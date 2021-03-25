@@ -48,16 +48,7 @@
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-void update_image_params(gui_window* win, const gui_input& input,
-    const color_image& image, ogl_image_params& glparams) {
-  glparams.window                           = input.window_size;
-  glparams.framebuffer                      = input.framebuffer_viewport;
-  std::tie(glparams.center, glparams.scale) = camera_imview(glparams.center,
-      glparams.scale, {image.width, image.height}, glparams.window,
-      glparams.fit);
-}
-
-void update_image_params(gui_window* win, const gui_input& input,
+static void update_image_params(gui_window* win, const gui_input& input,
     const color_image& image, glimage_params& glparams) {
   glparams.window                           = input.window_size;
   glparams.framebuffer                      = input.framebuffer_viewport;
@@ -74,8 +65,8 @@ static bool uiupdate_image_params(
     return true;
   }
   if (input.mouse_right && !input.widgets_active) {
-    glparams.scale *= powf(
-        2, (input.mouse_pos.x - input.mouse_last.x) * 0.001f);
+    glparams.scale *= pow(
+        2.0f, (input.mouse_pos.x - input.mouse_last.x) * 0.001f);
     return true;
   }
   return false;
@@ -636,135 +627,12 @@ void view_scene(const string& title, const string& name, scene_model& scene,
   stop_render();
 }
 
-static void init_glscene(shade_scene& glscene, const scene_model& ioscene) {
-  // init scene
-  init_scene(glscene);
-
-  // camera
-  for (auto& iocamera : ioscene.cameras) {
-    auto& camera = glscene.cameras.at(add_camera(glscene));
-    set_frame(camera, iocamera.frame);
-    set_lens(camera, iocamera.lens, iocamera.aspect, iocamera.film);
-    set_nearfar(camera, 0.001, 10000);
-  }
-
-  // textures
-  for (auto& iotexture : ioscene.textures) {
-    auto  handle    = add_texture(glscene);
-    auto& gltexture = glscene.textures[handle];
-    if (!iotexture.pixelsf.empty()) {
-      set_texture(
-          gltexture, iotexture.width, iotexture.height, iotexture.pixelsf);
-    } else if (!iotexture.pixelsb.empty()) {
-      set_texture(
-          gltexture, iotexture.width, iotexture.height, iotexture.pixelsb);
-    }
-  }
-
-  // material
-  for (auto& iomaterial : ioscene.materials) {
-    auto  handle     = add_material(glscene);
-    auto& glmaterial = glscene.materials[handle];
-    set_emission(glmaterial, iomaterial.emission, iomaterial.emission_tex);
-    set_opacity(glmaterial, iomaterial.opacity, invalidid);
-    set_normalmap(glmaterial, iomaterial.normal_tex);
-    switch (iomaterial.type) {
-      case scene_material_type::matte: {
-        set_color(glmaterial, iomaterial.color, iomaterial.color_tex);
-        set_specular(glmaterial, 0, invalidid);
-        set_metallic(glmaterial, 0, invalidid);
-        set_roughness(glmaterial, 0, invalidid);
-      } break;
-      case scene_material_type::glossy: {
-        set_color(glmaterial, iomaterial.color, iomaterial.color_tex);
-        set_specular(glmaterial, 1, invalidid);
-        set_metallic(glmaterial, 0, invalidid);
-        set_roughness(glmaterial, iomaterial.roughness, invalidid);
-      } break;
-      case scene_material_type::metallic: {
-        set_color(glmaterial, iomaterial.color, iomaterial.color_tex);
-        set_specular(glmaterial, 0, invalidid);
-        set_metallic(glmaterial, 1, invalidid);
-        set_roughness(
-            glmaterial, iomaterial.roughness, iomaterial.roughness_tex);
-      } break;
-      case scene_material_type::gltfpbr: {
-        set_color(glmaterial, iomaterial.color, iomaterial.color_tex);
-        set_specular(glmaterial, 1, invalidid);
-        set_metallic(glmaterial, iomaterial.metallic, invalidid);
-        set_roughness(glmaterial, iomaterial.roughness, invalidid);
-      } break;
-      default: {
-        set_color(glmaterial, iomaterial.color, iomaterial.color_tex);
-        set_specular(glmaterial, 0, invalidid);
-        set_metallic(glmaterial, 0, invalidid);
-        set_roughness(
-            glmaterial, iomaterial.roughness, iomaterial.roughness_tex);
-      } break;
-    }
-  }
-
-  // shapes
-  for (auto& ioshape : ioscene.shapes) {
-    add_shape(glscene, ioshape.points, ioshape.lines, ioshape.triangles,
-        ioshape.quads, ioshape.positions, ioshape.normals, ioshape.texcoords,
-        ioshape.colors);
-  }
-
-  // shapes
-  for (auto& ioinstance : ioscene.instances) {
-    auto  handle     = add_instance(glscene);
-    auto& glinstance = glscene.instances[handle];
-    set_frame(glinstance, ioinstance.frame);
-    set_shape(glinstance, ioinstance.shape);
-    set_material(glinstance, ioinstance.material);
-  }
-
-  // environments
-  for (auto& ioenvironment : ioscene.environments) {
-    auto  handle        = add_environment(glscene);
-    auto& glenvironment = glscene.environments[handle];
-    set_frame(glenvironment, ioenvironment.frame);
-    set_emission(
-        glenvironment, ioenvironment.emission, ioenvironment.emission_tex);
-  }
-
-  // init environments
-  init_environments(glscene);
-}
-
-static void update_glscene(shade_scene& glscene, const scene_model& scene,
-    const vector<int>& updated_shapes, const vector<int>& updated_textures) {
-  for (auto shape_id : updated_shapes) {
-    auto& shape   = scene.shapes.at(shape_id);
-    auto& glshape = glscene.shapes.at(shape_id);
-    if (!shape.points.empty()) set_points(glshape, shape.points);
-    if (!shape.lines.empty()) set_lines(glshape, shape.lines);
-    if (!shape.triangles.empty()) set_triangles(glshape, shape.triangles);
-    if (!shape.quads.empty()) set_quads(glshape, shape.quads);
-    if (!shape.positions.empty()) set_positions(glshape, shape.positions);
-    if (!shape.normals.empty()) set_normals(glshape, shape.normals);
-    if (!shape.texcoords.empty()) set_texcoords(glshape, shape.texcoords);
-    if (!shape.colors.empty()) set_colors(glshape, shape.colors);
-    if (!shape.tangents.empty()) set_tangents(glshape, shape.tangents);
-  }
-  for (auto texture_id : updated_textures) {
-    auto& texture   = scene.textures.at(texture_id);
-    auto& gltexture = glscene.textures.at(texture_id);
-    if (!texture.pixelsf.empty()) {
-      set_texture(gltexture, texture.width, texture.height, texture.pixelsf);
-    } else if (!texture.pixelsb.empty()) {
-      set_texture(gltexture, texture.width, texture.height, texture.pixelsb);
-    }
-  }
-}
-
 void glview_scene(const string& title, const string& name, scene_model& scene,
-    const shade_params& params_, const glview_callback& widgets_callback,
+    const glscene_params& params_, const glview_callback& widgets_callback,
     const glview_callback& uiupdate_callback,
     const glview_callback& update_callback) {
   // glscene
-  auto glscene = shade_scene{};
+  auto glscene = glscene_state{};
 
   // draw params
   auto params = params_;
@@ -794,7 +662,7 @@ void glview_scene(const string& title, const string& name, scene_model& scene,
     clear_scene(glscene);
   };
   callbacks.draw_cb = [&](gui_window* win, const gui_input& input) {
-    draw_scene(glscene, input.framebuffer_viewport, params);
+    draw_scene(glscene, scene, input.framebuffer_viewport, params);
   };
   callbacks.widgets_cb = [&](gui_window* win, const gui_input& input) {
     draw_combobox(win, "name", selected, names);
@@ -806,7 +674,7 @@ void glview_scene(const string& title, const string& name, scene_model& scene,
       continue_line(win);
       draw_checkbox(win, "double sided", params.double_sided);
       draw_combobox(
-          win, "lighting", (int&)params.lighting, shade_lighting_names);
+          win, "lighting", (int&)params.lighting, glscene_lighting_names);
       draw_slider(win, "exposure", params.exposure, -10, 10);
       draw_slider(win, "gamma", params.gamma, 0.1f, 4);
       draw_slider(win, "near", params.near, 0.01f, 1.0f);
@@ -843,10 +711,9 @@ void glview_scene(const string& title, const string& name, scene_model& scene,
         updated_textures.clear();
       }
     }
-    auto camera = scene.cameras.at(0);
+    auto camera = scene.cameras.at(params.camera);
     if (uiupdate_camera_params(win, input, camera)) {
-      scene.cameras.at(0) = camera;
-      set_frame(glscene.cameras.at(0), camera.frame);
+      scene.cameras.at(params.camera) = camera;
     }
   };
 
@@ -881,7 +748,7 @@ namespace yocto {
   }
   return error_code;
 }
-static void assert_ogl_error_() { assert(_assert_ogl_error() == GL_NO_ERROR); }
+static void assert_glerror() { assert(_assert_ogl_error() == GL_NO_ERROR); }
 
 // initialize program
 void set_program(uint& program_id, uint& vertex_id, uint& fragment_id,
@@ -903,7 +770,7 @@ void set_program(uint& program_id, uint& vertex_id, uint& fragment_id,
   auto        errflags   = 0;
   auto        errbuf     = array<char, 10000>{};
 
-  assert_ogl_error_();
+  assert_glerror();
 
   // create vertex
   vertex_id = glCreateShader(GL_VERTEX_SHADER);
@@ -914,7 +781,7 @@ void set_program(uint& program_id, uint& vertex_id, uint& fragment_id,
     glGetShaderInfoLog(vertex_id, 10000, 0, errbuf.data());
     return program_error("vertex shader not compiled", errbuf.data());
   }
-  assert_ogl_error_();
+  assert_glerror();
 
   // create fragment
   fragment_id = glCreateShader(GL_FRAGMENT_SHADER);
@@ -925,7 +792,7 @@ void set_program(uint& program_id, uint& vertex_id, uint& fragment_id,
     glGetShaderInfoLog(fragment_id, 10000, 0, errbuf.data());
     return program_error("fragment shader not compiled", errbuf.data());
   }
-  assert_ogl_error_();
+  assert_glerror();
 
   // create program
   program_id = glCreateProgram();
@@ -949,7 +816,7 @@ void set_program(uint& program_id, uint& vertex_id, uint& fragment_id,
     glGetProgramInfoLog(program_id, 10000, 0, errbuf.data());
     return program_error("program not validated", errbuf.data());
   }
-  assert_ogl_error_();
+  assert_glerror();
 #endif
 }
 
@@ -960,7 +827,7 @@ void set_program(uint& program_id, uint& vertex_id, uint& fragment_id,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-static auto ogl_image_vertex =
+static auto glimage_vertex =
     R"(
 #version 330
 in vec2 positions;
@@ -975,7 +842,7 @@ void main() {
 }
 )";
 #if 0
-static auto ogl_image_vertex = R"(
+static auto glimage_vertex = R"(
 #version 330
 in vec2 positions;
 out vec2 frag_texcoord;
@@ -989,7 +856,7 @@ void main() {
 }
 )";
 #endif
-static auto ogl_image_fragment =
+static auto glimage_fragment =
     R"(
 #version 330
 in vec2 frag_texcoord;
@@ -1000,7 +867,7 @@ void main() {
 }
 )";
 #if 0
-static auto ogl_image_fragment = R"(
+static auto glimage_fragment = R"(
 #version 330
 in vec2 frag_texcoord;
 out vec4 frag_color;
@@ -1021,8 +888,8 @@ void main() {
 // init image program
 bool init_image(glimage_state& glimage) {
   // program
-  set_program(glimage.program, glimage.vertex, glimage.fragment,
-      ogl_image_vertex, ogl_image_fragment);
+  set_program(glimage.program, glimage.vertex, glimage.fragment, glimage_vertex,
+      glimage_fragment);
 
   // vertex arrays
   glGenVertexArrays(1, &glimage.vertexarray);
@@ -1083,7 +950,7 @@ void set_image(glimage_state& glimage, const color_image& img) {
 // draw image
 void draw_image(glimage_state& glimage, const glimage_params& params) {
   // check errors
-  assert_ogl_error_();
+  assert_glerror();
 
   // viewport and framebuffer
   glViewport(params.framebuffer.x, params.framebuffer.y, params.framebuffer.z,
@@ -1106,18 +973,654 @@ void draw_image(glimage_state& glimage, const glimage_params& params) {
       params.center.x, params.center.y);
   glUniform1f(
       glGetUniformLocation(glimage.program, "image_scale"), params.scale);
-  assert_ogl_error_();
+  assert_glerror();
 
   // draw
   glBindVertexArray(glimage.vertexarray);
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, glimage.triangles);
   glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
   glBindVertexArray(0);
-  assert_ogl_error_();
+  assert_glerror();
 
   // unbind program
   glUseProgram(0);
-  assert_ogl_error_();
+  assert_glerror();
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// SCENE DRAWING
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+#ifndef _WIN32
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Woverlength-strings"
+#endif
+
+static const char* glscene_vertex =
+    R"(
+#version 330
+
+layout(location = 0) in vec3 positions;           // vertex position (in mesh coordinate frame)
+layout(location = 1) in vec3 normals;             // vertex normal (in mesh coordinate frame)
+layout(location = 2) in vec2 texcoords;           // vertex texcoords
+layout(location = 3) in vec4 colors;              // vertex color
+layout(location = 4) in vec4 tangents;            // vertex tangent space
+
+uniform mat4 frame;             // shape transform
+uniform mat4 frameit;           // shape transform
+
+uniform mat4 view;              // inverse of the camera frame (as a matrix)
+uniform mat4 projection;        // camera projection
+
+out vec3 position;              // [to fragment shader] vertex position (in world coordinate)
+out vec3 normal;                // [to fragment shader] vertex normal (in world coordinate)
+out vec2 texcoord;              // [to fragment shader] vertex texture coordinates
+out vec4 scolor;                // [to fragment shader] vertex color
+out vec4 tangsp;                // [to fragment shader] vertex tangent space
+
+// main function
+void main() {
+  // copy values
+  position = positions;
+  normal = normals;
+  tangsp = tangents;
+  texcoord = texcoords;
+  scolor = colors;
+
+  // world projection
+  position = (frame * vec4(position,1)).xyz;
+  normal = (frameit * vec4(normal,0)).xyz;
+  tangsp.xyz = (frame * vec4(tangsp.xyz,0)).xyz;
+
+  // clip
+  gl_Position = projection * view * vec4(position,1);
+}
+)";
+
+static const char* glscene_fragment =
+    R"(
+#version 330
+
+in vec3 position;  // [from vertex shader] position in world space
+in vec3 normal;    // [from vertex shader] normal in world space
+in vec2 texcoord;  // [from vertex shader] texcoord
+in vec4 scolor;    // [from vertex shader] color
+in vec4 tangsp;    // [from vertex shader] tangent space
+
+uniform int element;
+uniform bool unlit;
+uniform bool faceted;
+uniform vec4 highlight;
+uniform bool double_sided;
+
+uniform vec3 emission;            // material ke
+uniform vec3 color;               // material kd
+uniform float specular;           // material ks
+uniform float metallic;           // material km
+uniform float roughness;          // material rs
+uniform float opacity;            // material op
+
+uniform bool emission_tex_on;     // material ke texture on
+uniform sampler2D emission_tex;   // material ke texture
+uniform bool color_tex_on;        // material kd texture on
+uniform sampler2D color_tex;      // material kd texture
+uniform bool roughness_tex_on;    // material rs texture on
+uniform sampler2D roughness_tex;  // material rs texture
+uniform bool normalmap_tex_on;    // material normal texture on
+uniform sampler2D normalmap_tex;  // material normal texture
+
+uniform int  lighting;            // eyelight shading
+uniform vec3 ambient;             // ambient light
+uniform int  lights_num;          // number of lights
+uniform vec3 lights_direction[16];// light positions
+uniform vec3 lights_emission[16]; // light intensities
+
+uniform mat4 frame;              // shape transform
+uniform mat4 frameit;            // shape transform
+
+uniform vec3 eye;              // camera position
+uniform mat4 view;             // inverse of the camera frame (as a matrix)
+uniform mat4 projection;       // camera projection
+
+uniform float exposure; 
+uniform float gamma;
+
+out vec4 frag_color;      
+
+float pif = 3.14159265;
+
+struct shade_brdf {
+  vec3  emission;
+  vec3  diffuse;
+  vec3  specular;
+  float roughness;
+  float opacity;
+};
+
+vec3 eval_brdf_color(vec3 value, sampler2D tex, bool tex_on) {
+  vec3 result = value;
+  if (tex_on) result *= texture(tex, texcoord).rgb;
+  return result;
+}
+float eval_brdf_value(float value, sampler2D tex, bool tex_on) {
+  float result = value;
+  if (tex_on) result *= texture(tex, texcoord).r;
+  return result;
+}
+
+shade_brdf eval_brdf() {
+  vec4 emission_t = vec4(emission, 1);
+  if (emission_tex_on) emission_t *= texture(emission_tex, texcoord);
+  vec4 base_t = scolor * vec4(color, opacity);
+  if (color_tex_on) base_t *= pow(texture(color_tex, texcoord), vec4(2.2,2.2,2.2,1));
+  float metallic_t = metallic;
+  float roughness_t = roughness;
+  roughness_t = roughness_t * roughness_t;
+  if (roughness_t < 0.03 * 0.03) roughness_t = 0.03 * 0.03;
+  float specular_t = specular;
+
+  // color?
+  shade_brdf brdf;
+  brdf.emission  = emission_t.xyz;
+  brdf.diffuse   = base_t.xyz * (1 - metallic_t);
+  brdf.specular  = specular_t * (base_t.xyz * metallic_t + vec3(0.04) * (1 - metallic_t));
+  brdf.roughness = roughness_t;
+  brdf.opacity   = base_t.w;
+  return brdf;
+}
+
+vec3 eval_brdfcos(shade_brdf brdf, vec3 n, vec3 incoming, vec3 outgoing) {
+  vec3 halfway = normalize(incoming+outgoing);
+  float ndi = dot(incoming,n), ndo = dot(outgoing,n), ndh = dot(halfway,n);
+  if(ndi<=0 || ndo <=0) return vec3(0);
+  vec3 diff = ndi * brdf.diffuse / pif;
+  if(ndh<=0) return diff;
+  float cos2 = ndh * ndh;
+  float tan2 = (1 - cos2) / cos2;
+  float alpha2 = brdf.roughness * brdf.roughness;
+  float d = alpha2 / (pif * cos2 * cos2 * (alpha2 + tan2) * (alpha2 + tan2));
+  float lambda_o = (-1 + sqrt(1 + (1 - ndo * ndo) / (ndo * ndo))) / 2;
+  float lambda_i = (-1 + sqrt(1 + (1 - ndi * ndi) / (ndi * ndi))) / 2;
+  float g = 1 / (1 + lambda_o + lambda_i);
+  vec3 spec = ndi * brdf.specular * d * g / (4*ndi*ndo);
+  return diff+spec;
+}
+
+vec3 apply_normal_map(vec2 texcoord, vec3 normal, vec4 tangsp) {
+  if(!normalmap_tex_on) return normal;
+  vec3 tangu = normalize((frame * vec4(normalize(tangsp.xyz),0)).xyz);
+  vec3 tangv = normalize(cross(normal, tangu));
+  if(tangsp.w < 0) tangv = -tangv;
+  vec3 texture = 2 * texture(normalmap_tex,texcoord).xyz - 1;
+  // texture.y = -texture.y;
+  return normalize( tangu * texture.x + tangv * texture.y + normal * texture.z );
+}
+
+vec3 triangle_normal(vec3 position) {
+  vec3 fdx = dFdx(position); 
+  vec3 fdy = dFdy(position); 
+  return normalize((frame * vec4(normalize(cross(fdx, fdy)), 0)).xyz);
+}
+
+#define element_points 1
+#define element_lines 2
+#define element_triangles 3
+
+vec3 eval_normal(vec3 outgoing) {
+  vec3 norm;
+  if (element == element_triangles) {
+    if (faceted) {
+      norm = triangle_normal(position);
+    } else {
+      norm = normalize(normal);
+    }
+    // apply normal map
+    norm = apply_normal_map(texcoord, norm, tangsp);
+    if (double_sided) norm = faceforward(norm, -outgoing, norm);
+  }
+
+  if (element == element_lines) {
+    vec3 tangent = normalize(normal);
+    norm         = normalize(outgoing - tangent * dot(outgoing, tangent));
+  }
+
+  return norm;
+}
+
+#define lighting_eyelight 0
+#define lighting_camlight 1
+
+// main
+void main() {
+  // view vector
+  vec3 outgoing = normalize(eye - position);
+  vec3 n = eval_normal(outgoing);
+
+  // get material color from textures
+  shade_brdf brdf = eval_brdf();
+  if(brdf.opacity < 0.005) discard;
+
+  if(unlit) {
+    frag_color = vec4(brdf.emission + brdf.diffuse, brdf.opacity);
+    return; 
+  }
+
+  // emission
+  vec3 radiance = brdf.emission;
+
+  // check early exit
+  if(brdf.diffuse != vec3(0,0,0) || brdf.specular != vec3(0,0,0)) {
+    // eyelight shading
+    if(lighting == lighting_eyelight) {
+      vec3 incoming = outgoing;
+      radiance += pif * eval_brdfcos(brdf, n, incoming, outgoing);
+    }
+    if(lighting == lighting_camlight) {
+      // accumulate ambient
+      radiance += ambient * brdf.diffuse;
+      // foreach light
+      for(int lid = 0; lid < lights_num; lid ++) {
+        radiance += lights_emission[lid] * 
+          eval_brdfcos(brdf, n, lights_direction[lid], outgoing);
+      }
+    }
+  }
+
+  // final color correction
+  radiance = pow(radiance * pow(2,exposure), vec3(1/gamma));
+
+  // highlighting
+  if(highlight.w > 0) {
+    if(mod(int(gl_FragCoord.x)/4 + int(gl_FragCoord.y)/4, 2)  == 0)
+        radiance = highlight.xyz * highlight.w + radiance * (1-highlight.w);
+  }
+
+  // output final color by setting gl_FragColor
+  frag_color = vec4(radiance, brdf.opacity);
+}
+)";
+
+#ifndef _WIN32
+#pragma GCC diagnostic pop
+#endif
+
+// Create texture
+void set_texture(glscene_texture& gltexture, const scene_texture& texture) {
+  if (!gltexture.texture || gltexture.width != texture.width ||
+      gltexture.height != texture.height) {
+    if (!gltexture.texture) glGenTextures(1, &gltexture.texture);
+    glBindTexture(GL_TEXTURE_2D, gltexture.texture);
+    if (!texture.pixelsb.empty()) {
+      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, texture.width, texture.height, 0,
+          GL_RGBA, GL_UNSIGNED_BYTE, texture.pixelsb.data());
+    } else {
+      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, texture.width, texture.height, 0,
+          GL_RGBA, GL_FLOAT, texture.pixelsf.data());
+    }
+    glGenerateMipmap(GL_TEXTURE_2D);
+    glTexParameteri(
+        GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  } else {
+    glBindTexture(GL_TEXTURE_2D, gltexture.texture);
+    if (!texture.pixelsb.empty()) {
+      glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, texture.width, texture.height,
+          GL_RGBA, GL_UNSIGNED_BYTE, texture.pixelsb.data());
+    } else {
+      glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, texture.width, texture.height,
+          GL_RGBA, GL_FLOAT, texture.pixelsf.data());
+    }
+    glGenerateMipmap(GL_TEXTURE_2D);
+  }
+}
+
+// Clean texture
+void clear_texture(glscene_texture& gltexture) {
+  if (gltexture.texture) {
+    glDeleteTextures(1, &gltexture.texture);
+    gltexture.texture = 0;
+  }
+}
+
+// Create shape
+void set_shape(glscene_shape& glshape, const scene_shape& shape) {
+  auto set_vertex = [](uint& buffer, int& num, const auto& data,
+                        const auto& def, int location) {
+    if (data.empty()) {
+      if (buffer) glDeleteBuffers(1, &buffer);
+      buffer = 0;
+      num    = 0;
+      glDisableVertexAttribArray(location);
+      if constexpr (sizeof(def) == sizeof(float))
+        glVertexAttrib1f(location, (float)def);
+      if constexpr (sizeof(def) == sizeof(vec2f))
+        glVertexAttrib2fv(location, (float*)&def.x);
+      if constexpr (sizeof(def) == sizeof(vec3f))
+        glVertexAttrib3fv(location, (float*)&def.x);
+      if constexpr (sizeof(def) == sizeof(vec4f))
+        glVertexAttrib4fv(location, (float*)&def.x);
+    } else {
+      if (!buffer || (int)data.size() != num) {
+        if (buffer) glDeleteBuffers(1, &buffer);
+        glGenBuffers(1, &buffer);
+        glBindBuffer(GL_ARRAY_BUFFER, buffer);
+        glBufferData(GL_ARRAY_BUFFER, data.size() * sizeof(data.front()),
+            data.data(), GL_STATIC_DRAW);
+        num = (int)data.size();
+      } else {
+        // we have enough space
+        glBindBuffer(GL_ARRAY_BUFFER, buffer);
+        glBufferSubData(GL_ARRAY_BUFFER, 0, data.size() * sizeof(data.front()),
+            data.data());
+      }
+      glBindBuffer(GL_ARRAY_BUFFER, buffer);
+      glEnableVertexAttribArray(location);
+      glVertexAttribPointer(location, sizeof(data.front()) / sizeof(float),
+          GL_FLOAT, false, 0, nullptr);
+    }
+  };
+
+  auto set_indices = [](uint& buffer, int& num, const auto& data) {
+    if (data.empty()) {
+      if (buffer) glDeleteBuffers(1, &buffer);
+      buffer = 0;
+      num    = 0;
+    } else {
+      if (!buffer || (int)data.size() != num) {
+        if (buffer) glDeleteBuffers(1, &buffer);
+        glGenBuffers(1, &buffer);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER,
+            data.size() * sizeof(data.front()), data.data(), GL_STATIC_DRAW);
+        num = (int)data.size();
+      } else {
+        // we have enough space
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer);
+        glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0,
+            data.size() * sizeof(data.front()), data.data());
+      }
+    }
+  };
+
+  if (!glshape.vertexarray) glGenVertexArrays(1, &glshape.vertexarray);
+  glBindVertexArray(glshape.vertexarray);
+  set_indices(glshape.points, glshape.num_points, shape.points);
+  set_indices(glshape.lines, glshape.num_lines, shape.lines);
+  set_indices(glshape.triangles, glshape.num_triangles, shape.triangles);
+  set_indices(
+      glshape.quads, glshape.num_quads, quads_to_triangles(shape.quads));
+  set_vertex(glshape.positions, glshape.num_positions, shape.positions,
+      vec3f{0, 0, 0}, 0);
+  set_vertex(
+      glshape.normals, glshape.num_normals, shape.normals, vec3f{0, 0, 1}, 1);
+  set_vertex(glshape.texcoords, glshape.num_texcoords, shape.texcoords,
+      vec2f{0, 0}, 2);
+  set_vertex(
+      glshape.colors, glshape.num_colors, shape.colors, vec4f{1, 1, 1, 1}, 3);
+  set_vertex(glshape.tangents, glshape.num_tangents, shape.tangents,
+      vec4f{0, 0, 1, 1}, 4);
+  glBindVertexArray(0);
+}
+
+// Clean shape
+void clear_shape(glscene_shape& glshape) {
+  if (glshape.vertexarray) glDeleteVertexArrays(1, &glshape.vertexarray);
+  if (glshape.positions) glDeleteBuffers(1, &glshape.positions);
+  if (glshape.normals) glDeleteBuffers(1, &glshape.normals);
+  if (glshape.texcoords) glDeleteBuffers(1, &glshape.texcoords);
+  if (glshape.colors) glDeleteBuffers(1, &glshape.colors);
+  if (glshape.tangents) glDeleteBuffers(1, &glshape.tangents);
+  if (glshape.points) glDeleteBuffers(1, &glshape.points);
+  if (glshape.lines) glDeleteBuffers(1, &glshape.lines);
+  if (glshape.triangles) glDeleteBuffers(1, &glshape.triangles);
+  if (glshape.quads) glDeleteBuffers(1, &glshape.quads);
+  glshape = {};
+  assert_glerror();
+}
+
+// init scene
+void init_glscene(glscene_state& glscene, const scene_model& ioscene) {
+  // program
+  set_program(glscene.program, glscene.vertex, glscene.fragment, glscene_vertex,
+      glscene_fragment);
+
+  // textures
+  for (auto& iotexture : ioscene.textures) {
+    auto& gltexture = glscene.textures.emplace_back();
+    set_texture(gltexture, iotexture);
+  }
+
+  // shapes
+  for (auto& ioshape : ioscene.shapes) {
+    auto& glshape = glscene.shapes.emplace_back();
+    set_shape(glshape, ioshape);
+  }
+}
+
+// update scene
+void update_glscene(glscene_state& glscene, const scene_model& scene,
+    const vector<int>& updated_shapes, const vector<int>& updated_textures) {
+  for (auto shape_id : updated_shapes) {
+    set_shape(glscene.shapes[shape_id], scene.shapes[shape_id]);
+  }
+  for (auto texture_id : updated_textures) {
+    set_texture(glscene.textures[texture_id], scene.textures[texture_id]);
+  }
+}
+
+// Clear an OpenGL scene
+void clear_scene(glscene_state& glscene) {
+  for (auto& texture : glscene.textures) clear_texture(texture);
+  for (auto& shape : glscene.shapes) clear_shape(shape);
+  if (glscene.program) glDeleteProgram(glscene.program);
+  if (glscene.vertex) glDeleteProgram(glscene.vertex);
+  if (glscene.fragment) glDeleteProgram(glscene.fragment);
+}
+
+[[maybe_unused]] static void draw_shape(glscene_shape& shape) {
+  if (shape.vertexarray == 0) return;
+  glBindVertexArray(shape.vertexarray);
+
+  if (shape.points) {
+    glPointSize(shape.point_size);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape.points);
+    glDrawElements(
+        GL_POINTS, (GLsizei)shape.num_points * 1, GL_UNSIGNED_INT, nullptr);
+    glPointSize(shape.point_size);
+  }
+  if (shape.lines) {
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape.lines);
+    glDrawElements(
+        GL_LINES, (GLsizei)shape.num_lines * 2, GL_UNSIGNED_INT, nullptr);
+  }
+  if (shape.triangles) {
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape.triangles);
+    glDrawElements(GL_TRIANGLES, (GLsizei)shape.num_triangles * 3,
+        GL_UNSIGNED_INT, nullptr);
+  }
+  if (shape.quads) {
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape.quads);
+    glDrawElements(
+        GL_TRIANGLES, (GLsizei)shape.num_quads * 3, GL_UNSIGNED_INT, nullptr);
+  }
+
+  glBindVertexArray(0);
+  assert_glerror();
+}
+
+void draw_scene(glscene_state& glscene, const scene_model& scene,
+    const vec4i& viewport, const glscene_params& params) {
+  // check errors
+  assert_glerror();
+
+  // viewport and framebuffer
+  glViewport(viewport.x, viewport.y, viewport.z, viewport.w);
+  glClearColor(params.background.x, params.background.y, params.background.z,
+      params.background.w);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  glEnable(GL_DEPTH_TEST);
+
+  // set program
+  auto& program = glscene.program;
+  glUseProgram(program);
+
+  // camera
+  auto& camera        = scene.cameras.at(params.camera);
+  auto  camera_aspect = (float)viewport.z / (float)viewport.w;
+  auto  camera_yfov =
+      camera_aspect >= 0
+           ? (2 * atan(camera.film / (camera_aspect * 2 * camera.lens)))
+           : (2 * atan(camera.film / (2 * camera.lens)));
+  auto view_matrix       = frame_to_mat(inverse(camera.frame));
+  auto projection_matrix = perspective_mat(
+      camera_yfov, camera_aspect, params.near, params.far);
+  glUniform3f(glGetUniformLocation(program, "eye"), camera.frame.o.x,
+      camera.frame.o.y, camera.frame.o.z);
+  glUniformMatrix4fv(
+      glGetUniformLocation(program, "view"), 1, false, &view_matrix.x.x);
+  glUniformMatrix4fv(glGetUniformLocation(program, "projection"), 1, false,
+      &projection_matrix.x.x);
+
+  // params
+  glUniform1f(glGetUniformLocation(program, "exposure"), params.exposure);
+  glUniform1f(glGetUniformLocation(program, "gamma"), params.gamma);
+  glUniform1i(glGetUniformLocation(program, "double_sided"),
+      params.double_sided ? 1 : 0);
+
+  static auto lights_direction = vector<vec3f>{normalize(vec3f{1, 1, 1}),
+      normalize(vec3f{-1, 1, 1}), normalize(vec3f{-1, -1, 1}),
+      normalize(vec3f{0.1, 0.5, -1})};
+  static auto lights_emission  = vector<vec3f>{vec3f{pif / 2, pif / 2, pif / 2},
+      vec3f{pif / 2, pif / 2, pif / 2}, vec3f{pif / 4, pif / 4, pif / 4},
+      vec3f{pif / 4, pif / 4, pif / 4}};
+  if (params.lighting == glscene_lighting_type::camlight) {
+    glUniform1i(glGetUniformLocation(program, "lighting"), 1);
+    glUniform3f(glGetUniformLocation(program, "ambient"), 0, 0, 0);
+    glUniform1i(glGetUniformLocation(program, "lights_num"),
+        (int)lights_direction.size());
+    for (auto lid = 0; lid < lights_direction.size(); lid++) {
+      auto is        = std::to_string(lid);
+      auto direction = transform_direction(camera.frame, lights_direction[lid]);
+      glUniform3f(glGetUniformLocation(
+                      program, ("lights_direction[" + is + "]").c_str()),
+          direction.x, direction.y, direction.z);
+      glUniform3f(glGetUniformLocation(
+                      program, ("lights_emission[" + is + "]").c_str()),
+          lights_emission[lid].x, lights_emission[lid].y,
+          lights_emission[lid].z);
+    }
+  } else if (params.lighting == glscene_lighting_type::eyelight) {
+    glUniform1i(glGetUniformLocation(program, "lighting"), 0);
+    glUniform1i(glGetUniformLocation(program, "lights_num"), 0);
+  } else {
+    throw std::invalid_argument{"unknown lighting type"};
+  }
+
+  // helper
+  auto set_texture = [&glscene](uint program, const char* name,
+                         const char* name_on, int texture_idx, int unit) {
+    if (texture_idx >= 0) {
+      auto& gltexture = glscene.textures.at(texture_idx);
+      glActiveTexture(GL_TEXTURE0 + unit);
+      glBindTexture(GL_TEXTURE_2D, gltexture.texture);
+      glUniform1i(glGetUniformLocation(program, name), unit);
+      glUniform1i(glGetUniformLocation(program, name_on), 1);
+    } else {
+      glActiveTexture(GL_TEXTURE0 + unit);
+      glBindTexture(GL_TEXTURE_2D, 0);
+      glUniform1i(glGetUniformLocation(program, name), unit);
+      glUniform1i(glGetUniformLocation(program, name_on), 0);
+    }
+  };
+
+  // draw instances
+  if (params.wireframe) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+  for (auto& instance : scene.instances) {
+    auto& glshape  = glscene.shapes.at(instance.shape);
+    auto& material = scene.materials.at(instance.material);
+
+    auto shape_xform     = frame_to_mat(instance.frame);
+    auto shape_inv_xform = transpose(
+        frame_to_mat(inverse(instance.frame, params.non_rigid_frames)));
+    glUniformMatrix4fv(
+        glGetUniformLocation(program, "frame"), 1, false, &shape_xform.x.x);
+    glUniformMatrix4fv(glGetUniformLocation(program, "frameit"), 1, false,
+        &shape_inv_xform.x.x);
+    glUniform1i(glGetUniformLocation(program, "faceted"),
+        (params.faceted || glshape.normals == 0) ? 1 : 0);
+
+    glUniform1i(glGetUniformLocation(program, "unlit"), 0);
+    glUniform3f(glGetUniformLocation(program, "emission"), material.emission.x,
+        material.emission.y, material.emission.z);
+    glUniform3f(glGetUniformLocation(program, "color"), material.color.x,
+        material.color.y, material.color.z);
+    glUniform1f(glGetUniformLocation(program, "specular"), 1);
+    glUniform1f(glGetUniformLocation(program, "metallic"), material.metallic);
+    glUniform1f(glGetUniformLocation(program, "roughness"), material.roughness);
+    glUniform1f(glGetUniformLocation(program, "opacity"), material.opacity);
+    if (material.type == scene_material_type::matte ||
+        material.type == scene_material_type::transparent ||
+        material.type == scene_material_type::refractive ||
+        material.type == scene_material_type::subsurface ||
+        material.type == scene_material_type::volume) {
+      glUniform1f(glGetUniformLocation(program, "specular"), 0);
+    }
+    if (material.type == scene_material_type::metallic) {
+      glUniform1f(glGetUniformLocation(program, "metallic"), 1);
+    }
+    glUniform1f(glGetUniformLocation(program, "double_sided"),
+        params.double_sided ? 1 : 0);
+    set_texture(
+        program, "emission_tex", "emission_tex_on", material.emission_tex, 0);
+    set_texture(program, "color_tex", "color_tex_on", material.color_tex, 1);
+    set_texture(program, "roughness_tex", "roughness_tex_on",
+        material.roughness_tex, 3);
+    set_texture(
+        program, "normalmap_tex", "normalmap_tex_on", material.normal_tex, 5);
+    assert_glerror();
+
+    if (glshape.points)
+      glUniform1i(glGetUniformLocation(program, "element"), 1);
+    if (glshape.lines) glUniform1i(glGetUniformLocation(program, "element"), 2);
+    if (glshape.triangles)
+      glUniform1i(glGetUniformLocation(program, "element"), 3);
+    if (glshape.quads) glUniform1i(glGetUniformLocation(program, "element"), 3);
+    assert_glerror();
+
+    glBindVertexArray(glshape.vertexarray);
+    if (glshape.points) {
+      glPointSize(glshape.point_size);
+      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, glshape.points);
+      glDrawElements(
+          GL_POINTS, (GLsizei)glshape.num_points * 1, GL_UNSIGNED_INT, nullptr);
+      glPointSize(glshape.point_size);
+    }
+    if (glshape.lines) {
+      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, glshape.lines);
+      glDrawElements(
+          GL_LINES, (GLsizei)glshape.num_lines * 2, GL_UNSIGNED_INT, nullptr);
+    }
+    if (glshape.triangles) {
+      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, glshape.triangles);
+      glDrawElements(GL_TRIANGLES, (GLsizei)glshape.num_triangles * 3,
+          GL_UNSIGNED_INT, nullptr);
+    }
+    if (glshape.quads) {
+      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, glshape.quads);
+      glDrawElements(GL_TRIANGLES, (GLsizei)glshape.num_quads * 3,
+          GL_UNSIGNED_INT, nullptr);
+    }
+
+    glBindVertexArray(0);
+    assert_glerror();
+  }
+  if (params.wireframe) glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+  // done
+  glUseProgram(0);
 }
 
 }  // namespace yocto

@@ -38,8 +38,6 @@
 #include <yocto/yocto_scene.h>
 #include <yocto/yocto_trace.h>
 #include <yocto_gui/yocto_imgui.h>
-#include <yocto_gui/yocto_opengl.h>
-#include <yocto_gui/yocto_shade.h>
 
 #include <array>
 #include <string>
@@ -82,15 +80,14 @@ using glview_callback =
     std::function<void(gui_window* win, const gui_input& input,
         vector<int>& updated_shapes, vector<int>& updated_textures)>;
 
+// Open a window and show an scene via OpenGL shading
+struct glscene_params;
 void glview_scene(const string& title, const string& name, scene_model& scene,
-    const shade_params&    params            = {},
-    const glview_callback& widgets_callback  = {},
+    const glscene_params& params, const glview_callback& widgets_callback = {},
     const glview_callback& uiupdate_callback = {},
     const glview_callback& update_callback   = {});
 
 }  // namespace yocto
-
-#endif
 
 // -----------------------------------------------------------------------------
 // IMAGE DRAWING
@@ -138,3 +135,110 @@ struct glimage_params {
 void draw_image(glimage_state& image, const glimage_params& params);
 
 }  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// SCENE DRAWING
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Opengl texture
+struct glscene_texture {
+  // texture properties
+  int width  = 0;
+  int height = 0;
+
+  // opengl state
+  uint texture = 0;
+};
+
+// Create texture
+void set_texture(glscene_texture& gltexture, const scene_texture& texture);
+
+// Clean texture
+void clear_texture(glscene_texture& gltexture);
+
+// Opengl shape
+struct glscene_shape {
+  // Shape properties
+  int num_positions = 0;
+  int num_normals   = 0;
+  int num_texcoords = 0;
+  int num_colors    = 0;
+  int num_tangents  = 0;
+  int num_points    = 0;
+  int num_lines     = 0;
+  int num_triangles = 0;
+  int num_quads     = 0;
+
+  // OpenGl state
+  uint  vertexarray = 0;
+  uint  positions   = 0;
+  uint  normals     = 0;
+  uint  texcoords   = 0;
+  uint  colors      = 0;
+  uint  tangents    = 0;
+  uint  points      = 0;
+  uint  lines       = 0;
+  uint  triangles   = 0;
+  uint  quads       = 0;
+  float point_size  = 1;
+};
+
+// Create shape
+void set_shape(glscene_shape& glshape, const scene_shape& shape);
+
+// Clean shape
+void clear_shape(glscene_shape& glshape);
+
+// Opengl scene
+struct glscene_state {
+  // scene objects
+  vector<glscene_shape>   shapes   = {};
+  vector<glscene_texture> textures = {};
+
+  // programs
+  uint program  = 0;
+  uint vertex   = 0;
+  uint fragment = 0;
+};
+
+// Shading type
+enum struct glscene_lighting_type { camlight, eyelight };
+
+// Shading name
+const auto glscene_lighting_names = vector<string>{"camlight", "eyelight"};
+
+// Draw options
+struct glscene_params {
+  int                   camera           = 0;
+  int                   resolution       = 1280;
+  bool                  wireframe        = false;
+  glscene_lighting_type lighting         = glscene_lighting_type::camlight;
+  float                 exposure         = 0;
+  float                 gamma            = 2.2f;
+  bool                  faceted          = false;
+  bool                  double_sided     = true;
+  bool                  non_rigid_frames = true;
+  float                 near             = 0.01f;
+  float                 far              = 10000.0f;
+  bool                  hide_environment = false;
+  vec4f                 background       = vec4f{0.15f, 0.15f, 0.15f, 1.0f};
+};
+
+// init scene
+void init_glscene(glscene_state& glscene, const scene_model& scene);
+
+// update scene
+void update_glscene(glscene_state& glscene, const scene_model& scene,
+    const vector<int>& updated_shapes, const vector<int>& updated_textures);
+
+// Clear an OpenGL scene
+void clear_scene(glscene_state& scene);
+
+// draw scene
+void draw_scene(glscene_state& glscene, const scene_model& scene,
+    const vec4i& viewport, const glscene_params& params);
+
+}  // namespace yocto
+
+#endif
