@@ -1128,6 +1128,7 @@ shade_brdf eval_brdf() {
   float metallic_t = metallic;
   float roughness_t = roughness;
   roughness_t = roughness_t * roughness_t;
+  // if (roughness_t < 0.03 * 0.03) roughness_t = 0.03 * 0.03;
 
   // color?
   shade_brdf brdf;
@@ -1570,6 +1571,12 @@ void draw_scene(glscene_state& glscene, const scene_model& scene,
     glUniform1f(glGetUniformLocation(program, "metallic"), material.metallic);
     glUniform1f(glGetUniformLocation(program, "roughness"), material.roughness);
     glUniform1f(glGetUniformLocation(program, "opacity"), material.opacity);
+    if (material.type == scene_material_type::matte) {
+      glUniform1f(glGetUniformLocation(program, "specular"), 0);
+    }
+    if (material.type == scene_material_type::metallic) {
+      glUniform1f(glGetUniformLocation(program, "metallic"), 1);
+    }
     glUniform1f(glGetUniformLocation(program, "double_sided"),
         params.double_sided ? 1 : 0);
     set_texture(
