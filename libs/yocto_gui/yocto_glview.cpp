@@ -1499,49 +1499,29 @@ void draw_scene(glscene_state& glscene, const scene_model& scene,
   glUniform1i(glGetUniformLocation(program, "double_sided"),
       params.double_sided ? 1 : 0);
 
-  // set lighting uniforms
-  struct gui_light {
-    vec3f position = {0, 0, 0};
-    vec3f emission = {0, 0, 0};
-    bool  camera   = false;
-  };
-  static auto camera_light0 = gui_light{
-      normalize(vec3f{1, 1, 1}), vec3f{pif / 2, pif / 2, pif / 2}, true};
-  static auto camera_light1 = gui_light{
-      normalize(vec3f{-1, 1, 1}), vec3f{pif / 2, pif / 2, pif / 2}, true};
-  static auto camera_light2 = gui_light{
-      normalize(vec3f{-1, -1, 1}), vec3f{pif / 4, pif / 4, pif / 4}, true};
-  static auto camera_light3 = gui_light{
-      normalize(vec3f{0.1, 0.5, -1}), vec3f{pif / 4, pif / 4, pif / 4}, true};
-  static auto camera_lights = vector<gui_light>{
-      camera_light0, camera_light1, camera_light2, camera_light3};
-  auto lighting = params.lighting;
-  if (lighting == glscene_lighting_type::camlight) {
-    auto& lights = camera_lights;
+  static auto lights_direction = vector<vec3f>{normalize(vec3f{1, 1, 1}),
+      normalize(vec3f{-1, 1, 1}), normalize(vec3f{-1, -1, 1}),
+      normalize(vec3f{0.1, 0.5, -1})};
+  static auto lights_emission  = vector<vec3f>{vec3f{pif / 2, pif / 2, pif / 2},
+      vec3f{pif / 2, pif / 2, pif / 2}, vec3f{pif / 4, pif / 4, pif / 4},
+      vec3f{pif / 4, pif / 4, pif / 4}};
+  if (params.lighting == glscene_lighting_type::camlight) {
     glUniform1i(glGetUniformLocation(program, "lighting"), 1);
     glUniform3f(glGetUniformLocation(program, "ambient"), 0, 0, 0);
-    glUniform1i(
-        glGetUniformLocation(program, "lights_num"), (int)lights.size());
-    auto lid = 0;
-    for (auto& light : lights) {
-      auto is = std::to_string(lid);
-      if (light.camera) {
-        auto direction = transform_direction(camera.frame, light.position);
-        glUniform3f(glGetUniformLocation(
-                        program, ("lights_direction[" + is + "]").c_str()),
-            direction.x, direction.y, direction.z);
-      } else {
-        auto direction = normalize(light.position);
-        glUniform3f(glGetUniformLocation(
-                        program, ("lights_direction[" + is + "]").c_str()),
-            direction.x, direction.y, direction.z);
-      }
+    glUniform1i(glGetUniformLocation(program, "lights_num"),
+        (int)lights_direction.size());
+    for (auto lid = 0; lid < lights_direction.size(); lid++) {
+      auto is        = std::to_string(lid);
+      auto direction = transform_direction(camera.frame, lights_direction[lid]);
+      glUniform3f(glGetUniformLocation(
+                      program, ("lights_direction[" + is + "]").c_str()),
+          direction.x, direction.y, direction.z);
       glUniform3f(glGetUniformLocation(
                       program, ("lights_emission[" + is + "]").c_str()),
-          light.emission.x, light.emission.y, light.emission.z);
-      lid++;
+          lights_emission[lid].x, lights_emission[lid].y,
+          lights_emission[lid].z);
     }
-  } else if (lighting == glscene_lighting_type::eyelight) {
+  } else if (params.lighting == glscene_lighting_type::eyelight) {
     glUniform1i(glGetUniformLocation(program, "lighting"), 0);
     glUniform1i(glGetUniformLocation(program, "lights_num"), 0);
   } else {
