@@ -1167,17 +1167,35 @@ void set_shape(glscene_shape& glshape, const scene_shape& shape) {
     }
   };
 
+  auto set_indices = [](uint& buffer, int& num, const auto& data) {
+    if (data.empty()) {
+      if (buffer) glDeleteBuffers(1, &buffer);
+      buffer = 0;
+      num    = 0;
+    } else {
+      if (!buffer || (int)data.size() != num) {
+        if (buffer) glDeleteBuffers(1, &buffer);
+        glGenBuffers(1, &buffer);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER,
+            data.size() * sizeof(data.front()), data.data(), GL_STATIC_DRAW);
+        num = (int)data.size();
+      } else {
+        // we have enough space
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer);
+        glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0,
+            data.size() * sizeof(data.front()), data.data());
+      }
+    }
+  };
+
   if (!glshape.vertexarray) glGenVertexArrays(1, &glshape.vertexarray);
   glBindVertexArray(glshape.vertexarray);
-  if (shape.points.size() != 0) {
-    set_index_buffer(glshape, glshape.points, shape.points);
-  } else if (shape.lines.size() != 0) {
-    set_index_buffer(glshape, glshape.lines, shape.lines);
-  } else if (shape.triangles.size() != 0) {
-    set_index_buffer(glshape, glshape.triangles, shape.triangles);
-  } else if (shape.quads.size() != 0) {
-    set_index_buffer(glshape, glshape.quads, quads_to_triangles(shape.quads));
-  }
+  set_indices(glshape.points, glshape.num_points, shape.points);
+  set_indices(glshape.lines, glshape.num_lines, shape.lines);
+  set_indices(glshape.triangles, glshape.num_triangles, shape.triangles);
+  set_indices(
+      glshape.quads, glshape.num_quads, quads_to_triangles(shape.quads));
   set_vertex(glshape.positions, glshape.num_positions, shape.positions,
       vec3f{0, 0, 0}, 0);
   set_vertex(
@@ -1193,10 +1211,6 @@ void set_shape(glscene_shape& glshape, const scene_shape& shape) {
 
 // Clean shape
 void clear_shape(glscene_shape& glshape) {
-  clear_elementbuffer(glshape.points);
-  clear_elementbuffer(glshape.lines);
-  clear_elementbuffer(glshape.triangles);
-  clear_elementbuffer(glshape.quads);
   if (glshape.vertexarray) glDeleteVertexArrays(1, &glshape.vertexarray);
   glshape.vertexarray = 0;
   if (glshape.positions) glDeleteBuffers(1, &glshape.positions);
@@ -1204,6 +1218,10 @@ void clear_shape(glscene_shape& glshape) {
   if (glshape.texcoords) glDeleteBuffers(1, &glshape.texcoords);
   if (glshape.colors) glDeleteBuffers(1, &glshape.colors);
   if (glshape.tangents) glDeleteBuffers(1, &glshape.tangents);
+  if (glshape.points) glDeleteBuffers(1, &glshape.points);
+  if (glshape.lines) glDeleteBuffers(1, &glshape.lines);
+  if (glshape.triangles) glDeleteBuffers(1, &glshape.triangles);
+  if (glshape.quads) glDeleteBuffers(1, &glshape.quads);
   assert_ogl_error_();
 }
 
@@ -1355,10 +1373,10 @@ void set_instance_uniforms(const glscene_state& scene, ogl_program& program,
 
   assert_ogl_error();
 
-  if (is_initialized(shape.points)) set_uniform(program, "element", 1);
-  if (is_initialized(shape.lines)) set_uniform(program, "element", 2);
-  if (is_initialized(shape.triangles)) set_uniform(program, "element", 3);
-  if (is_initialized(shape.quads)) set_uniform(program, "element", 3);
+  if (shape.points) set_uniform(program, "element", 1);
+  if (shape.lines) set_uniform(program, "element", 2);
+  if (shape.triangles) set_uniform(program, "element", 3);
+  if (shape.quads) set_uniform(program, "element", 3);
   assert_ogl_error_();
 }
 
@@ -1366,35 +1384,27 @@ static void draw_shape(glscene_shape& shape) {
   if (shape.vertexarray == 0) return;
   glBindVertexArray(shape.vertexarray);
 
-  if (is_initialized(shape.points)) {
-    auto& indices = shape.points;
+  if (shape.points) {
     glPointSize(shape.point_size);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indices.buffer_id);
-    glDrawElements(GL_POINTS,
-        (GLsizei)indices.num_elements * indices.element_size, GL_UNSIGNED_INT,
-        nullptr);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape.points);
+    glDrawElements(
+        GL_POINTS, (GLsizei)shape.num_points * 1, GL_UNSIGNED_INT, nullptr);
     glPointSize(shape.point_size);
   }
-  if (is_initialized(shape.lines)) {
-    auto& indices = shape.lines;
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indices.buffer_id);
-    glDrawElements(GL_LINES,
-        (GLsizei)indices.num_elements * indices.element_size, GL_UNSIGNED_INT,
-        nullptr);
+  if (shape.lines) {
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape.lines);
+    glDrawElements(
+        GL_LINES, (GLsizei)shape.num_lines * 2, GL_UNSIGNED_INT, nullptr);
   }
-  if (is_initialized(shape.triangles)) {
-    auto& indices = shape.triangles;
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indices.buffer_id);
-    glDrawElements(GL_TRIANGLES,
-        (GLsizei)indices.num_elements * indices.element_size, GL_UNSIGNED_INT,
-        nullptr);
+  if (shape.triangles) {
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape.triangles);
+    glDrawElements(GL_TRIANGLES, (GLsizei)shape.num_triangles * 3,
+        GL_UNSIGNED_INT, nullptr);
   }
-  if (is_initialized(shape.quads)) {
-    auto& indices = shape.quads;
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indices.buffer_id);
-    glDrawElements(GL_TRIANGLES,
-        (GLsizei)indices.num_elements * indices.element_size, GL_UNSIGNED_INT,
-        nullptr);
+  if (shape.quads) {
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape.quads);
+    glDrawElements(
+        GL_TRIANGLES, (GLsizei)shape.num_quads * 3, GL_UNSIGNED_INT, nullptr);
   }
 
   glBindVertexArray(0);
