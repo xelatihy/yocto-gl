@@ -1327,30 +1327,37 @@ void set_lighting_uniforms(ogl_program& program, const glscene_state& scene,
   auto lighting = params.lighting;
   if (lighting == glscene_lighting_type::camlight) {
     auto& lights = camera_lights;
-    set_uniform(program, "lighting", 1);
-    set_uniform(program, "ambient", vec3f{0, 0, 0});
-    set_uniform(program, "lights_num", (int)lights.size());
+    glUniform1i(glGetUniformLocation(program.program_id, "lighting"), 1);
+    glUniform3f(glGetUniformLocation(program.program_id, "ambient"), 0, 0, 0);
+    glUniform1i(glGetUniformLocation(program.program_id, "lights_num"),
+        (int)lights.size());
     auto lid = 0;
     for (auto light : lights) {
       auto is = std::to_string(lid);
       if (light->camera) {
         auto position = transform_direction(view.camera_frame, light->position);
-        set_uniform(program, ("lights_position[" + is + "]").c_str(), position);
+        glUniform3f(glGetUniformLocation(program.program_id,
+                        ("lights_position[" + is + "]").c_str()),
+            position.x, position.y, position.z);
       } else {
-        set_uniform(
-            program, ("lights_position[" + is + "]").c_str(), light->position);
+        glUniform3f(glGetUniformLocation(program.program_id,
+                        ("lights_position[" + is + "]").c_str()),
+            light->position.x, light->position.y, light->position.z);
       }
-      set_uniform(
-          program, ("lights_emission[" + is + "]").c_str(), light->emission);
-      set_uniform(program, ("lights_type[" + is + "]").c_str(), 1);
+      glUniform3f(glGetUniformLocation(program.program_id,
+                      ("lights_emission[" + is + "]").c_str()),
+          light->emission.x, light->emission.y, light->emission.z);
+      glUniform1i(glGetUniformLocation(
+                      program.program_id, ("lights_type[" + is + "]").c_str()),
+          1);
       lid++;
     }
     set_uniform(program, "envlight_irradiance", ogl_cubemap{}, 6);
     set_uniform(program, "envlight_reflection", ogl_cubemap{}, 7);
     set_uniform(program, "envlight_brdflut", ogl_texture{}, 8);
   } else if (lighting == glscene_lighting_type::eyelight) {
-    set_uniform(program, "lighting", 0);
-    set_uniform(program, "lights_num", 0);
+    glUniform1i(glGetUniformLocation(program.program_id, "lighting"), 0);
+    glUniform1i(glGetUniformLocation(program.program_id, "lights_num"), 0);
     set_uniform(program, "envlight_irradiance", ogl_cubemap{}, 6);
     set_uniform(program, "envlight_reflection", ogl_cubemap{}, 7);
     set_uniform(program, "envlight_brdflut", ogl_texture{}, 8);
