@@ -668,17 +668,7 @@ static void init_glscene(glscene_state& glscene, const scene_model& ioscene) {
 static void update_glscene(glscene_state& glscene, const scene_model& scene,
     const vector<int>& updated_shapes, const vector<int>& updated_textures) {
   for (auto shape_id : updated_shapes) {
-    auto& shape   = scene.shapes.at(shape_id);
-    auto& glshape = glscene.shapes.at(shape_id);
-    if (!shape.points.empty()) set_points(glshape, shape.points);
-    if (!shape.lines.empty()) set_lines(glshape, shape.lines);
-    if (!shape.triangles.empty()) set_triangles(glshape, shape.triangles);
-    if (!shape.quads.empty()) set_quads(glshape, shape.quads);
-    if (!shape.positions.empty()) set_positions(glshape, shape.positions);
-    if (!shape.normals.empty()) set_normals(glshape, shape.normals);
-    if (!shape.texcoords.empty()) set_texcoords(glshape, shape.texcoords);
-    if (!shape.colors.empty()) set_colors(glshape, shape.colors);
-    if (!shape.tangents.empty()) set_tangents(glshape, shape.tangents);
+    set_shape(glscene.shapes[shape_id], scene.shapes[shape_id]);
   }
   for (auto texture_id : updated_textures) {
     set_texture(glscene.textures[texture_id], scene.textures[texture_id]);
