@@ -124,6 +124,7 @@ static bool draw_image_inspector(const glinput_state& input,
   if (begin_glheader("inspect")) {
     draw_glslider("zoom", glparams.scale, 0.1, 10);
     draw_glcheckbox("fit", glparams.fit);
+    draw_glcoloredit("background", glparams.background);
     auto [i, j] = image_coords(input.mouse_pos, glparams.center, glparams.scale,
         {image.width, image.height});
     auto ij     = vec2i{i, j};
@@ -689,6 +690,7 @@ void glview_scene(const string& title, const string& name, scene_model& scene,
       draw_glslider("gamma", params.gamma, 0.1f, 4);
       draw_glslider("near", params.near, 0.01f, 1.0f);
       draw_glslider("far", params.far, 1000.0f, 10000.0f);
+      draw_glcoloredit("background", params.background);
       end_glheader();
     }
     // draw_scene_editor(scene, selection, {});
@@ -872,8 +874,9 @@ static auto glimage_fragment =
 in vec2 frag_texcoord;
 out vec4 frag_color;
 uniform sampler2D txt;
+uniform vec4 background;
 void main() {
-    frag_color = texture(txt, frag_texcoord);
+  frag_color = texture(txt, frag_texcoord);
 }
 )";
 #if 0
@@ -939,22 +942,22 @@ void clear_image(glimage_state& glimage) {
   glimage = {};
 }
 
-void set_image(glimage_state& glimage, const color_image& img) {
-  if (!glimage.texture || glimage.width != img.width ||
-      glimage.height != img.height) {
+void set_image(glimage_state& glimage, const color_image& image) {
+  if (!glimage.texture || glimage.width != image.width ||
+      glimage.height != image.height) {
     if (!glimage.texture) glGenTextures(1, &glimage.texture);
     glBindTexture(GL_TEXTURE_2D, glimage.texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img.width, img.height, 0, GL_RGBA,
-        GL_FLOAT, img.pixels.data());
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image.width, image.height, 0,
+        GL_RGBA, GL_FLOAT, image.pixels.data());
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   } else {
     glBindTexture(GL_TEXTURE_2D, glimage.texture);
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, img.width, img.height, GL_RGBA,
-        GL_FLOAT, img.pixels.data());
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, image.width, image.height, GL_RGBA,
+        GL_FLOAT, image.pixels.data());
   }
-  glimage.width  = img.width;
-  glimage.height = img.height;
+  glimage.width  = image.width;
+  glimage.height = image.height;
 }
 
 // draw image
@@ -970,6 +973,11 @@ void draw_image(glimage_state& glimage, const glimage_params& params) {
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   glEnable(GL_DEPTH_TEST);
 
+  // blend
+  glEnable(GL_BLEND);
+  glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_ADD);
+  glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ZERO);
+
   // bind program and params
   glUseProgram(glimage.program);
   glActiveTexture(GL_TEXTURE0);
@@ -983,6 +991,9 @@ void draw_image(glimage_state& glimage, const glimage_params& params) {
       params.center.x, params.center.y);
   glUniform1f(
       glGetUniformLocation(glimage.program, "image_scale"), params.scale);
+  glUniform4f(glGetUniformLocation(glimage.program, "background"),
+      params.background.x, params.background.y, params.background.z,
+      params.background.w);
   assert_glerror();
 
   // draw
@@ -995,6 +1006,9 @@ void draw_image(glimage_state& glimage, const glimage_params& params) {
   // unbind program
   glUseProgram(0);
   assert_glerror();
+
+  // blend
+  glDisable(GL_BLEND);
 }
 
 }  // namespace yocto
@@ -1912,7 +1926,6 @@ bool draw_glslider(const char* lbl, vec3f& value, float min, float max) {
 bool draw_glslider(const char* lbl, vec4f& value, float min, float max) {
   return ImGui::SliderFloat4(lbl, &value.x, min, max);
 }
-
 bool draw_glslider(const char* lbl, int& value, int min, int max) {
   return ImGui::SliderInt(lbl, &value, min, max);
 }
@@ -1942,7 +1955,6 @@ bool draw_gldragger(
     const char* lbl, vec4f& value, float speed, float min, float max) {
   return ImGui::DragFloat4(lbl, &value.x, speed, min, max);
 }
-
 bool draw_gldragger(
     const char* lbl, int& value, float speed, int min, int max) {
   return ImGui::DragInt(lbl, &value, speed, min, max);
@@ -2004,7 +2016,6 @@ bool draw_glcoloredit(const char* lbl, vec3f& value) {
   auto flags = ImGuiColorEditFlags_Float;
   return ImGui::ColorEdit3(lbl, &value.x, flags);
 }
-
 bool draw_glcoloredit(const char* lbl, vec4f& value) {
   auto flags = ImGuiColorEditFlags_Float;
   return ImGui::ColorEdit4(lbl, &value.x, flags);
