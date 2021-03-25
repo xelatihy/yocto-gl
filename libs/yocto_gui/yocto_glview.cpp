@@ -1926,7 +1926,6 @@ bool draw_glslider(const char* lbl, vec3f& value, float min, float max) {
 bool draw_glslider(const char* lbl, vec4f& value, float min, float max) {
   return ImGui::SliderFloat4(lbl, &value.x, min, max);
 }
-
 bool draw_glslider(const char* lbl, int& value, int min, int max) {
   return ImGui::SliderInt(lbl, &value, min, max);
 }
@@ -1956,7 +1955,6 @@ bool draw_gldragger(
     const char* lbl, vec4f& value, float speed, float min, float max) {
   return ImGui::DragFloat4(lbl, &value.x, speed, min, max);
 }
-
 bool draw_gldragger(
     const char* lbl, int& value, float speed, int min, int max) {
   return ImGui::DragInt(lbl, &value, speed, min, max);
@@ -2018,7 +2016,6 @@ bool draw_glcoloredit(const char* lbl, vec3f& value) {
   auto flags = ImGuiColorEditFlags_Float;
   return ImGui::ColorEdit3(lbl, &value.x, flags);
 }
-
 bool draw_glcoloredit(const char* lbl, vec4f& value) {
   auto flags = ImGuiColorEditFlags_Float;
   return ImGui::ColorEdit4(lbl, &value.x, flags);
