@@ -162,19 +162,26 @@ void clear_texture(glscene_texture& gltexture);
 // Opengl shape
 struct glscene_shape {
   // OpenGL objects
-  ogl_arraybuffer   positions  = {};
-  ogl_arraybuffer   normals    = {};
-  ogl_arraybuffer   texcoords  = {};
-  ogl_arraybuffer   colors     = {};
-  ogl_arraybuffer   tangents   = {};
   ogl_elementbuffer points     = {};
   ogl_elementbuffer lines      = {};
   ogl_elementbuffer triangles  = {};
   ogl_elementbuffer quads      = {};
   float             point_size = 1;
 
+  // Shape properties
+  int num_positions = 0;
+  int num_normals   = 0;
+  int num_texcoords = 0;
+  int num_colors    = 0;
+  int num_tangents  = 0;
+
   // OpenGl state
   uint vertexarray = 0;
+  uint positions   = 0;
+  uint normals     = 0;
+  uint texcoords   = 0;
+  uint colors      = 0;
+  uint tangents    = 0;
 
   // Disable copy construction
   glscene_shape()                     = default;
@@ -186,6 +193,11 @@ struct glscene_shape {
     std::swap(texcoords, other.texcoords);
     std::swap(colors, other.colors);
     std::swap(tangents, other.tangents);
+    std::swap(num_positions, other.num_positions);
+    std::swap(num_normals, other.num_normals);
+    std::swap(num_texcoords, other.num_texcoords);
+    std::swap(num_colors, other.num_colors);
+    std::swap(num_tangents, other.num_tangents);
     std::swap(points, other.points);
     std::swap(lines, other.lines);
     std::swap(triangles, other.triangles);

@@ -1131,9 +1131,12 @@ static void set_index_buffer(glscene_shape& shape, ogl_elementbuffer& buffer,
 
 // Create shape
 void set_shape(glscene_shape& glshape, const scene_shape& shape) {
-  auto set_vertex = [](ogl_arraybuffer& buffer, const auto& data,
+  auto set_vertex = [](uint& buffer, int& num, const auto& data,
                         const auto& def, int location) {
     if (data.empty()) {
+      if (buffer) glDeleteBuffers(1, &buffer);
+      buffer = 0;
+      num    = 0;
       glDisableVertexAttribArray(location);
       if constexpr (sizeof(def) == sizeof(float))
         glVertexAttrib1f(location, (float)def);
@@ -1144,11 +1147,23 @@ void set_shape(glscene_shape& glshape, const scene_shape& shape) {
       if constexpr (sizeof(def) == sizeof(vec4f))
         glVertexAttrib4fv(location, (float*)&def.x);
     } else {
-      set_arraybuffer(buffer, data, false);
-      glBindBuffer(GL_ARRAY_BUFFER, buffer.buffer_id);
+      if (!buffer || (int)data.size() != num) {
+        if (buffer) glDeleteBuffers(1, &buffer);
+        glGenBuffers(1, &buffer);
+        glBindBuffer(GL_ARRAY_BUFFER, buffer);
+        glBufferData(GL_ARRAY_BUFFER, data.size() * sizeof(data.front()),
+            data.data(), GL_STATIC_DRAW);
+        num = (int)data.size();
+      } else {
+        // we have enough space
+        glBindBuffer(GL_ARRAY_BUFFER, buffer);
+        glBufferSubData(GL_ARRAY_BUFFER, 0, data.size() * sizeof(data.front()),
+            data.data());
+      }
+      glBindBuffer(GL_ARRAY_BUFFER, buffer);
       glEnableVertexAttribArray(location);
-      glVertexAttribPointer(
-          location, buffer.element_size, GL_FLOAT, false, 0, nullptr);
+      glVertexAttribPointer(location, sizeof(data.front()) / sizeof(float),
+          GL_FLOAT, false, 0, nullptr);
     }
   };
 
@@ -1163,27 +1178,32 @@ void set_shape(glscene_shape& glshape, const scene_shape& shape) {
   } else if (shape.quads.size() != 0) {
     set_index_buffer(glshape, glshape.quads, quads_to_triangles(shape.quads));
   }
-  set_vertex(glshape.positions, shape.positions, vec3f{0, 0, 0}, 0);
-  set_vertex(glshape.normals, shape.normals, vec3f{0, 0, 1}, 1);
-  set_vertex(glshape.texcoords, shape.texcoords, vec2f{0, 0}, 2);
-  set_vertex(glshape.colors, shape.colors, vec4f{1, 1, 1, 1}, 3);
-  set_vertex(glshape.tangents, shape.tangents, vec4f{0, 0, 1, 1}, 4);
+  set_vertex(glshape.positions, glshape.num_positions, shape.positions,
+      vec3f{0, 0, 0}, 0);
+  set_vertex(
+      glshape.normals, glshape.num_normals, shape.normals, vec3f{0, 0, 1}, 1);
+  set_vertex(glshape.texcoords, glshape.num_texcoords, shape.texcoords,
+      vec2f{0, 0}, 2);
+  set_vertex(
+      glshape.colors, glshape.num_colors, shape.colors, vec4f{1, 1, 1, 1}, 3);
+  set_vertex(glshape.tangents, glshape.num_tangents, shape.tangents,
+      vec4f{0, 0, 1, 1}, 4);
   glBindVertexArray(0);
 }
 
 // Clean shape
 void clear_shape(glscene_shape& glshape) {
-  clear_arraybuffer(glshape.positions);
-  clear_arraybuffer(glshape.normals);
-  clear_arraybuffer(glshape.texcoords);
-  clear_arraybuffer(glshape.colors);
-  clear_arraybuffer(glshape.tangents);
   clear_elementbuffer(glshape.points);
   clear_elementbuffer(glshape.lines);
   clear_elementbuffer(glshape.triangles);
   clear_elementbuffer(glshape.quads);
   if (glshape.vertexarray) glDeleteVertexArrays(1, &glshape.vertexarray);
   glshape.vertexarray = 0;
+  if (glshape.positions) glDeleteBuffers(1, &glshape.positions);
+  if (glshape.normals) glDeleteBuffers(1, &glshape.normals);
+  if (glshape.texcoords) glDeleteBuffers(1, &glshape.texcoords);
+  if (glshape.colors) glDeleteBuffers(1, &glshape.colors);
+  if (glshape.tangents) glDeleteBuffers(1, &glshape.tangents);
   assert_ogl_error_();
 }
 
@@ -1297,8 +1317,7 @@ void set_instance_uniforms(const glscene_state& scene, ogl_program& program,
   set_uniform(program, "frame", shape_xform);
   set_uniform(program, "frameit", shape_inv_xform);
   set_uniform(program, "offset", 0.0f);
-  set_uniform(
-      program, "faceted", params.faceted || !is_initialized(shape.normals));
+  set_uniform(program, "faceted", params.faceted || shape.normals == 0);
 
   auto set_texture = [&scene](ogl_program& program, const char* name,
                          const char* name_on, int texture_idx, int unit) {
