@@ -160,7 +160,36 @@ void set_texture(glscene_texture& gltexture, const scene_texture& texture);
 void clear_texture(glscene_texture& gltexture);
 
 // Opengl shape
-struct glscene_shape : ogl_shape {};
+struct glscene_shape {
+  // OpenGL objects
+  vector<ogl_arraybuffer> vertex_buffers = {};
+  ogl_elementbuffer       index_buffer   = {};
+  ogl_element_type        elements       = ogl_element_type::triangles;
+  size_t                  num_instances  = 0;
+  float                   point_size     = 1;
+
+  // OpenGl state
+  uint shape_id = 0;
+
+  // Disable copy construction
+  glscene_shape()                     = default;
+  glscene_shape(const glscene_shape&) = delete;
+  glscene_shape& operator=(const glscene_shape&) = delete;
+  glscene_shape(glscene_shape&& other) {
+    vertex_buffers.swap(other.vertex_buffers);
+    std::swap(index_buffer, other.index_buffer);
+    std::swap(elements, other.elements);
+    std::swap(num_instances, other.num_instances);
+    std::swap(point_size, other.point_size);
+    std::swap(shape_id, other.shape_id);
+  }
+};
+
+// Create shape
+void set_shape(glscene_shape& glshape, const scene_shape& shape);
+
+// Clean shape
+void clear_shape(glscene_shape& glshape);
 
 // Opengl environment
 struct glscene_environment {
@@ -187,11 +216,11 @@ struct glscene_state {
   vector<glscene_environment> environments = {};
 
   // data for envmaps
-  vector<glscene_shape> envlight_shapes    = {};
-  vector<ogl_cubemap>   envlight_cubemaps  = {};
-  vector<ogl_cubemap>   envlight_diffuses  = {};
-  vector<ogl_cubemap>   envlight_speculars = {};
-  vector<ogl_texture>   envlight_brdfluts  = {};
+  vector<ogl_shape>   envlight_shapes    = {};
+  vector<ogl_cubemap> envlight_cubemaps  = {};
+  vector<ogl_cubemap> envlight_diffuses  = {};
+  vector<ogl_cubemap> envlight_speculars = {};
+  vector<ogl_texture> envlight_brdfluts  = {};
 
   // programs
   ogl_program environment_program;

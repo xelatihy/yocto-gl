@@ -1091,6 +1091,35 @@ void clear_texture(glscene_texture& gltexture) {
   }
 }
 
+// Create shape
+void set_shape(glscene_shape& glshape, const scene_shape& shape) {
+  if (shape.points.size() != 0) {
+    set_points(glshape, shape.points);
+  } else if (shape.lines.size() != 0) {
+    set_lines(glshape, shape.lines);
+  } else if (shape.triangles.size() != 0) {
+    set_triangles(glshape, shape.triangles);
+  } else if (shape.quads.size() != 0) {
+    set_quads(glshape, shape.quads);
+  }
+  set_positions(glshape, shape.positions);
+  set_normals(glshape, shape.normals);
+  set_texcoords(glshape, shape.texcoords);
+  set_colors(glshape, shape.colors);
+}
+
+// Clean shape
+void clear_shape(glscene_shape& glshape) {
+  for (auto& buffer : glshape.vertex_buffers) {
+    clear_arraybuffer(buffer);
+  }
+  clear_elementbuffer(glshape.index_buffer);
+  glDeleteVertexArrays(1, &glshape.shape_id);
+  glshape.num_instances = 0;
+  glshape.shape_id      = 0;
+  assert_ogl_error();
+}
+
 bool has_normals(const glscene_shape& shape) {
   if (shape.vertex_buffers.size() <= 1) return false;
   return is_initialized(shape.vertex_buffers[1]);
@@ -1123,65 +1152,65 @@ const ogl_arraybuffer& get_tangents(const glscene_shape& shape) {
 
 void set_positions(glscene_shape& shape, const vector<vec3f>& positions) {
   if (positions.empty()) {
-    set_vertex_buffer(shape, vec3f{0, 0, 0}, 0);
+    set_vertex_buffer((ogl_shape&)shape, vec3f{0, 0, 0}, 0);
   } else {
-    set_vertex_buffer(shape, positions, 0);
+    set_vertex_buffer((ogl_shape&)shape, positions, 0);
   }
 }
 void set_normals(glscene_shape& shape, const vector<vec3f>& normals) {
   if (normals.empty()) {
-    set_vertex_buffer(shape, vec3f{0, 0, 1}, 1);
+    set_vertex_buffer((ogl_shape&)shape, vec3f{0, 0, 1}, 1);
   } else {
-    set_vertex_buffer(shape, normals, 1);
+    set_vertex_buffer((ogl_shape&)shape, normals, 1);
   }
 }
 void set_texcoords(glscene_shape& shape, const vector<vec2f>& texcoords) {
   if (texcoords.empty()) {
-    set_vertex_buffer(shape, vec2f{0, 0}, 2);
+    set_vertex_buffer((ogl_shape&)shape, vec2f{0, 0}, 2);
   } else {
-    set_vertex_buffer(shape, texcoords, 2);
+    set_vertex_buffer((ogl_shape&)shape, texcoords, 2);
   }
 }
 void set_colors(glscene_shape& shape, const vector<vec4f>& colors) {
   if (colors.empty()) {
-    set_vertex_buffer(shape, vec4f{1, 1, 1, 1}, 3);
+    set_vertex_buffer((ogl_shape&)shape, vec4f{1, 1, 1, 1}, 3);
   } else {
-    set_vertex_buffer(shape, colors, 3);
+    set_vertex_buffer((ogl_shape&)shape, colors, 3);
   }
 }
 void set_tangents(glscene_shape& shape, const vector<vec4f>& tangents) {
   if (tangents.empty()) {
-    set_vertex_buffer(shape, vec4f{0, 0, 1, 1}, 4);
+    set_vertex_buffer((ogl_shape&)shape, vec4f{0, 0, 1, 1}, 4);
   } else {
-    set_vertex_buffer(shape, tangents, 4);
+    set_vertex_buffer((ogl_shape&)shape, tangents, 4);
   }
 }
 void set_instances(glscene_shape& shape, const vector<vec3f>& froms,
     const vector<vec3f>& tos) {
   if (froms.empty()) {
-    set_vertex_buffer(shape, vec3f{0, 0, 0}, 5);
-    set_instance_buffer(shape, 5, false);
+    set_vertex_buffer((ogl_shape&)(ogl_shape&)shape, vec3f{0, 0, 0}, 5);
+    set_instance_buffer((ogl_shape&)shape, 5, false);
   } else {
-    set_vertex_buffer(shape, froms, 5);
-    set_instance_buffer(shape, 5, true);
+    set_vertex_buffer((ogl_shape&)shape, froms, 5);
+    set_instance_buffer((ogl_shape&)shape, 5, true);
   }
   if (tos.empty()) {
-    set_vertex_buffer(shape, vec3f{0, 0, 0}, 5);
-    set_instance_buffer(shape, 6, false);
+    set_vertex_buffer((ogl_shape&)shape, vec3f{0, 0, 0}, 5);
+    set_instance_buffer((ogl_shape&)shape, 6, false);
   } else {
-    set_vertex_buffer(shape, tos, 6);
-    set_instance_buffer(shape, 6, true);
+    set_vertex_buffer((ogl_shape&)shape, tos, 6);
+    set_instance_buffer((ogl_shape&)shape, 6, true);
   }
 }
 
 void set_points(glscene_shape& shape, const vector<int>& points) {
-  set_index_buffer(shape, points);
+  set_index_buffer((ogl_shape&)shape, points);
 }
 void set_lines(glscene_shape& shape, const vector<vec2i>& lines) {
-  set_index_buffer(shape, lines);
+  set_index_buffer((ogl_shape&)shape, lines);
 }
 void set_triangles(glscene_shape& shape, const vector<vec3i>& triangles) {
-  set_index_buffer(shape, triangles);
+  set_index_buffer((ogl_shape&)shape, triangles);
 }
 void set_quads(glscene_shape& shape, const vector<vec4i>& quads) {
   auto triangles = vector<vec3i>{};
@@ -1190,7 +1219,7 @@ void set_quads(glscene_shape& shape, const vector<vec4i>& quads) {
     triangles.push_back({q.x, q.y, q.w});
     if (q.z != q.w) triangles.push_back({q.z, q.w, q.y});
   }
-  set_index_buffer(shape, triangles);
+  set_index_buffer((ogl_shape&)shape, triangles);
 }
 
 // set point size
