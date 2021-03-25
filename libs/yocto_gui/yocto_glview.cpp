@@ -1200,9 +1200,11 @@ void set_view_uniforms(ogl_program& program, const shade_view& view) {
 }
 
 void set_params_uniforms(ogl_program& program, const glscene_params& params) {
-  set_uniform(program, "exposure", params.exposure);
-  set_uniform(program, "gamma", params.gamma);
-  set_uniform(program, "double_sided", params.double_sided);
+  glUniform1f(
+      glGetUniformLocation(program.program_id, "exposure"), params.exposure);
+  glUniform1f(glGetUniformLocation(program.program_id, "gamma"), params.gamma);
+  glUniform1i(glGetUniformLocation(program.program_id, "double_sided"),
+      params.double_sided ? 1 : 0);
 }
 
 // Draw a shape
@@ -1212,10 +1214,13 @@ void set_instance_uniforms(const glscene_state& scene, ogl_program& program,
   auto shape_xform     = frame_to_mat(frame);
   auto shape_inv_xform = transpose(
       frame_to_mat(inverse(frame, params.non_rigid_frames)));
-  set_uniform(program, "frame", shape_xform);
-  set_uniform(program, "frameit", shape_inv_xform);
-  set_uniform(program, "offset", 0.0f);
-  set_uniform(program, "faceted", params.faceted || shape.normals == 0);
+  glUniformMatrix4fv(glGetUniformLocation(program.program_id, "frame"), 1,
+      false, &shape_xform.x.x);
+  glUniformMatrix4fv(glGetUniformLocation(program.program_id, "frameit"), 1,
+      false, &shape_inv_xform.x.x);
+  glUniform1f(glGetUniformLocation(program.program_id, "offset"), 0.0f);
+  glUniform1i(glGetUniformLocation(program.program_id, "faceted"),
+      (params.faceted || shape.normals == 0) ? 1 : 0);
 
   auto set_texture = [&scene](ogl_program& program, const char* name,
                          const char* name_on, int texture_idx, int unit) {
