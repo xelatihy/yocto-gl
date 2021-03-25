@@ -1139,7 +1139,6 @@ shade_brdf eval_brdf() {
   brdf.specular  = base_t.xyz * metallic_t + vec3(0.04) * (1 - metallic_t);
   brdf.roughness = roughness_t;
   brdf.opacity   = base_t.w;
-  brdf.roughness = roughness_t;
   return brdf;
 }
 
