@@ -289,7 +289,7 @@ namespace yocto {
 inline void print_info(const string& message) {
   printf("%s\n", message.c_str());
 }
-// Prints a messgae to the console and exit with an error.
+// Prints a message to the console and exit with an error.
 inline int print_fatal(const string& message) {
   printf("\n%s\n", message.c_str());
   exit(1);
@@ -544,10 +544,11 @@ inline void validate_name(const cli_command& cli, const string& name) {
   }
 }
 
-template <typename T>
-inline void add_option_impl(cli_command& cli, const string& name, T& value,
-    cli_type type, int nargs, const string& usage, const vector<T>& minmax,
-    const vector<string>& choices, const string& alt, bool req) {
+inline void add_option_impl(cli_command& cli, const string& name,
+    const vector<cli_value>& value, cli_type type, int nargs,
+    const string& usage, const vector<cli_value>& minmax,
+    const vector<string>& choices, const string& alt, bool req,
+    function<bool(const cli_option&)> set_value) {
   validate_name(cli, name);
   auto& option      = cli.options.emplace_back();
   option.name       = name;
@@ -557,19 +558,18 @@ inline void add_option_impl(cli_command& cli, const string& name, T& value,
   option.req        = req;
   option.nargs      = nargs;
   option.usage      = usage;
-  option.minmax     = make_cli_values(minmax);
+  option.minmax     = minmax;
   option.choices    = choices;
-  option.value      = make_cli_values(value);
-  option.def        = make_cli_values(value);
-  option.set_value  = [&value](const cli_option& option) -> bool {
-    return get_value(option, value);
-  };
+  option.value      = value;
+  option.def        = value;
+  option.set_value  = set_value;
 }
 
-template <typename T>
-inline void add_argument_impl(cli_command& cli, const string& name, T& value,
-    cli_type type, int nargs, const string& usage, const vector<T>& minmax,
-    const vector<string>& choices, bool req) {
+inline void add_argument_impl(cli_command& cli, const string& name,
+    const vector<cli_value>& value, cli_type type, int nargs,
+    const string& usage, const vector<cli_value>& minmax,
+    const vector<string>& choices, bool req,
+    function<bool(const cli_option&)> set_value) {
   validate_name(cli, name);
   auto& option      = cli.arguments.emplace_back();
   option.name       = name;
@@ -579,19 +579,18 @@ inline void add_argument_impl(cli_command& cli, const string& name, T& value,
   option.req        = req;
   option.nargs      = nargs;
   option.usage      = usage;
-  option.minmax     = make_cli_values(value);
+  option.minmax     = minmax;
   option.choices    = choices;
-  option.value      = make_cli_values(value);
-  option.def        = make_cli_values(value);
-  option.set_value  = [&value](const cli_option& option) -> bool {
-    return get_value(option, value);
-  };
+  option.value      = value;
+  option.def        = value;
+  option.set_value  = set_value;
 }
 
-template <typename T>
 inline void add_argumentv_impl(cli_command& cli, const string& name,
-    vector<T>& value, cli_type type, int nargs, const string& usage,
-    const vector<T>& minmax, const vector<string>& choices, bool req) {
+    const vector<cli_value>& value, cli_type type, int nargs,
+    const string& usage, const vector<cli_value>& minmax,
+    const vector<string>& choices, bool req,
+    function<bool(const cli_option&)> set_value) {
   validate_name(cli, name);
   auto& option      = cli.arguments.emplace_back();
   option.name       = name;
@@ -601,13 +600,11 @@ inline void add_argumentv_impl(cli_command& cli, const string& name,
   option.req        = req;
   option.nargs      = nargs;
   option.usage      = usage;
-  option.minmax     = make_cli_values(value);
+  option.minmax     = minmax;
   option.choices    = choices;
-  option.value      = make_cli_values(value);
-  option.def        = make_cli_values(value);
-  option.set_value  = [&value](const cli_option& option) -> bool {
-    return get_value(option, value);
-  };
+  option.value      = value;
+  option.def        = value;
+  option.set_value  = set_value;
 }
 
 // Add an optional argument. Supports strings, numbers, and boolean flags.
@@ -617,84 +614,121 @@ inline void add_argumentv_impl(cli_command& cli, const string& name,
 inline void add_option(cli_command& cli, const string& name, int& value,
     const string& usage, const vector<int>& minmax, const string& alt,
     bool req) {
-  return add_option_impl(
-      cli, name, value, cli_type::integer, 1, usage, minmax, {}, alt, req);
+  return add_option_impl(cli, name, make_cli_values(value), cli_type::integer,
+      1, usage, make_cli_values(minmax), {}, alt, req,
+      [&value](const cli_option& option) -> bool {
+        return get_value(option, value);
+      });
 }
 inline void add_option(cli_command& cli, const string& name, float& value,
     const string& usage, const vector<float>& minmax, const string& alt,
     bool req) {
-  return add_option_impl(
-      cli, name, value, cli_type::number, 1, usage, minmax, {}, alt, req);
+  return add_option_impl(cli, name, make_cli_values(value), cli_type::number, 1,
+      usage, make_cli_values(minmax), {}, alt, req,
+      [&value](const cli_option& option) -> bool {
+        return get_value(option, value);
+      });
 }
 inline void add_option(cli_command& cli, const string& name, bool& value,
     const string& usage, const vector<string>& choices, const string& alt,
     bool req) {
-  return add_option_impl(
-      cli, name, value, cli_type::boolean, 0, usage, {}, choices, alt, req);
+  return add_option_impl(cli, name, make_cli_values(value), cli_type::boolean,
+      0, usage, {}, choices, alt, req,
+      [&value](const cli_option& option) -> bool {
+        return get_value(option, value);
+      });
 }
 inline void add_option(cli_command& cli, const string& name, string& value,
     const string& usage, const vector<string>& choices, const string& alt,
     bool req) {
-  return add_option_impl(
-      cli, name, value, cli_type::string, 1, usage, {}, choices, alt, req);
+  return add_option_impl(cli, name, make_cli_values(value), cli_type::string, 1,
+      usage, {}, choices, alt, req, [&value](const cli_option& option) -> bool {
+        return get_value(option, value);
+      });
 }
 inline void add_option(cli_command& cli, const string& name, int& value,
     const string& usage, const vector<string>& choices, const string& alt,
     bool req) {
-  return add_option_impl(
-      cli, name, value, cli_type::integer, 1, usage, {}, choices, alt, req);
+  return add_option_impl(cli, name, make_cli_values(value), cli_type::integer,
+      1, usage, {}, choices, alt, req,
+      [&value](const cli_option& option) -> bool {
+        return get_value(option, value);
+      });
 }
 // Add a positional argument. Supports strings, numbers, and boolean flags.
 inline void add_argument(cli_command& cli, const string& name, int& value,
     const string& usage, const vector<int>& minmax, bool req) {
-  return add_argument_impl(
-      cli, name, value, cli_type::integer, 1, usage, minmax, {}, req);
+  return add_argument_impl(cli, name, make_cli_values(value), cli_type::integer,
+      1, usage, make_cli_values(minmax), {}, req,
+      [&value](const cli_option& option) -> bool {
+        return get_value(option, value);
+      });
 }
 inline void add_argument(cli_command& cli, const string& name, float& value,
     const string& usage, const vector<float>& minmax, bool req) {
-  return add_argument_impl(
-      cli, name, value, cli_type::number, 1, usage, minmax, {}, req);
+  return add_argument_impl(cli, name, make_cli_values(value), cli_type::number,
+      1, usage, make_cli_values(minmax), {}, req,
+      [&value](const cli_option& option) -> bool {
+        return get_value(option, value);
+      });
 }
 inline void add_argument(cli_command& cli, const string& name, bool& value,
     const string& usage, const vector<string>& choices, bool req) {
-  return add_argument_impl(
-      cli, name, value, cli_type::boolean, 1, usage, {}, choices, req);
+  return add_argument_impl(cli, name, make_cli_values(value), cli_type::boolean,
+      1, usage, {}, choices, req, [&value](const cli_option& option) -> bool {
+        return get_value(option, value);
+      });
 }
 inline void add_argument(cli_command& cli, const string& name, string& value,
     const string& usage, const vector<string>& choices, bool req) {
-  return add_argument_impl(
-      cli, name, value, cli_type::string, 1, usage, {}, choices, req);
+  return add_argument_impl(cli, name, make_cli_values(value), cli_type::string,
+      1, usage, {}, choices, req, [&value](const cli_option& option) -> bool {
+        return get_value(option, value);
+      });
 }
 inline void add_argument(cli_command& cli, const string& name, int& value,
     const string& usage, const vector<string>& choices, bool req) {
-  return add_argument_impl(
-      cli, name, value, cli_type::integer, 1, usage, {}, choices, req);
+  return add_argument_impl(cli, name, make_cli_values(value), cli_type::integer,
+      1, usage, {}, choices, req, [&value](const cli_option& option) -> bool {
+        return get_value(option, value);
+      });
 }
 // Add a positional argument that consumes all arguments left.
 // Supports strings and enums.
 inline void add_argument(cli_command& cli, const string& name,
     vector<int>& value, const string& usage, const vector<int>& minmax,
     bool req) {
-  return add_argumentv_impl(
-      cli, name, value, cli_type::integer, -1, usage, minmax, {}, req);
+  return add_argumentv_impl(cli, name, make_cli_values(value),
+      cli_type::integer, -1, usage, make_cli_values(minmax), {}, req,
+      [&value](const cli_option& option) -> bool {
+        return get_value(option, value);
+      });
 }
 inline void add_argument(cli_command& cli, const string& name,
     vector<float>& value, const string& usage, const vector<float>& minmax,
     bool req) {
-  return add_argumentv_impl(
-      cli, name, value, cli_type::number, -1, usage, minmax, {}, req);
+  return add_argumentv_impl(cli, name, make_cli_values(value), cli_type::number,
+      -1, usage, make_cli_values(minmax), {}, req,
+      [&value](const cli_option& option) -> bool {
+        return get_value(option, value);
+      });
 }
 inline void add_argument(cli_command& cli, const string& name,
     vector<int>& value, const string& usage, const vector<string>& choices,
     bool req) {
-  return add_argumentv_impl(
-      cli, name, value, cli_type::integer, -1, usage, {}, choices, req);
+  return add_argumentv_impl(cli, name, make_cli_values(value),
+      cli_type::integer, -1, usage, {}, choices, req,
+      [&value](const cli_option& option) -> bool {
+        return get_value(option, value);
+      });
 }
 inline void add_argument(cli_command& cli, const string& name,
     vector<string>& value, const string& usage, const vector<string>& choices,
     bool req) {
-  return add_argumentv_impl(
-      cli, name, value, cli_type::string, -1, usage, {}, choices, req);
+  return add_argumentv_impl(cli, name, make_cli_values(value), cli_type::string,
+      -1, usage, {}, choices, req, [&value](const cli_option& option) -> bool {
+        return get_value(option, value);
+      });
 }
 
 // initialize a command line parser
