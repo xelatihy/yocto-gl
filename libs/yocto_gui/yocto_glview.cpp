@@ -1642,7 +1642,6 @@ namespace yocto {
 
 // OpenGL window wrapper
 struct glwindow_state {
-  GLFWwindow*         win           = nullptr;
   string              title         = "";
   init_glcallback     init_cb       = {};
   clear_glcallback    clear_cb      = {};
@@ -1653,6 +1652,7 @@ struct glwindow_state {
   int                 widgets_width = 0;
   bool                widgets_left  = true;
   glinput_state       input         = {};
+  vec2i               window_size   = {0, 0};
   vec4f               background    = {0.15f, 0.15f, 0.15f, 1.0f};
 };
 
@@ -1665,8 +1665,7 @@ static void draw_window(glwindow_state& state) {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
-    auto window = zero2i;
-    glfwGetWindowSize(state.win, &window.x, &window.y);
+    auto window = state.window_size;
     if (state.widgets_left) {
       ImGui::SetNextWindowPos({0, 0});
       ImGui::SetNextWindowSize({(float)state.widgets_width, (float)window.y});
@@ -1686,14 +1685,11 @@ static void draw_window(glwindow_state& state) {
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
   }
-  glfwSwapBuffers(state.win);
 }
 
 // run the user interface with the give callbacks
 void run_ui(const vec2i& size, const string& title,
     const glwindow_callbacks& callbacks, int widgets_width, bool widgets_left) {
-  auto state = glwindow_state{};
-
   // init glfw
   if (!glfwInit())
     throw std::runtime_error("cannot initialize windowing system");
@@ -1704,36 +1700,48 @@ void run_ui(const vec2i& size, const string& title,
   glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 #endif
 
+  // create state
+  auto state        = glwindow_state{};
+  state.title       = title;
+  state.init_cb     = callbacks.init_cb;
+  state.clear_cb    = callbacks.clear_cb;
+  state.draw_cb     = callbacks.draw_cb;
+  state.widgets_cb  = callbacks.widgets_cb;
+  state.update_cb   = callbacks.update_cb;
+  state.uiupdate_cb = callbacks.uiupdate_cb;
+
   // create window
-  state.title = title;
-  state.win = glfwCreateWindow(size.x, size.y, title.c_str(), nullptr, nullptr);
-  if (state.win == nullptr)
+  auto window = glfwCreateWindow(
+      size.x, size.y, title.c_str(), nullptr, nullptr);
+  if (window == nullptr)
     throw std::runtime_error{"cannot initialize windowing system"};
-  glfwMakeContextCurrent(state.win);
+  glfwMakeContextCurrent(window);
   glfwSwapInterval(1);  // Enable vsync
 
   // set user data
-  glfwSetWindowUserPointer(state.win, &state);
+  glfwSetWindowUserPointer(window, &state);
 
   // set callbacks
-  glfwSetWindowRefreshCallback(state.win, [](GLFWwindow* glfw) {
-    auto& state = *(glwindow_state*)glfwGetWindowUserPointer(glfw);
+  glfwSetWindowRefreshCallback(window, [](GLFWwindow* window) {
+    auto& state = *(glwindow_state*)glfwGetWindowUserPointer(window);
+    glfwGetWindowSize(window, &state.window_size.x, &state.window_size.y);
     draw_window(state);
+    glfwSwapBuffers(window);
   });
   glfwSetWindowSizeCallback(
-      state.win, [](GLFWwindow* glfw, int width, int height) {
-        auto& state = *(glwindow_state*)glfwGetWindowUserPointer(glfw);
+      window, [](GLFWwindow* window, int width, int height) {
+        auto& state = *(glwindow_state*)glfwGetWindowUserPointer(window);
         glfwGetWindowSize(
-            state.win, &state.input.window_size.x, &state.input.window_size.y);
+            window, &state.input.window_size.x, &state.input.window_size.y);
         if (state.widgets_width)
           state.input.window_size.x -= state.widgets_width;
-        glfwGetFramebufferSize(state.win, &state.input.framebuffer_viewport.z,
+        glfwGetFramebufferSize(window, &state.input.framebuffer_viewport.z,
             &state.input.framebuffer_viewport.w);
         state.input.framebuffer_viewport.x = 0;
         state.input.framebuffer_viewport.y = 0;
         if (state.widgets_width) {
           auto win_size = zero2i;
-          glfwGetWindowSize(state.win, &win_size.x, &win_size.y);
+          glfwGetWindowSize(window, &win_size.x, &win_size.y);
           auto offset = (int)(state.widgets_width *
                               (float)state.input.framebuffer_viewport.z /
                               win_size.x);
@@ -1751,7 +1759,7 @@ void run_ui(const vec2i& size, const string& title,
     ImGui::CreateContext();
     ImGui::GetIO().IniFilename       = nullptr;
     ImGui::GetStyle().WindowRounding = 0;
-    ImGui_ImplGlfw_InitForOpenGL(state.win, true);
+    ImGui_ImplGlfw_InitForOpenGL(window, true);
 #ifndef __APPLE__
     ImGui_ImplOpenGL3_Init();
 #else
@@ -1762,49 +1770,41 @@ void run_ui(const vec2i& size, const string& title,
     state.widgets_left  = widgets_left;
   }
 
-  // callbacks
-  state.init_cb     = callbacks.init_cb;
-  state.clear_cb    = callbacks.clear_cb;
-  state.draw_cb     = callbacks.draw_cb;
-  state.widgets_cb  = callbacks.widgets_cb;
-  state.update_cb   = callbacks.update_cb;
-  state.uiupdate_cb = callbacks.uiupdate_cb;
-
   // init
   if (state.init_cb) state.init_cb(state.input);
 
   // run ui
-  while (!glfwWindowShouldClose(state.win)) {
+  while (!glfwWindowShouldClose(window)) {
     // update input
     state.input.mouse_last = state.input.mouse_pos;
     auto mouse_posx = 0.0, mouse_posy = 0.0;
-    glfwGetCursorPos(state.win, &mouse_posx, &mouse_posy);
+    glfwGetCursorPos(window, &mouse_posx, &mouse_posy);
     state.input.mouse_pos = vec2f{(float)mouse_posx, (float)mouse_posy};
     if (state.widgets_width && state.widgets_left)
       state.input.mouse_pos.x -= state.widgets_width;
-    state.input.mouse_left =
-        glfwGetMouseButton(state.win, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
+    state.input.mouse_left = glfwGetMouseButton(
+                                 window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
     state.input.mouse_right =
-        glfwGetMouseButton(state.win, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS;
+        glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS;
     state.input.modifier_alt =
-        glfwGetKey(state.win, GLFW_KEY_LEFT_ALT) == GLFW_PRESS ||
-        glfwGetKey(state.win, GLFW_KEY_RIGHT_ALT) == GLFW_PRESS;
+        glfwGetKey(window, GLFW_KEY_LEFT_ALT) == GLFW_PRESS ||
+        glfwGetKey(window, GLFW_KEY_RIGHT_ALT) == GLFW_PRESS;
     state.input.modifier_shift =
-        glfwGetKey(state.win, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ||
-        glfwGetKey(state.win, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
+        glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ||
+        glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
     state.input.modifier_ctrl =
-        glfwGetKey(state.win, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS ||
-        glfwGetKey(state.win, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS;
+        glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS ||
+        glfwGetKey(window, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS;
     glfwGetWindowSize(
-        state.win, &state.input.window_size.x, &state.input.window_size.y);
+        window, &state.input.window_size.x, &state.input.window_size.y);
     if (state.widgets_width) state.input.window_size.x -= state.widgets_width;
-    glfwGetFramebufferSize(state.win, &state.input.framebuffer_viewport.z,
+    glfwGetFramebufferSize(window, &state.input.framebuffer_viewport.z,
         &state.input.framebuffer_viewport.w);
     state.input.framebuffer_viewport.x = 0;
     state.input.framebuffer_viewport.y = 0;
     if (state.widgets_width) {
       auto win_size = zero2i;
-      glfwGetWindowSize(state.win, &win_size.x, &win_size.y);
+      glfwGetWindowSize(window, &win_size.x, &win_size.y);
       auto offset = (int)(state.widgets_width *
                           (float)state.input.framebuffer_viewport.z /
                           win_size.x);
@@ -1833,7 +1833,9 @@ void run_ui(const vec2i& size, const string& title,
     if (state.update_cb) state.update_cb(state.input);
 
     // draw
+    glfwGetWindowSize(window, &state.window_size.x, &state.window_size.y);
     draw_window(state);
+    glfwSwapBuffers(window);
 
     // event hadling
     glfwPollEvents();
@@ -1843,9 +1845,8 @@ void run_ui(const vec2i& size, const string& title,
   if (state.clear_cb) state.clear_cb(state.input);
 
   // clear
-  glfwDestroyWindow(state.win);
+  glfwDestroyWindow(window);
   glfwTerminate();
-  state.win = nullptr;
 }
 
 }  // namespace yocto
