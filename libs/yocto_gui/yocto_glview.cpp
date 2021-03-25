@@ -1261,13 +1261,16 @@ void set_instance_uniforms(const glscene_state& scene, ogl_program& program,
   set_texture(program.program_id, "opacity_tex", "opacity_tex_on", -1, 4);
   set_texture(program.program_id, "normalmap_tex", "normalmap_tex_on",
       material.normal_tex, 5);
+  assert_ogl_error_();
 
-  assert_ogl_error();
-
-  if (shape.points) set_uniform(program, "element", 1);
-  if (shape.lines) set_uniform(program, "element", 2);
-  if (shape.triangles) set_uniform(program, "element", 3);
-  if (shape.quads) set_uniform(program, "element", 3);
+  if (shape.points)
+    glUniform1i(glGetUniformLocation(program.program_id, "element"), 1);
+  if (shape.lines)
+    glUniform1i(glGetUniformLocation(program.program_id, "element"), 2);
+  if (shape.triangles)
+    glUniform1i(glGetUniformLocation(program.program_id, "element"), 3);
+  if (shape.quads)
+    glUniform1i(glGetUniformLocation(program.program_id, "element"), 3);
   assert_ogl_error_();
 }
 
