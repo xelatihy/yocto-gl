@@ -1186,6 +1186,9 @@ vec3 eval_normal(vec3 outgoing) {
     } else {
       norm = normalize(normal);
     }
+    // apply normal map
+    norm = apply_normal_map(texcoord, norm, tangsp);
+    if (double_sided) norm = faceforward(norm, -outgoing, norm);
   }
 
   if (element == element_lines) {
@@ -1193,11 +1196,6 @@ vec3 eval_normal(vec3 outgoing) {
     norm         = normalize(outgoing - tangent * dot(outgoing, tangent));
   }
 
-  // apply normal map
-  norm = apply_normal_map(texcoord, norm, tangsp);
-
-  // use faceforward to ensure the normals points toward us
-  if (double_sided) norm = faceforward(norm, -outgoing, norm);
   return norm;
 }
 
