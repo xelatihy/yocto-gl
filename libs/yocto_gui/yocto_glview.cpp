@@ -1081,37 +1081,17 @@ void clear_texture(glscene_texture& gltexture) {
 }
 
 template <typename T>
-static void set_vertex_buffer_impl(
-    glscene_shape& shape, const vector<T>& data, int location) {
+static void set_vertex_buffer(glscene_shape& shape, ogl_arraybuffer& buffer,
+    const vector<T>& data, int location) {
   if (!shape.shape_id) glGenVertexArrays(1, &shape.shape_id);
-  while (shape.vertex_buffers.size() <= location) {
-    shape.vertex_buffers.emplace_back();
-  }
-  set_arraybuffer(shape.vertex_buffers[location], data, false);
+  set_arraybuffer(buffer, data, false);
   glBindVertexArray(shape.shape_id);
-  auto& buffer = shape.vertex_buffers[location];
   assert_ogl_error();
   glBindBuffer(GL_ARRAY_BUFFER, buffer.buffer_id);
   glEnableVertexAttribArray(location);
   glVertexAttribPointer(
       location, buffer.element_size, GL_FLOAT, false, 0, nullptr);
   assert_ogl_error();
-}
-
-static void set_vertex_buffer(
-    glscene_shape& shape, const vector<vec2f>& values, int location) {
-  if (!shape.shape_id) glGenVertexArrays(1, &shape.shape_id);
-  set_vertex_buffer_impl(shape, values, location);
-}
-static void set_vertex_buffer(
-    glscene_shape& shape, const vector<vec3f>& values, int location) {
-  if (!shape.shape_id) glGenVertexArrays(1, &shape.shape_id);
-  set_vertex_buffer_impl(shape, values, location);
-}
-static void set_vertex_buffer(
-    glscene_shape& shape, const vector<vec4f>& values, int location) {
-  if (!shape.shape_id) glGenVertexArrays(1, &shape.shape_id);
-  set_vertex_buffer_impl(shape, values, location);
 }
 
 static void set_vertex_buffer(
@@ -1165,35 +1145,37 @@ void set_shape(glscene_shape& glshape, const scene_shape& shape) {
   if (shape.positions.empty()) {
     set_vertex_buffer(glshape, vec3f{0, 0, 0}, 0);
   } else {
-    set_vertex_buffer(glshape, shape.positions, 0);
+    set_vertex_buffer(glshape, glshape.positions, shape.positions, 0);
   }
   if (shape.normals.empty()) {
     set_vertex_buffer(glshape, vec3f{0, 0, 1}, 1);
   } else {
-    set_vertex_buffer(glshape, shape.normals, 1);
+    set_vertex_buffer(glshape, glshape.normals, shape.normals, 1);
   }
   if (shape.texcoords.empty()) {
     set_vertex_buffer(glshape, vec2f{0, 0}, 2);
   } else {
-    set_vertex_buffer(glshape, shape.texcoords, 2);
+    set_vertex_buffer(glshape, glshape.texcoords, shape.texcoords, 2);
   }
   if (shape.colors.empty()) {
     set_vertex_buffer(glshape, vec4f{1, 1, 1, 1}, 3);
   } else {
-    set_vertex_buffer(glshape, shape.colors, 3);
+    set_vertex_buffer(glshape, glshape.colors, shape.colors, 3);
   }
   if (shape.tangents.empty()) {
     set_vertex_buffer(glshape, vec4f{0, 0, 1, 1}, 4);
   } else {
-    set_vertex_buffer(glshape, shape.tangents, 4);
+    set_vertex_buffer(glshape, glshape.tangents, shape.tangents, 4);
   }
 }
 
 // Clean shape
 void clear_shape(glscene_shape& glshape) {
-  for (auto& buffer : glshape.vertex_buffers) {
-    clear_arraybuffer(buffer);
-  }
+  clear_arraybuffer(glshape.positions);
+  clear_arraybuffer(glshape.normals);
+  clear_arraybuffer(glshape.texcoords);
+  clear_arraybuffer(glshape.colors);
+  clear_arraybuffer(glshape.tangents);
   clear_elementbuffer(glshape.index_buffer);
   glDeleteVertexArrays(1, &glshape.shape_id);
   glshape.num_instances = 0;
@@ -1311,8 +1293,8 @@ void set_instance_uniforms(const glscene_state& scene, ogl_program& program,
   set_uniform(program, "frame", shape_xform);
   set_uniform(program, "frameit", shape_inv_xform);
   set_uniform(program, "offset", 0.0f);
-  set_uniform(program, "faceted",
-      params.faceted || !is_initialized(shape.vertex_buffers[1]));
+  set_uniform(
+      program, "faceted", params.faceted || !is_initialized(shape.normals));
   //  if (instance.highlighted) {
   //    set_uniform(program, "highlight", vec4f{1, 1, 0, 1});
   //  } else {
@@ -1399,7 +1381,7 @@ static void draw_shape(glscene_shape& shape) {
           nullptr, (GLsizei)shape.num_instances);
     }
   } else {
-    auto& vertices = shape.vertex_buffers[0];
+    auto& vertices = shape.positions;
     glDrawArrays(type, 0, (int)vertices.num_elements);
   }
 

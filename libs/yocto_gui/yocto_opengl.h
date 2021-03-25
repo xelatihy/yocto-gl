@@ -185,6 +185,10 @@ struct ogl_arraybuffer {
   ogl_arraybuffer(ogl_arraybuffer&& other) {
     move_by_swap(this, std::move(other));
   }
+  ogl_arraybuffer& operator=(ogl_arraybuffer&& other) {
+    move_by_swap(this, std::move(other));
+    return *this;
+  }
 
   // Cleanup
   ~ogl_arraybuffer();

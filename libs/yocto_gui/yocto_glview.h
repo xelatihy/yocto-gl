@@ -162,11 +162,15 @@ void clear_texture(glscene_texture& gltexture);
 // Opengl shape
 struct glscene_shape {
   // OpenGL objects
-  vector<ogl_arraybuffer> vertex_buffers = {};
-  ogl_elementbuffer       index_buffer   = {};
-  ogl_element_type        elements       = ogl_element_type::triangles;
-  size_t                  num_instances  = 0;
-  float                   point_size     = 1;
+  ogl_arraybuffer   positions     = {};
+  ogl_arraybuffer   normals       = {};
+  ogl_arraybuffer   texcoords     = {};
+  ogl_arraybuffer   colors        = {};
+  ogl_arraybuffer   tangents      = {};
+  ogl_elementbuffer index_buffer  = {};
+  ogl_element_type  elements      = ogl_element_type::triangles;
+  size_t            num_instances = 0;
+  float             point_size    = 1;
 
   // OpenGl state
   uint shape_id = 0;
@@ -176,7 +180,11 @@ struct glscene_shape {
   glscene_shape(const glscene_shape&) = delete;
   glscene_shape& operator=(const glscene_shape&) = delete;
   glscene_shape(glscene_shape&& other) {
-    vertex_buffers.swap(other.vertex_buffers);
+    std::swap(positions, other.positions);
+    std::swap(normals, other.normals);
+    std::swap(texcoords, other.texcoords);
+    std::swap(colors, other.colors);
+    std::swap(tangents, other.tangents);
     std::swap(index_buffer, other.index_buffer);
     std::swap(elements, other.elements);
     std::swap(num_instances, other.num_instances);
