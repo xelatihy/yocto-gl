@@ -1124,18 +1124,22 @@ float eval_brdf_value(float value, sampler2D tex, bool tex_on) {
 }
 
 shade_brdf eval_brdf() {
-  vec4 base = vec4(diffuse, opacity);
-  if (diffuse_tex_on) base *= texture(diffuse_tex, texcoord);
-  float metallic = specular.x;
+  vec4 emission_t = vec4(emission, 1);
+  if (emission_tex_on) emission_t *= texture(emission_tex, texcoord);
+  vec4 base_t = vec4(diffuse, opacity);
+  if (diffuse_tex_on) base_t *= texture(diffuse_tex, texcoord);
+  float metallic_t = specular.x;
+  float roughness_t = roughness;
+  roughness_t = roughness_t * roughness_t;
 
   // color?
   shade_brdf brdf;
-  brdf.emission  = eval_brdf_color(emission, emission_tex, emission_tex_on);
-  brdf.diffuse   = base.xyz * (1 - metallic);
-  brdf.specular  = base.xyz * metallic + vec3(0.04) * (1 - metallic);
-  brdf.roughness = eval_brdf_value(roughness, roughness_tex, roughness_tex_on);
-  brdf.opacity   = eval_brdf_value(opacity, opacity_tex, opacity_tex_on);
-  brdf.roughness = brdf.roughness * brdf.roughness;
+  brdf.emission  = emission_t.xyz;
+  brdf.diffuse   = base_t.xyz * (1 - metallic_t);
+  brdf.specular  = base_t.xyz * metallic_t + vec3(0.04) * (1 - metallic_t);
+  brdf.roughness = roughness_t;
+  brdf.opacity   = base_t.w;
+  brdf.roughness = roughness_t;
   return brdf;
 }
 
