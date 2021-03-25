@@ -972,6 +972,9 @@ void draw_image(glimage_state& glimage, const glimage_params& params) {
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   glEnable(GL_DEPTH_TEST);
 
+  // enable blending
+  glEnable(GL_BLEND);
+
   // bind program and params
   glUseProgram(glimage.program);
   glActiveTexture(GL_TEXTURE0);
@@ -997,6 +1000,9 @@ void draw_image(glimage_state& glimage, const glimage_params& params) {
   // unbind program
   glUseProgram(0);
   assert_glerror();
+
+  // enable blending
+  glDisable(GL_BLEND);
 }
 
 }  // namespace yocto
