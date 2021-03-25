@@ -1186,22 +1186,6 @@ struct shade_view {
   mat4f   projection_matrix = {};
 };
 
-void set_view_uniforms(uint program, const shade_view& view) {
-  glUniform3f(glGetUniformLocation(program, "eye"), view.camera_frame.o.x,
-      view.camera_frame.o.y, view.camera_frame.o.z);
-  glUniformMatrix4fv(
-      glGetUniformLocation(program, "view"), 1, false, &view.view_matrix.x.x);
-  glUniformMatrix4fv(glGetUniformLocation(program, "projection"), 1, false,
-      &view.projection_matrix.x.x);
-}
-
-void set_params_uniforms(uint program, const glscene_params& params) {
-  glUniform1f(glGetUniformLocation(program, "exposure"), params.exposure);
-  glUniform1f(glGetUniformLocation(program, "gamma"), params.gamma);
-  glUniform1i(glGetUniformLocation(program, "double_sided"),
-      params.double_sided ? 1 : 0);
-}
-
 // Draw a shape
 void set_instance_uniforms(const glscene_state& scene, uint program,
     const frame3f& frame, const glscene_shape& shape,
@@ -1295,12 +1279,54 @@ static void draw_shape(glscene_shape& shape) {
 
 void set_lighting_uniforms(uint program, const glscene_state& scene,
     const shade_view& view, const glscene_params& params) {
+  assert_ogl_error();
+}
+
+void draw_scene(glscene_state& glscene, const scene_model& scene,
+    const vec4i& viewport, const glscene_params& params) {
+  // check errors
+  assert_ogl_error_();
+
+  // viewport and framebuffer
+  glViewport(viewport.x, viewport.y, viewport.z, viewport.w);
+  glClearColor(params.background.x, params.background.y, params.background.z,
+      params.background.w);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  glEnable(GL_DEPTH_TEST);
+
+  // set program
+  auto& program = glscene.program;
+  glUseProgram(program);
+
+  // camera
+  auto& camera        = scene.cameras.at(params.camera);
+  auto  camera_aspect = (float)viewport.z / (float)viewport.w;
+  auto  camera_yfov =
+      camera_aspect >= 0
+           ? (2 * atan(camera.film / (camera_aspect * 2 * camera.lens)))
+           : (2 * atan(camera.film / (2 * camera.lens)));
+  auto view_matrix       = frame_to_mat(inverse(camera.frame));
+  auto projection_matrix = perspective_mat(
+      camera_yfov, camera_aspect, params.near, params.far);
+  glUniform3f(glGetUniformLocation(program, "eye"), camera.frame.o.x,
+      camera.frame.o.y, camera.frame.o.z);
+  glUniformMatrix4fv(
+      glGetUniformLocation(program, "view"), 1, false, &view_matrix.x.x);
+  glUniformMatrix4fv(glGetUniformLocation(program, "projection"), 1, false,
+      &projection_matrix.x.x);
+
+  // params
+  glUniform1f(glGetUniformLocation(program, "exposure"), params.exposure);
+  glUniform1f(glGetUniformLocation(program, "gamma"), params.gamma);
+  glUniform1i(glGetUniformLocation(program, "double_sided"),
+      params.double_sided ? 1 : 0);
+
+  // set lighting uniforms
   struct gui_light {
     vec3f position = {0, 0, 0};
     vec3f emission = {0, 0, 0};
     bool  camera   = false;
   };
-
   static auto camera_light0 = gui_light{
       normalize(vec3f{1, 1, 1}), vec3f{pif / 2, pif / 2, pif / 2}, true};
   static auto camera_light1 = gui_light{
@@ -1309,9 +1335,8 @@ void set_lighting_uniforms(uint program, const glscene_state& scene,
       normalize(vec3f{-1, -1, 1}), vec3f{pif / 4, pif / 4, pif / 4}, true};
   static auto camera_light3 = gui_light{
       normalize(vec3f{0.1, 0.5, -1}), vec3f{pif / 4, pif / 4, pif / 4}, true};
-  static auto camera_lights = vector<gui_light*>{
-      &camera_light0, &camera_light1, &camera_light2, &camera_light3};
-
+  static auto camera_lights = vector<gui_light>{
+      camera_light0, camera_light1, camera_light2, camera_light3};
   auto lighting = params.lighting;
   if (lighting == glscene_lighting_type::camlight) {
     auto& lights = camera_lights;
@@ -1320,21 +1345,21 @@ void set_lighting_uniforms(uint program, const glscene_state& scene,
     glUniform1i(
         glGetUniformLocation(program, "lights_num"), (int)lights.size());
     auto lid = 0;
-    for (auto light : lights) {
+    for (auto& light : lights) {
       auto is = std::to_string(lid);
-      if (light->camera) {
-        auto position = transform_direction(view.camera_frame, light->position);
+      if (light.camera) {
+        auto position = transform_direction(camera.frame, light.position);
         glUniform3f(glGetUniformLocation(
                         program, ("lights_position[" + is + "]").c_str()),
             position.x, position.y, position.z);
       } else {
         glUniform3f(glGetUniformLocation(
                         program, ("lights_position[" + is + "]").c_str()),
-            light->position.x, light->position.y, light->position.z);
+            light.position.x, light.position.y, light.position.z);
       }
       glUniform3f(glGetUniformLocation(
                       program, ("lights_emission[" + is + "]").c_str()),
-          light->emission.x, light->emission.y, light->emission.z);
+          light.emission.x, light.emission.y, light.emission.z);
       glUniform1i(
           glGetUniformLocation(program, ("lights_type[" + is + "]").c_str()),
           1);
@@ -1346,21 +1371,6 @@ void set_lighting_uniforms(uint program, const glscene_state& scene,
   } else {
     throw std::invalid_argument{"unknown lighting type"};
   }
-  assert_ogl_error();
-}
-
-void draw_instances(glscene_state& glscene, const scene_model& scene,
-    const shade_view& view, const glscene_params& params) {
-  // set program
-  auto& program = glscene.program;
-  glUseProgram(program);
-
-  // set scene uniforms
-  set_view_uniforms(program, view);
-  set_params_uniforms(program, params);
-
-  // set lighting uniforms
-  set_lighting_uniforms(program, glscene, view, params);
 
   set_ogl_wireframe(params.wireframe);
   for (auto& instance : scene.instances) {
@@ -1371,34 +1381,6 @@ void draw_instances(glscene_state& glscene, const scene_model& scene,
     draw_shape(glscene.shapes.at(instance.shape));
   }
   unbind_program();
-}
-
-static shade_view make_scene_view(const scene_camera& camera,
-    const vec4i& viewport, const glscene_params& params) {
-  auto camera_aspect = (float)viewport.z / (float)viewport.w;
-  auto camera_yfov =
-      camera_aspect >= 0
-          ? (2 * atan(camera.film / (camera_aspect * 2 * camera.lens)))
-          : (2 * atan(camera.film / (2 * camera.lens)));
-  auto view_matrix       = frame_to_mat(inverse(camera.frame));
-  auto projection_matrix = perspective_mat(
-      camera_yfov, camera_aspect, params.near, params.far);
-
-  auto view              = shade_view{};
-  view.camera_frame      = camera.frame;
-  view.view_matrix       = view_matrix;
-  view.projection_matrix = projection_matrix;
-  return view;
-}
-
-void draw_scene(glscene_state& glscene, const scene_model& scene,
-    const vec4i& viewport, const glscene_params& params) {
-  clear_ogl_framebuffer(params.background);
-  set_ogl_viewport(viewport);
-
-  auto& camera = scene.cameras.at(params.camera);
-  auto  view   = make_scene_view(camera, viewport, params);
-  draw_instances(glscene, scene, view, params);
 }
 
 #ifndef _WIN32
