@@ -1841,22 +1841,6 @@ void run_ui(const vec2i& size, const string& title,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-void init_glwidgets(glwindow_state* win, int width, bool left) {
-  // init widgets
-  ImGui::CreateContext();
-  ImGui::GetIO().IniFilename       = nullptr;
-  ImGui::GetStyle().WindowRounding = 0;
-  ImGui_ImplGlfw_InitForOpenGL(win->win, true);
-#ifndef __APPLE__
-  ImGui_ImplOpenGL3_Init();
-#else
-  ImGui_ImplOpenGL3_Init("#version 330");
-#endif
-  ImGui::StyleColorsDark();
-  win->widgets_width = width;
-  win->widgets_left  = left;
-}
-
 bool begin_header(glwindow_state* win, const char* lbl) {
   if (!ImGui::CollapsingHeader(lbl)) return false;
   ImGui::PushID(lbl);
