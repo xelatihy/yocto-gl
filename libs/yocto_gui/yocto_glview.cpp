@@ -636,33 +636,6 @@ void view_scene(const string& title, const string& name, scene_model& scene,
   stop_render();
 }
 
-static void init_glscene(glscene_state& glscene, const scene_model& ioscene) {
-  // init scene
-  init_scene(glscene);
-
-  // textures
-  for (auto& iotexture : ioscene.textures) {
-    auto& gltexture = glscene.textures.emplace_back();
-    set_texture(gltexture, iotexture);
-  }
-
-  // shapes
-  for (auto& ioshape : ioscene.shapes) {
-    auto& glshape = glscene.shapes.emplace_back();
-    set_shape(glshape, ioshape);
-  }
-}
-
-static void update_glscene(glscene_state& glscene, const scene_model& scene,
-    const vector<int>& updated_shapes, const vector<int>& updated_textures) {
-  for (auto shape_id : updated_shapes) {
-    set_shape(glscene.shapes[shape_id], scene.shapes[shape_id]);
-  }
-  for (auto texture_id : updated_textures) {
-    set_texture(glscene.textures[texture_id], scene.textures[texture_id]);
-  }
-}
-
 void glview_scene(const string& title, const string& name, scene_model& scene,
     const shade_params& params_, const glview_callback& widgets_callback,
     const glview_callback& uiupdate_callback,
@@ -1168,10 +1141,34 @@ static const char* shade_instance_vertex();
 static const char* shade_instanced_vertex();
 static const char* shade_instance_fragment();
 
-// Initialize an OpenGL scene
-void init_scene(glscene_state& glscene) {
+// init scene
+void init_glscene(glscene_state& glscene, const scene_model& ioscene) {
+  // program
   set_program(glscene.program, glscene.vertex, glscene.fragment,
       shade_instance_vertex(), shade_instance_fragment());
+
+  // textures
+  for (auto& iotexture : ioscene.textures) {
+    auto& gltexture = glscene.textures.emplace_back();
+    set_texture(gltexture, iotexture);
+  }
+
+  // shapes
+  for (auto& ioshape : ioscene.shapes) {
+    auto& glshape = glscene.shapes.emplace_back();
+    set_shape(glshape, ioshape);
+  }
+}
+
+// update scene
+void update_glscene(glscene_state& glscene, const scene_model& scene,
+    const vector<int>& updated_shapes, const vector<int>& updated_textures) {
+  for (auto shape_id : updated_shapes) {
+    set_shape(glscene.shapes[shape_id], scene.shapes[shape_id]);
+  }
+  for (auto texture_id : updated_textures) {
+    set_texture(glscene.textures[texture_id], scene.textures[texture_id]);
+  }
 }
 
 // Clear an OpenGL scene

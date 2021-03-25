@@ -228,9 +228,12 @@ struct glscene_params {
   vec4f                 background       = vec4f{0.15f, 0.15f, 0.15f, 1.0f};
 };
 
-// Initialize an OpenGL scene
-void init_scene(glscene_state& scene);
-bool is_initialized(const glscene_state& scene);
+// init scene
+void init_glscene(glscene_state& glscene, const scene_model& scene);
+
+// update scene
+void update_glscene(glscene_state& glscene, const scene_model& scene,
+    const vector<int>& updated_shapes, const vector<int>& updated_textures);
 
 // Clear an OpenGL scene
 void clear_scene(glscene_state& scene);
