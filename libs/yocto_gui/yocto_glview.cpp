@@ -1246,7 +1246,7 @@ void set_instance_uniforms(const glscene_state& scene, uint program,
   assert_ogl_error_();
 }
 
-static void draw_shape(glscene_shape& shape) {
+[[maybe_unused]] static void draw_shape(glscene_shape& shape) {
   if (shape.vertexarray == 0) return;
   glBindVertexArray(shape.vertexarray);
 
@@ -1430,8 +1430,34 @@ void draw_scene(glscene_state& glscene, const scene_model& scene,
     if (glshape.triangles)
       glUniform1i(glGetUniformLocation(program, "element"), 3);
     if (glshape.quads) glUniform1i(glGetUniformLocation(program, "element"), 3);
+    assert_ogl_error_();
 
-    draw_shape(glscene.shapes.at(instance.shape));
+    glBindVertexArray(glshape.vertexarray);
+    if (glshape.points) {
+      glPointSize(glshape.point_size);
+      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, glshape.points);
+      glDrawElements(
+          GL_POINTS, (GLsizei)glshape.num_points * 1, GL_UNSIGNED_INT, nullptr);
+      glPointSize(glshape.point_size);
+    }
+    if (glshape.lines) {
+      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, glshape.lines);
+      glDrawElements(
+          GL_LINES, (GLsizei)glshape.num_lines * 2, GL_UNSIGNED_INT, nullptr);
+    }
+    if (glshape.triangles) {
+      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, glshape.triangles);
+      glDrawElements(GL_TRIANGLES, (GLsizei)glshape.num_triangles * 3,
+          GL_UNSIGNED_INT, nullptr);
+    }
+    if (glshape.quads) {
+      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, glshape.quads);
+      glDrawElements(GL_TRIANGLES, (GLsizei)glshape.num_quads * 3,
+          GL_UNSIGNED_INT, nullptr);
+    }
+
+    glBindVertexArray(0);
+    assert_ogl_error_();
   }
   if (params.wireframe) glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
