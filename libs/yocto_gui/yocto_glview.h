@@ -336,76 +336,67 @@ void run_ui(const vec2i& size, const string& title,
 namespace yocto {
 
 // Headers
-bool begin_header(glwindow_state* win, const char* title);
-void end_header(glwindow_state* win);
+bool begin_glheader(const char* title);
+void end_glheader();
 
 // Labels
-void draw_label(glwindow_state* win, const char* lbl, const string& text);
-void draw_label(glwindow_state* win, const char* lbl, int value);
-void draw_label(glwindow_state* win, const char* lbl, bool value);
+void draw_gllabel(const char* lbl, const string& text);
+void draw_gllabel(const char* lbl, int value);
+void draw_gllabel(const char* lbl, bool value);
 
 // Lines
-void draw_separator(glwindow_state* win);
-void continue_line(glwindow_state* win);
+void draw_glseparator();
+void continue_glline();
 
 // Buttons
-bool draw_button(glwindow_state* win, const char* lbl, bool enabled = true);
+bool draw_glbutton(const char* lbl, bool enabled = true);
 
 // Text
-bool draw_textinput(glwindow_state* win, const char* lbl, string& value);
+bool draw_gltextinput(const char* lbl, string& value);
 
 // Slider
-bool draw_slider(
-    glwindow_state* win, const char* lbl, float& value, float min, float max);
-bool draw_slider(
-    glwindow_state* win, const char* lbl, vec2f& value, float min, float max);
-bool draw_slider(
-    glwindow_state* win, const char* lbl, vec3f& value, float min, float max);
-bool draw_slider(
-    glwindow_state* win, const char* lbl, vec4f& value, float min, float max);
-bool draw_slider(
-    glwindow_state* win, const char* lbl, int& value, int min, int max);
-bool draw_slider(
-    glwindow_state* win, const char* lbl, vec2i& value, int min, int max);
-bool draw_slider(
-    glwindow_state* win, const char* lbl, vec3i& value, int min, int max);
-bool draw_slider(
-    glwindow_state* win, const char* lbl, vec4i& value, int min, int max);
+bool draw_glslider(const char* lbl, float& value, float min, float max);
+bool draw_glslider(const char* lbl, vec2f& value, float min, float max);
+bool draw_glslider(const char* lbl, vec3f& value, float min, float max);
+bool draw_glslider(const char* lbl, vec4f& value, float min, float max);
+bool draw_glslider(const char* lbl, int& value, int min, int max);
+bool draw_glslider(const char* lbl, vec2i& value, int min, int max);
+bool draw_glslider(const char* lbl, vec3i& value, int min, int max);
+bool draw_glslider(const char* lbl, vec4i& value, int min, int max);
 
 // Dragger
-bool draw_dragger(glwindow_state* win, const char* lbl, float& value,
-    float speed = 1.0f, float min = 0.0f, float max = 0.0f);
-bool draw_dragger(glwindow_state* win, const char* lbl, vec2f& value,
-    float speed = 1.0f, float min = 0.0f, float max = 0.0f);
-bool draw_dragger(glwindow_state* win, const char* lbl, vec3f& value,
-    float speed = 1.0f, float min = 0.0f, float max = 0.0f);
-bool draw_dragger(glwindow_state* win, const char* lbl, vec4f& value,
-    float speed = 1.0f, float min = 0.0f, float max = 0.0f);
-bool draw_dragger(glwindow_state* win, const char* lbl, int& value,
-    float speed = 1, int min = 0, int max = 0);
-bool draw_dragger(glwindow_state* win, const char* lbl, vec2i& value,
-    float speed = 1, int min = 0, int max = 0);
-bool draw_dragger(glwindow_state* win, const char* lbl, vec3i& value,
-    float speed = 1, int min = 0, int max = 0);
-bool draw_dragger(glwindow_state* win, const char* lbl, vec4i& value,
-    float speed = 1, int min = 0, int max = 0);
+bool draw_gldragger(const char* lbl, float& value, float speed = 1.0f,
+    float min = 0.0f, float max = 0.0f);
+bool draw_gldragger(const char* lbl, vec2f& value, float speed = 1.0f,
+    float min = 0.0f, float max = 0.0f);
+bool draw_gldragger(const char* lbl, vec3f& value, float speed = 1.0f,
+    float min = 0.0f, float max = 0.0f);
+bool draw_gldragger(const char* lbl, vec4f& value, float speed = 1.0f,
+    float min = 0.0f, float max = 0.0f);
+bool draw_gldragger(
+    const char* lbl, int& value, float speed = 1, int min = 0, int max = 0);
+bool draw_gldragger(
+    const char* lbl, vec2i& value, float speed = 1, int min = 0, int max = 0);
+bool draw_gldragger(
+    const char* lbl, vec3i& value, float speed = 1, int min = 0, int max = 0);
+bool draw_gldragger(
+    const char* lbl, vec4i& value, float speed = 1, int min = 0, int max = 0);
 
 // Checkbox
-bool draw_checkbox(glwindow_state* win, const char* lbl, bool& value);
-bool draw_checkbox(
-    glwindow_state* win, const char* lbl, bool& value, bool invert);
+bool draw_glcheckbox(const char* lbl, bool& value);
+bool draw_glcheckbox(const char* lbl, bool& value, bool invert);
 
 // Color editor
-bool draw_coloredit(glwindow_state* win, const char* lbl, vec3f& value);
-bool draw_coloredit(glwindow_state* win, const char* lbl, vec4f& value);
-bool draw_coloredit(glwindow_state* win, const char* lbl, vec4b& value);
-bool draw_hdrcoloredit(glwindow_state* win, const char* lbl, vec3f& value);
-bool draw_hdrcoloredit(glwindow_state* win, const char* lbl, vec4f& value);
+bool draw_glcoloredit(const char* lbl, vec3f& value);
+bool draw_glcoloredit(const char* lbl, vec4f& value);
+bool draw_glcoloredit(const char* lbl, vec4b& value);
+bool draw_glcoloredithdr(const char* lbl, vec3f& value);
+bool draw_glcoloredithdr(const char* lbl, vec4f& value);
 
 // Combo box
-bool draw_combobox(glwindow_state* win, const char* lbl, int& idx,
-    const vector<string>& labels, bool include_null = false);
-bool draw_combobox(glwindow_state* win, const char* lbl, string& value,
+bool draw_glcombobox(const char* lbl, int& idx, const vector<string>& labels,
+    bool include_null = false);
+bool draw_glcombobox(const char* lbl, string& value,
     const vector<string>& labels, bool include_null = false);
 
 }  // namespace yocto

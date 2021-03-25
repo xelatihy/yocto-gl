@@ -1267,22 +1267,22 @@ int run_glsculpt(const glsculpt_params& params_) {
       "ymesh", params_.shape, scene, {},
       [&](glwindow_state* win, const glinput_state&, vector<int>&,
           vector<int>&) {
-        draw_combobox(win, "brush type", (int&)params.type, sculpt_brush_names);
+        draw_glcombobox("brush type", (int&)params.type, sculpt_brush_names);
         if (params.type == sculpt_brush_type::gaussian) {
           if (params.strength < 0.8f || params.strength > 1.5f)
             params.strength = 1.0f;
-          draw_slider(win, "radius", params.radius, 0.1f, 0.8f);
-          draw_slider(win, "strength", params.strength, 1.5f, 0.9f);
-          draw_checkbox(win, "negative", params.negative);
+          draw_glslider("radius", params.radius, 0.1f, 0.8f);
+          draw_glslider("strength", params.strength, 1.5f, 0.9f);
+          draw_glcheckbox("negative", params.negative);
         } else if (params.type == sculpt_brush_type::texture) {
           if (params.strength < 0.8f || params.strength > 1.5f)
             params.strength = 1.0f;
-          draw_slider(win, "radius", params.radius, 0.1f, 0.8f);
-          draw_slider(win, "strength", params.strength, 1.5f, 0.9f);
-          draw_checkbox(win, "negative", params.negative);
+          draw_glslider("radius", params.radius, 0.1f, 0.8f);
+          draw_glslider("strength", params.strength, 1.5f, 0.9f);
+          draw_glcheckbox("negative", params.negative);
         } else if (params.type == sculpt_brush_type::smooth) {
-          draw_slider(win, "radius", params.radius, 0.1f, 0.8f);
-          draw_slider(win, "strength", params.strength, 0.1f, 1.0f);
+          draw_glslider("radius", params.radius, 0.1f, 0.8f);
+          draw_glslider("strength", params.strength, 0.1f, 1.0f);
         }
       },
       [&](glwindow_state* win, const glinput_state& input,

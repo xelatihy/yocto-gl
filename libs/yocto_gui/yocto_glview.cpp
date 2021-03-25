@@ -111,10 +111,10 @@ static bool uiupdate_camera_params(
 static bool draw_tonemap_params(glwindow_state* win, const glinput_state& input,
     float& exposure, bool& filmic) {
   auto edited = 0;
-  if (begin_header(win, "tonemap")) {
-    edited += draw_slider(win, "exposure", exposure, -5, 5);
-    edited += draw_checkbox(win, "filmic", filmic);
-    end_header(win);
+  if (begin_glheader("tonemap")) {
+    edited += draw_glslider("exposure", exposure, -5, 5);
+    edited += draw_glcheckbox("filmic", filmic);
+    end_glheader();
   }
   return (bool)edited;
 }
@@ -122,22 +122,22 @@ static bool draw_tonemap_params(glwindow_state* win, const glinput_state& input,
 static bool draw_image_inspector(glwindow_state* win,
     const glinput_state& input, const color_image& image,
     const color_image& display, glimage_params& glparams) {
-  if (begin_header(win, "inspect")) {
-    draw_slider(win, "zoom", glparams.scale, 0.1, 10);
-    draw_checkbox(win, "fit", glparams.fit);
+  if (begin_glheader("inspect")) {
+    draw_glslider("zoom", glparams.scale, 0.1, 10);
+    draw_glcheckbox("fit", glparams.fit);
     auto [i, j] = image_coords(input.mouse_pos, glparams.center, glparams.scale,
         {image.width, image.height});
     auto ij     = vec2i{i, j};
-    draw_dragger(win, "mouse", ij);
+    draw_gldragger("mouse", ij);
     auto image_pixel   = zero4f;
     auto display_pixel = zero4f;
     if (i >= 0 && i < image.width && j >= 0 && j < image.height) {
       image_pixel   = image.pixels[j * image.width + i];
       display_pixel = image.pixels[j * image.width + i];
     }
-    draw_coloredit(win, "image", image_pixel);
-    draw_coloredit(win, "display", display_pixel);
-    end_header(win);
+    draw_glcoloredit("image", image_pixel);
+    draw_glcoloredit("display", display_pixel);
+    end_glheader();
   }
   return false;
 }
@@ -155,103 +155,103 @@ struct scene_selection {
 static bool draw_scene_editor(glwindow_state* win, scene_model& scene,
     scene_selection& selection, const function<void()>& before_edit) {
   auto edited = 0;
-  if (begin_header(win, "cameras")) {
-    draw_combobox(win, "camera", selection.camera, scene.camera_names);
+  if (begin_glheader("cameras")) {
+    draw_glcombobox("camera", selection.camera, scene.camera_names);
     auto camera = scene.cameras.at(selection.camera);
-    edited += draw_checkbox(win, "ortho", camera.orthographic);
-    edited += draw_slider(win, "lens", camera.lens, 0.001, 1);
-    edited += draw_slider(win, "aspect", camera.aspect, 0.1, 5);
-    edited += draw_slider(win, "film", camera.film, 0.1, 0.5);
-    edited += draw_slider(win, "focus", camera.focus, 0.001, 100);
-    edited += draw_slider(win, "aperture", camera.aperture, 0, 1);
+    edited += draw_glcheckbox("ortho", camera.orthographic);
+    edited += draw_glslider("lens", camera.lens, 0.001, 1);
+    edited += draw_glslider("aspect", camera.aspect, 0.1, 5);
+    edited += draw_glslider("film", camera.film, 0.1, 0.5);
+    edited += draw_glslider("focus", camera.focus, 0.001, 100);
+    edited += draw_glslider("aperture", camera.aperture, 0, 1);
     //   frame3f frame        = identity3x4f;
     if (edited) {
       if (before_edit) before_edit();
       scene.cameras.at(selection.camera) = camera;
     }
-    end_header(win);
+    end_glheader();
   }
-  if (begin_header(win, "environments")) {
-    draw_combobox(
-        win, "environment", selection.environment, scene.environment_names);
+  if (begin_glheader("environments")) {
+    draw_glcombobox(
+        "environment", selection.environment, scene.environment_names);
     auto environment = scene.environments.at(selection.environment);
-    edited += draw_hdrcoloredit(win, "emission", environment.emission);
-    edited += draw_combobox(win, "emission_tex", environment.emission_tex,
-        scene.texture_names, true);
+    edited += draw_glcoloredithdr("emission", environment.emission);
+    edited += draw_glcombobox(
+        "emission_tex", environment.emission_tex, scene.texture_names, true);
     //   frame3f frame        = identity3x4f;
     if (edited) {
       if (before_edit) before_edit();
       scene.environments.at(selection.environment) = environment;
     }
-    end_header(win);
+    end_glheader();
   }
-  if (begin_header(win, "instances")) {
-    draw_combobox(win, "instance", selection.instance, scene.instance_names);
+  if (begin_glheader("instances")) {
+    draw_glcombobox("instance", selection.instance, scene.instance_names);
     auto instance = scene.instances.at(selection.instance);
-    edited += draw_combobox(win, "shape", instance.shape, scene.shape_names);
-    edited += draw_combobox(
-        win, "material", instance.material, scene.material_names);
+    edited += draw_glcombobox("shape", instance.shape, scene.shape_names);
+    edited += draw_glcombobox(
+        "material", instance.material, scene.material_names);
     //   frame3f frame        = identity3x4f;
     if (edited) {
       if (before_edit) before_edit();
       scene.instances.at(selection.instance) = instance;
     }
-    end_header(win);
+    end_glheader();
   }
-  if (begin_header(win, "materials")) {
-    draw_combobox(win, "material", selection.material, scene.material_names);
+  if (begin_glheader("materials")) {
+    draw_glcombobox("material", selection.material, scene.material_names);
     auto material = scene.materials.at(selection.material);
-    edited += draw_hdrcoloredit(win, "emission", material.emission);
-    edited += draw_combobox(
-        win, "emission_tex", material.emission_tex, scene.texture_names, true);
-    edited += draw_hdrcoloredit(win, "color", material.color);
-    edited += draw_combobox(
-        win, "color_tex", material.color_tex, scene.texture_names, true);
-    edited += draw_slider(win, "roughness", material.roughness, 0, 1);
-    edited += draw_combobox(win, "roughness_tex", material.roughness_tex,
-        scene.texture_names, true);
-    edited += draw_slider(win, "metallic", material.metallic, 0, 1);
-    edited += draw_slider(win, "ior", material.ior, 0.1, 5);
+    edited += draw_glcoloredithdr("emission", material.emission);
+    edited += draw_glcombobox(
+        "emission_tex", material.emission_tex, scene.texture_names, true);
+    edited += draw_glcoloredithdr("color", material.color);
+    edited += draw_glcombobox(
+        "color_tex", material.color_tex, scene.texture_names, true);
+    edited += draw_glslider("roughness", material.roughness, 0, 1);
+    edited += draw_glcombobox(
+        "roughness_tex", material.roughness_tex, scene.texture_names, true);
+    edited += draw_glslider("metallic", material.metallic, 0, 1);
+    edited += draw_glslider("ior", material.ior, 0.1, 5);
     if (edited) {
       if (before_edit) before_edit();
       scene.materials.at(selection.material) = material;
     }
-    end_header(win);
+    end_glheader();
   }
-  if (begin_header(win, "shapes")) {
-    draw_combobox(win, "shape", selection.shape, scene.shape_names);
+  if (begin_glheader("shapes")) {
+    draw_glcombobox("shape", selection.shape, scene.shape_names);
     auto& shape = scene.shapes.at(selection.shape);
-    draw_label(win, "points", (int)shape.points.size());
-    draw_label(win, "lines", (int)shape.lines.size());
-    draw_label(win, "triangles", (int)shape.triangles.size());
-    draw_label(win, "quads", (int)shape.quads.size());
-    draw_label(win, "positions", (int)shape.positions.size());
-    draw_label(win, "normals", (int)shape.normals.size());
-    draw_label(win, "texcoords", (int)shape.texcoords.size());
-    draw_label(win, "colors", (int)shape.colors.size());
-    draw_label(win, "radius", (int)shape.radius.size());
-    draw_label(win, "tangents", (int)shape.tangents.size());
-    end_header(win);
+    draw_gllabel("points", (int)shape.points.size());
+    draw_gllabel("lines", (int)shape.lines.size());
+    draw_gllabel("triangles", (int)shape.triangles.size());
+    draw_gllabel("quads", (int)shape.quads.size());
+    draw_gllabel("positions", (int)shape.positions.size());
+    draw_gllabel("normals", (int)shape.normals.size());
+    draw_gllabel("texcoords", (int)shape.texcoords.size());
+    draw_gllabel("colors", (int)shape.colors.size());
+    draw_gllabel("radius", (int)shape.radius.size());
+    draw_gllabel("tangents", (int)shape.tangents.size());
+    end_glheader();
   }
-  if (begin_header(win, "textures")) {
-    draw_combobox(win, "texture", selection.texture, scene.texture_names);
+  if (begin_glheader("textures")) {
+    draw_glcombobox("texture", selection.texture, scene.texture_names);
     auto& texture = scene.textures.at(selection.texture);
-    draw_label(win, "width", texture.width);
-    draw_label(win, "height", texture.height);
-    draw_label(win, "linear", texture.linear);
-    draw_label(win, "byte", !texture.pixelsb.empty());
-    end_header(win);
+    draw_gllabel("width", texture.width);
+    draw_gllabel("height", texture.height);
+    draw_gllabel("linear", texture.linear);
+    draw_gllabel("byte", !texture.pixelsb.empty());
+    end_glheader();
   }
-  if (begin_header(win, "subdivs")) {
-    draw_combobox(win, "subdiv", selection.subdiv, scene.subdiv_names);
+  if (begin_glheader("subdivs")) {
+    draw_glcombobox("subdiv", selection.subdiv, scene.subdiv_names);
     auto& subdiv = scene.subdivs.at(selection.subdiv);
-    draw_label(win, "quadspos", (int)subdiv.quadspos.size());
-    draw_label(win, "quadsnorm", (int)subdiv.quadsnorm.size());
-    draw_label(win, "quadstexcoord", (int)subdiv.quadstexcoord.size());
-    draw_label(win, "positions", (int)subdiv.positions.size());
-    draw_label(win, "normals", (int)subdiv.normals.size());
-    draw_label(win, "texcoords", (int)subdiv.texcoords.size());
-    end_header(win);
+    draw_gllabel("quadspos", (int)subdiv.quadspos.size());
+    draw_gllabel("quadsnorm", (int)subdiv.quadsnorm.size());
+    draw_gllabel("quadstexcoord", (int)subdiv.quadstexcoord.size());
+    draw_gllabel("positions", (int)subdiv.positions.size());
+    draw_gllabel("normals", (int)subdiv.normals.size());
+    draw_gllabel("texcoords", (int)subdiv.texcoords.size());
+    end_glheader();
   }
   return (bool)edited;
 }
@@ -294,7 +294,7 @@ void view_image(
     draw_image(glimage, glparams);
   };
   callbacks.widgets_cb = [&](glwindow_state* win, const glinput_state& input) {
-    draw_combobox(win, "name", selected, names);
+    draw_glcombobox("name", selected, names);
     if (draw_tonemap_params(win, input, exposure, filmic)) {
       tonemap_image_mt(display, image, exposure, filmic);
       set_image(glimage, display);
@@ -346,7 +346,7 @@ void view_images(const string& title, const vector<string>& names,
     draw_image(glimages[selected], glparamss[selected]);
   };
   callbacks.widgets_cb = [&](glwindow_state* win, const glinput_state& input) {
-    draw_combobox(win, "name", selected, names);
+    draw_glcombobox("name", selected, names);
     auto filmic = (bool)filmics[selected];  // vector of bool ...
     if (draw_tonemap_params(win, input, exposures[selected], filmic)) {
       filmics[selected] = filmic;
@@ -397,27 +397,26 @@ void colorgrade_image(
     draw_image(glimage, glparams);
   };
   callbacks.widgets_cb = [&](glwindow_state* win, const glinput_state& input) {
-    draw_combobox(win, "name", selected, names);
-    if (begin_header(win, "colorgrade")) {
+    draw_glcombobox("name", selected, names);
+    if (begin_glheader("colorgrade")) {
       auto edited = 0;
-      edited += draw_slider(win, "exposure", params.exposure, -5, 5);
-      edited += draw_coloredit(win, "tint", params.tint);
-      edited += draw_slider(win, "lincontrast", params.lincontrast, 0, 1);
-      edited += draw_slider(win, "logcontrast", params.logcontrast, 0, 1);
-      edited += draw_slider(win, "linsaturation", params.linsaturation, 0, 1);
-      edited += draw_checkbox(win, "filmic", params.filmic);
-      continue_line(win);
-      edited += draw_checkbox(win, "srgb", params.srgb);
-      edited += draw_slider(win, "contrast", params.contrast, 0, 1);
-      edited += draw_slider(win, "saturation", params.saturation, 0, 1);
-      edited += draw_slider(win, "shadows", params.shadows, 0, 1);
-      edited += draw_slider(win, "midtones", params.midtones, 0, 1);
-      edited += draw_slider(win, "highlights", params.highlights, 0, 1);
-      edited += draw_coloredit(win, "shadows color", params.shadows_color);
-      edited += draw_coloredit(win, "midtones color", params.midtones_color);
-      edited += draw_coloredit(
-          win, "highlights color", params.highlights_color);
-      end_header(win);
+      edited += draw_glslider("exposure", params.exposure, -5, 5);
+      edited += draw_glcoloredit("tint", params.tint);
+      edited += draw_glslider("lincontrast", params.lincontrast, 0, 1);
+      edited += draw_glslider("logcontrast", params.logcontrast, 0, 1);
+      edited += draw_glslider("linsaturation", params.linsaturation, 0, 1);
+      edited += draw_glcheckbox("filmic", params.filmic);
+      continue_glline();
+      edited += draw_glcheckbox("srgb", params.srgb);
+      edited += draw_glslider("contrast", params.contrast, 0, 1);
+      edited += draw_glslider("saturation", params.saturation, 0, 1);
+      edited += draw_glslider("shadows", params.shadows, 0, 1);
+      edited += draw_glslider("midtones", params.midtones, 0, 1);
+      edited += draw_glslider("highlights", params.highlights, 0, 1);
+      edited += draw_glcoloredit("shadows color", params.shadows_color);
+      edited += draw_glcoloredit("midtones color", params.midtones_color);
+      edited += draw_glcoloredit("highlights color", params.highlights_color);
+      end_glheader();
       if (edited) {
         colorgrade_image_mt(display, image, params);
         set_image(glimage, display);
@@ -580,37 +579,37 @@ void view_scene(const string& title, const string& name, scene_model& scene,
   };
   callbacks.widgets_cb = [&](glwindow_state* win, const glinput_state& input) {
     auto edited = 0;
-    draw_combobox(win, "name", selected, names);
-    // draw_progressbar(win, "render", app->current, app->total);
-    if (begin_header(win, "render")) {
+    draw_glcombobox("name", selected, names);
+    // draw_glprogressbar(win, "render", app->current, app->total);
+    if (begin_glheader("render")) {
       auto edited  = 0;
       auto tparams = params;
-      edited += draw_combobox(win, "camera", tparams.camera, camera_names);
-      edited += draw_slider(win, "resolution", tparams.resolution, 180, 4096);
-      edited += draw_slider(win, "samples", tparams.samples, 16, 4096);
-      edited += draw_combobox(
-          win, "tracer", (int&)tparams.sampler, trace_sampler_names);
-      edited += draw_combobox(
-          win, "false color", (int&)tparams.falsecolor, trace_falsecolor_names);
-      edited += draw_slider(win, "bounces", tparams.bounces, 1, 128);
-      edited += draw_slider(win, "clamp", tparams.clamp, 10, 1000);
-      edited += draw_checkbox(win, "envhidden", tparams.envhidden);
-      continue_line(win);
-      edited += draw_checkbox(win, "filter", tparams.tentfilter);
-      edited += draw_slider(win, "pratio", tparams.pratio, 1, 64);
-      // edited += draw_slider(win, "exposure", tparams.exposure, -5, 5);
-      end_header(win);
+      edited += draw_glcombobox("camera", tparams.camera, camera_names);
+      edited += draw_glslider("resolution", tparams.resolution, 180, 4096);
+      edited += draw_glslider("samples", tparams.samples, 16, 4096);
+      edited += draw_glcombobox(
+          "tracer", (int&)tparams.sampler, trace_sampler_names);
+      edited += draw_glcombobox(
+          "false color", (int&)tparams.falsecolor, trace_falsecolor_names);
+      edited += draw_glslider("bounces", tparams.bounces, 1, 128);
+      edited += draw_glslider("clamp", tparams.clamp, 10, 1000);
+      edited += draw_glcheckbox("envhidden", tparams.envhidden);
+      continue_glline();
+      edited += draw_glcheckbox("filter", tparams.tentfilter);
+      edited += draw_glslider("pratio", tparams.pratio, 1, 64);
+      // edited += draw_glslider("exposure", tparams.exposure, -5, 5);
+      end_glheader();
       if (edited) {
         stop_render();
         params = tparams;
         reset_display();
       }
     }
-    if (begin_header(win, "tonemap")) {
-      edited += draw_slider(win, "exposure", params.exposure, -5, 5);
-      edited += draw_checkbox(win, "filmic", params.filmic);
-      edited += draw_checkbox(win, "denoise", params.denoise);
-      end_header(win);
+    if (begin_glheader("tonemap")) {
+      edited += draw_glslider("exposure", params.exposure, -5, 5);
+      edited += draw_glcheckbox("filmic", params.filmic);
+      edited += draw_glcheckbox("denoise", params.denoise);
+      end_glheader();
       if (edited) {
         tonemap_image_mt(display, image, params.exposure, params.filmic);
         set_image(glimage, display);
@@ -677,21 +676,21 @@ void glview_scene(const string& title, const string& name, scene_model& scene,
     draw_scene(glscene, scene, input.framebuffer_viewport, params);
   };
   callbacks.widgets_cb = [&](glwindow_state* win, const glinput_state& input) {
-    draw_combobox(win, "name", selected, names);
-    if (begin_header(win, "shade")) {
-      draw_combobox(win, "camera", params.camera, camera_names);
-      draw_checkbox(win, "wireframe", params.wireframe);
-      continue_line(win);
-      draw_checkbox(win, "faceted", params.faceted);
-      continue_line(win);
-      draw_checkbox(win, "double sided", params.double_sided);
-      draw_combobox(
-          win, "lighting", (int&)params.lighting, glscene_lighting_names);
-      draw_slider(win, "exposure", params.exposure, -10, 10);
-      draw_slider(win, "gamma", params.gamma, 0.1f, 4);
-      draw_slider(win, "near", params.near, 0.01f, 1.0f);
-      draw_slider(win, "far", params.far, 1000.0f, 10000.0f);
-      end_header(win);
+    draw_glcombobox("name", selected, names);
+    if (begin_glheader("shade")) {
+      draw_glcombobox("camera", params.camera, camera_names);
+      draw_glcheckbox("wireframe", params.wireframe);
+      continue_glline();
+      draw_glcheckbox("faceted", params.faceted);
+      continue_glline();
+      draw_glcheckbox("double sided", params.double_sided);
+      draw_glcombobox(
+          "lighting", (int&)params.lighting, glscene_lighting_names);
+      draw_glslider("exposure", params.exposure, -10, 10);
+      draw_glslider("gamma", params.gamma, 0.1f, 4);
+      draw_glslider("near", params.near, 0.01f, 1.0f);
+      draw_glslider("far", params.far, 1000.0f, 10000.0f);
+      end_glheader();
     }
     // draw_scene_editor(win, scene, selection, {});
     if (widgets_callback) {
@@ -1841,24 +1840,18 @@ void run_ui(const vec2i& size, const string& title,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-bool begin_header(glwindow_state* win, const char* lbl) {
+bool begin_glheader(const char* lbl) {
   if (!ImGui::CollapsingHeader(lbl)) return false;
   ImGui::PushID(lbl);
   return true;
 }
-void end_header(glwindow_state* win) { ImGui::PopID(); }
+void end_glheader() { ImGui::PopID(); }
 
-void open_glmodal(glwindow_state* win, const char* lbl) {
-  ImGui::OpenPopup(lbl);
-}
+void open_glmodal(const char* lbl) { ImGui::OpenPopup(lbl); }
 void clear_glmodal(glwindow_state* win) { ImGui::CloseCurrentPopup(); }
-bool begin_glmodal(glwindow_state* win, const char* lbl) {
-  return ImGui::BeginPopupModal(lbl);
-}
+bool begin_glmodal(const char* lbl) { return ImGui::BeginPopupModal(lbl); }
 void end_glmodal(glwindow_state* win) { ImGui::EndPopup(); }
-bool is_glmodal_open(glwindow_state* win, const char* lbl) {
-  return ImGui::IsPopupOpen(lbl);
-}
+bool is_glmodal_open(const char* lbl) { return ImGui::IsPopupOpen(lbl); }
 
 struct filedialog_state {
   string                     dirname       = "";
@@ -1954,9 +1947,8 @@ struct filedialog_state {
   string get_path() const { return path_join(dirname, filename); }
 };
 
-bool draw_filedialog(glwindow_state* win, const char* lbl, string& path,
-    bool save, const string& dirname, const string& filename,
-    const string& filter) {
+bool draw_glfiledialog(const char* lbl, string& path, bool save,
+    const string& dirname, const string& filename, const string& filter) {
   static auto states = unordered_map<string, filedialog_state>{};
   ImGui::SetNextWindowSize({500, 300}, ImGuiCond_FirstUseEver);
   if (ImGui::BeginPopupModal(lbl)) {
@@ -2014,21 +2006,21 @@ bool draw_filedialog(glwindow_state* win, const char* lbl, string& path,
   }
 }
 
-bool draw_filedialog_button(glwindow_state* win, const char* button_lbl,
-    bool button_active, const char* lbl, string& path, bool save,
-    const string& dirname, const string& filename, const string& filter) {
-  if (is_glmodal_open(win, lbl)) {
-    draw_button(win, button_lbl, button_active);
-    return draw_filedialog(win, lbl, path, save, dirname, filename, filter);
+bool draw_filedialog_button(const char* button_lbl, bool button_active,
+    const char* lbl, string& path, bool save, const string& dirname,
+    const string& filename, const string& filter) {
+  if (is_glmodal_open(lbl)) {
+    draw_glbutton(button_lbl, button_active);
+    return draw_glfiledialog(lbl, path, save, dirname, filename, filter);
   } else {
-    if (draw_button(win, button_lbl, button_active)) {
-      open_glmodal(win, lbl);
+    if (draw_glbutton(button_lbl, button_active)) {
+      open_glmodal(lbl);
     }
     return false;
   }
 }
 
-bool draw_button(glwindow_state* win, const char* lbl, bool enabled) {
+bool draw_glbutton(const char* lbl, bool enabled) {
   if (enabled) {
     return ImGui::Button(lbl);
   } else {
@@ -2041,21 +2033,21 @@ bool draw_button(glwindow_state* win, const char* lbl, bool enabled) {
   }
 }
 
-void draw_label(glwindow_state* win, const char* lbl, const string& label) {
+void draw_gllabel(const char* lbl, const string& label) {
   ImGui::LabelText(lbl, "%s", label.c_str());
 }
-void draw_label(glwindow_state* win, const char* lbl, int value) {
+void draw_gllabel(const char* lbl, int value) {
   ImGui::LabelText(lbl, "%s", std::to_string(value).c_str());
 }
-void draw_label(glwindow_state* win, const char* lbl, bool value) {
+void draw_gllabel(const char* lbl, bool value) {
   ImGui::LabelText(lbl, "%s", value ? "true" : "false");
 }
 
-void draw_separator(glwindow_state* win) { ImGui::Separator(); }
+void draw_glseparator() { ImGui::Separator(); }
 
-void continue_line(glwindow_state* win) { ImGui::SameLine(); }
+void continue_glline() { ImGui::SameLine(); }
 
-bool draw_textinput(glwindow_state* win, const char* lbl, string& value) {
+bool draw_gltextinput(const char* lbl, string& value) {
   auto buffer = array<char, 4096>{};
   auto num    = 0;
   for (auto c : value) buffer[num++] = c;
@@ -2065,107 +2057,98 @@ bool draw_textinput(glwindow_state* win, const char* lbl, string& value) {
   return edited;
 }
 
-bool draw_slider(
-    glwindow_state* win, const char* lbl, float& value, float min, float max) {
+bool draw_glslider(const char* lbl, float& value, float min, float max) {
   return ImGui::SliderFloat(lbl, &value, min, max);
 }
-bool draw_slider(
-    glwindow_state* win, const char* lbl, vec2f& value, float min, float max) {
+bool draw_glslider(const char* lbl, vec2f& value, float min, float max) {
   return ImGui::SliderFloat2(lbl, &value.x, min, max);
 }
-bool draw_slider(
-    glwindow_state* win, const char* lbl, vec3f& value, float min, float max) {
+bool draw_glslider(const char* lbl, vec3f& value, float min, float max) {
   return ImGui::SliderFloat3(lbl, &value.x, min, max);
 }
-bool draw_slider(
-    glwindow_state* win, const char* lbl, vec4f& value, float min, float max) {
+bool draw_glslider(const char* lbl, vec4f& value, float min, float max) {
   return ImGui::SliderFloat4(lbl, &value.x, min, max);
 }
 
-bool draw_slider(
-    glwindow_state* win, const char* lbl, int& value, int min, int max) {
+bool draw_glslider(const char* lbl, int& value, int min, int max) {
   return ImGui::SliderInt(lbl, &value, min, max);
 }
-bool draw_slider(
-    glwindow_state* win, const char* lbl, vec2i& value, int min, int max) {
+bool draw_glslider(const char* lbl, vec2i& value, int min, int max) {
   return ImGui::SliderInt2(lbl, &value.x, min, max);
 }
-bool draw_slider(
-    glwindow_state* win, const char* lbl, vec3i& value, int min, int max) {
+bool draw_glslider(const char* lbl, vec3i& value, int min, int max) {
   return ImGui::SliderInt3(lbl, &value.x, min, max);
 }
-bool draw_slider(
-    glwindow_state* win, const char* lbl, vec4i& value, int min, int max) {
+bool draw_glslider(const char* lbl, vec4i& value, int min, int max) {
   return ImGui::SliderInt4(lbl, &value.x, min, max);
 }
 
-bool draw_dragger(glwindow_state* win, const char* lbl, float& value,
-    float speed, float min, float max) {
+bool draw_gldragger(
+    const char* lbl, float& value, float speed, float min, float max) {
   return ImGui::DragFloat(lbl, &value, speed, min, max);
 }
-bool draw_dragger(glwindow_state* win, const char* lbl, vec2f& value,
-    float speed, float min, float max) {
+bool draw_gldragger(
+    const char* lbl, vec2f& value, float speed, float min, float max) {
   return ImGui::DragFloat2(lbl, &value.x, speed, min, max);
 }
-bool draw_dragger(glwindow_state* win, const char* lbl, vec3f& value,
-    float speed, float min, float max) {
+bool draw_gldragger(
+    const char* lbl, vec3f& value, float speed, float min, float max) {
   return ImGui::DragFloat3(lbl, &value.x, speed, min, max);
 }
-bool draw_dragger(glwindow_state* win, const char* lbl, vec4f& value,
-    float speed, float min, float max) {
+bool draw_gldragger(
+    const char* lbl, vec4f& value, float speed, float min, float max) {
   return ImGui::DragFloat4(lbl, &value.x, speed, min, max);
 }
 
-bool draw_dragger(glwindow_state* win, const char* lbl, int& value, float speed,
-    int min, int max) {
+bool draw_gldragger(
+    const char* lbl, int& value, float speed, int min, int max) {
   return ImGui::DragInt(lbl, &value, speed, min, max);
 }
-bool draw_dragger(glwindow_state* win, const char* lbl, vec2i& value,
-    float speed, int min, int max) {
+bool draw_gldragger(
+    const char* lbl, vec2i& value, float speed, int min, int max) {
   return ImGui::DragInt2(lbl, &value.x, speed, min, max);
 }
-bool draw_dragger(glwindow_state* win, const char* lbl, vec3i& value,
-    float speed, int min, int max) {
+bool draw_gldragger(
+    const char* lbl, vec3i& value, float speed, int min, int max) {
   return ImGui::DragInt3(lbl, &value.x, speed, min, max);
 }
-bool draw_dragger(glwindow_state* win, const char* lbl, vec4i& value,
-    float speed, int min, int max) {
+bool draw_gldragger(
+    const char* lbl, vec4i& value, float speed, int min, int max) {
   return ImGui::DragInt4(lbl, &value.x, speed, min, max);
 }
 
-bool draw_dragger(glwindow_state* win, const char* lbl, array<float, 2>& value,
-    float speed, float min, float max) {
+bool draw_gldragger(const char* lbl, array<float, 2>& value, float speed,
+    float min, float max) {
   return ImGui::DragFloat2(lbl, value.data(), speed, min, max);
 }
-bool draw_dragger(glwindow_state* win, const char* lbl, array<float, 3>& value,
-    float speed, float min, float max) {
+bool draw_gldragger(const char* lbl, array<float, 3>& value, float speed,
+    float min, float max) {
   return ImGui::DragFloat3(lbl, value.data(), speed, min, max);
 }
-bool draw_dragger(glwindow_state* win, const char* lbl, array<float, 4>& value,
-    float speed, float min, float max) {
+bool draw_gldragger(const char* lbl, array<float, 4>& value, float speed,
+    float min, float max) {
   return ImGui::DragFloat4(lbl, value.data(), speed, min, max);
 }
 
-bool draw_dragger(glwindow_state* win, const char* lbl, array<int, 2>& value,
-    float speed, int min, int max) {
+bool draw_gldragger(
+    const char* lbl, array<int, 2>& value, float speed, int min, int max) {
   return ImGui::DragInt2(lbl, value.data(), speed, min, max);
 }
-bool draw_dragger(glwindow_state* win, const char* lbl, array<int, 3>& value,
-    float speed, int min, int max) {
+bool draw_gldragger(
+    const char* lbl, array<int, 3>& value, float speed, int min, int max) {
   return ImGui::DragInt3(lbl, value.data(), speed, min, max);
 }
-bool draw_dragger(glwindow_state* win, const char* lbl, array<int, 4>& value,
-    float speed, int min, int max) {
+bool draw_gldragger(
+    const char* lbl, array<int, 4>& value, float speed, int min, int max) {
   return ImGui::DragInt4(lbl, value.data(), speed, min, max);
 }
 
-bool draw_checkbox(glwindow_state* win, const char* lbl, bool& value) {
+bool draw_glcheckbox(const char* lbl, bool& value) {
   return ImGui::Checkbox(lbl, &value);
 }
-bool draw_checkbox(
-    glwindow_state* win, const char* lbl, bool& value, bool invert) {
+bool draw_glcheckbox(const char* lbl, bool& value, bool invert) {
   if (!invert) {
-    return draw_checkbox(win, lbl, value);
+    return draw_glcheckbox(lbl, value);
   } else {
     auto inverted = !value;
     auto edited   = ImGui::Checkbox(lbl, &inverted);
@@ -2174,17 +2157,17 @@ bool draw_checkbox(
   }
 }
 
-bool draw_coloredit(glwindow_state* win, const char* lbl, vec3f& value) {
+bool draw_glcoloredit(const char* lbl, vec3f& value) {
   auto flags = ImGuiColorEditFlags_Float;
   return ImGui::ColorEdit3(lbl, &value.x, flags);
 }
 
-bool draw_coloredit(glwindow_state* win, const char* lbl, vec4f& value) {
+bool draw_glcoloredit(const char* lbl, vec4f& value) {
   auto flags = ImGuiColorEditFlags_Float;
   return ImGui::ColorEdit4(lbl, &value.x, flags);
 }
 
-bool draw_hdrcoloredit(glwindow_state* win, const char* lbl, vec3f& value) {
+bool draw_glcoloredithdr(const char* lbl, vec3f& value) {
   auto color    = value;
   auto exposure = 0.0f;
   auto scale    = max(color);
@@ -2192,9 +2175,9 @@ bool draw_hdrcoloredit(glwindow_state* win, const char* lbl, vec3f& value) {
     color /= scale;
     exposure = log2(scale);
   }
-  auto edit_exposure = draw_slider(
-      win, (lbl + " [exp]"s).c_str(), exposure, 0, 10);
-  auto edit_color = draw_coloredit(win, (lbl + " [col]"s).c_str(), color);
+  auto edit_exposure = draw_glslider(
+      (lbl + " [exp]"s).c_str(), exposure, 0, 10);
+  auto edit_color = draw_glcoloredit((lbl + " [col]"s).c_str(), color);
   if (edit_exposure || edit_color) {
     value = color * exp2(exposure);
     return true;
@@ -2202,7 +2185,7 @@ bool draw_hdrcoloredit(glwindow_state* win, const char* lbl, vec3f& value) {
     return false;
   }
 }
-bool draw_hdrcoloredit(glwindow_state* win, const char* lbl, vec4f& value) {
+bool draw_glcoloredithdr(const char* lbl, vec4f& value) {
   auto color    = value;
   auto exposure = 0.0f;
   auto scale    = max(xyz(color));
@@ -2212,9 +2195,9 @@ bool draw_hdrcoloredit(glwindow_state* win, const char* lbl, vec4f& value) {
     color.z /= scale;
     exposure = log2(scale);
   }
-  auto edit_exposure = draw_slider(
-      win, (lbl + " [exp]"s).c_str(), exposure, 0, 10);
-  auto edit_color = draw_coloredit(win, (lbl + " [col]"s).c_str(), color);
+  auto edit_exposure = draw_glslider(
+      (lbl + " [exp]"s).c_str(), exposure, 0, 10);
+  auto edit_color = draw_glcoloredit((lbl + " [col]"s).c_str(), color);
   if (edit_exposure || edit_color) {
     value.x = color.x * exp2(exposure);
     value.y = color.y * exp2(exposure);
@@ -2226,7 +2209,7 @@ bool draw_hdrcoloredit(glwindow_state* win, const char* lbl, vec4f& value) {
   }
 }
 
-bool draw_coloredit(glwindow_state* win, const char* lbl, vec4b& value) {
+bool draw_glcoloredit(const char* lbl, vec4b& value) {
   auto valuef = byte_to_float(value);
   if (ImGui::ColorEdit4(lbl, &valuef.x)) {
     value = float_to_byte(valuef);
@@ -2236,8 +2219,8 @@ bool draw_coloredit(glwindow_state* win, const char* lbl, vec4b& value) {
   }
 }
 
-bool draw_combobox(glwindow_state* win, const char* lbl, int& value,
-    const vector<string>& labels, bool include_null) {
+bool draw_glcombobox(const char* lbl, int& value, const vector<string>& labels,
+    bool include_null) {
   if (!ImGui::BeginCombo(lbl, value >= 0 ? labels.at(value).c_str() : "<none>"))
     return false;
   auto old_val = value;
@@ -2257,7 +2240,7 @@ bool draw_combobox(glwindow_state* win, const char* lbl, int& value,
   return value != old_val;
 }
 
-bool draw_combobox(glwindow_state* win, const char* lbl, string& value,
+bool draw_glcombobox(const char* lbl, string& value,
     const vector<string>& labels, bool include_null) {
   if (!ImGui::BeginCombo(lbl, value.c_str())) return false;
   auto old_val = value;
@@ -2278,7 +2261,7 @@ bool draw_combobox(glwindow_state* win, const char* lbl, string& value,
   return value != old_val;
 }
 
-bool draw_combobox(glwindow_state* win, const char* lbl, int& idx, int num,
+bool draw_glcombobox(const char* lbl, int& idx, int num,
     const function<string(int)>& labels, bool include_null) {
   if (num <= 0) idx = -1;
   if (!ImGui::BeginCombo(lbl, idx >= 0 ? labels(idx).c_str() : "<none>"))
@@ -2300,7 +2283,7 @@ bool draw_combobox(glwindow_state* win, const char* lbl, int& idx, int num,
   return idx != old_idx;
 }
 
-void draw_progressbar(glwindow_state* win, const char* lbl, float fraction) {
+void draw_glprogressbar(const char* lbl, float fraction) {
   ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.5, 0.5, 1, 0.25));
   ImGui::ProgressBar(fraction, ImVec2(0.0f, 0.0f));
   ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
@@ -2308,8 +2291,7 @@ void draw_progressbar(glwindow_state* win, const char* lbl, float fraction) {
   ImGui::PopStyleColor(1);
 }
 
-void draw_progressbar(
-    glwindow_state* win, const char* lbl, int current, int total) {
+void draw_glprogressbar(const char* lbl, int current, int total) {
   auto overlay = std::to_string(current) + "/" + std::to_string(total);
   ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.5, 0.5, 1, 0.25));
   ImGui::ProgressBar(
@@ -2319,24 +2301,20 @@ void draw_progressbar(
   ImGui::PopStyleColor(1);
 }
 
-void draw_histogram(
-    glwindow_state* win, const char* lbl, const float* values, int count) {
+void draw_histogram(const char* lbl, const float* values, int count) {
   ImGui::PlotHistogram(lbl, values, count);
 }
-void draw_histogram(
-    glwindow_state* win, const char* lbl, const vector<float>& values) {
+void draw_histogram(const char* lbl, const vector<float>& values) {
   ImGui::PlotHistogram(lbl, values.data(), (int)values.size(), 0, nullptr,
       flt_max, flt_max, {0, 0}, 4);
 }
-void draw_histogram(
-    glwindow_state* win, const char* lbl, const vector<vec2f>& values) {
+void draw_histogram(const char* lbl, const vector<vec2f>& values) {
   ImGui::PlotHistogram((lbl + " x"s).c_str(), (const float*)values.data() + 0,
       (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec2f));
   ImGui::PlotHistogram((lbl + " y"s).c_str(), (const float*)values.data() + 1,
       (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec2f));
 }
-void draw_histogram(
-    glwindow_state* win, const char* lbl, const vector<vec3f>& values) {
+void draw_histogram(const char* lbl, const vector<vec3f>& values) {
   ImGui::PlotHistogram((lbl + " x"s).c_str(), (const float*)values.data() + 0,
       (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec3f));
   ImGui::PlotHistogram((lbl + " y"s).c_str(), (const float*)values.data() + 1,
@@ -2344,8 +2322,7 @@ void draw_histogram(
   ImGui::PlotHistogram((lbl + " z"s).c_str(), (const float*)values.data() + 2,
       (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec3f));
 }
-void draw_histogram(
-    glwindow_state* win, const char* lbl, const vector<vec4f>& values) {
+void draw_histogram(const char* lbl, const vector<vec4f>& values) {
   ImGui::PlotHistogram((lbl + " x"s).c_str(), (const float*)values.data() + 0,
       (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec4f));
   ImGui::PlotHistogram((lbl + " y"s).c_str(), (const float*)values.data() + 1,
@@ -2415,41 +2392,18 @@ struct ImGuiAppLog {
   }
 };
 
-std::mutex  _log_mutex;
-ImGuiAppLog _log_widget;
-void        log_info(glwindow_state* win, const string& msg) {
-  _log_mutex.lock();
-  _log_widget.AddLog(msg.c_str(), "info");
-  _log_mutex.unlock();
-}
-void log_error(glwindow_state* win, const string& msg) {
-  _log_mutex.lock();
-  _log_widget.AddLog(msg.c_str(), "errn");
-  _log_mutex.unlock();
-}
-void clear_log(glwindow_state* win) {
-  _log_mutex.lock();
-  _log_widget.Clear();
-  _log_mutex.unlock();
-}
-void draw_log(glwindow_state* win) {
-  _log_mutex.lock();
-  _log_widget.Draw();
-  _log_mutex.unlock();
-}
-
 // draw param
-bool draw_param(glwindow_state* win, const string& name, gui_param& param) {
+bool draw_glparam(const string& name, gui_param& param) {
   auto copy = param;
   switch (param.type) {
     case gui_param_type::value1f:
       if (param.minmaxf.x == param.minmaxf.y) {
-        return draw_dragger(win, name.c_str(),
-                   param.readonly ? (float&)copy.valuef
-                                  : (float&)param.valuef) &&
+        return draw_gldragger(name.c_str(), param.readonly
+                                                ? (float&)copy.valuef
+                                                : (float&)param.valuef) &&
                !param.readonly;
       } else {
-        return draw_slider(win, name.c_str(),
+        return draw_glslider(name.c_str(),
                    param.readonly ? (float&)copy.valuef : (float&)param.valuef,
                    param.minmaxf.x, param.minmaxf.y) &&
                !param.readonly;
@@ -2457,12 +2411,12 @@ bool draw_param(glwindow_state* win, const string& name, gui_param& param) {
       break;
     case gui_param_type::value2f:
       if (param.minmaxf.x == param.minmaxf.y) {
-        return draw_dragger(win, name.c_str(),
-                   param.readonly ? (vec2f&)copy.valuef
-                                  : (vec2f&)param.valuef) &&
+        return draw_gldragger(name.c_str(), param.readonly
+                                                ? (vec2f&)copy.valuef
+                                                : (vec2f&)param.valuef) &&
                !param.readonly;
       } else {
-        return draw_slider(win, name.c_str(),
+        return draw_glslider(name.c_str(),
                    param.readonly ? (vec2f&)copy.valuef : (vec2f&)param.valuef,
                    param.minmaxf.x, param.minmaxf.y) &&
                !param.readonly;
@@ -2470,17 +2424,17 @@ bool draw_param(glwindow_state* win, const string& name, gui_param& param) {
       break;
     case gui_param_type::value3f:
       if (param.color) {
-        return draw_coloredit(win, name.c_str(),
-                   param.readonly ? (vec3f&)copy.valuef
-                                  : (vec3f&)param.valuef) &&
+        return draw_glcoloredit(name.c_str(), param.readonly
+                                                  ? (vec3f&)copy.valuef
+                                                  : (vec3f&)param.valuef) &&
                !param.readonly;
       } else if (param.minmaxf.x == param.minmaxf.y) {
-        return draw_dragger(win, name.c_str(),
-                   param.readonly ? (vec3f&)copy.valuef
-                                  : (vec3f&)param.valuef) &&
+        return draw_gldragger(name.c_str(), param.readonly
+                                                ? (vec3f&)copy.valuef
+                                                : (vec3f&)param.valuef) &&
                !param.readonly;
       } else {
-        return draw_slider(win, name.c_str(),
+        return draw_glslider(name.c_str(),
                    param.readonly ? copy.valuef : param.valuef, param.minmaxf.x,
                    param.minmaxf.y) &&
                !param.readonly;
@@ -2488,17 +2442,17 @@ bool draw_param(glwindow_state* win, const string& name, gui_param& param) {
       break;
     case gui_param_type::value4f:
       if (param.color) {
-        return draw_coloredit(win, name.c_str(),
-                   param.readonly ? (vec4f&)copy.valuef
-                                  : (vec4f&)param.valuef) &&
+        return draw_glcoloredit(name.c_str(), param.readonly
+                                                  ? (vec4f&)copy.valuef
+                                                  : (vec4f&)param.valuef) &&
                !param.readonly;
       } else if (param.minmaxf.x == param.minmaxf.y) {
-        return draw_dragger(win, name.c_str(),
-                   param.readonly ? (vec4f&)copy.valuef
-                                  : (vec4f&)param.valuef) &&
+        return draw_gldragger(name.c_str(), param.readonly
+                                                ? (vec4f&)copy.valuef
+                                                : (vec4f&)param.valuef) &&
                !param.readonly;
       } else {
-        return draw_slider(win, name.c_str(),
+        return draw_glslider(name.c_str(),
                    param.readonly ? (vec4f&)copy.valuef : (vec4f&)param.valuef,
                    param.minmaxf.x, param.minmaxf.y) &&
                !param.readonly;
@@ -2506,16 +2460,16 @@ bool draw_param(glwindow_state* win, const string& name, gui_param& param) {
       break;
     case gui_param_type::value1i:
       if (!param.labels.empty()) {
-        return draw_combobox(win, name.c_str(),
+        return draw_glcombobox(name.c_str(),
                    param.readonly ? (int&)copy.valuei : (int&)param.valuei,
                    param.labels) &&
                !param.readonly;
       } else if (param.minmaxi.x == param.minmaxi.y) {
-        return draw_dragger(win, name.c_str(),
+        return draw_gldragger(name.c_str(),
                    param.readonly ? (int&)copy.valuei : (int&)param.valuei) &&
                !param.readonly;
       } else {
-        return draw_slider(win, name.c_str(),
+        return draw_glslider(name.c_str(),
                    param.readonly ? (int&)copy.valuei : (int&)param.valuei,
                    param.minmaxi.x, param.minmaxi.y) &&
                !param.readonly;
@@ -2523,12 +2477,12 @@ bool draw_param(glwindow_state* win, const string& name, gui_param& param) {
       break;
     case gui_param_type::value2i:
       if (param.minmaxi.x == param.minmaxi.y) {
-        return draw_dragger(win, name.c_str(),
-                   param.readonly ? (vec2i&)copy.valuei
-                                  : (vec2i&)param.valuei) &&
+        return draw_gldragger(name.c_str(), param.readonly
+                                                ? (vec2i&)copy.valuei
+                                                : (vec2i&)param.valuei) &&
                !param.readonly;
       } else {
-        return draw_slider(win, name.c_str(),
+        return draw_glslider(name.c_str(),
                    param.readonly ? (vec2i&)copy.valuei : (vec2i&)param.valuei,
                    param.minmaxi.x, param.minmaxi.y) &&
                !param.readonly;
@@ -2536,12 +2490,12 @@ bool draw_param(glwindow_state* win, const string& name, gui_param& param) {
       break;
     case gui_param_type::value3i:
       if (param.minmaxi.x == param.minmaxi.y) {
-        return draw_dragger(win, name.c_str(),
-                   param.readonly ? (vec3i&)copy.valuei
-                                  : (vec3i&)param.valuei) &&
+        return draw_gldragger(name.c_str(), param.readonly
+                                                ? (vec3i&)copy.valuei
+                                                : (vec3i&)param.valuei) &&
                !param.readonly;
       } else {
-        return draw_slider(win, name.c_str(),
+        return draw_glslider(name.c_str(),
                    param.readonly ? (vec3i&)copy.valuei : (vec3i&)param.valuei,
                    param.minmaxi.x, param.minmaxi.y) &&
                !param.readonly;
@@ -2549,12 +2503,12 @@ bool draw_param(glwindow_state* win, const string& name, gui_param& param) {
       break;
     case gui_param_type::value4i:
       if (param.minmaxi.x == param.minmaxi.y) {
-        return draw_dragger(win, name.c_str(),
-                   param.readonly ? (vec4i&)copy.valuei
-                                  : (vec4i&)param.valuei) &&
+        return draw_gldragger(name.c_str(), param.readonly
+                                                ? (vec4i&)copy.valuei
+                                                : (vec4i&)param.valuei) &&
                !param.readonly;
       } else {
-        return draw_slider(win, name.c_str(),
+        return draw_glslider(name.c_str(),
                    param.readonly ? (vec4i&)copy.valuei : (vec4i&)param.valuei,
                    param.minmaxi.x, param.minmaxi.y) &&
                !param.readonly;
@@ -2562,24 +2516,24 @@ bool draw_param(glwindow_state* win, const string& name, gui_param& param) {
       break;
     case gui_param_type::value1s:
       if (!param.labels.empty()) {
-        return draw_combobox(win, name.c_str(),
+        return draw_glcombobox(name.c_str(),
                    param.readonly ? copy.values : param.values, param.labels) &&
                !param.readonly;
       } else {
-        return draw_textinput(win, name.c_str(),
-                   param.readonly ? copy.values : param.values) &&
+        return draw_gltextinput(
+                   name.c_str(), param.readonly ? copy.values : param.values) &&
                !param.readonly;
       }
       break;
     case gui_param_type::value1b:
       if (!param.labels.empty()) {
         // maybe we should implement something different here
-        return draw_checkbox(win, name.c_str(),
-                   param.readonly ? copy.valueb : param.valueb) &&
+        return draw_glcheckbox(
+                   name.c_str(), param.readonly ? copy.valueb : param.valueb) &&
                !param.readonly;
       } else {
-        return draw_checkbox(win, name.c_str(),
-                   param.readonly ? copy.valueb : param.valueb) &&
+        return draw_glcheckbox(
+                   name.c_str(), param.readonly ? copy.valueb : param.valueb) &&
                !param.readonly;
       }
       break;
@@ -2588,14 +2542,14 @@ bool draw_param(glwindow_state* win, const string& name, gui_param& param) {
 }
 
 // draw params
-bool draw_params(glwindow_state* win, const string& name, gui_params& params) {
+bool draw_glparams(const string& name, gui_params& params) {
   auto edited = false;
-  if (begin_header(win, name.c_str())) {
+  if (begin_glheader(name.c_str())) {
     for (auto& [name, param] : params) {
-      auto pedited = draw_param(win, name, param);
+      auto pedited = draw_glparam(name, param);
       edited       = edited || pedited;
     }
-    end_header(win);
+    end_glheader();
   }
   return edited;
 }
