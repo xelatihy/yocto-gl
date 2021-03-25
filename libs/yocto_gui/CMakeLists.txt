@@ -24,7 +24,9 @@ if(YOCTO_OPENGL)
   target_compile_definitions(yocto_gui PRIVATE -DIMGUI_IMPL_OPENGL_LOADER_GLAD)
   target_compile_definitions(yocto_gui PUBLIC -DYOCTO_OPENGL)
   set_target_properties(yocto_gui PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
-  
+
+  target_link_libraries(yocto_gui yocto)
+
   target_include_directories(yocto_gui PRIVATE ${CMAKE_SOURCE_DIR}/exts/glfw/include)
   target_link_libraries(yocto_gui glfw ${OPENGL_gl_LIBRARY})
 
