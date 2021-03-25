@@ -32,11 +32,22 @@
 #include <yocto/yocto_cli.h>
 #include <yocto/yocto_geometry.h>
 #include <yocto/yocto_parallel.h>
+#include <yocto/yocto_sceneio.h>
 
 #include <cassert>
 #include <stdexcept>
 
 #include "ext/glad/glad.h"
+
+#ifdef __APPLE__
+#define GL_SILENCE_DEPRECATION
+#endif
+#include <GLFW/glfw3.h>
+
+#include "ext/imgui/imgui.h"
+#include "ext/imgui/imgui_impl_glfw.h"
+#include "ext/imgui/imgui_impl_opengl3.h"
+#include "ext/imgui/imgui_internal.h"
 
 #ifdef _WIN32
 #undef near
@@ -48,7 +59,7 @@
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-static void update_image_params(gui_window* win, const gui_input& input,
+static void update_image_params(const glinput_state& input,
     const color_image& image, glimage_params& glparams) {
   glparams.window                           = input.window_size;
   glparams.framebuffer                      = input.framebuffer_viewport;
@@ -58,7 +69,7 @@ static void update_image_params(gui_window* win, const gui_input& input,
 }
 
 static bool uiupdate_image_params(
-    gui_window* win, const gui_input& input, glimage_params& glparams) {
+    const glinput_state& input, glimage_params& glparams) {
   // handle mouse
   if (input.mouse_left && !input.widgets_active) {
     glparams.center += input.mouse_pos - input.mouse_last;
@@ -73,7 +84,7 @@ static bool uiupdate_image_params(
 }
 
 static bool uiupdate_camera_params(
-    gui_window* win, const gui_input& input, scene_camera& camera) {
+    const glinput_state& input, scene_camera& camera) {
   if ((input.mouse_left || input.mouse_right) && !input.modifier_alt &&
       !input.modifier_ctrl && !input.widgets_active) {
     auto dolly  = 0.0f;
@@ -98,35 +109,35 @@ static bool uiupdate_camera_params(
 }
 
 static bool draw_tonemap_params(
-    gui_window* win, const gui_input& input, float& exposure, bool& filmic) {
+    const glinput_state& input, float& exposure, bool& filmic) {
   auto edited = 0;
-  if (begin_header(win, "tonemap")) {
-    edited += draw_slider(win, "exposure", exposure, -5, 5);
-    edited += draw_checkbox(win, "filmic", filmic);
-    end_header(win);
+  if (begin_glheader("tonemap")) {
+    edited += draw_glslider("exposure", exposure, -5, 5);
+    edited += draw_glcheckbox("filmic", filmic);
+    end_glheader();
   }
   return (bool)edited;
 }
 
-static bool draw_image_inspector(gui_window* win, const gui_input& input,
+static bool draw_image_inspector(const glinput_state& input,
     const color_image& image, const color_image& display,
     glimage_params& glparams) {
-  if (begin_header(win, "inspect")) {
-    draw_slider(win, "zoom", glparams.scale, 0.1, 10);
-    draw_checkbox(win, "fit", glparams.fit);
+  if (begin_glheader("inspect")) {
+    draw_glslider("zoom", glparams.scale, 0.1, 10);
+    draw_glcheckbox("fit", glparams.fit);
     auto [i, j] = image_coords(input.mouse_pos, glparams.center, glparams.scale,
         {image.width, image.height});
     auto ij     = vec2i{i, j};
-    draw_dragger(win, "mouse", ij);
+    draw_gldragger("mouse", ij);
     auto image_pixel   = zero4f;
     auto display_pixel = zero4f;
     if (i >= 0 && i < image.width && j >= 0 && j < image.height) {
       image_pixel   = image.pixels[j * image.width + i];
       display_pixel = image.pixels[j * image.width + i];
     }
-    draw_coloredit(win, "image", image_pixel);
-    draw_coloredit(win, "display", display_pixel);
-    end_header(win);
+    draw_glcoloredit("image", image_pixel);
+    draw_glcoloredit("display", display_pixel);
+    end_glheader();
   }
   return false;
 }
@@ -141,106 +152,106 @@ struct scene_selection {
   int subdiv      = 0;
 };
 
-static bool draw_scene_editor(gui_window* win, scene_model& scene,
-    scene_selection& selection, const function<void()>& before_edit) {
+static bool draw_scene_editor(scene_model& scene, scene_selection& selection,
+    const function<void()>& before_edit) {
   auto edited = 0;
-  if (begin_header(win, "cameras")) {
-    draw_combobox(win, "camera", selection.camera, scene.camera_names);
+  if (begin_glheader("cameras")) {
+    draw_glcombobox("camera", selection.camera, scene.camera_names);
     auto camera = scene.cameras.at(selection.camera);
-    edited += draw_checkbox(win, "ortho", camera.orthographic);
-    edited += draw_slider(win, "lens", camera.lens, 0.001, 1);
-    edited += draw_slider(win, "aspect", camera.aspect, 0.1, 5);
-    edited += draw_slider(win, "film", camera.film, 0.1, 0.5);
-    edited += draw_slider(win, "focus", camera.focus, 0.001, 100);
-    edited += draw_slider(win, "aperture", camera.aperture, 0, 1);
+    edited += draw_glcheckbox("ortho", camera.orthographic);
+    edited += draw_glslider("lens", camera.lens, 0.001, 1);
+    edited += draw_glslider("aspect", camera.aspect, 0.1, 5);
+    edited += draw_glslider("film", camera.film, 0.1, 0.5);
+    edited += draw_glslider("focus", camera.focus, 0.001, 100);
+    edited += draw_glslider("aperture", camera.aperture, 0, 1);
     //   frame3f frame        = identity3x4f;
     if (edited) {
       if (before_edit) before_edit();
       scene.cameras.at(selection.camera) = camera;
     }
-    end_header(win);
+    end_glheader();
   }
-  if (begin_header(win, "environments")) {
-    draw_combobox(
-        win, "environment", selection.environment, scene.environment_names);
+  if (begin_glheader("environments")) {
+    draw_glcombobox(
+        "environment", selection.environment, scene.environment_names);
     auto environment = scene.environments.at(selection.environment);
-    edited += draw_hdrcoloredit(win, "emission", environment.emission);
-    edited += draw_combobox(win, "emission_tex", environment.emission_tex,
-        scene.texture_names, true);
+    edited += draw_glcoloredithdr("emission", environment.emission);
+    edited += draw_glcombobox(
+        "emission_tex", environment.emission_tex, scene.texture_names, true);
     //   frame3f frame        = identity3x4f;
     if (edited) {
       if (before_edit) before_edit();
       scene.environments.at(selection.environment) = environment;
     }
-    end_header(win);
+    end_glheader();
   }
-  if (begin_header(win, "instances")) {
-    draw_combobox(win, "instance", selection.instance, scene.instance_names);
+  if (begin_glheader("instances")) {
+    draw_glcombobox("instance", selection.instance, scene.instance_names);
     auto instance = scene.instances.at(selection.instance);
-    edited += draw_combobox(win, "shape", instance.shape, scene.shape_names);
-    edited += draw_combobox(
-        win, "material", instance.material, scene.material_names);
+    edited += draw_glcombobox("shape", instance.shape, scene.shape_names);
+    edited += draw_glcombobox(
+        "material", instance.material, scene.material_names);
     //   frame3f frame        = identity3x4f;
     if (edited) {
       if (before_edit) before_edit();
       scene.instances.at(selection.instance) = instance;
     }
-    end_header(win);
+    end_glheader();
   }
-  if (begin_header(win, "materials")) {
-    draw_combobox(win, "material", selection.material, scene.material_names);
+  if (begin_glheader("materials")) {
+    draw_glcombobox("material", selection.material, scene.material_names);
     auto material = scene.materials.at(selection.material);
-    edited += draw_hdrcoloredit(win, "emission", material.emission);
-    edited += draw_combobox(
-        win, "emission_tex", material.emission_tex, scene.texture_names, true);
-    edited += draw_hdrcoloredit(win, "color", material.color);
-    edited += draw_combobox(
-        win, "color_tex", material.color_tex, scene.texture_names, true);
-    edited += draw_slider(win, "roughness", material.roughness, 0, 1);
-    edited += draw_combobox(win, "roughness_tex", material.roughness_tex,
-        scene.texture_names, true);
-    edited += draw_slider(win, "metallic", material.metallic, 0, 1);
-    edited += draw_slider(win, "ior", material.ior, 0.1, 5);
+    edited += draw_glcoloredithdr("emission", material.emission);
+    edited += draw_glcombobox(
+        "emission_tex", material.emission_tex, scene.texture_names, true);
+    edited += draw_glcoloredithdr("color", material.color);
+    edited += draw_glcombobox(
+        "color_tex", material.color_tex, scene.texture_names, true);
+    edited += draw_glslider("roughness", material.roughness, 0, 1);
+    edited += draw_glcombobox(
+        "roughness_tex", material.roughness_tex, scene.texture_names, true);
+    edited += draw_glslider("metallic", material.metallic, 0, 1);
+    edited += draw_glslider("ior", material.ior, 0.1, 5);
     if (edited) {
       if (before_edit) before_edit();
       scene.materials.at(selection.material) = material;
     }
-    end_header(win);
+    end_glheader();
   }
-  if (begin_header(win, "shapes")) {
-    draw_combobox(win, "shape", selection.shape, scene.shape_names);
+  if (begin_glheader("shapes")) {
+    draw_glcombobox("shape", selection.shape, scene.shape_names);
     auto& shape = scene.shapes.at(selection.shape);
-    draw_label(win, "points", (int)shape.points.size());
-    draw_label(win, "lines", (int)shape.lines.size());
-    draw_label(win, "triangles", (int)shape.triangles.size());
-    draw_label(win, "quads", (int)shape.quads.size());
-    draw_label(win, "positions", (int)shape.positions.size());
-    draw_label(win, "normals", (int)shape.normals.size());
-    draw_label(win, "texcoords", (int)shape.texcoords.size());
-    draw_label(win, "colors", (int)shape.colors.size());
-    draw_label(win, "radius", (int)shape.radius.size());
-    draw_label(win, "tangents", (int)shape.tangents.size());
-    end_header(win);
+    draw_gllabel("points", (int)shape.points.size());
+    draw_gllabel("lines", (int)shape.lines.size());
+    draw_gllabel("triangles", (int)shape.triangles.size());
+    draw_gllabel("quads", (int)shape.quads.size());
+    draw_gllabel("positions", (int)shape.positions.size());
+    draw_gllabel("normals", (int)shape.normals.size());
+    draw_gllabel("texcoords", (int)shape.texcoords.size());
+    draw_gllabel("colors", (int)shape.colors.size());
+    draw_gllabel("radius", (int)shape.radius.size());
+    draw_gllabel("tangents", (int)shape.tangents.size());
+    end_glheader();
   }
-  if (begin_header(win, "textures")) {
-    draw_combobox(win, "texture", selection.texture, scene.texture_names);
+  if (begin_glheader("textures")) {
+    draw_glcombobox("texture", selection.texture, scene.texture_names);
     auto& texture = scene.textures.at(selection.texture);
-    draw_label(win, "width", texture.width);
-    draw_label(win, "height", texture.height);
-    draw_label(win, "linear", texture.linear);
-    draw_label(win, "byte", !texture.pixelsb.empty());
-    end_header(win);
+    draw_gllabel("width", texture.width);
+    draw_gllabel("height", texture.height);
+    draw_gllabel("linear", texture.linear);
+    draw_gllabel("byte", !texture.pixelsb.empty());
+    end_glheader();
   }
-  if (begin_header(win, "subdivs")) {
-    draw_combobox(win, "subdiv", selection.subdiv, scene.subdiv_names);
+  if (begin_glheader("subdivs")) {
+    draw_glcombobox("subdiv", selection.subdiv, scene.subdiv_names);
     auto& subdiv = scene.subdivs.at(selection.subdiv);
-    draw_label(win, "quadspos", (int)subdiv.quadspos.size());
-    draw_label(win, "quadsnorm", (int)subdiv.quadsnorm.size());
-    draw_label(win, "quadstexcoord", (int)subdiv.quadstexcoord.size());
-    draw_label(win, "positions", (int)subdiv.positions.size());
-    draw_label(win, "normals", (int)subdiv.normals.size());
-    draw_label(win, "texcoords", (int)subdiv.texcoords.size());
-    end_header(win);
+    draw_gllabel("quadspos", (int)subdiv.quadspos.size());
+    draw_gllabel("quadsnorm", (int)subdiv.quadsnorm.size());
+    draw_gllabel("quadstexcoord", (int)subdiv.quadstexcoord.size());
+    draw_gllabel("positions", (int)subdiv.positions.size());
+    draw_gllabel("normals", (int)subdiv.normals.size());
+    draw_gllabel("texcoords", (int)subdiv.texcoords.size());
+    end_glheader();
   }
   return (bool)edited;
 }
@@ -270,28 +281,28 @@ void view_image(
   auto selected = 0;
 
   // callbacks
-  auto callbacks    = gui_callbacks{};
-  callbacks.init_cb = [&](gui_window* win, const gui_input& input) {
+  auto callbacks    = glwindow_callbacks{};
+  callbacks.init_cb = [&](const glinput_state& input) {
     init_image(glimage);
     set_image(glimage, display);
   };
-  callbacks.clear_cb = [&](gui_window* win, const gui_input& input) {
+  callbacks.clear_cb = [&](const glinput_state& input) {
     clear_image(glimage);
   };
-  callbacks.draw_cb = [&](gui_window* win, const gui_input& input) {
-    update_image_params(win, input, image, glparams);
+  callbacks.draw_cb = [&](const glinput_state& input) {
+    update_image_params(input, image, glparams);
     draw_image(glimage, glparams);
   };
-  callbacks.widgets_cb = [&](gui_window* win, const gui_input& input) {
-    draw_combobox(win, "name", selected, names);
-    if (draw_tonemap_params(win, input, exposure, filmic)) {
+  callbacks.widgets_cb = [&](const glinput_state& input) {
+    draw_glcombobox("name", selected, names);
+    if (draw_tonemap_params(input, exposure, filmic)) {
       tonemap_image_mt(display, image, exposure, filmic);
       set_image(glimage, display);
     }
-    draw_image_inspector(win, input, image, display, glparams);
+    draw_image_inspector(input, image, display, glparams);
   };
-  callbacks.uiupdate_cb = [&](gui_window* win, const gui_input& input) {
-    uiupdate_image_params(win, input, glparams);
+  callbacks.uiupdate_cb = [&](const glinput_state& input) {
+    uiupdate_image_params(input, glparams);
   };
 
   // run ui
@@ -318,36 +329,36 @@ void view_images(const string& title, const vector<string>& names,
   auto selected = 0;
 
   // callbacks
-  auto callbacks    = gui_callbacks{};
-  callbacks.init_cb = [&](gui_window* win, const gui_input& input) {
+  auto callbacks    = glwindow_callbacks{};
+  callbacks.init_cb = [&](const glinput_state& input) {
     for (auto idx = 0; idx < (int)images.size(); idx++) {
       init_image(glimages[idx]);
       set_image(glimages[idx], displays[idx]);
     }
   };
-  callbacks.clear_cb = [&](gui_window* win, const gui_input& input) {
+  callbacks.clear_cb = [&](const glinput_state& input) {
     for (auto idx = 0; idx < (int)images.size(); idx++) {
       clear_image(glimages[idx]);
     }
   };
-  callbacks.draw_cb = [&](gui_window* win, const gui_input& input) {
-    update_image_params(win, input, displays[selected], glparamss[selected]);
+  callbacks.draw_cb = [&](const glinput_state& input) {
+    update_image_params(input, displays[selected], glparamss[selected]);
     draw_image(glimages[selected], glparamss[selected]);
   };
-  callbacks.widgets_cb = [&](gui_window* win, const gui_input& input) {
-    draw_combobox(win, "name", selected, names);
+  callbacks.widgets_cb = [&](const glinput_state& input) {
+    draw_glcombobox("name", selected, names);
     auto filmic = (bool)filmics[selected];  // vector of bool ...
-    if (draw_tonemap_params(win, input, exposures[selected], filmic)) {
+    if (draw_tonemap_params(input, exposures[selected], filmic)) {
       filmics[selected] = filmic;
       tonemap_image_mt(displays[selected], images[selected],
           exposures[selected], filmics[selected]);
       set_image(glimages[selected], displays[selected]);
     }
     draw_image_inspector(
-        win, input, images[selected], displays[selected], glparamss[selected]);
+        input, images[selected], displays[selected], glparamss[selected]);
   };
-  callbacks.uiupdate_cb = [&](gui_window* win, const gui_input& input) {
-    uiupdate_image_params(win, input, glparamss[selected]);
+  callbacks.uiupdate_cb = [&](const glinput_state& input) {
+    uiupdate_image_params(input, glparamss[selected]);
   };
 
   // run ui
@@ -373,49 +384,48 @@ void colorgrade_image(
   auto selected = 0;
 
   // callbacks
-  auto callbacks    = gui_callbacks{};
-  callbacks.init_cb = [&](gui_window* win, const gui_input& input) {
+  auto callbacks    = glwindow_callbacks{};
+  callbacks.init_cb = [&](const glinput_state& input) {
     init_image(glimage);
     set_image(glimage, display);
   };
-  callbacks.clear_cb = [&](gui_window* win, const gui_input& input) {
+  callbacks.clear_cb = [&](const glinput_state& input) {
     clear_image(glimage);
   };
-  callbacks.draw_cb = [&](gui_window* win, const gui_input& input) {
-    update_image_params(win, input, image, glparams);
+  callbacks.draw_cb = [&](const glinput_state& input) {
+    update_image_params(input, image, glparams);
     draw_image(glimage, glparams);
   };
-  callbacks.widgets_cb = [&](gui_window* win, const gui_input& input) {
-    draw_combobox(win, "name", selected, names);
-    if (begin_header(win, "colorgrade")) {
+  callbacks.widgets_cb = [&](const glinput_state& input) {
+    draw_glcombobox("name", selected, names);
+    if (begin_glheader("colorgrade")) {
       auto edited = 0;
-      edited += draw_slider(win, "exposure", params.exposure, -5, 5);
-      edited += draw_coloredit(win, "tint", params.tint);
-      edited += draw_slider(win, "lincontrast", params.lincontrast, 0, 1);
-      edited += draw_slider(win, "logcontrast", params.logcontrast, 0, 1);
-      edited += draw_slider(win, "linsaturation", params.linsaturation, 0, 1);
-      edited += draw_checkbox(win, "filmic", params.filmic);
-      continue_line(win);
-      edited += draw_checkbox(win, "srgb", params.srgb);
-      edited += draw_slider(win, "contrast", params.contrast, 0, 1);
-      edited += draw_slider(win, "saturation", params.saturation, 0, 1);
-      edited += draw_slider(win, "shadows", params.shadows, 0, 1);
-      edited += draw_slider(win, "midtones", params.midtones, 0, 1);
-      edited += draw_slider(win, "highlights", params.highlights, 0, 1);
-      edited += draw_coloredit(win, "shadows color", params.shadows_color);
-      edited += draw_coloredit(win, "midtones color", params.midtones_color);
-      edited += draw_coloredit(
-          win, "highlights color", params.highlights_color);
-      end_header(win);
+      edited += draw_glslider("exposure", params.exposure, -5, 5);
+      edited += draw_glcoloredit("tint", params.tint);
+      edited += draw_glslider("lincontrast", params.lincontrast, 0, 1);
+      edited += draw_glslider("logcontrast", params.logcontrast, 0, 1);
+      edited += draw_glslider("linsaturation", params.linsaturation, 0, 1);
+      edited += draw_glcheckbox("filmic", params.filmic);
+      continue_glline();
+      edited += draw_glcheckbox("srgb", params.srgb);
+      edited += draw_glslider("contrast", params.contrast, 0, 1);
+      edited += draw_glslider("saturation", params.saturation, 0, 1);
+      edited += draw_glslider("shadows", params.shadows, 0, 1);
+      edited += draw_glslider("midtones", params.midtones, 0, 1);
+      edited += draw_glslider("highlights", params.highlights, 0, 1);
+      edited += draw_glcoloredit("shadows color", params.shadows_color);
+      edited += draw_glcoloredit("midtones color", params.midtones_color);
+      edited += draw_glcoloredit("highlights color", params.highlights_color);
+      end_glheader();
       if (edited) {
         colorgrade_image_mt(display, image, params);
         set_image(glimage, display);
       }
     }
-    draw_image_inspector(win, input, image, display, glparams);
+    draw_image_inspector(input, image, display, glparams);
   };
-  callbacks.uiupdate_cb = [&glparams](gui_window* win, const gui_input& input) {
-    uiupdate_image_params(win, input, glparams);
+  callbacks.uiupdate_cb = [&glparams](const glinput_state& input) {
+    uiupdate_image_params(input, glparams);
   };
 
   // run ui
@@ -520,7 +530,7 @@ void view_scene(const string& title, const string& name, scene_model& scene,
         state.samples += 1;
         if (!render_stop) {
           auto lock      = std::lock_guard{render_mutex};
-          render_current = 0;
+          render_current = state.samples;
           if (!params.denoise || render_stop) {
             get_render(render, state);
           } else {
@@ -547,73 +557,74 @@ void view_scene(const string& title, const string& name, scene_model& scene,
   auto selection = scene_selection{};
 
   // callbacks
-  auto callbacks    = gui_callbacks{};
-  callbacks.init_cb = [&](gui_window* win, const gui_input& input) {
+  auto callbacks    = glwindow_callbacks{};
+  callbacks.init_cb = [&](const glinput_state& input) {
     auto lock = std::lock_guard{render_mutex};
     init_image(glimage);
     set_image(glimage, display);
   };
-  callbacks.clear_cb = [&](gui_window* win, const gui_input& input) {
+  callbacks.clear_cb = [&](const glinput_state& input) {
     clear_image(glimage);
   };
-  callbacks.draw_cb = [&](gui_window* win, const gui_input& input) {
+  callbacks.draw_cb = [&](const glinput_state& input) {
     // update image
     if (render_update) {
       auto lock = std::lock_guard{render_mutex};
       set_image(glimage, display);
       render_update = false;
     }
-    update_image_params(win, input, image, glparams);
+    update_image_params(input, image, glparams);
     draw_image(glimage, glparams);
   };
-  callbacks.widgets_cb = [&](gui_window* win, const gui_input& input) {
+  callbacks.widgets_cb = [&](const glinput_state& input) {
     auto edited = 0;
-    draw_combobox(win, "name", selected, names);
-    // draw_progressbar(win, "render", app->current, app->total);
-    if (begin_header(win, "render")) {
+    draw_glcombobox("name", selected, names);
+    auto current = (int)render_current;
+    draw_glprogressbar("sample", current, params.samples);
+    if (begin_glheader("render")) {
       auto edited  = 0;
       auto tparams = params;
-      edited += draw_combobox(win, "camera", tparams.camera, camera_names);
-      edited += draw_slider(win, "resolution", tparams.resolution, 180, 4096);
-      edited += draw_slider(win, "samples", tparams.samples, 16, 4096);
-      edited += draw_combobox(
-          win, "tracer", (int&)tparams.sampler, trace_sampler_names);
-      edited += draw_combobox(
-          win, "false color", (int&)tparams.falsecolor, trace_falsecolor_names);
-      edited += draw_slider(win, "bounces", tparams.bounces, 1, 128);
-      edited += draw_slider(win, "clamp", tparams.clamp, 10, 1000);
-      edited += draw_checkbox(win, "envhidden", tparams.envhidden);
-      continue_line(win);
-      edited += draw_checkbox(win, "filter", tparams.tentfilter);
-      edited += draw_slider(win, "pratio", tparams.pratio, 1, 64);
-      // edited += draw_slider(win, "exposure", tparams.exposure, -5, 5);
-      end_header(win);
+      edited += draw_glcombobox("camera", tparams.camera, camera_names);
+      edited += draw_glslider("resolution", tparams.resolution, 180, 4096);
+      edited += draw_glslider("samples", tparams.samples, 16, 4096);
+      edited += draw_glcombobox(
+          "tracer", (int&)tparams.sampler, trace_sampler_names);
+      edited += draw_glcombobox(
+          "false color", (int&)tparams.falsecolor, trace_falsecolor_names);
+      edited += draw_glslider("bounces", tparams.bounces, 1, 128);
+      edited += draw_glslider("clamp", tparams.clamp, 10, 1000);
+      edited += draw_glcheckbox("envhidden", tparams.envhidden);
+      continue_glline();
+      edited += draw_glcheckbox("filter", tparams.tentfilter);
+      edited += draw_glslider("pratio", tparams.pratio, 1, 64);
+      // edited += draw_glslider("exposure", tparams.exposure, -5, 5);
+      end_glheader();
       if (edited) {
         stop_render();
         params = tparams;
         reset_display();
       }
     }
-    if (begin_header(win, "tonemap")) {
-      edited += draw_slider(win, "exposure", params.exposure, -5, 5);
-      edited += draw_checkbox(win, "filmic", params.filmic);
-      edited += draw_checkbox(win, "denoise", params.denoise);
-      end_header(win);
+    if (begin_glheader("tonemap")) {
+      edited += draw_glslider("exposure", params.exposure, -5, 5);
+      edited += draw_glcheckbox("filmic", params.filmic);
+      edited += draw_glcheckbox("denoise", params.denoise);
+      end_glheader();
       if (edited) {
         tonemap_image_mt(display, image, params.exposure, params.filmic);
         set_image(glimage, display);
       }
     }
-    draw_image_inspector(win, input, image, display, glparams);
+    draw_image_inspector(input, image, display, glparams);
     if (edit) {
-      if (draw_scene_editor(win, scene, selection, [&]() { stop_render(); })) {
+      if (draw_scene_editor(scene, selection, [&]() { stop_render(); })) {
         reset_display();
       }
     }
   };
-  callbacks.uiupdate_cb = [&](gui_window* win, const gui_input& input) {
+  callbacks.uiupdate_cb = [&](const glinput_state& input) {
     auto camera = scene.cameras[params.camera];
-    if (uiupdate_camera_params(win, input, camera)) {
+    if (uiupdate_camera_params(input, camera)) {
       stop_render();
       scene.cameras[params.camera] = camera;
       reset_display();
@@ -654,36 +665,36 @@ void glview_scene(const string& title, const string& name, scene_model& scene,
   auto updated_textures = vector<int>{};
 
   // callbacks
-  auto callbacks    = gui_callbacks{};
-  callbacks.init_cb = [&](gui_window* win, const gui_input& input) {
+  auto callbacks    = glwindow_callbacks{};
+  callbacks.init_cb = [&](const glinput_state& input) {
     init_glscene(glscene, scene);
   };
-  callbacks.clear_cb = [&](gui_window* win, const gui_input& input) {
+  callbacks.clear_cb = [&](const glinput_state& input) {
     clear_scene(glscene);
   };
-  callbacks.draw_cb = [&](gui_window* win, const gui_input& input) {
+  callbacks.draw_cb = [&](const glinput_state& input) {
     draw_scene(glscene, scene, input.framebuffer_viewport, params);
   };
-  callbacks.widgets_cb = [&](gui_window* win, const gui_input& input) {
-    draw_combobox(win, "name", selected, names);
-    if (begin_header(win, "shade")) {
-      draw_combobox(win, "camera", params.camera, camera_names);
-      draw_checkbox(win, "wireframe", params.wireframe);
-      continue_line(win);
-      draw_checkbox(win, "faceted", params.faceted);
-      continue_line(win);
-      draw_checkbox(win, "double sided", params.double_sided);
-      draw_combobox(
-          win, "lighting", (int&)params.lighting, glscene_lighting_names);
-      draw_slider(win, "exposure", params.exposure, -10, 10);
-      draw_slider(win, "gamma", params.gamma, 0.1f, 4);
-      draw_slider(win, "near", params.near, 0.01f, 1.0f);
-      draw_slider(win, "far", params.far, 1000.0f, 10000.0f);
-      end_header(win);
+  callbacks.widgets_cb = [&](const glinput_state& input) {
+    draw_glcombobox("name", selected, names);
+    if (begin_glheader("shade")) {
+      draw_glcombobox("camera", params.camera, camera_names);
+      draw_glcheckbox("wireframe", params.wireframe);
+      continue_glline();
+      draw_glcheckbox("faceted", params.faceted);
+      continue_glline();
+      draw_glcheckbox("double sided", params.double_sided);
+      draw_glcombobox(
+          "lighting", (int&)params.lighting, glscene_lighting_names);
+      draw_glslider("exposure", params.exposure, -10, 10);
+      draw_glslider("gamma", params.gamma, 0.1f, 4);
+      draw_glslider("near", params.near, 0.01f, 1.0f);
+      draw_glslider("far", params.far, 1000.0f, 10000.0f);
+      end_glheader();
     }
-    // draw_scene_editor(win, scene, selection, {});
+    // draw_scene_editor(scene, selection, {});
     if (widgets_callback) {
-      widgets_callback(win, input, updated_shapes, updated_textures);
+      widgets_callback(input, updated_shapes, updated_textures);
       if (!updated_shapes.empty() || !updated_textures.empty()) {
         update_glscene(glscene, scene, updated_shapes, updated_textures);
         updated_shapes.clear();
@@ -691,9 +702,9 @@ void glview_scene(const string& title, const string& name, scene_model& scene,
       }
     }
   };
-  callbacks.update_cb = [&](gui_window* win, const gui_input& input) {
+  callbacks.update_cb = [&](const glinput_state& input) {
     if (update_callback) {
-      update_callback(win, input, updated_shapes, updated_textures);
+      update_callback(input, updated_shapes, updated_textures);
       if (!updated_shapes.empty() || !updated_textures.empty()) {
         update_glscene(glscene, scene, updated_shapes, updated_textures);
         updated_shapes.clear();
@@ -701,10 +712,10 @@ void glview_scene(const string& title, const string& name, scene_model& scene,
       }
     }
   };
-  callbacks.uiupdate_cb = [&](gui_window* win, const gui_input& input) {
+  callbacks.uiupdate_cb = [&](const glinput_state& input) {
     // handle mouse and keyboard for navigation
     if (uiupdate_callback) {
-      uiupdate_callback(win, input, updated_shapes, updated_textures);
+      uiupdate_callback(input, updated_shapes, updated_textures);
       if (!updated_shapes.empty() || !updated_textures.empty()) {
         update_glscene(glscene, scene, updated_shapes, updated_textures);
         updated_shapes.clear();
@@ -712,7 +723,7 @@ void glview_scene(const string& title, const string& name, scene_model& scene,
       }
     }
     auto camera = scene.cameras.at(params.camera);
-    if (uiupdate_camera_params(win, input, camera)) {
+    if (uiupdate_camera_params(input, camera)) {
       scene.cameras.at(params.camera) = camera;
     }
   };
@@ -1621,6 +1632,943 @@ void draw_scene(glscene_state& glscene, const scene_model& scene,
 
   // done
   glUseProgram(0);
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// WINDOW
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// OpenGL window wrapper
+struct glwindow_state {
+  string              title         = "";
+  init_glcallback     init_cb       = {};
+  clear_glcallback    clear_cb      = {};
+  draw_glcallback     draw_cb       = {};
+  widgets_glcallback  widgets_cb    = {};
+  update_glcallback   update_cb     = {};
+  uiupdate_glcallback uiupdate_cb   = {};
+  int                 widgets_width = 0;
+  bool                widgets_left  = true;
+  glinput_state       input         = {};
+  vec2i               window_size   = {0, 0};
+  vec4f               background    = {0.15f, 0.15f, 0.15f, 1.0f};
+};
+
+static void draw_window(glwindow_state& state) {
+  glClearColor(state.background.x, state.background.y, state.background.z,
+      state.background.w);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  if (state.draw_cb) state.draw_cb(state.input);
+  if (state.widgets_cb) {
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
+    auto window = state.window_size;
+    if (state.widgets_left) {
+      ImGui::SetNextWindowPos({0, 0});
+      ImGui::SetNextWindowSize({(float)state.widgets_width, (float)window.y});
+    } else {
+      ImGui::SetNextWindowPos({(float)(window.x - state.widgets_width), 0});
+      ImGui::SetNextWindowSize({(float)state.widgets_width, (float)window.y});
+    }
+    ImGui::SetNextWindowCollapsed(false);
+    ImGui::SetNextWindowBgAlpha(1);
+    if (ImGui::Begin(state.title.c_str(), nullptr,
+            ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
+                ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse |
+                ImGuiWindowFlags_NoSavedSettings)) {
+      state.widgets_cb(state.input);
+    }
+    ImGui::End();
+    ImGui::Render();
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+  }
+}
+
+// run the user interface with the give callbacks
+void run_ui(const vec2i& size, const string& title,
+    const glwindow_callbacks& callbacks, int widgets_width, bool widgets_left) {
+  // init glfw
+  if (!glfwInit())
+    throw std::runtime_error("cannot initialize windowing system");
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+  glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+#if __APPLE__
+  glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+#endif
+
+  // create state
+  auto state        = glwindow_state{};
+  state.title       = title;
+  state.init_cb     = callbacks.init_cb;
+  state.clear_cb    = callbacks.clear_cb;
+  state.draw_cb     = callbacks.draw_cb;
+  state.widgets_cb  = callbacks.widgets_cb;
+  state.update_cb   = callbacks.update_cb;
+  state.uiupdate_cb = callbacks.uiupdate_cb;
+
+  // create window
+  auto window = glfwCreateWindow(
+      size.x, size.y, title.c_str(), nullptr, nullptr);
+  if (window == nullptr)
+    throw std::runtime_error{"cannot initialize windowing system"};
+  glfwMakeContextCurrent(window);
+  glfwSwapInterval(1);  // Enable vsync
+
+  // set user data
+  glfwSetWindowUserPointer(window, &state);
+
+  // set callbacks
+  glfwSetWindowRefreshCallback(window, [](GLFWwindow* window) {
+    auto& state = *(glwindow_state*)glfwGetWindowUserPointer(window);
+    glfwGetWindowSize(window, &state.window_size.x, &state.window_size.y);
+    draw_window(state);
+    glfwSwapBuffers(window);
+  });
+  glfwSetWindowSizeCallback(
+      window, [](GLFWwindow* window, int width, int height) {
+        auto& state = *(glwindow_state*)glfwGetWindowUserPointer(window);
+        glfwGetWindowSize(
+            window, &state.input.window_size.x, &state.input.window_size.y);
+        if (state.widgets_width)
+          state.input.window_size.x -= state.widgets_width;
+        glfwGetFramebufferSize(window, &state.input.framebuffer_viewport.z,
+            &state.input.framebuffer_viewport.w);
+        state.input.framebuffer_viewport.x = 0;
+        state.input.framebuffer_viewport.y = 0;
+        if (state.widgets_width) {
+          auto win_size = zero2i;
+          glfwGetWindowSize(window, &win_size.x, &win_size.y);
+          auto offset = (int)(state.widgets_width *
+                              (float)state.input.framebuffer_viewport.z /
+                              win_size.x);
+          state.input.framebuffer_viewport.z -= offset;
+          if (state.widgets_left) state.input.framebuffer_viewport.x += offset;
+        }
+      });
+
+  // init gl extensions
+  if (!gladLoadGL())
+    throw std::runtime_error{"cannot initialize OpenGL extensions"};
+
+  // widgets
+  if (callbacks.widgets_cb) {
+    ImGui::CreateContext();
+    ImGui::GetIO().IniFilename       = nullptr;
+    ImGui::GetStyle().WindowRounding = 0;
+    ImGui_ImplGlfw_InitForOpenGL(window, true);
+#ifndef __APPLE__
+    ImGui_ImplOpenGL3_Init();
+#else
+    ImGui_ImplOpenGL3_Init("#version 330");
+#endif
+    ImGui::StyleColorsDark();
+    state.widgets_width = widgets_width;
+    state.widgets_left  = widgets_left;
+  }
+
+  // init
+  if (state.init_cb) state.init_cb(state.input);
+
+  // run ui
+  while (!glfwWindowShouldClose(window)) {
+    // update input
+    state.input.mouse_last = state.input.mouse_pos;
+    auto mouse_posx = 0.0, mouse_posy = 0.0;
+    glfwGetCursorPos(window, &mouse_posx, &mouse_posy);
+    state.input.mouse_pos = vec2f{(float)mouse_posx, (float)mouse_posy};
+    if (state.widgets_width && state.widgets_left)
+      state.input.mouse_pos.x -= state.widgets_width;
+    state.input.mouse_left = glfwGetMouseButton(
+                                 window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
+    state.input.mouse_right =
+        glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS;
+    state.input.modifier_alt =
+        glfwGetKey(window, GLFW_KEY_LEFT_ALT) == GLFW_PRESS ||
+        glfwGetKey(window, GLFW_KEY_RIGHT_ALT) == GLFW_PRESS;
+    state.input.modifier_shift =
+        glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ||
+        glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
+    state.input.modifier_ctrl =
+        glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS ||
+        glfwGetKey(window, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS;
+    glfwGetWindowSize(
+        window, &state.input.window_size.x, &state.input.window_size.y);
+    if (state.widgets_width) state.input.window_size.x -= state.widgets_width;
+    glfwGetFramebufferSize(window, &state.input.framebuffer_viewport.z,
+        &state.input.framebuffer_viewport.w);
+    state.input.framebuffer_viewport.x = 0;
+    state.input.framebuffer_viewport.y = 0;
+    if (state.widgets_width) {
+      auto win_size = zero2i;
+      glfwGetWindowSize(window, &win_size.x, &win_size.y);
+      auto offset = (int)(state.widgets_width *
+                          (float)state.input.framebuffer_viewport.z /
+                          win_size.x);
+      state.input.framebuffer_viewport.z -= offset;
+      if (state.widgets_left) state.input.framebuffer_viewport.x += offset;
+    }
+    if (state.widgets_width) {
+      auto io                    = &ImGui::GetIO();
+      state.input.widgets_active = io->WantTextInput || io->WantCaptureMouse ||
+                                   io->WantCaptureKeyboard;
+    }
+
+    // time
+    state.input.clock_last = state.input.clock_now;
+    state.input.clock_now =
+        std::chrono::high_resolution_clock::now().time_since_epoch().count();
+    state.input.time_now = (double)state.input.clock_now / 1000000000.0;
+    state.input.time_delta =
+        (double)(state.input.clock_now - state.input.clock_last) / 1000000000.0;
+
+    // update ui
+    if (state.uiupdate_cb && !state.input.widgets_active)
+      state.uiupdate_cb(state.input);
+
+    // update
+    if (state.update_cb) state.update_cb(state.input);
+
+    // draw
+    glfwGetWindowSize(window, &state.window_size.x, &state.window_size.y);
+    draw_window(state);
+    glfwSwapBuffers(window);
+
+    // event hadling
+    glfwPollEvents();
+  }
+
+  // clear
+  if (state.clear_cb) state.clear_cb(state.input);
+
+  // clear
+  glfwDestroyWindow(window);
+  glfwTerminate();
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// OPENGL WIDGETS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+bool begin_glheader(const char* lbl) {
+  if (!ImGui::CollapsingHeader(lbl)) return false;
+  ImGui::PushID(lbl);
+  return true;
+}
+void end_glheader() { ImGui::PopID(); }
+
+void open_glmodal(const char* lbl) { ImGui::OpenPopup(lbl); }
+void clear_glmodal(glwindow_state* win) { ImGui::CloseCurrentPopup(); }
+bool begin_glmodal(const char* lbl) { return ImGui::BeginPopupModal(lbl); }
+void end_glmodal(glwindow_state* win) { ImGui::EndPopup(); }
+bool is_glmodal_open(const char* lbl) { return ImGui::IsPopupOpen(lbl); }
+
+struct filedialog_state {
+  string                     dirname       = "";
+  string                     filename      = "";
+  vector<pair<string, bool>> entries       = {};
+  bool                       save          = false;
+  bool                       remove_hidden = true;
+  string                     filter        = "";
+  vector<string>             extensions    = {};
+
+  filedialog_state() = default;
+  filedialog_state(const string& dirname, const string& filename,
+      const string& filter, bool save) {
+    set(dirname, filename, filter, save);
+  }
+
+  void set(const string& dirname, const string& filename, const string& filter,
+      bool save) {
+    this->save = save;
+    _set_filter(filter);
+    _set_dirname(dirname);
+    _set_filename(filename);
+  }
+
+  void _set_dirname(const string& name) {
+    if (path_exists(name) && path_isdir(name)) {
+      dirname = name;
+    } else if (path_exists(dirname) && path_isdir(dirname)) {
+      // leave it like this
+    } else {
+      dirname = path_current();
+    }
+    dirname = normalize_path(dirname);
+    entries.clear();
+    for (auto entry : list_directory(dirname)) {
+      if (remove_hidden && path_basename(entry)[0] == '.') continue;
+      if (path_isdir(entry)) {
+        entries.push_back({path_filename(entry) + "/", true});
+      } else {
+        entries.push_back({path_filename(entry), false});
+      }
+    }
+    std::sort(entries.begin(), entries.end(), [](auto& a, auto& b) {
+      if (a.second == b.second) return a.first < b.first;
+      return a.second;
+    });
+  }
+
+  void _set_filename(const string& name) {
+    filename = name;
+    if (filename.empty()) return;
+    auto ext = path_extension(filename);
+    if (std::find(extensions.begin(), extensions.end(), ext) ==
+        extensions.end()) {
+      filename = "";
+      return;
+    }
+    if (!save && !path_exists(path_join(dirname, filename))) {
+      filename = "";
+      return;
+    }
+  }
+
+  void _set_filter(const string& flt) {
+    auto globs = vector<string>{""};
+    for (auto i = 0; i < flt.size(); i++) {
+      if (flt[i] == ';') {
+        globs.push_back("");
+      } else {
+        globs.back() += flt[i];
+      }
+    }
+    filter = "";
+    extensions.clear();
+    for (auto pattern : globs) {
+      if (pattern == "") continue;
+      auto ext = path_extension(pattern);
+      if (ext != "") {
+        extensions.push_back(ext);
+        filter += (filter == "") ? ("*." + ext) : (";*." + ext);
+      }
+    }
+  }
+
+  void select(int idx) {
+    if (entries[idx].second) {
+      set(path_join(dirname, entries[idx].first), filename, filter, save);
+    } else {
+      set(dirname, entries[idx].first, filter, save);
+    }
+  }
+
+  string get_path() const { return path_join(dirname, filename); }
+};
+
+bool draw_glfiledialog(const char* lbl, string& path, bool save,
+    const string& dirname, const string& filename, const string& filter) {
+  static auto states = unordered_map<string, filedialog_state>{};
+  ImGui::SetNextWindowSize({500, 300}, ImGuiCond_FirstUseEver);
+  if (ImGui::BeginPopupModal(lbl)) {
+    if (states.find(lbl) == states.end()) {
+      states[lbl] = filedialog_state{dirname, filename, filter, save};
+    }
+    auto& state      = states.at(lbl);
+    auto  dir_buffer = array<char, 1024>{};
+    snprintf(dir_buffer.data(), dir_buffer.size(), "%s", state.dirname.c_str());
+    if (ImGui::InputText("dir", dir_buffer.data(), sizeof(dir_buffer))) {
+      state.set(dir_buffer.data(), state.filename, state.filter, save);
+    }
+    auto current_item = -1;
+    if (ImGui::ListBox(
+            "entries", &current_item,
+            [](void* data, int idx, const char** out_text) -> bool {
+              auto& state = *(filedialog_state*)data;
+              *out_text   = state.entries[idx].first.c_str();
+              return true;
+            },
+            &state, (int)state.entries.size())) {
+      state.select(current_item);
+    }
+    auto file_buffer = array<char, 1024>{};
+    snprintf(
+        file_buffer.data(), file_buffer.size(), "%s", state.filename.c_str());
+    if (ImGui::InputText("file", file_buffer.data(), file_buffer.size())) {
+      state.set(state.dirname, file_buffer.data(), state.filter, save);
+    }
+    auto filter_buffer = array<char, 1024>{};
+    snprintf(
+        filter_buffer.data(), filter_buffer.size(), "%s", state.filter.c_str());
+    if (ImGui::InputText(
+            "filter", filter_buffer.data(), filter_buffer.size())) {
+      state.set(state.dirname, state.filename, filter_buffer.data(), save);
+    }
+    auto ok = false, exit = false;
+    if (ImGui::Button("Ok")) {
+      path = state.dirname + state.filename;
+      ok   = true;
+      exit = true;
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Cancel")) {
+      exit = true;
+    }
+    if (exit) {
+      ImGui::CloseCurrentPopup();
+      states.erase(lbl);
+    }
+    ImGui::EndPopup();
+    return ok;
+  } else {
+    return false;
+  }
+}
+
+bool draw_filedialog_button(const char* button_lbl, bool button_active,
+    const char* lbl, string& path, bool save, const string& dirname,
+    const string& filename, const string& filter) {
+  if (is_glmodal_open(lbl)) {
+    draw_glbutton(button_lbl, button_active);
+    return draw_glfiledialog(lbl, path, save, dirname, filename, filter);
+  } else {
+    if (draw_glbutton(button_lbl, button_active)) {
+      open_glmodal(lbl);
+    }
+    return false;
+  }
+}
+
+bool draw_glbutton(const char* lbl, bool enabled) {
+  if (enabled) {
+    return ImGui::Button(lbl);
+  } else {
+    ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
+    ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f);
+    auto ok = ImGui::Button(lbl);
+    ImGui::PopItemFlag();
+    ImGui::PopStyleVar();
+    return ok;
+  }
+}
+
+void draw_gllabel(const char* lbl, const string& label) {
+  ImGui::LabelText(lbl, "%s", label.c_str());
+}
+void draw_gllabel(const char* lbl, int value) {
+  ImGui::LabelText(lbl, "%s", std::to_string(value).c_str());
+}
+void draw_gllabel(const char* lbl, bool value) {
+  ImGui::LabelText(lbl, "%s", value ? "true" : "false");
+}
+
+void draw_glseparator() { ImGui::Separator(); }
+
+void continue_glline() { ImGui::SameLine(); }
+
+bool draw_gltextinput(const char* lbl, string& value) {
+  auto buffer = array<char, 4096>{};
+  auto num    = 0;
+  for (auto c : value) buffer[num++] = c;
+  buffer[num] = 0;
+  auto edited = ImGui::InputText(lbl, buffer.data(), buffer.size());
+  if (edited) value = buffer.data();
+  return edited;
+}
+
+bool draw_glslider(const char* lbl, float& value, float min, float max) {
+  return ImGui::SliderFloat(lbl, &value, min, max);
+}
+bool draw_glslider(const char* lbl, vec2f& value, float min, float max) {
+  return ImGui::SliderFloat2(lbl, &value.x, min, max);
+}
+bool draw_glslider(const char* lbl, vec3f& value, float min, float max) {
+  return ImGui::SliderFloat3(lbl, &value.x, min, max);
+}
+bool draw_glslider(const char* lbl, vec4f& value, float min, float max) {
+  return ImGui::SliderFloat4(lbl, &value.x, min, max);
+}
+
+bool draw_glslider(const char* lbl, int& value, int min, int max) {
+  return ImGui::SliderInt(lbl, &value, min, max);
+}
+bool draw_glslider(const char* lbl, vec2i& value, int min, int max) {
+  return ImGui::SliderInt2(lbl, &value.x, min, max);
+}
+bool draw_glslider(const char* lbl, vec3i& value, int min, int max) {
+  return ImGui::SliderInt3(lbl, &value.x, min, max);
+}
+bool draw_glslider(const char* lbl, vec4i& value, int min, int max) {
+  return ImGui::SliderInt4(lbl, &value.x, min, max);
+}
+
+bool draw_gldragger(
+    const char* lbl, float& value, float speed, float min, float max) {
+  return ImGui::DragFloat(lbl, &value, speed, min, max);
+}
+bool draw_gldragger(
+    const char* lbl, vec2f& value, float speed, float min, float max) {
+  return ImGui::DragFloat2(lbl, &value.x, speed, min, max);
+}
+bool draw_gldragger(
+    const char* lbl, vec3f& value, float speed, float min, float max) {
+  return ImGui::DragFloat3(lbl, &value.x, speed, min, max);
+}
+bool draw_gldragger(
+    const char* lbl, vec4f& value, float speed, float min, float max) {
+  return ImGui::DragFloat4(lbl, &value.x, speed, min, max);
+}
+
+bool draw_gldragger(
+    const char* lbl, int& value, float speed, int min, int max) {
+  return ImGui::DragInt(lbl, &value, speed, min, max);
+}
+bool draw_gldragger(
+    const char* lbl, vec2i& value, float speed, int min, int max) {
+  return ImGui::DragInt2(lbl, &value.x, speed, min, max);
+}
+bool draw_gldragger(
+    const char* lbl, vec3i& value, float speed, int min, int max) {
+  return ImGui::DragInt3(lbl, &value.x, speed, min, max);
+}
+bool draw_gldragger(
+    const char* lbl, vec4i& value, float speed, int min, int max) {
+  return ImGui::DragInt4(lbl, &value.x, speed, min, max);
+}
+
+bool draw_gldragger(const char* lbl, array<float, 2>& value, float speed,
+    float min, float max) {
+  return ImGui::DragFloat2(lbl, value.data(), speed, min, max);
+}
+bool draw_gldragger(const char* lbl, array<float, 3>& value, float speed,
+    float min, float max) {
+  return ImGui::DragFloat3(lbl, value.data(), speed, min, max);
+}
+bool draw_gldragger(const char* lbl, array<float, 4>& value, float speed,
+    float min, float max) {
+  return ImGui::DragFloat4(lbl, value.data(), speed, min, max);
+}
+
+bool draw_gldragger(
+    const char* lbl, array<int, 2>& value, float speed, int min, int max) {
+  return ImGui::DragInt2(lbl, value.data(), speed, min, max);
+}
+bool draw_gldragger(
+    const char* lbl, array<int, 3>& value, float speed, int min, int max) {
+  return ImGui::DragInt3(lbl, value.data(), speed, min, max);
+}
+bool draw_gldragger(
+    const char* lbl, array<int, 4>& value, float speed, int min, int max) {
+  return ImGui::DragInt4(lbl, value.data(), speed, min, max);
+}
+
+bool draw_glcheckbox(const char* lbl, bool& value) {
+  return ImGui::Checkbox(lbl, &value);
+}
+bool draw_glcheckbox(const char* lbl, bool& value, bool invert) {
+  if (!invert) {
+    return draw_glcheckbox(lbl, value);
+  } else {
+    auto inverted = !value;
+    auto edited   = ImGui::Checkbox(lbl, &inverted);
+    if (edited) value = !inverted;
+    return edited;
+  }
+}
+
+bool draw_glcoloredit(const char* lbl, vec3f& value) {
+  auto flags = ImGuiColorEditFlags_Float;
+  return ImGui::ColorEdit3(lbl, &value.x, flags);
+}
+
+bool draw_glcoloredit(const char* lbl, vec4f& value) {
+  auto flags = ImGuiColorEditFlags_Float;
+  return ImGui::ColorEdit4(lbl, &value.x, flags);
+}
+
+bool draw_glcoloredithdr(const char* lbl, vec3f& value) {
+  auto color    = value;
+  auto exposure = 0.0f;
+  auto scale    = max(color);
+  if (scale > 1) {
+    color /= scale;
+    exposure = log2(scale);
+  }
+  auto edit_exposure = draw_glslider(
+      (lbl + " [exp]"s).c_str(), exposure, 0, 10);
+  auto edit_color = draw_glcoloredit((lbl + " [col]"s).c_str(), color);
+  if (edit_exposure || edit_color) {
+    value = color * exp2(exposure);
+    return true;
+  } else {
+    return false;
+  }
+}
+bool draw_glcoloredithdr(const char* lbl, vec4f& value) {
+  auto color    = value;
+  auto exposure = 0.0f;
+  auto scale    = max(xyz(color));
+  if (scale > 1) {
+    color.x /= scale;
+    color.y /= scale;
+    color.z /= scale;
+    exposure = log2(scale);
+  }
+  auto edit_exposure = draw_glslider(
+      (lbl + " [exp]"s).c_str(), exposure, 0, 10);
+  auto edit_color = draw_glcoloredit((lbl + " [col]"s).c_str(), color);
+  if (edit_exposure || edit_color) {
+    value.x = color.x * exp2(exposure);
+    value.y = color.y * exp2(exposure);
+    value.z = color.z * exp2(exposure);
+    value.w = color.w;
+    return true;
+  } else {
+    return false;
+  }
+}
+
+bool draw_glcoloredit(const char* lbl, vec4b& value) {
+  auto valuef = byte_to_float(value);
+  if (ImGui::ColorEdit4(lbl, &valuef.x)) {
+    value = float_to_byte(valuef);
+    return true;
+  } else {
+    return false;
+  }
+}
+
+bool draw_glcombobox(const char* lbl, int& value, const vector<string>& labels,
+    bool include_null) {
+  if (!ImGui::BeginCombo(lbl, value >= 0 ? labels.at(value).c_str() : "<none>"))
+    return false;
+  auto old_val = value;
+  if (include_null) {
+    ImGui::PushID(100000);
+    if (ImGui::Selectable("<none>", value < 0)) value = -1;
+    if (value < 0) ImGui::SetItemDefaultFocus();
+    ImGui::PopID();
+  }
+  for (auto i = 0; i < labels.size(); i++) {
+    ImGui::PushID(i);
+    if (ImGui::Selectable(labels[i].c_str(), value == i)) value = i;
+    if (value == i) ImGui::SetItemDefaultFocus();
+    ImGui::PopID();
+  }
+  ImGui::EndCombo();
+  return value != old_val;
+}
+
+bool draw_glcombobox(const char* lbl, string& value,
+    const vector<string>& labels, bool include_null) {
+  if (!ImGui::BeginCombo(lbl, value.c_str())) return false;
+  auto old_val = value;
+  if (include_null) {
+    ImGui::PushID(100000);
+    if (ImGui::Selectable("<none>", value.empty())) value = "";
+    if (value.empty()) ImGui::SetItemDefaultFocus();
+    ImGui::PopID();
+  }
+  for (auto i = 0; i < labels.size(); i++) {
+    ImGui::PushID(i);
+    if (ImGui::Selectable(labels[i].c_str(), value == labels[i]))
+      value = labels[i];
+    if (value == labels[i]) ImGui::SetItemDefaultFocus();
+    ImGui::PopID();
+  }
+  ImGui::EndCombo();
+  return value != old_val;
+}
+
+bool draw_glcombobox(const char* lbl, int& idx, int num,
+    const function<string(int)>& labels, bool include_null) {
+  if (num <= 0) idx = -1;
+  if (!ImGui::BeginCombo(lbl, idx >= 0 ? labels(idx).c_str() : "<none>"))
+    return false;
+  auto old_idx = idx;
+  if (include_null) {
+    ImGui::PushID(100000);
+    if (ImGui::Selectable("<none>", idx < 0)) idx = -1;
+    if (idx < 0) ImGui::SetItemDefaultFocus();
+    ImGui::PopID();
+  }
+  for (auto i = 0; i < num; i++) {
+    ImGui::PushID(i);
+    if (ImGui::Selectable(labels(i).c_str(), idx == i)) idx = i;
+    if (idx == i) ImGui::SetItemDefaultFocus();
+    ImGui::PopID();
+  }
+  ImGui::EndCombo();
+  return idx != old_idx;
+}
+
+void draw_glprogressbar(const char* lbl, float fraction) {
+  ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.5, 0.5, 1, 0.25));
+  ImGui::ProgressBar(fraction, ImVec2(0.0f, 0.0f));
+  ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
+  ImGui::Text(lbl, ImVec2(0.0f, 0.0f));
+  ImGui::PopStyleColor(1);
+}
+
+void draw_glprogressbar(const char* lbl, int current, int total) {
+  auto overlay = std::to_string(current) + "/" + std::to_string(total);
+  ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.5, 0.5, 1, 0.25));
+  ImGui::ProgressBar(
+      (float)current / (float)total, ImVec2(0.0f, 0.0f), overlay.c_str());
+  ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
+  ImGui::Text(lbl, ImVec2(0.0f, 0.0f));
+  ImGui::PopStyleColor(1);
+}
+
+void draw_histogram(const char* lbl, const float* values, int count) {
+  ImGui::PlotHistogram(lbl, values, count);
+}
+void draw_histogram(const char* lbl, const vector<float>& values) {
+  ImGui::PlotHistogram(lbl, values.data(), (int)values.size(), 0, nullptr,
+      flt_max, flt_max, {0, 0}, 4);
+}
+void draw_histogram(const char* lbl, const vector<vec2f>& values) {
+  ImGui::PlotHistogram((lbl + " x"s).c_str(), (const float*)values.data() + 0,
+      (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec2f));
+  ImGui::PlotHistogram((lbl + " y"s).c_str(), (const float*)values.data() + 1,
+      (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec2f));
+}
+void draw_histogram(const char* lbl, const vector<vec3f>& values) {
+  ImGui::PlotHistogram((lbl + " x"s).c_str(), (const float*)values.data() + 0,
+      (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec3f));
+  ImGui::PlotHistogram((lbl + " y"s).c_str(), (const float*)values.data() + 1,
+      (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec3f));
+  ImGui::PlotHistogram((lbl + " z"s).c_str(), (const float*)values.data() + 2,
+      (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec3f));
+}
+void draw_histogram(const char* lbl, const vector<vec4f>& values) {
+  ImGui::PlotHistogram((lbl + " x"s).c_str(), (const float*)values.data() + 0,
+      (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec4f));
+  ImGui::PlotHistogram((lbl + " y"s).c_str(), (const float*)values.data() + 1,
+      (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec4f));
+  ImGui::PlotHistogram((lbl + " z"s).c_str(), (const float*)values.data() + 2,
+      (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec4f));
+  ImGui::PlotHistogram((lbl + " w"s).c_str(), (const float*)values.data() + 3,
+      (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec4f));
+}
+
+// https://github.com/ocornut/imgui/issues/300
+struct ImGuiAppLog {
+  ImGuiTextBuffer Buf;
+  ImGuiTextFilter Filter;
+  ImVector<int>   LineOffsets;  // Index to lines offset
+  bool            ScrollToBottom;
+
+  void Clear() {
+    Buf.clear();
+    LineOffsets.clear();
+  }
+
+  void AddLog(const char* msg, const char* lbl) {
+    auto old_size = Buf.size();
+    Buf.appendf("[%s] %s\n", lbl, msg);
+    for (auto new_size = Buf.size(); old_size < new_size; old_size++)
+      if (Buf[old_size] == '\n') LineOffsets.push_back(old_size);
+    ScrollToBottom = true;
+  }
+
+  void Draw() {
+    if (ImGui::Button("Clear")) Clear();
+    ImGui::SameLine();
+    bool copy = ImGui::Button("Copy");
+    ImGui::SameLine();
+    Filter.Draw("Filter", -100.0f);
+    ImGui::Separator();
+    ImGui::BeginChild("scrolling");
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 1));
+    if (copy) ImGui::LogToClipboard();
+
+    if (Filter.IsActive()) {
+      const char* buf_begin = Buf.begin();
+      const char* line      = buf_begin;
+      for (int line_no = 0; line != nullptr; line_no++) {
+        const char* line_end = (line_no < LineOffsets.Size)
+                                   ? buf_begin + LineOffsets[line_no]
+                                   : nullptr;
+        if (Filter.PassFilter(line, line_end))
+          ImGui::TextUnformatted(line, line_end);
+        line = line_end != nullptr && line_end[1] != 0 ? line_end + 1 : nullptr;
+      }
+    } else {
+      ImGui::TextUnformatted(Buf.begin());
+    }
+
+    if (ScrollToBottom) ImGui::SetScrollHere(1.0f);
+    ScrollToBottom = false;
+    ImGui::PopStyleVar();
+    ImGui::EndChild();
+  }
+  void Draw(const char* title, bool* p_opened = nullptr) {
+    ImGui::SetNextWindowSize(ImVec2(500, 400), ImGuiCond_FirstUseEver);
+    ImGui::Begin(title, p_opened);
+    Draw();
+    ImGui::End();
+  }
+};
+
+// draw param
+bool draw_glparam(const string& name, gui_param& param) {
+  auto copy = param;
+  switch (param.type) {
+    case gui_param_type::value1f:
+      if (param.minmaxf.x == param.minmaxf.y) {
+        return draw_gldragger(name.c_str(), param.readonly
+                                                ? (float&)copy.valuef
+                                                : (float&)param.valuef) &&
+               !param.readonly;
+      } else {
+        return draw_glslider(name.c_str(),
+                   param.readonly ? (float&)copy.valuef : (float&)param.valuef,
+                   param.minmaxf.x, param.minmaxf.y) &&
+               !param.readonly;
+      }
+      break;
+    case gui_param_type::value2f:
+      if (param.minmaxf.x == param.minmaxf.y) {
+        return draw_gldragger(name.c_str(), param.readonly
+                                                ? (vec2f&)copy.valuef
+                                                : (vec2f&)param.valuef) &&
+               !param.readonly;
+      } else {
+        return draw_glslider(name.c_str(),
+                   param.readonly ? (vec2f&)copy.valuef : (vec2f&)param.valuef,
+                   param.minmaxf.x, param.minmaxf.y) &&
+               !param.readonly;
+      }
+      break;
+    case gui_param_type::value3f:
+      if (param.color) {
+        return draw_glcoloredit(name.c_str(), param.readonly
+                                                  ? (vec3f&)copy.valuef
+                                                  : (vec3f&)param.valuef) &&
+               !param.readonly;
+      } else if (param.minmaxf.x == param.minmaxf.y) {
+        return draw_gldragger(name.c_str(), param.readonly
+                                                ? (vec3f&)copy.valuef
+                                                : (vec3f&)param.valuef) &&
+               !param.readonly;
+      } else {
+        return draw_glslider(name.c_str(),
+                   param.readonly ? copy.valuef : param.valuef, param.minmaxf.x,
+                   param.minmaxf.y) &&
+               !param.readonly;
+      }
+      break;
+    case gui_param_type::value4f:
+      if (param.color) {
+        return draw_glcoloredit(name.c_str(), param.readonly
+                                                  ? (vec4f&)copy.valuef
+                                                  : (vec4f&)param.valuef) &&
+               !param.readonly;
+      } else if (param.minmaxf.x == param.minmaxf.y) {
+        return draw_gldragger(name.c_str(), param.readonly
+                                                ? (vec4f&)copy.valuef
+                                                : (vec4f&)param.valuef) &&
+               !param.readonly;
+      } else {
+        return draw_glslider(name.c_str(),
+                   param.readonly ? (vec4f&)copy.valuef : (vec4f&)param.valuef,
+                   param.minmaxf.x, param.minmaxf.y) &&
+               !param.readonly;
+      }
+      break;
+    case gui_param_type::value1i:
+      if (!param.labels.empty()) {
+        return draw_glcombobox(name.c_str(),
+                   param.readonly ? (int&)copy.valuei : (int&)param.valuei,
+                   param.labels) &&
+               !param.readonly;
+      } else if (param.minmaxi.x == param.minmaxi.y) {
+        return draw_gldragger(name.c_str(),
+                   param.readonly ? (int&)copy.valuei : (int&)param.valuei) &&
+               !param.readonly;
+      } else {
+        return draw_glslider(name.c_str(),
+                   param.readonly ? (int&)copy.valuei : (int&)param.valuei,
+                   param.minmaxi.x, param.minmaxi.y) &&
+               !param.readonly;
+      }
+      break;
+    case gui_param_type::value2i:
+      if (param.minmaxi.x == param.minmaxi.y) {
+        return draw_gldragger(name.c_str(), param.readonly
+                                                ? (vec2i&)copy.valuei
+                                                : (vec2i&)param.valuei) &&
+               !param.readonly;
+      } else {
+        return draw_glslider(name.c_str(),
+                   param.readonly ? (vec2i&)copy.valuei : (vec2i&)param.valuei,
+                   param.minmaxi.x, param.minmaxi.y) &&
+               !param.readonly;
+      }
+      break;
+    case gui_param_type::value3i:
+      if (param.minmaxi.x == param.minmaxi.y) {
+        return draw_gldragger(name.c_str(), param.readonly
+                                                ? (vec3i&)copy.valuei
+                                                : (vec3i&)param.valuei) &&
+               !param.readonly;
+      } else {
+        return draw_glslider(name.c_str(),
+                   param.readonly ? (vec3i&)copy.valuei : (vec3i&)param.valuei,
+                   param.minmaxi.x, param.minmaxi.y) &&
+               !param.readonly;
+      }
+      break;
+    case gui_param_type::value4i:
+      if (param.minmaxi.x == param.minmaxi.y) {
+        return draw_gldragger(name.c_str(), param.readonly
+                                                ? (vec4i&)copy.valuei
+                                                : (vec4i&)param.valuei) &&
+               !param.readonly;
+      } else {
+        return draw_glslider(name.c_str(),
+                   param.readonly ? (vec4i&)copy.valuei : (vec4i&)param.valuei,
+                   param.minmaxi.x, param.minmaxi.y) &&
+               !param.readonly;
+      }
+      break;
+    case gui_param_type::value1s:
+      if (!param.labels.empty()) {
+        return draw_glcombobox(name.c_str(),
+                   param.readonly ? copy.values : param.values, param.labels) &&
+               !param.readonly;
+      } else {
+        return draw_gltextinput(
+                   name.c_str(), param.readonly ? copy.values : param.values) &&
+               !param.readonly;
+      }
+      break;
+    case gui_param_type::value1b:
+      if (!param.labels.empty()) {
+        // maybe we should implement something different here
+        return draw_glcheckbox(
+                   name.c_str(), param.readonly ? copy.valueb : param.valueb) &&
+               !param.readonly;
+      } else {
+        return draw_glcheckbox(
+                   name.c_str(), param.readonly ? copy.valueb : param.valueb) &&
+               !param.readonly;
+      }
+      break;
+    default: return false;
+  }
+}
+
+// draw params
+bool draw_glparams(const string& name, gui_params& params) {
+  auto edited = false;
+  if (begin_glheader(name.c_str())) {
+    for (auto& [name, param] : params) {
+      auto pedited = draw_glparam(name, param);
+      edited       = edited || pedited;
+    }
+    end_glheader();
+  }
+  return edited;
 }
 
 }  // namespace yocto

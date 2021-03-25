@@ -1131,8 +1131,8 @@ scene_model make_shape_scene(const scene_shape& shape, bool addsky) {
   scene.material_names.emplace_back("material");
   auto& shape_material     = scene.materials.emplace_back();
   shape_material.type      = scene_material_type::glossy;
-  shape_material.color     = {0.5, 1, 0.5};
-  shape_material.roughness = 0.2;
+  shape_material.color     = {0.5f, 1.0f, 0.5f};
+  shape_material.roughness = 0.2f;
   // instance
   scene.instance_names.emplace_back("instance");
   auto& shape_instance    = scene.instances.emplace_back();

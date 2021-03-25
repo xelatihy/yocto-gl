@@ -296,8 +296,8 @@ int run_glpath(const glpath_params& params) {
   // run viewer
   glview_scene(
       "ymesh", params.shape, scene, {},
-      [&](gui_window*, const gui_input&, vector<int>&, vector<int>&) {},
-      [&](gui_window* win, const gui_input& input, vector<int>& updated_shapes,
+      [&](const glinput_state&, vector<int>&, vector<int>&) {},
+      [&](const glinput_state& input, vector<int>& updated_shapes,
           vector<int>&) {
         auto& shape   = scene.shapes.at(0);
         auto& camera  = scene.cameras.at(0);
@@ -514,8 +514,8 @@ int run_glpathd(const glpathd_params& params) {
   // run viewer
   glview_scene(
       "ymesh", params.shape, scene, {},
-      [&](gui_window*, const gui_input&, vector<int>&, vector<int>&) {},
-      [&](gui_window* win, const gui_input& input, vector<int>& updated_shapes,
+      [&](const glinput_state&, vector<int>&, vector<int>&) {},
+      [&](const glinput_state& input, vector<int>& updated_shapes,
           vector<int>&) {
         auto& shape   = scene.shapes.at(0);
         auto& camera  = scene.cameras.at(0);
@@ -1265,26 +1265,26 @@ int run_glsculpt(const glsculpt_params& params_) {
   // callbacks
   glview_scene(
       "ymesh", params_.shape, scene, {},
-      [&](gui_window* win, const gui_input&, vector<int>&, vector<int>&) {
-        draw_combobox(win, "brush type", (int&)params.type, sculpt_brush_names);
+      [&](const glinput_state&, vector<int>&, vector<int>&) {
+        draw_glcombobox("brush type", (int&)params.type, sculpt_brush_names);
         if (params.type == sculpt_brush_type::gaussian) {
           if (params.strength < 0.8f || params.strength > 1.5f)
             params.strength = 1.0f;
-          draw_slider(win, "radius", params.radius, 0.1f, 0.8f);
-          draw_slider(win, "strength", params.strength, 1.5f, 0.9f);
-          draw_checkbox(win, "negative", params.negative);
+          draw_glslider("radius", params.radius, 0.1f, 0.8f);
+          draw_glslider("strength", params.strength, 1.5f, 0.9f);
+          draw_glcheckbox("negative", params.negative);
         } else if (params.type == sculpt_brush_type::texture) {
           if (params.strength < 0.8f || params.strength > 1.5f)
             params.strength = 1.0f;
-          draw_slider(win, "radius", params.radius, 0.1f, 0.8f);
-          draw_slider(win, "strength", params.strength, 1.5f, 0.9f);
-          draw_checkbox(win, "negative", params.negative);
+          draw_glslider("radius", params.radius, 0.1f, 0.8f);
+          draw_glslider("strength", params.strength, 1.5f, 0.9f);
+          draw_glcheckbox("negative", params.negative);
         } else if (params.type == sculpt_brush_type::smooth) {
-          draw_slider(win, "radius", params.radius, 0.1f, 0.8f);
-          draw_slider(win, "strength", params.strength, 0.1f, 1.0f);
+          draw_glslider("radius", params.radius, 0.1f, 0.8f);
+          draw_glslider("strength", params.strength, 0.1f, 1.0f);
         }
       },
-      [&](gui_window* win, const gui_input& input, vector<int>& updated_shapes,
+      [&](const glinput_state& input, vector<int>& updated_shapes,
           vector<int>&) {
         auto  mouse_uv = vec2f{input.mouse_pos.x / float(input.window_size.x),
             input.mouse_pos.y / float(input.window_size.y)};

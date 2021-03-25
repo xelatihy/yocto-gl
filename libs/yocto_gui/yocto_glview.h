@@ -76,9 +76,10 @@ void colorgrade_image(
 void view_scene(const string& title, const string& name, scene_model& scene,
     const trace_params& params = {}, bool print = true, bool edit = false);
 
-using glview_callback =
-    std::function<void(gui_window* win, const gui_input& input,
-        vector<int>& updated_shapes, vector<int>& updated_textures)>;
+// GUI callback
+struct glinput_state;
+using glview_callback = std::function<void(const glinput_state& input,
+    vector<int>& updated_shapes, vector<int>& updated_textures)>;
 
 // Open a window and show an scene via OpenGL shading
 struct glscene_params;
@@ -238,6 +239,136 @@ void clear_scene(glscene_state& scene);
 // draw scene
 void draw_scene(glscene_state& glscene, const scene_model& scene,
     const vec4i& viewport, const glscene_params& params);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// WINDOW
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Input state
+struct glinput_state {
+  bool     mouse_left           = false;  // left button
+  bool     mouse_right          = false;  // right button
+  bool     mouse_middle         = false;  // middle button
+  vec2f    mouse_pos            = {};     // position excluding widgets
+  vec2f    mouse_last           = {};  // last mouse position excluding widgets
+  vec2f    mouse_delta          = {};  // last mouse delta excluding widgets
+  bool     modifier_alt         = false;         // alt modifier
+  bool     modifier_ctrl        = false;         // ctrl modifier
+  bool     modifier_shift       = false;         // shift modifier
+  bool     widgets_active       = false;         // widgets are active
+  uint64_t clock_now            = 0;             // clock now
+  uint64_t clock_last           = 0;             // clock last
+  double   time_now             = 0;             // time now
+  double   time_delta           = 0;             // time delta
+  vec2i    window_size          = {0, 0};        // window size
+  vec4i    framebuffer_viewport = {0, 0, 0, 0};  // framebuffer viewport
+};
+
+// Init callback called after the window has opened
+using init_glcallback = function<void(const glinput_state& input)>;
+// Clear callback called after the window is cloased
+using clear_glcallback = function<void(const glinput_state& input)>;
+// Draw callback called every frame and when resizing
+using draw_glcallback = function<void(const glinput_state& input)>;
+// Draw callback for drawing widgets
+using widgets_glcallback = function<void(const glinput_state& input)>;
+// Update functions called every frame
+using update_glcallback = function<void(const glinput_state& input)>;
+// Update functions called every frame
+using uiupdate_glcallback = function<void(const glinput_state& input)>;
+
+// User interface callcaks
+struct glwindow_callbacks {
+  init_glcallback     init_cb     = {};
+  clear_glcallback    clear_cb    = {};
+  draw_glcallback     draw_cb     = {};
+  widgets_glcallback  widgets_cb  = {};
+  update_glcallback   update_cb   = {};
+  uiupdate_glcallback uiupdate_cb = {};
+};
+
+// run the user interface with the give callbacks
+void run_ui(const vec2i& size, const string& title,
+    const glwindow_callbacks& callbaks, int widgets_width = 320,
+    bool widgets_left = true);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// WIDGETS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Headers
+bool begin_glheader(const char* title);
+void end_glheader();
+
+// Labels
+void draw_gllabel(const char* lbl, const string& text);
+void draw_gllabel(const char* lbl, int value);
+void draw_gllabel(const char* lbl, bool value);
+
+// Lines
+void draw_glseparator();
+void continue_glline();
+
+// Buttons
+bool draw_glbutton(const char* lbl, bool enabled = true);
+
+// Text
+bool draw_gltextinput(const char* lbl, string& value);
+
+// Slider
+bool draw_glslider(const char* lbl, float& value, float min, float max);
+bool draw_glslider(const char* lbl, vec2f& value, float min, float max);
+bool draw_glslider(const char* lbl, vec3f& value, float min, float max);
+bool draw_glslider(const char* lbl, vec4f& value, float min, float max);
+bool draw_glslider(const char* lbl, int& value, int min, int max);
+bool draw_glslider(const char* lbl, vec2i& value, int min, int max);
+bool draw_glslider(const char* lbl, vec3i& value, int min, int max);
+bool draw_glslider(const char* lbl, vec4i& value, int min, int max);
+
+// Dragger
+bool draw_gldragger(const char* lbl, float& value, float speed = 1.0f,
+    float min = 0.0f, float max = 0.0f);
+bool draw_gldragger(const char* lbl, vec2f& value, float speed = 1.0f,
+    float min = 0.0f, float max = 0.0f);
+bool draw_gldragger(const char* lbl, vec3f& value, float speed = 1.0f,
+    float min = 0.0f, float max = 0.0f);
+bool draw_gldragger(const char* lbl, vec4f& value, float speed = 1.0f,
+    float min = 0.0f, float max = 0.0f);
+bool draw_gldragger(
+    const char* lbl, int& value, float speed = 1, int min = 0, int max = 0);
+bool draw_gldragger(
+    const char* lbl, vec2i& value, float speed = 1, int min = 0, int max = 0);
+bool draw_gldragger(
+    const char* lbl, vec3i& value, float speed = 1, int min = 0, int max = 0);
+bool draw_gldragger(
+    const char* lbl, vec4i& value, float speed = 1, int min = 0, int max = 0);
+
+// Checkbox
+bool draw_glcheckbox(const char* lbl, bool& value);
+bool draw_glcheckbox(const char* lbl, bool& value, bool invert);
+
+// Color editor
+bool draw_glcoloredit(const char* lbl, vec3f& value);
+bool draw_glcoloredit(const char* lbl, vec4f& value);
+bool draw_glcoloredit(const char* lbl, vec4b& value);
+bool draw_glcoloredithdr(const char* lbl, vec3f& value);
+bool draw_glcoloredithdr(const char* lbl, vec4f& value);
+
+// Combo box
+bool draw_glcombobox(const char* lbl, int& idx, const vector<string>& labels,
+    bool include_null = false);
+bool draw_glcombobox(const char* lbl, string& value,
+    const vector<string>& labels, bool include_null = false);
+
+// Progress bar
+void draw_glprogressbar(const char* lbl, float fraction);
+void draw_glprogressbar(const char* lbl, int current, int total);
 
 }  // namespace yocto
 
