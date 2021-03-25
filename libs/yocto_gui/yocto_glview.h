@@ -76,8 +76,11 @@ void colorgrade_image(
 void view_scene(const string& title, const string& name, scene_model& scene,
     const trace_params& params = {}, bool print = true, bool edit = false);
 
+// GUI callback
+struct glwindow_state;
+struct glinput_state;
 using glview_callback =
-    std::function<void(gui_window* win, const gui_input& input,
+    std::function<void(glwindow_state* win, const glinput_state& input,
         vector<int>& updated_shapes, vector<int>& updated_textures)>;
 
 // Open a window and show an scene via OpenGL shading
@@ -238,6 +241,195 @@ void clear_scene(glscene_state& scene);
 // draw scene
 void draw_scene(glscene_state& glscene, const scene_model& scene,
     const vec4i& viewport, const glscene_params& params);
+
+}  // namespace yocto
+
+// forward declaration
+struct GLFWwindow;
+
+// -----------------------------------------------------------------------------
+// WINDOW
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Forward declaration
+struct glwindow_state;
+
+// Input state
+struct glinput_state {
+  bool     mouse_left           = false;  // left button
+  bool     mouse_right          = false;  // right button
+  bool     mouse_middle         = false;  // middle button
+  vec2f    mouse_pos            = {};     // position excluding widgets
+  vec2f    mouse_last           = {};  // last mouse position excluding widgets
+  vec2f    mouse_delta          = {};  // last mouse delta excluding widgets
+  bool     modifier_alt         = false;         // alt modifier
+  bool     modifier_ctrl        = false;         // ctrl modifier
+  bool     modifier_shift       = false;         // shift modifier
+  bool     widgets_active       = false;         // widgets are active
+  uint64_t clock_now            = 0;             // clock now
+  uint64_t clock_last           = 0;             // clock last
+  double   time_now             = 0;             // time now
+  double   time_delta           = 0;             // time delta
+  vec2i    window_size          = {0, 0};        // window size
+  vec4i    framebuffer_viewport = {0, 0, 0, 0};  // framebuffer viewport
+};
+
+// Init callback called after the window has opened
+using init_glcallback =
+    function<void(glwindow_state*, const glinput_state& input)>;
+// Clear callback called after the window is cloased
+using clear_glcallback =
+    function<void(glwindow_state*, const glinput_state& input)>;
+// Draw callback called every frame and when resizing
+using draw_glcallback =
+    function<void(glwindow_state*, const glinput_state& input)>;
+// Draw callback for drawing widgets
+using widgets_glcallback =
+    function<void(glwindow_state*, const glinput_state& input)>;
+// Drop callback that returns that list of dropped strings.
+using drop_glcallback = function<void(
+    glwindow_state*, const vector<string>&, const glinput_state& input)>;
+// Key callback that returns key codes, pressed/released flag and modifier keys
+using key_glcallback = function<void(
+    glwindow_state*, int key, bool pressed, const glinput_state& input)>;
+// Char callback that returns ASCII key
+using char_glcallback = function<void(
+    glwindow_state*, unsigned int key, const glinput_state& input)>;
+// Mouse click callback that returns left/right button, pressed/released flag,
+// modifier keys
+using click_glcallback = function<void(
+    glwindow_state*, bool left, bool pressed, const glinput_state& input)>;
+// Scroll callback that returns scroll amount
+using scroll_glcallback =
+    function<void(glwindow_state*, float amount, const glinput_state& input)>;
+// Update functions called every frame
+using uiupdate_glcallback =
+    function<void(glwindow_state*, const glinput_state& input)>;
+// Update functions called every frame
+using update_glcallback =
+    function<void(glwindow_state*, const glinput_state& input)>;
+
+// User interface callcaks
+struct glwindow_callbacks {
+  init_glcallback     init_cb     = {};
+  clear_glcallback    clear_cb    = {};
+  draw_glcallback     draw_cb     = {};
+  widgets_glcallback  widgets_cb  = {};
+  drop_glcallback     drop_cb     = {};
+  key_glcallback      key_cb      = {};
+  char_glcallback     char_cb     = {};
+  click_glcallback    click_cb    = {};
+  scroll_glcallback   scroll_cb   = {};
+  update_glcallback   update_cb   = {};
+  uiupdate_glcallback uiupdate_cb = {};
+};
+
+// OpenGL window wrapper
+struct glwindow_state {
+  GLFWwindow*         win           = nullptr;
+  string              title         = "";
+  init_glcallback     init_cb       = {};
+  clear_glcallback    clear_cb      = {};
+  draw_glcallback     draw_cb       = {};
+  widgets_glcallback  widgets_cb    = {};
+  drop_glcallback     drop_cb       = {};
+  key_glcallback      key_cb        = {};
+  char_glcallback     char_cb       = {};
+  click_glcallback    click_cb      = {};
+  scroll_glcallback   scroll_cb     = {};
+  update_glcallback   update_cb     = {};
+  uiupdate_glcallback uiupdate_cb   = {};
+  int                 widgets_width = 0;
+  bool                widgets_left  = true;
+  glinput_state       input         = {};
+  vec4f               background    = {0.15f, 0.15f, 0.15f, 1.0f};
+};
+
+// run the user interface with the give callbacks
+void run_ui(const vec2i& size, const string& title,
+    const glwindow_callbacks& callbaks, int widgets_width = 320,
+    bool widgets_left = true);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// WIDGETS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Headers
+bool begin_header(glwindow_state* win, const char* title);
+void end_header(glwindow_state* win);
+
+// Labels
+void draw_label(glwindow_state* win, const char* lbl, const string& text);
+void draw_label(glwindow_state* win, const char* lbl, int value);
+void draw_label(glwindow_state* win, const char* lbl, bool value);
+
+// Lines
+void draw_separator(glwindow_state* win);
+void continue_line(glwindow_state* win);
+
+// Buttons
+bool draw_button(glwindow_state* win, const char* lbl, bool enabled = true);
+
+// Text
+bool draw_textinput(glwindow_state* win, const char* lbl, string& value);
+
+// Slider
+bool draw_slider(
+    glwindow_state* win, const char* lbl, float& value, float min, float max);
+bool draw_slider(
+    glwindow_state* win, const char* lbl, vec2f& value, float min, float max);
+bool draw_slider(
+    glwindow_state* win, const char* lbl, vec3f& value, float min, float max);
+bool draw_slider(
+    glwindow_state* win, const char* lbl, vec4f& value, float min, float max);
+bool draw_slider(
+    glwindow_state* win, const char* lbl, int& value, int min, int max);
+bool draw_slider(
+    glwindow_state* win, const char* lbl, vec2i& value, int min, int max);
+bool draw_slider(
+    glwindow_state* win, const char* lbl, vec3i& value, int min, int max);
+bool draw_slider(
+    glwindow_state* win, const char* lbl, vec4i& value, int min, int max);
+
+// Dragger
+bool draw_dragger(glwindow_state* win, const char* lbl, float& value,
+    float speed = 1.0f, float min = 0.0f, float max = 0.0f);
+bool draw_dragger(glwindow_state* win, const char* lbl, vec2f& value,
+    float speed = 1.0f, float min = 0.0f, float max = 0.0f);
+bool draw_dragger(glwindow_state* win, const char* lbl, vec3f& value,
+    float speed = 1.0f, float min = 0.0f, float max = 0.0f);
+bool draw_dragger(glwindow_state* win, const char* lbl, vec4f& value,
+    float speed = 1.0f, float min = 0.0f, float max = 0.0f);
+bool draw_dragger(glwindow_state* win, const char* lbl, int& value,
+    float speed = 1, int min = 0, int max = 0);
+bool draw_dragger(glwindow_state* win, const char* lbl, vec2i& value,
+    float speed = 1, int min = 0, int max = 0);
+bool draw_dragger(glwindow_state* win, const char* lbl, vec3i& value,
+    float speed = 1, int min = 0, int max = 0);
+bool draw_dragger(glwindow_state* win, const char* lbl, vec4i& value,
+    float speed = 1, int min = 0, int max = 0);
+
+// Checkbox
+bool draw_checkbox(glwindow_state* win, const char* lbl, bool& value);
+bool draw_checkbox(
+    glwindow_state* win, const char* lbl, bool& value, bool invert);
+
+// Color editor
+bool draw_coloredit(glwindow_state* win, const char* lbl, vec3f& value);
+bool draw_coloredit(glwindow_state* win, const char* lbl, vec4f& value);
+bool draw_coloredit(glwindow_state* win, const char* lbl, vec4b& value);
+bool draw_hdrcoloredit(glwindow_state* win, const char* lbl, vec3f& value);
+bool draw_hdrcoloredit(glwindow_state* win, const char* lbl, vec4f& value);
+
+// Combo box
+bool draw_combobox(glwindow_state* win, const char* lbl, int& idx,
+    const vector<string>& labels, bool include_null = false);
+bool draw_combobox(glwindow_state* win, const char* lbl, string& value,
+    const vector<string>& labels, bool include_null = false);
 
 }  // namespace yocto
 
