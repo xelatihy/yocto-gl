@@ -1086,9 +1086,8 @@ uniform sampler2D normalmap_tex;  // material normal texture
 
 uniform int  lighting;            // eyelight shading
 uniform vec3 ambient;             // ambient light
-uniform int  lights_num;                // number of lights
-uniform int  lights_type[16];     // light type (0 -> point, 1 -> directional)
-uniform vec3 lights_position[16];            // light positions
+uniform int  lights_num;          // number of lights
+uniform vec3 lights_direction[16];// light positions
 uniform vec3 lights_emission[16]; // light intensities
 
 uniform mat4 frame;              // shape transform
@@ -1138,23 +1137,6 @@ shade_brdf eval_brdf() {
   brdf.specular = base * metallic + vec3(0.04) * (1 - metallic);
   brdf.roughness = brdf.roughness * brdf.roughness;
   return brdf;
-}
-
-void eval_light(int lid, vec3 position, out vec3 radiance, out vec3 incoming) {
-  radiance = vec3(0,0,0);
-  incoming = vec3(0,0,0);
-  if(lights_type[lid] == 0) {
-    // compute point light color at position
-    radiance = lights_emission[lid] / pow(length(lights_position[lid]-position),2);
-    // compute light direction at position
-    incoming = normalize(lights_position[lid]-position);
-  }
-  else if(lights_type[lid] == 1) {
-    // compute light color
-    radiance = lights_emission[lid];
-    // compute light direction
-    incoming = normalize(lights_position[lid]);
-  }
 }
 
 vec3 eval_brdfcos(shade_brdf brdf, vec3 n, vec3 incoming, vec3 outgoing) {
@@ -1250,9 +1232,8 @@ void main() {
       radiance += ambient * brdf.diffuse;
       // foreach light
       for(int lid = 0; lid < lights_num; lid ++) {
-        vec3 cl = vec3(0,0,0); vec3 incoming = vec3(0,0,0);
-        eval_light(lid, position, cl, incoming);
-        radiance += cl * eval_brdfcos(brdf, n, incoming, outgoing);
+        radiance += lights_emission[lid] * 
+          eval_brdfcos(brdf, n, lights_direction[lid], outgoing);
       }
     }
   }
@@ -1448,71 +1429,6 @@ void clear_scene(glscene_state& glscene) {
   if (glscene.fragment) glDeleteProgram(glscene.fragment);
 }
 
-struct shade_view {
-  frame3f camera_frame      = {};
-  mat4f   view_matrix       = {};
-  mat4f   projection_matrix = {};
-};
-
-// Draw a shape
-void set_instance_uniforms(const glscene_state& scene, uint program,
-    const frame3f& frame, const glscene_shape& shape,
-    const scene_material& material, const glscene_params& params) {
-  auto shape_xform     = frame_to_mat(frame);
-  auto shape_inv_xform = transpose(
-      frame_to_mat(inverse(frame, params.non_rigid_frames)));
-  glUniformMatrix4fv(
-      glGetUniformLocation(program, "frame"), 1, false, &shape_xform.x.x);
-  glUniformMatrix4fv(
-      glGetUniformLocation(program, "frameit"), 1, false, &shape_inv_xform.x.x);
-  glUniform1i(glGetUniformLocation(program, "faceted"),
-      (params.faceted || shape.normals == 0) ? 1 : 0);
-
-  auto set_texture = [&scene](uint program, const char* name,
-                         const char* name_on, int texture_idx, int unit) {
-    if (texture_idx >= 0) {
-      auto& texture = scene.textures.at(texture_idx);
-      glActiveTexture(GL_TEXTURE0 + unit);
-      glBindTexture(GL_TEXTURE_2D, texture.texture);
-      glUniform1i(glGetUniformLocation(program, name), unit);
-      glUniform1i(glGetUniformLocation(program, name_on), 1);
-    } else {
-      glActiveTexture(GL_TEXTURE0 + unit);
-      glBindTexture(GL_TEXTURE_2D, 0);
-      glUniform1i(glGetUniformLocation(program, name), unit);
-      glUniform1i(glGetUniformLocation(program, name_on), 0);
-    }
-  };
-
-  glUniform1i(glGetUniformLocation(program, "unlit"), 0);
-  glUniform3f(glGetUniformLocation(program, "emission"), material.emission.x,
-      material.emission.y, material.emission.z);
-  glUniform3f(glGetUniformLocation(program, "diffuse"), material.color.x,
-      material.color.y, material.color.z);
-  glUniform3f(glGetUniformLocation(program, "specular"), material.metallic,
-      material.metallic, material.metallic);
-  glUniform1f(glGetUniformLocation(program, "roughness"), material.roughness);
-  glUniform1f(glGetUniformLocation(program, "opacity"), material.opacity);
-  glUniform1f(glGetUniformLocation(program, "double_sided"),
-      params.double_sided ? 1 : 0);
-  set_texture(
-      program, "emission_tex", "emission_tex_on", material.emission_tex, 0);
-  set_texture(program, "diffuse_tex", "diffuse_tex_on", material.color_tex, 1);
-  set_texture(program, "specular_tex", "specular_tex_on", -1, 2);
-  set_texture(
-      program, "roughness_tex", "roughness_tex_on", material.roughness_tex, 3);
-  set_texture(program, "opacity_tex", "opacity_tex_on", -1, 4);
-  set_texture(
-      program, "normalmap_tex", "normalmap_tex_on", material.normal_tex, 5);
-  assert_ogl_error_();
-
-  if (shape.points) glUniform1i(glGetUniformLocation(program, "element"), 1);
-  if (shape.lines) glUniform1i(glGetUniformLocation(program, "element"), 2);
-  if (shape.triangles) glUniform1i(glGetUniformLocation(program, "element"), 3);
-  if (shape.quads) glUniform1i(glGetUniformLocation(program, "element"), 3);
-  assert_ogl_error_();
-}
-
 [[maybe_unused]] static void draw_shape(glscene_shape& shape) {
   if (shape.vertexarray == 0) return;
   glBindVertexArray(shape.vertexarray);
@@ -1610,21 +1526,19 @@ void draw_scene(glscene_state& glscene, const scene_model& scene,
     for (auto& light : lights) {
       auto is = std::to_string(lid);
       if (light.camera) {
-        auto position = transform_direction(camera.frame, light.position);
+        auto direction = transform_direction(camera.frame, light.position);
         glUniform3f(glGetUniformLocation(
-                        program, ("lights_position[" + is + "]").c_str()),
-            position.x, position.y, position.z);
+                        program, ("lights_direction[" + is + "]").c_str()),
+            direction.x, direction.y, direction.z);
       } else {
+        auto direction = normalize(light.position);
         glUniform3f(glGetUniformLocation(
-                        program, ("lights_position[" + is + "]").c_str()),
-            light.position.x, light.position.y, light.position.z);
+                        program, ("lights_direction[" + is + "]").c_str()),
+            direction.x, direction.y, direction.z);
       }
       glUniform3f(glGetUniformLocation(
                       program, ("lights_emission[" + is + "]").c_str()),
           light.emission.x, light.emission.y, light.emission.z);
-      glUniform1i(
-          glGetUniformLocation(program, ("lights_type[" + is + "]").c_str()),
-          1);
       lid++;
     }
   } else if (lighting == glscene_lighting_type::eyelight) {
