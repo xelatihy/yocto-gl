@@ -38,8 +38,6 @@
 #include <yocto/yocto_scene.h>
 #include <yocto/yocto_trace.h>
 #include <yocto_gui/yocto_imgui.h>
-#include <yocto_gui/yocto_opengl.h>
-#include <yocto_gui/yocto_shade.h>
 
 #include <array>
 #include <string>

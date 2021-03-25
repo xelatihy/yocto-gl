@@ -48,16 +48,7 @@
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-void update_image_params(gui_window* win, const gui_input& input,
-    const color_image& image, ogl_image_params& glparams) {
-  glparams.window                           = input.window_size;
-  glparams.framebuffer                      = input.framebuffer_viewport;
-  std::tie(glparams.center, glparams.scale) = camera_imview(glparams.center,
-      glparams.scale, {image.width, image.height}, glparams.window,
-      glparams.fit);
-}
-
-void update_image_params(gui_window* win, const gui_input& input,
+static void update_image_params(gui_window* win, const gui_input& input,
     const color_image& image, glimage_params& glparams) {
   glparams.window                           = input.window_size;
   glparams.framebuffer                      = input.framebuffer_viewport;
