@@ -1080,55 +1080,6 @@ void clear_texture(glscene_texture& gltexture) {
   }
 }
 
-template <typename T>
-static void set_vertex_buffer(glscene_shape& shape, ogl_arraybuffer& buffer,
-    const vector<T>& data, int location) {
-  if (!shape.vertexarray) glGenVertexArrays(1, &shape.vertexarray);
-  set_arraybuffer(buffer, data, false);
-  glBindVertexArray(shape.vertexarray);
-  assert_ogl_error();
-  glBindBuffer(GL_ARRAY_BUFFER, buffer.buffer_id);
-  glEnableVertexAttribArray(location);
-  glVertexAttribPointer(
-      location, buffer.element_size, GL_FLOAT, false, 0, nullptr);
-  assert_ogl_error();
-}
-
-static void set_vertex_buffer(
-    glscene_shape& shape, const vec2f& value, int location) {
-  if (!shape.vertexarray) glGenVertexArrays(1, &shape.vertexarray);
-  glBindVertexArray(shape.vertexarray);
-  glVertexAttrib2f(location, value.x, value.y);
-  assert_ogl_error();
-}
-static void set_vertex_buffer(
-    glscene_shape& shape, const vec3f& value, int location) {
-  if (!shape.vertexarray) glGenVertexArrays(1, &shape.vertexarray);
-  glBindVertexArray(shape.vertexarray);
-  glVertexAttrib3f(location, value.x, value.y, value.z);
-  assert_ogl_error();
-}
-static void set_vertex_buffer(
-    glscene_shape& shape, const vec4f& value, int location) {
-  if (!shape.vertexarray) glGenVertexArrays(1, &shape.vertexarray);
-  glBindVertexArray(shape.vertexarray);
-  glVertexAttrib4f(location, value.x, value.y, value.z, value.w);
-  assert_ogl_error();
-}
-
-static void set_index_buffer(glscene_shape& shape, ogl_elementbuffer& buffer,
-    const vector<int>& indices) {
-  set_elementbuffer(buffer, indices);
-}
-static void set_index_buffer(glscene_shape& shape, ogl_elementbuffer& buffer,
-    const vector<vec2i>& indices) {
-  set_elementbuffer(buffer, indices);
-}
-static void set_index_buffer(glscene_shape& shape, ogl_elementbuffer& buffer,
-    const vector<vec3i>& indices) {
-  set_elementbuffer(buffer, indices);
-}
-
 // Create shape
 void set_shape(glscene_shape& glshape, const scene_shape& shape) {
   auto set_vertex = [](uint& buffer, int& num, const auto& data,
