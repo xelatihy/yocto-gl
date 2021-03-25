@@ -1558,7 +1558,6 @@ void draw_scene(glscene_state& glscene, const scene_model& scene,
         glGetUniformLocation(program, "frame"), 1, false, &shape_xform.x.x);
     glUniformMatrix4fv(glGetUniformLocation(program, "frameit"), 1, false,
         &shape_inv_xform.x.x);
-    glUniform1f(glGetUniformLocation(program, "offset"), 0.0f);
     glUniform1i(glGetUniformLocation(program, "faceted"),
         (params.faceted || glshape.normals == 0) ? 1 : 0);
 
