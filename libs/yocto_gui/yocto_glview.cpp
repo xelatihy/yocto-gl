@@ -1066,7 +1066,7 @@ uniform vec4 highlight;
 uniform bool double_sided;
 
 uniform vec3 emission;            // material ke
-uniform vec3 diffuse;             // material kd
+uniform vec3 color;               // material kd
 uniform float specular;           // material ks
 uniform float metallic;           // material km
 uniform float roughness;          // material rs
@@ -1074,8 +1074,8 @@ uniform float opacity;            // material op
 
 uniform bool emission_tex_on;     // material ke texture on
 uniform sampler2D emission_tex;   // material ke texture
-uniform bool diffuse_tex_on;      // material kd texture on
-uniform sampler2D diffuse_tex;    // material kd texture
+uniform bool color_tex_on;        // material kd texture on
+uniform sampler2D color_tex;      // material kd texture
 uniform bool roughness_tex_on;    // material rs texture on
 uniform sampler2D roughness_tex;  // material rs texture
 uniform bool normalmap_tex_on;    // material normal texture on
@@ -1123,8 +1123,8 @@ float eval_brdf_value(float value, sampler2D tex, bool tex_on) {
 shade_brdf eval_brdf() {
   vec4 emission_t = vec4(emission, 1);
   if (emission_tex_on) emission_t *= texture(emission_tex, texcoord);
-  vec4 base_t = scolor * vec4(diffuse, opacity);
-  if (diffuse_tex_on) base_t *= texture(diffuse_tex, texcoord);
+  vec4 base_t = scolor * vec4(color, opacity);
+  if (color_tex_on) base_t *= texture(color_tex, texcoord);
   float metallic_t = metallic;
   float roughness_t = roughness;
   roughness_t = roughness_t * roughness_t;
@@ -1564,7 +1564,7 @@ void draw_scene(glscene_state& glscene, const scene_model& scene,
     glUniform1i(glGetUniformLocation(program, "unlit"), 0);
     glUniform3f(glGetUniformLocation(program, "emission"), material.emission.x,
         material.emission.y, material.emission.z);
-    glUniform3f(glGetUniformLocation(program, "diffuse"), material.color.x,
+    glUniform3f(glGetUniformLocation(program, "color"), material.color.x,
         material.color.y, material.color.z);
     glUniform1f(glGetUniformLocation(program, "specular"), 1);
     glUniform1f(glGetUniformLocation(program, "metallic"), material.metallic);
@@ -1574,8 +1574,7 @@ void draw_scene(glscene_state& glscene, const scene_model& scene,
         params.double_sided ? 1 : 0);
     set_texture(
         program, "emission_tex", "emission_tex_on", material.emission_tex, 0);
-    set_texture(
-        program, "diffuse_tex", "diffuse_tex_on", material.color_tex, 1);
+    set_texture(program, "color_tex", "color_tex_on", material.color_tex, 1);
     set_texture(program, "roughness_tex", "roughness_tex_on",
         material.roughness_tex, 3);
     set_texture(
