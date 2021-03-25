@@ -1656,44 +1656,43 @@ struct glwindow_state {
   vec4f               background    = {0.15f, 0.15f, 0.15f, 1.0f};
 };
 
-static void draw_window(glwindow_state* win) {
-  glClearColor(win->background.x, win->background.y, win->background.z,
-      win->background.w);
+static void draw_window(glwindow_state& state) {
+  glClearColor(state.background.x, state.background.y, state.background.z,
+      state.background.w);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-  if (win->draw_cb) win->draw_cb(win->input);
-  if (win->widgets_cb) {
+  if (state.draw_cb) state.draw_cb(state.input);
+  if (state.widgets_cb) {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
     auto window = zero2i;
-    glfwGetWindowSize(win->win, &window.x, &window.y);
-    if (win->widgets_left) {
+    glfwGetWindowSize(state.win, &window.x, &window.y);
+    if (state.widgets_left) {
       ImGui::SetNextWindowPos({0, 0});
-      ImGui::SetNextWindowSize({(float)win->widgets_width, (float)window.y});
+      ImGui::SetNextWindowSize({(float)state.widgets_width, (float)window.y});
     } else {
-      ImGui::SetNextWindowPos({(float)(window.x - win->widgets_width), 0});
-      ImGui::SetNextWindowSize({(float)win->widgets_width, (float)window.y});
+      ImGui::SetNextWindowPos({(float)(window.x - state.widgets_width), 0});
+      ImGui::SetNextWindowSize({(float)state.widgets_width, (float)window.y});
     }
     ImGui::SetNextWindowCollapsed(false);
     ImGui::SetNextWindowBgAlpha(1);
-    if (ImGui::Begin(win->title.c_str(), nullptr,
+    if (ImGui::Begin(state.title.c_str(), nullptr,
             ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
                 ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse |
                 ImGuiWindowFlags_NoSavedSettings)) {
-      win->widgets_cb(win->input);
+      state.widgets_cb(state.input);
     }
     ImGui::End();
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
   }
-  glfwSwapBuffers(win->win);
+  glfwSwapBuffers(state.win);
 }
 
 // run the user interface with the give callbacks
 void run_ui(const vec2i& size, const string& title,
     const glwindow_callbacks& callbacks, int widgets_width, bool widgets_left) {
-  auto win_guard = std::make_unique<glwindow_state>();
-  auto win       = win_guard.get();
+  auto state = glwindow_state{};
 
   // init glfw
   if (!glfwInit())
@@ -1706,39 +1705,40 @@ void run_ui(const vec2i& size, const string& title,
 #endif
 
   // create window
-  win->title = title;
-  win->win = glfwCreateWindow(size.x, size.y, title.c_str(), nullptr, nullptr);
-  if (win->win == nullptr)
+  state.title = title;
+  state.win = glfwCreateWindow(size.x, size.y, title.c_str(), nullptr, nullptr);
+  if (state.win == nullptr)
     throw std::runtime_error{"cannot initialize windowing system"};
-  glfwMakeContextCurrent(win->win);
+  glfwMakeContextCurrent(state.win);
   glfwSwapInterval(1);  // Enable vsync
 
   // set user data
-  glfwSetWindowUserPointer(win->win, win);
+  glfwSetWindowUserPointer(state.win, &state);
 
   // set callbacks
-  glfwSetWindowRefreshCallback(win->win, [](GLFWwindow* glfw) {
-    auto win = (glwindow_state*)glfwGetWindowUserPointer(glfw);
-    draw_window(win);
+  glfwSetWindowRefreshCallback(state.win, [](GLFWwindow* glfw) {
+    auto& state = *(glwindow_state*)glfwGetWindowUserPointer(glfw);
+    draw_window(state);
   });
   glfwSetWindowSizeCallback(
-      win->win, [](GLFWwindow* glfw, int width, int height) {
-        auto win = (glwindow_state*)glfwGetWindowUserPointer(glfw);
+      state.win, [](GLFWwindow* glfw, int width, int height) {
+        auto& state = *(glwindow_state*)glfwGetWindowUserPointer(glfw);
         glfwGetWindowSize(
-            win->win, &win->input.window_size.x, &win->input.window_size.y);
-        if (win->widgets_width) win->input.window_size.x -= win->widgets_width;
-        glfwGetFramebufferSize(win->win, &win->input.framebuffer_viewport.z,
-            &win->input.framebuffer_viewport.w);
-        win->input.framebuffer_viewport.x = 0;
-        win->input.framebuffer_viewport.y = 0;
-        if (win->widgets_width) {
+            state.win, &state.input.window_size.x, &state.input.window_size.y);
+        if (state.widgets_width)
+          state.input.window_size.x -= state.widgets_width;
+        glfwGetFramebufferSize(state.win, &state.input.framebuffer_viewport.z,
+            &state.input.framebuffer_viewport.w);
+        state.input.framebuffer_viewport.x = 0;
+        state.input.framebuffer_viewport.y = 0;
+        if (state.widgets_width) {
           auto win_size = zero2i;
-          glfwGetWindowSize(win->win, &win_size.x, &win_size.y);
-          auto offset = (int)(win->widgets_width *
-                              (float)win->input.framebuffer_viewport.z /
+          glfwGetWindowSize(state.win, &win_size.x, &win_size.y);
+          auto offset = (int)(state.widgets_width *
+                              (float)state.input.framebuffer_viewport.z /
                               win_size.x);
-          win->input.framebuffer_viewport.z -= offset;
-          if (win->widgets_left) win->input.framebuffer_viewport.x += offset;
+          state.input.framebuffer_viewport.z -= offset;
+          if (state.widgets_left) state.input.framebuffer_viewport.x += offset;
         }
       });
 
@@ -1751,101 +1751,101 @@ void run_ui(const vec2i& size, const string& title,
     ImGui::CreateContext();
     ImGui::GetIO().IniFilename       = nullptr;
     ImGui::GetStyle().WindowRounding = 0;
-    ImGui_ImplGlfw_InitForOpenGL(win->win, true);
+    ImGui_ImplGlfw_InitForOpenGL(state.win, true);
 #ifndef __APPLE__
     ImGui_ImplOpenGL3_Init();
 #else
     ImGui_ImplOpenGL3_Init("#version 330");
 #endif
     ImGui::StyleColorsDark();
-    win->widgets_width = widgets_width;
-    win->widgets_left  = widgets_left;
+    state.widgets_width = widgets_width;
+    state.widgets_left  = widgets_left;
   }
 
   // callbacks
-  win->init_cb     = callbacks.init_cb;
-  win->clear_cb    = callbacks.clear_cb;
-  win->draw_cb     = callbacks.draw_cb;
-  win->widgets_cb  = callbacks.widgets_cb;
-  win->update_cb   = callbacks.update_cb;
-  win->uiupdate_cb = callbacks.uiupdate_cb;
+  state.init_cb     = callbacks.init_cb;
+  state.clear_cb    = callbacks.clear_cb;
+  state.draw_cb     = callbacks.draw_cb;
+  state.widgets_cb  = callbacks.widgets_cb;
+  state.update_cb   = callbacks.update_cb;
+  state.uiupdate_cb = callbacks.uiupdate_cb;
 
   // init
-  if (win->init_cb) win->init_cb(win->input);
+  if (state.init_cb) state.init_cb(state.input);
 
   // run ui
-  while (!glfwWindowShouldClose(win->win)) {
+  while (!glfwWindowShouldClose(state.win)) {
     // update input
-    win->input.mouse_last = win->input.mouse_pos;
+    state.input.mouse_last = state.input.mouse_pos;
     auto mouse_posx = 0.0, mouse_posy = 0.0;
-    glfwGetCursorPos(win->win, &mouse_posx, &mouse_posy);
-    win->input.mouse_pos = vec2f{(float)mouse_posx, (float)mouse_posy};
-    if (win->widgets_width && win->widgets_left)
-      win->input.mouse_pos.x -= win->widgets_width;
-    win->input.mouse_left = glfwGetMouseButton(
-                                win->win, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
-    win->input.mouse_right =
-        glfwGetMouseButton(win->win, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS;
-    win->input.modifier_alt =
-        glfwGetKey(win->win, GLFW_KEY_LEFT_ALT) == GLFW_PRESS ||
-        glfwGetKey(win->win, GLFW_KEY_RIGHT_ALT) == GLFW_PRESS;
-    win->input.modifier_shift =
-        glfwGetKey(win->win, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ||
-        glfwGetKey(win->win, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
-    win->input.modifier_ctrl =
-        glfwGetKey(win->win, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS ||
-        glfwGetKey(win->win, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS;
+    glfwGetCursorPos(state.win, &mouse_posx, &mouse_posy);
+    state.input.mouse_pos = vec2f{(float)mouse_posx, (float)mouse_posy};
+    if (state.widgets_width && state.widgets_left)
+      state.input.mouse_pos.x -= state.widgets_width;
+    state.input.mouse_left =
+        glfwGetMouseButton(state.win, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
+    state.input.mouse_right =
+        glfwGetMouseButton(state.win, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS;
+    state.input.modifier_alt =
+        glfwGetKey(state.win, GLFW_KEY_LEFT_ALT) == GLFW_PRESS ||
+        glfwGetKey(state.win, GLFW_KEY_RIGHT_ALT) == GLFW_PRESS;
+    state.input.modifier_shift =
+        glfwGetKey(state.win, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ||
+        glfwGetKey(state.win, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
+    state.input.modifier_ctrl =
+        glfwGetKey(state.win, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS ||
+        glfwGetKey(state.win, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS;
     glfwGetWindowSize(
-        win->win, &win->input.window_size.x, &win->input.window_size.y);
-    if (win->widgets_width) win->input.window_size.x -= win->widgets_width;
-    glfwGetFramebufferSize(win->win, &win->input.framebuffer_viewport.z,
-        &win->input.framebuffer_viewport.w);
-    win->input.framebuffer_viewport.x = 0;
-    win->input.framebuffer_viewport.y = 0;
-    if (win->widgets_width) {
+        state.win, &state.input.window_size.x, &state.input.window_size.y);
+    if (state.widgets_width) state.input.window_size.x -= state.widgets_width;
+    glfwGetFramebufferSize(state.win, &state.input.framebuffer_viewport.z,
+        &state.input.framebuffer_viewport.w);
+    state.input.framebuffer_viewport.x = 0;
+    state.input.framebuffer_viewport.y = 0;
+    if (state.widgets_width) {
       auto win_size = zero2i;
-      glfwGetWindowSize(win->win, &win_size.x, &win_size.y);
-      auto offset = (int)(win->widgets_width *
-                          (float)win->input.framebuffer_viewport.z /
+      glfwGetWindowSize(state.win, &win_size.x, &win_size.y);
+      auto offset = (int)(state.widgets_width *
+                          (float)state.input.framebuffer_viewport.z /
                           win_size.x);
-      win->input.framebuffer_viewport.z -= offset;
-      if (win->widgets_left) win->input.framebuffer_viewport.x += offset;
+      state.input.framebuffer_viewport.z -= offset;
+      if (state.widgets_left) state.input.framebuffer_viewport.x += offset;
     }
-    if (win->widgets_width) {
-      auto io                   = &ImGui::GetIO();
-      win->input.widgets_active = io->WantTextInput || io->WantCaptureMouse ||
-                                  io->WantCaptureKeyboard;
+    if (state.widgets_width) {
+      auto io                    = &ImGui::GetIO();
+      state.input.widgets_active = io->WantTextInput || io->WantCaptureMouse ||
+                                   io->WantCaptureKeyboard;
     }
 
     // time
-    win->input.clock_last = win->input.clock_now;
-    win->input.clock_now =
+    state.input.clock_last = state.input.clock_now;
+    state.input.clock_now =
         std::chrono::high_resolution_clock::now().time_since_epoch().count();
-    win->input.time_now = (double)win->input.clock_now / 1000000000.0;
-    win->input.time_delta =
-        (double)(win->input.clock_now - win->input.clock_last) / 1000000000.0;
+    state.input.time_now = (double)state.input.clock_now / 1000000000.0;
+    state.input.time_delta =
+        (double)(state.input.clock_now - state.input.clock_last) / 1000000000.0;
 
     // update ui
-    if (win->uiupdate_cb && !win->input.widgets_active)
-      win->uiupdate_cb(win->input);
+    if (state.uiupdate_cb && !state.input.widgets_active)
+      state.uiupdate_cb(state.input);
 
     // update
-    if (win->update_cb) win->update_cb(win->input);
+    if (state.update_cb) state.update_cb(state.input);
 
     // draw
-    draw_window(win);
+    draw_window(state);
 
     // event hadling
     glfwPollEvents();
   }
 
   // clear
-  if (win->clear_cb) win->clear_cb(win->input);
+  if (state.clear_cb) state.clear_cb(state.input);
 
   // clear
-  glfwDestroyWindow(win->win);
+  glfwDestroyWindow(state.win);
   glfwTerminate();
-  win->win = nullptr;
+  state.win = nullptr;
 }
 
 }  // namespace yocto
