@@ -1067,7 +1067,8 @@ uniform bool double_sided;
 
 uniform vec3 emission;            // material ke
 uniform vec3 diffuse;             // material kd
-uniform vec3 specular;            // material ks
+uniform float specular;           // material ks
+uniform float metallic;           // material km
 uniform float roughness;          // material rs
 uniform float opacity;            // material op
 
@@ -1124,7 +1125,7 @@ shade_brdf eval_brdf() {
   if (emission_tex_on) emission_t *= texture(emission_tex, texcoord);
   vec4 base_t = vec4(diffuse, opacity);
   if (diffuse_tex_on) base_t *= texture(diffuse_tex, texcoord);
-  float metallic_t = specular.x;
+  float metallic_t = metallic;
   float roughness_t = roughness;
   roughness_t = roughness_t * roughness_t;
 
@@ -1132,7 +1133,7 @@ shade_brdf eval_brdf() {
   shade_brdf brdf;
   brdf.emission  = emission_t.xyz;
   brdf.diffuse   = base_t.xyz * (1 - metallic_t);
-  brdf.specular  = base_t.xyz * metallic_t + vec3(0.04) * (1 - metallic_t);
+  brdf.specular  = specular * base_t.xyz * metallic_t + vec3(0.04) * (1 - metallic_t);
   brdf.roughness = roughness_t;
   brdf.opacity   = base_t.w;
   return brdf;
@@ -1565,8 +1566,8 @@ void draw_scene(glscene_state& glscene, const scene_model& scene,
         material.emission.y, material.emission.z);
     glUniform3f(glGetUniformLocation(program, "diffuse"), material.color.x,
         material.color.y, material.color.z);
-    glUniform3f(glGetUniformLocation(program, "specular"), material.metallic,
-        material.metallic, material.metallic);
+    glUniform1f(glGetUniformLocation(program, "specular"), 1);
+    glUniform1f(glGetUniformLocation(program, "metallic"), material.metallic);
     glUniform1f(glGetUniformLocation(program, "roughness"), material.roughness);
     glUniform1f(glGetUniformLocation(program, "opacity"), material.opacity);
     glUniform1f(glGetUniformLocation(program, "double_sided"),
