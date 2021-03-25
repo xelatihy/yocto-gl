@@ -1124,7 +1124,7 @@ shade_brdf eval_brdf() {
   vec4 emission_t = vec4(emission, 1);
   if (emission_tex_on) emission_t *= texture(emission_tex, texcoord);
   vec4 base_t = scolor * vec4(color, opacity);
-  if (color_tex_on) base_t *= texture(color_tex, texcoord);
+  if (color_tex_on) base_t *= pow(texture(color_tex, texcoord), vec4(2.2,2.2,2.2,1));
   float metallic_t = metallic;
   float roughness_t = roughness;
   roughness_t = roughness_t * roughness_t;
@@ -1159,11 +1159,11 @@ vec3 eval_brdfcos(shade_brdf brdf, vec3 n, vec3 incoming, vec3 outgoing) {
 }
 
 vec3 apply_normal_map(vec2 texcoord, vec3 normal, vec4 tangsp) {
-    if(!normalmap_tex_on) return normal;
+  if(!normalmap_tex_on) return normal;
   vec3 tangu = normalize((frame * vec4(normalize(tangsp.xyz),0)).xyz);
   vec3 tangv = normalize(cross(normal, tangu));
   if(tangsp.w < 0) tangv = -tangv;
-  vec3 texture = 2 * pow(texture(normalmap_tex,texcoord).xyz, vec3(1/2.2)) - 1;
+  vec3 texture = 2 * texture(normalmap_tex,texcoord).xyz - 1;
   // texture.y = -texture.y;
   return normalize( tangu * texture.x + tangv * texture.y + normal * texture.z );
 }
