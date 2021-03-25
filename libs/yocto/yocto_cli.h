@@ -548,7 +548,7 @@ inline void add_option_impl(cli_command& cli, const string& name,
     const vector<cli_value>& value, cli_type type, int nargs,
     const string& usage, const vector<cli_value>& minmax,
     const vector<string>& choices, const string& alt, bool req,
-    function<bool(const cli_option&)> set_value) {
+    const function<bool(const cli_option&)>& set_value) {
   validate_name(cli, name);
   auto& option      = cli.options.emplace_back();
   option.name       = name;
@@ -569,7 +569,7 @@ inline void add_argument_impl(cli_command& cli, const string& name,
     const vector<cli_value>& value, cli_type type, int nargs,
     const string& usage, const vector<cli_value>& minmax,
     const vector<string>& choices, bool req,
-    function<bool(const cli_option&)> set_value) {
+    const function<bool(const cli_option&)>& set_value) {
   validate_name(cli, name);
   auto& option      = cli.arguments.emplace_back();
   option.name       = name;
@@ -590,7 +590,7 @@ inline void add_argumentv_impl(cli_command& cli, const string& name,
     const vector<cli_value>& value, cli_type type, int nargs,
     const string& usage, const vector<cli_value>& minmax,
     const vector<string>& choices, bool req,
-    function<bool(const cli_option&)> set_value) {
+    const function<bool(const cli_option&)>& set_value) {
   validate_name(cli, name);
   auto& option      = cli.arguments.emplace_back();
   option.name       = name;
