@@ -1027,7 +1027,7 @@ uniform mat4 projection;        // camera projection
 out vec3 position;              // [to fragment shader] vertex position (in world coordinate)
 out vec3 normal;                // [to fragment shader] vertex normal (in world coordinate)
 out vec2 texcoord;              // [to fragment shader] vertex texture coordinates
-out vec4 color;                 // [to fragment shader] vertex color
+out vec4 scolor;                // [to fragment shader] vertex color
 out vec4 tangsp;                // [to fragment shader] vertex tangent space
 
 // main function
@@ -1037,7 +1037,7 @@ void main() {
   normal = normals;
   tangsp = tangents;
   texcoord = texcoords;
-  color = colors;
+  scolor = colors;
 
   // world projection
   position = (frame * vec4(position,1)).xyz;
@@ -1056,7 +1056,7 @@ static const char* glscene_fragment =
 in vec3 position;  // [from vertex shader] position in world space
 in vec3 normal;    // [from vertex shader] normal in world space
 in vec2 texcoord;  // [from vertex shader] texcoord
-in vec4 color;     // [from vertex shader] color
+in vec4 scolor;    // [from vertex shader] color
 in vec4 tangsp;    // [from vertex shader] tangent space
 
 uniform int element;
@@ -1123,7 +1123,7 @@ float eval_brdf_value(float value, sampler2D tex, bool tex_on) {
 shade_brdf eval_brdf() {
   vec4 emission_t = vec4(emission, 1);
   if (emission_tex_on) emission_t *= texture(emission_tex, texcoord);
-  vec4 base_t = vec4(diffuse, opacity);
+  vec4 base_t = scolor * vec4(diffuse, opacity);
   if (diffuse_tex_on) base_t *= texture(diffuse_tex, texcoord);
   float metallic_t = metallic;
   float roughness_t = roughness;
