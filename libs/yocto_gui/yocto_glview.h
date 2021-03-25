@@ -290,24 +290,11 @@ using widgets_glcallback =
 // Drop callback that returns that list of dropped strings.
 using drop_glcallback = function<void(
     glwindow_state*, const vector<string>&, const glinput_state& input)>;
-// Key callback that returns key codes, pressed/released flag and modifier keys
-using key_glcallback = function<void(
-    glwindow_state*, int key, bool pressed, const glinput_state& input)>;
-// Char callback that returns ASCII key
-using char_glcallback = function<void(
-    glwindow_state*, unsigned int key, const glinput_state& input)>;
-// Mouse click callback that returns left/right button, pressed/released flag,
-// modifier keys
-using click_glcallback = function<void(
-    glwindow_state*, bool left, bool pressed, const glinput_state& input)>;
-// Scroll callback that returns scroll amount
-using scroll_glcallback =
-    function<void(glwindow_state*, float amount, const glinput_state& input)>;
-// Update functions called every frame
-using uiupdate_glcallback =
-    function<void(glwindow_state*, const glinput_state& input)>;
 // Update functions called every frame
 using update_glcallback =
+    function<void(glwindow_state*, const glinput_state& input)>;
+// Update functions called every frame
+using uiupdate_glcallback =
     function<void(glwindow_state*, const glinput_state& input)>;
 
 // User interface callcaks
@@ -316,11 +303,6 @@ struct glwindow_callbacks {
   clear_glcallback    clear_cb    = {};
   draw_glcallback     draw_cb     = {};
   widgets_glcallback  widgets_cb  = {};
-  drop_glcallback     drop_cb     = {};
-  key_glcallback      key_cb      = {};
-  char_glcallback     char_cb     = {};
-  click_glcallback    click_cb    = {};
-  scroll_glcallback   scroll_cb   = {};
   update_glcallback   update_cb   = {};
   uiupdate_glcallback uiupdate_cb = {};
 };
@@ -333,11 +315,6 @@ struct glwindow_state {
   clear_glcallback    clear_cb      = {};
   draw_glcallback     draw_cb       = {};
   widgets_glcallback  widgets_cb    = {};
-  drop_glcallback     drop_cb       = {};
-  key_glcallback      key_cb        = {};
-  char_glcallback     char_cb       = {};
-  click_glcallback    click_cb      = {};
-  scroll_glcallback   scroll_cb     = {};
   update_glcallback   update_cb     = {};
   uiupdate_glcallback uiupdate_cb   = {};
   int                 widgets_width = 0;

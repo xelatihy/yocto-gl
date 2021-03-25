@@ -1703,36 +1703,6 @@ void init_window(glwindow_state* win, const vec2i& size, const string& title,
     auto win = (glwindow_state*)glfwGetWindowUserPointer(glfw);
     draw_window(win);
   });
-  glfwSetDropCallback(
-      win->win, [](GLFWwindow* glfw, int num, const char** paths) {
-        auto win = (glwindow_state*)glfwGetWindowUserPointer(glfw);
-        if (win->drop_cb) {
-          auto pathv = vector<string>();
-          for (auto i = 0; i < num; i++) pathv.push_back(paths[i]);
-          win->drop_cb(win, pathv, win->input);
-        }
-      });
-  glfwSetKeyCallback(win->win,
-      [](GLFWwindow* glfw, int key, int scancode, int action, int mods) {
-        auto win = (glwindow_state*)glfwGetWindowUserPointer(glfw);
-        if (win->key_cb) win->key_cb(win, key, (bool)action, win->input);
-      });
-  glfwSetCharCallback(win->win, [](GLFWwindow* glfw, unsigned int key) {
-    auto win = (glwindow_state*)glfwGetWindowUserPointer(glfw);
-    if (win->char_cb) win->char_cb(win, key, win->input);
-  });
-  glfwSetMouseButtonCallback(
-      win->win, [](GLFWwindow* glfw, int button, int action, int mods) {
-        auto win = (glwindow_state*)glfwGetWindowUserPointer(glfw);
-        if (win->click_cb)
-          win->click_cb(
-              win, button == GLFW_MOUSE_BUTTON_LEFT, (bool)action, win->input);
-      });
-  glfwSetScrollCallback(
-      win->win, [](GLFWwindow* glfw, double xoffset, double yoffset) {
-        auto win = (glwindow_state*)glfwGetWindowUserPointer(glfw);
-        if (win->scroll_cb) win->scroll_cb(win, (float)yoffset, win->input);
-      });
   glfwSetWindowSizeCallback(
       win->win, [](GLFWwindow* glfw, int width, int height) {
         auto win = (glwindow_state*)glfwGetWindowUserPointer(glfw);
@@ -1872,11 +1842,6 @@ void run_ui(const vec2i& size, const string& title,
   win->clear_cb    = callbacks.clear_cb;
   win->draw_cb     = callbacks.draw_cb;
   win->widgets_cb  = callbacks.widgets_cb;
-  win->drop_cb     = callbacks.drop_cb;
-  win->key_cb      = callbacks.key_cb;
-  win->char_cb     = callbacks.char_cb;
-  win->click_cb    = callbacks.click_cb;
-  win->scroll_cb   = callbacks.scroll_cb;
   win->update_cb   = callbacks.update_cb;
   win->uiupdate_cb = callbacks.uiupdate_cb;
 
