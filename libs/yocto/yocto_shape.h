@@ -552,6 +552,16 @@ void make_uvsphere(vector<vec4i>& quads, vector<vec3f>& positions,
 void make_capped_uvsphere(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps,
     float scale, const vec2f& uvscale, float cap);
+void make_uvspherey(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps,
+    float scale, const vec2f& uvscale);
+void make_capped_uvspherey(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps,
+    float scale, const vec2f& uvscale, float cap);
+// Generate a matsphere
+void make_matsphere(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps,
+    float scale, const vec2f& uvscale);
 // Generate a disk
 void make_disk(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, int steps, float scale,

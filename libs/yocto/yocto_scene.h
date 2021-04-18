@@ -497,9 +497,16 @@ scene_shape make_sphere(int steps = 32, float scale = 1, float uvscale = 1);
 // Make a sphere.
 scene_shape make_uvsphere(const vec2i& steps = {32, 32}, float scale = 1,
     const vec2f& uvscale = {1, 1});
+scene_shape make_uvspherey(const vec2i& steps = {32, 32}, float scale = 1,
+    const vec2f& uvscale = {1, 1});
 // Make a sphere with slipped caps.
 scene_shape make_capped_uvsphere(const vec2i& steps = {32, 32}, float scale = 1,
     const vec2f& uvscale = {1, 1}, float height = 0.3);
+scene_shape make_capped_uvspherey(const vec2i& steps = {32, 32},
+    float scale = 1, const vec2f& uvscale = {1, 1}, float height = 0.3);
+// Generate a matsphere
+scene_shape make_matsphere(const vec2i& steps = {32, 32}, float scale = 1,
+    const vec2f& uvscale = {1, 1});
 // Make a disk
 scene_shape make_disk(int steps = 32, float scale = 1, float uvscale = 1);
 // Make a bulged disk

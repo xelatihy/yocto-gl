@@ -2220,6 +2220,47 @@ void make_capped_uvsphere(vector<vec4i>& quads, vector<vec3f>& positions,
   }
 }
 
+// Generate a uvsphere
+void make_uvspherey(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps,
+    float scale, const vec2f& uvscale) {
+  make_uvsphere(quads, positions, normals, texcoords, steps, scale, uvscale);
+  for (auto& p : positions) std::swap(p.y, p.z);
+  for (auto& n : normals) std::swap(n.y, n.z);
+  for (auto& q : quads) std::swap(q.y, q.w);
+}
+
+void make_capped_uvspherey(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps,
+    float scale, const vec2f& uvscale, float cap) {
+  make_capped_uvsphere(
+      quads, positions, normals, texcoords, steps, scale, uvscale, cap);
+  for (auto& p : positions) std::swap(p.y, p.z);
+  for (auto& n : normals) std::swap(n.y, n.z);
+  for (auto& q : quads) std::swap(q.y, q.w);
+}
+
+// Generate a uvsphere
+void make_matsphere(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps,
+    float scale, const vec2f& uvscale) {
+  make_rect(quads, positions, normals, texcoords, steps, {1, 1}, {1, 1});
+  for (auto i = 0; i < positions.size(); i++) {
+    auto uv      = texcoords[i];
+    auto a       = vec2f{2 * pif * uv.x + pif, pif * uv.y};
+    positions[i] = vec3f{sin(a.x) * sin(a.y), cos(a.y), cos(a.x) * sin(a.y)} *
+                   scale;
+    normals[i] = normalize(positions[i]);
+    // texcoords[i].x = ((uv.x - 0.5f) * 2 + 0.5f) * uvscale.x;
+    // texcoords[i].y = ((1 - uv.y) - 0.5f) * uvscale.y + 0.5f;
+    texcoords[i].x = uv.x < 0.25f    ? (1 - sin(2 * pif * uv.x - pif)) / 2
+                     : uv.x >= 0.75f ? (1 - sin(2 * pif * uv.x + pif)) / 2
+                                     : (1 - sin(2 * pif * uv.x)) / 2;
+    texcoords[i].y = (1 - cos(uv.y * pif)) / 2;
+  }
+  // for (auto& q : quads) std::swap(q.y, q.w);
+}
+
 // Generate a disk
 void make_disk(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, int steps, float scale,
@@ -2285,6 +2326,7 @@ void make_uvcylinder(vector<vec4i>& quads, vector<vec3f>& positions,
     qnormals[i]   = {cos(phi), sin(phi), 0};
     qtexcoords[i] = uv * vec2f{uvscale.x, uvscale.y};
   }
+  for(auto& q : qquads) std::swap(q.y, q.w);
   merge_quads(quads, positions, normals, texcoords, qquads, qpositions,
       qnormals, qtexcoords);
   // top

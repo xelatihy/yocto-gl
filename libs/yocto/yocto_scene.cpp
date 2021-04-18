@@ -1484,6 +1484,15 @@ scene_shape make_uvsphere(
   return shape;
 }
 
+// Make a sphere.
+scene_shape make_uvspherey(
+    const vec2i& steps, float scale, const vec2f& uvscale) {
+  auto shape = scene_shape{};
+  make_uvspherey(shape.quads, shape.positions, shape.normals, shape.texcoords,
+      steps, scale, uvscale);
+  return shape;
+}
+
 // Make a sphere with slipped caps.
 scene_shape make_capped_uvsphere(
     const vec2i& steps, float scale, const vec2f& uvscale, float height) {
@@ -1492,6 +1501,25 @@ scene_shape make_capped_uvsphere(
       shape.texcoords, steps, scale, uvscale, height);
   return shape;
 }
+
+// Make a sphere with slipped caps.
+scene_shape make_capped_uvspherey(
+    const vec2i& steps, float scale, const vec2f& uvscale, float height) {
+  auto shape = scene_shape{};
+  make_capped_uvspherey(shape.quads, shape.positions, shape.normals,
+      shape.texcoords, steps, scale, uvscale, height);
+  return shape;
+}
+
+// Make a matsphere
+scene_shape make_matsphere(
+    const vec2i& steps, float scale, const vec2f& uvscale) {
+  auto shape = scene_shape{};
+  make_matsphere(shape.quads, shape.positions, shape.normals, shape.texcoords,
+      steps, scale, uvscale);
+  return shape;
+}
+
 // Make a disk
 scene_shape make_disk(int steps, float scale, float uvscale) {
   auto shape = scene_shape{};
