@@ -1323,10 +1323,10 @@ bool make_shape_preset(scene_shape& shape, const string& type, string& error) {
     set_quads(make_rounded_box());
   } else if (type == "default-sphere") {
     set_quads(make_sphere());
-  } else if (type == "default-matsphere") {
-    set_quads(make_matsphere());
   } else if (type == "default-matcube") {
     set_quads(make_rounded_box());
+  } else if (type == "default-matsphere") {
+    set_quads(make_uvspherey());
   } else if (type == "default-disk") {
     set_quads(make_disk());
   } else if (type == "default-disk-bulged") {
@@ -1389,12 +1389,12 @@ bool make_shape_preset(scene_shape& shape, const string& type, string& error) {
   } else if (type == "test-sphere") {
     set_quads(make_sphere(32, 0.075f, 1));
     for (auto& p : shape.positions) p += {0, 0.075f, 0};
-  } else if (type == "test-matsphere") {
-    set_quads(make_matsphere({32, 32}, 0.075f, {1, 1}));
-    for (auto& p : shape.positions) p += {0, 0.075f, 0};
   } else if (type == "test-matcube") {
     set_quads(make_rounded_box(
         {32, 32, 32}, {0.075f, 0.075f, 0.075f}, {1, 1, 1}, 0.3f * 0.075f));
+    for (auto& p : shape.positions) p += {0, 0.075f, 0};
+  } else if (type == "test-matsphere") {
+    set_quads(make_uvspherey({32, 32}, 0.075f, {2, 1}));
     for (auto& p : shape.positions) p += {0, 0.075f, 0};
   } else if (type == "test-sphere-displaced") {
     set_quads(make_sphere(128, 0.075f, 1));
@@ -1420,6 +1420,9 @@ bool make_shape_preset(scene_shape& shape, const string& type, string& error) {
     set_quads(make_recty({256, 256}, {0.075f, 0.075f}, {1, 1}));
   } else if (type == "test-matball") {
     set_quads(make_sphere(32, 0.075f));
+    for (auto& p : shape.positions) p += {0, 0.075f, 0};
+  } else if (type == "test-geosphere") {
+    set_triangles(make_geosphere(0.075f, 4));
     for (auto& p : shape.positions) p += {0, 0.075f, 0};
   } else if (type == "test-hairball1") {
     auto base = make_sphere(32, 0.075f * 0.8f, 1);
@@ -1518,10 +1521,10 @@ bool make_fvshape_preset(
     set_quads(make_rounded_box());
   } else if (type == "default-sphere") {
     set_quads(make_sphere());
-  } else if (type == "default-matsphere") {
-    set_quads(make_matsphere());
   } else if (type == "default-matcube") {
     set_quads(make_rounded_box());
+  } else if (type == "default-matsphere") {
+    set_quads(make_uvspherey());
   } else if (type == "default-disk") {
     set_quads(make_disk());
   } else if (type == "default-disk-bulged") {
@@ -1569,6 +1572,9 @@ bool make_fvshape_preset(
     set_quads(make_rounded_box(
         {32, 32, 32}, {0.075f, 0.075f, 0.075f}, {1, 1, 1}, 0.3f * 0.075f));
     for (auto& p : shape.positions) p += {0, 0.075f, 0};
+  } else if (type == "test-matsphere") {
+    set_quads(make_uvspherey({32, 32}, 0.075f, {2, 1}));
+    for (auto& p : shape.positions) p += {0, 0.075f, 0};
   } else if (type == "test-uvsphere") {
     set_quads(make_uvsphere({32, 32}, 0.075f));
     for (auto& p : shape.positions) p += {0, 0.075f, 0};
@@ -1586,9 +1592,6 @@ bool make_fvshape_preset(
     for (auto& p : shape.positions) p += {0, 0.075f, 0};
   } else if (type == "test-sphere-displaced") {
     set_quads(make_sphere(128, 0.075f, 1));
-    for (auto& p : shape.positions) p += {0, 0.075f, 0};
-  } else if (type == "test-matsphere") {
-    set_quads(make_matsphere({32, 32}, 0.075f, {1, 1}));
     for (auto& p : shape.positions) p += {0, 0.075f, 0};
   } else if (type == "test-matcube") {
     set_quads(make_rounded_box(

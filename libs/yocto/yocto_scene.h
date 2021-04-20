@@ -504,9 +504,6 @@ scene_shape make_capped_uvsphere(const vec2i& steps = {32, 32}, float scale = 1,
     const vec2f& uvscale = {1, 1}, float height = 0.3);
 scene_shape make_capped_uvspherey(const vec2i& steps = {32, 32},
     float scale = 1, const vec2f& uvscale = {1, 1}, float height = 0.3);
-// Generate a matsphere
-scene_shape make_matsphere(const vec2i& steps = {32, 32}, float scale = 1,
-    const vec2f& uvscale = {1, 1});
 // Make a disk
 scene_shape make_disk(int steps = 32, float scale = 1, float uvscale = 1);
 // Make a bulged disk
@@ -545,12 +542,12 @@ scene_shape make_random_points(int num = 65536, const vec3f& size = {1, 1, 1},
     float uvscale = 1, float radius = 0.001f, uint64_t seed = 17);
 
 // Predefined meshes
-scene_shape   make_monkey(float scale = 1);
-scene_shape   make_quad(float scale = 1);
-scene_shape   make_quady(float scale = 1);
-scene_shape   make_cube(float scale = 1);
-scene_fvshape make_fvcube(float scale = 1);
-scene_shape   make_geosphere(float scale = 1);
+scene_shape   make_monkey(float scale = 1, int subdivisions = 0);
+scene_shape   make_quad(float scale = 1, int subdivisions = 0);
+scene_shape   make_quady(float scale = 1, int subdivisions = 0);
+scene_shape   make_cube(float scale = 1, int subdivisions = 0);
+scene_fvshape make_fvcube(float scale = 1, int subdivisions = 0);
+scene_shape   make_geosphere(float scale = 1, int subdivisions = 0);
 
 // Make a hair ball around a shape.
 // length: minimum and maximum length

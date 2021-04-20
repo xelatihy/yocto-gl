@@ -1511,15 +1511,6 @@ scene_shape make_capped_uvspherey(
   return shape;
 }
 
-// Make a matsphere
-scene_shape make_matsphere(
-    const vec2i& steps, float scale, const vec2f& uvscale) {
-  auto shape = scene_shape{};
-  make_matsphere(shape.quads, shape.positions, shape.normals, shape.texcoords,
-      steps, scale, uvscale);
-  return shape;
-}
-
 // Make a disk
 scene_shape make_disk(int steps, float scale, float uvscale) {
   auto shape = scene_shape{};
@@ -1622,38 +1613,38 @@ scene_fvshape make_fvsphere(int steps, float scale, float uvscale) {
 }
 
 // Predefined meshes
-scene_shape make_monkey(float scale) {
+scene_shape make_monkey(float scale, int subdivisions) {
   auto shape = scene_shape{};
-  make_monkey(shape.quads, shape.positions, scale);
+  make_monkey(shape.quads, shape.positions, scale, subdivisions);
   return shape;
 }
-scene_shape make_quad(float scale) {
+scene_shape make_quad(float scale, int subdivisions) {
   auto shape = scene_shape{};
-  make_quad(
-      shape.quads, shape.positions, shape.normals, shape.texcoords, scale);
+  make_quad(shape.quads, shape.positions, shape.normals, shape.texcoords, scale,
+      subdivisions);
   return shape;
 }
-scene_shape make_quady(float scale) {
+scene_shape make_quady(float scale, int subdivisions) {
   auto shape = scene_shape{};
-  make_quady(
-      shape.quads, shape.positions, shape.normals, shape.texcoords, scale);
+  make_quady(shape.quads, shape.positions, shape.normals, shape.texcoords,
+      scale, subdivisions);
   return shape;
 }
-scene_shape make_cube(float scale) {
+scene_shape make_cube(float scale, int subdivisions) {
   auto shape = scene_shape{};
-  make_cube(
-      shape.quads, shape.positions, shape.normals, shape.texcoords, scale);
+  make_cube(shape.quads, shape.positions, shape.normals, shape.texcoords, scale,
+      subdivisions);
   return shape;
 }
-scene_fvshape make_fvcube(float scale) {
+scene_fvshape make_fvcube(float scale, int subdivisions) {
   auto shape = scene_fvshape{};
   make_fvcube(shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
-      shape.positions, shape.normals, shape.texcoords, scale);
+      shape.positions, shape.normals, shape.texcoords, scale, subdivisions);
   return shape;
 }
-scene_shape make_geosphere(float scale) {
+scene_shape make_geosphere(float scale, int subdivisions) {
   auto shape = scene_shape{};
-  make_geosphere(shape.triangles, shape.positions, scale);
+  make_geosphere(shape.triangles, shape.positions, scale, subdivisions);
   return shape;
 }
 

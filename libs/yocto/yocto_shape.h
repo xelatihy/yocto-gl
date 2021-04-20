@@ -558,10 +558,6 @@ void make_uvspherey(vector<vec4i>& quads, vector<vec3f>& positions,
 void make_capped_uvspherey(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps,
     float scale, const vec2f& uvscale, float cap);
-// Generate a matsphere
-void make_matsphere(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps,
-    float scale, const vec2f& uvscale);
 // Generate a disk
 void make_disk(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, int steps, float scale,
@@ -624,18 +620,23 @@ void make_fvsphere(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
     float uvscale);
 
 // Predefined meshes
-void make_monkey(vector<vec4i>& quads, vector<vec3f>& positions, float scale);
+void make_monkey(vector<vec4i>& quads, vector<vec3f>& positions, float scale,
+    int subdivisions);
 void make_quad(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, float scale);
+    vector<vec3f>& normals, vector<vec2f>& texcoords, float scale,
+    int subdivisions);
 void make_quady(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, float scale);
+    vector<vec3f>& normals, vector<vec2f>& texcoords, float scale,
+    int subdivisions);
 void make_cube(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, float scale);
+    vector<vec3f>& normals, vector<vec2f>& texcoords, float scale,
+    int subdivisions);
 void make_fvcube(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
     vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, float scale);
-void make_geosphere(
-    vector<vec3i>& triangles, vector<vec3f>& positions, float scale);
+    vector<vec3f>& normals, vector<vec2f>& texcoords, float scale,
+    int subdivisions);
+void make_geosphere(vector<vec3i>& triangles, vector<vec3f>& positions,
+    float scale, int subdivisions);
 
 // Convert points to small spheres and lines to small cylinders. This is
 // intended for making very small primitives for display in interactive
