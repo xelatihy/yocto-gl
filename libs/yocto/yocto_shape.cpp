@@ -3063,7 +3063,7 @@ void make_fvcube(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
 }
 
 void make_geosphere(vector<vec3i>& triangles, vector<vec3f>& positions,
-    float scale, int subdivisions) {
+    vector<vec3f>& normals, float scale, int subdivisions) {
   // https://stackoverflow.com/questions/17705621/algorithm-for-a-geodesic-sphere
   const float X                   = 0.525731112119133606f;
   const float Z                   = 0.850650808352039932f;
@@ -3077,9 +3077,12 @@ void make_geosphere(vector<vec3i>& triangles, vector<vec3f>& positions,
   if (subdivisions == 0) {
     triangles = geosphere_triangles;
     positions = geosphere_positions;
+    normals   = geosphere_positions;
   } else {
     std::tie(triangles, positions) = subdivide_triangles(
         geosphere_triangles, geosphere_positions, subdivisions);
+    for (auto& position : positions) position = normalize(position);
+    normals = positions;
   }
   if (scale != 1) {
     for (auto& p : positions) p *= scale;
@@ -3256,6 +3259,31 @@ void lines_to_cylinders(vector<vec4i>& quads, vector<vec3f>& positions,
     auto frame  = frame_fromz((vertices[idx + 0] + vertices[idx + 1]) / 2,
         vertices[idx + 0] - vertices[idx + 1]);
     auto length = distance(vertices[idx + 0], vertices[idx + 1]);
+    auto transformed_positions = cylinder_positions;
+    auto transformed_normals   = cylinder_normals;
+    for (auto& position : transformed_positions)
+      position = transform_point(frame, position * vec3f{1, 1, length / 2});
+    for (auto& normal : transformed_normals)
+      normal = transform_direction(frame, normal);
+    merge_quads(quads, positions, normals, texcoords, cylinder_quads,
+        transformed_positions, cylinder_normals, cylinder_texcoords);
+  }
+}
+
+void lines_to_cylinders(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords,
+    const vector<vec2i>& lines, const vector<vec3f>& vertices, int steps,
+    float scale) {
+  auto cylinder_quads     = vector<vec4i>{};
+  auto cylinder_positions = vector<vec3f>{};
+  auto cylinder_normals   = vector<vec3f>{};
+  auto cylinder_texcoords = vector<vec2f>{};
+  make_uvcylinder(cylinder_quads, cylinder_positions, cylinder_normals,
+      cylinder_texcoords, {steps, 1, 1}, {scale, 1}, {1, 1, 1});
+  for (auto& line : lines) {
+    auto frame  = frame_fromz((vertices[line.x] + vertices[line.y]) / 2,
+        vertices[line.x] - vertices[line.y]);
+    auto length = distance(vertices[line.x], vertices[line.y]);
     auto transformed_positions = cylinder_positions;
     auto transformed_normals   = cylinder_normals;
     for (auto& position : transformed_positions)

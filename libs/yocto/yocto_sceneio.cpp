@@ -1422,7 +1422,14 @@ bool make_shape_preset(scene_shape& shape, const string& type, string& error) {
     set_quads(make_sphere(32, 0.075f));
     for (auto& p : shape.positions) p += {0, 0.075f, 0};
   } else if (type == "test-geosphere") {
-    set_triangles(make_geosphere(0.075f, 4));
+    set_triangles(make_geosphere(0.075f, 3));
+    for (auto& p : shape.positions) p += {0, 0.075f, 0};
+  } else if (type == "test-geosphere-flat") {
+    set_triangles(make_geosphere(0.075f, 3));
+    for (auto& p : shape.positions) p += {0, 0.075f, 0};
+    shape.normals = {};
+  } else if (type == "test-geosphere-subdivided") {
+    set_triangles(make_geosphere(0.075f, 6));
     for (auto& p : shape.positions) p += {0, 0.075f, 0};
   } else if (type == "test-hairball1") {
     auto base = make_sphere(32, 0.075f * 0.8f, 1);

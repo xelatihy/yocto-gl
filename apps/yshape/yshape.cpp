@@ -51,6 +51,8 @@ struct convert_params {
   vec3f  rotate      = {0, 0, 0};
   vec3f  scale       = {1, 1, 1};
   float  scaleu      = 1;
+  bool   toedges     = false;
+  bool   tovertices  = false;
 };
 
 void add_command(cli_command& cli, const string& name, convert_params& params,
@@ -73,6 +75,9 @@ void add_command(cli_command& cli, const string& name, convert_params& params,
   add_option(cmd, "rotatex", params.rotate.x, "Rotate shape.");
   add_option(cmd, "rotatey", params.rotate.y, "Rotate shape.");
   add_option(cmd, "rotatez", params.rotate.z, "Rotate shape.");
+  add_option(cmd, "toedges", params.toedges, "Convert shape to edges.");
+  add_option(
+      cmd, "tovertices", params.tovertices, "Convert shape to vertices.");
 }
 
 // convert images
@@ -120,6 +125,24 @@ int run_convert(const convert_params& params) {
     auto nonuniform_scaling = min(params.scale) != max(params.scale);
     for (auto& n : shape.normals)
       n = transform_normal(xform, n, nonuniform_scaling);
+  }
+
+  // convert to edges
+  if (params.toedges) {
+    // check faces
+    if (shape.triangles.empty() && shape.quads.empty())
+      print_fatal("empty faces");
+
+    // convert to edges
+    auto edges = !shape.triangles.empty() ? get_edges(shape.triangles)
+                                          : get_edges(shape.quads);
+    shape      = lines_to_cylinders(edges, shape.positions, 4, 0.001f);
+  }
+
+  // convert to vertices
+  if (params.tovertices) {
+    // convert to spheres
+    shape = points_to_spheres(shape.positions);
   }
 
   // compute normals

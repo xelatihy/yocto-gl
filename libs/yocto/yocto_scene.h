@@ -562,13 +562,15 @@ scene_shape make_hair(const scene_shape& shape, const vec2i& steps = {8, 65536},
 
 // Convert points to small spheres and lines to small cylinders. This is
 // intended for making very small primitives for display in interactive
-// applications, so the spheres are low res and without texcoords and normals.
+// applications, so the spheres are low res.
 scene_shape points_to_spheres(
     const vector<vec3f>& vertices, int steps = 2, float scale = 0.01f);
 scene_shape polyline_to_cylinders(
     const vector<vec3f>& vertices, int steps = 4, float scale = 0.01f);
 scene_shape lines_to_cylinders(
     const vector<vec3f>& vertices, int steps = 4, float scale = 0.01f);
+scene_shape lines_to_cylinders(const vector<vec2i>& lines,
+    const vector<vec3f>& positions, int steps = 4, float scale = 0.01f);
 
 // Make a heightfield mesh.
 scene_shape make_heightfield(const vec2i& size, const vector<float>& height);
