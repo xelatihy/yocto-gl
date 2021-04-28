@@ -12,8 +12,8 @@ jobs:
           sudo apt-get install xorg-dev
       - name: configure
         env:
-          CC: gcc-8
-          CXX: g++-8
+          CC: gcc-9
+          CXX: g++-9
         run: |
           mkdir build
           cd build
