@@ -1399,6 +1399,9 @@ bool make_shape_preset(scene_shape& shape, const string& type, string& error) {
   } else if (type == "test-sphere-displaced") {
     set_quads(make_sphere(128, 0.075f, 1));
     for (auto& p : shape.positions) p += {0, 0.075f, 0};
+  } else if (type == "test-smallsphere") {
+    set_quads(make_sphere(32, 0.015f, 1));
+    for (auto& p : shape.positions) p += {0, 0.015f, 0};
   } else if (type == "test-disk") {
     set_quads(make_disk(32, 0.075f, 1));
     for (auto& p : shape.positions) p += {0, 0.075f, 0};
@@ -1475,7 +1478,8 @@ bool make_shape_preset(scene_shape& shape, const string& type, string& error) {
   } else if (type == "test-points") {
     set_points(make_points(4096));
   } else if (type == "test-points-random") {
-    set_points(make_random_points(4096, {0.2f, 0.2f, 0.2f}));
+    set_points(make_random_points(4096, {0.075f, 0.075f, 0.075f}));
+    for (auto& p : shape.positions) p += {0, 0.075f, 0};
   } else if (type == "test-particles") {
     set_points(make_points(4096));
   } else if (type == "test-cloth") {

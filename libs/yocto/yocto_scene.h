@@ -342,8 +342,8 @@ vector<float> sample_shape_cdf(const scene_shape& shape);
 void          sample_shape_cdf(vector<float>& cdf, const scene_shape& shape);
 shape_point   sample_shape(const scene_shape& shape, const vector<float>& cdf,
       float rn, const vec2f& ruv);
-vector<shape_point> sample_shape(const scene_shape& shape,
-    const vector<float>& cdf, int num_samples, uint64_t seed = 98729387);
+vector<shape_point> sample_shape(
+    const scene_shape& shape, int num_samples, uint64_t seed = 98729387);
 
 // Conversions
 scene_shape quads_to_triangles(const scene_shape& shape);
@@ -556,9 +556,15 @@ scene_shape   make_geosphere(float scale = 1, int subdivisions = 0);
 // clump: clump added to hair (strength/number)
 // rotation: rotation added to hair (angle/strength)
 scene_shape make_hair(const scene_shape& shape, const vec2i& steps = {8, 65536},
-    const vec2f& length = {0.1f, 0.1f}, const vec2f& rad = {0.001f, 0.001f},
+    const vec2f& length = {0.1f, 0.1f}, const vec2f& radius = {0.001f, 0.001f},
     const vec2f& noise = {0, 10}, const vec2f& clump = {0, 128},
     const vec2f& rotation = {0, 0}, int seed = 7);
+
+// Grow hairs around a shape
+scene_shape make_hair2(const scene_shape& shape,
+    const vec2i& steps = {8, 65536}, const vec2f& length = {0.1f, 0.1f},
+    const vec2f& radius = {0.001f, 0.001f}, float noise = 0,
+    float gravity = 0.001f, int seed = 7);
 
 // Convert points to small spheres and lines to small cylinders. This is
 // intended for making very small primitives for display in interactive

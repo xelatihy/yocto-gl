@@ -2370,39 +2370,36 @@ void make_lines(vector<vec2i>& lines, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<float>& radius,
     const vec2i& steps, const vec2f& size, const vec2f& uvscale,
     const vec2f& rad) {
-  auto nverts = (steps.x + 1) * steps.y;
-  auto nlines = steps.x * steps.y;
-  auto vid    = [steps](int i, int j) { return j * (steps.x + 1) + i; };
-  auto fid    = [steps](int i, int j) { return j * steps.x + i; };
-
-  positions.resize(nverts);
-  normals.resize(nverts);
-  texcoords.resize(nverts);
-  radius.resize(nverts);
+  positions.resize((steps.x + 1) * steps.y);
+  normals.resize((steps.x + 1) * steps.y);
+  texcoords.resize((steps.x + 1) * steps.y);
+  radius.resize((steps.x + 1) * steps.y);
   if (steps.y > 1) {
     for (auto j = 0; j < steps.y; j++) {
       for (auto i = 0; i <= steps.x; i++) {
-        auto uv = vec2f{
-            i / (float)steps.x, j / (float)(steps.y > 1 ? steps.y - 1 : 1)};
-        positions[vid(i, j)] = {
+        auto uv = vec2f{i / (float)steps.x, j / (float)(steps.y - 1)};
+        positions[j * (steps.x + 1) + i] = {
             (uv.x - 0.5f) * size.x, (uv.y - 0.5f) * size.y, 0};
-        normals[vid(i, j)]   = {1, 0, 0};
-        texcoords[vid(i, j)] = uv * uvscale;
+        normals[j * (steps.x + 1) + i]   = {1, 0, 0};
+        texcoords[j * (steps.x + 1) + i] = uv * uvscale;
+        radius[j * (steps.x + 1) + i]    = lerp(rad.x, rad.y, uv.x);
       }
     }
   } else {
     for (auto i = 0; i <= steps.x; i++) {
-      auto uv              = vec2f{i / (float)steps.x, 0};
-      positions[vid(i, 0)] = {(uv.x - 0.5f) * size.x, 0, 0};
-      normals[vid(i, 0)]   = {1, 0, 0};
-      texcoords[vid(i, 0)] = uv * uvscale;
+      auto uv      = vec2f{i / (float)steps.x, 0};
+      positions[i] = {(uv.x - 0.5f) * size.x, 0, 0};
+      normals[i]   = {1, 0, 0};
+      texcoords[i] = uv * uvscale;
+      radius[i]    = lerp(rad.x, rad.y, uv.x);
     }
   }
 
-  lines.resize(nlines);
+  lines.resize(steps.x * steps.y);
   for (int j = 0; j < steps.y; j++) {
     for (int i = 0; i < steps.x; i++) {
-      lines[fid(i, j)] = {vid(i, j), vid(i + 1, j)};
+      lines[j * steps.x + i] = {
+          j * (steps.x + 1) + i, j * (steps.x + 1) + i + 1};
     }
   }
 }
@@ -2441,9 +2438,8 @@ void make_random_points(vector<int>& points, vector<vec3f>& positions,
   make_points(points, positions, normals, texcoords, radius, num, uvscale,
       point_radius);
   auto rng = make_rng(seed);
-  for (auto& position : positions) {
-    position = (rand3f(rng) - vec3f{0.5f, 0.5f, 0.5f}) * size;
-  }
+  for (auto& position : positions) position = (2 * rand3f(rng) - 1) * size;
+  for (auto& texcoord : texcoords) texcoord = rand2f(rng);
 }
 
 // Make a bezier circle. Returns bezier, pos.
@@ -3159,6 +3155,45 @@ void make_hair(vector<vec2i>& lines, vector<vec3f>& positions,
   if (clump.x > 0 || noise.x > 0 || rotation.x > 0) {
     normals = lines_tangents(lines, positions);
   }
+}
+
+// Grow hairs around a shape
+void make_hair2(vector<vec2i>& lines, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, vector<float>& radius,
+    const vector<vec3i>& striangles, const vector<vec4i>& squads,
+    const vector<vec3f>& spos, const vector<vec3f>& snorm,
+    const vector<vec2f>& stexcoord, const vec2i& steps, const vec2f& len,
+    const vec2f& rad, float noise, float gravity, int seed) {
+  auto alltriangles    = striangles;
+  auto quads_triangles = quads_to_triangles(squads);
+  alltriangles.insert(
+      alltriangles.end(), quads_triangles.begin(), quads_triangles.end());
+  auto bpositions = vector<vec3f>{};
+  auto bnormals   = vector<vec3f>{};
+  auto btexcoord  = vector<vec2f>{};
+  sample_triangles(bpositions, bnormals, btexcoord, alltriangles, spos, snorm,
+      stexcoord, steps.y, seed);
+
+  make_lines(
+      lines, positions, normals, texcoords, radius, steps, {1, 1}, {1, 1}, rad);
+  auto rng = make_rng(seed);
+  for (auto idx = 0; idx < steps.y; idx++) {
+    auto offset       = idx * (steps.x + 1);
+    auto position     = bpositions[idx];
+    auto direction    = bnormals[idx];
+    auto length       = rand1f(rng) * (len.y - len.x) + len.x;
+    positions[offset] = position;
+    for (auto iidx = 1; iidx <= steps.x; iidx++) {
+      positions[offset + iidx] = position;
+      positions[offset + iidx] += direction * length / steps.x;
+      positions[offset + iidx] += (2 * rand3f(rng) - 1) * noise;
+      positions[offset + iidx] += vec3f{0, -gravity, 0};
+      direction = normalize(positions[offset + iidx] - position);
+      position  = positions[offset + iidx];
+    }
+  }
+
+  normals = lines_tangents(lines, positions);
 }
 
 // Thickens a shape by copy9ing the shape content, rescaling it and flipping

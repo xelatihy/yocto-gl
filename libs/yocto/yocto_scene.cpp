@@ -1651,12 +1651,23 @@ scene_shape make_geosphere(float scale, int subdivisions) {
 
 // Make a hair ball around a shape
 scene_shape make_hair(const scene_shape& base, const vec2i& steps,
-    const vec2f& len, const vec2f& rad, const vec2f& noise, const vec2f& clump,
-    const vec2f& rotation, int seed) {
+    const vec2f& length, const vec2f& radius, const vec2f& noise,
+    const vec2f& clump, const vec2f& rotation, int seed) {
   auto shape = scene_shape{};
   make_hair(shape.lines, shape.positions, shape.normals, shape.texcoords,
       shape.radius, base.triangles, base.quads, base.positions, base.normals,
-      base.texcoords, steps, len, rad, noise, clump, rotation, seed);
+      base.texcoords, steps, length, radius, noise, clump, rotation, seed);
+  return shape;
+}
+
+// Grow hairs around a shape
+scene_shape make_hair2(const scene_shape& base, const vec2i& steps,
+    const vec2f& length, const vec2f& radius, float noise, float gravity,
+    int seed) {
+  auto shape = scene_shape{};
+  make_hair2(shape.lines, shape.positions, shape.normals, shape.texcoords,
+      shape.radius, base.triangles, base.quads, base.positions, base.normals,
+      base.texcoords, steps, length, radius, noise, gravity, seed);
   return shape;
 }
 

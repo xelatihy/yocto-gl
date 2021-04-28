@@ -664,6 +664,14 @@ void make_hair(vector<vec2i>& lines, vector<vec3f>& positions,
     const vec2f& rad, const vec2f& noise, const vec2f& clump,
     const vec2f& rotation, int seed);
 
+// Grow hairs around a shape
+void make_hair2(vector<vec2i>& lines, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, vector<float>& radius,
+    const vector<vec3i>& striangles, const vector<vec4i>& squads,
+    const vector<vec3f>& spos, const vector<vec3f>& snorm,
+    const vector<vec2f>& stexcoord, const vec2i& steps, const vec2f& len,
+    const vec2f& rad, float noise, float gravity, int seed);
+
 // Thickens a shape by copy9ing the shape content, rescaling it and flipping
 // its normals. Note that this is very much not robust and only useful for
 // trivial cases.
