@@ -51,6 +51,8 @@ struct convert_params {
   vec3f  rotate      = {0, 0, 0};
   vec3f  scale       = {1, 1, 1};
   float  scaleu      = 1;
+  bool   toedges     = false;
+  bool   tovertices  = false;
 };
 
 void add_command(cli_command& cli, const string& name, convert_params& params,
@@ -73,6 +75,9 @@ void add_command(cli_command& cli, const string& name, convert_params& params,
   add_option(cmd, "rotatex", params.rotate.x, "Rotate shape.");
   add_option(cmd, "rotatey", params.rotate.y, "Rotate shape.");
   add_option(cmd, "rotatez", params.rotate.z, "Rotate shape.");
+  add_option(cmd, "toedges", params.toedges, "Convert shape to edges.");
+  add_option(
+      cmd, "tovertices", params.tovertices, "Convert shape to vertices.");
 }
 
 // convert images
@@ -120,6 +125,24 @@ int run_convert(const convert_params& params) {
     auto nonuniform_scaling = min(params.scale) != max(params.scale);
     for (auto& n : shape.normals)
       n = transform_normal(xform, n, nonuniform_scaling);
+  }
+
+  // convert to edges
+  if (params.toedges) {
+    // check faces
+    if (shape.triangles.empty() && shape.quads.empty())
+      print_fatal("empty faces");
+
+    // convert to edges
+    auto edges = !shape.triangles.empty() ? get_edges(shape.triangles)
+                                          : get_edges(shape.quads);
+    shape      = lines_to_cylinders(edges, shape.positions, 4, 0.001f);
+  }
+
+  // convert to vertices
+  if (params.tovertices) {
+    // convert to spheres
+    shape = points_to_spheres(shape.positions);
   }
 
   // compute normals
@@ -375,8 +398,89 @@ int run_heightfield(const heightfield_params& params) {
     for (auto& n : shape.normals)
       n = transform_normal(xform, n, nonuniform_scaling);
   }
+
   // save mesh
   if (!save_shape(params.output, shape, ioerror, true)) print_fatal(ioerror);
+
+  // done
+  return 0;
+}
+
+struct hair_params {
+  string shape   = "shape.ply"s;
+  string output  = "out.ply"s;
+  int    hairs   = 65536;
+  int    steps   = 8;
+  float  length  = 0.02f;
+  float  noise   = 0.001f;
+  float  gravity = 0.0005f;
+  float  radius  = 0.0001f;
+};
+
+void add_command(cli_command& cli, const string& name, hair_params& params,
+    const string& usage) {
+  auto& cmd = add_command(cli, name, usage);
+  add_argument(cmd, "shape", params.shape, "Input shape.");
+  add_option(cmd, "output", params.output, "Output shape.");
+  add_option(cmd, "hairs", params.hairs, "Number of hairs.");
+  add_option(cmd, "steps", params.steps, "Hair steps.");
+  add_option(cmd, "length", params.length, "Hair length.");
+  add_option(cmd, "noise", params.noise, "Noise weight.");
+  add_option(cmd, "gravity", params.gravity, "Gravity scale.");
+  add_option(cmd, "radius", params.radius, "Hair radius.");
+}
+
+int run_hair(const hair_params& params) {
+  // load mesh
+  auto shape   = scene_shape{};
+  auto ioerror = ""s;
+  if (!load_shape(params.shape, shape, ioerror)) print_fatal(ioerror);
+
+  // generate hair
+  auto hair = make_hair2(shape, {params.steps, params.hairs},
+      {params.length, params.length}, {params.radius, params.radius},
+      params.noise, params.gravity);
+
+  // save mesh
+  if (!save_shape(params.output, hair, ioerror, true)) print_fatal(ioerror);
+
+  // done
+  return 0;
+}
+
+struct sample_params {
+  string shape   = "shape.ply"s;
+  string output  = "out.ply"s;
+  int    samples = 4096;
+};
+
+void add_command(cli_command& cli, const string& name, sample_params& params,
+    const string& usage) {
+  auto& cmd = add_command(cli, name, usage);
+  add_argument(cmd, "shape", params.shape, "Input shape.");
+  add_option(cmd, "output", params.output, "Output shape.");
+  add_option(cmd, "samples", params.samples, "Number of samples.");
+}
+
+int run_sample(const sample_params& params) {
+  // load mesh
+  auto shape   = scene_shape{};
+  auto ioerror = ""s;
+  if (!load_shape(params.shape, shape, ioerror)) print_fatal(ioerror);
+
+  // generate samples
+  auto samples = sample_shape(shape, params.samples);
+
+  // sample shape
+  auto sshape = scene_shape{};
+  for (auto& sample : samples) {
+    sshape.points.push_back((int)sshape.points.size());
+    sshape.positions.push_back(eval_position(shape, sample.element, sample.uv));
+    sshape.radius.push_back(0.001f);
+  }
+
+  // save mesh
+  if (!save_shape(params.output, sshape, ioerror, true)) print_fatal(ioerror);
 
   // done
   return 0;
@@ -428,6 +532,8 @@ struct app_params {
   fvconvert_params   fvconvert   = {};
   view_params        view        = {};
   heightfield_params heightfield = {};
+  hair_params        hair        = {};
+  sample_params      sample      = {};
   glview_params      glview      = {};
 };
 
@@ -441,6 +547,8 @@ void add_commands(cli_command& cli, const string& name, app_params& params,
       cli, "fvconvert", params.fvconvert, "Convert face-varying shapes.");
   add_command(cli, "view", params.view, "View shapes.");
   add_command(cli, "heightfield", params.heightfield, "Create an heightfield.");
+  add_command(cli, "hair", params.hair, "Grow hairs on a shape.");
+  add_command(cli, "sample", params.sample, "Sample shapepoints on a shape.");
   add_command(cli, "glview", params.glview, "View shapes with OpenGL.");
 }
 
@@ -465,6 +573,10 @@ int main(int argc, const char* argv[]) {
     return run_view(params.view);
   } else if (params.command == "heightfield") {
     return run_heightfield(params.heightfield);
+  } else if (params.command == "hair") {
+    return run_hair(params.hair);
+  } else if (params.command == "sample") {
+    return run_sample(params.sample);
   } else if (params.command == "glview") {
     return run_glview(params.glview);
   } else {

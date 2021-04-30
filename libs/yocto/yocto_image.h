@@ -311,6 +311,14 @@ void make_ridgemap(vector<vec4f>& pixels, int width, int height,
     float scale = 1, const vec4f& noise = {2, 0.5, 8, 1},
     const vec4f& color0 = {0, 0, 0, 1}, const vec4f& color1 = {1, 1, 1, 1});
 
+// Make a random image.
+void make_randpoints(vector<vec4f>& pixels, int width, int height,
+    float scale = 1, const vec4f& color0 = vec4f{0.2f, 0.2f, 0.2f, 1.0f},
+    const vec4f& color1 = vec4f{0.5f, 0.5f, 0.5f, 1.0f});
+void make_randlines(vector<vec4f>& pixels, int width, int height,
+    float scale = 1, const vec4f& color0 = vec4f{0.2f, 0.2f, 0.2f, 1.0f},
+    const vec4f& color1 = vec4f{0.5f, 0.5f, 0.5f, 1.0f});
+
 // Make a sunsky HDR model with sun at sun_angle elevation in [0,pif/2],
 // turbidity in [1.7,10] with or without sun. The sun can be enabled or
 // disabled with has_sun. The sun parameters can be slightly modified by

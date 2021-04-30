@@ -552,6 +552,12 @@ void make_uvsphere(vector<vec4i>& quads, vector<vec3f>& positions,
 void make_capped_uvsphere(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps,
     float scale, const vec2f& uvscale, float cap);
+void make_uvspherey(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps,
+    float scale, const vec2f& uvscale);
+void make_capped_uvspherey(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps,
+    float scale, const vec2f& uvscale, float cap);
 // Generate a disk
 void make_disk(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, int steps, float scale,
@@ -614,18 +620,23 @@ void make_fvsphere(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
     float uvscale);
 
 // Predefined meshes
-void make_monkey(vector<vec4i>& quads, vector<vec3f>& positions, float scale);
+void make_monkey(vector<vec4i>& quads, vector<vec3f>& positions, float scale,
+    int subdivisions);
 void make_quad(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, float scale);
+    vector<vec3f>& normals, vector<vec2f>& texcoords, float scale,
+    int subdivisions);
 void make_quady(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, float scale);
+    vector<vec3f>& normals, vector<vec2f>& texcoords, float scale,
+    int subdivisions);
 void make_cube(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, float scale);
+    vector<vec3f>& normals, vector<vec2f>& texcoords, float scale,
+    int subdivisions);
 void make_fvcube(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
     vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, float scale);
-void make_geosphere(
-    vector<vec3i>& triangles, vector<vec3f>& positions, float scale);
+    vector<vec3f>& normals, vector<vec2f>& texcoords, float scale,
+    int subdivisions);
+void make_geosphere(vector<vec3i>& triangles, vector<vec3f>& positions,
+    vector<vec3f>& normals, float scale, int subdivisions);
 
 // Convert points to small spheres and lines to small cylinders. This is
 // intended for making very small primitives for display in interactive
@@ -639,6 +650,10 @@ void polyline_to_cylinders(vector<vec4i>& quads, vector<vec3f>& positions,
 void lines_to_cylinders(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords,
     const vector<vec3f>& vertices, int steps = 4, float scale = 0.01f);
+void lines_to_cylinders(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords,
+    const vector<vec2i>& lines, const vector<vec3f>& vertices, int steps = 4,
+    float scale = 0.01f);
 
 // Make a hair ball around a shape
 void make_hair(vector<vec2i>& lines, vector<vec3f>& positions,
@@ -648,6 +663,14 @@ void make_hair(vector<vec2i>& lines, vector<vec3f>& positions,
     const vector<vec2f>& stexcoord, const vec2i& steps, const vec2f& len,
     const vec2f& rad, const vec2f& noise, const vec2f& clump,
     const vec2f& rotation, int seed);
+
+// Grow hairs around a shape
+void make_hair2(vector<vec2i>& lines, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, vector<float>& radius,
+    const vector<vec3i>& striangles, const vector<vec4i>& squads,
+    const vector<vec3f>& spos, const vector<vec3f>& snorm,
+    const vector<vec2f>& stexcoord, const vec2i& steps, const vec2f& len,
+    const vec2f& rad, float noise, float gravity, int seed);
 
 // Thickens a shape by copy9ing the shape content, rescaling it and flipping
 // its normals. Note that this is very much not robust and only useful for

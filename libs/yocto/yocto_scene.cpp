@@ -1484,6 +1484,15 @@ scene_shape make_uvsphere(
   return shape;
 }
 
+// Make a sphere.
+scene_shape make_uvspherey(
+    const vec2i& steps, float scale, const vec2f& uvscale) {
+  auto shape = scene_shape{};
+  make_uvspherey(shape.quads, shape.positions, shape.normals, shape.texcoords,
+      steps, scale, uvscale);
+  return shape;
+}
+
 // Make a sphere with slipped caps.
 scene_shape make_capped_uvsphere(
     const vec2i& steps, float scale, const vec2f& uvscale, float height) {
@@ -1492,6 +1501,16 @@ scene_shape make_capped_uvsphere(
       shape.texcoords, steps, scale, uvscale, height);
   return shape;
 }
+
+// Make a sphere with slipped caps.
+scene_shape make_capped_uvspherey(
+    const vec2i& steps, float scale, const vec2f& uvscale, float height) {
+  auto shape = scene_shape{};
+  make_capped_uvspherey(shape.quads, shape.positions, shape.normals,
+      shape.texcoords, steps, scale, uvscale, height);
+  return shape;
+}
+
 // Make a disk
 scene_shape make_disk(int steps, float scale, float uvscale) {
   auto shape = scene_shape{};
@@ -1594,49 +1613,61 @@ scene_fvshape make_fvsphere(int steps, float scale, float uvscale) {
 }
 
 // Predefined meshes
-scene_shape make_monkey(float scale) {
+scene_shape make_monkey(float scale, int subdivisions) {
   auto shape = scene_shape{};
-  make_monkey(shape.quads, shape.positions, scale);
+  make_monkey(shape.quads, shape.positions, scale, subdivisions);
   return shape;
 }
-scene_shape make_quad(float scale) {
+scene_shape make_quad(float scale, int subdivisions) {
   auto shape = scene_shape{};
-  make_quad(
-      shape.quads, shape.positions, shape.normals, shape.texcoords, scale);
+  make_quad(shape.quads, shape.positions, shape.normals, shape.texcoords, scale,
+      subdivisions);
   return shape;
 }
-scene_shape make_quady(float scale) {
+scene_shape make_quady(float scale, int subdivisions) {
   auto shape = scene_shape{};
-  make_quady(
-      shape.quads, shape.positions, shape.normals, shape.texcoords, scale);
+  make_quady(shape.quads, shape.positions, shape.normals, shape.texcoords,
+      scale, subdivisions);
   return shape;
 }
-scene_shape make_cube(float scale) {
+scene_shape make_cube(float scale, int subdivisions) {
   auto shape = scene_shape{};
-  make_cube(
-      shape.quads, shape.positions, shape.normals, shape.texcoords, scale);
+  make_cube(shape.quads, shape.positions, shape.normals, shape.texcoords, scale,
+      subdivisions);
   return shape;
 }
-scene_fvshape make_fvcube(float scale) {
+scene_fvshape make_fvcube(float scale, int subdivisions) {
   auto shape = scene_fvshape{};
   make_fvcube(shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
-      shape.positions, shape.normals, shape.texcoords, scale);
+      shape.positions, shape.normals, shape.texcoords, scale, subdivisions);
   return shape;
 }
-scene_shape make_geosphere(float scale) {
+scene_shape make_geosphere(float scale, int subdivisions) {
   auto shape = scene_shape{};
-  make_geosphere(shape.triangles, shape.positions, scale);
+  make_geosphere(
+      shape.triangles, shape.positions, shape.normals, scale, subdivisions);
   return shape;
 }
 
 // Make a hair ball around a shape
 scene_shape make_hair(const scene_shape& base, const vec2i& steps,
-    const vec2f& len, const vec2f& rad, const vec2f& noise, const vec2f& clump,
-    const vec2f& rotation, int seed) {
+    const vec2f& length, const vec2f& radius, const vec2f& noise,
+    const vec2f& clump, const vec2f& rotation, int seed) {
   auto shape = scene_shape{};
   make_hair(shape.lines, shape.positions, shape.normals, shape.texcoords,
       shape.radius, base.triangles, base.quads, base.positions, base.normals,
-      base.texcoords, steps, len, rad, noise, clump, rotation, seed);
+      base.texcoords, steps, length, radius, noise, clump, rotation, seed);
+  return shape;
+}
+
+// Grow hairs around a shape
+scene_shape make_hair2(const scene_shape& base, const vec2i& steps,
+    const vec2f& length, const vec2f& radius, float noise, float gravity,
+    int seed) {
+  auto shape = scene_shape{};
+  make_hair2(shape.lines, shape.positions, shape.normals, shape.texcoords,
+      shape.radius, base.triangles, base.quads, base.positions, base.normals,
+      base.texcoords, steps, length, radius, noise, gravity, seed);
   return shape;
 }
 
@@ -1656,7 +1687,7 @@ scene_shape make_heightfield(const vec2i& size, const vector<vec4f>& color) {
 
 // Convert points to small spheres and lines to small cylinders. This is
 // intended for making very small primitives for display in interactive
-// applications, so the spheres are low res and without texcoords and normals.
+// applications, so the spheres are low res.
 scene_shape points_to_spheres(
     const vector<vec3f>& vertices, int steps, float scale) {
   auto shape = scene_shape{};
@@ -1676,6 +1707,13 @@ scene_shape lines_to_cylinders(
   auto shape = scene_shape{};
   lines_to_cylinders(shape.quads, shape.positions, shape.normals,
       shape.texcoords, vertices, steps, scale);
+  return shape;
+}
+scene_shape lines_to_cylinders(const vector<vec2i>& lines,
+    const vector<vec3f>& positions, int steps, float scale) {
+  auto shape = scene_shape{};
+  lines_to_cylinders(shape.quads, shape.positions, shape.normals,
+      shape.texcoords, lines, positions, steps, scale);
   return shape;
 }
 

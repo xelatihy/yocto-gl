@@ -342,8 +342,8 @@ vector<float> sample_shape_cdf(const scene_shape& shape);
 void          sample_shape_cdf(vector<float>& cdf, const scene_shape& shape);
 shape_point   sample_shape(const scene_shape& shape, const vector<float>& cdf,
       float rn, const vec2f& ruv);
-vector<shape_point> sample_shape(const scene_shape& shape,
-    const vector<float>& cdf, int num_samples, uint64_t seed = 98729387);
+vector<shape_point> sample_shape(
+    const scene_shape& shape, int num_samples, uint64_t seed = 98729387);
 
 // Conversions
 scene_shape quads_to_triangles(const scene_shape& shape);
@@ -497,9 +497,13 @@ scene_shape make_sphere(int steps = 32, float scale = 1, float uvscale = 1);
 // Make a sphere.
 scene_shape make_uvsphere(const vec2i& steps = {32, 32}, float scale = 1,
     const vec2f& uvscale = {1, 1});
+scene_shape make_uvspherey(const vec2i& steps = {32, 32}, float scale = 1,
+    const vec2f& uvscale = {1, 1});
 // Make a sphere with slipped caps.
 scene_shape make_capped_uvsphere(const vec2i& steps = {32, 32}, float scale = 1,
     const vec2f& uvscale = {1, 1}, float height = 0.3);
+scene_shape make_capped_uvspherey(const vec2i& steps = {32, 32},
+    float scale = 1, const vec2f& uvscale = {1, 1}, float height = 0.3);
 // Make a disk
 scene_shape make_disk(int steps = 32, float scale = 1, float uvscale = 1);
 // Make a bulged disk
@@ -538,12 +542,12 @@ scene_shape make_random_points(int num = 65536, const vec3f& size = {1, 1, 1},
     float uvscale = 1, float radius = 0.001f, uint64_t seed = 17);
 
 // Predefined meshes
-scene_shape   make_monkey(float scale = 1);
-scene_shape   make_quad(float scale = 1);
-scene_shape   make_quady(float scale = 1);
-scene_shape   make_cube(float scale = 1);
-scene_fvshape make_fvcube(float scale = 1);
-scene_shape   make_geosphere(float scale = 1);
+scene_shape   make_monkey(float scale = 1, int subdivisions = 0);
+scene_shape   make_quad(float scale = 1, int subdivisions = 0);
+scene_shape   make_quady(float scale = 1, int subdivisions = 0);
+scene_shape   make_cube(float scale = 1, int subdivisions = 0);
+scene_fvshape make_fvcube(float scale = 1, int subdivisions = 0);
+scene_shape   make_geosphere(float scale = 1, int subdivisions = 0);
 
 // Make a hair ball around a shape.
 // length: minimum and maximum length
@@ -552,19 +556,27 @@ scene_shape   make_geosphere(float scale = 1);
 // clump: clump added to hair (strength/number)
 // rotation: rotation added to hair (angle/strength)
 scene_shape make_hair(const scene_shape& shape, const vec2i& steps = {8, 65536},
-    const vec2f& length = {0.1f, 0.1f}, const vec2f& rad = {0.001f, 0.001f},
+    const vec2f& length = {0.1f, 0.1f}, const vec2f& radius = {0.001f, 0.001f},
     const vec2f& noise = {0, 10}, const vec2f& clump = {0, 128},
     const vec2f& rotation = {0, 0}, int seed = 7);
 
+// Grow hairs around a shape
+scene_shape make_hair2(const scene_shape& shape,
+    const vec2i& steps = {8, 65536}, const vec2f& length = {0.1f, 0.1f},
+    const vec2f& radius = {0.001f, 0.001f}, float noise = 0,
+    float gravity = 0.001f, int seed = 7);
+
 // Convert points to small spheres and lines to small cylinders. This is
 // intended for making very small primitives for display in interactive
-// applications, so the spheres are low res and without texcoords and normals.
+// applications, so the spheres are low res.
 scene_shape points_to_spheres(
     const vector<vec3f>& vertices, int steps = 2, float scale = 0.01f);
 scene_shape polyline_to_cylinders(
     const vector<vec3f>& vertices, int steps = 4, float scale = 0.01f);
 scene_shape lines_to_cylinders(
     const vector<vec3f>& vertices, int steps = 4, float scale = 0.01f);
+scene_shape lines_to_cylinders(const vector<vec2i>& lines,
+    const vector<vec3f>& positions, int steps = 4, float scale = 0.01f);
 
 // Make a heightfield mesh.
 scene_shape make_heightfield(const vec2i& size, const vector<float>& height);
