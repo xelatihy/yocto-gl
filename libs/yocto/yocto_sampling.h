@@ -124,6 +124,12 @@ inline vec3f sample_hemisphere_cospower(float exponent, const vec2f& ruv);
 inline float sample_hemisphere_cospower_pdf(
     float exponent, const vec3f& direction);
 
+// Sample an hemispherical direction with cosine power distribution.
+inline vec3f sample_hemisphere_cospower(
+    float exponent, const vec3f& normal, const vec2f& ruv);
+inline float sample_hemisphere_cospower_pdf(
+    float exponent, const vec3f& normal, const vec3f& direction);
+
 // Sample a point uniformly on a disk.
 inline vec2f sample_disk(const vec2f& ruv);
 inline float sample_disk_pdf(const vec2f& point);
@@ -309,6 +315,21 @@ inline float sample_hemisphere_cospower_pdf(
   return (direction.z <= 0)
              ? 0
              : pow(direction.z, exponent) * (exponent + 1) / (2 * pif);
+}
+
+// Sample an hemispherical direction with cosine power distribution.
+inline vec3f sample_hemisphere_cospower(
+    float exponent, const vec3f& normal, const vec2f& ruv) {
+  auto z               = pow(ruv.y, 1 / (exponent + 1));
+  auto r               = sqrt(1 - z * z);
+  auto phi             = 2 * pif * ruv.x;
+  auto local_direction = vec3f{r * cos(phi), r * sin(phi), z};
+  return transform_direction(basis_fromz(normal), local_direction);
+}
+inline float sample_hemisphere_cospower_pdf(
+    float exponent, const vec3f& normal, const vec3f& direction) {
+  auto cosw = dot(normal, direction);
+  return (cosw <= 0) ? 0 : pow(cosw, exponent) * (exponent + 1) / (2 * pif);
 }
 
 // Sample a point uniformly on a disk.
