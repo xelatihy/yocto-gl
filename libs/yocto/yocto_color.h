@@ -98,6 +98,9 @@ inline vec3f tonemap(
 inline vec4f tonemap(
     const vec4f& hdr, float exposure, bool filmic = false, bool srgb = true);
 
+// Composite colors
+inline vec4f composite(const vec4f& a, const vec4f& b);
+
 // Convert between CIE XYZ and RGB
 inline vec3f rgb_to_xyz(const vec3f& rgb);
 inline vec3f xyz_to_rgb(const vec3f& xyz);
@@ -310,6 +313,14 @@ inline vec3f tonemap(const vec3f& hdr, float exposure, bool filmic, bool srgb) {
 inline vec4f tonemap(const vec4f& hdr, float exposure, bool filmic, bool srgb) {
   auto ldr = tonemap(xyz(hdr), exposure, filmic, srgb);
   return {ldr.x, ldr.y, ldr.z, hdr.w};
+}
+
+// Composite colors
+inline vec4f composite(const vec4f& a, const vec4f& b) {
+  if (a.w == 0 && b.w == 0) return {0, 0, 0, 0};
+  auto cc = xyz(a) * a.w + xyz(b) * b.w * (1 - a.w);
+  auto ca = a.w + b.w * (1 - a.w);
+  return {cc.x / ca, cc.y / ca, cc.z / ca, ca};
 }
 
 // Convert between CIE XYZ and RGB

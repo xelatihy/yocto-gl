@@ -123,6 +123,17 @@ void get_region(color_image& region, const color_image& image, int x, int y,
 color_image image_difference(
     const color_image& image_a, const color_image& image_b, bool display_diff);
 
+// Composite two images together.
+color_image composite_image(
+    const color_image& image_a, const color_image& image_b);
+
+// Composite two images together.
+void composite_image(color_image& result, const color_image& image_a,
+    const color_image& image_b);
+
+// Composite two images together.
+void composite_image(color_image& result, const vector<color_image>& images);
+
 // Color grade an hsr or ldr image to an ldr image.
 color_image colorgrade_image(
     const color_image& image, const colorgrade_params& params);

@@ -260,6 +260,36 @@ void get_region(color_image& region, const color_image& image, int x, int y,
   }
 }
 
+// Composite two images together.
+color_image composite_image(
+    const color_image& image_a, const color_image& image_b) {
+  if (image_a.width != image_b.width || image_a.height != image_b.height)
+    throw std::invalid_argument{"image should be the same size"};
+  if (image_a.linear != image_b.linear)
+    throw std::invalid_argument{"image should be of the same type"};
+  auto result = make_image(image_a.width, image_a.height, image_a.linear);
+  for (auto idx = (size_t)0; idx < result.pixels.size(); idx++) {
+    result.pixels[idx] = composite(image_a.pixels[idx], image_b.pixels[idx]);
+  }
+  return result;
+}
+
+// Composite two images together.
+void composite_image(color_image& result, const color_image& image_a,
+    const color_image& image_b) {
+  if (image_a.width != image_b.width || image_a.height != image_b.height)
+    throw std::invalid_argument{"image should be the same size"};
+  if (image_a.linear != image_b.linear)
+    throw std::invalid_argument{"image should be of the same type"};
+  if (image_a.width != result.width || image_a.height != result.height)
+    throw std::invalid_argument{"image should be the same size"};
+  if (image_a.linear != result.linear)
+    throw std::invalid_argument{"image should be of the same type"};
+  for (auto idx = (size_t)0; idx < result.pixels.size(); idx++) {
+    result.pixels[idx] = composite(image_a.pixels[idx], image_b.pixels[idx]);
+  }
+}
+
 // Apply color grading from a linear or srgb color to an srgb color.
 vec4f colorgradeb(
     const vec4f& color, bool linear, const colorgrade_params& params) {
