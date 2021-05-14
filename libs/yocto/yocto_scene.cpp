@@ -1052,7 +1052,7 @@ vec3f eval_environment(const scene_model& scene,
 // Evaluate all environment color.
 vec3f eval_environment(const scene_model& scene, const vec3f& direction) {
   auto emission = zero3f;
-  for (auto environment : scene.environments) {
+  for (auto& environment : scene.environments) {
     emission += eval_environment(scene, environment, direction);
   }
   return emission;
