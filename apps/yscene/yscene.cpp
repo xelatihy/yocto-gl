@@ -166,6 +166,7 @@ void add_command(cli_command& cli, const string& name, render_params& params,
       trace_falsecolor_names);
   add_option(cmd, "samples", params.samples, "Number of samples.", {1, 4096});
   add_option(cmd, "bounces", params.bounces, "Number of bounces.", {1, 128});
+  add_option(cmd, "denoise", params.denoise, "Enable denoiser.");
   add_option(cmd, "clamp", params.clamp, "Clamp params.", {10, flt_max});
   add_option(cmd, "nocaustics", params.nocaustics, "Disable caustics.");
   add_option(cmd, "envhidden", params.envhidden, "Hide environment.");
@@ -173,6 +174,8 @@ void add_command(cli_command& cli, const string& name, render_params& params,
   add_option(cmd, "embreebvh", params.embreebvh, "Use Embree as BVH.");
   add_option(
       cmd, "highqualitybvh", params.highqualitybvh, "Use high quality BVH.");
+  add_option(cmd, "exposure", params.exposure, "Exposure value.");
+  add_option(cmd, "filmic", params.filmic, "Filmic tone mapping.");
   add_option(cmd, "noparallel", params.noparallel, "Disable threading.");
 }
 
@@ -232,7 +235,7 @@ int run_render(const render_params& params_) {
   for (auto sample = 0; sample < params.samples; sample++) {
     trace_samples(state, scene, bvh, lights, params);
     if (params.savebatch) {
-      auto image = get_render(state);
+      auto image = params.denoise ? get_denoised(state) : get_render(state);
       auto ext = "-s" + std::to_string(sample) + path_extension(params.output);
       auto outfilename = replace_extension(params.output, ext);
       auto ioerror     = ""s;
@@ -243,7 +246,7 @@ int run_render(const render_params& params_) {
 
   // save image
   print_progress_begin("save image");
-  auto image = get_render(state);
+  auto image = params.denoise ? get_denoised(state) : get_render(state);
   if (!save_image(params.output, image, ioerror)) return print_fatal(ioerror);
   print_progress_end();
 
@@ -277,6 +280,7 @@ void add_command(cli_command& cli, const string& name, view_params& params,
       trace_falsecolor_names);
   add_option(cmd, "samples", params.samples, "Number of samples.", {1, 4096});
   add_option(cmd, "bounces", params.bounces, "Number of bounces.", {1, 128});
+  add_option(cmd, "denoise", params.denoise, "Enable denoiser.");
   add_option(cmd, "clamp", params.clamp, "Clamp params.", {10, flt_max});
   add_option(cmd, "nocaustics", params.nocaustics, "Disable caustics.");
   add_option(cmd, "envhidden", params.envhidden, "Hide environment.");
@@ -284,6 +288,8 @@ void add_command(cli_command& cli, const string& name, view_params& params,
   add_option(cmd, "embreebvh", params.embreebvh, "Use Embree as BVH.");
   add_option(
       cmd, "highqualitybvh", params.highqualitybvh, "Use high quality BVH.");
+  add_option(cmd, "exposure", params.exposure, "Exposure value.");
+  add_option(cmd, "filmic", params.filmic, "Filmic tone mapping.");
   add_option(cmd, "noparallel", params.noparallel, "Disable threading.");
 }
 
