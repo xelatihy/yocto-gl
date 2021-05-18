@@ -762,7 +762,7 @@ static bool args_to_json(cli_json& js, const cli_json& schema,
       }
       if (name == "") return cli_error("unknown option " + arg);
       auto& oschema = schema.at("properties").at(name);
-      if (!arg_to_json(js[arg], oschema, name, is_positional, args, idx, error))
+      if (!arg_to_json(js[name], oschema, name, is_positional, args, idx, error))
         return false;
     }
   }
@@ -802,6 +802,65 @@ static bool args_to_json(cli_json& js, const cli_json& schema,
   // }
 
   // done
+  return true;
+}
+
+static bool validate_json(const cli_json& js, const cli_json& schema,
+    const string& name, string& error) {
+  auto cli_error = [&error](const string& message) {
+    error = message;
+    return false;
+  };
+
+  if (js.is_null()) {
+    return cli_error("bad value for " + name);
+  } else if (js.is_number_integer()) {
+    if (schema.at("type") != "integer" && schema.at("type") != "number")
+      return cli_error("bad value for " + name);
+  } else if (js.is_number()) {
+    if (schema.at("type") != "number")
+      return cli_error("bad value for " + name);
+  } else if (js.is_boolean()) {
+    if (schema.at("type") != "boolean")
+      return cli_error("bad value for " + name);
+  } else if (js.is_string()) {
+    if (schema.at("type") != "string")
+      return cli_error("bad value for " + name);
+  } else if (js.is_array()) {
+    if (schema.at("type") != "array") return cli_error("bad value for " + name);
+    if (schema.contains("minItems") &&
+        (size_t)schema.at("minItems") > js.size())
+      return cli_error("bad value for " + name);
+    if (schema.contains("maxItems") &&
+        (size_t)schema.at("maxItems") < js.size())
+      return cli_error("bad value for " + name);
+    for (auto& jsv : js)
+      if (!validate_json(jsv, schema.at("items"), name, error)) return false;
+  } else if (js.is_object()) {
+    if (schema.at("type") != "object")
+      return cli_error("bad value for " + name);
+    for (auto& [key, jsv] : js.items()) {
+      if (key == "help") {
+        if (!jsv.is_boolean()) return cli_error("bad value for " + name);
+      } else if (key == "command") {
+        if (!jsv.is_string()) return cli_error("bad value for " + name);
+      } else {
+        if (!schema.at("properties").contains(key))
+          return cli_error("unknown option " + key);
+        if (!validate_json(jsv, schema.at("properties").at(key), key, error))
+          return false;
+      }
+    }
+    if (schema.contains("required")) {
+      for (auto& req : schema.at("required")) {
+        if (!js.contains((string)req))
+          return cli_error("missing value for " + (string)req);
+      }
+    }
+  } else {
+    return cli_error("bad value for " + name);
+  }
+
   return true;
 }
 
@@ -876,6 +935,7 @@ void parse_cli(cli_state& cli, int argc, const char** argv) {
   } else {
     printf("%s\n", jargs.dump(2).c_str());
   }
+  if (!validate_json(jargs, schema, "", error)) printf("%s\n", error.c_str());
   try {
     cli11->parse(argc, argv);
   } catch (const CLI::ParseError& e) {
