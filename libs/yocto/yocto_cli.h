@@ -127,15 +127,15 @@ void parse_cli(cli_state& cli, int argc, const char** argv);
 void parse_cli(cli_state& cli, const vector<string>& args);
 // parse arguments, checks for errors
 bool parse_cli(cli_state& cli, const vector<string>& args, string& error);
-// gets the set command
-string get_command(const cli_state& cli);
 
 // Add a subcommand
 struct cli_command;
 cli_command add_command(
     const cli_command& cli, const string& name, const string& usage);
-void add_command_name(const cli_command& cli, const string& name, string& value,
-    const string& usage);
+void                set_command_var(const cli_command& cli, string& value);
+void                set_help_var(const cli_command& cli, bool& value);
+[[deprecated]] void add_command_name(const cli_command& cli, const string& name,
+    string& value, const string& usage);
 
 // Add an optional argument. Supports strings, numbers, and boolean flags.
 // Optional arguments will be parsed with name `--<name>` and `-<alt>`.

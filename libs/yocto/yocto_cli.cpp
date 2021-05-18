@@ -525,6 +525,68 @@ void add_option(const cli_command& cli, const string& name, vec4f& value,
       cli, name, (array<float, 4>&)value, usage, minmax, {}, alt, req);
 }
 
+static string schema_to_usage(
+    const cli_json& schema_, const string& command, const string& program) {
+  auto& schema        = command.empty() ? schema_
+                                        : schema_.at("properties").at(command);
+  auto  message       = string{};
+  auto  usage_options = string{}, usage_arguments = string{},
+       usage_commands = string{};
+  for (auto& [key, value] : schema.at("properties").items()) {
+    if (value.value("type", "") == "object") {
+      auto line = "  " + key;
+      while (line.size() < 32) line += " ";
+      line += value.value("description", "") + "\n";
+      usage_commands += line;
+    } else {
+      auto is_positional = false;
+      auto line          = (is_positional ? "  " : "  --") + key;
+      while (line.size() < 32) line += " ";
+      line += value.value("description", "");
+      if (value.contains("default")) {
+        line += " [" + value.at("default").dump() + "]\n";
+        // TODO: required
+      } else {
+        line += "\n";
+      }
+      if (value.contains("enum")) {
+        line += "    with choices: ";
+        auto len = 16;
+        for (auto& choice : value.at("enum")) {
+          if (len + choice.size() + 2 > 78) {
+            line += "\n                  ";
+            len = 16;
+          }
+          line += (string)choice + ", ";
+          len += (int)choice.size() + 2;
+        }
+        line = line.substr(0, line.size() - 2);
+        line += "\n";
+      }
+      if (is_positional)
+        usage_arguments += line;
+      else
+        usage_options += line;
+    }
+  }
+  usage_options += "  --help                       Prints help. [false]\n";
+  message += "usage: " + program + (command.empty() ? "" : (" " + command)) +
+             (!usage_commands.empty() ? " command" : "") +
+             (!usage_options.empty() ? " [options]" : "") +
+             (!usage_arguments.empty() ? " <arguments>" : "") + "\n";
+  message += schema.value("description", "") + "\n\n";
+  if (!usage_commands.empty()) {
+    message += "commands:\n" + usage_commands + "\n";
+  }
+  if (!usage_options.empty()) {
+    message += "options:\n" + usage_options + "\n";
+  }
+  if (!usage_arguments.empty()) {
+    message += "arguments:\n" + usage_arguments + "\n";
+  }
+  return message;
+}
+
 static bool arg_to_json(cli_json& js, const cli_json& schema,
     const string& name, bool positional, const vector<string>& args,
     size_t& idx, string& error) {
@@ -642,40 +704,6 @@ static bool args_to_json(cli_json& js, const cli_json& schema,
     }
   }
 
-  // check for help
-  // for (auto command_ptr : commands) {
-  //   auto& command = *command_ptr;
-  //   if (command.help) return true;
-  // }
-
-  // check for required, set defaults and set references
-  // for (auto command_ptr : commands) {
-  //   auto& command = *command_ptr;
-  //   if (!command.commands.empty() && command.command.empty())
-  //     return cli_error("command not set for " + command.name);
-  //   if (command.set_command) command.set_command(command.command);
-  //   for (auto& option : command.options) {
-  //     if (option.req && !option.set)
-  //       return cli_error("missing value for " + option.name);
-  //     if (!option.set) option.value = option.def;
-  //     if (option.set_value) {
-  //       if (!option.set_value(option)) {
-  //         return cli_error("bad value for " + option.name);
-  //       }
-  //     }
-  //   }
-  //   for (auto& option : command.arguments) {
-  //     if (option.req && !option.set)
-  //       return cli_error("missing value for " + option.name);
-  //     if (!option.set) option.value = option.def;
-  //     if (option.set_value) {
-  //       if (!option.set_value(option)) {
-  //         return cli_error("bad value for " + option.name);
-  //       }
-  //     }
-  //   }
-  // }
-
   // done
   return true;
 }
@@ -785,6 +813,18 @@ cli_command add_command(
   return {cli.state, cli.path.empty() ? name : (cli.path + "/" + name)};
 }
 
+void set_command_var(const cli_command& cli, string& value) {
+  cli.state->variables.push_back(
+      cli_variable{cli.path.empty() ? "command" : (cli.path + "/command"),
+          &value, cli_from_json_<string>, {}});
+}
+
+void set_help_var(const cli_command& cli, bool& value) {
+  cli.state->variables.push_back(
+      cli_variable{cli.path.empty() ? "help" : (cli.path + "/help"), &value,
+          cli_from_json_<string>, {}});
+}
+
 void add_command_name(const cli_command& cli, const string& name, string& value,
     const string& usage) {
   cli.state->variables.push_back(
@@ -792,39 +832,61 @@ void add_command_name(const cli_command& cli, const string& name, string& value,
           &value, cli_from_json_<string>, {}});
 }
 
-string get_command(const cli_state& cli) {
-  // TODO
-  return "";
+static bool json_to_help(const cli_json& js) {
+  if (js.contains("help") && js.at("help") == true) return true;
+  for (auto& [_, jsc] : js.items()) {
+    if (!jsc.is_object()) continue;
+    if (json_to_help(jsc)) return true;
+  }
+  return false;
+}
+
+static string json_to_command(const cli_json& js) {
+  auto command = js.value("command", "");
+  if (command.empty()) return "";
+  auto subcommand = json_to_command(js.at(command));
+  if (subcommand.empty()) return command;
+  return command + "/" + subcommand;
+}
+
+static bool parse_cli(cli_state& cli, const vector<string>& args,
+    string& command, bool& help, string& error) {
+  auto jargs = cli_json{};
+  auto idx   = (size_t)1;
+  if (!args_to_json(jargs, get_schema(cli), args, idx, error)) return false;
+  if (!validate_json(jargs, get_schema(cli), "", error)) return false;
+  if (!json_to_variables(jargs, cli.variables, error)) return false;
+  help    = json_to_help(jargs);
+  command = json_to_command(jargs);
+  return true;
 }
 
 bool parse_cli(cli_state& cli, const vector<string>& args, string& error) {
-  auto& defaults = get_defaults(cli);
-  auto& schema   = get_schema(cli);
-  printf("%s\n", defaults.dump(2).c_str());
-  printf("%s\n", schema.dump(2).c_str());
   auto jargs = cli_json{};
-  auto idx   = (size_t)0;
-  if (!args_to_json(jargs, schema, args, idx, error)) return false;
-  if (!validate_json(jargs, schema, "", error)) return false;
+  auto idx   = (size_t)1;
+  if (!args_to_json(jargs, get_schema(cli), args, idx, error)) return false;
+  if (!validate_json(jargs, get_schema(cli), "", error)) return false;
   if (!json_to_variables(jargs, cli.variables, error)) return false;
   return true;
 }
 
 void parse_cli(cli_state& cli, const vector<string>& args) {
-  auto error = string{};
-  if (!parse_cli(cli, args, error)) {
+  auto help    = false;
+  auto command = string{};
+  auto error   = string{};
+  if (!parse_cli(cli, args, command, help, error)) {
     print_info("error: " + error);
     print_info("");
-    // print_info(get_usage(cli));
+    print_info(schema_to_usage(get_schema(cli), command, args[0]));
     exit(1);
-    // } else if (get_help(cli)) {
-    // print_info(get_usage(cli));
-    // exit(0);
+  } else if (help) {
+    print_info(schema_to_usage(get_schema(cli), command, args[0]));
+    exit(0);
   }
 }
 
 void parse_cli(cli_state& cli, int argc, const char** argv) {
-  parse_cli(cli, vector<string>{argv + 1, argv + argc});
+  parse_cli(cli, vector<string>{argv, argv + argc});
 }
 
 }  // namespace yocto
