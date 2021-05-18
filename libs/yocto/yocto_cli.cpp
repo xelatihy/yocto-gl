@@ -652,51 +652,48 @@ void add_option(const cli_command& cli, const string& name, vec4f& value,
 }
 
 static bool arg_to_json(cli_json& js, const cli_json& schema,
-    const string& name, bool positional, vector<string>& args, string& error) {
+    const string& name, bool positional, const vector<string>& args,
+    size_t& idx, string& error) {
   auto cli_error = [&error](const string& message) {
     error = message;
     return false;
   };
 
   if (schema.contains("enum")) {
-    if (args.empty()) return cli_error("missing value for " + name);
-    auto arg = args.front();
-    args.erase(args.begin());
-    js = arg;
+    if (idx >= args.size()) return cli_error("missing value for " + name);
+    js = args[idx++];
   } else if (schema.value("type", "") == "integer") {
-    if (args.empty()) return cli_error("missing value for " + name);
-    auto arg = args.front();
-    args.erase(args.begin());
+    if (idx >= args.size()) return cli_error("missing value for " + name);
     auto end = (char*)nullptr;
-    js       = strtol(arg.c_str(), &end, 10);
+    js       = strtol(args[idx++].c_str(), &end, 10);
     if (end == nullptr) return cli_error("bad value for " + name);
   } else if (schema.value("type", "") == "number") {
-    auto arg = args.front();
-    args.erase(args.begin());
+    if (idx >= args.size()) return cli_error("missing value for " + name);
     auto end = (char*)nullptr;
-    js       = strtod(arg.c_str(), &end);
+    js       = strtod(args[idx++].c_str(), &end);
     if (end == nullptr) return cli_error("bad value for " + name);
   } else if (schema.value("type", "") == "boolean") {
     if (positional) {
-      auto arg = args.front();
-      args.erase(args.begin());
-      js = arg == "true" ? true : false;
+      if (idx >= args.size()) return cli_error("missing value for " + name);
+      js = args[idx++] == "true" ? true : false;
     } else {
       js = true;
     }
   } else if (schema.value("type", "") == "string") {
-    auto arg = args.front();
-    args.erase(args.begin());
-    js = arg;
+    if (idx >= args.size()) return cli_error("missing value for " + name);
+    js = args[idx++];
   } else if (schema.value("type", "") == "array") {
     js = cli_json::array();
-    if (schema.value("minItems", 0) > args.size())
-      return cli_error("bad value for " + name);
-    auto nargs = max(schema.value("minItems", 0),
-        min(schema.value("maxItems", int_max), (int)args.size()));
-    while (!args.empty() && js.size() < nargs) {
+    if (schema.contains("minItems")) {
+      if (idx + schema.value("minItems", (size_t)0) >= args.size())
+        return cli_error("missing value for " + name);
+    }
+    auto end = schema.contains("maxItems")
+                   ? (idx + (size_t)schema.at("maxItems"))
+                   : args.size();
+    while (idx < end) {
       if (!arg_to_json(js.emplace_back(), schema.at("items"), name, positional,
-              args, error))
+              args, idx, error))
         return false;
     }
   } else {
@@ -705,8 +702,8 @@ static bool arg_to_json(cli_json& js, const cli_json& schema,
   return true;
 }
 
-static bool args_to_json(
-    cli_json& js, const cli_json& schema, vector<string>& args, string& error) {
+static bool args_to_json(cli_json& js, const cli_json& schema,
+    const vector<string>& args, size_t idx, string& error) {
   auto cli_error = [&error](const string& message) {
     error = message;
     return false;
@@ -730,9 +727,8 @@ static bool args_to_json(
   auto positional = 0;
 
   // parse arguments
-  while (!args.empty()) {
-    auto arg = args.front();
-    args.erase(args.begin());
+  while (idx < args.size()) {
+    auto& arg = args[idx++];
     if (arg == "--help") {
       js["help"] = true;
       continue;
@@ -742,7 +738,7 @@ static bool args_to_json(
       if (std::find(commands.begin(), commands.end(), arg) != commands.end()) {
         js["command"] = arg;
         if (!args_to_json(
-                js[arg], schema.at("properties").at(arg), args, error))
+                js[arg], schema.at("properties").at(arg), args, idx, error))
           return false;
         break;
       } else {
@@ -753,21 +749,20 @@ static bool args_to_json(
         return cli_error("too many positional arguments");
       auto  name    = positionals[positional++];
       auto& oschema = schema.at("properties").at(name);
-      args.insert(args.begin(), arg);
-      if (!arg_to_json(js[name], oschema, arg, is_positional, args, error))
+      idx--;
+      if (!arg_to_json(js[name], oschema, arg, is_positional, args, idx, error))
         return false;
     } else {
       auto name = string{};
-      if (arg.find("--") == 0) arg = arg.substr(2);
       for (auto& [key, value] : schema.at("properties").items()) {
-        if (key == arg && value.value("type", "") != "object") {
+        if ("--" + key == arg && value.value("type", "") != "object") {
           name = key;
           break;
         }
       }
       if (name == "") return cli_error("unknown option " + arg);
       auto& oschema = schema.at("properties").at(name);
-      if (!arg_to_json(js[arg], oschema, name, is_positional, args, error))
+      if (!arg_to_json(js[arg], oschema, name, is_positional, args, idx, error))
         return false;
     }
   }
@@ -873,8 +868,9 @@ void parse_cli(cli_state& cli, int argc, const char** argv) {
   printf("%s\n", schema.dump(2).c_str());
   auto jargs = cli_json{};
   auto args  = vector<string>{argv + 1, argv + argc};
+  auto idx   = (size_t)0;
   auto error = string{};
-  if (!args_to_json(jargs, schema, args, error)) {
+  if (!args_to_json(jargs, schema, args, idx, error)) {
     printf("error: %s\n", error.c_str());
     printf("%s\n", jargs.dump(2).c_str());
   } else {
