@@ -48,9 +48,9 @@ struct convert_params {
 };
 
 // Cli
-void add_command(cli_command& cli, const string& name, convert_params& params,
-    const string& usage) {
-  auto& cmd = add_command(cli, name, usage);
+void add_command(const cli_command& cli, const string& name,
+    convert_params& params, const string& usage) {
+  auto cmd = add_command(cli, name, usage);
   add_argument(cmd, "image", params.image, "Input image.");
   add_option(cmd, "output", params.output, "Output image.");
   add_option(
@@ -91,9 +91,9 @@ struct view_params {
 };
 
 // Cli
-void add_command(cli_command& cli, const string& name, view_params& params,
-    const string& usage) {
-  auto& cmd = add_command(cli, name, usage);
+void add_command(const cli_command& cli, const string& name,
+    view_params& params, const string& usage) {
+  auto cmd = add_command(cli, name, usage);
   add_argument(cmd, "images", params.images, "Input images.");
   add_option(cmd, "output", params.output, "Output image.");
 }
@@ -133,9 +133,9 @@ struct grade_params : colorgrade_params {
 };
 
 // Cli
-void add_command(cli_command& cli, const string& name, grade_params& params,
-    const string& usage) {
-  auto& cmd = add_command(cli, name, usage);
+void add_command(const cli_command& cli, const string& name,
+    grade_params& params, const string& usage) {
+  auto cmd = add_command(cli, name, usage);
   add_argument(cmd, "image", params.image, "Input image.");
   add_option(cmd, "output", params.output, "Output image.");
 }
@@ -175,9 +175,9 @@ struct diff_params {
 };
 
 // Cli
-void add_command(cli_command& cli, const string& name, diff_params& params,
-    const string& usage) {
-  auto& cmd = add_command(cli, name, usage);
+void add_command(const cli_command& cli, const string& name,
+    diff_params& params, const string& usage) {
+  auto cmd = add_command(cli, name, usage);
   add_argument(cmd, "image1", params.image1, "Input image 1.");
   add_argument(cmd, "image2", params.image2, "Input image 2.");
   add_option(cmd, "output", params.output, "Output image.");
@@ -238,9 +238,9 @@ struct setalpha_params {
 };
 
 // Cli
-void add_command(cli_command& cli, const string& name, setalpha_params& params,
-    const string& usage) {
-  auto& cmd = add_command(cli, name, usage);
+void add_command(const cli_command& cli, const string& name,
+    setalpha_params& params, const string& usage) {
+  auto cmd = add_command(cli, name, usage);
   add_argument(cmd, "image", params.image, "Input image.");
   add_argument(cmd, "alpha", params.alpha, "Alpha image.");
   add_option(cmd, "output", params.output, "Output image.");
@@ -308,21 +308,21 @@ struct app_params {
 };
 
 // Cli
-void add_commands(cli_command& cli, const string& name, app_params& params,
-    const string& usage) {
-  cli = make_cli(name, usage);
-  add_command_name(cli, "command", params.command, "Command.");
+cli_state make_commands(
+    const string& name, app_params& params, const string& usage) {
+  auto cli = make_cli(name, usage);
+  set_command_var(cli, params.command);
   add_command(cli, "convert", params.convert, "Convert images.");
   add_command(cli, "view", params.view, "View images.");
   add_command(cli, "grade", params.grade, "Grade images.");
   add_command(cli, "diff", params.diff, "Diff two images.");
   add_command(cli, "setalpha", params.setalpha, "Set alpha in images.");
+  return cli;
 }
 
 // Parse cli
 void parse_cli(app_params& params, int argc, const char** argv) {
-  auto cli = cli_command{};
-  add_commands(cli, "yimage", params, "Process and view images.");
+  auto cli = make_commands("yimage", params, "Process and view images.");
   parse_cli(cli, argc, argv);
 }
 

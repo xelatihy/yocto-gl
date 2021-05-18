@@ -40,6 +40,7 @@
 using namespace yocto;
 
 #include <queue>
+#include <unordered_set>
 
 // view params
 struct view_params {
@@ -48,11 +49,11 @@ struct view_params {
   bool   addsky = false;
 };
 
-void add_command(cli_command& cli, const string& name, view_params& params,
-    const string& usage) {
-  auto& cmd = add_command(cli, name, usage);
+void add_command(const cli_command& cli, const string& name,
+    view_params& params, const string& usage) {
+  auto cmd = add_command(cli, name, usage);
   add_argument(cmd, "shape", params.shape, "Input shape.");
-  add_option(cmd, "output", params.output, "Output shape.", {});
+  add_option(cmd, "output", params.output, "Output shape.");
   add_option(cmd, "addsky", params.addsky, "Add sky.");
 }
 
@@ -94,9 +95,9 @@ struct glview_params {
 };
 
 // Cli
-void add_command(cli_command& cli, const string& name, glview_params& params,
-    const string& usage) {
-  auto& cmd = add_command(cli, name, usage);
+void add_command(const cli_command& cli, const string& name,
+    glview_params& params, const string& usage) {
+  auto cmd = add_command(cli, name, usage);
   add_argument(cmd, "shape", params.shape, "Input shape.");
 }
 
@@ -179,9 +180,9 @@ struct glpath_params {
 };
 
 // Cli
-void add_command(cli_command& cli, const string& name, glpath_params& params,
-    const string& usage) {
-  auto& cmd = add_command(cli, name, usage);
+void add_command(const cli_command& cli, const string& name,
+    glpath_params& params, const string& usage) {
+  auto cmd = add_command(cli, name, usage);
   add_argument(cmd, "shape", params.shape, "Input shape.");
 }
 
@@ -356,9 +357,9 @@ struct glpathd_params {
 };
 
 // Cli
-void add_command(cli_command& cli, const string& name, glpathd_params& params,
-    const string& usage) {
-  auto& cmd = add_command(cli, name, usage);
+void add_command(const cli_command& cli, const string& name,
+    glpathd_params& params, const string& usage) {
+  auto cmd = add_command(cli, name, usage);
   add_argument(cmd, "shape", params.shape, "Input shape.");
 }
 
@@ -595,9 +596,9 @@ struct glsculpt_params {
 };
 
 // Cli
-inline void add_command(cli_command& cli, const string& name,
+inline void add_command(const cli_command& cli, const string& name,
     glsculpt_params& params, const string& usage) {
-  auto& cmd = add_command(cli, name, usage);
+  auto cmd = add_command(cli, name, usage);
   add_argument(cmd, "shape", params.shape, "Input shape.");
   add_option(cmd, "texture", params.texture, "Brush texture.");
 }
@@ -1321,21 +1322,21 @@ struct app_params {
 };
 
 // Cli
-void add_commands(cli_command& cli, const string& name, app_params& params,
-    const string& usage) {
-  cli = make_cli(name, usage);
-  add_command_name(cli, "command", params.command, "Command.");
+cli_state make_commands(
+    const string& name, app_params& params, const string& usage) {
+  auto cli = make_cli(name, usage);
+  set_command_var(cli, params.command);
   add_command(cli, "view", params.view, "View shapes.");
   add_command(cli, "glview", params.glview, "View shapes with OpenGL.");
   add_command(cli, "glpath", params.glpath, "Trace paths with OpenGL.");
   add_command(cli, "glpathd", params.glpathd, "Trace debug paths with OpenGL.");
   add_command(cli, "glsculpt", params.glsculpt, "Sculpt meshes with OpenGL.");
+  return cli;
 }
 
 // Parse cli
 void parse_cli(app_params& params, int argc, const char** argv) {
-  auto cli = cli_command{};
-  add_commands(cli, "ymesh", params, "Process and view meshes.");
+  auto cli = make_commands("ymesh", params, "Process and view meshes.");
   parse_cli(cli, argc, argv);
 }
 

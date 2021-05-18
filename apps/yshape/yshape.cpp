@@ -55,9 +55,9 @@ struct convert_params {
   bool   tovertices  = false;
 };
 
-void add_command(cli_command& cli, const string& name, convert_params& params,
-    const string& usage) {
-  auto& cmd = add_command(cli, name, usage);
+void add_command(const cli_command& cli, const string& name,
+    convert_params& params, const string& usage) {
+  auto cmd = add_command(cli, name, usage);
   add_argument(cmd, "shape", params.shape, "Input shape.");
   add_option(cmd, "output", params.output, "Output shape.");
   add_option(cmd, "smooth", params.smooth, "Smooth normals.");
@@ -190,9 +190,9 @@ struct fvconvert_params {
   float  scaleu      = 1;
 };
 
-void add_command(cli_command& cli, const string& name, fvconvert_params& params,
-    const string& usage) {
-  auto& cmd = add_command(cli, name, usage);
+void add_command(const cli_command& cli, const string& name,
+    fvconvert_params& params, const string& usage) {
+  auto cmd = add_command(cli, name, usage);
   add_argument(cmd, "shape", params.shape, "Input shape.");
   add_option(cmd, "output", params.output, "Output shape.");
   add_option(cmd, "smooth", params.smooth, "Smooth normals.");
@@ -289,9 +289,9 @@ struct view_params {
   bool   addsky = false;
 };
 
-void add_command(cli_command& cli, const string& name, view_params& params,
-    const string& usage) {
-  auto& cmd = add_command(cli, name, usage);
+void add_command(const cli_command& cli, const string& name,
+    view_params& params, const string& usage) {
+  auto cmd = add_command(cli, name, usage);
   add_argument(cmd, "shape", params.shape, "Input shape.");
   add_option(cmd, "output", params.output, "Output shape.");
   add_option(cmd, "addsky", params.addsky, "Add sky.");
@@ -342,9 +342,9 @@ struct heightfield_params {
   float  scaleu    = 1;
 };
 
-void add_command(cli_command& cli, const string& name,
+void add_command(const cli_command& cli, const string& name,
     heightfield_params& params, const string& usage) {
-  auto& cmd = add_command(cli, name, usage);
+  auto cmd = add_command(cli, name, usage);
   add_argument(cmd, "image", params.image, "Input image.");
   add_option(cmd, "output", params.output, "Output shape.");
   add_option(cmd, "smooth", params.smooth, "Smoooth normals.");
@@ -417,9 +417,9 @@ struct hair_params {
   float  radius  = 0.0001f;
 };
 
-void add_command(cli_command& cli, const string& name, hair_params& params,
-    const string& usage) {
-  auto& cmd = add_command(cli, name, usage);
+void add_command(const cli_command& cli, const string& name,
+    hair_params& params, const string& usage) {
+  auto cmd = add_command(cli, name, usage);
   add_argument(cmd, "shape", params.shape, "Input shape.");
   add_option(cmd, "output", params.output, "Output shape.");
   add_option(cmd, "hairs", params.hairs, "Number of hairs.");
@@ -454,9 +454,9 @@ struct sample_params {
   int    samples = 4096;
 };
 
-void add_command(cli_command& cli, const string& name, sample_params& params,
-    const string& usage) {
-  auto& cmd = add_command(cli, name, usage);
+void add_command(const cli_command& cli, const string& name,
+    sample_params& params, const string& usage) {
+  auto cmd = add_command(cli, name, usage);
   add_argument(cmd, "shape", params.shape, "Input shape.");
   add_option(cmd, "output", params.output, "Output shape.");
   add_option(cmd, "samples", params.samples, "Number of samples.");
@@ -492,9 +492,9 @@ struct glview_params {
 };
 
 // Cli
-void add_command(cli_command& cli, const string& name, glview_params& params,
-    const string& usage) {
-  auto& cmd = add_command(cli, name, usage);
+void add_command(const cli_command& cli, const string& name,
+    glview_params& params, const string& usage) {
+  auto cmd = add_command(cli, name, usage);
   add_argument(cmd, "shape", params.shape, "Input shape.");
   add_option(cmd, "addsky", params.addsky, "Add sky.");
 }
@@ -538,10 +538,10 @@ struct app_params {
 };
 
 // Cli
-void add_commands(cli_command& cli, const string& name, app_params& params,
-    const string& usage) {
-  cli = make_cli(name, usage);
-  add_command_name(cli, "command", params.command, "Command.");
+cli_state make_commands(
+    const string& name, app_params& params, const string& usage) {
+  auto cli = make_cli(name, usage);
+  set_command_var(cli, params.command);
   add_command(cli, "convert", params.convert, "Convert shapes.");
   add_command(
       cli, "fvconvert", params.fvconvert, "Convert face-varying shapes.");
@@ -550,12 +550,12 @@ void add_commands(cli_command& cli, const string& name, app_params& params,
   add_command(cli, "hair", params.hair, "Grow hairs on a shape.");
   add_command(cli, "sample", params.sample, "Sample shapepoints on a shape.");
   add_command(cli, "glview", params.glview, "View shapes with OpenGL.");
+  return cli;
 }
 
 // Parse cli
 void parse_cli(app_params& params, int argc, const char** argv) {
-  auto cli = cli_command{};
-  add_commands(cli, "yshape", params, "Process and view shapes.");
+  auto cli = make_commands("yshape", params, "Process and view shapes.");
   parse_cli(cli, argc, argv);
 }
 
