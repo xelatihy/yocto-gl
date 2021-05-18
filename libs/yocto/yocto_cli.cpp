@@ -35,7 +35,6 @@
 #include <array>
 #include <chrono>
 #include <cstdio>
-#include <functional>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -832,32 +831,12 @@ void add_command_name(const cli_command& cli, const string& name, string& value,
           &value, cli_from_json_<string>, {}});
 }
 
-static bool json_to_help(const cli_json& js) {
-  if (js.contains("help") && js.at("help") == true) return true;
-  for (auto& [_, jsc] : js.items()) {
-    if (!jsc.is_object()) continue;
-    if (json_to_help(jsc)) return true;
-  }
-  return false;
-}
-
-static string json_to_command(const cli_json& js) {
-  auto command = js.value("command", "");
-  if (command.empty()) return "";
-  auto subcommand = json_to_command(js.at(command));
-  if (subcommand.empty()) return command;
-  return command + "/" + subcommand;
-}
-
 static bool parse_cli(cli_state& cli, const vector<string>& args,
-    string& command, bool& help, string& error) {
-  auto jargs = cli_json{};
-  auto idx   = (size_t)1;
+    cli_json& jargs, string& error) {
+  auto idx = (size_t)1;
   if (!args_to_json(jargs, get_schema(cli), args, idx, error)) return false;
   if (!validate_json(jargs, get_schema(cli), "", error)) return false;
   if (!json_to_variables(jargs, cli.variables, error)) return false;
-  help    = json_to_help(jargs);
-  command = json_to_command(jargs);
   return true;
 }
 
@@ -871,16 +850,30 @@ bool parse_cli(cli_state& cli, const vector<string>& args, string& error) {
 }
 
 void parse_cli(cli_state& cli, const vector<string>& args) {
-  auto help    = false;
-  auto command = string{};
-  auto error   = string{};
-  if (!parse_cli(cli, args, command, help, error)) {
+  auto get_command = [](const cli_json& jargs) -> string {
+    auto command = string{};
+    auto current = &jargs;
+    while (true) {
+      if (!current->contains("command")) break;
+      command += (command.empty() ? "" : "/") + current->value("command", "");
+      current = &current->at(current->value("command", ""));
+    }
+    return command;
+  };
+  auto get_help = [&](const cli_json& jargs) -> bool {
+    auto command = get_command(jargs);
+    if (command.empty()) return jargs.value("help", false);
+    return jargs.at(cli_json::json_pointer{"/" + command}).value("help", false);
+  };
+  auto jargs = cli_json{};
+  auto error = string{};
+  if (!parse_cli(cli, args, jargs, error)) {
     print_info("error: " + error);
     print_info("");
-    print_info(schema_to_usage(get_schema(cli), command, args[0]));
+    print_info(schema_to_usage(get_schema(cli), get_command(jargs), args[0]));
     exit(1);
-  } else if (help) {
-    print_info(schema_to_usage(get_schema(cli), command, args[0]));
+  } else if (get_help(jargs)) {
+    print_info(schema_to_usage(get_schema(cli), get_command(jargs), args[0]));
     exit(0);
   }
 }

@@ -39,7 +39,6 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
-#include <functional>
 #include <memory>
 #include <string>
 #include <type_traits>
@@ -53,7 +52,6 @@
 namespace yocto {
 
 // using directives
-using std::function;
 using std::string;
 using std::unique_ptr;
 using std::vector;
