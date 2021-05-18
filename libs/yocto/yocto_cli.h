@@ -130,8 +130,10 @@ bool parse_cli(cli_state& cli, const vector<string>& args, string& error);
 struct cli_command;
 cli_command add_command(
     const cli_command& cli, const string& name, const string& usage);
-void                set_command_var(const cli_command& cli, string& value);
-void                set_help_var(const cli_command& cli, bool& value);
+void set_command_var(const cli_command& cli, string& value);
+void set_help_var(const cli_command& cli, bool& value);
+void set_dependent_config(
+    const cli_command& cli, const string& option, const string& config);
 [[deprecated]] void add_command_name(const cli_command& cli, const string& name,
     string& value, const string& usage);
 

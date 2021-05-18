@@ -886,6 +886,14 @@ void set_help_var(const cli_command& cli, bool& value) {
           cli_from_json_<string>, {}});
 }
 
+void set_dependent_config(
+    const cli_command& cli, const string& option, const string& config) {
+  auto& schema = get_schema(cli);
+  if (!schema.at("properties").contains(option))
+    throw std::runtime_error{"create option first"};
+  schema.at("properties").at(option)["cli_dependent_config"] = config;
+}
+
 void add_command_name(const cli_command& cli, const string& name, string& value,
     const string& usage) {
   cli.state->variables.push_back(

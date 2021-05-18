@@ -407,7 +407,7 @@ struct app_params {
 cli_state make_commands(
     const string& name, app_params& params, const string& usage) {
   auto cli = make_cli(name, usage);
-  add_command_name(cli, "command", params.command, "Command.");
+  set_command_var(cli, params.command);
   add_command(cli, "convert", params.convert, "Convert scenes.");
   add_command(cli, "info", params.info, "Print scenes info.");
   add_command(cli, "render", params.render, "Render scenes.");
