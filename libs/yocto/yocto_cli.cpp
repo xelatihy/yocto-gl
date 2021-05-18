@@ -395,14 +395,16 @@ static void cli_to_schema(cli_json& js, const T& value,
       "unsupported type");
   js["cli_name"]    = name;
   js["description"] = usage;
+  cli_to_json(js["default"], value, choices);
   if (!choices.empty()) {
     js["type"] = "string";
+    js["enum"] = choices;
   } else {
     if constexpr (std::is_same_v<T, int32_t> || std::is_same_v<T, int64_t>) {
       js["type"] = "integer";
     } else if constexpr (std::is_same_v<T, int32_t> ||
                          std::is_same_v<T, int64_t>) {
-      js["type"] = "unsigned";
+      js["type"] = "integer";
     } else if constexpr (std::is_same_v<T, float> ||
                          std::is_same_v<T, double>) {
       js["type"] = "number";
@@ -411,7 +413,9 @@ static void cli_to_schema(cli_json& js, const T& value,
     } else if constexpr (std::is_same_v<T, string>) {
       js["type"] = "string";
     } else if constexpr (cli_is_array_v<T>) {
-      js["type"] = "array";
+      js["type"]     = "array";
+      js["minItems"] = value.size();
+      js["maxItems"] = value.size();
     } else if constexpr (cli_is_vector_v<T>) {
       js["type"] = "array";
     }
