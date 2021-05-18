@@ -124,6 +124,9 @@ struct cli_state;
 cli_state make_cli(const string& cmd, const string& usage);
 // parse arguments, checks for errors, and exits on error or help
 void parse_cli(cli_state& cli, int argc, const char** argv);
+void parse_cli(cli_state& cli, const vector<string>& args);
+// parse arguments, checks for errors
+bool parse_cli(cli_state& cli, const vector<string>& args, string& error);
 // gets the set command
 string get_command(const cli_state& cli);
 
@@ -159,8 +162,8 @@ void add_argument(const cli_command& cli, const string& name, bool& value,
     const string& usage, const vector<string>& choices = {}, bool req = true);
 void add_argument(const cli_command& cli, const string& name, string& value,
     const string& usage, const vector<string>& choices = {}, bool req = true);
-// Add an optional argument with values as labels. Supports integers, enums and
-// strings.
+// Add an optional argument with values as labels. Supports integers, enums
+// and strings.
 void add_option(const cli_command& cli, const string& name, int& value,
     const string& usage, const vector<string>& choices, const string& alt = "",
     bool req = false);
@@ -226,9 +229,10 @@ void add_option(const cli_command& cli, const string& name, vec4f& value,
 namespace yocto {
 
 // Command line setter.
-using cli_setter = bool (*)(void*, void*, const vector<string>& choices);
+using cli_setter = bool (*)(const void*, void*, const vector<string>& choices);
 // Command line variable.
 struct cli_variable {
+  string         path    = "";
   void*          value   = nullptr;
   cli_setter     setter  = nullptr;
   vector<string> choices = {};
