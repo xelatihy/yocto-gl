@@ -526,10 +526,17 @@ void add_option(const cli_command& cli, const string& name, vec4f& value,
 
 static string schema_to_usage(
     const cli_json& schema_, const string& command, const string& program) {
-  auto& schema        = command.empty() ? schema_
-                                        : schema_.at("properties").at(command);
-  auto  message       = string{};
-  auto  usage_options = string{}, usage_arguments = string{},
+  auto& schema   = command.empty() ? schema_
+                                   : schema_.at("properties").at(command);
+  auto  progname = program;
+  if (progname.rfind('/') != string::npos) {
+    progname = progname.substr(progname.rfind('/') + 1);
+  }
+  if (progname.rfind('\\') != string::npos) {
+    progname = progname.substr(progname.rfind('\\') + 1);
+  }
+  auto message       = string{};
+  auto usage_options = string{}, usage_arguments = string{},
        usage_commands = string{};
   for (auto& [key, value] : schema.at("properties").items()) {
     if (value.value("type", "") == "object") {
@@ -569,7 +576,7 @@ static string schema_to_usage(
     }
   }
   usage_options += "  --help                       Prints help. [false]\n";
-  message += "usage: " + program + (command.empty() ? "" : (" " + command)) +
+  message += "usage: " + progname + (command.empty() ? "" : (" " + command)) +
              (!usage_commands.empty() ? " command" : "") +
              (!usage_options.empty() ? " [options]" : "") +
              (!usage_arguments.empty() ? " <arguments>" : "") + "\n";
