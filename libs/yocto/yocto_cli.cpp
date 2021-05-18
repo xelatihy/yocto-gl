@@ -438,13 +438,12 @@ void add_option(const cli_command& cli, const string& name, string& value,
     bool req) {
   add_option_impl(cli, name, value, usage, {}, choices, alt, req);
 }
-void add_option(const cli_command& cli, const string& name, string& value,
-    const string& usage, const string& dependent_config, const string& alt,
+void add_option_with_config(const cli_command& cli, const string& name,
+    string& value, const string& usage, const string& config, const string& alt,
     bool req) {
   add_option_impl(cli, name, value, usage, {}, {}, alt, req);
-  if (!dependent_config.empty()) {
-    get_schema(cli).at("properties").at(name)["cli_dependent_config"] =
-        dependent_config;
+  if (!config.empty()) {
+    get_schema(cli).at("properties").at(name)["cli_config"] = config;
   }
 }
 void add_option(const cli_command& cli, const string& name, int& value,
@@ -469,12 +468,11 @@ void add_argument(const cli_command& cli, const string& name, string& value,
     const string& usage, const vector<string>& choices, bool req) {
   add_argument_impl(cli, name, value, usage, {}, choices, req);
 }
-void add_argument(const cli_command& cli, const string& name, string& value,
-    const string& usage, const string& dependent_config, bool req) {
+void add_argument_with_config(const cli_command& cli, const string& name,
+    string& value, const string& usage, const string& config, bool req) {
   add_argument_impl(cli, name, value, usage, {}, {}, req);
-  if (!dependent_config.empty()) {
-    get_schema(cli).at("properties").at(name)["cli_dependent_config"] =
-        dependent_config;
+  if (!config.empty()) {
+    get_schema(cli).at("properties").at(name)["cli_config"] = config;
   }
 }
 void add_argument(const cli_command& cli, const string& name, int& value,
@@ -677,6 +675,18 @@ static bool args_to_json(cli_json& js, const cli_json& schema,
     error = message;
     return false;
   };
+  
+  auto get_try_config = [](const string& base_, const string& name) {
+    auto base = base_;
+      if (base.rfind('/') != base.npos) {
+        base = base.substr(0, base.rfind('/'));
+      } else if (base.rfind('\\') != base.npos) {
+        base = base.substr(0, base.rfind('\\'));
+      } else {
+        base = ".";
+      }
+      return base + "/" + name;
+  };
 
   // init
   js = cli_json::object();
@@ -726,6 +736,9 @@ static bool args_to_json(cli_json& js, const cli_json& schema,
       idx--;
       if (!arg_to_json(js[name], oschema, arg, is_positional, args, idx, error))
         return false;
+      if (oschema.contains("cli_config") && !js.contains("config")) {
+        js["config"] = "try:" + get_try_config(js.at(name), oschema.at("cli_config"));
+      }
     } else {
       auto name = string{};
       for (auto& [key, value] : schema.at("properties").items()) {
@@ -739,6 +752,9 @@ static bool args_to_json(cli_json& js, const cli_json& schema,
       if (!arg_to_json(
               js[name], oschema, name, is_positional, args, idx, error))
         return false;
+      if (oschema.contains("cli_config") && !js.contains("config")) {
+        js["config"] = "try:" + get_try_config(js.at(name), oschema.at("cli_config"));
+       }
     }
   }
 
@@ -809,6 +825,18 @@ static bool validate_json(const cli_json& js, const cli_json& schema,
   return true;
 }
 
+// update json objects
+void update_json_objects(cli_json& js, const cli_json& update) {
+  if (!js.is_object()) return;
+  for (auto& [key, value] : update.items()) {
+    if (value.is_object() && js.contains(key) && js.at(key).is_object()) {
+      update_json_objects(js.at(key), value);
+    } else {
+      js[key] = value;
+    }
+  }
+}
+
 // set variables
 static bool json_to_variables(
     const cli_json& js, const vector<cli_variable>& variables, string& error) {
@@ -844,19 +872,27 @@ static bool config_to_json(cli_json& js, string& error) {
     return "";
   };
 
+  auto try_config = false;
   auto config = get_config(js);
   if (config.empty()) return true;
+  if (config.find("try:") == 0) {
+    config = config.substr(4);
+    try_config = true;
+  }
 
   auto cjs = cli_json{};
   auto fs  = std::ifstream(config);
-  if (!fs) return cli_error("missing configuration file " + config);
+  if (!fs) {
+    if (try_config) return true;
+    return cli_error("missing configuration file " + config);
+  }
   try {
     cjs = cli_json::parse(fs);
   } catch (...) {
     return cli_error("error loading configuration " + config);
   }
 
-  cjs.update(js);
+  update_json_objects(cjs, js);
   js = cjs;
   return true;
 }
@@ -901,14 +937,6 @@ void set_help_var(const cli_command& cli, bool& value) {
   cli.state->variables.push_back(
       cli_variable{cli.path.empty() ? "help" : (cli.path + "/help"), &value,
           cli_from_json_<string>, {}});
-}
-
-void set_dependent_config(
-    const cli_command& cli, const string& option, const string& config) {
-  auto& schema = get_schema(cli);
-  if (!schema.at("properties").contains(option))
-    throw std::runtime_error{"create option first"};
-  schema.at("properties").at(option)["cli_dependent_config"] = config;
 }
 
 void add_command_name(const cli_command& cli, const string& name, string& value,

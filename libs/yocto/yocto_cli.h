@@ -130,10 +130,8 @@ bool parse_cli(cli_state& cli, const vector<string>& args, string& error);
 struct cli_command;
 cli_command add_command(
     const cli_command& cli, const string& name, const string& usage);
-void set_command_var(const cli_command& cli, string& value);
-void set_help_var(const cli_command& cli, bool& value);
-void set_dependent_config(
-    const cli_command& cli, const string& option, const string& config);
+void                set_command_var(const cli_command& cli, string& value);
+void                set_help_var(const cli_command& cli, bool& value);
 [[deprecated]] void add_command_name(const cli_command& cli, const string& name,
     string& value, const string& usage);
 
@@ -153,9 +151,9 @@ void add_option(const cli_command& cli, const string& name, bool& value,
 void add_option(const cli_command& cli, const string& name, string& value,
     const string& usage, const vector<string>& choices = {},
     const string& alt = "", bool req = false);
-void add_option(const cli_command& cli, const string& name, string& value,
-    const string& usage, const string& dependent_config, const string& alt = "",
-    bool req = false);
+void add_option_with_config(const cli_command& cli, const string& name,
+    string& value, const string& usage, const string& config,
+    const string& alt = "", bool req = false);
 // Add a positional argument. Supports strings, numbers, and boolean flags.
 void add_argument(const cli_command& cli, const string& name, int& value,
     const string& usage, const vector<int>& minmax = {}, bool req = true);
@@ -165,8 +163,8 @@ void add_argument(const cli_command& cli, const string& name, bool& value,
     const string& usage, const vector<string>& choices = {}, bool req = true);
 void add_argument(const cli_command& cli, const string& name, string& value,
     const string& usage, const vector<string>& choices = {}, bool req = true);
-void add_argument(const cli_command& cli, const string& name, string& value,
-    const string& usage, const string& dependent_config, bool req = true);
+void add_argument_with_config(const cli_command& cli, const string& name,
+    string& value, const string& usage, const string& config, bool req = true);
 // Add an optional argument with values as labels. Supports integers, enums
 // and strings.
 void add_option(const cli_command& cli, const string& name, int& value,

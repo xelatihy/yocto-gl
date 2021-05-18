@@ -267,7 +267,8 @@ struct view_params : trace_params {
 void add_command(const cli_command& cli, const string& name,
     view_params& params, const string& usage) {
   auto cmd = add_command(cli, name, usage);
-  add_argument(cmd, "scene", params.scene, "Scene filename.");
+  add_argument_with_config(
+      cmd, "scene", params.scene, "Scene filename.", "yscene.json");
   add_option(cmd, "output", params.output, "Output filename.");
   add_option(cmd, "camera", params.camname, "Camera name.");
   add_option(cmd, "addsky", params.addsky, "Add sky.");
