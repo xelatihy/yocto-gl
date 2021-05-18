@@ -34,7 +34,6 @@
 #include <stdexcept>
 #include <utility>
 
-#include "yocto_cli.h"
 #include "yocto_color.h"
 #include "yocto_geometry.h"
 #include "yocto_parallel.h"

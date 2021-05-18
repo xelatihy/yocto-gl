@@ -37,7 +37,6 @@
 #include <unordered_map>
 
 #include "ext/stb_image_resize.h"
-#include "yocto_cli.h"
 #include "yocto_color.h"
 #include "yocto_geometry.h"
 #include "yocto_image.h"

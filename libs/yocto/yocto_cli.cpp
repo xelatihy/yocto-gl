@@ -43,7 +43,6 @@
 #include <utility>
 #include <vector>
 
-#include "ext/CLI11.hpp"
 #include "ext/json.hpp"
 
 // -----------------------------------------------------------------------------
@@ -206,113 +205,6 @@ namespace yocto {
 
 using cli_json = nlohmann::ordered_json;
 
-class ConfigJSON : public CLI::Config {
- public:
-  std::string to_config(const CLI::App* app, bool default_also, bool,
-      std::string) const override {
-    auto j = cli_json{};
-
-    for (const CLI::Option* opt : app->get_options({})) {
-      // Only process option with a long-name and configurable
-      if (!opt->get_lnames().empty() && opt->get_configurable()) {
-        std::string name = opt->get_lnames()[0];
-
-        // Non-flags
-        if (opt->get_type_size() != 0) {
-          // If the option was found on command line
-          if (opt->count() == 1)
-            j[name] = opt->results().at(0);
-          else if (opt->count() > 1)
-            j[name] = opt->results();
-
-          // If the option has a default and is requested by optional argument
-          else if (default_also && !opt->get_default_str().empty())
-            j[name] = opt->get_default_str();
-
-          // Flag, one passed
-        } else if (opt->count() == 1) {
-          j[name] = true;
-
-          // Flag, multiple passed
-        } else if (opt->count() > 1) {
-          j[name] = opt->count();
-
-          // Flag, not present
-        } else if (opt->count() == 0 && default_also) {
-          j[name] = false;
-        }
-      }
-    }
-
-    for (const CLI::App* subcom : app->get_subcommands({}))
-      j[subcom->get_name()] = cli_json(
-          to_config(subcom, default_also, false, ""));
-
-    return j.dump(4);
-  }
-
-  std::vector<CLI::ConfigItem> from_config(std::istream& input) const override {
-    auto j = cli_json{};
-    input >> j;
-    return cli_from_config(j);
-  }
-
-  std::vector<CLI::ConfigItem> cli_from_config(cli_json j,
-      std::string name = "", std::vector<std::string> prefix = {}) const {
-    std::vector<CLI::ConfigItem> results;
-
-    if (j.is_object()) {
-      for (cli_json::iterator item = j.begin(); item != j.end(); ++item) {
-        auto copy_prefix = prefix;
-        if (!name.empty()) copy_prefix.push_back(name);
-        auto sub_results = cli_from_config(*item, item.key(), copy_prefix);
-        results.insert(results.end(), sub_results.begin(), sub_results.end());
-      }
-    } else if (!name.empty()) {
-      results.emplace_back();
-      CLI::ConfigItem& res = results.back();
-      res.name             = name;
-      res.parents          = prefix;
-      if (j.is_boolean()) {
-        res.inputs = {j.get<bool>() ? "true" : "false"};
-      } else if (j.is_number()) {
-        std::stringstream ss;
-        ss << j.get<double>();
-        res.inputs = {ss.str()};
-      } else if (j.is_string()) {
-        res.inputs = {j.get<std::string>()};
-      } else if (j.is_array()) {
-        for (std::string ival : j) res.inputs.push_back(ival);
-      } else {
-        throw CLI::ConversionError("Failed to convert " + name);
-      }
-    } else {
-      throw CLI::ConversionError(
-          "You must make all top level values objects in json!");
-    }
-
-    return results;
-  }
-};
-
-template <typename T>
-static vector<pair<string, T>> make_cli_map(const vector<string>& choices) {
-  auto ret = vector<pair<string, T>>{};
-  for (auto idx = 0; idx < (int)choices.size(); idx++) {
-    ret.push_back({choices[idx], (T)idx});
-  }
-  return ret;
-}
-template <>
-vector<pair<string, string>> make_cli_map<string>(
-    const vector<string>& choices) {
-  auto ret = vector<pair<string, string>>{};
-  for (auto idx = 0; idx < (int)choices.size(); idx++) {
-    ret.push_back({choices[idx], choices[idx]});
-  }
-  return ret;
-}
-
 template <typename T>
 static void cli_to_json(
     cli_json& js, const T& value, const vector<string>& choices) {
@@ -448,17 +340,6 @@ template <typename T>
 static void add_option_impl(const cli_command& cli, const string& name,
     T& value, const string& usage, const vector<T>& minmax,
     const vector<string>& choices, const string& alt, bool req) {
-  auto cli11 = (CLI::App*)cli.cli11;
-  if constexpr (std::is_same_v<T, bool>) {
-    cli11->add_flag(
-        "--" + name + (alt.empty() ? "" : (",-" + alt)), value, usage);
-  } else {
-    auto option = cli11->add_option(
-        "--" + name + (alt.empty() ? "" : (",-" + alt)), value, usage);
-    if (minmax.size() == 2) option->check(CLI::Bound(minmax[0], minmax[1]));
-    if (!choices.empty())
-      option->transform(CLI::CheckedTransformer(make_cli_map<T>(choices)));
-  }
   auto& defaults = get_defaults(cli);
   auto& schema   = get_schema(cli);
   cli_to_json(defaults[name], value, choices);
@@ -473,14 +354,6 @@ template <typename T, size_t N>
 static void add_option_impl(const cli_command& cli, const string& name,
     array<T, N>& value, const string& usage, const vector<T>& minmax,
     const vector<string>& choices, const string& alt, bool req) {
-  auto cli11  = (CLI::App*)cli.cli11;
-  auto option = cli11->add_option(
-      "--" + name + (alt.empty() ? "" : (",-" + alt)), value, usage);
-  if constexpr (!std::is_same_v<T, bool>) {
-    if (minmax.size() == 2) option->check(CLI::Bound(minmax[0], minmax[1]));
-    if (!choices.empty())
-      option->transform(CLI::CheckedTransformer(make_cli_map<T>(choices)));
-  }
   auto& defaults = get_defaults(cli);
   auto& schema   = get_schema(cli);
   cli_to_json(defaults[name], value, choices);
@@ -494,13 +367,6 @@ template <typename T>
 static void add_argument_impl(const cli_command& cli, const string& name,
     T& value, const string& usage, const vector<T>& minmax,
     const vector<string>& choices, bool req) {
-  auto cli11  = (CLI::App*)cli.cli11;
-  auto option = cli11->add_option(name, value, usage);
-  if constexpr (!std::is_same_v<T, bool>) {
-    if (minmax.size() == 2) option->check(CLI::Bound(minmax[0], minmax[1]));
-    if (!choices.empty())
-      option->transform(CLI::CheckedTransformer(make_cli_map<T>(choices)));
-  }
   auto& defaults = get_defaults(cli);
   auto& schema   = get_schema(cli);
   cli_to_json(defaults[name], value, choices);
@@ -518,13 +384,6 @@ template <typename T, size_t N>
 static void add_argument_impl(const cli_command& cli, const string& name,
     array<T, N>& value, const string& usage, const vector<T>& minmax,
     const vector<string>& choices, bool req) {
-  auto cli11  = (CLI::App*)cli.cli11;
-  auto option = cli11->add_option(name, value, usage);
-  if constexpr (!std::is_same_v<T, bool>) {
-    if (minmax.size() == 2) option->check(CLI::Bound(minmax[0], minmax[1]));
-    if (!choices.empty())
-      option->transform(CLI::CheckedTransformer(make_cli_map<T>(choices)));
-  }
   auto& defaults = get_defaults(cli);
   auto& schema   = get_schema(cli);
   cli_to_json(defaults[name], value, choices);
@@ -542,13 +401,6 @@ template <typename T>
 static void add_argumentv_impl(const cli_command& cli, const string& name,
     vector<T>& value, const string& usage, const vector<T>& minmax,
     const vector<string>& choices, bool req) {
-  auto cli11  = (CLI::App*)cli.cli11;
-  auto option = cli11->add_option(name, value, usage);
-  if constexpr (!std::is_same_v<T, bool>) {
-    if (minmax.size() == 2) option->check(CLI::Bound(minmax[0], minmax[1]));
-    if (!choices.empty())
-      option->transform(CLI::CheckedTransformer(make_cli_map<T>(choices)));
-  }
   auto& defaults = get_defaults(cli);
   auto& schema   = get_schema(cli);
   cli_to_json(defaults[name], value, choices);
@@ -905,17 +757,14 @@ static bool json_to_variables(
 
 // initialize a command line parser
 cli_state make_cli(const string& name, const string& usage) {
-  auto cli11            = new CLI::App(usage, name);
   auto defaults         = cli_json::object();
   auto schema           = cli_json::object();
   schema["cli_name"]    = name;
   schema["description"] = usage;
   schema["type"]        = "object";
   schema["properties"]  = cli_json::object();
-  cli11->config_formatter(std::make_shared<ConfigJSON>());
-  auto cli     = cli_state{};
-  cli.cli11    = {cli11, [](void* state) { delete (CLI::App*)state; }};
-  cli.defaults = {
+  auto cli              = cli_state{};
+  cli.defaults          = {
       new cli_json{defaults}, [](void* json) { delete (cli_json*)json; }};
   cli.schema = {
       new cli_json{schema}, [](void* json) { delete (cli_json*)json; }};
@@ -925,7 +774,6 @@ cli_state make_cli(const string& name, const string& usage) {
 // add command
 cli_command add_command(
     const cli_command& cli, const string& name, const string& usage) {
-  auto  cli11                               = (CLI::App*)cli.cli11;
   auto& defaults                            = get_defaults(cli);
   defaults[name]                            = cli_json::object();
   auto& schema                              = get_schema(cli);
@@ -934,25 +782,19 @@ cli_command add_command(
   schema["properties"][name]["description"] = usage;
   schema["properties"][name]["type"]        = "object";
   schema["properties"][name]["properties"]  = cli_json::object();
-  cli11->require_subcommand(1);
-  return {cli11->add_subcommand(name, usage), cli.state,
-      cli.path.empty() ? name : (cli.path + "/" + name)};
+  return {cli.state, cli.path.empty() ? name : (cli.path + "/" + name)};
 }
 
 void add_command_name(const cli_command& cli, const string& name, string& value,
     const string& usage) {
-  auto cli11 = (CLI::App*)cli.cli11;
-  cli11->final_callback([&value, cli11] {
-    value = cli11->get_subcommands().front()->get_name();
-  });
   cli.state->variables.push_back(
       cli_variable{cli.path.empty() ? "command" : (cli.path + "/command"),
           &value, cli_from_json_<string>, {}});
 }
 
 string get_command(const cli_state& cli) {
-  auto cli11 = (CLI::App*)cli.cli11.get();
-  return cli11->get_subcommands().front()->get_name();
+  // TODO
+  return "";
 }
 
 bool parse_cli(cli_state& cli, const vector<string>& args, string& error) {

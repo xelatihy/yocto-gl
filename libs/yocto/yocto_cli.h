@@ -239,21 +239,18 @@ struct cli_variable {
 };
 // Command line state.
 struct cli_state {
-  unique_ptr<void, void (*)(void*)> cli11     = {nullptr, nullptr};
   unique_ptr<void, void (*)(void*)> defaults  = {nullptr, nullptr};
   unique_ptr<void, void (*)(void*)> schema    = {nullptr, nullptr};
   vector<cli_variable>              variables = {};
 };
 // Command line command.
 struct cli_command {
-  void*      cli11 = nullptr;
   cli_state* state = nullptr;
   string     path  = "";
   cli_command() {}
-  cli_command(void* cli11, cli_state* state, const string& path)
-      : cli11{cli11}, state{state}, path{path} {}
-  cli_command(const cli_state& state)
-      : cli11{state.cli11.get()}, state{(cli_state*)&state}, path{""} {}
+  cli_command(cli_state* state, const string& path)
+      : state{state}, path{path} {}
+  cli_command(const cli_state& state) : state{(cli_state*)&state}, path{""} {}
 };
 
 template <typename T, typename>
