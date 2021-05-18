@@ -225,16 +225,31 @@ void add_option(const cli_command& cli, const string& name, vec4f& value,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// Command line setter.
+using cli_setter = bool (*)(void*, void*, const vector<string>& choices);
+// Command line variable.
+struct cli_variable {
+  void*          value   = nullptr;
+  cli_setter     setter  = nullptr;
+  vector<string> choices = {};
+};
 // Command line state.
 struct cli_state {
-  unique_ptr<void, void (*)(void*)> state = {nullptr, nullptr};
+  unique_ptr<void, void (*)(void*)> cli11     = {nullptr, nullptr};
+  unique_ptr<void, void (*)(void*)> defaults  = {nullptr, nullptr};
+  unique_ptr<void, void (*)(void*)> schema    = {nullptr, nullptr};
+  vector<cli_variable>              variables = {};
 };
 // Command line command.
 struct cli_command {
-  void* state = nullptr;
+  void*      cli11 = nullptr;
+  cli_state* state = nullptr;
+  string     path  = "";
   cli_command() {}
-  cli_command(void* state) : state{state} {}
-  cli_command(const cli_state& state) : state{state.state.get()} {}
+  cli_command(void* cli11, cli_state* state, const string& path)
+      : cli11{cli11}, state{state}, path{path} {}
+  cli_command(const cli_state& state)
+      : cli11{state.cli11.get()}, state{(cli_state*)&state}, path{""} {}
 };
 
 template <typename T, typename>
