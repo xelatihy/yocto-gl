@@ -357,9 +357,12 @@ constexpr bool cli_is_vector_v = cli_is_vector<T>::value;
 template <typename T>
 static bool cli_from_json(
     const cli_json& js, T& value, const vector<string>& choices) {
-  static_assert(std::is_same_v<T, int32_t> || std::is_same_v<T, int64_t> ||std::is_same_v<T, int32_t> ||
-                std::is_same_v<T, int64_t> || std::is_same_v<T, float> ||
-                std::is_same_v<T, double> || std::is_same_v<T, bool> || std::is_same_v<T, string> || cli_is_array_v<T>|| cli_is_vector_v<T>, "unsupported type");
+  static_assert(std::is_same_v<T, int32_t> || std::is_same_v<T, int64_t> ||
+                    std::is_same_v<T, int32_t> || std::is_same_v<T, int64_t> ||
+                    std::is_same_v<T, float> || std::is_same_v<T, double> ||
+                    std::is_same_v<T, bool> || std::is_same_v<T, string> ||
+                    cli_is_array_v<T> || cli_is_vector_v<T>,
+      "unsupported type");
   if (!choices.empty()) {
     auto values = (string)js;
     if (std::find(choices.begin(), choices.end(), values) == choices.end()) {
@@ -384,9 +387,12 @@ static bool cli_from_json(
 template <typename T>
 static void cli_to_schema(cli_json& js, const T& value,
     const vector<string>& choices, const string& name, const string& usage) {
-  static_assert(std::is_same_v<T, int32_t> || std::is_same_v<T, int64_t> ||std::is_same_v<T, int32_t> ||
-                std::is_same_v<T, int64_t> || std::is_same_v<T, float> ||
-                std::is_same_v<T, double> || std::is_same_v<T, bool> || std::is_same_v<T, string> || cli_is_array_v<T>|| cli_is_vector_v<T>, "unsupported type");
+  static_assert(std::is_same_v<T, int32_t> || std::is_same_v<T, int64_t> ||
+                    std::is_same_v<T, int32_t> || std::is_same_v<T, int64_t> ||
+                    std::is_same_v<T, float> || std::is_same_v<T, double> ||
+                    std::is_same_v<T, bool> || std::is_same_v<T, string> ||
+                    cli_is_array_v<T> || cli_is_vector_v<T>,
+      "unsupported type");
   js["cli_name"]    = name;
   js["description"] = usage;
   if (!choices.empty()) {
