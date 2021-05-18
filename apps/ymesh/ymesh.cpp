@@ -40,6 +40,7 @@
 using namespace yocto;
 
 #include <queue>
+#include <unordered_set>
 
 // view params
 struct view_params {
