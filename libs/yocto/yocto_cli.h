@@ -153,6 +153,9 @@ void add_option(const cli_command& cli, const string& name, bool& value,
 void add_option(const cli_command& cli, const string& name, string& value,
     const string& usage, const vector<string>& choices = {},
     const string& alt = "", bool req = false);
+void add_option(const cli_command& cli, const string& name, string& value,
+    const string& usage, const string& dependent_config, const string& alt = "",
+    bool req = false);
 // Add a positional argument. Supports strings, numbers, and boolean flags.
 void add_argument(const cli_command& cli, const string& name, int& value,
     const string& usage, const vector<int>& minmax = {}, bool req = true);
@@ -162,6 +165,8 @@ void add_argument(const cli_command& cli, const string& name, bool& value,
     const string& usage, const vector<string>& choices = {}, bool req = true);
 void add_argument(const cli_command& cli, const string& name, string& value,
     const string& usage, const vector<string>& choices = {}, bool req = true);
+void add_argument(const cli_command& cli, const string& name, string& value,
+    const string& usage, const string& dependent_config, bool req = true);
 // Add an optional argument with values as labels. Supports integers, enums
 // and strings.
 void add_option(const cli_command& cli, const string& name, int& value,

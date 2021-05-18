@@ -53,7 +53,7 @@ void add_command(const cli_command& cli, const string& name,
     view_params& params, const string& usage) {
   auto cmd = add_command(cli, name, usage);
   add_argument(cmd, "shape", params.shape, "Input shape.");
-  add_option(cmd, "output", params.output, "Output shape.", {});
+  add_option(cmd, "output", params.output, "Output shape.");
   add_option(cmd, "addsky", params.addsky, "Add sky.");
 }
 
