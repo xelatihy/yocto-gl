@@ -35,6 +35,7 @@
 #include <array>
 #include <chrono>
 #include <cstdio>
+#include <fstream>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -547,10 +548,16 @@ static string schema_to_usage(
     } else {
       auto is_positional = false;
       auto line          = (is_positional ? "  " : "  --") + key;
+      if (value.value("type", "") != "boolean" || is_positional) {
+        line += " <" + value.value("type", "") + ">";
+      }
       while (line.size() < 32) line += " ";
       line += value.value("description", "");
       if (value.contains("default")) {
-        line += " [" + value.at("default").dump() + "]\n";
+        auto def = value.at("default").dump();
+        if (value.value("type", "") == "string")
+          def = def.substr(1, def.length() - 2);
+        line += " [" + def + "]\n";
         // TODO: required
       } else {
         line += "\n";
@@ -575,7 +582,10 @@ static string schema_to_usage(
         usage_options += line;
     }
   }
-  usage_options += "  --help                       Prints help. [false]\n";
+  usage_options += "  --help                        Prints help. [false]\n";
+  usage_options +=
+      "  --config <string>             Load configuration. ["
+      "]\n";
   message += "usage: " + progname + (command.empty() ? "" : (" " + command)) +
              (!usage_commands.empty() ? " command" : "") +
              (!usage_options.empty() ? " [options]" : "") +
@@ -675,6 +685,11 @@ static bool args_to_json(cli_json& js, const cli_json& schema,
       js["help"] = true;
       continue;
     }
+    if (arg == "--config") {
+      if (idx >= args.size()) return cli_error("missing value for config");
+      js["config"] = args[idx++];
+      continue;
+    }
     auto is_positional = arg.find('-') != 0;
     if (!commands.empty() && is_positional) {
       if (std::find(commands.begin(), commands.end(), arg) != commands.end()) {
@@ -750,9 +765,11 @@ static bool validate_json(const cli_json& js, const cli_json& schema,
       return cli_error("bad value for " + name);
     for (auto& [key, jsv] : js.items()) {
       if (key == "help") {
-        if (!jsv.is_boolean()) return cli_error("bad value for " + name);
+        if (!jsv.is_boolean()) return cli_error("bad value for " + key);
+      } else if (key == "config") {
+        if (!jsv.is_string()) return cli_error("bad value for " + key);
       } else if (key == "command") {
-        if (!jsv.is_string()) return cli_error("bad value for " + name);
+        if (!jsv.is_string()) return cli_error("bad value for " + key);
       } else {
         if (!schema.at("properties").contains(key))
           return cli_error("unknown option " + key);
@@ -786,6 +803,40 @@ static bool json_to_variables(
             variable.value, variable.choices))
       return cli_error("bad value for " + variable.path);
   }
+  return true;
+}
+
+// grabs a configution and update json arguments
+static bool config_to_json(cli_json& js, string& error) {
+  auto cli_error = [&error](const string& message) {
+    error = message;
+    return false;
+  };
+  auto get_config = [](const cli_json& jargs) -> string {
+    auto current = &jargs;
+    while (true) {
+      if (current->contains("config")) return (string)current->at("config");
+      if (current->contains("command")) {
+        current = &current->at((string)current->at("command"));
+      }
+    }
+    return "";
+  };
+
+  auto config = get_config(js);
+  if (config.empty()) return true;
+
+  auto cjs = cli_json{};
+  auto fs  = std::ifstream(config);
+  if (!fs) return cli_error("missing configuration file " + config);
+  try {
+    cjs = cli_json::parse(fs);
+  } catch (...) {
+    return cli_error("error loading configuration " + config);
+  }
+
+  cjs.update(js);
+  js = cjs;
   return true;
 }
 
@@ -842,6 +893,7 @@ static bool parse_cli(cli_state& cli, const vector<string>& args,
     cli_json& jargs, string& error) {
   auto idx = (size_t)1;
   if (!args_to_json(jargs, get_schema(cli), args, idx, error)) return false;
+  if (!config_to_json(jargs, error)) return false;
   if (!validate_json(jargs, get_schema(cli), "", error)) return false;
   if (!json_to_variables(jargs, cli.variables, error)) return false;
   return true;
@@ -849,11 +901,7 @@ static bool parse_cli(cli_state& cli, const vector<string>& args,
 
 bool parse_cli(cli_state& cli, const vector<string>& args, string& error) {
   auto jargs = cli_json{};
-  auto idx   = (size_t)1;
-  if (!args_to_json(jargs, get_schema(cli), args, idx, error)) return false;
-  if (!validate_json(jargs, get_schema(cli), "", error)) return false;
-  if (!json_to_variables(jargs, cli.variables, error)) return false;
-  return true;
+  return parse_cli(cli, args, jargs, error);
 }
 
 void parse_cli(cli_state& cli, const vector<string>& args) {
@@ -868,9 +916,14 @@ void parse_cli(cli_state& cli, const vector<string>& args) {
     return command;
   };
   auto get_help = [&](const cli_json& jargs) -> bool {
-    auto command = get_command(jargs);
-    if (command.empty()) return jargs.value("help", false);
-    return jargs.at(cli_json::json_pointer{"/" + command}).value("help", false);
+    auto current = &jargs;
+    while (true) {
+      if (current->contains("help")) return (bool)current->at("help");
+      if (current->contains("command")) {
+        current = &current->at((string)current->at("command"));
+      }
+    }
+    return false;
   };
   auto jargs = cli_json{};
   auto error = string{};
