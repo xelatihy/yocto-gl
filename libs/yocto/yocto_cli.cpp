@@ -730,7 +730,7 @@ static bool args_to_json(cli_json& js, const cli_json& schema,
 }
 
 static bool validate_json(const cli_json& js, const cli_json& schema,
-    const string& name, string& error) {
+    const string& name, bool check_required, string& error) {
   auto cli_error = [&error](const string& message) {
     error = message;
     return false;
@@ -759,7 +759,8 @@ static bool validate_json(const cli_json& js, const cli_json& schema,
         (size_t)schema.at("maxItems") < js.size())
       return cli_error("bad value for " + name);
     for (auto& jsv : js)
-      if (!validate_json(jsv, schema.at("items"), name, error)) return false;
+      if (!validate_json(jsv, schema.at("items"), name, false, error))
+        return false;
   } else if (js.is_object()) {
     if (schema.at("type") != "object")
       return cli_error("bad value for " + name);
@@ -773,11 +774,12 @@ static bool validate_json(const cli_json& js, const cli_json& schema,
       } else {
         if (!schema.at("properties").contains(key))
           return cli_error("unknown option " + key);
-        if (!validate_json(jsv, schema.at("properties").at(key), key, error))
+        if (!validate_json(jsv, schema.at("properties").at(key), key,
+                check_required && js.value("command", "") == key, error))
           return false;
       }
     }
-    if (schema.contains("required")) {
+    if (check_required && schema.contains("required")) {
       for (auto& req : schema.at("required")) {
         if (!js.contains((string)req))
           return cli_error("missing value for " + (string)req);
@@ -818,6 +820,8 @@ static bool config_to_json(cli_json& js, string& error) {
       if (current->contains("config")) return (string)current->at("config");
       if (current->contains("command")) {
         current = &current->at((string)current->at("command"));
+      } else {
+        break;
       }
     }
     return "";
@@ -894,7 +898,7 @@ static bool parse_cli(cli_state& cli, const vector<string>& args,
   auto idx = (size_t)1;
   if (!args_to_json(jargs, get_schema(cli), args, idx, error)) return false;
   if (!config_to_json(jargs, error)) return false;
-  if (!validate_json(jargs, get_schema(cli), "", error)) return false;
+  if (!validate_json(jargs, get_schema(cli), "", true, error)) return false;
   if (!json_to_variables(jargs, cli.variables, error)) return false;
   return true;
 }
@@ -921,6 +925,8 @@ void parse_cli(cli_state& cli, const vector<string>& args) {
       if (current->contains("help")) return (bool)current->at("help");
       if (current->contains("command")) {
         current = &current->at((string)current->at("command"));
+      } else {
+        break;
       }
     }
     return false;
