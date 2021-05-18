@@ -40,6 +40,7 @@
 // -----------------------------------------------------------------------------
 
 #include <functional>
+#include <memory>
 #include <string>
 #include <type_traits>
 #include <vector>
@@ -54,6 +55,7 @@ namespace yocto {
 // using directives
 using std::function;
 using std::string;
+using std::unique_ptr;
 using std::vector;
 using namespace std::string_literals;
 
@@ -118,96 +120,95 @@ string  elapsed_formatted(simple_timer& timer);
 namespace yocto {
 
 // Initialize a command line parser.
-struct cli_command;
-cli_command make_cli(const string& cmd, const string& usage);
+struct cli_state;
+cli_state make_cli(const string& cmd, const string& usage);
 // parse arguments, checks for errors, and exits on error or help
-void parse_cli(cli_command& cli, int argc, const char** argv);
-// parse arguments and checks for errors
-bool parse_cli(cli_command& cli, int argc, const char** argv, string& error);
-// gets usage message
-string get_usage(const cli_command& cli);
-// gets whether help was invoked
-bool get_help(const cli_command& cli);
+void parse_cli(cli_state& cli, int argc, const char** argv);
 // gets the set command
-string get_command(const cli_command& cli);
+string get_command(const cli_state& cli);
+
+// Add a subcommand
+struct cli_command;
+cli_command add_command(
+    const cli_command& cli, const string& name, const string& usage);
+void add_command_name(const cli_command& cli, const string& name, string& value,
+    const string& usage);
 
 // Add an optional argument. Supports strings, numbers, and boolean flags.
 // Optional arguments will be parsed with name `--<name>` and `-<alt>`.
 // Optional booleans will support both `--<name>` and `--no-<name>` to enabled
 // and disable the flag.
-void add_option(cli_command& cli, const string& name, int& value,
+void add_option(const cli_command& cli, const string& name, int& value,
     const string& usage, const vector<int>& minmax = {}, const string& alt = "",
     bool req = false);
-void add_option(cli_command& cli, const string& name, float& value,
+void add_option(const cli_command& cli, const string& name, float& value,
     const string& usage, const vector<float>& minmax = {},
     const string& alt = "", bool req = false);
-void add_option(cli_command& cli, const string& name, bool& value,
+void add_option(const cli_command& cli, const string& name, bool& value,
     const string& usage, const vector<string>& choices = {},
     const string& alt = "", bool req = false);
-void add_option(cli_command& cli, const string& name, string& value,
+void add_option(const cli_command& cli, const string& name, string& value,
     const string& usage, const vector<string>& choices = {},
     const string& alt = "", bool req = false);
 // Add a positional argument. Supports strings, numbers, and boolean flags.
-void add_argument(cli_command& cli, const string& name, int& value,
+void add_argument(const cli_command& cli, const string& name, int& value,
     const string& usage, const vector<int>& minmax = {}, bool req = true);
-void add_argument(cli_command& cli, const string& name, float& value,
+void add_argument(const cli_command& cli, const string& name, float& value,
     const string& usage, const vector<float>& minmax = {}, bool req = true);
-void add_argument(cli_command& cli, const string& name, bool& value,
+void add_argument(const cli_command& cli, const string& name, bool& value,
     const string& usage, const vector<string>& choices = {}, bool req = true);
-void add_argument(cli_command& cli, const string& name, string& value,
+void add_argument(const cli_command& cli, const string& name, string& value,
     const string& usage, const vector<string>& choices = {}, bool req = true);
 // Add an optional argument with values as labels. Supports integers, enums and
 // strings.
-void add_option(cli_command& cli, const string& name, int& value,
+void add_option(const cli_command& cli, const string& name, int& value,
     const string& usage, const vector<string>& choices, const string& alt = "",
     bool req = false);
 template <typename T, typename = std::enable_if_t<std::is_enum_v<T>>>
-inline void add_option(cli_command& cli, const string& name, T& value,
+inline void add_option(const cli_command& cli, const string& name, T& value,
     const string& usage, const vector<string>& choices, const string& alt = "",
     bool req = false);
 // Add a positional argument with values as labels. Supports string, integers
 // and enums.
-void add_argument(cli_command& cli, const string& name, int& value,
+void add_argument(const cli_command& cli, const string& name, int& value,
     const string& usage, const vector<string>& choices, bool req = true);
 template <typename T, typename = std::enable_if_t<std::is_enum_v<T>>>
-inline void add_argument(cli_command& cli, const string& name, T& value,
+inline void add_argument(const cli_command& cli, const string& name, T& value,
     const string& usage, const vector<string>& choices, bool req = true);
 // Add a positional argument that consumes all arguments left.
 // Supports strings and enums.
-void add_argument(cli_command& cli, const string& name, vector<int>& value,
-    const string& usage, const vector<int>& minmax, bool req = true);
-void add_argument(cli_command& cli, const string& name, vector<float>& value,
-    const string& usage, const vector<float>& minmax, bool req = true);
-void add_argument(cli_command& cli, const string& name, vector<int>& value,
-    const string& usage, const vector<string>& choices = {}, bool req = true);
-void add_argument(cli_command& cli, const string& name, vector<string>& value,
-    const string& usage, const vector<string>& choices = {}, bool req = true);
+void add_argument(const cli_command& cli, const string& name,
+    vector<int>& value, const string& usage, const vector<int>& minmax,
+    bool req = true);
+void add_argument(const cli_command& cli, const string& name,
+    vector<float>& value, const string& usage, const vector<float>& minmax,
+    bool req = true);
+void add_argument(const cli_command& cli, const string& name,
+    vector<int>& value, const string& usage, const vector<string>& choices = {},
+    bool req = true);
+void add_argument(const cli_command& cli, const string& name,
+    vector<string>& value, const string& usage,
+    const vector<string>& choices = {}, bool req = true);
 
 // Add an optional argument. Supports basic math types.
-void add_option(cli_command& cli, const string& name, vec2i& value,
+void add_option(const cli_command& cli, const string& name, vec2i& value,
     const string& usage, const vector<int>& minmax = {}, const string& alt = "",
     bool req = false);
-void add_option(cli_command& cli, const string& name, vec3i& value,
+void add_option(const cli_command& cli, const string& name, vec3i& value,
     const string& usage, const vector<int>& minmax = {}, const string& alt = "",
     bool req = false);
-void add_option(cli_command& cli, const string& name, vec4i& value,
+void add_option(const cli_command& cli, const string& name, vec4i& value,
     const string& usage, const vector<int>& minmax = {}, const string& alt = "",
     bool req = false);
-void add_option(cli_command& cli, const string& name, vec2f& value,
+void add_option(const cli_command& cli, const string& name, vec2f& value,
     const string& usage, const vector<float>& minmax = {},
     const string& alt = "", bool req = false);
-void add_option(cli_command& cli, const string& name, vec3f& value,
+void add_option(const cli_command& cli, const string& name, vec3f& value,
     const string& usage, const vector<float>& minmax = {},
     const string& alt = "", bool req = false);
-void add_option(cli_command& cli, const string& name, vec4f& value,
+void add_option(const cli_command& cli, const string& name, vec4f& value,
     const string& usage, const vector<float>& minmax = {},
     const string& alt = "", bool req = false);
-
-// Add a subcommand
-cli_command& add_command(
-    cli_command& cli, const string& name, const string& usage);
-void add_command_name(
-    cli_command& cli, const string& name, string& value, const string& usage);
 
 }  // namespace yocto
 
@@ -224,59 +225,31 @@ void add_command_name(
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Command line value type
-enum struct cli_type { integer, uinteger, number, boolean, string };
-// Command line value
-struct cli_value {
-  int64_t  integer  = 0;
-  uint64_t uinteger = 0;
-  double   number   = 0;
-  string   text     = "";
+// Command line state.
+struct cli_state {
+  unique_ptr<void, void (*)(void*)> state = {nullptr, nullptr};
 };
-// Command line option. All data should be considered private.
-struct cli_option {
-  string                            name       = "";
-  string                            alt        = "";
-  bool                              positional = false;
-  cli_type                          type       = cli_type::string;
-  bool                              req        = false;
-  int                               nargs      = 0;
-  string                            usage      = "";
-  vector<cli_value>                 minmax     = {};
-  vector<string>                    choices    = {};
-  vector<cli_value>                 value      = {};
-  vector<cli_value>                 def        = {};
-  bool                              set        = false;
-  function<bool(const cli_option&)> set_value  = {};
-};
-// Command line command. All data should be considered private.
+// Command line command.
 struct cli_command {
-  string                        name        = "";
-  string                        usage       = "";
-  vector<cli_command>           commands    = {};
-  vector<cli_option>            options     = {};
-  vector<cli_option>            arguments   = {};
-  bool                          help        = false;
-  string                        command     = "";
-  function<void(const string&)> set_command = {};
+  void* state = nullptr;
+  cli_command() {}
+  cli_command(void* state) : state{state} {}
+  cli_command(const cli_state& state) : state{state.state.get()} {}
 };
 
 template <typename T, typename>
-inline void add_option(cli_command& cli, const string& name, T& value,
+inline void add_option(const cli_command& cli, const string& name, T& value,
     const string& usage, const vector<string>& choices, const string& alt,
     bool req) {
   return add_option(
       cli, name, (std::underlying_type_t<T>&)value, usage, choices, alt, req);
 }
 template <typename T, typename>
-inline void add_argument(cli_command& cli, const string& name, T& value,
+inline void add_argument(const cli_command& cli, const string& name, T& value,
     const string& usage, const vector<string>& choices, bool req) {
   return add_argument(
       cli, name, (std::underlying_type_t<T>&)value, usage, choices, req);
 }
-
-// Backward compatibility
-using cli_state [[deprecated]] = cli_command;
 
 }  // namespace yocto
 

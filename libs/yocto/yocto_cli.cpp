@@ -204,806 +204,239 @@ string elapsed_formatted(simple_timer& timer) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-static vector<cli_value> make_cli_values(int value) {
-  auto cvalues           = vector<cli_value>(1);
-  cvalues.back().integer = value;
-  return cvalues;
+template <typename T>
+static vector<pair<string, T>> make_cli_map(const vector<string>& choices) {
+  auto ret = vector<pair<string, T>>{};
+  for (auto idx = 0; idx < (int)choices.size(); idx++) {
+    ret.push_back({choices[idx], (T)idx});
+  }
+  return ret;
 }
-static vector<cli_value> make_cli_values(float value) {
-  auto cvalues          = vector<cli_value>(1);
-  cvalues.back().number = value;
-  return cvalues;
-}
-static vector<cli_value> make_cli_values(bool value) {
-  auto values           = vector<cli_value>(1);
-  values.back().integer = value ? 1 : 0;
-  return values;
-}
-static vector<cli_value> make_cli_values(const string& value) {
-  auto values        = vector<cli_value>(1);
-  values.back().text = value;
-  return values;
-}
-static vector<cli_value> make_cli_values(const vector<int>& values) {
-  auto cvalues = vector<cli_value>(values.size());
-  for (auto idx = (size_t)0; idx < values.size(); idx++)
-    cvalues[idx].integer = values[idx];
-  return cvalues;
-}
-static vector<cli_value> make_cli_values(const vector<float>& values) {
-  auto cvalues = vector<cli_value>(values.size());
-  for (auto idx = (size_t)0; idx < values.size(); idx++)
-    cvalues[idx].number = values[idx];
-  return cvalues;
-}
-static vector<cli_value> make_cli_values(const vector<string>& values) {
-  auto cvalues = vector<cli_value>(values.size());
-  for (auto idx = (size_t)0; idx < values.size(); idx++)
-    cvalues[idx].text = values[idx];
-  return cvalues;
-}
-static vector<cli_value> make_cli_values(vec2i value) {
-  auto cvalues       = vector<cli_value>(2);
-  cvalues[0].integer = value.x;
-  cvalues[1].integer = value.y;
-  return cvalues;
-}
-static vector<cli_value> make_cli_values(vec3i value) {
-  auto cvalues       = vector<cli_value>(3);
-  cvalues[0].integer = value.x;
-  cvalues[1].integer = value.y;
-  cvalues[2].integer = value.z;
-  return cvalues;
-}
-static vector<cli_value> make_cli_values(vec4i value) {
-  auto cvalues       = vector<cli_value>(4);
-  cvalues[0].integer = value.x;
-  cvalues[1].integer = value.y;
-  cvalues[2].integer = value.z;
-  cvalues[3].integer = value.w;
-  return cvalues;
-}
-static vector<cli_value> make_cli_values(vec2f value) {
-  auto cvalues      = vector<cli_value>(2);
-  cvalues[0].number = value.x;
-  cvalues[1].number = value.y;
-  return cvalues;
-}
-static vector<cli_value> make_cli_values(vec3f value) {
-  auto cvalues      = vector<cli_value>(3);
-  cvalues[0].number = value.x;
-  cvalues[1].number = value.y;
-  cvalues[2].number = value.z;
-  return cvalues;
-}
-static vector<cli_value> make_cli_values(vec4f value) {
-  auto cvalues      = vector<cli_value>(4);
-  cvalues[0].number = value.x;
-  cvalues[1].number = value.y;
-  cvalues[2].number = value.z;
-  cvalues[3].number = value.w;
-  return cvalues;
+template <>
+vector<pair<string, string>> make_cli_map<string>(
+    const vector<string>& choices) {
+  auto ret = vector<pair<string, string>>{};
+  for (auto idx = 0; idx < (int)choices.size(); idx++) {
+    ret.push_back({choices[idx], choices[idx]});
+  }
+  return ret;
 }
 
-static bool get_value(const cli_option& option, int& value) {
-  if (option.value.size() != 1) throw std::out_of_range{"bad option size"};
-  auto& cvalue = option.value[0];
-  if (option.type != cli_type::integer) return false;
-  value = (int)cvalue.integer;
-  return true;
-}
-static bool get_value(const cli_option& option, float& value) {
-  if (option.value.size() != 1) throw std::out_of_range{"bad option size"};
-  auto& cvalue = option.value[0];
-  if (option.type != cli_type::number) return false;
-  value = (float)cvalue.number;
-  return true;
-}
-static bool get_value(const cli_option& option, bool& value) {
-  if (option.value.size() != 1) throw std::out_of_range{"bad option size"};
-  auto& cvalue = option.value[0];
-  if (option.type != cli_type::boolean) return false;
-  value = (bool)cvalue.integer;
-  return true;
-}
-static bool get_value(const cli_option& option, string& value) {
-  if (option.value.size() != 1) throw std::out_of_range{"bad option size"};
-  auto& cvalue = option.value[0];
-  if (option.type != cli_type::string) return false;
-  value = cvalue.text;
-  return true;
-}
-static bool get_value(const cli_option& option, vector<int>& values) {
-  values.clear();
-  for (auto& cvalue : option.value) {
-    auto& value = values.emplace_back();
-    if (option.type != cli_type::integer) return false;
-    value = (int)cvalue.integer;
-  }
-  return true;
-}
-static bool get_value(const cli_option& option, vector<float>& values) {
-  values.clear();
-  for (auto& cvalue : option.value) {
-    auto& value = values.emplace_back();
-    if (option.type != cli_type::number) return false;
-    value = (float)cvalue.number;
-  }
-  return true;
-}
-static bool get_value(const cli_option& option, vector<string>& values) {
-  values.clear();
-  for (auto& cvalue : option.value) {
-    auto& value = values.emplace_back();
-    if (option.type != cli_type::string) return false;
-    value = cvalue.text;
-  }
-  return true;
-}
-static bool get_value(const cli_option& option, vec2i& value) {
-  if (option.value.size() != 2) throw std::out_of_range{"bad option size"};
-  for (auto idx = 0; idx < 2; idx++) {
-    auto& cvalue = option.value[idx];
-    if (option.type != cli_type::integer) return false;
-    value[idx] = (int)cvalue.integer;
-  }
-  return true;
-}
-static bool get_value(const cli_option& option, vec3i& value) {
-  if (option.value.size() != 3) throw std::out_of_range{"bad option size"};
-  for (auto idx = 0; idx < 3; idx++) {
-    auto& cvalue = option.value[idx];
-    if (option.type != cli_type::integer) return false;
-    value[idx] = (int)cvalue.integer;
-  }
-  return true;
-}
-static bool get_value(const cli_option& option, vec4i& value) {
-  if (option.value.size() != 4) throw std::out_of_range{"bad option size"};
-  for (auto idx = 0; idx < 4; idx++) {
-    auto& cvalue = option.value[idx];
-    if (option.type != cli_type::integer) return false;
-    value[idx] = (int)cvalue.integer;
-  }
-  return true;
-}
-static bool get_value(const cli_option& option, vec2f& value) {
-  if (option.value.size() != 2) throw std::out_of_range{"bad option size"};
-  for (auto idx = 0; idx < 2; idx++) {
-    auto& cvalue = option.value[idx];
-    if (option.type != cli_type::number) return false;
-    value[idx] = (int)cvalue.number;
-  }
-  return true;
-}
-static bool get_value(const cli_option& option, vec3f& value) {
-  if (option.value.size() != 3) throw std::out_of_range{"bad option size"};
-  for (auto idx = 0; idx < 3; idx++) {
-    auto& cvalue = option.value[idx];
-    if (option.type != cli_type::number) return false;
-    value[idx] = (int)cvalue.number;
-  }
-  return true;
-}
-static bool get_value(const cli_option& option, vec4f& value) {
-  if (option.value.size() != 4) throw std::out_of_range{"bad option size"};
-  for (auto idx = 0; idx < 4; idx++) {
-    auto& cvalue = option.value[idx];
-    if (option.type != cli_type::number) return false;
-    value[idx] = (int)cvalue.number;
-  }
-  return true;
-}
-
-static void validate_name(const cli_command& cli, const string& name) {
-  for (auto& command : cli.commands) {
-    if (name == command.name)
-      throw std::invalid_argument{name + " already used"};
-  }
-  for (auto& option : cli.options) {
-    if (name == option.name)
-      throw std::invalid_argument{name + " already used"};
-  }
-  for (auto& option : cli.arguments) {
-    if (name == option.name)
-      throw std::invalid_argument{name + " already used"};
+template <typename T>
+static void add_option_impl(const cli_command& cli, const string& name,
+    T& value, const string& usage, const vector<T>& minmax,
+    const vector<string>& choices, const string& alt, bool req) {
+  auto cli11 = (CLI::App*)cli.state;
+  if constexpr (std::is_same_v<T, bool>) {
+    cli11->add_flag(
+        "--" + name + (alt.empty() ? "" : (",-" + alt)), value, usage);
+  } else {
+    auto option = cli11->add_option(
+        "--" + name + (alt.empty() ? "" : (",-" + alt)), value, usage);
+    if (minmax.size() == 2) option->check(CLI::Bound(minmax[0], minmax[1]));
+    if (!choices.empty())
+      option->transform(CLI::CheckedTransformer(make_cli_map<T>(choices)));
   }
 }
 
-static void add_option_impl(cli_command& cli, const string& name,
-    const vector<cli_value>& value, cli_type type, int nargs,
-    const string& usage, const vector<cli_value>& minmax,
-    const vector<string>& choices, const string& alt, bool req,
-    const function<bool(const cli_option&)>& set_value) {
-  validate_name(cli, name);
-  auto& option      = cli.options.emplace_back();
-  option.name       = name;
-  option.alt        = alt;
-  option.positional = false;
-  option.type       = type;
-  option.req        = req;
-  option.nargs      = nargs;
-  option.usage      = usage;
-  option.minmax     = minmax;
-  option.choices    = choices;
-  option.value      = value;
-  option.def        = value;
-  option.set_value  = set_value;
+template <typename T, size_t N>
+static void add_option_impl(const cli_command& cli, const string& name,
+    array<T, N>& value, const string& usage, const vector<T>& minmax,
+    const vector<string>& choices, const string& alt, bool req) {
+  auto cli11  = (CLI::App*)cli.state;
+  auto option = cli11->add_option(
+      "--" + name + (alt.empty() ? "" : (",-" + alt)), value, usage);
+  if constexpr (!std::is_same_v<T, bool>) {
+    if (minmax.size() == 2) option->check(CLI::Bound(minmax[0], minmax[1]));
+    if (!choices.empty())
+      option->transform(CLI::CheckedTransformer(make_cli_map<T>(choices)));
+  }
+}
+template <typename T>
+static void add_argument_impl(const cli_command& cli, const string& name,
+    T& value, const string& usage, const vector<T>& minmax,
+    const vector<string>& choices, bool req) {
+  auto cli11  = (CLI::App*)cli.state;
+  auto option = cli11->add_option(name, value, usage);
+  if constexpr (!std::is_same_v<T, bool>) {
+    if (minmax.size() == 2) option->check(CLI::Bound(minmax[0], minmax[1]));
+    if (!choices.empty())
+      option->transform(CLI::CheckedTransformer(make_cli_map<T>(choices)));
+  }
 }
 
-static void add_argument_impl(cli_command& cli, const string& name,
-    const vector<cli_value>& value, cli_type type, int nargs,
-    const string& usage, const vector<cli_value>& minmax,
-    const vector<string>& choices, bool req,
-    const function<bool(const cli_option&)>& set_value) {
-  validate_name(cli, name);
-  auto& option      = cli.arguments.emplace_back();
-  option.name       = name;
-  option.alt        = "";
-  option.positional = true;
-  option.type       = type;
-  option.req        = req;
-  option.nargs      = nargs;
-  option.usage      = usage;
-  option.minmax     = minmax;
-  option.choices    = choices;
-  option.value      = value;
-  option.def        = value;
-  option.set_value  = set_value;
+template <typename T, size_t N>
+static void add_argument_impl(const cli_command& cli, const string& name,
+    array<T, N>& value, const string& usage, const vector<T>& minmax,
+    const vector<string>& choices, bool req) {
+  auto cli11  = (CLI::App*)cli.state;
+  auto option = cli11->add_option(name, value, usage);
+  if constexpr (!std::is_same_v<T, bool>) {
+    if (minmax.size() == 2) option->check(CLI::Bound(minmax[0], minmax[1]));
+    if (!choices.empty())
+      option->transform(CLI::CheckedTransformer(make_cli_map<T>(choices)));
+  }
 }
 
-static void add_argumentv_impl(cli_command& cli, const string& name,
-    const vector<cli_value>& value, cli_type type, int nargs,
-    const string& usage, const vector<cli_value>& minmax,
-    const vector<string>& choices, bool req,
-    const function<bool(const cli_option&)>& set_value) {
-  validate_name(cli, name);
-  auto& option      = cli.arguments.emplace_back();
-  option.name       = name;
-  option.alt        = "";
-  option.positional = true;
-  option.type       = type;
-  option.req        = req;
-  option.nargs      = nargs;
-  option.usage      = usage;
-  option.minmax     = minmax;
-  option.choices    = choices;
-  option.value      = value;
-  option.def        = value;
-  option.set_value  = set_value;
+template <typename T>
+static void add_argumentv_impl(const cli_command& cli, const string& name,
+    vector<T>& value, const string& usage, const vector<T>& minmax,
+    const vector<string>& choices, bool req) {
+  auto cli11  = (CLI::App*)cli.state;
+  auto option = cli11->add_option(name, value, usage);
+  if constexpr (!std::is_same_v<T, bool>) {
+    if (minmax.size() == 2) option->check(CLI::Bound(minmax[0], minmax[1]));
+    if (!choices.empty())
+      option->transform(CLI::CheckedTransformer(make_cli_map<T>(choices)));
+  }
 }
 
 // Add an optional argument. Supports strings, numbers, and boolean flags.
 // Optional arguments will be parsed with name `--<name>` and `-<alt>`.
 // Optional booleans will support both `--<name>` and `--no-<name>` to enabled
 // and disable the flag.
-void add_option(cli_command& cli, const string& name, int& value,
+void add_option(const cli_command& cli, const string& name, int& value,
     const string& usage, const vector<int>& minmax, const string& alt,
     bool req) {
-  return add_option_impl(cli, name, make_cli_values(value), cli_type::integer,
-      1, usage, make_cli_values(minmax), {}, alt, req,
-      [&value](const cli_option& option) -> bool {
-        return get_value(option, value);
-      });
+  return add_option_impl(cli, name, value, usage, minmax, {}, alt, req);
 }
-void add_option(cli_command& cli, const string& name, float& value,
+void add_option(const cli_command& cli, const string& name, float& value,
     const string& usage, const vector<float>& minmax, const string& alt,
     bool req) {
-  return add_option_impl(cli, name, make_cli_values(value), cli_type::number, 1,
-      usage, make_cli_values(minmax), {}, alt, req,
-      [&value](const cli_option& option) -> bool {
-        return get_value(option, value);
-      });
+  return add_option_impl(cli, name, value, usage, minmax, {}, alt, req);
 }
-void add_option(cli_command& cli, const string& name, bool& value,
+void add_option(const cli_command& cli, const string& name, bool& value,
     const string& usage, const vector<string>& choices, const string& alt,
     bool req) {
-  return add_option_impl(cli, name, make_cli_values(value), cli_type::boolean,
-      0, usage, {}, choices, alt, req,
-      [&value](const cli_option& option) -> bool {
-        return get_value(option, value);
-      });
+  return add_option_impl(cli, name, value, usage, {}, choices, alt, req);
 }
-void add_option(cli_command& cli, const string& name, string& value,
+void add_option(const cli_command& cli, const string& name, string& value,
     const string& usage, const vector<string>& choices, const string& alt,
     bool req) {
-  return add_option_impl(cli, name, make_cli_values(value), cli_type::string, 1,
-      usage, {}, choices, alt, req, [&value](const cli_option& option) -> bool {
-        return get_value(option, value);
-      });
+  return add_option_impl(cli, name, value, usage, {}, choices, alt, req);
 }
-void add_option(cli_command& cli, const string& name, int& value,
+void add_option(const cli_command& cli, const string& name, int& value,
     const string& usage, const vector<string>& choices, const string& alt,
     bool req) {
-  return add_option_impl(cli, name, make_cli_values(value), cli_type::integer,
-      1, usage, {}, choices, alt, req,
-      [&value](const cli_option& option) -> bool {
-        return get_value(option, value);
-      });
+  return add_option_impl(cli, name, value, usage, {}, choices, alt, req);
 }
 // Add a positional argument. Supports strings, numbers, and boolean flags.
-void add_argument(cli_command& cli, const string& name, int& value,
+void add_argument(const cli_command& cli, const string& name, int& value,
     const string& usage, const vector<int>& minmax, bool req) {
-  return add_argument_impl(cli, name, make_cli_values(value), cli_type::integer,
-      1, usage, make_cli_values(minmax), {}, req,
-      [&value](const cli_option& option) -> bool {
-        return get_value(option, value);
-      });
+  return add_argument_impl(cli, name, value, usage, minmax, {}, req);
 }
-void add_argument(cli_command& cli, const string& name, float& value,
+void add_argument(const cli_command& cli, const string& name, float& value,
     const string& usage, const vector<float>& minmax, bool req) {
-  return add_argument_impl(cli, name, make_cli_values(value), cli_type::number,
-      1, usage, make_cli_values(minmax), {}, req,
-      [&value](const cli_option& option) -> bool {
-        return get_value(option, value);
-      });
+  return add_argument_impl(cli, name, value, usage, minmax, {}, req);
 }
-void add_argument(cli_command& cli, const string& name, bool& value,
+void add_argument(const cli_command& cli, const string& name, bool& value,
     const string& usage, const vector<string>& choices, bool req) {
-  return add_argument_impl(cli, name, make_cli_values(value), cli_type::boolean,
-      1, usage, {}, choices, req, [&value](const cli_option& option) -> bool {
-        return get_value(option, value);
-      });
+  return add_argument_impl(cli, name, value, usage, {}, choices, req);
 }
-void add_argument(cli_command& cli, const string& name, string& value,
+void add_argument(const cli_command& cli, const string& name, string& value,
     const string& usage, const vector<string>& choices, bool req) {
-  return add_argument_impl(cli, name, make_cli_values(value), cli_type::string,
-      1, usage, {}, choices, req, [&value](const cli_option& option) -> bool {
-        return get_value(option, value);
-      });
+  return add_argument_impl(cli, name, value, usage, {}, choices, req);
 }
-void add_argument(cli_command& cli, const string& name, int& value,
+void add_argument(const cli_command& cli, const string& name, int& value,
     const string& usage, const vector<string>& choices, bool req) {
-  return add_argument_impl(cli, name, make_cli_values(value), cli_type::integer,
-      1, usage, {}, choices, req, [&value](const cli_option& option) -> bool {
-        return get_value(option, value);
-      });
+  return add_argument_impl(cli, name, value, usage, {}, choices, req);
 }
 // Add a positional argument that consumes all arguments left.
 // Supports strings and enums.
-void add_argument(cli_command& cli, const string& name, vector<int>& value,
-    const string& usage, const vector<int>& minmax, bool req) {
-  return add_argumentv_impl(cli, name, make_cli_values(value),
-      cli_type::integer, -1, usage, make_cli_values(minmax), {}, req,
-      [&value](const cli_option& option) -> bool {
-        return get_value(option, value);
-      });
+void add_argument(const cli_command& cli, const string& name,
+    vector<int>& value, const string& usage, const vector<int>& minmax,
+    bool req) {
+  return add_argumentv_impl(cli, name, value, usage, minmax, {}, req);
 }
-void add_argument(cli_command& cli, const string& name, vector<float>& value,
-    const string& usage, const vector<float>& minmax, bool req) {
-  return add_argumentv_impl(cli, name, make_cli_values(value), cli_type::number,
-      -1, usage, make_cli_values(minmax), {}, req,
-      [&value](const cli_option& option) -> bool {
-        return get_value(option, value);
-      });
+void add_argument(const cli_command& cli, const string& name,
+    vector<float>& value, const string& usage, const vector<float>& minmax,
+    bool req) {
+  return add_argumentv_impl(cli, name, value, usage, minmax, {}, req);
 }
-void add_argument(cli_command& cli, const string& name, vector<int>& value,
-    const string& usage, const vector<string>& choices, bool req) {
-  return add_argumentv_impl(cli, name, make_cli_values(value),
-      cli_type::integer, -1, usage, {}, choices, req,
-      [&value](const cli_option& option) -> bool {
-        return get_value(option, value);
-      });
+void add_argument(const cli_command& cli, const string& name,
+    vector<int>& value, const string& usage, const vector<string>& choices,
+    bool req) {
+  return add_argumentv_impl(cli, name, value, usage, {}, choices, req);
 }
-void add_argument(cli_command& cli, const string& name, vector<string>& value,
-    const string& usage, const vector<string>& choices, bool req) {
-  return add_argumentv_impl(cli, name, make_cli_values(value), cli_type::string,
-      -1, usage, {}, choices, req, [&value](const cli_option& option) -> bool {
-        return get_value(option, value);
-      });
+void add_argument(const cli_command& cli, const string& name,
+    vector<string>& value, const string& usage, const vector<string>& choices,
+    bool req) {
+  return add_argumentv_impl(cli, name, value, usage, {}, choices, req);
 }
 
 // Add an optional argument. Supports basic math types.
-void add_option(cli_command& cli, const string& name, vec2i& value,
+void add_option(const cli_command& cli, const string& name, vec2i& value,
     const string& usage, const vector<int>& minmax, const string& alt,
     bool req) {
-  return add_option_impl(cli, name, make_cli_values(value), cli_type::integer,
-      2, usage, make_cli_values(minmax), {}, alt, req,
-      [&value](const cli_option& option) -> bool {
-        return get_value(option, value);
-      });
+  return add_option_impl(
+      cli, name, (array<int, 2>&)value, usage, minmax, {}, alt, req);
 }
-void add_option(cli_command& cli, const string& name, vec3i& value,
+void add_option(const cli_command& cli, const string& name, vec3i& value,
     const string& usage, const vector<int>& minmax, const string& alt,
     bool req) {
-  return add_option_impl(cli, name, make_cli_values(value), cli_type::integer,
-      3, usage, make_cli_values(minmax), {}, alt, req,
-      [&value](const cli_option& option) -> bool {
-        return get_value(option, value);
-      });
+  return add_option_impl(
+      cli, name, (array<int, 3>&)value, usage, minmax, {}, alt, req);
 }
-void add_option(cli_command& cli, const string& name, vec4i& value,
+void add_option(const cli_command& cli, const string& name, vec4i& value,
     const string& usage, const vector<int>& minmax, const string& alt,
     bool req) {
-  return add_option_impl(cli, name, make_cli_values(value), cli_type::integer,
-      4, usage, make_cli_values(minmax), {}, alt, req,
-      [&value](const cli_option& option) -> bool {
-        return get_value(option, value);
-      });
+  return add_option_impl(
+      cli, name, (array<int, 4>&)value, usage, minmax, {}, alt, req);
 }
-void add_option(cli_command& cli, const string& name, vec2f& value,
+void add_option(const cli_command& cli, const string& name, vec2f& value,
     const string& usage, const vector<float>& minmax, const string& alt,
     bool req) {
-  return add_option_impl(cli, name, make_cli_values(value), cli_type::number, 2,
-      usage, make_cli_values(minmax), {}, alt, req,
-      [&value](const cli_option& option) -> bool {
-        return get_value(option, value);
-      });
+  return add_option_impl(
+      cli, name, (array<float, 2>&)value, usage, minmax, {}, alt, req);
 }
-void add_option(cli_command& cli, const string& name, vec3f& value,
+void add_option(const cli_command& cli, const string& name, vec3f& value,
     const string& usage, const vector<float>& minmax, const string& alt,
     bool req) {
-  return add_option_impl(cli, name, make_cli_values(value), cli_type::number, 3,
-      usage, make_cli_values(minmax), {}, alt, req,
-      [&value](const cli_option& option) -> bool {
-        return get_value(option, value);
-      });
+  return add_option_impl(
+      cli, name, (array<float, 3>&)value, usage, minmax, {}, alt, req);
 }
-void add_option(cli_command& cli, const string& name, vec4f& value,
+void add_option(const cli_command& cli, const string& name, vec4f& value,
     const string& usage, const vector<float>& minmax, const string& alt,
     bool req) {
-  return add_option_impl(cli, name, make_cli_values(value), cli_type::number, 4,
-      usage, make_cli_values(minmax), {}, alt, req,
-      [&value](const cli_option& option) -> bool {
-        return get_value(option, value);
-      });
+  return add_option_impl(
+      cli, name, (array<float, 4>&)value, usage, minmax, {}, alt, req);
 }
 
 // initialize a command line parser
-cli_command make_cli(const string& name, const string& usage) {
-  auto cli  = cli_command{};
-  cli.name  = name;
-  cli.usage = usage;
-  cli.commands.reserve(256);
+cli_state make_cli(const string& name, const string& usage) {
+  auto cli  = cli_state{};
+  cli.state = {
+      new CLI::App(usage, name), [](void* state) { delete (CLI::App*)state; }};
   return cli;
 }
 
 // add command
-cli_command& add_command(
-    cli_command& cli, const string& name, const string& usage) {
-  validate_name(cli, name);
-  auto& cmd = cli.commands.emplace_back();
-  cmd.name  = name;
-  cmd.usage = usage;
-  cmd.commands.reserve(256);
-  return cmd;
+cli_command add_command(
+    const cli_command& cli, const string& name, const string& usage) {
+  auto cli11 = (CLI::App*)cli.state;
+  cli11->require_subcommand(1);
+  return {cli11->add_subcommand(name, usage)};
 }
 
-void add_command_name(
-    cli_command& cli, const string& name, string& value, const string& usage) {
-  cli.set_command = [&value](const string& cvalue) { value = cvalue; };
+void add_command_name(const cli_command& cli, const string& name, string& value,
+    const string& usage) {
+  auto cli11 = (CLI::App*)cli.state;
+  cli11->final_callback([&value, cli11] {
+    value = cli11->get_subcommands().front()->get_name();
+  });
 }
 
-bool get_help(const cli_command& cli) {
-  if (cli.help) return true;
-  for (auto& cmd : cli.commands)
-    if (get_help(cmd)) return true;
-  return false;
+string get_command(const cli_state& cli) {
+  auto cli11 = (CLI::App*)cli.state.get();
+  return cli11->get_subcommands().front()->get_name();
 }
 
-string get_usage(const cli_command& root, const cli_command& cli) {
-  auto type_name = [](const cli_option& option) -> string {
-    auto str = string{};
-    str += "<";
-    if (option.nargs < 0) str += "[";
-    if (!option.choices.empty()) {
-      str += "string";
-    } else {
-      switch (option.type) {
-        case cli_type::integer: str += "integer"; break;
-        case cli_type::uinteger: str += "uinteger"; break;
-        case cli_type::number: str += "number"; break;
-        case cli_type::string: str += "string"; break;
-        case cli_type::boolean: str += "boolean"; break;
-      }
-    }
-    if (option.nargs < 0) str += "]";
-    str += ">";
-    return str;
-  };
-  auto def_string = [](const cli_option& option) -> string {
-    if (option.req) return string{"[required]"};
-    auto str = string{};
-    str += "[";
-    for (auto& value : option.def) {
-      switch (option.type) {
-        case cli_type::integer:
-          str += option.choices.empty() ? std::to_string(value.integer)
-                                        : option.choices[value.integer];
-          break;
-        case cli_type::uinteger:
-          str += option.choices.empty() ? std::to_string(value.uinteger)
-                                        : option.choices[value.uinteger];
-          break;
-        case cli_type::number: str += std::to_string(value.number); break;
-        case cli_type::string: str += '\"' + value.text + '\"'; break;
-        case cli_type::boolean: str += value.integer ? "true" : "false"; break;
-      }
-    }
-    str += "]";
-    return str;
-  };
-
-  if (!cli.command.empty()) {
-    for (auto& subcommand : cli.commands)
-      if (cli.command == subcommand.name) return get_usage(root, subcommand);
-  }
-
-  auto message       = string{};
-  auto usage_options = string{}, usage_arguments = string{},
-       usage_commands = string{};
-  for (auto& option : cli.options) {
-    auto line = "  --" + option.name;
-    if (!option.alt.empty()) line += ", -" + option.alt;
-    if (option.nargs > 0) line += " " + type_name(option);
-    while (line.size() < 32) line += " ";
-    line += option.usage;
-    line += " " + def_string(option) + "\n";
-    if (!option.choices.empty()) {
-      line += "    with choices: ";
-      auto len = 16;
-      for (auto& choice : option.choices) {
-        if (len + choice.size() + 2 > 78) {
-          line += "\n                  ";
-          len = 16;
-        }
-        line += choice + ", ";
-        len += (int)choice.size() + 2;
-      }
-      line = line.substr(0, line.size() - 2);
-      line += "\n";
-    }
-    usage_options += line;
-  }
-  {
-    auto line = "  --help" + string{};
-    while (line.size() < 32) line += " ";
-    line += "Prints help. [false]\n";
-    usage_options += line;
-  }
-  for (auto& option : cli.arguments) {
-    auto line = "  " + option.name;
-    if (option.nargs > 0) line += " " + type_name(option);
-    while (line.size() < 32) line += " ";
-    line += option.usage;
-    line += " " + def_string(option) + "\n";
-    if (!option.choices.empty()) {
-      line += "    with choices: ";
-      auto len = 16;
-      for (auto& choice : option.choices) {
-        if (len + choice.size() + 2 > 78) {
-          line += "\n                  ";
-          len = 16;
-        }
-        line += choice + ", ";
-        len += (int)choice.size() + 2;
-      }
-      line = line.substr(0, line.size() - 2);
-      line += "\n";
-    }
-    usage_arguments += line;
-  }
-  for (auto& scmd : cli.commands) {
-    auto line = "  " + scmd.name;
-    while (line.size() < 32) line += " ";
-    line += scmd.usage + "\n";
-    usage_commands += line;
-  }
-  auto is_command = &cli != &root;
-  message += "usage: " + root.name + (is_command ? " " + cli.name : "") +
-             (!usage_commands.empty() ? " command" : "") +
-             (!usage_options.empty() ? " [options]" : "") +
-             (!usage_arguments.empty() ? " <arguments>" : "") + "\n";
-  message += cli.usage + "\n\n";
-  if (!usage_commands.empty()) {
-    message += "commands:\n" + usage_commands + "\n";
-  }
-  if (!usage_options.empty()) {
-    message += "options:\n" + usage_options + "\n";
-  }
-  if (!usage_arguments.empty()) {
-    message += "arguments:\n" + usage_arguments + "\n";
-  }
-  return message;
-}
-
-string get_usage(const cli_command& cli) { return get_usage(cli, cli); }
-
-string get_command(const cli_command& cli) { return cli.command; }
-
-static bool parse_value(
-    cli_option& option, const vector<string>& args, size_t start) {
-  option.value.resize(option.nargs > 0 ? option.nargs : (args.size() - start));
-  for (auto idx = (size_t)0; idx < option.value.size(); idx++) {
-    auto& value   = option.value.at(idx);
-    auto& arg     = args.at(start + idx);
-    auto& choices = option.choices;
-    if (!choices.empty()) {
-      if (std::find(choices.begin(), choices.end(), arg) == choices.end())
-        return false;
-    }
-    switch (option.type) {
-      case cli_type::string: {
-        value.text = arg;
-      } break;
-      case cli_type::boolean: {
-        if (arg == "true" || arg == "1") {
-          value.integer = 1;
-        } else if (arg == "false" || arg == "0") {
-          value.integer = 0;
-        } else {
-          return false;
-        }
-      } break;
-      case cli_type::integer: {
-        if (choices.empty()) {
-          auto end      = (char*)nullptr;
-          value.integer = (int)strtol(arg.c_str(), &end, 10);
-          if (end == nullptr) return false;
-          if (option.minmax.size() >= 2) {
-            if (value.integer < option.minmax[0].integer) return false;
-            if (value.integer > option.minmax[1].integer) return false;
-          }
-        } else {
-          value.integer =
-              (int64_t)(std::find(choices.begin(), choices.end(), arg) -
-                        choices.begin());
-        }
-      } break;
-      case cli_type::uinteger: {
-        if (choices.empty()) {
-          auto end       = (char*)nullptr;
-          value.uinteger = (int)strtoul(arg.c_str(), &end, 10);
-          if (end == nullptr) return false;
-          if (option.minmax.size() >= 2) {
-            if (value.uinteger < option.minmax[0].uinteger) return false;
-            if (value.uinteger > option.minmax[1].uinteger) return false;
-          }
-        } else {
-          value.uinteger =
-              (uint64_t)(std::find(choices.begin(), choices.end(), arg) -
-                         choices.begin());
-        }
-      } break;
-      case cli_type::number: {
-        auto end     = (char*)nullptr;
-        value.number = strtod(arg.c_str(), &end);
-        if (end == nullptr) return false;
-        if (option.minmax.size() >= 2) {
-          if (value.number < option.minmax[0].number) return false;
-          if (value.number > option.minmax[1].number) return false;
-        }
-      } break;
-    }
-  }
-  return true;
-}
-
-bool parse_cli(cli_command& cli, vector<string>& args, string& error) {
-  auto cli_error = [&error](const string& message) {
-    error = message;
-    return false;
-  };
-
-  // current parsing state
-  auto commands    = vector<cli_command*>{&cli};
-  auto positionals = vector<int>{0};
-
-  // parse arguments
-  for (auto idx = (size_t)0; idx < args.size(); idx++) {
-    auto& cmd = *commands.back();
-    auto& arg = args[idx];
-    if (arg == "--help") {
-      cmd.help = true;
-      break;
-    }
-    auto is_positional = args[idx].find('-') != 0;
-    if (!cmd.commands.empty() && is_positional) {
-      auto pos = std::find_if(cmd.commands.begin(), cmd.commands.end(),
-          [&arg](auto& command) { return command.name == arg; });
-      if (pos == cmd.commands.end()) return cli_error("unknown command " + arg);
-      cmd.command = arg;
-      commands.push_back(&(*pos));
-      positionals.push_back(0);
-      continue;
-    } else if (is_positional) {
-      if (positionals.back() >= cmd.arguments.size())
-        return cli_error("too many positional arguments");
-      auto& option = cmd.arguments[positionals.back()++];
-      option.set   = true;
-      if (option.nargs > 0) {
-        if (idx + (size_t)option.nargs > args.size())
-          return cli_error("missing value for " + option.name);
-        if (!parse_value(option, args, idx))
-          return cli_error("bad value for " + option.name);
-        idx += option.nargs - 1;
-      } else if (option.nargs < 0) {
-        if (!parse_value(option, args, idx))
-          return cli_error("bad value for " + option.name);
-        idx += args.size();
-      } else {
-        throw std::invalid_argument{"unsupported number of arguments"};
-      }
-    } else {
-      auto pos = std::find_if(
-          cmd.options.begin(), cmd.options.end(), [&arg](auto& option) {
-            return arg == "--" + option.name || arg == "-" + option.alt;
-          });
-      if (pos == cmd.options.end()) return cli_error("unknown option " + arg);
-      auto& option = *pos;
-      option.set   = true;
-      if (option.nargs == 0) {
-        if (option.type != cli_type::boolean)
-          throw std::invalid_argument{"unsupported flag type"};
-        option.value.resize(1);
-        option.value[0].integer = 1;
-      } else if (option.nargs > 0) {
-        if (idx + (size_t)option.nargs >= args.size())
-          return cli_error("missing value for " + option.name);
-        if (!parse_value(option, args, idx + 1))
-          return cli_error("bad value for " + option.name);
-        idx += option.nargs;
-      } else {
-        throw std::invalid_argument{"unsupported number of arguments"};
-      }
-    }
-  }
-
-  // check for help
-  for (auto command_ptr : commands) {
-    auto& command = *command_ptr;
-    if (command.help) return true;
-  }
-
-  // check for required, set defaults and set references
-  for (auto command_ptr : commands) {
-    auto& command = *command_ptr;
-    if (!command.commands.empty() && command.command.empty())
-      return cli_error("command not set for " + command.name);
-    if (command.set_command) command.set_command(command.command);
-    for (auto& option : command.options) {
-      if (option.req && !option.set)
-        return cli_error("missing value for " + option.name);
-      if (!option.set) option.value = option.def;
-      if (option.set_value) {
-        if (!option.set_value(option)) {
-          return cli_error("bad value for " + option.name);
-        }
-      }
-    }
-    for (auto& option : command.arguments) {
-      if (option.req && !option.set)
-        return cli_error("missing value for " + option.name);
-      if (!option.set) option.value = option.def;
-      if (option.set_value) {
-        if (!option.set_value(option)) {
-          return cli_error("bad value for " + option.name);
-        }
-      }
-    }
-  }
-
-  // done
-  return true;
-}
-
-bool parse_cli(cli_command& cli, int argc, const char** argv, string& error) {
-  // prepare args
-  auto args = vector<string>{argv + 1, argv + argc};
-  // parse
-  return parse_cli(cli, args, error);
-}
-
-void parse_cli(cli_command& cli, int argc, const char** argv) {
-  auto error = string{};
-  if (!parse_cli(cli, argc, argv, error)) {
-    print_info("error: " + error);
-    print_info("");
-    print_info(get_usage(cli));
-    exit(1);
-  } else if (get_help(cli)) {
-    print_info(get_usage(cli));
-    exit(0);
+void parse_cli(cli_state& cli, int argc, const char** argv) {
+  auto cli11 = (CLI::App*)cli.state.get();
+  try {
+    cli11->parse(argc, argv);
+  } catch (const CLI::ParseError& e) {
+    exit(cli11->exit(e));
   }
 }
 

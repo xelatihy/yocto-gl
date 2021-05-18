@@ -47,9 +47,9 @@ struct convert_params {
 };
 
 // Cli
-void add_command(cli_command& cli, const string& name, convert_params& params,
-    const string& usage) {
-  auto& cmd = add_command(cli, name, usage);
+void add_command(const cli_command& cli, const string& name,
+    convert_params& params, const string& usage) {
+  auto cmd = add_command(cli, name, usage);
   add_argument(cmd, "scene", params.scene, "Input scene.");
   add_option(cmd, "output", params.output, "Output scene.");
   add_option(cmd, "info", params.info, "Print info.");
@@ -109,9 +109,9 @@ struct info_params {
 };
 
 // Cli
-void add_command(cli_command& cli, const string& name, info_params& params,
-    const string& usage) {
-  auto& cmd = add_command(cli, name, usage);
+void add_command(const cli_command& cli, const string& name,
+    info_params& params, const string& usage) {
+  auto cmd = add_command(cli, name, usage);
   add_argument(cmd, "scene", params.scene, "Input scene.");
   add_option(cmd, "validate", params.validate, "Validate scene.");
 }
@@ -149,9 +149,9 @@ struct render_params : trace_params {
 };
 
 // Cli
-void add_command(cli_command& cli, const string& name, render_params& params,
-    const string& usage) {
-  auto& cmd = add_command(cli, name, usage);
+void add_command(const cli_command& cli, const string& name,
+    render_params& params, const string& usage) {
+  auto cmd = add_command(cli, name, usage);
   add_argument(cmd, "scene", params.scene, "Scene filename.");
   add_option(cmd, "output", params.output, "Output filename.");
   add_option(cmd, "camera", params.camname, "Camera name.");
@@ -264,9 +264,9 @@ struct view_params : trace_params {
 };
 
 // Cli
-void add_command(cli_command& cli, const string& name, view_params& params,
-    const string& usage) {
-  auto& cmd = add_command(cli, name, usage);
+void add_command(const cli_command& cli, const string& name,
+    view_params& params, const string& usage) {
+  auto cmd = add_command(cli, name, usage);
   add_argument(cmd, "scene", params.scene, "Scene filename.");
   add_option(cmd, "output", params.output, "Output filename.");
   add_option(cmd, "camera", params.camname, "Camera name.");
@@ -347,9 +347,9 @@ struct glview_params {
 };
 
 // Cli
-void add_command(cli_command& cli, const string& name, glview_params& params,
-    const string& usage) {
-  auto& cmd = add_command(cli, name, usage);
+void add_command(const cli_command& cli, const string& name,
+    glview_params& params, const string& usage) {
+  auto cmd = add_command(cli, name, usage);
   add_argument(cmd, "scene", params.scene, "Input scene.");
   add_option(cmd, "camera", params.camname, "Camera name.");
 }
@@ -404,21 +404,21 @@ struct app_params {
 };
 
 // Cli
-void add_commands(cli_command& cli, const string& name, app_params& params,
-    const string& usage) {
-  cli = make_cli(name, usage);
+cli_state make_commands(
+    const string& name, app_params& params, const string& usage) {
+  auto cli = make_cli(name, usage);
   add_command_name(cli, "command", params.command, "Command.");
   add_command(cli, "convert", params.convert, "Convert scenes.");
   add_command(cli, "info", params.info, "Print scenes info.");
   add_command(cli, "render", params.render, "Render scenes.");
   add_command(cli, "view", params.view, "View scenes.");
   add_command(cli, "glview", params.glview, "View scenes with OpenGL.");
+  return cli;
 }
 
 // Parse cli
 void parse_cli(app_params& params, int argc, const char** argv) {
-  auto cli = cli_command{};
-  add_commands(cli, "yscene", params, "Process and view scenes.");
+  auto cli = make_commands("yscene", params, "Process and view scenes.");
   parse_cli(cli, argc, argv);
 }
 
