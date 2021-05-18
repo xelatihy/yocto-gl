@@ -945,6 +945,9 @@ void add_command_name(const cli_command& cli, const string& name, string& value,
   cli11->final_callback([&value, cli11] {
     value = cli11->get_subcommands().front()->get_name();
   });
+  cli.state->variables.push_back(
+      cli_variable{cli.path.empty() ? "command" : (cli.path + "/command"),
+          &value, cli_from_json_<string>, {}});
 }
 
 string get_command(const cli_state& cli) {
