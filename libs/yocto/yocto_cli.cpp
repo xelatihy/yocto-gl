@@ -333,8 +333,33 @@ static void cli_to_json(
 }
 
 template <typename T>
+struct cli_is_array {
+  static const bool value = false;
+};
+template <typename T, size_t N>
+struct cli_is_array<array<T, N>> {
+  static const bool value = true;
+};
+template <typename T>
+constexpr bool cli_is_array_v = cli_is_array<T>::value;
+
+template <typename T>
+struct cli_is_vector {
+  static const bool value = false;
+};
+template <typename T, typename A>
+struct cli_is_vector<vector<T, A>> {
+  static const bool value = true;
+};
+template <typename T>
+constexpr bool cli_is_vector_v = cli_is_vector<T>::value;
+
+template <typename T>
 static bool cli_from_json(
     const cli_json& js, T& value, const vector<string>& choices) {
+  static_assert(std::is_same_v<T, int32_t> || std::is_same_v<T, int64_t> ||std::is_same_v<T, int32_t> ||
+                std::is_same_v<T, int64_t> || std::is_same_v<T, float> ||
+                std::is_same_v<T, double> || std::is_same_v<T, bool> || std::is_same_v<T, string> || cli_is_array_v<T>|| cli_is_vector_v<T>, "unsupported type");
   if (!choices.empty()) {
     auto values = (string)js;
     if (std::find(choices.begin(), choices.end(), values) == choices.end()) {
@@ -357,21 +382,33 @@ static bool cli_from_json(
 }
 
 template <typename T>
-static void cli_to_schema(
-    cli_json& js, const T& value, const vector<string>& choices) {
+static void cli_to_schema(cli_json& js, const T& value,
+    const vector<string>& choices, const string& name, const string& usage) {
+  static_assert(std::is_same_v<T, int32_t> || std::is_same_v<T, int64_t> ||std::is_same_v<T, int32_t> ||
+                std::is_same_v<T, int64_t> || std::is_same_v<T, float> ||
+                std::is_same_v<T, double> || std::is_same_v<T, bool> || std::is_same_v<T, string> || cli_is_array_v<T>|| cli_is_vector_v<T>, "unsupported type");
+  js["cli_name"]    = name;
+  js["description"] = usage;
   if (!choices.empty()) {
-    if constexpr (std::is_same_v<T, int32_t> || std::is_same_v<T, int64_t> ||
-                  std::is_same_v<T, uint32_t> || std::is_same_v<T, uint64_t>) {
-      js = choices.at((int)value);
-    } else if constexpr (std::is_same_v<T, string>) {
-      js = value;
-    } else if constexpr (std::is_same_v<T, bool>) {
-      js = choices.at(value ? 1 : 0);
-    } else {
-      throw std::runtime_error{"type not supported"};
-    }
+    js["type"] = "string";
   } else {
-    js = value;
+    if constexpr (std::is_same_v<T, int32_t> || std::is_same_v<T, int64_t>) {
+      js["type"] = "integer";
+    } else if constexpr (std::is_same_v<T, int32_t> ||
+                         std::is_same_v<T, int64_t>) {
+      js["type"] = "unsigned";
+    } else if constexpr (std::is_same_v<T, float> ||
+                         std::is_same_v<T, double>) {
+      js["type"] = "number";
+    } else if constexpr (std::is_same_v<T, bool>) {
+      js["type"] = "boolean";
+    } else if constexpr (std::is_same_v<T, string>) {
+      js["type"] = "string";
+    } else if constexpr (cli_is_array_v<T>) {
+      js["type"] = "array";
+    } else if constexpr (cli_is_vector_v<T>) {
+      js["type"] = "array";
+    }
   }
 }
 
@@ -406,9 +443,9 @@ static void add_option_impl(const cli_command& cli, const string& name,
       option->transform(CLI::CheckedTransformer(make_cli_map<T>(choices)));
   }
   auto& defaults = get_defaults(cli);
-  // auto& schema   = get_schema(cli);
+  auto& schema   = get_schema(cli);
   cli_to_json(defaults[name], value, choices);
-  // cli_to_schema(schema["properties"][name], value, choices);
+  cli_to_schema(schema["properties"][name], value, choices, name, usage);
 }
 
 template <typename T, size_t N>
@@ -424,9 +461,9 @@ static void add_option_impl(const cli_command& cli, const string& name,
       option->transform(CLI::CheckedTransformer(make_cli_map<T>(choices)));
   }
   auto& defaults = get_defaults(cli);
-  // auto& schema   = get_schema(cli);
+  auto& schema   = get_schema(cli);
   cli_to_json(defaults[name], value, choices);
-  // cli_to_schema(schema["properties"][name], value, choices);
+  cli_to_schema(schema["properties"][name], value, choices, name, usage);
 }
 template <typename T>
 static void add_argument_impl(const cli_command& cli, const string& name,
@@ -440,9 +477,9 @@ static void add_argument_impl(const cli_command& cli, const string& name,
       option->transform(CLI::CheckedTransformer(make_cli_map<T>(choices)));
   }
   auto& defaults = get_defaults(cli);
-  // auto& schema   = get_schema(cli);
+  auto& schema   = get_schema(cli);
   cli_to_json(defaults[name], value, choices);
-  // cli_to_schema(schema["properties"][name], value, choices);
+  cli_to_schema(schema["properties"][name], value, choices, name, usage);
 }
 
 template <typename T, size_t N>
@@ -457,9 +494,9 @@ static void add_argument_impl(const cli_command& cli, const string& name,
       option->transform(CLI::CheckedTransformer(make_cli_map<T>(choices)));
   }
   auto& defaults = get_defaults(cli);
-  // auto& schema   = get_schema(cli);
+  auto& schema   = get_schema(cli);
   cli_to_json(defaults[name], value, choices);
-  // cli_to_schema(schema["properties"][name], value, choices);
+  cli_to_schema(schema["properties"][name], value, choices, name, usage);
 }
 
 template <typename T>
@@ -474,9 +511,9 @@ static void add_argumentv_impl(const cli_command& cli, const string& name,
       option->transform(CLI::CheckedTransformer(make_cli_map<T>(choices)));
   }
   auto& defaults = get_defaults(cli);
-  // auto& schema   = get_schema(cli);
+  auto& schema   = get_schema(cli);
   cli_to_json(defaults[name], value, choices);
-  // cli_to_schema(schema["properties"][name], value, choices);
+  cli_to_schema(schema["properties"][name], value, choices, name, usage);
 }
 
 // Add an optional argument. Supports strings, numbers, and boolean flags.
