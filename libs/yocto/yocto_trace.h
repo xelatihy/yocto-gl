@@ -112,6 +112,7 @@ struct trace_params {
   float                 exposure       = 0;
   bool                  filmic         = false;
   bool                  denoise        = false;
+  int                   batch          = 1;
 };
 
 inline const auto trace_sampler_names = std::vector<std::string>{"path",

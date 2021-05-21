@@ -521,13 +521,15 @@ void view_scene(const string& title, const string& name, scene_model& scene,
 
     // start renderer
     render_worker = std::async(std::launch::async, [&]() {
-      for (auto sample = 0; sample < params.samples; sample++) {
+      for (auto sample = 0; sample < params.samples; sample += params.batch) {
         if (render_stop) return;
         parallel_for(state.width, state.height, [&](int i, int j) {
-          if (render_stop) return;
-          trace_sample(state, scene, bvh, lights, i, j, params);
+          for (auto s = 0; s < params.batch; s++) {
+            if (render_stop) return;
+            trace_sample(state, scene, bvh, lights, i, j, params);
+          }
         });
-        state.samples += 1;
+        state.samples += params.batch;
         if (!render_stop) {
           auto lock      = std::lock_guard{render_mutex};
           render_current = state.samples;
@@ -592,6 +594,7 @@ void view_scene(const string& title, const string& name, scene_model& scene,
       edited += draw_glcombobox(
           "false color", (int&)tparams.falsecolor, trace_falsecolor_names);
       edited += draw_glslider("bounces", tparams.bounces, 1, 128);
+      edited += draw_glslider("batch", tparams.batch, 1, 16);
       edited += draw_glslider("clamp", tparams.clamp, 10, 1000);
       edited += draw_glcheckbox("envhidden", tparams.envhidden);
       continue_glline();
