@@ -107,40 +107,50 @@
   },
   "materials": {
     "floor": {
+      "type": "matte",
       "color": [0.7, 0.7, 0.7],
       "color_tex": "floor"
     },
     "arealight1": {
+      "type": "matte",
       "emission": [20, 20, 20]
     },
     "arealight2": {
+      "type": "matte",
       "emission": [20, 20, 20]
     },
     "sphere-matte": {
+      "type": "matte",
       "color": [0.7, 0.7, 0.7],
       "roughness": 1
     },
     "hairball1-hair": {
+      "type": "matte",
       "color": [0.7, 0.7, 0.7],
       "roughness": 1
     },
     "hairball2-hair": {
+      "type": "matte",
       "color": [0.7, 0.7, 0.7],
       "roughness": 1
     },
     "hairball3-hair": {
+      "type": "matte",
       "color": [0.7, 0.7, 0.7],
       "roughness": 1
     },
     "hairballi1-hair": {
+      "type": "matte",
       "color": [0.7, 0.7, 0.7],
       "roughness": 1
     },
     "hairballi2-hair": {
+      "type": "matte",
       "color": [0.7, 0.7, 0.7],
       "roughness": 1
     },
     "hairballi3-hair": {
+      "type": "matte",
       "color": [0.7, 0.7, 0.7],
       "roughness": 1
     }

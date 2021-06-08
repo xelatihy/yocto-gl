@@ -24,6 +24,8 @@
 //    distribution.
 //
 //========================================================================
+// Please use C89 style variable declarations in this file because VS 2010
+//========================================================================
 
 #include "internal.h"
 
@@ -141,6 +143,8 @@ static GLFWbool loadLibraries(void)
             GetProcAddress(_glfw.win32.dwmapi.instance, "DwmFlush");
         _glfw.win32.dwmapi.EnableBlurBehindWindow = (PFN_DwmEnableBlurBehindWindow)
             GetProcAddress(_glfw.win32.dwmapi.instance, "DwmEnableBlurBehindWindow");
+        _glfw.win32.dwmapi.GetColorizationColor = (PFN_DwmGetColorizationColor)
+            GetProcAddress(_glfw.win32.dwmapi.instance, "DwmGetColorizationColor");
     }
 
     _glfw.win32.shcore.instance = LoadLibraryA("shcore.dll");
@@ -523,7 +527,7 @@ BOOL _glfwIsWindowsVersionOrGreaterWin32(WORD major, WORD minor, WORD sp)
     cond = VerSetConditionMask(cond, VER_MINORVERSION, VER_GREATER_EQUAL);
     cond = VerSetConditionMask(cond, VER_SERVICEPACKMAJOR, VER_GREATER_EQUAL);
     // HACK: Use RtlVerifyVersionInfo instead of VerifyVersionInfoW as the
-    //       latter lies unless the user knew to embedd a non-default manifest
+    //       latter lies unless the user knew to embed a non-default manifest
     //       announcing support for Windows 10 via supportedOS GUID
     return RtlVerifyVersionInfo(&osvi, mask, cond) == 0;
 }
@@ -538,7 +542,7 @@ BOOL _glfwIsWindows10BuildOrGreaterWin32(WORD build)
     cond = VerSetConditionMask(cond, VER_MINORVERSION, VER_GREATER_EQUAL);
     cond = VerSetConditionMask(cond, VER_BUILDNUMBER, VER_GREATER_EQUAL);
     // HACK: Use RtlVerifyVersionInfo instead of VerifyVersionInfoW as the
-    //       latter lies unless the user knew to embedd a non-default manifest
+    //       latter lies unless the user knew to embed a non-default manifest
     //       announcing support for Windows 10 via supportedOS GUID
     return RtlVerifyVersionInfo(&osvi, mask, cond) == 0;
 }

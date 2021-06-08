@@ -6,19 +6,18 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v1
-      - name: install ubuntu dependencies
+      - uses: actions/checkout@v2
+      - name: dependencies
         run: |
-          sudo apt-get update --yes
-          sudo apt-get install --yes ninja-build
+          sudo apt-get install xorg-dev
       - name: configure
         env:
-          CC: gcc-8
-          CXX: g++-8
+          CC: gcc-9
+          CXX: g++-9
         run: |
           mkdir build
           cd build
-          cmake .. -GNinja -DYOCTO_OPENGL=OFF -DYOCTO_EMBREE=OFF
+          cmake .. -G"Unix Makefiles" -DYOCTO_OPENGL=ON -DYOCTO_EMBREE=OFF -DYOCTO_DENOISE=OFF
       - name: build
         run: |
           cd build

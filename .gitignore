@@ -6,6 +6,10 @@ out1
 /*.hdr
 /*.exr
 /*.png
+/*.jpg
+/*.ply
+/*.obj
+/*.stl
 .vscode/ipch/
 tests/renderings/*.png
 tests/renderings/*.hdr
@@ -14,3 +18,4 @@ tests2/
 .vs
 testsr/
 site/
+tests/sculpting1

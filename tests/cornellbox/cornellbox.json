@@ -13,36 +13,28 @@
   },
   "materials": {
     "backwall": {
-      "color": [0.725, 0.71, 0.68],
-      "displacement": 1.0
+      "color": [0.725, 0.71, 0.68]
     },
     "ceiling": {
-      "color": [0.725, 0.71, 0.68],
-      "displacement": 1.0
+      "color": [0.725, 0.71, 0.68]
     },
     "floor": {
-      "color": [0.725, 0.71, 0.68],
-      "displacement": 1.0
+      "color": [0.725, 0.71, 0.68]
     },
     "leftwall": {
-      "color": [0.63, 0.065, 0.05],
-      "displacement": 1.0
+      "color": [0.63, 0.065, 0.05]
     },
     "light": {
-      "displacement": 1.0,
       "emission": [17.0, 12.0, 4.0]
     },
     "rightwall": {
-      "color": [0.14, 0.45, 0.09],
-      "displacement": 1.0
+      "color": [0.14, 0.45, 0.09]
     },
     "shortbox": {
-      "color": [0.725, 0.71, 0.68],
-      "displacement": 1.0
+      "color": [0.725, 0.71, 0.68]
     },
     "tallbox": {
-      "color": [0.725, 0.71, 0.68],
-      "displacement": 1.0
+      "color": [0.725, 0.71, 0.68]
     }
   },
   "instances": {

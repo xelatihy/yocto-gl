@@ -122,71 +122,70 @@
   },
   "materials": {
     "floor": {
+      "type": "matte",
       "color": [0.7, 0.7, 0.7],
       "color_tex": "floor"
     },
     "largearealight1": {
+      "type": "matte",
       "emission": [10, 10, 10]
     },
     "largearealight2": {
+      "type": "matte",
       "emission": [10, 10, 10]
     },
     "sphere-plastic-sharp-bumped": {
-      "specular": 1,
+      "type": "glossy",
       "color": [0.5, 0.5, 0.7],
       "roughness": 0.01,
       "normal_tex": "bumps-normal"
     },
     "sphere-plastic-rough-coated": {
-      "specular": 1,
-      "coat": 1,
+      "type": "glossy",
       "color": [0.5, 0.7, 0.5],
       "roughness": 0.2
     },
     "sphere-metal-sharp-bumped": {
+      "type": "metallic",
       "color": [0.7, 0.7, 0.7],
-      "metallic": 1,
       "roughness": 0,
       "normal_tex": "bumps-normal"
     },
     "sphere-metal-rough-coated": {
-      "coat": 1,
+      "type": "metallic",
       "color": [0.66, 0.45, 0.34],
-      "metallic": 1,
       "roughness": 0.2
     },
     "sphere-metal-rough": {
+      "type": "metallic",
       "color": [0.66, 0.45, 0.34],
-      "metallic": 1,
       "roughness": 0.2
     },
     "bunny-plastic-sharp-bumped": {
-      "specular": 1,
+      "type": "glossy",
       "color": [0.5, 0.5, 0.7],
       "roughness": 0.01,
       "normal_tex": "bumps-normal"
     },
     "bunny-plastic-rough-coated": {
-      "specular": 1,
-      "coat": 1,
+      "type": "glossy",
       "color": [0.5, 0.7, 0.5],
       "roughness": 0.2
     },
     "bunny-metal-sharp-bumped": {
+      "type": "metallic",
       "color": [0.7, 0.7, 0.7],
-      "metallic": 1,
       "roughness": 0,
       "normal_tex": "bumps-normal"
     },
     "bunny-metal-rough-coated": {
-      "coat": 1,
+      "type": "metallic",
       "color": [0.66, 0.45, 0.34],
-      "metallic": 1,
       "roughness": 0.2
     },
     "bunny-metal-rough": {
+      "type": "metallic",
       "color": [0.66, 0.45, 0.34],
-      "metallic": 1,
       "roughness": 0.2
     }
   }

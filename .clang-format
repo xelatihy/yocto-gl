@@ -15,3 +15,6 @@ BreakStringLiterals: false
 
 PenaltyBreakAssignment: 20
 PenaltyBreakBeforeFirstCallParameter: 50
+
+DerivePointerAlignment: false
+PointerAlignment: Left

@@ -76,6 +76,29 @@ ldr = contrast(saturate(ldr,0.7),0.7);            // contrast and saturation
 auto hdr2 = logcontrast(hdr * tint, 0.7, 0.18);   // contrast and tint in HDR
 ```
 
+## Color grading
+
+Several color corrections are bundled together, with their parameters
+packed in a convenience structure `colorgrade_params`, to implement a minimal
+set of minimal color grading tools in manner similar to
+[Hable 2017](http://filmicworlds.com/blog/minimal-color-grading-tools/),
+using the function `colorgrade(color, linear, params)`.
+Color grading operations are applied in a fixed sequence and consist of the
+following operations: exposure compensation, color tint, contrast in the log domain,
+filmic curve, conversion to sRGB, S-shaped contrast, saturation,
+and shadow/midtone/highlight correction.
+Color tinting can be used to apply white balance by using
+`compute_white_balance(img)` to determine the correct color.
+Color grading corrections can be applied to either linear HDR
+or sRGB encoded colors. The results is always an LDR value encoded in sRGB.
+
+```cpp
+auto params = colorgrade_params{};       // default color grading params
+params.exposure = 1;                     // set desired params
+params.logcontrast = 0.75;               // set desired params
+auto ldr = colorgrade(hdr, linear, params);// color grading
+```
+
 ## Color map
 
 Yocto/Color defines functions to apply standard color maps.

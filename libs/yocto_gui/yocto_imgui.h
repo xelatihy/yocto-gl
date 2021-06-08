@@ -5,7 +5,7 @@
 //
 // LICENSE:
 //
-// Copyright (c) 2016 -- 2020 Fabio Pellacini
+// Copyright (c) 2016 -- 2021 Fabio Pellacini
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -37,6 +37,8 @@
 #include <yocto/yocto_math.h>
 
 #include <functional>
+#include <memory>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -49,8 +51,10 @@ struct GLFWwindow;
 namespace yocto {
 
 // using directives
+using std::array;
 using std::function;
 using std::string;
+using std::unique_ptr;
 using std::vector;
 
 }  // namespace yocto
@@ -191,10 +195,219 @@ void set_close(gui_window* win, bool close);
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+enum struct gui_param_type {
+  // clang-format off
+  value1f, value2f, value3f, value4f, 
+  value1i, value2i, value3i, value4i, 
+  value1s, value1b
+  // clang-format on
+};
+
+struct gui_param {
+  // constructors
+  gui_param()
+      : type{gui_param_type::value1f}
+      , valuef{0, 0, 0, 0}
+      , minmaxf{0, 0}
+      , readonly{true} {}
+  gui_param(float value, const vec2f& minmax = {0, 0}, bool readonly = false)
+      : type{gui_param_type::value1f}
+      , valuef{value, 0, 0, 0}
+      , minmaxf{minmax}
+      , readonly{readonly} {}
+  gui_param(vec2f value, const vec2f& minmax = {0, 0}, bool readonly = false)
+      : type{gui_param_type::value2f}
+      , valuef{value.x, value.y, 0, 0}
+      , minmaxf{minmax}
+      , readonly{readonly} {}
+  gui_param(vec3f value, const vec2f& minmax = {0, 0}, bool readonly = false)
+      : type{gui_param_type::value3f}
+      , valuef{value.x, value.y, value.z}
+      , minmaxf{minmax}
+      , readonly{readonly} {}
+  gui_param(vec4f value, const vec2f& minmax = {0, 0}, bool readonly = false)
+      : type{gui_param_type::value4f}
+      , valuef{value.x, value.y, value.z, value.w}
+      , minmaxf{minmax}
+      , readonly{readonly} {}
+  gui_param(vec3f value, bool color, bool readonly = false)
+      : type{gui_param_type::value3f}
+      , valuef{value.x, value.y, value.z, 1}
+      , color{color}
+      , readonly{readonly} {}
+  gui_param(vec4f value, bool color, bool readonly = false)
+      : type{gui_param_type::value4f}
+      , valuef{value.x, value.y, value.z, value.w}
+      , color{color}
+      , readonly{readonly} {}
+  gui_param(int value, const vec2i& minmax = {0, 0}, bool readonly = false)
+      : type{gui_param_type::value1i}
+      , valuei{value, 0, 0, 0}
+      , minmaxi{minmax}
+      , readonly{readonly} {}
+  gui_param(vec2i value, const vec2i& minmax = {0, 0}, bool readonly = false)
+      : type{gui_param_type::value2i}
+      , valuei{value.x, value.y, 0, 0}
+      , minmaxi{minmax}
+      , readonly{readonly} {}
+  gui_param(vec3i value, const vec2i& minmax = {0, 0}, bool readonly = false)
+      : type{gui_param_type::value3i}
+      , valuei{value.x, value.y, value.z, 0}
+      , minmaxi{minmax}
+      , readonly{readonly} {}
+  gui_param(vec4i value, const vec2i& minmax = {0, 0}, bool readonly = false)
+      : type{gui_param_type::value4i}
+      , valuei{value.x, value.y, value.z, value.w}
+      , minmaxi{minmax}
+      , readonly{readonly} {}
+  gui_param(bool value, bool readonly = false)
+      : type{gui_param_type::value1b}, valueb{value}, readonly{readonly} {}
+  gui_param(const string& value, bool readonly = false)
+      : type{gui_param_type::value1s}, values{value}, readonly{readonly} {}
+  gui_param(
+      const string& value, const vector<string>& labels, bool readonly = false)
+      : type{gui_param_type::value1s}
+      , values{value}
+      , labels{labels}
+      , readonly{readonly} {}
+  gui_param(int value, const vector<string>& labels, bool readonly = false)
+      : type{gui_param_type::value1i}
+      , valuei{value, 0, 0, 0}
+      , labels{labels}
+      , readonly{readonly} {}
+  template <typename T, typename = std::enable_if_t<std::is_enum_v<T>>>
+  gui_param(T value, const vector<string>& labels, bool readonly = false)
+      : type{gui_param_type::value1i}
+      , valuei{(int)value, 0, 0, 0}
+      , labels{labels}
+      , readonly{readonly} {}
+
+  // conversions
+  operator float() const {
+    check_type(gui_param_type::value1f);
+    return valuef.x;
+  }
+  operator vec2f() const {
+    check_type(gui_param_type::value2f);
+    return {valuef.x, valuef.y};
+  }
+  operator vec3f() const {
+    check_type(gui_param_type::value3f);
+    return {valuef.x, valuef.y, valuef.z};
+  }
+  operator vec4f() const {
+    check_type(gui_param_type::value4f);
+    return {valuef.x, valuef.y, valuef.z, valuef.w};
+  }
+  operator int() const {
+    check_type(gui_param_type::value1i);
+    return valuei.x;
+  }
+  operator vec2i() const {
+    check_type(gui_param_type::value2i);
+    return {valuei.x, valuei.y};
+  }
+  operator vec3i() const {
+    check_type(gui_param_type::value3i);
+    return {valuei.x, valuei.y, valuei.z};
+  }
+  operator vec4i() const {
+    check_type(gui_param_type::value4i);
+    return {valuei.x, valuei.y, valuei.z, valuei.w};
+  }
+  operator bool() const {
+    check_type(gui_param_type::value1b);
+    return valueb;
+  }
+  operator string() const {
+    check_type(gui_param_type::value1s);
+    return values;
+  }
+  template <typename T, typename = std::enable_if_t<std::is_enum_v<T>>>
+  operator T() const {
+    check_type(gui_param_type::value1i);
+    return (T)valuei.x;
+  }
+
+  // type checking
+  void check_type(gui_param_type type) const {
+    if (type != this->type) throw std::invalid_argument{"bad gui type"};
+  }
+
+  // value
+  gui_param_type type   = gui_param_type::value1f;
+  vec4f          valuef = {0, 0, 0, 0};
+  vec4i          valuei = {0, 0, 0, 0};
+  bool           valueb = false;
+  string         values = "";
+
+  // display properties
+  vec2f          minmaxf  = {0, 0};
+  vec2i          minmaxi  = {0, 0};
+  bool           color    = false;
+  vector<string> labels   = {};
+  bool           readonly = false;
+};
+
+struct gui_params {
+  using container      = vector<pair<string, gui_param>>;
+  using iterator       = container::iterator;
+  using const_iterator = container::const_iterator;
+
+  gui_params() {}
+
+  bool   empty() const { return items.empty(); }
+  size_t size() const { return items.size(); }
+
+  gui_param& operator[](const string& key) {
+    auto item = find(key);
+    if (item == end()) return items.emplace_back(key, gui_param{}).second;
+    return item->second;
+  }
+  const gui_param& operator[](const string& key) const { return at(key); }
+
+  gui_param& at(const string& key) {
+    auto item = find(key);
+    if (item == end()) throw std::out_of_range{"key not found " + key};
+    return item->second;
+  }
+  const gui_param& at(const string& key) const {
+    auto item = find(key);
+    if (item == end()) throw std::out_of_range{"key not found " + key};
+    return item->second;
+  }
+
+  iterator find(const string& key) {
+    for (auto iterator = items.begin(); iterator != items.end(); ++iterator) {
+      if (iterator->first == key) return iterator;
+    }
+    return items.end();
+  }
+  const_iterator find(const string& key) const {
+    for (auto iterator = items.begin(); iterator != items.end(); ++iterator) {
+      if (iterator->first == key) return iterator;
+    }
+    return items.end();
+  }
+
+  iterator       begin() { return items.begin(); }
+  iterator       end() { return items.end(); }
+  const_iterator begin() const { return items.begin(); }
+  const_iterator end() const { return items.end(); }
+
+ private:
+  vector<pair<string, gui_param>> items;
+};
+
+// draw params
+bool draw_params(gui_window* win, const string& title, gui_params& value);
+
 bool begin_header(gui_window* win, const char* title);
 void end_header(gui_window* win);
 
 void draw_label(gui_window* win, const char* lbl, const string& text);
+void draw_label(gui_window* win, const char* lbl, int value);
+void draw_label(gui_window* win, const char* lbl, bool value);
 
 void draw_separator(gui_window* win);
 void continue_line(gui_window* win);
@@ -244,16 +457,25 @@ bool draw_checkbox(gui_window* win, const char* lbl, bool& value, bool invert);
 
 bool draw_coloredit(gui_window* win, const char* lbl, vec3f& value);
 bool draw_coloredit(gui_window* win, const char* lbl, vec4f& value);
+bool draw_coloredit(gui_window* win, const char* lbl, vec4b& value);
 
 bool draw_hdrcoloredit(gui_window* win, const char* lbl, vec3f& value);
 bool draw_hdrcoloredit(gui_window* win, const char* lbl, vec4f& value);
 
-bool draw_combobox(
-    gui_window* win, const char* lbl, int& idx, const vector<string>& labels);
+bool draw_combobox(gui_window* win, const char* lbl, int& idx,
+    const vector<string>& labels, bool include_null = false);
 bool draw_combobox(gui_window* win, const char* lbl, string& value,
-    const vector<string>& labels);
+    const vector<string>& labels, bool include_null = false);
 bool draw_combobox(gui_window* win, const char* lbl, int& idx, int num,
     const function<string(int)>& labels, bool include_null = false);
+
+template <typename T>
+inline bool draw_combobox(gui_window* win, const char* lbl, int& idx,
+    const vector<T*>& vals, bool include_null = false) {
+  return draw_combobox(
+      win, lbl, idx, (int)vals.size(), [&](int idx) { return vals[idx]->name; },
+      include_null);
+}
 
 template <typename T>
 inline bool draw_combobox(gui_window* win, const char* lbl, T*& value,
@@ -266,6 +488,21 @@ inline bool draw_combobox(gui_window* win, const char* lbl, T*& value,
       include_null);
   if (edited) {
     value = idx >= 0 ? vals[idx] : nullptr;
+  }
+  return edited;
+}
+
+template <typename T>
+inline bool draw_combobox(gui_window* win, const char* lbl, T*& value,
+    const vector<unique_ptr<T>>& vals, bool include_null = false) {
+  auto idx = -1;
+  for (auto pos = 0; pos < vals.size(); pos++)
+    if (vals[pos].get() == value) idx = pos;
+  auto edited = draw_combobox(
+      win, lbl, idx, (int)vals.size(), [&](int idx) { return vals[idx]->name; },
+      include_null);
+  if (edited) {
+    value = idx >= 0 ? vals[idx].get() : nullptr;
   }
   return edited;
 }
@@ -308,6 +545,21 @@ void log_info(gui_window* win, const string& msg);
 void log_error(gui_window* win, const string& msg);
 void clear_log(gui_window* win);
 void draw_log(gui_window* win);
+
+// Convenience funcion for params
+bool draw_dragger(gui_window* win, const char* lbl, array<float, 2>& value,
+    float speed = 1.0f, float min = 0.0f, float max = 0.0f);
+bool draw_dragger(gui_window* win, const char* lbl, array<float, 3>& value,
+    float speed = 1.0f, float min = 0.0f, float max = 0.0f);
+bool draw_dragger(gui_window* win, const char* lbl, array<float, 4>& value,
+    float speed = 1.0f, float min = 0.0f, float max = 0.0f);
+
+bool draw_dragger(gui_window* win, const char* lbl, array<int, 2>& value,
+    float speed = 1, int min = 0, int max = 0);
+bool draw_dragger(gui_window* win, const char* lbl, array<int, 3>& value,
+    float speed = 1, int min = 0, int max = 0);
+bool draw_dragger(gui_window* win, const char* lbl, array<int, 4>& value,
+    float speed = 1, int min = 0, int max = 0);
 
 }  // namespace yocto
 

@@ -10,7 +10,7 @@
 //
 // LICENSE:
 //
-// Copyright (c) 2016 -- 2020 Fabio Pellacini
+// Copyright (c) 2016 -- 2021 Fabio Pellacini
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -588,8 +588,8 @@ inline ray3f camera_ray(const frame3f& frame, float lens, float aspect,
     float film_, const vec2f& image_uv) {
   auto film = aspect >= 1 ? vec2f{film_, film_ / aspect}
                           : vec2f{film_ * aspect, film_};
-  auto e = zero3f;
-  auto q = vec3f{
+  auto e    = zero3f;
+  auto q    = vec3f{
       film.x * (0.5f - image_uv.x), film.y * (image_uv.y - 0.5f), lens};
   auto q1  = -q;
   auto d   = normalize(q1 - e);

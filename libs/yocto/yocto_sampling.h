@@ -10,7 +10,7 @@
 //
 // LICENSE:
 //
-// Copyright (c) 2016 -- 2020 Fabio Pellacini
+// Copyright (c) 2016 -- 2021 Fabio Pellacini
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -124,6 +124,12 @@ inline vec3f sample_hemisphere_cospower(float exponent, const vec2f& ruv);
 inline float sample_hemisphere_cospower_pdf(
     float exponent, const vec3f& direction);
 
+// Sample an hemispherical direction with cosine power distribution.
+inline vec3f sample_hemisphere_cospower(
+    float exponent, const vec3f& normal, const vec2f& ruv);
+inline float sample_hemisphere_cospower_pdf(
+    float exponent, const vec3f& normal, const vec3f& direction);
+
 // Sample a point uniformly on a disk.
 inline vec2f sample_disk(const vec2f& ruv);
 inline float sample_disk_pdf(const vec2f& point);
@@ -151,28 +157,9 @@ inline float sample_uniform(const vector<float>& elements, float r);
 inline float sample_uniform_pdf(const vector<float>& elements);
 
 // Sample a discrete distribution represented by its cdf.
-[[deprecated]] inline int sample_discrete(const vector<float>& cdf, float r);
+inline int sample_discrete(const vector<float>& cdf, float r);
 // Pdf for uniform discrete distribution sampling.
-[[deprecated]] inline float sample_discrete_pdf(
-    const vector<float>& cdf, int idx);
-
-// Sample a discrete distribution represented by its cdf.
-inline int sample_discrete_cdf(const vector<float>& cdf, float r);
-// Pdf for uniform discrete distribution sampling.
-inline float sample_discrete_cdf_pdf(const vector<float>& cdf, int idx);
-
-// Sample a discrete distribution represented by its weights.
-inline int sample_discrete_weights(const vector<float>& weights, float r);
-// Pdf for uniform discrete distribution sampling.
-inline float sample_discrete_weights_pdf(const vector<float>& weights, int idx);
-
-// Sample a discrete distribution represented by its weights.
-template <size_t N>
-inline int sample_discrete_weights(const array<float, N>& weights, float r);
-// Pdf for uniform discrete distribution sampling.
-template <size_t N>
-inline float sample_discrete_weights_pdf(
-    const array<float, N>& weights, int idx);
+inline float sample_discrete_pdf(const vector<float>& cdf, int idx);
 
 }  // namespace yocto
 
@@ -199,7 +186,8 @@ inline uint32_t _advance_rng(rng_state& rng) {
   rng.state         = oldstate * 6364136223846793005ULL + rng.inc;
   auto xorshifted   = (uint32_t)(((oldstate >> 18u) ^ oldstate) >> 27u);
   auto rot          = (uint32_t)(oldstate >> 59u);
-  return (xorshifted >> rot) | (xorshifted << ((-rot) & 31));
+  // return (xorshifted >> rot) | (xorshifted << ((-rot) & 31));
+  return (xorshifted >> rot) | (xorshifted << ((~rot + 1u) & 31));
 }
 
 // Init a random number generator with a state state from the sequence seq.
@@ -329,6 +317,21 @@ inline float sample_hemisphere_cospower_pdf(
              : pow(direction.z, exponent) * (exponent + 1) / (2 * pif);
 }
 
+// Sample an hemispherical direction with cosine power distribution.
+inline vec3f sample_hemisphere_cospower(
+    float exponent, const vec3f& normal, const vec2f& ruv) {
+  auto z               = pow(ruv.y, 1 / (exponent + 1));
+  auto r               = sqrt(1 - z * z);
+  auto phi             = 2 * pif * ruv.x;
+  auto local_direction = vec3f{r * cos(phi), r * sin(phi), z};
+  return transform_direction(basis_fromz(normal), local_direction);
+}
+inline float sample_hemisphere_cospower_pdf(
+    float exponent, const vec3f& normal, const vec3f& direction) {
+  auto cosw = dot(normal, direction);
+  return (cosw <= 0) ? 0 : pow(cosw, exponent) * (exponent + 1) / (2 * pif);
+}
+
 // Sample a point uniformly on a disk.
 inline vec2f sample_disk(const vec2f& ruv) {
   auto r   = sqrt(ruv.y);
@@ -389,57 +392,6 @@ inline int sample_discrete(const vector<float>& cdf, float r) {
 inline float sample_discrete_pdf(const vector<float>& cdf, int idx) {
   if (idx == 0) return cdf.at(0);
   return cdf.at(idx) - cdf.at(idx - 1);
-}
-
-// Sample a discrete distribution represented by its cdf.
-inline int sample_discrete_cdf(const vector<float>& cdf, float r) {
-  r        = clamp(r * cdf.back(), (float)0, cdf.back() - (float)0.00001);
-  auto idx = (int)(std::upper_bound(cdf.data(), cdf.data() + cdf.size(), r) -
-                   cdf.data());
-  return clamp(idx, 0, (int)cdf.size() - 1);
-}
-// Pdf for uniform discrete distribution sampling.
-inline float sample_discrete_cdf_pdf(const vector<float>& cdf, int idx) {
-  if (idx == 0) return cdf.at(0);
-  return cdf.at(idx) - cdf.at(idx - 1);
-}
-
-// Sample a discrete distribution represented by its cdf.
-inline int sample_discrete_weights(const vector<float>& weights, float r) {
-  auto sum = 0.0f;
-  for (auto weight : weights) sum += weight;
-  r            = clamp(r * sum, (float)0, sum - (float)0.00001);
-  auto cur_sum = 0.0f;
-  for (auto idx = 0; idx < weights.size(); idx++) {
-    cur_sum += weights[idx];
-    if (r < cur_sum) return idx;
-  }
-  return (int)weights.size() - 1;
-}
-// Pdf for uniform discrete distribution sampling.
-inline float sample_discrete_weights_pdf(
-    const vector<float>& weights, int idx) {
-  return weights[idx];
-}
-
-// Sample a discrete distribution represented by its cdf.
-template <size_t N>
-inline int sample_discrete_weights(const array<float, N>& weights, float r) {
-  auto sum = 0.0f;
-  for (auto weight : weights) sum += weight;
-  r            = clamp(r * sum, (float)0, sum - (float)0.00001);
-  auto cur_sum = 0.0f;
-  for (auto idx = 0; idx < weights.size(); idx++) {
-    cur_sum += weights[idx];
-    if (r < cur_sum) return idx;
-  }
-  return (int)weights.size() - 1;
-}
-// Pdf for uniform discrete distribution sampling.
-template <size_t N>
-inline float sample_discrete_weights_pdf(
-    const array<float, N>& weights, int idx) {
-  return weights[idx];
 }
 
 }  // namespace yocto

@@ -6,7 +6,7 @@
   "type": "object",
   "properties": {
     "asset": {
-      "description": "asset informations",
+      "description": "asset information",
       "type": "object",
       "properties": {
         "copyright": {
@@ -26,10 +26,6 @@
         "description": "Camera",
         "type": "object",
         "properties": {
-          "name": {
-            "description": "Name",
-            "type": "string"
-          },
           "frame": {
             "description": "Frame",
             "type": "array",
@@ -67,10 +63,6 @@
         "description": "Environment",
         "type": "object",
         "properties": {
-          "name": {
-            "description": "Name",
-            "type": "string"
-          },
           "frame": {
             "description": "Frame",
             "type": "array",
@@ -85,7 +77,7 @@
               "type": "number"
             }
           },
-          "emission_map": {
+          "emission_tex": {
             "description": "Environment map file name",
             "type": "string"
           }
@@ -99,10 +91,6 @@
         "description": "Object",
         "type": "object",
         "properties": {
-          "name": {
-            "description": "Name",
-            "type": "string"
-          },
           "emission": {
             "description": "Emission",
             "type": "array",
@@ -117,10 +105,6 @@
               "type": "number"
             }
           },
-          "specular": {
-            "description": "Specular",
-            "type": "number"
-          },
           "roughness": {
             "description": "Roughness",
             "type": "number"
@@ -131,21 +115,6 @@
           },
           "ior": {
             "description": "Ior",
-            "type": "number"
-          },
-          "spectint": {
-            "description": "Specular tint",
-            "type": "array",
-            "items": {
-              "type": "number"
-            }
-          },
-          "coat": {
-            "description": "Coat",
-            "type": "number"
-          },
-          "transmission": {
-            "description": "Transmission",
             "type": "number"
           },
           "scattering": {
@@ -171,20 +140,12 @@
             "description": "Displacement",
             "type": "number"
           },
-          "thin": {
-            "description": "Thin",
-            "type": "boolean"
-          },        
           "emission_tex": {
             "description": "Emission map",
             "type": "string"
           },
           "color_tex": {
             "description": "Color",
-            "type": "string"
-          },
-          "specular_tex": {
-            "description": "Specular",
             "type": "string"
           },
           "roughness_tex": {
@@ -195,65 +156,16 @@
             "description": "Metallic",
             "type": "string"
           },
-          "spectint_tex": {
-            "description": "Specular tint",
-            "type": "string"
-          },
-          "coat_tex": {
-            "description": "Coat",
-            "type": "string"
-          },
-          "transmission_tex": {
-            "description": "Transmission",
-            "type": "string"
-          },
           "scattering_tex": {
             "description": "Volume scattering",
-            "type": "string"
-          },
-          "opacity_tex": {
-            "description": "Opacity map",
             "type": "string"
           },
           "displacement_tex": {
             "description": "Displacement map",
             "type": "string"
           },
-          "gltf_textures": {
-            "description": "glTF Textures",
-            "type": "boolean"
-          }
-        }
-      }
-    },
-    "objects": {
-      "description": "List of objects",
-      "type": "object",
-      "additionalProperties": {
-        "description": "Object",
-        "type": "object",
-        "properties": {
-          "name": {
-            "description": "Name",
-            "type": "string"
-          },
-          "frame": {
-            "description": "Frame",
-            "type": "array",
-            "items": {
-              "type": "number"
-            }
-          },
-          "shape": {
-            "description": "Geometry filename",
-            "type": "string"
-          },
-          "subdiv": {
-            "description": "Geometry filename",
-            "type": "string"
-          },
-          "instance": {
-            "description": "Instances filename",
+          "normal_tex": {
+            "description": "Normal map",
             "type": "string"
           }
         }
@@ -261,4 +173,3 @@
     }
   }
 }
-

@@ -1,7 +1,5 @@
 {
   "C_Cpp.default.configurationProvider": "vector-of-bool.cmake-tools",
-  "cmake.buildDirectory": "${workspaceFolder}/build/vscode/${variant:buildType}",
-  "cmake.parallelJobs": 8,
   "files.associations": {
     "iosfwd": "cpp",
     "__functional_03": "cpp",
@@ -110,7 +108,6 @@
       "url": "./scripts/scene.schema.json"
     }
   ],
-  "editor.formatOnSave": true,
   "cpplint.filters": [
     "-runtime/references",
     "-legal/copyright",
@@ -154,5 +151,17 @@
     "modernize-*",
     "-modernize-use-nodiscard",
     "-modernize-use-trailing-return-type"
+  ],
+  "python.pythonPath": "/usr/local/bin/python3",
+  "editor.formatOnSave": true,
+  "python.formatting.provider": "yapf",
+  "cSpell.words": [
+    "bsdf",
+    "bsdfs",
+    "denoise",
+    "denoising",
+    "khronos",
+    "lambertian",
+    "microfacet"
   ]
 }

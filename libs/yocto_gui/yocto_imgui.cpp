@@ -5,7 +5,7 @@
 //
 // LICENSE:
 //
-// Copyright (c) 2016 -- 2020 Fabio Pellacini
+// Copyright (c) 2016 -- 2021 Fabio Pellacini
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -29,11 +29,12 @@
 
 #include "yocto_imgui.h"
 
-#include <yocto/yocto_commonio.h>
+#include <yocto/yocto_color.h>
 
 #include <algorithm>
 #include <array>
 #include <cstdarg>
+#include <filesystem>
 #include <memory>
 #include <mutex>
 #include <stdexcept>
@@ -68,6 +69,67 @@ using std::mutex;
 using std::pair;
 using std::unordered_map;
 using namespace std::string_literals;
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// PATH UTILITIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Make a path from a utf8 string
+static std::filesystem::path make_path(const string& filename) {
+  return std::filesystem::u8path(filename);
+}
+
+// Normalize path
+static string normalize_path(const string& filename) {
+  return make_path(filename).generic_u8string();
+}
+
+// Get extension (including .)
+static string path_extension(const string& filename) {
+  return make_path(filename).extension().u8string();
+}
+
+// Get filename without directory.
+static string path_filename(const string& filename) {
+  return make_path(filename).filename().u8string();
+}
+
+// Get filename without directory and extension.
+static string path_basename(const string& filename) {
+  return make_path(filename).stem().u8string();
+}
+
+// Joins paths
+static string path_join(const string& patha, const string& pathb) {
+  return (make_path(patha) / make_path(pathb)).generic_u8string();
+}
+
+// Check if a file can be opened for reading.
+static bool path_exists(const string& filename) {
+  return exists(make_path(filename));
+}
+
+// Check if a file is a directory
+static bool path_isdir(const string& filename) {
+  return is_directory(make_path(filename));
+}
+
+// List the contents of a directory
+static vector<string> list_directory(const string& filename) {
+  auto entries = vector<string>{};
+  for (auto entry : std::filesystem::directory_iterator(make_path(filename))) {
+    entries.push_back(entry.path().generic_u8string());
+  }
+  return entries;
+}
+
+// Get the current directory
+static string path_current() {
+  return std::filesystem::current_path().u8string();
+}
 
 }  // namespace yocto
 
@@ -577,6 +639,12 @@ bool draw_button(gui_window* win, const char* lbl, bool enabled) {
 void draw_label(gui_window* win, const char* lbl, const string& label) {
   ImGui::LabelText(lbl, "%s", label.c_str());
 }
+void draw_label(gui_window* win, const char* lbl, int value) {
+  ImGui::LabelText(lbl, "%s", std::to_string(value).c_str());
+}
+void draw_label(gui_window* win, const char* lbl, bool value) {
+  ImGui::LabelText(lbl, "%s", value ? "true" : "false");
+}
 
 void draw_separator(gui_window* win) { ImGui::Separator(); }
 
@@ -660,6 +728,32 @@ bool draw_dragger(gui_window* win, const char* lbl, vec4i& value, float speed,
   return ImGui::DragInt4(lbl, &value.x, speed, min, max);
 }
 
+bool draw_dragger(gui_window* win, const char* lbl, array<float, 2>& value,
+    float speed, float min, float max) {
+  return ImGui::DragFloat2(lbl, value.data(), speed, min, max);
+}
+bool draw_dragger(gui_window* win, const char* lbl, array<float, 3>& value,
+    float speed, float min, float max) {
+  return ImGui::DragFloat3(lbl, value.data(), speed, min, max);
+}
+bool draw_dragger(gui_window* win, const char* lbl, array<float, 4>& value,
+    float speed, float min, float max) {
+  return ImGui::DragFloat4(lbl, value.data(), speed, min, max);
+}
+
+bool draw_dragger(gui_window* win, const char* lbl, array<int, 2>& value,
+    float speed, int min, int max) {
+  return ImGui::DragInt2(lbl, value.data(), speed, min, max);
+}
+bool draw_dragger(gui_window* win, const char* lbl, array<int, 3>& value,
+    float speed, int min, int max) {
+  return ImGui::DragInt3(lbl, value.data(), speed, min, max);
+}
+bool draw_dragger(gui_window* win, const char* lbl, array<int, 4>& value,
+    float speed, int min, int max) {
+  return ImGui::DragInt4(lbl, value.data(), speed, min, max);
+}
+
 bool draw_checkbox(gui_window* win, const char* lbl, bool& value) {
   return ImGui::Checkbox(lbl, &value);
 }
@@ -726,10 +820,27 @@ bool draw_hdrcoloredit(gui_window* win, const char* lbl, vec4f& value) {
   }
 }
 
+bool draw_coloredit(gui_window* win, const char* lbl, vec4b& value) {
+  auto valuef = byte_to_float(value);
+  if (ImGui::ColorEdit4(lbl, &valuef.x)) {
+    value = float_to_byte(valuef);
+    return true;
+  } else {
+    return false;
+  }
+}
+
 bool draw_combobox(gui_window* win, const char* lbl, int& value,
-    const vector<string>& labels) {
-  if (!ImGui::BeginCombo(lbl, labels[value].c_str())) return false;
+    const vector<string>& labels, bool include_null) {
+  if (!ImGui::BeginCombo(lbl, value >= 0 ? labels.at(value).c_str() : "<none>"))
+    return false;
   auto old_val = value;
+  if (include_null) {
+    ImGui::PushID(100000);
+    if (ImGui::Selectable("<none>", value < 0)) value = -1;
+    if (value < 0) ImGui::SetItemDefaultFocus();
+    ImGui::PopID();
+  }
   for (auto i = 0; i < labels.size(); i++) {
     ImGui::PushID(i);
     if (ImGui::Selectable(labels[i].c_str(), value == i)) value = i;
@@ -741,9 +852,15 @@ bool draw_combobox(gui_window* win, const char* lbl, int& value,
 }
 
 bool draw_combobox(gui_window* win, const char* lbl, string& value,
-    const vector<string>& labels) {
+    const vector<string>& labels, bool include_null) {
   if (!ImGui::BeginCombo(lbl, value.c_str())) return false;
   auto old_val = value;
+  if (include_null) {
+    ImGui::PushID(100000);
+    if (ImGui::Selectable("<none>", value.empty())) value = "";
+    if (value.empty()) ImGui::SetItemDefaultFocus();
+    ImGui::PopID();
+  }
   for (auto i = 0; i < labels.size(); i++) {
     ImGui::PushID(i);
     if (ImGui::Selectable(labels[i].c_str(), value == labels[i]))
@@ -885,7 +1002,7 @@ struct ImGuiAppLog {
     ImGui::EndChild();
   }
   void Draw(const char* title, bool* p_opened = nullptr) {
-    ImGui::SetNextWindowSize(ImVec2(500, 400), ImGuiSetCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(500, 400), ImGuiCond_FirstUseEver);
     ImGui::Begin(title, p_opened);
     Draw();
     ImGui::End();
@@ -913,6 +1030,168 @@ void draw_log(gui_window* win) {
   _log_mutex.lock();
   _log_widget.Draw();
   _log_mutex.unlock();
+}
+
+// draw param
+bool draw_param(gui_window* win, const string& name, gui_param& param) {
+  auto copy = param;
+  switch (param.type) {
+    case gui_param_type::value1f:
+      if (param.minmaxf.x == param.minmaxf.y) {
+        return draw_dragger(win, name.c_str(),
+                   param.readonly ? (float&)copy.valuef
+                                  : (float&)param.valuef) &&
+               !param.readonly;
+      } else {
+        return draw_slider(win, name.c_str(),
+                   param.readonly ? (float&)copy.valuef : (float&)param.valuef,
+                   param.minmaxf.x, param.minmaxf.y) &&
+               !param.readonly;
+      }
+      break;
+    case gui_param_type::value2f:
+      if (param.minmaxf.x == param.minmaxf.y) {
+        return draw_dragger(win, name.c_str(),
+                   param.readonly ? (vec2f&)copy.valuef
+                                  : (vec2f&)param.valuef) &&
+               !param.readonly;
+      } else {
+        return draw_slider(win, name.c_str(),
+                   param.readonly ? (vec2f&)copy.valuef : (vec2f&)param.valuef,
+                   param.minmaxf.x, param.minmaxf.y) &&
+               !param.readonly;
+      }
+      break;
+    case gui_param_type::value3f:
+      if (param.color) {
+        return draw_coloredit(win, name.c_str(),
+                   param.readonly ? (vec3f&)copy.valuef
+                                  : (vec3f&)param.valuef) &&
+               !param.readonly;
+      } else if (param.minmaxf.x == param.minmaxf.y) {
+        return draw_dragger(win, name.c_str(),
+                   param.readonly ? (vec3f&)copy.valuef
+                                  : (vec3f&)param.valuef) &&
+               !param.readonly;
+      } else {
+        return draw_slider(win, name.c_str(),
+                   param.readonly ? copy.valuef : param.valuef, param.minmaxf.x,
+                   param.minmaxf.y) &&
+               !param.readonly;
+      }
+      break;
+    case gui_param_type::value4f:
+      if (param.color) {
+        return draw_coloredit(win, name.c_str(),
+                   param.readonly ? (vec4f&)copy.valuef
+                                  : (vec4f&)param.valuef) &&
+               !param.readonly;
+      } else if (param.minmaxf.x == param.minmaxf.y) {
+        return draw_dragger(win, name.c_str(),
+                   param.readonly ? (vec4f&)copy.valuef
+                                  : (vec4f&)param.valuef) &&
+               !param.readonly;
+      } else {
+        return draw_slider(win, name.c_str(),
+                   param.readonly ? (vec4f&)copy.valuef : (vec4f&)param.valuef,
+                   param.minmaxf.x, param.minmaxf.y) &&
+               !param.readonly;
+      }
+      break;
+    case gui_param_type::value1i:
+      if (!param.labels.empty()) {
+        return draw_combobox(win, name.c_str(),
+                   param.readonly ? (int&)copy.valuei : (int&)param.valuei,
+                   param.labels) &&
+               !param.readonly;
+      } else if (param.minmaxi.x == param.minmaxi.y) {
+        return draw_dragger(win, name.c_str(),
+                   param.readonly ? (int&)copy.valuei : (int&)param.valuei) &&
+               !param.readonly;
+      } else {
+        return draw_slider(win, name.c_str(),
+                   param.readonly ? (int&)copy.valuei : (int&)param.valuei,
+                   param.minmaxi.x, param.minmaxi.y) &&
+               !param.readonly;
+      }
+      break;
+    case gui_param_type::value2i:
+      if (param.minmaxi.x == param.minmaxi.y) {
+        return draw_dragger(win, name.c_str(),
+                   param.readonly ? (vec2i&)copy.valuei
+                                  : (vec2i&)param.valuei) &&
+               !param.readonly;
+      } else {
+        return draw_slider(win, name.c_str(),
+                   param.readonly ? (vec2i&)copy.valuei : (vec2i&)param.valuei,
+                   param.minmaxi.x, param.minmaxi.y) &&
+               !param.readonly;
+      }
+      break;
+    case gui_param_type::value3i:
+      if (param.minmaxi.x == param.minmaxi.y) {
+        return draw_dragger(win, name.c_str(),
+                   param.readonly ? (vec3i&)copy.valuei
+                                  : (vec3i&)param.valuei) &&
+               !param.readonly;
+      } else {
+        return draw_slider(win, name.c_str(),
+                   param.readonly ? (vec3i&)copy.valuei : (vec3i&)param.valuei,
+                   param.minmaxi.x, param.minmaxi.y) &&
+               !param.readonly;
+      }
+      break;
+    case gui_param_type::value4i:
+      if (param.minmaxi.x == param.minmaxi.y) {
+        return draw_dragger(win, name.c_str(),
+                   param.readonly ? (vec4i&)copy.valuei
+                                  : (vec4i&)param.valuei) &&
+               !param.readonly;
+      } else {
+        return draw_slider(win, name.c_str(),
+                   param.readonly ? (vec4i&)copy.valuei : (vec4i&)param.valuei,
+                   param.minmaxi.x, param.minmaxi.y) &&
+               !param.readonly;
+      }
+      break;
+    case gui_param_type::value1s:
+      if (!param.labels.empty()) {
+        return draw_combobox(win, name.c_str(),
+                   param.readonly ? copy.values : param.values, param.labels) &&
+               !param.readonly;
+      } else {
+        return draw_textinput(win, name.c_str(),
+                   param.readonly ? copy.values : param.values) &&
+               !param.readonly;
+      }
+      break;
+    case gui_param_type::value1b:
+      if (!param.labels.empty()) {
+        // maybe we should implement something different here
+        return draw_checkbox(win, name.c_str(),
+                   param.readonly ? copy.valueb : param.valueb) &&
+               !param.readonly;
+      } else {
+        return draw_checkbox(win, name.c_str(),
+                   param.readonly ? copy.valueb : param.valueb) &&
+               !param.readonly;
+      }
+      break;
+    default: return false;
+  }
+}
+
+// draw params
+bool draw_params(gui_window* win, const string& name, gui_params& params) {
+  auto edited = false;
+  if (begin_header(win, name.c_str())) {
+    for (auto& [name, param] : params) {
+      auto pedited = draw_param(win, name, param);
+      edited       = edited || pedited;
+    }
+    end_header(win);
+  }
+  return edited;
 }
 
 }  // namespace yocto

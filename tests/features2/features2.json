@@ -76,8 +76,6 @@
     },
     "suzanne-subdiv-plastic-rough": {
       "shape": "suzanne-subdiv",
-      "subdivisions": 2,
-      "smooth": true,
       "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0],
       "material": "suzanne-subdiv-plastic-rough"
     },
@@ -88,10 +86,6 @@
     },
     "sphere-displaced-plastic-rough": {
       "shape": "sphere-displaced",
-      "displacement": 0.025,
-      "displacement_tex": "bumps-displacement",
-      "subdivisions": 0,
-      "smooth": true,
       "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, 0],
       "material": "sphere-displaced-plastic-rough"
     },
@@ -106,48 +100,64 @@
       "material": "hairballi-hair"
     }
   },
+  "subdivs": {
+    "suzanne-subdiv": {
+      "shape": "suzanne-subdiv",
+      "subdivisions": 2,
+      "smooth": true
+    },
+    "sphere-displaced": {
+      "shape": "sphere-displaced",
+      "displacement": 0.025,
+      "displacement_tex": "bumps-displacement",
+      "subdivisions": 0,
+      "smooth": true
+    }
+  },
   "materials": {
     "floor": {
+      "type": "matte",
       "color": [0.7, 0.7, 0.7],
-      "color_tex": "floor",
-      "specular": 0
+      "color_tex": "floor"
     },
     "arealight1": {
+      "type": "matte",
       "emission": [20, 20, 20]
     },
     "arealight2": {
+      "type": "matte",
       "emission": [20, 20, 20]
     },
     "sphere-uvgrid": {
+      "type": "glossy",
       "color": [1, 1, 1],
-      "specular": 1,
       "roughness": 0.1,
       "color_tex": "uvgrid"
     },
     "suzanne-subdiv-plastic-rough": {
+      "type": "glossy",
       "color": [0.5, 0.7, 0.5],
-      "specular": 1,
       "roughness": 0.2
     },
     "hairball1-hair": {
+      "type": "matte",
       "color": [0.7, 0.7, 0.7],
-      "specular": 0,
       "roughness": 1
     },
     "sphere-displaced-plastic-rough": {
+      "type": "glossy",
       "color": [0.5, 0.7, 0.5],
-      "specular": 1,
       "roughness": 0.2
     },
     "cube-uvgrid": {
+      "type": "glossy",
       "color": [1, 1, 1],
-      "specular": 1,
       "roughness": 0.1,
       "color_tex": "uvgrid"
     },
     "hairballi-hair": {
+      "type": "matte",
       "color": [0.7, 0.7, 0.7],
-      "specular": 0,
       "roughness": 1
     }
   }
