@@ -75,6 +75,7 @@ inline float min(float a, float b);
 inline float max(float a, float b);
 inline float clamp(float a, float min, float max);
 inline float sign(float a);
+inline float sqr(float a);
 inline float sqrt(float a);
 inline float sin(float a);
 inline float cos(float a);
@@ -222,6 +223,7 @@ inline float mean(const vec2f& a);
 
 // Functions applied to vector elements
 inline vec2f abs(const vec2f& a);
+inline vec2f sqr(const vec2f& a);
 inline vec2f sqrt(const vec2f& a);
 inline vec2f exp(const vec2f& a);
 inline vec2f log(const vec2f& a);
@@ -307,6 +309,7 @@ inline float mean(const vec3f& a);
 
 // Functions applied to vector elements
 inline vec3f abs(const vec3f& a);
+inline vec3f sqr(const vec3f& a);
 inline vec3f sqrt(const vec3f& a);
 inline vec3f exp(const vec3f& a);
 inline vec3f log(const vec3f& a);
@@ -384,6 +387,7 @@ inline float mean(const vec4f& a);
 
 // Functions applied to vector elements
 inline vec4f abs(const vec4f& a);
+inline vec4f sqr(const vec4f& a);
 inline vec4f sqrt(const vec4f& a);
 inline vec4f exp(const vec4f& a);
 inline vec4f log(const vec4f& a);
@@ -637,6 +641,7 @@ inline double min(double a, double b);
 inline double max(double a, double b);
 inline double clamp(double a, double min, double max);
 inline double sign(double a);
+inline double sqr(double a);
 inline double sqrt(double a);
 inline double sin(double a);
 inline double cos(double a);
@@ -773,6 +778,7 @@ inline double mean(const vec2d& a);
 
 // Functions applied to vector elements
 inline vec2d abs(const vec2d& a);
+inline vec2d sqr(const vec2d& a);
 inline vec2d sqrt(const vec2d& a);
 inline vec2d exp(const vec2d& a);
 inline vec2d log(const vec2d& a);
@@ -858,6 +864,7 @@ inline double mean(const vec3d& a);
 
 // Functions applied to vector elements
 inline vec3d abs(const vec3d& a);
+inline vec3d sqr(const vec3d& a);
 inline vec3d sqrt(const vec3d& a);
 inline vec3d exp(const vec3d& a);
 inline vec3d log(const vec3d& a);
@@ -935,6 +942,7 @@ inline double mean(const vec4d& a);
 
 // Functions applied to vector elements
 inline vec4d abs(const vec4d& a);
+inline vec4d sqr(const vec4d& a);
 inline vec4d sqrt(const vec4d& a);
 inline vec4d exp(const vec4d& a);
 inline vec4d log(const vec4d& a);
@@ -1339,6 +1347,7 @@ inline float clamp(float a, float min_, float max_) {
   return min(max(a, min_), max_);
 }
 inline float sign(float a) { return a < 0 ? -1.0f : 1.0f; }
+inline float sqr(float a) { return a * a; }
 inline float sqrt(float a) { return std::sqrt(a); }
 inline float sin(float a) { return std::sin(a); }
 inline float cos(float a) { return std::cos(a); }
@@ -1503,6 +1512,7 @@ inline float mean(const vec2f& a) { return sum(a) / 2; }
 
 // Functions applied to vector elements
 inline vec2f abs(const vec2f& a) { return {abs(a.x), abs(a.y)}; }
+inline vec2f sqr(const vec2f& a) { return {sqr(a.x), sqr(a.y)}; }
 inline vec2f sqrt(const vec2f& a) { return {sqrt(a.x), sqrt(a.y)}; }
 inline vec2f exp(const vec2f& a) { return {exp(a.x), exp(a.y)}; }
 inline vec2f log(const vec2f& a) { return {log(a.x), log(a.y)}; }
@@ -1657,6 +1667,7 @@ inline float mean(const vec3f& a) { return sum(a) / 3; }
 
 // Functions applied to vector elements
 inline vec3f abs(const vec3f& a) { return {abs(a.x), abs(a.y), abs(a.z)}; }
+inline vec3f sqr(const vec3f& a) { return {sqr(a.x), sqr(a.y), sqr(a.z)}; }
 inline vec3f sqrt(const vec3f& a) { return {sqrt(a.x), sqrt(a.y), sqrt(a.z)}; }
 inline vec3f exp(const vec3f& a) { return {exp(a.x), exp(a.y), exp(a.z)}; }
 inline vec3f log(const vec3f& a) { return {log(a.x), log(a.y), log(a.z)}; }
@@ -1807,6 +1818,9 @@ inline float mean(const vec4f& a) { return sum(a) / 4; }
 // Functions applied to vector elements
 inline vec4f abs(const vec4f& a) {
   return {abs(a.x), abs(a.y), abs(a.z), abs(a.w)};
+}
+inline vec4f sqr(const vec4f& a) {
+  return {sqr(a.x), sqr(a.y), sqr(a.z), sqr(a.w)};
 }
 inline vec4f sqrt(const vec4f& a) {
   return {sqrt(a.x), sqrt(a.y), sqrt(a.z), sqrt(a.w)};
@@ -2160,6 +2174,7 @@ inline double clamp(double a, double min_, double max_) {
   return min(max(a, min_), max_);
 }
 inline double sign(double a) { return a < 0 ? -1 : 1; }
+inline double sqr(double a) { return a * a; }
 inline double sqrt(double a) { return std::sqrt(a); }
 inline double sin(double a) { return std::sin(a); }
 inline double cos(double a) { return std::cos(a); }
@@ -2317,6 +2332,7 @@ inline double mean(const vec2d& a) { return sum(a) / 2; }
 
 // Functions applied to vector elements
 inline vec2d abs(const vec2d& a) { return {abs(a.x), abs(a.y)}; }
+inline vec2d sqr(const vec2d& a) { return {sqr(a.x), sqr(a.y)}; }
 inline vec2d sqrt(const vec2d& a) { return {sqrt(a.x), sqrt(a.y)}; }
 inline vec2d exp(const vec2d& a) { return {exp(a.x), exp(a.y)}; }
 inline vec2d log(const vec2d& a) { return {log(a.x), log(a.y)}; }
@@ -2473,6 +2489,7 @@ inline double mean(const vec3d& a) { return sum(a) / 3; }
 
 // Functions applied to vector elements
 inline vec3d abs(const vec3d& a) { return {abs(a.x), abs(a.y), abs(a.z)}; }
+inline vec3d sqr(const vec3d& a) { return {sqr(a.x), sqr(a.y), sqr(a.z)}; }
 inline vec3d sqrt(const vec3d& a) { return {sqrt(a.x), sqrt(a.y), sqrt(a.z)}; }
 inline vec3d exp(const vec3d& a) { return {exp(a.x), exp(a.y), exp(a.z)}; }
 inline vec3d log(const vec3d& a) { return {log(a.x), log(a.y), log(a.z)}; }
@@ -2623,6 +2640,9 @@ inline double mean(const vec4d& a) { return sum(a) / 4; }
 // Functions applied to vector elements
 inline vec4d abs(const vec4d& a) {
   return {abs(a.x), abs(a.y), abs(a.z), abs(a.w)};
+}
+inline vec4d sqr(const vec4d& a) {
+  return {sqr(a.x), sqr(a.y), sqr(a.z), sqr(a.w)};
 }
 inline vec4d sqrt(const vec4d& a) {
   return {sqrt(a.x), sqrt(a.y), sqrt(a.z), sqrt(a.w)};
