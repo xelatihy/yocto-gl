@@ -87,7 +87,7 @@ Yocto/Trace supports a low-level rendering API that is more flexible for
 applications that need it. In this modality, you have to manage all state
 manually.
 
-Yocto/Trace internally uses a `bvh_scene` BVH for ray-scene intersection,
+Yocto/Trace internally uses a `bvh_data` BVH for ray-scene intersection,
 a `trace_lights` objects to store lighting information, and a `trace_state`
 object to tracks the rendering process and contains all data needed to perform
 progressive computation. Each object need to be initialized separately.

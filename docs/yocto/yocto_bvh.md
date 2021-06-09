@@ -10,26 +10,24 @@ Yocto/Bvh provides ray-scene intersection for points, lines, triangles and
 quads accelerated by a BVH data structure. Our BVH is written for
 minimal code and not maximum speed, but still gives fast-enough results.
 
-The BVH tree is stored in a `bvh_tree` struct. The tree stores an array of
+The BVH tree is stored in a `bvh_data` struct. The tree stores an array of
 nodes and an array of element indices. Each node in the tree has references
 to either other nodes or elements. References are represented as indices
 in the nodes or elements arrays. Nodes indices refer to the nodes array,
 for internal nodes, or the element arrays, for leaf nodes.
-The BVH does not store shape data, which is instead passed explicitly
+The BVH does not store shape or scene data, which is instead passed explicitly
 to all calls.
+We use the same data structure to store the BVH for [Yocto/Scene](yocto_scene.md)
+shapes and scenes. To support scene intersection, we store the shapes BVHs 
+together with the other data.
 
 BVH nodes contain their bounds, indices to the BVH arrays of either
 primitives or internal nodes, node element type,
 and the split axis. Leaf and internal nodes are identical, except that
 indices refer to primitives for leaf nodes or other nodes for internal nodes.
 
-Two wrappers, `bvh_scene` and `bvh_shape` are used to store the BVH for
-[Yocto/Scene](yocto_scene.md) scenes and shapes. For shapes, we store a
-single BVH, while for scene we store the scene BVH and all shapes BVHs.
-These wrappers does not store copies to shape or scene data, so that data is
-passed in for all subsequent calls.
 
-These wrappers can alternatively store references to Intel's Embree BVH,
+The BVH data structure can also function as a wrapper for Intel's Embree BVH,
 for faster ray-scene intersection. To use Embree, the library should be
 compiled with Embree support by setting the `YOCTO_EMBREE` compile flag and
 linking to Embree's libraries.
