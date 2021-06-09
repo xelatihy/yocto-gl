@@ -1303,14 +1303,19 @@ inline frame3f camera_fpscam(
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Python `range()` equivalent. Construct an object that iterates over an
-// integer sequence.
+// Python range. Construct an object that iterates over an integer sequence.
 template <typename T>
 constexpr auto range(T max);
 template <typename T>
 constexpr auto range(T min, T max);
 template <typename T>
 constexpr auto range(T min, T max, T step);
+
+// Python enumerate
+template <typename Sequence, typename T = size_t>
+constexpr auto enumerate(const Sequence& sequence, T start = 0);
+template <typename Sequence, typename T = size_t>
+constexpr auto enumerate(Sequence& sequence, T start = 0);
 
 }  // namespace yocto
 
@@ -3411,28 +3416,96 @@ namespace yocto {
 // Python `range()` equivalent. Construct an object to iterate over a sequence.
 template <typename T>
 constexpr auto range(T max) {
-  return range((T)0, max, (T)1);
+  return range((T)0, max);
 }
 template <typename T>
 constexpr auto range(T min, T max) {
-  return range(min, max, (T)1);
-}
-template <typename T>
-constexpr auto range(T min, T max, T step) {
-  struct iterator {
+  struct range_iterator {
     T    index;
     void operator++() { ++index; }
-    bool operator!=(const iterator& other) const {
+    bool operator!=(const range_iterator& other) const {
       return index != other.index;
     }
     T operator*() const { return index; }
   };
   struct range_helper {
-    T        begin_ = 0, end_ = 0;
-    iterator begin() const { return {begin_}; }
-    iterator end() const { return {end_}; }
+    T              begin_ = 0, end_ = 0;
+    range_iterator begin() const { return {begin_}; }
+    range_iterator end() const { return {end_}; }
   };
   return range_helper{min, max};
+}
+template <typename T>
+constexpr auto range(T min, T max, T step) {
+  struct range_iterator {
+    T    index;
+    T    step;
+    void operator++() { index += step; }
+    bool operator!=(const range_iterator& other) const {
+      return index != other.index;
+    }
+    T operator*() const { return index; }
+  };
+  struct range_helper {
+    T              begin_ = 0, end_ = 0, step_ = 0;
+    range_iterator begin() const { return {begin_, step_}; }
+    range_iterator end() const {
+      return {begin_ + ((end_ - begin_) / step_) * step_, step_};
+    }
+  };
+  return range_helper{min, max, step};
+}
+
+// Python enumerate
+template <typename Sequence, typename T>
+constexpr auto enumerate(const Sequence& sequence, T start) {
+  using Iterator  = typename Sequence::const_iterator;
+  using Reference = typename Sequence::const_reference;
+  struct enumerate_iterator {
+    T        index;
+    Iterator iterator;
+    bool     operator!=(const enumerate_iterator& other) const {
+      return index != other.index;
+    }
+    void operator++() {
+      ++index;
+      ++iterator;
+    }
+    pair<const T&, Reference> operator*() const { return {index, *iterator}; }
+  };
+  struct enumerate_helper {
+    Sequence& sequence;
+    T         begin_, end_;
+    auto begin() { return enumerate_iterator{begin_, std::begin(sequence)}; }
+    auto end() { return enumerate_iterator{end_, std::end(sequence)}; }
+  };
+  return enumerate_helper{sequence, 0, size(sequence)};
+}
+
+// Python enumerate
+template <typename Sequence, typename T>
+constexpr auto enumerate(Sequence& sequence, T start) {
+  using Iterator  = typename Sequence::iterator;
+  using Reference = typename Sequence::reference;
+  struct enumerate_iterator {
+    T        index;
+    Iterator iterator;
+    bool     operator!=(const enumerate_iterator& other) const {
+      return index != other.index;
+    }
+    void operator++() {
+      ++index;
+      ++iterator;
+    }
+    pair<T&, Reference> operator*() const { return {index, *iterator}; }
+  };
+  struct enumerate_helper {
+    Sequence& sequence;
+    T         begin_, end_;
+    auto begin() { return enumerate_iterator{begin_, std::begin(sequence)}; }
+    auto end() { return enumerate_iterator{end_, std::end(sequence)}; }
+  };
+  return enumerate_helper{sequence, 0, size(sequence)};
 }
 
 }  // namespace yocto
