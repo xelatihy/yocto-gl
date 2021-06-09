@@ -907,9 +907,9 @@ cli_state make_cli(const string& name, const string& usage) {
   schema["properties"]  = cli_json::object();
   auto cli              = cli_state{};
   cli.defaults          = {
-      new cli_json{defaults}, [](void* json) { delete (cli_json*)json; }};
+      new cli_json(defaults), [](void* json) { delete (cli_json*)json; }};
   cli.schema = {
-      new cli_json{schema}, [](void* json) { delete (cli_json*)json; }};
+      new cli_json(schema), [](void* json) { delete (cli_json*)json; }};
   return cli;
 }
 
