@@ -675,17 +675,17 @@ static bool args_to_json(cli_json& js, const cli_json& schema,
     error = message;
     return false;
   };
-  
+
   auto get_try_config = [](const string& base_, const string& name) {
     auto base = base_;
-      if (base.rfind('/') != base.npos) {
-        base = base.substr(0, base.rfind('/'));
-      } else if (base.rfind('\\') != base.npos) {
-        base = base.substr(0, base.rfind('\\'));
-      } else {
-        base = ".";
-      }
-      return base + "/" + name;
+    if (base.rfind('/') != base.npos) {
+      base = base.substr(0, base.rfind('/'));
+    } else if (base.rfind('\\') != base.npos) {
+      base = base.substr(0, base.rfind('\\'));
+    } else {
+      base = ".";
+    }
+    return base + "/" + name;
   };
 
   // init
@@ -737,7 +737,8 @@ static bool args_to_json(cli_json& js, const cli_json& schema,
       if (!arg_to_json(js[name], oschema, arg, is_positional, args, idx, error))
         return false;
       if (oschema.contains("cli_config") && !js.contains("config")) {
-        js["config"] = "try:" + get_try_config(js.at(name), oschema.at("cli_config"));
+        js["config"] = "try:" +
+                       get_try_config(js.at(name), oschema.at("cli_config"));
       }
     } else {
       auto name = string{};
@@ -753,8 +754,9 @@ static bool args_to_json(cli_json& js, const cli_json& schema,
               js[name], oschema, name, is_positional, args, idx, error))
         return false;
       if (oschema.contains("cli_config") && !js.contains("config")) {
-        js["config"] = "try:" + get_try_config(js.at(name), oschema.at("cli_config"));
-       }
+        js["config"] = "try:" +
+                       get_try_config(js.at(name), oschema.at("cli_config"));
+      }
     }
   }
 
@@ -873,10 +875,10 @@ static bool config_to_json(cli_json& js, string& error) {
   };
 
   auto try_config = false;
-  auto config = get_config(js);
+  auto config     = get_config(js);
   if (config.empty()) return true;
   if (config.find("try:") == 0) {
-    config = config.substr(4);
+    config     = config.substr(4);
     try_config = true;
   }
 
@@ -906,10 +908,17 @@ cli_state make_cli(const string& name, const string& usage) {
   schema["type"]        = "object";
   schema["properties"]  = cli_json::object();
   auto cli              = cli_state{};
-  cli.defaults          = {
-      new cli_json{defaults}, [](void* json) { delete (cli_json*)json; }};
+  // we force the call to copy constructors since there is a bug in the JSON
+  // library causing GCC and clang to behave differently with copy constructors
+  // initialized with {} --- original code commented here
+  // cli.defaults = {
+  //     new cli_json{defaults}, [](void* json) { delete (cli_json*)json; }};
+  // cli.schema = {
+  //     new cli_json{schema}, [](void* json) { delete (cli_json*)json; }};
+  cli.defaults = {
+      new cli_json(defaults), [](void* json) { delete (cli_json*)json; }};
   cli.schema = {
-      new cli_json{schema}, [](void* json) { delete (cli_json*)json; }};
+      new cli_json(schema), [](void* json) { delete (cli_json*)json; }};
   return cli;
 }
 
