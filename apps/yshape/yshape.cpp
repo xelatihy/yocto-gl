@@ -214,7 +214,7 @@ void add_command(const cli_command& cli, const string& name,
 // convert images
 int run_fvconvert(const fvconvert_params& params) {
   // mesh data
-  auto shape = scene_fvshape{};
+  auto shape = fvshape_data{};
 
   // load mesh
   auto ioerror = ""s;

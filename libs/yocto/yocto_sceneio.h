@@ -122,15 +122,15 @@ bool save_shape(const string& filename, const shape_data& shape, string& error,
     bool flip_texcoords = true, bool ascii = false);
 
 // Load/save a subdiv
-bool load_fvshape(const string& filename, scene_fvshape& shape, string& error,
+bool load_fvshape(const string& filename, fvshape_data& shape, string& error,
     bool flip_texcoords = true);
-bool save_fvshape(const string& filename, const scene_fvshape& shape,
+bool save_fvshape(const string& filename, const fvshape_data& shape,
     string& error, bool flip_texcoords = true, bool ascii = false);
 
 // Make presets. Supported mostly in IO.
 bool make_shape_preset(shape_data& shape, const string& type, string& error);
 bool make_fvshape_preset(
-    scene_fvshape& shape, const string& type, string& error);
+    fvshape_data& shape, const string& type, string& error);
 
 }  // namespace yocto
 

@@ -1115,7 +1115,7 @@ bool save_shape(const string& filename, const shape_data& shape, string& error,
 }
 
 // Load ply mesh
-bool load_fvshape(const string& filename, scene_fvshape& shape, string& error,
+bool load_fvshape(const string& filename, fvshape_data& shape, string& error,
     bool flip_texcoord) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
@@ -1177,7 +1177,7 @@ bool load_fvshape(const string& filename, scene_fvshape& shape, string& error,
 }
 
 // Save ply mesh
-bool save_fvshape(const string& filename, const scene_fvshape& shape,
+bool save_fvshape(const string& filename, const fvshape_data& shape,
     string& error, bool flip_texcoord, bool ascii) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
@@ -1305,7 +1305,7 @@ bool make_shape_preset(shape_data& shape, const string& type, string& error) {
     shape.texcoords = shape_.texcoords;
     shape.radius    = shape_.radius;
   };
-  auto set_fvquads = [&](scene_fvshape&& shape_) {
+  auto set_fvquads = [&](fvshape_data&& shape_) {
     shape.quads     = shape_.quadspos;
     shape.positions = shape_.positions;
     shape.normals   = shape_.normals;
@@ -1494,7 +1494,7 @@ bool make_shape_preset(shape_data& shape, const string& type, string& error) {
 
 // Shape presets used for testing.
 bool make_fvshape_preset(
-    scene_fvshape& shape, const string& type, string& error) {
+    fvshape_data& shape, const string& type, string& error) {
   auto set_quads = [&](shape_data&& shape_) {
     shape.quadspos  = shape_.quads;
     shape.positions = shape_.positions;
@@ -1512,7 +1512,7 @@ bool make_fvshape_preset(
   auto set_points = [&](shape_data&& shape) {
     throw std::invalid_argument{"bad shape type"};
   };
-  auto set_fvquads = [&](scene_fvshape&& shape_) {
+  auto set_fvquads = [&](fvshape_data&& shape_) {
     shape.quadspos      = shape_.quadspos;
     shape.quadsnorm     = shape_.quadsnorm;
     shape.quadstexcoord = shape_.quadstexcoord;
@@ -1766,7 +1766,7 @@ namespace yocto {
   return get_texture_name(scene, (int)(&texture - scene.textures.data()));
 }
 [[maybe_unused]] static string get_instance_name(
-    const scene_model& scene, const scene_instance& instance) {
+    const scene_model& scene, const instance_data& instance) {
   return get_instance_name(scene, (int)(&instance - scene.instances.data()));
 }
 [[maybe_unused]] static string get_material_name(
@@ -2494,7 +2494,7 @@ bool save_instance(const string& filename, const vector<frame3f>& frames,
 
 // load subdiv
 bool load_subdiv(const string& filename, scene_subdiv& subdiv, string& error) {
-  auto lsubdiv = scene_fvshape{};
+  auto lsubdiv = fvshape_data{};
   if (!load_fvshape(filename, lsubdiv, error, true)) return false;
   subdiv.quadspos      = lsubdiv.quadspos;
   subdiv.quadsnorm     = lsubdiv.quadsnorm;
@@ -2508,7 +2508,7 @@ bool load_subdiv(const string& filename, scene_subdiv& subdiv, string& error) {
 // save subdiv
 bool save_subdiv(
     const string& filename, const scene_subdiv& subdiv, string& error) {
-  auto ssubdiv          = scene_fvshape{};
+  auto ssubdiv          = fvshape_data{};
   ssubdiv.quadspos      = subdiv.quadspos;
   ssubdiv.quadsnorm     = subdiv.quadsnorm;
   ssubdiv.quadstexcoord = subdiv.quadstexcoord;
@@ -2752,7 +2752,7 @@ static bool load_json_scene(const string& filename, scene_model& scene,
   auto get_ply_instances = [&scene, &ply_instances, &ply_instances_names,
                                &ply_instance_map, &instance_ply,
                                &get_value](const njson& js,
-                               const scene_instance&    instance) -> bool {
+                               const instance_data&     instance) -> bool {
     auto name = ""s;
     if (!get_value(js, name)) return false;
     if (name.empty()) return true;

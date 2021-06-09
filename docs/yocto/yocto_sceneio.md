@@ -80,7 +80,7 @@ if(!load_shape(filename, shape, error))      // load shape
 if(!save_shape(filename, shape, error))      // save shape
   print_error(error);
 
-auto fvshape = scene_fvshape{};              // face-varying shape
+auto fvshape = fvshape_data{};               // face-varying shape
 auto error = string{};                       // error buffer
 if(!load_fvshape(filename, fvshape, error))  // load shape
   print_error(error);

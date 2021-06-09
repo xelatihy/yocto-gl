@@ -41,7 +41,7 @@ auto shape = shape_data{};          // create a shape and add it
 set_shape_properties(shape, ...);
 scene.shapes.push_back(shape);
 scene.materials.push_back({});      // create a black material directly
-auto instance = scene_instance{};   // create an instance of last added shape
+auto instance = instance_data{};    // create an instance of last added shape
 instance.shape = (int)scene.shapes.size()-1;
 instance.material = (int)scene.materials.size()-1;
 ```
@@ -105,7 +105,7 @@ auto ray = eval_camera(camera,{0.5,0.5},{0,0});// get ray though image center
 
 ## Instances
 
-Instances, represented as `scene_instance`, place shapes in the scene by
+Instances, represented as `instance_data`, place shapes in the scene by
 defining their coordinate frame, a shape index and a material index.
 Through the use of instancing, Yocto/Scene scales well to large environments
 without introducing more complex mechanisms.
@@ -113,7 +113,7 @@ without introducing more complex mechanisms.
 For instances, you should set the instance frame, shape and material.
 
 ```cpp
-auto instance = scene_instance{};    // create an instance
+auto instance = instance_data{};     // create an instance
 instance.frame = identity3x4f;       // set frame to identity
 instance.shape = shape_index;        // set shape index
 instance.material = material_index;  // set material index
@@ -179,7 +179,7 @@ points, lines, triangles or quads. Shape elements are parametrized as in
 [Yocto/Geometry](yocto_geometry.md).
 Vertex properties are defined as separate arrays and include
 positions, normals, texture coords, colors, radius and tangent spaces.
-Additionally, Yocto/Scene supports face-varying primitives, as `scene_fvshape`,
+Additionally, Yocto/Scene supports face-varying primitives, as `fvshape_data`,
 where each vertex data has its own topology.
 
 Shapes also work as a standalone mesh representation throughout the
@@ -393,7 +393,7 @@ We also support standalone face-varying shapes, that are not stored in the scene
 normals and texture coordinates.
 
 ```cpp
-auto shape = scene_fvshape{};               // create a shape
+auto shape = fvshape_data{};                // create a shape
 shape.quadspos = vector<vec4i>{...};        // set face-varying indices
 shape.quadstexcoord = vector<vec4i>{...};   // for positions and textures
 shape.positions = vector<vec3f>{...};       // set positions
@@ -458,7 +458,7 @@ auto shape_15 = make_rounded_uvcylinder({32,32,32}, {1,1});
 
 Yocto/Shape defines a few procedural face-varying shapes with similar interfaces
 to the above functions. In this case, the functions return face-varying quads
-packed in a `scene_fvshape` struct.
+packed in a `fvshape_data` struct.
 Use `make_fvrect(...)` for a rectangle in the XY plane,
 `make_fvbox(...)` for a box,
 `make_fvsphere(...)` for a sphere obtained from a cube.
@@ -473,14 +473,14 @@ auto fvshape_03 = make_fvsphere(32, 1);
 Yocto/Shape provides functions to create predefined shapes helpful in testing.
 These functions take only a scale and often provide only the positions as
 vertex data. These functions return either triangles, quads, or
-face-varying quads in a `shape_data` or `scene_fvshape` struct.
+face-varying quads in a `shape_data` or `fvshape_data` struct.
 Use `make_monkey(...)` for the Blender monkey as quads and positions only,
 `make_quad(...)` for a simple quad,
 `make_quady(...)` for a simple quad in the XZ plane,
 `make_cube(...)` for a simple cube as quads and positions only,
 `make_fvcube(...)` for a simple face-varying unit cube,
 `make_geosphere(...)` for a geodesic sphere as triangles and positions only.
-These functions return a `shape_data` or `scene_fvshape`.
+These functions return a `shape_data` or `fvshape_data`.
 
 ```cpp
 auto monkey = make_monkey(1);

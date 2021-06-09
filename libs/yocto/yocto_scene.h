@@ -156,7 +156,7 @@ struct shape_data {
 };
 
 // Shape data stored as a face-varying mesh
-struct scene_fvshape {
+struct fvshape_data {
   // element data
   vector<vec4i> quadspos      = {};
   vector<vec4i> quadsnorm     = {};
@@ -169,7 +169,7 @@ struct scene_fvshape {
 };
 
 // Instance.
-struct scene_instance {
+struct instance_data {
   // instance data
   frame3f frame    = identity3x4f;
   int     shape    = invalidid;
@@ -220,7 +220,7 @@ struct scene_subdiv {
 struct scene_model {
   // scene elements
   vector<camera_data>       cameras      = {};
-  vector<scene_instance>    instances    = {};
+  vector<instance_data>     instances    = {};
   vector<scene_environment> environments = {};
   vector<shape_data>        shapes       = {};
   vector<texture_data>      textures     = {};
@@ -307,7 +307,7 @@ bool is_delta(const material_point& material);
 // check if a material has a volume
 bool is_volumetric(const material_data& material);
 bool is_volumetric(const material_point& material);
-bool is_volumetric(const scene_model& scene, const scene_instance& instance);
+bool is_volumetric(const scene_model& scene, const instance_data& instance);
 
 }  // namespace yocto
 
@@ -354,29 +354,29 @@ shape_data subdivide_shape(
     const shape_data& shape, int subdivisions, bool catmullclark);
 
 // Interpolate vertex data
-vec3f eval_position(const scene_fvshape& shape, int element, const vec2f& uv);
-vec3f eval_normal(const scene_fvshape& shape, int element, const vec2f& uv);
+vec3f eval_position(const fvshape_data& shape, int element, const vec2f& uv);
+vec3f eval_normal(const fvshape_data& shape, int element, const vec2f& uv);
 vec2f eval_texcoord(const shape_data& shape, int element, const vec2f& uv);
 
 // Evaluate element normals
-vec3f eval_element_normal(const scene_fvshape& shape, int element);
+vec3f eval_element_normal(const fvshape_data& shape, int element);
 
 // Compute per-vertex normals/tangents for lines/triangles/quads.
-vector<vec3f> compute_normals(const scene_fvshape& shape);
-void compute_normals(vector<vec3f>& normals, const scene_fvshape& shape);
+vector<vec3f> compute_normals(const fvshape_data& shape);
+void compute_normals(vector<vec3f>& normals, const fvshape_data& shape);
 
 // Conversions
 shape_data fvshape_to_shape(
-    const scene_fvshape& shape, bool as_triangles = false);
-scene_fvshape shape_to_fvshape(const shape_data& shape);
+    const fvshape_data& shape, bool as_triangles = false);
+fvshape_data shape_to_fvshape(const shape_data& shape);
 
 // Subdivision
-scene_fvshape subdivide_fvshape(
-    const scene_fvshape& shape, int subdivisions, bool catmullclark);
+fvshape_data subdivide_fvshape(
+    const fvshape_data& shape, int subdivisions, bool catmullclark);
 
 // Shape statistics
 vector<string> shape_stats(const shape_data& shape, bool verbose = false);
-vector<string> fvshape_stats(const scene_fvshape& shape, bool verbose = false);
+vector<string> fvshape_stats(const fvshape_data& shape, bool verbose = false);
 
 }  // namespace yocto
 
@@ -386,29 +386,29 @@ vector<string> fvshape_stats(const scene_fvshape& shape, bool verbose = false);
 namespace yocto {
 
 // Evaluate instance properties
-vec3f eval_position(const scene_model& scene, const scene_instance& instance,
+vec3f eval_position(const scene_model& scene, const instance_data& instance,
     int element, const vec2f& uv);
 vec3f eval_element_normal(
-    const scene_model& scene, const scene_instance& instance, int element);
-vec3f eval_normal(const scene_model& scene, const scene_instance& instance,
+    const scene_model& scene, const instance_data& instance, int element);
+vec3f eval_normal(const scene_model& scene, const instance_data& instance,
     int element, const vec2f& uv);
-vec2f eval_texcoord(const scene_model& scene, const scene_instance& instance,
+vec2f eval_texcoord(const scene_model& scene, const instance_data& instance,
     int element, const vec2f& uv);
 pair<vec3f, vec3f> eval_element_tangents(
-    const scene_model& scene, const scene_instance& instance, int element);
-vec3f eval_normalmap(const scene_model& scene, const scene_instance& instance,
+    const scene_model& scene, const instance_data& instance, int element);
+vec3f eval_normalmap(const scene_model& scene, const instance_data& instance,
     int element, const vec2f& uv);
 vec3f eval_shading_normal(const scene_model& scene,
-    const scene_instance& instance, int element, const vec2f& uv,
+    const instance_data& instance, int element, const vec2f& uv,
     const vec3f& outgoing);
-vec4f eval_color(const scene_model& scene, const scene_instance& instance,
+vec4f eval_color(const scene_model& scene, const instance_data& instance,
     int element, const vec2f& uv);
 
 // Eval material to obtain emission, brdf and opacity.
 material_point eval_material(const scene_model& scene,
-    const scene_instance& instance, int element, const vec2f& uv);
+    const instance_data& instance, int element, const vec2f& uv);
 // check if a material has a volume
-bool is_volumetric(const scene_model& scene, const scene_instance& instance);
+bool is_volumetric(const scene_model& scene, const instance_data& instance);
 
 }  // namespace yocto
 
@@ -521,13 +521,13 @@ shape_data make_rounded_uvcylinder(const vec3i& steps = {32, 32, 32},
     float radius = 0.3);
 
 // Make a facevarying rect
-scene_fvshape make_fvrect(const vec2i& steps = {1, 1},
+fvshape_data make_fvrect(const vec2i& steps = {1, 1},
     const vec2f& scale = {1, 1}, const vec2f& uvscale = {1, 1});
 // Make a facevarying box
-scene_fvshape make_fvbox(const vec3i& steps = {1, 1, 1},
+fvshape_data make_fvbox(const vec3i& steps = {1, 1, 1},
     const vec3f& scale = {1, 1, 1}, const vec3f& uvscale = {1, 1, 1});
 // Make a facevarying sphere
-scene_fvshape make_fvsphere(int steps = 32, float scale = 1, float uvscale = 1);
+fvshape_data make_fvsphere(int steps = 32, float scale = 1, float uvscale = 1);
 
 // Generate lines set along a quad. Returns lines, pos, norm, texcoord, radius.
 shape_data make_lines(const vec2i& steps = {4, 65536},
@@ -542,12 +542,12 @@ shape_data make_random_points(int num = 65536, const vec3f& size = {1, 1, 1},
     float uvscale = 1, float radius = 0.001f, uint64_t seed = 17);
 
 // Predefined meshes
-shape_data    make_monkey(float scale = 1, int subdivisions = 0);
-shape_data    make_quad(float scale = 1, int subdivisions = 0);
-shape_data    make_quady(float scale = 1, int subdivisions = 0);
-shape_data    make_cube(float scale = 1, int subdivisions = 0);
-scene_fvshape make_fvcube(float scale = 1, int subdivisions = 0);
-shape_data    make_geosphere(float scale = 1, int subdivisions = 0);
+shape_data   make_monkey(float scale = 1, int subdivisions = 0);
+shape_data   make_quad(float scale = 1, int subdivisions = 0);
+shape_data   make_quady(float scale = 1, int subdivisions = 0);
+shape_data   make_cube(float scale = 1, int subdivisions = 0);
+fvshape_data make_fvcube(float scale = 1, int subdivisions = 0);
+shape_data   make_geosphere(float scale = 1, int subdivisions = 0);
 
 // Make a hair ball around a shape.
 // length: minimum and maximum length
@@ -608,7 +608,9 @@ using scene_material_type = material_type;
 using sceneio_material    = material_data;
 using sceneio_shape       = shape_data;
 using scene_shape         = shape_data;
-using sceneio_instance    = scene_instance;
+using scene_fvshape       = fvshape_data;
+using sceneio_instance    = instance_data;
+using scene_instance      = instance_data;
 using sceneio_environment = scene_environment;
 
 inline const auto scene_material_names = std::vector<std::string>{"matte",
