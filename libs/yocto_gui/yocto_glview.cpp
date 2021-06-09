@@ -1313,7 +1313,7 @@ void clear_texture(glscene_texture& gltexture) {
 }
 
 // Create shape
-void set_shape(glscene_shape& glshape, const scene_shape& shape) {
+void set_shape(glscene_shape& glshape, const shape_data& shape) {
   auto set_vertex = [](uint& buffer, int& num, const auto& data,
                         const auto& def, int location) {
     if (data.empty()) {

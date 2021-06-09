@@ -43,7 +43,7 @@ appropriate. This design tries to balance readability and generality, without
 forcing a single convention that would not be appropriate everywhere.
 
 If a higher level design is needed, [Yocto/Scene](yocto_scene.md) contains
-the standalone types `scene_shape` and `scene_fvshape` to store indexed
+the standalone types `shape_data` and `scene_fvshape` to store indexed
 and face-varying shapes respectively, a a collection of methods to work
 on these type, that are essentially wrappers to the functionality in this
 library.

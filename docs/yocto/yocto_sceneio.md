@@ -73,7 +73,7 @@ are flipped vertically to match the convention of OpenGL texturing;
 this can be disabled by setting the `flipv` flag.
 
 ```cpp
-auto shape = scene_shape{};                  // shape
+auto shape = shape_data{};                   // shape
 auto error = string{};                       // error buffer
 if(!load_shape(filename, shape, error))      // load shape
   print_error(error);

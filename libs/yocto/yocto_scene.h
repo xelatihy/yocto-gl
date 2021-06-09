@@ -108,7 +108,7 @@ enum struct material_type {
 };
 
 // Enum labels
-inline const auto scene_material_names = std::vector<std::string>{"matte",
+inline const auto material_type_names = std::vector<std::string>{"matte",
     "glossy", "metallic", "transparent", "refractive", "subsurface", "volume",
     "gltfpbr"};
 
@@ -139,7 +139,7 @@ struct material_data {
 
 // Shape data represented as indexed meshes of elements.
 // May contain either points, lines, triangles and quads.
-struct scene_shape {
+struct shape_data {
   // element data
   vector<int>   points    = {};
   vector<vec2i> lines     = {};
@@ -222,7 +222,7 @@ struct scene_model {
   vector<camera_data>       cameras      = {};
   vector<scene_instance>    instances    = {};
   vector<scene_environment> environments = {};
-  vector<scene_shape>       shapes       = {};
+  vector<shape_data>        shapes       = {};
   vector<texture_data>      textures     = {};
   vector<material_data>     materials    = {};
   vector<scene_subdiv>      subdivs      = {};
@@ -317,19 +317,19 @@ bool is_volumetric(const scene_model& scene, const scene_instance& instance);
 namespace yocto {
 
 // Interpolate vertex data
-vec3f eval_position(const scene_shape& shape, int element, const vec2f& uv);
-vec3f eval_normal(const scene_shape& shape, int element, const vec2f& uv);
-vec3f eval_tangent(const scene_shape& shape, int element, const vec2f& uv);
-vec2f eval_texcoord(const scene_shape& shape, int element, const vec2f& uv);
-vec4f eval_color(const scene_shape& shape, int element, const vec2f& uv);
-float eval_radius(const scene_shape& shape, int element, const vec2f& uv);
+vec3f eval_position(const shape_data& shape, int element, const vec2f& uv);
+vec3f eval_normal(const shape_data& shape, int element, const vec2f& uv);
+vec3f eval_tangent(const shape_data& shape, int element, const vec2f& uv);
+vec2f eval_texcoord(const shape_data& shape, int element, const vec2f& uv);
+vec4f eval_color(const shape_data& shape, int element, const vec2f& uv);
+float eval_radius(const shape_data& shape, int element, const vec2f& uv);
 
 // Evaluate element normals
-vec3f eval_element_normal(const scene_shape& shape, int element);
+vec3f eval_element_normal(const shape_data& shape, int element);
 
 // Compute per-vertex normals/tangents for lines/triangles/quads.
-vector<vec3f> compute_normals(const scene_shape& shape);
-void          compute_normals(vector<vec3f>& normals, const scene_shape& shape);
+vector<vec3f> compute_normals(const shape_data& shape);
+void          compute_normals(vector<vec3f>& normals, const shape_data& shape);
 
 // An unevaluated location on a shape
 struct shape_point {
@@ -338,25 +338,25 @@ struct shape_point {
 };
 
 // Shape sampling
-vector<float> sample_shape_cdf(const scene_shape& shape);
-void          sample_shape_cdf(vector<float>& cdf, const scene_shape& shape);
-shape_point   sample_shape(const scene_shape& shape, const vector<float>& cdf,
+vector<float> sample_shape_cdf(const shape_data& shape);
+void          sample_shape_cdf(vector<float>& cdf, const shape_data& shape);
+shape_point   sample_shape(const shape_data& shape, const vector<float>& cdf,
       float rn, const vec2f& ruv);
 vector<shape_point> sample_shape(
-    const scene_shape& shape, int num_samples, uint64_t seed = 98729387);
+    const shape_data& shape, int num_samples, uint64_t seed = 98729387);
 
 // Conversions
-scene_shape quads_to_triangles(const scene_shape& shape);
-void        quads_to_triangles(scene_shape& result, const scene_shape& shape);
+shape_data quads_to_triangles(const shape_data& shape);
+void       quads_to_triangles(shape_data& result, const shape_data& shape);
 
 // Subdivision
-scene_shape subdivide_shape(
-    const scene_shape& shape, int subdivisions, bool catmullclark);
+shape_data subdivide_shape(
+    const shape_data& shape, int subdivisions, bool catmullclark);
 
 // Interpolate vertex data
 vec3f eval_position(const scene_fvshape& shape, int element, const vec2f& uv);
 vec3f eval_normal(const scene_fvshape& shape, int element, const vec2f& uv);
-vec2f eval_texcoord(const scene_shape& shape, int element, const vec2f& uv);
+vec2f eval_texcoord(const shape_data& shape, int element, const vec2f& uv);
 
 // Evaluate element normals
 vec3f eval_element_normal(const scene_fvshape& shape, int element);
@@ -366,16 +366,16 @@ vector<vec3f> compute_normals(const scene_fvshape& shape);
 void compute_normals(vector<vec3f>& normals, const scene_fvshape& shape);
 
 // Conversions
-scene_shape fvshape_to_shape(
+shape_data fvshape_to_shape(
     const scene_fvshape& shape, bool as_triangles = false);
-scene_fvshape shape_to_fvshape(const scene_shape& shape);
+scene_fvshape shape_to_fvshape(const shape_data& shape);
 
 // Subdivision
 scene_fvshape subdivide_fvshape(
     const scene_fvshape& shape, int subdivisions, bool catmullclark);
 
 // Shape statistics
-vector<string> shape_stats(const scene_shape& shape, bool verbose = false);
+vector<string> shape_stats(const shape_data& shape, bool verbose = false);
 vector<string> fvshape_stats(const scene_fvshape& shape, bool verbose = false);
 
 }  // namespace yocto
@@ -440,7 +440,7 @@ void add_sky(scene_model& scene, float sun_angle = pif / 4);
 int find_camera(const scene_model& scene, const string& name);
 
 // create a scene from a shape
-scene_model make_shape_scene(const scene_shape& shape, bool add_sky = false);
+scene_model make_shape_scene(const shape_data& shape, bool add_sky = false);
 
 // Return scene statistics as list of strings.
 vector<string> scene_stats(const scene_model& scene, bool verbose = false);
@@ -466,57 +466,57 @@ void tesselate_subdivs(scene_model& scene);
 namespace yocto {
 
 // Make a plane.
-scene_shape make_rect(const vec2i& steps = {1, 1}, const vec2f& scale = {1, 1},
+shape_data make_rect(const vec2i& steps = {1, 1}, const vec2f& scale = {1, 1},
     const vec2f& uvscale = {1, 1});
-scene_shape make_bulged_rect(const vec2i& steps = {1, 1},
+shape_data make_bulged_rect(const vec2i& steps = {1, 1},
     const vec2f& scale = {1, 1}, const vec2f& uvscale = {1, 1},
     float radius = 0.3);
 // Make a plane in the xz plane.
-scene_shape make_recty(const vec2i& steps = {1, 1}, const vec2f& scale = {1, 1},
+shape_data make_recty(const vec2i& steps = {1, 1}, const vec2f& scale = {1, 1},
     const vec2f& uvscale = {1, 1});
-scene_shape make_bulged_recty(const vec2i& steps = {1, 1},
+shape_data make_bulged_recty(const vec2i& steps = {1, 1},
     const vec2f& scale = {1, 1}, const vec2f& uvscale = {1, 1},
     float radius = 0.3);
 // Make a box.
-scene_shape make_box(const vec3i& steps = {1, 1, 1},
+shape_data make_box(const vec3i& steps = {1, 1, 1},
     const vec3f& scale = {1, 1, 1}, const vec3f& uvscale = {1, 1, 1});
-scene_shape make_rounded_box(const vec3i& steps = {1, 1, 1},
+shape_data make_rounded_box(const vec3i& steps = {1, 1, 1},
     const vec3f& scale = {1, 1, 1}, const vec3f& uvscale = {1, 1, 1},
     float radius = 0.3);
 // Make a quad stack
-scene_shape make_rect_stack(const vec3i& steps = {1, 1, 1},
+shape_data make_rect_stack(const vec3i& steps = {1, 1, 1},
     const vec3f& scale = {1, 1, 1}, const vec2f& uvscale = {1, 1});
 // Make a floor.
-scene_shape make_floor(const vec2i& steps = {1, 1},
+shape_data make_floor(const vec2i& steps = {1, 1},
     const vec2f& scale = {10, 10}, const vec2f& uvscale = {10, 10});
-scene_shape make_bent_floor(const vec2i& steps = {1, 1},
+shape_data make_bent_floor(const vec2i& steps = {1, 1},
     const vec2f& scale = {10, 10}, const vec2f& uvscale = {10, 10},
     float bent = 0.5);
 // Make a sphere.
-scene_shape make_sphere(int steps = 32, float scale = 1, float uvscale = 1);
+shape_data make_sphere(int steps = 32, float scale = 1, float uvscale = 1);
 // Make a sphere.
-scene_shape make_uvsphere(const vec2i& steps = {32, 32}, float scale = 1,
+shape_data make_uvsphere(const vec2i& steps = {32, 32}, float scale = 1,
     const vec2f& uvscale = {1, 1});
-scene_shape make_uvspherey(const vec2i& steps = {32, 32}, float scale = 1,
+shape_data make_uvspherey(const vec2i& steps = {32, 32}, float scale = 1,
     const vec2f& uvscale = {1, 1});
 // Make a sphere with slipped caps.
-scene_shape make_capped_uvsphere(const vec2i& steps = {32, 32}, float scale = 1,
+shape_data make_capped_uvsphere(const vec2i& steps = {32, 32}, float scale = 1,
     const vec2f& uvscale = {1, 1}, float height = 0.3);
-scene_shape make_capped_uvspherey(const vec2i& steps = {32, 32},
-    float scale = 1, const vec2f& uvscale = {1, 1}, float height = 0.3);
+shape_data make_capped_uvspherey(const vec2i& steps = {32, 32}, float scale = 1,
+    const vec2f& uvscale = {1, 1}, float height = 0.3);
 // Make a disk
-scene_shape make_disk(int steps = 32, float scale = 1, float uvscale = 1);
+shape_data make_disk(int steps = 32, float scale = 1, float uvscale = 1);
 // Make a bulged disk
-scene_shape make_bulged_disk(
+shape_data make_bulged_disk(
     int steps = 32, float scale = 1, float uvscale = 1, float height = 0.3);
 // Make a uv disk
-scene_shape make_uvdisk(const vec2i& steps = {32, 32}, float scale = 1,
+shape_data make_uvdisk(const vec2i& steps = {32, 32}, float scale = 1,
     const vec2f& uvscale = {1, 1});
 // Make a uv cylinder
-scene_shape make_uvcylinder(const vec3i& steps = {32, 32, 32},
+shape_data make_uvcylinder(const vec3i& steps = {32, 32, 32},
     const vec2f& scale = {1, 1}, const vec3f& uvscale = {1, 1, 1});
 // Make a rounded uv cylinder
-scene_shape make_rounded_uvcylinder(const vec3i& steps = {32, 32, 32},
+shape_data make_rounded_uvcylinder(const vec3i& steps = {32, 32, 32},
     const vec2f& scale = {1, 1}, const vec3f& uvscale = {1, 1, 1},
     float radius = 0.3);
 
@@ -530,24 +530,24 @@ scene_fvshape make_fvbox(const vec3i& steps = {1, 1, 1},
 scene_fvshape make_fvsphere(int steps = 32, float scale = 1, float uvscale = 1);
 
 // Generate lines set along a quad. Returns lines, pos, norm, texcoord, radius.
-scene_shape make_lines(const vec2i& steps = {4, 65536},
+shape_data make_lines(const vec2i& steps = {4, 65536},
     const vec2f& scale = {1, 1}, const vec2f& uvscale = {1, 1},
     const vec2f& radius = {0.001f, 0.001f});
 
 // Make point primitives. Returns points, pos, norm, texcoord, radius.
-scene_shape make_point(float radius = 0.001f);
-scene_shape make_points(
+shape_data make_point(float radius = 0.001f);
+shape_data make_points(
     int num = 65536, float uvscale = 1, float radius = 0.001f);
-scene_shape make_random_points(int num = 65536, const vec3f& size = {1, 1, 1},
+shape_data make_random_points(int num = 65536, const vec3f& size = {1, 1, 1},
     float uvscale = 1, float radius = 0.001f, uint64_t seed = 17);
 
 // Predefined meshes
-scene_shape   make_monkey(float scale = 1, int subdivisions = 0);
-scene_shape   make_quad(float scale = 1, int subdivisions = 0);
-scene_shape   make_quady(float scale = 1, int subdivisions = 0);
-scene_shape   make_cube(float scale = 1, int subdivisions = 0);
+shape_data    make_monkey(float scale = 1, int subdivisions = 0);
+shape_data    make_quad(float scale = 1, int subdivisions = 0);
+shape_data    make_quady(float scale = 1, int subdivisions = 0);
+shape_data    make_cube(float scale = 1, int subdivisions = 0);
 scene_fvshape make_fvcube(float scale = 1, int subdivisions = 0);
-scene_shape   make_geosphere(float scale = 1, int subdivisions = 0);
+shape_data    make_geosphere(float scale = 1, int subdivisions = 0);
 
 // Make a hair ball around a shape.
 // length: minimum and maximum length
@@ -555,32 +555,31 @@ scene_shape   make_geosphere(float scale = 1, int subdivisions = 0);
 // noise: noise added to hair (strength/scale)
 // clump: clump added to hair (strength/number)
 // rotation: rotation added to hair (angle/strength)
-scene_shape make_hair(const scene_shape& shape, const vec2i& steps = {8, 65536},
+shape_data make_hair(const shape_data& shape, const vec2i& steps = {8, 65536},
     const vec2f& length = {0.1f, 0.1f}, const vec2f& radius = {0.001f, 0.001f},
     const vec2f& noise = {0, 10}, const vec2f& clump = {0, 128},
     const vec2f& rotation = {0, 0}, int seed = 7);
 
 // Grow hairs around a shape
-scene_shape make_hair2(const scene_shape& shape,
-    const vec2i& steps = {8, 65536}, const vec2f& length = {0.1f, 0.1f},
-    const vec2f& radius = {0.001f, 0.001f}, float noise = 0,
-    float gravity = 0.001f, int seed = 7);
+shape_data make_hair2(const shape_data& shape, const vec2i& steps = {8, 65536},
+    const vec2f& length = {0.1f, 0.1f}, const vec2f& radius = {0.001f, 0.001f},
+    float noise = 0, float gravity = 0.001f, int seed = 7);
 
 // Convert points to small spheres and lines to small cylinders. This is
 // intended for making very small primitives for display in interactive
 // applications, so the spheres are low res.
-scene_shape points_to_spheres(
+shape_data points_to_spheres(
     const vector<vec3f>& vertices, int steps = 2, float scale = 0.01f);
-scene_shape polyline_to_cylinders(
+shape_data polyline_to_cylinders(
     const vector<vec3f>& vertices, int steps = 4, float scale = 0.01f);
-scene_shape lines_to_cylinders(
+shape_data lines_to_cylinders(
     const vector<vec3f>& vertices, int steps = 4, float scale = 0.01f);
-scene_shape lines_to_cylinders(const vector<vec2i>& lines,
+shape_data lines_to_cylinders(const vector<vec2i>& lines,
     const vector<vec3f>& positions, int steps = 4, float scale = 0.01f);
 
 // Make a heightfield mesh.
-scene_shape make_heightfield(const vec2i& size, const vector<float>& height);
-scene_shape make_heightfield(const vec2i& size, const vector<vec4f>& color);
+shape_data make_heightfield(const vec2i& size, const vector<float>& height);
+shape_data make_heightfield(const vec2i& size, const vector<vec4f>& color);
 
 }  // namespace yocto
 
@@ -607,9 +606,14 @@ using scene_texture       = texture_data;
 using sceneio_material    = material_data;
 using scene_material_type = material_type;
 using sceneio_material    = material_data;
-using sceneio_shape       = scene_shape;
+using sceneio_shape       = shape_data;
+using scene_shape         = shape_data;
 using sceneio_instance    = scene_instance;
 using sceneio_environment = scene_environment;
+
+inline const auto scene_material_names = std::vector<std::string>{"matte",
+    "glossy", "metallic", "transparent", "refractive", "subsurface", "volume",
+    "gltfpbr"};
 
 }  // namespace yocto
 

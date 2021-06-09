@@ -277,7 +277,7 @@ bool has_volume(const material_point& material) {
 namespace yocto {
 
 // Interpolate vertex data
-vec3f eval_position(const scene_shape& shape, int element, const vec2f& uv) {
+vec3f eval_position(const shape_data& shape, int element, const vec2f& uv) {
   if (!shape.points.empty()) {
     auto& point = shape.points[element];
     return shape.positions[point];
@@ -298,7 +298,7 @@ vec3f eval_position(const scene_shape& shape, int element, const vec2f& uv) {
   }
 }
 
-vec3f eval_normal(const scene_shape& shape, int element, const vec2f& uv) {
+vec3f eval_normal(const shape_data& shape, int element, const vec2f& uv) {
   if (shape.normals.empty()) return eval_element_normal(shape, element);
   if (!shape.points.empty()) {
     auto& point = shape.points[element];
@@ -321,11 +321,11 @@ vec3f eval_normal(const scene_shape& shape, int element, const vec2f& uv) {
   }
 }
 
-vec3f eval_tangent(const scene_shape& shape, int element, const vec2f& uv) {
+vec3f eval_tangent(const shape_data& shape, int element, const vec2f& uv) {
   return eval_normal(shape, element, uv);
 }
 
-vec2f eval_texcoord(const scene_shape& shape, int element, const vec2f& uv) {
+vec2f eval_texcoord(const shape_data& shape, int element, const vec2f& uv) {
   if (shape.texcoords.empty()) return {0, 0};
   if (!shape.points.empty()) {
     auto& point = shape.points[element];
@@ -347,7 +347,7 @@ vec2f eval_texcoord(const scene_shape& shape, int element, const vec2f& uv) {
   }
 }
 
-vec4f eval_color(const scene_shape& shape, int element, const vec2f& uv) {
+vec4f eval_color(const shape_data& shape, int element, const vec2f& uv) {
   if (shape.colors.empty()) return {1, 1, 1, 1};
   if (!shape.points.empty()) {
     auto& point = shape.points[element];
@@ -368,7 +368,7 @@ vec4f eval_color(const scene_shape& shape, int element, const vec2f& uv) {
   }
 }
 
-float eval_radius(const scene_shape& shape, int element, const vec2f& uv) {
+float eval_radius(const shape_data& shape, int element, const vec2f& uv) {
   if (shape.radius.empty()) return 0;
   if (!shape.points.empty()) {
     auto& point = shape.points[element];
@@ -390,7 +390,7 @@ float eval_radius(const scene_shape& shape, int element, const vec2f& uv) {
 }
 
 // Evaluate element normals
-vec3f eval_element_normal(const scene_shape& shape, int element) {
+vec3f eval_element_normal(const shape_data& shape, int element) {
   if (!shape.points.empty()) {
     return {0, 0, 1};
   } else if (!shape.lines.empty()) {
@@ -410,7 +410,7 @@ vec3f eval_element_normal(const scene_shape& shape, int element) {
 }
 
 // Compute per-vertex normals/tangents for lines/triangles/quads.
-vector<vec3f> compute_normals(const scene_shape& shape) {
+vector<vec3f> compute_normals(const shape_data& shape) {
   if (!shape.points.empty()) {
     return vector<vec3f>(shape.positions.size(), {0, 0, 1});
   } else if (!shape.lines.empty()) {
@@ -423,7 +423,7 @@ vector<vec3f> compute_normals(const scene_shape& shape) {
     return vector<vec3f>(shape.positions.size(), {0, 0, 1});
   }
 }
-void compute_normals(vector<vec3f>& normals, const scene_shape& shape) {
+void compute_normals(vector<vec3f>& normals, const shape_data& shape) {
   if (!shape.points.empty()) {
     normals.assign(shape.positions.size(), {0, 0, 1});
   } else if (!shape.lines.empty()) {
@@ -438,7 +438,7 @@ void compute_normals(vector<vec3f>& normals, const scene_shape& shape) {
 }
 
 // Shape sampling
-vector<float> sample_shape_cdf(const scene_shape& shape) {
+vector<float> sample_shape_cdf(const shape_data& shape) {
   if (!shape.points.empty()) {
     return sample_points_cdf((int)shape.points.size());
   } else if (!shape.lines.empty()) {
@@ -452,7 +452,7 @@ vector<float> sample_shape_cdf(const scene_shape& shape) {
   }
 }
 
-void sample_shape_cdf(vector<float>& cdf, const scene_shape& shape) {
+void sample_shape_cdf(vector<float>& cdf, const shape_data& shape) {
   if (!shape.points.empty()) {
     sample_points_cdf(cdf, (int)shape.points.size());
   } else if (!shape.lines.empty()) {
@@ -466,7 +466,7 @@ void sample_shape_cdf(vector<float>& cdf, const scene_shape& shape) {
   }
 }
 
-shape_point sample_shape(const scene_shape& shape, const vector<float>& cdf,
+shape_point sample_shape(const shape_data& shape, const vector<float>& cdf,
     float rn, const vec2f& ruv) {
   if (!shape.points.empty()) {
     auto element = sample_points(cdf, rn);
@@ -487,7 +487,7 @@ shape_point sample_shape(const scene_shape& shape, const vector<float>& cdf,
 }
 
 vector<shape_point> sample_shape(
-    const scene_shape& shape, int num_samples, uint64_t seed) {
+    const shape_data& shape, int num_samples, uint64_t seed) {
   auto cdf    = sample_shape_cdf(shape);
   auto points = vector<shape_point>(num_samples);
   auto rng    = make_rng(seed);
@@ -498,22 +498,22 @@ vector<shape_point> sample_shape(
 }
 
 // Conversions
-scene_shape quads_to_triangles(const scene_shape& shape) {
+shape_data quads_to_triangles(const shape_data& shape) {
   auto result = shape;
   quads_to_triangles(result, result);
   return result;
 }
-void quads_to_triangles(scene_shape& result, const scene_shape& shape) {
+void quads_to_triangles(shape_data& result, const shape_data& shape) {
   result.triangles = quads_to_triangles(shape.quads);
   result.quads     = {};
 }
 
 // Subdivision
-scene_shape subdivide_shape(
-    const scene_shape& shape, int subdivisions, bool catmullclark) {
+shape_data subdivide_shape(
+    const shape_data& shape, int subdivisions, bool catmullclark) {
   // This should probably be reimplemented in a faster fashion,
   // but how it is not obvious
-  auto subdivided = scene_shape{};
+  auto subdivided = shape_data{};
   if (!shape.points.empty()) {
     // nothing to do
   } else if (!shape.lines.empty()) {
@@ -628,15 +628,15 @@ void compute_normals(vector<vec3f>& normals, const scene_fvshape& shape) {
 }
 
 // Conversions
-scene_shape fvshape_to_shape(const scene_fvshape& fvshape, bool as_triangles) {
-  auto shape = scene_shape{};
+shape_data fvshape_to_shape(const scene_fvshape& fvshape, bool as_triangles) {
+  auto shape = shape_data{};
   split_facevarying(shape.quads, shape.positions, shape.normals,
       shape.texcoords, fvshape.quadspos, fvshape.quadsnorm,
       fvshape.quadstexcoord, fvshape.positions, fvshape.normals,
       fvshape.texcoords);
   return shape;
 }
-scene_fvshape shape_to_fvshape(const scene_shape& shape) {
+scene_fvshape shape_to_fvshape(const shape_data& shape) {
   if (!shape.points.empty() || !shape.lines.empty())
     throw std::invalid_argument{"cannor convert shape"};
   auto fvshape          = scene_fvshape{};
@@ -675,7 +675,7 @@ scene_fvshape subdivide_fvshape(
   return subdivided;
 }
 
-vector<string> shape_stats(const scene_shape& shape, bool verbose) {
+vector<string> shape_stats(const shape_data& shape, bool verbose) {
   auto format = [](auto num) {
     auto str = std::to_string(num);
     while (str.size() < 13) str = " " + str;
@@ -1120,7 +1120,7 @@ int find_camera(const scene_model& scene, const string& name) {
 }
 
 // create a scene from a shape
-scene_model make_shape_scene(const scene_shape& shape, bool addsky) {
+scene_model make_shape_scene(const shape_data& shape, bool addsky) {
   // scene
   auto scene = scene_model{};
   // shape
@@ -1168,7 +1168,7 @@ bbox3f compute_bounds(const scene_model& scene) {
 namespace yocto {
 
 void tesselate_subdiv(
-    scene_shape& shape, scene_subdiv& subdiv_, const scene_model& scene) {
+    shape_data& shape, scene_subdiv& subdiv_, const scene_model& scene) {
   auto subdiv = subdiv_;
 
   if (subdiv.subdivisions > 0) {
@@ -1394,192 +1394,192 @@ vector<string> scene_validation(const scene_model& scene, bool notextures) {
 namespace yocto {
 
 // Make a plane.
-scene_shape make_rect(
+shape_data make_rect(
     const vec2i& steps, const vec2f& scale, const vec2f& uvscale) {
-  auto shape = scene_shape{};
+  auto shape = shape_data{};
   make_rect(shape.quads, shape.positions, shape.normals, shape.texcoords, steps,
       scale, uvscale);
   return shape;
 }
-scene_shape make_bulged_rect(const vec2i& steps, const vec2f& scale,
+shape_data make_bulged_rect(const vec2i& steps, const vec2f& scale,
     const vec2f& uvscale, float radius) {
-  auto shape = scene_shape{};
+  auto shape = shape_data{};
   make_bulged_rect(shape.quads, shape.positions, shape.normals, shape.texcoords,
       steps, scale, uvscale, radius);
   return shape;
 }
 
 // Make a plane in the xz plane.
-scene_shape make_recty(
+shape_data make_recty(
     const vec2i& steps, const vec2f& scale, const vec2f& uvscale) {
-  auto shape = scene_shape{};
+  auto shape = shape_data{};
   make_recty(shape.quads, shape.positions, shape.normals, shape.texcoords,
       steps, scale, uvscale);
   return shape;
 }
-scene_shape make_bulged_recty(const vec2i& steps, const vec2f& scale,
+shape_data make_bulged_recty(const vec2i& steps, const vec2f& scale,
     const vec2f& uvscale, float radius) {
-  auto shape = scene_shape{};
+  auto shape = shape_data{};
   make_bulged_recty(shape.quads, shape.positions, shape.normals,
       shape.texcoords, steps, scale, uvscale, radius);
   return shape;
 }
 
 // Make a box.
-scene_shape make_box(
+shape_data make_box(
     const vec3i& steps, const vec3f& scale, const vec3f& uvscale) {
-  auto shape = scene_shape{};
+  auto shape = shape_data{};
   make_box(shape.quads, shape.positions, shape.normals, shape.texcoords, steps,
       scale, uvscale);
   return shape;
 }
-scene_shape make_rounded_box(const vec3i& steps, const vec3f& scale,
+shape_data make_rounded_box(const vec3i& steps, const vec3f& scale,
     const vec3f& uvscale, float radius) {
-  auto shape = scene_shape{};
+  auto shape = shape_data{};
   make_rounded_box(shape.quads, shape.positions, shape.normals, shape.texcoords,
       steps, scale, uvscale, radius);
   return shape;
 }
 
 // Make a quad stack
-scene_shape make_rect_stack(
+shape_data make_rect_stack(
     const vec3i& steps, const vec3f& scale, const vec2f& uvscale) {
-  auto shape = scene_shape{};
+  auto shape = shape_data{};
   make_rect_stack(shape.quads, shape.positions, shape.normals, shape.texcoords,
       steps, scale, uvscale);
   return shape;
 }
 
 // Make a floor.
-scene_shape make_floor(
+shape_data make_floor(
     const vec2i& steps, const vec2f& scale, const vec2f& uvscale) {
-  auto shape = scene_shape{};
+  auto shape = shape_data{};
   make_floor(shape.quads, shape.positions, shape.normals, shape.texcoords,
       steps, scale, uvscale);
   return shape;
 }
-scene_shape make_bent_floor(
+shape_data make_bent_floor(
     const vec2i& steps, const vec2f& scale, const vec2f& uvscale, float bent) {
-  auto shape = scene_shape{};
+  auto shape = shape_data{};
   make_bent_floor(shape.quads, shape.positions, shape.normals, shape.texcoords,
       steps, scale, uvscale, bent);
   return shape;
 }
 
 // Make a sphere.
-scene_shape make_sphere(int steps, float scale, float uvscale) {
-  auto shape = scene_shape{};
+shape_data make_sphere(int steps, float scale, float uvscale) {
+  auto shape = shape_data{};
   make_sphere(shape.quads, shape.positions, shape.normals, shape.texcoords,
       steps, scale, uvscale);
   return shape;
 }
 
 // Make a sphere.
-scene_shape make_uvsphere(
+shape_data make_uvsphere(
     const vec2i& steps, float scale, const vec2f& uvscale) {
-  auto shape = scene_shape{};
+  auto shape = shape_data{};
   make_uvsphere(shape.quads, shape.positions, shape.normals, shape.texcoords,
       steps, scale, uvscale);
   return shape;
 }
 
 // Make a sphere.
-scene_shape make_uvspherey(
+shape_data make_uvspherey(
     const vec2i& steps, float scale, const vec2f& uvscale) {
-  auto shape = scene_shape{};
+  auto shape = shape_data{};
   make_uvspherey(shape.quads, shape.positions, shape.normals, shape.texcoords,
       steps, scale, uvscale);
   return shape;
 }
 
 // Make a sphere with slipped caps.
-scene_shape make_capped_uvsphere(
+shape_data make_capped_uvsphere(
     const vec2i& steps, float scale, const vec2f& uvscale, float height) {
-  auto shape = scene_shape{};
+  auto shape = shape_data{};
   make_capped_uvsphere(shape.quads, shape.positions, shape.normals,
       shape.texcoords, steps, scale, uvscale, height);
   return shape;
 }
 
 // Make a sphere with slipped caps.
-scene_shape make_capped_uvspherey(
+shape_data make_capped_uvspherey(
     const vec2i& steps, float scale, const vec2f& uvscale, float height) {
-  auto shape = scene_shape{};
+  auto shape = shape_data{};
   make_capped_uvspherey(shape.quads, shape.positions, shape.normals,
       shape.texcoords, steps, scale, uvscale, height);
   return shape;
 }
 
 // Make a disk
-scene_shape make_disk(int steps, float scale, float uvscale) {
-  auto shape = scene_shape{};
+shape_data make_disk(int steps, float scale, float uvscale) {
+  auto shape = shape_data{};
   make_disk(shape.quads, shape.positions, shape.normals, shape.texcoords, steps,
       scale, uvscale);
   return shape;
 }
 
 // Make a bulged disk
-scene_shape make_bulged_disk(
+shape_data make_bulged_disk(
     int steps, float scale, float uvscale, float height) {
-  auto shape = scene_shape{};
+  auto shape = shape_data{};
   make_bulged_disk(shape.quads, shape.positions, shape.normals, shape.texcoords,
       steps, scale, uvscale, height);
   return shape;
 }
 
 // Make a uv disk
-scene_shape make_uvdisk(const vec2i& steps, float scale, const vec2f& uvscale) {
-  auto shape = scene_shape{};
+shape_data make_uvdisk(const vec2i& steps, float scale, const vec2f& uvscale) {
+  auto shape = shape_data{};
   make_uvdisk(shape.quads, shape.positions, shape.normals, shape.texcoords,
       steps, scale, uvscale);
   return shape;
 }
 
 // Make a uv cylinder
-scene_shape make_uvcylinder(
+shape_data make_uvcylinder(
     const vec3i& steps, const vec2f& scale, const vec3f& uvscale) {
-  auto shape = scene_shape{};
+  auto shape = shape_data{};
   make_uvcylinder(shape.quads, shape.positions, shape.normals, shape.texcoords,
       steps, scale, uvscale);
   return shape;
 }
 
 // Make a rounded uv cylinder
-scene_shape make_rounded_uvcylinder(const vec3i& steps, const vec2f& scale,
+shape_data make_rounded_uvcylinder(const vec3i& steps, const vec2f& scale,
     const vec3f& uvscale, float radius) {
-  auto shape = scene_shape{};
+  auto shape = shape_data{};
   make_rounded_uvcylinder(shape.quads, shape.positions, shape.normals,
       shape.texcoords, steps, scale, uvscale, radius);
   return shape;
 }
 
 // Generate lines set along a quad. Returns lines, pos, norm, texcoord, radius.
-scene_shape make_lines(const vec2i& steps, const vec2f& scale,
+shape_data make_lines(const vec2i& steps, const vec2f& scale,
     const vec2f& uvscale, const vec2f& rad) {
-  auto shape = scene_shape{};
+  auto shape = shape_data{};
   make_lines(shape.lines, shape.positions, shape.normals, shape.texcoords,
       shape.radius, steps, scale, uvscale, rad);
   return shape;
 }
 
 // Make point primitives. Returns points, pos, norm, texcoord, radius.
-scene_shape make_point(float radius) {
-  auto shape = scene_shape{};
+shape_data make_point(float radius) {
+  auto shape = shape_data{};
   make_point(shape.points, shape.positions, shape.normals, shape.texcoords,
       shape.radius, radius);
   return shape;
 }
 
-scene_shape make_points(int num, float uvscale, float radius) {
-  auto shape = scene_shape{};
+shape_data make_points(int num, float uvscale, float radius) {
+  auto shape = shape_data{};
   make_points(shape.points, shape.positions, shape.normals, shape.texcoords,
       shape.radius, num, uvscale, radius);
   return shape;
 }
 
-scene_shape make_random_points(
+shape_data make_random_points(
     int num, const vec3f& size, float uvscale, float radius, uint64_t seed) {
-  auto shape = scene_shape{};
+  auto shape = shape_data{};
   make_random_points(shape.points, shape.positions, shape.normals,
       shape.texcoords, shape.radius, num, size, uvscale, radius, seed);
   return shape;
@@ -1612,25 +1612,25 @@ scene_fvshape make_fvsphere(int steps, float scale, float uvscale) {
 }
 
 // Predefined meshes
-scene_shape make_monkey(float scale, int subdivisions) {
-  auto shape = scene_shape{};
+shape_data make_monkey(float scale, int subdivisions) {
+  auto shape = shape_data{};
   make_monkey(shape.quads, shape.positions, scale, subdivisions);
   return shape;
 }
-scene_shape make_quad(float scale, int subdivisions) {
-  auto shape = scene_shape{};
+shape_data make_quad(float scale, int subdivisions) {
+  auto shape = shape_data{};
   make_quad(shape.quads, shape.positions, shape.normals, shape.texcoords, scale,
       subdivisions);
   return shape;
 }
-scene_shape make_quady(float scale, int subdivisions) {
-  auto shape = scene_shape{};
+shape_data make_quady(float scale, int subdivisions) {
+  auto shape = shape_data{};
   make_quady(shape.quads, shape.positions, shape.normals, shape.texcoords,
       scale, subdivisions);
   return shape;
 }
-scene_shape make_cube(float scale, int subdivisions) {
-  auto shape = scene_shape{};
+shape_data make_cube(float scale, int subdivisions) {
+  auto shape = shape_data{};
   make_cube(shape.quads, shape.positions, shape.normals, shape.texcoords, scale,
       subdivisions);
   return shape;
@@ -1641,18 +1641,18 @@ scene_fvshape make_fvcube(float scale, int subdivisions) {
       shape.positions, shape.normals, shape.texcoords, scale, subdivisions);
   return shape;
 }
-scene_shape make_geosphere(float scale, int subdivisions) {
-  auto shape = scene_shape{};
+shape_data make_geosphere(float scale, int subdivisions) {
+  auto shape = shape_data{};
   make_geosphere(
       shape.triangles, shape.positions, shape.normals, scale, subdivisions);
   return shape;
 }
 
 // Make a hair ball around a shape
-scene_shape make_hair(const scene_shape& base, const vec2i& steps,
+shape_data make_hair(const shape_data& base, const vec2i& steps,
     const vec2f& length, const vec2f& radius, const vec2f& noise,
     const vec2f& clump, const vec2f& rotation, int seed) {
-  auto shape = scene_shape{};
+  auto shape = shape_data{};
   make_hair(shape.lines, shape.positions, shape.normals, shape.texcoords,
       shape.radius, base.triangles, base.quads, base.positions, base.normals,
       base.texcoords, steps, length, radius, noise, clump, rotation, seed);
@@ -1660,10 +1660,10 @@ scene_shape make_hair(const scene_shape& base, const vec2i& steps,
 }
 
 // Grow hairs around a shape
-scene_shape make_hair2(const scene_shape& base, const vec2i& steps,
+shape_data make_hair2(const shape_data& base, const vec2i& steps,
     const vec2f& length, const vec2f& radius, float noise, float gravity,
     int seed) {
-  auto shape = scene_shape{};
+  auto shape = shape_data{};
   make_hair2(shape.lines, shape.positions, shape.normals, shape.texcoords,
       shape.radius, base.triangles, base.quads, base.positions, base.normals,
       base.texcoords, steps, length, radius, noise, gravity, seed);
@@ -1671,14 +1671,14 @@ scene_shape make_hair2(const scene_shape& base, const vec2i& steps,
 }
 
 // Make a heightfield mesh.
-scene_shape make_heightfield(const vec2i& size, const vector<float>& height) {
-  auto shape = scene_shape{};
+shape_data make_heightfield(const vec2i& size, const vector<float>& height) {
+  auto shape = shape_data{};
   make_heightfield(shape.quads, shape.positions, shape.normals, shape.texcoords,
       size, height);
   return shape;
 }
-scene_shape make_heightfield(const vec2i& size, const vector<vec4f>& color) {
-  auto shape = scene_shape{};
+shape_data make_heightfield(const vec2i& size, const vector<vec4f>& color) {
+  auto shape = shape_data{};
   make_heightfield(shape.quads, shape.positions, shape.normals, shape.texcoords,
       size, color);
   return shape;
@@ -1687,30 +1687,30 @@ scene_shape make_heightfield(const vec2i& size, const vector<vec4f>& color) {
 // Convert points to small spheres and lines to small cylinders. This is
 // intended for making very small primitives for display in interactive
 // applications, so the spheres are low res.
-scene_shape points_to_spheres(
+shape_data points_to_spheres(
     const vector<vec3f>& vertices, int steps, float scale) {
-  auto shape = scene_shape{};
+  auto shape = shape_data{};
   points_to_spheres(shape.quads, shape.positions, shape.normals,
       shape.texcoords, vertices, steps, scale);
   return shape;
 }
-scene_shape polyline_to_cylinders(
+shape_data polyline_to_cylinders(
     const vector<vec3f>& vertices, int steps, float scale) {
-  auto shape = scene_shape{};
+  auto shape = shape_data{};
   polyline_to_cylinders(shape.quads, shape.positions, shape.normals,
       shape.texcoords, vertices, steps, scale);
   return shape;
 }
-scene_shape lines_to_cylinders(
+shape_data lines_to_cylinders(
     const vector<vec3f>& vertices, int steps, float scale) {
-  auto shape = scene_shape{};
+  auto shape = shape_data{};
   lines_to_cylinders(shape.quads, shape.positions, shape.normals,
       shape.texcoords, vertices, steps, scale);
   return shape;
 }
-scene_shape lines_to_cylinders(const vector<vec2i>& lines,
+shape_data lines_to_cylinders(const vector<vec2i>& lines,
     const vector<vec3f>& positions, int steps, float scale) {
-  auto shape = scene_shape{};
+  auto shape = shape_data{};
   lines_to_cylinders(shape.quads, shape.positions, shape.normals,
       shape.texcoords, lines, positions, steps, scale);
   return shape;

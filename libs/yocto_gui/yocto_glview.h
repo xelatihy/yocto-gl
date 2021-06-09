@@ -185,7 +185,7 @@ struct glscene_shape {
 };
 
 // Create shape
-void set_shape(glscene_shape& glshape, const scene_shape& shape);
+void set_shape(glscene_shape& glshape, const shape_data& shape);
 
 // Clean shape
 void clear_shape(glscene_shape& glshape);

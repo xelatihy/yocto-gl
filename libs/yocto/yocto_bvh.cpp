@@ -116,7 +116,7 @@ void clear_embree_bvh(void* embree_bvh) {
 
 // Initialize Embree BVH
 static void build_embree_bvh(
-    bvh_shape& bvh, const scene_shape& shape, bool highquality) {
+    bvh_shape& bvh, const shape_data& shape, bool highquality) {
   auto edevice   = bvh_embree_device();
   bvh.embree_bvh = unique_ptr<void, void (*)(void*)>{
       rtcNewScene(edevice), &clear_embree_bvh};
@@ -240,7 +240,7 @@ static void update_embree_bvh(bvh_scene& bvh, const scene_model& scene,
   rtcCommitScene(escene);
 }
 
-static bool intersect_embree_bvh(const bvh_shape& bvh, const scene_shape& shape,
+static bool intersect_embree_bvh(const bvh_shape& bvh, const shape_data& shape,
     const ray3f& ray, int& element, vec2f& uv, float& distance, bool find_any) {
   RTCRayHit embree_ray;
   embree_ray.ray.org_x     = ray.o.x;
@@ -630,7 +630,7 @@ static void refit_bvh(bvh_tree& bvh, const vector<bbox3f>& bboxes) {
 }
 
 static void build_bvh(
-    bvh_shape& bvh, const scene_shape& shape, bool highquality, bool embree) {
+    bvh_shape& bvh, const shape_data& shape, bool highquality, bool embree) {
 #ifdef YOCTO_EMBREE
   if (embree) {
     return build_embree_bvh(bvh, shape, highquality);
@@ -695,7 +695,7 @@ static void build_bvh(bvh_scene& bvh, const scene_model& scene,
   build_bvh_serial(bvh.bvh, bboxes, highquality);
 }
 
-bvh_shape make_bvh(const scene_shape& shape, bool highquality, bool embree) {
+bvh_shape make_bvh(const shape_data& shape, bool highquality, bool embree) {
   // bvh
   auto bvh = bvh_shape{};
 
@@ -731,7 +731,7 @@ bvh_scene make_bvh(
   return bvh;
 }
 
-static void refit_bvh(bvh_shape& bvh, const scene_shape& shape) {
+static void refit_bvh(bvh_shape& bvh, const shape_data& shape) {
 #ifdef YOCTO_EMBREE
   if (bvh.embree_bvh) {
     throw std::runtime_error("embree shape refit not supported");
@@ -793,7 +793,7 @@ void refit_bvh(bvh_scene& bvh, const scene_model& scene,
   refit_bvh(bvh.bvh, bboxes);
 }
 
-void update_bvh(bvh_shape& bvh, const scene_shape& shape) {
+void update_bvh(bvh_shape& bvh, const shape_data& shape) {
   // handle instances
   refit_bvh(bvh, shape);
 }
@@ -817,7 +817,7 @@ void update_bvh(bvh_scene& bvh, const scene_model& scene,
 namespace yocto {
 
 // Intersect ray with a bvh.
-static bool intersect_bvh(const bvh_shape& bvh, const scene_shape& shape,
+static bool intersect_bvh(const bvh_shape& bvh, const shape_data& shape,
     const ray3f& ray_, int& element, vec2f& uv, float& distance,
     bool find_any) {
 #ifdef YOCTO_EMBREE
@@ -1009,7 +1009,7 @@ static bool intersect_bvh(const bvh_scene& bvh, const scene_model& scene,
 namespace yocto {
 
 // Intersect ray with a bvh.
-static bool overlap_bvh(const bvh_shape& bvh, const scene_shape& shape,
+static bool overlap_bvh(const bvh_shape& bvh, const shape_data& shape,
     const vec3f& pos, float max_distance, int& element, vec2f& uv,
     float& distance, bool find_any) {
   // check if empty

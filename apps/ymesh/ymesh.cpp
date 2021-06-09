@@ -69,7 +69,7 @@ int run_view(const view_params& params) {
 // view shapes
 int run_view(const view_params& params) {
   // load mesh
-  auto shape   = scene_shape{};
+  auto shape   = shape_data{};
   auto ioerror = ""s;
   if (path_filename(params.shape) == ".ypreset") {
     if (!make_shape_preset(shape, path_basename(params.shape), ioerror))
@@ -110,7 +110,7 @@ int run_glview(const glview_params& params) {
 
 #else
 
-static scene_model make_shapescene(const scene_shape& ioshape_) {
+static scene_model make_shapescene(const shape_data& ioshape_) {
   // Frame camera
   auto camera_frame = [](float lens, float aspect,
                           float film = 0.036) -> frame3f {
@@ -160,7 +160,7 @@ static scene_model make_shapescene(const scene_shape& ioshape_) {
 int run_glview(const glview_params& params) {
   // loading shape
   auto ioerror = ""s;
-  auto shape   = scene_shape{};
+  auto shape   = shape_data{};
   if (!load_shape(params.shape, shape, ioerror, true)) print_fatal(ioerror);
 
   // create scene
@@ -195,7 +195,7 @@ int run_glpath(const glpath_params& params) {
 
 #else
 
-static scene_model make_pathscene(const scene_shape& ioshape_) {
+static scene_model make_pathscene(const shape_data& ioshape_) {
   // Frame camera
   auto camera_frame = [](float lens, float aspect,
                           float film = 0.036) -> frame3f {
@@ -261,7 +261,7 @@ static scene_model make_pathscene(const scene_shape& ioshape_) {
 int run_glpath(const glpath_params& params) {
   // loading shape
   auto ioerror = ""s;
-  auto ioshape = scene_shape{};
+  auto ioshape = shape_data{};
   if (!load_shape(params.shape, ioshape, ioerror, true)) print_fatal(ioerror);
   if (!ioshape.quads.empty()) {
     ioshape.triangles = quads_to_triangles(ioshape.quads);
@@ -372,7 +372,7 @@ int run_glpathd(const glpathd_params& params) {
 
 #else
 
-static scene_model make_pathdscene(const scene_shape& ioshape) {
+static scene_model make_pathdscene(const shape_data& ioshape) {
   // Frame camera
   auto camera_frame = [](float lens, float aspect,
                           float film = 0.036) -> frame3f {
@@ -467,7 +467,7 @@ static scene_model make_pathdscene(const scene_shape& ioshape) {
 int run_glpathd(const glpathd_params& params) {
   // loading shape
   auto ioerror = ""s;
-  auto ioshape = scene_shape{};
+  auto ioshape = shape_data{};
   if (!load_shape(params.shape, ioshape, ioerror, true)) print_fatal(ioerror);
   if (!ioshape.quads.empty()) {
     ioshape.triangles = quads_to_triangles(ioshape.quads);
@@ -636,12 +636,12 @@ struct sculpt_state {
   vec2f               last_uv  = {};
   bool                instroke = false;
   // shape at the beginning of the stroke
-  scene_shape base_shape = {};
+  shape_data base_shape = {};
 };
 
 // Initialize all sculpting parameters.
 sculpt_state make_sculpt_state(
-    const scene_shape& shape, const texture_data& texture) {
+    const shape_data& shape, const texture_data& texture) {
   auto state = sculpt_state{};
   state.bvh  = make_triangles_bvh(
       shape.triangles, shape.positions, shape.radius);
@@ -656,7 +656,7 @@ sculpt_state make_sculpt_state(
   return state;
 }
 
-scene_shape make_circle(
+shape_data make_circle(
     const vec3f& center, const mat3f& basis, float radius, int steps) {
   // 4 initial vertices
   auto  lines    = make_lines({1, 4});
@@ -703,8 +703,8 @@ scene_shape make_circle(
 }
 
 // To visualize mouse intersection on mesh
-scene_shape make_cursor(const vec3f& position, const vec3f& normal,
-    float radius, float height = 0.05f) {
+shape_data make_cursor(const vec3f& position, const vec3f& normal, float radius,
+    float height = 0.05f) {
   auto basis  = basis_fromz(normal);
   auto cursor = make_circle(position, basis, radius, 32);
   cursor.normals.clear();
@@ -1087,7 +1087,7 @@ bool smooth_brush(vector<vec3f>& positions, const geodesic_solver& solver,
   return true;
 }
 
-static scene_model make_sculptscene(const scene_shape& ioshape_) {
+static scene_model make_sculptscene(const shape_data& ioshape_) {
   // Frame camera
   auto camera_frame = [](float lens, float aspect,
                           float film = 0.036) -> frame3f {
@@ -1140,7 +1140,7 @@ static scene_model make_sculptscene(const scene_shape& ioshape_) {
 
 // To make the stroke sampling (position, normal) following the mouse
 static pair<vector<shape_point>, vec2f> sample_stroke(const shape_bvh& bvh,
-    const scene_shape& shape, const vec2f& last_uv, const vec2f& mouse_uv,
+    const shape_data& shape, const vec2f& last_uv, const vec2f& mouse_uv,
     const camera_data& camera, const sculpt_params& params) {
   // helper
   auto intersect_shape = [&](const vec2f& uv) {
@@ -1174,8 +1174,8 @@ static pair<vector<shape_point>, vec2f> sample_stroke(const shape_bvh& bvh,
   return {samples, cur_uv};
 }
 
-static pair<bool, bool> sculpt_update(sculpt_state& state, scene_shape& shape,
-    scene_shape& cursor, const camera_data& camera, const vec2f& mouse_uv,
+static pair<bool, bool> sculpt_update(sculpt_state& state, shape_data& shape,
+    shape_data& cursor, const camera_data& camera, const vec2f& mouse_uv,
     bool mouse_pressed, const sculpt_params& params) {
   auto updated_shape = false, updated_cursor = false;
 
@@ -1243,7 +1243,7 @@ static pair<bool, bool> sculpt_update(sculpt_state& state, scene_shape& shape,
 int run_glsculpt(const glsculpt_params& params_) {
   // loading shape
   auto ioerror = ""s;
-  auto ioshape = scene_shape{};
+  auto ioshape = shape_data{};
   if (!load_shape(params_.shape, ioshape, ioerror, true)) print_fatal(ioerror);
   if (!ioshape.quads.empty()) {
     ioshape.triangles = quads_to_triangles(ioshape.quads);

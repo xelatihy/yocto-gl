@@ -37,7 +37,7 @@ Here is an sketch of how to create a shape instance in a scene.
 
 ```cpp
 auto scene = scene_model{};         // create a scene
-auto shape = scene_shape{};         // create a shape and add it
+auto shape = shape_data{};          // create a shape and add it
 set_shape_properties(shape, ...);
 scene.shapes.push_back(shape);
 scene.materials.push_back({});      // create a black material directly
@@ -173,7 +173,7 @@ auto envi = eval_environment(environment, dir);  // eval environment
 
 ## Shapes
 
-Shapes, represented by `scene_shape`, are indexed meshes of elements.
+Shapes, represented by `shape_data`, are indexed meshes of elements.
 Shapes can contain only one type of element, either
 points, lines, triangles or quads. Shape elements are parametrized as in
 [Yocto/Geometry](yocto_geometry.md).
@@ -190,7 +190,7 @@ or quads, and the vertex properties, i.e. positions, normals, texture
 coordinates, colors and radia. Shapes support only one element type.
 
 ```cpp
-auto shape = scene_shape{};            // create a shape
+auto shape = shape_data{};             // create a shape
 shape.triangles = vector<vec3i>{...};  // set triangle indices
 shape.positions = vector<vec3f>{...};  // set positions
 shape.normals = vector<vec3f>{...};    // set normals
@@ -419,7 +419,7 @@ a comprehensive list of all procedural shapes supported.
 
 Procedural shapes take as input the desired shape resolution, the shape scale,
 the uv scale, and additional parameters specific to that procedural shape.
-These functions return a quad mesh, stored as a `scene_shape` struct.
+These functions return a quad mesh, stored as a `shape_data` struct.
 Use `make_rect(...)` for a rectangle in the XY plane,
 `make_bulged_rect(...)` for a bulged rectangle,
 `make_recty(...)` for a rectangle in the XZ plane,
@@ -473,14 +473,14 @@ auto fvshape_03 = make_fvsphere(32, 1);
 Yocto/Shape provides functions to create predefined shapes helpful in testing.
 These functions take only a scale and often provide only the positions as
 vertex data. These functions return either triangles, quads, or
-face-varying quads in a `scene_shape` or `scene_fvshape` struct.
+face-varying quads in a `shape_data` or `scene_fvshape` struct.
 Use `make_monkey(...)` for the Blender monkey as quads and positions only,
 `make_quad(...)` for a simple quad,
 `make_quady(...)` for a simple quad in the XZ plane,
 `make_cube(...)` for a simple cube as quads and positions only,
 `make_fvcube(...)` for a simple face-varying unit cube,
 `make_geosphere(...)` for a geodesic sphere as triangles and positions only.
-These functions return a `scene_shape` or `scene_fvshape`.
+These functions return a `shape_data` or `scene_fvshape`.
 
 ```cpp
 auto monkey = make_monkey(1);
@@ -495,7 +495,7 @@ Yocto/Shape supports the generation of points and lines sets.
 Use `make_lines(...)` to create a line set in the XY plane,
 `make_points(...)` for a collection of points at the origin,
 adn `make_random_points(...)` for a point set randomly placed in a box.
-These functions return points or lines, packed in a `scene_shape` struct.
+These functions return points or lines, packed in a `shape_data` struct.
 
 ```cpp
 auto lines_01 = make_lines({4, 65536},      // line steps and number of lines

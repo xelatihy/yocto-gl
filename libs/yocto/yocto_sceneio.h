@@ -116,9 +116,9 @@ bool make_texture_preset(
 namespace yocto {
 
 // Load/save a shape
-bool load_shape(const string& filename, scene_shape& shape, string& error,
+bool load_shape(const string& filename, shape_data& shape, string& error,
     bool flip_texcoords = true);
-bool save_shape(const string& filename, const scene_shape& shape, string& error,
+bool save_shape(const string& filename, const shape_data& shape, string& error,
     bool flip_texcoords = true, bool ascii = false);
 
 // Load/save a subdiv
@@ -128,7 +128,7 @@ bool save_fvshape(const string& filename, const scene_fvshape& shape,
     string& error, bool flip_texcoords = true, bool ascii = false);
 
 // Make presets. Supported mostly in IO.
-bool make_shape_preset(scene_shape& shape, const string& type, string& error);
+bool make_shape_preset(shape_data& shape, const string& type, string& error);
 bool make_fvshape_preset(
     scene_fvshape& shape, const string& type, string& error);
 

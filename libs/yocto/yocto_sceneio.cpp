@@ -935,7 +935,7 @@ bool make_texture_preset(
 namespace yocto {
 
 // Load ply mesh
-bool load_shape(const string& filename, scene_shape& shape, string& error,
+bool load_shape(const string& filename, shape_data& shape, string& error,
     bool flip_texcoord) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
@@ -1001,7 +1001,7 @@ bool load_shape(const string& filename, scene_shape& shape, string& error,
 }
 
 // Save ply mesh
-bool save_shape(const string& filename, const scene_shape& shape, string& error,
+bool save_shape(const string& filename, const shape_data& shape, string& error,
     bool flip_texcoord, bool ascii) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
@@ -1278,27 +1278,27 @@ bool save_fvshape(const string& filename, const scene_fvshape& shape,
 }
 
 // Shape presets used ofr testing.
-bool make_shape_preset(scene_shape& shape, const string& type, string& error) {
-  auto set_quads = [&](scene_shape&& shape_) {
+bool make_shape_preset(shape_data& shape, const string& type, string& error) {
+  auto set_quads = [&](shape_data&& shape_) {
     shape.quads     = shape_.quads;
     shape.positions = shape_.positions;
     shape.normals   = shape_.normals;
     shape.texcoords = shape_.texcoords;
   };
-  auto set_triangles = [&](scene_shape&& shape_) {
+  auto set_triangles = [&](shape_data&& shape_) {
     shape.triangles = shape_.triangles;
     shape.positions = shape_.positions;
     shape.normals   = shape_.normals;
     shape.texcoords = shape_.texcoords;
   };
-  auto set_lines = [&](scene_shape&& shape_) {
+  auto set_lines = [&](shape_data&& shape_) {
     shape.lines     = shape_.lines;
     shape.positions = shape_.positions;
     shape.normals   = shape_.normals;
     shape.texcoords = shape_.texcoords;
     shape.radius    = shape_.radius;
   };
-  auto set_points = [&](scene_shape&& shape_) {
+  auto set_points = [&](shape_data&& shape_) {
     shape.points    = shape_.points;
     shape.positions = shape_.positions;
     shape.normals   = shape_.normals;
@@ -1495,7 +1495,7 @@ bool make_shape_preset(scene_shape& shape, const string& type, string& error) {
 // Shape presets used for testing.
 bool make_fvshape_preset(
     scene_fvshape& shape, const string& type, string& error) {
-  auto set_quads = [&](scene_shape&& shape_) {
+  auto set_quads = [&](shape_data&& shape_) {
     shape.quadspos  = shape_.quads;
     shape.positions = shape_.positions;
     if (!shape_.normals.empty()) shape.quadsnorm = shape_.quads;
@@ -1503,13 +1503,13 @@ bool make_fvshape_preset(
     if (!shape_.texcoords.empty()) shape.quadstexcoord = shape_.quads;
     shape.texcoords = shape_.texcoords;
   };
-  auto set_triangles = [&](scene_shape&& shape) {
+  auto set_triangles = [&](shape_data&& shape) {
     throw std::invalid_argument{"bad shape type"};
   };
-  auto set_lines = [&](scene_shape&& shape) {
+  auto set_lines = [&](shape_data&& shape) {
     throw std::invalid_argument{"bad shape type"};
   };
-  auto set_points = [&](scene_shape&& shape) {
+  auto set_points = [&](shape_data&& shape) {
     throw std::invalid_argument{"bad shape type"};
   };
   auto set_fvquads = [&](scene_fvshape&& shape_) {
@@ -1758,7 +1758,7 @@ namespace yocto {
       scene, (int)(&environment - scene.environments.data()));
 }
 [[maybe_unused]] static string get_shape_name(
-    const scene_model& scene, const scene_shape& shape) {
+    const scene_model& scene, const shape_data& shape) {
   return get_shape_name(scene, (int)(&shape - scene.shapes.data()));
 }
 [[maybe_unused]] static string get_texture_name(
@@ -2520,7 +2520,7 @@ bool save_subdiv(
 
 // save binary shape
 static bool save_binshape(
-    const string& filename, const scene_shape& shape, string& error) {
+    const string& filename, const shape_data& shape, string& error) {
   auto open_error = [filename, &error]() {
     error = filename + ": file not found";
     return false;
@@ -2616,15 +2616,15 @@ inline void from_json(const njson& j, mat4f& value) {
 }
 
 inline void to_json(njson& j, material_type value) {
-  j = scene_material_names.at((int)value);
+  j = material_type_names.at((int)value);
 }
 inline void from_json(const njson& j, material_type& value) {
   auto values = j.get<string>();
   auto pos    = std::find(
-      scene_material_names.begin(), scene_material_names.end(), values);
-  if (pos == scene_material_names.end())
+      material_type_names.begin(), material_type_names.end(), values);
+  if (pos == material_type_names.end())
     throw std::invalid_argument{"unknown value"};
-  value = (material_type)(pos - scene_material_names.begin());
+  value = (material_type)(pos - material_type_names.begin());
 }
 
 }  // namespace yocto
