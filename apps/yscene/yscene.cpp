@@ -239,7 +239,9 @@ int run_render(const render_params& params_) {
       auto image = params.denoise ? get_denoised(state) : get_render(state);
       auto ext = "-s" + std::to_string(sample) + path_extension(params.output);
       auto outfilename = replace_extension(params.output, ext);
-      auto ioerror     = ""s;
+      if (!is_hdr_filename(params.output))
+        image = tonemap_image(image, params.exposure, params.filmic);
+      auto ioerror = ""s;
       if (!save_image(outfilename, image, ioerror)) print_fatal(ioerror);
     }
     print_progress_next();
@@ -248,6 +250,8 @@ int run_render(const render_params& params_) {
   // save image
   print_progress_begin("save image");
   auto image = params.denoise ? get_denoised(state) : get_render(state);
+  if (!is_hdr_filename(params.output))
+    image = tonemap_image(image, params.exposure, params.filmic);
   if (!save_image(params.output, image, ioerror)) return print_fatal(ioerror);
   print_progress_end();
 
