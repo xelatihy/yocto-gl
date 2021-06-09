@@ -45,7 +45,7 @@ By default, Yocto/BVH uses the internal BVH. Intel's Embree can be used
 by setting the `embree` flag to true.
 
 ```cpp
-auto scene = scene_model{...};            // make a complete scene
+auto scene = scene_data{...};             // make a complete scene
 auto bvh = build_bvh(scene);              // build a BVH
 auto embree = build_bvh(scene,true,true); // use Embree
 ```
@@ -57,7 +57,7 @@ Updating works ony for change to instance frames and shapes positions.
 For changes like adding or removing elements, the BVH has to be built again.
 
 ```cpp
-auto scene = scene_model{...};            // make a complete scene
+auto scene = scene_data{...};             // make a complete scene
 auto bvh = build_bvh(scene);              // build a BVH
 auto shapes = update_shapes(scene);       // updates some shapes
 auto instances = update_instances(scene); // updates some instances

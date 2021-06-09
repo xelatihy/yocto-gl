@@ -152,7 +152,7 @@ struct scene_selection {
   int subdiv      = 0;
 };
 
-static bool draw_scene_editor(scene_model& scene, scene_selection& selection,
+static bool draw_scene_editor(scene_data& scene, scene_selection& selection,
     const function<void()>& before_edit) {
   auto edited = 0;
   if (begin_glheader("cameras")) {
@@ -433,7 +433,7 @@ void colorgrade_image(
 }
 
 // Open a window and show an scene via path tracing
-void view_scene(const string& title, const string& name, scene_model& scene,
+void view_scene(const string& title, const string& name, scene_data& scene,
     const trace_params& params_, bool print, bool edit) {
   // copy params and camera
   auto params = params_;
@@ -641,7 +641,7 @@ void view_scene(const string& title, const string& name, scene_model& scene,
   stop_render();
 }
 
-void glview_scene(const string& title, const string& name, scene_model& scene,
+void glview_scene(const string& title, const string& name, scene_data& scene,
     const glscene_params& params_, const glview_callback& widgets_callback,
     const glview_callback& uiupdate_callback,
     const glview_callback& update_callback) {
@@ -1409,7 +1409,7 @@ void clear_shape(glscene_shape& glshape) {
 }
 
 // init scene
-void init_glscene(glscene_state& glscene, const scene_model& ioscene) {
+void init_glscene(glscene_state& glscene, const scene_data& ioscene) {
   // program
   set_program(glscene.program, glscene.vertex, glscene.fragment, glscene_vertex,
       glscene_fragment);
@@ -1428,7 +1428,7 @@ void init_glscene(glscene_state& glscene, const scene_model& ioscene) {
 }
 
 // update scene
-void update_glscene(glscene_state& glscene, const scene_model& scene,
+void update_glscene(glscene_state& glscene, const scene_data& scene,
     const vector<int>& updated_shapes, const vector<int>& updated_textures) {
   for (auto shape_id : updated_shapes) {
     set_shape(glscene.shapes[shape_id], scene.shapes[shape_id]);
@@ -1478,7 +1478,7 @@ void clear_scene(glscene_state& glscene) {
   assert_glerror();
 }
 
-void draw_scene(glscene_state& glscene, const scene_model& scene,
+void draw_scene(glscene_state& glscene, const scene_data& scene,
     const vec4i& viewport, const glscene_params& params) {
   // check errors
   assert_glerror();

@@ -103,12 +103,12 @@ struct bvh_scene {
 // Build the bvh acceleration structure.
 bvh_shape make_bvh(
     const shape_data& shape, bool highquality = false, bool embree = false);
-bvh_scene make_bvh(const scene_model& scene, bool highquality = false,
+bvh_scene make_bvh(const scene_data& scene, bool highquality = false,
     bool embree = false, bool noparallel = false);
 
 // Refit bvh data
 void update_bvh(bvh_shape& bvh, const shape_data& shape);
-void update_bvh(bvh_scene& bvh, const scene_model& scene,
+void update_bvh(bvh_scene& bvh, const scene_data& scene,
     const vector<int>& updated_instances, const vector<int>& updated_shapes);
 
 // Results of intersect_xxx and overlap_xxx functions that include hit flag,
@@ -129,9 +129,9 @@ struct bvh_intersection {
 // the shape element index and the element barycentric coordinates.
 bvh_intersection intersect_bvh(const bvh_shape& bvh, const shape_data& shape,
     const ray3f& ray, bool find_any = false, bool non_rigid_frames = true);
-bvh_intersection intersect_bvh(const bvh_scene& bvh, const scene_model& scene,
+bvh_intersection intersect_bvh(const bvh_scene& bvh, const scene_data& scene,
     const ray3f& ray, bool find_any = false, bool non_rigid_frames = true);
-bvh_intersection intersect_bvh(const bvh_scene& bvh, const scene_model& scene,
+bvh_intersection intersect_bvh(const bvh_scene& bvh, const scene_data& scene,
     int instance, const ray3f& ray, bool find_any = false,
     bool non_rigid_frames = true);
 
@@ -141,7 +141,7 @@ bvh_intersection intersect_bvh(const bvh_scene& bvh, const scene_model& scene,
 // index and the element barycentric coordinates.
 bvh_intersection overlap_bvh(const bvh_shape& bvh, const shape_data& shape,
     const vec3f& pos, float max_distance, bool find_any = false);
-bvh_intersection overlap_bvh(const bvh_scene& bvh, const scene_model& scene,
+bvh_intersection overlap_bvh(const bvh_scene& bvh, const scene_data& scene,
     const vec3f& pos, float max_distance, bool find_any = false,
     bool non_rigid_frames = true);
 

@@ -217,7 +217,7 @@ struct subdiv_data {
 // environment. In that case, the element transforms are computed from
 // the hierarchy. Animation is also optional, with keyframe data that
 // updates node transformations only if defined.
-struct scene_model {
+struct scene_data {
   // scene elements
   vector<camera_data>      cameras      = {};
   vector<instance_data>    instances    = {};
@@ -262,7 +262,7 @@ namespace yocto {
 vec4f eval_texture(const texture_data& texture, const vec2f& uv,
     bool as_linear = false, bool no_interpolation = false,
     bool clamp_to_edge = false);
-vec4f eval_texture(const scene_model& scene, int texture, const vec2f& uv,
+vec4f eval_texture(const scene_data& scene, int texture, const vec2f& uv,
     bool as_linear = false, bool no_interpolation = false,
     bool clamp_to_edge = false);
 
@@ -296,7 +296,7 @@ struct material_point {
 };
 
 // Eval material to obtain emission, brdf and opacity.
-material_point eval_material(const scene_model& scene,
+material_point eval_material(const scene_data& scene,
     const material_data& material, const vec2f& texcoord,
     const vec4f& shape_color = {1, 1, 1, 1});
 
@@ -307,7 +307,7 @@ bool is_delta(const material_point& material);
 // check if a material has a volume
 bool is_volumetric(const material_data& material);
 bool is_volumetric(const material_point& material);
-bool is_volumetric(const scene_model& scene, const instance_data& instance);
+bool is_volumetric(const scene_data& scene, const instance_data& instance);
 
 }  // namespace yocto
 
@@ -386,29 +386,29 @@ vector<string> fvshape_stats(const fvshape_data& shape, bool verbose = false);
 namespace yocto {
 
 // Evaluate instance properties
-vec3f eval_position(const scene_model& scene, const instance_data& instance,
+vec3f eval_position(const scene_data& scene, const instance_data& instance,
     int element, const vec2f& uv);
 vec3f eval_element_normal(
-    const scene_model& scene, const instance_data& instance, int element);
-vec3f eval_normal(const scene_model& scene, const instance_data& instance,
+    const scene_data& scene, const instance_data& instance, int element);
+vec3f eval_normal(const scene_data& scene, const instance_data& instance,
     int element, const vec2f& uv);
-vec2f eval_texcoord(const scene_model& scene, const instance_data& instance,
+vec2f eval_texcoord(const scene_data& scene, const instance_data& instance,
     int element, const vec2f& uv);
 pair<vec3f, vec3f> eval_element_tangents(
-    const scene_model& scene, const instance_data& instance, int element);
-vec3f eval_normalmap(const scene_model& scene, const instance_data& instance,
+    const scene_data& scene, const instance_data& instance, int element);
+vec3f eval_normalmap(const scene_data& scene, const instance_data& instance,
     int element, const vec2f& uv);
-vec3f eval_shading_normal(const scene_model& scene,
+vec3f eval_shading_normal(const scene_data& scene,
     const instance_data& instance, int element, const vec2f& uv,
     const vec3f& outgoing);
-vec4f eval_color(const scene_model& scene, const instance_data& instance,
+vec4f eval_color(const scene_data& scene, const instance_data& instance,
     int element, const vec2f& uv);
 
 // Eval material to obtain emission, brdf and opacity.
-material_point eval_material(const scene_model& scene,
+material_point eval_material(const scene_data& scene,
     const instance_data& instance, int element, const vec2f& uv);
 // check if a material has a volume
-bool is_volumetric(const scene_model& scene, const instance_data& instance);
+bool is_volumetric(const scene_data& scene, const instance_data& instance);
 
 }  // namespace yocto
 
@@ -418,9 +418,9 @@ bool is_volumetric(const scene_model& scene, const instance_data& instance);
 namespace yocto {
 
 // Environment
-vec3f eval_environment(const scene_model& scene,
+vec3f eval_environment(const scene_data& scene,
     const environment_data& environment, const vec3f& direction);
-vec3f eval_environment(const scene_model& scene, const vec3f& direction);
+vec3f eval_environment(const scene_data& scene, const vec3f& direction);
 
 }  // namespace yocto
 
@@ -430,23 +430,23 @@ vec3f eval_environment(const scene_model& scene, const vec3f& direction);
 namespace yocto {
 
 // compute scene bounds
-bbox3f compute_bounds(const scene_model& scene);
+bbox3f compute_bounds(const scene_data& scene);
 
 // add missing elements
-void add_camera(scene_model& scene);
-void add_sky(scene_model& scene, float sun_angle = pif / 4);
+void add_camera(scene_data& scene);
+void add_sky(scene_data& scene, float sun_angle = pif / 4);
 
 // get named camera or default if name is empty
-int find_camera(const scene_model& scene, const string& name);
+int find_camera(const scene_data& scene, const string& name);
 
 // create a scene from a shape
-scene_model make_shape_scene(const shape_data& shape, bool add_sky = false);
+scene_data make_shape_scene(const shape_data& shape, bool add_sky = false);
 
 // Return scene statistics as list of strings.
-vector<string> scene_stats(const scene_model& scene, bool verbose = false);
+vector<string> scene_stats(const scene_data& scene, bool verbose = false);
 // Return validation errors as list of strings.
 vector<string> scene_validation(
-    const scene_model& scene, bool notextures = false);
+    const scene_data& scene, bool notextures = false);
 
 }  // namespace yocto
 
@@ -456,7 +456,7 @@ vector<string> scene_validation(
 namespace yocto {
 
 // Apply subdivision and displacement rules.
-void tesselate_subdivs(scene_model& scene);
+void tesselate_subdivs(scene_data& scene);
 
 }  // namespace yocto
 
@@ -589,7 +589,7 @@ shape_data make_heightfield(const vec2i& size, const vector<vec4f>& color);
 namespace yocto {
 
 // Make Cornell Box scene
-void make_cornellbox(scene_model& scene);
+void make_cornellbox(scene_data& scene);
 
 }  // namespace yocto
 
@@ -598,7 +598,8 @@ void make_cornellbox(scene_model& scene);
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-using sceneio_scene       = scene_model;
+using sceneio_scene       = scene_data;
+using scene_model         = scene_data;
 using sceneio_camera      = camera_data;
 using scene_camera        = camera_data;
 using sceneio_texture     = texture_data;

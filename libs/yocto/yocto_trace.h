@@ -127,7 +127,7 @@ inline const auto trace_falsecolor_names = vector<string>{"position", "normal",
 using image_callback = function<void(int current, int total)>;
 
 // Progressively computes an image.
-color_image trace_image(const scene_model& scene, const trace_params& params);
+color_image trace_image(const scene_data& scene, const trace_params& params);
 
 }  // namespace yocto
 
@@ -164,19 +164,19 @@ struct trace_state {
 };
 
 // Initialize state.
-trace_state make_state(const scene_model& scene, const trace_params& params);
+trace_state make_state(const scene_data& scene, const trace_params& params);
 
 // Initialize lights.
-trace_lights make_lights(const scene_model& scene, const trace_params& params);
+trace_lights make_lights(const scene_data& scene, const trace_params& params);
 
 // Build the bvh acceleration structure.
-bvh_scene make_bvh(const scene_model& scene, const trace_params& params);
+bvh_scene make_bvh(const scene_data& scene, const trace_params& params);
 
 // Progressively computes an image.
-void trace_samples(trace_state& state, const scene_model& scene,
+void trace_samples(trace_state& state, const scene_data& scene,
     const bvh_scene& bvh, const trace_lights& lights,
     const trace_params& params);
-void trace_sample(trace_state& state, const scene_model& scene,
+void trace_sample(trace_state& state, const scene_data& scene,
     const bvh_scene& bvh, const trace_lights& lights, int i, int j,
     const trace_params& params);
 

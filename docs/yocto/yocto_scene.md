@@ -6,7 +6,7 @@ Yocto/Scene is implemented in `yocto_scene.h` and `yocto_scene.cpp`.
 
 ## Scene representation
 
-Scenes are stored in `scene_model` structs and are comprised of arrays of
+Scenes are stored in `scene_data` structs and are comprised of arrays of
 cameras, instances, shapes, materials, textures and environments.
 The various objects are stored as values in arrays named like the object type.
 Animation is not currently supported.
@@ -36,7 +36,7 @@ that "if you know how to use `std::vector`, you know how to use scenes".
 Here is an sketch of how to create a shape instance in a scene.
 
 ```cpp
-auto scene = scene_model{};         // create a scene
+auto scene = scene_data{};          // create a scene
 auto shape = shape_data{};          // create a shape and add it
 set_shape_properties(shape, ...);
 scene.shapes.push_back(shape);
@@ -98,7 +98,7 @@ to get a camera ray from the normalized image coordinates `image_uv` and
 lens coordinates `lens_uv`.
 
 ```cpp
-auto scene = scene_model{...};                 // create a complete scene
+auto scene = scene_data{...};                  // create a complete scene
 auto& camera = get_camera(scene);              // get default camera
 auto ray = eval_camera(camera,{0.5,0.5},{0,0});// get ray though image center
 ```

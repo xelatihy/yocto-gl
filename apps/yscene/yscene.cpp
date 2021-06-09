@@ -60,7 +60,7 @@ void add_command(const cli_command& cli, const string& name,
 // convert images
 int run_convert(const convert_params& params) {
   // load scene
-  auto scene   = scene_model{};
+  auto scene   = scene_data{};
   auto ioerror = ""s;
   print_progress_begin("load scene");
   if (!load_scene(params.scene, scene, ioerror)) print_fatal(ioerror);
@@ -119,7 +119,7 @@ void add_command(const cli_command& cli, const string& name,
 // print info for scenes
 int run_info(const info_params& params) {
   // load scene
-  auto scene   = scene_model{};
+  auto scene   = scene_data{};
   auto ioerror = ""s;
   print_progress_begin("load scene");
   if (!load_scene(params.scene, scene, ioerror)) print_fatal(ioerror);
@@ -186,7 +186,7 @@ int run_render(const render_params& params_) {
   auto params = params_;
 
   // scene loading
-  auto scene   = scene_model{};
+  auto scene   = scene_data{};
   auto ioerror = string{};
   print_progress_begin("load scene");
   if (!load_scene(params.scene, scene, ioerror)) return print_fatal(ioerror);
@@ -311,7 +311,7 @@ int run_view(const view_params& params_) {
   auto params = params_;
 
   // load scene
-  auto scene   = scene_model{};
+  auto scene   = scene_data{};
   auto ioerror = ""s;
   print_progress_begin("load scene");
   if (!load_scene(params.scene, scene, ioerror)) print_fatal(ioerror);
@@ -372,7 +372,7 @@ int run_glview(const glview_params& params_) {
 
   // loading scene
   auto ioerror = ""s;
-  auto scene   = scene_model{};
+  auto scene   = scene_data{};
   print_progress_begin("load scene");
   if (!load_scene(params.scene, scene, ioerror)) print_fatal(ioerror);
   print_progress_end();

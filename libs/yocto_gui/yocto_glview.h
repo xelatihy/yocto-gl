@@ -72,7 +72,7 @@ void colorgrade_image(
     const string& title, const string& name, const color_image& image);
 
 // Open a window and show an scene via path tracing
-void view_scene(const string& title, const string& name, scene_model& scene,
+void view_scene(const string& title, const string& name, scene_data& scene,
     const trace_params& params = {}, bool print = true, bool edit = false);
 
 // GUI callback
@@ -82,7 +82,7 @@ using glview_callback = std::function<void(const glinput_state& input,
 
 // Open a window and show an scene via OpenGL shading
 struct glscene_params;
-void glview_scene(const string& title, const string& name, scene_model& scene,
+void glview_scene(const string& title, const string& name, scene_data& scene,
     const glscene_params& params, const glview_callback& widgets_callback = {},
     const glview_callback& uiupdate_callback = {},
     const glview_callback& update_callback   = {});
@@ -226,17 +226,17 @@ struct glscene_params {
 };
 
 // init scene
-void init_glscene(glscene_state& glscene, const scene_model& scene);
+void init_glscene(glscene_state& glscene, const scene_data& scene);
 
 // update scene
-void update_glscene(glscene_state& glscene, const scene_model& scene,
+void update_glscene(glscene_state& glscene, const scene_data& scene,
     const vector<int>& updated_shapes, const vector<int>& updated_textures);
 
 // Clear an OpenGL scene
 void clear_scene(glscene_state& scene);
 
 // draw scene
-void draw_scene(glscene_state& glscene, const scene_model& scene,
+void draw_scene(glscene_state& glscene, const scene_data& scene,
     const vec4i& viewport, const glscene_params& params);
 
 }  // namespace yocto

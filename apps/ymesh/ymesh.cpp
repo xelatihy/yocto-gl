@@ -110,7 +110,7 @@ int run_glview(const glview_params& params) {
 
 #else
 
-static scene_model make_shapescene(const shape_data& ioshape_) {
+static scene_data make_shapescene(const shape_data& ioshape_) {
   // Frame camera
   auto camera_frame = [](float lens, float aspect,
                           float film = 0.036) -> frame3f {
@@ -121,7 +121,7 @@ static scene_model make_shapescene(const shape_data& ioshape_) {
   };
 
   // init scene
-  auto scene = scene_model{};
+  auto scene = scene_data{};
 
   // rescale shape to unit
   auto ioshape = ioshape_;
@@ -195,7 +195,7 @@ int run_glpath(const glpath_params& params) {
 
 #else
 
-static scene_model make_pathscene(const shape_data& ioshape_) {
+static scene_data make_pathscene(const shape_data& ioshape_) {
   // Frame camera
   auto camera_frame = [](float lens, float aspect,
                           float film = 0.036) -> frame3f {
@@ -206,7 +206,7 @@ static scene_model make_pathscene(const shape_data& ioshape_) {
   };
 
   // init scene
-  auto scene = scene_model{};
+  auto scene = scene_data{};
 
   // rescale shape to unit
   auto ioshape = ioshape_;
@@ -372,7 +372,7 @@ int run_glpathd(const glpathd_params& params) {
 
 #else
 
-static scene_model make_pathdscene(const shape_data& ioshape) {
+static scene_data make_pathdscene(const shape_data& ioshape) {
   // Frame camera
   auto camera_frame = [](float lens, float aspect,
                           float film = 0.036) -> frame3f {
@@ -383,7 +383,7 @@ static scene_model make_pathdscene(const shape_data& ioshape) {
   };
 
   // init scene
-  auto scene = scene_model{};
+  auto scene = scene_data{};
 
   // camera
   auto& camera  = scene.cameras.emplace_back();
@@ -1087,7 +1087,7 @@ bool smooth_brush(vector<vec3f>& positions, const geodesic_solver& solver,
   return true;
 }
 
-static scene_model make_sculptscene(const shape_data& ioshape_) {
+static scene_data make_sculptscene(const shape_data& ioshape_) {
   // Frame camera
   auto camera_frame = [](float lens, float aspect,
                           float film = 0.036) -> frame3f {
@@ -1098,7 +1098,7 @@ static scene_model make_sculptscene(const shape_data& ioshape_) {
   };
 
   // init scene
-  auto scene = scene_model{};
+  auto scene = scene_data{};
 
   // rescale shape to unit
   auto ioshape = ioshape_;

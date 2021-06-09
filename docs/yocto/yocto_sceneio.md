@@ -47,7 +47,7 @@ Yocto/SceneIO supports loading and saving to a custom Json format,
 Obj, glTF, Pbrt, and all shape file formats.
 
 ```cpp
-auto scene = scene_model{};              // scene
+auto scene = scene_data{};               // scene
 auto error = string{};                   // error buffer
 if(!load_scene(filename, scene, error))  // load scene
   print_error(error);

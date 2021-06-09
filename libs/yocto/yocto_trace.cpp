@@ -51,7 +51,7 @@
 namespace yocto {
 
 // Build the bvh acceleration structure.
-bvh_scene make_bvh(const scene_model& scene, const trace_params& params) {
+bvh_scene make_bvh(const scene_data& scene, const trace_params& params) {
   return make_bvh(
       scene, params.highqualitybvh, params.embreebvh, params.noparallel);
 }
@@ -259,7 +259,7 @@ static ray3f sample_camera(const camera_data& camera, const vec2i& ij,
 }
 
 // Sample lights wrt solid angle
-static vec3f sample_lights(const scene_model& scene, const trace_lights& lights,
+static vec3f sample_lights(const scene_data& scene, const trace_lights& lights,
     const vec3f& position, float rl, float rel, const vec2f& ruv) {
   auto  light_id = sample_uniform((int)lights.lights.size(), rl);
   auto& light    = lights.lights[light_id];
@@ -289,7 +289,7 @@ static vec3f sample_lights(const scene_model& scene, const trace_lights& lights,
 }
 
 // Sample lights pdf
-static float sample_lights_pdf(const scene_model& scene, const bvh_scene& bvh,
+static float sample_lights_pdf(const scene_data& scene, const bvh_scene& bvh,
     const trace_lights& lights, const vec3f& position, const vec3f& direction) {
   auto pdf = 0.0f;
   for (auto& light : lights.lights) {
@@ -351,7 +351,7 @@ struct trace_result {
 };
 
 // Recursive path tracing.
-static trace_result trace_path(const scene_model& scene, const bvh_scene& bvh,
+static trace_result trace_path(const scene_data& scene, const bvh_scene& bvh,
     const trace_lights& lights, const ray3f& ray_, rng_state& rng,
     const trace_params& params) {
   // initialize
@@ -498,7 +498,7 @@ static trace_result trace_path(const scene_model& scene, const bvh_scene& bvh,
 }
 
 // Recursive path tracing.
-static trace_result trace_pathdirect(const scene_model& scene,
+static trace_result trace_pathdirect(const scene_data& scene,
     const bvh_scene& bvh, const trace_lights& lights, const ray3f& ray_,
     rng_state& rng, const trace_params& params) {
   // initialize
@@ -669,9 +669,9 @@ static trace_result trace_pathdirect(const scene_model& scene,
 }
 
 // Recursive path tracing with MIS.
-static trace_result trace_pathmis(const scene_model& scene,
-    const bvh_scene& bvh, const trace_lights& lights, const ray3f& ray_,
-    rng_state& rng, const trace_params& params) {
+static trace_result trace_pathmis(const scene_data& scene, const bvh_scene& bvh,
+    const trace_lights& lights, const ray3f& ray_, rng_state& rng,
+    const trace_params& params) {
   // initialize
   auto radiance      = zero3f;
   auto weight        = vec3f{1, 1, 1};
@@ -853,7 +853,7 @@ static trace_result trace_pathmis(const scene_model& scene,
 }
 
 // Recursive path tracing.
-static trace_result trace_naive(const scene_model& scene, const bvh_scene& bvh,
+static trace_result trace_naive(const scene_data& scene, const bvh_scene& bvh,
     const trace_lights& lights, const ray3f& ray_, rng_state& rng,
     const trace_params& params) {
   // initialize
@@ -933,7 +933,7 @@ static trace_result trace_naive(const scene_model& scene, const bvh_scene& bvh,
 }
 
 // Eyelight for quick previewing.
-static trace_result trace_eyelight(const scene_model& scene,
+static trace_result trace_eyelight(const scene_data& scene,
     const bvh_scene& bvh, const trace_lights& lights, const ray3f& ray_,
     rng_state& rng, const trace_params& params) {
   // initialize
@@ -1002,7 +1002,7 @@ static trace_result trace_eyelight(const scene_model& scene,
 }
 
 // Eyelight with ambient occlusion for quick previewing.
-static trace_result trace_eyelightao(const scene_model& scene,
+static trace_result trace_eyelightao(const scene_data& scene,
     const bvh_scene& bvh, const trace_lights& lights, const ray3f& ray_,
     rng_state& rng, const trace_params& params) {
   // initialize
@@ -1075,7 +1075,7 @@ static trace_result trace_eyelightao(const scene_model& scene,
 }
 
 // False color rendering
-static trace_result trace_falsecolor(const scene_model& scene,
+static trace_result trace_falsecolor(const scene_data& scene,
     const bvh_scene& bvh, const trace_lights& lights, const ray3f& ray,
     rng_state& rng, const trace_params& params) {
   // intersect next point
@@ -1158,7 +1158,7 @@ static trace_result trace_falsecolor(const scene_model& scene,
 }
 
 // Trace a single ray from the camera using the given algorithm.
-using sampler_func = trace_result (*)(const scene_model& scene,
+using sampler_func = trace_result (*)(const scene_data& scene,
     const bvh_scene& bvh, const trace_lights& lights, const ray3f& ray,
     rng_state& rng, const trace_params& params);
 static sampler_func get_trace_sampler_func(const trace_params& params) {
@@ -1194,7 +1194,7 @@ bool is_sampler_lit(const trace_params& params) {
 }
 
 // Trace a block of samples
-void trace_sample(trace_state& state, const scene_model& scene,
+void trace_sample(trace_state& state, const scene_data& scene,
     const bvh_scene& bvh, const trace_lights& lights, int i, int j,
     const trace_params& params) {
   auto& camera  = scene.cameras[params.camera];
@@ -1221,7 +1221,7 @@ void trace_sample(trace_state& state, const scene_model& scene,
 }
 
 // Init a sequence of random number generators.
-trace_state make_state(const scene_model& scene, const trace_params& params) {
+trace_state make_state(const scene_data& scene, const trace_params& params) {
   auto& camera = scene.cameras[params.camera];
   auto  state  = trace_state{};
   if (camera.aspect >= 1) {
@@ -1250,7 +1250,7 @@ static trace_light& add_light(trace_lights& lights) {
 }
 
 // Init trace lights
-trace_lights make_lights(const scene_model& scene, const trace_params& params) {
+trace_lights make_lights(const scene_data& scene, const trace_params& params) {
   auto lights = trace_lights{};
 
   for (auto handle = 0; handle < scene.instances.size(); handle++) {
@@ -1305,7 +1305,7 @@ trace_lights make_lights(const scene_model& scene, const trace_params& params) {
 }
 
 // Progressively computes an image.
-color_image trace_image(const scene_model& scene, const trace_params& params) {
+color_image trace_image(const scene_data& scene, const trace_params& params) {
   auto bvh    = make_bvh(scene, params);
   auto lights = make_lights(scene, params);
   auto state  = make_state(scene, params);
@@ -1316,7 +1316,7 @@ color_image trace_image(const scene_model& scene, const trace_params& params) {
 }
 
 // Progressively compute an image by calling trace_samples multiple times.
-void trace_samples(trace_state& state, const scene_model& scene,
+void trace_samples(trace_state& state, const scene_data& scene,
     const bvh_scene& bvh, const trace_lights& lights,
     const trace_params& params) {
   if (state.samples >= params.samples) return;

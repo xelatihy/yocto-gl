@@ -153,20 +153,20 @@ namespace yocto {
 
 // Load/save a scene in the supported formats.
 // Calls the progress callback, if defined, as we process more data.
-bool load_scene(const string& filename, scene_model& scene, string& error,
+bool load_scene(const string& filename, scene_data& scene, string& error,
     bool noparallel = false);
-bool save_scene(const string& filename, const scene_model& scene, string& error,
+bool save_scene(const string& filename, const scene_data& scene, string& error,
     bool noparallel = false);
 
 // Make missing scene directories
 bool make_scene_directories(
-    const string& filename, const scene_model& scene, string& error);
+    const string& filename, const scene_data& scene, string& error);
 
 // Scene presets used for testing.
-bool make_scene_preset(scene_model& scene, const string& type, string& error);
+bool make_scene_preset(scene_data& scene, const string& type, string& error);
 
 // Add environment
-bool add_environment(scene_model& scene, const string& filename, string& error);
+bool add_environment(scene_data& scene, const string& filename, string& error);
 
 }  // namespace yocto
 
