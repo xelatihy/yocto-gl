@@ -144,7 +144,7 @@ auto mat  = eval_material(instance, eid, euv); // eval point material
 
 ## Environments
 
-Environments, represented as `scene_environment`, store the background
+Environments, represented as `environment_data`, store the background
 illumination as a scene. Environments have a frame, to rotate illumination,
 an emission term and an optional emission texture.
 The emission texture is an HDR environment map stored in a LatLon
@@ -153,7 +153,7 @@ parametrization.
 For environments, set the frame, emission and optionally the emission texture.
 
 ```cpp
-auto& environment = scene_environment{};  // create an environment
+auto& environment = environment_data{};  // create an environment
 environment.frame = identity3x4f;         // set identity transform
 environment.emission = {1,1,1};           // set emission scale
 environment.emission_tex = texture_index; // add emission texture

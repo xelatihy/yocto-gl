@@ -177,7 +177,7 @@ struct instance_data {
 };
 
 // Environment map.
-struct scene_environment {
+struct environment_data {
   // environment data
   frame3f frame        = identity3x4f;
   vec3f   emission     = {0, 0, 0};
@@ -219,13 +219,13 @@ struct scene_subdiv {
 // updates node transformations only if defined.
 struct scene_model {
   // scene elements
-  vector<camera_data>       cameras      = {};
-  vector<instance_data>     instances    = {};
-  vector<scene_environment> environments = {};
-  vector<shape_data>        shapes       = {};
-  vector<texture_data>      textures     = {};
-  vector<material_data>     materials    = {};
-  vector<scene_subdiv>      subdivs      = {};
+  vector<camera_data>      cameras      = {};
+  vector<instance_data>    instances    = {};
+  vector<environment_data> environments = {};
+  vector<shape_data>       shapes       = {};
+  vector<texture_data>     textures     = {};
+  vector<material_data>    materials    = {};
+  vector<scene_subdiv>     subdivs      = {};
 
   // names (this will be cleanup significantly later)
   vector<string> camera_names      = {};
@@ -419,7 +419,7 @@ namespace yocto {
 
 // Environment
 vec3f eval_environment(const scene_model& scene,
-    const scene_environment& environment, const vec3f& direction);
+    const environment_data& environment, const vec3f& direction);
 vec3f eval_environment(const scene_model& scene, const vec3f& direction);
 
 }  // namespace yocto
@@ -611,7 +611,8 @@ using scene_shape         = shape_data;
 using scene_fvshape       = fvshape_data;
 using sceneio_instance    = instance_data;
 using scene_instance      = instance_data;
-using sceneio_environment = scene_environment;
+using sceneio_environment = environment_data;
+using scene_environment   = environment_data;
 
 inline const auto scene_material_names = std::vector<std::string>{"matte",
     "glossy", "metallic", "transparent", "refractive", "subsurface", "volume",

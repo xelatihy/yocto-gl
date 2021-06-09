@@ -1039,7 +1039,7 @@ namespace yocto {
 
 // Evaluate environment color.
 vec3f eval_environment(const scene_model& scene,
-    const scene_environment& environment, const vec3f& direction) {
+    const environment_data& environment, const vec3f& direction) {
   auto wl       = transform_direction(inverse(environment.frame), direction);
   auto texcoord = vec2f{
       atan2(wl.z, wl.x) / (2 * pif), acos(clamp(wl.y, -1.0f, 1.0f)) / pif};

@@ -1753,7 +1753,7 @@ namespace yocto {
   return get_camera_name(scene, (int)(&camera - scene.cameras.data()));
 }
 [[maybe_unused]] static string get_environment_name(
-    const scene_model& scene, const scene_environment& environment) {
+    const scene_model& scene, const environment_data& environment) {
   return get_environment_name(
       scene, (int)(&environment - scene.environments.data()));
 }
