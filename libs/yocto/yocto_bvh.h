@@ -138,4 +138,14 @@ bvh_intersection overlap_bvh(const bvh_data& bvh, const scene_data& scene,
 
 }  // namespace yocto
 
+// -----------------------------------------------------------------------------
+// BACKWARDS COMPATIBILITY
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+using bvh_shape = bvh_data;
+using bvh_scene = bvh_data;
+
+}  // namespace yocto
+
 #endif
