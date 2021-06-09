@@ -8,7 +8,7 @@ depends on `stb_image_resize.h`.
 
 ## Image representation
 
-Images are represented as a simple struct called `color_image`, that stores
+Images are represented as a simple struct called `image_data`, that stores
 the image width and height, a boolean flat that indicates whether the colors
 are in linear ot sRGB color space, and an array of pixels of `vec4f` type.
 

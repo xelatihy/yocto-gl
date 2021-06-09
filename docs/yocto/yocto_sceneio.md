@@ -28,7 +28,7 @@ by the chosen file format.
 
 ```cpp
 auto error = string{};
-auto image = color_image{};             // define an image
+auto image = image_data{};              // define an image
 if(!load_image(filename, image, error)) // load image
   print_error(error);                   // check and print error
 if(!save_image(filename, image, error)) // save image

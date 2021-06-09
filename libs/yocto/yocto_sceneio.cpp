@@ -445,7 +445,7 @@ bool is_ldr_filename(const string& filename) {
 }
 
 // Loads/saves an image. Chooses hdr or ldr based on file name.
-bool load_image(const string& filename, color_image& image, string& error) {
+bool load_image(const string& filename, image_data& image, string& error) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
     return false;
@@ -549,7 +549,7 @@ bool load_image(const string& filename, color_image& image, string& error) {
 
 // Saves an hdr image.
 bool save_image(
-    const string& filename, const color_image& image, string& error) {
+    const string& filename, const image_data& image, string& error) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
     return false;
@@ -560,13 +560,13 @@ bool save_image(
   };
 
   // conversion helpers
-  auto to_linear = [](const color_image& image) {
+  auto to_linear = [](const image_data& image) {
     if (image.linear) return image.pixels;
     auto pixelsf = vector<vec4f>(image.pixels.size());
     srgb_to_rgb(pixelsf, image.pixels);
     return pixelsf;
   };
-  auto to_srgb = [](const color_image& image) {
+  auto to_srgb = [](const image_data& image) {
     auto pixelsb = vector<vec4b>(image.pixels.size());
     if (image.linear) {
       rgb_to_srgb(pixelsb, image.pixels);
@@ -618,7 +618,7 @@ bool save_image(
   }
 }
 
-bool make_image_preset(color_image& image, const string& type_, string& error) {
+bool make_image_preset(image_data& image, const string& type_, string& error) {
   auto type = path_basename(type_);
 
   auto width = 1024, height = 1024;
@@ -661,7 +661,7 @@ bool make_image_preset(color_image& image, const string& type_, string& error) {
   } else if (type == "images1") {
     auto sub_types = vector<string>{"grid", "uvgrid", "checker", "gammaramp",
         "bumps", "bump-normal", "noise", "fbm", "blackbodyramp"};
-    auto sub_imgs  = vector<color_image>(sub_types.size());
+    auto sub_imgs  = vector<image_data>(sub_types.size());
     for (auto i = 0; i < sub_imgs.size(); i++) {
       if (!make_image_preset(sub_imgs[i], sub_types[i], error)) return false;
     }
@@ -678,7 +678,7 @@ bool make_image_preset(color_image& image, const string& type_, string& error) {
     }
   } else if (type == "images2") {
     auto sub_types = vector<string>{"sky", "sunsky"};
-    auto sub_imgs  = vector<color_image>(sub_types.size());
+    auto sub_imgs  = vector<image_data>(sub_types.size());
     for (auto i = 0; i < sub_imgs.size(); i++) {
       if (!make_image_preset(sub_imgs[i], sub_types[i], error)) return false;
     }
@@ -921,7 +921,7 @@ bool save_texture(
 
 bool make_texture_preset(
     texture_data& texture, const string& type, string& error) {
-  auto image = color_image{};
+  auto image = image_data{};
   if (!make_image_preset(image, type, error)) return false;
   texture = image_to_texture(image);
   return true;

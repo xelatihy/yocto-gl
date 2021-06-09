@@ -170,7 +170,7 @@ vec4f eval_texture(const scene_data& scene, int texture, const vec2f& uv,
 }
 
 // conversion from image
-texture_data image_to_texture(const color_image& image) {
+texture_data image_to_texture(const image_data& image) {
   auto texture = texture_data{image.width, image.height, image.linear, {}, {}};
   if (image.linear) {
     texture.pixelsf = image.pixels;

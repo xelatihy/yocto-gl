@@ -59,7 +59,7 @@
 namespace yocto {
 
 static void update_image_params(const glinput_state& input,
-    const color_image& image, glimage_params& glparams) {
+    const image_data& image, glimage_params& glparams) {
   glparams.window                           = input.window_size;
   glparams.framebuffer                      = input.framebuffer_viewport;
   std::tie(glparams.center, glparams.scale) = camera_imview(glparams.center,
@@ -119,7 +119,7 @@ static bool draw_tonemap_params(
 }
 
 static bool draw_image_inspector(const glinput_state& input,
-    const color_image& image, const color_image& display,
+    const image_data& image, const image_data& display,
     glimage_params& glparams) {
   if (begin_glheader("inspect")) {
     draw_glslider("zoom", glparams.scale, 0.1, 10);
@@ -265,7 +265,7 @@ namespace yocto {
 
 // Open a window and show an image
 void view_image(
-    const string& title, const string& name, const color_image& image) {
+    const string& title, const string& name, const image_data& image) {
   // display image
   auto  display  = make_image(image.width, image.height, false);
   float exposure = 0;
@@ -311,9 +311,9 @@ void view_image(
 
 // Open a window and show an image
 void view_images(const string& title, const vector<string>& names,
-    const vector<color_image>& images) {
+    const vector<image_data>& images) {
   // display image
-  auto displays  = vector<color_image>(images.size());
+  auto displays  = vector<image_data>(images.size());
   auto exposures = vector<float>(images.size(), 0);
   auto filmics   = vector<bool>(images.size(), false);
   for (auto idx = 0; idx < (int)images.size(); idx++) {
@@ -367,7 +367,7 @@ void view_images(const string& title, const vector<string>& names,
 
 // Open a window and show an image
 void colorgrade_image(
-    const string& title, const string& name, const color_image& image) {
+    const string& title, const string& name, const image_data& image) {
   // color grading parameters
   auto params = colorgrade_params{};
 
@@ -945,7 +945,7 @@ void clear_image(glimage_state& glimage) {
   glimage = {};
 }
 
-void set_image(glimage_state& glimage, const color_image& image) {
+void set_image(glimage_state& glimage, const image_data& image) {
   if (!glimage.texture || glimage.width != image.width ||
       glimage.height != image.height) {
     if (!glimage.texture) glGenTextures(1, &glimage.texture);

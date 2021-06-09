@@ -61,15 +61,15 @@ namespace yocto {
 
 // Open a window and show an image
 void view_image(
-    const string& title, const string& name, const color_image& image);
+    const string& title, const string& name, const image_data& image);
 
 // Open a window and show a set of images
 void view_images(const string& title, const vector<string>& names,
-    const vector<color_image>& images);
+    const vector<image_data>& images);
 
 // Open a window and show an image for color grading
 void colorgrade_image(
-    const string& title, const string& name, const color_image& image);
+    const string& title, const string& name, const image_data& image);
 
 // Open a window and show an scene via path tracing
 void view_scene(const string& title, const string& name, scene_data& scene,
@@ -117,7 +117,7 @@ bool init_image(glimage_state& glimage);
 void clear_image(glimage_state& glimage);
 
 // update image data
-void set_image(glimage_state& glimage, const color_image& image);
+void set_image(glimage_state& glimage, const image_data& image);
 
 // OpenGL image drawing params
 struct glimage_params {

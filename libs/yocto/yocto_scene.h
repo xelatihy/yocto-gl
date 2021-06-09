@@ -271,7 +271,7 @@ vec4f lookup_texture(
     const texture_data& texture, int i, int j, bool as_linear = false);
 
 // conversion from image
-texture_data image_to_texture(const color_image& image);
+texture_data image_to_texture(const image_data& image);
 
 }  // namespace yocto
 
