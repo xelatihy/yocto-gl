@@ -108,7 +108,7 @@ by the chosen file format.
 
 ```cpp
 auto error = string{};
-auto texture = scene_texture{};             // define a texture
+auto texture = texture_data{};              // define a texture
 if(!load_texture(filename, texture, error)) // load texture
   print_error(error);                       // check and print error
 if(!save_texture(filename, texture, error)) // save texture

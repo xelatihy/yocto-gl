@@ -100,14 +100,13 @@ bool make_image_preset(color_image& image, const string& type, string& error);
 namespace yocto {
 
 // Load/save a texture in the supported formats.
-bool load_texture(
-    const string& filename, scene_texture& texture, string& error);
+bool load_texture(const string& filename, texture_data& texture, string& error);
 bool save_texture(
-    const string& filename, const scene_texture& texture, string& error);
+    const string& filename, const texture_data& texture, string& error);
 
 // Make presets. Supported mostly in IO.
 bool make_texture_preset(
-    scene_texture& texture, const string& type, string& error);
+    texture_data& texture, const string& type, string& error);
 
 }  // namespace yocto
 

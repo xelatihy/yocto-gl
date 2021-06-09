@@ -66,7 +66,7 @@ namespace yocto {
 // Generates a ray from a camera for yimg::image plane coordinate uv and
 // the lens coordinates luv.
 ray3f eval_camera(
-    const scene_camera& camera, const vec2f& image_uv, const vec2f& lens_uv) {
+    const camera_data& camera, const vec2f& image_uv, const vec2f& lens_uv) {
   auto film = camera.aspect >= 1
                   ? vec2f{camera.film, camera.film / camera.aspect}
                   : vec2f{camera.film * camera.aspect, camera.film};
@@ -111,7 +111,7 @@ namespace yocto {
 
 // pixel access
 vec4f lookup_texture(
-    const scene_texture& texture, int i, int j, bool as_linear) {
+    const texture_data& texture, int i, int j, bool as_linear) {
   auto color = vec4f{0, 0, 0, 0};
   if (!texture.pixelsf.empty()) {
     color = texture.pixelsf[j * texture.width + i];
@@ -126,8 +126,8 @@ vec4f lookup_texture(
 }
 
 // Evaluates an image at a point `uv`.
-vec4f eval_texture(const scene_texture& texture, const vec2f& uv,
-    bool as_linear, bool no_interpolation, bool clamp_to_edge) {
+vec4f eval_texture(const texture_data& texture, const vec2f& uv, bool as_linear,
+    bool no_interpolation, bool clamp_to_edge) {
   if (texture.width == 0 || texture.height == 0) return {0, 0, 0, 0};
 
   // get texture width/height
@@ -170,8 +170,8 @@ vec4f eval_texture(const scene_model& scene, int texture, const vec2f& uv,
 }
 
 // conversion from image
-scene_texture image_to_texture(const color_image& image) {
-  auto texture = scene_texture{image.width, image.height, image.linear, {}, {}};
+texture_data image_to_texture(const color_image& image) {
+  auto texture = texture_data{image.width, image.height, image.linear, {}, {}};
   if (image.linear) {
     texture.pixelsf = image.pixels;
   } else {

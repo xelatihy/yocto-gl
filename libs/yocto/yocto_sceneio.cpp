@@ -756,7 +756,7 @@ namespace yocto {
 
 // Loads/saves an image. Chooses hdr or ldr based on file name.
 bool load_texture(
-    const string& filename, scene_texture& texture, string& error) {
+    const string& filename, texture_data& texture, string& error) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
     return false;
@@ -854,7 +854,7 @@ bool load_texture(
 
 // Saves an hdr image.
 bool save_texture(
-    const string& filename, const scene_texture& texture, string& error) {
+    const string& filename, const texture_data& texture, string& error) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
     return false;
@@ -920,7 +920,7 @@ bool save_texture(
 }
 
 bool make_texture_preset(
-    scene_texture& texture, const string& type, string& error) {
+    texture_data& texture, const string& type, string& error) {
   auto image = color_image{};
   if (!make_image_preset(image, type, error)) return false;
   texture = image_to_texture(image);
@@ -1749,7 +1749,7 @@ namespace yocto {
 }
 
 [[maybe_unused]] static string get_camera_name(
-    const scene_model& scene, const scene_camera& camera) {
+    const scene_model& scene, const camera_data& camera) {
   return get_camera_name(scene, (int)(&camera - scene.cameras.data()));
 }
 [[maybe_unused]] static string get_environment_name(
@@ -1762,7 +1762,7 @@ namespace yocto {
   return get_shape_name(scene, (int)(&shape - scene.shapes.data()));
 }
 [[maybe_unused]] static string get_texture_name(
-    const scene_model& scene, const scene_texture& texture) {
+    const scene_model& scene, const texture_data& texture) {
   return get_texture_name(scene, (int)(&texture - scene.textures.data()));
 }
 [[maybe_unused]] static string get_instance_name(
@@ -3861,7 +3861,7 @@ static bool load_gltf_scene(const string& filename, scene_model& scene,
   }
 
   // convert cameras
-  auto cameras = vector<scene_camera>{};
+  auto cameras = vector<camera_data>{};
   if (gltf.contains("cameras")) {
     try {
       for (auto& gcamera : gltf.at("cameras")) {

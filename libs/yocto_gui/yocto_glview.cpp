@@ -83,7 +83,7 @@ static bool uiupdate_image_params(
 }
 
 static bool uiupdate_camera_params(
-    const glinput_state& input, scene_camera& camera) {
+    const glinput_state& input, camera_data& camera) {
   if ((input.mouse_left || input.mouse_right) && !input.modifier_alt &&
       !input.modifier_ctrl && !input.widgets_active) {
     auto dolly  = 0.0f;
@@ -1275,7 +1275,7 @@ void main() {
 #endif
 
 // Create texture
-void set_texture(glscene_texture& gltexture, const scene_texture& texture) {
+void set_texture(glscene_texture& gltexture, const texture_data& texture) {
   if (!gltexture.texture || gltexture.width != texture.width ||
       gltexture.height != texture.height) {
     if (!gltexture.texture) glGenTextures(1, &gltexture.texture);

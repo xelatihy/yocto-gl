@@ -152,7 +152,7 @@ struct glscene_texture {
 };
 
 // Create texture
-void set_texture(glscene_texture& gltexture, const scene_texture& texture);
+void set_texture(glscene_texture& gltexture, const texture_data& texture);
 
 // Clean texture
 void clear_texture(glscene_texture& gltexture);

@@ -630,7 +630,7 @@ struct sculpt_state {
   vector<vector<int>> adjacencies = {};
   geodesic_solver     solver      = {};
   // brush
-  scene_texture tex_image = {};
+  texture_data tex_image = {};
   // stroke
   vector<shape_point> stroke   = {};
   vec2f               last_uv  = {};
@@ -641,7 +641,7 @@ struct sculpt_state {
 
 // Initialize all sculpting parameters.
 sculpt_state make_sculpt_state(
-    const scene_shape& shape, const scene_texture& texture) {
+    const scene_shape& shape, const texture_data& texture) {
   auto state = sculpt_state{};
   state.bvh  = make_triangles_bvh(
       shape.triangles, shape.positions, shape.radius);
@@ -931,7 +931,7 @@ bool gaussian_brush(vector<vec3f>& positions, const hash_grid& grid,
 
 // Compute texture values through the parameterization
 bool texture_brush(vector<vec3f>& positions, vector<vec2f>& texcoords,
-    const geodesic_solver& solver, const scene_texture& texture,
+    const geodesic_solver& solver, const texture_data& texture,
     const vector<vec3i>& triangles, const vector<vec3f>& base_positions,
     const vector<vec3f>& base_normals, const vector<shape_point>& stroke,
     const sculpt_params& params) {
@@ -1141,7 +1141,7 @@ static scene_model make_sculptscene(const scene_shape& ioshape_) {
 // To make the stroke sampling (position, normal) following the mouse
 static pair<vector<shape_point>, vec2f> sample_stroke(const shape_bvh& bvh,
     const scene_shape& shape, const vec2f& last_uv, const vec2f& mouse_uv,
-    const scene_camera& camera, const sculpt_params& params) {
+    const camera_data& camera, const sculpt_params& params) {
   // helper
   auto intersect_shape = [&](const vec2f& uv) {
     auto ray = camera_ray(
@@ -1175,7 +1175,7 @@ static pair<vector<shape_point>, vec2f> sample_stroke(const shape_bvh& bvh,
 }
 
 static pair<bool, bool> sculpt_update(sculpt_state& state, scene_shape& shape,
-    scene_shape& cursor, const scene_camera& camera, const vec2f& mouse_uv,
+    scene_shape& cursor, const camera_data& camera, const vec2f& mouse_uv,
     bool mouse_pressed, const sculpt_params& params) {
   auto updated_shape = false, updated_cursor = false;
 
@@ -1251,7 +1251,7 @@ int run_glsculpt(const glsculpt_params& params_) {
   }
 
   // loading texture
-  auto texture = scene_texture{};
+  auto texture = texture_data{};
   if (!params_.texture.empty()) {
     if (!load_texture(params_.texture, texture, ioerror)) print_fatal(ioerror);
   }

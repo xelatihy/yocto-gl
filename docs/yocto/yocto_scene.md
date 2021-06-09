@@ -62,7 +62,7 @@ for(auto error : errors) print_error(error);// print error
 
 ## Cameras
 
-Cameras, represented by `scene_camera`, are based on a simple lens model.
+Cameras, represented by `camera_data`, are based on a simple lens model.
 Cameras coordinate systems are defined by their frame.
 Cameras projections are described in photographic terms. In particular,
 we specify film size (35mm by default), film aspect ration,
@@ -83,7 +83,7 @@ To create cameras, you should set the camera frame, the camera view,
 via lens, aspect and film, and optionally the camera aperture and focus.
 
 ```cpp
-auto camera = scene_camera{};    // create a camera
+auto camera = camera_data{};     // create a camera
 camera.frame = identity3x4f;     // set frame to identity
 camera.lens = 0.050;             // set as 50mm lens
 camera.aspect = 1.5;             // set 3:2 aspect ratio
@@ -320,7 +320,7 @@ auto mat = eval_material(scene,material,{0.5,0.5}) // eval material
 
 ## Textures
 
-Textures, represented as `scene_texture`, contains either 8-bit LDR or
+Textures, represented as `texture_data`, contains either 8-bit LDR or
 32-bit float HDR images with four channels. Textures can be encoded in either
 a linear color space or as sRGBs, depending on an internal flag. The use of
 float versus byte is just a memory saving feature.
@@ -328,12 +328,12 @@ float versus byte is just a memory saving feature.
 For textures, set the size, the color space, and _either_ the hdr or ldr pixels.
 
 ```cpp
-auto hdr_texture = scene_texture{};  // create a texture
+auto hdr_texture = texture_data{};   // create a texture
 hdr_texture.width = 512;             // set size
 hdr_texture.height = 512;
 hdr_texture.linear = true;           // set color space and pixels for an HDR
 hdr_texture.pixelsf = vector<vec4f>{...};
-auto ldr_texture = scene_texture{};  // create a texture
+auto ldr_texture = texture_data{};   // create a texture
 ldr_texture.width = 512;             // set size
 ldr_texture.height = 512;
 ldr_texture.linear = false;          // set color space and pixels for an LDR

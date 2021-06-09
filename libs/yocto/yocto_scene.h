@@ -80,7 +80,7 @@ inline const int invalidid = -1;
 // 2.4:1  on 35 mm:  0.036 x 0.015   or 0.05760 x 0.024 (approx. 2.39 : 1)
 // To compute good apertures, one can use the F-stop number from photography
 // and set the aperture to focal length over f-stop.
-struct scene_camera {
+struct camera_data {
   frame3f frame        = identity3x4f;
   bool    orthographic = false;
   float   lens         = 0.050f;
@@ -92,7 +92,7 @@ struct scene_camera {
 
 // Texture data as array of float or byte pixels. Textures can be stored in
 // linear or non linear color space.
-struct scene_texture {
+struct texture_data {
   int           width   = 0;
   int           height  = 0;
   bool          linear  = false;
@@ -219,11 +219,11 @@ struct scene_subdiv {
 // updates node transformations only if defined.
 struct scene_model {
   // scene elements
-  vector<scene_camera>      cameras      = {};
+  vector<camera_data>       cameras      = {};
   vector<scene_instance>    instances    = {};
   vector<scene_environment> environments = {};
   vector<scene_shape>       shapes       = {};
-  vector<scene_texture>     textures     = {};
+  vector<texture_data>      textures     = {};
   vector<scene_material>    materials    = {};
   vector<scene_subdiv>      subdivs      = {};
 
@@ -249,7 +249,7 @@ namespace yocto {
 
 // Generates a ray from a camera.
 ray3f eval_camera(
-    const scene_camera& camera, const vec2f& image_uv, const vec2f& lens_uv);
+    const camera_data& camera, const vec2f& image_uv, const vec2f& lens_uv);
 
 }  // namespace yocto
 
@@ -259,7 +259,7 @@ ray3f eval_camera(
 namespace yocto {
 
 // Evaluates a texture
-vec4f eval_texture(const scene_texture& texture, const vec2f& uv,
+vec4f eval_texture(const texture_data& texture, const vec2f& uv,
     bool as_linear = false, bool no_interpolation = false,
     bool clamp_to_edge = false);
 vec4f eval_texture(const scene_model& scene, int texture, const vec2f& uv,
@@ -268,10 +268,10 @@ vec4f eval_texture(const scene_model& scene, int texture, const vec2f& uv,
 
 // pixel access
 vec4f lookup_texture(
-    const scene_texture& texture, int i, int j, bool as_linear = false);
+    const texture_data& texture, int i, int j, bool as_linear = false);
 
 // conversion from image
-scene_texture image_to_texture(const color_image& image);
+texture_data image_to_texture(const color_image& image);
 
 }  // namespace yocto
 
@@ -600,8 +600,9 @@ void make_cornellbox(scene_model& scene);
 namespace yocto {
 
 using sceneio_scene       = scene_model;
-using sceneio_camera      = scene_camera;
-using sceneio_texture     = scene_texture;
+using sceneio_camera      = camera_data;
+using scene_camera        = camera_data;
+using sceneio_texture     = texture_data;
 using sceneio_material    = scene_material;
 using sceneio_shape       = scene_shape;
 using sceneio_instance    = scene_instance;

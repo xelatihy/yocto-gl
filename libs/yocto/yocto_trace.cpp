@@ -236,7 +236,7 @@ static float sample_scattering_pdf(const material_point& material,
 }
 
 // Sample camera
-static ray3f sample_camera(const scene_camera& camera, const vec2i& ij,
+static ray3f sample_camera(const camera_data& camera, const vec2i& ij,
     const vec2i& image_size, const vec2f& puv, const vec2f& luv, bool tent) {
   if (!tent) {
     auto uv = vec2f{
