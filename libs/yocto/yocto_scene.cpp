@@ -1168,7 +1168,7 @@ bbox3f compute_bounds(const scene_model& scene) {
 namespace yocto {
 
 void tesselate_subdiv(
-    shape_data& shape, scene_subdiv& subdiv_, const scene_model& scene) {
+    shape_data& shape, subdiv_data& subdiv_, const scene_model& scene) {
   auto subdiv = subdiv_;
 
   if (subdiv.subdivisions > 0) {

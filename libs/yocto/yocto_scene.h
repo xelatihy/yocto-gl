@@ -186,7 +186,7 @@ struct environment_data {
 
 // Subdiv data represented as face-varying primitives where
 // each vertex data has its own topology.
-struct scene_subdiv {
+struct subdiv_data {
   // face-varying primitives
   vector<vec4i> quadspos      = {};
   vector<vec4i> quadsnorm     = {};
@@ -225,7 +225,7 @@ struct scene_model {
   vector<shape_data>       shapes       = {};
   vector<texture_data>     textures     = {};
   vector<material_data>    materials    = {};
-  vector<scene_subdiv>     subdivs      = {};
+  vector<subdiv_data>      subdivs      = {};
 
   // names (this will be cleanup significantly later)
   vector<string> camera_names      = {};
@@ -613,6 +613,7 @@ using sceneio_instance    = instance_data;
 using scene_instance      = instance_data;
 using sceneio_environment = environment_data;
 using scene_environment   = environment_data;
+using scene_subdiv        = subdiv_data;
 
 inline const auto scene_material_names = std::vector<std::string>{"matte",
     "glossy", "metallic", "transparent", "refractive", "subsurface", "volume",

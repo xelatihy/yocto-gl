@@ -140,9 +140,9 @@ bool make_fvshape_preset(
 namespace yocto {
 
 // Load/save a subdiv in the supported formats.
-bool load_subdiv(const string& filename, scene_subdiv& subdiv, string& error);
+bool load_subdiv(const string& filename, subdiv_data& subdiv, string& error);
 bool save_subdiv(
-    const string& filename, const scene_subdiv& subdiv, string& error);
+    const string& filename, const subdiv_data& subdiv, string& error);
 
 }  // namespace yocto
 

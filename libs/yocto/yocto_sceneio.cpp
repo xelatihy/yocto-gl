@@ -1774,7 +1774,7 @@ namespace yocto {
   return get_material_name(scene, (int)(&material - scene.materials.data()));
 }
 [[maybe_unused]] static string get_subdiv_name(
-    const scene_model& scene, const scene_subdiv& subdiv) {
+    const scene_model& scene, const subdiv_data& subdiv) {
   return get_subdiv_name(scene, (int)(&subdiv - scene.subdivs.data()));
 }
 
@@ -2493,7 +2493,7 @@ bool save_instance(const string& filename, const vector<frame3f>& frames,
 }
 
 // load subdiv
-bool load_subdiv(const string& filename, scene_subdiv& subdiv, string& error) {
+bool load_subdiv(const string& filename, subdiv_data& subdiv, string& error) {
   auto lsubdiv = fvshape_data{};
   if (!load_fvshape(filename, lsubdiv, error, true)) return false;
   subdiv.quadspos      = lsubdiv.quadspos;
@@ -2507,7 +2507,7 @@ bool load_subdiv(const string& filename, scene_subdiv& subdiv, string& error) {
 
 // save subdiv
 bool save_subdiv(
-    const string& filename, const scene_subdiv& subdiv, string& error) {
+    const string& filename, const subdiv_data& subdiv, string& error) {
   auto ssubdiv          = fvshape_data{};
   ssubdiv.quadspos      = subdiv.quadspos;
   ssubdiv.quadsnorm     = subdiv.quadsnorm;
@@ -3307,7 +3307,7 @@ static bool save_json_scene(const string& filename, const scene_model& scene,
     }
   }
 
-  auto def_subdiv = scene_subdiv{};
+  auto def_subdiv = subdiv_data{};
   if (!scene.subdivs.empty()) {
     auto& group = insert_object(js, "subdivs");
     for (auto& subdiv : scene.subdivs) {

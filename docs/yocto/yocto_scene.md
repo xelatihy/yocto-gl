@@ -350,7 +350,7 @@ auto col = eval_texture(texture,{0.5,0.5});   // eval texture
 
 ## Subdivs
 
-Subdivs, represented as `scene_subdiv`, support tesselation and displacement
+Subdivs, represented as `subdiv_data`, support tesselation and displacement
 mapping. Subdivs are represented as facee-varying shapes.
 Subdivs specify a level of subdivision and can be subdivide elements
 either linearly or using Catmull-Clark subdivision. Subdivs also support
