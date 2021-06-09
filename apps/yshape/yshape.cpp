@@ -83,7 +83,7 @@ void add_command(const cli_command& cli, const string& name,
 // convert images
 int run_convert(const convert_params& params) {
   // shape data
-  auto shape = scene_shape{};
+  auto shape = shape_data{};
 
   // load mesh
   auto ioerror = ""s;
@@ -214,7 +214,7 @@ void add_command(const cli_command& cli, const string& name,
 // convert images
 int run_fvconvert(const fvconvert_params& params) {
   // mesh data
-  auto shape = scene_fvshape{};
+  auto shape = fvshape_data{};
 
   // load mesh
   auto ioerror = ""s;
@@ -309,7 +309,7 @@ int run_view(const view_params& params) {
 // view shapes
 int run_view(const view_params& params) {
   // load shape
-  auto shape   = scene_shape{};
+  auto shape   = shape_data{};
   auto ioerror = ""s;
   if (path_filename(params.shape) == ".ypreset") {
     if (!make_shape_preset(shape, path_basename(params.shape), ioerror))
@@ -364,7 +364,7 @@ void add_command(const cli_command& cli, const string& name,
 
 int run_heightfield(const heightfield_params& params) {
   // load mesh
-  auto image   = color_image{};
+  auto image   = image_data{};
   auto ioerror = ""s;
   if (!load_image(params.image, image, ioerror)) print_fatal(ioerror);
 
@@ -432,7 +432,7 @@ void add_command(const cli_command& cli, const string& name,
 
 int run_hair(const hair_params& params) {
   // load mesh
-  auto shape   = scene_shape{};
+  auto shape   = shape_data{};
   auto ioerror = ""s;
   if (!load_shape(params.shape, shape, ioerror)) print_fatal(ioerror);
 
@@ -464,7 +464,7 @@ void add_command(const cli_command& cli, const string& name,
 
 int run_sample(const sample_params& params) {
   // load mesh
-  auto shape   = scene_shape{};
+  auto shape   = shape_data{};
   auto ioerror = ""s;
   if (!load_shape(params.shape, shape, ioerror)) print_fatal(ioerror);
 
@@ -472,7 +472,7 @@ int run_sample(const sample_params& params) {
   auto samples = sample_shape(shape, params.samples);
 
   // sample shape
-  auto sshape = scene_shape{};
+  auto sshape = shape_data{};
   for (auto& sample : samples) {
     sshape.points.push_back((int)sshape.points.size());
     sshape.positions.push_back(eval_position(shape, sample.element, sample.uv));
@@ -511,7 +511,7 @@ int run_glview(const glview_params& params) {
 int run_glview(const glview_params& params) {
   // loading shape
   auto ioerror = ""s;
-  auto shape   = scene_shape{};
+  auto shape   = shape_data{};
   if (!load_shape(params.shape, shape, ioerror, true)) print_fatal(ioerror);
 
   // make scene

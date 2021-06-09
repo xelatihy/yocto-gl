@@ -69,7 +69,7 @@ int run_view(const view_params& params) {
 // view shapes
 int run_view(const view_params& params) {
   // load mesh
-  auto shape   = scene_shape{};
+  auto shape   = shape_data{};
   auto ioerror = ""s;
   if (path_filename(params.shape) == ".ypreset") {
     if (!make_shape_preset(shape, path_basename(params.shape), ioerror))
@@ -110,7 +110,7 @@ int run_glview(const glview_params& params) {
 
 #else
 
-static scene_model make_shapescene(const scene_shape& ioshape_) {
+static scene_data make_shapescene(const shape_data& ioshape_) {
   // Frame camera
   auto camera_frame = [](float lens, float aspect,
                           float film = 0.036) -> frame3f {
@@ -121,7 +121,7 @@ static scene_model make_shapescene(const scene_shape& ioshape_) {
   };
 
   // init scene
-  auto scene = scene_model{};
+  auto scene = scene_data{};
 
   // rescale shape to unit
   auto ioshape = ioshape_;
@@ -141,7 +141,7 @@ static scene_model make_shapescene(const scene_shape& ioshape_) {
 
   // material
   auto& shape_material     = scene.materials.emplace_back();
-  shape_material.type      = scene_material_type::glossy;
+  shape_material.type      = material_type::glossy;
   shape_material.color     = {0.5, 1, 0.5};
   shape_material.roughness = 0.2;
 
@@ -160,7 +160,7 @@ static scene_model make_shapescene(const scene_shape& ioshape_) {
 int run_glview(const glview_params& params) {
   // loading shape
   auto ioerror = ""s;
-  auto shape   = scene_shape{};
+  auto shape   = shape_data{};
   if (!load_shape(params.shape, shape, ioerror, true)) print_fatal(ioerror);
 
   // create scene
@@ -195,7 +195,7 @@ int run_glpath(const glpath_params& params) {
 
 #else
 
-static scene_model make_pathscene(const scene_shape& ioshape_) {
+static scene_data make_pathscene(const shape_data& ioshape_) {
   // Frame camera
   auto camera_frame = [](float lens, float aspect,
                           float film = 0.036) -> frame3f {
@@ -206,7 +206,7 @@ static scene_model make_pathscene(const scene_shape& ioshape_) {
   };
 
   // init scene
-  auto scene = scene_model{};
+  auto scene = scene_data{};
 
   // rescale shape to unit
   auto ioshape = ioshape_;
@@ -226,15 +226,15 @@ static scene_model make_pathscene(const scene_shape& ioshape_) {
 
   // material
   auto& shape_material      = scene.materials.emplace_back();
-  shape_material.type       = scene_material_type::glossy;
+  shape_material.type       = material_type::glossy;
   shape_material.color      = {0.5, 1, 0.5};
   shape_material.roughness  = 0.2;
   auto& points_material     = scene.materials.emplace_back();
-  points_material.type      = scene_material_type::glossy;
+  points_material.type      = material_type::glossy;
   points_material.color     = {1, 0.5, 0.5};
   points_material.roughness = 0.2;
   auto& lines_material      = scene.materials.emplace_back();
-  lines_material.type       = scene_material_type::glossy;
+  lines_material.type       = material_type::glossy;
   lines_material.color      = {0.5, 0.5, 1};
   lines_material.roughness  = 0.2;
 
@@ -261,7 +261,7 @@ static scene_model make_pathscene(const scene_shape& ioshape_) {
 int run_glpath(const glpath_params& params) {
   // loading shape
   auto ioerror = ""s;
-  auto ioshape = scene_shape{};
+  auto ioshape = shape_data{};
   if (!load_shape(params.shape, ioshape, ioerror, true)) print_fatal(ioerror);
   if (!ioshape.quads.empty()) {
     ioshape.triangles = quads_to_triangles(ioshape.quads);
@@ -372,7 +372,7 @@ int run_glpathd(const glpathd_params& params) {
 
 #else
 
-static scene_model make_pathdscene(const scene_shape& ioshape) {
+static scene_data make_pathdscene(const shape_data& ioshape) {
   // Frame camera
   auto camera_frame = [](float lens, float aspect,
                           float film = 0.036) -> frame3f {
@@ -383,7 +383,7 @@ static scene_model make_pathdscene(const scene_shape& ioshape) {
   };
 
   // init scene
-  auto scene = scene_model{};
+  auto scene = scene_data{};
 
   // camera
   auto& camera  = scene.cameras.emplace_back();
@@ -395,26 +395,26 @@ static scene_model make_pathdscene(const scene_shape& ioshape) {
 
   // material
   auto& shape_material     = scene.materials.emplace_back();
-  shape_material.type      = scene_material_type::glossy;
+  shape_material.type      = material_type::glossy;
   shape_material.color     = {0.5, 1, 0.5};
   shape_material.roughness = 0.2;
   auto& points_material    = scene.materials.emplace_back();
-  points_material.type     = scene_material_type::matte;
+  points_material.type     = material_type::matte;
   points_material.color    = {1, 0.5, 0.5};
   auto& lines1_material    = scene.materials.emplace_back();
-  lines1_material.type     = scene_material_type::matte;
+  lines1_material.type     = material_type::matte;
   lines1_material.color    = {0.5, 0.5, 1};
   auto& lines2_material    = scene.materials.emplace_back();
-  lines2_material.type     = scene_material_type::matte;
+  lines2_material.type     = material_type::matte;
   lines2_material.color    = {1, 1, 0.5};
   auto& lines3_material    = scene.materials.emplace_back();
-  lines3_material.type     = scene_material_type::matte;
+  lines3_material.type     = material_type::matte;
   lines3_material.color    = {1, 0.5, 1};
   auto& lines4_material    = scene.materials.emplace_back();
-  lines4_material.type     = scene_material_type::matte;
+  lines4_material.type     = material_type::matte;
   lines4_material.color    = {0.5, 0.5, 0.5};
   auto& edges_material     = scene.materials.emplace_back();
-  edges_material.type      = scene_material_type::matte;
+  edges_material.type      = material_type::matte;
   edges_material.color     = {0, 0, 0};
 
   // shapes
@@ -467,7 +467,7 @@ static scene_model make_pathdscene(const scene_shape& ioshape) {
 int run_glpathd(const glpathd_params& params) {
   // loading shape
   auto ioerror = ""s;
-  auto ioshape = scene_shape{};
+  auto ioshape = shape_data{};
   if (!load_shape(params.shape, ioshape, ioerror, true)) print_fatal(ioerror);
   if (!ioshape.quads.empty()) {
     ioshape.triangles = quads_to_triangles(ioshape.quads);
@@ -630,18 +630,18 @@ struct sculpt_state {
   vector<vector<int>> adjacencies = {};
   geodesic_solver     solver      = {};
   // brush
-  scene_texture tex_image = {};
+  texture_data tex_image = {};
   // stroke
   vector<shape_point> stroke   = {};
   vec2f               last_uv  = {};
   bool                instroke = false;
   // shape at the beginning of the stroke
-  scene_shape base_shape = {};
+  shape_data base_shape = {};
 };
 
 // Initialize all sculpting parameters.
 sculpt_state make_sculpt_state(
-    const scene_shape& shape, const scene_texture& texture) {
+    const shape_data& shape, const texture_data& texture) {
   auto state = sculpt_state{};
   state.bvh  = make_triangles_bvh(
       shape.triangles, shape.positions, shape.radius);
@@ -656,7 +656,7 @@ sculpt_state make_sculpt_state(
   return state;
 }
 
-scene_shape make_circle(
+shape_data make_circle(
     const vec3f& center, const mat3f& basis, float radius, int steps) {
   // 4 initial vertices
   auto  lines    = make_lines({1, 4});
@@ -703,8 +703,8 @@ scene_shape make_circle(
 }
 
 // To visualize mouse intersection on mesh
-scene_shape make_cursor(const vec3f& position, const vec3f& normal,
-    float radius, float height = 0.05f) {
+shape_data make_cursor(const vec3f& position, const vec3f& normal, float radius,
+    float height = 0.05f) {
   auto basis  = basis_fromz(normal);
   auto cursor = make_circle(position, basis, radius, 32);
   cursor.normals.clear();
@@ -931,7 +931,7 @@ bool gaussian_brush(vector<vec3f>& positions, const hash_grid& grid,
 
 // Compute texture values through the parameterization
 bool texture_brush(vector<vec3f>& positions, vector<vec2f>& texcoords,
-    const geodesic_solver& solver, const scene_texture& texture,
+    const geodesic_solver& solver, const texture_data& texture,
     const vector<vec3i>& triangles, const vector<vec3f>& base_positions,
     const vector<vec3f>& base_normals, const vector<shape_point>& stroke,
     const sculpt_params& params) {
@@ -1087,7 +1087,7 @@ bool smooth_brush(vector<vec3f>& positions, const geodesic_solver& solver,
   return true;
 }
 
-static scene_model make_sculptscene(const scene_shape& ioshape_) {
+static scene_data make_sculptscene(const shape_data& ioshape_) {
   // Frame camera
   auto camera_frame = [](float lens, float aspect,
                           float film = 0.036) -> frame3f {
@@ -1098,7 +1098,7 @@ static scene_model make_sculptscene(const scene_shape& ioshape_) {
   };
 
   // init scene
-  auto scene = scene_model{};
+  auto scene = scene_data{};
 
   // rescale shape to unit
   auto ioshape = ioshape_;
@@ -1117,10 +1117,10 @@ static scene_model make_sculptscene(const scene_shape& ioshape_) {
 
   // material
   auto& shape_material  = scene.materials.emplace_back();
-  shape_material.type   = scene_material_type::matte;
+  shape_material.type   = material_type::matte;
   shape_material.color  = {0.78f, 0.31f, 0.23f};
   auto& cursor_material = scene.materials.emplace_back();
-  cursor_material.type  = scene_material_type::matte;
+  cursor_material.type  = material_type::matte;
 
   // shapes
   scene.shapes.emplace_back(ioshape);
@@ -1140,8 +1140,8 @@ static scene_model make_sculptscene(const scene_shape& ioshape_) {
 
 // To make the stroke sampling (position, normal) following the mouse
 static pair<vector<shape_point>, vec2f> sample_stroke(const shape_bvh& bvh,
-    const scene_shape& shape, const vec2f& last_uv, const vec2f& mouse_uv,
-    const scene_camera& camera, const sculpt_params& params) {
+    const shape_data& shape, const vec2f& last_uv, const vec2f& mouse_uv,
+    const camera_data& camera, const sculpt_params& params) {
   // helper
   auto intersect_shape = [&](const vec2f& uv) {
     auto ray = camera_ray(
@@ -1174,8 +1174,8 @@ static pair<vector<shape_point>, vec2f> sample_stroke(const shape_bvh& bvh,
   return {samples, cur_uv};
 }
 
-static pair<bool, bool> sculpt_update(sculpt_state& state, scene_shape& shape,
-    scene_shape& cursor, const scene_camera& camera, const vec2f& mouse_uv,
+static pair<bool, bool> sculpt_update(sculpt_state& state, shape_data& shape,
+    shape_data& cursor, const camera_data& camera, const vec2f& mouse_uv,
     bool mouse_pressed, const sculpt_params& params) {
   auto updated_shape = false, updated_cursor = false;
 
@@ -1243,7 +1243,7 @@ static pair<bool, bool> sculpt_update(sculpt_state& state, scene_shape& shape,
 int run_glsculpt(const glsculpt_params& params_) {
   // loading shape
   auto ioerror = ""s;
-  auto ioshape = scene_shape{};
+  auto ioshape = shape_data{};
   if (!load_shape(params_.shape, ioshape, ioerror, true)) print_fatal(ioerror);
   if (!ioshape.quads.empty()) {
     ioshape.triangles = quads_to_triangles(ioshape.quads);
@@ -1251,7 +1251,7 @@ int run_glsculpt(const glsculpt_params& params_) {
   }
 
   // loading texture
-  auto texture = scene_texture{};
+  auto texture = texture_data{};
   if (!params_.texture.empty()) {
     if (!load_texture(params_.texture, texture, ioerror)) print_fatal(ioerror);
   }

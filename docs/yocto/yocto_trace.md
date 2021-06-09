@@ -27,7 +27,7 @@ with `tesselate_shapes(scene, params)`, then call
 `trace_image(scene, camera, params)`, where `params` are the rendering options.
 
 ```cpp
-auto scene = scene_model{...};            // initialize scene
+auto scene = scene_data{...};             // initialize scene
 auto params = trace_params{};             // default params
 tesselate_shapes(scene, params);          // tesselate shapes if needed
 trace_image(scene, params);               // render image
@@ -87,7 +87,7 @@ Yocto/Trace supports a low-level rendering API that is more flexible for
 applications that need it. In this modality, you have to manage all state
 manually.
 
-Yocto/Trace internally uses a `bvh_scene` BVH for ray-scene intersection,
+Yocto/Trace internally uses a `bvh_data` BVH for ray-scene intersection,
 a `trace_lights` objects to store lighting information, and a `trace_state`
 object to tracks the rendering process and contains all data needed to perform
 progressive computation. Each object need to be initialized separately.
@@ -104,7 +104,7 @@ and retrieve the computed image with `get_render(state)` or
 feedback by either saving or displaying partial images.
 
 ```cpp
-auto scene = scene_model{...};              // initialize scene
+auto scene = scene_data{...};              // initialize scene
 auto params = trace_params{};               // default params
 tesselate_shapes(scene, params);            // tesselate shapes if needed
 auto bvh = make_bvh(scene, params);         // init bvh
@@ -128,7 +128,7 @@ To denoise within Yocto/GL, the library should be compiled with OIDN support by
 setting the `YOCTO_DENOISE` compile flag and linking to OIDN's libraries.
 
 ```cpp
-auto scene = scene_model{...};              // initialize scene
+auto scene = scene_data{...};              // initialize scene
 auto params = trace_params{};               // default params
 tesselate_shapes(scene, params);            // tesselate shapes if needed
 auto bvh = make_bvh(scene, params);         // init bvh

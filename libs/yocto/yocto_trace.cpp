@@ -51,7 +51,7 @@
 namespace yocto {
 
 // Build the bvh acceleration structure.
-bvh_scene make_bvh(const scene_model& scene, const trace_params& params) {
+bvh_data make_bvh(const scene_data& scene, const trace_params& params) {
   return make_bvh(
       scene, params.highqualitybvh, params.embreebvh, params.noparallel);
 }
@@ -74,24 +74,24 @@ static vec3f eval_bsdfcos(const material_point& material, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
   if (material.roughness == 0) return zero3f;
 
-  if (material.type == scene_material_type::matte) {
+  if (material.type == material_type::matte) {
     return eval_matte(material.color, normal, outgoing, incoming);
-  } else if (material.type == scene_material_type::glossy) {
+  } else if (material.type == material_type::glossy) {
     return eval_glossy(material.color, material.ior, material.roughness, normal,
         outgoing, incoming);
-  } else if (material.type == scene_material_type::metallic) {
+  } else if (material.type == material_type::metallic) {
     return eval_metallic(
         material.color, material.roughness, normal, outgoing, incoming);
-  } else if (material.type == scene_material_type::transparent) {
+  } else if (material.type == material_type::transparent) {
     return eval_transparent(material.color, material.ior, material.roughness,
         normal, outgoing, incoming);
-  } else if (material.type == scene_material_type::refractive) {
+  } else if (material.type == material_type::refractive) {
     return eval_refractive(material.color, material.ior, material.roughness,
         normal, outgoing, incoming);
-  } else if (material.type == scene_material_type::subsurface) {
+  } else if (material.type == material_type::subsurface) {
     return eval_refractive(material.color, material.ior, material.roughness,
         normal, outgoing, incoming);
-  } else if (material.type == scene_material_type::gltfpbr) {
+  } else if (material.type == material_type::gltfpbr) {
     return eval_gltfpbr(material.color, material.ior, material.roughness,
         material.metallic, normal, outgoing, incoming);
   } else {
@@ -103,15 +103,15 @@ static vec3f eval_delta(const material_point& material, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
   if (material.roughness != 0) return zero3f;
 
-  if (material.type == scene_material_type::metallic) {
+  if (material.type == material_type::metallic) {
     return eval_metallic(material.color, normal, outgoing, incoming);
-  } else if (material.type == scene_material_type::transparent) {
+  } else if (material.type == material_type::transparent) {
     return eval_transparent(
         material.color, material.ior, normal, outgoing, incoming);
-  } else if (material.type == scene_material_type::refractive) {
+  } else if (material.type == material_type::refractive) {
     return eval_refractive(
         material.color, material.ior, normal, outgoing, incoming);
-  } else if (material.type == scene_material_type::volume) {
+  } else if (material.type == material_type::volume) {
     return eval_passthrough(material.color, normal, outgoing, incoming);
   } else {
     return {0, 0, 0};
@@ -123,24 +123,24 @@ static vec3f sample_bsdfcos(const material_point& material, const vec3f& normal,
     const vec3f& outgoing, float rnl, const vec2f& rn) {
   if (material.roughness == 0) return zero3f;
 
-  if (material.type == scene_material_type::matte) {
+  if (material.type == material_type::matte) {
     return sample_matte(material.color, normal, outgoing, rn);
-  } else if (material.type == scene_material_type::glossy) {
+  } else if (material.type == material_type::glossy) {
     return sample_specular(material.color, material.ior, material.roughness,
         normal, outgoing, rnl, rn);
-  } else if (material.type == scene_material_type::metallic) {
+  } else if (material.type == material_type::metallic) {
     return sample_metallic(
         material.color, material.roughness, normal, outgoing, rn);
-  } else if (material.type == scene_material_type::transparent) {
+  } else if (material.type == material_type::transparent) {
     return sample_transparent(material.color, material.ior, material.roughness,
         normal, outgoing, rnl, rn);
-  } else if (material.type == scene_material_type::refractive) {
+  } else if (material.type == material_type::refractive) {
     return sample_refractive(material.color, material.ior, material.roughness,
         normal, outgoing, rnl, rn);
-  } else if (material.type == scene_material_type::subsurface) {
+  } else if (material.type == material_type::subsurface) {
     return sample_refractive(material.color, material.ior, material.roughness,
         normal, outgoing, rnl, rn);
-  } else if (material.type == scene_material_type::gltfpbr) {
+  } else if (material.type == material_type::gltfpbr) {
     return sample_gltfpbr(material.color, material.ior, material.roughness,
         material.metallic, normal, outgoing, rnl, rn);
   } else {
@@ -152,15 +152,15 @@ static vec3f sample_delta(const material_point& material, const vec3f& normal,
     const vec3f& outgoing, float rnl) {
   if (material.roughness != 0) return zero3f;
 
-  if (material.type == scene_material_type::metallic) {
+  if (material.type == material_type::metallic) {
     return sample_metallic(material.color, normal, outgoing);
-  } else if (material.type == scene_material_type::transparent) {
+  } else if (material.type == material_type::transparent) {
     return sample_transparent(
         material.color, material.ior, normal, outgoing, rnl);
-  } else if (material.type == scene_material_type::refractive) {
+  } else if (material.type == material_type::refractive) {
     return sample_refractive(
         material.color, material.ior, normal, outgoing, rnl);
-  } else if (material.type == scene_material_type::volume) {
+  } else if (material.type == material_type::volume) {
     return sample_passthrough(material.color, normal, outgoing);
   } else {
     return {0, 0, 0};
@@ -172,24 +172,24 @@ static float sample_bsdfcos_pdf(const material_point& material,
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
   if (material.roughness == 0) return 0;
 
-  if (material.type == scene_material_type::matte) {
+  if (material.type == material_type::matte) {
     return sample_matte_pdf(material.color, normal, outgoing, incoming);
-  } else if (material.type == scene_material_type::glossy) {
+  } else if (material.type == material_type::glossy) {
     return sample_glossy_pdf(material.color, material.ior, material.roughness,
         normal, outgoing, incoming);
-  } else if (material.type == scene_material_type::metallic) {
+  } else if (material.type == material_type::metallic) {
     return sample_metallic_pdf(
         material.color, material.roughness, normal, outgoing, incoming);
-  } else if (material.type == scene_material_type::transparent) {
+  } else if (material.type == material_type::transparent) {
     return sample_tranparent_pdf(material.color, material.ior,
         material.roughness, normal, outgoing, incoming);
-  } else if (material.type == scene_material_type::refractive) {
+  } else if (material.type == material_type::refractive) {
     return sample_refractive_pdf(material.color, material.ior,
         material.roughness, normal, outgoing, incoming);
-  } else if (material.type == scene_material_type::subsurface) {
+  } else if (material.type == material_type::subsurface) {
     return sample_refractive_pdf(material.color, material.ior,
         material.roughness, normal, outgoing, incoming);
-  } else if (material.type == scene_material_type::gltfpbr) {
+  } else if (material.type == material_type::gltfpbr) {
     return sample_gltfpbr_pdf(material.color, material.ior, material.roughness,
         material.metallic, normal, outgoing, incoming);
   } else {
@@ -201,15 +201,15 @@ static float sample_delta_pdf(const material_point& material,
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
   if (material.roughness != 0) return 0;
 
-  if (material.type == scene_material_type::metallic) {
+  if (material.type == material_type::metallic) {
     return sample_metallic_pdf(material.color, normal, outgoing, incoming);
-  } else if (material.type == scene_material_type::transparent) {
+  } else if (material.type == material_type::transparent) {
     return sample_tranparent_pdf(
         material.color, material.ior, normal, outgoing, incoming);
-  } else if (material.type == scene_material_type::refractive) {
+  } else if (material.type == material_type::refractive) {
     return sample_refractive_pdf(
         material.color, material.ior, normal, outgoing, incoming);
-  } else if (material.type == scene_material_type::volume) {
+  } else if (material.type == material_type::volume) {
     return sample_passthrough_pdf(material.color, normal, outgoing, incoming);
   } else {
     return 0;
@@ -236,7 +236,7 @@ static float sample_scattering_pdf(const material_point& material,
 }
 
 // Sample camera
-static ray3f sample_camera(const scene_camera& camera, const vec2i& ij,
+static ray3f sample_camera(const camera_data& camera, const vec2i& ij,
     const vec2i& image_size, const vec2f& puv, const vec2f& luv, bool tent) {
   if (!tent) {
     auto uv = vec2f{
@@ -259,7 +259,7 @@ static ray3f sample_camera(const scene_camera& camera, const vec2i& ij,
 }
 
 // Sample lights wrt solid angle
-static vec3f sample_lights(const scene_model& scene, const trace_lights& lights,
+static vec3f sample_lights(const scene_data& scene, const trace_lights& lights,
     const vec3f& position, float rl, float rel, const vec2f& ruv) {
   auto  light_id = sample_uniform((int)lights.lights.size(), rl);
   auto& light    = lights.lights[light_id];
@@ -289,7 +289,7 @@ static vec3f sample_lights(const scene_model& scene, const trace_lights& lights,
 }
 
 // Sample lights pdf
-static float sample_lights_pdf(const scene_model& scene, const bvh_scene& bvh,
+static float sample_lights_pdf(const scene_data& scene, const bvh_data& bvh,
     const trace_lights& lights, const vec3f& position, const vec3f& direction) {
   auto pdf = 0.0f;
   for (auto& light : lights.lights) {
@@ -351,7 +351,7 @@ struct trace_result {
 };
 
 // Recursive path tracing.
-static trace_result trace_path(const scene_model& scene, const bvh_scene& bvh,
+static trace_result trace_path(const scene_data& scene, const bvh_data& bvh,
     const trace_lights& lights, const ray3f& ray_, rng_state& rng,
     const trace_params& params) {
   // initialize
@@ -498,8 +498,8 @@ static trace_result trace_path(const scene_model& scene, const bvh_scene& bvh,
 }
 
 // Recursive path tracing.
-static trace_result trace_pathdirect(const scene_model& scene,
-    const bvh_scene& bvh, const trace_lights& lights, const ray3f& ray_,
+static trace_result trace_pathdirect(const scene_data& scene,
+    const bvh_data& bvh, const trace_lights& lights, const ray3f& ray_,
     rng_state& rng, const trace_params& params) {
   // initialize
   auto radiance      = zero3f;
@@ -669,9 +669,9 @@ static trace_result trace_pathdirect(const scene_model& scene,
 }
 
 // Recursive path tracing with MIS.
-static trace_result trace_pathmis(const scene_model& scene,
-    const bvh_scene& bvh, const trace_lights& lights, const ray3f& ray_,
-    rng_state& rng, const trace_params& params) {
+static trace_result trace_pathmis(const scene_data& scene, const bvh_data& bvh,
+    const trace_lights& lights, const ray3f& ray_, rng_state& rng,
+    const trace_params& params) {
   // initialize
   auto radiance      = zero3f;
   auto weight        = vec3f{1, 1, 1};
@@ -853,7 +853,7 @@ static trace_result trace_pathmis(const scene_model& scene,
 }
 
 // Recursive path tracing.
-static trace_result trace_naive(const scene_model& scene, const bvh_scene& bvh,
+static trace_result trace_naive(const scene_data& scene, const bvh_data& bvh,
     const trace_lights& lights, const ray3f& ray_, rng_state& rng,
     const trace_params& params) {
   // initialize
@@ -933,9 +933,9 @@ static trace_result trace_naive(const scene_model& scene, const bvh_scene& bvh,
 }
 
 // Eyelight for quick previewing.
-static trace_result trace_eyelight(const scene_model& scene,
-    const bvh_scene& bvh, const trace_lights& lights, const ray3f& ray_,
-    rng_state& rng, const trace_params& params) {
+static trace_result trace_eyelight(const scene_data& scene, const bvh_data& bvh,
+    const trace_lights& lights, const ray3f& ray_, rng_state& rng,
+    const trace_params& params) {
   // initialize
   auto radiance   = zero3f;
   auto weight     = vec3f{1, 1, 1};
@@ -1002,8 +1002,8 @@ static trace_result trace_eyelight(const scene_model& scene,
 }
 
 // Eyelight with ambient occlusion for quick previewing.
-static trace_result trace_eyelightao(const scene_model& scene,
-    const bvh_scene& bvh, const trace_lights& lights, const ray3f& ray_,
+static trace_result trace_eyelightao(const scene_data& scene,
+    const bvh_data& bvh, const trace_lights& lights, const ray3f& ray_,
     rng_state& rng, const trace_params& params) {
   // initialize
   auto radiance   = zero3f;
@@ -1075,8 +1075,8 @@ static trace_result trace_eyelightao(const scene_model& scene,
 }
 
 // False color rendering
-static trace_result trace_falsecolor(const scene_model& scene,
-    const bvh_scene& bvh, const trace_lights& lights, const ray3f& ray,
+static trace_result trace_falsecolor(const scene_data& scene,
+    const bvh_data& bvh, const trace_lights& lights, const ray3f& ray,
     rng_state& rng, const trace_params& params) {
   // intersect next point
   auto intersection = intersect_bvh(bvh, scene, ray);
@@ -1158,8 +1158,8 @@ static trace_result trace_falsecolor(const scene_model& scene,
 }
 
 // Trace a single ray from the camera using the given algorithm.
-using sampler_func = trace_result (*)(const scene_model& scene,
-    const bvh_scene& bvh, const trace_lights& lights, const ray3f& ray,
+using sampler_func = trace_result (*)(const scene_data& scene,
+    const bvh_data& bvh, const trace_lights& lights, const ray3f& ray,
     rng_state& rng, const trace_params& params);
 static sampler_func get_trace_sampler_func(const trace_params& params) {
   switch (params.sampler) {
@@ -1194,8 +1194,8 @@ bool is_sampler_lit(const trace_params& params) {
 }
 
 // Trace a block of samples
-void trace_sample(trace_state& state, const scene_model& scene,
-    const bvh_scene& bvh, const trace_lights& lights, int i, int j,
+void trace_sample(trace_state& state, const scene_data& scene,
+    const bvh_data& bvh, const trace_lights& lights, int i, int j,
     const trace_params& params) {
   auto& camera  = scene.cameras[params.camera];
   auto  sampler = get_trace_sampler_func(params);
@@ -1221,7 +1221,7 @@ void trace_sample(trace_state& state, const scene_model& scene,
 }
 
 // Init a sequence of random number generators.
-trace_state make_state(const scene_model& scene, const trace_params& params) {
+trace_state make_state(const scene_data& scene, const trace_params& params) {
   auto& camera = scene.cameras[params.camera];
   auto  state  = trace_state{};
   if (camera.aspect >= 1) {
@@ -1250,7 +1250,7 @@ static trace_light& add_light(trace_lights& lights) {
 }
 
 // Init trace lights
-trace_lights make_lights(const scene_model& scene, const trace_params& params) {
+trace_lights make_lights(const scene_data& scene, const trace_params& params) {
   auto lights = trace_lights{};
 
   for (auto handle = 0; handle < scene.instances.size(); handle++) {
@@ -1305,7 +1305,7 @@ trace_lights make_lights(const scene_model& scene, const trace_params& params) {
 }
 
 // Progressively computes an image.
-color_image trace_image(const scene_model& scene, const trace_params& params) {
+image_data trace_image(const scene_data& scene, const trace_params& params) {
   auto bvh    = make_bvh(scene, params);
   auto lights = make_lights(scene, params);
   auto state  = make_state(scene, params);
@@ -1316,8 +1316,8 @@ color_image trace_image(const scene_model& scene, const trace_params& params) {
 }
 
 // Progressively compute an image by calling trace_samples multiple times.
-void trace_samples(trace_state& state, const scene_model& scene,
-    const bvh_scene& bvh, const trace_lights& lights,
+void trace_samples(trace_state& state, const scene_data& scene,
+    const bvh_data& bvh, const trace_lights& lights,
     const trace_params& params) {
   if (state.samples >= params.samples) return;
   if (params.noparallel) {
@@ -1336,7 +1336,7 @@ void trace_samples(trace_state& state, const scene_model& scene,
 
 // Check image type
 static void check_image(
-    const color_image& image, int width, int height, bool linear) {
+    const image_data& image, int width, int height, bool linear) {
   if (image.width != width || image.height != height)
     throw std::invalid_argument{"image should have the same size"};
   if (image.linear != linear)
@@ -1345,12 +1345,12 @@ static void check_image(
 }
 
 // Get resulting render
-color_image get_render(const trace_state& state) {
+image_data get_render(const trace_state& state) {
   auto image = make_image(state.width, state.height, true);
   get_render(image, state);
   return image;
 }
-void get_render(color_image& image, const trace_state& state) {
+void get_render(image_data& image, const trace_state& state) {
   check_image(image, state.width, state.height, true);
   auto scale = 1.0f / (float)state.samples;
   for (auto idx = 0; idx < state.width * state.height; idx++) {
@@ -1359,12 +1359,12 @@ void get_render(color_image& image, const trace_state& state) {
 }
 
 // Get denoised render
-color_image get_denoised(const trace_state& state) {
+image_data get_denoised(const trace_state& state) {
   auto image = make_image(state.width, state.height, true);
   get_denoised(image, state);
   return image;
 }
-void get_denoised(color_image& image, const trace_state& state) {
+void get_denoised(image_data& image, const trace_state& state) {
 #if YOCTO_DENOISE
   // Create an Intel Open Image Denoise device
   oidn::DeviceRef device = oidn::newDevice();
@@ -1404,12 +1404,12 @@ void get_denoised(color_image& image, const trace_state& state) {
 }
 
 // Get denoising buffers
-color_image get_albedo(const trace_state& state) {
+image_data get_albedo(const trace_state& state) {
   auto albedo = make_image(state.width, state.height, true);
   get_albedo(albedo, state);
   return albedo;
 }
-void get_albedo(color_image& albedo, const trace_state& state) {
+void get_albedo(image_data& albedo, const trace_state& state) {
   check_image(albedo, state.width, state.height, true);
   auto scale = 1.0f / (float)state.samples;
   for (auto idx = 0; idx < state.width * state.height; idx++) {
@@ -1417,12 +1417,12 @@ void get_albedo(color_image& albedo, const trace_state& state) {
         state.albedo[idx].y * scale, state.albedo[idx].z * scale, 1.0f};
   }
 }
-color_image get_normal(const trace_state& state) {
+image_data get_normal(const trace_state& state) {
   auto normal = make_image(state.width, state.height, true);
   get_normal(normal, state);
   return normal;
 }
-void get_normal(color_image& normal, const trace_state& state) {
+void get_normal(image_data& normal, const trace_state& state) {
   check_image(normal, state.width, state.height, true);
   auto scale = 1.0f / (float)state.samples;
   for (auto idx = 0; idx < state.width * state.height; idx++) {
@@ -1432,14 +1432,14 @@ void get_normal(color_image& normal, const trace_state& state) {
 }
 
 // Denoise image
-color_image denoise_render(const color_image& render, const color_image& albedo,
-    const color_image& normal) {
+image_data denoise_render(const image_data& render, const image_data& albedo,
+    const image_data& normal) {
   auto denoised = make_image(render.width, render.height, render.linear);
   denoise_render(denoised, render, albedo, normal);
   return denoised;
 }
-void denoise_render(color_image& denoised, const color_image& render,
-    const color_image& albedo, const color_image& normal) {
+void denoise_render(image_data& denoised, const image_data& render,
+    const image_data& albedo, const image_data& normal) {
   check_image(denoised, render.width, render.height, render.linear);
   check_image(albedo, render.width, render.height, albedo.linear);
   check_image(normal, render.width, render.height, normal.linear);

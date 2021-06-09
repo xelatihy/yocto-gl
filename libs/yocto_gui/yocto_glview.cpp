@@ -59,7 +59,7 @@
 namespace yocto {
 
 static void update_image_params(const glinput_state& input,
-    const color_image& image, glimage_params& glparams) {
+    const image_data& image, glimage_params& glparams) {
   glparams.window                           = input.window_size;
   glparams.framebuffer                      = input.framebuffer_viewport;
   std::tie(glparams.center, glparams.scale) = camera_imview(glparams.center,
@@ -83,7 +83,7 @@ static bool uiupdate_image_params(
 }
 
 static bool uiupdate_camera_params(
-    const glinput_state& input, scene_camera& camera) {
+    const glinput_state& input, camera_data& camera) {
   if ((input.mouse_left || input.mouse_right) && !input.modifier_alt &&
       !input.modifier_ctrl && !input.widgets_active) {
     auto dolly  = 0.0f;
@@ -119,7 +119,7 @@ static bool draw_tonemap_params(
 }
 
 static bool draw_image_inspector(const glinput_state& input,
-    const color_image& image, const color_image& display,
+    const image_data& image, const image_data& display,
     glimage_params& glparams) {
   if (begin_glheader("inspect")) {
     draw_glslider("zoom", glparams.scale, 0.1, 10);
@@ -152,7 +152,7 @@ struct scene_selection {
   int subdiv      = 0;
 };
 
-static bool draw_scene_editor(scene_model& scene, scene_selection& selection,
+static bool draw_scene_editor(scene_data& scene, scene_selection& selection,
     const function<void()>& before_edit) {
   auto edited = 0;
   if (begin_glheader("cameras")) {
@@ -265,7 +265,7 @@ namespace yocto {
 
 // Open a window and show an image
 void view_image(
-    const string& title, const string& name, const color_image& image) {
+    const string& title, const string& name, const image_data& image) {
   // display image
   auto  display  = make_image(image.width, image.height, false);
   float exposure = 0;
@@ -311,9 +311,9 @@ void view_image(
 
 // Open a window and show an image
 void view_images(const string& title, const vector<string>& names,
-    const vector<color_image>& images) {
+    const vector<image_data>& images) {
   // display image
-  auto displays  = vector<color_image>(images.size());
+  auto displays  = vector<image_data>(images.size());
   auto exposures = vector<float>(images.size(), 0);
   auto filmics   = vector<bool>(images.size(), false);
   for (auto idx = 0; idx < (int)images.size(); idx++) {
@@ -367,7 +367,7 @@ void view_images(const string& title, const vector<string>& names,
 
 // Open a window and show an image
 void colorgrade_image(
-    const string& title, const string& name, const color_image& image) {
+    const string& title, const string& name, const image_data& image) {
   // color grading parameters
   auto params = colorgrade_params{};
 
@@ -433,7 +433,7 @@ void colorgrade_image(
 }
 
 // Open a window and show an scene via path tracing
-void view_scene(const string& title, const string& name, scene_model& scene,
+void view_scene(const string& title, const string& name, scene_data& scene,
     const trace_params& params_, bool print, bool edit) {
   // copy params and camera
   auto params = params_;
@@ -641,7 +641,7 @@ void view_scene(const string& title, const string& name, scene_model& scene,
   stop_render();
 }
 
-void glview_scene(const string& title, const string& name, scene_model& scene,
+void glview_scene(const string& title, const string& name, scene_data& scene,
     const glscene_params& params_, const glview_callback& widgets_callback,
     const glview_callback& uiupdate_callback,
     const glview_callback& update_callback) {
@@ -945,7 +945,7 @@ void clear_image(glimage_state& glimage) {
   glimage = {};
 }
 
-void set_image(glimage_state& glimage, const color_image& image) {
+void set_image(glimage_state& glimage, const image_data& image) {
   if (!glimage.texture || glimage.width != image.width ||
       glimage.height != image.height) {
     if (!glimage.texture) glGenTextures(1, &glimage.texture);
@@ -1275,7 +1275,7 @@ void main() {
 #endif
 
 // Create texture
-void set_texture(glscene_texture& gltexture, const scene_texture& texture) {
+void set_texture(glscene_texture& gltexture, const texture_data& texture) {
   if (!gltexture.texture || gltexture.width != texture.width ||
       gltexture.height != texture.height) {
     if (!gltexture.texture) glGenTextures(1, &gltexture.texture);
@@ -1313,7 +1313,7 @@ void clear_texture(glscene_texture& gltexture) {
 }
 
 // Create shape
-void set_shape(glscene_shape& glshape, const scene_shape& shape) {
+void set_shape(glscene_shape& glshape, const shape_data& shape) {
   auto set_vertex = [](uint& buffer, int& num, const auto& data,
                         const auto& def, int location) {
     if (data.empty()) {
@@ -1409,7 +1409,7 @@ void clear_shape(glscene_shape& glshape) {
 }
 
 // init scene
-void init_glscene(glscene_state& glscene, const scene_model& ioscene) {
+void init_glscene(glscene_state& glscene, const scene_data& ioscene) {
   // program
   set_program(glscene.program, glscene.vertex, glscene.fragment, glscene_vertex,
       glscene_fragment);
@@ -1428,7 +1428,7 @@ void init_glscene(glscene_state& glscene, const scene_model& ioscene) {
 }
 
 // update scene
-void update_glscene(glscene_state& glscene, const scene_model& scene,
+void update_glscene(glscene_state& glscene, const scene_data& scene,
     const vector<int>& updated_shapes, const vector<int>& updated_textures) {
   for (auto shape_id : updated_shapes) {
     set_shape(glscene.shapes[shape_id], scene.shapes[shape_id]);
@@ -1478,7 +1478,7 @@ void clear_scene(glscene_state& glscene) {
   assert_glerror();
 }
 
-void draw_scene(glscene_state& glscene, const scene_model& scene,
+void draw_scene(glscene_state& glscene, const scene_data& scene,
     const vec4i& viewport, const glscene_params& params) {
   // check errors
   assert_glerror();
@@ -1588,14 +1588,14 @@ void draw_scene(glscene_state& glscene, const scene_model& scene,
     glUniform1f(glGetUniformLocation(program, "metallic"), material.metallic);
     glUniform1f(glGetUniformLocation(program, "roughness"), material.roughness);
     glUniform1f(glGetUniformLocation(program, "opacity"), material.opacity);
-    if (material.type == scene_material_type::matte ||
-        material.type == scene_material_type::transparent ||
-        material.type == scene_material_type::refractive ||
-        material.type == scene_material_type::subsurface ||
-        material.type == scene_material_type::volume) {
+    if (material.type == material_type::matte ||
+        material.type == material_type::transparent ||
+        material.type == material_type::refractive ||
+        material.type == material_type::subsurface ||
+        material.type == material_type::volume) {
       glUniform1f(glGetUniformLocation(program, "specular"), 0);
     }
-    if (material.type == scene_material_type::metallic) {
+    if (material.type == material_type::metallic) {
       glUniform1f(glGetUniformLocation(program, "metallic"), 1);
     }
     glUniform1f(glGetUniformLocation(program, "double_sided"),

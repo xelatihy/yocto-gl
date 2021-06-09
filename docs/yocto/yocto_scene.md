@@ -6,7 +6,7 @@ Yocto/Scene is implemented in `yocto_scene.h` and `yocto_scene.cpp`.
 
 ## Scene representation
 
-Scenes are stored in `scene_model` structs and are comprised of arrays of
+Scenes are stored in `scene_data` structs and are comprised of arrays of
 cameras, instances, shapes, materials, textures and environments.
 The various objects are stored as values in arrays named like the object type.
 Animation is not currently supported.
@@ -36,12 +36,12 @@ that "if you know how to use `std::vector`, you know how to use scenes".
 Here is an sketch of how to create a shape instance in a scene.
 
 ```cpp
-auto scene = scene_model{};         // create a scene
-auto shape = scene_shape{};         // create a shape and add it
+auto scene = scene_data{};          // create a scene
+auto shape = shape_data{};          // create a shape and add it
 set_shape_properties(shape, ...);
 scene.shapes.push_back(shape);
 scene.materials.push_back({});      // create a black material directly
-auto instance = scene_instance{};   // create an instance of last added shape
+auto instance = instance_data{};    // create an instance of last added shape
 instance.shape = (int)scene.shapes.size()-1;
 instance.material = (int)scene.materials.size()-1;
 ```
@@ -62,7 +62,7 @@ for(auto error : errors) print_error(error);// print error
 
 ## Cameras
 
-Cameras, represented by `scene_camera`, are based on a simple lens model.
+Cameras, represented by `camera_data`, are based on a simple lens model.
 Cameras coordinate systems are defined by their frame.
 Cameras projections are described in photographic terms. In particular,
 we specify film size (35mm by default), film aspect ration,
@@ -83,7 +83,7 @@ To create cameras, you should set the camera frame, the camera view,
 via lens, aspect and film, and optionally the camera aperture and focus.
 
 ```cpp
-auto camera = scene_camera{};    // create a camera
+auto camera = camera_data{};     // create a camera
 camera.frame = identity3x4f;     // set frame to identity
 camera.lens = 0.050;             // set as 50mm lens
 camera.aspect = 1.5;             // set 3:2 aspect ratio
@@ -98,14 +98,14 @@ to get a camera ray from the normalized image coordinates `image_uv` and
 lens coordinates `lens_uv`.
 
 ```cpp
-auto scene = scene_model{...};                 // create a complete scene
+auto scene = scene_data{...};                  // create a complete scene
 auto& camera = get_camera(scene);              // get default camera
 auto ray = eval_camera(camera,{0.5,0.5},{0,0});// get ray though image center
 ```
 
 ## Instances
 
-Instances, represented as `scene_instance`, place shapes in the scene by
+Instances, represented as `instance_data`, place shapes in the scene by
 defining their coordinate frame, a shape index and a material index.
 Through the use of instancing, Yocto/Scene scales well to large environments
 without introducing more complex mechanisms.
@@ -113,7 +113,7 @@ without introducing more complex mechanisms.
 For instances, you should set the instance frame, shape and material.
 
 ```cpp
-auto instance = scene_instance{};    // create an instance
+auto instance = instance_data{};     // create an instance
 instance.frame = identity3x4f;       // set frame to identity
 instance.shape = shape_index;        // set shape index
 instance.material = material_index;  // set material index
@@ -144,7 +144,7 @@ auto mat  = eval_material(instance, eid, euv); // eval point material
 
 ## Environments
 
-Environments, represented as `scene_environment`, store the background
+Environments, represented as `environment_data`, store the background
 illumination as a scene. Environments have a frame, to rotate illumination,
 an emission term and an optional emission texture.
 The emission texture is an HDR environment map stored in a LatLon
@@ -153,7 +153,7 @@ parametrization.
 For environments, set the frame, emission and optionally the emission texture.
 
 ```cpp
-auto& environment = scene_environment{};  // create an environment
+auto& environment = environment_data{};  // create an environment
 environment.frame = identity3x4f;         // set identity transform
 environment.emission = {1,1,1};           // set emission scale
 environment.emission_tex = texture_index; // add emission texture
@@ -173,13 +173,13 @@ auto envi = eval_environment(environment, dir);  // eval environment
 
 ## Shapes
 
-Shapes, represented by `scene_shape`, are indexed meshes of elements.
+Shapes, represented by `shape_data`, are indexed meshes of elements.
 Shapes can contain only one type of element, either
 points, lines, triangles or quads. Shape elements are parametrized as in
 [Yocto/Geometry](yocto_geometry.md).
 Vertex properties are defined as separate arrays and include
 positions, normals, texture coords, colors, radius and tangent spaces.
-Additionally, Yocto/Scene supports face-varying primitives, as `scene_fvshape`,
+Additionally, Yocto/Scene supports face-varying primitives, as `fvshape_data`,
 where each vertex data has its own topology.
 
 Shapes also work as a standalone mesh representation throughout the
@@ -190,7 +190,7 @@ or quads, and the vertex properties, i.e. positions, normals, texture
 coordinates, colors and radia. Shapes support only one element type.
 
 ```cpp
-auto shape = scene_shape{};            // create a shape
+auto shape = shape_data{};             // create a shape
 shape.triangles = vector<vec3i>{...};  // set triangle indices
 shape.positions = vector<vec3f>{...};  // set positions
 shape.normals = vector<vec3f>{...};    // set normals
@@ -233,7 +233,7 @@ with `shape_to_fvshape(shape)` and `fvshape_to_shape(fvshape)`.
 
 ## Materials
 
-Materials, represented as `scene_material`, are defined by a material type
+Materials, represented as `material_data`, are defined by a material type
 and a few parameters, common to all materials. In particular, we support the
 following materials:
 
@@ -275,27 +275,27 @@ We can further control the appearance by changing surface roughness, index of
 refraction and volumetric properties, when appropriate. Here are some examples.
 
 ```cpp
-auto matte = scene_material{};           // create a matte material
-matte.type = scene_material_type::matte;
+auto matte = material_data{};            // create a matte material
+matte.type = material_type::matte;
 matte.color = {1,0.5,0.5};               // with base color and
 matte.color_tex = texture_id;            // textured albedo
-auto glossy =  scene_material{};         // create a glossy material
-glossy.type = scene_material_type::glossy;
+auto glossy =  material_data{};          // create a glossy material
+glossy.type = material_type::glossy;
 glossy.color = {0.5,1,0.5};              // with constant color
 glossyv.roughness = 0.1;                 // base roughness and a
 glossy.roughness_tex = texture_id;       // roughness texture
-auto metallic =  scene_material{};       // create a metallic material
-glossy.type = scene_material_type::metallic
+auto metallic =  material_data{};        // create a metallic material
+glossy.type = material_type::metallic
 metal.color = {0.5,0.5,1};               // constant color
 metal.roughness = 0.1;                   // constant roughness
-auto tglass = scene_material{};          // create a transparent material
-tglass.type = scene_material_type::transparent;
+auto tglass = material_data{};           // create a transparent material
+tglass.type = material_type::transparent;
 tglass.color = {1,1,1};                  // with constant color
-auto glass = scene_material{};           // create a refractive material
-glass.type = scene_material_type::transparent;
+auto glass = material_data{};            // create a refractive material
+glass.type = material_type::transparent;
 glass.color = {1,0.9,0.9};               // constant color
-auto subsurf = scene_material{};         // create a refractive material
-subsurf.type = scene_material_type::subsurface;
+auto subsurf = material_data{};          // create a refractive material
+subsurf.type = material_type::subsurface;
 subsurf.color = {1,1,1};                 // that transmits all light
 subsurf.scattering = {0.5,1,0.5};        // and has volumetric scattering
 ```
@@ -304,7 +304,7 @@ Lights are not explicit in Yocto/Scene but are specified by assigning emissive
 materials.
 
 ```cpp
-auto light = scene_material{};   // create a material
+auto light = material_data{};    // create a material
 light.color = {0,0,0};           // that does not reflect light
 light.emission = {10,10,10};     // but emits it instead
 ```
@@ -320,7 +320,7 @@ auto mat = eval_material(scene,material,{0.5,0.5}) // eval material
 
 ## Textures
 
-Textures, represented as `scene_texture`, contains either 8-bit LDR or
+Textures, represented as `texture_data`, contains either 8-bit LDR or
 32-bit float HDR images with four channels. Textures can be encoded in either
 a linear color space or as sRGBs, depending on an internal flag. The use of
 float versus byte is just a memory saving feature.
@@ -328,12 +328,12 @@ float versus byte is just a memory saving feature.
 For textures, set the size, the color space, and _either_ the hdr or ldr pixels.
 
 ```cpp
-auto hdr_texture = scene_texture{};  // create a texture
+auto hdr_texture = texture_data{};   // create a texture
 hdr_texture.width = 512;             // set size
 hdr_texture.height = 512;
 hdr_texture.linear = true;           // set color space and pixels for an HDR
 hdr_texture.pixelsf = vector<vec4f>{...};
-auto ldr_texture = scene_texture{};  // create a texture
+auto ldr_texture = texture_data{};   // create a texture
 ldr_texture.width = 512;             // set size
 ldr_texture.height = 512;
 ldr_texture.linear = false;          // set color space and pixels for an LDR
@@ -350,7 +350,7 @@ auto col = eval_texture(texture,{0.5,0.5});   // eval texture
 
 ## Subdivs
 
-Subdivs, represented as `scene_subdiv`, support tesselation and displacement
+Subdivs, represented as `subdiv_data`, support tesselation and displacement
 mapping. Subdivs are represented as facee-varying shapes.
 Subdivs specify a level of subdivision and can be subdivide elements
 either linearly or using Catmull-Clark subdivision. Subdivs also support
@@ -393,7 +393,7 @@ We also support standalone face-varying shapes, that are not stored in the scene
 normals and texture coordinates.
 
 ```cpp
-auto shape = scene_fvshape{};               // create a shape
+auto shape = fvshape_data{};                // create a shape
 shape.quadspos = vector<vec4i>{...};        // set face-varying indices
 shape.quadstexcoord = vector<vec4i>{...};   // for positions and textures
 shape.positions = vector<vec3f>{...};       // set positions
@@ -419,7 +419,7 @@ a comprehensive list of all procedural shapes supported.
 
 Procedural shapes take as input the desired shape resolution, the shape scale,
 the uv scale, and additional parameters specific to that procedural shape.
-These functions return a quad mesh, stored as a `scene_shape` struct.
+These functions return a quad mesh, stored as a `shape_data` struct.
 Use `make_rect(...)` for a rectangle in the XY plane,
 `make_bulged_rect(...)` for a bulged rectangle,
 `make_recty(...)` for a rectangle in the XZ plane,
@@ -458,7 +458,7 @@ auto shape_15 = make_rounded_uvcylinder({32,32,32}, {1,1});
 
 Yocto/Shape defines a few procedural face-varying shapes with similar interfaces
 to the above functions. In this case, the functions return face-varying quads
-packed in a `scene_fvshape` struct.
+packed in a `fvshape_data` struct.
 Use `make_fvrect(...)` for a rectangle in the XY plane,
 `make_fvbox(...)` for a box,
 `make_fvsphere(...)` for a sphere obtained from a cube.
@@ -473,14 +473,14 @@ auto fvshape_03 = make_fvsphere(32, 1);
 Yocto/Shape provides functions to create predefined shapes helpful in testing.
 These functions take only a scale and often provide only the positions as
 vertex data. These functions return either triangles, quads, or
-face-varying quads in a `scene_shape` or `scene_fvshape` struct.
+face-varying quads in a `shape_data` or `fvshape_data` struct.
 Use `make_monkey(...)` for the Blender monkey as quads and positions only,
 `make_quad(...)` for a simple quad,
 `make_quady(...)` for a simple quad in the XZ plane,
 `make_cube(...)` for a simple cube as quads and positions only,
 `make_fvcube(...)` for a simple face-varying unit cube,
 `make_geosphere(...)` for a geodesic sphere as triangles and positions only.
-These functions return a `scene_shape` or `scene_fvshape`.
+These functions return a `shape_data` or `fvshape_data`.
 
 ```cpp
 auto monkey = make_monkey(1);
@@ -495,7 +495,7 @@ Yocto/Shape supports the generation of points and lines sets.
 Use `make_lines(...)` to create a line set in the XY plane,
 `make_points(...)` for a collection of points at the origin,
 adn `make_random_points(...)` for a point set randomly placed in a box.
-These functions return points or lines, packed in a `scene_shape` struct.
+These functions return points or lines, packed in a `shape_data` struct.
 
 ```cpp
 auto lines_01 = make_lines({4, 65536},      // line steps and number of lines

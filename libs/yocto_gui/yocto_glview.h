@@ -61,18 +61,18 @@ namespace yocto {
 
 // Open a window and show an image
 void view_image(
-    const string& title, const string& name, const color_image& image);
+    const string& title, const string& name, const image_data& image);
 
 // Open a window and show a set of images
 void view_images(const string& title, const vector<string>& names,
-    const vector<color_image>& images);
+    const vector<image_data>& images);
 
 // Open a window and show an image for color grading
 void colorgrade_image(
-    const string& title, const string& name, const color_image& image);
+    const string& title, const string& name, const image_data& image);
 
 // Open a window and show an scene via path tracing
-void view_scene(const string& title, const string& name, scene_model& scene,
+void view_scene(const string& title, const string& name, scene_data& scene,
     const trace_params& params = {}, bool print = true, bool edit = false);
 
 // GUI callback
@@ -82,7 +82,7 @@ using glview_callback = std::function<void(const glinput_state& input,
 
 // Open a window and show an scene via OpenGL shading
 struct glscene_params;
-void glview_scene(const string& title, const string& name, scene_model& scene,
+void glview_scene(const string& title, const string& name, scene_data& scene,
     const glscene_params& params, const glview_callback& widgets_callback = {},
     const glview_callback& uiupdate_callback = {},
     const glview_callback& update_callback   = {});
@@ -117,7 +117,7 @@ bool init_image(glimage_state& glimage);
 void clear_image(glimage_state& glimage);
 
 // update image data
-void set_image(glimage_state& glimage, const color_image& image);
+void set_image(glimage_state& glimage, const image_data& image);
 
 // OpenGL image drawing params
 struct glimage_params {
@@ -152,7 +152,7 @@ struct glscene_texture {
 };
 
 // Create texture
-void set_texture(glscene_texture& gltexture, const scene_texture& texture);
+void set_texture(glscene_texture& gltexture, const texture_data& texture);
 
 // Clean texture
 void clear_texture(glscene_texture& gltexture);
@@ -185,7 +185,7 @@ struct glscene_shape {
 };
 
 // Create shape
-void set_shape(glscene_shape& glshape, const scene_shape& shape);
+void set_shape(glscene_shape& glshape, const shape_data& shape);
 
 // Clean shape
 void clear_shape(glscene_shape& glshape);
@@ -226,17 +226,17 @@ struct glscene_params {
 };
 
 // init scene
-void init_glscene(glscene_state& glscene, const scene_model& scene);
+void init_glscene(glscene_state& glscene, const scene_data& scene);
 
 // update scene
-void update_glscene(glscene_state& glscene, const scene_model& scene,
+void update_glscene(glscene_state& glscene, const scene_data& scene,
     const vector<int>& updated_shapes, const vector<int>& updated_textures);
 
 // Clear an OpenGL scene
 void clear_scene(glscene_state& scene);
 
 // draw scene
-void draw_scene(glscene_state& glscene, const scene_model& scene,
+void draw_scene(glscene_state& glscene, const scene_data& scene,
     const vec4i& viewport, const glscene_params& params);
 
 }  // namespace yocto

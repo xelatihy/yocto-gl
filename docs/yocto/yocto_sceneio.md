@@ -28,7 +28,7 @@ by the chosen file format.
 
 ```cpp
 auto error = string{};
-auto image = color_image{};             // define an image
+auto image = image_data{};              // define an image
 if(!load_image(filename, image, error)) // load image
   print_error(error);                   // check and print error
 if(!save_image(filename, image, error)) // save image
@@ -47,7 +47,7 @@ Yocto/SceneIO supports loading and saving to a custom Json format,
 Obj, glTF, Pbrt, and all shape file formats.
 
 ```cpp
-auto scene = scene_model{};              // scene
+auto scene = scene_data{};               // scene
 auto error = string{};                   // error buffer
 if(!load_scene(filename, scene, error))  // load scene
   print_error(error);
@@ -73,14 +73,14 @@ are flipped vertically to match the convention of OpenGL texturing;
 this can be disabled by setting the `flipv` flag.
 
 ```cpp
-auto shape = scene_shape{};                  // shape
+auto shape = shape_data{};                   // shape
 auto error = string{};                       // error buffer
 if(!load_shape(filename, shape, error))      // load shape
   print_error(error);
 if(!save_shape(filename, shape, error))      // save shape
   print_error(error);
 
-auto fvshape = scene_fvshape{};              // face-varying shape
+auto fvshape = fvshape_data{};               // face-varying shape
 auto error = string{};                       // error buffer
 if(!load_fvshape(filename, fvshape, error))  // load shape
   print_error(error);
@@ -108,7 +108,7 @@ by the chosen file format.
 
 ```cpp
 auto error = string{};
-auto texture = scene_texture{};             // define a texture
+auto texture = texture_data{};              // define a texture
 if(!load_texture(filename, texture, error)) // load texture
   print_error(error);                       // check and print error
 if(!save_texture(filename, texture, error)) // save texture

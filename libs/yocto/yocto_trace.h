@@ -127,7 +127,7 @@ inline const auto trace_falsecolor_names = vector<string>{"position", "normal",
 using image_callback = function<void(int current, int total)>;
 
 // Progressively computes an image.
-color_image trace_image(const scene_model& scene, const trace_params& params);
+image_data trace_image(const scene_data& scene, const trace_params& params);
 
 }  // namespace yocto
 
@@ -164,41 +164,41 @@ struct trace_state {
 };
 
 // Initialize state.
-trace_state make_state(const scene_model& scene, const trace_params& params);
+trace_state make_state(const scene_data& scene, const trace_params& params);
 
 // Initialize lights.
-trace_lights make_lights(const scene_model& scene, const trace_params& params);
+trace_lights make_lights(const scene_data& scene, const trace_params& params);
 
 // Build the bvh acceleration structure.
-bvh_scene make_bvh(const scene_model& scene, const trace_params& params);
+bvh_data make_bvh(const scene_data& scene, const trace_params& params);
 
 // Progressively computes an image.
-void trace_samples(trace_state& state, const scene_model& scene,
-    const bvh_scene& bvh, const trace_lights& lights,
+void trace_samples(trace_state& state, const scene_data& scene,
+    const bvh_data& bvh, const trace_lights& lights,
     const trace_params& params);
-void trace_sample(trace_state& state, const scene_model& scene,
-    const bvh_scene& bvh, const trace_lights& lights, int i, int j,
+void trace_sample(trace_state& state, const scene_data& scene,
+    const bvh_data& bvh, const trace_lights& lights, int i, int j,
     const trace_params& params);
 
 // Get resulting render
-color_image get_render(const trace_state& state);
-void        get_render(color_image& render, const trace_state& state);
+image_data get_render(const trace_state& state);
+void       get_render(image_data& render, const trace_state& state);
 
 // Get denoised result
-color_image get_denoised(const trace_state& state);
-void        get_denoised(color_image& render, const trace_state& state);
+image_data get_denoised(const trace_state& state);
+void       get_denoised(image_data& render, const trace_state& state);
 
 // Get denoising buffers
-color_image get_albedo(const trace_state& state);
-void        get_albedo(color_image& albedo, const trace_state& state);
-color_image get_normal(const trace_state& state);
-void        get_normal(color_image& normal, const trace_state& state);
+image_data get_albedo(const trace_state& state);
+void       get_albedo(image_data& albedo, const trace_state& state);
+image_data get_normal(const trace_state& state);
+void       get_normal(image_data& normal, const trace_state& state);
 
 // Denoise image
-color_image denoise_render(const color_image& render, const color_image& albedo,
-    const color_image& normal);
-void        denoise_render(color_image& denoised, const color_image& render,
-           const color_image& albedo, const color_image& normal);
+image_data denoise_render(const image_data& render, const image_data& albedo,
+    const image_data& normal);
+void       denoise_render(image_data& denoised, const image_data& render,
+          const image_data& albedo, const image_data& normal);
 
 }  // namespace yocto
 
