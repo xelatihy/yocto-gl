@@ -101,7 +101,7 @@ struct texture_data {
 };
 
 // Material type
-enum struct scene_material_type {
+enum struct material_type {
   // clang-format off
   matte, glossy, metallic, transparent, refractive, subsurface, volume, gltfpbr
   // clang-format on
@@ -116,18 +116,18 @@ inline const auto scene_material_names = std::vector<std::string>{"matte",
 // For surfaces, uses a microfacet model with thin sheet transmission.
 // The model is based on OBJ, but contains glTF compatibility.
 // For the documentation on the values, please see the OBJ format.
-struct scene_material {
+struct material_data {
   // material
-  scene_material_type type         = scene_material_type::matte;
-  vec3f               emission     = {0, 0, 0};
-  vec3f               color        = {0, 0, 0};
-  float               roughness    = 0;
-  float               metallic     = 0;
-  float               ior          = 1.5f;
-  vec3f               scattering   = {0, 0, 0};
-  float               scanisotropy = 0;
-  float               trdepth      = 0.01f;
-  float               opacity      = 1;
+  material_type type         = material_type::matte;
+  vec3f         emission     = {0, 0, 0};
+  vec3f         color        = {0, 0, 0};
+  float         roughness    = 0;
+  float         metallic     = 0;
+  float         ior          = 1.5f;
+  vec3f         scattering   = {0, 0, 0};
+  float         scanisotropy = 0;
+  float         trdepth      = 0.01f;
+  float         opacity      = 1;
 
   // textures
   int emission_tex   = invalidid;
@@ -224,7 +224,7 @@ struct scene_model {
   vector<scene_environment> environments = {};
   vector<scene_shape>       shapes       = {};
   vector<texture_data>      textures     = {};
-  vector<scene_material>    materials    = {};
+  vector<material_data>     materials    = {};
   vector<scene_subdiv>      subdivs      = {};
 
   // names (this will be cleanup significantly later)
@@ -282,30 +282,30 @@ namespace yocto {
 
 // Material parameters evaluated at a point on the surface
 struct material_point {
-  scene_material_type type         = scene_material_type::gltfpbr;
-  vec3f               emission     = {0, 0, 0};
-  vec3f               color        = {0, 0, 0};
-  float               opacity      = 1;
-  float               roughness    = 0;
-  float               metallic     = 0;
-  float               ior          = 1;
-  vec3f               density      = {0, 0, 0};
-  vec3f               scattering   = {0, 0, 0};
-  float               scanisotropy = 0;
-  float               trdepth      = 0.01f;
+  material_type type         = material_type::gltfpbr;
+  vec3f         emission     = {0, 0, 0};
+  vec3f         color        = {0, 0, 0};
+  float         opacity      = 1;
+  float         roughness    = 0;
+  float         metallic     = 0;
+  float         ior          = 1;
+  vec3f         density      = {0, 0, 0};
+  vec3f         scattering   = {0, 0, 0};
+  float         scanisotropy = 0;
+  float         trdepth      = 0.01f;
 };
 
 // Eval material to obtain emission, brdf and opacity.
 material_point eval_material(const scene_model& scene,
-    const scene_material& material, const vec2f& texcoord,
+    const material_data& material, const vec2f& texcoord,
     const vec4f& shape_color = {1, 1, 1, 1});
 
 // check if a material is a delta
-bool is_delta(const scene_material& material);
+bool is_delta(const material_data& material);
 bool is_delta(const material_point& material);
 
 // check if a material has a volume
-bool is_volumetric(const scene_material& material);
+bool is_volumetric(const material_data& material);
 bool is_volumetric(const material_point& material);
 bool is_volumetric(const scene_model& scene, const scene_instance& instance);
 
@@ -603,7 +603,10 @@ using sceneio_scene       = scene_model;
 using sceneio_camera      = camera_data;
 using scene_camera        = camera_data;
 using sceneio_texture     = texture_data;
-using sceneio_material    = scene_material;
+using scene_texture       = texture_data;
+using sceneio_material    = material_data;
+using scene_material_type = material_type;
+using sceneio_material    = material_data;
 using sceneio_shape       = scene_shape;
 using sceneio_instance    = scene_instance;
 using sceneio_environment = scene_environment;

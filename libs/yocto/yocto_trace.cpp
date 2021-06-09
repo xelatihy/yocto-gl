@@ -74,24 +74,24 @@ static vec3f eval_bsdfcos(const material_point& material, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
   if (material.roughness == 0) return zero3f;
 
-  if (material.type == scene_material_type::matte) {
+  if (material.type == material_type::matte) {
     return eval_matte(material.color, normal, outgoing, incoming);
-  } else if (material.type == scene_material_type::glossy) {
+  } else if (material.type == material_type::glossy) {
     return eval_glossy(material.color, material.ior, material.roughness, normal,
         outgoing, incoming);
-  } else if (material.type == scene_material_type::metallic) {
+  } else if (material.type == material_type::metallic) {
     return eval_metallic(
         material.color, material.roughness, normal, outgoing, incoming);
-  } else if (material.type == scene_material_type::transparent) {
+  } else if (material.type == material_type::transparent) {
     return eval_transparent(material.color, material.ior, material.roughness,
         normal, outgoing, incoming);
-  } else if (material.type == scene_material_type::refractive) {
+  } else if (material.type == material_type::refractive) {
     return eval_refractive(material.color, material.ior, material.roughness,
         normal, outgoing, incoming);
-  } else if (material.type == scene_material_type::subsurface) {
+  } else if (material.type == material_type::subsurface) {
     return eval_refractive(material.color, material.ior, material.roughness,
         normal, outgoing, incoming);
-  } else if (material.type == scene_material_type::gltfpbr) {
+  } else if (material.type == material_type::gltfpbr) {
     return eval_gltfpbr(material.color, material.ior, material.roughness,
         material.metallic, normal, outgoing, incoming);
   } else {
@@ -103,15 +103,15 @@ static vec3f eval_delta(const material_point& material, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
   if (material.roughness != 0) return zero3f;
 
-  if (material.type == scene_material_type::metallic) {
+  if (material.type == material_type::metallic) {
     return eval_metallic(material.color, normal, outgoing, incoming);
-  } else if (material.type == scene_material_type::transparent) {
+  } else if (material.type == material_type::transparent) {
     return eval_transparent(
         material.color, material.ior, normal, outgoing, incoming);
-  } else if (material.type == scene_material_type::refractive) {
+  } else if (material.type == material_type::refractive) {
     return eval_refractive(
         material.color, material.ior, normal, outgoing, incoming);
-  } else if (material.type == scene_material_type::volume) {
+  } else if (material.type == material_type::volume) {
     return eval_passthrough(material.color, normal, outgoing, incoming);
   } else {
     return {0, 0, 0};
@@ -123,24 +123,24 @@ static vec3f sample_bsdfcos(const material_point& material, const vec3f& normal,
     const vec3f& outgoing, float rnl, const vec2f& rn) {
   if (material.roughness == 0) return zero3f;
 
-  if (material.type == scene_material_type::matte) {
+  if (material.type == material_type::matte) {
     return sample_matte(material.color, normal, outgoing, rn);
-  } else if (material.type == scene_material_type::glossy) {
+  } else if (material.type == material_type::glossy) {
     return sample_specular(material.color, material.ior, material.roughness,
         normal, outgoing, rnl, rn);
-  } else if (material.type == scene_material_type::metallic) {
+  } else if (material.type == material_type::metallic) {
     return sample_metallic(
         material.color, material.roughness, normal, outgoing, rn);
-  } else if (material.type == scene_material_type::transparent) {
+  } else if (material.type == material_type::transparent) {
     return sample_transparent(material.color, material.ior, material.roughness,
         normal, outgoing, rnl, rn);
-  } else if (material.type == scene_material_type::refractive) {
+  } else if (material.type == material_type::refractive) {
     return sample_refractive(material.color, material.ior, material.roughness,
         normal, outgoing, rnl, rn);
-  } else if (material.type == scene_material_type::subsurface) {
+  } else if (material.type == material_type::subsurface) {
     return sample_refractive(material.color, material.ior, material.roughness,
         normal, outgoing, rnl, rn);
-  } else if (material.type == scene_material_type::gltfpbr) {
+  } else if (material.type == material_type::gltfpbr) {
     return sample_gltfpbr(material.color, material.ior, material.roughness,
         material.metallic, normal, outgoing, rnl, rn);
   } else {
@@ -152,15 +152,15 @@ static vec3f sample_delta(const material_point& material, const vec3f& normal,
     const vec3f& outgoing, float rnl) {
   if (material.roughness != 0) return zero3f;
 
-  if (material.type == scene_material_type::metallic) {
+  if (material.type == material_type::metallic) {
     return sample_metallic(material.color, normal, outgoing);
-  } else if (material.type == scene_material_type::transparent) {
+  } else if (material.type == material_type::transparent) {
     return sample_transparent(
         material.color, material.ior, normal, outgoing, rnl);
-  } else if (material.type == scene_material_type::refractive) {
+  } else if (material.type == material_type::refractive) {
     return sample_refractive(
         material.color, material.ior, normal, outgoing, rnl);
-  } else if (material.type == scene_material_type::volume) {
+  } else if (material.type == material_type::volume) {
     return sample_passthrough(material.color, normal, outgoing);
   } else {
     return {0, 0, 0};
@@ -172,24 +172,24 @@ static float sample_bsdfcos_pdf(const material_point& material,
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
   if (material.roughness == 0) return 0;
 
-  if (material.type == scene_material_type::matte) {
+  if (material.type == material_type::matte) {
     return sample_matte_pdf(material.color, normal, outgoing, incoming);
-  } else if (material.type == scene_material_type::glossy) {
+  } else if (material.type == material_type::glossy) {
     return sample_glossy_pdf(material.color, material.ior, material.roughness,
         normal, outgoing, incoming);
-  } else if (material.type == scene_material_type::metallic) {
+  } else if (material.type == material_type::metallic) {
     return sample_metallic_pdf(
         material.color, material.roughness, normal, outgoing, incoming);
-  } else if (material.type == scene_material_type::transparent) {
+  } else if (material.type == material_type::transparent) {
     return sample_tranparent_pdf(material.color, material.ior,
         material.roughness, normal, outgoing, incoming);
-  } else if (material.type == scene_material_type::refractive) {
+  } else if (material.type == material_type::refractive) {
     return sample_refractive_pdf(material.color, material.ior,
         material.roughness, normal, outgoing, incoming);
-  } else if (material.type == scene_material_type::subsurface) {
+  } else if (material.type == material_type::subsurface) {
     return sample_refractive_pdf(material.color, material.ior,
         material.roughness, normal, outgoing, incoming);
-  } else if (material.type == scene_material_type::gltfpbr) {
+  } else if (material.type == material_type::gltfpbr) {
     return sample_gltfpbr_pdf(material.color, material.ior, material.roughness,
         material.metallic, normal, outgoing, incoming);
   } else {
@@ -201,15 +201,15 @@ static float sample_delta_pdf(const material_point& material,
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
   if (material.roughness != 0) return 0;
 
-  if (material.type == scene_material_type::metallic) {
+  if (material.type == material_type::metallic) {
     return sample_metallic_pdf(material.color, normal, outgoing, incoming);
-  } else if (material.type == scene_material_type::transparent) {
+  } else if (material.type == material_type::transparent) {
     return sample_tranparent_pdf(
         material.color, material.ior, normal, outgoing, incoming);
-  } else if (material.type == scene_material_type::refractive) {
+  } else if (material.type == material_type::refractive) {
     return sample_refractive_pdf(
         material.color, material.ior, normal, outgoing, incoming);
-  } else if (material.type == scene_material_type::volume) {
+  } else if (material.type == material_type::volume) {
     return sample_passthrough_pdf(material.color, normal, outgoing, incoming);
   } else {
     return 0;

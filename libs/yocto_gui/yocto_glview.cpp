@@ -1588,14 +1588,14 @@ void draw_scene(glscene_state& glscene, const scene_model& scene,
     glUniform1f(glGetUniformLocation(program, "metallic"), material.metallic);
     glUniform1f(glGetUniformLocation(program, "roughness"), material.roughness);
     glUniform1f(glGetUniformLocation(program, "opacity"), material.opacity);
-    if (material.type == scene_material_type::matte ||
-        material.type == scene_material_type::transparent ||
-        material.type == scene_material_type::refractive ||
-        material.type == scene_material_type::subsurface ||
-        material.type == scene_material_type::volume) {
+    if (material.type == material_type::matte ||
+        material.type == material_type::transparent ||
+        material.type == material_type::refractive ||
+        material.type == material_type::subsurface ||
+        material.type == material_type::volume) {
       glUniform1f(glGetUniformLocation(program, "specular"), 0);
     }
-    if (material.type == scene_material_type::metallic) {
+    if (material.type == material_type::metallic) {
       glUniform1f(glGetUniformLocation(program, "metallic"), 1);
     }
     glUniform1f(glGetUniformLocation(program, "double_sided"),

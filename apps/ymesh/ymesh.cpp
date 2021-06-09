@@ -141,7 +141,7 @@ static scene_model make_shapescene(const scene_shape& ioshape_) {
 
   // material
   auto& shape_material     = scene.materials.emplace_back();
-  shape_material.type      = scene_material_type::glossy;
+  shape_material.type      = material_type::glossy;
   shape_material.color     = {0.5, 1, 0.5};
   shape_material.roughness = 0.2;
 
@@ -226,15 +226,15 @@ static scene_model make_pathscene(const scene_shape& ioshape_) {
 
   // material
   auto& shape_material      = scene.materials.emplace_back();
-  shape_material.type       = scene_material_type::glossy;
+  shape_material.type       = material_type::glossy;
   shape_material.color      = {0.5, 1, 0.5};
   shape_material.roughness  = 0.2;
   auto& points_material     = scene.materials.emplace_back();
-  points_material.type      = scene_material_type::glossy;
+  points_material.type      = material_type::glossy;
   points_material.color     = {1, 0.5, 0.5};
   points_material.roughness = 0.2;
   auto& lines_material      = scene.materials.emplace_back();
-  lines_material.type       = scene_material_type::glossy;
+  lines_material.type       = material_type::glossy;
   lines_material.color      = {0.5, 0.5, 1};
   lines_material.roughness  = 0.2;
 
@@ -395,26 +395,26 @@ static scene_model make_pathdscene(const scene_shape& ioshape) {
 
   // material
   auto& shape_material     = scene.materials.emplace_back();
-  shape_material.type      = scene_material_type::glossy;
+  shape_material.type      = material_type::glossy;
   shape_material.color     = {0.5, 1, 0.5};
   shape_material.roughness = 0.2;
   auto& points_material    = scene.materials.emplace_back();
-  points_material.type     = scene_material_type::matte;
+  points_material.type     = material_type::matte;
   points_material.color    = {1, 0.5, 0.5};
   auto& lines1_material    = scene.materials.emplace_back();
-  lines1_material.type     = scene_material_type::matte;
+  lines1_material.type     = material_type::matte;
   lines1_material.color    = {0.5, 0.5, 1};
   auto& lines2_material    = scene.materials.emplace_back();
-  lines2_material.type     = scene_material_type::matte;
+  lines2_material.type     = material_type::matte;
   lines2_material.color    = {1, 1, 0.5};
   auto& lines3_material    = scene.materials.emplace_back();
-  lines3_material.type     = scene_material_type::matte;
+  lines3_material.type     = material_type::matte;
   lines3_material.color    = {1, 0.5, 1};
   auto& lines4_material    = scene.materials.emplace_back();
-  lines4_material.type     = scene_material_type::matte;
+  lines4_material.type     = material_type::matte;
   lines4_material.color    = {0.5, 0.5, 0.5};
   auto& edges_material     = scene.materials.emplace_back();
-  edges_material.type      = scene_material_type::matte;
+  edges_material.type      = material_type::matte;
   edges_material.color     = {0, 0, 0};
 
   // shapes
@@ -1117,10 +1117,10 @@ static scene_model make_sculptscene(const scene_shape& ioshape_) {
 
   // material
   auto& shape_material  = scene.materials.emplace_back();
-  shape_material.type   = scene_material_type::matte;
+  shape_material.type   = material_type::matte;
   shape_material.color  = {0.78f, 0.31f, 0.23f};
   auto& cursor_material = scene.materials.emplace_back();
-  cursor_material.type  = scene_material_type::matte;
+  cursor_material.type  = material_type::matte;
 
   // shapes
   scene.shapes.emplace_back(ioshape);

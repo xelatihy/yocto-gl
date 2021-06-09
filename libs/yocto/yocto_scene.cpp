@@ -193,7 +193,7 @@ static const auto min_roughness = 0.03f * 0.03f;
 
 // Evaluate material
 material_point eval_material(const scene_model& scene,
-    const scene_material& material, const vec2f& texcoord,
+    const material_data& material, const vec2f& texcoord,
     const vec4f& color_shp) {
   // evaluate textures
   auto emission_tex = eval_texture(
@@ -219,18 +219,18 @@ material_point eval_material(const scene_model& scene,
   point.trdepth      = material.trdepth;
 
   // volume density
-  if (material.type == scene_material_type::refractive ||
-      material.type == scene_material_type::volume ||
-      material.type == scene_material_type::subsurface) {
+  if (material.type == material_type::refractive ||
+      material.type == material_type::volume ||
+      material.type == material_type::subsurface) {
     point.density = -log(clamp(point.color, 0.0001f, 1.0f)) / point.trdepth;
   } else {
     point.density = {0, 0, 0};
   }
 
   // fix roughness
-  if (point.type == scene_material_type::matte ||
-      point.type == scene_material_type::gltfpbr ||
-      point.type == scene_material_type::glossy) {
+  if (point.type == material_type::matte ||
+      point.type == material_type::gltfpbr ||
+      point.type == material_type::glossy) {
     point.roughness = clamp(point.roughness, min_roughness, 1.0f);
   }
 
@@ -238,35 +238,35 @@ material_point eval_material(const scene_model& scene,
 }
 
 // check if a material is a delta or volumetric
-bool is_delta(const scene_material& material) {
-  return (material.type == scene_material_type::metallic &&
+bool is_delta(const material_data& material) {
+  return (material.type == material_type::metallic &&
              material.roughness == 0) ||
-         (material.type == scene_material_type::refractive &&
+         (material.type == material_type::refractive &&
              material.roughness == 0) ||
-         (material.type == scene_material_type::transparent &&
+         (material.type == material_type::transparent &&
              material.roughness == 0) ||
-         (material.type == scene_material_type::volume);
+         (material.type == material_type::volume);
 }
-bool is_volumetric(const scene_material& material) {
-  return material.type == scene_material_type::refractive ||
-         material.type == scene_material_type::volume ||
-         material.type == scene_material_type::subsurface;
+bool is_volumetric(const material_data& material) {
+  return material.type == material_type::refractive ||
+         material.type == material_type::volume ||
+         material.type == material_type::subsurface;
 }
 
 // check if a brdf is a delta
 bool is_delta(const material_point& material) {
-  return (material.type == scene_material_type::metallic &&
+  return (material.type == material_type::metallic &&
              material.roughness == 0) ||
-         (material.type == scene_material_type::refractive &&
+         (material.type == material_type::refractive &&
              material.roughness == 0) ||
-         (material.type == scene_material_type::transparent &&
+         (material.type == material_type::transparent &&
              material.roughness == 0) ||
-         (material.type == scene_material_type::volume);
+         (material.type == material_type::volume);
 }
 bool has_volume(const material_point& material) {
-  return material.type == scene_material_type::refractive ||
-         material.type == scene_material_type::volume ||
-         material.type == scene_material_type::subsurface;
+  return material.type == material_type::refractive ||
+         material.type == material_type::volume ||
+         material.type == material_type::subsurface;
 }
 
 }  // namespace yocto
@@ -937,7 +937,7 @@ vec3f eval_shading_normal(const scene_model& scene,
     if (material.normal_tex != invalidid) {
       normal = eval_normalmap(scene, instance, element, uv);
     }
-    if (material.type == scene_material_type::refractive) return normal;
+    if (material.type == material_type::refractive) return normal;
     return dot(normal, outgoing) >= 0 ? normal : -normal;
   } else if (!shape.lines.empty()) {
     auto normal = eval_normal(scene, instance, element, uv);
@@ -1003,20 +1003,20 @@ material_point eval_material(const scene_model& scene,
   point.trdepth      = material.trdepth;
 
   // volume density
-  if (material.type == scene_material_type::refractive ||
-      material.type == scene_material_type::volume ||
-      material.type == scene_material_type::subsurface) {
+  if (material.type == material_type::refractive ||
+      material.type == material_type::volume ||
+      material.type == material_type::subsurface) {
     point.density = -log(clamp(point.color, 0.0001f, 1.0f)) / point.trdepth;
   } else {
     point.density = {0, 0, 0};
   }
 
   // fix roughness
-  if (point.type == scene_material_type::matte ||
-      point.type == scene_material_type::gltfpbr ||
-      point.type == scene_material_type::glossy) {
+  if (point.type == material_type::matte ||
+      point.type == material_type::gltfpbr ||
+      point.type == material_type::glossy) {
     point.roughness = clamp(point.roughness, min_roughness, 1.0f);
-  } else if (material.type == scene_material_type::volume) {
+  } else if (material.type == material_type::volume) {
     point.roughness = 0;
   } else {
     if (point.roughness < min_roughness) point.roughness = 0;
@@ -1129,7 +1129,7 @@ scene_model make_shape_scene(const scene_shape& shape, bool addsky) {
   // material
   scene.material_names.emplace_back("material");
   auto& shape_material     = scene.materials.emplace_back();
-  shape_material.type      = scene_material_type::glossy;
+  shape_material.type      = material_type::glossy;
   shape_material.color     = {0.5f, 1.0f, 0.5f};
   shape_material.roughness = 0.2f;
   // instance

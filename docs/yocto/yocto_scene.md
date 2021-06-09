@@ -233,7 +233,7 @@ with `shape_to_fvshape(shape)` and `fvshape_to_shape(fvshape)`.
 
 ## Materials
 
-Materials, represented as `scene_material`, are defined by a material type
+Materials, represented as `material_data`, are defined by a material type
 and a few parameters, common to all materials. In particular, we support the
 following materials:
 
@@ -275,27 +275,27 @@ We can further control the appearance by changing surface roughness, index of
 refraction and volumetric properties, when appropriate. Here are some examples.
 
 ```cpp
-auto matte = scene_material{};           // create a matte material
-matte.type = scene_material_type::matte;
+auto matte = material_data{};            // create a matte material
+matte.type = material_type::matte;
 matte.color = {1,0.5,0.5};               // with base color and
 matte.color_tex = texture_id;            // textured albedo
-auto glossy =  scene_material{};         // create a glossy material
-glossy.type = scene_material_type::glossy;
+auto glossy =  material_data{};          // create a glossy material
+glossy.type = material_type::glossy;
 glossy.color = {0.5,1,0.5};              // with constant color
 glossyv.roughness = 0.1;                 // base roughness and a
 glossy.roughness_tex = texture_id;       // roughness texture
-auto metallic =  scene_material{};       // create a metallic material
-glossy.type = scene_material_type::metallic
+auto metallic =  material_data{};        // create a metallic material
+glossy.type = material_type::metallic
 metal.color = {0.5,0.5,1};               // constant color
 metal.roughness = 0.1;                   // constant roughness
-auto tglass = scene_material{};          // create a transparent material
-tglass.type = scene_material_type::transparent;
+auto tglass = material_data{};           // create a transparent material
+tglass.type = material_type::transparent;
 tglass.color = {1,1,1};                  // with constant color
-auto glass = scene_material{};           // create a refractive material
-glass.type = scene_material_type::transparent;
+auto glass = material_data{};            // create a refractive material
+glass.type = material_type::transparent;
 glass.color = {1,0.9,0.9};               // constant color
-auto subsurf = scene_material{};         // create a refractive material
-subsurf.type = scene_material_type::subsurface;
+auto subsurf = material_data{};          // create a refractive material
+subsurf.type = material_type::subsurface;
 subsurf.color = {1,1,1};                 // that transmits all light
 subsurf.scattering = {0.5,1,0.5};        // and has volumetric scattering
 ```
@@ -304,7 +304,7 @@ Lights are not explicit in Yocto/Scene but are specified by assigning emissive
 materials.
 
 ```cpp
-auto light = scene_material{};   // create a material
+auto light = material_data{};    // create a material
 light.color = {0,0,0};           // that does not reflect light
 light.emission = {10,10,10};     // but emits it instead
 ```
