@@ -42,6 +42,7 @@
 #include <memory>
 #include <string>
 #include <type_traits>
+#include <unordered_map>
 #include <vector>
 
 #include "yocto_math.h"
@@ -54,6 +55,7 @@ namespace yocto {
 // using directives
 using std::string;
 using std::unique_ptr;
+using std::unordered_map;
 using std::vector;
 using namespace std::string_literals;
 
@@ -231,6 +233,41 @@ void add_option(const cli_command& cli, const string& name, vec4f& value,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// Command line type.
+enum struct cli_type {
+  none,
+  integer,
+  unsigned_,
+  number,
+  boolean,
+  string,
+  array,
+  object
+};
+// Command line value.
+struct cli_value {
+  cli_type                         type      = cli_type::none;
+  int64_t                          integer   = 0;
+  uint64_t                         unsigned_ = 0;
+  double                           number    = 0;
+  bool                             boolean   = false;
+  string                           string_   = "";
+  vector<cli_value>                array     = {};
+  unordered_map<string, cli_value> object    = {};
+};
+
+// Command line schema.
+struct cli_schema {
+  cli_type                          type       = cli_type::object;
+  string                            name       = "";
+  string                            usage      = "";
+  cli_value                         default_   = {};
+  cli_value                         min        = {};
+  cli_value                         max        = {};
+  vector<cli_schema>                items      = {};
+  unordered_map<string, cli_schema> properties = {};
+};
+
 // Command line setter.
 using cli_setter = bool (*)(const void*, void*, const vector<string>& choices);
 // Command line variable.
@@ -242,7 +279,7 @@ struct cli_variable {
 };
 // Command line state.
 struct cli_state {
-  unique_ptr<void, void (*)(void*)> defaults  = {nullptr, nullptr};
+  cli_value                         defaults  = {};
   unique_ptr<void, void (*)(void*)> schema    = {nullptr, nullptr};
   vector<cli_variable>              variables = {};
 };
