@@ -39,7 +39,6 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
-#include <memory>
 #include <string>
 #include <type_traits>
 #include <vector>
@@ -53,7 +52,6 @@ namespace yocto {
 
 // using directives
 using std::string;
-using std::unique_ptr;
 using std::vector;
 using namespace std::string_literals;
 
@@ -297,7 +295,7 @@ struct cli_value {
   uint64_t                       unsigned_ = 0;
   double                         number    = 0;
   bool                           boolean   = false;
-  string                         string_   = "";
+  string                         string_   = {};
   vector<cli_value>              array     = {};
   ordered_map<string, cli_value> object    = {};
 };
