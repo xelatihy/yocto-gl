@@ -1,5 +1,5 @@
 //
-// Implementation for Yocto/Bvh
+// Implementation for Yocto/Cli
 //
 
 //
@@ -207,6 +207,7 @@ using json_value  = cli_value;
 using json_type   = cli_type;
 using json_array  = cli_array;
 using json_object = cli_object;
+using json_schema = cli_schema;
 
 struct json_error : std::logic_error {
   json_error(const string& error) : std::logic_error(error) {}
@@ -286,20 +287,20 @@ inline json_value to_json(const T& value) {
   return json;
 }
 
-inline void to_json(json_value& json, int32_t value) {
-  json.set_integer(value);
-}
 inline void to_json(json_value& json, int64_t value) {
   json.set_integer(value);
 }
-inline void to_json(json_value& json, uint32_t value) {
-  json.set_unsigned(value);
+inline void to_json(json_value& json, int32_t value) {
+  json.set_integer(value);
 }
 inline void to_json(json_value& json, uint64_t value) {
   json.set_unsigned(value);
 }
-inline void to_json(json_value& json, float value) { json.set_number(value); }
+inline void to_json(json_value& json, uint32_t value) {
+  json.set_unsigned(value);
+}
 inline void to_json(json_value& json, double value) { json.set_number(value); }
+inline void to_json(json_value& json, float value) { json.set_number(value); }
 inline void to_json(json_value& json, bool value) { json.set_boolean(value); }
 inline void to_json(json_value& json, const char* value) {
   json.set_string(value);
@@ -332,15 +333,6 @@ inline T from_json(const json_value& json) {
   return value;
 }
 
-inline void from_json(const json_value& json, int32_t& value) {
-  if (json.get_type() == json_type::integer) {
-    value = (int32_t)json.get_integer();
-  } else if (json.get_type() == json_type::unsigned_) {
-    value = (int32_t)json.get_unsigned();
-  } else {
-    throw json_error{"integer expected"};
-  }
-}
 inline void from_json(const json_value& json, int64_t& value) {
   if (json.get_type() == json_type::integer) {
     value = (int64_t)json.get_integer();
@@ -350,14 +342,8 @@ inline void from_json(const json_value& json, int64_t& value) {
     throw json_error{"integer expected"};
   }
 }
-inline void from_json(const json_value& json, uint32_t& value) {
-  if (json.get_type() == json_type::integer) {
-    value = (uint32_t)json.get_integer();
-  } else if (json.get_type() == json_type::unsigned_) {
-    value = (uint32_t)json.get_unsigned();
-  } else {
-    throw json_error{"integer expected"};
-  }
+inline void from_json(const json_value& json, int32_t& value) {
+  value = (int32_t)from_json<int64_t>(json);
 }
 inline void from_json(const json_value& json, uint64_t& value) {
   if (json.get_type() == json_type::integer) {
@@ -368,18 +354,10 @@ inline void from_json(const json_value& json, uint64_t& value) {
     throw json_error{"integer expected"};
   }
 }
-inline void from_json(const json_value& json, float& value) {
-  if (json.get_type() == json_type::integer) {
-    value = (float)json.get_integer();
-  } else if (json.get_type() == json_type::unsigned_) {
-    value = (float)json.get_unsigned();
-  } else if (json.get_type() == json_type::number) {
-    value = (float)json.get_number();
-  } else {
-    throw json_error{"number expected"};
-  }
+inline void from_json(const json_value& json, uint32_t& value) {
+  value = (uint32_t)from_json<uint64_t>(json);
 }
-inline void from_json(const json_value& json, double& value, string& error) {
+inline void from_json(const json_value& json, double& value) {
   if (json.get_type() == json_type::integer) {
     value = (double)json.get_integer();
   } else if (json.get_type() == json_type::unsigned_) {
@@ -389,6 +367,9 @@ inline void from_json(const json_value& json, double& value, string& error) {
   } else {
     throw json_error{"number expected"};
   }
+}
+inline void from_json(const json_value& json, float& value) {
+  value = (double)from_json<double>(json);
 }
 inline void from_json(const json_value& json, bool& value) {
   if (json.get_type() == json_type::boolean) {
@@ -403,6 +384,127 @@ inline void from_json(const json_value& json, string& value) {
   } else {
     throw json_error{"string expected"};
   }
+}
+
+inline void to_schema(json_schema& schema, int64_t value, const string& title,
+    const string& description) {
+  schema.type        = to_json(value).type;
+  schema.title       = title;
+  schema.description = description;
+  schema.default_    = to_json(value);
+}
+inline void to_schema(json_schema& schema, int64_t value, const string& title,
+    const string& description, int64_t min, int64_t max) {
+  schema.type        = to_json(value).type;
+  schema.title       = title;
+  schema.description = description;
+  schema.default_    = to_json(value);
+  schema.min         = to_json(min);
+  schema.max         = to_json(max);
+}
+inline void to_schema(json_schema& schema, int32_t value, const string& title,
+    const string& description) {
+  to_schema(schema, (int64_t)value, title, description);
+}
+inline void to_schema(json_schema& schema, int32_t value, const string& title,
+    const string& description, int32_t min, int32_t max) {
+  to_schema(
+      schema, (int64_t)value, title, description, (int64_t)min, (int64_t)max);
+}
+inline void to_schema(json_schema& schema, uint64_t value, const string& title,
+    const string& description) {
+  schema.type        = to_json(value).type;
+  schema.title       = title;
+  schema.description = description;
+  schema.default_    = to_json(value);
+}
+inline void to_schema(json_schema& schema, uint64_t value, const string& title,
+    const string& description, uint64_t min, uint64_t max) {
+  schema.type        = to_json(value).type;
+  schema.title       = title;
+  schema.description = description;
+  schema.default_    = to_json(value);
+  schema.min         = to_json(min);
+  schema.max         = to_json(max);
+}
+inline void to_schema(json_schema& schema, uint32_t value, const string& title,
+    const string& description) {
+  to_schema(schema, (uint64_t)value, title, description);
+}
+inline void to_schema(json_schema& schema, uint32_t value, const string& title,
+    const string& description, uint32_t min, uint32_t max) {
+  to_schema(schema, (uint64_t)value, title, description, (uint64_t)min,
+      (uint64_t)max);
+}
+inline void to_schema(json_schema& schema, double value, const string& title,
+    const string& description) {
+  schema.type        = to_json(value).type;
+  schema.title       = title;
+  schema.description = description;
+  schema.default_    = to_json(value);
+}
+inline void to_schema(json_schema& schema, double value, const string& title,
+    const string& description, double min, double max) {
+  schema.type        = to_json(value).type;
+  schema.title       = title;
+  schema.description = description;
+  schema.default_    = to_json(value);
+  schema.min         = to_json(min);
+  schema.max         = to_json(max);
+}
+inline void to_schema(json_schema& schema, float value, const string& title,
+    const string& description) {
+  to_schema(schema, (double)value, title, description);
+}
+inline void to_schema(json_schema& schema, float value, const string& title,
+    const string& description, float min, float max) {
+  to_schema(
+      schema, (double)value, title, description, (double)min, (double)max);
+}
+inline void to_schema(json_schema& schema, bool value, const string& title,
+    const string& description) {
+  schema.type        = to_json(value).type;
+  schema.title       = title;
+  schema.description = description;
+  schema.default_    = to_json(value);
+}
+inline void to_schema(json_schema& schema, const string& value,
+    const string& title, const string& description) {
+  schema.type        = to_json(value).type;
+  schema.title       = title;
+  schema.description = description;
+  schema.default_    = to_json(value);
+}
+inline void to_schema(json_schema& schema, const string& value,
+    const string& title, const string& description,
+    const vector<string>& enum_) {
+  schema.type        = to_json(value).type;
+  schema.title       = title;
+  schema.description = description;
+  schema.default_    = to_json(value);
+  schema.enum_       = enum_;
+}
+template <typename T, size_t N>
+inline void to_schema(json_schema& schema, const array<T, N>& value,
+    const string& title, const string& description) {
+  schema.type        = to_json(value).type;
+  schema.title       = title;
+  schema.description = description;
+  schema.default_    = to_json(value);
+  schema.min_items   = N;
+  schema.max_items   = N;
+  to_schema(schema.items.emplace_back(), T{}, "item", "");
+}
+template <typename T>
+inline void to_schema(json_schema& schema, const vector<T>& value,
+    const string& title, const string& description) {
+  schema.type        = to_json(value).type;
+  schema.title       = title;
+  schema.description = description;
+  schema.default_    = to_json(value);
+  schema.min_items   = 0;
+  schema.max_items   = std::numeric_limits<size_t>::max();
+  to_schema(schema.items.emplace_back(), T{}, "item", "");
 }
 
 template <typename T>
@@ -488,6 +590,97 @@ static void cli_to_value(
   for (auto& item : value) cli_to_value(to_json_append(cvalue), item, choices);
 }
 
+static void cli_to_schema(cli_schema& schema, const int& value,
+    const vector<string>& choices, const string& name, const string& usage,
+    bool req, bool positional) {
+  schema.title          = name;
+  schema.description    = usage;
+  schema.cli_required   = req;
+  schema.cli_positional = positional;
+  cli_to_value(schema.default_, value, choices);
+  if (!choices.empty()) {
+    schema.type  = cli_type::string;
+    schema.enum_ = choices;
+  } else {
+    schema.type = cli_type::integer;
+  }
+}
+
+static void cli_to_schema(cli_schema& schema, const float& value,
+    const vector<string>& choices, const string& name, const string& usage,
+    bool req, bool positional) {
+  schema.title          = name;
+  schema.description    = usage;
+  schema.cli_required   = req;
+  schema.cli_positional = positional;
+  cli_to_value(schema.default_, value, choices);
+  if (!choices.empty()) {
+    schema.type  = cli_type::string;
+    schema.enum_ = choices;
+  } else {
+    schema.type = cli_type::number;
+  }
+}
+
+static void cli_to_schema(cli_schema& schema, const bool& value,
+    const vector<string>& choices, const string& name, const string& usage,
+    bool req, bool positional) {
+  schema.title          = name;
+  schema.description    = usage;
+  schema.cli_required   = req;
+  schema.cli_positional = positional;
+  cli_to_value(schema.default_, value, choices);
+  if (!choices.empty()) {
+    schema.type  = cli_type::string;
+    schema.enum_ = choices;
+  } else {
+    schema.type = cli_type::boolean;
+  }
+}
+
+static void cli_to_schema(cli_schema& schema, const string& value,
+    const vector<string>& choices, const string& name, const string& usage,
+    bool req, bool positional) {
+  schema.title          = name;
+  schema.description    = usage;
+  schema.cli_required   = req;
+  schema.cli_positional = positional;
+  cli_to_value(schema.default_, value, choices);
+  if (!choices.empty()) {
+    schema.type  = cli_type::string;
+    schema.enum_ = choices;
+  } else {
+    schema.type = cli_type::string;
+  }
+}
+
+template <typename T, size_t N>
+static void cli_to_schema(cli_schema& schema, const array<T, N>& value,
+    const vector<string>& choices, const string& name, const string& usage,
+    bool req, bool positional) {
+  schema.title          = name;
+  schema.description    = usage;
+  schema.cli_required   = req;
+  schema.cli_positional = positional;
+  cli_to_value(schema.default_, value, choices);
+  schema.type      = cli_type::array;
+  schema.min_items = value.size();
+  schema.max_items = value.size();
+}
+template <typename T>
+static void cli_to_schema(cli_schema& schema, const vector<T>& value,
+    const vector<string>& choices, const string& name, const string& usage,
+    bool req, bool positional) {
+  schema.title          = name;
+  schema.description    = usage;
+  schema.cli_required   = req;
+  schema.cli_positional = positional;
+  cli_to_value(schema.default_, value, choices);
+  schema.type      = cli_type::array;
+  schema.min_items = 0;
+  schema.max_items = std::numeric_limits<size_t>::max();
+}
+
 static void cli_from_value(
     const cli_value& json, int32_t& value, const vector<string>& choices) {
   if (choices.empty()) {
@@ -551,68 +744,6 @@ static bool cli_from_value(
     cli_from_value(json_at(json, idx), value[idx], choices);
   }
   return true;
-}
-
-template <typename T>
-static bool cli_from_value(
-    const cli_value& cvalue, T& value, const vector<string>& choices) {
-  static_assert(std::is_same_v<T, int32_t> || std::is_same_v<T, int64_t> ||
-                    std::is_same_v<T, int32_t> || std::is_same_v<T, int64_t> ||
-                    std::is_same_v<T, float> || std::is_same_v<T, double> ||
-                    std::is_same_v<T, bool> || std::is_same_v<T, string> ||
-                    cli_is_array_v<T> || cli_is_vector_v<T>,
-      "unsupported type");
-  if constexpr (cli_is_boolean_v<T>) {
-    if (cvalue.type == cli_type::boolean) {
-      value = (T)cvalue.boolean;
-      return true;
-    } else if (cvalue.type == cli_type::string) {
-      if (std::find(choices.begin(), choices.end(), cvalue.string_) ==
-          choices.end()) {
-        return false;
-      }
-      value = choices[0] == cvalue.string_ ? false : true;
-      return true;
-    } else {
-      return false;
-    }
-  } else if constexpr (cli_is_string_v<T>) {
-    if (cvalue.type == cli_type::string) {
-      if (!choices.empty() && std::find(choices.begin(), choices.end(),
-                                  cvalue.string_) == choices.end()) {
-        return false;
-      }
-      value = cvalue.string_;
-      return true;
-    } else {
-      return false;
-    }
-  } else if constexpr (cli_is_array_v<T>) {
-    if (cvalue.type == cli_type::array) {
-      if (cvalue.array.size() != value.size()) return false;
-      for (auto idx = (size_t)0; idx < cvalue.array.size(); idx++) {
-        if (!cli_from_value(cvalue.array[idx], value[idx], choices))
-          return false;
-      }
-      return true;
-    } else {
-      return false;
-    }
-  } else if constexpr (cli_is_vector_v<T>) {
-    if (cvalue.type == cli_type::array) {
-      value.resize(cvalue.array.size());
-      for (auto idx = (size_t)0; idx < cvalue.array.size(); idx++) {
-        if (!cli_from_value(cvalue.array[idx], value[idx], choices))
-          return false;
-      }
-      return true;
-    } else {
-      return false;
-    }
-  } else {
-    throw std::runtime_error{"type not supported"};
-    return false;
-  }
 }
 
 template <typename T>
