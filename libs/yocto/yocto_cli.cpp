@@ -507,42 +507,6 @@ inline void to_schema(json_schema& schema, const vector<T>& value,
   to_schema(schema.items.emplace_back(), T{}, "item", "");
 }
 
-template <typename T>
-struct cli_is_array {
-  static const bool value = false;
-};
-template <typename T, size_t N>
-struct cli_is_array<array<T, N>> {
-  static const bool value = true;
-};
-
-template <typename T>
-struct cli_is_vector {
-  static const bool value = false;
-};
-template <typename T, typename A>
-struct cli_is_vector<vector<T, A>> {
-  static const bool value = true;
-};
-
-template <typename T>
-constexpr bool cli_is_integer_v = std::is_same_v<T, int32_t> ||
-                                  std::is_same_v<T, int64_t>;
-template <typename T>
-constexpr bool cli_is_unsigned_v = std::is_same_v<T, uint32_t> ||
-                                   std::is_same_v<T, uint64_t>;
-template <typename T>
-constexpr bool cli_is_floating_v = std::is_same_v<T, float> ||
-                                   std::is_same_v<T, double>;
-template <typename T>
-constexpr bool cli_is_boolean_v = std::is_same_v<T, bool>;
-template <typename T>
-constexpr bool cli_is_string_v = std::is_same_v<T, string>;
-template <typename T>
-constexpr bool cli_is_array_v = cli_is_array<T>::value;
-template <typename T>
-constexpr bool cli_is_vector_v = cli_is_vector<T>::value;
-
 static void cli_to_value(
     cli_value& cvalue, int32_t value, const vector<string>& choices) {
   if (choices.empty()) {
@@ -744,49 +708,6 @@ static bool cli_from_value(
     cli_from_value(json_at(json, idx), value[idx], choices);
   }
   return true;
-}
-
-template <typename T>
-static void cli_to_schema(cli_schema& schema, const T& value,
-    const vector<string>& choices, const string& name, const string& usage,
-    bool req, bool positional) {
-  static_assert(std::is_same_v<T, int32_t> || std::is_same_v<T, int64_t> ||
-                    std::is_same_v<T, int32_t> || std::is_same_v<T, int64_t> ||
-                    std::is_same_v<T, float> || std::is_same_v<T, double> ||
-                    std::is_same_v<T, bool> || std::is_same_v<T, string> ||
-                    cli_is_array_v<T> || cli_is_vector_v<T>,
-      "unsupported type");
-  schema.title          = name;
-  schema.description    = usage;
-  schema.cli_required   = req;
-  schema.cli_positional = positional;
-  cli_to_value(schema.default_, value, choices);
-  if (!choices.empty()) {
-    schema.type  = cli_type::string;
-    schema.enum_ = choices;
-  } else {
-    if constexpr (std::is_same_v<T, int32_t> || std::is_same_v<T, int64_t>) {
-      schema.type = cli_type::integer;
-    } else if constexpr (std::is_same_v<T, uint32_t> ||
-                         std::is_same_v<T, uint64_t>) {
-      schema.type = cli_type::unsigned_;
-    } else if constexpr (std::is_same_v<T, float> ||
-                         std::is_same_v<T, double>) {
-      schema.type = cli_type::number;
-    } else if constexpr (std::is_same_v<T, bool>) {
-      schema.type = cli_type::boolean;
-    } else if constexpr (std::is_same_v<T, string>) {
-      schema.type = cli_type::string;
-    } else if constexpr (cli_is_array_v<T>) {
-      schema.type      = cli_type::array;
-      schema.min_items = value.size();
-      schema.max_items = value.size();
-    } else if constexpr (cli_is_vector_v<T>) {
-      schema.type      = cli_type::array;
-      schema.min_items = 0;
-      schema.max_items = std::numeric_limits<size_t>::max();
-    }
-  }
 }
 
 template <typename T>
