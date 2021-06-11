@@ -323,6 +323,55 @@ struct cli_value {
     return *this;
   }
 
+  cli_type get_type() const { return type; }
+  void     set_type(cli_type type) {
+    if (this->type == type) return;
+    this->type = type;
+  }
+
+  void set_integer(int64_t value) { _set(cli_type::integer, integer, value); }
+  void set_unsigned(uint64_t value) {
+    _set(cli_type::unsigned_, unsigned_, value);
+  }
+  void set_number(double value) { _set(cli_type::number, number, value); }
+  void set_boolean(bool value) { _set(cli_type::boolean, boolean, value); }
+  void set_string(const char* value) {
+    _set(cli_type::string, string_, string{value});
+  }
+  void set_string(const string& value) {
+    _set(cli_type::string, string_, value);
+  }
+  void set_array() { _set(cli_type::array, array, {}); }
+  void set_array(const cli_array& value) {
+    _set(cli_type::array, array, value);
+  }
+  void set_object() { _set(cli_type::object, object, {}); }
+  void set_object(const cli_object& value) {
+    return _set(cli_type::object, object, value);
+  }
+
+  int64_t&    get_integer() { return _get(cli_type::integer, integer); }
+  uint64_t&   get_unsigned() { return _get(cli_type::unsigned_, unsigned_); }
+  double&     get_number() { return _get(cli_type::number, number); }
+  bool&       get_boolean() { return _get(cli_type::boolean, boolean); }
+  string&     get_string() { return _get(cli_type::string, string_); }
+  cli_array&  get_array() { return _get(cli_type::array, array); }
+  cli_object& get_object() { return _get(cli_type::object, object); }
+
+  const int64_t& get_integer() const {
+    return _get(cli_type::integer, integer);
+  }
+  const uint64_t& get_unsigned() const {
+    return _get(cli_type::unsigned_, unsigned_);
+  }
+  const double& get_number() const { return _get(cli_type::number, number); }
+  const bool&   get_boolean() const { return _get(cli_type::boolean, boolean); }
+  const string& get_string() const { return _get(cli_type::string, string_); }
+  const cli_array&  get_array() const { return _get(cli_type::array, array); }
+  const cli_object& get_object() const {
+    return _get(cli_type::object, object);
+  }
+
  private:
   void _swap(cli_value& other) {
     std::swap(type, other.type);
@@ -336,6 +385,21 @@ struct cli_value {
       case cli_type::array: std::swap(array, other.array); break;
       case cli_type::object: std::swap(object, other.object); break;
     }
+  }
+  template <typename T>
+  const T& _get(cli_type type, const T& value) const {
+    if (this->type != type) throw std::invalid_argument{"bad json type"};
+    return value;
+  }
+  template <typename T>
+  T& _get(cli_type type, T& value) {
+    if (this->type != type) throw std::invalid_argument{"bad json type"};
+    return value;
+  }
+  template <typename T>
+  void _set(cli_type type, T& value, const T& other) {
+    if (this->type != type) set_type(type);
+    value = other;
   }
 };
 

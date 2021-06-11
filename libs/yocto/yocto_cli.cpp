@@ -203,6 +203,167 @@ string elapsed_formatted(simple_timer& timer) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+using json_value  = cli_value;
+using json_type   = cli_type;
+using json_array  = cli_array;
+using json_object = cli_object;
+
+template <typename T>
+inline json_value to_json(const T& value) {
+  auto json = json_value{};
+  to_json(json, value);
+  return json;
+}
+
+inline void to_json(json_value& json, int32_t value) {
+  json.set_integer(value);
+}
+inline void to_json(json_value& json, int64_t value) {
+  json.set_integer(value);
+}
+inline void to_json(json_value& json, uint32_t value) {
+  json.set_unsigned(value);
+}
+inline void to_json(json_value& json, uint64_t value) {
+  json.set_unsigned(value);
+}
+inline void to_json(json_value& json, float value) { json.set_number(value); }
+inline void to_json(json_value& json, double value) { json.set_number(value); }
+inline void to_json(json_value& json, bool value) { json.set_boolean(value); }
+inline void to_json(json_value& json, const char* value) {
+  json.set_string(value);
+}
+inline void to_json(json_value& json, const string& value) {
+  json.set_string(value);
+}
+inline void to_json(json_value& json, const json_array& value) {
+  json.set_array(value);
+}
+inline void to_json(json_value& json, const json_object& value) {
+  json.set_object(value);
+}
+
+inline void        to_json_array(json_value& json) { json.set_array(); }
+inline json_value& to_json_append(json_value& json) {
+  if (json.type != json_type::array) json.set_array();
+  return json.get_array().emplace_back();
+}
+inline void        to_json_object(json_value& json) { json.set_object(); }
+inline json_value& to_json_insert(json_value& json, const string& key) {
+  if (json.type != json_type::object) json.set_object();
+  return json.get_object()[key];
+}
+
+template <typename T>
+inline void from_json(const json_value& json, T& value) {
+  auto error = string{};
+  if (!from_json(json, value, error)) throw std::invalid_argument{error};
+}
+template <typename T>
+inline T from_json(const json_value& json) {
+  auto value = T{};
+  auto error = string{};
+  if (!from_json(json, value, error)) throw std::invalid_argument{error};
+  return value;
+}
+
+inline bool from_json(const json_value& json, int32_t& value, string& error) {
+  if (json.get_type() == json_type::integer) {
+    value = (int32_t)json.get_integer();
+    return true;
+  } else if (json.get_type() == json_type::unsigned_) {
+    value = (int32_t)json.get_unsigned();
+    return true;
+  } else {
+    error = "integer expected";
+    return false;
+  }
+}
+inline bool from_json(const json_value& json, int64_t& value, string& error) {
+  if (json.get_type() == json_type::integer) {
+    value = (int64_t)json.get_integer();
+    return true;
+  } else if (json.get_type() == json_type::unsigned_) {
+    value = (int64_t)json.get_unsigned();
+    return true;
+  } else {
+    error = "integer expected";
+    return false;
+  }
+}
+inline bool from_json(const json_value& json, uint32_t& value, string& error) {
+  if (json.get_type() == json_type::integer) {
+    value = (uint32_t)json.get_integer();
+    return true;
+  } else if (json.get_type() == json_type::unsigned_) {
+    value = (uint32_t)json.get_unsigned();
+    return true;
+  } else {
+    error = "integer expected";
+    return false;
+  }
+}
+inline bool from_json(const json_value& json, uint64_t& value, string& error) {
+  if (json.get_type() == json_type::integer) {
+    value = (uint64_t)json.get_integer();
+    return true;
+  } else if (json.get_type() == json_type::unsigned_) {
+    value = (uint64_t)json.get_unsigned();
+    return true;
+  } else {
+    error = "integer expected";
+    return false;
+  }
+}
+inline bool from_json(const json_value& json, float& value, string& error) {
+  if (json.get_type() == json_type::integer) {
+    value = (float)json.get_integer();
+    return true;
+  } else if (json.get_type() == json_type::unsigned_) {
+    value = (float)json.get_unsigned();
+    return true;
+  } else if (json.get_type() == json_type::number) {
+    value = (float)json.get_number();
+    return true;
+  } else {
+    error = "number expected";
+    return false;
+  }
+}
+inline bool from_json(const json_value& json, double& value, string& error) {
+  if (json.get_type() == json_type::integer) {
+    value = (double)json.get_integer();
+    return true;
+  } else if (json.get_type() == json_type::unsigned_) {
+    value = (double)json.get_unsigned();
+    return true;
+  } else if (json.get_type() == json_type::number) {
+    value = (double)json.get_number();
+    return true;
+  } else {
+    error = "number expected";
+    return false;
+  }
+}
+inline bool from_json(const json_value& json, bool& value, string& error) {
+  if (json.get_type() == json_type::boolean) {
+    value = json.get_boolean();
+    return true;
+  } else {
+    error = "boolean expected";
+    return false;
+  }
+}
+inline bool from_json(const json_value& json, string& value, string& error) {
+  if (json.get_type() == json_type::string) {
+    value = json.get_string();
+    return true;
+  } else {
+    error = "string expected";
+    return false;
+  }
+}
+
 template <typename T>
 struct cli_is_array {
   static const bool value = false;
@@ -239,56 +400,51 @@ constexpr bool cli_is_array_v = cli_is_array<T>::value;
 template <typename T>
 constexpr bool cli_is_vector_v = cli_is_vector<T>::value;
 
+static void cli_to_value(
+    cli_value& cvalue, int32_t value, const vector<string>& choices) {
+  if (!choices.empty()) {
+    to_json(cvalue, choices.at(value));
+  } else {
+    to_json(cvalue, value);
+  }
+}
+static void cli_to_value(
+    cli_value& cvalue, float value, const vector<string>& choices) {
+  if (!choices.empty()) {
+    throw std::invalid_argument{"invalid argument"};
+  } else {
+    to_json(cvalue, value);
+  }
+}
+static void cli_to_value(
+    cli_value& cvalue, bool value, const vector<string>& choices) {
+  if (!choices.empty()) {
+    to_json(cvalue, choices.at(value ? 1 : 0));
+  } else {
+    to_json(cvalue, value);
+  }
+}
+static void cli_to_value(
+    cli_value& cvalue, const string& value, const vector<string>& choices) {
+  if (!choices.empty()) {
+    if (std::find(choices.begin(), choices.end(), value) == choices.end())
+      throw std::out_of_range{"bad value"};
+    to_json(cvalue, value);
+  } else {
+    to_json(cvalue, value);
+  }
+}
+template <typename T, size_t N>
+static void cli_to_value(cli_value& cvalue, const array<T, N>& value,
+    const vector<string>& choices) {
+  to_json_array(cvalue);
+  for (auto& item : value) cli_to_value(to_json_append(cvalue), item, choices);
+}
 template <typename T>
 static void cli_to_value(
-    cli_value& cvalue, const T& value, const vector<string>& choices) {
-  static_assert(cli_is_integer_v<T> || cli_is_unsigned_v<T> ||
-                    cli_is_floating_v<T> || cli_is_boolean_v<T> ||
-                    cli_is_string_v<T> || cli_is_array_v<T> ||
-                    cli_is_vector_v<T>,
-      "unsupported type");
-  if constexpr (cli_is_integer_v<T>) {
-    if (!choices.empty()) {
-      cvalue.type    = cli_type::string;
-      cvalue.string_ = choices.at(value);
-    } else {
-      cvalue.type    = cli_type::integer;
-      cvalue.integer = value;
-    }
-  } else if constexpr (cli_is_unsigned_v<T>) {
-    if (!choices.empty()) {
-      cvalue.type    = cli_type::string;
-      cvalue.string_ = choices.at(value);
-    } else {
-      cvalue.type      = cli_type::unsigned_;
-      cvalue.unsigned_ = value;
-    }
-  } else if constexpr (cli_is_floating_v<T>) {
-    if (!choices.empty()) {
-      throw std::invalid_argument{"invalid argument"};
-    } else {
-      cvalue.type   = cli_type::number;
-      cvalue.number = value;
-    }
-  } else if constexpr (cli_is_boolean_v<T>) {
-    if (!choices.empty()) {
-      cvalue.type    = cli_type::string;
-      cvalue.string_ = choices.at(value ? 1 : 0);
-    } else {
-    }
-  } else if constexpr (cli_is_string_v<T>) {
-    if (!choices.empty()) {
-      if (std::find(choices.begin(), choices.end(), value) == choices.end())
-        throw std::out_of_range{"bad value"};
-      cvalue.type    = cli_type::string;
-      cvalue.string_ = value;
-    } else {
-      cvalue.type    = cli_type::string;
-      cvalue.string_ = value;
-    }
-  } else {
-    throw std::runtime_error{"type not supported"};
-  }
+    cli_value& cvalue, const vector<T>& value, const vector<string>& choices) {
+  to_json_array(cvalue);
+  for (auto& item : value) cli_to_value(to_json_append(cvalue), item, choices);
 }
 
 template <typename T>
