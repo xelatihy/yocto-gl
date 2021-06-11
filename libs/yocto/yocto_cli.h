@@ -237,7 +237,7 @@ struct ordered_map {
 
   Value& operator[](const Key& key) {
     if (auto it = _search(key); it) return it->second;
-    _data.push_back({key, {}});
+    _data.emplace_back(key, Value{});
     return _data.back().second;
   }
   Value& at(const Key& key) {
@@ -289,15 +289,24 @@ enum struct cli_type {
   object
 };
 // Command line value.
+struct cli_value;
+using cli_array  = vector<cli_value>;
+using cli_object = ordered_map<string, cli_value>;
 struct cli_value {
-  cli_type                       type      = cli_type::none;
-  int64_t                        integer   = 0;
-  uint64_t                       unsigned_ = 0;
-  double                         number    = 0;
-  bool                           boolean   = false;
-  string                         string_   = {};
-  vector<cli_value>              array     = {};
-  ordered_map<string, cli_value> object    = {};
+  cli_type   type      = cli_type::none;
+  int64_t    integer   = 0;
+  uint64_t   unsigned_ = 0;
+  double     number    = 0;
+  bool       boolean   = false;
+  string     string_   = {};
+  cli_array  array     = {};
+  cli_object object    = {};
+
+  cli_value()                 = default;
+  cli_value(const cli_value&) = default;
+  cli_value(cli_value&&)      = default;
+  cli_value& operator=(const cli_value&) = default;
+  cli_value& operator=(cli_value&&) = default;
 };
 
 // Command line schema.
