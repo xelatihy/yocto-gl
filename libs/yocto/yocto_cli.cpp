@@ -741,9 +741,28 @@ static cli_variable& get_variables(const cli_command& cli) {
 }
 
 template <typename T>
+struct cli_is_array {
+  static const bool value = false;
+};
+template <typename T, size_t N>
+struct cli_is_array<array<T, N>> {
+  static const bool value = true;
+};
+
+template <typename T>
+struct cli_is_vector {
+  static const bool value = false;
+};
+template <typename T, typename A>
+struct cli_is_vector<vector<T, A>> {
+  static const bool value = true;
+};
+
+template <typename T>
 static void add_option_impl(const cli_command& cli, const string& name,
     T& value, const string& usage, const vector<T>& minmax,
-    const vector<string>& choices, const string& alt, bool req) {
+    const vector<string>& choices, const string& alt, bool req,
+    bool positional) {
   auto& defaults  = get_defaults(cli);
   auto& schema    = get_schema(cli);
   auto& variables = get_variables(cli);
@@ -751,13 +770,15 @@ static void add_option_impl(const cli_command& cli, const string& name,
   cli_to_schema(
       schema.properties[name], value, choices, name, usage, req, false);
   if (req) schema.required.push_back(name);
+  if (positional) schema.cli_positionals.push_back(name);
   variables.variables[name] = {&value, cli_from_value_<T>, choices};
 }
 
 template <typename T, size_t N>
 static void add_option_impl(const cli_command& cli, const string& name,
     array<T, N>& value, const string& usage, const vector<T>& minmax,
-    const vector<string>& choices, const string& alt, bool req) {
+    const vector<string>& choices, const string& alt, bool req,
+    bool positional) {
   auto& defaults  = get_defaults(cli);
   auto& schema    = get_schema(cli);
   auto& variables = get_variables(cli);
@@ -765,51 +786,24 @@ static void add_option_impl(const cli_command& cli, const string& name,
   cli_to_schema(
       schema.properties[name], value, choices, name, usage, req, false);
   if (req) schema.required.push_back(name);
-  variables.variables[name] = {&value, cli_from_value_<T>, choices};
-}
-template <typename T>
-static void add_argument_impl(const cli_command& cli, const string& name,
-    T& value, const string& usage, const vector<T>& minmax,
-    const vector<string>& choices, bool req) {
-  auto& defaults  = get_defaults(cli);
-  auto& schema    = get_schema(cli);
-  auto& variables = get_variables(cli);
-  cli_to_value(defaults.object[name], value, choices);
-  cli_to_schema(
-      schema.properties[name], value, choices, name, usage, req, true);
-  if (req) schema.required.push_back(name);
-  schema.cli_positionals.push_back(name);
-  variables.variables[name] = {&value, cli_from_value_<T>, choices};
-}
-
-template <typename T, size_t N>
-static void add_argument_impl(const cli_command& cli, const string& name,
-    array<T, N>& value, const string& usage, const vector<T>& minmax,
-    const vector<string>& choices, bool req) {
-  auto& defaults  = get_defaults(cli);
-  auto& schema    = get_schema(cli);
-  auto& variables = get_variables(cli);
-  cli_to_value(defaults.object[name], value, choices);
-  cli_to_schema(
-      schema.properties[name], value, choices, name, usage, req, true);
-  if (req) schema.required.push_back(name);
-  schema.cli_positionals.push_back(name);
-  variables.variables[name] = {&value, cli_from_value_<T>, choices};
+  if (positional) schema.cli_positionals.push_back(name);
+  variables.variables[name] = {&value, cli_from_value_<array<T, N>>, choices};
 }
 
 template <typename T>
-static void add_argumentv_impl(const cli_command& cli, const string& name,
+static void add_option_impl(const cli_command& cli, const string& name,
     vector<T>& value, const string& usage, const vector<T>& minmax,
-    const vector<string>& choices, bool req) {
+    const vector<string>& choices, const string& alt, bool req,
+    bool positional) {
   auto& defaults  = get_defaults(cli);
   auto& schema    = get_schema(cli);
   auto& variables = get_variables(cli);
   cli_to_value(defaults.object[name], value, choices);
   cli_to_schema(
-      schema.properties[name], value, choices, name, usage, req, true);
+      schema.properties[name], value, choices, name, usage, req, false);
   if (req) schema.required.push_back(name);
-  schema.cli_positionals.push_back(name);
-  variables.variables[name] = {&value, cli_from_value_<T>, choices};
+  if (positional) schema.cli_positionals.push_back(name);
+  variables.variables[name] = {&value, cli_from_value_<vector<T>>, choices};
 }
 
 // Add an optional argument. Supports strings, numbers, and boolean flags.
@@ -819,27 +813,28 @@ static void add_argumentv_impl(const cli_command& cli, const string& name,
 void add_option(const cli_command& cli, const string& name, int& value,
     const string& usage, const vector<int>& minmax, const string& alt,
     bool req) {
-  add_option_impl(cli, name, value, usage, minmax, {}, alt, req);
+  add_option_impl(cli, name, value, usage, minmax, {}, alt, req, false);
 }
 void add_option(const cli_command& cli, const string& name, float& value,
     const string& usage, const vector<float>& minmax, const string& alt,
     bool req) {
-  add_option_impl(cli, name, value, usage, minmax, {}, alt, req);
+  add_option_impl(cli, name, value, usage, minmax, {}, alt, req, false);
 }
 void add_option(const cli_command& cli, const string& name, bool& value,
     const string& usage, const vector<string>& choices, const string& alt,
     bool req) {
-  add_option_impl(cli, name, value, usage, {}, choices, alt, req);
+  add_option_impl(
+      cli, name, value, usage, vector<bool>{}, choices, alt, req, false);
 }
 void add_option(const cli_command& cli, const string& name, string& value,
     const string& usage, const vector<string>& choices, const string& alt,
     bool req) {
-  add_option_impl(cli, name, value, usage, {}, choices, alt, req);
+  add_option_impl(cli, name, value, usage, {}, choices, alt, req, false);
 }
 void add_option_with_config(const cli_command& cli, const string& name,
     string& value, const string& usage, const string& config, const string& alt,
     bool req) {
-  add_option_impl(cli, name, value, usage, {}, {}, alt, req);
+  add_option_impl(cli, name, value, usage, {}, {}, alt, req, false);
   if (!config.empty()) {
     get_schema(cli).properties.at(name).cli_config = config;
   }
@@ -847,57 +842,59 @@ void add_option_with_config(const cli_command& cli, const string& name,
 void add_option(const cli_command& cli, const string& name, int& value,
     const string& usage, const vector<string>& choices, const string& alt,
     bool req) {
-  add_option_impl(cli, name, value, usage, {}, choices, alt, req);
+  add_option_impl(cli, name, value, usage, {}, choices, alt, req, false);
 }
 // Add a positional argument. Supports strings, numbers, and boolean flags.
 void add_argument(const cli_command& cli, const string& name, int& value,
     const string& usage, const vector<int>& minmax, bool req) {
-  add_argument_impl(cli, name, value, usage, minmax, {}, req);
+  add_option_impl(cli, name, value, usage, minmax, {}, "", req, false);
 }
 void add_argument(const cli_command& cli, const string& name, float& value,
     const string& usage, const vector<float>& minmax, bool req) {
-  add_argument_impl(cli, name, value, usage, minmax, {}, req);
+  add_option_impl(cli, name, value, usage, minmax, {}, "", req, true);
 }
 void add_argument(const cli_command& cli, const string& name, bool& value,
     const string& usage, const vector<string>& choices, bool req) {
-  add_argument_impl(cli, name, value, usage, {}, choices, req);
+  add_option_impl(cli, name, value, usage, {}, choices, "", req, true);
 }
 void add_argument(const cli_command& cli, const string& name, string& value,
     const string& usage, const vector<string>& choices, bool req) {
-  add_argument_impl(cli, name, value, usage, {}, choices, req);
+  add_option_impl(cli, name, value, usage, {}, choices, "", req, true);
 }
 void add_argument_with_config(const cli_command& cli, const string& name,
     string& value, const string& usage, const string& config, bool req) {
-  add_argument_impl(cli, name, value, usage, {}, {}, req);
+  add_option_impl(cli, name, value, usage, {}, {}, "", req, true);
   if (!config.empty()) {
     get_schema(cli).properties.at(name).cli_config = config;
   }
 }
 void add_argument(const cli_command& cli, const string& name, int& value,
     const string& usage, const vector<string>& choices, bool req) {
-  add_argument_impl(cli, name, value, usage, {}, choices, req);
+  add_option_impl(cli, name, value, usage, {}, choices, "", req, true);
 }
 // Add a positional argument that consumes all arguments left.
 // Supports strings and enums.
 void add_argument(const cli_command& cli, const string& name,
     vector<int>& value, const string& usage, const vector<int>& minmax,
     bool req) {
-  add_argumentv_impl(cli, name, value, usage, minmax, {}, req);
+  add_option_impl(cli, name, value, usage, minmax, {}, "", req, true);
 }
 void add_argument(const cli_command& cli, const string& name,
     vector<float>& value, const string& usage, const vector<float>& minmax,
     bool req) {
-  add_argumentv_impl(cli, name, value, usage, minmax, {}, req);
+  add_option_impl(cli, name, value, usage, minmax, {}, "", req, true);
 }
 void add_argument(const cli_command& cli, const string& name,
     vector<int>& value, const string& usage, const vector<string>& choices,
     bool req) {
-  add_argumentv_impl(cli, name, value, usage, {}, choices, req);
+  add_option_impl(
+      cli, name, value, usage, vector<int>{}, choices, "", req, true);
 }
 void add_argument(const cli_command& cli, const string& name,
     vector<string>& value, const string& usage, const vector<string>& choices,
     bool req) {
-  add_argumentv_impl(cli, name, value, usage, {}, choices, req);
+  add_option_impl(
+      cli, name, value, usage, vector<string>{}, choices, "", req, true);
 }
 
 // Add an optional argument. Supports basic math types.
@@ -905,37 +902,37 @@ void add_option(const cli_command& cli, const string& name, vec2i& value,
     const string& usage, const vector<int>& minmax, const string& alt,
     bool req) {
   add_option_impl(
-      cli, name, (array<int, 2>&)value, usage, minmax, {}, alt, req);
+      cli, name, (array<int, 2>&)value, usage, minmax, {}, alt, req, false);
 }
 void add_option(const cli_command& cli, const string& name, vec3i& value,
     const string& usage, const vector<int>& minmax, const string& alt,
     bool req) {
   add_option_impl(
-      cli, name, (array<int, 3>&)value, usage, minmax, {}, alt, req);
+      cli, name, (array<int, 3>&)value, usage, minmax, {}, alt, req, false);
 }
 void add_option(const cli_command& cli, const string& name, vec4i& value,
     const string& usage, const vector<int>& minmax, const string& alt,
     bool req) {
   add_option_impl(
-      cli, name, (array<int, 4>&)value, usage, minmax, {}, alt, req);
+      cli, name, (array<int, 4>&)value, usage, minmax, {}, alt, req, false);
 }
 void add_option(const cli_command& cli, const string& name, vec2f& value,
     const string& usage, const vector<float>& minmax, const string& alt,
     bool req) {
   add_option_impl(
-      cli, name, (array<float, 2>&)value, usage, minmax, {}, alt, req);
+      cli, name, (array<float, 2>&)value, usage, minmax, {}, alt, req, false);
 }
 void add_option(const cli_command& cli, const string& name, vec3f& value,
     const string& usage, const vector<float>& minmax, const string& alt,
     bool req) {
   add_option_impl(
-      cli, name, (array<float, 3>&)value, usage, minmax, {}, alt, req);
+      cli, name, (array<float, 3>&)value, usage, minmax, {}, alt, req, false);
 }
 void add_option(const cli_command& cli, const string& name, vec4f& value,
     const string& usage, const vector<float>& minmax, const string& alt,
     bool req) {
   add_option_impl(
-      cli, name, (array<float, 4>&)value, usage, minmax, {}, alt, req);
+      cli, name, (array<float, 4>&)value, usage, minmax, {}, alt, req, false);
 }
 
 static string schema_to_usage(
