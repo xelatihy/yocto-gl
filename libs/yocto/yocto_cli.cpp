@@ -1107,7 +1107,7 @@ static bool value_to_variables(const cli_value& value,
   };
 
   for (auto& variable : variables) {
-    if (variable.path.find('/') != string::npos) {
+    if (variable.path.find('/') == string::npos) {
       auto name = variable.path;
       if (!contains(value.object, name)) continue;
       if (!variable.setter(
