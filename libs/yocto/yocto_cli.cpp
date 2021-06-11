@@ -719,24 +719,26 @@ static string schema_to_usage(
     auto type = schema.type;
     switch (type) {
       case cli_type::none: return "";
-      case cli_type::integer: return "integer";
-      case cli_type::unsigned_: return "integer";
-      case cli_type::number: return "number";
-      case cli_type::boolean: return "bool";
-      case cli_type::string: return "string";
-      case cli_type::array: return "array";
-      case cli_type::object: return "object";
+      case cli_type::integer: return "<integer>";
+      case cli_type::unsigned_: return "<integer>";
+      case cli_type::number: return "<number>";
+      case cli_type::boolean: return "<bool>";
+      case cli_type::string: return "<string>";
+      case cli_type::array: return "<array>";
+      case cli_type::object: return "<object>";
     }
   };
   auto default_to_string = [](const cli_schema& schema) -> string {
     auto& value = schema.default_;
     switch (value.type) {
       case cli_type::none: return "";
-      case cli_type::integer: return std::to_string(value.integer);
-      case cli_type::unsigned_: return std::to_string(value.unsigned_);
-      case cli_type::number: return std::to_string(value.number);
-      case cli_type::boolean: return value.boolean ? "true" : "false";
-      case cli_type::string: return value.string_;
+      case cli_type::integer: return "[" + std::to_string(value.integer) + "]";
+      case cli_type::unsigned_:
+        return "[" + std::to_string(value.unsigned_) + "]";
+      case cli_type::number: return "[" + std::to_string(value.number) + "]";
+      case cli_type::boolean:
+        return "[" + (value.boolean ? string{"true"} : string{"false"}) + "]";
+      case cli_type::string: return "[" + value.string_ + "]";
       case cli_type::array: return "[]";
       case cli_type::object: return "";
     }
@@ -759,7 +761,9 @@ static string schema_to_usage(
       line += property.description + "\n";
       usage_commands += line;
     } else {
-      auto is_positional = false;
+      auto is_positional = std::find(schema.cli_positionals.begin(),
+                               schema.cli_positionals.end(),
+                               key) != schema.cli_positionals.end();
       auto line          = (is_positional ? "  " : "  --") + key;
       if (property.type != cli_type::boolean || is_positional) {
         line += " " + type_to_string(property);
@@ -767,8 +771,9 @@ static string schema_to_usage(
       while (line.size() < 32) line += " ";
       line += property.description;
       if (property.default_.type != cli_type::none) {
-        line += " " + default_to_string(property) + "\n";
+        line += " " + default_to_string(property);
       }
+      line += "\n";
       if (!property.enum_.empty()) {
         line += "    with choices: ";
         auto len = 16;
