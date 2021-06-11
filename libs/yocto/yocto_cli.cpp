@@ -509,82 +509,83 @@ static cli_schema& get_schema(const cli_command& cli) {
   else
     return cli.state->schema.properties.at(cli.path);
 }
+static cli_variable& get_variables(const cli_command& cli) {
+  if (cli.path.empty())
+    return cli.state->variables;
+  else
+    return cli.state->variables.variables.at(cli.path);
+}
 
 template <typename T>
 static void add_option_impl(const cli_command& cli, const string& name,
     T& value, const string& usage, const vector<T>& minmax,
     const vector<string>& choices, const string& alt, bool req) {
-  auto& defaults = get_defaults(cli);
-  auto& schema   = get_schema(cli);
+  auto& defaults  = get_defaults(cli);
+  auto& schema    = get_schema(cli);
+  auto& variables = get_variables(cli);
   cli_to_value(defaults.object[name], value, choices);
   cli_to_schema(
       schema.properties[name], value, choices, name, usage, req, false);
   if (req) schema.required.push_back(name);
-  cli.state->variables.push_back(
-      cli_variable{cli.path.empty() ? name : (cli.path + "/" + name), &value,
-          cli_from_value_<T>, choices});
+  variables.variables[name] = {&value, cli_from_value_<T>, choices};
 }
 
 template <typename T, size_t N>
 static void add_option_impl(const cli_command& cli, const string& name,
     array<T, N>& value, const string& usage, const vector<T>& minmax,
     const vector<string>& choices, const string& alt, bool req) {
-  auto& defaults = get_defaults(cli);
-  auto& schema   = get_schema(cli);
+  auto& defaults  = get_defaults(cli);
+  auto& schema    = get_schema(cli);
+  auto& variables = get_variables(cli);
   cli_to_value(defaults.object[name], value, choices);
   cli_to_schema(
       schema.properties[name], value, choices, name, usage, req, false);
   if (req) schema.required.push_back(name);
-  cli.state->variables.push_back(
-      cli_variable{cli.path.empty() ? name : (cli.path + "/" + name), &value,
-          cli_from_value_<T>, choices});
+  variables.variables[name] = {&value, cli_from_value_<T>, choices};
 }
 template <typename T>
 static void add_argument_impl(const cli_command& cli, const string& name,
     T& value, const string& usage, const vector<T>& minmax,
     const vector<string>& choices, bool req) {
-  auto& defaults = get_defaults(cli);
-  auto& schema   = get_schema(cli);
+  auto& defaults  = get_defaults(cli);
+  auto& schema    = get_schema(cli);
+  auto& variables = get_variables(cli);
   cli_to_value(defaults.object[name], value, choices);
   cli_to_schema(
       schema.properties[name], value, choices, name, usage, req, true);
   if (req) schema.required.push_back(name);
   schema.cli_positionals.push_back(name);
-  cli.state->variables.push_back(
-      cli_variable{cli.path.empty() ? name : (cli.path + "/" + name), &value,
-          cli_from_value_<T>, choices});
+  variables.variables[name] = {&value, cli_from_value_<T>, choices};
 }
 
 template <typename T, size_t N>
 static void add_argument_impl(const cli_command& cli, const string& name,
     array<T, N>& value, const string& usage, const vector<T>& minmax,
     const vector<string>& choices, bool req) {
-  auto& defaults = get_defaults(cli);
-  auto& schema   = get_schema(cli);
+  auto& defaults  = get_defaults(cli);
+  auto& schema    = get_schema(cli);
+  auto& variables = get_variables(cli);
   cli_to_value(defaults.object[name], value, choices);
   cli_to_schema(
       schema.properties[name], value, choices, name, usage, req, true);
   if (req) schema.required.push_back(name);
   schema.cli_positionals.push_back(name);
-  cli.state->variables.push_back(
-      cli_variable{cli.path.empty() ? name : (cli.path + "/" + name), &value,
-          cli_from_value_<T>, choices});
+  variables.variables[name] = {&value, cli_from_value_<T>, choices};
 }
 
 template <typename T>
 static void add_argumentv_impl(const cli_command& cli, const string& name,
     vector<T>& value, const string& usage, const vector<T>& minmax,
     const vector<string>& choices, bool req) {
-  auto& defaults = get_defaults(cli);
-  auto& schema   = get_schema(cli);
+  auto& defaults  = get_defaults(cli);
+  auto& schema    = get_schema(cli);
+  auto& variables = get_variables(cli);
   cli_to_value(defaults.object[name], value, choices);
   cli_to_schema(
       schema.properties[name], value, choices, name, usage, req, true);
   if (req) schema.required.push_back(name);
   schema.cli_positionals.push_back(name);
-  cli.state->variables.push_back(
-      cli_variable{cli.path.empty() ? name : (cli.path + "/" + name), &value,
-          cli_from_value_<T>, choices});
+  variables.variables[name] = {&value, cli_from_value_<T>, choices};
 }
 
 // Add an optional argument. Supports strings, numbers, and boolean flags.
@@ -1095,8 +1096,8 @@ void update_value_objects(cli_value& value, const cli_value& update) {
 }
 
 // set variables
-static bool value_to_variables(const cli_value& value,
-    const vector<cli_variable>& variables, string& error) {
+static bool value_to_variable(
+    const cli_value& value, cli_variable& variable, string& error) {
   auto cli_error = [&error](const string& message) {
     error = message;
     return false;
@@ -1106,24 +1107,20 @@ static bool value_to_variables(const cli_value& value,
     return object.find(name) != object.end();
   };
 
-  for (auto& variable : variables) {
-    if (variable.path.find('/') == string::npos) {
-      auto name = variable.path;
-      if (!contains(value.object, name)) continue;
-      if (!variable.setter(
-              value.object.at(name), variable.value, variable.choices))
-        return cli_error("bad value for " + variable.path);
-    } else {
-      auto name    = variable.path.substr(variable.path.find('/') + 1);
-      auto command = variable.path.substr(0, variable.path.find('/'));
-      if (!contains(value.object, command)) continue;
-      if (value.object.at(command).type != cli_type::object) continue;
-      if (!contains(value.object.at(command).object, name)) continue;
-      if (!variable.setter(value.object.at(command).object.at(name),
-              variable.value, variable.choices))
-        return cli_error("bad value for " + variable.path);
+  if (variable.setter) {
+    if (!variable.setter(value, variable.value, variable.choices)) return false;
+  }
+
+  for (auto& [key, property] : variable.variables) {
+    if (value.type != cli_type::object)
+      throw std::runtime_error{"something went wrong"};
+    if (contains(value.object, key)) {
+      if (!value_to_variable(value.object.at(key), property, error)) {
+        return cli_error("bad value for " + key);
+      }
     }
   }
+
   return true;
 }
 
@@ -1262,35 +1259,34 @@ cli_command add_command(
   schema.properties[name].cli_name    = name;
   schema.properties[name].description = usage;
   schema.properties[name].type        = cli_type::object;
+  auto& variables                        = get_variables(cli);
+    variables.variables[name]          = {};
   return {cli.state, cli.path.empty() ? name : (cli.path + "/" + name)};
 }
 
 void set_command_var(const cli_command& cli, string& value) {
-  cli.state->variables.push_back(
-      cli_variable{cli.path.empty() ? "command" : (cli.path + "/command"),
-          &value, cli_from_value_<string>, {}});
+  auto& variables                = get_variables(cli);
+  variables.variables["command"] = {&value, cli_from_value_<string>, {}};
 }
 
 void set_help_var(const cli_command& cli, bool& value) {
-  cli.state->variables.push_back(
-      cli_variable{cli.path.empty() ? "help" : (cli.path + "/help"), &value,
-          cli_from_value_<string>, {}});
+  auto& variables             = get_variables(cli);
+  variables.variables["help"] = {&value, cli_from_value_<bool>, {}};
 }
 
 void add_command_name(const cli_command& cli, const string& name, string& value,
     const string& usage) {
-  cli.state->variables.push_back(
-      cli_variable{cli.path.empty() ? "command" : (cli.path + "/command"),
-          &value, cli_from_value_<string>, {}});
+  auto& variables                = get_variables(cli);
+  variables.variables["command"] = {&value, cli_from_value_<string>, {}};
 }
 
 static bool parse_cli(cli_state& cli, const vector<string>& args,
-    cli_value& values, string& error) {
+    cli_value& value, string& error) {
   auto idx = (size_t)1;
-  if (!args_to_value(values, get_schema(cli), args, idx, error)) return false;
-  if (!config_to_value(values, error)) return false;
-  if (!validate_value(values, get_schema(cli), "", true, error)) return false;
-  if (!value_to_variables(values, cli.variables, error)) return false;
+  if (!args_to_value(value, get_schema(cli), args, idx, error)) return false;
+  if (!config_to_value(value, error)) return false;
+  if (!validate_value(value, get_schema(cli), "", true, error)) return false;
+  if (!value_to_variable(value, cli.variables, error)) return false;
   return true;
 }
 

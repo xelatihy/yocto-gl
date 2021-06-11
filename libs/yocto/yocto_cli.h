@@ -281,16 +281,16 @@ using cli_setter = bool (*)(
     const cli_value&, void*, const vector<string>& choices);
 // Command line variable.
 struct cli_variable {
-  string         path    = "";
-  void*          value   = nullptr;
-  cli_setter     setter  = nullptr;
-  vector<string> choices = {};
+  void*                               value     = nullptr;
+  cli_setter                          setter    = nullptr;
+  vector<string>                      choices   = {};
+  unordered_map<string, cli_variable> variables = {};
 };
 // Command line state.
 struct cli_state {
-  cli_value            defaults  = {};
-  cli_schema           schema    = {};
-  vector<cli_variable> variables = {};
+  cli_value    defaults  = {};
+  cli_schema   schema    = {};
+  cli_variable variables = {};
 };
 // Command line command.
 struct cli_command {
