@@ -233,6 +233,54 @@ void add_option(const cli_command& cli, const string& name, vec4f& value,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// Simple ordered map
+template <typename Key, typename Value>
+struct ordered_map {
+  size_t size() const { return _data.size(); }
+  bool   empty() const { return _data.empty(); }
+
+  Value& operator[](const Key& key) {
+    if (auto it = _search(key); it) return it->second;
+    _data.push_back({key, {}});
+    return _data.back().second;
+  }
+  Value& at(const Key& key) {
+    if (auto it = _search(key); it) return it->second;
+    throw std::out_of_range{"missing key for " + key};
+  }
+  const Value& at(const Key& key) const {
+    if (auto it = _search(key); it) return it->second;
+    throw std::out_of_range{"missing key for " + key};
+  }
+
+  pair<Key, Value>* find(const string& key) {
+    if (auto it = _search(key); it) return it;
+    return end();
+  }
+  const pair<Key, Value>* find(const string& key) const {
+    if (auto it = _search(key); it) return it;
+    return end();
+  }
+
+  pair<Key, Value>*       begin() { return _data.data(); }
+  pair<Key, Value>*       end() { return _data.data() + _data.size(); }
+  const pair<Key, Value>* begin() const { return _data.data(); }
+  const pair<Key, Value>* end() const { return _data.data() + _data.size(); }
+
+ private:
+  vector<pair<Key, Value>> _data;
+  pair<Key, Value>* _search(const string& key) {
+    for (auto& item : _data)
+      if (key == item.first) return &item;
+    return nullptr;
+  }
+  const pair<Key, Value>* _search(const string& key) const {
+    for (auto& item : _data)
+      if (key == item.first) return &item;
+    return nullptr;
+  }
+};
+
 // Command line type.
 enum struct cli_type {
   none,
@@ -246,14 +294,14 @@ enum struct cli_type {
 };
 // Command line value.
 struct cli_value {
-  cli_type                         type      = cli_type::none;
-  int64_t                          integer   = 0;
-  uint64_t                         unsigned_ = 0;
-  double                           number    = 0;
-  bool                             boolean   = false;
-  string                           string_   = "";
-  vector<cli_value>                array     = {};
-  unordered_map<string, cli_value> object    = {};
+  cli_type                       type      = cli_type::none;
+  int64_t                        integer   = 0;
+  uint64_t                       unsigned_ = 0;
+  double                         number    = 0;
+  bool                           boolean   = false;
+  string                         string_   = "";
+  vector<cli_value>              array     = {};
+  ordered_map<string, cli_value> object    = {};
 };
 
 // Command line schema.
