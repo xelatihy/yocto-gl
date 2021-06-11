@@ -231,20 +231,112 @@ void add_option(const cli_command& cli, const string& name, vec4f& value,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// Simple ordered map
+template <typename Key, typename Value>
+struct ordered_map {
+  size_t size() const { return _data.size(); }
+  bool   empty() const { return _data.empty(); }
+
+  Value& operator[](const Key& key) {
+    if (auto it = _search(key); it) return it->second;
+    _data.push_back({key, {}});
+    return _data.back().second;
+  }
+  Value& at(const Key& key) {
+    if (auto it = _search(key); it) return it->second;
+    throw std::out_of_range{"missing key for " + key};
+  }
+  const Value& at(const Key& key) const {
+    if (auto it = _search(key); it) return it->second;
+    throw std::out_of_range{"missing key for " + key};
+  }
+
+  pair<Key, Value>* find(const string& key) {
+    if (auto it = _search(key); it) return it;
+    return end();
+  }
+  const pair<Key, Value>* find(const string& key) const {
+    if (auto it = _search(key); it) return it;
+    return end();
+  }
+
+  pair<Key, Value>*       begin() { return _data.data(); }
+  pair<Key, Value>*       end() { return _data.data() + _data.size(); }
+  const pair<Key, Value>* begin() const { return _data.data(); }
+  const pair<Key, Value>* end() const { return _data.data() + _data.size(); }
+
+ private:
+  vector<pair<Key, Value>> _data;
+  pair<Key, Value>*        _search(const string& key) {
+    for (auto& item : _data)
+      if (key == item.first) return &item;
+    return nullptr;
+  }
+  const pair<Key, Value>* _search(const string& key) const {
+    for (auto& item : _data)
+      if (key == item.first) return &item;
+    return nullptr;
+  }
+};
+
+// Command line type.
+enum struct cli_type {
+  none,
+  integer,
+  unsigned_,
+  number,
+  boolean,
+  string,
+  array,
+  object
+};
+// Command line value.
+struct cli_value {
+  cli_type                       type      = cli_type::none;
+  int64_t                        integer   = 0;
+  uint64_t                       unsigned_ = 0;
+  double                         number    = 0;
+  bool                           boolean   = false;
+  string                         string_   = "";
+  vector<cli_value>              array     = {};
+  ordered_map<string, cli_value> object    = {};
+};
+
+// Command line schema.
+struct cli_schema {
+  cli_type           type            = cli_type::object;
+  string             title           = "";
+  string             description     = "";
+  cli_value          default_        = {};
+  cli_value          min             = {};
+  cli_value          max             = {};
+  vector<string>     enum_           = {};
+  size_t             min_items       = 0;
+  size_t             max_items       = std::numeric_limits<size_t>::max();
+  bool               cli_required    = false;
+  bool               cli_positional  = false;
+  vector<string>     required        = {};
+  vector<string>     cli_positionals = {};
+  string             cli_config      = "";
+  vector<cli_schema> items           = {};
+  ordered_map<string, cli_schema> properties = {};
+};
+
 // Command line setter.
-using cli_setter = bool (*)(const void*, void*, const vector<string>& choices);
+using cli_setter = bool (*)(
+    const cli_value&, void*, const vector<string>& choices);
 // Command line variable.
 struct cli_variable {
-  string         path    = "";
-  void*          value   = nullptr;
-  cli_setter     setter  = nullptr;
-  vector<string> choices = {};
+  void*                             value     = nullptr;
+  cli_setter                        setter    = nullptr;
+  vector<string>                    choices   = {};
+  ordered_map<string, cli_variable> variables = {};
 };
 // Command line state.
 struct cli_state {
-  unique_ptr<void, void (*)(void*)> defaults  = {nullptr, nullptr};
-  unique_ptr<void, void (*)(void*)> schema    = {nullptr, nullptr};
-  vector<cli_variable>              variables = {};
+  cli_value    defaults  = {};
+  cli_schema   schema    = {};
+  cli_variable variables = {};
 };
 // Command line command.
 struct cli_command {
