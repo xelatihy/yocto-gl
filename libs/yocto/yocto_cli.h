@@ -258,18 +258,27 @@ struct cli_value {
 
 // Command line schema.
 struct cli_schema {
-  cli_type                          type       = cli_type::object;
-  string                            name       = "";
-  string                            usage      = "";
-  cli_value                         default_   = {};
-  cli_value                         min        = {};
-  cli_value                         max        = {};
-  vector<cli_schema>                items      = {};
+  cli_type           type            = cli_type::object;
+  string             cli_name        = "";
+  string             description     = "";
+  cli_value          default_        = {};
+  cli_value          min             = {};
+  cli_value          max             = {};
+  vector<string>     enum_           = {};
+  size_t             min_items       = 0;
+  size_t             max_items       = std::numeric_limits<size_t>::max();
+  bool               cli_required    = false;
+  bool               cli_positional  = false;
+  vector<string>     required        = {};
+  vector<string>     cli_positionals = {};
+  string             cli_config      = "";
+  vector<cli_schema> items           = {};
   unordered_map<string, cli_schema> properties = {};
 };
 
 // Command line setter.
-using cli_setter = bool (*)(const void*, void*, const vector<string>& choices);
+using cli_setter = bool (*)(
+    const cli_value&, void*, const vector<string>& choices);
 // Command line variable.
 struct cli_variable {
   string         path    = "";
@@ -279,9 +288,9 @@ struct cli_variable {
 };
 // Command line state.
 struct cli_state {
-  cli_value                         defaults  = {};
-  unique_ptr<void, void (*)(void*)> schema    = {nullptr, nullptr};
-  vector<cli_variable>              variables = {};
+  cli_value            defaults  = {};
+  cli_schema           schema    = {};
+  vector<cli_variable> variables = {};
 };
 // Command line command.
 struct cli_command {
