@@ -203,8 +203,6 @@ string elapsed_formatted(simple_timer& timer) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-using cli_json = nlohmann::ordered_json;
-
 template <typename T>
 struct cli_is_array {
   static const bool value = false;
@@ -449,44 +447,6 @@ static void cli_to_schema(cli_schema& schema, const T& value,
       schema.type      = cli_type::array;
       schema.min_items = 0;
       schema.max_items = std::numeric_limits<size_t>::max();
-    }
-  }
-}
-
-template <typename T>
-static void cli_to_schema(cli_json& js, const T& value,
-    const vector<string>& choices, const string& name, const string& usage) {
-  static_assert(std::is_same_v<T, int32_t> || std::is_same_v<T, int64_t> ||
-                    std::is_same_v<T, int32_t> || std::is_same_v<T, int64_t> ||
-                    std::is_same_v<T, float> || std::is_same_v<T, double> ||
-                    std::is_same_v<T, bool> || std::is_same_v<T, string> ||
-                    cli_is_array_v<T> || cli_is_vector_v<T>,
-      "unsupported type");
-  js["cli_name"]    = name;
-  js["description"] = usage;
-  cli_to_json(js["default"], value, choices);
-  if (!choices.empty()) {
-    js["type"] = "string";
-    js["enum"] = choices;
-  } else {
-    if constexpr (std::is_same_v<T, int32_t> || std::is_same_v<T, int64_t>) {
-      js["type"] = "integer";
-    } else if constexpr (std::is_same_v<T, int32_t> ||
-                         std::is_same_v<T, int64_t>) {
-      js["type"] = "integer";
-    } else if constexpr (std::is_same_v<T, float> ||
-                         std::is_same_v<T, double>) {
-      js["type"] = "number";
-    } else if constexpr (std::is_same_v<T, bool>) {
-      js["type"] = "boolean";
-    } else if constexpr (std::is_same_v<T, string>) {
-      js["type"] = "string";
-    } else if constexpr (cli_is_array_v<T>) {
-      js["type"]     = "array";
-      js["minItems"] = value.size();
-      js["maxItems"] = value.size();
-    } else if constexpr (cli_is_vector_v<T>) {
-      js["type"] = "array";
     }
   }
 }
@@ -1124,55 +1084,44 @@ static bool value_to_variable(
   return true;
 }
 
-// update json objects
-void update_json_objects(cli_json& js, const cli_json& update) {
-  if (!js.is_object()) return;
-  for (auto& [key, value] : update.items()) {
-    if (value.is_object() && js.contains(key) && js.at(key).is_object()) {
-      update_json_objects(js.at(key), value);
-    } else {
-      js[key] = value;
-    }
-  }
-}
-
-void from_json(const cli_json& js, cli_value& value) {
+using ordered_json = nlohmann::ordered_json;
+void from_json(const ordered_json& js, cli_value& value) {
   switch (js.type()) {
-    case cli_json::value_t::null: {
+    case ordered_json::value_t::null: {
       value.type = cli_type::none;
     } break;
-    case cli_json::value_t::number_integer: {
+    case ordered_json::value_t::number_integer: {
       value.type    = cli_type::integer;
       value.integer = (int64_t)js;
     } break;
-    case cli_json::value_t::number_unsigned: {
+    case ordered_json::value_t::number_unsigned: {
       value.type      = cli_type::unsigned_;
       value.unsigned_ = (uint64_t)js;
     } break;
-    case cli_json::value_t::number_float: {
+    case ordered_json::value_t::number_float: {
       value.type   = cli_type::number;
       value.number = (double)js;
     } break;
-    case cli_json::value_t::boolean: {
+    case ordered_json::value_t::boolean: {
       value.type    = cli_type::boolean;
       value.boolean = (bool)js;
     } break;
-    case cli_json::value_t::string: {
+    case ordered_json::value_t::string: {
       value.type    = cli_type::string;
       value.string_ = (string)js;
     } break;
-    case cli_json::value_t::array: {
+    case ordered_json::value_t::array: {
       value.type = cli_type::array;
       for (auto& jitem : js) from_json(jitem, value.array.emplace_back());
     } break;
-    case cli_json::value_t::object: {
+    case ordered_json::value_t::object: {
       value.type = cli_type::object;
       for (auto& [key, jitem] : js.items()) from_json(jitem, value.object[key]);
     } break;
-    case cli_json::value_t::binary: {
+    case ordered_json::value_t::binary: {
       value.type = cli_type::none;
     } break;
-    case cli_json::value_t::discarded: {
+    case ordered_json::value_t::discarded: {
       value.type = cli_type::none;
     } break;
   }
@@ -1214,14 +1163,14 @@ static bool config_to_value(cli_value& value, string& error) {
     try_config = true;
   }
 
-  auto js = cli_json{};
+  auto js = nlohmann::ordered_json{};
   auto fs = std::ifstream(config);
   if (!fs) {
     if (try_config) return true;
     return cli_error("missing configuration file " + config);
   }
   try {
-    js = cli_json::parse(fs);
+    js = nlohmann::ordered_json::parse(fs);
   } catch (...) {
     return cli_error("error loading configuration " + config);
   }
