@@ -420,7 +420,7 @@ static void cli_to_schema(cli_schema& schema, const T& value,
                     std::is_same_v<T, bool> || std::is_same_v<T, string> ||
                     cli_is_array_v<T> || cli_is_vector_v<T>,
       "unsupported type");
-  schema.cli_name       = name;
+  schema.title          = name;
   schema.description    = usage;
   schema.cli_required   = req;
   schema.cli_positional = positional;
@@ -1243,7 +1243,7 @@ cli_state make_cli(const string& name, const string& usage) {
   auto cli               = cli_state{};
   cli.defaults.type      = cli_type::object;
   cli.defaults.object    = {};
-  cli.schema.cli_name    = name;
+  cli.schema.title       = name;
   cli.schema.description = usage;
   cli.schema.type        = cli_type::object;
   cli.schema.properties  = {};
@@ -1256,11 +1256,11 @@ cli_command add_command(
   auto& defaults                      = get_defaults(cli);
   defaults.object[name].type          = cli_type::object;
   auto& schema                        = get_schema(cli);
-  schema.properties[name].cli_name    = name;
+  schema.properties[name].title       = name;
   schema.properties[name].description = usage;
   schema.properties[name].type        = cli_type::object;
-  auto& variables                        = get_variables(cli);
-    variables.variables[name]          = {};
+  auto& variables                     = get_variables(cli);
+  variables.variables[name]           = {};
   return {cli.state, cli.path.empty() ? name : (cli.path + "/" + name)};
 }
 

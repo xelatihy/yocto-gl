@@ -305,7 +305,7 @@ struct cli_value {
 // Command line schema.
 struct cli_schema {
   cli_type           type            = cli_type::object;
-  string             cli_name        = "";
+  string             title           = "";
   string             description     = "";
   cli_value          default_        = {};
   cli_value          min             = {};
