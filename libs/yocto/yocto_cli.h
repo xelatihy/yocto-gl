@@ -302,11 +302,41 @@ struct cli_value {
   cli_array  array     = {};
   cli_object object    = {};
 
-  cli_value()                 = default;
-  cli_value(const cli_value&) = default;
-  cli_value(cli_value&&)      = default;
-  cli_value& operator=(const cli_value&) = default;
-  cli_value& operator=(cli_value&&) = default;
+  cli_value() : type{cli_type::none} {}
+  cli_value(cli_type type) : type{type} {}
+  cli_value(const cli_value& other) {
+    type = other.type;
+    switch (type) {
+      case cli_type::none: break;
+      case cli_type::integer: integer = other.integer; break;
+      case cli_type::unsigned_: unsigned_ = other.unsigned_; break;
+      case cli_type::number: number = other.number; break;
+      case cli_type::boolean: boolean = other.boolean; break;
+      case cli_type::string: string_ = other.string_; break;
+      case cli_type::array: array = other.array; break;
+      case cli_type::object: object = other.object; break;
+    }
+  }
+  cli_value(cli_value&& value) : cli_value() { _swap(value); }
+  cli_value& operator=(cli_value other) {
+    _swap(other);
+    return *this;
+  }
+
+ private:
+  void _swap(cli_value& other) {
+    std::swap(type, other.type);
+    switch (type) {
+      case cli_type::none: break;
+      case cli_type::integer: std::swap(integer, other.integer); break;
+      case cli_type::unsigned_: std::swap(unsigned_, other.unsigned_); break;
+      case cli_type::number: std::swap(number, other.number); break;
+      case cli_type::boolean: std::swap(boolean, other.boolean); break;
+      case cli_type::string: std::swap(string_, other.string_); break;
+      case cli_type::array: std::swap(array, other.array); break;
+      case cli_type::object: std::swap(object, other.object); break;
+    }
+  }
 };
 
 // Command line schema.
