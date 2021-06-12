@@ -921,14 +921,14 @@ static bool args_to_value(json_value& value, const json_value& schema,
     }
     if (arg == "--config") {
       if (idx >= args.size()) return cli_error("missing value for config");
-      value.get_object()["config"].set_string(args[idx++]);
+      value.insert("config").set_string(args[idx++]);
       continue;
     }
     auto is_positional = arg.find('-') != 0;
     if (!commands.empty() && is_positional) {
       if (std::find(commands.begin(), commands.end(), arg) != commands.end()) {
-        value.get_object()["command"].set_string(arg);
-        if (!args_to_value(value.get_object()[arg],
+        value.insert("command").set(arg);
+        if (!args_to_value(value.insert(arg),
                 schema.at("properties").at(arg), args, idx, error))
           return false;
         break;
@@ -1154,8 +1154,12 @@ static bool config_to_value(json_value& value, string& error) {
   }
 
   auto cvalue = json_value{};
-  if (!load_json(config, cvalue, error))
-    return cli_error("error converting configuration " + config);
+  if(try_config) {
+    if(!load_json(config, cvalue, error)) return true;
+  } else {
+    if (!load_json(config, cvalue, error))
+      return cli_error("error converting configuration " + config);
+  }
 
   update_value_objects(cvalue, value);
   value = cvalue;
