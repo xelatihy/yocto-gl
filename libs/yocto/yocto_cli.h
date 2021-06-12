@@ -334,8 +334,8 @@ struct json_value {
   json_value&       at(const string& key);
   const json_value& at(const string& key) const;
 
-  template <typename... Args>
-  json_value& emplace_back(Args&&... args);
+  json_value& insert(const string& key);
+  json_value& append();
 
   void set(std::nullptr_t);
   void set(int32_t value);
@@ -908,9 +908,12 @@ inline const json_value& json_value::at(const string& key) const {
   throw json_error{"object expected"};
 }
 
-template <typename... Args>
-inline json_value& json_value::emplace_back(Args&&... args) {
-  if (is_array()) return _array->emplace_back(std::forward(args)...);
+inline json_value& json_value::insert(const string& key) {
+  if (is_object()) return _object->operator[](key);
+  throw json_error{"object expected"};
+}
+inline json_value& json_value::append() {
+  if (is_array()) return _array->emplace_back();
   throw json_error{"array expected"};
 }
 
