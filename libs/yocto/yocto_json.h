@@ -135,14 +135,6 @@ using json_object = ordered_map<string, json_value>;
 
 // Json value
 struct json_value {
-  int64_t     integer   = 0;
-  uint64_t    unsigned_ = 0;
-  double      number    = 0;
-  bool        boolean   = false;
-  string      string_   = {};
-  json_array  array     = {};
-  json_object object    = {};
-
   json_value() : type{json_type::none} {}
   json_value(json_type type) : type{type} {}
   json_value(const json_value& other) {
@@ -314,7 +306,14 @@ struct json_value {
   }
 
  private:
-  json_type type = json_type::none;
+  json_type   type      = json_type::none;
+  int64_t     integer   = 0;
+  uint64_t    unsigned_ = 0;
+  double      number    = 0;
+  bool        boolean   = false;
+  string      string_   = {};
+  json_array  array     = {};
+  json_object object    = {};
 
   void _swap(json_value& other) {
     std::swap(type, other.type);
