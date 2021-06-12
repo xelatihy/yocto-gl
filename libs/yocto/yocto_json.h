@@ -239,6 +239,81 @@ struct json_value {
       get_array().at(idx).set(value.at(idx));
   }
 
+  template <typename T>
+  T get() const {
+    auto value = T{};
+    get(value);
+    return value;
+  }
+
+  void get(int32_t& value) const { value = (int32_t)get<int64_t>(); }
+  void get(int64_t& value) const {
+    if (get_type() == json_type::integer) {
+      value = (int64_t)get_integer();
+    } else if (get_type() == json_type::unsigned_) {
+      value = (int64_t)get_unsigned();
+    } else {
+      throw json_error{"integer expected"};
+    }
+  }
+  void get(uint32_t& value) const { value = (uint32_t)get<uint64_t>(); }
+  void get(uint64_t& value) const {
+    if (get_type() == json_type::integer) {
+      value = (uint64_t)get_integer();
+    } else if (get_type() == json_type::unsigned_) {
+      value = (uint64_t)get_unsigned();
+    } else {
+      throw json_error{"integer expected"};
+    }
+  }
+  void get(float& value) const { value = (double)get<double>(); }
+  void get(double& value) const {
+    if (get_type() == json_type::integer) {
+      value = (double)get_integer();
+    } else if (get_type() == json_type::unsigned_) {
+      value = (double)get_unsigned();
+    } else if (get_type() == json_type::number) {
+      value = (double)get_number();
+    } else {
+      throw json_error{"number expected"};
+    }
+  }
+  void get(bool& value) const {
+    if (get_type() == json_type::boolean) {
+      value = get_boolean();
+    } else {
+      throw json_error{"boolean expected"};
+    }
+  }
+  void get(string& value) const {
+    if (get_type() == json_type::string) {
+      value = get_string();
+    } else {
+      throw json_error{"string expected"};
+    }
+  }
+  template <typename T, size_t N>
+  void get(std::array<T, N>& value) const {
+    if (get_type() == json_type::array) {
+      if (get_array().size() != N)
+        throw json_error{"array of size " + std::to_string(N) + " expected"};
+      for (auto idx = (size_t)0; idx < value.size(); idx++)
+        get_array().at(idx).get(value.at(idx));
+    } else {
+      throw json_error{"array expected"};
+    }
+  }
+  template <typename T>
+  void get(vector<T>& value) const {
+    if (get_type() == json_type::array) {
+      value.resize(get_array().size());
+      for (auto idx = (size_t)0; idx < value.size(); idx++)
+        get_array().at(idx).get(value.at(idx));
+    } else {
+      throw json_error{"array expected"};
+    }
+  }
+
  private:
   void _swap(json_value& other) {
     std::swap(type, other.type);
