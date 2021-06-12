@@ -135,17 +135,17 @@ using json_object = ordered_map<string, json_value>;
 
 // Json value
 struct json_value {
-  json_value() : type{json_type::none} {}
-  json_value(json_type type) : type{type} {}
+  json_value() : _type{json_type::none} {}
+  json_value(json_type type) : _type{type} {}
   json_value(const json_value& other) {
-    type = other.type;
-    switch (type) {
+    _type = other._type;
+    switch (_type) {
       case json_type::none: break;
       case json_type::integer: integer = other.integer; break;
       case json_type::unsigned_: unsigned_ = other.unsigned_; break;
       case json_type::number: number = other.number; break;
       case json_type::boolean: boolean = other.boolean; break;
-      case json_type::string: string_ = other.string_; break;
+      case json_type::string: _string = other._string; break;
       case json_type::array: array = other.array; break;
       case json_type::object: object = other.object; break;
     }
@@ -156,10 +156,10 @@ struct json_value {
     return *this;
   }
 
-  json_type get_type() const { return type; }
+  json_type get_type() const { return _type; }
   void      set_type(json_type type) {
-    if (this->type == type) return;
-    this->type = type;
+    if (_type == type) return;
+    _type = type;
   }
 
   void set_null() { _set(json_type::none, integer, (int64_t)0); }
@@ -170,10 +170,10 @@ struct json_value {
   void set_number(double value) { _set(json_type::number, number, value); }
   void set_boolean(bool value) { _set(json_type::boolean, boolean, value); }
   void set_string(const char* value) {
-    _set(json_type::string, string_, string{value});
+    _set(json_type::string, _string, string{value});
   }
   void set_string(const string& value) {
-    _set(json_type::string, string_, value);
+    _set(json_type::string, _string, value);
   }
   void set_array() { _set(json_type::array, array, {}); }
   void set_array(size_t size) {
@@ -191,7 +191,7 @@ struct json_value {
   uint64_t&    get_unsigned() { return _get(json_type::unsigned_, unsigned_); }
   double&      get_number() { return _get(json_type::number, number); }
   bool&        get_boolean() { return _get(json_type::boolean, boolean); }
-  string&      get_string() { return _get(json_type::string, string_); }
+  string&      get_string() { return _get(json_type::string, _string); }
   json_array&  get_array() { return _get(json_type::array, array); }
   json_object& get_object() { return _get(json_type::object, object); }
 
@@ -203,7 +203,7 @@ struct json_value {
   }
   const double& get_number() const { return _get(json_type::number, number); }
   const bool& get_boolean() const { return _get(json_type::boolean, boolean); }
-  const string& get_string() const { return _get(json_type::string, string_); }
+  const string& get_string() const { return _get(json_type::string, _string); }
   const json_array&  get_array() const { return _get(json_type::array, array); }
   const json_object& get_object() const {
     return _get(json_type::object, object);
@@ -306,41 +306,41 @@ struct json_value {
   }
 
  private:
-  json_type   type      = json_type::none;
+  json_type   _type     = json_type::none;
   int64_t     integer   = 0;
   uint64_t    unsigned_ = 0;
   double      number    = 0;
   bool        boolean   = false;
-  string      string_   = {};
+  string      _string   = {};
   json_array  array     = {};
   json_object object    = {};
 
   void _swap(json_value& other) {
-    std::swap(type, other.type);
-    switch (type) {
+    std::swap(_type, other._type);
+    switch (_type) {
       case json_type::none: break;
       case json_type::integer: std::swap(integer, other.integer); break;
       case json_type::unsigned_: std::swap(unsigned_, other.unsigned_); break;
       case json_type::number: std::swap(number, other.number); break;
       case json_type::boolean: std::swap(boolean, other.boolean); break;
-      case json_type::string: std::swap(string_, other.string_); break;
+      case json_type::string: std::swap(_string, other._string); break;
       case json_type::array: std::swap(array, other.array); break;
       case json_type::object: std::swap(object, other.object); break;
     }
   }
   template <typename T>
   const T& _get(json_type type, const T& value) const {
-    if (this->type != type) throw std::invalid_argument{"bad json type"};
+    if (_type != type) throw std::invalid_argument{"bad json type"};
     return value;
   }
   template <typename T>
   T& _get(json_type type, T& value) {
-    if (this->type != type) throw std::invalid_argument{"bad json type"};
+    if (_type != type) throw std::invalid_argument{"bad json type"};
     return value;
   }
   template <typename T>
   void _set(json_type type, T& value, const T& other) {
-    if (this->type != type) set_type(type);
+    if (_type != type) set_type(type);
     value = other;
   }
 };
