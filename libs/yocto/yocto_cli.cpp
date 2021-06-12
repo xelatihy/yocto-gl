@@ -405,25 +405,25 @@ template <typename T>
 static void cli_to_json(
     json_value& json, const T& value, const vector<string>& choices) {
   if (choices.empty()) {
-    to_json(json, value);
+    json.set(value);
   } else {
     if constexpr (cli_is_array_v<T>) {
-      to_json_array(json, value.size());
+      json.set_array(value.size());
       for (auto idx = (size_t)0; idx < value.size(); idx++) {
-        cli_to_json(json_at(json, idx), value.at(idx), choices);
+        cli_to_json(json.at(idx), value.at(idx), choices);
       }
     } else if constexpr (cli_is_vector_v<T>) {
-      to_json_array(json, value.size());
+      json.set_array(value.size());
       for (auto idx = (size_t)0; idx < value.size(); idx++) {
-        cli_to_json(json_at(json, idx), value.at(idx), choices);
+        cli_to_json(json.at(idx), value.at(idx), choices);
       }
     } else {
       if constexpr (std::is_integral_v<T> || std::is_floating_point_v<T>) {
-        to_json(json, choices.at((uint64_t)value));
+        json.set(choices.at((uint64_t)value));
       } else if constexpr (std::is_same_v<T, string>) {
         if (std::find(choices.begin(), choices.end(), value) == choices.end())
           throw std::out_of_range{"bad value"};
-        to_json(json, value);
+        json.set(value);
       } else {
         throw std::invalid_argument{"not supported"};
       }
@@ -491,22 +491,20 @@ template <typename T>
 static void cli_from_json(
     const json_value& json, T& value, const vector<string>& choices) {
   if (choices.empty()) {
-    from_json(json, value);
+    value = json.get<T>();
   } else {
     if constexpr (cli_is_array_v<T>) {
-      auto size = json_size(json);
-      if (size != value.size()) throw json_error{"bad array size"};
+      if (json.size() != value.size()) throw json_error{"bad array size"};
       for (auto idx = (size_t)0; idx < value.size(); idx++) {
-        cli_from_json(json_at(json, idx), value.at(idx), choices);
+        cli_from_json(json.at(idx), value.at(idx), choices);
       }
     } else if constexpr (cli_is_vector_v<T>) {
-      auto size = json_size(json);
-      value.resize(size);
+      value.resize(json.size());
       for (auto idx = (size_t)0; idx < value.size(); idx++) {
-        cli_from_json(json_at(json, idx), value.at(idx), choices);
+        cli_from_json(json.at(idx), value.at(idx), choices);
       }
     } else {
-      auto values = from_json<string>(json);
+      auto values = json.get<string>();
       if (std::find(choices.begin(), choices.end(), values) == choices.end())
         throw json_error{"invalid label"};
       if constexpr (std::is_integral_v<T> || std::is_floating_point_v<T>) {
