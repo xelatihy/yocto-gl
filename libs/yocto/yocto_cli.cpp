@@ -43,8 +43,6 @@
 #include <utility>
 #include <vector>
 
-#include "ext/json.hpp"
-
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
 // -----------------------------------------------------------------------------
@@ -943,45 +941,6 @@ static bool value_to_variable(
   return true;
 }
 
-using ordered_json = nlohmann::ordered_json;
-void from_json(const ordered_json& js, json_value& value) {
-  switch (js.type()) {
-    case ordered_json::value_t::null: {
-      value.set_null();
-    } break;
-    case ordered_json::value_t::number_integer: {
-      value.set_integer((int64_t)js);
-    } break;
-    case ordered_json::value_t::number_unsigned: {
-      value.set_uinteger((uint64_t)js);
-    } break;
-    case ordered_json::value_t::number_float: {
-      value.set_number((double)js);
-    } break;
-    case ordered_json::value_t::boolean: {
-      value.set_boolean((bool)js);
-    } break;
-    case ordered_json::value_t::string: {
-      value.set_string((string)js);
-    } break;
-    case ordered_json::value_t::array: {
-      value.set_array();
-      for (auto& jitem : js) from_json(jitem, value.get_array().emplace_back());
-    } break;
-    case ordered_json::value_t::object: {
-      value.set_object();
-      for (auto& [key, jitem] : js.items())
-        from_json(jitem, value.get_object()[key]);
-    } break;
-    case ordered_json::value_t::binary: {
-      value.set_null();
-    } break;
-    case ordered_json::value_t::discarded: {
-      value.set_null();
-    } break;
-  }
-}
-
 // grabs a configuration and update json arguments
 static bool config_to_value(json_value& value, string& error) {
   auto cli_error = [&error](const string& message) {
@@ -1019,24 +978,9 @@ static bool config_to_value(json_value& value, string& error) {
     try_config = true;
   }
 
-  auto js = nlohmann::ordered_json{};
-  auto fs = std::ifstream(config);
-  if (!fs) {
-    if (try_config) return true;
-    return cli_error("missing configuration file " + config);
-  }
-  try {
-    js = nlohmann::ordered_json::parse(fs);
-  } catch (...) {
-    return cli_error("error loading configuration " + config);
-  }
-
   auto cvalue = json_value{};
-  try {
-    from_json(js, cvalue);
-  } catch (...) {
+  if (!load_json(config, cvalue, error))
     return cli_error("error converting configuration " + config);
-  }
 
   update_value_objects(cvalue, value);
   value = cvalue;

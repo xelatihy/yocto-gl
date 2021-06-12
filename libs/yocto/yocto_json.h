@@ -120,14 +120,9 @@ struct json_error : std::logic_error {
 
 // Json type
 enum struct json_type {
-  null,
-  integer,
-  uinteger,
-  number,
-  boolean,
-  string,
-  array,
-  object
+  // clang-format off
+  null, integer, uinteger, number, boolean, string, array, object
+  // clang-format on
 };
 
 // Json typdefs
@@ -407,6 +402,30 @@ struct json_value {
     value = other;
   }
 };
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// JSON I/O
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Load json
+bool load_json(const string& filename, json_value& json, string& error);
+// Save json
+bool save_json(const string& filename, json_value& json, string& error);
+
+// Parse json
+bool parse_json(const string& text, json_value& json, string& error);
+// Dump json
+bool dump_json(string& text, const json_value& json, string& error);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// JSON SCHEMA
+// -----------------------------------------------------------------------------
+namespace yocto {
 
 // Json schema
 struct json_schema {
