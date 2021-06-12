@@ -368,6 +368,18 @@ struct json_value {
   template <typename T>
   void get(vector<T>& value) const;
 
+#ifdef __APPLE__
+  void set(size_t value);
+  void get(size_t& value) const;
+#endif
+
+  template <typename T>
+  json_value& insert(const string& key, const T& value);
+  template <typename T>
+  json_value& append(const T& value);
+
+  bool contains(const string& key) const;
+
  private:
   json_type _type = json_type::null;
   union {
@@ -917,6 +929,11 @@ inline json_value& json_value::append() {
   throw json_error{"array expected"};
 }
 
+inline bool json_value::contains(const string& key) const {
+  if (is_object()) return _object->contains(key);
+  throw json_error{"object expected"};
+}
+
 inline void json_value::set(std::nullptr_t) { set_null(); }
 inline void json_value::set(int32_t value) { set_integer(value); }
 inline void json_value::set(int64_t value) { set_integer(value); }
@@ -1019,6 +1036,24 @@ inline void json_value::get(vector<T>& value) const {
   } else {
     throw json_error{"array expected"};
   }
+}
+
+#ifdef __APPLE__
+inline void json_value::set(size_t value) { set((uint64_t)value); }
+inline void json_value::get(size_t& value) const { value = get<uint64_t>(); }
+#endif
+
+template <typename T>
+inline json_value& json_value::insert(const string& key, const T& value) {
+  auto& item = insert(key);
+  item.set(value);
+  return item;
+}
+template <typename T>
+inline json_value& json_value::append(const T& value) {
+  auto& item = append();
+  item.set(value);
+  return item;
 }
 
 inline void json_value::_swap(json_value& other) {
@@ -1539,7 +1574,7 @@ struct cli_variable {
 // Command line state.
 struct cli_state {
   json_value   defaults  = {};
-  json_schema  schema    = {};
+  json_value   schema    = {};
   cli_variable variables = {};
 };
 // Command line command.
