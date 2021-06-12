@@ -209,6 +209,65 @@ struct json_value {
     return _get(json_type::object, _object);
   }
 
+  bool is_null() const { return _type == json_type::none; }
+  bool is_integer() const {
+    return _type == json_type::integer || _type == json_type::uinteger;
+  }
+  bool is_number() const {
+    return _type == json_type::integer || _type == json_type::uinteger ||
+           _type == json_type::number;
+  }
+  bool is_boolean() const { return _type == json_type::boolean; }
+  bool is_string() const { return _type == json_type::string; }
+  bool is_array() const { return _type == json_type::array; }
+  bool is_object() const { return _type == json_type::object; }
+
+  bool empty() const {
+    if (is_array()) return _array.empty();
+    if (is_object()) return _object.empty();
+    throw json_error{"array or object expected"};
+  }
+  size_t size() const {
+    if (is_array()) return _array.size();
+    if (is_object()) return _object.size();
+    throw json_error{"array or object expected"};
+  }
+
+  json_value& operator[](size_t idx) {
+    if (is_array()) return _array.at(idx);
+    throw json_error{"array expected"};
+  }
+  const json_value& operator[](size_t idx) const {
+    if (is_array()) return _array.at(idx);
+    throw json_error{"array expected"};
+  }
+  json_value& operator[](const string& key) {
+    if (is_object()) return _object[key];
+    throw json_error{"object expected"};
+  }
+  json_value& at(size_t idx) {
+    if (is_array()) return _array.at(idx);
+    throw json_error{"array expected"};
+  }
+  const json_value& at(size_t idx) const {
+    if (is_array()) return _array.at(idx);
+    throw json_error{"array expected"};
+  }
+  json_value& at(const string& key) {
+    if (is_object()) return _object.at(key);
+    throw json_error{"object expected"};
+  }
+  const json_value& at(const string& key) const {
+    if (is_object()) return _object.at(key);
+    throw json_error{"object expected"};
+  }
+
+  template <typename... Args>
+  json_value& emplace_back(Args&&... args) {
+    if (is_array()) return _array.emplace_back(std::forward(args)...);
+    throw json_error{"array expected"};
+  }
+
   void set(std::nullptr_t) { set_null(); }
   void set(int32_t value) { set_integer(value); }
   void set(int64_t value) { set_integer(value); }
