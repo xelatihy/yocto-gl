@@ -279,8 +279,12 @@ struct ordered_map {
   }
 };
 
-// Command line type.
-enum struct cli_type {
+struct json_error : std::logic_error {
+  json_error(const string& error) : std::logic_error(error) {}
+};
+
+// Json type
+enum struct json_type {
   none,
   integer,
   unsigned_,
@@ -290,90 +294,95 @@ enum struct cli_type {
   array,
   object
 };
-// Command line value.
-struct cli_value;
-using cli_array  = vector<cli_value>;
-using cli_object = ordered_map<string, cli_value>;
-struct cli_value {
-  cli_type   type      = cli_type::none;
-  int64_t    integer   = 0;
-  uint64_t   unsigned_ = 0;
-  double     number    = 0;
-  bool       boolean   = false;
-  string     string_   = {};
-  cli_array  array     = {};
-  cli_object object    = {};
 
-  cli_value() : type{cli_type::none} {}
-  cli_value(cli_type type) : type{type} {}
-  cli_value(const cli_value& other) {
+// Json typdefs
+struct json_value;
+using json_array  = vector<json_value>;
+using json_object = ordered_map<string, json_value>;
+
+// Json value
+struct json_value {
+  json_type   type      = json_type::none;
+  int64_t     integer   = 0;
+  uint64_t    unsigned_ = 0;
+  double      number    = 0;
+  bool        boolean   = false;
+  string      string_   = {};
+  json_array  array     = {};
+  json_object object    = {};
+
+  json_value() : type{json_type::none} {}
+  json_value(json_type type) : type{type} {}
+  json_value(const json_value& other) {
     type = other.type;
     switch (type) {
-      case cli_type::none: break;
-      case cli_type::integer: integer = other.integer; break;
-      case cli_type::unsigned_: unsigned_ = other.unsigned_; break;
-      case cli_type::number: number = other.number; break;
-      case cli_type::boolean: boolean = other.boolean; break;
-      case cli_type::string: string_ = other.string_; break;
-      case cli_type::array: array = other.array; break;
-      case cli_type::object: object = other.object; break;
+      case json_type::none: break;
+      case json_type::integer: integer = other.integer; break;
+      case json_type::unsigned_: unsigned_ = other.unsigned_; break;
+      case json_type::number: number = other.number; break;
+      case json_type::boolean: boolean = other.boolean; break;
+      case json_type::string: string_ = other.string_; break;
+      case json_type::array: array = other.array; break;
+      case json_type::object: object = other.object; break;
     }
   }
-  cli_value(cli_value&& value) : cli_value() { _swap(value); }
-  cli_value& operator=(cli_value other) {
+  json_value(json_value&& value) : json_value() { _swap(value); }
+  json_value& operator=(json_value other) {
     _swap(other);
     return *this;
   }
 
-  cli_type get_type() const { return type; }
-  void     set_type(cli_type type) {
+  json_type get_type() const { return type; }
+  void      set_type(json_type type) {
     if (this->type == type) return;
     this->type = type;
   }
 
-  void set_null() { _set(cli_type::none, integer, (int64_t)0); }
-  void set_integer(int64_t value) { _set(cli_type::integer, integer, value); }
+  void set_null() { _set(json_type::none, integer, (int64_t)0); }
+  void set_integer(int64_t value) { _set(json_type::integer, integer, value); }
   void set_unsigned(uint64_t value) {
-    _set(cli_type::unsigned_, unsigned_, value);
+    _set(json_type::unsigned_, unsigned_, value);
   }
-  void set_number(double value) { _set(cli_type::number, number, value); }
-  void set_boolean(bool value) { _set(cli_type::boolean, boolean, value); }
+  void set_number(double value) { _set(json_type::number, number, value); }
+  void set_boolean(bool value) { _set(json_type::boolean, boolean, value); }
   void set_string(const char* value) {
-    _set(cli_type::string, string_, string{value});
+    _set(json_type::string, string_, string{value});
   }
   void set_string(const string& value) {
-    _set(cli_type::string, string_, value);
+    _set(json_type::string, string_, value);
   }
-  void set_array() { _set(cli_type::array, array, {}); }
-  void set_array(size_t size) { _set(cli_type::array, array, cli_array(size)); }
-  void set_array(const cli_array& value) {
-    _set(cli_type::array, array, value);
+  void set_array() { _set(json_type::array, array, {}); }
+  void set_array(size_t size) {
+    _set(json_type::array, array, json_array(size));
   }
-  void set_object() { _set(cli_type::object, object, {}); }
-  void set_object(const cli_object& value) {
-    return _set(cli_type::object, object, value);
+  void set_array(const json_array& value) {
+    _set(json_type::array, array, value);
+  }
+  void set_object() { _set(json_type::object, object, {}); }
+  void set_object(const json_object& value) {
+    return _set(json_type::object, object, value);
   }
 
-  int64_t&    get_integer() { return _get(cli_type::integer, integer); }
-  uint64_t&   get_unsigned() { return _get(cli_type::unsigned_, unsigned_); }
-  double&     get_number() { return _get(cli_type::number, number); }
-  bool&       get_boolean() { return _get(cli_type::boolean, boolean); }
-  string&     get_string() { return _get(cli_type::string, string_); }
-  cli_array&  get_array() { return _get(cli_type::array, array); }
-  cli_object& get_object() { return _get(cli_type::object, object); }
+  int64_t&     get_integer() { return _get(json_type::integer, integer); }
+  uint64_t&    get_unsigned() { return _get(json_type::unsigned_, unsigned_); }
+  double&      get_number() { return _get(json_type::number, number); }
+  bool&        get_boolean() { return _get(json_type::boolean, boolean); }
+  string&      get_string() { return _get(json_type::string, string_); }
+  json_array&  get_array() { return _get(json_type::array, array); }
+  json_object& get_object() { return _get(json_type::object, object); }
 
   const int64_t& get_integer() const {
-    return _get(cli_type::integer, integer);
+    return _get(json_type::integer, integer);
   }
   const uint64_t& get_unsigned() const {
-    return _get(cli_type::unsigned_, unsigned_);
+    return _get(json_type::unsigned_, unsigned_);
   }
-  const double& get_number() const { return _get(cli_type::number, number); }
-  const bool&   get_boolean() const { return _get(cli_type::boolean, boolean); }
-  const string& get_string() const { return _get(cli_type::string, string_); }
-  const cli_array&  get_array() const { return _get(cli_type::array, array); }
-  const cli_object& get_object() const {
-    return _get(cli_type::object, object);
+  const double& get_number() const { return _get(json_type::number, number); }
+  const bool& get_boolean() const { return _get(json_type::boolean, boolean); }
+  const string& get_string() const { return _get(json_type::string, string_); }
+  const json_array&  get_array() const { return _get(json_type::array, array); }
+  const json_object& get_object() const {
+    return _get(json_type::object, object);
   }
 
   void set(std::nullptr_t) { set_null(); }
@@ -398,57 +407,57 @@ struct cli_value {
   }
 
  private:
-  void _swap(cli_value& other) {
+  void _swap(json_value& other) {
     std::swap(type, other.type);
     switch (type) {
-      case cli_type::none: break;
-      case cli_type::integer: std::swap(integer, other.integer); break;
-      case cli_type::unsigned_: std::swap(unsigned_, other.unsigned_); break;
-      case cli_type::number: std::swap(number, other.number); break;
-      case cli_type::boolean: std::swap(boolean, other.boolean); break;
-      case cli_type::string: std::swap(string_, other.string_); break;
-      case cli_type::array: std::swap(array, other.array); break;
-      case cli_type::object: std::swap(object, other.object); break;
+      case json_type::none: break;
+      case json_type::integer: std::swap(integer, other.integer); break;
+      case json_type::unsigned_: std::swap(unsigned_, other.unsigned_); break;
+      case json_type::number: std::swap(number, other.number); break;
+      case json_type::boolean: std::swap(boolean, other.boolean); break;
+      case json_type::string: std::swap(string_, other.string_); break;
+      case json_type::array: std::swap(array, other.array); break;
+      case json_type::object: std::swap(object, other.object); break;
     }
   }
   template <typename T>
-  const T& _get(cli_type type, const T& value) const {
+  const T& _get(json_type type, const T& value) const {
     if (this->type != type) throw std::invalid_argument{"bad json type"};
     return value;
   }
   template <typename T>
-  T& _get(cli_type type, T& value) {
+  T& _get(json_type type, T& value) {
     if (this->type != type) throw std::invalid_argument{"bad json type"};
     return value;
   }
   template <typename T>
-  void _set(cli_type type, T& value, const T& other) {
+  void _set(json_type type, T& value, const T& other) {
     if (this->type != type) set_type(type);
     value = other;
   }
 };
 
-// Command line schema.
-struct cli_schema {
-  cli_type           type            = cli_type::object;
-  string             title           = "";
-  string             description     = "";
-  cli_value          default_        = {};
-  cli_value          min             = {};
-  cli_value          max             = {};
-  vector<string>     enum_           = {};
-  size_t             min_items       = 0;
-  size_t             max_items       = std::numeric_limits<size_t>::max();
-  vector<string>     required        = {};
-  vector<string>     cli_positionals = {};
-  string             cli_config      = "";
-  vector<cli_schema> items           = {};
-  ordered_map<string, cli_schema> properties = {};
+// Json schema
+struct json_schema {
+  json_type           type            = json_type::object;
+  string              title           = "";
+  string              description     = "";
+  json_value          default_        = {};
+  json_value          min             = {};
+  json_value          max             = {};
+  vector<string>      enum_           = {};
+  size_t              min_items       = 0;
+  size_t              max_items       = std::numeric_limits<size_t>::max();
+  vector<string>      required        = {};
+  vector<string>      cli_positionals = {};
+  string              cli_config      = "";
+  vector<json_schema> items           = {};
+  ordered_map<string, json_schema> properties = {};
 };
 
 // Command line setter.
 using cli_setter = bool (*)(
-    const cli_value&, void*, const vector<string>& choices);
+    const json_value&, void*, const vector<string>& choices);
 // Command line variable.
 struct cli_variable {
   void*                             value     = nullptr;
@@ -458,8 +467,8 @@ struct cli_variable {
 };
 // Command line state.
 struct cli_state {
-  cli_value    defaults  = {};
-  cli_schema   schema    = {};
+  json_value   defaults  = {};
+  json_schema  schema    = {};
   cli_variable variables = {};
 };
 // Command line command.
