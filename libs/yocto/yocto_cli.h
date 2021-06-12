@@ -227,27 +227,52 @@ namespace yocto {
 // Simple ordered map
 template <typename Key, typename Value>
 struct ordered_map {
-  size_t size() const;
-  bool   empty() const;
+  size_t size() const { return _data.size(); }
+  bool   empty() const { return _data.empty(); }
 
-  bool contains(const Key& key) const;
+  bool contains(const Key& key) const { return (bool)_search(key); }
 
-  Value&       operator[](const Key& key);
-  Value&       at(const Key& key);
-  const Value& at(const Key& key) const;
+  Value& operator[](const Key& key) {
+    if (auto it = _search(key); it) return it->second;
+    _data.emplace_back(key, Value{});
+    return _data.back().second;
+  }
+  Value& at(const Key& key) {
+    if (auto it = _search(key); it) return it->second;
+    throw std::out_of_range{"missing key for " + key};
+  }
+  const Value& at(const Key& key) const {
+    if (auto it = _search(key); it) return it->second;
+    throw std::out_of_range{"missing key for " + key};
+  }
 
-  pair<Key, Value>*       find(const string& key);
-  const pair<Key, Value>* find(const string& key) const;
+  pair<Key, Value>* find(const string& key) {
+    if (auto it = _search(key); it) return it;
+    return end();
+  }
+  const pair<Key, Value>* find(const string& key) const {
+    if (auto it = _search(key); it) return it;
+    return end();
+  }
 
-  pair<Key, Value>*       begin();
-  pair<Key, Value>*       end();
-  const pair<Key, Value>* begin() const;
-  const pair<Key, Value>* end() const;
+  pair<Key, Value>*       begin() { return _data.data(); }
+  pair<Key, Value>*       end() { return _data.data() + _data.size(); }
+  const pair<Key, Value>* begin() const { return _data.data(); }
+  const pair<Key, Value>* end() const { return _data.data() + _data.size(); }
 
  private:
   vector<pair<Key, Value>> _data;
-  pair<Key, Value>*        _search(const string& key);
-  const pair<Key, Value>*  _search(const string& key) const;
+
+  pair<Key, Value>* _search(const string& key) {
+    for (auto& item : _data)
+      if (key == item.first) return &item;
+    return nullptr;
+  }
+  const pair<Key, Value>* _search(const string& key) const {
+    for (auto& item : _data)
+      if (key == item.first) return &item;
+    return nullptr;
+  }
 };
 
 }  // namespace yocto
@@ -465,88 +490,6 @@ inline void add_argument(const cli_command& cli, const string& name, T& value,
     const string& usage, const vector<string>& choices, bool req) {
   return add_argument(
       cli, name, (std::underlying_type_t<T>&)value, usage, choices, req);
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// ORDERED MAP
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Simple ordered map
-template <typename Key, typename Value>
-inline size_t ordered_map<Key, Value>::size() const {
-  return _data.size();
-}
-template <typename Key, typename Value>
-inline bool ordered_map<Key, Value>::empty() const {
-  return _data.empty();
-}
-
-template <typename Key, typename Value>
-inline bool ordered_map<Key, Value>::contains(const Key& key) const {
-  return (bool)_search(key);
-}
-
-template <typename Key, typename Value>
-inline Value& ordered_map<Key, Value>::operator[](const Key& key) {
-  if (auto it = _search(key); it) return it->second;
-  _data.emplace_back(key, Value{});
-  return _data.back().second;
-}
-template <typename Key, typename Value>
-inline Value& ordered_map<Key, Value>::at(const Key& key) {
-  if (auto it = _search(key); it) return it->second;
-  throw std::out_of_range{"missing key for " + key};
-}
-template <typename Key, typename Value>
-inline const Value& ordered_map<Key, Value>::at(const Key& key) const {
-  if (auto it = _search(key); it) return it->second;
-  throw std::out_of_range{"missing key for " + key};
-}
-
-template <typename Key, typename Value>
-inline pair<Key, Value>* ordered_map<Key, Value>::find(const string& key) {
-  if (auto it = _search(key); it) return it;
-  return end();
-}
-template <typename Key, typename Value>
-inline const pair<Key, Value>* ordered_map<Key, Value>::find(
-    const string& key) const {
-  if (auto it = _search(key); it) return it;
-  return end();
-}
-
-template <typename Key, typename Value>
-inline pair<Key, Value>* ordered_map<Key, Value>::begin() {
-  return _data.data();
-}
-template <typename Key, typename Value>
-inline pair<Key, Value>* ordered_map<Key, Value>::end() {
-  return _data.data() + _data.size();
-}
-template <typename Key, typename Value>
-inline const pair<Key, Value>* ordered_map<Key, Value>::begin() const {
-  return _data.data();
-}
-template <typename Key, typename Value>
-inline const pair<Key, Value>* ordered_map<Key, Value>::end() const {
-  return _data.data() + _data.size();
-}
-
-template <typename Key, typename Value>
-inline pair<Key, Value>* ordered_map<Key, Value>::_search(const string& key) {
-  for (auto& item : _data)
-    if (key == item.first) return &item;
-  return nullptr;
-}
-template <typename Key, typename Value>
-inline const pair<Key, Value>* ordered_map<Key, Value>::_search(
-    const string& key) const {
-  for (auto& item : _data)
-    if (key == item.first) return &item;
-  return nullptr;
 }
 
 }  // namespace yocto
