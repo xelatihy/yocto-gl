@@ -70,6 +70,8 @@ struct ordered_map {
   size_t size() const { return _data.size(); }
   bool   empty() const { return _data.empty(); }
 
+  bool contains(const Key& key) const { return (bool)_search(key); }
+
   Value& operator[](const Key& key) {
     if (auto it = _search(key); it) return it->second;
     _data.emplace_back(key, Value{});
@@ -162,6 +164,19 @@ struct json_value {
     _type = type;
   }
 
+  bool is_null() const { return _type == json_type::null; }
+  bool is_integer() const {
+    return _type == json_type::integer || _type == json_type::uinteger;
+  }
+  bool is_number() const {
+    return _type == json_type::integer || _type == json_type::uinteger ||
+           _type == json_type::number;
+  }
+  bool is_boolean() const { return _type == json_type::boolean; }
+  bool is_string() const { return _type == json_type::string; }
+  bool is_array() const { return _type == json_type::array; }
+  bool is_object() const { return _type == json_type::object; }
+
   void set_null() { _set(json_type::null, _integer, (int64_t)0); }
   void set_integer(int64_t value) { _set(json_type::integer, _integer, value); }
   void set_uinteger(uint64_t value) {
@@ -208,19 +223,6 @@ struct json_value {
   const json_object& get_object() const {
     return _get(json_type::object, _object);
   }
-
-  bool is_null() const { return _type == json_type::null; }
-  bool is_integer() const {
-    return _type == json_type::integer || _type == json_type::uinteger;
-  }
-  bool is_number() const {
-    return _type == json_type::integer || _type == json_type::uinteger ||
-           _type == json_type::number;
-  }
-  bool is_boolean() const { return _type == json_type::boolean; }
-  bool is_string() const { return _type == json_type::string; }
-  bool is_array() const { return _type == json_type::array; }
-  bool is_object() const { return _type == json_type::object; }
 
   bool empty() const {
     if (is_array()) return _array.empty();
@@ -273,6 +275,8 @@ struct json_value {
   void set(int64_t value) { set_integer(value); }
   void set(uint32_t value) { set_uinteger(value); }
   void set(uint64_t value) { set_uinteger(value); }
+  void set(float value) { set_number(value); }
+  void set(double value) { set_number(value); }
   void set(bool value) { set_boolean(value); }
   void set(const string& value) { set_string(value); }
   void set(const char* value) { set_string(value); }
@@ -406,20 +410,125 @@ struct json_value {
 
 // Json schema
 struct json_schema {
-  json_type           type            = json_type::object;
-  string              title           = "";
-  string              description     = "";
-  json_value          default_        = {};
-  json_value          min             = {};
-  json_value          max             = {};
-  vector<string>      enum_           = {};
-  size_t              min_items       = 0;
-  size_t              max_items       = std::numeric_limits<size_t>::max();
-  vector<string>      required        = {};
-  vector<string>      cli_positionals = {};
-  string              cli_config      = "";
-  vector<json_schema> items           = {};
-  ordered_map<string, json_schema> properties = {};
+  void      set_type(json_type type) { _type = type; }
+  json_type get_type() const { return _type; }
+
+  bool is_null() const { return _type == json_type::null; }
+  bool is_integer() const {
+    return _type == json_type::integer || _type == json_type::uinteger;
+  }
+  bool is_number() const {
+    return _type == json_type::integer || _type == json_type::uinteger ||
+           _type == json_type::number;
+  }
+  bool is_boolean() const { return _type == json_type::boolean; }
+  bool is_string() const { return _type == json_type::string; }
+  bool is_array() const { return _type == json_type::array; }
+  bool is_object() const { return _type == json_type::object; }
+
+  void set_integer() { set_type(json_type::integer); }
+  void set_uinteger() { set_type(json_type::uinteger); }
+  void set_number() { set_type(json_type::number); }
+  void set_boolean() { set_type(json_type::boolean); }
+  void set_string() { set_type(json_type::string); }
+  void set_array() { set_type(json_type::array); }
+  void set_object() { set_type(json_type::object); }
+
+  void          set_title(const string& title) { _title = title; }
+  const string& get_title() const { return _title; }
+  void          set_description(const string& description) {
+    _description = description;
+  }
+  const string& get_description() const { return _description; }
+
+  template <typename T>
+  void set_default(const T& default_) {
+    _default.set(default_);
+  }
+  const json_value& get_default() const { return _default; }
+  json_value&       get_default() { return _default; }
+
+  template <typename T>
+  void set_min(const T& min) {
+    _min.set(min);
+  }
+  const json_value& get_min() const { return _min; }
+  json_value&       get_min() { return _min; }
+  template <typename T>
+  void set_max(const T& max) {
+    _max.set(max);
+  }
+  const json_value& get_max() const { return _max; }
+  json_value&       get_max() { return _max; }
+
+  void                  set_enum(const vector<string>& enum_) { _enum = enum_; }
+  const vector<string>& get_enum() const { return _enum; }
+
+  void   set_minitems(size_t minitems) { _minitems = minitems; }
+  size_t get_minitems() const { return _minitems; }
+  void   set_maxitems(size_t maxitems) { _maxitems = maxitems; }
+  size_t get_maxitems() const { return _maxitems; }
+
+  void set_required(const vector<string>& required) { _required = required; }
+  const vector<string>& get_required() const { return _required; }
+  void add_required(const string& required) { _required.push_back(required); }
+
+  void set_clipositional(const vector<string>& clipositional) {
+    _clipositional = clipositional;
+  }
+  const vector<string>& get_clipositional() const { return _clipositional; }
+  void                  add_clipositional(const string& clipositional) {
+    _clipositional.push_back(clipositional);
+  }
+
+  void set_cliconfig(const string& cliconfig) { _cliconfig = cliconfig; }
+  const string& get_cliconfig() const { return _cliconfig; }
+
+  void set_items(const vector<json_schema>& items) { _items = items; }
+  const vector<json_schema>& get_items() const { return _items; }
+
+  json_schema&       get_item(size_t idx) { return _items.at(idx); }
+  const json_schema& get_item(size_t idx) const { return _items.at(idx); }
+  json_schema&       add_item() { return _items.emplace_back(); }
+  void add_item(const json_schema& item) { _items.push_back(item); }
+
+  void set_properties(const ordered_map<string, json_schema>& properties) {
+    _properties = properties;
+  }
+  const ordered_map<string, json_schema>& get_properties() const {
+    return _properties;
+  }
+
+  bool has_property(const string& name) const {
+    return _properties.contains(name);
+  }
+  void set_property(const string& name, const json_schema& item) {
+    _properties[name] = item;
+  }
+  json_schema& get_property(const string& name) { return _properties.at(name); }
+  const json_schema& get_property(const string& name) const {
+    return _properties.at(name);
+  }
+  json_schema& add_property(const string& name) { return _properties[name]; }
+  void         add_property(const string& name, const json_schema& item) {
+    _properties[name] = item;
+  }
+
+ private:
+  json_type           _type          = json_type::object;
+  string              _title         = "";
+  string              _description   = "";
+  json_value          _default       = {};
+  json_value          _min           = {};
+  json_value          _max           = {};
+  vector<string>      _enum          = {};
+  size_t              _minitems      = 0;
+  size_t              _maxitems      = std::numeric_limits<size_t>::max();
+  vector<string>      _required      = {};
+  vector<string>      _clipositional = {};
+  string              _cliconfig     = "";
+  vector<json_schema> _items         = {};
+  ordered_map<string, json_schema> _properties = {};
 };
 
 }  // namespace yocto
@@ -647,19 +756,19 @@ namespace yocto {
 
 inline void to_schema(json_schema& schema, int64_t value, const string& title,
     const string& description) {
-  schema.type        = to_json(value).get_type();
-  schema.title       = title;
-  schema.description = description;
-  schema.default_    = to_json(value);
+  schema.set_integer();
+  schema.set_title(title);
+  schema.set_description(description);
+  schema.set_default(value);
 }
 inline void to_schema(json_schema& schema, int64_t value, const string& title,
     const string& description, int64_t min, int64_t max) {
-  schema.type        = to_json(value).get_type();
-  schema.title       = title;
-  schema.description = description;
-  schema.default_    = to_json(value);
-  schema.min         = to_json(min);
-  schema.max         = to_json(max);
+  schema.set_integer();
+  schema.set_title(title);
+  schema.set_description(description);
+  schema.set_default(value);
+  schema.set_min(min);
+  schema.set_max(max);
 }
 inline void to_schema(json_schema& schema, int32_t value, const string& title,
     const string& description) {
@@ -672,19 +781,19 @@ inline void to_schema(json_schema& schema, int32_t value, const string& title,
 }
 inline void to_schema(json_schema& schema, uint64_t value, const string& title,
     const string& description) {
-  schema.type        = to_json(value).get_type();
-  schema.title       = title;
-  schema.description = description;
-  schema.default_    = to_json(value);
+  schema.set_uinteger();
+  schema.set_title(title);
+  schema.set_description(description);
+  schema.set_default(value);
 }
 inline void to_schema(json_schema& schema, uint64_t value, const string& title,
     const string& description, uint64_t min, uint64_t max) {
-  schema.type        = to_json(value).get_type();
-  schema.title       = title;
-  schema.description = description;
-  schema.default_    = to_json(value);
-  schema.min         = to_json(min);
-  schema.max         = to_json(max);
+  schema.set_uinteger();
+  schema.set_title(title);
+  schema.set_description(description);
+  schema.set_default(value);
+  schema.set_min(min);
+  schema.set_max(max);
 }
 inline void to_schema(json_schema& schema, uint32_t value, const string& title,
     const string& description) {
@@ -697,19 +806,19 @@ inline void to_schema(json_schema& schema, uint32_t value, const string& title,
 }
 inline void to_schema(json_schema& schema, double value, const string& title,
     const string& description) {
-  schema.type        = to_json(value).get_type();
-  schema.title       = title;
-  schema.description = description;
-  schema.default_    = to_json(value);
+  schema.set_number();
+  schema.set_title(title);
+  schema.set_description(description);
+  schema.set_default(value);
 }
 inline void to_schema(json_schema& schema, double value, const string& title,
     const string& description, double min, double max) {
-  schema.type        = to_json(value).get_type();
-  schema.title       = title;
-  schema.description = description;
-  schema.default_    = to_json(value);
-  schema.min         = to_json(min);
-  schema.max         = to_json(max);
+  schema.set_number();
+  schema.set_title(title);
+  schema.set_description(description);
+  schema.set_default(value);
+  schema.set_min(min);
+  schema.set_max(max);
 }
 inline void to_schema(json_schema& schema, float value, const string& title,
     const string& description) {
@@ -722,48 +831,48 @@ inline void to_schema(json_schema& schema, float value, const string& title,
 }
 inline void to_schema(json_schema& schema, bool value, const string& title,
     const string& description) {
-  schema.type        = to_json(value).get_type();
-  schema.title       = title;
-  schema.description = description;
-  schema.default_    = to_json(value);
+  schema.set_boolean();
+  schema.set_title(title);
+  schema.set_description(description);
+  schema.set_default(value);
 }
 inline void to_schema(json_schema& schema, const string& value,
     const string& title, const string& description) {
-  schema.type        = to_json(value).get_type();
-  schema.title       = title;
-  schema.description = description;
-  schema.default_    = to_json(value);
+  schema.set_string();
+  schema.set_title(title);
+  schema.set_description(description);
+  schema.set_default(value);
 }
 inline void to_schema(json_schema& schema, const string& value,
     const string& title, const string& description,
     const vector<string>& enum_) {
-  schema.type        = to_json(value).get_type();
-  schema.title       = title;
-  schema.description = description;
-  schema.default_    = to_json(value);
-  schema.enum_       = enum_;
+  schema.set_string();
+  schema.set_title(title);
+  schema.set_description(description);
+  schema.set_default(value);
+  schema.set_enum(enum_);
 }
 template <typename T, size_t N>
 inline void to_schema(json_schema& schema, const array<T, N>& value,
     const string& title, const string& description) {
-  schema.type        = to_json(value).get_type();
-  schema.title       = title;
-  schema.description = description;
-  schema.default_    = to_json(value);
-  schema.min_items   = N;
-  schema.max_items   = N;
-  to_schema(schema.items.emplace_back(), T{}, "item", "");
+  schema.set_array();
+  schema.set_title(title);
+  schema.set_description(description);
+  schema.set_default(value);
+  schema.set_minitems(N);
+  schema.set_maxitems(N);
+  to_schema(schema.add_item(), T{}, "item", "");
 }
 template <typename T>
 inline void to_schema(json_schema& schema, const vector<T>& value,
     const string& title, const string& description) {
-  schema.type        = to_json(value).type;
-  schema.title       = title;
-  schema.description = description;
-  schema.default_    = to_json(value);
-  schema.min_items   = 0;
-  schema.max_items   = std::numeric_limits<size_t>::max();
-  to_schema(schema.items.emplace_back(), T{}, "item", "");
+  schema.set_array();
+  schema.set_title(title);
+  schema.set_description(description);
+  schema.set_default(value);
+  schema.set_minitems(0);
+  schema.set_maxitems(std::numeric_limits<size_t>::max());
+  to_schema(schema.add_item(), T{}, "item", "");
 }
 
 }  // namespace yocto
