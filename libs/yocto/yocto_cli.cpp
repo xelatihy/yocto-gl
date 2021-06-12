@@ -274,7 +274,7 @@ static void cli_to_schema(json_schema& schema, const T& value,
       schema.type  = json_type::string;
       schema.enum_ = choices;
     } else {
-      schema.type = json_type::unsigned_;
+      schema.type = json_type::uinteger;
     }
   } else if constexpr (std::is_same_v<T, float> || std::is_same_v<T, double>) {
     if (!choices.empty()) {
@@ -555,7 +555,7 @@ static string schema_to_usage(
     switch (type) {
       case json_type::none: return "";
       case json_type::integer: return "<integer>";
-      case json_type::unsigned_: return "<integer>";
+      case json_type::uinteger: return "<integer>";
       case json_type::number: return "<number>";
       case json_type::boolean: return "<bool>";
       case json_type::string: return "<string>";
@@ -569,8 +569,8 @@ static string schema_to_usage(
       case json_type::none: return "";
       case json_type::integer:
         return "[" + std::to_string(value.get_integer()) + "]";
-      case json_type::unsigned_:
-        return "[" + std::to_string(value.get_unsigned()) + "]";
+      case json_type::uinteger:
+        return "[" + std::to_string(value.get_uinteger()) + "]";
       case json_type::number:
         return "[" + std::to_string(value.get_number()) + "]";
       case json_type::boolean:
@@ -669,10 +669,10 @@ static bool arg_to_value(json_value& value, const json_schema& schema,
     auto end = (char*)nullptr;
     value.set_integer(strtol(args[idx++].c_str(), &end, 10));
     if (end == nullptr) return cli_error("bad value for " + name);
-  } else if (schema.type == json_type::unsigned_) {
+  } else if (schema.type == json_type::uinteger) {
     if (idx >= args.size()) return cli_error("missing value for " + name);
     auto end = (char*)nullptr;
-    value.set_unsigned(strtoul(args[idx++].c_str(), &end, 10));
+    value.set_uinteger(strtoul(args[idx++].c_str(), &end, 10));
     if (end == nullptr) return cli_error("bad value for " + name);
   } else if (schema.type == json_type::number) {
     if (idx >= args.size()) return cli_error("missing value for " + name);
@@ -826,14 +826,14 @@ static bool validate_value(const json_value& value, const json_schema& schema,
     } break;
     case json_type::integer: {
       if (schema.type != json_type::integer &&
-          schema.type != json_type::unsigned_ &&
+          schema.type != json_type::uinteger &&
           schema.type != json_type::number)
         return cli_error("bad value for " + name);
       return true;
     } break;
-    case json_type::unsigned_: {
+    case json_type::uinteger: {
       if (schema.type != json_type::integer &&
-          schema.type != json_type::unsigned_ &&
+          schema.type != json_type::uinteger &&
           schema.type != json_type::number)
         return cli_error("bad value for " + name);
       return true;
@@ -964,7 +964,7 @@ void from_json(const ordered_json& js, json_value& value) {
       value.set_integer((int64_t)js);
     } break;
     case ordered_json::value_t::number_unsigned: {
-      value.set_unsigned((uint64_t)js);
+      value.set_uinteger((uint64_t)js);
     } break;
     case ordered_json::value_t::number_float: {
       value.set_number((double)js);

@@ -120,7 +120,7 @@ struct json_error : std::logic_error {
 enum struct json_type {
   none,
   integer,
-  unsigned_,
+  uinteger,
   number,
   boolean,
   string,
@@ -142,7 +142,7 @@ struct json_value {
     switch (_type) {
       case json_type::none: break;
       case json_type::integer: _integer = other._integer; break;
-      case json_type::unsigned_: _unsigned = other._unsigned; break;
+      case json_type::uinteger: uinteger = other.uinteger; break;
       case json_type::number: _number = other._number; break;
       case json_type::boolean: _boolean = other._boolean; break;
       case json_type::string: _string = other._string; break;
@@ -164,8 +164,8 @@ struct json_value {
 
   void set_null() { _set(json_type::none, _integer, (int64_t)0); }
   void set_integer(int64_t value) { _set(json_type::integer, _integer, value); }
-  void set_unsigned(uint64_t value) {
-    _set(json_type::unsigned_, _unsigned, value);
+  void set_uinteger(uint64_t value) {
+    _set(json_type::uinteger, uinteger, value);
   }
   void set_number(double value) { _set(json_type::number, _number, value); }
   void set_boolean(bool value) { _set(json_type::boolean, _boolean, value); }
@@ -188,7 +188,7 @@ struct json_value {
   }
 
   int64_t&     get_integer() { return _get(json_type::integer, _integer); }
-  uint64_t&    get_unsigned() { return _get(json_type::unsigned_, _unsigned); }
+  uint64_t&    get_uinteger() { return _get(json_type::uinteger, uinteger); }
   double&      get_number() { return _get(json_type::number, _number); }
   bool&        get_boolean() { return _get(json_type::boolean, _boolean); }
   string&      get_string() { return _get(json_type::string, _string); }
@@ -198,8 +198,8 @@ struct json_value {
   const int64_t& get_integer() const {
     return _get(json_type::integer, _integer);
   }
-  const uint64_t& get_unsigned() const {
-    return _get(json_type::unsigned_, _unsigned);
+  const uint64_t& get_uinteger() const {
+    return _get(json_type::uinteger, uinteger);
   }
   const double& get_number() const { return _get(json_type::number, _number); }
   const bool& get_boolean() const { return _get(json_type::boolean, _boolean); }
@@ -212,8 +212,8 @@ struct json_value {
   void set(std::nullptr_t) { set_null(); }
   void set(int32_t value) { set_integer(value); }
   void set(int64_t value) { set_integer(value); }
-  void set(uint32_t value) { set_unsigned(value); }
-  void set(uint64_t value) { set_unsigned(value); }
+  void set(uint32_t value) { set_uinteger(value); }
+  void set(uint64_t value) { set_uinteger(value); }
   void set(bool value) { set_boolean(value); }
   void set(const string& value) { set_string(value); }
   void set(const char* value) { set_string(value); }
@@ -241,8 +241,8 @@ struct json_value {
   void get(int64_t& value) const {
     if (get_type() == json_type::integer) {
       value = (int64_t)get_integer();
-    } else if (get_type() == json_type::unsigned_) {
-      value = (int64_t)get_unsigned();
+    } else if (get_type() == json_type::uinteger) {
+      value = (int64_t)get_uinteger();
     } else {
       throw json_error{"integer expected"};
     }
@@ -251,8 +251,8 @@ struct json_value {
   void get(uint64_t& value) const {
     if (get_type() == json_type::integer) {
       value = (uint64_t)get_integer();
-    } else if (get_type() == json_type::unsigned_) {
-      value = (uint64_t)get_unsigned();
+    } else if (get_type() == json_type::uinteger) {
+      value = (uint64_t)get_uinteger();
     } else {
       throw json_error{"integer expected"};
     }
@@ -261,8 +261,8 @@ struct json_value {
   void get(double& value) const {
     if (get_type() == json_type::integer) {
       value = (double)get_integer();
-    } else if (get_type() == json_type::unsigned_) {
-      value = (double)get_unsigned();
+    } else if (get_type() == json_type::uinteger) {
+      value = (double)get_uinteger();
     } else if (get_type() == json_type::number) {
       value = (double)get_number();
     } else {
@@ -306,21 +306,21 @@ struct json_value {
   }
 
  private:
-  json_type   _type     = json_type::none;
-  int64_t     _integer  = 0;
-  uint64_t    _unsigned = 0;
-  double      _number   = 0;
-  bool        _boolean  = false;
-  string      _string   = {};
-  json_array  _array    = {};
-  json_object _object   = {};
+  json_type   _type    = json_type::none;
+  int64_t     _integer = 0;
+  uint64_t    uinteger = 0;
+  double      _number  = 0;
+  bool        _boolean = false;
+  string      _string  = {};
+  json_array  _array   = {};
+  json_object _object  = {};
 
   void _swap(json_value& other) {
     std::swap(_type, other._type);
     switch (_type) {
       case json_type::none: break;
       case json_type::integer: std::swap(_integer, other._integer); break;
-      case json_type::unsigned_: std::swap(_unsigned, other._unsigned); break;
+      case json_type::uinteger: std::swap(uinteger, other.uinteger); break;
       case json_type::number: std::swap(_number, other._number); break;
       case json_type::boolean: std::swap(_boolean, other._boolean); break;
       case json_type::string: std::swap(_string, other._string); break;
@@ -451,10 +451,10 @@ inline void to_json(json_value& json, int32_t value) {
   json.set_integer(value);
 }
 inline void to_json(json_value& json, uint64_t value) {
-  json.set_unsigned(value);
+  json.set_uinteger(value);
 }
 inline void to_json(json_value& json, uint32_t value) {
-  json.set_unsigned(value);
+  json.set_uinteger(value);
 }
 inline void to_json(json_value& json, double value) { json.set_number(value); }
 inline void to_json(json_value& json, float value) { json.set_number(value); }
@@ -508,8 +508,8 @@ inline T from_json(const json_value& json) {
 inline void from_json(const json_value& json, int64_t& value) {
   if (json.get_type() == json_type::integer) {
     value = (int64_t)json.get_integer();
-  } else if (json.get_type() == json_type::unsigned_) {
-    value = (int64_t)json.get_unsigned();
+  } else if (json.get_type() == json_type::uinteger) {
+    value = (int64_t)json.get_uinteger();
   } else {
     throw json_error{"integer expected"};
   }
@@ -520,8 +520,8 @@ inline void from_json(const json_value& json, int32_t& value) {
 inline void from_json(const json_value& json, uint64_t& value) {
   if (json.get_type() == json_type::integer) {
     value = (uint64_t)json.get_integer();
-  } else if (json.get_type() == json_type::unsigned_) {
-    value = (uint64_t)json.get_unsigned();
+  } else if (json.get_type() == json_type::uinteger) {
+    value = (uint64_t)json.get_uinteger();
   } else {
     throw json_error{"integer expected"};
   }
@@ -532,8 +532,8 @@ inline void from_json(const json_value& json, uint32_t& value) {
 inline void from_json(const json_value& json, double& value) {
   if (json.get_type() == json_type::integer) {
     value = (double)json.get_integer();
-  } else if (json.get_type() == json_type::unsigned_) {
-    value = (double)json.get_unsigned();
+  } else if (json.get_type() == json_type::uinteger) {
+    value = (double)json.get_uinteger();
   } else if (json.get_type() == json_type::number) {
     value = (double)json.get_number();
   } else {
