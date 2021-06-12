@@ -439,8 +439,6 @@ struct cli_schema {
   vector<string>     enum_           = {};
   size_t             min_items       = 0;
   size_t             max_items       = std::numeric_limits<size_t>::max();
-  bool               cli_required    = false;
-  bool               cli_positional  = false;
   vector<string>     required        = {};
   vector<string>     cli_positionals = {};
   string             cli_config      = "";

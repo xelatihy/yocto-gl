@@ -597,12 +597,9 @@ static void cli_to_json(
 
 template <typename T>
 static void cli_to_schema(cli_schema& schema, const T& value,
-    const vector<string>& choices, const string& name, const string& usage,
-    bool req, bool positional) {
-  schema.title          = name;
-  schema.description    = usage;
-  schema.cli_required   = req;
-  schema.cli_positional = positional;
+    const vector<string>& choices, const string& name, const string& usage) {
+  schema.title       = name;
+  schema.description = usage;
   cli_to_json(schema.default_, value, choices);
   if constexpr (std::is_same_v<T, int32_t> || std::is_same_v<T, int64_t>) {
     if (!choices.empty()) {
@@ -644,14 +641,12 @@ static void cli_to_schema(cli_schema& schema, const T& value,
     schema.type      = cli_type::array;
     schema.min_items = value.size();
     schema.max_items = value.size();
-    cli_to_schema(
-        schema.items.emplace_back(), T{}, choices, "item", "", false, false);
+    cli_to_schema(schema.items.emplace_back(), T{}, choices, "item", "");
   } else if constexpr (cli_is_vector_v<T>) {
     schema.type      = cli_type::array;
     schema.min_items = 0;
     schema.max_items = std::numeric_limits<size_t>::max();
-    cli_to_schema(
-        schema.items.emplace_back(), T{}, choices, "item", "", false, false);
+    cli_to_schema(schema.items.emplace_back(), T{}, choices, "item", "");
   }
 }
 
@@ -728,8 +723,7 @@ static void add_option_impl(const cli_command& cli, const string& name,
   auto& schema    = get_schema(cli);
   auto& variables = get_variables(cli);
   cli_to_json(defaults.object[name], value, choices);
-  cli_to_schema(
-      schema.properties[name], value, choices, name, usage, req, false);
+  cli_to_schema(schema.properties[name], value, choices, name, usage);
   if (req) schema.required.push_back(name);
   if (positional) schema.cli_positionals.push_back(name);
   variables.variables[name] = {&value, cli_from_json_<T>, choices};
@@ -744,8 +738,7 @@ static void add_option_impl(const cli_command& cli, const string& name,
   auto& schema    = get_schema(cli);
   auto& variables = get_variables(cli);
   cli_to_json(defaults.object[name], value, choices);
-  cli_to_schema(
-      schema.properties[name], value, choices, name, usage, req, false);
+  cli_to_schema(schema.properties[name], value, choices, name, usage);
   if (req) schema.required.push_back(name);
   if (positional) schema.cli_positionals.push_back(name);
   variables.variables[name] = {&value, cli_from_json_<array<T, N>>, choices};
@@ -760,8 +753,7 @@ static void add_option_impl(const cli_command& cli, const string& name,
   auto& schema    = get_schema(cli);
   auto& variables = get_variables(cli);
   cli_to_json(defaults.object[name], value, choices);
-  cli_to_schema(
-      schema.properties[name], value, choices, name, usage, req, false);
+  cli_to_schema(schema.properties[name], value, choices, name, usage);
   if (req) schema.required.push_back(name);
   if (positional) schema.cli_positionals.push_back(name);
   variables.variables[name] = {&value, cli_from_json_<vector<T>>, choices};
