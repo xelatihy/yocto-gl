@@ -39,6 +39,7 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
+#include <array>
 #include <string>
 #include <type_traits>
 #include <vector>
@@ -51,6 +52,7 @@
 namespace yocto {
 
 // using directives
+using std::array;
 using std::string;
 using std::vector;
 using namespace std::string_literals;
@@ -329,6 +331,7 @@ struct cli_value {
     this->type = type;
   }
 
+  void set_null() { _set(cli_type::none, integer, (int64_t)0); }
   void set_integer(int64_t value) { _set(cli_type::integer, integer, value); }
   void set_unsigned(uint64_t value) {
     _set(cli_type::unsigned_, unsigned_, value);
@@ -342,6 +345,7 @@ struct cli_value {
     _set(cli_type::string, string_, value);
   }
   void set_array() { _set(cli_type::array, array, {}); }
+  void set_array(size_t size) { _set(cli_type::array, array, cli_array(size)); }
   void set_array(const cli_array& value) {
     _set(cli_type::array, array, value);
   }
@@ -370,6 +374,27 @@ struct cli_value {
   const cli_array&  get_array() const { return _get(cli_type::array, array); }
   const cli_object& get_object() const {
     return _get(cli_type::object, object);
+  }
+
+  void set(std::nullptr_t) { set_null(); }
+  void set(int32_t value) { set_integer(value); }
+  void set(int64_t value) { set_integer(value); }
+  void set(uint32_t value) { set_unsigned(value); }
+  void set(uint64_t value) { set_unsigned(value); }
+  void set(bool value) { set_boolean(value); }
+  void set(const string& value) { set_string(value); }
+  void set(const char* value) { set_string(value); }
+  template <typename T, size_t N>
+  void set(const std::array<T, N>& value) {
+    set_array(value.size());
+    for (auto idx = (size_t)0; idx < value.size(); idx++)
+      get_array().at(idx).set(value.at(idx));
+  }
+  template <typename T>
+  void set(const vector<T>& value) {
+    set_array(value.size());
+    for (auto idx = (size_t)0; idx < value.size(); idx++)
+      get_array().at(idx).set(value.at(idx));
   }
 
  private:

@@ -314,8 +314,23 @@ inline void to_json(json_value& json, const json_array& value) {
 inline void to_json(json_value& json, const json_object& value) {
   json.set_object(value);
 }
+template <typename T, size_t N>
+inline void to_json(json_value& json, const array<T, N>& value) {
+  json.set_array(value.size());
+  for (auto idx = 0; idx < value.size(); idx++)
+    to_json(json.get_array().at(idx), value.at(idx));
+}
+template <typename T>
+inline void to_json(json_value& json, const vector<T>& value) {
+  json.set_array(value.size());
+  for (auto idx = 0; idx < value.size(); idx++)
+    to_json(json.get_array().at(idx), value.at(idx));
+}
 
-inline void        to_json_array(json_value& json) { json.set_array(); }
+inline void to_json_array(json_value& json) { json.set_array(); }
+inline void to_json_array(json_value& json, size_t size) {
+  json.set_array(size);
+}
 inline json_value& to_json_append(json_value& json) {
   if (json.type != json_type::array) json.set_array();
   return json.get_array().emplace_back();
@@ -383,6 +398,27 @@ inline void from_json(const json_value& json, string& value) {
     value = json.get_string();
   } else {
     throw json_error{"string expected"};
+  }
+}
+template <typename T, size_t N>
+inline void from_json(const json_value& json, array<T, N>& value) {
+  if (json.get_type() == json_type::array) {
+    if (json.get_array().size() != N)
+      throw json_error{"array of size " + std::to_string(N) + " expected"};
+    for (auto idx = (size_t)0; idx < value.size(); idx++)
+      from_json(json.get_array().at(idx), value.at(idx));
+  } else {
+    throw json_error{"array expected"};
+  }
+}
+template <typename T>
+inline void from_json(const json_value& json, vector<T>& value) {
+  if (json.get_type() == json_type::array) {
+    value.resize(json.get_array().size());
+    for (auto idx = (size_t)0; idx < value.size(); idx++)
+      from_json(json.get_array().at(idx), value.at(idx));
+  } else {
+    throw json_error{"array expected"};
   }
 }
 
@@ -507,51 +543,56 @@ inline void to_schema(json_schema& schema, const vector<T>& value,
   to_schema(schema.items.emplace_back(), T{}, "item", "");
 }
 
-static void cli_to_value(
-    cli_value& cvalue, int32_t value, const vector<string>& choices) {
-  if (choices.empty()) {
-    to_json(cvalue, value);
-  } else {
-    to_json(cvalue, choices.at(value));
-  }
-}
-static void cli_to_value(
-    cli_value& cvalue, float value, const vector<string>& choices) {
-  if (choices.empty()) {
-    to_json(cvalue, value);
-  } else {
-    throw std::invalid_argument{"invalid argument"};
-  }
-}
-static void cli_to_value(
-    cli_value& cvalue, bool value, const vector<string>& choices) {
-  if (choices.empty()) {
-    to_json(cvalue, value);
-  } else {
-    to_json(cvalue, choices.at(value ? 1 : 0));
-  }
-}
-static void cli_to_value(
-    cli_value& cvalue, const string& value, const vector<string>& choices) {
-  if (choices.empty()) {
-    to_json(cvalue, value);
-  } else {
-    if (std::find(choices.begin(), choices.end(), value) == choices.end())
-      throw std::out_of_range{"bad value"};
-    to_json(cvalue, value);
-  }
-}
-template <typename T, size_t N>
-static void cli_to_value(cli_value& cvalue, const array<T, N>& value,
-    const vector<string>& choices) {
-  to_json_array(cvalue);
-  for (auto& item : value) cli_to_value(to_json_append(cvalue), item, choices);
-}
 template <typename T>
-static void cli_to_value(
-    cli_value& cvalue, const vector<T>& value, const vector<string>& choices) {
-  to_json_array(cvalue);
-  for (auto& item : value) cli_to_value(to_json_append(cvalue), item, choices);
+struct cli_is_array {
+  static const bool value = false;
+};
+template <typename T, size_t N>
+struct cli_is_array<array<T, N>> {
+  static const bool value = true;
+};
+template <typename T>
+constexpr bool cli_is_array_v = cli_is_array<T>::value;
+
+template <typename T>
+struct cli_is_vector {
+  static const bool value = false;
+};
+template <typename T, typename A>
+struct cli_is_vector<vector<T, A>> {
+  static const bool value = true;
+};
+template <typename T>
+constexpr bool cli_is_vector_v = cli_is_vector<T>::value;
+
+template <typename T>
+static void cli_to_json(
+    cli_value& json, const T& value, const vector<string>& choices) {
+  if (choices.empty()) {
+    to_json(json, value);
+  } else {
+    if constexpr (cli_is_array_v<T>) {
+      to_json_array(json, value.size());
+      for (auto idx = (size_t)0; idx < value.size(); idx++) {
+        cli_to_json(json_at(json, idx), value.at(idx), choices);
+      }
+    } else if constexpr (cli_is_vector_v<T>) {
+      to_json_array(json, value.size());
+      for (auto idx = (size_t)0; idx < value.size(); idx++) {
+        cli_to_json(json_at(json, idx), value.at(idx), choices);
+      }
+    } else {
+      if constexpr (std::is_integral_v<T> || std::is_floating_point_v<T>) {
+        to_json(json, choices.at((uint64_t)value));
+      } else if constexpr (std::is_same_v<T, string>) {
+        if (std::find(choices.begin(), choices.end(), value) == choices.end())
+          throw std::out_of_range{"bad value"};
+        to_json(json, value);
+      } else {
+        throw std::invalid_argument{"not supported"};
+      }
+    }
+  }
 }
 
 static void cli_to_schema(cli_schema& schema, const int& value,
@@ -561,7 +602,7 @@ static void cli_to_schema(cli_schema& schema, const int& value,
   schema.description    = usage;
   schema.cli_required   = req;
   schema.cli_positional = positional;
-  cli_to_value(schema.default_, value, choices);
+  cli_to_json(schema.default_, value, choices);
   if (!choices.empty()) {
     schema.type  = cli_type::string;
     schema.enum_ = choices;
@@ -577,7 +618,7 @@ static void cli_to_schema(cli_schema& schema, const float& value,
   schema.description    = usage;
   schema.cli_required   = req;
   schema.cli_positional = positional;
-  cli_to_value(schema.default_, value, choices);
+  cli_to_json(schema.default_, value, choices);
   if (!choices.empty()) {
     schema.type  = cli_type::string;
     schema.enum_ = choices;
@@ -593,7 +634,7 @@ static void cli_to_schema(cli_schema& schema, const bool& value,
   schema.description    = usage;
   schema.cli_required   = req;
   schema.cli_positional = positional;
-  cli_to_value(schema.default_, value, choices);
+  cli_to_json(schema.default_, value, choices);
   if (!choices.empty()) {
     schema.type  = cli_type::string;
     schema.enum_ = choices;
@@ -609,7 +650,7 @@ static void cli_to_schema(cli_schema& schema, const string& value,
   schema.description    = usage;
   schema.cli_required   = req;
   schema.cli_positional = positional;
-  cli_to_value(schema.default_, value, choices);
+  cli_to_json(schema.default_, value, choices);
   if (!choices.empty()) {
     schema.type  = cli_type::string;
     schema.enum_ = choices;
@@ -626,7 +667,7 @@ static void cli_to_schema(cli_schema& schema, const array<T, N>& value,
   schema.description    = usage;
   schema.cli_required   = req;
   schema.cli_positional = positional;
-  cli_to_value(schema.default_, value, choices);
+  cli_to_json(schema.default_, value, choices);
   schema.type      = cli_type::array;
   schema.min_items = value.size();
   schema.max_items = value.size();
@@ -639,82 +680,51 @@ static void cli_to_schema(cli_schema& schema, const vector<T>& value,
   schema.description    = usage;
   schema.cli_required   = req;
   schema.cli_positional = positional;
-  cli_to_value(schema.default_, value, choices);
+  cli_to_json(schema.default_, value, choices);
   schema.type      = cli_type::array;
   schema.min_items = 0;
   schema.max_items = std::numeric_limits<size_t>::max();
 }
 
-static void cli_from_value(
-    const cli_value& json, int32_t& value, const vector<string>& choices) {
-  if (choices.empty()) {
-    return from_json(json, value);
-  } else {
-    auto values = from_json<string>(json);
-    if (std::find(choices.begin(), choices.end(), values) == choices.end())
-      throw json_error{"invalid label"};
-    value = (int32_t)(std::find(choices.begin(), choices.end(), values) -
-                      choices.begin());
-  }
-}
-static void cli_from_value(
-    const cli_value& json, float& value, const vector<string>& choices) {
-  if (choices.empty()) {
-    return from_json(json, value);
-  } else {
-    throw std::invalid_argument{"not supported"};
-  }
-}
-static void cli_from_value(
-    const cli_value& json, bool& value, const vector<string>& choices) {
-  if (choices.empty()) {
-    return from_json(json, value);
-  } else {
-    auto values = from_json<string>(json);
-    if (std::find(choices.begin(), choices.end(), values) == choices.end())
-      throw json_error{"invalid label"};
-    value = choices[0] == values ? false : true;
-  }
-}
-static void cli_from_value(
-    const cli_value& json, string& value, const vector<string>& choices) {
-  if (choices.empty()) {
-    return from_json(json, value);
-  } else {
-    auto values = from_json<string>(json);
-    if (std::find(choices.begin(), choices.end(), values) == choices.end())
-      throw json_error{"invalid label"};
-    value = values;
-  }
-}
-template <typename T, size_t N>
-static bool cli_from_value(
-    const cli_value& json, array<T, N>& value, const vector<string>& choices) {
-  auto error = string{};
-  auto size  = json_size(json);
-  if (size != N) throw json_error{"bad array size"};
-  for (auto idx = (size_t)0; idx < N; idx++) {
-    cli_from_value(json_at(json, idx), value[idx], choices);
-  }
-  return true;
-}
 template <typename T>
-static bool cli_from_value(
-    const cli_value& json, vector<T>& value, const vector<string>& choices) {
-  auto error = string{};
-  auto size  = json_size(json);
-  value.resize(size);
-  for (auto idx = (size_t)0; idx < value.size(); idx++) {
-    cli_from_value(json_at(json, idx), value[idx], choices);
+static void cli_from_json(
+    const cli_value& json, T& value, const vector<string>& choices) {
+  if (choices.empty()) {
+    from_json(json, value);
+  } else {
+    if constexpr (cli_is_array_v<T>) {
+      auto size = json_size(json);
+      if (size != value.size()) throw json_error{"bad array size"};
+      for (auto idx = (size_t)0; idx < value.size(); idx++) {
+        cli_from_json(json_at(json, idx), value.at(idx), choices);
+      }
+    } else if constexpr (cli_is_vector_v<T>) {
+      auto size = json_size(json);
+      value.resize(size);
+      for (auto idx = (size_t)0; idx < value.size(); idx++) {
+        cli_from_json(json_at(json, idx), value.at(idx), choices);
+      }
+    } else {
+      auto values = from_json<string>(json);
+      if (std::find(choices.begin(), choices.end(), values) == choices.end())
+        throw json_error{"invalid label"};
+      if constexpr (std::is_integral_v<T> || std::is_floating_point_v<T>) {
+        value = (T)(std::find(choices.begin(), choices.end(), values) -
+                    choices.begin());
+      } else if constexpr (std::is_same_v<T, string>) {
+        value = values;
+      } else {
+        throw std::invalid_argument{"not supported"};
+      }
+    }
   }
-  return true;
 }
 
 template <typename T>
-static bool cli_from_value_(
+static bool cli_from_json_(
     const cli_value& cvalue, void* value, const vector<string>& choices) {
   try {
-    cli_from_value(cvalue, *(T*)value, choices);
+    cli_from_json(cvalue, *(T*)value, choices);
     return true;
   } catch (...) {
     return false;
@@ -741,24 +751,6 @@ static cli_variable& get_variables(const cli_command& cli) {
 }
 
 template <typename T>
-struct cli_is_array {
-  static const bool value = false;
-};
-template <typename T, size_t N>
-struct cli_is_array<array<T, N>> {
-  static const bool value = true;
-};
-
-template <typename T>
-struct cli_is_vector {
-  static const bool value = false;
-};
-template <typename T, typename A>
-struct cli_is_vector<vector<T, A>> {
-  static const bool value = true;
-};
-
-template <typename T>
 static void add_option_impl(const cli_command& cli, const string& name,
     T& value, const string& usage, const vector<T>& minmax,
     const vector<string>& choices, const string& alt, bool req,
@@ -766,12 +758,12 @@ static void add_option_impl(const cli_command& cli, const string& name,
   auto& defaults  = get_defaults(cli);
   auto& schema    = get_schema(cli);
   auto& variables = get_variables(cli);
-  cli_to_value(defaults.object[name], value, choices);
+  cli_to_json(defaults.object[name], value, choices);
   cli_to_schema(
       schema.properties[name], value, choices, name, usage, req, false);
   if (req) schema.required.push_back(name);
   if (positional) schema.cli_positionals.push_back(name);
-  variables.variables[name] = {&value, cli_from_value_<T>, choices};
+  variables.variables[name] = {&value, cli_from_json_<T>, choices};
 }
 
 template <typename T, size_t N>
@@ -782,12 +774,12 @@ static void add_option_impl(const cli_command& cli, const string& name,
   auto& defaults  = get_defaults(cli);
   auto& schema    = get_schema(cli);
   auto& variables = get_variables(cli);
-  cli_to_value(defaults.object[name], value, choices);
+  cli_to_json(defaults.object[name], value, choices);
   cli_to_schema(
       schema.properties[name], value, choices, name, usage, req, false);
   if (req) schema.required.push_back(name);
   if (positional) schema.cli_positionals.push_back(name);
-  variables.variables[name] = {&value, cli_from_value_<array<T, N>>, choices};
+  variables.variables[name] = {&value, cli_from_json_<array<T, N>>, choices};
 }
 
 template <typename T>
@@ -798,12 +790,12 @@ static void add_option_impl(const cli_command& cli, const string& name,
   auto& defaults  = get_defaults(cli);
   auto& schema    = get_schema(cli);
   auto& variables = get_variables(cli);
-  cli_to_value(defaults.object[name], value, choices);
+  cli_to_json(defaults.object[name], value, choices);
   cli_to_schema(
       schema.properties[name], value, choices, name, usage, req, false);
   if (req) schema.required.push_back(name);
   if (positional) schema.cli_positionals.push_back(name);
-  variables.variables[name] = {&value, cli_from_value_<vector<T>>, choices};
+  variables.variables[name] = {&value, cli_from_json_<vector<T>>, choices};
 }
 
 // Add an optional argument. Supports strings, numbers, and boolean flags.
@@ -1476,18 +1468,18 @@ cli_command add_command(
 
 void set_command_var(const cli_command& cli, string& value) {
   auto& variables                = get_variables(cli);
-  variables.variables["command"] = {&value, cli_from_value_<string>, {}};
+  variables.variables["command"] = {&value, cli_from_json_<string>, {}};
 }
 
 void set_help_var(const cli_command& cli, bool& value) {
   auto& variables             = get_variables(cli);
-  variables.variables["help"] = {&value, cli_from_value_<bool>, {}};
+  variables.variables["help"] = {&value, cli_from_json_<bool>, {}};
 }
 
 void add_command_name(const cli_command& cli, const string& name, string& value,
     const string& usage) {
   auto& variables                = get_variables(cli);
-  variables.variables["command"] = {&value, cli_from_value_<string>, {}};
+  variables.variables["command"] = {&value, cli_from_json_<string>, {}};
 }
 
 static bool parse_cli(cli_state& cli, const vector<string>& args,
