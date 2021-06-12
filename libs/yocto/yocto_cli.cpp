@@ -595,85 +595,8 @@ static void cli_to_json(
   }
 }
 
-static void cli_to_schema(cli_schema& schema, const int& value,
-    const vector<string>& choices, const string& name, const string& usage,
-    bool req, bool positional) {
-  schema.title          = name;
-  schema.description    = usage;
-  schema.cli_required   = req;
-  schema.cli_positional = positional;
-  cli_to_json(schema.default_, value, choices);
-  if (!choices.empty()) {
-    schema.type  = cli_type::string;
-    schema.enum_ = choices;
-  } else {
-    schema.type = cli_type::integer;
-  }
-}
-
-static void cli_to_schema(cli_schema& schema, const float& value,
-    const vector<string>& choices, const string& name, const string& usage,
-    bool req, bool positional) {
-  schema.title          = name;
-  schema.description    = usage;
-  schema.cli_required   = req;
-  schema.cli_positional = positional;
-  cli_to_json(schema.default_, value, choices);
-  if (!choices.empty()) {
-    schema.type  = cli_type::string;
-    schema.enum_ = choices;
-  } else {
-    schema.type = cli_type::number;
-  }
-}
-
-static void cli_to_schema(cli_schema& schema, const bool& value,
-    const vector<string>& choices, const string& name, const string& usage,
-    bool req, bool positional) {
-  schema.title          = name;
-  schema.description    = usage;
-  schema.cli_required   = req;
-  schema.cli_positional = positional;
-  cli_to_json(schema.default_, value, choices);
-  if (!choices.empty()) {
-    schema.type  = cli_type::string;
-    schema.enum_ = choices;
-  } else {
-    schema.type = cli_type::boolean;
-  }
-}
-
-static void cli_to_schema(cli_schema& schema, const string& value,
-    const vector<string>& choices, const string& name, const string& usage,
-    bool req, bool positional) {
-  schema.title          = name;
-  schema.description    = usage;
-  schema.cli_required   = req;
-  schema.cli_positional = positional;
-  cli_to_json(schema.default_, value, choices);
-  if (!choices.empty()) {
-    schema.type  = cli_type::string;
-    schema.enum_ = choices;
-  } else {
-    schema.type = cli_type::string;
-  }
-}
-
-template <typename T, size_t N>
-static void cli_to_schema(cli_schema& schema, const array<T, N>& value,
-    const vector<string>& choices, const string& name, const string& usage,
-    bool req, bool positional) {
-  schema.title          = name;
-  schema.description    = usage;
-  schema.cli_required   = req;
-  schema.cli_positional = positional;
-  cli_to_json(schema.default_, value, choices);
-  schema.type      = cli_type::array;
-  schema.min_items = value.size();
-  schema.max_items = value.size();
-}
 template <typename T>
-static void cli_to_schema(cli_schema& schema, const vector<T>& value,
+static void cli_to_schema(cli_schema& schema, const T& value,
     const vector<string>& choices, const string& name, const string& usage,
     bool req, bool positional) {
   schema.title          = name;
@@ -681,9 +604,55 @@ static void cli_to_schema(cli_schema& schema, const vector<T>& value,
   schema.cli_required   = req;
   schema.cli_positional = positional;
   cli_to_json(schema.default_, value, choices);
-  schema.type      = cli_type::array;
-  schema.min_items = 0;
-  schema.max_items = std::numeric_limits<size_t>::max();
+  if constexpr (std::is_same_v<T, int32_t> || std::is_same_v<T, int64_t>) {
+    if (!choices.empty()) {
+      schema.type  = cli_type::string;
+      schema.enum_ = choices;
+    } else {
+      schema.type = cli_type::integer;
+    }
+  } else if constexpr (std::is_same_v<T, uint32_t> ||
+                       std::is_same_v<T, uint64_t>) {
+    if (!choices.empty()) {
+      schema.type  = cli_type::string;
+      schema.enum_ = choices;
+    } else {
+      schema.type = cli_type::unsigned_;
+    }
+  } else if constexpr (std::is_same_v<T, float> || std::is_same_v<T, double>) {
+    if (!choices.empty()) {
+      schema.type  = cli_type::string;
+      schema.enum_ = choices;
+    } else {
+      schema.type = cli_type::number;
+    }
+  } else if constexpr (std::is_same_v<T, bool>) {
+    if (!choices.empty()) {
+      schema.type  = cli_type::string;
+      schema.enum_ = choices;
+    } else {
+      schema.type = cli_type::boolean;
+    }
+  } else if constexpr (std::is_same_v<T, string>) {
+    if (!choices.empty()) {
+      schema.type  = cli_type::string;
+      schema.enum_ = choices;
+    } else {
+      schema.type = cli_type::string;
+    }
+  } else if constexpr (cli_is_array_v<T>) {
+    schema.type      = cli_type::array;
+    schema.min_items = value.size();
+    schema.max_items = value.size();
+    cli_to_schema(
+        schema.items.emplace_back(), T{}, choices, "item", "", false, false);
+  } else if constexpr (cli_is_vector_v<T>) {
+    schema.type      = cli_type::array;
+    schema.min_items = 0;
+    schema.max_items = std::numeric_limits<size_t>::max();
+    cli_to_schema(
+        schema.items.emplace_back(), T{}, choices, "item", "", false, false);
+  }
 }
 
 template <typename T>
