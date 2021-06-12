@@ -992,17 +992,20 @@ static bool validate_json(const json_value& value, const json_value& schema,
       return cli_error("bad value for " + name);
     } break;
     case json_type::integer: {
-      if (schema.at("type").get<string>() != "number")
+      if (schema.at("type").get<string>() != "number" &&
+          schema.at("type").get<string>() != "integer")
         return cli_error("bad value for " + name);
       return true;
     } break;
     case json_type::uinteger: {
-      if (schema.at("type").get<string>() != "number")
+      if (schema.at("type").get<string>() != "number" &&
+          schema.at("type").get<string>() != "integer")
         return cli_error("bad value for " + name);
       return true;
     } break;
     case json_type::number: {
-      if (schema.at("type").get<string>() != "number")
+      if (schema.at("type").get<string>() != "number" &&
+          schema.at("type").get<string>() != "integer")
         return cli_error("bad value for " + name);
       return true;
     } break;
