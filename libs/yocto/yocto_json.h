@@ -118,7 +118,7 @@ struct json_error : std::logic_error {
 
 // Json type
 enum struct json_type {
-  none,
+  null,
   integer,
   uinteger,
   number,
@@ -135,12 +135,12 @@ using json_object = ordered_map<string, json_value>;
 
 // Json value
 struct json_value {
-  json_value() : _type{json_type::none} {}
+  json_value() : _type{json_type::null} {}
   json_value(json_type type) : _type{type} {}
   json_value(const json_value& other) {
     _type = other._type;
     switch (_type) {
-      case json_type::none: break;
+      case json_type::null: break;
       case json_type::integer: _integer = other._integer; break;
       case json_type::uinteger: uinteger = other.uinteger; break;
       case json_type::number: _number = other._number; break;
@@ -162,7 +162,7 @@ struct json_value {
     _type = type;
   }
 
-  void set_null() { _set(json_type::none, _integer, (int64_t)0); }
+  void set_null() { _set(json_type::null, _integer, (int64_t)0); }
   void set_integer(int64_t value) { _set(json_type::integer, _integer, value); }
   void set_uinteger(uint64_t value) {
     _set(json_type::uinteger, uinteger, value);
@@ -209,7 +209,7 @@ struct json_value {
     return _get(json_type::object, _object);
   }
 
-  bool is_null() const { return _type == json_type::none; }
+  bool is_null() const { return _type == json_type::null; }
   bool is_integer() const {
     return _type == json_type::integer || _type == json_type::uinteger;
   }
@@ -365,7 +365,7 @@ struct json_value {
   }
 
  private:
-  json_type   _type    = json_type::none;
+  json_type   _type    = json_type::null;
   int64_t     _integer = 0;
   uint64_t    uinteger = 0;
   double      _number  = 0;
@@ -377,7 +377,7 @@ struct json_value {
   void _swap(json_value& other) {
     std::swap(_type, other._type);
     switch (_type) {
-      case json_type::none: break;
+      case json_type::null: break;
       case json_type::integer: std::swap(_integer, other._integer); break;
       case json_type::uinteger: std::swap(uinteger, other.uinteger); break;
       case json_type::number: std::swap(_number, other._number); break;

@@ -553,7 +553,7 @@ static string schema_to_usage(
   auto type_to_string = [](const json_schema& schema) -> string {
     auto type = schema.type;
     switch (type) {
-      case json_type::none: return "";
+      case json_type::null: return "";
       case json_type::integer: return "<integer>";
       case json_type::uinteger: return "<integer>";
       case json_type::number: return "<number>";
@@ -566,7 +566,7 @@ static string schema_to_usage(
   auto default_to_string = [](const json_schema& schema) -> string {
     auto& value = schema.default_;
     switch (value.get_type()) {
-      case json_type::none: return "";
+      case json_type::null: return "";
       case json_type::integer:
         return "[" + std::to_string(value.get_integer()) + "]";
       case json_type::uinteger:
@@ -608,7 +608,7 @@ static string schema_to_usage(
       }
       while (line.size() < 32) line += " ";
       line += property.description;
-      if (property.default_.get_type() != json_type::none) {
+      if (property.default_.get_type() != json_type::null) {
         line += " " + default_to_string(property);
       }
       line += "\n";
@@ -821,7 +821,7 @@ static bool validate_value(const json_value& value, const json_schema& schema,
   };
 
   switch (value.get_type()) {
-    case json_type::none: {
+    case json_type::null: {
       return cli_error("bad value for " + name);
     } break;
     case json_type::integer: {
