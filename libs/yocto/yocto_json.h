@@ -135,7 +135,6 @@ using json_object = ordered_map<string, json_value>;
 
 // Json value
 struct json_value {
-  json_type   type      = json_type::none;
   int64_t     integer   = 0;
   uint64_t    unsigned_ = 0;
   double      number    = 0;
@@ -315,6 +314,8 @@ struct json_value {
   }
 
  private:
+  json_type type = json_type::none;
+
   void _swap(json_value& other) {
     std::swap(type, other.type);
     switch (type) {
@@ -489,12 +490,12 @@ inline void to_json_array(json_value& json, size_t size) {
   json.set_array(size);
 }
 inline json_value& to_json_append(json_value& json) {
-  if (json.type != json_type::array) json.set_array();
+  if (json.get_type() != json_type::array) json.set_array();
   return json.get_array().emplace_back();
 }
 inline void        to_json_object(json_value& json) { json.set_object(); }
 inline json_value& to_json_insert(json_value& json, const string& key) {
-  if (json.type != json_type::object) json.set_object();
+  if (json.get_type() != json_type::object) json.set_object();
   return json.get_object()[key];
 }
 
@@ -588,14 +589,14 @@ namespace yocto {
 
 inline void to_schema(json_schema& schema, int64_t value, const string& title,
     const string& description) {
-  schema.type        = to_json(value).type;
+  schema.type        = to_json(value).get_type();
   schema.title       = title;
   schema.description = description;
   schema.default_    = to_json(value);
 }
 inline void to_schema(json_schema& schema, int64_t value, const string& title,
     const string& description, int64_t min, int64_t max) {
-  schema.type        = to_json(value).type;
+  schema.type        = to_json(value).get_type();
   schema.title       = title;
   schema.description = description;
   schema.default_    = to_json(value);
@@ -613,14 +614,14 @@ inline void to_schema(json_schema& schema, int32_t value, const string& title,
 }
 inline void to_schema(json_schema& schema, uint64_t value, const string& title,
     const string& description) {
-  schema.type        = to_json(value).type;
+  schema.type        = to_json(value).get_type();
   schema.title       = title;
   schema.description = description;
   schema.default_    = to_json(value);
 }
 inline void to_schema(json_schema& schema, uint64_t value, const string& title,
     const string& description, uint64_t min, uint64_t max) {
-  schema.type        = to_json(value).type;
+  schema.type        = to_json(value).get_type();
   schema.title       = title;
   schema.description = description;
   schema.default_    = to_json(value);
@@ -638,14 +639,14 @@ inline void to_schema(json_schema& schema, uint32_t value, const string& title,
 }
 inline void to_schema(json_schema& schema, double value, const string& title,
     const string& description) {
-  schema.type        = to_json(value).type;
+  schema.type        = to_json(value).get_type();
   schema.title       = title;
   schema.description = description;
   schema.default_    = to_json(value);
 }
 inline void to_schema(json_schema& schema, double value, const string& title,
     const string& description, double min, double max) {
-  schema.type        = to_json(value).type;
+  schema.type        = to_json(value).get_type();
   schema.title       = title;
   schema.description = description;
   schema.default_    = to_json(value);
@@ -663,14 +664,14 @@ inline void to_schema(json_schema& schema, float value, const string& title,
 }
 inline void to_schema(json_schema& schema, bool value, const string& title,
     const string& description) {
-  schema.type        = to_json(value).type;
+  schema.type        = to_json(value).get_type();
   schema.title       = title;
   schema.description = description;
   schema.default_    = to_json(value);
 }
 inline void to_schema(json_schema& schema, const string& value,
     const string& title, const string& description) {
-  schema.type        = to_json(value).type;
+  schema.type        = to_json(value).get_type();
   schema.title       = title;
   schema.description = description;
   schema.default_    = to_json(value);
@@ -678,7 +679,7 @@ inline void to_schema(json_schema& schema, const string& value,
 inline void to_schema(json_schema& schema, const string& value,
     const string& title, const string& description,
     const vector<string>& enum_) {
-  schema.type        = to_json(value).type;
+  schema.type        = to_json(value).get_type();
   schema.title       = title;
   schema.description = description;
   schema.default_    = to_json(value);
@@ -687,7 +688,7 @@ inline void to_schema(json_schema& schema, const string& value,
 template <typename T, size_t N>
 inline void to_schema(json_schema& schema, const array<T, N>& value,
     const string& title, const string& description) {
-  schema.type        = to_json(value).type;
+  schema.type        = to_json(value).get_type();
   schema.title       = title;
   schema.description = description;
   schema.default_    = to_json(value);
