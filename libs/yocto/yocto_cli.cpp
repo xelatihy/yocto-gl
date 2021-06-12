@@ -819,7 +819,7 @@ static string schema_to_usage(
   return message;
 }
 
-static bool arg_to_value(json_value& value, const json_value& schema,
+static bool arg_to_json(json_value& value, const json_value& schema,
     const string& name, bool positional, const vector<string>& args,
     size_t& idx, string& error) {
   auto cli_error = [&error](const string& message) {
@@ -862,7 +862,7 @@ static bool arg_to_value(json_value& value, const json_value& schema,
     auto end = std::min(
         idx + schema.at("max_items").get<size_t>(), args.size());
     while (idx < end) {
-      if (!arg_to_value(value.get_array().emplace_back(), schema.at("items"),
+      if (!arg_to_json(value.get_array().emplace_back(), schema.at("items"),
               name, positional, args, idx, error))
         return false;
     }
@@ -872,7 +872,7 @@ static bool arg_to_value(json_value& value, const json_value& schema,
   return true;
 }
 
-static bool args_to_value(json_value& value, const json_value& schema,
+static bool args_to_json(json_value& value, const json_value& schema,
     const vector<string>& args, size_t idx, string& error) {
   auto cli_error = [&error](const string& message) {
     error = message;
@@ -928,8 +928,8 @@ static bool args_to_value(json_value& value, const json_value& schema,
     if (!commands.empty() && is_positional) {
       if (std::find(commands.begin(), commands.end(), arg) != commands.end()) {
         value.insert("command").set(arg);
-        if (!args_to_value(value.insert(arg),
-                schema.at("properties").at(arg), args, idx, error))
+        if (!args_to_json(value.insert(arg), schema.at("properties").at(arg),
+                args, idx, error))
           return false;
         break;
       } else {
@@ -941,7 +941,7 @@ static bool args_to_value(json_value& value, const json_value& schema,
       auto  name    = positionals[positional++];
       auto& oschema = schema.at("properties").at(name);
       idx--;
-      if (!arg_to_value(value.insert(name), oschema, arg, is_positional, args,
+      if (!arg_to_json(value.insert(name), oschema, arg, is_positional, args,
               idx, error))
         return false;
       if (oschema.contains("cliconfig") &&
@@ -960,7 +960,7 @@ static bool args_to_value(json_value& value, const json_value& schema,
       }
       if (name == "") return cli_error("unknown option " + arg);
       auto& oschema = schema.at("properties").at(name);
-      if (!arg_to_value(value.get_object()[name], oschema, name, is_positional,
+      if (!arg_to_json(value.get_object()[name], oschema, name, is_positional,
               args, idx, error))
         return false;
       if (!oschema.at("cliconfig").empty() &&
@@ -976,7 +976,7 @@ static bool args_to_value(json_value& value, const json_value& schema,
   return true;
 }
 
-static bool validate_value(const json_value& value, const json_value& schema,
+static bool validate_json(const json_value& value, const json_value& schema,
     const string& name, bool check_required, string& error) {
   auto cli_error = [&error](const string& message) {
     error = message;
@@ -1024,7 +1024,7 @@ static bool validate_value(const json_value& value, const json_value& schema,
       if (schema.at("max_items").get<size_t>() < value.size())
         return cli_error("bad value for " + name);
       for (auto& item : value.get_array())
-        if (!validate_value(item, schema.at("items"), name, false, error))
+        if (!validate_json(item, schema.at("items"), name, false, error))
           return false;
       return true;
     } break;
@@ -1048,7 +1048,7 @@ static bool validate_value(const json_value& value, const json_value& schema,
                                   value.at("command").get_type() ==
                                       json_type::string &&
                                   value.at("command").get_string() == key;
-          if (!validate_value(property, schema.at("properties").at(key), key,
+          if (!validate_json(property, schema.at("properties").at(key), key,
                   check_required && selected_command, error))
             return false;
         }
@@ -1154,8 +1154,8 @@ static bool config_to_value(json_value& value, string& error) {
   }
 
   auto cvalue = json_value{};
-  if(try_config) {
-    if(!load_json(config, cvalue, error)) return true;
+  if (try_config) {
+    if (!load_json(config, cvalue, error)) return true;
   } else {
     if (!load_json(config, cvalue, error))
       return cli_error("error converting configuration " + config);
@@ -1218,9 +1218,9 @@ void add_command_name(const cli_command& cli, const string& name, string& value,
 static bool parse_cli(cli_state& cli, const vector<string>& args,
     json_value& value, string& error) {
   auto idx = (size_t)1;
-  if (!args_to_value(value, get_schema(cli), args, idx, error)) return false;
+  if (!args_to_json(value, get_schema(cli), args, idx, error)) return false;
   if (!config_to_value(value, error)) return false;
-  if (!validate_value(value, get_schema(cli), "", true, error)) return false;
+  if (!validate_json(value, get_schema(cli), "", true, error)) return false;
   if (!value_to_variable(value, cli.variables, error)) return false;
   return true;
 }
