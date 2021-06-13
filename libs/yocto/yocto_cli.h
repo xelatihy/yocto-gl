@@ -309,6 +309,56 @@ struct json_value {
   json_value& operator=(json_value other) { return _swap(other); }
   ~json_value() { _clear(); }
 
+  // conversions
+  explicit json_value(int32_t value)
+      : _type{json_type::integer}, _integer{value} {}
+  explicit json_value(int64_t value)
+      : _type{json_type::integer}, _integer{value} {}
+  explicit json_value(uint32_t value)
+      : _type{json_type::uinteger}, _uinteger{value} {}
+  explicit json_value(uint64_t value)
+      : _type{json_type::uinteger}, _uinteger{value} {}
+  explicit json_value(float value)  //
+      : _type{json_type::number}, _number{value} {}
+  explicit json_value(double value)
+      : _type{json_type::number}, _number{value} {}
+  explicit json_value(bool value)
+      : _type{json_type::boolean}, _boolean{value} {}
+  explicit json_value(const string& value)
+      : _type{json_type::string}, _string{new string{value}} {}
+  explicit json_value(const char* value)
+      : _type{json_type::string}, _string{new string{value}} {}
+  explicit json_value(const json_array& value)
+      : _type{json_type::array}, _array{new json_array{value}} {}
+  explicit json_value(const json_object& value)
+      : _type{json_type::object}, _object{new json_object{value}} {}
+
+#if 0
+  // casts
+  explicit operator int32_t() const { return (int32_t)_integer_cast(); }
+  explicit operator int64_t() const { return (int64_t)_integer_cast(); }
+  explicit operator uint32_t() const { return (uint32_t)_uinteger_cast(); }
+  explicit operator uint64_t() const { return (uint64_t)_uinteger_cast(); }
+  explicit operator float() const { return (float)_number_cast(); }
+  explicit operator double() const { return (double)_number_cast(); }
+  explicit operator bool() const { return _boolan_cast(); }
+  explicit operator string() const { return _string_cast(); }
+#endif
+
+  // arrays
+  template <typename T, size_t N>
+  explicit json_value(const array<T, N>& value)
+      : _type(json_type::array), _array{new json_array(value.size())} {
+    for (auto idx = (size_t)0; idx < value.size(); idx++)
+      (*_array)[idx] = json_value{value[idx]};
+  }
+  template <typename T>
+  explicit json_value(const vector<T>& value)
+      : _type(json_type::array), _array{new json_array(value.size())} {
+    for (auto idx = (size_t)0; idx < value.size(); idx++)
+      (*_array)[idx] = json_value{value[idx]};
+  }
+
   json_type get_type() const { return _type; }
   void      set_type(json_type type) {
     if (_type == type) return;
