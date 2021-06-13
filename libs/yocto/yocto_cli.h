@@ -359,7 +359,7 @@ struct json_value {
       (*_array)[idx] = json_value{value[idx]};
   }
 
-  json_type get_type() const { return _type; }
+  json_type type() const { return _type; }
   void      set_type(json_type type) {
     if (_type == type) return;
     auto new_json = json_value{type};
@@ -569,9 +569,9 @@ struct json_value {
 
   void get(int32_t& value) const { value = (int32_t)get<int64_t>(); }
   void get(int64_t& value) const {
-    if (get_type() == json_type::integer) {
+    if (_type == json_type::integer) {
       value = (int64_t)get_integer();
-    } else if (get_type() == json_type::uinteger) {
+    } else if (_type == json_type::uinteger) {
       value = (int64_t)get_uinteger();
     } else {
       throw json_error{"integer expected"};
@@ -579,9 +579,9 @@ struct json_value {
   }
   void get(uint32_t& value) const { value = (uint32_t)get<uint64_t>(); }
   void get(uint64_t& value) const {
-    if (get_type() == json_type::integer) {
+    if (_type == json_type::integer) {
       value = (uint64_t)get_integer();
-    } else if (get_type() == json_type::uinteger) {
+    } else if (_type == json_type::uinteger) {
       value = (uint64_t)get_uinteger();
     } else {
       throw json_error{"integer expected"};
@@ -589,25 +589,25 @@ struct json_value {
   }
   void get(float& value) const { value = (double)get<double>(); }
   void get(double& value) const {
-    if (get_type() == json_type::integer) {
+    if (_type == json_type::integer) {
       value = (double)get_integer();
-    } else if (get_type() == json_type::uinteger) {
+    } else if (_type == json_type::uinteger) {
       value = (double)get_uinteger();
-    } else if (get_type() == json_type::number) {
+    } else if (_type == json_type::number) {
       value = (double)get_number();
     } else {
       throw json_error{"number expected"};
     }
   }
   void get(bool& value) const {
-    if (get_type() == json_type::boolean) {
+    if (_type == json_type::boolean) {
       value = get_boolean();
     } else {
       throw json_error{"boolean expected"};
     }
   }
   void get(string& value) const {
-    if (get_type() == json_type::string) {
+    if (_type == json_type::string) {
       value = get_string();
     } else {
       throw json_error{"string expected"};
@@ -615,7 +615,7 @@ struct json_value {
   }
   template <typename T, size_t N>
   void get(std::array<T, N>& value) const {
-    if (get_type() == json_type::array) {
+    if (_type == json_type::array) {
       if (get_array().size() != N)
         throw json_error{"array of size " + std::to_string(N) + " expected"};
       for (auto idx = (size_t)0; idx < value.size(); idx++)
@@ -626,7 +626,7 @@ struct json_value {
   }
   template <typename T>
   inline void get(vector<T>& value) const {
-    if (get_type() == json_type::array) {
+    if (_type == json_type::array) {
       value.resize(get_array().size());
       for (auto idx = (size_t)0; idx < value.size(); idx++)
         get_array().at(idx).get(value.at(idx));

@@ -329,7 +329,7 @@ bool save_json(const string& filename, json_value& json, string& error) {
 }
 
 static void to_json(nlohmann::json& js, const json_value& value) {
-  switch (value.get_type()) {
+  switch (value.type()) {
     case json_type::null: {
       js = {};
     } break;
@@ -729,7 +729,7 @@ void add_option(const cli_command& cli, const string& name, vec4f& value,
 static string schema_to_usage(
     const json_value& schema_, const string& command, const string& program) {
   auto default_to_string = [](const json_value& value) -> string {
-    switch (value.get_type()) {
+    switch (value.type()) {
       case json_type::null: return "";
       case json_type::integer:
         return "[" + std::to_string(value.get_integer()) + "]";
@@ -985,7 +985,7 @@ static bool validate_json(const json_value& value, const json_value& schema,
     return object.find(name) != object.end();
   };
 
-  switch (value.get_type()) {
+  switch (value.type()) {
     case json_type::null: {
       return cli_error("bad value for " + name);
     } break;
@@ -1034,19 +1034,19 @@ static bool validate_json(const json_value& value, const json_value& schema,
         return cli_error("bad value for " + name);
       for (auto& [key, property] : value.get_object()) {
         if (key == "help") {
-          if (property.get_type() != json_type::boolean)
+          if (property.type() != json_type::boolean)
             return cli_error("bad value for " + key);
         } else if (key == "config") {
-          if (property.get_type() != json_type::string)
+          if (property.type() != json_type::string)
             return cli_error("bad value for " + key);
         } else if (key == "command") {
-          if (property.get_type() != json_type::string)
+          if (property.type() != json_type::string)
             return cli_error("bad value for " + key);
         } else {
           if (!schema.at("properties").contains(key))
             return cli_error("unknown option " + key);
           auto selected_command = contains(value.get_object(), "command") &&
-                                  value.at("command").get_type() ==
+                                  value.at("command").type() ==
                                       json_type::string &&
                                   value.at("command").get_string() == key;
           if (!validate_json(property, schema.at("properties").at(key), key,
@@ -1076,11 +1076,11 @@ void update_value_objects(json_value& value, const json_value& update) {
     return object.find(name) != object.end();
   };
 
-  if (value.get_type() != json_type::object) return;
+  if (value.type() != json_type::object) return;
   for (auto& [key, property] : update.get_object()) {
-    if (property.get_type() == json_type::object &&
+    if (property.type() == json_type::object &&
         contains(value.get_object(), key) &&
-        value.get_object().at(key).get_type() == json_type::object) {
+        value.get_object().at(key).type() == json_type::object) {
       update_value_objects(value.get_object().at(key), value);
     } else {
       value.get_object()[key] = property;
@@ -1105,7 +1105,7 @@ static bool value_to_variable(
   }
 
   for (auto& [key, property] : variable.variables) {
-    if (value.get_type() != json_type::object)
+    if (value.type() != json_type::object)
       throw std::runtime_error{"something went wrong"};
     if (contains(value.get_object(), key)) {
       if (!value_to_variable(value.get_object().at(key), property, error)) {
@@ -1131,12 +1131,12 @@ static bool config_to_value(json_value& value, string& error) {
 
     auto current = &value;
     while (true) {
-      if (current->get_type() != json_type::object) break;
+      if (current->type() != json_type::object) break;
       if (contains(current->get_object(), "config") &&
-          current->get_object().at("config").get_type() == json_type::string)
+          current->get_object().at("config").type() == json_type::string)
         return current->get_object().at("config").get_string();
       if (contains(current->get_object(), "command") &&
-          current->get_object().at("command").get_type() == json_type::string) {
+          current->get_object().at("command").type() == json_type::string) {
         current = &current->get_object().at(
             current->get_object().at("command").get_string());
       } else {
