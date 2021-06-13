@@ -301,109 +301,307 @@ using json_object = ordered_map<string, json_value>;
 
 // Json value
 struct json_value {
-  json_value();
-  json_value(json_type type);
-  json_value(const json_value& other);
-  json_value(json_value&& value);
-  json_value& operator=(json_value other);
-  ~json_value();
+  // Json value
+  json_value() : _type{json_type::null} {}
+  json_value(json_type type) : _type{type} { _init(); }
+  json_value(const json_value& other) { _copy(other); }
+  json_value(json_value&& value) : json_value() { _swap(value); }
+  json_value& operator=(json_value other) { return _swap(other); }
+  ~json_value() { _clear(); }
 
-  json_type get_type() const;
-  void      set_type(json_type type);
+  json_type get_type() const { return _type; }
+  void      set_type(json_type type) {
+    if (_type == type) return;
+    auto new_json = json_value{type};
+    _swap(new_json);
+  }
 
-  bool is_null() const;
-  bool is_integer() const;
-  bool is_number() const;
-  bool is_boolean() const;
-  bool is_string() const;
-  bool is_array() const;
-  bool is_object() const;
+  bool is_null() const { return _type == json_type::null; }
+  bool is_integer() const {
+    return _type == json_type::integer || _type == json_type::uinteger;
+  }
+  bool is_number() const {
+    return _type == json_type::integer || _type == json_type::uinteger ||
+           _type == json_type::number;
+  }
+  bool is_boolean() const { return _type == json_type::boolean; }
+  bool is_string() const { return _type == json_type::string; }
+  bool is_array() const { return _type == json_type::array; }
+  bool is_object() const { return _type == json_type::object; }
 
-  void set_null();
-  void set_integer(int64_t value);
-  void set_uinteger(uint64_t value);
-  void set_number(double value);
-  void set_boolean(bool value);
-  void set_string(const char* value);
-  void set_string(const string& value);
-  void set_array();
-  void set_array(size_t size);
-  void set_array(const json_array& value);
-  void set_object();
-  void set_object(const json_object& value);
+  void set_null() { set_type(json_type::null); }
+  void set_integer(int64_t value) {
+    set_type(json_type::integer);
+    _integer = value;
+  }
+  void set_uinteger(uint64_t value) {
+    set_type(json_type::uinteger);
+    _uinteger = value;
+  }
+  void set_number(double value) {
+    set_type(json_type::number);
+    _number = value;
+  }
+  void set_boolean(bool value) {
+    set_type(json_type::boolean);
+    _boolean = value;
+  }
+  void set_string(const char* value) {
+    set_type(json_type::string);
+    *_string = value;
+  }
+  void set_string(const string& value) {
+    set_type(json_type::string);
+    *_string = value;
+  }
+  void set_array() {
+    set_type(json_type::array);
+    *_array = {};
+  }
+  void set_array(size_t size) {
+    set_type(json_type::array);
+    _array->resize(size);
+  }
+  void set_array(const json_array& value) {
+    set_type(json_type::array);
+    *_array = value;
+  }
+  void set_object() {
+    set_type(json_type::object);
+    *_object = {};
+  }
+  void set_object(const json_object& value) {
+    set_type(json_type::object);
+    *_object = value;
+  }
 
-  int64_t&     get_integer();
-  uint64_t&    get_uinteger();
-  double&      get_number();
-  bool&        get_boolean();
-  string&      get_string();
-  json_array&  get_array();
-  json_object& get_object();
+  int64_t& get_integer() {
+    if (_type != json_type::integer) throw json_error{"integer expected"};
+    return _integer;
+  }
+  uint64_t& get_uinteger() {
+    if (_type != json_type::uinteger) throw json_error{"integer expected"};
+    return _uinteger;
+  }
+  double& get_number() {
+    if (_type != json_type::number) throw json_error{"number expected"};
+    return _number;
+  }
+  bool& get_boolean() {
+    if (_type != json_type::boolean) throw json_error{"boolean expected"};
+    return _boolean;
+  }
+  string& get_string() {
+    if (_type != json_type::string) throw json_error{"string expected"};
+    return *_string;
+  }
+  json_array& get_array() {
+    if (_type != json_type::array) throw json_error{"array expected"};
+    return *_array;
+  }
+  json_object& get_object() {
+    if (_type != json_type::object) throw json_error{"object expected"};
+    return *_object;
+  }
 
-  const int64_t&     get_integer() const;
-  const uint64_t&    get_uinteger() const;
-  const double&      get_number() const;
-  const bool&        get_boolean() const;
-  const string&      get_string() const;
-  const json_array&  get_array() const;
-  const json_object& get_object() const;
+  const int64_t& get_integer() const {
+    if (_type != json_type::integer) throw json_error{"integer expected"};
+    return _integer;
+  }
+  const uint64_t& get_uinteger() const {
+    if (_type != json_type::uinteger) throw json_error{"integer expected"};
+    return _uinteger;
+  }
+  const double& get_number() const {
+    if (_type != json_type::number) throw json_error{"number expected"};
+    return _number;
+  }
+  const bool& get_boolean() const {
+    if (_type != json_type::boolean) throw json_error{"boolean expected"};
+    return _boolean;
+  }
+  const string& get_string() const {
+    if (_type != json_type::string) throw json_error{"string expected"};
+    return *_string;
+  }
+  const json_array& get_array() const {
+    if (_type != json_type::array) throw json_error{"array expected"};
+    return *_array;
+  }
+  const json_object& get_object() const {
+    if (_type != json_type::object) throw json_error{"object expected"};
+    return *_object;
+  }
 
-  bool   empty() const;
-  size_t size() const;
+  bool empty() const {
+    if (is_array()) return _array->empty();
+    if (is_object()) return _object->empty();
+    throw json_error{"array or object expected"};
+  }
+  size_t size() const {
+    if (is_array()) return _array->size();
+    if (is_object()) return _object->size();
+    throw json_error{"array or object expected"};
+  }
 
-  json_value&       operator[](size_t idx);
-  const json_value& operator[](size_t idx) const;
-  json_value&       operator[](const string& key);
-  json_value&       at(size_t idx);
-  const json_value& at(size_t idx) const;
-  json_value&       at(const string& key);
-  const json_value& at(const string& key) const;
+  json_value& operator[](size_t idx) {
+    if (is_array()) return _array->at(idx);
+    throw json_error{"array expected"};
+  }
+  const json_value& operator[](size_t idx) const {
+    if (is_array()) return _array->at(idx);
+    throw json_error{"array expected"};
+  }
+  json_value& operator[](const string& key) {
+    if (is_object()) return _object->operator[](key);
+    throw json_error{"object expected"};
+  }
+  json_value& at(size_t idx) {
+    if (is_array()) return _array->at(idx);
+    throw json_error{"array expected"};
+  }
+  const json_value& at(size_t idx) const {
+    if (is_array()) return _array->at(idx);
+    throw json_error{"array expected"};
+  }
+  json_value& at(const string& key) {
+    if (is_object()) return _object->at(key);
+    throw json_error{"object expected"};
+  }
+  const json_value& at(const string& key) const {
+    if (is_object()) return _object->at(key);
+    throw json_error{"object expected"};
+  }
 
-  json_value& insert(const string& key);
-  json_value& append();
+  json_value& insert(const string& key) {
+    if (is_object()) return _object->operator[](key);
+    throw json_error{"object expected"};
+  }
+  json_value& append() {
+    if (is_array()) return _array->emplace_back();
+    throw json_error{"array expected"};
+  }
 
-  void set(std::nullptr_t);
-  void set(int32_t value);
-  void set(int64_t value);
-  void set(uint32_t value);
-  void set(uint64_t value);
-  void set(float value);
-  void set(double value);
-  void set(bool value);
-  void set(const string& value);
-  void set(const char* value);
+  bool contains(const string& key) const {
+    if (is_object()) return _object->contains(key);
+    throw json_error{"object expected"};
+  }
+
+  void set(std::nullptr_t) { set_null(); }
+  void set(int32_t value) { set_integer(value); }
+  void set(int64_t value) { set_integer(value); }
+  void set(uint32_t value) { set_uinteger(value); }
+  void set(uint64_t value) { set_uinteger(value); }
+  void set(float value) { set_number(value); }
+  void set(double value) { set_number(value); }
+  void set(bool value) { set_boolean(value); }
+  void set(const string& value) { set_string(value); }
+  void set(const char* value) { set_string(value); }
   template <typename T, size_t N>
-  void set(const std::array<T, N>& value);
+  void set(const std::array<T, N>& value) {
+    set_array(value.size());
+    for (auto idx = (size_t)0; idx < value.size(); idx++)
+      get_array().at(idx).set(value.at(idx));
+  }
   template <typename T>
-  void set(const vector<T>& value);
+  void set(const vector<T>& value) {
+    set_array(value.size());
+    for (auto idx = (size_t)0; idx < value.size(); idx++)
+      get_array().at(idx).set(value.at(idx));
+  }
 
   template <typename T>
-  T get() const;
+  T get() const {
+    auto value = T{};
+    get(value);
+    return value;
+  }
 
-  void get(int32_t& value) const;
-  void get(int64_t& value) const;
-  void get(uint32_t& value) const;
-  void get(uint64_t& value) const;
-  void get(float& value) const;
-  void get(double& value) const;
-  void get(bool& value) const;
-  void get(string& value) const;
+  void get(int32_t& value) const { value = (int32_t)get<int64_t>(); }
+  void get(int64_t& value) const {
+    if (get_type() == json_type::integer) {
+      value = (int64_t)get_integer();
+    } else if (get_type() == json_type::uinteger) {
+      value = (int64_t)get_uinteger();
+    } else {
+      throw json_error{"integer expected"};
+    }
+  }
+  void get(uint32_t& value) const { value = (uint32_t)get<uint64_t>(); }
+  void get(uint64_t& value) const {
+    if (get_type() == json_type::integer) {
+      value = (uint64_t)get_integer();
+    } else if (get_type() == json_type::uinteger) {
+      value = (uint64_t)get_uinteger();
+    } else {
+      throw json_error{"integer expected"};
+    }
+  }
+  void get(float& value) const { value = (double)get<double>(); }
+  void get(double& value) const {
+    if (get_type() == json_type::integer) {
+      value = (double)get_integer();
+    } else if (get_type() == json_type::uinteger) {
+      value = (double)get_uinteger();
+    } else if (get_type() == json_type::number) {
+      value = (double)get_number();
+    } else {
+      throw json_error{"number expected"};
+    }
+  }
+  void get(bool& value) const {
+    if (get_type() == json_type::boolean) {
+      value = get_boolean();
+    } else {
+      throw json_error{"boolean expected"};
+    }
+  }
+  void get(string& value) const {
+    if (get_type() == json_type::string) {
+      value = get_string();
+    } else {
+      throw json_error{"string expected"};
+    }
+  }
   template <typename T, size_t N>
-  void get(std::array<T, N>& value) const;
+  void get(std::array<T, N>& value) const {
+    if (get_type() == json_type::array) {
+      if (get_array().size() != N)
+        throw json_error{"array of size " + std::to_string(N) + " expected"};
+      for (auto idx = (size_t)0; idx < value.size(); idx++)
+        get_array().at(idx).get(value.at(idx));
+    } else {
+      throw json_error{"array expected"};
+    }
+  }
   template <typename T>
-  void get(vector<T>& value) const;
+  inline void get(vector<T>& value) const {
+    if (get_type() == json_type::array) {
+      value.resize(get_array().size());
+      for (auto idx = (size_t)0; idx < value.size(); idx++)
+        get_array().at(idx).get(value.at(idx));
+    } else {
+      throw json_error{"array expected"};
+    }
+  }
 
 #ifdef __APPLE__
-  void set(size_t value);
-  void get(size_t& value) const;
+  void set(size_t value) { set((uint64_t)value); }
+  void get(size_t& value) const { value = get<uint64_t>(); }
 #endif
 
   template <typename T>
-  json_value& insert(const string& key, const T& value);
+  json_value& insert(const string& key, const T& value) {
+    auto& item = insert(key);
+    item.set(value);
+    return item;
+  }
   template <typename T>
-  json_value& append(const T& value);
-
-  bool contains(const string& key) const;
+  json_value& append(const T& value) {
+    auto& item = append();
+    item.set(value);
+    return item;
+  }
 
  private:
   json_type _type = json_type::null;
@@ -417,7 +615,43 @@ struct json_value {
     json_object* _object;
   };
 
-  void _swap(json_value& other);
+  void _init() {
+    switch (_type) {
+      case json_type::string: _string = new string{}; break;
+      case json_type::array: _array = new json_array{}; break;
+      case json_type::object: _object = new json_object{}; break;
+      default: break;
+    }
+  }
+
+  void _copy(const json_value& other) {
+    _type = other._type;
+    switch (_type) {
+      case json_type::null: break;
+      case json_type::integer: _integer = other._integer; break;
+      case json_type::uinteger: _uinteger = other._uinteger; break;
+      case json_type::number: _number = other._number; break;
+      case json_type::boolean: _boolean = other._boolean; break;
+      case json_type::string: _string = new string{*other._string}; break;
+      case json_type::array: _array = new json_array{*other._array}; break;
+      case json_type::object: _object = new json_object{*other._object}; break;
+    }
+  }
+
+  json_value& _swap(json_value& other) {
+    std::swap(_type, other._type);
+    std::swap(_integer, other._integer);
+    return *this;
+  }
+
+  void _clear() {
+    switch (_type) {
+      case json_type::string: delete _string; break;
+      case json_type::array: delete _array; break;
+      case json_type::object: delete _object; break;
+      default: break;
+    }
+  }
 };
 
 }  // namespace yocto
@@ -490,359 +724,6 @@ inline void add_argument(const cli_command& cli, const string& name, T& value,
     const string& usage, const vector<string>& choices, bool req) {
   return add_argument(
       cli, name, (std::underlying_type_t<T>&)value, usage, choices, req);
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// JSON DATA
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Json value
-inline json_value::json_value() : _type{json_type::null} {}
-inline json_value::json_value(json_type type) : _type{type} {
-  switch (_type) {
-    case json_type::string: _string = new string{}; break;
-    case json_type::array: _array = new json_array{}; break;
-    case json_type::object: _object = new json_object{}; break;
-    default: break;
-  }
-}
-inline json_value::json_value(const json_value& other) {
-  _type = other._type;
-  switch (_type) {
-    case json_type::null: break;
-    case json_type::integer: _integer = other._integer; break;
-    case json_type::uinteger: _uinteger = other._uinteger; break;
-    case json_type::number: _number = other._number; break;
-    case json_type::boolean: _boolean = other._boolean; break;
-    case json_type::string: _string = new string{*other._string}; break;
-    case json_type::array: _array = new json_array{*other._array}; break;
-    case json_type::object: _object = new json_object{*other._object}; break;
-  }
-}
-inline json_value::json_value(json_value&& value) : json_value() {
-  _swap(value);
-}
-inline json_value& json_value::operator=(json_value other) {
-  _swap(other);
-  return *this;
-}
-inline json_value::~json_value() {
-  switch (_type) {
-    case json_type::string: delete _string; break;
-    case json_type::array: delete _array; break;
-    case json_type::object: delete _object; break;
-    default: break;
-  }
-}
-
-inline json_type json_value::get_type() const { return _type; }
-inline void      json_value::set_type(json_type type) {
-  if (_type == type) return;
-  auto new_json = json_value{type};
-  _swap(new_json);
-}
-
-inline bool json_value::is_null() const { return _type == json_type::null; }
-inline bool json_value::is_integer() const {
-  return _type == json_type::integer || _type == json_type::uinteger;
-}
-inline bool json_value::is_number() const {
-  return _type == json_type::integer || _type == json_type::uinteger ||
-         _type == json_type::number;
-}
-inline bool json_value::is_boolean() const {
-  return _type == json_type::boolean;
-}
-inline bool json_value::is_string() const { return _type == json_type::string; }
-inline bool json_value::is_array() const { return _type == json_type::array; }
-inline bool json_value::is_object() const { return _type == json_type::object; }
-
-inline void json_value::set_null() { set_type(json_type::null); }
-inline void json_value::set_integer(int64_t value) {
-  set_type(json_type::integer);
-  _integer = value;
-}
-inline void json_value::set_uinteger(uint64_t value) {
-  set_type(json_type::uinteger);
-  _uinteger = value;
-}
-inline void json_value::set_number(double value) {
-  set_type(json_type::number);
-  _number = value;
-}
-inline void json_value::set_boolean(bool value) {
-  set_type(json_type::boolean);
-  _boolean = value;
-}
-inline void json_value::set_string(const char* value) {
-  set_type(json_type::string);
-  *_string = value;
-}
-inline void json_value::set_string(const string& value) {
-  set_type(json_type::string);
-  *_string = value;
-}
-inline void json_value::set_array() {
-  set_type(json_type::array);
-  *_array = {};
-}
-inline void json_value::set_array(size_t size) {
-  set_type(json_type::array);
-  _array->resize(size);
-}
-inline void json_value::set_array(const json_array& value) {
-  set_type(json_type::array);
-  *_array = value;
-}
-inline void json_value::set_object() {
-  set_type(json_type::object);
-  *_object = {};
-}
-inline void json_value::set_object(const json_object& value) {
-  set_type(json_type::object);
-  *_object = value;
-}
-
-inline int64_t& json_value::get_integer() {
-  if (_type != json_type::integer) throw json_error{"integer expected"};
-  return _integer;
-}
-inline uint64_t& json_value::get_uinteger() {
-  if (_type != json_type::uinteger) throw json_error{"integer expected"};
-  return _uinteger;
-}
-inline double& json_value::get_number() {
-  if (_type != json_type::number) throw json_error{"number expected"};
-  return _number;
-}
-inline bool& json_value::get_boolean() {
-  if (_type != json_type::boolean) throw json_error{"boolean expected"};
-  return _boolean;
-}
-inline string& json_value::get_string() {
-  if (_type != json_type::string) throw json_error{"string expected"};
-  return *_string;
-}
-inline json_array& json_value::get_array() {
-  if (_type != json_type::array) throw json_error{"array expected"};
-  return *_array;
-}
-inline json_object& json_value::get_object() {
-  if (_type != json_type::object) throw json_error{"object expected"};
-  return *_object;
-}
-
-inline const int64_t& json_value::get_integer() const {
-  if (_type != json_type::integer) throw json_error{"integer expected"};
-  return _integer;
-}
-inline const uint64_t& json_value::get_uinteger() const {
-  if (_type != json_type::uinteger) throw json_error{"integer expected"};
-  return _uinteger;
-}
-inline const double& json_value::get_number() const {
-  if (_type != json_type::number) throw json_error{"number expected"};
-  return _number;
-}
-inline const bool& json_value::get_boolean() const {
-  if (_type != json_type::boolean) throw json_error{"boolean expected"};
-  return _boolean;
-}
-inline const string& json_value::get_string() const {
-  if (_type != json_type::string) throw json_error{"string expected"};
-  return *_string;
-}
-inline const json_array& json_value::get_array() const {
-  if (_type != json_type::array) throw json_error{"array expected"};
-  return *_array;
-}
-inline const json_object& json_value::get_object() const {
-  if (_type != json_type::object) throw json_error{"object expected"};
-  return *_object;
-}
-
-inline bool json_value::empty() const {
-  if (is_array()) return _array->empty();
-  if (is_object()) return _object->empty();
-  throw json_error{"array or object expected"};
-}
-inline size_t json_value::size() const {
-  if (is_array()) return _array->size();
-  if (is_object()) return _object->size();
-  throw json_error{"array or object expected"};
-}
-
-inline json_value& json_value::operator[](size_t idx) {
-  if (is_array()) return _array->at(idx);
-  throw json_error{"array expected"};
-}
-inline const json_value& json_value::operator[](size_t idx) const {
-  if (is_array()) return _array->at(idx);
-  throw json_error{"array expected"};
-}
-inline json_value& json_value::operator[](const string& key) {
-  if (is_object()) return _object->operator[](key);
-  throw json_error{"object expected"};
-}
-inline json_value& json_value::at(size_t idx) {
-  if (is_array()) return _array->at(idx);
-  throw json_error{"array expected"};
-}
-inline const json_value& json_value::at(size_t idx) const {
-  if (is_array()) return _array->at(idx);
-  throw json_error{"array expected"};
-}
-inline json_value& json_value::at(const string& key) {
-  if (is_object()) return _object->at(key);
-  throw json_error{"object expected"};
-}
-inline const json_value& json_value::at(const string& key) const {
-  if (is_object()) return _object->at(key);
-  throw json_error{"object expected"};
-}
-
-inline json_value& json_value::insert(const string& key) {
-  if (is_object()) return _object->operator[](key);
-  throw json_error{"object expected"};
-}
-inline json_value& json_value::append() {
-  if (is_array()) return _array->emplace_back();
-  throw json_error{"array expected"};
-}
-
-inline bool json_value::contains(const string& key) const {
-  if (is_object()) return _object->contains(key);
-  throw json_error{"object expected"};
-}
-
-inline void json_value::set(std::nullptr_t) { set_null(); }
-inline void json_value::set(int32_t value) { set_integer(value); }
-inline void json_value::set(int64_t value) { set_integer(value); }
-inline void json_value::set(uint32_t value) { set_uinteger(value); }
-inline void json_value::set(uint64_t value) { set_uinteger(value); }
-inline void json_value::set(float value) { set_number(value); }
-inline void json_value::set(double value) { set_number(value); }
-inline void json_value::set(bool value) { set_boolean(value); }
-inline void json_value::set(const string& value) { set_string(value); }
-inline void json_value::set(const char* value) { set_string(value); }
-template <typename T, size_t N>
-inline void json_value::set(const std::array<T, N>& value) {
-  set_array(value.size());
-  for (auto idx = (size_t)0; idx < value.size(); idx++)
-    get_array().at(idx).set(value.at(idx));
-}
-template <typename T>
-inline void json_value::set(const vector<T>& value) {
-  set_array(value.size());
-  for (auto idx = (size_t)0; idx < value.size(); idx++)
-    get_array().at(idx).set(value.at(idx));
-}
-
-template <typename T>
-inline T json_value::get() const {
-  auto value = T{};
-  get(value);
-  return value;
-}
-
-inline void json_value::get(int32_t& value) const {
-  value = (int32_t)get<int64_t>();
-}
-inline void json_value::get(int64_t& value) const {
-  if (get_type() == json_type::integer) {
-    value = (int64_t)get_integer();
-  } else if (get_type() == json_type::uinteger) {
-    value = (int64_t)get_uinteger();
-  } else {
-    throw json_error{"integer expected"};
-  }
-}
-inline void json_value::get(uint32_t& value) const {
-  value = (uint32_t)get<uint64_t>();
-}
-inline void json_value::get(uint64_t& value) const {
-  if (get_type() == json_type::integer) {
-    value = (uint64_t)get_integer();
-  } else if (get_type() == json_type::uinteger) {
-    value = (uint64_t)get_uinteger();
-  } else {
-    throw json_error{"integer expected"};
-  }
-}
-inline void json_value::get(float& value) const {
-  value = (double)get<double>();
-}
-inline void json_value::get(double& value) const {
-  if (get_type() == json_type::integer) {
-    value = (double)get_integer();
-  } else if (get_type() == json_type::uinteger) {
-    value = (double)get_uinteger();
-  } else if (get_type() == json_type::number) {
-    value = (double)get_number();
-  } else {
-    throw json_error{"number expected"};
-  }
-}
-inline void json_value::get(bool& value) const {
-  if (get_type() == json_type::boolean) {
-    value = get_boolean();
-  } else {
-    throw json_error{"boolean expected"};
-  }
-}
-inline void json_value::get(string& value) const {
-  if (get_type() == json_type::string) {
-    value = get_string();
-  } else {
-    throw json_error{"string expected"};
-  }
-}
-template <typename T, size_t N>
-inline void json_value::get(std::array<T, N>& value) const {
-  if (get_type() == json_type::array) {
-    if (get_array().size() != N)
-      throw json_error{"array of size " + std::to_string(N) + " expected"};
-    for (auto idx = (size_t)0; idx < value.size(); idx++)
-      get_array().at(idx).get(value.at(idx));
-  } else {
-    throw json_error{"array expected"};
-  }
-}
-template <typename T>
-inline void json_value::get(vector<T>& value) const {
-  if (get_type() == json_type::array) {
-    value.resize(get_array().size());
-    for (auto idx = (size_t)0; idx < value.size(); idx++)
-      get_array().at(idx).get(value.at(idx));
-  } else {
-    throw json_error{"array expected"};
-  }
-}
-
-#ifdef __APPLE__
-inline void json_value::set(size_t value) { set((uint64_t)value); }
-inline void json_value::get(size_t& value) const { value = get<uint64_t>(); }
-#endif
-
-template <typename T>
-inline json_value& json_value::insert(const string& key, const T& value) {
-  auto& item = insert(key);
-  item.set(value);
-  return item;
-}
-template <typename T>
-inline json_value& json_value::append(const T& value) {
-  auto& item = append();
-  item.set(value);
-  return item;
-}
-
-inline void json_value::_swap(json_value& other) {
-  std::swap(_type, other._type);
-  std::swap(_integer, other._integer);
 }
 
 }  // namespace yocto
