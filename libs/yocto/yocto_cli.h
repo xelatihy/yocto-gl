@@ -360,14 +360,8 @@ struct json_value {
   }
 
   json_type type() const { return _type; }
-  void      set_type(json_type type) {
-    if (_type == type) return;
-    auto new_json = json_value{type};
-    _swap(new_json);
-  }
-
-  bool is_null() const { return _type == json_type::null; }
-  bool is_integer() const {
+  bool      is_null() const { return _type == json_type::null; }
+  bool      is_integer() const {
     return _type == json_type::integer || _type == json_type::uinteger;
   }
   bool is_number() const {
@@ -379,49 +373,49 @@ struct json_value {
   bool is_array() const { return _type == json_type::array; }
   bool is_object() const { return _type == json_type::object; }
 
-  void set_null() { set_type(json_type::null); }
+  void set_null() { _set_type(json_type::null); }
   void set_integer(int64_t value) {
-    set_type(json_type::integer);
+    _set_type(json_type::integer);
     _integer = value;
   }
   void set_uinteger(uint64_t value) {
-    set_type(json_type::uinteger);
+    _set_type(json_type::uinteger);
     _uinteger = value;
   }
   void set_number(double value) {
-    set_type(json_type::number);
+    _set_type(json_type::number);
     _number = value;
   }
   void set_boolean(bool value) {
-    set_type(json_type::boolean);
+    _set_type(json_type::boolean);
     _boolean = value;
   }
   void set_string(const char* value) {
-    set_type(json_type::string);
+    _set_type(json_type::string);
     *_string = value;
   }
   void set_string(const string& value) {
-    set_type(json_type::string);
+    _set_type(json_type::string);
     *_string = value;
   }
   void set_array() {
-    set_type(json_type::array);
+    _set_type(json_type::array);
     *_array = {};
   }
   void set_array(size_t size) {
-    set_type(json_type::array);
+    _set_type(json_type::array);
     _array->resize(size);
   }
   void set_array(const json_array& value) {
-    set_type(json_type::array);
+    _set_type(json_type::array);
     *_array = value;
   }
   void set_object() {
-    set_type(json_type::object);
+    _set_type(json_type::object);
     *_object = {};
   }
   void set_object(const json_object& value) {
-    set_type(json_type::object);
+    _set_type(json_type::object);
     *_object = value;
   }
 
@@ -701,6 +695,12 @@ struct json_value {
       case json_type::object: delete _object; break;
       default: break;
     }
+  }
+
+  void _set_type(json_type type) {
+    if (_type == type) return;
+    auto new_json = json_value{type};
+    _swap(new_json);
   }
 };
 
