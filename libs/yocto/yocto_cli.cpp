@@ -1185,9 +1185,9 @@ cli_state make_cli(const string& name, const string& usage) {
 cli_command add_command(
     const cli_command& cli, const string& name, const string& usage) {
   auto& defaults = get_defaults(cli);
-  defaults.insert(name).set_object();
+  defaults[name].set_object();
   auto& schema   = get_schema(cli);
-  auto& property = schema.at("properties").insert(name);
+  auto& property = schema.at("properties")[name];
   property.set_object();
   property["title"].set(name);
   property["description"].set(usage);
