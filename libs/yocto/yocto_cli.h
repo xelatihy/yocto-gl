@@ -310,6 +310,7 @@ struct json_value {
   ~json_value() { _clear(); }
 
   // conversions
+  explicit json_value(std::nullptr_t) : _type{json_type::null}, _integer{0} {}
   explicit json_value(int32_t value)
       : _type{json_type::integer}, _integer{value} {}
   explicit json_value(int64_t value)
@@ -493,11 +494,17 @@ struct json_value {
   const json_value& at(size_t idx) const { return _get_array().at(idx); }
   json_value&       at(const string& key) { return _get_object().at(key); }
   const json_value& at(const string& key) const { return _get_object().at(key); }
+  bool contains(const string& key) const { return _get_object().contains(key); }
   json_value& insert(const string& key) { return _get_object()[key]; }
   json_value& append() { return _get_array().emplace_back(); }
-  bool contains(const string& key) const { return _get_object().contains(key); }
+  json_value& emplace_back() { return _get_array().emplace_back(); }
+  void push_back(const json_value& item) { _get_array().push_back(item); }
+  template<typename T>
+  void push_back(const T& value) { _get_array().push_back(json_value{value}); }
+  // clang-format on
 
   // iteration
+  // clang-format off
   json_value* begin() { return _get_array().data(); }
   const json_value* begin() const { return _get_array().data(); }
   json_value* end() { return _get_array().data() + _get_array().size(); }
@@ -507,16 +514,17 @@ struct json_value {
   // clang-format on
 
   // setters
-  void set(std::nullptr_t) { set_null(); }
-  void set(int32_t value) { set_integer(value); }
-  void set(int64_t value) { set_integer(value); }
-  void set(uint32_t value) { set_uinteger(value); }
-  void set(uint64_t value) { set_uinteger(value); }
-  void set(float value) { set_number(value); }
-  void set(double value) { set_number(value); }
-  void set(bool value) { set_boolean(value); }
-  void set(const string& value) { set_string(value); }
-  void set(const char* value) { set_string(value); }
+  // clang-format off
+  void set(std::nullptr_t) { _set_value(json_type::null, _integer, 0); }
+  void set(int32_t value) { _set_value(json_type::integer, _integer, value); }
+  void set(int64_t value) { _set_value(json_type::integer, _integer, value); }
+  void set(uint32_t value) { _set_value(json_type::uinteger, _uinteger, value); }
+  void set(uint64_t value) { _set_value(json_type::uinteger, _uinteger, value); }
+  void set(float value) { _set_value(json_type::number, _number, value); }
+  void set(double value) { _set_value(json_type::number, _number, value); }
+  void set(bool value) { _set_value(json_type::boolean, _boolean, value); }
+  void set(const string& value) { _set_ptr(json_type::string, _string, value); }
+  void set(const char* value) { _set_ptr(json_type::string, _string, value); }
   template <typename T, size_t N>
   void set(const std::array<T, N>& value) {
     set_array(value.size());
@@ -529,6 +537,7 @@ struct json_value {
     for (auto idx = (size_t)0; idx < value.size(); idx++)
       get_array().at(idx).set(value.at(idx));
   }
+  // clang-format on
 
   template <typename T>
   T get() const {
@@ -676,6 +685,23 @@ struct json_value {
   json_object& _get_object() {
     if (_type != json_type::object) throw json_error{"object expected"};
     return *_object;
+  }
+
+  template <typename T, typename V>
+  void _set_value(json_type type, T& var, const V& value) {
+    if (_type != type) _clear();
+    _type = type;
+    var   = (T)value;
+  }
+  template <typename T, typename V>
+  void _set_ptr(json_type type, T* var, const V& value) {
+    if (_type != type) {
+      _clear();
+      _type = type;
+      var   = new T(value);
+    } else {
+      *var = value;
+    }
   }
 };
 
