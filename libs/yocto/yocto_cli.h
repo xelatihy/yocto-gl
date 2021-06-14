@@ -234,9 +234,11 @@ struct ordered_map {
 
   Value& operator[](const Key& key) {
     if (auto it = _search(key); it) return it->second;
-    auto item = pair<Key, Value>{key, Value{}};
-    _data.push_back(item);
-    return _data.back().second;
+    return _data.emplace_back(key, Value{}).second;
+  }
+  const Value& operator[](const Key& key) const {
+    if (auto it = _search(key); it) return it->second;
+    throw std::out_of_range{"missing key for " + key};
   }
   Value& at(const Key& key) {
     if (auto it = _search(key); it) return it->second;
@@ -363,11 +365,10 @@ struct json_value {
   template <typename T, size_t N>
   explicit operator std::array<T, N>() const {
     auto& array = _get_array();
-    if (array.size() != N)
-      throw json_error{"array of size " + std::to_string(N) + " expected"};
+    if (array.size() != N) throw json_error{"array of fixed size expected"};
     auto value = std::array<T, N>{};
     for (auto idx = (size_t)0; idx < value.size(); idx++)
-      array[idx] = value[idx];
+      value[idx] = (T)array[idx];
     return value;
   }
   template <typename T>
@@ -375,7 +376,7 @@ struct json_value {
     auto& array = _get_array();
     auto  value = vector<T>(array.size());
     for (auto idx = (size_t)0; idx < value.size(); idx++)
-      array[idx] = value[idx];
+      value[idx] = (T)array[idx];
     return value;
   }
 #ifdef __APPLE__
@@ -417,31 +418,20 @@ struct json_value {
   // clang-format on
 
   // type
+  // clang-format off
   json_type type() const { return _type; }
-  bool      is_null() const { return _type == json_type::null; }
-  bool      is_integer() const {
-    return _type == json_type::integer || _type == json_type::uinteger;
-  }
-  bool is_number() const {
-    return _type == json_type::integer || _type == json_type::uinteger ||
-           _type == json_type::number;
-  }
+  bool is_null() const { return _type == json_type::null; }
+  bool is_integer() const { return _type == json_type::integer || _type == json_type::uinteger; }
+  bool is_number() const { return _type == json_type::integer || _type == json_type::uinteger || _type == json_type::number; }
   bool is_boolean() const { return _type == json_type::boolean; }
   bool is_string() const { return _type == json_type::string; }
   bool is_array() const { return _type == json_type::array; }
   bool is_object() const { return _type == json_type::object; }
+  // clang-format on
 
   // size
-  bool empty() const {
-    if (is_array()) return _array->empty();
-    if (is_object()) return _object->empty();
-    throw json_error{"array or object expected"};
-  }
-  size_t size() const {
-    if (is_array()) return _array->size();
-    if (is_object()) return _object->size();
-    throw json_error{"array or object expected"};
-  }
+  bool   empty() const { return _empty(); }
+  size_t size() const { return _size(); }
 
   // object creation
   static json_value array() { return json_value{json_array{}}; }
@@ -478,40 +468,15 @@ struct json_value {
   const json_object& items() const { return _get_object(); }
   // clang-format on
 
-  template <typename T>
-  T get() const {
-    auto value = T{};
-    get(value);
-    return value;
-  }
-
-  // conversions
-  void get(int32_t& value) const { value = _get_number<int32_t>(); }
-  void get(int64_t& value) const { value = _get_number<int64_t>(); }
-  void get(uint32_t& value) const { value = _get_number<uint32_t>(); }
-  void get(uint64_t& value) const { value = _get_number<uint64_t>(); }
-  void get(float& value) const { value = _get_number<float>(); }
-  void get(double& value) const { value = _get_number<double>(); }
-  void get(bool& value) const { value = _get_boolean(); }
-  void get(string& value) const { value = _get_string(); }
-  template <typename T, size_t N>
-  void get(std::array<T, N>& value) const {
-    auto& array = _get_array();
-    if (array.size() != N)
-      throw json_error{"array of size " + std::to_string(N) + " expected"};
-    for (auto idx = (size_t)0; idx < value.size(); idx++)
-      array.at(idx).get(value.at(idx));
-  }
-  template <typename T>
-  inline void get(vector<T>& value) const {
-    auto& array = _get_array();
-    value.resize(array.size());
-    for (auto idx = (size_t)0; idx < value.size(); idx++)
-      array.at(idx).get(value.at(idx));
-  }
-#ifdef __APPLE__
-  void get(size_t& value) const { value = get<uint64_t>(); }
-#endif
+  // comparisons
+  // clang-format off
+  template<typename T>
+  bool operator==(const T& value) const { return (T)(*this) == value; }
+  bool operator==(const string& value) const { return _get_string() == value; }
+  bool operator==(const char* value) const { return _get_string() == value; }
+  template<typename T>
+  bool operator!=(const T& value) const { return !(*this == value); }
+  // clang-format on
 
  private:
   json_type _type = json_type::null;
@@ -561,6 +526,8 @@ struct json_value {
       case json_type::object: delete _object; break;
       default: break;
     }
+    _type    = json_type::null;
+    _integer = 0;
   }
 
   template <typename T>
@@ -633,6 +600,31 @@ struct json_value {
       *var = std::move(value);
     }
     return *this;
+  }
+
+  bool _empty() const {
+    switch (_type) {
+      case json_type::null: return true;
+      case json_type::integer:
+      case json_type::uinteger:
+      case json_type::number:
+      case json_type::boolean: return false;
+      case json_type::string: return _string->empty();
+      case json_type::array: return _array->empty();
+      case json_type::object: return _object->empty();
+    }
+  }
+  size_t _size() const {
+    switch (_type) {
+      case json_type::null: return 0;
+      case json_type::integer:
+      case json_type::uinteger:
+      case json_type::number:
+      case json_type::boolean: return 1;
+      case json_type::string: return _string->size();
+      case json_type::array: return _array->size();
+      case json_type::object: return _object->size();
+    }
   }
 };
 
