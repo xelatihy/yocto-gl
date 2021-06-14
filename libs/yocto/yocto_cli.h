@@ -3,8 +3,9 @@
 //
 // Yocto/CLI is a collection of utilities used in writing command-line
 // applications, including parsing command line arguments, printing values,
-// timers and progress bars.
-// Yocto/CLI is implemented in `yocto_cli.h`.
+// timers, progress bars, Json data, Json IO, file IO, path manipulation.
+// Yocto/CLI is implemented in `yocto_cli.h` and `yocto_cli.cpp`, and
+// depends on `json.hpp` for Json serialization.
 //
 
 //
@@ -44,7 +45,6 @@
 #include <type_traits>
 #include <vector>
 
-#include "yocto_json.h"
 #include "yocto_math.h"
 
 // -----------------------------------------------------------------------------
@@ -220,6 +220,434 @@ void add_option(const cli_command& cli, const string& name, vec4f& value,
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// ORDERED MAP
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Simple ordered map
+template <typename Key, typename Value>
+struct ordered_map {
+  size_t size() const { return _data.size(); }
+  bool   empty() const { return _data.empty(); }
+
+  bool contains(const Key& key) const { return (bool)_search(key); }
+
+  Value& operator[](const Key& key) {
+    if (auto it = _search(key); it) return it->second;
+    return _data.emplace_back(key, Value{}).second;
+  }
+  const Value& operator[](const Key& key) const {
+    if (auto it = _search(key); it) return it->second;
+    throw std::out_of_range{"missing key for " + key};
+  }
+  Value& at(const Key& key) {
+    if (auto it = _search(key); it) return it->second;
+    throw std::out_of_range{"missing key for " + key};
+  }
+  const Value& at(const Key& key) const {
+    if (auto it = _search(key); it) return it->second;
+    throw std::out_of_range{"missing key for " + key};
+  }
+
+  pair<Key, Value>* find(const string& key) {
+    if (auto it = _search(key); it) return it;
+    return end();
+  }
+  const pair<Key, Value>* find(const string& key) const {
+    if (auto it = _search(key); it) return it;
+    return end();
+  }
+
+  pair<Key, Value>*       begin() { return _data.data(); }
+  pair<Key, Value>*       end() { return _data.data() + _data.size(); }
+  const pair<Key, Value>* begin() const { return _data.data(); }
+  const pair<Key, Value>* end() const { return _data.data() + _data.size(); }
+
+ private:
+  vector<pair<Key, Value>> _data;
+
+  pair<Key, Value>* _search(const string& key) {
+    for (auto& item : _data)
+      if (key == item.first) return &item;
+    return nullptr;
+  }
+  const pair<Key, Value>* _search(const string& key) const {
+    for (auto& item : _data)
+      if (key == item.first) return &item;
+    return nullptr;
+  }
+};
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// JSON DATA
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Json error
+struct json_error : std::logic_error {
+  json_error(const string& error) : std::logic_error(error) {}
+};
+
+// Json type
+enum struct json_type {
+  // clang-format off
+  null, integer, uinteger, number, boolean, string, array, object
+  // clang-format on
+};
+
+// Json typdefs
+struct json_value;
+using json_array  = vector<json_value>;
+using json_object = ordered_map<string, json_value>;
+
+// Json value
+struct json_value {
+  // Json value
+  json_value() : _type{json_type::null}, _integer{0} {}
+  json_value(json_type type) : _type{type} { _init(); }
+  json_value(const json_value& other) { _copy(other); }
+  json_value(json_value&& value) : json_value() { _swap(value); }
+  json_value& operator=(json_value other) { return _swap(other); }
+  ~json_value() { _clear(); }
+
+  // conversions
+  explicit json_value(std::nullptr_t) : _type{json_type::null}, _integer{0} {}
+  explicit json_value(int32_t value)
+      : _type{json_type::integer}, _integer{value} {}
+  explicit json_value(int64_t value)
+      : _type{json_type::integer}, _integer{value} {}
+  explicit json_value(uint32_t value)
+      : _type{json_type::uinteger}, _uinteger{value} {}
+  explicit json_value(uint64_t value)
+      : _type{json_type::uinteger}, _uinteger{value} {}
+  explicit json_value(float value)  //
+      : _type{json_type::number}, _number{value} {}
+  explicit json_value(double value)
+      : _type{json_type::number}, _number{value} {}
+  explicit json_value(bool value)
+      : _type{json_type::boolean}, _boolean{value} {}
+  explicit json_value(const string& value)
+      : _type{json_type::string}, _string{new string{value}} {}
+  explicit json_value(const char* value)
+      : _type{json_type::string}, _string{new string{value}} {}
+  explicit json_value(const json_array& value)
+      : _type{json_type::array}, _array{new json_array{value}} {}
+  explicit json_value(json_array&& value)
+      : _type{json_type::array}, _array{new json_array{std::move(value)}} {}
+  explicit json_value(const json_object& value)
+      : _type{json_type::object}, _object{new json_object{value}} {}
+  explicit json_value(json_object&& value)
+      : _type{json_type::object}, _object{new json_object{std::move(value)}} {}
+  template <typename T, size_t N>
+  explicit json_value(const array<T, N>& value)
+      : _type{json_type::array}
+      , _array{new json_array(value.data(), value.data() + value.size())} {}
+  template <typename T>
+  explicit json_value(const vector<T>& value)
+      : _type{json_type::array}
+      , _array{new json_array(value.data(), value.data() + value.size())} {}
+#ifdef __APPLE__
+  explicit json_value(size_t value)
+      : _type{json_type::uinteger}, _uinteger{(uint64_t)value} {}
+#endif
+
+  // casts
+  explicit operator int32_t() const { return _get_number<int32_t>(); }
+  explicit operator int64_t() const { return _get_number<int64_t>(); }
+  explicit operator uint32_t() const { return _get_number<uint32_t>(); }
+  explicit operator uint64_t() const { return _get_number<uint64_t>(); }
+  explicit operator float() const { return _get_number<float>(); }
+  explicit operator double() const { return _get_number<double>(); }
+  explicit operator bool() const { return _get_boolean(); }
+  explicit operator string() const { return _get_string(); }
+  template <typename T, size_t N>
+  explicit operator std::array<T, N>() const {
+    auto& array = _get_array();
+    if (array.size() != N) throw json_error{"array of fixed size expected"};
+    auto value = std::array<T, N>{};
+    for (auto idx = (size_t)0; idx < value.size(); idx++)
+      value[idx] = (T)array[idx];
+    return value;
+  }
+  template <typename T>
+  explicit operator vector<T>() const {
+    auto& array = _get_array();
+    auto  value = vector<T>(array.size());
+    for (auto idx = (size_t)0; idx < value.size(); idx++)
+      value[idx] = (T)array[idx];
+    return value;
+  }
+#ifdef __APPLE__
+  explicit operator size_t() const { return _get_number<size_t>(); }
+#endif
+
+  // setters
+  // clang-format off
+  json_value& operator=(std::nullptr_t) { return _set_value(json_type::null, _integer, 0); }
+  json_value& operator=(int32_t value) { return _set_value(json_type::integer, _integer, value); }
+  json_value& operator=(int64_t value) { return _set_value(json_type::integer, _integer, value); }
+  json_value& operator=(uint32_t value) { return _set_value(json_type::uinteger, _uinteger, value); }
+  json_value& operator=(uint64_t value) { return _set_value(json_type::uinteger, _uinteger, value); }
+  json_value& operator=(float value) { return _set_value(json_type::number, _number, value); }
+  json_value& operator=(double value) { return _set_value(json_type::number, _number, value); }
+  json_value& operator=(bool value) { return _set_value(json_type::boolean, _boolean, value); }
+  json_value& operator=(const string& value) { return _set_ptr(json_type::string, _string, value); }
+  json_value& operator=(string&& value) { return _set_ptr(json_type::string, _string, std::move(value)); }
+  json_value& operator=(const char* value) { return _set_ptr(json_type::string, _string, value); }
+  json_value& operator=(const json_array& value) { return _set_ptr(json_type::array, _array, value); }
+  json_value& operator=(json_array&& value) { return _set_ptr(json_type::array, _array, std::move(value)); }
+  json_value& operator=(const json_object& value) { return _set_ptr(json_type::object, _object, value); }
+  json_value& operator=(json_object&& value) { return _set_ptr(json_type::object, _object, std::move(value)); }
+  template <typename T, size_t N>
+  json_value& operator=(const std::array<T, N>& value) {
+    _set_ptr(json_type::array, _array, json_array(value.size()));
+    for (auto idx = (size_t)0; idx < value.size(); idx++) (*_array)[idx] = value.at(idx);
+    return *this;
+  }
+  template <typename T>
+  json_value& operator=(const vector<T>& value) {
+    _set_ptr(json_type::array, _array, json_array(value.size()));
+    for (auto idx = (size_t)0; idx < value.size(); idx++) (*_array)[idx] = value.at(idx);
+    return *this;
+  }
+#ifdef __APPLE__
+  json_value& operator=(size_t value) { return _set_value(json_type::uinteger, _uinteger, (uint64_t)value); }
+#endif
+  // clang-format on
+
+  // type
+  // clang-format off
+  json_type type() const { return _type; }
+  bool is_null() const { return _type == json_type::null; }
+  bool is_integer() const { return _type == json_type::integer || _type == json_type::uinteger; }
+  bool is_number() const { return _type == json_type::integer || _type == json_type::uinteger || _type == json_type::number; }
+  bool is_boolean() const { return _type == json_type::boolean; }
+  bool is_string() const { return _type == json_type::string; }
+  bool is_array() const { return _type == json_type::array; }
+  bool is_object() const { return _type == json_type::object; }
+  // clang-format on
+
+  // size
+  bool   empty() const { return _empty(); }
+  size_t size() const { return _size(); }
+
+  // object creation
+  static json_value array() { return json_value{json_array{}}; }
+  static json_value array(size_t size) { return json_value{json_array(size)}; }
+  static json_value object() { return json_value{json_object{}}; }
+
+  // element access
+  // clang-format off
+  json_value&       operator[](size_t idx) { return _get_array().at(idx); }
+  const json_value& operator[](size_t idx) const { return _get_array().at(idx); }
+  json_value&       operator[](const string& key) { return _get_object()[key]; }
+  const json_value& operator[](const string& key) const { return _get_object().at(key); }
+  json_value&       at(size_t idx) { return _get_array().at(idx); }
+  const json_value& at(size_t idx) const { return _get_array().at(idx); }
+  json_value&       at(const string& key) { return _get_object().at(key); }
+  const json_value& at(const string& key) const { return _get_object().at(key); }
+  bool contains(const string& key) const { return _get_object().contains(key); }
+  json_value& append() { return _get_array().emplace_back(); }
+  template<typename T>
+  void append(const T& value) { _get_array().push_back(json_value{value}); }
+  json_value& emplace_back() { return _get_array().emplace_back(); }
+  void push_back(const json_value& item) { _get_array().push_back(item); }
+  template<typename T>
+  void push_back(const T& value) { _get_array().push_back(json_value{value}); }
+  // clang-format on
+
+  // iteration
+  // clang-format off
+  json_value* begin() { return _get_array().data(); }
+  const json_value* begin() const { return _get_array().data(); }
+  json_value* end() { return _get_array().data() + _get_array().size(); }
+  const json_value* end() const { return _get_array().data() + _get_array().size(); }
+  json_object& items() { return _get_object(); }
+  const json_object& items() const { return _get_object(); }
+  // clang-format on
+
+  // comparisons
+  // clang-format off
+  template<typename T>
+  bool operator==(const T& value) const { return (T)(*this) == value; }
+  bool operator==(const string& value) const { return _get_string() == value; }
+  bool operator==(const char* value) const { return _get_string() == value; }
+  template<typename T>
+  bool operator!=(const T& value) const { return !(*this == value); }
+  // clang-format on
+
+ private:
+  json_type _type = json_type::null;
+  union {
+    int64_t      _integer = 0;
+    uint64_t     _uinteger;
+    double       _number;
+    bool         _boolean;
+    string*      _string;
+    json_array*  _array;
+    json_object* _object;
+  };
+
+  void _init() {
+    switch (_type) {
+      case json_type::string: _string = new string{}; break;
+      case json_type::array: _array = new json_array{}; break;
+      case json_type::object: _object = new json_object{}; break;
+      default: break;
+    }
+  }
+
+  void _copy(const json_value& other) {
+    _type = other._type;
+    switch (_type) {
+      case json_type::null: break;
+      case json_type::integer: _integer = other._integer; break;
+      case json_type::uinteger: _uinteger = other._uinteger; break;
+      case json_type::number: _number = other._number; break;
+      case json_type::boolean: _boolean = other._boolean; break;
+      case json_type::string: _string = new string{*other._string}; break;
+      case json_type::array: _array = new json_array{*other._array}; break;
+      case json_type::object: _object = new json_object{*other._object}; break;
+    }
+  }
+
+  json_value& _swap(json_value& other) {
+    std::swap(_type, other._type);
+    std::swap(_integer, other._integer);
+    return *this;
+  }
+
+  void _clear() {
+    switch (_type) {
+      case json_type::string: delete _string; break;
+      case json_type::array: delete _array; break;
+      case json_type::object: delete _object; break;
+      default: break;
+    }
+    _type    = json_type::null;
+    _integer = 0;
+  }
+
+  template <typename T>
+  T _get_number() const {
+    if (_type == json_type::integer) {
+      return (T)_integer;
+    } else if (_type == json_type::uinteger) {
+      return (T)_uinteger;
+    } else if (_type == json_type::number) {
+      return (T)_number;
+    } else {
+      throw json_error{"number expected"};
+    }
+  }
+
+  bool _get_boolean() const {
+    if (_type != json_type::boolean) throw json_error{"boolean expected"};
+    return _boolean;
+  }
+  const string& _get_string() const {
+    if (_type != json_type::string) throw json_error{"string expected"};
+    return *_string;
+  }
+  string& _get_string() {
+    if (_type != json_type::string) throw json_error{"string expected"};
+    return *_string;
+  }
+  const json_array& _get_array() const {
+    if (_type != json_type::array) throw json_error{"array expected"};
+    return *_array;
+  }
+  json_array& _get_array() {
+    if (_type != json_type::array) throw json_error{"array expected"};
+    return *_array;
+  }
+  const json_object& _get_object() const {
+    if (_type != json_type::object) throw json_error{"object expected"};
+    return *_object;
+  }
+  json_object& _get_object() {
+    if (_type != json_type::object) throw json_error{"object expected"};
+    return *_object;
+  }
+
+  template <typename T, typename V>
+  json_value& _set_value(json_type type, T& var, const V& value) {
+    if (_type != type) _clear();
+    _type = type;
+    var   = (T)value;
+    return *this;
+  }
+  template <typename T, typename V>
+  json_value& _set_ptr(json_type type, T*& var, const V& value) {
+    if (_type != type) {
+      _clear();
+      _type = type;
+      var   = new T(value);
+    } else {
+      *var = value;
+    }
+    return *this;
+  }
+  template <typename T, typename V>
+  json_value& _set_ptr(json_type type, T*& var, V&& value) {
+    if (_type != type) {
+      _clear();
+      _type = type;
+      var   = new T(std::move(value));
+    } else {
+      *var = std::move(value);
+    }
+    return *this;
+  }
+
+  bool _empty() const {
+    switch (_type) {
+      case json_type::null: return true;
+      case json_type::integer:
+      case json_type::uinteger:
+      case json_type::number:
+      case json_type::boolean: return false;
+      case json_type::string: return _string->empty();
+      case json_type::array: return _array->empty();
+      case json_type::object: return _object->empty();
+    }
+  }
+  size_t _size() const {
+    switch (_type) {
+      case json_type::null: return 0;
+      case json_type::integer:
+      case json_type::uinteger:
+      case json_type::number:
+      case json_type::boolean: return 1;
+      case json_type::string: return _string->size();
+      case json_type::array: return _array->size();
+      case json_type::object: return _object->size();
+    }
+  }
+};
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// JSON I/O
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Load json
+bool load_json(const string& filename, json_value& json, string& error);
+// Save json
+bool save_json(const string& filename, json_value& json, string& error);
+
+// Parse json
+bool parse_json(const string& text, json_value& json, string& error);
+// Dump json
+bool dump_json(string& text, const json_value& json, string& error);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 //
 //
 // IMPLEMENTATION
@@ -245,7 +673,7 @@ struct cli_variable {
 // Command line state.
 struct cli_state {
   json_value   defaults  = {};
-  json_schema  schema    = {};
+  json_value   schema    = {};
   cli_variable variables = {};
 };
 // Command line command.
