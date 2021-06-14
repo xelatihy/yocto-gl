@@ -497,6 +497,8 @@ struct json_value {
   const json_value& at(const string& key) const { return _get_object().at(key); }
   bool contains(const string& key) const { return _get_object().contains(key); }
   json_value& append() { return _get_array().emplace_back(); }
+  template<typename T>
+  void append(const T& value) { _get_array().push_back(json_value{value}); }
   json_value& emplace_back() { return _get_array().emplace_back(); }
   void push_back(const json_value& item) { _get_array().push_back(item); }
   template<typename T>
@@ -575,13 +577,6 @@ struct json_value {
   void set(size_t value) { set((uint64_t)value); }
   void get(size_t& value) const { value = get<uint64_t>(); }
 #endif
-
-  template <typename T>
-  json_value& append(const T& value) {
-    auto& item = append();
-    item.set(value);
-    return item;
-  }
 
  private:
   json_type _type = json_type::null;
