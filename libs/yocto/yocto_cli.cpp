@@ -557,8 +557,8 @@ static void add_option_impl(const cli_command& cli, const string& name,
   auto& defaults  = get_defaults(cli);
   auto& schema    = get_schema(cli);
   auto& variables = get_variables(cli);
-  cli_to_json(defaults.insert(name), value, choices);
-  cli_to_schema(schema["properties"].insert(name), value, choices, name, usage);
+  cli_to_json(defaults[name], value, choices);
+  cli_to_schema(schema["properties"][name], value, choices, name, usage);
   if (req) schema["required"].append(name);
   if (positional) schema["clipositional"].append(name);
   variables.variables[name] = {&value, cli_from_json_<T>, choices};
@@ -572,8 +572,8 @@ static void add_option_impl(const cli_command& cli, const string& name,
   auto& defaults  = get_defaults(cli);
   auto& schema    = get_schema(cli);
   auto& variables = get_variables(cli);
-  cli_to_json(defaults.insert(name), value, choices);
-  cli_to_schema(schema["properties"].insert(name), value, choices, name, usage);
+  cli_to_json(defaults[name], value, choices);
+  cli_to_schema(schema["properties"][name], value, choices, name, usage);
   if (req) schema["required"].append(name);
   if (positional) schema["clipositional"].append(name);
   variables.variables[name] = {&value, cli_from_json_<array<T, N>>, choices};
@@ -587,8 +587,8 @@ static void add_option_impl(const cli_command& cli, const string& name,
   auto& defaults  = get_defaults(cli);
   auto& schema    = get_schema(cli);
   auto& variables = get_variables(cli);
-  cli_to_json(defaults.insert(name), value, choices);
-  cli_to_schema(schema["properties"].insert(name), value, choices, name, usage);
+  cli_to_json(defaults[name], value, choices);
+  cli_to_schema(schema["properties"][name], value, choices, name, usage);
   if (req) schema["required"].append(name);
   if (positional) schema["clipositional"].append(name);
   variables.variables[name] = {&value, cli_from_json_<vector<T>>, choices};
@@ -884,10 +884,6 @@ static bool args_to_json(json_value& value, const json_value& schema,
     return base + "/" + name;
   };
 
-  auto contains = [](const auto& object, const string& name) {
-    return object.find(name) != object.end();
-  };
-
   // init
   value.set_object();
 
@@ -922,7 +918,7 @@ static bool args_to_json(json_value& value, const json_value& schema,
       if (std::find(commands.begin(), commands.end(), arg) != commands.end()) {
         value["command"].set(arg);
         if (!args_to_json(
-                value.insert(arg), schema["properties"][arg], args, idx, error))
+                value[arg], schema["properties"][arg], args, idx, error))
           return false;
         break;
       } else {
@@ -934,18 +930,16 @@ static bool args_to_json(json_value& value, const json_value& schema,
       auto  name    = positionals[positional++];
       auto& oschema = schema["properties"][name];
       idx--;
-      if (!arg_to_json(value.insert(name), oschema, arg, is_positional, args,
-              idx, error))
+      if (!arg_to_json(
+              value[name], oschema, arg, is_positional, args, idx, error))
         return false;
-      if (oschema.contains("cliconfig") &&
-          !contains(value.get_object(), "config")) {
-        value.get_object()["config"].set(
-            "try:" + get_try_config(value[name].get<string>(),
-                         oschema["cliconfig"].get<string>()));
+      if (oschema.contains("cliconfig") && !value.contains("config")) {
+        value["config"].set("try:" + get_try_config((string)value[name],
+                                         (string)oschema["cliconfig"]));
       }
     } else {
       auto name = string{};
-      for (auto& [key, value] : schema["properties"].get_object()) {
+      for (auto& [key, value] : schema["properties"].items()) {
         if ("--" + key == arg && !value.is_object()) {
           name = key;
           break;
@@ -953,14 +947,12 @@ static bool args_to_json(json_value& value, const json_value& schema,
       }
       if (name == "") return cli_error("unknown option " + arg);
       auto& oschema = schema["properties"][name];
-      if (!arg_to_json(value.get_object()[name], oschema, name, is_positional,
-              args, idx, error))
+      if (!arg_to_json(
+              value[name], oschema, name, is_positional, args, idx, error))
         return false;
-      if (!oschema["cliconfig"].empty() &&
-          !contains(value.get_object(), "config")) {
-        value.get_object()["config"].set(
-            "try:" + get_try_config(value[name].get<string>(),
-                         oschema["cliconfig"].get<string>()));
+      if (!oschema["cliconfig"].empty() && !value.contains("config")) {
+        value["config"].set("try:" + get_try_config((string)value[name],
+                                         (string)oschema["cliconfig"]));
       }
     }
   }
@@ -1120,10 +1112,6 @@ static bool config_to_value(json_value& value, string& error) {
   };
 
   auto get_config = [](const json_value& value) -> string {
-    auto contains = [](const auto& object, const string& name) {
-      return object.find(name) != object.end();
-    };
-
     auto current_ = &value;
     while (true) {
       auto& current = *current_;
