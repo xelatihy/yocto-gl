@@ -272,7 +272,7 @@ bool load_json(const string& filename, json_value& json, string& error) {
 static void from_json(const nlohmann::json& js, json_value& value) {
   switch (js.type()) {
     case nlohmann::json::value_t::null: {
-      value.set_null();
+      value = nullptr;
     } break;
     case nlohmann::json::value_t::number_integer: {
       value = (int64_t)js;
@@ -299,10 +299,10 @@ static void from_json(const nlohmann::json& js, json_value& value) {
         from_json(jitem, value.get_object()[key]);
     } break;
     case nlohmann::json::value_t::binary: {
-      value.set_null();
+      value = nullptr;
     } break;
     case nlohmann::json::value_t::discarded: {
-      value.set_null();
+      value = nullptr;
     } break;
   }
 }

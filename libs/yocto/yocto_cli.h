@@ -397,7 +397,6 @@ struct json_value {
   bool is_object() const { return _type == json_type::object; }
 
   // set
-  void set_null() { _set_type(json_type::null); }
   void set_array() {
     _set_type(json_type::array);
     *_array = {};
