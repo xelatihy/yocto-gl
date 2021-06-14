@@ -368,15 +368,13 @@ struct json_value {
   template <typename T, size_t N>
   json_value& operator=(const std::array<T, N>& value) {
     set_array(value.size());
-    for (auto idx = (size_t)0; idx < value.size(); idx++)
-      get_array().at(idx).set(value.at(idx));
+    for (auto idx = (size_t)0; idx < value.size(); idx++) (*_array)[idx] = value.at(idx);
     return *this;
   }
   template <typename T>
   json_value& operator=(const vector<T>& value) {
     set_array(value.size());
-    for (auto idx = (size_t)0; idx < value.size(); idx++)
-      get_array().at(idx).set(value.at(idx));
+    for (auto idx = (size_t)0; idx < value.size(); idx++) (*_array)[idx] = value.at(idx);
     return *this;
   }
   // clang-format on
@@ -416,64 +414,6 @@ struct json_value {
   void set_object(const json_object& value) {
     _set_type(json_type::object);
     *_object = value;
-  }
-
-  int64_t& get_integer() {
-    if (_type != json_type::integer) throw json_error{"integer expected"};
-    return _integer;
-  }
-  uint64_t& get_uinteger() {
-    if (_type != json_type::uinteger) throw json_error{"integer expected"};
-    return _uinteger;
-  }
-  double& get_number() {
-    if (_type != json_type::number) throw json_error{"number expected"};
-    return _number;
-  }
-  bool& get_boolean() {
-    if (_type != json_type::boolean) throw json_error{"boolean expected"};
-    return _boolean;
-  }
-  string& get_string() {
-    if (_type != json_type::string) throw json_error{"string expected"};
-    return *_string;
-  }
-  json_array& get_array() {
-    if (_type != json_type::array) throw json_error{"array expected"};
-    return *_array;
-  }
-  json_object& get_object() {
-    if (_type != json_type::object) throw json_error{"object expected"};
-    return *_object;
-  }
-
-  const int64_t& get_integer() const {
-    if (_type != json_type::integer) throw json_error{"integer expected"};
-    return _integer;
-  }
-  const uint64_t& get_uinteger() const {
-    if (_type != json_type::uinteger) throw json_error{"integer expected"};
-    return _uinteger;
-  }
-  const double& get_number() const {
-    if (_type != json_type::number) throw json_error{"number expected"};
-    return _number;
-  }
-  const bool& get_boolean() const {
-    if (_type != json_type::boolean) throw json_error{"boolean expected"};
-    return _boolean;
-  }
-  const string& get_string() const {
-    if (_type != json_type::string) throw json_error{"string expected"};
-    return *_string;
-  }
-  const json_array& get_array() const {
-    if (_type != json_type::array) throw json_error{"array expected"};
-    return *_array;
-  }
-  const json_object& get_object() const {
-    if (_type != json_type::object) throw json_error{"object expected"};
-    return *_object;
   }
 
   // size
@@ -534,13 +474,13 @@ struct json_value {
   void set(const std::array<T, N>& value) {
     set_array(value.size());
     for (auto idx = (size_t)0; idx < value.size(); idx++)
-      get_array().at(idx).set(value.at(idx));
+      (*_array)[idx].set(value.at(idx));
   }
   template <typename T>
   void set(const vector<T>& value) {
     set_array(value.size());
     for (auto idx = (size_t)0; idx < value.size(); idx++)
-      get_array().at(idx).set(value.at(idx));
+      (*_array)[idx].set(value.at(idx));
   }
   // clang-format on
 

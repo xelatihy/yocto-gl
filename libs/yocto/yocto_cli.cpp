@@ -291,12 +291,11 @@ static void from_json(const nlohmann::json& js, json_value& value) {
     } break;
     case nlohmann::json::value_t::array: {
       value.set_array();
-      for (auto& jitem : js) from_json(jitem, value.get_array().emplace_back());
+      for (auto& jitem : js) from_json(jitem, value.emplace_back());
     } break;
     case nlohmann::json::value_t::object: {
       value.set_object();
-      for (auto& [key, jitem] : js.items())
-        from_json(jitem, value.get_object()[key]);
+      for (auto& [key, jitem] : js.items()) from_json(jitem, value[key]);
     } break;
     case nlohmann::json::value_t::binary: {
       value = nullptr;
@@ -330,31 +329,19 @@ bool save_json(const string& filename, json_value& json, string& error) {
 
 static void to_json(nlohmann::json& js, const json_value& value) {
   switch (value.type()) {
-    case json_type::null: {
-      js = {};
-    } break;
-    case json_type::integer: {
-      js = value.get_integer();
-    } break;
-    case json_type::uinteger: {
-      js = value.get_uinteger();
-    } break;
-    case json_type::number: {
-      js = value.get_number();
-    } break;
-    case json_type::boolean: {
-      js = value.get_boolean();
-    } break;
-    case json_type::string: {
-      js = value.get_string();
-    } break;
+    case json_type::null: js = {}; break;
+    case json_type::integer: js = (int64_t)value; break;
+    case json_type::uinteger: js = (uint64_t)value; break;
+    case json_type::number: js = (double)value; break;
+    case json_type::boolean: js = (bool)value; break;
+    case json_type::string: js = (string)value; break;
     case json_type::array: {
       js = nlohmann::json::array();
-      for (auto& item : value.get_array()) to_json(js.emplace_back(), item);
+      for (auto& item : value) to_json(js.emplace_back(), item);
     } break;
     case json_type::object: {
       js = nlohmann::json::object();
-      for (auto& [key, item] : value.get_object()) to_json(js[key], item);
+      for (auto& [key, item] : value.items()) to_json(js[key], item);
     } break;
   }
 }
@@ -534,7 +521,7 @@ static json_value& get_defaults(const cli_command& cli) {
   if (cli.path.empty())
     return cli.state->defaults;
   else
-    return cli.state->defaults.get_object().at(cli.path);
+    return cli.state->defaults[cli.path];
 }
 static json_value& get_schema(const cli_command& cli) {
   if (cli.path.empty())
@@ -729,15 +716,13 @@ static string schema_to_usage(
     switch (value.type()) {
       case json_type::null: return "";
       case json_type::integer:
-        return "[" + std::to_string(value.get_integer()) + "]";
+        return "[" + std::to_string((int64_t)value) + "]";
       case json_type::uinteger:
-        return "[" + std::to_string(value.get_uinteger()) + "]";
-      case json_type::number:
-        return "[" + std::to_string(value.get_number()) + "]";
+        return "[" + std::to_string((uint64_t)value) + "]";
+      case json_type::number: return "[" + std::to_string((double)value) + "]";
       case json_type::boolean:
-        return "[" + (value.get_boolean() ? string{"true"} : string{"false"}) +
-               "]";
-      case json_type::string: return "[" + value.get_string() + "]";
+        return "[" + ((bool)value ? string{"true"} : string{"false"}) + "]";
+      case json_type::string: return "[" + (string)value + "]";
       case json_type::array: return "[]";
       case json_type::object: return "";
     }
@@ -753,7 +738,7 @@ static string schema_to_usage(
   auto message       = string{};
   auto usage_options = string{}, usage_arguments = string{},
        usage_commands = string{};
-  for (auto& [key, property] : schema["properties"].get_object()) {
+  for (auto& [key, property] : schema["properties"].items()) {
     if (property["type"].get<string>() == "object") {
       auto line = "  " + key;
       while (line.size() < 32) line += " ";
@@ -761,7 +746,7 @@ static string schema_to_usage(
       usage_commands += line;
     } else {
       auto is_positional = false;
-      for (auto& positional : schema["clipositional"].get_array()) {
+      for (auto& positional : schema["clipositional"]) {
         if (positional.get<string>() == key) is_positional = true;
       }
       auto line = (is_positional ? "  " : "  --") + key;
@@ -777,7 +762,7 @@ static string schema_to_usage(
       if (property.contains("enum")) {
         line += "    with choices: ";
         auto len = 16;
-        for (auto& choice : property["enum"].get_array()) {
+        for (auto& choice : property["enum"]) {
           if (len + choice.get<string>().size() + 2 > 78) {
             line += "\n                  ";
             len = 16;
@@ -855,8 +840,8 @@ static bool arg_to_json(json_value& value, const json_value& schema,
       return cli_error("missing value for " + name);
     auto end = std::min(idx + schema["max_items"].get<size_t>(), args.size());
     while (idx < end) {
-      if (!arg_to_json(value.get_array().emplace_back(), schema["items"], name,
-              positional, args, idx, error))
+      if (!arg_to_json(value.emplace_back(), schema["items"], name, positional,
+              args, idx, error))
         return false;
     }
   } else {
@@ -889,11 +874,11 @@ static bool args_to_json(json_value& value, const json_value& schema,
 
   // add things to schema
   auto commands = vector<string>{}, positionals = vector<string>{};
-  for (auto& [key, property] : schema["properties"].get_object()) {
+  for (auto& [key, property] : schema["properties"].items()) {
     if (property["type"].get<string>() == "object") commands.push_back(key);
   }
   if (!schema["clipositional"].empty()) {
-    for (auto& key : schema["clipositional"].get_array()) {
+    for (auto& key : schema["clipositional"]) {
       positionals.push_back(key.get<string>());
     }
   }
@@ -905,7 +890,7 @@ static bool args_to_json(json_value& value, const json_value& schema,
   while (idx < args.size()) {
     auto& arg = args[idx++];
     if (arg == "--help") {
-      value.get_object()["help"] = true;
+      value["help"] = true;
       continue;
     }
     if (arg == "--config") {
@@ -968,10 +953,6 @@ static bool validate_json(const json_value& value, const json_value& schema,
     return false;
   };
 
-  auto contains = [](const auto& object, const string& name) {
-    return object.find(name) != object.end();
-  };
-
   switch (value.type()) {
     case json_type::null: {
       return cli_error("bad value for " + name);
@@ -1011,7 +992,7 @@ static bool validate_json(const json_value& value, const json_value& schema,
         return cli_error("bad value for " + name);
       if (schema["max_items"].get<size_t>() < value.size())
         return cli_error("bad value for " + name);
-      for (auto& item : value.get_array())
+      for (auto& item : value)
         if (!validate_json(item, schema["items"], name, false, error))
           return false;
       return true;
@@ -1019,7 +1000,7 @@ static bool validate_json(const json_value& value, const json_value& schema,
     case json_type::object: {
       if (schema["type"].get<string>() != "object")
         return cli_error("bad value for " + name);
-      for (auto& [key, property] : value.get_object()) {
+      for (auto& [key, property] : value.items()) {
         if (key == "help") {
           if (property.type() != json_type::boolean)
             return cli_error("bad value for " + key);
@@ -1032,19 +1013,19 @@ static bool validate_json(const json_value& value, const json_value& schema,
         } else {
           if (!schema["properties"].contains(key))
             return cli_error("unknown option " + key);
-          auto selected_command = contains(value.get_object(), "command") &&
+          auto selected_command = value.contains("command") &&
                                   value["command"].type() ==
                                       json_type::string &&
-                                  value["command"].get_string() == key;
+                                  (string)value["command"] == key;
           if (!validate_json(property, schema["properties"][key], key,
                   check_required && selected_command, error))
             return false;
         }
       }
       if (check_required) {
-        for (auto& req : schema["required"].get_array()) {
-          if (!contains(value.get_object(), req.get<string>()))
-            return cli_error("missing value for " + req.get<string>());
+        for (auto& req : schema["required"]) {
+          if (!value.contains((string)req))
+            return cli_error("missing value for " + (string)req);
         }
       }
       return true;
@@ -1059,18 +1040,12 @@ static bool validate_json(const json_value& value, const json_value& schema,
 
 // update json objects
 void update_value_objects(json_value& value, const json_value& update) {
-  auto contains = [](const auto& object, const string& name) {
-    return object.find(name) != object.end();
-  };
-
   if (value.type() != json_type::object) return;
-  for (auto& [key, property] : update.get_object()) {
-    if (property.type() == json_type::object &&
-        contains(value.get_object(), key) &&
-        value.get_object()[key].type() == json_type::object) {
-      update_value_objects(value.get_object()[key], value);
+  for (auto& [key, property] : update.items()) {
+    if (property.is_object() && value.contains(key) && value[key].is_object()) {
+      update_value_objects(value[key], value);
     } else {
-      value.get_object()[key] = property;
+      value[key] = property;
     }
   }
 }
@@ -1083,10 +1058,6 @@ static bool value_to_variable(
     return false;
   };
 
-  auto contains = [](const auto& object, const string& name) {
-    return object.find(name) != object.end();
-  };
-
   if (variable.setter) {
     if (!variable.setter(value, variable.value, variable.choices)) return false;
   }
@@ -1094,7 +1065,7 @@ static bool value_to_variable(
   for (auto& [key, property] : variable.variables) {
     if (value.type() != json_type::object)
       throw std::runtime_error{"something went wrong"};
-    if (contains(value.get_object(), key)) {
+    if (value.contains(key)) {
       if (!value_to_variable(value[key], property, error)) {
         return cli_error("bad value for " + key);
       }
