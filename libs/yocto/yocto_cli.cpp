@@ -290,11 +290,11 @@ static void from_json(const nlohmann::json& js, json_value& value) {
       value = (string)js;
     } break;
     case nlohmann::json::value_t::array: {
-      value.set_array();
+      value = json_array{};
       for (auto& jitem : js) from_json(jitem, value.emplace_back());
     } break;
     case nlohmann::json::value_t::object: {
-      value.set_object();
+      value = json_object{};
       for (auto& [key, jitem] : js.items()) from_json(jitem, value[key]);
     } break;
     case nlohmann::json::value_t::binary: {
@@ -392,25 +392,25 @@ template <typename T>
 static void cli_to_json(
     json_value& json, const T& value, const vector<string>& choices) {
   if (choices.empty()) {
-    json.set(value);
+    json = value;
   } else {
     if constexpr (cli_is_array_v<T>) {
-      json.set_array(value.size());
+      json = json_array(value.size());
       for (auto idx = (size_t)0; idx < value.size(); idx++) {
         cli_to_json(json[idx], value[idx], choices);
       }
     } else if constexpr (cli_is_vector_v<T>) {
-      json.set_array(value.size());
+      json = json_array(value.size());
       for (auto idx = (size_t)0; idx < value.size(); idx++) {
         cli_to_json(json[idx], value[idx], choices);
       }
     } else {
       if constexpr (std::is_integral_v<T> || std::is_floating_point_v<T>) {
-        json.set(choices.at((uint64_t)value));
+        json = choices.at((uint64_t)value);
       } else if constexpr (std::is_same_v<T, string>) {
         if (std::find(choices.begin(), choices.end(), value) == choices.end())
           throw std::out_of_range{"bad value"};
-        json.set(value);
+        json = value;
       } else {
         throw std::invalid_argument{"not supported"};
       }
@@ -421,55 +421,55 @@ static void cli_to_json(
 template <typename T>
 static void cli_to_schema(json_value& schema, const T& value,
     const vector<string>& choices, const string& name, const string& usage) {
-  schema.set_object();
-  schema["title"].set(name);
-  schema["description"].set(usage);
+  schema                = json_object{};
+  schema["title"]       = name;
+  schema["description"] = usage;
   cli_to_json(schema["default"], value, choices);
   if constexpr (std::is_same_v<T, int32_t> || std::is_same_v<T, int64_t>) {
     if (!choices.empty()) {
-      schema["type"].set("string");
-      schema["enum"].set(choices);
+      schema["type"] = "string";
+      schema["enum"] = choices;
     } else {
-      schema["type"].set("integer");
+      schema["type"] = "integer";
     }
   } else if constexpr (std::is_same_v<T, uint32_t> ||
                        std::is_same_v<T, uint64_t>) {
     if (!choices.empty()) {
-      schema["type"].set("string");
-      schema["enum"].set(choices);
+      schema["type"] = "string";
+      schema["enum"] = choices;
     } else {
-      schema["type"].set("integer");
+      schema["type"] = "integer";
     }
   } else if constexpr (std::is_same_v<T, float> || std::is_same_v<T, double>) {
     if (!choices.empty()) {
-      schema["type"].set("string");
-      schema["enum"].set(choices);
+      schema["type"] = "string";
+      schema["enum"] = choices;
     } else {
-      schema["type"].set("number");
+      schema["type"] = "number";
     }
   } else if constexpr (std::is_same_v<T, bool>) {
     if (!choices.empty()) {
-      schema["type"].set("string");
-      schema["enum"].set(choices);
+      schema["type"] = "string";
+      schema["enum"] = choices;
     } else {
-      schema["type"].set("boolean");
+      schema["type"] = "boolean";
     }
   } else if constexpr (std::is_same_v<T, string>) {
     if (!choices.empty()) {
-      schema["type"].set("string");
-      schema["enum"].set(choices);
+      schema["type"] = "string";
+      schema["enum"] = choices;
     } else {
-      schema["type"].set("string");
+      schema["type"] = "string";
     }
   } else if constexpr (cli_is_array_v<T>) {
-    schema["type"].set("array");
-    schema["min_items"].set(value.size());
-    schema["max_items"].set(value.size());
+    schema["type"]      = "array";
+    schema["min_items"] = value.size();
+    schema["max_items"] = value.size();
     cli_to_schema(schema["item"], T{}, choices, "item", "");
   } else if constexpr (cli_is_vector_v<T>) {
-    schema["type"].set("array");
-    schema["min_items"].set((size_t)0);
-    schema["max_items"].set(std::numeric_limits<size_t>::max());
+    schema["type"]      = "array";
+    schema["min_items"] = (size_t)0;
+    schema["max_items"] = std::numeric_limits<size_t>::max();
     cli_to_schema(schema["item"], T{}, choices, "item", "");
   }
 }
@@ -611,7 +611,7 @@ void add_option_with_config(const cli_command& cli, const string& name,
     bool req) {
   add_option_impl(cli, name, value, usage, {}, {}, alt, req, false);
   if (!config.empty()) {
-    get_schema(cli)["properties"][name]["cliconfig"].set(config);
+    get_schema(cli)["properties"][name]["cliconfig"] = config;
   }
 }
 void add_option(const cli_command& cli, const string& name, int& value,
@@ -640,7 +640,7 @@ void add_argument_with_config(const cli_command& cli, const string& name,
     string& value, const string& usage, const string& config, bool req) {
   add_option_impl(cli, name, value, usage, {}, {}, "", req, true);
   if (!config.empty()) {
-    get_schema(cli)["properties"][name]["cliconfig"].set(config);
+    get_schema(cli)["properties"][name]["cliconfig"] = config;
   }
 }
 void add_argument(const cli_command& cli, const string& name, int& value,
@@ -835,7 +835,7 @@ static bool arg_to_json(json_value& value, const json_value& schema,
     if (idx >= args.size()) return cli_error("missing value for " + name);
     value = args[idx++];
   } else if (schema["type"].get<string>() == "array") {
-    value.set_array();
+    value = json_array{};
     if (idx + schema["min_items"].get<size_t>() >= args.size())
       return cli_error("missing value for " + name);
     auto end = std::min(idx + schema["max_items"].get<size_t>(), args.size());
@@ -870,7 +870,7 @@ static bool args_to_json(json_value& value, const json_value& schema,
   };
 
   // init
-  value.set_object();
+  value = json_object{};
 
   // add things to schema
   auto commands = vector<string>{}, positionals = vector<string>{};
@@ -901,7 +901,7 @@ static bool args_to_json(json_value& value, const json_value& schema,
     auto is_positional = arg.find('-') != 0;
     if (!commands.empty() && is_positional) {
       if (std::find(commands.begin(), commands.end(), arg) != commands.end()) {
-        value["command"].set(arg);
+        value["command"] = arg;
         if (!args_to_json(
                 value[arg], schema["properties"][arg], args, idx, error))
           return false;
@@ -919,8 +919,8 @@ static bool args_to_json(json_value& value, const json_value& schema,
               value[name], oschema, arg, is_positional, args, idx, error))
         return false;
       if (oschema.contains("cliconfig") && !value.contains("config")) {
-        value["config"].set("try:" + get_try_config((string)value[name],
-                                         (string)oschema["cliconfig"]));
+        value["config"] = "try:" + get_try_config((string)value[name],
+                                       (string)oschema["cliconfig"]);
       }
     } else {
       auto name = string{};
@@ -936,8 +936,8 @@ static bool args_to_json(json_value& value, const json_value& schema,
               value[name], oschema, name, is_positional, args, idx, error))
         return false;
       if (!oschema["cliconfig"].empty() && !value.contains("config")) {
-        value["config"].set("try:" + get_try_config((string)value[name],
-                                         (string)oschema["cliconfig"]));
+        value["config"] = "try:" + get_try_config((string)value[name],
+                                       (string)oschema["cliconfig"]);
       }
     }
   }
@@ -1122,32 +1122,32 @@ static bool config_to_value(json_value& value, string& error) {
 
 // initialize a command line parser
 cli_state make_cli(const string& name, const string& usage) {
-  auto cli = cli_state{};
-  cli.defaults.set_object();
-  cli.schema.set_object();
-  cli.schema["title"].set(name);
-  cli.schema["description"].set(usage);
-  cli.schema["type"].set("object");
-  cli.schema["properties"].set_object();
-  cli.schema["required"].set_array();
-  cli.schema["clipositional"].set_array();
+  auto cli                    = cli_state{};
+  cli.defaults                = json_object{};
+  cli.schema                  = json_object{};
+  cli.schema["title"]         = name;
+  cli.schema["description"]   = usage;
+  cli.schema["type"]          = "object";
+  cli.schema["properties"]    = json_object{};
+  cli.schema["required"]      = json_array{};
+  cli.schema["clipositional"] = json_array{};
   return cli;
 }
 
 // add command
 cli_command add_command(
     const cli_command& cli, const string& name, const string& usage) {
-  auto& defaults = get_defaults(cli);
-  defaults[name].set_object();
-  auto& schema   = get_schema(cli);
-  auto& property = schema["properties"][name];
-  property.set_object();
-  property["title"].set(name);
-  property["description"].set(usage);
-  property["type"].set("object");
-  property["properties"].set_object();
-  property["required"].set_array();
-  property["clipositional"].set_array();
+  auto& defaults            = get_defaults(cli);
+  defaults[name]            = json_object{};
+  auto& schema              = get_schema(cli);
+  auto& property            = schema["properties"][name];
+  property                  = json_object{};
+  property["title"]         = name;
+  property["description"]   = usage;
+  property["type"]          = "object";
+  property["properties"]    = json_object{};
+  property["required"]      = json_array{};
+  property["clipositional"] = json_array{};
   auto& variables           = get_variables(cli);
   variables.variables[name] = {};
   return {cli.state, cli.path.empty() ? name : (cli.path + "/" + name)};

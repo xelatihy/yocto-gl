@@ -465,6 +465,11 @@ struct json_value {
     throw json_error{"array or object expected"};
   }
 
+  // object creation
+  static json_value array() { return json_value{json_array{}}; }
+  static json_value array(size_t size) { return json_value{json_array(size)}; }
+  static json_value object() { return json_value{json_object{}}; }
+
   // element access
   // clang-format off
   json_value&       operator[](size_t idx) { return _get_array().at(idx); }
@@ -493,32 +498,6 @@ struct json_value {
   const json_value* end() const { return _get_array().data() + _get_array().size(); }
   json_object& items() { return _get_object(); }
   const json_object& items() const { return _get_object(); }
-  // clang-format on
-
-  // setters
-  // clang-format off
-  void set(std::nullptr_t) { _set_value(json_type::null, _integer, 0); }
-  void set(int32_t value) { _set_value(json_type::integer, _integer, value); }
-  void set(int64_t value) { _set_value(json_type::integer, _integer, value); }
-  void set(uint32_t value) { _set_value(json_type::uinteger, _uinteger, value); }
-  void set(uint64_t value) { _set_value(json_type::uinteger, _uinteger, value); }
-  void set(float value) { _set_value(json_type::number, _number, value); }
-  void set(double value) { _set_value(json_type::number, _number, value); }
-  void set(bool value) { _set_value(json_type::boolean, _boolean, value); }
-  void set(const string& value) { _set_ptr(json_type::string, _string, value); }
-  void set(const char* value) { _set_ptr(json_type::string, _string, value); }
-  template <typename T, size_t N>
-  void set(const std::array<T, N>& value) {
-    set_array(value.size());
-    for (auto idx = (size_t)0; idx < value.size(); idx++)
-      (*_array)[idx].set(value.at(idx));
-  }
-  template <typename T>
-  void set(const vector<T>& value) {
-    set_array(value.size());
-    for (auto idx = (size_t)0; idx < value.size(); idx++)
-      (*_array)[idx].set(value.at(idx));
-  }
   // clang-format on
 
   template <typename T>
@@ -552,9 +531,7 @@ struct json_value {
     for (auto idx = (size_t)0; idx < value.size(); idx++)
       array.at(idx).get(value.at(idx));
   }
-
 #ifdef __APPLE__
-  void set(size_t value) { set((uint64_t)value); }
   void get(size_t& value) const { value = get<uint64_t>(); }
 #endif
 
