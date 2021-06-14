@@ -401,13 +401,13 @@ struct json_value {
   json_value& operator=(json_object&& value) { return _set_ptr(json_type::object, _object, std::move(value)); }
   template <typename T, size_t N>
   json_value& operator=(const std::array<T, N>& value) {
-    set_array(value.size());
+    _set_ptr(json_type::array, _array, json_array(value.size()));
     for (auto idx = (size_t)0; idx < value.size(); idx++) (*_array)[idx] = value.at(idx);
     return *this;
   }
   template <typename T>
   json_value& operator=(const vector<T>& value) {
-    set_array(value.size());
+    _set_ptr(json_type::array, _array, json_array(value.size()));
     for (auto idx = (size_t)0; idx < value.size(); idx++) (*_array)[idx] = value.at(idx);
     return *this;
   }
@@ -430,28 +430,6 @@ struct json_value {
   bool is_string() const { return _type == json_type::string; }
   bool is_array() const { return _type == json_type::array; }
   bool is_object() const { return _type == json_type::object; }
-
-  // set
-  void set_array() {
-    _set_type(json_type::array);
-    *_array = {};
-  }
-  void set_array(size_t size) {
-    _set_type(json_type::array);
-    _array->resize(size);
-  }
-  void set_array(const json_array& value) {
-    _set_type(json_type::array);
-    *_array = value;
-  }
-  void set_object() {
-    _set_type(json_type::object);
-    *_object = {};
-  }
-  void set_object(const json_object& value) {
-    _set_type(json_type::object);
-    *_object = value;
-  }
 
   // size
   bool empty() const {
@@ -583,12 +561,6 @@ struct json_value {
       case json_type::object: delete _object; break;
       default: break;
     }
-  }
-
-  void _set_type(json_type type) {
-    if (_type == type) return;
-    auto new_json = json_value{type};
-    _swap(new_json);
   }
 
   template <typename T>
