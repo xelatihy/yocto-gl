@@ -234,7 +234,8 @@ struct ordered_map {
 
   Value& operator[](const Key& key) {
     if (auto it = _search(key); it) return it->second;
-    _data.emplace_back(key, Value{});
+    auto item = pair<Key, Value>{key, Value{}};
+    _data.push_back(item);
     return _data.back().second;
   }
   Value& at(const Key& key) {
@@ -302,7 +303,7 @@ using json_object = ordered_map<string, json_value>;
 // Json value
 struct json_value {
   // Json value
-  json_value() : _type{json_type::null} {}
+  json_value() : _type{json_type::null}, _integer{0} {}
   json_value(json_type type) : _type{type} { _init(); }
   json_value(const json_value& other) { _copy(other); }
   json_value(json_value&& value) : json_value() { _swap(value); }
@@ -671,11 +672,11 @@ struct json_value {
     return *_string;
   }
   const json_array& _get_array() const {
-    if (_type == json_type::array) throw json_error{"array expected"};
+    if (_type != json_type::array) throw json_error{"array expected"};
     return *_array;
   }
   json_array& _get_array() {
-    if (_type == json_type::array) throw json_error{"array expected"};
+    if (_type != json_type::array) throw json_error{"array expected"};
     return *_array;
   }
   const json_object& _get_object() const {
@@ -694,7 +695,7 @@ struct json_value {
     var   = (T)value;
   }
   template <typename T, typename V>
-  void _set_ptr(json_type type, T* var, const V& value) {
+  void _set_ptr(json_type type, T*& var, const V& value) {
     if (_type != type) {
       _clear();
       _type = type;
