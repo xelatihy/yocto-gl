@@ -275,19 +275,19 @@ static void from_json(const nlohmann::json& js, json_value& value) {
       value.set_null();
     } break;
     case nlohmann::json::value_t::number_integer: {
-      value.set_integer((int64_t)js);
+      value = (int64_t)js;
     } break;
     case nlohmann::json::value_t::number_unsigned: {
-      value.set_uinteger((uint64_t)js);
+      value = (uint64_t)js;
     } break;
     case nlohmann::json::value_t::number_float: {
-      value.set_number((double)js);
+      value = (double)js;
     } break;
     case nlohmann::json::value_t::boolean: {
-      value.set_boolean((bool)js);
+      value = (bool)js;
     } break;
     case nlohmann::json::value_t::string: {
-      value.set_string((string)js);
+      value = (string)js;
     } break;
     case nlohmann::json::value_t::array: {
       value.set_array();
@@ -823,32 +823,32 @@ static bool arg_to_json(json_value& value, const json_value& schema,
 
   if (schema.contains("enum")) {
     if (idx >= args.size()) return cli_error("missing value for " + name);
-    value.set_string(args[idx++]);
+    value = args[idx++];
   } else if (schema["type"].get<string>() == "integer") {
     if (idx >= args.size()) return cli_error("missing value for " + name);
     auto end = (char*)nullptr;
-    value.set_integer(strtol(args[idx++].c_str(), &end, 10));
+    value    = (int64_t)strtol(args[idx++].c_str(), &end, 10);
     if (end == nullptr) return cli_error("bad value for " + name);
   } else if (schema["type"].get<string>() == "uinteger") {
     if (idx >= args.size()) return cli_error("missing value for " + name);
     auto end = (char*)nullptr;
-    value.set_uinteger(strtoul(args[idx++].c_str(), &end, 10));
+    value    = (uint64_t)strtoul(args[idx++].c_str(), &end, 10);
     if (end == nullptr) return cli_error("bad value for " + name);
   } else if (schema["type"].get<string>() == "number") {
     if (idx >= args.size()) return cli_error("missing value for " + name);
     auto end = (char*)nullptr;
-    value.set_number(strtod(args[idx++].c_str(), &end));
+    value    = strtod(args[idx++].c_str(), &end);
     if (end == nullptr) return cli_error("bad value for " + name);
   } else if (schema["type"].get<string>() == "boolean") {
     if (positional) {
       if (idx >= args.size()) return cli_error("missing value for " + name);
-      value.set_boolean(args[idx++] == "true" ? true : false);
+      value = args[idx++] == "true" ? true : false;
     } else {
-      value.set_boolean(true);
+      value = true;
     }
   } else if (schema["type"].get<string>() == "string") {
     if (idx >= args.size()) return cli_error("missing value for " + name);
-    value.set_string(args[idx++]);
+    value = args[idx++];
   } else if (schema["type"].get<string>() == "array") {
     value.set_array();
     if (idx + schema["min_items"].get<size_t>() >= args.size())
@@ -905,12 +905,12 @@ static bool args_to_json(json_value& value, const json_value& schema,
   while (idx < args.size()) {
     auto& arg = args[idx++];
     if (arg == "--help") {
-      value.get_object()["help"].set_boolean(true);
+      value.get_object()["help"] = true;
       continue;
     }
     if (arg == "--config") {
       if (idx >= args.size()) return cli_error("missing value for config");
-      value["config"].set_string(args[idx++]);
+      value["config"] = args[idx++];
       continue;
     }
     auto is_positional = arg.find('-') != 0;
