@@ -332,8 +332,12 @@ struct json_value {
       : _type{json_type::string}, _string{new string{value}} {}
   explicit json_value(const json_array& value)
       : _type{json_type::array}, _array{new json_array{value}} {}
+  explicit json_value(json_array&& value)
+      : _type{json_type::array}, _array{new json_array{std::move(value)}} {}
   explicit json_value(const json_object& value)
       : _type{json_type::object}, _object{new json_object{value}} {}
+  explicit json_value(json_object&& value)
+      : _type{json_type::object}, _object{new json_object{std::move(value)}} {}
   template <typename T, size_t N>
   explicit json_value(const array<T, N>& value)
       : _type{json_type::array}
@@ -342,6 +346,10 @@ struct json_value {
   explicit json_value(const vector<T>& value)
       : _type{json_type::array}
       , _array{new json_array(value.data(), value.data() + value.size())} {}
+#ifdef __APPLE__
+  explicit json_value(size_t value)
+      : _type{json_type::uinteger}, _uinteger{(uint64_t)value} {}
+#endif
 
   // casts
   explicit operator int32_t() const { return _get_number<int32_t>(); }
@@ -352,6 +360,27 @@ struct json_value {
   explicit operator double() const { return _get_number<double>(); }
   explicit operator bool() const { return _get_boolean(); }
   explicit operator string() const { return _get_string(); }
+  template <typename T, size_t N>
+  explicit operator std::array<T, N>() const {
+    auto& array = _get_array();
+    if (array.size() != N)
+      throw json_error{"array of size " + std::to_string(N) + " expected"};
+    auto value = std::array<T, N>{};
+    for (auto idx = (size_t)0; idx < value.size(); idx++)
+      array[idx] = value[idx];
+    return value;
+  }
+  template <typename T>
+  explicit operator vector<T>() const {
+    auto& array = _get_array();
+    auto  value = vector<T>(array.size());
+    for (auto idx = (size_t)0; idx < value.size(); idx++)
+      array[idx] = value[idx];
+    return value;
+  }
+#ifdef __APPLE__
+  explicit operator size_t() const { return _get_number<size_t>(); }
+#endif
 
   // setters
   // clang-format off
@@ -364,7 +393,12 @@ struct json_value {
   json_value& operator=(double value) { return _set_value(json_type::number, _number, value); }
   json_value& operator=(bool value) { return _set_value(json_type::boolean, _boolean, value); }
   json_value& operator=(const string& value) { return _set_ptr(json_type::string, _string, value); }
+  json_value& operator=(string&& value) { return _set_ptr(json_type::string, _string, std::move(value)); }
   json_value& operator=(const char* value) { return _set_ptr(json_type::string, _string, value); }
+  json_value& operator=(const json_array& value) { return _set_ptr(json_type::array, _array, value); }
+  json_value& operator=(json_array&& value) { return _set_ptr(json_type::array, _array, std::move(value)); }
+  json_value& operator=(const json_object& value) { return _set_ptr(json_type::object, _object, value); }
+  json_value& operator=(json_object&& value) { return _set_ptr(json_type::object, _object, std::move(value)); }
   template <typename T, size_t N>
   json_value& operator=(const std::array<T, N>& value) {
     set_array(value.size());
@@ -377,6 +411,9 @@ struct json_value {
     for (auto idx = (size_t)0; idx < value.size(); idx++) (*_array)[idx] = value.at(idx);
     return *this;
   }
+#ifdef __APPLE__
+  json_value& operator=(size_t value) { return _set_value(json_type::uinteger, _uinteger, (uint64_t)value); }
+#endif
   // clang-format on
 
   // type
@@ -634,6 +671,17 @@ struct json_value {
       var   = new T(value);
     } else {
       *var = value;
+    }
+    return *this;
+  }
+  template <typename T, typename V>
+  json_value& _set_ptr(json_type type, T*& var, V&& value) {
+    if (_type != type) {
+      _clear();
+      _type = type;
+      var   = new T(std::move(value));
+    } else {
+      *var = std::move(value);
     }
     return *this;
   }
