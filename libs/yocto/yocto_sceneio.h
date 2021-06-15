@@ -58,16 +58,48 @@ using std::vector;
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// IO ERROR
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Io error used in exception handling
+struct io_error : std::runtime_error {
+  io_error(const string& message) : std::runtime_error(message) {}
+
+  // common errors
+  // clang-format off
+  static io_error open_error(const string& filename) { return {filename + ": file not found"}; }
+  static io_error read_error(const string& filename) { return {filename + ": read found"}; }
+  static io_error write_error(const string& filename) { return {filename + ": write found"}; }
+  static io_error parse_error(const string& filename) { return {filename + ": parse found"}; }
+  static io_error format_error(const string& filename) { return {filename + ": format not supported"}; }
+  static io_error preset_error(const string& filename) { return {filename + ": unknown preset"}; }
+  // clang-format on
+};
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // FILE IO
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// Using directive
+using byte = unsigned char;
+
+// Load/save a text file
+string load_text(const string& filename);
+void   load_text(const string& filename, string& str);
+void   save_text(const string& filename, const string& str);
+
+// Load/save a binary file
+vector<byte> load_binary(const string& filename);
+void         load_binary(const string& filename, vector<byte>& data);
+void         save_binary(const string& filename, const vector<byte>& data);
+
 // Load/save a text file
 bool load_text(const string& filename, string& str, string& error);
 bool save_text(const string& filename, const string& str, string& error);
-
-// Using directive
-using byte = unsigned char;
 
 // Load/save a binary file
 bool load_binary(const string& filename, vector<byte>& data, string& error);
@@ -84,6 +116,14 @@ namespace yocto {
 // Check if an image is HDR or LDR based on filename.
 bool is_hdr_filename(const string& filename);
 bool is_ldr_filename(const string& filename);
+
+// Loads/saves a 4 channels float/byte image in linear/srgb color space.
+image_data load_image(const string& filename);
+void       load_image(const string& filename, image_data& image);
+void       save_image(const string& filename, const image_data& image);
+
+// Make presets. Supported mostly in IO.
+image_data make_image_preset(const string& type);
 
 // Loads/saves a 4 channels float/byte image in linear/srgb color space.
 bool load_image(const string& filename, image_data& img, string& error);

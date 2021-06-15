@@ -153,9 +153,180 @@ string path_current() { return std::filesystem::current_path().u8string(); }
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// FILE STREAM
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Safe wrapper for FILE stream
+struct file_stream {
+  // file parameters
+  string filename = "";
+  FILE*  fs       = nullptr;
+  bool   owned    = false;
+
+  // move-only type
+  file_stream(const file_stream&) = delete;
+  file_stream& operator=(const file_stream&) = delete;
+  ~file_stream() {
+    if (owned && fs) fclose(fs);
+  }
+
+  // operator bool to check for error
+  explicit operator bool() const { return fs != nullptr; }
+};
+
+// Open a file
+static file_stream open_file(const string& filename, const string& mode) {
+#ifdef _WIN32
+  auto path8 = std::filesystem::u8path(filename);
+  auto wmode = std::wstring(mode.begin(), mode.end());
+  auto fs    = _wfopen(path8.c_str(), wmode.c_str());
+#else
+  auto fs = fopen(filename.c_str(), mode.c_str());
+#endif
+  if (!fs) throw io_error::open_error(filename);
+  return {filename, fs, true};
+}
+
+// Close a file
+static void close_file(file_stream& fs) {
+  if (fs.owned && fs.fs) fclose(fs.fs);
+  fs.filename = "";
+  fs.fs       = nullptr;
+  fs.owned    = false;
+}
+
+// File length
+static size_t get_length(file_stream& fs) {
+  fseek(fs.fs, 0, SEEK_END);
+  auto length = ftell(fs.fs);
+  fseek(fs.fs, 0, SEEK_SET);
+  return (size_t)length;
+}
+
+// Read a line of text
+static bool read_line(file_stream& fs, char* buffer, size_t size) {
+  return fgets(buffer, (int)size, fs.fs);
+}
+
+// Write text to a file
+static void write_text(file_stream& fs, const string& str) {
+  if (fprintf(fs.fs, "%s", str.c_str()) < 0)
+    throw io_error::write_error(fs.filename);
+}
+
+// Read data from a file
+static void read_data(file_stream& fs, void* buffer, size_t count) {
+  if (fread(buffer, 1, count, fs.fs) != count)
+    throw io_error::read_error(fs.filename);
+}
+
+// Write data from a file
+static void write_data(file_stream& fs, const void* buffer, size_t count) {
+  if (fwrite(buffer, 1, count, fs.fs) != count)
+    throw io_error::read_error(fs.filename);
+}
+
+// Read a line of text
+template <size_t N>
+static void read_line(file_stream& fs, array<char, N>& buffer) {
+  return read_line(fs, buffer.data(), buffer.size());
+}
+
+// Read data from a file
+template <typename T>
+static void read_value(file_stream& fs, T& buffer) {
+  return read_data(fs, &buffer, sizeof(T));
+}
+
+// Write data from a file
+template <typename T>
+static void write_value(file_stream& fs, const T& buffer) {
+  return write_data(fs, &buffer, sizeof(T));
+}
+
+// Read data from a file
+template <typename T>
+static void read_values(file_stream& fs, T* buffer, size_t count) {
+  return read_data(fs, buffer, sizeof(T) * count);
+}
+
+// Write data from a file
+template <typename T>
+static void write_values(file_stream& fs, const T* buffer, size_t count) {
+  return write_data(fs, buffer, sizeof(T) * count);
+}
+
+// Write data from a file
+template <typename T>
+static void write_values(file_stream& fs, const vector<T>& values) {
+  return write_data(fs, values.data(), sizeof(T) * values.size());
+}
+
+template <typename T>
+static T swap_endian(T value) {
+  // https://stackoverflow.com/questions/105252/how-do-i-convert-between-big-endian-and-little-endian-values-in-c
+  static_assert(sizeof(char) == 1, "sizeof(char) == 1");
+  union {
+    T             value;
+    unsigned char bytes[sizeof(T)];
+  } source, dest;
+  source.value = value;
+  for (auto k = (size_t)0; k < sizeof(T); k++)
+    dest.bytes[k] = source.bytes[sizeof(T) - k - 1];
+  return dest.value;
+}
+
+template <typename T>
+static void read_value(file_stream& fs, T& value, bool big_endian) {
+  read_value(fs, value);
+  if (big_endian) value = swap_endian(value);
+}
+
+template <typename T>
+static void write_value(file_stream& fs, const T& value_, bool big_endian) {
+  auto value = big_endian ? swap_endian(value_) : value_;
+  return write_value(fs, value);
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // FILE IO
 // -----------------------------------------------------------------------------
 namespace yocto {
+
+// Load a text file
+string load_text(const string& filename) {
+  auto str = string{};
+  load_text(filename, str);
+  return str;
+}
+void load_text(const string& filename, string& text) {
+  auto fs = open_file(filename, "rb");
+  text.resize(get_length(fs));
+  read_data(fs, text.data(), text.size());
+}
+
+// Save a text file
+void save_text(const string& filename, const string& text) {
+  auto fs = open_file(filename, "wt");
+  write_text(fs, text);
+}
+
+// Load a binary file
+void load_binary(const string& filename, vector<byte>& data) {
+  // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
+  auto fs = open_file(filename, "rb");
+  data.resize(get_length(fs));
+  read_data(fs, data.data(), data.size());
+}
+
+// Save a binary file
+void save_binary(const string& filename, const vector<byte>& data) {
+  auto fs = open_file(filename, "wb");
+  write_data(fs, data.data(), data.size());
+}
 
 // Opens a file with a utf8 file name
 static FILE* fopen_utf8(const char* filename, const char* mode) {
@@ -252,7 +423,7 @@ bool save_binary(
 namespace yocto {
 
 template <typename T>
-static T swap_endian(T value) {
+static T _swap_endian(T value) {
   // https://stackoverflow.com/questions/105252/how-do-i-convert-between-big-endian-and-little-endian-values-in-c
   static_assert(sizeof(char) == 1, "sizeof(char) == 1");
   union {
@@ -442,6 +613,271 @@ bool is_ldr_filename(const string& filename) {
   auto ext = path_extension(filename);
   return ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".bmp" ||
          ext == ".tga";
+}
+
+// Loads/saves an image. Chooses hdr or ldr based on file name.
+image_data load_image(const string& filename) {
+  auto image = image_data{};
+  load_image(filename, image);
+  return image;
+}
+void load_image(const string& filename, image_data& image) {
+  // conversion helpers
+  auto from_linear = [](const float* pixels, int width, int height) {
+    return vector<vec4f>{
+        (vec4f*)pixels, (vec4f*)pixels + (size_t)width * (size_t)height};
+  };
+  auto from_srgb = [](const byte* pixels, int width, int height) {
+    auto pixelsf = vector<vec4f>((size_t)width * (size_t)height);
+    for (auto idx = (size_t)0; idx < pixelsf.size(); idx++) {
+      pixelsf[idx] = byte_to_float(((vec4b*)pixels)[idx]);
+    }
+    return pixelsf;
+  };
+
+  auto ext = path_extension(filename);
+  if (ext == ".exr" || ext == ".EXR") {
+    auto pixels = (float*)nullptr;
+    if (LoadEXR(&pixels, &image.width, &image.height, filename.c_str(),
+            nullptr) != 0)
+      throw io_error::read_error(filename);
+    image.linear = true;
+    image.pixels = from_linear(pixels, image.width, image.height);
+    free(pixels);
+  } else if (ext == ".pfm" || ext == ".PFM") {
+    auto ncomp  = 0;
+    auto pixels = load_pfm(
+        filename.c_str(), &image.width, &image.height, &ncomp, 4);
+    if (!pixels) throw io_error::read_error(filename);
+    image.linear = true;
+    image.pixels = from_linear(pixels, image.width, image.height);
+    delete[] pixels;
+  } else if (ext == ".hdr" || ext == ".HDR") {
+    auto ncomp  = 0;
+    auto pixels = stbi_loadf(
+        filename.c_str(), &image.width, &image.height, &ncomp, 4);
+    if (!pixels) throw io_error::read_error(filename);
+    image.linear = true;
+    image.pixels = from_linear(pixels, image.width, image.height);
+    free(pixels);
+  } else if (ext == ".png" || ext == ".PNG") {
+    auto ncomp  = 0;
+    auto pixels = stbi_load(
+        filename.c_str(), &image.width, &image.height, &ncomp, 4);
+    if (!pixels) throw io_error::read_error(filename);
+    image.linear = false;
+    image.pixels = from_srgb(pixels, image.width, image.height);
+    free(pixels);
+  } else if (ext == ".jpg" || ext == ".JPG" || ext == ".jpeg" ||
+             ext == ".JPEG") {
+    auto ncomp  = 0;
+    auto pixels = stbi_load(
+        filename.c_str(), &image.width, &image.height, &ncomp, 4);
+    if (!pixels) throw io_error::read_error(filename);
+    image.linear = false;
+    image.pixels = from_srgb(pixels, image.width, image.height);
+    free(pixels);
+  } else if (ext == ".tga" || ext == ".TGA") {
+    auto ncomp  = 0;
+    auto pixels = stbi_load(
+        filename.c_str(), &image.width, &image.height, &ncomp, 4);
+    if (!pixels) throw io_error::read_error(filename);
+    image.linear = false;
+    image.pixels = from_srgb(pixels, image.width, image.height);
+    free(pixels);
+  } else if (ext == ".bmp" || ext == ".BMP") {
+    auto ncomp  = 0;
+    auto pixels = stbi_load(
+        filename.c_str(), &image.width, &image.height, &ncomp, 4);
+    if (!pixels) throw io_error::read_error(filename);
+    image.linear = false;
+    image.pixels = from_srgb(pixels, image.width, image.height);
+    free(pixels);
+  } else if (ext == ".ypreset" || ext == ".YPRESET") {
+    // create preset
+    image = make_image_preset(path_basename(filename));
+  } else {
+    throw io_error::format_error(filename);
+  }
+}
+
+// Saves an hdr image.
+void save_image(const string& filename, const image_data& image) {
+  // conversion helpers
+  auto to_linear = [](const image_data& image) {
+    if (image.linear) return image.pixels;
+    auto pixelsf = vector<vec4f>(image.pixels.size());
+    srgb_to_rgb(pixelsf, image.pixels);
+    return pixelsf;
+  };
+  auto to_srgb = [](const image_data& image) {
+    auto pixelsb = vector<vec4b>(image.pixels.size());
+    if (image.linear) {
+      rgb_to_srgb(pixelsb, image.pixels);
+    } else {
+      float_to_byte(pixelsb, image.pixels);
+    }
+    return pixelsb;
+  };
+
+  auto ext = path_extension(filename);
+  if (ext == ".hdr" || ext == ".HDR") {
+    if (!stbi_write_hdr(filename.c_str(), (int)image.width, (int)image.height,
+            4, (const float*)to_linear(image).data()))
+      throw io_error::write_error(filename);
+  } else if (ext == ".pfm" || ext == ".PFM") {
+    if (!save_pfm(filename.c_str(), image.width, image.height, 4,
+            (const float*)to_linear(image).data()))
+      throw io_error::write_error(filename);
+  } else if (ext == ".exr" || ext == ".EXR") {
+    if (SaveEXR((const float*)to_linear(image).data(), (int)image.width,
+            (int)image.height, 4, 1, filename.c_str(), nullptr) < 0)
+      throw io_error::write_error(filename);
+  } else if (ext == ".png" || ext == ".PNG") {
+    if (!stbi_write_png(filename.c_str(), (int)image.width, (int)image.height,
+            4, (const byte*)to_srgb(image).data(), (int)image.width * 4))
+      throw io_error::write_error(filename);
+  } else if (ext == ".jpg" || ext == ".JPG" || ext == ".jpeg" ||
+             ext == ".JPEG") {
+    if (!stbi_write_jpg(filename.c_str(), (int)image.width, (int)image.height,
+            4, (const byte*)to_srgb(image).data(), 75))
+      throw io_error::write_error(filename);
+  } else if (ext == ".tga" || ext == ".TGA") {
+    if (!stbi_write_tga(filename.c_str(), (int)image.width, (int)image.height,
+            4, (const byte*)to_srgb(image).data()))
+      throw io_error::write_error(filename);
+  } else if (ext == ".bmp" || ext == ".BMP") {
+    if (!stbi_write_bmp(filename.c_str(), (int)image.width, (int)image.height,
+            4, (const byte*)to_srgb(image).data()))
+      throw io_error::write_error(filename);
+  } else {
+    throw io_error::format_error(filename);
+  }
+}
+
+image_data make_image_preset(const string& type_) {
+  auto type  = path_basename(type_);
+  auto width = 1024, height = 1024;
+  if (type.find("sky") != type.npos) width = 2048;
+  if (type.find("images2") != type.npos) width = 2048;
+  if (type == "grid") {
+    return make_grid(width, height);
+  } else if (type == "checker") {
+    return make_checker(width, height);
+  } else if (type == "bumps") {
+    return make_bumps(width, height);
+  } else if (type == "uvramp") {
+    return make_uvramp(width, height);
+  } else if (type == "gammaramp") {
+    return make_gammaramp(width, height);
+  } else if (type == "blackbodyramp") {
+    return make_blackbodyramp(width, height);
+  } else if (type == "uvgrid") {
+    return make_uvgrid(width, height);
+  } else if (type == "colormapramp") {
+    return make_colormapramp(width, height);
+  } else if (type == "sky") {
+    return make_sunsky(width, height, pif / 4, 3.0f, false, 1.0f, 1.0f,
+        vec3f{0.7f, 0.7f, 0.7f});
+  } else if (type == "sunsky") {
+    return make_sunsky(width, height, pif / 4, 3.0f, true, 1.0f, 1.0f,
+        vec3f{0.7f, 0.7f, 0.7f});
+  } else if (type == "noise") {
+    return make_noisemap(width, height, 1);
+  } else if (type == "fbm") {
+    return make_fbmmap(width, height, 1);
+  } else if (type == "ridge") {
+    return make_ridgemap(width, height, 1);
+  } else if (type == "turbulence") {
+    return make_turbulencemap(width, height, 1);
+  } else if (type == "bump-normal") {
+    return make_bumps(width, height);
+    // TODO(fabio): fix color space
+    // img   = srgb_to_rgb(bump_to_normal(img, 0.05f));
+  } else if (type == "images1") {
+    auto sub_types  = vector<string>{"grid", "uvgrid", "checker", "gammaramp",
+        "bumps", "bump-normal", "noise", "fbm", "blackbodyramp"};
+    auto sub_images = vector<image_data>();
+    for (auto& sub_type : sub_types)
+      sub_images.push_back(make_image_preset(sub_type));
+    auto montage_size = zero2i;
+    for (auto& sub_image : sub_images) {
+      montage_size.x += sub_image.width;
+      montage_size.y = max(montage_size.y, sub_image.height);
+    }
+    auto image = make_image(
+        montage_size.x, montage_size.y, sub_images[0].linear);
+    auto pos = 0;
+    for (auto& sub_image : sub_images) {
+      set_region(image, sub_image, pos, 0);
+      pos += sub_image.width;
+    }
+    return image;
+  } else if (type == "images2") {
+    auto sub_types  = vector<string>{"sky", "sunsky"};
+    auto sub_images = vector<image_data>();
+    for (auto& sub_type : sub_types)
+      sub_images.push_back(make_image_preset(sub_type));
+    auto montage_size = zero2i;
+    for (auto& sub_image : sub_images) {
+      montage_size.x += sub_image.width;
+      montage_size.y = max(montage_size.y, sub_image.height);
+    }
+    auto image = make_image(
+        montage_size.x, montage_size.y, sub_images[0].linear);
+    auto pos = 0;
+    for (auto& sub_image : sub_images) {
+      set_region(image, sub_image, pos, 0);
+      pos += sub_image.width;
+    }
+    return image;
+  } else if (type == "test-floor") {
+    return add_border(make_grid(width, height), 0.0025f);
+  } else if (type == "test-grid") {
+    return make_grid(width, height);
+  } else if (type == "test-checker") {
+    return make_checker(width, height);
+  } else if (type == "test-bumps") {
+    return make_bumps(width, height);
+  } else if (type == "test-uvramp") {
+    return make_uvramp(width, height);
+  } else if (type == "test-gammaramp") {
+    return make_gammaramp(width, height);
+  } else if (type == "test-blackbodyramp") {
+    return make_blackbodyramp(width, height);
+  } else if (type == "test-colormapramp") {
+    return make_colormapramp(width, height);
+    // TODO(fabio): fix color space
+    // img   = srgb_to_rgb(img);
+  } else if (type == "test-uvgrid") {
+    return make_uvgrid(width, height);
+  } else if (type == "test-sky") {
+    return make_sunsky(width, height, pif / 4, 3.0f, false, 1.0f, 1.0f,
+        vec3f{0.7f, 0.7f, 0.7f});
+  } else if (type == "test-sunsky") {
+    return make_sunsky(width, height, pif / 4, 3.0f, true, 1.0f, 1.0f,
+        vec3f{0.7f, 0.7f, 0.7f});
+  } else if (type == "test-noise") {
+    return make_noisemap(width, height);
+  } else if (type == "test-fbm") {
+    return make_noisemap(width, height);
+  } else if (type == "test-bumps-normal") {
+    return bump_to_normal(make_bumps(width, height), 0.05f);
+  } else if (type == "test-bumps-displacement") {
+    return make_bumps(width, height);
+    // TODO(fabio): fix color space
+    // img   = srgb_to_rgb(img);
+  } else if (type == "test-fbm-displacement") {
+    return make_fbmmap(width, height);
+    // TODO(fabio): fix color space
+    // img   = srgb_to_rgb(img);
+  } else if (type == "test-checker-opacity") {
+    return make_checker(width, height, 1, {1, 1, 1, 1}, {0, 0, 0, 0});
+  } else if (type == "test-grid-opacity") {
+    return make_grid(width, height, 1, {1, 1, 1, 1}, {0, 0, 0, 0});
+  } else {
+    throw io_error::preset_error(type_);
+  }
 }
 
 // Loads/saves an image. Chooses hdr or ldr based on file name.
