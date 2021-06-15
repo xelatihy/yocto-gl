@@ -5819,7 +5819,7 @@ static void load_pbrt_scene(
       // load shapes
       parallel_foreach(scene.shapes, [&](auto& shape) {
         auto& path = shapes_paths[&shape - &scene.shapes.front()];
-        if (path.empty()) return true;
+        if (path.empty()) return;
         load_shape(path_join(dirname, path), shape, true);
       });
       // load textures

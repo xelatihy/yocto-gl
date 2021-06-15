@@ -111,19 +111,6 @@ inline void parallel_foreach(vector<T>& values, Func&& func);
 template <typename T, typename Func>
 inline void parallel_foreach(const vector<T>& values, Func&& func);
 
-// Parallel for with error handling. `func` takes an index and a string and
-// return a boolean.
-template <typename T, typename Func>
-inline bool parallel_for(T num, string& error, Func&& func);
-
-// Parallel for with error handling. `func` takes a reference to a `T` and a
-// string and return a boolean.
-template <typename T, typename Func>
-inline bool parallel_foreach(vector<T>& values, string& error, Func&& func);
-template <typename T, typename Func>
-inline bool parallel_foreach(
-    const vector<T>& values, string& error, Func&& func);
-
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -185,16 +172,23 @@ inline bool is_ready(const future<void>& result) {
 // parallel algorithms. `Func` takes the integer index.
 template <typename T, typename Func>
 inline void parallel_for(T num, Func&& func) {
-  auto      futures  = vector<future<void>>{};
-  auto      nthreads = std::thread::hardware_concurrency();
-  atomic<T> next_idx(0);
+  auto         futures  = vector<future<void>>{};
+  auto         nthreads = std::thread::hardware_concurrency();
+  atomic<T>    next_idx(0);
+  atomic<bool> has_error(false);
   for (auto thread_id = 0; thread_id < (int)nthreads; thread_id++) {
     futures.emplace_back(
-        std::async(std::launch::async, [&func, &next_idx, num]() {
-          while (true) {
-            auto idx = next_idx.fetch_add(1);
-            if (idx >= num) break;
-            func(idx);
+        std::async(std::launch::async, [&func, &next_idx, &has_error, num]() {
+          try {
+            while (true) {
+              auto idx = next_idx.fetch_add(1);
+              if (idx >= num) break;
+              if (has_error) break;
+              func(idx);
+            }
+          } catch (...) {
+            has_error = true;
+            throw;
           }
         }));
   }
@@ -205,16 +199,23 @@ inline void parallel_for(T num, Func&& func) {
 // parallel algorithms. `Func` takes the two integer indices.
 template <typename T, typename Func>
 inline void parallel_for(T num1, T num2, Func&& func) {
-  auto      futures  = vector<future<void>>{};
-  auto      nthreads = std::thread::hardware_concurrency();
-  atomic<T> next_idx(0);
+  auto         futures  = vector<future<void>>{};
+  auto         nthreads = std::thread::hardware_concurrency();
+  atomic<T>    next_idx(0);
+  atomic<bool> has_error(false);
   for (auto thread_id = 0; thread_id < (int)nthreads; thread_id++) {
-    futures.emplace_back(
-        std::async(std::launch::async, [&func, &next_idx, num1, num2]() {
-          while (true) {
-            auto j = next_idx.fetch_add(1);
-            if (j >= num2) break;
-            for (auto i = (T)0; i < num1; i++) func(i, j);
+    futures.emplace_back(std::async(
+        std::launch::async, [&func, &next_idx, &has_error, num1, num2]() {
+          try {
+            while (true) {
+              auto j = next_idx.fetch_add(1);
+              if (j >= num2) break;
+              if (has_error) break;
+              for (auto i = (T)0; i < num1; i++) func(i, j);
+            }
+          } catch (...) {
+            has_error = true;
+            throw;
           }
         }));
   }
@@ -225,17 +226,24 @@ inline void parallel_for(T num1, T num2, Func&& func) {
 // parallel algorithms. `Func` takes the integer index.
 template <typename T, typename Func>
 inline void parallel_for_batch(T num, T batch, Func&& func) {
-  auto      futures  = vector<future<void>>{};
-  auto      nthreads = std::thread::hardware_concurrency();
-  atomic<T> next_idx(0);
+  auto         futures  = vector<future<void>>{};
+  auto         nthreads = std::thread::hardware_concurrency();
+  atomic<T>    next_idx(0);
+  atomic<bool> has_error(false);
   for (auto thread_id = 0; thread_id < (int)nthreads; thread_id++) {
-    futures.emplace_back(
-        std::async(std::launch::async, [&func, &next_idx, num, batch]() {
-          while (true) {
-            auto start = next_idx.fetch_add(batch);
-            if (start >= num) break;
-            auto end = std::min(num, start + batch);
-            for (auto i = (T)start; i < end; i++) func(i);
+    futures.emplace_back(std::async(
+        std::launch::async, [&func, &next_idx, &has_error, num, batch]() {
+          try {
+            while (true) {
+              auto start = next_idx.fetch_add(batch);
+              if (start >= num) break;
+              if (has_error) break;
+              auto end = std::min(num, start + batch);
+              for (auto i = (T)start; i < end; i++) func(i);
+            }
+          } catch (...) {
+            has_error = true;
+            throw;
           }
         }));
   }
@@ -253,53 +261,6 @@ template <typename T, typename Func>
 inline void parallel_foreach(const vector<T>& values, Func&& func) {
   parallel_for(
       values.size(), [&func, &values](size_t idx) { func(values[idx]); });
-}
-
-// Parallel for with error handling. `func` takes an index and a string and
-// return a boolean.
-template <typename T, typename Func>
-inline bool parallel_for(T num, string& error, Func&& func) {
-  auto         futures  = vector<future<void>>{};
-  auto         nthreads = std::thread::hardware_concurrency();
-  atomic<T>    next_idx(0);
-  atomic<bool> has_error(false);
-  std::mutex   error_mutex;
-  for (auto thread_id = 0; thread_id < (int)nthreads; thread_id++) {
-    futures.emplace_back(std::async(std::launch::async,
-        [&func, &next_idx, &error, &error_mutex, &has_error, num]() {
-          auto thread_error = string{};
-          while (true) {
-            auto idx = next_idx.fetch_add(1);
-            if (idx >= num) break;
-            if (has_error) break;
-            if (!func(idx, thread_error)) {
-              has_error = true;
-              auto lock = std::lock_guard{error_mutex};
-              error     = thread_error;
-              break;
-            }
-          }
-        }));
-  }
-  return !has_error;
-}
-
-// Parallel for with error handling. `func` takes a reference to a `T` and a
-// string and return a boolean.
-template <typename T, typename Func>
-inline bool parallel_foreach(vector<T>& values, string& error, Func&& func) {
-  return parallel_for(
-      values.size(), error, [&func, &values](size_t idx, auto& error) -> bool {
-        return func(values[idx], error);
-      });
-}
-template <typename T, typename Func>
-inline bool parallel_foreach(
-    const vector<T>& values, string& error, Func&& func) {
-  return parallel_for(
-      values.size(), error, [&func, &values](size_t idx, auto& error) -> bool {
-        return func(values[idx], error);
-      });
 }
 
 }  // namespace yocto
