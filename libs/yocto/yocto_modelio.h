@@ -40,6 +40,7 @@
 #include <algorithm>
 #include <array>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -106,6 +107,16 @@ struct ply_model {
   vector<string>      comments = {};
   vector<ply_element> elements = {};
 };
+
+// Ply error
+struct ply_error : std::runtime_error {
+  ply_error(const string& message) : std::runtime_error(message) {}
+};
+
+// Load and save ply
+ply_model load_ply(const string& filename);
+void      load_ply(const string& filename, ply_model& ply);
+void      save_ply(const string& filename, const ply_model& ply);
 
 // Load and save ply
 bool load_ply(const string& filename, ply_model& ply, string& error);
@@ -310,6 +321,24 @@ struct obj_model {
   vector<obj_environment> environments = {};
 };
 
+// Obj error
+struct obj_error : std::runtime_error {
+  obj_error(const string& message) : std::runtime_error(message) {}
+};
+
+// Load and save obj
+obj_model load_obj(const string& filename, bool face_varying = false,
+    bool split_materials = false);
+void load_obj(const string& filename, obj_model& obj, bool face_varying = false,
+    bool split_materials = false);
+void save_obj(const string& filename, const obj_model& obj);
+
+// Load and save obj shape
+obj_shape load_sobj(const string& filename, bool face_varying = false);
+void      load_obj(
+         const string& filename, obj_shape& obj, bool face_varying = false);
+void save_obj(const string& filename, const obj_shape& obj);
+
 // Load and save obj
 bool load_obj(const string& filename, obj_model& obj, string& error,
     bool face_varying = false, bool split_materials = false);
@@ -403,6 +432,17 @@ struct stl_shape {
 struct stl_model {
   vector<stl_shape> shapes = {};
 };
+
+// Stl error
+struct stl_error : std::runtime_error {
+  stl_error(const string& message) : std::runtime_error(message) {}
+};
+
+// Load and save ply
+stl_model load_stl(const string& filename, bool unique_vertices = true);
+void      load_stl(
+         const string& filename, stl_model& stl, bool unique_vertices = true);
+void save_stl(const string& filename, const stl_model& stl, bool ascii = false);
 
 // Load/save stl
 bool load_stl(const string& filename, stl_model& stl, string& error,
@@ -512,6 +552,18 @@ struct pbrt_model {
   vector<pbrt_material>    materials    = {};
   vector<pbrt_texture>     textures     = {};
 };
+
+// Pbrt error
+struct pbrt_error : std::runtime_error {
+  pbrt_error(const string& message) : std::runtime_error(message) {}
+};
+
+// Load/save pbrt
+pbrt_model load_pbrt(const string& filename, bool ply_meshes = false);
+void       load_pbrt(
+          const string& filename, pbrt_model& pbrt, bool ply_meshes = false);
+void save_pbrt(
+    const string& filename, const pbrt_model& pbrt, bool ply_meshes = false);
 
 // Load/save pbrt
 bool load_pbrt(const string& filename, pbrt_model& pbrt, string& error,

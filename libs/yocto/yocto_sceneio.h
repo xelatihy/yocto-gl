@@ -69,11 +69,12 @@ struct io_error : std::runtime_error {
   // common errors
   // clang-format off
   static io_error open_error(const string& filename) { return {filename + ": file not found"}; }
-  static io_error read_error(const string& filename) { return {filename + ": read found"}; }
-  static io_error write_error(const string& filename) { return {filename + ": write found"}; }
-  static io_error parse_error(const string& filename) { return {filename + ": parse found"}; }
-  static io_error format_error(const string& filename) { return {filename + ": format not supported"}; }
+  static io_error read_error(const string& filename) { return {filename + ": read error"}; }
+  static io_error write_error(const string& filename) { return {filename + ": write error"}; }
+  static io_error parse_error(const string& filename) { return {filename + ": parse error"}; }
+  static io_error format_error(const string& filename) { return {filename + ": unknown format"}; }
   static io_error preset_error(const string& filename) { return {filename + ": unknown preset"}; }
+  static io_error shape_error(const string& filename) { return {filename + ": empty shape"}; }
   // clang-format on
 };
 
@@ -140,6 +141,14 @@ bool make_image_preset(image_data& image, const string& type, string& error);
 namespace yocto {
 
 // Load/save a texture in the supported formats.
+texture_data load_texture(const string& filename);
+void         load_texture(const string& filename, texture_data& texture);
+void         save_texture(const string& filename, const texture_data& texture);
+
+// Make presets. Supported mostly in IO.
+texture_data make_texture_preset(const string& type);
+
+// Load/save a texture in the supported formats.
 bool load_texture(const string& filename, texture_data& texture, string& error);
 bool save_texture(
     const string& filename, const texture_data& texture, string& error);
@@ -154,6 +163,24 @@ bool make_texture_preset(
 // SHAPE IO
 // -----------------------------------------------------------------------------
 namespace yocto {
+
+// Load/save a shape
+shape_data load_shape(const string& filename, bool flip_texcoords = true);
+void       load_shape(
+          const string& filename, shape_data& shape, bool flip_texcoords = true);
+void save_shape(const string& filename, const shape_data& shape,
+    bool flip_texcoords = true, bool ascii = false);
+
+// Load/save a subdiv
+fvshape_data load_fvshape(const string& filename, bool flip_texcoords = true);
+void         load_fvshape(
+            const string& filename, fvshape_data& shape, bool flip_texcoords = true);
+void save_fvshape(const string& filename, const fvshape_data& shape,
+    bool flip_texcoords = true, bool ascii = false);
+
+// Make presets. Supported mostly in IO.
+shape_data   make_shape_preset(const string& type);
+fvshape_data make_fvshape_preset(const string& type);
 
 // Load/save a shape
 bool load_shape(const string& filename, shape_data& shape, string& error,

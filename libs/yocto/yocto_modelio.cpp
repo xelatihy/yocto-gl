@@ -501,6 +501,21 @@ inline bool parse_value(string_view& str, frame3f& value) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// Load and save ply
+ply_model load_ply(const string& filename) {
+  auto ply = ply_model{};
+  load_ply(filename, ply);
+  return ply;
+}
+void load_ply(const string& filename, ply_model& ply) {
+  auto error = string{};
+  if (!load_ply(filename, ply, error)) throw ply_error{error};
+}
+void save_ply(const string& filename, const ply_model& ply) {
+  auto error = string{};
+  if (!save_ply(filename, ply, error)) throw ply_error{error};
+}
+
 // Load ply
 bool load_ply(const string& filename, ply_model& ply, string& error) {
   // ply type names
@@ -1487,6 +1502,39 @@ inline bool parse_value(string_view& str, obj_texture& info) {
   }
 
   return true;
+}
+
+// Load and save obj
+obj_model load_obj(
+    const string& filename, bool face_varying, bool split_materials) {
+  auto obj = obj_model{};
+  load_obj(filename, obj, face_varying, split_materials);
+  return obj;
+}
+void load_obj(const string& filename, obj_model& obj, bool face_varying,
+    bool split_materials) {
+  auto error = string{};
+  if (!load_obj(filename, obj, error, face_varying, face_varying))
+    throw obj_error{error};
+}
+void save_obj(const string& filename, const obj_model& obj) {
+  auto error = string{};
+  if (!save_obj(filename, obj, error)) throw obj_error{error};
+}
+
+// Load and save obj shape
+obj_shape load_sobj(const string& filename, bool face_varying) {
+  auto obj = obj_shape{};
+  load_obj(filename, obj, face_varying);
+  return obj;
+}
+void load_obj(const string& filename, obj_shape& obj, bool face_varying) {
+  auto error = string{};
+  if (!load_obj(filename, obj, error, face_varying)) throw obj_error{error};
+}
+void save_obj(const string& filename, const obj_shape& obj) {
+  auto error = string{};
+  if (!save_obj(filename, obj, error)) throw obj_error{error};
 }
 
 // Read obj
@@ -2816,6 +2864,21 @@ struct hash<yocto::vec3f> {
 // STL PARSING
 // -----------------------------------------------------------------------------
 namespace yocto {
+
+// Load and save stl
+stl_model load_stl(const string& filename, bool unique_vertices) {
+  auto stl = stl_model{};
+  load_stl(filename, stl);
+  return stl;
+}
+void load_stl(const string& filename, stl_model& stl, bool unique_vertices) {
+  auto error = string{};
+  if (!load_stl(filename, stl, error)) throw stl_error{error};
+}
+void save_stl(const string& filename, const stl_model& stl, bool ascii) {
+  auto error = string{};
+  if (!save_stl(filename, stl, error, ascii)) throw stl_error{error};
+}
 
 // Load/save stl
 bool load_stl(const string& filename, stl_model& stl, string& error,
@@ -5081,6 +5144,22 @@ inline bool load_pbrt(const string& filename, pbrt_model& pbrt, string& error,
     }
   }
   return true;
+}
+
+// Load/save pbrt
+pbrt_model load_pbrt(const string& filename, bool ply_meshes) {
+  auto pbrt = pbrt_model{};
+  load_pbrt(filename, pbrt, ply_meshes);
+  return pbrt;
+}
+void load_pbrt(const string& filename, pbrt_model& pbrt, bool ply_meshes) {
+  auto error = string{};
+  if (!load_pbrt(filename, pbrt, error, ply_meshes)) throw pbrt_error{error};
+}
+void save_pbrt(
+    const string& filename, const pbrt_model& pbrt, bool ply_meshes) {
+  auto error = string{};
+  if (!save_pbrt(filename, pbrt, error, ply_meshes)) throw pbrt_error{error};
 }
 
 // load pbrt
