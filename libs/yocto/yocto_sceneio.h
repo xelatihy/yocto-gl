@@ -64,17 +64,24 @@ namespace yocto {
 
 // Io error used in exception handling
 struct io_error : std::runtime_error {
-  io_error(const string& message) : std::runtime_error(message) {}
+  string filename = "", message = "";
+  io_error(const string& filename, const string& message)
+      : std::runtime_error(filename + ": " + message)
+      , filename{filename}
+      , message{message} {}
 
   // common errors
   // clang-format off
-  static io_error open_error(const string& filename) { return {filename + ": file not found"}; }
-  static io_error read_error(const string& filename) { return {filename + ": read error"}; }
-  static io_error write_error(const string& filename) { return {filename + ": write error"}; }
-  static io_error parse_error(const string& filename) { return {filename + ": parse error"}; }
-  static io_error format_error(const string& filename) { return {filename + ": unknown format"}; }
-  static io_error preset_error(const string& filename) { return {filename + ": unknown preset"}; }
-  static io_error shape_error(const string& filename) { return {filename + ": empty shape"}; }
+  static io_error open_error(const string& filename) { return {filename, "file not found"}; }
+  static io_error read_error(const string& filename) { return {filename, "read error"}; }
+  static io_error write_error(const string& filename) { return {filename, "write error"}; }
+  static io_error parse_error(const string& filename) { return {filename, "parse error"}; }
+  static io_error format_error(const string& filename) { return {filename, "unknown format"}; }
+  static io_error preset_error(const string& filename) { return {filename, "unknown preset"}; }
+  static io_error shape_error(const string& filename) { return {filename, "empty shape"}; }
+  static io_error dependent_error(const string& filename, const io_error& error) { return {filename, string{"error in "} + error.what()}; }
+  static io_error json_error(const string& filename) { return {filename, "json error"}; }
+  static io_error matref_error(const string& filename, const string& name) { return {filename, "missing material " + name}; }
   // clang-format on
 };
 

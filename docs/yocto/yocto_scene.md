@@ -406,8 +406,7 @@ Yocto/Scene has a function to create a simple Cornell Box scene for testing.
 There are plans to increase support for more test scenes in the future.
 
 ```cpp
-auto scene = new sceneio_scene{...};         // create a complete scene
-make_cornellbox(scene);                      // make cornell box
+auto scene = make_cornellbox();             // make cornell box
 ```
 
 ## Procedural shapes
