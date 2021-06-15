@@ -127,13 +127,30 @@ bool path_isfile(const string& filename) {
 }
 
 // List the contents of a directory
-vector<string> list_directory(const string& filename) {
-  auto entries = vector<string>{};
-  for (auto entry : std::filesystem::directory_iterator(make_path(filename))) {
-    entries.push_back(entry.path().generic_u8string());
+vector<string> list_directory(const string& dirname) {
+  try {
+    auto entries = vector<string>{};
+    for (auto entry : std::filesystem::directory_iterator(make_path(dirname))) {
+      entries.push_back(entry.path().generic_u8string());
+    }
+    return entries;
+  } catch (...) {
+    throw io_error(dirname + ": cannot list directory");
   }
-  return entries;
 }
+
+// Create a directory and all missing parent directories if needed
+void make_directory(const string& dirname) {
+  if (path_exists(dirname)) return;
+  try {
+    create_directories(make_path(dirname));
+  } catch (...) {
+    throw io_error(dirname + ": cannot create directory");
+  }
+}
+
+// Get the current directory
+string path_current() { return std::filesystem::current_path().u8string(); }
 
 // Create a directory and all missing parent directories if needed
 bool make_directory(const string& dirname, string& error) {
@@ -146,9 +163,6 @@ bool make_directory(const string& dirname, string& error) {
     return false;
   }
 }
-
-// Get the current directory
-string path_current() { return std::filesystem::current_path().u8string(); }
 
 }  // namespace yocto
 
@@ -3611,6 +3625,23 @@ static bool load_preset_scene(
 }
 
 // Make missing scene directories
+void make_scene_directories(const string& filename, const scene_data& scene) {
+  // make a directory if needed
+  make_directory(path_dirname(filename));
+  if (!scene.shapes.empty())
+    make_directory(path_join(path_dirname(filename), "shapes"));
+  if (!scene.textures.empty())
+    make_directory(path_join(path_dirname(filename), "textures"));
+}
+
+// Add environment
+void add_environment(scene_data& scene, const string& filename) {
+  scene.textures.push_back(load_texture(filename));
+  scene.environments.push_back(
+      {identity3x4f, {1, 1, 1}, (int)scene.textures.size() - 1});
+}
+
+// Make missing scene directories
 bool make_scene_directories(
     const string& filename, const scene_data& scene, string& error) {
   // make a directory if needed
@@ -3687,6 +3718,35 @@ bool save_instance(const string& filename, const vector<frame3f>& frames,
   } else {
     return format_error();
   }
+}
+
+// load subdiv
+subdiv_data load_subdiv(const string& filename) {
+  auto subdiv = subdiv_data{};
+  load_subdiv(filename, subdiv);
+  return subdiv;
+}
+void load_subdiv(const string& filename, subdiv_data& subdiv) {
+  auto lsubdiv = fvshape_data{};
+  load_fvshape(filename, lsubdiv, true);
+  subdiv.quadspos      = lsubdiv.quadspos;
+  subdiv.quadsnorm     = lsubdiv.quadsnorm;
+  subdiv.quadstexcoord = lsubdiv.quadstexcoord;
+  subdiv.positions     = lsubdiv.positions;
+  subdiv.normals       = lsubdiv.normals;
+  subdiv.texcoords     = lsubdiv.texcoords;
+}
+
+// save subdiv
+void save_subdiv(const string& filename, const subdiv_data& subdiv) {
+  auto ssubdiv          = fvshape_data{};
+  ssubdiv.quadspos      = subdiv.quadspos;
+  ssubdiv.quadsnorm     = subdiv.quadsnorm;
+  ssubdiv.quadstexcoord = subdiv.quadstexcoord;
+  ssubdiv.positions     = subdiv.positions;
+  ssubdiv.normals       = subdiv.normals;
+  ssubdiv.texcoords     = subdiv.texcoords;
+  save_fvshape(filename, ssubdiv, true);
 }
 
 // load subdiv
