@@ -3748,7 +3748,7 @@ static void load_instance(const string& filename, vector<frame3f>& frames) {
 }
 
 // save instances
-static void save_instance(
+[[maybe_unused]] static void save_instance(
     const string& filename, const vector<frame3f>& frames, bool ascii = false) {
   auto ext = path_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
@@ -3957,72 +3957,58 @@ static void load_json_scene(
   auto js = load_njson(filename);
 
   // parse json value
-  auto get_opt = [](const njson& js, const string& key, auto& value) -> bool {
-    try {
-      value = js.value(key, value);
-      return true;
-    } catch (...) {
-      return false;
-    }
+  auto get_opt = [](const njson& js, const string& key, auto& value) {
+    value = js.value(key, value);
   };
 
   // parse json reference
   auto shape_map = unordered_map<string, int>{};
-  auto get_shp   = [&scene, &shape_map, &get_opt](
-                     const njson& js, int& value) -> bool {
-    auto name = ""s;
-    if (!get_value(js, name)) return false;
+  auto get_shp   = [&scene, &shape_map](
+                     const njson& js, const string& key, int& value) {
+    auto name = js.value(key, string{});
+    if (name.empty()) return;
     auto it = shape_map.find(name);
     if (it != shape_map.end()) {
       value = it->second;
-      return true;
+    } else {
+      scene.shape_names.emplace_back(name);
+      scene.shapes.emplace_back();
+      auto shape_id   = (int)scene.shapes.size() - 1;
+      shape_map[name] = shape_id;
+      value           = shape_id;
     }
-    scene.shape_names.emplace_back(name);
-    scene.shapes.emplace_back();
-    auto shape_id   = (int)scene.shapes.size() - 1;
-    shape_map[name] = shape_id;
-    value           = shape_id;
-    return true;
   };
 
   // parse json reference
   auto material_map = unordered_map<string, int>{};
-  auto material_set = vector<bool>{};
-  auto get_material = [&scene, &material_map, &material_set, &get_value](
-                          const njson& js, int& value) -> bool {
-    auto name = ""s;
-    if (!get_value(js, name)) return false;
+  auto get_mat      = [&material_map](
+                     const njson& js, const string& key, int& value) {
+    auto name = js.value(key, string{});
+    if (name.empty()) return;
     auto it = material_map.find(name);
     if (it != material_map.end()) {
       value = it->second;
-      return true;
+    } else {
+      throw std::out_of_range{"missing key"};
     }
-    scene.material_names.emplace_back(name);
-    scene.materials.emplace_back();
-    auto material_id   = (int)scene.materials.size() - 1;
-    material_map[name] = material_id;
-    value              = material_id;
-    material_set.push_back(false);
-    return true;
   };
 
   // parse json reference
   auto texture_map = unordered_map<string, int>{};
-  auto get_texture = [&scene, &texture_map, &get_value](
-                         const njson& js, int& value) -> bool {
-    auto name = ""s;
-    if (!get_value(js, name)) return false;
+  auto get_tex     = [&scene, &texture_map](
+                     const njson& js, const string& key, int& value) {
+    auto name = js.value(key, string{});
+    if (name.empty()) return;
     auto it = texture_map.find(name);
     if (it != texture_map.end()) {
       value = it->second;
-      return true;
+    } else {
+      scene.texture_names.emplace_back(name);
+      scene.textures.emplace_back();
+      auto texture_id   = (int)scene.textures.size() - 1;
+      texture_map[name] = texture_id;
+      value             = texture_id;
     }
-    scene.texture_names.emplace_back(name);
-    scene.textures.emplace_back();
-    auto texture_id   = (int)scene.textures.size() - 1;
-    texture_map[name] = texture_id;
-    value             = texture_id;
-    return true;
   };
 
   // load json instance
@@ -4034,26 +4020,23 @@ static void load_json_scene(
   auto ply_instances_names  = vector<string>{};
   auto ply_instance_map     = unordered_map<string, ply_instance_handle>{
       {"", invalidid}};
-  auto instance_ply      = unordered_map<int, ply_instance_handle>{};
-  auto get_ply_instances = [&scene, &ply_instances, &ply_instances_names,
-                               &ply_instance_map, &instance_ply,
-                               &get_value](const njson& js,
-                               const instance_data&     instance) -> bool {
-    auto name = ""s;
-    if (!get_value(js, name)) return false;
-    if (name.empty()) return true;
+  auto instance_ply = unordered_map<int, ply_instance_handle>{};
+  auto get_ist      = [&scene, &ply_instances, &ply_instances_names,
+                     &ply_instance_map, &instance_ply](const njson& js,
+                     const string& key, const instance_data& instance) {
+    auto name = js.value(key, string{});
+    if (name.empty()) return;
     auto instance_id = (int)(&instance - scene.instances.data());
     auto it          = ply_instance_map.find(name);
     if (it != ply_instance_map.end()) {
       instance_ply[instance_id] = it->second;
-      return true;
+    } else {
+      ply_instances_names.emplace_back(name);
+      ply_instances.emplace_back(ply_instance());
+      auto ply_instance_id      = (int)ply_instances.size() - 1;
+      ply_instance_map[name]    = ply_instance_id;
+      instance_ply[instance_id] = ply_instance_id;
     }
-    ply_instances_names.emplace_back(name);
-    ply_instances.emplace_back(ply_instance());
-    auto ply_instance_id      = (int)ply_instances.size() - 1;
-    ply_instance_map[name]    = ply_instance_id;
-    instance_ply[instance_id] = ply_instance_id;
-    return true;
   };
   auto get_ply_instance_name = [&ply_instances, &ply_instances_names](
                                    const scene_data&   scene,
@@ -4061,84 +4044,99 @@ static void load_json_scene(
     return ply_instances_names[&instance - ply_instances.data()];
   };
 
-  // helper for iteration
-  auto iterate_object = [](const njson& js) { return js.items(); };
-  auto check_object   = [](const njson& js) { return js.is_object(); };
-
-  // parsing now
-  if (js.contains("asset")) {
-    auto& element = js.at("asset");
-    parse_opt(element, "copyright", scene.copyright);
-  }
-  if (js.contains("cameras")) {
-    for (auto& [key, element] : js.at("cameras").items()) {
-      auto& camera = scene.camera.emplac_back();
-      scene.camera_names.emplace_back(key);
-      parse_opt(element, "frame", camera.frame);
-      parse_opt(element, "orthographic", camera.orthographic);
-      parse_opt(element, "ortho", camera.orthographic);
-      parse_opt(element, "lens", camera.lens);
-      parse_opt(element, "aspect", camera.aspect);
-      parse_opt(element, "film", camera.film);
-      parse_opt(element, "focus", camera.focus);
-      parse_opt(element, "aperture", camera.aperture);
-      if (element.contains("lookat")) {
-        parse_opt(element, "lookat", (mat3f&)camera.frame);
-        camera.focus = length(camera.frame.x - camera.frame.y);
-        camera.frame = lookat_frame(
-            camera.frame.x, camera.frame.y, camera.frame.z);
+  // parsing values
+  try {
+    if (js.contains("asset")) {
+      auto& element = js.at("asset");
+      get_opt(element, "copyright", scene.copyright);
+    }
+    if (js.contains("cameras")) {
+      for (auto& [key, element] : js.at("cameras").items()) {
+        auto& camera = scene.cameras.emplace_back();
+        scene.camera_names.emplace_back(key);
+        get_opt(element, "frame", camera.frame);
+        get_opt(element, "orthographic", camera.orthographic);
+        get_opt(element, "ortho", camera.orthographic);
+        get_opt(element, "lens", camera.lens);
+        get_opt(element, "aspect", camera.aspect);
+        get_opt(element, "film", camera.film);
+        get_opt(element, "focus", camera.focus);
+        get_opt(element, "aperture", camera.aperture);
+        if (element.contains("lookat")) {
+          get_opt(element, "lookat", (mat3f&)camera.frame);
+          camera.focus = length(camera.frame.x - camera.frame.y);
+          camera.frame = lookat_frame(
+              camera.frame.x, camera.frame.y, camera.frame.z);
+        }
       }
     }
-  }
-  if (js.contains("materials")) {
-    for (auto& [key, element] : js.at("materials").items()) {
-      auto& material = scene.materials.emplace_back();
-      scene.material_names.emplace_back(key);
-      parse_opt(element, "type", material.frame);
-      parse_opt(element, "emission", material.emission);
-      parse_opt(element, "color", material.color);
-      parse_opt(element, "metallic", material.metallic);
-      parse_opt(element, "roughness", material.roughness);
-      parse_opt(element, "ior", material.ior);
-      parse_opt(element, "trdepth", material.trdepth);
-      parse_opt(element, "scattering", material.scattering);
-      parse_opt(element, "scanisotropy", material.scanisotropy);
-      parse_opt(element, "opacity", material.opacity);
-      parse_tex(element, "emission_tex", material.emission_tex);
-      parse_tex(element, "color_tex", material.color_tex);
-      parse_tex(element, "roughness_tex", material.roughness_tex);
-      parse_tex(element, "scattering_tex", material.scattering_tex);
-      parse_tex(element, "normal_tex", material.normal_tex);
-    }
-  }
-  if (js.contains("instances")) {
-    for (auto& [key, element] : js.at("instances").items()) {
-      auto& instance = scene.instances.emplace_back();
-      scene.instance_names.emplace_back(key);
-      parse_opt(element, "frame", instance.frame);
-      parse_shp(element, "shape", instance.shape);
-      parse_mat(element, "material", instance.material);
-      if (element.contains("lookat")) {
-        parse_opt(element, "lookat", (mat3f&)instance.frame);
-        instance.frame = lookat_frame(
-            instance.frame.x, instance.frame.y, instance.frame.z, false);
-      }
-      if (element.contains("instance")) {
-        parse_ist(element, "instance", instance);
+    if (js.contains("environments")) {
+      for (auto& [key, element] : js.at("environments").items()) {
+        auto& environment = scene.environments.emplace_back();
+        scene.environment_names.emplace_back(key);
+        get_opt(element, "frame", environment.frame);
+        get_opt(element, "emission", environment.emission);
+        get_tex(element, "emission_tex", environment.emission_tex);
+        if (element.contains("lookat")) {
+          get_opt(element, "lookat", (mat3f&)environment.frame);
+          environment.frame = lookat_frame(environment.frame.x,
+              environment.frame.y, environment.frame.z, false);
+        }
       }
     }
-  }
-  if (js.contains("subdivs")) {
-    for (auto& [key, element] : js.at("subdivs").items()) {
-      auto& subdiv = scene.subdivs.emplace_back();
-      scene.subdiv_names.emplace_back(key);
-      parse_shp(element, "shape", subdiv.shape);
-      parse_opt(element, "subdivisions", subdiv.subdivisions);
-      parse_opt(element, "catmullclark", subdiv.catmullclark);
-      parse_opt(element, "smooth", subdiv.smooth);
-      parse_opt(element, "displacement", subdiv.displacement);
-      parse_opt(element, "displacement_tex", subdiv.displacement_tex);
+    if (js.contains("materials")) {
+      for (auto& [key, element] : js.at("materials").items()) {
+        auto& material = scene.materials.emplace_back();
+        scene.material_names.emplace_back(key);
+        material_map[key] = (int)scene.materials.size() - 1;
+        get_opt(element, "type", material.type);
+        get_opt(element, "emission", material.emission);
+        get_opt(element, "color", material.color);
+        get_opt(element, "metallic", material.metallic);
+        get_opt(element, "roughness", material.roughness);
+        get_opt(element, "ior", material.ior);
+        get_opt(element, "trdepth", material.trdepth);
+        get_opt(element, "scattering", material.scattering);
+        get_opt(element, "scanisotropy", material.scanisotropy);
+        get_opt(element, "opacity", material.opacity);
+        get_tex(element, "emission_tex", material.emission_tex);
+        get_tex(element, "color_tex", material.color_tex);
+        get_tex(element, "roughness_tex", material.roughness_tex);
+        get_tex(element, "scattering_tex", material.scattering_tex);
+        get_tex(element, "normal_tex", material.normal_tex);
+      }
     }
+    if (js.contains("instances")) {
+      for (auto& [key, element] : js.at("instances").items()) {
+        auto& instance = scene.instances.emplace_back();
+        scene.instance_names.emplace_back(key);
+        get_opt(element, "frame", instance.frame);
+        get_shp(element, "shape", instance.shape);
+        get_mat(element, "material", instance.material);
+        if (element.contains("lookat")) {
+          get_opt(element, "lookat", (mat3f&)instance.frame);
+          instance.frame = lookat_frame(
+              instance.frame.x, instance.frame.y, instance.frame.z, false);
+        }
+        if (element.contains("instance")) {
+          get_ist(element, "instance", instance);
+        }
+      }
+    }
+    if (js.contains("subdivs")) {
+      for (auto& [key, element] : js.at("subdivs").items()) {
+        auto& subdiv = scene.subdivs.emplace_back();
+        scene.subdiv_names.emplace_back(key);
+        get_shp(element, "shape", subdiv.shape);
+        get_opt(element, "subdivisions", subdiv.subdivisions);
+        get_opt(element, "catmullclark", subdiv.catmullclark);
+        get_opt(element, "smooth", subdiv.smooth);
+        get_opt(element, "displacement", subdiv.displacement);
+        get_opt(element, "displacement_tex", subdiv.displacement_tex);
+      }
+    }
+  } catch (...) {
+    throw io_error::parse_error(filename);
   }
 
   // dirname
