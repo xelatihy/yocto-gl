@@ -4701,7 +4701,7 @@ namespace yocto {
 static void load_gltf_scene(
     const string& filename, scene_data& scene, bool noparallel) {
   // load gltf
-  auto gltf = load_njson(filename);
+  auto gltf = load_json(filename);
 
   // parse buffers
   auto buffers_paths = vector<string>{};

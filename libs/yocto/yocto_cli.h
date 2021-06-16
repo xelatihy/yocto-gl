@@ -432,6 +432,12 @@ struct json_value {
       return it->second.get<T>();
     return default_;
   }
+  string value(const string& key, const char* default_) const {
+    auto& object = _get_object();
+    if (auto it = object.find(key); it != object.end())
+      return it->second.get<string>();
+    return default_;
+  }
 
   // iteration
   json_value*       begin() { return _get_array().data(); }
