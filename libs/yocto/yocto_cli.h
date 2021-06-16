@@ -315,7 +315,7 @@ struct json_value {
   // Json value
   json_value() : _type{json_type::null}, _integer{0} {}
   explicit json_value(json_type type) : _type{type} { _init(); }
-  json_value(const json_value& other) { _copy(other); }
+  json_value(const json_value& other) : json_value() { _copy(other); }
   json_value(json_value&& value) : json_value() { _swap(value); }
   json_value& operator=(const json_value& other) {
     auto copy = json_value{other};
