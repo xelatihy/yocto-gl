@@ -261,15 +261,27 @@ static bool save_text(
 namespace yocto {
 
 // Load json
-bool load_json(const string& filename, json_value& json, string& error) {
-  // load file
-  auto text = string{};
-  if (!load_text(filename, text, error)) return false;
-  // parse
-  return parse_json(text, json, error);
+json_value load_json(const string& filename) {
+  auto json = json_value{};
+  load_json(filename, json);
+  return json;
+}
+void load_json(const string& filename, json_value& json) {
+  auto error = std::string{};
+  auto text  = string{};
+  if (!load_text(filename, text, error))
+    throw json_error{"cannot load", nullptr};
+  parse_json(text, json);
+}
+void save_json(const string& filename, const json_value& json) {
+  auto text  = dump_json(json);
+  auto error = std::string{};
+  if (!save_text(filename, text, error))
+    throw json_error{"cannot save", nullptr};
 }
 
-static void from_json(const nlohmann::json& js, json_value& value) {
+[[maybe_unused]] static void from_json(
+    const nlohmann::json& js, json_value& value) {
   switch (js.type()) {
     case nlohmann::json::value_t::null: {
       value = nullptr;
@@ -306,27 +318,129 @@ static void from_json(const nlohmann::json& js, json_value& value) {
   }
 }
 
-// Pars json
-bool parse_json(const string& text, json_value& json, string& error) {
-  try {
-    auto njson = nlohmann::json::parse(text);
-    from_json(njson, json);
+struct json_sax {
+  explicit json_sax(json_value* root, bool allow_exceptions = true)
+      : _root(root), _allow_exceptions(allow_exceptions) {}
+
+  bool null() {
+    handle_value(nullptr);
     return true;
-  } catch (...) {
-    error = "error parsing json";
+  }
+
+  bool boolean(bool val) {
+    handle_value(val);
+    return true;
+  }
+
+  bool number_integer(int64_t val) {
+    handle_value(val);
+    return true;
+  }
+
+  bool number_unsigned(uint64_t val) {
+    handle_value(val);
+    return true;
+  }
+
+  bool number_float(double val, const std::string& /*unused*/) {
+    handle_value(val);
+    return true;
+  }
+
+  bool string(std::string& val) {
+    handle_value(val);
+    return true;
+  }
+
+  bool binary(vector<byte>& val) {
+    handle_value(std::move(val));
+    return true;
+  }
+
+  bool start_object(std::size_t len) {
+    _stack.push_back(handle_value(json_object{}));
+    return true;
+  }
+
+  bool key(std::string& val) {
+    // add null at given key and store the reference for later
+    _object_item = &(_stack.back()->operator[](val));
+    return true;
+  }
+
+  bool end_object() {
+    _stack.pop_back();
+    return true;
+  }
+
+  bool start_array(std::size_t len) {
+    _stack.push_back(handle_value(json_array{}));
+    return true;
+  }
+
+  bool end_array() {
+    _stack.pop_back();
+    return true;
+  }
+
+  template <class Exception>
+  bool parse_error(std::size_t /*unused*/, const std::string& /*unused*/,
+      const Exception& ex) {
+    _errored = true;
+    static_cast<void>(ex);
+    if (_allow_exceptions) {
+      if (_stack.empty()) throw json_error{"parse error", _root};
+      if (_stack.back()->is_array())
+        throw json_error{"parse error", _stack.back()};
+      if (_stack.back()->is_object())
+        throw json_error{"parse error", _stack.back()};
+    }
     return false;
   }
+
+  bool is_errored() const { return _errored; }
+
+ private:
+  template <typename Value>
+  json_value* handle_value(Value&& v) {
+    if (_stack.empty()) {
+      *_root = json_value(std::forward<Value>(v));
+      return _root;
+    }
+
+    assert(_stack.back()->is_array() || _stack.back()->is_object());
+
+    if (_stack.back()->is_array()) {
+      _stack.back()->emplace_back(std::forward<Value>(v));
+      return &(_stack.back()->back());
+    }
+
+    assert(_stack.back()->is_object());
+    assert(object_element);
+    *_object_item = json_value(std::forward<Value>(v));
+    return _object_item;
+  }
+
+  json_value*         _root;
+  vector<json_value*> _stack            = {};
+  json_value*         _object_item      = nullptr;
+  bool                _errored          = false;
+  bool                _allow_exceptions = true;
+};
+
+// Parse json
+json_value parse_json(const string& text) {
+  auto json = json_value{};
+  parse_json(text, json);
+  return json;
+}
+void parse_json(const string& text, json_value& json) {
+  json     = json_value{};
+  auto sax = json_sax{&json};
+  nlohmann::json::sax_parse(text, &sax);
 }
 
-// Save json
-bool save_json(const string& filename, json_value& json, string& error) {
-  // convert to string
-  auto text = string{};
-  if (!dump_json(text, json, error)) return false;
-  // save file
-  return save_text(filename, text, error);
-}
-
+// Dump json
 static void to_json(nlohmann::json& js, const json_value& value) {
   switch (value.type()) {
     case json_type::null: js = {}; break;
@@ -347,14 +461,55 @@ static void to_json(nlohmann::json& js, const json_value& value) {
 }
 
 // Dump json
+string dump_json(const json_value& json) {
+  auto text = string{};
+  dump_json(text, json);
+  return text;
+}
+void dump_json(string& text, const json_value& json) {
+  auto njson = nlohmann::json{};
+  to_json(njson, json);
+  text = njson.dump(2);
+}
+
+// Parse json
+bool load_json(const string& filename, json_value& json, string& error) {
+  try {
+    load_json(filename, json);
+    return true;
+  } catch (std::exception& exception) {
+    error = exception.what();
+    return false;
+  }
+}
+
+// Save json
+bool save_json(const string& filename, json_value& json, string& error) {
+  // convert to string
+  auto text = string{};
+  if (!dump_json(text, json, error)) return false;
+  // save file
+  return save_text(filename, text, error);
+}
+
+// Parse json
+bool parse_json(const string& text, json_value& json, string& error) {
+  try {
+    parse_json(text, json);
+    return true;
+  } catch (std::exception& exception) {
+    error = exception.what();
+    return false;
+  }
+}
+
+// Dump json
 bool dump_json(string& text, const json_value& json, string& error) {
   try {
-    auto njson = nlohmann::json{};
-    to_json(njson, json);
-    text = njson.dump(2);
+    dump_json(text, json);
     return true;
-  } catch (...) {
-    error = "error dumping json";
+  } catch (std::exception& exception) {
+    error = exception.what();
     return false;
   }
 }

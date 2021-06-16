@@ -454,10 +454,16 @@ struct json_value {
   json_value&       at(const string& key) { return _get_object().at(key); }
   const json_value& at(const string& key) const { return _get_object().at(key); }
   bool contains(const string& key) const { return _get_object().contains(key); }
+  json_value& front() { return _get_array().front(); }
+  const json_value& front() const { return _get_array().front(); }
+  json_value& back() { return _get_array().back(); }
+  const json_value& back() const { return _get_array().back(); }
   json_value& append() { return _get_array().emplace_back(); }
   template<typename T>
   void append(const T& value) { _get_array().push_back(json_value{value}); }
   json_value& emplace_back() { return _get_array().emplace_back(); }
+  template<typename ... Args>
+  json_value& emplace_back(Args&&... args) { return _get_array().emplace_back(std::forward<Args>(args)...); }
   void push_back(const json_value& item) { _get_array().push_back(item); }
   template<typename T>
   void push_back(const T& value) { _get_array().push_back(json_value{value}); }
@@ -639,6 +645,17 @@ struct json_value {
 // JSON I/O
 // -----------------------------------------------------------------------------
 namespace yocto {
+
+// Load/save json
+json_value load_json(const string& filename);
+void       load_json(const string& filename, json_value& json);
+void       save_json(const string& filename, json_value& json);
+
+// Parse/dump json
+json_value parse_json(const string& text);
+void       parse_json(const string& text, json_value& json);
+string     dump_json(const json_value& json);
+void       dump_json(string& text, const json_value& json);
 
 // Load json
 bool load_json(const string& filename, json_value& json, string& error);
