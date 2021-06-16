@@ -513,7 +513,10 @@ struct json_value {
     auto  values = get<string>();
     auto& labels = json_enum_trait<T>::labels();
     for (auto idx = 0; idx < (int)labels.size(); idx++)
-      if (labels[idx] == values) { value = (T)idx; return; }
+      if (labels[idx] == values) {
+        value = (T)idx;
+        return;
+      }
     throw json_error{"missing label", this};
   }
   template <typename T, size_t N>
@@ -708,14 +711,12 @@ void       parse_json(const string& text, json_value& json);
 string     dump_json(const json_value& json);
 void       dump_json(string& text, const json_value& json);
 
-// Load json
+// Load/save json
 bool load_json(const string& filename, json_value& json, string& error);
-// Save json
 bool save_json(const string& filename, json_value& json, string& error);
 
-// Parse json
+// Parse/dump json
 bool parse_json(const string& text, json_value& json, string& error);
-// Dump json
 bool dump_json(string& text, const json_value& json, string& error);
 
 }  // namespace yocto
