@@ -326,8 +326,8 @@ struct json_value {
 
   // conversions, casts, assignments
   template <typename T>
-  explicit json_value(T&& value) : json_value() {
-    set(std::forward<T>(value));
+  explicit json_value(const T& value) : json_value() {
+    set(value);
   }
   template <typename T>
   explicit operator T() const {
@@ -336,8 +336,8 @@ struct json_value {
     return value;
   }
   template <typename T>
-  json_value& operator=(T&& value) {
-    set(std::forward<T>(value));
+  json_value& operator=(const T& value) {
+    set(value);
     return *this;
   }
 
@@ -415,40 +415,48 @@ struct json_value {
   // clang-format on
 
   // setters
-  // clang-format off
-  void set(const json_value& other) { auto copy = json_value(other); _swap(copy); }
+  void set(const json_value& other) {
+    auto copy = json_value(other);
+    _swap(copy);
+  }
   void set(json_value&& other) { _swap(other); }
-  void set(std::nullptr_t) { _set_value(json_type::null, _integer, 0); }
-  void set(int32_t value) { _set_value(json_type::integer, _integer, value); }
-  void set(int64_t value) { _set_value(json_type::integer, _integer, value); }
-  void set(uint32_t value) { _set_value(json_type::uinteger, _uinteger, value); }
-  void set(uint64_t value) { _set_value(json_type::uinteger, _uinteger, value); }
-  void set(float value) { _set_value(json_type::number, _number, value); }
-  void set(double value) { _set_value(json_type::number, _number, value); }
-  void set(bool value) { _set_value(json_type::boolean, _boolean, value); }
-  void set(const string& value) { _set_ptr(json_type::string, _string, value); }
-  void set(string&& value) { _set_ptr(json_type::string, _string, std::move(value)); }
-  void set(const char* value) { _set_ptr(json_type::string, _string, value); }
-  void set(const json_array& value) { _set_ptr(json_type::array, _array, value); }
-  void set(json_array&& value) { _set_ptr(json_type::array, _array, std::move(value)); }
-  void set(const json_object& value) { _set_ptr(json_type::object, _object, value); }
-  void set(json_object&& value) { _set_ptr(json_type::object, _object, std::move(value)); }
+  void set(std::nullptr_t) { _set(json_type::null, _integer, 0); }
+  void set(int32_t value) { _set(json_type::integer, _integer, value); }
+  void set(int64_t value) { _set(json_type::integer, _integer, value); }
+  void set(uint32_t value) { _set(json_type::uinteger, _uinteger, value); }
+  void set(uint64_t value) { _set(json_type::uinteger, _uinteger, value); }
+  void set(float value) { _set(json_type::number, _number, value); }
+  void set(double value) { _set(json_type::number, _number, value); }
+  void set(bool value) { _set(json_type::boolean, _boolean, value); }
+  void set(const string& value) { _set(json_type::string, _string, value); }
+  void set(const char* value) { _set(json_type::string, _string, value); }
+  void set(const json_array& value) { _set(json_type::array, _array, value); }
+  void set(const json_object& value) {
+    _set(json_type::object, _object, value);
+  }
   template <typename T, std::enable_if_t<std::is_enum_v<T>, bool> = true>
-  void set(T value) { _set_ptr(json_type::string, _string, json_enum<T>::to_string(value)); }
+  void set(T value) {
+    _set(json_type::string, _string, json_enum<T>::to_string(value));
+  }
   template <typename T, size_t N>
   void set(const std::array<T, N>& value) {
-    _set_ptr(json_type::array, _array, json_array(value.size()));
-    for (auto idx = (size_t)0; idx < value.size(); idx++) (*_array)[idx] = value.at(idx);
+    _set(json_type::array, _array, json_array{});
+    _array->resize(value.size());
+    for (auto idx = (size_t)0; idx < value.size(); idx++)
+      (*_array)[idx].set(value.at(idx));
   }
   template <typename T>
   void set(const vector<T>& value) {
-    _set_ptr(json_type::array, _array, json_array(value.size()));
-    for (auto idx = (size_t)0; idx < value.size(); idx++) (*_array)[idx] = value.at(idx);
+    _set(json_type::array, _array, json_array{});
+    _array->resize(value.size());
+    for (auto idx = (size_t)0; idx < value.size(); idx++)
+      (*_array)[idx].set(value.at(idx));
   }
 #ifdef __APPLE__
-  void set(size_t value) { _set_value(json_type::uinteger, _uinteger, (uint64_t)value); }
+  void set(size_t value) {
+    _set(json_type::uinteger, _uinteger, (uint64_t)value);
+  }
 #endif
-  // clang-format on
 
   // generic get
   template <typename T>
@@ -477,14 +485,14 @@ struct json_value {
     if (array.size() != N)
       throw json_error{"array of fixed size expected", this};
     for (auto idx = (size_t)0; idx < value.size(); idx++)
-      value[idx] = (T)array[idx];
+      array[idx].get(value[idx]);
   }
   template <typename T>
   void get(vector<T>& value) const {
     auto& array = _get_array();
     value.resize(array.size());
     for (auto idx = (size_t)0; idx < value.size(); idx++)
-      value[idx] = (T)array[idx];
+      array[idx].get(value[idx]);
   }
 #ifdef __APPLE__
   void get(size_t& value) const { value = _get_number<size_t>(); }
@@ -630,13 +638,13 @@ struct json_value {
   }
 
   template <typename T, typename V>
-  void _set_value(json_type type, T& var, const V& value) {
+  void _set(json_type type, T& var, const V& value) {
     if (_type != type) _clear();
     _type = type;
     var   = (T)value;
   }
   template <typename T, typename V>
-  void _set_ptr(json_type type, T*& var, const V& value) {
+  void _set(json_type type, T*& var, const V& value) {
     if (_type != type) {
       _clear();
       _type = type;
@@ -645,39 +653,21 @@ struct json_value {
       *var = value;
     }
   }
-  template <typename T, typename V>
-  void _set_ptr(json_type type, T*& var, V&& value) {
-    if (_type != type) {
-      _clear();
-      _type = type;
-      var   = new T(std::move(value));
-    } else {
-      *var = std::move(value);
-    }
-  }
 
   bool _empty() const {
     switch (_type) {
-      case json_type::null: return true;
-      case json_type::integer:
-      case json_type::uinteger:
-      case json_type::number:
-      case json_type::boolean: return false;
       case json_type::string: return _string->empty();
       case json_type::array: return _array->empty();
       case json_type::object: return _object->empty();
+      default: throw json_error{"compound expected", this};
     }
   }
   size_t _size() const {
     switch (_type) {
-      case json_type::null: return 0;
-      case json_type::integer:
-      case json_type::uinteger:
-      case json_type::number:
-      case json_type::boolean: return 1;
       case json_type::string: return _string->size();
       case json_type::array: return _array->size();
       case json_type::object: return _object->size();
+      default: throw json_error{"compound expected", this};
     }
   }
 };
