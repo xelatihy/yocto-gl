@@ -39,7 +39,6 @@
 #include <stdexcept>
 #include <unordered_map>
 
-#include "ext/json.hpp"
 #include "ext/stb_image.h"
 #include "ext/stb_image_resize.h"
 #include "ext/stb_image_write.h"
