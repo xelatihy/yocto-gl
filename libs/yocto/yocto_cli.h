@@ -365,76 +365,15 @@ struct json_value {
       : _type{json_type::uinteger}, _uinteger{(uint64_t)value} {}
 #endif
 
-  // casts
-  explicit operator int32_t() const { return _get_number<int32_t>(); }
-  explicit operator int64_t() const { return _get_number<int64_t>(); }
-  explicit operator uint32_t() const { return _get_number<uint32_t>(); }
-  explicit operator uint64_t() const { return _get_number<uint64_t>(); }
-  explicit operator float() const { return _get_number<float>(); }
-  explicit operator double() const { return _get_number<double>(); }
-  explicit operator bool() const { return _get_boolean(); }
-  explicit operator string() const { return _get_string(); }
-  template <typename T, std::enable_if_t<std::is_enum_v<T>, bool> = true>
+  // casts and assignments
+  template <typename T>
   explicit operator T() const {
-    return json_enum<T>::from_string(_get_string());
-  }
-  template <typename T, size_t N>
-  explicit operator std::array<T, N>() const {
-    auto& array = _get_array();
-    if (array.size() != N)
-      throw json_error{"array of fixed size expected", this};
-    auto value = std::array<T, N>{};
-    for (auto idx = (size_t)0; idx < value.size(); idx++)
-      value[idx] = (T)array[idx];
-    return value;
+    return get<T>();
   }
   template <typename T>
-  explicit operator vector<T>() const {
-    auto& array = _get_array();
-    auto  value = vector<T>(array.size());
-    for (auto idx = (size_t)0; idx < value.size(); idx++)
-      value[idx] = (T)array[idx];
-    return value;
+  json_value& operator=(T&& value) {
+    return set(std::forward<T>(value));
   }
-#ifdef __APPLE__
-  explicit operator size_t() const { return _get_number<size_t>(); }
-#endif
-
-  // setters
-  // clang-format off
-  json_value& operator=(std::nullptr_t) { return _set_value(json_type::null, _integer, 0); }
-  json_value& operator=(int32_t value) { return _set_value(json_type::integer, _integer, value); }
-  json_value& operator=(int64_t value) { return _set_value(json_type::integer, _integer, value); }
-  json_value& operator=(uint32_t value) { return _set_value(json_type::uinteger, _uinteger, value); }
-  json_value& operator=(uint64_t value) { return _set_value(json_type::uinteger, _uinteger, value); }
-  json_value& operator=(float value) { return _set_value(json_type::number, _number, value); }
-  json_value& operator=(double value) { return _set_value(json_type::number, _number, value); }
-  json_value& operator=(bool value) { return _set_value(json_type::boolean, _boolean, value); }
-  json_value& operator=(const string& value) { return _set_ptr(json_type::string, _string, value); }
-  json_value& operator=(string&& value) { return _set_ptr(json_type::string, _string, std::move(value)); }
-  json_value& operator=(const char* value) { return _set_ptr(json_type::string, _string, value); }
-  json_value& operator=(const json_array& value) { return _set_ptr(json_type::array, _array, value); }
-  json_value& operator=(json_array&& value) { return _set_ptr(json_type::array, _array, std::move(value)); }
-  json_value& operator=(const json_object& value) { return _set_ptr(json_type::object, _object, value); }
-  json_value& operator=(json_object&& value) { return _set_ptr(json_type::object, _object, std::move(value)); }
-  template <typename T, std::enable_if_t<std::is_enum_v<T>, bool> = true>
-  json_value& operator=(T value) { return _set_ptr(json_type::string, _string, json_enum<T>::to_string(value)); }
-  template <typename T, size_t N>
-  json_value& operator=(const std::array<T, N>& value) {
-    _set_ptr(json_type::array, _array, json_array(value.size()));
-    for (auto idx = (size_t)0; idx < value.size(); idx++) (*_array)[idx] = value.at(idx);
-    return *this;
-  }
-  template <typename T>
-  json_value& operator=(const vector<T>& value) {
-    _set_ptr(json_type::array, _array, json_array(value.size()));
-    for (auto idx = (size_t)0; idx < value.size(); idx++) (*_array)[idx] = value.at(idx);
-    return *this;
-  }
-#ifdef __APPLE__
-  json_value& operator=(size_t value) { return _set_value(json_type::uinteger, _uinteger, (uint64_t)value); }
-#endif
-  // clang-format on
 
   // type
   // clang-format off
@@ -509,6 +448,82 @@ struct json_value {
   bool operator!=(const T& value) const { return !(*this == value); }
   // clang-format on
 
+  // setters
+  // clang-format off
+  json_value& set(std::nullptr_t) { return _set_value(json_type::null, _integer, 0); }
+  json_value& set(int32_t value) { return _set_value(json_type::integer, _integer, value); }
+  json_value& set(int64_t value) { return _set_value(json_type::integer, _integer, value); }
+  json_value& set(uint32_t value) { return _set_value(json_type::uinteger, _uinteger, value); }
+  json_value& set(uint64_t value) { return _set_value(json_type::uinteger, _uinteger, value); }
+  json_value& set(float value) { return _set_value(json_type::number, _number, value); }
+  json_value& set(double value) { return _set_value(json_type::number, _number, value); }
+  json_value& set(bool value) { return _set_value(json_type::boolean, _boolean, value); }
+  json_value& set(const string& value) { return _set_ptr(json_type::string, _string, value); }
+  json_value& set(string&& value) { return _set_ptr(json_type::string, _string, std::move(value)); }
+  json_value& set(const char* value) { return _set_ptr(json_type::string, _string, value); }
+  json_value& set(const json_array& value) { return _set_ptr(json_type::array, _array, value); }
+  json_value& set(json_array&& value) { return _set_ptr(json_type::array, _array, std::move(value)); }
+  json_value& set(const json_object& value) { return _set_ptr(json_type::object, _object, value); }
+  json_value& set(json_object&& value) { return _set_ptr(json_type::object, _object, std::move(value)); }
+  template <typename T, std::enable_if_t<std::is_enum_v<T>, bool> = true>
+  json_value& set(T value) { return _set_ptr(json_type::string, _string, json_enum<T>::to_string(value)); }
+  template <typename T, size_t N>
+  json_value& set(const std::array<T, N>& value) {
+    _set_ptr(json_type::array, _array, json_array(value.size()));
+    for (auto idx = (size_t)0; idx < value.size(); idx++) (*_array)[idx] = value.at(idx);
+    return *this;
+  }
+  template <typename T>
+  json_value& set(const vector<T>& value) {
+    _set_ptr(json_type::array, _array, json_array(value.size()));
+    for (auto idx = (size_t)0; idx < value.size(); idx++) (*_array)[idx] = value.at(idx);
+    return *this;
+  }
+#ifdef __APPLE__
+  json_value& set(size_t value) { return _set_value(json_type::uinteger, _uinteger, (uint64_t)value); }
+#endif
+  // clang-format on
+
+  // generic get
+  template <typename T>
+  T get() const {
+    auto value = T{};
+    get(value);
+    return value;
+  }
+
+  // getters
+  void get(int32_t& value) const { value = _get_number<int32_t>(); }
+  void get(int64_t& value) const { value = _get_number<int64_t>(); }
+  void get(uint32_t& value) const { value = _get_number<uint32_t>(); }
+  void get(uint64_t& value) const { value = _get_number<uint64_t>(); }
+  void get(float& value) const { value = _get_number<float>(); }
+  void get(double& value) const { value = _get_number<double>(); }
+  void get(bool& value) const { value = _get_boolean(); }
+  void get(string& value) const { value = _get_string(); }
+  template <typename T, std::enable_if_t<std::is_enum_v<T>, bool> = true>
+  void get(T& value) const {
+    value = json_enum<T>::from_string(_get_string());
+  }
+  template <typename T, size_t N>
+  void get(std::array<T, N>& value) const {
+    auto& array = _get_array();
+    if (array.size() != N)
+      throw json_error{"array of fixed size expected", this};
+    for (auto idx = (size_t)0; idx < value.size(); idx++)
+      value[idx] = (T)array[idx];
+  }
+  template <typename T>
+  void get(vector<T>& value) const {
+    auto& array = _get_array();
+    value.resize(array.size());
+    for (auto idx = (size_t)0; idx < value.size(); idx++)
+      value[idx] = (T)array[idx];
+  }
+#ifdef __APPLE__
+  void get(size_t& value) const { value = _get_number<size_t>(); }
+#endif
+
   // math types
   // clang-format off
   explicit json_value(const vec2i& value) : json_value((const std::array<int, 2>&)value) { }
@@ -526,32 +541,32 @@ struct json_value {
 
   // math types
   // clang-format off
-  explicit operator vec2i() const { return _bitcast<vec2i>((std::array<int, 2>)*this); }
-  explicit operator vec3i() const { return _bitcast<vec3i>((std::array<int, 3>)*this); }
-  explicit operator vec4i() const { return _bitcast<vec4i>((std::array<int, 4>)*this); }
-  explicit operator vec2f() const { return _bitcast<vec2f>((std::array<float, 2>)*this); }
-  explicit operator vec3f() const { return _bitcast<vec3f>((std::array<float, 3>)*this); }
-  explicit operator vec4f() const { return _bitcast<vec4f>((std::array<float, 4>)*this); }
-  explicit operator frame2f() const { return _bitcast<frame2f>((std::array<float, 6>)*this); }
-  explicit operator frame3f() const { return _bitcast<frame3f>((std::array<float, 12>)*this); }
-  explicit operator mat2f() const { return _bitcast<mat2f>((std::array<float, 4>)*this); }
-  explicit operator mat3f() const { return _bitcast<mat3f>((std::array<float, 9>)*this); }
-  explicit operator mat4f() const { return _bitcast<mat4f>((std::array<float, 16>)*this); }
+  void get(vec2i& value) const { get((std::array<int, 2>&)value); }
+  void get(vec3i& value) const { get((std::array<int, 3>&)value); }
+  void get(vec4i& value) const { get((std::array<int, 4>&)value); }
+  void get(vec2f& value) const { get((std::array<float, 2>&)value); }
+  void get(vec3f& value) const { get((std::array<float, 3>&)value); }
+  void get(vec4f& value) const { get((std::array<float, 4>&)value); }
+  void get(frame2f& value) const { get((std::array<float, 6>&)value); }
+  void get(frame3f& value) const { get((std::array<float, 12>&)value); }
+  void get(mat2f& value) const { get((std::array<float, 4>&)value); }
+  void get(mat3f& value) const { get((std::array<float, 9>&)value); }
+  void get(mat4f& value) const { get((std::array<float, 16>&)value); }
   // clang-format on
 
   // math types
   // clang-format off
-  json_value& operator=(const vec2i& value) { return operator=((const std::array<int, 2>&)value); }
-  json_value& operator=(const vec3i& value) { return operator=((const std::array<int, 3>&)value); }
-  json_value& operator=(const vec4i& value) { return operator=((const std::array<int, 4>&)value); }
-  json_value& operator=(const vec2f& value) { return operator=((const std::array<float, 2>&)value); }
-  json_value& operator=(const vec3f& value) { return operator=((const std::array<float, 3>&)value); }
-  json_value& operator=(const vec4f& value) { return operator=((const std::array<float, 4>&)value); }
-  json_value& operator=(const frame2f& value) { return operator=((const std::array<float, 6>&)value); }
-  json_value& operator=(const frame3f& value) { return operator=((const std::array<float, 12>&)value); }
-  json_value& operator=(const mat2f& value) { return operator=((const std::array<float, 4>&)value); }
-  json_value& operator=(const mat3f& value) { return operator=((const std::array<float, 9>&)value); }
-  json_value& operator=(const mat4f& value) { return operator=((const std::array<float, 16>&)value); }
+  json_value& set(const vec2i& value) { return set((const std::array<int, 2>&)value); }
+  json_value& set(const vec3i& value) { return set((const std::array<int, 3>&)value); }
+  json_value& set(const vec4i& value) { return set((const std::array<int, 4>&)value); }
+  json_value& set(const vec2f& value) { return set((const std::array<float, 2>&)value); }
+  json_value& set(const vec3f& value) { return set((const std::array<float, 3>&)value); }
+  json_value& set(const vec4f& value) { return set((const std::array<float, 4>&)value); }
+  json_value& set(const frame2f& value) { return set((const std::array<float, 6>&)value); }
+  json_value& set(const frame3f& value) { return set((const std::array<float, 12>&)value); }
+  json_value& set(const mat2f& value) { return set((const std::array<float, 4>&)value); }
+  json_value& set(const mat3f& value) { return set((const std::array<float, 9>&)value); }
+  json_value& set(const mat4f& value) { return set((const std::array<float, 16>&)value); }
   // clang-format on
 
  private:
