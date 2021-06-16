@@ -64,17 +64,24 @@ namespace yocto {
 
 // Io error used in exception handling
 struct io_error : std::runtime_error {
-  io_error(const string& message) : std::runtime_error(message) {}
+  string filename = "", message = "";
+  io_error(const string& filename, const string& message)
+      : std::runtime_error(filename + ": " + message)
+      , filename{filename}
+      , message{message} {}
 
   // common errors
   // clang-format off
-  static io_error open_error(const string& filename) { return {filename + ": file not found"}; }
-  static io_error read_error(const string& filename) { return {filename + ": read error"}; }
-  static io_error write_error(const string& filename) { return {filename + ": write error"}; }
-  static io_error parse_error(const string& filename) { return {filename + ": parse error"}; }
-  static io_error format_error(const string& filename) { return {filename + ": unknown format"}; }
-  static io_error preset_error(const string& filename) { return {filename + ": unknown preset"}; }
-  static io_error shape_error(const string& filename) { return {filename + ": empty shape"}; }
+  static io_error open_error(const string& filename) { return {filename, "file not found"}; }
+  static io_error read_error(const string& filename) { return {filename, "read error"}; }
+  static io_error write_error(const string& filename) { return {filename, "write error"}; }
+  static io_error parse_error(const string& filename) { return {filename, "parse error"}; }
+  static io_error format_error(const string& filename) { return {filename, "unknown format"}; }
+  static io_error preset_error(const string& filename) { return {filename, "unknown preset"}; }
+  static io_error shape_error(const string& filename) { return {filename, "empty shape"}; }
+  static io_error dependent_error(const string& filename, const io_error& error) { return {filename, string{"error in "} + error.what()}; }
+  static io_error json_error(const string& filename) { return {filename, "json error"}; }
+  static io_error matref_error(const string& filename, const string& name) { return {filename, "missing material " + name}; }
   // clang-format on
 };
 
@@ -207,6 +214,11 @@ bool make_fvshape_preset(
 namespace yocto {
 
 // Load/save a subdiv in the supported formats.
+subdiv_data load_subdiv(const string& filename);
+void        load_subdiv(const string& filename, subdiv_data& subdiv);
+void        save_subdiv(const string& filename, const subdiv_data& subdiv);
+
+// Load/save a subdiv in the supported formats.
 bool load_subdiv(const string& filename, subdiv_data& subdiv, string& error);
 bool save_subdiv(
     const string& filename, const subdiv_data& subdiv, string& error);
@@ -219,7 +231,21 @@ bool save_subdiv(
 namespace yocto {
 
 // Load/save a scene in the supported formats.
-// Calls the progress callback, if defined, as we process more data.
+void load_scene(
+    const string& filename, scene_data& scene, bool noparallel = false);
+void save_scene(
+    const string& filename, const scene_data& scene, bool noparallel = false);
+
+// Make missing scene directories
+void make_scene_directories(const string& filename, const scene_data& scene);
+
+// Scene presets used for testing.
+scene_data make_scene_preset(const string& type);
+
+// Add environment
+void add_environment(scene_data& scene, const string& filename);
+
+// Load/save a scene in the supported formats.
 bool load_scene(const string& filename, scene_data& scene, string& error,
     bool noparallel = false);
 bool save_scene(const string& filename, const scene_data& scene, string& error,
@@ -274,13 +300,16 @@ bool path_isdir(const string& filename);
 bool path_isfile(const string& filename);
 
 // List the contents of a directory
-vector<string> list_directory(const string& filename);
+vector<string> list_directory(const string& dirname);
 
 // Create a directory and all missing parent directories if needed
-bool make_directory(const string& dirname, string& error);
+void make_directory(const string& dirname);
 
 // Get the current directory
 string path_current();
+
+// Create a directory and all missing parent directories if needed
+bool make_directory(const string& dirname, string& error);
 
 }  // namespace yocto
 
