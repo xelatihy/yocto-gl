@@ -4250,11 +4250,13 @@ static void load_json_scene(
 static void save_json_scene(
     const string& filename, const scene_data& scene, bool noparallel) {
   // helpers to handel old code paths
-  auto insert_object = [](njson& js, const string& name) -> njson& {
+  auto add_elem = [](njson& js, const string& name) -> njson& {
     js[name] = njson::object();
     return js[name];
   };
-  auto insert_value = [](njson& js, const string& name, const auto& value) {
+  auto set_opt = [](njson& js, const string& name, const auto& value,
+                     const auto& def) {
+    if (value == def) return;
     js[name] = value;
   };
 
@@ -4263,162 +4265,96 @@ static void save_json_scene(
 
   // asset
   {
-    auto& element = insert_object(js, "asset");
-    if (!scene.copyright.empty()) {
-      insert_value(element, "copyright", scene.copyright);
-    }
-    insert_value(element, "generator",
-        "Yocto/GL - https://github.com/xelatihy/yocto-gl");
+    auto& element = add_elem(js, "asset");
+    set_opt(element, "copyright", scene.copyright, "");
+    set_opt(element, "generator",
+        "Yocto/GL - https://github.com/xelatihy/yocto-gl", "");
   }
 
-  auto def_cam = sceneio_camera{};
   if (!scene.cameras.empty()) {
-    auto& group = insert_object(js, "cameras");
+    auto  default_ = sceneio_camera{};
+    auto& group    = add_elem(js, "cameras");
     for (auto& camera : scene.cameras) {
-      auto& element = insert_object(group, get_camera_name(scene, camera));
-      if (camera.frame != def_cam.frame) {
-        insert_value(element, "frame", camera.frame);
-      }
-      if (camera.orthographic != def_cam.orthographic) {
-        insert_value(element, "orthographic", camera.orthographic);
-      }
-      if (camera.lens != def_cam.lens) {
-        insert_value(element, "lens", camera.lens);
-      }
-      if (camera.aspect != def_cam.aspect) {
-        insert_value(element, "aspect", camera.aspect);
-      }
-      if (camera.film != def_cam.film) {
-        insert_value(element, "film", camera.film);
-      }
-      if (camera.focus != def_cam.focus) {
-        insert_value(element, "focus", camera.focus);
-      }
-      if (camera.aperture != def_cam.aperture) {
-        insert_value(element, "aperture", camera.aperture);
-      }
+      auto& element = add_elem(group, get_camera_name(scene, camera));
+      set_opt(element, "frame", camera.frame, default_.frame);
+      set_opt(
+          element, "orthographic", camera.orthographic, default_.orthographic);
+      set_opt(element, "lens", camera.lens, default_.lens);
+      set_opt(element, "aspect", camera.aspect, default_.aspect);
+      set_opt(element, "film", camera.film, default_.film);
+      set_opt(element, "focus", camera.focus, default_.focus);
+      set_opt(element, "aperture", camera.aperture, default_.aperture);
     }
   }
 
-  auto def_env = sceneio_environment{};
   if (!scene.environments.empty()) {
-    auto& group = insert_object(js, "environments");
+    auto  default_ = sceneio_environment{};
+    auto& group    = add_elem(js, "environments");
     for (auto& environment : scene.environments) {
-      auto& element = insert_object(
-          group, get_environment_name(scene, environment));
-      if (environment.frame != def_env.frame) {
-        insert_value(element, "frame", environment.frame);
-      }
-      if (environment.emission != def_env.emission) {
-        insert_value(element, "emission", environment.emission);
-      }
-      if (environment.emission_tex != invalidid) {
-        insert_value(element, "emission_tex",
-            get_texture_name(scene, environment.emission_tex));
-      }
+      auto& element = add_elem(group, get_environment_name(scene, environment));
+      set_opt(element, "frame", environment.frame, default_.frame);
+      set_opt(element, "emission", environment.emission, default_.emission);
+      set_opt(element, "emission_tex",
+          get_texture_name(scene, environment.emission_tex), "");
     }
   }
 
-  auto def_material = sceneio_material{};
   if (!scene.materials.empty()) {
-    auto& group = insert_object(js, "materials");
+    auto  default_ = sceneio_material{};
+    auto& group    = add_elem(js, "materials");
     for (auto& material : scene.materials) {
-      auto& element = insert_object(group, get_material_name(scene, material));
-      if (material.type != def_material.type) {
-        insert_value(element, "type", material.type);
-      }
-      if (material.emission != def_material.emission) {
-        insert_value(element, "emission", material.emission);
-      }
-      if (material.color != def_material.color) {
-        insert_value(element, "color", material.color);
-      }
-      if (material.metallic != def_material.metallic) {
-        insert_value(element, "metallic", material.metallic);
-      }
-      if (material.roughness != def_material.roughness) {
-        insert_value(element, "roughness", material.roughness);
-      }
-      if (material.ior != def_material.ior) {
-        insert_value(element, "ior", material.ior);
-      }
-      if (material.trdepth != def_material.trdepth) {
-        insert_value(element, "trdepth", material.trdepth);
-      }
-      if (material.scattering != def_material.scattering) {
-        insert_value(element, "scattering", material.scattering);
-      }
-      if (material.scanisotropy != def_material.scanisotropy) {
-        insert_value(element, "scanisotropy", material.scanisotropy);
-      }
-      if (material.opacity != def_material.opacity) {
-        insert_value(element, "opacity", material.opacity);
-      }
-      if (material.emission_tex != invalidid) {
-        insert_value(element, "emission_tex",
-            get_texture_name(scene, material.emission_tex));
-      }
-      if (material.color_tex != invalidid) {
-        insert_value(
-            element, "color_tex", get_texture_name(scene, material.color_tex));
-      }
-      if (material.roughness_tex != invalidid) {
-        insert_value(element, "roughness_tex",
-            get_texture_name(scene, material.roughness_tex));
-      }
-      if (material.scattering_tex != invalidid) {
-        insert_value(element, "scattering_tex",
-            get_texture_name(scene, material.scattering_tex));
-      }
-      if (material.normal_tex != invalidid) {
-        insert_value(element, "normal_tex",
-            get_texture_name(scene, material.normal_tex));
-      }
+      auto& element = add_elem(group, get_material_name(scene, material));
+      set_opt(element, "type", material.type, default_.type);
+      set_opt(element, "emission", material.emission, default_.emission);
+      set_opt(element, "color", material.color, default_.color);
+      set_opt(element, "metallic", material.metallic, default_.metallic);
+      set_opt(element, "roughness", material.roughness, default_.roughness);
+      set_opt(element, "ior", material.ior, default_.ior);
+      set_opt(element, "trdepth", material.trdepth, default_.trdepth);
+      set_opt(element, "scattering", material.scattering, default_.scattering);
+      set_opt(element, "scanisotropy", material.scanisotropy,
+          default_.scanisotropy);
+      set_opt(element, "opacity", material.opacity, default_.opacity);
+      set_opt(element, "emission_tex",
+          get_texture_name(scene, material.emission_tex), "");
+      set_opt(element, "color_tex", get_texture_name(scene, material.color_tex),
+          "");
+      set_opt(element, "roughness_tex",
+          get_texture_name(scene, material.roughness_tex), "");
+      set_opt(element, "scattering_tex",
+          get_texture_name(scene, material.scattering_tex), "");
+      set_opt(element, "normal_tex",
+          get_texture_name(scene, material.normal_tex), "");
     }
   }
 
-  auto def_instance = sceneio_instance{};
   if (!scene.instances.empty()) {
-    auto& group = insert_object(js, "instances");
+    auto  default_ = sceneio_instance{};
+    auto& group    = add_elem(js, "instances");
     for (auto& instance : scene.instances) {
-      auto& element = insert_object(group, get_instance_name(scene, instance));
-      if (instance.frame != def_instance.frame) {
-        insert_value(element, "frame", instance.frame);
-      }
-      if (instance.shape != invalidid) {
-        insert_value(element, "shape", get_shape_name(scene, instance.shape));
-      }
-      if (instance.material != invalidid) {
-        insert_value(
-            element, "material", get_material_name(scene, instance.material));
-      }
+      auto& element = add_elem(group, get_instance_name(scene, instance));
+      set_opt(element, "frame", instance.frame, default_.frame);
+      set_opt(element, "shape", get_shape_name(scene, instance.shape), "");
+      set_opt(
+          element, "material", get_material_name(scene, instance.material), "");
     }
   }
 
-  auto def_subdiv = subdiv_data{};
   if (!scene.subdivs.empty()) {
-    auto& group = insert_object(js, "subdivs");
+    auto  default_ = subdiv_data{};
+    auto& group    = add_elem(js, "subdivs");
     for (auto& subdiv : scene.subdivs) {
-      auto& element = insert_object(group, get_subdiv_name(scene, subdiv));
-      if (subdiv.shape != invalidid) {
-        insert_value(element, "shape", get_shape_name(scene, subdiv.shape));
-      }
-      if (subdiv.subdivisions != def_subdiv.subdivisions) {
-        insert_value(element, "subdivisions", subdiv.subdivisions);
-      }
-      if (subdiv.catmullclark != def_subdiv.catmullclark) {
-        insert_value(element, "catmullclark", subdiv.catmullclark);
-      }
-      if (subdiv.smooth != def_subdiv.smooth) {
-        insert_value(element, "smooth", subdiv.smooth);
-      }
-      if (subdiv.displacement != def_subdiv.displacement) {
-        insert_value(element, "displacement", subdiv.displacement);
-      }
-      if (subdiv.displacement_tex != invalidid) {
-        insert_value(element, "displacement_tex",
-            get_texture_name(scene, subdiv.displacement_tex));
-      }
+      auto& element = add_elem(group, get_subdiv_name(scene, subdiv));
+      set_opt(element, "shape", get_shape_name(scene, subdiv.shape), "");
+      set_opt(
+          element, "subdivisions", subdiv.subdivisions, default_.subdivisions);
+      set_opt(
+          element, "catmullclark", subdiv.catmullclark, default_.subdivisions);
+      set_opt(element, "smooth", subdiv.smooth, default_.subdivisions);
+      set_opt(
+          element, "displacement", subdiv.displacement, default_.subdivisions);
+      set_opt(element, "displacement_tex",
+          get_texture_name(scene, subdiv.displacement_tex), "");
     }
   }
 
