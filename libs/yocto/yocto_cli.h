@@ -296,8 +296,9 @@ struct json_error : std::logic_error {
 };
 
 // Json enum support
+// define  static const vector<string>& labels();
 template <typename T>
-struct json_enum;
+struct json_enum_trait;
 
 // Json type
 enum struct json_type {
@@ -342,16 +343,19 @@ struct json_value {
   }
 
   // type
-  // clang-format off
   json_type type() const { return _type; }
-  bool is_null() const { return _type == json_type::null; }
-  bool is_integer() const { return _type == json_type::integer || _type == json_type::uinteger; }
-  bool is_number() const { return _type == json_type::integer || _type == json_type::uinteger || _type == json_type::number; }
+  bool      is_null() const { return _type == json_type::null; }
+  bool      is_integer() const {
+    return _type == json_type::integer || _type == json_type::uinteger;
+  }
+  bool is_number() const {
+    return _type == json_type::integer || _type == json_type::uinteger ||
+           _type == json_type::number;
+  }
   bool is_boolean() const { return _type == json_type::boolean; }
   bool is_string() const { return _type == json_type::string; }
   bool is_array() const { return _type == json_type::array; }
   bool is_object() const { return _type == json_type::object; }
-  // clang-format on
 
   // size
   bool   empty() const { return _empty(); }
@@ -363,56 +367,93 @@ struct json_value {
   static json_value object() { return json_value{json_object{}}; }
 
   // element access
-  // clang-format off
   json_value&       operator[](size_t idx) { return _get_array().at(idx); }
-  const json_value& operator[](size_t idx) const { return _get_array().at(idx); }
+  const json_value& operator[](size_t idx) const {
+    return _get_array().at(idx);
+  }
   json_value&       operator[](const string& key) { return _get_object()[key]; }
-  const json_value& operator[](const string& key) const { return _get_object().at(key); }
+  const json_value& operator[](const string& key) const {
+    return _get_object().at(key);
+  }
   json_value&       at(size_t idx) { return _get_array().at(idx); }
   const json_value& at(size_t idx) const { return _get_array().at(idx); }
   json_value&       at(const string& key) { return _get_object().at(key); }
-  const json_value& at(const string& key) const { return _get_object().at(key); }
+  const json_value& at(const string& key) const {
+    return _get_object().at(key);
+  }
   bool contains(const string& key) const { return _get_object().contains(key); }
-  json_value& front() { return _get_array().front(); }
+  json_value&       front() { return _get_array().front(); }
   const json_value& front() const { return _get_array().front(); }
-  json_value& back() { return _get_array().back(); }
+  json_value&       back() { return _get_array().back(); }
   const json_value& back() const { return _get_array().back(); }
-  json_value& append() { return _get_array().emplace_back(); }
-  template<typename T>
-  void append(const T& value) { _get_array().push_back(json_value{value}); }
-  json_value& emplace_back() { return _get_array().emplace_back(); }
-  template<typename ... Args>
-  json_value& emplace_back(Args&&... args) { return _get_array().emplace_back(std::forward<Args>(args)...); }
+  json_value&       append() { return _get_array().emplace_back(); }
+  template <typename T>
+  void append(const T& value) {
+    _get_array().push_back(json_value{value});
+  }
+  template <typename... Args>
+  json_value& emplace_back(Args&&... args) {
+    return _get_array().emplace_back(std::forward<Args>(args)...);
+  }
   void push_back(const json_value& item) { _get_array().push_back(item); }
-  template<typename T>
-  void push_back(const T& value) { _get_array().push_back(json_value{value}); }
-  template<typename T>
-  T value(const string& key, const T& default_) const {
+  template <typename T>
+  void push_back(const T& value) {
+    _get_array().push_back(json_value{value});
+  }
+
+  // get functions
+  template <typename T>
+  T get() const {
+    auto value = T{};
+    get(value);
+    return value;
+  }
+  template <typename T>
+  void try_get(const string& key, T& value) const {
     auto& object = _get_object();
-    if (auto it = object.find(key); it != object.end()) return (T)(it->second);
+    auto  it     = object.find(key);
+    if (it) it->second.get(value);
+  }
+  template <typename T>
+  T get_at(const string& key) const {
+    return _get_object().at(key).get<T>();
+  }
+  template <typename T>
+  T get_or(const string& key, const T& default_) const {
+    auto& object = _get_object();
+    if (auto it = object.find(key); it != object.end())
+      return it->second.get<T>();
     return default_;
   }
-  // clang-format on
+  template <typename T>
+  T value(const string& key, const T& default_) const {
+    auto& object = _get_object();
+    if (auto it = object.find(key); it != object.end())
+      return it->second.get<T>();
+    return default_;
+  }
 
   // iteration
-  // clang-format off
-  json_value* begin() { return _get_array().data(); }
+  json_value*       begin() { return _get_array().data(); }
   const json_value* begin() const { return _get_array().data(); }
-  json_value* end() { return _get_array().data() + _get_array().size(); }
-  const json_value* end() const { return _get_array().data() + _get_array().size(); }
-  json_object& items() { return _get_object(); }
+  json_value*       end() { return _get_array().data() + _get_array().size(); }
+  const json_value* end() const {
+    return _get_array().data() + _get_array().size();
+  }
+  json_object&       items() { return _get_object(); }
   const json_object& items() const { return _get_object(); }
-  // clang-format on
 
   // comparisons
-  // clang-format off
-  template<typename T>
-  bool operator==(const T& value) const { return (T)(*this) == value; }
+  template <typename T>
+  bool operator==(const T& value) const {
+    return (T)(*this) == value;
+  }
+  template <typename T>
+  bool operator!=(const T& value) const {
+    return !(*this == value);
+  }
   bool operator==(const string& value) const { return _get_string() == value; }
   bool operator==(const char* value) const { return _get_string() == value; }
-  template<typename T>
-  bool operator!=(const T& value) const { return !(*this == value); }
-  // clang-format on
 
   // setters
   void set(const json_value& other) {
@@ -436,7 +477,7 @@ struct json_value {
   }
   template <typename T, std::enable_if_t<std::is_enum_v<T>, bool> = true>
   void set(T value) {
-    _set(json_type::string, _string, json_enum<T>::to_string(value));
+    _set(json_type::string, _string, json_enum_trait<T>::labels.at((int)value));
   }
   template <typename T, size_t N>
   void set(const std::array<T, N>& value) {
@@ -458,14 +499,6 @@ struct json_value {
   }
 #endif
 
-  // generic get
-  template <typename T>
-  T get() const {
-    auto value = T{};
-    get(value);
-    return value;
-  }
-
   // getters
   void get(int32_t& value) const { value = _get_number<int32_t>(); }
   void get(int64_t& value) const { value = _get_number<int64_t>(); }
@@ -477,7 +510,11 @@ struct json_value {
   void get(string& value) const { value = _get_string(); }
   template <typename T, std::enable_if_t<std::is_enum_v<T>, bool> = true>
   void get(T& value) const {
-    value = json_enum<T>::from_string(_get_string());
+    auto  values = get<string>();
+    auto& labels = json_enum_trait<T>::labels();
+    for (auto idx = 0; idx < (int)labels.size(); idx++)
+      if (labels[idx] == values) { value = (T)idx; return; }
+    throw json_error{"missing label", this};
   }
   template <typename T, size_t N>
   void get(std::array<T, N>& value) const {
@@ -499,22 +536,6 @@ struct json_value {
 #endif
 
   // math types
-  // clang-format off
-  explicit json_value(const vec2i& value) : json_value((const std::array<int, 2>&)value) { }
-  explicit json_value(const vec3i& value) : json_value((const std::array<int, 3>&)value) { }
-  explicit json_value(const vec4i& value) : json_value((const std::array<int, 4>&)value) { }
-  explicit json_value(const vec2f& value) : json_value((const std::array<float, 2>&)value) { }
-  explicit json_value(const vec3f& value) : json_value((const std::array<float, 3>&)value) { }
-  explicit json_value(const vec4f& value) : json_value((const std::array<float, 4>&)value) { }
-  explicit json_value(const frame2f& value) : json_value((const std::array<float, 6>&)value) { }
-  explicit json_value(const frame3f& value) : json_value((const std::array<float, 12>&)value) { }
-  explicit json_value(const mat2f& value) : json_value((const std::array<float, 4>&)value) { }
-  explicit json_value(const mat3f& value) : json_value((const std::array<float, 9>&)value) { }
-  explicit json_value(const mat4f& value) : json_value((const std::array<float, 16>&)value) { }
-  // clang-format on
-
-  // math types
-  // clang-format off
   void get(vec2i& value) const { get((std::array<int, 2>&)value); }
   void get(vec3i& value) const { get((std::array<int, 3>&)value); }
   void get(vec4i& value) const { get((std::array<int, 4>&)value); }
@@ -526,10 +547,8 @@ struct json_value {
   void get(mat2f& value) const { get((std::array<float, 4>&)value); }
   void get(mat3f& value) const { get((std::array<float, 9>&)value); }
   void get(mat4f& value) const { get((std::array<float, 16>&)value); }
-  // clang-format on
 
   // math types
-  // clang-format off
   void set(const vec2i& value) { set((const std::array<int, 2>&)value); }
   void set(const vec3i& value) { set((const std::array<int, 3>&)value); }
   void set(const vec4i& value) { set((const std::array<int, 4>&)value); }
@@ -541,7 +560,6 @@ struct json_value {
   void set(const mat2f& value) { set((const std::array<float, 4>&)value); }
   void set(const mat3f& value) { set((const std::array<float, 9>&)value); }
   void set(const mat4f& value) { set((const std::array<float, 16>&)value); }
-  // clang-format on
 
  private:
   json_type _type = json_type::null;

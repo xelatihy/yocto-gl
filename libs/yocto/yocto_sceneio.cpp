@@ -3938,16 +3938,8 @@ namespace yocto {
 
 // Json specializations
 template <>
-struct json_enum<material_type> {
-  static string to_from(material_type type) {
-    return material_type_names.at((int)type);
-  }
-  static material_type from_string(const string& label) {
-    for (auto idx = (size_t)0; idx < material_type_names.size(); idx++) {
-      if (material_type_names[idx] == label) return (material_type)idx;
-    }
-    throw std::invalid_argument{"not an enum value"};
-  }
+struct json_enum_trait<material_type> {
+  static const vector<string>& labels() { return material_type_names; }
 };
 
 // Load a scene in the builtin JSON format.

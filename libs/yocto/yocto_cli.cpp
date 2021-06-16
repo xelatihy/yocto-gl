@@ -416,7 +416,7 @@ struct json_sax {
     }
 
     assert(_stack.back()->is_object());
-    assert(object_element);
+    assert(_object_item);
     *_object_item = json_value(std::forward<Value>(v));
     return _object_item;
   }
