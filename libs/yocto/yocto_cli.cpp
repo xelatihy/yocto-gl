@@ -481,7 +481,8 @@ static void cli_from_json(
     value = (T)json;
   } else {
     if constexpr (cli_is_array_v<T>) {
-      if (json.size() != value.size()) throw json_error{"bad array size"};
+      if (json.size() != value.size())
+        throw json_error{"bad array size", &json};
       for (auto idx = (size_t)0; idx < value.size(); idx++) {
         cli_from_json(json[idx], value[idx], choices);
       }
@@ -493,7 +494,7 @@ static void cli_from_json(
     } else {
       auto values = (string)json;
       if (std::find(choices.begin(), choices.end(), values) == choices.end())
-        throw json_error{"invalid label"};
+        throw json_error{"invalid label", &json};
       if constexpr (std::is_integral_v<T> || std::is_floating_point_v<T>) {
         value = (T)(std::find(choices.begin(), choices.end(), values) -
                     choices.begin());

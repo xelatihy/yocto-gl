@@ -285,9 +285,14 @@ struct ordered_map {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// Json forward declaration
+struct json_value;
+
 // Json error
 struct json_error : std::logic_error {
-  json_error(const string& error) : std::logic_error(error) {}
+  const json_value* _where = nullptr;
+  json_error(const string& error, const json_value* where)
+      : std::logic_error(error), _where(where) {}
 };
 
 // Json type
@@ -298,7 +303,6 @@ enum struct json_type {
 };
 
 // Json typdefs
-struct json_value;
 using json_array  = vector<json_value>;
 using json_object = ordered_map<string, json_value>;
 
@@ -365,7 +369,8 @@ struct json_value {
   template <typename T, size_t N>
   explicit operator std::array<T, N>() const {
     auto& array = _get_array();
-    if (array.size() != N) throw json_error{"array of fixed size expected"};
+    if (array.size() != N)
+      throw json_error{"array of fixed size expected", this};
     auto value = std::array<T, N>{};
     for (auto idx = (size_t)0; idx < value.size(); idx++)
       value[idx] = (T)array[idx];
@@ -539,36 +544,36 @@ struct json_value {
     } else if (_type == json_type::number) {
       return (T)_number;
     } else {
-      throw json_error{"number expected"};
+      throw json_error{"number expected", this};
     }
   }
 
   bool _get_boolean() const {
-    if (_type != json_type::boolean) throw json_error{"boolean expected"};
+    if (_type != json_type::boolean) throw json_error{"boolean expected", this};
     return _boolean;
   }
   const string& _get_string() const {
-    if (_type != json_type::string) throw json_error{"string expected"};
+    if (_type != json_type::string) throw json_error{"string expected", this};
     return *_string;
   }
   string& _get_string() {
-    if (_type != json_type::string) throw json_error{"string expected"};
+    if (_type != json_type::string) throw json_error{"string expected", this};
     return *_string;
   }
   const json_array& _get_array() const {
-    if (_type != json_type::array) throw json_error{"array expected"};
+    if (_type != json_type::array) throw json_error{"array expected", this};
     return *_array;
   }
   json_array& _get_array() {
-    if (_type != json_type::array) throw json_error{"array expected"};
+    if (_type != json_type::array) throw json_error{"array expected", this};
     return *_array;
   }
   const json_object& _get_object() const {
-    if (_type != json_type::object) throw json_error{"object expected"};
+    if (_type != json_type::object) throw json_error{"object expected", this};
     return *_object;
   }
   json_object& _get_object() {
-    if (_type != json_type::object) throw json_error{"object expected"};
+    if (_type != json_type::object) throw json_error{"object expected", this};
     return *_object;
   }
 
