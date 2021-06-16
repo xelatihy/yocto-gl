@@ -44,6 +44,7 @@
 #include "ext/stb_image_resize.h"
 #include "ext/stb_image_write.h"
 #include "ext/tinyexr.h"
+#include "yocto_cli.h"
 #include "yocto_color.h"
 #include "yocto_geometry.h"
 #include "yocto_image.h"
@@ -3935,6 +3936,20 @@ inline void from_json(const njson& j, material_type& value) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// Json specializations
+template <>
+struct json_enum<material_type> {
+  static string to_from(material_type type) {
+    return material_type_names.at((int)type);
+  }
+  static material_type from_string(const string& label) {
+    for (auto idx = (size_t)0; idx < material_type_names.size(); idx++) {
+      if (material_type_names[idx] == label) return (material_type)idx;
+    }
+    throw std::invalid_argument{"not an enum value"};
+  }
+};
+
 // Load a scene in the builtin JSON format.
 static void load_json_scene(
     const string& filename, scene_data& scene, bool noparallel) {
@@ -3954,17 +3969,17 @@ static void load_json_scene(
   };
 
   // open file
-  auto js = load_njson(filename);
+  auto js = load_json(filename);
 
   // parse json value
-  auto get_opt = [](const njson& js, const string& key, auto& value) {
+  auto get_opt = [](const json_value& js, const string& key, auto& value) {
     value = js.value(key, value);
   };
 
   // parse json reference
   auto shape_map = unordered_map<string, int>{};
   auto get_shp   = [&scene, &shape_map](
-                     const njson& js, const string& key, int& value) {
+                     const json_value& js, const string& key, int& value) {
     auto name = js.value(key, string{});
     if (name.empty()) return;
     auto it = shape_map.find(name);
@@ -3982,7 +3997,7 @@ static void load_json_scene(
   // parse json reference
   auto material_map = unordered_map<string, int>{};
   auto get_mat      = [&material_map](
-                     const njson& js, const string& key, int& value) {
+                     const json_value& js, const string& key, int& value) {
     auto name = js.value(key, string{});
     if (name.empty()) return;
     auto it = material_map.find(name);
@@ -3996,7 +4011,7 @@ static void load_json_scene(
   // parse json reference
   auto texture_map = unordered_map<string, int>{};
   auto get_tex     = [&scene, &texture_map](
-                     const njson& js, const string& key, int& value) {
+                     const json_value& js, const string& key, int& value) {
     auto name = js.value(key, string{});
     if (name.empty()) return;
     auto it = texture_map.find(name);
