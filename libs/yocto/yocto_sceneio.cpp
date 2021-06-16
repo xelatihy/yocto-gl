@@ -3868,9 +3868,9 @@ static bool load_json_scene(
   if (!load_json(filename, js, error)) return json_error();
 
   // parse json value
-  auto get_value = [](const njson& js, auto& value) -> bool {
+  auto get_opt = [](const njson& js, const string& key, auto& value) -> bool {
     try {
-      value = js;
+      value = js.value(key, value);
       return true;
     } catch (...) {
       return false;
@@ -3879,8 +3879,8 @@ static bool load_json_scene(
 
   // parse json reference
   auto shape_map = unordered_map<string, int>{};
-  auto get_shape = [&scene, &shape_map, &get_value](
-                       const njson& js, int& value) -> bool {
+  auto get_shp   = [&scene, &shape_map, &get_opt](
+                     const njson& js, int& value) -> bool {
     auto name = ""s;
     if (!get_value(js, name)) return false;
     auto it = shape_map.find(name);
@@ -3976,220 +3976,80 @@ static bool load_json_scene(
   auto iterate_object = [](const njson& js) { return js.items(); };
   auto check_object   = [](const njson& js) { return js.is_object(); };
 
-  // loop over external dictionaries
-  for (auto& [gname, group] : iterate_object(js)) {
-    if (gname == "asset") {
-      if (!check_object(group)) return parse_error(gname);
-      for (auto& [key, value] : iterate_object(group)) {
-        if (key == "copyright") {
-          if (!get_value(value, scene.copyright))
-            return parse_error(gname, key);
-        } else if (key == "generator") {
-          // skip
-        } else {
-          return key_error(gname, key);
-        }
+  // parsing now
+  if (js.contains("asset")) {
+    auto& element = js.at("asset");
+    parse_opt(element, "copyright", scene.copyright);
+  }
+  if (js.contains("cameras")) {
+    for (auto& [key, element] : js.at("cameras").items()) {
+      auto& camera = scene.camera.emplac_back();
+      scene.camera_names.emplace_back(key);
+      parse_opt(element, "frame", camera.frame);
+      parse_opt(element, "orthographic", camera.orthographic);
+      parse_opt(element, "ortho", camera.orthographic);
+      parse_opt(element, "lens", camera.lens);
+      parse_opt(element, "aspect", camera.aspect);
+      parse_opt(element, "film", camera.film);
+      parse_opt(element, "focus", camera.focus);
+      parse_opt(element, "aperture", camera.aperture);
+      if (element.contains("lookat")) {
+        parse_opt(element, "lookat", (mat3f&)camera.frame);
+        camera.focus = length(camera.frame.x - camera.frame.y);
+        camera.frame = lookat_frame(
+            camera.frame.x, camera.frame.y, camera.frame.z);
       }
-    } else if (gname == "cameras") {
-      if (!check_object(group)) return parse_error(gname);
-      for (auto& [name, element] : iterate_object(group)) {
-        if (!check_object(element)) return parse_error(gname, name);
-        scene.camera_names.emplace_back(name);
-        auto& camera = scene.cameras.emplace_back();
-        for (auto& [key, value] : iterate_object(element)) {
-          if (key == "frame") {
-            if (!get_value(value, camera.frame))
-              return parse_error(gname, name, key);
-          } else if (key == "orthographic") {
-            if (!get_value(value, camera.orthographic))
-              return parse_error(gname, name, key);
-          } else if (key == "ortho") {
-            // backward compatibility
-            if (!get_value(value, camera.orthographic))
-              return parse_error(gname, name, key);
-          } else if (key == "lens") {
-            if (!get_value(value, camera.lens))
-              return parse_error(gname, name, key);
-          } else if (key == "aspect") {
-            if (!get_value(value, camera.aspect))
-              return parse_error(gname, name, key);
-          } else if (key == "film") {
-            if (!get_value(value, camera.film))
-              return parse_error(gname, name, key);
-          } else if (key == "focus") {
-            if (!get_value(value, camera.focus))
-              return parse_error(gname, name, key);
-          } else if (key == "aperture") {
-            if (!get_value(value, camera.aperture))
-              return parse_error(gname, name, key);
-          } else if (key == "lookat") {
-            if (!get_value(value, (mat3f&)camera.frame))
-              return parse_error(gname, name, key);
-            camera.focus = length(camera.frame.x - camera.frame.y);
-            camera.frame = lookat_frame(
-                camera.frame.x, camera.frame.y, camera.frame.z);
-          } else {
-            return key_error(gname, name, key);
-          }
-        }
-      }
-    } else if (gname == "environments") {
-      if (!check_object(group)) return parse_error(gname);
-      for (auto& [name, element] : iterate_object(group)) {
-        if (!check_object(element)) return parse_error(gname, name);
-        scene.environment_names.emplace_back(name);
-        auto& environment = scene.environments.emplace_back();
-        for (auto& [key, value] : iterate_object(element)) {
-          if (key == "frame") {
-            if (!get_value(value, environment.frame))
-              return parse_error(gname, name, key);
-          } else if (key == "emission") {
-            if (!get_value(value, environment.emission))
-              return parse_error(gname, name, key);
-          } else if (key == "emission_tex") {
-            if (!get_texture(value, environment.emission_tex))
-              return parse_error(gname, name, key);
-          } else if (key == "lookat") {
-            if (!get_value(value, (mat3f&)environment.frame))
-              return parse_error(gname, name, key);
-            environment.frame = lookat_frame(environment.frame.x,
-                environment.frame.y, environment.frame.z, true);
-          } else {
-            return key_error(gname, name, key);
-          }
-        }
-      }
-    } else if (gname == "materials") {
-      if (!check_object(group)) return parse_error(gname);
-      for (auto& [name, element] : iterate_object(group)) {
-        if (!check_object(element)) return parse_error(gname, name);
-        if (material_map.find(name) == material_map.end()) {
-          scene.material_names.emplace_back(name);
-          scene.materials.emplace_back();
-          material_map[name] = (int)scene.materials.size() - 1;
-          material_set.push_back(false);
-        }
-        auto& material = scene.materials.at(material_map.at(name));
-        material_set[&material - &scene.materials.front()] = true;
-        for (auto& [key, value] : iterate_object(element)) {
-          if (key == "type") {
-            if (!get_value(value, material.type))
-              return parse_error(gname, name, key);
-          } else if (key == "emission") {
-            if (!get_value(value, material.emission))
-              return parse_error(gname, name, key);
-          } else if (key == "color") {
-            if (!get_value(value, material.color))
-              return parse_error(gname, name, key);
-          } else if (key == "metallic") {
-            if (!get_value(value, material.metallic))
-              return parse_error(gname, name, key);
-          } else if (key == "roughness") {
-            if (!get_value(value, material.roughness))
-              return parse_error(gname, name, key);
-          } else if (key == "ior") {
-            if (!get_value(value, material.ior))
-              return parse_error(gname, name, key);
-          } else if (key == "trdepth") {
-            if (!get_value(value, material.trdepth))
-              return parse_error(gname, name, key);
-          } else if (key == "scattering") {
-            if (!get_value(value, material.scattering))
-              return parse_error(gname, name, key);
-          } else if (key == "scanisotropy") {
-            if (!get_value(value, material.scanisotropy))
-              return parse_error(gname, name, key);
-          } else if (key == "opacity") {
-            if (!get_value(value, material.opacity))
-              return parse_error(gname, name, key);
-          } else if (key == "emission_tex") {
-            if (!get_texture(value, material.emission_tex))
-              return parse_error(gname, name, key);
-          } else if (key == "color_tex") {
-            if (!get_texture(value, material.color_tex))
-              return parse_error(gname, name, key);
-          } else if (key == "roughness_tex") {
-            if (!get_texture(value, material.roughness_tex))
-              return parse_error(gname, name, key);
-          } else if (key == "scattering_tex") {
-            if (!get_texture(value, material.scattering_tex))
-              return parse_error(gname, name, key);
-          } else if (key == "normal_tex") {
-            if (!get_texture(value, material.normal_tex))
-              return parse_error(gname, name, key);
-          } else {
-            return key_error(gname, name, key);
-          }
-        }
-      }
-    } else if (gname == "instances" || gname == "objects") {
-      if (!check_object(group)) return parse_error(gname);
-      for (auto& [name, element] : iterate_object(group)) {
-        if (!check_object(element)) return parse_error(gname, name);
-        scene.instance_names.emplace_back(name);
-        auto& instance = scene.instances.emplace_back();
-        for (auto [key, value] : iterate_object(element)) {
-          if (key == "frame") {
-            if (!get_value(value, instance.frame))
-              return parse_error(gname, name, key);
-          } else if (key == "lookat") {
-            if (!get_value(value, (mat3f&)instance.frame))
-              return parse_error(gname, name, key);
-            instance.frame = lookat_frame(
-                instance.frame.x, instance.frame.y, instance.frame.z, true);
-          } else if (key == "material") {
-            if (!get_material(value, instance.material))
-              return parse_error(gname, name, key);
-          } else if (key == "shape") {
-            if (!get_shape(value, instance.shape))
-              return parse_error(gname, name, key);
-          } else if (key == "instance") {
-            if (!get_ply_instances(value, instance))
-              return parse_error(gname, name, key);
-          } else {
-            return key_error(gname, name, key);
-          }
-        }
-      }
-    } else if (gname == "subdivs") {
-      if (!check_object(group)) return parse_error(gname);
-      for (auto& [name, element] : iterate_object(group)) {
-        if (!check_object(element)) return parse_error(gname, name);
-        scene.subdiv_names.emplace_back(name);
-        auto& subdiv = scene.subdivs.emplace_back();
-        for (auto& [key, value] : iterate_object(element)) {
-          if (key == "shape") {
-            if (!get_shape(value, subdiv.shape))
-              return parse_error(gname, name, key);
-          } else if (key == "subdivisions") {
-            if (!get_value(value, subdiv.subdivisions))
-              return parse_error(gname, name, key);
-          } else if (key == "catmullcark") {
-            if (!get_value(value, subdiv.catmullclark))
-              return parse_error(gname, name, key);
-          } else if (key == "smooth") {
-            if (!get_value(value, subdiv.smooth))
-              return parse_error(gname, name, key);
-          } else if (key == "displacement") {
-            if (!get_value(value, subdiv.displacement))
-              return parse_error(gname, name, key);
-          } else if (key == "displacement_tex") {
-            if (!get_texture(value, subdiv.displacement_tex))
-              return parse_error(gname, name, key);
-          } else {
-            return key_error(gname, name, key);
-          }
-        }
-      }
-    } else {
-      return key_error(gname);
     }
   }
-
-  // check materials
-  for (auto& material : scene.materials) {
-    if (!material_set[&material - &scene.materials.front()])
-      return material_error(get_material_name(scene, material));
+  if (js.contains("materials")) {
+    for (auto& [key, element] : js.at("materials").items()) {
+      auto& material = scene.materials.emplace_back();
+      scene.material_names.emplace_back(key);
+      parse_opt(element, "type", material.frame);
+      parse_opt(element, "emission", material.emission);
+      parse_opt(element, "color", material.color);
+      parse_opt(element, "metallic", material.metallic);
+      parse_opt(element, "roughness", material.roughness);
+      parse_opt(element, "ior", material.ior);
+      parse_opt(element, "trdepth", material.trdepth);
+      parse_opt(element, "scattering", material.scattering);
+      parse_opt(element, "scanisotropy", material.scanisotropy);
+      parse_opt(element, "opacity", material.opacity);
+      parse_tex(element, "emission_tex", material.emission_tex);
+      parse_tex(element, "color_tex", material.color_tex);
+      parse_tex(element, "roughness_tex", material.roughness_tex);
+      parse_tex(element, "scattering_tex", material.scattering_tex);
+      parse_tex(element, "normal_tex", material.normal_tex);
+    }
+  }
+  if (js.contains("instances")) {
+    for (auto& [key, element] : js.at("instances").items()) {
+      auto& instance = scene.instances.emplace_back();
+      scene.instance_names.emplace_back(key);
+      parse_opt(element, "frame", instance.frame);
+      parse_shp(element, "shape", instance.shape);
+      parse_mat(element, "material", instance.material);
+      if (element.contains("lookat")) {
+        parse_opt(element, "lookat", (mat3f&)instance.frame);
+        instance.frame = lookat_frame(
+            instance.frame.x, instance.frame.y, instance.frame.z, false);
+      }
+      if (element.contains("instance")) {
+        parse_ist(element, "instance", instance);
+      }
+    }
+  }
+  if (js.contains("subdivs")) {
+    for (auto& [key, element] : js.at("subdivs").items()) {
+      auto& subdiv = scene.subdivs.emplace_back();
+      scene.subdiv_names.emplace_back(key);
+      parse_shp(element, "shape", subdiv.shape);
+      parse_opt(element, "subdivisions", subdiv.subdivisions);
+      parse_opt(element, "catmullclark", subdiv.catmullclark);
+      parse_opt(element, "smooth", subdiv.smooth);
+      parse_opt(element, "displacement", subdiv.displacement);
+      parse_opt(element, "displacement_tex", subdiv.displacement_tex);
+    }
   }
 
   // dirname
