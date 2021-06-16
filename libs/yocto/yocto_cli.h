@@ -477,7 +477,8 @@ struct json_value {
   }
   template <typename T, std::enable_if_t<std::is_enum_v<T>, bool> = true>
   void set(T value) {
-    _set(json_type::string, _string, json_enum_trait<T>::labels.at((int)value));
+    _set(json_type::string, _string,
+        json_enum_trait<T>::labels().at((int)value));
   }
   template <typename T, size_t N>
   void set(const std::array<T, N>& value) {

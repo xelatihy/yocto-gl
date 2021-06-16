@@ -4257,22 +4257,23 @@ static void load_json_scene(
 static void save_json_scene(
     const string& filename, const scene_data& scene, bool noparallel) {
   // helpers to handel old code paths
-  auto add_elem = [](njson& js, const string& name) -> njson& {
-    js[name] = njson::object();
+  auto add_object = [](json_value& js, const string& name) -> json_value& {
+    js[name] = json_object{};
     return js[name];
   };
-  auto set_opt = [](njson& js, const string& name, const auto& value,
+  auto set_opt = [](json_value& js, const string& name, const auto& value,
                      const auto& def) {
     if (value == def) return;
     js[name] = value;
   };
 
   // save json file
-  auto js = njson::object();
+  auto js = json_value{};
+  js      = json_object{};
 
   // asset
   {
-    auto& element = add_elem(js, "asset");
+    auto& element = add_object(js, "asset");
     set_opt(element, "copyright", scene.copyright, "");
     set_opt(element, "generator",
         "Yocto/GL - https://github.com/xelatihy/yocto-gl", "");
@@ -4280,9 +4281,9 @@ static void save_json_scene(
 
   if (!scene.cameras.empty()) {
     auto  default_ = sceneio_camera{};
-    auto& group    = add_elem(js, "cameras");
+    auto& group    = add_object(js, "cameras");
     for (auto& camera : scene.cameras) {
-      auto& element = add_elem(group, get_camera_name(scene, camera));
+      auto& element = add_object(group, get_camera_name(scene, camera));
       set_opt(element, "frame", camera.frame, default_.frame);
       set_opt(
           element, "orthographic", camera.orthographic, default_.orthographic);
@@ -4296,9 +4297,10 @@ static void save_json_scene(
 
   if (!scene.environments.empty()) {
     auto  default_ = sceneio_environment{};
-    auto& group    = add_elem(js, "environments");
+    auto& group    = add_object(js, "environments");
     for (auto& environment : scene.environments) {
-      auto& element = add_elem(group, get_environment_name(scene, environment));
+      auto& element = add_object(
+          group, get_environment_name(scene, environment));
       set_opt(element, "frame", environment.frame, default_.frame);
       set_opt(element, "emission", environment.emission, default_.emission);
       set_opt(element, "emission_tex",
@@ -4308,9 +4310,9 @@ static void save_json_scene(
 
   if (!scene.materials.empty()) {
     auto  default_ = sceneio_material{};
-    auto& group    = add_elem(js, "materials");
+    auto& group    = add_object(js, "materials");
     for (auto& material : scene.materials) {
-      auto& element = add_elem(group, get_material_name(scene, material));
+      auto& element = add_object(group, get_material_name(scene, material));
       set_opt(element, "type", material.type, default_.type);
       set_opt(element, "emission", material.emission, default_.emission);
       set_opt(element, "color", material.color, default_.color);
@@ -4337,9 +4339,9 @@ static void save_json_scene(
 
   if (!scene.instances.empty()) {
     auto  default_ = sceneio_instance{};
-    auto& group    = add_elem(js, "instances");
+    auto& group    = add_object(js, "instances");
     for (auto& instance : scene.instances) {
-      auto& element = add_elem(group, get_instance_name(scene, instance));
+      auto& element = add_object(group, get_instance_name(scene, instance));
       set_opt(element, "frame", instance.frame, default_.frame);
       set_opt(element, "shape", get_shape_name(scene, instance.shape), "");
       set_opt(
@@ -4349,9 +4351,9 @@ static void save_json_scene(
 
   if (!scene.subdivs.empty()) {
     auto  default_ = subdiv_data{};
-    auto& group    = add_elem(js, "subdivs");
+    auto& group    = add_object(js, "subdivs");
     for (auto& subdiv : scene.subdivs) {
-      auto& element = add_elem(group, get_subdiv_name(scene, subdiv));
+      auto& element = add_object(group, get_subdiv_name(scene, subdiv));
       set_opt(element, "shape", get_shape_name(scene, subdiv.shape), "");
       set_opt(
           element, "subdivisions", subdiv.subdivisions, default_.subdivisions);
