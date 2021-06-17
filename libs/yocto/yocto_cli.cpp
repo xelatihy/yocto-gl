@@ -365,7 +365,7 @@ struct json_sax {
   bool key(std::string& val) {
     // add null at given key and store the reference for later
     // _object_item = &(_stack.back()->operator[](val));
-    _object_item = &(_stack.back()->insert_back(val));
+    _object_item = &(_stack.back()->insert_back(std::move(val)));
     return true;
   }
 

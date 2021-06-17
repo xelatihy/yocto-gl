@@ -263,6 +263,7 @@ struct ordered_map {
   const_iterator begin() const { return _data.begin(); }
   const_iterator end() const { return _data.end(); }
 
+  void push_back(value_type&& item) { _data.push_back(std::move(item)); }
   void push_back(const value_type& item) { _data.push_back(item); }
   template <typename... Args>
   value_type& emplace_back(Args&&... args) {
@@ -334,8 +335,8 @@ struct json_value {
 
   // conversions, casts, assignments
   template <typename T>
-  explicit json_value(const T& value) : json_value() {
-    set(value);
+  explicit json_value(T&& value) : json_value() {
+    set(std::forward<T>(value));
   }
   template <typename T>
   explicit operator T() const {
@@ -344,8 +345,8 @@ struct json_value {
     return value;
   }
   template <typename T>
-  json_value& operator=(const T& value) {
-    set(value);
+  json_value& operator=(T&& value) {
+    set(std::forward<T>(value));
     return *this;
   }
 
@@ -397,10 +398,14 @@ struct json_value {
   json_value& emplace_back(Args&&... args) {
     return _get_array().emplace_back(std::forward<Args>(args)...);
   }
+  void push_back(json_value&& item) { _get_array().push_back(std::move(item)); }
   void push_back(const json_value& item) { _get_array().push_back(item); }
   template <typename T>
   void push_back(const T& value) {
     _get_array().push_back(json_value{value});
+  }
+  json_value& insert_back(string&& key) {
+    return _get_object().emplace_back(std::move(key), json_value{}).second;
   }
   json_value& insert_back(const string& key) {
     return _get_object().emplace_back(key, json_value{}).second;
@@ -483,8 +488,14 @@ struct json_value {
   void set(const string& value) { _set(json_type::string, _string, value); }
   void set(const char* value) { _set(json_type::string, _string, value); }
   void set(const json_array& value) { _set(json_type::array, _array, value); }
+  void set(json_array&& value) {
+    _set(json_type::array, _array, std::move(value));
+  }
   void set(const json_object& value) {
     _set(json_type::object, _object, value);
+  }
+  void set(json_object&& value) {
+    _set(json_type::object, _object, std::move(value));
   }
   template <typename T, std::enable_if_t<std::is_enum_v<T>, bool> = true>
   void set(T value) {
@@ -684,6 +695,16 @@ struct json_value {
       var   = new T(value);
     } else {
       *var = value;
+    }
+  }
+  template <typename T, typename V>
+  void _set(json_type type, T*& var, V&& value) {
+    if (_type != type) {
+      _clear();
+      _type = type;
+      var   = new T(std::move(value));
+    } else {
+      *var = std::move(value);
     }
   }
 

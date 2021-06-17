@@ -4028,6 +4028,20 @@ static void load_json_scene(
           instance.frame = lookat_frame(
               instance.frame.x, instance.frame.y, instance.frame.z, false);
         }
+      }
+    }
+    if (js.contains("objects")) {
+      for (auto& [key, element] : js.at("objects").items()) {
+        auto& instance = scene.instances.emplace_back();
+        scene.instance_names.emplace_back(key);
+        get_opt(element, "frame", instance.frame);
+        get_shp(element, "shape", instance.shape);
+        get_mat(element, "material", instance.material);
+        if (element.contains("lookat")) {
+          get_opt(element, "lookat", (mat3f&)instance.frame);
+          instance.frame = lookat_frame(
+              instance.frame.x, instance.frame.y, instance.frame.z, false);
+        }
         if (element.contains("instance")) {
           get_ist(element, "instance", instance);
         }
