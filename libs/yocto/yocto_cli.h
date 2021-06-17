@@ -226,7 +226,7 @@ namespace yocto {
 
 // Simple ordered map
 template <typename K, typename T>
-class ordered_map {
+struct ordered_map {
  public:
   using container      = vector<pair<K, T>>;
   using const_iterator = typename container::const_iterator;
@@ -319,6 +319,7 @@ using json_object = ordered_map<string, json_value>;
 
 // Json value
 struct json_value {
+ public:
   // Json value
   json_value() : _type{json_type::null}, _integer{0} {}
   explicit json_value(json_type type) : _type{type} { _init(); }
