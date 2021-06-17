@@ -88,6 +88,33 @@ def render(directory='mcguire', scene='*', format='json', mode='path'):
 @click.option('--directory', '-d', default='mcguire')
 @click.option('--scene', '-s', default='*')
 @click.option('--format', '-f', default='json')
+@click.option('--mode', '-m', default='default')
+def info(directory='mcguire', scene='*', format='json', mode='default'):
+    modes = {
+        'default': '',
+        'validate': '--validate'
+    }
+    options = modes[mode]
+    for dirname in sorted(glob.glob(f'{directory}/{format}/{scene}')):
+        if not os.path.isdir(dirname): continue
+        if '/_' in dirname: continue
+        extraoptions = ''
+        if os.path.exists(f'{dirname}/yscene_render.txt'):
+            with open(f'{dirname}/yscene_render.txt') as f:
+                extraoptions = f.read().strip()
+        for filename in sorted(glob.glob(f'{dirname}/*.{format}')):
+            if format == 'pbrt':
+                with open(filename) as f:
+                    if 'WorldBegin' not in f.read(): continue
+            cmd = f'../yocto-gl/bin/yscene info {options} {extraoptions} {filename}'
+            print(cmd, file=sys.stderr)
+            os.system(cmd)
+
+
+@cli.command()
+@click.option('--directory', '-d', default='mcguire')
+@click.option('--scene', '-s', default='*')
+@click.option('--format', '-f', default='json')
 @click.option('--mode', '-m', default='linear')
 def tonemap(directory='mcguire', scene='*', format='json', mode='filmic'):
     modes = {

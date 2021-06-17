@@ -710,7 +710,7 @@ namespace yocto {
 // Load/save json
 json_value load_json(const string& filename);
 void       load_json(const string& filename, json_value& json);
-void       save_json(const string& filename, json_value& json);
+void       save_json(const string& filename, const json_value& json);
 
 // Parse/dump json
 json_value parse_json(const string& text);
@@ -720,7 +720,7 @@ void       dump_json(string& text, const json_value& json);
 
 // Load/save json
 bool load_json(const string& filename, json_value& json, string& error);
-bool save_json(const string& filename, json_value& json, string& error);
+bool save_json(const string& filename, const json_value& json, string& error);
 
 // Parse/dump json
 bool parse_json(const string& text, json_value& json, string& error);

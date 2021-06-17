@@ -1081,7 +1081,7 @@ static bool args_to_json(json_value& value, const json_value& schema,
     } else {
       auto name = string{};
       for (auto& [key, value] : schema["properties"].items()) {
-        if ("--" + key == arg && !value.is_object()) {
+        if ("--" + key == arg && value.at("type") != "object") {
           name = key;
           break;
         }
@@ -1091,7 +1091,7 @@ static bool args_to_json(json_value& value, const json_value& schema,
       if (!arg_to_json(
               value[name], oschema, name, is_positional, args, idx, error))
         return false;
-      if (!oschema["cliconfig"].empty() && !value.contains("config")) {
+      if (oschema.contains("cliconfig") && !value.contains("config")) {
         value["config"] = "try:" + get_try_config((string)value[name],
                                        (string)oschema["cliconfig"]);
       }
