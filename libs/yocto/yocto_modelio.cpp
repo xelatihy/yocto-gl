@@ -3737,8 +3737,7 @@ inline void convert_material(pbrt_material& pmaterial,
     get_pbrt_value(values, "remaproughness", remaproughness);
 
     roughness = 0;
-    if (uroughness.first == zero3f || vroughness.first == zero3f)
-      throw std::invalid_argument{"roughness not supported"};
+    if (uroughness.first == zero3f || vroughness.first == zero3f) return;
     roughness = mean(vec2f{mean(uroughness.first), mean(vroughness.first)});
     // from pbrt code
     if (remaproughness) {
