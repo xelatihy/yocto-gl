@@ -198,6 +198,7 @@ size_t get_length(file_stream& fs) {
   fseek(fs.fs, 0, SEEK_SET);
   return (size_t)length;
 }
+bool is_eof(file_stream& fs) { return feof(fs.fs); }
 
 // Read a line of text
 bool read_line(file_stream& fs, char* buffer, size_t size) {

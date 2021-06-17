@@ -39,11 +39,10 @@
 
 #include <algorithm>
 #include <array>
-#include <memory>
-#include <stdexcept>
 #include <string>
 #include <vector>
 
+#include "yocto_commonio.h"
 #include "yocto_math.h"
 
 // -----------------------------------------------------------------------------

@@ -83,7 +83,11 @@ struct io_error : std::runtime_error {
   static io_error shape_error(const string& filename) { return {filename, "empty shape"}; }
   static io_error dependent_error(const string& filename, const io_error& error) { return {filename, string{"error in "} + error.what()}; }
   static io_error json_error(const string& filename) { return {filename, "json error"}; }
-  static io_error matref_error(const string& filename, const string& name) { return {filename, "missing material " + name}; }
+  static io_error material_error(const string& filename, const string& name) { return {filename, "missing material " + name}; }
+  static io_error object_error(const string& filename, const string& name) { return {filename, "missing object " + name}; }
+  static io_error shape_error(const string& filename, const string& name) { return {filename, "missing shape " + name}; }
+  static io_error command_error(const string& filename, const string& name) { return {filename, "unknown command " + name}; }
+  static io_error type_error(const string& filename, const string& name) { return {filename, "unknown type " + name}; }
   // clang-format on
 };
 
@@ -747,6 +751,7 @@ void        close_file(file_stream& fs);
 
 // File length
 size_t get_length(file_stream& fs);
+bool   is_eof(file_stream& fs);
 
 // Read/write text to a file
 bool read_line(file_stream& fs, char* buffer, size_t size);
@@ -758,7 +763,7 @@ void write_data(file_stream& fs, const void* buffer, size_t count);
 
 // Read a line of text
 template <size_t N>
-inline void read_line(file_stream& fs, array<char, N>& buffer) {
+inline bool read_line(file_stream& fs, array<char, N>& buffer) {
   return read_line(fs, buffer.data(), buffer.size());
 }
 
