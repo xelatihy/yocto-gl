@@ -2246,32 +2246,24 @@ void add_environment(scene_data& scene, const string& filename) {
 // Make missing scene directories
 bool make_scene_directories(
     const string& filename, const scene_data& scene, string& error) {
-  // make a directory if needed
-  if (!make_directory(path_dirname(filename), error)) return false;
-  if (!scene.shapes.empty()) {
-    if (!make_directory(path_join(path_dirname(filename), "shapes"), error))
-      return false;
+  try {
+    make_scene_directories(filename, scene);
+    return true;
+  } catch (io_error& exception) {
+    error = exception.what();
+    return false;
   }
-  if (!scene.textures.empty()) {
-    if (!make_directory(path_join(path_dirname(filename), "textures"), error))
-      return false;
-  }
-  return true;
 }
 
 // Add environment
 bool add_environment(scene_data& scene, const string& filename, string& error) {
-  // load texture
-  auto& texture = scene.textures.emplace_back();
-  if (!load_texture(filename, texture, error)) return false;
-
-  // create envirironment
-  auto& environment        = scene.environments.emplace_back();
-  environment.emission     = {1, 1, 1};
-  environment.emission_tex = (int)scene.textures.size() - 1;
-
-  // done
-  return true;
+  try {
+    add_environment(scene, filename);
+    return true;
+  } catch (io_error& exception) {
+    error = exception.what();
+    return false;
+  }
 }
 
 }  // namespace yocto
@@ -2342,28 +2334,25 @@ void save_subdiv(const string& filename, const subdiv_data& subdiv) {
 
 // load subdiv
 bool load_subdiv(const string& filename, subdiv_data& subdiv, string& error) {
-  auto lsubdiv = fvshape_data{};
-  if (!load_fvshape(filename, lsubdiv, error, true)) return false;
-  subdiv.quadspos      = lsubdiv.quadspos;
-  subdiv.quadsnorm     = lsubdiv.quadsnorm;
-  subdiv.quadstexcoord = lsubdiv.quadstexcoord;
-  subdiv.positions     = lsubdiv.positions;
-  subdiv.normals       = lsubdiv.normals;
-  subdiv.texcoords     = lsubdiv.texcoords;
-  return true;
+  try {
+    load_subdiv(filename, subdiv);
+    return true;
+  } catch (io_error& exception) {
+    error = exception.what();
+    return false;
+  }
 }
 
 // save subdiv
 bool save_subdiv(
     const string& filename, const subdiv_data& subdiv, string& error) {
-  auto ssubdiv          = fvshape_data{};
-  ssubdiv.quadspos      = subdiv.quadspos;
-  ssubdiv.quadsnorm     = subdiv.quadsnorm;
-  ssubdiv.quadstexcoord = subdiv.quadstexcoord;
-  ssubdiv.positions     = subdiv.positions;
-  ssubdiv.normals       = subdiv.normals;
-  ssubdiv.texcoords     = subdiv.texcoords;
-  return save_fvshape(filename, ssubdiv, error, true);
+  try {
+    save_subdiv(filename, subdiv);
+    return true;
+  } catch (io_error& exception) {
+    error = exception.what();
+    return false;
+  }
 }
 
 // save binary shape
@@ -2677,8 +2666,8 @@ static void load_json_scene(
         load_instance(path_join(dirname, path), ply_instance.frames);
       });
     }
-  } catch (io_error& error) {
-    throw io_error::dependent_error(filename, error);
+  } catch (io_error& exception) {
+    throw io_error::dependent_error(filename, exception);
   }
 
   // apply instances
@@ -2874,8 +2863,8 @@ static void save_json_scene(
         save_texture(path_join(dirname, path), texture);
       });
     }
-  } catch (io_error& error) {
-    throw io_error::dependent_error(filename, error);
+  } catch (io_error& exception) {
+    throw io_error::dependent_error(filename, exception);
   }
 }
 
@@ -2991,8 +2980,8 @@ static void load_obj_scene(
         return load_texture(path_join(dirname, path), texture);
       });
     }
-  } catch (io_error& error) {
-    throw io_error::dependent_error(filename, error);
+  } catch (io_error& exception) {
+    throw io_error::dependent_error(filename, exception);
   }
 
   // fix scene
@@ -3099,8 +3088,8 @@ static void save_obj_scene(
         save_texture(path_join(dirname, path), texture);
       });
     }
-  } catch (io_error& error) {
-    throw io_error::dependent_error(filename, error);
+  } catch (io_error& exception) {
+    throw io_error::dependent_error(filename, exception);
   }
 }
 
@@ -3201,8 +3190,8 @@ static void load_gltf_scene(
         load_binary(path_join(dirname, path), buffer);
       });
     }
-  } catch (io_error& error) {
-    throw io_error::dependent_error(filename, error);
+  } catch (io_error& exception) {
+    throw io_error::dependent_error(filename, exception);
   }
 
   // convert asset
@@ -3620,8 +3609,8 @@ static void load_gltf_scene(
         return load_texture(path_join(dirname, path), texture);
       });
     }
-  } catch (io_error& error) {
-    throw io_error::dependent_error(filename, error);
+  } catch (io_error& exception) {
+    throw io_error::dependent_error(filename, exception);
   }
 
   // fix scene
@@ -3959,8 +3948,8 @@ static void save_gltf_scene(
         save_texture(path_join(dirname, path), texture);
       });
     }
-  } catch (io_error& error) {
-    throw io_error::dependent_error(filename, error);
+  } catch (io_error& exception) {
+    throw io_error::dependent_error(filename, exception);
   }
 }
 
@@ -4096,8 +4085,8 @@ static void load_pbrt_scene(
         load_texture(path_join(dirname, path), texture);
       });
     }
-  } catch (io_error& error) {
-    throw io_error::dependent_error(filename, error);
+  } catch (io_error& exception) {
+    throw io_error::dependent_error(filename, exception);
   }
 
   // fix scene
@@ -4198,8 +4187,8 @@ static void save_pbrt_scene(
         save_texture(path_join(dirname, path), texture);
       });
     }
-  } catch (io_error& error) {
-    throw io_error::dependent_error(filename, error);
+  } catch (io_error& exception) {
+    throw io_error::dependent_error(filename, exception);
   }
 }
 
