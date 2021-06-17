@@ -33,8 +33,10 @@
 #include "yocto_cli.h"
 
 #include <array>
+#include <charconv>
 #include <chrono>
 #include <cstdio>
+#include <filesystem>
 #include <fstream>
 #include <memory>
 #include <stdexcept>
@@ -199,169 +201,6 @@ string elapsed_formatted(simple_timer& timer) {
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// FILE IO
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Opens a file with a utf8 file name
-static FILE* fopen_utf8(const char* filename, const char* mode) {
-#ifdef _WIN32
-  auto path8    = std::filesystem::u8path(filename);
-  auto str_mode = string{mode};
-  auto wmode    = std::wstring(str_mode.begin(), str_mode.end());
-  return _wfopen(path8.c_str(), wmode.c_str());
-#else
-  return fopen(filename, mode);
-#endif
-}
-
-// Load a text file
-static bool load_text(const string& filename, string& str, string& error) {
-  // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
-  auto fs = fopen_utf8(filename.c_str(), "rb");
-  if (!fs) {
-    error = filename + ": file not found";
-    return false;
-  }
-  fseek(fs, 0, SEEK_END);
-  auto length = ftell(fs);
-  fseek(fs, 0, SEEK_SET);
-  str.resize(length);
-  if (fread(str.data(), 1, length, fs) != length) {
-    fclose(fs);
-    error = filename + ": read error";
-    return false;
-  }
-  fclose(fs);
-  return true;
-}
-
-// Save a text file
-static bool save_text(
-    const string& filename, const string& str, string& error) {
-  auto fs = fopen_utf8(filename.c_str(), "wt");
-  if (!fs) {
-    error = filename + ": file not found";
-    return false;
-  }
-  if (fprintf(fs, "%s", str.c_str()) < 0) {
-    fclose(fs);
-    error = filename + ": write error";
-    return false;
-  }
-  fclose(fs);
-  return true;
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// JSON I/O
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Load json
-bool load_json(const string& filename, json_value& json, string& error) {
-  // load file
-  auto text = string{};
-  if (!load_text(filename, text, error)) return false;
-  // parse
-  return parse_json(text, json, error);
-}
-
-static void from_json(const nlohmann::json& js, json_value& value) {
-  switch (js.type()) {
-    case nlohmann::json::value_t::null: {
-      value = nullptr;
-    } break;
-    case nlohmann::json::value_t::number_integer: {
-      value = (int64_t)js;
-    } break;
-    case nlohmann::json::value_t::number_unsigned: {
-      value = (uint64_t)js;
-    } break;
-    case nlohmann::json::value_t::number_float: {
-      value = (double)js;
-    } break;
-    case nlohmann::json::value_t::boolean: {
-      value = (bool)js;
-    } break;
-    case nlohmann::json::value_t::string: {
-      value = (string)js;
-    } break;
-    case nlohmann::json::value_t::array: {
-      value = json_array{};
-      for (auto& jitem : js) from_json(jitem, value.emplace_back());
-    } break;
-    case nlohmann::json::value_t::object: {
-      value = json_object{};
-      for (auto& [key, jitem] : js.items()) from_json(jitem, value[key]);
-    } break;
-    case nlohmann::json::value_t::binary: {
-      value = nullptr;
-    } break;
-    case nlohmann::json::value_t::discarded: {
-      value = nullptr;
-    } break;
-  }
-}
-
-// Pars json
-bool parse_json(const string& text, json_value& json, string& error) {
-  try {
-    auto njson = nlohmann::json::parse(text);
-    from_json(njson, json);
-    return true;
-  } catch (...) {
-    error = "error parsing json";
-    return false;
-  }
-}
-
-// Save json
-bool save_json(const string& filename, json_value& json, string& error) {
-  // convert to string
-  auto text = string{};
-  if (!dump_json(text, json, error)) return false;
-  // save file
-  return save_text(filename, text, error);
-}
-
-static void to_json(nlohmann::json& js, const json_value& value) {
-  switch (value.type()) {
-    case json_type::null: js = {}; break;
-    case json_type::integer: js = (int64_t)value; break;
-    case json_type::uinteger: js = (uint64_t)value; break;
-    case json_type::number: js = (double)value; break;
-    case json_type::boolean: js = (bool)value; break;
-    case json_type::string: js = (string)value; break;
-    case json_type::array: {
-      js = nlohmann::json::array();
-      for (auto& item : value) to_json(js.emplace_back(), item);
-    } break;
-    case json_type::object: {
-      js = nlohmann::json::object();
-      for (auto& [key, item] : value.items()) to_json(js[key], item);
-    } break;
-  }
-}
-
-// Dump json
-bool dump_json(string& text, const json_value& json, string& error) {
-  try {
-    auto njson = nlohmann::json{};
-    to_json(njson, json);
-    text = njson.dump(2);
-    return true;
-  } catch (...) {
-    error = "error dumping json";
-    return false;
-  }
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
 // IMPLEMENTATION OF COMMAND-LINE PARSING
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -481,7 +320,8 @@ static void cli_from_json(
     value = (T)json;
   } else {
     if constexpr (cli_is_array_v<T>) {
-      if (json.size() != value.size()) throw json_error{"bad array size"};
+      if (json.size() != value.size())
+        throw json_error{"bad array size", &json};
       for (auto idx = (size_t)0; idx < value.size(); idx++) {
         cli_from_json(json[idx], value[idx], choices);
       }
@@ -493,7 +333,7 @@ static void cli_from_json(
     } else {
       auto values = (string)json;
       if (std::find(choices.begin(), choices.end(), values) == choices.end())
-        throw json_error{"invalid label"};
+        throw json_error{"invalid label", &json};
       if constexpr (std::is_integral_v<T> || std::is_floating_point_v<T>) {
         value = (T)(std::find(choices.begin(), choices.end(), values) -
                     choices.begin());
@@ -507,14 +347,9 @@ static void cli_from_json(
 }
 
 template <typename T>
-static bool cli_from_json_(
+static void cli_from_json_(
     const json_value& cvalue, void* value, const vector<string>& choices) {
-  try {
-    cli_from_json(cvalue, *(T*)value, choices);
-    return true;
-  } catch (...) {
-    return false;
-  }
+  cli_from_json(cvalue, *(T*)value, choices);
 }
 
 static json_value& get_defaults(const cli_command& cli) {
@@ -522,6 +357,12 @@ static json_value& get_defaults(const cli_command& cli) {
     return cli.state->defaults;
   else
     return cli.state->defaults[cli.path];
+}
+static json_value& get_value(const cli_command& cli) {
+  if (cli.path.empty())
+    return cli.state->value;
+  else
+    return cli.state->value[cli.path];
 }
 static json_value& get_schema(const cli_command& cli) {
   if (cli.path.empty())
@@ -546,9 +387,9 @@ static void add_option_impl(const cli_command& cli, const string& name,
   auto& variables = get_variables(cli);
   cli_to_json(defaults[name], value, choices);
   cli_to_schema(schema["properties"][name], value, choices, name, usage);
-  if (req) schema["required"].append(name);
-  if (positional) schema["clipositional"].append(name);
-  variables.variables[name] = {&value, cli_from_json_<T>, choices};
+  if (req) schema["required"].push_back(name);
+  if (positional) schema["clipositional"].push_back(name);
+  variables.variables[name] = {&value, cli_from_json_<T>, choices, {}};
 }
 
 template <typename T, size_t N>
@@ -561,9 +402,10 @@ static void add_option_impl(const cli_command& cli, const string& name,
   auto& variables = get_variables(cli);
   cli_to_json(defaults[name], value, choices);
   cli_to_schema(schema["properties"][name], value, choices, name, usage);
-  if (req) schema["required"].append(name);
-  if (positional) schema["clipositional"].append(name);
-  variables.variables[name] = {&value, cli_from_json_<array<T, N>>, choices};
+  if (req) schema["required"].push_back(name);
+  if (positional) schema["clipositional"].push_back(name);
+  variables.variables[name] = {
+      &value, cli_from_json_<array<T, N>>, choices, {}};
 }
 
 template <typename T>
@@ -576,9 +418,9 @@ static void add_option_impl(const cli_command& cli, const string& name,
   auto& variables = get_variables(cli);
   cli_to_json(defaults[name], value, choices);
   cli_to_schema(schema["properties"][name], value, choices, name, usage);
-  if (req) schema["required"].append(name);
-  if (positional) schema["clipositional"].append(name);
-  variables.variables[name] = {&value, cli_from_json_<vector<T>>, choices};
+  if (req) schema["required"].push_back(name);
+  if (positional) schema["clipositional"].push_back(name);
+  variables.variables[name] = {&value, cli_from_json_<vector<T>>, choices, {}};
 }
 
 // Add an optional argument. Supports strings, numbers, and boolean flags.
@@ -711,7 +553,7 @@ void add_option(const cli_command& cli, const string& name, vec4f& value,
 }
 
 static string schema_to_usage(
-    const json_value& schema_, const string& command, const string& program) {
+    const json_value& schema, const string& command, const string& program) {
   auto default_to_string = [](const json_value& value) -> string {
     switch (value.type()) {
       case json_type::null: return "";
@@ -727,14 +569,16 @@ static string schema_to_usage(
       case json_type::object: return "";
     }
   };
-  auto& schema   = command.empty() ? schema_ : schema_["properties"][command];
-  auto  progname = program;
+  auto progname = program;
   if (progname.rfind('/') != string::npos) {
     progname = progname.substr(progname.rfind('/') + 1);
   }
   if (progname.rfind('\\') != string::npos) {
     progname = progname.substr(progname.rfind('\\') + 1);
   }
+  auto commandname = command;
+  for (auto& c : commandname)
+    if (c == '/') c = ' ';
   auto message       = string{};
   auto usage_options = string{}, usage_arguments = string{},
        usage_commands = string{};
@@ -781,7 +625,8 @@ static string schema_to_usage(
   }
   usage_options += "  --help                        Prints help. [false]\n";
   usage_options += "  --config <string>             Load configuration. []\n";
-  message += "usage: " + progname + (command.empty() ? "" : (" " + command)) +
+  message += "usage: " + progname +
+             (commandname.empty() ? "" : (" " + commandname)) +
              (!usage_commands.empty() ? " command" : "") +
              (!usage_options.empty() ? " [options]" : "") +
              (!usage_arguments.empty() ? " <arguments>" : "") + "\n";
@@ -798,65 +643,53 @@ static string schema_to_usage(
   return message;
 }
 
-static bool arg_to_json(json_value& value, const json_value& schema,
+static void arg_to_json(json_value& value, const json_value& schema,
     const string& name, bool positional, const vector<string>& args,
-    size_t& idx, string& error) {
-  auto cli_error = [&error](const string& message) {
-    error = message;
-    return false;
-  };
-
+    size_t& idx) {
   if (schema.contains("enum")) {
-    if (idx >= args.size()) return cli_error("missing value for " + name);
+    if (idx >= args.size()) throw cli_error("missing value for " + name);
     value = args[idx++];
   } else if (schema["type"] == "integer") {
-    if (idx >= args.size()) return cli_error("missing value for " + name);
+    if (idx >= args.size()) throw cli_error("missing value for " + name);
     auto end = (char*)nullptr;
     value    = (int64_t)strtol(args[idx++].c_str(), &end, 10);
-    if (end == nullptr) return cli_error("bad value for " + name);
+    if (end == nullptr) throw cli_error("bad value for " + name);
   } else if (schema["type"] == "uinteger") {
-    if (idx >= args.size()) return cli_error("missing value for " + name);
+    if (idx >= args.size()) throw cli_error("missing value for " + name);
     auto end = (char*)nullptr;
     value    = (uint64_t)strtoul(args[idx++].c_str(), &end, 10);
-    if (end == nullptr) return cli_error("bad value for " + name);
+    if (end == nullptr) throw cli_error("bad value for " + name);
   } else if (schema["type"] == "number") {
-    if (idx >= args.size()) return cli_error("missing value for " + name);
+    if (idx >= args.size()) throw cli_error("missing value for " + name);
     auto end = (char*)nullptr;
     value    = strtod(args[idx++].c_str(), &end);
-    if (end == nullptr) return cli_error("bad value for " + name);
+    if (end == nullptr) throw cli_error("bad value for " + name);
   } else if (schema["type"] == "boolean") {
     if (positional) {
-      if (idx >= args.size()) return cli_error("missing value for " + name);
+      if (idx >= args.size()) throw cli_error("missing value for " + name);
       value = args[idx++] == "true" ? true : false;
     } else {
       value = true;
     }
   } else if (schema["type"] == "string") {
-    if (idx >= args.size()) return cli_error("missing value for " + name);
+    if (idx >= args.size()) throw cli_error("missing value for " + name);
     value = args[idx++];
   } else if (schema["type"] == "array") {
     value = json_array{};
     if (idx + (size_t)schema["min_items"] >= args.size())
-      return cli_error("missing value for " + name);
+      throw cli_error("missing value for " + name);
     auto end = std::min(idx + (size_t)schema["max_items"], args.size());
     while (idx < end) {
-      if (!arg_to_json(value.emplace_back(), schema["items"], name, positional,
-              args, idx, error))
-        return false;
+      arg_to_json(
+          value.emplace_back(), schema["items"], name, positional, args, idx);
     }
   } else {
     throw std::runtime_error("unsupported type");
   }
-  return true;
 }
 
-static bool args_to_json(json_value& value, const json_value& schema,
-    const vector<string>& args, size_t idx, string& error) {
-  auto cli_error = [&error](const string& message) {
-    error = message;
-    return false;
-  };
-
+static void args_to_json(json_value& value, const json_value& schema,
+    const vector<string>& args, size_t idx) {
   auto get_try_config = [](const string& base_, const string& name) {
     auto base = base_;
     if (base.rfind('/') != base.npos) {
@@ -894,7 +727,7 @@ static bool args_to_json(json_value& value, const json_value& schema,
       continue;
     }
     if (arg == "--config") {
-      if (idx >= args.size()) return cli_error("missing value for config");
+      if (idx >= args.size()) throw cli_error("missing value for config");
       value["config"] = args[idx++];
       continue;
     }
@@ -902,22 +735,17 @@ static bool args_to_json(json_value& value, const json_value& schema,
     if (!commands.empty() && is_positional) {
       if (std::find(commands.begin(), commands.end(), arg) != commands.end()) {
         value["command"] = arg;
-        if (!args_to_json(
-                value[arg], schema["properties"][arg], args, idx, error))
-          return false;
-        break;
+        return args_to_json(value[arg], schema["properties"][arg], args, idx);
       } else {
-        return cli_error("unknown command " + arg);
+        throw cli_error("unknown command " + arg);
       }
     } else if (is_positional) {
       if (positional >= positionals.size())
-        return cli_error("too many positional arguments");
+        throw cli_error("too many positional arguments");
       auto  name    = positionals[positional++];
       auto& oschema = schema["properties"][name];
       idx--;
-      if (!arg_to_json(
-              value[name], oschema, arg, is_positional, args, idx, error))
-        return false;
+      arg_to_json(value[name], oschema, arg, is_positional, args, idx);
       if (oschema.contains("cliconfig") && !value.contains("config")) {
         value["config"] = "try:" + get_try_config((string)value[name],
                                        (string)oschema["cliconfig"]);
@@ -925,107 +753,85 @@ static bool args_to_json(json_value& value, const json_value& schema,
     } else {
       auto name = string{};
       for (auto& [key, value] : schema["properties"].items()) {
-        if ("--" + key == arg && !value.is_object()) {
+        if ("--" + key == arg && value.at("type") != "object") {
           name = key;
           break;
         }
       }
-      if (name == "") return cli_error("unknown option " + arg);
+      if (name == "") throw cli_error("unknown option " + arg);
       auto& oschema = schema["properties"][name];
-      if (!arg_to_json(
-              value[name], oschema, name, is_positional, args, idx, error))
-        return false;
-      if (!oschema["cliconfig"].empty() && !value.contains("config")) {
+      arg_to_json(value[name], oschema, name, is_positional, args, idx);
+      if (oschema.contains("cliconfig") && !value.contains("config")) {
         value["config"] = "try:" + get_try_config((string)value[name],
                                        (string)oschema["cliconfig"]);
       }
     }
   }
-
-  // done
-  return true;
 }
 
-static bool validate_json(const json_value& value, const json_value& schema,
-    const string& name, bool check_required, string& error) {
-  auto cli_error = [&error](const string& message) {
-    error = message;
-    return false;
-  };
-
+static void validate_json(const json_value& value, const json_value& schema,
+    const string& name, bool check_required) {
   switch (value.type()) {
     case json_type::null: {
-      return cli_error("bad value for " + name);
+      throw cli_error("bad value for " + name);
     } break;
     case json_type::integer: {
       if (schema["type"] != "number" && schema["type"] != "integer")
-        return cli_error("bad value for " + name);
-      return true;
+        throw cli_error("bad value for " + name);
     } break;
     case json_type::uinteger: {
       if (schema["type"] != "number" && schema["type"] != "integer")
-        return cli_error("bad value for " + name);
-      return true;
+        throw cli_error("bad value for " + name);
     } break;
     case json_type::number: {
       if (schema["type"] != "number" && schema["type"] != "integer")
-        return cli_error("bad value for " + name);
-      return true;
+        throw cli_error("bad value for " + name);
     } break;
     case json_type::boolean: {
-      if (schema["type"] != "boolean")
-        return cli_error("bad value for " + name);
-      return true;
+      if (schema["type"] != "boolean") throw cli_error("bad value for " + name);
     } break;
     case json_type::string: {
-      if (schema["type"] != "string") return cli_error("bad value for " + name);
-      return true;
+      if (schema["type"] != "string") throw cli_error("bad value for " + name);
     } break;
     case json_type::array: {
-      if (schema["type"] != "array") return cli_error("bad value for " + name);
+      if (schema["type"] != "array") throw cli_error("bad value for " + name);
       if ((size_t)schema["min_items"] > value.size())
-        return cli_error("bad value for " + name);
+        throw cli_error("bad value for " + name);
       if ((size_t)schema["max_items"] < value.size())
-        return cli_error("bad value for " + name);
+        throw cli_error("bad value for " + name);
       for (auto& item : value)
-        if (!validate_json(item, schema["items"], name, false, error))
-          return false;
-      return true;
+        validate_json(item, schema["items"], name, false);
     } break;
     case json_type::object: {
-      if (schema["type"] != "object") return cli_error("bad value for " + name);
+      if (schema["type"] != "object") throw cli_error("bad value for " + name);
       for (auto& [key, property] : value.items()) {
         if (key == "help") {
-          if (!property.is_boolean()) return cli_error("bad value for " + key);
+          if (!property.is_boolean()) throw cli_error("bad value for " + key);
         } else if (key == "config") {
-          if (!property.is_string()) return cli_error("bad value for " + key);
+          if (!property.is_string()) throw cli_error("bad value for " + key);
         } else if (key == "command") {
-          if (!property.is_string()) return cli_error("bad value for " + key);
+          if (!property.is_string()) throw cli_error("bad value for " + key);
         } else {
           if (!schema["properties"].contains(key))
-            return cli_error("unknown option " + key);
+            throw cli_error("unknown option " + key);
           auto selected_command = value.contains("command") &&
                                   value["command"].is_string() &&
                                   value["command"] == key;
-          if (!validate_json(property, schema["properties"][key], key,
-                  check_required && selected_command, error))
-            return false;
+          validate_json(property, schema["properties"][key], key,
+              check_required && selected_command);
         }
       }
       if (check_required) {
         for (auto& req : schema["required"]) {
           if (!value.contains((string)req))
-            return cli_error("missing value for " + (string)req);
+            throw cli_error("missing value for " + (string)req);
         }
       }
-      return true;
     } break;
     default: {
-      return cli_error("bad value for " + name);
+      throw cli_error("bad value for " + name);
     } break;
   }
-
-  return true;
 }
 
 // update json objects
@@ -1041,77 +847,56 @@ void update_value_objects(json_value& value, const json_value& update) {
 }
 
 // set variables
-static bool value_to_variable(
-    const json_value& value, cli_variable& variable, string& error) {
-  auto cli_error = [&error](const string& message) {
-    error = message;
-    return false;
-  };
-
+static void json_to_variable(
+    const json_value& json, cli_variable& variable, const string& name) {
   if (variable.setter) {
-    if (!variable.setter(value, variable.value, variable.choices)) return false;
-  }
-
-  for (auto& [key, property] : variable.variables) {
-    if (!value.is_object()) throw std::runtime_error{"something went wrong"};
-    if (value.contains(key)) {
-      if (!value_to_variable(value[key], property, error)) {
-        return cli_error("bad value for " + key);
-      }
+    try {
+      variable.setter(json, variable.value, variable.choices);
+    } catch (...) {
+      throw cli_error("bad value for " + name);
     }
   }
-
-  return true;
+  for (auto& [key, property] : variable.variables) {
+    if (json.contains(key)) {
+      json_to_variable(json.at(key), property, key);
+    }
+  }
 }
 
 // grabs a configuration and update json arguments
-static bool config_to_value(json_value& value, string& error) {
-  auto cli_error = [&error](const string& message) {
-    error = message;
-    return false;
-  };
-
-  auto get_config = [](const json_value& value) -> string {
-    auto current_ = &value;
-    while (true) {
-      auto& current = *current_;
-      if (!current.is_object()) break;
-      if (current.contains("config") && current["config"].is_string())
-        return (string)current["config"];
-      if (current.contains("command") && current["command"].is_string()) {
-        current_ = &current[(string)current["command"]];
-      } else {
-        break;
-      }
-    }
-    return "";
-  };
-
-  auto try_config = false;
-  auto config     = get_config(value);
-  if (config.empty()) return true;
-  if (config.find("try:") == 0) {
-    config     = config.substr(4);
-    try_config = true;
+static string get_config(const json_value& json) {
+  if (!json.is_object()) return "";
+  if (json.contains("config") && json.at("config").is_string())
+    return json.at("config").get<string>();
+  if (json.contains("command") && json.at("command").is_string()) {
+    return get_config(json.at(json.at("command").get<string>()));
+  }
+  return "";
+}
+static void config_to_json(json_value& json) {
+  auto filename = get_config(json);
+  if (filename.empty()) return;
+  if (filename.find("try:") == 0) {
+    filename = filename.substr(4);
+    if (!path_exists(filename)) return;
   }
 
-  auto cvalue = json_value{};
-  if (try_config) {
-    if (!load_json(config, cvalue, error)) return true;
-  } else {
-    if (!load_json(config, cvalue, error))
-      return cli_error("error converting configuration " + config);
+  auto config = json_value{};
+  try {
+    load_json(filename, config);
+  } catch (...) {
+    throw cli_error{"error converting configuration " + filename};
   }
 
-  update_value_objects(cvalue, value);
-  value = cvalue;
-  return true;
+  update_value_objects(config, json);
+  json = config;
 }
 
 // initialize a command line parser
 cli_state make_cli(const string& name, const string& usage) {
   auto cli                    = cli_state{};
   cli.defaults                = json_object{};
+  cli.value                   = json_object{};
   cli.schema                  = json_object{};
   cli.schema["title"]         = name;
   cli.schema["description"]   = usage;
@@ -1127,6 +912,8 @@ cli_command add_command(
     const cli_command& cli, const string& name, const string& usage) {
   auto& defaults            = get_defaults(cli);
   defaults[name]            = json_object{};
+  auto& value               = get_value(cli);
+  value[name]               = json_object{};
   auto& schema              = get_schema(cli);
   auto& property            = schema["properties"][name];
   property                  = json_object{};
@@ -1157,61 +944,82 @@ void add_command_name(const cli_command& cli, const string& name, string& value,
   variables.variables["command"] = {&value, cli_from_json_<string>, {}};
 }
 
-static bool parse_cli(cli_state& cli, const vector<string>& args,
-    json_value& value, string& error) {
-  auto idx = (size_t)1;
-  if (!args_to_json(value, get_schema(cli), args, idx, error)) return false;
-  if (!config_to_value(value, error)) return false;
-  if (!validate_json(value, get_schema(cli), "", true, error)) return false;
-  if (!value_to_variable(value, cli.variables, error)) return false;
-  return true;
+// get usage
+static string get_usage(const json_value& json, const json_value& schema,
+    const string& commandname, const string& progname) {
+  if (json.contains("command") && !json.at("command").empty()) {
+    auto command = json.at("command").get<string>();
+    return get_usage(json.at(command), schema.at("properties").at(command),
+        commandname.empty() ? command : (commandname + " " + command),
+        progname);
+  } else {
+    return schema_to_usage(schema, commandname, progname);
+  }
+}
+string get_usage(const cli_state& cli) {
+  return get_usage(
+      cli.value, cli.schema, "", cli.schema.at("title").get<string>());
 }
 
-bool parse_cli(cli_state& cli, const vector<string>& args, string& error) {
-  auto values = json_value{};
-  return parse_cli(cli, args, values, error);
+// get help
+static bool get_help(const json_value& json, const json_value& schema) {
+  if (json.contains("help")) return json.at("help").get<bool>();
+  if (json.contains("command") && !json.at("command").empty()) {
+    return get_help(json.at(json.at("command").get<string>()),
+        schema.at("properties").at(json.at("command").get<string>()));
+  }
+  return false;
+}
+bool get_help(const cli_state& cli) { return get_help(cli.value, cli.schema); }
+
+// get command
+static string get_command(const json_value& json, const json_value& schema) {
+  if (json.contains("command")) {
+    auto command   = json.at("command").get<string>();
+    auto subcommnd = get_command(json.at(command), schema.at(command));
+    return command + (subcommnd.empty() ? "" : ("/" + subcommnd));
+  } else {
+    return "";
+  }
+}
+string get_command(const cli_state& cli) {
+  return get_command(cli.value, cli.schema);
 }
 
 void parse_cli(cli_state& cli, const vector<string>& args) {
-  auto get_command = [](const json_value& value) -> string {
-    auto command  = string{};
-    auto current_ = &value;
-    while (true) {
-      auto& current = *current_;
-      if (!current.contains("command")) break;
-      command += (command.empty() ? "" : "/") + (string)current["command"];
-      current_ = &current[(string)current["command"]];
-    }
-    return command;
-  };
-  auto get_help = [&](const json_value& value) -> bool {
-    auto current_ = &value;
-    while (true) {
-      auto& current = *current_;
-      if (current.contains("help")) return (bool)current["help"];
-      if (current.contains("command")) {
-        current_ = &current[(string)current["command"]];
-      } else {
-        break;
-      }
-    }
+  auto idx = (size_t)1;
+  args_to_json(cli.value, cli.schema, args, idx);
+  config_to_json(cli.value);
+  validate_json(cli.value, cli.schema, "", true);
+  json_to_variable(cli.value, cli.variables, "");
+}
+
+bool parse_cli(cli_state& cli, const vector<string>& args, string& error) {
+  try {
+    parse_cli(cli, args);
+    return true;
+  } catch (cli_error& exception) {
+    error = exception.what();
     return false;
-  };
-  auto values = json_value{};
-  auto error  = string{};
-  if (!parse_cli(cli, args, values, error)) {
-    print_info("error: " + error);
+  }
+}
+
+void parse_cli_and_handle_errors(cli_state& cli, const vector<string>& args) {
+  try {
+    parse_cli(cli, args);
+  } catch (cli_error& error) {
+    print_info("error: " + string{error.what()});
     print_info("");
-    print_info(schema_to_usage(get_schema(cli), get_command(values), args[0]));
+    print_info(get_usage(cli));
     exit(1);
-  } else if (get_help(values)) {
-    print_info(schema_to_usage(get_schema(cli), get_command(values), args[0]));
+  } catch (cli_help& help) {
+    print_info(get_usage(cli));
     exit(0);
   }
 }
 
-void parse_cli(cli_state& cli, int argc, const char** argv) {
-  parse_cli(cli, vector<string>{argv, argv + argc});
+void parse_cli_and_handle_errors(cli_state& cli, int argc, const char** argv) {
+  parse_cli_and_handle_errors(cli, vector<string>(argv, argv + argc));
 }
 
 }  // namespace yocto

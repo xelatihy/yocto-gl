@@ -1723,7 +1723,9 @@ shape_data lines_to_cylinders(const vector<vec2i>& lines,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-void make_cornellbox(scene_data& scene) {
+scene_data make_cornellbox() {
+  auto scene = scene_data{};
+
   auto& camera    = scene.cameras.emplace_back();
   camera.frame    = frame3f{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 1, 3.9f}};
   camera.lens     = 0.035f;
@@ -1824,6 +1826,8 @@ void make_cornellbox(scene_data& scene) {
   auto& light_instance    = scene.instances.emplace_back();
   light_instance.shape    = (int)scene.shapes.size() - 1;
   light_instance.material = (int)scene.materials.size() - 1;
+
+  return scene;
 }
 
 }  // namespace yocto

@@ -589,7 +589,7 @@ shape_data make_heightfield(const vec2i& size, const vector<vec4f>& color);
 namespace yocto {
 
 // Make Cornell Box scene
-void make_cornellbox(scene_data& scene);
+scene_data make_cornellbox();
 
 }  // namespace yocto
 

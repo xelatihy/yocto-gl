@@ -426,7 +426,7 @@ cli_state make_commands(
 // Parse cli
 void parse_cli(app_params& params, int argc, const char** argv) {
   auto cli = make_commands("yscene", params, "Process and view scenes.");
-  parse_cli(cli, argc, argv);
+  parse_cli_and_handle_errors(cli, argc, argv);
 }
 
 int main(int argc, const char* argv[]) {

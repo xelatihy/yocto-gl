@@ -34,17 +34,16 @@
 #include <climits>
 #include <cstdlib>
 #include <cstring>
-#include <filesystem>
 #include <memory>
 #include <stdexcept>
 #include <unordered_map>
 
-#include "ext/json.hpp"
 #include "ext/stb_image.h"
 #include "ext/stb_image_resize.h"
 #include "ext/stb_image_write.h"
 #include "ext/tinyexr.h"
 #include "yocto_color.h"
+#include "yocto_commonio.h"
 #include "yocto_geometry.h"
 #include "yocto_image.h"
 #include "yocto_modelio.h"
@@ -64,210 +63,27 @@ using namespace std::string_literals;
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// PATH UTILITIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Make a path from a utf8 string
-static std::filesystem::path make_path(const string& filename) {
-  return std::filesystem::u8path(filename);
-}
-
-// Normalize path
-string normalize_path(const string& filename) {
-  return make_path(filename).generic_u8string();
-}
-
-// Get directory name (not including /)
-string path_dirname(const string& filename) {
-  return make_path(filename).parent_path().generic_u8string();
-}
-
-// Get extension (including .)
-string path_extension(const string& filename) {
-  return make_path(filename).extension().u8string();
-}
-
-// Get filename without directory.
-string path_filename(const string& filename) {
-  return make_path(filename).filename().u8string();
-}
-
-// Get filename without directory and extension.
-string path_basename(const string& filename) {
-  return make_path(filename).stem().u8string();
-}
-
-// Joins paths
-string path_join(const string& patha, const string& pathb) {
-  return (make_path(patha) / make_path(pathb)).generic_u8string();
-}
-string path_join(
-    const string& patha, const string& pathb, const string& pathc) {
-  return (make_path(patha) / make_path(pathb) / make_path(pathc))
-      .generic_u8string();
-}
-
-// Replaces extensions
-string replace_extension(const string& filename, const string& ext) {
-  return make_path(filename).replace_extension(ext).u8string();
-}
-
-// Check if a file can be opened for reading.
-bool path_exists(const string& filename) { return exists(make_path(filename)); }
-
-// Check if a file is a directory
-bool path_isdir(const string& filename) {
-  return is_directory(make_path(filename));
-}
-
-// Check if a file is a file
-bool path_isfile(const string& filename) {
-  return is_regular_file(make_path(filename));
-}
-
-// List the contents of a directory
-vector<string> list_directory(const string& filename) {
-  auto entries = vector<string>{};
-  for (auto entry : std::filesystem::directory_iterator(make_path(filename))) {
-    entries.push_back(entry.path().generic_u8string());
-  }
-  return entries;
-}
-
-// Create a directory and all missing parent directories if needed
-bool make_directory(const string& dirname, string& error) {
-  if (path_exists(dirname)) return true;
-  try {
-    create_directories(make_path(dirname));
-    return true;
-  } catch (...) {
-    error = dirname + ": cannot create directory";
-    return false;
-  }
-}
-
-// Get the current directory
-string path_current() { return std::filesystem::current_path().u8string(); }
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// FILE IO
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Opens a file with a utf8 file name
-static FILE* fopen_utf8(const char* filename, const char* mode) {
-#ifdef _WIN32
-  auto path8    = std::filesystem::u8path(filename);
-  auto str_mode = string{mode};
-  auto wmode    = std::wstring(str_mode.begin(), str_mode.end());
-  return _wfopen(path8.c_str(), wmode.c_str());
-#else
-  return fopen(filename, mode);
-#endif
-}
-
-// Load a text file
-bool load_text(const string& filename, string& str, string& error) {
-  // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
-  auto fs = fopen_utf8(filename.c_str(), "rb");
-  if (!fs) {
-    error = filename + ": file not found";
-    return false;
-  }
-  fseek(fs, 0, SEEK_END);
-  auto length = ftell(fs);
-  fseek(fs, 0, SEEK_SET);
-  str.resize(length);
-  if (fread(str.data(), 1, length, fs) != length) {
-    fclose(fs);
-    error = filename + ": read error";
-    return false;
-  }
-  fclose(fs);
-  return true;
-}
-
-// Save a text file
-bool save_text(const string& filename, const string& str, string& error) {
-  auto fs = fopen_utf8(filename.c_str(), "wt");
-  if (!fs) {
-    error = filename + ": file not found";
-    return false;
-  }
-  if (fprintf(fs, "%s", str.c_str()) < 0) {
-    fclose(fs);
-    error = filename + ": write error";
-    return false;
-  }
-  fclose(fs);
-  return true;
-}
-
-// Load a binary file
-bool load_binary(const string& filename, vector<byte>& data, string& error) {
-  // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
-  auto fs = fopen_utf8(filename.c_str(), "rb");
-  if (!fs) {
-    error = filename + ": file not found";
-    return false;
-  }
-  fseek(fs, 0, SEEK_END);
-  auto length = ftell(fs);
-  fseek(fs, 0, SEEK_SET);
-  data.resize(length);
-  if (fread(data.data(), 1, length, fs) != length) {
-    fclose(fs);
-    error = filename + ": read error";
-    return false;
-  }
-  fclose(fs);
-  return true;
-}
-
-// Save a binary file
-bool save_binary(
-    const string& filename, const vector<byte>& data, string& error) {
-  auto fs = fopen_utf8(filename.c_str(), "wb");
-  if (!fs) {
-    error = filename + ": file not found";
-    return false;
-  }
-  if (fwrite(data.data(), 1, data.size(), fs) != data.size()) {
-    fclose(fs);
-    error = filename + ": write error";
-    return false;
-  }
-  fclose(fs);
-  return true;
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
 // IMAGE IO
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-template <typename T>
-static T swap_endian(T value) {
-  // https://stackoverflow.com/questions/105252/how-do-i-convert-between-big-endian-and-little-endian-values-in-c
-  static_assert(sizeof(char) == 1, "sizeof(char) == 1");
-  union {
-    T             value;
-    unsigned char bytes[sizeof(T)];
-  } source, dest;
-  source.value = value;
-  for (auto k = (size_t)0; k < sizeof(T); k++)
-    dest.bytes[k] = source.bytes[sizeof(T) - k - 1];
-  return dest.value;
-}
-
 // Pfm load
 static float* load_pfm(
     const string& filename, int* width, int* height, int* components, int req) {
+  auto swap_endian = [](auto value) {
+    // https://stackoverflow.com/questions/105252/how-do-i-convert-between-big-endian-and-little-endian-values-in-c
+    static_assert(sizeof(char) == 1, "sizeof(char) == 1");
+    using T = decltype(value);
+    union {
+      T             value;
+      unsigned char bytes[sizeof(T)];
+    } source, dest;
+    source.value = value;
+    for (auto k = (size_t)0; k < sizeof(T); k++)
+      dest.bytes[k] = source.bytes[sizeof(T) - k - 1];
+    return dest.value;
+  };
+
   // Split a string
   auto split_string = [](const string& str) -> vector<string> {
     auto ret = vector<string>();
@@ -286,7 +102,7 @@ static float* load_pfm(
     return ret;
   };
 
-  auto fs       = fopen_utf8(filename.c_str(), "rb");
+  auto fs       = fopen_utf8(filename, "rb");
   auto fs_guard = unique_ptr<FILE, int (*)(FILE*)>(fs, &fclose);
   if (!fs) return nullptr;
 
@@ -445,20 +261,12 @@ bool is_ldr_filename(const string& filename) {
 }
 
 // Loads/saves an image. Chooses hdr or ldr based on file name.
-bool load_image(const string& filename, image_data& image, string& error) {
-  auto format_error = [filename, &error]() {
-    error = filename + ": unknown format";
-    return false;
-  };
-  auto read_error = [filename, &error]() {
-    error = filename + ": read error";
-    return false;
-  };
-  auto preset_error = [filename, &error]() {
-    error = filename + ": " + error;
-    return false;
-  };
-
+image_data load_image(const string& filename) {
+  auto image = image_data{};
+  load_image(filename, image);
+  return image;
+}
+void load_image(const string& filename, image_data& image) {
   // conversion helpers
   auto from_linear = [](const float* pixels, int width, int height) {
     return vector<vec4f>{
@@ -477,88 +285,69 @@ bool load_image(const string& filename, image_data& image, string& error) {
     auto pixels = (float*)nullptr;
     if (LoadEXR(&pixels, &image.width, &image.height, filename.c_str(),
             nullptr) != 0)
-      return read_error();
+      throw io_error::read_error(filename);
     image.linear = true;
     image.pixels = from_linear(pixels, image.width, image.height);
     free(pixels);
-    return true;
   } else if (ext == ".pfm" || ext == ".PFM") {
     auto ncomp  = 0;
     auto pixels = load_pfm(
         filename.c_str(), &image.width, &image.height, &ncomp, 4);
-    if (!pixels) return read_error();
+    if (!pixels) throw io_error::read_error(filename);
     image.linear = true;
     image.pixels = from_linear(pixels, image.width, image.height);
     delete[] pixels;
-    return true;
   } else if (ext == ".hdr" || ext == ".HDR") {
     auto ncomp  = 0;
     auto pixels = stbi_loadf(
         filename.c_str(), &image.width, &image.height, &ncomp, 4);
-    if (!pixels) return read_error();
+    if (!pixels) throw io_error::read_error(filename);
     image.linear = true;
     image.pixels = from_linear(pixels, image.width, image.height);
     free(pixels);
-    return true;
   } else if (ext == ".png" || ext == ".PNG") {
     auto ncomp  = 0;
     auto pixels = stbi_load(
         filename.c_str(), &image.width, &image.height, &ncomp, 4);
-    if (!pixels) return read_error();
+    if (!pixels) throw io_error::read_error(filename);
     image.linear = false;
     image.pixels = from_srgb(pixels, image.width, image.height);
     free(pixels);
-    return true;
   } else if (ext == ".jpg" || ext == ".JPG" || ext == ".jpeg" ||
              ext == ".JPEG") {
     auto ncomp  = 0;
     auto pixels = stbi_load(
         filename.c_str(), &image.width, &image.height, &ncomp, 4);
-    if (!pixels) return read_error();
+    if (!pixels) throw io_error::read_error(filename);
     image.linear = false;
     image.pixels = from_srgb(pixels, image.width, image.height);
     free(pixels);
-    return true;
   } else if (ext == ".tga" || ext == ".TGA") {
     auto ncomp  = 0;
     auto pixels = stbi_load(
         filename.c_str(), &image.width, &image.height, &ncomp, 4);
-    if (!pixels) return read_error();
+    if (!pixels) throw io_error::read_error(filename);
     image.linear = false;
     image.pixels = from_srgb(pixels, image.width, image.height);
     free(pixels);
-    return true;
   } else if (ext == ".bmp" || ext == ".BMP") {
     auto ncomp  = 0;
     auto pixels = stbi_load(
         filename.c_str(), &image.width, &image.height, &ncomp, 4);
-    if (!pixels) return read_error();
+    if (!pixels) throw io_error::read_error(filename);
     image.linear = false;
     image.pixels = from_srgb(pixels, image.width, image.height);
     free(pixels);
-    return true;
   } else if (ext == ".ypreset" || ext == ".YPRESET") {
     // create preset
-    if (!make_image_preset(image, path_basename(filename), error))
-      return preset_error();
-    return true;
+    image = make_image_preset(path_basename(filename));
   } else {
-    return format_error();
+    throw io_error::format_error(filename);
   }
 }
 
 // Saves an hdr image.
-bool save_image(
-    const string& filename, const image_data& image, string& error) {
-  auto format_error = [filename, &error]() {
-    error = filename + ": unknown format";
-    return false;
-  };
-  auto write_error = [filename, &error]() {
-    error = filename + ": write error";
-    return false;
-  };
-
+void save_image(const string& filename, const image_data& image) {
   // conversion helpers
   auto to_linear = [](const image_data& image) {
     if (image.linear) return image.pixels;
@@ -580,171 +369,193 @@ bool save_image(
   if (ext == ".hdr" || ext == ".HDR") {
     if (!stbi_write_hdr(filename.c_str(), (int)image.width, (int)image.height,
             4, (const float*)to_linear(image).data()))
-      return write_error();
-    return true;
+      throw io_error::write_error(filename);
   } else if (ext == ".pfm" || ext == ".PFM") {
     if (!save_pfm(filename.c_str(), image.width, image.height, 4,
             (const float*)to_linear(image).data()))
-      return write_error();
-    return true;
+      throw io_error::write_error(filename);
   } else if (ext == ".exr" || ext == ".EXR") {
     if (SaveEXR((const float*)to_linear(image).data(), (int)image.width,
             (int)image.height, 4, 1, filename.c_str(), nullptr) < 0)
-      return write_error();
-    return true;
+      throw io_error::write_error(filename);
   } else if (ext == ".png" || ext == ".PNG") {
     if (!stbi_write_png(filename.c_str(), (int)image.width, (int)image.height,
             4, (const byte*)to_srgb(image).data(), (int)image.width * 4))
-      return write_error();
-    return true;
+      throw io_error::write_error(filename);
   } else if (ext == ".jpg" || ext == ".JPG" || ext == ".jpeg" ||
              ext == ".JPEG") {
     if (!stbi_write_jpg(filename.c_str(), (int)image.width, (int)image.height,
             4, (const byte*)to_srgb(image).data(), 75))
-      return write_error();
-    return true;
+      throw io_error::write_error(filename);
   } else if (ext == ".tga" || ext == ".TGA") {
     if (!stbi_write_tga(filename.c_str(), (int)image.width, (int)image.height,
             4, (const byte*)to_srgb(image).data()))
-      return write_error();
-    return true;
+      throw io_error::write_error(filename);
   } else if (ext == ".bmp" || ext == ".BMP") {
     if (!stbi_write_bmp(filename.c_str(), (int)image.width, (int)image.height,
             4, (const byte*)to_srgb(image).data()))
-      return write_error();
-    return true;
+      throw io_error::write_error(filename);
   } else {
-    return format_error();
+    throw io_error::format_error(filename);
   }
 }
 
-bool make_image_preset(image_data& image, const string& type_, string& error) {
-  auto type = path_basename(type_);
-
+image_data make_image_preset(const string& type_) {
+  auto type  = path_basename(type_);
   auto width = 1024, height = 1024;
   if (type.find("sky") != type.npos) width = 2048;
   if (type.find("images2") != type.npos) width = 2048;
   if (type == "grid") {
-    image = make_grid(width, height);
+    return make_grid(width, height);
   } else if (type == "checker") {
-    image = make_checker(width, height);
+    return make_checker(width, height);
   } else if (type == "bumps") {
-    image = make_bumps(width, height);
+    return make_bumps(width, height);
   } else if (type == "uvramp") {
-    image = make_uvramp(width, height);
+    return make_uvramp(width, height);
   } else if (type == "gammaramp") {
-    image = make_gammaramp(width, height);
+    return make_gammaramp(width, height);
   } else if (type == "blackbodyramp") {
-    image = make_blackbodyramp(width, height);
+    return make_blackbodyramp(width, height);
   } else if (type == "uvgrid") {
-    image = make_uvgrid(width, height);
+    return make_uvgrid(width, height);
   } else if (type == "colormapramp") {
-    image = make_colormapramp(width, height);
+    return make_colormapramp(width, height);
   } else if (type == "sky") {
-    image = make_sunsky(width, height, pif / 4, 3.0f, false, 1.0f, 1.0f,
+    return make_sunsky(width, height, pif / 4, 3.0f, false, 1.0f, 1.0f,
         vec3f{0.7f, 0.7f, 0.7f});
   } else if (type == "sunsky") {
-    image = make_sunsky(width, height, pif / 4, 3.0f, true, 1.0f, 1.0f,
+    return make_sunsky(width, height, pif / 4, 3.0f, true, 1.0f, 1.0f,
         vec3f{0.7f, 0.7f, 0.7f});
   } else if (type == "noise") {
-    image = make_noisemap(width, height, 1);
+    return make_noisemap(width, height, 1);
   } else if (type == "fbm") {
-    image = make_fbmmap(width, height, 1);
+    return make_fbmmap(width, height, 1);
   } else if (type == "ridge") {
-    image = make_ridgemap(width, height, 1);
+    return make_ridgemap(width, height, 1);
   } else if (type == "turbulence") {
-    image = make_turbulencemap(width, height, 1);
+    return make_turbulencemap(width, height, 1);
   } else if (type == "bump-normal") {
-    image = make_bumps(width, height);
+    return make_bumps(width, height);
     // TODO(fabio): fix color space
     // img   = srgb_to_rgb(bump_to_normal(img, 0.05f));
   } else if (type == "images1") {
-    auto sub_types = vector<string>{"grid", "uvgrid", "checker", "gammaramp",
+    auto sub_types  = vector<string>{"grid", "uvgrid", "checker", "gammaramp",
         "bumps", "bump-normal", "noise", "fbm", "blackbodyramp"};
-    auto sub_imgs  = vector<image_data>(sub_types.size());
-    for (auto i = 0; i < sub_imgs.size(); i++) {
-      if (!make_image_preset(sub_imgs[i], sub_types[i], error)) return false;
-    }
+    auto sub_images = vector<image_data>();
+    for (auto& sub_type : sub_types)
+      sub_images.push_back(make_image_preset(sub_type));
     auto montage_size = zero2i;
-    for (auto& sub_img : sub_imgs) {
-      montage_size.x += sub_img.width;
-      montage_size.y = max(montage_size.y, sub_img.height);
+    for (auto& sub_image : sub_images) {
+      montage_size.x += sub_image.width;
+      montage_size.y = max(montage_size.y, sub_image.height);
     }
-    image    = make_image(montage_size.x, montage_size.y, sub_imgs[0].linear);
+    auto image = make_image(
+        montage_size.x, montage_size.y, sub_images[0].linear);
     auto pos = 0;
-    for (auto& sub_img : sub_imgs) {
-      set_region(image, sub_img, pos, 0);
-      pos += sub_img.width;
+    for (auto& sub_image : sub_images) {
+      set_region(image, sub_image, pos, 0);
+      pos += sub_image.width;
     }
+    return image;
   } else if (type == "images2") {
-    auto sub_types = vector<string>{"sky", "sunsky"};
-    auto sub_imgs  = vector<image_data>(sub_types.size());
-    for (auto i = 0; i < sub_imgs.size(); i++) {
-      if (!make_image_preset(sub_imgs[i], sub_types[i], error)) return false;
-    }
+    auto sub_types  = vector<string>{"sky", "sunsky"};
+    auto sub_images = vector<image_data>();
+    for (auto& sub_type : sub_types)
+      sub_images.push_back(make_image_preset(sub_type));
     auto montage_size = zero2i;
-    for (auto& sub_img : sub_imgs) {
-      montage_size.x += sub_img.width;
-      montage_size.y = max(montage_size.y, sub_img.height);
+    for (auto& sub_image : sub_images) {
+      montage_size.x += sub_image.width;
+      montage_size.y = max(montage_size.y, sub_image.height);
     }
-    image    = make_image(montage_size.x, montage_size.y, sub_imgs[0].linear);
+    auto image = make_image(
+        montage_size.x, montage_size.y, sub_images[0].linear);
     auto pos = 0;
-    for (auto& sub_img : sub_imgs) {
-      set_region(image, sub_img, pos, 0);
-      pos += sub_img.width;
+    for (auto& sub_image : sub_images) {
+      set_region(image, sub_image, pos, 0);
+      pos += sub_image.width;
     }
+    return image;
   } else if (type == "test-floor") {
-    image = make_grid(width, height);
-    image = add_border(image, 0.0025f);
+    return add_border(make_grid(width, height), 0.0025f);
   } else if (type == "test-grid") {
-    image = make_grid(width, height);
+    return make_grid(width, height);
   } else if (type == "test-checker") {
-    image = make_checker(width, height);
+    return make_checker(width, height);
   } else if (type == "test-bumps") {
-    image = make_bumps(width, height);
+    return make_bumps(width, height);
   } else if (type == "test-uvramp") {
-    image = make_uvramp(width, height);
+    return make_uvramp(width, height);
   } else if (type == "test-gammaramp") {
-    image = make_gammaramp(width, height);
+    return make_gammaramp(width, height);
   } else if (type == "test-blackbodyramp") {
-    image = make_blackbodyramp(width, height);
+    return make_blackbodyramp(width, height);
   } else if (type == "test-colormapramp") {
-    image = make_colormapramp(width, height);
+    return make_colormapramp(width, height);
     // TODO(fabio): fix color space
     // img   = srgb_to_rgb(img);
   } else if (type == "test-uvgrid") {
-    image = make_uvgrid(width, height);
+    return make_uvgrid(width, height);
   } else if (type == "test-sky") {
-    image = make_sunsky(width, height, pif / 4, 3.0f, false, 1.0f, 1.0f,
+    return make_sunsky(width, height, pif / 4, 3.0f, false, 1.0f, 1.0f,
         vec3f{0.7f, 0.7f, 0.7f});
   } else if (type == "test-sunsky") {
-    image = make_sunsky(width, height, pif / 4, 3.0f, true, 1.0f, 1.0f,
+    return make_sunsky(width, height, pif / 4, 3.0f, true, 1.0f, 1.0f,
         vec3f{0.7f, 0.7f, 0.7f});
   } else if (type == "test-noise") {
-    image = make_noisemap(width, height);
+    return make_noisemap(width, height);
   } else if (type == "test-fbm") {
-    image = make_noisemap(width, height);
+    return make_noisemap(width, height);
   } else if (type == "test-bumps-normal") {
-    image = make_bumps(width, height);
-    image = bump_to_normal(image, 0.05f);
+    return bump_to_normal(make_bumps(width, height), 0.05f);
   } else if (type == "test-bumps-displacement") {
-    image = make_bumps(width, height);
+    return make_bumps(width, height);
     // TODO(fabio): fix color space
     // img   = srgb_to_rgb(img);
   } else if (type == "test-fbm-displacement") {
-    image = make_fbmmap(width, height);
+    return make_fbmmap(width, height);
     // TODO(fabio): fix color space
     // img   = srgb_to_rgb(img);
   } else if (type == "test-checker-opacity") {
-    image = make_checker(width, height, 1, {1, 1, 1, 1}, {0, 0, 0, 0});
+    return make_checker(width, height, 1, {1, 1, 1, 1}, {0, 0, 0, 0});
   } else if (type == "test-grid-opacity") {
-    image = make_grid(width, height, 1, {1, 1, 1, 1}, {0, 0, 0, 0});
+    return make_grid(width, height, 1, {1, 1, 1, 1}, {0, 0, 0, 0});
   } else {
-    error = "unknown preset";
-    image = {};
+    throw io_error::preset_error(type_);
+  }
+}
+
+// Loads/saves an image. Chooses hdr or ldr based on file name.
+bool load_image(const string& filename, image_data& image, string& error) {
+  try {
+    load_image(filename, image);
+    return true;
+  } catch (io_error& exception) {
+    error = exception.what();
     return false;
   }
-  return true;
+}
+
+// Saves an hdr image.
+bool save_image(
+    const string& filename, const image_data& image, string& error) {
+  try {
+    save_image(filename, image);
+    return true;
+  } catch (io_error& exception) {
+    error = exception.what();
+    return false;
+  }
+}
+
+bool make_image_preset(image_data& image, const string& type, string& error) {
+  try {
+    image = make_image_preset(type);
+    return true;
+  } catch (io_error& exception) {
+    error = exception.what();
+    return false;
+  }
 }
 
 }  // namespace yocto
@@ -755,176 +566,166 @@ bool make_image_preset(image_data& image, const string& type_, string& error) {
 namespace yocto {
 
 // Loads/saves an image. Chooses hdr or ldr based on file name.
-bool load_texture(
-    const string& filename, texture_data& texture, string& error) {
-  auto format_error = [filename, &error]() {
-    error = filename + ": unknown format";
-    return false;
-  };
-  auto read_error = [filename, &error]() {
-    error = filename + ": read error";
-    return false;
-  };
-  auto preset_error = [filename, &error]() {
-    error = filename + ": " + error;
-    return false;
-  };
-
+texture_data load_texture(const string& filename) {
+  auto texture = texture_data{};
+  load_texture(filename, texture);
+  return texture;
+}
+void load_texture(const string& filename, texture_data& texture) {
   auto ext = path_extension(filename);
   if (ext == ".exr" || ext == ".EXR") {
     auto pixels = (float*)nullptr;
     if (LoadEXR(&pixels, &texture.width, &texture.height, filename.c_str(),
             nullptr) != 0)
-      return read_error();
+      throw io_error::read_error(filename);
     texture.linear  = true;
     texture.pixelsf = vector<vec4f>{
         (vec4f*)pixels, (vec4f*)pixels + texture.width * texture.height};
     free(pixels);
-    return true;
   } else if (ext == ".pfm" || ext == ".PFM") {
     auto ncomp  = 0;
     auto pixels = load_pfm(
         filename.c_str(), &texture.width, &texture.height, &ncomp, 4);
-    if (!pixels) return read_error();
+    if (!pixels) throw io_error::read_error(filename);
     texture.linear  = true;
     texture.pixelsf = vector<vec4f>{
         (vec4f*)pixels, (vec4f*)pixels + texture.width * texture.height};
     delete[] pixels;
-    return true;
   } else if (ext == ".hdr" || ext == ".HDR") {
     auto ncomp  = 0;
     auto pixels = stbi_loadf(
         filename.c_str(), &texture.width, &texture.height, &ncomp, 4);
-    if (!pixels) return read_error();
+    if (!pixels) throw io_error::read_error(filename);
     texture.linear  = true;
     texture.pixelsf = vector<vec4f>{
         (vec4f*)pixels, (vec4f*)pixels + texture.width * texture.height};
     free(pixels);
-    return true;
   } else if (ext == ".png" || ext == ".PNG") {
     auto ncomp  = 0;
     auto pixels = stbi_load(
         filename.c_str(), &texture.width, &texture.height, &ncomp, 4);
-    if (!pixels) return read_error();
+    if (!pixels) throw io_error::read_error(filename);
     texture.linear  = false;
     texture.pixelsb = vector<vec4b>{
         (vec4b*)pixels, (vec4b*)pixels + texture.width * texture.height};
     free(pixels);
-    return true;
   } else if (ext == ".jpg" || ext == ".JPG" || ext == ".jpeg" ||
              ext == ".JPEG") {
     auto ncomp  = 0;
     auto pixels = stbi_load(
         filename.c_str(), &texture.width, &texture.height, &ncomp, 4);
-    if (!pixels) return read_error();
+    if (!pixels) throw io_error::read_error(filename);
     texture.linear  = false;
     texture.pixelsb = vector<vec4b>{
         (vec4b*)pixels, (vec4b*)pixels + texture.width * texture.height};
     free(pixels);
-    return true;
   } else if (ext == ".tga" || ext == ".TGA") {
     auto ncomp  = 0;
     auto pixels = stbi_load(
         filename.c_str(), &texture.width, &texture.height, &ncomp, 4);
-    if (!pixels) return read_error();
+    if (!pixels) throw io_error::read_error(filename);
     texture.linear  = false;
     texture.pixelsb = vector<vec4b>{
         (vec4b*)pixels, (vec4b*)pixels + texture.width * texture.height};
     free(pixels);
-    return true;
   } else if (ext == ".bmp" || ext == ".BMP") {
     auto ncomp  = 0;
     auto pixels = stbi_load(
         filename.c_str(), &texture.width, &texture.height, &ncomp, 4);
-    if (!pixels) return read_error();
+    if (!pixels) throw io_error::read_error(filename);
     texture.linear  = false;
     texture.pixelsb = vector<vec4b>{
         (vec4b*)pixels, (vec4b*)pixels + texture.width * texture.height};
     free(pixels);
-    return true;
   } else if (ext == ".ypreset" || ext == ".YPRESET") {
     // create preset
-    if (!make_texture_preset(texture, path_basename(filename), error))
-      return preset_error();
-    return true;
+    texture = make_texture_preset(path_basename(filename));
   } else {
-    return format_error();
+    throw io_error::format_error(filename);
+  }
+}
+
+// Saves an hdr image.
+void save_texture(const string& filename, const texture_data& texture) {
+  // check for correct handling
+  if (!texture.pixelsf.empty() && is_ldr_filename(filename))
+    throw io_error{filename, "cannot save hdr texture to ldr file"};
+  if (!texture.pixelsb.empty() && is_hdr_filename(filename))
+    throw io_error{filename, "cannot save ldr texture to hdr file"};
+
+  auto ext = path_extension(filename);
+  if (ext == ".hdr" || ext == ".HDR") {
+    if (!stbi_write_hdr(filename.c_str(), (int)texture.width,
+            (int)texture.height, 4, (const float*)texture.pixelsf.data()))
+      throw io_error::write_error(filename);
+  } else if (ext == ".pfm" || ext == ".PFM") {
+    if (!save_pfm(filename.c_str(), texture.width, texture.height, 4,
+            (const float*)texture.pixelsf.data()))
+      throw io_error::write_error(filename);
+  } else if (ext == ".exr" || ext == ".EXR") {
+    if (SaveEXR((const float*)texture.pixelsf.data(), (int)texture.width,
+            (int)texture.height, 4, 1, filename.c_str(), nullptr) < 0)
+      throw io_error::write_error(filename);
+  } else if (ext == ".png" || ext == ".PNG") {
+    if (!stbi_write_png(filename.c_str(), (int)texture.width,
+            (int)texture.height, 4, (const byte*)texture.pixelsb.data(),
+            (int)texture.width * 4))
+      throw io_error::write_error(filename);
+  } else if (ext == ".jpg" || ext == ".JPG" || ext == ".jpeg" ||
+             ext == ".JPEG") {
+    if (!stbi_write_jpg(filename.c_str(), (int)texture.width,
+            (int)texture.height, 4, (const byte*)texture.pixelsb.data(), 75))
+      throw io_error::write_error(filename);
+  } else if (ext == ".tga" || ext == ".TGA") {
+    if (!stbi_write_tga(filename.c_str(), (int)texture.width,
+            (int)texture.height, 4, (const byte*)texture.pixelsb.data()))
+      throw io_error::write_error(filename);
+  } else if (ext == ".bmp" || ext == ".BMP") {
+    if (!stbi_write_bmp(filename.c_str(), (int)texture.width,
+            (int)texture.height, 4, (const byte*)texture.pixelsb.data()))
+      throw io_error::write_error(filename);
+  } else {
+    throw io_error::format_error(filename);
+  }
+}
+
+texture_data make_texture_preset(const string& type) {
+  return image_to_texture(make_image_preset(type));
+}
+
+// Loads/saves an image. Chooses hdr or ldr based on file name.
+bool load_texture(
+    const string& filename, texture_data& texture, string& error) {
+  try {
+    load_texture(filename, texture);
+    return true;
+  } catch (io_error& exception) {
+    error = exception.what();
+    return false;
   }
 }
 
 // Saves an hdr image.
 bool save_texture(
     const string& filename, const texture_data& texture, string& error) {
-  auto format_error = [filename, &error]() {
-    error = filename + ": unknown format";
+  try {
+    save_texture(filename, texture);
+    return true;
+  } catch (io_error& exception) {
+    error = exception.what();
     return false;
-  };
-  auto write_error = [filename, &error]() {
-    error = filename + ": write error";
-    return false;
-  };
-  auto hdr_error = [filename, &error]() {
-    error = filename + ": cannot save hdr texture to ldr file";
-    return false;
-  };
-  auto ldr_error = [filename, &error]() {
-    error = filename + ": cannot save ldr texture to hdr file";
-    return false;
-  };
-
-  // check for correct handling
-  if (!texture.pixelsf.empty() && is_ldr_filename(filename)) return hdr_error();
-  if (!texture.pixelsb.empty() && is_hdr_filename(filename)) return ldr_error();
-
-  auto ext = path_extension(filename);
-  if (ext == ".hdr" || ext == ".HDR") {
-    if (!stbi_write_hdr(filename.c_str(), (int)texture.width,
-            (int)texture.height, 4, (const float*)texture.pixelsf.data()))
-      return write_error();
-    return true;
-  } else if (ext == ".pfm" || ext == ".PFM") {
-    if (!save_pfm(filename.c_str(), texture.width, texture.height, 4,
-            (const float*)texture.pixelsf.data()))
-      return write_error();
-    return true;
-  } else if (ext == ".exr" || ext == ".EXR") {
-    if (SaveEXR((const float*)texture.pixelsf.data(), (int)texture.width,
-            (int)texture.height, 4, 1, filename.c_str(), nullptr) < 0)
-      return write_error();
-    return true;
-  } else if (ext == ".png" || ext == ".PNG") {
-    if (!stbi_write_png(filename.c_str(), (int)texture.width,
-            (int)texture.height, 4, (const byte*)texture.pixelsb.data(),
-            (int)texture.width * 4))
-      return write_error();
-    return true;
-  } else if (ext == ".jpg" || ext == ".JPG" || ext == ".jpeg" ||
-             ext == ".JPEG") {
-    if (!stbi_write_jpg(filename.c_str(), (int)texture.width,
-            (int)texture.height, 4, (const byte*)texture.pixelsb.data(), 75))
-      return write_error();
-    return true;
-  } else if (ext == ".tga" || ext == ".TGA") {
-    if (!stbi_write_tga(filename.c_str(), (int)texture.width,
-            (int)texture.height, 4, (const byte*)texture.pixelsb.data()))
-      return write_error();
-    return true;
-  } else if (ext == ".bmp" || ext == ".BMP") {
-    if (!stbi_write_bmp(filename.c_str(), (int)texture.width,
-            (int)texture.height, 4, (const byte*)texture.pixelsb.data()))
-      return write_error();
-    return true;
-  } else {
-    return format_error();
   }
 }
 
 bool make_texture_preset(
     texture_data& texture, const string& type, string& error) {
-  auto image = image_data{};
-  if (!make_image_preset(image, type, error)) return false;
-  texture = image_to_texture(image);
-  return true;
+  try {
+    texture = make_texture_preset(type);
+    return true;
+  } catch (io_error& exception) {
+    error = exception.what();
+    return false;
+  }
 }
 
 }  // namespace yocto
@@ -935,27 +736,18 @@ bool make_texture_preset(
 namespace yocto {
 
 // Load ply mesh
-bool load_shape(const string& filename, shape_data& shape, string& error,
-    bool flip_texcoord) {
-  auto format_error = [filename, &error]() {
-    error = filename + ": unknown format";
-    return false;
-  };
-  auto shape_error = [filename, &error]() {
-    error = filename + ": empty shape";
-    return false;
-  };
-  auto preset_error = [filename, &error]() {
-    error = filename + ": " + error;
-    return false;
-  };
-
+shape_data load_shape(const string& filename, bool flip_texcoord) {
+  auto shape = shape_data{};
+  load_shape(filename, shape, flip_texcoord);
+  return shape;
+}
+void load_shape(const string& filename, shape_data& shape, bool flip_texcoord) {
   shape = {};
 
   auto ext = path_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     auto ply = ply_model{};
-    if (!load_ply(filename, ply, error)) return false;
+    load_ply(filename, ply);
     get_positions(ply, shape.positions);
     get_normals(ply, shape.normals);
     get_texcoords(ply, shape.texcoords, flip_texcoord);
@@ -966,11 +758,10 @@ bool load_shape(const string& filename, shape_data& shape, string& error,
     get_points(ply, shape.points);
     if (shape.points.empty() && shape.lines.empty() &&
         shape.triangles.empty() && shape.quads.empty())
-      return shape_error();
-    return true;
+      throw io_error::shape_error(filename);
   } else if (ext == ".obj" || ext == ".OBJ") {
     auto obj = obj_shape{};
-    if (!load_obj(filename, obj, error, false)) return false;
+    load_obj(filename, obj, false);
     auto materials = vector<int>{};
     get_positions(obj, shape.positions);
     get_normals(obj, shape.normals);
@@ -980,46 +771,24 @@ bool load_shape(const string& filename, shape_data& shape, string& error,
     get_points(obj, shape.points, materials);
     if (shape.points.empty() && shape.lines.empty() &&
         shape.triangles.empty() && shape.quads.empty())
-      return shape_error();
-    return true;
+      throw io_error::shape_error(filename);
   } else if (ext == ".stl" || ext == ".STL") {
     auto stl = stl_model{};
-    if (!load_stl(filename, stl, error, true)) return false;
-    if (stl.shapes.size() != 1) return shape_error();
+    load_stl(filename, stl, true);
+    if (stl.shapes.size() != 1) throw io_error::shape_error(filename);
     auto fnormals = vector<vec3f>{};
     if (!get_triangles(stl, 0, shape.triangles, shape.positions, fnormals))
-      return shape_error();
-    return true;
+      throw io_error::shape_error(filename);
   } else if (ext == ".ypreset" || ext == ".YPRESET") {
-    // create preset
-    if (!make_shape_preset(shape, path_basename(filename), error))
-      return preset_error();
-    return true;
+    shape = make_shape_preset(path_basename(filename));
   } else {
-    return format_error();
+    throw io_error::format_error(filename);
   }
 }
 
 // Save ply mesh
-bool save_shape(const string& filename, const shape_data& shape, string& error,
+void save_shape(const string& filename, const shape_data& shape,
     bool flip_texcoord, bool ascii) {
-  auto format_error = [filename, &error]() {
-    error = filename + ": unknown format";
-    return false;
-  };
-  auto shape_error = [filename, &error]() {
-    error = filename + ": empty shape";
-    return false;
-  };
-  auto line_error = [filename, &error]() {
-    error = filename + ": unsupported lines";
-    return false;
-  };
-  auto point_error = [filename, &error]() {
-    error = filename + ": unsupported points";
-    return false;
-  };
-
   auto ext = path_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     auto ply = ply_model{};
@@ -1031,7 +800,7 @@ bool save_shape(const string& filename, const shape_data& shape, string& error,
     add_faces(ply, shape.triangles, shape.quads);
     add_lines(ply, shape.lines);
     add_points(ply, shape.points);
-    return save_ply(filename, ply, error);
+    save_ply(filename, ply);
   } else if (ext == ".obj" || ext == ".OBJ") {
     auto obj = obj_shape{};
     add_positions(obj, shape.positions);
@@ -1045,19 +814,19 @@ bool save_shape(const string& filename, const shape_data& shape, string& error,
         obj, shape.lines, 0, !shape.normals.empty(), !shape.texcoords.empty());
     add_points(
         obj, shape.points, 0, !shape.normals.empty(), !shape.texcoords.empty());
-    return save_obj(filename, obj, error);
+    save_obj(filename, obj);
   } else if (ext == ".stl" || ext == ".STL") {
     auto stl = stl_model{};
-    if (!shape.lines.empty()) return line_error();
-    if (!shape.points.empty()) return point_error();
+    if (!shape.lines.empty()) throw io_error{filename, "lines not supported"};
+    if (!shape.points.empty()) throw io_error{filename, "points not supported"};
     if (!shape.triangles.empty()) {
       add_triangles(stl, shape.triangles, shape.positions, {});
     } else if (!shape.quads.empty()) {
       add_triangles(stl, quads_to_triangles(shape.quads), shape.positions, {});
     } else {
-      return shape_error();
+      throw io_error::shape_error(filename);
     }
-    return save_stl(filename, stl, error);
+    save_stl(filename, stl);
   } else if (ext == ".cpp" || ext == ".CPP") {
     auto to_cpp = [](const string& name, const string& vname,
                       const auto& values) -> string {
@@ -1108,86 +877,63 @@ bool save_shape(const string& filename, const shape_data& shape, string& error,
     str += to_cpp(name, "lines", shape.lines);
     str += to_cpp(name, "triangles", shape.triangles);
     str += to_cpp(name, "quads", shape.quads);
-    return save_text(filename, str, error);
+    save_text(filename, str);
   } else {
-    return format_error();
+    throw io_error::format_error(filename);
   }
 }
 
-// Load ply mesh
-bool load_fvshape(const string& filename, fvshape_data& shape, string& error,
-    bool flip_texcoord) {
-  auto format_error = [filename, &error]() {
-    error = filename + ": unknown format";
-    return false;
-  };
-  auto shape_error = [filename, &error]() {
-    error = filename + ": empty shape";
-    return false;
-  };
-  auto preset_error = [filename, &error]() {
-    error = filename + ": " + error;
-    return false;
-  };
-
+// Load face-varying mesh
+fvshape_data load_fvshape(const string& filename, bool flip_texcoord) {
+  auto shape = fvshape_data{};
+  load_fvshape(filename, shape, flip_texcoord);
+  return shape;
+}
+void load_fvshape(
+    const string& filename, fvshape_data& shape, bool flip_texcoord) {
   shape = {};
 
   auto ext = path_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     auto ply = ply_model{};
-    if (!load_ply(filename, ply, error)) return false;
+    load_ply(filename, ply);
     get_positions(ply, shape.positions);
     get_normals(ply, shape.normals);
     get_texcoords(ply, shape.texcoords, flip_texcoord);
     get_quads(ply, shape.quadspos);
     if (!shape.normals.empty()) shape.quadsnorm = shape.quadspos;
     if (!shape.texcoords.empty()) shape.quadstexcoord = shape.quadspos;
-    if (shape.quadspos.empty()) return shape_error();
-    return true;
+    if (shape.quadspos.empty()) throw io_error::shape_error(filename);
   } else if (ext == ".obj" || ext == ".OBJ") {
     auto obj = obj_shape{};
-    if (!load_obj(filename, obj, error, true)) return false;
+    load_obj(filename, obj, true);
     auto materials = vector<int>{};
     get_positions(obj, shape.positions);
     get_normals(obj, shape.normals);
     get_texcoords(obj, shape.texcoords, flip_texcoord);
     get_fvquads(
         obj, shape.quadspos, shape.quadsnorm, shape.quadstexcoord, materials);
-    if (shape.quadspos.empty()) return shape_error();
-    return true;
+    if (shape.quadspos.empty()) throw io_error::shape_error(filename);
   } else if (ext == ".stl" || ext == ".STL") {
     auto stl = stl_model{};
-    if (!load_stl(filename, stl, error, true)) return false;
-    if (stl.shapes.empty()) return shape_error();
-    if (stl.shapes.size() > 1) return shape_error();
+    load_stl(filename, stl, true);
+    if (stl.shapes.empty()) throw io_error::shape_error(filename);
+    if (stl.shapes.size() > 1) throw io_error::shape_error(filename);
     auto fnormals  = vector<vec3f>{};
     auto triangles = vector<vec3i>{};
     if (!get_triangles(stl, 0, triangles, shape.positions, fnormals))
-      return shape_error();
+      throw io_error::shape_error(filename);
     shape.quadspos = triangles_to_quads(triangles);
-    return true;
   } else if (ext == ".ypreset" || ext == ".YPRESET") {
-    // create preset
-    if (!make_fvshape_preset(shape, path_basename(filename), error))
-      return preset_error();
-    return true;
+    shape = make_fvshape_preset(path_basename(filename));
   } else {
-    return format_error();
+    throw io_error::format_error(filename);
   }
 }
 
 // Save ply mesh
-bool save_fvshape(const string& filename, const fvshape_data& shape,
-    string& error, bool flip_texcoord, bool ascii) {
-  auto format_error = [filename, &error]() {
-    error = filename + ": unknown format";
-    return false;
-  };
-  auto shape_error = [filename, &error]() {
-    error = filename + ": empty shape";
-    return false;
-  };
-
+void save_fvshape(const string& filename, const fvshape_data& shape,
+    bool flip_texcoord, bool ascii) {
   auto ext = path_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     auto ply             = ply_model{};
@@ -1202,14 +948,14 @@ bool save_fvshape(const string& filename, const fvshape_data& shape,
     add_normals(ply, split_normals);
     add_texcoords(ply, split_texcoords, flip_texcoord);
     add_faces(ply, {}, split_quads);
-    return save_ply(filename, ply, error);
+    save_ply(filename, ply);
   } else if (ext == ".obj" || ext == ".OBJ") {
     auto obj = obj_shape{};
     add_positions(obj, shape.positions);
     add_normals(obj, shape.positions);
     add_texcoords(obj, shape.texcoords, flip_texcoord);
     add_fvquads(obj, shape.quadspos, shape.quadsnorm, shape.quadstexcoord, 0);
-    return save_obj(filename, obj, error);
+    save_obj(filename, obj);
   } else if (ext == ".stl" || ext == ".STL") {
     auto stl = stl_model{};
     if (!shape.quadspos.empty()) {
@@ -1222,9 +968,9 @@ bool save_fvshape(const string& filename, const fvshape_data& shape,
           shape.positions, shape.normals, shape.texcoords);
       add_triangles(stl, quads_to_triangles(split_quads), split_positions, {});
     } else {
-      return shape_error();
+      throw io_error::shape_error(filename);
     }
-    return save_stl(filename, stl, error);
+    save_stl(filename, stl);
   } else if (ext == ".cpp" || ext == ".CPP") {
     auto to_cpp = [](const string& name, const string& vname,
                       const auto& values) -> string {
@@ -1271,420 +1017,425 @@ bool save_fvshape(const string& filename, const fvshape_data& shape,
     str += to_cpp(name, "quadspos", shape.quadspos);
     str += to_cpp(name, "quadsnorm", shape.quadsnorm);
     str += to_cpp(name, "quadstexcoord", shape.quadstexcoord);
-    return save_text(filename, str, error);
+    save_text(filename, str);
   } else {
-    return format_error();
+    throw io_error::format_error(filename);
+  }
+}
+
+// Shape presets used for testing.
+shape_data make_shape_preset(const string& type) {
+  if (type == "default-quad") {
+    return make_rect();
+  } else if (type == "default-quady") {
+    return make_recty();
+  } else if (type == "default-cube") {
+    return make_box();
+  } else if (type == "default-cube-rounded") {
+    return make_rounded_box();
+  } else if (type == "default-sphere") {
+    return make_sphere();
+  } else if (type == "default-matcube") {
+    return make_rounded_box();
+  } else if (type == "default-matsphere") {
+    return make_uvspherey();
+  } else if (type == "default-disk") {
+    return make_disk();
+  } else if (type == "default-disk-bulged") {
+    return make_bulged_disk();
+  } else if (type == "default-quad-bulged") {
+    return make_bulged_rect();
+  } else if (type == "default-uvsphere") {
+    return make_uvsphere();
+  } else if (type == "default-uvsphere-flipcap") {
+    return make_capped_uvsphere();
+  } else if (type == "default-uvspherey") {
+    return make_uvspherey();
+  } else if (type == "default-uvspherey-flipcap") {
+    return make_capped_uvspherey();
+  } else if (type == "default-uvdisk") {
+    return make_uvdisk();
+  } else if (type == "default-uvcylinder") {
+    return make_uvcylinder();
+  } else if (type == "default-uvcylinder-rounded") {
+    return make_rounded_uvcylinder({32, 32, 32});
+  } else if (type == "default-geosphere") {
+    return make_geosphere();
+  } else if (type == "default-floor") {
+    return make_floor();
+  } else if (type == "default-floor-bent") {
+    return make_bent_floor();
+  } else if (type == "default-matball") {
+    return make_sphere();
+  } else if (type == "default-hairball") {
+    auto base = make_sphere(pow2(5), 0.8f);
+    return make_hair(base, {4, 65536}, {0.2f, 0.2f}, {0.002f, 0.001f});
+  } else if (type == "default-hairball-interior") {
+    return make_sphere(pow2(5), 0.8f);
+  } else if (type == "default-suzanne") {
+    return make_monkey();
+  } else if (type == "default-cube-facevarying") {
+    return fvshape_to_shape(make_fvbox());
+  } else if (type == "default-sphere-facevarying") {
+    return fvshape_to_shape(make_fvsphere());
+  } else if (type == "default-quady-displaced") {
+    return make_recty({256, 256});
+  } else if (type == "default-sphere-displaced") {
+    return make_sphere(128);
+  } else if (type == "test-cube") {
+    auto shape = make_rounded_box(
+        {32, 32, 32}, {0.075f, 0.075f, 0.075f}, {1, 1, 1}, 0.3f * 0.075f);
+    for (auto& p : shape.positions) p += {0, 0.075f, 0};
+    return shape;
+  } else if (type == "test-uvsphere") {
+    auto shape = make_uvsphere({32, 32}, 0.075f);
+    for (auto& p : shape.positions) p += {0, 0.075f, 0};
+    return shape;
+  } else if (type == "test-uvsphere-flipcap") {
+    auto shape = make_capped_uvsphere({32, 32}, 0.075f, {1, 1}, 0.3f * 0.075f);
+    for (auto& p : shape.positions) p += {0, 0.075f, 0};
+    return shape;
+  } else if (type == "test-uvspherey") {
+    auto shape = make_uvspherey({32, 32}, 0.075f);
+    for (auto& p : shape.positions) p += {0, 0.075f, 0};
+    return shape;
+  } else if (type == "test-uvspherey-flipcap") {
+    auto shape = make_capped_uvspherey({32, 32}, 0.075f, {1, 1}, 0.3f * 0.075f);
+    for (auto& p : shape.positions) p += {0, 0.075f, 0};
+    return shape;
+  } else if (type == "test-sphere") {
+    auto shape = make_sphere(32, 0.075f, 1);
+    for (auto& p : shape.positions) p += {0, 0.075f, 0};
+    return shape;
+  } else if (type == "test-matcube") {
+    auto shape = make_rounded_box(
+        {32, 32, 32}, {0.075f, 0.075f, 0.075f}, {1, 1, 1}, 0.3f * 0.075f);
+    for (auto& p : shape.positions) p += {0, 0.075f, 0};
+    return shape;
+  } else if (type == "test-matsphere") {
+    auto shape = make_uvspherey({32, 32}, 0.075f, {2, 1});
+    for (auto& p : shape.positions) p += {0, 0.075f, 0};
+    return shape;
+  } else if (type == "test-sphere-displaced") {
+    auto shape = make_sphere(128, 0.075f, 1);
+    for (auto& p : shape.positions) p += {0, 0.075f, 0};
+    return shape;
+  } else if (type == "test-smallsphere") {
+    auto shape = make_sphere(32, 0.015f, 1);
+    for (auto& p : shape.positions) p += {0, 0.015f, 0};
+    return shape;
+  } else if (type == "test-disk") {
+    auto shape = make_disk(32, 0.075f, 1);
+    for (auto& p : shape.positions) p += {0, 0.075f, 0};
+    return shape;
+  } else if (type == "test-uvcylinder") {
+    auto shape = make_rounded_uvcylinder(
+        {32, 32, 32}, {0.075f, 0.075f}, {1, 1, 1}, 0.3f * 0.075f);
+    for (auto& p : shape.positions) p += {0, 0.075f, 0};
+    return shape;
+  } else if (type == "test-floor") {
+    return make_floor({1, 1}, {2, 2}, {20, 20});
+  } else if (type == "test-smallfloor") {
+    return make_floor({1, 1}, {0.5f, 0.5f}, {1, 1});
+  } else if (type == "test-quad") {
+    return make_rect({1, 1}, {0.075f, 0.075f}, {1, 1});
+  } else if (type == "test-quady") {
+    return make_recty({1, 1}, {0.075f, 0.075f}, {1, 1});
+  } else if (type == "test-quad-displaced") {
+    return make_rect({256, 256}, {0.075f, 0.075f}, {1, 1});
+  } else if (type == "test-quady-displaced") {
+    return make_recty({256, 256}, {0.075f, 0.075f}, {1, 1});
+  } else if (type == "test-matball") {
+    auto shape = make_sphere(32, 0.075f);
+    for (auto& p : shape.positions) p += {0, 0.075f, 0};
+    return shape;
+  } else if (type == "test-geosphere") {
+    auto shape = make_geosphere(0.075f, 3);
+    for (auto& p : shape.positions) p += {0, 0.075f, 0};
+    return shape;
+  } else if (type == "test-geosphere-flat") {
+    auto shape = make_geosphere(0.075f, 3);
+    for (auto& p : shape.positions) p += {0, 0.075f, 0};
+    shape.normals = {};
+    return shape;
+  } else if (type == "test-geosphere-subdivided") {
+    auto shape = make_geosphere(0.075f, 6);
+    for (auto& p : shape.positions) p += {0, 0.075f, 0};
+    return shape;
+  } else if (type == "test-hairball1") {
+    auto base = make_sphere(32, 0.075f * 0.8f, 1);
+    for (auto& p : base.positions) p += {0, 0.075f, 0};
+    return make_hair(base, {4, 65536}, {0.1f * 0.15f, 0.1f * 0.15f},
+        {0.001f * 0.15f, 0.0005f * 0.15f}, {0.03f, 100});
+  } else if (type == "test-hairball2") {
+    auto base = make_sphere(32, 0.075f * 0.8f, 1);
+    for (auto& p : base.positions) p += {0, 0.075f, 0};
+    return make_hair(base, {4, 65536}, {0.1f * 0.15f, 0.1f * 0.15f},
+        {0.001f * 0.15f, 0.0005f * 0.15f});
+  } else if (type == "test-hairball3") {
+    auto base = make_sphere(32, 0.075f * 0.8f, 1);
+    for (auto& p : base.positions) p += {0, 0.075f, 0};
+    return make_hair(base, {4, 65536}, {0.1f * 0.15f, 0.1f * 0.15f},
+        {0.001f * 0.15f, 0.0005f * 0.15f}, {0, 0}, {0.5, 128});
+  } else if (type == "test-hairball-interior") {
+    auto shape = make_sphere(32, 0.075f * 0.8f, 1);
+    for (auto& p : shape.positions) p += {0, 0.075f, 0};
+    return shape;
+  } else if (type == "test-suzanne-subdiv") {
+    auto shape = make_monkey(0.075f * 0.8f);
+    for (auto& p : shape.positions) p += {0, 0.075f, 0};
+    return shape;
+  } else if (type == "test-cube-subdiv") {
+    auto fvshape    = make_fvcube(0.075f);
+    auto shape      = shape_data{};
+    shape.quads     = fvshape.quadspos;
+    shape.positions = fvshape.positions;
+    for (auto& p : shape.positions) p += {0, 0.075f, 0};
+    return shape;
+  } else if (type == "test-arealight1") {
+    return make_rect({1, 1}, {0.2f, 0.2f});
+  } else if (type == "test-arealight2") {
+    return make_rect({1, 1}, {0.2f, 0.2f});
+  } else if (type == "test-largearealight1") {
+    return make_rect({1, 1}, {0.4f, 0.4f});
+  } else if (type == "test-largearealight2") {
+    return make_rect({1, 1}, {0.4f, 0.4f});
+  } else if (type == "test-pointlight1") {
+    return make_point(0);
+  } else if (type == "test-pointlight2") {
+    return make_point(0);
+  } else if (type == "test-point") {
+    return make_points(1);
+  } else if (type == "test-points") {
+    return make_points(4096);
+  } else if (type == "test-points-random") {
+    auto shape = make_random_points(4096, {0.075f, 0.075f, 0.075f});
+    for (auto& p : shape.positions) p += {0, 0.075f, 0};
+    return shape;
+  } else if (type == "test-particles") {
+    return make_points(4096);
+  } else if (type == "test-cloth") {
+    return make_rect({64, 64}, {0.2f, 0.2f});
+  } else if (type == "test-clothy") {
+    return make_recty({64, 64}, {0.2f, 0.2f});
+  } else {
+    throw io_error::preset_error(type);
+  }
+}
+
+// Shape presets used for testing.
+fvshape_data make_fvshape_preset(const string& type) {
+  if (type == "default-quad") {
+    return shape_to_fvshape(make_rect());
+  } else if (type == "default-quady") {
+    return shape_to_fvshape(make_recty());
+  } else if (type == "default-cube") {
+    return shape_to_fvshape(make_box());
+  } else if (type == "default-cube-rounded") {
+    return shape_to_fvshape(make_rounded_box());
+  } else if (type == "default-sphere") {
+    return shape_to_fvshape(make_sphere());
+  } else if (type == "default-matcube") {
+    return shape_to_fvshape(make_rounded_box());
+  } else if (type == "default-matsphere") {
+    return shape_to_fvshape(make_uvspherey());
+  } else if (type == "default-disk") {
+    return shape_to_fvshape(make_disk());
+  } else if (type == "default-disk-bulged") {
+    return shape_to_fvshape(make_bulged_disk());
+  } else if (type == "default-quad-bulged") {
+    return shape_to_fvshape(make_bulged_rect());
+  } else if (type == "default-uvsphere") {
+    return shape_to_fvshape(make_uvsphere());
+  } else if (type == "default-uvsphere-flipcap") {
+    return shape_to_fvshape(make_capped_uvsphere());
+  } else if (type == "default-uvspherey") {
+    return shape_to_fvshape(make_uvspherey());
+  } else if (type == "default-uvspherey-flipcap") {
+    return shape_to_fvshape(make_capped_uvspherey());
+  } else if (type == "default-uvdisk") {
+    return shape_to_fvshape(make_uvdisk());
+  } else if (type == "default-uvcylinder") {
+    return shape_to_fvshape(make_uvcylinder());
+  } else if (type == "default-uvcylinder-rounded") {
+    return shape_to_fvshape(make_rounded_uvcylinder({32, 32, 32}));
+  } else if (type == "default-geosphere") {
+    return shape_to_fvshape(make_geosphere());
+  } else if (type == "default-floor") {
+    return shape_to_fvshape(make_floor());
+  } else if (type == "default-floor-bent") {
+    return shape_to_fvshape(make_bent_floor());
+  } else if (type == "default-matball") {
+    return shape_to_fvshape(make_sphere());
+  } else if (type == "default-hairball-interior") {
+    return shape_to_fvshape(make_sphere(pow2(5), 0.8f));
+  } else if (type == "default-suzanne") {
+    return shape_to_fvshape(make_monkey());
+  } else if (type == "default-cube-facevarying") {
+    return make_fvbox();
+  } else if (type == "default-sphere-facevarying") {
+    return make_fvsphere();
+  } else if (type == "default-quady-displaced") {
+    return shape_to_fvshape(make_recty({256, 256}));
+  } else if (type == "default-sphere-displaced") {
+    return shape_to_fvshape(make_sphere(128));
+  } else if (type == "test-cube") {
+    auto shape = make_rounded_box(
+        {32, 32, 32}, {0.075f, 0.075f, 0.075f}, {1, 1, 1}, 0.3f * 0.075f);
+    for (auto& p : shape.positions) p += {0, 0.075f, 0};
+    return shape_to_fvshape(shape);
+  } else if (type == "test-matsphere") {
+    auto shape = make_uvspherey({32, 32}, 0.075f, {2, 1});
+    for (auto& p : shape.positions) p += {0, 0.075f, 0};
+    return shape_to_fvshape(shape);
+  } else if (type == "test-uvsphere") {
+    auto shape = make_uvsphere({32, 32}, 0.075f);
+    for (auto& p : shape.positions) p += {0, 0.075f, 0};
+    return shape_to_fvshape(shape);
+  } else if (type == "test-uvsphere-flipcap") {
+    auto shape = make_capped_uvsphere({32, 32}, 0.075f, {1, 1}, 0.3f * 0.075f);
+    for (auto& p : shape.positions) p += {0, 0.075f, 0};
+    return shape_to_fvshape(shape);
+  } else if (type == "test-uvspherey") {
+    auto shape = make_uvspherey({32, 32}, 0.075f);
+    for (auto& p : shape.positions) p += {0, 0.075f, 0};
+    return shape_to_fvshape(shape);
+  } else if (type == "test-uvspherey-flipcap") {
+    auto shape = make_capped_uvspherey({32, 32}, 0.075f, {1, 1}, 0.3f * 0.075f);
+    for (auto& p : shape.positions) p += {0, 0.075f, 0};
+    return shape_to_fvshape(shape);
+  } else if (type == "test-sphere") {
+    auto shape = make_sphere(32, 0.075f, 1);
+    for (auto& p : shape.positions) p += {0, 0.075f, 0};
+    return shape_to_fvshape(shape);
+  } else if (type == "test-sphere-displaced") {
+    auto shape = make_sphere(128, 0.075f, 1);
+    for (auto& p : shape.positions) p += {0, 0.075f, 0};
+    return shape_to_fvshape(shape);
+  } else if (type == "test-matcube") {
+    auto shape = make_rounded_box(
+        {32, 32, 32}, {0.075f, 0.075f, 0.075f}, {1, 1, 1}, 0.3f * 0.075f);
+    for (auto& p : shape.positions) p += {0, 0.075f, 0};
+    return shape_to_fvshape(shape);
+  } else if (type == "test-disk") {
+    auto shape = make_disk(32, 0.075f, 1);
+    for (auto& p : shape.positions) p += {0, 0.075f, 0};
+    return shape_to_fvshape(shape);
+  } else if (type == "test-uvcylinder") {
+    auto shape = make_rounded_uvcylinder(
+        {32, 32, 32}, {0.075f, 0.075f}, {1, 1, 1}, 0.3f * 0.075f);
+    for (auto& p : shape.positions) p += {0, 0.075f, 0};
+    return shape_to_fvshape(shape);
+  } else if (type == "test-floor") {
+    return shape_to_fvshape(make_floor({1, 1}, {2, 2}, {20, 20}));
+  } else if (type == "test-smallfloor") {
+    return shape_to_fvshape(make_floor({1, 1}, {0.5f, 0.5f}, {1, 1}));
+  } else if (type == "test-quad") {
+    return shape_to_fvshape(make_rect({1, 1}, {0.075f, 0.075f}, {1, 1}));
+  } else if (type == "test-quady") {
+    return shape_to_fvshape(make_recty({1, 1}, {0.075f, 0.075f}, {1, 1}));
+  } else if (type == "test-quad-displaced") {
+    return shape_to_fvshape(make_rect({256, 256}, {0.075f, 0.075f}, {1, 1}));
+  } else if (type == "test-quady-displaced") {
+    return shape_to_fvshape(make_recty({256, 256}, {0.075f, 0.075f}, {1, 1}));
+  } else if (type == "test-matball") {
+    auto shape = make_sphere(32, 0.075f);
+    for (auto& p : shape.positions) p += {0, 0.075f, 0};
+    return shape_to_fvshape(shape);
+  } else if (type == "test-suzanne-subdiv") {
+    auto shape = make_monkey(0.075f * 0.8f);
+    for (auto& p : shape.positions) p += {0, 0.075f, 0};
+    return shape_to_fvshape(shape);
+  } else if (type == "test-cube-subdiv") {
+    auto fvshape = make_fvcube(0.075f);
+    for (auto& p : fvshape.positions) p += {0, 0.075f, 0};
+    return fvshape;
+  } else if (type == "test-arealight1") {
+    return shape_to_fvshape(make_rect({1, 1}, {0.2f, 0.2f}));
+  } else if (type == "test-arealight2") {
+    return shape_to_fvshape(make_rect({1, 1}, {0.2f, 0.2f}));
+  } else if (type == "test-largearealight1") {
+    return shape_to_fvshape(make_rect({1, 1}, {0.4f, 0.4f}));
+  } else if (type == "test-largearealight2") {
+    return shape_to_fvshape(make_rect({1, 1}, {0.4f, 0.4f}));
+  } else if (type == "test-cloth") {
+    return shape_to_fvshape(make_rect({64, 64}, {0.2f, 0.2f}));
+  } else if (type == "test-clothy") {
+    return shape_to_fvshape(make_recty({64, 64}, {0.2f, 0.2f}));
+  } else {
+    throw io_error::preset_error(type);
+  }
+}
+
+// Load ply mesh
+bool load_shape(const string& filename, shape_data& shape, string& error,
+    bool flip_texcoord) {
+  try {
+    load_shape(filename, shape, flip_texcoord);
+    return true;
+  } catch (io_error& exception) {
+    error = exception.what();
+    return false;
+  }
+}
+
+// Save ply mesh
+bool save_shape(const string& filename, const shape_data& shape, string& error,
+    bool flip_texcoord, bool ascii) {
+  try {
+    save_shape(filename, shape, flip_texcoord, ascii);
+    return true;
+  } catch (io_error& exception) {
+    error = exception.what();
+    return false;
+  }
+}
+
+// Load ply mesh
+bool load_fvshape(const string& filename, fvshape_data& fvshape, string& error,
+    bool flip_texcoord) {
+  try {
+    load_fvshape(filename, fvshape, flip_texcoord);
+    return true;
+  } catch (io_error& exception) {
+    error = exception.what();
+    return false;
+  }
+}
+
+// Save ply mesh
+bool save_fvshape(const string& filename, const fvshape_data& fvshape,
+    string& error, bool flip_texcoord, bool ascii) {
+  try {
+    save_fvshape(filename, fvshape, flip_texcoord, ascii);
+    return true;
+  } catch (io_error& exception) {
+    error = exception.what();
+    return false;
   }
 }
 
 // Shape presets used ofr testing.
 bool make_shape_preset(shape_data& shape, const string& type, string& error) {
-  auto set_quads = [&](shape_data&& shape_) {
-    shape.quads     = shape_.quads;
-    shape.positions = shape_.positions;
-    shape.normals   = shape_.normals;
-    shape.texcoords = shape_.texcoords;
-  };
-  auto set_triangles = [&](shape_data&& shape_) {
-    shape.triangles = shape_.triangles;
-    shape.positions = shape_.positions;
-    shape.normals   = shape_.normals;
-    shape.texcoords = shape_.texcoords;
-  };
-  auto set_lines = [&](shape_data&& shape_) {
-    shape.lines     = shape_.lines;
-    shape.positions = shape_.positions;
-    shape.normals   = shape_.normals;
-    shape.texcoords = shape_.texcoords;
-    shape.radius    = shape_.radius;
-  };
-  auto set_points = [&](shape_data&& shape_) {
-    shape.points    = shape_.points;
-    shape.positions = shape_.positions;
-    shape.normals   = shape_.normals;
-    shape.texcoords = shape_.texcoords;
-    shape.radius    = shape_.radius;
-  };
-  auto set_fvquads = [&](fvshape_data&& shape_) {
-    shape.quads     = shape_.quadspos;
-    shape.positions = shape_.positions;
-    shape.normals   = shape_.normals;
-    shape.texcoords = shape_.texcoords;
-  };
-
-  if (type == "default-quad") {
-    set_quads(make_rect());
-  } else if (type == "default-quady") {
-    set_quads(make_recty());
-  } else if (type == "default-cube") {
-    set_quads(make_box());
-  } else if (type == "default-cube-rounded") {
-    set_quads(make_rounded_box());
-  } else if (type == "default-sphere") {
-    set_quads(make_sphere());
-  } else if (type == "default-matcube") {
-    set_quads(make_rounded_box());
-  } else if (type == "default-matsphere") {
-    set_quads(make_uvspherey());
-  } else if (type == "default-disk") {
-    set_quads(make_disk());
-  } else if (type == "default-disk-bulged") {
-    set_quads(make_bulged_disk());
-  } else if (type == "default-quad-bulged") {
-    set_quads(make_bulged_rect());
-  } else if (type == "default-uvsphere") {
-    set_quads(make_uvsphere());
-  } else if (type == "default-uvsphere-flipcap") {
-    set_quads(make_capped_uvsphere());
-  } else if (type == "default-uvspherey") {
-    set_quads(make_uvspherey());
-  } else if (type == "default-uvspherey-flipcap") {
-    set_quads(make_capped_uvspherey());
-  } else if (type == "default-uvdisk") {
-    set_quads(make_uvdisk());
-  } else if (type == "default-uvcylinder") {
-    set_quads(make_uvcylinder());
-  } else if (type == "default-uvcylinder-rounded") {
-    set_quads(make_rounded_uvcylinder({32, 32, 32}));
-  } else if (type == "default-geosphere") {
-    set_triangles(make_geosphere());
-  } else if (type == "default-floor") {
-    set_quads(make_floor());
-  } else if (type == "default-floor-bent") {
-    set_quads(make_bent_floor());
-  } else if (type == "default-matball") {
-    set_quads(make_sphere());
-  } else if (type == "default-hairball") {
-    auto base = make_sphere(pow2(5), 0.8f);
-    set_lines(make_hair(base, {4, 65536}, {0.2f, 0.2f}, {0.002f, 0.001f}));
-  } else if (type == "default-hairball-interior") {
-    set_quads(make_sphere(pow2(5), 0.8f));
-  } else if (type == "default-suzanne") {
-    set_quads(make_monkey());
-  } else if (type == "default-cube-facevarying") {
-    set_fvquads(make_fvbox());
-  } else if (type == "default-sphere-facevarying") {
-    set_fvquads(make_fvsphere());
-  } else if (type == "default-quady-displaced") {
-    set_quads(make_recty({256, 256}));
-  } else if (type == "default-sphere-displaced") {
-    set_quads(make_sphere(128));
-  } else if (type == "test-cube") {
-    set_quads(make_rounded_box(
-        {32, 32, 32}, {0.075f, 0.075f, 0.075f}, {1, 1, 1}, 0.3f * 0.075f));
-    for (auto& p : shape.positions) p += {0, 0.075f, 0};
-  } else if (type == "test-uvsphere") {
-    set_quads(make_uvsphere({32, 32}, 0.075f));
-    for (auto& p : shape.positions) p += {0, 0.075f, 0};
-  } else if (type == "test-uvsphere-flipcap") {
-    set_quads(make_capped_uvsphere({32, 32}, 0.075f, {1, 1}, 0.3f * 0.075f));
-    for (auto& p : shape.positions) p += {0, 0.075f, 0};
-  } else if (type == "test-uvspherey") {
-    set_quads(make_uvspherey({32, 32}, 0.075f));
-    for (auto& p : shape.positions) p += {0, 0.075f, 0};
-  } else if (type == "test-uvspherey-flipcap") {
-    set_quads(make_capped_uvspherey({32, 32}, 0.075f, {1, 1}, 0.3f * 0.075f));
-    for (auto& p : shape.positions) p += {0, 0.075f, 0};
-  } else if (type == "test-sphere") {
-    set_quads(make_sphere(32, 0.075f, 1));
-    for (auto& p : shape.positions) p += {0, 0.075f, 0};
-  } else if (type == "test-matcube") {
-    set_quads(make_rounded_box(
-        {32, 32, 32}, {0.075f, 0.075f, 0.075f}, {1, 1, 1}, 0.3f * 0.075f));
-    for (auto& p : shape.positions) p += {0, 0.075f, 0};
-  } else if (type == "test-matsphere") {
-    set_quads(make_uvspherey({32, 32}, 0.075f, {2, 1}));
-    for (auto& p : shape.positions) p += {0, 0.075f, 0};
-  } else if (type == "test-sphere-displaced") {
-    set_quads(make_sphere(128, 0.075f, 1));
-    for (auto& p : shape.positions) p += {0, 0.075f, 0};
-  } else if (type == "test-smallsphere") {
-    set_quads(make_sphere(32, 0.015f, 1));
-    for (auto& p : shape.positions) p += {0, 0.015f, 0};
-  } else if (type == "test-disk") {
-    set_quads(make_disk(32, 0.075f, 1));
-    for (auto& p : shape.positions) p += {0, 0.075f, 0};
-  } else if (type == "test-uvcylinder") {
-    set_quads(make_rounded_uvcylinder(
-        {32, 32, 32}, {0.075f, 0.075f}, {1, 1, 1}, 0.3f * 0.075f));
-    for (auto& p : shape.positions) p += {0, 0.075f, 0};
-  } else if (type == "test-floor") {
-    set_quads(make_floor({1, 1}, {2, 2}, {20, 20}));
-  } else if (type == "test-smallfloor") {
-    set_quads(make_floor({1, 1}, {0.5f, 0.5f}, {1, 1}));
-  } else if (type == "test-quad") {
-    set_quads(make_rect({1, 1}, {0.075f, 0.075f}, {1, 1}));
-  } else if (type == "test-quady") {
-    set_quads(make_recty({1, 1}, {0.075f, 0.075f}, {1, 1}));
-  } else if (type == "test-quad-displaced") {
-    set_quads(make_rect({256, 256}, {0.075f, 0.075f}, {1, 1}));
-  } else if (type == "test-quady-displaced") {
-    set_quads(make_recty({256, 256}, {0.075f, 0.075f}, {1, 1}));
-  } else if (type == "test-matball") {
-    set_quads(make_sphere(32, 0.075f));
-    for (auto& p : shape.positions) p += {0, 0.075f, 0};
-  } else if (type == "test-geosphere") {
-    set_triangles(make_geosphere(0.075f, 3));
-    for (auto& p : shape.positions) p += {0, 0.075f, 0};
-  } else if (type == "test-geosphere-flat") {
-    set_triangles(make_geosphere(0.075f, 3));
-    for (auto& p : shape.positions) p += {0, 0.075f, 0};
-    shape.normals = {};
-  } else if (type == "test-geosphere-subdivided") {
-    set_triangles(make_geosphere(0.075f, 6));
-    for (auto& p : shape.positions) p += {0, 0.075f, 0};
-  } else if (type == "test-hairball1") {
-    auto base = make_sphere(32, 0.075f * 0.8f, 1);
-    for (auto& p : base.positions) p += {0, 0.075f, 0};
-    set_lines(make_hair(base, {4, 65536}, {0.1f * 0.15f, 0.1f * 0.15f},
-        {0.001f * 0.15f, 0.0005f * 0.15f}, {0.03f, 100}));
-  } else if (type == "test-hairball2") {
-    auto base = make_sphere(32, 0.075f * 0.8f, 1);
-    for (auto& p : base.positions) p += {0, 0.075f, 0};
-    set_lines(make_hair(base, {4, 65536}, {0.1f * 0.15f, 0.1f * 0.15f},
-        {0.001f * 0.15f, 0.0005f * 0.15f}));
-  } else if (type == "test-hairball3") {
-    auto base = make_sphere(32, 0.075f * 0.8f, 1);
-    for (auto& p : base.positions) p += {0, 0.075f, 0};
-    set_lines(make_hair(base, {4, 65536}, {0.1f * 0.15f, 0.1f * 0.15f},
-        {0.001f * 0.15f, 0.0005f * 0.15f}, {0, 0}, {0.5, 128}));
-  } else if (type == "test-hairball-interior") {
-    set_quads(make_sphere(32, 0.075f * 0.8f, 1));
-    for (auto& p : shape.positions) p += {0, 0.075f, 0};
-  } else if (type == "test-suzanne-subdiv") {
-    set_quads(make_monkey(0.075f * 0.8f));
-    for (auto& p : shape.positions) p += {0, 0.075f, 0};
-  } else if (type == "test-cube-subdiv") {
-    // set_quads(make_cube( 0.075f);
-    set_fvquads(make_fvcube(0.075f));
-    // make_fvbox(quadspos, quadsnorm, quadstexcoord, positions, normals,
-    //      texcoords, {1, 1, 1}, {0.075f, 0.075f, 0.075f});
-    for (auto& p : shape.positions) p += {0, 0.075f, 0};
-  } else if (type == "test-arealight1") {
-    set_quads(make_rect({1, 1}, {0.2f, 0.2f}));
-  } else if (type == "test-arealight2") {
-    set_quads(make_rect({1, 1}, {0.2f, 0.2f}));
-  } else if (type == "test-largearealight1") {
-    set_quads(make_rect({1, 1}, {0.4f, 0.4f}));
-  } else if (type == "test-largearealight2") {
-    set_quads(make_rect({1, 1}, {0.4f, 0.4f}));
-  } else if (type == "test-pointlight1") {
-    set_points(make_point(0));
-  } else if (type == "test-pointlight2") {
-    set_points(make_point(0));
-  } else if (type == "test-point") {
-    set_points(make_points(1));
-  } else if (type == "test-points") {
-    set_points(make_points(4096));
-  } else if (type == "test-points-random") {
-    set_points(make_random_points(4096, {0.075f, 0.075f, 0.075f}));
-    for (auto& p : shape.positions) p += {0, 0.075f, 0};
-  } else if (type == "test-particles") {
-    set_points(make_points(4096));
-  } else if (type == "test-cloth") {
-    set_quads(make_rect({64, 64}, {0.2f, 0.2f}));
-  } else if (type == "test-clothy") {
-    set_quads(make_recty({64, 64}, {0.2f, 0.2f}));
-  } else {
-    error = "unknown preset";
+  try {
+    shape = make_shape_preset(type);
+    return true;
+  } catch (io_error& exception) {
+    error = exception.what();
     return false;
   }
-  return true;
 }
 
 // Shape presets used for testing.
 bool make_fvshape_preset(
-    fvshape_data& shape, const string& type, string& error) {
-  auto set_quads = [&](shape_data&& shape_) {
-    shape.quadspos  = shape_.quads;
-    shape.positions = shape_.positions;
-    if (!shape_.normals.empty()) shape.quadsnorm = shape_.quads;
-    shape.normals = shape_.normals;
-    if (!shape_.texcoords.empty()) shape.quadstexcoord = shape_.quads;
-    shape.texcoords = shape_.texcoords;
-  };
-  auto set_triangles = [&](shape_data&& shape) {
-    throw std::invalid_argument{"bad shape type"};
-  };
-  auto set_lines = [&](shape_data&& shape) {
-    throw std::invalid_argument{"bad shape type"};
-  };
-  auto set_points = [&](shape_data&& shape) {
-    throw std::invalid_argument{"bad shape type"};
-  };
-  auto set_fvquads = [&](fvshape_data&& shape_) {
-    shape.quadspos      = shape_.quadspos;
-    shape.quadsnorm     = shape_.quadsnorm;
-    shape.quadstexcoord = shape_.quadstexcoord;
-    shape.positions     = shape_.positions;
-    shape.normals       = shape_.normals;
-    shape.texcoords     = shape_.texcoords;
-  };
-
-  if (type == "default-quad") {
-    set_quads(make_rect());
-  } else if (type == "default-quady") {
-    set_quads(make_recty());
-  } else if (type == "default-cube") {
-    set_quads(make_box());
-  } else if (type == "default-cube-rounded") {
-    set_quads(make_rounded_box());
-  } else if (type == "default-sphere") {
-    set_quads(make_sphere());
-  } else if (type == "default-matcube") {
-    set_quads(make_rounded_box());
-  } else if (type == "default-matsphere") {
-    set_quads(make_uvspherey());
-  } else if (type == "default-disk") {
-    set_quads(make_disk());
-  } else if (type == "default-disk-bulged") {
-    set_quads(make_bulged_disk());
-  } else if (type == "default-quad-bulged") {
-    set_quads(make_bulged_rect());
-  } else if (type == "default-uvsphere") {
-    set_quads(make_uvsphere());
-  } else if (type == "default-uvsphere-flipcap") {
-    set_quads(make_capped_uvsphere());
-  } else if (type == "default-uvspherey") {
-    set_quads(make_uvspherey());
-  } else if (type == "default-uvspherey-flipcap") {
-    set_quads(make_capped_uvspherey());
-  } else if (type == "default-uvdisk") {
-    set_quads(make_uvdisk());
-  } else if (type == "default-uvcylinder") {
-    set_quads(make_uvcylinder());
-  } else if (type == "default-uvcylinder-rounded") {
-    set_quads(make_rounded_uvcylinder({32, 32, 32}));
-  } else if (type == "default-geosphere") {
-    set_triangles(make_geosphere());
-  } else if (type == "default-floor") {
-    set_quads(make_floor());
-  } else if (type == "default-floor-bent") {
-    set_quads(make_bent_floor());
-  } else if (type == "default-matball") {
-    set_quads(make_sphere());
-  } else if (type == "default-hairball") {
-    auto base = make_sphere(pow2(5), 0.8f);
-    set_lines(make_hair(base, {4, 65536}, {0.2f, 0.2f}, {0.002f, 0.001f}));
-  } else if (type == "default-hairball-interior") {
-    set_quads(make_sphere(pow2(5), 0.8f));
-  } else if (type == "default-suzanne") {
-    set_quads(make_monkey());
-  } else if (type == "default-cube-facevarying") {
-    set_fvquads(make_fvbox());
-  } else if (type == "default-sphere-facevarying") {
-    set_fvquads(make_fvsphere());
-  } else if (type == "default-quady-displaced") {
-    set_quads(make_recty({256, 256}));
-  } else if (type == "default-sphere-displaced") {
-    set_quads(make_sphere(128));
-  } else if (type == "test-cube") {
-    set_quads(make_rounded_box(
-        {32, 32, 32}, {0.075f, 0.075f, 0.075f}, {1, 1, 1}, 0.3f * 0.075f));
-    for (auto& p : shape.positions) p += {0, 0.075f, 0};
-  } else if (type == "test-matsphere") {
-    set_quads(make_uvspherey({32, 32}, 0.075f, {2, 1}));
-    for (auto& p : shape.positions) p += {0, 0.075f, 0};
-  } else if (type == "test-uvsphere") {
-    set_quads(make_uvsphere({32, 32}, 0.075f));
-    for (auto& p : shape.positions) p += {0, 0.075f, 0};
-  } else if (type == "test-uvsphere-flipcap") {
-    set_quads(make_capped_uvsphere({32, 32}, 0.075f, {1, 1}, 0.3f * 0.075f));
-    for (auto& p : shape.positions) p += {0, 0.075f, 0};
-  } else if (type == "test-uvspherey") {
-    set_quads(make_uvspherey({32, 32}, 0.075f));
-    for (auto& p : shape.positions) p += {0, 0.075f, 0};
-  } else if (type == "test-uvspherey-flipcap") {
-    set_quads(make_capped_uvspherey({32, 32}, 0.075f, {1, 1}, 0.3f * 0.075f));
-    for (auto& p : shape.positions) p += {0, 0.075f, 0};
-  } else if (type == "test-sphere") {
-    set_quads(make_sphere(32, 0.075f, 1));
-    for (auto& p : shape.positions) p += {0, 0.075f, 0};
-  } else if (type == "test-sphere-displaced") {
-    set_quads(make_sphere(128, 0.075f, 1));
-    for (auto& p : shape.positions) p += {0, 0.075f, 0};
-  } else if (type == "test-matcube") {
-    set_quads(make_rounded_box(
-        {32, 32, 32}, {0.075f, 0.075f, 0.075f}, {1, 1, 1}, 0.3f * 0.075f));
-    for (auto& p : shape.positions) p += {0, 0.075f, 0};
-  } else if (type == "test-disk") {
-    set_quads(make_disk(32, 0.075f, 1));
-    for (auto& p : shape.positions) p += {0, 0.075f, 0};
-  } else if (type == "test-uvcylinder") {
-    set_quads(make_rounded_uvcylinder(
-        {32, 32, 32}, {0.075f, 0.075f}, {1, 1, 1}, 0.3f * 0.075f));
-    for (auto& p : shape.positions) p += {0, 0.075f, 0};
-  } else if (type == "test-floor") {
-    set_quads(make_floor({1, 1}, {2, 2}, {20, 20}));
-  } else if (type == "test-smallfloor") {
-    set_quads(make_floor({1, 1}, {0.5f, 0.5f}, {1, 1}));
-  } else if (type == "test-quad") {
-    set_quads(make_rect({1, 1}, {0.075f, 0.075f}, {1, 1}));
-  } else if (type == "test-quady") {
-    set_quads(make_recty({1, 1}, {0.075f, 0.075f}, {1, 1}));
-  } else if (type == "test-quad-displaced") {
-    set_quads(make_rect({256, 256}, {0.075f, 0.075f}, {1, 1}));
-  } else if (type == "test-quady-displaced") {
-    set_quads(make_recty({256, 256}, {0.075f, 0.075f}, {1, 1}));
-  } else if (type == "test-matball") {
-    set_quads(make_sphere(32, 0.075f));
-    for (auto& p : shape.positions) p += {0, 0.075f, 0};
-  } else if (type == "test-hairball1") {
-    auto base = make_sphere(32, 0.075f * 0.8f, 1);
-    for (auto& p : base.positions) p += {0, 0.075f, 0};
-    set_lines(make_hair(base, {4, 65536}, {0.1f * 0.15f, 0.1f * 0.15f},
-        {0.001f * 0.15f, 0.0005f * 0.15f}, {0.03f, 100}));
-  } else if (type == "test-hairball2") {
-    auto base = make_sphere(32, 0.075f * 0.8f, 1);
-    for (auto& p : base.positions) p += {0, 0.075f, 0};
-    set_lines(make_hair(base, {4, 65536}, {0.1f * 0.15f, 0.1f * 0.15f},
-        {0.001f * 0.15f, 0.0005f * 0.15f}));
-  } else if (type == "test-hairball3") {
-    auto base = make_sphere(32, 0.075f * 0.8f, 1);
-    for (auto& p : base.positions) p += {0, 0.075f, 0};
-    set_lines(make_hair(base, {4, 65536}, {0.1f * 0.15f, 0.1f * 0.15f},
-        {0.001f * 0.15f, 0.0005f * 0.15f}, {0, 0}, {0.5f, 128}));
-  } else if (type == "test-hairball-interior") {
-    set_quads(make_sphere(32, 0.075f * 0.8f, 1));
-    for (auto& p : shape.positions) p += {0, 0.075f, 0};
-  } else if (type == "test-suzanne-subdiv") {
-    set_quads(make_monkey(0.075f * 0.8f));
-    for (auto& p : shape.positions) p += {0, 0.075f, 0};
-  } else if (type == "test-cube-subdiv") {
-    // set_quads(make_cube( 0.075f);
-    set_fvquads(make_fvcube(0.075f));
-    // make_fvbox(quadspos, quadsnorm, quadstexcoord, positions, normals,
-    //      texcoords, {1, 1, 1}, {0.075f, 0.075f, 0.075f});
-    for (auto& p : shape.positions) p += {0, 0.075f, 0};
-  } else if (type == "test-arealight1") {
-    set_quads(make_rect({1, 1}, {0.2f, 0.2f}));
-  } else if (type == "test-arealight2") {
-    set_quads(make_rect({1, 1}, {0.2f, 0.2f}));
-  } else if (type == "test-largearealight1") {
-    set_quads(make_rect({1, 1}, {0.4f, 0.4f}));
-  } else if (type == "test-largearealight2") {
-    set_quads(make_rect({1, 1}, {0.4f, 0.4f}));
-  } else if (type == "test-pointlight1") {
-    set_points(make_point(0));
-  } else if (type == "test-pointlight2") {
-    set_points(make_point(0));
-  } else if (type == "test-point") {
-    set_points(make_points(1));
-  } else if (type == "test-points") {
-    set_points(make_points(4096));
-  } else if (type == "test-points-random") {
-    set_points(make_random_points(4096, {0.2f, 0.2f, 0.2f}));
-  } else if (type == "test-particles") {
-    set_points(make_points(4096));
-  } else if (type == "test-cloth") {
-    set_quads(make_rect({64, 64}, {0.2f, 0.2f}));
-  } else if (type == "test-clothy") {
-    set_quads(make_recty({64, 64}, {0.2f, 0.2f}));
-  } else {
-    error = "unknown preset";
+    fvshape_data& fvshape, const string& type, string& error) {
+  try {
+    fvshape = make_fvshape_preset(type);
+    return true;
+  } catch (io_error& exception) {
+    error = exception.what();
     return false;
   }
-  return true;
 }
 
 }  // namespace yocto
@@ -1707,42 +1458,49 @@ namespace yocto {
 // get name
 [[maybe_unused]] static string get_camera_name(
     const scene_data& scene, int idx) {
+  if (idx < 0) return "";
   if (scene.camera_names.empty())
     return get_element_name("camera", idx, scene.cameras.size());
   return scene.camera_names[idx];
 }
 [[maybe_unused]] static string get_environment_name(
     const scene_data& scene, int idx) {
+  if (idx < 0) return "";
   if (scene.environment_names.empty())
     return get_element_name("environment", idx, scene.environments.size());
   return scene.environment_names[idx];
 }
 [[maybe_unused]] static string get_shape_name(
     const scene_data& scene, int idx) {
+  if (idx < 0) return "";
   if (scene.shape_names.empty())
     return get_element_name("shape", idx, scene.shapes.size());
   return scene.shape_names[idx];
 }
 [[maybe_unused]] static string get_texture_name(
     const scene_data& scene, int idx) {
+  if (idx < 0) return "";
   if (scene.texture_names.empty())
     return get_element_name("texture", idx, scene.textures.size());
   return scene.texture_names[idx];
 }
 [[maybe_unused]] static string get_instance_name(
     const scene_data& scene, int idx) {
+  if (idx < 0) return "";
   if (scene.instance_names.empty())
     return get_element_name("instance", idx, scene.instances.size());
   return scene.instance_names[idx];
 }
 [[maybe_unused]] static string get_material_name(
     const scene_data& scene, int idx) {
+  if (idx < 0) return "";
   if (scene.material_names.empty())
     return get_element_name("material", idx, scene.materials.size());
   return scene.material_names[idx];
 }
 [[maybe_unused]] static string get_subdiv_name(
     const scene_data& scene, int idx) {
+  if (idx < 0) return "";
   if (scene.subdiv_names.empty())
     return get_element_name("subdiv", idx, scene.subdivs.size());
   return scene.subdiv_names[idx];
@@ -1895,8 +1653,8 @@ struct test_params {
 };
 
 // Scene test
-void make_test(scene_data& scene, const test_params& params) {
-  return;
+scene_data make_test(const test_params& params) {
+  return {};
   // // cameras
   // switch (params.cameras) {
   //   case test_cameras_type::standard: {
@@ -2194,103 +1952,166 @@ void make_test(scene_data& scene, const test_params& params) {
 }
 
 // Scene presets used for testing.
+scene_data make_scene_preset(const string& type) {
+  if (type == "cornellbox") {
+    return make_cornellbox();
+  } else if (type == "features1") {
+    return make_test({test_cameras_type::standard, test_environments_type::sky,
+        test_arealights_type::standard, test_floor_type::standard,
+        test_shapes_type::features1, test_materials_type::features1,
+        test_instance_name_type::material});
+  } else if (type == "features2") {
+    return make_test({test_cameras_type::standard, test_environments_type::sky,
+        test_arealights_type::standard, test_floor_type::standard,
+        test_shapes_type::features2, test_materials_type::features2,
+        test_instance_name_type::shape});
+  } else if (type == "materials1") {
+    return make_test({test_cameras_type::wide, test_environments_type::sky,
+        test_arealights_type::large, test_floor_type::standard,
+        test_shapes_type::rows, test_materials_type::materials1,
+        test_instance_name_type::material});
+  } else if (type == "materials2") {
+    return make_test({test_cameras_type::wide, test_environments_type::sky,
+        test_arealights_type::large, test_floor_type::standard,
+        test_shapes_type::rows, test_materials_type::materials2,
+        test_instance_name_type::material});
+  } else if (type == "materials3") {
+    return make_test({test_cameras_type::wide, test_environments_type::sky,
+        test_arealights_type::large, test_floor_type::standard,
+        test_shapes_type::rows, test_materials_type::materials3,
+        test_instance_name_type::material});
+  } else if (type == "materials4") {
+    return make_test({test_cameras_type::wide, test_environments_type::sky,
+        test_arealights_type::large, test_floor_type::standard,
+        test_shapes_type::rows, test_materials_type::materials4,
+        test_instance_name_type::material});
+  } else if (type == "materials5") {
+    return make_test({test_cameras_type::wide, test_environments_type::sky,
+        test_arealights_type::large, test_floor_type::standard,
+        test_shapes_type::rows, test_materials_type::materials5,
+        test_instance_name_type::material});
+  } else if (type == "shapes1") {
+    return make_test({test_cameras_type::standard, test_environments_type::sky,
+        test_arealights_type::large, test_floor_type::standard,
+        test_shapes_type::shapes1, test_materials_type::uvgrid,
+        test_instance_name_type::shape});
+  } else if (type == "shapes2") {
+    return make_test({test_cameras_type::standard, test_environments_type::sky,
+        test_arealights_type::large, test_floor_type::standard,
+        test_shapes_type::shapes2, test_materials_type::uvgrid,
+        test_instance_name_type::shape});
+  } else if (type == "shapes3") {
+    return make_test({test_cameras_type::standard, test_environments_type::sky,
+        test_arealights_type::large, test_floor_type::standard,
+        test_shapes_type::shapes3, test_materials_type::hair,
+        test_instance_name_type::shape});
+  } else if (type == "environments1") {
+    return make_test({test_cameras_type::standard, test_environments_type::sky,
+        test_arealights_type::none, test_floor_type::standard,
+        test_shapes_type::bunny_sphere, test_materials_type::plastic_metal,
+        test_instance_name_type::material});
+  } else if (type == "environments2") {
+    return make_test({test_cameras_type::standard,
+        test_environments_type::sunsky, test_arealights_type::none,
+        test_floor_type::standard, test_shapes_type::bunny_sphere,
+        test_materials_type::plastic_metal, test_instance_name_type::material});
+  } else if (type == "arealights1") {
+    return make_test({test_cameras_type::standard, test_environments_type::none,
+        test_arealights_type::standard, test_floor_type::standard,
+        test_shapes_type::bunny_sphere, test_materials_type::plastic_metal,
+        test_instance_name_type::material});
+  } else {
+    throw io_error::preset_error(type);
+  }
+}
+
+// Scene presets used for testing.
 bool make_scene_preset(scene_data& scene, const string& type, string& error) {
   if (type == "cornellbox") {
-    make_cornellbox(scene);
+    scene = make_cornellbox();
     return true;
   } else if (type == "features1") {
-    make_test(
-        scene, {test_cameras_type::standard, test_environments_type::sky,
-                   test_arealights_type::standard, test_floor_type::standard,
-                   test_shapes_type::features1, test_materials_type::features1,
-                   test_instance_name_type::material});
+    scene = make_test({test_cameras_type::standard, test_environments_type::sky,
+        test_arealights_type::standard, test_floor_type::standard,
+        test_shapes_type::features1, test_materials_type::features1,
+        test_instance_name_type::material});
     return true;
   } else if (type == "features2") {
-    make_test(
-        scene, {test_cameras_type::standard, test_environments_type::sky,
-                   test_arealights_type::standard, test_floor_type::standard,
-                   test_shapes_type::features2, test_materials_type::features2,
-                   test_instance_name_type::shape});
+    scene = make_test({test_cameras_type::standard, test_environments_type::sky,
+        test_arealights_type::standard, test_floor_type::standard,
+        test_shapes_type::features2, test_materials_type::features2,
+        test_instance_name_type::shape});
     return true;
   } else if (type == "materials1") {
-    make_test(
-        scene, {test_cameras_type::wide, test_environments_type::sky,
-                   test_arealights_type::large, test_floor_type::standard,
-                   test_shapes_type::rows, test_materials_type::materials1,
-                   test_instance_name_type::material});
+    scene = make_test({test_cameras_type::wide, test_environments_type::sky,
+        test_arealights_type::large, test_floor_type::standard,
+        test_shapes_type::rows, test_materials_type::materials1,
+        test_instance_name_type::material});
     return true;
   } else if (type == "materials2") {
-    make_test(
-        scene, {test_cameras_type::wide, test_environments_type::sky,
-                   test_arealights_type::large, test_floor_type::standard,
-                   test_shapes_type::rows, test_materials_type::materials2,
-                   test_instance_name_type::material});
+    scene = make_test({test_cameras_type::wide, test_environments_type::sky,
+        test_arealights_type::large, test_floor_type::standard,
+        test_shapes_type::rows, test_materials_type::materials2,
+        test_instance_name_type::material});
     return true;
   } else if (type == "materials3") {
-    make_test(
-        scene, {test_cameras_type::wide, test_environments_type::sky,
-                   test_arealights_type::large, test_floor_type::standard,
-                   test_shapes_type::rows, test_materials_type::materials3,
-                   test_instance_name_type::material});
+    scene = make_test({test_cameras_type::wide, test_environments_type::sky,
+        test_arealights_type::large, test_floor_type::standard,
+        test_shapes_type::rows, test_materials_type::materials3,
+        test_instance_name_type::material});
     return true;
   } else if (type == "materials4") {
-    make_test(
-        scene, {test_cameras_type::wide, test_environments_type::sky,
-                   test_arealights_type::large, test_floor_type::standard,
-                   test_shapes_type::rows, test_materials_type::materials4,
-                   test_instance_name_type::material});
+    scene = make_test({test_cameras_type::wide, test_environments_type::sky,
+        test_arealights_type::large, test_floor_type::standard,
+        test_shapes_type::rows, test_materials_type::materials4,
+        test_instance_name_type::material});
     return true;
   } else if (type == "materials5") {
-    make_test(
-        scene, {test_cameras_type::wide, test_environments_type::sky,
-                   test_arealights_type::large, test_floor_type::standard,
-                   test_shapes_type::rows, test_materials_type::materials5,
-                   test_instance_name_type::material});
+    scene = make_test({test_cameras_type::wide, test_environments_type::sky,
+        test_arealights_type::large, test_floor_type::standard,
+        test_shapes_type::rows, test_materials_type::materials5,
+        test_instance_name_type::material});
     return true;
   } else if (type == "shapes1") {
-    make_test(scene, {test_cameras_type::standard, test_environments_type::sky,
-                         test_arealights_type::large, test_floor_type::standard,
-                         test_shapes_type::shapes1, test_materials_type::uvgrid,
-                         test_instance_name_type::shape});
+    scene = make_test({test_cameras_type::standard, test_environments_type::sky,
+        test_arealights_type::large, test_floor_type::standard,
+        test_shapes_type::shapes1, test_materials_type::uvgrid,
+        test_instance_name_type::shape});
     return true;
   } else if (type == "shapes2") {
-    make_test(scene, {test_cameras_type::standard, test_environments_type::sky,
-                         test_arealights_type::large, test_floor_type::standard,
-                         test_shapes_type::shapes2, test_materials_type::uvgrid,
-                         test_instance_name_type::shape});
+    scene = make_test({test_cameras_type::standard, test_environments_type::sky,
+        test_arealights_type::large, test_floor_type::standard,
+        test_shapes_type::shapes2, test_materials_type::uvgrid,
+        test_instance_name_type::shape});
     return true;
   } else if (type == "shapes3") {
-    make_test(scene, {test_cameras_type::standard, test_environments_type::sky,
-                         test_arealights_type::large, test_floor_type::standard,
-                         test_shapes_type::shapes3, test_materials_type::hair,
-                         test_instance_name_type::shape});
+    scene = make_test({test_cameras_type::standard, test_environments_type::sky,
+        test_arealights_type::large, test_floor_type::standard,
+        test_shapes_type::shapes3, test_materials_type::hair,
+        test_instance_name_type::shape});
     return true;
   } else if (type == "environments1") {
-    make_test(scene,
-        {test_cameras_type::standard, test_environments_type::sky,
-            test_arealights_type::none, test_floor_type::standard,
-            test_shapes_type::bunny_sphere, test_materials_type::plastic_metal,
-            test_instance_name_type::material});
+    scene = make_test({test_cameras_type::standard, test_environments_type::sky,
+        test_arealights_type::none, test_floor_type::standard,
+        test_shapes_type::bunny_sphere, test_materials_type::plastic_metal,
+        test_instance_name_type::material});
     return true;
   } else if (type == "environments2") {
-    make_test(scene,
-        {test_cameras_type::standard, test_environments_type::sunsky,
-            test_arealights_type::none, test_floor_type::standard,
-            test_shapes_type::bunny_sphere, test_materials_type::plastic_metal,
-            test_instance_name_type::material});
+    scene = make_test({test_cameras_type::standard,
+        test_environments_type::sunsky, test_arealights_type::none,
+        test_floor_type::standard, test_shapes_type::bunny_sphere,
+        test_materials_type::plastic_metal, test_instance_name_type::material});
     return true;
   } else if (type == "arealights1") {
-    make_test(scene,
-        {test_cameras_type::standard, test_environments_type::none,
-            test_arealights_type::standard, test_floor_type::standard,
-            test_shapes_type::bunny_sphere, test_materials_type::plastic_metal,
-            test_instance_name_type::material});
+    scene = make_test({test_cameras_type::standard,
+        test_environments_type::none, test_arealights_type::standard,
+        test_floor_type::standard, test_shapes_type::bunny_sphere,
+        test_materials_type::plastic_metal, test_instance_name_type::material});
     return true;
   } else {
     error = "unknown preset";
     return false;
   }
-  return true;
 }
 
 }  // namespace yocto
@@ -2301,146 +2122,148 @@ bool make_scene_preset(scene_data& scene, const string& type, string& error) {
 namespace yocto {
 
 // Load/save a scene in the builtin JSON format.
-static bool load_json_scene(
-    const string& filename, scene_data& scene, string& error, bool noparallel);
-static bool save_json_scene(const string& filename, const scene_data& scene,
-    string& error, bool noparallel);
+static void load_json_scene(
+    const string& filename, scene_data& scene, bool noparallel);
+static void save_json_scene(
+    const string& filename, const scene_data& scene, bool noparallel);
 
 // Load/save a scene from/to OBJ.
-static bool load_obj_scene(
-    const string& filename, scene_data& scene, string& error, bool noparallel);
-static bool save_obj_scene(const string& filename, const scene_data& scene,
-    string& error, bool noparallel);
+static void load_obj_scene(
+    const string& filename, scene_data& scene, bool noparallel);
+static void save_obj_scene(
+    const string& filename, const scene_data& scene, bool noparallel);
 
 // Load/save a scene from/to PLY. Loads/saves only one mesh with no other data.
-static bool load_ply_scene(
-    const string& filename, scene_data& scene, string& error, bool noparallel);
-static bool save_ply_scene(const string& filename, const scene_data& scene,
-    string& error, bool noparallel);
+static void load_ply_scene(
+    const string& filename, scene_data& scene, bool noparallel);
+static void save_ply_scene(
+    const string& filename, const scene_data& scene, bool noparallel);
 
 // Load/save a scene from/to STL. Loads/saves only one mesh with no other data.
-static bool load_stl_scene(
-    const string& filename, scene_data& scene, string& error, bool noparallel);
-static bool save_stl_scene(const string& filename, const scene_data& scene,
-    string& error, bool noparallel);
+static void load_stl_scene(
+    const string& filename, scene_data& scene, bool noparallel);
+static void save_stl_scene(
+    const string& filename, const scene_data& scene, bool noparallel);
 
 // Load/save a scene from/to glTF.
-static bool load_gltf_scene(
-    const string& filename, scene_data& scene, string& error, bool noparallel);
-static bool save_gltf_scene(const string& filename, const scene_data& scene,
-    string& error, bool noparallel);
+static void load_gltf_scene(
+    const string& filename, scene_data& scene, bool noparallel);
+static void save_gltf_scene(
+    const string& filename, const scene_data& scene, bool noparallel);
 
 // Load/save a scene from/to pbrt-> This is not robust at all and only
 // works on scene that have been previously adapted since the two renderers
 // are too different to match.
-static bool load_pbrt_scene(
-    const string& filename, scene_data& scene, string& error, bool noparallel);
-static bool save_pbrt_scene(const string& filename, const scene_data& scene,
-    string& error, bool noparallel);
+static void load_pbrt_scene(
+    const string& filename, scene_data& scene, bool noparallel);
+static void save_pbrt_scene(
+    const string& filename, const scene_data& scene, bool noparallel);
 
-// Load/save a scene preset.
-static bool load_preset_scene(
-    const string& filename, scene_data& scene, string& error, bool noparallel);
+// Load a scene
+void load_scene(const string& filename, scene_data& scene, bool noparallel) {
+  auto ext = path_extension(filename);
+  if (ext == ".json" || ext == ".JSON") {
+    return load_json_scene(filename, scene, noparallel);
+  } else if (ext == ".obj" || ext == ".OBJ") {
+    return load_obj_scene(filename, scene, noparallel);
+  } else if (ext == ".gltf" || ext == ".GLTF") {
+    return load_gltf_scene(filename, scene, noparallel);
+  } else if (ext == ".pbrt" || ext == ".PBRT") {
+    return load_pbrt_scene(filename, scene, noparallel);
+  } else if (ext == ".ply" || ext == ".PLY") {
+    return load_ply_scene(filename, scene, noparallel);
+  } else if (ext == ".stl" || ext == ".STL") {
+    return load_stl_scene(filename, scene, noparallel);
+  } else if (ext == ".ypreset" || ext == ".YPRESET") {
+    scene = make_scene_preset(path_basename(filename));
+  } else {
+    throw io_error::format_error(filename);
+  }
+}
+
+// Save a scene
+void save_scene(
+    const string& filename, const scene_data& scene, bool noparallel) {
+  auto ext = path_extension(filename);
+  if (ext == ".json" || ext == ".JSON") {
+    return save_json_scene(filename, scene, noparallel);
+  } else if (ext == ".obj" || ext == ".OBJ") {
+    return save_obj_scene(filename, scene, noparallel);
+  } else if (ext == ".pbrt" || ext == ".PBRT") {
+    return save_pbrt_scene(filename, scene, noparallel);
+  } else if (ext == ".gltf" || ext == ".GLTF") {
+    return save_gltf_scene(filename, scene, noparallel);
+  } else if (ext == ".ply" || ext == ".PLY") {
+    return save_ply_scene(filename, scene, noparallel);
+  } else if (ext == ".stl" || ext == ".STL") {
+    return save_stl_scene(filename, scene, noparallel);
+  } else {
+    throw io_error::format_error(filename);
+  }
+}
 
 // Load a scene
 bool load_scene(
     const string& filename, scene_data& scene, string& error, bool noparallel) {
-  auto format_error = [filename, &error]() {
-    error = filename + ": unknown format";
+  try {
+    load_scene(filename, scene, noparallel);
+    return true;
+  } catch (io_error& exception) {
+    error = exception.what();
     return false;
-  };
-
-  auto ext = path_extension(filename);
-  if (ext == ".json" || ext == ".JSON") {
-    return load_json_scene(filename, scene, error, noparallel);
-  } else if (ext == ".obj" || ext == ".OBJ") {
-    return load_obj_scene(filename, scene, error, noparallel);
-  } else if (ext == ".gltf" || ext == ".GLTF") {
-    return load_gltf_scene(filename, scene, error, noparallel);
-  } else if (ext == ".pbrt" || ext == ".PBRT") {
-    return load_pbrt_scene(filename, scene, error, noparallel);
-  } else if (ext == ".ply" || ext == ".PLY") {
-    return load_ply_scene(filename, scene, error, noparallel);
-  } else if (ext == ".stl" || ext == ".STL") {
-    return load_stl_scene(filename, scene, error, noparallel);
-  } else if (ext == ".ypreset" || ext == ".YPRESET") {
-    return load_preset_scene(filename, scene, error, noparallel);
-  } else {
-    return format_error();
   }
 }
 
 // Save a scene
 bool save_scene(const string& filename, const scene_data& scene, string& error,
     bool noparallel) {
-  auto format_error = [filename, &error]() {
-    error = filename + ": unknown format";
+  try {
+    save_scene(filename, scene, noparallel);
+    return true;
+  } catch (io_error& exception) {
+    error = exception.what();
     return false;
-  };
-
-  auto ext = path_extension(filename);
-  if (ext == ".json" || ext == ".JSON") {
-    return save_json_scene(filename, scene, error, noparallel);
-  } else if (ext == ".obj" || ext == ".OBJ") {
-    return save_obj_scene(filename, scene, error, noparallel);
-  } else if (ext == ".pbrt" || ext == ".PBRT") {
-    return save_pbrt_scene(filename, scene, error, noparallel);
-  } else if (ext == ".gltf" || ext == ".GLTF") {
-    return save_gltf_scene(filename, scene, error, noparallel);
-  } else if (ext == ".ply" || ext == ".PLY") {
-    return save_ply_scene(filename, scene, error, noparallel);
-  } else if (ext == ".stl" || ext == ".STL") {
-    return save_stl_scene(filename, scene, error, noparallel);
-  } else {
-    return format_error();
   }
 }
 
-// Load/save a scene preset.
-static bool load_preset_scene(
-    const string& filename, scene_data& scene, string& error, bool noparallel) {
-  auto preset_error = [filename, &error]() {
-    error = filename + ": " + error;
-    return false;
-  };
+// Make missing scene directories
+void make_scene_directories(const string& filename, const scene_data& scene) {
+  // make a directory if needed
+  make_directory(path_dirname(filename));
+  if (!scene.shapes.empty())
+    make_directory(path_join(path_dirname(filename), "shapes"));
+  if (!scene.textures.empty())
+    make_directory(path_join(path_dirname(filename), "textures"));
+}
 
-  // make preset
-  if (!make_scene_preset(scene, path_basename(filename), error))
-    return preset_error();
-
-  // done
-  return true;
+// Add environment
+void add_environment(scene_data& scene, const string& filename) {
+  scene.textures.push_back(load_texture(filename));
+  scene.environments.push_back(
+      {identity3x4f, {1, 1, 1}, (int)scene.textures.size() - 1});
 }
 
 // Make missing scene directories
 bool make_scene_directories(
     const string& filename, const scene_data& scene, string& error) {
-  // make a directory if needed
-  if (!make_directory(path_dirname(filename), error)) return false;
-  if (!scene.shapes.empty()) {
-    if (!make_directory(path_join(path_dirname(filename), "shapes"), error))
-      return false;
+  try {
+    make_scene_directories(filename, scene);
+    return true;
+  } catch (io_error& exception) {
+    error = exception.what();
+    return false;
   }
-  if (!scene.textures.empty()) {
-    if (!make_directory(path_join(path_dirname(filename), "textures"), error))
-      return false;
-  }
-  return true;
 }
 
 // Add environment
 bool add_environment(scene_data& scene, const string& filename, string& error) {
-  // load texture
-  auto& texture = scene.textures.emplace_back();
-  if (!load_texture(filename, texture, error)) return false;
-
-  // create envirironment
-  auto& environment        = scene.environments.emplace_back();
-  environment.emission     = {1, 1, 1};
-  environment.emission_tex = (int)scene.textures.size() - 1;
-
-  // done
-  return true;
+  try {
+    add_environment(scene, filename);
+    return true;
+  } catch (io_error& exception) {
+    error = exception.what();
+    return false;
+  }
 }
 
 }  // namespace yocto
@@ -2451,33 +2274,22 @@ bool add_environment(scene_data& scene, const string& filename, string& error) {
 namespace yocto {
 
 // load instances
-static bool load_instance(
-    const string& filename, vector<frame3f>& frames, string& error) {
-  auto format_error = [filename, &error]() {
-    error = filename + ": unknown format";
-    return false;
-  };
+static void load_instance(const string& filename, vector<frame3f>& frames) {
   auto ext = path_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
-    auto ply = ply_model{};
-    if (!load_ply(filename, ply, error)) return false;
+    auto ply = load_ply(filename);
     get_values(ply, "instance",
         {"xx", "xy", "xz", "yx", "yy", "yz", "zx", "zy", "zz", "ox", "oy",
             "oz"},
         frames);
-    return true;
   } else {
-    return format_error();
+    io_error::format_error(filename);
   }
 }
 
 // save instances
-bool save_instance(const string& filename, const vector<frame3f>& frames,
-    string& error, bool ascii = false) {
-  auto format_error = [filename, &error]() {
-    error = filename + ": unknown format";
-    return false;
-  };
+[[maybe_unused]] static void save_instance(
+    const string& filename, const vector<frame3f>& frames, bool ascii = false) {
   auto ext = path_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     auto ply = ply_model{};
@@ -2485,28 +2297,31 @@ bool save_instance(const string& filename, const vector<frame3f>& frames,
         {"xx", "xy", "xz", "yx", "yy", "yz", "zx", "zy", "zz", "ox", "oy",
             "oz"},
         frames);
-    return save_ply(filename, ply, error);
+    save_ply(filename, ply);
   } else {
-    return format_error();
+    throw io_error::format_error(filename);
   }
 }
 
 // load subdiv
-bool load_subdiv(const string& filename, subdiv_data& subdiv, string& error) {
+subdiv_data load_subdiv(const string& filename) {
+  auto subdiv = subdiv_data{};
+  load_subdiv(filename, subdiv);
+  return subdiv;
+}
+void load_subdiv(const string& filename, subdiv_data& subdiv) {
   auto lsubdiv = fvshape_data{};
-  if (!load_fvshape(filename, lsubdiv, error, true)) return false;
+  load_fvshape(filename, lsubdiv, true);
   subdiv.quadspos      = lsubdiv.quadspos;
   subdiv.quadsnorm     = lsubdiv.quadsnorm;
   subdiv.quadstexcoord = lsubdiv.quadstexcoord;
   subdiv.positions     = lsubdiv.positions;
   subdiv.normals       = lsubdiv.normals;
   subdiv.texcoords     = lsubdiv.texcoords;
-  return true;
 }
 
 // save subdiv
-bool save_subdiv(
-    const string& filename, const subdiv_data& subdiv, string& error) {
+void save_subdiv(const string& filename, const subdiv_data& subdiv) {
   auto ssubdiv          = fvshape_data{};
   ssubdiv.quadspos      = subdiv.quadspos;
   ssubdiv.quadsnorm     = subdiv.quadsnorm;
@@ -2514,116 +2329,44 @@ bool save_subdiv(
   ssubdiv.positions     = subdiv.positions;
   ssubdiv.normals       = subdiv.normals;
   ssubdiv.texcoords     = subdiv.texcoords;
-  return save_fvshape(filename, ssubdiv, error, true);
+  save_fvshape(filename, ssubdiv, true);
 }
 
-// save binary shape
-static bool save_binshape(
-    const string& filename, const shape_data& shape, string& error) {
-  auto open_error = [filename, &error]() {
-    error = filename + ": file not found";
-    return false;
-  };
-  auto write_error = [filename, &error]() {
-    error = filename + ": write error";
-    return false;
-  };
-
-  auto write_values = [](FILE* fs, const auto& values) -> bool {
-    return fwrite(values.data(), sizeof(values.front()), values.size(), fs) ==
-           values.size();
-  };
-
-  auto fs       = fopen_utf8(filename.c_str(), "wb");
-  auto fs_guard = unique_ptr<FILE, int (*)(FILE*)>(fs, &fclose);
-  if (!fs) return open_error();
-
-  if (!write_values(fs, shape.positions)) return write_error();
-  if (!write_values(fs, shape.normals)) return write_error();
-  if (!write_values(fs, shape.texcoords)) return write_error();
-  if (!write_values(fs, shape.colors)) return write_error();
-  if (!write_values(fs, shape.radius)) return write_error();
-  if (!write_values(fs, shape.points)) return write_error();
-  if (!write_values(fs, shape.lines)) return write_error();
-  if (!write_values(fs, shape.triangles)) return write_error();
-  if (!write_values(fs, quads_to_triangles(shape.quads))) return write_error();
-
-  return true;
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// JSON SUPPORT
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-using njson = nlohmann::json;
-using std::array;
-
-// load/save json
-[[maybe_unused]] static bool load_json(
-    const string& filename, njson& json, string& error) {
-  // error helpers
-  auto parse_error = [filename, &error]() {
-    error = filename + ": parse error in json";
-    return false;
-  };
-  auto text = ""s;
-  if (!load_text(filename, text, error)) return false;
+// load subdiv
+bool load_subdiv(const string& filename, subdiv_data& subdiv, string& error) {
   try {
-    json = njson::parse(text);
+    load_subdiv(filename, subdiv);
     return true;
-  } catch (std::exception&) {
-    return parse_error();
+  } catch (io_error& exception) {
+    error = exception.what();
+    return false;
   }
 }
 
-[[maybe_unused]] static bool save_json(
-    const string& filename, const njson& json, string& error) {
-  return save_text(filename, json.dump(2), error);
+// save subdiv
+bool save_subdiv(
+    const string& filename, const subdiv_data& subdiv, string& error) {
+  try {
+    save_subdiv(filename, subdiv);
+    return true;
+  } catch (io_error& exception) {
+    error = exception.what();
+    return false;
+  }
 }
 
-// support for json conversions
-inline void to_json(njson& j, const vec3f& value) {
-  nlohmann::to_json(j, (const array<float, 3>&)value);
-}
-inline void to_json(njson& j, const vec4f& value) {
-  nlohmann::to_json(j, (const array<float, 4>&)value);
-}
-inline void to_json(njson& j, const frame3f& value) {
-  nlohmann::to_json(j, (const array<float, 12>&)value);
-}
-inline void to_json(njson& j, const mat4f& value) {
-  nlohmann::to_json(j, (const array<float, 16>&)value);
-}
-
-inline void from_json(const njson& j, vec3f& value) {
-  nlohmann::from_json(j, (array<float, 3>&)value);
-}
-inline void from_json(const njson& j, vec4f& value) {
-  nlohmann::from_json(j, (array<float, 4>&)value);
-}
-inline void from_json(const njson& j, mat3f& value) {
-  nlohmann::from_json(j, (array<float, 9>&)value);
-}
-inline void from_json(const njson& j, frame3f& value) {
-  nlohmann::from_json(j, (array<float, 12>&)value);
-}
-inline void from_json(const njson& j, mat4f& value) {
-  nlohmann::from_json(j, (array<float, 16>&)value);
-}
-
-inline void to_json(njson& j, material_type value) {
-  j = material_type_names.at((int)value);
-}
-inline void from_json(const njson& j, material_type& value) {
-  auto values = j.get<string>();
-  auto pos    = std::find(
-      material_type_names.begin(), material_type_names.end(), values);
-  if (pos == material_type_names.end())
-    throw std::invalid_argument{"unknown value"};
-  value = (material_type)(pos - material_type_names.begin());
+// save binary shape
+static void save_binshape(const string& filename, const shape_data& shape) {
+  auto fs = open_file(filename, "wb");
+  write_values(fs, shape.positions);
+  write_values(fs, shape.normals);
+  write_values(fs, shape.texcoords);
+  write_values(fs, shape.colors);
+  write_values(fs, shape.radius);
+  write_values(fs, shape.points);
+  write_values(fs, shape.lines);
+  write_values(fs, shape.triangles);
+  write_values(fs, quads_to_triangles(shape.quads));
 }
 
 }  // namespace yocto
@@ -2633,109 +2376,86 @@ inline void from_json(const njson& j, material_type& value) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// Json specializations
+template <>
+struct json_enum_trait<material_type> {
+  static const vector<string>& labels() { return material_type_names; }
+};
+
 // Load a scene in the builtin JSON format.
-static bool load_json_scene(
-    const string& filename, scene_data& scene, string& error, bool noparallel) {
-  auto json_error = [filename]() {
-    // error does not need setting
-    return false;
-  };
-  auto parse_error = [filename, &error](const string& patha,
-                         const string& pathb = "", const string& pathc = "") {
+static void load_json_scene(
+    const string& filename, scene_data& scene, bool noparallel) {
+  auto parse_error = [filename](const string& patha, const string& pathb = "",
+                         const string& pathc = "") {
     auto path = patha;
     if (!pathb.empty()) path += "/" + pathb;
     if (!pathc.empty()) path += "/" + pathc;
-    error = filename + ": parse error at " + path;
-    return false;
+    throw io_error(filename, "parse error at " + path);
   };
-  auto key_error = [filename, &error](const string& patha,
-                       const string& pathb = "", const string& pathc = "") {
+  auto key_error = [filename](const string& patha, const string& pathb = "",
+                       const string& pathc = "") {
     auto path = patha;
     if (!pathb.empty()) path += "/" + pathb;
     if (!pathc.empty()) path += "/" + pathc;
-    error = filename + ": unknow key at " + path;
-    return false;
-  };
-  auto material_error = [filename, &error](const string& name) {
-    error = filename + ": missing material " + string{name};
-    return false;
-  };
-  auto dependent_error = [filename, &error]() {
-    error = filename + ": error in " + error;
-    return false;
+    throw io_error(filename, "unknow key at " + path);
   };
 
   // open file
-  auto js = njson{};
-  if (!load_json(filename, js, error)) return json_error();
+  auto js = load_json(filename);
 
   // parse json value
-  auto get_value = [](const njson& js, auto& value) -> bool {
-    try {
-      value = js;
-      return true;
-    } catch (...) {
-      return false;
-    }
+  auto get_opt = [](const json_value& js, const string& key, auto& value) {
+    value = js.value(key, value);
   };
 
   // parse json reference
   auto shape_map = unordered_map<string, int>{};
-  auto get_shape = [&scene, &shape_map, &get_value](
-                       const njson& js, int& value) -> bool {
-    auto name = ""s;
-    if (!get_value(js, name)) return false;
+  auto get_shp   = [&scene, &shape_map](
+                     const json_value& js, const string& key, int& value) {
+    auto name = js.value(key, string{});
+    if (name.empty()) return;
     auto it = shape_map.find(name);
     if (it != shape_map.end()) {
       value = it->second;
-      return true;
+    } else {
+      scene.shape_names.emplace_back(name);
+      scene.shapes.emplace_back();
+      auto shape_id   = (int)scene.shapes.size() - 1;
+      shape_map[name] = shape_id;
+      value           = shape_id;
     }
-    scene.shape_names.emplace_back(name);
-    scene.shapes.emplace_back();
-    auto shape_id   = (int)scene.shapes.size() - 1;
-    shape_map[name] = shape_id;
-    value           = shape_id;
-    return true;
   };
 
   // parse json reference
   auto material_map = unordered_map<string, int>{};
-  auto material_set = vector<bool>{};
-  auto get_material = [&scene, &material_map, &material_set, &get_value](
-                          const njson& js, int& value) -> bool {
-    auto name = ""s;
-    if (!get_value(js, name)) return false;
+  auto get_mat      = [&material_map](
+                     const json_value& js, const string& key, int& value) {
+    auto name = js.value(key, string{});
+    if (name.empty()) return;
     auto it = material_map.find(name);
     if (it != material_map.end()) {
       value = it->second;
-      return true;
+    } else {
+      throw std::out_of_range{"missing key"};
     }
-    scene.material_names.emplace_back(name);
-    scene.materials.emplace_back();
-    auto material_id   = (int)scene.materials.size() - 1;
-    material_map[name] = material_id;
-    value              = material_id;
-    material_set.push_back(false);
-    return true;
   };
 
   // parse json reference
   auto texture_map = unordered_map<string, int>{};
-  auto get_texture = [&scene, &texture_map, &get_value](
-                         const njson& js, int& value) -> bool {
-    auto name = ""s;
-    if (!get_value(js, name)) return false;
+  auto get_tex     = [&scene, &texture_map](
+                     const json_value& js, const string& key, int& value) {
+    auto name = js.value(key, string{});
+    if (name.empty()) return;
     auto it = texture_map.find(name);
     if (it != texture_map.end()) {
       value = it->second;
-      return true;
+    } else {
+      scene.texture_names.emplace_back(name);
+      scene.textures.emplace_back();
+      auto texture_id   = (int)scene.textures.size() - 1;
+      texture_map[name] = texture_id;
+      value             = texture_id;
     }
-    scene.texture_names.emplace_back(name);
-    scene.textures.emplace_back();
-    auto texture_id   = (int)scene.textures.size() - 1;
-    texture_map[name] = texture_id;
-    value             = texture_id;
-    return true;
   };
 
   // load json instance
@@ -2747,26 +2467,23 @@ static bool load_json_scene(
   auto ply_instances_names  = vector<string>{};
   auto ply_instance_map     = unordered_map<string, ply_instance_handle>{
       {"", invalidid}};
-  auto instance_ply      = unordered_map<int, ply_instance_handle>{};
-  auto get_ply_instances = [&scene, &ply_instances, &ply_instances_names,
-                               &ply_instance_map, &instance_ply,
-                               &get_value](const njson& js,
-                               const instance_data&     instance) -> bool {
-    auto name = ""s;
-    if (!get_value(js, name)) return false;
-    if (name.empty()) return true;
+  auto instance_ply = unordered_map<int, ply_instance_handle>{};
+  auto get_ist      = [&scene, &ply_instances, &ply_instances_names,
+                     &ply_instance_map, &instance_ply](const json_value& js,
+                     const string& key, const instance_data& instance) {
+    auto name = js.value(key, string{});
+    if (name.empty()) return;
     auto instance_id = (int)(&instance - scene.instances.data());
     auto it          = ply_instance_map.find(name);
     if (it != ply_instance_map.end()) {
       instance_ply[instance_id] = it->second;
-      return true;
+    } else {
+      ply_instances_names.emplace_back(name);
+      ply_instances.emplace_back(ply_instance());
+      auto ply_instance_id      = (int)ply_instances.size() - 1;
+      ply_instance_map[name]    = ply_instance_id;
+      instance_ply[instance_id] = ply_instance_id;
     }
-    ply_instances_names.emplace_back(name);
-    ply_instances.emplace_back(ply_instance());
-    auto ply_instance_id      = (int)ply_instances.size() - 1;
-    ply_instance_map[name]    = ply_instance_id;
-    instance_ply[instance_id] = ply_instance_id;
-    return true;
   };
   auto get_ply_instance_name = [&ply_instances, &ply_instances_names](
                                    const scene_data&   scene,
@@ -2774,224 +2491,113 @@ static bool load_json_scene(
     return ply_instances_names[&instance - ply_instances.data()];
   };
 
-  // helper for iteration
-  auto iterate_object = [](const njson& js) { return js.items(); };
-  auto check_object   = [](const njson& js) { return js.is_object(); };
-
-  // loop over external dictionaries
-  for (auto& [gname, group] : iterate_object(js)) {
-    if (gname == "asset") {
-      if (!check_object(group)) return parse_error(gname);
-      for (auto& [key, value] : iterate_object(group)) {
-        if (key == "copyright") {
-          if (!get_value(value, scene.copyright))
-            return parse_error(gname, key);
-        } else if (key == "generator") {
-          // skip
-        } else {
-          return key_error(gname, key);
-        }
-      }
-    } else if (gname == "cameras") {
-      if (!check_object(group)) return parse_error(gname);
-      for (auto& [name, element] : iterate_object(group)) {
-        if (!check_object(element)) return parse_error(gname, name);
-        scene.camera_names.emplace_back(name);
-        auto& camera = scene.cameras.emplace_back();
-        for (auto& [key, value] : iterate_object(element)) {
-          if (key == "frame") {
-            if (!get_value(value, camera.frame))
-              return parse_error(gname, name, key);
-          } else if (key == "orthographic") {
-            if (!get_value(value, camera.orthographic))
-              return parse_error(gname, name, key);
-          } else if (key == "ortho") {
-            // backward compatibility
-            if (!get_value(value, camera.orthographic))
-              return parse_error(gname, name, key);
-          } else if (key == "lens") {
-            if (!get_value(value, camera.lens))
-              return parse_error(gname, name, key);
-          } else if (key == "aspect") {
-            if (!get_value(value, camera.aspect))
-              return parse_error(gname, name, key);
-          } else if (key == "film") {
-            if (!get_value(value, camera.film))
-              return parse_error(gname, name, key);
-          } else if (key == "focus") {
-            if (!get_value(value, camera.focus))
-              return parse_error(gname, name, key);
-          } else if (key == "aperture") {
-            if (!get_value(value, camera.aperture))
-              return parse_error(gname, name, key);
-          } else if (key == "lookat") {
-            if (!get_value(value, (mat3f&)camera.frame))
-              return parse_error(gname, name, key);
-            camera.focus = length(camera.frame.x - camera.frame.y);
-            camera.frame = lookat_frame(
-                camera.frame.x, camera.frame.y, camera.frame.z);
-          } else {
-            return key_error(gname, name, key);
-          }
-        }
-      }
-    } else if (gname == "environments") {
-      if (!check_object(group)) return parse_error(gname);
-      for (auto& [name, element] : iterate_object(group)) {
-        if (!check_object(element)) return parse_error(gname, name);
-        scene.environment_names.emplace_back(name);
-        auto& environment = scene.environments.emplace_back();
-        for (auto& [key, value] : iterate_object(element)) {
-          if (key == "frame") {
-            if (!get_value(value, environment.frame))
-              return parse_error(gname, name, key);
-          } else if (key == "emission") {
-            if (!get_value(value, environment.emission))
-              return parse_error(gname, name, key);
-          } else if (key == "emission_tex") {
-            if (!get_texture(value, environment.emission_tex))
-              return parse_error(gname, name, key);
-          } else if (key == "lookat") {
-            if (!get_value(value, (mat3f&)environment.frame))
-              return parse_error(gname, name, key);
-            environment.frame = lookat_frame(environment.frame.x,
-                environment.frame.y, environment.frame.z, true);
-          } else {
-            return key_error(gname, name, key);
-          }
-        }
-      }
-    } else if (gname == "materials") {
-      if (!check_object(group)) return parse_error(gname);
-      for (auto& [name, element] : iterate_object(group)) {
-        if (!check_object(element)) return parse_error(gname, name);
-        if (material_map.find(name) == material_map.end()) {
-          scene.material_names.emplace_back(name);
-          scene.materials.emplace_back();
-          material_map[name] = (int)scene.materials.size() - 1;
-          material_set.push_back(false);
-        }
-        auto& material = scene.materials.at(material_map.at(name));
-        material_set[&material - &scene.materials.front()] = true;
-        for (auto& [key, value] : iterate_object(element)) {
-          if (key == "type") {
-            if (!get_value(value, material.type))
-              return parse_error(gname, name, key);
-          } else if (key == "emission") {
-            if (!get_value(value, material.emission))
-              return parse_error(gname, name, key);
-          } else if (key == "color") {
-            if (!get_value(value, material.color))
-              return parse_error(gname, name, key);
-          } else if (key == "metallic") {
-            if (!get_value(value, material.metallic))
-              return parse_error(gname, name, key);
-          } else if (key == "roughness") {
-            if (!get_value(value, material.roughness))
-              return parse_error(gname, name, key);
-          } else if (key == "ior") {
-            if (!get_value(value, material.ior))
-              return parse_error(gname, name, key);
-          } else if (key == "trdepth") {
-            if (!get_value(value, material.trdepth))
-              return parse_error(gname, name, key);
-          } else if (key == "scattering") {
-            if (!get_value(value, material.scattering))
-              return parse_error(gname, name, key);
-          } else if (key == "scanisotropy") {
-            if (!get_value(value, material.scanisotropy))
-              return parse_error(gname, name, key);
-          } else if (key == "opacity") {
-            if (!get_value(value, material.opacity))
-              return parse_error(gname, name, key);
-          } else if (key == "emission_tex") {
-            if (!get_texture(value, material.emission_tex))
-              return parse_error(gname, name, key);
-          } else if (key == "color_tex") {
-            if (!get_texture(value, material.color_tex))
-              return parse_error(gname, name, key);
-          } else if (key == "roughness_tex") {
-            if (!get_texture(value, material.roughness_tex))
-              return parse_error(gname, name, key);
-          } else if (key == "scattering_tex") {
-            if (!get_texture(value, material.scattering_tex))
-              return parse_error(gname, name, key);
-          } else if (key == "normal_tex") {
-            if (!get_texture(value, material.normal_tex))
-              return parse_error(gname, name, key);
-          } else {
-            return key_error(gname, name, key);
-          }
-        }
-      }
-    } else if (gname == "instances" || gname == "objects") {
-      if (!check_object(group)) return parse_error(gname);
-      for (auto& [name, element] : iterate_object(group)) {
-        if (!check_object(element)) return parse_error(gname, name);
-        scene.instance_names.emplace_back(name);
-        auto& instance = scene.instances.emplace_back();
-        for (auto [key, value] : iterate_object(element)) {
-          if (key == "frame") {
-            if (!get_value(value, instance.frame))
-              return parse_error(gname, name, key);
-          } else if (key == "lookat") {
-            if (!get_value(value, (mat3f&)instance.frame))
-              return parse_error(gname, name, key);
-            instance.frame = lookat_frame(
-                instance.frame.x, instance.frame.y, instance.frame.z, true);
-          } else if (key == "material") {
-            if (!get_material(value, instance.material))
-              return parse_error(gname, name, key);
-          } else if (key == "shape") {
-            if (!get_shape(value, instance.shape))
-              return parse_error(gname, name, key);
-          } else if (key == "instance") {
-            if (!get_ply_instances(value, instance))
-              return parse_error(gname, name, key);
-          } else {
-            return key_error(gname, name, key);
-          }
-        }
-      }
-    } else if (gname == "subdivs") {
-      if (!check_object(group)) return parse_error(gname);
-      for (auto& [name, element] : iterate_object(group)) {
-        if (!check_object(element)) return parse_error(gname, name);
-        scene.subdiv_names.emplace_back(name);
-        auto& subdiv = scene.subdivs.emplace_back();
-        for (auto& [key, value] : iterate_object(element)) {
-          if (key == "shape") {
-            if (!get_shape(value, subdiv.shape))
-              return parse_error(gname, name, key);
-          } else if (key == "subdivisions") {
-            if (!get_value(value, subdiv.subdivisions))
-              return parse_error(gname, name, key);
-          } else if (key == "catmullcark") {
-            if (!get_value(value, subdiv.catmullclark))
-              return parse_error(gname, name, key);
-          } else if (key == "smooth") {
-            if (!get_value(value, subdiv.smooth))
-              return parse_error(gname, name, key);
-          } else if (key == "displacement") {
-            if (!get_value(value, subdiv.displacement))
-              return parse_error(gname, name, key);
-          } else if (key == "displacement_tex") {
-            if (!get_texture(value, subdiv.displacement_tex))
-              return parse_error(gname, name, key);
-          } else {
-            return key_error(gname, name, key);
-          }
-        }
-      }
-    } else {
-      return key_error(gname);
+  // parsing values
+  try {
+    if (js.contains("asset")) {
+      auto& element = js.at("asset");
+      get_opt(element, "copyright", scene.copyright);
     }
-  }
-
-  // check materials
-  for (auto& material : scene.materials) {
-    if (!material_set[&material - &scene.materials.front()])
-      return material_error(get_material_name(scene, material));
+    if (js.contains("cameras")) {
+      for (auto& [key, element] : js.at("cameras").items()) {
+        auto& camera = scene.cameras.emplace_back();
+        scene.camera_names.emplace_back(key);
+        get_opt(element, "frame", camera.frame);
+        get_opt(element, "orthographic", camera.orthographic);
+        get_opt(element, "ortho", camera.orthographic);
+        get_opt(element, "lens", camera.lens);
+        get_opt(element, "aspect", camera.aspect);
+        get_opt(element, "film", camera.film);
+        get_opt(element, "focus", camera.focus);
+        get_opt(element, "aperture", camera.aperture);
+        if (element.contains("lookat")) {
+          get_opt(element, "lookat", (mat3f&)camera.frame);
+          camera.focus = length(camera.frame.x - camera.frame.y);
+          camera.frame = lookat_frame(
+              camera.frame.x, camera.frame.y, camera.frame.z);
+        }
+      }
+    }
+    if (js.contains("environments")) {
+      for (auto& [key, element] : js.at("environments").items()) {
+        auto& environment = scene.environments.emplace_back();
+        scene.environment_names.emplace_back(key);
+        get_opt(element, "frame", environment.frame);
+        get_opt(element, "emission", environment.emission);
+        get_tex(element, "emission_tex", environment.emission_tex);
+        if (element.contains("lookat")) {
+          get_opt(element, "lookat", (mat3f&)environment.frame);
+          environment.frame = lookat_frame(environment.frame.x,
+              environment.frame.y, environment.frame.z, false);
+        }
+      }
+    }
+    if (js.contains("materials")) {
+      for (auto& [key, element] : js.at("materials").items()) {
+        auto& material = scene.materials.emplace_back();
+        scene.material_names.emplace_back(key);
+        material_map[key] = (int)scene.materials.size() - 1;
+        get_opt(element, "type", material.type);
+        get_opt(element, "emission", material.emission);
+        get_opt(element, "color", material.color);
+        get_opt(element, "metallic", material.metallic);
+        get_opt(element, "roughness", material.roughness);
+        get_opt(element, "ior", material.ior);
+        get_opt(element, "trdepth", material.trdepth);
+        get_opt(element, "scattering", material.scattering);
+        get_opt(element, "scanisotropy", material.scanisotropy);
+        get_opt(element, "opacity", material.opacity);
+        get_tex(element, "emission_tex", material.emission_tex);
+        get_tex(element, "color_tex", material.color_tex);
+        get_tex(element, "roughness_tex", material.roughness_tex);
+        get_tex(element, "scattering_tex", material.scattering_tex);
+        get_tex(element, "normal_tex", material.normal_tex);
+      }
+    }
+    if (js.contains("instances")) {
+      for (auto& [key, element] : js.at("instances").items()) {
+        auto& instance = scene.instances.emplace_back();
+        scene.instance_names.emplace_back(key);
+        get_opt(element, "frame", instance.frame);
+        get_shp(element, "shape", instance.shape);
+        get_mat(element, "material", instance.material);
+        if (element.contains("lookat")) {
+          get_opt(element, "lookat", (mat3f&)instance.frame);
+          instance.frame = lookat_frame(
+              instance.frame.x, instance.frame.y, instance.frame.z, false);
+        }
+      }
+    }
+    if (js.contains("objects")) {
+      for (auto& [key, element] : js.at("objects").items()) {
+        auto& instance = scene.instances.emplace_back();
+        scene.instance_names.emplace_back(key);
+        get_opt(element, "frame", instance.frame);
+        get_shp(element, "shape", instance.shape);
+        get_mat(element, "material", instance.material);
+        if (element.contains("lookat")) {
+          get_opt(element, "lookat", (mat3f&)instance.frame);
+          instance.frame = lookat_frame(
+              instance.frame.x, instance.frame.y, instance.frame.z, false);
+        }
+        if (element.contains("instance")) {
+          get_ist(element, "instance", instance);
+        }
+      }
+    }
+    if (js.contains("subdivs")) {
+      for (auto& [key, element] : js.at("subdivs").items()) {
+        auto& subdiv = scene.subdivs.emplace_back();
+        scene.subdiv_names.emplace_back(key);
+        get_shp(element, "shape", subdiv.shape);
+        get_opt(element, "subdivisions", subdiv.subdivisions);
+        get_opt(element, "catmullclark", subdiv.catmullclark);
+        get_opt(element, "smooth", subdiv.smooth);
+        get_opt(element, "displacement", subdiv.displacement);
+        get_opt(element, "displacement_tex", subdiv.displacement_tex);
+      }
+    }
+  } catch (...) {
+    throw io_error::parse_error(filename);
   }
 
   // dirname
@@ -3008,102 +2614,60 @@ static bool load_json_scene(
   };
 
   // load resources
-  if (noparallel) {
-    // load shapes
-    for (auto& shape : scene.shapes) {
-      auto path = find_path(
-          get_shape_name(scene, shape), "shapes", {".ply", ".obj"});
-      if (!load_shape(path_join(dirname, path), shape, error, true))
-        return dependent_error();
+  try {
+    if (noparallel) {
+      // load shapes
+      for (auto& shape : scene.shapes) {
+        auto path = find_path(
+            get_shape_name(scene, shape), "shapes", {".ply", ".obj"});
+        load_shape(path_join(dirname, path), shape, true);
+      }
+      // load subdivs
+      for (auto& subdiv : scene.subdivs) {
+        auto path = find_path(
+            get_subdiv_name(scene, subdiv), "subdivs", {".ply", ".obj"});
+        load_subdiv(path_join(dirname, path), subdiv);
+      }
+      // load textures
+      for (auto& texture : scene.textures) {
+        auto path = find_path(get_texture_name(scene, texture), "textures",
+            {".hdr", ".exr", ".png", ".jpg"});
+        load_texture(path_join(dirname, path), texture);
+      }
+      // load instances
+      for (auto& ply_instance : ply_instances) {
+        auto path = find_path(
+            get_ply_instance_name(scene, ply_instance), "instances", {".ply"});
+        load_instance(path_join(dirname, path), ply_instance.frames);
+      }
+    } else {
+      // load shapes
+      parallel_foreach(scene.shapes, [&](auto& shape) {
+        auto path = find_path(
+            get_shape_name(scene, shape), "shapes", {".ply", ".obj"});
+        load_shape(path_join(dirname, path), shape, true);
+      });
+      // load subdivs
+      parallel_foreach(scene.subdivs, [&](auto& subdiv) {
+        auto path = find_path(
+            get_subdiv_name(scene, subdiv), "subdivs", {".ply", ".obj"});
+        load_subdiv(path_join(dirname, path), subdiv);
+      });
+      // load textures
+      parallel_foreach(scene.textures, [&](auto& texture) {
+        auto path = find_path(get_texture_name(scene, texture), "textures",
+            {".hdr", ".exr", ".png", ".jpg"});
+        load_texture(path_join(dirname, path), texture);
+      });
+      // load instances
+      parallel_foreach(ply_instances, [&](auto& ply_instance) {
+        auto path = find_path(
+            get_ply_instance_name(scene, ply_instance), "instances", {".ply"});
+        load_instance(path_join(dirname, path), ply_instance.frames);
+      });
     }
-    // load subdivs
-    for (auto& subdiv : scene.subdivs) {
-      auto path = find_path(
-          get_subdiv_name(scene, subdiv), "subdivs", {".ply", ".obj"});
-      if (!load_subdiv(path_join(dirname, path), subdiv, error))
-        return dependent_error();
-    }
-    // load textures
-    for (auto& texture : scene.textures) {
-      auto path = find_path(get_texture_name(scene, texture), "textures",
-          {".hdr", ".exr", ".png", ".jpg"});
-      if (!load_texture(path_join(dirname, path), texture, error))
-        return dependent_error();
-    }
-    // load instances
-    for (auto& ply_instance : ply_instances) {
-      auto path = find_path(
-          get_ply_instance_name(scene, ply_instance), "instances", {".ply"});
-      if (!load_instance(path_join(dirname, path), ply_instance.frames, error))
-        return dependent_error();
-    }
-  } else {
-    // helpers
-    auto mutex = std::mutex{};
-    // load shapes
-    parallel_foreach(scene.shapes, [&](auto& shape) {
-      {
-        auto lock = std::lock_guard{mutex};
-        if (!error.empty()) return;
-      }
-      auto path = find_path(
-          get_shape_name(scene, shape), "shapes", {".ply", ".obj"});
-      auto err = string{};
-      if (!load_shape(path_join(dirname, path), shape, err, true)) {
-        auto lock = std::lock_guard{mutex};
-        error     = err;
-        return;
-      }
-    });
-    if (!error.empty()) return dependent_error();
-    // load subdivs
-    parallel_foreach(scene.subdivs, [&](auto& subdiv) {
-      {
-        auto lock = std::lock_guard{mutex};
-        if (!error.empty()) return;
-      }
-      auto path = find_path(
-          get_subdiv_name(scene, subdiv), "subdivs", {".ply", ".obj"});
-      auto err = string{};
-      if (!load_subdiv(path_join(dirname, path), subdiv, err)) {
-        auto lock = std::lock_guard{mutex};
-        error     = err;
-        return;
-      }
-    });
-    if (!error.empty()) return dependent_error();
-    // load textures
-    parallel_foreach(scene.textures, [&](auto& texture) {
-      {
-        auto lock = std::lock_guard{mutex};
-        if (!error.empty()) return;
-      }
-      auto path = find_path(get_texture_name(scene, texture), "textures",
-          {".hdr", ".exr", ".png", ".jpg"});
-      auto err  = string{};
-      if (!load_texture(path_join(dirname, path), texture, err)) {
-        auto lock = std::lock_guard{mutex};
-        error     = err;
-        return;
-      }
-    });
-    if (!error.empty()) return dependent_error();
-    // load instances
-    parallel_foreach(ply_instances, [&](auto& ply_instance) {
-      {
-        auto lock = std::lock_guard{mutex};
-        if (!error.empty()) return;
-      }
-      auto path = find_path(
-          get_ply_instance_name(scene, ply_instance), "instances", {".ply"});
-      auto err = string{};
-      if (!load_instance(path_join(dirname, path), ply_instance.frames, err)) {
-        auto lock = std::lock_guard{mutex};
-        error     = err;
-        return;
-      }
-    });
-    if (!error.empty()) return dependent_error();
+  } catch (io_error& exception) {
+    throw io_error::dependent_error(filename, exception);
   }
 
   // apply instances
@@ -3141,279 +2705,167 @@ static bool load_json_scene(
   add_missing_camera(scene);
   add_missing_radius(scene);
   trim_memory(scene);
-
-  // done
-  return true;
 }
 
 // Save a scene in the builtin JSON format.
-static bool save_json_scene(const string& filename, const scene_data& scene,
-    string& error, bool noparallel) {
-  auto conversion_error = [filename, &error](const string& message) {
-    // should never happen
-    throw std::runtime_error{"programmer error"};
-    error = filename + ": conversion error (" + message + ")";
-    return false;
-  };
-  auto dependent_error = [filename, &error]() {
-    error = filename + ": error in " + error;
-    return false;
-  };
-
+static void save_json_scene(
+    const string& filename, const scene_data& scene, bool noparallel) {
   // helpers to handel old code paths
-  auto insert_object = [](njson& js, const string& name) -> njson& {
-    js[name] = njson::object();
-    return js[name];
+  auto add_object = [](json_value& js, const string& name) -> json_value& {
+    auto& item = js.insert_back(name);
+    item       = json_object{};
+    return item;
   };
-  auto insert_value = [](njson& js, const string& name, const auto& value) {
-    js[name] = value;
+  auto set_opt = [](json_value& js, const string& name, const auto& value,
+                     const auto& def) {
+    if (value == def) return;
+    js.insert_back(name) = value;
   };
 
   // save json file
-  auto js = njson::object();
+  auto js = json_value{};
+  js      = json_object{};
 
   // asset
   {
-    auto& element = insert_object(js, "asset");
-    if (!scene.copyright.empty()) {
-      insert_value(element, "copyright", scene.copyright);
-    }
-    insert_value(element, "generator",
-        "Yocto/GL - https://github.com/xelatihy/yocto-gl");
+    auto& element = add_object(js, "asset");
+    set_opt(element, "copyright", scene.copyright, "");
+    set_opt(element, "generator",
+        "Yocto/GL - https://github.com/xelatihy/yocto-gl", "");
   }
 
-  auto def_cam = sceneio_camera{};
   if (!scene.cameras.empty()) {
-    auto& group = insert_object(js, "cameras");
+    auto  default_ = sceneio_camera{};
+    auto& group    = add_object(js, "cameras");
     for (auto& camera : scene.cameras) {
-      auto& element = insert_object(group, get_camera_name(scene, camera));
-      if (camera.frame != def_cam.frame) {
-        insert_value(element, "frame", camera.frame);
-      }
-      if (camera.orthographic != def_cam.orthographic) {
-        insert_value(element, "orthographic", camera.orthographic);
-      }
-      if (camera.lens != def_cam.lens) {
-        insert_value(element, "lens", camera.lens);
-      }
-      if (camera.aspect != def_cam.aspect) {
-        insert_value(element, "aspect", camera.aspect);
-      }
-      if (camera.film != def_cam.film) {
-        insert_value(element, "film", camera.film);
-      }
-      if (camera.focus != def_cam.focus) {
-        insert_value(element, "focus", camera.focus);
-      }
-      if (camera.aperture != def_cam.aperture) {
-        insert_value(element, "aperture", camera.aperture);
-      }
+      auto& element = add_object(group, get_camera_name(scene, camera));
+      set_opt(element, "frame", camera.frame, default_.frame);
+      set_opt(
+          element, "orthographic", camera.orthographic, default_.orthographic);
+      set_opt(element, "lens", camera.lens, default_.lens);
+      set_opt(element, "aspect", camera.aspect, default_.aspect);
+      set_opt(element, "film", camera.film, default_.film);
+      set_opt(element, "focus", camera.focus, default_.focus);
+      set_opt(element, "aperture", camera.aperture, default_.aperture);
     }
   }
 
-  auto def_env = sceneio_environment{};
   if (!scene.environments.empty()) {
-    auto& group = insert_object(js, "environments");
+    auto  default_ = sceneio_environment{};
+    auto& group    = add_object(js, "environments");
     for (auto& environment : scene.environments) {
-      auto& element = insert_object(
+      auto& element = add_object(
           group, get_environment_name(scene, environment));
-      if (environment.frame != def_env.frame) {
-        insert_value(element, "frame", environment.frame);
-      }
-      if (environment.emission != def_env.emission) {
-        insert_value(element, "emission", environment.emission);
-      }
-      if (environment.emission_tex != invalidid) {
-        insert_value(element, "emission_tex",
-            get_texture_name(scene, environment.emission_tex));
-      }
+      set_opt(element, "frame", environment.frame, default_.frame);
+      set_opt(element, "emission", environment.emission, default_.emission);
+      set_opt(element, "emission_tex",
+          get_texture_name(scene, environment.emission_tex), "");
     }
   }
 
-  auto def_material = sceneio_material{};
   if (!scene.materials.empty()) {
-    auto& group = insert_object(js, "materials");
+    auto  default_ = sceneio_material{};
+    auto& group    = add_object(js, "materials");
     for (auto& material : scene.materials) {
-      auto& element = insert_object(group, get_material_name(scene, material));
-      if (material.type != def_material.type) {
-        insert_value(element, "type", material.type);
-      }
-      if (material.emission != def_material.emission) {
-        insert_value(element, "emission", material.emission);
-      }
-      if (material.color != def_material.color) {
-        insert_value(element, "color", material.color);
-      }
-      if (material.metallic != def_material.metallic) {
-        insert_value(element, "metallic", material.metallic);
-      }
-      if (material.roughness != def_material.roughness) {
-        insert_value(element, "roughness", material.roughness);
-      }
-      if (material.ior != def_material.ior) {
-        insert_value(element, "ior", material.ior);
-      }
-      if (material.trdepth != def_material.trdepth) {
-        insert_value(element, "trdepth", material.trdepth);
-      }
-      if (material.scattering != def_material.scattering) {
-        insert_value(element, "scattering", material.scattering);
-      }
-      if (material.scanisotropy != def_material.scanisotropy) {
-        insert_value(element, "scanisotropy", material.scanisotropy);
-      }
-      if (material.opacity != def_material.opacity) {
-        insert_value(element, "opacity", material.opacity);
-      }
-      if (material.emission_tex != invalidid) {
-        insert_value(element, "emission_tex",
-            get_texture_name(scene, material.emission_tex));
-      }
-      if (material.color_tex != invalidid) {
-        insert_value(
-            element, "color_tex", get_texture_name(scene, material.color_tex));
-      }
-      if (material.roughness_tex != invalidid) {
-        insert_value(element, "roughness_tex",
-            get_texture_name(scene, material.roughness_tex));
-      }
-      if (material.scattering_tex != invalidid) {
-        insert_value(element, "scattering_tex",
-            get_texture_name(scene, material.scattering_tex));
-      }
-      if (material.normal_tex != invalidid) {
-        insert_value(element, "normal_tex",
-            get_texture_name(scene, material.normal_tex));
-      }
+      auto& element = add_object(group, get_material_name(scene, material));
+      set_opt(element, "type", material.type, default_.type);
+      set_opt(element, "emission", material.emission, default_.emission);
+      set_opt(element, "color", material.color, default_.color);
+      set_opt(element, "metallic", material.metallic, default_.metallic);
+      set_opt(element, "roughness", material.roughness, default_.roughness);
+      set_opt(element, "ior", material.ior, default_.ior);
+      set_opt(element, "trdepth", material.trdepth, default_.trdepth);
+      set_opt(element, "scattering", material.scattering, default_.scattering);
+      set_opt(element, "scanisotropy", material.scanisotropy,
+          default_.scanisotropy);
+      set_opt(element, "opacity", material.opacity, default_.opacity);
+      set_opt(element, "emission_tex",
+          get_texture_name(scene, material.emission_tex), "");
+      set_opt(element, "color_tex", get_texture_name(scene, material.color_tex),
+          "");
+      set_opt(element, "roughness_tex",
+          get_texture_name(scene, material.roughness_tex), "");
+      set_opt(element, "scattering_tex",
+          get_texture_name(scene, material.scattering_tex), "");
+      set_opt(element, "normal_tex",
+          get_texture_name(scene, material.normal_tex), "");
     }
   }
 
-  auto def_instance = sceneio_instance{};
   if (!scene.instances.empty()) {
-    auto& group = insert_object(js, "instances");
+    auto  default_ = sceneio_instance{};
+    auto& group    = add_object(js, "instances");
     for (auto& instance : scene.instances) {
-      auto& element = insert_object(group, get_instance_name(scene, instance));
-      if (instance.frame != def_instance.frame) {
-        insert_value(element, "frame", instance.frame);
-      }
-      if (instance.shape != invalidid) {
-        insert_value(element, "shape", get_shape_name(scene, instance.shape));
-      }
-      if (instance.material != invalidid) {
-        insert_value(
-            element, "material", get_material_name(scene, instance.material));
-      }
+      auto& element = add_object(group, get_instance_name(scene, instance));
+      set_opt(element, "frame", instance.frame, default_.frame);
+      set_opt(element, "shape", get_shape_name(scene, instance.shape), "");
+      set_opt(
+          element, "material", get_material_name(scene, instance.material), "");
     }
   }
 
-  auto def_subdiv = subdiv_data{};
   if (!scene.subdivs.empty()) {
-    auto& group = insert_object(js, "subdivs");
+    auto  default_ = subdiv_data{};
+    auto& group    = add_object(js, "subdivs");
     for (auto& subdiv : scene.subdivs) {
-      auto& element = insert_object(group, get_subdiv_name(scene, subdiv));
-      if (subdiv.shape != invalidid) {
-        insert_value(element, "shape", get_shape_name(scene, subdiv.shape));
-      }
-      if (subdiv.subdivisions != def_subdiv.subdivisions) {
-        insert_value(element, "subdivisions", subdiv.subdivisions);
-      }
-      if (subdiv.catmullclark != def_subdiv.catmullclark) {
-        insert_value(element, "catmullclark", subdiv.catmullclark);
-      }
-      if (subdiv.smooth != def_subdiv.smooth) {
-        insert_value(element, "smooth", subdiv.smooth);
-      }
-      if (subdiv.displacement != def_subdiv.displacement) {
-        insert_value(element, "displacement", subdiv.displacement);
-      }
-      if (subdiv.displacement_tex != invalidid) {
-        insert_value(element, "displacement_tex",
-            get_texture_name(scene, subdiv.displacement_tex));
-      }
+      auto& element = add_object(group, get_subdiv_name(scene, subdiv));
+      set_opt(element, "shape", get_shape_name(scene, subdiv.shape), "");
+      set_opt(
+          element, "subdivisions", subdiv.subdivisions, default_.subdivisions);
+      set_opt(
+          element, "catmullclark", subdiv.catmullclark, default_.subdivisions);
+      set_opt(element, "smooth", subdiv.smooth, default_.subdivisions);
+      set_opt(
+          element, "displacement", subdiv.displacement, default_.subdivisions);
+      set_opt(element, "displacement_tex",
+          get_texture_name(scene, subdiv.displacement_tex), "");
     }
   }
 
   // save json
-  if (!save_json(filename, js, error)) return false;
+  save_json(filename, js);
 
   // dirname
   auto dirname = path_dirname(filename);
-
-  if (noparallel) {
-    // save shapes
-    for (auto& shape : scene.shapes) {
-      auto path = "shapes/" + get_shape_name(scene, shape) + ".ply";
-      if (!save_shape(path_join(dirname, path), shape, error, true))
-        return dependent_error();
+  try {
+    if (noparallel) {
+      // save shapes
+      for (auto& shape : scene.shapes) {
+        auto path = "shapes/" + get_shape_name(scene, shape) + ".ply";
+        save_shape(path_join(dirname, path), shape, true);
+      }
+      // save subdiv
+      for (auto& subdiv : scene.subdivs) {
+        auto path = "subdivs/" + get_subdiv_name(scene, subdiv) + ".obj";
+        save_subdiv(path_join(dirname, path), subdiv);
+      }
+      // save textures
+      for (auto& texture : scene.textures) {
+        auto path = "textures/" + get_texture_name(scene, texture) +
+                    (!texture.pixelsf.empty() ? ".hdr"s : ".png"s);
+        save_texture(path_join(dirname, path), texture);
+      }
+    } else {
+      // save shapes
+      parallel_foreach(scene.shapes, [&](auto& shape) {
+        auto path = "shapes/" + get_shape_name(scene, shape) + ".ply";
+        save_shape(path_join(dirname, path), shape, true);
+      });
+      // save subdivs
+      parallel_foreach(scene.subdivs, [&](auto& subdiv) {
+        auto path = "subdivs/" + get_subdiv_name(scene, subdiv) + ".obj";
+        save_subdiv(path_join(dirname, path), subdiv);
+      });
+      // save textures
+      parallel_foreach(scene.textures, [&](auto& texture) {
+        auto path = "textures/" + get_texture_name(scene, texture) +
+                    (!texture.pixelsf.empty() ? ".hdr"s : ".png"s);
+        save_texture(path_join(dirname, path), texture);
+      });
     }
-
-    // save subdiv
-    for (auto& subdiv : scene.subdivs) {
-      auto path = "subdivs/" + get_subdiv_name(scene, subdiv) + ".obj";
-      if (!save_subdiv(path_join(dirname, path), subdiv, error))
-        return dependent_error();
-    }
-
-    // save textures
-    for (auto& texture : scene.textures) {
-      auto path = "textures/" + get_texture_name(scene, texture) +
-                  (!texture.pixelsf.empty() ? ".hdr"s : ".png"s);
-      if (!save_texture(path_join(dirname, path), texture, error))
-        return dependent_error();
-    }
-  } else {
-    // mutex
-    auto mutex = std::mutex{};
-    // save shapes
-    parallel_foreach(scene.shapes, [&](auto& shape) {
-      {
-        auto lock = std::lock_guard{mutex};
-        if (!error.empty()) return;
-      }
-      auto path = "shapes/" + get_shape_name(scene, shape) + ".ply";
-      auto err  = string{};
-      if (!save_shape(path_join(dirname, path), shape, err, true)) {
-        auto lock = std::lock_guard{mutex};
-        error     = err;
-        return;
-      }
-    });
-    if (!error.empty()) return dependent_error();
-    // save subdivs
-    parallel_foreach(scene.subdivs, [&](auto& subdiv) {
-      {
-        auto lock = std::lock_guard{mutex};
-        if (!error.empty()) return;
-      }
-      auto path = "subdivs/" + get_subdiv_name(scene, subdiv) + ".obj";
-      auto err  = string{};
-      if (!save_subdiv(path_join(dirname, path), subdiv, err)) {
-        auto lock = std::lock_guard{mutex};
-        error     = err;
-        return;
-      }
-    });
-    if (!error.empty()) return dependent_error();
-    // save textures
-    parallel_foreach(scene.textures, [&](auto& texture) {
-      {
-        auto lock = std::lock_guard{mutex};
-        if (!error.empty()) return;
-      }
-      auto path = "textures/" + get_texture_name(scene, texture) +
-                  (!texture.pixelsf.empty() ? ".hdr"s : ".png"s);
-      auto err = string{};
-      if (!save_texture(path_join(dirname, path), texture, err)) {
-        auto lock = std::lock_guard{mutex};
-        error     = err;
-        return;
-      }
-    });
-    if (!error.empty()) return dependent_error();
+  } catch (io_error& exception) {
+    throw io_error::dependent_error(filename, exception);
   }
-
-  // done
-  return true;
 }
 
 }  // namespace yocto
@@ -3424,24 +2876,10 @@ static bool save_json_scene(const string& filename, const scene_data& scene,
 namespace yocto {
 
 // Loads an OBJ
-static bool load_obj_scene(
-    const string& filename, scene_data& scene, string& error, bool noparallel) {
-  auto shape_error = [filename, &error]() {
-    error = filename + ": empty shape";
-    return false;
-  };
-  auto material_error = [filename, &error](const string& name) {
-    error = filename + ": missing material " + name;
-    return false;
-  };
-  auto dependent_error = [filename, &error]() {
-    error = filename + ": error in " + error;
-    return false;
-  };
-
+static void load_obj_scene(
+    const string& filename, scene_data& scene, bool noparallel) {
   // load obj
-  auto obj = obj_model{};
-  if (!load_obj(filename, obj, error, false, true)) return false;
+  auto obj = load_obj(filename, false, true);
 
   // convert cameras
   for (auto& ocamera : obj.cameras) {
@@ -3528,52 +2966,31 @@ static bool load_obj_scene(
   // dirname
   auto dirname = path_dirname(filename);
 
-  if (noparallel) {
-    // load textures
-    for (auto& texture : scene.textures) {
-      auto& path = texture_paths[&texture - &scene.textures.front()];
-      if (!load_texture(path_join(dirname, path), texture, error))
-        return dependent_error();
+  try {
+    if (noparallel) {
+      // load textures
+      for (auto& texture : scene.textures) {
+        auto& path = texture_paths[&texture - &scene.textures.front()];
+        load_texture(path_join(dirname, path), texture);
+      }
+    } else {
+      // load textures
+      parallel_foreach(scene.textures, [&](auto& texture) {
+        auto& path = texture_paths[&texture - &scene.textures.front()];
+        return load_texture(path_join(dirname, path), texture);
+      });
     }
-  } else {
-    // mutex
-    auto mutex = std::mutex{};
-    // load textures
-    parallel_foreach(scene.textures, [&](auto& texture) {
-      {
-        auto lock = std::lock_guard{mutex};
-        if (!error.empty()) return;
-      }
-      auto& path = texture_paths[&texture - &scene.textures.front()];
-      auto  err  = string{};
-      if (!load_texture(path_join(dirname, path), texture, err)) {
-        auto lock = std::lock_guard{mutex};
-        error     = err;
-        return;
-      }
-    });
-    if (!error.empty()) return dependent_error();
+  } catch (io_error& exception) {
+    throw io_error::dependent_error(filename, exception);
   }
 
   // fix scene
   add_missing_camera(scene);
   add_missing_radius(scene);
-
-  // done
-  return true;
 }
 
-static bool save_obj_scene(const string& filename, const scene_data& scene,
-    string& error, bool noparallel) {
-  auto shape_error = [filename, &error]() {
-    error = filename + ": empty shape";
-    return false;
-  };
-  auto dependent_error = [filename, &error]() {
-    error = filename + ": error in " + error;
-    return false;
-  };
-
+static void save_obj_scene(
+    const string& filename, const scene_data& scene, bool noparallel) {
   // build obj
   auto obj = obj_model{};
 
@@ -3650,42 +3067,30 @@ static bool save_obj_scene(const string& filename, const scene_data& scene,
   }
 
   // save obj
-  if (!save_obj(filename, obj, error)) return false;
+  save_obj(filename, obj);
 
   // dirname
   auto dirname = path_dirname(filename);
 
-  if (noparallel) {
-    // save textures
-    for (auto& texture : scene.textures) {
-      auto path = "textures/" + get_texture_name(scene, texture) +
-                  (!texture.pixelsf.empty() ? ".hdr"s : ".png"s);
-      if (!save_texture(path_join(dirname, path), texture, error))
-        return dependent_error();
+  try {
+    if (noparallel) {
+      // save textures
+      for (auto& texture : scene.textures) {
+        auto path = "textures/" + get_texture_name(scene, texture) +
+                    (!texture.pixelsf.empty() ? ".hdr"s : ".png"s);
+        save_texture(path_join(dirname, path), texture);
+      }
+    } else {
+      // save textures
+      parallel_foreach(scene.textures, [&](auto& texture) {
+        auto path = "textures/" + get_texture_name(scene, texture) +
+                    (!texture.pixelsf.empty() ? ".hdr"s : ".png"s);
+        save_texture(path_join(dirname, path), texture);
+      });
     }
-  } else {
-    // mutex
-    auto mutex = std::mutex{};
-    // save textures
-    parallel_foreach(scene.textures, [&](auto& texture) {
-      {
-        auto lock = std::lock_guard{mutex};
-        if (!error.empty()) return;
-      }
-      auto path = "textures/" + get_texture_name(scene, texture) +
-                  (!texture.pixelsf.empty() ? ".hdr"s : ".png"s);
-      auto err = string{};
-      if (!save_texture(path_join(dirname, path), texture, err)) {
-        auto lock = std::lock_guard{mutex};
-        error     = err;
-        return;
-      }
-    });
-    if (!error.empty()) return dependent_error();
+  } catch (io_error& exception) {
+    throw io_error::dependent_error(filename, exception);
   }
-
-  // done
-  return true;
 }
 
 }  // namespace yocto
@@ -3695,40 +3100,23 @@ static bool save_obj_scene(const string& filename, const scene_data& scene,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-static bool load_ply_scene(
-    const string& filename, scene_data& scene, string& error, bool noparallel) {
-  // load ply mesh
-  auto& shape = scene.shapes.emplace_back();
-  if (!load_shape(filename, shape, error, true)) return false;
-
-  // create instance
-  auto& instance = scene.instances.emplace_back();
-  instance.shape = (int)scene.shapes.size() - 1;
+static void load_ply_scene(
+    const string& filename, scene_data& scene, bool noparallel) {
+  // load ply mesh and make instance
+  scene.shapes.push_back(load_shape(filename, true));
+  scene.instances.push_back({identity3x4f, (int)scene.shapes.size() - 1, -1});
 
   // fix scene
   add_missing_material(scene);
   add_missing_camera(scene);
   add_missing_radius(scene);
-
-  // done
-  return true;
 }
 
-static bool save_ply_scene(const string& filename, const scene_data& scene,
-    string& error, bool noparallel) {
-  auto shape_error = [filename, &error]() {
-    error = filename + ": empty shape";
-    return false;
-  };
-
-  if (scene.shapes.empty()) return shape_error();
-
+static void save_ply_scene(
+    const string& filename, const scene_data& scene, bool noparallel) {
   // save shape
-  auto& shape = scene.shapes.front();
-  if (!save_shape(filename, shape, error, false)) return false;
-
-  // done
-  return true;
+  if (scene.shapes.empty()) throw io_error::shape_error(filename);
+  save_shape(filename, scene.shapes.front(), false);
 }
 
 }  // namespace yocto
@@ -3738,40 +3126,23 @@ static bool save_ply_scene(const string& filename, const scene_data& scene,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-static bool load_stl_scene(
-    const string& filename, scene_data& scene, string& error, bool noparallel) {
-  // load stl mesh
-  auto& shape = scene.shapes.emplace_back();
-  if (!load_shape(filename, shape, error, true)) return false;
-
-  // create instance
-  auto& instance = scene.instances.emplace_back();
-  instance.shape = (int)scene.shapes.size() - 1;
+static void load_stl_scene(
+    const string& filename, scene_data& scene, bool noparallel) {
+  // load ply mesh and make instance
+  scene.shapes.push_back(load_shape(filename, true));
+  scene.instances.push_back({identity3x4f, (int)scene.shapes.size() - 1, -1});
 
   // fix scene
   add_missing_material(scene);
   add_missing_camera(scene);
   add_missing_radius(scene);
-
-  // done
-  return true;
 }
 
-static bool save_stl_scene(const string& filename, const scene_data& scene,
-    string& error, bool noparallel) {
-  auto shape_error = [filename, &error]() {
-    error = filename + ": empty shape";
-    return false;
-  };
-
-  if (scene.shapes.empty()) return shape_error();
-
+static void save_stl_scene(
+    const string& filename, const scene_data& scene, bool noparallel) {
   // save shape
-  auto& shape = scene.shapes.front();
-  if (!save_shape(filename, shape, error, false)) return false;
-
-  // done
-  return true;
+  if (scene.shapes.empty()) throw io_error::shape_error(filename);
+  save_shape(filename, scene.shapes.front(), false);
 }
 
 }  // namespace yocto
@@ -3782,28 +3153,10 @@ static bool save_stl_scene(const string& filename, const scene_data& scene,
 namespace yocto {
 
 // Load a scene
-static bool load_gltf_scene(
-    const string& filename, scene_data& scene, string& error, bool noparallel) {
-  auto read_error = [filename, &error]() {
-    error = filename + ": read error";
-    return false;
-  };
-  auto primitive_error = [filename, &error]() {
-    error = filename + ": primitive error";
-    return false;
-  };
-  auto parse_error = [filename, &error]() {
-    error = filename + ": parse error";
-    return false;
-  };
-  auto dependent_error = [filename, &error]() {
-    error = filename + ": error in " + error;
-    return false;
-  };
-
+static void load_gltf_scene(
+    const string& filename, scene_data& scene, bool noparallel) {
   // load gltf
-  auto gltf = njson{};
-  if (!load_json(filename, gltf, error)) return false;
+  auto gltf = load_json(filename);
 
   // parse buffers
   auto buffers_paths = vector<string>{};
@@ -3811,43 +3164,34 @@ static bool load_gltf_scene(
   try {
     if (gltf.contains("buffers")) {
       for (auto& gbuffer : gltf.at("buffers")) {
-        if (!gbuffer.contains("uri")) return parse_error();
+        if (!gbuffer.contains("uri")) throw io_error::parse_error(filename);
         buffers_paths.push_back(gbuffer.value("uri", ""));
         buffers.emplace_back();
       }
     }
   } catch (...) {
-    return parse_error();
+    throw io_error::parse_error(filename);
   }
 
   // dirname
   auto dirname = path_dirname(filename);
 
-  if (noparallel) {
-    // load buffers
-    for (auto& buffer : buffers) {
-      auto& path = buffers_paths[&buffer - &buffers.front()];
-      if (!load_binary(path_join(dirname, path), buffer, error))
-        return dependent_error();
+  try {
+    if (noparallel) {
+      // load buffers
+      for (auto& buffer : buffers) {
+        auto& path = buffers_paths[&buffer - &buffers.front()];
+        load_binary(path_join(dirname, path), buffer);
+      }
+    } else {
+      // load buffers
+      parallel_foreach(buffers, [&](auto& buffer) {
+        auto& path = buffers_paths[&buffer - &buffers.front()];
+        load_binary(path_join(dirname, path), buffer);
+      });
     }
-  } else {
-    // mutex
-    auto mutex = std::mutex{};
-    // load buffers
-    parallel_foreach(buffers, [&](auto& buffer) {
-      {
-        auto lock = std::lock_guard{mutex};
-        if (!error.empty()) return;
-      }
-      auto& path = buffers_paths[&buffer - &buffers.front()];
-      auto  err  = string{};
-      if (!load_binary(path_join(dirname, path), buffer, err)) {
-        auto lock = std::lock_guard{mutex};
-        error     = err;
-        return;
-      }
-    });
-    if (!error.empty()) return dependent_error();
+  } catch (io_error& exception) {
+    throw io_error::dependent_error(filename, exception);
   }
 
   // convert asset
@@ -3855,7 +3199,7 @@ static bool load_gltf_scene(
     try {
       scene.copyright = gltf.value("copyright", ""s);
     } catch (...) {
-      return parse_error();
+      throw io_error::parse_error(filename);
     }
   }
 
@@ -3886,16 +3230,16 @@ static bool load_gltf_scene(
           }
           camera.focus = 1;
         } else {
-          return parse_error();
+          throw io_error::parse_error(filename);
         }
       }
     } catch (...) {
-      return parse_error();
+      throw io_error::parse_error(filename);
     }
   }
 
   // convert color textures
-  auto get_texture = [&gltf](const njson& js, const string& name) -> int {
+  auto get_texture = [&gltf](const json_value& js, const string& name) -> int {
     if (!js.contains(name)) return invalidid;
     auto& ginfo    = js.at(name);
     auto& gtexture = gltf.at("textures").at(ginfo.value("index", -1));
@@ -3924,7 +3268,7 @@ static bool load_gltf_scene(
         texture_paths.push_back(replace(gimage.value("uri", ""), "%20", " "));
       }
     } catch (...) {
-      return parse_error();
+      throw io_error::parse_error(filename);
     }
   }
 
@@ -3962,7 +3306,7 @@ static bool load_gltf_scene(
         }
       }
     } catch (...) {
-      return parse_error();
+      throw io_error::parse_error(filename);
     }
   }
 
@@ -4100,9 +3444,9 @@ static bool load_gltf_scene(
                 shape.lines[i - 1] = {i - 1, i};
             } else if (mode == 0) {  // points strips
               // points
-              return primitive_error();
+              throw io_error{filename, "primitive_error"};
             } else {
-              return primitive_error();
+              throw io_error{filename, "primitive_error"};
             }
           } else {
             auto& gaccessor =
@@ -4174,15 +3518,17 @@ static bool load_gltf_scene(
               }
             } else if (mode == 0) {  // points strips
               // points
-              return primitive_error();
+              throw io_error{filename, "primitive_error"};
             } else {
-              return primitive_error();
+              throw io_error{filename, "primitive_error"};
             }
           }
         }
       }
+    } catch (io_error& error) {
+      throw;
     } catch (...) {
-      return parse_error();
+      throw io_error::parse_error(filename);
     }
   }
 
@@ -4245,69 +3591,44 @@ static bool load_gltf_scene(
         node_id++;
       }
     } catch (...) {
-      return parse_error();
+      throw io_error::parse_error(filename);
     }
   }
 
-  if (noparallel) {
-    // load texture
-    for (auto& texture : scene.textures) {
-      auto& path = texture_paths[&texture - &scene.textures.front()];
-      if (!load_texture(path_join(dirname, path), texture, error))
-        return dependent_error();
+  try {
+    if (noparallel) {
+      // load texture
+      for (auto& texture : scene.textures) {
+        auto& path = texture_paths[&texture - &scene.textures.front()];
+        load_texture(path_join(dirname, path), texture);
+      }
+    } else {
+      // load textures
+      parallel_foreach(scene.textures, [&](auto& texture) {
+        auto& path = texture_paths[&texture - &scene.textures.front()];
+        return load_texture(path_join(dirname, path), texture);
+      });
     }
-  } else {
-    // mutex
-    auto mutex = std::mutex{};
-    // load textures
-    parallel_foreach(scene.textures, [&](auto& texture) {
-      {
-        auto lock = std::lock_guard{mutex};
-        if (!error.empty()) return;
-      }
-      auto& path = texture_paths[&texture - &scene.textures.front()];
-      auto  err  = string{};
-      if (!load_texture(path_join(dirname, path), texture, err)) {
-        auto lock = std::lock_guard{mutex};
-        error     = err;
-        return;
-      }
-    });
-    if (!error.empty()) return dependent_error();
+  } catch (io_error& exception) {
+    throw io_error::dependent_error(filename, exception);
   }
 
   // fix scene
   add_missing_material(scene);
   add_missing_camera(scene);
   add_missing_radius(scene);
-
-  // load done
-  return true;
 }
 
 // Load a scene
-static bool save_gltf_scene(const string& filename, const scene_data& scene,
-    string& error, bool noparallel) {
-  auto write_error = [filename, &error]() {
-    error = filename + ": write error";
-    return false;
-  };
-  auto dependent_error = [filename, &error]() {
-    error = filename + ": error in " + error;
-    return false;
-  };
-  auto fvshape_error = [filename, &error]() {
-    error = filename + ": face-varying not supported";
-    return false;
-  };
-
+static void save_gltf_scene(
+    const string& filename, const scene_data& scene, bool noparallel) {
   // convert scene to json
-  auto gltf = njson::object();
+  auto gltf = json_value::object();
 
   // asset
   {
     auto& gasset        = gltf["asset"];
-    gasset              = njson::object();
+    gasset              = json_value::object();
     gasset["version"]   = "2.0";
     gasset["generator"] = "Yocto/GL - https://github.com/xelatihy/yocto-gl";
     if (!scene.copyright.empty()) gasset["copyright"] = scene.copyright;
@@ -4316,14 +3637,14 @@ static bool save_gltf_scene(const string& filename, const scene_data& scene,
   // cameras
   if (!scene.cameras.empty()) {
     auto& gcameras = gltf["cameras"];
-    gcameras       = njson::array();
+    gcameras       = json_value::array();
     for (auto& camera : scene.cameras) {
       auto& gcamera               = gcameras.emplace_back();
-      gcamera                     = njson::object();
+      gcamera                     = json_value::object();
       gcamera["name"]             = get_camera_name(scene, camera);
       gcamera["type"]             = "perspective";
       auto& gperspective          = gcamera["perspective"];
-      gperspective                = njson::object();
+      gperspective                = json_value::object();
       gperspective["aspectRatio"] = camera.aspect;
       gperspective["yfov"]        = 0.660593;  // TODO(fabio): yfov
       gperspective["znear"]       = 0.001;     // TODO(fabio): configurable?
@@ -4333,22 +3654,22 @@ static bool save_gltf_scene(const string& filename, const scene_data& scene,
   // textures
   if (!scene.textures.empty()) {
     auto& gtextures  = gltf["textures"];
-    gtextures        = njson::array();
+    gtextures        = json_value::array();
     auto& gsamplers  = gltf["samplers"];
-    gsamplers        = njson::array();
+    gsamplers        = json_value::array();
     auto& gimages    = gltf["images"];
-    gimages          = njson::array();
+    gimages          = json_value::array();
     auto& gsampler   = gsamplers.emplace_back();
-    gsampler         = njson::object();
+    gsampler         = json_value::object();
     gsampler["name"] = "sampler";
     for (auto& texture : scene.textures) {
       auto  name          = get_texture_name(scene, texture);
       auto& gimage        = gimages.emplace_back();
-      gimage              = njson::object();
+      gimage              = json_value::object();
       gimage["name"]      = name;
       gimage["uri"]       = "textures/" + name + ".png";
       auto& gtexture      = gtextures.emplace_back();
-      gtexture            = njson::object();
+      gtexture            = json_value::object();
       gtexture["name"]    = name;
       gtexture["sampler"] = 0;
       gtexture["source"]  = (int)gimages.size() - 1;
@@ -4358,52 +3679,52 @@ static bool save_gltf_scene(const string& filename, const scene_data& scene,
   // materials
   if (!scene.materials.empty()) {
     auto& gmaterials = gltf["materials"];
-    gmaterials       = njson::array();
+    gmaterials       = json_value::array();
     for (auto& material : scene.materials) {
       auto& gmaterial             = gmaterials.emplace_back();
-      gmaterial                   = njson::object();
+      gmaterial                   = json_value::object();
       gmaterial["name"]           = get_material_name(scene, material);
       gmaterial["emissiveFactor"] = material.emission;
       auto& gpbr                  = gmaterial["pbrMetallicRoughness"];
-      gpbr                        = njson::object();
+      gpbr                        = json_value::object();
       gpbr["baseColorFactor"]     = vec4f{material.color.x, material.color.y,
           material.color.z, material.opacity};
       gpbr["metallicFactor"]      = material.metallic;
       gpbr["roughnessFactor"]     = material.roughness;
       if (material.emission_tex != invalidid) {
-        gmaterial["emissiveTexture"]          = njson::object();
+        gmaterial["emissiveTexture"]          = json_value::object();
         gmaterial["emissiveTexture"]["index"] = material.emission_tex;
       }
       if (material.normal_tex != invalidid) {
-        gmaterial["normalTexture"]          = njson::object();
+        gmaterial["normalTexture"]          = json_value::object();
         gmaterial["normalTexture"]["index"] = material.normal_tex;
       }
       if (material.color_tex != invalidid) {
-        gpbr["baseColorTexture"]          = njson::object();
+        gpbr["baseColorTexture"]          = json_value::object();
         gpbr["baseColorTexture"]["index"] = material.color_tex;
       }
       if (material.roughness_tex != invalidid) {
-        gpbr["metallicRoughnessTexture"]          = njson::object();
+        gpbr["metallicRoughnessTexture"]          = json_value::object();
         gpbr["metallicRoughnessTexture"]["index"] = material.roughness_tex;
       }
     }
   }
 
   // add an accessor
-  auto set_view = [](njson& gview, njson& gbuffer, const auto& data,
+  auto set_view = [](json_value& gview, json_value& gbuffer, const auto& data,
                       size_t buffer_id) {
-    gview                 = njson::object();
+    gview                 = json_value::object();
     gview["buffer"]       = buffer_id;
     gview["byteLength"]   = data.size() * sizeof(data.front());
     gview["byteOffset"]   = gbuffer["byteLength"];
     gbuffer["byteLength"] = gbuffer.value("byteLength", (size_t)0) +
                             data.size() * sizeof(data.front());
   };
-  auto set_vaccessor = [](njson& gaccessor, const auto& data, size_t view_id,
-                           bool minmax = false) {
+  auto set_vaccessor = [](json_value& gaccessor, const auto& data,
+                           size_t view_id, bool minmax = false) {
     static auto types = unordered_map<size_t, string>{
         {1, "SCALAR"}, {2, "VEC2"}, {3, "VEC3"}, {4, "VEC4"}};
-    gaccessor                  = njson::object();
+    gaccessor                  = json_value::object();
     gaccessor["bufferView"]    = view_id;
     gaccessor["componentType"] = 5126;
     gaccessor["count"]         = data.size();
@@ -4417,9 +3738,9 @@ static bool save_gltf_scene(const string& filename, const scene_data& scene,
       }
     }
   };
-  auto set_iaccessor = [](njson& gaccessor, const auto& data, size_t view_id,
-                           bool minmax = false) {
-    gaccessor                  = njson::object();
+  auto set_iaccessor = [](json_value& gaccessor, const auto& data,
+                           size_t view_id, bool minmax = false) {
+    gaccessor                  = json_value::object();
     gaccessor["bufferView"]    = view_id;
     gaccessor["componentType"] = 5125;
     gaccessor["count"] = data.size() * sizeof(data.front()) / sizeof(int);
@@ -4427,23 +3748,23 @@ static bool save_gltf_scene(const string& filename, const scene_data& scene,
   };
 
   // meshes
-  auto shape_primitives = vector<njson>();
+  auto shape_primitives = vector<json_value>();
   shape_primitives.reserve(scene.shapes.size());
   if (!scene.shapes.empty()) {
     auto& gaccessors = gltf["accessors"];
-    gaccessors       = njson::array();
+    gaccessors       = json_value::array();
     auto& gviews     = gltf["bufferViews"];
-    gviews           = njson::array();
+    gviews           = json_value::array();
     auto& gbuffers   = gltf["buffers"];
-    gbuffers         = njson::array();
+    gbuffers         = json_value::array();
     for (auto& shape : scene.shapes) {
       auto& gbuffer         = gbuffers.emplace_back();
       gbuffer["uri"]        = "shapes/" + get_shape_name(scene, shape) + ".bin";
       gbuffer["byteLength"] = (size_t)0;
       auto& gprimitive      = shape_primitives.emplace_back();
-      gprimitive            = njson::object();
+      gprimitive            = json_value::object();
       auto& gattributes     = gprimitive["attributes"];
-      gattributes           = njson::object();
+      gattributes           = json_value::object();
       if (!shape.positions.empty()) {
         set_view(gviews.emplace_back(), gbuffer, shape.positions,
             gbuffers.size() - 1);
@@ -4525,28 +3846,28 @@ static bool save_gltf_scene(const string& filename, const scene_data& scene,
   auto mesh_map = unordered_map<mesh_key, size_t, mesh_key_hash>{};
   if (!scene.instances.empty()) {
     auto& gmeshes = gltf["meshes"];
-    gmeshes       = njson::array();
+    gmeshes       = json_value::array();
     for (auto& instance : scene.instances) {
       auto key = mesh_key{instance.shape, instance.material};
       if (mesh_map.find(key) != mesh_map.end()) continue;
       auto& gmesh   = gmeshes.emplace_back();
-      gmesh         = njson::object();
+      gmesh         = json_value::object();
       gmesh["name"] = get_shape_name(scene, instance.shape) + "_" +
                       get_material_name(scene, instance.material);
-      gmesh["primitives"] = njson::array();
+      gmesh["primitives"] = json_value::array();
       gmesh["primitives"].push_back(shape_primitives.at(instance.shape));
       gmesh["primitives"].back()["material"] = instance.material;
       mesh_map[key]                          = gmeshes.size() - 1;
     }
   } else if (!scene.shapes.empty()) {
     auto& gmeshes = gltf["meshes"];
-    gmeshes       = njson::array();
+    gmeshes       = json_value::array();
     auto shape_id = 0;
     for (auto& primitives : shape_primitives) {
       auto& gmesh         = gmeshes.emplace_back();
-      gmesh               = njson::object();
+      gmesh               = json_value::object();
       gmesh["name"]       = get_shape_name(scene, shape_id++);
-      gmesh["primitives"] = njson::array();
+      gmesh["primitives"] = json_value::array();
       gmesh["primitives"].push_back(primitives);
     }
   }
@@ -4554,43 +3875,43 @@ static bool save_gltf_scene(const string& filename, const scene_data& scene,
   // nodes
   if (!scene.cameras.empty() || !scene.instances.empty()) {
     auto& gnodes   = gltf["nodes"];
-    gnodes         = njson::array();
+    gnodes         = json_value::array();
     auto camera_id = 0;
     for (auto& camera : scene.cameras) {
       auto& gnode     = gnodes.emplace_back();
-      gnode           = njson::object();
+      gnode           = json_value::object();
       gnode["name"]   = get_camera_name(scene, camera);
       gnode["matrix"] = frame_to_mat(camera.frame);
       gnode["camera"] = camera_id++;
     }
     for (auto& instance : scene.instances) {
       auto& gnode     = gnodes.emplace_back();
-      gnode           = njson::object();
+      gnode           = json_value::object();
       gnode["name"]   = get_instance_name(scene, instance);
       gnode["matrix"] = frame_to_mat(instance.frame);
       gnode["mesh"]   = mesh_map.at({instance.shape, instance.material});
     }
     // root children
     auto& groot     = gnodes.emplace_back();
-    groot           = njson::object();
+    groot           = json_value::object();
     groot["name"]   = "root";
     auto& gchildren = groot["children"];
-    gchildren       = njson::array();
+    gchildren       = json_value::array();
     for (auto idx = (size_t)0; idx < gnodes.size() - 1; idx++)
       gchildren.push_back(idx);
     // scene
     auto& gscenes     = gltf["scenes"];
-    gscenes           = njson::array();
+    gscenes           = json_value::array();
     auto& gscene      = gscenes.emplace_back();
-    gscene            = njson::object();
+    gscene            = json_value::object();
     auto& gscenenodes = gscene["nodes"];
-    gscenenodes       = njson::array();
+    gscenenodes       = json_value::array();
     gscenenodes.push_back(gnodes.size() - 1);
     gltf["scene"] = 0;
   }
 
   // save json
-  if (!save_json(filename, gltf, error)) return false;
+  save_json(filename, gltf);
 
   // get filename from name
   auto make_filename = [filename](const string& name, const string& group,
@@ -4601,58 +3922,35 @@ static bool save_gltf_scene(const string& filename, const scene_data& scene,
   // dirname
   auto dirname = path_dirname(filename);
 
-  if (noparallel) {
-    // save shapes
-    for (auto& shape : scene.shapes) {
-      auto path = "shapes/" + get_shape_name(scene, shape) + ".bin";
-      if (!save_binshape(path_join(dirname, path), shape, error))
-        return dependent_error();
+  try {
+    if (noparallel) {
+      // save shapes
+      for (auto& shape : scene.shapes) {
+        auto path = "shapes/" + get_shape_name(scene, shape) + ".bin";
+        save_binshape(path_join(dirname, path), shape);
+      }
+      // save textures
+      for (auto& texture : scene.textures) {
+        auto path = "textures/" + get_texture_name(scene, texture) +
+                    (!texture.pixelsf.empty() ? ".hdr" : ".png");
+        save_texture(path_join(dirname, path), texture);
+      }
+    } else {
+      // save shapes
+      parallel_foreach(scene.shapes, [&](auto& shape) {
+        auto path = "shapes/" + get_shape_name(scene, shape) + ".bin";
+        save_binshape(path_join(dirname, path), shape);
+      });
+      // save textures
+      parallel_foreach(scene.textures, [&](auto& texture) {
+        auto path = "textures/" + get_texture_name(scene, texture) +
+                    (!texture.pixelsf.empty() ? ".hdr"s : ".png"s);
+        save_texture(path_join(dirname, path), texture);
+      });
     }
-    // save textures
-    for (auto& texture : scene.textures) {
-      auto path = "textures/" + get_texture_name(scene, texture) +
-                  (!texture.pixelsf.empty() ? ".hdr" : ".png");
-      if (!save_texture(path_join(dirname, path), texture, error))
-        return dependent_error();
-    }
-  } else {
-    // mutex
-    auto mutex = std::mutex{};
-    // save shapes
-    parallel_foreach(scene.shapes, [&](auto& shape) {
-      {
-        auto lock = std::lock_guard{mutex};
-        if (!error.empty()) return;
-      }
-      auto path = "shapes/" + get_shape_name(scene, shape) + ".bin";
-      auto err  = string{};
-      if (!save_binshape(path_join(dirname, path), shape, err)) {
-        auto lock = std::lock_guard{mutex};
-        error     = err;
-        return;
-      }
-    });
-    if (!error.empty()) return dependent_error();
-    // save textures
-    parallel_foreach(scene.textures, [&](auto& texture) {
-      {
-        auto lock = std::lock_guard{mutex};
-        if (!error.empty()) return;
-      }
-      auto path = "textures/" + get_texture_name(scene, texture) +
-                  (!texture.pixelsf.empty() ? ".hdr"s : ".png"s);
-      auto err = string{};
-      if (!save_texture(path_join(dirname, path), texture, err)) {
-        auto lock = std::lock_guard{mutex};
-        error     = err;
-        return;
-      }
-    });
-    if (!error.empty()) return dependent_error();
+  } catch (io_error& exception) {
+    throw io_error::dependent_error(filename, exception);
   }
-
-  // done
-  return true;
 }
 
 }  // namespace yocto
@@ -4663,16 +3961,10 @@ static bool save_gltf_scene(const string& filename, const scene_data& scene,
 namespace yocto {
 
 // load pbrt scenes
-static bool load_pbrt_scene(
-    const string& filename, scene_data& scene, string& error, bool noparallel) {
-  auto dependent_error = [filename, &error]() {
-    error = filename + ": error in " + error;
-    return false;
-  };
-
+static void load_pbrt_scene(
+    const string& filename, scene_data& scene, bool noparallel) {
   // load pbrt
-  auto pbrt = pbrt_model{};
-  if (!load_pbrt(filename, pbrt, error)) return false;
+  auto pbrt = load_pbrt(filename);
 
   // convert cameras
   for (auto& pcamera : pbrt.cameras) {
@@ -4767,72 +4059,44 @@ static bool load_pbrt_scene(
   // dirname
   auto dirname = path_dirname(filename);
 
-  if (noparallel) {
-    // load shape
-    for (auto& shape : scene.shapes) {
-      auto& path = shapes_paths[&shape - &scene.shapes.front()];
-      if (path.empty()) continue;
-      if (!load_shape(path_join(dirname, path), shape, error, true))
-        return dependent_error();
+  try {
+    if (noparallel) {
+      // load shape
+      for (auto& shape : scene.shapes) {
+        auto& path = shapes_paths[&shape - &scene.shapes.front()];
+        if (path.empty()) continue;
+        load_shape(path_join(dirname, path), shape, true);
+      }
+      // load texture
+      for (auto& texture : scene.textures) {
+        auto& path = texture_paths[&texture - &scene.textures.front()];
+        load_texture(path_join(dirname, path), texture);
+      }
+    } else {
+      // load shapes
+      parallel_foreach(scene.shapes, [&](auto& shape) {
+        auto& path = shapes_paths[&shape - &scene.shapes.front()];
+        if (path.empty()) return;
+        load_shape(path_join(dirname, path), shape, true);
+      });
+      // load textures
+      parallel_foreach(scene.textures, [&](auto& texture) {
+        auto& path = texture_paths[&texture - &scene.textures.front()];
+        load_texture(path_join(dirname, path), texture);
+      });
     }
-    // load texture
-    for (auto& texture : scene.textures) {
-      auto& path = texture_paths[&texture - &scene.textures.front()];
-      if (!load_texture(path_join(dirname, path), texture, error))
-        return dependent_error();
-    }
-  } else {
-    // mutex
-    auto mutex = std::mutex{};
-    // load shapes
-    parallel_foreach(scene.shapes, [&](auto& shape) {
-      {
-        auto lock = std::lock_guard{mutex};
-        if (!error.empty()) return;
-      }
-      auto& path = shapes_paths[&shape - &scene.shapes.front()];
-      if (path.empty()) return;
-      auto err = string{};
-      if (!load_shape(path_join(dirname, path), shape, err, true)) {
-        auto lock = std::lock_guard{mutex};
-        error     = err;
-        return;
-      }
-    });
-    if (!error.empty()) return dependent_error();
-    // load textures
-    parallel_foreach(scene.textures, [&](auto& texture) {
-      {
-        auto lock = std::lock_guard{mutex};
-        if (!error.empty()) return;
-      }
-      auto& path = texture_paths[&texture - &scene.textures.front()];
-      auto  err  = string{};
-      if (!load_texture(path_join(dirname, path), texture, err)) {
-        auto lock = std::lock_guard{mutex};
-        error     = err;
-        return;
-      }
-    });
-    if (!error.empty()) return dependent_error();
+  } catch (io_error& exception) {
+    throw io_error::dependent_error(filename, exception);
   }
 
   // fix scene
   add_missing_camera(scene);
   add_missing_radius(scene);
-
-  // done
-  return true;
 }
 
 // Save a pbrt scene
-static bool save_pbrt_scene(const string& filename, const scene_data& scene,
-    string& error, bool noparallel) {
-  auto dependent_error = [filename, &error]() {
-    error = filename + ": error in " + error;
-    return false;
-  };
-
+static void save_pbrt_scene(
+    const string& filename, const scene_data& scene, bool noparallel) {
   // save pbrt
   auto pbrt = pbrt_model{};
 
@@ -4892,63 +4156,40 @@ static bool save_pbrt_scene(const string& filename, const scene_data& scene,
   }
 
   // save pbrt
-  if (!save_pbrt(filename, pbrt, error)) return false;
+  save_pbrt(filename, pbrt);
 
   // dirname
   auto dirname = path_dirname(filename);
 
-  if (noparallel) {
-    // save textures
-    for (auto& shape : scene.shapes) {
-      auto path = "shapes/" + get_shape_name(scene, shape) + ".ply";
-      if (!save_shape(path_join(dirname, path), shape, error, true))
-        return dependent_error();
+  try {
+    if (noparallel) {
+      // save textures
+      for (auto& shape : scene.shapes) {
+        auto path = "shapes/" + get_shape_name(scene, shape) + ".ply";
+        save_shape(path_join(dirname, path), shape, true);
+      }
+      // save shapes
+      for (auto& texture : scene.textures) {
+        auto path = "textures/" + get_texture_name(scene, texture) +
+                    (!texture.pixelsf.empty() ? ".hdr" : ".png");
+        save_texture(path_join(dirname, path), texture);
+      }
+    } else {
+      // save shapes
+      parallel_foreach(scene.shapes, [&](auto& shape) {
+        auto path = "shapes/" + get_shape_name(scene, shape) + ".ply";
+        save_shape(path_join(dirname, path), shape, true);
+      });
+      // save textures
+      parallel_foreach(scene.textures, [&](auto& texture) {
+        auto path = "textures/" + get_texture_name(scene, texture) +
+                    (!texture.pixelsf.empty() ? ".hdr"s : ".png"s);
+        save_texture(path_join(dirname, path), texture);
+      });
     }
-    // save shapes
-    for (auto& texture : scene.textures) {
-      auto path = "textures/" + get_texture_name(scene, texture) +
-                  (!texture.pixelsf.empty() ? ".hdr" : ".png");
-      if (!save_texture(path_join(dirname, path), texture, error))
-        return dependent_error();
-    }
-  } else {
-    // mutex
-    auto mutex = std::mutex{};
-    // save shapes
-    parallel_foreach(scene.shapes, [&](auto& shape) {
-      {
-        auto lock = std::lock_guard{mutex};
-        if (!error.empty()) return;
-      }
-      auto path = "shapes/" + get_shape_name(scene, shape) + ".ply";
-      auto err  = string{};
-      if (!save_shape(path_join(dirname, path), shape, err, true)) {
-        auto lock = std::lock_guard{mutex};
-        error     = err;
-        return;
-      }
-    });
-    if (!error.empty()) return dependent_error();
-    // save textures
-    parallel_foreach(scene.textures, [&](auto& texture) {
-      {
-        auto lock = std::lock_guard{mutex};
-        if (!error.empty()) return;
-      }
-      auto path = "textures/" + get_texture_name(scene, texture) +
-                  (!texture.pixelsf.empty() ? ".hdr"s : ".png"s);
-      auto err = string{};
-      if (!save_texture(path_join(dirname, path), texture, err)) {
-        auto lock = std::lock_guard{mutex};
-        error     = err;
-        return;
-      }
-    });
-    if (!error.empty()) return dependent_error();
+  } catch (io_error& exception) {
+    throw io_error::dependent_error(filename, exception);
   }
-
-  // done
-  return true;
 }
 
 }  // namespace yocto
