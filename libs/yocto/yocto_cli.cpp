@@ -1215,16 +1215,17 @@ void update_value_objects(json_value& value, const json_value& update) {
 }
 
 // set variables
-static void json_to_variable(const json_value& json, cli_variable& variable, const string& name) {
-    if (variable.setter) {
-      try {
-          variable.setter(json, variable.value, variable.choices);
-      } catch (...) {
-        throw cli_error("bad value for " + name);
-      }
+static void json_to_variable(
+    const json_value& json, cli_variable& variable, const string& name) {
+  if (variable.setter) {
+    try {
+      variable.setter(json, variable.value, variable.choices);
+    } catch (...) {
+      throw cli_error("bad value for " + name);
     }
+  }
   for (auto& [key, property] : variable.variables) {
-    if(json.contains(key)) {
+    if (json.contains(key)) {
       json_to_variable(json.at(key), property, key);
     }
   }
