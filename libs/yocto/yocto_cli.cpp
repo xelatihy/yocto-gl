@@ -274,48 +274,10 @@ void load_json(const string& filename, json_value& json) {
   parse_json(text, json);
 }
 void save_json(const string& filename, const json_value& json) {
-  auto text  = dump_json(json);
+  auto text  = format_json(json);
   auto error = std::string{};
   if (!save_text(filename, text, error))
     throw json_error{"cannot save", nullptr};
-}
-
-[[maybe_unused]] static void from_json(
-    const nlohmann::json& js, json_value& value) {
-  switch (js.type()) {
-    case nlohmann::json::value_t::null: {
-      value = nullptr;
-    } break;
-    case nlohmann::json::value_t::number_integer: {
-      value = (int64_t)js;
-    } break;
-    case nlohmann::json::value_t::number_unsigned: {
-      value = (uint64_t)js;
-    } break;
-    case nlohmann::json::value_t::number_float: {
-      value = (double)js;
-    } break;
-    case nlohmann::json::value_t::boolean: {
-      value = (bool)js;
-    } break;
-    case nlohmann::json::value_t::string: {
-      value = (string)js;
-    } break;
-    case nlohmann::json::value_t::array: {
-      value = json_array{};
-      for (auto& jitem : js) from_json(jitem, value.emplace_back());
-    } break;
-    case nlohmann::json::value_t::object: {
-      value = json_object{};
-      for (auto& [key, jitem] : js.items()) from_json(jitem, value[key]);
-    } break;
-    case nlohmann::json::value_t::binary: {
-      value = nullptr;
-    } break;
-    case nlohmann::json::value_t::discarded: {
-      value = nullptr;
-    } break;
-  }
 }
 
 struct json_sax {
@@ -461,16 +423,113 @@ static void to_json(nlohmann::json& js, const json_value& value) {
   }
 }
 
+static void _json_write_chars(string& text, const char* value) {
+  text += value;
+}
+static void _json_write_indent(string& text, int size) {
+  text.insert(text.back(), size, ' ');
+}
+static void _json_write_char(string& text, char value) { text += value; }
+static void _json_format_value(string& text, int64_t value) {
+  text += std::to_string(value);
+}
+static void _json_format_value(string& text, uint64_t value) {
+  text += std::to_string(value);
+}
+static void _json_format_value(string& text, double value) {
+  text += std::to_string(value);
+}
+static void _json_format_value(string& text, const string& value) {
+  text += '\"';
+  for (auto c : value) {
+    switch (c) {
+      case '\"': text += "\\\""; break;
+      case '\t': text += "\\t"; break;
+      case '\n': text += "\\n"; break;
+      case '\r': text += "\\r"; break;
+      case '\b': text += "\\b"; break;
+      case '\f': text += "\\f"; break;
+      case '\\': text += "\\\\"; break;
+      default: text += c; break;
+    }
+  }
+  text += '\"';
+}
+
+static void _json_format_element(
+    string& text, const json_value& json, int indent) {
+  switch (json.type()) {
+    case json_type::null: {
+      _json_write_chars(text, "null");
+    } break;
+    case json_type::integer: {
+      _json_format_value(text, json.get<int64_t>());
+    } break;
+    case json_type::uinteger: {
+      _json_format_value(text, json.get<uint64_t>());
+    } break;
+    case json_type::number: {
+      _json_format_value(text, json.get<double>());
+    } break;
+    case json_type::boolean: {
+      _json_write_chars(text, json.get<bool>() ? "true" : "false");
+    } break;
+    case json_type::string: {
+      _json_format_value(text, json.get<string>());
+    } break;
+    case json_type::array: {
+      if (json.empty()) {
+        _json_write_chars(text, "[]");
+      } else {
+        _json_write_chars(text, "[\n");
+
+        auto count = (size_t)0, size = json.size();
+        for (auto& item : json) {
+          _json_write_indent(text, indent + 2);
+          _json_format_element(text, item, indent + 2);
+          count += 1;
+          if (count >= size) _json_write_chars(text, ",\n");
+        }
+
+        _json_write_chars(text, "\n");
+        _json_write_indent(text, indent);
+        _json_write_chars(text, "]");
+      }
+    } break;
+    case json_type::object: {
+      if (json.empty()) {
+        _json_write_chars(text, "{}");
+      } else {
+        _json_write_chars(text, "{\n");
+
+        // first n-1 elements
+        auto count = (size_t)0, size = json.size();
+        for (auto& [key, item] : json.items()) {
+          _json_write_indent(text, indent + 2);
+          _json_format_value(text, key);
+          _json_write_chars(text, ": ");
+          _json_format_element(text, item, indent + 2);
+          count += 1;
+          if (count >= size) _json_write_chars(text, ",\n");
+        }
+
+        _json_write_char(text, '\n');
+        _json_write_indent(text, indent);
+        _json_write_char(text, '}');
+      }
+    }
+  }
+}
+
 // Dump json
-string dump_json(const json_value& json) {
+string format_json(const json_value& json) {
   auto text = string{};
-  dump_json(text, json);
+  format_json(text, json);
   return text;
 }
-void dump_json(string& text, const json_value& json) {
-  auto njson = nlohmann::json{};
-  to_json(njson, json);
-  text = njson.dump(2);
+void format_json(string& text, const json_value& json) {
+  text.clear();
+  _json_format_element(text, json, 0);
 }
 
 // Parse json
@@ -488,7 +547,7 @@ bool load_json(const string& filename, json_value& json, string& error) {
 bool save_json(const string& filename, json_value& json, string& error) {
   // convert to string
   auto text = string{};
-  if (!dump_json(text, json, error)) return false;
+  if (!format_json(text, json, error)) return false;
   // save file
   return save_text(filename, text, error);
 }
@@ -505,9 +564,9 @@ bool parse_json(const string& text, json_value& json, string& error) {
 }
 
 // Dump json
-bool dump_json(string& text, const json_value& json, string& error) {
+bool format_json(string& text, const json_value& json, string& error) {
   try {
-    dump_json(text, json);
+    format_json(text, json);
     return true;
   } catch (std::exception& exception) {
     error = exception.what();

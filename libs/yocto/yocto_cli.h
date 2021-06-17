@@ -741,8 +741,8 @@ void       save_json(const string& filename, const json_value& json);
 // Parse/dump json
 json_value parse_json(const string& text);
 void       parse_json(const string& text, json_value& json);
-string     dump_json(const json_value& json);
-void       dump_json(string& text, const json_value& json);
+string     format_json(const json_value& json);
+void       format_json(string& text, const json_value& json);
 
 // Load/save json
 bool load_json(const string& filename, json_value& json, string& error);
@@ -750,7 +750,7 @@ bool save_json(const string& filename, const json_value& json, string& error);
 
 // Parse/dump json
 bool parse_json(const string& text, json_value& json, string& error);
-bool dump_json(string& text, const json_value& json, string& error);
+bool format_json(string& text, const json_value& json, string& error);
 
 }  // namespace yocto
 
