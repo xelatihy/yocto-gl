@@ -225,62 +225,62 @@ void add_option(const cli_command& cli, const string& name, vec4f& value,
 namespace yocto {
 
 // Simple ordered map
-template <typename Key, typename Value>
-struct ordered_map {
+template <typename K, typename T>
+class ordered_map {
+ public:
+  using container      = vector<pair<K, T>>;
+  using const_iterator = typename container::const_iterator;
+  using iterator       = typename container::iterator;
+  using value_type     = typename container::value_type;
+
   size_t size() const { return _data.size(); }
   bool   empty() const { return _data.empty(); }
 
-  bool contains(const Key& key) const { return (bool)_search(key); }
+  bool contains(const K& key) const { return _find(key) != _data.end(); }
 
-  Value& operator[](const Key& key) {
-    if (auto it = _search(key); it) return it->second;
-    return _data.emplace_back(key, Value{}).second;
+  T& operator[](const K& key) {
+    if (auto it = _find(key); it != _data.end()) return it->second;
+    return _data.emplace_back(key, T{}).second;
   }
-  const Value& operator[](const Key& key) const {
-    if (auto it = _search(key); it) return it->second;
+  const T& operator[](const K& key) const {
+    if (auto it = _search(key); it != _data.end()) return it->second;
     throw std::out_of_range{"missing key for " + key};
   }
-  Value& at(const Key& key) {
-    if (auto it = _search(key); it) return it->second;
+  T& at(const K& key) {
+    if (auto it = _find(key); it != _data.end()) return it->second;
     throw std::out_of_range{"missing key for " + key};
   }
-  const Value& at(const Key& key) const {
-    if (auto it = _search(key); it) return it->second;
+  const T& at(const K& key) const {
+    if (auto it = _find(key); it != _data.end()) return it->second;
     throw std::out_of_range{"missing key for " + key};
   }
 
-  pair<Key, Value>* find(const string& key) {
-    if (auto it = _search(key); it) return it;
-    return end();
-  }
-  const pair<Key, Value>* find(const string& key) const {
-    if (auto it = _search(key); it) return it;
-    return end();
-  }
+  iterator       find(const string& key) { return _find(key); }
+  const_iterator find(const string& key) const { return _find(key); }
 
-  pair<Key, Value>*       begin() { return _data.data(); }
-  pair<Key, Value>*       end() { return _data.data() + _data.size(); }
-  const pair<Key, Value>* begin() const { return _data.data(); }
-  const pair<Key, Value>* end() const { return _data.data() + _data.size(); }
+  iterator       begin() { return _data.begin(); }
+  iterator       end() { return _data.end(); }
+  const_iterator begin() const { return _data.begin(); }
+  const_iterator end() const { return _data.end(); }
 
-  void push_back(const pair<Key, Value>& item) { _data.push_back(item); }
+  void push_back(const value_type& item) { _data.push_back(item); }
   template <typename... Args>
-  pair<Key, Value>& emplace_back(Args&&... args) {
+  value_type& emplace_back(Args&&... args) {
     return _data.emplace_back(std::forward<Args>(args)...);
   }
 
  private:
-  vector<pair<Key, Value>> _data;
+  container _data;
 
-  pair<Key, Value>* _search(const string& key) {
-    for (auto& item : _data)
-      if (key == item.first) return &item;
-    return nullptr;
+  iterator _find(const string& key) {
+    for (auto it = _data.begin(); it != _data.end(); ++it)
+      if (key == it->first) return it;
+    return _data.end();
   }
-  const pair<Key, Value>* _search(const string& key) const {
-    for (auto& item : _data)
-      if (key == item.first) return &item;
-    return nullptr;
+  const_iterator _find(const string& key) const {
+    for (auto it = _data.begin(); it != _data.end(); ++it)
+      if (key == it->first) return it;
+    return _data.end();
   }
 };
 
@@ -416,7 +416,7 @@ struct json_value {
   void try_get(const string& key, T& value) const {
     auto& object = _get_object();
     auto  it     = object.find(key);
-    if (it) it->second.get(value);
+    if (it != object.end()) it->second.get(value);
   }
   template <typename T>
   T get_at(const string& key) const {
