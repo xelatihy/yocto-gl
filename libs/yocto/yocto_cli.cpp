@@ -1326,7 +1326,7 @@ static string get_usage(const json_value& json, const json_value& schema,
     const string& commandname, const string& progname) {
   if (json.contains("command") && !json.at("command").empty()) {
     auto command = json.at("command").get<string>();
-    return get_usage(json.at(command), schema.at(command),
+    return get_usage(json.at(command), schema.at("properties").at(command),
         commandname.empty() ? command : (commandname + " " + command),
         progname);
   } else {
