@@ -364,7 +364,8 @@ struct json_sax {
 
   bool key(std::string& val) {
     // add null at given key and store the reference for later
-    _object_item = &(_stack.back()->operator[](val));
+    // _object_item = &(_stack.back()->operator[](val));
+    _object_item = &(_stack.back()->insert_back(val));
     return true;
   }
 
@@ -702,8 +703,8 @@ static void add_option_impl(const cli_command& cli, const string& name,
   auto& variables = get_variables(cli);
   cli_to_json(defaults[name], value, choices);
   cli_to_schema(schema["properties"][name], value, choices, name, usage);
-  if (req) schema["required"].append(name);
-  if (positional) schema["clipositional"].append(name);
+  if (req) schema["required"].push_back(name);
+  if (positional) schema["clipositional"].push_back(name);
   variables.variables[name] = {&value, cli_from_json_<T>, choices};
 }
 
@@ -717,8 +718,8 @@ static void add_option_impl(const cli_command& cli, const string& name,
   auto& variables = get_variables(cli);
   cli_to_json(defaults[name], value, choices);
   cli_to_schema(schema["properties"][name], value, choices, name, usage);
-  if (req) schema["required"].append(name);
-  if (positional) schema["clipositional"].append(name);
+  if (req) schema["required"].push_back(name);
+  if (positional) schema["clipositional"].push_back(name);
   variables.variables[name] = {&value, cli_from_json_<array<T, N>>, choices};
 }
 
@@ -732,8 +733,8 @@ static void add_option_impl(const cli_command& cli, const string& name,
   auto& variables = get_variables(cli);
   cli_to_json(defaults[name], value, choices);
   cli_to_schema(schema["properties"][name], value, choices, name, usage);
-  if (req) schema["required"].append(name);
-  if (positional) schema["clipositional"].append(name);
+  if (req) schema["required"].push_back(name);
+  if (positional) schema["clipositional"].push_back(name);
   variables.variables[name] = {&value, cli_from_json_<vector<T>>, choices};
 }
 

@@ -263,6 +263,12 @@ struct ordered_map {
   const pair<Key, Value>* begin() const { return _data.data(); }
   const pair<Key, Value>* end() const { return _data.data() + _data.size(); }
 
+  void push_back(const pair<Key, Value>& item) { _data.push_back(item); }
+  template <typename... Args>
+  pair<Key, Value>& emplace_back(Args&&... args) {
+    return _data.emplace_back(std::forward<Args>(args)...);
+  }
+
  private:
   vector<pair<Key, Value>> _data;
 
@@ -386,11 +392,6 @@ struct json_value {
   const json_value& front() const { return _get_array().front(); }
   json_value&       back() { return _get_array().back(); }
   const json_value& back() const { return _get_array().back(); }
-  json_value&       append() { return _get_array().emplace_back(); }
-  template <typename T>
-  void append(const T& value) {
-    _get_array().push_back(json_value{value});
-  }
   template <typename... Args>
   json_value& emplace_back(Args&&... args) {
     return _get_array().emplace_back(std::forward<Args>(args)...);
@@ -399,6 +400,9 @@ struct json_value {
   template <typename T>
   void push_back(const T& value) {
     _get_array().push_back(json_value{value});
+  }
+  json_value& insert_back(const string& key) {
+    return _get_object().emplace_back(key, json_value{}).second;
   }
 
   // get functions

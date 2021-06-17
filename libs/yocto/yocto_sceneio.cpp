@@ -4161,13 +4161,14 @@ static void save_json_scene(
     const string& filename, const scene_data& scene, bool noparallel) {
   // helpers to handel old code paths
   auto add_object = [](json_value& js, const string& name) -> json_value& {
-    js[name] = json_object{};
-    return js[name];
+    auto& item = js.insert_back(name);
+    item       = json_object{};
+    return item;
   };
   auto set_opt = [](json_value& js, const string& name, const auto& value,
                      const auto& def) {
     if (value == def) return;
-    js[name] = value;
+    js.insert_back(name) = value;
   };
 
   // save json file
