@@ -121,11 +121,18 @@ namespace yocto {
 // Initialize a command line parser.
 struct cli_state;
 cli_state make_cli(const string& cmd, const string& usage);
-// parse arguments, checks for errors, and exits on error or help
-void parse_cli(cli_state& cli, int argc, const char** argv);
+// parse arguments, throw exceptions on error
 void parse_cli(cli_state& cli, const vector<string>& args);
 // parse arguments, checks for errors
 bool parse_cli(cli_state& cli, const vector<string>& args, string& error);
+// parse arguments, checks for errors, and exits on error or help
+void parse_cli_and_handle_errors(cli_state& cli, int argc, const char** argv);
+void parse_cli_and_handle_errors(cli_state& cli, const vector<string>& args);
+
+// get usage
+string get_usage(const cli_state& cli);
+// get help
+bool get_help(const cli_state& cli);
 
 // Add a subcommand
 struct cli_command;
@@ -780,7 +787,7 @@ bool format_json(string& text, const json_value& json, string& error);
 namespace yocto {
 
 // Command line setter.
-using cli_setter = bool (*)(
+using cli_setter = void (*)(
     const json_value&, void*, const vector<string>& choices);
 // Command line variable.
 struct cli_variable {
@@ -793,6 +800,7 @@ struct cli_variable {
 struct cli_state {
   json_value   defaults  = {};
   json_value   schema    = {};
+  json_value   value     = {};
   cli_variable variables = {};
 };
 // Command line command.
@@ -803,6 +811,14 @@ struct cli_command {
   cli_command(cli_state* state, const string& path)
       : state{state}, path{path} {}
   cli_command(const cli_state& state) : state{(cli_state*)&state}, path{""} {}
+};
+
+// Command line error.
+struct cli_error : std::runtime_error {
+  cli_error(const string& message) : std::runtime_error(message) {}
+};
+struct cli_help : std::runtime_error {
+  cli_help(const string& message) : std::runtime_error(message) {}
 };
 
 template <typename T, typename>
