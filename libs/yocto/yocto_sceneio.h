@@ -58,65 +58,6 @@ using std::vector;
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// IO ERROR
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Io error used in exception handling
-struct io_error : std::runtime_error {
-  string filename = "", message = "";
-  io_error(const string& filename, const string& message)
-      : std::runtime_error(filename + ": " + message)
-      , filename{filename}
-      , message{message} {}
-
-  // common errors
-  // clang-format off
-  static io_error open_error(const string& filename) { return {filename, "file not found"}; }
-  static io_error read_error(const string& filename) { return {filename, "read error"}; }
-  static io_error write_error(const string& filename) { return {filename, "write error"}; }
-  static io_error parse_error(const string& filename) { return {filename, "parse error"}; }
-  static io_error format_error(const string& filename) { return {filename, "unknown format"}; }
-  static io_error preset_error(const string& filename) { return {filename, "unknown preset"}; }
-  static io_error shape_error(const string& filename) { return {filename, "empty shape"}; }
-  static io_error dependent_error(const string& filename, const io_error& error) { return {filename, string{"error in "} + error.what()}; }
-  static io_error json_error(const string& filename) { return {filename, "json error"}; }
-  static io_error matref_error(const string& filename, const string& name) { return {filename, "missing material " + name}; }
-  // clang-format on
-};
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// FILE IO
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Using directive
-using byte = unsigned char;
-
-// Load/save a text file
-string load_text(const string& filename);
-void   load_text(const string& filename, string& str);
-void   save_text(const string& filename, const string& str);
-
-// Load/save a binary file
-vector<byte> load_binary(const string& filename);
-void         load_binary(const string& filename, vector<byte>& data);
-void         save_binary(const string& filename, const vector<byte>& data);
-
-// Load/save a text file
-bool load_text(const string& filename, string& str, string& error);
-bool save_text(const string& filename, const string& str, string& error);
-
-// Load/save a binary file
-bool load_binary(const string& filename, vector<byte>& data, string& error);
-bool save_binary(
-    const string& filename, const vector<byte>& data, string& error);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
 // IMAGE IO
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -260,56 +201,6 @@ bool make_scene_preset(scene_data& scene, const string& type, string& error);
 
 // Add environment
 bool add_environment(scene_data& scene, const string& filename, string& error);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// PATH UTILITIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Utility to normalize a path
-string normalize_path(const string& filename);
-
-// Get directory name (not including '/').
-string path_dirname(const string& filename);
-
-// Get extension (including '.').
-string path_extension(const string& filename);
-
-// Get filename without directory.
-string path_filename(const string& filename);
-
-// Get filename without directory and extension.
-string path_basename(const string& filename);
-
-// Joins paths
-string path_join(const string& patha, const string& pathb);
-string path_join(const string& patha, const string& pathb, const string& pathc);
-
-// Replaces extensions
-string replace_extension(const string& filename, const string& ext);
-
-// Check if a file can be opened for reading.
-bool path_exists(const string& filename);
-
-// Check if a file is a directory
-bool path_isdir(const string& filename);
-
-// Check if a file is a file
-bool path_isfile(const string& filename);
-
-// List the contents of a directory
-vector<string> list_directory(const string& dirname);
-
-// Create a directory and all missing parent directories if needed
-void make_directory(const string& dirname);
-
-// Get the current directory
-string path_current();
-
-// Create a directory and all missing parent directories if needed
-bool make_directory(const string& dirname, string& error);
 
 }  // namespace yocto
 

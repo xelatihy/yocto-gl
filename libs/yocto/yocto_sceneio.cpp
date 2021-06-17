@@ -34,7 +34,6 @@
 #include <climits>
 #include <cstdlib>
 #include <cstring>
-#include <filesystem>
 #include <memory>
 #include <stdexcept>
 #include <unordered_map>
@@ -43,8 +42,8 @@
 #include "ext/stb_image_resize.h"
 #include "ext/stb_image_write.h"
 #include "ext/tinyexr.h"
-#include "yocto_cli.h"
 #include "yocto_color.h"
+#include "yocto_commonio.h"
 #include "yocto_geometry.h"
 #include "yocto_image.h"
 #include "yocto_modelio.h"
@@ -64,283 +63,9 @@ using namespace std::string_literals;
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// PATH UTILITIES
+// IMAGE IO
 // -----------------------------------------------------------------------------
 namespace yocto {
-
-// Make a path from a utf8 string
-static std::filesystem::path make_path(const string& filename) {
-  return std::filesystem::u8path(filename);
-}
-
-// Normalize path
-string normalize_path(const string& filename) {
-  return make_path(filename).generic_u8string();
-}
-
-// Get directory name (not including /)
-string path_dirname(const string& filename) {
-  return make_path(filename).parent_path().generic_u8string();
-}
-
-// Get extension (including .)
-string path_extension(const string& filename) {
-  return make_path(filename).extension().u8string();
-}
-
-// Get filename without directory.
-string path_filename(const string& filename) {
-  return make_path(filename).filename().u8string();
-}
-
-// Get filename without directory and extension.
-string path_basename(const string& filename) {
-  return make_path(filename).stem().u8string();
-}
-
-// Joins paths
-string path_join(const string& patha, const string& pathb) {
-  return (make_path(patha) / make_path(pathb)).generic_u8string();
-}
-string path_join(
-    const string& patha, const string& pathb, const string& pathc) {
-  return (make_path(patha) / make_path(pathb) / make_path(pathc))
-      .generic_u8string();
-}
-
-// Replaces extensions
-string replace_extension(const string& filename, const string& ext) {
-  return make_path(filename).replace_extension(ext).u8string();
-}
-
-// Check if a file can be opened for reading.
-bool path_exists(const string& filename) { return exists(make_path(filename)); }
-
-// Check if a file is a directory
-bool path_isdir(const string& filename) {
-  return is_directory(make_path(filename));
-}
-
-// Check if a file is a file
-bool path_isfile(const string& filename) {
-  return is_regular_file(make_path(filename));
-}
-
-// List the contents of a directory
-vector<string> list_directory(const string& dirname) {
-  try {
-    auto entries = vector<string>{};
-    for (auto entry : std::filesystem::directory_iterator(make_path(dirname))) {
-      entries.push_back(entry.path().generic_u8string());
-    }
-    return entries;
-  } catch (...) {
-    throw io_error{dirname, "cannot list directory"};
-  }
-}
-
-// Create a directory and all missing parent directories if needed
-void make_directory(const string& dirname) {
-  if (path_exists(dirname)) return;
-  try {
-    create_directories(make_path(dirname));
-  } catch (...) {
-    throw io_error{dirname, "cannot create directory"};
-  }
-}
-
-// Get the current directory
-string path_current() { return std::filesystem::current_path().u8string(); }
-
-// Create a directory and all missing parent directories if needed
-bool make_directory(const string& dirname, string& error) {
-  if (path_exists(dirname)) return true;
-  try {
-    create_directories(make_path(dirname));
-    return true;
-  } catch (...) {
-    error = dirname + ": cannot create directory";
-    return false;
-  }
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// FILE STREAM
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Safe wrapper for FILE stream
-struct file_stream {
-  // file parameters
-  string filename = "";
-  FILE*  fs       = nullptr;
-  bool   owned    = false;
-
-  // move-only type
-  file_stream(const file_stream&) = delete;
-  file_stream& operator=(const file_stream&) = delete;
-  ~file_stream() {
-    if (owned && fs) fclose(fs);
-  }
-
-  // operator bool to check for error
-  explicit operator bool() const { return fs != nullptr; }
-};
-
-// Open a file
-static file_stream open_file(const string& filename, const string& mode) {
-#ifdef _WIN32
-  auto path8 = std::filesystem::u8path(filename);
-  auto wmode = std::wstring(mode.begin(), mode.end());
-  auto fs    = _wfopen(path8.c_str(), wmode.c_str());
-#else
-  auto fs = fopen(filename.c_str(), mode.c_str());
-#endif
-  if (!fs) throw io_error::open_error(filename);
-  return {filename, fs, true};
-}
-
-// Close a file
-static void close_file(file_stream& fs) {
-  if (fs.owned && fs.fs) fclose(fs.fs);
-  fs.filename = "";
-  fs.fs       = nullptr;
-  fs.owned    = false;
-}
-
-// File length
-static size_t get_length(file_stream& fs) {
-  fseek(fs.fs, 0, SEEK_END);
-  auto length = ftell(fs.fs);
-  fseek(fs.fs, 0, SEEK_SET);
-  return (size_t)length;
-}
-
-// Read a line of text
-static bool read_line(file_stream& fs, char* buffer, size_t size) {
-  return fgets(buffer, (int)size, fs.fs);
-}
-
-// Write text to a file
-static void write_text(file_stream& fs, const string& str) {
-  if (fprintf(fs.fs, "%s", str.c_str()) < 0)
-    throw io_error::write_error(fs.filename);
-}
-
-// Read data from a file
-static void read_data(file_stream& fs, void* buffer, size_t count) {
-  if (fread(buffer, 1, count, fs.fs) != count)
-    throw io_error::read_error(fs.filename);
-}
-
-// Write data from a file
-static void write_data(file_stream& fs, const void* buffer, size_t count) {
-  if (fwrite(buffer, 1, count, fs.fs) != count)
-    throw io_error::read_error(fs.filename);
-}
-
-// Read a line of text
-template <size_t N>
-static void read_line(file_stream& fs, array<char, N>& buffer) {
-  return read_line(fs, buffer.data(), buffer.size());
-}
-
-// Read data from a file
-template <typename T>
-static void read_value(file_stream& fs, T& buffer) {
-  return read_data(fs, &buffer, sizeof(T));
-}
-
-// Write data from a file
-template <typename T>
-static void write_value(file_stream& fs, const T& buffer) {
-  return write_data(fs, &buffer, sizeof(T));
-}
-
-// Read data from a file
-template <typename T>
-static void read_values(file_stream& fs, T* buffer, size_t count) {
-  return read_data(fs, buffer, sizeof(T) * count);
-}
-
-// Write data from a file
-template <typename T>
-static void write_values(file_stream& fs, const T* buffer, size_t count) {
-  return write_data(fs, buffer, sizeof(T) * count);
-}
-
-// Write data from a file
-template <typename T>
-static void write_values(file_stream& fs, const vector<T>& values) {
-  return write_data(fs, values.data(), sizeof(T) * values.size());
-}
-
-template <typename T>
-static T swap_endian(T value) {
-  // https://stackoverflow.com/questions/105252/how-do-i-convert-between-big-endian-and-little-endian-values-in-c
-  static_assert(sizeof(char) == 1, "sizeof(char) == 1");
-  union {
-    T             value;
-    unsigned char bytes[sizeof(T)];
-  } source, dest;
-  source.value = value;
-  for (auto k = (size_t)0; k < sizeof(T); k++)
-    dest.bytes[k] = source.bytes[sizeof(T) - k - 1];
-  return dest.value;
-}
-
-template <typename T>
-static void read_value(file_stream& fs, T& value, bool big_endian) {
-  read_value(fs, value);
-  if (big_endian) value = swap_endian(value);
-}
-
-template <typename T>
-static void write_value(file_stream& fs, const T& value_, bool big_endian) {
-  auto value = big_endian ? swap_endian(value_) : value_;
-  return write_value(fs, value);
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// FILE IO
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Load a text file
-string load_text(const string& filename) {
-  auto str = string{};
-  load_text(filename, str);
-  return str;
-}
-void load_text(const string& filename, string& text) {
-  auto fs = open_file(filename, "rb");
-  text.resize(get_length(fs));
-  read_data(fs, text.data(), text.size());
-}
-
-// Save a text file
-void save_text(const string& filename, const string& text) {
-  auto fs = open_file(filename, "wt");
-  write_text(fs, text);
-}
-
-// Load a binary file
-void load_binary(const string& filename, vector<byte>& data) {
-  // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
-  auto fs = open_file(filename, "rb");
-  data.resize(get_length(fs));
-  read_data(fs, data.data(), data.size());
-}
-
-// Save a binary file
-void save_binary(const string& filename, const vector<byte>& data) {
-  auto fs = open_file(filename, "wb");
-  write_data(fs, data.data(), data.size());
-}
 
 // Opens a file with a utf8 file name
 static FILE* fopen_utf8(const char* filename, const char* mode) {
@@ -354,105 +79,23 @@ static FILE* fopen_utf8(const char* filename, const char* mode) {
 #endif
 }
 
-// Load a text file
-bool load_text(const string& filename, string& str, string& error) {
-  // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
-  auto fs = fopen_utf8(filename.c_str(), "rb");
-  if (!fs) {
-    error = filename + ": file not found";
-    return false;
-  }
-  fseek(fs, 0, SEEK_END);
-  auto length = ftell(fs);
-  fseek(fs, 0, SEEK_SET);
-  str.resize(length);
-  if (fread(str.data(), 1, length, fs) != length) {
-    fclose(fs);
-    error = filename + ": read error";
-    return false;
-  }
-  fclose(fs);
-  return true;
-}
-
-// Save a text file
-bool save_text(const string& filename, const string& str, string& error) {
-  auto fs = fopen_utf8(filename.c_str(), "wt");
-  if (!fs) {
-    error = filename + ": file not found";
-    return false;
-  }
-  if (fprintf(fs, "%s", str.c_str()) < 0) {
-    fclose(fs);
-    error = filename + ": write error";
-    return false;
-  }
-  fclose(fs);
-  return true;
-}
-
-// Load a binary file
-bool load_binary(const string& filename, vector<byte>& data, string& error) {
-  // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
-  auto fs = fopen_utf8(filename.c_str(), "rb");
-  if (!fs) {
-    error = filename + ": file not found";
-    return false;
-  }
-  fseek(fs, 0, SEEK_END);
-  auto length = ftell(fs);
-  fseek(fs, 0, SEEK_SET);
-  data.resize(length);
-  if (fread(data.data(), 1, length, fs) != length) {
-    fclose(fs);
-    error = filename + ": read error";
-    return false;
-  }
-  fclose(fs);
-  return true;
-}
-
-// Save a binary file
-bool save_binary(
-    const string& filename, const vector<byte>& data, string& error) {
-  auto fs = fopen_utf8(filename.c_str(), "wb");
-  if (!fs) {
-    error = filename + ": file not found";
-    return false;
-  }
-  if (fwrite(data.data(), 1, data.size(), fs) != data.size()) {
-    fclose(fs);
-    error = filename + ": write error";
-    return false;
-  }
-  fclose(fs);
-  return true;
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// IMAGE IO
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-template <typename T>
-static T _swap_endian(T value) {
-  // https://stackoverflow.com/questions/105252/how-do-i-convert-between-big-endian-and-little-endian-values-in-c
-  static_assert(sizeof(char) == 1, "sizeof(char) == 1");
-  union {
-    T             value;
-    unsigned char bytes[sizeof(T)];
-  } source, dest;
-  source.value = value;
-  for (auto k = (size_t)0; k < sizeof(T); k++)
-    dest.bytes[k] = source.bytes[sizeof(T) - k - 1];
-  return dest.value;
-}
-
 // Pfm load
 static float* load_pfm(
     const string& filename, int* width, int* height, int* components, int req) {
+  auto swap_endian = [](auto value) {
+    // https://stackoverflow.com/questions/105252/how-do-i-convert-between-big-endian-and-little-endian-values-in-c
+    static_assert(sizeof(char) == 1, "sizeof(char) == 1");
+    using T = decltype(value);
+    union {
+      T             value;
+      unsigned char bytes[sizeof(T)];
+    } source, dest;
+    source.value = value;
+    for (auto k = (size_t)0; k < sizeof(T); k++)
+      dest.bytes[k] = source.bytes[sizeof(T) - k - 1];
+    return dest.value;
+  };
+
   // Split a string
   auto split_string = [](const string& str) -> vector<string> {
     auto ret = vector<string>();
