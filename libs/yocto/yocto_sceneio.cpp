@@ -2917,42 +2917,49 @@ namespace yocto {
 // get name
 [[maybe_unused]] static string get_camera_name(
     const scene_data& scene, int idx) {
+  if (idx < 0) return "";
   if (scene.camera_names.empty())
     return get_element_name("camera", idx, scene.cameras.size());
   return scene.camera_names[idx];
 }
 [[maybe_unused]] static string get_environment_name(
     const scene_data& scene, int idx) {
+  if (idx < 0) return "";
   if (scene.environment_names.empty())
     return get_element_name("environment", idx, scene.environments.size());
   return scene.environment_names[idx];
 }
 [[maybe_unused]] static string get_shape_name(
     const scene_data& scene, int idx) {
+  if (idx < 0) return "";
   if (scene.shape_names.empty())
     return get_element_name("shape", idx, scene.shapes.size());
   return scene.shape_names[idx];
 }
 [[maybe_unused]] static string get_texture_name(
     const scene_data& scene, int idx) {
+  if (idx < 0) return "";
   if (scene.texture_names.empty())
     return get_element_name("texture", idx, scene.textures.size());
   return scene.texture_names[idx];
 }
 [[maybe_unused]] static string get_instance_name(
     const scene_data& scene, int idx) {
+  if (idx < 0) return "";
   if (scene.instance_names.empty())
     return get_element_name("instance", idx, scene.instances.size());
   return scene.instance_names[idx];
 }
 [[maybe_unused]] static string get_material_name(
     const scene_data& scene, int idx) {
+  if (idx < 0) return "";
   if (scene.material_names.empty())
     return get_element_name("material", idx, scene.materials.size());
   return scene.material_names[idx];
 }
 [[maybe_unused]] static string get_subdiv_name(
     const scene_data& scene, int idx) {
+  if (idx < 0) return "";
   if (scene.subdiv_names.empty())
     return get_element_name("subdiv", idx, scene.subdivs.size());
   return scene.subdiv_names[idx];

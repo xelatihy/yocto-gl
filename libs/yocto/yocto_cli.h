@@ -233,6 +233,18 @@ struct ordered_map {
   using iterator       = typename container::iterator;
   using value_type     = typename container::value_type;
 
+  ordered_map() {}
+  ordered_map(const ordered_map& other) : _data{other._data} {}
+  ordered_map(ordered_map&& other) : _data{std::move(other._data)} {};
+  ordered_map& operator=(const ordered_map& other) {
+    _data.operator=(other._data);
+    return *this;
+  }
+  ordered_map& operator=(ordered_map&& other) {
+    _data.operator=(std::move(other._data));
+    return *this;
+  }
+
   size_t size() const { return _data.size(); }
   bool   empty() const { return _data.empty(); }
 

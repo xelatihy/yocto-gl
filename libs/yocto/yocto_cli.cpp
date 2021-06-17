@@ -33,6 +33,7 @@
 #include "yocto_cli.h"
 
 #include <array>
+#include <charconv>
 #include <chrono>
 #include <cstdio>
 #include <fstream>
@@ -403,64 +404,59 @@ void parse_json(const string& text, json_value& json) {
   nlohmann::json::sax_parse(text, &sax);
 }
 
-// Dump json
-static void to_json(nlohmann::json& js, const json_value& value) {
-  switch (value.type()) {
-    case json_type::null: js = {}; break;
-    case json_type::integer: js = (int64_t)value; break;
-    case json_type::uinteger: js = (uint64_t)value; break;
-    case json_type::number: js = (double)value; break;
-    case json_type::boolean: js = (bool)value; break;
-    case json_type::string: js = (string)value; break;
-    case json_type::array: {
-      js = nlohmann::json::array();
-      for (auto& item : value) to_json(js.emplace_back(), item);
-    } break;
-    case json_type::object: {
-      js = nlohmann::json::object();
-      for (auto& [key, item] : value.items()) to_json(js[key], item);
-    } break;
-  }
+static void _json_write_char(string& text, char value) {
+  text.push_back(value);
 }
-
-static void _json_write_chars(string& text, const char* value) {
-  text += value;
+static void _json_write_chars(string& text, const char* value, int size) {
+  text.append(value, size);
 }
 static void _json_write_indent(string& text, int size) {
-  text.insert(text.back(), size, ' ');
+  text.append(size, ' ');
 }
-static void _json_write_char(string& text, char value) { text += value; }
 static void _json_format_value(string& text, int64_t value) {
-  text += std::to_string(value);
+  char buffer[64];
+  auto result = std::to_chars(buffer, buffer + 64, value);
+  text.append(buffer, result.ptr - buffer);
 }
 static void _json_format_value(string& text, uint64_t value) {
-  text += std::to_string(value);
+  char buffer[64];
+  auto result = std::to_chars(buffer, buffer + 64, value);
+  text.append(buffer, result.ptr - buffer);
 }
 static void _json_format_value(string& text, double value) {
-  text += std::to_string(value);
+  char  buffer[128];
+  char* end = ::nlohmann::detail::to_chars(buffer, buffer + 128, value);
+  text.append(buffer, end - buffer);
+}
+static void _json_format_value(string& text, bool value) {
+  if (value) {
+    text.append("true", 4);
+  } else {
+    text.append("false", 5);
+  }
 }
 static void _json_format_value(string& text, const string& value) {
-  text += '\"';
+  text.push_back('\"');
   for (auto c : value) {
     switch (c) {
-      case '\"': text += "\\\""; break;
-      case '\t': text += "\\t"; break;
-      case '\n': text += "\\n"; break;
-      case '\r': text += "\\r"; break;
-      case '\b': text += "\\b"; break;
-      case '\f': text += "\\f"; break;
-      case '\\': text += "\\\\"; break;
-      default: text += c; break;
+      case '\"': text.append("\\\"", 2); break;
+      case '\t': text.append("\\t", 2); break;
+      case '\n': text.append("\\n", 2); break;
+      case '\r': text.append("\\r", 2); break;
+      case '\b': text.append("\\b", 2); break;
+      case '\f': text.append("\\f", 2); break;
+      case '\\': text.append("\\\\", 2); break;
+      default: text.push_back(c); break;
     }
   }
-  text += '\"';
+  text.push_back('\"');
 }
 
 static void _json_format_element(
     string& text, const json_value& json, int indent) {
   switch (json.type()) {
     case json_type::null: {
-      _json_write_chars(text, "null");
+      _json_write_chars(text, "null", 4);
     } break;
     case json_type::integer: {
       _json_format_value(text, json.get<int64_t>());
@@ -472,47 +468,42 @@ static void _json_format_element(
       _json_format_value(text, json.get<double>());
     } break;
     case json_type::boolean: {
-      _json_write_chars(text, json.get<bool>() ? "true" : "false");
+      _json_format_value(text, json.get<bool>());
     } break;
     case json_type::string: {
       _json_format_value(text, json.get<string>());
     } break;
     case json_type::array: {
       if (json.empty()) {
-        _json_write_chars(text, "[]");
+        _json_write_chars(text, "[]", 2);
       } else {
-        _json_write_chars(text, "[\n");
-
+        _json_write_chars(text, "[\n", 2);
         auto count = (size_t)0, size = json.size();
         for (auto& item : json) {
           _json_write_indent(text, indent + 2);
           _json_format_element(text, item, indent + 2);
           count += 1;
-          if (count >= size) _json_write_chars(text, ",\n");
+          if (count < size) _json_write_chars(text, ",\n", 2);
         }
-
-        _json_write_chars(text, "\n");
+        _json_write_char(text, '\n');
         _json_write_indent(text, indent);
-        _json_write_chars(text, "]");
+        _json_write_char(text, ']');
       }
     } break;
     case json_type::object: {
       if (json.empty()) {
-        _json_write_chars(text, "{}");
+        _json_write_chars(text, "{}", 2);
       } else {
-        _json_write_chars(text, "{\n");
-
-        // first n-1 elements
+        _json_write_chars(text, "{\n", 2);
         auto count = (size_t)0, size = json.size();
         for (auto& [key, item] : json.items()) {
           _json_write_indent(text, indent + 2);
           _json_format_value(text, key);
-          _json_write_chars(text, ": ");
+          _json_write_chars(text, ": ", 2);
           _json_format_element(text, item, indent + 2);
           count += 1;
-          if (count >= size) _json_write_chars(text, ",\n");
+          if (count < size) _json_write_chars(text, ",\n", 2);
         }
-
         _json_write_char(text, '\n');
         _json_write_indent(text, indent);
         _json_write_char(text, '}');
