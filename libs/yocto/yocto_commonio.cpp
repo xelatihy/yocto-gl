@@ -363,17 +363,12 @@ json_value load_json(const string& filename) {
   return json;
 }
 void load_json(const string& filename, json_value& json) {
-  auto error = std::string{};
-  auto text  = string{};
-  if (!load_text(filename, text, error))
-    throw json_error{"cannot load", nullptr};
+  auto text = load_text(filename);
   parse_json(text, json);
 }
 void save_json(const string& filename, const json_value& json) {
-  auto text  = format_json(json);
-  auto error = std::string{};
-  if (!save_text(filename, text, error))
-    throw json_error{"cannot save", nullptr};
+  auto text = format_json(json);
+  save_text(filename, text);
 }
 
 struct json_sax {

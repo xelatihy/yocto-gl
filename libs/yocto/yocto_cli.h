@@ -3,7 +3,7 @@
 //
 // Yocto/CLI is a collection of utilities used in writing command-line
 // applications, including parsing command line arguments, printing values,
-// timers, progress bars, Json data, Json IO, file IO, path manipulation.
+// timers, progress bars, handling errors via exceptions.
 // Yocto/CLI is implemented in `yocto_cli.h` and `yocto_cli.cpp`, and
 // depends on `json.hpp` for Json serialization.
 //
@@ -120,11 +120,12 @@ string  elapsed_formatted(simple_timer& timer);
 namespace yocto {
 
 // handle errors
-void handle_errors(void (*run)(int, const char**), int argc, const char** argv);
-void handle_errors(
-    void (*run)(const vector<string>&), const vector<string>& args);
 template <typename Func>
 inline void handle_errors(Func&& run);
+inline void handle_errors(
+    void (*run)(int, const char**), int argc, const char** argv);
+inline void handle_errors(
+    void (*run)(const vector<string>&), const vector<string>& args);
 
 }  // namespace yocto
 
@@ -331,21 +332,35 @@ template <typename Func>
 inline void handle_errors(Func&& run) {
   try {
     run();
-  } catch (cli_error& error) {
+  } catch (const cli_error& error) {
+    print_info("");
     print_info("error: " + string{error.what()});
     print_info("");
     print_info(error.usage());
     exit(1);
-  } catch (cli_help& error) {
+  } catch (const cli_help& error) {
+    print_info("");
     print_info(error.usage());
     exit(0);
-  } catch (io_error& error) {
+  } catch (const io_error& error) {
+    print_info("");
     print_info(error.what());
     exit(1);
-  } catch (std::exception& error) {
+  } catch (const std::exception& error) {
+    print_info("");
     print_info("program error:" + string(error.what()));
     exit(1);
   }
+}
+
+// handle errors
+inline void handle_errors(
+    void (*run)(int, const char**), int argc, const char** argv) {
+  handle_errors([&]() { run(argc, argv); });
+}
+inline void handle_errors(
+    void (*run)(const vector<string>&), const vector<string>& args) {
+  handle_errors([&]() { run(args); });
 }
 
 }  // namespace yocto
