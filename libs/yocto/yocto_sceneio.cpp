@@ -2160,6 +2160,13 @@ static void save_pbrt_scene(
     const string& filename, const scene_data& scene, bool noparallel);
 
 // Load a scene
+scene_data load_scene(const string& filename, bool noparallel) {
+  auto scene = scene_data{};
+  load_scene(filename, scene, noparallel);
+  return scene;
+}
+
+// Load a scene
 void load_scene(const string& filename, scene_data& scene, bool noparallel) {
   auto ext = path_extension(filename);
   if (ext == ".json" || ext == ".JSON") {

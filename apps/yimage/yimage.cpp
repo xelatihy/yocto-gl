@@ -293,6 +293,7 @@ void parse_cli(app_params& params, int argc, const char** argv) {
   parse_cli(cli, argc, argv);
 }
 
+// Run
 void run(int argc, const char* argv[]) {
   // command line parameters
   auto params = app_params{};
@@ -314,4 +315,5 @@ void run(int argc, const char* argv[]) {
   }
 }
 
+// Main
 int main(int argc, const char* argv[]) { handle_errors(run, argc, argv); }

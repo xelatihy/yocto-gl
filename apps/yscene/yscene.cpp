@@ -58,7 +58,7 @@ void add_command(const cli_command& cli, const string& name,
 }
 
 // convert images
-int run_convert(const convert_params& params) {
+void run_convert(const convert_params& params) {
   // load scene
   auto scene   = scene_data{};
   auto ioerror = ""s;
@@ -97,9 +97,6 @@ int run_convert(const convert_params& params) {
   print_progress_begin("save scene");
   if (!save_scene(params.output, scene, ioerror)) print_fatal(ioerror);
   print_progress_end();
-
-  // done
-  return 0;
 }
 
 // info params
@@ -117,7 +114,7 @@ void add_command(const cli_command& cli, const string& name,
 }
 
 // print info for scenes
-int run_info(const info_params& params) {
+void run_info(const info_params& params) {
   // load scene
   auto scene   = scene_data{};
   auto ioerror = ""s;
@@ -133,9 +130,6 @@ int run_info(const info_params& params) {
   // print info
   print_info("scene stats ------------");
   for (auto stat : scene_stats(scene)) print_info(stat);
-
-  // done
-  return 0;
 }
 
 // render params
@@ -181,15 +175,13 @@ void add_command(const cli_command& cli, const string& name,
 }
 
 // convert images
-int run_render(const render_params& params_) {
+void run_render(const render_params& params_) {
   // copy params
   auto params = params_;
 
   // scene loading
-  auto scene   = scene_data{};
-  auto ioerror = string{};
   print_progress_begin("load scene");
-  if (!load_scene(params.scene, scene, ioerror)) return print_fatal(ioerror);
+  auto scene = load_scene(params.scene);
   print_progress_end();
 
   // add sky
@@ -197,7 +189,9 @@ int run_render(const render_params& params_) {
 
   // add environment
   if (!params.envname.empty()) {
-    if (!add_environment(scene, params.envname, ioerror)) return false;
+    print_progress_begin("add environment");
+    add_environment(scene, params.envname);
+    print_progress_end();
   }
 
   // camera
@@ -252,11 +246,8 @@ int run_render(const render_params& params_) {
   auto image = params.denoise ? get_denoised(state) : get_render(state);
   if (!is_hdr_filename(params.output))
     image = tonemap_image(image, params.exposure, params.filmic);
-  if (!save_image(params.output, image, ioerror)) return print_fatal(ioerror);
+  save_image(params.output, image);
   print_progress_end();
-
-  // done
-  return 0;
 }
 
 // convert params
@@ -303,22 +294,20 @@ void add_command(const cli_command& cli, const string& name,
 #ifndef YOCTO_OPENGL
 
 // view scene
-int run_view(const view_params& params) {
-  return print_fatal("Opengl not compiled");
+void run_view(const view_params& params) {
+  throw io_error::not_implemented_error("Opengl not compiled");
 }
 
 #else
 
 // view scene
-int run_view(const view_params& params_) {
+void run_view(const view_params& params_) {
   // copy params
   auto params = params_;
 
   // load scene
-  auto scene   = scene_data{};
-  auto ioerror = ""s;
   print_progress_begin("load scene");
-  if (!load_scene(params.scene, scene, ioerror)) print_fatal(ioerror);
+  auto scene = load_scene(params.scene);
   print_progress_end();
 
   // add sky
@@ -326,7 +315,9 @@ int run_view(const view_params& params_) {
 
   // add environment
   if (!params.envname.empty()) {
-    if (!add_environment(scene, params.envname, ioerror)) return false;
+    print_progress_begin("add environment");
+    add_environment(scene, params.envname);
+    print_progress_end();
   }
 
   // tesselation
@@ -341,9 +332,6 @@ int run_view(const view_params& params_) {
 
   // run view
   view_scene("yscene", params.scene, scene, params);
-
-  // done
-  return 0;
 }
 
 #endif
@@ -364,21 +352,19 @@ void add_command(const cli_command& cli, const string& name,
 #ifndef YOCTO_OPENGL
 
 // view scene
-int run_glview(const glview_params& params) {
-  return print_fatal("Opengl not compiled");
+void run_glview(const glview_params& params) {
+  throw io_error::not_implemented_error("Opengl not compiled");
 }
 
 #else
 
-int run_glview(const glview_params& params_) {
+void run_glview(const glview_params& params_) {
   // copy params
   auto params = params_;
 
   // loading scene
-  auto ioerror = ""s;
-  auto scene   = scene_data{};
   print_progress_begin("load scene");
-  if (!load_scene(params.scene, scene, ioerror)) print_fatal(ioerror);
+  auto scene = load_scene(params.scene);
   print_progress_end();
 
   // tesselation
@@ -394,9 +380,6 @@ int run_glview(const glview_params& params_) {
 
   // run viewer
   glview_scene("yscene", params.scene, scene, glparams);
-
-  // done
-  return 0;
 }
 
 #endif
@@ -426,10 +409,11 @@ cli_state make_commands(
 // Parse cli
 void parse_cli(app_params& params, int argc, const char** argv) {
   auto cli = make_commands("yscene", params, "Process and view scenes.");
-  parse_cli_and_handle_errors(cli, argc, argv);
+  parse_cli(cli, argc, argv);
 }
 
-int main(int argc, const char* argv[]) {
+// Run
+void run(int argc, const char* argv[]) {
   // command line parameters
   auto params = app_params{};
   parse_cli(params, argc, argv);
@@ -446,6 +430,9 @@ int main(int argc, const char* argv[]) {
   } else if (params.command == "glview") {
     return run_glview(params.glview);
   } else {
-    return print_fatal("unknown command " + params.command);
+    throw io_error::command_error("yscene", params.command);
   }
 }
+
+// Main
+int main(int argc, const char* argv[]) { handle_errors(run, argc, argv); }
