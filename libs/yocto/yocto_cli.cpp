@@ -45,8 +45,6 @@
 #include <utility>
 #include <vector>
 
-#include "ext/json.hpp"
-
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
 // -----------------------------------------------------------------------------
@@ -987,11 +985,24 @@ string get_command(const cli_state& cli) {
 }
 
 void parse_cli(cli_state& cli, const vector<string>& args) {
-  auto idx = (size_t)1;
-  args_to_json(cli.value, cli.schema, args, idx);
-  config_to_json(cli.value);
-  validate_json(cli.value, cli.schema, "", true);
-  json_to_variable(cli.value, cli.variables, "");
+  try {
+    auto idx = (size_t)1;
+    args_to_json(cli.value, cli.schema, args, idx);
+    config_to_json(cli.value);
+    validate_json(cli.value, cli.schema, "", true);
+    json_to_variable(cli.value, cli.variables, "");
+  } catch (cli_error& error) {
+    error.set_usage(get_usage(cli));
+    throw;
+  } catch (cli_help& error) {
+    error.set_usage(get_usage(cli));
+    throw;
+  }
+}
+
+// a convenience function that packs args to strings
+vector<string> make_cli_args(int argc, const char** argv) {
+  return vector<string>(argv, argv + argc);
 }
 
 bool parse_cli(cli_state& cli, const vector<string>& args, string& error) {
@@ -1016,10 +1027,6 @@ void parse_cli_and_handle_errors(cli_state& cli, const vector<string>& args) {
     print_info(get_usage(cli));
     exit(0);
   }
-}
-
-void parse_cli_and_handle_errors(cli_state& cli, int argc, const char** argv) {
-  parse_cli_and_handle_errors(cli, vector<string>(argv, argv + argc));
 }
 
 }  // namespace yocto

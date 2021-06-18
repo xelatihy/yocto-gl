@@ -3,9 +3,8 @@
 //
 // Yocto/CLI is a collection of utilities used in writing command-line
 // applications, including parsing command line arguments, printing values,
-// timers, progress bars, Json data, Json IO, file IO, path manipulation.
-// Yocto/CLI is implemented in `yocto_cli.h` and `yocto_cli.cpp`, and
-// depends on `json.hpp` for Json serialization.
+// timers, progress bars, handling errors via exceptions.
+// Yocto/CLI is implemented in `yocto_cli.h` and `yocto_cli.cpp`.
 //
 
 //
@@ -69,7 +68,7 @@ namespace yocto {
 // Print a message to the console
 void print_info(const string& message);
 // Prints a message to the console and exit with an error. Returns error code.
-int print_fatal(const string& message);
+[[deprecated]] int print_fatal(const string& message);
 
 // Timer that prints as scope end. Create with `print_timed` and print with
 // `print_elapsed`.
@@ -115,6 +114,19 @@ string  elapsed_formatted(simple_timer& timer);
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// ERROR HANDLING VIA EXCEPTIONS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// handle errors
+template <typename Func>
+inline void handle_errors(Func&& run);
+inline void handle_errors(
+    void (*run)(const vector<string>&), const vector<string>& args);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // COMMAND LINE PARSING
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -127,8 +139,9 @@ void parse_cli(cli_state& cli, const vector<string>& args);
 // parse arguments, checks for errors
 bool parse_cli(cli_state& cli, const vector<string>& args, string& error);
 // parse arguments, checks for errors, and exits on error or help
-void parse_cli_and_handle_errors(cli_state& cli, int argc, const char** argv);
 void parse_cli_and_handle_errors(cli_state& cli, const vector<string>& args);
+// a convenience function that packs args to strings
+vector<string> make_cli_args(int argc, const char** argv);
 
 // get usage
 string get_usage(const cli_state& cli);
@@ -143,6 +156,13 @@ void                set_command_var(const cli_command& cli, string& value);
 void                set_help_var(const cli_command& cli, bool& value);
 [[deprecated]] void add_command_name(const cli_command& cli, const string& name,
     string& value, const string& usage);
+
+// Add a command with variables. Calls the function add_options for the type.
+template <typename T>
+inline cli_state make_cli(const string& name, T& values, const string& usage);
+template <typename T>
+inline cli_command add_command(
+    const cli_command& cli, const string& name, T& values, const string& usage);
 
 // Add an optional argument. Supports strings, numbers, and boolean flags.
 // Optional arguments will be parsed with name `--<name>` and `-<alt>`.
@@ -269,11 +289,42 @@ struct cli_command {
 
 // Command line error.
 struct cli_error : std::runtime_error {
-  cli_error(const string& message) : std::runtime_error(message) {}
+  cli_error(const string& message) : std::runtime_error(message), _usage() {}
+  cli_error(const string& message, const string& usage)
+      : std::runtime_error(message), _usage(usage) {}
+
+  string usage() const { return _usage; }
+  void   set_usage(const string& usage) { _usage = usage; }
+
+ private:
+  string _usage = "";
 };
 struct cli_help : std::runtime_error {
-  cli_help(const string& message) : std::runtime_error(message) {}
+  cli_help(const string& message) : std::runtime_error(message), _usage() {}
+  cli_help(const string& message, const string& usage)
+      : std::runtime_error(message), _usage(usage) {}
+
+  string usage() const { return _usage; }
+  void   set_usage(const string& usage) { _usage = usage; }
+
+ private:
+  string _usage = "";
 };
+
+// Add a command with variables. Calls the function add_options for the type.
+template <typename T>
+inline cli_state make_cli(const string& name, T& values, const string& usage) {
+  auto cli = make_cli(name, usage);
+  add_options(cli, values);
+  return cli;
+}
+template <typename T>
+inline cli_command add_command(const cli_command& cli, const string& name,
+    T& values, const string& usage) {
+  auto cmd = add_command(cli, name, usage);
+  add_options(cmd, values);
+  return cli;
+}
 
 template <typename T, typename>
 inline void add_option(const cli_command& cli, const string& name, T& value,
@@ -287,6 +338,44 @@ inline void add_argument(const cli_command& cli, const string& name, T& value,
     const string& usage, const vector<string>& choices, bool req) {
   return add_argument(
       cli, name, (std::underlying_type_t<T>&)value, usage, choices, req);
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// ERROR HANDLING VIA EXCEPTIONS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+template <typename Func>
+inline void handle_errors(Func&& run) {
+  try {
+    run();
+  } catch (const cli_error& error) {
+    print_info("");
+    print_info("error: " + string{error.what()});
+    print_info("");
+    print_info(error.usage());
+    exit(1);
+  } catch (const cli_help& error) {
+    print_info("");
+    print_info(error.usage());
+    exit(0);
+  } catch (const io_error& error) {
+    print_info("");
+    print_info(error.what());
+    exit(1);
+  } catch (const std::exception& error) {
+    print_info("");
+    print_info("program error:" + string(error.what()));
+    exit(1);
+  }
+}
+
+// handle errors
+inline void handle_errors(
+    void (*run)(const vector<string>&), const vector<string>& args) {
+  handle_errors([&]() { run(args); });
 }
 
 }  // namespace yocto

@@ -363,17 +363,12 @@ json_value load_json(const string& filename) {
   return json;
 }
 void load_json(const string& filename, json_value& json) {
-  auto error = std::string{};
-  auto text  = string{};
-  if (!load_text(filename, text, error))
-    throw json_error{"cannot load", nullptr};
+  auto text = load_text(filename);
   parse_json(text, json);
 }
 void save_json(const string& filename, const json_value& json) {
-  auto text  = format_json(json);
-  auto error = std::string{};
-  if (!save_text(filename, text, error))
-    throw json_error{"cannot save", nullptr};
+  auto text = format_json(json);
+  save_text(filename, text);
 }
 
 struct json_sax {
@@ -623,7 +618,7 @@ bool load_json(const string& filename, json_value& json, string& error) {
   try {
     load_json(filename, json);
     return true;
-  } catch (std::exception& exception) {
+  } catch (const io_error& exception) {
     error = exception.what();
     return false;
   }
@@ -631,11 +626,13 @@ bool load_json(const string& filename, json_value& json, string& error) {
 
 // Save json
 bool save_json(const string& filename, json_value& json, string& error) {
-  // convert to string
-  auto text = string{};
-  if (!format_json(text, json, error)) return false;
-  // save file
-  return save_text(filename, text, error);
+  try {
+    save_json(filename, json);
+    return true;
+  } catch (const io_error& exception) {
+    error = exception.what();
+    return false;
+  }
 }
 
 // Parse json
@@ -643,7 +640,10 @@ bool parse_json(const string& text, json_value& json, string& error) {
   try {
     parse_json(text, json);
     return true;
-  } catch (std::exception& exception) {
+  } catch (const json_error& exception) {
+    error = exception.what();
+    return false;
+  } catch (const io_error& exception) {
     error = exception.what();
     return false;
   }
@@ -654,7 +654,10 @@ bool format_json(string& text, const json_value& json, string& error) {
   try {
     format_json(text, json);
     return true;
-  } catch (std::exception& exception) {
+  } catch (const json_error& exception) {
+    error = exception.what();
+    return false;
+  } catch (const io_error& exception) {
     error = exception.what();
     return false;
   }
