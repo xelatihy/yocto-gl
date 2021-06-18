@@ -48,16 +48,14 @@ struct convert_params {
 };
 
 // Cli
-void add_command(const cli_command& cli, const string& name,
-    convert_params& params, const string& usage) {
-  auto cmd = add_command(cli, name, usage);
-  add_argument(cmd, "image", params.image, "Input image.");
-  add_option(cmd, "output", params.output, "Output image.");
+void add_options(const cli_command& cli, convert_params& params) {
+  add_argument(cli, "image", params.image, "Input image.");
+  add_option(cli, "output", params.output, "Output image.");
   add_option(
-      cmd, "exposure", params.exposure, "Tonemap exposure.", {-100, +100});
-  add_option(cmd, "filmic", params.filmic, "Tonemap filmic.");
-  add_option(cmd, "width", params.width, "Resize width.", {1, int_max});
-  add_option(cmd, "height", params.height, "Resize height.", {1, int_max});
+      cli, "exposure", params.exposure, "Tonemap exposure.", {-100, +100});
+  add_option(cli, "filmic", params.filmic, "Tonemap filmic.");
+  add_option(cli, "width", params.width, "Resize width.", {1, int_max});
+  add_option(cli, "height", params.height, "Resize height.", {1, int_max});
 }
 
 // convert images
@@ -86,11 +84,9 @@ struct view_params {
 };
 
 // Cli
-void add_command(const cli_command& cli, const string& name,
-    view_params& params, const string& usage) {
-  auto cmd = add_command(cli, name, usage);
-  add_argument(cmd, "images", params.images, "Input images.");
-  add_option(cmd, "output", params.output, "Output image.");
+void add_options(const cli_command& cli, view_params& params) {
+  add_argument(cli, "images", params.images, "Input images.");
+  add_option(cli, "output", params.output, "Output image.");
 }
 
 #ifndef YOCTO_OPENGL
@@ -123,11 +119,9 @@ struct grade_params : colorgrade_params {
 };
 
 // Cli
-void add_command(const cli_command& cli, const string& name,
-    grade_params& params, const string& usage) {
-  auto cmd = add_command(cli, name, usage);
-  add_argument(cmd, "image", params.image, "Input image.");
-  add_option(cmd, "output", params.output, "Output image.");
+void add_options(const cli_command& cli, grade_params& params) {
+  add_argument(cli, "image", params.image, "Input image.");
+  add_option(cli, "output", params.output, "Output image.");
 }
 
 #ifndef YOCTO_OPENGL
@@ -160,14 +154,12 @@ struct diff_params {
 };
 
 // Cli
-void add_command(const cli_command& cli, const string& name,
-    diff_params& params, const string& usage) {
-  auto cmd = add_command(cli, name, usage);
-  add_argument(cmd, "image1", params.image1, "Input image 1.");
-  add_argument(cmd, "image2", params.image2, "Input image 2.");
-  add_option(cmd, "output", params.output, "Output image.");
-  add_option(cmd, "signal", params.signal, "Error on diff.");
-  add_option(cmd, "threshold", params.threshold, "Diff threshold.");
+void add_options(const cli_command& cli, diff_params& params) {
+  add_argument(cli, "image1", params.image1, "Input image 1.");
+  add_argument(cli, "image2", params.image2, "Input image 2.");
+  add_option(cli, "output", params.output, "Output image.");
+  add_option(cli, "signal", params.signal, "Error on diff.");
+  add_option(cli, "threshold", params.threshold, "Diff threshold.");
 }
 
 // resize images
@@ -216,15 +208,13 @@ struct setalpha_params {
 };
 
 // Cli
-void add_command(const cli_command& cli, const string& name,
-    setalpha_params& params, const string& usage) {
-  auto cmd = add_command(cli, name, usage);
-  add_argument(cmd, "image", params.image, "Input image.");
-  add_argument(cmd, "alpha", params.alpha, "Alpha image.");
-  add_option(cmd, "output", params.output, "Output image.");
-  add_option(cmd, "from-color", params.from_color, "Alpha from color.");
-  add_option(cmd, "from-black", params.from_black, "Alpha from black.");
-  add_option(cmd, "to-color", params.to_color, "Color from alpha.");
+void add_options(const cli_command& cli, setalpha_params& params) {
+  add_argument(cli, "image", params.image, "Input image.");
+  add_argument(cli, "alpha", params.alpha, "Alpha image.");
+  add_option(cli, "output", params.output, "Output image.");
+  add_option(cli, "from-color", params.from_color, "Alpha from color.");
+  add_option(cli, "from-black", params.from_black, "Alpha from black.");
+  add_option(cli, "to-color", params.to_color, "Color from alpha.");
 }
 
 // setalpha images

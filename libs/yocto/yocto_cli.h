@@ -326,7 +326,7 @@ inline cli_command add_command(const cli_command& cli, const string& name,
     T& values, const string& usage) {
   auto cmd = add_command(cli, name, usage);
   add_options(cmd, values);
-  return cmd;
+  return cli;
 }
 
 template <typename T, typename>

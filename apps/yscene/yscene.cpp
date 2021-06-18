@@ -47,14 +47,12 @@ struct convert_params {
 };
 
 // Cli
-void add_command(const cli_command& cli, const string& name,
-    convert_params& params, const string& usage) {
-  auto cmd = add_command(cli, name, usage);
-  add_argument(cmd, "scene", params.scene, "Input scene.");
-  add_option(cmd, "output", params.output, "Output scene.");
-  add_option(cmd, "info", params.info, "Print info.");
-  add_option(cmd, "validate", params.validate, "Validate scene.");
-  add_option(cmd, "copyright", params.copyright, "Set scene copyright.");
+void add_options(const cli_command& cli, convert_params& params) {
+  add_argument(cli, "scene", params.scene, "Input scene.");
+  add_option(cli, "output", params.output, "Output scene.");
+  add_option(cli, "info", params.info, "Print info.");
+  add_option(cli, "validate", params.validate, "Validate scene.");
+  add_option(cli, "copyright", params.copyright, "Set scene copyright.");
 }
 
 // convert images
@@ -101,11 +99,9 @@ struct info_params {
 };
 
 // Cli
-void add_command(const cli_command& cli, const string& name,
-    info_params& params, const string& usage) {
-  auto cmd = add_command(cli, name, usage);
-  add_argument(cmd, "scene", params.scene, "Input scene.");
-  add_option(cmd, "validate", params.validate, "Validate scene.");
+void add_options(const cli_command& cli, info_params& params) {
+  add_argument(cli, "scene", params.scene, "Input scene.");
+  add_option(cli, "validate", params.validate, "Validate scene.");
 }
 
 // print info for scenes
@@ -136,35 +132,33 @@ struct render_params : trace_params {
 };
 
 // Cli
-void add_command(const cli_command& cli, const string& name,
-    render_params& params, const string& usage) {
-  auto cmd = add_command(cli, name, usage);
-  add_argument(cmd, "scene", params.scene, "Scene filename.");
-  add_option(cmd, "output", params.output, "Output filename.");
-  add_option(cmd, "camera", params.camname, "Camera name.");
-  add_option(cmd, "addsky", params.addsky, "Add sky.");
-  add_option(cmd, "envname", params.envname, "Add environment map.");
-  add_option(cmd, "savebatch", params.savebatch, "Save batch.");
+void add_options(const cli_command& cli, render_params& params) {
+  add_argument(cli, "scene", params.scene, "Scene filename.");
+  add_option(cli, "output", params.output, "Output filename.");
+  add_option(cli, "camera", params.camname, "Camera name.");
+  add_option(cli, "addsky", params.addsky, "Add sky.");
+  add_option(cli, "envname", params.envname, "Add environment map.");
+  add_option(cli, "savebatch", params.savebatch, "Save batch.");
   add_option(
-      cmd, "resolution", params.resolution, "Image resolution.", {1, 4096});
+      cli, "resolution", params.resolution, "Image resolution.", {1, 4096});
   add_option(
-      cmd, "sampler", params.sampler, "Sampler type.", trace_sampler_names);
-  add_option(cmd, "falsecolor", params.falsecolor, "False color type.",
+      cli, "sampler", params.sampler, "Sampler type.", trace_sampler_names);
+  add_option(cli, "falsecolor", params.falsecolor, "False color type.",
       trace_falsecolor_names);
-  add_option(cmd, "samples", params.samples, "Number of samples.", {1, 4096});
-  add_option(cmd, "bounces", params.bounces, "Number of bounces.", {1, 128});
-  add_option(cmd, "denoise", params.denoise, "Enable denoiser.");
-  add_option(cmd, "batch", params.batch, "Sample batch.");
-  add_option(cmd, "clamp", params.clamp, "Clamp params.", {10, flt_max});
-  add_option(cmd, "nocaustics", params.nocaustics, "Disable caustics.");
-  add_option(cmd, "envhidden", params.envhidden, "Hide environment.");
-  add_option(cmd, "tentfilter", params.tentfilter, "Filter image.");
-  add_option(cmd, "embreebvh", params.embreebvh, "Use Embree as BVH.");
+  add_option(cli, "samples", params.samples, "Number of samples.", {1, 4096});
+  add_option(cli, "bounces", params.bounces, "Number of bounces.", {1, 128});
+  add_option(cli, "denoise", params.denoise, "Enable denoiser.");
+  add_option(cli, "batch", params.batch, "Sample batch.");
+  add_option(cli, "clamp", params.clamp, "Clamp params.", {10, flt_max});
+  add_option(cli, "nocaustics", params.nocaustics, "Disable caustics.");
+  add_option(cli, "envhidden", params.envhidden, "Hide environment.");
+  add_option(cli, "tentfilter", params.tentfilter, "Filter image.");
+  add_option(cli, "embreebvh", params.embreebvh, "Use Embree as BVH.");
   add_option(
-      cmd, "highqualitybvh", params.highqualitybvh, "Use high quality BVH.");
-  add_option(cmd, "exposure", params.exposure, "Exposure value.");
-  add_option(cmd, "filmic", params.filmic, "Filmic tone mapping.");
-  add_option(cmd, "noparallel", params.noparallel, "Disable threading.");
+      cli, "highqualitybvh", params.highqualitybvh, "Use high quality BVH.");
+  add_option(cli, "exposure", params.exposure, "Exposure value.");
+  add_option(cli, "filmic", params.filmic, "Filmic tone mapping.");
+  add_option(cli, "noparallel", params.noparallel, "Disable threading.");
 }
 
 // convert images
@@ -252,35 +246,33 @@ struct view_params : trace_params {
 };
 
 // Cli
-void add_command(const cli_command& cli, const string& name,
-    view_params& params, const string& usage) {
-  auto cmd = add_command(cli, name, usage);
+void add_options(const cli_command& cli, view_params& params) {
   add_argument_with_config(
-      cmd, "scene", params.scene, "Scene filename.", "yscene.json");
-  add_option(cmd, "output", params.output, "Output filename.");
-  add_option(cmd, "camera", params.camname, "Camera name.");
-  add_option(cmd, "addsky", params.addsky, "Add sky.");
-  add_option(cmd, "envname", params.envname, "Add environment map.");
+      cli, "scene", params.scene, "Scene filename.", "yscene.json");
+  add_option(cli, "output", params.output, "Output filename.");
+  add_option(cli, "camera", params.camname, "Camera name.");
+  add_option(cli, "addsky", params.addsky, "Add sky.");
+  add_option(cli, "envname", params.envname, "Add environment map.");
   add_option(
-      cmd, "resolution", params.resolution, "Image resolution.", {1, 4096});
+      cli, "resolution", params.resolution, "Image resolution.", {1, 4096});
   add_option(
-      cmd, "sampler", params.sampler, "Sampler type.", trace_sampler_names);
-  add_option(cmd, "falsecolor", params.falsecolor, "False color type.",
+      cli, "sampler", params.sampler, "Sampler type.", trace_sampler_names);
+  add_option(cli, "falsecolor", params.falsecolor, "False color type.",
       trace_falsecolor_names);
-  add_option(cmd, "samples", params.samples, "Number of samples.", {1, 4096});
-  add_option(cmd, "bounces", params.bounces, "Number of bounces.", {1, 128});
-  add_option(cmd, "denoise", params.denoise, "Enable denoiser.");
-  add_option(cmd, "batch", params.batch, "Sample batch.");
-  add_option(cmd, "clamp", params.clamp, "Clamp params.", {10, flt_max});
-  add_option(cmd, "nocaustics", params.nocaustics, "Disable caustics.");
-  add_option(cmd, "envhidden", params.envhidden, "Hide environment.");
-  add_option(cmd, "tentfilter", params.tentfilter, "Filter image.");
-  add_option(cmd, "embreebvh", params.embreebvh, "Use Embree as BVH.");
+  add_option(cli, "samples", params.samples, "Number of samples.", {1, 4096});
+  add_option(cli, "bounces", params.bounces, "Number of bounces.", {1, 128});
+  add_option(cli, "denoise", params.denoise, "Enable denoiser.");
+  add_option(cli, "batch", params.batch, "Sample batch.");
+  add_option(cli, "clamp", params.clamp, "Clamp params.", {10, flt_max});
+  add_option(cli, "nocaustics", params.nocaustics, "Disable caustics.");
+  add_option(cli, "envhidden", params.envhidden, "Hide environment.");
+  add_option(cli, "tentfilter", params.tentfilter, "Filter image.");
+  add_option(cli, "embreebvh", params.embreebvh, "Use Embree as BVH.");
   add_option(
-      cmd, "highqualitybvh", params.highqualitybvh, "Use high quality BVH.");
-  add_option(cmd, "exposure", params.exposure, "Exposure value.");
-  add_option(cmd, "filmic", params.filmic, "Filmic tone mapping.");
-  add_option(cmd, "noparallel", params.noparallel, "Disable threading.");
+      cli, "highqualitybvh", params.highqualitybvh, "Use high quality BVH.");
+  add_option(cli, "exposure", params.exposure, "Exposure value.");
+  add_option(cli, "filmic", params.filmic, "Filmic tone mapping.");
+  add_option(cli, "noparallel", params.noparallel, "Disable threading.");
 }
 
 #ifndef YOCTO_OPENGL
@@ -334,11 +326,9 @@ struct glview_params {
 };
 
 // Cli
-void add_command(const cli_command& cli, const string& name,
-    glview_params& params, const string& usage) {
-  auto cmd = add_command(cli, name, usage);
-  add_argument(cmd, "scene", params.scene, "Input scene.");
-  add_option(cmd, "camera", params.camname, "Camera name.");
+void add_options(const cli_command& cli, glview_params& params) {
+  add_argument(cli, "scene", params.scene, "Input scene.");
+  add_option(cli, "camera", params.camname, "Camera name.");
 }
 
 #ifndef YOCTO_OPENGL
@@ -386,21 +376,18 @@ struct app_params {
 };
 
 // Cli
-cli_state make_commands(
-    const string& name, app_params& params, const string& usage) {
-  auto cli = make_cli(name, usage);
+void add_options(const cli_command& cli, app_params& params) {
   set_command_var(cli, params.command);
   add_command(cli, "convert", params.convert, "Convert scenes.");
   add_command(cli, "info", params.info, "Print scenes info.");
   add_command(cli, "render", params.render, "Render scenes.");
   add_command(cli, "view", params.view, "View scenes.");
   add_command(cli, "glview", params.glview, "View scenes with OpenGL.");
-  return cli;
 }
 
 // Parse cli
 void parse_cli(app_params& params, int argc, const char** argv) {
-  auto cli = make_commands("yscene", params, "Process and view scenes.");
+  auto cli = make_cli("yscene", params, "Process and view scenes.");
   parse_cli(cli, argc, argv);
 }
 
