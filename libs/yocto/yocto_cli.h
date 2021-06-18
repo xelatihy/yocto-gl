@@ -4,8 +4,7 @@
 // Yocto/CLI is a collection of utilities used in writing command-line
 // applications, including parsing command line arguments, printing values,
 // timers, progress bars, handling errors via exceptions.
-// Yocto/CLI is implemented in `yocto_cli.h` and `yocto_cli.cpp`, and
-// depends on `json.hpp` for Json serialization.
+// Yocto/CLI is implemented in `yocto_cli.h` and `yocto_cli.cpp`.
 //
 
 //
