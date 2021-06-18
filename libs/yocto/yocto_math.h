@@ -3494,8 +3494,8 @@ constexpr auto enumerate(const Sequence& sequence, T start) {
     pair<const T&, Reference> operator*() const { return {index, *iterator}; }
   };
   struct enumerate_helper {
-    Sequence& sequence;
-    T         begin_, end_;
+    const Sequence& sequence;
+    T               begin_, end_;
     auto begin() { return enumerate_iterator{begin_, std::begin(sequence)}; }
     auto end() { return enumerate_iterator{end_, std::end(sequence)}; }
   };

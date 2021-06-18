@@ -210,6 +210,21 @@ struct subdiv_data {
   int shape = invalidid;
 };
 
+// Scene metadata
+struct scene_metadata {
+  // copyright info preserve in IO
+  string copyright = "";
+
+  // element names
+  vector<string> camera_names      = {};
+  vector<string> texture_names     = {};
+  vector<string> material_names    = {};
+  vector<string> shape_names       = {};
+  vector<string> instance_names    = {};
+  vector<string> environment_names = {};
+  vector<string> subdiv_names      = {};
+};
+
 // Scene comprised an array of objects whose memory is owened by the scene.
 // All members are optional,Scene objects (camera, instances, environments)
 // have transforms defined internally. A scene can optionally contain a

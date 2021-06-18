@@ -202,6 +202,8 @@ struct ordered_map {
 
   size_t size() const { return _data.size(); }
   bool   empty() const { return _data.empty(); }
+  void   reserve(size_t size) { return _data.reserve(size); }
+  void   resize(size_t size) { return _data.resize(size); }
 
   bool contains(const K& key) const { return _find(key) != _data.end(); }
 
@@ -335,6 +337,8 @@ struct json_value {
   // size
   bool   empty() const { return _empty(); }
   size_t size() const { return _size(); }
+  void   reserve(size_t size) { _reserve(size); }
+  void   resize(size_t size) { _resize(size); }
 
   // object creation
   static json_value array() { return json_value{json_array{}}; }
@@ -688,6 +692,22 @@ struct json_value {
       case json_type::string: return _string->size();
       case json_type::array: return _array->size();
       case json_type::object: return _object->size();
+      default: throw json_error{"compound expected", this};
+    }
+  }
+  void _reserve(size_t size) const {
+    switch (_type) {
+      case json_type::string: _string->reserve(size); break;
+      case json_type::array: _array->reserve(size); break;
+      case json_type::object: _object->reserve(size); break;
+      default: throw json_error{"compound expected", this};
+    }
+  }
+  void _resize(size_t size) const {
+    switch (_type) {
+      case json_type::string: _string->resize(size); break;
+      case json_type::array: _array->resize(size); break;
+      case json_type::object: _object->resize(size); break;
       default: throw json_error{"compound expected", this};
     }
   }
