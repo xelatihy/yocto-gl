@@ -445,7 +445,7 @@ void add_options(const cli_command& cli, glview_params& params) {
 
 // view shapes
 void run_glview(const glview_params& params) {
-  return print_fatal("Opengl not compiled");
+  throw io_error::not_implemented_error("Opengl not compiled");
 }
 
 #else
