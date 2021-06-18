@@ -123,8 +123,6 @@ namespace yocto {
 template <typename Func>
 inline void handle_errors(Func&& run);
 inline void handle_errors(
-    void (*run)(int, const char**), int argc, const char** argv);
-inline void handle_errors(
     void (*run)(const vector<string>&), const vector<string>& args);
 
 }  // namespace yocto
@@ -139,12 +137,12 @@ struct cli_state;
 cli_state make_cli(const string& cmd, const string& usage);
 // parse arguments, throw exceptions on error
 void parse_cli(cli_state& cli, const vector<string>& args);
-void parse_cli(cli_state& cli, int argc, const char** argv);
 // parse arguments, checks for errors
 bool parse_cli(cli_state& cli, const vector<string>& args, string& error);
 // parse arguments, checks for errors, and exits on error or help
-void parse_cli_and_handle_errors(cli_state& cli, int argc, const char** argv);
 void parse_cli_and_handle_errors(cli_state& cli, const vector<string>& args);
+// a convenience function that packs args to strings
+vector<string> make_cli_args(int argc, const char** argv);
 
 // get usage
 string get_usage(const cli_state& cli);
@@ -376,10 +374,6 @@ inline void handle_errors(Func&& run) {
 }
 
 // handle errors
-inline void handle_errors(
-    void (*run)(int, const char**), int argc, const char** argv) {
-  handle_errors([&]() { run(argc, argv); });
-}
 inline void handle_errors(
     void (*run)(const vector<string>&), const vector<string>& args) {
   handle_errors([&]() { run(args); });

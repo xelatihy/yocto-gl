@@ -1289,17 +1289,12 @@ void add_options(const cli_command& cli, app_params& params) {
   add_command(cli, "glsculpt", params.glsculpt, "Sculpt meshes with OpenGL.");
 }
 
-// Parse cli
-void parse_cli(app_params& params, int argc, const char** argv) {
-  auto cli = make_cli("ymesh", params, "Process and view meshes.");
-  parse_cli(cli, argc, argv);
-}
-
 // Run
-void run(int argc, const char* argv[]) {
+void run(const vector<string>& args) {
   // command line parameters
   auto params = app_params{};
-  parse_cli(params, argc, argv);
+  auto cli    = make_cli("ymesh", params, "Process and view meshes.");
+  parse_cli(cli, args);
 
   // dispatch commands
   if (params.command == "view") {
@@ -1318,4 +1313,6 @@ void run(int argc, const char* argv[]) {
 }
 
 // Main
-int main(int argc, const char* argv[]) { handle_errors(run, argc, argv); }
+int main(int argc, const char* argv[]) {
+  handle_errors(run, make_cli_args(argc, argv));
+}

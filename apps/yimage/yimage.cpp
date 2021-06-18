@@ -275,11 +275,11 @@ void add_options(const cli_command& cli, app_params& params) {
 }
 
 // Run
-void run(int argc, const char* argv[]) {
+void run(const vector<string>& args) {
   // command line parameters
   auto params = app_params{};
   auto cli    = make_cli("yimage", params, "Process and view images.");
-  parse_cli(cli, argc, argv);
+  parse_cli(cli, args);
 
   // dispatch commands
   if (params.command == "convert") {
@@ -298,4 +298,6 @@ void run(int argc, const char* argv[]) {
 }
 
 // Main
-int main(int argc, const char* argv[]) { handle_errors(run, argc, argv); }
+int main(int argc, const char* argv[]) {
+  handle_errors(run, make_cli_args(argc, argv));
+}

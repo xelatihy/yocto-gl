@@ -1002,8 +1002,9 @@ void parse_cli(cli_state& cli, const vector<string>& args) {
   }
 }
 
-void parse_cli(cli_state& cli, int argc, const char** argv) {
-  parse_cli(cli, vector<string>(argv, argv + argc));
+// a convenience function that packs args to strings
+vector<string> make_cli_args(int argc, const char** argv) {
+  return vector<string>(argv, argv + argc);
 }
 
 bool parse_cli(cli_state& cli, const vector<string>& args, string& error) {
@@ -1028,10 +1029,6 @@ void parse_cli_and_handle_errors(cli_state& cli, const vector<string>& args) {
     print_info(get_usage(cli));
     exit(0);
   }
-}
-
-void parse_cli_and_handle_errors(cli_state& cli, int argc, const char** argv) {
-  parse_cli_and_handle_errors(cli, vector<string>(argv, argv + argc));
 }
 
 }  // namespace yocto
