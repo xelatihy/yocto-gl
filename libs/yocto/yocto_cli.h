@@ -115,6 +115,20 @@ string  elapsed_formatted(simple_timer& timer);
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// ERROR HANDLING VIA EXCEPTIONS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// handle errors
+void handle_errors(void (*run)(int, const char**), int argc, const char** argv);
+void handle_errors(
+    void (*run)(const vector<string>&), const vector<string>& args);
+template <typename Func>
+inline void handle_errors(Func&& run);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // COMMAND LINE PARSING
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -124,6 +138,7 @@ struct cli_state;
 cli_state make_cli(const string& cmd, const string& usage);
 // parse arguments, throw exceptions on error
 void parse_cli(cli_state& cli, const vector<string>& args);
+void parse_cli(cli_state& cli, int argc, const char** argv);
 // parse arguments, checks for errors
 bool parse_cli(cli_state& cli, const vector<string>& args, string& error);
 // parse arguments, checks for errors, and exits on error or help
@@ -269,10 +284,26 @@ struct cli_command {
 
 // Command line error.
 struct cli_error : std::runtime_error {
-  cli_error(const string& message) : std::runtime_error(message) {}
+  cli_error(const string& message) : std::runtime_error(message), _usage() {}
+  cli_error(const string& message, const string& usage)
+      : std::runtime_error(message), _usage(usage) {}
+
+  string usage() const { return _usage; }
+  void   set_usage(const string& usage) { _usage = usage; }
+
+ private:
+  string _usage = "";
 };
 struct cli_help : std::runtime_error {
-  cli_help(const string& message) : std::runtime_error(message) {}
+  cli_help(const string& message) : std::runtime_error(message), _usage() {}
+  cli_help(const string& message, const string& usage)
+      : std::runtime_error(message), _usage(usage) {}
+
+  string usage() const { return _usage; }
+  void   set_usage(const string& usage) { _usage = usage; }
+
+ private:
+  string _usage = "";
 };
 
 template <typename T, typename>
@@ -287,6 +318,34 @@ inline void add_argument(const cli_command& cli, const string& name, T& value,
     const string& usage, const vector<string>& choices, bool req) {
   return add_argument(
       cli, name, (std::underlying_type_t<T>&)value, usage, choices, req);
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// ERROR HANDLING VIA EXCEPTIONS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+template <typename Func>
+inline void handle_errors(Func&& run) {
+  try {
+    run();
+  } catch (cli_error& error) {
+    print_info("error: " + string{error.what()});
+    print_info("");
+    print_info(error.usage());
+    exit(1);
+  } catch (cli_help& error) {
+    print_info(error.usage());
+    exit(0);
+  } catch (io_error& error) {
+    print_info(error.what());
+    exit(1);
+  } catch (std::exception& error) {
+    print_info("program error:" + string(error.what()));
+    exit(1);
+  }
 }
 
 }  // namespace yocto

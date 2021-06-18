@@ -88,6 +88,8 @@ struct io_error : std::runtime_error {
   static io_error shape_error(const string& filename, const string& name) { return {filename, "missing shape " + name}; }
   static io_error command_error(const string& filename, const string& name) { return {filename, "unknown command " + name}; }
   static io_error type_error(const string& filename, const string& name) { return {filename, "unknown type " + name}; }
+  static io_error mismatch_error(const string& filename1, const string& filename2, const string& error) { return {filename1 + " and " + filename2, error}; }
+  static io_error not_implemented_error(const string& error) { return {"not implemented", error}; }
   // clang-format on
 };
 

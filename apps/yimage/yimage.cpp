@@ -61,11 +61,9 @@ void add_command(const cli_command& cli, const string& name,
 }
 
 // convert images
-int run_convert(const convert_params& params) {
+void run_convert(const convert_params& params) {
   // load
-  auto image   = image_data{};
-  auto ioerror = string{};
-  if (!load_image(params.image, image, ioerror)) return print_fatal(ioerror);
+  auto image = load_image(params.image);
 
   // resize if needed
   if (params.width != 0 || params.height != 0) {
@@ -78,10 +76,7 @@ int run_convert(const convert_params& params) {
   }
 
   // save
-  if (!save_image(params.output, image, ioerror)) return print_fatal(ioerror);
-
-  // done
-  return 0;
+  save_image(params.output, image);
 }
 
 // view params
@@ -101,27 +96,22 @@ void add_command(const cli_command& cli, const string& name,
 #ifndef YOCTO_OPENGL
 
 // view images
-int run_view(const view_params& params) {
-  return print_fatal("Opengl not compiled");
+void run_view(const view_params& params) {
+  throw io_error::not_supported_error("Opengl not compiled");
 }
 
 #else
 
 // view images
-int run_view(const view_params& params) {
+void run_view(const view_params& params) {
   // load
   auto images = vector<image_data>(params.images.size());
   for (auto idx = 0; idx < (int)params.images.size(); idx++) {
-    auto ioerror = string{};
-    if (!load_image(params.images[idx], images[idx], ioerror))
-      return print_fatal(ioerror);
+    images[idx] = load_image(params.images[idx]);
   }
 
   // run viewer
   view_images("yimage", params.images, images);
-
-  // done
-  return 0;
 }
 
 #endif
@@ -143,24 +133,19 @@ void add_command(const cli_command& cli, const string& name,
 #ifndef YOCTO_OPENGL
 
 // grade images
-int run_grade(const grade_params& params) {
-  return print_fatal("Opengl not compiled");
+void run_grade(const grade_params& params) {
+  throw io_error::not_supported_error("Opengl not compiled");
 }
 
 #else
 
 // grade images
-int run_grade(const grade_params& params) {
+void run_grade(const grade_params& params) {
   // load image
-  auto image   = image_data{};
-  auto ioerror = string{};
-  if (!load_image(params.image, image, ioerror)) return print_fatal(ioerror);
+  auto image = load_image(params.image);
 
   // run viewer
   colorgrade_image("yimage", params.image, image);
-
-  // done
-  return 0;
 }
 
 #endif
@@ -186,45 +171,38 @@ void add_command(const cli_command& cli, const string& name,
 }
 
 // resize images
-int run_diff(const diff_params& params) {
+void run_diff(const diff_params& params) {
   // load
-  auto ioerror = string{};
-  auto image1 = image_data{}, image2 = image_data{};
-  if (!load_image(params.image1, image1, ioerror)) return false;
-  if (!load_image(params.image2, image2, ioerror)) return false;
+  auto image1 = load_image(params.image1);
+  auto image2 = load_image(params.image2);
 
   // check sizes
   if (image1.width != image2.width || image1.height != image2.height) {
-    ioerror = "image sizes are different";
-    return print_fatal(ioerror);
+    throw io_error::mismatch_error(
+        params.image1, params.image2, "image different sizes");
   }
 
   // check types
   if (image1.linear != image2.linear) {
-    ioerror = "image types are different";
-    return print_fatal(ioerror);
+    throw io_error::mismatch_error(
+        params.image1, params.image2, "image different types");
   }
 
   // compute diff
   auto diff = image_difference(image1, image2, true);
 
   // save
-  if (params.output != "") {
-    if (!save_image(params.output, diff, ioerror)) return print_fatal(ioerror);
-  }
+  if (params.output != "") save_image(params.output, diff);
 
   // check diff
   if (params.signal) {
     for (auto& c : diff.pixels) {
       if (max(xyz(c)) > params.threshold) {
-        ioerror = "image content differs";
-        return print_fatal(ioerror);
+        throw io_error::mismatch_error(
+            params.image1, params.image2, "image content differs");
       }
     }
   }
-
-  // done
-  return 0;
 }
 
 // setalpha params
@@ -250,29 +228,21 @@ void add_command(const cli_command& cli, const string& name,
 }
 
 // setalpha images
-int run_setalpha(const setalpha_params& params) {
+void run_setalpha(const setalpha_params& params) {
   // load
-  auto ioerror = string{};
-  auto image = image_data{}, alpha = image_data{};
-  if (!load_image(params.image, image, ioerror)) return print_fatal(ioerror);
-  if (!load_image(params.alpha, alpha, ioerror)) return print_fatal(ioerror);
+  auto image = load_image(params.image);
+  auto alpha = load_image(params.alpha);
 
   // check sizes
   if (image.width != alpha.width || image.height != alpha.height) {
-    ioerror = "image sizes are different";
-    return print_fatal(ioerror);
+    throw io_error::mismatch_error(
+        params.image, params.alpha, "image different size");
   }
 
   // check types
   if (image.linear != alpha.linear) {
-    ioerror = "image types are different";
-    return print_fatal(ioerror);
-  }
-
-  // check types
-  if (image.linear != alpha.linear || !image.linear != !alpha.linear) {
-    ioerror = "image types are different";
-    return print_fatal(ioerror);
+    throw io_error::mismatch_error(
+        params.image, params.alpha, "image different types");
   }
 
   // edit alpha
@@ -292,10 +262,7 @@ int run_setalpha(const setalpha_params& params) {
   }
 
   // save
-  if (!save_image(params.output, out, ioerror)) return print_fatal(ioerror);
-
-  // done
-  return 0;
+  save_image(params.output, out);
 }
 
 struct app_params {
@@ -323,10 +290,10 @@ cli_state make_commands(
 // Parse cli
 void parse_cli(app_params& params, int argc, const char** argv) {
   auto cli = make_commands("yimage", params, "Process and view images.");
-  parse_cli_and_handle_errors(cli, argc, argv);
+  parse_cli(cli, argc, argv);
 }
 
-int main(int argc, const char* argv[]) {
+void run(int argc, const char* argv[]) {
   // command line parameters
   auto params = app_params{};
   parse_cli(params, argc, argv);
@@ -343,6 +310,8 @@ int main(int argc, const char* argv[]) {
   } else if (params.command == "setalpha") {
     return run_setalpha(params.setalpha);
   } else {
-    return print_fatal("unknown command " + params.command);
+    throw io_error::command_error("yimage", params.command);
   }
 }
+
+int main(int argc, const char* argv[]) { handle_errors(run, argc, argv); }

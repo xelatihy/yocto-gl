@@ -987,11 +987,23 @@ string get_command(const cli_state& cli) {
 }
 
 void parse_cli(cli_state& cli, const vector<string>& args) {
-  auto idx = (size_t)1;
-  args_to_json(cli.value, cli.schema, args, idx);
-  config_to_json(cli.value);
-  validate_json(cli.value, cli.schema, "", true);
-  json_to_variable(cli.value, cli.variables, "");
+  try {
+    auto idx = (size_t)1;
+    args_to_json(cli.value, cli.schema, args, idx);
+    config_to_json(cli.value);
+    validate_json(cli.value, cli.schema, "", true);
+    json_to_variable(cli.value, cli.variables, "");
+  } catch (cli_error& error) {
+    error.set_usage(get_usage(cli));
+    throw;
+  } catch (cli_help& error) {
+    error.set_usage(get_usage(cli));
+    throw;
+  }
+}
+
+void parse_cli(cli_state& cli, int argc, const char** argv) {
+  parse_cli(cli, vector<string>(argv, argv + argc));
 }
 
 bool parse_cli(cli_state& cli, const vector<string>& args, string& error) {
@@ -1020,6 +1032,55 @@ void parse_cli_and_handle_errors(cli_state& cli, const vector<string>& args) {
 
 void parse_cli_and_handle_errors(cli_state& cli, int argc, const char** argv) {
   parse_cli_and_handle_errors(cli, vector<string>(argv, argv + argc));
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// ERROR HANDLING VIA EXCEPTIONS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// handle errors
+void handle_errors(
+    void (*run)(int, const char**), int argc, const char** argv) {
+  try {
+    run(argc, argv);
+  } catch (cli_error& error) {
+    print_info("error: " + string{error.what()});
+    print_info("");
+    print_info(error.usage());
+    exit(1);
+  } catch (cli_help& error) {
+    print_info(error.usage());
+    exit(0);
+  } catch (io_error& error) {
+    print_info(error.what());
+    exit(1);
+  } catch (std::exception& error) {
+    print_info("program error:" + string(error.what()));
+    exit(1);
+  }
+}
+void handle_errors(
+    void (*run)(const vector<string>&), const vector<string>& args) {
+  try {
+    run(args);
+  } catch (cli_error& error) {
+    print_info("error: " + string{error.what()});
+    print_info("");
+    print_info(error.usage());
+    exit(1);
+  } catch (cli_help& error) {
+    print_info(error.usage());
+    exit(0);
+  } catch (io_error& error) {
+    print_info(error.what());
+    exit(1);
+  } catch (std::exception& error) {
+    print_info("program error:" + string(error.what()));
+    exit(1);
+  }
 }
 
 }  // namespace yocto
