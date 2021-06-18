@@ -626,11 +626,13 @@ bool load_json(const string& filename, json_value& json, string& error) {
 
 // Save json
 bool save_json(const string& filename, json_value& json, string& error) {
-  // convert to string
-  auto text = string{};
-  if (!format_json(text, json, error)) return false;
-  // save file
-  return save_text(filename, text, error);
+  try {
+    save_json(filename, json);
+    return true;
+  } catch (std::exception& exception) {
+    error = exception.what();
+    return false;
+  }
 }
 
 // Parse json
