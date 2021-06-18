@@ -60,10 +60,8 @@ void add_command(const cli_command& cli, const string& name,
 // convert images
 void run_convert(const convert_params& params) {
   // load scene
-  auto scene   = scene_data{};
-  auto ioerror = ""s;
   print_progress_begin("load scene");
-  if (!load_scene(params.scene, scene, ioerror)) print_fatal(ioerror);
+  auto scene = load_scene(params.scene);
   print_progress_end();
 
   // copyright
@@ -89,13 +87,10 @@ void run_convert(const convert_params& params) {
     print_progress_end();
   }
 
-  // make a directory if needed
-  if (!make_scene_directories(params.output, scene, ioerror))
-    print_fatal(ioerror);
-
   // save scene
   print_progress_begin("save scene");
-  if (!save_scene(params.output, scene, ioerror)) print_fatal(ioerror);
+  make_scene_directories(params.output, scene);
+  save_scene(params.output, scene);
   print_progress_end();
 }
 
@@ -116,10 +111,8 @@ void add_command(const cli_command& cli, const string& name,
 // print info for scenes
 void run_info(const info_params& params) {
   // load scene
-  auto scene   = scene_data{};
-  auto ioerror = ""s;
   print_progress_begin("load scene");
-  if (!load_scene(params.scene, scene, ioerror)) print_fatal(ioerror);
+  auto scene = load_scene(params.scene);
   print_progress_end();
 
   // validate scene
@@ -235,8 +228,7 @@ void run_render(const render_params& params_) {
       auto outfilename = replace_extension(params.output, ext);
       if (!is_hdr_filename(params.output))
         image = tonemap_image(image, params.exposure, params.filmic);
-      auto ioerror = ""s;
-      if (!save_image(outfilename, image, ioerror)) print_fatal(ioerror);
+      save_image(outfilename, image);
     }
     print_progress_next();
   }

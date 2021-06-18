@@ -160,6 +160,13 @@ void                set_help_var(const cli_command& cli, bool& value);
 [[deprecated]] void add_command_name(const cli_command& cli, const string& name,
     string& value, const string& usage);
 
+// Add a command with variables. Calls the function add_options for the type.
+template <typename T>
+inline cli_state make_cli(const string& name, T& values, const string& usage);
+template <typename T>
+inline cli_command add_command(
+    const cli_command& cli, const string& name, T& values, const string& usage);
+
 // Add an optional argument. Supports strings, numbers, and boolean flags.
 // Optional arguments will be parsed with name `--<name>` and `-<alt>`.
 // Optional booleans will support both `--<name>` and `--no-<name>` to enabled
@@ -306,6 +313,21 @@ struct cli_help : std::runtime_error {
  private:
   string _usage = "";
 };
+
+// Add a command with variables. Calls the function add_options for the type.
+template <typename T>
+inline cli_state make_cli(const string& name, T& values, const string& usage) {
+  auto cli = make_cli(name, usage);
+  add_options(cli, values);
+  return cli;
+}
+template <typename T>
+inline cli_command add_command(const cli_command& cli, const string& name,
+    T& values, const string& usage) {
+  auto cmd = add_command(cli, name, usage);
+  add_options(cmd, values);
+  return cmd;
+}
 
 template <typename T, typename>
 inline void add_option(const cli_command& cli, const string& name, T& value,

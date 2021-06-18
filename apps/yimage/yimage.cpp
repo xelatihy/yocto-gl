@@ -275,29 +275,21 @@ struct app_params {
 };
 
 // Cli
-cli_state make_commands(
-    const string& name, app_params& params, const string& usage) {
-  auto cli = make_cli(name, usage);
+void add_options(const cli_command& cli, app_params& params) {
   set_command_var(cli, params.command);
   add_command(cli, "convert", params.convert, "Convert images.");
   add_command(cli, "view", params.view, "View images.");
   add_command(cli, "grade", params.grade, "Grade images.");
   add_command(cli, "diff", params.diff, "Diff two images.");
   add_command(cli, "setalpha", params.setalpha, "Set alpha in images.");
-  return cli;
-}
-
-// Parse cli
-void parse_cli(app_params& params, int argc, const char** argv) {
-  auto cli = make_commands("yimage", params, "Process and view images.");
-  parse_cli(cli, argc, argv);
 }
 
 // Run
 void run(int argc, const char* argv[]) {
   // command line parameters
   auto params = app_params{};
-  parse_cli(params, argc, argv);
+  auto cli    = make_cli("yimage", params, "Process and view images.");
+  parse_cli(cli, argc, argv);
 
   // dispatch commands
   if (params.command == "convert") {
