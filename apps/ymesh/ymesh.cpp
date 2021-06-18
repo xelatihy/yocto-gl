@@ -69,14 +69,7 @@ void run_view(const view_params& params) {
 // view shapes
 void run_view(const view_params& params) {
   // load mesh
-  auto shape   = shape_data{};
-  auto ioerror = ""s;
-  if (path_filename(params.shape) == ".ypreset") {
-    if (!make_shape_preset(shape, path_basename(params.shape), ioerror))
-      print_fatal(ioerror);
-  } else {
-    if (!load_shape(params.shape, shape, ioerror, true)) print_fatal(ioerror);
-  }
+  auto shape = load_shape(params.shape, true);
 
   // make scene
   auto scene = make_shape_scene(shape, params.addsky);
@@ -156,9 +149,7 @@ static scene_data make_shapescene(const shape_data& ioshape_) {
 
 void run_glview(const glview_params& params) {
   // loading shape
-  auto ioerror = ""s;
-  auto shape   = shape_data{};
-  if (!load_shape(params.shape, shape, ioerror, true)) print_fatal(ioerror);
+  auto shape = load_shape(params.shape, true);
 
   // create scene
   auto scene = make_shapescene(shape);
@@ -254,9 +245,7 @@ static scene_data make_pathscene(const shape_data& ioshape_) {
 
 void run_glpath(const glpath_params& params) {
   // loading shape
-  auto ioerror = ""s;
-  auto ioshape = shape_data{};
-  if (!load_shape(params.shape, ioshape, ioerror, true)) print_fatal(ioerror);
+  auto ioshape = load_shape(params.shape, true);
   if (!ioshape.quads.empty()) {
     ioshape.triangles = quads_to_triangles(ioshape.quads);
     ioshape.quads     = {};
@@ -457,9 +446,7 @@ static scene_data make_pathdscene(const shape_data& ioshape) {
 
 void run_glpathd(const glpathd_params& params) {
   // loading shape
-  auto ioerror = ""s;
-  auto ioshape = shape_data{};
-  if (!load_shape(params.shape, ioshape, ioerror, true)) print_fatal(ioerror);
+  auto ioshape = load_shape(params.shape, true);
   if (!ioshape.quads.empty()) {
     ioshape.triangles = quads_to_triangles(ioshape.quads);
     ioshape.quads     = {};
@@ -1230,9 +1217,7 @@ static pair<bool, bool> sculpt_update(sculpt_state& state, shape_data& shape,
 
 void run_glsculpt(const glsculpt_params& params_) {
   // loading shape
-  auto ioerror = ""s;
-  auto ioshape = shape_data{};
-  if (!load_shape(params_.shape, ioshape, ioerror, true)) print_fatal(ioerror);
+  auto ioshape = load_shape(params_.shape, true);
   if (!ioshape.quads.empty()) {
     ioshape.triangles = quads_to_triangles(ioshape.quads);
     ioshape.quads.clear();
@@ -1240,9 +1225,7 @@ void run_glsculpt(const glsculpt_params& params_) {
 
   // loading texture
   auto texture = texture_data{};
-  if (!params_.texture.empty()) {
-    if (!load_texture(params_.texture, texture, ioerror)) print_fatal(ioerror);
-  }
+  if (!params_.texture.empty()) texture = load_texture(params_.texture);
 
   // setup app
   auto scene = make_sculptscene(ioshape);
