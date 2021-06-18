@@ -530,7 +530,7 @@ bool load_image(const string& filename, image_data& image, string& error) {
   try {
     load_image(filename, image);
     return true;
-  } catch (io_error& exception) {
+  } catch (const io_error& exception) {
     error = exception.what();
     return false;
   }
@@ -542,7 +542,7 @@ bool save_image(
   try {
     save_image(filename, image);
     return true;
-  } catch (io_error& exception) {
+  } catch (const io_error& exception) {
     error = exception.what();
     return false;
   }
@@ -552,7 +552,7 @@ bool make_image_preset(image_data& image, const string& type, string& error) {
   try {
     image = make_image_preset(type);
     return true;
-  } catch (io_error& exception) {
+  } catch (const io_error& exception) {
     error = exception.what();
     return false;
   }
@@ -699,7 +699,7 @@ bool load_texture(
   try {
     load_texture(filename, texture);
     return true;
-  } catch (io_error& exception) {
+  } catch (const io_error& exception) {
     error = exception.what();
     return false;
   }
@@ -711,7 +711,7 @@ bool save_texture(
   try {
     save_texture(filename, texture);
     return true;
-  } catch (io_error& exception) {
+  } catch (const io_error& exception) {
     error = exception.what();
     return false;
   }
@@ -722,7 +722,7 @@ bool make_texture_preset(
   try {
     texture = make_texture_preset(type);
     return true;
-  } catch (io_error& exception) {
+  } catch (const io_error& exception) {
     error = exception.what();
     return false;
   }
@@ -1373,7 +1373,7 @@ bool load_shape(const string& filename, shape_data& shape, string& error,
   try {
     load_shape(filename, shape, flip_texcoord);
     return true;
-  } catch (io_error& exception) {
+  } catch (const io_error& exception) {
     error = exception.what();
     return false;
   }
@@ -1385,7 +1385,7 @@ bool save_shape(const string& filename, const shape_data& shape, string& error,
   try {
     save_shape(filename, shape, flip_texcoord, ascii);
     return true;
-  } catch (io_error& exception) {
+  } catch (const io_error& exception) {
     error = exception.what();
     return false;
   }
@@ -1397,7 +1397,7 @@ bool load_fvshape(const string& filename, fvshape_data& fvshape, string& error,
   try {
     load_fvshape(filename, fvshape, flip_texcoord);
     return true;
-  } catch (io_error& exception) {
+  } catch (const io_error& exception) {
     error = exception.what();
     return false;
   }
@@ -1409,7 +1409,7 @@ bool save_fvshape(const string& filename, const fvshape_data& fvshape,
   try {
     save_fvshape(filename, fvshape, flip_texcoord, ascii);
     return true;
-  } catch (io_error& exception) {
+  } catch (const io_error& exception) {
     error = exception.what();
     return false;
   }
@@ -1420,7 +1420,7 @@ bool make_shape_preset(shape_data& shape, const string& type, string& error) {
   try {
     shape = make_shape_preset(type);
     return true;
-  } catch (io_error& exception) {
+  } catch (const io_error& exception) {
     error = exception.what();
     return false;
   }
@@ -1432,7 +1432,7 @@ bool make_fvshape_preset(
   try {
     fvshape = make_fvshape_preset(type);
     return true;
-  } catch (io_error& exception) {
+  } catch (const io_error& exception) {
     error = exception.what();
     return false;
   }
@@ -2215,7 +2215,7 @@ bool load_scene(
   try {
     load_scene(filename, scene, noparallel);
     return true;
-  } catch (io_error& exception) {
+  } catch (const io_error& exception) {
     error = exception.what();
     return false;
   }
@@ -2227,7 +2227,7 @@ bool save_scene(const string& filename, const scene_data& scene, string& error,
   try {
     save_scene(filename, scene, noparallel);
     return true;
-  } catch (io_error& exception) {
+  } catch (const io_error& exception) {
     error = exception.what();
     return false;
   }
@@ -2256,7 +2256,7 @@ bool make_scene_directories(
   try {
     make_scene_directories(filename, scene);
     return true;
-  } catch (io_error& exception) {
+  } catch (const io_error& exception) {
     error = exception.what();
     return false;
   }
@@ -2267,7 +2267,7 @@ bool add_environment(scene_data& scene, const string& filename, string& error) {
   try {
     add_environment(scene, filename);
     return true;
-  } catch (io_error& exception) {
+  } catch (const io_error& exception) {
     error = exception.what();
     return false;
   }
@@ -2344,7 +2344,7 @@ bool load_subdiv(const string& filename, subdiv_data& subdiv, string& error) {
   try {
     load_subdiv(filename, subdiv);
     return true;
-  } catch (io_error& exception) {
+  } catch (const io_error& exception) {
     error = exception.what();
     return false;
   }
@@ -2356,7 +2356,7 @@ bool save_subdiv(
   try {
     save_subdiv(filename, subdiv);
     return true;
-  } catch (io_error& exception) {
+  } catch (const io_error& exception) {
     error = exception.what();
     return false;
   }
@@ -2673,7 +2673,7 @@ static void load_json_scene(
         load_instance(path_join(dirname, path), ply_instance.frames);
       });
     }
-  } catch (io_error& exception) {
+  } catch (const io_error& exception) {
     throw io_error::dependent_error(filename, exception);
   }
 
@@ -2870,7 +2870,7 @@ static void save_json_scene(
         save_texture(path_join(dirname, path), texture);
       });
     }
-  } catch (io_error& exception) {
+  } catch (const io_error& exception) {
     throw io_error::dependent_error(filename, exception);
   }
 }
@@ -2987,7 +2987,7 @@ static void load_obj_scene(
         return load_texture(path_join(dirname, path), texture);
       });
     }
-  } catch (io_error& exception) {
+  } catch (const io_error& exception) {
     throw io_error::dependent_error(filename, exception);
   }
 
@@ -3095,7 +3095,7 @@ static void save_obj_scene(
         save_texture(path_join(dirname, path), texture);
       });
     }
-  } catch (io_error& exception) {
+  } catch (const io_error& exception) {
     throw io_error::dependent_error(filename, exception);
   }
 }
@@ -3197,7 +3197,7 @@ static void load_gltf_scene(
         load_binary(path_join(dirname, path), buffer);
       });
     }
-  } catch (io_error& exception) {
+  } catch (const io_error& exception) {
     throw io_error::dependent_error(filename, exception);
   }
 
@@ -3532,7 +3532,7 @@ static void load_gltf_scene(
           }
         }
       }
-    } catch (io_error& error) {
+    } catch (const io_error& error) {
       throw;
     } catch (...) {
       throw io_error::parse_error(filename);
@@ -3616,7 +3616,7 @@ static void load_gltf_scene(
         return load_texture(path_join(dirname, path), texture);
       });
     }
-  } catch (io_error& exception) {
+  } catch (const io_error& exception) {
     throw io_error::dependent_error(filename, exception);
   }
 
@@ -3955,7 +3955,7 @@ static void save_gltf_scene(
         save_texture(path_join(dirname, path), texture);
       });
     }
-  } catch (io_error& exception) {
+  } catch (const io_error& exception) {
     throw io_error::dependent_error(filename, exception);
   }
 }
@@ -4092,7 +4092,7 @@ static void load_pbrt_scene(
         load_texture(path_join(dirname, path), texture);
       });
     }
-  } catch (io_error& exception) {
+  } catch (const io_error& exception) {
     throw io_error::dependent_error(filename, exception);
   }
 
@@ -4194,7 +4194,7 @@ static void save_pbrt_scene(
         save_texture(path_join(dirname, path), texture);
       });
     }
-  } catch (io_error& exception) {
+  } catch (const io_error& exception) {
     throw io_error::dependent_error(filename, exception);
   }
 }

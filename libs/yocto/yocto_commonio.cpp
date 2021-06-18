@@ -618,7 +618,7 @@ bool load_json(const string& filename, json_value& json, string& error) {
   try {
     load_json(filename, json);
     return true;
-  } catch (std::exception& exception) {
+  } catch (const io_error& exception) {
     error = exception.what();
     return false;
   }
@@ -629,7 +629,7 @@ bool save_json(const string& filename, json_value& json, string& error) {
   try {
     save_json(filename, json);
     return true;
-  } catch (std::exception& exception) {
+  } catch (const io_error& exception) {
     error = exception.what();
     return false;
   }
@@ -640,7 +640,10 @@ bool parse_json(const string& text, json_value& json, string& error) {
   try {
     parse_json(text, json);
     return true;
-  } catch (std::exception& exception) {
+  } catch (const json_error& exception) {
+    error = exception.what();
+    return false;
+  } catch (const io_error& exception) {
     error = exception.what();
     return false;
   }
@@ -651,7 +654,10 @@ bool format_json(string& text, const json_value& json, string& error) {
   try {
     format_json(text, json);
     return true;
-  } catch (std::exception& exception) {
+  } catch (const json_error& exception) {
+    error = exception.what();
+    return false;
+  } catch (const io_error& exception) {
     error = exception.what();
     return false;
   }

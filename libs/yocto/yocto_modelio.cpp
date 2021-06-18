@@ -672,7 +672,7 @@ bool load_ply(const string& filename, ply_model& ply, string& error) {
   try {
     load_ply(filename, ply);
     return true;
-  } catch (io_error& exception) {
+  } catch (const io_error& exception) {
     error = exception.what();
     return false;
   }
@@ -683,7 +683,7 @@ bool save_ply(const string& filename, const ply_model& ply, string& error) {
   try {
     save_ply(filename, ply);
     return true;
-  } catch (io_error& exception) {
+  } catch (const io_error& exception) {
     error = exception.what();
     return false;
   }
@@ -1583,7 +1583,7 @@ void load_obj(const string& filename, obj_model& obj, bool face_varying,
           mtllibs.push_back(mtllib);
           try {
             load_mtl(path_join(path_dirname(filename), mtllib), obj);
-          } catch (io_error& error) {
+          } catch (const io_error& error) {
             throw io_error::dependent_error(filename, error);
           }
           auto material_id = 0;
@@ -1593,7 +1593,7 @@ void load_obj(const string& filename, obj_model& obj, bool face_varying,
       } else {
         // unused
       }
-    } catch (io_error&) {
+    } catch (const io_error&) {
       throw;
     } catch (...) {
       throw io_error::parse_error(filename);
@@ -1670,7 +1670,7 @@ void load_obj(const string& filename, obj_model& obj, bool face_varying,
   if (path_exists(extfilename)) {
     try {
       load_obx(extfilename, obj);
-    } catch (io_error& error) {
+    } catch (const io_error& error) {
       throw io_error::dependent_error(filename, error);
     }
   }
@@ -1968,7 +1968,7 @@ void save_obj(const string& filename, const obj_model& obj) {
   if (!obj.materials.empty()) {
     try {
       save_mtl(replace_extension(filename, ".mtl"), obj);
-    } catch (io_error& error) {
+    } catch (const io_error& error) {
       throw io_error::dependent_error(filename, error);
     }
   }
@@ -1977,7 +1977,7 @@ void save_obj(const string& filename, const obj_model& obj) {
   if (!obj.cameras.empty() || !obj.environments.empty()) {
     try {
       save_obx(replace_extension(filename, ".obx"), obj);
-    } catch (io_error& error) {
+    } catch (const io_error& error) {
       throw io_error::dependent_error(filename, error);
     }
   }
@@ -2028,7 +2028,7 @@ bool load_obj(const string& filename, obj_model& obj, string& error,
   try {
     load_obj(filename, obj, face_varying, split_materials);
     return true;
-  } catch (io_error& exception) {
+  } catch (const io_error& exception) {
     error = exception.what();
     return false;
   }
@@ -2037,7 +2037,7 @@ bool save_obj(const string& filename, const obj_model& obj, string& error) {
   try {
     save_obj(filename, obj);
     return true;
-  } catch (io_error& exception) {
+  } catch (const io_error& exception) {
     error = exception.what();
     return false;
   }
@@ -2049,7 +2049,7 @@ bool load_obj(
   try {
     load_obj(filename, obj, face_varying);
     return true;
-  } catch (io_error& exception) {
+  } catch (const io_error& exception) {
     error = exception.what();
     return false;
   }
@@ -2058,7 +2058,7 @@ bool save_obj(const string& filename, const obj_shape& obj, string& error) {
   try {
     save_obj(filename, obj);
     return true;
-  } catch (io_error& exception) {
+  } catch (const io_error& exception) {
     error = exception.what();
     return false;
   }
@@ -2632,7 +2632,7 @@ void load_stl(const string& filename, stl_model& stl, bool unique_vertices) {
         } else {
           throw io_error::parse_error(filename);
         }
-      } catch (io_error&) {
+      } catch (const io_error&) {
         throw;
       } catch (...) {
         throw io_error::parse_error(filename);
@@ -2730,7 +2730,7 @@ bool load_stl(const string& filename, stl_model& stl, string& error,
   try {
     load_stl(filename, stl, unique_vertices);
     return true;
-  } catch (io_error& exception) {
+  } catch (const io_error& exception) {
     error = exception.what();
     return false;
   }
@@ -2740,7 +2740,7 @@ bool save_stl(
   try {
     save_stl(filename, stl, ascii);
     return true;
-  } catch (io_error& exception) {
+  } catch (const io_error& exception) {
     error = exception.what();
     return false;
   }
@@ -3527,7 +3527,7 @@ inline void convert_film(pbrt_film& film, const pbrt_command& command,
     } else {
       throw io_error::type_error(filename, command.type);
     }
-  } catch (io_error& error) {
+  } catch (const io_error& error) {
     throw;
   } catch (...) {
     throw io_error::parse_error(filename);
@@ -3574,7 +3574,7 @@ inline void convert_camera(pbrt_camera& pcamera, const pbrt_command& command,
     } else {
       throw io_error::type_error(filename, command.type);
     }
-  } catch (io_error& error) {
+  } catch (const io_error& error) {
     throw;
   } catch (...) {
     throw io_error::parse_error(filename);
@@ -3652,7 +3652,7 @@ inline void convert_texture(pbrt_texture& ptexture, const pbrt_command& command,
     } else {
       throw io_error::type_error(filename, command.type);
     }
-  } catch (io_error& error) {
+  } catch (const io_error& error) {
     throw;
   } catch (...) {
     throw io_error::parse_error(filename);
@@ -3992,7 +3992,7 @@ inline void convert_material(pbrt_material& pmaterial,
     } else {
       throw io_error::type_error(filename, command.type);
     }
-  } catch (io_error& error) {
+  } catch (const io_error& error) {
     throw;
   } catch (...) {
     throw io_error::parse_error(filename);
@@ -4115,7 +4115,7 @@ inline void convert_shape(pbrt_shape& pshape, const pbrt_command& command,
         auto ply = ply_model{};
         try {
           load_ply(path_join(ply_dirname, pshape.filename_), ply);
-        } catch (io_error& error) {
+        } catch (const io_error& error) {
           throw io_error::dependent_error(filename, error);
         }
         get_positions(ply, pshape.positions);
@@ -4136,7 +4136,7 @@ inline void convert_shape(pbrt_shape& pshape, const pbrt_command& command,
     } else {
       throw io_error::type_error(filename, command.type);
     }
-  } catch (io_error& error) {
+  } catch (const io_error& error) {
     throw;
   } catch (...) {
     throw io_error::parse_error(filename);
@@ -4156,7 +4156,7 @@ inline void convert_arealight(pbrt_arealight& parealight,
     } else {
       throw io_error::type_error(filename, command.type);
     }
-  } catch (io_error& error) {
+  } catch (const io_error& error) {
     throw;
   } catch (...) {
     throw io_error::parse_error(filename);
@@ -4211,7 +4211,7 @@ inline void convert_light(pbrt_light& plight, const pbrt_command& command,
     } else {
       throw io_error::type_error(filename, command.type);
     }
-  } catch (io_error& error) {
+  } catch (const io_error& error) {
     throw;
   } catch (...) {
     throw io_error::parse_error(filename);
@@ -4246,7 +4246,7 @@ inline void convert_environment(pbrt_environment& penvironment,
     } else {
       throw io_error::type_error(filename, command.type);
     }
-  } catch (io_error& error) {
+  } catch (const io_error& error) {
     throw;
   } catch (...) {
     throw io_error::parse_error(filename);
@@ -4539,13 +4539,13 @@ inline void load_pbrt(const string& filename, pbrt_model& pbrt,
           load_pbrt(path_join(path_dirname(filename), includename), pbrt, ctx,
               material_map, texture_map, named_materials, named_textures,
               named_mediums, named_objects, ply_dirname, ply_meshes);
-        } catch (io_error& error) {
+        } catch (const io_error& error) {
           throw io_error::dependent_error(filename, error);
         }
       } else {
         throw io_error::command_error(filename, cmd);
       }
-    } catch (io_error& error) {
+    } catch (const io_error& error) {
       throw;
     } catch (...) {
       throw io_error::parse_error(filename);
@@ -4807,7 +4807,7 @@ void save_pbrt(
       add_triangles(ply, shape.triangles);
       try {
         save_ply(path_dirname(filename) + "/" + shape.filename_, ply);
-      } catch (io_error& error) {
+      } catch (const io_error& error) {
         throw io_error::dependent_error(filename, error);
       }
     }
@@ -4844,7 +4844,7 @@ bool load_pbrt(
   try {
     load_pbrt(filename, pbrt, ply_meshes);
     return true;
-  } catch (io_error& exception) {
+  } catch (const io_error& exception) {
     error = exception.what();
     return false;
   }
@@ -4854,7 +4854,7 @@ bool save_pbrt(const string& filename, const pbrt_model& pbrt, string& error,
   try {
     save_pbrt(filename, pbrt, ply_meshes);
     return true;
-  } catch (io_error& exception) {
+  } catch (const io_error& exception) {
     error = exception.what();
     return false;
   }
