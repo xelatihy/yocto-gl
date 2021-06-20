@@ -2429,6 +2429,14 @@ static void load_json_scene_version40(const string& filename,
   auto get_opt = [](const json_value& js, const string& key, auto& value) {
     value = js.value(key, value);
   };
+  auto get_of3 = [](const json_value& js, const string& key, auto& value) {
+    auto valuea = js.value(key, (array<float, 12>&)value);
+    value       = *(frame3f*)&valuea;
+  };
+  auto get_om3 = [](const json_value& js, const string& key, auto& value) {
+    auto valuea = js.value(key, (array<float, 9>&)value);
+    value       = *(mat3f*)&valuea;
+  };
 
   // parse json reference
   auto shape_map = unordered_map<string, int>{};
@@ -2523,7 +2531,7 @@ static void load_json_scene_version40(const string& filename,
       for (auto& [key, element] : js.at("cameras").items()) {
         auto& camera = scene.cameras.emplace_back();
         scene.camera_names.emplace_back(key);
-        get_opt(element, "frame", camera.frame);
+        get_of3(element, "frame", camera.frame);
         get_opt(element, "orthographic", camera.orthographic);
         get_opt(element, "ortho", camera.orthographic);
         get_opt(element, "lens", camera.lens);
@@ -2532,7 +2540,7 @@ static void load_json_scene_version40(const string& filename,
         get_opt(element, "focus", camera.focus);
         get_opt(element, "aperture", camera.aperture);
         if (element.contains("lookat")) {
-          get_opt(element, "lookat", (mat3f&)camera.frame);
+          get_om3(element, "lookat", (mat3f&)camera.frame);
           camera.focus = length(camera.frame.x - camera.frame.y);
           camera.frame = lookat_frame(
               camera.frame.x, camera.frame.y, camera.frame.z);
@@ -2543,11 +2551,11 @@ static void load_json_scene_version40(const string& filename,
       for (auto& [key, element] : js.at("environments").items()) {
         auto& environment = scene.environments.emplace_back();
         scene.environment_names.emplace_back(key);
-        get_opt(element, "frame", environment.frame);
+        get_of3(element, "frame", environment.frame);
         get_opt(element, "emission", environment.emission);
         get_tex(element, "emission_tex", environment.emission_tex);
         if (element.contains("lookat")) {
-          get_opt(element, "lookat", (mat3f&)environment.frame);
+          get_om3(element, "lookat", (mat3f&)environment.frame);
           environment.frame = lookat_frame(environment.frame.x,
               environment.frame.y, environment.frame.z, false);
         }
@@ -2579,11 +2587,11 @@ static void load_json_scene_version40(const string& filename,
       for (auto& [key, element] : js.at("instances").items()) {
         auto& instance = scene.instances.emplace_back();
         scene.instance_names.emplace_back(key);
-        get_opt(element, "frame", instance.frame);
+        get_of3(element, "frame", instance.frame);
         get_shp(element, "shape", instance.shape);
         get_mat(element, "material", instance.material);
         if (element.contains("lookat")) {
-          get_opt(element, "lookat", (mat3f&)instance.frame);
+          get_om3(element, "lookat", (mat3f&)instance.frame);
           instance.frame = lookat_frame(
               instance.frame.x, instance.frame.y, instance.frame.z, false);
         }
@@ -2593,11 +2601,11 @@ static void load_json_scene_version40(const string& filename,
       for (auto& [key, element] : js.at("objects").items()) {
         auto& instance = scene.instances.emplace_back();
         scene.instance_names.emplace_back(key);
-        get_opt(element, "frame", instance.frame);
+        get_of3(element, "frame", instance.frame);
         get_shp(element, "shape", instance.shape);
         get_mat(element, "material", instance.material);
         if (element.contains("lookat")) {
-          get_opt(element, "lookat", (mat3f&)instance.frame);
+          get_om3(element, "lookat", (mat3f&)instance.frame);
           instance.frame = lookat_frame(
               instance.frame.x, instance.frame.y, instance.frame.z, false);
         }

@@ -533,30 +533,34 @@ struct json_value {
 #endif
 
   // math types
+  // clang-format off
   void get(vec2i& value) const { get((std::array<int, 2>&)value); }
   void get(vec3i& value) const { get((std::array<int, 3>&)value); }
   void get(vec4i& value) const { get((std::array<int, 4>&)value); }
   void get(vec2f& value) const { get((std::array<float, 2>&)value); }
   void get(vec3f& value) const { get((std::array<float, 3>&)value); }
   void get(vec4f& value) const { get((std::array<float, 4>&)value); }
-  void get(frame2f& value) const { get((std::array<float, 6>&)value); }
-  void get(frame3f& value) const { get((std::array<float, 12>&)value); }
-  void get(mat2f& value) const { get((std::array<float, 4>&)value); }
-  void get(mat3f& value) const { get((std::array<float, 9>&)value); }
-  void get(mat4f& value) const { get((std::array<float, 16>&)value); }
+  void get(frame2f& value) const { get((std::array<std::array<float, 2>, 3>&)value); }
+  void get(frame3f& value) const { get((std::array<std::array<float, 3>, 4>&)value); }
+  void get(mat2f& value) const { get((std::array<std::array<float, 2>, 2>&)value); }
+  void get(mat3f& value) const { get((std::array<std::array<float, 3>, 3>&)value); }
+  void get(mat4f& value) const { get((std::array<std::array<float, 4>, 4>&)value); }
+  // clang-format on
 
   // math types
+  // clang-format off
   void set(const vec2i& value) { set((const std::array<int, 2>&)value); }
   void set(const vec3i& value) { set((const std::array<int, 3>&)value); }
   void set(const vec4i& value) { set((const std::array<int, 4>&)value); }
   void set(const vec2f& value) { set((const std::array<float, 2>&)value); }
   void set(const vec3f& value) { set((const std::array<float, 3>&)value); }
   void set(const vec4f& value) { set((const std::array<float, 4>&)value); }
-  void set(const frame2f& value) { set((const std::array<float, 6>&)value); }
-  void set(const frame3f& value) { set((const std::array<float, 12>&)value); }
-  void set(const mat2f& value) { set((const std::array<float, 4>&)value); }
-  void set(const mat3f& value) { set((const std::array<float, 9>&)value); }
-  void set(const mat4f& value) { set((const std::array<float, 16>&)value); }
+  void set(const frame2f& value) { set((const std::array<std::array<float, 2>, 3>&)value); }
+  void set(const frame3f& value) { set((const std::array<std::array<float, 3>, 4>&)value); }
+  void set(const mat2f& value) { set((const std::array<std::array<float, 2>, 2>&)value); }
+  void set(const mat3f& value) { set((const std::array<std::array<float, 3>, 3>&)value); }
+  void set(const mat4f& value) { set((const std::array<std::array<float, 4>, 4>&)value); }
+  // clang-format on
 
  private:
   json_type _type = json_type::null;
