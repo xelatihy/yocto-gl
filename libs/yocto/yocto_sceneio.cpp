@@ -3191,8 +3191,8 @@ static void save_json_scene(
   {
     auto& element = add_object(js, "asset");
     set_opt(element, "copyright", scene.copyright, "");
-    set_opt(element, "generator",
-        "Yocto/GL - https://github.com/xelatihy/yocto-gl", "");
+    set_req(element, "generator",
+        "Yocto/GL - https://github.com/xelatihy/yocto-gl");
     set_req(element, "version", "4.1");
   }
 
@@ -3210,7 +3210,6 @@ static void save_json_scene(
       set_opt(element, "film", camera.film, default_.film);
       set_opt(element, "focus", camera.focus, default_.focus);
       set_opt(element, "aperture", camera.aperture, default_.aperture);
-      set_req(element, "lookat", mat3f{});
     }
   }
 
