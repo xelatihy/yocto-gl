@@ -32,31 +32,9 @@
 
 #include "yocto_cli.h"
 
-#include <array>
-#include <charconv>
+#include <algorithm>
 #include <chrono>
 #include <cstdio>
-#include <filesystem>
-#include <fstream>
-#include <memory>
-#include <stdexcept>
-#include <string>
-#include <type_traits>
-#include <utility>
-#include <vector>
-
-// -----------------------------------------------------------------------------
-// USING DIRECTIVES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// using directives
-using std::array;
-using std::pair;
-using std::string;
-using namespace std::string_literals;
-
-}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // PRINT/FORMATTING UTILITIES
