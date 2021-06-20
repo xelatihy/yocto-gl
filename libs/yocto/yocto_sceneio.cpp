@@ -67,41 +67,41 @@ using namespace std::string_literals;
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+template <typename T>
+static T _load_pfm_swap_endian(T value) {
+  // https://stackoverflow.com/questions/105252/how-do-i-convert-between-big-endian-and-little-endian-values-in-c
+  static_assert(sizeof(char) == 1, "sizeof(char) == 1");
+  union {
+    T             value;
+    unsigned char bytes[sizeof(T)];
+  } source, dest;
+  source.value = value;
+  for (auto k = (size_t)0; k < sizeof(T); k++)
+    dest.bytes[k] = source.bytes[sizeof(T) - k - 1];
+  return dest.value;
+}
+
+// Split a string
+static vector<string> _load_pfm_split_string(const string& str) {
+  auto ret = vector<string>();
+  if (str.empty()) return ret;
+  auto lpos = (size_t)0;
+  while (lpos != string::npos) {
+    auto pos = str.find_first_of(" \t\n\r", lpos);
+    if (pos != string::npos) {
+      if (pos > lpos) ret.push_back(str.substr(lpos, pos - lpos));
+      lpos = pos + 1;
+    } else {
+      if (lpos < str.size()) ret.push_back(str.substr(lpos));
+      lpos = pos;
+    }
+  }
+  return ret;
+}
+
 // Pfm load
 static float* load_pfm(
     const string& filename, int* width, int* height, int* components, int req) {
-  auto swap_endian = [](auto value) {
-    // https://stackoverflow.com/questions/105252/how-do-i-convert-between-big-endian-and-little-endian-values-in-c
-    static_assert(sizeof(char) == 1, "sizeof(char) == 1");
-    using T = decltype(value);
-    union {
-      T             value;
-      unsigned char bytes[sizeof(T)];
-    } source, dest;
-    source.value = value;
-    for (auto k = (size_t)0; k < sizeof(T); k++)
-      dest.bytes[k] = source.bytes[sizeof(T) - k - 1];
-    return dest.value;
-  };
-
-  // Split a string
-  auto split_string = [](const string& str) -> vector<string> {
-    auto ret = vector<string>();
-    if (str.empty()) return ret;
-    auto lpos = (size_t)0;
-    while (lpos != string::npos) {
-      auto pos = str.find_first_of(" \t\n\r", lpos);
-      if (pos != string::npos) {
-        if (pos > lpos) ret.push_back(str.substr(lpos, pos - lpos));
-        lpos = pos + 1;
-      } else {
-        if (lpos < str.size()) ret.push_back(str.substr(lpos));
-        lpos = pos;
-      }
-    }
-    return ret;
-  };
-
   auto fs       = fopen_utf8(filename, "rb");
   auto fs_guard = unique_ptr<FILE, int (*)(FILE*)>(fs, &fclose);
   if (!fs) return nullptr;
@@ -112,7 +112,7 @@ static float* load_pfm(
 
   // read magic
   if (!fgets(buffer.data(), (int)buffer.size(), fs)) return nullptr;
-  toks = split_string(buffer.data());
+  toks = _load_pfm_split_string(buffer.data());
   if (toks[0] == "Pf") {
     *components = 1;
   } else if (toks[0] == "PF") {
@@ -123,13 +123,13 @@ static float* load_pfm(
 
   // read width, height
   if (!fgets(buffer.data(), (int)buffer.size(), fs)) return nullptr;
-  toks    = split_string(buffer.data());
+  toks    = _load_pfm_split_string(buffer.data());
   *width  = atoi(toks[0].c_str());
   *height = atoi(toks[1].c_str());
 
   // read scale
   if (!fgets(buffer.data(), (int)buffer.size(), fs)) return nullptr;
-  toks   = split_string(buffer.data());
+  toks   = _load_pfm_split_string(buffer.data());
   auto s = (float)atof(toks[0].c_str());
 
   // read the data (flip y)
@@ -144,7 +144,7 @@ static float* load_pfm(
   // endian conversion
   if (s > 0) {
     for (auto i = (size_t)0; i < nvalues; ++i) {
-      pixels[i] = swap_endian(pixels[i]);
+      pixels[i] = _load_pfm_swap_endian(pixels[i]);
     }
   }
 
