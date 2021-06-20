@@ -1,58 +1,165 @@
 {
   "asset": {
-    "copyright": "Model by Fabio Pellacini from github.com/~xelatihy/yocto-gl"
+    "copyright": "Model by Fabio Pellacini from github.com/~xelatihy/yocto-gl",
+    "generator": "Yocto/GL - https://github.com/xelatihy/yocto-gl",
+    "version": "4.1"
   },
   "cameras": {
     "default": {
-      "lens": 0.1,
-      "aperture": 0.0,
-      "aspect": 2.4,
-      "lookat": [-0.6, 1.5, 2.75, -0.05, 0.15, 0, 0, 1, 0]
+      "frame": [
+        [ 0.9805806875228882, -0.0, 0.1961161345243454 ],
+        [ 0.08506310731172562, 0.9010388255119324, -0.4253155291080475 ],
+        [ -0.17670825123786926, 0.43373844027519226, 0.8835412859916687 ],
+        [ -0.6000000238418579, 1.5, 2.75 ]
+      ],
+      "lens": 0.10000000149011612,
+      "aspect": 2.4000000953674316,
+      "focus": 3.1124749183654785
     },
     "front": {
-      "lens": 0.1,
-      "aperture": 0.0,
-      "aspect": 3,
-      "lookat": [0, 1.75, 3, 0, 0.175, 0, 0, 1, 0]
+      "frame": [
+        [ 1.0, 0.0, 0.0 ],
+        [ 0.0, 0.8853979110717773, -0.46483391523361206 ],
+        [ 0.0, 0.46483391523361206, 0.8853979110717773 ],
+        [ 0.0, 1.75, 3.0 ]
+      ],
+      "lens": 0.10000000149011612,
+      "aspect": 3.0,
+      "focus": 3.3883070945739746
     },
     "back": {
-      "lens": 0.1,
-      "aperture": 0.0,
-      "aspect": 3,
-      "lookat": [0, 1.5, -3.25, 0, -0.05, 0, 0, 1, 0]
+      "frame": [
+        [ -1.0, 0.0, 0.0 ],
+        [ 0.0, 0.9026037454605103, 0.4304725229740143 ],
+        [ 0.0, 0.4304724931716919, -0.9026036858558655 ],
+        [ 0.0, 1.5, -3.25 ]
+      ],
+      "lens": 0.10000000149011612,
+      "aspect": 3.0,
+      "focus": 3.600694417953491
     },
     "perspective-sharp": {
-      "lens": 0.1,
-      "aperture": 0.0,
-      "aspect": 2.4,
-      "lookat": [-0.6, 1.5, 2.75, -0.05, 0.15, 0, 0, 1, 0]
+      "frame": [
+        [ 0.9805806875228882, -0.0, 0.1961161345243454 ],
+        [ 0.08506310731172562, 0.9010388255119324, -0.4253155291080475 ],
+        [ -0.17670825123786926, 0.43373844027519226, 0.8835412859916687 ],
+        [ -0.6000000238418579, 1.5, 2.75 ]
+      ],
+      "lens": 0.10000000149011612,
+      "aspect": 2.4000000953674316,
+      "focus": 3.1124749183654785
     },
     "perspective-dof": {
-      "lens": 0.1,
-      "aperture": 0.05,
-      "aspect": 2.4,
-      "lookat": [-0.6, 1.5, 2.75, -0.05, 0.15, 0, 0, 1, 0]
+      "frame": [
+        [ 0.9805806875228882, -0.0, 0.1961161345243454 ],
+        [ 0.08506310731172562, 0.9010388255119324, -0.4253155291080475 ],
+        [ -0.17670825123786926, 0.43373844027519226, 0.8835412859916687 ],
+        [ -0.6000000238418579, 1.5, 2.75 ]
+      ],
+      "lens": 0.10000000149011612,
+      "aspect": 2.4000000953674316,
+      "focus": 3.1124749183654785,
+      "aperture": 0.05000000074505806
     },
     "orthographic-sharp": {
-      "lens": 0.03,
-      "aperture": 0.0,
-      "aspect": 2.4,
+      "frame": [
+        [ 0.9756097197532654, -0.0, 0.2195121943950653 ],
+        [ 0.08407647162675858, 0.9237421154975891, -0.3736732006072998 ],
+        [ -0.20277264714241028, 0.3830150067806244, 0.9012117385864258 ],
+        [ -0.5, 1.0, 2.0 ]
+      ],
       "orthographic": true,
-      "lookat": [-0.5, 1, 2, -0.05, 0.15, 0, 0, 1, 0]
+      "lens": 0.029999999329447746,
+      "aspect": 2.4000000953674316,
+      "focus": 2.2192342281341553
     },
     "orthographic-dof": {
-      "lens": 0.03,
-      "aperture": 0.02,
-      "aspect": 2.4,
+      "frame": [
+        [ 0.9756097197532654, -0.0, 0.2195121943950653 ],
+        [ 0.08407647162675858, 0.9237421154975891, -0.3736732006072998 ],
+        [ -0.20277264714241028, 0.3830150067806244, 0.9012117385864258 ],
+        [ -0.5, 1.0, 2.0 ]
+      ],
       "orthographic": true,
-      "lookat": [-0.5, 1, 2, -0.05, 0.15, 0, 0, 1, 0]
+      "lens": 0.029999999329447746,
+      "aspect": 2.4000000953674316,
+      "focus": 2.2192342281341553,
+      "aperture": 0.019999999552965164
     }
   },
-  "environments": {
-    "sky": {
-      "emission": [0.5, 0.5, 0.5],
-      "emission_tex": "sky"
+  "textures": {
+    "sky": "sky.hdr",
+    "floor": "floor.png"
+  },
+  "materials": {
+    "floor": {
+      "color": [ 0.699999988079071, 0.699999988079071, 0.699999988079071 ],
+      "color_tex": "floor"
+    },
+    "largearealight1": {
+      "emission": [ 10.0, 10.0, 10.0 ]
+    },
+    "largearealight2": {
+      "emission": [ 10.0, 10.0, 10.0 ]
+    },
+    "sphere-volume-cloud": {
+      "type": "volume",
+      "color": [ 0.6499999761581421, 0.6499999761581421, 0.6499999761581421 ],
+      "scattering": [ 0.8999999761581421, 0.8999999761581421, 0.8999999761581421 ]
+    },
+    "sphere-volume-glass": {
+      "type": "refractive",
+      "color": [ 1.0, 0.5, 0.5 ],
+      "trdepth": 0.019999999552965164
+    },
+    "sphere-volume-jade": {
+      "type": "refractive",
+      "color": [ 0.5, 0.5, 0.5 ],
+      "scattering": [ 0.30000001192092896, 0.6000000238418579, 0.30000001192092896 ]
+    },
+    "sphere-volume-jade2": {
+      "type": "refractive",
+      "color": [ 0.5, 0.5, 0.5 ],
+      "scattering": [ 0.30000001192092896, 0.6000000238418579, 0.30000001192092896 ]
+    },
+    "sphere-volume-smoke": {
+      "type": "volume",
+      "color": [ 0.5, 0.5, 0.5 ],
+      "scattering": [ 0.20000000298023224, 0.20000000298023224, 0.20000000298023224 ]
+    },
+    "bunny-volume-cloud": {
+      "type": "volume",
+      "color": [ 0.6499999761581421, 0.6499999761581421, 0.6499999761581421 ],
+      "scattering": [ 0.8999999761581421, 0.8999999761581421, 0.8999999761581421 ]
+    },
+    "bunny-volume-glass": {
+      "type": "refractive",
+      "color": [ 1.0, 0.5, 0.5 ],
+      "trdepth": 0.019999999552965164
+    },
+    "bunny-volume-jade": {
+      "type": "refractive",
+      "color": [ 0.5, 0.5, 0.5 ],
+      "scattering": [ 0.30000001192092896, 0.6000000238418579, 0.30000001192092896 ]
+    },
+    "bunny-volume-jade2": {
+      "type": "refractive",
+      "color": [ 0.5, 0.5, 0.5 ],
+      "roughness": 0.10000000149011612,
+      "scattering": [ 0.30000001192092896, 0.6000000238418579, 0.30000001192092896 ]
+    },
+    "bunny-volume-smoke": {
+      "type": "volume",
+      "color": [ 0.5, 0.5, 0.5 ],
+      "scattering": [ 0.20000000298023224, 0.20000000298023224, 0.20000000298023224 ]
     }
+  },
+  "shapes": {
+    "floor": "floor.ply",
+    "largearealight1": "largearealight1.ply",
+    "largearealight2": "largearealight2.ply",
+    "sphere": "sphere.ply",
+    "bunny": "bunny.ply"
   },
   "instances": {
     "floor": {
@@ -60,133 +167,124 @@
       "material": "floor"
     },
     "largearealight1": {
+      "frame": [
+        [ 0.8944271802902222, -0.0, 0.4472135901451111 ],
+        [ 0.2873478829860687, 0.766261100769043, -0.5746957659721375 ],
+        [ -0.3426823318004608, 0.6425293684005737, 0.6853646636009216 ],
+        [ -0.800000011920929, 1.600000023841858, 1.600000023841858 ]
+      ],
       "shape": "largearealight1",
-      "lookat": [-0.8, 1.6, 1.6, 0, 0.1, 0, 0, 1, 0],
       "material": "largearealight1"
     },
     "largearealight2": {
+      "frame": [
+        [ 0.8944271802902222, 0.0, -0.4472135901451111 ],
+        [ -0.2873478829860687, 0.766261100769043, -0.5746957659721375 ],
+        [ 0.3426823318004608, 0.6425293684005737, 0.6853646636009216 ],
+        [ 0.800000011920929, 1.600000023841858, 1.600000023841858 ]
+      ],
       "shape": "largearealight2",
-      "lookat": [0.8, 1.6, 1.6, 0, 0.1, 0, 0, 1, 0],
       "material": "largearealight2"
     },
     "sphere-volume-cloud": {
+      "frame": [
+        [ 1.0, 0.0, 0.0 ],
+        [ 0.0, 1.0, 0.0 ],
+        [ 0.0, 0.0, 1.0 ],
+        [ -0.4000000059604645, 0.0, 0.0 ]
+      ],
       "shape": "sphere",
-      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, 0],
       "material": "sphere-volume-cloud"
     },
     "sphere-volume-glass": {
+      "frame": [
+        [ 1.0, 0.0, 0.0 ],
+        [ 0.0, 1.0, 0.0 ],
+        [ 0.0, 0.0, 1.0 ],
+        [ -0.20000000298023224, 0.0, 0.0 ]
+      ],
       "shape": "sphere",
-      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0],
       "material": "sphere-volume-glass"
     },
     "sphere-volume-jade": {
       "shape": "sphere",
-      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],
       "material": "sphere-volume-jade"
     },
     "sphere-volume-jade2": {
+      "frame": [
+        [ 1.0, 0.0, 0.0 ],
+        [ 0.0, 1.0, 0.0 ],
+        [ 0.0, 0.0, 1.0 ],
+        [ 0.20000000298023224, 0.0, 0.0 ]
+      ],
       "shape": "sphere",
-      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, 0],
       "material": "sphere-volume-jade2"
     },
     "sphere-volume-smoke": {
+      "frame": [
+        [ 1.0, 0.0, 0.0 ],
+        [ 0.0, 1.0, 0.0 ],
+        [ 0.0, 0.0, 1.0 ],
+        [ 0.4000000059604645, 0.0, 0.0 ]
+      ],
       "shape": "sphere",
-      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, 0],
       "material": "sphere-volume-smoke"
     },
     "bunny-volume-cloud": {
+      "frame": [
+        [ 1.0, 0.0, 0.0 ],
+        [ 0.0, 1.0, 0.0 ],
+        [ 0.0, 0.0, 1.0 ],
+        [ -0.4000000059604645, 0.0, -0.4000000059604645 ]
+      ],
       "shape": "bunny",
-      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, -0.4],
       "material": "bunny-volume-cloud"
     },
     "bunny-volume-glass": {
+      "frame": [
+        [ 1.0, 0.0, 0.0 ],
+        [ 0.0, 1.0, 0.0 ],
+        [ 0.0, 0.0, 1.0 ],
+        [ -0.20000000298023224, 0.0, -0.4000000059604645 ]
+      ],
       "shape": "bunny",
-      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, -0.4],
       "material": "bunny-volume-glass"
     },
     "bunny-volume-jade": {
+      "frame": [
+        [ 1.0, 0.0, 0.0 ],
+        [ 0.0, 1.0, 0.0 ],
+        [ 0.0, 0.0, 1.0 ],
+        [ 0.0, 0.0, -0.4000000059604645 ]
+      ],
       "shape": "bunny",
-      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.4],
       "material": "bunny-volume-jade"
     },
     "bunny-volume-jade2": {
+      "frame": [
+        [ 1.0, 0.0, 0.0 ],
+        [ 0.0, 1.0, 0.0 ],
+        [ 0.0, 0.0, 1.0 ],
+        [ 0.20000000298023224, 0.0, -0.4000000059604645 ]
+      ],
       "shape": "bunny",
-      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, -0.4],
       "material": "bunny-volume-jade2"
     },
     "bunny-volume-smoke": {
+      "frame": [
+        [ 1.0, 0.0, 0.0 ],
+        [ 0.0, 1.0, 0.0 ],
+        [ 0.0, 0.0, 1.0 ],
+        [ 0.4000000059604645, 0.0, -0.4000000059604645 ]
+      ],
       "shape": "bunny",
-      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, -0.4],
       "material": "bunny-volume-smoke"
     }
   },
-  "materials": {
-    "floor": {
-      "type": "matte",
-      "color": [0.7, 0.7, 0.7],
-      "color_tex": "floor"
-    },
-    "largearealight1": {
-      "type": "matte",
-      "emission": [10, 10, 10]
-    },
-    "largearealight2": {
-      "type": "matte",
-      "emission": [10, 10, 10]
-    },
-    "sphere-volume-cloud": {
-      "type": "volume",
-      "color": [0.65, 0.65, 0.65],
-      "scattering": [0.9, 0.9, 0.9]
-    },
-    "sphere-volume-glass": {
-      "type": "refractive",
-      "color": [1, 0.5, 0.5],
-      "trdepth": 0.02
-    },
-    "sphere-volume-jade": {
-      "type": "refractive",
-      "color": [0.5, 0.5, 0.5],
-      "scattering": [0.3, 0.6, 0.3]
-    },
-    "sphere-volume-jade2": {
-      "type": "refractive",
-      "color": [0.5, 0.5, 0.5],
-      "scattering": [0.3, 0.6, 0.3]
-    },
-    "sphere-volume-smoke": {
-      "type": "volume",
-      "color": [0.5, 0.5, 0.5],
-      "scattering": [0.2, 0.2, 0.2]
-    },
-    "bunny-volume-cloud": {
-      "type": "volume",
-      "color": [0.65, 0.65, 0.65],
-      "scattering": [0.9, 0.9, 0.9]
-    },
-    "bunny-volume-glass": {
-      "type": "refractive",
-      "roughness": 0,
-      "color": [1, 0.5, 0.5],
-      "trdepth": 0.02
-    },
-    "bunny-volume-jade": {
-      "type": "refractive",
-      "roughness": 0,
-      "color": [0.5, 0.5, 0.5],
-      "scattering": [0.3, 0.6, 0.3]
-    },
-    "bunny-volume-jade2": {
-      "type": "refractive",
-      "roughness": 0.1,
-      "color": [0.5, 0.5, 0.5],
-      "scattering": [0.3, 0.6, 0.3]
-    },
-    "bunny-volume-smoke": {
-      "type": "volume",
-      "color": [0.5, 0.5, 0.5],
-      "scattering": [0.2, 0.2, 0.2],
-      "scanisotropy": 0
+  "environments": {
+    "sky": {
+      "emission": [ 0.5, 0.5, 0.5 ],
+      "emission_tex": "sky"
     }
   }
 }

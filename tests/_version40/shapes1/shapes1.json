@@ -1,0 +1,143 @@
+{
+  "asset": {
+    "copyright": "Model by Fabio Pellacini from github.com/~xelatihy/yocto-gl"
+  },
+  "cameras": {
+    "default": {
+      "lens": 0.05,
+      "aperture": 0.0,
+      "aspect": 2.4,
+      "lookat": [-0.75, 0.4, 0.9, -0.075, 0.05, -0.05, 0, 1, 0]
+    },
+    "front": {
+      "lens": 0.05,
+      "aspect": 3,
+      "aperture": 0.0,
+      "lookat": [0, 0.575, 1.4, 0, 0.05, 0, 0, 1, 0]
+    },
+    "back": {
+      "lens": 0.05,
+      "aperture": 0.0,
+      "aspect": 3,
+      "lookat": [0, 0.575, -1.4, 0, 0.05, 0, 0, 1, 0]
+    },
+    "perspective-sharp": {
+      "lens": 0.05,
+      "aperture": 0.0,
+      "aspect": 2.4,
+      "lookat": [-0.75, 0.4, 0.9, -0.075, 0.05, -0.05, 0, 1, 0]
+    },
+    "perspective-dof": {
+      "lens": 0.05,
+      "aperture": 0.025,
+      "aspect": 2.4,
+      "lookat": [-0.75, 0.4, 0.9, -0.075, 0.05, -0.05, 0, 1, 0]
+    },
+    "orthographic-sharp": {
+      "lens": 0.05,
+      "aperture": 0.0,
+      "aspect": 2.4,
+      "orthographic": true,
+      "lookat": [-0.75, 0.4, 0.9, -0.075, 0.05, -0.05, 0, 1, 0]
+    },
+    "orthographic-dof": {
+      "lens": 0.05,
+      "aperture": 0.02,
+      "aspect": 2.4,
+      "orthographic": true,
+      "lookat": [-0.75, 0.4, 0.9, -0.075, 0.05, -0.05, 0, 1, 0]
+    }
+  },
+  "environments": {
+    "sky": {
+      "emission": [0.5, 0.5, 0.5],
+      "emission_tex": "sky"
+    }
+  },
+  "instances": {
+    "floor": {
+      "shape": "floor",
+      "material": "floor"
+    },
+    "arealight1": {
+      "shape": "arealight1",
+      "lookat": [-0.4, 0.8, 0.8, 0, 0.1, 0, 0, 1, 0],
+      "material": "arealight1"
+    },
+    "arealight2": {
+      "shape": "arealight2",
+      "lookat": [0.4, 0.8, 0.8, 0, 0.1, 0, 0, 1, 0],
+      "material": "arealight2"
+    },
+    "sphere-uvgrid": {
+      "shape": "sphere",
+      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, 0],
+      "material": "sphere-uvgrid"
+    },
+    "uvsphere-flipcap-uvgrid": {
+      "shape": "uvsphere-flipcap",
+      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0],
+      "material": "uvsphere-flipcap-uvgrid"
+    },
+    "disk-uvgrid": {
+      "shape": "disk",
+      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],
+      "material": "disk-uvgrid"
+    },
+    "uvcylinder-uvgrid": {
+      "shape": "uvcylinder",
+      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, 0],
+      "material": "uvcylinder-uvgrid"
+    },
+    "cube-uvgrid": {
+      "shape": "cube",
+      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, 0],
+      "material": "cube-uvgrid"
+    }
+  },
+  "materials": {
+    "floor": {
+      "type": "matte",
+      "color": [0.7, 0.7, 0.7],
+      "color_tex": "floor"
+    },
+    "arealight1": {
+      "type": "matte",
+      "emission": [20, 20, 20]
+    },
+    "arealight2": {
+      "type": "matte",
+      "emission": [20, 20, 20]
+    },
+    "sphere-uvgrid": {
+      "type": "glossy",
+      "color": [1, 1, 1],
+      "roughness": 0.1,
+      "color_tex": "uvgrid"
+    },
+    "uvsphere-flipcap-uvgrid": {
+      "type": "glossy",
+      "color": [1, 1, 1],
+      "roughness": 0.1,
+      "color_tex": "uvgrid"
+    },
+    "disk-uvgrid": {
+      "type": "glossy",
+      "color": [1, 1, 1],
+      "roughness": 0.1,
+      "color_tex": "uvgrid"
+    },
+    "uvcylinder-uvgrid": {
+      "type": "glossy",
+      "color": [1, 1, 1],
+      "roughness": 0.1,
+      "color_tex": "uvgrid"
+    },
+    "cube-uvgrid": {
+      "type": "glossy",
+      "color": [1, 1, 1],
+      "roughness": 0.1,
+      "color_tex": "uvgrid"
+    }
+  }
+}

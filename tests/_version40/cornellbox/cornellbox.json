@@ -1,0 +1,74 @@
+{
+  "asset": {
+    "generator": "Yocto/GL - https://github.com/xelatihy/yocto-gl"
+  },
+  "cameras": {
+    "camera1": {
+      "aspect": 1.0,
+      "film": 0.024,
+      "focus": 3.9,
+      "frame": [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 3.9],
+      "lens": 0.035
+    }
+  },
+  "materials": {
+    "backwall": {
+      "color": [0.725, 0.71, 0.68]
+    },
+    "ceiling": {
+      "color": [0.725, 0.71, 0.68]
+    },
+    "floor": {
+      "color": [0.725, 0.71, 0.68]
+    },
+    "leftwall": {
+      "color": [0.63, 0.065, 0.05]
+    },
+    "light": {
+      "emission": [17.0, 12.0, 4.0]
+    },
+    "rightwall": {
+      "color": [0.14, 0.45, 0.09]
+    },
+    "shortbox": {
+      "color": [0.725, 0.71, 0.68]
+    },
+    "tallbox": {
+      "color": [0.725, 0.71, 0.68]
+    }
+  },
+  "instances": {
+    "backwall": {
+      "material": "backwall",
+      "shape": "backwall"
+    },
+    "ceiling": {
+      "material": "ceiling",
+      "shape": "ceiling"
+    },
+    "floor": {
+      "material": "floor",
+      "shape": "floor"
+    },
+    "leftwall": {
+      "material": "leftwall",
+      "shape": "leftwall"
+    },
+    "light": {
+      "material": "light",
+      "shape": "light"
+    },
+    "rightwall": {
+      "material": "rightwall",
+      "shape": "rightwall"
+    },
+    "shortbox": {
+      "material": "shortbox",
+      "shape": "shortbox"
+    },
+    "tallbox": {
+      "material": "tallbox",
+      "shape": "tallbox"
+    }
+  }
+}

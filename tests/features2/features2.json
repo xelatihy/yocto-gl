@@ -1,57 +1,159 @@
 {
   "asset": {
-    "copyright": "Model by Fabio Pellacini from github.com/~xelatihy/yocto-gl"
+    "copyright": "Model by Fabio Pellacini from github.com/~xelatihy/yocto-gl",
+    "generator": "Yocto/GL - https://github.com/xelatihy/yocto-gl",
+    "version": "4.1"
   },
   "cameras": {
     "default": {
-      "lens": 0.05,
-      "aperture": 0.0,
-      "aspect": 2.4,
-      "lookat": [-0.75, 0.4, 0.9, -0.075, 0.05, -0.05, 0, 1, 0]
+      "frame": [
+        [ 0.8151804208755493, -0.0, 0.579207181930542 ],
+        [ 0.16660168766975403, 0.9577393531799316, -0.23447643220424652 ],
+        [ -0.5547295212745667, 0.28763750195503235, 0.7807304263114929 ],
+        [ -0.75, 0.4000000059604645, 0.8999999761581421 ]
+      ],
+      "aspect": 2.4000000953674316,
+      "focus": 1.2168092727661133
     },
     "front": {
-      "lens": 0.05,
-      "aspect": 3,
-      "aperture": 0.0,
-      "lookat": [0, 0.575, 1.4, 0, 0.05, 0, 0, 1, 0]
+      "frame": [
+        [ 1.0, 0.0, 0.0 ],
+        [ 0.0, 0.936329185962677, -0.3511234223842621 ],
+        [ 0.0, 0.3511234223842621, 0.936329185962677 ],
+        [ 0.0, 0.574999988079071, 1.399999976158142 ]
+      ],
+      "aspect": 3.0,
+      "focus": 1.4952006340026855
     },
     "back": {
-      "lens": 0.05,
-      "aperture": 0.0,
-      "aspect": 3,
-      "lookat": [0, 0.575, -1.4, 0, 0.05, 0, 0, 1, 0]
+      "frame": [
+        [ -1.0, 0.0, 0.0 ],
+        [ 0.0, 0.936329185962677, 0.3511234223842621 ],
+        [ 0.0, 0.3511234223842621, -0.936329185962677 ],
+        [ 0.0, 0.574999988079071, -1.399999976158142 ]
+      ],
+      "aspect": 3.0,
+      "focus": 1.4952006340026855
     },
     "perspective-sharp": {
-      "lens": 0.05,
-      "aperture": 0.0,
-      "aspect": 2.4,
-      "lookat": [-0.75, 0.4, 0.9, -0.075, 0.05, -0.05, 0, 1, 0]
+      "frame": [
+        [ 0.8151804208755493, -0.0, 0.579207181930542 ],
+        [ 0.16660168766975403, 0.9577393531799316, -0.23447643220424652 ],
+        [ -0.5547295212745667, 0.28763750195503235, 0.7807304263114929 ],
+        [ -0.75, 0.4000000059604645, 0.8999999761581421 ]
+      ],
+      "aspect": 2.4000000953674316,
+      "focus": 1.2168092727661133
     },
     "perspective-dof": {
-      "lens": 0.05,
-      "aperture": 0.025,
-      "aspect": 2.4,
-      "lookat": [-0.75, 0.4, 0.9, -0.075, 0.05, -0.05, 0, 1, 0]
+      "frame": [
+        [ 0.8151804208755493, -0.0, 0.579207181930542 ],
+        [ 0.16660168766975403, 0.9577393531799316, -0.23447643220424652 ],
+        [ -0.5547295212745667, 0.28763750195503235, 0.7807304263114929 ],
+        [ -0.75, 0.4000000059604645, 0.8999999761581421 ]
+      ],
+      "aspect": 2.4000000953674316,
+      "focus": 1.2168092727661133,
+      "aperture": 0.02500000037252903
     },
     "orthographic-sharp": {
-      "lens": 0.05,
-      "aperture": 0.0,
-      "aspect": 2.4,
+      "frame": [
+        [ 0.8151804208755493, -0.0, 0.579207181930542 ],
+        [ 0.16660168766975403, 0.9577393531799316, -0.23447643220424652 ],
+        [ -0.5547295212745667, 0.28763750195503235, 0.7807304263114929 ],
+        [ -0.75, 0.4000000059604645, 0.8999999761581421 ]
+      ],
       "orthographic": true,
-      "lookat": [-0.75, 0.4, 0.9, -0.075, 0.05, -0.05, 0, 1, 0]
+      "aspect": 2.4000000953674316,
+      "focus": 1.2168092727661133
     },
     "orthographic-dof": {
-      "lens": 0.05,
-      "aperture": 0.02,
-      "aspect": 2.4,
+      "frame": [
+        [ 0.8151804208755493, -0.0, 0.579207181930542 ],
+        [ 0.16660168766975403, 0.9577393531799316, -0.23447643220424652 ],
+        [ -0.5547295212745667, 0.28763750195503235, 0.7807304263114929 ],
+        [ -0.75, 0.4000000059604645, 0.8999999761581421 ]
+      ],
       "orthographic": true,
-      "lookat": [-0.75, 0.4, 0.9, -0.075, 0.05, -0.05, 0, 1, 0]
+      "aspect": 2.4000000953674316,
+      "focus": 1.2168092727661133,
+      "aperture": 0.019999999552965164
     }
   },
-  "environments": {
-    "sky": {
-      "emission": [0.5, 0.5, 0.5],
-      "emission_tex": "sky"
+  "textures": {
+    "sky": "sky.hdr",
+    "floor": "floor.png",
+    "uvgrid": "uvgrid.png",
+    "bumps-displacement": "bumps-displacement.png"
+  },
+  "materials": {
+    "floor": {
+      "color": [ 0.699999988079071, 0.699999988079071, 0.699999988079071 ],
+      "color_tex": "floor"
+    },
+    "arealight1": {
+      "emission": [ 20.0, 20.0, 20.0 ]
+    },
+    "arealight2": {
+      "emission": [ 20.0, 20.0, 20.0 ]
+    },
+    "sphere-uvgrid": {
+      "type": "glossy",
+      "color": [ 1.0, 1.0, 1.0 ],
+      "roughness": 0.10000000149011612,
+      "color_tex": "uvgrid"
+    },
+    "suzanne-subdiv-plastic-rough": {
+      "type": "glossy",
+      "color": [ 0.5, 0.699999988079071, 0.5 ],
+      "roughness": 0.20000000298023224
+    },
+    "hairball1-hair": {
+      "color": [ 0.699999988079071, 0.699999988079071, 0.699999988079071 ],
+      "roughness": 1.0
+    },
+    "sphere-displaced-plastic-rough": {
+      "type": "glossy",
+      "color": [ 0.5, 0.699999988079071, 0.5 ],
+      "roughness": 0.20000000298023224
+    },
+    "cube-uvgrid": {
+      "type": "glossy",
+      "color": [ 1.0, 1.0, 1.0 ],
+      "roughness": 0.10000000149011612,
+      "color_tex": "uvgrid"
+    },
+    "hairballi-hair": {
+      "color": [ 0.699999988079071, 0.699999988079071, 0.699999988079071 ],
+      "roughness": 1.0
+    }
+  },
+  "shapes": {
+    "floor": "floor.ply",
+    "arealight1": "arealight1.ply",
+    "arealight2": "arealight2.ply",
+    "sphere": "sphere.ply",
+    "suzanne-subdiv": "suzanne-subdiv.ply",
+    "hairball1": "hairball1.ply",
+    "sphere-displaced": "sphere-displaced.ply",
+    "cube": "cube.ply",
+    "hairballi": "hairballi.ply"
+  },
+  "subdivs": {
+    "suzanne-subdiv": {
+      "shape": "suzanne-subdiv",
+      "datafile": "suzanne-subdiv.obj",
+      "subdivisions": 2,
+      "catmullclark": true,
+      "smooth": true
+    },
+    "sphere-displaced": {
+      "shape": "sphere-displaced",
+      "datafile": "sphere-displaced.obj",
+      "catmullclark": true,
+      "smooth": true,
+      "displacement": 0.02500000037252903,
+      "displacement_tex": "bumps-displacement"
     }
   },
   "instances": {
@@ -60,105 +162,78 @@
       "material": "floor"
     },
     "arealight1": {
+      "frame": [
+        [ 0.8944271802902222, -0.0, 0.4472135901451111 ],
+        [ 0.27562475204467773, 0.7874992489814758, -0.5512495040893555 ],
+        [ -0.3521803617477417, 0.6163156628608704, 0.7043607234954834 ],
+        [ -0.4000000059604645, 0.800000011920929, 0.800000011920929 ]
+      ],
       "shape": "arealight1",
-      "lookat": [-0.4, 0.8, 0.8, 0, 0.1, 0, 0, 1, 0],
       "material": "arealight1"
     },
     "arealight2": {
+      "frame": [
+        [ 0.8944271802902222, 0.0, -0.4472135901451111 ],
+        [ -0.27562475204467773, 0.7874992489814758, -0.5512495040893555 ],
+        [ 0.3521803617477417, 0.6163156628608704, 0.7043607234954834 ],
+        [ 0.4000000059604645, 0.800000011920929, 0.800000011920929 ]
+      ],
       "shape": "arealight2",
-      "lookat": [0.4, 0.8, 0.8, 0, 0.1, 0, 0, 1, 0],
       "material": "arealight2"
     },
     "sphere-uvgrid": {
+      "frame": [
+        [ 1.0, 0.0, 0.0 ],
+        [ 0.0, 1.0, 0.0 ],
+        [ 0.0, 0.0, 1.0 ],
+        [ -0.4000000059604645, 0.0, 0.0 ]
+      ],
       "shape": "sphere",
-      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, 0],
       "material": "sphere-uvgrid"
     },
     "suzanne-subdiv-plastic-rough": {
+      "frame": [
+        [ 1.0, 0.0, 0.0 ],
+        [ 0.0, 1.0, 0.0 ],
+        [ 0.0, 0.0, 1.0 ],
+        [ -0.20000000298023224, 0.0, 0.0 ]
+      ],
       "shape": "suzanne-subdiv",
-      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0],
       "material": "suzanne-subdiv-plastic-rough"
     },
     "hairball1-hair": {
       "shape": "hairball1",
-      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],
       "material": "hairball1-hair"
     },
     "sphere-displaced-plastic-rough": {
+      "frame": [
+        [ 1.0, 0.0, 0.0 ],
+        [ 0.0, 1.0, 0.0 ],
+        [ 0.0, 0.0, 1.0 ],
+        [ 0.20000000298023224, 0.0, 0.0 ]
+      ],
       "shape": "sphere-displaced",
-      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, 0],
       "material": "sphere-displaced-plastic-rough"
     },
     "cube-uvgrid": {
+      "frame": [
+        [ 1.0, 0.0, 0.0 ],
+        [ 0.0, 1.0, 0.0 ],
+        [ 0.0, 0.0, 1.0 ],
+        [ 0.4000000059604645, 0.0, 0.0 ]
+      ],
       "shape": "cube",
-      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, 0],
       "material": "cube-uvgrid"
     },
     "hairballi-hair": {
       "shape": "hairballi",
-      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],
       "material": "hairballi-hair"
     }
   },
-  "subdivs": {
-    "suzanne-subdiv": {
-      "shape": "suzanne-subdiv",
-      "subdivisions": 2,
-      "smooth": true
-    },
-    "sphere-displaced": {
-      "shape": "sphere-displaced",
-      "displacement": 0.025,
-      "displacement_tex": "bumps-displacement",
-      "subdivisions": 0,
-      "smooth": true
-    }
-  },
-  "materials": {
-    "floor": {
-      "type": "matte",
-      "color": [0.7, 0.7, 0.7],
-      "color_tex": "floor"
-    },
-    "arealight1": {
-      "type": "matte",
-      "emission": [20, 20, 20]
-    },
-    "arealight2": {
-      "type": "matte",
-      "emission": [20, 20, 20]
-    },
-    "sphere-uvgrid": {
-      "type": "glossy",
-      "color": [1, 1, 1],
-      "roughness": 0.1,
-      "color_tex": "uvgrid"
-    },
-    "suzanne-subdiv-plastic-rough": {
-      "type": "glossy",
-      "color": [0.5, 0.7, 0.5],
-      "roughness": 0.2
-    },
-    "hairball1-hair": {
-      "type": "matte",
-      "color": [0.7, 0.7, 0.7],
-      "roughness": 1
-    },
-    "sphere-displaced-plastic-rough": {
-      "type": "glossy",
-      "color": [0.5, 0.7, 0.5],
-      "roughness": 0.2
-    },
-    "cube-uvgrid": {
-      "type": "glossy",
-      "color": [1, 1, 1],
-      "roughness": 0.1,
-      "color_tex": "uvgrid"
-    },
-    "hairballi-hair": {
-      "type": "matte",
-      "color": [0.7, 0.7, 0.7],
-      "roughness": 1
+  "environments": {
+    "sky": {
+      "emission": [ 0.5, 0.5, 0.5 ],
+      "emission_tex": "sky"
     }
   }
 }

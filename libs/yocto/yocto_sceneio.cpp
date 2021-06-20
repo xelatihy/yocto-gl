@@ -2256,6 +2256,8 @@ void make_scene_directories(const string& filename, const scene_data& scene) {
     make_directory(path_join(path_dirname(filename), "shapes"));
   if (!scene.textures.empty())
     make_directory(path_join(path_dirname(filename), "textures"));
+  if (!scene.subdivs.empty())
+    make_directory(path_join(path_dirname(filename), "subdivs"));
 }
 
 // Add environment
@@ -2422,19 +2424,24 @@ static void load_json_scene_version40(const string& filename,
     throw io_error(filename, "unknow key at " + path);
   };
 
-  // open file
-  auto js = load_json(filename);
-
   // parse json value
-  auto get_opt = [](const json_value& js, const string& key, auto& value) {
-    value = js.value(key, value);
+  auto get_opt = [](const json_value& json, const string& key, auto& value) {
+    value = json.value(key, value);
+  };
+  auto get_of3 = [](const json_value& json, const string& key, auto& value) {
+    auto valuea = json.value(key, (array<float, 12>&)value);
+    value       = *(frame3f*)&valuea;
+  };
+  auto get_om3 = [](const json_value& json, const string& key, auto& value) {
+    auto valuea = json.value(key, (array<float, 9>&)value);
+    value       = *(mat3f*)&valuea;
   };
 
   // parse json reference
   auto shape_map = unordered_map<string, int>{};
   auto get_shp   = [&scene, &shape_map](
-                     const json_value& js, const string& key, int& value) {
-    auto name = js.value(key, string{});
+                     const json_value& json, const string& key, int& value) {
+    auto name = json.value(key, string{});
     if (name.empty()) return;
     auto it = shape_map.find(name);
     if (it != shape_map.end()) {
@@ -2451,8 +2458,8 @@ static void load_json_scene_version40(const string& filename,
   // parse json reference
   auto material_map = unordered_map<string, int>{};
   auto get_mat      = [&material_map](
-                     const json_value& js, const string& key, int& value) {
-    auto name = js.value(key, string{});
+                     const json_value& json, const string& key, int& value) {
+    auto name = json.value(key, string{});
     if (name.empty()) return;
     auto it = material_map.find(name);
     if (it != material_map.end()) {
@@ -2465,8 +2472,8 @@ static void load_json_scene_version40(const string& filename,
   // parse json reference
   auto texture_map = unordered_map<string, int>{};
   auto get_tex     = [&scene, &texture_map](
-                     const json_value& js, const string& key, int& value) {
-    auto name = js.value(key, string{});
+                     const json_value& json, const string& key, int& value) {
+    auto name = json.value(key, string{});
     if (name.empty()) return;
     auto it = texture_map.find(name);
     if (it != texture_map.end()) {
@@ -2491,9 +2498,9 @@ static void load_json_scene_version40(const string& filename,
       {"", invalidid}};
   auto instance_ply = unordered_map<int, ply_instance_handle>{};
   auto get_ist      = [&scene, &ply_instances, &ply_instances_names,
-                     &ply_instance_map, &instance_ply](const json_value& js,
+                     &ply_instance_map, &instance_ply](const json_value& json,
                      const string& key, const instance_data& instance) {
-    auto name = js.value(key, string{});
+    auto name = json.value(key, string{});
     if (name.empty()) return;
     auto instance_id = (int)(&instance - scene.instances.data());
     auto it          = ply_instance_map.find(name);
@@ -2515,15 +2522,15 @@ static void load_json_scene_version40(const string& filename,
 
   // parsing values
   try {
-    if (js.contains("asset")) {
-      auto& element = js.at("asset");
+    if (json.contains("asset")) {
+      auto& element = json.at("asset");
       get_opt(element, "copyright", scene.copyright);
     }
-    if (js.contains("cameras")) {
-      for (auto& [key, element] : js.at("cameras").items()) {
+    if (json.contains("cameras")) {
+      for (auto& [key, element] : json.at("cameras").items()) {
         auto& camera = scene.cameras.emplace_back();
         scene.camera_names.emplace_back(key);
-        get_opt(element, "frame", camera.frame);
+        get_of3(element, "frame", camera.frame);
         get_opt(element, "orthographic", camera.orthographic);
         get_opt(element, "ortho", camera.orthographic);
         get_opt(element, "lens", camera.lens);
@@ -2532,29 +2539,29 @@ static void load_json_scene_version40(const string& filename,
         get_opt(element, "focus", camera.focus);
         get_opt(element, "aperture", camera.aperture);
         if (element.contains("lookat")) {
-          get_opt(element, "lookat", (mat3f&)camera.frame);
+          get_om3(element, "lookat", (mat3f&)camera.frame);
           camera.focus = length(camera.frame.x - camera.frame.y);
           camera.frame = lookat_frame(
               camera.frame.x, camera.frame.y, camera.frame.z);
         }
       }
     }
-    if (js.contains("environments")) {
-      for (auto& [key, element] : js.at("environments").items()) {
+    if (json.contains("environments")) {
+      for (auto& [key, element] : json.at("environments").items()) {
         auto& environment = scene.environments.emplace_back();
         scene.environment_names.emplace_back(key);
-        get_opt(element, "frame", environment.frame);
+        get_of3(element, "frame", environment.frame);
         get_opt(element, "emission", environment.emission);
         get_tex(element, "emission_tex", environment.emission_tex);
         if (element.contains("lookat")) {
-          get_opt(element, "lookat", (mat3f&)environment.frame);
+          get_om3(element, "lookat", (mat3f&)environment.frame);
           environment.frame = lookat_frame(environment.frame.x,
               environment.frame.y, environment.frame.z, false);
         }
       }
     }
-    if (js.contains("materials")) {
-      for (auto& [key, element] : js.at("materials").items()) {
+    if (json.contains("materials")) {
+      for (auto& [key, element] : json.at("materials").items()) {
         auto& material = scene.materials.emplace_back();
         scene.material_names.emplace_back(key);
         material_map[key] = (int)scene.materials.size() - 1;
@@ -2575,29 +2582,29 @@ static void load_json_scene_version40(const string& filename,
         get_tex(element, "normal_tex", material.normal_tex);
       }
     }
-    if (js.contains("instances")) {
-      for (auto& [key, element] : js.at("instances").items()) {
+    if (json.contains("instances")) {
+      for (auto& [key, element] : json.at("instances").items()) {
         auto& instance = scene.instances.emplace_back();
         scene.instance_names.emplace_back(key);
-        get_opt(element, "frame", instance.frame);
+        get_of3(element, "frame", instance.frame);
         get_shp(element, "shape", instance.shape);
         get_mat(element, "material", instance.material);
         if (element.contains("lookat")) {
-          get_opt(element, "lookat", (mat3f&)instance.frame);
+          get_om3(element, "lookat", (mat3f&)instance.frame);
           instance.frame = lookat_frame(
               instance.frame.x, instance.frame.y, instance.frame.z, false);
         }
       }
     }
-    if (js.contains("objects")) {
-      for (auto& [key, element] : js.at("objects").items()) {
+    if (json.contains("objects")) {
+      for (auto& [key, element] : json.at("objects").items()) {
         auto& instance = scene.instances.emplace_back();
         scene.instance_names.emplace_back(key);
-        get_opt(element, "frame", instance.frame);
+        get_of3(element, "frame", instance.frame);
         get_shp(element, "shape", instance.shape);
         get_mat(element, "material", instance.material);
         if (element.contains("lookat")) {
-          get_opt(element, "lookat", (mat3f&)instance.frame);
+          get_om3(element, "lookat", (mat3f&)instance.frame);
           instance.frame = lookat_frame(
               instance.frame.x, instance.frame.y, instance.frame.z, false);
         }
@@ -2606,8 +2613,8 @@ static void load_json_scene_version40(const string& filename,
         }
       }
     }
-    if (js.contains("subdivs")) {
-      for (auto& [key, element] : js.at("subdivs").items()) {
+    if (json.contains("subdivs")) {
+      for (auto& [key, element] : json.at("subdivs").items()) {
         auto& subdiv = scene.subdivs.emplace_back();
         scene.subdiv_names.emplace_back(key);
         get_shp(element, "shape", subdiv.shape);
@@ -2615,9 +2622,12 @@ static void load_json_scene_version40(const string& filename,
         get_opt(element, "catmullclark", subdiv.catmullclark);
         get_opt(element, "smooth", subdiv.smooth);
         get_opt(element, "displacement", subdiv.displacement);
-        get_opt(element, "displacement_tex", subdiv.displacement_tex);
+        get_tex(element, "displacement_tex", subdiv.displacement_tex);
       }
     }
+  } catch (const json_error& error) {
+    throw io_error::parse_error(
+        filename, json_value::get_path(&json, error.where()));
   } catch (...) {
     throw io_error::parse_error(filename);
   }
@@ -2739,27 +2749,27 @@ static void load_json_scene(
   };
 
   // open file
-  auto js = load_json(filename);
+  auto json = load_json(filename);
 
   // check vrsion
-  if (!js.contains("asset") || !js.at("asset").contains("version"))
-    return load_json_scene_version40(filename, js, scene, noparallel);
+  if (!json.contains("asset") || !json.at("asset").contains("version"))
+    return load_json_scene_version40(filename, json, scene, noparallel);
 
   // parse json value
-  auto get_opt = [](const json_value& js, const string& key, auto& value) {
-    value = js.value(key, value);
+  auto get_opt = [](const json_value& json, const string& key, auto& value) {
+    value = json.value(key, value);
   };
-  auto get_req = [](const json_value& js, const string& key, auto& value) {
-    js.at(key).get(value);
+  auto get_req = [](const json_value& json, const string& key, auto& value) {
+    json.at(key).get(value);
   };
-  auto get_orf = [](const json_value& js, const string& key, int& value,
+  auto get_orf = [](const json_value& json, const string& key, int& value,
                      const unordered_map<string, int>& map) {
-    auto values = js.value(key, string{});
+    auto values = json.value(key, string{});
     value       = values.empty() ? -1 : map.at(values);
   };
-  auto get_rrf = [](const json_value& js, const string& key, int& value,
+  auto get_rrf = [](const json_value& json, const string& key, int& value,
                      const unordered_map<string, int>& map) {
-    auto values = js.at(key).get<string>();
+    auto values = json.at(key).get<string>();
     value       = map.at(values);
   };
 
@@ -2784,9 +2794,10 @@ static void load_json_scene(
   //     {"", invalidid}};
   // auto instance_ply = unordered_map<int, ply_instance_handle>{};
   // auto get_ist      = [&scene, &ply_instances, &ply_instances_names,
-  //                    &ply_instance_map, &instance_ply](const json_value& js,
-  //                    const string& key, const instance_data& instance) {
-  //   auto name = js.value(key, string{});
+  //                    &ply_instance_map, &instance_ply](const json_value&
+  //                    json, const string& key, const instance_data& instance)
+  //                    {
+  //   auto name = json.value(key, string{});
   //   if (name.empty()) return;
   //   auto instance_id = (int)(&instance - scene.instances.data());
   //   auto it          = ply_instance_map.find(name);
@@ -2811,12 +2822,12 @@ static void load_json_scene(
 
   // parsing values
   try {
-    if (js.contains("asset")) {
-      auto& element = js.at("asset");
+    if (json.contains("asset")) {
+      auto& element = json.at("asset");
       get_opt(element, "copyright", scene.copyright);
     }
-    if (js.contains("cameras")) {
-      auto& group = js.at("cameras");
+    if (json.contains("cameras")) {
+      auto& group = json.at("cameras");
       scene.cameras.reserve(group.size());
       scene.camera_names.reserve(group.size());
       for (auto& [key, element] : group.items()) {
@@ -2842,8 +2853,8 @@ static void load_json_scene(
         }
       }
     }
-    if (js.contains("textures")) {
-      auto& group = js.at("textures");
+    if (json.contains("textures")) {
+      auto& group = json.at("textures");
       scene.textures.reserve(group.size());
       scene.texture_names.reserve(group.size());
       texture_datafiles.reserve(group.size());
@@ -2864,11 +2875,11 @@ static void load_json_scene(
         get_req(element, "datafile", datafile);
       }
     }
-    if (js.contains("materials")) {
-      auto& group = js.at("materials");
+    if (json.contains("materials")) {
+      auto& group = json.at("materials");
       scene.materials.reserve(group.size());
       scene.material_names.reserve(group.size());
-      for (auto& [key, element] : js.at("materials").items()) {
+      for (auto& [key, element] : json.at("materials").items()) {
         auto& material = scene.materials.emplace_back();
         scene.material_names.push_back(key);
         material_map[key] = (int)scene.materials.size() - 1;
@@ -2894,8 +2905,8 @@ static void load_json_scene(
         get_orf(element, "normal_tex", material.normal_tex, texture_map);
       }
     }
-    if (js.contains("shapes")) {
-      auto& group = js.at("shapes");
+    if (json.contains("shapes")) {
+      auto& group = json.at("shapes");
       scene.shapes.reserve(group.size());
       scene.shape_names.reserve(group.size());
       shape_datafiles.reserve(group.size());
@@ -2916,8 +2927,8 @@ static void load_json_scene(
         get_req(element, "datafile", datafile);
       }
     }
-    if (js.contains("subdivs")) {
-      auto& group = js.at("subdivs");
+    if (json.contains("subdivs")) {
+      auto& group = json.at("subdivs");
       scene.subdivs.reserve(group.size());
       scene.subdiv_names.reserve(group.size());
       subdiv_datafiles.reserve(group.size());
@@ -2939,8 +2950,8 @@ static void load_json_scene(
             element, "displacement_tex", subdiv.displacement_tex, texture_map);
       }
     }
-    if (js.contains("instances")) {
-      auto& group = js.at("instances");
+    if (json.contains("instances")) {
+      auto& group = json.at("instances");
       scene.instances.reserve(group.size());
       scene.instance_names.reserve(group.size());
       for (auto& [key, element] : group.items()) {
@@ -2960,8 +2971,8 @@ static void load_json_scene(
         }
       }
     }
-    if (js.contains("environments")) {
-      auto& group = js.at("environments");
+    if (json.contains("environments")) {
+      auto& group = json.at("environments");
       scene.instances.reserve(group.size());
       scene.instance_names.reserve(group.size());
       for (auto& [key, element] : group.items()) {
@@ -2981,8 +2992,8 @@ static void load_json_scene(
         }
       }
     }
-    // if (js.contains("object_instances")) {
-    //   for (auto& [key, element] : js.at("object_instances").items()) {
+    // if (json.contains("object_instances")) {
+    //   for (auto& [key, element] : json.at("object_instances").items()) {
     //     auto& instance = ply_instances.emplace_back();
     //     if (element.is_string()) {
     //       auto filename = element.get<string>();
@@ -3001,8 +3012,8 @@ static void load_json_scene(
     //     }
     //   }
     // }
-    // if (js.contains("objects")) {
-    //   for (auto& [key, element] : js.at("objects").items()) {
+    // if (json.contains("objects")) {
+    //   for (auto& [key, element] : json.at("objects").items()) {
     //     auto& instance = scene.instances.emplace_back();
     //     scene.instance_names.emplace_back(key);
     //     if (element.is_string()) {
@@ -3022,6 +3033,11 @@ static void load_json_scene(
     //     }
     //   }
     // }
+  } catch (const json_error& error) {
+    throw io_error::parse_error(
+        filename, json_value::get_path(&json, error.where()));
+  } catch (const io_error& error) {
+    throw io_error::dependent_error(filename, error);
   } catch (...) {
     throw io_error::parse_error(filename);
   }
@@ -3122,33 +3138,33 @@ static void load_json_scene(
 static void save_json_scene(
     const string& filename, const scene_data& scene, bool noparallel) {
   // helpers to handel old code paths
-  auto add_object = [](json_value& js, const string& name) -> json_value& {
-    auto& item = js.insert_back(name);
+  auto add_object = [](json_value& json, const string& name) -> json_value& {
+    auto& item = json.insert_back(name);
     item       = json_object{};
     return item;
   };
-  auto add_value = [](json_value& js, const string& name,
+  auto add_value = [](json_value& json, const string& name,
                        const auto& value) -> json_value& {
-    auto& item = js.insert_back(name);
+    auto& item = json.insert_back(name);
     item       = value;
     return item;
   };
-  auto set_opt = [](json_value& js, const string& name, const auto& value,
+  auto set_opt = [](json_value& json, const string& name, const auto& value,
                      const auto& def) {
     if (value == def) return;
-    js.insert_back(name) = value;
+    json.insert_back(name) = value;
   };
-  auto set_req = [](json_value& js, const string& name, const auto& value) {
-    js.insert_back(name) = value;
+  auto set_req = [](json_value& json, const string& name, const auto& value) {
+    json.insert_back(name) = value;
   };
-  auto set_orf = [](json_value& js, const string& name, int value,
+  auto set_orf = [](json_value& json, const string& name, int value,
                      const vector<string>& names) {
     if (value < 0) return;
-    js.insert_back(name) = names.at(value);
+    json.insert_back(name) = names.at(value);
   };
-  auto set_rrf = [](json_value& js, const string& name, int value,
+  auto set_rrf = [](json_value& json, const string& name, int value,
                      const vector<string>& names) {
-    js.insert_back(name) = names.at(value);
+    json.insert_back(name) = names.at(value);
   };
 
   // dirname
@@ -3184,12 +3200,12 @@ static void save_json_scene(
   }
 
   // save json file
-  auto js = json_value{};
-  js      = json_object{};
+  auto json = json_value{};
+  json      = json_object{};
 
   // asset
   {
-    auto& element = add_object(js, "asset");
+    auto& element = add_object(json, "asset");
     set_opt(element, "copyright", scene.copyright, "");
     set_req(element, "generator",
         "Yocto/GL - https://github.com/xelatihy/yocto-gl");
@@ -3198,7 +3214,7 @@ static void save_json_scene(
 
   if (!scene.cameras.empty()) {
     auto  default_ = sceneio_camera{};
-    auto& group    = add_object(js, "cameras");
+    auto& group    = add_object(json, "cameras");
     group.reserve(scene.cameras.size());
     for (auto&& [idx, camera] : enumerate(scene.cameras)) {
       auto& element = add_object(group, camera_names[idx]);
@@ -3214,7 +3230,7 @@ static void save_json_scene(
   }
 
   if (!scene.textures.empty()) {
-    auto& group = add_object(js, "textures");
+    auto& group = add_object(json, "textures");
     group.reserve(scene.textures.size());
     for (auto&& [idx, texture] : enumerate(scene.textures)) {
       add_value(group, texture_names[idx],
@@ -3224,7 +3240,7 @@ static void save_json_scene(
 
   if (!scene.materials.empty()) {
     auto  default_ = sceneio_material{};
-    auto& group    = add_object(js, "materials");
+    auto& group    = add_object(json, "materials");
     group.reserve(scene.materials.size());
     for (auto&& [idx, material] : enumerate(scene.materials)) {
       auto& element = add_object(group, material_names[idx]);
@@ -3249,7 +3265,7 @@ static void save_json_scene(
   }
 
   if (!scene.shapes.empty()) {
-    auto& group = add_object(js, "shapes");
+    auto& group = add_object(json, "shapes");
     group.reserve(scene.shapes.size());
     for (auto&& [idx, shape] : enumerate(scene.shapes)) {
       add_value(group, shape_names[idx], shape_names[idx] + ".ply");
@@ -3258,7 +3274,7 @@ static void save_json_scene(
 
   if (!scene.subdivs.empty()) {
     auto  default_ = subdiv_data{};
-    auto& group    = add_object(js, "subdivs");
+    auto& group    = add_object(json, "subdivs");
     group.reserve(scene.subdivs.size());
     for (auto&& [idx, subdiv] : enumerate(scene.subdivs)) {
       auto& element = add_object(group, subdiv_names[idx]);
@@ -3278,7 +3294,7 @@ static void save_json_scene(
 
   if (!scene.instances.empty()) {
     auto  default_ = sceneio_instance{};
-    auto& group    = add_object(js, "instances");
+    auto& group    = add_object(json, "instances");
     group.reserve(scene.instances.size());
     for (auto& instance : scene.instances) {
       auto& element = add_object(group, get_instance_name(scene, instance));
@@ -3290,7 +3306,7 @@ static void save_json_scene(
 
   if (!scene.environments.empty()) {
     auto  default_ = sceneio_environment{};
-    auto& group    = add_object(js, "environments");
+    auto& group    = add_object(json, "environments");
     group.reserve(scene.environments.size());
     for (auto& environment : scene.environments) {
       auto& element = add_object(
@@ -3302,7 +3318,7 @@ static void save_json_scene(
   }
 
   // save json
-  save_json(filename, js);
+  save_json(filename, json);
 
   // dirname
   try {
@@ -3724,9 +3740,10 @@ static void load_gltf_scene(
   }
 
   // convert color textures
-  auto get_texture = [&gltf](const json_value& js, const string& name) -> int {
-    if (!js.contains(name)) return invalidid;
-    auto& ginfo    = js.at(name);
+  auto get_texture = [&gltf](
+                         const json_value& json, const string& name) -> int {
+    if (!json.contains(name)) return invalidid;
+    auto& ginfo    = json.at(name);
     auto& gtexture = gltf.at("textures").at(ginfo.value("index", -1));
     return gtexture.value("source", -1);
   };

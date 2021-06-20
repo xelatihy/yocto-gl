@@ -566,6 +566,15 @@ static void _json_format_element(
     case json_type::array: {
       if (json.empty()) {
         _json_write_chars(text, "[]", 2);
+      } else if (!json.at(0).is_array() && !json.at(0).is_object()) {
+        _json_write_chars(text, "[ ", 2);
+        auto count = (size_t)0, size = json.size();
+        for (auto& item : json) {
+          _json_format_element(text, item, indent + 2);
+          count += 1;
+          if (count < size) _json_write_chars(text, ", ", 2);
+        }
+        _json_write_chars(text, " ]", 2);
       } else {
         _json_write_chars(text, "[\n", 2);
         auto count = (size_t)0, size = json.size();

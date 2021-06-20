@@ -30,7 +30,10 @@
             "description": "Frame",
             "type": "array",
             "items": {
-              "type": "number"
+              "type": "array",
+              "items": {
+                "type": "number"
+              }
             }
           },
           "lens": {

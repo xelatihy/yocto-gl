@@ -1,0 +1,32 @@
+{
+  "asset": {
+    "copyright": "Model by Fabio Pellacini from github.com/~xelatihy/yocto-gl"
+  },
+  "cameras": {
+    "default": {
+      "lens": 0.05,
+      "aperture": 0.0,
+      "aspect": 2.4,
+      "lookat": [0, 0, 1, 0, 0, 0, 0, 1, 0]
+    }
+  },
+  "environments": {
+    "env": {
+      "emission": [0.5, 0.5, 0.5]
+    }
+  },
+  "instances": {
+    "sphere": {
+      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.075, 0],
+      "shape": "sphere",
+      "material": "sphere"
+    }
+  },
+  "materials": {
+    "sphere": {
+      "type": "metallic",
+      "color": [1, 1, 1],
+      "roughness": 0.5
+    }
+  }
+}
