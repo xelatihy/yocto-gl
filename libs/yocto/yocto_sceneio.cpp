@@ -2854,7 +2854,7 @@ static void load_json_scene(
         texture_map[key] = (int)scene.textures.size() - 1;
         if (element.is_string()) {
           auto filename = element.get<string>();
-          if (ends_with(filename, ".json")) {
+          if (!ends_with(filename, ".json")) {
             element             = json_object();
             element["datafile"] = filename;
           } else {
@@ -3346,10 +3346,16 @@ namespace yocto {
 // Loads an OBJ
 static void load_obj_scene(
     const string& filename, scene_data& scene, bool noparallel) {
+  // dirname
+  auto dirname = path_dirname(filename);
+
+  // data files
+
   // load obj
   auto obj = load_obj(filename, false, true);
 
   // convert cameras
+  scene.cameras.reserve(obj.cameras.size());
   for (auto& ocamera : obj.cameras) {
     auto& camera        = scene.cameras.emplace_back();
     camera.frame        = ocamera.frame;
@@ -3379,6 +3385,7 @@ static void load_obj_scene(
   }
 
   // handler for materials
+  scene.materials.reserve(obj.materials.size());
   for (auto& omaterial : obj.materials) {
     auto& material        = scene.materials.emplace_back();
     material.type         = material_type::gltfpbr;
@@ -3409,6 +3416,8 @@ static void load_obj_scene(
   }
 
   // convert shapes
+  scene.shapes.reserve(obj.shapes.size());
+  scene.instances.reserve(obj.shapes.size());
   for (auto& oshape : obj.shapes) {
     if (oshape.elements.empty()) continue;
     auto& shape       = scene.shapes.emplace_back();
@@ -3424,6 +3433,7 @@ static void load_obj_scene(
   }
 
   // convert environments
+  scene.environments.reserve(obj.environments.size());
   for (auto& oenvironment : obj.environments) {
     auto& environment        = scene.environments.emplace_back();
     environment.frame        = oenvironment.frame;
@@ -3431,8 +3441,13 @@ static void load_obj_scene(
     environment.emission_tex = oenvironment.emission_tex;
   }
 
-  // dirname
-  auto dirname = path_dirname(filename);
+  // names
+  scene.camera_names   = make_names(scene.cameras, {}, "camera");
+  scene.texture_names  = make_names(scene.textures, {}, "texture");
+  scene.material_names = make_names(scene.materials, {}, "material");
+  scene.shape_names    = make_names(scene.shapes, {}, "shape");
+  scene.subdiv_names   = make_names(scene.subdivs, {}, "subdiv");
+  scene.instance_names = make_names(scene.instances, {}, "instance");
 
   try {
     if (noparallel) {
