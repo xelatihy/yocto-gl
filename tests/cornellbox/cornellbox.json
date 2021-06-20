@@ -1,0 +1,138 @@
+{
+  "asset": {
+    "generator": "Yocto/GL - https://github.com/xelatihy/yocto-gl",
+    "version": "4.1"
+  },
+  "cameras": {
+    "camera1": {
+      "frame": [
+        [
+          1.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.0
+        ],
+        [
+          0.0,
+          1.0,
+          3.9000000953674316
+        ]
+      ],
+      "lens": 0.03500000014901161,
+      "aspect": 1.0,
+      "film": 0.024000000208616257,
+      "focus": 3.9000000953674316
+    }
+  },
+  "materials": {
+    "backwall": {
+      "color": [
+        0.7250000238418579,
+        0.7099999785423279,
+        0.6800000071525574
+      ]
+    },
+    "ceiling": {
+      "color": [
+        0.7250000238418579,
+        0.7099999785423279,
+        0.6800000071525574
+      ]
+    },
+    "floor": {
+      "color": [
+        0.7250000238418579,
+        0.7099999785423279,
+        0.6800000071525574
+      ]
+    },
+    "leftwall": {
+      "color": [
+        0.6299999952316284,
+        0.06499999761581421,
+        0.05000000074505806
+      ]
+    },
+    "light": {
+      "emission": [
+        17.0,
+        12.0,
+        4.0
+      ]
+    },
+    "rightwall": {
+      "color": [
+        0.14000000059604645,
+        0.44999998807907104,
+        0.09000000357627869
+      ]
+    },
+    "shortbox": {
+      "color": [
+        0.7250000238418579,
+        0.7099999785423279,
+        0.6800000071525574
+      ]
+    },
+    "tallbox": {
+      "color": [
+        0.7250000238418579,
+        0.7099999785423279,
+        0.6800000071525574
+      ]
+    }
+  },
+  "shapes": {
+    "backwall": "backwall.ply",
+    "ceiling": "ceiling.ply",
+    "floor": "floor.ply",
+    "leftwall": "leftwall.ply",
+    "light": "light.ply",
+    "rightwall": "rightwall.ply",
+    "shortbox": "shortbox.ply",
+    "tallbox": "tallbox.ply"
+  },
+  "instances": {
+    "backwall": {
+      "shape": "backwall",
+      "material": "backwall"
+    },
+    "ceiling": {
+      "shape": "ceiling",
+      "material": "ceiling"
+    },
+    "floor": {
+      "shape": "floor",
+      "material": "floor"
+    },
+    "leftwall": {
+      "shape": "leftwall",
+      "material": "leftwall"
+    },
+    "light": {
+      "shape": "light",
+      "material": "light"
+    },
+    "rightwall": {
+      "shape": "rightwall",
+      "material": "rightwall"
+    },
+    "shortbox": {
+      "shape": "shortbox",
+      "material": "shortbox"
+    },
+    "tallbox": {
+      "shape": "tallbox",
+      "material": "tallbox"
+    }
+  }
+}

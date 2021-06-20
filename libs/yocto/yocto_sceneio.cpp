@@ -2256,6 +2256,8 @@ void make_scene_directories(const string& filename, const scene_data& scene) {
     make_directory(path_join(path_dirname(filename), "shapes"));
   if (!scene.textures.empty())
     make_directory(path_join(path_dirname(filename), "textures"));
+  if (!scene.subdivs.empty())
+    make_directory(path_join(path_dirname(filename), "subdivs"));
 }
 
 // Add environment
@@ -2620,7 +2622,7 @@ static void load_json_scene_version40(const string& filename,
         get_opt(element, "catmullclark", subdiv.catmullclark);
         get_opt(element, "smooth", subdiv.smooth);
         get_opt(element, "displacement", subdiv.displacement);
-        get_opt(element, "displacement_tex", subdiv.displacement_tex);
+        get_tex(element, "displacement_tex", subdiv.displacement_tex);
       }
     }
   } catch (const json_error& error) {

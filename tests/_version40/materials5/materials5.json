@@ -167,7 +167,7 @@
       "trdepth": 0.001
     },
     "skin2b": {
-      "type": "glass",
+      "type": "refractive",
       "roughness": 0.25,
       "color": [0.82, 0.55, 0.4],
       "scattering": [0.623, 0.433, 0.343],
