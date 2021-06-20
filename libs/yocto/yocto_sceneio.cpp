@@ -3128,7 +3128,7 @@ static void save_json_scene(
     return item;
   };
   auto add_value = [](json_value& js, const string& name,
-                       auto& value) -> json_value& {
+                       const auto& value) -> json_value& {
     auto& item = js.insert_back(name);
     item       = value;
     return item;
@@ -3210,6 +3210,7 @@ static void save_json_scene(
       set_opt(element, "film", camera.film, default_.film);
       set_opt(element, "focus", camera.focus, default_.focus);
       set_opt(element, "aperture", camera.aperture, default_.aperture);
+      set_req(element, "lookat", mat3f{});
     }
   }
 
@@ -3217,7 +3218,8 @@ static void save_json_scene(
     auto& group = add_object(js, "textures");
     group.reserve(scene.textures.size());
     for (auto&& [idx, texture] : enumerate(scene.textures)) {
-      add_value(group, texture_names[idx], texture_datafiles[idx]);
+      add_value(group, texture_names[idx],
+          texture_names[idx] + (texture.pixelsf.empty() ? ".png" : ".hdr"));
     }
   }
 
@@ -3251,7 +3253,7 @@ static void save_json_scene(
     auto& group = add_object(js, "shapes");
     group.reserve(scene.shapes.size());
     for (auto&& [idx, shape] : enumerate(scene.shapes)) {
-      add_value(group, shape_names[idx], shape_datafiles[idx]);
+      add_value(group, shape_names[idx], shape_names[idx] + ".ply");
     }
   }
 
@@ -3262,6 +3264,7 @@ static void save_json_scene(
     for (auto&& [idx, subdiv] : enumerate(scene.subdivs)) {
       auto& element = add_object(group, subdiv_names[idx]);
       set_rrf(element, "shape", subdiv.shape, shape_names);
+      set_req(element, "datafile", subdiv_names[idx] + ".obj");
       set_opt(
           element, "subdivisions", subdiv.subdivisions, default_.subdivisions);
       set_opt(
