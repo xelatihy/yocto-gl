@@ -78,6 +78,7 @@ struct io_error : std::runtime_error {
   static io_error read_error(const string& filename) { return {filename, "read error"}; }
   static io_error write_error(const string& filename) { return {filename, "write error"}; }
   static io_error parse_error(const string& filename) { return {filename, "parse error"}; }
+  static io_error parse_error(const string& filename, const string& path) { return {filename, "parse error at " + path}; }
   static io_error format_error(const string& filename) { return {filename, "unknown format"}; }
   static io_error preset_error(const string& filename) { return {filename, "unknown preset"}; }
   static io_error shape_error(const string& filename) { return {filename, "empty shape"}; }
@@ -269,6 +270,7 @@ struct json_error : std::logic_error {
   const json_value* _where = nullptr;
   json_error(const string& error, const json_value* where)
       : std::logic_error(error), _where(where) {}
+  const json_value* where() const { return _where; }
 };
 
 // Json enum support
@@ -561,6 +563,29 @@ struct json_value {
   void set(const mat3f& value) { set((const std::array<std::array<float, 3>, 3>&)value); }
   void set(const mat4f& value) { set((const std::array<std::array<float, 4>, 4>&)value); }
   // clang-format on
+
+  // get path string (useful for error)
+  static string get_path(const json_value* root, const json_value* value) {
+    if (root == value) {
+      return "/";
+    } else if (root->is_array()) {
+      for (auto&& [index, item] : enumerate(root->_get_array())) {
+        if (&item == value) return "/" + std::to_string(index);
+        if (auto path = get_path(&item, value); !path.empty())
+          return "/" + std::to_string(index) + path;
+      }
+      return "";
+    } else if (root->is_object()) {
+      for (auto& [key, item] : root->_get_object()) {
+        if (&item == value) return "/" + key;
+        if (auto path = get_path(&item, value); !path.empty())
+          return "/" + key + path;
+      }
+      return "";
+    } else {
+      return "";
+    }
+  }
 
  private:
   json_type _type = json_type::null;
