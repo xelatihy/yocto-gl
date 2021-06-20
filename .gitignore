@@ -18,5 +18,5 @@ tests2/
 .vs
 testsr/
 site/
-tests/sculpting1
-tests/cities1
+tests/_version40/sculpting1
+tests/_version40/cities1
