@@ -71,7 +71,6 @@ template <typename T>
 static T _load_pfm_swap_endian(T value) {
   // https://stackoverflow.com/questions/105252/how-do-i-convert-between-big-endian-and-little-endian-values-in-c
   static_assert(sizeof(char) == 1, "sizeof(char) == 1");
-  using T = decltype(value);
   union {
     T             value;
     unsigned char bytes[sizeof(T)];
@@ -124,13 +123,13 @@ static float* load_pfm(
 
   // read width, height
   if (!fgets(buffer.data(), (int)buffer.size(), fs)) return nullptr;
-  toks    = split_string(buffer.data());
+  toks    = _load_pfm_split_string(buffer.data());
   *width  = atoi(toks[0].c_str());
   *height = atoi(toks[1].c_str());
 
   // read scale
   if (!fgets(buffer.data(), (int)buffer.size(), fs)) return nullptr;
-  toks   = split_string(buffer.data());
+  toks   = _load_pfm_split_string(buffer.data());
   auto s = (float)atof(toks[0].c_str());
 
   // read the data (flip y)
