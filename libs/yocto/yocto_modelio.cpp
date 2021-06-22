@@ -38,6 +38,7 @@
 #include <unordered_set>
 #include <utility>
 
+#include "ext/fast_float/fast_float.h"
 #include "yocto_color.h"
 
 // -----------------------------------------------------------------------------
@@ -61,28 +62,52 @@ namespace yocto {
 // Formats values to string
 inline void format_value(string& str, const string& value) { str += value; }
 inline void format_value(string& str, int8_t value) {
-  str += std::to_string((int32_t)value);
+  auto buffer = array<char, 64>{};
+  auto result = std::to_chars(
+      buffer.data(), buffer.data() + buffer.size(), value);
+  str.append(buffer.data(), result.ptr);
 }
 inline void format_value(string& str, int16_t value) {
-  str += std::to_string(value);
+  auto buffer = array<char, 64>{};
+  auto result = std::to_chars(
+      buffer.data(), buffer.data() + buffer.size(), value);
+  str.append(buffer.data(), result.ptr);
 }
 inline void format_value(string& str, int32_t value) {
-  str += std::to_string(value);
+  auto buffer = array<char, 64>{};
+  auto result = std::to_chars(
+      buffer.data(), buffer.data() + buffer.size(), value);
+  str.append(buffer.data(), result.ptr);
 }
 inline void format_value(string& str, int64_t value) {
-  str += std::to_string(value);
+  auto buffer = array<char, 64>{};
+  auto result = std::to_chars(
+      buffer.data(), buffer.data() + buffer.size(), value);
+  str.append(buffer.data(), result.ptr);
 }
 inline void format_value(string& str, uint8_t value) {
-  str += std::to_string((uint32_t)value);
+  auto buffer = array<char, 64>{};
+  auto result = std::to_chars(
+      buffer.data(), buffer.data() + buffer.size(), value);
+  str.append(buffer.data(), result.ptr);
 }
 inline void format_value(string& str, uint16_t value) {
-  str += std::to_string(value);
+  auto buffer = array<char, 64>{};
+  auto result = std::to_chars(
+      buffer.data(), buffer.data() + buffer.size(), value);
+  str.append(buffer.data(), result.ptr);
 }
 inline void format_value(string& str, uint32_t value) {
-  str += std::to_string(value);
+  auto buffer = array<char, 64>{};
+  auto result = std::to_chars(
+      buffer.data(), buffer.data() + buffer.size(), value);
+  str.append(buffer.data(), result.ptr);
 }
 inline void format_value(string& str, uint64_t value) {
-  str += std::to_string(value);
+  auto buffer = array<char, 64>{};
+  auto result = std::to_chars(
+      buffer.data(), buffer.data() + buffer.size(), value);
+  str.append(buffer.data(), result.ptr);
 }
 inline void format_value(string& str, float value) {
   auto buf = array<char, 256>{};
@@ -265,23 +290,23 @@ inline void parse_value(string_view& str, uint64_t& value) {
   str.remove_prefix(result.ptr - str.data());
 }
 inline void parse_value(string_view& str, float& value) {
-  char* end = nullptr;
-  value     = strtof(str.data(), &end);
-  if (str.data() == end) throw std::invalid_argument{"number expected"};
-  str.remove_prefix(end - str.data());
+  skip_whitespace(str);
+  auto result = fast_float::from_chars(str.data(), str.data() + str.size(), value);
+  if (result.ptr == str.data()) throw std::invalid_argument{"integer expected"};
+  str.remove_prefix(result.ptr - str.data());
 }
 inline void parse_value(string_view& str, double& value) {
-  char* end = nullptr;
-  value     = strtod(str.data(), &end);
-  if (str.data() == end) throw std::invalid_argument{"number expected"};
-  str.remove_prefix(end - str.data());
+  skip_whitespace(str);
+  auto result = fast_float::from_chars(str.data(), str.data() + str.size(), value);
+  if (result.ptr == str.data()) throw std::invalid_argument{"integer expected"};
+  str.remove_prefix(result.ptr - str.data());
 }
 #ifdef __APPLE__
 inline void parse_value(string_view& str, size_t& value) {
-  char* end = nullptr;
-  value     = (size_t)strtoull(str.data(), &end, 10);
-  if (str.data() == end) throw std::invalid_argument{"integer expected"};
-  str.remove_prefix(end - str.data());
+  skip_whitespace(str);
+  auto result = std::from_chars(str.data(), str.data() + str.size(), value);
+  if (result.ptr == str.data()) throw std::invalid_argument{"integer expected"};
+  str.remove_prefix(result.ptr - str.data());
 }
 #endif
 inline void parse_value(string_view& str, bool& value) {
