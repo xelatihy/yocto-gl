@@ -781,21 +781,36 @@ bool format_json(string& text, const json_value& json, string& error);
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// importing conversions
-using std::chars_format;
-using std::from_chars;
-using std::from_chars_result;
-using std::to_chars;
-using std::to_chars_result;
+// from_chars result
+struct from_chars_result {
+  const char* ptr;
+  std::errc   ec;
+};
 
-from_chars_result from_chars(const char* first, const char* last, float& value,
-    chars_format fmt = chars_format::general);
-from_chars_result from_chars(const char* first, const char* last, double& value,
-    chars_format fmt = chars_format::general);
-to_chars_result   to_chars(char* first, char* last, float value,
-      chars_format fmt = chars_format::general);
-to_chars_result   to_chars(char* first, char* last, double value,
-      chars_format fmt = chars_format::general);
+// from_chars
+template <typename T>
+from_chars_result from_chars(const char* first, const char* last, T& value) {
+  auto result = std::from_chars(first, last, value);
+  return {result.ptr, result.ec};
+}
+from_chars_result from_chars(const char* first, const char* last, float& value);
+from_chars_result from_chars(
+    const char* first, const char* last, double& value);
+
+// to_chars result
+struct to_chars_result {
+  char*     ptr;
+  std::errc ec;
+};
+
+// to_chars
+template <typename T>
+from_chars_result to_chars(const char* first, const char* last, T value) {
+  auto result = std::to_chars(first, last, value);
+  return {result.ptr, result.ec};
+}
+to_chars_result to_chars(char* first, char* last, float value);
+to_chars_result to_chars(char* first, char* last, double value);
 
 }  // namespace yocto
 

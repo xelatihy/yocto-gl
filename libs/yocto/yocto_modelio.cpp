@@ -29,6 +29,7 @@
 #include "yocto_modelio.h"
 
 #include <cstdio>
+#include <cstring>
 #include <filesystem>
 #include <memory>
 #include <stdexcept>
