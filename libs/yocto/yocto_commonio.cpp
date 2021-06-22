@@ -35,7 +35,9 @@
 #include <charconv>
 #include <cstdio>
 #include <filesystem>
+#include <limits>
 
+#include "ext/fast_float/fast_float.h"
 #include "ext/json.hpp"
 
 // -----------------------------------------------------------------------------
@@ -155,9 +157,21 @@ bool make_directory(const string& dirname, string& error) {
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// FILE STREAM
+// FILE IO
 // -----------------------------------------------------------------------------
 namespace yocto {
+
+// Opens a file with a utf8 file name
+static FILE* fopen_utf8(const char* filename, const char* mode) {
+#ifdef _WIN32
+  auto path8    = std::filesystem::u8path(filename);
+  auto str_mode = string{mode};
+  auto wmode    = std::wstring(str_mode.begin(), str_mode.end());
+  return _wfopen(path8.c_str(), wmode.c_str());
+#else
+  return fopen(filename, mode);
+#endif
+}
 
 // Opens a file with utf8 filename
 FILE* fopen_utf8(const string& filename, const string& mode) {
@@ -170,66 +184,6 @@ FILE* fopen_utf8(const string& filename, const string& mode) {
 #endif
 }
 
-// Open a file
-file_stream open_file(const string& filename, const string& mode) {
-#ifdef _WIN32
-  auto path8 = std::filesystem::u8path(filename);
-  auto wmode = std::wstring(mode.begin(), mode.end());
-  auto fs    = _wfopen(path8.c_str(), wmode.c_str());
-#else
-  auto fs = fopen(filename.c_str(), mode.c_str());
-#endif
-  if (!fs) throw io_error::open_error(filename);
-  return {filename, fs, true};
-}
-
-// Close a file
-void close_file(file_stream& fs) {
-  if (fs.owned && fs.fs) fclose(fs.fs);
-  fs.filename = "";
-  fs.fs       = nullptr;
-  fs.owned    = false;
-}
-
-// File length
-size_t get_length(file_stream& fs) {
-  fseek(fs.fs, 0, SEEK_END);
-  auto length = ftell(fs.fs);
-  fseek(fs.fs, 0, SEEK_SET);
-  return (size_t)length;
-}
-bool is_eof(file_stream& fs) { return feof(fs.fs); }
-
-// Read a line of text
-bool read_line(file_stream& fs, char* buffer, size_t size) {
-  return fgets(buffer, (int)size, fs.fs);
-}
-
-// Write text to a file
-void write_text(file_stream& fs, const string& str) {
-  if (fprintf(fs.fs, "%s", str.c_str()) < 0)
-    throw io_error::write_error(fs.filename);
-}
-
-// Read data from a file
-void read_data(file_stream& fs, void* buffer, size_t count) {
-  if (fread(buffer, 1, count, fs.fs) != count)
-    throw io_error::read_error(fs.filename);
-}
-
-// Write data from a file
-void write_data(file_stream& fs, const void* buffer, size_t count) {
-  if (fwrite(buffer, 1, count, fs.fs) != count)
-    throw io_error::read_error(fs.filename);
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// FILE IO
-// -----------------------------------------------------------------------------
-namespace yocto {
-
 // Load a text file
 string load_text(const string& filename) {
   auto str = string{};
@@ -237,41 +191,61 @@ string load_text(const string& filename) {
   return str;
 }
 void load_text(const string& filename, string& text) {
-  auto fs = open_file(filename, "rb");
-  text.resize(get_length(fs));
-  read_data(fs, text.data(), text.size());
+  // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
+  auto fs = fopen_utf8(filename.c_str(), "rb");
+  if (!fs) throw io_error::open_error(filename);
+  fseek(fs, 0, SEEK_END);
+  auto length = ftell(fs);
+  fseek(fs, 0, SEEK_SET);
+  text.resize(length);
+  if (fread(text.data(), 1, length, fs) != length) {
+    fclose(fs);
+    throw io_error::read_error(filename);
+  }
+  fclose(fs);
 }
 
 // Save a text file
 void save_text(const string& filename, const string& text) {
-  auto fs = open_file(filename, "wt");
-  write_text(fs, text);
+  auto fs = fopen_utf8(filename.c_str(), "wt");
+  if (!fs) throw io_error::open_error(filename);
+  if (fprintf(fs, "%s", text.c_str()) < 0) {
+    fclose(fs);
+    throw io_error::write_error(filename);
+  }
+  fclose(fs);
 }
 
 // Load a binary file
+vector<byte> load_binary(const string& filename) {
+  auto data = vector<byte>{};
+  load_binary(filename, data);
+  return data;
+}
 void load_binary(const string& filename, vector<byte>& data) {
   // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
-  auto fs = open_file(filename, "rb");
-  data.resize(get_length(fs));
-  read_data(fs, data.data(), data.size());
+  auto fs = fopen_utf8(filename.c_str(), "rb");
+  if (!fs) throw io_error::open_error(filename);
+  fseek(fs, 0, SEEK_END);
+  auto length = ftell(fs);
+  fseek(fs, 0, SEEK_SET);
+  data.resize(length);
+  if (fread(data.data(), 1, length, fs) != length) {
+    fclose(fs);
+    throw io_error::read_error(filename);
+  }
+  fclose(fs);
 }
 
 // Save a binary file
 void save_binary(const string& filename, const vector<byte>& data) {
-  auto fs = open_file(filename, "wb");
-  write_data(fs, data.data(), data.size());
-}
-
-// Opens a file with a utf8 file name
-static FILE* fopen_utf8(const char* filename, const char* mode) {
-#ifdef _WIN32
-  auto path8    = std::filesystem::u8path(filename);
-  auto str_mode = string{mode};
-  auto wmode    = std::wstring(str_mode.begin(), str_mode.end());
-  return _wfopen(path8.c_str(), wmode.c_str());
-#else
-  return fopen(filename, mode);
-#endif
+  auto fs = fopen_utf8(filename.c_str(), "wb");
+  if (!fs) throw io_error::open_error(filename);
+  if (fwrite(data.data(), 1, data.size(), fs) != data.size()) {
+    fclose(fs);
+    throw io_error::write_error(filename);
+  }
+  fclose(fs);
 }
 
 // Load a text file
@@ -670,6 +644,49 @@ bool format_json(string& text, const json_value& json, string& error) {
     error = exception.what();
     return false;
   }
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// FAST CONVERSIONS FROM/TO CHARS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+from_chars_result from_chars(
+    const char* first, const char* last, float& value, chars_format fmt_) {
+  auto fmt    = fmt_ == std::chars_format::general
+                    ? fast_float::chars_format::general
+                : fmt_ == std::chars_format::fixed
+                    ? fast_float::chars_format::fixed
+                    : fast_float::chars_format::scientific;
+  auto result = fast_float::from_chars(first, last, value, fmt);
+  return {result.ptr, result.ec};
+}
+from_chars_result from_chars(
+    const char* first, const char* last, double& value, chars_format fmt_) {
+  auto fmt    = fmt_ == std::chars_format::general
+                    ? fast_float::chars_format::general
+                : fmt_ == std::chars_format::fixed
+                    ? fast_float::chars_format::fixed
+                    : fast_float::chars_format::scientific;
+  auto result = fast_float::from_chars(first, last, value, fmt);
+  return {result.ptr, result.ec};
+}
+
+to_chars_result to_chars(
+    char* first, char* last, float value, chars_format fmt) {
+  if (last - first >= std::numeric_limits<float>::max_digits10)
+    return {last, std::errc::value_too_large};
+  auto ptr = ::nlohmann::detail::to_chars(first, last, value);
+  return {ptr, std::errc()};
+}
+to_chars_result to_chars(
+    char* first, char* last, double value, chars_format fmt) {
+  if (last - first >= std::numeric_limits<double>::max_digits10)
+    return {last, std::errc::value_too_large};
+  auto ptr = ::nlohmann::detail::to_chars(first, last, value);
+  return {ptr, std::errc()};
 }
 
 }  // namespace yocto
