@@ -40,6 +40,7 @@
 // -----------------------------------------------------------------------------
 
 #include <array>
+#include <charconv>
 #include <stdexcept>
 #include <string>
 #include <type_traits>
@@ -771,6 +772,29 @@ bool save_json(const string& filename, const json_value& json, string& error);
 // Parse/dump json
 bool parse_json(const string& text, json_value& json, string& error);
 bool format_json(string& text, const json_value& json, string& error);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// FAST CONVERSIONS FROM/TO CHARS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// importing conversions
+using std::chars_format;
+using std::from_chars;
+using std::from_chars_result;
+using std::to_chars;
+using std::to_chars_result;
+
+from_chars_result from_chars(const char* first, const char* last, float& value,
+    chars_format fmt = chars_format::general);
+from_chars_result from_chars(const char* first, const char* last, double& value,
+    chars_format fmt = chars_format::general);
+to_chars_result   to_chars(char* first, char* last, float value,
+      chars_format fmt = chars_format::general);
+to_chars_result   to_chars(char* first, char* last, double value,
+      chars_format fmt = chars_format::general);
 
 }  // namespace yocto
 

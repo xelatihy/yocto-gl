@@ -15,9 +15,12 @@ add_library(yocto
   ext/stb_image.h ext/stb_image_resize.h ext/stb_image_write.h ext/stb_image.cpp
   ext/json.hpp
   ext/tinyexr.h ext/tinyexr.cpp
+  ext/fast_float/fast_float.h
 )
 
 set_target_properties(yocto PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
+
+target_include_directories(yocto PRIVATE ext/)
 
 if(UNIX AND NOT APPLE)
   find_package(Threads REQUIRED)

@@ -28,7 +28,6 @@
 
 #include "yocto_modelio.h"
 
-#include <charconv>
 #include <cstdio>
 #include <filesystem>
 #include <memory>
@@ -38,7 +37,6 @@
 #include <unordered_set>
 #include <utility>
 
-#include "ext/fast_float/fast_float.h"
 #include "yocto_color.h"
 
 // -----------------------------------------------------------------------------
@@ -110,14 +108,14 @@ inline void format_value(string& str, uint64_t value) {
   str.append(buffer.data(), result.ptr);
 }
 inline void format_value(string& str, float value) {
-  auto buf = array<char, 256>{};
-  snprintf(buf.data(), buf.size(), "%g", value);
-  str += buf.data();
+  auto buffer = array<char, 256>{};
+  auto result = to_chars(buffer.data(), buffer.data() + buffer.size(), value);
+  str.append(buffer.data(), result.ptr);
 }
 inline void format_value(string& str, double value) {
-  auto buf = array<char, 256>{};
-  snprintf(buf.data(), buf.size(), "%g", value);
-  str += buf.data();
+  auto buffer = array<char, 256>{};
+  auto result = to_chars(buffer.data(), buffer.data() + buffer.size(), value);
+  str.append(buffer.data(), result.ptr);
 }
 inline void format_value(string& str, const vec2f& value) {
   for (auto i = 0; i < 2; i++) {
@@ -291,13 +289,13 @@ inline void parse_value(string_view& str, uint64_t& value) {
 }
 inline void parse_value(string_view& str, float& value) {
   skip_whitespace(str);
-  auto result = fast_float::from_chars(str.data(), str.data() + str.size(), value);
+  auto result = from_chars(str.data(), str.data() + str.size(), value);
   if (result.ptr == str.data()) throw std::invalid_argument{"integer expected"};
   str.remove_prefix(result.ptr - str.data());
 }
 inline void parse_value(string_view& str, double& value) {
   skip_whitespace(str);
-  auto result = fast_float::from_chars(str.data(), str.data() + str.size(), value);
+  auto result = from_chars(str.data(), str.data() + str.size(), value);
   if (result.ptr == str.data()) throw std::invalid_argument{"integer expected"};
   str.remove_prefix(result.ptr - str.data());
 }

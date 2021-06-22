@@ -35,7 +35,9 @@
 #include <charconv>
 #include <cstdio>
 #include <filesystem>
+#include <limits>
 
+#include "ext/fast_float/fast_float.h"
 #include "ext/json.hpp"
 
 // -----------------------------------------------------------------------------
@@ -642,6 +644,49 @@ bool format_json(string& text, const json_value& json, string& error) {
     error = exception.what();
     return false;
   }
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// FAST CONVERSIONS FROM/TO CHARS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+from_chars_result from_chars(
+    const char* first, const char* last, float& value, chars_format fmt_) {
+  auto fmt    = fmt_ == std::chars_format::general
+                    ? fast_float::chars_format::general
+                : fmt_ == std::chars_format::fixed
+                    ? fast_float::chars_format::fixed
+                    : fast_float::chars_format::scientific;
+  auto result = fast_float::from_chars(first, last, value, fmt);
+  return {result.ptr, result.ec};
+}
+from_chars_result from_chars(
+    const char* first, const char* last, double& value, chars_format fmt_) {
+  auto fmt    = fmt_ == std::chars_format::general
+                    ? fast_float::chars_format::general
+                : fmt_ == std::chars_format::fixed
+                    ? fast_float::chars_format::fixed
+                    : fast_float::chars_format::scientific;
+  auto result = fast_float::from_chars(first, last, value, fmt);
+  return {result.ptr, result.ec};
+}
+
+to_chars_result to_chars(
+    char* first, char* last, float value, chars_format fmt) {
+  if (last - first >= std::numeric_limits<float>::max_digits10)
+    return {last, std::errc::value_too_large};
+  auto ptr = ::nlohmann::detail::to_chars(first, last, value);
+  return {ptr, std::errc()};
+}
+to_chars_result to_chars(
+    char* first, char* last, double value, chars_format fmt) {
+  if (last - first >= std::numeric_limits<double>::max_digits10)
+    return {last, std::errc::value_too_large};
+  auto ptr = ::nlohmann::detail::to_chars(first, last, value);
+  return {ptr, std::errc()};
 }
 
 }  // namespace yocto
