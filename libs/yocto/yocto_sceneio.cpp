@@ -373,7 +373,7 @@ void save_image(const string& filename, const image_data& image) {
   // write data
   auto stbi_write_data = [](void* context, void* data, int size) {
     auto& buffer = *(vector<byte>*)context;
-    buffer.insert(buffer.end(), data, size);
+    buffer.insert(buffer.end(), (byte*)data, (byte*)data + size);
   };
 
   auto ext = path_extension(filename);
@@ -683,13 +683,13 @@ void save_texture(const string& filename, const texture_data& texture) {
   // write data
   auto stbi_write_data = [](void* context, void* data, int size) {
     auto& buffer = *(vector<byte>*)context;
-    buffer.insert(buffer.end(), data, size);
+    buffer.insert(buffer.end(), (byte*)data, (byte*)data + size);
   };
 
   auto ext = path_extension(filename);
   if (ext == ".hdr" || ext == ".HDR") {
     auto buffer = vector<byte>{};
-    if (!stbi_write_hdr_to_func(stbi_write_func, &buffer, (int)texture.width,
+    if (!stbi_write_hdr_to_func(stbi_write_data, &buffer, (int)texture.width,
             (int)texture.height, 4, (const float*)texture.pixelsf.data()))
       throw io_error::write_error(filename);
     save_binary(filename, buffer);
@@ -703,7 +703,7 @@ void save_texture(const string& filename, const texture_data& texture) {
       throw io_error::write_error(filename);
   } else if (ext == ".png" || ext == ".PNG") {
     auto buffer = vector<byte>{};
-    if (!stbi_write_png_to_func(stbi_write_func, &buffer, (int)texture.width,
+    if (!stbi_write_png_to_func(stbi_write_data, &buffer, (int)texture.width,
             (int)texture.height, 4, (const byte*)texture.pixelsb.data(),
             (int)texture.width * 4))
       throw io_error::write_error(filename);
@@ -711,19 +711,19 @@ void save_texture(const string& filename, const texture_data& texture) {
   } else if (ext == ".jpg" || ext == ".JPG" || ext == ".jpeg" ||
              ext == ".JPEG") {
     auto buffer = vector<byte>{};
-    if (!stbi_write_jpg_to_func(stbi_write_func, &buffer, (int)texture.width,
+    if (!stbi_write_jpg_to_func(stbi_write_data, &buffer, (int)texture.width,
             (int)texture.height, 4, (const byte*)texture.pixelsb.data(), 75))
       throw io_error::write_error(filename);
     save_binary(filename, buffer);
   } else if (ext == ".tga" || ext == ".TGA") {
     auto buffer = vector<byte>{};
-    if (!stbi_write_tga_to_func(stbi_write_func, &buffer, (int)texture.width,
+    if (!stbi_write_tga_to_func(stbi_write_data, &buffer, (int)texture.width,
             (int)texture.height, 4, (const byte*)texture.pixelsb.data()))
       throw io_error::write_error(filename);
     save_binary(filename, buffer);
   } else if (ext == ".bmp" || ext == ".BMP") {
     auto buffer = vector<byte>{};
-    if (!stbi_write_bmp_to_func(stbi_write_func, &buffer, (int)texture.width,
+    if (!stbi_write_bmp_to_func(stbi_write_data, &buffer, (int)texture.width,
             (int)texture.height, 4, (const byte*)texture.pixelsb.data()))
       throw io_error::write_error(filename);
     save_binary(filename, buffer);
