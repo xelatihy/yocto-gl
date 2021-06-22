@@ -155,77 +155,6 @@ bool make_directory(const string& dirname, string& error) {
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// FILE STREAM
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Opens a file with utf8 filename
-FILE* fopen_utf8(const string& filename, const string& mode) {
-#ifdef _WIN32
-  auto path8 = std::filesystem::u8path(filename);
-  auto wmode = std::wstring(mode.begin(), mode.end());
-  return _wfopen(path8.c_str(), wmode.c_str());
-#else
-  return fopen(filename.c_str(), mode.c_str());
-#endif
-}
-
-// Open a file
-file_stream open_file(const string& filename, const string& mode) {
-#ifdef _WIN32
-  auto path8 = std::filesystem::u8path(filename);
-  auto wmode = std::wstring(mode.begin(), mode.end());
-  auto fs    = _wfopen(path8.c_str(), wmode.c_str());
-#else
-  auto fs = fopen(filename.c_str(), mode.c_str());
-#endif
-  if (!fs) throw io_error::open_error(filename);
-  return {filename, fs, true};
-}
-
-// Close a file
-void close_file(file_stream& fs) {
-  if (fs.owned && fs.fs) fclose(fs.fs);
-  fs.filename = "";
-  fs.fs       = nullptr;
-  fs.owned    = false;
-}
-
-// File length
-size_t get_length(file_stream& fs) {
-  fseek(fs.fs, 0, SEEK_END);
-  auto length = ftell(fs.fs);
-  fseek(fs.fs, 0, SEEK_SET);
-  return (size_t)length;
-}
-bool is_eof(file_stream& fs) { return feof(fs.fs); }
-
-// Read a line of text
-bool read_line(file_stream& fs, char* buffer, size_t size) {
-  return fgets(buffer, (int)size, fs.fs);
-}
-
-// Write text to a file
-void write_text(file_stream& fs, const string& str) {
-  if (fprintf(fs.fs, "%s", str.c_str()) < 0)
-    throw io_error::write_error(fs.filename);
-}
-
-// Read data from a file
-void read_data(file_stream& fs, void* buffer, size_t count) {
-  if (fread(buffer, 1, count, fs.fs) != count)
-    throw io_error::read_error(fs.filename);
-}
-
-// Write data from a file
-void write_data(file_stream& fs, const void* buffer, size_t count) {
-  if (fwrite(buffer, 1, count, fs.fs) != count)
-    throw io_error::read_error(fs.filename);
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
 // FILE IO
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -239,6 +168,17 @@ static FILE* fopen_utf8(const char* filename, const char* mode) {
   return _wfopen(path8.c_str(), wmode.c_str());
 #else
   return fopen(filename, mode);
+#endif
+}
+
+// Opens a file with utf8 filename
+FILE* fopen_utf8(const string& filename, const string& mode) {
+#ifdef _WIN32
+  auto path8 = std::filesystem::u8path(filename);
+  auto wmode = std::wstring(mode.begin(), mode.end());
+  return _wfopen(path8.c_str(), wmode.c_str());
+#else
+  return fopen(filename.c_str(), mode.c_str());
 #endif
 }
 

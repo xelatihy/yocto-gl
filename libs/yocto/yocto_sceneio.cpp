@@ -2381,16 +2381,25 @@ bool save_subdiv(
 
 // save binary shape
 static void save_binshape(const string& filename, const shape_data& shape) {
-  auto fs = open_file(filename, "wb");
-  write_values(fs, shape.positions);
-  write_values(fs, shape.normals);
-  write_values(fs, shape.texcoords);
-  write_values(fs, shape.colors);
-  write_values(fs, shape.radius);
-  write_values(fs, shape.points);
-  write_values(fs, shape.lines);
-  write_values(fs, shape.triangles);
-  write_values(fs, quads_to_triangles(shape.quads));
+  auto write_values = [](vector<byte>& buffer, const auto& values) {
+    if (values.empty()) return;
+    buffer.insert(buffer.end(), (byte*)values.data(),
+        (byte*)values.data() + values.size() * sizeof(values.front()));
+  };
+
+  auto buffer = vector<byte>{};
+
+  write_values(buffer, shape.positions);
+  write_values(buffer, shape.normals);
+  write_values(buffer, shape.texcoords);
+  write_values(buffer, shape.colors);
+  write_values(buffer, shape.radius);
+  write_values(buffer, shape.points);
+  write_values(buffer, shape.lines);
+  write_values(buffer, shape.triangles);
+  write_values(buffer, quads_to_triangles(shape.quads));
+
+  save_binary(filename, buffer);
 }
 
 }  // namespace yocto

@@ -124,6 +124,9 @@ bool load_binary(const string& filename, vector<byte>& data, string& error);
 bool save_binary(
     const string& filename, const vector<byte>& data, string& error);
 
+// Opens a file with utf8 filename
+FILE* fopen_utf8(const string& filename, const string& mode);
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -768,112 +771,6 @@ bool save_json(const string& filename, const json_value& json, string& error);
 // Parse/dump json
 bool parse_json(const string& text, json_value& json, string& error);
 bool format_json(string& text, const json_value& json, string& error);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// FILE STREAM
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Safe wrapper for FILE stream
-struct file_stream {
-  // file parameters
-  string filename = "";
-  FILE*  fs       = nullptr;
-  bool   owned    = false;
-
-  // move-only type
-  file_stream(const file_stream&) = delete;
-  file_stream& operator=(const file_stream&) = delete;
-  ~file_stream() {
-    if (owned && fs) fclose(fs);
-  }
-
-  // operator bool to check for error
-  explicit operator bool() const { return fs != nullptr; }
-};
-
-// Opens a file with utf8 filename
-FILE* fopen_utf8(const string& filename, const string& mode);
-
-// Open/close a file
-file_stream open_file(const string& filename, const string& mode);
-void        close_file(file_stream& fs);
-
-// File length
-size_t get_length(file_stream& fs);
-bool   is_eof(file_stream& fs);
-
-// Read/write text to a file
-bool read_line(file_stream& fs, char* buffer, size_t size);
-void write_text(file_stream& fs, const string& str);
-
-// Read/write data from a file
-void read_data(file_stream& fs, void* buffer, size_t count);
-void write_data(file_stream& fs, const void* buffer, size_t count);
-
-// Read a line of text
-template <size_t N>
-inline bool read_line(file_stream& fs, array<char, N>& buffer) {
-  return read_line(fs, buffer.data(), buffer.size());
-}
-
-// Read data from a file
-template <typename T>
-inline void read_value(file_stream& fs, T& buffer) {
-  return read_data(fs, &buffer, sizeof(T));
-}
-
-// Write data from a file
-template <typename T>
-inline void write_value(file_stream& fs, const T& buffer) {
-  return write_data(fs, &buffer, sizeof(T));
-}
-
-// Read data from a file
-template <typename T>
-inline void read_values(file_stream& fs, T* buffer, size_t count) {
-  return read_data(fs, buffer, sizeof(T) * count);
-}
-
-// Write data from a file
-template <typename T>
-inline void write_values(file_stream& fs, const T* buffer, size_t count) {
-  return write_data(fs, buffer, sizeof(T) * count);
-}
-
-// Write data from a file
-template <typename T>
-inline void write_values(file_stream& fs, const vector<T>& values) {
-  return write_data(fs, values.data(), sizeof(T) * values.size());
-}
-
-template <typename T>
-inline T _swap_endian(T value) {
-  // https://stackoverflow.com/questions/105252/how-do-i-convert-between-big-endian-and-little-endian-values-in-c
-  static_assert(sizeof(char) == 1, "sizeof(char) == 1");
-  union {
-    T             value;
-    unsigned char bytes[sizeof(T)];
-  } source, dest;
-  source.value = value;
-  for (auto k = (size_t)0; k < sizeof(T); k++)
-    dest.bytes[k] = source.bytes[sizeof(T) - k - 1];
-  return dest.value;
-}
-
-template <typename T>
-inline void read_value(file_stream& fs, T& value, bool big_endian) {
-  read_value(fs, value);
-  if (big_endian) value = _swap_endian(value);
-}
-
-template <typename T>
-inline void write_value(file_stream& fs, const T& value_, bool big_endian) {
-  auto value = big_endian ? _swap_endian(value_) : value_;
-  return write_value(fs, value);
-}
 
 }  // namespace yocto
 

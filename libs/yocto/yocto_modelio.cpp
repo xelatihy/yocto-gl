@@ -140,20 +140,6 @@ inline void format_values(
   format_values(str, fmt.substr(pos + 2), args...);
 }
 
-template <typename... Args>
-inline void format_values(
-    file_stream& fs, const string& fmt, const Args&... args) {
-  auto str = ""s;
-  format_values(str, fmt, args...);
-  write_text(fs, str);
-}
-template <typename T>
-inline void format_value(file_stream& fs, const T& value) {
-  auto str = ""s;
-  format_value(str, value);
-  write_text(fs, str);
-}
-
 inline bool is_newline(char c) { return c == '\r' || c == '\n'; }
 inline bool is_space(char c) {
   return c == ' ' || c == '\t' || c == '\r' || c == '\n';
@@ -361,7 +347,7 @@ inline void read_value(string_view& fs, T& value, bool big_endian) {
 
 template <typename T>
 inline void write_value(vector<byte>& data, const T& value_, bool big_endian) {
-  auto value = big_endian ? _swap_endian(value_) : value_;
+  auto value = big_endian ? swap_endian(value_) : value_;
   return write_value(data, value);
 }
 
@@ -3147,39 +3133,6 @@ inline void remove_pbrt_comment(string_view& str, char comment_char = '#') {
     cpy.remove_prefix(1);
   }
   str.remove_suffix(cpy.size());
-}
-
-// Read a pbrt command from file
-inline bool read_pbrt_cmdline(file_stream& fs, string& cmd) {
-  auto buffer = array<char, 4096>{};
-  cmd.clear();
-  auto found = false;
-  auto pos   = ftell(fs.fs);
-  while (read_line(fs, buffer)) {
-    // line
-    auto line = string_view{buffer.data()};
-    remove_comment(line, '#', true);
-    skip_whitespace(line);
-    if (line.empty()) continue;
-
-    // check if command
-    auto is_cmd = line[0] >= 'A' && line[0] <= 'Z';
-    if (is_cmd) {
-      if (found) {
-        fseek(fs.fs, pos, SEEK_SET);
-        // line_num -= 1;
-        return true;
-      } else {
-        found = true;
-      }
-    } else if (!found) {
-      return false;
-    }
-    cmd += line;
-    cmd += " ";
-    pos = ftell(fs.fs);
-  }
-  return found;
 }
 
 // Read a pbrt command from file
