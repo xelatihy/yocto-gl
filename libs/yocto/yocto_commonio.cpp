@@ -230,43 +230,6 @@ void write_data(file_stream& fs, const void* buffer, size_t count) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Load a text file
-string load_text(const string& filename) {
-  auto str = string{};
-  load_text(filename, str);
-  return str;
-}
-void load_text(const string& filename, string& text) {
-  auto fs = open_file(filename, "rb");
-  text.resize(get_length(fs));
-  read_data(fs, text.data(), text.size());
-}
-
-// Save a text file
-void save_text(const string& filename, const string& text) {
-  auto fs = open_file(filename, "wt");
-  write_text(fs, text);
-}
-
-// Load a binary file
-vector<byte> load_binary(const string& filename) {
-  auto data = vector<byte>{};
-  load_binary(filename, data);
-  return data;
-}
-void load_binary(const string& filename, vector<byte>& data) {
-  // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
-  auto fs = open_file(filename, "rb");
-  data.resize(get_length(fs));
-  read_data(fs, data.data(), data.size());
-}
-
-// Save a binary file
-void save_binary(const string& filename, const vector<byte>& data) {
-  auto fs = open_file(filename, "wb");
-  write_data(fs, data.data(), data.size());
-}
-
 // Opens a file with a utf8 file name
 static FILE* fopen_utf8(const char* filename, const char* mode) {
 #ifdef _WIN32
@@ -277,6 +240,70 @@ static FILE* fopen_utf8(const char* filename, const char* mode) {
 #else
   return fopen(filename, mode);
 #endif
+}
+
+// Load a text file
+string load_text(const string& filename) {
+  auto str = string{};
+  load_text(filename, str);
+  return str;
+}
+void load_text(const string& filename, string& text) {
+  // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
+  auto fs = fopen_utf8(filename.c_str(), "rb");
+  if (!fs) throw io_error::open_error(filename);
+  fseek(fs, 0, SEEK_END);
+  auto length = ftell(fs);
+  fseek(fs, 0, SEEK_SET);
+  text.resize(length);
+  if (fread(text.data(), 1, length, fs) != length) {
+    fclose(fs);
+    throw io_error::read_error(filename);
+  }
+  fclose(fs);
+}
+
+// Save a text file
+void save_text(const string& filename, const string& text) {
+  auto fs = fopen_utf8(filename.c_str(), "wt");
+  if (!fs) throw io_error::open_error(filename);
+  if (fprintf(fs, "%s", text.c_str()) < 0) {
+    fclose(fs);
+    throw io_error::write_error(filename);
+  }
+  fclose(fs);
+}
+
+// Load a binary file
+vector<byte> load_binary(const string& filename) {
+  auto data = vector<byte>{};
+  load_binary(filename, data);
+  return data;
+}
+void load_binary(const string& filename, vector<byte>& data) {
+  // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
+  auto fs = fopen_utf8(filename.c_str(), "rb");
+  if (!fs) throw io_error::open_error(filename);
+  fseek(fs, 0, SEEK_END);
+  auto length = ftell(fs);
+  fseek(fs, 0, SEEK_SET);
+  data.resize(length);
+  if (fread(data.data(), 1, length, fs) != length) {
+    fclose(fs);
+    throw io_error::read_error(filename);
+  }
+  fclose(fs);
+}
+
+// Save a binary file
+void save_binary(const string& filename, const vector<byte>& data) {
+  auto fs = fopen_utf8(filename.c_str(), "wb");
+  if (!fs) throw io_error::open_error(filename);
+  if (fwrite(data.data(), 1, data.size(), fs) != data.size()) {
+    fclose(fs);
+    throw io_error::write_error(filename);
+  }
+  fclose(fs);
 }
 
 // Load a text file
