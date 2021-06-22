@@ -28,6 +28,7 @@
 
 #include "yocto_modelio.h"
 
+#include <charconv>
 #include <cstdio>
 #include <filesystem>
 #include <memory>
@@ -216,52 +217,52 @@ inline void parse_value(string_view& str, string& value) {
   value = string{valuev};
 }
 inline void parse_value(string_view& str, int8_t& value) {
-  char* end = nullptr;
-  value     = (int8_t)strtol(str.data(), &end, 10);
-  if (str.data() == end) throw std::invalid_argument{"integer expected"};
-  str.remove_prefix(end - str.data());
+  skip_whitespace(str);
+  auto result = std::from_chars(str.data(), str.data() + str.size(), value);
+  if (result.ptr == str.data()) throw std::invalid_argument{"integer expected"};
+  str.remove_prefix(result.ptr - str.data());
 }
 inline void parse_value(string_view& str, int16_t& value) {
-  char* end = nullptr;
-  value     = (int16_t)strtol(str.data(), &end, 10);
-  if (str.data() == end) throw std::invalid_argument{"integer expected"};
-  str.remove_prefix(end - str.data());
+  skip_whitespace(str);
+  auto result = std::from_chars(str.data(), str.data() + str.size(), value);
+  if (result.ptr == str.data()) throw std::invalid_argument{"integer expected"};
+  str.remove_prefix(result.ptr - str.data());
 }
 inline void parse_value(string_view& str, int32_t& value) {
-  char* end = nullptr;
-  value     = (int32_t)strtol(str.data(), &end, 10);
-  if (str.data() == end) throw std::invalid_argument{"integer expected"};
-  str.remove_prefix(end - str.data());
+  skip_whitespace(str);
+  auto result = std::from_chars(str.data(), str.data() + str.size(), value);
+  if (result.ptr == str.data()) throw std::invalid_argument{"integer expected"};
+  str.remove_prefix(result.ptr - str.data());
 }
 inline void parse_value(string_view& str, int64_t& value) {
-  char* end = nullptr;
-  value     = (int64_t)strtoll(str.data(), &end, 10);
-  if (str.data() == end) throw std::invalid_argument{"integer expected"};
-  str.remove_prefix(end - str.data());
+  skip_whitespace(str);
+  auto result = std::from_chars(str.data(), str.data() + str.size(), value);
+  if (result.ptr == str.data()) throw std::invalid_argument{"integer expected"};
+  str.remove_prefix(result.ptr - str.data());
 }
 inline void parse_value(string_view& str, uint8_t& value) {
-  char* end = nullptr;
-  value     = (uint8_t)strtoul(str.data(), &end, 10);
-  if (str.data() == end) throw std::invalid_argument{"integer expected"};
-  str.remove_prefix(end - str.data());
+  skip_whitespace(str);
+  auto result = std::from_chars(str.data(), str.data() + str.size(), value);
+  if (result.ptr == str.data()) throw std::invalid_argument{"integer expected"};
+  str.remove_prefix(result.ptr - str.data());
 }
 inline void parse_value(string_view& str, uint16_t& value) {
-  char* end = nullptr;
-  value     = (uint16_t)strtoul(str.data(), &end, 10);
-  if (str.data() == end) throw std::invalid_argument{"integer expected"};
-  str.remove_prefix(end - str.data());
+  skip_whitespace(str);
+  auto result = std::from_chars(str.data(), str.data() + str.size(), value);
+  if (result.ptr == str.data()) throw std::invalid_argument{"integer expected"};
+  str.remove_prefix(result.ptr - str.data());
 }
 inline void parse_value(string_view& str, uint32_t& value) {
-  char* end = nullptr;
-  value     = (uint32_t)strtoul(str.data(), &end, 10);
-  if (str.data() == end) throw std::invalid_argument{"integer expected"};
-  str.remove_prefix(end - str.data());
+  skip_whitespace(str);
+  auto result = std::from_chars(str.data(), str.data() + str.size(), value);
+  if (result.ptr == str.data()) throw std::invalid_argument{"integer expected"};
+  str.remove_prefix(result.ptr - str.data());
 }
 inline void parse_value(string_view& str, uint64_t& value) {
-  char* end = nullptr;
-  value     = (uint64_t)strtoull(str.data(), &end, 10);
-  if (str.data() == end) throw std::invalid_argument{"integer expected"};
-  str.remove_prefix(end - str.data());
+  skip_whitespace(str);
+  auto result = std::from_chars(str.data(), str.data() + str.size(), value);
+  if (result.ptr == str.data()) throw std::invalid_argument{"integer expected"};
+  str.remove_prefix(result.ptr - str.data());
 }
 inline void parse_value(string_view& str, float& value) {
   char* end = nullptr;

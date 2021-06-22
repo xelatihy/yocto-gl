@@ -1583,7 +1583,7 @@ template <typename T>
 static vector<string> make_names(const vector<T>& elements,
     const vector<string>& names, const string& prefix) {
   if (names.size() == elements.size()) return names;
-  auto nnames = vector<string>();
+  auto nnames = vector<string>(elements.size());
   for (auto idx : range(elements.size())) {
     // there are much better ways to do this, but fine for now
     auto num_str  = std::to_string(idx + 1);
