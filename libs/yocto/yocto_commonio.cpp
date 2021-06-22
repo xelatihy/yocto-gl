@@ -249,6 +249,11 @@ void save_text(const string& filename, const string& text) {
 }
 
 // Load a binary file
+vector<byte> load_binary(const string& filename) {
+  auto data = vector<byte>{};
+  load_binary(filename, data);
+  return data;
+}
 void load_binary(const string& filename, vector<byte>& data) {
   // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
   auto fs = open_file(filename, "rb");

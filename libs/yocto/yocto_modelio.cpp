@@ -182,6 +182,25 @@ inline void remove_comment(
   }
 }
 
+// Read a line
+inline bool read_line(string_view& str, string_view& line) {
+  if (str.empty()) return false;
+  auto data = str.data();
+  auto size = (size_t)0;
+  while (!str.empty()) {
+    if (str.front() == '\n') {
+      str.remove_prefix(1);
+      size++;
+      break;
+    } else {
+      str.remove_prefix(1);
+      size++;
+    }
+  }
+  line = {data, size};
+  return true;
+}
+
 // Parse values from a string
 inline void parse_value(string_view& str, string_view& value) {
   skip_whitespace(str);
@@ -303,6 +322,49 @@ inline void parse_value(string_view& str, frame3f& value) {
   for (auto i = 0; i < 4; i++) parse_value(str, value[i]);
 }
 
+template <typename T>
+inline void read_value(string_view& str, T& value) {
+  if (str.size() < sizeof(value)) throw std::out_of_range{"read error"};
+  memcpy(&value, str.data(), sizeof(T));
+  str.remove_prefix(sizeof(T));
+}
+
+// Write data from a file
+template <typename T>
+inline void write_value(vector<byte>& data, const T& value) {
+  if constexpr (sizeof(T) == 1) {
+    data.push_back(*(byte*)&value);
+  } else {
+    data.insert(data.end(), (byte*)(&value), (byte*)(&value) + sizeof(T));
+  }
+}
+
+template <typename T>
+inline T swap_endian(T value) {
+  // https://stackoverflow.com/questions/105252/how-do-i-convert-between-big-endian-and-little-endian-values-in-c
+  static_assert(sizeof(char) == 1, "sizeof(char) == 1");
+  union {
+    T             value;
+    unsigned char bytes[sizeof(T)];
+  } source, dest;
+  source.value = value;
+  for (auto k = (size_t)0; k < sizeof(T); k++)
+    dest.bytes[k] = source.bytes[sizeof(T) - k - 1];
+  return dest.value;
+}
+
+template <typename T>
+inline void read_value(string_view& fs, T& value, bool big_endian) {
+  read_value(fs, value);
+  if (big_endian) value = swap_endian(value);
+}
+
+template <typename T>
+inline void write_value(vector<byte>& data, const T& value_, bool big_endian) {
+  auto value = big_endian ? _swap_endian(value_) : value_;
+  return write_value(data, value);
+}
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -331,19 +393,19 @@ void load_ply(const string& filename, ply_model& ply) {
       {"uint32", ply_type::u32}, {"uint64", ply_type::u64},
       {"float32", ply_type::f32}, {"float64", ply_type::f64}};
 
-  // open file
-  auto fs = open_file(filename, "rb");
+  // load data
+  auto data = load_binary(filename);
 
   // parsing checks
   auto first_line = true;
   auto end_header = false;
 
   // read header ---------------------------------------------
-  auto buffer = array<char, 4096>{};
-  while (read_line(fs, buffer)) {
+  auto data_view = string_view{(const char*)data.data(), data.size()};
+  auto str       = string_view{};
+  while (read_line(data_view, str)) {
     try {
       // str
-      auto str = string_view{buffer.data()};
       remove_comment(str);
       skip_whitespace(str);
       if (str.empty()) continue;
@@ -438,12 +500,10 @@ void load_ply(const string& filename, ply_model& ply) {
 
   // read data -------------------------------------
   if (ply.format == ply_format::ascii) {
-    auto buffer = array<char, 4096>{};
     for (auto& elem : ply.elements) {
       for (auto idx = 0; idx < elem.count; idx++) {
-        if (!read_line(fs, buffer)) throw io_error::read_error(filename);
+        if (!read_line(data_view, str)) throw io_error::read_error(filename);
         try {
-          auto str = string_view{buffer.data()};
           for (auto& prop : elem.properties) {
             if (prop.is_list) parse_value(str, prop.ldata_u8.emplace_back());
             auto vcount = prop.is_list ? prop.ldata_u8.back() : 1;
@@ -493,40 +553,40 @@ void load_ply(const string& filename, ply_model& ply) {
       for (auto idx = 0; idx < elem.count; idx++) {
         for (auto& prop : elem.properties) {
           if (prop.is_list) {
-            read_value(fs, prop.ldata_u8.emplace_back(), big_endian);
+            read_value(data_view, prop.ldata_u8.emplace_back(), big_endian);
           }
           auto vcount = prop.is_list ? prop.ldata_u8.back() : 1;
           for (auto i = 0; i < vcount; i++) {
             switch (prop.type) {
               case ply_type::i8:
-                read_value(fs, prop.data_i8.emplace_back(), big_endian);
+                read_value(data_view, prop.data_i8.emplace_back(), big_endian);
                 break;
               case ply_type::i16:
-                read_value(fs, prop.data_i16.emplace_back(), big_endian);
+                read_value(data_view, prop.data_i16.emplace_back(), big_endian);
                 break;
               case ply_type::i32:
-                read_value(fs, prop.data_i32.emplace_back(), big_endian);
+                read_value(data_view, prop.data_i32.emplace_back(), big_endian);
                 break;
               case ply_type::i64:
-                read_value(fs, prop.data_i64.emplace_back(), big_endian);
+                read_value(data_view, prop.data_i64.emplace_back(), big_endian);
                 break;
               case ply_type::u8:
-                read_value(fs, prop.data_u8.emplace_back(), big_endian);
+                read_value(data_view, prop.data_u8.emplace_back(), big_endian);
                 break;
               case ply_type::u16:
-                read_value(fs, prop.data_u16.emplace_back(), big_endian);
+                read_value(data_view, prop.data_u16.emplace_back(), big_endian);
                 break;
               case ply_type::u32:
-                read_value(fs, prop.data_u32.emplace_back(), big_endian);
+                read_value(data_view, prop.data_u32.emplace_back(), big_endian);
                 break;
               case ply_type::u64:
-                read_value(fs, prop.data_u64.emplace_back(), big_endian);
+                read_value(data_view, prop.data_u64.emplace_back(), big_endian);
                 break;
               case ply_type::f32:
-                read_value(fs, prop.data_f32.emplace_back(), big_endian);
+                read_value(data_view, prop.data_f32.emplace_back(), big_endian);
                 break;
               case ply_type::f64:
-                read_value(fs, prop.data_f64.emplace_back(), big_endian);
+                read_value(data_view, prop.data_f64.emplace_back(), big_endian);
                 break;
             }
           }
@@ -549,121 +609,137 @@ void save_ply(const string& filename, const ply_model& ply) {
       {ply_format::binary_little_endian, "binary_little_endian"},
       {ply_format::binary_big_endian, "binary_big_endian"}};
 
-  // open file
-  auto fs = open_file(filename, "wb");
+  // buffer
+  auto header = string{};
 
   // header
-  format_values(fs, "ply\n");
-  format_values(fs, "format {} 1.0\n", format_map.at(ply.format));
-  format_values(fs, "comment Written by Yocto/GL\n");
-  format_values(fs, "comment https://github.com/xelatihy/yocto-gl\n");
-  for (auto& comment : ply.comments) format_values(fs, "comment {}\n", comment);
+  format_values(header, "ply\n");
+  format_values(header, "format {} 1.0\n", format_map.at(ply.format));
+  format_values(header, "comment Written by Yocto/GL\n");
+  format_values(header, "comment https://github.com/xelatihy/yocto-gl\n");
+  for (auto& comment : ply.comments)
+    format_values(header, "comment {}\n", comment);
   for (auto& elem : ply.elements) {
-    format_values(fs, "element {} {}\n", elem.name, (uint64_t)elem.count);
+    format_values(header, "element {} {}\n", elem.name, (uint64_t)elem.count);
     for (auto& prop : elem.properties) {
       if (prop.is_list) {
-        format_values(
-            fs, "property list uchar {} {}\n", type_map[prop.type], prop.name);
+        format_values(header, "property list uchar {} {}\n",
+            type_map[prop.type], prop.name);
       } else {
-        format_values(fs, "property {} {}\n", type_map[prop.type], prop.name);
+        format_values(
+            header, "property {} {}\n", type_map[prop.type], prop.name);
       }
     }
   }
 
-  format_values(fs, "end_header\n");
+  format_values(header, "end_header\n");
 
   // properties
   if (ply.format == ply_format::ascii) {
+    // buffer
+    auto buffer = header;
+
     for (auto& elem : ply.elements) {
       auto cur = vector<size_t>(elem.properties.size(), 0);
       for (auto idx = 0; idx < elem.count; idx++) {
         for (auto& prop : elem.properties) {
-          if (prop.is_list) format_values(fs, "{} ", (int)prop.ldata_u8[idx]);
+          if (prop.is_list)
+            format_values(buffer, "{} ", (int)prop.ldata_u8[idx]);
           auto vcount = prop.is_list ? prop.ldata_u8[idx] : 1;
           for (auto i = 0; i < vcount; i++) {
             switch (prop.type) {
               case ply_type::i8:
-                format_values(fs, "{} ", prop.data_i8[cur[idx]++]);
+                format_values(buffer, "{} ", prop.data_i8[cur[idx]++]);
                 break;
               case ply_type::i16:
-                format_values(fs, "{} ", prop.data_i16[cur[idx]++]);
+                format_values(buffer, "{} ", prop.data_i16[cur[idx]++]);
                 break;
               case ply_type::i32:
-                format_values(fs, "{} ", prop.data_i32[cur[idx]++]);
+                format_values(buffer, "{} ", prop.data_i32[cur[idx]++]);
                 break;
               case ply_type::i64:
-                format_values(fs, "{} ", prop.data_i64[cur[idx]++]);
+                format_values(buffer, "{} ", prop.data_i64[cur[idx]++]);
                 break;
               case ply_type::u8:
-                format_values(fs, "{} ", prop.data_u8[cur[idx]++]);
+                format_values(buffer, "{} ", prop.data_u8[cur[idx]++]);
                 break;
               case ply_type::u16:
-                format_values(fs, "{} ", prop.data_u16[cur[idx]++]);
+                format_values(buffer, "{} ", prop.data_u16[cur[idx]++]);
                 break;
               case ply_type::u32:
-                format_values(fs, "{} ", prop.data_u32[cur[idx]++]);
+                format_values(buffer, "{} ", prop.data_u32[cur[idx]++]);
                 break;
               case ply_type::u64:
-                format_values(fs, "{} ", prop.data_u64[cur[idx]++]);
+                format_values(buffer, "{} ", prop.data_u64[cur[idx]++]);
                 break;
               case ply_type::f32:
-                format_values(fs, "{} ", prop.data_f32[cur[idx]++]);
+                format_values(buffer, "{} ", prop.data_f32[cur[idx]++]);
                 break;
               case ply_type::f64:
-                format_values(fs, "{} ", prop.data_f64[cur[idx]++]);
+                format_values(buffer, "{} ", prop.data_f64[cur[idx]++]);
                 break;
             }
           }
-          format_values(fs, "\n");
+          format_values(buffer, "\n");
         }
       }
     }
+
+    // save file
+    save_text(filename, buffer);
   } else {
+    // buffer
+    auto buffer = vector<byte>{
+        (const byte*)header.data(), (const byte*)header.data() + header.size()};
+
     auto big_endian = ply.format == ply_format::binary_big_endian;
     for (auto& elem : ply.elements) {
       auto cur = vector<size_t>(elem.properties.size(), 0);
       for (auto idx = 0; idx < elem.count; idx++) {
         for (auto pidx = 0; pidx < elem.properties.size(); pidx++) {
           auto& prop = elem.properties[pidx];
-          if (prop.is_list) write_value(fs, prop.ldata_u8[idx], big_endian);
+          if (prop.is_list) write_value(buffer, prop.ldata_u8[idx], big_endian);
           auto vcount = prop.is_list ? prop.ldata_u8[idx] : 1;
           for (auto i = 0; i < vcount; i++) {
             switch (prop.type) {
               case ply_type::i8:
-                write_value(fs, prop.data_i8[cur[pidx]++], big_endian);
+                write_value(buffer, prop.data_i8[cur[pidx]++], big_endian);
                 break;
               case ply_type::i16:
-                write_value(fs, prop.data_i16[cur[pidx]++], big_endian);
+                write_value(buffer, prop.data_i16[cur[pidx]++], big_endian);
                 break;
               case ply_type::i32:
-                write_value(fs, prop.data_i32[cur[pidx]++], big_endian);
+                write_value(buffer, prop.data_i32[cur[pidx]++], big_endian);
                 break;
               case ply_type::i64:
-                write_value(fs, prop.data_i64[cur[pidx]++], big_endian);
+                write_value(buffer, prop.data_i64[cur[pidx]++], big_endian);
                 break;
               case ply_type::u8:
-                write_value(fs, prop.data_u8[cur[pidx]++], big_endian);
+                write_value(buffer, prop.data_u8[cur[pidx]++], big_endian);
                 break;
               case ply_type::u16:
-                write_value(fs, prop.data_u16[cur[pidx]++], big_endian);
+                write_value(buffer, prop.data_u16[cur[pidx]++], big_endian);
                 break;
               case ply_type::u32:
-                write_value(fs, prop.data_u32[cur[pidx]++], big_endian);
+                write_value(buffer, prop.data_u32[cur[pidx]++], big_endian);
                 break;
               case ply_type::u64:
-                write_value(fs, prop.data_u64[cur[pidx]++], big_endian);
+                write_value(buffer, prop.data_u64[cur[pidx]++], big_endian);
                 break;
               case ply_type::f32:
-                write_value(fs, prop.data_f32[cur[pidx]++], big_endian);
+                write_value(buffer, prop.data_f32[cur[pidx]++], big_endian);
                 break;
               case ply_type::f64:
-                write_value(fs, prop.data_f64[cur[pidx]++], big_endian);
+                write_value(buffer, prop.data_f64[cur[pidx]++], big_endian);
                 break;
             }
           }
         }
       }
     }
+
+    // save file
+    save_binary(filename, buffer);
   }
 }
 
@@ -1281,18 +1357,18 @@ static void load_mtl(const string& filename, obj_model& obj) {
     }
   };
 
-  // open file
-  auto fs = open_file(filename, "rt");
+  // load data
+  auto data = load_text(filename);
 
   // init parsing
   obj.materials.emplace_back();
 
   // read the file str by str
-  auto buffer = array<char, 4096>{};
-  while (read_line(fs, buffer)) {
+  auto data_view = string_view{data.data(), data.size()};
+  auto str       = string_view{};
+  while (read_line(data_view, str)) {
     try {
       // str
-      auto str = string_view{buffer.data()};
       remove_comment(str);
       skip_whitespace(str);
       if (str.empty()) continue;
@@ -1383,19 +1459,19 @@ static void load_obx(const string& filename, obj_model& obj) {
     }
   };
 
-  // open file
-  auto fs = open_file(filename, "rt");
+  // load data
+  auto data = load_text(filename);
 
   // init parsing
   obj.cameras.emplace_back();
   obj.environments.emplace_back();
 
   // read the file str by str
-  auto buffer = array<char, 4096>{};
-  while (read_line(fs, buffer)) {
+  auto data_view = string_view{data.data(), data.size()};
+  auto str       = string_view{};
+  while (read_line(data_view, str)) {
     try {
       // str
-      auto str = string_view{buffer.data()};
       remove_comment(str);
       skip_whitespace(str);
       if (str.empty()) continue;
@@ -1461,8 +1537,8 @@ static void load_obx(const string& filename, obj_model& obj) {
 // Read obj
 void load_obj(const string& filename, obj_model& obj, bool face_varying,
     bool split_materials) {
-  // open file
-  auto fs = open_file(filename, "rt");
+  // load data
+  auto data = load_text(filename);
 
   // parsing state
   auto opositions   = vector<vec3f>{};
@@ -1484,11 +1560,11 @@ void load_obj(const string& filename, obj_model& obj, bool face_varying,
   }
 
   // read the file str by str
-  auto buffer = array<char, 4096>{};
-  while (read_line(fs, buffer)) {
+  auto data_view = string_view{data.data(), data.size()};
+  auto str       = string_view{};
+  while (read_line(data_view, str)) {
     try {
       // str
-      auto str = string_view{buffer.data()};
       remove_comment(str);
       skip_whitespace(str);
       if (str.empty()) continue;
@@ -1678,8 +1754,8 @@ void load_obj(const string& filename, obj_model& obj, bool face_varying,
 
 // Read obj
 void load_obj(const string& filename, obj_shape& shape, bool face_varying) {
-  // open file
-  auto fs = open_file(filename, "rt");
+  // load data
+  auto data = load_text(filename);
 
   // parsing state
   auto material_map = unordered_map<string, int>{};
@@ -1689,11 +1765,11 @@ void load_obj(const string& filename, obj_shape& shape, bool face_varying) {
   shape = {};
 
   // read the file str by str
-  auto buffer = array<char, 4096>{};
-  while (read_line(fs, buffer)) {
+  auto data_view = string_view{data.data(), data.size()};
+  auto str       = string_view{};
+  while (read_line(data_view, str)) {
     try {
       // str
-      auto str = string_view{buffer.data()};
       remove_comment(str);
       skip_whitespace(str);
       if (str.empty()) continue;
@@ -1809,160 +1885,174 @@ inline void format_value(string& str, const obj_vertex& value) {
 
 // Save obj
 inline void save_mtl(const string& filename, const obj_model& obj) {
-  // open file
-  auto fs = open_file(filename, "wt");
+  // buffer
+  auto buffer = string{};
 
   // save comments
-  format_values(fs, "#\n");
-  format_values(fs, "# Written by Yocto/GL\n");
-  format_values(fs, "# https://github.com/xelatihy/yocto-gl\n");
-  format_values(fs, "#\n\n");
+  format_values(buffer, "#\n");
+  format_values(buffer, "# Written by Yocto/GL\n");
+  format_values(buffer, "# https://github.com/xelatihy/yocto-gl\n");
+  format_values(buffer, "#\n\n");
   for (auto& comment : obj.comments) {
-    format_values(fs, "# {}\n", comment);
+    format_values(buffer, "# {}\n", comment);
   }
-  format_values(fs, "\n");
+  format_values(buffer, "\n");
 
   // write material
   for (auto& material : obj.materials) {
-    format_values(fs, "newmtl {}\n", material.name);
-    format_values(fs, "illum {}\n", material.illum);
+    format_values(buffer, "newmtl {}\n", material.name);
+    format_values(buffer, "illum {}\n", material.illum);
     if (material.emission != zero3f)
-      format_values(fs, "Ke {}\n", material.emission);
+      format_values(buffer, "Ke {}\n", material.emission);
     if (material.ambient != zero3f)
-      format_values(fs, "Ka {}\n", material.ambient);
-    format_values(fs, "Kd {}\n", material.diffuse);
-    format_values(fs, "Ks {}\n", material.specular);
+      format_values(buffer, "Ka {}\n", material.ambient);
+    format_values(buffer, "Kd {}\n", material.diffuse);
+    format_values(buffer, "Ks {}\n", material.specular);
     if (material.reflection != zero3f)
-      format_values(fs, "Kr {}\n", material.reflection);
+      format_values(buffer, "Kr {}\n", material.reflection);
     if (material.transmission != zero3f)
-      format_values(fs, "Kt {}\n", material.transmission);
-    format_values(fs, "Ns {}\n", (int)material.exponent);
-    if (material.opacity != 1) format_values(fs, "d {}\n", material.opacity);
+      format_values(buffer, "Kt {}\n", material.transmission);
+    format_values(buffer, "Ns {}\n", (int)material.exponent);
+    if (material.opacity != 1)
+      format_values(buffer, "d {}\n", material.opacity);
     if (material.emission_tex >= 0)
       format_values(
-          fs, "map_Ke {}\n", obj.textures[material.emission_tex].path);
+          buffer, "map_Ke {}\n", obj.textures[material.emission_tex].path);
     if (material.diffuse_tex >= 0)
-      format_values(fs, "map_Kd {}\n", obj.textures[material.diffuse_tex].path);
+      format_values(
+          buffer, "map_Kd {}\n", obj.textures[material.diffuse_tex].path);
     if (material.specular_tex >= 0)
       format_values(
-          fs, "map_Ks {}\n", obj.textures[material.specular_tex].path);
+          buffer, "map_Ks {}\n", obj.textures[material.specular_tex].path);
     if (material.transmission_tex >= 0)
       format_values(
-          fs, "map_Kt {}\n", obj.textures[material.transmission_tex].path);
+          buffer, "map_Kt {}\n", obj.textures[material.transmission_tex].path);
     if (material.reflection_tex >= 0)
       format_values(
-          fs, "map_Kr {}\n", obj.textures[material.reflection_tex].path);
+          buffer, "map_Kr {}\n", obj.textures[material.reflection_tex].path);
     if (material.exponent_tex >= 0)
       format_values(
-          fs, "map_Ns {}\n", obj.textures[material.exponent_tex].path);
+          buffer, "map_Ns {}\n", obj.textures[material.exponent_tex].path);
     if (material.opacity_tex >= 0)
-      format_values(fs, "map_d {}\n", obj.textures[material.opacity_tex].path);
-    if (material.bump_tex >= 0)
-      format_values(fs, "map_bump {}\n", obj.textures[material.bump_tex].path);
-    if (material.displacement_tex >= 0)
       format_values(
-          fs, "map_disp {}\n", obj.textures[material.displacement_tex].path);
+          buffer, "map_d {}\n", obj.textures[material.opacity_tex].path);
+    if (material.bump_tex >= 0)
+      format_values(
+          buffer, "map_bump {}\n", obj.textures[material.bump_tex].path);
+    if (material.displacement_tex >= 0)
+      format_values(buffer, "map_disp {}\n",
+          obj.textures[material.displacement_tex].path);
     if (material.normal_tex >= 0)
       format_values(
-          fs, "map_norm {}\n", obj.textures[material.normal_tex].path);
-    format_values(fs, "\n");
+          buffer, "map_norm {}\n", obj.textures[material.normal_tex].path);
+    format_values(buffer, "\n");
   }
+
+  // save file
+  save_text(filename, buffer);
 }
 
 // Save obj
 inline void save_obx(const string& filename, const obj_model& obj) {
-  // open file
-  auto fs = open_file(filename, "wt");
+  // buffer
+  auto buffer = string{};
 
   // save comments
-  format_values(fs, "#\n");
-  format_values(fs, "# Written by Yocto/GL\n");
-  format_values(fs, "# https://github.com/xelatihy/yocto-gl\n");
-  format_values(fs, "#\n\n");
+  format_values(buffer, "#\n");
+  format_values(buffer, "# Written by Yocto/GL\n");
+  format_values(buffer, "# https://github.com/xelatihy/yocto-gl\n");
+  format_values(buffer, "#\n\n");
   for (auto& comment : obj.comments) {
-    format_values(fs, "# {}\n", comment);
+    format_values(buffer, "# {}\n", comment);
   }
-  format_values(fs, "\n");
+  format_values(buffer, "\n");
 
   // cameras
   for (auto& camera : obj.cameras) {
-    format_values(fs, "newCam {}\n", camera.name);
-    format_values(fs, "  Co {}\n", camera.ortho);
-    format_values(fs, "  Ca {}\n", camera.aspect);
-    format_values(fs, "  Cl {}\n", camera.lens);
-    format_values(fs, "  Cs {}\n", camera.film);
-    format_values(fs, "  Cf {}\n", camera.focus);
-    format_values(fs, "  Cp {}\n", camera.aperture);
-    format_values(fs, "  Cx {}\n", camera.frame);
+    format_values(buffer, "newCam {}\n", camera.name);
+    format_values(buffer, "  Co {}\n", camera.ortho);
+    format_values(buffer, "  Ca {}\n", camera.aspect);
+    format_values(buffer, "  Cl {}\n", camera.lens);
+    format_values(buffer, "  Cs {}\n", camera.film);
+    format_values(buffer, "  Cf {}\n", camera.focus);
+    format_values(buffer, "  Cp {}\n", camera.aperture);
+    format_values(buffer, "  Cx {}\n", camera.frame);
   }
 
   // environments
   for (auto& environment : obj.environments) {
-    format_values(fs, "newEnv {}\n", environment.name);
-    format_values(fs, "  Ee {}\n", environment.emission);
+    format_values(buffer, "newEnv {}\n", environment.name);
+    format_values(buffer, "  Ee {}\n", environment.emission);
     if (environment.emission_tex >= 0) {
       format_values(
-          fs, "  map_Ee {}\n", obj.textures[environment.emission_tex].path);
+          buffer, "  map_Ee {}\n", obj.textures[environment.emission_tex].path);
     }
-    format_values(fs, "  Ex {}\n", environment.frame);
+    format_values(buffer, "  Ex {}\n", environment.frame);
   }
+
+  // save file
+  save_text(filename, buffer);
 }
 
 // Save obj
 void save_obj(const string& filename, const obj_model& obj) {
-  // open file
-  auto fs = open_file(filename, "wt");
+  // buffer
+  auto buffer = string{};
 
   // save comments
-  format_values(fs, "#\n");
-  format_values(fs, "# Written by Yocto/GL\n");
-  format_values(fs, "# https://github.com/xelatihy/yocto-gl\n");
-  format_values(fs, "#\n\n");
+  format_values(buffer, "#\n");
+  format_values(buffer, "# Written by Yocto/GL\n");
+  format_values(buffer, "# https://github.com/xelatihy/yocto-gl\n");
+  format_values(buffer, "#\n\n");
   for (auto& comment : obj.comments) {
-    format_values(fs, "# {}\n", comment);
+    format_values(buffer, "# {}\n", comment);
   }
-  format_values(fs, "\n");
+  format_values(buffer, "\n");
 
   // save material library
   if (!obj.materials.empty()) {
-    format_values(fs, "mtllib {}\n\n",
+    format_values(buffer, "mtllib {}\n\n",
         replace_extension(path_filename(filename), ".mtl"));
   }
 
   // save objects
   auto vert_size = obj_vertex{0, 0, 0};
   for (auto& shape : obj.shapes) {
-    format_values(fs, "o {}\n", shape.name);
-    for (auto& p : shape.positions) format_values(fs, "v {}\n", p);
-    for (auto& n : shape.normals) format_values(fs, "vn {}\n", n);
-    for (auto& t : shape.texcoords) format_values(fs, "vt {}\n", t);
+    format_values(buffer, "o {}\n", shape.name);
+    for (auto& p : shape.positions) format_values(buffer, "v {}\n", p);
+    for (auto& n : shape.normals) format_values(buffer, "vn {}\n", n);
+    for (auto& t : shape.texcoords) format_values(buffer, "vt {}\n", t);
     auto cur_material = -1, cur_vertex = 0;
     for (auto& element : shape.elements) {
       if (!obj.materials.empty() && cur_material != element.material) {
-        format_values(fs, "usemtl {}\n", obj.materials[element.material].name);
+        format_values(
+            buffer, "usemtl {}\n", obj.materials[element.material].name);
         cur_material = element.material;
       }
       if (element.etype == obj_etype::face) {
-        format_values(fs, "{}", "f");
+        format_values(buffer, "{}", "f");
       } else if (element.etype == obj_etype::line) {
-        format_values(fs, "{}", "l");
+        format_values(buffer, "{}", "l");
       } else if (element.etype == obj_etype::point) {
-        format_values(fs, "{}", "p");
+        format_values(buffer, "{}", "p");
       }
       for (auto c = 0; c < element.size; c++) {
         auto vert = shape.vertices[cur_vertex++];
         if (vert.position != 0) vert.position += vert_size.position;
         if (vert.normal != 0) vert.normal += vert_size.normal;
         if (vert.texcoord != 0) vert.texcoord += vert_size.texcoord;
-        format_values(fs, " {}", vert);
+        format_values(buffer, " {}", vert);
       }
-      format_values(fs, "\n");
+      format_values(buffer, "\n");
     }
-    format_values(fs, "\n");
+    format_values(buffer, "\n");
     vert_size.position += (int)shape.positions.size();
     vert_size.normal += (int)shape.normals.size();
     vert_size.texcoord += (int)shape.texcoords.size();
   }
+
+  // save file
+  save_text(filename, buffer);
 
   // save mtl
   if (!obj.materials.empty()) {
@@ -1985,41 +2075,44 @@ void save_obj(const string& filename, const obj_model& obj) {
 
 // Save obj
 void save_obj(const string& filename, const obj_shape& shape) {
-  // open file
-  auto fs = open_file(filename, "wt");
+  // buffer
+  auto buffer = string{};
 
   // save comments
-  format_values(fs, "#\n");
-  format_values(fs, "# Written by Yocto/GL\n");
-  format_values(fs, "# https://github.com/xelatihy/yocto-gl\n");
-  format_values(fs, "#\n\n");
-  format_values(fs, "\n");
+  format_values(buffer, "#\n");
+  format_values(buffer, "# Written by Yocto/GL\n");
+  format_values(buffer, "# https://github.com/xelatihy/yocto-gl\n");
+  format_values(buffer, "#\n\n");
+  format_values(buffer, "\n");
 
   // save objects
-  format_values(fs, "o {}\n", shape.name);
-  for (auto& p : shape.positions) format_values(fs, "v {}\n", p);
-  for (auto& n : shape.normals) format_values(fs, "vn {}\n", n);
-  for (auto& t : shape.texcoords) format_values(fs, "vt {}\n", t);
+  format_values(buffer, "o {}\n", shape.name);
+  for (auto& p : shape.positions) format_values(buffer, "v {}\n", p);
+  for (auto& n : shape.normals) format_values(buffer, "vn {}\n", n);
+  for (auto& t : shape.texcoords) format_values(buffer, "vt {}\n", t);
   auto cur_material = -1, cur_vertex = 0;
   for (auto& element : shape.elements) {
     if (cur_material != element.material) {
       format_values(
-          fs, "usemtl {}\n", "material" + std::to_string(element.material));
+          buffer, "usemtl {}\n", "material" + std::to_string(element.material));
       cur_material = element.material;
     }
     if (element.etype == obj_etype::face) {
-      format_values(fs, "{}", "f");
+      format_values(buffer, "{}", "f");
     } else if (element.etype == obj_etype::line) {
-      format_values(fs, "{}", "l");
+      format_values(buffer, "{}", "l");
     } else if (element.etype == obj_etype::point) {
-      format_values(fs, "{}", "p");
+      format_values(buffer, "{}", "p");
     }
     for (auto c = 0; c < element.size; c++) {
       auto& vert = shape.vertices[cur_vertex++];
-      format_values(fs, " {}", vert);
+      format_values(buffer, " {}", vert);
     }
-    format_values(fs, "\n");
+    format_values(buffer, "\n");
   }
+
+  // save file
+  save_text(filename, buffer);
 }
 
 // Load and save obj
@@ -2498,12 +2591,13 @@ stl_model load_stl(const string& filename, bool unique_vertices) {
 void load_stl(const string& filename, stl_model& stl, bool unique_vertices) {
   stl.shapes.clear();
 
-  // open file
-  auto fs = open_file(filename, "rb");
+  // load data
+  auto data      = load_binary(filename);
+  auto data_view = string_view{(const char*)data.data(), data.size()};
 
   // assume it is binary and read hader
   auto header = array<char, 80>{};
-  read_value(fs, header);
+  read_value(data_view, header);
 
   // check if binary
   auto binary = header[0] != 's' || header[1] != 'o' || header[2] != 'l' ||
@@ -2512,35 +2606,30 @@ void load_stl(const string& filename, stl_model& stl, bool unique_vertices) {
   // check size in case the binary had a bad header
   if (!binary) {
     auto ntriangles = (uint32_t)0;
-    read_value(fs, ntriangles);
-    fseek(fs.fs, 0, SEEK_SET);
-    fseek(fs.fs, 0, SEEK_END);
-    auto length = ftell(fs.fs);
-    fseek(fs.fs, 0, SEEK_SET);
-    auto size = 80 + 4 + (4 * 12 + 2) * (size_t)ntriangles;
-    binary    = length == size;
+    read_value(data_view, ntriangles);
+    auto length = data.size();
+    auto size   = 80 + 4 + (4 * 12 + 2) * (size_t)ntriangles;
+    binary      = length == size;
   }
-
-  // close file
-  close_file(fs);
 
   // switch on type
   if (binary) {
-    // open file
-    auto fs = open_file(filename, "rb");
+    // load data
+    auto data      = load_binary(filename);
+    auto data_view = string_view{(const char*)data.data(), data.size()};
 
     // skip header
     auto header = array<char, 80>{};
-    read_value(fs, header);
+    read_value(data_view, header);
 
     // read shapes until the end
     auto ntriangles = (uint32_t)0;
-    while (is_eof(fs)) {
+    while (!data_view.empty()) {
       // append shape
       auto& shape = stl.shapes.emplace_back();
 
       // read num triangles
-      read_value(fs, ntriangles);
+      read_value(data_view, ntriangles);
 
       // resize buffers
       shape.fnormals.resize(ntriangles);
@@ -2550,32 +2639,33 @@ void load_stl(const string& filename, stl_model& stl, bool unique_vertices) {
       // read all data
       for (auto triangle_id = 0; triangle_id < (int)ntriangles; triangle_id++) {
         // read triangle data
-        read_value(fs, shape.fnormals[triangle_id]);
-        read_value(fs, shape.positions[triangle_id * 3 + 0]);
-        read_value(fs, shape.positions[triangle_id * 3 + 1]);
-        read_value(fs, shape.positions[triangle_id * 3 + 2]);
+        read_value(data_view, shape.fnormals[triangle_id]);
+        read_value(data_view, shape.positions[triangle_id * 3 + 0]);
+        read_value(data_view, shape.positions[triangle_id * 3 + 1]);
+        read_value(data_view, shape.positions[triangle_id * 3 + 2]);
         shape.triangles[triangle_id] = {
             triangle_id * 3 + 0, triangle_id * 3 + 1, triangle_id * 3 + 2};
         // read unused attrobute count
         auto attribute_count = (uint16_t)0;
-        read_value(fs, attribute_count);
+        read_value(data_view, attribute_count);
       }
     }
 
     // check if read at least one
     if (stl.shapes.empty()) throw io_error::read_error(filename);
   } else {
-    // if ascii, re-open the file as text
-    auto fs = open_file(filename, "rt");
+    // load data
+    auto data = load_text(filename);
 
     // parse state
     auto in_solid = false, in_facet = false, in_loop = false;
-    // raed all lines
-    auto buffer = array<char, 4096>{};
-    while (read_line(fs, buffer)) {
+
+    // read all lines
+    auto data_view = string_view{data.data(), data.size()};
+    auto str       = string_view{};
+    while (read_line(data_view, str)) {
       try {
         // str
-        auto str = string_view{buffer.data()};
         remove_comment(str);
         skip_whitespace(str);
         if (str.empty()) continue;
@@ -2670,20 +2760,20 @@ void save_stl(const string& filename, const stl_model& stl, bool ascii) {
     return normalize(cross(p1 - p0, p2 - p0));
   };
 
-  // open file
-  auto fs = open_file(filename, ascii ? "wt" : "wb");
-
   // switch on format
   if (!ascii) {
+    // buffer
+    auto buffer = vector<byte>{};
+
     // header
     auto header = array<char, 80>{0};
     snprintf(header.data(), header.size(), "Binary STL - Written by Yocto/GL");
-    write_value(fs, header);
+    write_value(buffer, header);
 
     // write shapes
     for (auto& shape : stl.shapes) {
       auto ntriangles = (uint32_t)shape.triangles.size();
-      write_value(fs, ntriangles);
+      write_value(buffer, ntriangles);
       for (auto triangle_idx = 0; triangle_idx < shape.triangles.size();
            triangle_idx++) {
         auto& triangle = shape.triangles[triangle_idx];
@@ -2692,17 +2782,23 @@ void save_stl(const string& filename, const stl_model& stl, bool ascii) {
                              : triangle_normal(shape.positions[triangle.x],
                                  shape.positions[triangle.y],
                                  shape.positions[triangle.z]);
-        write_value(fs, fnormal);
-        write_value(fs, shape.positions[triangle.x]);
-        write_value(fs, shape.positions[triangle.y]);
-        write_value(fs, shape.positions[triangle.z]);
+        write_value(buffer, fnormal);
+        write_value(buffer, shape.positions[triangle.x]);
+        write_value(buffer, shape.positions[triangle.y]);
+        write_value(buffer, shape.positions[triangle.z]);
         auto attribute_count = (uint16_t)0;
-        write_value(fs, attribute_count);
+        write_value(buffer, attribute_count);
       }
     }
+
+    // save file
+    save_binary(filename, buffer);
   } else {
+    // buffer
+    auto buffer = string{};
+
     for (auto& shape : stl.shapes) {
-      format_values(fs, "solid \n");
+      format_values(buffer, "solid \n");
       for (auto triangle_idx = 0; triangle_idx < shape.triangles.size();
            triangle_idx++) {
         auto& triangle = shape.triangles[triangle_idx];
@@ -2711,16 +2807,19 @@ void save_stl(const string& filename, const stl_model& stl, bool ascii) {
                              : triangle_normal(shape.positions[triangle.x],
                                  shape.positions[triangle.y],
                                  shape.positions[triangle.z]);
-        format_values(fs, "facet normal {}\n", fnormal);
-        format_values(fs, "outer loop\n");
-        format_values(fs, "vertex {}\n", shape.positions[triangle.x]);
-        format_values(fs, "vertex {}\n", shape.positions[triangle.y]);
-        format_values(fs, "vertex {}\n", shape.positions[triangle.z]);
-        format_values(fs, "endloop\n");
-        format_values(fs, "endfacet\n");
+        format_values(buffer, "facet normal {}\n", fnormal);
+        format_values(buffer, "outer loop\n");
+        format_values(buffer, "vertex {}\n", shape.positions[triangle.x]);
+        format_values(buffer, "vertex {}\n", shape.positions[triangle.y]);
+        format_values(buffer, "vertex {}\n", shape.positions[triangle.z]);
+        format_values(buffer, "endloop\n");
+        format_values(buffer, "endfacet\n");
       }
-      format_values(fs, "endsolid \n");
+      format_values(buffer, "endsolid \n");
     }
+
+    // save file
+    save_text(filename, buffer);
   }
 }
 
@@ -3079,6 +3178,37 @@ inline bool read_pbrt_cmdline(file_stream& fs, string& cmd) {
     cmd += line;
     cmd += " ";
     pos = ftell(fs.fs);
+  }
+  return found;
+}
+
+// Read a pbrt command from file
+inline bool read_pbrt_cmdline(string_view& str, string& cmd) {
+  cmd.clear();
+  auto found = false;
+  auto copy  = str;
+  auto line  = string_view{};
+  while (read_line(str, line)) {
+    // line
+    remove_comment(line, '#', true);
+    skip_whitespace(line);
+    if (line.empty()) continue;
+
+    // check if command
+    auto is_cmd = line[0] >= 'A' && line[0] <= 'Z';
+    if (is_cmd) {
+      if (found) {
+        str = copy;
+        return true;
+      } else {
+        found = true;
+      }
+    } else if (!found) {
+      return false;
+    }
+    cmd += line;
+    cmd += " ";
+    copy = str;
   }
   return found;
 }
@@ -4283,8 +4413,8 @@ inline void load_pbrt(const string& filename, pbrt_model& pbrt,
     unordered_map<string, pbrt_medium>&   named_mediums,
     unordered_map<string, vector<int>>&   named_objects,
     const string& ply_dirname, bool ply_meshes) {
-  // open file
-  auto fs = open_file(filename, "rt");
+  // load data
+  auto data = load_text(filename);
 
   // helpers
   auto set_transform = [](pbrt_stack_element& ctx, const frame3f& xform) {
@@ -4300,8 +4430,9 @@ inline void load_pbrt(const string& filename, pbrt_model& pbrt,
   if (ctx.stack.empty()) ctx.stack.emplace_back();
 
   // parse command by command
-  auto line = ""s;
-  while (read_pbrt_cmdline(fs, line)) {
+  auto data_view = string_view{data.data(), data.size()};
+  auto line      = ""s;
+  while (read_pbrt_cmdline(data_view, line)) {
     try {
       auto str = string_view{line};
       // get command
@@ -4655,18 +4786,18 @@ inline void format_value(string& str, const vector<pbrt_value>& values) {
 
 void save_pbrt(
     const string& filename, const pbrt_model& pbrt, bool ply_meshes) {
-  // open file
-  auto fs = open_file(filename, "wt");
+  // buffer
+  auto buffer = string{};
 
   // save comments
-  format_values(fs, "#\n");
-  format_values(fs, "# Written by Yocto/GL\n");
-  format_values(fs, "# https://github.com/xelatihy/yocto-gl\n");
-  format_values(fs, "#\n\n");
+  format_values(buffer, "#\n");
+  format_values(buffer, "# Written by Yocto/GL\n");
+  format_values(buffer, "# https://github.com/xelatihy/yocto-gl\n");
+  format_values(buffer, "#\n\n");
   for (auto& comment : pbrt.comments) {
-    format_values(fs, "# {}\n", comment);
+    format_values(buffer, "# {}\n", comment);
   }
-  format_values(fs, "\n");
+  format_values(buffer, "\n");
 
   for (auto& camera : pbrt.cameras) {
     auto command = pbrt_command{};
@@ -4676,7 +4807,7 @@ void save_pbrt(
     command.values.push_back(
         make_pbrt_value("yresolution", camera.resolution.y));
     command.values.push_back(make_pbrt_value("filename", "image.exr"s));
-    format_values(fs, "Film \"{}\" {}\n", command.type, command.values);
+    format_values(buffer, "Film \"{}\" {}\n", command.type, command.values);
   }
 
   for (auto& camera : pbrt.cameras) {
@@ -4685,12 +4816,12 @@ void save_pbrt(
     command.frame = camera.frame;
     command.values.push_back(make_pbrt_value(
         "fov", 2 * tan(0.036f / (2 * camera.lens)) * 180 / pif));
-    format_values(fs, "LookAt {} {} {}\n", command.frame.o,
+    format_values(buffer, "LookAt {} {} {}\n", command.frame.o,
         command.frame.o - command.frame.z, command.frame.y);
-    format_values(fs, "Camera \"{}\" {}\n", command.type, command.values);
+    format_values(buffer, "Camera \"{}\" {}\n", command.type, command.values);
   }
 
-  format_values(fs, "\nWorldBegin\n\n");
+  format_values(buffer, "\nWorldBegin\n\n");
 
   for (auto& light : pbrt.lights) {
     auto command  = pbrt_command{};
@@ -4702,10 +4833,11 @@ void save_pbrt(
       command.type = "point";
       command.values.push_back(make_pbrt_value("I", light.emission));
     }
-    format_values(fs, "AttributeBegin\n");
-    format_values(fs, "Transform {}\n", frame_to_mat(command.frame));
-    format_values(fs, "LightSource \"{}\" {}\n", command.type, command.values);
-    format_values(fs, "AttributeEnd\n");
+    format_values(buffer, "AttributeBegin\n");
+    format_values(buffer, "Transform {}\n", frame_to_mat(command.frame));
+    format_values(
+        buffer, "LightSource \"{}\" {}\n", command.type, command.values);
+    format_values(buffer, "AttributeEnd\n");
   }
 
   for (auto& environment : pbrt.environments) {
@@ -4715,10 +4847,11 @@ void save_pbrt(
     command.values.push_back(make_pbrt_value("L", environment.emission));
     command.values.push_back(
         make_pbrt_value("mapname", environment.emission_tex));
-    format_values(fs, "AttributeBegin\n");
-    format_values(fs, "Transform {}\n", frame_to_mat(command.frame));
-    format_values(fs, "LightSource \"{}\" {}\n", command.type, command.values);
-    format_values(fs, "AttributeEnd\n");
+    format_values(buffer, "AttributeBegin\n");
+    format_values(buffer, "Transform {}\n", frame_to_mat(command.frame));
+    format_values(
+        buffer, "LightSource \"{}\" {}\n", command.type, command.values);
+    format_values(buffer, "AttributeEnd\n");
   }
 
   auto reflectivity_to_eta = [](const vec3f& reflectivity) {
@@ -4776,8 +4909,9 @@ void save_pbrt(
       } break;
     }
 
-    format_values(fs, "MakeNamedMaterial \"{}\" \"string type\" \"{}\" {}\n",
-        material.name, command.type, command.values);
+    format_values(buffer,
+        "MakeNamedMaterial \"{}\" \"string type\" \"{}\" {}\n", material.name,
+        command.type, command.values);
   }
 
   auto object_id = 0;
@@ -4813,29 +4947,32 @@ void save_pbrt(
     }
     auto object = "object" + std::to_string(object_id++);
     if (!shape.instances.empty())
-      format_values(fs, "ObjectBegin \"{}\"\n", object);
-    format_values(fs, "AttributeBegin\n");
-    format_values(fs, "Transform {}\n", frame_to_mat(shape.frame));
+      format_values(buffer, "ObjectBegin \"{}\"\n", object);
+    format_values(buffer, "AttributeBegin\n");
+    format_values(buffer, "Transform {}\n", frame_to_mat(shape.frame));
     if (material.emission != zero3f) {
       auto acommand = pbrt_command{};
       acommand.type = "diffuse";
       acommand.values.push_back(make_pbrt_value("L", material.emission));
-      format_values(
-          fs, "AreaLightSource \"{}\" {}\n", acommand.type, acommand.values);
+      format_values(buffer, "AreaLightSource \"{}\" {}\n", acommand.type,
+          acommand.values);
     }
-    format_values(fs, "NamedMaterial \"{}\"\n", material.name);
-    format_values(fs, "Shape \"{}\" {}\n", command.type, command.values);
-    format_values(fs, "AttributeEnd\n");
-    if (!shape.instances.empty()) format_values(fs, "ObjectEnd\n");
+    format_values(buffer, "NamedMaterial \"{}\"\n", material.name);
+    format_values(buffer, "Shape \"{}\" {}\n", command.type, command.values);
+    format_values(buffer, "AttributeEnd\n");
+    if (!shape.instances.empty()) format_values(buffer, "ObjectEnd\n");
     for (auto& iframe : shape.instances) {
-      format_values(fs, "AttributeBegin\n");
-      format_values(fs, "Transform {}\n", frame_to_mat(iframe));
-      format_values(fs, "ObjectInstance \"{}\"\n", object);
-      format_values(fs, "AttributeEnd\n");
+      format_values(buffer, "AttributeBegin\n");
+      format_values(buffer, "Transform {}\n", frame_to_mat(iframe));
+      format_values(buffer, "ObjectInstance \"{}\"\n", object);
+      format_values(buffer, "AttributeEnd\n");
     }
   }
 
-  format_values(fs, "\nWorldEnd\n\n");
+  format_values(buffer, "\nWorldEnd\n\n");
+
+  // save file
+  save_text(filename, buffer);
 }
 
 // Load/save pbrt
