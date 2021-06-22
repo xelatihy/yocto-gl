@@ -34,6 +34,7 @@
 
 #include <charconv>
 #include <cstdio>
+#include <cstring>
 #include <filesystem>
 #include <limits>
 
