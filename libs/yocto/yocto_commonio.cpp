@@ -38,7 +38,7 @@
 #include <filesystem>
 #include <limits>
 
-#include "ext/fast_float/fast_float.h"
+#include "ext/fast_float.h"
 #include "ext/json.hpp"
 
 // -----------------------------------------------------------------------------
