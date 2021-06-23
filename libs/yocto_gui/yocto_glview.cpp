@@ -70,16 +70,16 @@ static void update_image_params(const glinput_state& input,
 static bool uiupdate_image_params(
     const glinput_state& input, glimage_params& glparams) {
   // handle mouse
-  if (input.mouse_left && !input.widgets_active) {
-    glparams.center += input.mouse_pos - input.mouse_last;
-    return true;
+  if (input.mouse_left && input.modifier_alt && !input.widgets_active) {
+    if (input.modifier_ctrl) {
+      glparams.scale *= pow(
+          2.0f, (input.mouse_pos.y - input.mouse_last.y) * 0.001f);
+      return true;
+    } else {
+      glparams.center += input.mouse_pos - input.mouse_last;
+      return true;
+    }
   }
-  if (input.mouse_right && !input.widgets_active) {
-    glparams.scale *= pow(
-        2.0f, (input.mouse_pos.x - input.mouse_last.x) * 0.001f);
-    return true;
-  }
-  return false;
 }
 
 static bool uiupdate_camera_params(
