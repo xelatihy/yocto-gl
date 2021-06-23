@@ -84,18 +84,18 @@ static bool uiupdate_image_params(
 
 static bool uiupdate_camera_params(
     const glinput_state& input, camera_data& camera) {
-  if ((input.mouse_left || input.mouse_right) && !input.modifier_alt &&
-      !input.modifier_ctrl && !input.widgets_active) {
+  if (input.mouse_left && input.modifier_alt && !input.widgets_active) {
     auto dolly  = 0.0f;
     auto pan    = zero2f;
     auto rotate = zero2f;
-    if (input.mouse_left && !input.modifier_shift)
+    if (input.modifier_shift) {
+      pan   = (input.mouse_pos - input.mouse_last) * camera.focus / 200.0f;
+      pan.x = -pan.x;
+    } else if (input.modifier_ctrl) {
+      dolly = (input.mouse_pos.y - input.mouse_last.y) / 100.0f;
+    } else {
       rotate = (input.mouse_pos - input.mouse_last) / 100.0f;
-    if (input.mouse_right)
-      dolly = (input.mouse_pos.x - input.mouse_last.x) / 100.0f;
-    if (input.mouse_left && input.modifier_shift)
-      pan = (input.mouse_pos - input.mouse_last) * camera.focus / 200.0f;
-    pan.x               = -pan.x;
+    }
     auto [frame, focus] = camera_turntable(
         camera.frame, camera.focus, rotate, dolly, pan);
     if (camera.frame != frame || camera.focus != focus) {
