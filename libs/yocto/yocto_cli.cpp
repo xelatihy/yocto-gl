@@ -277,15 +277,17 @@ static void cli_to_schema(json_value& schema, const T& value,
       schema["type"] = "string";
     }
   } else if constexpr (cli_is_array_v<T>) {
-    schema["type"]      = "array";
-    schema["min_items"] = value.size();
-    schema["max_items"] = value.size();
-    cli_to_schema(schema["item"], T{}, choices, "item", "");
+    using V            = typename T::value_type;
+    schema["type"]     = "array";
+    schema["minItems"] = value.size();
+    schema["maxItems"] = value.size();
+    cli_to_schema(schema["items"], V{}, choices, "item", "");
   } else if constexpr (cli_is_vector_v<T>) {
-    schema["type"]      = "array";
-    schema["min_items"] = (size_t)0;
-    schema["max_items"] = std::numeric_limits<size_t>::max();
-    cli_to_schema(schema["item"], T{}, choices, "item", "");
+    using V            = typename T::value_type;
+    schema["type"]     = "array";
+    schema["minItems"] = (size_t)0;
+    schema["maxItems"] = (size_t)(1024 * 1024);
+    cli_to_schema(schema["items"], V{}, choices, "item", "");
   }
 }
 
@@ -652,9 +654,9 @@ static void arg_to_json(json_value& value, const json_value& schema,
     value = args[idx++];
   } else if (schema["type"] == "array") {
     value = json_array{};
-    if (idx + (size_t)schema["min_items"] >= args.size())
+    if (idx + (size_t)schema["minItems"] >= args.size())
       throw cli_error("missing value for " + name);
-    auto end = std::min(idx + (size_t)schema["max_items"], args.size());
+    auto end = std::min(idx + (size_t)schema["maxItems"], args.size());
     while (idx < end) {
       arg_to_json(
           value.emplace_back(), schema["items"], name, positional, args, idx);
@@ -771,9 +773,9 @@ static void validate_json(const json_value& value, const json_value& schema,
     } break;
     case json_type::array: {
       if (schema["type"] != "array") throw cli_error("bad value for " + name);
-      if ((size_t)schema["min_items"] > value.size())
+      if ((size_t)schema["minItems"] > value.size())
         throw cli_error("bad value for " + name);
-      if ((size_t)schema["max_items"] < value.size())
+      if ((size_t)schema["maxItems"] < value.size())
         throw cli_error("bad value for " + name);
       for (auto& item : value)
         validate_json(item, schema["items"], name, false);
