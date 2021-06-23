@@ -80,6 +80,7 @@ static bool uiupdate_image_params(
       return true;
     }
   }
+  return false;
 }
 
 static bool uiupdate_camera_params(

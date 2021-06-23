@@ -63,6 +63,42 @@ bvh_data make_bvh(const scene_data& scene, const trace_params& params) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// Convenience functions
+[[maybe_unused]] static vec3f eval_position(
+    const scene_data& scene, const bvh_intersection& intersection) {
+  return eval_position(scene, scene.instances[intersection.instance],
+      intersection.element, intersection.uv);
+}
+[[maybe_unused]] static vec3f eval_normal(
+    const scene_data& scene, const bvh_intersection& intersection) {
+  return eval_normal(scene, scene.instances[intersection.instance],
+      intersection.element, intersection.uv);
+}
+[[maybe_unused]] static vec3f eval_element_normal(
+    const scene_data& scene, const bvh_intersection& intersection) {
+  return eval_element_normal(
+      scene, scene.instances[intersection.instance], intersection.element);
+}
+[[maybe_unused]] static vec3f eval_shading_normal(const scene_data& scene,
+    const bvh_intersection& intersection, const vec3f& outgoing) {
+  return eval_shading_normal(scene, scene.instances[intersection.instance],
+      intersection.element, intersection.uv, outgoing);
+}
+[[maybe_unused]] static vec2f eval_texcoord(
+    const scene_data& scene, const bvh_intersection& intersection) {
+  return eval_texcoord(scene, scene.instances[intersection.instance],
+      intersection.element, intersection.uv);
+}
+[[maybe_unused]] static material_point eval_material(
+    const scene_data& scene, const bvh_intersection& intersection) {
+  return eval_material(scene, scene.instances[intersection.instance],
+      intersection.element, intersection.uv);
+}
+[[maybe_unused]] static bool is_volumetric(
+    const scene_data& scene, const bvh_intersection& intersection) {
+  return is_volumetric(scene, scene.instances[intersection.instance]);
+}
+
 // Evaluates/sample the BRDF scaled by the cosine of the incoming direction.
 static vec3f eval_emission(const material_point& material, const vec3f& normal,
     const vec3f& outgoing) {
@@ -391,13 +427,10 @@ static trace_result trace_path(const scene_data& scene, const bvh_data& bvh,
     // switch between surface and volume
     if (!in_volume) {
       // prepare shading point
-      auto  outgoing = -ray.d;
-      auto& instance = scene.instances[intersection.instance];
-      auto  element  = intersection.element;
-      auto  uv       = intersection.uv;
-      auto  position = eval_position(scene, instance, element, uv);
-      auto normal = eval_shading_normal(scene, instance, element, uv, outgoing);
-      auto material = eval_material(scene, instance, element, uv);
+      auto outgoing = -ray.d;
+      auto position = eval_position(scene, intersection);
+      auto normal   = eval_shading_normal(scene, intersection, outgoing);
+      auto material = eval_material(scene, intersection);
 
       // correct roughness
       if (params.nocaustics) {
@@ -445,10 +478,10 @@ static trace_result trace_path(const scene_data& scene, const bvh_data& bvh,
       }
 
       // update volume stack
-      if (is_volumetric(scene, instance) &&
+      if (is_volumetric(scene, intersection) &&
           dot(normal, outgoing) * dot(normal, incoming) < 0) {
         if (volume_stack.empty()) {
-          auto material = eval_material(scene, instance, element, uv);
+          auto material = eval_material(scene, intersection);
           volume_stack.push_back(material);
         } else {
           volume_stack.pop_back();
@@ -539,13 +572,10 @@ static trace_result trace_pathdirect(const scene_data& scene,
     // switch between surface and volume
     if (!in_volume) {
       // prepare shading point
-      auto  outgoing = -ray.d;
-      auto& instance = scene.instances[intersection.instance];
-      auto  element  = intersection.element;
-      auto  uv       = intersection.uv;
-      auto  position = eval_position(scene, instance, element, uv);
-      auto normal = eval_shading_normal(scene, instance, element, uv, outgoing);
-      auto material = eval_material(scene, instance, element, uv);
+      auto outgoing = -ray.d;
+      auto position = eval_position(scene, intersection);
+      auto normal   = eval_shading_normal(scene, intersection, outgoing);
+      auto material = eval_material(scene, intersection);
 
       // correct roughness
       if (params.nocaustics) {
@@ -619,10 +649,10 @@ static trace_result trace_pathdirect(const scene_data& scene,
       }
 
       // update volume stack
-      if (is_volumetric(scene, instance) &&
+      if (is_volumetric(scene, intersection) &&
           dot(normal, outgoing) * dot(normal, incoming) < 0) {
         if (volume_stack.empty()) {
-          auto material = eval_material(scene, instance, element, uv);
+          auto material = eval_material(scene, intersection);
           volume_stack.push_back(material);
         } else {
           volume_stack.pop_back();
@@ -718,13 +748,10 @@ static trace_result trace_pathmis(const scene_data& scene, const bvh_data& bvh,
     // switch between surface and volume
     if (!in_volume) {
       // prepare shading point
-      auto  outgoing = -ray.d;
-      auto& instance = scene.instances[intersection.instance];
-      auto  element  = intersection.element;
-      auto  uv       = intersection.uv;
-      auto  position = eval_position(scene, instance, element, uv);
-      auto normal = eval_shading_normal(scene, instance, element, uv, outgoing);
-      auto material = eval_material(scene, instance, element, uv);
+      auto outgoing = -ray.d;
+      auto position = eval_position(scene, intersection);
+      auto normal   = eval_shading_normal(scene, intersection, outgoing);
+      auto material = eval_material(scene, intersection);
 
       // correct roughness
       if (params.nocaustics) {
@@ -801,10 +828,10 @@ static trace_result trace_pathmis(const scene_data& scene, const bvh_data& bvh,
       }
 
       // update volume stack
-      if (is_volumetric(scene, instance) &&
+      if (is_volumetric(scene, intersection) &&
           dot(normal, outgoing) * dot(normal, incoming) < 0) {
         if (volume_stack.empty()) {
-          auto material = eval_material(scene, instance, element, uv);
+          auto material = eval_material(scene, intersection);
           volume_stack.push_back(material);
         } else {
           volume_stack.pop_back();
@@ -877,12 +904,9 @@ static trace_result trace_naive(const scene_data& scene, const bvh_data& bvh,
 
     // prepare shading point
     auto outgoing = -ray.d;
-    auto instance = scene.instances[intersection.instance];
-    auto element  = intersection.element;
-    auto uv       = intersection.uv;
-    auto position = eval_position(scene, instance, element, uv);
-    auto normal   = eval_shading_normal(scene, instance, element, uv, outgoing);
-    auto material = eval_material(scene, instance, element, uv);
+    auto position = eval_position(scene, intersection);
+    auto normal   = eval_shading_normal(scene, intersection, outgoing);
+    auto material = eval_material(scene, intersection);
 
     // handle opacity
     if (material.opacity < 1 && rand1f(rng) >= material.opacity) {
@@ -957,12 +981,9 @@ static trace_result trace_eyelight(const scene_data& scene, const bvh_data& bvh,
 
     // prepare shading point
     auto outgoing = -ray.d;
-    auto instance = scene.instances[intersection.instance];
-    auto element  = intersection.element;
-    auto uv       = intersection.uv;
-    auto position = eval_position(scene, instance, element, uv);
-    auto normal   = eval_shading_normal(scene, instance, element, uv, outgoing);
-    auto material = eval_material(scene, instance, element, uv);
+    auto position = eval_position(scene, intersection);
+    auto normal   = eval_shading_normal(scene, intersection, outgoing);
+    auto material = eval_material(scene, intersection);
 
     // handle opacity
     if (material.opacity < 1 && rand1f(rng) >= material.opacity) {
@@ -1026,12 +1047,9 @@ static trace_result trace_eyelightao(const scene_data& scene,
 
     // prepare shading point
     auto outgoing = -ray.d;
-    auto instance = scene.instances[intersection.instance];
-    auto element  = intersection.element;
-    auto uv       = intersection.uv;
-    auto position = eval_position(scene, instance, element, uv);
-    auto normal   = eval_shading_normal(scene, instance, element, uv, outgoing);
-    auto material = eval_material(scene, instance, element, uv);
+    auto position = eval_position(scene, intersection);
+    auto normal   = eval_shading_normal(scene, intersection, outgoing);
+    auto material = eval_material(scene, intersection);
 
     // handle opacity
     if (material.opacity < 1 && rand1f(rng) >= material.opacity) {
@@ -1084,14 +1102,11 @@ static trace_result trace_falsecolor(const scene_data& scene,
 
   // prepare shading point
   auto outgoing = -ray.d;
-  auto instance = scene.instances[intersection.instance];
-  auto element  = intersection.element;
-  auto uv       = intersection.uv;
-  auto position = eval_position(scene, instance, element, uv);
-  auto normal   = eval_shading_normal(scene, instance, element, uv, outgoing);
-  auto gnormal  = eval_element_normal(scene, instance, element);
-  auto texcoord = eval_texcoord(scene, instance, element, uv);
-  auto material = eval_material(scene, instance, element, uv);
+  auto position = eval_position(scene, intersection);
+  auto normal   = eval_shading_normal(scene, intersection, outgoing);
+  auto gnormal  = eval_element_normal(scene, intersection);
+  auto texcoord = eval_texcoord(scene, intersection);
+  auto material = eval_material(scene, intersection);
   auto delta    = is_delta(material) ? 1.0f : 0.0f;
 
   // hash color
