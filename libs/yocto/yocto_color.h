@@ -249,7 +249,7 @@ inline vec3f rgba_to_rgb(const vec4f& rgba) { return xyz(rgba); }
 
 // Apply contrast. Grey should be 0.18 for linear and 0.5 for gamma.
 inline vec3f lincontrast(const vec3f& rgb, float contrast, float grey) {
-  return max(zero3f, grey + (rgb - grey) * (contrast * 2));
+  return max({0, 0, 0}, grey + (rgb - grey) * (contrast * 2));
 }
 // Apply contrast in log2. Grey should be 0.18 for linear and 0.5 for gamma.
 inline vec3f logcontrast(const vec3f& rgb, float logcontrast, float grey) {
@@ -257,7 +257,7 @@ inline vec3f logcontrast(const vec3f& rgb, float logcontrast, float grey) {
   auto log_grey = log2(grey);
   auto log_ldr  = log2(rgb + epsilon);
   auto adjusted = log_grey + (log_ldr - log_grey) * (logcontrast * 2);
-  return max(zero3f, exp2(adjusted) - epsilon);
+  return max({0, 0, 0}, exp2(adjusted) - epsilon);
 }
 // Apply an s-shaped contrast.
 inline vec3f contrast(const vec3f& rgb, float contrast) {
@@ -267,7 +267,7 @@ inline vec3f contrast(const vec3f& rgb, float contrast) {
 inline vec3f saturate(
     const vec3f& rgb, float saturation, const vec3f& weights) {
   auto grey = dot(weights, rgb);
-  return max(zero3f, grey + (rgb - grey) * (saturation * 2));
+  return max({0, 0, 0}, grey + (rgb - grey) * (saturation * 2));
 }
 
 // Filmic tonemapping
@@ -277,7 +277,7 @@ inline vec3f tonemap_filmic(const vec3f& hdr_, bool accurate_fit = false) {
     auto hdr = hdr_ * 0.6f;  // brings it back to ACES range
     auto ldr = (hdr * hdr * 2.51f + hdr * 0.03f) /
                (hdr * hdr * 2.43f + hdr * 0.59f + 0.14f);
-    return max(zero3f, ldr);
+    return max({0, 0, 0}, ldr);
   } else {
     // https://github.com/TheRealMJP/BakingLab/blob/master/BakingLab/ACES.hlsl
     // sRGB => XYZ => D65_2_D60 => AP1 => RRT_SAT
@@ -299,7 +299,7 @@ inline vec3f tonemap_filmic(const vec3f& hdr_, bool accurate_fit = false) {
     };
 
     auto ldr = ACESOutputMat * RRTAndODTFit(ACESInputMat * hdr_);
-    return max(zero3f, ldr);
+    return max({0, 0, 0}, ldr);
   }
 }
 

@@ -291,7 +291,7 @@ namespace yocto {
 // Schlick approximation of the Fresnel term
 inline vec3f fresnel_schlick(
     const vec3f& specular, const vec3f& normal, const vec3f& outgoing) {
-  if (specular == zero3f) return zero3f;
+  if (specular == zero3f) return {0, 0, 0};
   auto cosine = dot(normal, outgoing);
   return specular +
          (1 - specular) * pow(clamp(1 - abs(cosine), 0.0f, 1.0f), 5.0f);
@@ -326,7 +326,7 @@ inline vec3f fresnel_conductor(const vec3f& eta, const vec3f& etak,
   // Implementation from
   // https://seblagarde.wordpress.com/2013/04/29/memo-on-fresnel-equations/
   auto cosw = dot(normal, outgoing);
-  if (cosw <= 0) return zero3f;
+  if (cosw <= 0) return {0, 0, 0};
 
   cosw       = clamp(cosw, (float)-1, (float)1);
   auto cos2  = cosw * cosw;
@@ -533,7 +533,7 @@ inline vec3f microfacet_compensation(const vec3f& color, float roughness,
 // Evaluate a diffuse BRDF lobe.
 inline vec3f eval_matte(const vec3f& color, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
-  if (dot(normal, incoming) * dot(normal, outgoing) <= 0) return zero3f;
+  if (dot(normal, incoming) * dot(normal, outgoing) <= 0) return {0, 0, 0};
   return color / pif * abs(dot(normal, incoming));
 }
 
@@ -555,7 +555,7 @@ inline float sample_matte_pdf(const vec3f& color, const vec3f& normal,
 // Evaluate a specular BRDF lobe.
 inline vec3f eval_glossy(const vec3f& color, float ior, float roughness,
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
-  if (dot(normal, incoming) * dot(normal, outgoing) <= 0) return zero3f;
+  if (dot(normal, incoming) * dot(normal, outgoing) <= 0) return {0, 0, 0};
   auto up_normal = dot(normal, outgoing) <= 0 ? -normal : normal;
   auto F1        = fresnel_dielectric(ior, up_normal, outgoing);
   auto halfway   = normalize(incoming + outgoing);
@@ -596,7 +596,7 @@ inline float sample_glossy_pdf(const vec3f& color, float ior, float roughness,
 // Evaluate a metal BRDF lobe.
 inline vec3f eval_metallic(const vec3f& color, float roughness,
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
-  if (dot(normal, incoming) * dot(normal, outgoing) <= 0) return zero3f;
+  if (dot(normal, incoming) * dot(normal, outgoing) <= 0) return {0, 0, 0};
   auto up_normal = dot(normal, outgoing) <= 0 ? -normal : normal;
   auto halfway   = normalize(incoming + outgoing);
   auto F         = fresnel_conductor(
@@ -629,7 +629,7 @@ inline float sample_metallic_pdf(const vec3f& color, float roughness,
 // Evaluate a metal BRDF lobe.
 inline vec3f eval_metallic(const vec3f& eta, const vec3f& etak, float roughness,
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
-  if (dot(normal, incoming) * dot(normal, outgoing) <= 0) return zero3f;
+  if (dot(normal, incoming) * dot(normal, outgoing) <= 0) return {0, 0, 0};
   auto up_normal = dot(normal, outgoing) <= 0 ? -normal : normal;
   auto halfway   = normalize(incoming + outgoing);
   auto F         = fresnel_conductor(eta, etak, halfway, incoming);
@@ -663,7 +663,7 @@ inline float sample_metallic_pdf(const vec3f& eta, const vec3f& etak,
 // Evaluate a delta metal BRDF lobe.
 inline vec3f eval_metallic(const vec3f& color, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
-  if (dot(normal, incoming) * dot(normal, outgoing) <= 0) return zero3f;
+  if (dot(normal, incoming) * dot(normal, outgoing) <= 0) return {0, 0, 0};
   auto up_normal = dot(normal, outgoing) <= 0 ? -normal : normal;
   return fresnel_conductor(
       reflectivity_to_eta(color), {0, 0, 0}, up_normal, outgoing);
@@ -686,7 +686,7 @@ inline float sample_metallic_pdf(const vec3f& color, const vec3f& normal,
 // Evaluate a delta metal BRDF lobe.
 inline vec3f eval_metallic(const vec3f& eta, const vec3f& etak,
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
-  if (dot(normal, incoming) * dot(normal, outgoing) <= 0) return zero3f;
+  if (dot(normal, incoming) * dot(normal, outgoing) <= 0) return {0, 0, 0};
   auto up_normal = dot(normal, outgoing) <= 0 ? -normal : normal;
   return fresnel_conductor(eta, etak, up_normal, outgoing);
 }
@@ -709,7 +709,7 @@ inline float sample_metallic_pdf(const vec3f& eta, const vec3f& etak,
 inline vec3f eval_gltfpbr(const vec3f& color, float ior, float roughness,
     float metallic, const vec3f& normal, const vec3f& outgoing,
     const vec3f& incoming) {
-  if (dot(normal, incoming) * dot(normal, outgoing) <= 0) return zero3f;
+  if (dot(normal, incoming) * dot(normal, outgoing) <= 0) return {0, 0, 0};
   auto reflectivity = lerp(
       eta_to_reflectivity(vec3f{ior, ior, ior}), color, metallic);
   auto up_normal = dot(normal, outgoing) <= 0 ? -normal : normal;
@@ -964,7 +964,7 @@ inline float sample_refractive_pdf(const vec3f& color, float ior,
 inline vec3f eval_translucent(const vec3f& color, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
   // TODO (fabio): fix me
-  if (dot(normal, incoming) * dot(normal, outgoing) >= 0) return zero3f;
+  if (dot(normal, incoming) * dot(normal, outgoing) >= 0) return {0, 0, 0};
   return color / pif * abs(dot(normal, incoming));
 }
 
@@ -1161,7 +1161,7 @@ inline pair<vec3f, vec3f> conductor_eta(const string& name) {
   for (auto& [ename, etas] : metal_ior_table) {
     if (ename == name) return etas;
   }
-  return {zero3f, zero3f};
+  return {{0, 0, 0}, {0, 0, 0}};
 }
 
 }  // namespace yocto

@@ -924,7 +924,7 @@ bool texture_brush(vector<vec3f>& positions, vector<vec2f>& texcoords,
 
   auto scale_factor = 3.5f / params.radius;
   auto max_height   = gaussian_distribution(
-      zero3f, zero3f, 0.7f, scale_factor, params.strength, params.radius);
+      {0, 0, 0}, {0, 0, 0}, 0.7f, scale_factor, params.strength, params.radius);
 
   for (auto idx : vertices) {
     auto uv     = texcoords[idx];
@@ -1032,9 +1032,9 @@ bool smooth_brush(vector<vec3f>& positions, const geodesic_solver& solver,
   auto update       = [&](int node, int neighbor, float new_distance) {
     if (current_node == -1) current_node = node;
     if (node != current_node) {
-      vec3f sum1 = zero3f;
-      float sum2 = 0.0f;
-      for (int i = 0; i < neighbors.size(); i++) {
+      auto sum1 = vec3f{0, 0, 0};
+      auto sum2 = 0.0f;
+      for (auto i = 0; i < neighbors.size(); i++) {
         sum1 += positions[neighbors[i]] * weights[i];
         sum2 += weights[i];
       }

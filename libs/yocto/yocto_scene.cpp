@@ -767,7 +767,7 @@ vec3f eval_position(const scene_data& scene, const instance_data& instance,
     return transform_point(
         instance.frame, shape.positions[shape.points[element]]);
   } else {
-    return zero3f;
+    return {0, 0, 0};
   }
 }
 
@@ -821,7 +821,7 @@ vec3f eval_normal(const scene_data& scene, const instance_data& instance,
     return transform_normal(
         instance.frame, normalize(shape.normals[shape.points[element]]));
   } else {
-    return zero3f;
+    return {0, 0, 0};
   }
 }
 
@@ -875,7 +875,7 @@ static pair<vec3f, vec3f> eval_tangents(
           uv);
     }
   } else {
-    return {zero3f, zero3f};
+    return {{0,0,0}, {0,0,0}};
   }
 }
 #endif
@@ -916,7 +916,7 @@ vec3f eval_normalmap(const scene_data& scene, const instance_data& instance,
     auto& normal_tex = scene.textures[material.normal_tex];
     auto  normalmap  = -1 + 2 * xyz(eval_texture(normal_tex, texcoord, false));
     auto [tu, tv]    = eval_element_tangents(scene, instance, element);
-    auto frame       = frame3f{tu, tv, normal, zero3f};
+    auto frame       = frame3f{tu, tv, normal, {0, 0, 0}};
     frame.x          = orthonormalize(frame.x, frame.z);
     frame.y          = normalize(cross(frame.z, frame.x));
     auto flip_v      = dot(frame.y, tv) < 0;
@@ -945,7 +945,7 @@ vec3f eval_shading_normal(const scene_data& scene,
   } else if (!shape.points.empty()) {
     return outgoing;
   } else {
-    return zero3f;
+    return {0, 0, 0};
   }
 }
 
@@ -1050,7 +1050,7 @@ vec3f eval_environment(const scene_data& scene,
 
 // Evaluate all environment color.
 vec3f eval_environment(const scene_data& scene, const vec3f& direction) {
-  auto emission = zero3f;
+  auto emission = vec3f{0, 0, 0};
   for (auto& environment : scene.environments) {
     emission += eval_environment(scene, environment, direction);
   }

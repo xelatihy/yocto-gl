@@ -108,7 +108,7 @@ static vec3f eval_emission(const material_point& material, const vec3f& normal,
 // Evaluates/sample the BRDF scaled by the cosine of the incoming direction.
 static vec3f eval_bsdfcos(const material_point& material, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
-  if (material.roughness == 0) return zero3f;
+  if (material.roughness == 0) return {0, 0, 0};
 
   if (material.type == material_type::matte) {
     return eval_matte(material.color, normal, outgoing, incoming);
@@ -137,7 +137,7 @@ static vec3f eval_bsdfcos(const material_point& material, const vec3f& normal,
 
 static vec3f eval_delta(const material_point& material, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
-  if (material.roughness != 0) return zero3f;
+  if (material.roughness != 0) return {0, 0, 0};
 
   if (material.type == material_type::metallic) {
     return eval_metallic(material.color, normal, outgoing, incoming);
@@ -157,7 +157,7 @@ static vec3f eval_delta(const material_point& material, const vec3f& normal,
 // Picks a direction based on the BRDF
 static vec3f sample_bsdfcos(const material_point& material, const vec3f& normal,
     const vec3f& outgoing, float rnl, const vec2f& rn) {
-  if (material.roughness == 0) return zero3f;
+  if (material.roughness == 0) return {0, 0, 0};
 
   if (material.type == material_type::matte) {
     return sample_matte(material.color, normal, outgoing, rn);
@@ -186,7 +186,7 @@ static vec3f sample_bsdfcos(const material_point& material, const vec3f& normal,
 
 static vec3f sample_delta(const material_point& material, const vec3f& normal,
     const vec3f& outgoing, float rnl) {
-  if (material.roughness != 0) return zero3f;
+  if (material.roughness != 0) return {0, 0, 0};
 
   if (material.type == material_type::metallic) {
     return sample_metallic(material.color, normal, outgoing);
@@ -254,14 +254,14 @@ static float sample_delta_pdf(const material_point& material,
 
 static vec3f eval_scattering(const material_point& material,
     const vec3f& outgoing, const vec3f& incoming) {
-  if (material.density == zero3f) return zero3f;
+  if (material.density == zero3f) return {0, 0, 0};
   return material.scattering * material.density *
          eval_phasefunction(material.scanisotropy, outgoing, incoming);
 }
 
 static vec3f sample_scattering(const material_point& material,
     const vec3f& outgoing, float rnl, const vec2f& rn) {
-  if (material.density == zero3f) return zero3f;
+  if (material.density == zero3f) return {0, 0, 0};
   return sample_phasefunction(material.scanisotropy, outgoing, rn);
 }
 
@@ -320,7 +320,7 @@ static vec3f sample_lights(const scene_data& scene, const trace_lights& lights,
       return sample_sphere(ruv);
     }
   } else {
-    return zero3f;
+    return {0, 0, 0};
   }
 }
 
@@ -391,7 +391,7 @@ static trace_result trace_path(const scene_data& scene, const bvh_data& bvh,
     const trace_lights& lights, const ray3f& ray_, rng_state& rng,
     const trace_params& params) {
   // initialize
-  auto radiance      = zero3f;
+  auto radiance      = vec3f{0, 0, 0};
   auto weight        = vec3f{1, 1, 1};
   auto ray           = ray_;
   auto volume_stack  = vector<material_point>{};
@@ -457,7 +457,7 @@ static trace_result trace_path(const scene_data& scene, const bvh_data& bvh,
       radiance += weight * eval_emission(material, normal, outgoing);
 
       // next direction
-      auto incoming = zero3f;
+      auto incoming = vec3f{0, 0, 0};
       if (!is_delta(material)) {
         if (rand1f(rng) < 0.5f) {
           incoming = sample_bsdfcos(
@@ -500,7 +500,7 @@ static trace_result trace_path(const scene_data& scene, const bvh_data& bvh,
       // radiance += weight * eval_volemission(emission, outgoing);
 
       // next direction
-      auto incoming = zero3f;
+      auto incoming = vec3f{0, 0, 0};
       if (rand1f(rng) < 0.5f) {
         incoming = sample_scattering(vsdf, outgoing, rand1f(rng), rand2f(rng));
       } else {
@@ -535,7 +535,7 @@ static trace_result trace_pathdirect(const scene_data& scene,
     const bvh_data& bvh, const trace_lights& lights, const ray3f& ray_,
     rng_state& rng, const trace_params& params) {
   // initialize
-  auto radiance      = zero3f;
+  auto radiance      = vec3f{0, 0, 0};
   auto weight        = vec3f{1, 1, 1};
   auto ray           = ray_;
   auto volume_stack  = vector<material_point>{};
@@ -628,7 +628,7 @@ static trace_result trace_pathdirect(const scene_data& scene,
       }
 
       // next direction
-      auto incoming = zero3f;
+      auto incoming = vec3f{0, 0, 0};
       if (!is_delta(material)) {
         if (rand1f(rng) < 0.5f) {
           incoming = sample_bsdfcos(
@@ -668,7 +668,7 @@ static trace_result trace_pathdirect(const scene_data& scene,
       auto& vsdf     = volume_stack.back();
 
       // next direction
-      auto incoming = zero3f;
+      auto incoming = vec3f{0, 0, 0};
       if (rand1f(rng) < 0.5f) {
         incoming = sample_scattering(vsdf, outgoing, rand1f(rng), rand2f(rng));
       } else {
@@ -703,7 +703,7 @@ static trace_result trace_pathmis(const scene_data& scene, const bvh_data& bvh,
     const trace_lights& lights, const ray3f& ray_, rng_state& rng,
     const trace_params& params) {
   // initialize
-  auto radiance      = zero3f;
+  auto radiance      = vec3f{0, 0, 0};
   auto weight        = vec3f{1, 1, 1};
   auto ray           = ray_;
   auto volume_stack  = vector<material_point>{};
@@ -780,7 +780,7 @@ static trace_result trace_pathmis(const scene_data& scene, const bvh_data& bvh,
       }
 
       // next direction
-      auto incoming = zero3f;
+      auto incoming = vec3f{0, 0, 0};
       if (!is_delta(material)) {
         // direct with MIS --- light
         for (auto sample_light : {true, false}) {
@@ -799,7 +799,7 @@ static trace_result trace_pathmis(const scene_data& scene, const bvh_data& bvh,
           if (bsdfcos != zero3f && mis_weight != 0) {
             auto intersection = intersect_bvh(bvh, scene, {position, incoming});
             if (!sample_light) next_intersection = intersection;
-            auto emission = zero3f;
+            auto emission = vec3f{0, 0, 0};
             if (!intersection.hit) {
               emission = eval_environment(scene, incoming);
             } else {
@@ -847,7 +847,7 @@ static trace_result trace_pathmis(const scene_data& scene, const bvh_data& bvh,
       auto& vsdf     = volume_stack.back();
 
       // next direction
-      auto incoming = zero3f;
+      auto incoming = vec3f{0, 0, 0};
       if (rand1f(rng) < 0.5f) {
         incoming = sample_scattering(vsdf, outgoing, rand1f(rng), rand2f(rng));
         next_emission = true;
@@ -884,7 +884,7 @@ static trace_result trace_naive(const scene_data& scene, const bvh_data& bvh,
     const trace_lights& lights, const ray3f& ray_, rng_state& rng,
     const trace_params& params) {
   // initialize
-  auto radiance   = zero3f;
+  auto radiance   = vec3f{0, 0, 0};
   auto weight     = vec3f{1, 1, 1};
   auto ray        = ray_;
   auto hit        = false;
@@ -927,7 +927,7 @@ static trace_result trace_naive(const scene_data& scene, const bvh_data& bvh,
     radiance += weight * eval_emission(material, normal, outgoing);
 
     // next direction
-    auto incoming = zero3f;
+    auto incoming = vec3f{0, 0, 0};
     if (material.roughness != 0) {
       incoming = sample_bsdfcos(
           material, normal, outgoing, rand1f(rng), rand2f(rng));
@@ -961,7 +961,7 @@ static trace_result trace_eyelight(const scene_data& scene, const bvh_data& bvh,
     const trace_lights& lights, const ray3f& ray_, rng_state& rng,
     const trace_params& params) {
   // initialize
-  auto radiance   = zero3f;
+  auto radiance   = vec3f{0, 0, 0};
   auto weight     = vec3f{1, 1, 1};
   auto ray        = ray_;
   auto hit        = false;
@@ -1027,7 +1027,7 @@ static trace_result trace_eyelightao(const scene_data& scene,
     const bvh_data& bvh, const trace_lights& lights, const ray3f& ray_,
     rng_state& rng, const trace_params& params) {
   // initialize
-  auto radiance   = zero3f;
+  auto radiance   = vec3f{0, 0, 0};
   auto weight     = vec3f{1, 1, 1};
   auto ray        = ray_;
   auto hit        = false;

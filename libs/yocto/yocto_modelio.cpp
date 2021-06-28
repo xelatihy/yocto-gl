@@ -3056,7 +3056,7 @@ inline bool get_pbrt_value(const pbrt_value& pbrt, pair<float, string>& val) {
 }
 inline bool get_pbrt_value(const pbrt_value& pbrt, pair<vec3f, string>& val) {
   if (pbrt.type == pbrt_type::string || pbrt.type == pbrt_type::texture) {
-    val.first = zero3f;
+    val.first = {0, 0, 0};
     return get_pbrt_value(pbrt, val.second);
   } else {
     val.second = "";
@@ -3858,7 +3858,7 @@ inline void convert_material(pbrt_material& pmaterial,
   };
 
   auto eta_to_reflectivity = [](const vec3f&  eta,
-                                 const vec3f& etak = zero3f) -> vec3f {
+                                 const vec3f& etak = {0, 0, 0}) -> vec3f {
     return ((eta - 1) * (eta - 1) + etak * etak) /
            ((eta + 1) * (eta + 1) + etak * etak);
   };
@@ -3866,7 +3866,8 @@ inline void convert_material(pbrt_material& pmaterial,
   try {
     pmaterial.name = command.name;
     if (command.type == "uber") {
-      auto diffuse = zero3f, specular = zero3f, transmission = zero3f;
+      auto diffuse = vec3f{0, 0, 0}, specular = vec3f{0, 0, 0},
+           transmission = vec3f{0, 0, 0};
       auto diffuse_map = -1, specular_map = -1, transmission_map = -1;
       get_texture(
           command.values, "Kd", diffuse, diffuse_map, vec3f{0.25, 0.25, 0.25});
@@ -3943,7 +3944,7 @@ inline void convert_material(pbrt_material& pmaterial,
       // get_texture(
       //     values, "Kr", material->specular, material->specular_tex,
       //     vec3f{1,1,1});
-      auto eta = zero3f, etak = zero3f;
+      auto eta = vec3f{0, 0, 0}, etak = vec3f{0, 0, 0};
       get_color(command.values, "eta", eta,
           vec3f{0.2004376970f, 0.9240334304f, 1.1022119527f});
       get_color(command.values, "k", etak,
@@ -3953,7 +3954,7 @@ inline void convert_material(pbrt_material& pmaterial,
       get_roughness(command.values, pmaterial.roughness, 0.01f);
     } else if (command.type == "conductor") {
       pmaterial.type = pbrt_mtype::metal;
-      auto eta = zero3f, etak = zero3f;
+      auto eta = vec3f{0, 0, 0}, etak = vec3f{0, 0, 0};
       get_color(command.values, "eta", eta,
           vec3f{0.2004376970f, 0.9240334304f, 1.1022119527f});
       get_color(command.values, "k", etak,
@@ -3963,7 +3964,7 @@ inline void convert_material(pbrt_material& pmaterial,
       get_roughness(command.values, pmaterial.roughness, 0.01f);
     } else if (command.type == "coatedconductor") {
       pmaterial.type = pbrt_mtype::metal;
-      auto eta = zero3f, etak = zero3f;
+      auto eta = vec3f{0, 0, 0}, etak = vec3f{0, 0, 0};
       get_color(command.values, "conductor.eta", eta,
           vec3f{0.2004376970f, 0.9240334304f, 1.1022119527f});
       get_color(command.values, "conductor.k", etak,
@@ -4035,7 +4036,7 @@ inline void convert_material(pbrt_material& pmaterial,
       auto scale = 1.0f;
       get_pbrt_value(command.values, "scale", scale);
       pmaterial.volscale = 1 / scale;
-      auto sigma_a = zero3f, sigma_s = zero3f;
+      auto sigma_a = vec3f{0, 0, 0}, sigma_s = vec3f{0, 0, 0};
       auto sigma_a_tex = -1, sigma_s_tex = -1;
       get_texture(command.values, "sigma_a", sigma_a, sigma_a_tex,
           vec3f{0.011f, .0024f, .014f});
@@ -4308,7 +4309,7 @@ inline void convert_light(pbrt_light& plight, const pbrt_command& command,
       get_pbrt_value(command.values, "I", i);
       get_pbrt_value(command.values, "scale", scale);
       plight.emission = i * scale;
-      plight.from     = zero3f;
+      plight.from     = {0, 0, 0};
       get_pbrt_value(command.values, "from", plight.from);
       plight.area_emission = plight.emission;
       plight.area_frame    = plight.frame * translation_frame(plight.from);
@@ -4475,11 +4476,11 @@ inline void load_pbrt(const string& filename, pbrt_model& pbrt,
         parse_param(str, xf);
         concat_transform(ctx.stack.back(), mat_to_frame(xf));
       } else if (cmd == "Scale") {
-        auto v = zero3f;
+        auto v = vec3f{0, 0, 0};
         parse_param(str, v);
         concat_transform(ctx.stack.back(), scaling_frame(v));
       } else if (cmd == "Translate") {
-        auto v = zero3f;
+        auto v = vec3f{0, 0, 0};
         parse_param(str, v);
         concat_transform(ctx.stack.back(), translation_frame(v));
       } else if (cmd == "Rotate") {
@@ -4488,7 +4489,7 @@ inline void load_pbrt(const string& filename, pbrt_model& pbrt,
         concat_transform(ctx.stack.back(),
             rotation_frame(vec3f{v.y, v.z, v.w}, radians(v.x)));
       } else if (cmd == "LookAt") {
-        auto from = zero3f, to = zero3f, up = zero3f;
+        auto from = vec3f{0, 0, 0}, to = vec3f{0, 0, 0}, up = vec3f{0, 0, 0};
         parse_param(str, from);
         parse_param(str, to);
         parse_param(str, up);
