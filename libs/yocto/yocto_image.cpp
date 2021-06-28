@@ -723,7 +723,7 @@ image_data make_sunsky(int width, int height, float theta_sun, float turbidity,
     }
   }
 
-  if (ground_albedo != zero3f) {
+  if (ground_albedo != vec3f{0, 0, 0}) {
     auto ground = vec3f{0, 0, 0};
     for (auto j = 0; j < height / 2; j++) {
       auto theta = pif * ((j + 0.5f) / height);
@@ -924,7 +924,7 @@ void colorgrade_image_mt(vector<vec4b>& corrected, const vector<vec4f>& img,
 vec3f compute_white_balance(const vector<vec4f>& img) {
   auto rgb = vec3f{0, 0, 0};
   for (auto& p : img) rgb += xyz(p);
-  if (rgb == zero3f) return {0, 0, 0};
+  if (rgb == vec3f{0, 0, 0}) return {0, 0, 0};
   return rgb / max(rgb);
 }
 
@@ -1317,7 +1317,7 @@ void make_sunsky(vector<vec4f>& pixels, int width, int height, float theta_sun,
     }
   }
 
-  if (ground_albedo != zero3f) {
+  if (ground_albedo != vec3f{0, 0, 0}) {
     auto ground = vec3f{0, 0, 0};
     for (auto j = 0; j < height / 2; j++) {
       auto theta = pif * ((j + 0.5f) / height);

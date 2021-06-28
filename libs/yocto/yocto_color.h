@@ -345,7 +345,7 @@ inline vec3f xyz_to_rgb(const vec3f& xyz) {
 
 // Convert between CIE XYZ and xyY
 inline vec3f xyz_to_xyY(const vec3f& xyz) {
-  if (xyz == zero3f) return {0, 0, 0};
+  if (xyz == vec3f{0, 0, 0}) return {0, 0, 0};
   return {
       xyz.x / (xyz.x + xyz.y + xyz.z), xyz.y / (xyz.x + xyz.y + xyz.z), xyz.y};
 }

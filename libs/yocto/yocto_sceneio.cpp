@@ -4551,7 +4551,7 @@ static void load_pbrt_scene(
   for (auto& pmaterial : pbrt.materials) {
     auto& material = scene.materials.emplace_back();
     material.type  = material_type_map.at(pmaterial.type);
-    if (pmaterial.emission != zero3f) {
+    if (pmaterial.emission != vec3f{0, 0, 0}) {
       material.type = material_type::matte;
     }
     material.emission  = pmaterial.emission;

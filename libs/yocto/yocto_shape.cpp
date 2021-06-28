@@ -63,7 +63,7 @@ namespace yocto {
 vector<vec3f> lines_tangents(
     const vector<vec2i>& lines, const vector<vec3f>& positions) {
   auto tangents = vector<vec3f>{positions.size()};
-  for (auto& tangent : tangents) tangent = {0,0,0};
+  for (auto& tangent : tangents) tangent = {0, 0, 0};
   for (auto& l : lines) {
     auto tangent = line_tangent(positions[l.x], positions[l.y]);
     auto length  = line_length(positions[l.x], positions[l.y]);
@@ -78,7 +78,7 @@ vector<vec3f> lines_tangents(
 vector<vec3f> triangles_normals(
     const vector<vec3i>& triangles, const vector<vec3f>& positions) {
   auto normals = vector<vec3f>{positions.size()};
-  for (auto& normal : normals) normal = {0,0,0};
+  for (auto& normal : normals) normal = {0, 0, 0};
   for (auto& t : triangles) {
     auto normal = triangle_normal(
         positions[t.x], positions[t.y], positions[t.z]);
@@ -95,7 +95,7 @@ vector<vec3f> triangles_normals(
 vector<vec3f> quads_normals(
     const vector<vec4i>& quads, const vector<vec3f>& positions) {
   auto normals = vector<vec3f>{positions.size()};
-  for (auto& normal : normals) normal = {0,0,0};
+  for (auto& normal : normals) normal = {0, 0, 0};
   for (auto& q : quads) {
     auto normal = quad_normal(
         positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
@@ -116,7 +116,7 @@ void lines_tangents(vector<vec3f>& tangents, const vector<vec2i>& lines,
   if (tangents.size() != positions.size()) {
     throw std::out_of_range("array should be the same length");
   }
-  for (auto& tangent : tangents) tangent = {0,0,0};
+  for (auto& tangent : tangents) tangent = {0, 0, 0};
   for (auto& l : lines) {
     auto tangent = line_tangent(positions[l.x], positions[l.y]);
     auto length  = line_length(positions[l.x], positions[l.y]);
@@ -132,7 +132,7 @@ void triangles_normals(vector<vec3f>& normals, const vector<vec3i>& triangles,
   if (normals.size() != positions.size()) {
     throw std::out_of_range("array should be the same length");
   }
-  for (auto& normal : normals) normal = {0,0,0};
+  for (auto& normal : normals) normal = {0, 0, 0};
   for (auto& t : triangles) {
     auto normal = triangle_normal(
         positions[t.x], positions[t.y], positions[t.z]);
@@ -150,7 +150,7 @@ void quads_normals(vector<vec3f>& normals, const vector<vec4i>& quads,
   if (normals.size() != positions.size()) {
     throw std::out_of_range("array should be the same length");
   }
-  for (auto& normal : normals) normal = {0,0,0};
+  for (auto& normal : normals) normal = {0, 0, 0};
   for (auto& q : quads) {
     auto normal = quad_normal(
         positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
@@ -172,8 +172,8 @@ void quads_normals(vector<vec3f>& normals, const vector<vec4i>& quads,
 vector<vec4f> triangles_tangent_spaces(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texcoords) {
-  auto tangu = vector<vec3f>(positions.size(), vec3f{0,0,0});
-  auto tangv = vector<vec3f>(positions.size(), vec3f{0,0,0});
+  auto tangu = vector<vec3f>(positions.size(), vec3f{0, 0, 0});
+  auto tangv = vector<vec3f>(positions.size(), vec3f{0, 0, 0});
   for (auto t : triangles) {
     auto tutv = triangle_tangents_fromuv(positions[t.x], positions[t.y],
         positions[t.z], texcoords[t.x], texcoords[t.y], texcoords[t.z]);
@@ -609,7 +609,7 @@ static pair<int, int> split_middle(vector<int>& primitives,
   for (auto i = start; i < end; i++)
     cbbox = merge(cbbox, centers[primitives[i]]);
   auto csize = cbbox.max - cbbox.min;
-  if (csize == zero3f) return {mid, axis};
+  if (csize == vec3f{0, 0, 0}) return {mid, axis};
 
   // split along largest
   if (csize.x >= csize.y && csize.x >= csize.z) axis = 0;

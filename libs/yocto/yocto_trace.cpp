@@ -254,20 +254,20 @@ static float sample_delta_pdf(const material_point& material,
 
 static vec3f eval_scattering(const material_point& material,
     const vec3f& outgoing, const vec3f& incoming) {
-  if (material.density == zero3f) return {0, 0, 0};
+  if (material.density == vec3f{0, 0, 0}) return {0, 0, 0};
   return material.scattering * material.density *
          eval_phasefunction(material.scanisotropy, outgoing, incoming);
 }
 
 static vec3f sample_scattering(const material_point& material,
     const vec3f& outgoing, float rnl, const vec2f& rn) {
-  if (material.density == zero3f) return {0, 0, 0};
+  if (material.density == vec3f{0, 0, 0}) return {0, 0, 0};
   return sample_phasefunction(material.scanisotropy, outgoing, rn);
 }
 
 static float sample_scattering_pdf(const material_point& material,
     const vec3f& outgoing, const vec3f& incoming) {
-  if (material.density == zero3f) return 0;
+  if (material.density == vec3f{0, 0, 0}) return 0;
   return sample_phasefunction_pdf(material.scanisotropy, outgoing, incoming);
 }
 
@@ -517,7 +517,7 @@ static trace_result trace_path(const scene_data& scene, const bvh_data& bvh,
     }
 
     // check weight
-    if (weight == zero3f || !isfinite(weight)) break;
+    if (weight == vec3f{0, 0, 0} || !isfinite(weight)) break;
 
     // russian roulette
     if (bounce > 3) {
@@ -608,7 +608,7 @@ static trace_result trace_pathdirect(const scene_data& scene,
             scene, lights, position, rand1f(rng), rand1f(rng), rand2f(rng));
         auto pdf = sample_lights_pdf(scene, bvh, lights, position, incoming);
         auto bsdfcos = eval_bsdfcos(material, normal, outgoing, incoming);
-        if (bsdfcos != zero3f && pdf > 0) {
+        if (bsdfcos != vec3f{0, 0, 0} && pdf > 0) {
           auto intersection = intersect_bvh(bvh, scene, {position, incoming});
           auto emission =
               !intersection.hit
@@ -685,7 +685,7 @@ static trace_result trace_pathdirect(const scene_data& scene,
     }
 
     // check weight
-    if (weight == zero3f || !isfinite(weight)) break;
+    if (weight == vec3f{0, 0, 0} || !isfinite(weight)) break;
 
     // russian roulette
     if (bounce > 3) {
@@ -796,7 +796,7 @@ static trace_result trace_pathmis(const scene_data& scene, const bvh_data& bvh,
           auto mis_weight = sample_light
                                 ? mis_heuristic(light_pdf, bsdf_pdf) / light_pdf
                                 : mis_heuristic(bsdf_pdf, light_pdf) / bsdf_pdf;
-          if (bsdfcos != zero3f && mis_weight != 0) {
+          if (bsdfcos != vec3f{0, 0, 0} && mis_weight != 0) {
             auto intersection = intersect_bvh(bvh, scene, {position, incoming});
             if (!sample_light) next_intersection = intersection;
             auto emission = vec3f{0, 0, 0};
@@ -866,7 +866,7 @@ static trace_result trace_pathmis(const scene_data& scene, const bvh_data& bvh,
     }
 
     // check weight
-    if (weight == zero3f || !isfinite(weight)) break;
+    if (weight == vec3f{0, 0, 0} || !isfinite(weight)) break;
 
     // russian roulette
     if (bounce > 3) {
@@ -940,7 +940,7 @@ static trace_result trace_naive(const scene_data& scene, const bvh_data& bvh,
     }
 
     // check weight
-    if (weight == zero3f || !isfinite(weight)) break;
+    if (weight == vec3f{0, 0, 0} || !isfinite(weight)) break;
 
     // russian roulette
     if (bounce > 3) {
@@ -1013,7 +1013,7 @@ static trace_result trace_eyelight(const scene_data& scene, const bvh_data& bvh,
     incoming = sample_delta(material, normal, outgoing, rand1f(rng));
     weight *= eval_delta(material, normal, outgoing, incoming) /
               sample_delta_pdf(material, normal, outgoing, incoming);
-    if (weight == zero3f || !isfinite(weight)) break;
+    if (weight == vec3f{0, 0, 0} || !isfinite(weight)) break;
 
     // setup next iteration
     ray = {position, incoming};
@@ -1083,7 +1083,7 @@ static trace_result trace_eyelightao(const scene_data& scene,
     incoming = sample_delta(material, normal, outgoing, rand1f(rng));
     weight *= eval_delta(material, normal, outgoing, incoming) /
               sample_delta_pdf(material, normal, outgoing, incoming);
-    if (weight == zero3f || !isfinite(weight)) break;
+    if (weight == vec3f{0, 0, 0} || !isfinite(weight)) break;
 
     // setup next iteration
     ray = {position, incoming};
@@ -1161,7 +1161,8 @@ static trace_result trace_falsecolor(const scene_data& scene,
       result = hashed_color(scene.instances[intersection.instance].material);
       break;
     case trace_falsecolor_type::highlight: {
-      if (material.emission == zero3f) material.emission = {0.2f, 0.2f, 0.2f};
+      if (material.emission == vec3f{0, 0, 0})
+        material.emission = {0.2f, 0.2f, 0.2f};
       result = material.emission * abs(dot(-ray.d, normal));
       break;
     } break;
@@ -1271,7 +1272,7 @@ trace_lights make_lights(const scene_data& scene, const trace_params& params) {
   for (auto handle = 0; handle < scene.instances.size(); handle++) {
     auto& instance = scene.instances[handle];
     auto& material = scene.materials[instance.material];
-    if (material.emission == zero3f) continue;
+    if (material.emission == vec3f{0, 0, 0}) continue;
     auto& shape = scene.shapes[instance.shape];
     if (shape.triangles.empty() && shape.quads.empty()) continue;
     auto& light       = add_light(lights);
@@ -1298,7 +1299,7 @@ trace_lights make_lights(const scene_data& scene, const trace_params& params) {
   }
   for (auto handle = 0; handle < scene.environments.size(); handle++) {
     auto& environment = scene.environments[handle];
-    if (environment.emission == zero3f) continue;
+    if (environment.emission == vec3f{0, 0, 0}) continue;
     auto& light       = add_light(lights);
     light.instance    = invalidid;
     light.environment = handle;

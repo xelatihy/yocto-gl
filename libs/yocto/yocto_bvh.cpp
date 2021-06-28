@@ -311,7 +311,7 @@ static pair<int, int> split_sah(vector<int>& primitives,
   for (auto i = start; i < end; i++)
     cbbox = merge(cbbox, centers[primitives[i]]);
   auto csize = cbbox.max - cbbox.min;
-  if (csize == zero3f) return {mid, split_axis};
+  if (csize == vec3f{0, 0, 0}) return {mid, split_axis};
 
   // consider N bins, compute their cost and keep the minimum
   const int nbins    = 16;
@@ -375,7 +375,7 @@ static pair<int, int> split_sah(vector<int>& primitives,
   for (auto i = start; i < end; i++)
     cbbox = merge(cbbox, centers[primitives[i]]);
   auto csize = cbbox.max - cbbox.min;
-  if (csize == zero3f) return {mid, axis};
+  if (csize == vec3f{0, 0, 0}) return {mid, axis};
 
   // split along largest
   if (csize.x >= csize.y && csize.x >= csize.z) axis = 0;
@@ -414,7 +414,7 @@ static pair<int, int> split_middle(vector<int>& primitives,
   for (auto i = start; i < end; i++)
     cbbox = merge(cbbox, centers[primitives[i]]);
   auto csize = cbbox.max - cbbox.min;
-  if (csize == zero3f) return {mid, axis};
+  if (csize == vec3f{0, 0, 0}) return {mid, axis};
 
   // split along largest
   if (csize.x >= csize.y && csize.x >= csize.z) axis = 0;

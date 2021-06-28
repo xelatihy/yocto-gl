@@ -1913,15 +1913,15 @@ inline void save_mtl(const string& filename, const obj_model& obj) {
   for (auto& material : obj.materials) {
     format_values(buffer, "newmtl {}\n", material.name);
     format_values(buffer, "illum {}\n", material.illum);
-    if (material.emission != zero3f)
+    if (material.emission != vec3f{0, 0, 0})
       format_values(buffer, "Ke {}\n", material.emission);
-    if (material.ambient != zero3f)
+    if (material.ambient != vec3f{0, 0, 0})
       format_values(buffer, "Ka {}\n", material.ambient);
     format_values(buffer, "Kd {}\n", material.diffuse);
     format_values(buffer, "Ks {}\n", material.specular);
-    if (material.reflection != zero3f)
+    if (material.reflection != vec3f{0, 0, 0})
       format_values(buffer, "Kr {}\n", material.reflection);
-    if (material.transmission != zero3f)
+    if (material.transmission != vec3f{0, 0, 0})
       format_values(buffer, "Kt {}\n", material.transmission);
     format_values(buffer, "Ns {}\n", (int)material.exponent);
     if (material.opacity != 1)
@@ -3845,7 +3845,9 @@ inline void convert_material(pbrt_material& pmaterial,
     get_pbrt_value(values, "remaproughness", remaproughness);
 
     roughness = 0;
-    if (uroughness.first == zero3f || vroughness.first == zero3f) return;
+    if (uroughness.first == vec3f{0, 0, 0} ||
+        vroughness.first == vec3f{0, 0, 0})
+      return;
     roughness = mean(vec2f{mean(uroughness.first), mean(vroughness.first)});
     // from pbrt code
     if (remaproughness) {
@@ -4929,7 +4931,7 @@ void save_pbrt(
       format_values(buffer, "ObjectBegin \"{}\"\n", object);
     format_values(buffer, "AttributeBegin\n");
     format_values(buffer, "Transform {}\n", frame_to_mat(shape.frame));
-    if (material.emission != zero3f) {
+    if (material.emission != vec3f{0, 0, 0}) {
       auto acommand = pbrt_command{};
       acommand.type = "diffuse";
       acommand.values.push_back(make_pbrt_value("L", material.emission));

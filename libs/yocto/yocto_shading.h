@@ -291,7 +291,7 @@ namespace yocto {
 // Schlick approximation of the Fresnel term
 inline vec3f fresnel_schlick(
     const vec3f& specular, const vec3f& normal, const vec3f& outgoing) {
-  if (specular == zero3f) return {0, 0, 0};
+  if (specular == vec3f{0, 0, 0}) return {0, 0, 0};
   auto cosine = dot(normal, outgoing);
   return specular +
          (1 - specular) * pow(clamp(1 - abs(cosine), 0.0f, 1.0f), 5.0f);
