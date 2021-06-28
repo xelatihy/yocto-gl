@@ -214,8 +214,8 @@ static float* load_pfm(
 }
 
 // save pfm
-static bool save_pfm(const char* filename, int width, int height,
-    int components, const float* pixels) {
+[[maybe_unused]] static bool save_pfm(const char* filename, int width,
+    int height, int components, const float* pixels) {
   auto fs       = fopen_utf8(filename, "wb");
   auto fs_guard = unique_ptr<FILE, int (*)(FILE*)>(fs, &fclose);
   if (!fs) return false;
@@ -240,6 +240,38 @@ static bool save_pfm(const char* filename, int width, int height,
           if (fwrite(&vz, 4, 1, fs) != 1) return false;
         } else {
           if (fwrite(&v[2], 4, 1, fs) != 1) return false;
+        }
+      }
+    }
+  }
+
+  return true;
+}
+
+// save pfm
+static bool save_pfm_to_func(
+    void (*func)(void* context, const void* data, int size), void* context,
+    int width, int height, int components, const float* pixels) {
+  auto buffer = array<char, 512>{};
+  func(context, (components == 1) ? "Pf\n" : "PF\n", 3);
+  func(context, buffer.data(),
+      snprintf(buffer.data(), buffer.size(), "%d %d\n", width, height));
+  func(context, "-1\n", 3);
+  if (components == 1 || components == 3) {
+    for (auto j = height - 1; j >= 0; j--) {
+      func(context, pixels + j * width * components, 4 * width * components);
+    }
+  } else {
+    for (auto j = height - 1; j >= 0; j--) {
+      for (auto i = 0; i < width; i++) {
+        auto vz = 0.0f;
+        auto v  = pixels + (j * width + i) * components;
+        func(context, &v[0], 4);
+        func(context, &v[1], 4);
+        if (components == 2) {
+          func(context, &vz, 4);
+        } else {
+          func(context, &v[2], 4);
         }
       }
     }
@@ -375,6 +407,10 @@ void save_image(const string& filename, const image_data& image) {
     auto& buffer = *(vector<byte>*)context;
     buffer.insert(buffer.end(), (byte*)data, (byte*)data + size);
   };
+  auto pfm_write_data = [](void* context, const void* data, int size) {
+    auto& buffer = *(vector<byte>*)context;
+    buffer.insert(buffer.end(), (byte*)data, (byte*)data + size);
+  };
 
   auto ext = path_extension(filename);
   if (ext == ".hdr" || ext == ".HDR") {
@@ -384,9 +420,11 @@ void save_image(const string& filename, const image_data& image) {
       throw io_error::write_error(filename);
     save_binary(filename, buffer);
   } else if (ext == ".pfm" || ext == ".PFM") {
-    if (!save_pfm(filename.c_str(), image.width, image.height, 4,
+    auto buffer = vector<byte>{};
+    if (!save_pfm_to_func(pfm_write_data, &buffer, image.width, image.height, 4,
             (const float*)to_linear(image).data()))
       throw io_error::write_error(filename);
+    save_binary(filename, buffer);
   } else if (ext == ".exr" || ext == ".EXR") {
     if (SaveEXR((const float*)to_linear(image).data(), (int)image.width,
             (int)image.height, 4, 1, filename.c_str(), nullptr) < 0)
@@ -685,6 +723,10 @@ void save_texture(const string& filename, const texture_data& texture) {
     auto& buffer = *(vector<byte>*)context;
     buffer.insert(buffer.end(), (byte*)data, (byte*)data + size);
   };
+  auto pfm_write_data = [](void* context, const void* data, int size) {
+    auto& buffer = *(vector<byte>*)context;
+    buffer.insert(buffer.end(), (byte*)data, (byte*)data + size);
+  };
 
   auto ext = path_extension(filename);
   if (ext == ".hdr" || ext == ".HDR") {
@@ -694,9 +736,11 @@ void save_texture(const string& filename, const texture_data& texture) {
       throw io_error::write_error(filename);
     save_binary(filename, buffer);
   } else if (ext == ".pfm" || ext == ".PFM") {
-    if (!save_pfm(filename.c_str(), texture.width, texture.height, 4,
-            (const float*)texture.pixelsf.data()))
+    auto buffer = vector<byte>{};
+    if (!save_pfm_to_func(pfm_write_data, &buffer, texture.width,
+            texture.height, 4, (const float*)texture.pixelsf.data()))
       throw io_error::write_error(filename);
+    save_binary(filename, buffer);
   } else if (ext == ".exr" || ext == ".EXR") {
     if (SaveEXR((const float*)texture.pixelsf.data(), (int)texture.width,
             (int)texture.height, 4, 1, filename.c_str(), nullptr) < 0)
