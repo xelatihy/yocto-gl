@@ -427,9 +427,14 @@ void save_image(const string& filename, const image_data& image) {
       throw io_error::write_error(filename);
     save_binary(filename, buffer);
   } else if (ext == ".exr" || ext == ".EXR") {
-    if (SaveEXR((const float*)to_linear(image).data(), (int)image.width,
-            (int)image.height, 4, 1, filename.c_str(), nullptr) < 0)
+    auto data = (byte*)nullptr;
+    auto size = (size_t)0;
+    if (SaveEXRToMemory((const float*)to_linear(image).data(), (int)image.width,
+            (int)image.height, 4, 1, &data, &size, nullptr) < 0)
       throw io_error::write_error(filename);
+    auto buffer = vector<byte>{data, data + size};
+    free(data);
+    save_binary(filename, buffer);
   } else if (ext == ".png" || ext == ".PNG") {
     auto buffer = vector<byte>{};
     if (!stbi_write_png_to_func(stbi_write_data, &buffer, (int)image.width,
@@ -743,9 +748,15 @@ void save_texture(const string& filename, const texture_data& texture) {
       throw io_error::write_error(filename);
     save_binary(filename, buffer);
   } else if (ext == ".exr" || ext == ".EXR") {
-    if (SaveEXR((const float*)texture.pixelsf.data(), (int)texture.width,
-            (int)texture.height, 4, 1, filename.c_str(), nullptr) < 0)
+    auto data = (byte*)nullptr;
+    auto size = (size_t)0;
+    if (SaveEXRToMemory((const float*)texture.pixelsf.data(),
+            (int)texture.width, (int)texture.height, 4, 1, &data, &size,
+            nullptr) < 0)
       throw io_error::write_error(filename);
+    auto buffer = vector<byte>{data, data + size};
+    free(data);
+    save_binary(filename, buffer);
   } else if (ext == ".png" || ext == ".PNG") {
     auto buffer = vector<byte>{};
     if (!stbi_write_png_to_func(stbi_write_data, &buffer, (int)texture.width,
