@@ -314,9 +314,10 @@ void load_image(const string& filename, image_data& image) {
 
   auto ext = path_extension(filename);
   if (ext == ".exr" || ext == ".EXR") {
+    auto buffer = load_binary(filename);
     auto pixels = (float*)nullptr;
-    if (LoadEXR(&pixels, &image.width, &image.height, filename.c_str(),
-            nullptr) != 0)
+    if (LoadEXRFromMemory(&pixels, &image.width, &image.height, buffer.data(),
+            buffer.size(), nullptr) != 0)
       throw io_error::read_error(filename);
     image.linear = true;
     image.pixels = from_linear(pixels, image.width, image.height);
