@@ -553,8 +553,8 @@ vector<vector<int>> ordered_boundaries(const vector<vec3i>& triangles,
     const vector<vec3i>& adjacency, int num_vertices) {
   // map every boundary vertex to its next one
   auto next_vert = vector<int>(num_vertices, -1);
-  for (int i = 0; i < triangles.size(); ++i) {
-    for (int k = 0; k < 3; ++k) {
+  for (auto i = 0; i < (int)triangles.size(); ++i) {
+    for (auto k = 0; k < 3; ++k) {
       if (adjacency[i][k] == -1)
         next_vert[triangles[i][k]] = triangles[i][(k + 1) % 3];
     }
@@ -564,7 +564,7 @@ vector<vector<int>> ordered_boundaries(const vector<vec3i>& triangles,
   auto boundaries = vector<vector<int>>();
 
   // arrange boundary vertices in loops
-  for (int i = 0; i < next_vert.size(); i++) {
+  for (auto i = 0; i < (int)next_vert.size(); i++) {
     if (next_vert[i] == -1) continue;
 
     // add new empty boundary
