@@ -50,7 +50,6 @@ struct convert_params {
   vec3f  translate    = {0, 0, 0};
   vec3f  rotate       = {0, 0, 0};
   vec3f  scale        = {1, 1, 1};
-  float  scaleu       = 1;
   int    subdivisions = 0;
   bool   catmullclark = false;
   bool   toedges      = false;
@@ -65,16 +64,9 @@ void add_options(const cli_command& cli, convert_params& params) {
   add_option(
       cli, "aspositions", params.aspositions, "Remove all but positions.");
   add_option(cli, "astriangles", params.astriangles, "Convert to triangles.");
-  add_option(cli, "translatex", params.translate.x, "Translate shape.");
-  add_option(cli, "translatey", params.translate.y, "Translate shape.");
-  add_option(cli, "translatez", params.translate.z, "Translate shape.");
-  add_option(cli, "scalex", params.scale.x, "Scale shape.");
-  add_option(cli, "scaley", params.scale.y, "Scale shape.");
-  add_option(cli, "scalez", params.scale.z, "Scale shape.");
-  add_option(cli, "scaleu", params.scaleu, "Scale shape.");
-  add_option(cli, "rotatex", params.rotate.x, "Rotate shape.");
-  add_option(cli, "rotatey", params.rotate.y, "Rotate shape.");
-  add_option(cli, "rotatez", params.rotate.z, "Rotate shape.");
+  add_option(cli, "translate", params.translate, "Translate shape.");
+  add_option(cli, "scale", params.scale, "Scale shape.");
+  add_option(cli, "rotate", params.rotate, "Rotate shape.");
   add_option(cli, "subdivisions", params.subdivisions, "Apply subdivision.");
   add_option(
       cli, "catmullclark", params.catmullclark, "Catmull-Clark subdivision.");
@@ -118,9 +110,9 @@ void run_convert(const convert_params& params) {
 
   // transform
   if (params.translate != vec3f{0, 0, 0} || params.rotate != vec3f{0, 0, 0} ||
-      params.scale != vec3f{1, 1, 1} || params.scaleu != 1) {
+      params.scale != vec3f{1, 1, 1}) {
     auto translation = translation_frame(params.translate);
-    auto scaling     = scaling_frame(params.scale * params.scaleu);
+    auto scaling     = scaling_frame(params.scale);
     auto rotation    = rotation_frame({1, 0, 0}, radians(params.rotate.x)) *
                     rotation_frame({0, 0, 1}, radians(params.rotate.z)) *
                     rotation_frame({0, 1, 0}, radians(params.rotate.y));
@@ -188,7 +180,6 @@ struct fvconvert_params {
   vec3f  translate    = {0, 0, 0};
   vec3f  rotate       = {0, 0, 0};
   vec3f  scale        = {1, 1, 1};
-  float  scaleu       = 1;
   int    subdivisions = 0;
   bool   catmullclark = false;
 };
@@ -200,16 +191,9 @@ void add_options(const cli_command& cli, fvconvert_params& params) {
   add_option(cli, "facet", params.facet, "Facet normals.");
   add_option(
       cli, "aspositions", params.aspositions, "Remove all but positions.");
-  add_option(cli, "translatex", params.translate.x, "Translate shape.");
-  add_option(cli, "translatey", params.translate.y, "Translate shape.");
-  add_option(cli, "translatez", params.translate.z, "Translate shape.");
-  add_option(cli, "scalex", params.scale.x, "Scale shape.");
-  add_option(cli, "scaley", params.scale.y, "Scale shape.");
-  add_option(cli, "scalez", params.scale.z, "Scale shape.");
-  add_option(cli, "scaleu", params.scaleu, "Scale shape.");
-  add_option(cli, "rotatex", params.rotate.x, "Rotate shape.");
-  add_option(cli, "rotatey", params.rotate.y, "Rotate shape.");
-  add_option(cli, "rotatez", params.rotate.z, "Rotate shape.");
+  add_option(cli, "translate", params.translate, "Translate shape.");
+  add_option(cli, "scale", params.scale, "Scale shape.");
+  add_option(cli, "rotate", params.rotate, "Rotate shape.");
   add_option(cli, "subdivisions", params.subdivisions, "Apply subdivision.");
   add_option(
       cli, "catmullclark", params.catmullclark, "Catmull-Clark subdivision.");
@@ -242,9 +226,9 @@ void run_fvconvert(const fvconvert_params& params) {
 
   // transform
   if (params.translate != vec3f{0, 0, 0} || params.rotate != vec3f{0, 0, 0} ||
-      params.scale != vec3f{1, 1, 1} || params.scaleu != 1) {
+      params.scale != vec3f{1, 1, 1}) {
     auto translation = translation_frame(params.translate);
-    auto scaling     = scaling_frame(params.scale * params.scaleu);
+    auto scaling     = scaling_frame(params.scale);
     auto rotation    = rotation_frame({1, 0, 0}, radians(params.rotate.x)) *
                     rotation_frame({0, 0, 1}, radians(params.rotate.z)) *
                     rotation_frame({0, 1, 0}, radians(params.rotate.y));
@@ -324,7 +308,6 @@ struct heightfield_params {
   vec3f  translate = {0, 0, 0};
   vec3f  rotate    = {0, 0, 0};
   vec3f  scale     = {1, 1, 1};
-  float  scaleu    = 1;
 };
 
 void add_options(const cli_command& cli, heightfield_params& params) {
@@ -333,16 +316,9 @@ void add_options(const cli_command& cli, heightfield_params& params) {
   add_option(cli, "smooth", params.smooth, "Smoooth normals.");
   add_option(cli, "height", params.height, "Shape height.");
   add_option(cli, "info", params.info, "Print info.");
-  add_option(cli, "translatex", params.translate.x, "Translate shape.");
-  add_option(cli, "translatey", params.translate.y, "Translate shape.");
-  add_option(cli, "translatez", params.translate.z, "Translate shape.");
-  add_option(cli, "scalex", params.scale.x, "Scale shape.");
-  add_option(cli, "scaley", params.scale.y, "Scale shape.");
-  add_option(cli, "scalez", params.scale.z, "Scale shape.");
-  add_option(cli, "scaleu", params.scaleu, "Scale shape.");
-  add_option(cli, "rotatex", params.rotate.x, "Rotate shape.");
-  add_option(cli, "rotatey", params.rotate.y, "Rotate shape.");
-  add_option(cli, "rotatez", params.rotate.z, "Rotate shape.");
+  add_option(cli, "translate", params.translate, "Translate shape.");
+  add_option(cli, "scale", params.scale, "Scale shape.");
+  add_option(cli, "rotate", params.rotate, "Rotate shape.");
 }
 
 void run_heightfield(const heightfield_params& params) {

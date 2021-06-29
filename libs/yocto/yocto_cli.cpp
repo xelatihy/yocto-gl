@@ -654,7 +654,7 @@ static void arg_to_json(json_value& value, const json_value& schema,
     value = args[idx++];
   } else if (schema["type"] == "array") {
     value = json_array{};
-    if (idx + (size_t)schema["minItems"] >= args.size())
+    if (idx + (size_t)schema["minItems"] > args.size())
       throw cli_error("missing value for " + name);
     auto end = std::min(idx + (size_t)schema["maxItems"], args.size());
     while (idx < end) {
