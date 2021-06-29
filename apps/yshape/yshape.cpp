@@ -40,19 +40,21 @@ using namespace yocto;
 
 // convert params
 struct convert_params {
-  string shape       = "shape.ply";
-  string output      = "out.ply";
-  bool   info        = false;
-  bool   smooth      = false;
-  bool   facet       = false;
-  bool   aspositions = false;
-  bool   astriangles = false;
-  vec3f  translate   = {0, 0, 0};
-  vec3f  rotate      = {0, 0, 0};
-  vec3f  scale       = {1, 1, 1};
-  float  scaleu      = 1;
-  bool   toedges     = false;
-  bool   tovertices  = false;
+  string shape        = "shape.ply";
+  string output       = "out.ply";
+  bool   info         = false;
+  bool   smooth       = false;
+  bool   facet        = false;
+  bool   aspositions  = false;
+  bool   astriangles  = false;
+  vec3f  translate    = {0, 0, 0};
+  vec3f  rotate       = {0, 0, 0};
+  vec3f  scale        = {1, 1, 1};
+  float  scaleu       = 1;
+  int    subdivisions = 0;
+  bool   catmullclark = false;
+  bool   toedges      = false;
+  bool   tovertices   = false;
 };
 
 void add_options(const cli_command& cli, convert_params& params) {
@@ -73,6 +75,9 @@ void add_options(const cli_command& cli, convert_params& params) {
   add_option(cli, "rotatex", params.rotate.x, "Rotate shape.");
   add_option(cli, "rotatey", params.rotate.y, "Rotate shape.");
   add_option(cli, "rotatez", params.rotate.z, "Rotate shape.");
+  add_option(cli, "subdivisions", params.subdivisions, "Apply subdivision.");
+  add_option(
+      cli, "catmullclark", params.catmullclark, "Catmull-Clark subdivision.");
   add_option(cli, "toedges", params.toedges, "Convert shape to edges.");
   add_option(
       cli, "tovertices", params.tovertices, "Convert shape to vertices.");
@@ -104,6 +109,11 @@ void run_convert(const convert_params& params) {
     print_info("shape stats ------------");
     auto stats = shape_stats(shape);
     for (auto& stat : stats) print_info(stat);
+  }
+
+  // subdivision
+  if (params.subdivisions > 0) {
+    shape = subdivide_shape(shape, params.subdivisions, params.catmullclark);
   }
 
   // transform
@@ -169,16 +179,18 @@ void run_convert(const convert_params& params) {
 
 // fvconvert params
 struct fvconvert_params {
-  string shape       = "shape.obj";
-  string output      = "out.obj";
-  bool   info        = false;
-  bool   smooth      = false;
-  bool   facet       = false;
-  bool   aspositions = false;
-  vec3f  translate   = {0, 0, 0};
-  vec3f  rotate      = {0, 0, 0};
-  vec3f  scale       = {1, 1, 1};
-  float  scaleu      = 1;
+  string shape        = "shape.obj";
+  string output       = "out.obj";
+  bool   info         = false;
+  bool   smooth       = false;
+  bool   facet        = false;
+  bool   aspositions  = false;
+  vec3f  translate    = {0, 0, 0};
+  vec3f  rotate       = {0, 0, 0};
+  vec3f  scale        = {1, 1, 1};
+  float  scaleu       = 1;
+  int    subdivisions = 0;
+  bool   catmullclark = false;
 };
 
 void add_options(const cli_command& cli, fvconvert_params& params) {
@@ -198,6 +210,9 @@ void add_options(const cli_command& cli, fvconvert_params& params) {
   add_option(cli, "rotatex", params.rotate.x, "Rotate shape.");
   add_option(cli, "rotatey", params.rotate.y, "Rotate shape.");
   add_option(cli, "rotatez", params.rotate.z, "Rotate shape.");
+  add_option(cli, "subdivisions", params.subdivisions, "Apply subdivision.");
+  add_option(
+      cli, "catmullclark", params.catmullclark, "Catmull-Clark subdivision.");
 }
 
 // convert images
@@ -218,6 +233,11 @@ void run_fvconvert(const fvconvert_params& params) {
     print_info("shape stats ------------");
     auto stats = fvshape_stats(shape);
     for (auto& stat : stats) print_info(stat);
+  }
+
+  // subdivision
+  if (params.subdivisions > 0) {
+    shape = subdivide_fvshape(shape, params.subdivisions, params.catmullclark);
   }
 
   // transform
@@ -498,7 +518,7 @@ void run(const vector<string>& args) {
   if (params.command == "convert") {
     return run_convert(params.convert);
   } else if (params.command == "fvconvert") {
-    return run_view(params.view);
+    return run_fvconvert(params.fvconvert);
   } else if (params.command == "view") {
     return run_view(params.view);
   } else if (params.command == "heightfield") {

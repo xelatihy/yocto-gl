@@ -511,62 +511,62 @@ void quads_to_triangles(shape_data& result, const shape_data& shape) {
 // Subdivision
 shape_data subdivide_shape(
     const shape_data& shape, int subdivisions, bool catmullclark) {
-  // This should probably be reimplemented in a faster fashion,
+  // This should probably be re-implemented in a faster fashion,
   // but how it is not obvious
-  auto subdivided = shape_data{};
-  if (!shape.points.empty()) {
+  auto subdivided = shape;
+  if (!subdivided.points.empty()) {
     // nothing to do
-  } else if (!shape.lines.empty()) {
+  } else if (!subdivided.lines.empty()) {
     for ([[maybe_unused]] auto subdivision : range(subdivisions)) {
       std::tie(std::ignore, subdivided.normals) = subdivide_lines(
-          shape.lines, shape.normals);
+          subdivided.lines, subdivided.normals);
       std::tie(std::ignore, subdivided.texcoords) = subdivide_lines(
-          shape.lines, shape.texcoords);
+          subdivided.lines, subdivided.texcoords);
       std::tie(std::ignore, subdivided.colors) = subdivide_lines(
-          shape.lines, shape.colors);
+          subdivided.lines, subdivided.colors);
       std::tie(std::ignore, subdivided.radius) = subdivide_lines(
-          shape.lines, shape.radius);
+          subdivided.lines, subdivided.radius);
       std::tie(subdivided.lines, subdivided.positions) = subdivide_lines(
-          shape.lines, shape.positions);
+          subdivided.lines, subdivided.positions);
     }
-  } else if (!shape.triangles.empty()) {
+  } else if (!subdivided.triangles.empty()) {
     for ([[maybe_unused]] auto subdivision : range(subdivisions)) {
       std::tie(std::ignore, subdivided.normals) = subdivide_triangles(
-          shape.triangles, shape.normals);
+          subdivided.triangles, subdivided.normals);
       std::tie(std::ignore, subdivided.texcoords) = subdivide_triangles(
-          shape.triangles, shape.texcoords);
+          subdivided.triangles, subdivided.texcoords);
       std::tie(std::ignore, subdivided.colors) = subdivide_triangles(
-          shape.triangles, shape.colors);
+          subdivided.triangles, subdivided.colors);
       std::tie(std::ignore, subdivided.radius) = subdivide_triangles(
-          shape.triangles, shape.radius);
+          subdivided.triangles, subdivided.radius);
       std::tie(subdivided.triangles, subdivided.positions) =
-          subdivide_triangles(shape.triangles, shape.positions);
+          subdivide_triangles(subdivided.triangles, subdivided.positions);
     }
-  } else if (!shape.quads.empty() && !catmullclark) {
+  } else if (!subdivided.quads.empty() && !catmullclark) {
     for ([[maybe_unused]] auto subdivision : range(subdivisions)) {
       std::tie(std::ignore, subdivided.normals) = subdivide_quads(
-          shape.quads, shape.normals);
+          subdivided.quads, subdivided.normals);
       std::tie(std::ignore, subdivided.texcoords) = subdivide_quads(
-          shape.quads, shape.texcoords);
+          subdivided.quads, subdivided.texcoords);
       std::tie(std::ignore, subdivided.colors) = subdivide_quads(
-          shape.quads, shape.colors);
+          subdivided.quads, subdivided.colors);
       std::tie(std::ignore, subdivided.radius) = subdivide_quads(
-          shape.quads, shape.radius);
+          subdivided.quads, subdivided.radius);
       std::tie(subdivided.quads, subdivided.positions) = subdivide_quads(
-          shape.quads, shape.positions);
+          subdivided.quads, subdivided.positions);
     }
-  } else if (!shape.quads.empty() && catmullclark) {
+  } else if (!subdivided.quads.empty() && catmullclark) {
     for ([[maybe_unused]] auto subdivision : range(subdivisions)) {
       std::tie(std::ignore, subdivided.normals) = subdivide_catmullclark(
-          shape.quads, shape.normals);
+          subdivided.quads, subdivided.normals);
       std::tie(std::ignore, subdivided.texcoords) = subdivide_catmullclark(
-          shape.quads, shape.texcoords);
+          subdivided.quads, subdivided.texcoords);
       std::tie(std::ignore, subdivided.colors) = subdivide_catmullclark(
-          shape.quads, shape.colors);
+          subdivided.quads, subdivided.colors);
       std::tie(std::ignore, subdivided.radius) = subdivide_catmullclark(
-          shape.quads, shape.radius);
+          subdivided.quads, subdivided.radius);
       std::tie(subdivided.quads, subdivided.positions) = subdivide_catmullclark(
-          shape.quads, shape.positions);
+          subdivided.quads, subdivided.positions);
     }
   } else {
     // empty shape
@@ -663,24 +663,25 @@ fvshape_data shape_to_fvshape(const shape_data& shape) {
 // Subdivision
 fvshape_data subdivide_fvshape(
     const fvshape_data& shape, int subdivisions, bool catmullclark) {
-  auto subdivided = fvshape_data{};
+  auto subdivided = shape;
   if (!catmullclark) {
     for ([[maybe_unused]] auto subdivision : range(subdivisions)) {
       std::tie(subdivided.quadspos, subdivided.positions) = subdivide_quads(
-          shape.quadspos, shape.positions);
+          subdivided.quadspos, subdivided.positions);
       std::tie(subdivided.quadsnorm, subdivided.normals) = subdivide_quads(
-          shape.quadsnorm, shape.normals);
+          subdivided.quadsnorm, subdivided.normals);
       std::tie(subdivided.quadstexcoord, subdivided.texcoords) =
-          subdivide_quads(shape.quadstexcoord, shape.texcoords);
+          subdivide_quads(subdivided.quadstexcoord, subdivided.texcoords);
     }
   } else {
     for ([[maybe_unused]] auto subdivision : range(subdivisions)) {
       std::tie(subdivided.quadspos, subdivided.positions) =
-          subdivide_catmullclark(shape.quadspos, shape.positions);
+          subdivide_catmullclark(subdivided.quadspos, subdivided.positions);
       std::tie(subdivided.quadsnorm, subdivided.normals) =
-          subdivide_catmullclark(shape.quadsnorm, shape.normals);
+          subdivide_catmullclark(subdivided.quadsnorm, subdivided.normals);
       std::tie(subdivided.quadstexcoord, subdivided.texcoords) =
-          subdivide_catmullclark(shape.quadstexcoord, shape.texcoords, true);
+          subdivide_catmullclark(
+              subdivided.quadstexcoord, subdivided.texcoords, true);
     }
   }
   return subdivided;
