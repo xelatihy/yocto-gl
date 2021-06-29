@@ -36,7 +36,6 @@
 #include <array>
 #include <atomic>
 #include <cstring>
-#include <deque>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -57,7 +56,6 @@ namespace yocto {
 // using directives
 using std::array;
 using std::atomic;
-using std::deque;
 using std::pair;
 using std::string;
 using namespace std::string_literals;
@@ -445,13 +443,9 @@ const int bvh_max_prims = 4;
 // Build BVH nodes
 static void build_bvh_serial(
     bvh_data& bvh, const vector<bbox3f>& bboxes, bool highquality) {
-  // get values
-  auto& nodes      = bvh.nodes;
-  auto& primitives = bvh.primitives;
-
   // prepare to build nodes
-  nodes.clear();
-  nodes.reserve(bboxes.size() * 2);
+  bvh.nodes.clear();
+  bvh.nodes.reserve(bboxes.size() * 2);
 
   // prepare primitives
   bvh.primitives.resize(bboxes.size());
@@ -463,38 +457,38 @@ static void build_bvh_serial(
     centers[idx] = center(bboxes[idx]);
 
   // queue up first node
-  auto queue = deque<vec3i>{{0, 0, (int)bboxes.size()}};
-  nodes.emplace_back();
+  auto queue = vector<vec3i>{{0, 0, (int)bboxes.size()}};
+  bvh.nodes.emplace_back();
 
   // create nodes until the queue is empty
   while (!queue.empty()) {
     // grab node to work on
-    auto next = queue.front();
-    queue.pop_front();
-    auto nodeid = next.x, start = next.y, end = next.z;
+    auto [nodeid, start, end] = queue.back();
+    queue.pop_back();
 
     // grab node
-    auto& node = nodes[nodeid];
+    auto& node = bvh.nodes[nodeid];
 
     // compute bounds
     node.bbox = invalidb3f;
     for (auto i = start; i < end; i++)
-      node.bbox = merge(node.bbox, bboxes[primitives[i]]);
+      node.bbox = merge(node.bbox, bboxes[bvh.primitives[i]]);
 
     // split into two children
     if (end - start > bvh_max_prims) {
       // get split
       auto [mid, axis] =
-          highquality ? split_sah(primitives, bboxes, centers, start, end)
-                      : split_middle(primitives, bboxes, centers, start, end);
+          highquality
+              ? split_sah(bvh.primitives, bboxes, centers, start, end)
+              : split_middle(bvh.primitives, bboxes, centers, start, end);
 
       // make an internal node
       node.internal = true;
       node.axis     = (uint8_t)axis;
       node.num      = 2;
-      node.start    = (int)nodes.size();
-      nodes.emplace_back();
-      nodes.emplace_back();
+      node.start    = (int)bvh.nodes.size();
+      bvh.nodes.emplace_back();
+      bvh.nodes.emplace_back();
       queue.push_back({node.start + 0, start, mid});
       queue.push_back({node.start + 1, mid, end});
     } else {
@@ -506,111 +500,8 @@ static void build_bvh_serial(
   }
 
   // cleanup
-  nodes.shrink_to_fit();
+  bvh.nodes.shrink_to_fit();
 }
-
-#if 0
-
-// Build BVH nodes
-static void build_bvh_parallel(
-    bvh_tree_& bvh, const vector<bbox3f>& bboxes, bool highquality) {
-  // get values
-  auto& nodes      = bvh.nodes;
-  auto& primitives = bvh.primitives;
-
-  // prepare to build nodes
-  nodes.clear();
-  nodes.reserve(bboxes.size() * 2);
-
-  // prepare primitives
-  bvh.primitives.resize(bboxes.size());
-  for (auto idx = 0; idx < bboxes.size(); idx++) bvh.primitives[idx] = idx;
-
-  // prepare centers
-  auto centers = vector<vec3f>(bboxes.size());
-  for (auto idx = 0; idx < bboxes.size(); idx++)
-    centers[idx] = center(bboxes[idx]);
-
-  // queue up first node
-  auto queue = deque<vec3i>{{0, 0, (int)primitives.size()}};
-  nodes.emplace_back();
-
-  // synchronization
-  atomic<int>          num_processed_prims(0);
-  std::mutex           queue_mutex;
-  vector<future<void>> futures;
-  auto                 nthreads = std::thread::hardware_concurrency();
-
-  // create nodes until the queue is empty
-  for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
-    futures.emplace_back(std::async(
-        std::launch::async, [&nodes, &primitives, &bboxes, &centers, &type,
-                                &num_processed_prims, &queue_mutex, &queue] {
-          while (true) {
-            // exit if needed
-            if (num_processed_prims >= primitives.size()) return;
-
-            // grab node to work on
-            auto next = zero3i;
-            {
-              std::lock_guard<std::mutex> lock{queue_mutex};
-              if (!queue.empty()) {
-                next = queue.front();
-                queue.pop_front();
-              }
-            }
-
-            // wait a bit if needed
-            if (next == zero3i) {
-              std::this_thread::sleep_for(std::chrono::microseconds(10));
-              continue;
-            }
-
-            // grab node
-            auto  nodeid = next.x, start = next.y, end = next.z;
-            auto& node = nodes[nodeid];
-
-            // compute bounds
-            node.bbox = invalidb3f;
-            for (auto i = start; i < end; i++)
-              node.bbox = merge(node.bbox, bboxes[primitives[i]]);
-
-            // split into two children
-            if (end - start > bvh_max_prims) {
-              // get split
-              auto [mid, axis] =
-                  highquality ? split_sah(primitives, bboxes, centers, start, end)
-                              : split_middle(primitives, bboxes, centers, start, end);
-
-              // make an internal node
-              {
-                std::lock_guard<std::mutex> lock{queue_mutex};
-                node.internal = true;
-                node.axis     = (int8_t)axis;
-                node.num      = 2;
-                node.start    = (int)nodes.size();
-                nodes.emplace_back();
-                nodes.emplace_back();
-                queue.push_back({node.start + 0, start, mid});
-                queue.push_back({node.start + 1, mid, end});
-              }
-            } else {
-              // Make a leaf node
-              node.internal = false;
-              node.num      = (int16_t)(end - start);
-              node.start    = start;
-              num_processed_prims += node.num;
-            }
-          }
-        }));
-  }
-  for (auto& f : futures) f.get();
-
-  // cleanup
-  nodes.shrink_to_fit();
-}
-
-#endif
 
 // Update bvh
 static void refit_bvh(bvh_data& bvh, const vector<bbox3f>& bboxes) {
