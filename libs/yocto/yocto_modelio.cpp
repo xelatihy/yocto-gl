@@ -30,7 +30,6 @@
 
 #include <cstdio>
 #include <cstring>
-#include <filesystem>
 #include <memory>
 #include <stdexcept>
 #include <string_view>
