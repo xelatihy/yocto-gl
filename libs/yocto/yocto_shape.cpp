@@ -380,17 +380,15 @@ void insert_edges(edge_map& emap, const vector<vec4i>& quads) {
 // Insert an edge and return its index
 int insert_edge(edge_map& emap, const vec2i& edge) {
   auto es = edge.x < edge.y ? edge : vec2i{edge.y, edge.x};
-  auto it = emap.index.find(es);
-  if (it == emap.index.end()) {
-    auto idx = (int)emap.edges.size();
-    emap.index.insert(it, {es, idx});
-    emap.edges.push_back(es);
-    emap.nfaces.push_back(1);
-    return idx;
+  auto it = emap.edges.find(es);
+  if (it == emap.edges.end()) {
+    auto data = edge_map::edge_data{(int)emap.edges.size(), 1};
+    emap.edges.insert(it, {es, data});
+    return data.index;
   } else {
-    auto idx = it->second;
-    emap.nfaces[idx] += 1;
-    return idx;
+    auto& data = it->second;
+    data.nfaces += 1;
+    return data.index;
   }
 }
 // Get number of edges
@@ -398,16 +396,20 @@ int num_edges(const edge_map& emap) { return (int)emap.edges.size(); }
 // Get the edge index
 int edge_index(const edge_map& emap, const vec2i& edge) {
   auto es       = edge.x < edge.y ? edge : vec2i{edge.y, edge.x};
-  auto iterator = emap.index.find(es);
-  if (iterator == emap.index.end()) return -1;
-  return iterator->second;
+  auto iterator = emap.edges.find(es);
+  if (iterator == emap.edges.end()) return -1;
+  return iterator->second.index;
 }
 // Get a list of edges, boundary edges, boundary vertices
-vector<vec2i> get_edges(const edge_map& emap) { return emap.edges; }
+vector<vec2i> get_edges(const edge_map& emap) {
+  auto edges = vector<vec2i>(emap.edges.size());
+  for (auto& [edge, data] : emap.edges) edges[data.index] = edge;
+  return edges;
+}
 vector<vec2i> get_boundary(const edge_map& emap) {
   auto boundary = vector<vec2i>{};
-  for (auto idx = 0; idx < emap.edges.size(); idx++) {
-    if (emap.nfaces[idx] < 2) boundary.push_back(emap.edges[idx]);
+  for (auto& [edge, data] : emap.edges) {
+    if (data.nfaces < 2) boundary.push_back(edge);
   }
   return boundary;
 }

@@ -181,9 +181,11 @@ namespace yocto {
 // We store only bidirectional edges to keep the dictionary small. Use the
 // functions below to access this data.
 struct edge_map {
-  unordered_map<vec2i, int> index  = {};
-  vector<vec2i>             edges  = {};
-  vector<int>               nfaces = {};
+  struct edge_data {
+    int index;
+    int nfaces;
+  };
+  unordered_map<vec2i, edge_data> edges = {};
 };
 
 // Initialize an edge map with elements.
