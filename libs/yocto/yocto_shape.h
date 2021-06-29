@@ -407,78 +407,78 @@ namespace yocto {
 
 // Subdivide lines by splitting each line in half.
 pair<vector<vec2i>, vector<float>> subdivide_lines(
-    const vector<vec2i>& lines, const vector<float>& vert);
+    const vector<vec2i>& lines, const vector<float>& vertex);
 pair<vector<vec2i>, vector<vec2f>> subdivide_lines(
-    const vector<vec2i>& lines, const vector<vec2f>& vert);
+    const vector<vec2i>& lines, const vector<vec2f>& vertex);
 pair<vector<vec2i>, vector<vec3f>> subdivide_lines(
-    const vector<vec2i>& lines, const vector<vec3f>& vert);
+    const vector<vec2i>& lines, const vector<vec3f>& vertex);
 pair<vector<vec2i>, vector<vec4f>> subdivide_lines(
-    const vector<vec2i>& lines, const vector<vec4f>& vert);
+    const vector<vec2i>& lines, const vector<vec4f>& vertex);
 // Subdivide triangle by splitting each triangle in four, creating new
 // vertices for each edge.
 pair<vector<vec3i>, vector<float>> subdivide_triangles(
-    const vector<vec3i>& triangles, const vector<float>& vert);
+    const vector<vec3i>& triangles, const vector<float>& vertex);
 pair<vector<vec3i>, vector<vec2f>> subdivide_triangles(
-    const vector<vec3i>& triangles, const vector<vec2f>& vert);
+    const vector<vec3i>& triangles, const vector<vec2f>& vertex);
 pair<vector<vec3i>, vector<vec3f>> subdivide_triangles(
-    const vector<vec3i>& triangles, const vector<vec3f>& vert);
+    const vector<vec3i>& triangles, const vector<vec3f>& vertex);
 pair<vector<vec3i>, vector<vec4f>> subdivide_triangles(
-    const vector<vec3i>& triangles, const vector<vec4f>& vert);
+    const vector<vec3i>& triangles, const vector<vec4f>& vertex);
 // Subdivide quads by splitting each quads in four, creating new
 // vertices for each edge and for each face.
 pair<vector<vec4i>, vector<float>> subdivide_quads(
-    const vector<vec4i>& quads, const vector<float>& vert);
+    const vector<vec4i>& quads, const vector<float>& vertex);
 pair<vector<vec4i>, vector<vec2f>> subdivide_quads(
-    const vector<vec4i>& quads, const vector<vec2f>& vert);
+    const vector<vec4i>& quads, const vector<vec2f>& vertex);
 pair<vector<vec4i>, vector<vec3f>> subdivide_quads(
-    const vector<vec4i>& quads, const vector<vec3f>& vert);
+    const vector<vec4i>& quads, const vector<vec3f>& vertex);
 pair<vector<vec4i>, vector<vec4f>> subdivide_quads(
-    const vector<vec4i>& quads, const vector<vec4f>& vert);
+    const vector<vec4i>& quads, const vector<vec4f>& vertex);
 // Subdivide beziers by splitting each segment in two.
 pair<vector<vec4i>, vector<float>> subdivide_beziers(
-    const vector<vec4i>& beziers, const vector<float>& vert);
+    const vector<vec4i>& beziers, const vector<float>& vertex);
 pair<vector<vec4i>, vector<vec2f>> subdivide_beziers(
-    const vector<vec4i>& beziers, const vector<vec2f>& vert);
+    const vector<vec4i>& beziers, const vector<vec2f>& vertex);
 pair<vector<vec4i>, vector<vec3f>> subdivide_beziers(
-    const vector<vec4i>& beziers, const vector<vec3f>& vert);
+    const vector<vec4i>& beziers, const vector<vec3f>& vertex);
 pair<vector<vec4i>, vector<vec4f>> subdivide_beziers(
-    const vector<vec4i>& beziers, const vector<vec4f>& vert);
+    const vector<vec4i>& beziers, const vector<vec4f>& vertex);
 // Subdivide quads using Carmull-Clark subdivision rules.
 pair<vector<vec4i>, vector<float>> subdivide_catmullclark(
-    const vector<vec4i>& quads, const vector<float>& vert,
+    const vector<vec4i>& quads, const vector<float>& vertex,
     bool lock_boundary = false);
 pair<vector<vec4i>, vector<vec2f>> subdivide_catmullclark(
-    const vector<vec4i>& quads, const vector<vec2f>& vert,
+    const vector<vec4i>& quads, const vector<vec2f>& vertex,
     bool lock_boundary = false);
 pair<vector<vec4i>, vector<vec3f>> subdivide_catmullclark(
-    const vector<vec4i>& quads, const vector<vec3f>& vert,
+    const vector<vec4i>& quads, const vector<vec3f>& vertex,
     bool lock_boundary = false);
 pair<vector<vec4i>, vector<vec4f>> subdivide_catmullclark(
-    const vector<vec4i>& quads, const vector<vec4f>& vert,
+    const vector<vec4i>& quads, const vector<vec4f>& vertex,
     bool lock_boundary = false);
 
 // Subdivide lines by splitting each line in half.
 template <typename T>
 inline pair<vector<vec2i>, vector<T>> subdivide_lines(
-    const vector<vec2i>& lines, const vector<T>& vert, int level);
+    const vector<vec2i>& lines, const vector<T>& vertices, int level);
 // Subdivide triangle by splitting each triangle in four, creating new
 // vertices for each edge.
 template <typename T>
 inline pair<vector<vec3i>, vector<T>> subdivide_triangles(
-    const vector<vec3i>& triangles, const vector<T>& vert, int level);
+    const vector<vec3i>& triangles, const vector<T>& vertices, int level);
 // Subdivide quads by splitting each quads in four, creating new
 // vertices for each edge and for each face.
 template <typename T>
 inline pair<vector<vec4i>, vector<T>> subdivide_quads(
-    const vector<vec4i>& quads, const vector<T>& vert, int level);
+    const vector<vec4i>& quads, const vector<T>& vertices, int level);
 // Subdivide beziers by splitting each segment in two.
 template <typename T>
 inline pair<vector<vec4i>, vector<T>> subdivide_beziers(
-    const vector<vec4i>& beziers, const vector<T>& vert, int level);
+    const vector<vec4i>& beziers, const vector<T>& vertices, int level);
 // Subdivide quads using Carmull-Clark subdivision rules.
 template <typename T>
 inline pair<vector<vec4i>, vector<T>> subdivide_catmullclark(
-    const vector<vec4i>& quads, const vector<T>& vert, int level,
+    const vector<vec4i>& quads, const vector<T>& vertices, int level,
     bool lock_boundary = false);
 
 }  // namespace yocto
@@ -730,9 +730,9 @@ namespace yocto {
 // Subdivide lines by splitting each line in half.
 template <typename T>
 inline pair<vector<vec2i>, vector<T>> subdivide_lines(
-    const vector<vec2i>& lines, const vector<T>& vert, int level) {
-  if (level < 1) return {lines, vert};
-  auto tess = pair{lines, vert};
+    const vector<vec2i>& lines, const vector<T>& vertices, int level) {
+  if (level < 1) return {lines, vertices};
+  auto tess = pair{lines, vertices};
   for (auto idx = 0; idx < level; idx++)
     tess = subdivide_lines(tess.first, tess.second);
   return tess;
@@ -741,9 +741,9 @@ inline pair<vector<vec2i>, vector<T>> subdivide_lines(
 // vertices for each edge.
 template <typename T>
 inline pair<vector<vec3i>, vector<T>> subdivide_triangles(
-    const vector<vec3i>& triangles, const vector<T>& vert, int level) {
-  if (level < 1) return {triangles, vert};
-  auto tess = pair{triangles, vert};
+    const vector<vec3i>& triangles, const vector<T>& vertices, int level) {
+  if (level < 1) return {triangles, vertices};
+  auto tess = pair{triangles, vertices};
   for (auto idx = 0; idx < level; idx++)
     tess = subdivide_triangles(tess.first, tess.second);
   return tess;
@@ -752,9 +752,9 @@ inline pair<vector<vec3i>, vector<T>> subdivide_triangles(
 // vertices for each edge and for each face.
 template <typename T>
 inline pair<vector<vec4i>, vector<T>> subdivide_quads(
-    const vector<vec4i>& quads, const vector<T>& vert, int level) {
-  if (level < 1) return {quads, vert};
-  auto tess = pair{quads, vert};
+    const vector<vec4i>& quads, const vector<T>& vertices, int level) {
+  if (level < 1) return {quads, vertices};
+  auto tess = pair{quads, vertices};
   for (auto idx = 0; idx < level; idx++)
     tess = subdivide_quads(tess.first, tess.second);
   return tess;
@@ -762,9 +762,9 @@ inline pair<vector<vec4i>, vector<T>> subdivide_quads(
 // Subdivide beziers by splitting each segment in two.
 template <typename T>
 inline pair<vector<vec4i>, vector<T>> subdivide_beziers(
-    const vector<vec4i>& beziers, const vector<T>& vert, int level) {
-  if (level < 1) return {beziers, vert};
-  auto tess = pair{beziers, vert};
+    const vector<vec4i>& beziers, const vector<T>& vertices, int level) {
+  if (level < 1) return {beziers, vertices};
+  auto tess = pair{beziers, vertices};
   for (auto idx = 0; idx < level; idx++)
     tess = subdivide_beziers(tess.first, tess.second);
   return tess;
@@ -772,10 +772,10 @@ inline pair<vector<vec4i>, vector<T>> subdivide_beziers(
 // Subdivide quads using Carmull-Clark subdivision rules.
 template <typename T>
 inline pair<vector<vec4i>, vector<T>> subdivide_catmullclark(
-    const vector<vec4i>& quads, const vector<T>& vert, int level,
+    const vector<vec4i>& quads, const vector<T>& vertices, int level,
     bool lock_boundary) {
-  if (level < 1) return {quads, vert};
-  auto tess = pair{quads, vert};
+  if (level < 1) return {quads, vertices};
+  auto tess = pair{quads, vertices};
   for (auto idx = 0; idx < level; idx++)
     tess = subdivide_catmullclark(tess.first, tess.second, lock_boundary);
   return tess;

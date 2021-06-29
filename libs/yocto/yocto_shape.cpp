@@ -1345,18 +1345,18 @@ namespace yocto {
 // Subdivide lines.
 template <typename T>
 static pair<vector<vec2i>, vector<T>> subdivide_lines_impl(
-    const vector<vec2i>& lines, const vector<T>& vert) {
+    const vector<vec2i>& lines, const vector<T>& vertices) {
   // early exit
-  if (lines.empty() || vert.empty()) return {lines, vert};
+  if (lines.empty() || vertices.empty()) return {lines, vertices};
   // sizes
-  auto nverts = (int)vert.size();
+  auto nverts = (int)vertices.size();
   auto nlines = (int)lines.size();
   // create vertices
   auto tvert = vector<T>(nverts + nlines);
-  for (auto i = 0; i < nverts; i++) tvert[i] = vert[i];
+  for (auto i = 0; i < nverts; i++) tvert[i] = vertices[i];
   for (auto i = 0; i < nlines; i++) {
     auto l            = lines[i];
-    tvert[nverts + i] = (vert[l.x] + vert[l.y]) / 2;
+    tvert[nverts + i] = (vertices[l.x] + vertices[l.y]) / 2;
   }
   // create lines
   auto tlines = vector<vec2i>(nlines * 2);
@@ -1372,22 +1372,22 @@ static pair<vector<vec2i>, vector<T>> subdivide_lines_impl(
 // Subdivide triangle.
 template <typename T>
 static pair<vector<vec3i>, vector<T>> subdivide_triangles_impl(
-    const vector<vec3i>& triangles, const vector<T>& vert) {
+    const vector<vec3i>& triangles, const vector<T>& vertices) {
   // early exit
-  if (triangles.empty() || vert.empty()) return {triangles, vert};
+  if (triangles.empty() || vertices.empty()) return {triangles, vertices};
   // get edges
   auto emap  = make_edge_map(triangles);
   auto edges = get_edges(emap);
   // number of elements
-  auto nverts = (int)vert.size();
+  auto nverts = (int)vertices.size();
   auto nedges = (int)edges.size();
   auto nfaces = (int)triangles.size();
   // create vertices
   auto tvert = vector<T>(nverts + nedges);
-  for (auto i = 0; i < nverts; i++) tvert[i] = vert[i];
+  for (auto i = 0; i < nverts; i++) tvert[i] = vertices[i];
   for (auto i = 0; i < nedges; i++) {
     auto e            = edges[i];
-    tvert[nverts + i] = (vert[e.x] + vert[e.y]) / 2;
+    tvert[nverts + i] = (vertices[e.x] + vertices[e.y]) / 2;
   }
   // create triangles
   auto ttriangles = vector<vec3i>(nfaces * 4);
@@ -1410,30 +1410,31 @@ static pair<vector<vec3i>, vector<T>> subdivide_triangles_impl(
 // Subdivide quads.
 template <typename T>
 static pair<vector<vec4i>, vector<T>> subdivide_quads_impl(
-    const vector<vec4i>& quads, const vector<T>& vert) {
+    const vector<vec4i>& quads, const vector<T>& vertices) {
   // early exit
-  if (quads.empty() || vert.empty()) return {quads, vert};
+  if (quads.empty() || vertices.empty()) return {quads, vertices};
   // get edges
   auto emap  = make_edge_map(quads);
   auto edges = get_edges(emap);
   // number of elements
-  auto nverts = (int)vert.size();
+  auto nverts = (int)vertices.size();
   auto nedges = (int)edges.size();
   auto nfaces = (int)quads.size();
   // create vertices
   auto tvert = vector<T>(nverts + nedges + nfaces);
-  for (auto i = 0; i < nverts; i++) tvert[i] = vert[i];
+  for (auto i = 0; i < nverts; i++) tvert[i] = vertices[i];
   for (auto i = 0; i < nedges; i++) {
     auto e            = edges[i];
-    tvert[nverts + i] = (vert[e.x] + vert[e.y]) / 2;
+    tvert[nverts + i] = (vertices[e.x] + vertices[e.y]) / 2;
   }
   for (auto i = 0; i < nfaces; i++) {
     auto q = quads[i];
     if (q.z != q.w) {
       tvert[nverts + nedges + i] =
-          (vert[q.x] + vert[q.y] + vert[q.z] + vert[q.w]) / 4;
+          (vertices[q.x] + vertices[q.y] + vertices[q.z] + vertices[q.w]) / 4;
     } else {
-      tvert[nverts + nedges + i] = (vert[q.x] + vert[q.y] + vert[q.z]) / 3;
+      tvert[nverts + nedges + i] =
+          (vertices[q.x] + vertices[q.y] + vertices[q.z]) / 3;
     }
   }
   // create quads
@@ -1467,9 +1468,9 @@ static pair<vector<vec4i>, vector<T>> subdivide_quads_impl(
 // Subdivide beziers.
 template <typename T>
 static pair<vector<vec4i>, vector<T>> subdivide_beziers_impl(
-    const vector<vec4i>& beziers, const vector<T>& vert) {
+    const vector<vec4i>& beziers, const vector<T>& vertices) {
   // early exit
-  if (beziers.empty() || vert.empty()) return {beziers, vert};
+  if (beziers.empty() || vertices.empty()) return {beziers, vertices};
   // get edges
   auto vmap     = unordered_map<int, int>();
   auto tvert    = vector<T>();
@@ -1477,21 +1478,21 @@ static pair<vector<vec4i>, vector<T>> subdivide_beziers_impl(
   for (auto b : beziers) {
     if (vmap.find(b.x) == vmap.end()) {
       vmap[b.x] = (int)tvert.size();
-      tvert.push_back(vert[b.x]);
+      tvert.push_back(vertices[b.x]);
     }
     if (vmap.find(b.w) == vmap.end()) {
       vmap[b.w] = (int)tvert.size();
-      tvert.push_back(vert[b.w]);
+      tvert.push_back(vertices[b.w]);
     }
     auto bo = (int)tvert.size();
     tbeziers.push_back({vmap.at(b.x), bo + 0, bo + 1, bo + 2});
     tbeziers.push_back({bo + 2, bo + 3, bo + 4, vmap.at(b.w)});
-    tvert.push_back(vert[b.x] / 2 + vert[b.y] / 2);
-    tvert.push_back(vert[b.x] / 4 + vert[b.y] / 2 + vert[b.z] / 4);
-    tvert.push_back(vert[b.x] / 8 + vert[b.y] * ((float)3 / (float)8) +
-                    vert[b.z] * ((float)3 / (float)8) + vert[b.w] / 8);
-    tvert.push_back(vert[b.y] / 4 + vert[b.z] / 2 + vert[b.w] / 4);
-    tvert.push_back(vert[b.z] / 2 + vert[b.w] / 2);
+    tvert.push_back(vertices[b.x] / 2 + vertices[b.y] / 2);
+    tvert.push_back(vertices[b.x] / 4 + vertices[b.y] / 2 + vertices[b.z] / 4);
+    tvert.push_back(vertices[b.x] / 8 + vertices[b.y] * ((float)3 / (float)8) +
+                    vertices[b.z] * ((float)3 / (float)8) + vertices[b.w] / 8);
+    tvert.push_back(vertices[b.y] / 4 + vertices[b.z] / 2 + vertices[b.w] / 4);
+    tvert.push_back(vertices[b.z] / 2 + vertices[b.w] / 2);
   }
 
   // done
@@ -1501,15 +1502,15 @@ static pair<vector<vec4i>, vector<T>> subdivide_beziers_impl(
 // Subdivide catmullclark.
 template <typename T>
 static pair<vector<vec4i>, vector<T>> subdivide_catmullclark_impl(
-    const vector<vec4i>& quads, const vector<T>& vert, bool lock_boundary) {
+    const vector<vec4i>& quads, const vector<T>& vertices, bool lock_boundary) {
   // early exit
-  if (quads.empty() || vert.empty()) return {quads, vert};
+  if (quads.empty() || vertices.empty()) return {quads, vertices};
   // get edges
   auto emap     = make_edge_map(quads);
   auto edges    = get_edges(emap);
   auto boundary = get_boundary(emap);
   // number of elements
-  auto nverts    = (int)vert.size();
+  auto nverts    = (int)vertices.size();
   auto nedges    = (int)edges.size();
   auto nboundary = (int)boundary.size();
   auto nfaces    = (int)quads.size();
@@ -1517,18 +1518,19 @@ static pair<vector<vec4i>, vector<T>> subdivide_catmullclark_impl(
   // split elements ------------------------------------
   // create vertices
   auto tvert = vector<T>(nverts + nedges + nfaces);
-  for (auto i = 0; i < nverts; i++) tvert[i] = vert[i];
+  for (auto i = 0; i < nverts; i++) tvert[i] = vertices[i];
   for (auto i = 0; i < nedges; i++) {
     auto e            = edges[i];
-    tvert[nverts + i] = (vert[e.x] + vert[e.y]) / 2;
+    tvert[nverts + i] = (vertices[e.x] + vertices[e.y]) / 2;
   }
   for (auto i = 0; i < nfaces; i++) {
     auto q = quads[i];
     if (q.z != q.w) {
       tvert[nverts + nedges + i] =
-          (vert[q.x] + vert[q.y] + vert[q.z] + vert[q.w]) / 4;
+          (vertices[q.x] + vertices[q.y] + vertices[q.z] + vertices[q.w]) / 4;
     } else {
-      tvert[nverts + nedges + i] = (vert[q.x] + vert[q.y] + vert[q.z]) / 3;
+      tvert[nverts + nedges + i] =
+          (vertices[q.x] + vertices[q.y] + vertices[q.z]) / 3;
     }
   }
   // create quads
@@ -1576,7 +1578,7 @@ static pair<vector<vec4i>, vector<T>> subdivide_catmullclark_impl(
     for (auto& b : tboundary) tcrease_edges.push_back(b);
   }
 
-  // define vertex valence ---------------------------
+  // define vertices valence ---------------------------
   auto tvert_val = vector<int>(tvert.size(), 2);
   for (auto& e : tboundary) {
     tvert_val[e.x] = (lock_boundary) ? 0 : 1;
@@ -1622,88 +1624,92 @@ static pair<vector<vec4i>, vector<T>> subdivide_catmullclark_impl(
 }
 
 pair<vector<vec2i>, vector<float>> subdivide_lines(
-    const vector<vec2i>& lines, const vector<float>& vert) {
-  return subdivide_lines_impl(lines, vert);
+    const vector<vec2i>& lines, const vector<float>& vertices) {
+  return subdivide_lines_impl(lines, vertices);
 }
 pair<vector<vec2i>, vector<vec2f>> subdivide_lines(
-    const vector<vec2i>& lines, const vector<vec2f>& vert) {
-  return subdivide_lines_impl(lines, vert);
+    const vector<vec2i>& lines, const vector<vec2f>& vertices) {
+  return subdivide_lines_impl(lines, vertices);
 }
 pair<vector<vec2i>, vector<vec3f>> subdivide_lines(
-    const vector<vec2i>& lines, const vector<vec3f>& vert) {
-  return subdivide_lines_impl(lines, vert);
+    const vector<vec2i>& lines, const vector<vec3f>& vertices) {
+  return subdivide_lines_impl(lines, vertices);
 }
 pair<vector<vec2i>, vector<vec4f>> subdivide_lines(
-    const vector<vec2i>& lines, const vector<vec4f>& vert) {
-  return subdivide_lines_impl(lines, vert);
+    const vector<vec2i>& lines, const vector<vec4f>& vertices) {
+  return subdivide_lines_impl(lines, vertices);
 }
 
 pair<vector<vec3i>, vector<float>> subdivide_triangles(
-    const vector<vec3i>& triangles, const vector<float>& vert) {
-  return subdivide_triangles_impl(triangles, vert);
+    const vector<vec3i>& triangles, const vector<float>& vertices) {
+  return subdivide_triangles_impl(triangles, vertices);
 }
 pair<vector<vec3i>, vector<vec2f>> subdivide_triangles(
-    const vector<vec3i>& triangles, const vector<vec2f>& vert) {
-  return subdivide_triangles_impl(triangles, vert);
+    const vector<vec3i>& triangles, const vector<vec2f>& vertices) {
+  return subdivide_triangles_impl(triangles, vertices);
 }
 pair<vector<vec3i>, vector<vec3f>> subdivide_triangles(
-    const vector<vec3i>& triangles, const vector<vec3f>& vert) {
-  return subdivide_triangles_impl(triangles, vert);
+    const vector<vec3i>& triangles, const vector<vec3f>& vertices) {
+  return subdivide_triangles_impl(triangles, vertices);
 }
 pair<vector<vec3i>, vector<vec4f>> subdivide_triangles(
-    const vector<vec3i>& triangles, const vector<vec4f>& vert) {
-  return subdivide_triangles_impl(triangles, vert);
+    const vector<vec3i>& triangles, const vector<vec4f>& vertices) {
+  return subdivide_triangles_impl(triangles, vertices);
 }
 
 pair<vector<vec4i>, vector<float>> subdivide_quads(
-    const vector<vec4i>& quads, const vector<float>& vert) {
-  return subdivide_quads_impl(quads, vert);
+    const vector<vec4i>& quads, const vector<float>& vertices) {
+  return subdivide_quads_impl(quads, vertices);
 }
 pair<vector<vec4i>, vector<vec2f>> subdivide_quads(
-    const vector<vec4i>& quads, const vector<vec2f>& vert) {
-  return subdivide_quads_impl(quads, vert);
+    const vector<vec4i>& quads, const vector<vec2f>& vertices) {
+  return subdivide_quads_impl(quads, vertices);
 }
 pair<vector<vec4i>, vector<vec3f>> subdivide_quads(
-    const vector<vec4i>& quads, const vector<vec3f>& vert) {
-  return subdivide_quads_impl(quads, vert);
+    const vector<vec4i>& quads, const vector<vec3f>& vertices) {
+  return subdivide_quads_impl(quads, vertices);
 }
 pair<vector<vec4i>, vector<vec4f>> subdivide_quads(
-    const vector<vec4i>& quads, const vector<vec4f>& vert) {
-  return subdivide_quads_impl(quads, vert);
+    const vector<vec4i>& quads, const vector<vec4f>& vertices) {
+  return subdivide_quads_impl(quads, vertices);
 }
 
 pair<vector<vec4i>, vector<float>> subdivide_beziers(
-    const vector<vec4i>& beziers, const vector<float>& vert) {
-  return subdivide_beziers_impl(beziers, vert);
+    const vector<vec4i>& beziers, const vector<float>& vertices) {
+  return subdivide_beziers_impl(beziers, vertices);
 }
 pair<vector<vec4i>, vector<vec2f>> subdivide_beziers(
-    const vector<vec4i>& beziers, const vector<vec2f>& vert) {
-  return subdivide_beziers_impl(beziers, vert);
+    const vector<vec4i>& beziers, const vector<vec2f>& vertices) {
+  return subdivide_beziers_impl(beziers, vertices);
 }
 pair<vector<vec4i>, vector<vec3f>> subdivide_beziers(
-    const vector<vec4i>& beziers, const vector<vec3f>& vert) {
-  return subdivide_beziers_impl(beziers, vert);
+    const vector<vec4i>& beziers, const vector<vec3f>& vertices) {
+  return subdivide_beziers_impl(beziers, vertices);
 }
 pair<vector<vec4i>, vector<vec4f>> subdivide_beziers(
-    const vector<vec4i>& beziers, const vector<vec4f>& vert) {
-  return subdivide_beziers_impl(beziers, vert);
+    const vector<vec4i>& beziers, const vector<vec4f>& vertices) {
+  return subdivide_beziers_impl(beziers, vertices);
 }
 
 pair<vector<vec4i>, vector<float>> subdivide_catmullclark(
-    const vector<vec4i>& quads, const vector<float>& vert, bool lock_boundary) {
-  return subdivide_catmullclark_impl(quads, vert, lock_boundary);
+    const vector<vec4i>& quads, const vector<float>& vertices,
+    bool lock_boundary) {
+  return subdivide_catmullclark_impl(quads, vertices, lock_boundary);
 }
 pair<vector<vec4i>, vector<vec2f>> subdivide_catmullclark(
-    const vector<vec4i>& quads, const vector<vec2f>& vert, bool lock_boundary) {
-  return subdivide_catmullclark_impl(quads, vert, lock_boundary);
+    const vector<vec4i>& quads, const vector<vec2f>& vertices,
+    bool lock_boundary) {
+  return subdivide_catmullclark_impl(quads, vertices, lock_boundary);
 }
 pair<vector<vec4i>, vector<vec3f>> subdivide_catmullclark(
-    const vector<vec4i>& quads, const vector<vec3f>& vert, bool lock_boundary) {
-  return subdivide_catmullclark_impl(quads, vert, lock_boundary);
+    const vector<vec4i>& quads, const vector<vec3f>& vertices,
+    bool lock_boundary) {
+  return subdivide_catmullclark_impl(quads, vertices, lock_boundary);
 }
 pair<vector<vec4i>, vector<vec4f>> subdivide_catmullclark(
-    const vector<vec4i>& quads, const vector<vec4f>& vert, bool lock_boundary) {
-  return subdivide_catmullclark_impl(quads, vert, lock_boundary);
+    const vector<vec4i>& quads, const vector<vec4f>& vertices,
+    bool lock_boundary) {
+  return subdivide_catmullclark_impl(quads, vertices, lock_boundary);
 }
 
 }  // namespace yocto
