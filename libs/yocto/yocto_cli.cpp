@@ -530,23 +530,55 @@ void add_option(const cli_command& cli, const string& name, vec4f& value,
       cli, name, (array<float, 4>&)value, usage, minmax, {}, alt, req, false);
 }
 
+static string schema_to_usage_default(const json_value& value) {
+  switch (value.type()) {
+    case json_type::null: return "";
+    case json_type::integer: return std::to_string((int64_t)value);
+    case json_type::uinteger: return std::to_string((uint64_t)value);
+    case json_type::number:
+      if ((double)value == 0) return "0";
+      if ((double)value == 1) return "1";
+      return std::to_string((double)value);
+    case json_type::boolean: return (bool)value ? "true" : "false";
+    case json_type::string: return "\"" + (string)value + "\"";
+    case json_type::array: {
+      auto str = string{};
+      str += "[";
+      auto count = 0;
+      for (auto& item : value) {
+        if (count++) str += ",";
+        str += schema_to_usage_default(item);
+      }
+      str += "]";
+      return str;
+    }
+    case json_type::object: return "";
+  }
+}
+
+static string schema_to_usage_typename(const json_value& schema) {
+  auto type = schema.at("type").get<string>();
+  if (type == "integer") {
+    return "integer";
+  } else if (type == "number") {
+    return "number";
+  } else if (type == "boolean") {
+    return "boolean";
+  } else if (type == "string") {
+    return "string";
+  } else if (type == "array") {
+    if ((uint64_t)schema.at("minItems") == (uint64_t)schema.at("maxItems"))
+      return schema_to_usage_typename(schema.at("items")) + "[" +
+             std::to_string((uint64_t)schema.at("minItems")) + "]";
+    else
+      return schema_to_usage_typename(schema.at("items")) + "[]";
+  } else {
+    throw std::invalid_argument{"invalid type"};
+  }
+}
+
 static string schema_to_usage(
     const json_value& schema, const string& command, const string& program) {
-  auto default_to_string = [](const json_value& value) -> string {
-    switch (value.type()) {
-      case json_type::null: return "";
-      case json_type::integer:
-        return "[" + std::to_string((int64_t)value) + "]";
-      case json_type::uinteger:
-        return "[" + std::to_string((uint64_t)value) + "]";
-      case json_type::number: return "[" + std::to_string((double)value) + "]";
-      case json_type::boolean:
-        return "[" + ((bool)value ? string{"true"} : string{"false"}) + "]";
-      case json_type::string: return "[" + (string)value + "]";
-      case json_type::array: return "[]";
-      case json_type::object: return "";
-    }
-  };
   auto progname = program;
   if (progname.rfind('/') != string::npos) {
     progname = progname.substr(progname.rfind('/') + 1);
@@ -573,12 +605,12 @@ static string schema_to_usage(
       }
       auto line = (is_positional ? "  " : "  --") + key;
       if (property["type"] != "boolean" || is_positional) {
-        line += " <" + (string)property["type"] + ">";
+        line += " <" + schema_to_usage_typename(property) + ">";
       }
       while (line.size() < 32) line += " ";
       line += (string)property["description"];
       if (!property["default"].is_null()) {
-        line += " " + default_to_string(property["default"]);
+        line += " (" + schema_to_usage_default(property["default"]) + ")";
       }
       line += "\n";
       if (property.contains("enum")) {
@@ -601,8 +633,9 @@ static string schema_to_usage(
         usage_options += line;
     }
   }
-  usage_options += "  --help                        Prints help. [false]\n";
-  usage_options += "  --config <string>             Load configuration. []\n";
+  usage_options += "  --help                        Prints help. (false)\n";
+  usage_options +=
+      "  --config <string>             Load configuration. (\"\")\n";
   message += "usage: " + progname +
              (commandname.empty() ? "" : (" " + commandname)) +
              (!usage_commands.empty() ? " command" : "") +
