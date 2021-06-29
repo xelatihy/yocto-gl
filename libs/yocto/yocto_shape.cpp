@@ -436,8 +436,8 @@ vector<vec3i> face_adjacencies(const vector<vec3i>& triangles) {
   auto adjacencies = vector<vec3i>{triangles.size(), vec3i{-1, -1, -1}};
   auto edge_map    = unordered_map<vec2i, int>();
   edge_map.reserve((size_t)(triangles.size() * 1.5));
-  for (int i = 0; i < triangles.size(); ++i) {
-    for (int k = 0; k < 3; ++k) {
+  for (auto i = 0; i < (int)triangles.size(); ++i) {
+    for (auto k = 0; k < 3; ++k) {
       auto edge = get_edge(triangles[i], k);
       auto it   = edge_map.find(edge);
       if (it == edge_map.end()) {
@@ -445,7 +445,7 @@ vector<vec3i> face_adjacencies(const vector<vec3i>& triangles) {
       } else {
         auto neighbor     = it->second;
         adjacencies[i][k] = neighbor;
-        for (int kk = 0; kk < 3; ++kk) {
+        for (auto kk = 0; kk < 3; ++kk) {
           auto edge2 = get_edge(triangles[neighbor], kk);
           if (edge2 == edge) {
             adjacencies[neighbor][kk] = i;
@@ -472,8 +472,8 @@ vector<vector<int>> vertex_adjacencies(
   auto num_vertices     = 0;
   auto face_from_vertex = vector<int>(triangles.size() * 3, -1);
 
-  for (int i = 0; i < triangles.size(); ++i) {
-    for (int k = 0; k < 3; k++) {
+  for (auto i = 0; i < (int)triangles.size(); ++i) {
+    for (auto k = 0; k < 3; k++) {
       face_from_vertex[triangles[i][k]] = i;
       num_vertices                      = max(num_vertices, triangles[i][k]);
     }
@@ -483,7 +483,7 @@ vector<vector<int>> vertex_adjacencies(
   auto result = vector<vector<int>>(num_vertices);
 
   // For each vertex, loop around it and build its adjacency.
-  for (int i = 0; i < num_vertices; ++i) {
+  for (auto i = 0; i < num_vertices; ++i) {
     result[i].reserve(6);
     auto first_face = face_from_vertex[i];
     if (first_face == -1) continue;
@@ -518,8 +518,8 @@ vector<vector<int>> vertex_to_faces_adjacencies(
   auto num_vertices     = 0;
   auto face_from_vertex = vector<int>(triangles.size() * 3, -1);
 
-  for (int i = 0; i < triangles.size(); ++i) {
-    for (int k = 0; k < 3; k++) {
+  for (auto i = 0; i < (int)triangles.size(); ++i) {
+    for (auto k = 0; k < 3; k++) {
       face_from_vertex[triangles[i][k]] = i;
       num_vertices                      = max(num_vertices, triangles[i][k]);
     }
@@ -529,7 +529,7 @@ vector<vector<int>> vertex_to_faces_adjacencies(
   auto result = vector<vector<int>>(num_vertices);
 
   // For each vertex, loop around it and build its adjacency.
-  for (int i = 0; i < num_vertices; ++i) {
+  for (auto i = 0; i < num_vertices; ++i) {
     result[i].reserve(6);
     auto first_face = face_from_vertex[i];
     if (first_face == -1) continue;
