@@ -504,7 +504,7 @@ image_data make_uvgrid(int width, int height, float scale, bool colored) {
     uv *= scale;
     uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
     uv.y     = 1 - uv.y;
-    auto hsv = zero3f;
+    auto hsv = vec3f{0, 0, 0};
     hsv.x    = (clamp((int)(uv.x * 8), 0, 7) +
                 (clamp((int)(uv.y * 8), 0, 7) + 5) % 8 * 8) /
             64.0f;
@@ -541,7 +541,7 @@ image_data make_colormapramp(int width, int height, float scale) {
   return make_proc_image(width, height, false, [=](vec2f uv) {
     uv *= scale;
     uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
-    auto rgb = zero3f;
+    auto rgb = vec3f{0, 0, 0};
     if (uv.y < 0.25) {
       rgb = colormap(uv.x, colormap_type::viridis);
     } else if (uv.y < 0.50) {
@@ -700,7 +700,8 @@ image_data make_sunsky(int width, int height, float theta_sun, float turbidity,
   auto sun_direction = vec3f{0, cos(theta_sun), sin(theta_sun)};
 
   auto sun = [has_sun, sun_angular_radius, sun_le](auto theta, auto gamma) {
-    return (has_sun && gamma < sun_angular_radius) ? sun_le / 10000 : zero3f;
+    return (has_sun && gamma < sun_angular_radius) ? sun_le / 10000
+                                                   : vec3f{0, 0, 0};
   };
 
   // Make the sun sky image
@@ -722,8 +723,8 @@ image_data make_sunsky(int width, int height, float theta_sun, float turbidity,
     }
   }
 
-  if (ground_albedo != zero3f) {
-    auto ground = zero3f;
+  if (ground_albedo != vec3f{0, 0, 0}) {
+    auto ground = vec3f{0, 0, 0};
     for (auto j = 0; j < height / 2; j++) {
       auto theta = pif * ((j + 0.5f) / height);
       for (int i = 0; i < width; i++) {
@@ -921,9 +922,9 @@ void colorgrade_image_mt(vector<vec4b>& corrected, const vector<vec4f>& img,
 
 // compute white balance
 vec3f compute_white_balance(const vector<vec4f>& img) {
-  auto rgb = zero3f;
+  auto rgb = vec3f{0, 0, 0};
   for (auto& p : img) rgb += xyz(p);
-  if (rgb == zero3f) return zero3f;
+  if (rgb == vec3f{0, 0, 0}) return {0, 0, 0};
   return rgb / max(rgb);
 }
 
@@ -1096,7 +1097,7 @@ void make_uvgrid(
     uv *= scale;
     uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
     uv.y     = 1 - uv.y;
-    auto hsv = zero3f;
+    auto hsv = vec3f{0, 0, 0};
     hsv.x    = (clamp((int)(uv.x * 8), 0, 7) +
                 (clamp((int)(uv.y * 8), 0, 7) + 5) % 8 * 8) /
             64.0f;
@@ -1134,7 +1135,7 @@ void make_colormapramp(
   return make_proc_image(pixels, width, height, [=](vec2f uv) {
     uv *= scale;
     uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
-    auto rgb = zero3f;
+    auto rgb = vec3f{0, 0, 0};
     if (uv.y < 0.25) {
       rgb = colormap(uv.x, colormap_type::viridis);
     } else if (uv.y < 0.50) {
@@ -1293,7 +1294,8 @@ void make_sunsky(vector<vec4f>& pixels, int width, int height, float theta_sun,
   auto sun_direction = vec3f{0, cos(theta_sun), sin(theta_sun)};
 
   auto sun = [has_sun, sun_angular_radius, sun_le](auto theta, auto gamma) {
-    return (has_sun && gamma < sun_angular_radius) ? sun_le / 10000 : zero3f;
+    return (has_sun && gamma < sun_angular_radius) ? sun_le / 10000
+                                                   : vec3f{0, 0, 0};
   };
 
   // Make the sun sky image
@@ -1315,8 +1317,8 @@ void make_sunsky(vector<vec4f>& pixels, int width, int height, float theta_sun,
     }
   }
 
-  if (ground_albedo != zero3f) {
-    auto ground = zero3f;
+  if (ground_albedo != vec3f{0, 0, 0}) {
+    auto ground = vec3f{0, 0, 0};
     for (auto j = 0; j < height / 2; j++) {
       auto theta = pif * ((j + 0.5f) / height);
       for (int i = 0; i < width; i++) {

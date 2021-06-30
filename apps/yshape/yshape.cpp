@@ -40,19 +40,20 @@ using namespace yocto;
 
 // convert params
 struct convert_params {
-  string shape       = "shape.ply";
-  string output      = "out.ply";
-  bool   info        = false;
-  bool   smooth      = false;
-  bool   facet       = false;
-  bool   aspositions = false;
-  bool   astriangles = false;
-  vec3f  translate   = {0, 0, 0};
-  vec3f  rotate      = {0, 0, 0};
-  vec3f  scale       = {1, 1, 1};
-  float  scaleu      = 1;
-  bool   toedges     = false;
-  bool   tovertices  = false;
+  string shape        = "shape.ply";
+  string output       = "out.ply";
+  bool   info         = false;
+  bool   smooth       = false;
+  bool   facet        = false;
+  bool   aspositions  = false;
+  bool   astriangles  = false;
+  vec3f  translate    = {0, 0, 0};
+  vec3f  rotate       = {0, 0, 0};
+  vec3f  scale        = {1, 1, 1};
+  int    subdivisions = 0;
+  bool   catmullclark = false;
+  bool   toedges      = false;
+  bool   tovertices   = false;
 };
 
 void add_options(const cli_command& cli, convert_params& params) {
@@ -63,16 +64,12 @@ void add_options(const cli_command& cli, convert_params& params) {
   add_option(
       cli, "aspositions", params.aspositions, "Remove all but positions.");
   add_option(cli, "astriangles", params.astriangles, "Convert to triangles.");
-  add_option(cli, "translatex", params.translate.x, "Translate shape.");
-  add_option(cli, "translatey", params.translate.y, "Translate shape.");
-  add_option(cli, "translatez", params.translate.z, "Translate shape.");
-  add_option(cli, "scalex", params.scale.x, "Scale shape.");
-  add_option(cli, "scaley", params.scale.y, "Scale shape.");
-  add_option(cli, "scalez", params.scale.z, "Scale shape.");
-  add_option(cli, "scaleu", params.scaleu, "Scale shape.");
-  add_option(cli, "rotatex", params.rotate.x, "Rotate shape.");
-  add_option(cli, "rotatey", params.rotate.y, "Rotate shape.");
-  add_option(cli, "rotatez", params.rotate.z, "Rotate shape.");
+  add_option(cli, "translate", params.translate, "Translate shape.");
+  add_option(cli, "scale", params.scale, "Scale shape.");
+  add_option(cli, "rotate", params.rotate, "Rotate shape.");
+  add_option(cli, "subdivisions", params.subdivisions, "Apply subdivision.");
+  add_option(
+      cli, "catmullclark", params.catmullclark, "Catmull-Clark subdivision.");
   add_option(cli, "toedges", params.toedges, "Convert shape to edges.");
   add_option(
       cli, "tovertices", params.tovertices, "Convert shape to vertices.");
@@ -106,11 +103,16 @@ void run_convert(const convert_params& params) {
     for (auto& stat : stats) print_info(stat);
   }
 
+  // subdivision
+  if (params.subdivisions > 0) {
+    shape = subdivide_shape(shape, params.subdivisions, params.catmullclark);
+  }
+
   // transform
   if (params.translate != vec3f{0, 0, 0} || params.rotate != vec3f{0, 0, 0} ||
-      params.scale != vec3f{1, 1, 1} || params.scaleu != 1) {
+      params.scale != vec3f{1, 1, 1}) {
     auto translation = translation_frame(params.translate);
-    auto scaling     = scaling_frame(params.scale * params.scaleu);
+    auto scaling     = scaling_frame(params.scale);
     auto rotation    = rotation_frame({1, 0, 0}, radians(params.rotate.x)) *
                     rotation_frame({0, 0, 1}, radians(params.rotate.z)) *
                     rotation_frame({0, 1, 0}, radians(params.rotate.y));
@@ -169,16 +171,17 @@ void run_convert(const convert_params& params) {
 
 // fvconvert params
 struct fvconvert_params {
-  string shape       = "shape.obj";
-  string output      = "out.obj";
-  bool   info        = false;
-  bool   smooth      = false;
-  bool   facet       = false;
-  bool   aspositions = false;
-  vec3f  translate   = {0, 0, 0};
-  vec3f  rotate      = {0, 0, 0};
-  vec3f  scale       = {1, 1, 1};
-  float  scaleu      = 1;
+  string shape        = "shape.obj";
+  string output       = "out.obj";
+  bool   info         = false;
+  bool   smooth       = false;
+  bool   facet        = false;
+  bool   aspositions  = false;
+  vec3f  translate    = {0, 0, 0};
+  vec3f  rotate       = {0, 0, 0};
+  vec3f  scale        = {1, 1, 1};
+  int    subdivisions = 0;
+  bool   catmullclark = false;
 };
 
 void add_options(const cli_command& cli, fvconvert_params& params) {
@@ -188,16 +191,12 @@ void add_options(const cli_command& cli, fvconvert_params& params) {
   add_option(cli, "facet", params.facet, "Facet normals.");
   add_option(
       cli, "aspositions", params.aspositions, "Remove all but positions.");
-  add_option(cli, "translatex", params.translate.x, "Translate shape.");
-  add_option(cli, "translatey", params.translate.y, "Translate shape.");
-  add_option(cli, "translatez", params.translate.z, "Translate shape.");
-  add_option(cli, "scalex", params.scale.x, "Scale shape.");
-  add_option(cli, "scaley", params.scale.y, "Scale shape.");
-  add_option(cli, "scalez", params.scale.z, "Scale shape.");
-  add_option(cli, "scaleu", params.scaleu, "Scale shape.");
-  add_option(cli, "rotatex", params.rotate.x, "Rotate shape.");
-  add_option(cli, "rotatey", params.rotate.y, "Rotate shape.");
-  add_option(cli, "rotatez", params.rotate.z, "Rotate shape.");
+  add_option(cli, "translate", params.translate, "Translate shape.");
+  add_option(cli, "scale", params.scale, "Scale shape.");
+  add_option(cli, "rotate", params.rotate, "Rotate shape.");
+  add_option(cli, "subdivisions", params.subdivisions, "Apply subdivision.");
+  add_option(
+      cli, "catmullclark", params.catmullclark, "Catmull-Clark subdivision.");
 }
 
 // convert images
@@ -220,11 +219,16 @@ void run_fvconvert(const fvconvert_params& params) {
     for (auto& stat : stats) print_info(stat);
   }
 
+  // subdivision
+  if (params.subdivisions > 0) {
+    shape = subdivide_fvshape(shape, params.subdivisions, params.catmullclark);
+  }
+
   // transform
   if (params.translate != vec3f{0, 0, 0} || params.rotate != vec3f{0, 0, 0} ||
-      params.scale != vec3f{1, 1, 1} || params.scaleu != 1) {
+      params.scale != vec3f{1, 1, 1}) {
     auto translation = translation_frame(params.translate);
-    auto scaling     = scaling_frame(params.scale * params.scaleu);
+    auto scaling     = scaling_frame(params.scale);
     auto rotation    = rotation_frame({1, 0, 0}, radians(params.rotate.x)) *
                     rotation_frame({0, 0, 1}, radians(params.rotate.z)) *
                     rotation_frame({0, 1, 0}, radians(params.rotate.y));
@@ -304,7 +308,6 @@ struct heightfield_params {
   vec3f  translate = {0, 0, 0};
   vec3f  rotate    = {0, 0, 0};
   vec3f  scale     = {1, 1, 1};
-  float  scaleu    = 1;
 };
 
 void add_options(const cli_command& cli, heightfield_params& params) {
@@ -313,16 +316,9 @@ void add_options(const cli_command& cli, heightfield_params& params) {
   add_option(cli, "smooth", params.smooth, "Smoooth normals.");
   add_option(cli, "height", params.height, "Shape height.");
   add_option(cli, "info", params.info, "Print info.");
-  add_option(cli, "translatex", params.translate.x, "Translate shape.");
-  add_option(cli, "translatey", params.translate.y, "Translate shape.");
-  add_option(cli, "translatez", params.translate.z, "Translate shape.");
-  add_option(cli, "scalex", params.scale.x, "Scale shape.");
-  add_option(cli, "scaley", params.scale.y, "Scale shape.");
-  add_option(cli, "scalez", params.scale.z, "Scale shape.");
-  add_option(cli, "scaleu", params.scaleu, "Scale shape.");
-  add_option(cli, "rotatex", params.rotate.x, "Rotate shape.");
-  add_option(cli, "rotatey", params.rotate.y, "Rotate shape.");
-  add_option(cli, "rotatez", params.rotate.z, "Rotate shape.");
+  add_option(cli, "translate", params.translate, "Translate shape.");
+  add_option(cli, "scale", params.scale, "Scale shape.");
+  add_option(cli, "rotate", params.rotate, "Rotate shape.");
 }
 
 void run_heightfield(const heightfield_params& params) {
@@ -498,7 +494,7 @@ void run(const vector<string>& args) {
   if (params.command == "convert") {
     return run_convert(params.convert);
   } else if (params.command == "fvconvert") {
-    return run_view(params.view);
+    return run_fvconvert(params.fvconvert);
   } else if (params.command == "view") {
     return run_view(params.view);
   } else if (params.command == "heightfield") {

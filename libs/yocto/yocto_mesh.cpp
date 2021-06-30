@@ -1050,7 +1050,7 @@ geodesic_solver make_geodesic_solver(const vector<vec3i>& triangles,
       assert(k != -1);
       auto a       = opposite_vertex(triangles, adjacencies, tid, k);
       offset       = find_in_vec(triangles[opp], a);
-      auto bary    = zero3f;
+      auto bary    = vec3f{0, 0, 0};
       bary[offset] = 1;
       auto l       = length_by_flattening(
           triangles, positions, adjacencies, {opp, {bary.y, bary.z}}, strip);
@@ -1588,7 +1588,7 @@ vec3f compute_gradient(const vec3i& triangle, const vector<vec3f>& positions,
   auto yz     = positions[triangle.z] - positions[triangle.y];
   auto zx     = positions[triangle.x] - positions[triangle.z];
   auto normal = normalize(cross(zx, xy));
-  auto result = zero3f;
+  auto result = vec3f{0, 0, 0};
   result += field[triangle.x] * cross(normal, yz);
   result += field[triangle.y] * cross(normal, zx);
   result += field[triangle.z] * cross(normal, xy);

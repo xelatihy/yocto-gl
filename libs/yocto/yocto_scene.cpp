@@ -511,12 +511,13 @@ void quads_to_triangles(shape_data& result, const shape_data& shape) {
 // Subdivision
 shape_data subdivide_shape(
     const shape_data& shape, int subdivisions, bool catmullclark) {
-  // This should probably be reimplemented in a faster fashion,
+  // This should probably be re-implemented in a faster fashion,
   // but how it is not obvious
+  if (subdivisions == 0) return shape;
   auto subdivided = shape_data{};
-  if (!shape.points.empty()) {
-    // nothing to do
-  } else if (!shape.lines.empty()) {
+  if (!subdivided.points.empty()) {
+    subdivided = shape;
+  } else if (!subdivided.lines.empty()) {
     std::tie(std::ignore, subdivided.normals) = subdivide_lines(
         shape.lines, shape.normals, subdivisions);
     std::tie(std::ignore, subdivided.texcoords) = subdivide_lines(
@@ -524,10 +525,10 @@ shape_data subdivide_shape(
     std::tie(std::ignore, subdivided.colors) = subdivide_lines(
         shape.lines, shape.colors, subdivisions);
     std::tie(std::ignore, subdivided.radius) = subdivide_lines(
-        shape.lines, shape.radius, subdivisions);
+        subdivided.lines, shape.radius, subdivisions);
     std::tie(subdivided.lines, subdivided.positions) = subdivide_lines(
         shape.lines, shape.positions, subdivisions);
-  } else if (!shape.triangles.empty()) {
+  } else if (!subdivided.triangles.empty()) {
     std::tie(std::ignore, subdivided.normals) = subdivide_triangles(
         shape.triangles, shape.normals, subdivisions);
     std::tie(std::ignore, subdivided.texcoords) = subdivide_triangles(
@@ -538,7 +539,7 @@ shape_data subdivide_shape(
         shape.triangles, shape.radius, subdivisions);
     std::tie(subdivided.triangles, subdivided.positions) = subdivide_triangles(
         shape.triangles, shape.positions, subdivisions);
-  } else if (!shape.quads.empty() && !catmullclark) {
+  } else if (!subdivided.quads.empty() && !catmullclark) {
     std::tie(std::ignore, subdivided.normals) = subdivide_quads(
         shape.quads, shape.normals, subdivisions);
     std::tie(std::ignore, subdivided.texcoords) = subdivide_quads(
@@ -549,7 +550,7 @@ shape_data subdivide_shape(
         shape.quads, shape.radius, subdivisions);
     std::tie(subdivided.quads, subdivided.positions) = subdivide_quads(
         shape.quads, shape.positions, subdivisions);
-  } else if (!shape.quads.empty() && catmullclark) {
+  } else if (!subdivided.quads.empty() && catmullclark) {
     std::tie(std::ignore, subdivided.normals) = subdivide_catmullclark(
         shape.quads, shape.normals, subdivisions);
     std::tie(std::ignore, subdivided.texcoords) = subdivide_catmullclark(
@@ -655,6 +656,8 @@ fvshape_data shape_to_fvshape(const shape_data& shape) {
 // Subdivision
 fvshape_data subdivide_fvshape(
     const fvshape_data& shape, int subdivisions, bool catmullclark) {
+  // This should be probably re-implemeneted in a faster fashion.
+  if (subdivisions == 0) return shape;
   auto subdivided = fvshape_data{};
   if (!catmullclark) {
     std::tie(subdivided.quadspos, subdivided.positions) = subdivide_quads(
@@ -767,7 +770,7 @@ vec3f eval_position(const scene_data& scene, const instance_data& instance,
     return transform_point(
         instance.frame, shape.positions[shape.points[element]]);
   } else {
-    return zero3f;
+    return {0, 0, 0};
   }
 }
 
@@ -821,7 +824,7 @@ vec3f eval_normal(const scene_data& scene, const instance_data& instance,
     return transform_normal(
         instance.frame, normalize(shape.normals[shape.points[element]]));
   } else {
-    return zero3f;
+    return {0, 0, 0};
   }
 }
 
@@ -875,7 +878,7 @@ static pair<vec3f, vec3f> eval_tangents(
           uv);
     }
   } else {
-    return {zero3f, zero3f};
+    return {{0,0,0}, {0,0,0}};
   }
 }
 #endif
@@ -916,7 +919,7 @@ vec3f eval_normalmap(const scene_data& scene, const instance_data& instance,
     auto& normal_tex = scene.textures[material.normal_tex];
     auto  normalmap  = -1 + 2 * xyz(eval_texture(normal_tex, texcoord, false));
     auto [tu, tv]    = eval_element_tangents(scene, instance, element);
-    auto frame       = frame3f{tu, tv, normal, zero3f};
+    auto frame       = frame3f{tu, tv, normal, {0, 0, 0}};
     frame.x          = orthonormalize(frame.x, frame.z);
     frame.y          = normalize(cross(frame.z, frame.x));
     auto flip_v      = dot(frame.y, tv) < 0;
@@ -945,7 +948,7 @@ vec3f eval_shading_normal(const scene_data& scene,
   } else if (!shape.points.empty()) {
     return outgoing;
   } else {
-    return zero3f;
+    return {0, 0, 0};
   }
 }
 
@@ -1050,7 +1053,7 @@ vec3f eval_environment(const scene_data& scene,
 
 // Evaluate all environment color.
 vec3f eval_environment(const scene_data& scene, const vec3f& direction) {
-  auto emission = zero3f;
+  auto emission = vec3f{0, 0, 0};
   for (auto& environment : scene.environments) {
     emission += eval_environment(scene, environment, direction);
   }
@@ -1173,19 +1176,24 @@ void tesselate_subdiv(
 
   if (subdiv.subdivisions > 0) {
     if (subdiv.catmullclark) {
-      std::tie(subdiv.quadstexcoord, subdiv.texcoords) = subdivide_catmullclark(
-          subdiv.quadstexcoord, subdiv.texcoords, subdiv.subdivisions, true);
-      std::tie(subdiv.quadsnorm, subdiv.normals) = subdivide_catmullclark(
-          subdiv.quadsnorm, subdiv.normals, subdiv.subdivisions, true);
-      std::tie(subdiv.quadspos, subdiv.positions) = subdivide_catmullclark(
-          subdiv.quadspos, subdiv.positions, subdiv.subdivisions);
+      for ([[maybe_unused]] auto subdivision : range(subdiv.subdivisions)) {
+        std::tie(subdiv.quadstexcoord, subdiv.texcoords) =
+            subdivide_catmullclark(
+                subdiv.quadstexcoord, subdiv.texcoords, true);
+        std::tie(subdiv.quadsnorm, subdiv.normals) = subdivide_catmullclark(
+            subdiv.quadsnorm, subdiv.normals, true);
+        std::tie(subdiv.quadspos, subdiv.positions) = subdivide_catmullclark(
+            subdiv.quadspos, subdiv.positions);
+      }
     } else {
-      std::tie(subdiv.quadstexcoord, subdiv.texcoords) = subdivide_quads(
-          subdiv.quadstexcoord, subdiv.texcoords, subdiv.subdivisions);
-      std::tie(subdiv.quadsnorm, subdiv.normals) = subdivide_quads(
-          subdiv.quadsnorm, subdiv.normals, subdiv.subdivisions);
-      std::tie(subdiv.quadspos, subdiv.positions) = subdivide_quads(
-          subdiv.quadspos, subdiv.positions, subdiv.subdivisions);
+      for ([[maybe_unused]] auto subdivision : range(subdiv.subdivisions)) {
+        std::tie(subdiv.quadstexcoord, subdiv.texcoords) = subdivide_quads(
+            subdiv.quadstexcoord, subdiv.texcoords);
+        std::tie(subdiv.quadsnorm, subdiv.normals) = subdivide_quads(
+            subdiv.quadsnorm, subdiv.normals);
+        std::tie(subdiv.quadspos, subdiv.positions) = subdivide_quads(
+            subdiv.quadspos, subdiv.positions);
+      }
     }
     if (subdiv.smooth) {
       subdiv.normals   = quads_normals(subdiv.quadspos, subdiv.positions);

@@ -36,7 +36,6 @@
 #include <array>
 #include <atomic>
 #include <cstring>
-#include <deque>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -57,7 +56,6 @@ namespace yocto {
 // using directives
 using std::array;
 using std::atomic;
-using std::deque;
 using std::pair;
 using std::string;
 using namespace std::string_literals;
@@ -115,8 +113,8 @@ void clear_embree_bvh(void* embree_bvh) {
 }
 
 // Initialize Embree BVH
-static void build_embree_bvh(
-    bvh_data& bvh, const shape_data& shape, bool highquality) {
+static bvh_data make_embree_bvh(const shape_data& shape, bool highquality) {
+  auto bvh       = bvh_data{};
   auto edevice   = bvh_embree_device();
   bvh.embree_bvh = unique_ptr<void, void (*)(void*)>{
       rtcNewScene(edevice), &clear_embree_bvh};
@@ -195,10 +193,26 @@ static void build_embree_bvh(
     throw std::runtime_error("empty shapes not supported");
   }
   rtcCommitScene(escene);
+  return bvh;
 }
 
-static void build_embree_bvh(
-    bvh_data& bvh, const scene_data& scene, bool highquality) {
+static bvh_data make_embree_bvh(
+    const scene_data& scene, bool highquality, bool noparallel) {
+  // scene bvh
+  auto bvh = bvh_data{};
+
+  // shape bvhs
+  bvh.shapes.resize(scene.shapes.size());
+  if (noparallel) {
+    for (auto idx = (size_t)0; idx < scene.shapes.size(); idx++) {
+      bvh.shapes[idx] = make_embree_bvh(scene.shapes[idx], highquality);
+    }
+  } else {
+    parallel_for(scene.shapes.size(), [&](size_t idx) {
+      bvh.shapes[idx] = make_embree_bvh(scene.shapes[idx], highquality);
+    });
+  }
+
   // scene bvh
   auto edevice   = bvh_embree_device();
   bvh.embree_bvh = unique_ptr<void, void (*)(void*)>{
@@ -222,6 +236,7 @@ static void build_embree_bvh(
     rtcReleaseGeometry(egeometry);
   }
   rtcCommitScene(escene);
+  return bvh;
 }
 
 static void update_embree_bvh(bvh_data& bvh, const scene_data& scene,
@@ -302,33 +317,30 @@ namespace yocto {
 static pair<int, int> split_sah(vector<int>& primitives,
     const vector<bbox3f>& bboxes, const vector<vec3f>& centers, int start,
     int end) {
-  // initialize split axis and position
-  auto split_axis = 0;
-  auto mid        = (start + end) / 2;
-
   // compute primintive bounds and size
   auto cbbox = invalidb3f;
   for (auto i = start; i < end; i++)
     cbbox = merge(cbbox, centers[primitives[i]]);
   auto csize = cbbox.max - cbbox.min;
-  if (csize == zero3f) return {mid, split_axis};
+  if (csize == vec3f{0, 0, 0}) return {(start + end) / 2, 0};
 
   // consider N bins, compute their cost and keep the minimum
-  const int nbins    = 16;
-  auto      middle   = 0.0f;
-  auto      min_cost = flt_max;
-  auto      area     = [](auto& b) {
+  auto      axis      = 0;
+  const int nbins     = 16;
+  auto      split     = 0.0f;
+  auto      min_cost  = flt_max;
+  auto      bbox_area = [](const bbox3f& b) {
     auto size = b.max - b.min;
     return 1e-12f + 2 * size.x * size.y + 2 * size.x * size.z +
            2 * size.y * size.z;
   };
   for (auto saxis = 0; saxis < 3; saxis++) {
     for (auto b = 1; b < nbins; b++) {
-      auto split     = cbbox.min[saxis] + b * csize[saxis] / nbins;
+      auto bsplit    = cbbox.min[saxis] + b * csize[saxis] / nbins;
       auto left_bbox = invalidb3f, right_bbox = invalidb3f;
       auto left_nprims = 0, right_nprims = 0;
       for (auto i = start; i < end; i++) {
-        if (centers[primitives[i]][saxis] < split) {
+        if (centers[primitives[i]][saxis] < bsplit) {
           left_bbox = merge(left_bbox, bboxes[primitives[i]]);
           left_nprims += 1;
         } else {
@@ -336,29 +348,28 @@ static pair<int, int> split_sah(vector<int>& primitives,
           right_nprims += 1;
         }
       }
-      auto cost = 1 + left_nprims * area(left_bbox) / area(cbbox) +
-                  right_nprims * area(right_bbox) / area(cbbox);
+      auto cost = 1 + left_nprims * bbox_area(left_bbox) / bbox_area(cbbox) +
+                  right_nprims * bbox_area(right_bbox) / bbox_area(cbbox);
       if (cost < min_cost) {
-        min_cost   = cost;
-        middle     = split;
-        split_axis = saxis;
+        min_cost = cost;
+        split    = bsplit;
+        axis     = saxis;
       }
     }
   }
   // split
-  mid = (int)(std::partition(primitives.data() + start, primitives.data() + end,
-                  [split_axis, middle, &centers](
-                      auto a) { return centers[a][split_axis] < middle; }) -
-              primitives.data());
+  auto middle =
+      (int)(std::partition(primitives.data() + start, primitives.data() + end,
+                [axis, split, &centers](auto primitive) {
+                  return centers[primitive][axis] < split;
+                }) -
+            primitives.data());
 
   // if we were not able to split, just break the primitives in half
-  if (mid == start || mid == end) {
-    split_axis = 0;
-    mid        = (start + end) / 2;
-    // throw std::runtime_error{"bad bvh split"};
-  }
+  if (middle == start || middle == end) return {(start + end) / 2, axis};
 
-  return {mid, split_axis};
+  // done
+  return {middle, axis};
 }
 
 // Splits a BVH node using the balance heuristic. Returns split position and
@@ -366,92 +377,78 @@ static pair<int, int> split_sah(vector<int>& primitives,
 [[maybe_unused]] static pair<int, int> split_balanced(vector<int>& primitives,
     const vector<bbox3f>& bboxes, const vector<vec3f>& centers, int start,
     int end) {
-  // initialize split axis and position
-  auto axis = 0;
-  auto mid  = (start + end) / 2;
-
-  // compute primintive bounds and size
+  // compute primitives bounds and size
   auto cbbox = invalidb3f;
   for (auto i = start; i < end; i++)
     cbbox = merge(cbbox, centers[primitives[i]]);
   auto csize = cbbox.max - cbbox.min;
-  if (csize == zero3f) return {mid, axis};
+  if (csize == vec3f{0, 0, 0}) return {(start + end) / 2, 0};
 
   // split along largest
+  auto axis = 0;
   if (csize.x >= csize.y && csize.x >= csize.z) axis = 0;
   if (csize.y >= csize.x && csize.y >= csize.z) axis = 1;
   if (csize.z >= csize.x && csize.z >= csize.y) axis = 2;
 
   // balanced tree split: find the largest axis of the
   // bounding box and split along this one right in the middle
-  mid = (start + end) / 2;
-  std::nth_element(primitives.data() + start, primitives.data() + mid,
-      primitives.data() + end, [axis, &centers](auto a, auto b) {
-        return centers[a][axis] < centers[b][axis];
+  auto middle = (start + end) / 2;
+  std::nth_element(primitives.data() + start, primitives.data() + middle,
+      primitives.data() + end,
+      [axis, &centers](auto primitive_a, auto primitive_b) {
+        return centers[primitive_a][axis] < centers[primitive_b][axis];
       });
 
   // if we were not able to split, just break the primitives in half
-  if (mid == start || mid == end) {
-    axis = 0;
-    mid  = (start + end) / 2;
-    // throw std::runtime_error("bad bvh split");
-  }
+  if (middle == start || middle == end) return {(start + end) / 2, axis};
 
-  return {mid, axis};
+  // done
+  return {middle, axis};
 }
 
-// Splits a BVH node using the middle heutirtic. Returns split position and
+// Splits a BVH node using the middle heuristic. Returns split position and
 // axis.
 static pair<int, int> split_middle(vector<int>& primitives,
     const vector<bbox3f>& bboxes, const vector<vec3f>& centers, int start,
     int end) {
-  // initialize split axis and position
-  auto axis = 0;
-  auto mid  = (start + end) / 2;
-
   // compute primintive bounds and size
   auto cbbox = invalidb3f;
   for (auto i = start; i < end; i++)
     cbbox = merge(cbbox, centers[primitives[i]]);
   auto csize = cbbox.max - cbbox.min;
-  if (csize == zero3f) return {mid, axis};
+  if (csize == vec3f{0, 0, 0}) return {(start + end) / 2, 0};
 
   // split along largest
+  auto axis = 0;
   if (csize.x >= csize.y && csize.x >= csize.z) axis = 0;
   if (csize.y >= csize.x && csize.y >= csize.z) axis = 1;
   if (csize.z >= csize.x && csize.z >= csize.y) axis = 2;
 
   // split the space in the middle along the largest axis
-  auto cmiddle = (cbbox.max + cbbox.min) / 2;
-  auto middle  = cmiddle[axis];
-  mid = (int)(std::partition(primitives.data() + start, primitives.data() + end,
-                  [axis, middle, &centers](
-                      auto a) { return centers[a][axis] < middle; }) -
-              primitives.data());
+  auto split = center(cbbox)[axis];
+  auto middle =
+      (int)(std::partition(primitives.data() + start, primitives.data() + end,
+                [axis, split, &centers](auto primitive) {
+                  return centers[primitive][axis] < split;
+                }) -
+            primitives.data());
 
   // if we were not able to split, just break the primitives in half
-  if (mid == start || mid == end) {
-    axis = 0;
-    mid  = (start + end) / 2;
-    // throw std::runtime_error("bad bvh split");
-  }
+  if (middle == start || middle == end) return {(start + end) / 2, axis};
 
-  return {mid, axis};
+  // done
+  return {middle, axis};
 }
 
 // Maximum number of primitives per BVH node.
 const int bvh_max_prims = 4;
 
 // Build BVH nodes
-static void build_bvh_serial(
+static void build_bvh(
     bvh_data& bvh, const vector<bbox3f>& bboxes, bool highquality) {
-  // get values
-  auto& nodes      = bvh.nodes;
-  auto& primitives = bvh.primitives;
-
   // prepare to build nodes
-  nodes.clear();
-  nodes.reserve(bboxes.size() * 2);
+  bvh.nodes.clear();
+  bvh.nodes.reserve(bboxes.size() * 2);
 
   // prepare primitives
   bvh.primitives.resize(bboxes.size());
@@ -462,41 +459,41 @@ static void build_bvh_serial(
   for (auto idx = 0; idx < bboxes.size(); idx++)
     centers[idx] = center(bboxes[idx]);
 
-  // queue up first node
-  auto queue = deque<vec3i>{{0, 0, (int)bboxes.size()}};
-  nodes.emplace_back();
+  // push first node onto the stack
+  auto stack = vector<vec3i>{{0, 0, (int)bboxes.size()}};
+  bvh.nodes.emplace_back();
 
-  // create nodes until the queue is empty
-  while (!queue.empty()) {
+  // create nodes until the stack is empty
+  while (!stack.empty()) {
     // grab node to work on
-    auto next = queue.front();
-    queue.pop_front();
-    auto nodeid = next.x, start = next.y, end = next.z;
+    auto [nodeid, start, end] = stack.back();
+    stack.pop_back();
 
     // grab node
-    auto& node = nodes[nodeid];
+    auto& node = bvh.nodes[nodeid];
 
     // compute bounds
     node.bbox = invalidb3f;
     for (auto i = start; i < end; i++)
-      node.bbox = merge(node.bbox, bboxes[primitives[i]]);
+      node.bbox = merge(node.bbox, bboxes[bvh.primitives[i]]);
 
     // split into two children
     if (end - start > bvh_max_prims) {
       // get split
       auto [mid, axis] =
-          highquality ? split_sah(primitives, bboxes, centers, start, end)
-                      : split_middle(primitives, bboxes, centers, start, end);
+          highquality
+              ? split_sah(bvh.primitives, bboxes, centers, start, end)
+              : split_middle(bvh.primitives, bboxes, centers, start, end);
 
       // make an internal node
       node.internal = true;
       node.axis     = (uint8_t)axis;
       node.num      = 2;
-      node.start    = (int)nodes.size();
-      nodes.emplace_back();
-      nodes.emplace_back();
-      queue.push_back({node.start + 0, start, mid});
-      queue.push_back({node.start + 1, mid, end});
+      node.start    = (int)bvh.nodes.size();
+      bvh.nodes.emplace_back();
+      bvh.nodes.emplace_back();
+      stack.push_back({node.start + 0, start, mid});
+      stack.push_back({node.start + 1, mid, end});
     } else {
       // Make a leaf node
       node.internal = false;
@@ -506,111 +503,8 @@ static void build_bvh_serial(
   }
 
   // cleanup
-  nodes.shrink_to_fit();
+  bvh.nodes.shrink_to_fit();
 }
-
-#if 0
-
-// Build BVH nodes
-static void build_bvh_parallel(
-    bvh_tree_& bvh, const vector<bbox3f>& bboxes, bool highquality) {
-  // get values
-  auto& nodes      = bvh.nodes;
-  auto& primitives = bvh.primitives;
-
-  // prepare to build nodes
-  nodes.clear();
-  nodes.reserve(bboxes.size() * 2);
-
-  // prepare primitives
-  bvh.primitives.resize(bboxes.size());
-  for (auto idx = 0; idx < bboxes.size(); idx++) bvh.primitives[idx] = idx;
-
-  // prepare centers
-  auto centers = vector<vec3f>(bboxes.size());
-  for (auto idx = 0; idx < bboxes.size(); idx++)
-    centers[idx] = center(bboxes[idx]);
-
-  // queue up first node
-  auto queue = deque<vec3i>{{0, 0, (int)primitives.size()}};
-  nodes.emplace_back();
-
-  // synchronization
-  atomic<int>          num_processed_prims(0);
-  std::mutex           queue_mutex;
-  vector<future<void>> futures;
-  auto                 nthreads = std::thread::hardware_concurrency();
-
-  // create nodes until the queue is empty
-  for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
-    futures.emplace_back(std::async(
-        std::launch::async, [&nodes, &primitives, &bboxes, &centers, &type,
-                                &num_processed_prims, &queue_mutex, &queue] {
-          while (true) {
-            // exit if needed
-            if (num_processed_prims >= primitives.size()) return;
-
-            // grab node to work on
-            auto next = zero3i;
-            {
-              std::lock_guard<std::mutex> lock{queue_mutex};
-              if (!queue.empty()) {
-                next = queue.front();
-                queue.pop_front();
-              }
-            }
-
-            // wait a bit if needed
-            if (next == zero3i) {
-              std::this_thread::sleep_for(std::chrono::microseconds(10));
-              continue;
-            }
-
-            // grab node
-            auto  nodeid = next.x, start = next.y, end = next.z;
-            auto& node = nodes[nodeid];
-
-            // compute bounds
-            node.bbox = invalidb3f;
-            for (auto i = start; i < end; i++)
-              node.bbox = merge(node.bbox, bboxes[primitives[i]]);
-
-            // split into two children
-            if (end - start > bvh_max_prims) {
-              // get split
-              auto [mid, axis] =
-                  highquality ? split_sah(primitives, bboxes, centers, start, end)
-                              : split_middle(primitives, bboxes, centers, start, end);
-
-              // make an internal node
-              {
-                std::lock_guard<std::mutex> lock{queue_mutex};
-                node.internal = true;
-                node.axis     = (int8_t)axis;
-                node.num      = 2;
-                node.start    = (int)nodes.size();
-                nodes.emplace_back();
-                nodes.emplace_back();
-                queue.push_back({node.start + 0, start, mid});
-                queue.push_back({node.start + 1, mid, end});
-              }
-            } else {
-              // Make a leaf node
-              node.internal = false;
-              node.num      = (int16_t)(end - start);
-              node.start    = start;
-              num_processed_prims += node.num;
-            }
-          }
-        }));
-  }
-  for (auto& f : futures) f.get();
-
-  // cleanup
-  nodes.shrink_to_fit();
-}
-
-#endif
 
 // Update bvh
 static void refit_bvh(bvh_data& bvh, const vector<bbox3f>& bboxes) {
@@ -629,57 +523,75 @@ static void refit_bvh(bvh_data& bvh, const vector<bbox3f>& bboxes) {
   }
 }
 
-static void build_bvh(
-    bvh_data& bvh, const shape_data& shape, bool highquality, bool embree) {
+bvh_data make_bvh(const shape_data& shape, bool highquality, bool embree) {
+  // embree
 #ifdef YOCTO_EMBREE
-  if (embree) {
-    return build_embree_bvh(bvh, shape, highquality);
-  }
+  if (embree) return make_embree_bvh(shape, highquality);
 #endif
+
+  // bvh
+  auto bvh = bvh_data{};
 
   // build primitives
   auto bboxes = vector<bbox3f>{};
   if (!shape.points.empty()) {
     bboxes = vector<bbox3f>(shape.points.size());
-    for (auto idx = 0; idx < bboxes.size(); idx++) {
-      auto& p     = shape.points[idx];
-      bboxes[idx] = point_bounds(shape.positions[p], shape.radius[p]);
+    for (auto idx = 0; idx < shape.points.size(); idx++) {
+      auto& point = shape.points[idx];
+      bboxes[idx] = point_bounds(shape.positions[point], shape.radius[point]);
     }
   } else if (!shape.lines.empty()) {
     bboxes = vector<bbox3f>(shape.lines.size());
-    for (auto idx = 0; idx < bboxes.size(); idx++) {
-      auto& l     = shape.lines[idx];
-      bboxes[idx] = line_bounds(shape.positions[l.x], shape.positions[l.y],
-          shape.radius[l.x], shape.radius[l.y]);
+    for (auto idx = 0; idx < shape.lines.size(); idx++) {
+      auto& line  = shape.lines[idx];
+      bboxes[idx] = line_bounds(shape.positions[line.x],
+          shape.positions[line.y], shape.radius[line.x], shape.radius[line.y]);
     }
   } else if (!shape.triangles.empty()) {
     bboxes = vector<bbox3f>(shape.triangles.size());
-    for (auto idx = 0; idx < bboxes.size(); idx++) {
-      auto& t     = shape.triangles[idx];
-      bboxes[idx] = triangle_bounds(
-          shape.positions[t.x], shape.positions[t.y], shape.positions[t.z]);
+    for (auto idx = 0; idx < shape.triangles.size(); idx++) {
+      auto& triangle = shape.triangles[idx];
+      bboxes[idx]    = triangle_bounds(shape.positions[triangle.x],
+          shape.positions[triangle.y], shape.positions[triangle.z]);
     }
   } else if (!shape.quads.empty()) {
     bboxes = vector<bbox3f>(shape.quads.size());
-    for (auto idx = 0; idx < bboxes.size(); idx++) {
-      auto& q     = shape.quads[idx];
-      bboxes[idx] = quad_bounds(shape.positions[q.x], shape.positions[q.y],
-          shape.positions[q.z], shape.positions[q.w]);
+    for (auto idx = 0; idx < shape.quads.size(); idx++) {
+      auto& quad  = shape.quads[idx];
+      bboxes[idx] = quad_bounds(shape.positions[quad.x],
+          shape.positions[quad.y], shape.positions[quad.z],
+          shape.positions[quad.w]);
     }
   }
 
   // build nodes
-  build_bvh_serial(bvh, bboxes, highquality);
+  build_bvh(bvh, bboxes, highquality);
+
+  // done
+  return bvh;
 }
 
-static void build_bvh(bvh_data& bvh, const scene_data& scene, bool highquality,
-    bool embree, bool noparallel) {
+bvh_data make_bvh(
+    const scene_data& scene, bool highquality, bool embree, bool noparallel) {
   // embree
 #ifdef YOCTO_EMBREE
-  if (embree) {
-    return build_embree_bvh(bvh, scene, highquality);
-  }
+  if (embree) return make_embree_bvh(scene, highquality, noparallel);
 #endif
+
+  // bvh
+  auto bvh = bvh_data{};
+
+  // build shape bvh
+  bvh.shapes.resize(scene.shapes.size());
+  if (noparallel) {
+    for (auto idx = (size_t)0; idx < scene.shapes.size(); idx++) {
+      bvh.shapes[idx] = make_bvh(scene.shapes[idx], highquality, embree);
+    }
+  } else {
+    parallel_for(scene.shapes.size(), [&](size_t idx) {
+      bvh.shapes[idx] = make_bvh(scene.shapes[idx], highquality, embree);
+    });
+  }
 
   // instance bboxes
   auto bboxes = vector<bbox3f>(scene.instances.size());
@@ -692,42 +604,9 @@ static void build_bvh(bvh_data& bvh, const scene_data& scene, bool highquality,
   }
 
   // build nodes
-  build_bvh_serial(bvh, bboxes, highquality);
-}
+  build_bvh(bvh, bboxes, highquality);
 
-bvh_data make_bvh(const shape_data& shape, bool highquality, bool embree) {
-  // bvh
-  auto bvh = bvh_data{};
-
-  // build scene bvh
-  build_bvh(bvh, shape, highquality, embree);
-
-  // handle progress
-  return bvh;
-}
-
-bvh_data make_bvh(
-    const scene_data& scene, bool highquality, bool embree, bool noparallel) {
-  // bvh
-  auto bvh = bvh_data{};
-
-  // build shape bvh
-  bvh.shapes.resize(scene.shapes.size());
-  if (noparallel) {
-    for (auto idx = (size_t)0; idx < scene.shapes.size(); idx++) {
-      build_bvh(bvh.shapes[idx], scene.shapes[idx], highquality, embree);
-    }
-  } else {
-    // mutex
-    parallel_for(scene.shapes.size(), [&](size_t idx) {
-      build_bvh(bvh.shapes[idx], scene.shapes[idx], highquality, embree);
-    });
-  }
-
-  // build scene bvh
-  build_bvh(bvh, scene, highquality, embree, noparallel);
-
-  // handle progress
+  // done
   return bvh;
 }
 

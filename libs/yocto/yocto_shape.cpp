@@ -63,7 +63,7 @@ namespace yocto {
 vector<vec3f> lines_tangents(
     const vector<vec2i>& lines, const vector<vec3f>& positions) {
   auto tangents = vector<vec3f>{positions.size()};
-  for (auto& tangent : tangents) tangent = zero3f;
+  for (auto& tangent : tangents) tangent = {0, 0, 0};
   for (auto& l : lines) {
     auto tangent = line_tangent(positions[l.x], positions[l.y]);
     auto length  = line_length(positions[l.x], positions[l.y]);
@@ -78,7 +78,7 @@ vector<vec3f> lines_tangents(
 vector<vec3f> triangles_normals(
     const vector<vec3i>& triangles, const vector<vec3f>& positions) {
   auto normals = vector<vec3f>{positions.size()};
-  for (auto& normal : normals) normal = zero3f;
+  for (auto& normal : normals) normal = {0, 0, 0};
   for (auto& t : triangles) {
     auto normal = triangle_normal(
         positions[t.x], positions[t.y], positions[t.z]);
@@ -95,7 +95,7 @@ vector<vec3f> triangles_normals(
 vector<vec3f> quads_normals(
     const vector<vec4i>& quads, const vector<vec3f>& positions) {
   auto normals = vector<vec3f>{positions.size()};
-  for (auto& normal : normals) normal = zero3f;
+  for (auto& normal : normals) normal = {0, 0, 0};
   for (auto& q : quads) {
     auto normal = quad_normal(
         positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
@@ -116,7 +116,7 @@ void lines_tangents(vector<vec3f>& tangents, const vector<vec2i>& lines,
   if (tangents.size() != positions.size()) {
     throw std::out_of_range("array should be the same length");
   }
-  for (auto& tangent : tangents) tangent = zero3f;
+  for (auto& tangent : tangents) tangent = {0, 0, 0};
   for (auto& l : lines) {
     auto tangent = line_tangent(positions[l.x], positions[l.y]);
     auto length  = line_length(positions[l.x], positions[l.y]);
@@ -132,7 +132,7 @@ void triangles_normals(vector<vec3f>& normals, const vector<vec3i>& triangles,
   if (normals.size() != positions.size()) {
     throw std::out_of_range("array should be the same length");
   }
-  for (auto& normal : normals) normal = zero3f;
+  for (auto& normal : normals) normal = {0, 0, 0};
   for (auto& t : triangles) {
     auto normal = triangle_normal(
         positions[t.x], positions[t.y], positions[t.z]);
@@ -150,7 +150,7 @@ void quads_normals(vector<vec3f>& normals, const vector<vec4i>& quads,
   if (normals.size() != positions.size()) {
     throw std::out_of_range("array should be the same length");
   }
-  for (auto& normal : normals) normal = zero3f;
+  for (auto& normal : normals) normal = {0, 0, 0};
   for (auto& q : quads) {
     auto normal = quad_normal(
         positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
@@ -172,8 +172,8 @@ void quads_normals(vector<vec3f>& normals, const vector<vec4i>& quads,
 vector<vec4f> triangles_tangent_spaces(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texcoords) {
-  auto tangu = vector<vec3f>(positions.size(), zero3f);
-  auto tangv = vector<vec3f>(positions.size(), zero3f);
+  auto tangu = vector<vec3f>(positions.size(), vec3f{0, 0, 0});
+  auto tangv = vector<vec3f>(positions.size(), vec3f{0, 0, 0});
   for (auto t : triangles) {
     auto tutv = triangle_tangents_fromuv(positions[t.x], positions[t.y],
         positions[t.z], texcoords[t.x], texcoords[t.y], texcoords[t.z]);
@@ -380,17 +380,15 @@ void insert_edges(edge_map& emap, const vector<vec4i>& quads) {
 // Insert an edge and return its index
 int insert_edge(edge_map& emap, const vec2i& edge) {
   auto es = edge.x < edge.y ? edge : vec2i{edge.y, edge.x};
-  auto it = emap.index.find(es);
-  if (it == emap.index.end()) {
-    auto idx = (int)emap.edges.size();
-    emap.index.insert(it, {es, idx});
-    emap.edges.push_back(es);
-    emap.nfaces.push_back(1);
-    return idx;
+  auto it = emap.edges.find(es);
+  if (it == emap.edges.end()) {
+    auto data = edge_map::edge_data{(int)emap.edges.size(), 1};
+    emap.edges.insert(it, {es, data});
+    return data.index;
   } else {
-    auto idx = it->second;
-    emap.nfaces[idx] += 1;
-    return idx;
+    auto& data = it->second;
+    data.nfaces += 1;
+    return data.index;
   }
 }
 // Get number of edges
@@ -398,16 +396,20 @@ int num_edges(const edge_map& emap) { return (int)emap.edges.size(); }
 // Get the edge index
 int edge_index(const edge_map& emap, const vec2i& edge) {
   auto es       = edge.x < edge.y ? edge : vec2i{edge.y, edge.x};
-  auto iterator = emap.index.find(es);
-  if (iterator == emap.index.end()) return -1;
-  return iterator->second;
+  auto iterator = emap.edges.find(es);
+  if (iterator == emap.edges.end()) return -1;
+  return iterator->second.index;
 }
 // Get a list of edges, boundary edges, boundary vertices
-vector<vec2i> get_edges(const edge_map& emap) { return emap.edges; }
+vector<vec2i> get_edges(const edge_map& emap) {
+  auto edges = vector<vec2i>(emap.edges.size());
+  for (auto& [edge, data] : emap.edges) edges[data.index] = edge;
+  return edges;
+}
 vector<vec2i> get_boundary(const edge_map& emap) {
   auto boundary = vector<vec2i>{};
-  for (auto idx = 0; idx < emap.edges.size(); idx++) {
-    if (emap.nfaces[idx] < 2) boundary.push_back(emap.edges[idx]);
+  for (auto& [edge, data] : emap.edges) {
+    if (data.nfaces < 2) boundary.push_back(edge);
   }
   return boundary;
 }
@@ -434,8 +436,8 @@ vector<vec3i> face_adjacencies(const vector<vec3i>& triangles) {
   auto adjacencies = vector<vec3i>{triangles.size(), vec3i{-1, -1, -1}};
   auto edge_map    = unordered_map<vec2i, int>();
   edge_map.reserve((size_t)(triangles.size() * 1.5));
-  for (int i = 0; i < triangles.size(); ++i) {
-    for (int k = 0; k < 3; ++k) {
+  for (auto i = 0; i < (int)triangles.size(); ++i) {
+    for (auto k = 0; k < 3; ++k) {
       auto edge = get_edge(triangles[i], k);
       auto it   = edge_map.find(edge);
       if (it == edge_map.end()) {
@@ -443,7 +445,7 @@ vector<vec3i> face_adjacencies(const vector<vec3i>& triangles) {
       } else {
         auto neighbor     = it->second;
         adjacencies[i][k] = neighbor;
-        for (int kk = 0; kk < 3; ++kk) {
+        for (auto kk = 0; kk < 3; ++kk) {
           auto edge2 = get_edge(triangles[neighbor], kk);
           if (edge2 == edge) {
             adjacencies[neighbor][kk] = i;
@@ -470,8 +472,8 @@ vector<vector<int>> vertex_adjacencies(
   auto num_vertices     = 0;
   auto face_from_vertex = vector<int>(triangles.size() * 3, -1);
 
-  for (int i = 0; i < triangles.size(); ++i) {
-    for (int k = 0; k < 3; k++) {
+  for (auto i = 0; i < (int)triangles.size(); ++i) {
+    for (auto k = 0; k < 3; k++) {
       face_from_vertex[triangles[i][k]] = i;
       num_vertices                      = max(num_vertices, triangles[i][k]);
     }
@@ -481,7 +483,7 @@ vector<vector<int>> vertex_adjacencies(
   auto result = vector<vector<int>>(num_vertices);
 
   // For each vertex, loop around it and build its adjacency.
-  for (int i = 0; i < num_vertices; ++i) {
+  for (auto i = 0; i < num_vertices; ++i) {
     result[i].reserve(6);
     auto first_face = face_from_vertex[i];
     if (first_face == -1) continue;
@@ -516,8 +518,8 @@ vector<vector<int>> vertex_to_faces_adjacencies(
   auto num_vertices     = 0;
   auto face_from_vertex = vector<int>(triangles.size() * 3, -1);
 
-  for (int i = 0; i < triangles.size(); ++i) {
-    for (int k = 0; k < 3; k++) {
+  for (auto i = 0; i < (int)triangles.size(); ++i) {
+    for (auto k = 0; k < 3; k++) {
       face_from_vertex[triangles[i][k]] = i;
       num_vertices                      = max(num_vertices, triangles[i][k]);
     }
@@ -527,7 +529,7 @@ vector<vector<int>> vertex_to_faces_adjacencies(
   auto result = vector<vector<int>>(num_vertices);
 
   // For each vertex, loop around it and build its adjacency.
-  for (int i = 0; i < num_vertices; ++i) {
+  for (auto i = 0; i < num_vertices; ++i) {
     result[i].reserve(6);
     auto first_face = face_from_vertex[i];
     if (first_face == -1) continue;
@@ -551,8 +553,8 @@ vector<vector<int>> ordered_boundaries(const vector<vec3i>& triangles,
     const vector<vec3i>& adjacency, int num_vertices) {
   // map every boundary vertex to its next one
   auto next_vert = vector<int>(num_vertices, -1);
-  for (int i = 0; i < triangles.size(); ++i) {
-    for (int k = 0; k < 3; ++k) {
+  for (auto i = 0; i < (int)triangles.size(); ++i) {
+    for (auto k = 0; k < 3; ++k) {
       if (adjacency[i][k] == -1)
         next_vert[triangles[i][k]] = triangles[i][(k + 1) % 3];
     }
@@ -562,7 +564,7 @@ vector<vector<int>> ordered_boundaries(const vector<vec3i>& triangles,
   auto boundaries = vector<vector<int>>();
 
   // arrange boundary vertices in loops
-  for (int i = 0; i < next_vert.size(); i++) {
+  for (auto i = 0; i < (int)next_vert.size(); i++) {
     if (next_vert[i] == -1) continue;
 
     // add new empty boundary
@@ -609,7 +611,7 @@ static pair<int, int> split_middle(vector<int>& primitives,
   for (auto i = start; i < end; i++)
     cbbox = merge(cbbox, centers[primitives[i]]);
   auto csize = cbbox.max - cbbox.min;
-  if (csize == zero3f) return {mid, axis};
+  if (csize == vec3f{0, 0, 0}) return {mid, axis};
 
   // split along largest
   if (csize.x >= csize.y && csize.x >= csize.z) axis = 0;
@@ -1342,441 +1344,374 @@ namespace yocto {
 
 // Subdivide lines.
 template <typename T>
-void subdivide_lines_impl(vector<vec2i>& lines, vector<T>& vert,
-    const vector<vec2i>& lines_, const vector<T>& vert_, int level) {
-  // initialization
-  lines = lines_;
-  vert  = vert_;
+static pair<vector<vec2i>, vector<T>> subdivide_lines_impl(
+    const vector<vec2i>& lines, const vector<T>& vertices) {
   // early exit
-  if (lines.empty() || vert.empty()) return;
-  // loop over levels
-  for (auto l = 0; l < level; l++) {
-    // sizes
-    auto nverts = (int)vert.size();
-    auto nlines = (int)lines.size();
-    // create vertices
-    auto tvert = vector<T>(nverts + nlines);
-    for (auto i = 0; i < nverts; i++) tvert[i] = vert[i];
-    for (auto i = 0; i < nlines; i++) {
-      auto l            = lines[i];
-      tvert[nverts + i] = (vert[l.x] + vert[l.y]) / 2;
-    }
-    // create lines
-    auto tlines = vector<vec2i>(nlines * 2);
-    for (auto i = 0; i < nlines; i++) {
-      auto l            = lines[i];
-      tlines[i * 2 + 0] = {l.x, nverts + i};
-      tlines[i * 2 + 0] = {nverts + i, l.y};
-    }
-    swap(tlines, lines);
-    swap(tvert, vert);
+  if (lines.empty() || vertices.empty()) return {lines, vertices};
+  // create vertices
+  auto tvertices = vector<T>{};
+  tvertices.reserve(vertices.size() + lines.size());
+  for (auto& vertex : vertices) tvertices.push_back(vertex);
+  for (auto& line : lines) {
+    tvertices.push_back((vertices[line.x] + vertices[line.y]) / 2);
   }
-}
-template <typename T>
-pair<vector<vec2i>, vector<T>> subdivide_lines_impl(
-    const vector<vec2i>& lines, const vector<T>& vert, int level) {
-  auto tess = pair<vector<vec2i>, vector<T>>{};
-  subdivide_lines_impl(tess.first, tess.second, lines, vert, level);
-  return tess;
+  // create lines
+  auto tlines = vector<vec2i>{};
+  tlines.reserve(lines.size() * 2);
+  auto line_vertex = [nverts = (int)vertices.size()](
+                         size_t line_id) { return nverts + (int)line_id; };
+  for (auto&& [line_id, line] : enumerate(lines)) {
+    tlines.push_back({line.x, line_vertex(line_id)});
+    tlines.push_back({line_vertex(line_id), line.y});
+  }
+  // done
+  return {tlines, tvertices};
 }
 
 // Subdivide triangle.
 template <typename T>
-void subdivide_triangles_impl(vector<vec3i>& triangles, vector<T>& vert,
-    const vector<vec3i>& triangles_, const vector<T>& vert_, int level) {
-  // initialization
-  triangles = triangles_;
-  vert      = vert_;
+static pair<vector<vec3i>, vector<T>> subdivide_triangles_impl(
+    const vector<vec3i>& triangles, const vector<T>& vertices) {
   // early exit
-  if (triangles.empty() || vert.empty()) return;
-  // loop over levels
-  for (auto l = 0; l < level; l++) {
-    // get edges
-    auto emap  = make_edge_map(triangles);
-    auto edges = get_edges(emap);
-    // number of elements
-    auto nverts = (int)vert.size();
-    auto nedges = (int)edges.size();
-    auto nfaces = (int)triangles.size();
-    // create vertices
-    auto tvert = vector<T>(nverts + nedges);
-    for (auto i = 0; i < nverts; i++) tvert[i] = vert[i];
-    for (auto i = 0; i < nedges; i++) {
-      auto e            = edges[i];
-      tvert[nverts + i] = (vert[e.x] + vert[e.y]) / 2;
-    }
-    // create triangles
-    auto ttriangles = vector<vec3i>(nfaces * 4);
-    for (auto i = 0; i < nfaces; i++) {
-      auto t                = triangles[i];
-      ttriangles[i * 4 + 0] = {t.x, nverts + edge_index(emap, {t.x, t.y}),
-          nverts + edge_index(emap, {t.z, t.x})};
-      ttriangles[i * 4 + 1] = {t.y, nverts + edge_index(emap, {t.y, t.z}),
-          nverts + edge_index(emap, {t.x, t.y})};
-      ttriangles[i * 4 + 2] = {t.z, nverts + edge_index(emap, {t.z, t.x}),
-          nverts + edge_index(emap, {t.y, t.z})};
-      ttriangles[i * 4 + 3] = {nverts + edge_index(emap, {t.x, t.y}),
-          nverts + edge_index(emap, {t.y, t.z}),
-          nverts + edge_index(emap, {t.z, t.x})};
-    }
-    swap(ttriangles, triangles);
-    swap(tvert, vert);
+  if (triangles.empty() || vertices.empty()) return {triangles, vertices};
+  // get edges
+  auto emap  = make_edge_map(triangles);
+  auto edges = get_edges(emap);
+  // create vertices
+  auto tvertices = vector<T>{};
+  tvertices.reserve(vertices.size() + edges.size());
+  for (auto& vertex : vertices) tvertices.push_back(vertex);
+  for (auto& edge : edges)
+    tvertices.push_back((vertices[edge.x] + vertices[edge.y]) / 2);
+  // create triangles
+  auto ttriangles = vector<vec3i>{};
+  ttriangles.reserve(triangles.size() * 4);
+  auto edge_vertex = [&emap, nverts = (int)vertices.size()](const vec2i& edge) {
+    return nverts + edge_index(emap, edge);
+  };
+  for (auto& triangle : triangles) {
+    ttriangles.push_back({triangle.x, edge_vertex({triangle.x, triangle.y}),
+        edge_vertex({triangle.z, triangle.x})});
+    ttriangles.push_back({triangle.y, edge_vertex({triangle.y, triangle.z}),
+        edge_vertex({triangle.x, triangle.y})});
+    ttriangles.push_back({triangle.z, edge_vertex({triangle.z, triangle.x}),
+        edge_vertex({triangle.y, triangle.z})});
+    ttriangles.push_back({edge_vertex({triangle.x, triangle.y}),
+        edge_vertex({triangle.y, triangle.z}),
+        edge_vertex({triangle.z, triangle.x})});
   }
-}
-template <typename T>
-pair<vector<vec3i>, vector<T>> subdivide_triangles_impl(
-    const vector<vec3i>& triangles, const vector<T>& vert, int level) {
-  auto tess = pair<vector<vec3i>, vector<T>>{};
-  subdivide_triangles_impl(tess.first, tess.second, triangles, vert, level);
-  return tess;
+  // done
+  return {ttriangles, tvertices};
 }
 
 // Subdivide quads.
 template <typename T>
-void subdivide_quads_impl(vector<vec4i>& quads, vector<T>& vert,
-    const vector<vec4i>& quads_, const vector<T>& vert_, int level) {
-  // initialization
-  quads = quads_;
-  vert  = vert_;
+static pair<vector<vec4i>, vector<T>> subdivide_quads_impl(
+    const vector<vec4i>& quads, const vector<T>& vertices) {
   // early exit
-  if (quads.empty() || vert.empty()) return;
-  // loop over levels
-  for (auto l = 0; l < level; l++) {
-    // get edges
-    auto emap  = make_edge_map(quads);
-    auto edges = get_edges(emap);
-    // number of elements
-    auto nverts = (int)vert.size();
-    auto nedges = (int)edges.size();
-    auto nfaces = (int)quads.size();
-    // create vertices
-    auto tvert = vector<T>(nverts + nedges + nfaces);
-    for (auto i = 0; i < nverts; i++) tvert[i] = vert[i];
-    for (auto i = 0; i < nedges; i++) {
-      auto e            = edges[i];
-      tvert[nverts + i] = (vert[e.x] + vert[e.y]) / 2;
+  if (quads.empty() || vertices.empty()) return {quads, vertices};
+  // get edges
+  auto emap  = make_edge_map(quads);
+  auto edges = get_edges(emap);
+  // create vertices
+  auto tvertices = vector<T>{};
+  tvertices.reserve(vertices.size() + edges.size() + quads.size());
+  for (auto& vertex : vertices) tvertices.push_back(vertex);
+  for (auto& edge : edges)
+    tvertices.push_back((vertices[edge.x] + vertices[edge.y]) / 2);
+  for (auto& quad : quads) {
+    if (quad.z != quad.w) {
+      tvertices.push_back((vertices[quad.x] + vertices[quad.y] +
+                              vertices[quad.z] + vertices[quad.w]) /
+                          4);
+    } else {
+      tvertices.push_back(
+          (vertices[quad.x] + vertices[quad.y] + vertices[quad.z]) / 3);
     }
-    for (auto i = 0; i < nfaces; i++) {
-      auto q = quads[i];
-      if (q.z != q.w) {
-        tvert[nverts + nedges + i] =
-            (vert[q.x] + vert[q.y] + vert[q.z] + vert[q.w]) / 4;
-      } else {
-        tvert[nverts + nedges + i] = (vert[q.x] + vert[q.y] + vert[q.z]) / 3;
-      }
-    }
-    // create quads
-    auto tquads = vector<vec4i>(nfaces * 4);  // conservative allocation
-    auto qi     = 0;
-    for (auto i = 0; i < nfaces; i++) {
-      auto q = quads[i];
-      if (q.z != q.w) {
-        tquads[qi++] = {q.x, nverts + edge_index(emap, {q.x, q.y}),
-            nverts + nedges + i, nverts + edge_index(emap, {q.w, q.x})};
-        tquads[qi++] = {q.y, nverts + edge_index(emap, {q.y, q.z}),
-            nverts + nedges + i, nverts + edge_index(emap, {q.x, q.y})};
-        tquads[qi++] = {q.z, nverts + edge_index(emap, {q.z, q.w}),
-            nverts + nedges + i, nverts + edge_index(emap, {q.y, q.z})};
-        tquads[qi++] = {q.w, nverts + edge_index(emap, {q.w, q.x}),
-            nverts + nedges + i, nverts + edge_index(emap, {q.z, q.w})};
-      } else {
-        tquads[qi++] = {q.x, nverts + edge_index(emap, {q.x, q.y}),
-            nverts + nedges + i, nverts + edge_index(emap, {q.z, q.x})};
-        tquads[qi++] = {q.y, nverts + edge_index(emap, {q.y, q.z}),
-            nverts + nedges + i, nverts + edge_index(emap, {q.x, q.y})};
-        tquads[qi++] = {q.z, nverts + edge_index(emap, {q.z, q.x}),
-            nverts + nedges + i, nverts + edge_index(emap, {q.y, q.z})};
-      }
-    }
-    tquads.resize(qi);
-    // done
-    swap(tquads, quads);
-    swap(tvert, vert);
   }
-}
-template <typename T>
-pair<vector<vec4i>, vector<T>> subdivide_quads_impl(
-    const vector<vec4i>& quads, const vector<T>& vert, int level) {
-  auto tess = pair<vector<vec4i>, vector<T>>{};
-  subdivide_quads_impl(tess.first, tess.second, quads, vert, level);
-  return tess;
+  // create quads
+  auto tquads = vector<vec4i>{};
+  tquads.reserve(quads.size() * 4);
+  auto edge_vertex = [&emap, nverts = (int)vertices.size()](const vec2i& edge) {
+    return nverts + edge_index(emap, edge);
+  };
+  auto quad_vertex = [nverts    = (int)vertices.size(),
+                         nedges = (int)edges.size()](size_t quad_id) {
+    return nverts + nedges + (int)quad_id;
+  };
+  for (auto&& [quad_id, quad] : enumerate(quads)) {
+    if (quad.z != quad.w) {
+      tquads.push_back({quad.x, edge_vertex({quad.x, quad.y}),
+          quad_vertex(quad_id), edge_vertex({quad.w, quad.x})});
+      tquads.push_back({quad.y, edge_vertex({quad.y, quad.z}),
+          quad_vertex(quad_id), edge_vertex({quad.x, quad.y})});
+      tquads.push_back({quad.z, edge_vertex({quad.z, quad.w}),
+          quad_vertex(quad_id), edge_vertex({quad.y, quad.z})});
+      tquads.push_back({quad.w, edge_vertex({quad.w, quad.x}),
+          quad_vertex(quad_id), edge_vertex({quad.z, quad.w})});
+    } else {
+      tquads.push_back({quad.x, edge_vertex({quad.x, quad.y}),
+          quad_vertex(quad_id), edge_vertex({quad.z, quad.x})});
+      tquads.push_back({quad.y, edge_vertex({quad.y, quad.z}),
+          quad_vertex(quad_id), edge_vertex({quad.x, quad.y})});
+      tquads.push_back({quad.z, edge_vertex({quad.z, quad.x}),
+          quad_vertex(quad_id), edge_vertex({quad.y, quad.z})});
+    }
+  }
+  // done
+  return {tquads, tvertices};
 }
 
 // Subdivide beziers.
 template <typename T>
-void subdivide_beziers_impl(vector<vec4i>& beziers, vector<T>& vert,
-    const vector<vec4i>& beziers_, const vector<T>& vert_, int level) {
-  // initialization
-  beziers = beziers_;
-  vert    = vert_;
+static pair<vector<vec4i>, vector<T>> subdivide_beziers_impl(
+    const vector<vec4i>& beziers, const vector<T>& vertices) {
   // early exit
-  if (beziers.empty() || vert.empty()) return;
-  // loop over levels
-  for (auto l = 0; l < level; l++) {
-    // get edges
-    auto vmap     = unordered_map<int, int>();
-    auto tvert    = vector<T>();
-    auto tbeziers = vector<vec4i>();
-    for (auto b : beziers) {
-      if (vmap.find(b.x) == vmap.end()) {
-        vmap[b.x] = (int)tvert.size();
-        tvert.push_back(vert[b.x]);
-      }
-      if (vmap.find(b.w) == vmap.end()) {
-        vmap[b.w] = (int)tvert.size();
-        tvert.push_back(vert[b.w]);
-      }
-      auto bo = (int)tvert.size();
-      tbeziers.push_back({vmap.at(b.x), bo + 0, bo + 1, bo + 2});
-      tbeziers.push_back({bo + 2, bo + 3, bo + 4, vmap.at(b.w)});
-      tvert.push_back(vert[b.x] / 2 + vert[b.y] / 2);
-      tvert.push_back(vert[b.x] / 4 + vert[b.y] / 2 + vert[b.z] / 4);
-      tvert.push_back(vert[b.x] / 8 + vert[b.y] * ((float)3 / (float)8) +
-                      vert[b.z] * ((float)3 / (float)8) + vert[b.w] / 8);
-      tvert.push_back(vert[b.y] / 4 + vert[b.z] / 2 + vert[b.w] / 4);
-      tvert.push_back(vert[b.z] / 2 + vert[b.w] / 2);
+  if (beziers.empty() || vertices.empty()) return {beziers, vertices};
+  // get edges
+  auto vmap      = unordered_map<int, int>();
+  auto tvertices = vector<T>();
+  auto tbeziers  = vector<vec4i>();
+  for (auto& bezier : beziers) {
+    if (vmap.find(bezier.x) == vmap.end()) {
+      vmap[bezier.x] = (int)tvertices.size();
+      tvertices.push_back(vertices[bezier.x]);
     }
-
-    // done
-    swap(tbeziers, beziers);
-    swap(tvert, vert);
+    if (vmap.find(bezier.w) == vmap.end()) {
+      vmap[bezier.w] = (int)tvertices.size();
+      tvertices.push_back(vertices[bezier.w]);
+    }
+    auto bo = (int)tvertices.size();
+    tbeziers.push_back({vmap.at(bezier.x), bo + 0, bo + 1, bo + 2});
+    tbeziers.push_back({bo + 2, bo + 3, bo + 4, vmap.at(bezier.w)});
+    tvertices.push_back(vertices[bezier.x] / 2 + vertices[bezier.y] / 2);
+    tvertices.push_back(vertices[bezier.x] / 4 + vertices[bezier.y] / 2 +
+                        vertices[bezier.z] / 4);
+    tvertices.push_back(
+        vertices[bezier.x] / 8 + vertices[bezier.y] * ((float)3 / (float)8) +
+        vertices[bezier.z] * ((float)3 / (float)8) + vertices[bezier.w] / 8);
+    tvertices.push_back(vertices[bezier.y] / 4 + vertices[bezier.z] / 2 +
+                        vertices[bezier.w] / 4);
+    tvertices.push_back(vertices[bezier.z] / 2 + vertices[bezier.w] / 2);
   }
-}
-template <typename T>
-pair<vector<vec4i>, vector<T>> subdivide_beziers_impl(
-    const vector<vec4i>& beziers, const vector<T>& vert, int level) {
-  auto tess = pair<vector<vec4i>, vector<T>>{};
-  subdivide_beziers_impl(tess.first, tess.second, beziers, vert, level);
-  return tess;
+
+  // done
+  return {tbeziers, tvertices};
 }
 
 // Subdivide catmullclark.
 template <typename T>
-void subdivide_catmullclark_impl(vector<vec4i>& quads, vector<T>& vert,
-    const vector<vec4i>& quads_, const vector<T>& vert_, int level,
-    bool lock_boundary) {
-  // initialization
-  quads = quads_;
-  vert  = vert_;
+static pair<vector<vec4i>, vector<T>> subdivide_catmullclark_impl(
+    const vector<vec4i>& quads, const vector<T>& vertices, bool lock_boundary) {
   // early exit
-  if (quads.empty() || vert.empty()) return;
-  // loop over levels
-  for (auto l = 0; l < level; l++) {
-    // get edges
-    auto emap     = make_edge_map(quads);
-    auto edges    = get_edges(emap);
-    auto boundary = get_boundary(emap);
-    // number of elements
-    auto nverts    = (int)vert.size();
-    auto nedges    = (int)edges.size();
-    auto nboundary = (int)boundary.size();
-    auto nfaces    = (int)quads.size();
+  if (quads.empty() || vertices.empty()) return {quads, vertices};
+  // get edges
+  auto emap     = make_edge_map(quads);
+  auto edges    = get_edges(emap);
+  auto boundary = get_boundary(emap);
 
-    // split elements ------------------------------------
-    // create vertices
-    auto tvert = vector<T>(nverts + nedges + nfaces);
-    for (auto i = 0; i < nverts; i++) tvert[i] = vert[i];
-    for (auto i = 0; i < nedges; i++) {
-      auto e            = edges[i];
-      tvert[nverts + i] = (vert[e.x] + vert[e.y]) / 2;
-    }
-    for (auto i = 0; i < nfaces; i++) {
-      auto q = quads[i];
-      if (q.z != q.w) {
-        tvert[nverts + nedges + i] =
-            (vert[q.x] + vert[q.y] + vert[q.z] + vert[q.w]) / 4;
-      } else {
-        tvert[nverts + nedges + i] = (vert[q.x] + vert[q.y] + vert[q.z]) / 3;
-      }
-    }
-    // create quads
-    auto tquads = vector<vec4i>(nfaces * 4);  // conservative allocation
-    auto qi     = 0;
-    for (auto i = 0; i < nfaces; i++) {
-      auto q = quads[i];
-      if (q.z != q.w) {
-        tquads[qi++] = {q.x, nverts + edge_index(emap, {q.x, q.y}),
-            nverts + nedges + i, nverts + edge_index(emap, {q.w, q.x})};
-        tquads[qi++] = {q.y, nverts + edge_index(emap, {q.y, q.z}),
-            nverts + nedges + i, nverts + edge_index(emap, {q.x, q.y})};
-        tquads[qi++] = {q.z, nverts + edge_index(emap, {q.z, q.w}),
-            nverts + nedges + i, nverts + edge_index(emap, {q.y, q.z})};
-        tquads[qi++] = {q.w, nverts + edge_index(emap, {q.w, q.x}),
-            nverts + nedges + i, nverts + edge_index(emap, {q.z, q.w})};
-      } else {
-        tquads[qi++] = {q.x, nverts + edge_index(emap, {q.x, q.y}),
-            nverts + nedges + i, nverts + edge_index(emap, {q.z, q.x})};
-        tquads[qi++] = {q.y, nverts + edge_index(emap, {q.y, q.z}),
-            nverts + nedges + i, nverts + edge_index(emap, {q.x, q.y})};
-        tquads[qi++] = {q.z, nverts + edge_index(emap, {q.z, q.x}),
-            nverts + nedges + i, nverts + edge_index(emap, {q.y, q.z})};
-      }
-    }
-    tquads.resize(qi);
-
-    // split boundary
-    auto tboundary = vector<vec2i>(nboundary * 2);
-    for (auto i = 0; i < nboundary; i++) {
-      auto e               = boundary[i];
-      tboundary[i * 2 + 0] = {e.x, nverts + edge_index(emap, e)};
-      tboundary[i * 2 + 1] = {nverts + edge_index(emap, e), e.y};
-    }
-
-    // setup creases -----------------------------------
-    auto tcrease_edges = vector<vec2i>();
-    auto tcrease_verts = vector<int>();
-    if (lock_boundary) {
-      for (auto& b : tboundary) {
-        tcrease_verts.push_back(b.x);
-        tcrease_verts.push_back(b.y);
-      }
+  // split elements ------------------------------------
+  // create vertices
+  auto tvertices = vector<T>{};
+  tvertices.reserve(vertices.size() + edges.size() + quads.size());
+  for (auto& vertex : vertices) tvertices.push_back(vertex);
+  for (auto& edge : edges)
+    tvertices.push_back((vertices[edge.x] + vertices[edge.y]) / 2);
+  for (auto& quad : quads) {
+    if (quad.z != quad.w) {
+      tvertices.push_back((vertices[quad.x] + vertices[quad.y] +
+                              vertices[quad.z] + vertices[quad.w]) /
+                          4);
     } else {
-      for (auto& b : tboundary) tcrease_edges.push_back(b);
+      tvertices.push_back(
+          (vertices[quad.x] + vertices[quad.y] + vertices[quad.z]) / 3);
     }
-
-    // define vertex valence ---------------------------
-    auto tvert_val = vector<int>(tvert.size(), 2);
-    for (auto& e : tboundary) {
-      tvert_val[e.x] = (lock_boundary) ? 0 : 1;
-      tvert_val[e.y] = (lock_boundary) ? 0 : 1;
-    }
-
-    // averaging pass ----------------------------------
-    auto avert  = vector<T>(tvert.size(), T());
-    auto acount = vector<int>(tvert.size(), 0);
-    for (auto p : tcrease_verts) {
-      if (tvert_val[p] != 0) continue;
-      avert[p] += tvert[p];
-      acount[p] += 1;
-    }
-    for (auto& e : tcrease_edges) {
-      auto c = (tvert[e.x] + tvert[e.y]) / 2;
-      for (auto vid : {e.x, e.y}) {
-        if (tvert_val[vid] != 1) continue;
-        avert[vid] += c;
-        acount[vid] += 1;
-      }
-    }
-    for (auto& q : tquads) {
-      auto c = (tvert[q.x] + tvert[q.y] + tvert[q.z] + tvert[q.w]) / 4;
-      for (auto vid : {q.x, q.y, q.z, q.w}) {
-        if (tvert_val[vid] != 2) continue;
-        avert[vid] += c;
-        acount[vid] += 1;
-      }
-    }
-    for (auto i = 0; i < tvert.size(); i++) avert[i] /= (float)acount[i];
-
-    // correction pass ----------------------------------
-    // p = p + (avg_p - p) * (4/avg_count)
-    for (auto i = 0; i < tvert.size(); i++) {
-      if (tvert_val[i] != 2) continue;
-      avert[i] = tvert[i] + (avert[i] - tvert[i]) * (4 / (float)acount[i]);
-    }
-    tvert = avert;
-
-    // done
-    swap(tquads, quads);
-    swap(tvert, vert);
   }
-}
-template <typename T>
-pair<vector<vec4i>, vector<T>> subdivide_catmullclark_impl(
-    const vector<vec4i>& quads, const vector<T>& vert, int level,
-    bool lock_boundary) {
-  auto tess = pair<vector<vec4i>, vector<T>>{};
-  subdivide_catmullclark_impl(
-      tess.first, tess.second, quads, vert, level, lock_boundary);
-  return tess;
+  // create quads
+  auto tquads = vector<vec4i>{};
+  tquads.reserve(quads.size() * 4);
+  auto edge_vertex = [&emap, nverts = (int)vertices.size()](const vec2i& edge) {
+    return nverts + edge_index(emap, edge);
+  };
+  auto quad_vertex = [nverts    = (int)vertices.size(),
+                         nedges = (int)edges.size()](size_t quad_id) {
+    return nverts + nedges + (int)quad_id;
+  };
+  for (auto&& [quad_id, quad] : enumerate(quads)) {
+    if (quad.z != quad.w) {
+      tquads.push_back({quad.x, edge_vertex({quad.x, quad.y}),
+          quad_vertex(quad_id), edge_vertex({quad.w, quad.x})});
+      tquads.push_back({quad.y, edge_vertex({quad.y, quad.z}),
+          quad_vertex(quad_id), edge_vertex({quad.x, quad.y})});
+      tquads.push_back({quad.z, edge_vertex({quad.z, quad.w}),
+          quad_vertex(quad_id), edge_vertex({quad.y, quad.z})});
+      tquads.push_back({quad.w, edge_vertex({quad.w, quad.x}),
+          quad_vertex(quad_id), edge_vertex({quad.z, quad.w})});
+    } else {
+      tquads.push_back({quad.x, edge_vertex({quad.x, quad.y}),
+          quad_vertex(quad_id), edge_vertex({quad.z, quad.x})});
+      tquads.push_back({quad.y, edge_vertex({quad.y, quad.z}),
+          quad_vertex(quad_id), edge_vertex({quad.x, quad.y})});
+      tquads.push_back({quad.z, edge_vertex({quad.z, quad.x}),
+          quad_vertex(quad_id), edge_vertex({quad.y, quad.z})});
+    }
+  }
+
+  // split boundary
+  auto tboundary = vector<vec2i>{};
+  tboundary.reserve(boundary.size());
+  for (auto& edge : boundary) {
+    tboundary.push_back({edge.x, edge_vertex(edge)});
+    tboundary.push_back({edge_vertex(edge), edge.y});
+  }
+
+  // setup creases -----------------------------------
+  auto tcrease_edges = vector<vec2i>{};
+  auto tcrease_verts = vector<int>{};
+  if (lock_boundary) {
+    for (auto& b : tboundary) {
+      tcrease_verts.push_back(b.x);
+      tcrease_verts.push_back(b.y);
+    }
+  } else {
+    for (auto& b : tboundary) tcrease_edges.push_back(b);
+  }
+
+  // define vertices valence ---------------------------
+  auto tvert_val = vector<int>(tvertices.size(), 2);
+  for (auto& edge : tboundary) {
+    tvert_val[edge.x] = (lock_boundary) ? 0 : 1;
+    tvert_val[edge.y] = (lock_boundary) ? 0 : 1;
+  }
+
+  // averaging pass ----------------------------------
+  auto avert  = vector<T>(tvertices.size(), T());
+  auto acount = vector<int>(tvertices.size(), 0);
+  for (auto& point : tcrease_verts) {
+    if (tvert_val[point] != 0) continue;
+    avert[point] += tvertices[point];
+    acount[point] += 1;
+  }
+  for (auto& edge : tcrease_edges) {
+    auto centroid = (tvertices[edge.x] + tvertices[edge.y]) / 2;
+    for (auto vid : {edge.x, edge.y}) {
+      if (tvert_val[vid] != 1) continue;
+      avert[vid] += centroid;
+      acount[vid] += 1;
+    }
+  }
+  for (auto& quad : tquads) {
+    auto centroid = (tvertices[quad.x] + tvertices[quad.y] + tvertices[quad.z] +
+                        tvertices[quad.w]) /
+                    4;
+    for (auto vid : {quad.x, quad.y, quad.z, quad.w}) {
+      if (tvert_val[vid] != 2) continue;
+      avert[vid] += centroid;
+      acount[vid] += 1;
+    }
+  }
+  for (auto i = 0; i < (int)tvertices.size(); i++) avert[i] /= (float)acount[i];
+
+  // correction pass ----------------------------------
+  // p = p + (avg_p - p) * (4/avg_count)
+  for (auto i = 0; i < (int)tvertices.size(); i++) {
+    if (tvert_val[i] != 2) continue;
+    avert[i] = tvertices[i] +
+               (avert[i] - tvertices[i]) * (4 / (float)acount[i]);
+  }
+  tvertices = avert;
+
+  // done
+  return {tquads, tvertices};
 }
 
 pair<vector<vec2i>, vector<float>> subdivide_lines(
-    const vector<vec2i>& lines, const vector<float>& vert, int level) {
-  return subdivide_lines_impl(lines, vert, level);
+    const vector<vec2i>& lines, const vector<float>& vertices) {
+  return subdivide_lines_impl(lines, vertices);
 }
 pair<vector<vec2i>, vector<vec2f>> subdivide_lines(
-    const vector<vec2i>& lines, const vector<vec2f>& vert, int level) {
-  return subdivide_lines_impl(lines, vert, level);
+    const vector<vec2i>& lines, const vector<vec2f>& vertices) {
+  return subdivide_lines_impl(lines, vertices);
 }
 pair<vector<vec2i>, vector<vec3f>> subdivide_lines(
-    const vector<vec2i>& lines, const vector<vec3f>& vert, int level) {
-  return subdivide_lines_impl(lines, vert, level);
+    const vector<vec2i>& lines, const vector<vec3f>& vertices) {
+  return subdivide_lines_impl(lines, vertices);
 }
 pair<vector<vec2i>, vector<vec4f>> subdivide_lines(
-    const vector<vec2i>& lines, const vector<vec4f>& vert, int level) {
-  return subdivide_lines_impl(lines, vert, level);
+    const vector<vec2i>& lines, const vector<vec4f>& vertices) {
+  return subdivide_lines_impl(lines, vertices);
 }
 
 pair<vector<vec3i>, vector<float>> subdivide_triangles(
-    const vector<vec3i>& triangles, const vector<float>& vert, int level) {
-  return subdivide_triangles_impl(triangles, vert, level);
+    const vector<vec3i>& triangles, const vector<float>& vertices) {
+  return subdivide_triangles_impl(triangles, vertices);
 }
 pair<vector<vec3i>, vector<vec2f>> subdivide_triangles(
-    const vector<vec3i>& triangles, const vector<vec2f>& vert, int level) {
-  return subdivide_triangles_impl(triangles, vert, level);
+    const vector<vec3i>& triangles, const vector<vec2f>& vertices) {
+  return subdivide_triangles_impl(triangles, vertices);
 }
 pair<vector<vec3i>, vector<vec3f>> subdivide_triangles(
-    const vector<vec3i>& triangles, const vector<vec3f>& vert, int level) {
-  return subdivide_triangles_impl(triangles, vert, level);
+    const vector<vec3i>& triangles, const vector<vec3f>& vertices) {
+  return subdivide_triangles_impl(triangles, vertices);
 }
 pair<vector<vec3i>, vector<vec4f>> subdivide_triangles(
-    const vector<vec3i>& triangles, const vector<vec4f>& vert, int level) {
-  return subdivide_triangles_impl(triangles, vert, level);
+    const vector<vec3i>& triangles, const vector<vec4f>& vertices) {
+  return subdivide_triangles_impl(triangles, vertices);
 }
 
 pair<vector<vec4i>, vector<float>> subdivide_quads(
-    const vector<vec4i>& quads, const vector<float>& vert, int level) {
-  return subdivide_quads_impl(quads, vert, level);
+    const vector<vec4i>& quads, const vector<float>& vertices) {
+  return subdivide_quads_impl(quads, vertices);
 }
 pair<vector<vec4i>, vector<vec2f>> subdivide_quads(
-    const vector<vec4i>& quads, const vector<vec2f>& vert, int level) {
-  return subdivide_quads_impl(quads, vert, level);
+    const vector<vec4i>& quads, const vector<vec2f>& vertices) {
+  return subdivide_quads_impl(quads, vertices);
 }
 pair<vector<vec4i>, vector<vec3f>> subdivide_quads(
-    const vector<vec4i>& quads, const vector<vec3f>& vert, int level) {
-  return subdivide_quads_impl(quads, vert, level);
+    const vector<vec4i>& quads, const vector<vec3f>& vertices) {
+  return subdivide_quads_impl(quads, vertices);
 }
 pair<vector<vec4i>, vector<vec4f>> subdivide_quads(
-    const vector<vec4i>& quads, const vector<vec4f>& vert, int level) {
-  return subdivide_quads_impl(quads, vert, level);
+    const vector<vec4i>& quads, const vector<vec4f>& vertices) {
+  return subdivide_quads_impl(quads, vertices);
 }
 
 pair<vector<vec4i>, vector<float>> subdivide_beziers(
-    const vector<vec4i>& beziers, const vector<float>& vert, int level) {
-  return subdivide_beziers_impl(beziers, vert, level);
+    const vector<vec4i>& beziers, const vector<float>& vertices) {
+  return subdivide_beziers_impl(beziers, vertices);
 }
 pair<vector<vec4i>, vector<vec2f>> subdivide_beziers(
-    const vector<vec4i>& beziers, const vector<vec2f>& vert, int level) {
-  return subdivide_beziers_impl(beziers, vert, level);
+    const vector<vec4i>& beziers, const vector<vec2f>& vertices) {
+  return subdivide_beziers_impl(beziers, vertices);
 }
 pair<vector<vec4i>, vector<vec3f>> subdivide_beziers(
-    const vector<vec4i>& beziers, const vector<vec3f>& vert, int level) {
-  return subdivide_beziers_impl(beziers, vert, level);
+    const vector<vec4i>& beziers, const vector<vec3f>& vertices) {
+  return subdivide_beziers_impl(beziers, vertices);
 }
 pair<vector<vec4i>, vector<vec4f>> subdivide_beziers(
-    const vector<vec4i>& beziers, const vector<vec4f>& vert, int level) {
-  return subdivide_beziers_impl(beziers, vert, level);
+    const vector<vec4i>& beziers, const vector<vec4f>& vertices) {
+  return subdivide_beziers_impl(beziers, vertices);
 }
 
 pair<vector<vec4i>, vector<float>> subdivide_catmullclark(
-    const vector<vec4i>& quads, const vector<float>& vert, int level,
+    const vector<vec4i>& quads, const vector<float>& vertices,
     bool lock_boundary) {
-  return subdivide_catmullclark_impl(quads, vert, level, lock_boundary);
+  return subdivide_catmullclark_impl(quads, vertices, lock_boundary);
 }
 pair<vector<vec4i>, vector<vec2f>> subdivide_catmullclark(
-    const vector<vec4i>& quads, const vector<vec2f>& vert, int level,
+    const vector<vec4i>& quads, const vector<vec2f>& vertices,
     bool lock_boundary) {
-  return subdivide_catmullclark_impl(quads, vert, level, lock_boundary);
+  return subdivide_catmullclark_impl(quads, vertices, lock_boundary);
 }
 pair<vector<vec4i>, vector<vec3f>> subdivide_catmullclark(
-    const vector<vec4i>& quads, const vector<vec3f>& vert, int level,
+    const vector<vec4i>& quads, const vector<vec3f>& vertices,
     bool lock_boundary) {
-  return subdivide_catmullclark_impl(quads, vert, level, lock_boundary);
+  return subdivide_catmullclark_impl(quads, vertices, lock_boundary);
 }
 pair<vector<vec4i>, vector<vec4f>> subdivide_catmullclark(
-    const vector<vec4i>& quads, const vector<vec4f>& vert, int level,
+    const vector<vec4i>& quads, const vector<vec4f>& vertices,
     bool lock_boundary) {
-  return subdivide_catmullclark_impl(quads, vert, level, lock_boundary);
+  return subdivide_catmullclark_impl(quads, vertices, lock_boundary);
 }
 
 }  // namespace yocto

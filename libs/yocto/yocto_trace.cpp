@@ -63,6 +63,42 @@ bvh_data make_bvh(const scene_data& scene, const trace_params& params) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// Convenience functions
+[[maybe_unused]] static vec3f eval_position(
+    const scene_data& scene, const bvh_intersection& intersection) {
+  return eval_position(scene, scene.instances[intersection.instance],
+      intersection.element, intersection.uv);
+}
+[[maybe_unused]] static vec3f eval_normal(
+    const scene_data& scene, const bvh_intersection& intersection) {
+  return eval_normal(scene, scene.instances[intersection.instance],
+      intersection.element, intersection.uv);
+}
+[[maybe_unused]] static vec3f eval_element_normal(
+    const scene_data& scene, const bvh_intersection& intersection) {
+  return eval_element_normal(
+      scene, scene.instances[intersection.instance], intersection.element);
+}
+[[maybe_unused]] static vec3f eval_shading_normal(const scene_data& scene,
+    const bvh_intersection& intersection, const vec3f& outgoing) {
+  return eval_shading_normal(scene, scene.instances[intersection.instance],
+      intersection.element, intersection.uv, outgoing);
+}
+[[maybe_unused]] static vec2f eval_texcoord(
+    const scene_data& scene, const bvh_intersection& intersection) {
+  return eval_texcoord(scene, scene.instances[intersection.instance],
+      intersection.element, intersection.uv);
+}
+[[maybe_unused]] static material_point eval_material(
+    const scene_data& scene, const bvh_intersection& intersection) {
+  return eval_material(scene, scene.instances[intersection.instance],
+      intersection.element, intersection.uv);
+}
+[[maybe_unused]] static bool is_volumetric(
+    const scene_data& scene, const bvh_intersection& intersection) {
+  return is_volumetric(scene, scene.instances[intersection.instance]);
+}
+
 // Evaluates/sample the BRDF scaled by the cosine of the incoming direction.
 static vec3f eval_emission(const material_point& material, const vec3f& normal,
     const vec3f& outgoing) {
@@ -72,7 +108,7 @@ static vec3f eval_emission(const material_point& material, const vec3f& normal,
 // Evaluates/sample the BRDF scaled by the cosine of the incoming direction.
 static vec3f eval_bsdfcos(const material_point& material, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
-  if (material.roughness == 0) return zero3f;
+  if (material.roughness == 0) return {0, 0, 0};
 
   if (material.type == material_type::matte) {
     return eval_matte(material.color, normal, outgoing, incoming);
@@ -101,7 +137,7 @@ static vec3f eval_bsdfcos(const material_point& material, const vec3f& normal,
 
 static vec3f eval_delta(const material_point& material, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
-  if (material.roughness != 0) return zero3f;
+  if (material.roughness != 0) return {0, 0, 0};
 
   if (material.type == material_type::metallic) {
     return eval_metallic(material.color, normal, outgoing, incoming);
@@ -121,7 +157,7 @@ static vec3f eval_delta(const material_point& material, const vec3f& normal,
 // Picks a direction based on the BRDF
 static vec3f sample_bsdfcos(const material_point& material, const vec3f& normal,
     const vec3f& outgoing, float rnl, const vec2f& rn) {
-  if (material.roughness == 0) return zero3f;
+  if (material.roughness == 0) return {0, 0, 0};
 
   if (material.type == material_type::matte) {
     return sample_matte(material.color, normal, outgoing, rn);
@@ -150,7 +186,7 @@ static vec3f sample_bsdfcos(const material_point& material, const vec3f& normal,
 
 static vec3f sample_delta(const material_point& material, const vec3f& normal,
     const vec3f& outgoing, float rnl) {
-  if (material.roughness != 0) return zero3f;
+  if (material.roughness != 0) return {0, 0, 0};
 
   if (material.type == material_type::metallic) {
     return sample_metallic(material.color, normal, outgoing);
@@ -218,20 +254,20 @@ static float sample_delta_pdf(const material_point& material,
 
 static vec3f eval_scattering(const material_point& material,
     const vec3f& outgoing, const vec3f& incoming) {
-  if (material.density == zero3f) return zero3f;
+  if (material.density == vec3f{0, 0, 0}) return {0, 0, 0};
   return material.scattering * material.density *
          eval_phasefunction(material.scanisotropy, outgoing, incoming);
 }
 
 static vec3f sample_scattering(const material_point& material,
     const vec3f& outgoing, float rnl, const vec2f& rn) {
-  if (material.density == zero3f) return zero3f;
+  if (material.density == vec3f{0, 0, 0}) return {0, 0, 0};
   return sample_phasefunction(material.scanisotropy, outgoing, rn);
 }
 
 static float sample_scattering_pdf(const material_point& material,
     const vec3f& outgoing, const vec3f& incoming) {
-  if (material.density == zero3f) return 0;
+  if (material.density == vec3f{0, 0, 0}) return 0;
   return sample_phasefunction_pdf(material.scanisotropy, outgoing, incoming);
 }
 
@@ -284,7 +320,7 @@ static vec3f sample_lights(const scene_data& scene, const trace_lights& lights,
       return sample_sphere(ruv);
     }
   } else {
-    return zero3f;
+    return {0, 0, 0};
   }
 }
 
@@ -355,7 +391,7 @@ static trace_result trace_path(const scene_data& scene, const bvh_data& bvh,
     const trace_lights& lights, const ray3f& ray_, rng_state& rng,
     const trace_params& params) {
   // initialize
-  auto radiance      = zero3f;
+  auto radiance      = vec3f{0, 0, 0};
   auto weight        = vec3f{1, 1, 1};
   auto ray           = ray_;
   auto volume_stack  = vector<material_point>{};
@@ -391,13 +427,10 @@ static trace_result trace_path(const scene_data& scene, const bvh_data& bvh,
     // switch between surface and volume
     if (!in_volume) {
       // prepare shading point
-      auto  outgoing = -ray.d;
-      auto& instance = scene.instances[intersection.instance];
-      auto  element  = intersection.element;
-      auto  uv       = intersection.uv;
-      auto  position = eval_position(scene, instance, element, uv);
-      auto normal = eval_shading_normal(scene, instance, element, uv, outgoing);
-      auto material = eval_material(scene, instance, element, uv);
+      auto outgoing = -ray.d;
+      auto position = eval_position(scene, intersection);
+      auto normal   = eval_shading_normal(scene, intersection, outgoing);
+      auto material = eval_material(scene, intersection);
 
       // correct roughness
       if (params.nocaustics) {
@@ -424,7 +457,7 @@ static trace_result trace_path(const scene_data& scene, const bvh_data& bvh,
       radiance += weight * eval_emission(material, normal, outgoing);
 
       // next direction
-      auto incoming = zero3f;
+      auto incoming = vec3f{0, 0, 0};
       if (!is_delta(material)) {
         if (rand1f(rng) < 0.5f) {
           incoming = sample_bsdfcos(
@@ -445,10 +478,10 @@ static trace_result trace_path(const scene_data& scene, const bvh_data& bvh,
       }
 
       // update volume stack
-      if (is_volumetric(scene, instance) &&
+      if (is_volumetric(scene, intersection) &&
           dot(normal, outgoing) * dot(normal, incoming) < 0) {
         if (volume_stack.empty()) {
-          auto material = eval_material(scene, instance, element, uv);
+          auto material = eval_material(scene, intersection);
           volume_stack.push_back(material);
         } else {
           volume_stack.pop_back();
@@ -467,7 +500,7 @@ static trace_result trace_path(const scene_data& scene, const bvh_data& bvh,
       // radiance += weight * eval_volemission(emission, outgoing);
 
       // next direction
-      auto incoming = zero3f;
+      auto incoming = vec3f{0, 0, 0};
       if (rand1f(rng) < 0.5f) {
         incoming = sample_scattering(vsdf, outgoing, rand1f(rng), rand2f(rng));
       } else {
@@ -484,7 +517,7 @@ static trace_result trace_path(const scene_data& scene, const bvh_data& bvh,
     }
 
     // check weight
-    if (weight == zero3f || !isfinite(weight)) break;
+    if (weight == vec3f{0, 0, 0} || !isfinite(weight)) break;
 
     // russian roulette
     if (bounce > 3) {
@@ -502,7 +535,7 @@ static trace_result trace_pathdirect(const scene_data& scene,
     const bvh_data& bvh, const trace_lights& lights, const ray3f& ray_,
     rng_state& rng, const trace_params& params) {
   // initialize
-  auto radiance      = zero3f;
+  auto radiance      = vec3f{0, 0, 0};
   auto weight        = vec3f{1, 1, 1};
   auto ray           = ray_;
   auto volume_stack  = vector<material_point>{};
@@ -539,13 +572,10 @@ static trace_result trace_pathdirect(const scene_data& scene,
     // switch between surface and volume
     if (!in_volume) {
       // prepare shading point
-      auto  outgoing = -ray.d;
-      auto& instance = scene.instances[intersection.instance];
-      auto  element  = intersection.element;
-      auto  uv       = intersection.uv;
-      auto  position = eval_position(scene, instance, element, uv);
-      auto normal = eval_shading_normal(scene, instance, element, uv, outgoing);
-      auto material = eval_material(scene, instance, element, uv);
+      auto outgoing = -ray.d;
+      auto position = eval_position(scene, intersection);
+      auto normal   = eval_shading_normal(scene, intersection, outgoing);
+      auto material = eval_material(scene, intersection);
 
       // correct roughness
       if (params.nocaustics) {
@@ -578,7 +608,7 @@ static trace_result trace_pathdirect(const scene_data& scene,
             scene, lights, position, rand1f(rng), rand1f(rng), rand2f(rng));
         auto pdf = sample_lights_pdf(scene, bvh, lights, position, incoming);
         auto bsdfcos = eval_bsdfcos(material, normal, outgoing, incoming);
-        if (bsdfcos != zero3f && pdf > 0) {
+        if (bsdfcos != vec3f{0, 0, 0} && pdf > 0) {
           auto intersection = intersect_bvh(bvh, scene, {position, incoming});
           auto emission =
               !intersection.hit
@@ -598,7 +628,7 @@ static trace_result trace_pathdirect(const scene_data& scene,
       }
 
       // next direction
-      auto incoming = zero3f;
+      auto incoming = vec3f{0, 0, 0};
       if (!is_delta(material)) {
         if (rand1f(rng) < 0.5f) {
           incoming = sample_bsdfcos(
@@ -619,10 +649,10 @@ static trace_result trace_pathdirect(const scene_data& scene,
       }
 
       // update volume stack
-      if (is_volumetric(scene, instance) &&
+      if (is_volumetric(scene, intersection) &&
           dot(normal, outgoing) * dot(normal, incoming) < 0) {
         if (volume_stack.empty()) {
-          auto material = eval_material(scene, instance, element, uv);
+          auto material = eval_material(scene, intersection);
           volume_stack.push_back(material);
         } else {
           volume_stack.pop_back();
@@ -638,7 +668,7 @@ static trace_result trace_pathdirect(const scene_data& scene,
       auto& vsdf     = volume_stack.back();
 
       // next direction
-      auto incoming = zero3f;
+      auto incoming = vec3f{0, 0, 0};
       if (rand1f(rng) < 0.5f) {
         incoming = sample_scattering(vsdf, outgoing, rand1f(rng), rand2f(rng));
       } else {
@@ -655,7 +685,7 @@ static trace_result trace_pathdirect(const scene_data& scene,
     }
 
     // check weight
-    if (weight == zero3f || !isfinite(weight)) break;
+    if (weight == vec3f{0, 0, 0} || !isfinite(weight)) break;
 
     // russian roulette
     if (bounce > 3) {
@@ -673,7 +703,7 @@ static trace_result trace_pathmis(const scene_data& scene, const bvh_data& bvh,
     const trace_lights& lights, const ray3f& ray_, rng_state& rng,
     const trace_params& params) {
   // initialize
-  auto radiance      = zero3f;
+  auto radiance      = vec3f{0, 0, 0};
   auto weight        = vec3f{1, 1, 1};
   auto ray           = ray_;
   auto volume_stack  = vector<material_point>{};
@@ -718,13 +748,10 @@ static trace_result trace_pathmis(const scene_data& scene, const bvh_data& bvh,
     // switch between surface and volume
     if (!in_volume) {
       // prepare shading point
-      auto  outgoing = -ray.d;
-      auto& instance = scene.instances[intersection.instance];
-      auto  element  = intersection.element;
-      auto  uv       = intersection.uv;
-      auto  position = eval_position(scene, instance, element, uv);
-      auto normal = eval_shading_normal(scene, instance, element, uv, outgoing);
-      auto material = eval_material(scene, instance, element, uv);
+      auto outgoing = -ray.d;
+      auto position = eval_position(scene, intersection);
+      auto normal   = eval_shading_normal(scene, intersection, outgoing);
+      auto material = eval_material(scene, intersection);
 
       // correct roughness
       if (params.nocaustics) {
@@ -753,7 +780,7 @@ static trace_result trace_pathmis(const scene_data& scene, const bvh_data& bvh,
       }
 
       // next direction
-      auto incoming = zero3f;
+      auto incoming = vec3f{0, 0, 0};
       if (!is_delta(material)) {
         // direct with MIS --- light
         for (auto sample_light : {true, false}) {
@@ -769,10 +796,10 @@ static trace_result trace_pathmis(const scene_data& scene, const bvh_data& bvh,
           auto mis_weight = sample_light
                                 ? mis_heuristic(light_pdf, bsdf_pdf) / light_pdf
                                 : mis_heuristic(bsdf_pdf, light_pdf) / bsdf_pdf;
-          if (bsdfcos != zero3f && mis_weight != 0) {
+          if (bsdfcos != vec3f{0, 0, 0} && mis_weight != 0) {
             auto intersection = intersect_bvh(bvh, scene, {position, incoming});
             if (!sample_light) next_intersection = intersection;
-            auto emission = zero3f;
+            auto emission = vec3f{0, 0, 0};
             if (!intersection.hit) {
               emission = eval_environment(scene, incoming);
             } else {
@@ -801,10 +828,10 @@ static trace_result trace_pathmis(const scene_data& scene, const bvh_data& bvh,
       }
 
       // update volume stack
-      if (is_volumetric(scene, instance) &&
+      if (is_volumetric(scene, intersection) &&
           dot(normal, outgoing) * dot(normal, incoming) < 0) {
         if (volume_stack.empty()) {
-          auto material = eval_material(scene, instance, element, uv);
+          auto material = eval_material(scene, intersection);
           volume_stack.push_back(material);
         } else {
           volume_stack.pop_back();
@@ -820,7 +847,7 @@ static trace_result trace_pathmis(const scene_data& scene, const bvh_data& bvh,
       auto& vsdf     = volume_stack.back();
 
       // next direction
-      auto incoming = zero3f;
+      auto incoming = vec3f{0, 0, 0};
       if (rand1f(rng) < 0.5f) {
         incoming = sample_scattering(vsdf, outgoing, rand1f(rng), rand2f(rng));
         next_emission = true;
@@ -839,7 +866,7 @@ static trace_result trace_pathmis(const scene_data& scene, const bvh_data& bvh,
     }
 
     // check weight
-    if (weight == zero3f || !isfinite(weight)) break;
+    if (weight == vec3f{0, 0, 0} || !isfinite(weight)) break;
 
     // russian roulette
     if (bounce > 3) {
@@ -857,7 +884,7 @@ static trace_result trace_naive(const scene_data& scene, const bvh_data& bvh,
     const trace_lights& lights, const ray3f& ray_, rng_state& rng,
     const trace_params& params) {
   // initialize
-  auto radiance   = zero3f;
+  auto radiance   = vec3f{0, 0, 0};
   auto weight     = vec3f{1, 1, 1};
   auto ray        = ray_;
   auto hit        = false;
@@ -877,12 +904,9 @@ static trace_result trace_naive(const scene_data& scene, const bvh_data& bvh,
 
     // prepare shading point
     auto outgoing = -ray.d;
-    auto instance = scene.instances[intersection.instance];
-    auto element  = intersection.element;
-    auto uv       = intersection.uv;
-    auto position = eval_position(scene, instance, element, uv);
-    auto normal   = eval_shading_normal(scene, instance, element, uv, outgoing);
-    auto material = eval_material(scene, instance, element, uv);
+    auto position = eval_position(scene, intersection);
+    auto normal   = eval_shading_normal(scene, intersection, outgoing);
+    auto material = eval_material(scene, intersection);
 
     // handle opacity
     if (material.opacity < 1 && rand1f(rng) >= material.opacity) {
@@ -903,7 +927,7 @@ static trace_result trace_naive(const scene_data& scene, const bvh_data& bvh,
     radiance += weight * eval_emission(material, normal, outgoing);
 
     // next direction
-    auto incoming = zero3f;
+    auto incoming = vec3f{0, 0, 0};
     if (material.roughness != 0) {
       incoming = sample_bsdfcos(
           material, normal, outgoing, rand1f(rng), rand2f(rng));
@@ -916,7 +940,7 @@ static trace_result trace_naive(const scene_data& scene, const bvh_data& bvh,
     }
 
     // check weight
-    if (weight == zero3f || !isfinite(weight)) break;
+    if (weight == vec3f{0, 0, 0} || !isfinite(weight)) break;
 
     // russian roulette
     if (bounce > 3) {
@@ -937,7 +961,7 @@ static trace_result trace_eyelight(const scene_data& scene, const bvh_data& bvh,
     const trace_lights& lights, const ray3f& ray_, rng_state& rng,
     const trace_params& params) {
   // initialize
-  auto radiance   = zero3f;
+  auto radiance   = vec3f{0, 0, 0};
   auto weight     = vec3f{1, 1, 1};
   auto ray        = ray_;
   auto hit        = false;
@@ -957,12 +981,9 @@ static trace_result trace_eyelight(const scene_data& scene, const bvh_data& bvh,
 
     // prepare shading point
     auto outgoing = -ray.d;
-    auto instance = scene.instances[intersection.instance];
-    auto element  = intersection.element;
-    auto uv       = intersection.uv;
-    auto position = eval_position(scene, instance, element, uv);
-    auto normal   = eval_shading_normal(scene, instance, element, uv, outgoing);
-    auto material = eval_material(scene, instance, element, uv);
+    auto position = eval_position(scene, intersection);
+    auto normal   = eval_shading_normal(scene, intersection, outgoing);
+    auto material = eval_material(scene, intersection);
 
     // handle opacity
     if (material.opacity < 1 && rand1f(rng) >= material.opacity) {
@@ -992,7 +1013,7 @@ static trace_result trace_eyelight(const scene_data& scene, const bvh_data& bvh,
     incoming = sample_delta(material, normal, outgoing, rand1f(rng));
     weight *= eval_delta(material, normal, outgoing, incoming) /
               sample_delta_pdf(material, normal, outgoing, incoming);
-    if (weight == zero3f || !isfinite(weight)) break;
+    if (weight == vec3f{0, 0, 0} || !isfinite(weight)) break;
 
     // setup next iteration
     ray = {position, incoming};
@@ -1006,7 +1027,7 @@ static trace_result trace_eyelightao(const scene_data& scene,
     const bvh_data& bvh, const trace_lights& lights, const ray3f& ray_,
     rng_state& rng, const trace_params& params) {
   // initialize
-  auto radiance   = zero3f;
+  auto radiance   = vec3f{0, 0, 0};
   auto weight     = vec3f{1, 1, 1};
   auto ray        = ray_;
   auto hit        = false;
@@ -1026,12 +1047,9 @@ static trace_result trace_eyelightao(const scene_data& scene,
 
     // prepare shading point
     auto outgoing = -ray.d;
-    auto instance = scene.instances[intersection.instance];
-    auto element  = intersection.element;
-    auto uv       = intersection.uv;
-    auto position = eval_position(scene, instance, element, uv);
-    auto normal   = eval_shading_normal(scene, instance, element, uv, outgoing);
-    auto material = eval_material(scene, instance, element, uv);
+    auto position = eval_position(scene, intersection);
+    auto normal   = eval_shading_normal(scene, intersection, outgoing);
+    auto material = eval_material(scene, intersection);
 
     // handle opacity
     if (material.opacity < 1 && rand1f(rng) >= material.opacity) {
@@ -1065,7 +1083,7 @@ static trace_result trace_eyelightao(const scene_data& scene,
     incoming = sample_delta(material, normal, outgoing, rand1f(rng));
     weight *= eval_delta(material, normal, outgoing, incoming) /
               sample_delta_pdf(material, normal, outgoing, incoming);
-    if (weight == zero3f || !isfinite(weight)) break;
+    if (weight == vec3f{0, 0, 0} || !isfinite(weight)) break;
 
     // setup next iteration
     ray = {position, incoming};
@@ -1084,14 +1102,11 @@ static trace_result trace_falsecolor(const scene_data& scene,
 
   // prepare shading point
   auto outgoing = -ray.d;
-  auto instance = scene.instances[intersection.instance];
-  auto element  = intersection.element;
-  auto uv       = intersection.uv;
-  auto position = eval_position(scene, instance, element, uv);
-  auto normal   = eval_shading_normal(scene, instance, element, uv, outgoing);
-  auto gnormal  = eval_element_normal(scene, instance, element);
-  auto texcoord = eval_texcoord(scene, instance, element, uv);
-  auto material = eval_material(scene, instance, element, uv);
+  auto position = eval_position(scene, intersection);
+  auto normal   = eval_shading_normal(scene, intersection, outgoing);
+  auto gnormal  = eval_element_normal(scene, intersection);
+  auto texcoord = eval_texcoord(scene, intersection);
+  auto material = eval_material(scene, intersection);
   auto delta    = is_delta(material) ? 1.0f : 0.0f;
 
   // hash color
@@ -1146,7 +1161,8 @@ static trace_result trace_falsecolor(const scene_data& scene,
       result = hashed_color(scene.instances[intersection.instance].material);
       break;
     case trace_falsecolor_type::highlight: {
-      if (material.emission == zero3f) material.emission = {0.2f, 0.2f, 0.2f};
+      if (material.emission == vec3f{0, 0, 0})
+        material.emission = {0.2f, 0.2f, 0.2f};
       result = material.emission * abs(dot(-ray.d, normal));
       break;
     } break;
@@ -1256,7 +1272,7 @@ trace_lights make_lights(const scene_data& scene, const trace_params& params) {
   for (auto handle = 0; handle < scene.instances.size(); handle++) {
     auto& instance = scene.instances[handle];
     auto& material = scene.materials[instance.material];
-    if (material.emission == zero3f) continue;
+    if (material.emission == vec3f{0, 0, 0}) continue;
     auto& shape = scene.shapes[instance.shape];
     if (shape.triangles.empty() && shape.quads.empty()) continue;
     auto& light       = add_light(lights);
@@ -1283,7 +1299,7 @@ trace_lights make_lights(const scene_data& scene, const trace_params& params) {
   }
   for (auto handle = 0; handle < scene.environments.size(); handle++) {
     auto& environment = scene.environments[handle];
-    if (environment.emission == zero3f) continue;
+    if (environment.emission == vec3f{0, 0, 0}) continue;
     auto& light       = add_light(lights);
     light.instance    = invalidid;
     light.environment = handle;
