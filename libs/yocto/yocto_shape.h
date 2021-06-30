@@ -459,25 +459,25 @@ pair<vector<vec4i>, vector<vec4f>> subdivide_catmullclark(
 
 // Subdivide lines by splitting each line in half.
 template <typename T>
-[[deprecated]] inline pair<vector<vec2i>, vector<T>> subdivide_lines(
+inline pair<vector<vec2i>, vector<T>> subdivide_lines(
     const vector<vec2i>& lines, const vector<T>& vertices, int level);
 // Subdivide triangle by splitting each triangle in four, creating new
 // vertices for each edge.
 template <typename T>
-[[deprecated]] inline pair<vector<vec3i>, vector<T>> subdivide_triangles(
+inline pair<vector<vec3i>, vector<T>> subdivide_triangles(
     const vector<vec3i>& triangles, const vector<T>& vertices, int level);
 // Subdivide quads by splitting each quads in four, creating new
 // vertices for each edge and for each face.
 template <typename T>
-[[deprecated]] inline pair<vector<vec4i>, vector<T>> subdivide_quads(
+inline pair<vector<vec4i>, vector<T>> subdivide_quads(
     const vector<vec4i>& quads, const vector<T>& vertices, int level);
 // Subdivide beziers by splitting each segment in two.
 template <typename T>
-[[deprecated]] inline pair<vector<vec4i>, vector<T>> subdivide_beziers(
+inline pair<vector<vec4i>, vector<T>> subdivide_beziers(
     const vector<vec4i>& beziers, const vector<T>& vertices, int level);
 // Subdivide quads using Carmull-Clark subdivision rules.
 template <typename T>
-[[deprecated]] inline pair<vector<vec4i>, vector<T>> subdivide_catmullclark(
+inline pair<vector<vec4i>, vector<T>> subdivide_catmullclark(
     const vector<vec4i>& quads, const vector<T>& vertices, int level,
     bool lock_boundary = false);
 

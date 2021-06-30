@@ -550,27 +550,27 @@ bvh_data make_bvh(const shape_data& shape, bool highquality, bool embree) {
   auto bboxes = vector<bbox3f>{};
   if (!shape.points.empty()) {
     bboxes = vector<bbox3f>(shape.points.size());
-    for (auto idx = 0; idx < bboxes.size(); idx++) {
+    for (auto idx = 0; idx < shape.points.size(); idx++) {
       auto& p     = shape.points[idx];
       bboxes[idx] = point_bounds(shape.positions[p], shape.radius[p]);
     }
   } else if (!shape.lines.empty()) {
     bboxes = vector<bbox3f>(shape.lines.size());
-    for (auto idx = 0; idx < bboxes.size(); idx++) {
+    for (auto idx = 0; idx < shape.lines.size(); idx++) {
       auto& l     = shape.lines[idx];
       bboxes[idx] = line_bounds(shape.positions[l.x], shape.positions[l.y],
           shape.radius[l.x], shape.radius[l.y]);
     }
   } else if (!shape.triangles.empty()) {
     bboxes = vector<bbox3f>(shape.triangles.size());
-    for (auto idx = 0; idx < bboxes.size(); idx++) {
+    for (auto idx = 0; idx < shape.triangles.size(); idx++) {
       auto& t     = shape.triangles[idx];
       bboxes[idx] = triangle_bounds(
           shape.positions[t.x], shape.positions[t.y], shape.positions[t.z]);
     }
   } else if (!shape.quads.empty()) {
     bboxes = vector<bbox3f>(shape.quads.size());
-    for (auto idx = 0; idx < bboxes.size(); idx++) {
+    for (auto idx = 0; idx < shape.quads.size(); idx++) {
       auto& q     = shape.quads[idx];
       bboxes[idx] = quad_bounds(shape.positions[q.x], shape.positions[q.y],
           shape.positions[q.z], shape.positions[q.w]);
