@@ -671,6 +671,42 @@ inline bool intersect_line(const ray3f& ray, const vec3f& p0, const vec3f& p1,
   return true;
 }
 
+// Intersect a ray with a sphere
+inline bool intersect_sphere(
+    const ray3f& ray, const vec3f& p, float r, vec2f& uv, float& dist) {
+  // compute parameters
+  auto a = dot(ray.d, ray.d);
+  auto b = 2 * dot(ray.o - p, ray.d);
+  auto c = dot(ray.o - p, ray.o - p) - r * r;
+
+  // check discriminant
+  auto dis = b * b - 4 * a * c;
+  if (dis < 0) return false;
+
+  // compute ray parameter
+  auto t = (-b - sqrt(dis)) / (2 * a);
+
+  // exit if not within bounds
+  if (t < ray.tmin || t > ray.tmax) return false;
+
+  // try other ray parameter
+  t = (-b + sqrt(dis)) / (2 * a);
+
+  // exit if not within bounds
+  if (t < ray.tmin || t > ray.tmax) return false;
+
+  // compute local point for uvs
+  auto plocal = ((ray.o + ray.d * t) - p) / r;
+  auto u      = atan2(plocal.y, plocal.x) / (2 * pif);
+  if (u < 0) u += 1;
+  auto v = acos(clamp(plocal.z, -1.0f, 1.0f)) / pif;
+
+  // intersection occurred: set params and exit
+  uv   = {u, v};
+  dist = t;
+  return true;
+}
+
 // Intersect a ray with a triangle
 inline bool intersect_triangle(const ray3f& ray, const vec3f& p0,
     const vec3f& p1, const vec3f& p2, vec2f& uv, float& dist) {
