@@ -113,8 +113,8 @@ void clear_embree_bvh(void* embree_bvh) {
 }
 
 // Initialize Embree BVH
-static void build_embree_bvh(
-    bvh_data& bvh, const shape_data& shape, bool highquality) {
+static bvh_data make_embree_bvh(const shape_data& shape, bool highquality) {
+  auto bvh       = bvh_data{};
   auto edevice   = bvh_embree_device();
   bvh.embree_bvh = unique_ptr<void, void (*)(void*)>{
       rtcNewScene(edevice), &clear_embree_bvh};
@@ -193,10 +193,26 @@ static void build_embree_bvh(
     throw std::runtime_error("empty shapes not supported");
   }
   rtcCommitScene(escene);
+  return bvh;
 }
 
-static void build_embree_bvh(
-    bvh_data& bvh, const scene_data& scene, bool highquality) {
+static bvh_data make_embree_bvh(
+    const scene_data& scene, bool highquality, bool noparallel) {
+  // scene bvh
+  auto bvh = bvh_data{};
+
+  // shape bvhs
+  bvh.shapes.resize(scene.shapes.size());
+  if (noparallel) {
+    for (auto idx = (size_t)0; idx < scene.shapes.size(); idx++) {
+      bvh.shapes[idx] = make_embree_bvh(scene.shapes[idx], highquality);
+    }
+  } else {
+    parallel_for(scene.shapes.size(), [&](size_t idx) {
+      bvh.shapes[idx] = make_embree_bvh(scene.shapes[idx], highquality);
+    });
+  }
+
   // scene bvh
   auto edevice   = bvh_embree_device();
   bvh.embree_bvh = unique_ptr<void, void (*)(void*)>{
@@ -220,6 +236,7 @@ static void build_embree_bvh(
     rtcReleaseGeometry(egeometry);
   }
   rtcCommitScene(escene);
+  return bvh;
 }
 
 static void update_embree_bvh(bvh_data& bvh, const scene_data& scene,
@@ -520,13 +537,14 @@ static void refit_bvh(bvh_data& bvh, const vector<bbox3f>& bboxes) {
   }
 }
 
-static void build_bvh(
-    bvh_data& bvh, const shape_data& shape, bool highquality, bool embree) {
+bvh_data make_bvh(const shape_data& shape, bool highquality, bool embree) {
+  // embree
 #ifdef YOCTO_EMBREE
-  if (embree) {
-    return build_embree_bvh(bvh, shape, highquality);
-  }
+  if (embree) return make_embree_bvh(shape, highquality);
 #endif
+
+  // bvh
+  auto bvh = bvh_data{};
 
   // build primitives
   auto bboxes = vector<bbox3f>{};
@@ -561,16 +579,32 @@ static void build_bvh(
 
   // build nodes
   build_bvh_serial(bvh, bboxes, highquality);
+
+  // done
+  return bvh;
 }
 
-static void build_bvh(bvh_data& bvh, const scene_data& scene, bool highquality,
-    bool embree, bool noparallel) {
+bvh_data make_bvh(
+    const scene_data& scene, bool highquality, bool embree, bool noparallel) {
   // embree
 #ifdef YOCTO_EMBREE
-  if (embree) {
-    return build_embree_bvh(bvh, scene, highquality);
-  }
+  if (embree) return make_embree_bvh(scene, highquality, noparallel);
 #endif
+
+  // bvh
+  auto bvh = bvh_data{};
+
+  // build shape bvh
+  bvh.shapes.resize(scene.shapes.size());
+  if (noparallel) {
+    for (auto idx = (size_t)0; idx < scene.shapes.size(); idx++) {
+      bvh.shapes[idx] = make_bvh(scene.shapes[idx], highquality, embree);
+    }
+  } else {
+    parallel_for(scene.shapes.size(), [&](size_t idx) {
+      bvh.shapes[idx] = make_bvh(scene.shapes[idx], highquality, embree);
+    });
+  }
 
   // instance bboxes
   auto bboxes = vector<bbox3f>(scene.instances.size());
@@ -584,41 +618,8 @@ static void build_bvh(bvh_data& bvh, const scene_data& scene, bool highquality,
 
   // build nodes
   build_bvh_serial(bvh, bboxes, highquality);
-}
 
-bvh_data make_bvh(const shape_data& shape, bool highquality, bool embree) {
-  // bvh
-  auto bvh = bvh_data{};
-
-  // build scene bvh
-  build_bvh(bvh, shape, highquality, embree);
-
-  // handle progress
-  return bvh;
-}
-
-bvh_data make_bvh(
-    const scene_data& scene, bool highquality, bool embree, bool noparallel) {
-  // bvh
-  auto bvh = bvh_data{};
-
-  // build shape bvh
-  bvh.shapes.resize(scene.shapes.size());
-  if (noparallel) {
-    for (auto idx = (size_t)0; idx < scene.shapes.size(); idx++) {
-      build_bvh(bvh.shapes[idx], scene.shapes[idx], highquality, embree);
-    }
-  } else {
-    // mutex
-    parallel_for(scene.shapes.size(), [&](size_t idx) {
-      build_bvh(bvh.shapes[idx], scene.shapes[idx], highquality, embree);
-    });
-  }
-
-  // build scene bvh
-  build_bvh(bvh, scene, highquality, embree, noparallel);
-
-  // handle progress
+  // done
   return bvh;
 }
 
