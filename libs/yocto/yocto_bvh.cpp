@@ -415,7 +415,7 @@ static pair<int, int> split_sah(vector<int>& primitives,
   return {mid, axis};
 }
 
-// Splits a BVH node using the middle heutirtic. Returns split position and
+// Splits a BVH node using the middle heuristic. Returns split position and
 // axis.
 static pair<int, int> split_middle(vector<int>& primitives,
     const vector<bbox3f>& bboxes, const vector<vec3f>& centers, int start,
@@ -458,7 +458,7 @@ static pair<int, int> split_middle(vector<int>& primitives,
 const int bvh_max_prims = 4;
 
 // Build BVH nodes
-static void build_bvh_serial(
+static void build_bvh(
     bvh_data& bvh, const vector<bbox3f>& bboxes, bool highquality) {
   // prepare to build nodes
   bvh.nodes.clear();
@@ -473,15 +473,15 @@ static void build_bvh_serial(
   for (auto idx = 0; idx < bboxes.size(); idx++)
     centers[idx] = center(bboxes[idx]);
 
-  // queue up first node
-  auto queue = vector<vec3i>{{0, 0, (int)bboxes.size()}};
+  // push first node onto the stack
+  auto stack = vector<vec3i>{{0, 0, (int)bboxes.size()}};
   bvh.nodes.emplace_back();
 
-  // create nodes until the queue is empty
-  while (!queue.empty()) {
+  // create nodes until the stack is empty
+  while (!stack.empty()) {
     // grab node to work on
-    auto [nodeid, start, end] = queue.back();
-    queue.pop_back();
+    auto [nodeid, start, end] = stack.back();
+    stack.pop_back();
 
     // grab node
     auto& node = bvh.nodes[nodeid];
@@ -506,8 +506,8 @@ static void build_bvh_serial(
       node.start    = (int)bvh.nodes.size();
       bvh.nodes.emplace_back();
       bvh.nodes.emplace_back();
-      queue.push_back({node.start + 0, start, mid});
-      queue.push_back({node.start + 1, mid, end});
+      stack.push_back({node.start + 0, start, mid});
+      stack.push_back({node.start + 1, mid, end});
     } else {
       // Make a leaf node
       node.internal = false;
@@ -578,7 +578,7 @@ bvh_data make_bvh(const shape_data& shape, bool highquality, bool embree) {
   }
 
   // build nodes
-  build_bvh_serial(bvh, bboxes, highquality);
+  build_bvh(bvh, bboxes, highquality);
 
   // done
   return bvh;
@@ -617,7 +617,7 @@ bvh_data make_bvh(
   }
 
   // build nodes
-  build_bvh_serial(bvh, bboxes, highquality);
+  build_bvh(bvh, bboxes, highquality);
 
   // done
   return bvh;
