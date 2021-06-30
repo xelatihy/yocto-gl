@@ -317,33 +317,30 @@ namespace yocto {
 static pair<int, int> split_sah(vector<int>& primitives,
     const vector<bbox3f>& bboxes, const vector<vec3f>& centers, int start,
     int end) {
-  // initialize split axis and position
-  auto split_axis = 0;
-  auto mid        = (start + end) / 2;
-
   // compute primintive bounds and size
   auto cbbox = invalidb3f;
   for (auto i = start; i < end; i++)
     cbbox = merge(cbbox, centers[primitives[i]]);
   auto csize = cbbox.max - cbbox.min;
-  if (csize == vec3f{0, 0, 0}) return {mid, split_axis};
+  if (csize == vec3f{0, 0, 0}) return {(start + end) / 2, 0};
 
   // consider N bins, compute their cost and keep the minimum
-  const int nbins    = 16;
-  auto      middle   = 0.0f;
-  auto      min_cost = flt_max;
-  auto      area     = [](auto& b) {
+  auto      axis      = 0;
+  const int nbins     = 16;
+  auto      split     = 0.0f;
+  auto      min_cost  = flt_max;
+  auto      bbox_area = [](const bbox3f& b) {
     auto size = b.max - b.min;
     return 1e-12f + 2 * size.x * size.y + 2 * size.x * size.z +
            2 * size.y * size.z;
   };
   for (auto saxis = 0; saxis < 3; saxis++) {
     for (auto b = 1; b < nbins; b++) {
-      auto split     = cbbox.min[saxis] + b * csize[saxis] / nbins;
+      auto bsplit    = cbbox.min[saxis] + b * csize[saxis] / nbins;
       auto left_bbox = invalidb3f, right_bbox = invalidb3f;
       auto left_nprims = 0, right_nprims = 0;
       for (auto i = start; i < end; i++) {
-        if (centers[primitives[i]][saxis] < split) {
+        if (centers[primitives[i]][saxis] < bsplit) {
           left_bbox = merge(left_bbox, bboxes[primitives[i]]);
           left_nprims += 1;
         } else {
@@ -351,29 +348,28 @@ static pair<int, int> split_sah(vector<int>& primitives,
           right_nprims += 1;
         }
       }
-      auto cost = 1 + left_nprims * area(left_bbox) / area(cbbox) +
-                  right_nprims * area(right_bbox) / area(cbbox);
+      auto cost = 1 + left_nprims * bbox_area(left_bbox) / bbox_area(cbbox) +
+                  right_nprims * bbox_area(right_bbox) / bbox_area(cbbox);
       if (cost < min_cost) {
-        min_cost   = cost;
-        middle     = split;
-        split_axis = saxis;
+        min_cost = cost;
+        split    = bsplit;
+        axis     = saxis;
       }
     }
   }
   // split
-  mid = (int)(std::partition(primitives.data() + start, primitives.data() + end,
-                  [split_axis, middle, &centers](
-                      auto a) { return centers[a][split_axis] < middle; }) -
-              primitives.data());
+  auto middle =
+      (int)(std::partition(primitives.data() + start, primitives.data() + end,
+                [axis, split, &centers](auto primitive) {
+                  return centers[primitive][axis] < split;
+                }) -
+            primitives.data());
 
   // if we were not able to split, just break the primitives in half
-  if (mid == start || mid == end) {
-    split_axis = 0;
-    mid        = (start + end) / 2;
-    // throw std::runtime_error{"bad bvh split"};
-  }
+  if (middle == start || middle == end) return {(start + end) / 2, axis};
 
-  return {mid, split_axis};
+  // done
+  return {middle, axis};
 }
 
 // Splits a BVH node using the balance heuristic. Returns split position and
@@ -381,38 +377,33 @@ static pair<int, int> split_sah(vector<int>& primitives,
 [[maybe_unused]] static pair<int, int> split_balanced(vector<int>& primitives,
     const vector<bbox3f>& bboxes, const vector<vec3f>& centers, int start,
     int end) {
-  // initialize split axis and position
-  auto axis = 0;
-  auto mid  = (start + end) / 2;
-
-  // compute primintive bounds and size
+  // compute primitives bounds and size
   auto cbbox = invalidb3f;
   for (auto i = start; i < end; i++)
     cbbox = merge(cbbox, centers[primitives[i]]);
   auto csize = cbbox.max - cbbox.min;
-  if (csize == vec3f{0, 0, 0}) return {mid, axis};
+  if (csize == vec3f{0, 0, 0}) return {(start + end) / 2, 0};
 
   // split along largest
+  auto axis = 0;
   if (csize.x >= csize.y && csize.x >= csize.z) axis = 0;
   if (csize.y >= csize.x && csize.y >= csize.z) axis = 1;
   if (csize.z >= csize.x && csize.z >= csize.y) axis = 2;
 
   // balanced tree split: find the largest axis of the
   // bounding box and split along this one right in the middle
-  mid = (start + end) / 2;
-  std::nth_element(primitives.data() + start, primitives.data() + mid,
-      primitives.data() + end, [axis, &centers](auto a, auto b) {
-        return centers[a][axis] < centers[b][axis];
+  auto middle = (start + end) / 2;
+  std::nth_element(primitives.data() + start, primitives.data() + middle,
+      primitives.data() + end,
+      [axis, &centers](auto primitive_a, auto primitive_b) {
+        return centers[primitive_a][axis] < centers[primitive_b][axis];
       });
 
   // if we were not able to split, just break the primitives in half
-  if (mid == start || mid == end) {
-    axis = 0;
-    mid  = (start + end) / 2;
-    // throw std::runtime_error("bad bvh split");
-  }
+  if (middle == start || middle == end) return {(start + end) / 2, axis};
 
-  return {mid, axis};
+  // done
+  return {middle, axis};
 }
 
 // Splits a BVH node using the middle heuristic. Returns split position and
@@ -420,38 +411,33 @@ static pair<int, int> split_sah(vector<int>& primitives,
 static pair<int, int> split_middle(vector<int>& primitives,
     const vector<bbox3f>& bboxes, const vector<vec3f>& centers, int start,
     int end) {
-  // initialize split axis and position
-  auto axis = 0;
-  auto mid  = (start + end) / 2;
-
   // compute primintive bounds and size
   auto cbbox = invalidb3f;
   for (auto i = start; i < end; i++)
     cbbox = merge(cbbox, centers[primitives[i]]);
   auto csize = cbbox.max - cbbox.min;
-  if (csize == vec3f{0, 0, 0}) return {mid, axis};
+  if (csize == vec3f{0, 0, 0}) return {(start + end) / 2, 0};
 
   // split along largest
+  auto axis = 0;
   if (csize.x >= csize.y && csize.x >= csize.z) axis = 0;
   if (csize.y >= csize.x && csize.y >= csize.z) axis = 1;
   if (csize.z >= csize.x && csize.z >= csize.y) axis = 2;
 
   // split the space in the middle along the largest axis
-  auto cmiddle = (cbbox.max + cbbox.min) / 2;
-  auto middle  = cmiddle[axis];
-  mid = (int)(std::partition(primitives.data() + start, primitives.data() + end,
-                  [axis, middle, &centers](
-                      auto a) { return centers[a][axis] < middle; }) -
-              primitives.data());
+  auto split = center(cbbox)[axis];
+  auto middle =
+      (int)(std::partition(primitives.data() + start, primitives.data() + end,
+                [axis, split, &centers](auto primitive) {
+                  return centers[primitive][axis] < split;
+                }) -
+            primitives.data());
 
   // if we were not able to split, just break the primitives in half
-  if (mid == start || mid == end) {
-    axis = 0;
-    mid  = (start + end) / 2;
-    // throw std::runtime_error("bad bvh split");
-  }
+  if (middle == start || middle == end) return {(start + end) / 2, axis};
 
-  return {mid, axis};
+  // done
+  return {middle, axis};
 }
 
 // Maximum number of primitives per BVH node.
