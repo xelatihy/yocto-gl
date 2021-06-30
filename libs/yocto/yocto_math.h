@@ -1330,6 +1330,10 @@ template <typename Sequence1, typename Sequence2>
 constexpr auto zip(const Sequence1& sequence1, const Sequence2& sequence2);
 template <typename Sequence1, typename Sequence2>
 constexpr auto zip(Sequence1& sequence1, Sequence2& sequence2);
+template <typename Sequence1, typename Sequence2>
+constexpr auto zip(const Sequence1& sequence1, Sequence2& sequence2);
+template <typename Sequence1, typename Sequence2>
+constexpr auto zip(Sequence1& sequence1, const Sequence2& sequence2);
 
 }  // namespace yocto
 
@@ -3593,6 +3597,74 @@ constexpr auto zip(Sequence1& sequence1, Sequence2& sequence2) {
     Sequence1& sequence1;
     Sequence2& sequence2;
     auto       begin() {
+      return zip_iterator{std::begin(sequence1), std::begin(sequence2)};
+    }
+    auto end() {
+      return zip_iterator{std::end(sequence1), std::end(sequence2)};
+    }
+  };
+  return zip_helper{sequence1, sequence2};
+}
+
+// Python zip
+template <typename Sequence1, typename Sequence2>
+constexpr auto zip(const Sequence1& sequence1, Sequence2& sequence2) {
+  using Iterator1  = typename Sequence1::const_iterator;
+  using Reference1 = typename Sequence1::const_reference;
+  using Iterator2  = typename Sequence2::iterator;
+  using Reference2 = typename Sequence2::reference;
+  struct zip_iterator {
+    Iterator1 iterator1;
+    Iterator2 iterator2;
+    bool      operator!=(const zip_iterator& other) const {
+      return iterator1 != other.iterator1;
+    }
+    void operator++() {
+      ++iterator1;
+      ++iterator2;
+    }
+    pair<Reference1, Reference2> operator*() const {
+      return {*iterator1, *iterator2};
+    }
+  };
+  struct zip_helper {
+    const Sequence1& sequence1;
+    Sequence2&       sequence2;
+    auto             begin() {
+      return zip_iterator{std::begin(sequence1), std::begin(sequence2)};
+    }
+    auto end() {
+      return zip_iterator{std::end(sequence1), std::end(sequence2)};
+    }
+  };
+  return zip_helper{sequence1, sequence2};
+}
+
+// Python zip
+template <typename Sequence1, typename Sequence2>
+constexpr auto zip(Sequence1& sequence1, const Sequence2& sequence2) {
+  using Iterator1  = typename Sequence1::iterator;
+  using Reference1 = typename Sequence1::reference;
+  using Iterator2  = typename Sequence2::const_iterator;
+  using Reference2 = typename Sequence2::const_reference;
+  struct zip_iterator {
+    Iterator1 iterator1;
+    Iterator2 iterator2;
+    bool      operator!=(const zip_iterator& other) const {
+      return iterator1 != other.iterator1;
+    }
+    void operator++() {
+      ++iterator1;
+      ++iterator2;
+    }
+    pair<Reference1, Reference2> operator*() const {
+      return {*iterator1, *iterator2};
+    }
+  };
+  struct zip_helper {
+    Sequence1&       sequence1;
+    const Sequence2& sequence2;
+    auto             begin() {
       return zip_iterator{std::begin(sequence1), std::begin(sequence2)};
     }
     auto end() {
