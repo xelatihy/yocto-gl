@@ -167,6 +167,9 @@ inline bbox3f triangle_bounds(
     const vec3f& p0, const vec3f& p1, const vec3f& p2);
 inline bbox3f quad_bounds(
     const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec3f& p3);
+inline bbox3f sphere_bounds(const vec3f& p, float r);
+inline bbox3f capsule_bounds(
+    const vec3f& p0, const vec3f& p1, float r0, float r1);
 
 }  // namespace yocto
 
@@ -176,14 +179,19 @@ inline bbox3f quad_bounds(
 namespace yocto {
 
 // Line properties.
+inline vec3f line_point(const vec3f& p0, const vec3f& p1, float u);
 inline vec3f line_tangent(const vec3f& p0, const vec3f& p1);
 inline float line_length(const vec3f& p0, const vec3f& p1);
 
 // Triangle properties.
+inline vec3f triangle_point(
+    const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec2f& uv);
 inline vec3f triangle_normal(const vec3f& p0, const vec3f& p1, const vec3f& p2);
 inline float triangle_area(const vec3f& p0, const vec3f& p1, const vec3f& p2);
 
-// Quad propeties.
+// Quad properties.
+inline vec3f quad_point(
+    const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec2f& uv);
 inline vec3f quad_normal(
     const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec3f& p3);
 inline float quad_area(
@@ -221,11 +229,27 @@ inline T interpolate_quad(
 template <typename T>
 inline T interpolate_bezier(
     const T& p0, const T& p1, const T& p2, const T& p3, float u);
-// Computes the derivative of a cubic Bezier segment parametrized by u.
 
+// Computes the derivative of a cubic Bezier segment parametrized by u.
 template <typename T>
 inline T interpolate_bezier_derivative(
     const T& p0, const T& p1, const T& p2, const T& p3, float u);
+
+// Interpolated line properties.
+inline vec3f line_point(const vec3f& p0, const vec3f& p1, float u);
+inline vec3f line_tangent(const vec3f& t0, const vec3f& t1, float u);
+
+// Interpolated triangle properties.
+inline vec3f triangle_point(
+    const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec2f& uv);
+inline vec3f triangle_normal(
+    const vec3f& n0, const vec3f& n1, const vec3f& n2, const vec2f& uv);
+
+// Interpolated quad properties.
+inline vec3f quad_point(const vec3f& p0, const vec3f& p1, const vec3f& p2,
+    const vec3f& p3, const vec2f& uv);
+inline vec3f quad_normal(const vec3f& n0, const vec3f& n1, const vec3f& n2,
+    const vec3f& n3, const vec2f& uv);
 
 }  // namespace yocto
 
@@ -453,6 +477,11 @@ inline bbox3f quad_bounds(
     const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec3f& p3) {
   return {min(p0, min(p1, min(p2, p3))), max(p0, max(p1, max(p2, p3)))};
 }
+inline bbox3f sphere_bounds(const vec3f& p, float r) { return {p - r, p + r}; }
+inline bbox3f capsule_bounds(
+    const vec3f& p0, const vec3f& p1, float r0, float r1) {
+  return {min(p0 - r0, p1 - r1), max(p0 + r0, p1 + r1)};
+}
 
 }  // namespace yocto
 
@@ -527,6 +556,52 @@ inline T interpolate_bezier_derivative(
          (p3 - p2) * 3 * u * u;
 }
 
+// Interpolated line properties.
+inline vec3f line_point(const vec3f& p0, const vec3f& p1, float u) {
+  return p0 * (1 - u) + p1 * u;
+}
+inline vec3f line_tangent(const vec3f& t0, const vec3f& t1, float u) {
+  return normalize(t0 * (1 - u) + t1 * u);
+}
+
+// Interpolated triangle properties.
+inline vec3f triangle_point(
+    const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec2f& uv) {
+  return p0 * (1 - uv.x - uv.y) + p1 * uv.x + p2 * uv.y;
+}
+inline vec3f triangle_normal(
+    const vec3f& n0, const vec3f& n1, const vec3f& n2, const vec2f& uv) {
+  return normalize(n0 * (1 - uv.x - uv.y) + n1 * uv.x + n2 * uv.y);
+}
+
+// Interpolated quad properties.
+inline vec3f quad_point(const vec3f& p0, const vec3f& p1, const vec3f& p2,
+    const vec3f& p3, const vec2f& uv) {
+  if (uv.x + uv.y <= 1) {
+    return triangle_point(p0, p1, p3, uv);
+  } else {
+    return triangle_point(p2, p3, p1, 1 - uv);
+  }
+}
+inline vec3f quad_normal(const vec3f& n0, const vec3f& n1, const vec3f& n2,
+    const vec3f& n3, const vec2f& uv) {
+  if (uv.x + uv.y <= 1) {
+    return triangle_normal(n0, n1, n3, uv);
+  } else {
+    return triangle_normal(n2, n3, n1, 1 - uv);
+  }
+}
+
+// Interpolated sphere properties.
+inline vec3f sphere_point(const vec3f p, float r, const vec2f& uv) {
+  return p + r * vec3f{cos(uv.x * 2 * pif) * sin(uv.y * pif),
+                     sin(uv.x * 2 * pif) * sin(uv.y * pif), cos(uv.y * pif)};
+}
+inline vec3f sphere_normal(const vec3f p, float r, const vec2f& uv) {
+  return normalize(vec3f{cos(uv.x * 2 * pif) * sin(uv.y * pif),
+      sin(uv.x * 2 * pif) * sin(uv.y * pif), cos(uv.y * pif)});
+}
+
 // Triangle tangent and bitangent from uv
 inline pair<vec3f, vec3f> triangle_tangents_fromuv(const vec3f& p0,
     const vec3f& p1, const vec3f& p2, const vec2f& uv0, const vec2f& uv1,
@@ -567,7 +642,7 @@ inline pair<vec3f, vec3f> quad_tangents_fromuv(const vec3f& p0, const vec3f& p1,
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// IMPLEMENRTATION OF USER INTERFACE UTILITIES
+// IMPLEMENTATION OF USER INTERFACE UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto {
 

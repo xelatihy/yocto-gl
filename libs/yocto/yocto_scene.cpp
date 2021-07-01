@@ -1585,6 +1585,14 @@ shape_data make_points(int num, float uvscale, float radius) {
   return shape;
 }
 
+shape_data make_points(const vec2i& steps, const vec2f& size,
+    const vec2f& uvscale, const vec2f& radius) {
+  auto shape = shape_data{};
+  make_points(shape.points, shape.positions, shape.normals, shape.texcoords,
+      shape.radius, steps, size, uvscale, radius);
+  return shape;
+}
+
 shape_data make_random_points(
     int num, const vec3f& size, float uvscale, float radius, uint64_t seed) {
   auto shape = shape_data{};

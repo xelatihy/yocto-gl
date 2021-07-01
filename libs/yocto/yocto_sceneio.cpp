@@ -1456,6 +1456,26 @@ shape_data make_shape_preset(const string& type) {
     auto shape = make_random_points(4096, {0.075f, 0.075f, 0.075f});
     for (auto& p : shape.positions) p += {0, 0.075f, 0};
     return shape;
+  } else if (type == "test-points-grid") {
+    auto shape = make_points({256, 256}, {0.075f, 0.075f});
+    for (auto& p : shape.positions) p += {0, 0.075f, 0};
+    for (auto& r : shape.radius) r *= 0.075f;
+    return shape;
+  } else if (type == "test-lines-grid") {
+    auto shape = make_lines({256, 256}, {0.075f, 0.075f});
+    for (auto& p : shape.positions) p += {0, 0.075f, 0};
+    for (auto& r : shape.radius) r *= 0.075f;
+    return shape;
+  } else if (type == "test-thickpoints-grid") {
+    auto shape = make_points({16, 16}, {0.075f, 0.075f});
+    for (auto& p : shape.positions) p += {0, 0.075f, 0};
+    for (auto& r : shape.radius) r *= 0.075f * 10;
+    return shape;
+  } else if (type == "test-thicklines-grid") {
+    auto shape = make_lines({16, 16}, {0.075f, 0.075f});
+    for (auto& p : shape.positions) p += {0, 0.075f, 0};
+    for (auto& r : shape.radius) r *= 0.075f * 10;
+    return shape;
   } else if (type == "test-particles") {
     return make_points(4096);
   } else if (type == "test-cloth") {

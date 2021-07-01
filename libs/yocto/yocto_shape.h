@@ -621,6 +621,12 @@ void make_points(vector<int>& points, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<float>& radius,
     int num, float uvscale, float point_radius);
 
+// Generate a point set along a quad.
+void make_points(vector<int>& points, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, vector<float>& radius,
+    const vec2i& steps, const vec2f& size, const vec2f& uvscale,
+    const vec2f& rad);
+
 // Generate a point set.
 void make_random_points(vector<int>& points, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<float>& radius,

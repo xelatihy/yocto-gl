@@ -2365,6 +2365,20 @@ void make_points(vector<int>& points, vector<vec3f>& positions,
     texcoords[i] = {(float)i / (float)num, 0};
 }
 
+// Generate a point set along a quad.
+void make_points(vector<int>& points, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, vector<float>& radius,
+    const vec2i& steps, const vec2f& size, const vec2f& uvscale,
+    const vec2f& rad) {
+  auto quads = vector<vec4i>{};
+  make_rect(quads, positions, normals, texcoords, steps, size, uvscale);
+  points.resize(positions.size());
+  for (auto i = 0; i < (int)positions.size(); i++) points[i] = i;
+  radius.resize(positions.size());
+  for (auto i = 0; i < (int)texcoords.size(); i++)
+    radius[i] = lerp(rad.x, rad.y, texcoords[i].y / uvscale.y);
+}
+
 // Generate a point set.
 void make_random_points(vector<int>& points, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<float>& radius,

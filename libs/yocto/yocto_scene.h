@@ -549,10 +549,15 @@ shape_data make_lines(const vec2i& steps = {4, 65536},
     const vec2f& scale = {1, 1}, const vec2f& uvscale = {1, 1},
     const vec2f& radius = {0.001f, 0.001f});
 
-// Make point primitives. Returns points, pos, norm, texcoord, radius.
+// Make a point primitive. Returns points, pos, norm, texcoord, radius.
 shape_data make_point(float radius = 0.001f);
+// Make a point set on a grid. Returns points, pos, norm, texcoord, radius.
 shape_data make_points(
     int num = 65536, float uvscale = 1, float radius = 0.001f);
+shape_data make_points(const vec2i& steps = {256, 256},
+    const vec2f& size = {1, 1}, const vec2f& uvscale = {1, 1},
+    const vec2f& radius = {0.001f, 0.001f});
+// Make random points in a cube. Returns points, pos, norm, texcoord, radius.
 shape_data make_random_points(int num = 65536, const vec3f& size = {1, 1, 1},
     float uvscale = 1, float radius = 0.001f, uint64_t seed = 17);
 
