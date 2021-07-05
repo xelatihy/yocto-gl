@@ -413,6 +413,9 @@ pair<vec3f, vec3f> eval_element_tangents(
     const scene_data& scene, const instance_data& instance, int element);
 vec3f eval_normalmap(const scene_data& scene, const instance_data& instance,
     int element, const vec2f& uv);
+vec3f eval_shading_position(const scene_data& scene,
+    const instance_data& instance, int element, const vec2f& uv,
+    const vec3f& outgoing);
 vec3f eval_shading_normal(const scene_data& scene,
     const instance_data& instance, int element, const vec2f& uv,
     const vec3f& outgoing);
