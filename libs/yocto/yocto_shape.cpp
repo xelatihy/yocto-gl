@@ -538,51 +538,161 @@ vector<string> fvshape_stats(const fvshape_data& shape, bool verbose) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// Make a tesselated rectangle. Useful in other subdivisions.
+static shape_data make_quads(
+    const vec2i& steps, const vec2f& scale, const vec2f& uvscale) {
+  auto shape = shape_data{};
+
+  shape.positions.resize((steps.x + 1) * (steps.y + 1));
+  shape.normals.resize((steps.x + 1) * (steps.y + 1));
+  shape.texcoords.resize((steps.x + 1) * (steps.y + 1));
+  for (auto j = 0; j <= steps.y; j++) {
+    for (auto i = 0; i <= steps.x; i++) {
+      auto uv = vec2f{i / (float)steps.x, j / (float)steps.y};
+      shape.positions[j * (steps.x + 1) + i] = {
+          (2 * uv.x - 1) * scale.x, (2 * uv.y - 1) * scale.y, 0};
+      shape.normals[j * (steps.x + 1) + i]   = {0, 0, 1};
+      shape.texcoords[j * (steps.x + 1) + i] = vec2f{uv.x, 1 - uv.y} * uvscale;
+    }
+  }
+
+  shape.quads.resize(steps.x * steps.y);
+  for (auto j = 0; j < steps.y; j++) {
+    for (auto i = 0; i < steps.x; i++) {
+      shape.quads[j * steps.x + i] = {j * (steps.x + 1) + i,
+          j * (steps.x + 1) + i + 1, (j + 1) * (steps.x + 1) + i + 1,
+          (j + 1) * (steps.x + 1) + i};
+    }
+  }
+
+  return shape;
+}
+
 // Make a plane.
 shape_data make_rect(
     const vec2i& steps, const vec2f& scale, const vec2f& uvscale) {
-  auto shape = shape_data{};
-  make_rect(shape.quads, shape.positions, shape.normals, shape.texcoords, steps,
-      scale, uvscale);
-  return shape;
+  return make_quads(steps, scale, uvscale);
 }
 shape_data make_bulged_rect(const vec2i& steps, const vec2f& scale,
-    const vec2f& uvscale, float radius) {
-  auto shape = shape_data{};
-  make_bulged_rect(shape.quads, shape.positions, shape.normals, shape.texcoords,
-      steps, scale, uvscale, radius);
+    const vec2f& uvscale, float height) {
+  auto shape = make_rect(steps, scale, uvscale);
+  if (height != 0) {
+    height      = min(height, min(scale));
+    auto radius = (1 + height * height) / (2 * height);
+    auto center = vec3f{0, 0, -radius + height};
+    for (auto i = 0; i < shape.positions.size(); i++) {
+      auto pn            = normalize(shape.positions[i] - center);
+      shape.positions[i] = center + pn * radius;
+      shape.normals[i]   = pn;
+    }
+  }
   return shape;
 }
 
 // Make a plane in the xz plane.
 shape_data make_recty(
     const vec2i& steps, const vec2f& scale, const vec2f& uvscale) {
-  auto shape = shape_data{};
-  make_recty(shape.quads, shape.positions, shape.normals, shape.texcoords,
-      steps, scale, uvscale);
+  auto shape = make_rect(steps, scale, uvscale);
+  for (auto& p : shape.positions) {
+    std::swap(p.y, p.z);
+    p.z = -p.z;
+  }
+  for (auto& n : shape.normals) std::swap(n.y, n.z);
   return shape;
 }
 shape_data make_bulged_recty(const vec2i& steps, const vec2f& scale,
-    const vec2f& uvscale, float radius) {
-  auto shape = shape_data{};
-  make_bulged_recty(shape.quads, shape.positions, shape.normals,
-      shape.texcoords, steps, scale, uvscale, radius);
+    const vec2f& uvscale, float height) {
+  auto shape = make_bulged_rect(steps, scale, uvscale, height);
+  for (auto& p : shape.positions) {
+    std::swap(p.y, p.z);
+    p.z = -p.z;
+  }
+  for (auto& n : shape.normals) std::swap(n.y, n.z);
   return shape;
 }
 
 // Make a box.
 shape_data make_box(
     const vec3i& steps, const vec3f& scale, const vec3f& uvscale) {
-  auto shape = shape_data{};
-  make_box(shape.quads, shape.positions, shape.normals, shape.texcoords, steps,
-      scale, uvscale);
+  auto shape  = shape_data{};
+  auto qshape = shape_data{};
+  // + z
+  qshape = make_rect(
+      {steps.x, steps.y}, {scale.x, scale.y}, {uvscale.x, uvscale.y});
+  for (auto& p : qshape.positions) p = {p.x, p.y, scale.z};
+  for (auto& n : qshape.normals) n = {0, 0, 1};
+  merge_shape(shape, qshape);
+  // - z
+  qshape = make_rect(
+      {steps.x, steps.y}, {scale.x, scale.y}, {uvscale.x, uvscale.y});
+  for (auto& p : qshape.positions) p = {-p.x, p.y, -scale.z};
+  for (auto& n : qshape.normals) n = {0, 0, -1};
+  merge_shape(shape, qshape);
+  // + x
+  qshape = make_rect(
+      {steps.z, steps.y}, {scale.z, scale.y}, {uvscale.z, uvscale.y});
+  for (auto& p : qshape.positions) p = {scale.x, p.y, -p.x};
+  for (auto& n : qshape.normals) n = {1, 0, 0};
+  merge_shape(shape, qshape);
+  // - x
+  qshape = make_rect(
+      {steps.z, steps.y}, {scale.z, scale.y}, {uvscale.z, uvscale.y});
+  for (auto& p : qshape.positions) p = {-scale.x, p.y, p.x};
+  for (auto& n : qshape.normals) n = {-1, 0, 0};
+  merge_shape(shape, qshape);
+  // + y
+  qshape = make_rect(
+      {steps.x, steps.z}, {scale.x, scale.z}, {uvscale.x, uvscale.z});
+  for (auto i = 0; i < qpositions.size(); i++) {
+    qpositions[i] = {qpositions[i].x, scale.y, -qpositions[i].y};
+    qnormals[i]   = {0, 1, 0};
+  }
+  merge_shape(shape, qshape);
+  // - y
+  qshape = make_rect(
+      {steps.x, steps.z}, {scale.x, scale.z}, {uvscale.x, uvscale.z});
+  for (auto i = 0; i < qpositions.size(); i++) {
+    qpositions[i] = {qpositions[i].x, -scale.y, qpositions[i].y};
+    qnormals[i]   = {0, -1, 0};
+  }
+  merge_shape(shape, qshape);
   return shape;
 }
 shape_data make_rounded_box(const vec3i& steps, const vec3f& scale,
     const vec3f& uvscale, float radius) {
-  auto shape = shape_data{};
-  make_rounded_box(shape.quads, shape.positions, shape.normals, shape.texcoords,
-      steps, scale, uvscale, radius);
+  auto shape = make_box(steps, scale, uvscale);
+  if (radius != 0) {
+    radius = min(radius, min(scale));
+    auto c = scale - radius;
+    for (auto i = 0; i < shape.positions.size(); i++) {
+      auto pc = vec3f{abs(shape.positions[i].x), abs(shape.positions[i].y),
+          abs(shape.positions[i].z)};
+      auto ps = vec3f{shape.positions[i].x < 0 ? -1.0f : 1.0f,
+          shape.positions[i].y < 0 ? -1.0f : 1.0f,
+          shape.positions[i].z < 0 ? -1.0f : 1.0f};
+      if (pc.x >= c.x && pc.y >= c.y && pc.z >= c.z) {
+        auto pn            = normalize(pc - c);
+        shape.positions[i] = c + radius * pn;
+        shape.normals[i]   = pn;
+      } else if (pc.x >= c.x && pc.y >= c.y) {
+        auto pn            = normalize((pc - c) * vec3f{1, 1, 0});
+        shape.positions[i] = {c.x + radius * pn.x, c.y + radius * pn.y, pc.z};
+        shape.normals[i]   = pn;
+      } else if (pc.x >= c.x && pc.z >= c.z) {
+        auto pn            = normalize((pc - c) * vec3f{1, 0, 1});
+        shape.positions[i] = {c.x + radius * pn.x, pc.y, c.z + radius * pn.z};
+        shape.normals[i]   = pn;
+      } else if (pc.y >= c.y && pc.z >= c.z) {
+        auto pn            = normalize((pc - c) * vec3f{0, 1, 1});
+        shape.positions[i] = {pc.x, c.y + radius * pn.y, c.z + radius * pn.z};
+        shape.normals[i]   = pn;
+      } else {
+        continue;
+      }
+      shape.positions[i] *= ps;
+      shape.normals[i] *= ps;
+    }
+  }
   return shape;
 }
 
