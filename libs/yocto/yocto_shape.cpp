@@ -350,6 +350,40 @@ shape_data subdivide_shape(
   return subdivided;
 }
 
+vector<string> shape_stats(const shape_data& shape, bool verbose) {
+  auto format = [](auto num) {
+    auto str = std::to_string(num);
+    while (str.size() < 13) str = " " + str;
+    return str;
+  };
+  auto format3 = [](auto num) {
+    auto str = std::to_string(num.x) + " " + std::to_string(num.y) + " " +
+               std::to_string(num.z);
+    while (str.size() < 13) str = " " + str;
+    return str;
+  };
+
+  auto bbox = invalidb3f;
+  for (auto& pos : shape.positions) bbox = merge(bbox, pos);
+
+  auto stats = vector<string>{};
+  stats.push_back("points:       " + format(shape.points.size()));
+  stats.push_back("lines:        " + format(shape.lines.size()));
+  stats.push_back("triangles:    " + format(shape.triangles.size()));
+  stats.push_back("quads:        " + format(shape.quads.size()));
+  stats.push_back("positions:    " + format(shape.positions.size()));
+  stats.push_back("normals:      " + format(shape.normals.size()));
+  stats.push_back("texcoords:    " + format(shape.texcoords.size()));
+  stats.push_back("colors:       " + format(shape.colors.size()));
+  stats.push_back("radius:       " + format(shape.radius.size()));
+  stats.push_back("center:       " + format3(center(bbox)));
+  stats.push_back("size:         " + format3(size(bbox)));
+  stats.push_back("min:          " + format3(bbox.min));
+  stats.push_back("max:          " + format3(bbox.max));
+
+  return stats;
+}
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -468,40 +502,6 @@ fvshape_data subdivide_fvshape(
   return subdivided;
 }
 
-vector<string> shape_stats(const shape_data& shape, bool verbose) {
-  auto format = [](auto num) {
-    auto str = std::to_string(num);
-    while (str.size() < 13) str = " " + str;
-    return str;
-  };
-  auto format3 = [](auto num) {
-    auto str = std::to_string(num.x) + " " + std::to_string(num.y) + " " +
-               std::to_string(num.z);
-    while (str.size() < 13) str = " " + str;
-    return str;
-  };
-
-  auto bbox = invalidb3f;
-  for (auto& pos : shape.positions) bbox = merge(bbox, pos);
-
-  auto stats = vector<string>{};
-  stats.push_back("points:       " + format(shape.points.size()));
-  stats.push_back("lines:        " + format(shape.lines.size()));
-  stats.push_back("triangles:    " + format(shape.triangles.size()));
-  stats.push_back("quads:        " + format(shape.quads.size()));
-  stats.push_back("positions:    " + format(shape.positions.size()));
-  stats.push_back("normals:      " + format(shape.normals.size()));
-  stats.push_back("texcoords:    " + format(shape.texcoords.size()));
-  stats.push_back("colors:       " + format(shape.colors.size()));
-  stats.push_back("radius:       " + format(shape.radius.size()));
-  stats.push_back("center:       " + format3(center(bbox)));
-  stats.push_back("size:         " + format3(size(bbox)));
-  stats.push_back("min:          " + format3(bbox.min));
-  stats.push_back("max:          " + format3(bbox.max));
-
-  return stats;
-}
-
 vector<string> fvshape_stats(const fvshape_data& shape, bool verbose) {
   auto format = [](auto num) {
     auto str = std::to_string(num);
@@ -529,6 +529,344 @@ vector<string> fvshape_stats(const fvshape_data& shape, bool verbose) {
   stats.push_back("max:          " + format3(bbox.max));
 
   return stats;
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION FOR SHAPE EXAMPLES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Make a plane.
+shape_data make_rect(
+    const vec2i& steps, const vec2f& scale, const vec2f& uvscale) {
+  auto shape = shape_data{};
+  make_rect(shape.quads, shape.positions, shape.normals, shape.texcoords, steps,
+      scale, uvscale);
+  return shape;
+}
+shape_data make_bulged_rect(const vec2i& steps, const vec2f& scale,
+    const vec2f& uvscale, float radius) {
+  auto shape = shape_data{};
+  make_bulged_rect(shape.quads, shape.positions, shape.normals, shape.texcoords,
+      steps, scale, uvscale, radius);
+  return shape;
+}
+
+// Make a plane in the xz plane.
+shape_data make_recty(
+    const vec2i& steps, const vec2f& scale, const vec2f& uvscale) {
+  auto shape = shape_data{};
+  make_recty(shape.quads, shape.positions, shape.normals, shape.texcoords,
+      steps, scale, uvscale);
+  return shape;
+}
+shape_data make_bulged_recty(const vec2i& steps, const vec2f& scale,
+    const vec2f& uvscale, float radius) {
+  auto shape = shape_data{};
+  make_bulged_recty(shape.quads, shape.positions, shape.normals,
+      shape.texcoords, steps, scale, uvscale, radius);
+  return shape;
+}
+
+// Make a box.
+shape_data make_box(
+    const vec3i& steps, const vec3f& scale, const vec3f& uvscale) {
+  auto shape = shape_data{};
+  make_box(shape.quads, shape.positions, shape.normals, shape.texcoords, steps,
+      scale, uvscale);
+  return shape;
+}
+shape_data make_rounded_box(const vec3i& steps, const vec3f& scale,
+    const vec3f& uvscale, float radius) {
+  auto shape = shape_data{};
+  make_rounded_box(shape.quads, shape.positions, shape.normals, shape.texcoords,
+      steps, scale, uvscale, radius);
+  return shape;
+}
+
+// Make a quad stack
+shape_data make_rect_stack(
+    const vec3i& steps, const vec3f& scale, const vec2f& uvscale) {
+  auto shape = shape_data{};
+  make_rect_stack(shape.quads, shape.positions, shape.normals, shape.texcoords,
+      steps, scale, uvscale);
+  return shape;
+}
+
+// Make a floor.
+shape_data make_floor(
+    const vec2i& steps, const vec2f& scale, const vec2f& uvscale) {
+  auto shape = shape_data{};
+  make_floor(shape.quads, shape.positions, shape.normals, shape.texcoords,
+      steps, scale, uvscale);
+  return shape;
+}
+shape_data make_bent_floor(
+    const vec2i& steps, const vec2f& scale, const vec2f& uvscale, float bent) {
+  auto shape = shape_data{};
+  make_bent_floor(shape.quads, shape.positions, shape.normals, shape.texcoords,
+      steps, scale, uvscale, bent);
+  return shape;
+}
+
+// Make a sphere.
+shape_data make_sphere(int steps, float scale, float uvscale) {
+  auto shape = shape_data{};
+  make_sphere(shape.quads, shape.positions, shape.normals, shape.texcoords,
+      steps, scale, uvscale);
+  return shape;
+}
+
+// Make a sphere.
+shape_data make_uvsphere(
+    const vec2i& steps, float scale, const vec2f& uvscale) {
+  auto shape = shape_data{};
+  make_uvsphere(shape.quads, shape.positions, shape.normals, shape.texcoords,
+      steps, scale, uvscale);
+  return shape;
+}
+
+// Make a sphere.
+shape_data make_uvspherey(
+    const vec2i& steps, float scale, const vec2f& uvscale) {
+  auto shape = shape_data{};
+  make_uvspherey(shape.quads, shape.positions, shape.normals, shape.texcoords,
+      steps, scale, uvscale);
+  return shape;
+}
+
+// Make a sphere with slipped caps.
+shape_data make_capped_uvsphere(
+    const vec2i& steps, float scale, const vec2f& uvscale, float height) {
+  auto shape = shape_data{};
+  make_capped_uvsphere(shape.quads, shape.positions, shape.normals,
+      shape.texcoords, steps, scale, uvscale, height);
+  return shape;
+}
+
+// Make a sphere with slipped caps.
+shape_data make_capped_uvspherey(
+    const vec2i& steps, float scale, const vec2f& uvscale, float height) {
+  auto shape = shape_data{};
+  make_capped_uvspherey(shape.quads, shape.positions, shape.normals,
+      shape.texcoords, steps, scale, uvscale, height);
+  return shape;
+}
+
+// Make a disk
+shape_data make_disk(int steps, float scale, float uvscale) {
+  auto shape = shape_data{};
+  make_disk(shape.quads, shape.positions, shape.normals, shape.texcoords, steps,
+      scale, uvscale);
+  return shape;
+}
+
+// Make a bulged disk
+shape_data make_bulged_disk(
+    int steps, float scale, float uvscale, float height) {
+  auto shape = shape_data{};
+  make_bulged_disk(shape.quads, shape.positions, shape.normals, shape.texcoords,
+      steps, scale, uvscale, height);
+  return shape;
+}
+
+// Make a uv disk
+shape_data make_uvdisk(const vec2i& steps, float scale, const vec2f& uvscale) {
+  auto shape = shape_data{};
+  make_uvdisk(shape.quads, shape.positions, shape.normals, shape.texcoords,
+      steps, scale, uvscale);
+  return shape;
+}
+
+// Make a uv cylinder
+shape_data make_uvcylinder(
+    const vec3i& steps, const vec2f& scale, const vec3f& uvscale) {
+  auto shape = shape_data{};
+  make_uvcylinder(shape.quads, shape.positions, shape.normals, shape.texcoords,
+      steps, scale, uvscale);
+  return shape;
+}
+
+// Make a rounded uv cylinder
+shape_data make_rounded_uvcylinder(const vec3i& steps, const vec2f& scale,
+    const vec3f& uvscale, float radius) {
+  auto shape = shape_data{};
+  make_rounded_uvcylinder(shape.quads, shape.positions, shape.normals,
+      shape.texcoords, steps, scale, uvscale, radius);
+  return shape;
+}
+
+// Generate lines set along a quad. Returns lines, pos, norm, texcoord, radius.
+shape_data make_lines(const vec2i& steps, const vec2f& scale,
+    const vec2f& uvscale, const vec2f& rad) {
+  auto shape = shape_data{};
+  make_lines(shape.lines, shape.positions, shape.normals, shape.texcoords,
+      shape.radius, steps, scale, uvscale, rad);
+  return shape;
+}
+
+// Make point primitives. Returns points, pos, norm, texcoord, radius.
+shape_data make_point(float radius) {
+  auto shape = shape_data{};
+  make_point(shape.points, shape.positions, shape.normals, shape.texcoords,
+      shape.radius, radius);
+  return shape;
+}
+
+shape_data make_points(int num, float uvscale, float radius) {
+  auto shape = shape_data{};
+  make_points(shape.points, shape.positions, shape.normals, shape.texcoords,
+      shape.radius, num, uvscale, radius);
+  return shape;
+}
+
+shape_data make_points(const vec2i& steps, const vec2f& size,
+    const vec2f& uvscale, const vec2f& radius) {
+  auto shape = shape_data{};
+  make_points(shape.points, shape.positions, shape.normals, shape.texcoords,
+      shape.radius, steps, size, uvscale, radius);
+  return shape;
+}
+
+shape_data make_random_points(
+    int num, const vec3f& size, float uvscale, float radius, uint64_t seed) {
+  auto shape = shape_data{};
+  make_random_points(shape.points, shape.positions, shape.normals,
+      shape.texcoords, shape.radius, num, size, uvscale, radius, seed);
+  return shape;
+}
+
+// Make a facevarying rect
+fvshape_data make_fvrect(
+    const vec2i& steps, const vec2f& scale, const vec2f& uvscale) {
+  auto shape = fvshape_data{};
+  make_fvrect(shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
+      shape.positions, shape.normals, shape.texcoords, steps, scale, uvscale);
+  return shape;
+}
+
+// Make a facevarying box
+fvshape_data make_fvbox(
+    const vec3i& steps, const vec3f& scale, const vec3f& uvscale) {
+  auto shape = fvshape_data{};
+  make_fvbox(shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
+      shape.positions, shape.normals, shape.texcoords, steps, scale, uvscale);
+  return shape;
+}
+
+// Make a facevarying sphere
+fvshape_data make_fvsphere(int steps, float scale, float uvscale) {
+  auto shape = fvshape_data{};
+  make_fvsphere(shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
+      shape.positions, shape.normals, shape.texcoords, steps, scale, uvscale);
+  return shape;
+}
+
+// Predefined meshes
+shape_data make_monkey(float scale, int subdivisions) {
+  auto shape = shape_data{};
+  make_monkey(shape.quads, shape.positions, scale, subdivisions);
+  return shape;
+}
+shape_data make_quad(float scale, int subdivisions) {
+  auto shape = shape_data{};
+  make_quad(shape.quads, shape.positions, shape.normals, shape.texcoords, scale,
+      subdivisions);
+  return shape;
+}
+shape_data make_quady(float scale, int subdivisions) {
+  auto shape = shape_data{};
+  make_quady(shape.quads, shape.positions, shape.normals, shape.texcoords,
+      scale, subdivisions);
+  return shape;
+}
+shape_data make_cube(float scale, int subdivisions) {
+  auto shape = shape_data{};
+  make_cube(shape.quads, shape.positions, shape.normals, shape.texcoords, scale,
+      subdivisions);
+  return shape;
+}
+fvshape_data make_fvcube(float scale, int subdivisions) {
+  auto shape = fvshape_data{};
+  make_fvcube(shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
+      shape.positions, shape.normals, shape.texcoords, scale, subdivisions);
+  return shape;
+}
+shape_data make_geosphere(float scale, int subdivisions) {
+  auto shape = shape_data{};
+  make_geosphere(
+      shape.triangles, shape.positions, shape.normals, scale, subdivisions);
+  return shape;
+}
+
+// Make a hair ball around a shape
+shape_data make_hair(const shape_data& base, const vec2i& steps,
+    const vec2f& length, const vec2f& radius, const vec2f& noise,
+    const vec2f& clump, const vec2f& rotation, int seed) {
+  auto shape = shape_data{};
+  make_hair(shape.lines, shape.positions, shape.normals, shape.texcoords,
+      shape.radius, base.triangles, base.quads, base.positions, base.normals,
+      base.texcoords, steps, length, radius, noise, clump, rotation, seed);
+  return shape;
+}
+
+// Grow hairs around a shape
+shape_data make_hair2(const shape_data& base, const vec2i& steps,
+    const vec2f& length, const vec2f& radius, float noise, float gravity,
+    int seed) {
+  auto shape = shape_data{};
+  make_hair2(shape.lines, shape.positions, shape.normals, shape.texcoords,
+      shape.radius, base.triangles, base.quads, base.positions, base.normals,
+      base.texcoords, steps, length, radius, noise, gravity, seed);
+  return shape;
+}
+
+// Make a heightfield mesh.
+shape_data make_heightfield(const vec2i& size, const vector<float>& height) {
+  auto shape = shape_data{};
+  make_heightfield(shape.quads, shape.positions, shape.normals, shape.texcoords,
+      size, height);
+  return shape;
+}
+shape_data make_heightfield(const vec2i& size, const vector<vec4f>& color) {
+  auto shape = shape_data{};
+  make_heightfield(shape.quads, shape.positions, shape.normals, shape.texcoords,
+      size, color);
+  return shape;
+}
+
+// Convert points to small spheres and lines to small cylinders. This is
+// intended for making very small primitives for display in interactive
+// applications, so the spheres are low res.
+shape_data points_to_spheres(
+    const vector<vec3f>& vertices, int steps, float scale) {
+  auto shape = shape_data{};
+  points_to_spheres(shape.quads, shape.positions, shape.normals,
+      shape.texcoords, vertices, steps, scale);
+  return shape;
+}
+shape_data polyline_to_cylinders(
+    const vector<vec3f>& vertices, int steps, float scale) {
+  auto shape = shape_data{};
+  polyline_to_cylinders(shape.quads, shape.positions, shape.normals,
+      shape.texcoords, vertices, steps, scale);
+  return shape;
+}
+shape_data lines_to_cylinders(
+    const vector<vec3f>& vertices, int steps, float scale) {
+  auto shape = shape_data{};
+  lines_to_cylinders(shape.quads, shape.positions, shape.normals,
+      shape.texcoords, vertices, steps, scale);
+  return shape;
+}
+shape_data lines_to_cylinders(const vector<vec2i>& lines,
+    const vector<vec3f>& positions, int steps, float scale) {
+  auto shape = shape_data{};
+  lines_to_cylinders(shape.quads, shape.positions, shape.normals,
+      shape.texcoords, lines, positions, steps, scale);
+  return shape;
 }
 
 }  // namespace yocto
