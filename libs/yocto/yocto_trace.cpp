@@ -79,6 +79,11 @@ namespace yocto {
   return eval_element_normal(
       scene, scene.instances[intersection.instance], intersection.element);
 }
+[[maybe_unused]] static vec3f eval_shading_position(const scene_data& scene,
+    const bvh_intersection& intersection, const vec3f& outgoing) {
+  return eval_shading_position(scene, scene.instances[intersection.instance],
+      intersection.element, intersection.uv, outgoing);
+}
 [[maybe_unused]] static vec3f eval_shading_normal(const scene_data& scene,
     const bvh_intersection& intersection, const vec3f& outgoing) {
   return eval_shading_normal(scene, scene.instances[intersection.instance],
@@ -428,7 +433,7 @@ static trace_result trace_path(const scene_data& scene, const bvh_data& bvh,
     if (!in_volume) {
       // prepare shading point
       auto outgoing = -ray.d;
-      auto position = eval_position(scene, intersection);
+      auto position = eval_shading_position(scene, intersection, outgoing);
       auto normal   = eval_shading_normal(scene, intersection, outgoing);
       auto material = eval_material(scene, intersection);
 
@@ -573,7 +578,7 @@ static trace_result trace_pathdirect(const scene_data& scene,
     if (!in_volume) {
       // prepare shading point
       auto outgoing = -ray.d;
-      auto position = eval_position(scene, intersection);
+      auto position = eval_shading_position(scene, intersection, outgoing);
       auto normal   = eval_shading_normal(scene, intersection, outgoing);
       auto material = eval_material(scene, intersection);
 
@@ -749,7 +754,7 @@ static trace_result trace_pathmis(const scene_data& scene, const bvh_data& bvh,
     if (!in_volume) {
       // prepare shading point
       auto outgoing = -ray.d;
-      auto position = eval_position(scene, intersection);
+      auto position = eval_shading_position(scene, intersection, outgoing);
       auto normal   = eval_shading_normal(scene, intersection, outgoing);
       auto material = eval_material(scene, intersection);
 
@@ -904,7 +909,7 @@ static trace_result trace_naive(const scene_data& scene, const bvh_data& bvh,
 
     // prepare shading point
     auto outgoing = -ray.d;
-    auto position = eval_position(scene, intersection);
+    auto position = eval_shading_position(scene, intersection, outgoing);
     auto normal   = eval_shading_normal(scene, intersection, outgoing);
     auto material = eval_material(scene, intersection);
 
@@ -981,7 +986,7 @@ static trace_result trace_eyelight(const scene_data& scene, const bvh_data& bvh,
 
     // prepare shading point
     auto outgoing = -ray.d;
-    auto position = eval_position(scene, intersection);
+    auto position = eval_shading_position(scene, intersection, outgoing);
     auto normal   = eval_shading_normal(scene, intersection, outgoing);
     auto material = eval_material(scene, intersection);
 
@@ -1047,7 +1052,7 @@ static trace_result trace_eyelightao(const scene_data& scene,
 
     // prepare shading point
     auto outgoing = -ray.d;
-    auto position = eval_position(scene, intersection);
+    auto position = eval_shading_position(scene, intersection, outgoing);
     auto normal   = eval_shading_normal(scene, intersection, outgoing);
     auto material = eval_material(scene, intersection);
 
@@ -1102,7 +1107,7 @@ static trace_result trace_falsecolor(const scene_data& scene,
 
   // prepare shading point
   auto outgoing = -ray.d;
-  auto position = eval_position(scene, intersection);
+  auto position = eval_shading_position(scene, intersection, outgoing);
   auto normal   = eval_shading_normal(scene, intersection, outgoing);
   auto gnormal  = eval_element_normal(scene, intersection);
   auto texcoord = eval_texcoord(scene, intersection);

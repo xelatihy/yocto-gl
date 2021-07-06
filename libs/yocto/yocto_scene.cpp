@@ -326,7 +326,7 @@ vec3f eval_tangent(const shape_data& shape, int element, const vec2f& uv) {
 }
 
 vec2f eval_texcoord(const shape_data& shape, int element, const vec2f& uv) {
-  if (shape.texcoords.empty()) return {0, 0};
+  if (shape.texcoords.empty()) return uv;
   if (!shape.points.empty()) {
     auto& point = shape.points[element];
     return shape.texcoords[point];
@@ -343,7 +343,7 @@ vec2f eval_texcoord(const shape_data& shape, int element, const vec2f& uv) {
     return interpolate_quad(shape.texcoords[quad.x], shape.texcoords[quad.y],
         shape.texcoords[quad.z], shape.texcoords[quad.w], uv);
   } else {
-    return {0, 0};
+    return uv;
   }
 }
 
@@ -591,13 +591,13 @@ vec3f eval_normal(const fvshape_data& shape, int element, const vec2f& uv) {
 }
 
 vec2f eval_texcoord(const fvshape_data& shape, int element, const vec2f& uv) {
-  if (shape.texcoords.empty()) return {0, 0};
+  if (shape.texcoords.empty()) return uv;
   if (!shape.quadspos.empty()) {
     auto& quad = shape.quadstexcoord[element];
     return interpolate_quad(shape.texcoords[quad.x], shape.texcoords[quad.y],
         shape.texcoords[quad.z], shape.texcoords[quad.w], uv);
   } else {
-    return {0, 0};
+    return uv;
   }
 }
 
@@ -929,6 +929,22 @@ vec3f eval_normalmap(const scene_data& scene, const instance_data& instance,
   return normal;
 }
 
+// Eval shading position
+vec3f eval_shading_position(const scene_data& scene,
+    const instance_data& instance, int element, const vec2f& uv,
+    const vec3f& outgoing) {
+  auto& shape = scene.shapes[instance.shape];
+  if (!shape.triangles.empty() || !shape.quads.empty()) {
+    return eval_position(scene, instance, element, uv);
+  } else if (!shape.lines.empty()) {
+    return eval_position(scene, instance, element, uv);
+  } else if (!shape.points.empty()) {
+    return eval_position(shape, element, uv);
+  } else {
+    return {0, 0, 0};
+  }
+}
+
 // Eval shading normal
 vec3f eval_shading_normal(const scene_data& scene,
     const instance_data& instance, int element, const vec2f& uv,
@@ -946,7 +962,14 @@ vec3f eval_shading_normal(const scene_data& scene,
     auto normal = eval_normal(scene, instance, element, uv);
     return orthonormalize(outgoing, normal);
   } else if (!shape.points.empty()) {
-    return outgoing;
+    // HACK: sphere
+    if (true) {
+      return transform_direction(instance.frame,
+          vec3f{cos(2 * pif * uv.x) * sin(pif * uv.y),
+              sin(2 * pif * uv.x) * sin(pif * uv.y), cos(pif * uv.y)});
+    } else {
+      return outgoing;
+    }
   } else {
     return {0, 0, 0};
   }
@@ -1582,6 +1605,14 @@ shape_data make_points(int num, float uvscale, float radius) {
   auto shape = shape_data{};
   make_points(shape.points, shape.positions, shape.normals, shape.texcoords,
       shape.radius, num, uvscale, radius);
+  return shape;
+}
+
+shape_data make_points(const vec2i& steps, const vec2f& size,
+    const vec2f& uvscale, const vec2f& radius) {
+  auto shape = shape_data{};
+  make_points(shape.points, shape.positions, shape.normals, shape.texcoords,
+      shape.radius, steps, size, uvscale, radius);
   return shape;
 }
 
