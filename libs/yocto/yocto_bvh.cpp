@@ -748,26 +748,13 @@ static bool intersect_bvh(const bvh_data& bvh, const shape_data& shape,
         node_stack[node_cur++] = node.start + 0;
       }
     } else if (!shape.points.empty()) {
-      // HACK: sphere
-      if (true) {
-        for (auto idx = node.start; idx < node.start + node.num; idx++) {
-          auto& p = shape.points[bvh.primitives[idx]];
-          if (intersect_sphere(
-                  ray, shape.positions[p], shape.radius[p], uv, distance)) {
-            hit      = true;
-            element  = bvh.primitives[idx];
-            ray.tmax = distance;
-          }
-        }
-      } else {
-        for (auto idx = node.start; idx < node.start + node.num; idx++) {
-          auto& p = shape.points[bvh.primitives[idx]];
-          if (intersect_point(
-                  ray, shape.positions[p], shape.radius[p], uv, distance)) {
-            hit      = true;
-            element  = bvh.primitives[idx];
-            ray.tmax = distance;
-          }
+      for (auto idx = node.start; idx < node.start + node.num; idx++) {
+        auto& p = shape.points[bvh.primitives[idx]];
+        if (intersect_point(
+                ray, shape.positions[p], shape.radius[p], uv, distance)) {
+          hit      = true;
+          element  = bvh.primitives[idx];
+          ray.tmax = distance;
         }
       }
     } else if (!shape.lines.empty()) {

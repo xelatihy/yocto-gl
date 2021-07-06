@@ -939,15 +939,7 @@ vec3f eval_shading_position(const scene_data& scene,
   } else if (!shape.lines.empty()) {
     return eval_position(scene, instance, element, uv);
   } else if (!shape.points.empty()) {
-    // HACK: sphere
-    if (true && !shape.radius.empty()) {
-      return transform_point(instance.frame, vec3f{cos(2 * pif * uv.x) * sin(pif * uv.y),
-                 sin(2 * pif * uv.x) * sin(pif * uv.y), cos(pif * uv.y)} *
-                 shape.radius[element] +
-             shape.positions[element]);
-    } else {
-      return eval_position(shape, element, uv);
-    }
+    return eval_position(shape, element, uv);
   } else {
     return {0, 0, 0};
   }
