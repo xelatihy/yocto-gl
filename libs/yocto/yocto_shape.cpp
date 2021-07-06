@@ -1259,23 +1259,111 @@ shape_data make_geosphere(float scale, int subdivisions) {
 
 // Make a hair ball around a shape
 shape_data make_hair(const shape_data& base, const vec2i& steps,
-    const vec2f& length, const vec2f& radius, const vec2f& noise,
-    const vec2f& clump, const vec2f& rotation, int seed) {
-  auto shape = shape_data{};
-  make_hair(shape.lines, shape.positions, shape.normals, shape.texcoords,
-      shape.radius, base.triangles, base.quads, base.positions, base.normals,
-      base.texcoords, steps, length, radius, noise, clump, rotation, seed);
+    const vec2f& len, const vec2f& rad, const vec2f& noise, const vec2f& clump,
+    const vec2f& rotation, int seed) {
+  auto points    = sample_shape(base, steps.y, seed);
+  auto bpos      = vector<vec3f>{};
+  auto bnorm     = vector<vec3f>{};
+  auto btexcoord = vector<vec2f>{};
+  for (auto& point : points) {
+    bpos.push_back(eval_position(base, point.element, point.uv));
+    bnorm.push_back(eval_normal(base, point.element, point.uv));
+    btexcoord.push_back(eval_texcoord(base, point.element, point.uv));
+  }
+
+  auto rng  = make_rng(seed, 3);
+  auto blen = vector<float>(bpos.size());
+  for (auto& l : blen) {
+    l = lerp(len.x, len.y, rand1f(rng));
+  }
+
+  auto cidx = vector<int>();
+  if (clump.x > 0) {
+    for (auto bidx = 0; bidx < bpos.size(); bidx++) {
+      cidx.push_back(0);
+      auto cdist = flt_max;
+      for (auto c = 0; c < clump.y; c++) {
+        auto d = length(bpos[bidx] - bpos[c]);
+        if (d < cdist) {
+          cdist       = d;
+          cidx.back() = c;
+        }
+      }
+    }
+  }
+
+  auto shape = make_lines(steps, {1, 1}, {1, 1}, {1, 1});
+  for (auto i = 0; i < shape.positions.size(); i++) {
+    auto u             = shape.texcoords[i].x;
+    auto bidx          = i / (steps.x + 1);
+    shape.positions[i] = bpos[bidx] + bnorm[bidx] * u * blen[bidx];
+    shape.normals[i]   = bnorm[bidx];
+    shape.radius[i]    = lerp(rad.x, rad.y, u);
+    if (clump.x > 0) {
+      shape.positions[i] =
+          shape.positions[i] +
+          (shape.positions[i + (cidx[bidx] - bidx) * (steps.x + 1)] -
+              shape.positions[i]) *
+              u * clump.x;
+    }
+    if (noise.x > 0) {
+      auto nx =
+          (perlin_noise(shape.positions[i] * noise.y + vec3f{0, 0, 0}) * 2 -
+              1) *
+          noise.x;
+      auto ny =
+          (perlin_noise(shape.positions[i] * noise.y + vec3f{3, 7, 11}) * 2 -
+              1) *
+          noise.x;
+      auto nz =
+          (perlin_noise(shape.positions[i] * noise.y + vec3f{13, 17, 19}) * 2 -
+              1) *
+          noise.x;
+      shape.positions[i] += {nx, ny, nz};
+    }
+  }
+
+  if (clump.x > 0 || noise.x > 0 || rotation.x > 0) {
+    shape.normals = lines_tangents(shape.lines, shape.positions);
+  }
+
   return shape;
 }
 
 // Grow hairs around a shape
 shape_data make_hair2(const shape_data& base, const vec2i& steps,
-    const vec2f& length, const vec2f& radius, float noise, float gravity,
+    const vec2f& len, const vec2f& radius, float noise, float gravity,
     int seed) {
-  auto shape = shape_data{};
-  make_hair2(shape.lines, shape.positions, shape.normals, shape.texcoords,
-      shape.radius, base.triangles, base.quads, base.positions, base.normals,
-      base.texcoords, steps, length, radius, noise, gravity, seed);
+  auto points     = sample_shape(base, steps.y, seed);
+  auto bpositions = vector<vec3f>{};
+  auto bnormals   = vector<vec3f>{};
+  auto btexcoord  = vector<vec2f>{};
+  for (auto& point : points) {
+    bpositions.push_back(eval_position(base, point.element, point.uv));
+    bnormals.push_back(eval_normal(base, point.element, point.uv));
+    btexcoord.push_back(eval_texcoord(base, point.element, point.uv));
+  }
+
+  auto shape = make_lines(steps, {1, 1}, {1, 1}, radius);
+  auto rng   = make_rng(seed);
+  for (auto idx = 0; idx < steps.y; idx++) {
+    auto offset             = idx * (steps.x + 1);
+    auto position           = bpositions[idx];
+    auto direction          = bnormals[idx];
+    auto length             = rand1f(rng) * (len.y - len.x) + len.x;
+    shape.positions[offset] = position;
+    for (auto iidx = 1; iidx <= steps.x; iidx++) {
+      shape.positions[offset + iidx] = position;
+      shape.positions[offset + iidx] += direction * length / steps.x;
+      shape.positions[offset + iidx] += (2 * rand3f(rng) - 1) * noise;
+      shape.positions[offset + iidx] += vec3f{0, -gravity, 0};
+      direction = normalize(shape.positions[offset + iidx] - position);
+      position  = shape.positions[offset + iidx];
+    }
+  }
+
+  shape.normals = lines_tangents(shape.lines, shape.positions);
+
   return shape;
 }
 
