@@ -616,21 +616,17 @@ shape_data make_bulged_rect(const vec2i& steps, const vec2f& scale,
 shape_data make_recty(
     const vec2i& steps, const vec2f& scale, const vec2f& uvscale) {
   auto shape = make_rect(steps, scale, uvscale);
-  for (auto& p : shape.positions) {
-    std::swap(p.y, p.z);
-    p.z = -p.z;
-  }
-  for (auto& n : shape.normals) std::swap(n.y, n.z);
+  for (auto& position : shape.positions)
+    position = {position.x, position.z, -position.y};
+  for (auto& normal : shape.normals) normal = {normal.x, normal.z, normal.y};
   return shape;
 }
 shape_data make_bulged_recty(const vec2i& steps, const vec2f& scale,
     const vec2f& uvscale, float height) {
   auto shape = make_bulged_rect(steps, scale, uvscale, height);
-  for (auto& p : shape.positions) {
-    std::swap(p.y, p.z);
-    p.z = -p.z;
-  }
-  for (auto& n : shape.normals) std::swap(n.y, n.z);
+  for (auto& position : shape.positions)
+    position = {position.x, position.z, -position.y};
+  for (auto& normal : shape.normals) normal = {normal.x, normal.z, normal.y};
   return shape;
 }
 
@@ -739,11 +735,9 @@ shape_data make_rect_stack(
 shape_data make_floor(
     const vec2i& steps, const vec2f& scale, const vec2f& uvscale) {
   auto shape = make_rect(steps, scale, uvscale);
-  for (auto& p : shape.positions) {
-    std::swap(p.y, p.z);
-    p.z = -p.z;
-  }
-  for (auto& n : shape.normals) std::swap(n.y, n.z);
+  for (auto& position : shape.positions)
+    position = {position.x, position.z, -position.y};
+  for (auto& normal : shape.normals) normal = {normal.x, normal.z, normal.y};
   return shape;
 }
 shape_data make_bent_floor(const vec2i& steps, const vec2f& scale,
@@ -800,10 +794,12 @@ shape_data make_uvsphere(
 shape_data make_uvspherey(
     const vec2i& steps, float scale, const vec2f& uvscale) {
   auto shape = make_uvsphere(steps, scale, uvscale);
-  for (auto& p : shape.positions) std::swap(p.y, p.z);
-  for (auto& n : shape.normals) std::swap(n.y, n.z);
-  for (auto& t : shape.texcoords) t.y = 1 - t.y;
-  for (auto& q : shape.quads) std::swap(q.y, q.w);
+  for (auto& position : shape.positions)
+    position = {position.x, position.z, position.y};
+  for (auto& normal : shape.normals) normal = {normal.x, normal.z, normal.y};
+  for (auto& texcoord : shape.texcoords)
+    texcoord = {texcoord.x, 1 - texcoord.y};
+  for (auto& quad : shape.quads) quad = {quad.x, quad.w, quad.z, quad.y};
   return shape;
 }
 
@@ -833,9 +829,12 @@ shape_data make_capped_uvsphere(
 shape_data make_capped_uvspherey(
     const vec2i& steps, float scale, const vec2f& uvscale, float cap) {
   auto shape = make_capped_uvsphere(steps, scale, uvscale, cap);
-  for (auto& p : shape.positions) std::swap(p.y, p.z);
-  for (auto& n : shape.normals) std::swap(n.y, n.z);
-  for (auto& q : shape.quads) std::swap(q.y, q.w);
+  for (auto& position : shape.positions)
+    position = {position.x, position.z, position.y};
+  for (auto& normal : shape.normals) normal = {normal.x, normal.z, normal.y};
+  for (auto& texcoord : shape.texcoords)
+    texcoord = {texcoord.x, 1 - texcoord.y};
+  for (auto& quad : shape.quads) quad = {quad.x, quad.w, quad.z, quad.y};
   return shape;
 }
 
@@ -898,7 +897,7 @@ shape_data make_uvcylinder(
     qshape.normals[i]   = {cos(phi), sin(phi), 0};
     qshape.texcoords[i] = uv * vec2f{uvscale.x, uvscale.y};
   }
-  for (auto& q : qshape.quads) std::swap(q.y, q.w);
+  for (auto& quad : qshape.quads) quad = {quad.x, quad.w, quad.z, quad.y};
   merge_shape_inplace(shape, qshape);
   // top
   qshape = make_rect({steps.x, steps.z}, {1, 1}, {1, 1});
@@ -3339,11 +3338,9 @@ void make_recty(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps,
     const vec2f& scale, const vec2f& uvscale) {
   make_rect(quads, positions, normals, texcoords, steps, scale, uvscale);
-  for (auto& p : positions) {
-    std::swap(p.y, p.z);
-    p.z = -p.z;
-  }
-  for (auto& n : normals) std::swap(n.y, n.z);
+  for (auto& position : positions)
+    position = {position.x, position.z, -position.y};
+  for (auto& normal : normals) normal = {normal.x, normal.z, normal.y};
 }
 
 void make_bulged_recty(vector<vec4i>& quads, vector<vec3f>& positions,
@@ -3351,11 +3348,9 @@ void make_bulged_recty(vector<vec4i>& quads, vector<vec3f>& positions,
     const vec2f& scale, const vec2f& uvscale, float height) {
   make_bulged_rect(
       quads, positions, normals, texcoords, steps, scale, uvscale, height);
-  for (auto& p : positions) {
-    std::swap(p.y, p.z);
-    p.z = -p.z;
-  }
-  for (auto& n : normals) std::swap(n.y, n.z);
+  for (auto& position : positions)
+    position = {position.x, position.z, -position.y};
+  for (auto& normal : normals) normal = {normal.x, normal.z, normal.y};
 }
 
 // Make a cube.
@@ -3475,11 +3470,9 @@ void make_floor(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps,
     const vec2f& scale, const vec2f& uvscale) {
   make_rect(quads, positions, normals, texcoords, steps, scale, uvscale);
-  for (auto& p : positions) {
-    std::swap(p.y, p.z);
-    p.z = -p.z;
-  }
-  for (auto& n : normals) std::swap(n.y, n.z);
+  for (auto& position : positions)
+    position = {position.x, position.z, -position.y};
+  for (auto& normal : normals) normal = {normal.x, normal.z, normal.y};
 }
 
 void make_bent_floor(vector<vec4i>& quads, vector<vec3f>& positions,
@@ -3557,10 +3550,11 @@ void make_uvspherey(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps,
     float scale, const vec2f& uvscale) {
   make_uvsphere(quads, positions, normals, texcoords, steps, scale, uvscale);
-  for (auto& p : positions) std::swap(p.y, p.z);
-  for (auto& n : normals) std::swap(n.y, n.z);
-  for (auto& t : texcoords) t.y = 1 - t.y;
-  for (auto& q : quads) std::swap(q.y, q.w);
+  for (auto& position : positions)
+    position = {position.x, position.z, position.y};
+  for (auto& normal : normals) normal = {normal.x, normal.z, normal.y};
+  for (auto& texcoord : texcoords) texcoord = {texcoord.x, 1 - texcoord.y};
+  for (auto& quad : quads) quad = {quad.x, quad.w, quad.z, quad.y};
 }
 
 void make_capped_uvspherey(vector<vec4i>& quads, vector<vec3f>& positions,
@@ -3568,9 +3562,11 @@ void make_capped_uvspherey(vector<vec4i>& quads, vector<vec3f>& positions,
     float scale, const vec2f& uvscale, float cap) {
   make_capped_uvsphere(
       quads, positions, normals, texcoords, steps, scale, uvscale, cap);
-  for (auto& p : positions) std::swap(p.y, p.z);
-  for (auto& n : normals) std::swap(n.y, n.z);
-  for (auto& q : quads) std::swap(q.y, q.w);
+  for (auto& position : positions)
+    position = {position.x, position.z, position.y};
+  for (auto& normal : normals) normal = {normal.x, normal.z, normal.y};
+  for (auto& texcoord : texcoords) texcoord = {texcoord.x, 1 - texcoord.y};
+  for (auto& quad : quads) quad = {quad.x, quad.w, quad.z, quad.y};
 }
 
 // Generate a disk
@@ -3638,7 +3634,7 @@ void make_uvcylinder(vector<vec4i>& quads, vector<vec3f>& positions,
     qnormals[i]   = {cos(phi), sin(phi), 0};
     qtexcoords[i] = uv * vec2f{uvscale.x, uvscale.y};
   }
-  for (auto& q : qquads) std::swap(q.y, q.w);
+  for (auto& quad : qquads) quad = {quad.x, quad.w, quad.z, quad.y};
   merge_quads(quads, positions, normals, texcoords, qquads, qpositions,
       qnormals, qtexcoords);
   // top
