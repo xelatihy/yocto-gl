@@ -568,6 +568,29 @@ static shape_data make_quads(
   return shape;
 }
 
+// Merge shape elements
+void merge_shape_inplace(shape_data& shape, const shape_data& merge) {
+  auto offset = (int)shape.positions.size();
+  for (auto& p : merge.points) shape.points.push_back(p + offset);
+  for (auto& l : merge.lines)
+    shape.lines.push_back({l.x + offset, l.y + offset});
+  for (auto& t : merge.triangles)
+    shape.triangles.push_back({t.x + offset, t.y + offset, t.z + offset});
+  for (auto& q : merge.quads)
+    shape.quads.push_back(
+        {q.x + offset, q.y + offset, q.z + offset, q.w + offset});
+  shape.positions.insert(
+      shape.positions.end(), merge.positions.begin(), merge.positions.end());
+  shape.tangents.insert(
+      shape.tangents.end(), merge.tangents.begin(), merge.tangents.end());
+  shape.texcoords.insert(
+      shape.texcoords.end(), merge.texcoords.begin(), merge.texcoords.end());
+  shape.colors.insert(
+      shape.colors.end(), merge.colors.begin(), merge.colors.end());
+  shape.radius.insert(
+      shape.radius.end(), merge.radius.begin(), merge.radius.end());
+}
+
 // Make a plane.
 shape_data make_rect(
     const vec2i& steps, const vec2f& scale, const vec2f& uvscale) {
@@ -621,41 +644,43 @@ shape_data make_box(
       {steps.x, steps.y}, {scale.x, scale.y}, {uvscale.x, uvscale.y});
   for (auto& p : qshape.positions) p = {p.x, p.y, scale.z};
   for (auto& n : qshape.normals) n = {0, 0, 1};
-  merge_shape(shape, qshape);
+  merge_shape_inplace(shape, qshape);
   // - z
   qshape = make_rect(
       {steps.x, steps.y}, {scale.x, scale.y}, {uvscale.x, uvscale.y});
   for (auto& p : qshape.positions) p = {-p.x, p.y, -scale.z};
   for (auto& n : qshape.normals) n = {0, 0, -1};
-  merge_shape(shape, qshape);
+  merge_shape_inplace(shape, qshape);
   // + x
   qshape = make_rect(
       {steps.z, steps.y}, {scale.z, scale.y}, {uvscale.z, uvscale.y});
   for (auto& p : qshape.positions) p = {scale.x, p.y, -p.x};
   for (auto& n : qshape.normals) n = {1, 0, 0};
-  merge_shape(shape, qshape);
+  merge_shape_inplace(shape, qshape);
   // - x
   qshape = make_rect(
       {steps.z, steps.y}, {scale.z, scale.y}, {uvscale.z, uvscale.y});
   for (auto& p : qshape.positions) p = {-scale.x, p.y, p.x};
   for (auto& n : qshape.normals) n = {-1, 0, 0};
-  merge_shape(shape, qshape);
+  merge_shape_inplace(shape, qshape);
   // + y
   qshape = make_rect(
       {steps.x, steps.z}, {scale.x, scale.z}, {uvscale.x, uvscale.z});
-  for (auto i = 0; i < qpositions.size(); i++) {
-    qpositions[i] = {qpositions[i].x, scale.y, -qpositions[i].y};
-    qnormals[i]   = {0, 1, 0};
+  for (auto i = 0; i < qshape.positions.size(); i++) {
+    qshape.positions[i] = {
+        qshape.positions[i].x, scale.y, -qshape.positions[i].y};
+    qshape.normals[i] = {0, 1, 0};
   }
-  merge_shape(shape, qshape);
+  merge_shape_inplace(shape, qshape);
   // - y
   qshape = make_rect(
       {steps.x, steps.z}, {scale.x, scale.z}, {uvscale.x, uvscale.z});
-  for (auto i = 0; i < qpositions.size(); i++) {
-    qpositions[i] = {qpositions[i].x, -scale.y, qpositions[i].y};
-    qnormals[i]   = {0, -1, 0};
+  for (auto i = 0; i < qshape.positions.size(); i++) {
+    qshape.positions[i] = {
+        qshape.positions[i].x, -scale.y, qshape.positions[i].y};
+    qshape.normals[i] = {0, -1, 0};
   }
-  merge_shape(shape, qshape);
+  merge_shape_inplace(shape, qshape);
   return shape;
 }
 shape_data make_rounded_box(const vec3i& steps, const vec3f& scale,
