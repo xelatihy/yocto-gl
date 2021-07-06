@@ -283,12 +283,16 @@ vector<shape_point> sample_shape(
 // Conversions
 shape_data quads_to_triangles(const shape_data& shape) {
   auto result = shape;
-  quads_to_triangles(result, result);
+  if (!shape.quads.empty()) {
+    result.triangles = quads_to_triangles(shape.quads);
+    result.quads     = {};
+  }
   return result;
 }
-void quads_to_triangles(shape_data& result, const shape_data& shape) {
-  result.triangles = quads_to_triangles(shape.quads);
-  result.quads     = {};
+void quads_to_triangles_inplace(shape_data& shape) {
+  if (shape.quads.empty()) return;
+  shape.triangles = quads_to_triangles(shape.quads);
+  shape.quads     = {};
 }
 
 // Subdivision

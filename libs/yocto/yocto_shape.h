@@ -118,7 +118,7 @@ vector<shape_point> sample_shape(
 
 // Conversions
 shape_data quads_to_triangles(const shape_data& shape);
-void       quads_to_triangles(shape_data& result, const shape_data& shape);
+void       quads_to_triangles_inplace(shape_data& shape);
 
 // Subdivision
 shape_data subdivide_shape(
