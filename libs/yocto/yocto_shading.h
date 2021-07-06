@@ -761,7 +761,7 @@ inline vec3f eval_transparent(const vec3f& color, float ior, float roughness,
   auto up_normal = dot(normal, outgoing) <= 0 ? -normal : normal;
   if (dot(normal, incoming) * dot(normal, outgoing) >= 0) {
     auto halfway = normalize(incoming + outgoing);
-    auto F       = fresnel_dielectric(ior, halfway, incoming);
+    auto F       = fresnel_dielectric(ior, halfway, outgoing);
     auto D       = microfacet_distribution(roughness, up_normal, halfway);
     auto G       = microfacet_shadowing(
         roughness, up_normal, halfway, outgoing, incoming);
@@ -771,7 +771,7 @@ inline vec3f eval_transparent(const vec3f& color, float ior, float roughness,
   } else {
     auto reflected = reflect(-incoming, up_normal);
     auto halfway   = normalize(reflected + outgoing);
-    auto F         = fresnel_dielectric(ior, halfway, incoming);
+    auto F         = fresnel_dielectric(ior, halfway, outgoing);
     auto D         = microfacet_distribution(roughness, up_normal, halfway);
     auto G         = microfacet_shadowing(
         roughness, up_normal, halfway, outgoing, reflected);
