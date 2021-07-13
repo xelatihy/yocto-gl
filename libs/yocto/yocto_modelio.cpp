@@ -49,6 +49,7 @@ using std::string_view;
 using std::unordered_map;
 using std::unordered_set;
 using namespace std::string_literals;
+using namespace std::string_view_literals;
 
 }  // namespace yocto
 
@@ -149,15 +150,15 @@ inline void format_value(string& str, const mat4f& value) {
 }
 
 // Foramt to file
-inline void format_values(string& str, const string& fmt) {
-  auto pos = fmt.find("{}");
+inline void format_values(string& str, string_view fmt) {
+  auto pos = fmt.find("{}"sv);
   if (pos != string::npos) throw std::invalid_argument("bad format string");
   str += fmt;
 }
 template <typename Arg, typename... Args>
 inline void format_values(
-    string& str, const string& fmt, const Arg& arg, const Args&... args) {
-  auto pos = fmt.find("{}");
+    string& str, string_view fmt, const Arg& arg, const Args&... args) {
+  auto pos = fmt.find("{}"sv);
   if (pos == string::npos) throw std::invalid_argument("bad format string");
   str += fmt.substr(0, pos);
   format_value(str, arg);
