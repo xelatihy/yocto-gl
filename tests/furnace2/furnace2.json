@@ -1,0 +1,272 @@
+{
+  "asset": {
+    "copyright": "Model by Fabio Pellacini from github.com/~xelatihy/yocto-gl"
+  },
+  "cameras": {
+    "default": {
+      "lens": 0.1,
+      "aperture": 0.0,
+      "aspect": 1,
+      "lookat": [0, 0.075, 3, 0, 0.075, 0, 0, 1, 0]
+    }
+  },
+  "environments": {
+    "furnace": {
+      "emission": [0.5, 0.5, 0.5]
+    }
+  },
+  "instances": {
+    "metallic-0": {
+      "shape": "sphere",
+      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0.4, 0],
+      "material": "metallic-0"
+    },
+    "metallic-0.25": {
+      "shape": "sphere",
+      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0.4, 0],
+      "material": "metallic-0.25"
+    },
+    "metallic-0.5": {
+      "shape": "sphere",
+      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.4, 0],
+      "material": "metallic-0.5"
+    },
+    "metallic-0.75": {
+      "shape": "sphere",
+      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0.4, 0],
+      "material": "metallic-0.75"
+    },
+    "metallic-1": {
+      "shape": "sphere",
+      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0.4, 0],
+      "material": "metallic-1"
+    },
+    "transparent-0": {
+      "shape": "sphere",
+      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0.2, 0],
+      "material": "transparent-0"
+    },
+    "transparent-0.25": {
+      "shape": "sphere",
+      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0.2, 0],
+      "material": "transparent-0.25"
+    },
+    "transparent-0.5": {
+      "shape": "sphere",
+      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.2, 0],
+      "material": "transparent-0.5"
+    },
+    "transparent-0.75": {
+      "shape": "sphere",
+      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0.2, 0],
+      "material": "transparent-0.75"
+    },
+    "transparent-1": {
+      "shape": "sphere",
+      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0.2, 0],
+      "material": "transparent-1"
+    },
+    "refractive-0": {
+      "shape": "sphere",
+      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, 0],
+      "material": "refractive-0"
+    },
+    "refractive-0.25": {
+      "shape": "sphere",
+      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0],
+      "material": "refractive-0.25"
+    },
+    "refractive-0.5": {
+      "shape": "sphere",
+      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],
+      "material": "refractive-0.5"
+    },
+    "refractive-0.75": {
+      "shape": "sphere",
+      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, 0],
+      "material": "refractive-0.75"
+    },
+    "refractive-1": {
+      "shape": "sphere",
+      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, 0],
+      "material": "refractive-1"
+    },
+    "matte-0": {
+      "shape": "sphere",
+      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, -0.2, 0],
+      "material": "matte-0"
+    },
+    "matte-0.25": {
+      "shape": "sphere",
+      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, -0.2, 0],
+      "material": "matte-0.25"
+    },
+    "matte-0.5": {
+      "shape": "sphere",
+      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.2, 0],
+      "material": "matte-0.5"
+    },
+    "matte-0.75": {
+      "shape": "sphere",
+      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, -0.2, 0],
+      "material": "matte-0.75"
+    },
+    "matte-1": {
+      "shape": "sphere",
+      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, -0.2, 0],
+      "material": "matte-1"
+    },
+    "glossy-0": {
+      "shape": "sphere",
+      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, -0.4, 0],
+      "material": "glossy-0"
+    },
+    "glossy-0.25": {
+      "shape": "sphere",
+      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, -0.4, 0],
+      "material": "glossy-0.25"
+    },
+    "glossy-0.5": {
+      "shape": "sphere",
+      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.4, 0],
+      "material": "glossy-0.5"
+    },
+    "glossy-0.75": {
+      "shape": "sphere",
+      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, -0.4, 0],
+      "material": "glossy-0.75"
+    },
+    "glossy-1": {
+      "shape": "sphere",
+      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, -0.4, 0],
+      "material": "glossy-1"
+    }
+  },
+  "materials": {
+    "metallic-0": {
+      "type": "metallic",
+      "color": [1, 1, 1],
+      "roughness": 0
+    },
+    "metallic-0.25": {
+      "type": "metallic",
+      "color": [1, 1, 1],
+      "roughness": 0.25
+    },
+    "metallic-0.5": {
+      "type": "metallic",
+      "color": [1, 1, 1],
+      "roughness": 0.5
+    },
+    "metallic-0.75": {
+      "type": "metallic",
+      "color": [1, 1, 1],
+      "roughness": 0.75
+    },
+    "metallic-1": {
+      "type": "metallic",
+      "color": [1, 1, 1],
+      "roughness": 1
+    },
+    "transparent-0": {
+      "type": "transparent",
+      "color": [1, 1, 1],
+      "roughness": 0
+    },
+    "transparent-0.25": {
+      "type": "transparent",
+      "color": [1, 1, 1],
+      "roughness": 0.25
+    },
+    "transparent-0.5": {
+      "type": "transparent",
+      "color": [1, 1, 1],
+      "roughness": 0.5
+    },
+    "transparent-0.75": {
+      "type": "transparent",
+      "color": [1, 1, 1],
+      "roughness": 0.75
+    },
+    "transparent-1": {
+      "type": "transparent",
+      "color": [1, 1, 1],
+      "roughness": 1
+    },
+    "refractive-0": {
+      "type": "refractive",
+      "color": [1, 1, 1],
+      "roughness": 0
+    },
+    "refractive-0.25": {
+      "type": "refractive",
+      "color": [1, 1, 1],
+      "roughness": 0.25
+    },
+    "refractive-0.5": {
+      "type": "refractive",
+      "color": [1, 1, 1],
+      "roughness": 0.5
+    },
+    "refractive-0.75": {
+      "type": "refractive",
+      "color": [1, 1, 1],
+      "roughness": 0.75
+    },
+    "refractive-1": {
+      "type": "refractive",
+      "color": [1, 1, 1],
+      "roughness": 1
+    },
+    "matte-0": {
+      "type": "matte",
+      "color": [1, 1, 1],
+      "roughness": 0
+    },
+    "matte-0.25": {
+      "type": "matte",
+      "color": [1, 1, 1],
+      "roughness": 0.25
+    },
+    "matte-0.5": {
+      "type": "matte",
+      "color": [1, 1, 1],
+      "roughness": 0.5
+    },
+    "matte-0.75": {
+      "type": "matte",
+      "color": [1, 1, 1],
+      "roughness": 0.75
+    },
+    "matte-1": {
+      "type": "matte",
+      "color": [1, 1, 1],
+      "roughness": 1
+    },
+    "glossy-0": {
+      "type": "glossy",
+      "color": [1, 1, 1],
+      "roughness": 0
+    },
+    "glossy-0.25": {
+      "type": "glossy",
+      "color": [1, 1, 1],
+      "roughness": 0.25
+    },
+    "glossy-0.5": {
+      "type": "glossy",
+      "color": [1, 1, 1],
+      "roughness": 0.5
+    },
+    "glossy-0.75": {
+      "type": "glossy",
+      "color": [1, 1, 1],
+      "roughness": 0.75
+    },
+    "glossy-1": {
+      "type": "glossy",
+      "color": [1, 1, 1],
+      "roughness": 1
+    }
+  }
+}

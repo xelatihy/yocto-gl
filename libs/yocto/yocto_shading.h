@@ -61,6 +61,10 @@ using std::vector;
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// Check if on the same side of the hemisphere
+inline bool same_hemisphere(
+    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming);
+
 // Schlick approximation of the Fresnel term.
 inline vec3f fresnel_schlick(
     const vec3f& specular, const vec3f& normal, const vec3f& outgoing);
@@ -287,6 +291,12 @@ inline float sample_phasefunction_pdf(
 // IMPLEMENTATION OF SHADING FUNCTIONS
 // -----------------------------------------------------------------------------
 namespace yocto {
+
+// Check if on the same side of the hemisphere
+inline bool same_hemisphere(
+    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
+  return dot(normal, outgoing) * dot(normal, incoming) >= 0;
+}
 
 // Schlick approximation of the Fresnel term
 inline vec3f fresnel_schlick(
@@ -570,12 +580,14 @@ inline vec3f eval_glossy(const vec3f& color, float ior, float roughness,
 }
 
 // Sample a specular BRDF lobe.
-inline vec3f sample_specular(const vec3f& color, float ior, float roughness,
+inline vec3f sample_glossy(const vec3f& color, float ior, float roughness,
     const vec3f& normal, const vec3f& outgoing, float rnl, const vec2f& rn) {
   auto up_normal = dot(normal, outgoing) <= 0 ? -normal : normal;
   if (rnl < fresnel_dielectric(ior, up_normal, outgoing)) {
-    auto halfway = sample_microfacet(roughness, up_normal, rn);
-    return reflect(outgoing, halfway);
+    auto halfway  = sample_microfacet(roughness, up_normal, rn);
+    auto incoming = reflect(outgoing, halfway);
+    if (!same_hemisphere(up_normal, outgoing, incoming)) return {0, 0, 0};
+    return incoming;
   } else {
     return sample_hemisphere_cos(up_normal, rn);
   }
@@ -613,7 +625,9 @@ inline vec3f sample_metallic(const vec3f& color, float roughness,
     const vec3f& normal, const vec3f& outgoing, const vec2f& rn) {
   auto up_normal = dot(normal, outgoing) <= 0 ? -normal : normal;
   auto halfway   = sample_microfacet(roughness, up_normal, rn);
-  return reflect(outgoing, halfway);
+  auto incoming  = reflect(outgoing, halfway);
+  if (!same_hemisphere(up_normal, outgoing, incoming)) return {0, 0, 0};
+  return incoming;
 }
 
 // Pdf for metal BRDF lobe sampling.
@@ -733,8 +747,10 @@ inline vec3f sample_gltfpbr(const vec3f& color, float ior, float roughness,
   auto reflectivity = lerp(
       eta_to_reflectivity(vec3f{ior, ior, ior}), color, metallic);
   if (rnl < mean(fresnel_schlick(reflectivity, up_normal, outgoing))) {
-    auto halfway = sample_microfacet(roughness, up_normal, rn);
-    return reflect(outgoing, halfway);
+    auto halfway  = sample_microfacet(roughness, up_normal, rn);
+    auto incoming = reflect(outgoing, halfway);
+    if (!same_hemisphere(up_normal, outgoing, incoming)) return {0, 0, 0};
+    return incoming;
   } else {
     return sample_hemisphere_cos(up_normal, rn);
   }
@@ -787,10 +803,14 @@ inline vec3f sample_transparent(const vec3f& color, float ior, float roughness,
   auto up_normal = dot(normal, outgoing) <= 0 ? -normal : normal;
   auto halfway   = sample_microfacet(roughness, up_normal, rn);
   if (rnl < fresnel_dielectric(ior, halfway, outgoing)) {
-    return reflect(outgoing, halfway);
+    auto incoming = reflect(outgoing, halfway);
+    if (!same_hemisphere(up_normal, outgoing, incoming)) return {0, 0, 0};
+    return incoming;
   } else {
     auto reflected = reflect(outgoing, halfway);
-    return -reflect(reflected, up_normal);
+    auto incoming  = -reflect(reflected, up_normal);
+    if (same_hemisphere(up_normal, outgoing, incoming)) return {0, 0, 0};
+    return incoming;
   }
 }
 
@@ -885,9 +905,13 @@ inline vec3f sample_refractive(const vec3f& color, float ior, float roughness,
   auto up_normal = entering ? normal : -normal;
   auto halfway   = sample_microfacet(roughness, up_normal, rn);
   if (rnl < fresnel_dielectric(entering ? ior : (1 / ior), halfway, outgoing)) {
-    return reflect(outgoing, halfway);
+    auto incoming = reflect(outgoing, halfway);
+    if (!same_hemisphere(up_normal, outgoing, incoming)) return {0, 0, 0};
+    return incoming;
   } else {
-    return refract(outgoing, halfway, entering ? (1 / ior) : ior);
+    auto incoming = refract(outgoing, halfway, entering ? (1 / ior) : ior);
+    if (same_hemisphere(up_normal, outgoing, incoming)) return {0, 0, 0};
+    return incoming;
   }
 }
 
