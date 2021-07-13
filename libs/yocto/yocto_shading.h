@@ -580,12 +580,14 @@ inline vec3f eval_glossy(const vec3f& color, float ior, float roughness,
 }
 
 // Sample a specular BRDF lobe.
-inline vec3f sample_specular(const vec3f& color, float ior, float roughness,
+inline vec3f sample_glossy(const vec3f& color, float ior, float roughness,
     const vec3f& normal, const vec3f& outgoing, float rnl, const vec2f& rn) {
   auto up_normal = dot(normal, outgoing) <= 0 ? -normal : normal;
   if (rnl < fresnel_dielectric(ior, up_normal, outgoing)) {
-    auto halfway = sample_microfacet(roughness, up_normal, rn);
-    return reflect(outgoing, halfway);
+    auto halfway  = sample_microfacet(roughness, up_normal, rn);
+    auto incoming = reflect(outgoing, halfway);
+    if (!same_hemisphere(up_normal, outgoing, incoming)) return {0, 0, 0};
+    return incoming;
   } else {
     return sample_hemisphere_cos(up_normal, rn);
   }
@@ -623,7 +625,9 @@ inline vec3f sample_metallic(const vec3f& color, float roughness,
     const vec3f& normal, const vec3f& outgoing, const vec2f& rn) {
   auto up_normal = dot(normal, outgoing) <= 0 ? -normal : normal;
   auto halfway   = sample_microfacet(roughness, up_normal, rn);
-  return reflect(outgoing, halfway);
+  auto incoming  = reflect(outgoing, halfway);
+  if (!same_hemisphere(up_normal, outgoing, incoming)) return {0, 0, 0};
+  return incoming;
 }
 
 // Pdf for metal BRDF lobe sampling.
@@ -743,8 +747,10 @@ inline vec3f sample_gltfpbr(const vec3f& color, float ior, float roughness,
   auto reflectivity = lerp(
       eta_to_reflectivity(vec3f{ior, ior, ior}), color, metallic);
   if (rnl < mean(fresnel_schlick(reflectivity, up_normal, outgoing))) {
-    auto halfway = sample_microfacet(roughness, up_normal, rn);
-    return reflect(outgoing, halfway);
+    auto halfway  = sample_microfacet(roughness, up_normal, rn);
+    auto incoming = reflect(outgoing, halfway);
+    if (!same_hemisphere(up_normal, outgoing, incoming)) return {0, 0, 0};
+    return incoming;
   } else {
     return sample_hemisphere_cos(up_normal, rn);
   }

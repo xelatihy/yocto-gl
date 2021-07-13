@@ -167,7 +167,7 @@ static vec3f sample_bsdfcos(const material_point& material, const vec3f& normal,
   if (material.type == material_type::matte) {
     return sample_matte(material.color, normal, outgoing, rn);
   } else if (material.type == material_type::glossy) {
-    return sample_specular(material.color, material.ior, material.roughness,
+    return sample_glossy(material.color, material.ior, material.roughness,
         normal, outgoing, rnl, rn);
   } else if (material.type == material_type::metallic) {
     return sample_metallic(
