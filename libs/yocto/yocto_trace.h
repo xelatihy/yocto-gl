@@ -78,6 +78,7 @@ enum struct trace_sampler_type {
   naive,       // naive path tracing
   eyelight,    // eyelight rendering
   eyelightao,  // eyelight with ambient occlusion
+  furnace,     // furnace test
   falsecolor,  // false color rendering
 };
 // Type of false color visualization
@@ -116,7 +117,8 @@ struct trace_params {
 };
 
 inline const auto trace_sampler_names = std::vector<std::string>{"path",
-    "pathdirect", "pathmis", "naive", "eyelight", "eyelightao", "falsecolor"};
+    "pathdirect", "pathmis", "naive", "eyelight", "eyelightao", "furnace",
+    "falsecolor"};
 
 inline const auto trace_falsecolor_names = vector<string>{"position", "normal",
     "frontfacing", "gnormal", "gfrontfacing", "texcoord", "mtype", "color",
