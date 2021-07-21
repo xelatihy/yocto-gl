@@ -471,6 +471,7 @@ static trace_result trace_path(const scene_data& scene, const bvh_data& bvh,
           incoming = sample_lights(
               scene, lights, position, rand1f(rng), rand1f(rng), rand2f(rng));
         }
+        if (incoming == vec3f{0, 0, 0}) break;
         weight *=
             eval_bsdfcos(material, normal, outgoing, incoming) /
             (0.5f * sample_bsdfcos_pdf(material, normal, outgoing, incoming) +
@@ -512,6 +513,7 @@ static trace_result trace_path(const scene_data& scene, const bvh_data& bvh,
         incoming = sample_lights(
             scene, lights, position, rand1f(rng), rand1f(rng), rand2f(rng));
       }
+      if (incoming == vec3f{0, 0, 0}) break;
       weight *=
           eval_scattering(vsdf, outgoing, incoming) /
           (0.5f * sample_scattering_pdf(vsdf, outgoing, incoming) +
@@ -642,6 +644,7 @@ static trace_result trace_pathdirect(const scene_data& scene,
           incoming = sample_lights(
               scene, lights, position, rand1f(rng), rand1f(rng), rand2f(rng));
         }
+        if (incoming == vec3f{0, 0, 0}) break;
         weight *=
             eval_bsdfcos(material, normal, outgoing, incoming) /
             (0.5f * sample_bsdfcos_pdf(material, normal, outgoing, incoming) +
@@ -649,6 +652,7 @@ static trace_result trace_pathdirect(const scene_data& scene,
                     sample_lights_pdf(scene, bvh, lights, position, incoming));
       } else {
         incoming = sample_delta(material, normal, outgoing, rand1f(rng));
+        if (incoming == vec3f{0, 0, 0}) break;
         weight *= eval_delta(material, normal, outgoing, incoming) /
                   sample_delta_pdf(material, normal, outgoing, incoming);
       }
@@ -680,6 +684,7 @@ static trace_result trace_pathdirect(const scene_data& scene,
         incoming = sample_lights(
             scene, lights, position, rand1f(rng), rand1f(rng), rand2f(rng));
       }
+      if (incoming == vec3f{0, 0, 0}) break;
       weight *=
           eval_scattering(vsdf, outgoing, incoming) /
           (0.5f * sample_scattering_pdf(vsdf, outgoing, incoming) +
@@ -789,10 +794,11 @@ static trace_result trace_pathmis(const scene_data& scene, const bvh_data& bvh,
       if (!is_delta(material)) {
         // direct with MIS --- light
         for (auto sample_light : {true, false}) {
-          incoming       = sample_light ? sample_lights(scene, lights, position,
+          incoming = sample_light ? sample_lights(scene, lights, position,
                                         rand1f(rng), rand1f(rng), rand2f(rng))
-                                        : sample_bsdfcos(material, normal, outgoing,
+                                  : sample_bsdfcos(material, normal, outgoing,
                                         rand1f(rng), rand2f(rng));
+          if (incoming == vec3f{0, 0, 0}) break;
           auto bsdfcos   = eval_bsdfcos(material, normal, outgoing, incoming);
           auto light_pdf = sample_lights_pdf(
               scene, bvh, lights, position, incoming);
@@ -936,10 +942,12 @@ static trace_result trace_naive(const scene_data& scene, const bvh_data& bvh,
     if (material.roughness != 0) {
       incoming = sample_bsdfcos(
           material, normal, outgoing, rand1f(rng), rand2f(rng));
+      if (incoming == vec3f{0, 0, 0}) break;
       weight *= eval_bsdfcos(material, normal, outgoing, incoming) /
                 sample_bsdfcos_pdf(material, normal, outgoing, incoming);
     } else {
       incoming = sample_delta(material, normal, outgoing, rand1f(rng));
+      if (incoming == vec3f{0, 0, 0}) break;
       weight *= eval_delta(material, normal, outgoing, incoming) /
                 sample_delta_pdf(material, normal, outgoing, incoming);
     }
@@ -1016,6 +1024,7 @@ static trace_result trace_eyelight(const scene_data& scene, const bvh_data& bvh,
     // continue path
     if (!is_delta(material)) break;
     incoming = sample_delta(material, normal, outgoing, rand1f(rng));
+    if (incoming == vec3f{0, 0, 0}) break;
     weight *= eval_delta(material, normal, outgoing, incoming) /
               sample_delta_pdf(material, normal, outgoing, incoming);
     if (weight == vec3f{0, 0, 0} || !isfinite(weight)) break;
@@ -1086,6 +1095,7 @@ static trace_result trace_eyelightao(const scene_data& scene,
     // continue path
     if (!is_delta(material)) break;
     incoming = sample_delta(material, normal, outgoing, rand1f(rng));
+    if (incoming == vec3f{0, 0, 0}) break;
     weight *= eval_delta(material, normal, outgoing, incoming) /
               sample_delta_pdf(material, normal, outgoing, incoming);
     if (weight == vec3f{0, 0, 0} || !isfinite(weight)) break;
