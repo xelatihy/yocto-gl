@@ -446,7 +446,7 @@ inline float microfacet_shadowing(float roughness, const vec3f& normal,
          microfacet_shadowing1(roughness, normal, halfway, incoming, ggx);
 }
 
-// Sample a microfacet ditribution.
+// Sample a microfacet distribution.
 inline vec3f sample_microfacet(
     float roughness, const vec3f& normal, const vec2f& rn, bool ggx) {
   auto phi   = 2 * pif * rn.x;
@@ -489,12 +489,10 @@ inline vec3f sample_microfacet(float roughness, const vec3f& normal,
                            : vec3f{1, 0, 0};
     auto T2    = cross(Vh, T1);
     // Section 4.2: parameterization of the projected area
-    auto r   = sqrt(rn.y);
-    auto phi = 2 * pif * rn.x;
-    auto t1  = r * cos(phi);
-    auto t2  = r * sin(phi);
-    auto s   = 0.5f * (1 + Vh.z);
-    t2       = (1 - s) * sqrt(1 - t1 * t1) + s * t2;
+    auto r = sqrt(rn.y), phi = 2 * pif * rn.x;
+    auto t1 = r * cos(phi), t2 = r * sin(phi);
+    auto s = 0.5f * (1 + Vh.z);
+    t2     = (1 - s) * sqrt(1 - t1 * t1) + s * t2;
     // Section 4.3: reprojection onto hemisphere
     auto Nh = t1 * T1 + t2 * T2 + sqrt(max(0.0f, 1 - t1 * t1 - t2 * t2)) * Vh;
     // Section 3.4: transforming the normal back to the ellipsoid configuration
@@ -905,6 +903,7 @@ inline vec3f sample_refractive(const vec3f& color, float ior, float roughness,
   auto entering  = dot(normal, outgoing) >= 0;
   auto up_normal = entering ? normal : -normal;
   auto halfway   = sample_microfacet(roughness, up_normal, rn);
+  // auto halfway = sample_microfacet(roughness, up_normal, outgoing, rn);
   if (rnl < fresnel_dielectric(entering ? ior : (1 / ior), halfway, outgoing)) {
     auto incoming = reflect(outgoing, halfway);
     if (!same_hemisphere(up_normal, outgoing, incoming)) return {0, 0, 0};
@@ -927,6 +926,7 @@ inline float sample_refractive_pdf(const vec3f& color, float ior,
     auto halfway = normalize(incoming + outgoing);
     return fresnel_dielectric(rel_ior, halfway, outgoing) *
            sample_microfacet_pdf(roughness, up_normal, halfway) /
+           //  sample_microfacet_pdf(roughness, up_normal, halfway, outgoing) /
            (4 * abs(dot(outgoing, halfway)));
   } else {
     auto halfway = -normalize(rel_ior * incoming + outgoing) *
@@ -934,6 +934,7 @@ inline float sample_refractive_pdf(const vec3f& color, float ior,
     // [Walter 2007] equation 17
     return (1 - fresnel_dielectric(rel_ior, halfway, outgoing)) *
            sample_microfacet_pdf(roughness, up_normal, halfway) *
+           //  sample_microfacet_pdf(roughness, up_normal, halfway, outgoing) /
            abs(dot(halfway, incoming)) /  // here we use incoming as from pbrt
            pow(rel_ior * dot(halfway, incoming) + dot(halfway, outgoing), 2);
   }
