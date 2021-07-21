@@ -421,6 +421,7 @@ inline float microfacet_shadowing1(float roughness, const vec3f& normal,
     const vec3f& halfway, const vec3f& direction, bool ggx) {
   // https://google.github.io/filament/Filament.html#materialsystem/specularbrdf
   // http://graphicrants.blogspot.com/2013/08/specular-brdf-reference.html
+  // https://github.com/KhronosGroup/glTF/tree/master/specification/2.0#appendix-b-brdf-implementation
   auto cosine  = dot(normal, direction);
   auto cosineh = dot(halfway, direction);
   if (cosine * cosineh <= 0) return 0;
@@ -933,7 +934,7 @@ inline float sample_refractive_pdf(const vec3f& color, float ior,
     // [Walter 2007] equation 17
     return (1 - fresnel_dielectric(rel_ior, halfway, outgoing)) *
            sample_microfacet_pdf(roughness, up_normal, halfway) *
-           abs(dot(halfway, outgoing)) /
+           abs(dot(halfway, incoming)) /  // here we use incoming as from pbrt
            pow(rel_ior * dot(halfway, incoming) + dot(halfway, outgoing), 2);
   }
 }
