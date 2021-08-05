@@ -378,27 +378,27 @@ scene_data make_cornellbox();
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-using sceneio_scene       = scene_data;
-using scene_model         = scene_data;
-using sceneio_camera      = camera_data;
-using scene_camera        = camera_data;
-using sceneio_texture     = texture_data;
-using scene_texture       = texture_data;
-using sceneio_material    = material_data;
-using scene_material_type = material_type;
-using sceneio_material    = material_data;
-using sceneio_shape       = shape_data;
-using scene_shape         = shape_data;
-using scene_fvshape       = fvshape_data;
-using sceneio_instance    = instance_data;
-using scene_instance      = instance_data;
-using sceneio_environment = environment_data;
-using scene_environment   = environment_data;
-using scene_subdiv        = subdiv_data;
+using sceneio_scene [[deprecated]]       = scene_data;
+using scene_model [[deprecated]]         = scene_data;
+using sceneio_camera [[deprecated]]      = camera_data;
+using scene_camera [[deprecated]]        = camera_data;
+using sceneio_texture [[deprecated]]     = texture_data;
+using scene_texture [[deprecated]]       = texture_data;
+using sceneio_material [[deprecated]]    = material_data;
+using scene_material_type [[deprecated]] = material_type;
+using sceneio_material [[deprecated]]    = material_data;
+using sceneio_shape [[deprecated]]       = shape_data;
+using scene_shape [[deprecated]]         = shape_data;
+using scene_fvshape [[deprecated]]       = fvshape_data;
+using sceneio_instance [[deprecated]]    = instance_data;
+using scene_instance [[deprecated]]      = instance_data;
+using sceneio_environment [[deprecated]] = environment_data;
+using scene_environment [[deprecated]]   = environment_data;
+using scene_subdiv [[deprecated]]        = subdiv_data;
 
-inline const auto scene_material_names = std::vector<std::string>{"matte",
-    "glossy", "metallic", "transparent", "refractive", "subsurface", "volume",
-    "gltfpbr"};
+[[deprecated]] inline const auto scene_material_names =
+    std::vector<std::string>{"matte", "glossy", "metallic", "transparent",
+        "refractive", "subsurface", "volume", "gltfpbr"};
 
 }  // namespace yocto
 

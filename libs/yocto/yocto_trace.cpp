@@ -1108,9 +1108,9 @@ static trace_result trace_eyelightao(const scene_data& scene,
 }
 
 // Furnace test.
-static trace_result trace_furnace(const scene_model& scene,
-    const bvh_scene& bvh, const trace_lights& lights, const ray3f& ray_,
-    rng_state& rng, const trace_params& params) {
+static trace_result trace_furnace(const scene_data& scene, const bvh_scene& bvh,
+    const trace_lights& lights, const ray3f& ray_, rng_state& rng,
+    const trace_params& params) {
   // initialize
   auto radiance   = zero3f;
   auto weight     = vec3f{1, 1, 1};

@@ -2404,7 +2404,7 @@ static void save_json_scene(
   }
 
   if (!scene.cameras.empty()) {
-    auto  default_ = sceneio_camera{};
+    auto  default_ = camera_data{};
     auto& group    = add_object(json, "cameras");
     group.reserve(scene.cameras.size());
     for (auto&& [idx, camera] : enumerate(scene.cameras)) {
@@ -2430,7 +2430,7 @@ static void save_json_scene(
   }
 
   if (!scene.materials.empty()) {
-    auto  default_ = sceneio_material{};
+    auto  default_ = material_data{};
     auto& group    = add_object(json, "materials");
     group.reserve(scene.materials.size());
     for (auto&& [idx, material] : enumerate(scene.materials)) {
@@ -2484,7 +2484,7 @@ static void save_json_scene(
   }
 
   if (!scene.instances.empty()) {
-    auto  default_ = sceneio_instance{};
+    auto  default_ = instance_data{};
     auto& group    = add_object(json, "instances");
     group.reserve(scene.instances.size());
     for (auto& instance : scene.instances) {
@@ -2496,7 +2496,7 @@ static void save_json_scene(
   }
 
   if (!scene.environments.empty()) {
-    auto  default_ = sceneio_environment{};
+    auto  default_ = environment_data{};
     auto& group    = add_object(json, "environments");
     group.reserve(scene.environments.size());
     for (auto& environment : scene.environments) {
@@ -3004,7 +3004,7 @@ static void load_gltf_scene(
   }
 
   // convert meshes
-  auto mesh_primitives = vector<vector<sceneio_instance>>{};
+  auto mesh_primitives = vector<vector<instance_data>>{};
   if (gltf.contains("meshes")) {
     try {
       auto type_components = unordered_map<string, int>{
