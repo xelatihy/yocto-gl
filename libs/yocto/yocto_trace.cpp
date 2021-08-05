@@ -121,7 +121,7 @@ static vec3f eval_bsdfcos(const material_point& material, const vec3f& normal,
     return eval_glossy(material.color, material.ior, material.roughness, normal,
         outgoing, incoming);
   } else if (material.type == material_type::reflective) {
-    return eval_metallic(
+    return eval_reflective(
         material.color, material.roughness, normal, outgoing, incoming);
   } else if (material.type == material_type::transparent) {
     return eval_transparent(material.color, material.ior, material.roughness,
@@ -145,7 +145,7 @@ static vec3f eval_delta(const material_point& material, const vec3f& normal,
   if (material.roughness != 0) return {0, 0, 0};
 
   if (material.type == material_type::reflective) {
-    return eval_metallic(material.color, normal, outgoing, incoming);
+    return eval_reflective(material.color, normal, outgoing, incoming);
   } else if (material.type == material_type::transparent) {
     return eval_transparent(
         material.color, material.ior, normal, outgoing, incoming);
@@ -170,7 +170,7 @@ static vec3f sample_bsdfcos(const material_point& material, const vec3f& normal,
     return sample_glossy(material.color, material.ior, material.roughness,
         normal, outgoing, rnl, rn);
   } else if (material.type == material_type::reflective) {
-    return sample_metallic(
+    return sample_reflective(
         material.color, material.roughness, normal, outgoing, rn);
   } else if (material.type == material_type::transparent) {
     return sample_transparent(material.color, material.ior, material.roughness,
@@ -194,7 +194,7 @@ static vec3f sample_delta(const material_point& material, const vec3f& normal,
   if (material.roughness != 0) return {0, 0, 0};
 
   if (material.type == material_type::reflective) {
-    return sample_metallic(material.color, normal, outgoing);
+    return sample_reflective(material.color, normal, outgoing);
   } else if (material.type == material_type::transparent) {
     return sample_transparent(
         material.color, material.ior, normal, outgoing, rnl);
@@ -219,7 +219,7 @@ static float sample_bsdfcos_pdf(const material_point& material,
     return sample_glossy_pdf(material.color, material.ior, material.roughness,
         normal, outgoing, incoming);
   } else if (material.type == material_type::reflective) {
-    return sample_metallic_pdf(
+    return sample_reflective_pdf(
         material.color, material.roughness, normal, outgoing, incoming);
   } else if (material.type == material_type::transparent) {
     return sample_tranparent_pdf(material.color, material.ior,
@@ -243,7 +243,7 @@ static float sample_delta_pdf(const material_point& material,
   if (material.roughness != 0) return 0;
 
   if (material.type == material_type::reflective) {
-    return sample_metallic_pdf(material.color, normal, outgoing, incoming);
+    return sample_reflective_pdf(material.color, normal, outgoing, incoming);
   } else if (material.type == material_type::transparent) {
     return sample_tranparent_pdf(
         material.color, material.ior, normal, outgoing, incoming);

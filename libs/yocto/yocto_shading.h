@@ -141,43 +141,43 @@ inline float sample_glossy_pdf(const vec3f& color, float ior, float roughness,
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming);
 
 // Evaluates a metal BRDF lobe.
-inline vec3f eval_metallic(const vec3f& color, float roughness,
+inline vec3f eval_reflective(const vec3f& color, float roughness,
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming);
 // Sample a metal BRDF lobe.
-inline vec3f sample_metallic(const vec3f& color, float roughness,
+inline vec3f sample_reflective(const vec3f& color, float roughness,
     const vec3f& normal, const vec3f& outgoing, const vec2f& rn);
 // Pdf for metal BRDF lobe sampling.
-inline float sample_metallic_pdf(const vec3f& color, float roughness,
+inline float sample_reflective_pdf(const vec3f& color, float roughness,
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming);
 
 // Evaluate a delta metal BRDF lobe.
-inline vec3f eval_metallic(const vec3f& color, const vec3f& normal,
+inline vec3f eval_reflective(const vec3f& color, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming);
 // Sample a delta metal BRDF lobe.
-inline vec3f sample_metallic(
+inline vec3f sample_reflective(
     const vec3f& color, const vec3f& normal, const vec3f& outgoing);
 // Pdf for delta metal BRDF lobe sampling.
-inline float sample_metallic_pdf(const vec3f& color, const vec3f& normal,
+inline float sample_reflective_pdf(const vec3f& color, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming);
 
 // Evaluate a delta metal BRDF lobe.
-inline vec3f eval_metallic(const vec3f& eta, const vec3f& etak,
+inline vec3f eval_reflective(const vec3f& eta, const vec3f& etak,
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming);
 // Sample a delta metal BRDF lobe.
-inline vec3f sample_metallic(const vec3f& eta, const vec3f& etak,
+inline vec3f sample_reflective(const vec3f& eta, const vec3f& etak,
     const vec3f& normal, const vec3f& outgoing);
 // Pdf for delta metal BRDF lobe sampling.
-inline float sample_metallic_pdf(const vec3f& eta, const vec3f& etak,
+inline float sample_reflective_pdf(const vec3f& eta, const vec3f& etak,
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming);
 
 // Evaluate a delta metal BRDF lobe.
-inline vec3f eval_metallic(const vec3f& eta, const vec3f& etak,
+inline vec3f eval_reflective(const vec3f& eta, const vec3f& etak,
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming);
 // Sample a delta metal BRDF lobe.
-inline vec3f sample_metallic(const vec3f& eta, const vec3f& etak,
+inline vec3f sample_reflective(const vec3f& eta, const vec3f& etak,
     const vec3f& normal, const vec3f& outgoing);
 // Pdf for delta metal BRDF lobe sampling.
-inline float sample_metallic_pdf(const vec3f& eta, const vec3f& etak,
+inline float sample_reflective_pdf(const vec3f& eta, const vec3f& etak,
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming);
 
 // Evaluates a specular BRDF lobe.
@@ -605,7 +605,7 @@ inline float sample_glossy_pdf(const vec3f& color, float ior, float roughness,
 }
 
 // Evaluate a metal BRDF lobe.
-inline vec3f eval_metallic(const vec3f& color, float roughness,
+inline vec3f eval_reflective(const vec3f& color, float roughness,
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
   if (dot(normal, incoming) * dot(normal, outgoing) <= 0) return {0, 0, 0};
   auto up_normal = dot(normal, outgoing) <= 0 ? -normal : normal;
@@ -620,7 +620,7 @@ inline vec3f eval_metallic(const vec3f& color, float roughness,
 }
 
 // Sample a metal BRDF lobe.
-inline vec3f sample_metallic(const vec3f& color, float roughness,
+inline vec3f sample_reflective(const vec3f& color, float roughness,
     const vec3f& normal, const vec3f& outgoing, const vec2f& rn) {
   auto up_normal = dot(normal, outgoing) <= 0 ? -normal : normal;
   auto halfway   = sample_microfacet(roughness, up_normal, rn);
@@ -630,7 +630,7 @@ inline vec3f sample_metallic(const vec3f& color, float roughness,
 }
 
 // Pdf for metal BRDF lobe sampling.
-inline float sample_metallic_pdf(const vec3f& color, float roughness,
+inline float sample_reflective_pdf(const vec3f& color, float roughness,
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
   if (dot(normal, incoming) * dot(normal, outgoing) <= 0) return 0;
   auto up_normal = dot(normal, outgoing) <= 0 ? -normal : normal;
@@ -640,8 +640,9 @@ inline float sample_metallic_pdf(const vec3f& color, float roughness,
 }
 
 // Evaluate a metal BRDF lobe.
-inline vec3f eval_metallic(const vec3f& eta, const vec3f& etak, float roughness,
-    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
+inline vec3f eval_reflective(const vec3f& eta, const vec3f& etak,
+    float roughness, const vec3f& normal, const vec3f& outgoing,
+    const vec3f& incoming) {
   if (dot(normal, incoming) * dot(normal, outgoing) <= 0) return {0, 0, 0};
   auto up_normal = dot(normal, outgoing) <= 0 ? -normal : normal;
   auto halfway   = normalize(incoming + outgoing);
@@ -654,7 +655,7 @@ inline vec3f eval_metallic(const vec3f& eta, const vec3f& etak, float roughness,
 }
 
 // Sample a metal BRDF lobe.
-inline vec3f sample_metallic(const vec3f& eta, const vec3f& etak,
+inline vec3f sample_reflective(const vec3f& eta, const vec3f& etak,
     float roughness, const vec3f& normal, const vec3f& outgoing,
     const vec2f& rn) {
   auto up_normal = dot(normal, outgoing) <= 0 ? -normal : normal;
@@ -663,7 +664,7 @@ inline vec3f sample_metallic(const vec3f& eta, const vec3f& etak,
 }
 
 // Pdf for metal BRDF lobe sampling.
-inline float sample_metallic_pdf(const vec3f& eta, const vec3f& etak,
+inline float sample_reflective_pdf(const vec3f& eta, const vec3f& etak,
     float roughness, const vec3f& normal, const vec3f& outgoing,
     const vec3f& incoming) {
   if (dot(normal, incoming) * dot(normal, outgoing) <= 0) return 0;
@@ -674,7 +675,7 @@ inline float sample_metallic_pdf(const vec3f& eta, const vec3f& etak,
 }
 
 // Evaluate a delta metal BRDF lobe.
-inline vec3f eval_metallic(const vec3f& color, const vec3f& normal,
+inline vec3f eval_reflective(const vec3f& color, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
   if (dot(normal, incoming) * dot(normal, outgoing) <= 0) return {0, 0, 0};
   auto up_normal = dot(normal, outgoing) <= 0 ? -normal : normal;
@@ -683,21 +684,21 @@ inline vec3f eval_metallic(const vec3f& color, const vec3f& normal,
 }
 
 // Sample a delta metal BRDF lobe.
-inline vec3f sample_metallic(
+inline vec3f sample_reflective(
     const vec3f& color, const vec3f& normal, const vec3f& outgoing) {
   auto up_normal = dot(normal, outgoing) <= 0 ? -normal : normal;
   return reflect(outgoing, up_normal);
 }
 
 // Pdf for delta metal BRDF lobe sampling.
-inline float sample_metallic_pdf(const vec3f& color, const vec3f& normal,
+inline float sample_reflective_pdf(const vec3f& color, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
   if (dot(normal, incoming) * dot(normal, outgoing) <= 0) return 0;
   return 1;
 }
 
 // Evaluate a delta metal BRDF lobe.
-inline vec3f eval_metallic(const vec3f& eta, const vec3f& etak,
+inline vec3f eval_reflective(const vec3f& eta, const vec3f& etak,
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
   if (dot(normal, incoming) * dot(normal, outgoing) <= 0) return {0, 0, 0};
   auto up_normal = dot(normal, outgoing) <= 0 ? -normal : normal;
@@ -705,14 +706,14 @@ inline vec3f eval_metallic(const vec3f& eta, const vec3f& etak,
 }
 
 // Sample a delta metal BRDF lobe.
-inline vec3f sample_metallic(const vec3f& eta, const vec3f& etak,
+inline vec3f sample_reflective(const vec3f& eta, const vec3f& etak,
     const vec3f& normal, const vec3f& outgoing) {
   auto up_normal = dot(normal, outgoing) <= 0 ? -normal : normal;
   return reflect(outgoing, up_normal);
 }
 
 // Pdf for delta metal BRDF lobe sampling.
-inline float sample_metallic_pdf(const vec3f& eta, const vec3f& etak,
+inline float sample_reflective_pdf(const vec3f& eta, const vec3f& etak,
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
   if (dot(normal, incoming) * dot(normal, outgoing) <= 0) return 0;
   return 1;
@@ -1188,6 +1189,63 @@ inline pair<vec3f, vec3f> conductor_eta(const string& name) {
     if (ename == name) return etas;
   }
   return {{0, 0, 0}, {0, 0, 0}};
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION OF DEPRECATED SHADING FUNCTIONS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Evaluates a metal BRDF lobe.
+[[deprecated]] inline vec3f eval_metallic(const vec3f& color, float roughness,
+    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
+  return eval_reflective(color, roughness, normal, outgoing, incoming);
+}
+// Sample a metal BRDF lobe.
+[[deprecated]] inline vec3f sample_metallic(const vec3f& color, float roughness,
+    const vec3f& normal, const vec3f& outgoing, const vec2f& rn) {
+  return sample_reflective(color, roughness, normal, outgoing, rn);
+}
+// Pdf for metal BRDF lobe sampling.
+[[deprecated]] inline float sample_metallic_pdf(const vec3f& color,
+    float roughness, const vec3f& normal, const vec3f& outgoing,
+    const vec3f& incoming) {
+  return sample_reflective_pdf(color, roughness, normal, outgoing, incoming);
+}
+
+// Evaluate a delta metal BRDF lobe.
+[[deprecated]] inline vec3f eval_metallic(const vec3f& color,
+    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
+  return eval_reflective(color, normal, outgoing, incoming);
+}
+// Sample a delta metal BRDF lobe.
+[[deprecated]] inline vec3f sample_metallic(
+    const vec3f& color, const vec3f& normal, const vec3f& outgoing) {
+  return sample_reflective(color, normal, outgoing);
+}
+// Pdf for delta metal BRDF lobe sampling.
+[[deprecated]] inline float sample_metallic_pdf(const vec3f& color,
+    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
+  return sample_reflective_pdf(color, normal, outgoing, incoming);
+}
+
+// Evaluate a delta metal BRDF lobe.
+[[deprecated]] inline vec3f eval_metallic(const vec3f& eta, const vec3f& etak,
+    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
+  return eval_reflective(eta, etak, normal, outgoing, incoming);
+}
+// Sample a delta metal BRDF lobe.
+[[deprecated]] inline vec3f sample_metallic(const vec3f& eta, const vec3f& etak,
+    const vec3f& normal, const vec3f& outgoing) {
+  return sample_reflective(eta, etak, normal, outgoing);
+}
+// Pdf for delta metal BRDF lobe sampling.
+[[deprecated]] inline float sample_metallic_pdf(const vec3f& eta,
+    const vec3f& etak, const vec3f& normal, const vec3f& outgoing,
+    const vec3f& incoming) {
+  return sample_reflective_pdf(eta, etak, normal, outgoing, incoming);
 }
 
 }  // namespace yocto
