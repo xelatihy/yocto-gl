@@ -142,4 +142,6 @@ The same is true for the use of short flags, like `-h`.
 Th main reasons for this is to make the input to CLI tools more readable by 
 using long names for options and avoiding unnamed positional arguments.
 This is also a better match for the JSON config files and since internally
-the CLI uses JSON as a data model to process values. 
+the CLI uses JSON as a data model to process values.
+In future releases, positional arguments will be deprecated and eventually
+removed. 
