@@ -144,27 +144,27 @@
   },
   "materials": {
     "metallic-0": {
-      "type": "metallic",
+      "type": "reflective",
       "color": [1, 1, 1],
       "roughness": 0
     },
     "metallic-0.25": {
-      "type": "metallic",
+      "type": "reflective",
       "color": [1, 1, 1],
       "roughness": 0.25
     },
     "metallic-0.5": {
-      "type": "metallic",
+      "type": "reflective",
       "color": [1, 1, 1],
       "roughness": 0.5
     },
     "metallic-0.75": {
-      "type": "metallic",
+      "type": "reflective",
       "color": [1, 1, 1],
       "roughness": 0.75
     },
     "metallic-1": {
-      "type": "metallic",
+      "type": "reflective",
       "color": [1, 1, 1],
       "roughness": 1
     },
