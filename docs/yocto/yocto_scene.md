@@ -240,7 +240,7 @@ following materials:
 - `matte`, for materials like concrete or stucco, implemented as a lambertian bsdf;
 - `glossy`, for materials like plastic or painted wood, implemented as the sum
   of a lambertian and a microfacet dielectric lobe;
-- `metallic`, for materials like metals, implemented as either a delta or
+- `reflective`, for materials like metals, implemented as either a delta or
   microfacet brdf lobe;
 - `transparent`, for materials for thin glass, implemented as a delta or
   microfacet transmission bsdf;
@@ -248,7 +248,7 @@ following materials:
   microfacet refraction bsdf; also support homogenous volume scattering;
 - `subsurface`, for materials for skin, implemented as a microfacet refraction
   bsdf with homogenous volume scattering - for no this is like `refractive`;
-- `volume`, for materials like homogeneous smoke or fog, implemented as the lack
+- `volumetric`, for materials like homogeneous smoke or fog, implemented as the lack
   of a surface interface but with volumetric scattering.
 - `gltfpbr`, for materials that range from glossy to metallic, implemented as
   the sum of a lambertian and a microfacet dielectric lobe;
@@ -263,7 +263,7 @@ the index of refraction `ior`. The physical meaning of each parameter depends
 on the material type. By default surfaces are fully opaque, but
 can defined a `opacity` parameter and texture to define the surface coverage.
 
-Materials like `refractive`, `subsurface` and `volume` may also specify
+Materials like `refractive`, `subsurface` and `volumetric` may also specify
 volumetric properties. In these cases, the `color` parameter controls the volume density,
 while the `scattering` also define volumetric scattering properties by setting a
 `transmission` parameter controls the homogenous volume scattering.
@@ -284,10 +284,10 @@ glossy.type = material_type::glossy;
 glossy.color = {0.5,1,0.5};              // with constant color
 glossyv.roughness = 0.1;                 // base roughness and a
 glossy.roughness_tex = texture_id;       // roughness texture
-auto metallic =  material_data{};        // create a metallic material
-glossy.type = material_type::metallic
-metal.color = {0.5,0.5,1};               // constant color
-metal.roughness = 0.1;                   // constant roughness
+auto reflective =  material_data{};      // create a reflective material
+glossy.type = material_type::reflective
+reflective.color = {0.5,0.5,1};          // constant color
+reflective.roughness = 0.1;              // constant roughness
 auto tglass = material_data{};           // create a transparent material
 tglass.type = material_type::transparent;
 tglass.color = {1,1,1};                  // with constant color
