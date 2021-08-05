@@ -103,14 +103,15 @@ struct texture_data {
 // Material type
 enum struct material_type {
   // clang-format off
-  matte, glossy, metallic, transparent, refractive, subsurface, volume, gltfpbr
+  matte, glossy, reflective, transparent, refractive, subsurface, volumetric, 
+  gltfpbr
   // clang-format on
 };
 
 // Enum labels
 inline const auto material_type_names = std::vector<std::string>{"matte",
-    "glossy", "metallic", "transparent", "refractive", "subsurface", "volume",
-    "gltfpbr"};
+    "glossy", "reflective", "transparent", "refractive", "subsurface",
+    "volumetric", "gltfpbr"};
 
 // Material for surfaces, lines and triangles.
 // For surfaces, uses a microfacet model with thin sheet transmission.

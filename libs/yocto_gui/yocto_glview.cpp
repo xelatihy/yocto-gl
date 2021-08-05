@@ -1593,10 +1593,10 @@ void draw_scene(glscene_state& glscene, const scene_data& scene,
         material.type == material_type::transparent ||
         material.type == material_type::refractive ||
         material.type == material_type::subsurface ||
-        material.type == material_type::volume) {
+        material.type == material_type::volumetric) {
       glUniform1f(glGetUniformLocation(program, "specular"), 0);
     }
-    if (material.type == material_type::metallic) {
+    if (material.type == material_type::reflective) {
       glUniform1f(glGetUniformLocation(program, "metallic"), 1);
     }
     glUniform1f(glGetUniformLocation(program, "double_sided"),

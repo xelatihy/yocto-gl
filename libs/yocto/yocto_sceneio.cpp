@@ -1591,10 +1591,22 @@ static void save_binshape(const string& filename, const shape_data& shape) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// Material type
+enum struct material_type40 {
+  // clang-format off
+  matte, glossy, metallic, transparent, refractive, subsurface, volume, gltfpbr
+  // clang-format on
+};
+
+// Enum labels
+static const auto material_type40_names = std::vector<std::string>{"matte",
+    "glossy", "metallic", "transparent", "refractive", "subsurface", "volume",
+    "gltfpbr"};
+
 // Json specializations
 template <>
-struct json_enum_trait<material_type> {
-  static const vector<string>& labels() { return material_type_names; }
+struct json_enum_trait<material_type40> {
+  static const vector<string>& labels() { return material_type40_names; }
 };
 
 // Load a scene in the builtin JSON format.
@@ -1756,7 +1768,9 @@ static void load_json_scene_version40(const string& filename,
         auto& material = scene.materials.emplace_back();
         scene.material_names.emplace_back(key);
         material_map[key] = (int)scene.materials.size() - 1;
-        get_opt(element, "type", material.type);
+        auto type40       = material_type40::matte;
+        get_opt(element, "type", type40);
+        material.type = (material_type)type40;
         get_opt(element, "emission", material.emission);
         get_opt(element, "color", material.color);
         get_opt(element, "metallic", material.metallic);
@@ -1929,6 +1943,12 @@ static void load_json_scene_version40(const string& filename,
   add_missing_radius(scene);
   trim_memory(scene);
 }
+
+// Json specializations
+template <>
+struct json_enum_trait<material_type> {
+  static const vector<string>& labels() { return material_type_names; }
+};
 
 // Load a scene in the builtin JSON format.
 static void load_json_scene(
@@ -2605,7 +2625,7 @@ static void load_obj_scene(
       material.color     = omaterial.transmission;
       material.color_tex = omaterial.transmission_tex;
     } else if (max(omaterial.specular) > 0.2) {
-      material.type      = material_type::metallic;
+      material.type      = material_type::reflective;
       material.color     = omaterial.specular;
       material.color_tex = omaterial.specular_tex;
     } else if (max(omaterial.specular) > 0) {
@@ -3680,7 +3700,7 @@ static void load_pbrt_scene(
   auto material_type_map = unordered_map<pbrt_mtype, material_type>{
       {pbrt_mtype::matte, material_type::matte},
       {pbrt_mtype::plastic, material_type::glossy},
-      {pbrt_mtype::metal, material_type::metallic},
+      {pbrt_mtype::metal, material_type::reflective},
       {pbrt_mtype::glass, material_type::refractive},
       {pbrt_mtype::thinglass, material_type::transparent},
       {pbrt_mtype::subsurface, material_type::matte},
@@ -3812,11 +3832,11 @@ static void save_pbrt_scene(
   auto material_type_map = unordered_map<material_type, pbrt_mtype>{
       {material_type::matte, pbrt_mtype::matte},
       {material_type::glossy, pbrt_mtype::plastic},
-      {material_type::metallic, pbrt_mtype::metal},
+      {material_type::reflective, pbrt_mtype::metal},
       {material_type::refractive, pbrt_mtype::glass},
       {material_type::transparent, pbrt_mtype::thinglass},
       {material_type::subsurface, pbrt_mtype::matte},
-      {material_type::volume, pbrt_mtype::matte},
+      {material_type::volumetric, pbrt_mtype::matte},
   };
 
   // convert materials

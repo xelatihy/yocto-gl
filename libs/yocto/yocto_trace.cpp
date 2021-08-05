@@ -120,7 +120,7 @@ static vec3f eval_bsdfcos(const material_point& material, const vec3f& normal,
   } else if (material.type == material_type::glossy) {
     return eval_glossy(material.color, material.ior, material.roughness, normal,
         outgoing, incoming);
-  } else if (material.type == material_type::metallic) {
+  } else if (material.type == material_type::reflective) {
     return eval_metallic(
         material.color, material.roughness, normal, outgoing, incoming);
   } else if (material.type == material_type::transparent) {
@@ -144,7 +144,7 @@ static vec3f eval_delta(const material_point& material, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
   if (material.roughness != 0) return {0, 0, 0};
 
-  if (material.type == material_type::metallic) {
+  if (material.type == material_type::reflective) {
     return eval_metallic(material.color, normal, outgoing, incoming);
   } else if (material.type == material_type::transparent) {
     return eval_transparent(
@@ -152,7 +152,7 @@ static vec3f eval_delta(const material_point& material, const vec3f& normal,
   } else if (material.type == material_type::refractive) {
     return eval_refractive(
         material.color, material.ior, normal, outgoing, incoming);
-  } else if (material.type == material_type::volume) {
+  } else if (material.type == material_type::volumetric) {
     return eval_passthrough(material.color, normal, outgoing, incoming);
   } else {
     return {0, 0, 0};
@@ -169,7 +169,7 @@ static vec3f sample_bsdfcos(const material_point& material, const vec3f& normal,
   } else if (material.type == material_type::glossy) {
     return sample_glossy(material.color, material.ior, material.roughness,
         normal, outgoing, rnl, rn);
-  } else if (material.type == material_type::metallic) {
+  } else if (material.type == material_type::reflective) {
     return sample_metallic(
         material.color, material.roughness, normal, outgoing, rn);
   } else if (material.type == material_type::transparent) {
@@ -193,7 +193,7 @@ static vec3f sample_delta(const material_point& material, const vec3f& normal,
     const vec3f& outgoing, float rnl) {
   if (material.roughness != 0) return {0, 0, 0};
 
-  if (material.type == material_type::metallic) {
+  if (material.type == material_type::reflective) {
     return sample_metallic(material.color, normal, outgoing);
   } else if (material.type == material_type::transparent) {
     return sample_transparent(
@@ -201,7 +201,7 @@ static vec3f sample_delta(const material_point& material, const vec3f& normal,
   } else if (material.type == material_type::refractive) {
     return sample_refractive(
         material.color, material.ior, normal, outgoing, rnl);
-  } else if (material.type == material_type::volume) {
+  } else if (material.type == material_type::volumetric) {
     return sample_passthrough(material.color, normal, outgoing);
   } else {
     return {0, 0, 0};
@@ -218,7 +218,7 @@ static float sample_bsdfcos_pdf(const material_point& material,
   } else if (material.type == material_type::glossy) {
     return sample_glossy_pdf(material.color, material.ior, material.roughness,
         normal, outgoing, incoming);
-  } else if (material.type == material_type::metallic) {
+  } else if (material.type == material_type::reflective) {
     return sample_metallic_pdf(
         material.color, material.roughness, normal, outgoing, incoming);
   } else if (material.type == material_type::transparent) {
@@ -242,7 +242,7 @@ static float sample_delta_pdf(const material_point& material,
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
   if (material.roughness != 0) return 0;
 
-  if (material.type == material_type::metallic) {
+  if (material.type == material_type::reflective) {
     return sample_metallic_pdf(material.color, normal, outgoing, incoming);
   } else if (material.type == material_type::transparent) {
     return sample_tranparent_pdf(
@@ -250,7 +250,7 @@ static float sample_delta_pdf(const material_point& material,
   } else if (material.type == material_type::refractive) {
     return sample_refractive_pdf(
         material.color, material.ior, normal, outgoing, incoming);
-  } else if (material.type == material_type::volume) {
+  } else if (material.type == material_type::volumetric) {
     return sample_passthrough_pdf(material.color, normal, outgoing, incoming);
   } else {
     return 0;
