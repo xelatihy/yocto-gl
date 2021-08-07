@@ -515,7 +515,7 @@ stl = load_stl(filename);      // alternative load
 save_stl(filename, stl);       // save stl
 ```
 
-## Stl reading and writing
+## Stl reading
 
 You can access Stl data directly from the shapes, without any further complexity.
 
@@ -527,6 +527,8 @@ auto& shape = stl.shapes.front();      // get shape
 auto positions = shape.positions;      // vertex properties
 auto triangles = shape.triangles;      // element data
 ```
+
+## Stl writing
 
 Similarly, you can create an Stl model by acting directly on the data.
 
