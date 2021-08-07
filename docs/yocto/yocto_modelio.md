@@ -62,7 +62,7 @@ whose use is preferred over direct data access.
 
 Use `load_ply(filename, ply)` or `ply = load_ply(filename)` to load Ply files 
 and `save_ply(filename, ply)` to save them.  
-Both loading and saving take a filename, a reference to a Ply model, and throw 
+Both loading and saving take a filename, a reference to a model, and throw 
 an exception `io_error` exception if the file was not loaded successfully.
 Use without exception is supported as described above.
 
@@ -304,7 +304,7 @@ for(auto environment : obj.environments)  // access environments [extension]
 
 Use `load_obj(filename, obj)` or `obj = load_obj(filename)` to load Obj files
 and `save_obj(filename, obj)` to save them.
-Both loading and saving take a filename, a reference to a Ply model, and throw 
+Both loading and saving take a filename, a reference to a model, and throw 
 an exception `io_error` exception if the file was not loaded successfully.
 Use without exception is supported as described above.
 
@@ -490,6 +490,55 @@ add_texcoords(shape, texcoords);
 save_obj(filename, obj);                // save obj
 ```
 
+## Stl models
+
+The Stl file format is a file format used to serialize meshes.
+To use this library is helpful to understand the basic of the Stl
+file format for example from the
+[Stl Wikipedia page](<https://en.wikipedia.org/wiki/STL_(file_format)>).
+
+Yocto/ModelIO represents Stl data with the `stl_model` struct.
+Stl models are defined as collections of shapes, stored in `stl_shape`.
+Shapes are defined by an array of vertex positions, an array of triangle
+indices, and an array of triangle normals.
+
+Use `load_stl(filename, stl)` or `stl = load_stl(filename)` to load Stl files
+and `save_stl(filename, stl)` to save them.
+Both loading and saving take a filename, a reference to a model, and throw 
+an exception `io_error` exception if the file was not loaded successfully.
+Use without exception is supported as described above.
+
+```cpp
+auto stl = stl_model{};        // stl model
+load_stl(filename, stl);       // load stl
+stl = load_stl(filename);      // alternative load
+save_stl(filename, stl);       // save stl
+```
+
+## Stl reading and writing
+
+You can access Stl data directly from the shapes, without any further complexity.
+
+```cpp
+auto stl = stl_model{};                // stl model buffer
+load_obj(filename, stl);               // load stl
+auto& shape = stl.shapes.front();      // get shape
+
+auto positions = shape.positions;      // vertex properties
+auto triangles = shape.triangles;      // element data
+```
+
+Similarly, you can create an Stl model by acting directly on the data.
+
+```cpp
+auto stl = stl_model{};                // stl model buffer
+auto shape = stl_shape{};              // create shape
+shape.positions = vector<vec3f>{...};
+shape.triangles = vector<vec3i>{...};
+stl.shapes.push_back(shape);           // add shape
+load_obj(filename, stl);               // save stl
+```
+
 ## Pbrt models
 
 The Pbrt file format is a scene representation suitable for realistic rendering
@@ -540,7 +589,7 @@ for(auto environment : pbrt.environments)  // access environments [extension]
 
 Use `load_pbrt(filename, pbrt)` or `pbrt = load_pbrt(filename)` to load Pbrt 
 files and `save_pbrt(filename, pbrt)` to save them.  
-Both loading and saving take a filename, a reference to a Ply model, and throw 
+Both loading and saving take a filename, a reference to a model, and throw 
 an exception `io_error` exception if the file was not loaded successfully.
 Use without exception is supported as described above.
 
