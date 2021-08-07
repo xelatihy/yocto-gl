@@ -31,7 +31,7 @@ try {
 }
 ```
 
-IO functions without exceptions are written as .
+IO functions without exceptions are written as
 `load_<type>(filename, data, error, <options>)` and 
 `save_<type>(filename, data, error, <options>)` where `error` is a string 
 that contains a message if an error occurred. These functions return a boolean 

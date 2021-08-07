@@ -4,6 +4,46 @@ Yocto/ModelIO is a collection of utilities for loading and saving scenes
 and meshes in Ply, Obj, Stl and Pbrt formats.
 Yocto/ModelIO is implemented in `yocto_modelio.h` and `yocto_modelio.cpp`.
 
+## Errors handling in IO functions
+
+IO functions in Yocto/ModelIO have a dual interface to support their use with
+and without exceptions. IO functions with exception are written as 
+`load_<type>(filename, data, <options>)` and 
+`save_<type>(filename, data, <options>)` where `<type>` is the data type 
+read or written, and `<options>` is an optional list of IO options. 
+A convenience shortcut is provided for all loading functions that returns the 
+data directly, written as `data = load_<type>(filename, <options>)`.
+Upon errors, an `io_error` is thrown from all IO functions.
+This makes the error-handling code more uniform across the library. 
+`io_error` has fields for `filename` and `message` that can retrieved directly, 
+and a message for users that can be retrieved with the `.what()` method.
+
+```cpp
+auto ply = string{};
+try {
+  load_ply("input_file.ply",  ply);   // load ply
+  ply = load_ply("input_file.ply");   // alternative load
+  save_ply("output_file.ply", ply);   // save ply
+} catch(const io_error& error) {
+  print_info(error.what()); exit(1);    // handle error
+}
+```
+
+IO functions without exceptions are written as
+`load_<type>(filename, data, error, <options>)` and 
+`save_<type>(filename, data, error, <options>)` where `error` is a string 
+that contains a message if an error occurred. These functions return a boolean 
+flag that indicates whether the operation succeeded.  
+
+```cpp
+auto ply = string{};
+auto error = string{};
+if(!load_ply("input_file.ply",  ply))      // load ply
+  print_info(error); exit(1);              // handle error
+if(!save_ply("output_file.ply", ply))      // save ply
+  print_info(error); exit(1);              // handle error
+```
+
 ## Ply models
 
 The Ply file format is a generic file format used to serialize meshes and point
@@ -20,20 +60,17 @@ All elements and properties are owned by the main `ply_model`.
 Yocto/ModelIO provides several functions to read and write Ply data
 whose use is preferred over direct data access.
 
-Use `load_ply(filename, ply, error)` to load Ply files and
-`save_ply(filename, ply, error)` to save them.  
-Both loading and saving take a filename, a reference to a Ply model,
-and returns whether or not the file was loaded successfully.
-In the case of an error, the IO functions set the `error` string with a
-message suitable for displaying to a user.
+Use `load_ply(filename, ply)` or `ply = load_ply(filename)` to load Ply files 
+and `save_ply(filename, ply)` to save them.  
+Both loading and saving take a filename, a reference to a Ply model, and throw 
+an exception `io_error` exception if the file was not loaded successfully.
+Use without exception is supported as described above.
 
 ```cpp
-auto ply = ply_model{};                 // ply model buffer
-auto error = string{};                  // error buffer
-if(!load_ply(filename, ply, error))     // load ply
-  print_error(error);                   // check and print error
-if(!save_ply(filename, ply, error))     // save ply
-  print_error(error);                   // check and print error
+auto ply = ply_model{};      // ply model buffer
+load_ply(filename, ply);     // load ply
+ply = load_ply(filename);    // alternative load
+save_ply(filename, ply;      // save ply
 ```
 
 ## Ply reading
@@ -265,45 +302,38 @@ for(auto environment : obj.environments)  // access environments [extension]
   print_info(environment.emission);       // access environment properties
 ```
 
-Use `load_obj(filename, obj, error)` to load Obj files and
-`save_obj(filename, obj, error)` to save them.
-Both loading and saving take a filename, a reference to an Obj model,
-and return whether or not the file was loaded successfully.
-In the case of an error, the IO functions set the `error` string with a
-message suitable for displaying to a user.
+Use `load_obj(filename, obj)` or `obj = load_obj(filename)` to load Obj files
+and `save_obj(filename, obj)` to save them.
+Both loading and saving take a filename, a reference to a Ply model, and throw 
+an exception `io_error` exception if the file was not loaded successfully.
+Use without exception is supported as described above.
 
 Obj is a face-varying file format, while most applications handle only
 indexed meshes. The loading function takes an optional that specify whether
 to load as face-varying or convert to indexed meshes, which is the default.
 
 ```cpp
-auto obj = obj_model{};                 // obj model
-auto error = string{};                  // error
-if(!load_obj(filename, obj, error))     // load obj as indexed meshes
-  print_error(error);                   // check and print error
-if(!load_obj(filename, obj, error, true)) // load obj as face-varying
-  print_error(error);                   // check and print error
-if(!save_obj(filename, obj, error))     // save obj
-  print_error(error);                   // check and print error
+auto obj = obj_model{};        // obj model
+load_obj(filename, obj);       // load obj as indexed meshes
+obj = load_obj(filename);      // alternative load
+load_obj(filename, obj, true); // load obj as face-varying
+save_obj(filename, obj);       // save obj
 ```
 
 It is common in graphics to use Obj file to store single meshes. Yocto/Obj
 supports this modality by providing specialized loading and saving functions
 that take references to shapes as parameters.
-Use `load_obj(filename, shape, error)` to load Obj shapes and
-`save_obj(filename, shape, error)` to save them. The loading function takes
+Use `load_obj(filename, shape)` or `shape = load_sobj(filename)` to load Obj 
+shapes and `save_obj(filename, shape)` to save them. The loading function takes
 an optional that specify whether to load as face-varying or convert to
 indexed meshes, which is the default.
 
 ```cpp
-auto shape = obj_shape{};                 // obj shape
-auto error = string{};                    // error
-if(!load_obj(filename, shape, error))     // load obj as indexed meshes
-  print_error(error);                     // check and print error
-if(!load_obj(filename, shape, error, true)) // load obj as face-varying
-  print_error(error);                     // check and print error
-if(!save_obj(filename, shape, error))     // save obj
-  print_error(error);                     // check and print error
+auto shape = obj_shape{};        // obj shape
+load_obj(filename, shape)        // load obj as indexed meshes
+shape = load_sobj(filename);     // alternative load
+load_obj(filename, shape, true); // load obj as face-varying
+save_obj(filename, shape);       // save obj
 ```
 
 ## Obj reading
@@ -336,19 +366,18 @@ materials tags.
 
 ```cpp
 auto obj = obj_model{};                // obj model buffer
-auto error = string{};                 // error buffer
-load_obj(filename, obj, error);        // load obj
+load_obj(filename, obj);               // load obj
 auto& shape = obj.shapes.front();      // get shape
 
-auto positions = vector<vec3f>{};       // vertex properties
+auto positions = vector<vec3f>{};      // vertex properties
 get_positions(shape, positions);
 auto normals   = vector<vec3f>{};
 get_normals(shape, normals);
 auto texcoords = vector<vec2f>{};
 get_texcoords(shape, texcoords);
-auto triangles = vector<vec3i>{};       // element data
+auto triangles = vector<vec3i>{};      // element data
 auto quads     = vector<vec4i>{};
-auto materials = vector<int>{};         // per-face material ids
+auto materials = vector<int>{};        // per-face material ids
 if(has_quads(shape)) {
   get_triangles(shape, triangles, materials); // read as triangles
 } else {
@@ -369,8 +398,7 @@ face-varying.
 
 ```cpp
 auto obj = new obj_model{};             // obj model buffer
-auto error = string{};                  // error buffer
-load_obj(filename, obj, error, true);   // load obj as face-varying
+load_obj(filename, obj, true);          // load obj as face-varying
 auto& shape = obj.shapes.front();       // get shape
 
 auto positions = vector<vec3f>{};       // vertex properties
@@ -459,8 +487,7 @@ add_positions(shape, positions);
 add_normals(shape, normals);
 add_texcoords(shape, texcoords);
 
-auto error = string{};                  // error buffer
-save_obj(filename, obj, error);         // save obj
+save_obj(filename, obj);                // save obj
 ```
 
 ## Pbrt models
@@ -511,18 +538,15 @@ for(auto environment : pbrt.environments)  // access environments [extension]
   print_info(environment.emission);        // access environment properties
 ```
 
-Use `load_pbrt(filename, pbrt, error)` to load Pbrt files and
-`save_pbrt(filename, pbrt, error)` to save them.  
-Both loading and saving take a filename, a pointer to a Pbrt model,
-and returns whether or not the file was loaded successfully.
-In the case of an error, the IO functions set the `error` string with a
-message suitable for displaying to a user.
+Use `load_pbrt(filename, pbrt)` or `pbrt = load_pbrt(filename)` to load Pbrt 
+files and `save_pbrt(filename, pbrt)` to save them.  
+Both loading and saving take a filename, a reference to a Ply model, and throw 
+an exception `io_error` exception if the file was not loaded successfully.
+Use without exception is supported as described above.
 
 ```cpp
-auto pbrt = new pbrt_scene{};           // obj model buffer
-auto error = string{};                  // error buffer
-if(!load_pbrt(filename, pbrt, error))   // load obj
-  print_error(error);                   // check and print error
-if(!save_pbrt(filename, pbrt, error))   // save obj
-  print_error(error);                   // check and print error
+auto pbrt = pbrt_scene{};    // pbrt model buffer
+load_pbrt(filename, pbrt);   // load pbrt
+pbrt = load_pbrt(filename);  // alternative load
+save_pbrt(filename, pbrt);   // save pbrt
 ```
