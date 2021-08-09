@@ -180,11 +180,13 @@ auto value = json.get_or("key", 5);   // get value or default
 json.try_get("key", value);           // get value if present
 ```
 
-## Json IO
+## Json serialization
 
 Use `load_json(filename, json)` or `json = load_json(filename)` to load json 
 data from a file, and `save_json(filename, json)` to save json data to a file. 
-Use without exception is supported as described above.
+Upon errors, an `io_error` is thrown from all IO functions.
+See [Yocto/CommonIO](yocto_commonio.md) for discussion on error handling 
+and use without exceptions.
 
 ```cpp
 auto json = json_value{};
