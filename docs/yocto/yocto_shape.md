@@ -500,7 +500,12 @@ Yocto/Shape defines functions to subdivide shape elements linearly, in
 order to obtain higher shape resolution, for example before applying
 displacement mapping. All functions will split all shape elements,
 regardless of their size. This ensures that meshes have no cracks.
-Use `subdivide_lines(lines, vert, level)` for lines,
+Use `subdivide_lines(lines, vert)` for lines,
+`subdivide_triangles(triangles, vert)` for triangles,
+`subdivide_quads(quads, vert)` for quads, and
+`subdivide_bezier(beziers, vert)` for Bezier segments.
+Alternatively, shape elemens can be subdivideede multiple times, 
+as a convenience, with `subdivide_lines(lines, vert, level)` for lines,
 `subdivide_triangles(triangles, vert, level)` for triangles,
 `subdivide_quads(quads, vert, level)` for quads, and
 `subdivide_bezier(beziers, vert, level)` for Bezier segments.
