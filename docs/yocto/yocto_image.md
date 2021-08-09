@@ -48,7 +48,9 @@ auto ch0 = eval_image(ldr, {0.5,0.5});  // samples in sRGB, returns as sRGB
 auto ch1 = eval_image(ldr, {0.5,0.5}, true);  // treats sRGB values as linear
 ```
 
-Image loading and saving is defined in [Yocto/SceneIO](yocto_sceneio.md).
+## Image serialization
+
+Image loading and saving is defined in [Yocto/ImageIO](yocto_imageio.md).
 
 ## Image utilities
 
