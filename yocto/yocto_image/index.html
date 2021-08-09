@@ -363,6 +363,13 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#image-serialization" class="md-nav__link">
+    Image serialization
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#image-utilities" class="md-nav__link">
     Image utilities
   </a>
@@ -459,8 +466,53 @@
   
   
     <li class="md-nav__item">
-      <a href="../yocto_modelio/" class="md-nav__link">
-        Model serialization
+      <a href="../yocto_trace/" class="md-nav__link">
+        Path tracing
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../yocto_cli/" class="md-nav__link">
+        Command-line utilities
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../yocto_imageio/" class="md-nav__link">
+        Image serialization
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../yocto_shapeio/" class="md-nav__link">
+        Shape serialization
       </a>
     </li>
   
@@ -489,8 +541,8 @@
   
   
     <li class="md-nav__item">
-      <a href="../yocto_trace/" class="md-nav__link">
-        Path tracing
+      <a href="../yocto_commonio/" class="md-nav__link">
+        Json and serialization utilities
       </a>
     </li>
   
@@ -504,8 +556,8 @@
   
   
     <li class="md-nav__item">
-      <a href="../yocto_cli/" class="md-nav__link">
-        Command-line utilities
+      <a href="../yocto_modelio/" class="md-nav__link">
+        Model serialization
       </a>
     </li>
   
@@ -558,6 +610,13 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#image-serialization" class="md-nav__link">
+    Image serialization
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#image-utilities" class="md-nav__link">
     Image utilities
   </a>
@@ -598,7 +657,7 @@ utilities and tone mapping, and image resizing.
 Yocto/Image is implemented in <code>yocto_image.h</code> and <code>yocto_image.cpp</code>, and
 depends on <code>stb_image_resize.h</code>.</p>
 <h2 id="image-representation">Image representation</h2>
-<p>Images are represented as a simple struct called <code>color_image</code>, that stores
+<p>Images are represented as a simple struct called <code>image_data</code>, that stores
 the image width and height, a boolean flat that indicates whether the colors
 are in linear ot sRGB color space, and an array of pixels of <code>vec4f</code> type.</p>
 <p>While images can be constructed by direct manipulation of their values,
@@ -630,7 +689,8 @@ as overrides.</p>
 <span class="k">auto</span> <span class="n">ch0</span> <span class="o">=</span> <span class="n">eval_image</span><span class="p">(</span><span class="n">ldr</span><span class="p">,</span> <span class="p">{</span><span class="mf">0.5</span><span class="p">,</span><span class="mf">0.5</span><span class="p">});</span>  <span class="c1">// samples in sRGB, returns as sRGB</span>
 <span class="k">auto</span> <span class="n">ch1</span> <span class="o">=</span> <span class="n">eval_image</span><span class="p">(</span><span class="n">ldr</span><span class="p">,</span> <span class="p">{</span><span class="mf">0.5</span><span class="p">,</span><span class="mf">0.5</span><span class="p">},</span> <span class="nb">true</span><span class="p">);</span>  <span class="c1">// treats sRGB values as linear</span>
 </code></pre></div>
-<p>Image loading and saving is defined in <a href="../yocto_sceneio/">Yocto/SceneIO</a>.</p>
+<h2 id="image-serialization">Image serialization</h2>
+<p>Image loading and saving is defined in <a href="../yocto_imageio/">Yocto/ImageIO</a>.</p>
 <h2 id="image-utilities">Image utilities</h2>
 <p>Images can be converted between linear RGB and sRGB color space using
 <code>convert_image(image,linear)</code>.</p>
@@ -741,7 +801,7 @@ images stored in a linear color spaces.</p>
 <h2 id="low-level-operations">Low-level operations</h2>
 <p>Yocto/Image supports versions of the most of the above functions that work
 directly on pixel arrays, rather than the image structure. This low-level
-interface may be helpful when building applications that mhave their own
+interface may be helpful when building applications that have their own
 image data structure.</p>
 <p>In this interface we support arrays of <code>vec4f</code> pixels together with arrays of
 <code>vec4b</code> pixels for 8bit images, the latter with a much smaller number of

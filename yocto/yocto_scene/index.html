@@ -457,22 +457,8 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#face-varying-shapes" class="md-nav__link">
-    Face-Varying shapes
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#example-scenes" class="md-nav__link">
     Example scenes
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#procedural-shapes" class="md-nav__link">
-    Procedural shapes
   </a>
   
 </li>
@@ -508,8 +494,53 @@
   
   
     <li class="md-nav__item">
-      <a href="../yocto_modelio/" class="md-nav__link">
-        Model serialization
+      <a href="../yocto_trace/" class="md-nav__link">
+        Path tracing
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../yocto_cli/" class="md-nav__link">
+        Command-line utilities
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../yocto_imageio/" class="md-nav__link">
+        Image serialization
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../yocto_shapeio/" class="md-nav__link">
+        Shape serialization
       </a>
     </li>
   
@@ -538,8 +569,8 @@
   
   
     <li class="md-nav__item">
-      <a href="../yocto_trace/" class="md-nav__link">
-        Path tracing
+      <a href="../yocto_commonio/" class="md-nav__link">
+        Json and serialization utilities
       </a>
     </li>
   
@@ -553,8 +584,8 @@
   
   
     <li class="md-nav__item">
-      <a href="../yocto_cli/" class="md-nav__link">
-        Command-line utilities
+      <a href="../yocto_modelio/" class="md-nav__link">
+        Model serialization
       </a>
     </li>
   
@@ -656,22 +687,8 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#face-varying-shapes" class="md-nav__link">
-    Face-Varying shapes
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#example-scenes" class="md-nav__link">
     Example scenes
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#procedural-shapes" class="md-nav__link">
-    Procedural shapes
   </a>
   
 </li>
@@ -694,7 +711,7 @@
 used in the Yocto/GL path tracer and for scene IO.
 Yocto/Scene is implemented in <code>yocto_scene.h</code> and <code>yocto_scene.cpp</code>.</p>
 <h2 id="scene-representation">Scene representation</h2>
-<p>Scenes are stored in <code>scene_model</code> structs and are comprised of arrays of
+<p>Scenes are stored in <code>scene_data</code> structs and are comprised of arrays of
 cameras, instances, shapes, materials, textures and environments.
 The various objects are stored as values in arrays named like the object type.
 Animation is not currently supported.
@@ -718,12 +735,12 @@ Also, all scene objects are values, so you can work freely with them without
 concerning yourself with memory management. The mantra we followed here is
 that "if you know how to use <code>std::vector</code>, you know how to use scenes".</p>
 <p>Here is an sketch of how to create a shape instance in a scene.</p>
-<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">scene</span> <span class="o">=</span> <span class="n">scene_model</span><span class="p">{};</span>         <span class="c1">// create a scene</span>
-<span class="k">auto</span> <span class="n">shape</span> <span class="o">=</span> <span class="n">scene_shape</span><span class="p">{};</span>         <span class="c1">// create a shape and add it</span>
+<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">scene</span> <span class="o">=</span> <span class="n">scene_data</span><span class="p">{};</span>          <span class="c1">// create a scene</span>
+<span class="k">auto</span> <span class="n">shape</span> <span class="o">=</span> <span class="n">shape_data</span><span class="p">{};</span>          <span class="c1">// create a shape and add it</span>
 <span class="n">set_shape_properties</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="p">...);</span>
 <span class="n">scene</span><span class="p">.</span><span class="n">shapes</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">shape</span><span class="p">);</span>
 <span class="n">scene</span><span class="p">.</span><span class="n">materials</span><span class="p">.</span><span class="n">push_back</span><span class="p">({});</span>      <span class="c1">// create a black material directly</span>
-<span class="k">auto</span> <span class="n">instance</span> <span class="o">=</span> <span class="n">scene_instance</span><span class="p">{};</span>   <span class="c1">// create an instance of last added shape</span>
+<span class="k">auto</span> <span class="n">instance</span> <span class="o">=</span> <span class="n">instance_data</span><span class="p">{};</span>    <span class="c1">// create an instance of last added shape</span>
 <span class="n">instance</span><span class="p">.</span><span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="kt">int</span><span class="p">)</span><span class="n">scene</span><span class="p">.</span><span class="n">shapes</span><span class="p">.</span><span class="n">size</span><span class="p">()</span><span class="mi">-1</span><span class="p">;</span>
 <span class="n">instance</span><span class="p">.</span><span class="n">material</span> <span class="o">=</span> <span class="p">(</span><span class="kt">int</span><span class="p">)</span><span class="n">scene</span><span class="p">.</span><span class="n">materials</span><span class="p">.</span><span class="n">size</span><span class="p">()</span><span class="mi">-1</span><span class="p">;</span>
 </code></pre></div>
@@ -739,7 +756,7 @@ Use <code>compute_bounds(scene)</code> to compute the scene bounding boxes,<br /
 <span class="k">for</span><span class="p">(</span><span class="k">auto</span> <span class="nl">error</span> <span class="p">:</span> <span class="n">errors</span><span class="p">)</span> <span class="n">print_error</span><span class="p">(</span><span class="n">error</span><span class="p">);</span><span class="c1">// print error</span>
 </code></pre></div>
 <h2 id="cameras">Cameras</h2>
-<p>Cameras, represented by <code>scene_camera</code>, are based on a simple lens model.
+<p>Cameras, represented by <code>camera_data</code>, are based on a simple lens model.
 Cameras coordinate systems are defined by their frame.
 Cameras projections are described in photographic terms. In particular,
 we specify film size (35mm by default), film aspect ration,
@@ -756,7 +773,7 @@ To compute good apertures, one can use the F-stop number from photography
 and set the aperture to focal length over f-stop.</p>
 <p>To create cameras, you should set the camera frame, the camera view,
 via lens, aspect and film, and optionally the camera aperture and focus.</p>
-<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">camera</span> <span class="o">=</span> <span class="n">scene_camera</span><span class="p">{};</span>    <span class="c1">// create a camera</span>
+<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">camera</span> <span class="o">=</span> <span class="n">camera_data</span><span class="p">{};</span>     <span class="c1">// create a camera</span>
 <span class="n">camera</span><span class="p">.</span><span class="n">frame</span> <span class="o">=</span> <span class="n">identity3x4f</span><span class="p">;</span>     <span class="c1">// set frame to identity</span>
 <span class="n">camera</span><span class="p">.</span><span class="n">lens</span> <span class="o">=</span> <span class="mf">0.050</span><span class="p">;</span>             <span class="c1">// set as 50mm lens</span>
 <span class="n">camera</span><span class="p">.</span><span class="n">aspect</span> <span class="o">=</span> <span class="mf">1.5</span><span class="p">;</span>             <span class="c1">// set 3:2 aspect ratio</span>
@@ -768,17 +785,17 @@ via lens, aspect and film, and optionally the camera aperture and focus.</p>
 is the name is not given. Use <code>eval_camera(camera, image_uv, lens_uv)</code>
 to get a camera ray from the normalized image coordinates <code>image_uv</code> and
 lens coordinates <code>lens_uv</code>.</p>
-<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">scene</span> <span class="o">=</span> <span class="n">scene_model</span><span class="p">{...};</span>                 <span class="c1">// create a complete scene</span>
+<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">scene</span> <span class="o">=</span> <span class="n">scene_data</span><span class="p">{...};</span>                  <span class="c1">// create a complete scene</span>
 <span class="k">auto</span><span class="o">&amp;</span> <span class="n">camera</span> <span class="o">=</span> <span class="n">get_camera</span><span class="p">(</span><span class="n">scene</span><span class="p">);</span>              <span class="c1">// get default camera</span>
 <span class="k">auto</span> <span class="n">ray</span> <span class="o">=</span> <span class="n">eval_camera</span><span class="p">(</span><span class="n">camera</span><span class="p">,{</span><span class="mf">0.5</span><span class="p">,</span><span class="mf">0.5</span><span class="p">},{</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">});</span><span class="c1">// get ray though image center</span>
 </code></pre></div>
 <h2 id="instances">Instances</h2>
-<p>Instances, represented as <code>scene_instance</code>, place shapes in the scene by
+<p>Instances, represented as <code>instance_data</code>, place shapes in the scene by
 defining their coordinate frame, a shape index and a material index.
 Through the use of instancing, Yocto/Scene scales well to large environments
 without introducing more complex mechanisms.</p>
 <p>For instances, you should set the instance frame, shape and material.</p>
-<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">instance</span> <span class="o">=</span> <span class="n">scene_instance</span><span class="p">{};</span>    <span class="c1">// create an instance</span>
+<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">instance</span> <span class="o">=</span> <span class="n">instance_data</span><span class="p">{};</span>     <span class="c1">// create an instance</span>
 <span class="n">instance</span><span class="p">.</span><span class="n">frame</span> <span class="o">=</span> <span class="n">identity3x4f</span><span class="p">;</span>       <span class="c1">// set frame to identity</span>
 <span class="n">instance</span><span class="p">.</span><span class="n">shape</span> <span class="o">=</span> <span class="n">shape_index</span><span class="p">;</span>        <span class="c1">// set shape index</span>
 <span class="n">instance</span><span class="p">.</span><span class="n">material</span> <span class="o">=</span> <span class="n">material_index</span><span class="p">;</span>  <span class="c1">// set material index</span>
@@ -804,13 +821,13 @@ properties of instance points.</p>
 <span class="k">auto</span> <span class="n">mat</span>  <span class="o">=</span> <span class="n">eval_material</span><span class="p">(</span><span class="n">instance</span><span class="p">,</span> <span class="n">eid</span><span class="p">,</span> <span class="n">euv</span><span class="p">);</span> <span class="c1">// eval point material</span>
 </code></pre></div>
 <h2 id="environments">Environments</h2>
-<p>Environments, represented as <code>scene_environment</code>, store the background
+<p>Environments, represented as <code>environment_data</code>, store the background
 illumination as a scene. Environments have a frame, to rotate illumination,
 an emission term and an optional emission texture.
 The emission texture is an HDR environment map stored in a LatLon
 parametrization.</p>
 <p>For environments, set the frame, emission and optionally the emission texture.</p>
-<div class="highlight"><pre><span></span><code><span class="k">auto</span><span class="o">&amp;</span> <span class="n">environment</span> <span class="o">=</span> <span class="n">scene_environment</span><span class="p">{};</span>  <span class="c1">// create an environment</span>
+<div class="highlight"><pre><span></span><code><span class="k">auto</span><span class="o">&amp;</span> <span class="n">environment</span> <span class="o">=</span> <span class="n">environment_data</span><span class="p">{};</span>  <span class="c1">// create an environment</span>
 <span class="n">environment</span><span class="p">.</span><span class="n">frame</span> <span class="o">=</span> <span class="n">identity3x4f</span><span class="p">;</span>         <span class="c1">// set identity transform</span>
 <span class="n">environment</span><span class="p">.</span><span class="n">emission</span> <span class="o">=</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">};</span>           <span class="c1">// set emission scale</span>
 <span class="n">environment</span><span class="p">.</span><span class="n">emission_tex</span> <span class="o">=</span> <span class="n">texture_index</span><span class="p">;</span> <span class="c1">// add emission texture</span>
@@ -825,20 +842,21 @@ environment maps.</p>
 <span class="k">auto</span> <span class="n">envi</span> <span class="o">=</span> <span class="n">eval_environment</span><span class="p">(</span><span class="n">environment</span><span class="p">,</span> <span class="n">dir</span><span class="p">);</span>  <span class="c1">// eval environment</span>
 </code></pre></div>
 <h2 id="shapes">Shapes</h2>
-<p>Shapes, represented by <code>scene_shape</code>, are indexed meshes of elements.
-Shapes can contain only one type of element, either
+<p>Shapes, represented by <code>shape_data</code>, are indexed meshes of elements.
+Shapes are defined in <a href="../yocto_shape/">Yocto/Shape</a>, and briefly described 
+here for convenience. Shapes can contain only one type of element, either
 points, lines, triangles or quads. Shape elements are parametrized as in
 <a href="../yocto_geometry/">Yocto/Geometry</a>.
 Vertex properties are defined as separate arrays and include
 positions, normals, texture coords, colors, radius and tangent spaces.
-Additionally, Yocto/Scene supports face-varying primitives, as <code>scene_fvshape</code>,
+Additionally, Yocto/Scene supports face-varying primitives, as <code>fvshape_data</code>,
 where each vertex data has its own topology.</p>
 <p>Shapes also work as a standalone mesh representation throughout the
 library and can be used even without a scene.</p>
 <p>For shapes, you should set the shape elements, i.e. point, limes, triangles
 or quads, and the vertex properties, i.e. positions, normals, texture
 coordinates, colors and radia. Shapes support only one element type.</p>
-<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">shape</span> <span class="o">=</span> <span class="n">scene_shape</span><span class="p">{};</span>            <span class="c1">// create a shape</span>
+<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">shape</span> <span class="o">=</span> <span class="n">shape_data</span><span class="p">{};</span>             <span class="c1">// create a shape</span>
 <span class="n">shape</span><span class="p">.</span><span class="n">triangles</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;</span><span class="p">{...};</span>  <span class="c1">// set triangle indices</span>
 <span class="n">shape</span><span class="p">.</span><span class="n">positions</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">{...};</span>  <span class="c1">// set positions</span>
 <span class="n">shape</span><span class="p">.</span><span class="n">normals</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">{...};</span>    <span class="c1">// set normals</span>
@@ -872,14 +890,14 @@ are rectangular.</p>
 <code>compute_normals(shape)</code> and converting to and from face-varying representations
 with <code>shape_to_fvshape(shape)</code> and <code>fvshape_to_shape(fvshape)</code>.</p>
 <h2 id="materials">Materials</h2>
-<p>Materials, represented as <code>scene_material</code>, are defined by a material type
+<p>Materials, represented as <code>material_data</code>, are defined by a material type
 and a few parameters, common to all materials. In particular, we support the
 following materials:</p>
 <ul>
 <li><code>matte</code>, for materials like concrete or stucco, implemented as a lambertian bsdf;</li>
 <li><code>glossy</code>, for materials like plastic or painted wood, implemented as the sum
   of a lambertian and a microfacet dielectric lobe;</li>
-<li><code>metallic</code>, for materials like metals, implemented as either a delta or
+<li><code>reflective</code>, for materials like metals, implemented as either a delta or
   microfacet brdf lobe;</li>
 <li><code>transparent</code>, for materials for thin glass, implemented as a delta or
   microfacet transmission bsdf;</li>
@@ -887,7 +905,7 @@ following materials:</p>
   microfacet refraction bsdf; also support homogenous volume scattering;</li>
 <li><code>subsurface</code>, for materials for skin, implemented as a microfacet refraction
   bsdf with homogenous volume scattering - for no this is like <code>refractive</code>;</li>
-<li><code>volume</code>, for materials like homogeneous smoke or fog, implemented as the lack
+<li><code>volumetric</code>, for materials like homogeneous smoke or fog, implemented as the lack
   of a surface interface but with volumetric scattering.</li>
 <li><code>gltfpbr</code>, for materials that range from glossy to metallic, implemented as
   the sum of a lambertian and a microfacet dielectric lobe;
@@ -900,7 +918,7 @@ that represent the surface albedo, the surface roughness <code>roughness</code> 
 the index of refraction <code>ior</code>. The physical meaning of each parameter depends
 on the material type. By default surfaces are fully opaque, but
 can defined a <code>opacity</code> parameter and texture to define the surface coverage.</p>
-<p>Materials like <code>refractive</code>, <code>subsurface</code> and <code>volume</code> may also specify
+<p>Materials like <code>refractive</code>, <code>subsurface</code> and <code>volumetric</code> may also specify
 volumetric properties. In these cases, the <code>color</code> parameter controls the volume density,
 while the <code>scattering</code> also define volumetric scattering properties by setting a
 <code>transmission</code> parameter controls the homogenous volume scattering.</p>
@@ -908,33 +926,33 @@ while the <code>scattering</code> also define volumetric scattering properties b
 <p>For materials, we need to specify the material type and color at the minimum.
 We can further control the appearance by changing surface roughness, index of
 refraction and volumetric properties, when appropriate. Here are some examples.</p>
-<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">matte</span> <span class="o">=</span> <span class="n">scene_material</span><span class="p">{};</span>           <span class="c1">// create a matte material</span>
-<span class="n">matte</span><span class="p">.</span><span class="n">type</span> <span class="o">=</span> <span class="n">scene_material_type</span><span class="o">::</span><span class="n">matte</span><span class="p">;</span>
+<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">matte</span> <span class="o">=</span> <span class="n">material_data</span><span class="p">{};</span>            <span class="c1">// create a matte material</span>
+<span class="n">matte</span><span class="p">.</span><span class="n">type</span> <span class="o">=</span> <span class="n">material_type</span><span class="o">::</span><span class="n">matte</span><span class="p">;</span>
 <span class="n">matte</span><span class="p">.</span><span class="n">color</span> <span class="o">=</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="mf">0.5</span><span class="p">,</span><span class="mf">0.5</span><span class="p">};</span>               <span class="c1">// with base color and</span>
 <span class="n">matte</span><span class="p">.</span><span class="n">color_tex</span> <span class="o">=</span> <span class="n">texture_id</span><span class="p">;</span>            <span class="c1">// textured albedo</span>
-<span class="k">auto</span> <span class="n">glossy</span> <span class="o">=</span>  <span class="n">scene_material</span><span class="p">{};</span>         <span class="c1">// create a glossy material</span>
-<span class="n">glossy</span><span class="p">.</span><span class="n">type</span> <span class="o">=</span> <span class="n">scene_material_type</span><span class="o">::</span><span class="n">glossy</span><span class="p">;</span>
+<span class="k">auto</span> <span class="n">glossy</span> <span class="o">=</span>  <span class="n">material_data</span><span class="p">{};</span>          <span class="c1">// create a glossy material</span>
+<span class="n">glossy</span><span class="p">.</span><span class="n">type</span> <span class="o">=</span> <span class="n">material_type</span><span class="o">::</span><span class="n">glossy</span><span class="p">;</span>
 <span class="n">glossy</span><span class="p">.</span><span class="n">color</span> <span class="o">=</span> <span class="p">{</span><span class="mf">0.5</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mf">0.5</span><span class="p">};</span>              <span class="c1">// with constant color</span>
 <span class="n">glossyv</span><span class="p">.</span><span class="n">roughness</span> <span class="o">=</span> <span class="mf">0.1</span><span class="p">;</span>                 <span class="c1">// base roughness and a</span>
 <span class="n">glossy</span><span class="p">.</span><span class="n">roughness_tex</span> <span class="o">=</span> <span class="n">texture_id</span><span class="p">;</span>       <span class="c1">// roughness texture</span>
-<span class="k">auto</span> <span class="n">metallic</span> <span class="o">=</span>  <span class="n">scene_material</span><span class="p">{};</span>       <span class="c1">// create a metallic material</span>
-<span class="n">glossy</span><span class="p">.</span><span class="n">type</span> <span class="o">=</span> <span class="n">scene_material_type</span><span class="o">::</span><span class="n">metallic</span>
-<span class="n">metal</span><span class="p">.</span><span class="n">color</span> <span class="o">=</span> <span class="p">{</span><span class="mf">0.5</span><span class="p">,</span><span class="mf">0.5</span><span class="p">,</span><span class="mi">1</span><span class="p">};</span>               <span class="c1">// constant color</span>
-<span class="n">metal</span><span class="p">.</span><span class="n">roughness</span> <span class="o">=</span> <span class="mf">0.1</span><span class="p">;</span>                   <span class="c1">// constant roughness</span>
-<span class="k">auto</span> <span class="n">tglass</span> <span class="o">=</span> <span class="n">scene_material</span><span class="p">{};</span>          <span class="c1">// create a transparent material</span>
-<span class="n">tglass</span><span class="p">.</span><span class="n">type</span> <span class="o">=</span> <span class="n">scene_material_type</span><span class="o">::</span><span class="n">transparent</span><span class="p">;</span>
+<span class="k">auto</span> <span class="n">reflective</span> <span class="o">=</span>  <span class="n">material_data</span><span class="p">{};</span>      <span class="c1">// create a reflective material</span>
+<span class="n">glossy</span><span class="p">.</span><span class="n">type</span> <span class="o">=</span> <span class="n">material_type</span><span class="o">::</span><span class="n">reflective</span>
+<span class="n">reflective</span><span class="p">.</span><span class="n">color</span> <span class="o">=</span> <span class="p">{</span><span class="mf">0.5</span><span class="p">,</span><span class="mf">0.5</span><span class="p">,</span><span class="mi">1</span><span class="p">};</span>          <span class="c1">// constant color</span>
+<span class="n">reflective</span><span class="p">.</span><span class="n">roughness</span> <span class="o">=</span> <span class="mf">0.1</span><span class="p">;</span>              <span class="c1">// constant roughness</span>
+<span class="k">auto</span> <span class="n">tglass</span> <span class="o">=</span> <span class="n">material_data</span><span class="p">{};</span>           <span class="c1">// create a transparent material</span>
+<span class="n">tglass</span><span class="p">.</span><span class="n">type</span> <span class="o">=</span> <span class="n">material_type</span><span class="o">::</span><span class="n">transparent</span><span class="p">;</span>
 <span class="n">tglass</span><span class="p">.</span><span class="n">color</span> <span class="o">=</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">};</span>                  <span class="c1">// with constant color</span>
-<span class="k">auto</span> <span class="n">glass</span> <span class="o">=</span> <span class="n">scene_material</span><span class="p">{};</span>           <span class="c1">// create a refractive material</span>
-<span class="n">glass</span><span class="p">.</span><span class="n">type</span> <span class="o">=</span> <span class="n">scene_material_type</span><span class="o">::</span><span class="n">transparent</span><span class="p">;</span>
+<span class="k">auto</span> <span class="n">glass</span> <span class="o">=</span> <span class="n">material_data</span><span class="p">{};</span>            <span class="c1">// create a refractive material</span>
+<span class="n">glass</span><span class="p">.</span><span class="n">type</span> <span class="o">=</span> <span class="n">material_type</span><span class="o">::</span><span class="n">transparent</span><span class="p">;</span>
 <span class="n">glass</span><span class="p">.</span><span class="n">color</span> <span class="o">=</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="mf">0.9</span><span class="p">,</span><span class="mf">0.9</span><span class="p">};</span>               <span class="c1">// constant color</span>
-<span class="k">auto</span> <span class="n">subsurf</span> <span class="o">=</span> <span class="n">scene_material</span><span class="p">{};</span>         <span class="c1">// create a refractive material</span>
-<span class="n">subsurf</span><span class="p">.</span><span class="n">type</span> <span class="o">=</span> <span class="n">scene_material_type</span><span class="o">::</span><span class="n">subsurface</span><span class="p">;</span>
+<span class="k">auto</span> <span class="n">subsurf</span> <span class="o">=</span> <span class="n">material_data</span><span class="p">{};</span>          <span class="c1">// create a refractive material</span>
+<span class="n">subsurf</span><span class="p">.</span><span class="n">type</span> <span class="o">=</span> <span class="n">material_type</span><span class="o">::</span><span class="n">subsurface</span><span class="p">;</span>
 <span class="n">subsurf</span><span class="p">.</span><span class="n">color</span> <span class="o">=</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">};</span>                 <span class="c1">// that transmits all light</span>
 <span class="n">subsurf</span><span class="p">.</span><span class="n">scattering</span> <span class="o">=</span> <span class="p">{</span><span class="mf">0.5</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mf">0.5</span><span class="p">};</span>        <span class="c1">// and has volumetric scattering</span>
 </code></pre></div>
 <p>Lights are not explicit in Yocto/Scene but are specified by assigning emissive
 materials.</p>
-<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">light</span> <span class="o">=</span> <span class="n">scene_material</span><span class="p">{};</span>   <span class="c1">// create a material</span>
+<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">light</span> <span class="o">=</span> <span class="n">material_data</span><span class="p">{};</span>    <span class="c1">// create a material</span>
 <span class="n">light</span><span class="p">.</span><span class="n">color</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">};</span>           <span class="c1">// that does not reflect light</span>
 <span class="n">light</span><span class="p">.</span><span class="n">emission</span> <span class="o">=</span> <span class="p">{</span><span class="mi">10</span><span class="p">,</span><span class="mi">10</span><span class="p">,</span><span class="mi">10</span><span class="p">};</span>     <span class="c1">// but emits it instead</span>
 </code></pre></div>
@@ -945,17 +963,17 @@ textures defined.</p>
 <div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">mat</span> <span class="o">=</span> <span class="n">eval_material</span><span class="p">(</span><span class="n">scene</span><span class="p">,</span><span class="n">material</span><span class="p">,{</span><span class="mf">0.5</span><span class="p">,</span><span class="mf">0.5</span><span class="p">})</span> <span class="c1">// eval material</span>
 </code></pre></div>
 <h2 id="textures">Textures</h2>
-<p>Textures, represented as <code>scene_texture</code>, contains either 8-bit LDR or
+<p>Textures, represented as <code>texture_data</code>, contains either 8-bit LDR or
 32-bit float HDR images with four channels. Textures can be encoded in either
 a linear color space or as sRGBs, depending on an internal flag. The use of
 float versus byte is just a memory saving feature.</p>
 <p>For textures, set the size, the color space, and <em>either</em> the hdr or ldr pixels.</p>
-<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">hdr_texture</span> <span class="o">=</span> <span class="n">scene_texture</span><span class="p">{};</span>  <span class="c1">// create a texture</span>
+<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">hdr_texture</span> <span class="o">=</span> <span class="n">texture_data</span><span class="p">{};</span>   <span class="c1">// create a texture</span>
 <span class="n">hdr_texture</span><span class="p">.</span><span class="n">width</span> <span class="o">=</span> <span class="mi">512</span><span class="p">;</span>             <span class="c1">// set size</span>
 <span class="n">hdr_texture</span><span class="p">.</span><span class="n">height</span> <span class="o">=</span> <span class="mi">512</span><span class="p">;</span>
 <span class="n">hdr_texture</span><span class="p">.</span><span class="n">linear</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>           <span class="c1">// set color space and pixels for an HDR</span>
 <span class="n">hdr_texture</span><span class="p">.</span><span class="n">pixelsf</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4f</span><span class="o">&gt;</span><span class="p">{...};</span>
-<span class="k">auto</span> <span class="n">ldr_texture</span> <span class="o">=</span> <span class="n">scene_texture</span><span class="p">{};</span>  <span class="c1">// create a texture</span>
+<span class="k">auto</span> <span class="n">ldr_texture</span> <span class="o">=</span> <span class="n">texture_data</span><span class="p">{};</span>   <span class="c1">// create a texture</span>
 <span class="n">ldr_texture</span><span class="p">.</span><span class="n">width</span> <span class="o">=</span> <span class="mi">512</span><span class="p">;</span>             <span class="c1">// set size</span>
 <span class="n">ldr_texture</span><span class="p">.</span><span class="n">height</span> <span class="o">=</span> <span class="mi">512</span><span class="p">;</span>
 <span class="n">ldr_texture</span><span class="p">.</span><span class="n">linear</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>          <span class="c1">// set color space and pixels for an LDR</span>
@@ -967,7 +985,7 @@ the texture representation.</p>
 <div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">col</span> <span class="o">=</span> <span class="n">eval_texture</span><span class="p">(</span><span class="n">texture</span><span class="p">,{</span><span class="mf">0.5</span><span class="p">,</span><span class="mf">0.5</span><span class="p">});</span>   <span class="c1">// eval texture</span>
 </code></pre></div>
 <h2 id="subdivs">Subdivs</h2>
-<p>Subdivs, represented as <code>scene_subdiv</code>, support tesselation and displacement
+<p>Subdivs, represented as <code>subdiv_data</code>, support tesselation and displacement
 mapping. Subdivs are represented as facee-varying shapes.
 Subdivs specify a level of subdivision and can be subdivide elements
 either linearly or using Catmull-Clark subdivision. Subdivs also support
@@ -996,126 +1014,10 @@ indexed shapes using <code>tesselate_subdiv(subdiv, shape)</code> for a specific
 or <code>tesselate_subdivs(scene)</code> for the whole scene.</p>
 <div class="highlight"><pre><span></span><code><span class="n">tesselate_subdivs</span><span class="p">(</span><span class="n">scene</span><span class="p">);</span>     <span class="c1">// tesselate all subdivs in the scene</span>
 </code></pre></div>
-<h2 id="face-varying-shapes">Face-Varying shapes</h2>
-<p>We also support standalone face-varying shapes, that are not stored in the scene
-(see subdivs above). In this case, set the quads for positions,
-normals and texture coordinates.</p>
-<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">shape</span> <span class="o">=</span> <span class="n">scene_fvshape</span><span class="p">{};</span>               <span class="c1">// create a shape</span>
-<span class="n">shape</span><span class="p">.</span><span class="n">quadspos</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span><span class="p">{...};</span>        <span class="c1">// set face-varying indices</span>
-<span class="n">shape</span><span class="p">.</span><span class="n">quadstexcoord</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span><span class="p">{...};</span>   <span class="c1">// for positions and textures</span>
-<span class="n">shape</span><span class="p">.</span><span class="n">positions</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">{...};</span>       <span class="c1">// set positions</span>
-<span class="n">shape</span><span class="p">.</span><span class="n">texcoords</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;</span><span class="p">{...};</span>       <span class="c1">// set texture coordinates</span>
-</code></pre></div>
 <h2 id="example-scenes">Example scenes</h2>
 <p>Yocto/Scene has a function to create a simple Cornell Box scene for testing.
 There are plans to increase support for more test scenes in the future.</p>
-<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">scene</span> <span class="o">=</span> <span class="k">new</span> <span class="n">sceneio_scene</span><span class="p">{...};</span>         <span class="c1">// create a complete scene</span>
-<span class="n">make_cornellbox</span><span class="p">(</span><span class="n">scene</span><span class="p">);</span>                      <span class="c1">// make cornell box</span>
-</code></pre></div>
-<h2 id="procedural-shapes">Procedural shapes</h2>
-<p>Yocto/Scene has convenience function to create various procedural shapes,
-both for testing and for use in shape creation. These are wrappers to the
-corresponding functions in <a href="../yocto_shape/">Yocto/Shape</a>, where we maintain
-a comprehensive list of all procedural shapes supported.</p>
-<p>Procedural shapes take as input the desired shape resolution, the shape scale,
-the uv scale, and additional parameters specific to that procedural shape.
-These functions return a quad mesh, stored as a <code>scene_shape</code> struct.
-Use <code>make_rect(...)</code> for a rectangle in the XY plane,
-<code>make_bulged_rect(...)</code> for a bulged rectangle,
-<code>make_recty(...)</code> for a rectangle in the XZ plane,
-<code>make_bulged_recty(...)</code> for a bulged rectangle in the XZ plane,
-<code>make_box(...)</code> for a box,
-<code>make_rounded_box(...)</code> for a rounded box,
-<code>make_floor(...)</code> for a floor in the XZ plane,
-<code>make_bent_floor(...)</code> for a bent floor,
-<code>make_sphere(...)</code> for a sphere obtained from a cube,
-<code>make_uvsphere(...)</code> for a sphere tessellated along its uvs,
-<code>make_capped_uvsphere(...)</code> for a sphere with flipped caps,
-<code>make_disk(...)</code> for a disk obtained from a quad,
-<code>make_bulged_disk(...)</code> for a bulged disk,
-<code>make_uvdisk(...)</code> for a disk tessellated along its uvs,
-<code>make_uvcylinder(...)</code> for a cylinder tessellated along its uvs,
-<code>make_rounded_uvcylinder(...)</code> for a rounded cylinder.</p>
-<div class="highlight"><pre><span></span><code><span class="c1">// make shapes with 32 steps in resolution and scale of 1</span>
-<span class="k">auto</span> <span class="n">shape_01</span> <span class="o">=</span> <span class="n">make_rect</span><span class="p">({</span><span class="mi">32</span><span class="p">,</span><span class="mi">32</span><span class="p">},</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">});</span>
-<span class="k">auto</span> <span class="n">shape_02</span> <span class="o">=</span> <span class="n">make_bulged_rect</span><span class="p">({</span><span class="mi">32</span><span class="p">,</span><span class="mi">32</span><span class="p">},</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">});</span>
-<span class="k">auto</span> <span class="n">shape_03</span> <span class="o">=</span> <span class="n">make_recty</span><span class="p">({</span><span class="mi">32</span><span class="p">,</span><span class="mi">32</span><span class="p">},</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">});</span>
-<span class="k">auto</span> <span class="n">shape_04</span> <span class="o">=</span> <span class="n">make_box</span><span class="p">({</span><span class="mi">32</span><span class="p">,</span><span class="mi">32</span><span class="p">,</span><span class="mi">32</span><span class="p">},</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">});</span>
-<span class="k">auto</span> <span class="n">shape_05</span> <span class="o">=</span> <span class="n">make_rounded_box</span><span class="p">({</span><span class="mi">32</span><span class="p">,</span><span class="mi">32</span><span class="p">,</span><span class="mi">32</span><span class="p">},</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">});</span>
-<span class="k">auto</span> <span class="n">shape_06</span> <span class="o">=</span> <span class="n">make_floor</span><span class="p">({</span><span class="mi">32</span><span class="p">,</span><span class="mi">32</span><span class="p">},</span> <span class="p">{</span><span class="mi">10</span><span class="p">,</span><span class="mi">10</span><span class="p">});</span>
-<span class="k">auto</span> <span class="n">shape_07</span> <span class="o">=</span> <span class="n">make_bent_floor</span><span class="p">({</span><span class="mi">32</span><span class="p">,</span><span class="mi">32</span><span class="p">},</span> <span class="p">{</span><span class="mi">10</span><span class="p">,</span><span class="mi">10</span><span class="p">});</span>
-<span class="k">auto</span> <span class="n">shape_08</span> <span class="o">=</span> <span class="n">make_sphere</span><span class="p">(</span><span class="mi">32</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
-<span class="k">auto</span> <span class="n">shape_09</span> <span class="o">=</span> <span class="n">make_uvsphere</span><span class="p">({</span><span class="mi">32</span><span class="p">,</span><span class="mi">32</span><span class="p">},</span> <span class="mi">1</span><span class="p">);</span>
-<span class="k">auto</span> <span class="n">shape_10</span> <span class="o">=</span> <span class="n">make_capped_uvsphere</span><span class="p">({</span><span class="mi">32</span><span class="p">,</span><span class="mi">32</span><span class="p">},</span> <span class="mi">1</span><span class="p">);</span>
-<span class="k">auto</span> <span class="n">shape_11</span> <span class="o">=</span> <span class="n">make_disk</span><span class="p">(</span><span class="mi">32</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
-<span class="k">auto</span> <span class="n">shape_12</span> <span class="o">=</span> <span class="n">make_bulged_disk</span><span class="p">(</span><span class="mi">32</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
-<span class="k">auto</span> <span class="n">shape_13</span> <span class="o">=</span> <span class="n">make_uvdiskm</span><span class="p">({</span><span class="mi">32</span><span class="p">,</span><span class="mi">32</span><span class="p">},</span> <span class="mi">1</span><span class="p">);</span>
-<span class="k">auto</span> <span class="n">shape_14</span> <span class="o">=</span> <span class="n">make_uvcylinder</span><span class="p">({</span><span class="mi">32</span><span class="p">,</span><span class="mi">32</span><span class="p">,</span><span class="mi">32</span><span class="p">},</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">});</span>
-<span class="k">auto</span> <span class="n">shape_15</span> <span class="o">=</span> <span class="n">make_rounded_uvcylinder</span><span class="p">({</span><span class="mi">32</span><span class="p">,</span><span class="mi">32</span><span class="p">,</span><span class="mi">32</span><span class="p">},</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">});</span>
-</code></pre></div>
-<p>Yocto/Shape defines a few procedural face-varying shapes with similar interfaces
-to the above functions. In this case, the functions return face-varying quads
-packed in a <code>scene_fvshape</code> struct.
-Use <code>make_fvrect(...)</code> for a rectangle in the XY plane,
-<code>make_fvbox(...)</code> for a box,
-<code>make_fvsphere(...)</code> for a sphere obtained from a cube.</p>
-<div class="highlight"><pre><span></span><code><span class="c1">// make face-varying shapes with 32 steps in resolution and scale of 1</span>
-<span class="k">auto</span> <span class="n">fvshape_01</span> <span class="o">=</span> <span class="n">make_fvrect</span><span class="p">({</span><span class="mi">32</span><span class="p">,</span><span class="mi">32</span><span class="p">},</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">});</span>
-<span class="k">auto</span> <span class="n">fvshape_02</span> <span class="o">=</span> <span class="n">make_fvbox</span><span class="p">({</span><span class="mi">32</span><span class="p">,</span><span class="mi">32</span><span class="p">,</span><span class="mi">32</span><span class="p">},</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">});</span>
-<span class="k">auto</span> <span class="n">fvshape_03</span> <span class="o">=</span> <span class="n">make_fvsphere</span><span class="p">(</span><span class="mi">32</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
-</code></pre></div>
-<p>Yocto/Shape provides functions to create predefined shapes helpful in testing.
-These functions take only a scale and often provide only the positions as
-vertex data. These functions return either triangles, quads, or
-face-varying quads in a <code>scene_shape</code> or <code>scene_fvshape</code> struct.
-Use <code>make_monkey(...)</code> for the Blender monkey as quads and positions only,
-<code>make_quad(...)</code> for a simple quad,
-<code>make_quady(...)</code> for a simple quad in the XZ plane,
-<code>make_cube(...)</code> for a simple cube as quads and positions only,
-<code>make_fvcube(...)</code> for a simple face-varying unit cube,
-<code>make_geosphere(...)</code> for a geodesic sphere as triangles and positions only.
-These functions return a <code>scene_shape</code> or <code>scene_fvshape</code>.</p>
-<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">monkey</span> <span class="o">=</span> <span class="n">make_monkey</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
-<span class="k">auto</span> <span class="n">quad</span>   <span class="o">=</span> <span class="n">make_quad</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
-<span class="k">auto</span> <span class="n">quady</span>  <span class="o">=</span> <span class="n">make_quady</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
-<span class="k">auto</span> <span class="n">cube</span>   <span class="o">=</span> <span class="n">make_cube</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
-<span class="k">auto</span> <span class="n">geosph</span> <span class="o">=</span> <span class="n">make_geosphere</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
-<span class="k">auto</span> <span class="n">fvcube</span> <span class="o">=</span> <span class="n">make_fvcube</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
-</code></pre></div>
-<p>Yocto/Shape supports the generation of points and lines sets.
-Use <code>make_lines(...)</code> to create a line set in the XY plane,
-<code>make_points(...)</code> for a collection of points at the origin,
-adn <code>make_random_points(...)</code> for a point set randomly placed in a box.
-These functions return points or lines, packed in a <code>scene_shape</code> struct.</p>
-<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">lines_01</span> <span class="o">=</span> <span class="n">make_lines</span><span class="p">({</span><span class="mi">4</span><span class="p">,</span> <span class="mi">65536</span><span class="p">},</span>      <span class="c1">// line steps and number of lines</span>
-                           <span class="p">{</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">},</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">},</span>  <span class="c1">// line set scale and uvscale</span>
-                           <span class="p">{</span><span class="mf">0.001</span><span class="p">,</span> <span class="mf">0.001</span><span class="p">});</span> <span class="c1">// radius at the bottom and top</span>
-<span class="c1">// procedural points return points, positions, normals, texcoords, radia</span>
-<span class="k">auto</span> <span class="p">[</span><span class="n">points</span><span class="p">,</span> <span class="n">positions</span><span class="p">,</span> <span class="n">normals</span><span class="p">,</span> <span class="n">texcoords</span><span class="p">,</span> <span class="n">radius</span><span class="p">]</span> <span class="o">=</span> <span class="n">make_points</span><span class="p">(</span><span class="mi">65536</span><span class="p">);</span>
-<span class="k">auto</span> <span class="n">points_01</span> <span class="o">=</span> <span class="n">make_points</span><span class="p">(</span><span class="mi">65536</span><span class="p">,</span>        <span class="c1">// number of points</span>
-                             <span class="mi">1</span><span class="p">,</span>            <span class="c1">// uvscale</span>
-                             <span class="mf">0.001</span><span class="p">);</span>       <span class="c1">// point radius</span>
-<span class="k">auto</span> <span class="n">points_02</span> <span class="o">=</span> <span class="n">make_random_points</span><span class="p">(</span><span class="mi">65536</span><span class="p">,</span> <span class="c1">// number of points</span>
-                             <span class="p">{</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">},</span> <span class="mi">1</span><span class="p">,</span> <span class="c1">// line set scale and uvscale</span>
-                             <span class="mf">0.001</span><span class="p">);</span>       <span class="c1">// point radius</span>
-</code></pre></div>
-<p>Yocto/Shape also defines a simple functions to generate randomized hairs
-on a triangle or quad mesh. Use <code>make_hair(...)</code> to create a hair shape
-from a triangle and quad mesh, and return a line set.</p>
-<div class="highlight"><pre><span></span><code><span class="c1">// Make a hair ball around a shape</span>
-<span class="k">auto</span> <span class="n">lines</span> <span class="o">=</span>  <span class="n">make_hair</span><span class="p">(</span>
-  <span class="n">make_sphere</span><span class="p">(),</span>  <span class="c1">// sampled surface</span>
-  <span class="p">{</span><span class="mi">8</span><span class="p">,</span> <span class="mi">65536</span><span class="p">},</span>     <span class="c1">// steps: line steps and number of lines</span>
-  <span class="p">{</span><span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">},</span>     <span class="c1">// length: minimum and maximum length</span>
-  <span class="p">{</span><span class="mf">0.001</span><span class="p">,</span> <span class="mf">0.001</span><span class="p">},</span> <span class="c1">// radius: minimum and maximum radius from base to tip</span>
-  <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">10</span><span class="p">},</span>        <span class="c1">// noise: noise added to hair (strength/scale)</span>
-  <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">128</span><span class="p">},</span>       <span class="c1">// clump: clump added to hair (strength/number)</span>
-  <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">});</span>        <span class="c1">// rotation: rotation added to hair (angle/strength)</span>
-</code></pre></div>
-<p>Finally, Yocto/Shape defines a function to create a quad mesh from a heighfield.
-Use <code>make_heightfield(...)</code> to create a heightfield meshes.</p>
-<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">heightfield</span> <span class="o">=</span> <span class="n">vctor</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;</span><span class="p">{...};</span>             <span class="c1">// heightfield data</span>
-<span class="k">auto</span> <span class="n">shape</span> <span class="o">=</span> <span class="n">make_heightfield</span><span class="p">(</span><span class="n">size</span><span class="p">,</span> <span class="n">heightfield</span><span class="p">);</span> <span class="c1">// make heightfield mesh</span>
+<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">scene</span> <span class="o">=</span> <span class="n">make_cornellbox</span><span class="p">();</span>             <span class="c1">// make cornell box</span>
 </code></pre></div>
                 
               

@@ -398,36 +398,6 @@
 
   
   
-  
-    <li class="md-nav__item">
-      <a href="../yocto_modelio/" class="md-nav__link">
-        Model serialization
-      </a>
-    </li>
-  
-
-    
-      
-      
-      
-
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../yocto_sceneio/" class="md-nav__link">
-        Scene serialization
-      </a>
-    </li>
-  
-
-    
-      
-      
-      
-
-  
-  
     
   
   
@@ -513,6 +483,81 @@
     <li class="md-nav__item">
       <a href="../yocto_cli/" class="md-nav__link">
         Command-line utilities
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../yocto_imageio/" class="md-nav__link">
+        Image serialization
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../yocto_shapeio/" class="md-nav__link">
+        Shape serialization
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../yocto_sceneio/" class="md-nav__link">
+        Scene serialization
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../yocto_commonio/" class="md-nav__link">
+        Json and serialization utilities
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../yocto_modelio/" class="md-nav__link">
+        Model serialization
       </a>
     </li>
   
@@ -625,7 +670,7 @@ give feedback before the render is finished.</p>
 <p>To render a scene, first tesselate shapes for subdivs and displacement,
 with <code>tesselate_shapes(scene, params)</code>, then call
 <code>trace_image(scene, camera, params)</code>, where <code>params</code> are the rendering options.</p>
-<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">scene</span> <span class="o">=</span> <span class="n">scene_model</span><span class="p">{...};</span>            <span class="c1">// initialize scene</span>
+<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">scene</span> <span class="o">=</span> <span class="n">scene_data</span><span class="p">{...};</span>             <span class="c1">// initialize scene</span>
 <span class="k">auto</span> <span class="n">params</span> <span class="o">=</span> <span class="n">trace_params</span><span class="p">{};</span>             <span class="c1">// default params</span>
 <span class="n">tesselate_shapes</span><span class="p">(</span><span class="n">scene</span><span class="p">,</span> <span class="n">params</span><span class="p">);</span>          <span class="c1">// tesselate shapes if needed</span>
 <span class="n">trace_image</span><span class="p">(</span><span class="n">scene</span><span class="p">,</span> <span class="n">params</span><span class="p">);</span>               <span class="c1">// render image</span>
@@ -674,7 +719,7 @@ define string names for various enum values that can used for UIs or CLIs.</p>
 <p>Yocto/Trace supports a low-level rendering API that is more flexible for
 applications that need it. In this modality, you have to manage all state
 manually.</p>
-<p>Yocto/Trace internally uses a <code>bvh_scene</code> BVH for ray-scene intersection,
+<p>Yocto/Trace internally uses a <code>bvh_data</code> BVH for ray-scene intersection,
 a <code>trace_lights</code> objects to store lighting information, and a <code>trace_state</code>
 object to tracks the rendering process and contains all data needed to perform
 progressive computation. Each object need to be initialized separately.</p>
@@ -687,7 +732,7 @@ with <code>make_state(state, scene)</code>.</p>
 and retrieve the computed image with <code>get_render(state)</code> or
 <code>get_render(image, state)</code>. This interface can be useful to provide user
 feedback by either saving or displaying partial images.</p>
-<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">scene</span> <span class="o">=</span> <span class="n">scene_model</span><span class="p">{...};</span>              <span class="c1">// initialize scene</span>
+<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">scene</span> <span class="o">=</span> <span class="n">scene_data</span><span class="p">{...};</span>              <span class="c1">// initialize scene</span>
 <span class="k">auto</span> <span class="n">params</span> <span class="o">=</span> <span class="n">trace_params</span><span class="p">{};</span>               <span class="c1">// default params</span>
 <span class="n">tesselate_shapes</span><span class="p">(</span><span class="n">scene</span><span class="p">,</span> <span class="n">params</span><span class="p">);</span>            <span class="c1">// tesselate shapes if needed</span>
 <span class="k">auto</span> <span class="n">bvh</span> <span class="o">=</span> <span class="n">make_bvh</span><span class="p">(</span><span class="n">scene</span><span class="p">,</span> <span class="n">params</span><span class="p">);</span>         <span class="c1">// init bvh</span>
@@ -707,7 +752,7 @@ denoising buffers and either run the denoiser in a different process, or
 call <code>denoise_render(render, albedo, normal)</code> to denoise the image.
 To denoise within Yocto/GL, the library should be compiled with OIDN support by
 setting the <code>YOCTO_DENOISE</code> compile flag and linking to OIDN's libraries.</p>
-<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">scene</span> <span class="o">=</span> <span class="n">scene_model</span><span class="p">{...};</span>              <span class="c1">// initialize scene</span>
+<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">scene</span> <span class="o">=</span> <span class="n">scene_data</span><span class="p">{...};</span>              <span class="c1">// initialize scene</span>
 <span class="k">auto</span> <span class="n">params</span> <span class="o">=</span> <span class="n">trace_params</span><span class="p">{};</span>               <span class="c1">// default params</span>
 <span class="n">tesselate_shapes</span><span class="p">(</span><span class="n">scene</span><span class="p">,</span> <span class="n">params</span><span class="p">);</span>            <span class="c1">// tesselate shapes if needed</span>
 <span class="k">auto</span> <span class="n">bvh</span> <span class="o">=</span> <span class="n">make_bvh</span><span class="p">(</span><span class="n">scene</span><span class="p">,</span> <span class="n">params</span><span class="p">);</span>         <span class="c1">// init bvh</span>
@@ -742,7 +787,7 @@ setting the <code>YOCTO_DENOISE</code> compile flag and linking to OIDN's librar
   
     <nav class="md-footer__inner md-grid" aria-label="Footer">
       
-        <a href="../yocto_sceneio/" class="md-footer__link md-footer__link--prev" rel="prev">
+        <a href="../yocto_bvh/" class="md-footer__link md-footer__link--prev" rel="prev">
           <div class="md-footer__button md-icon">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
           </div>
@@ -751,7 +796,7 @@ setting the <code>YOCTO_DENOISE</code> compile flag and linking to OIDN's librar
               <span class="md-footer__direction">
                 Previous
               </span>
-              Scene serialization
+              Ray-scene intersection
             </div>
           </div>
         </a>

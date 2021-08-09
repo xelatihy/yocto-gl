@@ -459,8 +459,53 @@
   
   
     <li class="md-nav__item">
-      <a href="../yocto_modelio/" class="md-nav__link">
-        Model serialization
+      <a href="../yocto_trace/" class="md-nav__link">
+        Path tracing
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../yocto_cli/" class="md-nav__link">
+        Command-line utilities
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../yocto_imageio/" class="md-nav__link">
+        Image serialization
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../yocto_shapeio/" class="md-nav__link">
+        Shape serialization
       </a>
     </li>
   
@@ -489,8 +534,8 @@
   
   
     <li class="md-nav__item">
-      <a href="../yocto_trace/" class="md-nav__link">
-        Path tracing
+      <a href="../yocto_commonio/" class="md-nav__link">
+        Json and serialization utilities
       </a>
     </li>
   
@@ -504,8 +549,8 @@
   
   
     <li class="md-nav__item">
-      <a href="../yocto_cli/" class="md-nav__link">
-        Command-line utilities
+      <a href="../yocto_modelio/" class="md-nav__link">
+        Model serialization
       </a>
     </li>
   
@@ -599,23 +644,21 @@ Yocto/Bvh is implemented in <code>yocto_bvh.h</code> and <code>yocto_bvh.cpp</co
 <p>Yocto/Bvh provides ray-scene intersection for points, lines, triangles and
 quads accelerated by a BVH data structure. Our BVH is written for
 minimal code and not maximum speed, but still gives fast-enough results.</p>
-<p>The BVH tree is stored in a <code>bvh_tree</code> struct. The tree stores an array of
+<p>The BVH tree is stored in a <code>bvh_data</code> struct. The tree stores an array of
 nodes and an array of element indices. Each node in the tree has references
 to either other nodes or elements. References are represented as indices
 in the nodes or elements arrays. Nodes indices refer to the nodes array,
 for internal nodes, or the element arrays, for leaf nodes.
-The BVH does not store shape data, which is instead passed explicitly
-to all calls.</p>
+The BVH does not store shape or scene data, which is instead passed explicitly
+to all calls.
+We use the same data structure to store the BVH for <a href="../yocto_scene/">Yocto/Scene</a>
+shapes and scenes. To support scene intersection, we store the shapes BVHs 
+together with the other data.</p>
 <p>BVH nodes contain their bounds, indices to the BVH arrays of either
 primitives or internal nodes, node element type,
 and the split axis. Leaf and internal nodes are identical, except that
 indices refer to primitives for leaf nodes or other nodes for internal nodes.</p>
-<p>Two wrappers, <code>bvh_scene</code> and <code>bvh_shape</code> are used to store the BVH for
-<a href="../yocto_scene/">Yocto/Scene</a> scenes and shapes. For shapes, we store a
-single BVH, while for scene we store the scene BVH and all shapes BVHs.
-These wrappers does not store copies to shape or scene data, so that data is
-passed in for all subsequent calls.</p>
-<p>These wrappers can alternatively store references to Intel's Embree BVH,
+<p>The BVH data structure can also function as a wrapper for Intel's Embree BVH,
 for faster ray-scene intersection. To use Embree, the library should be
 compiled with Embree support by setting the <code>YOCTO_EMBREE</code> compile flag and
 linking to Embree's libraries.</p>
@@ -627,7 +670,7 @@ These functions takes as input scenes and shapes from
 that can be improved slightly by setting <code>highquality</code> to true.
 By default, Yocto/BVH uses the internal BVH. Intel's Embree can be used
 by setting the <code>embree</code> flag to true.</p>
-<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">scene</span> <span class="o">=</span> <span class="n">scene_model</span><span class="p">{...};</span>            <span class="c1">// make a complete scene</span>
+<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">scene</span> <span class="o">=</span> <span class="n">scene_data</span><span class="p">{...};</span>             <span class="c1">// make a complete scene</span>
 <span class="k">auto</span> <span class="n">bvh</span> <span class="o">=</span> <span class="n">build_bvh</span><span class="p">(</span><span class="n">scene</span><span class="p">);</span>              <span class="c1">// build a BVH</span>
 <span class="k">auto</span> <span class="n">embree</span> <span class="o">=</span> <span class="n">build_bvh</span><span class="p">(</span><span class="n">scene</span><span class="p">,</span><span class="nb">true</span><span class="p">,</span><span class="nb">true</span><span class="p">);</span> <span class="c1">// use Embree</span>
 </code></pre></div>
@@ -636,7 +679,7 @@ by setting the <code>embree</code> flag to true.</p>
 where we indicate the indices of the instances and shapes that have beed modified.
 Updating works ony for change to instance frames and shapes positions.
 For changes like adding or removing elements, the BVH has to be built again.</p>
-<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">scene</span> <span class="o">=</span> <span class="n">scene_model</span><span class="p">{...};</span>            <span class="c1">// make a complete scene</span>
+<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">scene</span> <span class="o">=</span> <span class="n">scene_data</span><span class="p">{...};</span>             <span class="c1">// make a complete scene</span>
 <span class="k">auto</span> <span class="n">bvh</span> <span class="o">=</span> <span class="n">build_bvh</span><span class="p">(</span><span class="n">scene</span><span class="p">);</span>              <span class="c1">// build a BVH</span>
 <span class="k">auto</span> <span class="n">shapes</span> <span class="o">=</span> <span class="n">update_shapes</span><span class="p">(</span><span class="n">scene</span><span class="p">);</span>       <span class="c1">// updates some shapes</span>
 <span class="k">auto</span> <span class="n">instances</span> <span class="o">=</span> <span class="n">update_instances</span><span class="p">(</span><span class="n">scene</span><span class="p">);</span> <span class="c1">// updates some instances</span>
@@ -708,13 +751,13 @@ relaxed to accept any element, by passing an optional flag.</p>
         </a>
       
       
-        <a href="../yocto_modelio/" class="md-footer__link md-footer__link--next" rel="next">
+        <a href="../yocto_trace/" class="md-footer__link md-footer__link--next" rel="next">
           <div class="md-footer__title">
             <div class="md-ellipsis">
               <span class="md-footer__direction">
                 Next
               </span>
-              Model serialization
+              Path tracing
             </div>
           </div>
           <div class="md-footer__button md-icon">

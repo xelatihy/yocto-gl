@@ -452,8 +452,53 @@
   
   
     <li class="md-nav__item">
-      <a href="../yocto_modelio/" class="md-nav__link">
-        Model serialization
+      <a href="../yocto_trace/" class="md-nav__link">
+        Path tracing
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../yocto_cli/" class="md-nav__link">
+        Command-line utilities
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../yocto_imageio/" class="md-nav__link">
+        Image serialization
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../yocto_shapeio/" class="md-nav__link">
+        Shape serialization
       </a>
     </li>
   
@@ -482,8 +527,8 @@
   
   
     <li class="md-nav__item">
-      <a href="../yocto_trace/" class="md-nav__link">
-        Path tracing
+      <a href="../yocto_commonio/" class="md-nav__link">
+        Json and serialization utilities
       </a>
     </li>
   
@@ -497,8 +542,8 @@
   
   
     <li class="md-nav__item">
-      <a href="../yocto_cli/" class="md-nav__link">
-        Command-line utilities
+      <a href="../yocto_modelio/" class="md-nav__link">
+        Model serialization
       </a>
     </li>
   
@@ -686,7 +731,7 @@ Yocto/Shading supports the following materials:</p>
 <ul>
 <li><code>matte</code>: matte appearance implemented as a diffuse bsdf</li>
 <li><code>glossy</code>: glossy appearance implemented as a sum of diffuse and microfacet bsdfs</li>
-<li><code>metallic</code>: metallic appearance implemented as a delta or microfacet bsdfs</li>
+<li><code>reflective</code>: metallic appearance implemented as a delta or microfacet bsdfs</li>
 <li><code>transparent</code>: thin glass-like appearance brdf implemented as a delta or microfacet bsdf</li>
 <li><code>refractive</code>: glass-like appearance implemented as a delta or microfacet bsdf</li>
 <li><code>passthrough</code>: used in volume rendering to simulated the absence of an interface</li>
@@ -701,15 +746,15 @@ Yocto/Shading supports the following materials:</p>
 <span class="c1">// evaluate smooth lobes</span>
 <span class="k">auto</span> <span class="n">b1</span> <span class="o">=</span> <span class="n">eval_matte</span><span class="p">(</span><span class="n">color</span><span class="p">,</span> <span class="n">normal</span><span class="p">,</span> <span class="n">outgoing</span><span class="p">,</span> <span class="n">incoming</span><span class="p">);</span>
 <span class="k">auto</span> <span class="n">b3</span> <span class="o">=</span> <span class="n">eval_glossy</span><span class="p">(</span><span class="n">color</span><span class="p">,</span> <span class="n">ior</span><span class="p">,</span> <span class="n">roughness</span><span class="p">,</span> <span class="n">normal</span><span class="p">,</span> <span class="n">outgoing</span><span class="p">,</span> <span class="n">incoming</span><span class="p">);</span>
-<span class="k">auto</span> <span class="n">b4</span> <span class="o">=</span> <span class="n">eval_metallic</span><span class="p">(</span><span class="n">color</span><span class="p">,</span> <span class="n">roughness</span><span class="p">,</span> <span class="n">normal</span><span class="p">,</span> <span class="n">outgoing</span><span class="p">,</span> <span class="n">incoming</span><span class="p">);</span>
+<span class="k">auto</span> <span class="n">b4</span> <span class="o">=</span> <span class="n">eval_reflective</span><span class="p">(</span><span class="n">color</span><span class="p">,</span> <span class="n">roughness</span><span class="p">,</span> <span class="n">normal</span><span class="p">,</span> <span class="n">outgoing</span><span class="p">,</span> <span class="n">incoming</span><span class="p">);</span>
 <span class="k">auto</span> <span class="n">b5</span> <span class="o">=</span> <span class="n">eval_transparent</span><span class="p">(</span><span class="n">color</span><span class="p">,</span> <span class="n">ior</span><span class="p">,</span> <span class="n">roughness</span><span class="p">,</span> <span class="n">normal</span><span class="p">,</span> <span class="n">outgoing</span><span class="p">,</span>  <span class="n">incoming</span><span class="p">);</span>
 <span class="k">auto</span> <span class="n">b6</span> <span class="o">=</span> <span class="n">eval_refractive</span><span class="p">(</span><span class="n">color</span><span class="p">,</span> <span class="n">ior</span><span class="p">,</span> <span class="n">roughness</span><span class="p">,</span> <span class="n">normal</span><span class="p">,</span> <span class="n">outgoing</span><span class="p">,</span> <span class="n">incoming</span><span class="p">);</span>
 <span class="c1">// sample smooth lobes</span>
 <span class="k">auto</span> <span class="n">incoming1</span> <span class="o">=</span> <span class="n">sample_matte</span><span class="p">(</span><span class="n">color</span><span class="p">,</span> <span class="n">normal</span><span class="p">,</span> <span class="n">outgoing</span><span class="p">,</span> <span class="n">rand2f</span><span class="p">(</span><span class="n">rng</span><span class="p">));</span>
 <span class="k">auto</span> <span class="n">pdf1</span> <span class="o">=</span> <span class="n">sample_matte_pdf</span><span class="p">(</span><span class="n">color</span><span class="p">,</span> <span class="n">normal</span><span class="p">,</span> <span class="n">outgoing</span><span class="p">,</span> <span class="n">incoming</span><span class="p">)</span>
 <span class="c1">// eval and sample delta lobes</span>
-<span class="k">auto</span> <span class="n">incoming2</span> <span class="o">=</span> <span class="n">sample_metallic</span><span class="p">(</span><span class="n">color</span><span class="p">,</span> <span class="n">normal</span><span class="p">,</span> <span class="n">outgoing</span><span class="p">);</span>
-<span class="k">auto</span> <span class="n">b7</span> <span class="o">=</span> <span class="n">eval_metallic</span><span class="p">(</span><span class="n">color</span><span class="p">,</span> <span class="n">normal</span><span class="p">,</span> <span class="n">outgoing</span><span class="p">,</span> <span class="n">incoming</span><span class="p">);</span>
+<span class="k">auto</span> <span class="n">incoming2</span> <span class="o">=</span> <span class="n">sample_reflective</span><span class="p">(</span><span class="n">color</span><span class="p">,</span> <span class="n">normal</span><span class="p">,</span> <span class="n">outgoing</span><span class="p">);</span>
+<span class="k">auto</span> <span class="n">b7</span> <span class="o">=</span> <span class="n">eval_reflective</span><span class="p">(</span><span class="n">color</span><span class="p">,</span> <span class="n">normal</span><span class="p">,</span> <span class="n">outgoing</span><span class="p">,</span> <span class="n">incoming</span><span class="p">);</span>
 </code></pre></div>
 <h2 id="design-considerations">Design considerations</h2>
 <p>Yocto/Shading evolved from using sum of Bsdf lobes to use full Bsdfs.

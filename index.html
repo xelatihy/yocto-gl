@@ -257,8 +257,8 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#credits" class="md-nav__link">
-    Credits
+  <a href="#license" class="md-nav__link">
+    License
   </a>
   
 </li>
@@ -466,8 +466,53 @@
   
   
     <li class="md-nav__item">
-      <a href="yocto/yocto_modelio/" class="md-nav__link">
-        Model serialization
+      <a href="yocto/yocto_trace/" class="md-nav__link">
+        Path tracing
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="yocto/yocto_cli/" class="md-nav__link">
+        Command-line utilities
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="yocto/yocto_imageio/" class="md-nav__link">
+        Image serialization
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="yocto/yocto_shapeio/" class="md-nav__link">
+        Shape serialization
       </a>
     </li>
   
@@ -496,8 +541,8 @@
   
   
     <li class="md-nav__item">
-      <a href="yocto/yocto_trace/" class="md-nav__link">
-        Path tracing
+      <a href="yocto/yocto_commonio/" class="md-nav__link">
+        Json and serialization utilities
       </a>
     </li>
   
@@ -511,8 +556,8 @@
   
   
     <li class="md-nav__item">
-      <a href="yocto/yocto_cli/" class="md-nav__link">
-        Command-line utilities
+      <a href="yocto/yocto_modelio/" class="md-nav__link">
+        Model serialization
       </a>
     </li>
   
@@ -579,8 +624,8 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#credits" class="md-nav__link">
-    Credits
+  <a href="#license" class="md-nav__link">
+    License
   </a>
   
 </li>
@@ -612,7 +657,7 @@ Yocto/GL is written in a deliberately data-oriented style for ease of
 development and use.</p>
 <h2 id="libraries">Libraries</h2>
 <p>Yocto/GL is split into small libraries to make code navigation easier.
-See each header file for documentation.</p>
+Here is a list of the main libraries.</p>
 <ul>
 <li><a href="yocto/yocto_math/">Yocto/Math</a>: fixed-size vectors, matrices, rigid frames,
   transforms</li>
@@ -627,26 +672,28 @@ See each header file for documentation.</p>
   functions, bsdf lobes, transmittance lobes, phase functions</li>
 <li><a href="yocto/yocto_image/">Yocto/Image</a>: simple image data type, image resizing,
   tonemapping, color correction, procedural images, procedural sun-sky</li>
-<li><a href="yocto/yocto_shape/">Yocto/Shape</a>: utilities for manipulating
-  triangle meshes, quads meshes and line sets, computation of normals and
-  tangents, linear and Catmull-Clark subdivision, procedural shapes generation,
-  ray intersection and closest point queries</li>
+<li><a href="yocto/yocto_shape/">Yocto/Shape</a>: simple shape data structure, utilities 
+  for manipulating triangle meshes, quads meshes and line sets, computation of 
+  normals and tangents, linear and Catmull-Clark subdivision, 
+  procedural shapes generation, ray intersection and closest point queries</li>
 <li><a href="yocto/yocto_mesh/">Yocto/Mesh</a>: computational geometry utilities for
   triangle meshes, mesh geodesic, mesh cutting</li>
-<li><a href="yocto/yocto_bvh/">Yocto/Bvh</a>: ray intersection and closest point queries
-  of triangle meshes, quads meshes, line sets and instances scenes using a
-  two-level bounding volume hierarchy</li>
-<li><a href="yocto/yocto_scene/">Yocto/Scen</a>: scene representation and properties
+<li><a href="yocto/yocto_scene/">Yocto/Scene</a>: scene representation and properties
   evaluation</li>
-<li><a href="yocto/yocto_sceneio/">Yocto/SceneIO</a>: image serialization,
-  shape serialization, scene serialization, text and binary serialization,
-  path helpers</li>
+<li><a href="yocto/yocto_bvh/">Yocto/Bvh</a>: ray intersection and closest point queries
+  of triangle meshes, quads meshes, line sets and shape instances using a
+  two-level bounding volume hierarchy</li>
 <li><a href="yocto/yocto_trace/">Yocto/Trace</a>: path tracing of surfaces and hairs
   supporting area and environment illumination, microfacet GGX and subsurface
   scattering, multiple importance sampling</li>
-<li><a href="yocto/yocto_modelio/">Yocto/ModelIO</a>: parsing and writing for Ply, Obj,
-  Stl, Pbrt formats</li>
 <li><a href="yocto/yocto_cli/">Yocto/Cli</a>: printing utilities and command line parsing</li>
+<li><a href="yocto/yocto_imageio/">Yocto/ImageIO</a>: image serialization</li>
+<li><a href="yocto/yocto_shapeio/">Yocto/ShapeIO</a>: shape serialization</li>
+<li><a href="yocto/yocto_sceneio/">Yocto/SceneIO</a>: scene serialization</li>
+<li><a href="yocto/yocto_commonio/">Yocto/CommonIO</a>: common IO operations, path helpers,
+  text and binary serialization, Json data model, Json serialization</li>
+<li><a href="yocto/yocto_modelio/">Yocto/ModelIO</a>: low-level parsing and writing for 
+  Ply, Obj, Stl, Pbrt formats</li>
 <li><a href="yocto/yocto_parallel/">Yocto/Parallel</a>: concurrency utilities</li>
 </ul>
 <h2 id="example-applications">Example Applications</h2>
@@ -666,61 +713,52 @@ included in the <a href="https://xelatihy.github.io/yocto-gl/">project site</a>.
 <p>Yocto/GL follows a "data-oriented programming model" that makes data explicit.
 Data is stored in simple structs and accessed with free functions or directly.
 All data is public, so we make no attempt at encapsulation.
-Most objects is Yocto/GL have value semantic, while large data structures
-use reference semantic with strict ownership. This means that everything
-can be trivially serialized and there is no need for memory management.</p>
-<p>We do this since this makes Yocto/GL easier to extend and quicker to learn,
+We do this since this makes Yocto/GL easier to extend and quicker to learn,
 with a more explicit data flow that is easier when writing parallel code.
 Since Yocto/GL is mainly used for research and teaching,
 explicit data is both more hackable and easier to understand.</p>
+<p>Nearly all objects in Yocto/GL have value semantic. This means that everything
+can be trivially copied and serialized and there is no need for memory management. 
+While this has the drawback of potentially introducing spurious copies, it does
+have the benefit of ensuring that no memory corruption can occur, which
+turned out was a major issue for novice C++ users, even in a very small
+library like this one. </p>
 <p>In terms of code style we prefer a functional approach rather than an
 object oriented one, favoring free functions to class methods. All functions
-and data are defined in sibling namespaces contained in the <code>yocto</code> namespace
-so libraries can call all others, but have to do so explicitly.</p>
+and data are defined in the <code>yocto</code> namespace so libraries can call each others
+trivially.</p>
 <p>The use of templates in Yocto was the reason for many refactoring, going
 from no template to heavy template use. At this point, Yocto uses some templates
 for readability. In the future, we will increase the use of templates in math
 code, while keeping many APIs explicitly typed.</p>
-<p>We do not use exception for error reporting, but only to report "programmers"
-errors. For example, IO operations use boolean flags and error strings for
-human readable errors, while exceptions are used when preconditions or
-post conditions are violated in functions.</p>
-<p>After several refactoring, we settled on a value-based approach, since the use
-of pointers and reference semantics was hard for many of our users. While
-this has the drawback of potentially introducing spurious copies, it does
-have th benefit of ensuring that no memory corruption can occur, which
-turned out was a major issue for novice C++ users, even in a very small
-library like this one.</p>
-<h2 id="credits">Credits</h2>
-<p>Main contributors:</p>
-<ul>
-<li>Fabio Pellacini (lead developer): <a href="http://pellacini.di.uniroma1.it">web</a>, <a href="https://github.com/xelatihy">github</a></li>
-<li>Edoardo Carra: <a href="https://github.com/edoardocarra">github</a></li>
-<li>Giacomo Nazzaro: <a href="https://github.com/giacomonazzaro">github</a></li>
-</ul>
-<p>This library includes code from the <a href="http://www.pcg-random.org">PCG random number generator</a>,
-boost <code>hash_combine</code>, and public domain code from <code>github.com/sgorsten/linalg</code>,
-<code>gist.github.com/badboy/6267743</code>.
-Other external libraries are included with their own license.</p>
+<p>We support both exceptions and return codes for error reporting. For example, 
+we have two versions of many IO operations that either use boolean flags and 
+error strings for human readable errors, or throw exceptions with the same
+error string. Internally exceptions are used, since they provide cleaner
+code and where in fact faster ion low-level parsers. At the moment,
+exceptions are only used in IO functions and to report "programmer"
+errors, namely when preconditions or post conditions are violated in functions.</p>
+<h2 id="license">License</h2>
+<p>The library is released under the MIT license. We include various external 
+dependencies in the distribution that each have thir own license, compatible
+with the chosen one.</p>
 <h2 id="compilation">Compilation</h2>
 <p>This library requires a C++17 compiler and is know to compiled on
 OsX (Xcode &gt;= 11), Windows (MSVC 2019) and Linux (gcc &gt;= 9, clang &gt;= 9).</p>
 <p>You can build the example applications using CMake with
 <code>mkdir build; cd build; cmake ..; cmake --build</code></p>
-<p>Yocto/GL depends on <code>stb_image.h</code>, <code>stb_image_write.h</code>, <code>stb_image_resize.h</code> and
-<code>tinyexr.h</code> for image loading, saving and resizing, <code>cgltf.h</code> and <code>json.hpp</code>
-for glTF and JSON support, and <code>filesystem.hpp</code> to support C++17 filesystem API
-when missing. All dependencies are included in the distribution.</p>
-<p>Yocto/GL optionally supports building OpenGL demos, which are handled by including
-glad, GLFW, ImGui as dependencies in apps. OpenGL support might eventually
-become part of the Yocto/GL libraries. OpenGL support is enabled by defining
-the cmake option <code>YOCTO_OPENGL</code> and contained in the <code>yocto_gui</code> library.</p>
+<p>Yocto/GL required dependencies are included in the distribution and do not
+need to be installed separately.</p>
+<p>Yocto/GL optionally supports building OpenGL demos. OpenGL support is enabled 
+by defining the cmake option <code>YOCTO_OPENGL</code> and contained in the <code>yocto_gui</code> 
+library. OpenGL dependencies are included in this repo.</p>
 <p>Yocto/GL optionally supports the use of Intel's Embree for ray casting.
 See the main CMake file for how to link to it. Embree support is enabled by
-defining the cmake option <code>YOCTO_EMBREE</code>.</p>
+defining the cmake option <code>YOCTO_EMBREE</code>. Embree needs to be installed separately.</p>
 <p>Yocto/GL optionally supports the use of Intel's Open Image Denoise for denoising.
 See the main CMake file for how to link to it. Open Image Denoise support
-is enabled by defining the cmake option <code>YOCTO_DENOISE</code>.</p>
+is enabled by defining the cmake option <code>YOCTO_DENOISE</code>. 
+OIDN needs to be installed separately.</p>
                 
               
               
