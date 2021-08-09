@@ -33,6 +33,28 @@ shape.normals = vector<vec3f>{...};    // set normals
 shape.texcoords = vector<vec2f>{...};  // set texture coordinates
 ```
 
+Additionally, Yocto/Scene supports face-varying shape, as `fvshape_data`,
+where each vertex data has its own topology. For now, only face-varying quad 
+meshes are supported since fave-varying shapes are used mostly with 
+Catmull-Clark subdivision.
+
+```cpp
+auto shape = fvshape_data{};                // create a shape
+shape.quadspos = vector<vec4i>{...};        // set face-varying indices
+shape.quadstexcoord = vector<vec4i>{...};   // for positions and textures
+shape.positions = vector<vec3f>{...};       // set positions
+shape.texcoords = vector<vec2f>{...};       // set texture coordinates
+```
+
+Conversion to and from face-varying shapes is handled by the 
+`shape_to_fvshape(shape)` and `fvshape_to_shape(fvshape)` functions.
+Note that conversion to an indexed shape is lossy since topology information is
+lost and vertices may be duplicated.
+
+## Shape serialization
+
+Shape loading and saving is defined in [Yocto/ShapeIO](yocto_shapeio.md).
+
 ## Shape properties
 
 Several functions are defined to evaluate the geometric properties of points
@@ -53,6 +75,10 @@ auto col  = eval_color(shape, eid, euv);    // eval point color
 auto gn   = eval_element_normal(shape, eid, euv); // eval geometric normal
 ```
 
+For shapes, we also support the computation of smooth vertex normals with
+`compute_normals(shape)` and converting to and from face-varying representations
+with `shape_to_fvshape(shape)` and `fvshape_to_shape(fvshape)`.
+
 ## Shape sampling
 
 Shape support random sampling with a uniform distribution using
@@ -66,15 +92,6 @@ auto points = sample_shape(shape, cdf, num); // sample many points
 auto point = sample_shape(shape, cdf,        // sample a single point
   rand1f(rng), rand2f(rng));
 ```
-
-Additionally, Yocto/Scene supports face-varying primitives, as `fvshape_data`,
-where each vertex data has its own topology.
-
-For shapes, we also support the computation of smooth vertex normals with
-`compute_normals(shape)` and converting to and from face-varying representations
-with `shape_to_fvshape(shape)` and `fvshape_to_shape(fvshape)`.
-
-Shape loading and saving is defined in [Yocto/ShapeIO](yocto_shapeio.md).
 
 ## Procedural shapes
 

@@ -387,20 +387,6 @@ or `tesselate_subdivs(scene)` for the whole scene.
 tesselate_subdivs(scene);     // tesselate all subdivs in the scene
 ```
 
-## Face-Varying shapes
-
-We also support standalone face-varying shapes, that are not stored in the scene
-(see subdivs above). In this case, set the quads for positions,
-normals and texture coordinates.
-
-```cpp
-auto shape = fvshape_data{};                // create a shape
-shape.quadspos = vector<vec4i>{...};        // set face-varying indices
-shape.quadstexcoord = vector<vec4i>{...};   // for positions and textures
-shape.positions = vector<vec3f>{...};       // set positions
-shape.texcoords = vector<vec2f>{...};       // set texture coordinates
-```
-
 ## Example scenes
 
 Yocto/Scene has a function to create a simple Cornell Box scene for testing.
