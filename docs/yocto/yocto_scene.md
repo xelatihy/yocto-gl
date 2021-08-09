@@ -174,7 +174,8 @@ auto envi = eval_environment(environment, dir);  // eval environment
 ## Shapes
 
 Shapes, represented by `shape_data`, are indexed meshes of elements.
-Shapes can contain only one type of element, either
+Shapes are defined in [Yocto/Shape](yocto_shape.md), and briefly described 
+here for convenience. Shapes can contain only one type of element, either
 points, lines, triangles or quads. Shape elements are parametrized as in
 [Yocto/Geometry](yocto_geometry.md).
 Vertex properties are defined as separate arrays and include

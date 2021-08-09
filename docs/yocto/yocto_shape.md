@@ -7,17 +7,77 @@ Yocto/Shape is implemented in `yocto_shape.h` and `yocto_shape.cpp`.
 ## Shape representation
 
 Yocto/Shape supports shapes defined as collection of either points, lines,
-triangles and quads. Most functions have overrides for all element types
-when appropriate.
-
-Shapes are represented as indexed meshes, with arbitrary properties for
-each vertex. Each vertex property is stored as a separate array,
+triangles and quads. Shapes are represented as indexed meshes, with arbitrary 
+properties for each vertex. Each vertex property is stored as a separate array,
 and shape elements are stored as arrays of indices to faces.
 For element parametrization, we follow [Yocto/Geometry](yocto_geometry.md).
 
+Shapes are represented as a simple struct called `shape_data`, that stores
+the shape elements and the vertex properties as individual arrays.
+Shapes can contain only one type of element, either points, lines, triangles or quads. 
+Vertex properties are defined as separate arrays and include
+positions, normals, texture coords, colors, radius and tangent spaces.
 Vertex data is stored as `vector<vecXf>`, while element indices are stored
 as `vector<vec3i>`, `vector<vec4i>`, `vector<vec2i>`, `vector<int>`
 for triangle meshes, quad meshes, line sets and point sets respectively.
+
+For shapes, you should set the shape elements, i.e. point, limes, triangles
+or quads, and the vertex properties, i.e. positions, normals, texture
+coordinates, colors and radia. Shapes support only one element type.
+
+```cpp
+auto shape = shape_data{};             // create a shape
+shape.triangles = vector<vec3i>{...};  // set triangle indices
+shape.positions = vector<vec3f>{...};  // set positions
+shape.normals = vector<vec3f>{...};    // set normals
+shape.texcoords = vector<vec2f>{...};  // set texture coordinates
+```
+
+Several functions are defined to evaluate the geometric properties of points
+of shapes, indicated by the shape element id and, when needed, the shape element
+barycentric coordinates.
+Use `eval_position(...)` to evaluate the point position,
+`eval_normal(...)` to evaluate the interpolate point normal,
+`eval_texcoord(...)` to evaluate the point texture coordinates,
+`eval_element_normal(...)` to evaluate the point geometric normal, and
+`eval_color(...)` to evaluate the interpolate point color.
+
+```cpp
+auto eid = 0; auto euv = vec3f{0.5,0.5};    // element id and uvs
+auto pos  = eval_position(shape, eid, euv); // eval point position
+auto norm = eval_normal(shape, eid, euv);   // eval point normal
+auto st   = eval_texcoord(shape, eid, euv); // eval point texture coords
+auto col  = eval_color(shape, eid, euv);    // eval point color
+auto gn   = eval_element_normal(shape, eid, euv); // eval geometric normal
+```
+
+Shape support random sampling with a uniform distribution using
+`sample_shape(...)` and `sample_shape_cdf(shape)`. Sampling works for lines and
+triangles in all cases, while for quad it requires that the elements
+are rectangular.
+
+```cpp
+auto cdf = sample_shape_cdfd(shape);         // compute the shape CDF
+auto points = sample_shape(shape, cdf, num); // sample many points
+auto point = sample_shape(shape, cdf,        // sample a single point
+  rand1f(rng), rand2f(rng));
+```
+
+Additionally, Yocto/Scene supports face-varying primitives, as `fvshape_data`,
+where each vertex data has its own topology.
+
+For shapes, we also support the computation of smooth vertex normals with
+`compute_normals(shape)` and converting to and from face-varying representations
+with `shape_to_fvshape(shape)` and `fvshape_to_shape(fvshape)`.
+
+Shape loading and saving is defined in [Yocto/ShapeIO](yocto_shapeio.md).
+
+## Low-level shape representation
+
+Yocto/Shape also support an interface where single arrays are passed as opposed
+to shape structs. This functionality will slowly be phased out and moved to
+the higher level interface in future releases. Here we give example of the 
+low-level interface.
 
 ```cpp
 auto triangles = vector<vec3i>{...};   // triangle indices
@@ -36,19 +96,6 @@ auto positions = vector<vec3f>{...};       // vertex positions
 auto quadstexcoords = vector<vec4i>{...};  // quads indices for uvs
 auto texcoords = vector<vec2f>{...};       // vertex uvs
 ```
-
-Throughout the library, functions may either take index and vertex arrays
-directly as input and output, or may pack these array in structs if deemed
-appropriate. This design tries to balance readability and generality, without
-forcing a single convention that would not be appropriate everywhere.
-
-If a higher level design is needed, [Yocto/Scene](yocto_scene.md) contains
-the standalone types `shape_data` and `fvshape_data` to store indexed
-and face-varying shapes respectively, a a collection of methods to work
-on these type, that are essentially wrappers to the functionality in this
-library.
-
-Shape loading and saving is defined in [Yocto/SceneIO](yocto_sceneio.md).
 
 ## Vertex properties
 
