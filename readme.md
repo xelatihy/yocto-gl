@@ -24,26 +24,28 @@ See each header file for documentation.
   functions, bsdf lobes, transmittance lobes, phase functions
 - `yocto/yocto_image.{h,cpp}`: simple image data type, image resizing,
   tonemapping, color correction, procedural images, procedural sun-sky
-- `yocto/yocto_shape.{h,cpp}`: utilities for manipulating
-  triangle meshes, quads meshes and line sets, computation of normals and
-  tangents, linear and Catmull-Clark subdivision, procedural shapes generation,
-  ray intersection and closest point queries
+- `yocto/yocto_shape.{h,cpp}`: simple shape data structure, utilities 
+  for manipulating triangle meshes, quads meshes and line sets, computation of 
+  normals and tangents, linear and Catmull-Clark subdivision, 
+  procedural shapes generation, ray intersection and closest point queries
 - `yocto/yocto_mesh.{h,cpp}`: computational geometry utilities for
   triangle meshes, mesh geodesic, mesh cutting
+- `yocto/yocto_scene.{h,cpp}`: scene representation and properties
+  evaluation
 - `yocto/yocto_bvh.{h,cpp}`: ray intersection and closest point queries
   of triangle meshes, quads meshes, line sets and instances scenes using a
   two-level bounding volume hierarchy
-- `yocto/yocto_scene.{h,cpp}`: scene representation and properties
-  evaluation
-- `yocto/yocto_sceneio.{h,cpp}`: image serialization,
-  shape serialization, scene serialization, text and binary serialization,
-  path helpers
 - `yocto/yocto_trace.{h,cpp}`: path tracing of surfaces and hairs supporting
   area and environment illumination, microfacet GGX and subsurface scattering,
   multiple importance sampling
-- `yocto/yocto_modelio.{h,cpp}`: parsing and writing for Ply, Obj,
-  Stl, Pbrt formats
-- `yocto/yocto_cli.h`: printing utilities, command line parsing
+- `yocto/yocto_cli.{h,cpp}`: printing utilities and command line parsing
+- `yocto/yocto_imageio.{h,cpp}`: image serialization
+- `yocto/yocto_shapeio.{h,cpp}`: shape serialization
+- `yocto/yocto_sceneio.{h,cpp}`: scene serialization
+- `yocto/yocto_commonio.{h,cpp}`: common IO operations, path helpers,
+  text and binary serialization, Json data model, Json serialization
+- `yocto/yocto_modelio.{h,cpp}`: low-level parsing and writing for 
+  Ply, Obj, Stl, Pbrt formats
 - `yocto/yocto_parallel.h`: concurrency utilities
 
 You can see Yocto/GL in action in the following applications written to

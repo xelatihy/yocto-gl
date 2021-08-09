@@ -8,7 +8,7 @@ development and use.
 ## Libraries
 
 Yocto/GL is split into small libraries to make code navigation easier.
-See each header file for documentation.
+Here is a list of the main libraries.
 
 - [Yocto/Math](yocto/yocto_math.md): fixed-size vectors, matrices, rigid frames,
   transforms
@@ -23,26 +23,28 @@ See each header file for documentation.
   functions, bsdf lobes, transmittance lobes, phase functions
 - [Yocto/Image](yocto/yocto_image.md): simple image data type, image resizing,
   tonemapping, color correction, procedural images, procedural sun-sky
-- [Yocto/Shape](yocto/yocto_shape.md): utilities for manipulating
-  triangle meshes, quads meshes and line sets, computation of normals and
-  tangents, linear and Catmull-Clark subdivision, procedural shapes generation,
-  ray intersection and closest point queries
+- [Yocto/Shape](yocto/yocto_shape.md): simple shape data structure, utilities 
+  for manipulating triangle meshes, quads meshes and line sets, computation of 
+  normals and tangents, linear and Catmull-Clark subdivision, 
+  procedural shapes generation, ray intersection and closest point queries
 - [Yocto/Mesh](yocto/yocto_mesh.md): computational geometry utilities for
   triangle meshes, mesh geodesic, mesh cutting
-- [Yocto/Bvh](yocto/yocto_bvh.md): ray intersection and closest point queries
-  of triangle meshes, quads meshes, line sets and instances scenes using a
-  two-level bounding volume hierarchy
-- [Yocto/Scen](yocto/yocto_scene.md): scene representation and properties
+- [Yocto/Scene](yocto/yocto_scene.md): scene representation and properties
   evaluation
-- [Yocto/SceneIO](yocto/yocto_sceneio.md): image serialization,
-  shape serialization, scene serialization, text and binary serialization,
-  path helpers
+- [Yocto/Bvh](yocto/yocto_bvh.md): ray intersection and closest point queries
+  of triangle meshes, quads meshes, line sets and shape instances using a
+  two-level bounding volume hierarchy
 - [Yocto/Trace](yocto/yocto_trace.md): path tracing of surfaces and hairs
   supporting area and environment illumination, microfacet GGX and subsurface
   scattering, multiple importance sampling
-- [Yocto/ModelIO](yocto/yocto_modelio.md): parsing and writing for Ply, Obj,
-  Stl, Pbrt formats
 - [Yocto/Cli](yocto/yocto_cli.md): printing utilities and command line parsing
+- [Yocto/ImageIO](yocto/yocto_imageio.md): image serialization
+- [Yocto/ShapeIO](yocto/yocto_shapeio.md): shape serialization
+- [Yocto/SceneIO](yocto/yocto_sceneio.md): scene serialization
+- [Yocto/CommonIO](yocto/yocto_commonio.md): common IO operations, path helpers,
+  text and binary serialization, Json data model, Json serialization
+- [Yocto/ModelIO](yocto/yocto_modelio.md): low-level parsing and writing for 
+  Ply, Obj, Stl, Pbrt formats
 - [Yocto/Parallel](yocto/yocto_parallel.md): concurrency utilities
 
 ## Example Applications
