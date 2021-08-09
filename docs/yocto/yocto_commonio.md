@@ -46,7 +46,7 @@ if(!save_text("output_file.txt", text))      // save text
   print_info(error); exit(1);                // handle error
 ```
 
-## File IO
+## Text and binary serialization
 
 Yocto/CommonIO supports reading and writing whole files of either binary
 data or text. Use `load_text(filename, text)` or `text = load_text(filename)` 
