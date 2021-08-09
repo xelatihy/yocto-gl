@@ -33,6 +33,8 @@ shape.normals = vector<vec3f>{...};    // set normals
 shape.texcoords = vector<vec2f>{...};  // set texture coordinates
 ```
 
+## Shape properties
+
 Several functions are defined to evaluate the geometric properties of points
 of shapes, indicated by the shape element id and, when needed, the shape element
 barycentric coordinates.
@@ -50,6 +52,8 @@ auto st   = eval_texcoord(shape, eid, euv); // eval point texture coords
 auto col  = eval_color(shape, eid, euv);    // eval point color
 auto gn   = eval_element_normal(shape, eid, euv); // eval geometric normal
 ```
+
+## Shape sampling
 
 Shape support random sampling with a uniform distribution using
 `sample_shape(...)` and `sample_shape_cdf(shape)`. Sampling works for lines and
@@ -72,7 +76,132 @@ with `shape_to_fvshape(shape)` and `fvshape_to_shape(fvshape)`.
 
 Shape loading and saving is defined in [Yocto/ShapeIO](yocto_shapeio.md).
 
-## Low-level shape representation
+## Procedural shapes
+
+Yocto/Scene has convenience function to create various procedural shapes,
+both for testing and for use in shape creation. These are wrappers to the
+corresponding functions in [Yocto/Shape](yocto_shape.md), where we maintain
+a comprehensive list of all procedural shapes supported.
+
+Procedural shapes take as input the desired shape resolution, the shape scale,
+the uv scale, and additional parameters specific to that procedural shape.
+These functions return a quad mesh, stored as a `shape_data` struct.
+Use `make_rect(...)` for a rectangle in the XY plane,
+`make_bulged_rect(...)` for a bulged rectangle,
+`make_recty(...)` for a rectangle in the XZ plane,
+`make_bulged_recty(...)` for a bulged rectangle in the XZ plane,
+`make_box(...)` for a box,
+`make_rounded_box(...)` for a rounded box,
+`make_floor(...)` for a floor in the XZ plane,
+`make_bent_floor(...)` for a bent floor,
+`make_sphere(...)` for a sphere obtained from a cube,
+`make_uvsphere(...)` for a sphere tessellated along its uvs,
+`make_capped_uvsphere(...)` for a sphere with flipped caps,
+`make_disk(...)` for a disk obtained from a quad,
+`make_bulged_disk(...)` for a bulged disk,
+`make_uvdisk(...)` for a disk tessellated along its uvs,
+`make_uvcylinder(...)` for a cylinder tessellated along its uvs,
+`make_rounded_uvcylinder(...)` for a rounded cylinder.
+
+```cpp
+// make shapes with 32 steps in resolution and scale of 1
+auto shape_01 = make_rect({32,32}, {1,1});
+auto shape_02 = make_bulged_rect({32,32}, {1,1});
+auto shape_03 = make_recty({32,32}, {1,1});
+auto shape_04 = make_box({32,32,32}, {1,1,1});
+auto shape_05 = make_rounded_box({32,32,32}, {1,1,1});
+auto shape_06 = make_floor({32,32}, {10,10});
+auto shape_07 = make_bent_floor({32,32}, {10,10});
+auto shape_08 = make_sphere(32, 1);
+auto shape_09 = make_uvsphere({32,32}, 1);
+auto shape_10 = make_capped_uvsphere({32,32}, 1);
+auto shape_11 = make_disk(32, 1);
+auto shape_12 = make_bulged_disk(32, 1);
+auto shape_13 = make_uvdiskm({32,32}, 1);
+auto shape_14 = make_uvcylinder({32,32,32}, {1,1});
+auto shape_15 = make_rounded_uvcylinder({32,32,32}, {1,1});
+```
+
+Yocto/Shape defines a few procedural face-varying shapes with similar interfaces
+to the above functions. In this case, the functions return face-varying quads
+packed in a `fvshape_data` struct.
+Use `make_fvrect(...)` for a rectangle in the XY plane,
+`make_fvbox(...)` for a box,
+`make_fvsphere(...)` for a sphere obtained from a cube.
+
+```cpp
+// make face-varying shapes with 32 steps in resolution and scale of 1
+auto fvshape_01 = make_fvrect({32,32}, {1,1});
+auto fvshape_02 = make_fvbox({32,32,32}, {1,1,1});
+auto fvshape_03 = make_fvsphere(32, 1);
+```
+
+Yocto/Shape provides functions to create predefined shapes helpful in testing.
+These functions take only a scale and often provide only the positions as
+vertex data. These functions return either triangles, quads, or
+face-varying quads in a `shape_data` or `fvshape_data` struct.
+Use `make_monkey(...)` for the Blender monkey as quads and positions only,
+`make_quad(...)` for a simple quad,
+`make_quady(...)` for a simple quad in the XZ plane,
+`make_cube(...)` for a simple cube as quads and positions only,
+`make_fvcube(...)` for a simple face-varying unit cube,
+`make_geosphere(...)` for a geodesic sphere as triangles and positions only.
+These functions return a `shape_data` or `fvshape_data`.
+
+```cpp
+auto monkey = make_monkey(1);
+auto quad   = make_quad(1);
+auto quady  = make_quady(1);
+auto cube   = make_cube(1);
+auto geosph = make_geosphere(1);
+auto fvcube = make_fvcube(1);
+```
+
+Yocto/Shape supports the generation of points and lines sets.
+Use `make_lines(...)` to create a line set in the XY plane,
+`make_points(...)` for a collection of points at the origin,
+adn `make_random_points(...)` for a point set randomly placed in a box.
+These functions return points or lines, packed in a `shape_data` struct.
+
+```cpp
+auto lines_01 = make_lines({4, 65536},      // line steps and number of lines
+                           {1, 1}, {1, 1},  // line set scale and uvscale
+                           {0.001, 0.001}); // radius at the bottom and top
+// procedural points return points, positions, normals, texcoords, radia
+auto [points, positions, normals, texcoords, radius] = make_points(65536);
+auto points_01 = make_points(65536,        // number of points
+                             1,            // uvscale
+                             0.001);       // point radius
+auto points_02 = make_random_points(65536, // number of points
+                             {1, 1, 1}, 1, // line set scale and uvscale
+                             0.001);       // point radius
+```
+
+Yocto/Shape also defines a simple functions to generate randomized hairs
+on a triangle or quad mesh. Use `make_hair(...)` to create a hair shape
+from a triangle and quad mesh, and return a line set.
+
+```cpp
+// Make a hair ball around a shape
+auto lines =  make_hair(
+  make_sphere(),  // sampled surface
+  {8, 65536},     // steps: line steps and number of lines
+  {0.1, 0.1},     // length: minimum and maximum length
+  {0.001, 0.001}, // radius: minimum and maximum radius from base to tip
+  {0, 10},        // noise: noise added to hair (strength/scale)
+  {0, 128},       // clump: clump added to hair (strength/number)
+  {0, 0});        // rotation: rotation added to hair (angle/strength)
+```
+
+Finally, Yocto/Shape defines a function to create a quad mesh from a heighfield.
+Use `make_heightfield(...)` to create a heightfield meshes.
+
+```cpp
+auto heightfield = vctor<float>{...};             // heightfield data
+auto shape = make_heightfield(size, heightfield); // make heightfield mesh
+```
+
+## Low-level interface: Shape representation
 
 Yocto/Shape also support an interface where single arrays are passed as opposed
 to shape structs. This functionality will slowly be phased out and moved to
@@ -97,7 +226,7 @@ auto quadstexcoords = vector<vec4i>{...};  // quads indices for uvs
 auto texcoords = vector<vec2f>{...};       // vertex uvs
 ```
 
-## Vertex properties
+## Low-level interface: Vertex properties
 
 Yocto/Shape provides many facilities to compute vertex properties for indexed
 elements. Use `triangles_normals(...)` and `quads_normals(...)` to compute
@@ -121,7 +250,7 @@ auto [skinned_pos, skinned_norm] = skin_vertices(positions, normals,
    weights, joints, frames);       // skinned positions ans normals
 ```
 
-## Flipping and aligning
+## Low-level interface: Flipping and aligning
 
 Yocto/Shape provides functions to correct shapes that have inconsistent
 orientations or normals. Use `flip_normals(normals)` to flip all mesh normals.
@@ -141,7 +270,7 @@ normals = flip_normals(normals);       // flip normals
 positions = align_vertices(positions, {0,1,0});
 ```
 
-## Edges and adjacencies
+## Low-level interface: Edges and adjacencies
 
 Use `get_edges(triangles)` amd `get_edges(quads)` to get a list of unique edges
 for a triangle or quads mesh.
@@ -167,7 +296,7 @@ for(auto& edge : edges)               // iterate over edges
 auto boundary = get_boundary(emap);   // get unsorted boundary edges
 ```
 
-## Ray-intersection and point-overlap
+## Low-level interface: Ray-intersection and point-overlap
 
 Yocto/Shape provides ray-scene intersection for points, lines, triangles and
 quads accelerated by a BVH data structure. Our BVH is written for
@@ -244,7 +373,7 @@ positions[...] = {...};                           // update positions
 update_triangles_bvh(bvh, triangles, positions);  // update BVH
 ```
 
-## Nearest neighbors
+## Low-level interface: Nearest neighbors
 
 Nearest neighbors queries are computed by building a sparse hash grid
 defined as `hash_grid`. The grid is created by specifying a cell size for the
@@ -265,7 +394,7 @@ find_neighbors(grid, neighbors, pt, max_dist);     // find neighbors by pos
 find_neighbors(grid, neighbors, id, max_dist);     // find neighbors by id
 ```
 
-## Element conversions and grouping
+## Low-level interface: Element conversions and grouping
 
 Yocto/Shape support conversion between shape elements.
 Use `quads_to_triangles(quads)` to convert quads to triangles and
@@ -348,7 +477,7 @@ primitive only. Use `merge_triangles_and_quads(triangles, quads, force_triangles
 to merge elements in-place. The algorithms will output quads if present or
 triangles if not unless `force_triangles` is used.
 
-## Shape subdivision
+## Low-level interface: Shape subdivision
 
 Yocto/Shape defines functions to subdivide shape elements linearly, in
 order to obtain higher shape resolution, for example before applying
@@ -389,7 +518,7 @@ auto texcoords = vector<vec2f>{...};
 auto [stquads, stexcoords] = subdivide_catmullclark(tquads, texcoords, 2, true);
 ```
 
-## Shape sampling
+## Low-level interface: Shape sampling
 
 Yocto/Shape supports sampling meshes uniformly. All sampling require to first
 compute the shape CDF and then use it to sample the shape. For each shape type,
@@ -429,7 +558,7 @@ sample_triangles(sampled_positions, sampled_normals, sampled_texcoords,
                  triangles, positions, normals, texcoords, npoints);
 ```
 
-## Procedural shapes
+## Low-level interface: Procedural shapes
 
 Yocto/Shape defines several procedural shapes used for both testing and
 to quickly create shapes for procedural scenes. Procedural shapes take as
