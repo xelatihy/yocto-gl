@@ -10,7 +10,7 @@ if(YOCTO_OPENGL)
     yocto_imgui.cpp
     yocto_glview.h 
     yocto_glview.cpp 
-    ext/imgui/imgui.cpp 
+    ext/imgui/imgui.cpp ext/imgui/imgui_demo.cpp 
     ext/imgui/imgui_draw.cpp 
     ext/imgui/imgui_widgets.cpp
     ext/imgui/imgui_tables.cpp 
