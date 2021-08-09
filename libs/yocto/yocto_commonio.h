@@ -3,8 +3,8 @@
 //
 // Yocto/CommonIO is a collection of utilities used in writing IO functionality,
 // including file IO, Json IO, and path manipulation.
-// Yocto/CLI is implemented in `yocto_commonio.h` and `yocto_commonio.cpp`, and
-// depends on `json.hpp` for Json serialization and number printing, and
+// Yocto/CommonIO is implemented in `yocto_commonio.h` and `yocto_commonio.cpp`,
+// and depends on `json.hpp` for Json serialization and number printing, and
 // `fast_float.h` for number parsing.
 //
 

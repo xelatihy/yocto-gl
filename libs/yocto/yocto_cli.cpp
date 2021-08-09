@@ -1028,18 +1028,4 @@ bool parse_cli(cli_state& cli, const vector<string>& args, string& error) {
   }
 }
 
-void parse_cli_and_handle_errors(cli_state& cli, const vector<string>& args) {
-  try {
-    parse_cli(cli, args);
-  } catch (cli_error& error) {
-    print_info("error: " + string{error.what()});
-    print_info("");
-    print_info(get_usage(cli));
-    exit(1);
-  } catch (cli_help& help) {
-    print_info(get_usage(cli));
-    exit(0);
-  }
-}
-
 }  // namespace yocto

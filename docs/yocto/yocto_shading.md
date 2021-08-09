@@ -125,7 +125,7 @@ Yocto/Shading supports the following materials:
 
 - `matte`: matte appearance implemented as a diffuse bsdf
 - `glossy`: glossy appearance implemented as a sum of diffuse and microfacet bsdfs
-- `metallic`: metallic appearance implemented as a delta or microfacet bsdfs
+- `reflective`: metallic appearance implemented as a delta or microfacet bsdfs
 - `transparent`: thin glass-like appearance brdf implemented as a delta or microfacet bsdf
 - `refractive`: glass-like appearance implemented as a delta or microfacet bsdf
 - `passthrough`: used in volume rendering to simulated the absence of an interface
@@ -141,15 +141,15 @@ auto ior = float{1.5};                 // dielectric ior
 // evaluate smooth lobes
 auto b1 = eval_matte(color, normal, outgoing, incoming);
 auto b3 = eval_glossy(color, ior, roughness, normal, outgoing, incoming);
-auto b4 = eval_metallic(color, roughness, normal, outgoing, incoming);
+auto b4 = eval_reflective(color, roughness, normal, outgoing, incoming);
 auto b5 = eval_transparent(color, ior, roughness, normal, outgoing,  incoming);
 auto b6 = eval_refractive(color, ior, roughness, normal, outgoing, incoming);
 // sample smooth lobes
 auto incoming1 = sample_matte(color, normal, outgoing, rand2f(rng));
 auto pdf1 = sample_matte_pdf(color, normal, outgoing, incoming)
 // eval and sample delta lobes
-auto incoming2 = sample_metallic(color, normal, outgoing);
-auto b7 = eval_metallic(color, normal, outgoing, incoming);
+auto incoming2 = sample_reflective(color, normal, outgoing);
+auto b7 = eval_reflective(color, normal, outgoing, incoming);
 ```
 
 ## Design considerations

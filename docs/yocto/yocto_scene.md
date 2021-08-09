@@ -174,7 +174,8 @@ auto envi = eval_environment(environment, dir);  // eval environment
 ## Shapes
 
 Shapes, represented by `shape_data`, are indexed meshes of elements.
-Shapes can contain only one type of element, either
+Shapes are defined in [Yocto/Shape](yocto_shape.md), and briefly described 
+here for convenience. Shapes can contain only one type of element, either
 points, lines, triangles or quads. Shape elements are parametrized as in
 [Yocto/Geometry](yocto_geometry.md).
 Vertex properties are defined as separate arrays and include
@@ -240,7 +241,7 @@ following materials:
 - `matte`, for materials like concrete or stucco, implemented as a lambertian bsdf;
 - `glossy`, for materials like plastic or painted wood, implemented as the sum
   of a lambertian and a microfacet dielectric lobe;
-- `metallic`, for materials like metals, implemented as either a delta or
+- `reflective`, for materials like metals, implemented as either a delta or
   microfacet brdf lobe;
 - `transparent`, for materials for thin glass, implemented as a delta or
   microfacet transmission bsdf;
@@ -248,7 +249,7 @@ following materials:
   microfacet refraction bsdf; also support homogenous volume scattering;
 - `subsurface`, for materials for skin, implemented as a microfacet refraction
   bsdf with homogenous volume scattering - for no this is like `refractive`;
-- `volume`, for materials like homogeneous smoke or fog, implemented as the lack
+- `volumetric`, for materials like homogeneous smoke or fog, implemented as the lack
   of a surface interface but with volumetric scattering.
 - `gltfpbr`, for materials that range from glossy to metallic, implemented as
   the sum of a lambertian and a microfacet dielectric lobe;
@@ -263,7 +264,7 @@ the index of refraction `ior`. The physical meaning of each parameter depends
 on the material type. By default surfaces are fully opaque, but
 can defined a `opacity` parameter and texture to define the surface coverage.
 
-Materials like `refractive`, `subsurface` and `volume` may also specify
+Materials like `refractive`, `subsurface` and `volumetric` may also specify
 volumetric properties. In these cases, the `color` parameter controls the volume density,
 while the `scattering` also define volumetric scattering properties by setting a
 `transmission` parameter controls the homogenous volume scattering.
@@ -284,10 +285,10 @@ glossy.type = material_type::glossy;
 glossy.color = {0.5,1,0.5};              // with constant color
 glossyv.roughness = 0.1;                 // base roughness and a
 glossy.roughness_tex = texture_id;       // roughness texture
-auto metallic =  material_data{};        // create a metallic material
-glossy.type = material_type::metallic
-metal.color = {0.5,0.5,1};               // constant color
-metal.roughness = 0.1;                   // constant roughness
+auto reflective =  material_data{};      // create a reflective material
+glossy.type = material_type::reflective
+reflective.color = {0.5,0.5,1};          // constant color
+reflective.roughness = 0.1;              // constant roughness
 auto tglass = material_data{};           // create a transparent material
 tglass.type = material_type::transparent;
 tglass.color = {1,1,1};                  // with constant color
@@ -386,20 +387,6 @@ or `tesselate_subdivs(scene)` for the whole scene.
 tesselate_subdivs(scene);     // tesselate all subdivs in the scene
 ```
 
-## Face-Varying shapes
-
-We also support standalone face-varying shapes, that are not stored in the scene
-(see subdivs above). In this case, set the quads for positions,
-normals and texture coordinates.
-
-```cpp
-auto shape = fvshape_data{};                // create a shape
-shape.quadspos = vector<vec4i>{...};        // set face-varying indices
-shape.quadstexcoord = vector<vec4i>{...};   // for positions and textures
-shape.positions = vector<vec3f>{...};       // set positions
-shape.texcoords = vector<vec2f>{...};       // set texture coordinates
-```
-
 ## Example scenes
 
 Yocto/Scene has a function to create a simple Cornell Box scene for testing.
@@ -407,129 +394,4 @@ There are plans to increase support for more test scenes in the future.
 
 ```cpp
 auto scene = make_cornellbox();             // make cornell box
-```
-
-## Procedural shapes
-
-Yocto/Scene has convenience function to create various procedural shapes,
-both for testing and for use in shape creation. These are wrappers to the
-corresponding functions in [Yocto/Shape](yocto_shape.md), where we maintain
-a comprehensive list of all procedural shapes supported.
-
-Procedural shapes take as input the desired shape resolution, the shape scale,
-the uv scale, and additional parameters specific to that procedural shape.
-These functions return a quad mesh, stored as a `shape_data` struct.
-Use `make_rect(...)` for a rectangle in the XY plane,
-`make_bulged_rect(...)` for a bulged rectangle,
-`make_recty(...)` for a rectangle in the XZ plane,
-`make_bulged_recty(...)` for a bulged rectangle in the XZ plane,
-`make_box(...)` for a box,
-`make_rounded_box(...)` for a rounded box,
-`make_floor(...)` for a floor in the XZ plane,
-`make_bent_floor(...)` for a bent floor,
-`make_sphere(...)` for a sphere obtained from a cube,
-`make_uvsphere(...)` for a sphere tessellated along its uvs,
-`make_capped_uvsphere(...)` for a sphere with flipped caps,
-`make_disk(...)` for a disk obtained from a quad,
-`make_bulged_disk(...)` for a bulged disk,
-`make_uvdisk(...)` for a disk tessellated along its uvs,
-`make_uvcylinder(...)` for a cylinder tessellated along its uvs,
-`make_rounded_uvcylinder(...)` for a rounded cylinder.
-
-```cpp
-// make shapes with 32 steps in resolution and scale of 1
-auto shape_01 = make_rect({32,32}, {1,1});
-auto shape_02 = make_bulged_rect({32,32}, {1,1});
-auto shape_03 = make_recty({32,32}, {1,1});
-auto shape_04 = make_box({32,32,32}, {1,1,1});
-auto shape_05 = make_rounded_box({32,32,32}, {1,1,1});
-auto shape_06 = make_floor({32,32}, {10,10});
-auto shape_07 = make_bent_floor({32,32}, {10,10});
-auto shape_08 = make_sphere(32, 1);
-auto shape_09 = make_uvsphere({32,32}, 1);
-auto shape_10 = make_capped_uvsphere({32,32}, 1);
-auto shape_11 = make_disk(32, 1);
-auto shape_12 = make_bulged_disk(32, 1);
-auto shape_13 = make_uvdiskm({32,32}, 1);
-auto shape_14 = make_uvcylinder({32,32,32}, {1,1});
-auto shape_15 = make_rounded_uvcylinder({32,32,32}, {1,1});
-```
-
-Yocto/Shape defines a few procedural face-varying shapes with similar interfaces
-to the above functions. In this case, the functions return face-varying quads
-packed in a `fvshape_data` struct.
-Use `make_fvrect(...)` for a rectangle in the XY plane,
-`make_fvbox(...)` for a box,
-`make_fvsphere(...)` for a sphere obtained from a cube.
-
-```cpp
-// make face-varying shapes with 32 steps in resolution and scale of 1
-auto fvshape_01 = make_fvrect({32,32}, {1,1});
-auto fvshape_02 = make_fvbox({32,32,32}, {1,1,1});
-auto fvshape_03 = make_fvsphere(32, 1);
-```
-
-Yocto/Shape provides functions to create predefined shapes helpful in testing.
-These functions take only a scale and often provide only the positions as
-vertex data. These functions return either triangles, quads, or
-face-varying quads in a `shape_data` or `fvshape_data` struct.
-Use `make_monkey(...)` for the Blender monkey as quads and positions only,
-`make_quad(...)` for a simple quad,
-`make_quady(...)` for a simple quad in the XZ plane,
-`make_cube(...)` for a simple cube as quads and positions only,
-`make_fvcube(...)` for a simple face-varying unit cube,
-`make_geosphere(...)` for a geodesic sphere as triangles and positions only.
-These functions return a `shape_data` or `fvshape_data`.
-
-```cpp
-auto monkey = make_monkey(1);
-auto quad   = make_quad(1);
-auto quady  = make_quady(1);
-auto cube   = make_cube(1);
-auto geosph = make_geosphere(1);
-auto fvcube = make_fvcube(1);
-```
-
-Yocto/Shape supports the generation of points and lines sets.
-Use `make_lines(...)` to create a line set in the XY plane,
-`make_points(...)` for a collection of points at the origin,
-adn `make_random_points(...)` for a point set randomly placed in a box.
-These functions return points or lines, packed in a `shape_data` struct.
-
-```cpp
-auto lines_01 = make_lines({4, 65536},      // line steps and number of lines
-                           {1, 1}, {1, 1},  // line set scale and uvscale
-                           {0.001, 0.001}); // radius at the bottom and top
-// procedural points return points, positions, normals, texcoords, radia
-auto [points, positions, normals, texcoords, radius] = make_points(65536);
-auto points_01 = make_points(65536,        // number of points
-                             1,            // uvscale
-                             0.001);       // point radius
-auto points_02 = make_random_points(65536, // number of points
-                             {1, 1, 1}, 1, // line set scale and uvscale
-                             0.001);       // point radius
-```
-
-Yocto/Shape also defines a simple functions to generate randomized hairs
-on a triangle or quad mesh. Use `make_hair(...)` to create a hair shape
-from a triangle and quad mesh, and return a line set.
-
-```cpp
-// Make a hair ball around a shape
-auto lines =  make_hair(
-  make_sphere(),  // sampled surface
-  {8, 65536},     // steps: line steps and number of lines
-  {0.1, 0.1},     // length: minimum and maximum length
-  {0.001, 0.001}, // radius: minimum and maximum radius from base to tip
-  {0, 10},        // noise: noise added to hair (strength/scale)
-  {0, 128},       // clump: clump added to hair (strength/number)
-  {0, 0});        // rotation: rotation added to hair (angle/strength)
-```
-
-Finally, Yocto/Shape defines a function to create a quad mesh from a heighfield.
-Use `make_heightfield(...)` to create a heightfield meshes.
-
-```cpp
-auto heightfield = vctor<float>{...};             // heightfield data
-auto shape = make_heightfield(size, heightfield); // make heightfield mesh
 ```

@@ -48,7 +48,9 @@ auto ch0 = eval_image(ldr, {0.5,0.5});  // samples in sRGB, returns as sRGB
 auto ch1 = eval_image(ldr, {0.5,0.5}, true);  // treats sRGB values as linear
 ```
 
-Image loading and saving is defined in [Yocto/SceneIO](yocto_sceneio.md).
+## Image serialization
+
+Image loading and saving is defined in [Yocto/ImageIO](yocto_imageio.md).
 
 ## Image utilities
 
@@ -192,7 +194,7 @@ auto bordered = add_border(img, 1, {0, 0, 0, 1}); // add a thin black border
 
 Yocto/Image supports versions of the most of the above functions that work
 directly on pixel arrays, rather than the image structure. This low-level
-interface may be helpful when building applications that mhave their own
+interface may be helpful when building applications that have their own
 image data structure.
 
 In this interface we support arrays of `vec4f` pixels together with arrays of
