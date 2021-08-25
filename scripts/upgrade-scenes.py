@@ -15,7 +15,7 @@ def upgrade(filename):
     for _, material in scene['materials'].items():
       if 'type' in material:
         if material['type'] == 'metallic':
-          material['type'] == 'reflective'
+          material['type'] = 'reflective'
       else:
         material['type'] = 'matte'
       for key in ['color_tex', 'normal_tex', 'emission_tex']:

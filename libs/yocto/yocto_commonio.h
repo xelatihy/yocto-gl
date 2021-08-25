@@ -563,11 +563,11 @@ struct json_value {
   void set(const vec2f& value) { set((const std::array<float, 2>&)value); }
   void set(const vec3f& value) { set((const std::array<float, 3>&)value); }
   void set(const vec4f& value) { set((const std::array<float, 4>&)value); }
-  void set(const frame2f& value) { set((const std::array<float, 2>&)value); }
-  void set(const frame3f& value) { set((const std::array<float, 3>&)value); }
-  void set(const mat2f& value) { set((const std::array<float, 2>&)value); }
-  void set(const mat3f& value) { set((const std::array<float, 3>&)value); }
-  void set(const mat4f& value) { set((const std::array<float, 4>&)value); }
+  void set(const frame2f& value) { set((const std::array<float, 6>&)value); }
+  void set(const frame3f& value) { set((const std::array<float, 12>&)value); }
+  void set(const mat2f& value) { set((const std::array<float, 4>&)value); }
+  void set(const mat3f& value) { set((const std::array<float, 9>&)value); }
+  void set(const mat4f& value) { set((const std::array<float, 16>&)value); }
   // clang-format on
 
   // get path string (useful for error)
