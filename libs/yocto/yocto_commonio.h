@@ -341,6 +341,12 @@ struct json_value {
   bool is_string() const { return _type == json_type::string; }
   bool is_array() const { return _type == json_type::array; }
   bool is_object() const { return _type == json_type::object; }
+  bool is_array_of_numbers() const {
+    if (_type != json_type::array) return false;
+    for (auto& item : _get_array())
+      if (!item.is_number()) return false;
+    return true;
+  }
 
   // size
   bool   empty() const { return _empty(); }
@@ -548,11 +554,11 @@ struct json_value {
   void get(vec2f& value) const { get((std::array<float, 2>&)value); }
   void get(vec3f& value) const { get((std::array<float, 3>&)value); }
   void get(vec4f& value) const { get((std::array<float, 4>&)value); }
-  void get(frame2f& value) const { get((std::array<std::array<float, 2>, 3>&)value); }
-  void get(frame3f& value) const { get((std::array<std::array<float, 3>, 4>&)value); }
-  void get(mat2f& value) const { get((std::array<std::array<float, 2>, 2>&)value); }
-  void get(mat3f& value) const { get((std::array<std::array<float, 3>, 3>&)value); }
-  void get(mat4f& value) const { get((std::array<std::array<float, 4>, 4>&)value); }
+  void get(frame2f& value) const { if(is_array_of_numbers()) get((std::array<float, 6>&)value); else get((std::array<std::array<float, 2>, 3>&)value); }
+  void get(frame3f& value) const { if(is_array_of_numbers()) get((std::array<float, 12>&)value); else get((std::array<std::array<float, 3>, 4>&)value); }
+  void get(mat2f& value) const { if(is_array_of_numbers()) get((std::array<float, 4>&)value); else get((std::array<std::array<float, 2>, 2>&)value); }
+  void get(mat3f& value) const { if(is_array_of_numbers()) get((std::array<float, 9>&)value); else get((std::array<std::array<float, 3>, 3>&)value); }
+  void get(mat4f& value) const { if(is_array_of_numbers()) get((std::array<float, 16>&)value); else get((std::array<std::array<float, 4>, 4>&)value); }
   // clang-format on
 
   // math types
