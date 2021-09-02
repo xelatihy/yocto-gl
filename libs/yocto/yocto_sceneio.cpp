@@ -1999,9 +1999,9 @@ static void load_json_scene_version41(const string& filename, json_value& json,
   auto material_map = unordered_map<string, int>{};
 
   // filenames
-  auto shape_datafiles   = vector<string>{};
-  auto texture_datafiles = vector<string>{};
-  auto subdiv_datafiles  = vector<string>{};
+  auto shape_filenames   = vector<string>{};
+  auto texture_filenames = vector<string>{};
+  auto subdiv_filenames  = vector<string>{};
 
   // // load json instance
   // struct ply_instance {
@@ -2077,11 +2077,11 @@ static void load_json_scene_version41(const string& filename, json_value& json,
       auto& group = json.at("textures");
       scene.textures.reserve(group.size());
       scene.texture_names.reserve(group.size());
-      texture_datafiles.reserve(group.size());
+      texture_filenames.reserve(group.size());
       for (auto& [key, element] : group.items()) {
         [[maybe_unused]] auto& texture = scene.textures.emplace_back();
         scene.texture_names.push_back(key);
-        auto& datafile   = texture_datafiles.emplace_back();
+        auto& datafile   = texture_filenames.emplace_back();
         texture_map[key] = (int)scene.textures.size() - 1;
         if (element.is_string()) {
           auto filename = element.get<string>();
@@ -2129,11 +2129,11 @@ static void load_json_scene_version41(const string& filename, json_value& json,
       auto& group = json.at("shapes");
       scene.shapes.reserve(group.size());
       scene.shape_names.reserve(group.size());
-      shape_datafiles.reserve(group.size());
+      shape_filenames.reserve(group.size());
       for (auto& [key, element] : group.items()) {
         [[maybe_unused]] auto& shape = scene.shapes.emplace_back();
         scene.shape_names.push_back(key);
-        auto& datafile = shape_datafiles.emplace_back();
+        auto& datafile = shape_filenames.emplace_back();
         shape_map[key] = (int)scene.shapes.size() - 1;
         if (element.is_string()) {
           auto filename = element.get<string>();
@@ -2151,11 +2151,11 @@ static void load_json_scene_version41(const string& filename, json_value& json,
       auto& group = json.at("subdivs");
       scene.subdivs.reserve(group.size());
       scene.subdiv_names.reserve(group.size());
-      subdiv_datafiles.reserve(group.size());
+      subdiv_filenames.reserve(group.size());
       for (auto& [key, element] : group.items()) {
         auto& subdiv = scene.subdivs.emplace_back();
         scene.subdiv_names.emplace_back(key);
-        auto& datafile = subdiv_datafiles.emplace_back();
+        auto& datafile = subdiv_filenames.emplace_back();
         if (element.is_string()) {
           auto filename = element.get<string>();
           element       = load_json(path_join(dirname, "subdivs", filename));
@@ -2263,11 +2263,11 @@ static void load_json_scene_version41(const string& filename, json_value& json,
   }
 
   // fix paths
-  for (auto& datafile : shape_datafiles)
+  for (auto& datafile : shape_filenames)
     datafile = path_join(dirname, "shapes", datafile);
-  for (auto& datafile : texture_datafiles)
+  for (auto& datafile : texture_filenames)
     datafile = path_join(dirname, "textures", datafile);
-  for (auto& datafile : subdiv_datafiles)
+  for (auto& datafile : subdiv_filenames)
     datafile = path_join(dirname, "subdivs", datafile);
 
   // load resources
@@ -2275,15 +2275,15 @@ static void load_json_scene_version41(const string& filename, json_value& json,
     if (noparallel) {
       // load shapes
       for (auto idx : range(scene.shapes.size())) {
-        load_shape(shape_datafiles[idx], scene.shapes[idx], true);
+        load_shape(shape_filenames[idx], scene.shapes[idx], true);
       }
       // load subdivs
       for (auto idx : range(scene.subdivs.size())) {
-        load_subdiv(subdiv_datafiles[idx], scene.subdivs[idx]);
+        load_subdiv(subdiv_filenames[idx], scene.subdivs[idx]);
       }
       // load textures
       for (auto idx : range(scene.textures.size())) {
-        load_texture(texture_datafiles[idx], scene.textures[idx]);
+        load_texture(texture_filenames[idx], scene.textures[idx]);
       }
       // load instances
       // for (auto& ply_instance : ply_instances) {
@@ -2295,15 +2295,15 @@ static void load_json_scene_version41(const string& filename, json_value& json,
     } else {
       // load shapes
       parallel_for(scene.shapes.size(), [&](size_t idx) {
-        load_shape(shape_datafiles[idx], scene.shapes[idx], true);
+        load_shape(shape_filenames[idx], scene.shapes[idx], true);
       });
       // load subdivs
       parallel_for(scene.subdivs.size(), [&](size_t idx) {
-        load_subdiv(subdiv_datafiles[idx], scene.subdivs[idx]);
+        load_subdiv(subdiv_filenames[idx], scene.subdivs[idx]);
       });
       // load textures
       parallel_for(scene.textures.size(), [&](size_t idx) {
-        load_texture(texture_datafiles[idx], scene.textures[idx]);
+        load_texture(texture_filenames[idx], scene.textures[idx]);
       });
       // // load instances
       // parallel_foreach(ply_instances, [&](auto& ply_instance) {
@@ -2380,20 +2380,30 @@ static void load_json_scene(
   };
   auto get_orf = [](const json_value& json, const string& key, int& value,
                      const unordered_map<string, int>& map) {
-    auto values = json.value(key, string{});
-    try {
-      value = values.empty() ? -1 : map.at(values);
-    } catch (const std::out_of_range&) {
-      throw json_error{"missing reference", &json.at(key)};
+    if (!json.contains(key)) return;
+    if (json.is_string()) {
+      auto values = json.value(key, string{});
+      try {
+        value = values.empty() ? -1 : map.at(values);
+      } catch (const std::out_of_range&) {
+        throw json_error{"missing reference", &json.at(key)};
+      }
+    } else {
+      value = json.value(key, -1);
     }
   };
   auto get_rrf = [](const json_value& json, const string& key, int& value,
                      const unordered_map<string, int>& map) {
-    auto values = json.at(key).get<string>();
-    try {
-      value = map.at(values);
-    } catch (const std::out_of_range&) {
-      throw json_error{"missing reference", &json.at(key)};
+    if (!json.contains(key)) throw json_error{"missing value", &json};
+    if (json.is_string()) {
+      auto values = json.at(key).get<string>();
+      try {
+        value = map.at(values);
+      } catch (const std::out_of_range&) {
+        throw json_error{"missing reference", &json.at(key)};
+      }
+    } else {
+      value = json.value(key, -1);
     }
   };
 
@@ -2558,97 +2568,48 @@ static void load_json_scene(
   } catch (const json_error& error) {
     throw io_error::parse_error(
         filename, json_value::get_path(&json, error.where()));
-  } catch (const io_error& error) {
-    throw io_error::dependent_error(filename, error);
   } catch (...) {
     throw io_error::parse_error(filename);
   }
-
-  // fix paths
-  for (auto& filename : shape_filenames)
-    filename = path_join(dirname, filename);
-  for (auto& filename : texture_filenames)
-    filename = path_join(dirname, filename);
-  for (auto& filename : subdiv_filenames)
-    filename = path_join(dirname, filename);
 
   // load resources
   try {
     if (noparallel) {
       // load shapes
       for (auto idx : range(scene.shapes.size())) {
-        load_shape(shape_filenames[idx], scene.shapes[idx], true);
+        load_shape(
+            path_join(dirname, shape_filenames[idx]), scene.shapes[idx], true);
       }
       // load subdivs
       for (auto idx : range(scene.subdivs.size())) {
-        load_subdiv(subdiv_filenames[idx], scene.subdivs[idx]);
+        load_subdiv(
+            path_join(dirname, subdiv_filenames[idx]), scene.subdivs[idx]);
       }
       // load textures
       for (auto idx : range(scene.textures.size())) {
-        load_texture(texture_filenames[idx], scene.textures[idx]);
+        load_texture(
+            path_join(dirname, texture_filenames[idx]), scene.textures[idx]);
       }
-      // load instances
-      // for (auto& ply_instance : ply_instances) {
-      //   auto path = find_path(
-      //       get_ply_instance_name(scene, ply_instance), "instances",
-      //       {".ply"});
-      //   load_instance(path_join(dirname, path), ply_instance.frames);
-      // }
     } else {
       // load shapes
       parallel_for(scene.shapes.size(), [&](size_t idx) {
-        load_shape(shape_filenames[idx], scene.shapes[idx], true);
+        load_shape(
+            path_join(dirname, shape_filenames[idx]), scene.shapes[idx], true);
       });
       // load subdivs
       parallel_for(scene.subdivs.size(), [&](size_t idx) {
-        load_subdiv(subdiv_filenames[idx], scene.subdivs[idx]);
+        load_subdiv(
+            path_join(dirname, subdiv_filenames[idx]), scene.subdivs[idx]);
       });
       // load textures
       parallel_for(scene.textures.size(), [&](size_t idx) {
-        load_texture(texture_filenames[idx], scene.textures[idx]);
+        load_texture(
+            path_join(dirname, texture_filenames[idx]), scene.textures[idx]);
       });
-      // // load instances
-      // parallel_foreach(ply_instances, [&](auto& ply_instance) {
-      //   auto path = find_path(
-      //       get_ply_instance_name(scene, ply_instance), "instances",
-      //       {".ply"});
-      //   load_instance(path_join(dirname, path), ply_instance.frames);
-      // });
     }
   } catch (const io_error& exception) {
     throw io_error::dependent_error(filename, exception);
   }
-
-  // apply instances
-  // if (!ply_instances.empty()) {
-  //   auto instances      = scene.instances;
-  //   auto instance_names = scene.instance_names;
-  //   scene.instances.clear();
-  //   scene.instance_names.clear();
-  //   for (auto& instance : instances) {
-  //     auto it = instance_ply.find((int)(&instance - instances.data()));
-  //     if (it == instance_ply.end()) {
-  //       auto& ninstance = scene.instances.emplace_back();
-  //       scene.instance_names.emplace_back(
-  //           instance_names[&instance - instances.data()]);
-  //       ninstance.frame    = instance.frame;
-  //       ninstance.shape    = instance.shape;
-  //       ninstance.material = instance.material;
-  //     } else {
-  //       auto& ply_instance = ply_instances[it->second];
-  //       auto  instance_id  = 0;
-  //       for (auto& frame : ply_instance.frames) {
-  //         auto& ninstance = scene.instances.emplace_back();
-  //         scene.instance_names.emplace_back(
-  //             instance_names[&instance - instances.data()] + "_" +
-  //             std::to_string(instance_id++));
-  //         ninstance.frame    = frame * instance.frame;
-  //         ninstance.shape    = instance.shape;
-  //         ninstance.material = instance.material;
-  //       }
-  //     }
-  //   }
-  // }
 
   // fix scene
   add_missing_camera(scene);
@@ -2665,10 +2626,14 @@ static void save_json_scene(
     item       = json_object{};
     return item;
   };
-  auto add_value = [](json_value& json, const string& name,
-                       const auto& value) -> json_value& {
+  auto add_array = [](json_value& json, const string& name) -> json_value& {
     auto& item = json.insert_back(name);
-    item       = value;
+    item       = json_array{};
+    return item;
+  };
+  auto append_object = [](json_value& json) -> json_value& {
+    auto& item = json.emplace_back();
+    item       = json_object{};
     return item;
   };
   auto set_opt = [](json_value& json, const string& name, const auto& value,
@@ -2682,43 +2647,54 @@ static void save_json_scene(
   auto set_orf = [](json_value& json, const string& name, int value,
                      const vector<string>& names) {
     if (value < 0) return;
-    json.insert_back(name) = names.at(value);
+    if (names.size() > value && names[value] != "") {
+      json.insert_back(name) = names.at(value);
+    } else {
+      json.insert_back(name) = value;
+    }
   };
   auto set_rrf = [](json_value& json, const string& name, int value,
                      const vector<string>& names) {
-    json.insert_back(name) = names.at(value);
+    if (names.size() > value && names[value] != "") {
+      json.insert_back(name) = names.at(value);
+    } else {
+      json.insert_back(name) = value;
+    }
   };
 
   // dirname
   auto dirname = path_dirname(filename);
 
   // names
-  auto camera_names  = make_names(scene.cameras, scene.camera_names, "camera");
-  auto texture_names = make_names(
-      scene.textures, scene.texture_names, "texture");
-  auto material_names = make_names(
-      scene.materials, scene.material_names, "material");
-  auto shape_names    = make_names(scene.shapes, scene.shape_names, "shape");
-  auto subdiv_names   = make_names(scene.subdivs, scene.subdiv_names, "subdiv");
-  auto instance_names = make_names(
-      scene.instances, scene.instance_names, "instance");
+  auto get_name = [](const vector<string>& names, size_t idx) -> string {
+    if (names.size() <= idx) return "";
+    return names[idx];
+  };
+  auto get_filename = [](const vector<string>& names, size_t idx,
+                          const string& basename,
+                          const string& extension) -> string {
+    if (names.size() <= idx) {
+      return basename + "s/" + names[idx] + extension;
+    } else {
+      return basename + "s/" + basename + extension;
+    }
+  };
 
   // filenames
-  auto shape_datafiles   = vector<string>(shape_names.size());
-  auto texture_datafiles = vector<string>(texture_names.size());
-  auto subdiv_datafiles  = vector<string>(subdiv_names.size());
-  for (auto idx : range(shape_datafiles.size())) {
-    shape_datafiles[idx] = path_join(
-        dirname, "shapes", shape_names[idx] + ".ply");
+  auto shape_filenames   = vector<string>(scene.shapes.size());
+  auto texture_filenames = vector<string>(scene.textures.size());
+  auto subdiv_filenames  = vector<string>(scene.subdivs.size());
+  for (auto idx : range(shape_filenames.size())) {
+    shape_filenames[idx] = get_filename(
+        scene.shape_names, idx, "shape", ".ply");
   }
-  for (auto idx : range(texture_datafiles.size())) {
-    texture_datafiles[idx] = path_join(dirname, "textures",
-        texture_names[idx] +
-            (scene.textures[idx].pixelsf.empty() ? ".png" : ".hdr"));
+  for (auto idx : range(texture_filenames.size())) {
+    texture_filenames[idx] = get_filename(scene.texture_names, idx, "texture",
+        (scene.textures[idx].pixelsf.empty() ? ".png" : ".hdr"));
   }
-  for (auto idx : range(subdiv_datafiles.size())) {
-    subdiv_datafiles[idx] = path_join(
-        dirname, "subdivs", subdiv_names[idx] + ".obj");
+  for (auto idx : range(subdiv_filenames.size())) {
+    subdiv_filenames[idx] = get_filename(
+        scene.subdiv_names, idx, "subdiv", ".obj");
   }
 
   // save json file
@@ -2731,15 +2707,16 @@ static void save_json_scene(
     set_opt(element, "copyright", scene.copyright, "");
     set_req(element, "generator",
         "Yocto/GL - https://github.com/xelatihy/yocto-gl");
-    set_req(element, "version", "4.1");
+    set_req(element, "version", "4.2");
   }
 
   if (!scene.cameras.empty()) {
     auto  default_ = camera_data{};
-    auto& group    = add_object(json, "cameras");
+    auto& group    = add_array(json, "cameras");
     group.reserve(scene.cameras.size());
     for (auto&& [idx, camera] : enumerate(scene.cameras)) {
-      auto& element = add_object(group, camera_names[idx]);
+      auto& element = append_object(group);
+      set_opt(element, "name", get_name(scene.camera_names, idx), "");
       set_opt(element, "frame", camera.frame, default_.frame);
       set_opt(
           element, "orthographic", camera.orthographic, default_.orthographic);
@@ -2752,20 +2729,22 @@ static void save_json_scene(
   }
 
   if (!scene.textures.empty()) {
-    auto& group = add_object(json, "textures");
+    auto& group = add_array(json, "textures");
     group.reserve(scene.textures.size());
     for (auto&& [idx, texture] : enumerate(scene.textures)) {
-      add_value(group, texture_names[idx],
-          texture_names[idx] + (texture.pixelsf.empty() ? ".png" : ".hdr"));
+      auto& element = append_object(group);
+      set_opt(element, "name", get_name(scene.texture_names, idx), "");
+      set_req(element, "uri", texture_filenames[idx]);
     }
   }
 
   if (!scene.materials.empty()) {
     auto  default_ = material_data{};
-    auto& group    = add_object(json, "materials");
+    auto& group    = add_array(json, "materials");
     group.reserve(scene.materials.size());
     for (auto&& [idx, material] : enumerate(scene.materials)) {
-      auto& element = add_object(group, material_names[idx]);
+      auto& element = append_object(group);
+      set_opt(element, "name", get_name(scene.material_names, idx), "");
       set_opt(element, "type", material.type, default_.type);
       set_opt(element, "emission", material.emission, default_.emission);
       set_opt(element, "color", material.color, default_.color);
@@ -2777,12 +2756,14 @@ static void save_json_scene(
       set_opt(element, "scanisotropy", material.scanisotropy,
           default_.scanisotropy);
       set_opt(element, "opacity", material.opacity, default_.opacity);
-      set_orf(element, "emission_tex", material.emission_tex, texture_names);
-      set_orf(element, "color_tex", material.color_tex, texture_names);
-      set_orf(element, "roughness_tex", material.roughness_tex, texture_names);
       set_orf(
-          element, "scattering_tex", material.scattering_tex, texture_names);
-      set_orf(element, "normal_tex", material.normal_tex, texture_names);
+          element, "emission_tex", material.emission_tex, scene.texture_names);
+      set_orf(element, "color_tex", material.color_tex, scene.texture_names);
+      set_orf(element, "roughness_tex", material.roughness_tex,
+          scene.texture_names);
+      set_orf(element, "scattering_tex", material.scattering_tex,
+          scene.texture_names);
+      set_orf(element, "normal_tex", material.normal_tex, scene.texture_names);
     }
   }
 
@@ -2790,18 +2771,21 @@ static void save_json_scene(
     auto& group = add_object(json, "shapes");
     group.reserve(scene.shapes.size());
     for (auto&& [idx, shape] : enumerate(scene.shapes)) {
-      add_value(group, shape_names[idx], shape_names[idx] + ".ply");
+      auto& element = append_object(group);
+      set_opt(element, "name", get_name(scene.shape_names, idx), "");
+      set_req(element, "uri", shape_filenames[idx]);
     }
   }
 
   if (!scene.subdivs.empty()) {
     auto  default_ = subdiv_data{};
-    auto& group    = add_object(json, "subdivs");
+    auto& group    = add_array(json, "subdivs");
     group.reserve(scene.subdivs.size());
     for (auto&& [idx, subdiv] : enumerate(scene.subdivs)) {
-      auto& element = add_object(group, subdiv_names[idx]);
-      set_rrf(element, "shape", subdiv.shape, shape_names);
-      set_req(element, "datafile", subdiv_names[idx] + ".obj");
+      auto& element = append_object(group);
+      set_opt(element, "name", get_name(scene.subdiv_names, idx), "");
+      set_rrf(element, "shape", subdiv.shape, scene.shape_names);
+      set_req(element, "uri", subdiv_filenames[idx]);
       set_opt(
           element, "subdivisions", subdiv.subdivisions, default_.subdivisions);
       set_opt(
@@ -2816,26 +2800,28 @@ static void save_json_scene(
 
   if (!scene.instances.empty()) {
     auto  default_ = instance_data{};
-    auto& group    = add_object(json, "instances");
+    auto& group    = add_array(json, "instances");
     group.reserve(scene.instances.size());
-    for (auto& instance : scene.instances) {
-      auto& element = add_object(group, get_instance_name(scene, instance));
+    for (auto&& [idx, instance] : enumerate(scene.instances)) {
+      auto& element = append_object(group);
+      set_opt(element, "name", get_name(scene.instance_names, idx), "");
       set_opt(element, "frame", instance.frame, default_.frame);
-      set_rrf(element, "shape", instance.shape, shape_names);
-      set_rrf(element, "material", instance.material, material_names);
+      set_rrf(element, "shape", instance.shape, scene.shape_names);
+      set_rrf(element, "material", instance.material, scene.material_names);
     }
   }
 
   if (!scene.environments.empty()) {
     auto  default_ = environment_data{};
-    auto& group    = add_object(json, "environments");
+    auto& group    = add_array(json, "environments");
     group.reserve(scene.environments.size());
-    for (auto& environment : scene.environments) {
-      auto& element = add_object(
-          group, get_environment_name(scene, environment));
+    for (auto&& [idx, environment] : enumerate(scene.environments)) {
+      auto& element = append_object(group);
+      set_opt(element, "name", get_name(scene.environment_names, idx), "");
       set_opt(element, "frame", environment.frame, default_.frame);
       set_opt(element, "emission", environment.emission, default_.emission);
-      set_orf(element, "emission_tex", environment.emission_tex, texture_names);
+      set_orf(element, "emission_tex", environment.emission_tex,
+          scene.texture_names);
     }
   }
 
@@ -2847,28 +2833,34 @@ static void save_json_scene(
     if (noparallel) {
       // save shapes
       for (auto idx : range(scene.shapes.size())) {
-        save_shape(shape_datafiles[idx], scene.shapes[idx], true);
+        save_shape(
+            path_join(dirname, shape_filenames[idx]), scene.shapes[idx], true);
       }
       // save subdiv
       for (auto idx : range(scene.subdivs.size())) {
-        save_subdiv(subdiv_datafiles[idx], scene.subdivs[idx]);
+        save_subdiv(
+            path_join(dirname, subdiv_filenames[idx]), scene.subdivs[idx]);
       }
       // save textures
       for (auto idx : range(scene.textures.size())) {
-        save_texture(texture_datafiles[idx], scene.textures[idx]);
+        save_texture(
+            path_join(dirname, texture_filenames[idx]), scene.textures[idx]);
       }
     } else {
       // save shapes
       parallel_for(scene.shapes.size(), [&](auto idx) {
-        save_shape(shape_datafiles[idx], scene.shapes[idx], true);
+        save_shape(
+            path_join(dirname, shape_filenames[idx]), scene.shapes[idx], true);
       });
       // save subdivs
       parallel_for(scene.subdivs.size(), [&](auto idx) {
-        save_subdiv(subdiv_datafiles[idx], scene.subdivs[idx]);
+        save_subdiv(
+            path_join(dirname, subdiv_filenames[idx]), scene.subdivs[idx]);
       });
       // save textures
       parallel_for(scene.textures.size(), [&](auto idx) {
-        save_texture(texture_datafiles[idx], scene.textures[idx]);
+        save_texture(
+            path_join(dirname, texture_filenames[idx]), scene.textures[idx]);
       });
     }
   } catch (const io_error& exception) {
