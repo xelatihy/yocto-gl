@@ -2003,40 +2003,6 @@ static void load_json_scene_version41(const string& filename, json_value& json,
   auto texture_filenames = vector<string>{};
   auto subdiv_filenames  = vector<string>{};
 
-  // // load json instance
-  // struct ply_instance {
-  //   vector<frame3f> frames = {};
-  // };
-  // using ply_instance_handle = int;
-  // auto ply_instances        = vector<ply_instance>{};
-  // auto ply_instances_names  = vector<string>{};
-  // auto ply_instance_map     = unordered_map<string, ply_instance_handle>{
-  //     {"", invalidid}};
-  // auto instance_ply = unordered_map<int, ply_instance_handle>{};
-  // auto get_ist      = [&scene, &ply_instances, &ply_instances_names,
-  //                    &ply_instance_map, &instance_ply](const json_value&
-  //                    json, const string& key, const instance_data& instance)
-  //                    {
-  //   auto name = json.value(key, string{});
-  //   if (name.empty()) return;
-  //   auto instance_id = (int)(&instance - scene.instances.data());
-  //   auto it          = ply_instance_map.find(name);
-  //   if (it != ply_instance_map.end()) {
-  //     instance_ply[instance_id] = it->second;
-  //   } else {
-  //     ply_instances_names.emplace_back(name);
-  //     ply_instances.emplace_back(ply_instance());
-  //     auto ply_instance_id      = (int)ply_instances.size() - 1;
-  //     ply_instance_map[name]    = ply_instance_id;
-  //     instance_ply[instance_id] = ply_instance_id;
-  //   }
-  // };
-  // auto get_ply_instance_name = [&ply_instances, &ply_instances_names](
-  //                                  const scene_data&   scene,
-  //                                  const ply_instance& instance) -> string {
-  //   return ply_instances_names[&instance - ply_instances.data()];
-  // };
-
   // prepare data
   auto dirname = path_dirname(filename);
 
@@ -2212,47 +2178,6 @@ static void load_json_scene_version41(const string& filename, json_value& json,
         }
       }
     }
-    // if (json.contains("object_instances")) {
-    //   for (auto& [key, element] : json.at("object_instances").items()) {
-    //     auto& instance = ply_instances.emplace_back();
-    //     if (element.is_string()) {
-    //       auto filename = element.get<string>();
-    //       element       = load_json(path_join(dirname, "objects", filename));
-    //     }
-    //     get_opt(element, "frame", instance.frame);
-    //     get_rrf(element, "shape", instance.shape, shape_map);
-    //     get_rrf(element, "material", instance.material, material_map);
-    //     if (element.contains("lookat")) {
-    //       get_opt(element, "lookat", (mat3f&)instance.frame);
-    //       instance.frame = lookat_frame(
-    //           instance.frame.x, instance.frame.y, instance.frame.z, false);
-    //     }
-    //     if (element.contains("ply_instance")) {
-    //       get_ist(element, "instance", instance);
-    //     }
-    //   }
-    // }
-    // if (json.contains("objects")) {
-    //   for (auto& [key, element] : json.at("objects").items()) {
-    //     auto& instance = scene.instances.emplace_back();
-    //     scene.instance_names.emplace_back(key);
-    //     if (element.is_string()) {
-    //       auto filename = element.get<string>();
-    //       element       = load_json(path_join(dirname, "objects", filename));
-    //     }
-    //     get_opt(element, "frame", instance.frame);
-    //     get_rrf(element, "shape", instance.shape, shape_map);
-    //     get_rrf(element, "material", instance.material, material_map);
-    //     if (element.contains("lookat")) {
-    //       get_opt(element, "lookat", (mat3f&)instance.frame);
-    //       instance.frame = lookat_frame(
-    //           instance.frame.x, instance.frame.y, instance.frame.z, false);
-    //     }
-    //     if (element.contains("ply_instance")) {
-    //       get_ist(element, "instance", instance);
-    //     }
-    //   }
-    // }
   } catch (const json_error& error) {
     throw io_error::parse_error(
         filename, json_value::get_path(&json, error.where()));
@@ -2285,13 +2210,6 @@ static void load_json_scene_version41(const string& filename, json_value& json,
       for (auto idx : range(scene.textures.size())) {
         load_texture(texture_filenames[idx], scene.textures[idx]);
       }
-      // load instances
-      // for (auto& ply_instance : ply_instances) {
-      //   auto path = find_path(
-      //       get_ply_instance_name(scene, ply_instance), "instances",
-      //       {".ply"});
-      //   load_instance(path_join(dirname, path), ply_instance.frames);
-      // }
     } else {
       // load shapes
       parallel_for(scene.shapes.size(), [&](size_t idx) {
@@ -2305,48 +2223,10 @@ static void load_json_scene_version41(const string& filename, json_value& json,
       parallel_for(scene.textures.size(), [&](size_t idx) {
         load_texture(texture_filenames[idx], scene.textures[idx]);
       });
-      // // load instances
-      // parallel_foreach(ply_instances, [&](auto& ply_instance) {
-      //   auto path = find_path(
-      //       get_ply_instance_name(scene, ply_instance), "instances",
-      //       {".ply"});
-      //   load_instance(path_join(dirname, path), ply_instance.frames);
-      // });
     }
   } catch (const io_error& exception) {
     throw io_error::dependent_error(filename, exception);
   }
-
-  // apply instances
-  // if (!ply_instances.empty()) {
-  //   auto instances      = scene.instances;
-  //   auto instance_names = scene.instance_names;
-  //   scene.instances.clear();
-  //   scene.instance_names.clear();
-  //   for (auto& instance : instances) {
-  //     auto it = instance_ply.find((int)(&instance - instances.data()));
-  //     if (it == instance_ply.end()) {
-  //       auto& ninstance = scene.instances.emplace_back();
-  //       scene.instance_names.emplace_back(
-  //           instance_names[&instance - instances.data()]);
-  //       ninstance.frame    = instance.frame;
-  //       ninstance.shape    = instance.shape;
-  //       ninstance.material = instance.material;
-  //     } else {
-  //       auto& ply_instance = ply_instances[it->second];
-  //       auto  instance_id  = 0;
-  //       for (auto& frame : ply_instance.frames) {
-  //         auto& ninstance = scene.instances.emplace_back();
-  //         scene.instance_names.emplace_back(
-  //             instance_names[&instance - instances.data()] + "_" +
-  //             std::to_string(instance_id++));
-  //         ninstance.frame    = frame * instance.frame;
-  //         ninstance.shape    = instance.shape;
-  //         ninstance.material = instance.material;
-  //       }
-  //     }
-  //   }
-  // }
 
   // fix scene
   add_missing_camera(scene);
