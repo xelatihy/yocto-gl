@@ -3,7 +3,7 @@
 import os, glob, json, sys
 from typing import OrderedDict
 
-def upgrade(filename):
+def upgrade(filename, remove_names):
   with open(filename) as f:
     scene = json.load(f, object_pairs_hook=OrderedDict)
     if scene['asset']['version'] == "4.2": return
@@ -16,10 +16,14 @@ def upgrade(filename):
     nscene['asset']['version'] = "4.2"
     for groupname in ['cameras', 'environments', 'textures', 'materials', 'shapes', 'subdivs', 'instances']:
       if groupname not in scene: continue
-      if groupname in ['textures', 'shapes']:
-        nscene[groupname] = [ { 'uri': groupname + "/" + item } for _, item in scene[groupname].items() ]
-      else:
-        nscene[groupname] = [ item for _, item in scene[groupname].items() ]
+      nscene[groupname] = []
+      for name, item in scene[groupname].items():
+        nscene[groupname].append(OrderedDict())
+        if not remove_names: nscene[groupname][-1]['name'] = name
+        if groupname in ['textures', 'shapes']:
+          nscene[groupname][-1]['uri'] = groupname + "/" + item
+        else:
+          nscene[groupname][-1].update(item)
     if 'subdivs' in nscene:
       for subdiv in nscene['subdivs']:
         subdiv['uri'] = 'subdivs/' + subdiv['datafile']
@@ -38,6 +42,11 @@ def upgrade(filename):
   with open(filename, 'w') as f:
     json.dump(nscene, f, indent=2)
 
-for filename in sys.argv[1:]:
+parser = argparse.ArgumentParser(description='Upgrades scene.')
+parser.add_argument('scenes', type=str, nargs='+')
+parser.add_argument('--remove-names', action='store_true', default=False)
+args = parser.parse_args()
+
+for filename in args.scenes:
   print(filename)
-  upgrade(filename)
+  upgrade(filename, args.remove_names)
