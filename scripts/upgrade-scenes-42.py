@@ -19,7 +19,7 @@ def upgrade(filename, remove_names):
       nscene[groupname] = []
       for name, item in scene[groupname].items():
         nitem = OrderedDict()
-        nscene[groupname].append(item)
+        nscene[groupname].append(nitem)
         if not remove_names: nitem['name'] = name
         if groupname in ['textures', 'shapes']:
           nitem['uri'] = groupname + "/" + item
