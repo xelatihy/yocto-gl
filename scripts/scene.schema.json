@@ -22,18 +22,19 @@
     "cameras": {
       "description": "Scene cameras",
       "type": "object",
-      "additionalProperties": {
+      "items": {
         "description": "Camera",
         "type": "object",
         "properties": {
+          "name": {
+            "description": "Name",
+            "type": "string"
+          },
           "frame": {
             "description": "Frame",
             "type": "array",
             "items": {
-              "type": "array",
-              "items": {
-                "type": "number"
-              }
+              "type": "number"
             }
           },
           "lens": {
@@ -61,11 +62,15 @@
     },
     "environments": {
       "description": "Scene environments",
-      "type": "object",
-      "additionalProperties": {
+      "type": "array",
+      "items": {
         "description": "Environment",
         "type": "object",
         "properties": {
+          "name": {
+            "description": "Name",
+            "type": "string"
+          },
           "frame": {
             "description": "Frame",
             "type": "array",
@@ -89,11 +94,15 @@
     },
     "materials": {
       "description": "Scene materials",
-      "type": "object",
-      "additionalProperties": {
+      "type": "array",
+      "items": {
         "description": "Object",
         "type": "object",
         "properties": {
+          "name": {
+            "description": "Name",
+            "type": "string"
+          },
           "emission": {
             "description": "Emission",
             "type": "array",

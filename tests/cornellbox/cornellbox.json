@@ -1,90 +1,129 @@
 {
   "asset": {
     "generator": "Yocto/GL - https://github.com/xelatihy/yocto-gl",
-    "version": "4.1"
+    "version": "4.2"
   },
-  "cameras": {
-    "camera1": {
+  "cameras": [
+    {
+      "name": "camera1",
       "frame": [
-        [ 1.0, 0.0, 0.0 ],
-        [ 0.0, 1.0, 0.0 ],
-        [ 0.0, 0.0, 1.0 ],
-        [ 0.0, 1.0, 3.9000000953674316 ]
+        1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0,
+        3.9000000953674316
       ],
       "lens": 0.03500000014901161,
       "aspect": 1.0,
       "film": 0.024000000208616257,
       "focus": 3.9000000953674316
     }
-  },
-  "materials": {
-    "backwall": {
-      "color": [ 0.7250000238418579, 0.7099999785423279, 0.6800000071525574 ]
+  ],
+  "materials": [
+    {
+      "name": "backwall",
+      "color": [0.7250000238418579, 0.7099999785423279, 0.6800000071525574]
     },
-    "ceiling": {
-      "color": [ 0.7250000238418579, 0.7099999785423279, 0.6800000071525574 ]
+    {
+      "name": "ceiling",
+      "color": [0.7250000238418579, 0.7099999785423279, 0.6800000071525574]
     },
-    "floor": {
-      "color": [ 0.7250000238418579, 0.7099999785423279, 0.6800000071525574 ]
+    {
+      "name": "floor",
+      "color": [0.7250000238418579, 0.7099999785423279, 0.6800000071525574]
     },
-    "leftwall": {
-      "color": [ 0.6299999952316284, 0.06499999761581421, 0.05000000074505806 ]
+    {
+      "name": "leftwall",
+      "color": [0.6299999952316284, 0.06499999761581421, 0.05000000074505806]
     },
-    "light": {
-      "emission": [ 17.0, 12.0, 4.0 ]
+    {
+      "name": "light",
+      "emission": [17.0, 12.0, 4.0]
     },
-    "rightwall": {
-      "color": [ 0.14000000059604645, 0.44999998807907104, 0.09000000357627869 ]
+    {
+      "name": "rightwall",
+      "color": [0.14000000059604645, 0.44999998807907104, 0.09000000357627869]
     },
-    "shortbox": {
-      "color": [ 0.7250000238418579, 0.7099999785423279, 0.6800000071525574 ]
+    {
+      "name": "shortbox",
+      "color": [0.7250000238418579, 0.7099999785423279, 0.6800000071525574]
     },
-    "tallbox": {
-      "color": [ 0.7250000238418579, 0.7099999785423279, 0.6800000071525574 ]
+    {
+      "name": "tallbox",
+      "color": [0.7250000238418579, 0.7099999785423279, 0.6800000071525574]
     }
-  },
-  "shapes": {
-    "backwall": "backwall.ply",
-    "ceiling": "ceiling.ply",
-    "floor": "floor.ply",
-    "leftwall": "leftwall.ply",
-    "light": "light.ply",
-    "rightwall": "rightwall.ply",
-    "shortbox": "shortbox.ply",
-    "tallbox": "tallbox.ply"
-  },
-  "instances": {
-    "backwall": {
-      "shape": "backwall",
-      "material": "backwall"
+  ],
+  "shapes": [
+    {
+      "name": "backwall",
+      "uri": "shapes/backwall.ply"
     },
-    "ceiling": {
-      "shape": "ceiling",
-      "material": "ceiling"
+    {
+      "name": "ceiling",
+      "uri": "shapes/ceiling.ply"
     },
-    "floor": {
-      "shape": "floor",
-      "material": "floor"
+    {
+      "name": "floor",
+      "uri": "shapes/floor.ply"
     },
-    "leftwall": {
-      "shape": "leftwall",
-      "material": "leftwall"
+    {
+      "name": "leftwall",
+      "uri": "shapes/leftwall.ply"
     },
-    "light": {
-      "shape": "light",
-      "material": "light"
+    {
+      "name": "light",
+      "uri": "shapes/light.ply"
     },
-    "rightwall": {
-      "shape": "rightwall",
-      "material": "rightwall"
+    {
+      "name": "rightwall",
+      "uri": "shapes/rightwall.ply"
     },
-    "shortbox": {
-      "shape": "shortbox",
-      "material": "shortbox"
+    {
+      "name": "shortbox",
+      "uri": "shapes/shortbox.ply"
     },
-    "tallbox": {
-      "shape": "tallbox",
-      "material": "tallbox"
+    {
+      "name": "tallbox",
+      "uri": "shapes/tallbox.ply"
     }
-  }
+  ],
+  "instances": [
+    {
+      "name": "backwall",
+      "shape": 0,
+      "material": 0
+    },
+    {
+      "name": "ceiling",
+      "shape": 1,
+      "material": 1
+    },
+    {
+      "name": "floor",
+      "shape": 2,
+      "material": 2
+    },
+    {
+      "name": "leftwall",
+      "shape": 3,
+      "material": 3
+    },
+    {
+      "name": "light",
+      "shape": 4,
+      "material": 4
+    },
+    {
+      "name": "rightwall",
+      "shape": 5,
+      "material": 5
+    },
+    {
+      "name": "shortbox",
+      "shape": 6,
+      "material": 6
+    },
+    {
+      "name": "tallbox",
+      "shape": 7,
+      "material": 7
+    }
+  ]
 }
