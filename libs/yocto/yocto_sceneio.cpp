@@ -2378,39 +2378,6 @@ static void load_json_scene(
       throw json_error{"missing reference", &json};
     }
   };
-  auto get_orf = [](const json_value& json, const string& key, int& value,
-                     const unordered_map<string, int>& map) {
-    if (!json.contains(key)) return;
-    if (json.is_string()) {
-      auto values = json.value(key, string{});
-      try {
-        value = values.empty() ? -1 : map.at(values);
-      } catch (const std::out_of_range&) {
-        throw json_error{"missing reference", &json.at(key)};
-      }
-    } else {
-      value = json.value(key, -1);
-    }
-  };
-  auto get_rrf = [](const json_value& json, const string& key, int& value,
-                     const unordered_map<string, int>& map) {
-    if (!json.contains(key)) throw json_error{"missing value", &json};
-    if (json.is_string()) {
-      auto values = json.at(key).get<string>();
-      try {
-        value = map.at(values);
-      } catch (const std::out_of_range&) {
-        throw json_error{"missing reference", &json.at(key)};
-      }
-    } else {
-      value = json.value(key, -1);
-    }
-  };
-
-  // references
-  auto shape_map    = unordered_map<string, int>{};
-  auto texture_map  = unordered_map<string, int>{};
-  auto material_map = unordered_map<string, int>{};
 
   // filenames
   auto shape_filenames   = vector<string>{};
@@ -2446,12 +2413,6 @@ static void load_json_scene(
         get_opt(element, "film", camera.film);
         get_opt(element, "focus", camera.focus);
         get_opt(element, "aperture", camera.aperture);
-        if (element.contains("lookat")) {
-          get_opt(element, "lookat", (mat3f&)camera.frame);
-          camera.focus = length(camera.frame.x - camera.frame.y);
-          camera.frame = lookat_frame(
-              camera.frame.x, camera.frame.y, camera.frame.z);
-        }
       }
     }
     if (json.contains("textures")) {
@@ -2465,7 +2426,6 @@ static void load_json_scene(
         auto&                  uri     = texture_filenames.emplace_back();
         get_opt(element, "name", name);
         get_req(element, "uri", uri);
-        if (!name.empty()) texture_map[name] = (int)scene.textures.size() - 1;
       }
     }
     if (json.contains("materials")) {
@@ -2486,13 +2446,11 @@ static void load_json_scene(
         get_opt(element, "scattering", material.scattering);
         get_opt(element, "scanisotropy", material.scanisotropy);
         get_opt(element, "opacity", material.opacity);
-        get_orf(element, "emission_tex", material.emission_tex, texture_map);
-        get_orf(element, "color_tex", material.color_tex, texture_map);
-        get_orf(element, "roughness_tex", material.roughness_tex, texture_map);
-        get_orf(
-            element, "scattering_tex", material.scattering_tex, texture_map);
-        get_orf(element, "normal_tex", material.normal_tex, texture_map);
-        if (!name.empty()) material_map[name] = (int)scene.materials.size() - 1;
+        get_opt(element, "emission_tex", material.emission_tex);
+        get_opt(element, "color_tex", material.color_tex);
+        get_opt(element, "roughness_tex", material.roughness_tex);
+        get_opt(element, "scattering_tex", material.scattering_tex);
+        get_opt(element, "normal_tex", material.normal_tex);
       }
     }
     if (json.contains("shapes")) {
@@ -2506,7 +2464,6 @@ static void load_json_scene(
         auto&                  uri   = shape_filenames.emplace_back();
         get_opt(element, "name", name);
         get_req(element, "uri", uri);
-        if (!name.empty()) shape_map[name] = (int)scene.shapes.size() - 1;
       }
     }
     if (json.contains("subdivs")) {
@@ -2520,13 +2477,12 @@ static void load_json_scene(
         auto& uri    = subdiv_filenames.emplace_back();
         get_opt(element, "name", name);
         get_req(element, "uri", uri);
-        get_rrf(element, "shape", subdiv.shape, shape_map);
+        get_req(element, "shape", subdiv.shape);
         get_opt(element, "subdivisions", subdiv.subdivisions);
         get_opt(element, "catmullclark", subdiv.catmullclark);
         get_opt(element, "smooth", subdiv.smooth);
         get_opt(element, "displacement", subdiv.displacement);
-        get_orf(
-            element, "displacement_tex", subdiv.displacement_tex, texture_map);
+        get_opt(element, "displacement_tex", subdiv.displacement_tex);
       }
     }
     if (json.contains("instances")) {
@@ -2538,13 +2494,8 @@ static void load_json_scene(
         auto& name     = scene.instance_names.emplace_back();
         get_opt(element, "name", name);
         get_opt(element, "frame", instance.frame);
-        get_rrf(element, "shape", instance.shape, shape_map);
-        get_rrf(element, "material", instance.material, material_map);
-        if (element.contains("lookat")) {
-          get_opt(element, "lookat", (mat3f&)instance.frame);
-          instance.frame = lookat_frame(
-              instance.frame.x, instance.frame.y, instance.frame.z, false);
-        }
+        get_req(element, "shape", instance.shape);
+        get_req(element, "material", instance.material);
       }
     }
     if (json.contains("environments")) {
@@ -2557,12 +2508,7 @@ static void load_json_scene(
         get_opt(element, "name", name);
         get_opt(element, "frame", environment.frame);
         get_opt(element, "emission", environment.emission);
-        get_orf(element, "emission_tex", environment.emission_tex, texture_map);
-        if (element.contains("lookat")) {
-          get_opt(element, "lookat", (mat3f&)environment.frame);
-          environment.frame = lookat_frame(environment.frame.x,
-              environment.frame.y, environment.frame.z, false);
-        }
+        get_opt(element, "emission_tex", environment.emission_tex);
       }
     }
   } catch (const json_error& error) {
