@@ -1,6 +1,6 @@
 #! /usr/bin/env python3 -B
 
-import os, glob, json, sys
+import json, argparse
 from typing import OrderedDict
 
 def upgrade(filename, remove_names):
@@ -18,27 +18,22 @@ def upgrade(filename, remove_names):
       if groupname not in scene: continue
       nscene[groupname] = []
       for name, item in scene[groupname].items():
-        nscene[groupname].append(OrderedDict())
-        if not remove_names: nscene[groupname][-1]['name'] = name
+        nitem = OrderedDict()
+        nscene[groupname].append(item)
+        if not remove_names: nitem['name'] = name
         if groupname in ['textures', 'shapes']:
-          nscene[groupname][-1]['uri'] = groupname + "/" + item
+          nitem['uri'] = groupname + "/" + item
         else:
-          nscene[groupname][-1].update(item)
-    if 'subdivs' in nscene:
-      for subdiv in nscene['subdivs']:
-        subdiv['uri'] = 'subdivs/' + subdiv['datafile']
-        del subdiv['datafile']
-        subdiv['shape'] = shape_map[subdiv['shape']]
-    for material in nscene['materials']:
-      for key in material:
-        if key.endswith('_tex'): material[key] = texture_map[material[key]]
-    if 'environments' in nscene:
-      for environment in nscene['environments']:
-        for key in environment:
-          if key.endswith('_tex'): environment[key] = texture_map[environment[key]]
-    for instance in nscene['instances']:
-      instance['shape'] = shape_map[instance['shape']]
-      instance['material'] = material_map[instance['material']]
+          nitem.update(item)
+        for key, value in nitem.items():
+          if key.endswith('_tex'): nitem[key] = texture_map[value]
+          if key == 'shape': nitem[key] = shape_map[value]
+          if key == 'material': nitem[key] = material_map[value]
+          if key == 'frame' and isinstance(value[0], list):
+            nitem[key] = value[0] + value[1] + value[2] + value[3]
+        if 'datafile' in nitem:
+          nitem['uri'] = item['datafile']
+          del item['datafile']
   with open(filename, 'w') as f:
     json.dump(nscene, f, indent=2)
 
