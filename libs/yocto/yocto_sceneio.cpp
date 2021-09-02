@@ -1951,18 +1951,15 @@ struct json_enum_trait<material_type> {
 };
 
 // Load a scene in the builtin JSON format.
-static void load_json_scene(
-    const string& filename, scene_data& scene, bool noparallel) {
+static void load_json_scene_version41(const string& filename, json_value& json,
+    scene_data& scene, bool noparallel) {
   // ends with
   auto ends_with = [](const string& str, const string& end) {
     if (str.size() < end.size()) return false;
     return str.substr(str.size() - end.size()) == end;
   };
 
-  // open file
-  auto json = load_json(filename);
-
-  // check vrsion
+  // check version
   if (!json.contains("asset") || !json.at("asset").contains("version"))
     return load_json_scene_version40(filename, json, scene, noparallel);
 
@@ -2307,6 +2304,308 @@ static void load_json_scene(
       // load textures
       parallel_for(scene.textures.size(), [&](size_t idx) {
         load_texture(texture_datafiles[idx], scene.textures[idx]);
+      });
+      // // load instances
+      // parallel_foreach(ply_instances, [&](auto& ply_instance) {
+      //   auto path = find_path(
+      //       get_ply_instance_name(scene, ply_instance), "instances",
+      //       {".ply"});
+      //   load_instance(path_join(dirname, path), ply_instance.frames);
+      // });
+    }
+  } catch (const io_error& exception) {
+    throw io_error::dependent_error(filename, exception);
+  }
+
+  // apply instances
+  // if (!ply_instances.empty()) {
+  //   auto instances      = scene.instances;
+  //   auto instance_names = scene.instance_names;
+  //   scene.instances.clear();
+  //   scene.instance_names.clear();
+  //   for (auto& instance : instances) {
+  //     auto it = instance_ply.find((int)(&instance - instances.data()));
+  //     if (it == instance_ply.end()) {
+  //       auto& ninstance = scene.instances.emplace_back();
+  //       scene.instance_names.emplace_back(
+  //           instance_names[&instance - instances.data()]);
+  //       ninstance.frame    = instance.frame;
+  //       ninstance.shape    = instance.shape;
+  //       ninstance.material = instance.material;
+  //     } else {
+  //       auto& ply_instance = ply_instances[it->second];
+  //       auto  instance_id  = 0;
+  //       for (auto& frame : ply_instance.frames) {
+  //         auto& ninstance = scene.instances.emplace_back();
+  //         scene.instance_names.emplace_back(
+  //             instance_names[&instance - instances.data()] + "_" +
+  //             std::to_string(instance_id++));
+  //         ninstance.frame    = frame * instance.frame;
+  //         ninstance.shape    = instance.shape;
+  //         ninstance.material = instance.material;
+  //       }
+  //     }
+  //   }
+  // }
+
+  // fix scene
+  add_missing_camera(scene);
+  add_missing_radius(scene);
+  trim_memory(scene);
+}
+
+// Load a scene in the builtin JSON format.
+static void load_json_scene(
+    const string& filename, scene_data& scene, bool noparallel) {
+  // open file
+  auto json = load_json(filename);
+
+  // check version
+  if (!json.contains("asset") || !json.at("asset").contains("version"))
+    return load_json_scene_version40(filename, json, scene, noparallel);
+  if (json.contains("asset") && json.at("asset").contains("version") &&
+      json.at("asset").at("version") == "4.1")
+    return load_json_scene_version41(filename, json, scene, noparallel);
+
+  // parse json value
+  auto get_opt = [](const json_value& json, const string& key, auto& value) {
+    value = json.value(key, value);
+  };
+  auto get_req = [](const json_value& json, const string& key, auto& value) {
+    try {
+      json.at(key).get(value);
+    } catch (const std::out_of_range&) {
+      throw json_error{"missing reference", &json};
+    }
+  };
+  auto get_orf = [](const json_value& json, const string& key, int& value,
+                     const unordered_map<string, int>& map) {
+    auto values = json.value(key, string{});
+    try {
+      value = values.empty() ? -1 : map.at(values);
+    } catch (const std::out_of_range&) {
+      throw json_error{"missing reference", &json.at(key)};
+    }
+  };
+  auto get_rrf = [](const json_value& json, const string& key, int& value,
+                     const unordered_map<string, int>& map) {
+    auto values = json.at(key).get<string>();
+    try {
+      value = map.at(values);
+    } catch (const std::out_of_range&) {
+      throw json_error{"missing reference", &json.at(key)};
+    }
+  };
+
+  // references
+  auto shape_map    = unordered_map<string, int>{};
+  auto texture_map  = unordered_map<string, int>{};
+  auto material_map = unordered_map<string, int>{};
+
+  // filenames
+  auto shape_filenames   = vector<string>{};
+  auto texture_filenames = vector<string>{};
+  auto subdiv_filenames  = vector<string>{};
+
+  // prepare data
+  auto dirname = path_dirname(filename);
+
+  // parsing values
+  try {
+    if (json.contains("asset")) {
+      auto& element = json.at("asset");
+      get_opt(element, "copyright", scene.copyright);
+      auto version = string{};
+      get_req(element, "version", version);
+      if (version != "4.2" && version != "5.0")
+        throw json_error("bad version", &element);
+    }
+    if (json.contains("cameras")) {
+      auto& group = json.at("cameras");
+      scene.cameras.reserve(group.size());
+      scene.camera_names.reserve(group.size());
+      for (auto& element : group) {
+        auto& camera = scene.cameras.emplace_back();
+        auto& name   = scene.camera_names.emplace_back();
+        get_opt(element, "name", name);
+        get_opt(element, "frame", camera.frame);
+        get_opt(element, "orthographic", camera.orthographic);
+        get_opt(element, "ortho", camera.orthographic);
+        get_opt(element, "lens", camera.lens);
+        get_opt(element, "aspect", camera.aspect);
+        get_opt(element, "film", camera.film);
+        get_opt(element, "focus", camera.focus);
+        get_opt(element, "aperture", camera.aperture);
+        if (element.contains("lookat")) {
+          get_opt(element, "lookat", (mat3f&)camera.frame);
+          camera.focus = length(camera.frame.x - camera.frame.y);
+          camera.frame = lookat_frame(
+              camera.frame.x, camera.frame.y, camera.frame.z);
+        }
+      }
+    }
+    if (json.contains("textures")) {
+      auto& group = json.at("textures");
+      scene.textures.reserve(group.size());
+      scene.texture_names.reserve(group.size());
+      texture_filenames.reserve(group.size());
+      for (auto& element : group) {
+        [[maybe_unused]] auto& texture = scene.textures.emplace_back();
+        auto&                  name    = scene.texture_names.emplace_back();
+        auto&                  uri     = texture_filenames.emplace_back();
+        get_opt(element, "name", name);
+        get_req(element, "uri", uri);
+        if (!name.empty()) texture_map[name] = (int)scene.textures.size() - 1;
+      }
+    }
+    if (json.contains("materials")) {
+      auto& group = json.at("materials");
+      scene.materials.reserve(group.size());
+      scene.material_names.reserve(group.size());
+      for (auto& element : json.at("materials")) {
+        auto& material = scene.materials.emplace_back();
+        auto& name     = scene.material_names.emplace_back();
+        get_opt(element, "name", name);
+        get_opt(element, "type", material.type);
+        get_opt(element, "emission", material.emission);
+        get_opt(element, "color", material.color);
+        get_opt(element, "metallic", material.metallic);
+        get_opt(element, "roughness", material.roughness);
+        get_opt(element, "ior", material.ior);
+        get_opt(element, "trdepth", material.trdepth);
+        get_opt(element, "scattering", material.scattering);
+        get_opt(element, "scanisotropy", material.scanisotropy);
+        get_opt(element, "opacity", material.opacity);
+        get_orf(element, "emission_tex", material.emission_tex, texture_map);
+        get_orf(element, "color_tex", material.color_tex, texture_map);
+        get_orf(element, "roughness_tex", material.roughness_tex, texture_map);
+        get_orf(
+            element, "scattering_tex", material.scattering_tex, texture_map);
+        get_orf(element, "normal_tex", material.normal_tex, texture_map);
+        if (!name.empty()) material_map[name] = (int)scene.materials.size() - 1;
+      }
+    }
+    if (json.contains("shapes")) {
+      auto& group = json.at("shapes");
+      scene.shapes.reserve(group.size());
+      scene.shape_names.reserve(group.size());
+      shape_filenames.reserve(group.size());
+      for (auto& element : group) {
+        [[maybe_unused]] auto& shape = scene.shapes.emplace_back();
+        auto&                  name  = scene.shape_names.emplace_back();
+        auto&                  uri   = shape_filenames.emplace_back();
+        get_opt(element, "name", name);
+        get_req(element, "uri", uri);
+        if (!name.empty()) shape_map[name] = (int)scene.shapes.size() - 1;
+      }
+    }
+    if (json.contains("subdivs")) {
+      auto& group = json.at("subdivs");
+      scene.subdivs.reserve(group.size());
+      scene.subdiv_names.reserve(group.size());
+      subdiv_filenames.reserve(group.size());
+      for (auto& element : group) {
+        auto& subdiv = scene.subdivs.emplace_back();
+        auto& name   = scene.subdiv_names.emplace_back();
+        auto& uri    = subdiv_filenames.emplace_back();
+        get_opt(element, "name", name);
+        get_req(element, "uri", uri);
+        get_rrf(element, "shape", subdiv.shape, shape_map);
+        get_opt(element, "subdivisions", subdiv.subdivisions);
+        get_opt(element, "catmullclark", subdiv.catmullclark);
+        get_opt(element, "smooth", subdiv.smooth);
+        get_opt(element, "displacement", subdiv.displacement);
+        get_orf(
+            element, "displacement_tex", subdiv.displacement_tex, texture_map);
+      }
+    }
+    if (json.contains("instances")) {
+      auto& group = json.at("instances");
+      scene.instances.reserve(group.size());
+      scene.instance_names.reserve(group.size());
+      for (auto element : group) {
+        auto& instance = scene.instances.emplace_back();
+        auto& name     = scene.instance_names.emplace_back();
+        get_opt(element, "name", name);
+        get_opt(element, "frame", instance.frame);
+        get_rrf(element, "shape", instance.shape, shape_map);
+        get_rrf(element, "material", instance.material, material_map);
+        if (element.contains("lookat")) {
+          get_opt(element, "lookat", (mat3f&)instance.frame);
+          instance.frame = lookat_frame(
+              instance.frame.x, instance.frame.y, instance.frame.z, false);
+        }
+      }
+    }
+    if (json.contains("environments")) {
+      auto& group = json.at("environments");
+      scene.instances.reserve(group.size());
+      scene.instance_names.reserve(group.size());
+      for (auto& element : group) {
+        auto& environment = scene.environments.emplace_back();
+        auto& name        = scene.environment_names.emplace_back();
+        get_opt(element, "name", name);
+        get_opt(element, "frame", environment.frame);
+        get_opt(element, "emission", environment.emission);
+        get_orf(element, "emission_tex", environment.emission_tex, texture_map);
+        if (element.contains("lookat")) {
+          get_opt(element, "lookat", (mat3f&)environment.frame);
+          environment.frame = lookat_frame(environment.frame.x,
+              environment.frame.y, environment.frame.z, false);
+        }
+      }
+    }
+  } catch (const json_error& error) {
+    throw io_error::parse_error(
+        filename, json_value::get_path(&json, error.where()));
+  } catch (const io_error& error) {
+    throw io_error::dependent_error(filename, error);
+  } catch (...) {
+    throw io_error::parse_error(filename);
+  }
+
+  // fix paths
+  for (auto& filename : shape_filenames)
+    filename = path_join(dirname, filename);
+  for (auto& filename : texture_filenames)
+    filename = path_join(dirname, filename);
+  for (auto& filename : subdiv_filenames)
+    filename = path_join(dirname, filename);
+
+  // load resources
+  try {
+    if (noparallel) {
+      // load shapes
+      for (auto idx : range(scene.shapes.size())) {
+        load_shape(shape_filenames[idx], scene.shapes[idx], true);
+      }
+      // load subdivs
+      for (auto idx : range(scene.subdivs.size())) {
+        load_subdiv(subdiv_filenames[idx], scene.subdivs[idx]);
+      }
+      // load textures
+      for (auto idx : range(scene.textures.size())) {
+        load_texture(texture_filenames[idx], scene.textures[idx]);
+      }
+      // load instances
+      // for (auto& ply_instance : ply_instances) {
+      //   auto path = find_path(
+      //       get_ply_instance_name(scene, ply_instance), "instances",
+      //       {".ply"});
+      //   load_instance(path_join(dirname, path), ply_instance.frames);
+      // }
+    } else {
+      // load shapes
+      parallel_for(scene.shapes.size(), [&](size_t idx) {
+        load_shape(shape_filenames[idx], scene.shapes[idx], true);
+      });
+      // load subdivs
+      parallel_for(scene.subdivs.size(), [&](size_t idx) {
+        load_subdiv(subdiv_filenames[idx], scene.subdivs[idx]);
+      });
+      // load textures
+      parallel_for(scene.textures.size(), [&](size_t idx) {
+        load_texture(texture_filenames[idx], scene.textures[idx]);
       });
       // // load instances
       // parallel_foreach(ply_instances, [&](auto& ply_instance) {
