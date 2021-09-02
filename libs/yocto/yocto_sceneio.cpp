@@ -1971,17 +1971,29 @@ static void load_json_scene(
     value = json.value(key, value);
   };
   auto get_req = [](const json_value& json, const string& key, auto& value) {
-    json.at(key).get(value);
+    try {
+      json.at(key).get(value);
+    } catch (const std::out_of_range&) {
+      throw json_error{"missing reference", &json};
+    }
   };
   auto get_orf = [](const json_value& json, const string& key, int& value,
                      const unordered_map<string, int>& map) {
     auto values = json.value(key, string{});
-    value       = values.empty() ? -1 : map.at(values);
+    try {
+      value = values.empty() ? -1 : map.at(values);
+    } catch (const std::out_of_range&) {
+      throw json_error{"missing reference", &json.at(key)};
+    }
   };
   auto get_rrf = [](const json_value& json, const string& key, int& value,
                      const unordered_map<string, int>& map) {
     auto values = json.at(key).get<string>();
-    value       = map.at(values);
+    try {
+      value = map.at(values);
+    } catch (const std::out_of_range&) {
+      throw json_error{"missing reference", &json.at(key)};
+    }
   };
 
   // references
