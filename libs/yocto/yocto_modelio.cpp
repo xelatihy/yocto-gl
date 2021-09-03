@@ -111,13 +111,24 @@ inline void format_value(string& str, uint64_t value) {
 }
 inline void format_value(string& str, float value) {
   auto buffer = array<char, 256>{};
-  auto result = to_chars(buffer.data(), buffer.data() + buffer.size(), value);
+#ifdef _WIN32
+  auto result = std::to_chars(
+      buffer.data(), buffer.data() + buffer.size(), value);
   str.append(buffer.data(), result.ptr);
+#else
+  auto len = snprintf(buffer.data(), buffer.size(), "%.9g", value);
+  str.append(buffer.data(), buffer.data() + len);
+#endif
 }
 inline void format_value(string& str, double value) {
   auto buffer = array<char, 256>{};
+#ifdef _WIN32
   auto result = to_chars(buffer.data(), buffer.data() + buffer.size(), value);
   str.append(buffer.data(), result.ptr);
+#else
+  auto len = snprintf(buffer.data(), buffer.size(), "%.17g", value);
+  str.append(buffer.data(), buffer.data() + len);
+#endif
 }
 inline void format_value(string& str, const vec2f& value) {
   for (auto i = 0; i < 2; i++) {
