@@ -647,23 +647,3 @@ bool format_json(string& text, const json_value& json, string& error) {
 }
 
 }  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// FAST CONVERSIONS FROM/TO CHARS
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-to_chars_result to_chars(char* first, char* last, float value) {
-  if (last - first >= std::numeric_limits<float>::max_digits10)
-    return {last, std::errc::value_too_large};
-  auto ptr = ::nlohmann::detail::to_chars(first, last, value);
-  return {ptr, std::errc()};
-}
-to_chars_result to_chars(char* first, char* last, double value) {
-  if (last - first >= std::numeric_limits<double>::max_digits10)
-    return {last, std::errc::value_too_large};
-  auto ptr = ::nlohmann::detail::to_chars(first, last, value);
-  return {ptr, std::errc()};
-}
-
-}  // namespace yocto

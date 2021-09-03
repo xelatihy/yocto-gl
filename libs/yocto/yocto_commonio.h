@@ -782,26 +782,4 @@ bool format_json(string& text, const json_value& json, string& error);
 
 }  // namespace yocto
 
-// -----------------------------------------------------------------------------
-// FAST CONVERSIONS FROM/TO CHARS
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// to_chars result
-struct to_chars_result {
-  char*     ptr;
-  std::errc ec;
-};
-
-// to_chars
-template <typename T>
-to_chars_result to_chars(const char* first, const char* last, T value) {
-  auto result = std::to_chars(first, last, value);
-  return {result.ptr, result.ec};
-}
-to_chars_result to_chars(char* first, char* last, float value);
-to_chars_result to_chars(char* first, char* last, double value);
-
-}  // namespace yocto
-
 #endif
