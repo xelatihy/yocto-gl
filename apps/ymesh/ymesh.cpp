@@ -27,7 +27,6 @@
 //
 
 #include <yocto/yocto_cli.h>
-#include <yocto/yocto_commonio.h>
 #include <yocto/yocto_geometry.h>
 #include <yocto/yocto_image.h>
 #include <yocto/yocto_math.h>

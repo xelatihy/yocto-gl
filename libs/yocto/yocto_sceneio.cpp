@@ -45,7 +45,6 @@
 #include "ext/stb_image_write.h"
 #include "ext/tinyexr.h"
 #include "yocto_color.h"
-#include "yocto_commonio.h"
 #include "yocto_geometry.h"
 #include "yocto_image.h"
 #include "yocto_modelio.h"
@@ -400,15 +399,8 @@ inline void from_json(const ordered_json& json, const frame3f& value) {
   nlohmann::from_json(json, (array<float, 12>&)value);
 }
 
-#define YOCTO_USE_NLOHMANN 1
-
-#if YOCTO_USE_NLOHMANN
-// picking json type
-using json_value_ = nlohmann::ordered_json;
-#else
-// picking json type
-using json_value_ = json_value;
-#endif
+// setup json value type
+using json_value = nlohmann::ordered_json;
 
 }  // namespace yocto
 
@@ -2840,15 +2832,9 @@ NLOHMANN_JSON_SERIALIZE_ENUM(
                        {material_type::gltfpbr, "gltfpbr"},
                    })
 
-// Json specializations
-template <>
-struct json_enum_trait<material_type40> {
-  static const vector<string>& labels() { return material_type40_names; }
-};
-
 // Load a scene in the builtin JSON format.
 static void load_json_scene_version40(const string& filename,
-    const json_value_& json, scene_data& scene, bool noparallel) {
+    const json_value& json, scene_data& scene, bool noparallel) {
   auto parse_error = [filename](const string& patha, const string& pathb = "",
                          const string& pathc = "") {
     auto path = patha;
@@ -2865,14 +2851,14 @@ static void load_json_scene_version40(const string& filename,
   };
 
   // parse json value
-  auto get_opt = [](const json_value_& json, const string& key, auto& value) {
+  auto get_opt = [](const json_value& json, const string& key, auto& value) {
     value = json.value(key, value);
   };
-  auto get_of3 = [](const json_value_& json, const string& key, auto& value) {
+  auto get_of3 = [](const json_value& json, const string& key, auto& value) {
     auto valuea = json.value(key, (array<float, 12>&)value);
     value       = *(frame3f*)&valuea;
   };
-  auto get_om3 = [](const json_value_& json, const string& key, auto& value) {
+  auto get_om3 = [](const json_value& json, const string& key, auto& value) {
     auto valuea = json.value(key, (array<float, 9>&)value);
     value       = *(mat3f*)&valuea;
   };
@@ -2880,7 +2866,7 @@ static void load_json_scene_version40(const string& filename,
   // parse json reference
   auto shape_map = unordered_map<string, int>{};
   auto get_shp   = [&scene, &shape_map](
-                     const json_value_& json, const string& key, int& value) {
+                     const json_value& json, const string& key, int& value) {
     auto name = json.value(key, string{});
     if (name.empty()) return;
     auto it = shape_map.find(name);
@@ -2898,7 +2884,7 @@ static void load_json_scene_version40(const string& filename,
   // parse json reference
   auto material_map = unordered_map<string, int>{};
   auto get_mat      = [&material_map](
-                     const json_value_& json, const string& key, int& value) {
+                     const json_value& json, const string& key, int& value) {
     auto name = json.value(key, string{});
     if (name.empty()) return;
     auto it = material_map.find(name);
@@ -2912,7 +2898,7 @@ static void load_json_scene_version40(const string& filename,
   // parse json reference
   auto texture_map = unordered_map<string, int>{};
   auto get_tex     = [&scene, &texture_map](
-                     const json_value_& json, const string& key, int& value) {
+                     const json_value& json, const string& key, int& value) {
     auto name = json.value(key, string{});
     if (name.empty()) return;
     auto it = texture_map.find(name);
@@ -2938,7 +2924,7 @@ static void load_json_scene_version40(const string& filename,
       {"", invalidid}};
   auto instance_ply = unordered_map<int, ply_instance_handle>{};
   auto get_ist      = [&scene, &ply_instances, &ply_instances_names,
-                     &ply_instance_map, &instance_ply](const json_value_& json,
+                     &ply_instance_map, &instance_ply](const json_value& json,
                      const string& key, const instance_data& instance) {
     auto name = json.value(key, string{});
     if (name.empty()) return;
@@ -3178,14 +3164,8 @@ static void load_json_scene_version40(const string& filename,
   trim_memory(scene);
 }
 
-// Json specializations
-template <>
-struct json_enum_trait<material_type> {
-  static const vector<string>& labels() { return material_type_names; }
-};
-
 // Load a scene in the builtin JSON format.
-static void load_json_scene_version41(const string& filename, json_value_& json,
+static void load_json_scene_version41(const string& filename, json_value& json,
     scene_data& scene, bool noparallel) {
   // ends with
   auto ends_with = [](const string& str, const string& end) {
@@ -3198,10 +3178,10 @@ static void load_json_scene_version41(const string& filename, json_value_& json,
     return load_json_scene_version40(filename, json, scene, noparallel);
 
   // parse json value
-  auto get_opt = [](const json_value_& json, const string& key, auto& value) {
+  auto get_opt = [](const json_value& json, const string& key, auto& value) {
     value = json.value(key, value);
   };
-  auto get_ref = [](const json_value_& json, const string& key, int& value,
+  auto get_ref = [](const json_value& json, const string& key, int& value,
                      const unordered_map<string, int>& map) {
     auto values = json.value(key, string{});
     value       = values.empty() ? -1 : map.at(values);
@@ -3266,7 +3246,7 @@ static void load_json_scene_version41(const string& filename, json_value_& json,
         if (element.is_string()) {
           auto filename = element.get<string>();
           if (!ends_with(filename, ".json")) {
-            element             = json_object();
+            element             = json_value::object();
             element["datafile"] = filename;
           } else {
             element = load_json(path_join(dirname, "textures", filename));
@@ -3318,7 +3298,7 @@ static void load_json_scene_version41(const string& filename, json_value_& json,
         if (element.is_string()) {
           auto filename = element.get<string>();
           if (!ends_with(filename, ".json")) {
-            element             = json_object();
+            element             = json_value::object();
             element["datafile"] = filename;
           } else {
             element = load_json(path_join(dirname, "shapes", filename));
@@ -3447,7 +3427,7 @@ static void load_json_scene_version41(const string& filename, json_value_& json,
 static void load_json_scene(
     const string& filename, scene_data& scene, bool noparallel) {
   // open file
-  auto json = json_value_{};
+  auto json = json_value{};
   load_json(filename, json);
 
   // check version
@@ -3458,7 +3438,7 @@ static void load_json_scene(
     return load_json_scene_version41(filename, json, scene, noparallel);
 
   // parse json value
-  auto get_opt = [](const json_value_& json, const string& key, auto& value) {
+  auto get_opt = [](const json_value& json, const string& key, auto& value) {
     value = json.value(key, value);
   };
 
@@ -3648,36 +3628,32 @@ static void load_json_scene(
 static void save_json_scene(
     const string& filename, const scene_data& scene, bool noparallel) {
   // helpers to handel old code paths
-  auto add_object = [](json_value_& json, const string& name) -> json_value_& {
+  auto add_object = [](json_value& json, const string& name) -> json_value& {
     auto& item = json[name];
-    item       = json_value_::object();
+    item       = json_value::object();
     return item;
   };
-  auto add_array = [](json_value_& json, const string& name) -> json_value_& {
+  auto add_array = [](json_value& json, const string& name) -> json_value& {
     auto& item = json[name];
-    item       = json_value_::array();
+    item       = json_value::array();
     return item;
   };
-  auto append_object = [](json_value_& json) -> json_value_& {
+  auto append_object = [](json_value& json) -> json_value& {
     auto& item = json.emplace_back();
-    item       = json_value_::object();
+    item       = json_value::object();
     return item;
   };
-  auto set_val = [](json_value_& json, const string& name, const auto& value,
+  auto set_val = [](json_value& json, const string& name, const auto& value,
                      const auto& def) {
     if (value == def) return;
     json[name] = value;
   };
-  auto set_ref = [](json_value_& json, const string& name, int value) {
+  auto set_ref = [](json_value& json, const string& name, int value) {
     if (value < 0) return;
     json[name] = value;
   };
-  auto reserve_values = [](json_value_& json, size_t size) {
-#if YOCTO_USE_NLOHMANN
-    json.get_ptr<json_value_::array_t*>()->reserve(size);
-#else
-    json.reserve(size);
-#endif
+  auto reserve_values = [](json_value& json, size_t size) {
+    json.get_ptr<json_value::array_t*>()->reserve(size);
   };
 
   // dirname
@@ -3716,8 +3692,7 @@ static void save_json_scene(
   }
 
   // save json file
-  auto json = json_value_{};
-  json      = json_object{};
+  auto json = json_value::object();
 
   // asset
   {
@@ -4274,7 +4249,7 @@ static void load_gltf_scene(
 
   // convert color textures
   auto get_texture = [&gltf](
-                         const json_value_& json, const string& name) -> int {
+                         const json_value& json, const string& name) -> int {
     if (!json.contains(name)) return invalidid;
     auto& ginfo    = json.at(name);
     auto& gtexture = gltf.at("textures").at(ginfo.value("index", -1));
@@ -4658,12 +4633,12 @@ static void load_gltf_scene(
 static void save_gltf_scene(
     const string& filename, const scene_data& scene, bool noparallel) {
   // convert scene to json
-  auto gltf = json_value_::object();
+  auto gltf = json_value::object();
 
   // asset
   {
     auto& gasset        = gltf["asset"];
-    gasset              = json_value_::object();
+    gasset              = json_value::object();
     gasset["version"]   = "2.0";
     gasset["generator"] = "Yocto/GL - https://github.com/xelatihy/yocto-gl";
     if (!scene.copyright.empty()) gasset["copyright"] = scene.copyright;
@@ -4672,14 +4647,14 @@ static void save_gltf_scene(
   // cameras
   if (!scene.cameras.empty()) {
     auto& gcameras = gltf["cameras"];
-    gcameras       = json_value_::array();
+    gcameras       = json_value::array();
     for (auto& camera : scene.cameras) {
       auto& gcamera               = gcameras.emplace_back();
-      gcamera                     = json_value_::object();
+      gcamera                     = json_value::object();
       gcamera["name"]             = get_camera_name(scene, camera);
       gcamera["type"]             = "perspective";
       auto& gperspective          = gcamera["perspective"];
-      gperspective                = json_value_::object();
+      gperspective                = json_value::object();
       gperspective["aspectRatio"] = camera.aspect;
       gperspective["yfov"]        = 0.660593;  // TODO(fabio): yfov
       gperspective["znear"]       = 0.001;     // TODO(fabio): configurable?
@@ -4689,22 +4664,22 @@ static void save_gltf_scene(
   // textures
   if (!scene.textures.empty()) {
     auto& gtextures  = gltf["textures"];
-    gtextures        = json_value_::array();
+    gtextures        = json_value::array();
     auto& gsamplers  = gltf["samplers"];
-    gsamplers        = json_value_::array();
+    gsamplers        = json_value::array();
     auto& gimages    = gltf["images"];
-    gimages          = json_value_::array();
+    gimages          = json_value::array();
     auto& gsampler   = gsamplers.emplace_back();
-    gsampler         = json_value_::object();
+    gsampler         = json_value::object();
     gsampler["name"] = "sampler";
     for (auto& texture : scene.textures) {
       auto  name          = get_texture_name(scene, texture);
       auto& gimage        = gimages.emplace_back();
-      gimage              = json_value_::object();
+      gimage              = json_value::object();
       gimage["name"]      = name;
       gimage["uri"]       = "textures/" + name + ".png";
       auto& gtexture      = gtextures.emplace_back();
-      gtexture            = json_value_::object();
+      gtexture            = json_value::object();
       gtexture["name"]    = name;
       gtexture["sampler"] = 0;
       gtexture["source"]  = (int)gimages.size() - 1;
@@ -4714,52 +4689,52 @@ static void save_gltf_scene(
   // materials
   if (!scene.materials.empty()) {
     auto& gmaterials = gltf["materials"];
-    gmaterials       = json_value_::array();
+    gmaterials       = json_value::array();
     for (auto& material : scene.materials) {
       auto& gmaterial             = gmaterials.emplace_back();
-      gmaterial                   = json_value_::object();
+      gmaterial                   = json_value::object();
       gmaterial["name"]           = get_material_name(scene, material);
       gmaterial["emissiveFactor"] = material.emission;
       auto& gpbr                  = gmaterial["pbrMetallicRoughness"];
-      gpbr                        = json_value_::object();
+      gpbr                        = json_value::object();
       gpbr["baseColorFactor"]     = vec4f{material.color.x, material.color.y,
           material.color.z, material.opacity};
       gpbr["metallicFactor"]      = material.metallic;
       gpbr["roughnessFactor"]     = material.roughness;
       if (material.emission_tex != invalidid) {
-        gmaterial["emissiveTexture"]          = json_value_::object();
+        gmaterial["emissiveTexture"]          = json_value::object();
         gmaterial["emissiveTexture"]["index"] = material.emission_tex;
       }
       if (material.normal_tex != invalidid) {
-        gmaterial["normalTexture"]          = json_value_::object();
+        gmaterial["normalTexture"]          = json_value::object();
         gmaterial["normalTexture"]["index"] = material.normal_tex;
       }
       if (material.color_tex != invalidid) {
-        gpbr["baseColorTexture"]          = json_value_::object();
+        gpbr["baseColorTexture"]          = json_value::object();
         gpbr["baseColorTexture"]["index"] = material.color_tex;
       }
       if (material.roughness_tex != invalidid) {
-        gpbr["metallicRoughnessTexture"]          = json_value_::object();
+        gpbr["metallicRoughnessTexture"]          = json_value::object();
         gpbr["metallicRoughnessTexture"]["index"] = material.roughness_tex;
       }
     }
   }
 
   // add an accessor
-  auto set_view = [](json_value_& gview, json_value_& gbuffer, const auto& data,
+  auto set_view = [](json_value& gview, json_value& gbuffer, const auto& data,
                       size_t buffer_id) {
-    gview                 = json_value_::object();
+    gview                 = json_value::object();
     gview["buffer"]       = buffer_id;
     gview["byteLength"]   = data.size() * sizeof(data.front());
     gview["byteOffset"]   = gbuffer["byteLength"];
     gbuffer["byteLength"] = gbuffer.value("byteLength", (size_t)0) +
                             data.size() * sizeof(data.front());
   };
-  auto set_vaccessor = [](json_value_& gaccessor, const auto& data,
+  auto set_vaccessor = [](json_value& gaccessor, const auto& data,
                            size_t view_id, bool minmax = false) {
     static auto types = unordered_map<size_t, string>{
         {1, "SCALAR"}, {2, "VEC2"}, {3, "VEC3"}, {4, "VEC4"}};
-    gaccessor                  = json_value_::object();
+    gaccessor                  = json_value::object();
     gaccessor["bufferView"]    = view_id;
     gaccessor["componentType"] = 5126;
     gaccessor["count"]         = data.size();
@@ -4773,9 +4748,9 @@ static void save_gltf_scene(
       }
     }
   };
-  auto set_iaccessor = [](json_value_& gaccessor, const auto& data,
+  auto set_iaccessor = [](json_value& gaccessor, const auto& data,
                            size_t view_id, bool minmax = false) {
-    gaccessor                  = json_value_::object();
+    gaccessor                  = json_value::object();
     gaccessor["bufferView"]    = view_id;
     gaccessor["componentType"] = 5125;
     gaccessor["count"] = data.size() * sizeof(data.front()) / sizeof(int);
@@ -4783,23 +4758,23 @@ static void save_gltf_scene(
   };
 
   // meshes
-  auto shape_primitives = vector<json_value_>();
+  auto shape_primitives = vector<json_value>();
   shape_primitives.reserve(scene.shapes.size());
   if (!scene.shapes.empty()) {
     auto& gaccessors = gltf["accessors"];
-    gaccessors       = json_value_::array();
+    gaccessors       = json_value::array();
     auto& gviews     = gltf["bufferViews"];
-    gviews           = json_value_::array();
+    gviews           = json_value::array();
     auto& gbuffers   = gltf["buffers"];
-    gbuffers         = json_value_::array();
+    gbuffers         = json_value::array();
     for (auto& shape : scene.shapes) {
       auto& gbuffer         = gbuffers.emplace_back();
       gbuffer["uri"]        = "shapes/" + get_shape_name(scene, shape) + ".bin";
       gbuffer["byteLength"] = (size_t)0;
       auto& gprimitive      = shape_primitives.emplace_back();
-      gprimitive            = json_value_::object();
+      gprimitive            = json_value::object();
       auto& gattributes     = gprimitive["attributes"];
-      gattributes           = json_value_::object();
+      gattributes           = json_value::object();
       if (!shape.positions.empty()) {
         set_view(gviews.emplace_back(), gbuffer, shape.positions,
             gbuffers.size() - 1);
@@ -4881,28 +4856,28 @@ static void save_gltf_scene(
   auto mesh_map = unordered_map<mesh_key, size_t, mesh_key_hash>{};
   if (!scene.instances.empty()) {
     auto& gmeshes = gltf["meshes"];
-    gmeshes       = json_value_::array();
+    gmeshes       = json_value::array();
     for (auto& instance : scene.instances) {
       auto key = mesh_key{instance.shape, instance.material};
       if (mesh_map.find(key) != mesh_map.end()) continue;
       auto& gmesh   = gmeshes.emplace_back();
-      gmesh         = json_value_::object();
+      gmesh         = json_value::object();
       gmesh["name"] = get_shape_name(scene, instance.shape) + "_" +
                       get_material_name(scene, instance.material);
-      gmesh["primitives"] = json_value_::array();
+      gmesh["primitives"] = json_value::array();
       gmesh["primitives"].push_back(shape_primitives.at(instance.shape));
       gmesh["primitives"].back()["material"] = instance.material;
       mesh_map[key]                          = gmeshes.size() - 1;
     }
   } else if (!scene.shapes.empty()) {
     auto& gmeshes = gltf["meshes"];
-    gmeshes       = json_value_::array();
+    gmeshes       = json_value::array();
     auto shape_id = 0;
     for (auto& primitives : shape_primitives) {
       auto& gmesh         = gmeshes.emplace_back();
-      gmesh               = json_value_::object();
+      gmesh               = json_value::object();
       gmesh["name"]       = get_shape_name(scene, shape_id++);
-      gmesh["primitives"] = json_value_::array();
+      gmesh["primitives"] = json_value::array();
       gmesh["primitives"].push_back(primitives);
     }
   }
@@ -4910,37 +4885,37 @@ static void save_gltf_scene(
   // nodes
   if (!scene.cameras.empty() || !scene.instances.empty()) {
     auto& gnodes   = gltf["nodes"];
-    gnodes         = json_value_::array();
+    gnodes         = json_value::array();
     auto camera_id = 0;
     for (auto& camera : scene.cameras) {
       auto& gnode     = gnodes.emplace_back();
-      gnode           = json_value_::object();
+      gnode           = json_value::object();
       gnode["name"]   = get_camera_name(scene, camera);
       gnode["matrix"] = frame_to_mat(camera.frame);
       gnode["camera"] = camera_id++;
     }
     for (auto& instance : scene.instances) {
       auto& gnode     = gnodes.emplace_back();
-      gnode           = json_value_::object();
+      gnode           = json_value::object();
       gnode["name"]   = get_instance_name(scene, instance);
       gnode["matrix"] = frame_to_mat(instance.frame);
       gnode["mesh"]   = mesh_map.at({instance.shape, instance.material});
     }
     // root children
     auto& groot     = gnodes.emplace_back();
-    groot           = json_value_::object();
+    groot           = json_value::object();
     groot["name"]   = "root";
     auto& gchildren = groot["children"];
-    gchildren       = json_value_::array();
+    gchildren       = json_value::array();
     for (auto idx = (size_t)0; idx < gnodes.size() - 1; idx++)
       gchildren.push_back(idx);
     // scene
     auto& gscenes     = gltf["scenes"];
-    gscenes           = json_value_::array();
+    gscenes           = json_value::array();
     auto& gscene      = gscenes.emplace_back();
-    gscene            = json_value_::object();
+    gscene            = json_value::object();
     auto& gscenenodes = gscene["nodes"];
-    gscenenodes       = json_value_::array();
+    gscenenodes       = json_value::array();
     gscenenodes.push_back(gnodes.size() - 1);
     gltf["scene"] = 0;
   }
