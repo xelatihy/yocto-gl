@@ -35,9 +35,8 @@
 #include <algorithm>
 #include <chrono>
 #include <cstdio>
+#include <filesystem>
 #include <fstream>
-
-#include "yocto_commonio.h"
 
 // -----------------------------------------------------------------------------
 // PRINT/FORMATTING UTILITIES
@@ -871,7 +870,7 @@ static void config_to_json(json_value_& json) {
   if (filename.empty()) return;
   if (filename.find("try:") == 0) {
     filename = filename.substr(4);
-    if (!path_exists(filename)) return;
+    if (!exists(std::filesystem::u8path(filename))) return;
   }
 
   auto config = json_value_{};
