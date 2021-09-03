@@ -1675,6 +1675,29 @@ static const auto material_type40_names = std::vector<std::string>{"matte",
     "glossy", "metallic", "transparent", "refractive", "subsurface", "volume",
     "gltfpbr"};
 
+NLOHMANN_JSON_SERIALIZE_ENUM(
+    material_type40, {
+                         {material_type40::matte, "matte"},
+                         {material_type40::glossy, "glossy"},
+                         {material_type40::metallic, "metallic"},
+                         {material_type40::transparent, "transparent"},
+                         {material_type40::refractive, "refractive"},
+                         {material_type40::subsurface, "subsurface"},
+                         {material_type40::volume, "volume"},
+                         {material_type40::gltfpbr, "gltfpbr"},
+                     })
+NLOHMANN_JSON_SERIALIZE_ENUM(
+    material_type, {
+                       {material_type::matte, "matte"},
+                       {material_type::glossy, "glossy"},
+                       {material_type::reflective, "reflective"},
+                       {material_type::transparent, "transparent"},
+                       {material_type::refractive, "refractive"},
+                       {material_type::subsurface, "subsurface"},
+                       {material_type::volumetric, "volumetric"},
+                       {material_type::gltfpbr, "gltfpbr"},
+                   })
+
 // Json specializations
 template <>
 struct json_enum_trait<material_type40> {
