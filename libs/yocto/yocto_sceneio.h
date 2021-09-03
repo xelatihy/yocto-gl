@@ -38,10 +38,7 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
-#include <memory>
 #include <string>
-#include <utility>
-#include <vector>
 
 #include "yocto_scene.h"
 
@@ -51,9 +48,7 @@
 namespace yocto {
 
 // using directives
-using std::pair;
 using std::string;
-using std::vector;
 
 }  // namespace yocto
 

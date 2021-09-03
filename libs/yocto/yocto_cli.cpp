@@ -35,6 +35,8 @@
 #include <algorithm>
 #include <chrono>
 #include <cstdio>
+#include <filesystem>
+#include <fstream>
 
 // -----------------------------------------------------------------------------
 // PRINT/FORMATTING UTILITIES
@@ -205,19 +207,19 @@ constexpr bool cli_is_vector_v = cli_is_vector<T>::value;
 
 template <typename T>
 static void cli_to_json(
-    json_value& json, const T& value, const vector<string>& choices) {
+    json_value_& json, const T& value, const vector<string>& choices) {
   if (choices.empty()) {
     json = value;
   } else {
     if constexpr (cli_is_array_v<T>) {
-      json = json_array(value.size());
-      for (auto idx = (size_t)0; idx < value.size(); idx++) {
-        cli_to_json(json[idx], value[idx], choices);
+      json = json_value_::array();
+      for (auto& item : value) {
+        cli_to_json(json.emplace_back(), item, choices);
       }
     } else if constexpr (cli_is_vector_v<T>) {
-      json = json_array(value.size());
-      for (auto idx = (size_t)0; idx < value.size(); idx++) {
-        cli_to_json(json[idx], value[idx], choices);
+      json = json_value_::array();
+      for (auto& item : value) {
+        cli_to_json(json.emplace_back(), item, choices);
       }
     } else {
       if constexpr (std::is_integral_v<T> || std::is_floating_point_v<T>) {
@@ -234,9 +236,9 @@ static void cli_to_json(
 }
 
 template <typename T>
-static void cli_to_schema(json_value& schema, const T& value,
+static void cli_to_schema(json_value_& schema, const T& value,
     const vector<string>& choices, const string& name, const string& usage) {
-  schema                = json_object{};
+  schema                = json_value_::object();
   schema["title"]       = name;
   schema["description"] = usage;
   cli_to_json(schema["default"], value, choices);
@@ -293,13 +295,13 @@ static void cli_to_schema(json_value& schema, const T& value,
 
 template <typename T>
 static void cli_from_json(
-    const json_value& json, T& value, const vector<string>& choices) {
+    const json_value_& json, T& value, const vector<string>& choices) {
   if (choices.empty()) {
     value = (T)json;
   } else {
     if constexpr (cli_is_array_v<T>) {
       if (json.size() != value.size())
-        throw json_error{"bad array size", &json};
+        throw std::invalid_argument{"bad array size"};
       for (auto idx = (size_t)0; idx < value.size(); idx++) {
         cli_from_json(json[idx], value[idx], choices);
       }
@@ -311,7 +313,7 @@ static void cli_from_json(
     } else {
       auto values = (string)json;
       if (std::find(choices.begin(), choices.end(), values) == choices.end())
-        throw json_error{"invalid label", &json};
+        throw std::invalid_argument{"invalid label"};
       if constexpr (std::is_integral_v<T> || std::is_floating_point_v<T>) {
         value = (T)(std::find(choices.begin(), choices.end(), values) -
                     choices.begin());
@@ -326,23 +328,23 @@ static void cli_from_json(
 
 template <typename T>
 static void cli_from_json_(
-    const json_value& cvalue, void* value, const vector<string>& choices) {
+    const json_value_& cvalue, void* value, const vector<string>& choices) {
   cli_from_json(cvalue, *(T*)value, choices);
 }
 
-static json_value& get_defaults(const cli_command& cli) {
+static json_value_& get_defaults(const cli_command& cli) {
   if (cli.path.empty())
     return cli.state->defaults;
   else
     return cli.state->defaults[cli.path];
 }
-static json_value& get_value(const cli_command& cli) {
+static json_value_& get_value(const cli_command& cli) {
   if (cli.path.empty())
     return cli.state->value;
   else
     return cli.state->value[cli.path];
 }
-static json_value& get_schema(const cli_command& cli) {
+static json_value_& get_schema(const cli_command& cli) {
   if (cli.path.empty())
     return cli.state->schema;
   else
@@ -530,33 +532,12 @@ void add_option(const cli_command& cli, const string& name, vec4f& value,
       cli, name, (array<float, 4>&)value, usage, minmax, {}, alt, req, false);
 }
 
-static string schema_to_usage_default(const json_value& value) {
-  switch (value.type()) {
-    case json_type::null: return "";
-    case json_type::integer: return std::to_string((int64_t)value);
-    case json_type::uinteger: return std::to_string((uint64_t)value);
-    case json_type::number:
-      if ((double)value == 0) return "0";
-      if ((double)value == 1) return "1";
-      return std::to_string((double)value);
-    case json_type::boolean: return (bool)value ? "true" : "false";
-    case json_type::string: return "\"" + (string)value + "\"";
-    case json_type::array: {
-      auto str = string{};
-      str += "[";
-      auto count = 0;
-      for (auto& item : value) {
-        if (count++) str += ",";
-        str += schema_to_usage_default(item);
-      }
-      str += "]";
-      return str;
-    }
-    case json_type::object: return "";
-  }
+static string schema_to_usage_default(const json_value_& value) {
+  if (value.is_object()) return "";
+  return value.dump();
 }
 
-static string schema_to_usage_typename(const json_value& schema) {
+static string schema_to_usage_typename(const json_value_& schema) {
   auto type = schema.at("type").get<string>();
   if (type == "integer") {
     return "integer";
@@ -578,7 +559,7 @@ static string schema_to_usage_typename(const json_value& schema) {
 }
 
 static string schema_to_usage(
-    const json_value& schema, const string& command, const string& program) {
+    const json_value_& schema, const string& command, const string& program) {
   auto progname = program;
   if (progname.rfind('/') != string::npos) {
     progname = progname.substr(progname.rfind('/') + 1);
@@ -654,7 +635,7 @@ static string schema_to_usage(
   return message;
 }
 
-static void arg_to_json(json_value& value, const json_value& schema,
+static void arg_to_json(json_value_& value, const json_value_& schema,
     const string& name, bool positional, const vector<string>& args,
     size_t& idx) {
   if (schema.contains("enum")) {
@@ -686,7 +667,7 @@ static void arg_to_json(json_value& value, const json_value& schema,
     if (idx >= args.size()) throw cli_error("missing value for " + name);
     value = args[idx++];
   } else if (schema["type"] == "array") {
-    value = json_array{};
+    value = json_value_::array();
     if (idx + (size_t)schema["minItems"] > args.size())
       throw cli_error("missing value for " + name);
     auto end = std::min(idx + (size_t)schema["maxItems"], args.size());
@@ -699,7 +680,7 @@ static void arg_to_json(json_value& value, const json_value& schema,
   }
 }
 
-static void args_to_json(json_value& value, const json_value& schema,
+static void args_to_json(json_value_& value, const json_value_& schema,
     const vector<string>& args, size_t idx) {
   auto get_try_config = [](const string& base_, const string& name) {
     auto base = base_;
@@ -714,7 +695,7 @@ static void args_to_json(json_value& value, const json_value& schema,
   };
 
   // init
-  value = json_object{};
+  value = json_value_::object();
 
   // add things to schema
   auto commands = vector<string>{}, positionals = vector<string>{};
@@ -780,31 +761,31 @@ static void args_to_json(json_value& value, const json_value& schema,
   }
 }
 
-static void validate_json(const json_value& value, const json_value& schema,
+static void validate_json(const json_value_& value, const json_value_& schema,
     const string& name, bool check_required) {
   switch (value.type()) {
-    case json_type::null: {
+    case json_value_::value_t::null: {
       throw cli_error("bad value for " + name);
     } break;
-    case json_type::integer: {
+    case json_value_::value_t::number_integer: {
       if (schema["type"] != "number" && schema["type"] != "integer")
         throw cli_error("bad value for " + name);
     } break;
-    case json_type::uinteger: {
+    case json_value_::value_t::number_unsigned: {
       if (schema["type"] != "number" && schema["type"] != "integer")
         throw cli_error("bad value for " + name);
     } break;
-    case json_type::number: {
+    case json_value_::value_t::number_float: {
       if (schema["type"] != "number" && schema["type"] != "integer")
         throw cli_error("bad value for " + name);
     } break;
-    case json_type::boolean: {
+    case json_value_::value_t::boolean: {
       if (schema["type"] != "boolean") throw cli_error("bad value for " + name);
     } break;
-    case json_type::string: {
+    case json_value_::value_t::string: {
       if (schema["type"] != "string") throw cli_error("bad value for " + name);
     } break;
-    case json_type::array: {
+    case json_value_::value_t::array: {
       if (schema["type"] != "array") throw cli_error("bad value for " + name);
       if ((size_t)schema["minItems"] > value.size())
         throw cli_error("bad value for " + name);
@@ -813,7 +794,7 @@ static void validate_json(const json_value& value, const json_value& schema,
       for (auto& item : value)
         validate_json(item, schema["items"], name, false);
     } break;
-    case json_type::object: {
+    case json_value_::value_t::object: {
       if (schema["type"] != "object") throw cli_error("bad value for " + name);
       for (auto& [key, property] : value.items()) {
         if (key == "help") {
@@ -846,7 +827,7 @@ static void validate_json(const json_value& value, const json_value& schema,
 }
 
 // update json objects
-void update_value_objects(json_value& value, const json_value& update) {
+void update_value_objects(json_value_& value, const json_value_& update) {
   if (!value.is_object()) return;
   for (auto& [key, property] : update.items()) {
     if (property.is_object() && value.contains(key) && value[key].is_object()) {
@@ -859,7 +840,7 @@ void update_value_objects(json_value& value, const json_value& update) {
 
 // set variables
 static void json_to_variable(
-    const json_value& json, cli_variable& variable, const string& name) {
+    const json_value_& json, cli_variable& variable, const string& name) {
   if (variable.setter) {
     try {
       variable.setter(json, variable.value, variable.choices);
@@ -875,7 +856,7 @@ static void json_to_variable(
 }
 
 // grabs a configuration and update json arguments
-static string get_config(const json_value& json) {
+static string get_config(const json_value_& json) {
   if (!json.is_object()) return "";
   if (json.contains("config") && json.at("config").is_string())
     return json.at("config").get<string>();
@@ -884,17 +865,19 @@ static string get_config(const json_value& json) {
   }
   return "";
 }
-static void config_to_json(json_value& json) {
+static void config_to_json(json_value_& json) {
   auto filename = get_config(json);
   if (filename.empty()) return;
   if (filename.find("try:") == 0) {
     filename = filename.substr(4);
-    if (!path_exists(filename)) return;
+    if (!exists(std::filesystem::u8path(filename))) return;
   }
 
-  auto config = json_value{};
+  auto config = json_value_{};
+  auto stream = std::ifstream(filename);
+  if (!stream) throw cli_error{"missing configuration file " + filename};
   try {
-    load_json(filename, config);
+    config = json_value_::parse(stream);
   } catch (...) {
     throw cli_error{"error converting configuration " + filename};
   }
@@ -906,15 +889,15 @@ static void config_to_json(json_value& json) {
 // initialize a command line parser
 cli_state make_cli(const string& name, const string& usage) {
   auto cli                    = cli_state{};
-  cli.defaults                = json_object{};
-  cli.value                   = json_object{};
-  cli.schema                  = json_object{};
+  cli.defaults                = json_value_::object();
+  cli.value                   = json_value_::object();
+  cli.schema                  = json_value_::object();
   cli.schema["title"]         = name;
   cli.schema["description"]   = usage;
   cli.schema["type"]          = "object";
-  cli.schema["properties"]    = json_object{};
-  cli.schema["required"]      = json_array{};
-  cli.schema["clipositional"] = json_array{};
+  cli.schema["properties"]    = json_value_::object();
+  cli.schema["required"]      = json_value_::array();
+  cli.schema["clipositional"] = json_value_::array();
   return cli;
 }
 
@@ -922,18 +905,18 @@ cli_state make_cli(const string& name, const string& usage) {
 cli_command add_command(
     const cli_command& cli, const string& name, const string& usage) {
   auto& defaults            = get_defaults(cli);
-  defaults[name]            = json_object{};
+  defaults[name]            = json_value_::object();
   auto& value               = get_value(cli);
-  value[name]               = json_object{};
+  value[name]               = json_value_::object();
   auto& schema              = get_schema(cli);
   auto& property            = schema["properties"][name];
-  property                  = json_object{};
+  property                  = json_value_::object();
   property["title"]         = name;
   property["description"]   = usage;
   property["type"]          = "object";
-  property["properties"]    = json_object{};
-  property["required"]      = json_array{};
-  property["clipositional"] = json_array{};
+  property["properties"]    = json_value_::object();
+  property["required"]      = json_value_::array();
+  property["clipositional"] = json_value_::array();
   auto& variables           = get_variables(cli);
   variables.variables[name] = {};
   return {cli.state, cli.path.empty() ? name : (cli.path + "/" + name)};
@@ -956,7 +939,7 @@ void add_command_name(const cli_command& cli, const string& name, string& value,
 }
 
 // get usage
-static string get_usage(const json_value& json, const json_value& schema,
+static string get_usage(const json_value_& json, const json_value_& schema,
     const string& commandname, const string& progname) {
   if (json.contains("command") && !json.at("command").empty()) {
     auto command = json.at("command").get<string>();
@@ -973,7 +956,7 @@ string get_usage(const cli_state& cli) {
 }
 
 // get help
-static bool get_help(const json_value& json, const json_value& schema) {
+static bool get_help(const json_value_& json, const json_value_& schema) {
   if (json.contains("help")) return json.at("help").get<bool>();
   if (json.contains("command") && !json.at("command").empty()) {
     return get_help(json.at(json.at("command").get<string>()),
@@ -984,7 +967,7 @@ static bool get_help(const json_value& json, const json_value& schema) {
 bool get_help(const cli_state& cli) { return get_help(cli.value, cli.schema); }
 
 // get command
-static string get_command(const json_value& json, const json_value& schema) {
+static string get_command(const json_value_& json, const json_value_& schema) {
   if (json.contains("command")) {
     auto command   = json.at("command").get<string>();
     auto subcommnd = get_command(json.at(command), schema.at(command));

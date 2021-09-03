@@ -44,7 +44,7 @@
 #include <type_traits>
 #include <vector>
 
-#include "yocto_commonio.h"
+#include "ext/json.hpp"
 #include "yocto_math.h"
 
 // -----------------------------------------------------------------------------
@@ -258,21 +258,24 @@ void add_option(const cli_command& cli, const string& name, vec4f& value,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// Json value
+using json_value_ = nlohmann::ordered_json;
+
 // Command line setter.
 using cli_setter = void (*)(
-    const json_value&, void*, const vector<string>& choices);
+    const json_value_&, void*, const vector<string>& choices);
 // Command line variable.
 struct cli_variable {
-  void*                             value     = nullptr;
-  cli_setter                        setter    = nullptr;
-  vector<string>                    choices   = {};
-  ordered_map<string, cli_variable> variables = {};
+  void*                                       value     = nullptr;
+  cli_setter                                  setter    = nullptr;
+  vector<string>                              choices   = {};
+  nlohmann::ordered_map<string, cli_variable> variables = {};
 };
 // Command line state.
 struct cli_state {
-  json_value   defaults  = {};
-  json_value   schema    = {};
-  json_value   value     = {};
+  json_value_  defaults  = {};
+  json_value_  schema    = {};
+  json_value_  value     = {};
   cli_variable variables = {};
 };
 // Command line command.
@@ -359,13 +362,9 @@ inline void handle_errors(Func&& run) {
     print_info("");
     print_info(error.usage());
     exit(0);
-  } catch (const io_error& error) {
-    print_info("");
-    print_info(error.what());
-    exit(1);
   } catch (const std::exception& error) {
     print_info("");
-    print_info("program error:" + string(error.what()));
+    print_info(error.what());
     exit(1);
   }
 }
