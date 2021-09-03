@@ -36,6 +36,8 @@
 #include <chrono>
 #include <cstdio>
 
+#include "yocto_commonio.h"
+
 // -----------------------------------------------------------------------------
 // PRINT/FORMATTING UTILITIES
 // -----------------------------------------------------------------------------
@@ -210,14 +212,14 @@ static void cli_to_json(
     json = value;
   } else {
     if constexpr (cli_is_array_v<T>) {
-      json = json_array(value.size());
-      for (auto idx = (size_t)0; idx < value.size(); idx++) {
-        cli_to_json(json[idx], value[idx], choices);
+      json = json_value_::array();
+      for (auto& item : value) {
+        cli_to_json(json.emplace_back(), item, choices);
       }
     } else if constexpr (cli_is_vector_v<T>) {
-      json = json_array(value.size());
-      for (auto idx = (size_t)0; idx < value.size(); idx++) {
-        cli_to_json(json[idx], value[idx], choices);
+      json = json_value_::array();
+      for (auto& item : value) {
+        cli_to_json(json.emplace_back(), item, choices);
       }
     } else {
       if constexpr (std::is_integral_v<T> || std::is_floating_point_v<T>) {

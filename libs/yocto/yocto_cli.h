@@ -45,7 +45,6 @@
 #include <vector>
 
 #include "ext/json.hpp"
-#include "yocto_commonio.h"
 #include "yocto_math.h"
 
 // -----------------------------------------------------------------------------
@@ -267,10 +266,10 @@ using cli_setter = void (*)(
     const json_value_&, void*, const vector<string>& choices);
 // Command line variable.
 struct cli_variable {
-  void*                             value     = nullptr;
-  cli_setter                        setter    = nullptr;
-  vector<string>                    choices   = {};
-  ordered_map<string, cli_variable> variables = {};
+  void*                                       value     = nullptr;
+  cli_setter                                  setter    = nullptr;
+  vector<string>                              choices   = {};
+  nlohmann::ordered_map<string, cli_variable> variables = {};
 };
 // Command line state.
 struct cli_state {
@@ -363,13 +362,9 @@ inline void handle_errors(Func&& run) {
     print_info("");
     print_info(error.usage());
     exit(0);
-  } catch (const io_error& error) {
-    print_info("");
-    print_info(error.what());
-    exit(1);
   } catch (const std::exception& error) {
     print_info("");
-    print_info("program error:" + string(error.what()));
+    print_info(error.what());
     exit(1);
   }
 }
