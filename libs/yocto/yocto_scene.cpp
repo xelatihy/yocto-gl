@@ -26,6 +26,8 @@
 // SOFTWARE.
 //
 
+#include "yocto_scene.h"
+
 #include <algorithm>
 #include <cassert>
 #include <cctype>
@@ -36,14 +38,11 @@
 #include <stdexcept>
 #include <unordered_map>
 
-#include "ext/stb_image_resize.h"
 #include "yocto_color.h"
 #include "yocto_geometry.h"
 #include "yocto_image.h"
-#include "yocto_modelio.h"
 #include "yocto_noise.h"
 #include "yocto_parallel.h"
-#include "yocto_sceneio.h"
 #include "yocto_shading.h"
 #include "yocto_shape.h"
 
