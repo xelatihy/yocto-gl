@@ -1620,7 +1620,7 @@ static void load_json_scene_version40(const string& filename,
       });
     }
   } catch (const io_error& exception) {
-    throw io_error::dependent_error(filename, exception);
+    throw io_error{filename + ": error in " + exception.what()};
   }
 
   // apply instances
@@ -1916,7 +1916,7 @@ static void load_json_scene_version41(const string& filename, json_value_& json,
       });
     }
   } catch (const io_error& exception) {
-    throw io_error::dependent_error(filename, exception);
+    throw io_error{filename + ": error in " + exception.what()};
   }
 
   // fix scene
@@ -1960,7 +1960,7 @@ static void load_json_scene(
       auto version = string{};
       get_opt(element, "version", version);
       if (version != "4.2" && version != "5.0")
-        throw io_error::parse_error(filename, "/asset");
+        throw io_error(filename + ": parse error in " + "/asset/version");
     }
     if (json.contains("cameras")) {
       auto& group = json.at("cameras");
@@ -1972,7 +1972,6 @@ static void load_json_scene(
         get_opt(element, "name", name);
         get_opt(element, "frame", camera.frame);
         get_opt(element, "orthographic", camera.orthographic);
-        get_opt(element, "ortho", camera.orthographic);
         get_opt(element, "lens", camera.lens);
         get_opt(element, "aspect", camera.aspect);
         get_opt(element, "film", camera.film);
@@ -2118,7 +2117,7 @@ static void load_json_scene(
       });
     }
   } catch (const io_error& exception) {
-    throw io_error::dependent_error(filename, exception);
+    throw io_error{filename + ": error in " + exception.what()};
   }
 
   // fix scene
@@ -2365,7 +2364,7 @@ static void save_json_scene(
       });
     }
   } catch (const io_error& exception) {
-    throw io_error::dependent_error(filename, exception);
+    throw io_error{filename + ": error in " + exception.what()};
   }
 }
 
@@ -2497,7 +2496,7 @@ static void load_obj_scene(
       });
     }
   } catch (const io_error& exception) {
-    throw io_error::dependent_error(filename, exception);
+    throw io_error{filename + ": error in " + exception.what()};
   }
 
   // fix scene
@@ -2605,7 +2604,7 @@ static void save_obj_scene(
       });
     }
   } catch (const io_error& exception) {
-    throw io_error::dependent_error(filename, exception);
+    throw io_error{filename + ": error in " + exception.what()};
   }
 }
 
@@ -2708,7 +2707,7 @@ static void load_gltf_scene(
       });
     }
   } catch (const io_error& exception) {
-    throw io_error::dependent_error(filename, exception);
+    throw io_error{filename + ": error in " + exception.what()};
   }
 
   // convert asset
@@ -3128,7 +3127,7 @@ static void load_gltf_scene(
       });
     }
   } catch (const io_error& exception) {
-    throw io_error::dependent_error(filename, exception);
+    throw io_error{filename + ": error in " + exception.what()};
   }
 
   // fix scene
@@ -3467,7 +3466,7 @@ static void save_gltf_scene(
       });
     }
   } catch (const io_error& exception) {
-    throw io_error::dependent_error(filename, exception);
+    throw io_error{filename + ": error in " + exception.what()};
   }
 }
 
@@ -3604,7 +3603,7 @@ static void load_pbrt_scene(
       });
     }
   } catch (const io_error& exception) {
-    throw io_error::dependent_error(filename, exception);
+    throw io_error{filename + ": error in " + exception.what()};
   }
 
   // fix scene
@@ -3706,7 +3705,7 @@ static void save_pbrt_scene(
       });
     }
   } catch (const io_error& exception) {
-    throw io_error::dependent_error(filename, exception);
+    throw io_error{filename + ": error in " + exception.what()};
   }
 }
 

@@ -69,15 +69,6 @@ namespace yocto {
 // Io error used in exception handling
 struct io_error : std::runtime_error {
   io_error(const string& message) : std::runtime_error(message) {}
-
-  // common errors
-  // clang-format off
-  static io_error parse_error(const string& filename, const string& path) { return io_error{filename + ": parse error at " + path}; }
-  static io_error dependent_error(const string& filename, const io_error& error) { return io_error{filename + string{": error in "} + error.what()}; }
-  static io_error json_error(const string& filename) { return io_error{filename + ": json error"}; }
-  static io_error mismatch_error(const string& filename1, const string& filename2, const string& error) { return io_error{filename1 + " and " + filename2 + ": " + error}; }
-  static io_error not_implemented_error(const string& error) { return io_error{"not implemented " +  error}; }
-  // clang-format on
 };
 
 }  // namespace yocto
