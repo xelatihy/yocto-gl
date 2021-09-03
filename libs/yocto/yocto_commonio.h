@@ -68,11 +68,9 @@ namespace yocto {
 
 // Io error used in exception handling
 struct io_error : std::runtime_error {
-  string filename = "", message = "";
+  io_error(string& message) : std::runtime_error(message) {}
   io_error(const string& filename, const string& message)
-      : std::runtime_error(filename + ": " + message)
-      , filename{filename}
-      , message{message} {}
+      : std::runtime_error(filename + ": " + message) {}
 
   // common errors
   // clang-format off
