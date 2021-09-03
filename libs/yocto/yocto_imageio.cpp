@@ -96,7 +96,7 @@ void load_image(const string& filename, image_data& image) {
     auto pixels = (float*)nullptr;
     if (LoadEXRFromMemory(&pixels, &image.width, &image.height, buffer.data(),
             buffer.size(), nullptr) != 0)
-      throw io_error::read_error(filename);
+      throw io_error{filename + ": read error"};
     image.linear = true;
     image.pixels = from_linear(pixels, image.width, image.height);
     free(pixels);
@@ -105,7 +105,7 @@ void load_image(const string& filename, image_data& image) {
     auto ncomp  = 0;
     auto pixels = stbi_loadf_from_memory(buffer.data(), (int)buffer.size(),
         &image.width, &image.height, &ncomp, 4);
-    if (!pixels) throw io_error::read_error(filename);
+    if (!pixels) throw io_error{filename + ": read error"};
     image.linear = true;
     image.pixels = from_linear(pixels, image.width, image.height);
     free(pixels);
@@ -114,7 +114,7 @@ void load_image(const string& filename, image_data& image) {
     auto ncomp  = 0;
     auto pixels = stbi_load_from_memory(buffer.data(), (int)buffer.size(),
         &image.width, &image.height, &ncomp, 4);
-    if (!pixels) throw io_error::read_error(filename);
+    if (!pixels) throw io_error{filename + ": read error"};
     image.linear = false;
     image.pixels = from_srgb(pixels, image.width, image.height);
     free(pixels);
@@ -124,7 +124,7 @@ void load_image(const string& filename, image_data& image) {
     auto ncomp  = 0;
     auto pixels = stbi_load_from_memory(buffer.data(), (int)buffer.size(),
         &image.width, &image.height, &ncomp, 4);
-    if (!pixels) throw io_error::read_error(filename);
+    if (!pixels) throw io_error{filename + ": read error"};
     image.linear = false;
     image.pixels = from_srgb(pixels, image.width, image.height);
     free(pixels);
@@ -133,7 +133,7 @@ void load_image(const string& filename, image_data& image) {
     auto ncomp  = 0;
     auto pixels = stbi_load_from_memory(buffer.data(), (int)buffer.size(),
         &image.width, &image.height, &ncomp, 4);
-    if (!pixels) throw io_error::read_error(filename);
+    if (!pixels) throw io_error{filename + ": read error"};
     image.linear = false;
     image.pixels = from_srgb(pixels, image.width, image.height);
     free(pixels);
@@ -142,7 +142,7 @@ void load_image(const string& filename, image_data& image) {
     auto ncomp  = 0;
     auto pixels = stbi_load_from_memory(buffer.data(), (int)buffer.size(),
         &image.width, &image.height, &ncomp, 4);
-    if (!pixels) throw io_error::read_error(filename);
+    if (!pixels) throw io_error{filename + ": read error"};
     image.linear = false;
     image.pixels = from_srgb(pixels, image.width, image.height);
     free(pixels);
@@ -184,14 +184,14 @@ void save_image(const string& filename, const image_data& image) {
     auto buffer = vector<byte>{};
     if (!stbi_write_hdr_to_func(stbi_write_data, &buffer, (int)image.width,
             (int)image.height, 4, (const float*)to_linear(image).data()))
-      throw io_error::write_error(filename);
+      throw io_error{filename + ": write error"};
     save_binary(filename, buffer);
   } else if (ext == ".exr" || ext == ".EXR") {
     auto data = (byte*)nullptr;
     auto size = (size_t)0;
     if (SaveEXRToMemory((const float*)to_linear(image).data(), (int)image.width,
             (int)image.height, 4, 1, &data, &size, nullptr) < 0)
-      throw io_error::write_error(filename);
+      throw io_error{filename + ": write error"};
     auto buffer = vector<byte>{data, data + size};
     free(data);
     save_binary(filename, buffer);
@@ -200,26 +200,26 @@ void save_image(const string& filename, const image_data& image) {
     if (!stbi_write_png_to_func(stbi_write_data, &buffer, (int)image.width,
             (int)image.height, 4, (const byte*)to_srgb(image).data(),
             (int)image.width * 4))
-      throw io_error::write_error(filename);
+      throw io_error{filename + ": write error"};
     save_binary(filename, buffer);
   } else if (ext == ".jpg" || ext == ".JPG" || ext == ".jpeg" ||
              ext == ".JPEG") {
     auto buffer = vector<byte>{};
     if (!stbi_write_jpg_to_func(stbi_write_data, &buffer, (int)image.width,
             (int)image.height, 4, (const byte*)to_srgb(image).data(), 75))
-      throw io_error::write_error(filename);
+      throw io_error{filename + ": write error"};
     save_binary(filename, buffer);
   } else if (ext == ".tga" || ext == ".TGA") {
     auto buffer = vector<byte>{};
     if (!stbi_write_tga_to_func(stbi_write_data, &buffer, (int)image.width,
             (int)image.height, 4, (const byte*)to_srgb(image).data()))
-      throw io_error::write_error(filename);
+      throw io_error{filename + ": write error"};
     save_binary(filename, buffer);
   } else if (ext == ".bmp" || ext == ".BMP") {
     auto buffer = vector<byte>{};
     if (!stbi_write_bmp_to_func(stbi_write_data, &buffer, (int)image.width,
             (int)image.height, 4, (const byte*)to_srgb(image).data()))
-      throw io_error::write_error(filename);
+      throw io_error{filename + ": write error"};
     save_binary(filename, buffer);
   } else {
     throw io_error::format_error(filename);

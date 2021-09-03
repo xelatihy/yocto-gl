@@ -151,7 +151,7 @@ void load_texture(const string& filename, texture_data& texture) {
     auto pixels = (float*)nullptr;
     if (LoadEXR(&pixels, &texture.width, &texture.height, filename.c_str(),
             nullptr) != 0)
-      throw io_error::read_error(filename);
+      throw io_error{filename + ": read error"};
     texture.linear  = true;
     texture.pixelsf = vector<vec4f>{
         (vec4f*)pixels, (vec4f*)pixels + texture.width * texture.height};
@@ -161,7 +161,7 @@ void load_texture(const string& filename, texture_data& texture) {
     auto ncomp  = 0;
     auto pixels = stbi_loadf_from_memory(buffer.data(), (int)buffer.size(),
         &texture.width, &texture.height, &ncomp, 4);
-    if (!pixels) throw io_error::read_error(filename);
+    if (!pixels) throw io_error{filename + ": read error"};
     texture.linear  = true;
     texture.pixelsf = vector<vec4f>{
         (vec4f*)pixels, (vec4f*)pixels + texture.width * texture.height};
@@ -171,7 +171,7 @@ void load_texture(const string& filename, texture_data& texture) {
     auto ncomp  = 0;
     auto pixels = stbi_load_from_memory(buffer.data(), (int)buffer.size(),
         &texture.width, &texture.height, &ncomp, 4);
-    if (!pixels) throw io_error::read_error(filename);
+    if (!pixels) throw io_error{filename + ": read error"};
     texture.linear  = false;
     texture.pixelsb = vector<vec4b>{
         (vec4b*)pixels, (vec4b*)pixels + texture.width * texture.height};
@@ -182,7 +182,7 @@ void load_texture(const string& filename, texture_data& texture) {
     auto ncomp  = 0;
     auto pixels = stbi_load_from_memory(buffer.data(), (int)buffer.size(),
         &texture.width, &texture.height, &ncomp, 4);
-    if (!pixels) throw io_error::read_error(filename);
+    if (!pixels) throw io_error{filename + ": read error"};
     texture.linear  = false;
     texture.pixelsb = vector<vec4b>{
         (vec4b*)pixels, (vec4b*)pixels + texture.width * texture.height};
@@ -192,7 +192,7 @@ void load_texture(const string& filename, texture_data& texture) {
     auto ncomp  = 0;
     auto pixels = stbi_load_from_memory(buffer.data(), (int)buffer.size(),
         &texture.width, &texture.height, &ncomp, 4);
-    if (!pixels) throw io_error::read_error(filename);
+    if (!pixels) throw io_error{filename + ": read error"};
     texture.linear  = false;
     texture.pixelsb = vector<vec4b>{
         (vec4b*)pixels, (vec4b*)pixels + texture.width * texture.height};
@@ -202,7 +202,7 @@ void load_texture(const string& filename, texture_data& texture) {
     auto ncomp  = 0;
     auto pixels = stbi_load_from_memory(buffer.data(), (int)buffer.size(),
         &texture.width, &texture.height, &ncomp, 4);
-    if (!pixels) throw io_error::read_error(filename);
+    if (!pixels) throw io_error{filename + ": read error"};
     texture.linear  = false;
     texture.pixelsb = vector<vec4b>{
         (vec4b*)pixels, (vec4b*)pixels + texture.width * texture.height};
@@ -234,7 +234,7 @@ void save_texture(const string& filename, const texture_data& texture) {
     auto buffer = vector<byte>{};
     if (!stbi_write_hdr_to_func(stbi_write_data, &buffer, (int)texture.width,
             (int)texture.height, 4, (const float*)texture.pixelsf.data()))
-      throw io_error::write_error(filename);
+      throw io_error{filename + ": write error"};
     save_binary(filename, buffer);
   } else if (ext == ".exr" || ext == ".EXR") {
     auto data = (byte*)nullptr;
@@ -242,7 +242,7 @@ void save_texture(const string& filename, const texture_data& texture) {
     if (SaveEXRToMemory((const float*)texture.pixelsf.data(),
             (int)texture.width, (int)texture.height, 4, 1, &data, &size,
             nullptr) < 0)
-      throw io_error::write_error(filename);
+      throw io_error{filename + ": write error"};
     auto buffer = vector<byte>{data, data + size};
     free(data);
     save_binary(filename, buffer);
@@ -251,26 +251,26 @@ void save_texture(const string& filename, const texture_data& texture) {
     if (!stbi_write_png_to_func(stbi_write_data, &buffer, (int)texture.width,
             (int)texture.height, 4, (const byte*)texture.pixelsb.data(),
             (int)texture.width * 4))
-      throw io_error::write_error(filename);
+      throw io_error{filename + ": write error"};
     save_binary(filename, buffer);
   } else if (ext == ".jpg" || ext == ".JPG" || ext == ".jpeg" ||
              ext == ".JPEG") {
     auto buffer = vector<byte>{};
     if (!stbi_write_jpg_to_func(stbi_write_data, &buffer, (int)texture.width,
             (int)texture.height, 4, (const byte*)texture.pixelsb.data(), 75))
-      throw io_error::write_error(filename);
+      throw io_error{filename + ": write error"};
     save_binary(filename, buffer);
   } else if (ext == ".tga" || ext == ".TGA") {
     auto buffer = vector<byte>{};
     if (!stbi_write_tga_to_func(stbi_write_data, &buffer, (int)texture.width,
             (int)texture.height, 4, (const byte*)texture.pixelsb.data()))
-      throw io_error::write_error(filename);
+      throw io_error{filename + ": write error"};
     save_binary(filename, buffer);
   } else if (ext == ".bmp" || ext == ".BMP") {
     auto buffer = vector<byte>{};
     if (!stbi_write_bmp_to_func(stbi_write_data, &buffer, (int)texture.width,
             (int)texture.height, 4, (const byte*)texture.pixelsb.data()))
-      throw io_error::write_error(filename);
+      throw io_error{filename + ": write error"};
     save_binary(filename, buffer);
   } else {
     throw io_error::format_error(filename);

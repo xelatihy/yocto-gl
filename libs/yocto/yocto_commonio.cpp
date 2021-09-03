@@ -193,14 +193,14 @@ string load_text(const string& filename) {
 void load_text(const string& filename, string& text) {
   // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
   auto fs = fopen_utf8(filename.c_str(), "rb");
-  if (!fs) throw io_error::open_error(filename);
+  if (!fs) throw io_error{filename + ": cannot open file"};
   fseek(fs, 0, SEEK_END);
   auto length = ftell(fs);
   fseek(fs, 0, SEEK_SET);
   text.resize(length);
   if (fread(text.data(), 1, length, fs) != length) {
     fclose(fs);
-    throw io_error::read_error(filename);
+    throw io_error{filename + ": read error"};
   }
   fclose(fs);
 }
@@ -208,10 +208,10 @@ void load_text(const string& filename, string& text) {
 // Save a text file
 void save_text(const string& filename, const string& text) {
   auto fs = fopen_utf8(filename.c_str(), "wt");
-  if (!fs) throw io_error::open_error(filename);
+  if (!fs) throw io_error{filename + ": cannot open file"};
   if (fprintf(fs, "%s", text.c_str()) < 0) {
     fclose(fs);
-    throw io_error::write_error(filename);
+    throw io_error{filename + ": write error"};
   }
   fclose(fs);
 }
@@ -225,14 +225,14 @@ vector<byte> load_binary(const string& filename) {
 void load_binary(const string& filename, vector<byte>& data) {
   // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
   auto fs = fopen_utf8(filename.c_str(), "rb");
-  if (!fs) throw io_error::open_error(filename);
+  if (!fs) throw io_error{filename + ": cannot open file"};
   fseek(fs, 0, SEEK_END);
   auto length = ftell(fs);
   fseek(fs, 0, SEEK_SET);
   data.resize(length);
   if (fread(data.data(), 1, length, fs) != length) {
     fclose(fs);
-    throw io_error::read_error(filename);
+    throw io_error{filename + ": read error"};
   }
   fclose(fs);
 }
@@ -240,10 +240,10 @@ void load_binary(const string& filename, vector<byte>& data) {
 // Save a binary file
 void save_binary(const string& filename, const vector<byte>& data) {
   auto fs = fopen_utf8(filename.c_str(), "wb");
-  if (!fs) throw io_error::open_error(filename);
+  if (!fs) throw io_error{filename + ": cannot open file"};
   if (fwrite(data.data(), 1, data.size(), fs) != data.size()) {
     fclose(fs);
-    throw io_error::write_error(filename);
+    throw io_error{filename + ": write error"};
   }
   fclose(fs);
 }
