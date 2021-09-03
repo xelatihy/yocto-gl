@@ -63,6 +63,18 @@ using std::vector;
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// Error type for modelio
+struct modelio_error : std::logic_error {
+  modelio_error(const string& message) : std::logic_error(message) {}
+};
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// PLY LOADER AND WRITER
+// -----------------------------------------------------------------------------
+namespace yocto {
+
 // Ply type
 enum struct ply_type { i8, i16, i32, i64, u8, u16, u32, u64, f32, f64 };
 
@@ -109,8 +121,8 @@ struct ply_model {
 };
 
 // Ply error
-struct ply_error : std::runtime_error {
-  ply_error(const string& message) : std::runtime_error(message) {}
+struct ply_error : modelio_error {
+  ply_error(const string& message) : modelio_error(message) {}
 };
 
 // Load and save ply
@@ -322,8 +334,8 @@ struct obj_model {
 };
 
 // Obj error
-struct obj_error : std::runtime_error {
-  obj_error(const string& message) : std::runtime_error(message) {}
+struct obj_error : modelio_error {
+  obj_error(const string& message) : modelio_error(message) {}
 };
 
 // Load and save obj
@@ -434,8 +446,8 @@ struct stl_model {
 };
 
 // Stl error
-struct stl_error : std::runtime_error {
-  stl_error(const string& message) : std::runtime_error(message) {}
+struct stl_error : modelio_error {
+  stl_error(const string& message) : modelio_error(message) {}
 };
 
 // Load and save ply
@@ -554,8 +566,8 @@ struct pbrt_model {
 };
 
 // Pbrt error
-struct pbrt_error : std::runtime_error {
-  pbrt_error(const string& message) : std::runtime_error(message) {}
+struct pbrt_error : modelio_error {
+  pbrt_error(const string& message) : modelio_error(message) {}
 };
 
 // Load/save pbrt
