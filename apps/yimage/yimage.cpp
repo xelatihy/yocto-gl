@@ -294,7 +294,7 @@ void run(const vector<string>& args) {
   } else if (params.command == "setalpha") {
     return run_setalpha(params.setalpha);
   } else {
-    throw io_error::command_error("yimage", params.command);
+    throw io_error("yimage: unknown command");
   }
 }
 

@@ -405,7 +405,7 @@ void run(const vector<string>& args) {
   } else if (params.command == "glview") {
     return run_glview(params.glview);
   } else {
-    throw io_error::command_error("yscene", params.command);
+    throw io_error("yscene; unknown command");
   }
 }
 

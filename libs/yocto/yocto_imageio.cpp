@@ -150,7 +150,7 @@ void load_image(const string& filename, image_data& image) {
     // create preset
     image = make_image_preset(path_basename(filename));
   } else {
-    throw io_error::format_error(filename);
+    throw io_error{filename + ": unknown format"};
   }
 }
 
@@ -222,7 +222,7 @@ void save_image(const string& filename, const image_data& image) {
       throw io_error{filename + ": write error"};
     save_binary(filename, buffer);
   } else {
-    throw io_error::format_error(filename);
+    throw io_error{filename + ": unknown format"};
   }
 }
 
@@ -347,7 +347,7 @@ image_data make_image_preset(const string& type_) {
   } else if (type == "test-grid-opacity") {
     return make_grid(width, height, 1, {1, 1, 1, 1}, {0, 0, 0, 0});
   } else {
-    throw io_error::preset_error(type_);
+    throw io_error{type_ + ": unknown preset"};
   }
 }
 

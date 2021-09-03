@@ -77,7 +77,7 @@ static void load_json(const string& filename, ordered_json& json) {
   try {
     json = ordered_json::parse(text);
   } catch (...) {
-    throw io_error::parse_error(filename);
+    throw io_error{filename + ": parse error"};
   }
 }
 static void save_json(const string& filename, const ordered_json& json) {
@@ -211,7 +211,7 @@ void load_texture(const string& filename, texture_data& texture) {
     // create preset
     texture = make_texture_preset(path_basename(filename));
   } else {
-    throw io_error::format_error(filename);
+    throw io_error{filename + ": unknown format"};
   }
 }
 
@@ -273,7 +273,7 @@ void save_texture(const string& filename, const texture_data& texture) {
       throw io_error{filename + ": write error"};
     save_binary(filename, buffer);
   } else {
-    throw io_error::format_error(filename);
+    throw io_error{filename + ": unknown format"};
   }
 }
 
@@ -914,7 +914,7 @@ scene_data make_scene_preset(const string& type) {
         test_shapes_type::bunny_sphere, test_materials_type::plastic_metal,
         test_instance_name_type::material});
   } else {
-    throw io_error::preset_error(type);
+    throw io_error{type + ": unknown preset"};
   }
 }
 
@@ -1077,7 +1077,7 @@ void load_scene(const string& filename, scene_data& scene, bool noparallel) {
   } else if (ext == ".ypreset" || ext == ".YPRESET") {
     scene = make_scene_preset(path_basename(filename));
   } else {
-    throw io_error::format_error(filename);
+    throw io_error{filename + ": unknown format"};
   }
 }
 
@@ -1098,7 +1098,7 @@ void save_scene(
   } else if (ext == ".stl" || ext == ".STL") {
     return save_stl_scene(filename, scene, noparallel);
   } else {
-    throw io_error::format_error(filename);
+    throw io_error{filename + ": unknown format"};
   }
 }
 
@@ -1185,7 +1185,7 @@ static void load_instance(const string& filename, vector<frame3f>& frames) {
             "oz"},
         frames);
   } else {
-    io_error::format_error(filename);
+    throw io_error{filename + ": unknown format"};
   }
 }
 
@@ -1201,7 +1201,7 @@ static void load_instance(const string& filename, vector<frame3f>& frames) {
         frames);
     save_ply(filename, ply);
   } else {
-    throw io_error::format_error(filename);
+    throw io_error{filename + ": unknown format"};
   }
 }
 
@@ -1550,7 +1550,7 @@ static void load_json_scene_version40(const string& filename,
       }
     }
   } catch (...) {
-    throw io_error::parse_error(filename);
+    throw io_error{filename + ": parse error"};
   }
 
   // dirname
@@ -1875,7 +1875,7 @@ static void load_json_scene_version41(const string& filename, json_value_& json,
       }
     }
   } catch (...) {
-    throw io_error::parse_error(filename);
+    throw io_error{filename + ": parse error"};
   }
 
   // fix paths
@@ -2079,7 +2079,7 @@ static void load_json_scene(
   } catch (const io_error& error) {
     throw;
   } catch (...) {
-    throw io_error::parse_error(filename);
+    throw io_error{filename + ": parse error"};
   }
 
   // load resources
@@ -2680,13 +2680,14 @@ static void load_gltf_scene(
   try {
     if (gltf.contains("buffers")) {
       for (auto& gbuffer : gltf.at("buffers")) {
-        if (!gbuffer.contains("uri")) throw io_error::parse_error(filename);
+        if (!gbuffer.contains("uri"))
+          throw io_error{filename + ": parse error"};
         buffers_paths.push_back(gbuffer.value("uri", ""));
         buffers.emplace_back();
       }
     }
   } catch (...) {
-    throw io_error::parse_error(filename);
+    throw io_error{filename + ": parse error"};
   }
 
   // dirname
@@ -2715,7 +2716,7 @@ static void load_gltf_scene(
     try {
       scene.copyright = gltf.value("copyright", ""s);
     } catch (...) {
-      throw io_error::parse_error(filename);
+      throw io_error{filename + ": parse error"};
     }
   }
 
@@ -2746,11 +2747,11 @@ static void load_gltf_scene(
           }
           camera.focus = 1;
         } else {
-          throw io_error::parse_error(filename);
+          throw io_error{filename + ": parse error"};
         }
       }
     } catch (...) {
-      throw io_error::parse_error(filename);
+      throw io_error{filename + ": parse error"};
     }
   }
 
@@ -2785,7 +2786,7 @@ static void load_gltf_scene(
         texture_paths.push_back(replace(gimage.value("uri", ""), "%20", " "));
       }
     } catch (...) {
-      throw io_error::parse_error(filename);
+      throw io_error{filename + ": parse error"};
     }
   }
 
@@ -2823,7 +2824,7 @@ static void load_gltf_scene(
         }
       }
     } catch (...) {
-      throw io_error::parse_error(filename);
+      throw io_error{filename + ": parse error"};
     }
   }
 
@@ -3045,7 +3046,7 @@ static void load_gltf_scene(
     } catch (const io_error& error) {
       throw;
     } catch (...) {
-      throw io_error::parse_error(filename);
+      throw io_error{filename + ": parse error"};
     }
   }
 
@@ -3108,7 +3109,7 @@ static void load_gltf_scene(
         node_id++;
       }
     } catch (...) {
-      throw io_error::parse_error(filename);
+      throw io_error{filename + ": parse error"};
     }
   }
 

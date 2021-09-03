@@ -102,7 +102,7 @@ void load_shape(const string& filename, shape_data& shape, bool flip_texcoord) {
   } else if (ext == ".ypreset" || ext == ".YPRESET") {
     shape = make_shape_preset(path_basename(filename));
   } else {
-    throw io_error::format_error(filename);
+    throw io_error{filename + ": unknown format"};
   }
 }
 
@@ -213,7 +213,7 @@ void save_shape(const string& filename, const shape_data& shape,
     str += to_cpp(name, "quads", shape.quads);
     save_text(filename, str);
   } else {
-    throw io_error::format_error(filename);
+    throw io_error{filename + ": unknown format"};
   }
 }
 
@@ -273,7 +273,7 @@ void load_fvshape(
   } else if (ext == ".ypreset" || ext == ".YPRESET") {
     shape = make_fvshape_preset(path_basename(filename));
   } else {
-    throw io_error::format_error(filename);
+    throw io_error{filename + ": unknown format"};
   }
 }
 
@@ -377,7 +377,7 @@ void save_fvshape(const string& filename, const fvshape_data& shape,
     str += to_cpp(name, "quadstexcoord", shape.quadstexcoord);
     save_text(filename, str);
   } else {
-    throw io_error::format_error(filename);
+    throw io_error{filename + ": unknown format"};
   }
 }
 
@@ -597,7 +597,7 @@ shape_data make_shape_preset(const string& type) {
   } else if (type == "test-clothy") {
     return make_recty({64, 64}, {0.2f, 0.2f});
   } else {
-    throw io_error::preset_error(type);
+    throw io_error{type + ": unknown preset"};
   }
 }
 
@@ -741,7 +741,7 @@ fvshape_data make_fvshape_preset(const string& type) {
   } else if (type == "test-clothy") {
     return shape_to_fvshape(make_recty({64, 64}, {0.2f, 0.2f}));
   } else {
-    throw io_error::preset_error(type);
+    throw io_error{type + ": unknown preset"};
   }
 }
 
