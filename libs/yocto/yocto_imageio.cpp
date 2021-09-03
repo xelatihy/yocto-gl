@@ -178,10 +178,6 @@ void save_image(const string& filename, const image_data& image) {
     auto& buffer = *(vector<byte>*)context;
     buffer.insert(buffer.end(), (byte*)data, (byte*)data + size);
   };
-  auto pfm_write_data = [](void* context, const void* data, int size) {
-    auto& buffer = *(vector<byte>*)context;
-    buffer.insert(buffer.end(), (byte*)data, (byte*)data + size);
-  };
 
   auto ext = path_extension(filename);
   if (ext == ".hdr" || ext == ".HDR") {
