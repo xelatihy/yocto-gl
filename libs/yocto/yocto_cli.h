@@ -44,6 +44,7 @@
 #include <type_traits>
 #include <vector>
 
+#include "ext/json.hpp"
 #include "yocto_commonio.h"
 #include "yocto_math.h"
 
@@ -258,9 +259,12 @@ void add_option(const cli_command& cli, const string& name, vec4f& value,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// Json value
+using json_value_ = nlohmann::ordered_json;
+
 // Command line setter.
 using cli_setter = void (*)(
-    const json_value&, void*, const vector<string>& choices);
+    const json_value_&, void*, const vector<string>& choices);
 // Command line variable.
 struct cli_variable {
   void*                             value     = nullptr;
@@ -270,9 +274,9 @@ struct cli_variable {
 };
 // Command line state.
 struct cli_state {
-  json_value   defaults  = {};
-  json_value   schema    = {};
-  json_value   value     = {};
+  json_value_  defaults  = {};
+  json_value_  schema    = {};
+  json_value_  value     = {};
   cli_variable variables = {};
 };
 // Command line command.
