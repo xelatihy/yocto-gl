@@ -35,6 +35,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cstdio>
+#include <fstream>
 
 #include "yocto_commonio.h"
 
@@ -855,16 +856,6 @@ static void json_to_variable(
   }
 }
 
-// Load/save json
-static void load_json(const string& filename, json_value_& json) {
-  auto text = load_text(filename);
-  try {
-    json = json_value_::parse(text);
-  } catch (...) {
-    throw io_error::parse_error(filename);
-  }
-}
-
 // grabs a configuration and update json arguments
 static string get_config(const json_value_& json) {
   if (!json.is_object()) return "";
@@ -884,8 +875,10 @@ static void config_to_json(json_value_& json) {
   }
 
   auto config = json_value_{};
+  auto stream = std::ifstream(filename);
+  if (!stream) throw cli_error{"missing configuration file " + filename};
   try {
-    load_json(filename, config);
+    config = json_value_::parse(stream);
   } catch (...) {
     throw cli_error{"error converting configuration " + filename};
   }
