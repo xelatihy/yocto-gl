@@ -207,3 +207,43 @@ if(!load_texture(filename, texture, error)) // load texture
 if(!save_texture(filename, texture, error)) // save texture
   print_error(error);                       // check and print error
 ```
+
+## Text and binary serialization
+
+Yocto/CommonIO supports reading and writing whole files of either binary
+data or text. Use `load_text(filename, text)` or `text = load_text(filename)` 
+to load text, and `save_text(filename, text)` to save it.
+Use `load_binary(filename, data)` or `data = load_binary(filename)` 
+to load text, and `save_binary(filename, data)` to save it. 
+Text is stored as a string and binary data is stored as an array of bytes.
+Use without exception is supported as described above.
+
+```cpp
+auto text = string{};
+load_text("input_file.txt",  text);          // load text
+save_text("output_file.txt", text);          // save text
+auto text1 = load_text("input_file.txt");    // alternative load
+auto data = vector<byte>{};
+load_binary("input_file.bin",  data);        // load data
+save_binary("output_file.bin", data);        // save data
+auto data1 = load_binary("input_file.bin");  // alternative load
+```
+
+## Path manipulation utilities
+
+Yocto/CommonIO contains several helper function to manipulate paths. Paths
+are encoded in UTF8 across the library and these functions make it easier to
+handle UTF8-encoded paths across operating systems, by wrapping 
+`std::filesystem` with a string interface.
+
+Use `path_dirname(filename)`, `path_extension(filename)`,  
+`path_filename(filename)`, `path_basename(fillename)`
+to extract the directory, extension, filename and basename from a path.
+Use `path_join(patha,pathb)` to joins paths and
+`replace_extension(filename,ext)` to replace a path extension.
+Use `path_exists(filename)` to check if a path exists and
+`path_isdir(filename)` and `path_isfile(filename)` to check whether
+it is a directory ot file respectively.
+Use `list_directory(dirname)` to list directory contents, 
+`make_directory(dirname)` to create a directory, and
+`path_current()` to get the current directory.
