@@ -4,8 +4,7 @@
 // Yocto/CommonIO is a collection of utilities used in writing IO functionality,
 // including file IO, Json IO, and path manipulation.
 // Yocto/CommonIO is implemented in `yocto_commonio.h` and `yocto_commonio.cpp`,
-// and depends on `json.hpp` for Json serialization and number printing, and
-// `fast_float.h` for number parsing.
+// and depends on `json.hpp` for Json serialization and number printing.
 //
 
 //
@@ -69,32 +68,7 @@ namespace yocto {
 
 // Io error used in exception handling
 struct io_error : std::runtime_error {
-  string filename = "", message = "";
-  io_error(const string& filename, const string& message)
-      : std::runtime_error(filename + ": " + message)
-      , filename{filename}
-      , message{message} {}
-
-  // common errors
-  // clang-format off
-  static io_error open_error(const string& filename) { return {filename, "file not found"}; }
-  static io_error read_error(const string& filename) { return {filename, "read error"}; }
-  static io_error write_error(const string& filename) { return {filename, "write error"}; }
-  static io_error parse_error(const string& filename) { return {filename, "parse error"}; }
-  static io_error parse_error(const string& filename, const string& path) { return {filename, "parse error at " + path}; }
-  static io_error format_error(const string& filename) { return {filename, "unknown format"}; }
-  static io_error preset_error(const string& filename) { return {filename, "unknown preset"}; }
-  static io_error shape_error(const string& filename) { return {filename, "empty shape"}; }
-  static io_error dependent_error(const string& filename, const io_error& error) { return {filename, string{"error in "} + error.what()}; }
-  static io_error json_error(const string& filename) { return {filename, "json error"}; }
-  static io_error material_error(const string& filename, const string& name) { return {filename, "missing material " + name}; }
-  static io_error object_error(const string& filename, const string& name) { return {filename, "missing object " + name}; }
-  static io_error shape_error(const string& filename, const string& name) { return {filename, "missing shape " + name}; }
-  static io_error command_error(const string& filename, const string& name) { return {filename, "unknown command " + name}; }
-  static io_error type_error(const string& filename, const string& name) { return {filename, "unknown type " + name}; }
-  static io_error mismatch_error(const string& filename1, const string& filename2, const string& error) { return {filename1 + " and " + filename2, error}; }
-  static io_error not_implemented_error(const string& error) { return {"not implemented", error}; }
-  // clang-format on
+  io_error(const string& message) : std::runtime_error(message) {}
 };
 
 }  // namespace yocto
@@ -780,44 +754,6 @@ bool save_json(const string& filename, const json_value& json, string& error);
 // Parse/dump json
 bool parse_json(const string& text, json_value& json, string& error);
 bool format_json(string& text, const json_value& json, string& error);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// FAST CONVERSIONS FROM/TO CHARS
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// from_chars result
-struct from_chars_result {
-  const char* ptr;
-  std::errc   ec;
-};
-
-// from_chars
-template <typename T>
-from_chars_result from_chars(const char* first, const char* last, T& value) {
-  auto result = std::from_chars(first, last, value);
-  return {result.ptr, result.ec};
-}
-from_chars_result from_chars(const char* first, const char* last, float& value);
-from_chars_result from_chars(
-    const char* first, const char* last, double& value);
-
-// to_chars result
-struct to_chars_result {
-  char*     ptr;
-  std::errc ec;
-};
-
-// to_chars
-template <typename T>
-from_chars_result to_chars(const char* first, const char* last, T value) {
-  auto result = std::to_chars(first, last, value);
-  return {result.ptr, result.ec};
-}
-to_chars_result to_chars(char* first, char* last, float value);
-to_chars_result to_chars(char* first, char* last, double value);
 
 }  // namespace yocto
 

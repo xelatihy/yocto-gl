@@ -3,7 +3,8 @@
 //
 // Yocto/ModelIO is a collection of utilities for loading and saving scenes
 // and meshes in Ply, Obj, Stl and Pbrt formats.
-// Yocto/ModelIO is implemented in `yocto_modelio.h` and `yocto_modelio.cpp`.
+// Yocto/ModelIO is implemented in `yocto_modelio.h` and `yocto_modelio.cpp`,
+// and depends on `fast_float.h` for number parsing.
 //
 
 //
@@ -42,7 +43,6 @@
 #include <string>
 #include <vector>
 
-#include "yocto_commonio.h"
 #include "yocto_math.h"
 
 // -----------------------------------------------------------------------------
@@ -54,6 +54,18 @@ namespace yocto {
 using std::array;
 using std::string;
 using std::vector;
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// PLY LOADER AND WRITER
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Error type for modelio
+struct modelio_error : std::logic_error {
+  modelio_error(const string& message) : std::logic_error(message) {}
+};
 
 }  // namespace yocto
 
@@ -108,8 +120,8 @@ struct ply_model {
 };
 
 // Ply error
-struct ply_error : std::runtime_error {
-  ply_error(const string& message) : std::runtime_error(message) {}
+struct ply_error : modelio_error {
+  ply_error(const string& message) : modelio_error(message) {}
 };
 
 // Load and save ply
@@ -321,8 +333,8 @@ struct obj_model {
 };
 
 // Obj error
-struct obj_error : std::runtime_error {
-  obj_error(const string& message) : std::runtime_error(message) {}
+struct obj_error : modelio_error {
+  obj_error(const string& message) : modelio_error(message) {}
 };
 
 // Load and save obj
@@ -433,8 +445,8 @@ struct stl_model {
 };
 
 // Stl error
-struct stl_error : std::runtime_error {
-  stl_error(const string& message) : std::runtime_error(message) {}
+struct stl_error : modelio_error {
+  stl_error(const string& message) : modelio_error(message) {}
 };
 
 // Load and save ply
@@ -553,8 +565,8 @@ struct pbrt_model {
 };
 
 // Pbrt error
-struct pbrt_error : std::runtime_error {
-  pbrt_error(const string& message) : std::runtime_error(message) {}
+struct pbrt_error : modelio_error {
+  pbrt_error(const string& message) : modelio_error(message) {}
 };
 
 // Load/save pbrt

@@ -171,14 +171,14 @@ void run_diff(const diff_params& params) {
 
   // check sizes
   if (image1.width != image2.width || image1.height != image2.height) {
-    throw io_error::mismatch_error(
-        params.image1, params.image2, "image different sizes");
+    throw io_error{
+        params.image1 + "," + params.image2 + ": image different sizes"};
   }
 
   // check types
   if (image1.linear != image2.linear) {
-    throw io_error::mismatch_error(
-        params.image1, params.image2, "image different types");
+    throw io_error{
+        params.image1 + "," + params.image2 + "image different types"};
   }
 
   // compute diff
@@ -191,8 +191,8 @@ void run_diff(const diff_params& params) {
   if (params.signal) {
     for (auto& c : diff.pixels) {
       if (max(xyz(c)) > params.threshold) {
-        throw io_error::mismatch_error(
-            params.image1, params.image2, "image content differs");
+        throw io_error{
+            params.image1 + "," + params.image2 + "image content differs"};
       }
     }
   }
@@ -226,14 +226,14 @@ void run_setalpha(const setalpha_params& params) {
 
   // check sizes
   if (image.width != alpha.width || image.height != alpha.height) {
-    throw io_error::mismatch_error(
-        params.image, params.alpha, "image different size");
+    throw io_error{
+        params.image + "," + params.alpha + ": image different size"};
   }
 
   // check types
   if (image.linear != alpha.linear) {
-    throw io_error::mismatch_error(
-        params.image, params.alpha, "image different types");
+    throw io_error{
+        params.image + "," + params.alpha + ": image different types"};
   }
 
   // edit alpha
@@ -294,7 +294,7 @@ void run(const vector<string>& args) {
   } else if (params.command == "setalpha") {
     return run_setalpha(params.setalpha);
   } else {
-    throw io_error::command_error("yimage", params.command);
+    throw io_error("yimage: unknown command");
   }
 }
 

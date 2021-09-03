@@ -77,7 +77,7 @@ static void load_json(const string& filename, ordered_json& json) {
   try {
     json = ordered_json::parse(text);
   } catch (...) {
-    throw io_error::parse_error(filename);
+    throw io_error{filename + ": parse error"};
   }
 }
 static void save_json(const string& filename, const ordered_json& json) {
@@ -139,362 +139,6 @@ using json_value_ = json_value;
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Pfm load
-[[maybe_unused]] static float* load_pfm(
-    const string& filename, int* width, int* height, int* components, int req) {
-  auto swap_endian = [](float value) -> float {
-    // https://stackoverflow.com/questions/105252/how-do-i-convert-between-big-endian-and-little-endian-values-in-c
-    static_assert(sizeof(char) == 1, "sizeof(char) == 1");
-    static_assert(sizeof(float) == 4, "sizeof(float) == 4");
-    union {
-      float         value;
-      unsigned char bytes[4];
-    } source, dest;
-    source.value = value;
-    for (auto k = 0; k < 4; k++) dest.bytes[k] = source.bytes[4 - k - 1];
-    return dest.value;
-  };
-
-  auto file_error = [](FILE* fs) -> float* {
-    if (fs) fclose(fs);
-    return nullptr;
-  };
-
-  auto fs = fopen_utf8(filename, "rb");
-  if (!fs) return nullptr;
-
-  // buffer
-  auto buffer = array<char, 4096>{};
-
-  // read magic
-  auto magic = array<char, 3>{};
-  if (!fgets(buffer.data(), (int)buffer.size(), fs)) return file_error(fs);
-  if (sscanf(buffer.data(), "%2s", magic.data()) != 1) return file_error(fs);
-  if (magic[0] == 'P' && magic[1] == 'f') {
-    *components = 1;
-  } else if (magic[0] == 'P' && magic[1] == 'F') {
-    *components = 3;
-  } else {
-    return file_error(fs);
-  }
-
-  // read width, height
-  if (!fgets(buffer.data(), (int)buffer.size(), fs)) return file_error(fs);
-  if (sscanf(buffer.data(), "%d %d", width, height) != 2) return file_error(fs);
-
-  // read scale
-  auto scale = 0.0f;
-  if (!fgets(buffer.data(), (int)buffer.size(), fs)) return file_error(fs);
-  if (sscanf(buffer.data(), "%f", &scale) != 1) return file_error(fs);
-
-  // read the data (flip y)
-  auto npixels = (size_t)*width * (size_t)*height;
-  auto nvalues = npixels * (size_t)*components;
-  auto nrow    = (size_t)*width * (size_t)*components;
-  auto pixels  = (float*)malloc(nvalues * 4);
-  for (auto j = *height - 1; j >= 0; j--) {
-    if (fread(pixels + j * nrow, 4, nrow, fs) != nrow) {
-      free(pixels);
-      return file_error(fs);
-    }
-  }
-
-  // close file
-  fclose(fs);
-
-  // endian conversion
-  if (scale > 0) {
-    for (auto i = (size_t)0; i < nvalues; ++i) {
-      pixels[i] = swap_endian(pixels[i]);
-    }
-  }
-
-  // scale
-  auto scl = (scale > 0) ? scale : -scale;
-  if (scl != 1) {
-    for (auto i = (size_t)0; i < nvalues; i++) pixels[i] *= scl;
-  }
-
-  // check convertions
-  if (req == 0 || *components == req) return pixels;
-
-  // convert channels
-  auto cpixels = (float*)malloc(npixels * req * 4);
-  if (req == 1) {
-    if (*components == 3) {
-      for (auto i = (size_t)0; i < npixels; i++) {
-        cpixels[i] =
-            (pixels[i * 3 + 0] + pixels[i * 3 + 1] + pixels[i * 3 + 2]) / 3;
-      }
-    }
-  } else if (req == 2) {
-    if (*components == 1) {
-      for (auto i = (size_t)0; i < npixels; i++) {
-        cpixels[i * 2 + 0] = pixels[i];
-        cpixels[i * 2 + 1] = 1;
-      }
-    }
-    if (*components == 3) {
-      for (auto i = (size_t)0; i < npixels; i++) {
-        cpixels[i * 2 + 0] =
-            (pixels[i * 3 + 0] + pixels[i * 3 + 1] + pixels[i * 3 + 2]) / 3;
-        cpixels[i * 2 + 1] = 1;
-      }
-    }
-  } else if (req == 3) {
-    if (*components == 1) {
-      for (auto i = (size_t)0; i < npixels; i++) {
-        cpixels[i * 3 + 0] = pixels[i];
-        cpixels[i * 3 + 1] = pixels[i];
-        cpixels[i * 3 + 2] = pixels[i];
-      }
-    }
-  } else if (req == 4) {
-    if (*components == 1) {
-      for (auto i = (size_t)0; i < npixels; i++) {
-        cpixels[i * 4 + 0] = pixels[i];
-        cpixels[i * 4 + 1] = pixels[i];
-        cpixels[i * 4 + 2] = pixels[i];
-        cpixels[i * 4 + 3] = 1;
-      }
-    }
-    if (*components == 3) {
-      for (auto i = (size_t)0; i < npixels; i++) {
-        cpixels[i * 4 + 0] = pixels[i * 3 + 0];
-        cpixels[i * 4 + 1] = pixels[i * 3 + 1];
-        cpixels[i * 4 + 2] = pixels[i * 3 + 2];
-        cpixels[i * 4 + 3] = 1;
-      }
-    }
-  } else {
-    free(pixels);
-    free(cpixels);
-    return nullptr;
-  }
-
-  // done
-  free(pixels);
-  return cpixels;
-}
-
-// save pfm
-[[maybe_unused]] static bool save_pfm(const char* filename, int width,
-    int height, int components, const float* pixels) {
-  auto file_error = [](FILE* fs) -> bool {
-    if (fs) fclose(fs);
-    return false;
-  };
-
-  auto fs = fopen_utf8(filename, "wb");
-  if (!fs) return false;
-
-  if (fprintf(fs, "%s\n", (components == 1) ? "Pf" : "PF") < 0)
-    return file_error(fs);
-  if (fprintf(fs, "%d %d\n", width, height) < 0) return file_error(fs);
-  if (fprintf(fs, "-1\n") < 0) return file_error(fs);
-  if (components == 1 || components == 3) {
-    for (auto j = height - 1; j >= 0; j--) {
-      if (fwrite(pixels + j * width * components, 4, width * components, fs) !=
-          width * components)
-        return file_error(fs);
-    }
-  } else {
-    for (auto j = height - 1; j >= 0; j--) {
-      for (auto i = 0; i < width; i++) {
-        auto vz = 0.0f;
-        auto v  = pixels + (j * width + i) * components;
-        if (fwrite(&v[0], 4, 1, fs) != 1) return file_error(fs);
-        if (fwrite(&v[1], 4, 1, fs) != 1) return file_error(fs);
-        if (components == 2) {
-          if (fwrite(&vz, 4, 1, fs) != 1) return file_error(fs);
-        } else {
-          if (fwrite(&v[2], 4, 1, fs) != 1) return file_error(fs);
-        }
-      }
-    }
-  }
-
-  // close
-  fclose(fs);
-
-  // done
-  return true;
-}
-
-// Pfm load
-static float* load_pfm_from_memory(const void* data, int size, int* width,
-    int* height, int* components, int req) {
-  auto swap_endian = [](float value) -> float {
-    // https://stackoverflow.com/questions/105252/how-do-i-convert-between-big-endian-and-little-endian-values-in-c
-    static_assert(sizeof(char) == 1, "sizeof(char) == 1");
-    static_assert(sizeof(float) == 4, "sizeof(float) == 4");
-    union {
-      float         value;
-      unsigned char bytes[4];
-    } source, dest;
-    source.value = value;
-    for (auto k = 0; k < 4; k++) dest.bytes[k] = source.bytes[4 - k - 1];
-    return dest.value;
-  };
-
-  // get line
-  auto get_line = [](const char*& data, const char* end, char* buffer,
-                      int bsize) -> bool {
-    if (data == end) return false;
-    while (data != end && *data != '\n') {
-      *buffer++ = *data++;
-      bsize--;
-      if (bsize < 1) return false;
-    }
-    if (data != end && *data == '\n') data++;
-    *buffer = '\0';
-    return true;
-  };
-
-  // begin/end
-  auto cur = (const char*)data, end = (const char*)data + size;
-
-  // buffer
-  auto buffer = array<char, 4096>{};
-
-  // read magic
-  auto magic = array<char, 3>{};
-  if (!get_line(cur, end, buffer.data(), buffer.size())) return nullptr;
-  if (sscanf(buffer.data(), "%2s", magic.data()) != 1) return nullptr;
-  if (magic[0] == 'P' && magic[1] == 'f') {
-    *components = 1;
-  } else if (magic[0] == 'P' && magic[1] == 'F') {
-    *components = 3;
-  } else {
-    return nullptr;
-  }
-
-  // read width, height
-  if (!get_line(cur, end, buffer.data(), buffer.size())) return nullptr;
-  if (sscanf(buffer.data(), "%d %d", width, height) != 2) return nullptr;
-
-  // read scale
-  auto scale = 0.0f;
-  if (!get_line(cur, end, buffer.data(), buffer.size())) return nullptr;
-  if (sscanf(buffer.data(), "%f", &scale) != 1) return nullptr;
-
-  // read the data (flip y)
-  auto npixels = (size_t)*width * (size_t)*height;
-  auto nvalues = npixels * (size_t)*components;
-  auto nrow    = (size_t)*width * (size_t)*components;
-  if (end - cur < 4 * nvalues) return nullptr;
-  auto pixels = (float*)malloc(nvalues * 4);
-  for (auto j = *height - 1; j >= 0; j--) {
-    memcpy(pixels + j * nrow, cur, 4 * nrow);
-    cur += 4 * nrow;
-  }
-
-  // endian conversion
-  if (scale > 0) {
-    for (auto i = (size_t)0; i < nvalues; ++i) {
-      pixels[i] = swap_endian(pixels[i]);
-    }
-  }
-
-  // scale
-  auto scl = (scale > 0) ? scale : -scale;
-  if (scl != 1) {
-    for (auto i = (size_t)0; i < nvalues; i++) pixels[i] *= scl;
-  }
-
-  // check convertions
-  if (req == 0 || *components == req) return pixels;
-
-  // convert channels
-  auto cpixels = (float*)malloc(npixels * req * 4);
-  if (req == 1) {
-    if (*components == 3) {
-      for (auto i = (size_t)0; i < npixels; i++) {
-        cpixels[i] =
-            (pixels[i * 3 + 0] + pixels[i * 3 + 1] + pixels[i * 3 + 2]) / 3;
-      }
-    }
-  } else if (req == 2) {
-    if (*components == 1) {
-      for (auto i = (size_t)0; i < npixels; i++) {
-        cpixels[i * 2 + 0] = pixels[i];
-        cpixels[i * 2 + 1] = 1;
-      }
-    }
-    if (*components == 3) {
-      for (auto i = (size_t)0; i < npixels; i++) {
-        cpixels[i * 2 + 0] =
-            (pixels[i * 3 + 0] + pixels[i * 3 + 1] + pixels[i * 3 + 2]) / 3;
-        cpixels[i * 2 + 1] = 1;
-      }
-    }
-  } else if (req == 3) {
-    if (*components == 1) {
-      for (auto i = (size_t)0; i < npixels; i++) {
-        cpixels[i * 3 + 0] = pixels[i];
-        cpixels[i * 3 + 1] = pixels[i];
-        cpixels[i * 3 + 2] = pixels[i];
-      }
-    }
-  } else if (req == 4) {
-    if (*components == 1) {
-      for (auto i = (size_t)0; i < npixels; i++) {
-        cpixels[i * 4 + 0] = pixels[i];
-        cpixels[i * 4 + 1] = pixels[i];
-        cpixels[i * 4 + 2] = pixels[i];
-        cpixels[i * 4 + 3] = 1;
-      }
-    }
-    if (*components == 3) {
-      for (auto i = (size_t)0; i < npixels; i++) {
-        cpixels[i * 4 + 0] = pixels[i * 3 + 0];
-        cpixels[i * 4 + 1] = pixels[i * 3 + 1];
-        cpixels[i * 4 + 2] = pixels[i * 3 + 2];
-        cpixels[i * 4 + 3] = 1;
-      }
-    }
-  } else {
-    free(pixels);
-    free(cpixels);
-    return nullptr;
-  }
-
-  // done
-  return cpixels;
-}
-
-// save pfm
-static bool save_pfm_to_func(
-    void (*func)(void* context, const void* data, int size), void* context,
-    int width, int height, int components, const float* pixels) {
-  auto buffer = array<char, 512>{};
-  func(context, (components == 1) ? "Pf\n" : "PF\n", 3);
-  func(context, buffer.data(),
-      snprintf(buffer.data(), buffer.size(), "%d %d\n", width, height));
-  func(context, "-1\n", 3);
-  if (components == 1 || components == 3) {
-    for (auto j = height - 1; j >= 0; j--) {
-      func(context, pixels + j * width * components, 4 * width * components);
-    }
-  } else {
-    for (auto j = height - 1; j >= 0; j--) {
-      for (auto i = 0; i < width; i++) {
-        auto vz = 0.0f;
-        auto v  = pixels + (j * width + i) * components;
-        func(context, &v[0], 4);
-        func(context, &v[1], 4);
-        if (components == 2) {
-          func(context, &vz, 4);
-        } else {
-          func(context, &v[2], 4);
-        }
-      }
-    }
-  }
-
-  return true;
-}
-
 // Loads/saves an image. Chooses hdr or ldr based on file name.
 texture_data load_texture(const string& filename) {
   auto texture = texture_data{};
@@ -507,27 +151,17 @@ void load_texture(const string& filename, texture_data& texture) {
     auto pixels = (float*)nullptr;
     if (LoadEXR(&pixels, &texture.width, &texture.height, filename.c_str(),
             nullptr) != 0)
-      throw io_error::read_error(filename);
+      throw io_error{filename + ": read error"};
     texture.linear  = true;
     texture.pixelsf = vector<vec4f>{
         (vec4f*)pixels, (vec4f*)pixels + texture.width * texture.height};
     free(pixels);
-  } else if (ext == ".pfm" || ext == ".PFM") {
-    auto buffer = load_binary(filename);
-    auto ncomp  = 0;
-    auto pixels = load_pfm_from_memory(buffer.data(), (int)buffer.size(),
-        &texture.width, &texture.height, &ncomp, 4);
-    if (!pixels) throw io_error::read_error(filename);
-    texture.linear  = true;
-    texture.pixelsf = vector<vec4f>{
-        (vec4f*)pixels, (vec4f*)pixels + texture.width * texture.height};
-    delete[] pixels;
   } else if (ext == ".hdr" || ext == ".HDR") {
     auto buffer = load_binary(filename);
     auto ncomp  = 0;
     auto pixels = stbi_loadf_from_memory(buffer.data(), (int)buffer.size(),
         &texture.width, &texture.height, &ncomp, 4);
-    if (!pixels) throw io_error::read_error(filename);
+    if (!pixels) throw io_error{filename + ": read error"};
     texture.linear  = true;
     texture.pixelsf = vector<vec4f>{
         (vec4f*)pixels, (vec4f*)pixels + texture.width * texture.height};
@@ -537,7 +171,7 @@ void load_texture(const string& filename, texture_data& texture) {
     auto ncomp  = 0;
     auto pixels = stbi_load_from_memory(buffer.data(), (int)buffer.size(),
         &texture.width, &texture.height, &ncomp, 4);
-    if (!pixels) throw io_error::read_error(filename);
+    if (!pixels) throw io_error{filename + ": read error"};
     texture.linear  = false;
     texture.pixelsb = vector<vec4b>{
         (vec4b*)pixels, (vec4b*)pixels + texture.width * texture.height};
@@ -548,7 +182,7 @@ void load_texture(const string& filename, texture_data& texture) {
     auto ncomp  = 0;
     auto pixels = stbi_load_from_memory(buffer.data(), (int)buffer.size(),
         &texture.width, &texture.height, &ncomp, 4);
-    if (!pixels) throw io_error::read_error(filename);
+    if (!pixels) throw io_error{filename + ": read error"};
     texture.linear  = false;
     texture.pixelsb = vector<vec4b>{
         (vec4b*)pixels, (vec4b*)pixels + texture.width * texture.height};
@@ -558,7 +192,7 @@ void load_texture(const string& filename, texture_data& texture) {
     auto ncomp  = 0;
     auto pixels = stbi_load_from_memory(buffer.data(), (int)buffer.size(),
         &texture.width, &texture.height, &ncomp, 4);
-    if (!pixels) throw io_error::read_error(filename);
+    if (!pixels) throw io_error{filename + ": read error"};
     texture.linear  = false;
     texture.pixelsb = vector<vec4b>{
         (vec4b*)pixels, (vec4b*)pixels + texture.width * texture.height};
@@ -568,7 +202,7 @@ void load_texture(const string& filename, texture_data& texture) {
     auto ncomp  = 0;
     auto pixels = stbi_load_from_memory(buffer.data(), (int)buffer.size(),
         &texture.width, &texture.height, &ncomp, 4);
-    if (!pixels) throw io_error::read_error(filename);
+    if (!pixels) throw io_error{filename + ": read error"};
     texture.linear  = false;
     texture.pixelsb = vector<vec4b>{
         (vec4b*)pixels, (vec4b*)pixels + texture.width * texture.height};
@@ -577,7 +211,7 @@ void load_texture(const string& filename, texture_data& texture) {
     // create preset
     texture = make_texture_preset(path_basename(filename));
   } else {
-    throw io_error::format_error(filename);
+    throw io_error{filename + ": unknown format"};
   }
 }
 
@@ -585,16 +219,12 @@ void load_texture(const string& filename, texture_data& texture) {
 void save_texture(const string& filename, const texture_data& texture) {
   // check for correct handling
   if (!texture.pixelsf.empty() && is_ldr_filename(filename))
-    throw io_error{filename, "cannot save hdr texture to ldr file"};
+    throw io_error{filename + ": cannot save hdr texture to ldr file"};
   if (!texture.pixelsb.empty() && is_hdr_filename(filename))
-    throw io_error{filename, "cannot save ldr texture to hdr file"};
+    throw io_error{filename + ": cannot save ldr texture to hdr file"};
 
   // write data
   auto stbi_write_data = [](void* context, void* data, int size) {
-    auto& buffer = *(vector<byte>*)context;
-    buffer.insert(buffer.end(), (byte*)data, (byte*)data + size);
-  };
-  auto pfm_write_data = [](void* context, const void* data, int size) {
     auto& buffer = *(vector<byte>*)context;
     buffer.insert(buffer.end(), (byte*)data, (byte*)data + size);
   };
@@ -604,13 +234,7 @@ void save_texture(const string& filename, const texture_data& texture) {
     auto buffer = vector<byte>{};
     if (!stbi_write_hdr_to_func(stbi_write_data, &buffer, (int)texture.width,
             (int)texture.height, 4, (const float*)texture.pixelsf.data()))
-      throw io_error::write_error(filename);
-    save_binary(filename, buffer);
-  } else if (ext == ".pfm" || ext == ".PFM") {
-    auto buffer = vector<byte>{};
-    if (!save_pfm_to_func(pfm_write_data, &buffer, texture.width,
-            texture.height, 4, (const float*)texture.pixelsf.data()))
-      throw io_error::write_error(filename);
+      throw io_error{filename + ": write error"};
     save_binary(filename, buffer);
   } else if (ext == ".exr" || ext == ".EXR") {
     auto data = (byte*)nullptr;
@@ -618,7 +242,7 @@ void save_texture(const string& filename, const texture_data& texture) {
     if (SaveEXRToMemory((const float*)texture.pixelsf.data(),
             (int)texture.width, (int)texture.height, 4, 1, &data, &size,
             nullptr) < 0)
-      throw io_error::write_error(filename);
+      throw io_error{filename + ": write error"};
     auto buffer = vector<byte>{data, data + size};
     free(data);
     save_binary(filename, buffer);
@@ -627,29 +251,29 @@ void save_texture(const string& filename, const texture_data& texture) {
     if (!stbi_write_png_to_func(stbi_write_data, &buffer, (int)texture.width,
             (int)texture.height, 4, (const byte*)texture.pixelsb.data(),
             (int)texture.width * 4))
-      throw io_error::write_error(filename);
+      throw io_error{filename + ": write error"};
     save_binary(filename, buffer);
   } else if (ext == ".jpg" || ext == ".JPG" || ext == ".jpeg" ||
              ext == ".JPEG") {
     auto buffer = vector<byte>{};
     if (!stbi_write_jpg_to_func(stbi_write_data, &buffer, (int)texture.width,
             (int)texture.height, 4, (const byte*)texture.pixelsb.data(), 75))
-      throw io_error::write_error(filename);
+      throw io_error{filename + ": write error"};
     save_binary(filename, buffer);
   } else if (ext == ".tga" || ext == ".TGA") {
     auto buffer = vector<byte>{};
     if (!stbi_write_tga_to_func(stbi_write_data, &buffer, (int)texture.width,
             (int)texture.height, 4, (const byte*)texture.pixelsb.data()))
-      throw io_error::write_error(filename);
+      throw io_error{filename + ": write error"};
     save_binary(filename, buffer);
   } else if (ext == ".bmp" || ext == ".BMP") {
     auto buffer = vector<byte>{};
     if (!stbi_write_bmp_to_func(stbi_write_data, &buffer, (int)texture.width,
             (int)texture.height, 4, (const byte*)texture.pixelsb.data()))
-      throw io_error::write_error(filename);
+      throw io_error{filename + ": write error"};
     save_binary(filename, buffer);
   } else {
-    throw io_error::format_error(filename);
+    throw io_error{filename + ": unknown format"};
   }
 }
 
@@ -1290,7 +914,7 @@ scene_data make_scene_preset(const string& type) {
         test_shapes_type::bunny_sphere, test_materials_type::plastic_metal,
         test_instance_name_type::material});
   } else {
-    throw io_error::preset_error(type);
+    throw io_error{type + ": unknown preset"};
   }
 }
 
@@ -1453,7 +1077,7 @@ void load_scene(const string& filename, scene_data& scene, bool noparallel) {
   } else if (ext == ".ypreset" || ext == ".YPRESET") {
     scene = make_scene_preset(path_basename(filename));
   } else {
-    throw io_error::format_error(filename);
+    throw io_error{filename + ": unknown format"};
   }
 }
 
@@ -1474,7 +1098,7 @@ void save_scene(
   } else if (ext == ".stl" || ext == ".STL") {
     return save_stl_scene(filename, scene, noparallel);
   } else {
-    throw io_error::format_error(filename);
+    throw io_error{filename + ": unknown format"};
   }
 }
 
@@ -1561,7 +1185,7 @@ static void load_instance(const string& filename, vector<frame3f>& frames) {
             "oz"},
         frames);
   } else {
-    io_error::format_error(filename);
+    throw io_error{filename + ": unknown format"};
   }
 }
 
@@ -1577,7 +1201,7 @@ static void load_instance(const string& filename, vector<frame3f>& frames) {
         frames);
     save_ply(filename, ply);
   } else {
-    throw io_error::format_error(filename);
+    throw io_error{filename + ": unknown format"};
   }
 }
 
@@ -1712,14 +1336,14 @@ static void load_json_scene_version40(const string& filename,
     auto path = patha;
     if (!pathb.empty()) path += "/" + pathb;
     if (!pathc.empty()) path += "/" + pathc;
-    throw io_error(filename, "parse error at " + path);
+    throw io_error(filename + ": parse error at " + path);
   };
   auto key_error = [filename](const string& patha, const string& pathb = "",
                        const string& pathc = "") {
     auto path = patha;
     if (!pathb.empty()) path += "/" + pathb;
     if (!pathc.empty()) path += "/" + pathc;
-    throw io_error(filename, "unknow key at " + path);
+    throw io_error(filename + "; unknow key at " + path);
   };
 
   // parse json value
@@ -1926,7 +1550,7 @@ static void load_json_scene_version40(const string& filename,
       }
     }
   } catch (...) {
-    throw io_error::parse_error(filename);
+    throw io_error{filename + ": parse error"};
   }
 
   // dirname
@@ -1996,7 +1620,7 @@ static void load_json_scene_version40(const string& filename,
       });
     }
   } catch (const io_error& exception) {
-    throw io_error::dependent_error(filename, exception);
+    throw io_error{filename + ": error in " + exception.what()};
   }
 
   // apply instances
@@ -2251,7 +1875,7 @@ static void load_json_scene_version41(const string& filename, json_value_& json,
       }
     }
   } catch (...) {
-    throw io_error::parse_error(filename);
+    throw io_error{filename + ": parse error"};
   }
 
   // fix paths
@@ -2292,7 +1916,7 @@ static void load_json_scene_version41(const string& filename, json_value_& json,
       });
     }
   } catch (const io_error& exception) {
-    throw io_error::dependent_error(filename, exception);
+    throw io_error{filename + ": error in " + exception.what()};
   }
 
   // fix scene
@@ -2336,7 +1960,7 @@ static void load_json_scene(
       auto version = string{};
       get_opt(element, "version", version);
       if (version != "4.2" && version != "5.0")
-        throw io_error::parse_error(filename, "/asset");
+        throw io_error(filename + ": parse error in " + "/asset/version");
     }
     if (json.contains("cameras")) {
       auto& group = json.at("cameras");
@@ -2348,7 +1972,6 @@ static void load_json_scene(
         get_opt(element, "name", name);
         get_opt(element, "frame", camera.frame);
         get_opt(element, "orthographic", camera.orthographic);
-        get_opt(element, "ortho", camera.orthographic);
         get_opt(element, "lens", camera.lens);
         get_opt(element, "aspect", camera.aspect);
         get_opt(element, "film", camera.film);
@@ -2455,7 +2078,7 @@ static void load_json_scene(
   } catch (const io_error& error) {
     throw;
   } catch (...) {
-    throw io_error::parse_error(filename);
+    throw io_error{filename + ": parse error"};
   }
 
   // load resources
@@ -2494,7 +2117,7 @@ static void load_json_scene(
       });
     }
   } catch (const io_error& exception) {
-    throw io_error::dependent_error(filename, exception);
+    throw io_error{filename + ": error in " + exception.what()};
   }
 
   // fix scene
@@ -2741,7 +2364,7 @@ static void save_json_scene(
       });
     }
   } catch (const io_error& exception) {
-    throw io_error::dependent_error(filename, exception);
+    throw io_error{filename + ": error in " + exception.what()};
   }
 }
 
@@ -2873,7 +2496,7 @@ static void load_obj_scene(
       });
     }
   } catch (const io_error& exception) {
-    throw io_error::dependent_error(filename, exception);
+    throw io_error{filename + ": error in " + exception.what()};
   }
 
   // fix scene
@@ -2981,7 +2604,7 @@ static void save_obj_scene(
       });
     }
   } catch (const io_error& exception) {
-    throw io_error::dependent_error(filename, exception);
+    throw io_error{filename + ": error in " + exception.what()};
   }
 }
 
@@ -3007,7 +2630,7 @@ static void load_ply_scene(
 static void save_ply_scene(
     const string& filename, const scene_data& scene, bool noparallel) {
   // save shape
-  if (scene.shapes.empty()) throw io_error::shape_error(filename);
+  if (scene.shapes.empty()) throw io_error{filename + ": empty shape"};
   save_shape(filename, scene.shapes.front(), false);
 }
 
@@ -3033,7 +2656,7 @@ static void load_stl_scene(
 static void save_stl_scene(
     const string& filename, const scene_data& scene, bool noparallel) {
   // save shape
-  if (scene.shapes.empty()) throw io_error::shape_error(filename);
+  if (scene.shapes.empty()) throw io_error{filename + ": empty shape"};
   save_shape(filename, scene.shapes.front(), false);
 }
 
@@ -3056,13 +2679,14 @@ static void load_gltf_scene(
   try {
     if (gltf.contains("buffers")) {
       for (auto& gbuffer : gltf.at("buffers")) {
-        if (!gbuffer.contains("uri")) throw io_error::parse_error(filename);
+        if (!gbuffer.contains("uri"))
+          throw io_error{filename + ": parse error"};
         buffers_paths.push_back(gbuffer.value("uri", ""));
         buffers.emplace_back();
       }
     }
   } catch (...) {
-    throw io_error::parse_error(filename);
+    throw io_error{filename + ": parse error"};
   }
 
   // dirname
@@ -3083,7 +2707,7 @@ static void load_gltf_scene(
       });
     }
   } catch (const io_error& exception) {
-    throw io_error::dependent_error(filename, exception);
+    throw io_error{filename + ": error in " + exception.what()};
   }
 
   // convert asset
@@ -3091,7 +2715,7 @@ static void load_gltf_scene(
     try {
       scene.copyright = gltf.value("copyright", ""s);
     } catch (...) {
-      throw io_error::parse_error(filename);
+      throw io_error{filename + ": parse error"};
     }
   }
 
@@ -3122,11 +2746,11 @@ static void load_gltf_scene(
           }
           camera.focus = 1;
         } else {
-          throw io_error::parse_error(filename);
+          throw io_error{filename + ": parse error"};
         }
       }
     } catch (...) {
-      throw io_error::parse_error(filename);
+      throw io_error{filename + ": parse error"};
     }
   }
 
@@ -3161,7 +2785,7 @@ static void load_gltf_scene(
         texture_paths.push_back(replace(gimage.value("uri", ""), "%20", " "));
       }
     } catch (...) {
-      throw io_error::parse_error(filename);
+      throw io_error{filename + ": parse error"};
     }
   }
 
@@ -3199,7 +2823,7 @@ static void load_gltf_scene(
         }
       }
     } catch (...) {
-      throw io_error::parse_error(filename);
+      throw io_error{filename + ": parse error"};
     }
   }
 
@@ -3337,9 +2961,9 @@ static void load_gltf_scene(
                 shape.lines[i - 1] = {i - 1, i};
             } else if (mode == 0) {  // points strips
               // points
-              throw io_error{filename, "primitive_error"};
+              throw io_error{filename + ": primitive_error"};
             } else {
-              throw io_error{filename, "primitive_error"};
+              throw io_error{filename + ": primitive_error"};
             }
           } else {
             auto& gaccessor =
@@ -3411,9 +3035,9 @@ static void load_gltf_scene(
               }
             } else if (mode == 0) {  // points strips
               // points
-              throw io_error{filename, "primitive_error"};
+              throw io_error{filename + ": primitive_error"};
             } else {
-              throw io_error{filename, "primitive_error"};
+              throw io_error{filename + ": primitive_error"};
             }
           }
         }
@@ -3421,7 +3045,7 @@ static void load_gltf_scene(
     } catch (const io_error& error) {
       throw;
     } catch (...) {
-      throw io_error::parse_error(filename);
+      throw io_error{filename + ": parse error"};
     }
   }
 
@@ -3484,7 +3108,7 @@ static void load_gltf_scene(
         node_id++;
       }
     } catch (...) {
-      throw io_error::parse_error(filename);
+      throw io_error{filename + ": parse error"};
     }
   }
 
@@ -3503,7 +3127,7 @@ static void load_gltf_scene(
       });
     }
   } catch (const io_error& exception) {
-    throw io_error::dependent_error(filename, exception);
+    throw io_error{filename + ": error in " + exception.what()};
   }
 
   // fix scene
@@ -3842,7 +3466,7 @@ static void save_gltf_scene(
       });
     }
   } catch (const io_error& exception) {
-    throw io_error::dependent_error(filename, exception);
+    throw io_error{filename + ": error in " + exception.what()};
   }
 }
 
@@ -3979,7 +3603,7 @@ static void load_pbrt_scene(
       });
     }
   } catch (const io_error& exception) {
-    throw io_error::dependent_error(filename, exception);
+    throw io_error{filename + ": error in " + exception.what()};
   }
 
   // fix scene
@@ -4081,7 +3705,7 @@ static void save_pbrt_scene(
       });
     }
   } catch (const io_error& exception) {
-    throw io_error::dependent_error(filename, exception);
+    throw io_error{filename + ": error in " + exception.what()};
   }
 }
 

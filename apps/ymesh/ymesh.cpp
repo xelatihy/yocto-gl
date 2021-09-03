@@ -1309,7 +1309,7 @@ void run(const vector<string>& args) {
   } else if (params.command == "glsculpt") {
     return run_glsculpt(params.glsculpt);
   } else {
-    throw io_error::command_error("ymesh", params.command);
+    throw io_error("ymesh: unknown command");
   }
 }
 

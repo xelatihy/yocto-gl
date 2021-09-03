@@ -128,7 +128,7 @@ void run_convert(const convert_params& params) {
   if (params.toedges) {
     // check faces
     if (shape.triangles.empty() && shape.quads.empty())
-      throw io_error::shape_error(params.shape);
+      throw io_error{params.shape + ": empty shape"};
 
     // convert to edges
     auto edges = !shape.triangles.empty() ? get_edges(shape.triangles)
@@ -507,7 +507,7 @@ void run(const vector<string>& args) {
   } else if (params.command == "glview") {
     return run_glview(params.glview);
   } else {
-    throw io_error::command_error("yshape", params.command);
+    throw io_error("yshape: unknown command");
   }
 }
 

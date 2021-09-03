@@ -58,362 +58,6 @@ using namespace std::string_literals;
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Pfm load
-[[maybe_unused]] static float* load_pfm(
-    const string& filename, int* width, int* height, int* components, int req) {
-  auto swap_endian = [](float value) -> float {
-    // https://stackoverflow.com/questions/105252/how-do-i-convert-between-big-endian-and-little-endian-values-in-c
-    static_assert(sizeof(char) == 1, "sizeof(char) == 1");
-    static_assert(sizeof(float) == 4, "sizeof(float) == 4");
-    union {
-      float         value;
-      unsigned char bytes[4];
-    } source, dest;
-    source.value = value;
-    for (auto k = 0; k < 4; k++) dest.bytes[k] = source.bytes[4 - k - 1];
-    return dest.value;
-  };
-
-  auto file_error = [](FILE* fs) -> float* {
-    if (fs) fclose(fs);
-    return nullptr;
-  };
-
-  auto fs = fopen_utf8(filename, "rb");
-  if (!fs) return nullptr;
-
-  // buffer
-  auto buffer = array<char, 4096>{};
-
-  // read magic
-  auto magic = array<char, 3>{};
-  if (!fgets(buffer.data(), (int)buffer.size(), fs)) return file_error(fs);
-  if (sscanf(buffer.data(), "%2s", magic.data()) != 1) return file_error(fs);
-  if (magic[0] == 'P' && magic[1] == 'f') {
-    *components = 1;
-  } else if (magic[0] == 'P' && magic[1] == 'F') {
-    *components = 3;
-  } else {
-    return file_error(fs);
-  }
-
-  // read width, height
-  if (!fgets(buffer.data(), (int)buffer.size(), fs)) return file_error(fs);
-  if (sscanf(buffer.data(), "%d %d", width, height) != 2) return file_error(fs);
-
-  // read scale
-  auto scale = 0.0f;
-  if (!fgets(buffer.data(), (int)buffer.size(), fs)) return file_error(fs);
-  if (sscanf(buffer.data(), "%f", &scale) != 1) return file_error(fs);
-
-  // read the data (flip y)
-  auto npixels = (size_t)*width * (size_t)*height;
-  auto nvalues = npixels * (size_t)*components;
-  auto nrow    = (size_t)*width * (size_t)*components;
-  auto pixels  = (float*)malloc(nvalues * 4);
-  for (auto j = *height - 1; j >= 0; j--) {
-    if (fread(pixels + j * nrow, 4, nrow, fs) != nrow) {
-      free(pixels);
-      return file_error(fs);
-    }
-  }
-
-  // close file
-  fclose(fs);
-
-  // endian conversion
-  if (scale > 0) {
-    for (auto i = (size_t)0; i < nvalues; ++i) {
-      pixels[i] = swap_endian(pixels[i]);
-    }
-  }
-
-  // scale
-  auto scl = (scale > 0) ? scale : -scale;
-  if (scl != 1) {
-    for (auto i = (size_t)0; i < nvalues; i++) pixels[i] *= scl;
-  }
-
-  // check convertions
-  if (req == 0 || *components == req) return pixels;
-
-  // convert channels
-  auto cpixels = (float*)malloc(npixels * req * 4);
-  if (req == 1) {
-    if (*components == 3) {
-      for (auto i = (size_t)0; i < npixels; i++) {
-        cpixels[i] =
-            (pixels[i * 3 + 0] + pixels[i * 3 + 1] + pixels[i * 3 + 2]) / 3;
-      }
-    }
-  } else if (req == 2) {
-    if (*components == 1) {
-      for (auto i = (size_t)0; i < npixels; i++) {
-        cpixels[i * 2 + 0] = pixels[i];
-        cpixels[i * 2 + 1] = 1;
-      }
-    }
-    if (*components == 3) {
-      for (auto i = (size_t)0; i < npixels; i++) {
-        cpixels[i * 2 + 0] =
-            (pixels[i * 3 + 0] + pixels[i * 3 + 1] + pixels[i * 3 + 2]) / 3;
-        cpixels[i * 2 + 1] = 1;
-      }
-    }
-  } else if (req == 3) {
-    if (*components == 1) {
-      for (auto i = (size_t)0; i < npixels; i++) {
-        cpixels[i * 3 + 0] = pixels[i];
-        cpixels[i * 3 + 1] = pixels[i];
-        cpixels[i * 3 + 2] = pixels[i];
-      }
-    }
-  } else if (req == 4) {
-    if (*components == 1) {
-      for (auto i = (size_t)0; i < npixels; i++) {
-        cpixels[i * 4 + 0] = pixels[i];
-        cpixels[i * 4 + 1] = pixels[i];
-        cpixels[i * 4 + 2] = pixels[i];
-        cpixels[i * 4 + 3] = 1;
-      }
-    }
-    if (*components == 3) {
-      for (auto i = (size_t)0; i < npixels; i++) {
-        cpixels[i * 4 + 0] = pixels[i * 3 + 0];
-        cpixels[i * 4 + 1] = pixels[i * 3 + 1];
-        cpixels[i * 4 + 2] = pixels[i * 3 + 2];
-        cpixels[i * 4 + 3] = 1;
-      }
-    }
-  } else {
-    free(pixels);
-    free(cpixels);
-    return nullptr;
-  }
-
-  // done
-  free(pixels);
-  return cpixels;
-}
-
-// save pfm
-[[maybe_unused]] static bool save_pfm(const char* filename, int width,
-    int height, int components, const float* pixels) {
-  auto file_error = [](FILE* fs) -> bool {
-    if (fs) fclose(fs);
-    return false;
-  };
-
-  auto fs = fopen_utf8(filename, "wb");
-  if (!fs) return false;
-
-  if (fprintf(fs, "%s\n", (components == 1) ? "Pf" : "PF") < 0)
-    return file_error(fs);
-  if (fprintf(fs, "%d %d\n", width, height) < 0) return file_error(fs);
-  if (fprintf(fs, "-1\n") < 0) return file_error(fs);
-  if (components == 1 || components == 3) {
-    for (auto j = height - 1; j >= 0; j--) {
-      if (fwrite(pixels + j * width * components, 4, width * components, fs) !=
-          width * components)
-        return file_error(fs);
-    }
-  } else {
-    for (auto j = height - 1; j >= 0; j--) {
-      for (auto i = 0; i < width; i++) {
-        auto vz = 0.0f;
-        auto v  = pixels + (j * width + i) * components;
-        if (fwrite(&v[0], 4, 1, fs) != 1) return file_error(fs);
-        if (fwrite(&v[1], 4, 1, fs) != 1) return file_error(fs);
-        if (components == 2) {
-          if (fwrite(&vz, 4, 1, fs) != 1) return file_error(fs);
-        } else {
-          if (fwrite(&v[2], 4, 1, fs) != 1) return file_error(fs);
-        }
-      }
-    }
-  }
-
-  // close
-  fclose(fs);
-
-  // done
-  return true;
-}
-
-// Pfm load
-static float* load_pfm_from_memory(const void* data, int size, int* width,
-    int* height, int* components, int req) {
-  auto swap_endian = [](float value) -> float {
-    // https://stackoverflow.com/questions/105252/how-do-i-convert-between-big-endian-and-little-endian-values-in-c
-    static_assert(sizeof(char) == 1, "sizeof(char) == 1");
-    static_assert(sizeof(float) == 4, "sizeof(float) == 4");
-    union {
-      float         value;
-      unsigned char bytes[4];
-    } source, dest;
-    source.value = value;
-    for (auto k = 0; k < 4; k++) dest.bytes[k] = source.bytes[4 - k - 1];
-    return dest.value;
-  };
-
-  // get line
-  auto get_line = [](const char*& data, const char* end, char* buffer,
-                      int bsize) -> bool {
-    if (data == end) return false;
-    while (data != end && *data != '\n') {
-      *buffer++ = *data++;
-      bsize--;
-      if (bsize < 1) return false;
-    }
-    if (data != end && *data == '\n') data++;
-    *buffer = '\0';
-    return true;
-  };
-
-  // begin/end
-  auto cur = (const char*)data, end = (const char*)data + size;
-
-  // buffer
-  auto buffer = array<char, 4096>{};
-
-  // read magic
-  auto magic = array<char, 3>{};
-  if (!get_line(cur, end, buffer.data(), buffer.size())) return nullptr;
-  if (sscanf(buffer.data(), "%2s", magic.data()) != 1) return nullptr;
-  if (magic[0] == 'P' && magic[1] == 'f') {
-    *components = 1;
-  } else if (magic[0] == 'P' && magic[1] == 'F') {
-    *components = 3;
-  } else {
-    return nullptr;
-  }
-
-  // read width, height
-  if (!get_line(cur, end, buffer.data(), buffer.size())) return nullptr;
-  if (sscanf(buffer.data(), "%d %d", width, height) != 2) return nullptr;
-
-  // read scale
-  auto scale = 0.0f;
-  if (!get_line(cur, end, buffer.data(), buffer.size())) return nullptr;
-  if (sscanf(buffer.data(), "%f", &scale) != 1) return nullptr;
-
-  // read the data (flip y)
-  auto npixels = (size_t)*width * (size_t)*height;
-  auto nvalues = npixels * (size_t)*components;
-  auto nrow    = (size_t)*width * (size_t)*components;
-  if (end - cur < 4 * nvalues) return nullptr;
-  auto pixels = (float*)malloc(nvalues * 4);
-  for (auto j = *height - 1; j >= 0; j--) {
-    memcpy(pixels + j * nrow, cur, 4 * nrow);
-    cur += 4 * nrow;
-  }
-
-  // endian conversion
-  if (scale > 0) {
-    for (auto i = (size_t)0; i < nvalues; ++i) {
-      pixels[i] = swap_endian(pixels[i]);
-    }
-  }
-
-  // scale
-  auto scl = (scale > 0) ? scale : -scale;
-  if (scl != 1) {
-    for (auto i = (size_t)0; i < nvalues; i++) pixels[i] *= scl;
-  }
-
-  // check convertions
-  if (req == 0 || *components == req) return pixels;
-
-  // convert channels
-  auto cpixels = (float*)malloc(npixels * req * 4);
-  if (req == 1) {
-    if (*components == 3) {
-      for (auto i = (size_t)0; i < npixels; i++) {
-        cpixels[i] =
-            (pixels[i * 3 + 0] + pixels[i * 3 + 1] + pixels[i * 3 + 2]) / 3;
-      }
-    }
-  } else if (req == 2) {
-    if (*components == 1) {
-      for (auto i = (size_t)0; i < npixels; i++) {
-        cpixels[i * 2 + 0] = pixels[i];
-        cpixels[i * 2 + 1] = 1;
-      }
-    }
-    if (*components == 3) {
-      for (auto i = (size_t)0; i < npixels; i++) {
-        cpixels[i * 2 + 0] =
-            (pixels[i * 3 + 0] + pixels[i * 3 + 1] + pixels[i * 3 + 2]) / 3;
-        cpixels[i * 2 + 1] = 1;
-      }
-    }
-  } else if (req == 3) {
-    if (*components == 1) {
-      for (auto i = (size_t)0; i < npixels; i++) {
-        cpixels[i * 3 + 0] = pixels[i];
-        cpixels[i * 3 + 1] = pixels[i];
-        cpixels[i * 3 + 2] = pixels[i];
-      }
-    }
-  } else if (req == 4) {
-    if (*components == 1) {
-      for (auto i = (size_t)0; i < npixels; i++) {
-        cpixels[i * 4 + 0] = pixels[i];
-        cpixels[i * 4 + 1] = pixels[i];
-        cpixels[i * 4 + 2] = pixels[i];
-        cpixels[i * 4 + 3] = 1;
-      }
-    }
-    if (*components == 3) {
-      for (auto i = (size_t)0; i < npixels; i++) {
-        cpixels[i * 4 + 0] = pixels[i * 3 + 0];
-        cpixels[i * 4 + 1] = pixels[i * 3 + 1];
-        cpixels[i * 4 + 2] = pixels[i * 3 + 2];
-        cpixels[i * 4 + 3] = 1;
-      }
-    }
-  } else {
-    free(pixels);
-    free(cpixels);
-    return nullptr;
-  }
-
-  // done
-  return cpixels;
-}
-
-// save pfm
-static bool save_pfm_to_func(
-    void (*func)(void* context, const void* data, int size), void* context,
-    int width, int height, int components, const float* pixels) {
-  auto buffer = array<char, 512>{};
-  func(context, (components == 1) ? "Pf\n" : "PF\n", 3);
-  func(context, buffer.data(),
-      snprintf(buffer.data(), buffer.size(), "%d %d\n", width, height));
-  func(context, "-1\n", 3);
-  if (components == 1 || components == 3) {
-    for (auto j = height - 1; j >= 0; j--) {
-      func(context, pixels + j * width * components, 4 * width * components);
-    }
-  } else {
-    for (auto j = height - 1; j >= 0; j--) {
-      for (auto i = 0; i < width; i++) {
-        auto vz = 0.0f;
-        auto v  = pixels + (j * width + i) * components;
-        func(context, &v[0], 4);
-        func(context, &v[1], 4);
-        if (components == 2) {
-          func(context, &vz, 4);
-        } else {
-          func(context, &v[2], 4);
-        }
-      }
-    }
-  }
-
-  return true;
-}
-
 // Check if an image is HDR based on filename.
 bool is_hdr_filename(const string& filename) {
   auto ext = path_extension(filename);
@@ -452,16 +96,7 @@ void load_image(const string& filename, image_data& image) {
     auto pixels = (float*)nullptr;
     if (LoadEXRFromMemory(&pixels, &image.width, &image.height, buffer.data(),
             buffer.size(), nullptr) != 0)
-      throw io_error::read_error(filename);
-    image.linear = true;
-    image.pixels = from_linear(pixels, image.width, image.height);
-    free(pixels);
-  } else if (ext == ".pfm" || ext == ".PFM") {
-    auto buffer = load_binary(filename);
-    auto ncomp  = 0;
-    auto pixels = load_pfm_from_memory(buffer.data(), (int)buffer.size(),
-        &image.width, &image.height, &ncomp, 4);
-    if (!pixels) throw io_error::read_error(filename);
+      throw io_error{filename + ": read error"};
     image.linear = true;
     image.pixels = from_linear(pixels, image.width, image.height);
     free(pixels);
@@ -470,7 +105,7 @@ void load_image(const string& filename, image_data& image) {
     auto ncomp  = 0;
     auto pixels = stbi_loadf_from_memory(buffer.data(), (int)buffer.size(),
         &image.width, &image.height, &ncomp, 4);
-    if (!pixels) throw io_error::read_error(filename);
+    if (!pixels) throw io_error{filename + ": read error"};
     image.linear = true;
     image.pixels = from_linear(pixels, image.width, image.height);
     free(pixels);
@@ -479,7 +114,7 @@ void load_image(const string& filename, image_data& image) {
     auto ncomp  = 0;
     auto pixels = stbi_load_from_memory(buffer.data(), (int)buffer.size(),
         &image.width, &image.height, &ncomp, 4);
-    if (!pixels) throw io_error::read_error(filename);
+    if (!pixels) throw io_error{filename + ": read error"};
     image.linear = false;
     image.pixels = from_srgb(pixels, image.width, image.height);
     free(pixels);
@@ -489,7 +124,7 @@ void load_image(const string& filename, image_data& image) {
     auto ncomp  = 0;
     auto pixels = stbi_load_from_memory(buffer.data(), (int)buffer.size(),
         &image.width, &image.height, &ncomp, 4);
-    if (!pixels) throw io_error::read_error(filename);
+    if (!pixels) throw io_error{filename + ": read error"};
     image.linear = false;
     image.pixels = from_srgb(pixels, image.width, image.height);
     free(pixels);
@@ -498,7 +133,7 @@ void load_image(const string& filename, image_data& image) {
     auto ncomp  = 0;
     auto pixels = stbi_load_from_memory(buffer.data(), (int)buffer.size(),
         &image.width, &image.height, &ncomp, 4);
-    if (!pixels) throw io_error::read_error(filename);
+    if (!pixels) throw io_error{filename + ": read error"};
     image.linear = false;
     image.pixels = from_srgb(pixels, image.width, image.height);
     free(pixels);
@@ -507,7 +142,7 @@ void load_image(const string& filename, image_data& image) {
     auto ncomp  = 0;
     auto pixels = stbi_load_from_memory(buffer.data(), (int)buffer.size(),
         &image.width, &image.height, &ncomp, 4);
-    if (!pixels) throw io_error::read_error(filename);
+    if (!pixels) throw io_error{filename + ": read error"};
     image.linear = false;
     image.pixels = from_srgb(pixels, image.width, image.height);
     free(pixels);
@@ -515,7 +150,7 @@ void load_image(const string& filename, image_data& image) {
     // create preset
     image = make_image_preset(path_basename(filename));
   } else {
-    throw io_error::format_error(filename);
+    throw io_error{filename + ": unknown format"};
   }
 }
 
@@ -543,30 +178,20 @@ void save_image(const string& filename, const image_data& image) {
     auto& buffer = *(vector<byte>*)context;
     buffer.insert(buffer.end(), (byte*)data, (byte*)data + size);
   };
-  auto pfm_write_data = [](void* context, const void* data, int size) {
-    auto& buffer = *(vector<byte>*)context;
-    buffer.insert(buffer.end(), (byte*)data, (byte*)data + size);
-  };
 
   auto ext = path_extension(filename);
   if (ext == ".hdr" || ext == ".HDR") {
     auto buffer = vector<byte>{};
     if (!stbi_write_hdr_to_func(stbi_write_data, &buffer, (int)image.width,
             (int)image.height, 4, (const float*)to_linear(image).data()))
-      throw io_error::write_error(filename);
-    save_binary(filename, buffer);
-  } else if (ext == ".pfm" || ext == ".PFM") {
-    auto buffer = vector<byte>{};
-    if (!save_pfm_to_func(pfm_write_data, &buffer, image.width, image.height, 4,
-            (const float*)to_linear(image).data()))
-      throw io_error::write_error(filename);
+      throw io_error{filename + ": write error"};
     save_binary(filename, buffer);
   } else if (ext == ".exr" || ext == ".EXR") {
     auto data = (byte*)nullptr;
     auto size = (size_t)0;
     if (SaveEXRToMemory((const float*)to_linear(image).data(), (int)image.width,
             (int)image.height, 4, 1, &data, &size, nullptr) < 0)
-      throw io_error::write_error(filename);
+      throw io_error{filename + ": write error"};
     auto buffer = vector<byte>{data, data + size};
     free(data);
     save_binary(filename, buffer);
@@ -575,29 +200,29 @@ void save_image(const string& filename, const image_data& image) {
     if (!stbi_write_png_to_func(stbi_write_data, &buffer, (int)image.width,
             (int)image.height, 4, (const byte*)to_srgb(image).data(),
             (int)image.width * 4))
-      throw io_error::write_error(filename);
+      throw io_error{filename + ": write error"};
     save_binary(filename, buffer);
   } else if (ext == ".jpg" || ext == ".JPG" || ext == ".jpeg" ||
              ext == ".JPEG") {
     auto buffer = vector<byte>{};
     if (!stbi_write_jpg_to_func(stbi_write_data, &buffer, (int)image.width,
             (int)image.height, 4, (const byte*)to_srgb(image).data(), 75))
-      throw io_error::write_error(filename);
+      throw io_error{filename + ": write error"};
     save_binary(filename, buffer);
   } else if (ext == ".tga" || ext == ".TGA") {
     auto buffer = vector<byte>{};
     if (!stbi_write_tga_to_func(stbi_write_data, &buffer, (int)image.width,
             (int)image.height, 4, (const byte*)to_srgb(image).data()))
-      throw io_error::write_error(filename);
+      throw io_error{filename + ": write error"};
     save_binary(filename, buffer);
   } else if (ext == ".bmp" || ext == ".BMP") {
     auto buffer = vector<byte>{};
     if (!stbi_write_bmp_to_func(stbi_write_data, &buffer, (int)image.width,
             (int)image.height, 4, (const byte*)to_srgb(image).data()))
-      throw io_error::write_error(filename);
+      throw io_error{filename + ": write error"};
     save_binary(filename, buffer);
   } else {
-    throw io_error::format_error(filename);
+    throw io_error{filename + ": unknown format"};
   }
 }
 
@@ -722,7 +347,7 @@ image_data make_image_preset(const string& type_) {
   } else if (type == "test-grid-opacity") {
     return make_grid(width, height, 1, {1, 1, 1, 1}, {0, 0, 0, 0});
   } else {
-    throw io_error::preset_error(type_);
+    throw io_error{type_ + ": unknown preset"};
   }
 }
 

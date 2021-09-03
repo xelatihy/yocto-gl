@@ -28,8 +28,10 @@
 
 #include "yocto_modelio.h"
 
+#include <charconv>
 #include <cstdio>
 #include <cstring>
+#include <filesystem>
 #include <memory>
 #include <stdexcept>
 #include <string_view>
@@ -37,6 +39,7 @@
 #include <unordered_set>
 #include <utility>
 
+#include "ext/fast_float.h"
 #include "yocto_color.h"
 
 // -----------------------------------------------------------------------------
@@ -50,6 +53,132 @@ using std::unordered_map;
 using std::unordered_set;
 using namespace std::string_literals;
 using namespace std::string_view_literals;
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// FILE IO
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Opens a file with a utf8 file name
+static FILE* fopen_utf8(const char* filename, const char* mode) {
+#ifdef _WIN32
+  auto path8    = std::filesystem::u8path(filename);
+  auto str_mode = string{mode};
+  auto wmode    = std::wstring(str_mode.begin(), str_mode.end());
+  return _wfopen(path8.c_str(), wmode.c_str());
+#else
+  return fopen(filename, mode);
+#endif
+}
+
+// Load a text file
+template <typename Error>
+void load_text(const string& filename, string& text) {
+  // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
+  auto fs = fopen_utf8(filename.c_str(), "rb");
+  if (!fs) throw Error(filename + ": cannot open " + filename);
+  fseek(fs, 0, SEEK_END);
+  auto length = ftell(fs);
+  fseek(fs, 0, SEEK_SET);
+  text.resize(length);
+  if (fread(text.data(), 1, length, fs) != length) {
+    fclose(fs);
+    throw Error(filename + ": read error");
+  }
+  fclose(fs);
+}
+template <typename Error>
+static string load_text(const string& filename) {
+  auto str = string{};
+  load_text<Error>(filename, str);
+  return str;
+}
+
+// Save a text file
+template <typename Error>
+static void save_text(const string& filename, const string& text) {
+  auto fs = fopen_utf8(filename.c_str(), "wt");
+  if (!fs) throw Error(filename + ": cannot open " + filename);
+  if (fprintf(fs, "%s", text.c_str()) < 0) {
+    fclose(fs);
+    throw Error(filename + ": write error");
+  }
+  fclose(fs);
+}
+
+// Load a binary file
+template <typename Error>
+static void load_binary(const string& filename, vector<byte>& data) {
+  // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
+  auto fs = fopen_utf8(filename.c_str(), "rb");
+  if (!fs) throw Error(filename + ": cannot open " + filename);
+  fseek(fs, 0, SEEK_END);
+  auto length = ftell(fs);
+  fseek(fs, 0, SEEK_SET);
+  data.resize(length);
+  if (fread(data.data(), 1, length, fs) != length) {
+    fclose(fs);
+    throw Error(filename + ": read error");
+  }
+  fclose(fs);
+}
+template <typename Error>
+static vector<byte> load_binary(const string& filename) {
+  auto data = vector<byte>{};
+  load_binary<Error>(filename, data);
+  return data;
+}
+
+// Save a binary file
+template <typename Error>
+void save_binary(const string& filename, const vector<byte>& data) {
+  auto fs = fopen_utf8(filename.c_str(), "wb");
+  if (!fs) throw Error(filename + ": cannot open " + filename);
+  if (fwrite(data.data(), 1, data.size(), fs) != data.size()) {
+    fclose(fs);
+    throw Error(filename + ": write error");
+  }
+  fclose(fs);
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// PATH UTILITIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Make a path from a utf8 string
+static std::filesystem::path make_path(const string& filename) {
+  return std::filesystem::u8path(filename);
+}
+
+// Get directory name (not including /)
+static string path_dirname(const string& filename) {
+  return make_path(filename).parent_path().generic_u8string();
+}
+
+// Get filename without directory.
+static string path_filename(const string& filename) {
+  return make_path(filename).filename().u8string();
+}
+
+// Joins paths
+static string path_join(const string& patha, const string& pathb) {
+  return (make_path(patha) / make_path(pathb)).generic_u8string();
+}
+
+// Replaces extensions
+static string replace_extension(const string& filename, const string& ext) {
+  return make_path(filename).replace_extension(ext).u8string();
+}
+
+// Check if a file can be opened for reading.
+static bool path_exists(const string& filename) {
+  return exists(make_path(filename));
+}
 
 }  // namespace yocto
 
@@ -110,13 +239,24 @@ inline void format_value(string& str, uint64_t value) {
 }
 inline void format_value(string& str, float value) {
   auto buffer = array<char, 256>{};
-  auto result = to_chars(buffer.data(), buffer.data() + buffer.size(), value);
+#ifdef _WIN32
+  auto result = std::to_chars(
+      buffer.data(), buffer.data() + buffer.size(), value);
   str.append(buffer.data(), result.ptr);
+#else
+  auto len = snprintf(buffer.data(), buffer.size(), "%.9g", value);
+  str.append(buffer.data(), buffer.data() + len);
+#endif
 }
 inline void format_value(string& str, double value) {
   auto buffer = array<char, 256>{};
+#ifdef _WIN32
   auto result = to_chars(buffer.data(), buffer.data() + buffer.size(), value);
   str.append(buffer.data(), result.ptr);
+#else
+  auto len = snprintf(buffer.data(), buffer.size(), "%.17g", value);
+  str.append(buffer.data(), buffer.data() + len);
+#endif
 }
 inline void format_value(string& str, const vec2f& value) {
   for (auto i = 0; i < 2; i++) {
@@ -290,14 +430,16 @@ inline void parse_value(string_view& str, uint64_t& value) {
 }
 inline void parse_value(string_view& str, float& value) {
   skip_whitespace(str);
-  auto result = from_chars(str.data(), str.data() + str.size(), value);
-  if (result.ptr == str.data()) throw std::invalid_argument{"integer expected"};
+  auto result = fast_float::from_chars(
+      str.data(), str.data() + str.size(), value);
+  if (result.ptr == str.data()) throw std::invalid_argument{"number expected"};
   str.remove_prefix(result.ptr - str.data());
 }
 inline void parse_value(string_view& str, double& value) {
   skip_whitespace(str);
-  auto result = from_chars(str.data(), str.data() + str.size(), value);
-  if (result.ptr == str.data()) throw std::invalid_argument{"integer expected"};
+  auto result = fast_float::from_chars(
+      str.data(), str.data() + str.size(), value);
+  if (result.ptr == str.data()) throw std::invalid_argument{"number expected"};
   str.remove_prefix(result.ptr - str.data());
 }
 #ifdef __APPLE__
@@ -405,7 +547,7 @@ void load_ply(const string& filename, ply_model& ply) {
       {"float32", ply_type::f32}, {"float64", ply_type::f64}};
 
   // load data
-  auto data = load_binary(filename);
+  auto data = load_binary<ply_error>(filename);
 
   // parsing checks
   auto first_line = true;
@@ -428,14 +570,14 @@ void load_ply(const string& filename, ply_model& ply) {
 
       // check magic number
       if (first_line) {
-        if (cmd != "ply") throw io_error::parse_error(filename);
+        if (cmd != "ply") throw ply_error(filename + ": parse error");
         first_line = false;
         continue;
       }
 
       // possible token values
       if (cmd == "ply") {
-        if (!first_line) throw io_error::parse_error(filename);
+        if (!first_line) throw ply_error(filename + ": parse error");
       } else if (cmd == "format") {
         auto fmt = ""s;
         parse_value(str, fmt);
@@ -446,7 +588,7 @@ void load_ply(const string& filename, ply_model& ply) {
         } else if (fmt == "binary_big_endian") {
           ply.format = ply_format::binary_big_endian;
         } else {
-          throw io_error::parse_error(filename);
+          throw ply_error(filename + ": parse error");
         }
       } else if (cmd == "comment") {
         skip_whitespace(str);
@@ -459,7 +601,7 @@ void load_ply(const string& filename, ply_model& ply) {
         parse_value(str, elem.name);
         parse_value(str, elem.count);
       } else if (cmd == "property") {
-        if (ply.elements.empty()) throw io_error::parse_error(filename);
+        if (ply.elements.empty()) throw ply_error(filename + ": parse error");
         auto& prop  = ply.elements.back().properties.emplace_back();
         auto  tname = ""s;
         parse_value(str, tname);
@@ -467,7 +609,8 @@ void load_ply(const string& filename, ply_model& ply) {
           prop.is_list = true;
           parse_value(str, tname);
           auto itype = type_map.at(tname);
-          if (itype != ply_type::u8) throw io_error::parse_error(filename);
+          if (itype != ply_type::u8)
+            throw ply_error(filename + ": parse error");
           parse_value(str, tname);
           prop.type = type_map.at(tname);
         } else {
@@ -479,15 +622,15 @@ void load_ply(const string& filename, ply_model& ply) {
         end_header = true;
         break;
       } else {
-        throw io_error::parse_error(filename);
+        throw ply_error(filename + ": parse error");
       }
     } catch (...) {
-      throw io_error::parse_error(filename);
+      throw ply_error(filename + ": parse error");
     }
   }
 
   // check exit
-  if (!end_header) throw io_error::parse_error(filename);
+  if (!end_header) throw ply_error(filename + ": parse error");
 
   // allocate data ---------------------------------
   for (auto& element : ply.elements) {
@@ -513,7 +656,8 @@ void load_ply(const string& filename, ply_model& ply) {
   if (ply.format == ply_format::ascii) {
     for (auto& elem : ply.elements) {
       for (auto idx = 0; idx < elem.count; idx++) {
-        if (!read_line(data_view, str)) throw io_error::read_error(filename);
+        if (!read_line(data_view, str))
+          throw ply_error(filename + ": read error");
         try {
           for (auto& prop : elem.properties) {
             if (prop.is_list) parse_value(str, prop.ldata_u8.emplace_back());
@@ -554,7 +698,7 @@ void load_ply(const string& filename, ply_model& ply) {
             }
           }
         } catch (...) {
-          throw io_error::parse_error(filename);
+          throw ply_error(filename + ": parse error");
         }
       }
     }
@@ -697,7 +841,7 @@ void save_ply(const string& filename, const ply_model& ply) {
     }
 
     // save file
-    save_text(filename, buffer);
+    save_text<ply_error>(filename, buffer);
   } else {
     // buffer
     auto buffer = vector<byte>{
@@ -750,7 +894,7 @@ void save_ply(const string& filename, const ply_model& ply) {
     }
 
     // save file
-    save_binary(filename, buffer);
+    save_binary<ply_error>(filename, buffer);
   }
 }
 
@@ -759,7 +903,7 @@ bool load_ply(const string& filename, ply_model& ply, string& error) {
   try {
     load_ply(filename, ply);
     return true;
-  } catch (const io_error& exception) {
+  } catch (const ply_error& exception) {
     error = exception.what();
     return false;
   }
@@ -770,7 +914,7 @@ bool save_ply(const string& filename, const ply_model& ply, string& error) {
   try {
     save_ply(filename, ply);
     return true;
-  } catch (const io_error& exception) {
+  } catch (const ply_error& exception) {
     error = exception.what();
     return false;
   }
@@ -1369,7 +1513,7 @@ static void load_mtl(const string& filename, obj_model& obj) {
   };
 
   // load data
-  auto data = load_text(filename);
+  auto data = load_text<obj_error>(filename);
 
   // init parsing
   obj.materials.emplace_back();
@@ -1442,7 +1586,7 @@ static void load_mtl(const string& filename, obj_model& obj) {
         continue;
       }
     } catch (...) {
-      throw io_error::parse_error(filename);
+      throw obj_error(filename + ": parse error");
     }
   }
 
@@ -1471,7 +1615,7 @@ static void load_obx(const string& filename, obj_model& obj) {
   };
 
   // load data
-  auto data = load_text(filename);
+  auto data = load_text<obj_error>(filename);
 
   // init parsing
   obj.cameras.emplace_back();
@@ -1536,7 +1680,7 @@ static void load_obx(const string& filename, obj_model& obj) {
         // unused
       }
     } catch (...) {
-      throw io_error::parse_error(filename);
+      throw obj_error(filename + ": parse error");
     }
   }
 
@@ -1549,7 +1693,7 @@ static void load_obx(const string& filename, obj_model& obj) {
 void load_obj(const string& filename, obj_model& obj, bool face_varying,
     bool split_materials) {
   // load data
-  auto data = load_text(filename);
+  auto data = load_text<obj_error>(filename);
 
   // parsing state
   auto opositions   = vector<vec3f>{};
@@ -1648,7 +1792,7 @@ void load_obj(const string& filename, obj_model& obj, bool face_varying,
         parse_value(str, mname);
         auto material_it = material_map.find(mname);
         if (material_it == material_map.end())
-          throw io_error::material_error(filename, mname);
+          throw obj_error(filename + ": missing material " + mname);
         if (split_materials && cur_material != material_it->second) {
           cur_material  = material_it->second;
           auto shape_it = cur_shapes.find(cur_material);
@@ -1668,11 +1812,7 @@ void load_obj(const string& filename, obj_model& obj, bool face_varying,
         if (std::find(mtllibs.begin(), mtllibs.end(), mtllib) ==
             mtllibs.end()) {
           mtllibs.push_back(mtllib);
-          try {
-            load_mtl(path_join(path_dirname(filename), mtllib), obj);
-          } catch (const io_error& error) {
-            throw io_error::dependent_error(filename, error);
-          }
+          load_mtl(path_join(path_dirname(filename), mtllib), obj);
           auto material_id = 0;
           for (auto& material : obj.materials)
             material_map[material.name] = material_id++;
@@ -1680,10 +1820,10 @@ void load_obj(const string& filename, obj_model& obj, bool face_varying,
       } else {
         // unused
       }
-    } catch (const io_error&) {
+    } catch (const obj_error&) {
       throw;
     } catch (...) {
-      throw io_error::parse_error(filename);
+      throw obj_error(filename + ": parse error");
     }
   }
 
@@ -1755,18 +1895,14 @@ void load_obj(const string& filename, obj_model& obj, bool face_varying,
   // load extensions
   auto extfilename = replace_extension(filename, ".obx");
   if (path_exists(extfilename)) {
-    try {
-      load_obx(extfilename, obj);
-    } catch (const io_error& error) {
-      throw io_error::dependent_error(filename, error);
-    }
+    load_obx(extfilename, obj);
   }
 }
 
 // Read obj
 void load_obj(const string& filename, obj_shape& shape, bool face_varying) {
   // load data
-  auto data = load_text(filename);
+  auto data = load_text<obj_error>(filename);
 
   // parsing state
   auto material_map = unordered_map<string, int>{};
@@ -1836,7 +1972,7 @@ void load_obj(const string& filename, obj_shape& shape, bool face_varying) {
         // unused
       }
     } catch (...) {
-      throw io_error::parse_error(filename);
+      throw obj_error(filename + ": parse error");
     }
   }
 
@@ -1960,7 +2096,7 @@ inline void save_mtl(const string& filename, const obj_model& obj) {
   }
 
   // save file
-  save_text(filename, buffer);
+  save_text<obj_error>(filename, buffer);
 }
 
 // Save obj
@@ -2002,7 +2138,7 @@ inline void save_obx(const string& filename, const obj_model& obj) {
   }
 
   // save file
-  save_text(filename, buffer);
+  save_text<obj_error>(filename, buffer);
 }
 
 // Save obj
@@ -2063,24 +2199,16 @@ void save_obj(const string& filename, const obj_model& obj) {
   }
 
   // save file
-  save_text(filename, buffer);
+  save_text<obj_error>(filename, buffer);
 
   // save mtl
   if (!obj.materials.empty()) {
-    try {
-      save_mtl(replace_extension(filename, ".mtl"), obj);
-    } catch (const io_error& error) {
-      throw io_error::dependent_error(filename, error);
-    }
+    save_mtl(replace_extension(filename, ".mtl"), obj);
   }
 
   // save obx
   if (!obj.cameras.empty() || !obj.environments.empty()) {
-    try {
-      save_obx(replace_extension(filename, ".obx"), obj);
-    } catch (const io_error& error) {
-      throw io_error::dependent_error(filename, error);
-    }
+    save_obx(replace_extension(filename, ".obx"), obj);
   }
 }
 
@@ -2123,7 +2251,7 @@ void save_obj(const string& filename, const obj_shape& shape) {
   }
 
   // save file
-  save_text(filename, buffer);
+  save_text<obj_error>(filename, buffer);
 }
 
 // Load and save obj
@@ -2132,7 +2260,7 @@ bool load_obj(const string& filename, obj_model& obj, string& error,
   try {
     load_obj(filename, obj, face_varying, split_materials);
     return true;
-  } catch (const io_error& exception) {
+  } catch (const obj_error& exception) {
     error = exception.what();
     return false;
   }
@@ -2141,7 +2269,7 @@ bool save_obj(const string& filename, const obj_model& obj, string& error) {
   try {
     save_obj(filename, obj);
     return true;
-  } catch (const io_error& exception) {
+  } catch (const obj_error& exception) {
     error = exception.what();
     return false;
   }
@@ -2153,7 +2281,7 @@ bool load_obj(
   try {
     load_obj(filename, obj, face_varying);
     return true;
-  } catch (const io_error& exception) {
+  } catch (const obj_error& exception) {
     error = exception.what();
     return false;
   }
@@ -2162,7 +2290,7 @@ bool save_obj(const string& filename, const obj_shape& obj, string& error) {
   try {
     save_obj(filename, obj);
     return true;
-  } catch (const io_error& exception) {
+  } catch (const obj_error& exception) {
     error = exception.what();
     return false;
   }
@@ -2603,7 +2731,7 @@ void load_stl(const string& filename, stl_model& stl, bool unique_vertices) {
   stl.shapes.clear();
 
   // load data
-  auto data      = load_binary(filename);
+  auto data      = load_binary<stl_error>(filename);
   auto data_view = string_view{(const char*)data.data(), data.size()};
 
   // assume it is binary and read hader
@@ -2626,7 +2754,7 @@ void load_stl(const string& filename, stl_model& stl, bool unique_vertices) {
   // switch on type
   if (binary) {
     // load data
-    auto data      = load_binary(filename);
+    auto data      = load_binary<stl_error>(filename);
     auto data_view = string_view{(const char*)data.data(), data.size()};
 
     // skip header
@@ -2663,10 +2791,10 @@ void load_stl(const string& filename, stl_model& stl, bool unique_vertices) {
     }
 
     // check if read at least one
-    if (stl.shapes.empty()) throw io_error::read_error(filename);
+    if (stl.shapes.empty()) throw stl_error(filename + ": read error");
   } else {
     // load data
-    auto data = load_text(filename);
+    auto data = load_text<stl_error>(filename);
 
     // parse state
     auto in_solid = false, in_facet = false, in_loop = false;
@@ -2688,55 +2816,56 @@ void load_stl(const string& filename, stl_model& stl, bool unique_vertices) {
 
         // switch over command
         if (cmd == "solid") {
-          if (in_solid) throw io_error::parse_error(filename);
+          if (in_solid) throw stl_error(filename + ": parse error");
           in_solid = true;
           stl.shapes.emplace_back();
         } else if (cmd == "endsolid") {
-          if (!in_solid) throw io_error::parse_error(filename);
+          if (!in_solid) throw stl_error(filename + ": parse error");
           in_solid = false;
         } else if (cmd == "facet") {
-          if (!in_solid || in_facet) throw io_error::parse_error(filename);
+          if (!in_solid || in_facet)
+            throw stl_error(filename + ": parse error");
           in_facet = true;
           // next command
           parse_value(str, cmd);
-          if (cmd != "normal") throw io_error::parse_error(filename);
+          if (cmd != "normal") throw stl_error(filename + ": parse error");
           // vertex normal
           parse_value(str, stl.shapes.back().fnormals.emplace_back());
         } else if (cmd == "endfacet") {
           if (!in_solid || !in_facet || in_loop)
-            throw io_error::parse_error(filename);
+            throw stl_error(filename + ": parse error");
           in_facet = false;
           // check that it was a triangle
           auto last_pos = (int)stl.shapes.back().positions.size() - 3;
           if (stl.shapes.back().triangles.empty() && last_pos != 0)
-            throw io_error::parse_error(filename);
+            throw stl_error(filename + ": parse error");
           if (!stl.shapes.back().triangles.empty() &&
               last_pos != stl.shapes.back().triangles.back().z + 1)
-            throw io_error::parse_error(filename);
+            throw stl_error(filename + ": parse error");
           // add triangle
           stl.shapes.back().triangles.push_back(
               {last_pos + 0, last_pos + 1, last_pos + 2});
         } else if (cmd == "outer") {
           if (!in_solid || !in_facet || in_loop)
-            throw io_error::parse_error(filename);
+            throw stl_error(filename + ": parse error");
           in_loop = true;
           // next command
           parse_value(str, cmd);
-          if (cmd != "loop") throw io_error::parse_error(filename);
+          if (cmd != "loop") throw stl_error(filename + ": parse error");
         } else if (cmd == "endloop") {
           if (!in_solid || !in_facet || !in_loop)
-            throw io_error::parse_error(filename);
+            throw stl_error(filename + ": parse error");
           in_loop = false;
         } else if (cmd == "vertex") {
           // vertex position
           parse_value(str, stl.shapes.back().positions.emplace_back());
         } else {
-          throw io_error::parse_error(filename);
+          throw stl_error(filename + ": parse error");
         }
-      } catch (const io_error&) {
+      } catch (const stl_error&) {
         throw;
       } catch (...) {
-        throw io_error::parse_error(filename);
+        throw stl_error(filename + ": parse error");
       }
     }
   }
@@ -2803,7 +2932,7 @@ void save_stl(const string& filename, const stl_model& stl, bool ascii) {
     }
 
     // save file
-    save_binary(filename, buffer);
+    save_binary<stl_error>(filename, buffer);
   } else {
     // buffer
     auto buffer = string{};
@@ -2830,7 +2959,7 @@ void save_stl(const string& filename, const stl_model& stl, bool ascii) {
     }
 
     // save file
-    save_text(filename, buffer);
+    save_text<stl_error>(filename, buffer);
   }
 }
 
@@ -2840,7 +2969,7 @@ bool load_stl(const string& filename, stl_model& stl, string& error,
   try {
     load_stl(filename, stl, unique_vertices);
     return true;
-  } catch (const io_error& exception) {
+  } catch (const stl_error& exception) {
     error = exception.what();
     return false;
   }
@@ -2850,7 +2979,7 @@ bool save_stl(
   try {
     save_stl(filename, stl, ascii);
     return true;
-  } catch (const io_error& exception) {
+  } catch (const stl_error& exception) {
     error = exception.what();
     return false;
   }
@@ -3633,12 +3762,12 @@ inline void convert_film(pbrt_film& film, const pbrt_command& command,
       film.filename = "out.png"s;
       get_pbrt_value(command.values, "filename", film.filename);
     } else {
-      throw io_error::type_error(filename, command.type);
+      throw pbrt_error(filename + ": unknown type " + command.type);
     }
-  } catch (const io_error& error) {
+  } catch (const pbrt_error& error) {
     throw;
   } catch (...) {
-    throw io_error::parse_error(filename);
+    throw pbrt_error(filename + ": parse error");
   }
 }
 
@@ -3680,12 +3809,12 @@ inline void convert_camera(pbrt_camera& pcamera, const pbrt_command& command,
       get_pbrt_value(command.values, "focusdistance", pcamera.focus);
       pcamera.aspect = film_aspect;
     } else {
-      throw io_error::type_error(filename, command.type);
+      throw pbrt_error(filename + ": unknown type " + command.type);
     }
-  } catch (const io_error& error) {
+  } catch (const pbrt_error& error) {
     throw;
   } catch (...) {
-    throw io_error::parse_error(filename);
+    throw pbrt_error(filename + ": parse error");
   }
 }
 
@@ -3758,12 +3887,12 @@ inline void convert_texture(pbrt_texture& ptexture, const pbrt_command& command,
     } else if (command.type == "wrinkled") {
       ptexture.constant = {1, 0, 0};
     } else {
-      throw io_error::type_error(filename, command.type);
+      throw pbrt_error(filename + ": unknown type " + command.type);
     }
-  } catch (const io_error& error) {
+  } catch (const pbrt_error& error) {
     throw;
   } catch (...) {
-    throw io_error::parse_error(filename);
+    throw pbrt_error(filename + ": parse error");
   }
 }
 
@@ -4055,7 +4184,7 @@ inline void convert_material(pbrt_material& pmaterial,
                                                : namedmaterial2;
       auto matit   = named_materials.find(matname);
       if (matit == named_materials.end())
-        throw io_error::material_error(filename, matname);
+        throw pbrt_error(filename + "missing material " + matname);
       auto saved_name = pmaterial.name;
       pmaterial       = matit->second;
       pmaterial.name  = saved_name;
@@ -4098,15 +4227,15 @@ inline void convert_material(pbrt_material& pmaterial,
         pmaterial.color = eta_to_reflectivity(eta, etak);
         pmaterial.roughness = 0.2f;
       } else {
-        throw io_error::type_error(filename, bsdffile);
+        throw pbrt_error(filename + ": unknown type " + bsdffile);
       }
     } else {
-      throw io_error::type_error(filename, command.type);
+      throw pbrt_error(filename + ": unknown type " + command.type);
     }
-  } catch (const io_error& error) {
+  } catch (const pbrt_error& error) {
     throw;
   } catch (...) {
-    throw io_error::parse_error(filename);
+    throw pbrt_error(filename + ": parse error");
   }
 }
 
@@ -4226,8 +4355,9 @@ inline void convert_shape(pbrt_shape& pshape, const pbrt_command& command,
         auto ply = ply_model{};
         try {
           load_ply(path_join(ply_dirname, pshape.filename_), ply);
-        } catch (const io_error& error) {
-          throw io_error::dependent_error(filename, error);
+        } catch (const ply_error& error) {
+          throw pbrt_error(
+              filename + ": error reading ply (" + string{error.what()} + ")");
         }
         get_positions(ply, pshape.positions);
         get_normals(ply, pshape.normals);
@@ -4245,12 +4375,12 @@ inline void convert_shape(pbrt_shape& pshape, const pbrt_command& command,
       make_disk(pshape.triangles, pshape.positions, pshape.normals,
           pshape.texcoords, {32, 1}, radius);
     } else {
-      throw io_error::type_error(filename, command.type);
+      throw pbrt_error(filename + ": unknown type " + command.type);
     }
-  } catch (const io_error& error) {
+  } catch (const pbrt_error& error) {
     throw;
   } catch (...) {
-    throw io_error::parse_error(filename);
+    throw pbrt_error(filename + ": parse error");
   }
 }
 
@@ -4265,12 +4395,12 @@ inline void convert_arealight(pbrt_arealight& parealight,
       get_pbrt_value(command.values, "scale", scale);
       parealight.emission = l * scale;
     } else {
-      throw io_error::type_error(filename, command.type);
+      throw pbrt_error(filename + ": unknown type " + command.type);
     }
-  } catch (const io_error& error) {
+  } catch (const pbrt_error& error) {
     throw;
   } catch (...) {
-    throw io_error::parse_error(filename);
+    throw pbrt_error(filename + ": parse error");
   }
 }
 
@@ -4320,12 +4450,12 @@ inline void convert_light(pbrt_light& plight, const pbrt_command& command,
       make_sphere(plight.area_triangles, plight.area_positions,
           plight.area_normals, texcoords, {4, 2}, 0.0025f);
     } else {
-      throw io_error::type_error(filename, command.type);
+      throw pbrt_error(filename + ": unknown type " + command.type);
     }
-  } catch (const io_error& error) {
+  } catch (const pbrt_error& error) {
     throw;
   } catch (...) {
-    throw io_error::parse_error(filename);
+    throw pbrt_error(filename + ": parse error");
   }
 }
 
@@ -4355,12 +4485,12 @@ inline void convert_environment(pbrt_environment& penvironment,
         penvironment.emission_tex = texture_map.at(mapname);
       }
     } else {
-      throw io_error::type_error(filename, command.type);
+      throw pbrt_error(filename + ": unknown type " + command.type);
     }
-  } catch (const io_error& error) {
+  } catch (const pbrt_error& error) {
     throw;
   } catch (...) {
-    throw io_error::parse_error(filename);
+    throw pbrt_error(filename + ": parse error");
   }
 }
 
@@ -4395,7 +4525,7 @@ inline void load_pbrt(const string& filename, pbrt_model& pbrt,
     unordered_map<string, vector<int>>&   named_objects,
     const string& ply_dirname, bool ply_meshes) {
   // load data
-  auto data = load_text(filename);
+  auto data = load_text<pbrt_error>(filename);
 
   // helpers
   auto set_transform = [](pbrt_stack_element& ctx, const frame3f& xform) {
@@ -4446,7 +4576,7 @@ inline void load_pbrt(const string& filename, pbrt_model& pbrt,
         auto object = ""s;
         parse_param(str, object);
         if (named_objects.find(object) == named_objects.end())
-          throw io_error::object_error(filename, object);
+          throw pbrt_error(filename + ": unknow object " + object);
         auto& named_object = named_objects.at(object);
         for (auto& shape_id : named_object) {
           pbrt.shapes[shape_id].instances.push_back(
@@ -4579,7 +4709,7 @@ inline void load_pbrt(const string& filename, pbrt_model& pbrt,
         auto name = ""s;
         parse_param(str, name);
         if (named_materials.find(name) == named_materials.end())
-          throw io_error::material_error(filename, name);
+          throw pbrt_error(filename + ": unknown material " + name);
         ctx.stack.back().material = named_materials.at(name);
       } else if (cmd == "Shape") {
         auto command = pbrt_command{};
@@ -4647,20 +4777,16 @@ inline void load_pbrt(const string& filename, pbrt_model& pbrt,
       } else if (cmd == "Include") {
         auto includename = ""s;
         parse_param(str, includename);
-        try {
-          load_pbrt(path_join(path_dirname(filename), includename), pbrt, ctx,
-              material_map, texture_map, named_materials, named_textures,
-              named_mediums, named_objects, ply_dirname, ply_meshes);
-        } catch (const io_error& error) {
-          throw io_error::dependent_error(filename, error);
-        }
+        load_pbrt(path_join(path_dirname(filename), includename), pbrt, ctx,
+            material_map, texture_map, named_materials, named_textures,
+            named_mediums, named_objects, ply_dirname, ply_meshes);
       } else {
-        throw io_error::command_error(filename, cmd);
+        throw pbrt_error(filename + ": unknown command " + cmd);
       }
-    } catch (const io_error& error) {
+    } catch (const pbrt_error& error) {
       throw;
     } catch (...) {
-      throw io_error::parse_error(filename);
+      throw pbrt_error(filename + ": parse error");
     }
   }
 }
@@ -4922,8 +5048,9 @@ void save_pbrt(
       add_triangles(ply, shape.triangles);
       try {
         save_ply(path_dirname(filename) + "/" + shape.filename_, ply);
-      } catch (const io_error& error) {
-        throw io_error::dependent_error(filename, error);
+      } catch (const ply_error& error) {
+        throw pbrt_error(
+            filename + ": error saving ply (" + string{error.what()} + ")");
       }
     }
     auto object = "object" + std::to_string(object_id++);
@@ -4953,7 +5080,7 @@ void save_pbrt(
   format_values(buffer, "\nWorldEnd\n\n");
 
   // save file
-  save_text(filename, buffer);
+  save_text<pbrt_error>(filename, buffer);
 }
 
 // Load/save pbrt
@@ -4962,7 +5089,7 @@ bool load_pbrt(
   try {
     load_pbrt(filename, pbrt, ply_meshes);
     return true;
-  } catch (const io_error& exception) {
+  } catch (const pbrt_error& exception) {
     error = exception.what();
     return false;
   }
@@ -4972,7 +5099,7 @@ bool save_pbrt(const string& filename, const pbrt_model& pbrt, string& error,
   try {
     save_pbrt(filename, pbrt, ply_meshes);
     return true;
-  } catch (const io_error& exception) {
+  } catch (const pbrt_error& exception) {
     error = exception.what();
     return false;
   }
