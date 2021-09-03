@@ -34,6 +34,7 @@
 #include <climits>
 #include <cstdlib>
 #include <cstring>
+#include <filesystem>
 #include <memory>
 #include <stdexcept>
 #include <unordered_map>
@@ -64,6 +65,278 @@ using namespace std::string_literals;
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// PATH UTILITIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Make a path from a utf8 string
+static std::filesystem::path make_path(const string& filename) {
+  return std::filesystem::u8path(filename);
+}
+
+// Normalize path
+string normalize_path(const string& filename) {
+  return make_path(filename).generic_u8string();
+}
+
+// Get directory name (not including /)
+string path_dirname(const string& filename) {
+  return make_path(filename).parent_path().generic_u8string();
+}
+
+// Get extension (including .)
+string path_extension(const string& filename) {
+  return make_path(filename).extension().u8string();
+}
+
+// Get filename without directory.
+string path_filename(const string& filename) {
+  return make_path(filename).filename().u8string();
+}
+
+// Get filename without directory and extension.
+string path_basename(const string& filename) {
+  return make_path(filename).stem().u8string();
+}
+
+// Joins paths
+string path_join(const string& patha, const string& pathb) {
+  return (make_path(patha) / make_path(pathb)).generic_u8string();
+}
+string path_join(
+    const string& patha, const string& pathb, const string& pathc) {
+  return (make_path(patha) / make_path(pathb) / make_path(pathc))
+      .generic_u8string();
+}
+
+// Replaces extensions
+string replace_extension(const string& filename, const string& ext) {
+  return make_path(filename).replace_extension(ext).u8string();
+}
+
+// Check if a file can be opened for reading.
+bool path_exists(const string& filename) { return exists(make_path(filename)); }
+
+// Check if a file is a directory
+bool path_isdir(const string& filename) {
+  return is_directory(make_path(filename));
+}
+
+// Check if a file is a file
+bool path_isfile(const string& filename) {
+  return is_regular_file(make_path(filename));
+}
+
+// List the contents of a directory
+vector<string> list_directory(const string& dirname) {
+  try {
+    auto entries = vector<string>{};
+    for (auto entry : std::filesystem::directory_iterator(make_path(dirname))) {
+      entries.push_back(entry.path().generic_u8string());
+    }
+    return entries;
+  } catch (...) {
+    throw io_error{dirname + ": cannot list directory"};
+  }
+}
+
+// Create a directory and all missing parent directories if needed
+void make_directory(const string& dirname) {
+  if (path_exists(dirname)) return;
+  try {
+    create_directories(make_path(dirname));
+  } catch (...) {
+    throw io_error{dirname + ": cannot create directory"};
+  }
+}
+
+// Get the current directory
+string path_current() { return std::filesystem::current_path().u8string(); }
+
+// Create a directory and all missing parent directories if needed
+bool make_directory(const string& dirname, string& error) {
+  if (path_exists(dirname)) return true;
+  try {
+    create_directories(make_path(dirname));
+    return true;
+  } catch (...) {
+    error = dirname + ": cannot create directory";
+    return false;
+  }
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// FILE IO
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Opens a file with a utf8 file name
+static FILE* fopen_utf8(const char* filename, const char* mode) {
+#ifdef _WIN32
+  auto path8    = std::filesystem::u8path(filename);
+  auto str_mode = string{mode};
+  auto wmode    = std::wstring(str_mode.begin(), str_mode.end());
+  return _wfopen(path8.c_str(), wmode.c_str());
+#else
+  return fopen(filename, mode);
+#endif
+}
+
+// Opens a file with utf8 filename
+FILE* fopen_utf8(const string& filename, const string& mode) {
+#ifdef _WIN32
+  auto path8 = std::filesystem::u8path(filename);
+  auto wmode = std::wstring(mode.begin(), mode.end());
+  return _wfopen(path8.c_str(), wmode.c_str());
+#else
+  return fopen(filename.c_str(), mode.c_str());
+#endif
+}
+
+// Load a text file
+string load_text(const string& filename) {
+  auto str = string{};
+  load_text(filename, str);
+  return str;
+}
+void load_text(const string& filename, string& text) {
+  // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
+  auto fs = fopen_utf8(filename.c_str(), "rb");
+  if (!fs) throw io_error{filename + ": cannot open file"};
+  fseek(fs, 0, SEEK_END);
+  auto length = ftell(fs);
+  fseek(fs, 0, SEEK_SET);
+  text.resize(length);
+  if (fread(text.data(), 1, length, fs) != length) {
+    fclose(fs);
+    throw io_error{filename + ": read error"};
+  }
+  fclose(fs);
+}
+
+// Save a text file
+void save_text(const string& filename, const string& text) {
+  auto fs = fopen_utf8(filename.c_str(), "wt");
+  if (!fs) throw io_error{filename + ": cannot open file"};
+  if (fprintf(fs, "%s", text.c_str()) < 0) {
+    fclose(fs);
+    throw io_error{filename + ": write error"};
+  }
+  fclose(fs);
+}
+
+// Load a binary file
+vector<byte> load_binary(const string& filename) {
+  auto data = vector<byte>{};
+  load_binary(filename, data);
+  return data;
+}
+void load_binary(const string& filename, vector<byte>& data) {
+  // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
+  auto fs = fopen_utf8(filename.c_str(), "rb");
+  if (!fs) throw io_error{filename + ": cannot open file"};
+  fseek(fs, 0, SEEK_END);
+  auto length = ftell(fs);
+  fseek(fs, 0, SEEK_SET);
+  data.resize(length);
+  if (fread(data.data(), 1, length, fs) != length) {
+    fclose(fs);
+    throw io_error{filename + ": read error"};
+  }
+  fclose(fs);
+}
+
+// Save a binary file
+void save_binary(const string& filename, const vector<byte>& data) {
+  auto fs = fopen_utf8(filename.c_str(), "wb");
+  if (!fs) throw io_error{filename + ": cannot open file"};
+  if (fwrite(data.data(), 1, data.size(), fs) != data.size()) {
+    fclose(fs);
+    throw io_error{filename + ": write error"};
+  }
+  fclose(fs);
+}
+
+// Load a text file
+bool load_text(const string& filename, string& str, string& error) {
+  // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
+  auto fs = fopen_utf8(filename.c_str(), "rb");
+  if (!fs) {
+    error = filename + ": file not found";
+    return false;
+  }
+  fseek(fs, 0, SEEK_END);
+  auto length = ftell(fs);
+  fseek(fs, 0, SEEK_SET);
+  str.resize(length);
+  if (fread(str.data(), 1, length, fs) != length) {
+    fclose(fs);
+    error = filename + ": read error";
+    return false;
+  }
+  fclose(fs);
+  return true;
+}
+
+// Save a text file
+bool save_text(const string& filename, const string& str, string& error) {
+  auto fs = fopen_utf8(filename.c_str(), "wt");
+  if (!fs) {
+    error = filename + ": file not found";
+    return false;
+  }
+  if (fprintf(fs, "%s", str.c_str()) < 0) {
+    fclose(fs);
+    error = filename + ": write error";
+    return false;
+  }
+  fclose(fs);
+  return true;
+}
+
+// Load a binary file
+bool load_binary(const string& filename, vector<byte>& data, string& error) {
+  // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
+  auto fs = fopen_utf8(filename.c_str(), "rb");
+  if (!fs) {
+    error = filename + ": file not found";
+    return false;
+  }
+  fseek(fs, 0, SEEK_END);
+  auto length = ftell(fs);
+  fseek(fs, 0, SEEK_SET);
+  data.resize(length);
+  if (fread(data.data(), 1, length, fs) != length) {
+    fclose(fs);
+    error = filename + ": read error";
+    return false;
+  }
+  fclose(fs);
+  return true;
+}
+
+// Save a binary file
+bool save_binary(
+    const string& filename, const vector<byte>& data, string& error) {
+  auto fs = fopen_utf8(filename.c_str(), "wb");
+  if (!fs) {
+    error = filename + ": file not found";
+    return false;
+  }
+  if (fwrite(data.data(), 1, data.size(), fs) != data.size()) {
+    fclose(fs);
+    error = filename + ": write error";
+    return false;
+  }
+  fclose(fs);
+  return true;
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // JSON SUPPORT
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -79,6 +352,11 @@ static void load_json(const string& filename, ordered_json& json) {
   } catch (...) {
     throw io_error{filename + ": parse error"};
   }
+}
+static ordered_json load_json(const string& filename) {
+  auto json = ordered_json{};
+  load_json(filename, json);
+  return json;
 }
 static void save_json(const string& filename, const ordered_json& json) {
   save_text(filename, json.dump(2));

@@ -40,8 +40,6 @@
 // -----------------------------------------------------------------------------
 
 #include <array>
-#include <charconv>
-#include <stdexcept>
 #include <string>
 #include <type_traits>
 #include <vector>
@@ -58,100 +56,6 @@ using std::array;
 using std::string;
 using std::vector;
 using namespace std::string_literals;
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// IO ERROR
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Io error used in exception handling
-struct io_error : std::runtime_error {
-  io_error(const string& message) : std::runtime_error(message) {}
-};
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// FILE IO
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Using directive
-using byte = unsigned char;
-
-// Load/save a text file
-string load_text(const string& filename);
-void   load_text(const string& filename, string& str);
-void   save_text(const string& filename, const string& str);
-
-// Load/save a binary file
-vector<byte> load_binary(const string& filename);
-void         load_binary(const string& filename, vector<byte>& data);
-void         save_binary(const string& filename, const vector<byte>& data);
-
-// Load/save a text file
-bool load_text(const string& filename, string& str, string& error);
-bool save_text(const string& filename, const string& str, string& error);
-
-// Load/save a binary file
-bool load_binary(const string& filename, vector<byte>& data, string& error);
-bool save_binary(
-    const string& filename, const vector<byte>& data, string& error);
-
-// Opens a file with utf8 filename
-FILE* fopen_utf8(const string& filename, const string& mode);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// PATH UTILITIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Utility to normalize a path
-string normalize_path(const string& filename);
-
-// Get directory name (not including '/').
-string path_dirname(const string& filename);
-
-// Get extension (including '.').
-string path_extension(const string& filename);
-
-// Get filename without directory.
-string path_filename(const string& filename);
-
-// Get filename without directory and extension.
-string path_basename(const string& filename);
-
-// Joins paths
-string path_join(const string& patha, const string& pathb);
-string path_join(const string& patha, const string& pathb, const string& pathc);
-
-// Replaces extensions
-string replace_extension(const string& filename, const string& ext);
-
-// Check if a file can be opened for reading.
-bool path_exists(const string& filename);
-
-// Check if a file is a directory
-bool path_isdir(const string& filename);
-
-// Check if a file is a file
-bool path_isfile(const string& filename);
-
-// List the contents of a directory
-vector<string> list_directory(const string& dirname);
-
-// Create a directory and all missing parent directories if needed
-void make_directory(const string& dirname);
-
-// Get the current directory
-string path_current();
-
-// Create a directory and all missing parent directories if needed
-bool make_directory(const string& dirname, string& error);
 
 }  // namespace yocto
 
@@ -737,15 +641,15 @@ struct json_value {
 namespace yocto {
 
 // Load/save json
-json_value load_json(const string& filename);
-void       load_json(const string& filename, json_value& json);
-void       save_json(const string& filename, const json_value& json);
+// json_value load_json(const string& filename);
+void load_json(const string& filename, json_value& json);
+void save_json(const string& filename, const json_value& json);
 
 // Parse/dump json
-json_value parse_json(const string& text);
-void       parse_json(const string& text, json_value& json);
-string     format_json(const json_value& json);
-void       format_json(string& text, const json_value& json);
+// json_value parse_json(const string& text);
+void   parse_json(const string& text, json_value& json);
+string format_json(const json_value& json);
+void   format_json(string& text, const json_value& json);
 
 // Load/save json
 bool load_json(const string& filename, json_value& json, string& error);
