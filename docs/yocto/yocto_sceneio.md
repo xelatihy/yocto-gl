@@ -1,7 +1,8 @@
 # Yocto/SceneIO: Scene serialization
 
 Yocto/SceneIO is a collection of functions to load and save images, shapes, and
-scene elements, together with path manipulation utilities.
+scene elements, together with path manipulation utilities. The list of 
+supported file formats in included in the sections below.
 Yocto/SceneIO is implemented in `yocto_sceneio.h` and `yocto_sceneio.cpp`,
 and depends on `json.hpp` for Json serialization, and `stb_image.h`,
 `stb_image_write.h` and `tinyexr.h` for the image serialization.
@@ -52,7 +53,7 @@ Images are loaded with `load_image(filename, image)` or
 `image = load_image(filename)` and saved with `save_image(filename, text)`.
 Images are stored as `image_data` structs defined in [Yocto/Image](yocto_image.md).
 Upon errors, an `io_error` is thrown from all IO functions.
-Yocto/SceneIO supports loading and saving to JPG, PNG, TGA, BMP, HDR, EXR.
+The library supports loading and saving to JPG, PNG, TGA, BMP, HDR, EXR.
 
 ```cpp
 auto image = image_data{};
@@ -90,20 +91,26 @@ by the chosen file format.
 
 ## Shape serialization
 
-Shapes are loaded with `load_shape(filename, shape, error)` and
+Shapes are loaded with `load_shape(filename, shape)` or 
+`shape = load_shape(filename)` and saved with `save_shape(filename, shape)`.
+Shapes are stored as `shape_data` structs defined in [Yocto/Shape](yocto_shape.md).
+Upon errors, an `io_error` is thrown from all IO functions.
+The library supports loading and saving to Ply, Obj, Stl.
+
+```cpp
+auto shape = shape_data{};
+load_shape("input_file.ply",  shape);        // load shape
+save_shape("output_file.ply", shape);        // save shape
+auto shape1 = load_shape("input_file.ply");  // alternative load
+```
+
+When using without exceptions, shapes are loaded with 
+`load_shape(filename, shape, error)` and
 saved with `save_shape(filename, shape, error)`.
-Face-varying shapes with `load_fvshape(filename, shape, error)`
-and saved with `save_fvshape(filename, shape, error)`.
 Both loading and saving take a filename, a scene reference and return
 whether or not the scene was loaded successfully.
 In the case of an error, the IO functions set the `error` string with a
 message suitable for displaying to a user.
-Yocto/SceneIO supports loading and saving to Ply, Obj, Stl.
-
-For indexed meshes, the type of elements is determined during loading,
-while face-varying coerce all face to quads. By default, texture coordinates
-are flipped vertically to match the convention of OpenGL texturing;
-this can be disabled by setting the `flipv` flag.
 
 ```cpp
 auto shape = shape_data{};                   // shape
@@ -112,7 +119,36 @@ if(!load_shape(filename, shape, error))      // load shape
   print_error(error);
 if(!save_shape(filename, shape, error))      // save shape
   print_error(error);
+```
 
+During loading, the library chooses whether to store triangles or quads.
+By default, texture coordinates are flipped vertically to match the convention 
+of OpenGL texturing; this can be disabled by setting the `flipv` flag.
+
+## Face-Varying shape serialization
+
+Face-varying shapes are loaded with `load_fvshape(filename, shape)` or 
+`shape = load_fvshape(filename)` and saved with `save_shape(filename, shape)`.
+Face-varying shapes are stored as `fvshape_data` structs defined in [Yocto/Shape](yocto_shape.md).
+Upon errors, an `io_error` is thrown from all IO functions.
+The library supports loading and saving to Ply, Obj, Stl.
+
+```cpp
+auto fvshape = fvshape_data{};
+load_fvshape("input_file.obj",  fvshape);        // load face-varying shape
+save_fvshape("output_file.obj", fvshape);        // save face-varying shape
+auto fvshape1 = load_fvshape("input_file.obj");  // alternative load
+```
+
+When using without exceptions, face-varying shapes 
+are loaded with `load_fvshape(filename, shape, error)`
+and saved with `save_fvshape(filename, shape, error)`.
+Both loading and saving take a filename, a scene reference and return
+whether or not the scene was loaded successfully.
+In the case of an error, the IO functions set the `error` string with a
+message suitable for displaying to a user.
+
+```cpp
 auto fvshape = fvshape_data{};               // face-varying shape
 auto error = string{};                       // error buffer
 if(!load_fvshape(filename, fvshape, error))  // load shape
@@ -120,6 +156,10 @@ if(!load_fvshape(filename, fvshape, error))  // load shape
 if(!save_fvshape(filename, fvshape, error))  // save shape
   print_error(error);
 ```
+
+Face-varying shapes are coerced to quads, regardless of the polygon type stored 
+in the file. By default, texture coordinates are flipped vertically to match the 
+convention of OpenGL texturing; this can be disabled by setting the `flipv` flag.
 
 ## Scene serialization
 
