@@ -38,14 +38,11 @@ Here is a list of the main libraries.
   supporting area and environment illumination, microfacet GGX and subsurface
   scattering, multiple importance sampling
 - [Yocto/Cli](yocto/yocto_cli.md): printing utilities and command line parsing
-- [Yocto/ImageIO](yocto/yocto_imageio.md): image serialization
-- [Yocto/ShapeIO](yocto/yocto_shapeio.md): shape serialization
-- [Yocto/SceneIO](yocto/yocto_sceneio.md): scene serialization
-- [Yocto/CommonIO](yocto/yocto_commonio.md): common IO operations, path helpers,
-  text and binary serialization, Json data model, Json serialization
+- [Yocto/SceneIO](yocto/yocto_sceneio.md): image, shape and scene serialization
 - [Yocto/ModelIO](yocto/yocto_modelio.md): low-level parsing and writing for 
   Ply, Obj, Stl, Pbrt formats
 - [Yocto/Parallel](yocto/yocto_parallel.md): concurrency utilities
+- [Yocto/Json](yocto/yocto_json.md): Json data model and serialization
 
 ## Example Applications
 
