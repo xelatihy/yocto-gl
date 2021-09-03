@@ -28,8 +28,10 @@
 
 #include "yocto_modelio.h"
 
+#include <charconv>
 #include <cstdio>
 #include <cstring>
+#include <filesystem>
 #include <memory>
 #include <stdexcept>
 #include <string_view>
@@ -51,6 +53,132 @@ using std::unordered_map;
 using std::unordered_set;
 using namespace std::string_literals;
 using namespace std::string_view_literals;
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// FILE IO
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Opens a file with a utf8 file name
+static FILE* fopen_utf8(const char* filename, const char* mode) {
+#ifdef _WIN32
+  auto path8    = std::filesystem::u8path(filename);
+  auto str_mode = string{mode};
+  auto wmode    = std::wstring(str_mode.begin(), str_mode.end());
+  return _wfopen(path8.c_str(), wmode.c_str());
+#else
+  return fopen(filename, mode);
+#endif
+}
+
+// Load a text file
+template <typename Error>
+void load_text(const string& filename, string& text) {
+  // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
+  auto fs = fopen_utf8(filename.c_str(), "rb");
+  if (!fs) throw Error(filename + ": cannot open " + filename);
+  fseek(fs, 0, SEEK_END);
+  auto length = ftell(fs);
+  fseek(fs, 0, SEEK_SET);
+  text.resize(length);
+  if (fread(text.data(), 1, length, fs) != length) {
+    fclose(fs);
+    throw Error(filename + ": read error");
+  }
+  fclose(fs);
+}
+template <typename Error>
+static string load_text(const string& filename) {
+  auto str = string{};
+  load_text<Error>(filename, str);
+  return str;
+}
+
+// Save a text file
+template <typename Error>
+static void save_text(const string& filename, const string& text) {
+  auto fs = fopen_utf8(filename.c_str(), "wt");
+  if (!fs) throw Error(filename + ": cannot open " + filename);
+  if (fprintf(fs, "%s", text.c_str()) < 0) {
+    fclose(fs);
+    throw Error(filename + ": write error");
+  }
+  fclose(fs);
+}
+
+// Load a binary file
+template <typename Error>
+static void load_binary(const string& filename, vector<byte>& data) {
+  // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
+  auto fs = fopen_utf8(filename.c_str(), "rb");
+  if (!fs) throw Error(filename + ": cannot open " + filename);
+  fseek(fs, 0, SEEK_END);
+  auto length = ftell(fs);
+  fseek(fs, 0, SEEK_SET);
+  data.resize(length);
+  if (fread(data.data(), 1, length, fs) != length) {
+    fclose(fs);
+    throw Error(filename + ": read error");
+  }
+  fclose(fs);
+}
+template <typename Error>
+static vector<byte> load_binary(const string& filename) {
+  auto data = vector<byte>{};
+  load_binary<Error>(filename, data);
+  return data;
+}
+
+// Save a binary file
+template <typename Error>
+void save_binary(const string& filename, const vector<byte>& data) {
+  auto fs = fopen_utf8(filename.c_str(), "wb");
+  if (!fs) throw Error(filename + ": cannot open " + filename);
+  if (fwrite(data.data(), 1, data.size(), fs) != data.size()) {
+    fclose(fs);
+    throw Error(filename + ": write error");
+  }
+  fclose(fs);
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// PATH UTILITIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Make a path from a utf8 string
+static std::filesystem::path make_path(const string& filename) {
+  return std::filesystem::u8path(filename);
+}
+
+// Get directory name (not including /)
+static string path_dirname(const string& filename) {
+  return make_path(filename).parent_path().generic_u8string();
+}
+
+// Get filename without directory.
+static string path_filename(const string& filename) {
+  return make_path(filename).filename().u8string();
+}
+
+// Joins paths
+static string path_join(const string& patha, const string& pathb) {
+  return (make_path(patha) / make_path(pathb)).generic_u8string();
+}
+
+// Replaces extensions
+static string replace_extension(const string& filename, const string& ext) {
+  return make_path(filename).replace_extension(ext).u8string();
+}
+
+// Check if a file can be opened for reading.
+static bool path_exists(const string& filename) {
+  return exists(make_path(filename));
+}
 
 }  // namespace yocto
 
@@ -419,7 +547,7 @@ void load_ply(const string& filename, ply_model& ply) {
       {"float32", ply_type::f32}, {"float64", ply_type::f64}};
 
   // load data
-  auto data = load_binary(filename);
+  auto data = load_binary<ply_error>(filename);
 
   // parsing checks
   auto first_line = true;
@@ -713,7 +841,7 @@ void save_ply(const string& filename, const ply_model& ply) {
     }
 
     // save file
-    save_text(filename, buffer);
+    save_text<ply_error>(filename, buffer);
   } else {
     // buffer
     auto buffer = vector<byte>{
@@ -766,7 +894,7 @@ void save_ply(const string& filename, const ply_model& ply) {
     }
 
     // save file
-    save_binary(filename, buffer);
+    save_binary<ply_error>(filename, buffer);
   }
 }
 
@@ -1385,7 +1513,7 @@ static void load_mtl(const string& filename, obj_model& obj) {
   };
 
   // load data
-  auto data = load_text(filename);
+  auto data = load_text<obj_error>(filename);
 
   // init parsing
   obj.materials.emplace_back();
@@ -1487,7 +1615,7 @@ static void load_obx(const string& filename, obj_model& obj) {
   };
 
   // load data
-  auto data = load_text(filename);
+  auto data = load_text<obj_error>(filename);
 
   // init parsing
   obj.cameras.emplace_back();
@@ -1565,7 +1693,7 @@ static void load_obx(const string& filename, obj_model& obj) {
 void load_obj(const string& filename, obj_model& obj, bool face_varying,
     bool split_materials) {
   // load data
-  auto data = load_text(filename);
+  auto data = load_text<obj_error>(filename);
 
   // parsing state
   auto opositions   = vector<vec3f>{};
@@ -1774,7 +1902,7 @@ void load_obj(const string& filename, obj_model& obj, bool face_varying,
 // Read obj
 void load_obj(const string& filename, obj_shape& shape, bool face_varying) {
   // load data
-  auto data = load_text(filename);
+  auto data = load_text<obj_error>(filename);
 
   // parsing state
   auto material_map = unordered_map<string, int>{};
@@ -1968,7 +2096,7 @@ inline void save_mtl(const string& filename, const obj_model& obj) {
   }
 
   // save file
-  save_text(filename, buffer);
+  save_text<obj_error>(filename, buffer);
 }
 
 // Save obj
@@ -2010,7 +2138,7 @@ inline void save_obx(const string& filename, const obj_model& obj) {
   }
 
   // save file
-  save_text(filename, buffer);
+  save_text<obj_error>(filename, buffer);
 }
 
 // Save obj
@@ -2071,7 +2199,7 @@ void save_obj(const string& filename, const obj_model& obj) {
   }
 
   // save file
-  save_text(filename, buffer);
+  save_text<obj_error>(filename, buffer);
 
   // save mtl
   if (!obj.materials.empty()) {
@@ -2123,7 +2251,7 @@ void save_obj(const string& filename, const obj_shape& shape) {
   }
 
   // save file
-  save_text(filename, buffer);
+  save_text<obj_error>(filename, buffer);
 }
 
 // Load and save obj
@@ -2603,7 +2731,7 @@ void load_stl(const string& filename, stl_model& stl, bool unique_vertices) {
   stl.shapes.clear();
 
   // load data
-  auto data      = load_binary(filename);
+  auto data      = load_binary<stl_error>(filename);
   auto data_view = string_view{(const char*)data.data(), data.size()};
 
   // assume it is binary and read hader
@@ -2626,7 +2754,7 @@ void load_stl(const string& filename, stl_model& stl, bool unique_vertices) {
   // switch on type
   if (binary) {
     // load data
-    auto data      = load_binary(filename);
+    auto data      = load_binary<stl_error>(filename);
     auto data_view = string_view{(const char*)data.data(), data.size()};
 
     // skip header
@@ -2666,7 +2794,7 @@ void load_stl(const string& filename, stl_model& stl, bool unique_vertices) {
     if (stl.shapes.empty()) throw stl_error(filename + ": read error");
   } else {
     // load data
-    auto data = load_text(filename);
+    auto data = load_text<stl_error>(filename);
 
     // parse state
     auto in_solid = false, in_facet = false, in_loop = false;
@@ -2804,7 +2932,7 @@ void save_stl(const string& filename, const stl_model& stl, bool ascii) {
     }
 
     // save file
-    save_binary(filename, buffer);
+    save_binary<stl_error>(filename, buffer);
   } else {
     // buffer
     auto buffer = string{};
@@ -2831,7 +2959,7 @@ void save_stl(const string& filename, const stl_model& stl, bool ascii) {
     }
 
     // save file
-    save_text(filename, buffer);
+    save_text<stl_error>(filename, buffer);
   }
 }
 
@@ -4397,7 +4525,7 @@ inline void load_pbrt(const string& filename, pbrt_model& pbrt,
     unordered_map<string, vector<int>>&   named_objects,
     const string& ply_dirname, bool ply_meshes) {
   // load data
-  auto data = load_text(filename);
+  auto data = load_text<pbrt_error>(filename);
 
   // helpers
   auto set_transform = [](pbrt_stack_element& ctx, const frame3f& xform) {
@@ -4952,7 +5080,7 @@ void save_pbrt(
   format_values(buffer, "\nWorldEnd\n\n");
 
   // save file
-  save_text(filename, buffer);
+  save_text<pbrt_error>(filename, buffer);
 }
 
 // Load/save pbrt

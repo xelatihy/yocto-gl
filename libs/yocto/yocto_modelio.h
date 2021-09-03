@@ -43,7 +43,6 @@
 #include <string>
 #include <vector>
 
-#include "yocto_commonio.h"
 #include "yocto_math.h"
 
 // -----------------------------------------------------------------------------
