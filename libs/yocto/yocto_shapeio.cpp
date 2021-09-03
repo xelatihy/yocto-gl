@@ -125,8 +125,10 @@ void save_shape(const string& filename, const shape_data& shape,
     save_obj(filename, obj);
   } else if (ext == ".stl" || ext == ".STL") {
     auto stl = stl_model{};
-    if (!shape.lines.empty()) throw io_error{filename, "lines not supported"};
-    if (!shape.points.empty()) throw io_error{filename, "points not supported"};
+    if (!shape.lines.empty())
+      throw io_error{filename + ": lines not supported"};
+    if (!shape.points.empty())
+      throw io_error{filename + ": points not supported"};
     if (!shape.triangles.empty()) {
       add_triangles(stl, shape.triangles, shape.positions, {});
     } else if (!shape.quads.empty()) {

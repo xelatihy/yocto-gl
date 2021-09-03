@@ -125,7 +125,7 @@ vector<string> list_directory(const string& dirname) {
     }
     return entries;
   } catch (...) {
-    throw io_error{dirname, "cannot list directory"};
+    throw io_error{dirname + ": cannot list directory"};
   }
 }
 
@@ -135,7 +135,7 @@ void make_directory(const string& dirname) {
   try {
     create_directories(make_path(dirname));
   } catch (...) {
-    throw io_error{dirname, "cannot create directory"};
+    throw io_error{dirname + ": cannot create directory"};
   }
 }
 

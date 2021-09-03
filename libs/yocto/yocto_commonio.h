@@ -68,29 +68,27 @@ namespace yocto {
 
 // Io error used in exception handling
 struct io_error : std::runtime_error {
-  io_error(string& message) : std::runtime_error(message) {}
-  io_error(const string& filename, const string& message)
-      : std::runtime_error(filename + ": " + message) {}
+  io_error(const string& message) : std::runtime_error(message) {}
 
   // common errors
   // clang-format off
-  static io_error open_error(const string& filename) { return {filename, "file not found"}; }
-  static io_error read_error(const string& filename) { return {filename, "read error"}; }
-  static io_error write_error(const string& filename) { return {filename, "write error"}; }
-  static io_error parse_error(const string& filename) { return {filename, "parse error"}; }
-  static io_error parse_error(const string& filename, const string& path) { return {filename, "parse error at " + path}; }
-  static io_error format_error(const string& filename) { return {filename, "unknown format"}; }
-  static io_error preset_error(const string& filename) { return {filename, "unknown preset"}; }
-  static io_error shape_error(const string& filename) { return {filename, "empty shape"}; }
-  static io_error dependent_error(const string& filename, const io_error& error) { return {filename, string{"error in "} + error.what()}; }
-  static io_error json_error(const string& filename) { return {filename, "json error"}; }
-  static io_error material_error(const string& filename, const string& name) { return {filename, "missing material " + name}; }
-  static io_error object_error(const string& filename, const string& name) { return {filename, "missing object " + name}; }
-  static io_error shape_error(const string& filename, const string& name) { return {filename, "missing shape " + name}; }
-  static io_error command_error(const string& filename, const string& name) { return {filename, "unknown command " + name}; }
-  static io_error type_error(const string& filename, const string& name) { return {filename, "unknown type " + name}; }
-  static io_error mismatch_error(const string& filename1, const string& filename2, const string& error) { return {filename1 + " and " + filename2, error}; }
-  static io_error not_implemented_error(const string& error) { return {"not implemented", error}; }
+  static io_error open_error(const string& filename) { return io_error{filename + ": file not found"}; }
+  static io_error read_error(const string& filename) { return io_error{filename + ": read error"}; }
+  static io_error write_error(const string& filename) { return io_error{filename + ": write error"}; }
+  static io_error parse_error(const string& filename) { return io_error{filename + ": parse error"}; }
+  static io_error parse_error(const string& filename, const string& path) { return io_error{filename + ": parse error at " + path}; }
+  static io_error format_error(const string& filename) { return io_error{filename + ": unknown format"}; }
+  static io_error preset_error(const string& filename) { return io_error{filename + ": unknown preset"}; }
+  static io_error shape_error(const string& filename) { return io_error{filename + ": empty shape"}; }
+  static io_error dependent_error(const string& filename, const io_error& error) { return io_error{filename + string{": error in "} + error.what()}; }
+  static io_error json_error(const string& filename) { return io_error{filename + ": json error"}; }
+  static io_error material_error(const string& filename, const string& name) { return io_error{filename + "missing material " + name}; }
+  static io_error object_error(const string& filename, const string& name) { return io_error{filename + ": missing object " + name}; }
+  static io_error shape_error(const string& filename, const string& name) { return io_error{filename + ": missing shape " + name}; }
+  static io_error command_error(const string& filename, const string& name) { return io_error{filename + ": unknown command " + name}; }
+  static io_error type_error(const string& filename, const string& name) { return io_error{filename + ": unknown type " + name}; }
+  static io_error mismatch_error(const string& filename1, const string& filename2, const string& error) { return io_error{filename1 + " and " + filename2 + ": " + error}; }
+  static io_error not_implemented_error(const string& error) { return io_error{"not implemented " +  error}; }
   // clang-format on
 };
 

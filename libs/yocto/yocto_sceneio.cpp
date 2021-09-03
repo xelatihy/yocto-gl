@@ -219,9 +219,9 @@ void load_texture(const string& filename, texture_data& texture) {
 void save_texture(const string& filename, const texture_data& texture) {
   // check for correct handling
   if (!texture.pixelsf.empty() && is_ldr_filename(filename))
-    throw io_error{filename, "cannot save hdr texture to ldr file"};
+    throw io_error{filename + ": cannot save hdr texture to ldr file"};
   if (!texture.pixelsb.empty() && is_hdr_filename(filename))
-    throw io_error{filename, "cannot save ldr texture to hdr file"};
+    throw io_error{filename + ": cannot save ldr texture to hdr file"};
 
   // write data
   auto stbi_write_data = [](void* context, void* data, int size) {
@@ -1336,14 +1336,14 @@ static void load_json_scene_version40(const string& filename,
     auto path = patha;
     if (!pathb.empty()) path += "/" + pathb;
     if (!pathc.empty()) path += "/" + pathc;
-    throw io_error(filename, "parse error at " + path);
+    throw io_error(filename + ": parse error at " + path);
   };
   auto key_error = [filename](const string& patha, const string& pathb = "",
                        const string& pathc = "") {
     auto path = patha;
     if (!pathb.empty()) path += "/" + pathb;
     if (!pathc.empty()) path += "/" + pathc;
-    throw io_error(filename, "unknow key at " + path);
+    throw io_error(filename + "; unknow key at " + path);
   };
 
   // parse json value
@@ -2961,9 +2961,9 @@ static void load_gltf_scene(
                 shape.lines[i - 1] = {i - 1, i};
             } else if (mode == 0) {  // points strips
               // points
-              throw io_error{filename, "primitive_error"};
+              throw io_error{filename + ": primitive_error"};
             } else {
-              throw io_error{filename, "primitive_error"};
+              throw io_error{filename + ": primitive_error"};
             }
           } else {
             auto& gaccessor =
@@ -3035,9 +3035,9 @@ static void load_gltf_scene(
               }
             } else if (mode == 0) {  // points strips
               // points
-              throw io_error{filename, "primitive_error"};
+              throw io_error{filename + ": primitive_error"};
             } else {
-              throw io_error{filename, "primitive_error"};
+              throw io_error{filename + ": primitive_error"};
             }
           }
         }
