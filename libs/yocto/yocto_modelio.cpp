@@ -37,6 +37,7 @@
 #include <unordered_set>
 #include <utility>
 
+#include "ext/fast_float.h"
 #include "yocto_color.h"
 
 // -----------------------------------------------------------------------------
@@ -290,14 +291,16 @@ inline void parse_value(string_view& str, uint64_t& value) {
 }
 inline void parse_value(string_view& str, float& value) {
   skip_whitespace(str);
-  auto result = from_chars(str.data(), str.data() + str.size(), value);
-  if (result.ptr == str.data()) throw std::invalid_argument{"integer expected"};
+  auto result = fast_float::from_chars(
+      str.data(), str.data() + str.size(), value);
+  if (result.ptr == str.data()) throw std::invalid_argument{"number expected"};
   str.remove_prefix(result.ptr - str.data());
 }
 inline void parse_value(string_view& str, double& value) {
   skip_whitespace(str);
-  auto result = from_chars(str.data(), str.data() + str.size(), value);
-  if (result.ptr == str.data()) throw std::invalid_argument{"integer expected"};
+  auto result = fast_float::from_chars(
+      str.data(), str.data() + str.size(), value);
+  if (result.ptr == str.data()) throw std::invalid_argument{"number expected"};
   str.remove_prefix(result.ptr - str.data());
 }
 #ifdef __APPLE__

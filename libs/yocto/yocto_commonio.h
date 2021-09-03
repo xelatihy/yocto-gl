@@ -788,22 +788,6 @@ bool format_json(string& text, const json_value& json, string& error);
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// from_chars result
-struct from_chars_result {
-  const char* ptr;
-  std::errc   ec;
-};
-
-// from_chars
-template <typename T>
-from_chars_result from_chars(const char* first, const char* last, T& value) {
-  auto result = std::from_chars(first, last, value);
-  return {result.ptr, result.ec};
-}
-from_chars_result from_chars(const char* first, const char* last, float& value);
-from_chars_result from_chars(
-    const char* first, const char* last, double& value);
-
 // to_chars result
 struct to_chars_result {
   char*     ptr;
@@ -812,7 +796,7 @@ struct to_chars_result {
 
 // to_chars
 template <typename T>
-from_chars_result to_chars(const char* first, const char* last, T value) {
+to_chars_result to_chars(const char* first, const char* last, T value) {
   auto result = std::to_chars(first, last, value);
   return {result.ptr, result.ec};
 }
