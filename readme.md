@@ -39,14 +39,11 @@ See each header file for documentation.
   area and environment illumination, microfacet GGX and subsurface scattering,
   multiple importance sampling
 - `yocto/yocto_cli.{h,cpp}`: printing utilities and command line parsing
-- `yocto/yocto_imageio.{h,cpp}`: image serialization
-- `yocto/yocto_shapeio.{h,cpp}`: shape serialization
-- `yocto/yocto_sceneio.{h,cpp}`: scene serialization
-- `yocto/yocto_commonio.{h,cpp}`: common IO operations, path helpers,
-  text and binary serialization, Json data model, Json serialization
+- `yocto/yocto_sceneio.{h,cpp}`: image, shape and scene serialization
 - `yocto/yocto_modelio.{h,cpp}`: low-level parsing and writing for 
   Ply, Obj, Stl, Pbrt formats
 - `yocto/yocto_parallel.h`: concurrency utilities
+- `yocto/yocto_json.{h,cpp}`: Json data model and serialization
 
 You can see Yocto/GL in action in the following applications written to
 test the library:
