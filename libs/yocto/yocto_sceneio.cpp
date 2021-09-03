@@ -2631,7 +2631,7 @@ static void load_ply_scene(
 static void save_ply_scene(
     const string& filename, const scene_data& scene, bool noparallel) {
   // save shape
-  if (scene.shapes.empty()) throw io_error::shape_error(filename);
+  if (scene.shapes.empty()) throw io_error{filename + ": empty shape"};
   save_shape(filename, scene.shapes.front(), false);
 }
 
@@ -2657,7 +2657,7 @@ static void load_stl_scene(
 static void save_stl_scene(
     const string& filename, const scene_data& scene, bool noparallel) {
   // save shape
-  if (scene.shapes.empty()) throw io_error::shape_error(filename);
+  if (scene.shapes.empty()) throw io_error{filename + ": empty shape"};
   save_shape(filename, scene.shapes.front(), false);
 }
 
