@@ -1,5 +1,5 @@
 //
-// Implementation for Yocto/Scene Input and Output functions.
+// Implementation for Yocto/Scene.
 //
 
 //
