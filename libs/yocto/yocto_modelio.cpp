@@ -251,7 +251,8 @@ inline void format_value(string& str, float value) {
 inline void format_value(string& str, double value) {
   auto buffer = array<char, 256>{};
 #ifdef _WIN32
-  auto result = to_chars(buffer.data(), buffer.data() + buffer.size(), value);
+  auto result = std::to_chars(
+      buffer.data(), buffer.data() + buffer.size(), value);
   str.append(buffer.data(), result.ptr);
 #else
   auto len = snprintf(buffer.data(), buffer.size(), "%.17g", value);
