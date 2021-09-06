@@ -3303,13 +3303,9 @@ static bool load_json_scene_version41(const string& filename, json_value& json,
         auto& datafile   = texture_filenames.emplace_back();
         texture_map[key] = (int)scene.textures.size() - 1;
         if (element.is_string()) {
-          auto filename = element.get<string>();
-          if (!ends_with(filename, ".json")) {
-            element             = json_value::object();
-            element["datafile"] = filename;
-          } else {
-            throw io_error{filename + ": parse error"};
-          }
+          auto filename       = element.get<string>();
+          element             = json_value::object();
+          element["datafile"] = filename;
         }
         get_opt(element, "datafile", datafile);
       }
@@ -3351,13 +3347,9 @@ static bool load_json_scene_version41(const string& filename, json_value& json,
         auto& datafile = shape_filenames.emplace_back();
         shape_map[key] = (int)scene.shapes.size() - 1;
         if (element.is_string()) {
-          auto filename = element.get<string>();
-          if (!ends_with(filename, ".json")) {
-            element             = json_value::object();
-            element["datafile"] = filename;
-          } else {
-            throw io_error{filename + ": parse error"};
-          }
+          auto filename       = element.get<string>();
+          element             = json_value::object();
+          element["datafile"] = filename;
         }
         get_opt(element, "datafile", datafile);
       }
@@ -3517,8 +3509,7 @@ static bool load_json_scene(
       get_opt(element, "copyright", scene.copyright);
       auto version = string{};
       get_opt(element, "version", version);
-      if (version != "4.2" && version != "5.0")
-        throw io_error(filename + ": parse error in " + "/asset/version");
+      if (version != "4.2" && version != "5.0") return parse_error();
     }
     if (json.contains("cameras")) {
       auto& group = json.at("cameras");

@@ -393,56 +393,56 @@ static bool read_line(string_view& str, string_view& line) {
 [[nodiscard]] static bool parse_value(string_view& str, int8_t& value) {
   skip_whitespace(str);
   auto result = std::from_chars(str.data(), str.data() + str.size(), value);
-  if (result.ptr == str.data()) throw std::invalid_argument{"integer expected"};
+  if (result.ptr == str.data()) return false;
   str.remove_prefix(result.ptr - str.data());
   return true;
 }
 [[nodiscard]] static bool parse_value(string_view& str, int16_t& value) {
   skip_whitespace(str);
   auto result = std::from_chars(str.data(), str.data() + str.size(), value);
-  if (result.ptr == str.data()) throw std::invalid_argument{"integer expected"};
+  if (result.ptr == str.data()) return false;
   str.remove_prefix(result.ptr - str.data());
   return true;
 }
 [[nodiscard]] static bool parse_value(string_view& str, int32_t& value) {
   skip_whitespace(str);
   auto result = std::from_chars(str.data(), str.data() + str.size(), value);
-  if (result.ptr == str.data()) throw std::invalid_argument{"integer expected"};
+  if (result.ptr == str.data()) return false;
   str.remove_prefix(result.ptr - str.data());
   return true;
 }
 [[nodiscard]] static bool parse_value(string_view& str, int64_t& value) {
   skip_whitespace(str);
   auto result = std::from_chars(str.data(), str.data() + str.size(), value);
-  if (result.ptr == str.data()) throw std::invalid_argument{"integer expected"};
+  if (result.ptr == str.data()) return false;
   str.remove_prefix(result.ptr - str.data());
   return true;
 }
 [[nodiscard]] static bool parse_value(string_view& str, uint8_t& value) {
   skip_whitespace(str);
   auto result = std::from_chars(str.data(), str.data() + str.size(), value);
-  if (result.ptr == str.data()) throw std::invalid_argument{"integer expected"};
+  if (result.ptr == str.data()) return false;
   str.remove_prefix(result.ptr - str.data());
   return true;
 }
 [[nodiscard]] static bool parse_value(string_view& str, uint16_t& value) {
   skip_whitespace(str);
   auto result = std::from_chars(str.data(), str.data() + str.size(), value);
-  if (result.ptr == str.data()) throw std::invalid_argument{"integer expected"};
+  if (result.ptr == str.data()) return false;
   str.remove_prefix(result.ptr - str.data());
   return true;
 }
 [[nodiscard]] static bool parse_value(string_view& str, uint32_t& value) {
   skip_whitespace(str);
   auto result = std::from_chars(str.data(), str.data() + str.size(), value);
-  if (result.ptr == str.data()) throw std::invalid_argument{"integer expected"};
+  if (result.ptr == str.data()) return false;
   str.remove_prefix(result.ptr - str.data());
   return true;
 }
 [[nodiscard]] static bool parse_value(string_view& str, uint64_t& value) {
   skip_whitespace(str);
   auto result = std::from_chars(str.data(), str.data() + str.size(), value);
-  if (result.ptr == str.data()) throw std::invalid_argument{"integer expected"};
+  if (result.ptr == str.data()) return false;
   str.remove_prefix(result.ptr - str.data());
   return true;
 }
@@ -450,7 +450,7 @@ static bool read_line(string_view& str, string_view& line) {
   skip_whitespace(str);
   auto result = fast_float::from_chars(
       str.data(), str.data() + str.size(), value);
-  if (result.ptr == str.data()) throw std::invalid_argument{"number expected"};
+  if (result.ptr == str.data()) return false;
   str.remove_prefix(result.ptr - str.data());
   return true;
 }
@@ -458,7 +458,7 @@ static bool read_line(string_view& str, string_view& line) {
   skip_whitespace(str);
   auto result = fast_float::from_chars(
       str.data(), str.data() + str.size(), value);
-  if (result.ptr == str.data()) throw std::invalid_argument{"number expected"};
+  if (result.ptr == str.data()) return false;
   str.remove_prefix(result.ptr - str.data());
   return true;
 }
@@ -466,7 +466,7 @@ static bool read_line(string_view& str, string_view& line) {
 [[nodiscard]] static bool parse_value(string_view& str, size_t& value) {
   skip_whitespace(str);
   auto result = std::from_chars(str.data(), str.data() + str.size(), value);
-  if (result.ptr == str.data()) throw std::invalid_argument{"integer expected"};
+  if (result.ptr == str.data()) return false;
   str.remove_prefix(result.ptr - str.data());
   return true;
 }
@@ -591,6 +591,10 @@ bool load_ply(const string& filename, ply_model& ply, string& error) {
     error = filename + ": parse error";
     return false;
   };
+  auto read_error = [&filename, &error]() {
+    error = filename + ": parse error";
+    return false;
+  };
   while (read_line(data_view, str)) {
     // str
     remove_comment(str);
@@ -622,7 +626,7 @@ bool load_ply(const string& filename, ply_model& ply, string& error) {
       } else if (fmt == "binary_big_endian") {
         ply.format = ply_format::binary_big_endian;
       } else {
-        throw ply_error(filename + ": parse error");
+        return parse_error();
       }
     } else if (cmd == "comment") {
       skip_whitespace(str);
@@ -686,8 +690,7 @@ bool load_ply(const string& filename, ply_model& ply, string& error) {
   if (ply.format == ply_format::ascii) {
     for (auto& elem : ply.elements) {
       for (auto idx = 0; idx < elem.count; idx++) {
-        if (!read_line(data_view, str))
-          throw ply_error(filename + ": read error");
+        if (!read_line(data_view, str)) return read_error();
         for (auto& prop : elem.properties) {
           if (prop.is_list)
             if (!parse_value(str, prop.ldata_u8.emplace_back()))
@@ -741,10 +744,6 @@ bool load_ply(const string& filename, ply_model& ply, string& error) {
       }
     }
   } else {
-    auto read_error = [&filename, &error]() {
-      error = filename + ": parse error";
-      return false;
-    };
     auto big_endian = ply.format == ply_format::binary_big_endian;
     for (auto& elem : ply.elements) {
       for (auto idx = 0; idx < elem.count; idx++) {
@@ -1691,62 +1690,58 @@ static bool load_obx(const string& filename, obj_model& obj, string& error) {
     return false;
   };
   while (read_line(data_view, str)) {
-    try {
-      // str
-      remove_comment(str);
-      skip_whitespace(str);
-      if (str.empty()) continue;
+    // str
+    remove_comment(str);
+    skip_whitespace(str);
+    if (str.empty()) continue;
 
-      // get command
-      auto cmd = ""s;
-      if (!parse_value(str, cmd)) return parse_error();
-      if (cmd.empty()) continue;
+    // get command
+    auto cmd = ""s;
+    if (!parse_value(str, cmd)) return parse_error();
+    if (cmd.empty()) continue;
 
-      // grab elements
-      auto& camera      = obj.cameras.back();
-      auto& environment = obj.environments.back();
+    // grab elements
+    auto& camera      = obj.cameras.back();
+    auto& environment = obj.environments.back();
 
-      // read values
-      if (cmd == "newCam") {
-        auto& camera = obj.cameras.emplace_back();
-        if (!parse_value(str, camera.name)) return parse_error();
-      } else if (cmd == "Co") {
-        if (!parse_value(str, camera.ortho)) return parse_error();
-      } else if (cmd == "Ca") {
-        if (!parse_value(str, camera.aspect)) return parse_error();
-      } else if (cmd == "Cl") {
-        if (!parse_value(str, camera.lens)) return parse_error();
-      } else if (cmd == "Cs") {
-        if (!parse_value(str, camera.film)) return parse_error();
-      } else if (cmd == "Cf") {
-        if (!parse_value(str, camera.focus)) return parse_error();
-      } else if (cmd == "Cp") {
-        if (!parse_value(str, camera.aperture)) return parse_error();
-      } else if (cmd == "Cx") {
-        if (!parse_value(str, camera.frame)) return parse_error();
-      } else if (cmd == "Ct") {
-        auto lookat = mat3f{};
-        if (!parse_value(str, lookat)) return parse_error();
-        camera.frame = lookat_frame(lookat.x, lookat.y, lookat.z);
-        if (camera.focus == 0) camera.focus = length(lookat.y - lookat.x);
-      } else if (cmd == "newEnv") {
-        auto& environment = obj.environments.emplace_back();
-        if (!parse_value(str, environment.name)) return parse_error();
-      } else if (cmd == "Ee") {
-        if (!parse_value(str, environment.emission)) return parse_error();
-      } else if (cmd == "map_Ee") {
-        if (!parse_texture(str, environment.emission_tex)) return parse_error();
-      } else if (cmd == "Ex") {
-        if (!parse_value(str, environment.frame)) return parse_error();
-      } else if (cmd == "Et") {
-        auto lookat = mat3f{};
-        if (!parse_value(str, lookat)) return parse_error();
-        environment.frame = lookat_frame(lookat.x, lookat.y, lookat.z, true);
-      } else {
-        // unused
-      }
-    } catch (...) {
-      throw obj_error(filename + ": parse error");
+    // read values
+    if (cmd == "newCam") {
+      auto& camera = obj.cameras.emplace_back();
+      if (!parse_value(str, camera.name)) return parse_error();
+    } else if (cmd == "Co") {
+      if (!parse_value(str, camera.ortho)) return parse_error();
+    } else if (cmd == "Ca") {
+      if (!parse_value(str, camera.aspect)) return parse_error();
+    } else if (cmd == "Cl") {
+      if (!parse_value(str, camera.lens)) return parse_error();
+    } else if (cmd == "Cs") {
+      if (!parse_value(str, camera.film)) return parse_error();
+    } else if (cmd == "Cf") {
+      if (!parse_value(str, camera.focus)) return parse_error();
+    } else if (cmd == "Cp") {
+      if (!parse_value(str, camera.aperture)) return parse_error();
+    } else if (cmd == "Cx") {
+      if (!parse_value(str, camera.frame)) return parse_error();
+    } else if (cmd == "Ct") {
+      auto lookat = mat3f{};
+      if (!parse_value(str, lookat)) return parse_error();
+      camera.frame = lookat_frame(lookat.x, lookat.y, lookat.z);
+      if (camera.focus == 0) camera.focus = length(lookat.y - lookat.x);
+    } else if (cmd == "newEnv") {
+      auto& environment = obj.environments.emplace_back();
+      if (!parse_value(str, environment.name)) return parse_error();
+    } else if (cmd == "Ee") {
+      if (!parse_value(str, environment.emission)) return parse_error();
+    } else if (cmd == "map_Ee") {
+      if (!parse_texture(str, environment.emission_tex)) return parse_error();
+    } else if (cmd == "Ex") {
+      if (!parse_value(str, environment.frame)) return parse_error();
+    } else if (cmd == "Et") {
+      auto lookat = mat3f{};
+      if (!parse_value(str, lookat)) return parse_error();
+      environment.frame = lookat_frame(lookat.x, lookat.y, lookat.z, true);
+    } else {
+      // unused
     }
   }
 
@@ -1868,8 +1863,7 @@ bool load_obj(const string& filename, obj_model& obj, string& error,
       auto mname = string{};
       if (!parse_value(str, mname)) return parse_error();
       auto material_it = material_map.find(mname);
-      if (material_it == material_map.end())
-        throw obj_error(filename + ": missing material " + mname);
+      if (material_it == material_map.end()) return parse_error();
       if (split_materials && cur_material != material_it->second) {
         cur_material  = material_it->second;
         auto shape_it = cur_shapes.find(cur_material);
@@ -2902,7 +2896,7 @@ bool load_stl(const string& filename, stl_model& stl, string& error,
     }
 
     // check if read at least one
-    if (stl.shapes.empty()) throw stl_error(filename + ": read error");
+    if (stl.shapes.empty()) return read_error();
   } else {
     // load data
     auto data = string{};
@@ -3223,8 +3217,7 @@ static bool get_pbrt_value(const pbrt_value& pbrt, vector<vec2f>& val) {
     }
     return true;
   } else if (pbrt.type == pbrt_type::real) {
-    if (pbrt.vector1f.empty() || (pbrt.vector1f.size() % 2) != 0)
-      throw std::runtime_error("bad pbrt type");
+    if (pbrt.vector1f.empty() || (pbrt.vector1f.size() % 2) != 0) return false;
     val.resize(pbrt.vector1f.size() / 2);
     for (auto i = 0; i < val.size(); i++)
       val[i] = {pbrt.vector1f[i * 2 + 0], pbrt.vector1f[i * 2 + 1]};
@@ -3243,8 +3236,7 @@ static bool get_pbrt_value(const pbrt_value& pbrt, vector<vec3f>& val) {
     }
     return true;
   } else if (pbrt.type == pbrt_type::real) {
-    if (pbrt.vector1f.empty() || (pbrt.vector1f.size() % 3) != 0)
-      throw std::invalid_argument{"expected float3 array"};
+    if (pbrt.vector1f.empty() || (pbrt.vector1f.size() % 3) != 0) return false;
     val.resize(pbrt.vector1f.size() / 3);
     for (auto i = 0; i < val.size(); i++)
       val[i] = {pbrt.vector1f[i * 3 + 0], pbrt.vector1f[i * 3 + 1],
@@ -3270,8 +3262,7 @@ static bool get_pbrt_value(const pbrt_value& pbrt, vector<vec3f>& val) {
 }
 static bool get_pbrt_value(const pbrt_value& pbrt, vector<vec3i>& val) {
   if (pbrt.type == pbrt_type::integer) {
-    if (pbrt.vector1i.empty() || (pbrt.vector1i.size() % 3) != 0)
-      throw std::invalid_argument{"expected int3 array"};
+    if (pbrt.vector1i.empty() || (pbrt.vector1i.size() % 3) != 0) return false;
     val.resize(pbrt.vector1i.size() / 3);
     for (auto i = 0; i < val.size(); i++)
       val[i] = {pbrt.vector1i[i * 3 + 0], pbrt.vector1i[i * 3 + 1],
@@ -3451,11 +3442,10 @@ template <typename T>
   auto parens = !str.empty() && str.front() == '[';
   if (parens) str.remove_prefix(1);
   if (!parse_value(str, value)) return false;
-  if (!str.data()) throw std::invalid_argument{"value expected"};
+  if (!str.data()) return false;
   if (parens) {
     skip_whitespace(str);
-    if (!str.empty() && str.front() == '[')
-      throw std::invalid_argument{"array expected"};
+    if (!str.empty() && str.front() == '[') return false;
     str.remove_prefix(1);
   }
   return true;
@@ -3466,14 +3456,14 @@ template <typename T>
     string_view& str_, string& name, string& type) {
   auto value = ""s;
   if (!parse_value(str_, value)) return false;
-  if (str_.empty()) throw std::invalid_argument{"string expected"};
+  if (str_.empty()) return false;
   auto str  = string_view{value};
   auto pos1 = str.find(' ');
-  if (pos1 == string_view::npos) throw std::invalid_argument{"string expected"};
+  if (pos1 == string_view::npos) return false;
   type = string(str.substr(0, pos1));
   str.remove_prefix(pos1);
   auto pos2 = str.find_first_not_of(' ');
-  if (pos2 == string_view::npos) throw std::invalid_argument{"string expected"};
+  if (pos2 == string_view::npos) return false;
   str.remove_prefix(pos2);
   name = string(str);
   return true;
@@ -3767,7 +3757,7 @@ template <typename T, typename V>
       value.type = pbrt_type::color;
       if (!parse_pvalues(str, value.value3f, value.vector3f)) return false;
       // xyz conversion
-      throw std::invalid_argument{"xyz not supported"};
+      return false;
     } else if (type == "spectrum") {
       auto is_string = false;
       auto str1      = str;
@@ -4283,8 +4273,7 @@ struct pbrt_medium {
     get_pbrt_value(command.values, "namedmaterial2", namedmaterial2);
     auto matname = (!namedmaterial1.empty()) ? namedmaterial1 : namedmaterial2;
     auto matit   = named_materials.find(matname);
-    if (matit == named_materials.end())
-      throw pbrt_error(filename + "missing material " + matname);
+    if (matit == named_materials.end()) return false;
     auto saved_name = pmaterial.name;
     pmaterial       = matit->second;
     pmaterial.name  = saved_name;
@@ -4658,7 +4647,7 @@ static bool load_pbrt(const string& filename, pbrt_model& pbrt, string& error,
       auto object = ""s;
       if (!parse_param(str, object)) return parse_error();
       if (named_objects.find(object) == named_objects.end())
-        throw pbrt_error(filename + ": unknow object " + object);
+        return parse_error();
       auto& named_object = named_objects.at(object);
       for (auto& shape_id : named_object) {
         pbrt.shapes[shape_id].instances.push_back(
@@ -4795,7 +4784,7 @@ static bool load_pbrt(const string& filename, pbrt_model& pbrt, string& error,
       auto name = ""s;
       if (!parse_param(str, name)) return parse_error();
       if (named_materials.find(name) == named_materials.end())
-        throw pbrt_error(filename + ": unknown material " + name);
+        return parse_error();
       ctx.stack.back().material = named_materials.at(name);
     } else if (cmd == "Shape") {
       auto command = pbrt_command{};
