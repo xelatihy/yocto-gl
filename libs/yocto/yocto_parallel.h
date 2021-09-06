@@ -295,7 +295,7 @@ inline bool parallel_for(T num, string& error, Func&& func) {
             if (has_error) break;
             auto idx = next_idx.fetch_add(1);
             if (idx >= num) break;
-            if (func(idx, this_error)) {
+            if (!func(idx, this_error)) {
               has_error = true;
               auto _    = std::lock_guard{error_mutex};
               error     = this_error;
@@ -305,7 +305,7 @@ inline bool parallel_for(T num, string& error, Func&& func) {
         }));
   }
   for (auto& f : futures) f.get();
-  return (bool)has_error;
+  return !(bool)has_error;
 }
 
 // Simple parallel for used since our target platforms do not yet support
