@@ -70,7 +70,8 @@ bool is_ldr_filename(const string& filename);
 image_data make_image_preset(const string& type);
 
 // Loads/saves a 4 channels float/byte image in linear/srgb color space.
-bool load_image(const string& filename, image_data& img, string& error);
+image_data load_image(const string& filename, string& error);
+bool       load_image(const string& filename, image_data& img, string& error);
 bool save_image(const string& filename, const image_data& img, string& error);
 
 // Make presets. Supported mostly in IO.
@@ -94,6 +95,7 @@ namespace yocto {
 texture_data make_texture_preset(const string& type);
 
 // Load/save a texture in the supported formats.
+texture_data load_texture(const string& filename, string& error);
 bool load_texture(const string& filename, texture_data& texture, string& error);
 bool save_texture(
     const string& filename, const texture_data& texture, string& error);
@@ -130,12 +132,16 @@ shape_data   make_shape_preset(const string& type);
 fvshape_data make_fvshape_preset(const string& type);
 
 // Load/save a shape
+shape_data load_shape(
+    const string& filename, string& error, bool flip_texcoords = true);
 bool load_shape(const string& filename, shape_data& shape, string& error,
     bool flip_texcoords = true);
 bool save_shape(const string& filename, const shape_data& shape, string& error,
     bool flip_texcoords = true, bool ascii = false);
 
 // Load/save a subdiv
+fvshape_data load_fvshape(
+    const string& filename, string& error, bool flip_texcoords = true);
 bool load_fvshape(const string& filename, fvshape_data& shape, string& error,
     bool flip_texcoords = true);
 bool save_fvshape(const string& filename, const fvshape_data& shape,
@@ -160,6 +166,7 @@ namespace yocto {
     const string& filename, const subdiv_data& subdiv);
 
 // Load/save a subdiv in the supported formats.
+subdiv_data load_subdiv(const string& filename, string& error);
 bool load_subdiv(const string& filename, subdiv_data& subdiv, string& error);
 bool save_subdiv(
     const string& filename, const subdiv_data& subdiv, string& error);
@@ -188,6 +195,8 @@ scene_data make_scene_preset(const string& type);
 void add_environment(scene_data& scene, const string& filename);
 
 // Load/save a scene in the supported formats.
+scene_data load_scene(
+    const string& filename, string& error, bool noparallel = false);
 bool load_scene(const string& filename, scene_data& scene, string& error,
     bool noparallel = false);
 bool save_scene(const string& filename, const scene_data& scene, string& error,
@@ -237,10 +246,12 @@ void         load_binary(const string& filename, vector<byte>& data);
 void         save_binary(const string& filename, const vector<byte>& data);
 
 // Load/save a text file
-bool load_text(const string& filename, string& str, string& error);
-bool save_text(const string& filename, const string& str, string& error);
+string load_text(const string& filename, string& error);
+bool   load_text(const string& filename, string& str, string& error);
+bool   save_text(const string& filename, const string& str, string& error);
 
 // Load/save a binary file
+vector<byte> load_binary(const string& filename, string& error);
 bool load_binary(const string& filename, vector<byte>& data, string& error);
 bool save_binary(
     const string& filename, const vector<byte>& data, string& error);

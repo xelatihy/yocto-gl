@@ -750,6 +750,11 @@ image_data make_image_preset(const string& type_) {
 }
 
 // Loads/saves an image. Chooses hdr or ldr based on file name.
+image_data load_image(const string& filename, string& error) {
+  auto image = image_data{};
+  if (!load_image(filename, image, error)) return false;
+  return image;
+}
 image_data load_image(const string& filename) {
   auto error = string{};
   auto image = image_data{};
@@ -1595,6 +1600,12 @@ fvshape_data make_fvshape_preset(const string& type) {
 }
 
 // Load mesh
+shape_data load_shape(
+    const string& filename, string& error, bool flip_texcoord) {
+  auto shape = shape_data{};
+  if (!load_shape(filename, shape, error, flip_texcoord)) return false;
+  return shape;
+}
 shape_data load_shape(const string& filename, bool flip_texcoord) {
   auto error = string{};
   auto shape = shape_data{};
@@ -1613,6 +1624,13 @@ void save_shape(const string& filename, const shape_data& shape,
 }
 
 // Load mesh
+fvshape_data load_fvshape(
+    const string& filename, string& error, bool flip_texcoord) {
+  auto shape = fvshape_data{};
+  if (!load_fvshape(filename, shape, error, flip_texcoord)) return false;
+  throw io_error{error};
+  return shape;
+}
 fvshape_data load_fvshape(const string& filename, bool flip_texcoord) {
   auto error = string{};
   auto shape = fvshape_data{};
@@ -1831,6 +1849,11 @@ texture_data make_texture_preset(const string& type) {
 }
 
 // Loads/saves an image. Chooses hdr or ldr based on file name.
+texture_data load_texture(const string& filename, string& error) {
+  auto texture = texture_data{};
+  if (!load_texture(filename, texture, error)) return false;
+  return texture;
+}
 texture_data load_texture(const string& filename) {
   auto error   = string{};
   auto texture = texture_data{};
@@ -2770,6 +2793,11 @@ bool save_subdiv(
 }
 
 // load/save subdiv
+subdiv_data load_subdiv(const string& filename, string& error) {
+  auto subdiv = subdiv_data{};
+  if (!load_subdiv(filename, subdiv, error)) return false;
+  return subdiv;
+}
 subdiv_data load_subdiv(const string& filename) {
   auto error  = string{};
   auto subdiv = subdiv_data{};
