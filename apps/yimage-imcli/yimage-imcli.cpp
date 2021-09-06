@@ -48,14 +48,14 @@ struct convert_params {
 };
 
 // Cli
-void add_options(const cli_command& cli, convert_params& params) {
-  add_argument(cli, "image", params.image, "Input image.");
-  add_option(cli, "output", params.output, "Output image.");
-  add_option(
-      cli, "exposure", params.exposure, "Tonemap exposure.", {-100, +100});
-  add_option(cli, "filmic", params.filmic, "Tonemap filmic.");
-  add_option(cli, "width", params.width, "Resize width.", {1, int_max});
-  add_option(cli, "height", params.height, "Resize height.", {1, int_max});
+void get_options(imcli_state& cli, convert_params& params) {
+  get_option(cli, "output", params.output, "Output image.");
+  get_option(
+      cli, "exposure", params.exposure, "Tonemap exposure.", -100.0f, +100.0f);
+  get_option(cli, "filmic", params.filmic, "Tonemap filmic.");
+  get_option(cli, "width", params.width, "Resize width.", 1, int_max);
+  get_option(cli, "height", params.height, "Resize height.", 1, int_max);
+  get_argument(cli, "image", params.image, "Input image.");
 }
 
 // convert images
@@ -84,9 +84,9 @@ struct view_params {
 };
 
 // Cli
-void add_options(const cli_command& cli, view_params& params) {
-  add_argument(cli, "images", params.images, "Input images.");
-  add_option(cli, "output", params.output, "Output image.");
+void get_options(imcli_state& cli, view_params& params) {
+  get_option(cli, "output", params.output, "Output image.");
+  get_arguments(cli, "images", params.images, "Input images.");
 }
 
 #ifndef YOCTO_OPENGL
@@ -119,9 +119,9 @@ struct grade_params : colorgrade_params {
 };
 
 // Cli
-void add_options(const cli_command& cli, grade_params& params) {
-  add_argument(cli, "image", params.image, "Input image.");
-  add_option(cli, "output", params.output, "Output image.");
+void get_options(imcli_state& cli, grade_params& params) {
+  get_option(cli, "output", params.output, "Output image.");
+  get_argument(cli, "image", params.image, "Input image.");
 }
 
 #ifndef YOCTO_OPENGL
@@ -154,12 +154,12 @@ struct diff_params {
 };
 
 // Cli
-void add_options(const cli_command& cli, diff_params& params) {
-  add_argument(cli, "image1", params.image1, "Input image 1.");
-  add_argument(cli, "image2", params.image2, "Input image 2.");
-  add_option(cli, "output", params.output, "Output image.");
-  add_option(cli, "signal", params.signal, "Error on diff.");
-  add_option(cli, "threshold", params.threshold, "Diff threshold.");
+void get_options(imcli_state& cli, diff_params& params) {
+  get_option(cli, "output", params.output, "Output image.");
+  get_option(cli, "signal", params.signal, "Error on diff.");
+  get_option(cli, "threshold", params.threshold, "Diff threshold.");
+  get_argument(cli, "image1", params.image1, "Input image 1.");
+  get_argument(cli, "image2", params.image2, "Input image 2.");
 }
 
 // resize images
@@ -208,13 +208,13 @@ struct setalpha_params {
 };
 
 // Cli
-void add_options(const cli_command& cli, setalpha_params& params) {
-  add_argument(cli, "image", params.image, "Input image.");
-  add_argument(cli, "alpha", params.alpha, "Alpha image.");
-  add_option(cli, "output", params.output, "Output image.");
-  add_option(cli, "from-color", params.from_color, "Alpha from color.");
-  add_option(cli, "from-black", params.from_black, "Alpha from black.");
-  add_option(cli, "to-color", params.to_color, "Color from alpha.");
+void get_options(imcli_state& cli, setalpha_params& params) {
+  get_option(cli, "output", params.output, "Output image.");
+  get_option(cli, "from-color", params.from_color, "Alpha from color.");
+  get_option(cli, "from-black", params.from_black, "Alpha from black.");
+  get_option(cli, "to-color", params.to_color, "Color from alpha.");
+  get_argument(cli, "image", params.image, "Input image.");
+  get_argument(cli, "alpha", params.alpha, "Alpha image.");
 }
 
 // setalpha images
@@ -265,21 +265,32 @@ struct app_params {
 };
 
 // Cli
-void add_options(const cli_command& cli, app_params& params) {
-  set_command_var(cli, params.command);
-  add_command(cli, "convert", params.convert, "Convert images.");
-  add_command(cli, "view", params.view, "View images.");
-  add_command(cli, "grade", params.grade, "Grade images.");
-  add_command(cli, "diff", params.diff, "Diff two images.");
-  add_command(cli, "setalpha", params.setalpha, "Set alpha in images.");
+void get_options(imcli_state& cli, app_params& params) {
+  if (get_command(cli, "convert", "Convert images.")) {
+    params.command = "convert";
+    get_options(cli, params.convert);
+  } else if (get_command(cli, "view", "View images.")) {
+    params.command = "view";
+    get_options(cli, params.view);
+  } else if (get_command(cli, "grade", "Grade images.")) {
+    params.command = "grade";
+    get_options(cli, params.grade);
+  } else if (get_command(cli, "diff", "Diff images.")) {
+    params.command = "diff";
+    get_options(cli, params.diff);
+  } else if (get_command(cli, "setalpha", "Set alpha in images.")) {
+    params.command = "setalpha";
+    get_options(cli, params.setalpha);
+  }
 }
 
 // Run
 void run(const vector<string>& args) {
   // command line parameters
   auto params = app_params{};
-  auto cli    = make_cli("yimage", params, "Process and view images.");
-  parse_cli(cli, args);
+  auto cli    = make_imcli("yimage", "Process and view images.", args);
+  get_options(cli, params);
+  if (!check_cli(cli)) print_fatal(get_message(cli));
 
   // dispatch commands
   if (params.command == "convert") {
