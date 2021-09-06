@@ -423,12 +423,16 @@ bool is_ldr_filename(const string& filename) {
 }
 
 // Loads/saves an image. Chooses hdr or ldr based on file name.
-image_data load_image(const string& filename) {
-  auto image = image_data{};
-  load_image(filename, image);
-  return image;
-}
-void load_image(const string& filename, image_data& image) {
+bool load_image(const string& filename, image_data& image, string& error) {
+  auto read_error = [&]() {
+    error = filename + ": read error";
+    return false;
+  };
+  auto format_error = [&]() {
+    error = filename + ": unknown format";
+    return false;
+  };
+
   // conversion helpers
   auto from_linear = [](const float* pixels, int width, int height) {
     return vector<vec4f>{
@@ -444,70 +448,93 @@ void load_image(const string& filename, image_data& image) {
 
   auto ext = path_extension(filename);
   if (ext == ".exr" || ext == ".EXR") {
-    auto buffer = load_binary(filename);
+    auto buffer = vector<byte>{};
+    if (!load_binary(filename, buffer, error)) return false;
     auto pixels = (float*)nullptr;
     if (LoadEXRFromMemory(&pixels, &image.width, &image.height, buffer.data(),
             buffer.size(), nullptr) != 0)
-      throw io_error{filename + ": read error"};
+      return read_error();
     image.linear = true;
     image.pixels = from_linear(pixels, image.width, image.height);
     free(pixels);
+    return true;
   } else if (ext == ".hdr" || ext == ".HDR") {
-    auto buffer = load_binary(filename);
+    auto buffer = vector<byte>{};
+    if (!load_binary(filename, buffer, error)) return false;
     auto ncomp  = 0;
     auto pixels = stbi_loadf_from_memory(buffer.data(), (int)buffer.size(),
         &image.width, &image.height, &ncomp, 4);
-    if (!pixels) throw io_error{filename + ": read error"};
+    if (!pixels) return read_error();
     image.linear = true;
     image.pixels = from_linear(pixels, image.width, image.height);
     free(pixels);
+    return true;
   } else if (ext == ".png" || ext == ".PNG") {
-    auto buffer = load_binary(filename);
+    auto buffer = vector<byte>{};
+    if (!load_binary(filename, buffer, error)) return false;
     auto ncomp  = 0;
     auto pixels = stbi_load_from_memory(buffer.data(), (int)buffer.size(),
         &image.width, &image.height, &ncomp, 4);
-    if (!pixels) throw io_error{filename + ": read error"};
+    if (!pixels) return read_error();
     image.linear = false;
     image.pixels = from_srgb(pixels, image.width, image.height);
     free(pixels);
+    return true;
   } else if (ext == ".jpg" || ext == ".JPG" || ext == ".jpeg" ||
              ext == ".JPEG") {
-    auto buffer = load_binary(filename);
+    auto buffer = vector<byte>{};
+    if (!load_binary(filename, buffer, error)) return false;
     auto ncomp  = 0;
     auto pixels = stbi_load_from_memory(buffer.data(), (int)buffer.size(),
         &image.width, &image.height, &ncomp, 4);
-    if (!pixels) throw io_error{filename + ": read error"};
+    if (!pixels) return read_error();
     image.linear = false;
     image.pixels = from_srgb(pixels, image.width, image.height);
     free(pixels);
+    return true;
   } else if (ext == ".tga" || ext == ".TGA") {
-    auto buffer = load_binary(filename);
+    auto buffer = vector<byte>{};
+    if (!load_binary(filename, buffer, error)) return false;
     auto ncomp  = 0;
     auto pixels = stbi_load_from_memory(buffer.data(), (int)buffer.size(),
         &image.width, &image.height, &ncomp, 4);
-    if (!pixels) throw io_error{filename + ": read error"};
+    if (!pixels) return read_error();
     image.linear = false;
     image.pixels = from_srgb(pixels, image.width, image.height);
     free(pixels);
+    return true;
   } else if (ext == ".bmp" || ext == ".BMP") {
-    auto buffer = load_binary(filename);
+    auto buffer = vector<byte>{};
+    if (!load_binary(filename, buffer, error)) return false;
     auto ncomp  = 0;
     auto pixels = stbi_load_from_memory(buffer.data(), (int)buffer.size(),
         &image.width, &image.height, &ncomp, 4);
-    if (!pixels) throw io_error{filename + ": read error"};
+    if (!pixels) return read_error();
     image.linear = false;
     image.pixels = from_srgb(pixels, image.width, image.height);
     free(pixels);
+    return true;
   } else if (ext == ".ypreset" || ext == ".YPRESET") {
     // create preset
-    image = make_image_preset(path_basename(filename));
+    if (!make_image_preset(image, path_basename(filename), error)) return false;
+    return true;
   } else {
-    throw io_error{filename + ": unknown format"};
+    return format_error();
   }
 }
 
 // Saves an hdr image.
-void save_image(const string& filename, const image_data& image) {
+bool save_image(
+    const string& filename, const image_data& image, string& error) {
+  auto write_error = [&]() {
+    error = filename + ": write error";
+    return false;
+  };
+  auto format_error = [&]() {
+    error = filename + ": unknown format";
+    return false;
+  };
+
   // conversion helpers
   auto to_linear = [](const image_data& image) {
     if (image.linear) return image.pixels;
@@ -536,45 +563,51 @@ void save_image(const string& filename, const image_data& image) {
     auto buffer = vector<byte>{};
     if (!stbi_write_hdr_to_func(stbi_write_data, &buffer, (int)image.width,
             (int)image.height, 4, (const float*)to_linear(image).data()))
-      throw io_error{filename + ": write error"};
-    save_binary(filename, buffer);
+      return write_error();
+    if (!save_binary(filename, buffer, error)) return false;
+    return true;
   } else if (ext == ".exr" || ext == ".EXR") {
     auto data = (byte*)nullptr;
     auto size = (size_t)0;
     if (SaveEXRToMemory((const float*)to_linear(image).data(), (int)image.width,
             (int)image.height, 4, 1, &data, &size, nullptr) < 0)
-      throw io_error{filename + ": write error"};
+      return write_error();
     auto buffer = vector<byte>{data, data + size};
     free(data);
-    save_binary(filename, buffer);
+    if (!save_binary(filename, buffer, error)) return false;
+    return true;
   } else if (ext == ".png" || ext == ".PNG") {
     auto buffer = vector<byte>{};
     if (!stbi_write_png_to_func(stbi_write_data, &buffer, (int)image.width,
             (int)image.height, 4, (const byte*)to_srgb(image).data(),
             (int)image.width * 4))
-      throw io_error{filename + ": write error"};
-    save_binary(filename, buffer);
+      return write_error();
+    if (!save_binary(filename, buffer, error)) return false;
+    return true;
   } else if (ext == ".jpg" || ext == ".JPG" || ext == ".jpeg" ||
              ext == ".JPEG") {
     auto buffer = vector<byte>{};
     if (!stbi_write_jpg_to_func(stbi_write_data, &buffer, (int)image.width,
             (int)image.height, 4, (const byte*)to_srgb(image).data(), 75))
-      throw io_error{filename + ": write error"};
-    save_binary(filename, buffer);
+      return write_error();
+    if (!save_binary(filename, buffer, error)) return false;
+    return true;
   } else if (ext == ".tga" || ext == ".TGA") {
     auto buffer = vector<byte>{};
     if (!stbi_write_tga_to_func(stbi_write_data, &buffer, (int)image.width,
             (int)image.height, 4, (const byte*)to_srgb(image).data()))
-      throw io_error{filename + ": write error"};
-    save_binary(filename, buffer);
+      return write_error();
+    if (!save_binary(filename, buffer, error)) return false;
+    return true;
   } else if (ext == ".bmp" || ext == ".BMP") {
     auto buffer = vector<byte>{};
     if (!stbi_write_bmp_to_func(stbi_write_data, &buffer, (int)image.width,
             (int)image.height, 4, (const byte*)to_srgb(image).data()))
-      throw io_error{filename + ": write error"};
-    save_binary(filename, buffer);
+      return write_error();
+    if (!save_binary(filename, buffer, error)) return false;
+    return true;
   } else {
-    throw io_error{filename + ": unknown format"};
+    return format_error();
   }
 }
 
@@ -699,41 +732,33 @@ image_data make_image_preset(const string& type_) {
   } else if (type == "test-grid-opacity") {
     return make_grid(width, height, 1, {1, 1, 1, 1}, {0, 0, 0, 0});
   } else {
-    throw io_error{type_ + ": unknown preset"};
+    return {};
   }
 }
 
 // Loads/saves an image. Chooses hdr or ldr based on file name.
-bool load_image(const string& filename, image_data& image, string& error) {
-  try {
-    load_image(filename, image);
-    return true;
-  } catch (const io_error& exception) {
-    error = exception.what();
-    return false;
-  }
+image_data load_image(const string& filename) {
+  auto error = string{};
+  auto image = image_data{};
+  if (!load_image(filename, image, error)) throw io_error{error};
+  return image;
 }
-
-// Saves an hdr image.
-bool save_image(
-    const string& filename, const image_data& image, string& error) {
-  try {
-    save_image(filename, image);
-    return true;
-  } catch (const io_error& exception) {
-    error = exception.what();
-    return false;
-  }
+void load_image(const string& filename, image_data& image) {
+  auto error = string{};
+  if (!load_image(filename, image, error)) throw io_error{error};
+}
+void save_image(const string& filename, const image_data& image) {
+  auto error = string{};
+  if (!save_image(filename, image, error)) throw io_error{error};
 }
 
 bool make_image_preset(image_data& image, const string& type, string& error) {
-  try {
-    image = make_image_preset(type);
-    return true;
-  } catch (const io_error& exception) {
-    error = exception.what();
+  image = make_image_preset(type);
+  if (image.pixels.empty()) {
+    error = "unknown preset";
     return false;
   }
+  return true;
 }
 
 }  // namespace yocto
@@ -1420,7 +1445,7 @@ shape_data make_shape_preset(const string& type) {
   } else if (type == "test-clothy") {
     return make_recty({64, 64}, {0.2f, 0.2f});
   } else {
-    return shape_data{};
+    return {};
   }
 }
 
@@ -1564,7 +1589,7 @@ fvshape_data make_fvshape_preset(const string& type) {
   } else if (type == "test-clothy") {
     return shape_to_fvshape(make_recty({64, 64}, {0.2f, 0.2f}));
   } else {
-    return fvshape_data{};
+    return {};
   }
 }
 
@@ -1636,83 +1661,110 @@ bool make_fvshape_preset(
 namespace yocto {
 
 // Loads/saves an image. Chooses hdr or ldr based on file name.
-texture_data load_texture(const string& filename) {
-  auto texture = texture_data{};
-  load_texture(filename, texture);
-  return texture;
-}
-void load_texture(const string& filename, texture_data& texture) {
+bool load_texture(
+    const string& filename, texture_data& texture, string& error) {
+  auto read_error = [&]() {
+    error = filename + ": rad error";
+    return false;
+  };
+  auto format_error = [&]() {
+    error = filename + ": unknown format";
+    return false;
+  };
+
   auto ext = path_extension(filename);
   if (ext == ".exr" || ext == ".EXR") {
     auto pixels = (float*)nullptr;
     if (LoadEXR(&pixels, &texture.width, &texture.height, filename.c_str(),
             nullptr) != 0)
-      throw io_error{filename + ": read error"};
+      return read_error();
     texture.linear  = true;
     texture.pixelsf = vector<vec4f>{
         (vec4f*)pixels, (vec4f*)pixels + texture.width * texture.height};
     free(pixels);
+    return true;
   } else if (ext == ".hdr" || ext == ".HDR") {
-    auto buffer = load_binary(filename);
+    auto buffer = vector<byte>{};
+    if (!load_binary(filename, buffer, error)) return false;
     auto ncomp  = 0;
     auto pixels = stbi_loadf_from_memory(buffer.data(), (int)buffer.size(),
         &texture.width, &texture.height, &ncomp, 4);
-    if (!pixels) throw io_error{filename + ": read error"};
+    if (!pixels) return read_error();
     texture.linear  = true;
     texture.pixelsf = vector<vec4f>{
         (vec4f*)pixels, (vec4f*)pixels + texture.width * texture.height};
     free(pixels);
+    return true;
   } else if (ext == ".png" || ext == ".PNG") {
-    auto buffer = load_binary(filename);
+    auto buffer = vector<byte>{};
+    if (!load_binary(filename, buffer, error)) return false;
     auto ncomp  = 0;
     auto pixels = stbi_load_from_memory(buffer.data(), (int)buffer.size(),
         &texture.width, &texture.height, &ncomp, 4);
-    if (!pixels) throw io_error{filename + ": read error"};
+    if (!pixels) return read_error();
     texture.linear  = false;
     texture.pixelsb = vector<vec4b>{
         (vec4b*)pixels, (vec4b*)pixels + texture.width * texture.height};
     free(pixels);
+    return true;
   } else if (ext == ".jpg" || ext == ".JPG" || ext == ".jpeg" ||
              ext == ".JPEG") {
-    auto buffer = load_binary(filename);
+    auto buffer = vector<byte>{};
+    if (!load_binary(filename, buffer, error)) return false;
     auto ncomp  = 0;
     auto pixels = stbi_load_from_memory(buffer.data(), (int)buffer.size(),
         &texture.width, &texture.height, &ncomp, 4);
-    if (!pixels) throw io_error{filename + ": read error"};
+    if (!pixels) return read_error();
     texture.linear  = false;
     texture.pixelsb = vector<vec4b>{
         (vec4b*)pixels, (vec4b*)pixels + texture.width * texture.height};
     free(pixels);
+    return true;
   } else if (ext == ".tga" || ext == ".TGA") {
-    auto buffer = load_binary(filename);
+    auto buffer = vector<byte>{};
+    if (!load_binary(filename, buffer, error)) return false;
     auto ncomp  = 0;
     auto pixels = stbi_load_from_memory(buffer.data(), (int)buffer.size(),
         &texture.width, &texture.height, &ncomp, 4);
-    if (!pixels) throw io_error{filename + ": read error"};
+    if (!pixels) return read_error();
     texture.linear  = false;
     texture.pixelsb = vector<vec4b>{
         (vec4b*)pixels, (vec4b*)pixels + texture.width * texture.height};
     free(pixels);
+    return true;
   } else if (ext == ".bmp" || ext == ".BMP") {
-    auto buffer = load_binary(filename);
+    auto buffer = vector<byte>{};
+    if (!load_binary(filename, buffer, error)) return false;
     auto ncomp  = 0;
     auto pixels = stbi_load_from_memory(buffer.data(), (int)buffer.size(),
         &texture.width, &texture.height, &ncomp, 4);
-    if (!pixels) throw io_error{filename + ": read error"};
+    if (!pixels) return read_error();
     texture.linear  = false;
     texture.pixelsb = vector<vec4b>{
         (vec4b*)pixels, (vec4b*)pixels + texture.width * texture.height};
     free(pixels);
+    return true;
   } else if (ext == ".ypreset" || ext == ".YPRESET") {
-    // create preset
-    texture = make_texture_preset(path_basename(filename));
+    if (!make_texture_preset(texture, path_basename(filename), error))
+      return false;
+    return true;
   } else {
-    throw io_error{filename + ": unknown format"};
+    return format_error();
   }
 }
 
 // Saves an hdr image.
-void save_texture(const string& filename, const texture_data& texture) {
+bool save_texture(
+    const string& filename, const texture_data& texture, string& error) {
+  auto write_error = [&]() {
+    error = filename + ": write error";
+    return false;
+  };
+  auto format_error = [&]() {
+    error = filename + ": unknown format";
+    return false;
+  };
+
   // check for correct handling
   if (!texture.pixelsf.empty() && is_ldr_filename(filename))
     throw io_error{filename + ": cannot save hdr texture to ldr file"};
@@ -1730,46 +1782,52 @@ void save_texture(const string& filename, const texture_data& texture) {
     auto buffer = vector<byte>{};
     if (!stbi_write_hdr_to_func(stbi_write_data, &buffer, (int)texture.width,
             (int)texture.height, 4, (const float*)texture.pixelsf.data()))
-      throw io_error{filename + ": write error"};
-    save_binary(filename, buffer);
+      return write_error();
+    if (!save_binary(filename, buffer, error)) return false;
+    return true;
   } else if (ext == ".exr" || ext == ".EXR") {
     auto data = (byte*)nullptr;
     auto size = (size_t)0;
     if (SaveEXRToMemory((const float*)texture.pixelsf.data(),
             (int)texture.width, (int)texture.height, 4, 1, &data, &size,
             nullptr) < 0)
-      throw io_error{filename + ": write error"};
+      return write_error();
     auto buffer = vector<byte>{data, data + size};
     free(data);
-    save_binary(filename, buffer);
+    if (!save_binary(filename, buffer, error)) return false;
+    return true;
   } else if (ext == ".png" || ext == ".PNG") {
     auto buffer = vector<byte>{};
     if (!stbi_write_png_to_func(stbi_write_data, &buffer, (int)texture.width,
             (int)texture.height, 4, (const byte*)texture.pixelsb.data(),
             (int)texture.width * 4))
-      throw io_error{filename + ": write error"};
-    save_binary(filename, buffer);
+      return write_error();
+    if (!save_binary(filename, buffer, error)) return false;
+    return true;
   } else if (ext == ".jpg" || ext == ".JPG" || ext == ".jpeg" ||
              ext == ".JPEG") {
     auto buffer = vector<byte>{};
     if (!stbi_write_jpg_to_func(stbi_write_data, &buffer, (int)texture.width,
             (int)texture.height, 4, (const byte*)texture.pixelsb.data(), 75))
       throw io_error{filename + ": write error"};
-    save_binary(filename, buffer);
+    if (!save_binary(filename, buffer, error)) return false;
+    return true;
   } else if (ext == ".tga" || ext == ".TGA") {
     auto buffer = vector<byte>{};
     if (!stbi_write_tga_to_func(stbi_write_data, &buffer, (int)texture.width,
             (int)texture.height, 4, (const byte*)texture.pixelsb.data()))
-      throw io_error{filename + ": write error"};
-    save_binary(filename, buffer);
+      return write_error();
+    if (!save_binary(filename, buffer, error)) return false;
+    return true;
   } else if (ext == ".bmp" || ext == ".BMP") {
     auto buffer = vector<byte>{};
     if (!stbi_write_bmp_to_func(stbi_write_data, &buffer, (int)texture.width,
             (int)texture.height, 4, (const byte*)texture.pixelsb.data()))
-      throw io_error{filename + ": write error"};
-    save_binary(filename, buffer);
+      return write_error();
+    if (!save_binary(filename, buffer, error)) return false;
+    return true;
   } else {
-    throw io_error{filename + ": unknown format"};
+    return format_error();
   }
 }
 
@@ -1778,38 +1836,29 @@ texture_data make_texture_preset(const string& type) {
 }
 
 // Loads/saves an image. Chooses hdr or ldr based on file name.
-bool load_texture(
-    const string& filename, texture_data& texture, string& error) {
-  try {
-    load_texture(filename, texture);
-    return true;
-  } catch (const io_error& exception) {
-    error = exception.what();
-    return false;
-  }
+texture_data load_texture(const string& filename) {
+  auto error   = string{};
+  auto texture = texture_data{};
+  if (!load_texture(filename, texture, error)) throw io_error{error};
+  return texture;
 }
-
-// Saves an hdr image.
-bool save_texture(
-    const string& filename, const texture_data& texture, string& error) {
-  try {
-    save_texture(filename, texture);
-    return true;
-  } catch (const io_error& exception) {
-    error = exception.what();
-    return false;
-  }
+void load_texture(const string& filename, texture_data& texture) {
+  auto error = string{};
+  if (!load_texture(filename, texture, error)) throw io_error{error};
+}
+void save_texture(const string& filename, const texture_data& texture) {
+  auto error = string{};
+  if (!save_texture(filename, texture, error)) throw io_error{error};
 }
 
 bool make_texture_preset(
     texture_data& texture, const string& type, string& error) {
-  try {
-    texture = make_texture_preset(type);
-    return true;
-  } catch (const io_error& exception) {
-    error = exception.what();
+  texture = make_texture_preset(type);
+  if (texture.width == 0 || texture.height == 0) {
+    error = "unknown preset";
     return false;
   }
+  return true;
 }
 
 }  // namespace yocto
