@@ -3662,16 +3662,15 @@ static void save_json_scene(
 
   // names
   auto get_name = [](const vector<string>& names, size_t idx) -> string {
-    if (names.size() <= idx) return "";
-    return names[idx];
+    return (idx < names.size()) ? names[idx] : "";
   };
   auto get_filename = [](const vector<string>& names, size_t idx,
                           const string& basename,
                           const string& extension) -> string {
-    if (names.size() <= idx) {
+    if (idx < names.size()) {
       return basename + "s/" + names[idx] + extension;
     } else {
-      return basename + "s/" + basename + extension;
+      return basename + "s/" + basename + std::to_string(idx) + extension;
     }
   };
 
