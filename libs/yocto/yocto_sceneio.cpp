@@ -3573,7 +3573,7 @@ static void load_json_scene(
         get_opt(element, "emission_tex", environment.emission_tex);
       }
     }
-  } catch (const io_error& error) {
+  } catch (const io_error&) {
     throw;
   } catch (...) {
     throw io_error{filename + ": parse error"};
@@ -4535,7 +4535,7 @@ static void load_gltf_scene(
           }
         }
       }
-    } catch (const io_error& error) {
+    } catch (const io_error&) {
       throw;
     } catch (...) {
       throw io_error{filename + ": parse error"};
