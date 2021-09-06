@@ -136,7 +136,7 @@ namespace yocto {
 
 // Initialize a command line parser.
 struct imcli_state;
-imcli_state make_imcli(
+inline imcli_state make_imcli(
     const string& cmd, const string& usage, const vector<string>& args);
 
 // Parse options
@@ -168,8 +168,7 @@ struct imcli_state {
 };
 
 // Initialize a command line parser.
-struct imcli_state;
-imcli_state make_imcli(
+inline imcli_state make_imcli(
     const string& cmd, const string& usage, const vector<string>& args) {
   auto cli  = imcli_state{};
   cli.app   = cmd;
