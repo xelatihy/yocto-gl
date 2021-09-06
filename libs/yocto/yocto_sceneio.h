@@ -62,19 +62,21 @@ bool is_hdr_filename(const string& filename);
 bool is_ldr_filename(const string& filename);
 
 // Loads/saves a 4 channels float/byte image in linear/srgb color space.
-image_data load_image(const string& filename);
-void       load_image(const string& filename, image_data& image);
-void       save_image(const string& filename, const image_data& image);
+[[deprecated]] image_data load_image(const string& filename);
+[[deprecated]] void       load_image(const string& filename, image_data& image);
+[[deprecated]] void save_image(const string& filename, const image_data& image);
 
 // Make presets. Supported mostly in IO.
 image_data make_image_preset(const string& type);
 
 // Loads/saves a 4 channels float/byte image in linear/srgb color space.
-bool load_image(const string& filename, image_data& img, string& error);
+image_data load_image(const string& filename, string& error);
+bool       load_image(const string& filename, image_data& img, string& error);
 bool save_image(const string& filename, const image_data& img, string& error);
 
 // Make presets. Supported mostly in IO.
-bool make_image_preset(image_data& image, const string& type, string& error);
+bool make_image_preset(
+    const string& filename, image_data& image, string& error);
 
 }  // namespace yocto
 
@@ -84,21 +86,23 @@ bool make_image_preset(image_data& image, const string& type, string& error);
 namespace yocto {
 
 // Load/save a texture in the supported formats.
-texture_data load_texture(const string& filename);
-void         load_texture(const string& filename, texture_data& texture);
-void         save_texture(const string& filename, const texture_data& texture);
+[[deprecated]] texture_data load_texture(const string& filename);
+[[deprecated]] void load_texture(const string& filename, texture_data& texture);
+[[deprecated]] void save_texture(
+    const string& filename, const texture_data& texture);
 
 // Make presets. Supported mostly in IO.
 texture_data make_texture_preset(const string& type);
 
 // Load/save a texture in the supported formats.
+texture_data load_texture(const string& filename, string& error);
 bool load_texture(const string& filename, texture_data& texture, string& error);
 bool save_texture(
     const string& filename, const texture_data& texture, string& error);
 
 // Make presets. Supported mostly in IO.
 bool make_texture_preset(
-    texture_data& texture, const string& type, string& error);
+    const string& filname, texture_data& texture, string& error);
 
 }  // namespace yocto
 
@@ -108,39 +112,45 @@ bool make_texture_preset(
 namespace yocto {
 
 // Load/save a shape
-shape_data load_shape(const string& filename, bool flip_texcoords = true);
-void       load_shape(
-          const string& filename, shape_data& shape, bool flip_texcoords = true);
-void save_shape(const string& filename, const shape_data& shape,
+[[deprecated]] shape_data load_shape(
+    const string& filename, bool flip_texcoords = true);
+[[deprecated]] void load_shape(
+    const string& filename, shape_data& shape, bool flip_texcoords = true);
+[[deprecated]] void save_shape(const string& filename, const shape_data& shape,
     bool flip_texcoords = true, bool ascii = false);
 
 // Load/save a subdiv
-fvshape_data load_fvshape(const string& filename, bool flip_texcoords = true);
-void         load_fvshape(
-            const string& filename, fvshape_data& shape, bool flip_texcoords = true);
-void save_fvshape(const string& filename, const fvshape_data& shape,
-    bool flip_texcoords = true, bool ascii = false);
+[[deprecated]] fvshape_data load_fvshape(
+    const string& filename, bool flip_texcoords = true);
+[[deprecated]] void load_fvshape(
+    const string& filename, fvshape_data& shape, bool flip_texcoords = true);
+[[deprecated]] void save_fvshape(const string& filename,
+    const fvshape_data& shape, bool flip_texcoords = true, bool ascii = false);
 
 // Make presets. Supported mostly in IO.
 shape_data   make_shape_preset(const string& type);
 fvshape_data make_fvshape_preset(const string& type);
 
 // Load/save a shape
+shape_data load_shape(
+    const string& filename, string& error, bool flip_texcoords = true);
 bool load_shape(const string& filename, shape_data& shape, string& error,
     bool flip_texcoords = true);
 bool save_shape(const string& filename, const shape_data& shape, string& error,
     bool flip_texcoords = true, bool ascii = false);
 
 // Load/save a subdiv
+fvshape_data load_fvshape(
+    const string& filename, string& error, bool flip_texcoords = true);
 bool load_fvshape(const string& filename, fvshape_data& shape, string& error,
     bool flip_texcoords = true);
 bool save_fvshape(const string& filename, const fvshape_data& shape,
     string& error, bool flip_texcoords = true, bool ascii = false);
 
 // Make presets. Supported mostly in IO.
-bool make_shape_preset(shape_data& shape, const string& type, string& error);
+bool make_shape_preset(const string& filname, shape_data& shape, string& error);
 bool make_fvshape_preset(
-    fvshape_data& shape, const string& type, string& error);
+    const string& filname, fvshape_data& shape, string& error);
 
 }  // namespace yocto
 
@@ -150,11 +160,13 @@ bool make_fvshape_preset(
 namespace yocto {
 
 // Load/save a subdiv in the supported formats.
-subdiv_data load_subdiv(const string& filename);
-void        load_subdiv(const string& filename, subdiv_data& subdiv);
-void        save_subdiv(const string& filename, const subdiv_data& subdiv);
+[[deprecated]] subdiv_data load_subdiv(const string& filename);
+[[deprecated]] void load_subdiv(const string& filename, subdiv_data& subdiv);
+[[deprecated]] void save_subdiv(
+    const string& filename, const subdiv_data& subdiv);
 
 // Load/save a subdiv in the supported formats.
+subdiv_data load_subdiv(const string& filename, string& error);
 bool load_subdiv(const string& filename, subdiv_data& subdiv, string& error);
 bool save_subdiv(
     const string& filename, const subdiv_data& subdiv, string& error);
@@ -183,6 +195,8 @@ scene_data make_scene_preset(const string& type);
 void add_environment(scene_data& scene, const string& filename);
 
 // Load/save a scene in the supported formats.
+scene_data load_scene(
+    const string& filename, string& error, bool noparallel = false);
 bool load_scene(const string& filename, scene_data& scene, string& error,
     bool noparallel = false);
 bool save_scene(const string& filename, const scene_data& scene, string& error,
@@ -193,7 +207,8 @@ bool make_scene_directories(
     const string& filename, const scene_data& scene, string& error);
 
 // Scene presets used for testing.
-bool make_scene_preset(scene_data& scene, const string& type, string& error);
+bool make_scene_preset(
+    const string& filename, scene_data& scene, string& error);
 
 // Add environment
 bool add_environment(scene_data& scene, const string& filename, string& error);
