@@ -4448,13 +4448,10 @@ static void make_quad(vector<vec3i>& triangles, vector<vec3f>& positions,
     get_pbrt_value(command.values, "filename", pshape.filename_);
     get_alpha(command.values, "alpha", alphamap);
     if (ply_meshes) {
-      auto ply = ply_model{};
-      try {
-        load_ply(path_join(ply_dirname, pshape.filename_), ply);
-      } catch (const ply_error& error) {
-        throw pbrt_error(
-            filename + ": error reading ply (" + string{error.what()} + ")");
-      }
+      auto error = string{};
+      auto ply   = ply_model{};
+      if (!load_ply(path_join(ply_dirname, pshape.filename_), ply, error))
+        return false;
       get_positions(ply, pshape.positions);
       get_normals(ply, pshape.normals);
       get_texcoords(ply, pshape.texcoords);
@@ -5131,12 +5128,8 @@ bool save_pbrt(const string& filename, const pbrt_model& pbrt, string& error,
       add_normals(ply, shape.normals);
       add_texcoords(ply, shape.texcoords);
       add_triangles(ply, shape.triangles);
-      try {
-        save_ply(path_dirname(filename) + "/" + shape.filename_, ply);
-      } catch (const ply_error& error) {
-        throw pbrt_error(
-            filename + ": error saving ply (" + string{error.what()} + ")");
-      }
+      if (!save_ply(path_dirname(filename) + "/" + shape.filename_, ply, error))
+        return false;
     }
     auto object = "object" + std::to_string(object_id++);
     if (!shape.instances.empty())
