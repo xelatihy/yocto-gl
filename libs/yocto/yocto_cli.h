@@ -40,6 +40,7 @@
 // -----------------------------------------------------------------------------
 
 #include <array>
+#include <sstream>
 #include <string>
 #include <type_traits>
 #include <vector>
@@ -125,6 +126,140 @@ template <typename Func>
 inline void handle_errors(Func&& run);
 inline void handle_errors(
     void (*run)(const vector<string>&), const vector<string>& args);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// COMMAND LINE PARSING
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Initialize a command line parser.
+struct imcli_state;
+imcli_state make_imcli(
+    const string& cmd, const string& usage, const vector<string>& args);
+
+// Parse options
+template <typename T>
+inline bool get_option(
+    imcli_state& cli, const string& name, T& value, const string& usage);
+template <typename T>
+inline bool get_option(imcli_state& cli, const string& name, T& value,
+    const string& usage, const T& min, const T& max);
+template <typename T>
+inline bool get_option(imcli_state& cli, const string& name, T& value,
+    const string& usage, const vector<string>& labels);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// COMMAND LINE PARSING
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Cli state
+struct imcli_state {
+  string         app     = "";
+  string         command = "";
+  string         usage   = "";
+  string         options = "";
+  vector<string> args    = {};
+  string         error   = "";
+};
+
+// Initialize a command line parser.
+struct imcli_state;
+imcli_state make_imcli(
+    const string& cmd, const string& usage, const vector<string>& args) {
+  auto cli  = imcli_state{};
+  cli.app   = cmd;
+  cli.usage = usage;
+  cli.args  = args;
+  cli.error = "";
+  return cli;
+}
+
+// Add help
+template <typename T>
+inline bool add_option_help(
+    imcli_state& cli, const string& name, T& value, const string& usage) {
+  cli.options += "  --" + name + "  " + usage + "\n";
+}
+
+// Parse options
+template <typename T>
+inline bool get_option(
+    imcli_state& cli, const string& name, T& value, const string& usage) {
+  add_option_help(cli, name, value, usage);
+  if (!cli.error.empty()) return false;
+  auto pos = std::find(cli.args.begin(), cli.args.end(), "--" + name);
+  if (pos == cli.args.end()) return false;
+  if constexpr (std::is_same_v<T, bool>) {
+    cli.args.erase(pos);
+    value = true;
+    return true;
+  } else {
+    if ((cli.args.end() - pos) < 1) {
+      cli.error = "missing value for " + name;
+      return false;
+    }
+    auto values = *(pos + 1);
+    cli.args.erase(pos, pos + 2);
+    if constexpr (std::is_same_v<T, string>) {
+      value = values;
+    } else {
+      auto stream = std::stringstream(values);
+      stream >> value;
+      if (!stream) {
+        cli.error = "invalid value for " + name;
+        return false;
+      }
+    }
+    return true;
+  }
+}
+
+// Parse options
+template <typename T>
+inline bool get_option(imcli_state& cli, const string& name, T& value,
+    const string& usage, const T& min, const T& max) {
+  auto values = value;
+  if (!get_option(cli, name, values, usage)) return false;
+  if (values < min || values > max) {
+    cli.error = "invalid value for " + name;
+    return false;
+  }
+  value = values;
+  return true;
+}
+
+// Parse options
+template <typename T>
+inline bool get_option(imcli_state& cli, const string& name, T& value,
+    const string& usage, const vector<string>& labels) {
+  auto values = string{};
+  if constexpr (std::is_same_v<T, string>) {
+    if (std::find(labels.begin(), labels.end(), value) == labels.end())
+      throw std::invalid_argument{"bad value for " + name};
+    values = value;
+  } else {
+    auto valuei = (int)value;
+    if (valuei < 0 || valuei >= (int)labels.size())
+      throw std::invalid_argument{"bad value for " + name};
+  }
+  if (!get_option(cli, name, values, usage)) return false;
+  auto pos = std::find(labels.begin(), labels.end(), values);
+  if (pos == labels.end()) {
+    cli.error = "invalid value for " + name;
+    return false;
+  }
+  if constexpr (std::is_same_v<T, string>) {
+    value = values;
+  } else {
+    value = (int)(pos - labels.begin());
+  }
+  return true;
+}
 
 }  // namespace yocto
 
