@@ -870,23 +870,24 @@ bool save_volume(
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Load ply mesh
-shape_data load_shape(const string& filename, bool flip_texcoord) {
-  auto shape = shape_data{};
-  load_shape(filename, shape, flip_texcoord);
-  return shape;
-}
-void load_shape(const string& filename, shape_data& shape, bool flip_texcoord) {
+// Load mesh
+bool load_shape(const string& filename, shape_data& shape, string& error,
+    bool flip_texcoord) {
+  auto shape_error = [&]() {
+    error = filename + ": empty shape";
+    return false;
+  };
+  auto format_error = [&]() {
+    error = filename + ": unknown format";
+    return false;
+  };
+
   shape = {};
 
   auto ext = path_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     auto ply = ply_model{};
-    try {
-      load_ply(filename, ply);
-    } catch (const modelio_error& error) {
-      throw io_error{error.what()};
-    }
+    if (!load_ply(filename, ply, error)) return false;
     get_positions(ply, shape.positions);
     get_normals(ply, shape.normals);
     get_texcoords(ply, shape.texcoords, flip_texcoord);
@@ -897,14 +898,11 @@ void load_shape(const string& filename, shape_data& shape, bool flip_texcoord) {
     get_points(ply, shape.points);
     if (shape.points.empty() && shape.lines.empty() &&
         shape.triangles.empty() && shape.quads.empty())
-      throw io_error{filename + ": empty shape"};
+      return shape_error();
+    return true;
   } else if (ext == ".obj" || ext == ".OBJ") {
     auto obj = obj_shape{};
-    try {
-      load_obj(filename, obj, false);
-    } catch (const modelio_error& error) {
-      throw io_error{error.what()};
-    }
+    if (!load_obj(filename, obj, error, false)) return false;
     auto materials = vector<int>{};
     get_positions(obj, shape.positions);
     get_normals(obj, shape.normals);
@@ -914,28 +912,36 @@ void load_shape(const string& filename, shape_data& shape, bool flip_texcoord) {
     get_points(obj, shape.points, materials);
     if (shape.points.empty() && shape.lines.empty() &&
         shape.triangles.empty() && shape.quads.empty())
-      throw io_error{filename + ": empty shape"};
+      return shape_error();
+    return true;
   } else if (ext == ".stl" || ext == ".STL") {
     auto stl = stl_model{};
-    try {
-      load_stl(filename, stl, true);
-    } catch (const modelio_error& error) {
-      throw io_error{error.what()};
-    }
+    if (!load_stl(filename, stl, error, true)) return false;
     if (stl.shapes.size() != 1) throw io_error{filename + ": empty shape"};
     auto fnormals = vector<vec3f>{};
     if (!get_triangles(stl, 0, shape.triangles, shape.positions, fnormals))
-      throw io_error{filename + ": empty shape"};
+      return shape_error();
+    return true;
   } else if (ext == ".ypreset" || ext == ".YPRESET") {
-    shape = make_shape_preset(path_basename(filename));
+    if (!make_shape_preset(shape, path_basename(filename), error)) return false;
+    return true;
   } else {
-    throw io_error{filename + ": unknown format"};
+    return format_error();
   }
 }
 
 // Save ply mesh
-void save_shape(const string& filename, const shape_data& shape,
+bool save_shape(const string& filename, const shape_data& shape, string& error,
     bool flip_texcoord, bool ascii) {
+  auto shape_error = [&]() {
+    error = filename + ": empty shape";
+    return false;
+  };
+  auto format_error = [&]() {
+    error = filename + ": unknown format";
+    return false;
+  };
+
   auto ext = path_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     auto ply = ply_model{};
@@ -947,11 +953,8 @@ void save_shape(const string& filename, const shape_data& shape,
     add_faces(ply, shape.triangles, shape.quads);
     add_lines(ply, shape.lines);
     add_points(ply, shape.points);
-    try {
-      save_ply(filename, ply);
-    } catch (const modelio_error& error) {
-      throw io_error{error.what()};
-    }
+    if (!save_ply(filename, ply, error)) return false;
+    return true;
   } else if (ext == ".obj" || ext == ".OBJ") {
     auto obj = obj_shape{};
     add_positions(obj, shape.positions);
@@ -965,11 +968,8 @@ void save_shape(const string& filename, const shape_data& shape,
         obj, shape.lines, 0, !shape.normals.empty(), !shape.texcoords.empty());
     add_points(
         obj, shape.points, 0, !shape.normals.empty(), !shape.texcoords.empty());
-    try {
-      save_obj(filename, obj);
-    } catch (const modelio_error& error) {
-      throw io_error{error.what()};
-    }
+    if (!save_obj(filename, obj, error)) return false;
+    return true;
   } else if (ext == ".stl" || ext == ".STL") {
     auto stl = stl_model{};
     if (!shape.lines.empty())
@@ -981,13 +981,10 @@ void save_shape(const string& filename, const shape_data& shape,
     } else if (!shape.quads.empty()) {
       add_triangles(stl, quads_to_triangles(shape.quads), shape.positions, {});
     } else {
-      throw io_error{filename + ": empty shape"};
+      return shape_error();
     }
-    try {
-      save_stl(filename, stl);
-    } catch (const modelio_error& error) {
-      throw io_error{error.what()};
-    }
+    if (!save_stl(filename, stl, error)) return false;
+    return true;
   } else if (ext == ".cpp" || ext == ".CPP") {
     auto to_cpp = [](const string& name, const string& vname,
                       const auto& values) -> string {
@@ -1038,30 +1035,31 @@ void save_shape(const string& filename, const shape_data& shape,
     str += to_cpp(name, "lines", shape.lines);
     str += to_cpp(name, "triangles", shape.triangles);
     str += to_cpp(name, "quads", shape.quads);
-    save_text(filename, str);
+    if (!save_text(filename, str, error)) return false;
+    return true;
   } else {
-    throw io_error{filename + ": unknown format"};
+    return format_error();
   }
 }
 
 // Load face-varying mesh
-fvshape_data load_fvshape(const string& filename, bool flip_texcoord) {
-  auto shape = fvshape_data{};
-  load_fvshape(filename, shape, flip_texcoord);
-  return shape;
-}
-void load_fvshape(
-    const string& filename, fvshape_data& shape, bool flip_texcoord) {
+bool load_fvshape(const string& filename, fvshape_data& shape, string& error,
+    bool flip_texcoord) {
+  auto shape_error = [&]() {
+    error = filename + ": empty shape";
+    return false;
+  };
+  auto format_error = [&]() {
+    error = filename + ": unknown format";
+    return false;
+  };
+
   shape = {};
 
   auto ext = path_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     auto ply = ply_model{};
-    try {
-      load_ply(filename, ply);
-    } catch (const modelio_error& error) {
-      throw io_error{error.what()};
-    }
+    if (!load_ply(filename, ply, error)) return false;
     get_positions(ply, shape.positions);
     get_normals(ply, shape.normals);
     get_texcoords(ply, shape.texcoords, flip_texcoord);
@@ -1069,13 +1067,10 @@ void load_fvshape(
     if (!shape.normals.empty()) shape.quadsnorm = shape.quadspos;
     if (!shape.texcoords.empty()) shape.quadstexcoord = shape.quadspos;
     if (shape.quadspos.empty()) throw io_error{filename + ": empty shape"};
+    return true;
   } else if (ext == ".obj" || ext == ".OBJ") {
     auto obj = obj_shape{};
-    try {
-      load_obj(filename, obj, true);
-    } catch (const modelio_error& error) {
-      throw io_error{error.what()};
-    }
+    if (!load_obj(filename, obj, error, true)) return false;
     auto materials = vector<int>{};
     get_positions(obj, shape.positions);
     get_normals(obj, shape.normals);
@@ -1083,30 +1078,39 @@ void load_fvshape(
     get_fvquads(
         obj, shape.quadspos, shape.quadsnorm, shape.quadstexcoord, materials);
     if (shape.quadspos.empty()) throw io_error{filename + ": empty shape"};
+    return true;
   } else if (ext == ".stl" || ext == ".STL") {
     auto stl = stl_model{};
-    try {
-      load_stl(filename, stl, true);
-    } catch (const modelio_error& error) {
-      throw io_error{error.what()};
-    }
+    if (!load_stl(filename, stl, error, true)) return false;
     if (stl.shapes.empty()) throw io_error{filename + ": empty shape"};
     if (stl.shapes.size() > 1) throw io_error{filename + ": empty shape"};
     auto fnormals  = vector<vec3f>{};
     auto triangles = vector<vec3i>{};
     if (!get_triangles(stl, 0, triangles, shape.positions, fnormals))
-      throw io_error{filename + ": empty shape"};
+      return shape_error();
     shape.quadspos = triangles_to_quads(triangles);
+    return true;
   } else if (ext == ".ypreset" || ext == ".YPRESET") {
-    shape = make_fvshape_preset(path_basename(filename));
+    if (!make_fvshape_preset(shape, path_basename(filename), error))
+      return false;
+    return true;
   } else {
-    throw io_error{filename + ": unknown format"};
+    return format_error();
   }
 }
 
 // Save ply mesh
-void save_fvshape(const string& filename, const fvshape_data& shape,
-    bool flip_texcoord, bool ascii) {
+bool save_fvshape(const string& filename, const fvshape_data& shape,
+    string& error, bool flip_texcoord, bool ascii) {
+  auto shape_error = [&]() {
+    error = filename + ": empty shape";
+    return false;
+  };
+  auto format_error = [&]() {
+    error = filename + ": unknown format";
+    return false;
+  };
+
   auto ext = path_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     auto ply             = ply_model{};
@@ -1121,22 +1125,16 @@ void save_fvshape(const string& filename, const fvshape_data& shape,
     add_normals(ply, split_normals);
     add_texcoords(ply, split_texcoords, flip_texcoord);
     add_faces(ply, {}, split_quads);
-    try {
-      save_ply(filename, ply);
-    } catch (const modelio_error& error) {
-      throw io_error{error.what()};
-    }
+    if (!save_ply(filename, ply, error)) return false;
+    return true;
   } else if (ext == ".obj" || ext == ".OBJ") {
     auto obj = obj_shape{};
     add_positions(obj, shape.positions);
     add_normals(obj, shape.positions);
     add_texcoords(obj, shape.texcoords, flip_texcoord);
     add_fvquads(obj, shape.quadspos, shape.quadsnorm, shape.quadstexcoord, 0);
-    try {
-      save_obj(filename, obj);
-    } catch (const modelio_error& error) {
-      throw io_error{error.what()};
-    }
+    if (!save_obj(filename, obj, error)) return false;
+    return true;
   } else if (ext == ".stl" || ext == ".STL") {
     auto stl = stl_model{};
     if (!shape.quadspos.empty()) {
@@ -1149,13 +1147,10 @@ void save_fvshape(const string& filename, const fvshape_data& shape,
           shape.positions, shape.normals, shape.texcoords);
       add_triangles(stl, quads_to_triangles(split_quads), split_positions, {});
     } else {
-      throw io_error{filename + ": empty shape"};
+      return shape_error();
     }
-    try {
-      save_stl(filename, stl);
-    } catch (const modelio_error& error) {
-      throw io_error{error.what()};
-    }
+    if (!save_stl(filename, stl, error)) return false;
+    return true;
   } else if (ext == ".cpp" || ext == ".CPP") {
     auto to_cpp = [](const string& name, const string& vname,
                       const auto& values) -> string {
@@ -1202,9 +1197,10 @@ void save_fvshape(const string& filename, const fvshape_data& shape,
     str += to_cpp(name, "quadspos", shape.quadspos);
     str += to_cpp(name, "quadsnorm", shape.quadsnorm);
     str += to_cpp(name, "quadstexcoord", shape.quadstexcoord);
-    save_text(filename, str);
+    if (!save_text(filename, str, error)) return false;
+    return true;
   } else {
-    throw io_error{filename + ": unknown format"};
+    return format_error();
   }
 }
 
@@ -1424,7 +1420,7 @@ shape_data make_shape_preset(const string& type) {
   } else if (type == "test-clothy") {
     return make_recty({64, 64}, {0.2f, 0.2f});
   } else {
-    throw io_error{type + ": unknown preset"};
+    return shape_data{};
   }
 }
 
@@ -1568,56 +1564,47 @@ fvshape_data make_fvshape_preset(const string& type) {
   } else if (type == "test-clothy") {
     return shape_to_fvshape(make_recty({64, 64}, {0.2f, 0.2f}));
   } else {
-    throw io_error{type + ": unknown preset"};
+    return fvshape_data{};
   }
 }
 
-// Load ply mesh
-bool load_shape(const string& filename, shape_data& shape, string& error,
-    bool flip_texcoord) {
-  try {
-    load_shape(filename, shape, flip_texcoord);
-    return true;
-  } catch (const io_error& exception) {
-    error = exception.what();
-    return false;
-  }
+// Load mesh
+shape_data load_shape(const string& filename, bool flip_texcoord) {
+  auto error = string{};
+  auto shape = shape_data{};
+  if (!load_shape(filename, shape, error, flip_texcoord)) throw io_error{error};
+  return shape;
 }
-
-// Save ply mesh
-bool save_shape(const string& filename, const shape_data& shape, string& error,
+void load_shape(const string& filename, shape_data& shape, bool flip_texcoord) {
+  auto error = string{};
+  if (!load_shape(filename, shape, error, flip_texcoord)) throw io_error{error};
+}
+void save_shape(const string& filename, const shape_data& shape,
     bool flip_texcoord, bool ascii) {
-  try {
-    save_shape(filename, shape, flip_texcoord, ascii);
-    return true;
-  } catch (const io_error& exception) {
-    error = exception.what();
-    return false;
-  }
+  auto error = string{};
+  if (!save_shape(filename, shape, error, flip_texcoord, ascii))
+    throw io_error{error};
 }
 
-// Load ply mesh
-bool load_fvshape(const string& filename, fvshape_data& fvshape, string& error,
-    bool flip_texcoord) {
-  try {
-    load_fvshape(filename, fvshape, flip_texcoord);
-    return true;
-  } catch (const io_error& exception) {
-    error = exception.what();
-    return false;
-  }
+// Load mesh
+fvshape_data load_fvshape(const string& filename, bool flip_texcoord) {
+  auto error = string{};
+  auto shape = fvshape_data{};
+  if (!load_fvshape(filename, shape, error, flip_texcoord))
+    throw io_error{error};
+  return shape;
 }
-
-// Save ply mesh
-bool save_fvshape(const string& filename, const fvshape_data& fvshape,
-    string& error, bool flip_texcoord, bool ascii) {
-  try {
-    save_fvshape(filename, fvshape, flip_texcoord, ascii);
-    return true;
-  } catch (const io_error& exception) {
-    error = exception.what();
-    return false;
-  }
+void load_fvshape(
+    const string& filename, fvshape_data& fvshape, bool flip_texcoord) {
+  auto error = string{};
+  if (!load_fvshape(filename, fvshape, error, flip_texcoord))
+    throw io_error{error};
+}
+void save_fvshape(const string& filename, const fvshape_data& fvshape,
+    bool flip_texcoord, bool ascii) {
+  auto error = string{};
+  if (!save_fvshape(filename, fvshape, error, flip_texcoord, ascii))
+    throw io_error{error};
 }
 
 // Shape presets used ofr testing.
