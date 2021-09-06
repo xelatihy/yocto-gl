@@ -546,7 +546,7 @@ template <typename T>
     string_view& fs, T& value, bool big_endian) {
   if (!read_value(fs, value)) return false;
   if (big_endian) value = swap_endian(value);
-  return false;
+  return true;
 }
 
 template <typename T>
@@ -660,7 +660,7 @@ bool load_ply(const string& filename, ply_model& ply, string& error) {
   }
 
   // check exit
-  if (!end_header) throw ply_error(filename + ": parse error");
+  if (!end_header) return parse_error();
 
   // allocate data ---------------------------------
   for (auto& element : ply.elements) {
