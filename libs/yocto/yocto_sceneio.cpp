@@ -1609,25 +1609,23 @@ void save_fvshape(const string& filename, const fvshape_data& fvshape,
 
 // Shape presets used ofr testing.
 bool make_shape_preset(shape_data& shape, const string& type, string& error) {
-  try {
-    shape = make_shape_preset(type);
-    return true;
-  } catch (const io_error& exception) {
-    error = exception.what();
+  shape = make_shape_preset(type);
+  if (shape.positions.empty()) {
+    error = "unknown preset";
     return false;
   }
+  return true;
 }
 
 // Shape presets used for testing.
 bool make_fvshape_preset(
     fvshape_data& fvshape, const string& type, string& error) {
-  try {
-    fvshape = make_fvshape_preset(type);
-    return true;
-  } catch (const io_error& exception) {
-    error = exception.what();
+  fvshape = make_fvshape_preset(type);
+  if (fvshape.positions.empty()) {
+    error = "unknown preset";
     return false;
   }
+  return true;
 }
 
 }  // namespace yocto
