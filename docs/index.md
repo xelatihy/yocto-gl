@@ -42,7 +42,7 @@ Here is a list of the main libraries.
 - [Yocto/ModelIO](yocto/yocto_modelio.md): low-level parsing and writing for 
   Ply, Obj, Stl, Pbrt formats
 - [Yocto/Parallel](yocto/yocto_parallel.md): concurrency utilities
-- [Yocto/Json](yocto/yocto_json.md): Json data model and serialization
+- [Yocto/Json](yocto/yocto_json.md): Json data model and serialization (deprecated)
 
 ## Example Applications
 

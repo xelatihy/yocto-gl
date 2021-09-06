@@ -43,7 +43,7 @@ See each header file for documentation.
 - `yocto/yocto_modelio.{h,cpp}`: low-level parsing and writing for 
   Ply, Obj, Stl, Pbrt formats
 - `yocto/yocto_parallel.h`: concurrency utilities
-- `yocto/yocto_json.{h,cpp}`: Json data model and serialization
+- `yocto/yocto_json.{h,cpp}`: Json data model and serialization (deprecated)
 
 You can see Yocto/GL in action in the following applications written to
 test the library:
