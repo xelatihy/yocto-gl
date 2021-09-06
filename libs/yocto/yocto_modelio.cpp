@@ -3765,7 +3765,7 @@ inline void convert_film(pbrt_film& film, const pbrt_command& command,
     } else {
       throw pbrt_error(filename + ": unknown type " + command.type);
     }
-  } catch (const pbrt_error& error) {
+  } catch (const pbrt_error&) {
     throw;
   } catch (...) {
     throw pbrt_error(filename + ": parse error");
@@ -3812,7 +3812,7 @@ inline void convert_camera(pbrt_camera& pcamera, const pbrt_command& command,
     } else {
       throw pbrt_error(filename + ": unknown type " + command.type);
     }
-  } catch (const pbrt_error& error) {
+  } catch (const pbrt_error&) {
     throw;
   } catch (...) {
     throw pbrt_error(filename + ": parse error");
@@ -3890,7 +3890,7 @@ inline void convert_texture(pbrt_texture& ptexture, const pbrt_command& command,
     } else {
       throw pbrt_error(filename + ": unknown type " + command.type);
     }
-  } catch (const pbrt_error& error) {
+  } catch (const pbrt_error&) {
     throw;
   } catch (...) {
     throw pbrt_error(filename + ": parse error");
@@ -4233,7 +4233,7 @@ inline void convert_material(pbrt_material& pmaterial,
     } else {
       throw pbrt_error(filename + ": unknown type " + command.type);
     }
-  } catch (const pbrt_error& error) {
+  } catch (const pbrt_error&) {
     throw;
   } catch (...) {
     throw pbrt_error(filename + ": parse error");
@@ -4378,7 +4378,7 @@ inline void convert_shape(pbrt_shape& pshape, const pbrt_command& command,
     } else {
       throw pbrt_error(filename + ": unknown type " + command.type);
     }
-  } catch (const pbrt_error& error) {
+  } catch (const pbrt_error&) {
     throw;
   } catch (...) {
     throw pbrt_error(filename + ": parse error");
@@ -4398,7 +4398,7 @@ inline void convert_arealight(pbrt_arealight& parealight,
     } else {
       throw pbrt_error(filename + ": unknown type " + command.type);
     }
-  } catch (const pbrt_error& error) {
+  } catch (const pbrt_error&) {
     throw;
   } catch (...) {
     throw pbrt_error(filename + ": parse error");
@@ -4453,7 +4453,7 @@ inline void convert_light(pbrt_light& plight, const pbrt_command& command,
     } else {
       throw pbrt_error(filename + ": unknown type " + command.type);
     }
-  } catch (const pbrt_error& error) {
+  } catch (const pbrt_error&) {
     throw;
   } catch (...) {
     throw pbrt_error(filename + ": parse error");
@@ -4488,7 +4488,7 @@ inline void convert_environment(pbrt_environment& penvironment,
     } else {
       throw pbrt_error(filename + ": unknown type " + command.type);
     }
-  } catch (const pbrt_error& error) {
+  } catch (const pbrt_error&) {
     throw;
   } catch (...) {
     throw pbrt_error(filename + ": parse error");
@@ -4784,7 +4784,7 @@ inline void load_pbrt(const string& filename, pbrt_model& pbrt,
       } else {
         throw pbrt_error(filename + ": unknown command " + cmd);
       }
-    } catch (const pbrt_error& error) {
+    } catch (const pbrt_error&) {
       throw;
     } catch (...) {
       throw pbrt_error(filename + ": parse error");
