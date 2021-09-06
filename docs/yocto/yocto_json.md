@@ -1,90 +1,8 @@
-# Yocto/CommonIO: Common IO functionality
+# Yocto/Json: Json functionality
 
-Yocto/CommonIO is a collection of utilities used in writing IO functionality,
-including file IO, Json IO, and path manipulation.
-Yocto/CommonIO is implemented in `yocto_commonio.h` and `yocto_commonio.cpp`, 
-and depends on `json.hpp` for Json serialization and number printing, and
-`fast_float.h` for number parsing.
-
-## Errors handling in IO functions
-
-IO functions in Yocto/GL have a dual interface to support their use with and 
-without exceptions. IO functions with exception are written as 
-`load_<type>(filename, data, <options>)` and 
-`save_<type>(filename, data, <options>)` where `<type>` is the data type 
-read or written, and `<options>` is an optional list of IO options. 
-A convenience shortcut is provided for all loading functions that returns the 
-data directly, written as `data = load_<type>(filename, <options>)`.
-Upon errors, an `io_error` is thrown from all IO functions.
-This makes the error-handling code more uniform across the library. 
-`io_error` has fields for `filename` and `message` that can retrieved directly, 
-and a message for users that can be retrieved with the `.what()` method.
-
-```cpp
-auto text = string{};
-try {
-  load_text("input_file.txt",  text);   // load text
-  text = load_text("input_file.txt");   // alternative load
-  save_text("output_file.txt", text);   // save text
-} catch(const io_error& error) {
-  print_info(error.what()); exit(1);    // handle error
-}
-```
-
-IO functions without exceptions are written as
-`load_<type>(filename, data, error, <options>)` and 
-`save_<type>(filename, data, error, <options>)` where `error` is a string 
-that contains a message if an error occurred. These functions return a boolean 
-flag that indicates whether the operation succeeded.  
-
-```cpp
-auto text = string{};
-auto error = string{};
-if(!load_text("input_file.txt",  text))      // load text
-  print_info(error); exit(1);                // handle error
-if(!save_text("output_file.txt", text))      // save text
-  print_info(error); exit(1);                // handle error
-```
-
-## Text and binary serialization
-
-Yocto/CommonIO supports reading and writing whole files of either binary
-data or text. Use `load_text(filename, text)` or `text = load_text(filename)` 
-to load text, and `save_text(filename, text)` to save it.
-Use `load_binary(filename, data)` or `data = load_binary(filename)` 
-to load text, and `save_binary(filename, data)` to save it. 
-Text is stored as a string and binary data is stored as an array of bytes.
-Use without exception is supported as described above.
-
-```cpp
-auto text = string{};
-load_text("input_file.txt",  text);          // load text
-save_text("output_file.txt", text);          // save text
-auto text1 = load_text("input_file.txt");    // alternative load
-auto data = vector<byte>{};
-load_binary("input_file.bin",  data);        // load data
-save_binary("output_file.bin", data);        // save data
-auto data1 = load_binary("input_file.bin");  // alternative load
-```
-
-## Path manipulation utilities
-
-Yocto/CommonIO contains several helper function to manipulate paths. Paths
-are encoded in UTF8 across the library and these functions make it easier to
-handle UTF8-encoded paths across operating systems, by wrapping 
-`std::filesystem` with a string interface.
-
-Use `path_dirname(filename)`, `path_extension(filename)`,  
-`path_filename(filename)`, `path_basename(fillename)`
-to extract the directory, extension, filename and basename from a path.
-Use `path_join(patha,pathb)` to joins paths and
-`replace_extension(filename,ext)` to replace a path extension.
-Use `path_exists(filename)` to check if a path exists and
-`path_isdir(filename)` and `path_isfile(filename)` to check whether
-it is a directory ot file respectively.
-Use `list_directory(dirname)` to list directory contents, 
-`make_directory(dirname)` to create a directory, and
-`path_current()` to get the current directory.
+Yocto/Json is an implementation of a Json type and related IO functionality.
+Yocto/Json is implemented in `yocto_json.h` and `yocto_json.cpp`, 
+and depends on `json.hpp` for Json serialization.
 
 ## Json data type
 
@@ -184,9 +102,7 @@ json.try_get("key", value);           // get value if present
 
 Use `load_json(filename, json)` or `json = load_json(filename)` to load json 
 data from a file, and `save_json(filename, json)` to save json data to a file. 
-Upon errors, an `io_error` is thrown from all IO functions.
-See [Yocto/CommonIO](yocto_commonio.md) for discussion on error handling 
-and use without exceptions.
+Upon errors, an `json_error` is thrown from all IO functions.
 
 ```cpp
 auto json = json_value{};

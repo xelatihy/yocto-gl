@@ -8,9 +8,6 @@ add_library(yocto
   yocto_image.h yocto_image.cpp
   yocto_scene.h yocto_scene.cpp
   yocto_trace.h yocto_trace.cpp
-  yocto_commonio.h yocto_commonio.cpp
-  yocto_imageio.h yocto_imageio.cpp
-  yocto_shapeio.h yocto_shapeio.cpp
   yocto_sceneio.h yocto_sceneio.cpp
   yocto_cli.h yocto_cli.cpp
   yocto_parallel.h

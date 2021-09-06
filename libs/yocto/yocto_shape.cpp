@@ -1357,7 +1357,7 @@ shape_data make_hair2(const shape_data& base, const vec2i& steps,
     shape.positions[offset] = position;
     for (auto iidx = 1; iidx <= steps.x; iidx++) {
       shape.positions[offset + iidx] = position;
-      shape.positions[offset + iidx] += direction * length / steps.x;
+      shape.positions[offset + iidx] += direction * length / (float)steps.x;
       shape.positions[offset + iidx] += (2 * rand3f(rng) - 1) * noise;
       shape.positions[offset + iidx] += vec3f{0, -gravity, 0};
       direction = normalize(shape.positions[offset + iidx] - position);
@@ -4115,7 +4115,7 @@ void make_hair2(vector<vec2i>& lines, vector<vec3f>& positions,
     positions[offset] = position;
     for (auto iidx = 1; iidx <= steps.x; iidx++) {
       positions[offset + iidx] = position;
-      positions[offset + iidx] += direction * length / steps.x;
+      positions[offset + iidx] += direction * length / (float)steps.x;
       positions[offset + iidx] += (2 * rand3f(rng) - 1) * noise;
       positions[offset + iidx] += vec3f{0, -gravity, 0};
       direction = normalize(positions[offset + iidx] - position);

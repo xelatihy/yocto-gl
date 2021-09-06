@@ -397,10 +397,6 @@ using sceneio_environment [[deprecated]] = environment_data;
 using scene_environment [[deprecated]]   = environment_data;
 using scene_subdiv [[deprecated]]        = subdiv_data;
 
-[[deprecated]] inline const auto scene_material_names =
-    std::vector<std::string>{"matte", "glossy", "metallic", "transparent",
-        "refractive", "subsurface", "volume", "gltfpbr"};
-
 }  // namespace yocto
 
 #endif
