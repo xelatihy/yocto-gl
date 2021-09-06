@@ -964,8 +964,8 @@ bool save_ply(const string& filename, const ply_model& ply, string& error) {
     if (!save_binary(filename, buffer, error)) return false;
   }
 
-  // don
-  return false;
+  // done
+  return true;
 }
 
 // Load and save ply

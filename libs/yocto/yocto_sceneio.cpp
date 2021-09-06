@@ -3762,7 +3762,7 @@ static void save_json_scene(
   }
 
   if (!scene.shapes.empty()) {
-    auto& group = add_object(json, "shapes");
+    auto& group = add_array(json, "shapes");
     reserve_values(group, scene.shapes.size());
     for (auto&& [idx, shape] : enumerate(scene.shapes)) {
       auto& element = append_object(group);
