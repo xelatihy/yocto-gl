@@ -3233,12 +3233,6 @@ static bool load_json_scene_version40(const string& filename,
 // Load a scene in the builtin JSON format.
 static bool load_json_scene_version41(const string& filename, json_value& json,
     scene_data& scene, string& error, bool noparallel) {
-  // ends with
-  auto ends_with = [](const string& str, const string& end) {
-    if (str.size() < end.size()) return false;
-    return str.substr(str.size() - end.size()) == end;
-  };
-
   // check version
   if (!json.contains("asset") || !json.at("asset").contains("version"))
     return load_json_scene_version40(filename, json, scene, error, noparallel);
@@ -3502,6 +3496,12 @@ static bool load_json_scene(
   auto texture_filenames = vector<string>{};
   auto subdiv_filenames  = vector<string>{};
 
+  // errors
+  auto parse_error = [&filename, &error]() {
+    error = filename + ": parse error";
+    return false;
+  };
+
   // parsing values
   try {
     if (json.contains("asset")) {
@@ -3625,8 +3625,7 @@ static bool load_json_scene(
       }
     }
   } catch (...) {
-    error = filename + ": parse error";
-    return false;
+    return parse_error();
   }
 
   // prepare data
