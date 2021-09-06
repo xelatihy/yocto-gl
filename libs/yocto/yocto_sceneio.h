@@ -246,12 +246,10 @@ void         load_binary(const string& filename, vector<byte>& data);
 void         save_binary(const string& filename, const vector<byte>& data);
 
 // Load/save a text file
-string load_text(const string& filename, string& error);
-bool   load_text(const string& filename, string& str, string& error);
-bool   save_text(const string& filename, const string& str, string& error);
+bool load_text(const string& filename, string& str, string& error);
+bool save_text(const string& filename, const string& str, string& error);
 
 // Load/save a binary file
-vector<byte> load_binary(const string& filename, string& error);
 bool load_binary(const string& filename, vector<byte>& data, string& error);
 bool save_binary(
     const string& filename, const vector<byte>& data, string& error);

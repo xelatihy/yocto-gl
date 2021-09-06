@@ -752,7 +752,7 @@ image_data make_image_preset(const string& type_) {
 // Loads/saves an image. Chooses hdr or ldr based on file name.
 image_data load_image(const string& filename, string& error) {
   auto image = image_data{};
-  if (!load_image(filename, image, error)) return false;
+  if (!load_image(filename, image, error)) return image_data{};
   return image;
 }
 image_data load_image(const string& filename) {
@@ -1603,7 +1603,7 @@ fvshape_data make_fvshape_preset(const string& type) {
 shape_data load_shape(
     const string& filename, string& error, bool flip_texcoord) {
   auto shape = shape_data{};
-  if (!load_shape(filename, shape, error, flip_texcoord)) return false;
+  if (!load_shape(filename, shape, error, flip_texcoord)) return shape_data{};
   return shape;
 }
 shape_data load_shape(const string& filename, bool flip_texcoord) {
@@ -1627,7 +1627,8 @@ void save_shape(const string& filename, const shape_data& shape,
 fvshape_data load_fvshape(
     const string& filename, string& error, bool flip_texcoord) {
   auto shape = fvshape_data{};
-  if (!load_fvshape(filename, shape, error, flip_texcoord)) return false;
+  if (!load_fvshape(filename, shape, error, flip_texcoord))
+    return fvshape_data{};
   throw io_error{error};
   return shape;
 }
@@ -1851,7 +1852,7 @@ texture_data make_texture_preset(const string& type) {
 // Loads/saves an image. Chooses hdr or ldr based on file name.
 texture_data load_texture(const string& filename, string& error) {
   auto texture = texture_data{};
-  if (!load_texture(filename, texture, error)) return false;
+  if (!load_texture(filename, texture, error)) return texture_data{};
   return texture;
 }
 texture_data load_texture(const string& filename) {
@@ -2795,7 +2796,7 @@ bool save_subdiv(
 // load/save subdiv
 subdiv_data load_subdiv(const string& filename, string& error) {
   auto subdiv = subdiv_data{};
-  if (!load_subdiv(filename, subdiv, error)) return false;
+  if (!load_subdiv(filename, subdiv, error)) return subdiv_data{};
   return subdiv;
 }
 subdiv_data load_subdiv(const string& filename) {
