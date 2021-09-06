@@ -131,8 +131,10 @@ struct ply_error : modelio_error {
 [[deprecated]] void      save_ply(const string& filename, const ply_model& ply);
 
 // Load and save ply
-bool load_ply(const string& filename, ply_model& ply, string& error);
-bool save_ply(const string& filename, const ply_model& ply, string& error);
+[[nodiscard]] bool load_ply(
+    const string& filename, ply_model& ply, string& error);
+[[nodiscard]] bool save_ply(
+    const string& filename, const ply_model& ply, string& error);
 
 // Get ply properties
 bool has_property(
@@ -352,14 +354,16 @@ void      load_obj(
 void save_obj(const string& filename, const obj_shape& obj);
 
 // Load and save obj
-bool load_obj(const string& filename, obj_model& obj, string& error,
-    bool face_varying = false, bool split_materials = false);
-bool save_obj(const string& filename, const obj_model& obj, string& error);
+[[nodiscard]] bool load_obj(const string& filename, obj_model& obj,
+    string& error, bool face_varying = false, bool split_materials = false);
+[[nodiscard]] bool save_obj(
+    const string& filename, const obj_model& obj, string& error);
 
 // Load and save obj shape
-bool load_obj(const string& filename, obj_shape& obj, string& error,
-    bool face_varying = false);
-bool save_obj(const string& filename, const obj_shape& obj, string& error);
+[[nodiscard]] bool load_obj(const string& filename, obj_shape& obj,
+    string& error, bool face_varying = false);
+[[nodiscard]] bool save_obj(
+    const string& filename, const obj_shape& obj, string& error);
 
 // Get obj shape.
 void get_positions(const obj_shape& shape, vector<vec3f>& positions);
@@ -459,10 +463,10 @@ struct stl_error : modelio_error {
     const string& filename, const stl_model& stl, bool ascii = false);
 
 // Load/save stl
-bool load_stl(const string& filename, stl_model& stl, string& error,
-    bool unique_vertices = true);
-bool save_stl(const string& filename, const stl_model& stl, string& error,
-    bool ascii = false);
+[[nodiscard]] bool load_stl(const string& filename, stl_model& stl,
+    string& error, bool unique_vertices = true);
+[[nodiscard]] bool save_stl(const string& filename, const stl_model& stl,
+    string& error, bool ascii = false);
 
 // Get/set data
 bool get_triangles(const stl_model& stl, int shape_id, vector<vec3i>& triangles,
@@ -581,10 +585,10 @@ struct pbrt_error : modelio_error {
     const string& filename, const pbrt_model& pbrt, bool ply_meshes = false);
 
 // Load/save pbrt
-bool load_pbrt(const string& filename, pbrt_model& pbrt, string& error,
-    bool ply_meshes = false);
-bool save_pbrt(const string& filename, const pbrt_model& pbrt, string& error,
-    bool ply_meshes = false);
+[[nodiscard]] bool load_pbrt(const string& filename, pbrt_model& pbrt,
+    string& error, bool ply_meshes = false);
+[[nodiscard]] bool save_pbrt(const string& filename, const pbrt_model& pbrt,
+    string& error, bool ply_meshes = false);
 
 }  // namespace yocto
 
