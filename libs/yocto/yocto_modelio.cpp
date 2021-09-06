@@ -378,7 +378,7 @@ inline void parse_value(string_view& str, string_view& value) {
 }
 inline void parse_value(string_view& str, string& value) {
   auto valuev = string_view{};
-  parse_value(str, valuev);
+  if(!parse_value(str, valuev) return parse_error();
   value = string{valuev};
 }
 inline void parse_value(string_view& str, int8_t& value) {
@@ -453,7 +453,7 @@ inline void parse_value(string_view& str, size_t& value) {
 #endif
 inline void parse_value(string_view& str, bool& value) {
   auto valuei = 0;
-  parse_value(str, valuei);
+  if(!parse_value(str, valuei) return parse_error();
   value = (bool)valuei;
 }
 
@@ -566,7 +566,7 @@ void load_ply(const string& filename, ply_model& ply) {
 
       // get command
       auto cmd = ""s;
-      parse_value(str, cmd);
+      if(!parse_value(str, cmd) return parse_error();
       if (cmd.empty()) continue;
 
       // check magic number
@@ -581,7 +581,7 @@ void load_ply(const string& filename, ply_model& ply) {
         if (!first_line) throw ply_error(filename + ": parse error");
       } else if (cmd == "format") {
         auto fmt = ""s;
-        parse_value(str, fmt);
+        if(!parse_value(str, fmt) return parse_error();
         if (fmt == "ascii") {
           ply.format = ply_format::ascii;
         } else if (fmt == "binary_little_endian") {
@@ -599,26 +599,26 @@ void load_ply(const string& filename, ply_model& ply) {
         // comment is the rest of the str
       } else if (cmd == "element") {
         auto& elem = ply.elements.emplace_back();
-        parse_value(str, elem.name);
-        parse_value(str, elem.count);
+        if(!parse_value(str, elem.name) return parse_error();
+        if(!parse_value(str, elem.count) return parse_error();
       } else if (cmd == "property") {
         if (ply.elements.empty()) throw ply_error(filename + ": parse error");
         auto& prop  = ply.elements.back().properties.emplace_back();
         auto  tname = ""s;
-        parse_value(str, tname);
+        if(!parse_value(str, tname) return parse_error();
         if (tname == "list") {
           prop.is_list = true;
-          parse_value(str, tname);
+          if(!parse_value(str, tname) return parse_error();
           auto itype = type_map.at(tname);
           if (itype != ply_type::u8)
             throw ply_error(filename + ": parse error");
-          parse_value(str, tname);
+          if(!parse_value(str, tname) return parse_error();
           prop.type = type_map.at(tname);
         } else {
           prop.is_list = false;
           prop.type    = type_map.at(tname);
         }
-        parse_value(str, prop.name);
+        if(!parse_value(str, prop.name) return parse_error();
       } else if (cmd == "end_header") {
         end_header = true;
         break;
@@ -1433,17 +1433,17 @@ namespace yocto {
 
 inline void parse_value(string_view& str, obj_vertex& value) {
   value = obj_vertex{0, 0, 0};
-  parse_value(str, value.position);
+  if(!parse_value(str, value.position) return parse_error();
   if (!str.empty() && str.front() == '/') {
     str.remove_prefix(1);
     if (!str.empty() && str.front() == '/') {
       str.remove_prefix(1);
-      parse_value(str, value.normal);
+      if(!parse_value(str, value.normal) return parse_error();
     } else {
-      parse_value(str, value.texcoord);
+      if(!parse_value(str, value.texcoord) return parse_error();
       if (!str.empty() && str.front() == '/') {
         str.remove_prefix(1);
-        parse_value(str, value.normal);
+        if(!parse_value(str, value.normal) return parse_error();
       }
     }
   }
@@ -1459,7 +1459,7 @@ inline void parse_value(string_view& str, obj_texture& info) {
   skip_whitespace(str);
   while (!str.empty()) {
     auto token = ""s;
-    parse_value(str, token);
+    if(!parse_value(str, token) return parse_error();
     tokens.push_back(token);
     skip_whitespace(str);
   }
@@ -1501,7 +1501,7 @@ static void load_mtl(const string& filename, obj_model& obj) {
   for (auto& texture : obj.textures) texture_map[texture.path] = texture_id++;
   auto parse_texture = [&texture_map, &obj](string_view& str, int& texture_id) {
     auto texture_path = obj_texture{};
-    parse_value(str, texture_path);
+    if(!parse_value(str, texture_path) return parse_error();
     auto texture_it = texture_map.find(texture_path.path);
     if (texture_it == texture_map.end()) {
       auto& texture             = obj.textures.emplace_back();
@@ -1531,7 +1531,7 @@ static void load_mtl(const string& filename, obj_model& obj) {
 
       // get command
       auto cmd = ""s;
-      parse_value(str, cmd);
+      if(!parse_value(str, cmd) return parse_error();
       if (cmd.empty()) continue;
 
       // grab material
@@ -1540,49 +1540,49 @@ static void load_mtl(const string& filename, obj_model& obj) {
       // possible token values
       if (cmd == "newmtl") {
         auto& material = obj.materials.emplace_back();
-        parse_value(str, material.name);
+        if(!parse_value(str, material.name) return parse_error();
       } else if (cmd == "illum") {
-        parse_value(str, material.illum);
+        if(!parse_value(str, material.illum) return parse_error();
       } else if (cmd == "Ke") {
-        parse_value(str, material.emission);
+        if(!parse_value(str, material.emission) return parse_error();
       } else if (cmd == "Ka") {
-        parse_value(str, material.ambient);
+        if(!parse_value(str, material.ambient) return parse_error();
       } else if (cmd == "Kd") {
-        parse_value(str, material.diffuse);
+        if(!parse_value(str, material.diffuse) return parse_error();
       } else if (cmd == "Ks") {
-        parse_value(str, material.specular);
+        if(!parse_value(str, material.specular) return parse_error();
       } else if (cmd == "Kt") {
-        parse_value(str, material.transmission);
+        if(!parse_value(str, material.transmission) return parse_error();
       } else if (cmd == "Tf") {
-        parse_value(str, material.transmission);
+        if(!parse_value(str, material.transmission) return parse_error();
         material.transmission = max(1 - material.transmission, 0.0f);
         if (max(material.transmission) < 0.001)
           material.transmission = {0, 0, 0};
       } else if (cmd == "Tr") {
-        parse_value(str, material.opacity);
+        if(!parse_value(str, material.opacity) return parse_error();
         material.opacity = 1 - material.opacity;
       } else if (cmd == "Ns") {
-        parse_value(str, material.exponent);
+        if(!parse_value(str, material.exponent) return parse_error();
       } else if (cmd == "d") {
-        parse_value(str, material.opacity);
+        if(!parse_value(str, material.opacity) return parse_error();
       } else if (cmd == "map_Ke") {
-        parse_texture(str, material.emission_tex);
+        if(!parse_texture(str, material.emission_tex) return parse_error();
       } else if (cmd == "map_Ka") {
-        parse_texture(str, material.ambient_tex);
+        if(!parse_texture(str, material.ambient_tex) return parse_error();
       } else if (cmd == "map_Kd") {
-        parse_texture(str, material.diffuse_tex);
+        if(!parse_texture(str, material.diffuse_tex) return parse_error();
       } else if (cmd == "map_Ks") {
-        parse_texture(str, material.specular_tex);
+        if(!parse_texture(str, material.specular_tex) return parse_error();
       } else if (cmd == "map_Tr") {
-        parse_texture(str, material.transmission_tex);
+        if(!parse_texture(str, material.transmission_tex) return parse_error();
       } else if (cmd == "map_d" || cmd == "map_Tr") {
-        parse_texture(str, material.opacity_tex);
+        if(!parse_texture(str, material.opacity_tex) return parse_error();
       } else if (cmd == "map_bump" || cmd == "bump") {
-        parse_texture(str, material.bump_tex);
+        if(!parse_texture(str, material.bump_tex) return parse_error();
       } else if (cmd == "map_disp" || cmd == "disp") {
-        parse_texture(str, material.displacement_tex);
+        if(!parse_texture(str, material.displacement_tex) return parse_error();
       } else if (cmd == "map_norm" || cmd == "norm") {
-        parse_texture(str, material.normal_tex);
+        if(!parse_texture(str, material.normal_tex) return parse_error();
       } else {
         continue;
       }
@@ -1603,7 +1603,7 @@ static void load_obx(const string& filename, obj_model& obj) {
   for (auto& texture : obj.textures) texture_map[texture.path] = texture_id++;
   auto parse_texture = [&texture_map, &obj](string_view& str, int& texture_id) {
     auto texture_path = obj_texture{};
-    parse_value(str, texture_path);
+    if(!parse_value(str, texture_path) return parse_error();
     auto texture_it = texture_map.find(texture_path.path);
     if (texture_it == texture_map.end()) {
       auto& texture             = obj.textures.emplace_back();
@@ -1634,7 +1634,7 @@ static void load_obx(const string& filename, obj_model& obj) {
 
       // get command
       auto cmd = ""s;
-      parse_value(str, cmd);
+      if(!parse_value(str, cmd) return parse_error();
       if (cmd.empty()) continue;
 
       // grab elements
@@ -1644,38 +1644,38 @@ static void load_obx(const string& filename, obj_model& obj) {
       // read values
       if (cmd == "newCam") {
         auto& camera = obj.cameras.emplace_back();
-        parse_value(str, camera.name);
+        if(!parse_value(str, camera.name) return parse_error();
       } else if (cmd == "Co") {
-        parse_value(str, camera.ortho);
+        if(!parse_value(str, camera.ortho) return parse_error();
       } else if (cmd == "Ca") {
-        parse_value(str, camera.aspect);
+        if(!parse_value(str, camera.aspect) return parse_error();
       } else if (cmd == "Cl") {
-        parse_value(str, camera.lens);
+        if(!parse_value(str, camera.lens) return parse_error();
       } else if (cmd == "Cs") {
-        parse_value(str, camera.film);
+        if(!parse_value(str, camera.film) return parse_error();
       } else if (cmd == "Cf") {
-        parse_value(str, camera.focus);
+        if(!parse_value(str, camera.focus) return parse_error();
       } else if (cmd == "Cp") {
-        parse_value(str, camera.aperture);
+        if(!parse_value(str, camera.aperture) return parse_error();
       } else if (cmd == "Cx") {
-        parse_value(str, camera.frame);
+        if(!parse_value(str, camera.frame) return parse_error();
       } else if (cmd == "Ct") {
         auto lookat = mat3f{};
-        parse_value(str, lookat);
+        if(!parse_value(str, lookat) return parse_error();
         camera.frame = lookat_frame(lookat.x, lookat.y, lookat.z);
         if (camera.focus == 0) camera.focus = length(lookat.y - lookat.x);
       } else if (cmd == "newEnv") {
         auto& environment = obj.environments.emplace_back();
-        parse_value(str, environment.name);
+        if(!parse_value(str, environment.name) return parse_error();
       } else if (cmd == "Ee") {
-        parse_value(str, environment.emission);
+        if(!parse_value(str, environment.emission) return parse_error();
       } else if (cmd == "map_Ee") {
-        parse_texture(str, environment.emission_tex);
+        if(!parse_texture(str, environment.emission_tex) return parse_error();
       } else if (cmd == "Ex") {
-        parse_value(str, environment.frame);
+        if(!parse_value(str, environment.frame) return parse_error();
       } else if (cmd == "Et") {
         auto lookat = mat3f{};
-        parse_value(str, lookat);
+        if(!parse_value(str, lookat) return parse_error();
         environment.frame = lookat_frame(lookat.x, lookat.y, lookat.z, true);
       } else {
         // unused
@@ -1727,7 +1727,7 @@ void load_obj(const string& filename, obj_model& obj, bool face_varying,
 
       // get command
       auto cmd = ""s;
-      parse_value(str, cmd);
+      if(!parse_value(str, cmd) return parse_error();
       if (cmd.empty()) continue;
 
       // possible token values
@@ -1758,7 +1758,7 @@ void load_obj(const string& filename, obj_model& obj, bool face_varying,
         skip_whitespace(str);
         while (!str.empty()) {
           auto vert = obj_vertex{};
-          parse_value(str, vert);
+          if(!parse_value(str, vert) return parse_error();
           if (vert.position == 0) break;
           if (vert.position < 0)
             vert.position = (int)opositions.size() + vert.position + 1;
@@ -1776,7 +1776,7 @@ void load_obj(const string& filename, obj_model& obj, bool face_varying,
         if (str.empty()) {
           name = "";
         } else {
-          parse_value(str, name);
+          if(!parse_value(str, name) return parse_error();
         }
         if (split_materials) {
           cur_shape       = &obj.shapes.emplace_back();
@@ -1790,7 +1790,7 @@ void load_obj(const string& filename, obj_model& obj, bool face_varying,
         }
       } else if (cmd == "usemtl") {
         auto mname = string{};
-        parse_value(str, mname);
+        if(!parse_value(str, mname) return parse_error();
         auto material_it = material_map.find(mname);
         if (material_it == material_map.end())
           throw obj_error(filename + ": missing material " + mname);
@@ -1809,7 +1809,7 @@ void load_obj(const string& filename, obj_model& obj, bool face_varying,
         }
       } else if (cmd == "mtllib") {
         auto mtllib = ""s;
-        parse_value(str, mtllib);
+        if(!parse_value(str, mtllib) return parse_error();
         if (std::find(mtllibs.begin(), mtllibs.end(), mtllib) ==
             mtllibs.end()) {
           mtllibs.push_back(mtllib);
@@ -1924,7 +1924,7 @@ void load_obj(const string& filename, obj_shape& shape, bool face_varying) {
 
       // get command
       auto cmd = ""s;
-      parse_value(str, cmd);
+      if(!parse_value(str, cmd) return parse_error();
       if (cmd.empty()) continue;
 
       // possible token values
@@ -1947,7 +1947,7 @@ void load_obj(const string& filename, obj_shape& shape, bool face_varying) {
         skip_whitespace(str);
         while (!str.empty()) {
           auto vert = obj_vertex{};
-          parse_value(str, vert);
+          if(!parse_value(str, vert) return parse_error();
           if (vert.position == 0) break;
           if (vert.position < 0)
             vert.position = (int)shape.positions.size() + vert.position + 1;
@@ -1961,7 +1961,7 @@ void load_obj(const string& filename, obj_shape& shape, bool face_varying) {
         }
       } else if (cmd == "usemtl") {
         auto mname = string{};
-        parse_value(str, mname);
+        if(!parse_value(str, mname) return parse_error();
         auto material_it = material_map.find(mname);
         if (material_it == material_map.end()) {
           cur_material        = (int)material_map.size();
@@ -2812,7 +2812,7 @@ void load_stl(const string& filename, stl_model& stl, bool unique_vertices) {
 
         // get command
         auto cmd = ""s;
-        parse_value(str, cmd);
+        if(!parse_value(str, cmd) return parse_error();
         if (cmd.empty()) continue;
 
         // switch over command
@@ -2828,7 +2828,7 @@ void load_stl(const string& filename, stl_model& stl, bool unique_vertices) {
             throw stl_error(filename + ": parse error");
           in_facet = true;
           // next command
-          parse_value(str, cmd);
+          if(!parse_value(str, cmd) return parse_error();
           if (cmd != "normal") throw stl_error(filename + ": parse error");
           // vertex normal
           parse_value(str, stl.shapes.back().fnormals.emplace_back());
@@ -2851,7 +2851,7 @@ void load_stl(const string& filename, stl_model& stl, bool unique_vertices) {
             throw stl_error(filename + ": parse error");
           in_loop = true;
           // next command
-          parse_value(str, cmd);
+          if(!parse_value(str, cmd) return parse_error();
           if (cmd != "loop") throw stl_error(filename + ": parse error");
         } else if (cmd == "endloop") {
           if (!in_solid || !in_facet || !in_loop)
@@ -3343,7 +3343,7 @@ inline void parse_param(string_view& str, T& value) {
   skip_whitespace(str);
   auto parens = !str.empty() && str.front() == '[';
   if (parens) str.remove_prefix(1);
-  parse_value(str, value);
+  if(!parse_value(str, value) return parse_error();
   if (!str.data()) throw std::invalid_argument{"value expected"};
   if (parens) {
     skip_whitespace(str);
@@ -3562,7 +3562,7 @@ inline void parse_params(string_view& str, vector<pbrt_value>& values) {
       if (str.empty()) throw std::invalid_argument{"param expected"};
       while (!str.empty()) {
         auto& val = values.empty() ? value : values.emplace_back();
-        parse_value(str, val);
+        if(!parse_value(str, val) return parse_error();
         if (!str.data()) throw std::invalid_argument{"param expected"};
         skip_whitespace(str);
         if (str.empty()) break;
@@ -3573,7 +3573,7 @@ inline void parse_params(string_view& str, vector<pbrt_value>& values) {
       if (str.front() != ']') throw std::invalid_argument{"param expected"};
       str.remove_prefix(1);
     } else {
-      return parse_value(str, value);
+      return if(!parse_value(str, value) return parse_error();
     }
   };
 
@@ -3673,7 +3673,7 @@ inline void parse_params(string_view& str, vector<pbrt_value>& values) {
         skip_whitespace(str);
         auto has_parens = str.front() == '[';
         if (has_parens) str.remove_prefix(1);
-        parse_value(str, filename);
+        if(!parse_value(str, filename) return parse_error();
         if (has_parens) {
           skip_whitespace(str);
           if (str.front() != ']') throw std::invalid_argument{"param expected"};
@@ -4549,7 +4549,7 @@ inline void load_pbrt(const string& filename, pbrt_model& pbrt,
       auto str = string_view{line};
       // get command
       auto cmd = ""s;
-      parse_command(str, cmd);
+      if(!parse_command(str, cmd) return parse_error();
       if (cmd == "WorldBegin") {
         ctx.stack.push_back({});
       } else if (cmd == "WorldEnd") {
@@ -4568,14 +4568,14 @@ inline void load_pbrt(const string& filename, pbrt_model& pbrt,
         ctx.stack.pop_back();
       } else if (cmd == "ObjectBegin") {
         ctx.stack.push_back(ctx.stack.back());
-        parse_param(str, ctx.cur_object);
+        if(!parse_param(str, ctx.cur_object) return parse_error();
         named_objects[ctx.cur_object] = {};
       } else if (cmd == "ObjectEnd") {
         ctx.stack.pop_back();
         ctx.cur_object = "";
       } else if (cmd == "ObjectInstance") {
         auto object = ""s;
-        parse_param(str, object);
+        if(!parse_param(str, object) return parse_error();
         if (named_objects.find(object) == named_objects.end())
           throw pbrt_error(filename + ": unknow object " + object);
         auto& named_object = named_objects.at(object);
@@ -4587,7 +4587,7 @@ inline void load_pbrt(const string& filename, pbrt_model& pbrt,
         }
       } else if (cmd == "ActiveTransform") {
         auto name = ""s;
-        parse_command(str, name);
+        if(!parse_command(str, name) return parse_error();
         if (name == "StartTime") {
           ctx.stack.back().active_transform_start = true;
           ctx.stack.back().active_transform_end   = false;
@@ -4602,42 +4602,42 @@ inline void load_pbrt(const string& filename, pbrt_model& pbrt,
         }
       } else if (cmd == "Transform") {
         auto xf = identity4x4f;
-        parse_param(str, xf);
+        if(!parse_param(str, xf) return parse_error();
         set_transform(ctx.stack.back(), mat_to_frame(xf));
       } else if (cmd == "ConcatTransform") {
         auto xf = identity4x4f;
-        parse_param(str, xf);
+        if(!parse_param(str, xf) return parse_error();
         concat_transform(ctx.stack.back(), mat_to_frame(xf));
       } else if (cmd == "Scale") {
         auto v = vec3f{0, 0, 0};
-        parse_param(str, v);
+        if(!parse_param(str, v) return parse_error();
         concat_transform(ctx.stack.back(), scaling_frame(v));
       } else if (cmd == "Translate") {
         auto v = vec3f{0, 0, 0};
-        parse_param(str, v);
+        if(!parse_param(str, v) return parse_error();
         concat_transform(ctx.stack.back(), translation_frame(v));
       } else if (cmd == "Rotate") {
         auto v = zero4f;
-        parse_param(str, v);
+        if(!parse_param(str, v) return parse_error();
         concat_transform(ctx.stack.back(),
             rotation_frame(vec3f{v.y, v.z, v.w}, radians(v.x)));
       } else if (cmd == "LookAt") {
         auto from = vec3f{0, 0, 0}, to = vec3f{0, 0, 0}, up = vec3f{0, 0, 0};
-        parse_param(str, from);
-        parse_param(str, to);
-        parse_param(str, up);
+        if(!parse_param(str, from) return parse_error();
+        if(!parse_param(str, to) return parse_error();
+        if(!parse_param(str, up) return parse_error();
         auto frame = lookat_frame(from, to, up, true);
         concat_transform(ctx.stack.back(), inverse(frame));
       } else if (cmd == "ReverseOrientation") {
         ctx.stack.back().reverse = !ctx.stack.back().reverse;
       } else if (cmd == "CoordinateSystem") {
         auto name = ""s;
-        parse_param(str, name);
+        if(!parse_param(str, name) return parse_error();
         ctx.coordsys[name].transform_start = ctx.stack.back().transform_start;
         ctx.coordsys[name].transform_end   = ctx.stack.back().transform_end;
       } else if (cmd == "CoordSysTransform") {
         auto name = ""s;
-        parse_param(str, name);
+        if(!parse_param(str, name) return parse_error();
         if (ctx.coordsys.find(name) != ctx.coordsys.end()) {
           ctx.stack.back().transform_start =
               ctx.coordsys.at(name).transform_start;
@@ -4645,31 +4645,31 @@ inline void load_pbrt(const string& filename, pbrt_model& pbrt,
         }
       } else if (cmd == "Integrator") {
         auto command = pbrt_command{};
-        parse_param(str, command.type);
-        parse_params(str, command.values);
+        if(!parse_param(str, command.type) return parse_error();
+        if(!parse_params(str, command.values) return parse_error();
       } else if (cmd == "Sampler") {
         auto command = pbrt_command{};
-        parse_param(str, command.type);
-        parse_params(str, command.values);
+        if(!parse_param(str, command.type) return parse_error();
+        if(!parse_params(str, command.values) return parse_error();
       } else if (cmd == "PixelFilter") {
         auto command = pbrt_command{};
-        parse_param(str, command.type);
-        parse_params(str, command.values);
+        if(!parse_param(str, command.type) return parse_error();
+        if(!parse_params(str, command.values) return parse_error();
       } else if (cmd == "Film") {
         auto command = pbrt_command{};
-        parse_param(str, command.type);
-        parse_params(str, command.values);
+        if(!parse_param(str, command.type) return parse_error();
+        if(!parse_params(str, command.values) return parse_error();
         auto film = pbrt_film{};
         convert_film(film, command, filename);
         ctx.film_resolution = film.resolution;
       } else if (cmd == "Accelerator") {
         auto command = pbrt_command{};
-        parse_param(str, command.type);
-        parse_params(str, command.values);
+        if(!parse_param(str, command.type) return parse_error();
+        if(!parse_params(str, command.values) return parse_error();
       } else if (cmd == "Camera") {
         auto command = pbrt_command{};
-        parse_param(str, command.type);
-        parse_params(str, command.values);
+        if(!parse_param(str, command.type) return parse_error();
+        if(!parse_params(str, command.values) return parse_error();
         command.frame = ctx.stack.back().transform_start;
         command.frend = ctx.stack.back().transform_end;
         auto& camera  = pbrt.cameras.emplace_back();
@@ -4678,18 +4678,18 @@ inline void load_pbrt(const string& filename, pbrt_model& pbrt,
         auto command  = pbrt_command{};
         auto comptype = ""s;
         auto str_     = string{str};
-        parse_param(str, command.name);
-        parse_param(str, comptype);
-        parse_param(str, command.type);
-        parse_params(str, command.values);
+        if(!parse_param(str, command.name) return parse_error();
+        if(!parse_param(str, comptype) return parse_error();
+        if(!parse_param(str, command.type) return parse_error();
+        if(!parse_params(str, command.values) return parse_error();
         convert_texture(
             named_textures[command.name], command, named_textures, filename);
       } else if (cmd == "Material") {
         static auto material_id = 0;
         auto        command     = pbrt_command{};
         command.name = "__unnamed__material__" + std::to_string(material_id++);
-        parse_param(str, command.type);
-        parse_params(str, command.values);
+        if(!parse_param(str, command.type) return parse_error();
+        if(!parse_params(str, command.values) return parse_error();
         if (command.type.empty()) {
           ctx.stack.back().material = {};
         } else {
@@ -4699,8 +4699,8 @@ inline void load_pbrt(const string& filename, pbrt_model& pbrt,
         }
       } else if (cmd == "MakeNamedMaterial") {
         auto command = pbrt_command{};
-        parse_param(str, command.name);
-        parse_params(str, command.values);
+        if(!parse_param(str, command.name) return parse_error();
+        if(!parse_params(str, command.values) return parse_error();
         command.type = "";
         for (auto& value : command.values)
           if (value.name == "type") command.type = value.value1s;
@@ -4708,14 +4708,14 @@ inline void load_pbrt(const string& filename, pbrt_model& pbrt,
             named_materials, named_textures, filename);
       } else if (cmd == "NamedMaterial") {
         auto name = ""s;
-        parse_param(str, name);
+        if(!parse_param(str, name) return parse_error();
         if (named_materials.find(name) == named_materials.end())
           throw pbrt_error(filename + ": unknown material " + name);
         ctx.stack.back().material = named_materials.at(name);
       } else if (cmd == "Shape") {
         auto command = pbrt_command{};
-        parse_param(str, command.type);
-        parse_params(str, command.values);
+        if(!parse_param(str, command.type) return parse_error();
+        if(!parse_params(str, command.values) return parse_error();
         command.frame  = ctx.stack.back().transform_start;
         command.frend  = ctx.stack.back().transform_end;
         auto& shape    = pbrt.shapes.emplace_back();
@@ -4742,15 +4742,15 @@ inline void load_pbrt(const string& filename, pbrt_model& pbrt,
         auto        command      = pbrt_command{};
         command.name             = "__unnamed__arealight__" +
                        std::to_string(arealight_id++);
-        parse_param(str, command.type);
-        parse_params(str, command.values);
+        if(!parse_param(str, command.type) return parse_error();
+        if(!parse_params(str, command.values) return parse_error();
         command.frame = ctx.stack.back().transform_start;
         command.frend = ctx.stack.back().transform_end;
         convert_arealight(ctx.stack.back().arealight, command, filename);
       } else if (cmd == "LightSource") {
         auto command = pbrt_command{};
-        parse_param(str, command.type);
-        parse_params(str, command.values);
+        if(!parse_param(str, command.type) return parse_error();
+        if(!parse_params(str, command.values) return parse_error();
         command.frame = ctx.stack.back().transform_start;
         command.frend = ctx.stack.back().transform_end;
         if (command.type == "infinite") {
@@ -4762,8 +4762,8 @@ inline void load_pbrt(const string& filename, pbrt_model& pbrt,
         }
       } else if (cmd == "MakeNamedMedium") {
         auto command = pbrt_command{};
-        parse_param(str, command.name);
-        parse_params(str, command.values);
+        if(!parse_param(str, command.name) return parse_error();
+        if(!parse_params(str, command.values) return parse_error();
         command.type = "";
         for (auto& value : command.values)
           if (command.name == "type") command.type = value.value1s;
@@ -4771,13 +4771,13 @@ inline void load_pbrt(const string& filename, pbrt_model& pbrt,
         named_mediums[command.name] = medium;
       } else if (cmd == "MediumInterface") {
         auto interior = ""s, exterior = ""s;
-        parse_param(str, interior);
-        parse_param(str, exterior);
+        if(!parse_param(str, interior) return parse_error();
+        if(!parse_param(str, exterior) return parse_error();
         ctx.stack.back().interior = named_mediums.at(interior);
         ctx.stack.back().exterior = named_mediums.at(exterior);
       } else if (cmd == "Include") {
         auto includename = ""s;
-        parse_param(str, includename);
+        if(!parse_param(str, includename) return parse_error();
         load_pbrt(path_join(path_dirname(filename), includename), pbrt, ctx,
             material_map, texture_map, named_materials, named_textures,
             named_mediums, named_objects, ply_dirname, ply_meshes);
