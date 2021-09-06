@@ -44,8 +44,10 @@
 #include <type_traits>
 #include <vector>
 
-#include "ext/json.hpp"
 #include "yocto_math.h"
+
+#define JSON_USE_IMPLICIT_CONVERSIONS 0
+#include "ext/json.hpp"
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES

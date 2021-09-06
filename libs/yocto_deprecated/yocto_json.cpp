@@ -38,6 +38,7 @@
 #include <filesystem>
 #include <limits>
 
+#define JSON_USE_IMPLICIT_CONVERSIONS 0
 #include "ext/json.hpp"
 
 // -----------------------------------------------------------------------------
