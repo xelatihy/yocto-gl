@@ -86,8 +86,8 @@
             }
           },
           "emission_tex": {
-            "description": "Environment map file name",
-            "type": "string"
+            "description": "Environment map index",
+            "type": "integer"
           }
         }
       }
@@ -150,35 +150,35 @@
           },
           "displacement": {
             "description": "Displacement",
-            "type": "number"
+            "type": "integer"
           },
           "emission_tex": {
             "description": "Emission map",
-            "type": "string"
+            "type": "integer"
           },
           "color_tex": {
             "description": "Color",
-            "type": "string"
+            "type": "integer"
           },
           "roughness_tex": {
             "description": "Roughness",
-            "type": "string"
+            "type": "integer"
           },
           "metallic_tex": {
             "description": "Metallic",
-            "type": "string"
+            "type": "integer"
           },
           "scattering_tex": {
             "description": "Volume scattering",
-            "type": "string"
+            "type": "integer"
           },
           "displacement_tex": {
             "description": "Displacement map",
-            "type": "string"
+            "type": "integer"
           },
           "normal_tex": {
             "description": "Normal map",
-            "type": "string"
+            "type": "integer"
           }
         }
       }
