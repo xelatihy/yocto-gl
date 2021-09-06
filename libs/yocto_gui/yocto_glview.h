@@ -39,6 +39,7 @@
 #include <yocto/yocto_trace.h>
 
 #include <array>
+#include <functional>
 #include <string>
 #include <vector>
 
@@ -49,6 +50,7 @@ namespace yocto {
 
 // using directives
 using std::array;
+using std::function;
 using std::string;
 using std::vector;
 

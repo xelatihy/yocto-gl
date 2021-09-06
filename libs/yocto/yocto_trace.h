@@ -57,7 +57,6 @@ namespace yocto {
 
 // using directives
 using std::atomic;
-using std::function;
 using std::future;
 using std::pair;
 using std::string;
@@ -115,18 +114,6 @@ struct trace_params {
   bool                  denoise        = false;
   int                   batch          = 1;
 };
-
-inline const auto trace_sampler_names = std::vector<std::string>{"path",
-    "pathdirect", "pathmis", "naive", "eyelight", "eyelightao", "furnace",
-    "falsecolor"};
-
-inline const auto trace_falsecolor_names = vector<string>{"position", "normal",
-    "frontfacing", "gnormal", "gfrontfacing", "texcoord", "mtype", "color",
-    "emission", "roughness", "opacity", "metallic", "delta", "instance",
-    "shape", "material", "element", "highlight"};
-
-// Progress report callback
-using image_callback = function<void(int current, int total)>;
 
 // Progressively computes an image.
 image_data trace_image(const scene_data& scene, const trace_params& params);
@@ -201,6 +188,56 @@ image_data denoise_render(const image_data& render, const image_data& albedo,
     const image_data& normal);
 void       denoise_render(image_data& denoised, const image_data& render,
           const image_data& albedo, const image_data& normal);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// ENUM LABELS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// trace sampler names
+inline const auto trace_sampler_names = vector<string>{"path", "pathdirect",
+    "pathmis", "naive", "eyelight", "eyelightao", "furnace", "falsecolor"};
+
+// false color names
+inline const auto trace_falsecolor_names = vector<string>{"position", "normal",
+    "frontfacing", "gnormal", "gfrontfacing", "texcoord", "mtype", "color",
+    "emission", "roughness", "opacity", "metallic", "delta", "instance",
+    "shape", "material", "element", "highlight"};
+
+// trace sampler labels
+inline const auto trace_sampler_labels =
+    vector<pair<trace_sampler_type, string>>{{trace_sampler_type::path, "path"},
+        {trace_sampler_type::pathdirect, "pathdirect"},
+        {trace_sampler_type::pathmis, "pathmis"},
+        {trace_sampler_type::naive, "naive"},
+        {trace_sampler_type::eyelight, "eyelight"},
+        {trace_sampler_type::eyelightao, "eyelightao"},
+        {trace_sampler_type::furnace, "furnace"},
+        {trace_sampler_type::falsecolor, "falsecolor"}};
+
+// false color labels
+inline const auto trace_falsecolor_labels =
+    vector<pair<trace_falsecolor_type, string>>{
+        {trace_falsecolor_type::position, "position"},
+        {trace_falsecolor_type::normal, "normal"},
+        {trace_falsecolor_type::frontfacing, "frontfacing"},
+        {trace_falsecolor_type::gnormal, "gnormal"},
+        {trace_falsecolor_type::gfrontfacing, "gfrontfacing"},
+        {trace_falsecolor_type::texcoord, "texcoord"},
+        {trace_falsecolor_type::mtype, "mtype"},
+        {trace_falsecolor_type::color, "color"},
+        {trace_falsecolor_type::emission, "emission"},
+        {trace_falsecolor_type::roughness, "roughness"},
+        {trace_falsecolor_type::opacity, "opacity"},
+        {trace_falsecolor_type::metallic, "metallic"},
+        {trace_falsecolor_type::delta, "delta"},
+        {trace_falsecolor_type::instance, "instance"},
+        {trace_falsecolor_type::shape, "shape"},
+        {trace_falsecolor_type::material, "material"},
+        {trace_falsecolor_type::element, "element"},
+        {trace_falsecolor_type::highlight, "highlight"}};
 
 }  // namespace yocto
 
