@@ -44,12 +44,6 @@ option flag, and `req` determines whether the option is required, and `check`
 is either a range of valid values er a list of valid choices.
 A help flag is automatically added.
 
-After adding all arguments, use `parse_cli(cli, args)` to parse the
-command-line. If an error occurs, the parser throws a `cli_error` exception,
-that includes a message that can be printed to inform the user.
-If you cannot use exceptions, use the function `parse_cli(cli, args, error)`
-that returns whether an error has occurred as a boolean and the error string.
-
 For positional arguments, the argument name is only used for printing help.
 For optional arguments, the command line is parsed for options named `--` 
 followed by the option `name` or `-` followed by the `alt` short name.
@@ -59,6 +53,10 @@ enums and arrays of strings.
 
 An help command is added automatically and checked for printing help and exiting
 without errors.
+
+After adding all arguments, use `ok = parse_cli(cli, args, error)` to parse the
+command-line. If an error occurs, the parser throws `false` and stores in 
+`error` a message that can be printed to inform the user.
 
 ```cpp
 auto samples = 10; auto flag = false;                // state
@@ -71,27 +69,9 @@ add_option(cli, "flag", flag, "flag");          // optional flag
 add_argument(cli, "scene", scene, "scene");     // positional argument
 add_option(cli, "scenes", scenes, "scenes");    // positional arguments
 auto args = make_cli_args(argc, argv);          // make a vector of args
-try {
-  parse_cli(cli, args);                         // parse args
-} catch(const cli_error& error) {
-  print_info(error.what());                     // exit with error
-  exit(1);
-} catch(const cli_help& help) {
-  print_info(help.what());                      // exit with help
-  exit(0);
-} catch (const std::exception& error) {               
-  print_info(error.what());                     // exit with other error
-  exit(1);
-}
-```
-
-You can avoid using writing the exception chain above by using the 
-`handle_errors(func)` or `handle_errors(func, args)` function that executes a 
-function and handle all errors internally.
-
-```cpp
-void app(const vector<string>& args) { ... }    // parse cli and run
-handle_errors(app, make_cli_args(argc, argv));  // run and handle errors
+auto error = string{};                          // error string
+if (!parse_cli(cli, args, error))               // parse args
+  print_fatal(error);                           // exit with error
 ```
 
 ## Command-Line Commands
