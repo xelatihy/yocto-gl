@@ -63,18 +63,6 @@ using std::vector;
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Error type for modelio
-struct modelio_error : std::logic_error {
-  modelio_error(const string& message) : std::logic_error(message) {}
-};
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// PLY LOADER AND WRITER
-// -----------------------------------------------------------------------------
-namespace yocto {
-
 // Ply type
 enum struct ply_type { i8, i16, i32, i64, u8, u16, u32, u64, f32, f64 };
 
@@ -119,16 +107,6 @@ struct ply_model {
   vector<string>      comments = {};
   vector<ply_element> elements = {};
 };
-
-// Ply error
-struct ply_error : modelio_error {
-  ply_error(const string& message) : modelio_error(message) {}
-};
-
-// Load and save ply
-[[deprecated]] ply_model load_ply(const string& filename);
-[[deprecated]] void      load_ply(const string& filename, ply_model& ply);
-[[deprecated]] void      save_ply(const string& filename, const ply_model& ply);
 
 // Load and save ply
 [[nodiscard]] bool load_ply(
@@ -335,18 +313,6 @@ struct obj_model {
   vector<obj_environment> environments = {};
 };
 
-// Obj error
-struct obj_error : modelio_error {
-  obj_error(const string& message) : modelio_error(message) {}
-};
-
-// Load and save obj
-[[deprecated]] obj_model load_obj(const string& filename,
-    bool face_varying = false, bool split_materials = false);
-[[deprecated]] void      load_obj(const string& filename, obj_model& obj,
-         bool face_varying = false, bool split_materials = false);
-[[deprecated]] void      save_obj(const string& filename, const obj_model& obj);
-
 // Load and save obj shape
 obj_shape load_sobj(const string& filename, bool face_varying = false);
 void      load_obj(
@@ -448,19 +414,6 @@ struct stl_shape {
 struct stl_model {
   vector<stl_shape> shapes = {};
 };
-
-// Stl error
-struct stl_error : modelio_error {
-  stl_error(const string& message) : modelio_error(message) {}
-};
-
-// Load and save ply
-[[deprecated]] stl_model load_stl(
-    const string& filename, bool unique_vertices = true);
-[[deprecated]] void load_stl(
-    const string& filename, stl_model& stl, bool unique_vertices = true);
-[[deprecated]] void save_stl(
-    const string& filename, const stl_model& stl, bool ascii = false);
 
 // Load/save stl
 [[nodiscard]] bool load_stl(const string& filename, stl_model& stl,
@@ -570,19 +523,6 @@ struct pbrt_model {
   vector<pbrt_material>    materials    = {};
   vector<pbrt_texture>     textures     = {};
 };
-
-// Pbrt error
-struct pbrt_error : modelio_error {
-  pbrt_error(const string& message) : modelio_error(message) {}
-};
-
-// Load/save pbrt
-[[deprecated]] pbrt_model load_pbrt(
-    const string& filename, bool ply_meshes = false);
-[[deprecated]] void load_pbrt(
-    const string& filename, pbrt_model& pbrt, bool ply_meshes = false);
-[[deprecated]] void save_pbrt(
-    const string& filename, const pbrt_model& pbrt, bool ply_meshes = false);
 
 // Load/save pbrt
 [[nodiscard]] bool load_pbrt(const string& filename, pbrt_model& pbrt,

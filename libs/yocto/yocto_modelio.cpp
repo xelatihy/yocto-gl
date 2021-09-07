@@ -967,26 +967,6 @@ bool save_ply(const string& filename, const ply_model& ply, string& error) {
   return true;
 }
 
-// Load and save ply
-ply_model load_ply(const string& filename) {
-  auto error = string{};
-  auto ply   = ply_model{};
-  if (!load_ply(filename, ply, error)) throw ply_error{error};
-  return ply;
-}
-
-// Load ply
-void load_ply(const string& filename, ply_model& ply) {
-  auto error = string{};
-  if (!load_ply(filename, ply, error)) throw ply_error{error};
-}
-
-// Save ply
-void save_ply(const string& filename, const ply_model& ply) {
-  auto error = string{};
-  if (!save_ply(filename, ply, error)) throw ply_error{error};
-}
-
 // Get ply properties
 bool has_property(
     const ply_model& ply, const string& element, const string& property) {
@@ -2352,42 +2332,6 @@ bool save_obj(const string& filename, const obj_shape& shape, string& error) {
   return true;
 }
 
-// Load and save obj
-obj_model load_obj(
-    const string& filename, bool face_varying, bool split_materials) {
-  auto error = string{};
-  auto obj   = obj_model{};
-  if (!load_obj(filename, obj, error, face_varying, split_materials))
-    throw obj_error{error};
-  return obj;
-}
-obj_shape load_sobj(const string& filename, bool face_varying) {
-  auto error = string{};
-  auto obj   = obj_shape{};
-  if (!load_obj(filename, obj, error, face_varying)) throw obj_error{error};
-  return obj;
-}
-void load_obj(const string& filename, obj_model& obj, bool face_varying,
-    bool split_materials) {
-  auto error = string{};
-  if (!load_obj(filename, obj, error, face_varying, split_materials))
-    throw obj_error{error};
-}
-void save_obj(const string& filename, const obj_model& obj) {
-  auto error = string{};
-  if (!save_obj(filename, obj, error)) throw obj_error{error};
-}
-
-// Load and save obj shape
-void load_obj(const string& filename, obj_shape& obj, bool face_varying) {
-  auto error = string{};
-  if (!load_obj(filename, obj, error, face_varying)) throw obj_error{error};
-}
-void save_obj(const string& filename, const obj_shape& obj) {
-  auto error = string{};
-  if (!save_obj(filename, obj, error)) throw obj_error{error};
-}
-
 // Get obj shape.
 void get_positions(const obj_shape& shape, vector<vec3f>& positions) {
   positions = shape.positions;
@@ -2811,13 +2755,6 @@ struct hash<yocto::vec3f> {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Load and save stl
-stl_model load_stl(const string& filename, bool unique_vertices) {
-  auto stl = stl_model{};
-  load_stl(filename, stl);
-  return stl;
-}
-
 // Load/save stl
 bool load_stl(const string& filename, stl_model& stl, string& error,
     bool unique_vertices) {
@@ -3071,16 +3008,6 @@ bool save_stl(
 
   // done
   return true;
-}
-
-// Load and save stl
-void load_stl(const string& filename, stl_model& stl, bool unique_vertices) {
-  auto error = string{};
-  if (!load_stl(filename, stl, error, unique_vertices)) throw stl_error{error};
-}
-void save_stl(const string& filename, const stl_model& stl, bool ascii) {
-  auto error = string{};
-  if (!save_stl(filename, stl, error, ascii)) throw stl_error{error};
 }
 
 // Get/set data
@@ -5151,23 +5078,6 @@ bool save_pbrt(const string& filename, const pbrt_model& pbrt, string& error,
 
   // done
   return true;
-}
-
-// Load/save pbrt
-pbrt_model load_pbrt(const string& filename, bool ply_meshes) {
-  auto error = string{};
-  auto pbrt  = pbrt_model{};
-  if (!load_pbrt(filename, pbrt, error, ply_meshes)) throw pbrt_error{error};
-  return pbrt;
-}
-void load_pbrt(const string& filename, pbrt_model& pbrt, bool ply_meshes) {
-  auto error = string{};
-  if (!load_pbrt(filename, pbrt, error, ply_meshes)) throw pbrt_error{error};
-}
-void save_pbrt(
-    const string& filename, const pbrt_model& pbrt, bool ply_meshes) {
-  auto error = string{};
-  if (!save_pbrt(filename, pbrt, error, ply_meshes)) throw pbrt_error{error};
 }
 
 }  // namespace yocto
