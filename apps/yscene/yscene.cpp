@@ -58,8 +58,10 @@ void add_options(const cli_command& cli, convert_params& params) {
 // convert images
 void run_convert(const convert_params& params) {
   // load scene
+  auto error = string{};
+  auto scene = scene_data{};
   print_progress_begin("load scene");
-  auto scene = load_scene(params.scene);
+  if (!load_scene(params.scene, scene, error)) print_fatal(error);
   print_progress_end();
 
   // copyright
@@ -107,8 +109,10 @@ void add_options(const cli_command& cli, info_params& params) {
 // print info for scenes
 void run_info(const info_params& params) {
   // load scene
+  auto error = string{};
   print_progress_begin("load scene");
-  auto scene = load_scene(params.scene);
+  auto scene = scene_data{};
+  if (!load_scene(params.scene, scene, error)) print_fatal(error);
   print_progress_end();
 
   // validate scene
@@ -167,8 +171,10 @@ void run_render(const render_params& params_) {
   auto params = params_;
 
   // scene loading
+  auto error = string{};
   print_progress_begin("load scene");
-  auto scene = load_scene(params.scene);
+  auto scene = scene_data{};
+  if (!load_scene(params.scene, scene, error)) print_fatal(error);
   print_progress_end();
 
   // add sky
@@ -222,7 +228,7 @@ void run_render(const render_params& params_) {
       auto outfilename = replace_extension(params.output, ext);
       if (!is_hdr_filename(params.output))
         image = tonemap_image(image, params.exposure, params.filmic);
-      save_image(outfilename, image);
+      if (!save_image(outfilename, image, error)) print_fatal(error);
     }
     print_progress_next();
   }
@@ -232,7 +238,7 @@ void run_render(const render_params& params_) {
   auto image = params.denoise ? get_denoised(state) : get_render(state);
   if (!is_hdr_filename(params.output))
     image = tonemap_image(image, params.exposure, params.filmic);
-  save_image(params.output, image);
+  if (!save_image(params.output, image, error)) print_fatal(error);
   print_progress_end();
 }
 
@@ -278,9 +284,7 @@ void add_options(const cli_command& cli, view_params& params) {
 #ifndef YOCTO_OPENGL
 
 // view scene
-void run_view(const view_params& params) {
-  throw io_error::not_implemented_error("Opengl not compiled");
-}
+void run_view(const view_params& params) { print_fatal("Opengl not compiled"); }
 
 #else
 
@@ -290,8 +294,10 @@ void run_view(const view_params& params_) {
   auto params = params_;
 
   // load scene
+  auto error = string{};
   print_progress_begin("load scene");
-  auto scene = load_scene(params.scene);
+  auto scene = scene_data{};
+  if (!load_scene(params.scene, scene, error)) print_fatal(error);
   print_progress_end();
 
   // add sky
@@ -335,7 +341,7 @@ void add_options(const cli_command& cli, glview_params& params) {
 
 // view scene
 void run_glview(const glview_params& params) {
-  throw io_error::not_implemented_error("Opengl not compiled");
+  print_fatal("Opengl not compiled");
 }
 
 #else
@@ -345,8 +351,10 @@ void run_glview(const glview_params& params_) {
   auto params = params_;
 
   // loading scene
+  auto error = string{};
   print_progress_begin("load scene");
-  auto scene = load_scene(params.scene);
+  auto scene = scene_data{};
+  if (!load_scene(params.scene, scene, error)) print_fatal(error);
   print_progress_end();
 
   // tesselation
@@ -388,9 +396,10 @@ void add_options(const cli_command& cli, app_params& params) {
 // Run
 void run(const vector<string>& args) {
   // command line parameters
+  auto error  = string{};
   auto params = app_params{};
   auto cli    = make_cli("yscene", params, "Process and view scenes.");
-  parse_cli(cli, args);
+  if (!parse_cli(cli, args, error)) print_fatal(error);
 
   // dispatch commands
   if (params.command == "convert") {
@@ -404,11 +413,9 @@ void run(const vector<string>& args) {
   } else if (params.command == "glview") {
     return run_glview(params.glview);
   } else {
-    throw io_error("yscene; unknown command");
+    print_fatal("yscene; unknown command");
   }
 }
 
 // Main
-int main(int argc, const char* argv[]) {
-  handle_errors(run, make_cli_args(argc, argv));
-}
+int main(int argc, const char* argv[]) { run(make_cli_args(argc, argv)); }

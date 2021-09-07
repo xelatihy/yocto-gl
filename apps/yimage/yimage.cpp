@@ -61,7 +61,9 @@ void add_options(const cli_command& cli, convert_params& params) {
 // convert images
 void run_convert(const convert_params& params) {
   // load
-  auto image = load_image(params.image);
+  auto error = string{};
+  auto image = image_data{};
+  if (!load_image(params.image, image, error)) print_fatal(error);
 
   // resize if needed
   if (params.width != 0 || params.height != 0) {
@@ -74,7 +76,7 @@ void run_convert(const convert_params& params) {
   }
 
   // save
-  save_image(params.output, image);
+  if (!save_image(params.output, image, error)) print_fatal(error);
 }
 
 // view params
@@ -92,18 +94,17 @@ void add_options(const cli_command& cli, view_params& params) {
 #ifndef YOCTO_OPENGL
 
 // view images
-void run_view(const view_params& params) {
-  throw io_error::not_supported_error("Opengl not compiled");
-}
+void run_view(const view_params& params) { print_fatal("Opengl not compiled"); }
 
 #else
 
 // view images
 void run_view(const view_params& params) {
   // load
+  auto error  = string{};
   auto images = vector<image_data>(params.images.size());
   for (auto idx = 0; idx < (int)params.images.size(); idx++) {
-    images[idx] = load_image(params.images[idx]);
+    if (!load_image(params.images[idx], images[idx], error)) print_fatal(error);
   }
 
   // run viewer
@@ -128,7 +129,7 @@ void add_options(const cli_command& cli, grade_params& params) {
 
 // grade images
 void run_grade(const grade_params& params) {
-  throw io_error::not_supported_error("Opengl not compiled");
+  print_fatal("Opengl not compiled");
 }
 
 #else
@@ -136,7 +137,9 @@ void run_grade(const grade_params& params) {
 // grade images
 void run_grade(const grade_params& params) {
   // load image
-  auto image = load_image(params.image);
+  auto error = string{};
+  auto image = image_data{};
+  if (!load_image(params.image, image, error)) print_fatal(error);
 
   // run viewer
   colorgrade_image("yimage", params.image, image);
@@ -165,33 +168,35 @@ void add_options(const cli_command& cli, diff_params& params) {
 // resize images
 void run_diff(const diff_params& params) {
   // load
-  auto image1 = load_image(params.image1);
-  auto image2 = load_image(params.image2);
+  auto error  = string{};
+  auto image1 = image_data{}, image2 = image_data{};
+  if (!load_image(params.image1, image1, error)) print_fatal(error);
+  if (!load_image(params.image2, image2, error)) print_fatal(error);
 
   // check sizes
   if (image1.width != image2.width || image1.height != image2.height) {
-    throw io_error{
-        params.image1 + "," + params.image2 + ": image different sizes"};
+    print_fatal(
+        params.image1 + "," + params.image2 + ": image different sizes");
   }
 
   // check types
   if (image1.linear != image2.linear) {
-    throw io_error{
-        params.image1 + "," + params.image2 + "image different types"};
+    print_fatal(params.image1 + "," + params.image2 + "image different types");
   }
 
   // compute diff
   auto diff = image_difference(image1, image2, true);
 
   // save
-  if (params.output != "") save_image(params.output, diff);
+  if (params.output != "")
+    if (!save_image(params.output, diff, error)) print_fatal(error);
 
   // check diff
   if (params.signal) {
     for (auto& c : diff.pixels) {
       if (max(xyz(c)) > params.threshold) {
-        throw io_error{
-            params.image1 + "," + params.image2 + "image content differs"};
+        print_fatal(
+            params.image1 + "," + params.image2 + "image content differs");
       }
     }
   }
@@ -220,19 +225,19 @@ void add_options(const cli_command& cli, setalpha_params& params) {
 // setalpha images
 void run_setalpha(const setalpha_params& params) {
   // load
-  auto image = load_image(params.image);
-  auto alpha = load_image(params.alpha);
+  auto error = string{};
+  auto image = image_data{}, alpha = image_data{};
+  if (!load_image(params.image, image, error)) print_fatal(error);
+  if (!load_image(params.alpha, alpha, error)) print_fatal(error);
 
   // check sizes
   if (image.width != alpha.width || image.height != alpha.height) {
-    throw io_error{
-        params.image + "," + params.alpha + ": image different size"};
+    print_fatal(params.image + "," + params.alpha + ": image different size");
   }
 
   // check types
   if (image.linear != alpha.linear) {
-    throw io_error{
-        params.image + "," + params.alpha + ": image different types"};
+    print_fatal(params.image + "," + params.alpha + ": image different types");
   }
 
   // edit alpha
@@ -252,7 +257,7 @@ void run_setalpha(const setalpha_params& params) {
   }
 
   // save
-  save_image(params.output, out);
+  if (!save_image(params.output, out, error)) print_fatal(error);
 }
 
 struct app_params {
@@ -278,8 +283,9 @@ void add_options(const cli_command& cli, app_params& params) {
 void run(const vector<string>& args) {
   // command line parameters
   auto params = app_params{};
+  auto error  = string{};
   auto cli    = make_cli("yimage", params, "Process and view images.");
-  parse_cli(cli, args);
+  if (!parse_cli(cli, args, error)) print_fatal(error);
 
   // dispatch commands
   if (params.command == "convert") {
@@ -293,11 +299,9 @@ void run(const vector<string>& args) {
   } else if (params.command == "setalpha") {
     return run_setalpha(params.setalpha);
   } else {
-    throw io_error("yimage: unknown command");
+    print_fatal("yimage: unknown command");
   }
 }
 
 // Main
-int main(int argc, const char* argv[]) {
-  handle_errors(run, make_cli_args(argc, argv));
-}
+int main(int argc, const char* argv[]) { run(make_cli_args(argc, argv)); }

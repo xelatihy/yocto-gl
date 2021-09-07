@@ -5323,6 +5323,84 @@ static bool save_pbrt_scene(const string& filename, const scene_data& scene,
 
 }  // namespace yocto
 
+// -----------------------------------------------------------------------------
+// JSON CLI
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Using directive
+using ordered_json = nlohmann::ordered_json;
+
+// Parse command line arguments to Json without schema
+static bool cli_to_json_value(ordered_json& json, const string& arg) {
+  if (arg.empty()) throw std::invalid_argument("should not have gotten here");
+  json = ordered_json::parse(arg, nullptr, false);
+  if (json.is_discarded()) json = arg;
+  return true;
+}
+static pair<bool, int> cli_to_json_option(
+    ordered_json& json, const vector<string>& args, int pos) {
+  if (pos >= args.size() || args[pos].find("--") == 0) {
+    json = true;
+    return {true, pos};
+  } else {
+    while (pos < (int)args.size() && args[pos].find("--") != 0) {
+      if (json.is_array()) {
+        if (!cli_to_json_value(json.emplace_back(), args[pos++]))
+          return {false, pos};
+      } else if (json.is_null()) {
+        if (!cli_to_json_value(json, args[pos++])) return {false, pos};
+      } else {
+        auto item = json;
+        json      = ordered_json::array();
+        json.push_back(item);
+        if (!cli_to_json_value(json.emplace_back(), args[pos++]))
+          return {false, pos};
+      }
+    }
+    return {true, pos};
+  }
+}
+static bool cli_to_json_command(
+    ordered_json& json, const vector<string>& args, int pos) {
+  if (pos >= args.size()) return true;
+  if (args[pos].find("--") == 0) {
+    while (pos < (int)args.size() && args[pos].find("--") == 0) {
+      auto result = cli_to_json_option(
+          json[args[pos].substr(2)], args, pos + 1);
+      if (!result.first) return false;
+      pos = result.second;
+    }
+    return true;
+  } else {
+    return cli_to_json_command(json[args[pos]], args, pos + 1);
+  }
+}
+bool cli_to_json(ordered_json& json, const vector<string>& args) {
+  return cli_to_json_command(json, args, 1);
+}
+bool cli_to_json(ordered_json& json, int argc, const char** argv) {
+  return cli_to_json(json, vector<string>{argv, argv + argc});
+}
+
+// Validate Cli Json against a schema
+bool validate_cli(const ordered_json& json, const ordered_json& schema);
+
+// Get Cli usage from Json
+string cli_usage(const ordered_json& json, const ordered_json& schema);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// JSON SUPPORT FOR YOCTO TYPES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Validate Json against a schema
+bool validate_json(const ordered_json& json, const ordered_json& schema);
+
+}  // namespace yocto
+
 #if 0
 
 // -----------------------------------------------------------------------------

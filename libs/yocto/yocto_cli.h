@@ -40,6 +40,7 @@
 // -----------------------------------------------------------------------------
 
 #include <array>
+#include <sstream>
 #include <string>
 #include <type_traits>
 #include <vector>
@@ -70,7 +71,7 @@ namespace yocto {
 // Print a message to the console
 void print_info(const string& message);
 // Prints a message to the console and exit with an error. Returns error code.
-[[deprecated]] int print_fatal(const string& message);
+int print_fatal(const string& message);
 
 // Timer that prints as scope end. Create with `print_timed` and print with
 // `print_elapsed`.
@@ -264,7 +265,7 @@ namespace yocto {
 using json_value_ = nlohmann::ordered_json;
 
 // Command line setter.
-using cli_setter = void (*)(
+using cli_setter = bool (*)(
     const json_value_&, void*, const vector<string>& choices);
 // Command line variable.
 struct cli_variable {
