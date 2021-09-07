@@ -78,7 +78,9 @@ void add_options(const cli_command& cli, convert_params& params) {
 // convert images
 void run_convert(const convert_params& params) {
   // load mesh
-  auto shape = load_shape(params.shape, true);
+  auto error = string{};
+  auto shape = shape_data{};
+  if (!load_shape(params.shape, shape, error, true)) print_fatal(error);
 
   // remove data
   if (params.aspositions) {
@@ -202,7 +204,9 @@ void add_options(const cli_command& cli, fvconvert_params& params) {
 // convert images
 void run_fvconvert(const fvconvert_params& params) {
   // load mesh
-  auto shape = load_fvshape(params.shape);
+  auto error = string{};
+  auto shape = fvshape_data{};
+  if (!load_fvshape(params.shape, shape, error, true)) print_fatal(error);
 
   // remove data
   if (params.aspositions) {
@@ -288,7 +292,9 @@ void run_view(const view_params& params) {
 // view shapes
 void run_view(const view_params& params) {
   // load shape
-  auto shape = load_shape(params.shape, true);
+  auto error = string{};
+  auto shape = shape_data{};
+  if (!load_shape(params.shape, shape, error, true)) print_fatal(error);
 
   // make scene
   auto scene = make_shape_scene(shape, params.addsky);
@@ -323,7 +329,9 @@ void add_options(const cli_command& cli, heightfield_params& params) {
 
 void run_heightfield(const heightfield_params& params) {
   // load image
-  auto image = load_image(params.image);
+  auto error = string{};
+  auto image = image_data{};
+  if (!load_image(params.image, image, error)) print_fatal(error);
 
   // adjust height
   if (params.height != 1) {
@@ -384,6 +392,7 @@ void add_options(const cli_command& cli, hair_params& params) {
 
 void run_hair(const hair_params& params) {
   // load mesh
+  auto error = string{};
   auto shape = load_shape(params.shape);
 
   // generate hair
@@ -409,6 +418,7 @@ void add_options(const cli_command& cli, sample_params& params) {
 
 void run_sample(const sample_params& params) {
   // load mesh
+  auto error = string{};
   auto shape = load_shape(params.shape);
 
   // generate samples
@@ -448,6 +458,7 @@ void run_glview(const glview_params& params) {
 
 void run_glview(const glview_params& params) {
   // loading shape
+  auto error = string{};
   auto shape = load_shape(params.shape);
 
   // make scene
@@ -486,9 +497,10 @@ void add_options(const cli_command& cli, app_params& params) {
 // Run
 void run(const vector<string>& args) {
   // command line parameters
+  auto error  = string{};
   auto params = app_params{};
   auto cli    = make_cli("yshape", params, "Process and view shapes.");
-  parse_cli(cli, args);
+  if (!parse_cli(cli, args, error)) print_fatal(error);
 
   // dispatch commands
   if (params.command == "convert") {
@@ -506,11 +518,9 @@ void run(const vector<string>& args) {
   } else if (params.command == "glview") {
     return run_glview(params.glview);
   } else {
-    throw io_error("yshape: unknown command");
+    print_fatal("yshape: unknown command");
   }
 }
 
 // Main
-int main(int argc, const char* argv[]) {
-  handle_errors(run, make_cli_args(argc, argv));
-}
+int main(int argc, const char* argv[]) { run(make_cli_args(argc, argv)); }
