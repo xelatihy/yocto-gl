@@ -89,13 +89,12 @@ from no template to heavy template use. At this point, Yocto uses some templates
 for readability. In the future, we will increase the use of templates in math
 code, while keeping many APIs explicitly typed.
 
-We support both exceptions and return codes for error reporting. For example, 
-we have two versions of many IO operations that either use boolean flags and 
-error strings for human readable errors, or throw exceptions with the same
-error string. Internally exceptions are used, since they provide cleaner
-code and where in fact faster ion low-level parsers. At the moment,
-exceptions are only used in IO functions and to report "programmer"
-errors, namely when preconditions or post conditions are violated in functions.
+For error handling in IO we either return status object or an interface that
+uses boolean flags and error strings. Internally exceptions are used when used
+by external libraries, but otherwise no exception are used. At the moment,
+exceptions are only used to report "programmer errors", namely when 
+preconditions or post conditions are violated in functions, just lime the
+standard library does.
 
 ## License
 

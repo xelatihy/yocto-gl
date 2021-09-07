@@ -45,11 +45,15 @@ namespace yocto {
 
 // Print a message to the console
 void print_info(const string& message) { printf("%s\n", message.c_str()); }
+void print_info(const char* message) { printf("%s\n", message); }
 // Prints a message to the console and exit with an error.
-int print_fatal(const string& message) {
+void print_fatal(const string& message) {
   printf("\n%s\n", message.c_str());
   exit(1);
-  return 1;
+}
+void print_fatal(const char* message) {
+  printf("\n%s\n", message);
+  exit(1);
 }
 
 // get time in nanoseconds - useful only to compute difference of times
@@ -1056,9 +1060,10 @@ vector<string> make_cli_args(int argc, const char** argv) {
   return vector<string>(argv, argv + argc);
 }
 
-void parse_cli(cli_state& cli, const vector<string>& args) {
+cli_status parse_cli(cli_state& cli, const vector<string>& args) {
   auto error = string{};
-  if (!parse_cli(cli, args, error)) throw cli_error{error};
+  if (!parse_cli(cli, args, error)) return cli_status{error};
+  return {};
 }
 
 }  // namespace yocto

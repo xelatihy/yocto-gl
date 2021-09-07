@@ -127,29 +127,6 @@ bool path_isfile(const string& filename) {
   return is_regular_file(make_path(filename));
 }
 
-// List the contents of a directory
-vector<string> list_directory(const string& dirname) {
-  try {
-    auto entries = vector<string>{};
-    for (auto entry : std::filesystem::directory_iterator(make_path(dirname))) {
-      entries.push_back(entry.path().generic_u8string());
-    }
-    return entries;
-  } catch (...) {
-    throw io_error{dirname + ": cannot list directory"};
-  }
-}
-
-// Create a directory and all missing parent directories if needed
-void make_directory(const string& dirname) {
-  if (path_exists(dirname)) return;
-  try {
-    create_directories(make_path(dirname));
-  } catch (...) {
-    throw io_error{dirname + ": cannot create directory"};
-  }
-}
-
 // Get the current directory
 string path_current() { return std::filesystem::current_path().u8string(); }
 
@@ -163,6 +140,36 @@ bool make_directory(const string& dirname, string& error) {
     error = dirname + ": cannot create directory";
     return false;
   }
+}
+
+// List the contents of a directory
+bool list_directory(
+    const string& dirname, vector<string>& entries, string& error) {
+  entries.clear();
+  try {
+    for (auto entry : std::filesystem::directory_iterator(make_path(dirname))) {
+      entries.push_back(entry.path().generic_u8string());
+    }
+    return true;
+  } catch (...) {
+    error = dirname + ": cannot list directory";
+    return false;
+  }
+}
+
+// Create a directory and all missing parent directories if needed
+io_status make_directory(const string& dirname) {
+  auto error = string{};
+  if (!make_directory(dirname, error)) return io_status{error};
+  return io_status{};
+}
+
+// List the contents of a directory
+pair<io_status, vector<string>> list_directory(const string& dirname) {
+  auto error   = string{};
+  auto entries = vector<string>{};
+  if (!list_directory(dirname, entries, error)) return {io_status{error}, {}};
+  return {io_status{}, std::move(entries)};
 }
 
 }  // namespace yocto
@@ -196,67 +203,43 @@ FILE* fopen_utf8(const string& filename, const string& mode) {
 }
 
 // Load a text file
-string load_text(const string& filename) {
-  auto str = string{};
-  load_text(filename, str);
-  return str;
+pair<io_status, string> load_text(const string& filename) {
+  auto error = string{};
+  auto str   = string{};
+  if (!load_text(filename, str, error)) return {io_status{error}, {}};
+  return {io_status{}, std::move(str)};
 }
-void load_text(const string& filename, string& text) {
-  // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
-  auto fs = fopen_utf8(filename.c_str(), "rb");
-  if (!fs) throw io_error{filename + ": cannot open file"};
-  fseek(fs, 0, SEEK_END);
-  auto length = ftell(fs);
-  fseek(fs, 0, SEEK_SET);
-  text.resize(length);
-  if (fread(text.data(), 1, length, fs) != length) {
-    fclose(fs);
-    throw io_error{filename + ": read error"};
-  }
-  fclose(fs);
+io_status load_text(const string& filename, string& text) {
+  auto error = string{};
+  if (!load_text(filename, text, error)) return io_status{error};
+  return io_status{};
 }
 
 // Save a text file
-void save_text(const string& filename, const string& text) {
-  auto fs = fopen_utf8(filename.c_str(), "wt");
-  if (!fs) throw io_error{filename + ": cannot open file"};
-  if (fprintf(fs, "%s", text.c_str()) < 0) {
-    fclose(fs);
-    throw io_error{filename + ": write error"};
-  }
-  fclose(fs);
+io_status save_text(const string& filename, const string& text) {
+  auto error = string{};
+  if (!save_text(filename, text, error)) return io_status{error};
+  return io_status{};
 }
 
 // Load a binary file
-vector<byte> load_binary(const string& filename) {
-  auto data = vector<byte>{};
-  load_binary(filename, data);
-  return data;
+pair<io_status, vector<byte>> load_binary(const string& filename) {
+  auto error = string{};
+  auto data  = vector<byte>{};
+  if (!load_binary(filename, data, error)) return {io_status{error}, {}};
+  return {io_status{}, std::move(data)};
 }
-void load_binary(const string& filename, vector<byte>& data) {
-  // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
-  auto fs = fopen_utf8(filename.c_str(), "rb");
-  if (!fs) throw io_error{filename + ": cannot open file"};
-  fseek(fs, 0, SEEK_END);
-  auto length = ftell(fs);
-  fseek(fs, 0, SEEK_SET);
-  data.resize(length);
-  if (fread(data.data(), 1, length, fs) != length) {
-    fclose(fs);
-    throw io_error{filename + ": read error"};
-  }
-  fclose(fs);
+io_status load_binary(const string& filename, vector<byte>& data) {
+  auto error = string{};
+  if (!load_binary(filename, data, error)) return io_status{error};
+  return io_status{};
 }
 
 // Save a binary file
-void save_binary(const string& filename, const vector<byte>& data) {
-  auto fs = fopen_utf8(filename.c_str(), "wb");
-  if (!fs) throw io_error{filename + ": cannot open file"};
-  if (fwrite(data.data(), 1, data.size(), fs) != data.size()) {
-    fclose(fs);
-    throw io_error{filename + ": write error"};
-  }
-  fclose(fs);
+io_status save_binary(const string& filename, const vector<byte>& data) {
+  auto error = string{};
+  if (!save_binary(filename, data, error)) return io_status{error};
+  return io_status{};
 }
 
 // Load a text file
@@ -360,25 +343,6 @@ static bool load_json(
 static bool save_json(
     const string& filename, const ordered_json& json, string& error) {
   return save_text(filename, json.dump(2), error);
-}
-
-// Load/save json
-static void load_json(const string& filename, ordered_json& json) {
-  auto text = load_text(filename);
-  try {
-    json = ordered_json::parse(text);
-  } catch (...) {
-    throw io_error{filename + ": parse error"};
-  }
-}
-[[maybe_unused]] static ordered_json load_json(const string& filename) {
-  auto json = ordered_json{};
-  load_json(filename, json);
-  return json;
-}
-[[maybe_unused]] static void save_json(
-    const string& filename, const ordered_json& json) {
-  save_text(filename, json.dump(2));
 }
 
 // conversions
@@ -755,19 +719,21 @@ image_data load_image(const string& filename, string& error) {
   if (!load_image(filename, image, error)) return image_data{};
   return image;
 }
-image_data load_image(const string& filename) {
+pair<io_status, image_data> load_image(const string& filename) {
   auto error = string{};
   auto image = image_data{};
-  if (!load_image(filename, image, error)) throw io_error{error};
-  return image;
+  if (!load_image(filename, image, error)) return {io_status{error}, {}};
+  return {io_status{}, std::move(image)};
 }
-void load_image(const string& filename, image_data& image) {
+io_status load_image(const string& filename, image_data& image) {
   auto error = string{};
-  if (!load_image(filename, image, error)) throw io_error{error};
+  if (!load_image(filename, image, error)) return io_status{error};
+  return io_status{};
 }
-void save_image(const string& filename, const image_data& image) {
+io_status save_image(const string& filename, const image_data& image) {
   auto error = string{};
-  if (!save_image(filename, image, error)) throw io_error{error};
+  if (!save_image(filename, image, error)) return io_status{error};
+  return io_status{};
 }
 
 bool make_image_preset(
@@ -957,7 +923,7 @@ bool load_shape(const string& filename, shape_data& shape, string& error,
   } else if (ext == ".stl" || ext == ".STL") {
     auto stl = stl_model{};
     if (!load_stl(filename, stl, error, true)) return false;
-    if (stl.shapes.size() != 1) throw io_error{filename + ": empty shape"};
+    if (stl.shapes.size() != 1) return shape_error();
     auto fnormals = vector<vec3f>{};
     if (!get_triangles(stl, 0, shape.triangles, shape.positions, fnormals))
       return shape_error();
@@ -1009,10 +975,8 @@ bool save_shape(const string& filename, const shape_data& shape, string& error,
     return true;
   } else if (ext == ".stl" || ext == ".STL") {
     auto stl = stl_model{};
-    if (!shape.lines.empty())
-      throw io_error{filename + ": lines not supported"};
-    if (!shape.points.empty())
-      throw io_error{filename + ": points not supported"};
+    if (!shape.lines.empty()) return shape_error();
+    if (!shape.points.empty()) return shape_error();
     if (!shape.triangles.empty()) {
       add_triangles(stl, shape.triangles, shape.positions, {});
     } else if (!shape.quads.empty()) {
@@ -1100,7 +1064,7 @@ bool load_fvshape(const string& filename, fvshape_data& shape, string& error,
     get_quads(ply, shape.quadspos);
     if (!shape.normals.empty()) shape.quadsnorm = shape.quadspos;
     if (!shape.texcoords.empty()) shape.quadstexcoord = shape.quadspos;
-    if (shape.quadspos.empty()) throw io_error{filename + ": empty shape"};
+    if (shape.quadspos.empty()) return shape_error();
     return true;
   } else if (ext == ".obj" || ext == ".OBJ") {
     auto obj = obj_shape{};
@@ -1111,13 +1075,13 @@ bool load_fvshape(const string& filename, fvshape_data& shape, string& error,
     get_texcoords(obj, shape.texcoords, flip_texcoord);
     get_fvquads(
         obj, shape.quadspos, shape.quadsnorm, shape.quadstexcoord, materials);
-    if (shape.quadspos.empty()) throw io_error{filename + ": empty shape"};
+    if (shape.quadspos.empty()) return shape_error();
     return true;
   } else if (ext == ".stl" || ext == ".STL") {
     auto stl = stl_model{};
     if (!load_stl(filename, stl, error, true)) return false;
-    if (stl.shapes.empty()) throw io_error{filename + ": empty shape"};
-    if (stl.shapes.size() > 1) throw io_error{filename + ": empty shape"};
+    if (stl.shapes.empty()) return shape_error();
+    if (stl.shapes.size() > 1) return shape_error();
     auto fnormals  = vector<vec3f>{};
     auto triangles = vector<vec3i>{};
     if (!get_triangles(stl, 0, triangles, shape.positions, fnormals))
@@ -1606,50 +1570,51 @@ shape_data load_shape(
   if (!load_shape(filename, shape, error, flip_texcoord)) return shape_data{};
   return shape;
 }
-shape_data load_shape(const string& filename, bool flip_texcoord) {
+pair<io_status, shape_data> load_shape(
+    const string& filename, bool flip_texcoord) {
   auto error = string{};
   auto shape = shape_data{};
-  if (!load_shape(filename, shape, error, flip_texcoord)) throw io_error{error};
-  return shape;
+  if (!load_shape(filename, shape, error, flip_texcoord))
+    return {io_status{error}, {}};
+  return {io_status{}, std::move(shape)};
 }
-void load_shape(const string& filename, shape_data& shape, bool flip_texcoord) {
+io_status load_shape(
+    const string& filename, shape_data& shape, bool flip_texcoord) {
   auto error = string{};
-  if (!load_shape(filename, shape, error, flip_texcoord)) throw io_error{error};
+  if (!load_shape(filename, shape, error, flip_texcoord))
+    return io_status{error};
+  return io_status{};
 }
-void save_shape(const string& filename, const shape_data& shape,
+io_status save_shape(const string& filename, const shape_data& shape,
     bool flip_texcoord, bool ascii) {
   auto error = string{};
   if (!save_shape(filename, shape, error, flip_texcoord, ascii))
-    throw io_error{error};
+    return io_status{error};
+  return io_status{};
 }
 
 // Load mesh
-fvshape_data load_fvshape(
-    const string& filename, string& error, bool flip_texcoord) {
-  auto shape = fvshape_data{};
-  if (!load_fvshape(filename, shape, error, flip_texcoord))
-    return fvshape_data{};
-  throw io_error{error};
-  return shape;
-}
-fvshape_data load_fvshape(const string& filename, bool flip_texcoord) {
+pair<io_status, fvshape_data> load_fvshape(
+    const string& filename, bool flip_texcoord) {
   auto error = string{};
   auto shape = fvshape_data{};
   if (!load_fvshape(filename, shape, error, flip_texcoord))
-    throw io_error{error};
-  return shape;
+    return {io_status{error}, {}};
+  return {io_status{}, std::move(shape)};
 }
-void load_fvshape(
+io_status load_fvshape(
     const string& filename, fvshape_data& fvshape, bool flip_texcoord) {
   auto error = string{};
   if (!load_fvshape(filename, fvshape, error, flip_texcoord))
-    throw io_error{error};
+    return io_status{error};
+  return io_status{};
 }
-void save_fvshape(const string& filename, const fvshape_data& fvshape,
+io_status save_fvshape(const string& filename, const fvshape_data& fvshape,
     bool flip_texcoord, bool ascii) {
   auto error = string{};
   if (!save_fvshape(filename, fvshape, error, flip_texcoord, ascii))
-    throw io_error{error};
+    return io_status{error};
+  return io_status{};
 }
 
 // Shape presets used ofr testing.
@@ -1780,9 +1745,11 @@ bool save_texture(
 
   // check for correct handling
   if (!texture.pixelsf.empty() && is_ldr_filename(filename))
-    throw io_error{filename + ": cannot save hdr texture to ldr file"};
+    throw std::invalid_argument(
+        filename + ": cannot save hdr texture to ldr file");
   if (!texture.pixelsb.empty() && is_hdr_filename(filename))
-    throw io_error{filename + ": cannot save ldr texture to hdr file"};
+    throw std::invalid_argument(
+        filename + ": cannot save ldr texture to hdr file");
 
   // write data
   auto stbi_write_data = [](void* context, void* data, int size) {
@@ -1822,7 +1789,7 @@ bool save_texture(
     auto buffer = vector<byte>{};
     if (!stbi_write_jpg_to_func(stbi_write_data, &buffer, (int)texture.width,
             (int)texture.height, 4, (const byte*)texture.pixelsb.data(), 75))
-      throw io_error{filename + ": write error"};
+      return write_error();
     if (!save_binary(filename, buffer, error)) return false;
     return true;
   } else if (ext == ".tga" || ext == ".TGA") {
@@ -1850,24 +1817,21 @@ texture_data make_texture_preset(const string& type) {
 }
 
 // Loads/saves an image. Chooses hdr or ldr based on file name.
-texture_data load_texture(const string& filename, string& error) {
-  auto texture = texture_data{};
-  if (!load_texture(filename, texture, error)) return texture_data{};
-  return texture;
-}
-texture_data load_texture(const string& filename) {
+pair<io_status, texture_data> load_texture(const string& filename) {
   auto error   = string{};
   auto texture = texture_data{};
-  if (!load_texture(filename, texture, error)) throw io_error{error};
-  return texture;
+  if (!load_texture(filename, texture, error)) return {io_status{error}, {}};
+  return {io_status{}, std::move(texture)};
 }
-void load_texture(const string& filename, texture_data& texture) {
+io_status load_texture(const string& filename, texture_data& texture) {
   auto error = string{};
-  if (!load_texture(filename, texture, error)) throw io_error{error};
+  if (!load_texture(filename, texture, error)) return io_status{error};
+  return io_status{};
 }
-void save_texture(const string& filename, const texture_data& texture) {
+io_status save_texture(const string& filename, const texture_data& texture) {
   auto error = string{};
-  if (!save_texture(filename, texture, error)) throw io_error{error};
+  if (!save_texture(filename, texture, error)) return io_status{error};
+  return io_status{};
 }
 
 bool make_texture_preset(
@@ -2478,7 +2442,7 @@ scene_data make_scene_preset(const string& type) {
         test_shapes_type::bunny_sphere, test_materials_type::plastic_metal,
         test_instance_name_type::material});
   } else {
-    throw io_error{type + ": unknown preset"};
+    return {};
   }
 }
 
@@ -2665,20 +2629,25 @@ bool save_scene(const string& filename, const scene_data& scene, string& error,
 }
 
 // Load/save a scene
-scene_data load_scene(const string& filename, bool noparallel) {
+pair<io_status, scene_data> load_scene(
+    const string& filename, bool noparallel) {
   auto error = string{};
   auto scene = scene_data{};
-  if (!load_scene(filename, scene, error, noparallel)) throw io_error{error};
-  return scene;
+  if (!load_scene(filename, scene, error, noparallel))
+    return {io_status{error}, {}};
+  return {io_status{}, std::move(scene)};
 }
-void load_scene(const string& filename, scene_data& scene, bool noparallel) {
+io_status load_scene(
+    const string& filename, scene_data& scene, bool noparallel) {
   auto error = string{};
-  if (!load_scene(filename, scene, error, noparallel)) throw io_error{error};
+  if (!load_scene(filename, scene, error, noparallel)) return io_status{error};
+  return io_status{};
 }
-void save_scene(
+io_status save_scene(
     const string& filename, const scene_data& scene, bool noparallel) {
   auto error = string{};
-  if (!save_scene(filename, scene, error, noparallel)) throw io_error{error};
+  if (!save_scene(filename, scene, error, noparallel)) return io_status{error};
+  return io_status{};
 }
 
 // Make missing scene directories
@@ -2709,15 +2678,18 @@ bool add_environment(scene_data& scene, const string& filename, string& error) {
 }
 
 // Make missing scene directories
-void make_scene_directories(const string& filename, const scene_data& scene) {
+io_status make_scene_directories(
+    const string& filename, const scene_data& scene) {
   auto error = string{};
-  if (!make_scene_directories(filename, scene, error)) throw io_error{error};
+  if (!make_scene_directories(filename, scene, error)) return io_status{error};
+  return io_status{};
 }
 
 // Add environment
-void add_environment(scene_data& scene, const string& filename) {
+io_status add_environment(scene_data& scene, const string& filename) {
   auto error = string{};
-  if (!add_environment(scene, filename, error)) throw io_error{error};
+  if (!add_environment(scene, filename, error)) return io_status{error};
+  return io_status{};
 }
 
 }  // namespace yocto
@@ -2794,24 +2766,21 @@ bool save_subdiv(
 }
 
 // load/save subdiv
-subdiv_data load_subdiv(const string& filename, string& error) {
-  auto subdiv = subdiv_data{};
-  if (!load_subdiv(filename, subdiv, error)) return subdiv_data{};
-  return subdiv;
-}
-subdiv_data load_subdiv(const string& filename) {
+pair<io_status, subdiv_data> load_subdiv(const string& filename) {
   auto error  = string{};
   auto subdiv = subdiv_data{};
-  if (!load_subdiv(filename, subdiv, error)) throw io_error{error};
-  return subdiv;
+  if (!load_subdiv(filename, subdiv, error)) return {io_status{error}, {}};
+  return {io_status{}, std::move(subdiv)};
 }
-void load_subdiv(const string& filename, subdiv_data& subdiv) {
+io_status load_subdiv(const string& filename, subdiv_data& subdiv) {
   auto error = string{};
-  if (!load_subdiv(filename, subdiv, error)) throw io_error{error};
+  if (!load_subdiv(filename, subdiv, error)) return io_status{error};
+  return io_status{};
 }
-void save_subdiv(const string& filename, const subdiv_data& subdiv) {
+io_status save_subdiv(const string& filename, const subdiv_data& subdiv) {
   auto error = string{};
-  if (!save_subdiv(filename, subdiv, error)) throw io_error{error};
+  if (!save_subdiv(filename, subdiv, error)) return io_status{error};
+  return io_status{};
 }
 
 // save binary shape
@@ -2884,19 +2853,21 @@ NLOHMANN_JSON_SERIALIZE_ENUM(
 // Load a scene in the builtin JSON format.
 static bool load_json_scene_version40(const string& filename,
     const json_value& json, scene_data& scene, string& error, bool noparallel) {
-  auto parse_error = [filename](const string& patha, const string& pathb = "",
-                         const string& pathc = "") {
+  auto parse_error = [filename, &error](const string& patha,
+                         const string& pathb = "", const string& pathc = "") {
     auto path = patha;
     if (!pathb.empty()) path += "/" + pathb;
     if (!pathc.empty()) path += "/" + pathc;
-    throw io_error(filename + ": parse error at " + path);
+    error = filename + ": parse error at " + path;
+    return false;
   };
-  auto key_error = [filename](const string& patha, const string& pathb = "",
-                       const string& pathc = "") {
+  auto key_error = [filename, &error](const string& patha,
+                       const string& pathb = "", const string& pathc = "") {
     auto path = patha;
     if (!pathb.empty()) path += "/" + pathb;
     if (!pathc.empty()) path += "/" + pathc;
-    throw io_error(filename + "; unknow key at " + path);
+    error = filename + "; unknow key at " + path;
+    return false;
   };
 
   // parse json value
@@ -4273,8 +4244,7 @@ static bool load_gltf_scene(
   try {
     if (gltf.contains("buffers")) {
       for (auto& gbuffer : gltf.at("buffers")) {
-        if (!gbuffer.contains("uri"))
-          throw io_error{filename + ": parse error"};
+        if (!gbuffer.contains("uri")) return parse_error();
         buffers_paths.push_back(gbuffer.value("uri", ""));
         buffers.emplace_back();
       }

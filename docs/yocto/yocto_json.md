@@ -1,4 +1,4 @@
-# Yocto/Json: Json functionality
+# Yocto/Json: Json functionality (deprecated)
 
 Yocto/Json is an implementation of a Json type and related IO functionality.
 Yocto/Json is implemented in `yocto_json.h` and `yocto_json.cpp`, 
