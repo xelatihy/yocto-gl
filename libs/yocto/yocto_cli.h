@@ -265,7 +265,7 @@ namespace yocto {
 using json_value_ = nlohmann::ordered_json;
 
 // Command line setter.
-using cli_setter = void (*)(
+using cli_setter = bool (*)(
     const json_value_&, void*, const vector<string>& choices);
 // Command line variable.
 struct cli_variable {
