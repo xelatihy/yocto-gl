@@ -226,7 +226,7 @@ static void cli_to_json(
         json = choices.at((uint64_t)value);
       } else if constexpr (std::is_same_v<T, string>) {
         if (std::find(choices.begin(), choices.end(), value) == choices.end())
-          throw std::out_of_range{"bad value"};
+          throw std::invalid_argument{"bad label"};
         json = value;
       } else {
         throw std::invalid_argument{"not supported"};
@@ -681,7 +681,7 @@ static string schema_to_usage(
     }
     return true;
   } else if (schema["type"] == "string") {
-    if (idx >= args.size()) throw cli_error("missing value for " + name);
+    if (idx >= args.size()) return cli_error("missing value for " + name);
     value = args[idx++];
     return true;
   } else if (schema["type"] == "array") {
@@ -761,7 +761,7 @@ static string schema_to_usage(
       }
     } else if (is_positional) {
       if (positional >= positionals.size())
-        throw cli_error("too many positional arguments");
+        return cli_error("too many positional arguments");
       auto  name    = positionals[positional++];
       auto& oschema = schema["properties"][name];
       idx--;
@@ -780,7 +780,7 @@ static string schema_to_usage(
           break;
         }
       }
-      if (name == "") throw cli_error("unknown option " + arg);
+      if (name == "") return cli_error("unknown option " + arg);
       auto& oschema = schema["properties"][name];
       if (!arg_to_json(
               value[name], oschema, name, is_positional, args, idx, error))
@@ -917,6 +917,11 @@ static string get_config(const json_value_& json) {
 }
 
 [[nodiscard]] static bool config_to_json(json_value_& json, string& error) {
+  auto cli_error = [&error](const string& message) {
+    error = message;
+    return false;
+  };
+
   auto filename = get_config(json);
   if (filename.empty()) return true;
   if (filename.find("try:") == 0) {
@@ -925,12 +930,10 @@ static string get_config(const json_value_& json) {
   }
 
   auto stream = std::ifstream(filename);
-  if (!stream) throw cli_error{"missing configuration file " + filename};
+  if (!stream) return cli_error("missing configuration file " + filename);
   auto config = json_value_::parse(stream, nullptr, false);
-  if (config.is_discarded()) {
-    error = "error converting configuration " + filename;
-    return false;
-  }
+  if (config.is_discarded())
+    return cli_error("error converting configuration " + filename);
 
   update_value_objects(config, json);
   json = config;
