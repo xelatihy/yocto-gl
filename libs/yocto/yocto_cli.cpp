@@ -1035,11 +1035,19 @@ string get_command(const cli_state& cli) {
 }
 
 bool parse_cli(cli_state& cli, const vector<string>& args, string& error) {
+  auto cli_error = [&error, &cli]() {
+    error += "\n" + get_usage(cli);
+    return false;
+  };
   auto idx = (size_t)1;
-  if (!args_to_json(cli.value, cli.schema, args, idx, error)) return false;
+  if (!args_to_json(cli.value, cli.schema, args, idx, error))
+    return cli_error();
   if (!config_to_json(cli.value, error)) return false;
-  if (!validate_json(cli.value, cli.schema, "", true, error)) return false;
-  if (!json_to_variable(cli.value, cli.variables, "", error)) return false;
+  if (!validate_json(cli.value, cli.schema, "", true, error))
+    return cli_error();
+  if (!json_to_variable(cli.value, cli.variables, "", error))
+    return cli_error();
+  if (get_help(cli)) return cli_error();
   return true;
 }
 
