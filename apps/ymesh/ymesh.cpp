@@ -58,9 +58,7 @@ void add_options(const cli_command& cli, view_params& params) {
 #ifndef YOCTO_OPENGL
 
 // view shapes
-void run_view(const view_params& params) {
-  throw io_error::not_implemented_error("Opengl not compiled");
-}
+void run_view(const view_params& params) { print_fatal("Opengl not compiled"); }
 
 #else
 
@@ -93,7 +91,7 @@ void add_options(const cli_command& cli, glview_params& params) {
 
 // view shapes
 void run_glview(const glview_params& params) {
-  throw io_error::not_implemented_error("Opengl not compiled");
+  print_fatal("Opengl not compiled");
 }
 
 #else
@@ -173,7 +171,7 @@ void add_options(const cli_command& cli, glpath_params& params) {
 
 // view shapes
 void run_glpath(const glpath_params& params) {
-  throw io_error::not_implemented_error("Opengl not compiled");
+  print_fatal("Opengl not compiled");
 }
 
 #else
@@ -345,7 +343,7 @@ void add_options(const cli_command& cli, glpathd_params& params) {
 
 // view shapes
 void run_glpathd(const glpathd_params& params) {
-  throw io_error::not_implemented_error("Opengl not compiled");
+  print_fatal("Opengl not compiled");
 }
 
 #else
@@ -580,7 +578,7 @@ inline void add_options(const cli_command& cli, glsculpt_params& params) {
 
 // view scene
 void run_glsculpt(const glsculpt_params& params) {
-  throw io_error::not_implemented_error("Opengl not compiled");
+  print_fatal("Opengl not compiled");
 }
 
 #else
@@ -1216,7 +1214,8 @@ static pair<bool, bool> sculpt_update(sculpt_state& state, shape_data& shape,
 void run_glsculpt(const glsculpt_params& params_) {
   // loading shape
   auto error   = string{};
-  auto ioshape = load_shape(params_.shape, true);
+  auto ioshape = shape_data{};
+  if (!load_shape(params_.shape, ioshape, error, true)) print_fatal(error);
   if (!ioshape.quads.empty()) {
     ioshape.triangles = quads_to_triangles(ioshape.quads);
     ioshape.quads.clear();
@@ -1224,7 +1223,8 @@ void run_glsculpt(const glsculpt_params& params_) {
 
   // loading texture
   auto texture = texture_data{};
-  if (!params_.texture.empty()) texture = load_texture(params_.texture);
+  if (!params_.texture.empty())
+    if (!load_texture(params_.texture, texture, error)) print_fatal(error);
 
   // setup app
   auto scene = make_sculptscene(ioshape);

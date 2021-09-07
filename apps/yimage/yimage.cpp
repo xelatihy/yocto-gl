@@ -76,7 +76,7 @@ void run_convert(const convert_params& params) {
   }
 
   // save
-  save_image(params.output, image);
+  if (!save_image(params.output, image, error)) print_fatal(error);
 }
 
 // view params
@@ -94,9 +94,7 @@ void add_options(const cli_command& cli, view_params& params) {
 #ifndef YOCTO_OPENGL
 
 // view images
-void run_view(const view_params& params) {
-  throw io_error::not_supported_error("Opengl not compiled");
-}
+void run_view(const view_params& params) { print_fatal("Opengl not compiled"); }
 
 #else
 
@@ -106,7 +104,7 @@ void run_view(const view_params& params) {
   auto error  = string{};
   auto images = vector<image_data>(params.images.size());
   for (auto idx = 0; idx < (int)params.images.size(); idx++) {
-    images[idx] = load_image(params.images[idx]);
+    if (!load_image(params.images[idx], images[idx], error)) print_fatal(error);
   }
 
   // run viewer
@@ -131,7 +129,7 @@ void add_options(const cli_command& cli, grade_params& params) {
 
 // grade images
 void run_grade(const grade_params& params) {
-  throw io_error::not_supported_error("Opengl not compiled");
+  print_fatal("Opengl not compiled");
 }
 
 #else
@@ -177,28 +175,28 @@ void run_diff(const diff_params& params) {
 
   // check sizes
   if (image1.width != image2.width || image1.height != image2.height) {
-    throw io_error{
-        params.image1 + "," + params.image2 + ": image different sizes"};
+    print_fatal(
+        params.image1 + "," + params.image2 + ": image different sizes");
   }
 
   // check types
   if (image1.linear != image2.linear) {
-    throw io_error{
-        params.image1 + "," + params.image2 + "image different types"};
+    print_fatal(params.image1 + "," + params.image2 + "image different types");
   }
 
   // compute diff
   auto diff = image_difference(image1, image2, true);
 
   // save
-  if (params.output != "") save_image(params.output, diff);
+  if (params.output != "")
+    if (!save_image(params.output, diff, error)) print_fatal(error);
 
   // check diff
   if (params.signal) {
     for (auto& c : diff.pixels) {
       if (max(xyz(c)) > params.threshold) {
-        throw io_error{
-            params.image1 + "," + params.image2 + "image content differs"};
+        print_fatal(
+            params.image1 + "," + params.image2 + "image content differs");
       }
     }
   }
@@ -234,14 +232,12 @@ void run_setalpha(const setalpha_params& params) {
 
   // check sizes
   if (image.width != alpha.width || image.height != alpha.height) {
-    throw io_error{
-        params.image + "," + params.alpha + ": image different size"};
+    print_fatal(params.image + "," + params.alpha + ": image different size");
   }
 
   // check types
   if (image.linear != alpha.linear) {
-    throw io_error{
-        params.image + "," + params.alpha + ": image different types"};
+    print_fatal(params.image + "," + params.alpha + ": image different types");
   }
 
   // edit alpha
@@ -261,7 +257,7 @@ void run_setalpha(const setalpha_params& params) {
   }
 
   // save
-  save_image(params.output, out);
+  if (!save_image(params.output, out, error)) print_fatal(error);
 }
 
 struct app_params {

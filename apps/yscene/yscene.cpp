@@ -284,9 +284,7 @@ void add_options(const cli_command& cli, view_params& params) {
 #ifndef YOCTO_OPENGL
 
 // view scene
-void run_view(const view_params& params) {
-  throw io_error::not_implemented_error("Opengl not compiled");
-}
+void run_view(const view_params& params) { print_fatal("Opengl not compiled"); }
 
 #else
 
@@ -343,7 +341,7 @@ void add_options(const cli_command& cli, glview_params& params) {
 
 // view scene
 void run_glview(const glview_params& params) {
-  throw io_error::not_implemented_error("Opengl not compiled");
+  print_fatal("Opengl not compiled");
 }
 
 #else

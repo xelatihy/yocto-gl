@@ -129,7 +129,7 @@ void run_convert(const convert_params& params) {
   if (params.toedges) {
     // check faces
     if (shape.triangles.empty() && shape.quads.empty())
-      throw io_error{params.shape + ": empty shape"};
+      print_fatal(params.shape + ": empty shape");
 
     // convert to edges
     auto edges = !shape.triangles.empty() ? get_edges(shape.triangles)
@@ -168,7 +168,7 @@ void run_convert(const convert_params& params) {
   }
 
   // save mesh
-  save_shape(params.output, shape, true);
+  if (!save_shape(params.output, shape, error, true)) print_fatal(error);
 }
 
 // fvconvert params
@@ -264,7 +264,7 @@ void run_fvconvert(const fvconvert_params& params) {
   }
 
   // save mesh
-  save_fvshape(params.output, shape, true);
+  if (!save_fvshape(params.output, shape, error, true)) print_fatal(error);
 }
 
 // view params
@@ -283,9 +283,7 @@ void add_options(const cli_command& cli, view_params& params) {
 #ifndef YOCTO_OPENGL
 
 // view shapes
-void run_view(const view_params& params) {
-  throw io_error::not_implemented_error("Opengl not compiled");
-}
+void run_view(const view_params& params) { print_fatal("Opengl not compiled"); }
 
 #else
 
@@ -365,7 +363,7 @@ void run_heightfield(const heightfield_params& params) {
   }
 
   // save mesh
-  save_shape(params.output, shape, true);
+  if (!save_shape(params.output, shape, error, true)) print_fatal(error);
 }
 
 struct hair_params {
@@ -393,7 +391,8 @@ void add_options(const cli_command& cli, hair_params& params) {
 void run_hair(const hair_params& params) {
   // load mesh
   auto error = string{};
-  auto shape = load_shape(params.shape);
+  auto shape = shape_data{};
+  if (!load_shape(params.shape, shape, error)) print_fatal(error);
 
   // generate hair
   auto hair = make_hair2(shape, {params.steps, params.hairs},
@@ -401,7 +400,7 @@ void run_hair(const hair_params& params) {
       params.noise, params.gravity);
 
   // save mesh
-  save_shape(params.output, hair, true);
+  if (!save_shape(params.output, hair, error, true)) print_fatal(error);
 }
 
 struct sample_params {
@@ -419,7 +418,8 @@ void add_options(const cli_command& cli, sample_params& params) {
 void run_sample(const sample_params& params) {
   // load mesh
   auto error = string{};
-  auto shape = load_shape(params.shape);
+  auto shape = shape_data{};
+  if (!load_shape(params.shape, shape, error)) print_fatal(error);
 
   // generate samples
   auto samples = sample_shape(shape, params.samples);
@@ -433,7 +433,7 @@ void run_sample(const sample_params& params) {
   }
 
   // save mesh
-  save_shape(params.output, sshape);
+  if (!save_shape(params.output, sshape, error)) print_fatal(error);
 }
 
 struct glview_params {
@@ -451,7 +451,7 @@ void add_options(const cli_command& cli, glview_params& params) {
 
 // view shapes
 void run_glview(const glview_params& params) {
-  throw io_error::not_implemented_error("Opengl not compiled");
+  print_fatal("Opengl not compiled");
 }
 
 #else
@@ -459,7 +459,8 @@ void run_glview(const glview_params& params) {
 void run_glview(const glview_params& params) {
   // loading shape
   auto error = string{};
-  auto shape = load_shape(params.shape);
+  auto shape = shape_data{};
+  if (!load_shape(params.shape, shape, error)) print_fatal(error);
 
   // make scene
   auto scene = make_shape_scene(shape, params.addsky);
