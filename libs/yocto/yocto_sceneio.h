@@ -62,18 +62,8 @@ namespace yocto {
 
 // Result object modeled on std::expected
 struct io_status {
-  static io_status ok() { return io_status{true}; }
-  static io_status error(const string& error) { return io_status{error}; }
-
-  explicit operator bool() const { return _ok; }
-
- private:
-  explicit io_status(bool value) : _ok{value}, _error{} {}
-  explicit io_status(const char* error) : _ok{false}, _error{error} {}
-  explicit io_status(const string& error) : _ok{false}, _error{error} {}
-
-  bool   _ok    = false;
-  string _error = "";
+  string   error = "";
+  explicit operator bool() const { return error.empty(); }
 };
 
 }  // namespace yocto

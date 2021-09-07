@@ -160,17 +160,16 @@ bool list_directory(
 // Create a directory and all missing parent directories if needed
 io_status make_directory(const string& dirname) {
   auto error = string{};
-  if (!make_directory(dirname, error)) return io_status::error(error);
-  return io_status::ok();
+  if (!make_directory(dirname, error)) return io_status{error};
+  return io_status{};
 }
 
 // List the contents of a directory
 pair<io_status, vector<string>> list_directory(const string& dirname) {
   auto error   = string{};
   auto entries = vector<string>{};
-  if (!list_directory(dirname, entries, error))
-    return {io_status::error(error), {}};
-  return {io_status::ok(), std::move(entries)};
+  if (!list_directory(dirname, entries, error)) return {io_status{error}, {}};
+  return {io_status{}, std::move(entries)};
 }
 
 }  // namespace yocto
@@ -207,40 +206,40 @@ FILE* fopen_utf8(const string& filename, const string& mode) {
 pair<io_status, string> load_text(const string& filename) {
   auto error = string{};
   auto str   = string{};
-  if (!load_text(filename, str, error)) return {io_status::error(error), {}};
-  return {io_status::ok(), std::move(str)};
+  if (!load_text(filename, str, error)) return {io_status{error}, {}};
+  return {io_status{}, std::move(str)};
 }
 io_status load_text(const string& filename, string& text) {
   auto error = string{};
-  if (!load_text(filename, text, error)) return io_status::error(error);
-  return io_status::ok();
+  if (!load_text(filename, text, error)) return io_status{error};
+  return io_status{};
 }
 
 // Save a text file
 io_status save_text(const string& filename, const string& text) {
   auto error = string{};
-  if (!save_text(filename, text, error)) return io_status::error(error);
-  return io_status::ok();
+  if (!save_text(filename, text, error)) return io_status{error};
+  return io_status{};
 }
 
 // Load a binary file
 pair<io_status, vector<byte>> load_binary(const string& filename) {
   auto error = string{};
   auto data  = vector<byte>{};
-  if (!load_binary(filename, data, error)) return {io_status::error(error), {}};
-  return {io_status::ok(), std::move(data)};
+  if (!load_binary(filename, data, error)) return {io_status{error}, {}};
+  return {io_status{}, std::move(data)};
 }
 io_status load_binary(const string& filename, vector<byte>& data) {
   auto error = string{};
-  if (!load_binary(filename, data, error)) return io_status::error(error);
-  return io_status::ok();
+  if (!load_binary(filename, data, error)) return io_status{error};
+  return io_status{};
 }
 
 // Save a binary file
 io_status save_binary(const string& filename, const vector<byte>& data) {
   auto error = string{};
-  if (!save_binary(filename, data, error)) return io_status::error(error);
-  return io_status::ok();
+  if (!save_binary(filename, data, error)) return io_status{error};
+  return io_status{};
 }
 
 // Load a text file
@@ -723,18 +722,18 @@ image_data load_image(const string& filename, string& error) {
 pair<io_status, image_data> load_image(const string& filename) {
   auto error = string{};
   auto image = image_data{};
-  if (!load_image(filename, image, error)) return {io_status::error(error), {}};
-  return {io_status::ok(), std::move(image)};
+  if (!load_image(filename, image, error)) return {io_status{error}, {}};
+  return {io_status{}, std::move(image)};
 }
 io_status load_image(const string& filename, image_data& image) {
   auto error = string{};
-  if (!load_image(filename, image, error)) return io_status::error(error);
-  return io_status::ok();
+  if (!load_image(filename, image, error)) return io_status{error};
+  return io_status{};
 }
 io_status save_image(const string& filename, const image_data& image) {
   auto error = string{};
-  if (!save_image(filename, image, error)) return io_status::error(error);
-  return io_status::ok();
+  if (!save_image(filename, image, error)) return io_status{error};
+  return io_status{};
 }
 
 bool make_image_preset(
@@ -1576,22 +1575,22 @@ pair<io_status, shape_data> load_shape(
   auto error = string{};
   auto shape = shape_data{};
   if (!load_shape(filename, shape, error, flip_texcoord))
-    return {io_status::error(error), {}};
-  return {io_status::ok(), std::move(shape)};
+    return {io_status{error}, {}};
+  return {io_status{}, std::move(shape)};
 }
 io_status load_shape(
     const string& filename, shape_data& shape, bool flip_texcoord) {
   auto error = string{};
   if (!load_shape(filename, shape, error, flip_texcoord))
-    return io_status::error(error);
-  return io_status::ok();
+    return io_status{error};
+  return io_status{};
 }
 io_status save_shape(const string& filename, const shape_data& shape,
     bool flip_texcoord, bool ascii) {
   auto error = string{};
   if (!save_shape(filename, shape, error, flip_texcoord, ascii))
-    return io_status::error(error);
-  return io_status::ok();
+    return io_status{error};
+  return io_status{};
 }
 
 // Load mesh
@@ -1600,22 +1599,22 @@ pair<io_status, fvshape_data> load_fvshape(
   auto error = string{};
   auto shape = fvshape_data{};
   if (!load_fvshape(filename, shape, error, flip_texcoord))
-    return {io_status::error(error), {}};
-  return {io_status::ok(), std::move(shape)};
+    return {io_status{error}, {}};
+  return {io_status{}, std::move(shape)};
 }
 io_status load_fvshape(
     const string& filename, fvshape_data& fvshape, bool flip_texcoord) {
   auto error = string{};
   if (!load_fvshape(filename, fvshape, error, flip_texcoord))
-    return io_status::error(error);
-  return io_status::ok();
+    return io_status{error};
+  return io_status{};
 }
 io_status save_fvshape(const string& filename, const fvshape_data& fvshape,
     bool flip_texcoord, bool ascii) {
   auto error = string{};
   if (!save_fvshape(filename, fvshape, error, flip_texcoord, ascii))
-    return io_status::error(error);
-  return io_status::ok();
+    return io_status{error};
+  return io_status{};
 }
 
 // Shape presets used ofr testing.
@@ -1821,19 +1820,18 @@ texture_data make_texture_preset(const string& type) {
 pair<io_status, texture_data> load_texture(const string& filename) {
   auto error   = string{};
   auto texture = texture_data{};
-  if (!load_texture(filename, texture, error))
-    return {io_status::error(error), {}};
-  return {io_status::ok(), std::move(texture)};
+  if (!load_texture(filename, texture, error)) return {io_status{error}, {}};
+  return {io_status{}, std::move(texture)};
 }
 io_status load_texture(const string& filename, texture_data& texture) {
   auto error = string{};
-  if (!load_texture(filename, texture, error)) return io_status::error(error);
-  return io_status::ok();
+  if (!load_texture(filename, texture, error)) return io_status{error};
+  return io_status{};
 }
 io_status save_texture(const string& filename, const texture_data& texture) {
   auto error = string{};
-  if (!save_texture(filename, texture, error)) return io_status::error(error);
-  return io_status::ok();
+  if (!save_texture(filename, texture, error)) return io_status{error};
+  return io_status{};
 }
 
 bool make_texture_preset(
@@ -2636,22 +2634,20 @@ pair<io_status, scene_data> load_scene(
   auto error = string{};
   auto scene = scene_data{};
   if (!load_scene(filename, scene, error, noparallel))
-    return {io_status::error(error), {}};
-  return {io_status::ok(), std::move(scene)};
+    return {io_status{error}, {}};
+  return {io_status{}, std::move(scene)};
 }
 io_status load_scene(
     const string& filename, scene_data& scene, bool noparallel) {
   auto error = string{};
-  if (!load_scene(filename, scene, error, noparallel))
-    return io_status::error(error);
-  return io_status::ok();
+  if (!load_scene(filename, scene, error, noparallel)) return io_status{error};
+  return io_status{};
 }
 io_status save_scene(
     const string& filename, const scene_data& scene, bool noparallel) {
   auto error = string{};
-  if (!save_scene(filename, scene, error, noparallel))
-    return io_status::error(error);
-  return io_status::ok();
+  if (!save_scene(filename, scene, error, noparallel)) return io_status{error};
+  return io_status{};
 }
 
 // Make missing scene directories
@@ -2685,16 +2681,15 @@ bool add_environment(scene_data& scene, const string& filename, string& error) {
 io_status make_scene_directories(
     const string& filename, const scene_data& scene) {
   auto error = string{};
-  if (!make_scene_directories(filename, scene, error))
-    return io_status::error(error);
-  return io_status::ok();
+  if (!make_scene_directories(filename, scene, error)) return io_status{error};
+  return io_status{};
 }
 
 // Add environment
 io_status add_environment(scene_data& scene, const string& filename) {
   auto error = string{};
-  if (!add_environment(scene, filename, error)) return io_status::error(error);
-  return io_status::ok();
+  if (!add_environment(scene, filename, error)) return io_status{error};
+  return io_status{};
 }
 
 }  // namespace yocto
@@ -2774,19 +2769,18 @@ bool save_subdiv(
 pair<io_status, subdiv_data> load_subdiv(const string& filename) {
   auto error  = string{};
   auto subdiv = subdiv_data{};
-  if (!load_subdiv(filename, subdiv, error))
-    return {io_status::error(error), {}};
-  return {io_status::ok(), std::move(subdiv)};
+  if (!load_subdiv(filename, subdiv, error)) return {io_status{error}, {}};
+  return {io_status{}, std::move(subdiv)};
 }
 io_status load_subdiv(const string& filename, subdiv_data& subdiv) {
   auto error = string{};
-  if (!load_subdiv(filename, subdiv, error)) return io_status::error(error);
-  return io_status::ok();
+  if (!load_subdiv(filename, subdiv, error)) return io_status{error};
+  return io_status{};
 }
 io_status save_subdiv(const string& filename, const subdiv_data& subdiv) {
   auto error = string{};
-  if (!save_subdiv(filename, subdiv, error)) return io_status::error(error);
-  return io_status::ok();
+  if (!save_subdiv(filename, subdiv, error)) return io_status{error};
+  return io_status{};
 }
 
 // save binary shape

@@ -140,7 +140,7 @@ cli_state make_cli(const string& cmd, const string& usage);
 // parse arguments, checks for errors
 struct cli_status {
   string   error = "";
-  explicit operator bool() { return error.empty(); }
+  explicit operator bool() const { return error.empty(); }
 };
 cli_status parse_cli(cli_state& cli, const vector<string>& args);
 // parse arguments, checks for errors
