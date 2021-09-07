@@ -42,6 +42,9 @@
 
 #include "yocto_scene.h"
 
+#define JSON_USE_IMPLICIT_CONVERSIONS 0
+#include "ext/json.hpp"
+
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
 // -----------------------------------------------------------------------------
@@ -306,6 +309,36 @@ string path_current();
 
 // Create a directory and all missing parent directories if needed
 bool make_directory(const string& dirname, string& error);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// JSON CLI
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Using directive
+using ordered_json = nlohmann::ordered_json;
+
+// Parse command line arguments to Json without schema
+bool cli_to_json(ordered_json& json, int argc, const char** argv);
+bool cli_to_json(ordered_json& json, const vector<string>& args);
+
+// Validate Cli Json against a schema
+bool validate_cli(const ordered_json& json, const ordered_json& schema);
+
+// Get Cli usage from Json
+string cli_usage(const ordered_json& json, const ordered_json& schema);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// JSON SUPPORT FOR YOCTO TYPES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Validate Json against a schema
+bool validate_json(const ordered_json& json, const ordered_json& schema);
 
 }  // namespace yocto
 

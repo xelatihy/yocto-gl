@@ -5323,6 +5323,52 @@ static bool save_pbrt_scene(const string& filename, const scene_data& scene,
 
 }  // namespace yocto
 
+// -----------------------------------------------------------------------------
+// JSON CLI
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Using directive
+using ordered_json = nlohmann::ordered_json;
+
+// Parse command line arguments to Json without schema
+bool cli_to_json(ordered_json& json, int argc, const char** argv) {
+  return cli_to_json(json, vector<string>{argv, argv + argc});
+}
+static bool cli_to_json_impl(
+    ordered_json& json, const vector<string>& args, int pos) {
+  if (pos >= args.size()) return true;
+  if (args[pos].find("--") == 0) {
+    while (pos < (int)args.size()) {
+      json[args[pos]] = ordered_json();
+    }
+  } else {
+    return cli_to_json_impl(json[args[pos]], args, pos + 1);
+  }
+  return true;
+}
+bool cli_to_json(ordered_json& json, const vector<string>& args) {
+  return cli_to_json_impl(json, args, 1);
+}
+
+// Validate Cli Json against a schema
+bool validate_cli(const ordered_json& json, const ordered_json& schema);
+
+// Get Cli usage from Json
+string cli_usage(const ordered_json& json, const ordered_json& schema);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// JSON SUPPORT FOR YOCTO TYPES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Validate Json against a schema
+bool validate_json(const ordered_json& json, const ordered_json& schema);
+
+}  // namespace yocto
+
 #if 0
 
 // -----------------------------------------------------------------------------
