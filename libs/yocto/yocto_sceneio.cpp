@@ -152,7 +152,7 @@ bool list_directory(
     }
     return true;
   } catch (...) {
-    throw io_error{dirname + ": cannot list directory"};
+    error = dirname + ": cannot list directory";
     return false;
   }
 }
@@ -2859,19 +2859,21 @@ NLOHMANN_JSON_SERIALIZE_ENUM(
 // Load a scene in the builtin JSON format.
 static bool load_json_scene_version40(const string& filename,
     const json_value& json, scene_data& scene, string& error, bool noparallel) {
-  auto parse_error = [filename](const string& patha, const string& pathb = "",
-                         const string& pathc = "") {
+  auto parse_error = [filename, &error](const string& patha,
+                         const string& pathb = "", const string& pathc = "") {
     auto path = patha;
     if (!pathb.empty()) path += "/" + pathb;
     if (!pathc.empty()) path += "/" + pathc;
-    throw io_error(filename + ": parse error at " + path);
+    error = filename + ": parse error at " + path;
+    return false;
   };
-  auto key_error = [filename](const string& patha, const string& pathb = "",
-                       const string& pathc = "") {
+  auto key_error = [filename, &error](const string& patha,
+                       const string& pathb = "", const string& pathc = "") {
     auto path = patha;
     if (!pathb.empty()) path += "/" + pathb;
     if (!pathc.empty()) path += "/" + pathc;
-    throw io_error(filename + "; unknow key at " + path);
+    error = filename + "; unknow key at " + path;
+    return false;
   };
 
   // parse json value

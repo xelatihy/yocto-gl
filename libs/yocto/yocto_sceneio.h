@@ -233,18 +233,6 @@ bool add_environment(scene_data& scene, const string& filename, string& error);
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// IO ERROR
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Io error used in exception handling
-struct io_error : std::runtime_error {
-  io_error(const string& message) : std::runtime_error(message) {}
-};
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
 // FILE IO
 // -----------------------------------------------------------------------------
 namespace yocto {
