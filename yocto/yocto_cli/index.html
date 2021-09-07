@@ -496,53 +496,8 @@
   
   
     <li class="md-nav__item">
-      <a href="../yocto_imageio/" class="md-nav__link">
-        Image serialization
-      </a>
-    </li>
-  
-
-    
-      
-      
-      
-
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../yocto_shapeio/" class="md-nav__link">
-        Shape serialization
-      </a>
-    </li>
-  
-
-    
-      
-      
-      
-
-  
-  
-  
-    <li class="md-nav__item">
       <a href="../yocto_sceneio/" class="md-nav__link">
-        Scene serialization
-      </a>
-    </li>
-  
-
-    
-      
-      
-      
-
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../yocto_commonio/" class="md-nav__link">
-        Json and serialization utilities
+        Image, shape and scene serialization
       </a>
     </li>
   
@@ -573,6 +528,21 @@
     <li class="md-nav__item">
       <a href="../yocto_parallel/" class="md-nav__link">
         Concurrency utilities
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../yocto_json/" class="md-nav__link">
+        Json and serialization utilities
       </a>
     </li>
   
@@ -687,11 +657,6 @@ variable that we want to set, <code>help</code> is a usage message, <code>alt</c
 option flag, and <code>req</code> determines whether the option is required, and <code>check</code>
 is either a range of valid values er a list of valid choices.
 A help flag is automatically added.</p>
-<p>After adding all arguments, use <code>parse_cli(cli, args)</code> to parse the
-command-line. If an error occurs, the parser throws a <code>cli_error</code> exception,
-that includes a message that can be printed to inform the user.
-If you cannot use exceptions, use the function <code>parse_cli(cli, args, error)</code>
-that returns whether an error has occurred as a boolean and the error string.</p>
 <p>For positional arguments, the argument name is only used for printing help.
 For optional arguments, the command line is parsed for options named <code>--</code> 
 followed by the option <code>name</code> or <code>-</code> followed by the <code>alt</code> short name.
@@ -700,6 +665,9 @@ The parser supports integers, floating point numbers, strings, boolean flags,
 enums and arrays of strings.</p>
 <p>An help command is added automatically and checked for printing help and exiting
 without errors.</p>
+<p>After adding all arguments, use <code>ok = parse_cli(cli, args, error)</code> to parse the
+command-line. If an error occurs, the parser throws <code>false</code> and stores in 
+<code>error</code> a message that can be printed to inform the user.</p>
 <div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">samples</span> <span class="o">=</span> <span class="mi">10</span><span class="p">;</span> <span class="k">auto</span> <span class="n">flag</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>                <span class="c1">// state</span>
 <span class="k">auto</span> <span class="n">out</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="n">s</span><span class="p">,</span> <span class="n">scene</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="n">s</span><span class="p">;</span>
 <span class="k">auto</span> <span class="n">scenes</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">string</span><span class="o">&gt;</span><span class="p">{};</span>
@@ -710,24 +678,9 @@ without errors.</p>
 <span class="n">add_argument</span><span class="p">(</span><span class="n">cli</span><span class="p">,</span> <span class="s">&quot;scene&quot;</span><span class="p">,</span> <span class="n">scene</span><span class="p">,</span> <span class="s">&quot;scene&quot;</span><span class="p">);</span>     <span class="c1">// positional argument</span>
 <span class="n">add_option</span><span class="p">(</span><span class="n">cli</span><span class="p">,</span> <span class="s">&quot;scenes&quot;</span><span class="p">,</span> <span class="n">scenes</span><span class="p">,</span> <span class="s">&quot;scenes&quot;</span><span class="p">);</span>    <span class="c1">// positional arguments</span>
 <span class="k">auto</span> <span class="n">args</span> <span class="o">=</span> <span class="n">make_cli_args</span><span class="p">(</span><span class="n">argc</span><span class="p">,</span> <span class="n">argv</span><span class="p">);</span>          <span class="c1">// make a vector of args</span>
-<span class="k">try</span> <span class="p">{</span>
-  <span class="n">parse_cli</span><span class="p">(</span><span class="n">cli</span><span class="p">,</span> <span class="n">args</span><span class="p">);</span>                         <span class="c1">// parse args</span>
-<span class="p">}</span> <span class="k">catch</span><span class="p">(</span><span class="k">const</span> <span class="n">cli_error</span><span class="o">&amp;</span> <span class="n">error</span><span class="p">)</span> <span class="p">{</span>
-  <span class="n">print_info</span><span class="p">(</span><span class="n">error</span><span class="p">.</span><span class="n">what</span><span class="p">());</span>                     <span class="c1">// exit with error</span>
-  <span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
-<span class="p">}</span> <span class="k">catch</span><span class="p">(</span><span class="k">const</span> <span class="n">cli_help</span><span class="o">&amp;</span> <span class="n">help</span><span class="p">)</span> <span class="p">{</span>
-  <span class="n">print_info</span><span class="p">(</span><span class="n">help</span><span class="p">.</span><span class="n">what</span><span class="p">());</span>                      <span class="c1">// exit with help</span>
-  <span class="n">exit</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span>
-<span class="p">}</span> <span class="k">catch</span> <span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">exception</span><span class="o">&amp;</span> <span class="n">error</span><span class="p">)</span> <span class="p">{</span>               
-  <span class="n">print_info</span><span class="p">(</span><span class="n">error</span><span class="p">.</span><span class="n">what</span><span class="p">());</span>                     <span class="c1">// exit with other error</span>
-  <span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
-<span class="p">}</span>
-</code></pre></div>
-<p>You can avoid using writing the exception chain above by using the 
-<code>handle_errors(func)</code> or <code>handle_errors(func, args)</code> function that executes a 
-function and handle all errors internally.</p>
-<div class="highlight"><pre><span></span><code><span class="kt">void</span> <span class="nf">app</span><span class="p">(</span><span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">string</span><span class="o">&gt;&amp;</span> <span class="n">args</span><span class="p">)</span> <span class="p">{</span> <span class="p">...</span> <span class="p">}</span>    <span class="c1">// parse cli and run</span>
-<span class="n">handle_errors</span><span class="p">(</span><span class="n">app</span><span class="p">,</span> <span class="n">make_cli_args</span><span class="p">(</span><span class="n">argc</span><span class="p">,</span> <span class="n">argv</span><span class="p">));</span>  <span class="c1">// run and handle errors</span>
+<span class="k">auto</span> <span class="n">error</span> <span class="o">=</span> <span class="n">string</span><span class="p">{};</span>                          <span class="c1">// error string</span>
+<span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">parse_cli</span><span class="p">(</span><span class="n">cli</span><span class="p">,</span> <span class="n">args</span><span class="p">,</span> <span class="n">error</span><span class="p">))</span>               <span class="c1">// parse args</span>
+  <span class="n">print_fatal</span><span class="p">(</span><span class="n">error</span><span class="p">);</span>                           <span class="c1">// exit with error</span>
 </code></pre></div>
 <h2 id="command-line-commands">Command-Line Commands</h2>
 <p>The command line parser also support commands, that are created by
@@ -803,13 +756,13 @@ removed. </p>
         </a>
       
       
-        <a href="../yocto_imageio/" class="md-footer__link md-footer__link--next" rel="next">
+        <a href="../yocto_sceneio/" class="md-footer__link md-footer__link--next" rel="next">
           <div class="md-footer__title">
             <div class="md-ellipsis">
               <span class="md-footer__direction">
                 Next
               </span>
-              Image serialization
+              Image, shape and scene serialization
             </div>
           </div>
           <div class="md-footer__button md-icon">

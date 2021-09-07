@@ -496,53 +496,8 @@
   
   
     <li class="md-nav__item">
-      <a href="yocto/yocto_imageio/" class="md-nav__link">
-        Image serialization
-      </a>
-    </li>
-  
-
-    
-      
-      
-      
-
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="yocto/yocto_shapeio/" class="md-nav__link">
-        Shape serialization
-      </a>
-    </li>
-  
-
-    
-      
-      
-      
-
-  
-  
-  
-    <li class="md-nav__item">
       <a href="yocto/yocto_sceneio/" class="md-nav__link">
-        Scene serialization
-      </a>
-    </li>
-  
-
-    
-      
-      
-      
-
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="yocto/yocto_commonio/" class="md-nav__link">
-        Json and serialization utilities
+        Image, shape and scene serialization
       </a>
     </li>
   
@@ -573,6 +528,21 @@
     <li class="md-nav__item">
       <a href="yocto/yocto_parallel/" class="md-nav__link">
         Concurrency utilities
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="yocto/yocto_json/" class="md-nav__link">
+        Json and serialization utilities
       </a>
     </li>
   
@@ -687,14 +657,11 @@ Here is a list of the main libraries.</p>
   supporting area and environment illumination, microfacet GGX and subsurface
   scattering, multiple importance sampling</li>
 <li><a href="yocto/yocto_cli/">Yocto/Cli</a>: printing utilities and command line parsing</li>
-<li><a href="yocto/yocto_imageio/">Yocto/ImageIO</a>: image serialization</li>
-<li><a href="yocto/yocto_shapeio/">Yocto/ShapeIO</a>: shape serialization</li>
-<li><a href="yocto/yocto_sceneio/">Yocto/SceneIO</a>: scene serialization</li>
-<li><a href="yocto/yocto_commonio/">Yocto/CommonIO</a>: common IO operations, path helpers,
-  text and binary serialization, Json data model, Json serialization</li>
+<li><a href="yocto/yocto_sceneio/">Yocto/SceneIO</a>: image, shape and scene serialization</li>
 <li><a href="yocto/yocto_modelio/">Yocto/ModelIO</a>: low-level parsing and writing for 
   Ply, Obj, Stl, Pbrt formats</li>
 <li><a href="yocto/yocto_parallel/">Yocto/Parallel</a>: concurrency utilities</li>
+<li><a href="yocto/yocto_json/">Yocto/Json</a>: Json data model and serialization (deprecated)</li>
 </ul>
 <h2 id="example-applications">Example Applications</h2>
 <p>You can see Yocto/GL in action in the following applications written to
@@ -731,13 +698,12 @@ trivially.</p>
 from no template to heavy template use. At this point, Yocto uses some templates
 for readability. In the future, we will increase the use of templates in math
 code, while keeping many APIs explicitly typed.</p>
-<p>We support both exceptions and return codes for error reporting. For example, 
-we have two versions of many IO operations that either use boolean flags and 
-error strings for human readable errors, or throw exceptions with the same
-error string. Internally exceptions are used, since they provide cleaner
-code and where in fact faster ion low-level parsers. At the moment,
-exceptions are only used in IO functions and to report "programmer"
-errors, namely when preconditions or post conditions are violated in functions.</p>
+<p>For error handling in IO we either return status object or an interface that
+uses boolean flags and error strings. Internally exceptions are used when used
+by external libraries, but otherwise no exception are used. At the moment,
+exceptions are only used to report "programmer errors", namely when 
+preconditions or post conditions are violated in functions, just lime the
+standard library does.</p>
 <h2 id="license">License</h2>
 <p>The library is released under the MIT license. We include various external 
 dependencies in the distribution that each have thir own license, compatible

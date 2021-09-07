@@ -16,7 +16,7 @@
     
     
       
-        <title>Scene serialization - Yocto/GL</title>
+        <title>Image, shape and scene serialization - Yocto/GL</title>
       
     
     
@@ -96,7 +96,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Scene serialization
+              Image, shape and scene serialization
             
           </span>
         </div>
@@ -428,36 +428,6 @@
 
   
   
-  
-    <li class="md-nav__item">
-      <a href="../yocto_imageio/" class="md-nav__link">
-        Image serialization
-      </a>
-    </li>
-  
-
-    
-      
-      
-      
-
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../yocto_shapeio/" class="md-nav__link">
-        Shape serialization
-      </a>
-    </li>
-  
-
-    
-      
-      
-      
-
-  
-  
     
   
   
@@ -469,12 +439,12 @@
       
       
         <label class="md-nav__link md-nav__link--active" for="__toc">
-          Scene serialization
+          Image, shape and scene serialization
           <span class="md-nav__icon md-icon"></span>
         </label>
       
       <a href="./" class="md-nav__link md-nav__link--active">
-        Scene serialization
+        Image, shape and scene serialization
       </a>
       
         
@@ -498,15 +468,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#scene-serialization" class="md-nav__link">
-    Scene serialization
+  <a href="#shape-serialization" class="md-nav__link">
+    Shape serialization
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#shape-serialization" class="md-nav__link">
-    Shape serialization
+  <a href="#face-varying-shape-serialization" class="md-nav__link">
+    Face-Varying shape serialization
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#scene-serialization" class="md-nav__link">
+    Scene serialization
   </a>
   
 </li>
@@ -518,25 +495,24 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#text-and-binary-serialization" class="md-nav__link">
+    Text and binary serialization
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#path-manipulation-utilities" class="md-nav__link">
+    Path manipulation utilities
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
       
-    </li>
-  
-
-    
-      
-      
-      
-
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../yocto_commonio/" class="md-nav__link">
-        Json and serialization utilities
-      </a>
     </li>
   
 
@@ -566,6 +542,21 @@
     <li class="md-nav__item">
       <a href="../yocto_parallel/" class="md-nav__link">
         Concurrency utilities
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../yocto_json/" class="md-nav__link">
+        Json and serialization utilities
       </a>
     </li>
   
@@ -603,13 +594,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#scene-serialization" class="md-nav__link">
-    Scene serialization
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#shape-serialization" class="md-nav__link">
     Shape serialization
   </a>
@@ -617,8 +601,36 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#face-varying-shape-serialization" class="md-nav__link">
+    Face-Varying shape serialization
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#scene-serialization" class="md-nav__link">
+    Scene serialization
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#texture-serialization" class="md-nav__link">
     Texture serialization
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#text-and-binary-serialization" class="md-nav__link">
+    Text and binary serialization
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#path-manipulation-utilities" class="md-nav__link">
+    Path manipulation utilities
   </a>
   
 </li>
@@ -637,18 +649,26 @@
                 
                 
                 <h1 id="yoctosceneio-scene-serialization">Yocto/SceneIO: Scene serialization</h1>
-<p>Yocto/SceneIO is a collection of functions to load and save images and
-scene elements, together with path manipulation utilities.
+<p>Yocto/SceneIO is a collection of functions to load and save images, shapes, and
+scene elements, together with path manipulation utilities. The list of 
+supported file formats in included in the sections below.
 Yocto/SceneIO is implemented in <code>yocto_sceneio.h</code> and <code>yocto_sceneio.cpp</code>,
 and depends on <code>json.hpp</code> for Json serialization, and <code>stb_image.h</code>,
 <code>stb_image_write.h</code> and <code>tinyexr.h</code> for the image serialization.</p>
 <h2 id="image-serialization">Image serialization</h2>
-<p>Images are loaded with <code>load_image(filename, img, error)</code> and saved with
-<code>save_image(filename, img, error)</code>. Both loading and saving take a filename,
-an image buffer and return whether or not the image was loaded successfully.
-In the case of an error, the IO functions set the <code>error</code> string with a
-message suitable for displaying to a user.
-Yocto/SceneIO supports loading and saving to JPG, PNG, TGA, BMP, HDR, EXR.</p>
+<p>Use <code>ok = load_image(filename, image, error)</code> to load images 
+and <code>ok = save_pbrt(filename, image, error)</code> to save them.<br />
+Both loading and saving take a filename, a reference to an image, 
+and an error string, and returns a boolean that indicated whether the 
+operation is successful.
+The library supports loading and saving to JPG, PNG, TGA, BMP, HDR, EXR.</p>
+<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">error</span> <span class="o">=</span> <span class="n">string</span><span class="p">{};</span>
+<span class="k">auto</span> <span class="n">image</span> <span class="o">=</span> <span class="n">image_data</span><span class="p">{};</span>              <span class="c1">// define an image</span>
+<span class="k">if</span><span class="p">(</span><span class="o">!</span><span class="n">load_image</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">image</span><span class="p">,</span> <span class="n">error</span><span class="p">))</span> <span class="c1">// load image</span>
+  <span class="n">handle_error</span><span class="p">(</span><span class="n">error</span><span class="p">);</span>                   <span class="c1">// check and print error</span>
+<span class="k">if</span><span class="p">(</span><span class="o">!</span><span class="n">save_image</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">image</span><span class="p">,</span> <span class="n">error</span><span class="p">))</span> <span class="c1">// save image</span>
+  <span class="n">handle_error</span><span class="p">(</span><span class="n">error</span><span class="p">);</span>                   <span class="c1">// check and print error</span>
+</code></pre></div>
 <p>When loading images, the color space is detected by the filename and stored
 in the returned image. Since color space information is not
 present in many images and since it is customary in 3D graphics to misuse
@@ -659,64 +679,69 @@ Use <code>is_hdr_filename(filename)</code> to determine whether a supported form
 contains linear float data.
 When saving images, pixel values are converted to the color space supported
 by the chosen file format.</p>
-<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">error</span> <span class="o">=</span> <span class="n">string</span><span class="p">{};</span>
-<span class="k">auto</span> <span class="n">image</span> <span class="o">=</span> <span class="n">image_data</span><span class="p">{};</span>              <span class="c1">// define an image</span>
-<span class="k">if</span><span class="p">(</span><span class="o">!</span><span class="n">load_image</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">image</span><span class="p">,</span> <span class="n">error</span><span class="p">))</span> <span class="c1">// load image</span>
-  <span class="n">print_error</span><span class="p">(</span><span class="n">error</span><span class="p">);</span>                   <span class="c1">// check and print error</span>
-<span class="k">if</span><span class="p">(</span><span class="o">!</span><span class="n">save_image</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">image</span><span class="p">,</span> <span class="n">error</span><span class="p">))</span> <span class="c1">// save image</span>
-  <span class="n">print_error</span><span class="p">(</span><span class="n">error</span><span class="p">);</span>                   <span class="c1">// check and print error</span>
+<h2 id="shape-serialization">Shape serialization</h2>
+<p>Use <code>ok = load_shape(filename, shape, error)</code> to load shapes 
+and <code>ok = save_shape(filename, shape, error)</code> to save them.<br />
+Both loading and saving take a filename, a reference to a model, 
+and an error string, and returns a boolean that indicated whether the 
+operation is successful.
+The library supports loading and saving to Ply, Obj, Stl.</p>
+<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">shape</span> <span class="o">=</span> <span class="n">shape_data</span><span class="p">{};</span>                   <span class="c1">// shape</span>
+<span class="k">auto</span> <span class="n">error</span> <span class="o">=</span> <span class="n">string</span><span class="p">{};</span>                       <span class="c1">// error buffer</span>
+<span class="k">if</span><span class="p">(</span><span class="o">!</span><span class="n">load_shape</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">shape</span><span class="p">,</span> <span class="n">error</span><span class="p">))</span>      <span class="c1">// load shape</span>
+  <span class="n">handle_error</span><span class="p">(</span><span class="n">error</span><span class="p">);</span>
+<span class="k">if</span><span class="p">(</span><span class="o">!</span><span class="n">save_shape</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">shape</span><span class="p">,</span> <span class="n">error</span><span class="p">))</span>      <span class="c1">// save shape</span>
+  <span class="n">handle_error</span><span class="p">(</span><span class="n">error</span><span class="p">);</span>
 </code></pre></div>
+<p>During loading, the library chooses whether to store triangles or quads.
+By default, texture coordinates are flipped vertically to match the convention 
+of OpenGL texturing; this can be disabled by setting the <code>flipv</code> flag.</p>
+<h2 id="face-varying-shape-serialization">Face-Varying shape serialization</h2>
+<p>Use <code>ok = load_fvshape(filename, fvshape, error)</code> to load face-varying shapes 
+and <code>ok = save_fvshape(filename, fvshape, error)</code> to save them.<br />
+Both loading and saving take a filename, a reference to a shape, 
+and an error string, and returns a boolean that indicated whether the 
+operation is successful.
+The library supports loading and saving to Ply, Obj, Stl.</p>
+<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">fvshape</span> <span class="o">=</span> <span class="n">fvshape_data</span><span class="p">{};</span>               <span class="c1">// face-varying shape</span>
+<span class="k">auto</span> <span class="n">error</span> <span class="o">=</span> <span class="n">string</span><span class="p">{};</span>                       <span class="c1">// error buffer</span>
+<span class="k">if</span><span class="p">(</span><span class="o">!</span><span class="n">load_fvshape</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">fvshape</span><span class="p">,</span> <span class="n">error</span><span class="p">))</span>  <span class="c1">// load shape</span>
+  <span class="n">handle_error</span><span class="p">(</span><span class="n">error</span><span class="p">);</span>
+<span class="k">if</span><span class="p">(</span><span class="o">!</span><span class="n">save_fvshape</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">fvshape</span><span class="p">,</span> <span class="n">error</span><span class="p">))</span>  <span class="c1">// save shape</span>
+  <span class="n">handle_error</span><span class="p">(</span><span class="n">error</span><span class="p">);</span>
+</code></pre></div>
+<p>Face-varying shapes are coerced to quads, regardless of the polygon type stored 
+in the file. By default, texture coordinates are flipped vertically to match the 
+convention of OpenGL texturing; this can be disabled by setting the <code>flipv</code> flag.</p>
 <h2 id="scene-serialization">Scene serialization</h2>
-<p>Scenes are loaded with <code>load_scene(filename, scene, error, progress)</code> and
-saved with <code>save_scene(filename, scene, error, progress)</code>.
-Both loading and saving take a filename, a scene reference and return
-whether or not the scene was loaded successfully.
-In the case of an error, the IO functions set the <code>error</code> string with a
-message suitable for displaying to a user.
-Yocto/SceneIO supports loading and saving to a custom Json format,
+<p>Use <code>ok = load_scene(filename, scene, error)</code> to load scenes 
+and <code>ok = save_scene(filename, scene, error)</code> to save them.<br />
+Both loading and saving take a filename, a reference to a scene, 
+and an error string, and returns a boolean that indicated whether the 
+operation is successful.
+The library supports loading and saving to a custom Json format,
 Obj, glTF, Pbrt, and all shape file formats.</p>
 <div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">scene</span> <span class="o">=</span> <span class="n">scene_data</span><span class="p">{};</span>               <span class="c1">// scene</span>
 <span class="k">auto</span> <span class="n">error</span> <span class="o">=</span> <span class="n">string</span><span class="p">{};</span>                   <span class="c1">// error buffer</span>
 <span class="k">if</span><span class="p">(</span><span class="o">!</span><span class="n">load_scene</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">scene</span><span class="p">,</span> <span class="n">error</span><span class="p">))</span>  <span class="c1">// load scene</span>
-  <span class="n">print_error</span><span class="p">(</span><span class="n">error</span><span class="p">);</span>
+  <span class="n">handle_error</span><span class="p">(</span><span class="n">error</span><span class="p">);</span>
 <span class="k">if</span><span class="p">(</span><span class="o">!</span><span class="n">save_scene</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">scene</span><span class="p">,</span> <span class="n">error</span><span class="p">))</span>  <span class="c1">// save scene</span>
-  <span class="n">print_error</span><span class="p">(</span><span class="n">error</span><span class="p">);</span>
-</code></pre></div>
-<h2 id="shape-serialization">Shape serialization</h2>
-<p>Shapes are loaded with <code>load_shape(filename, shape, error)</code> and
-saved with <code>save_shape(filename, shape, error)</code>.
-Face-varying shapes with <code>load_fvshape(filename, shape, error)</code>
-and saved with <code>save_fvshape(filename, shape, error)</code>.
-Both loading and saving take a filename, a scene reference and return
-whether or not the scene was loaded successfully.
-In the case of an error, the IO functions set the <code>error</code> string with a
-message suitable for displaying to a user.
-Yocto/SceneIO supports loading and saving to Ply, Obj, Stl.</p>
-<p>For indexed meshes, the type of elements is determined during loading,
-while face-varying coerce all face to quads. By default, texture coordinates
-are flipped vertically to match the convention of OpenGL texturing;
-this can be disabled by setting the <code>flipv</code> flag.</p>
-<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">shape</span> <span class="o">=</span> <span class="n">shape_data</span><span class="p">{};</span>                   <span class="c1">// shape</span>
-<span class="k">auto</span> <span class="n">error</span> <span class="o">=</span> <span class="n">string</span><span class="p">{};</span>                       <span class="c1">// error buffer</span>
-<span class="k">if</span><span class="p">(</span><span class="o">!</span><span class="n">load_shape</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">shape</span><span class="p">,</span> <span class="n">error</span><span class="p">))</span>      <span class="c1">// load shape</span>
-  <span class="n">print_error</span><span class="p">(</span><span class="n">error</span><span class="p">);</span>
-<span class="k">if</span><span class="p">(</span><span class="o">!</span><span class="n">save_shape</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">shape</span><span class="p">,</span> <span class="n">error</span><span class="p">))</span>      <span class="c1">// save shape</span>
-  <span class="n">print_error</span><span class="p">(</span><span class="n">error</span><span class="p">);</span>
-
-<span class="k">auto</span> <span class="n">fvshape</span> <span class="o">=</span> <span class="n">fvshape_data</span><span class="p">{};</span>               <span class="c1">// face-varying shape</span>
-<span class="k">auto</span> <span class="n">error</span> <span class="o">=</span> <span class="n">string</span><span class="p">{};</span>                       <span class="c1">// error buffer</span>
-<span class="k">if</span><span class="p">(</span><span class="o">!</span><span class="n">load_fvshape</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">fvshape</span><span class="p">,</span> <span class="n">error</span><span class="p">))</span>  <span class="c1">// load shape</span>
-  <span class="n">print_error</span><span class="p">(</span><span class="n">error</span><span class="p">);</span>
-<span class="k">if</span><span class="p">(</span><span class="o">!</span><span class="n">save_fvshape</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">fvshape</span><span class="p">,</span> <span class="n">error</span><span class="p">))</span>  <span class="c1">// save shape</span>
-  <span class="n">print_error</span><span class="p">(</span><span class="n">error</span><span class="p">);</span>
+  <span class="n">handle_error</span><span class="p">(</span><span class="n">error</span><span class="p">);</span>
 </code></pre></div>
 <h2 id="texture-serialization">Texture serialization</h2>
-<p>Textures are loaded with <code>load_texture(filename, texture, error)</code> and saved with
-<code>save_texture(filename, texture, error)</code>. Both loading and saving take a filename,
-a texture and return whether or not the image was loaded successfully.
-In the case of an error, the IO functions set the <code>error</code> string with a
-message suitable for displaying to a user.
+<p>Use <code>ok = load_texture(filename, texture, error)</code> to load textures 
+and <code>ok = save_texture(filename, texture, error)</code> to save them.<br />
+Both loading and saving take a filename, a reference to a texture, 
+and an error string, and returns a boolean that indicated whether the 
+operation is successful.
 Yocto/SceneIO supports loading and saving to JPG, PNG, TGA, BMP, HDR, EXR.</p>
+<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">error</span> <span class="o">=</span> <span class="n">string</span><span class="p">{};</span>
+<span class="k">auto</span> <span class="n">texture</span> <span class="o">=</span> <span class="n">texture_data</span><span class="p">{};</span>              <span class="c1">// define a texture</span>
+<span class="k">if</span><span class="p">(</span><span class="o">!</span><span class="n">load_texture</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">texture</span><span class="p">,</span> <span class="n">error</span><span class="p">))</span> <span class="c1">// load texture</span>
+  <span class="n">handle_error</span><span class="p">(</span><span class="n">error</span><span class="p">);</span>                       <span class="c1">// check and print error</span>
+<span class="k">if</span><span class="p">(</span><span class="o">!</span><span class="n">save_texture</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">texture</span><span class="p">,</span> <span class="n">error</span><span class="p">))</span> <span class="c1">// save texture</span>
+  <span class="n">handle_error</span><span class="p">(</span><span class="n">error</span><span class="p">);</span>                       <span class="c1">// check and print error</span>
+</code></pre></div>
 <p>When loading textures, the color space and bit depth is detected by the filename.
 Texture are loaded as float for float file formats, and as bytes for 8bit file
 formats. Since color space information is not present in many images,
@@ -725,13 +750,44 @@ Use <code>is_hdr_filename(filename)</code> to determine whether a supported form
 contains linear float data.
 When saving images, pixel values are converted to the color space supported
 by the chosen file format.</p>
-<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">error</span> <span class="o">=</span> <span class="n">string</span><span class="p">{};</span>
-<span class="k">auto</span> <span class="n">texture</span> <span class="o">=</span> <span class="n">texture_data</span><span class="p">{};</span>              <span class="c1">// define a texture</span>
-<span class="k">if</span><span class="p">(</span><span class="o">!</span><span class="n">load_texture</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">texture</span><span class="p">,</span> <span class="n">error</span><span class="p">))</span> <span class="c1">// load texture</span>
-  <span class="n">print_error</span><span class="p">(</span><span class="n">error</span><span class="p">);</span>                       <span class="c1">// check and print error</span>
-<span class="k">if</span><span class="p">(</span><span class="o">!</span><span class="n">save_texture</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">texture</span><span class="p">,</span> <span class="n">error</span><span class="p">))</span> <span class="c1">// save texture</span>
-  <span class="n">print_error</span><span class="p">(</span><span class="n">error</span><span class="p">);</span>                       <span class="c1">// check and print error</span>
+<h2 id="text-and-binary-serialization">Text and binary serialization</h2>
+<p>Use <code>ok = load_text(filename, text, error)</code> to load text files 
+and <code>ok = save_text(filename, text, error)</code> to save them.<br />
+Use <code>ok = load_binary(filename, data, error)</code> to load binary files 
+and <code>ok = save_binary(filename, data, error)</code> to save them. 
+Both loading and saving take a filename, a reference to a string or data buffer, 
+and an error string, and returns a boolean that indicated whether the 
+operation is successful.
+Text is stored as a string and binary data is stored as an array of bytes.
+Use without exception is supported as described above.</p>
+<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">text</span> <span class="o">=</span> <span class="n">string</span><span class="p">{};</span>
+<span class="k">auto</span> <span class="n">error</span> <span class="o">=</span> <span class="n">string</span><span class="p">{};</span>
+<span class="k">if</span><span class="p">(</span><span class="o">!</span><span class="n">load_text</span><span class="p">(</span><span class="s">&quot;input_file.txt&quot;</span><span class="p">,</span>  <span class="n">text</span><span class="p">,</span> <span class="n">error</span><span class="p">))</span>          <span class="c1">// load text</span>
+  <span class="n">handle_error</span><span class="p">(</span><span class="n">error</span><span class="p">);</span>
+<span class="k">if</span><span class="p">(</span><span class="o">!</span><span class="n">save_text</span><span class="p">(</span><span class="s">&quot;output_file.txt&quot;</span><span class="p">,</span> <span class="n">text</span><span class="p">,</span> <span class="n">error</span><span class="p">))</span>          <span class="c1">// save text</span>
+  <span class="n">handle_error</span><span class="p">(</span><span class="n">error</span><span class="p">);</span>
+<span class="k">auto</span> <span class="n">data</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">byte</span><span class="o">&gt;</span><span class="p">{};</span>
+<span class="n">load_binary</span><span class="p">(</span><span class="s">&quot;input_file.bin&quot;</span><span class="p">,</span>  <span class="n">data</span><span class="p">);</span>        <span class="c1">// load data</span>
+  <span class="n">handle_error</span><span class="p">(</span><span class="n">error</span><span class="p">);</span>
+<span class="n">save_binary</span><span class="p">(</span><span class="s">&quot;output_file.bin&quot;</span><span class="p">,</span> <span class="n">data</span><span class="p">);</span>        <span class="c1">// save data</span>
+  <span class="n">handle_error</span><span class="p">(</span><span class="n">error</span><span class="p">);</span>
 </code></pre></div>
+<h2 id="path-manipulation-utilities">Path manipulation utilities</h2>
+<p>Yocto/CommonIO contains several helper function to manipulate paths. Paths
+are encoded in UTF8 across the library and these functions make it easier to
+handle UTF8-encoded paths across operating systems, by wrapping 
+<code>std::filesystem</code> with a string interface.</p>
+<p>Use <code>path_dirname(filename)</code>, <code>path_extension(filename)</code>,<br />
+<code>path_filename(filename)</code>, <code>path_basename(fillename)</code>
+to extract the directory, extension, filename and basename from a path.
+Use <code>path_join(patha,pathb)</code> to joins paths and
+<code>replace_extension(filename,ext)</code> to replace a path extension.
+Use <code>path_exists(filename)</code> to check if a path exists and
+<code>path_isdir(filename)</code> and <code>path_isfile(filename)</code> to check whether
+it is a directory ot file respectively.
+Use <code>ok = list_directory(dirname, error)</code> to list directory contents, 
+<code>ok = make_directory(dirname, error)</code> to create a directory, and
+<code>path_current()</code> to get the current directory.</p>
                 
               
               
@@ -749,7 +805,7 @@ by the chosen file format.</p>
   
     <nav class="md-footer__inner md-grid" aria-label="Footer">
       
-        <a href="../yocto_shapeio/" class="md-footer__link md-footer__link--prev" rel="prev">
+        <a href="../yocto_cli/" class="md-footer__link md-footer__link--prev" rel="prev">
           <div class="md-footer__button md-icon">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
           </div>
@@ -758,19 +814,19 @@ by the chosen file format.</p>
               <span class="md-footer__direction">
                 Previous
               </span>
-              Shape serialization
+              Command-line utilities
             </div>
           </div>
         </a>
       
       
-        <a href="../yocto_commonio/" class="md-footer__link md-footer__link--next" rel="next">
+        <a href="../yocto_modelio/" class="md-footer__link md-footer__link--next" rel="next">
           <div class="md-footer__title">
             <div class="md-ellipsis">
               <span class="md-footer__direction">
                 Next
               </span>
-              Json and serialization utilities
+              Model serialization
             </div>
           </div>
           <div class="md-footer__button md-icon">

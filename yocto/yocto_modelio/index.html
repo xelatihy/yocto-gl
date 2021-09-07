@@ -430,53 +430,8 @@
   
   
     <li class="md-nav__item">
-      <a href="../yocto_imageio/" class="md-nav__link">
-        Image serialization
-      </a>
-    </li>
-  
-
-    
-      
-      
-      
-
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../yocto_shapeio/" class="md-nav__link">
-        Shape serialization
-      </a>
-    </li>
-  
-
-    
-      
-      
-      
-
-  
-  
-  
-    <li class="md-nav__item">
       <a href="../yocto_sceneio/" class="md-nav__link">
-        Scene serialization
-      </a>
-    </li>
-  
-
-    
-      
-      
-      
-
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../yocto_commonio/" class="md-nav__link">
-        Json and serialization utilities
+        Image, shape and scene serialization
       </a>
     </li>
   
@@ -519,13 +474,6 @@
       Table of contents
     </label>
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#errors-handling-in-io-functions" class="md-nav__link">
-    Errors handling in IO functions
-  </a>
-  
-</li>
       
         <li class="md-nav__item">
   <a href="#ply-models" class="md-nav__link">
@@ -620,6 +568,21 @@
   
 
     
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../yocto_json/" class="md-nav__link">
+        Json and serialization utilities
+      </a>
+    </li>
+  
+
+    
   </ul>
 </nav>
                   </div>
@@ -643,13 +606,6 @@
       Table of contents
     </label>
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#errors-handling-in-io-functions" class="md-nav__link">
-    Errors handling in IO functions
-  </a>
-  
-</li>
       
         <li class="md-nav__item">
   <a href="#ply-models" class="md-nav__link">
@@ -738,39 +694,6 @@
 <p>Yocto/ModelIO is a collection of utilities for loading and saving scenes
 and meshes in Ply, Obj, Stl and Pbrt formats.
 Yocto/ModelIO is implemented in <code>yocto_modelio.h</code> and <code>yocto_modelio.cpp</code>.</p>
-<h2 id="errors-handling-in-io-functions">Errors handling in IO functions</h2>
-<p>IO functions in Yocto/ModelIO have a dual interface to support their use with
-and without exceptions. IO functions with exception are written as 
-<code>load_&lt;type&gt;(filename, data, &lt;options&gt;)</code> and 
-<code>save_&lt;type&gt;(filename, data, &lt;options&gt;)</code> where <code>&lt;type&gt;</code> is the data type 
-read or written, and <code>&lt;options&gt;</code> is an optional list of IO options. 
-A convenience shortcut is provided for all loading functions that returns the 
-data directly, written as <code>data = load_&lt;type&gt;(filename, &lt;options&gt;)</code>.
-Upon errors, an <code>io_error</code> is thrown from all IO functions.
-This makes the error-handling code more uniform across the library. 
-<code>io_error</code> has fields for <code>filename</code> and <code>message</code> that can retrieved directly, 
-and a message for users that can be retrieved with the <code>.what()</code> method.</p>
-<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">ply</span> <span class="o">=</span> <span class="n">string</span><span class="p">{};</span>
-<span class="k">try</span> <span class="p">{</span>
-  <span class="n">load_ply</span><span class="p">(</span><span class="s">&quot;input_file.ply&quot;</span><span class="p">,</span>  <span class="n">ply</span><span class="p">);</span>   <span class="c1">// load ply</span>
-  <span class="n">ply</span> <span class="o">=</span> <span class="n">load_ply</span><span class="p">(</span><span class="s">&quot;input_file.ply&quot;</span><span class="p">);</span>   <span class="c1">// alternative load</span>
-  <span class="n">save_ply</span><span class="p">(</span><span class="s">&quot;output_file.ply&quot;</span><span class="p">,</span> <span class="n">ply</span><span class="p">);</span>   <span class="c1">// save ply</span>
-<span class="p">}</span> <span class="k">catch</span><span class="p">(</span><span class="k">const</span> <span class="n">io_error</span><span class="o">&amp;</span> <span class="n">error</span><span class="p">)</span> <span class="p">{</span>
-  <span class="n">print_info</span><span class="p">(</span><span class="n">error</span><span class="p">.</span><span class="n">what</span><span class="p">());</span> <span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>    <span class="c1">// handle error</span>
-<span class="p">}</span>
-</code></pre></div>
-<p>IO functions without exceptions are written as
-<code>load_&lt;type&gt;(filename, data, error, &lt;options&gt;)</code> and 
-<code>save_&lt;type&gt;(filename, data, error, &lt;options&gt;)</code> where <code>error</code> is a string 
-that contains a message if an error occurred. These functions return a boolean 
-flag that indicates whether the operation succeeded.  </p>
-<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">ply</span> <span class="o">=</span> <span class="n">string</span><span class="p">{};</span>
-<span class="k">auto</span> <span class="n">error</span> <span class="o">=</span> <span class="n">string</span><span class="p">{};</span>
-<span class="k">if</span><span class="p">(</span><span class="o">!</span><span class="n">load_ply</span><span class="p">(</span><span class="s">&quot;input_file.ply&quot;</span><span class="p">,</span>  <span class="n">ply</span><span class="p">))</span>      <span class="c1">// load ply</span>
-  <span class="n">print_info</span><span class="p">(</span><span class="n">error</span><span class="p">);</span> <span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>              <span class="c1">// handle error</span>
-<span class="k">if</span><span class="p">(</span><span class="o">!</span><span class="n">save_ply</span><span class="p">(</span><span class="s">&quot;output_file.ply&quot;</span><span class="p">,</span> <span class="n">ply</span><span class="p">))</span>      <span class="c1">// save ply</span>
-  <span class="n">print_info</span><span class="p">(</span><span class="n">error</span><span class="p">);</span> <span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>              <span class="c1">// handle error</span>
-</code></pre></div>
 <h2 id="ply-models">Ply models</h2>
 <p>The Ply file format is a generic file format used to serialize meshes and point
 clouds. To use this library is helpful to understand the basic of the Ply
@@ -784,15 +707,17 @@ Ply properties can contain most C data types.
 All elements and properties are owned by the main <code>ply_model</code>.
 Yocto/ModelIO provides several functions to read and write Ply data
 whose use is preferred over direct data access.</p>
-<p>Use <code>load_ply(filename, ply)</code> or <code>ply = load_ply(filename)</code> to load Ply files 
-and <code>save_ply(filename, ply)</code> to save them.<br />
-Both loading and saving take a filename, a reference to a model, and throw 
-an exception <code>io_error</code> exception if the file was not loaded successfully.
-Use without exception is supported as described above.</p>
-<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">ply</span> <span class="o">=</span> <span class="n">ply_model</span><span class="p">{};</span>      <span class="c1">// ply model buffer</span>
-<span class="n">load_ply</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">ply</span><span class="p">);</span>     <span class="c1">// load ply</span>
-<span class="n">ply</span> <span class="o">=</span> <span class="n">load_ply</span><span class="p">(</span><span class="n">filename</span><span class="p">);</span>    <span class="c1">// alternative load</span>
-<span class="n">save_ply</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">ply</span><span class="p">;</span>      <span class="c1">// save ply</span>
+<p>Use <code>ok = load_ply(filename, ply, error)</code> to load Ply files 
+and <code>ok = save_ply(filename, ply, error)</code> to save them.<br />
+Both loading and saving take a filename, a reference to a model, 
+and an error string, and returns a boolean that indicated whether the 
+operation is successful.</p>
+<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">ply</span> <span class="o">=</span> <span class="n">ply_model</span><span class="p">{};</span>              <span class="c1">// ply model</span>
+<span class="k">auto</span> <span class="n">error</span> <span class="o">=</span> <span class="n">string</span><span class="p">{};</span>               <span class="c1">// error string</span>
+<span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">load_ply</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">ply</span><span class="p">,</span> <span class="n">error</span><span class="p">))</span> <span class="c1">// load ply</span>
+  <span class="n">handle_error</span><span class="p">(</span><span class="n">error</span><span class="p">);</span> 
+<span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">save_ply</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">ply</span><span class="p">,</span> <span class="n">error</span><span class="p">))</span> <span class="c1">// save ply</span>
+  <span class="n">handle_error</span><span class="p">(</span><span class="n">error</span><span class="p">);</span> 
 </code></pre></div>
 <h2 id="ply-reading">Ply reading</h2>
 <p>Yocto/ModelIO defines several functions to make it easy to extract data
@@ -918,8 +843,8 @@ with <code>add_lists(ply,element,property,values)</code>.</p>
 <span class="k">if</span><span class="p">(</span><span class="o">!</span><span class="n">add_lists</span><span class="p">(</span><span class="n">ply</span><span class="p">,</span> <span class="s">&quot;face&quot;</span><span class="p">,</span> <span class="s">&quot;indices&quot;</span><span class="p">,</span> <span class="n">triangles</span><span class="p">))</span><span class="c1">// add lists</span>
   <span class="n">print_error</span><span class="p">(</span><span class="s">&quot;missing faces&quot;</span><span class="p">);</span>                  <span class="c1">// error if missing</span>
 
-<span class="k">auto</span> <span class="n">error</span> <span class="o">=</span> <span class="n">string</span><span class="p">{};</span>                  <span class="c1">// error buffer</span>
-<span class="n">save_ply</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">ply</span><span class="p">,</span> <span class="n">error</span><span class="p">);</span>         <span class="c1">// save ply</span>
+<span class="k">auto</span> <span class="n">error</span> <span class="o">=</span> <span class="n">string</span><span class="p">{};</span>            <span class="c1">// error buffer</span>
+<span class="n">save_ply</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">ply</span><span class="p">,</span> <span class="n">error</span><span class="p">);</span>   <span class="c1">// save ply</span>
 </code></pre></div>
 <p>Yocto/ModelIO defines convenience functions to add the most used properties
 of meshes, using standard element and property names.
@@ -996,32 +921,34 @@ shapes, with a simpler interface than accessing data directly.</p>
 <span class="k">for</span><span class="p">(</span><span class="k">auto</span> <span class="nl">environment</span> <span class="p">:</span> <span class="n">obj</span><span class="p">.</span><span class="n">environments</span><span class="p">)</span>  <span class="c1">// access environments [extension]</span>
   <span class="n">print_info</span><span class="p">(</span><span class="n">environment</span><span class="p">.</span><span class="n">emission</span><span class="p">);</span>       <span class="c1">// access environment properties</span>
 </code></pre></div>
-<p>Use <code>load_obj(filename, obj)</code> or <code>obj = load_obj(filename)</code> to load Obj files
-and <code>save_obj(filename, obj)</code> to save them.
-Both loading and saving take a filename, a reference to a model, and throw 
-an exception <code>io_error</code> exception if the file was not loaded successfully.
-Use without exception is supported as described above.</p>
+<p>Use <code>ok = load_obj(filename, obj, error)</code> to load Obj files
+and <code>ok = save_obj(filename, obj, error)</code> to save them.
+Both loading and saving take a filename, a reference to a model, 
+and an error string, and returns a boolean that indicated whether the 
+operation is successful.</p>
 <p>Obj is a face-varying file format, while most applications handle only
 indexed meshes. The loading function takes an optional that specify whether
 to load as face-varying or convert to indexed meshes, which is the default.</p>
-<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">obj</span> <span class="o">=</span> <span class="n">obj_model</span><span class="p">{};</span>        <span class="c1">// obj model</span>
-<span class="n">load_obj</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">obj</span><span class="p">);</span>       <span class="c1">// load obj as indexed meshes</span>
-<span class="n">obj</span> <span class="o">=</span> <span class="n">load_obj</span><span class="p">(</span><span class="n">filename</span><span class="p">);</span>      <span class="c1">// alternative load</span>
-<span class="n">load_obj</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">obj</span><span class="p">,</span> <span class="nb">true</span><span class="p">);</span> <span class="c1">// load obj as face-varying</span>
-<span class="n">save_obj</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">obj</span><span class="p">);</span>       <span class="c1">// save obj</span>
+<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">obj</span> <span class="o">=</span> <span class="n">obj_model</span><span class="p">{};</span>              <span class="c1">// obj model</span>
+<span class="k">auto</span> <span class="n">error</span> <span class="o">=</span> <span class="n">string</span><span class="p">{};</span>               <span class="c1">// error string</span>
+<span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">load_obj</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">obj</span><span class="p">,</span> <span class="n">error</span><span class="p">))</span> <span class="c1">// load obj</span>
+  <span class="n">handle_error</span><span class="p">(</span><span class="n">error</span><span class="p">);</span> 
+<span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">save_obj</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">obj</span><span class="p">,</span> <span class="n">error</span><span class="p">))</span> <span class="c1">// save obj</span>
+  <span class="n">handle_error</span><span class="p">(</span><span class="n">error</span><span class="p">);</span> 
 </code></pre></div>
 <p>It is common in graphics to use Obj file to store single meshes. Yocto/Obj
 supports this modality by providing specialized loading and saving functions
 that take references to shapes as parameters.
-Use <code>load_obj(filename, shape)</code> or <code>shape = load_sobj(filename)</code> to load Obj 
-shapes and <code>save_obj(filename, shape)</code> to save them. The loading function takes
+Use <code>ok = load_obj(filename, shape, error)</code> to load Obj 
+shapes and <code>ok = save_obj(filename, shape, error)</code> to save them. The loading function takes
 an optional that specify whether to load as face-varying or convert to
 indexed meshes, which is the default.</p>
-<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">shape</span> <span class="o">=</span> <span class="n">obj_shape</span><span class="p">{};</span>        <span class="c1">// obj shape</span>
-<span class="n">load_obj</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">shape</span><span class="p">)</span>        <span class="c1">// load obj as indexed meshes</span>
-<span class="n">shape</span> <span class="o">=</span> <span class="n">load_sobj</span><span class="p">(</span><span class="n">filename</span><span class="p">);</span>     <span class="c1">// alternative load</span>
-<span class="n">load_obj</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">shape</span><span class="p">,</span> <span class="nb">true</span><span class="p">);</span> <span class="c1">// load obj as face-varying</span>
-<span class="n">save_obj</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">shape</span><span class="p">);</span>       <span class="c1">// save obj</span>
+<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">oshape</span> <span class="o">=</span> <span class="n">obj_shape</span><span class="p">{};</span>              <span class="c1">// obj shape</span>
+<span class="k">auto</span> <span class="n">error</span> <span class="o">=</span> <span class="n">string</span><span class="p">{};</span>                  <span class="c1">// error string</span>
+<span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">load_obj</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">oshape</span><span class="p">,</span> <span class="n">error</span><span class="p">))</span> <span class="c1">// load obj shape</span>
+  <span class="n">handle_error</span><span class="p">(</span><span class="n">error</span><span class="p">);</span> 
+<span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">save_obj</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">oshape</span><span class="p">,</span> <span class="n">error</span><span class="p">))</span> <span class="c1">// save obj shape</span>
+  <span class="n">handle_error</span><span class="p">(</span><span class="n">error</span><span class="p">);</span> 
 </code></pre></div>
 <h2 id="obj-reading">Obj reading</h2>
 <p>Obj is a face-varying format and that geometry representation is maintained
@@ -1048,7 +975,8 @@ that are overrides of the previous <code>get_&lt;element&gt;(...)</code> functio
 but differ in that they take a material is as input, instead of returning
 materials tags.</p>
 <div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">obj</span> <span class="o">=</span> <span class="n">obj_model</span><span class="p">{};</span>                <span class="c1">// obj model buffer</span>
-<span class="n">load_obj</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">obj</span><span class="p">);</span>               <span class="c1">// load obj</span>
+<span class="k">auto</span> <span class="n">error</span> <span class="o">=</span> <span class="n">string</span><span class="p">{};</span>                 <span class="c1">// error buffer</span>
+<span class="n">load_obj</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">obj</span><span class="p">,</span> <span class="n">error</span><span class="p">);</span>        <span class="c1">// load obj</span>
 <span class="k">auto</span><span class="o">&amp;</span> <span class="n">shape</span> <span class="o">=</span> <span class="n">obj</span><span class="p">.</span><span class="n">shapes</span><span class="p">.</span><span class="n">front</span><span class="p">();</span>      <span class="c1">// get shape</span>
 
 <span class="k">auto</span> <span class="n">positions</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">{};</span>      <span class="c1">// vertex properties</span>
@@ -1076,8 +1004,9 @@ materials tags.</p>
 <p>Yocto/ModelIO supports also reading Obj shapes as face-varying quads
 with <code>get_fvquads(...)</code>. In this case, the model should be loaded as
 face-varying.</p>
-<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">obj</span> <span class="o">=</span> <span class="k">new</span> <span class="n">obj_model</span><span class="p">{};</span>             <span class="c1">// obj model buffer</span>
-<span class="n">load_obj</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">obj</span><span class="p">,</span> <span class="nb">true</span><span class="p">);</span>          <span class="c1">// load obj as face-varying</span>
+<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">obj</span> <span class="o">=</span>  <span class="n">obj_model</span><span class="p">{};</span>                <span class="c1">// obj model buffer</span>
+<span class="k">auto</span> <span class="n">error</span> <span class="o">=</span> <span class="n">string</span><span class="p">{};</span>                  <span class="c1">// error buffer</span>
+<span class="n">load_obj</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">obj</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span> <span class="nb">true</span><span class="p">);</span>   <span class="c1">// load obj as face-varying</span>
 <span class="k">auto</span><span class="o">&amp;</span> <span class="n">shape</span> <span class="o">=</span> <span class="n">obj</span><span class="p">.</span><span class="n">shapes</span><span class="p">.</span><span class="n">front</span><span class="p">();</span>       <span class="c1">// get shape</span>
 
 <span class="k">auto</span> <span class="n">positions</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">{};</span>       <span class="c1">// vertex properties</span>
@@ -1158,7 +1087,8 @@ To add face-varying shapes, use <code>add_fvquads(...)</code>.</p>
 <span class="n">add_normals</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="n">normals</span><span class="p">);</span>
 <span class="n">add_texcoords</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="n">texcoords</span><span class="p">);</span>
 
-<span class="n">save_obj</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">obj</span><span class="p">);</span>                <span class="c1">// save obj</span>
+<span class="k">auto</span> <span class="n">error</span> <span class="o">=</span> <span class="n">string</span><span class="p">{};</span>                  <span class="c1">// error buffer</span>
+<span class="n">save_obj</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">obj</span><span class="p">,</span> <span class="n">error</span><span class="p">);</span>         <span class="c1">// save obj</span>
 </code></pre></div>
 <h2 id="stl-models">Stl models</h2>
 <p>The Stl file format is a file format used to serialize meshes.
@@ -1169,15 +1099,14 @@ file format for example from the
 Stl models are defined as collections of shapes, stored in <code>stl_shape</code>.
 Shapes are defined by an array of vertex positions, an array of triangle
 indices, and an array of triangle normals.</p>
-<p>Use <code>load_stl(filename, stl)</code> or <code>stl = load_stl(filename)</code> to load Stl files
-and <code>save_stl(filename, stl)</code> to save them.
-Both loading and saving take a filename, a reference to a model, and throw 
-an exception <code>io_error</code> exception if the file was not loaded successfully.
-Use without exception is supported as described above.</p>
-<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">stl</span> <span class="o">=</span> <span class="n">stl_model</span><span class="p">{};</span>        <span class="c1">// stl model</span>
-<span class="n">load_stl</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">stl</span><span class="p">);</span>       <span class="c1">// load stl</span>
-<span class="n">stl</span> <span class="o">=</span> <span class="n">load_stl</span><span class="p">(</span><span class="n">filename</span><span class="p">);</span>      <span class="c1">// alternative load</span>
-<span class="n">save_stl</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">stl</span><span class="p">);</span>       <span class="c1">// save stl</span>
+<p>Use <code>ok = load_stl(filename, stl, error)</code> to load Stl files
+and <code>ok = save_stl(filename, stl, error)</code> to save them.</p>
+<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">stl</span> <span class="o">=</span> <span class="n">stl_model</span><span class="p">{};</span>              <span class="c1">// stl model</span>
+<span class="k">auto</span> <span class="n">error</span> <span class="o">=</span> <span class="n">string</span><span class="p">{};</span>               <span class="c1">// error string</span>
+<span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">load_stl</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">stl</span><span class="p">,</span> <span class="n">error</span><span class="p">))</span> <span class="c1">// load stl</span>
+  <span class="n">handle_error</span><span class="p">(</span><span class="n">error</span><span class="p">);</span> 
+<span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">save_stl</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">stl</span><span class="p">,</span> <span class="n">error</span><span class="p">))</span> <span class="c1">// save stl</span>
+  <span class="n">handle_error</span><span class="p">(</span><span class="n">error</span><span class="p">);</span> 
 </code></pre></div>
 <h2 id="stl-reading">Stl reading</h2>
 <p>You can access Stl data directly from the shapes, without any further complexity.</p>
@@ -1237,15 +1166,17 @@ stored in the header file.</p>
 <span class="k">for</span><span class="p">(</span><span class="k">auto</span> <span class="nl">environment</span> <span class="p">:</span> <span class="n">pbrt</span><span class="p">.</span><span class="n">environments</span><span class="p">)</span>  <span class="c1">// access environments [extension]</span>
   <span class="n">print_info</span><span class="p">(</span><span class="n">environment</span><span class="p">.</span><span class="n">emission</span><span class="p">);</span>        <span class="c1">// access environment properties</span>
 </code></pre></div>
-<p>Use <code>load_pbrt(filename, pbrt)</code> or <code>pbrt = load_pbrt(filename)</code> to load Pbrt 
-files and <code>save_pbrt(filename, pbrt)</code> to save them.<br />
-Both loading and saving take a filename, a reference to a model, and throw 
-an exception <code>io_error</code> exception if the file was not loaded successfully.
-Use without exception is supported as described above.</p>
-<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">pbrt</span> <span class="o">=</span> <span class="n">pbrt_scene</span><span class="p">{};</span>    <span class="c1">// pbrt model buffer</span>
-<span class="n">load_pbrt</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">pbrt</span><span class="p">);</span>   <span class="c1">// load pbrt</span>
-<span class="n">pbrt</span> <span class="o">=</span> <span class="n">load_pbrt</span><span class="p">(</span><span class="n">filename</span><span class="p">);</span>  <span class="c1">// alternative load</span>
-<span class="n">save_pbrt</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">pbrt</span><span class="p">);</span>   <span class="c1">// save pbrt</span>
+<p>Use <code>ok = load_pbrt(filename, pbrt, error)</code> to load Pbrt 
+files and <code>ok = save_pbrt(filename, pbrt, error)</code> to save them.<br />
+Both loading and saving take a filename, a reference to a model, 
+and an error string, and returns a boolean that indicated whether the 
+operation is successful.</p>
+<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">pbrt</span> <span class="o">=</span> <span class="n">pbrt_model</span><span class="p">{};</span>              <span class="c1">// pbrt model</span>
+<span class="k">auto</span> <span class="n">error</span> <span class="o">=</span> <span class="n">string</span><span class="p">{};</span>                 <span class="c1">// error string</span>
+<span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">load_pbrt</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">pbrt</span><span class="p">,</span> <span class="n">error</span><span class="p">))</span> <span class="c1">// load pbrt</span>
+  <span class="n">handle_error</span><span class="p">(</span><span class="n">error</span><span class="p">);</span> 
+<span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">save_pbrt</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">pbrt</span><span class="p">,</span> <span class="n">error</span><span class="p">))</span> <span class="c1">// save pbrt</span>
+  <span class="n">handle_error</span><span class="p">(</span><span class="n">error</span><span class="p">);</span> 
 </code></pre></div>
                 
               
@@ -1264,7 +1195,7 @@ Use without exception is supported as described above.</p>
   
     <nav class="md-footer__inner md-grid" aria-label="Footer">
       
-        <a href="../yocto_commonio/" class="md-footer__link md-footer__link--prev" rel="prev">
+        <a href="../yocto_sceneio/" class="md-footer__link md-footer__link--prev" rel="prev">
           <div class="md-footer__button md-icon">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
           </div>
@@ -1273,7 +1204,7 @@ Use without exception is supported as described above.</p>
               <span class="md-footer__direction">
                 Previous
               </span>
-              Json and serialization utilities
+              Image, shape and scene serialization
             </div>
           </div>
         </a>

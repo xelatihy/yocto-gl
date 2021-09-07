@@ -64,7 +64,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#yoctocommonio-common-io-functionality" class="md-skip">
+        <a href="#yoctojson-json-functionality-deprecated" class="md-skip">
           Skip to content
         </a>
       
@@ -430,38 +430,38 @@
   
   
     <li class="md-nav__item">
-      <a href="../yocto_imageio/" class="md-nav__link">
-        Image serialization
-      </a>
-    </li>
-  
-
-    
-      
-      
-      
-
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../yocto_shapeio/" class="md-nav__link">
-        Shape serialization
-      </a>
-    </li>
-  
-
-    
-      
-      
-      
-
-  
-  
-  
-    <li class="md-nav__item">
       <a href="../yocto_sceneio/" class="md-nav__link">
-        Scene serialization
+        Image, shape and scene serialization
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../yocto_modelio/" class="md-nav__link">
+        Model serialization
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../yocto_parallel/" class="md-nav__link">
+        Concurrency utilities
       </a>
     </li>
   
@@ -506,27 +506,6 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#errors-handling-in-io-functions" class="md-nav__link">
-    Errors handling in IO functions
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#text-and-binary-serialization" class="md-nav__link">
-    Text and binary serialization
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#path-manipulation-utilities" class="md-nav__link">
-    Path manipulation utilities
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#json-data-type" class="md-nav__link">
     Json data type
   </a>
@@ -555,36 +534,6 @@
   
 
     
-      
-      
-      
-
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../yocto_modelio/" class="md-nav__link">
-        Model serialization
-      </a>
-    </li>
-  
-
-    
-      
-      
-      
-
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../yocto_parallel/" class="md-nav__link">
-        Concurrency utilities
-      </a>
-    </li>
-  
-
-    
   </ul>
 </nav>
                   </div>
@@ -608,27 +557,6 @@
       Table of contents
     </label>
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#errors-handling-in-io-functions" class="md-nav__link">
-    Errors handling in IO functions
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#text-and-binary-serialization" class="md-nav__link">
-    Text and binary serialization
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#path-manipulation-utilities" class="md-nav__link">
-    Path manipulation utilities
-  </a>
-  
-</li>
       
         <li class="md-nav__item">
   <a href="#json-data-type" class="md-nav__link">
@@ -664,78 +592,10 @@
               
                 
                 
-                <h1 id="yoctocommonio-common-io-functionality">Yocto/CommonIO: Common IO functionality</h1>
-<p>Yocto/CommonIO is a collection of utilities used in writing IO functionality,
-including file IO, Json IO, and path manipulation.
-Yocto/CommonIO is implemented in <code>yocto_commonio.h</code> and <code>yocto_commonio.cpp</code>, 
-and depends on <code>json.hpp</code> for Json serialization and number printing, and
-<code>fast_float.h</code> for number parsing.</p>
-<h2 id="errors-handling-in-io-functions">Errors handling in IO functions</h2>
-<p>IO functions in Yocto/GL have a dual interface to support their use with and 
-without exceptions. IO functions with exception are written as 
-<code>load_&lt;type&gt;(filename, data, &lt;options&gt;)</code> and 
-<code>save_&lt;type&gt;(filename, data, &lt;options&gt;)</code> where <code>&lt;type&gt;</code> is the data type 
-read or written, and <code>&lt;options&gt;</code> is an optional list of IO options. 
-A convenience shortcut is provided for all loading functions that returns the 
-data directly, written as <code>data = load_&lt;type&gt;(filename, &lt;options&gt;)</code>.
-Upon errors, an <code>io_error</code> is thrown from all IO functions.
-This makes the error-handling code more uniform across the library. 
-<code>io_error</code> has fields for <code>filename</code> and <code>message</code> that can retrieved directly, 
-and a message for users that can be retrieved with the <code>.what()</code> method.</p>
-<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">text</span> <span class="o">=</span> <span class="n">string</span><span class="p">{};</span>
-<span class="k">try</span> <span class="p">{</span>
-  <span class="n">load_text</span><span class="p">(</span><span class="s">&quot;input_file.txt&quot;</span><span class="p">,</span>  <span class="n">text</span><span class="p">);</span>   <span class="c1">// load text</span>
-  <span class="n">text</span> <span class="o">=</span> <span class="n">load_text</span><span class="p">(</span><span class="s">&quot;input_file.txt&quot;</span><span class="p">);</span>   <span class="c1">// alternative load</span>
-  <span class="n">save_text</span><span class="p">(</span><span class="s">&quot;output_file.txt&quot;</span><span class="p">,</span> <span class="n">text</span><span class="p">);</span>   <span class="c1">// save text</span>
-<span class="p">}</span> <span class="k">catch</span><span class="p">(</span><span class="k">const</span> <span class="n">io_error</span><span class="o">&amp;</span> <span class="n">error</span><span class="p">)</span> <span class="p">{</span>
-  <span class="n">print_info</span><span class="p">(</span><span class="n">error</span><span class="p">.</span><span class="n">what</span><span class="p">());</span> <span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>    <span class="c1">// handle error</span>
-<span class="p">}</span>
-</code></pre></div>
-<p>IO functions without exceptions are written as
-<code>load_&lt;type&gt;(filename, data, error, &lt;options&gt;)</code> and 
-<code>save_&lt;type&gt;(filename, data, error, &lt;options&gt;)</code> where <code>error</code> is a string 
-that contains a message if an error occurred. These functions return a boolean 
-flag that indicates whether the operation succeeded.  </p>
-<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">text</span> <span class="o">=</span> <span class="n">string</span><span class="p">{};</span>
-<span class="k">auto</span> <span class="n">error</span> <span class="o">=</span> <span class="n">string</span><span class="p">{};</span>
-<span class="k">if</span><span class="p">(</span><span class="o">!</span><span class="n">load_text</span><span class="p">(</span><span class="s">&quot;input_file.txt&quot;</span><span class="p">,</span>  <span class="n">text</span><span class="p">))</span>      <span class="c1">// load text</span>
-  <span class="n">print_info</span><span class="p">(</span><span class="n">error</span><span class="p">);</span> <span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>                <span class="c1">// handle error</span>
-<span class="k">if</span><span class="p">(</span><span class="o">!</span><span class="n">save_text</span><span class="p">(</span><span class="s">&quot;output_file.txt&quot;</span><span class="p">,</span> <span class="n">text</span><span class="p">))</span>      <span class="c1">// save text</span>
-  <span class="n">print_info</span><span class="p">(</span><span class="n">error</span><span class="p">);</span> <span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>                <span class="c1">// handle error</span>
-</code></pre></div>
-<h2 id="text-and-binary-serialization">Text and binary serialization</h2>
-<p>Yocto/CommonIO supports reading and writing whole files of either binary
-data or text. Use <code>load_text(filename, text)</code> or <code>text = load_text(filename)</code> 
-to load text, and <code>save_text(filename, text)</code> to save it.
-Use <code>load_binary(filename, data)</code> or <code>data = load_binary(filename)</code> 
-to load text, and <code>save_binary(filename, data)</code> to save it. 
-Text is stored as a string and binary data is stored as an array of bytes.
-Use without exception is supported as described above.</p>
-<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">text</span> <span class="o">=</span> <span class="n">string</span><span class="p">{};</span>
-<span class="n">load_text</span><span class="p">(</span><span class="s">&quot;input_file.txt&quot;</span><span class="p">,</span>  <span class="n">text</span><span class="p">);</span>          <span class="c1">// load text</span>
-<span class="n">save_text</span><span class="p">(</span><span class="s">&quot;output_file.txt&quot;</span><span class="p">,</span> <span class="n">text</span><span class="p">);</span>          <span class="c1">// save text</span>
-<span class="k">auto</span> <span class="n">text1</span> <span class="o">=</span> <span class="n">load_text</span><span class="p">(</span><span class="s">&quot;input_file.txt&quot;</span><span class="p">);</span>    <span class="c1">// alternative load</span>
-<span class="k">auto</span> <span class="n">data</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">byte</span><span class="o">&gt;</span><span class="p">{};</span>
-<span class="n">load_binary</span><span class="p">(</span><span class="s">&quot;input_file.bin&quot;</span><span class="p">,</span>  <span class="n">data</span><span class="p">);</span>        <span class="c1">// load data</span>
-<span class="n">save_binary</span><span class="p">(</span><span class="s">&quot;output_file.bin&quot;</span><span class="p">,</span> <span class="n">data</span><span class="p">);</span>        <span class="c1">// save data</span>
-<span class="k">auto</span> <span class="n">data1</span> <span class="o">=</span> <span class="n">load_binary</span><span class="p">(</span><span class="s">&quot;input_file.bin&quot;</span><span class="p">);</span>  <span class="c1">// alternative load</span>
-</code></pre></div>
-<h2 id="path-manipulation-utilities">Path manipulation utilities</h2>
-<p>Yocto/CommonIO contains several helper function to manipulate paths. Paths
-are encoded in UTF8 across the library and these functions make it easier to
-handle UTF8-encoded paths across operating systems, by wrapping 
-<code>std::filesystem</code> with a string interface.</p>
-<p>Use <code>path_dirname(filename)</code>, <code>path_extension(filename)</code>,<br />
-<code>path_filename(filename)</code>, <code>path_basename(fillename)</code>
-to extract the directory, extension, filename and basename from a path.
-Use <code>path_join(patha,pathb)</code> to joins paths and
-<code>replace_extension(filename,ext)</code> to replace a path extension.
-Use <code>path_exists(filename)</code> to check if a path exists and
-<code>path_isdir(filename)</code> and <code>path_isfile(filename)</code> to check whether
-it is a directory ot file respectively.
-Use <code>list_directory(dirname)</code> to list directory contents, 
-<code>make_directory(dirname)</code> to create a directory, and
-<code>path_current()</code> to get the current directory.</p>
+                <h1 id="yoctojson-json-functionality-deprecated">Yocto/Json: Json functionality (deprecated)</h1>
+<p>Yocto/Json is an implementation of a Json type and related IO functionality.
+Yocto/Json is implemented in <code>yocto_json.h</code> and <code>yocto_json.cpp</code>, 
+and depends on <code>json.hpp</code> for Json serialization.</p>
 <h2 id="json-data-type">Json data type</h2>
 <p>Throughout the library, JSON data is used extensively as a simple and flexible
 IO format. Most JSON libraries we reviewed use header-only formulation that
@@ -816,9 +676,7 @@ the default value specified.</p>
 <h2 id="json-serialization">Json serialization</h2>
 <p>Use <code>load_json(filename, json)</code> or <code>json = load_json(filename)</code> to load json 
 data from a file, and <code>save_json(filename, json)</code> to save json data to a file. 
-Upon errors, an <code>io_error</code> is thrown from all IO functions.
-See <a href="./">Yocto/CommonIO</a> for discussion on error handling 
-and use without exceptions.</p>
+Upon errors, an <code>json_error</code> is thrown from all IO functions.</p>
 <div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">json</span> <span class="o">=</span> <span class="n">json_value</span><span class="p">{};</span>
 <span class="n">load_json</span><span class="p">(</span><span class="s">&quot;input_file.json&quot;</span><span class="p">,</span>  <span class="n">json</span><span class="p">);</span>       <span class="c1">// load json</span>
 <span class="n">save_json</span><span class="p">(</span><span class="s">&quot;output_file.json&quot;</span><span class="p">,</span> <span class="n">json</span><span class="p">);</span>       <span class="c1">// save json</span>
@@ -865,7 +723,7 @@ In that case, we can skip the key checks and insert values at the end directly.<
   
     <nav class="md-footer__inner md-grid" aria-label="Footer">
       
-        <a href="../yocto_sceneio/" class="md-footer__link md-footer__link--prev" rel="prev">
+        <a href="../yocto_parallel/" class="md-footer__link md-footer__link--prev" rel="prev">
           <div class="md-footer__button md-icon">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
           </div>
@@ -874,25 +732,11 @@ In that case, we can skip the key checks and insert values at the end directly.<
               <span class="md-footer__direction">
                 Previous
               </span>
-              Scene serialization
+              Concurrency utilities
             </div>
           </div>
         </a>
       
-      
-        <a href="../yocto_modelio/" class="md-footer__link md-footer__link--next" rel="next">
-          <div class="md-footer__title">
-            <div class="md-ellipsis">
-              <span class="md-footer__direction">
-                Next
-              </span>
-              Model serialization
-            </div>
-          </div>
-          <div class="md-footer__button md-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11H4z"/></svg>
-          </div>
-        </a>
       
     </nav>
   
