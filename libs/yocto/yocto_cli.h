@@ -137,8 +137,12 @@ namespace yocto {
 // Initialize a command line parser.
 struct cli_state;
 cli_state make_cli(const string& cmd, const string& usage);
-// parse arguments, throw exceptions on error
-void parse_cli(cli_state& cli, const vector<string>& args);
+// parse arguments, checks for errors
+struct cli_status {
+  string   error = "";
+  explicit operator bool() { return error.empty(); }
+};
+cli_status parse_cli(cli_state& cli, const vector<string>& args);
 // parse arguments, checks for errors
 bool parse_cli(cli_state& cli, const vector<string>& args, string& error);
 // a convenience function that packs args to strings

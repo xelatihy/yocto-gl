@@ -1056,9 +1056,10 @@ vector<string> make_cli_args(int argc, const char** argv) {
   return vector<string>(argv, argv + argc);
 }
 
-void parse_cli(cli_state& cli, const vector<string>& args) {
+cli_status parse_cli(cli_state& cli, const vector<string>& args) {
   auto error = string{};
-  if (!parse_cli(cli, args, error)) throw cli_error{error};
+  if (!parse_cli(cli, args, error)) return cli_status{error};
+  return {};
 }
 
 }  // namespace yocto
