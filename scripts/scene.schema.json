@@ -48,6 +48,10 @@
             "description": "Lens",
             "type": "number"
           },
+          "film": {
+            "description": "film size",
+            "type": "number"
+          },
           "aspect": {
             "description": "Aspect ratio",
             "type": "number"
