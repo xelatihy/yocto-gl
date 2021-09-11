@@ -21,7 +21,7 @@
     },
     "cameras": {
       "description": "Scene cameras",
-      "type": "object",
+      "type": "array",
       "items": {
         "description": "Camera",
         "type": "object",
