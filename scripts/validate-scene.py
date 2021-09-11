@@ -9,7 +9,7 @@ def main(input: str, schema: str):
     json_schema = json.load(f)
   validator = jsonschema.Draft7Validator(json_schema)
   for error in validator.iter_errors(json_input):
-     print(error.path)
+     print(error.message)
 
 if __name__ == '__main__':
   typer.run(main)

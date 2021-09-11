@@ -8,7 +8,13 @@
     "asset": {
       "description": "asset information",
       "type": "object",
+      "additionalProperties": false,
       "properties": {
+        "version": {
+          "description": "Version string",
+          "type": "string",
+          "enum": ["4.1", "4.2", "5.0"]
+        },
         "copyright": {
           "description": "Copyright string",
           "type": "string"
@@ -25,6 +31,7 @@
       "items": {
         "description": "Camera",
         "type": "object",
+        "additionalProperties": false,
         "properties": {
           "name": {
             "description": "Name",
@@ -53,7 +60,7 @@
             "description": "Lens aperture",
             "type": "number"
           },
-          "ortho": {
+          "orthographic": {
             "description": "Whether the camera is orthographic",
             "type": "boolean"
           }
@@ -66,6 +73,7 @@
       "items": {
         "description": "Environment",
         "type": "object",
+        "additionalProperties": false,
         "properties": {
           "name": {
             "description": "Name",
@@ -98,10 +106,25 @@
       "items": {
         "description": "Object",
         "type": "object",
+        "additionalProperties": false,
         "properties": {
           "name": {
             "description": "Name",
             "type": "string"
+          },
+          "type": {
+            "description": "Type",
+            "type": "string",
+            "enum": [
+              "matte",
+              "glossy",
+              "reflective",
+              "transparent",
+              "refractive",
+              "subsurface",
+              "volume",
+              "gltfpbr"
+            ]
           },
           "emission": {
             "description": "Emission",
