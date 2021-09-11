@@ -110,6 +110,26 @@ def info(directory='mcguire', scene='*', format='json', mode='default'):
             print(cmd, file=sys.stderr)
             os.system(cmd)
 
+@cli.command()
+@click.option('--directory', '-d', default='mcguire')
+@click.option('--scene', '-s', default='*')
+@click.option('--format', '-f', default='json')
+@click.option('--mode', '-m', default='default')
+def validate(directory='mcguire', scene='*', format='json', mode='default'):
+    modes = {
+        'default': ''
+    }
+    options = modes[mode]
+    schema = '../yocto-gl/scripts/scene.schema.json'
+    for dirname in sorted(glob.glob(f'{directory}/{format}/{scene}')):
+        if not os.path.isdir(dirname): continue
+        if '/_' in dirname: continue
+        extraoptions = ''
+        for filename in sorted(glob.glob(f'{dirname}/*.{format}')):
+            cmd = f'../yocto-gl/scripts/validate-scene.py {schema} {filename} {options}'
+            print(cmd, file=sys.stderr)
+            os.system(cmd)
+
 
 @cli.command()
 @click.option('--directory', '-d', default='mcguire')

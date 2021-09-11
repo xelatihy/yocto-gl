@@ -4,11 +4,18 @@
   "title": "Yocto/GL Scene Format",
   "description": "The scene format used by Yocto/GL",
   "type": "object",
+  "additionalProperties": false,
   "properties": {
     "asset": {
       "description": "asset information",
       "type": "object",
+      "additionalProperties": false,
       "properties": {
+        "version": {
+          "description": "Version string",
+          "type": "string",
+          "enum": ["4.1", "4.2", "5.0"]
+        },
         "copyright": {
           "description": "Copyright string",
           "type": "string"
@@ -21,10 +28,11 @@
     },
     "cameras": {
       "description": "Scene cameras",
-      "type": "object",
+      "type": "array",
       "items": {
         "description": "Camera",
         "type": "object",
+        "additionalProperties": false,
         "properties": {
           "name": {
             "description": "Name",
@@ -41,6 +49,10 @@
             "description": "Lens",
             "type": "number"
           },
+          "film": {
+            "description": "film size",
+            "type": "number"
+          },
           "aspect": {
             "description": "Aspect ratio",
             "type": "number"
@@ -53,41 +65,47 @@
             "description": "Lens aperture",
             "type": "number"
           },
-          "ortho": {
+          "orthographic": {
             "description": "Whether the camera is orthographic",
             "type": "boolean"
           }
         }
       }
     },
-    "environments": {
-      "description": "Scene environments",
+    "textures": {
+      "description": "Scene textures",
       "type": "array",
       "items": {
-        "description": "Environment",
+        "description": "Texture",
         "type": "object",
+        "additionalProperties": false,
         "properties": {
           "name": {
             "description": "Name",
             "type": "string"
           },
-          "frame": {
-            "description": "Frame",
-            "type": "array",
-            "items": {
-              "type": "number"
-            }
+          "uri": {
+            "description": "Uri",
+            "type": "string"
+          }
+        }
+      }
+    },
+    "shapes": {
+      "description": "Scene shapes",
+      "type": "array",
+      "items": {
+        "description": "Shape",
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "description": "Name",
+            "type": "string"
           },
-          "emission": {
-            "description": "Emission",
-            "type": "array",
-            "items": {
-              "type": "number"
-            }
-          },
-          "emission_tex": {
-            "description": "Environment map index",
-            "type": "integer"
+          "uri": {
+            "description": "Uri",
+            "type": "string"
           }
         }
       }
@@ -98,10 +116,25 @@
       "items": {
         "description": "Object",
         "type": "object",
+        "additionalProperties": false,
         "properties": {
           "name": {
             "description": "Name",
             "type": "string"
+          },
+          "type": {
+            "description": "Type",
+            "type": "string",
+            "enum": [
+              "matte",
+              "glossy",
+              "reflective",
+              "transparent",
+              "refractive",
+              "subsurface",
+              "volume",
+              "gltfpbr"
+            ]
           },
           "emission": {
             "description": "Emission",
@@ -178,6 +211,112 @@
           },
           "normal_tex": {
             "description": "Normal map",
+            "type": "integer"
+          }
+        }
+      }
+    },
+    "instances": {
+      "description": "Scene instances",
+      "type": "array",
+      "items": {
+        "description": "Instance",
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "description": "Name",
+            "type": "string"
+          },
+          "frame": {
+            "description": "Frame",
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          },
+          "shape": {
+            "description": "Shape index",
+            "type": "integer"
+          },
+          "material": {
+            "description": "Material index",
+            "type": "integer"
+          }
+        }
+      }
+    },
+    "environments": {
+      "description": "Scene environments",
+      "type": "array",
+      "items": {
+        "description": "Environment",
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "description": "Name",
+            "type": "string"
+          },
+          "frame": {
+            "description": "Frame",
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          },
+          "emission": {
+            "description": "Emission",
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          },
+          "emission_tex": {
+            "description": "Environment map index",
+            "type": "integer"
+          }
+        }
+      }
+    },
+    "subdivs": {
+      "description": "Scene subdivs",
+      "type": "array",
+      "items": {
+        "description": "Subdiv",
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "description": "Name",
+            "type": "string"
+          },
+          "uri": {
+            "description": "Uri",
+            "type": "string"
+          },
+          "shape": {
+            "description": "Shape index",
+            "type": "integer"
+          },
+          "subdivisions": {
+            "description": "Subdivisions",
+            "type": "integer"
+          },
+          "smooth": {
+            "description": "Smooth normals",
+            "type": "boolean"
+          },
+          "catmullclark": {
+            "description": "Catmull-Clark subdivision",
+            "type": "boolean"
+          },
+          "displacement": {
+            "description": "Displacement amount",
+            "type": "number"
+          },
+          "displacement_tex": {
+            "description": "Displacement texture",
             "type": "integer"
           }
         }

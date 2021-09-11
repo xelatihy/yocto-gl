@@ -195,7 +195,6 @@
     {
       "name": "sphere-displaced",
       "shape": 5,
-      "datafile": "sphere-displaced.obj",
       "catmullclark": true,
       "smooth": true,
       "displacement": 0.02500000037252903,
@@ -205,7 +204,6 @@
     {
       "name": "suzanne-subdiv",
       "shape": 4,
-      "datafile": "suzanne-subdiv.obj",
       "subdivisions": 2,
       "catmullclark": true,
       "smooth": true,
@@ -214,7 +212,6 @@
     {
       "name": "cube-subdiv",
       "shape": 3,
-      "datafile": "cube-subdiv.obj",
       "subdivisions": 4,
       "catmullclark": true,
       "uri": "cube-subdiv.obj"
