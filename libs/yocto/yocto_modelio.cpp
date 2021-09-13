@@ -40,7 +40,6 @@
 #include <utility>
 
 #include "ext/fast_float.h"
-#include "yocto_color.h"
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
@@ -48,11 +47,13 @@
 namespace yocto {
 
 // using directives
+using std::pair;
 using std::string_view;
 using std::unordered_map;
 using std::unordered_set;
 using namespace std::string_literals;
 using namespace std::string_view_literals;
+using byte = unsigned char;
 
 }  // namespace yocto
 
@@ -285,10 +286,23 @@ namespace yocto {
   return {u, v, w, eye};
 }
 
+static array<array<float, 3>, 3> mul(
+    const array<array<float, 3>, 3>& a, float b) {
+  return {mul(a[0], b), mul(a[1], b), mul(a[2], b)};
+}
+static array<float, 3> mul(
+    const array<array<float, 3>, 3>& a, const array<float, 3>& b) {
+  return add(mul(a[0], b[0]), add(mul(a[1], b[1]), mul(a[2], b[2])));
+}
+static array<array<float, 3>, 3> mul(
+    const array<array<float, 3>, 3>& a, const array<array<float, 3>, 3>& b) {
+  return {mul(a, b[0]), mul(a, b[1]), mul(a, b[2])};
+}
 static array<array<float, 3>, 4> mul(
     const array<array<float, 3>, 4>& a, const array<array<float, 3>, 4>& b) {
-  auto frame = ((const frame3f&)a) * ((const frame3f&)b);
-  return (array<array<float, 3>, 4>&)frame;
+  auto al = array<array<float, 3>, 3>{a[0], a[1], a[2]};
+  return {
+      mul(al, b[0]), mul(al, b[1]), mul(al, b[2]), add(mul(al, b[3]), a[3])};
 }
 
 static array<array<float, 3>, 4> translation_frame(const array<float, 3>& a) {
@@ -313,10 +327,29 @@ static array<array<float, 3>, 4> rotation_frame(
       array<float, 3>{0, 0, 0}};
 }
 
-static array<array<float, 3>, 4> inverse_frame(
+static array<array<float, 3>, 3> transpose(const array<array<float, 3>, 3>& a) {
+  return {
+      array<float, 3>{a[0][0], a[1][0], a[2][0]},
+      array<float, 3>{a[0][1], a[1][1], a[2][1]},
+      array<float, 3>{a[0][2], a[1][2], a[2][2]},
+  };
+}
+static float determinant(const array<array<float, 3>, 3>& a) {
+  return dot(a[0], cross(a[1], a[2]));
+}
+static array<array<float, 3>, 3> adjoint(const array<array<float, 3>, 3>& a) {
+  return transpose(array<array<float, 3>, 3>{
+      cross(a[1], a[2]), cross(a[2], a[0]), cross(a[0], a[1])});
+}
+static array<array<float, 3>, 3> inverse(const array<array<float, 3>, 3>& a) {
+  return mul(adjoint(a), (1 / determinant(a)));
+}
+
+static array<array<float, 3>, 4> inverse(
     const array<array<float, 3>, 4>& a, bool non_rigid = false) {
-  auto frame = inverse((const frame3f&)a, non_rigid);
-  return (array<array<float, 3>, 4>&)frame;
+  auto m    = array<array<float, 3>, 3>{a[0], a[1], a[2]};
+  auto minv = non_rigid ? inverse(m) : transpose(m);
+  return {minv[0], minv[1], minv[2], neg(mul(minv, a[3]))};
 }
 
 // frame/mat conversion
@@ -3128,7 +3161,7 @@ template <typename T, typename V>
 // Approximate color of blackbody radiation from wavelength in nm.
 static array<float, 3> blackbody_to_rgb_(float temperature) {
   // clamp to valid range
-  auto t = clamp(temperature, 1667.0f, 25000.0f) / 1000.0f;
+  auto t = std::min(std::max(temperature, 1667.0f), 25000.0f) / 1000.0f;
   // compute x
   auto x = 0.0f;
   if (temperature < 4000.0f) {
@@ -3153,9 +3186,9 @@ static array<float, 3> blackbody_to_rgb_(float temperature) {
   auto xyY = array<float, 3>{x, y, 1};
   auto xyz = array<float, 3>{xyY[0] * xyY[2] / xyY[1], xyY[2],
       (1 - xyY[0] - xyY[1]) * xyY[2] / xyY[1]};
-  auto rgb = add(mul({+3.2406f, -0.9689f, +0.0557f}, xyz[0]),
-      add(mul({-1.5372f, +1.8758f, -0.2040f}, xyz[1]),
-          mul({-0.4986f, +0.0415f, +1.0570f}, xyz[2])));
+  auto rgb = add(mul(array<float, 3>{+3.2406f, -0.9689f, +0.0557f}, xyz[0]),
+      add(mul(array<float, 3>{-1.5372f, +1.8758f, -0.2040f}, xyz[1]),
+          mul(array<float, 3>{-0.4986f, +0.0415f, +1.0570f}, xyz[2])));
   return rgb;
 }
 
@@ -3358,7 +3391,7 @@ struct pbrt_medium {
     const string& filename, bool verbose = false) {
   pcamera.frame      = command.frame;
   pcamera.frend      = command.frend;
-  auto cframe        = inverse_frame(unflatten(pcamera.frame));
+  auto cframe        = inverse(unflatten(pcamera.frame));
   cframe[2]          = neg(cframe[2]);
   pcamera.frame      = flatten(cframe);
   pcamera.resolution = resolution;
@@ -3371,9 +3404,11 @@ struct pbrt_medium {
     // auto lensradius = if(!get_pbrt_value(values, "lensradius", 0.0f);
     pcamera.aspect = film_aspect;
     if (pcamera.aspect >= 1) {
-      pcamera.lens = (0.036f / pcamera.aspect) / (2 * tan(radians(fov) / 2));
+      pcamera.lens = (0.036f / pcamera.aspect) /
+                     (2 * std::tan((fov * (float)M_PI / 180) / 2));
     } else {
-      pcamera.lens = (0.036f * pcamera.aspect) / (2 * tan(radians(fov) / 2));
+      pcamera.lens = (0.036f * pcamera.aspect) /
+                     (2 * std::tan((fov * (float)M_PI / 180) / 2));
     }
     get_pbrt_value(command.values, "frameaspectratio", pcamera.aspect);
     pcamera.focus = 10.0f;
@@ -3381,11 +3416,11 @@ struct pbrt_medium {
   } else if (command.type == "realistic") {
     auto lensfile = ""s;
     get_pbrt_value(command.values, "lensfile", lensfile);
-    lensfile         = lensfile.substr(0, lensfile.size() - 4);
-    lensfile         = lensfile.substr(lensfile.find('.') + 1);
-    lensfile         = lensfile.substr(0, lensfile.size() - 2);
-    auto lens        = max((float)std::atof(lensfile.c_str()), 35.0f) * 0.001f;
-    pcamera.lens     = 2 * atan(0.036f / (2 * lens));
+    lensfile     = lensfile.substr(0, lensfile.size() - 4);
+    lensfile     = lensfile.substr(lensfile.find('.') + 1);
+    lensfile     = lensfile.substr(0, lensfile.size() - 2);
+    auto lens    = std::max((float)std::atof(lensfile.c_str()), 35.0f) * 0.001f;
+    pcamera.lens = 2 * atan(0.036f / (2 * lens));
     pcamera.aperture = 0.0f;
     get_pbrt_value(command.values, "aperturediameter", pcamera.aperture);
     pcamera.focus = 10.0f;
@@ -3564,7 +3599,7 @@ struct pbrt_medium {
     roughness = (uroughness_mean + vroughness_mean) / 2;
     // from pbrt code
     if (remaproughness) {
-      roughness = max(roughness, 1e-3f);
+      roughness = std::max(roughness, 1e-3f);
       auto x    = log(roughness);
       roughness = 1.62142f + 0.819955f * x + 0.1734f * x * x +
                   0.0171201f * x * x * x + 0.000640711f * x * x * x * x;
@@ -3865,12 +3900,14 @@ static void make_sphere(vector<array<int, 3>>& triangles,
   make_shape(
       triangles, positions, normals, texcoords, steps,
       [radius](const array<float, 2>& uv) {
-        auto pt = array<float, 2>{2 * pif * uv[0], pif * (1 - uv[1])};
+        auto pt = array<float, 2>{
+            2 * (float)M_PI * uv[0], (float)M_PI * (1 - uv[1])};
         return array<float, 3>{radius * cos(pt[0]) * sin(pt[1]),
             radius * sin(pt[0]) * sin(pt[1]), radius * cos(pt[1])};
       },
       [](const array<float, 2>& uv) {
-        auto pt = array<float, 2>{2 * pif * uv[0], pif * (1 - uv[1])};
+        auto pt = array<float, 2>{
+            2 * (float)M_PI * uv[0], (float)M_PI * (1 - uv[1])};
         return array<float, 3>{
             cos(pt[0]) * sin(pt[1]), sin(pt[0]) * sin(pt[1]), cos(pt[1])};
       });
@@ -3882,7 +3919,7 @@ static void make_disk(vector<array<int, 3>>& triangles,
   make_shape(
       triangles, positions, normals, texcoords, steps,
       [radius](const array<float, 2>& uv) {
-        auto a = 2 * pif * uv[0];
+        auto a = 2 * (float)M_PI * uv[0];
         return array<float, 3>{
             radius * (1 - uv[1]) * cos(a), radius * (1 - uv[1]) * sin(a), 0};
       },
@@ -4006,7 +4043,7 @@ static void make_quad(vector<array<int, 3>>& triangles,
     get_pbrt_value(command.values, "to", plight.to);
     plight.distant       = true;
     auto distant_dist    = 100.0f;
-    auto size            = distant_dist * sin(5 * pif / 180);
+    auto size            = distant_dist * std::sin(5 * (float)M_PI / 180);
     auto dscale          = (distant_dist * distant_dist) / (size * size);
     plight.area_emission = {plight.emission[0] * dscale,
         plight.emission[1] * dscale, plight.emission[2] * dscale};
@@ -4211,8 +4248,9 @@ static bool load_pbrt(const string& filename, pbrt_model& pbrt, string& error,
     } else if (cmd == "Rotate") {
       auto v = array<float, 4>{0, 0, 0, 0};
       if (!parse_param(str, v)) return parse_error();
-      concat_transform(ctx.stack.back(),
-          rotation_frame(array<float, 3>{v[1], v[2], v[3]}, radians(v[0])));
+      concat_transform(
+          ctx.stack.back(), rotation_frame(array<float, 3>{v[1], v[2], v[3]},
+                                v[0] * (float)M_PI / 180));
     } else if (cmd == "LookAt") {
       auto from = array<float, 3>{0, 0, 0}, to = array<float, 3>{0, 0, 0},
            up = array<float, 3>{0, 0, 0};
@@ -4220,7 +4258,7 @@ static bool load_pbrt(const string& filename, pbrt_model& pbrt, string& error,
       if (!parse_param(str, to)) return parse_error();
       if (!parse_param(str, up)) return parse_error();
       auto frame = lookat_frame(from, to, up, true);
-      concat_transform(ctx.stack.back(), inverse_frame(frame));
+      concat_transform(ctx.stack.back(), inverse(frame));
     } else if (cmd == "ReverseOrientation") {
       ctx.stack.back().reverse = !ctx.stack.back().reverse;
     } else if (cmd == "CoordinateSystem") {
@@ -4516,7 +4554,7 @@ bool save_pbrt(const string& filename, const pbrt_model& pbrt, string& error,
     command.type  = "perspective";
     command.frame = camera.frame;
     command.values.push_back(make_pbrt_value(
-        "fov", 2 * tan(0.036f / (2 * camera.lens)) * 180 / pif));
+        "fov", 2 * std::tan(0.036f / (2 * camera.lens)) * 180 / (float)M_PI));
     format_values(buffer, "LookAt {} {} {}\n",
         array<float, 3>{command.frame[9], command.frame[10], command.frame[11]},
         array<float, 3>{command.frame[9] - command.frame[6],
@@ -4584,7 +4622,7 @@ bool save_pbrt(const string& filename, const pbrt_model& pbrt, string& error,
         command.values.push_back(
             make_pbrt_value("Ks", array<float, 3>{1, 1, 1}));
         command.values.push_back(
-            make_pbrt_value("roughness", pow(material.roughness, 2)));
+            make_pbrt_value("roughness", std::pow(material.roughness, 2.0f)));
         command.values.push_back(
             make_pbrt_value("eta", reflectivity_to_eta(material.color)));
         command.values.push_back(make_pbrt_value("remaproughness", false));
@@ -4594,7 +4632,7 @@ bool save_pbrt(const string& filename, const pbrt_model& pbrt, string& error,
         command.values.push_back(
             make_pbrt_value("Kr", array<float, 3>{1, 1, 1}));
         command.values.push_back(
-            make_pbrt_value("roughness", pow(material.roughness, 2)));
+            make_pbrt_value("roughness", std::pow(material.roughness, 2.0f)));
         command.values.push_back(
             make_pbrt_value("eta", reflectivity_to_eta(material.color)));
         command.values.push_back(make_pbrt_value("remaproughness", false));
@@ -4605,7 +4643,7 @@ bool save_pbrt(const string& filename, const pbrt_model& pbrt, string& error,
             make_pbrt_value("Ks", array<float, 3>{1, 1, 1}));
         command.values.push_back(make_pbrt_value("Kt", material.color));
         command.values.push_back(
-            make_pbrt_value("roughness", pow(material.roughness, 2)));
+            make_pbrt_value("roughness", std::pow(material.roughness, 2.0f)));
         command.values.push_back(
             make_pbrt_value("eta", reflectivity_to_eta(material.color)));
         command.values.push_back(make_pbrt_value("remaproughness", false));
@@ -4617,7 +4655,7 @@ bool save_pbrt(const string& filename, const pbrt_model& pbrt, string& error,
         command.values.push_back(
             make_pbrt_value("Kt", array<float, 3>{1, 1, 1}));
         command.values.push_back(
-            make_pbrt_value("roughness", pow(material.roughness, 2)));
+            make_pbrt_value("roughness", std::pow(material.roughness, 2.0f)));
         command.values.push_back(make_pbrt_value("eta", material.ior));
         command.values.push_back(make_pbrt_value("remaproughness", false));
       } break;
