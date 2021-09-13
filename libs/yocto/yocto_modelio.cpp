@@ -1134,33 +1134,164 @@ bool get_lists(const ply_model& ply, const string& element,
   if (!has_property(ply, element, property)) return false;
   auto& prop = get_property(ply, element, property);
   if (!prop.is_list) return false;
-  auto& sizes  = prop.ldata_u8;
-  auto  values = vector<int>{};
-  if (!convert_property(prop, values)) return false;
-  lists    = vector<vector<int>>(sizes.size());
-  auto cur = (size_t)0;
-  for (auto i = (size_t)0; i < lists.size(); i++) {
-    lists[i].resize(sizes[i]);
-    for (auto c = 0; c < sizes[i]; c++) {
-      lists[i][c] = values[cur++];
-    }
+  auto& sizes = prop.ldata_u8;
+  lists.resize(sizes.size());
+  auto list = (size_t)0, current = (size_t)0;
+  for (auto size : sizes) {
+    lists[list].resize(size);
+    for (auto item = (size_t)0; item < size; item++)
+      lists[list][item] = get_value<int>(prop, current + item);
+    list += 1;
+    current += size;
   }
   return true;
 }
 bool get_list_sizes(const ply_model& ply, const string& element,
     const string& property, vector<byte>& sizes) {
+  sizes.clear();
   if (!has_property(ply, element, property)) return {};
   auto& prop = get_property(ply, element, property);
-  if (!prop.is_list) return {};
+  if (!prop.is_list) return false;
   sizes = prop.ldata_u8;
   return true;
 }
 bool get_list_values(const ply_model& ply, const string& element,
     const string& property, vector<int>& values) {
+  values.clear();
   if (!has_property(ply, element, property)) return {};
   auto& prop = get_property(ply, element, property);
-  if (!prop.is_list) return {};
-  return convert_property<int>(prop, values);
+  if (!prop.is_list) return false;
+  values.resize(get_size(prop));
+  for (auto index = (size_t)0; index < values.size(); index++) {
+    values[index] = get_value<int>(prop, index);
+  }
+  return true;
+}
+template <typename T>
+inline bool get_triangles(const ply_model& ply, const string& element,
+    const string& property, vector<array<T, 3>>& triangles) {
+  triangles.clear();
+  if (!has_property(ply, element, property)) return {};
+  auto& prop = get_property(ply, element, property);
+  if (!prop.is_list) return false;
+  auto& sizes = prop.ldata_u8;
+  triangles.clear();
+  triangles.reserve(sizes.size());
+  auto current = (size_t)0;
+  for (auto size : sizes) {
+    if (size == 0) {
+      triangles.push_back({(T)-1, (T)-1, (T)-1});
+    } else if (size == 1) {
+      triangles.push_back({get_value<T>(prop, current + 0), (T)-1, (T)-1});
+    } else if (size == 2) {
+      triangles.push_back({get_value<T>(prop, current + 0),
+          get_value<T>(prop, current + 1), (T)-1});
+    } else if (size == 3) {
+      triangles.push_back({get_value<T>(prop, current + 0),
+          get_value<T>(prop, current + 1), get_value<T>(prop, current + 2)});
+    } else {
+      for (auto item = (size_t)2; item < size; item++) {
+        triangles.push_back({get_value<T>(prop, current + 0),
+            get_value<T>(prop, current + item - 1),
+            get_value<T>(prop, current + item)});
+      }
+    }
+    current += size;
+  }
+  return true;
+}
+template <typename T>
+inline bool get_quads(const ply_model& ply, const string& element,
+    const string& property, vector<array<T, 4>>& quads) {
+  quads.clear();
+  if (!has_property(ply, element, property)) return false;
+  auto& prop = get_property(ply, element, property);
+  if (!prop.is_list) return false;
+  auto& sizes = prop.ldata_u8;
+  quads.clear();
+  quads.reserve(sizes.size());
+  auto current = (size_t)0;
+  for (auto size : sizes) {
+    if (size == 0) {
+      quads.push_back({(T)-1, (T)-1, (T)-1, (T)-1});
+    } else if (size == 1) {
+      quads.push_back({get_value<T>(prop, current + 0), (T)-1, (T)-1, (T)-1});
+    } else if (size == 2) {
+      quads.push_back({get_value<T>(prop, current + 0),
+          get_value<T>(prop, current + 1), (T)-1, (T)-1});
+    } else if (size == 3) {
+      quads.push_back({get_value<T>(prop, current + 0),
+          get_value<T>(prop, current + 1), get_value<T>(prop, current + 2),
+          get_value<T>(prop, current + 2)});
+    } else if (size == 4) {
+      quads.push_back({get_value<T>(prop, current + 0),
+          get_value<T>(prop, current + 1), get_value<T>(prop, current + 2),
+          get_value<T>(prop, current + 3)});
+    } else {
+      for (auto item = (size_t)2; item < size; item++) {
+        quads.push_back({get_value<T>(prop, current + 0),
+            get_value<T>(prop, current + item - 1),
+            get_value<T>(prop, current + item),
+            get_value<T>(prop, current + item)});
+      }
+    }
+    current += size;
+  }
+  return true;
+}
+bool has_quads(
+    const ply_model& ply, const string& element, const string& property) {
+  if (!has_property(ply, element, property)) return false;
+  auto& prop = get_property(ply, element, property);
+  if (!prop.is_list) return false;
+  auto& sizes = prop.ldata_u8;
+  for (auto size : sizes)
+    if (size == 4) return true;
+  return false;
+}
+template <typename T>
+inline bool get_faces(const ply_model& ply, const string& element,
+    const string& property, vector<array<T, 3>>& triangles,
+    vector<array<T, 4>>& quads) {
+  if (has_quads(ply, element, property)) {
+    return get_quads(ply, element, property, quads);
+  } else {
+    return get_triangles(ply, element, property, triangles);
+  }
+}
+template <typename T>
+inline bool get_lines(const ply_model& ply, const string& element,
+    const string& property, vector<array<T, 2>>& lines) {
+  lines.clear();
+  if (!has_property(ply, element, property)) return false;
+  auto& prop = get_property(ply, element, property);
+  if (!prop.is_list) return false;
+  auto& sizes = prop.ldata_u8;
+  lines.clear();
+  lines.reserve(sizes.size());
+  auto current = (size_t)0;
+  for (auto size : sizes) {
+    if (size == 0) {
+      lines.push_back({(T)-1, (T)-1});
+    } else if (size == 1) {
+      lines.push_back({get_value<T>(prop, current + 0), (T)-1});
+    } else if (size == 2) {
+      lines.push_back(
+          {get_value<T>(prop, current + 0), get_value<T>(prop, current + 1)});
+    } else {
+      for (auto item = (size_t)1; item < size; item++) {
+        lines.push_back({get_value<T>(prop, current + item - 1),
+            get_value<T>(prop, current + item)});
+      }
+    }
+    current += size;
+  }
+  return true;
+}
+template <typename T>
+bool get_points(const ply_model& ply, const string& element,
+    const string& property, vector<T>& values) {
+  return get_list_values(ply, element, property, values);
 }
 
 static vector<vec2f> flip_ply_texcoord(const vector<vec2f>& texcoords) {
@@ -1210,79 +1341,27 @@ bool get_faces(const ply_model& ply, vector<vector<int>>& faces) {
   return get_lists(ply, "face", "vertex_indices", faces);
 }
 bool get_triangles(const ply_model& ply, vector<vec3i>& triangles) {
-  triangles.clear();
-  auto indices = vector<int>{};
-  auto sizes   = vector<uint8_t>{};
-  if (!get_list_values(ply, "face", "vertex_indices", indices)) return false;
-  if (!get_list_sizes(ply, "face", "vertex_indices", sizes)) return false;
-  triangles = vector<vec3i>{};
-  triangles.reserve(sizes.size());
-  auto cur = 0;
-  for (auto size : sizes) {
-    for (auto c = 2; c < size; c++) {
-      triangles.push_back(
-          {indices[cur + 0], indices[cur + c - 1], indices[cur + c]});
-    }
-    cur += size;
-  }
-  return true;
+  return get_triangles(
+      ply, "face", "vertex_indices", (vector<array<int, 3>>&)triangles);
 }
 bool get_quads(const ply_model& ply, vector<vec4i>& quads) {
-  quads.clear();
-  auto indices = vector<int>{};
-  auto sizes   = vector<uint8_t>{};
-  if (!get_list_values(ply, "face", "vertex_indices", indices)) return false;
-  if (!get_list_sizes(ply, "face", "vertex_indices", sizes)) return false;
-  quads = vector<vec4i>{};
-  quads.reserve(sizes.size());
-  auto cur = 0;
-  for (auto size : sizes) {
-    if (size == 4) {
-      quads.push_back({indices[cur + 0], indices[cur + 1], indices[cur + 2],
-          indices[cur + 3]});
-    } else {
-      for (auto c = 2; c < size; c++) {
-        quads.push_back({indices[cur + 0], indices[cur + c - 1],
-            indices[cur + c], indices[cur + c]});
-      }
-    }
-    cur += size;
-  }
-  return true;
+  return get_quads(
+      ply, "face", "vertex_indices", (vector<array<int, 4>>&)quads);
 }
 bool get_faces(
     const ply_model& ply, vector<vec3i>& triangles, vector<vec4i>& quads) {
-  if (has_quads(ply)) {
-    return get_quads(ply, quads);
-  } else {
-    return get_triangles(ply, triangles);
-  }
+  return get_faces(ply, "face", "vertex_indices",
+      (vector<array<int, 3>>&)triangles, (vector<array<int, 4>>&)quads);
 }
 bool get_lines(const ply_model& ply, vector<vec2i>& lines) {
-  auto indices = vector<int>{};
-  auto sizes   = vector<uint8_t>{};
-  if (!get_list_values(ply, "line", "vertex_indices", indices)) return false;
-  if (!get_list_sizes(ply, "line", "vertex_indices", sizes)) return false;
-  lines = vector<vec2i>{};
-  lines.reserve(sizes.size());
-  auto cur = 0;
-  for (auto size : sizes) {
-    for (auto c = 1; c < size; c++) {
-      lines.push_back({indices[cur + c - 1], indices[cur + c]});
-    }
-    cur += size;
-  }
-  return true;
+  return get_lines(
+      ply, "line", "vertex_indices", (vector<array<int, 2>>&)lines);
 }
-bool get_points(const ply_model& ply, vector<int>& values) {
-  return get_list_values(ply, "point", "vertex_indices", values);
+bool get_points(const ply_model& ply, vector<int>& points) {
+  return get_points(ply, "point", "vertex_indices", points);
 }
 bool has_quads(const ply_model& ply) {
-  auto sizes = vector<uint8_t>{};
-  if (!get_list_sizes(ply, "face", "vertex_indices", sizes)) return false;
-  for (auto size : sizes)
-    if (size == 4) return true;
-  return false;
+  return has_quads(ply, "face", "vertex_indices");
 }
 
 // Add ply properties
