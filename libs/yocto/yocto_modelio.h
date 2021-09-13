@@ -1179,106 +1179,124 @@ inline bool add_points(ply_model& ply, const vector<T>& values) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-inline bool get_values(const ply_model& ply, const string& element,
-    const array<string, 2>& properties, vector<vec2f>& values) {
+[[deprecated]] inline bool get_values(const ply_model& ply,
+    const string& element, const array<string, 2>& properties,
+    vector<vec2f>& values) {
   return get_values(ply, element, properties, (vector<array<float, 2>>&)values);
 }
-inline bool get_values(const ply_model& ply, const string& element,
-    const array<string, 3>& properties, vector<vec3f>& values) {
+[[deprecated]] inline bool get_values(const ply_model& ply,
+    const string& element, const array<string, 3>& properties,
+    vector<vec3f>& values) {
   return get_values(ply, element, properties, (vector<array<float, 3>>&)values);
 }
-inline bool get_values(const ply_model& ply, const string& element,
-    const array<string, 4>& properties, vector<vec4f>& values) {
+[[deprecated]] inline bool get_values(const ply_model& ply,
+    const string& element, const array<string, 4>& properties,
+    vector<vec4f>& values) {
   return get_values(ply, element, properties, (vector<array<float, 4>>&)values);
 }
-inline bool get_values(const ply_model& ply, const string& element,
-    const array<string, 12>& properties, vector<frame3f>& values) {
+[[deprecated]] inline bool get_values(const ply_model& ply,
+    const string& element, const array<string, 12>& properties,
+    vector<frame3f>& values) {
   return get_values(
       ply, element, properties, (vector<array<float, 12>>&)values);
 }
 
 // Get ply properties for meshes
-inline bool get_positions(const ply_model& ply, vector<vec3f>& positions) {
+[[deprecated]] inline bool get_positions(
+    const ply_model& ply, vector<vec3f>& positions) {
   return get_positions(ply, (vector<array<float, 3>>&)positions);
 }
-inline bool get_normals(const ply_model& ply, vector<vec3f>& normals) {
+[[deprecated]] inline bool get_normals(
+    const ply_model& ply, vector<vec3f>& normals) {
   return get_normals(ply, (vector<array<float, 3>>&)normals);
 }
-inline bool get_texcoords(
+[[deprecated]] inline bool get_texcoords(
     const ply_model& ply, vector<vec2f>& texcoords, bool flipv = false) {
   return get_texcoords(ply, (vector<array<float, 2>>&)texcoords, flipv);
 }
-inline bool get_colors(const ply_model& ply, vector<vec3f>& colors) {
+[[deprecated]] inline bool get_colors(
+    const ply_model& ply, vector<vec3f>& colors) {
   return get_colors(ply, (vector<array<float, 3>>&)colors);
 }
-inline bool get_colors(const ply_model& ply, vector<vec4f>& colors) {
+[[deprecated]] inline bool get_colors(
+    const ply_model& ply, vector<vec4f>& colors) {
   return get_colors(ply, (vector<array<float, 4>>&)colors);
 }
-inline bool get_triangles(const ply_model& ply, vector<vec3i>& triangles) {
+[[deprecated]] inline bool get_triangles(
+    const ply_model& ply, vector<vec3i>& triangles) {
   return get_triangles(ply, (vector<array<float, 3>>&)triangles);
 }
-inline bool get_quads(const ply_model& ply, vector<vec4i>& quads) {
+[[deprecated]] inline bool get_quads(
+    const ply_model& ply, vector<vec4i>& quads) {
   return get_quads(ply, (vector<array<int, 4>>&)quads);
 }
-inline bool get_faces(
+[[deprecated]] inline bool get_faces(
     const ply_model& ply, vector<vec3i>& triangles, vector<vec4i>& quads) {
   return get_faces(
       ply, (vector<array<int, 3>>&)triangles, (vector<array<int, 4>>&)quads);
 }
-inline bool get_lines(const ply_model& ply, vector<vec2i>& lines) {
+[[deprecated]] inline bool get_lines(
+    const ply_model& ply, vector<vec2i>& lines) {
   return get_lines(ply, (vector<array<int, 2>>&)lines);
 }
 
-inline bool add_values(ply_model& ply, const string& element,
+[[deprecated]] inline bool add_values(ply_model& ply, const string& element,
     const array<string, 2>& properties, const vector<vec2f>& values) {
   return add_values(
       ply, element, properties, (const vector<array<float, 2>>&)values);
 }
-inline bool add_values(ply_model& ply, const string& element,
+[[deprecated]] inline bool add_values(ply_model& ply, const string& element,
     const array<string, 3>& properties, const vector<vec3f>& values) {
   return add_values(
       ply, element, properties, (const vector<array<float, 3>>&)values);
 }
-inline bool add_values(ply_model& ply, const string& element,
+[[deprecated]] inline bool add_values(ply_model& ply, const string& element,
     const array<string, 4>& properties, const vector<vec4f>& values) {
   return add_values(
       ply, element, properties, (const vector<array<float, 4>>&)values);
 }
-inline bool add_values(ply_model& ply, const string& element,
+[[deprecated]] inline bool add_values(ply_model& ply, const string& element,
     const array<string, 12>& properties, const vector<frame3f>& values) {
   return add_values(
       ply, element, properties, (const vector<array<float, 12>>&)values);
 }
 
 // Add ply properties for meshes
-inline bool add_positions(ply_model& ply, const vector<vec3f>& values) {
+[[deprecated]] inline bool add_positions(
+    ply_model& ply, const vector<vec3f>& values) {
   return add_positions(ply, (const vector<array<float, 3>>&)values);
 }
-inline bool add_normals(ply_model& ply, const vector<vec3f>& values) {
+[[deprecated]] inline bool add_normals(
+    ply_model& ply, const vector<vec3f>& values) {
   return add_normals(ply, (const vector<array<float, 3>>&)values);
 }
-inline bool add_texcoords(
+[[deprecated]] inline bool add_texcoords(
     ply_model& ply, const vector<vec2f>& values, bool flipv = false) {
   return add_texcoords(ply, (const vector<array<float, 2>>&)values, flipv);
 }
-inline bool add_colors(ply_model& ply, const vector<vec3f>& values) {
+[[deprecated]] inline bool add_colors(
+    ply_model& ply, const vector<vec3f>& values) {
   return add_colors(ply, (const vector<array<float, 3>>&)values);
 }
-inline bool add_colors(ply_model& ply, const vector<vec4f>& values) {
+[[deprecated]] inline bool add_colors(
+    ply_model& ply, const vector<vec4f>& values) {
   return add_colors(ply, (const vector<array<float, 4>>&)values);
 }
-inline bool add_faces(ply_model& ply, const vector<vec3i>& triangles,
-    const vector<vec4i>& quads) {
+[[deprecated]] inline bool add_faces(ply_model& ply,
+    const vector<vec3i>& triangles, const vector<vec4i>& quads) {
   return add_faces(ply, (const vector<array<int, 3>>&)triangles,
       (const vector<array<int, 4>>&)quads);
 }
-inline bool add_triangles(ply_model& ply, const vector<vec3i>& values) {
+[[deprecated]] inline bool add_triangles(
+    ply_model& ply, const vector<vec3i>& values) {
   return add_triangles(ply, (const vector<array<int, 3>>&)values);
 }
-inline bool add_quads(ply_model& ply, const vector<vec4i>& values) {
+[[deprecated]] inline bool add_quads(
+    ply_model& ply, const vector<vec4i>& values) {
   return add_quads(ply, (const vector<array<int, 4>>&)values);
 }
-inline bool add_lines(ply_model& ply, const vector<vec2i>& values) {
+[[deprecated]] inline bool add_lines(
+    ply_model& ply, const vector<vec2i>& values) {
   return add_lines(ply, (const vector<array<int, 2>>&)values);
 }
 

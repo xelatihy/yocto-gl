@@ -3743,10 +3743,11 @@ static void make_quad(vector<vec3i>& triangles, vector<vec3f>& positions,
       auto ply   = ply_model{};
       if (!load_ply(path_join(ply_dirname, pshape.filename_), ply, error))
         return false;
-      get_positions(ply, pshape.positions);
-      get_normals(ply, pshape.normals);
-      get_texcoords(ply, pshape.texcoords);
-      get_triangles(ply, pshape.triangles);
+      // TODO: remove once all using arrays
+      get_positions(ply, (vector<array<float, 3>>&)pshape.positions);
+      get_normals(ply, (vector<array<float, 3>>&)pshape.normals);
+      get_texcoords(ply, (vector<array<float, 2>>&)pshape.texcoords);
+      get_triangles(ply, (vector<array<int, 3>>&)pshape.triangles);
     }
   } else if (command.type == "sphere") {
     auto radius = 1.0f;
@@ -4415,10 +4416,11 @@ bool save_pbrt(const string& filename, const pbrt_model& pbrt, string& error,
     }
     if (ply_meshes) {
       auto ply = ply_model{};
-      add_positions(ply, shape.positions);
-      add_normals(ply, shape.normals);
-      add_texcoords(ply, shape.texcoords);
-      add_triangles(ply, shape.triangles);
+      // TODO: remove once all using arrays
+      add_positions(ply, (const vector<array<float, 3>>&)shape.positions);
+      add_normals(ply, (const vector<array<float, 3>>&)shape.normals);
+      add_texcoords(ply, (const vector<array<float, 2>>&)shape.texcoords);
+      add_triangles(ply, (const vector<array<int, 3>>&)shape.triangles);
       if (!save_ply(path_dirname(filename) + "/" + shape.filename_, ply, error))
         return false;
     }
