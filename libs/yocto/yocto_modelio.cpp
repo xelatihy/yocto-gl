@@ -295,7 +295,33 @@ namespace yocto {
       inv_xz));
 }
 
+[[maybe_unused]] static array<float, 3> triangle_normal(
+    const array<float, 3>& p0, const array<float, 3>& p1,
+    const array<float, 3>& p2) {
+  return normalize(cross(sub(p1, p0), sub(p2, p0)));
+}
+
 }  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// HELPER FOR STL
+// -----------------------------------------------------------------------------
+namespace std {
+
+// Hash functor for vector for use with hash_map
+template <typename T, size_t N>
+struct hash<array<T, N>> {
+  size_t operator()(const array<T, N>& value) const {
+    const std::hash<float> hasher = std::hash<T>();
+    auto                   h      = (size_t)0;
+    for (auto item : value) {
+      h ^= hasher(item) + 0x9e3779b9 + (h << 6) + (h >> 2);
+    }
+    return h;
+  }
+};
+
+}  // namespace std
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR UTILITIES
@@ -2214,7 +2240,7 @@ void add_fvquads(obj_shape& shape, const vector<array<int, 4>>& quadspos,
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// HELPER FOR StL
+// HELPER FOR STL
 // -----------------------------------------------------------------------------
 namespace std {
 
@@ -2368,7 +2394,7 @@ bool load_stl(const string& filename, stl_model& stl, string& error,
         if (stl.shapes.back().triangles.empty() && last_pos != 0)
           return parse_error();
         if (!stl.shapes.back().triangles.empty() &&
-            last_pos != stl.shapes.back().triangles.back().z + 1)
+            last_pos != stl.shapes.back().triangles.back()[2] + 1)
           return parse_error();
         // add triangle
         stl.shapes.back().triangles.push_back(
@@ -2396,8 +2422,8 @@ bool load_stl(const string& filename, stl_model& stl, string& error,
   // make unique vertices
   if (unique_vertices) {
     for (auto& shape : stl.shapes) {
-      auto vertex_map       = unordered_map<vec3f, int>{};
-      auto unique_positions = vector<vec3f>{};
+      auto vertex_map       = unordered_map<array<float, 3>, int>{};
+      auto unique_positions = vector<array<float, 3>>{};
       for (auto& triangle : shape.triangles) {
         for (auto& vertex_id : triangle) {
           auto vertex_it = vertex_map.find(shape.positions[vertex_id]);
@@ -2422,11 +2448,6 @@ bool load_stl(const string& filename, stl_model& stl, string& error,
 
 bool save_stl(
     const string& filename, const stl_model& stl, string& error, bool ascii) {
-  // helper
-  auto triangle_normal = [](const vec3f& p0, const vec3f& p1, const vec3f& p2) {
-    return normalize(cross(p1 - p0, p2 - p0));
-  };
-
   // switch on format
   if (!ascii) {
     // buffer
@@ -2446,13 +2467,13 @@ bool save_stl(
         auto& triangle = shape.triangles[triangle_idx];
         auto  fnormal  = !shape.fnormals.empty()
                              ? shape.fnormals[triangle_idx]
-                             : triangle_normal(shape.positions[triangle.x],
-                                 shape.positions[triangle.y],
-                                 shape.positions[triangle.z]);
+                             : triangle_normal(shape.positions[triangle[0]],
+                                 shape.positions[triangle[1]],
+                                 shape.positions[triangle[2]]);
         write_value(buffer, fnormal);
-        write_value(buffer, shape.positions[triangle.x]);
-        write_value(buffer, shape.positions[triangle.y]);
-        write_value(buffer, shape.positions[triangle.z]);
+        write_value(buffer, shape.positions[triangle[0]]);
+        write_value(buffer, shape.positions[triangle[1]]);
+        write_value(buffer, shape.positions[triangle[2]]);
         auto attribute_count = (uint16_t)0;
         write_value(buffer, attribute_count);
       }
@@ -2471,14 +2492,14 @@ bool save_stl(
         auto& triangle = shape.triangles[triangle_idx];
         auto  fnormal  = !shape.fnormals.empty()
                              ? shape.fnormals[triangle_idx]
-                             : triangle_normal(shape.positions[triangle.x],
-                                 shape.positions[triangle.y],
-                                 shape.positions[triangle.z]);
+                             : triangle_normal(shape.positions[triangle[0]],
+                                 shape.positions[triangle[1]],
+                                 shape.positions[triangle[2]]);
         format_values(buffer, "facet normal {}\n", fnormal);
         format_values(buffer, "outer loop\n");
-        format_values(buffer, "vertex {}\n", shape.positions[triangle.x]);
-        format_values(buffer, "vertex {}\n", shape.positions[triangle.y]);
-        format_values(buffer, "vertex {}\n", shape.positions[triangle.z]);
+        format_values(buffer, "vertex {}\n", shape.positions[triangle[0]]);
+        format_values(buffer, "vertex {}\n", shape.positions[triangle[1]]);
+        format_values(buffer, "vertex {}\n", shape.positions[triangle[2]]);
         format_values(buffer, "endloop\n");
         format_values(buffer, "endfacet\n");
       }
@@ -2494,8 +2515,9 @@ bool save_stl(
 }
 
 // Get/set data
-bool get_triangles(const stl_model& stl, int shape_id, vector<vec3i>& triangles,
-    vector<vec3f>& positions, vector<vec3f>& fnormals) {
+bool get_triangles(const stl_model& stl, int shape_id,
+    vector<array<int, 3>>& triangles, vector<array<float, 3>>& positions,
+    vector<array<float, 3>>& fnormals) {
   if (shape_id < 0 || shape_id >= stl.shapes.size()) return false;
   auto& shape = stl.shapes.at(shape_id);
   triangles   = shape.triangles;
@@ -2503,8 +2525,9 @@ bool get_triangles(const stl_model& stl, int shape_id, vector<vec3i>& triangles,
   fnormals    = shape.fnormals;
   return true;
 }
-void add_triangles(stl_model& stl, const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, const vector<vec3f>& fnormals) {
+void add_triangles(stl_model& stl, const vector<array<int, 3>>& triangles,
+    const vector<array<float, 3>>& positions,
+    const vector<array<float, 3>>& fnormals) {
   auto& shape     = stl.shapes.emplace_back();
   shape.triangles = triangles;
   shape.positions = positions;

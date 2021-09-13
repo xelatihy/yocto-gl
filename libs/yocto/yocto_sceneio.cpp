@@ -950,7 +950,9 @@ bool load_shape(const string& filename, shape_data& shape, string& error,
     if (!load_stl(filename, stl, error, true)) return false;
     if (stl.shapes.size() != 1) return shape_error();
     auto fnormals = vector<vec3f>{};
-    if (!get_triangles(stl, 0, shape.triangles, shape.positions, fnormals))
+    if (!get_triangles(stl, 0, (vector<array<int, 3>>&)shape.triangles,
+            (vector<array<float, 3>>&)shape.positions,
+            (vector<array<float, 3>>&)fnormals))
       return shape_error();
     return true;
   } else if (ext == ".ypreset" || ext == ".YPRESET") {
@@ -1008,9 +1010,12 @@ bool save_shape(const string& filename, const shape_data& shape, string& error,
     if (!shape.lines.empty()) return shape_error();
     if (!shape.points.empty()) return shape_error();
     if (!shape.triangles.empty()) {
-      add_triangles(stl, shape.triangles, shape.positions, {});
+      add_triangles(stl, (const vector<array<int, 3>>&)shape.triangles,
+          (const vector<array<float, 3>>&)shape.positions, {});
     } else if (!shape.quads.empty()) {
-      add_triangles(stl, quads_to_triangles(shape.quads), shape.positions, {});
+      auto triangles = quads_to_triangles(shape.quads);
+      add_triangles(stl, (const vector<array<int, 3>>&)triangles,
+          (const vector<array<float, 3>>&)shape.positions, {});
     } else {
       return shape_error();
     }
@@ -1119,7 +1124,9 @@ bool load_fvshape(const string& filename, fvshape_data& shape, string& error,
     if (stl.shapes.size() > 1) return shape_error();
     auto fnormals  = vector<vec3f>{};
     auto triangles = vector<vec3i>{};
-    if (!get_triangles(stl, 0, triangles, shape.positions, fnormals))
+    if (!get_triangles(stl, 0, (vector<array<int, 3>>&)triangles,
+            (vector<array<float, 3>>&)shape.positions,
+            (vector<array<float, 3>>&)fnormals))
       return shape_error();
     shape.quadspos = triangles_to_quads(triangles);
     return true;
@@ -1180,7 +1187,9 @@ bool save_fvshape(const string& filename, const fvshape_data& shape,
       split_facevarying(split_quads, split_positions, split_normals,
           split_texcoords, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
           shape.positions, shape.normals, shape.texcoords);
-      add_triangles(stl, quads_to_triangles(split_quads), split_positions, {});
+      auto triangles = quads_to_triangles(split_quads);
+      add_triangles(stl, (const vector<array<int, 3>>&)triangles,
+          (const vector<array<float, 3>>&)split_positions, {});
     } else {
       return shape_error();
     }

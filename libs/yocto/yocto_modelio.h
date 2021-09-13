@@ -417,9 +417,9 @@ struct hash<yocto::obj_vertex> {
 namespace yocto {
 
 struct stl_shape {
-  vector<vec3f> positions = {};
-  vector<vec3i> triangles = {};
-  vector<vec3f> fnormals  = {};
+  vector<array<float, 3>> positions = {};
+  vector<array<int, 3>>   triangles = {};
+  vector<array<float, 3>> fnormals  = {};
 };
 
 struct stl_model {
@@ -433,10 +433,12 @@ struct stl_model {
     string& error, bool ascii = false);
 
 // Get/set data
-bool get_triangles(const stl_model& stl, int shape_id, vector<vec3i>& triangles,
-    vector<vec3f>& positions, vector<vec3f>& fnormals);
-void add_triangles(stl_model& stl, const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, const vector<vec3f>& fnormals);
+bool get_triangles(const stl_model& stl, int shape_id,
+    vector<array<int, 3>>& triangles, vector<array<float, 3>>& positions,
+    vector<array<float, 3>>& fnormals);
+void add_triangles(stl_model& stl, const vector<array<int, 3>>& triangles,
+    const vector<array<float, 3>>& positions,
+    const vector<array<float, 3>>& fnormals);
 
 }  // namespace yocto
 
