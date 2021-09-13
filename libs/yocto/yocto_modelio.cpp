@@ -272,7 +272,7 @@ namespace yocto {
   return normalize(cross(sub(p1, p0), sub(p2, p0)));
 }
 
-[[maybe_unused]] static array<float, 12> lookat_frame(
+[[maybe_unused]] static array<array<float, 3>, 4> lookat_frame(
     const array<float, 3>& eye, const array<float, 3>& center,
     const array<float, 3>& up, bool inv_xz = false) {
   auto w = normalize(sub(eye, center));
@@ -282,47 +282,71 @@ namespace yocto {
     w = neg(w);
     u = neg(u);
   }
-  return {u[0], u[1], u[2], v[0], v[1], v[2], w[0], w[1], w[2], eye[0], eye[1],
-      eye[2]};
+  return {u, v, w, eye};
 }
 
-static array<float, 12> transform_frame(
-    const array<float, 12>& a, const array<float, 12>& b) {
+static array<array<float, 3>, 4> mul(
+    const array<array<float, 3>, 4>& a, const array<array<float, 3>, 4>& b) {
   auto frame = ((const frame3f&)a) * ((const frame3f&)b);
-  return (array<float, 12>&)frame;
+  return (array<array<float, 3>, 4>&)frame;
 }
 
-static array<float, 12> translation_frame(const array<float, 3>& a) {
-  return {1, 0, 0, 0, 1, 0, 0, 0, 1, a[0], a[1], a[2]};
+static array<array<float, 3>, 4> translation_frame(const array<float, 3>& a) {
+  return {array<float, 3>{1, 0, 0}, array<float, 3>{0, 1, 0},
+      array<float, 3>{0, 0, 1}, a};
 }
-static array<float, 12> scaling_frame(const array<float, 3>& a) {
-  return {a[0], 0, 0, 0, a[1], 0, 0, 0, a[2], 0, 0, 0};
+static array<array<float, 3>, 4> scaling_frame(const array<float, 3>& a) {
+  return {array<float, 3>{a[0], 0, 0}, array<float, 3>{0, a[1], 0},
+      array<float, 3>{0, 0, a[2]}, array<float, 3>{0, 0, 0}};
 }
-static array<float, 12> rotation_frame(
+static array<array<float, 3>, 4> rotation_frame(
     const array<float, 3>& axis, float angle) {
   auto s = std::sin(angle), c = std::cos(angle);
   auto vv = normalize(axis);
-  return {c + (1 - c) * vv[0] * vv[0], (1 - c) * vv[0] * vv[1] + s * vv[2],
-      (1 - c) * vv[0] * vv[2] - s * vv[1], (1 - c) * vv[0] * vv[1] - s * vv[2],
-      c + (1 - c) * vv[1] * vv[1], (1 - c) * vv[1] * vv[2] + s * vv[0],
-      (1 - c) * vv[0] * vv[2] + s * vv[1], (1 - c) * vv[1] * vv[2] - s * vv[0],
-      c + (1 - c) * vv[2] * vv[2], 0, 0, 0};
+  return {array<float, 3>{c + (1 - c) * vv[0] * vv[0],
+              (1 - c) * vv[0] * vv[1] + s * vv[2],
+              (1 - c) * vv[0] * vv[2] - s * vv[1]},
+      array<float, 3>{(1 - c) * vv[0] * vv[1] - s * vv[2],
+          c + (1 - c) * vv[1] * vv[1], (1 - c) * vv[1] * vv[2] + s * vv[0]},
+      array<float, 3>{(1 - c) * vv[0] * vv[2] + s * vv[1],
+          (1 - c) * vv[1] * vv[2] - s * vv[0], c + (1 - c) * vv[2] * vv[2]},
+      array<float, 3>{0, 0, 0}};
 }
 
-static array<float, 12> inverse_frame(
-    const array<float, 12>& a, bool non_rigid = false) {
+static array<array<float, 3>, 4> inverse_frame(
+    const array<array<float, 3>, 4>& a, bool non_rigid = false) {
   auto frame = inverse((const frame3f&)a, non_rigid);
-  return (array<float, 12>&)frame;
+  return (array<array<float, 3>, 4>&)frame;
 }
 
 // frame/mat conversion
-static array<float, 12> mat_to_frame(const array<float, 16>& m) {
-  return {m[0], m[1], m[2], m[4], m[5], m[6], m[8], m[9], m[10], m[12], m[13],
-      m[14]};
+static array<array<float, 3>, 4> mat_to_frame(
+    const array<array<float, 4>, 4>& m) {
+  return {array<float, 3>{m[0][0], m[0][1], m[0][2]},
+      array<float, 3>{m[1][0], m[1][1], m[1][2]},
+      array<float, 3>{m[2][0], m[2][1], m[2][2]},
+      array<float, 3>{m[3][0], m[3][1], m[3][2]}};
 }
-static array<float, 16> frame_to_mat(const array<float, 12>& f) {
-  return {f[0], f[1], f[2], 0, f[3], f[4], f[5], 0, f[6], f[7], f[8], 0, f[9],
-      f[10], f[11], 1};
+static array<array<float, 4>, 4> frame_to_mat(
+    const array<array<float, 3>, 4>& f) {
+  return {array<float, 4>{f[0][0], f[0][1], f[0][2], 0},
+      array<float, 4>{f[1][0], f[1][1], f[1][2], 0},
+      array<float, 4>{f[2][0], f[2][1], f[2][2], 0},
+      array<float, 4>{f[3][0], f[3][1], f[3][2], 1}};
+}
+
+static array<float, 12> flatten(const array<array<float, 3>, 4>& a) {
+  return (const array<float, 12>&)a;
+}
+static array<array<float, 3>, 4> unflatten(const array<float, 12>& a) {
+  return (const array<array<float, 3>, 4>&)a;
+}
+
+static array<float, 16> flatten(const array<array<float, 4>, 4>& a) {
+  return (const array<float, 16>&)a;
+}
+static array<array<float, 4>, 4> unflatten(const array<float, 16>& a) {
+  return (const array<array<float, 4>, 4>&)a;
 }
 
 }  // namespace yocto
@@ -1212,7 +1236,7 @@ static bool load_obx(const string& filename, obj_model& obj, string& error) {
     } else if (cmd == "Ct") {
       auto lookat = array<array<float, 3>, 3>{};
       if (!parse_value(str, lookat)) return parse_error();
-      camera.frame = lookat_frame(lookat[0], lookat[1], lookat[2]);
+      camera.frame = flatten(lookat_frame(lookat[0], lookat[1], lookat[2]));
       if (camera.focus == 0) camera.focus = length(sub(lookat[1], lookat[0]));
     } else if (cmd == "newEnv") {
       auto& environment = obj.environments.emplace_back();
@@ -1226,7 +1250,8 @@ static bool load_obx(const string& filename, obj_model& obj, string& error) {
     } else if (cmd == "Et") {
       auto lookat = array<array<float, 3>, 3>{};
       if (!parse_value(str, lookat)) return parse_error();
-      environment.frame = lookat_frame(lookat[0], lookat[1], lookat[2], true);
+      environment.frame = flatten(
+          lookat_frame(lookat[0], lookat[1], lookat[2], true));
     } else {
       // unused
     }
@@ -3333,10 +3358,9 @@ struct pbrt_medium {
     const string& filename, bool verbose = false) {
   pcamera.frame      = command.frame;
   pcamera.frend      = command.frend;
-  pcamera.frame      = inverse_frame(pcamera.frame);
-  pcamera.frame[6]   = -pcamera.frame[6];
-  pcamera.frame[7]   = -pcamera.frame[7];
-  pcamera.frame[8]   = -pcamera.frame[8];
+  auto cframe        = inverse_frame(unflatten(pcamera.frame));
+  cframe[2]          = neg(cframe[2]);
+  pcamera.frame      = flatten(cframe);
   pcamera.resolution = resolution;
   auto film_aspect   = (resolution[0] == 0 || resolution[1] == 0)
                            ? 1
@@ -3986,12 +4010,12 @@ static void make_quad(vector<array<int, 3>>& triangles,
     auto dscale          = (distant_dist * distant_dist) / (size * size);
     plight.area_emission = {plight.emission[0] * dscale,
         plight.emission[1] * dscale, plight.emission[2] * dscale};
-    plight.area_frame    = transform_frame(plight.frame,
+    plight.area_frame    = flatten(mul(unflatten(plight.frame),
         lookat_frame(mul(normalize(sub(plight.from, plight.to)), distant_dist),
-            {0, 0, 0}, {0, 1, 0}, true));
-    plight.area_frend    = transform_frame(plight.frend,
+            {0, 0, 0}, {0, 1, 0}, true)));
+    plight.area_frend    = flatten(mul(unflatten(plight.frend),
         lookat_frame(mul(normalize(sub(plight.from, plight.to)), distant_dist),
-            {0, 0, 0}, {0, 1, 0}, true));
+            {0, 0, 0}, {0, 1, 0}, true)));
     auto texcoords       = vector<array<float, 2>>{};
     make_quad(plight.area_triangles, plight.area_positions, plight.area_normals,
         texcoords, {4, 2}, size);
@@ -4004,10 +4028,10 @@ static void make_quad(vector<array<int, 3>>& triangles,
     plight.from     = {0, 0, 0};
     get_pbrt_value(command.values, "from", plight.from);
     plight.area_emission = plight.emission;
-    plight.area_frame    = transform_frame(
-        plight.frame, translation_frame(plight.from));
-    plight.area_frend = transform_frame(
-        plight.frend, translation_frame(plight.from));
+    plight.area_frame    = flatten(
+        mul(unflatten(plight.frame), translation_frame(plight.from)));
+    plight.area_frend = flatten(
+        mul(unflatten(plight.frend), translation_frame(plight.from)));
     auto texcoords = vector<array<float, 2>>{};
     make_sphere(plight.area_triangles, plight.area_positions,
         plight.area_normals, texcoords, {4, 2}, 0.0025f);
@@ -4022,10 +4046,14 @@ static void make_quad(vector<array<int, 3>>& triangles,
     const string& filename, bool verbose = false) {
   penvironment.frame = command.frame;
   penvironment.frend = command.frend;
-  penvironment.frame = transform_frame(
-      penvironment.frame, array<float, 12>{1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0});
-  penvironment.frend = transform_frame(
-      penvironment.frend, array<float, 12>{1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0});
+  penvironment.frame = flatten(mul(unflatten(penvironment.frame),
+      array<array<float, 3>, 4>{array<float, 3>{1, 0, 0},
+          array<float, 3>{0, 0, 1}, array<float, 3>{0, 1, 0},
+          array<float, 3>{0, 0, 0}}));
+  penvironment.frend = flatten(mul(unflatten(penvironment.frend),
+      array<array<float, 3>, 4>{array<float, 3>{1, 0, 0},
+          array<float, 3>{0, 0, 1}, array<float, 3>{0, 1, 0},
+          array<float, 3>{0, 0, 0}}));
   if (command.type == "infinite") {
     auto l = array<float, 3>{1, 1, 1}, scale = array<float, 3>{1, 1, 1};
     get_pbrt_value(command.values, "L", l);
@@ -4082,17 +4110,17 @@ static bool load_pbrt(const string& filename, pbrt_model& pbrt, string& error,
   if (!load_text(filename, data, error)) return false;
 
   // helpers
-  auto set_transform = [](pbrt_stack_element&      ctx,
-                           const array<float, 12>& xform) {
-    if (ctx.active_transform_start) ctx.transform_start = xform;
-    if (ctx.active_transform_end) ctx.transform_end = xform;
+  auto set_transform = [](pbrt_stack_element&               ctx,
+                           const array<array<float, 3>, 4>& xform) {
+    if (ctx.active_transform_start) ctx.transform_start = flatten(xform);
+    if (ctx.active_transform_end) ctx.transform_end = flatten(xform);
   };
-  auto concat_transform = [](pbrt_stack_element&      ctx,
-                              const array<float, 12>& xform) {
+  auto concat_transform = [](pbrt_stack_element&               ctx,
+                              const array<array<float, 3>, 4>& xform) {
     if (ctx.active_transform_start)
-      ctx.transform_start = transform_frame(ctx.transform_start, xform);
+      ctx.transform_start = flatten(mul(unflatten(ctx.transform_start), xform));
     if (ctx.active_transform_end)
-      ctx.transform_end = transform_frame(ctx.transform_end, xform);
+      ctx.transform_end = flatten(mul(unflatten(ctx.transform_end), xform));
   };
 
   // init stack
@@ -4167,11 +4195,11 @@ static bool load_pbrt(const string& filename, pbrt_model& pbrt, string& error,
     } else if (cmd == "Transform") {
       auto xf = array<float, 16>{};
       if (!parse_param(str, xf)) return parse_error();
-      set_transform(ctx.stack.back(), mat_to_frame(xf));
+      set_transform(ctx.stack.back(), mat_to_frame(unflatten(xf)));
     } else if (cmd == "ConcatTransform") {
       auto xf = array<float, 16>{};
       if (!parse_param(str, xf)) return parse_error();
-      concat_transform(ctx.stack.back(), mat_to_frame(xf));
+      concat_transform(ctx.stack.back(), mat_to_frame(unflatten(xf)));
     } else if (cmd == "Scale") {
       auto v = array<float, 3>{0, 0, 0};
       if (!parse_param(str, v)) return parse_error();
@@ -4511,7 +4539,8 @@ bool save_pbrt(const string& filename, const pbrt_model& pbrt, string& error,
       command.values.push_back(make_pbrt_value("I", light.emission));
     }
     format_values(buffer, "AttributeBegin\n");
-    format_values(buffer, "Transform {}\n", frame_to_mat(command.frame));
+    format_values(
+        buffer, "Transform {}\n", frame_to_mat(unflatten(command.frame)));
     format_values(
         buffer, "LightSource \"{}\" {}\n", command.type, command.values);
     format_values(buffer, "AttributeEnd\n");
@@ -4525,7 +4554,8 @@ bool save_pbrt(const string& filename, const pbrt_model& pbrt, string& error,
     command.values.push_back(
         make_pbrt_value("mapname", environment.emission_tex));
     format_values(buffer, "AttributeBegin\n");
-    format_values(buffer, "Transform {}\n", frame_to_mat(command.frame));
+    format_values(
+        buffer, "Transform {}\n", frame_to_mat(unflatten(command.frame)));
     format_values(
         buffer, "LightSource \"{}\" {}\n", command.type, command.values);
     format_values(buffer, "AttributeEnd\n");
@@ -4635,7 +4665,8 @@ bool save_pbrt(const string& filename, const pbrt_model& pbrt, string& error,
     if (!shape.instances.empty())
       format_values(buffer, "ObjectBegin \"{}\"\n", object);
     format_values(buffer, "AttributeBegin\n");
-    format_values(buffer, "Transform {}\n", frame_to_mat(shape.frame));
+    format_values(
+        buffer, "Transform {}\n", frame_to_mat(unflatten(shape.frame)));
     if (material.emission != array<float, 3>{0, 0, 0}) {
       auto acommand = pbrt_command{};
       acommand.type = "diffuse";
@@ -4649,7 +4680,7 @@ bool save_pbrt(const string& filename, const pbrt_model& pbrt, string& error,
     if (!shape.instances.empty()) format_values(buffer, "ObjectEnd\n");
     for (auto& iframe : shape.instances) {
       format_values(buffer, "AttributeBegin\n");
-      format_values(buffer, "Transform {}\n", frame_to_mat(iframe));
+      format_values(buffer, "Transform {}\n", frame_to_mat(unflatten(iframe)));
       format_values(buffer, "ObjectInstance \"{}\"\n", object);
       format_values(buffer, "AttributeEnd\n");
     }
