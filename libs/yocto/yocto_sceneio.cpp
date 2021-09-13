@@ -894,13 +894,16 @@ bool load_shape(const string& filename, shape_data& shape, string& error,
   if (ext == ".ply" || ext == ".PLY") {
     auto ply = ply_model{};
     if (!load_ply(filename, ply, error)) return false;
-    get_positions(ply, shape.positions);
-    get_normals(ply, shape.normals);
-    get_texcoords(ply, shape.texcoords, flip_texcoord);
-    get_colors(ply, shape.colors);
+    // TODO: remove when all as arrays
+    get_positions(ply, (vector<array<float, 3>>&)shape.positions);
+    get_normals(ply, (vector<array<float, 3>>&)shape.normals);
+    get_texcoords(
+        ply, (vector<array<float, 2>>&)shape.texcoords, flip_texcoord);
+    get_colors(ply, (vector<array<float, 4>>&)shape.colors);
     get_radius(ply, shape.radius);
-    get_faces(ply, shape.triangles, shape.quads);
-    get_lines(ply, shape.lines);
+    get_faces(ply, (vector<array<int, 3>>&)shape.triangles,
+        (vector<array<int, 4>>&)shape.quads);
+    get_lines(ply, (vector<array<int, 2>>&)shape.lines);
     get_points(ply, shape.points);
     if (shape.points.empty() && shape.lines.empty() &&
         shape.triangles.empty() && shape.quads.empty())
@@ -948,13 +951,16 @@ bool save_shape(const string& filename, const shape_data& shape, string& error,
   auto ext = path_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     auto ply = ply_model{};
-    add_positions(ply, shape.positions);
-    add_normals(ply, shape.normals);
-    add_texcoords(ply, shape.texcoords, flip_texcoord);
-    add_colors(ply, shape.colors);
+    // TODO: remove when all as arrays
+    add_positions(ply, (const vector<array<float, 3>>&)shape.positions);
+    add_normals(ply, (const vector<array<float, 3>>&)shape.normals);
+    add_texcoords(
+        ply, (const vector<array<float, 2>>&)shape.texcoords, flip_texcoord);
+    add_colors(ply, (const vector<array<float, 4>>&)shape.colors);
     add_radius(ply, shape.radius);
-    add_faces(ply, shape.triangles, shape.quads);
-    add_lines(ply, shape.lines);
+    add_faces(ply, (const vector<array<int, 3>>&)shape.triangles,
+        (const vector<array<int, 4>>&)shape.quads);
+    add_lines(ply, (const vector<array<int, 2>>&)shape.lines);
     add_points(ply, shape.points);
     if (!save_ply(filename, ply, error)) return false;
     return true;
@@ -1058,10 +1064,12 @@ bool load_fvshape(const string& filename, fvshape_data& shape, string& error,
   if (ext == ".ply" || ext == ".PLY") {
     auto ply = ply_model{};
     if (!load_ply(filename, ply, error)) return false;
-    get_positions(ply, shape.positions);
-    get_normals(ply, shape.normals);
-    get_texcoords(ply, shape.texcoords, flip_texcoord);
-    get_quads(ply, shape.quadspos);
+    // TODO: remove when all as arrays
+    get_positions(ply, (vector<array<float, 3>>&)shape.positions);
+    get_normals(ply, (vector<array<float, 3>>&)shape.normals);
+    get_texcoords(
+        ply, (vector<array<float, 2>>&)shape.texcoords, flip_texcoord);
+    get_quads(ply, (vector<array<int, 4>>&)shape.quadspos);
     if (!shape.normals.empty()) shape.quadsnorm = shape.quadspos;
     if (!shape.texcoords.empty()) shape.quadstexcoord = shape.quadspos;
     if (shape.quadspos.empty()) return shape_error();
@@ -1115,10 +1123,12 @@ bool save_fvshape(const string& filename, const fvshape_data& shape,
     split_facevarying(split_quads, split_positions, split_normals,
         split_texcoords, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
         shape.positions, shape.normals, shape.texcoords);
-    add_positions(ply, split_positions);
-    add_normals(ply, split_normals);
-    add_texcoords(ply, split_texcoords, flip_texcoord);
-    add_faces(ply, {}, split_quads);
+    // TODO: remove when all as arrays
+    add_positions(ply, (const vector<array<float, 3>>&)split_positions);
+    add_normals(ply, (const vector<array<float, 3>>&)split_normals);
+    add_texcoords(
+        ply, (const vector<array<float, 2>>&)split_texcoords, flip_texcoord);
+    add_quads(ply, (const vector<array<int, 4>>&)split_quads);
     if (!save_ply(filename, ply, error)) return false;
     return true;
   } else if (ext == ".obj" || ext == ".OBJ") {
@@ -2706,10 +2716,11 @@ static bool load_instance(
   if (ext == ".ply" || ext == ".PLY") {
     auto ply = ply_model{};
     if (!load_ply(filename, ply, error)) return false;
+    // TODO: remove when all as arrays
     if (!get_values(ply, "instance",
             {"xx", "xy", "xz", "yx", "yy", "yz", "zx", "zy", "zz", "ox", "oy",
                 "oz"},
-            frames)) {
+            (vector<array<float, 12>>&)frames)) {
       error = filename + ": parse error";
       return false;
     }
@@ -2726,10 +2737,11 @@ static bool load_instance(
   auto ext = path_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     auto ply = ply_model{};
+    // TODO: remove when all as arrays
     add_values(ply, "instance",
         {"xx", "xy", "xz", "yx", "yy", "yz", "zx", "zy", "zz", "ox", "oy",
             "oz"},
-        frames);
+        (const vector<array<float, 12>>&)frames);
     if (!save_ply(filename, ply, error)) return false;
     return true;
   } else {
