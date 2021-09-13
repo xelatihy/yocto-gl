@@ -196,105 +196,55 @@ namespace yocto {
 
 // Formats values to string
 static void format_value(string& str, const string& value) { str += value; }
-static void format_value(string& str, int8_t value) {
+static void format_value(string& str, const char* value) { str += value; }
+template <typename T>
+static void format_value(string& str, T value) {
   auto buffer = array<char, 64>{};
-  auto result = std::to_chars(
-      buffer.data(), buffer.data() + buffer.size(), value);
-  str.append(buffer.data(), result.ptr);
-}
-static void format_value(string& str, int16_t value) {
-  auto buffer = array<char, 64>{};
-  auto result = std::to_chars(
-      buffer.data(), buffer.data() + buffer.size(), value);
-  str.append(buffer.data(), result.ptr);
-}
-static void format_value(string& str, int32_t value) {
-  auto buffer = array<char, 64>{};
-  auto result = std::to_chars(
-      buffer.data(), buffer.data() + buffer.size(), value);
-  str.append(buffer.data(), result.ptr);
-}
-static void format_value(string& str, int64_t value) {
-  auto buffer = array<char, 64>{};
-  auto result = std::to_chars(
-      buffer.data(), buffer.data() + buffer.size(), value);
-  str.append(buffer.data(), result.ptr);
-}
-static void format_value(string& str, uint8_t value) {
-  auto buffer = array<char, 64>{};
-  auto result = std::to_chars(
-      buffer.data(), buffer.data() + buffer.size(), value);
-  str.append(buffer.data(), result.ptr);
-}
-static void format_value(string& str, uint16_t value) {
-  auto buffer = array<char, 64>{};
-  auto result = std::to_chars(
-      buffer.data(), buffer.data() + buffer.size(), value);
-  str.append(buffer.data(), result.ptr);
-}
-static void format_value(string& str, uint32_t value) {
-  auto buffer = array<char, 64>{};
-  auto result = std::to_chars(
-      buffer.data(), buffer.data() + buffer.size(), value);
-  str.append(buffer.data(), result.ptr);
-}
-static void format_value(string& str, uint64_t value) {
-  auto buffer = array<char, 64>{};
-  auto result = std::to_chars(
-      buffer.data(), buffer.data() + buffer.size(), value);
-  str.append(buffer.data(), result.ptr);
-}
-static void format_value(string& str, float value) {
-  auto buffer = array<char, 256>{};
+  if constexpr (std::is_same_v<T, float>) {
 #ifdef _WIN32
-  auto result = std::to_chars(
-      buffer.data(), buffer.data() + buffer.size(), value);
-  str.append(buffer.data(), result.ptr);
+    auto result = std::to_chars(
+        buffer.data(), buffer.data() + buffer.size(), value);
+    str.append(buffer.data(), result.ptr);
 #else
-  auto len = snprintf(buffer.data(), buffer.size(), "%.9g", value);
-  str.append(buffer.data(), buffer.data() + len);
+    auto len = snprintf(buffer.data(), buffer.size(), "%.9g", value);
+    str.append(buffer.data(), buffer.data() + len);
 #endif
-}
-static void format_value(string& str, double value) {
-  auto buffer = array<char, 256>{};
+  } else if constexpr (std::is_same_v<T, double>) {
 #ifdef _WIN32
-  auto result = std::to_chars(
-      buffer.data(), buffer.data() + buffer.size(), value);
-  str.append(buffer.data(), result.ptr);
+    auto result = std::to_chars(
+        buffer.data(), buffer.data() + buffer.size(), value);
+    str.append(buffer.data(), result.ptr);
 #else
-  auto len = snprintf(buffer.data(), buffer.size(), "%.17g", value);
-  str.append(buffer.data(), buffer.data() + len);
+    auto len = snprintf(buffer.data(), buffer.size(), "%.17g", value);
+    str.append(buffer.data(), buffer.data() + len);
 #endif
+  } else {
+    auto result = std::to_chars(
+        buffer.data(), buffer.data() + buffer.size(), value);
+    str.append(buffer.data(), result.ptr);
+  }
+}
+static void format_value(string& str, bool value) {
+  format_value(str, value ? 1 : 0);
+}
+template <typename T, size_t N>
+static void format_value(string& str, const array<T, N>& value) {
+  for (auto i = 0; i < N; i++) {
+    if (i != 0) str += " ";
+    format_value(str, value[i]);
+  }
 }
 static void format_value(string& str, const vec2f& value) {
-  for (auto i = 0; i < 2; i++) {
-    if (i != 0) str += " ";
-    format_value(str, value[i]);
-  }
+  return format_value(str, (const array<float, 2>&)value);
 }
 static void format_value(string& str, const vec3f& value) {
-  for (auto i = 0; i < 3; i++) {
-    if (i != 0) str += " ";
-    format_value(str, value[i]);
-  }
-}
-static void format_value(string& str, const frame3f& value) {
-  for (auto i = 0; i < 4; i++) {
-    if (i != 0) str += " ";
-    format_value(str, value[i]);
-  }
-}
-static void format_value(string& str, const vec4f& value) {
-  for (auto i = 0; i < 4; i++) {
-    if (i != 0) str += " ";
-    format_value(str, value[i]);
-  }
+  return format_value(str, (const array<float, 3>&)value);
 }
 static void format_value(string& str, const mat4f& value) {
-  for (auto i = 0; i < 4; i++) {
-    if (i != 0) str += " ";
-    format_value(str, value[i]);
-  }
+  return format_value(str, (const array<float, 16>&)value);
+}
+static void format_value(string& str, const frame3f& value) {
+  return format_value(str, (const array<float, 12>&)value);
 }
 
 // Foramt to file
@@ -390,123 +340,51 @@ static bool read_line(string_view& str, string_view& line) {
   value = string{valuev};
   return true;
 }
-[[nodiscard]] static bool parse_value(string_view& str, int8_t& value) {
+template <typename T>
+[[nodiscard]] static bool parse_value(string_view& str, T& value) {
   skip_whitespace(str);
-  auto result = std::from_chars(str.data(), str.data() + str.size(), value);
-  if (result.ptr == str.data()) return false;
-  str.remove_prefix(result.ptr - str.data());
+  if constexpr (std::is_same_v<T, float> || std::is_same_v<T, double>) {
+    auto result = fast_float::from_chars(
+        str.data(), str.data() + str.size(), value);
+    if (result.ptr == str.data()) return false;
+    str.remove_prefix(result.ptr - str.data());
+  } else {
+    auto result = std::from_chars(str.data(), str.data() + str.size(), value);
+    if (result.ptr == str.data()) return false;
+    str.remove_prefix(result.ptr - str.data());
+  }
   return true;
 }
-[[nodiscard]] static bool parse_value(string_view& str, int16_t& value) {
-  skip_whitespace(str);
-  auto result = std::from_chars(str.data(), str.data() + str.size(), value);
-  if (result.ptr == str.data()) return false;
-  str.remove_prefix(result.ptr - str.data());
-  return true;
-}
-[[nodiscard]] static bool parse_value(string_view& str, int32_t& value) {
-  skip_whitespace(str);
-  auto result = std::from_chars(str.data(), str.data() + str.size(), value);
-  if (result.ptr == str.data()) return false;
-  str.remove_prefix(result.ptr - str.data());
-  return true;
-}
-[[nodiscard]] static bool parse_value(string_view& str, int64_t& value) {
-  skip_whitespace(str);
-  auto result = std::from_chars(str.data(), str.data() + str.size(), value);
-  if (result.ptr == str.data()) return false;
-  str.remove_prefix(result.ptr - str.data());
-  return true;
-}
-[[nodiscard]] static bool parse_value(string_view& str, uint8_t& value) {
-  skip_whitespace(str);
-  auto result = std::from_chars(str.data(), str.data() + str.size(), value);
-  if (result.ptr == str.data()) return false;
-  str.remove_prefix(result.ptr - str.data());
-  return true;
-}
-[[nodiscard]] static bool parse_value(string_view& str, uint16_t& value) {
-  skip_whitespace(str);
-  auto result = std::from_chars(str.data(), str.data() + str.size(), value);
-  if (result.ptr == str.data()) return false;
-  str.remove_prefix(result.ptr - str.data());
-  return true;
-}
-[[nodiscard]] static bool parse_value(string_view& str, uint32_t& value) {
-  skip_whitespace(str);
-  auto result = std::from_chars(str.data(), str.data() + str.size(), value);
-  if (result.ptr == str.data()) return false;
-  str.remove_prefix(result.ptr - str.data());
-  return true;
-}
-[[nodiscard]] static bool parse_value(string_view& str, uint64_t& value) {
-  skip_whitespace(str);
-  auto result = std::from_chars(str.data(), str.data() + str.size(), value);
-  if (result.ptr == str.data()) return false;
-  str.remove_prefix(result.ptr - str.data());
-  return true;
-}
-[[nodiscard]] static bool parse_value(string_view& str, float& value) {
-  skip_whitespace(str);
-  auto result = fast_float::from_chars(
-      str.data(), str.data() + str.size(), value);
-  if (result.ptr == str.data()) return false;
-  str.remove_prefix(result.ptr - str.data());
-  return true;
-}
-[[nodiscard]] static bool parse_value(string_view& str, double& value) {
-  skip_whitespace(str);
-  auto result = fast_float::from_chars(
-      str.data(), str.data() + str.size(), value);
-  if (result.ptr == str.data()) return false;
-  str.remove_prefix(result.ptr - str.data());
-  return true;
-}
-#ifdef __APPLE__
-[[nodiscard]] static bool parse_value(string_view& str, size_t& value) {
-  skip_whitespace(str);
-  auto result = std::from_chars(str.data(), str.data() + str.size(), value);
-  if (result.ptr == str.data()) return false;
-  str.remove_prefix(result.ptr - str.data());
-  return true;
-}
-#endif
 [[nodiscard]] static bool parse_value(string_view& str, bool& value) {
   auto valuei = 0;
   if (!parse_value(str, valuei)) return false;
   value = (bool)valuei;
   return true;
 }
+template <typename T, size_t N>
+[[nodiscard]] static bool parse_value(string_view& str, array<T, N>& value) {
+  for (auto i = 0; i < N; i++)
+    if (!parse_value(str, value[i])) return false;
+  return true;
+}
 
 [[nodiscard]] static bool parse_value(string_view& str, vec2f& value) {
-  for (auto i = 0; i < 2; i++)
-    if (!parse_value(str, value[i])) return false;
-  return true;
+  return parse_value(str, (array<float, 2>&)value);
 }
 [[nodiscard]] static bool parse_value(string_view& str, vec3f& value) {
-  for (auto i = 0; i < 3; i++)
-    if (!parse_value(str, value[i])) return false;
-  return true;
+  return parse_value(str, (array<float, 3>&)value);
 }
 [[nodiscard]] static bool parse_value(string_view& str, vec4f& value) {
-  for (auto i = 0; i < 4; i++)
-    if (!parse_value(str, value[i])) return false;
-  return true;
+  return parse_value(str, (array<float, 4>&)value);
 }
 [[nodiscard]] static bool parse_value(string_view& str, mat3f& value) {
-  for (auto i = 0; i < 3; i++)
-    if (!parse_value(str, value[i])) return false;
-  return true;
+  return parse_value(str, (array<float, 9>&)value);
 }
 [[nodiscard]] static bool parse_value(string_view& str, mat4f& value) {
-  for (auto i = 0; i < 4; i++)
-    if (!parse_value(str, value[i])) return false;
-  return true;
+  return parse_value(str, (array<float, 16>&)value);
 }
 [[nodiscard]] static bool parse_value(string_view& str, frame3f& value) {
-  for (auto i = 0; i < 4; i++)
-    if (!parse_value(str, value[i])) return false;
-  return true;
+  return parse_value(str, (array<float, 12>&)value);
 }
 
 template <typename T>
