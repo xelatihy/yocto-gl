@@ -389,6 +389,25 @@ using json_value = nlohmann::ordered_json;
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// MATH TYPE SUPPORT
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+static vec3f   to_math(const array<float, 3>& value) { return (vec3f&)value; }
+static frame3f to_math(const array<float, 12>& value) {
+  return (frame3f&)value;
+}
+
+static array<float, 3> to_array(const vec3f& value) {
+  return (array<float, 3>&)value;
+}
+static array<float, 12> to_array(const frame3f& value) {
+  return (array<float, 12>&)value;
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // IMAGE IO
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -3948,7 +3967,7 @@ static bool load_obj_scene(
   scene.cameras.reserve(obj.cameras.size());
   for (auto& ocamera : obj.cameras) {
     auto& camera        = scene.cameras.emplace_back();
-    camera.frame        = ocamera.frame;
+    camera.frame        = to_math(ocamera.frame);
     camera.orthographic = ocamera.ortho;
     camera.film         = ocamera.film;
     camera.aspect       = ocamera.aspect;
@@ -3979,23 +3998,23 @@ static bool load_obj_scene(
   for (auto& omaterial : obj.materials) {
     auto& material        = scene.materials.emplace_back();
     material.type         = material_type::gltfpbr;
-    material.emission     = omaterial.emission;
+    material.emission     = to_math(omaterial.emission);
     material.emission_tex = omaterial.emission_tex;
-    if (max(omaterial.transmission) > 0.1) {
+    if (max(to_math(omaterial.transmission)) > 0.1) {
       material.type      = material_type::transparent;
-      material.color     = omaterial.transmission;
+      material.color     = to_math(omaterial.transmission);
       material.color_tex = omaterial.transmission_tex;
-    } else if (max(omaterial.specular) > 0.2) {
+    } else if (max(to_math(omaterial.specular)) > 0.2) {
       material.type      = material_type::reflective;
-      material.color     = omaterial.specular;
+      material.color     = to_math(omaterial.specular);
       material.color_tex = omaterial.specular_tex;
-    } else if (max(omaterial.specular) > 0) {
+    } else if (max(to_math(omaterial.specular)) > 0) {
       material.type      = material_type::glossy;
-      material.color     = omaterial.diffuse;
+      material.color     = to_math(omaterial.diffuse);
       material.color_tex = omaterial.diffuse_tex;
     } else {
       material.type      = material_type::matte;
-      material.color     = omaterial.diffuse;
+      material.color     = to_math(omaterial.diffuse);
       material.color_tex = omaterial.diffuse_tex;
     }
     material.roughness  = exponent_to_roughness(omaterial.exponent);
@@ -4014,11 +4033,13 @@ static bool load_obj_scene(
     auto& instance    = scene.instances.emplace_back();
     instance.shape    = (int)scene.shapes.size() - 1;
     instance.material = oshape.elements.front().material;
-    get_positions(oshape, shape.positions);
-    get_normals(oshape, shape.normals);
-    get_texcoords(oshape, shape.texcoords, true);
-    get_faces(oshape, instance.material, shape.triangles, shape.quads);
-    get_lines(oshape, instance.material, shape.lines);
+    get_positions(oshape, (vector<array<float, 3>>&)shape.positions);
+    get_normals(oshape, (vector<array<float, 3>>&)shape.normals);
+    get_texcoords(oshape, (vector<array<float, 2>>&)shape.texcoords, true);
+    get_faces(oshape, instance.material,
+        (vector<array<int, 3>>&)shape.triangles,
+        (vector<array<int, 4>>&)shape.quads);
+    get_lines(oshape, instance.material, (vector<array<int, 2>>&)shape.lines);
     get_points(oshape, instance.material, shape.points);
   }
 
@@ -4026,8 +4047,8 @@ static bool load_obj_scene(
   scene.environments.reserve(obj.environments.size());
   for (auto& oenvironment : obj.environments) {
     auto& environment        = scene.environments.emplace_back();
-    environment.frame        = oenvironment.frame;
-    environment.emission     = oenvironment.emission;
+    environment.frame        = to_math(oenvironment.frame);
+    environment.emission     = to_math(oenvironment.emission);
     environment.emission_tex = oenvironment.emission_tex;
   }
 
@@ -4080,7 +4101,7 @@ static bool save_obj_scene(const string& filename, const scene_data& scene,
   for (auto& camera : scene.cameras) {
     auto& ocamera    = obj.cameras.emplace_back();
     ocamera.name     = get_camera_name(scene, camera);
-    ocamera.frame    = camera.frame;
+    ocamera.frame    = to_array(camera.frame);
     ocamera.ortho    = camera.orthographic;
     ocamera.film     = camera.film;
     ocamera.aspect   = camera.aspect;
@@ -4108,8 +4129,8 @@ static bool save_obj_scene(const string& filename, const scene_data& scene,
     auto& omaterial        = obj.materials.emplace_back();
     omaterial.name         = get_material_name(scene, material);
     omaterial.illum        = 2;
-    omaterial.emission     = material.emission;
-    omaterial.diffuse      = material.color;
+    omaterial.emission     = to_array(material.emission);
+    omaterial.diffuse      = to_array(material.color);
     omaterial.specular     = {0, 0, 0};
     omaterial.exponent     = roughness_to_exponent(material.roughness);
     omaterial.opacity      = material.opacity;
@@ -4126,15 +4147,16 @@ static bool save_obj_scene(const string& filename, const scene_data& scene,
     for (auto& n : normals) n = transform_normal(instance.frame, n);
     auto& oshape = obj.shapes.emplace_back();
     oshape.name  = get_shape_name(scene, shape);
-    add_positions(oshape, positions);
-    add_normals(oshape, normals);
-    add_texcoords(oshape, shape.texcoords, true);
-    add_triangles(oshape, shape.triangles, instance.material,
-        !shape.normals.empty(), !shape.texcoords.empty());
-    add_quads(oshape, shape.quads, instance.material, !shape.normals.empty(),
-        !shape.texcoords.empty());
-    add_lines(oshape, shape.lines, instance.material, !shape.normals.empty(),
-        !shape.texcoords.empty());
+    add_positions(oshape, (const vector<array<float, 3>>&)positions);
+    add_normals(oshape, (const vector<array<float, 3>>&)normals);
+    add_texcoords(
+        oshape, (const vector<array<float, 2>>&)shape.texcoords, true);
+    add_triangles(oshape, (const vector<array<int, 3>>&)shape.triangles,
+        instance.material, !shape.normals.empty(), !shape.texcoords.empty());
+    add_quads(oshape, (const vector<array<int, 4>>&)shape.quads,
+        instance.material, !shape.normals.empty(), !shape.texcoords.empty());
+    add_lines(oshape, (const vector<array<int, 2>>&)shape.lines,
+        instance.material, !shape.normals.empty(), !shape.texcoords.empty());
     add_points(oshape, shape.points, instance.material, !shape.normals.empty(),
         !shape.texcoords.empty());
   }
@@ -4143,8 +4165,8 @@ static bool save_obj_scene(const string& filename, const scene_data& scene,
   for (auto& environment : scene.environments) {
     auto& oenvironment        = obj.environments.emplace_back();
     oenvironment.name         = get_environment_name(scene, environment);
-    oenvironment.frame        = environment.frame;
-    oenvironment.emission     = environment.emission;
+    oenvironment.frame        = to_array(environment.frame);
+    oenvironment.emission     = to_array(environment.emission);
     oenvironment.emission_tex = environment.emission_tex;
   }
 

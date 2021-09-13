@@ -190,6 +190,114 @@ static bool path_exists(const string& filename) {
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// ARRAY MATH HELPERS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+[[maybe_unused]] static array<float, 3> neg(const array<float, 3>& a) {
+  return {-a[0], -a[1], -a[2]};
+}
+[[maybe_unused]] static array<float, 3> add(
+    const array<float, 3>& a, const array<float, 3>& b) {
+  return {a[0] + b[0], a[1] + b[1], a[2] + b[2]};
+}
+[[maybe_unused]] static array<float, 3> add(const array<float, 3>& a, float b) {
+  return {a[0] + b, a[1] + b, a[2] + b};
+}
+[[maybe_unused]] static array<float, 3> add(float a, const array<float, 3>& b) {
+  return {a + b[0], a + b[1], a + b[2]};
+}
+[[maybe_unused]] static array<float, 3> sub(
+    const array<float, 3>& a, const array<float, 3>& b) {
+  return {a[0] - b[0], a[1] - b[1], a[2] - b[2]};
+}
+[[maybe_unused]] static array<float, 3> sub(const array<float, 3>& a, float b) {
+  return {a[0] - b, a[1] - b, a[2] - b};
+}
+[[maybe_unused]] static array<float, 3> sub(float a, const array<float, 3>& b) {
+  return {a - b[0], a - b[1], a - b[2]};
+}
+[[maybe_unused]] static array<float, 3> mul(
+    const array<float, 3>& a, const array<float, 3>& b) {
+  return {a[0] * b[0], a[1] * b[1], a[2] * b[2]};
+}
+[[maybe_unused]] static array<float, 3> mul(const array<float, 3>& a, float b) {
+  return {a[0] * b, a[1] * b, a[2] * b};
+}
+[[maybe_unused]] static array<float, 3> mul(float a, const array<float, 3>& b) {
+  return {a * b[0], a * b[1], a * b[2]};
+}
+[[maybe_unused]] static array<float, 3> div(
+    const array<float, 3>& a, const array<float, 3>& b) {
+  return {a[0] / b[0], a[1] / b[1], a[2] / b[2]};
+}
+[[maybe_unused]] static array<float, 3> div(const array<float, 3>& a, float b) {
+  return {a[0] / b, a[1] / b, a[2] / b};
+}
+[[maybe_unused]] static array<float, 3> div(float a, const array<float, 3>& b) {
+  return {a / b[0], a / b[1], a / b[2]};
+}
+
+[[maybe_unused]] static float dot(
+    const array<float, 3>& a, const array<float, 3>& b) {
+  return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+}
+[[maybe_unused]] static array<float, 3> cross(
+    const array<float, 3>& a, const array<float, 3>& b) {
+  return {a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2],
+      a[0] * b[1] - a[1] * b[0]};
+}
+[[maybe_unused]] static float length(const array<float, 3>& a) {
+  return sqrt(dot(a, a));
+}
+[[maybe_unused]] static float length_squared(const array<float, 3>& a) {
+  return dot(a, a);
+}
+[[maybe_unused]] static array<float, 3> normalize(const array<float, 3>& a) {
+  auto l = length(a);
+  return (l != 0) ? div(a, l) : a;
+}
+[[maybe_unused]] static float distance(
+    const array<float, 3>& a, const array<float, 3>& b) {
+  return length(sub(a, b));
+}
+[[maybe_unused]] static float distance_squared(
+    const array<float, 3>& a, const array<float, 3>& b) {
+  return dot(sub(a, b), sub(a, b));
+}
+
+[[maybe_unused]] static array<array<float, 3>, 4> lookat_frame(
+    const array<float, 3>& eye, const array<float, 3>& center,
+    const array<float, 3>& up, bool inv_xz = false) {
+  auto w = normalize(sub(eye, center));
+  auto u = normalize(cross(up, w));
+  auto v = normalize(cross(w, u));
+  if (inv_xz) {
+    w = neg(w);
+    u = neg(u);
+  }
+  return {u, v, w, eye};
+}
+
+[[maybe_unused]] static array<float, 12> flatten(
+    const array<array<float, 3>, 4>& value) {
+  return {value[0][0], value[0][1], value[0][2], value[1][0], value[1][1],
+      value[1][2], value[2][0], value[2][1], value[2][2], value[3][0],
+      value[3][1], value[3][2]};
+}
+
+[[maybe_unused]] static array<float, 12> lookat_frame(
+    const array<float, 9>& eye_center_up, bool inv_xz = false) {
+  return flatten(lookat_frame(
+      array<float, 3>{eye_center_up[0], eye_center_up[1], eye_center_up[2]},
+      array<float, 3>{eye_center_up[3], eye_center_up[4], eye_center_up[5]},
+      array<float, 3>{eye_center_up[6], eye_center_up[7], eye_center_up[8]},
+      inv_xz));
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -242,9 +350,6 @@ static void format_value(string& str, const vec3f& value) {
 }
 static void format_value(string& str, const mat4f& value) {
   return format_value(str, (const array<float, 16>&)value);
-}
-static void format_value(string& str, const frame3f& value) {
-  return format_value(str, (const array<float, 12>&)value);
 }
 
 // Foramt to file
@@ -377,14 +482,8 @@ template <typename T, size_t N>
 [[nodiscard]] static bool parse_value(string_view& str, vec4f& value) {
   return parse_value(str, (array<float, 4>&)value);
 }
-[[nodiscard]] static bool parse_value(string_view& str, mat3f& value) {
-  return parse_value(str, (array<float, 9>&)value);
-}
 [[nodiscard]] static bool parse_value(string_view& str, mat4f& value) {
   return parse_value(str, (array<float, 16>&)value);
-}
-[[nodiscard]] static bool parse_value(string_view& str, frame3f& value) {
-  return parse_value(str, (array<float, 12>&)value);
 }
 
 template <typename T>
@@ -969,8 +1068,13 @@ static bool load_mtl(const string& filename, obj_model& obj, string& error) {
       if (!parse_value(str, material.transmission)) return parse_error();
     } else if (cmd == "Tf") {
       if (!parse_value(str, material.transmission)) return parse_error();
-      material.transmission = max(1 - material.transmission, 0.0f);
-      if (max(material.transmission) < 0.001) material.transmission = {0, 0, 0};
+      material.transmission = {std::max(1 - material.transmission[0], 0.0f),
+          std::max(1 - material.transmission[1], 0.0f),
+          std::max(1 - material.transmission[2], 0.0f)};
+      if (std::max(material.transmission[0],
+              std::max(material.transmission[1], material.transmission[2])) <
+          0.001f)
+        material.transmission = {0, 0, 0};
     } else if (cmd == "Tr") {
       if (!parse_value(str, material.opacity)) return parse_error();
       material.opacity = 1 - material.opacity;
@@ -1078,10 +1182,10 @@ static bool load_obx(const string& filename, obj_model& obj, string& error) {
     } else if (cmd == "Cx") {
       if (!parse_value(str, camera.frame)) return parse_error();
     } else if (cmd == "Ct") {
-      auto lookat = mat3f{};
+      auto lookat = array<array<float, 3>, 3>{};
       if (!parse_value(str, lookat)) return parse_error();
-      camera.frame = lookat_frame(lookat.x, lookat.y, lookat.z);
-      if (camera.focus == 0) camera.focus = length(lookat.y - lookat.x);
+      camera.frame = flatten(lookat_frame(lookat[0], lookat[1], lookat[2]));
+      if (camera.focus == 0) camera.focus = length(sub(lookat[1], lookat[0]));
     } else if (cmd == "newEnv") {
       auto& environment = obj.environments.emplace_back();
       if (!parse_value(str, environment.name)) return parse_error();
@@ -1092,9 +1196,10 @@ static bool load_obx(const string& filename, obj_model& obj, string& error) {
     } else if (cmd == "Ex") {
       if (!parse_value(str, environment.frame)) return parse_error();
     } else if (cmd == "Et") {
-      auto lookat = mat3f{};
+      auto lookat = array<array<float, 3>, 3>{};
       if (!parse_value(str, lookat)) return parse_error();
-      environment.frame = lookat_frame(lookat.x, lookat.y, lookat.z, true);
+      environment.frame = flatten(
+          lookat_frame(lookat[0], lookat[1], lookat[2], true));
     } else {
       // unused
     }
@@ -1116,9 +1221,9 @@ bool load_obj(const string& filename, obj_model& obj, string& error,
   if (!load_text(filename, data, error)) return false;
 
   // parsing state
-  auto opositions   = vector<vec3f>{};
-  auto onormals     = vector<vec3f>{};
-  auto otexcoords   = vector<vec2f>{};
+  auto opositions   = vector<array<float, 3>>{};
+  auto onormals     = vector<array<float, 3>>{};
+  auto otexcoords   = vector<array<float, 2>>{};
   auto oname        = ""s;
   auto gname        = ""s;
   auto mtllibs      = vector<string>{};
@@ -1406,9 +1511,9 @@ bool load_obj(const string& filename, obj_shape& shape, string& error,
 
   // convert vertex data
   if (!face_varying) {
-    auto opositions = vector<vec3f>{};
-    auto onormals   = vector<vec3f>{};
-    auto otexcoords = vector<vec2f>{};
+    auto opositions = vector<array<float, 3>>{};
+    auto onormals   = vector<array<float, 3>>{};
+    auto otexcoords = vector<array<float, 2>>{};
     shape.positions.swap(opositions);
     shape.normals.swap(onormals);
     shape.texcoords.swap(otexcoords);
@@ -1482,15 +1587,15 @@ static bool save_mtl(
   for (auto& material : obj.materials) {
     format_values(buffer, "newmtl {}\n", material.name);
     format_values(buffer, "illum {}\n", material.illum);
-    if (material.emission != vec3f{0, 0, 0})
+    if (material.emission != array<float, 3>{0, 0, 0})
       format_values(buffer, "Ke {}\n", material.emission);
-    if (material.ambient != vec3f{0, 0, 0})
+    if (material.ambient != array<float, 3>{0, 0, 0})
       format_values(buffer, "Ka {}\n", material.ambient);
     format_values(buffer, "Kd {}\n", material.diffuse);
     format_values(buffer, "Ks {}\n", material.specular);
-    if (material.reflection != vec3f{0, 0, 0})
+    if (material.reflection != array<float, 3>{0, 0, 0})
       format_values(buffer, "Kr {}\n", material.reflection);
-    if (material.transmission != vec3f{0, 0, 0})
+    if (material.transmission != array<float, 3>{0, 0, 0})
       format_values(buffer, "Kt {}\n", material.transmission);
     format_values(buffer, "Ns {}\n", (int)material.exponent);
     if (material.opacity != 1)
@@ -1709,17 +1814,14 @@ bool save_obj(const string& filename, const obj_shape& shape, string& error) {
 
 // Get obj shape.
 void get_positions(const obj_shape& shape, vector<array<float, 3>>& positions) {
-  // TODO: remove when all using arrays
-  positions = (const vector<array<float, 3>>&)shape.positions;
+  positions = shape.positions;
 }
 void get_normals(const obj_shape& shape, vector<array<float, 3>>& normals) {
-  // TODO: remove when all using arrays
-  normals = (const vector<array<float, 3>>&)shape.normals;
+  normals = shape.normals;
 }
 void get_texcoords(
     const obj_shape& shape, vector<array<float, 2>>& texcoords, bool flipv) {
-  // TODO: remove when all using arrays
-  texcoords = (const vector<array<float, 2>>&)shape.texcoords;
+  texcoords = shape.texcoords;
   if (flipv) {
     for (auto& texcoord : texcoords) texcoord = {texcoord[0], 1 - texcoord[1]};
   }
@@ -1965,29 +2067,21 @@ vector<int> get_materials(const obj_shape& shape) {
 
 // Add obj shape
 void add_positions(obj_shape& shape, const vector<array<float, 3>>& positions) {
-  // TODO: remove when all using arrays
-  // shape.positions.insert(
-  //     shape.positions.end(), positions.begin(), positions.end());
-  shape.positions.insert(shape.positions.end(), (vec3f*)positions.data(),
-      (vec3f*)positions.data() + positions.size());
+  shape.positions.insert(
+      shape.positions.end(), positions.begin(), positions.end());
 }
 void add_normals(obj_shape& shape, const vector<array<float, 3>>& normals) {
-  // TODO: remove when all using arrays
-  // shape.normals.insert(shape.normals.end(), normals.begin(), normals.end());
-  shape.normals.insert(shape.normals.end(), (vec3f*)normals.data(),
-      (vec3f*)normals.data() + normals.size());
+  shape.normals.insert(shape.normals.end(), normals.begin(), normals.end());
 }
 void add_texcoords(
     obj_shape& shape, const vector<array<float, 2>>& texcoords, bool flipv) {
-  // TODO: remove when all using arrays
-  // shape.texcoords.insert(
-  //     shape.texcoords.end(), texcoords.begin(), texcoords.end());
-  shape.texcoords.insert(shape.texcoords.end(), (vec2f*)texcoords.data(),
-      (vec2f*)texcoords.data() + texcoords.size());
+  shape.texcoords.insert(
+      shape.texcoords.end(), texcoords.begin(), texcoords.end());
   if (flipv) {
     for (auto idx = shape.texcoords.size() - texcoords.size();
          idx < shape.texcoords.size(); idx++)
-      shape.texcoords[idx].y = 1 - shape.texcoords[idx].y;
+      shape.texcoords[idx] = {
+          shape.texcoords[idx][0], 1 - shape.texcoords[idx][1]};
   }
 }
 void add_triangles(obj_shape& shape, const vector<array<int, 3>>& triangles,

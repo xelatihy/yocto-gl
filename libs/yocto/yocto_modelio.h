@@ -258,15 +258,15 @@ struct obj_material {
   int    illum = 0;
 
   // material colors and values
-  vec3f emission     = {0, 0, 0};
-  vec3f ambient      = {0, 0, 0};
-  vec3f diffuse      = {0, 0, 0};
-  vec3f specular     = {0, 0, 0};
-  vec3f reflection   = {0, 0, 0};
-  vec3f transmission = {0, 0, 0};
-  float exponent     = 10;
-  float ior          = 1.5;
-  float opacity      = 1;
+  array<float, 3> emission     = {0, 0, 0};
+  array<float, 3> ambient      = {0, 0, 0};
+  array<float, 3> diffuse      = {0, 0, 0};
+  array<float, 3> specular     = {0, 0, 0};
+  array<float, 3> reflection   = {0, 0, 0};
+  array<float, 3> transmission = {0, 0, 0};
+  float           exponent     = 10;
+  float           ior          = 1.5;
+  float           opacity      = 1;
 
   // material textures
   int emission_tex     = -1;
@@ -284,32 +284,32 @@ struct obj_material {
 
 // Obj shape
 struct obj_shape {
-  string              name      = "";
-  vector<vec3f>       positions = {};
-  vector<vec3f>       normals   = {};
-  vector<vec2f>       texcoords = {};
-  vector<obj_vertex>  vertices  = {};
-  vector<obj_element> elements  = {};
+  string                  name      = "";
+  vector<array<float, 3>> positions = {};
+  vector<array<float, 3>> normals   = {};
+  vector<array<float, 2>> texcoords = {};
+  vector<obj_vertex>      vertices  = {};
+  vector<obj_element>     elements  = {};
 };
 
 // Obj camera
 struct obj_camera {
-  string  name     = "";
-  frame3f frame    = identity3x4f;
-  bool    ortho    = false;
-  float   aspect   = 16.0f / 9.0f;
-  float   lens     = 0.50f;
-  float   film     = 0.036f;
-  float   focus    = 0;
-  float   aperture = 0;
+  string           name     = "";
+  array<float, 12> frame    = {1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0};
+  bool             ortho    = false;
+  float            aspect   = 16.0f / 9.0f;
+  float            lens     = 0.50f;
+  float            film     = 0.036f;
+  float            focus    = 0;
+  float            aperture = 0;
 };
 
 // Obj environment
 struct obj_environment {
-  string  name         = "";
-  frame3f frame        = identity3x4f;
-  vec3f   emission     = {0, 0, 0};
-  int     emission_tex = -1;
+  string           name         = "";
+  array<float, 12> frame        = {1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0};
+  array<float, 3>  emission     = {0, 0, 0};
+  int              emission_tex = -1;
 };
 
 // Obj model
