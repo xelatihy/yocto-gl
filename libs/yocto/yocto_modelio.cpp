@@ -1708,29 +1708,32 @@ bool save_obj(const string& filename, const obj_shape& shape, string& error) {
 }
 
 // Get obj shape.
-void get_positions(const obj_shape& shape, vector<vec3f>& positions) {
-  positions = shape.positions;
+void get_positions(const obj_shape& shape, vector<array<float, 3>>& positions) {
+  // TODO: remove when all using arrays
+  positions = (const vector<array<float, 3>>&)shape.positions;
 }
-void get_normals(const obj_shape& shape, vector<vec3f>& normals) {
-  normals = shape.normals;
+void get_normals(const obj_shape& shape, vector<array<float, 3>>& normals) {
+  // TODO: remove when all using arrays
+  normals = (const vector<array<float, 3>>&)shape.normals;
 }
 void get_texcoords(
-    const obj_shape& shape, vector<vec2f>& texcoords, bool flipv) {
-  texcoords = shape.texcoords;
+    const obj_shape& shape, vector<array<float, 2>>& texcoords, bool flipv) {
+  // TODO: remove when all using arrays
+  texcoords = (const vector<array<float, 2>>&)shape.texcoords;
   if (flipv) {
-    for (auto& texcoord : texcoords) texcoord.y = 1 - texcoord.y;
+    for (auto& texcoord : texcoords) texcoord = {texcoord[0], 1 - texcoord[1]};
   }
 }
-void get_faces(const obj_shape& shape, vector<vec3i>& triangles,
-    vector<vec4i>& quads, vector<int>& materials) {
+void get_faces(const obj_shape& shape, vector<array<int, 3>>& triangles,
+    vector<array<int, 4>>& quads, vector<int>& materials) {
   if (has_quads(shape)) {
     get_quads(shape, quads, materials);
   } else {
     get_triangles(shape, triangles, materials);
   }
 }
-void get_triangles(
-    const obj_shape& shape, vector<vec3i>& triangles, vector<int>& materials) {
+void get_triangles(const obj_shape& shape, vector<array<int, 3>>& triangles,
+    vector<int>& materials) {
   triangles.clear();
   materials.clear();
   triangles.reserve(shape.elements.size());
@@ -1747,8 +1750,8 @@ void get_triangles(
     cur += element.size;
   }
 }
-void get_quads(
-    const obj_shape& shape, vector<vec4i>& quads, vector<int>& materials) {
+void get_quads(const obj_shape& shape, vector<array<int, 4>>& quads,
+    vector<int>& materials) {
   quads.clear();
   materials.clear();
   quads.reserve(shape.elements.size());
@@ -1774,8 +1777,8 @@ void get_quads(
     cur += element.size;
   }
 }
-void get_lines(
-    const obj_shape& shape, vector<vec2i>& lines, vector<int>& materials) {
+void get_lines(const obj_shape& shape, vector<array<int, 2>>& lines,
+    vector<int>& materials) {
   lines.clear();
   materials.clear();
   lines.reserve(shape.elements.size());
@@ -1807,8 +1810,8 @@ void get_points(
     cur += element.size;
   }
 }
-void get_fvquads(const obj_shape& shape, vector<vec4i>& quadspos,
-    vector<vec4i>& quadsnorm, vector<vec4i>& quadstexcoord,
+void get_fvquads(const obj_shape& shape, vector<array<int, 4>>& quadspos,
+    vector<array<int, 4>>& quadsnorm, vector<array<int, 4>>& quadstexcoord,
     vector<int>& materials) {
   quadspos.clear();
   quadsnorm.clear();
@@ -1861,8 +1864,8 @@ void get_fvquads(const obj_shape& shape, vector<vec4i>& quadspos,
     cur += element.size;
   }
 }
-void get_faces(const obj_shape& shape, int material, vector<vec3i>& triangles,
-    vector<vec4i>& quads) {
+void get_faces(const obj_shape& shape, int material,
+    vector<array<int, 3>>& triangles, vector<array<int, 4>>& quads) {
   if (has_quads(shape)) {
     get_quads(shape, material, quads);
   } else {
@@ -1870,7 +1873,7 @@ void get_faces(const obj_shape& shape, int material, vector<vec3i>& triangles,
   }
 }
 void get_triangles(
-    const obj_shape& shape, int material, vector<vec3i>& triangles) {
+    const obj_shape& shape, int material, vector<array<int, 3>>& triangles) {
   triangles.clear();
   if (shape.elements.empty()) return;
   triangles.reserve(shape.elements.size());
@@ -1886,7 +1889,8 @@ void get_triangles(
     cur += element.size;
   }
 }
-void get_quads(const obj_shape& shape, int material, vector<vec4i>& quads) {
+void get_quads(
+    const obj_shape& shape, int material, vector<array<int, 4>>& quads) {
   quads.clear();
   if (shape.elements.empty()) return;
   quads.reserve(shape.elements.size());
@@ -1910,7 +1914,8 @@ void get_quads(const obj_shape& shape, int material, vector<vec4i>& quads) {
     cur += element.size;
   }
 }
-void get_lines(const obj_shape& shape, int material, vector<vec2i>& lines) {
+void get_lines(
+    const obj_shape& shape, int material, vector<array<int, 2>>& lines) {
   lines.clear();
   if (shape.elements.empty()) return;
   lines.reserve(shape.elements.size());
@@ -1959,24 +1964,33 @@ vector<int> get_materials(const obj_shape& shape) {
 }
 
 // Add obj shape
-void add_positions(obj_shape& shape, const vector<vec3f>& positions) {
-  shape.positions.insert(
-      shape.positions.end(), positions.begin(), positions.end());
+void add_positions(obj_shape& shape, const vector<array<float, 3>>& positions) {
+  // TODO: remove when all using arrays
+  // shape.positions.insert(
+  //     shape.positions.end(), positions.begin(), positions.end());
+  shape.positions.insert(shape.positions.end(), (vec3f*)positions.data(),
+      (vec3f*)positions.data() + positions.size());
 }
-void add_normals(obj_shape& shape, const vector<vec3f>& normals) {
-  shape.normals.insert(shape.normals.end(), normals.begin(), normals.end());
+void add_normals(obj_shape& shape, const vector<array<float, 3>>& normals) {
+  // TODO: remove when all using arrays
+  // shape.normals.insert(shape.normals.end(), normals.begin(), normals.end());
+  shape.normals.insert(shape.normals.end(), (vec3f*)normals.data(),
+      (vec3f*)normals.data() + normals.size());
 }
 void add_texcoords(
-    obj_shape& shape, const vector<vec2f>& texcoords, bool flipv) {
-  shape.texcoords.insert(
-      shape.texcoords.end(), texcoords.begin(), texcoords.end());
+    obj_shape& shape, const vector<array<float, 2>>& texcoords, bool flipv) {
+  // TODO: remove when all using arrays
+  // shape.texcoords.insert(
+  //     shape.texcoords.end(), texcoords.begin(), texcoords.end());
+  shape.texcoords.insert(shape.texcoords.end(), (vec2f*)texcoords.data(),
+      (vec2f*)texcoords.data() + texcoords.size());
   if (flipv) {
     for (auto idx = shape.texcoords.size() - texcoords.size();
          idx < shape.texcoords.size(); idx++)
       shape.texcoords[idx].y = 1 - shape.texcoords[idx].y;
   }
 }
-void add_triangles(obj_shape& shape, const vector<vec3i>& triangles,
+void add_triangles(obj_shape& shape, const vector<array<int, 3>>& triangles,
     int material, bool has_normals, bool has_texcoord) {
   for (auto idx = 0; idx < triangles.size(); idx++) {
     auto& triangle = triangles[idx];
@@ -1990,11 +2004,11 @@ void add_triangles(obj_shape& shape, const vector<vec3i>& triangles,
     shape.elements.push_back({3, obj_etype::face, material});
   }
 }
-void add_quads(obj_shape& shape, const vector<vec4i>& quads, int material,
-    bool has_normals, bool has_texcoord) {
+void add_quads(obj_shape& shape, const vector<array<int, 4>>& quads,
+    int material, bool has_normals, bool has_texcoord) {
   for (auto idx = 0; idx < quads.size(); idx++) {
     auto& quad = quads[idx];
-    auto  nv   = quad.z == quad.w ? 3 : 4;
+    auto  nv   = quad[2] == quad[3] ? 3 : 4;
     for (auto c = 0; c < nv; c++) {
       shape.vertices.push_back({
           quad[c] + 1,
@@ -2005,8 +2019,8 @@ void add_quads(obj_shape& shape, const vector<vec4i>& quads, int material,
     shape.elements.push_back({(uint16_t)nv, obj_etype::face, material});
   }
 }
-void add_lines(obj_shape& shape, const vector<vec2i>& lines, int material,
-    bool has_normals, bool has_texcoord) {
+void add_lines(obj_shape& shape, const vector<array<int, 2>>& lines,
+    int material, bool has_normals, bool has_texcoord) {
   for (auto idx = 0; idx < lines.size(); idx++) {
     auto& line = lines[idx];
     for (auto c = 0; c < 2; c++) {
@@ -2031,11 +2045,11 @@ void add_points(obj_shape& shape, const vector<int>& points, int material,
     shape.elements.push_back({1, obj_etype::point, material});
   }
 }
-void add_fvquads(obj_shape& shape, const vector<vec4i>& quadspos,
-    const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
-    int material) {
+void add_fvquads(obj_shape& shape, const vector<array<int, 4>>& quadspos,
+    const vector<array<int, 4>>& quadsnorm,
+    const vector<array<int, 4>>& quadstexcoord, int material) {
   for (auto idx = 0; idx < quadspos.size(); idx++) {
-    auto nv = quadspos[idx].z == quadspos[idx].w ? 3 : 4;
+    auto nv = quadspos[idx][2] == quadspos[idx][3] ? 3 : 4;
     for (auto c = 0; c < nv; c++) {
       shape.vertices.push_back({
           quadspos.empty() ? 0 : quadspos[idx][c] + 1,
@@ -2046,11 +2060,11 @@ void add_fvquads(obj_shape& shape, const vector<vec4i>& quadspos,
     shape.elements.push_back({(uint16_t)nv, obj_etype::face, material});
   }
 }
-void add_quads(obj_shape& shape, const vector<vec4i>& quads,
+void add_quads(obj_shape& shape, const vector<array<int, 4>>& quads,
     const vector<int>& materials, bool has_normals, bool has_texcoord) {
   for (auto idx = 0; idx < quads.size(); idx++) {
     auto& quad = quads[idx];
-    auto  nv   = quad.z == quad.w ? 3 : 4;
+    auto  nv   = quad[2] == quad[3] ? 3 : 4;
     for (auto c = 0; c < nv; c++) {
       shape.vertices.push_back({
           quad[c] + 1,
@@ -2061,7 +2075,7 @@ void add_quads(obj_shape& shape, const vector<vec4i>& quads,
     shape.elements.push_back({(uint16_t)nv, obj_etype::face, materials[idx]});
   }
 }
-void add_lines(obj_shape& shape, const vector<vec2i>& lines,
+void add_lines(obj_shape& shape, const vector<array<int, 2>>& lines,
     const vector<int>& materials, bool has_normals, bool has_texcoord) {
   for (auto idx = 0; idx < lines.size(); idx++) {
     auto& line = lines[idx];
@@ -2087,11 +2101,11 @@ void add_points(obj_shape& shape, const vector<int>& points,
     shape.elements.push_back({1, obj_etype::point, materials[idx]});
   }
 }
-void add_fvquads(obj_shape& shape, const vector<vec4i>& quadspos,
-    const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
-    const vector<int>& materials) {
+void add_fvquads(obj_shape& shape, const vector<array<int, 4>>& quadspos,
+    const vector<array<int, 4>>& quadsnorm,
+    const vector<array<int, 4>>& quadstexcoord, const vector<int>& materials) {
   for (auto idx = 0; idx < quadspos.size(); idx++) {
-    auto nv = quadspos[idx].z == quadspos[idx].w ? 3 : 4;
+    auto nv = quadspos[idx][2] == quadspos[idx][3] ? 3 : 4;
     for (auto c = 0; c < nv; c++) {
       shape.vertices.push_back({
           quadspos.empty() ? 0 : quadspos[idx][c] + 1,

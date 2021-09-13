@@ -913,11 +913,14 @@ bool load_shape(const string& filename, shape_data& shape, string& error,
     auto obj = obj_shape{};
     if (!load_obj(filename, obj, error, false)) return false;
     auto materials = vector<int>{};
-    get_positions(obj, shape.positions);
-    get_normals(obj, shape.normals);
-    get_texcoords(obj, shape.texcoords, flip_texcoord);
-    get_faces(obj, shape.triangles, shape.quads, materials);
-    get_lines(obj, shape.lines, materials);
+    // TODO: remove when all as arrays
+    get_positions(obj, (vector<array<float, 3>>&)shape.positions);
+    get_normals(obj, (vector<array<float, 3>>&)shape.normals);
+    get_texcoords(
+        obj, (vector<array<float, 2>>&)shape.texcoords, flip_texcoord);
+    get_faces(obj, (vector<array<int, 3>>&)shape.triangles,
+        (vector<array<int, 4>>&)shape.quads, materials);
+    get_lines(obj, (vector<array<int, 2>>&)shape.lines, materials);
     get_points(obj, shape.points, materials);
     if (shape.points.empty() && shape.lines.empty() &&
         shape.triangles.empty() && shape.quads.empty())
@@ -966,15 +969,17 @@ bool save_shape(const string& filename, const shape_data& shape, string& error,
     return true;
   } else if (ext == ".obj" || ext == ".OBJ") {
     auto obj = obj_shape{};
-    add_positions(obj, shape.positions);
-    add_normals(obj, shape.normals);
-    add_texcoords(obj, shape.texcoords, flip_texcoord);
-    add_triangles(obj, shape.triangles, 0, !shape.normals.empty(),
-        !shape.texcoords.empty());
-    add_quads(
-        obj, shape.quads, 0, !shape.normals.empty(), !shape.texcoords.empty());
-    add_lines(
-        obj, shape.lines, 0, !shape.normals.empty(), !shape.texcoords.empty());
+    // TODO: remove when all as arrays
+    add_positions(obj, (const vector<array<float, 3>>&)shape.positions);
+    add_normals(obj, (const vector<array<float, 3>>&)shape.normals);
+    add_texcoords(
+        obj, (const vector<array<float, 2>>&)shape.texcoords, flip_texcoord);
+    add_triangles(obj, (const vector<array<int, 3>>&)shape.triangles, 0,
+        !shape.normals.empty(), !shape.texcoords.empty());
+    add_quads(obj, (const vector<array<int, 4>>&)shape.quads, 0,
+        !shape.normals.empty(), !shape.texcoords.empty());
+    add_lines(obj, (const vector<array<int, 2>>&)shape.lines, 0,
+        !shape.normals.empty(), !shape.texcoords.empty());
     add_points(
         obj, shape.points, 0, !shape.normals.empty(), !shape.texcoords.empty());
     if (!save_obj(filename, obj, error)) return false;
@@ -1077,12 +1082,15 @@ bool load_fvshape(const string& filename, fvshape_data& shape, string& error,
   } else if (ext == ".obj" || ext == ".OBJ") {
     auto obj = obj_shape{};
     if (!load_obj(filename, obj, error, true)) return false;
+    // TODO: remove when all as arrays
     auto materials = vector<int>{};
-    get_positions(obj, shape.positions);
-    get_normals(obj, shape.normals);
-    get_texcoords(obj, shape.texcoords, flip_texcoord);
-    get_fvquads(
-        obj, shape.quadspos, shape.quadsnorm, shape.quadstexcoord, materials);
+    get_positions(obj, (vector<array<float, 3>>&)shape.positions);
+    get_normals(obj, (vector<array<float, 3>>&)shape.normals);
+    get_texcoords(
+        obj, (vector<array<float, 2>>&)shape.texcoords, flip_texcoord);
+    get_fvquads(obj, (vector<array<int, 4>>&)shape.quadspos,
+        (vector<array<int, 4>>&)shape.quadsnorm,
+        (vector<array<int, 4>>&)shape.quadstexcoord, materials);
     if (shape.quadspos.empty()) return shape_error();
     return true;
   } else if (ext == ".stl" || ext == ".STL") {
@@ -1133,10 +1141,14 @@ bool save_fvshape(const string& filename, const fvshape_data& shape,
     return true;
   } else if (ext == ".obj" || ext == ".OBJ") {
     auto obj = obj_shape{};
-    add_positions(obj, shape.positions);
-    add_normals(obj, shape.positions);
-    add_texcoords(obj, shape.texcoords, flip_texcoord);
-    add_fvquads(obj, shape.quadspos, shape.quadsnorm, shape.quadstexcoord, 0);
+    // TODO: remove when all as arrays
+    add_positions(obj, (const vector<array<float, 3>>&)shape.positions);
+    add_normals(obj, (const vector<array<float, 3>>&)shape.normals);
+    add_texcoords(
+        obj, (const vector<array<float, 2>>&)shape.texcoords, flip_texcoord);
+    add_fvquads(obj, (const vector<array<int, 4>>&)shape.quadspos,
+        (const vector<array<int, 4>>&)shape.quadsnorm,
+        (const vector<array<int, 4>>&)shape.quadstexcoord, 0);
     if (!save_obj(filename, obj, error)) return false;
     return true;
   } else if (ext == ".stl" || ext == ".STL") {

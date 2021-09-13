@@ -341,51 +341,53 @@ void save_obj(const string& filename, const obj_shape& obj);
     const string& filename, const obj_shape& obj, string& error);
 
 // Get obj shape.
-void get_positions(const obj_shape& shape, vector<vec3f>& positions);
-void get_normals(const obj_shape& shape, vector<vec3f>& normals);
-void get_texcoords(
-    const obj_shape& shape, vector<vec2f>& texcoords, bool flipv = false);
-void get_faces(const obj_shape& shape, vector<vec3i>& triangles,
-    vector<vec4i>& quads, vector<int>& materials);
-void get_triangles(
-    const obj_shape& shape, vector<vec3i>& triangles, vector<int>& materials);
-void get_quads(
-    const obj_shape& shape, vector<vec4i>& quads, vector<int>& materials);
-void get_lines(
-    const obj_shape& shape, vector<vec2i>& lines, vector<int>& materials);
-void get_points(
-    const obj_shape& shape, vector<int>& points, vector<int>& materials);
-void get_fvquads(const obj_shape& shape, vector<vec4i>& quadspos,
-    vector<vec4i>& quadsnorm, vector<vec4i>& quadstexcoord,
+void get_positions(const obj_shape& obj, vector<array<float, 3>>& positions);
+void get_normals(const obj_shape& obj, vector<array<float, 3>>& normals);
+void get_texcoords(const obj_shape& obj, vector<array<float, 2>>& texcoords,
+    bool flipv = false);
+void get_faces(const obj_shape& obj, vector<array<int, 3>>& triangles,
+    vector<array<int, 4>>& quads, vector<int>& materials);
+void get_triangles(const obj_shape& obj, vector<array<int, 3>>& triangles,
     vector<int>& materials);
-void get_faces(const obj_shape& shape, int material, vector<vec3i>& triangles,
-    vector<vec4i>& quads);
+void get_quads(
+    const obj_shape& obj, vector<array<int, 4>>& quads, vector<int>& materials);
+void get_lines(
+    const obj_shape& obj, vector<array<int, 2>>& lines, vector<int>& materials);
+void get_points(
+    const obj_shape& obj, vector<int>& points, vector<int>& materials);
+void get_fvquads(const obj_shape& obj, vector<array<int, 4>>& quadspos,
+    vector<array<int, 4>>& quadsnorm, vector<array<int, 4>>& quadstexcoord,
+    vector<int>& materials);
+void get_faces(const obj_shape& obj, int material,
+    vector<array<int, 3>>& triangles, vector<array<int, 4>>& quads);
 void get_triangles(
-    const obj_shape& shape, int material, vector<vec3i>& triangles);
-void get_quads(const obj_shape& shape, int material, vector<vec4i>& quads);
-void get_lines(const obj_shape& shape, int material, vector<vec2i>& lines);
-void get_points(const obj_shape& shape, int material, vector<int>& points);
-bool has_quads(const obj_shape& shape);
+    const obj_shape& obj, int material, vector<array<int, 3>>& triangles);
+void get_quads(
+    const obj_shape& obj, int material, vector<array<int, 4>>& quads);
+void get_lines(
+    const obj_shape& obj, int material, vector<array<int, 2>>& lines);
+void get_points(const obj_shape& obj, int material, vector<int>& points);
+bool has_quads(const obj_shape& obj);
 
 // get unique materials from shape
-vector<int> get_materials(const obj_shape& shape);
+vector<int> get_materials(const obj_shape& obj);
 
 // Add obj shape
-void add_positions(obj_shape& shape, const vector<vec3f>& positions);
-void add_normals(obj_shape& shape, const vector<vec3f>& normals);
-void add_texcoords(
-    obj_shape& shape, const vector<vec2f>& texcoords, bool flipv = false);
-void add_triangles(obj_shape& shape, const vector<vec3i>& triangles,
+void add_positions(obj_shape& obj, const vector<array<float, 3>>& positions);
+void add_normals(obj_shape& obj, const vector<array<float, 3>>& normals);
+void add_texcoords(obj_shape& obj, const vector<array<float, 2>>& texcoords,
+    bool flipv = false);
+void add_triangles(obj_shape& obj, const vector<array<int, 3>>& triangles,
     int material, bool has_normals, bool has_texcoord);
-void add_quads(obj_shape& shape, const vector<vec4i>& quads, int material,
+void add_quads(obj_shape& obj, const vector<array<int, 4>>& quads, int material,
     bool has_normals, bool has_texcoord);
-void add_lines(obj_shape& shape, const vector<vec2i>& lines, int material,
+void add_lines(obj_shape& obj, const vector<array<int, 2>>& lines, int material,
     bool has_normals, bool has_texcoord);
-void add_points(obj_shape& shape, const vector<int>& points, int material,
+void add_points(obj_shape& obj, const vector<int>& points, int material,
     bool has_normals, bool has_texcoord);
-void add_fvquads(obj_shape& shape, const vector<vec4i>& quadspos,
-    const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
-    int material);
+void add_fvquads(obj_shape& obj, const vector<array<int, 4>>& quadspos,
+    const vector<array<int, 4>>& quadsnorm,
+    const vector<array<int, 4>>& quadstexcoord, int material);
 
 }  // namespace yocto
 
@@ -1298,6 +1300,105 @@ namespace yocto {
 [[deprecated]] inline bool add_lines(
     ply_model& ply, const vector<vec2i>& values) {
   return add_lines(ply, (const vector<array<int, 2>>&)values);
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// OBJ LOADER AND WRITER --- DEPRECATED
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Get obj shape.
+[[deprecated]] inline void get_positions(
+    const obj_shape& obj, vector<vec3f>& positions) {
+  return get_positions(obj, (vector<array<float, 3>>&)positions);
+}
+[[deprecated]] inline void get_normals(
+    const obj_shape& obj, vector<vec3f>& normals) {
+  return get_normals(obj, (vector<array<float, 3>>&)normals);
+}
+[[deprecated]] inline void get_texcoords(
+    const obj_shape& obj, vector<vec2f>& texcoords, bool flipv = false) {
+  return get_texcoords(obj, (vector<array<float, 2>>&)texcoords);
+}
+[[deprecated]] inline void get_faces(const obj_shape& obj,
+    vector<vec3i>& triangles, vector<vec4i>& quads, vector<int>& materials) {
+  return get_faces(obj, (vector<array<int, 3>>&)triangles,
+      (vector<array<int, 4>>&)quads, materials);
+}
+[[deprecated]] inline void get_triangles(
+    const obj_shape& obj, vector<vec3i>& triangles, vector<int>& materials) {
+  return get_triangles(obj, (vector<array<int, 3>>&)triangles, materials);
+}
+[[deprecated]] inline void get_quads(
+    const obj_shape& obj, vector<vec4i>& quads, vector<int>& materials) {
+  return get_quads(obj, (vector<array<int, 4>>&)quads, materials);
+}
+[[deprecated]] inline void get_lines(
+    const obj_shape& obj, vector<vec2i>& lines, vector<int>& materials) {
+  return get_lines(obj, (vector<array<int, 2>>&)lines, materials);
+}
+[[deprecated]] inline void get_fvquads(const obj_shape& obj,
+    vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
+    vector<vec4i>& quadstexcoord, vector<int>& materials) {
+  return get_fvquads(obj, (vector<array<int, 4>>&)quadspos,
+      (vector<array<int, 4>>&)quadsnorm, (vector<array<int, 4>>&)quadstexcoord,
+      materials);
+}
+[[deprecated]] inline void get_faces(const obj_shape& obj, int material,
+    vector<vec3i>& triangles, vector<vec4i>& quads) {
+  return get_faces(obj, material, (vector<array<int, 3>>&)triangles,
+      (vector<array<int, 4>>&)quads);
+}
+[[deprecated]] inline void get_triangles(
+    const obj_shape& obj, int material, vector<vec3i>& triangles) {
+  return get_triangles(obj, material, (vector<array<int, 3>>&)triangles);
+}
+[[deprecated]] inline void get_quads(
+    const obj_shape& obj, int material, vector<vec4i>& quads) {
+  return get_quads(obj, material, (vector<array<int, 4>>&)quads);
+}
+[[deprecated]] inline void get_lines(
+    const obj_shape& obj, int material, vector<vec2i>& lines) {
+  return get_lines(obj, material, (vector<array<int, 2>>&)lines);
+}
+
+// Add obj shape
+[[deprecated]] inline void add_positions(
+    obj_shape& obj, const vector<vec3f>& positions) {
+  return add_positions(obj, (vector<array<float, 3>>&)positions);
+}
+[[deprecated]] inline void add_normals(
+    obj_shape& obj, const vector<vec3f>& normals) {
+  return add_normals(obj, (vector<array<float, 3>>&)normals);
+}
+[[deprecated]] inline void add_texcoords(
+    obj_shape& obj, const vector<vec2f>& texcoords, bool flipv = false) {
+  return add_texcoords(obj, (vector<array<float, 2>>&)texcoords, flipv);
+}
+[[deprecated]] inline void add_triangles(obj_shape& obj,
+    const vector<vec3i>& triangles, int material, bool has_normals,
+    bool has_texcoord) {
+  return add_triangles(obj, (vector<array<int, 3>>&)triangles, material,
+      has_normals, has_texcoord);
+}
+[[deprecated]] inline void add_quads(obj_shape& obj, const vector<vec4i>& quads,
+    int material, bool has_normals, bool has_texcoord) {
+  return add_quads(
+      obj, (vector<array<int, 4>>&)quads, material, has_normals, has_texcoord);
+}
+[[deprecated]] inline void add_lines(obj_shape& obj, const vector<vec2i>& lines,
+    int material, bool has_normals, bool has_texcoord) {
+  return add_lines(
+      obj, (vector<array<int, 2>>&)lines, material, has_normals, has_texcoord);
+}
+[[deprecated]] inline void add_fvquads(obj_shape& obj,
+    const vector<vec4i>& quadspos, const vector<vec4i>& quadsnorm,
+    const vector<vec4i>& quadstexcoord, int material) {
+  return add_fvquads(obj, (vector<array<int, 4>>&)quadspos,
+      (vector<array<int, 4>>&)quadsnorm, (vector<array<int, 4>>&)quadstexcoord,
+      material);
 }
 
 }  // namespace yocto
