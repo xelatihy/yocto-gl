@@ -28,7 +28,9 @@
 
 #include "yocto_modelio.h"
 
+#define _USE_MATH_DEFINES
 #include <charconv>
+#include <cmath>
 #include <cstdio>
 #include <cstring>
 #include <filesystem>
@@ -39,8 +41,11 @@
 #include <unordered_set>
 #include <utility>
 
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
 #include "ext/fast_float.h"
-#include "yocto_color.h"
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
@@ -48,11 +53,13 @@
 namespace yocto {
 
 // using directives
+using std::pair;
 using std::string_view;
 using std::unordered_map;
 using std::unordered_set;
 using namespace std::string_literals;
 using namespace std::string_view_literals;
+using byte = unsigned char;
 
 }  // namespace yocto
 
@@ -190,108 +197,262 @@ static bool path_exists(const string& filename) {
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// ARRAY MATH HELPERS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+[[maybe_unused]] static array<float, 3> neg(const array<float, 3>& a) {
+  return {-a[0], -a[1], -a[2]};
+}
+[[maybe_unused]] static array<float, 3> add(
+    const array<float, 3>& a, const array<float, 3>& b) {
+  return {a[0] + b[0], a[1] + b[1], a[2] + b[2]};
+}
+[[maybe_unused]] static array<float, 3> add(const array<float, 3>& a, float b) {
+  return {a[0] + b, a[1] + b, a[2] + b};
+}
+[[maybe_unused]] static array<float, 3> add(float a, const array<float, 3>& b) {
+  return {a + b[0], a + b[1], a + b[2]};
+}
+[[maybe_unused]] static array<float, 3> sub(
+    const array<float, 3>& a, const array<float, 3>& b) {
+  return {a[0] - b[0], a[1] - b[1], a[2] - b[2]};
+}
+[[maybe_unused]] static array<float, 3> sub(const array<float, 3>& a, float b) {
+  return {a[0] - b, a[1] - b, a[2] - b};
+}
+[[maybe_unused]] static array<float, 3> sub(float a, const array<float, 3>& b) {
+  return {a - b[0], a - b[1], a - b[2]};
+}
+[[maybe_unused]] static array<float, 3> mul(
+    const array<float, 3>& a, const array<float, 3>& b) {
+  return {a[0] * b[0], a[1] * b[1], a[2] * b[2]};
+}
+[[maybe_unused]] static array<float, 3> mul(const array<float, 3>& a, float b) {
+  return {a[0] * b, a[1] * b, a[2] * b};
+}
+[[maybe_unused]] static array<float, 3> mul(float a, const array<float, 3>& b) {
+  return {a * b[0], a * b[1], a * b[2]};
+}
+[[maybe_unused]] static array<float, 3> div(
+    const array<float, 3>& a, const array<float, 3>& b) {
+  return {a[0] / b[0], a[1] / b[1], a[2] / b[2]};
+}
+[[maybe_unused]] static array<float, 3> div(const array<float, 3>& a, float b) {
+  return {a[0] / b, a[1] / b, a[2] / b};
+}
+[[maybe_unused]] static array<float, 3> div(float a, const array<float, 3>& b) {
+  return {a / b[0], a / b[1], a / b[2]};
+}
+
+[[maybe_unused]] static float dot(
+    const array<float, 3>& a, const array<float, 3>& b) {
+  return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+}
+[[maybe_unused]] static array<float, 3> cross(
+    const array<float, 3>& a, const array<float, 3>& b) {
+  return {a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2],
+      a[0] * b[1] - a[1] * b[0]};
+}
+[[maybe_unused]] static float length(const array<float, 3>& a) {
+  return sqrt(dot(a, a));
+}
+[[maybe_unused]] static float length_squared(const array<float, 3>& a) {
+  return dot(a, a);
+}
+[[maybe_unused]] static array<float, 3> normalize(const array<float, 3>& a) {
+  auto l = length(a);
+  return (l != 0) ? div(a, l) : a;
+}
+[[maybe_unused]] static float distance(
+    const array<float, 3>& a, const array<float, 3>& b) {
+  return length(sub(a, b));
+}
+[[maybe_unused]] static float distance_squared(
+    const array<float, 3>& a, const array<float, 3>& b) {
+  return dot(sub(a, b), sub(a, b));
+}
+
+[[maybe_unused]] static array<float, 3> triangle_normal(
+    const array<float, 3>& p0, const array<float, 3>& p1,
+    const array<float, 3>& p2) {
+  return normalize(cross(sub(p1, p0), sub(p2, p0)));
+}
+
+[[maybe_unused]] static array<array<float, 3>, 4> lookat_frame(
+    const array<float, 3>& eye, const array<float, 3>& center,
+    const array<float, 3>& up, bool inv_xz = false) {
+  auto w = normalize(sub(eye, center));
+  auto u = normalize(cross(up, w));
+  auto v = normalize(cross(w, u));
+  if (inv_xz) {
+    w = neg(w);
+    u = neg(u);
+  }
+  return {u, v, w, eye};
+}
+
+static array<array<float, 3>, 3> mul(
+    const array<array<float, 3>, 3>& a, float b) {
+  return {mul(a[0], b), mul(a[1], b), mul(a[2], b)};
+}
+static array<float, 3> mul(
+    const array<array<float, 3>, 3>& a, const array<float, 3>& b) {
+  return add(mul(a[0], b[0]), add(mul(a[1], b[1]), mul(a[2], b[2])));
+}
+[[maybe_unused]] static array<array<float, 3>, 3> mul(
+    const array<array<float, 3>, 3>& a, const array<array<float, 3>, 3>& b) {
+  return {mul(a, b[0]), mul(a, b[1]), mul(a, b[2])};
+}
+static array<array<float, 3>, 4> mul(
+    const array<array<float, 3>, 4>& a, const array<array<float, 3>, 4>& b) {
+  auto al = array<array<float, 3>, 3>{a[0], a[1], a[2]};
+  return {
+      mul(al, b[0]), mul(al, b[1]), mul(al, b[2]), add(mul(al, b[3]), a[3])};
+}
+
+static array<array<float, 3>, 4> translation_frame(const array<float, 3>& a) {
+  return {array<float, 3>{1, 0, 0}, array<float, 3>{0, 1, 0},
+      array<float, 3>{0, 0, 1}, a};
+}
+static array<array<float, 3>, 4> scaling_frame(const array<float, 3>& a) {
+  return {array<float, 3>{a[0], 0, 0}, array<float, 3>{0, a[1], 0},
+      array<float, 3>{0, 0, a[2]}, array<float, 3>{0, 0, 0}};
+}
+static array<array<float, 3>, 4> rotation_frame(
+    const array<float, 3>& axis, float angle) {
+  auto s = std::sin(angle), c = std::cos(angle);
+  auto vv = normalize(axis);
+  return {array<float, 3>{c + (1 - c) * vv[0] * vv[0],
+              (1 - c) * vv[0] * vv[1] + s * vv[2],
+              (1 - c) * vv[0] * vv[2] - s * vv[1]},
+      array<float, 3>{(1 - c) * vv[0] * vv[1] - s * vv[2],
+          c + (1 - c) * vv[1] * vv[1], (1 - c) * vv[1] * vv[2] + s * vv[0]},
+      array<float, 3>{(1 - c) * vv[0] * vv[2] + s * vv[1],
+          (1 - c) * vv[1] * vv[2] - s * vv[0], c + (1 - c) * vv[2] * vv[2]},
+      array<float, 3>{0, 0, 0}};
+}
+
+static array<array<float, 3>, 3> transpose(const array<array<float, 3>, 3>& a) {
+  return {
+      array<float, 3>{a[0][0], a[1][0], a[2][0]},
+      array<float, 3>{a[0][1], a[1][1], a[2][1]},
+      array<float, 3>{a[0][2], a[1][2], a[2][2]},
+  };
+}
+static float determinant(const array<array<float, 3>, 3>& a) {
+  return dot(a[0], cross(a[1], a[2]));
+}
+static array<array<float, 3>, 3> adjoint(const array<array<float, 3>, 3>& a) {
+  return transpose(array<array<float, 3>, 3>{
+      cross(a[1], a[2]), cross(a[2], a[0]), cross(a[0], a[1])});
+}
+static array<array<float, 3>, 3> inverse(const array<array<float, 3>, 3>& a) {
+  return mul(adjoint(a), (1 / determinant(a)));
+}
+
+static array<array<float, 3>, 4> inverse(
+    const array<array<float, 3>, 4>& a, bool non_rigid = false) {
+  auto m    = array<array<float, 3>, 3>{a[0], a[1], a[2]};
+  auto minv = non_rigid ? inverse(m) : transpose(m);
+  return {minv[0], minv[1], minv[2], neg(mul(minv, a[3]))};
+}
+
+// frame/mat conversion
+static array<array<float, 3>, 4> mat_to_frame(
+    const array<array<float, 4>, 4>& m) {
+  return {array<float, 3>{m[0][0], m[0][1], m[0][2]},
+      array<float, 3>{m[1][0], m[1][1], m[1][2]},
+      array<float, 3>{m[2][0], m[2][1], m[2][2]},
+      array<float, 3>{m[3][0], m[3][1], m[3][2]}};
+}
+static array<array<float, 4>, 4> frame_to_mat(
+    const array<array<float, 3>, 4>& f) {
+  return {array<float, 4>{f[0][0], f[0][1], f[0][2], 0},
+      array<float, 4>{f[1][0], f[1][1], f[1][2], 0},
+      array<float, 4>{f[2][0], f[2][1], f[2][2], 0},
+      array<float, 4>{f[3][0], f[3][1], f[3][2], 1}};
+}
+
+static array<float, 12> flatten(const array<array<float, 3>, 4>& a) {
+  return (const array<float, 12>&)a;
+}
+static array<array<float, 3>, 4> unflatten(const array<float, 12>& a) {
+  return (const array<array<float, 3>, 4>&)a;
+}
+
+[[maybe_unused]] static array<float, 16> flatten(
+    const array<array<float, 4>, 4>& a) {
+  return (const array<float, 16>&)a;
+}
+[[maybe_unused]] static array<array<float, 4>, 4> unflatten(
+    const array<float, 16>& a) {
+  return (const array<array<float, 4>, 4>&)a;
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// HELPER FOR STL
+// -----------------------------------------------------------------------------
+namespace std {
+
+// Hash functor for vector for use with hash_map
+template <typename T, size_t N>
+struct hash<array<T, N>> {
+  size_t operator()(const array<T, N>& value) const {
+    const std::hash<float> hasher = std::hash<T>();
+    auto                   h      = (size_t)0;
+    for (auto item : value) {
+      h ^= hasher(item) + 0x9e3779b9 + (h << 6) + (h >> 2);
+    }
+    return h;
+  }
+};
+
+}  // namespace std
+
+// -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto {
 
 // Formats values to string
 static void format_value(string& str, const string& value) { str += value; }
-static void format_value(string& str, int8_t value) {
+static void format_value(string& str, const char* value) { str += value; }
+template <typename T>
+static void format_value(string& str, T value) {
   auto buffer = array<char, 64>{};
-  auto result = std::to_chars(
-      buffer.data(), buffer.data() + buffer.size(), value);
-  str.append(buffer.data(), result.ptr);
-}
-static void format_value(string& str, int16_t value) {
-  auto buffer = array<char, 64>{};
-  auto result = std::to_chars(
-      buffer.data(), buffer.data() + buffer.size(), value);
-  str.append(buffer.data(), result.ptr);
-}
-static void format_value(string& str, int32_t value) {
-  auto buffer = array<char, 64>{};
-  auto result = std::to_chars(
-      buffer.data(), buffer.data() + buffer.size(), value);
-  str.append(buffer.data(), result.ptr);
-}
-static void format_value(string& str, int64_t value) {
-  auto buffer = array<char, 64>{};
-  auto result = std::to_chars(
-      buffer.data(), buffer.data() + buffer.size(), value);
-  str.append(buffer.data(), result.ptr);
-}
-static void format_value(string& str, uint8_t value) {
-  auto buffer = array<char, 64>{};
-  auto result = std::to_chars(
-      buffer.data(), buffer.data() + buffer.size(), value);
-  str.append(buffer.data(), result.ptr);
-}
-static void format_value(string& str, uint16_t value) {
-  auto buffer = array<char, 64>{};
-  auto result = std::to_chars(
-      buffer.data(), buffer.data() + buffer.size(), value);
-  str.append(buffer.data(), result.ptr);
-}
-static void format_value(string& str, uint32_t value) {
-  auto buffer = array<char, 64>{};
-  auto result = std::to_chars(
-      buffer.data(), buffer.data() + buffer.size(), value);
-  str.append(buffer.data(), result.ptr);
-}
-static void format_value(string& str, uint64_t value) {
-  auto buffer = array<char, 64>{};
-  auto result = std::to_chars(
-      buffer.data(), buffer.data() + buffer.size(), value);
-  str.append(buffer.data(), result.ptr);
-}
-static void format_value(string& str, float value) {
-  auto buffer = array<char, 256>{};
+  if constexpr (std::is_same_v<T, float>) {
 #ifdef _WIN32
-  auto result = std::to_chars(
-      buffer.data(), buffer.data() + buffer.size(), value);
-  str.append(buffer.data(), result.ptr);
+    auto result = std::to_chars(
+        buffer.data(), buffer.data() + buffer.size(), value);
+    str.append(buffer.data(), result.ptr);
 #else
-  auto len = snprintf(buffer.data(), buffer.size(), "%.9g", value);
-  str.append(buffer.data(), buffer.data() + len);
+    auto len = snprintf(buffer.data(), buffer.size(), "%.9g", value);
+    str.append(buffer.data(), buffer.data() + len);
 #endif
-}
-static void format_value(string& str, double value) {
-  auto buffer = array<char, 256>{};
+  } else if constexpr (std::is_same_v<T, double>) {
 #ifdef _WIN32
-  auto result = std::to_chars(
-      buffer.data(), buffer.data() + buffer.size(), value);
-  str.append(buffer.data(), result.ptr);
+    auto result = std::to_chars(
+        buffer.data(), buffer.data() + buffer.size(), value);
+    str.append(buffer.data(), result.ptr);
 #else
-  auto len = snprintf(buffer.data(), buffer.size(), "%.17g", value);
-  str.append(buffer.data(), buffer.data() + len);
+    auto len = snprintf(buffer.data(), buffer.size(), "%.17g", value);
+    str.append(buffer.data(), buffer.data() + len);
 #endif
-}
-static void format_value(string& str, const vec2f& value) {
-  for (auto i = 0; i < 2; i++) {
-    if (i != 0) str += " ";
-    format_value(str, value[i]);
+  } else {
+    auto result = std::to_chars(
+        buffer.data(), buffer.data() + buffer.size(), value);
+    str.append(buffer.data(), result.ptr);
   }
 }
-static void format_value(string& str, const vec3f& value) {
-  for (auto i = 0; i < 3; i++) {
-    if (i != 0) str += " ";
-    format_value(str, value[i]);
-  }
+static void format_value(string& str, bool value) {
+  format_value(str, value ? 1 : 0);
 }
-static void format_value(string& str, const frame3f& value) {
-  for (auto i = 0; i < 4; i++) {
-    if (i != 0) str += " ";
-    format_value(str, value[i]);
-  }
-}
-static void format_value(string& str, const vec4f& value) {
-  for (auto i = 0; i < 4; i++) {
-    if (i != 0) str += " ";
-    format_value(str, value[i]);
-  }
-}
-static void format_value(string& str, const mat4f& value) {
-  for (auto i = 0; i < 4; i++) {
+template <typename T, size_t N>
+static void format_value(string& str, const array<T, N>& value) {
+  for (auto i = 0; i < N; i++) {
     if (i != 0) str += " ";
     format_value(str, value[i]);
   }
@@ -390,121 +551,30 @@ static bool read_line(string_view& str, string_view& line) {
   value = string{valuev};
   return true;
 }
-[[nodiscard]] static bool parse_value(string_view& str, int8_t& value) {
+template <typename T>
+[[nodiscard]] static bool parse_value(string_view& str, T& value) {
   skip_whitespace(str);
-  auto result = std::from_chars(str.data(), str.data() + str.size(), value);
-  if (result.ptr == str.data()) return false;
-  str.remove_prefix(result.ptr - str.data());
+  if constexpr (std::is_same_v<T, float> || std::is_same_v<T, double>) {
+    auto result = fast_float::from_chars(
+        str.data(), str.data() + str.size(), value);
+    if (result.ptr == str.data()) return false;
+    str.remove_prefix(result.ptr - str.data());
+  } else {
+    auto result = std::from_chars(str.data(), str.data() + str.size(), value);
+    if (result.ptr == str.data()) return false;
+    str.remove_prefix(result.ptr - str.data());
+  }
   return true;
 }
-[[nodiscard]] static bool parse_value(string_view& str, int16_t& value) {
-  skip_whitespace(str);
-  auto result = std::from_chars(str.data(), str.data() + str.size(), value);
-  if (result.ptr == str.data()) return false;
-  str.remove_prefix(result.ptr - str.data());
-  return true;
-}
-[[nodiscard]] static bool parse_value(string_view& str, int32_t& value) {
-  skip_whitespace(str);
-  auto result = std::from_chars(str.data(), str.data() + str.size(), value);
-  if (result.ptr == str.data()) return false;
-  str.remove_prefix(result.ptr - str.data());
-  return true;
-}
-[[nodiscard]] static bool parse_value(string_view& str, int64_t& value) {
-  skip_whitespace(str);
-  auto result = std::from_chars(str.data(), str.data() + str.size(), value);
-  if (result.ptr == str.data()) return false;
-  str.remove_prefix(result.ptr - str.data());
-  return true;
-}
-[[nodiscard]] static bool parse_value(string_view& str, uint8_t& value) {
-  skip_whitespace(str);
-  auto result = std::from_chars(str.data(), str.data() + str.size(), value);
-  if (result.ptr == str.data()) return false;
-  str.remove_prefix(result.ptr - str.data());
-  return true;
-}
-[[nodiscard]] static bool parse_value(string_view& str, uint16_t& value) {
-  skip_whitespace(str);
-  auto result = std::from_chars(str.data(), str.data() + str.size(), value);
-  if (result.ptr == str.data()) return false;
-  str.remove_prefix(result.ptr - str.data());
-  return true;
-}
-[[nodiscard]] static bool parse_value(string_view& str, uint32_t& value) {
-  skip_whitespace(str);
-  auto result = std::from_chars(str.data(), str.data() + str.size(), value);
-  if (result.ptr == str.data()) return false;
-  str.remove_prefix(result.ptr - str.data());
-  return true;
-}
-[[nodiscard]] static bool parse_value(string_view& str, uint64_t& value) {
-  skip_whitespace(str);
-  auto result = std::from_chars(str.data(), str.data() + str.size(), value);
-  if (result.ptr == str.data()) return false;
-  str.remove_prefix(result.ptr - str.data());
-  return true;
-}
-[[nodiscard]] static bool parse_value(string_view& str, float& value) {
-  skip_whitespace(str);
-  auto result = fast_float::from_chars(
-      str.data(), str.data() + str.size(), value);
-  if (result.ptr == str.data()) return false;
-  str.remove_prefix(result.ptr - str.data());
-  return true;
-}
-[[nodiscard]] static bool parse_value(string_view& str, double& value) {
-  skip_whitespace(str);
-  auto result = fast_float::from_chars(
-      str.data(), str.data() + str.size(), value);
-  if (result.ptr == str.data()) return false;
-  str.remove_prefix(result.ptr - str.data());
-  return true;
-}
-#ifdef __APPLE__
-[[nodiscard]] static bool parse_value(string_view& str, size_t& value) {
-  skip_whitespace(str);
-  auto result = std::from_chars(str.data(), str.data() + str.size(), value);
-  if (result.ptr == str.data()) return false;
-  str.remove_prefix(result.ptr - str.data());
-  return true;
-}
-#endif
 [[nodiscard]] static bool parse_value(string_view& str, bool& value) {
   auto valuei = 0;
   if (!parse_value(str, valuei)) return false;
   value = (bool)valuei;
   return true;
 }
-
-[[nodiscard]] static bool parse_value(string_view& str, vec2f& value) {
-  for (auto i = 0; i < 2; i++)
-    if (!parse_value(str, value[i])) return false;
-  return true;
-}
-[[nodiscard]] static bool parse_value(string_view& str, vec3f& value) {
-  for (auto i = 0; i < 3; i++)
-    if (!parse_value(str, value[i])) return false;
-  return true;
-}
-[[nodiscard]] static bool parse_value(string_view& str, vec4f& value) {
-  for (auto i = 0; i < 4; i++)
-    if (!parse_value(str, value[i])) return false;
-  return true;
-}
-[[nodiscard]] static bool parse_value(string_view& str, mat3f& value) {
-  for (auto i = 0; i < 3; i++)
-    if (!parse_value(str, value[i])) return false;
-  return true;
-}
-[[nodiscard]] static bool parse_value(string_view& str, mat4f& value) {
-  for (auto i = 0; i < 4; i++)
-    if (!parse_value(str, value[i])) return false;
-  return true;
-}
-[[nodiscard]] static bool parse_value(string_view& str, frame3f& value) {
-  for (auto i = 0; i < 4; i++)
+template <typename T, size_t N>
+[[nodiscard]] static bool parse_value(string_view& str, array<T, N>& value) {
+  for (auto i = 0; i < N; i++)
     if (!parse_value(str, value[i])) return false;
   return true;
 }
@@ -967,509 +1037,6 @@ bool save_ply(const string& filename, const ply_model& ply, string& error) {
   return true;
 }
 
-// Get ply properties
-bool has_property(
-    const ply_model& ply, const string& element, const string& property) {
-  for (auto& elem : ply.elements) {
-    if (elem.name != element) continue;
-    for (auto& prop : elem.properties) {
-      if (prop.name == property) return true;
-    }
-  }
-  return false;
-}
-ply_property& get_property(
-    ply_model& ply, const string& element, const string& property) {
-  for (auto& elem : ply.elements) {
-    if (elem.name != element) continue;
-    for (auto& prop : elem.properties) {
-      if (prop.name == property) return prop;
-    }
-  }
-  throw std::runtime_error("property not found");
-}
-const ply_property& get_property(
-    const ply_model& ply, const string& element, const string& property) {
-  for (auto& elem : ply.elements) {
-    if (elem.name != element) continue;
-    for (auto& prop : elem.properties) {
-      if (prop.name == property) return prop;
-    }
-  }
-  throw std::runtime_error("property not found");
-}
-template <typename T, typename T1>
-static bool convert_property(const vector<T1>& prop, vector<T>& values) {
-  values = vector<T>(prop.size());
-  for (auto i = (size_t)0; i < prop.size(); i++) values[i] = (T)prop[i];
-  return true;
-}
-template <typename T>
-static bool convert_property(const ply_property& prop, vector<T>& values) {
-  switch (prop.type) {
-    case ply_type::i8: return convert_property(prop.data_i8, values);
-    case ply_type::i16: return convert_property(prop.data_i16, values);
-    case ply_type::i32: return convert_property(prop.data_i32, values);
-    case ply_type::i64: return convert_property(prop.data_i64, values);
-    case ply_type::u8: return convert_property(prop.data_u8, values);
-    case ply_type::u16: return convert_property(prop.data_u16, values);
-    case ply_type::u32: return convert_property(prop.data_u32, values);
-    case ply_type::u64: return convert_property(prop.data_u64, values);
-    case ply_type::f32: return convert_property(prop.data_f32, values);
-    case ply_type::f64: return convert_property(prop.data_f64, values);
-  }
-  // return here to silence warnings
-  throw std::runtime_error{"should not have gotten here"};
-  return false;
-}
-bool get_value(const ply_model& ply, const string& element,
-    const string& property, vector<float>& values) {
-  values.clear();
-  if (!has_property(ply, element, property)) return false;
-  auto& prop = get_property(ply, element, property);
-  if (prop.is_list) return false;
-  if (!convert_property(prop, values)) return false;
-  return true;
-}
-bool get_values(const ply_model& ply, const string& element,
-    const array<string, 2>& properties, vector<vec2f>& values) {
-  values.clear();
-  auto x = vector<float>{}, y = vector<float>{};
-  if (!get_value(ply, element, properties[0], x)) return false;
-  if (!get_value(ply, element, properties[1], y)) return false;
-  values = vector<vec2f>(x.size());
-  for (auto i = (size_t)0; i < values.size(); i++) values[i] = {x[i], y[i]};
-  return true;
-}
-bool get_values(const ply_model& ply, const string& element,
-    const array<string, 3>& properties, vector<vec3f>& values) {
-  values.clear();
-  auto x = vector<float>{}, y = vector<float>{}, z = vector<float>{};
-  if (!get_value(ply, element, properties[0], x)) return false;
-  if (!get_value(ply, element, properties[1], y)) return false;
-  if (!get_value(ply, element, properties[2], z)) return false;
-  values = vector<vec3f>(x.size());
-  for (auto i = (size_t)0; i < values.size(); i++)
-    values[i] = {x[i], y[i], z[i]};
-  return true;
-}
-bool get_values(const ply_model& ply, const string& element,
-    const array<string, 4>& properties, vector<vec4f>& values) {
-  values.clear();
-  auto x = vector<float>{}, y = vector<float>{}, z = vector<float>{},
-       w = vector<float>{};
-  if (!get_value(ply, element, properties[0], x)) return false;
-  if (!get_value(ply, element, properties[1], y)) return false;
-  if (!get_value(ply, element, properties[2], z)) return false;
-  if (!get_value(ply, element, properties[3], w)) return false;
-  values = vector<vec4f>(x.size());
-  for (auto i = (size_t)0; i < values.size(); i++)
-    values[i] = {x[i], y[i], z[i], w[i]};
-  return true;
-}
-bool get_values(const ply_model& ply, const string& element,
-    const array<string, 12>& properties, vector<frame3f>& values) {
-  values.clear();
-  auto coords = array<vector<float>, 12>{};
-  for (auto idx = 0; idx < 12; idx++)
-    if (!get_value(ply, element, properties[idx], coords[idx])) return false;
-  values = vector<frame3f>(coords[0].size());
-  for (auto i = (size_t)0; i < values.size(); i++) {
-    for (auto c = 0; c < 12; c++) (&values[i].x.x)[c] = coords[c][i];
-  }
-  return true;
-}
-bool get_lists(const ply_model& ply, const string& element,
-    const string& property, vector<vector<int>>& lists) {
-  lists.clear();
-  if (!has_property(ply, element, property)) return false;
-  auto& prop = get_property(ply, element, property);
-  if (!prop.is_list) return false;
-  auto& sizes  = prop.ldata_u8;
-  auto  values = vector<int>{};
-  if (!convert_property(prop, values)) return false;
-  lists    = vector<vector<int>>(sizes.size());
-  auto cur = (size_t)0;
-  for (auto i = (size_t)0; i < lists.size(); i++) {
-    lists[i].resize(sizes[i]);
-    for (auto c = 0; c < sizes[i]; c++) {
-      lists[i][c] = values[cur++];
-    }
-  }
-  return true;
-}
-bool get_list_sizes(const ply_model& ply, const string& element,
-    const string& property, vector<byte>& sizes) {
-  if (!has_property(ply, element, property)) return {};
-  auto& prop = get_property(ply, element, property);
-  if (!prop.is_list) return {};
-  sizes = prop.ldata_u8;
-  return true;
-}
-bool get_list_values(const ply_model& ply, const string& element,
-    const string& property, vector<int>& values) {
-  if (!has_property(ply, element, property)) return {};
-  auto& prop = get_property(ply, element, property);
-  if (!prop.is_list) return {};
-  return convert_property<int>(prop, values);
-}
-
-static vector<vec2f> flip_ply_texcoord(const vector<vec2f>& texcoords) {
-  auto flipped = texcoords;
-  for (auto& uv : flipped) uv.y = 1 - uv.y;
-  return flipped;
-}
-
-// Get ply properties for meshes
-bool get_positions(const ply_model& ply, vector<vec3f>& positions) {
-  return get_values(ply, "vertex", {"x", "y", "z"}, positions);
-}
-bool get_normals(const ply_model& ply, vector<vec3f>& normals) {
-  return get_values(ply, "vertex", {"nx", "ny", "nz"}, normals);
-}
-bool get_texcoords(const ply_model& ply, vector<vec2f>& texcoords, bool flipv) {
-  if (has_property(ply, "vertex", "u")) {
-    if (!get_values(ply, "vertex", {"u", "v"}, texcoords)) return false;
-  } else {
-    if (!get_values(ply, "vertex", {"s", "t"}, texcoords)) return false;
-  }
-  if (flipv) {
-    for (auto& uv : texcoords) uv.y = 1 - uv.y;
-  }
-  return true;
-}
-bool get_colors(const ply_model& ply, vector<vec3f>& colors) {
-  return get_values(ply, "vertex", {"red", "green", "blue"}, colors);
-}
-bool get_colors(const ply_model& ply, vector<vec4f>& colors) {
-  if (has_property(ply, "vertex", "alpha")) {
-    return get_values(ply, "vertex", {"red", "green", "blue", "alpha"}, colors);
-  } else {
-    auto colors3 = vector<vec3f>{};
-    if (!get_values(ply, "vertex", {"red", "green", "blue"}, colors3))
-      return false;
-    colors.resize(colors3.size());
-    for (auto i = 0; i < colors.size(); i++)
-      colors[i] = {colors3[i].x, colors3[i].y, colors3[i].z, 1};
-    return true;
-  }
-}
-bool get_radius(const ply_model& ply, vector<float>& radius) {
-  return get_value(ply, "vertex", "radius", radius);
-}
-bool get_faces(const ply_model& ply, vector<vector<int>>& faces) {
-  return get_lists(ply, "face", "vertex_indices", faces);
-}
-bool get_triangles(const ply_model& ply, vector<vec3i>& triangles) {
-  triangles.clear();
-  auto indices = vector<int>{};
-  auto sizes   = vector<uint8_t>{};
-  if (!get_list_values(ply, "face", "vertex_indices", indices)) return false;
-  if (!get_list_sizes(ply, "face", "vertex_indices", sizes)) return false;
-  triangles = vector<vec3i>{};
-  triangles.reserve(sizes.size());
-  auto cur = 0;
-  for (auto size : sizes) {
-    for (auto c = 2; c < size; c++) {
-      triangles.push_back(
-          {indices[cur + 0], indices[cur + c - 1], indices[cur + c]});
-    }
-    cur += size;
-  }
-  return true;
-}
-bool get_quads(const ply_model& ply, vector<vec4i>& quads) {
-  quads.clear();
-  auto indices = vector<int>{};
-  auto sizes   = vector<uint8_t>{};
-  if (!get_list_values(ply, "face", "vertex_indices", indices)) return false;
-  if (!get_list_sizes(ply, "face", "vertex_indices", sizes)) return false;
-  quads = vector<vec4i>{};
-  quads.reserve(sizes.size());
-  auto cur = 0;
-  for (auto size : sizes) {
-    if (size == 4) {
-      quads.push_back({indices[cur + 0], indices[cur + 1], indices[cur + 2],
-          indices[cur + 3]});
-    } else {
-      for (auto c = 2; c < size; c++) {
-        quads.push_back({indices[cur + 0], indices[cur + c - 1],
-            indices[cur + c], indices[cur + c]});
-      }
-    }
-    cur += size;
-  }
-  return true;
-}
-bool get_faces(
-    const ply_model& ply, vector<vec3i>& triangles, vector<vec4i>& quads) {
-  if (has_quads(ply)) {
-    return get_quads(ply, quads);
-  } else {
-    return get_triangles(ply, triangles);
-  }
-}
-bool get_lines(const ply_model& ply, vector<vec2i>& lines) {
-  auto indices = vector<int>{};
-  auto sizes   = vector<uint8_t>{};
-  if (!get_list_values(ply, "line", "vertex_indices", indices)) return false;
-  if (!get_list_sizes(ply, "line", "vertex_indices", sizes)) return false;
-  lines = vector<vec2i>{};
-  lines.reserve(sizes.size());
-  auto cur = 0;
-  for (auto size : sizes) {
-    for (auto c = 1; c < size; c++) {
-      lines.push_back({indices[cur + c - 1], indices[cur + c]});
-    }
-    cur += size;
-  }
-  return true;
-}
-bool get_points(const ply_model& ply, vector<int>& values) {
-  return get_list_values(ply, "point", "vertex_indices", values);
-}
-bool has_quads(const ply_model& ply) {
-  auto sizes = vector<uint8_t>{};
-  if (!get_list_sizes(ply, "face", "vertex_indices", sizes)) return false;
-  for (auto size : sizes)
-    if (size == 4) return true;
-  return false;
-}
-
-// Add ply properties
-static ply_element& add_element(
-    ply_model& ply, const string& element_name, size_t count) {
-  for (auto& elem : ply.elements) {
-    if (elem.name == element_name) return elem;
-  }
-  auto& elem = ply.elements.emplace_back();
-  elem.name  = element_name;
-  elem.count = count;
-  return elem;
-}
-static ply_property& add_property(ply_model& ply, const string& element_name,
-    const string& property_name, size_t count, ply_type type, bool is_list) {
-  add_element(ply, element_name, count);
-  for (auto& elem : ply.elements) {
-    if (elem.name != element_name) continue;
-    for (auto& prop : elem.properties) {
-      if (prop.name == property_name) return prop;
-    }
-    auto& prop   = elem.properties.emplace_back();
-    prop.name    = property_name;
-    prop.type    = type;
-    prop.is_list = is_list;
-    return prop;
-  }
-  throw std::invalid_argument{"should not have gotten here"};
-}
-template <typename T>
-static vector<T> make_vector(const T* value, size_t count, int stride) {
-  auto ret = vector<T>(count);
-  for (auto idx = (size_t)0; idx < count; idx++) ret[idx] = value[idx * stride];
-  return ret;
-}
-
-static bool add_values(ply_model& ply, const float* values, size_t count,
-    const string& element, const string* properties, int nprops) {
-  if (values == nullptr) return false;
-  for (auto p = 0; p < nprops; p++) {
-    add_property(ply, element, properties[p], count, ply_type::f32, false);
-    auto& prop = get_property(ply, element, properties[p]);
-    prop.data_f32.resize(count);
-    for (auto i = 0; i < count; i++) prop.data_f32[i] = values[p + i * nprops];
-  }
-  return true;
-}
-
-static bool add_values(ply_model& ply, const int* values, size_t count,
-    const string& element, const string* properties, int nprops) {
-  if (values == nullptr) return false;
-  for (auto p = 0; p < nprops; p++) {
-    add_property(ply, element, properties[p], count, ply_type::i32, false);
-    auto& prop = get_property(ply, element, properties[p]);
-    prop.data_i32.resize(count);
-    for (auto i = 0; i < count; i++) prop.data_i32[i] = values[p + i * nprops];
-  }
-  return true;
-}
-
-bool add_value(ply_model& ply, const string& element, const string& property,
-    const vector<float>& values) {
-  if (values.empty()) return false;
-  auto properties = vector{property};
-  return add_values(
-      ply, values.data(), values.size(), element, properties.data(), 1);
-}
-bool add_values(ply_model& ply, const string& element,
-    const array<string, 2>& properties, const vector<vec2f>& values) {
-  if (values.empty()) return false;
-  return add_values(
-      ply, &values.front().x, values.size(), element, properties.data(), 2);
-}
-bool add_values(ply_model& ply, const string& element,
-    const array<string, 3>& properties, const vector<vec3f>& values) {
-  if (values.empty()) return false;
-  return add_values(
-      ply, &values.front().x, values.size(), element, properties.data(), 3);
-}
-bool add_values(ply_model& ply, const string& element,
-    const array<string, 4>& properties, const vector<vec4f>& values) {
-  if (values.empty()) return false;
-  return add_values(
-      ply, &values.front().x, values.size(), element, properties.data(), 4);
-}
-bool add_values(ply_model& ply, const string& element,
-    const array<string, 12>& properties, const vector<frame3f>& values) {
-  if (values.empty()) return false;
-  return add_values(ply, &values.front().x.x, values.size(), element,
-      properties.data(), (int)properties.size());
-}
-
-bool add_value(ply_model& ply, const string& element, const string& property,
-    const vector<int>& values) {
-  if (values.empty()) return false;
-  auto properties = vector{property};
-  return add_values(
-      ply, values.data(), values.size(), element, properties.data(), 1);
-}
-bool add_values(ply_model& ply, const string& element,
-    const array<string, 2>& properties, const vector<vec2i>& values) {
-  if (values.empty()) return false;
-  return add_values(
-      ply, &values.front().x, values.size(), element, properties.data(), 2);
-}
-bool add_values(ply_model& ply, const string& element,
-    const array<string, 3>& properties, const vector<vec3i>& values) {
-  if (values.empty()) return false;
-  return add_values(
-      ply, &values.front().x, values.size(), element, properties.data(), 3);
-}
-bool add_values(ply_model& ply, const string& element,
-    const array<string, 4>& properties, const vector<vec4i>& values) {
-  if (values.empty()) return false;
-  return add_values(
-      ply, &values.front().x, values.size(), element, properties.data(), 4);
-}
-
-bool add_lists(ply_model& ply, const string& element, const string& property,
-    const vector<vector<int>>& values) {
-  if (values.empty()) return false;
-  add_property(ply, element, property, values.size(), ply_type::i32, true);
-  auto& prop = get_property(ply, element, property);
-  prop.data_i32.reserve(values.size() * 4);
-  prop.ldata_u8.reserve(values.size());
-  for (auto& value : values) {
-    prop.data_i32.insert(prop.data_i32.end(), value.begin(), value.end());
-    prop.ldata_u8.push_back((uint8_t)value.size());
-  }
-  return true;
-}
-bool add_lists(ply_model& ply, const string& element, const string& property,
-    const vector<byte>& sizes, const vector<int>& values) {
-  if (values.empty()) return false;
-  add_property(ply, element, property, sizes.size(), ply_type::i32, true);
-  auto& prop    = get_property(ply, element, property);
-  prop.data_i32 = values;
-  prop.ldata_u8 = sizes;
-  return true;
-}
-bool add_lists(ply_model& ply, const int* values, size_t count, int size,
-    const string& element, const string& property) {
-  if (values == nullptr) return false;
-  add_property(ply, element, property, count, ply_type::i32, true);
-  auto& prop = get_property(ply, element, property);
-  prop.data_i32.assign(values, values + count * size);
-  prop.ldata_u8.assign(count, (byte)size);
-  return true;
-}
-bool add_lists(ply_model& ply, const string& element, const string& property,
-    const vector<int>& values) {
-  if (values.empty()) return false;
-  return add_lists(ply, values.data(), values.size(), 1, element, property);
-}
-bool add_lists(ply_model& ply, const string& element, const string& property,
-    const vector<vec2i>& values) {
-  if (values.empty()) return false;
-  return add_lists(ply, &values.front().x, values.size(), 2, element, property);
-}
-bool add_lists(ply_model& ply, const string& element, const string& property,
-    const vector<vec3i>& values) {
-  if (values.empty()) return false;
-  return add_lists(ply, &values.front().x, values.size(), 3, element, property);
-}
-bool add_lists(ply_model& ply, const string& element, const string& property,
-    const vector<vec4i>& values) {
-  if (values.empty()) return false;
-  return add_lists(ply, &values.front().x, values.size(), 4, element, property);
-}
-
-// Add ply properties for meshes
-bool add_positions(ply_model& ply, const vector<vec3f>& values) {
-  return add_values(ply, "vertex", {"x", "y", "z"}, values);
-}
-bool add_normals(ply_model& ply, const vector<vec3f>& values) {
-  return add_values(ply, "vertex", {"nx", "ny", "nz"}, values);
-}
-bool add_texcoords(ply_model& ply, const vector<vec2f>& values, bool flipv) {
-  return add_values(
-      ply, "vertex", {"u", "v"}, flipv ? flip_ply_texcoord(values) : values);
-}
-bool add_colors(ply_model& ply, const vector<vec3f>& values) {
-  return add_values(ply, "vertex", {"red", "green", "blue"}, values);
-}
-bool add_colors(ply_model& ply, const vector<vec4f>& values) {
-  return add_values(ply, "vertex", {"red", "green", "blue", "alpha"}, values);
-}
-bool add_radius(ply_model& ply, const vector<float>& values) {
-  return add_value(ply, "vertex", "radius", values);
-}
-bool add_faces(ply_model& ply, const vector<vector<int>>& values) {
-  return add_lists(ply, "face", "vertex_indices", values);
-}
-bool add_faces(ply_model& ply, const vector<vec3i>& triangles,
-    const vector<vec4i>& quads) {
-  if (triangles.empty() && quads.empty()) return false;
-  if (quads.empty()) {
-    return add_lists(ply, "face", "vertex_indices", triangles);
-  } else if (triangles.empty() &&
-             std::all_of(quads.begin(), quads.end(),
-                 [](const vec4i& q) { return q.z != q.w; })) {
-    return add_lists(ply, "face", "vertex_indices", quads);
-  } else {
-    auto sizes   = vector<uint8_t>();
-    auto indices = vector<int>{};
-    sizes.reserve(triangles.size() + quads.size());
-    indices.reserve(triangles.size() * 3 + quads.size() * 4);
-    for (auto& t : triangles) {
-      sizes.push_back(3);
-      indices.push_back(t.x);
-      indices.push_back(t.y);
-      indices.push_back(t.z);
-    }
-    for (auto& q : quads) {
-      sizes.push_back(q.z == q.w ? 3 : 4);
-      indices.push_back(q.x);
-      indices.push_back(q.y);
-      indices.push_back(q.z);
-      if (q.z != q.w) indices.push_back(q.w);
-    }
-    return add_lists(ply, "face", "vertex_indices", sizes, indices);
-  }
-}
-bool add_triangles(ply_model& ply, const vector<vec3i>& values) {
-  return add_faces(ply, values, {});
-}
-bool add_quads(ply_model& ply, const vector<vec4i>& values) {
-  return add_faces(ply, {}, values);
-}
-bool add_lines(ply_model& ply, const vector<vec2i>& values) {
-  return add_lists(ply, "line", "vertex_indices", values);
-}
-bool add_points(ply_model& ply, const vector<int>& values) {
-  return add_lists(ply, "point", "vertex_indices", values);
-}
-
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -1594,8 +1161,13 @@ static bool load_mtl(const string& filename, obj_model& obj, string& error) {
       if (!parse_value(str, material.transmission)) return parse_error();
     } else if (cmd == "Tf") {
       if (!parse_value(str, material.transmission)) return parse_error();
-      material.transmission = max(1 - material.transmission, 0.0f);
-      if (max(material.transmission) < 0.001) material.transmission = {0, 0, 0};
+      material.transmission = {std::max(1 - material.transmission[0], 0.0f),
+          std::max(1 - material.transmission[1], 0.0f),
+          std::max(1 - material.transmission[2], 0.0f)};
+      if (std::max(material.transmission[0],
+              std::max(material.transmission[1], material.transmission[2])) <
+          0.001f)
+        material.transmission = {0, 0, 0};
     } else if (cmd == "Tr") {
       if (!parse_value(str, material.opacity)) return parse_error();
       material.opacity = 1 - material.opacity;
@@ -1703,10 +1275,10 @@ static bool load_obx(const string& filename, obj_model& obj, string& error) {
     } else if (cmd == "Cx") {
       if (!parse_value(str, camera.frame)) return parse_error();
     } else if (cmd == "Ct") {
-      auto lookat = mat3f{};
+      auto lookat = array<array<float, 3>, 3>{};
       if (!parse_value(str, lookat)) return parse_error();
-      camera.frame = lookat_frame(lookat.x, lookat.y, lookat.z);
-      if (camera.focus == 0) camera.focus = length(lookat.y - lookat.x);
+      camera.frame = flatten(lookat_frame(lookat[0], lookat[1], lookat[2]));
+      if (camera.focus == 0) camera.focus = length(sub(lookat[1], lookat[0]));
     } else if (cmd == "newEnv") {
       auto& environment = obj.environments.emplace_back();
       if (!parse_value(str, environment.name)) return parse_error();
@@ -1717,9 +1289,10 @@ static bool load_obx(const string& filename, obj_model& obj, string& error) {
     } else if (cmd == "Ex") {
       if (!parse_value(str, environment.frame)) return parse_error();
     } else if (cmd == "Et") {
-      auto lookat = mat3f{};
+      auto lookat = array<array<float, 3>, 3>{};
       if (!parse_value(str, lookat)) return parse_error();
-      environment.frame = lookat_frame(lookat.x, lookat.y, lookat.z, true);
+      environment.frame = flatten(
+          lookat_frame(lookat[0], lookat[1], lookat[2], true));
     } else {
       // unused
     }
@@ -1741,9 +1314,9 @@ bool load_obj(const string& filename, obj_model& obj, string& error,
   if (!load_text(filename, data, error)) return false;
 
   // parsing state
-  auto opositions   = vector<vec3f>{};
-  auto onormals     = vector<vec3f>{};
-  auto otexcoords   = vector<vec2f>{};
+  auto opositions   = vector<array<float, 3>>{};
+  auto onormals     = vector<array<float, 3>>{};
+  auto otexcoords   = vector<array<float, 2>>{};
   auto oname        = ""s;
   auto gname        = ""s;
   auto mtllibs      = vector<string>{};
@@ -2031,9 +1604,9 @@ bool load_obj(const string& filename, obj_shape& shape, string& error,
 
   // convert vertex data
   if (!face_varying) {
-    auto opositions = vector<vec3f>{};
-    auto onormals   = vector<vec3f>{};
-    auto otexcoords = vector<vec2f>{};
+    auto opositions = vector<array<float, 3>>{};
+    auto onormals   = vector<array<float, 3>>{};
+    auto otexcoords = vector<array<float, 2>>{};
     shape.positions.swap(opositions);
     shape.normals.swap(onormals);
     shape.texcoords.swap(otexcoords);
@@ -2107,15 +1680,15 @@ static bool save_mtl(
   for (auto& material : obj.materials) {
     format_values(buffer, "newmtl {}\n", material.name);
     format_values(buffer, "illum {}\n", material.illum);
-    if (material.emission != vec3f{0, 0, 0})
+    if (material.emission != array<float, 3>{0, 0, 0})
       format_values(buffer, "Ke {}\n", material.emission);
-    if (material.ambient != vec3f{0, 0, 0})
+    if (material.ambient != array<float, 3>{0, 0, 0})
       format_values(buffer, "Ka {}\n", material.ambient);
     format_values(buffer, "Kd {}\n", material.diffuse);
     format_values(buffer, "Ks {}\n", material.specular);
-    if (material.reflection != vec3f{0, 0, 0})
+    if (material.reflection != array<float, 3>{0, 0, 0})
       format_values(buffer, "Kr {}\n", material.reflection);
-    if (material.transmission != vec3f{0, 0, 0})
+    if (material.transmission != array<float, 3>{0, 0, 0})
       format_values(buffer, "Kt {}\n", material.transmission);
     format_values(buffer, "Ns {}\n", (int)material.exponent);
     if (material.opacity != 1)
@@ -2333,29 +1906,29 @@ bool save_obj(const string& filename, const obj_shape& shape, string& error) {
 }
 
 // Get obj shape.
-void get_positions(const obj_shape& shape, vector<vec3f>& positions) {
+void get_positions(const obj_shape& shape, vector<array<float, 3>>& positions) {
   positions = shape.positions;
 }
-void get_normals(const obj_shape& shape, vector<vec3f>& normals) {
+void get_normals(const obj_shape& shape, vector<array<float, 3>>& normals) {
   normals = shape.normals;
 }
 void get_texcoords(
-    const obj_shape& shape, vector<vec2f>& texcoords, bool flipv) {
+    const obj_shape& shape, vector<array<float, 2>>& texcoords, bool flipv) {
   texcoords = shape.texcoords;
   if (flipv) {
-    for (auto& texcoord : texcoords) texcoord.y = 1 - texcoord.y;
+    for (auto& texcoord : texcoords) texcoord = {texcoord[0], 1 - texcoord[1]};
   }
 }
-void get_faces(const obj_shape& shape, vector<vec3i>& triangles,
-    vector<vec4i>& quads, vector<int>& materials) {
+void get_faces(const obj_shape& shape, vector<array<int, 3>>& triangles,
+    vector<array<int, 4>>& quads, vector<int>& materials) {
   if (has_quads(shape)) {
     get_quads(shape, quads, materials);
   } else {
     get_triangles(shape, triangles, materials);
   }
 }
-void get_triangles(
-    const obj_shape& shape, vector<vec3i>& triangles, vector<int>& materials) {
+void get_triangles(const obj_shape& shape, vector<array<int, 3>>& triangles,
+    vector<int>& materials) {
   triangles.clear();
   materials.clear();
   triangles.reserve(shape.elements.size());
@@ -2372,8 +1945,8 @@ void get_triangles(
     cur += element.size;
   }
 }
-void get_quads(
-    const obj_shape& shape, vector<vec4i>& quads, vector<int>& materials) {
+void get_quads(const obj_shape& shape, vector<array<int, 4>>& quads,
+    vector<int>& materials) {
   quads.clear();
   materials.clear();
   quads.reserve(shape.elements.size());
@@ -2399,8 +1972,8 @@ void get_quads(
     cur += element.size;
   }
 }
-void get_lines(
-    const obj_shape& shape, vector<vec2i>& lines, vector<int>& materials) {
+void get_lines(const obj_shape& shape, vector<array<int, 2>>& lines,
+    vector<int>& materials) {
   lines.clear();
   materials.clear();
   lines.reserve(shape.elements.size());
@@ -2432,8 +2005,8 @@ void get_points(
     cur += element.size;
   }
 }
-void get_fvquads(const obj_shape& shape, vector<vec4i>& quadspos,
-    vector<vec4i>& quadsnorm, vector<vec4i>& quadstexcoord,
+void get_fvquads(const obj_shape& shape, vector<array<int, 4>>& quadspos,
+    vector<array<int, 4>>& quadsnorm, vector<array<int, 4>>& quadstexcoord,
     vector<int>& materials) {
   quadspos.clear();
   quadsnorm.clear();
@@ -2486,8 +2059,8 @@ void get_fvquads(const obj_shape& shape, vector<vec4i>& quadspos,
     cur += element.size;
   }
 }
-void get_faces(const obj_shape& shape, int material, vector<vec3i>& triangles,
-    vector<vec4i>& quads) {
+void get_faces(const obj_shape& shape, int material,
+    vector<array<int, 3>>& triangles, vector<array<int, 4>>& quads) {
   if (has_quads(shape)) {
     get_quads(shape, material, quads);
   } else {
@@ -2495,7 +2068,7 @@ void get_faces(const obj_shape& shape, int material, vector<vec3i>& triangles,
   }
 }
 void get_triangles(
-    const obj_shape& shape, int material, vector<vec3i>& triangles) {
+    const obj_shape& shape, int material, vector<array<int, 3>>& triangles) {
   triangles.clear();
   if (shape.elements.empty()) return;
   triangles.reserve(shape.elements.size());
@@ -2511,7 +2084,8 @@ void get_triangles(
     cur += element.size;
   }
 }
-void get_quads(const obj_shape& shape, int material, vector<vec4i>& quads) {
+void get_quads(
+    const obj_shape& shape, int material, vector<array<int, 4>>& quads) {
   quads.clear();
   if (shape.elements.empty()) return;
   quads.reserve(shape.elements.size());
@@ -2535,7 +2109,8 @@ void get_quads(const obj_shape& shape, int material, vector<vec4i>& quads) {
     cur += element.size;
   }
 }
-void get_lines(const obj_shape& shape, int material, vector<vec2i>& lines) {
+void get_lines(
+    const obj_shape& shape, int material, vector<array<int, 2>>& lines) {
   lines.clear();
   if (shape.elements.empty()) return;
   lines.reserve(shape.elements.size());
@@ -2584,24 +2159,25 @@ vector<int> get_materials(const obj_shape& shape) {
 }
 
 // Add obj shape
-void add_positions(obj_shape& shape, const vector<vec3f>& positions) {
+void add_positions(obj_shape& shape, const vector<array<float, 3>>& positions) {
   shape.positions.insert(
       shape.positions.end(), positions.begin(), positions.end());
 }
-void add_normals(obj_shape& shape, const vector<vec3f>& normals) {
+void add_normals(obj_shape& shape, const vector<array<float, 3>>& normals) {
   shape.normals.insert(shape.normals.end(), normals.begin(), normals.end());
 }
 void add_texcoords(
-    obj_shape& shape, const vector<vec2f>& texcoords, bool flipv) {
+    obj_shape& shape, const vector<array<float, 2>>& texcoords, bool flipv) {
   shape.texcoords.insert(
       shape.texcoords.end(), texcoords.begin(), texcoords.end());
   if (flipv) {
     for (auto idx = shape.texcoords.size() - texcoords.size();
          idx < shape.texcoords.size(); idx++)
-      shape.texcoords[idx].y = 1 - shape.texcoords[idx].y;
+      shape.texcoords[idx] = {
+          shape.texcoords[idx][0], 1 - shape.texcoords[idx][1]};
   }
 }
-void add_triangles(obj_shape& shape, const vector<vec3i>& triangles,
+void add_triangles(obj_shape& shape, const vector<array<int, 3>>& triangles,
     int material, bool has_normals, bool has_texcoord) {
   for (auto idx = 0; idx < triangles.size(); idx++) {
     auto& triangle = triangles[idx];
@@ -2615,11 +2191,11 @@ void add_triangles(obj_shape& shape, const vector<vec3i>& triangles,
     shape.elements.push_back({3, obj_etype::face, material});
   }
 }
-void add_quads(obj_shape& shape, const vector<vec4i>& quads, int material,
-    bool has_normals, bool has_texcoord) {
+void add_quads(obj_shape& shape, const vector<array<int, 4>>& quads,
+    int material, bool has_normals, bool has_texcoord) {
   for (auto idx = 0; idx < quads.size(); idx++) {
     auto& quad = quads[idx];
-    auto  nv   = quad.z == quad.w ? 3 : 4;
+    auto  nv   = quad[2] == quad[3] ? 3 : 4;
     for (auto c = 0; c < nv; c++) {
       shape.vertices.push_back({
           quad[c] + 1,
@@ -2630,8 +2206,8 @@ void add_quads(obj_shape& shape, const vector<vec4i>& quads, int material,
     shape.elements.push_back({(uint16_t)nv, obj_etype::face, material});
   }
 }
-void add_lines(obj_shape& shape, const vector<vec2i>& lines, int material,
-    bool has_normals, bool has_texcoord) {
+void add_lines(obj_shape& shape, const vector<array<int, 2>>& lines,
+    int material, bool has_normals, bool has_texcoord) {
   for (auto idx = 0; idx < lines.size(); idx++) {
     auto& line = lines[idx];
     for (auto c = 0; c < 2; c++) {
@@ -2656,11 +2232,11 @@ void add_points(obj_shape& shape, const vector<int>& points, int material,
     shape.elements.push_back({1, obj_etype::point, material});
   }
 }
-void add_fvquads(obj_shape& shape, const vector<vec4i>& quadspos,
-    const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
-    int material) {
+void add_fvquads(obj_shape& shape, const vector<array<int, 4>>& quadspos,
+    const vector<array<int, 4>>& quadsnorm,
+    const vector<array<int, 4>>& quadstexcoord, int material) {
   for (auto idx = 0; idx < quadspos.size(); idx++) {
-    auto nv = quadspos[idx].z == quadspos[idx].w ? 3 : 4;
+    auto nv = quadspos[idx][2] == quadspos[idx][3] ? 3 : 4;
     for (auto c = 0; c < nv; c++) {
       shape.vertices.push_back({
           quadspos.empty() ? 0 : quadspos[idx][c] + 1,
@@ -2671,11 +2247,11 @@ void add_fvquads(obj_shape& shape, const vector<vec4i>& quadspos,
     shape.elements.push_back({(uint16_t)nv, obj_etype::face, material});
   }
 }
-void add_quads(obj_shape& shape, const vector<vec4i>& quads,
+void add_quads(obj_shape& shape, const vector<array<int, 4>>& quads,
     const vector<int>& materials, bool has_normals, bool has_texcoord) {
   for (auto idx = 0; idx < quads.size(); idx++) {
     auto& quad = quads[idx];
-    auto  nv   = quad.z == quad.w ? 3 : 4;
+    auto  nv   = quad[2] == quad[3] ? 3 : 4;
     for (auto c = 0; c < nv; c++) {
       shape.vertices.push_back({
           quad[c] + 1,
@@ -2686,7 +2262,7 @@ void add_quads(obj_shape& shape, const vector<vec4i>& quads,
     shape.elements.push_back({(uint16_t)nv, obj_etype::face, materials[idx]});
   }
 }
-void add_lines(obj_shape& shape, const vector<vec2i>& lines,
+void add_lines(obj_shape& shape, const vector<array<int, 2>>& lines,
     const vector<int>& materials, bool has_normals, bool has_texcoord) {
   for (auto idx = 0; idx < lines.size(); idx++) {
     auto& line = lines[idx];
@@ -2712,11 +2288,11 @@ void add_points(obj_shape& shape, const vector<int>& points,
     shape.elements.push_back({1, obj_etype::point, materials[idx]});
   }
 }
-void add_fvquads(obj_shape& shape, const vector<vec4i>& quadspos,
-    const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
-    const vector<int>& materials) {
+void add_fvquads(obj_shape& shape, const vector<array<int, 4>>& quadspos,
+    const vector<array<int, 4>>& quadsnorm,
+    const vector<array<int, 4>>& quadstexcoord, const vector<int>& materials) {
   for (auto idx = 0; idx < quadspos.size(); idx++) {
-    auto nv = quadspos[idx].z == quadspos[idx].w ? 3 : 4;
+    auto nv = quadspos[idx][2] == quadspos[idx][3] ? 3 : 4;
     for (auto c = 0; c < nv; c++) {
       shape.vertices.push_back({
           quadspos.empty() ? 0 : quadspos[idx][c] + 1,
@@ -2729,26 +2305,6 @@ void add_fvquads(obj_shape& shape, const vector<vec4i>& quadspos,
 }
 
 }  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// HELPER FOR StL
-// -----------------------------------------------------------------------------
-namespace std {
-
-// Hash functor for vector for use with hash_map
-template <>
-struct hash<yocto::vec3f> {
-  size_t operator()(const yocto::vec3f& v) const {
-    const std::hash<float> hasher = std::hash<float>();
-    auto                   h      = (size_t)0;
-    h ^= hasher(v.x) + 0x9e3779b9 + (h << 6) + (h >> 2);
-    h ^= hasher(v.y) + 0x9e3779b9 + (h << 6) + (h >> 2);
-    h ^= hasher(v.z) + 0x9e3779b9 + (h << 6) + (h >> 2);
-    return h;
-  }
-};
-
-}  // namespace std
 
 // -----------------------------------------------------------------------------
 // STL PARSING
@@ -2885,7 +2441,7 @@ bool load_stl(const string& filename, stl_model& stl, string& error,
         if (stl.shapes.back().triangles.empty() && last_pos != 0)
           return parse_error();
         if (!stl.shapes.back().triangles.empty() &&
-            last_pos != stl.shapes.back().triangles.back().z + 1)
+            last_pos != stl.shapes.back().triangles.back()[2] + 1)
           return parse_error();
         // add triangle
         stl.shapes.back().triangles.push_back(
@@ -2913,8 +2469,8 @@ bool load_stl(const string& filename, stl_model& stl, string& error,
   // make unique vertices
   if (unique_vertices) {
     for (auto& shape : stl.shapes) {
-      auto vertex_map       = unordered_map<vec3f, int>{};
-      auto unique_positions = vector<vec3f>{};
+      auto vertex_map       = unordered_map<array<float, 3>, int>{};
+      auto unique_positions = vector<array<float, 3>>{};
       for (auto& triangle : shape.triangles) {
         for (auto& vertex_id : triangle) {
           auto vertex_it = vertex_map.find(shape.positions[vertex_id]);
@@ -2939,11 +2495,6 @@ bool load_stl(const string& filename, stl_model& stl, string& error,
 
 bool save_stl(
     const string& filename, const stl_model& stl, string& error, bool ascii) {
-  // helper
-  auto triangle_normal = [](const vec3f& p0, const vec3f& p1, const vec3f& p2) {
-    return normalize(cross(p1 - p0, p2 - p0));
-  };
-
   // switch on format
   if (!ascii) {
     // buffer
@@ -2963,13 +2514,13 @@ bool save_stl(
         auto& triangle = shape.triangles[triangle_idx];
         auto  fnormal  = !shape.fnormals.empty()
                              ? shape.fnormals[triangle_idx]
-                             : triangle_normal(shape.positions[triangle.x],
-                                 shape.positions[triangle.y],
-                                 shape.positions[triangle.z]);
+                             : triangle_normal(shape.positions[triangle[0]],
+                                 shape.positions[triangle[1]],
+                                 shape.positions[triangle[2]]);
         write_value(buffer, fnormal);
-        write_value(buffer, shape.positions[triangle.x]);
-        write_value(buffer, shape.positions[triangle.y]);
-        write_value(buffer, shape.positions[triangle.z]);
+        write_value(buffer, shape.positions[triangle[0]]);
+        write_value(buffer, shape.positions[triangle[1]]);
+        write_value(buffer, shape.positions[triangle[2]]);
         auto attribute_count = (uint16_t)0;
         write_value(buffer, attribute_count);
       }
@@ -2988,14 +2539,14 @@ bool save_stl(
         auto& triangle = shape.triangles[triangle_idx];
         auto  fnormal  = !shape.fnormals.empty()
                              ? shape.fnormals[triangle_idx]
-                             : triangle_normal(shape.positions[triangle.x],
-                                 shape.positions[triangle.y],
-                                 shape.positions[triangle.z]);
+                             : triangle_normal(shape.positions[triangle[0]],
+                                 shape.positions[triangle[1]],
+                                 shape.positions[triangle[2]]);
         format_values(buffer, "facet normal {}\n", fnormal);
         format_values(buffer, "outer loop\n");
-        format_values(buffer, "vertex {}\n", shape.positions[triangle.x]);
-        format_values(buffer, "vertex {}\n", shape.positions[triangle.y]);
-        format_values(buffer, "vertex {}\n", shape.positions[triangle.z]);
+        format_values(buffer, "vertex {}\n", shape.positions[triangle[0]]);
+        format_values(buffer, "vertex {}\n", shape.positions[triangle[1]]);
+        format_values(buffer, "vertex {}\n", shape.positions[triangle[2]]);
         format_values(buffer, "endloop\n");
         format_values(buffer, "endfacet\n");
       }
@@ -3011,8 +2562,9 @@ bool save_stl(
 }
 
 // Get/set data
-bool get_triangles(const stl_model& stl, int shape_id, vector<vec3i>& triangles,
-    vector<vec3f>& positions, vector<vec3f>& fnormals) {
+bool get_triangles(const stl_model& stl, int shape_id,
+    vector<array<int, 3>>& triangles, vector<array<float, 3>>& positions,
+    vector<array<float, 3>>& fnormals) {
   if (shape_id < 0 || shape_id >= stl.shapes.size()) return false;
   auto& shape = stl.shapes.at(shape_id);
   triangles   = shape.triangles;
@@ -3020,8 +2572,9 @@ bool get_triangles(const stl_model& stl, int shape_id, vector<vec3i>& triangles,
   fnormals    = shape.fnormals;
   return true;
 }
-void add_triangles(stl_model& stl, const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, const vector<vec3f>& fnormals) {
+void add_triangles(stl_model& stl, const vector<array<int, 3>>& triangles,
+    const vector<array<float, 3>>& positions,
+    const vector<array<float, 3>>& fnormals) {
   auto& shape     = stl.shapes.emplace_back();
   shape.triangles = triangles;
   shape.positions = positions;
@@ -3045,27 +2598,31 @@ enum struct pbrt_type {
 
 // Pbrt value
 struct pbrt_value {
-  string        name     = "";
-  pbrt_type     type     = pbrt_type::real;
-  int           value1i  = 0;
-  float         value1f  = 0;
-  vec2f         value2f  = {0, 0};
-  vec3f         value3f  = {0, 0, 0};
-  bool          value1b  = false;
-  string        value1s  = "";
-  vector<float> vector1f = {};
-  vector<vec2f> vector2f = {};
-  vector<vec3f> vector3f = {};
-  vector<int>   vector1i = {};
+  string                  name     = "";
+  pbrt_type               type     = pbrt_type::real;
+  int                     value1i  = 0;
+  float                   value1f  = 0;
+  array<float, 2>         value2f  = {0, 0};
+  array<float, 3>         value3f  = {0, 0, 0};
+  bool                    value1b  = false;
+  string                  value1s  = "";
+  vector<float>           vector1f = {};
+  vector<array<float, 2>> vector2f = {};
+  vector<array<float, 3>> vector3f = {};
+  vector<int>             vector1i = {};
 };
 
 // Pbrt command
 struct pbrt_command {
-  string             name   = "";
-  string             type   = "";
-  vector<pbrt_value> values = {};
-  frame3f            frame  = identity3x4f;
-  frame3f            frend  = identity3x4f;
+  string                    name   = "";
+  string                    type   = "";
+  vector<pbrt_value>        values = {};
+  array<array<float, 3>, 4> frame  = {array<float, 3>{1, 0, 0},
+      array<float, 3>{0, 1, 0}, array<float, 3>{0, 0, 1},
+      array<float, 3>{0, 0, 0}};
+  array<array<float, 3>, 4> frend  = {array<float, 3>{1, 0, 0},
+      array<float, 3>{0, 1, 0}, array<float, 3>{0, 0, 1},
+      array<float, 3>{0, 0, 0}};
 };
 
 // get pbrt value
@@ -3102,7 +2659,7 @@ static bool get_pbrt_value(const pbrt_value& pbrt, float& val) {
   }
 }
 [[maybe_unused]] static bool get_pbrt_value(
-    const pbrt_value& pbrt, vec2f& val) {
+    const pbrt_value& pbrt, array<float, 2>& val) {
   if (pbrt.type == pbrt_type::point2 || pbrt.type == pbrt_type::vector2) {
     val = pbrt.value2f;
     return true;
@@ -3110,13 +2667,13 @@ static bool get_pbrt_value(const pbrt_value& pbrt, float& val) {
     return false;
   }
 }
-static bool get_pbrt_value(const pbrt_value& pbrt, vec3f& val) {
+static bool get_pbrt_value(const pbrt_value& pbrt, array<float, 3>& val) {
   if (pbrt.type == pbrt_type::point || pbrt.type == pbrt_type::vector ||
       pbrt.type == pbrt_type::normal || pbrt.type == pbrt_type::color) {
     val = pbrt.value3f;
     return true;
   } else if (pbrt.type == pbrt_type::real) {
-    val = vec3f{pbrt.value1f, pbrt.value1f, pbrt.value1f};
+    val = array<float, 3>{pbrt.value1f, pbrt.value1f, pbrt.value1f};
     return true;
   } else {
     return false;
@@ -3135,7 +2692,8 @@ static bool get_pbrt_value(const pbrt_value& pbrt, vec3f& val) {
     return false;
   }
 }
-static bool get_pbrt_value(const pbrt_value& pbrt, vector<vec2f>& val) {
+static bool get_pbrt_value(
+    const pbrt_value& pbrt, vector<array<float, 2>>& val) {
   if (pbrt.type == pbrt_type::point2 || pbrt.type == pbrt_type::vector2) {
     if (!pbrt.vector2f.empty()) {
       val = pbrt.vector2f;
@@ -3153,7 +2711,8 @@ static bool get_pbrt_value(const pbrt_value& pbrt, vector<vec2f>& val) {
     return false;
   }
 }
-static bool get_pbrt_value(const pbrt_value& pbrt, vector<vec3f>& val) {
+static bool get_pbrt_value(
+    const pbrt_value& pbrt, vector<array<float, 3>>& val) {
   if (pbrt.type == pbrt_type::point || pbrt.type == pbrt_type::vector ||
       pbrt.type == pbrt_type::normal || pbrt.type == pbrt_type::color) {
     if (!pbrt.vector3f.empty()) {
@@ -3187,7 +2746,7 @@ static bool get_pbrt_value(const pbrt_value& pbrt, vector<vec3f>& val) {
     return false;
   }
 }
-static bool get_pbrt_value(const pbrt_value& pbrt, vector<vec3i>& val) {
+static bool get_pbrt_value(const pbrt_value& pbrt, vector<array<int, 3>>& val) {
   if (pbrt.type == pbrt_type::integer) {
     if (pbrt.vector1i.empty() || (pbrt.vector1i.size() % 3) != 0) return false;
     val.resize(pbrt.vector1i.size() / 3);
@@ -3208,7 +2767,8 @@ static bool get_pbrt_value(const pbrt_value& pbrt, pair<float, string>& val) {
     return get_pbrt_value(pbrt, val.first);
   }
 }
-static bool get_pbrt_value(const pbrt_value& pbrt, pair<vec3f, string>& val) {
+static bool get_pbrt_value(
+    const pbrt_value& pbrt, pair<array<float, 3>, string>& val) {
   if (pbrt.type == pbrt_type::string || pbrt.type == pbrt_type::texture) {
     val.first = {0, 0, 0};
     return get_pbrt_value(pbrt, val.second);
@@ -3261,44 +2821,44 @@ static pbrt_value make_pbrt_value(
   pbrt.value1f = val;
   return pbrt;
 }
-[[maybe_unused]] static pbrt_value make_pbrt_value(
-    const string& name, const vec2f& val, pbrt_type type = pbrt_type::point2) {
+[[maybe_unused]] static pbrt_value make_pbrt_value(const string& name,
+    const array<float, 2>& val, pbrt_type type = pbrt_type::point2) {
   auto pbrt    = pbrt_value{};
   pbrt.name    = name;
   pbrt.type    = type;
   pbrt.value2f = val;
   return pbrt;
 }
-static pbrt_value make_pbrt_value(
-    const string& name, const vec3f& val, pbrt_type type = pbrt_type::color) {
+static pbrt_value make_pbrt_value(const string& name,
+    const array<float, 3>& val, pbrt_type type = pbrt_type::color) {
   auto pbrt    = pbrt_value{};
   pbrt.name    = name;
   pbrt.type    = type;
   pbrt.value3f = val;
   return pbrt;
 }
-static pbrt_value make_pbrt_value(const string& name, const vector<vec2f>& val,
-    pbrt_type type = pbrt_type::point2) {
+static pbrt_value make_pbrt_value(const string& name,
+    const vector<array<float, 2>>& val, pbrt_type type = pbrt_type::point2) {
   auto pbrt     = pbrt_value{};
   pbrt.name     = name;
   pbrt.type     = type;
   pbrt.vector2f = val;
   return pbrt;
 }
-static pbrt_value make_pbrt_value(const string& name, const vector<vec3f>& val,
-    pbrt_type type = pbrt_type::point) {
+static pbrt_value make_pbrt_value(const string& name,
+    const vector<array<float, 3>>& val, pbrt_type type = pbrt_type::point) {
   auto pbrt     = pbrt_value{};
   pbrt.name     = name;
   pbrt.type     = type;
   pbrt.vector3f = val;
   return pbrt;
 }
-static pbrt_value make_pbrt_value(const string& name, const vector<vec3i>& val,
-    pbrt_type type = pbrt_type::integer) {
+static pbrt_value make_pbrt_value(const string& name,
+    const vector<array<int, 3>>& val, pbrt_type type = pbrt_type::integer) {
   auto pbrt     = pbrt_value{};
   pbrt.name     = name;
   pbrt.type     = type;
-  pbrt.vector1i = {&val.front().x, &val.front().x + val.size() * 3};
+  pbrt.vector1i = {&val.front()[0], &val.front()[0] + val.size() * 3};
   return pbrt;
 }
 
@@ -3396,185 +2956,190 @@ template <typename T>
   return true;
 }
 
-static pair<vec3f, vec3f> get_etak(const string& name) {
-  static const unordered_map<string, pair<vec3f, vec3f>> metal_ior_table = {
-      {"a-C", {{2.9440999183f, 2.2271502925f, 1.9681668794f},
-                  {0.8874329109f, 0.7993216383f, 0.8152862927f}}},
-      {"Ag", {{0.1552646489f, 0.1167232965f, 0.1383806959f},
-                 {4.8283433224f, 3.1222459278f, 2.1469504455f}}},
-      {"Al", {{1.6574599595f, 0.8803689579f, 0.5212287346f},
-                 {9.2238691996f, 6.2695232477f, 4.8370012281f}}},
-      {"AlAs", {{3.6051023902f, 3.2329365777f, 2.2175611545f},
-                   {0.0006670247f, -0.0004999400f, 0.0074261204f}}},
-      {"AlSb", {{-0.0485225705f, 4.1427547893f, 4.6697691348f},
-                   {-0.0363741915f, 0.0937665154f, 1.3007390124f}}},
-      {"Au", {{0.1431189557f, 0.3749570432f, 1.4424785571f},
-                 {3.9831604247f, 2.3857207478f, 1.6032152899f}}},
-      {"Be", {{4.1850592788f, 3.1850604423f, 2.7840913457f},
-                 {3.8354398268f, 3.0101260162f, 2.8690088743f}}},
-      {"Cr", {{4.3696828663f, 2.9167024892f, 1.6547005413f},
-                 {5.2064337956f, 4.2313645277f, 3.7549467933f}}},
-      {"CsI", {{2.1449030413f, 1.7023164587f, 1.6624194173f},
-                  {0.0000000000f, 0.0000000000f, 0.0000000000f}}},
-      {"Cu", {{0.2004376970f, 0.9240334304f, 1.1022119527f},
-                 {3.9129485033f, 2.4528477015f, 2.1421879552f}}},
-      {"Cu2O", {{3.5492833755f, 2.9520622449f, 2.7369202137f},
-                   {0.1132179294f, 0.1946659670f, 0.6001681264f}}},
-      {"CuO", {{3.2453822204f, 2.4496293965f, 2.1974114493f},
-                  {0.5202739621f, 0.5707372756f, 0.7172250613f}}},
-      {"d-C", {{2.7112524747f, 2.3185812849f, 2.2288565009f},
-                  {0.0000000000f, 0.0000000000f, 0.0000000000f}}},
-      {"Hg", {{2.3989314904f, 1.4400254917f, 0.9095512090f},
-                 {6.3276269444f, 4.3719414152f, 3.4217899270f}}},
-      {"HgTe", {{4.7795267752f, 3.2309984581f, 2.6600252401f},
-                   {1.6319827058f, 1.5808189339f, 1.7295753852f}}},
-      {"Ir", {{3.0864098394f, 2.0821938440f, 1.6178866805f},
-                 {5.5921510077f, 4.0671757150f, 3.2672611269f}}},
-      {"K", {{0.0640493070f, 0.0464100621f, 0.0381842017f},
-                {2.1042155920f, 1.3489364357f, 0.9132113889f}}},
-      {"Li", {{0.2657871942f, 0.1956102432f, 0.2209198538f},
-                 {3.5401743407f, 2.3111306542f, 1.6685930000f}}},
-      {"MgO", {{2.0895885542f, 1.6507224525f, 1.5948759692f},
-                  {0.0000000000f, -0.0000000000f, 0.0000000000f}}},
-      {"Mo", {{4.4837010280f, 3.5254578255f, 2.7760769438f},
-                 {4.1111307988f, 3.4208716252f, 3.1506031404f}}},
-      {"Na", {{0.0602665320f, 0.0561412435f, 0.0619909494f},
-                 {3.1792906496f, 2.1124800781f, 1.5790940266f}}},
-      {"Nb", {{3.4201353595f, 2.7901921379f, 2.3955856658f},
-                 {3.4413817900f, 2.7376437930f, 2.5799132708f}}},
-      {"Ni", {{2.3672753521f, 1.6633583302f, 1.4670554172f},
-                 {4.4988329911f, 3.0501643957f, 2.3454274399f}}},
-      {"Rh", {{2.5857954933f, 1.8601866068f, 1.5544279524f},
-                 {6.7822927110f, 4.7029501026f, 3.9760892461f}}},
-      {"Se-e", {{5.7242724833f, 4.1653992967f, 4.0816099264f},
-                   {0.8713747439f, 1.1052845009f, 1.5647788766f}}},
-      {"Se", {{4.0592611085f, 2.8426947380f, 2.8207582835f},
-                 {0.7543791750f, 0.6385150558f, 0.5215872029f}}},
-      {"SiC", {{3.1723450205f, 2.5259677964f, 2.4793623897f},
-                  {0.0000007284f, -0.0000006859f, 0.0000100150f}}},
-      {"SnTe", {{4.5251865890f, 1.9811525984f, 1.2816819226f},
-                   {0.0000000000f, 0.0000000000f, 0.0000000000f}}},
-      {"Ta", {{2.0625846607f, 2.3930915569f, 2.6280684948f},
-                 {2.4080467973f, 1.7413705864f, 1.9470377016f}}},
-      {"Te-e", {{7.5090397678f, 4.2964603080f, 2.3698732430f},
-                   {5.5842076830f, 4.9476231084f, 3.9975145063f}}},
-      {"Te", {{7.3908396088f, 4.4821028985f, 2.6370708478f},
-                 {3.2561412892f, 3.5273908133f, 3.2921683116f}}},
-      {"ThF4", {{1.8307187117f, 1.4422274283f, 1.3876488528f},
-                   {0.0000000000f, 0.0000000000f, 0.0000000000f}}},
-      {"TiC", {{3.7004673762f, 2.8374356509f, 2.5823030278f},
-                  {3.2656905818f, 2.3515586388f, 2.1727857800f}}},
-      {"TiN", {{1.6484691607f, 1.1504482522f, 1.3797795097f},
-                  {3.3684596226f, 1.9434888540f, 1.1020123347f}}},
-      {"TiO2-e", {{3.1065574823f, 2.5131551146f, 2.5823844157f},
-                     {0.0000289537f, -0.0000251484f, 0.0001775555f}}},
-      {"TiO2", {{3.4566203131f, 2.8017076558f, 2.9051485020f},
-                   {0.0001026662f, -0.0000897534f, 0.0006356902f}}},
-      {"VC", {{3.6575665991f, 2.7527298065f, 2.5326814570f},
-                 {3.0683516659f, 2.1986687713f, 1.9631816252f}}},
-      {"VN", {{2.8656011588f, 2.1191817791f, 1.9400767149f},
-                 {3.0323264950f, 2.0561075580f, 1.6162930914f}}},
-      {"V", {{4.2775126218f, 3.5131538236f, 2.7611257461f},
-                {3.4911844504f, 2.8893580874f, 3.1116965117f}}},
-      {"W", {{4.3707029924f, 3.3002972445f, 2.9982666528f},
-                {3.5006778591f, 2.6048652781f, 2.2731930614f}}},
-  };
+static pair<array<float, 3>, array<float, 3>> get_etak(const string& name) {
+  static const unordered_map<string, pair<array<float, 3>, array<float, 3>>>
+      metal_ior_table = {
+          {"a-C", {{2.9440999183f, 2.2271502925f, 1.9681668794f},
+                      {0.8874329109f, 0.7993216383f, 0.8152862927f}}},
+          {"Ag", {{0.1552646489f, 0.1167232965f, 0.1383806959f},
+                     {4.8283433224f, 3.1222459278f, 2.1469504455f}}},
+          {"Al", {{1.6574599595f, 0.8803689579f, 0.5212287346f},
+                     {9.2238691996f, 6.2695232477f, 4.8370012281f}}},
+          {"AlAs", {{3.6051023902f, 3.2329365777f, 2.2175611545f},
+                       {0.0006670247f, -0.0004999400f, 0.0074261204f}}},
+          {"AlSb", {{-0.0485225705f, 4.1427547893f, 4.6697691348f},
+                       {-0.0363741915f, 0.0937665154f, 1.3007390124f}}},
+          {"Au", {{0.1431189557f, 0.3749570432f, 1.4424785571f},
+                     {3.9831604247f, 2.3857207478f, 1.6032152899f}}},
+          {"Be", {{4.1850592788f, 3.1850604423f, 2.7840913457f},
+                     {3.8354398268f, 3.0101260162f, 2.8690088743f}}},
+          {"Cr", {{4.3696828663f, 2.9167024892f, 1.6547005413f},
+                     {5.2064337956f, 4.2313645277f, 3.7549467933f}}},
+          {"CsI", {{2.1449030413f, 1.7023164587f, 1.6624194173f},
+                      {0.0000000000f, 0.0000000000f, 0.0000000000f}}},
+          {"Cu", {{0.2004376970f, 0.9240334304f, 1.1022119527f},
+                     {3.9129485033f, 2.4528477015f, 2.1421879552f}}},
+          {"Cu2O", {{3.5492833755f, 2.9520622449f, 2.7369202137f},
+                       {0.1132179294f, 0.1946659670f, 0.6001681264f}}},
+          {"CuO", {{3.2453822204f, 2.4496293965f, 2.1974114493f},
+                      {0.5202739621f, 0.5707372756f, 0.7172250613f}}},
+          {"d-C", {{2.7112524747f, 2.3185812849f, 2.2288565009f},
+                      {0.0000000000f, 0.0000000000f, 0.0000000000f}}},
+          {"Hg", {{2.3989314904f, 1.4400254917f, 0.9095512090f},
+                     {6.3276269444f, 4.3719414152f, 3.4217899270f}}},
+          {"HgTe", {{4.7795267752f, 3.2309984581f, 2.6600252401f},
+                       {1.6319827058f, 1.5808189339f, 1.7295753852f}}},
+          {"Ir", {{3.0864098394f, 2.0821938440f, 1.6178866805f},
+                     {5.5921510077f, 4.0671757150f, 3.2672611269f}}},
+          {"K", {{0.0640493070f, 0.0464100621f, 0.0381842017f},
+                    {2.1042155920f, 1.3489364357f, 0.9132113889f}}},
+          {"Li", {{0.2657871942f, 0.1956102432f, 0.2209198538f},
+                     {3.5401743407f, 2.3111306542f, 1.6685930000f}}},
+          {"MgO", {{2.0895885542f, 1.6507224525f, 1.5948759692f},
+                      {0.0000000000f, -0.0000000000f, 0.0000000000f}}},
+          {"Mo", {{4.4837010280f, 3.5254578255f, 2.7760769438f},
+                     {4.1111307988f, 3.4208716252f, 3.1506031404f}}},
+          {"Na", {{0.0602665320f, 0.0561412435f, 0.0619909494f},
+                     {3.1792906496f, 2.1124800781f, 1.5790940266f}}},
+          {"Nb", {{3.4201353595f, 2.7901921379f, 2.3955856658f},
+                     {3.4413817900f, 2.7376437930f, 2.5799132708f}}},
+          {"Ni", {{2.3672753521f, 1.6633583302f, 1.4670554172f},
+                     {4.4988329911f, 3.0501643957f, 2.3454274399f}}},
+          {"Rh", {{2.5857954933f, 1.8601866068f, 1.5544279524f},
+                     {6.7822927110f, 4.7029501026f, 3.9760892461f}}},
+          {"Se-e", {{5.7242724833f, 4.1653992967f, 4.0816099264f},
+                       {0.8713747439f, 1.1052845009f, 1.5647788766f}}},
+          {"Se", {{4.0592611085f, 2.8426947380f, 2.8207582835f},
+                     {0.7543791750f, 0.6385150558f, 0.5215872029f}}},
+          {"SiC", {{3.1723450205f, 2.5259677964f, 2.4793623897f},
+                      {0.0000007284f, -0.0000006859f, 0.0000100150f}}},
+          {"SnTe", {{4.5251865890f, 1.9811525984f, 1.2816819226f},
+                       {0.0000000000f, 0.0000000000f, 0.0000000000f}}},
+          {"Ta", {{2.0625846607f, 2.3930915569f, 2.6280684948f},
+                     {2.4080467973f, 1.7413705864f, 1.9470377016f}}},
+          {"Te-e", {{7.5090397678f, 4.2964603080f, 2.3698732430f},
+                       {5.5842076830f, 4.9476231084f, 3.9975145063f}}},
+          {"Te", {{7.3908396088f, 4.4821028985f, 2.6370708478f},
+                     {3.2561412892f, 3.5273908133f, 3.2921683116f}}},
+          {"ThF4", {{1.8307187117f, 1.4422274283f, 1.3876488528f},
+                       {0.0000000000f, 0.0000000000f, 0.0000000000f}}},
+          {"TiC", {{3.7004673762f, 2.8374356509f, 2.5823030278f},
+                      {3.2656905818f, 2.3515586388f, 2.1727857800f}}},
+          {"TiN", {{1.6484691607f, 1.1504482522f, 1.3797795097f},
+                      {3.3684596226f, 1.9434888540f, 1.1020123347f}}},
+          {"TiO2-e", {{3.1065574823f, 2.5131551146f, 2.5823844157f},
+                         {0.0000289537f, -0.0000251484f, 0.0001775555f}}},
+          {"TiO2", {{3.4566203131f, 2.8017076558f, 2.9051485020f},
+                       {0.0001026662f, -0.0000897534f, 0.0006356902f}}},
+          {"VC", {{3.6575665991f, 2.7527298065f, 2.5326814570f},
+                     {3.0683516659f, 2.1986687713f, 1.9631816252f}}},
+          {"VN", {{2.8656011588f, 2.1191817791f, 1.9400767149f},
+                     {3.0323264950f, 2.0561075580f, 1.6162930914f}}},
+          {"V", {{4.2775126218f, 3.5131538236f, 2.7611257461f},
+                    {3.4911844504f, 2.8893580874f, 3.1116965117f}}},
+          {"W", {{4.3707029924f, 3.3002972445f, 2.9982666528f},
+                    {3.5006778591f, 2.6048652781f, 2.2731930614f}}},
+      };
   return metal_ior_table.at(name);
 }
 
 // Pbrt measure subsurface parameters (sigma_prime_s, sigma_a in mm^-1)
 // from pbrt code at pbrt/code/medium.cpp
-[[maybe_unused]] static pair<vec3f, vec3f> get_subsurface(const string& name) {
-  static const unordered_map<string, pair<vec3f, vec3f>> params = {
-      // From "A Practical Model for Subsurface Light Transport"
-      // Jensen, Marschner, Levoy, Hanrahan
-      // Proc SIGGRAPH 2001
-      {"Apple", {{2.29f, 2.39f, 1.97f}, {0.0030f, 0.0034f, 0.046f}}},
-      {"Chicken1", {{0.15f, 0.21f, 0.38f}, {0.015f, 0.077f, 0.19f}}},
-      {"Chicken2", {{0.19f, 0.25f, 0.32f}, {0.018f, 0.088f, 0.20f}}},
-      {"Cream", {{7.38f, 5.47f, 3.15f}, {0.0002f, 0.0028f, 0.0163f}}},
-      {"Ketchup", {{0.18f, 0.07f, 0.03f}, {0.061f, 0.97f, 1.45f}}},
-      {"Marble", {{2.19f, 2.62f, 3.00f}, {0.0021f, 0.0041f, 0.0071f}}},
-      {"Potato", {{0.68f, 0.70f, 0.55f}, {0.0024f, 0.0090f, 0.12f}}},
-      {"Skimmilk", {{0.70f, 1.22f, 1.90f}, {0.0014f, 0.0025f, 0.0142f}}},
-      {"Skin1", {{0.74f, 0.88f, 1.01f}, {0.032f, 0.17f, 0.48f}}},
-      {"Skin2", {{1.09f, 1.59f, 1.79f}, {0.013f, 0.070f, 0.145f}}},
-      {"Spectralon", {{11.6f, 20.4f, 14.9f}, {0.00f, 0.00f, 0.00f}}},
-      {"Wholemilk", {{2.55f, 3.21f, 3.77f}, {0.0011f, 0.0024f, 0.014f}}},
-      // From "Acquiring Scattering Properties of Participating Media by
-      // Dilution",
-      // Narasimhan, Gupta, Donner, Ramamoorthi, Nayar, Jensen
-      // Proc SIGGRAPH 2006
-      {"Lowfat Milk",
-          {{0.89187f, 1.5136f, 2.532f}, {0.002875f, 0.00575f, 0.0115f}}},
-      {"Reduced Milk",
-          {{2.4858f, 3.1669f, 4.5214f}, {0.0025556f, 0.0051111f, 0.012778f}}},
-      {"Regular Milk",
-          {{4.5513f, 5.8294f, 7.136f}, {0.0015333f, 0.0046f, 0.019933f}}},
-      {"Espresso",
-          {{0.72378f, 0.84557f, 1.0247f}, {4.7984f, 6.5751f, 8.8493f}}},
-      {"Mint Mocha Coffee",
-          {{0.31602f, 0.38538f, 0.48131f}, {3.772f, 5.8228f, 7.82f}}},
-      {"Lowfat Soy Milk", {{0.30576f, 0.34233f, 0.61664f},
-                              {0.0014375f, 0.0071875f, 0.035937f}}},
-      {"Regular Soy Milk",
-          {{0.59223f, 0.73866f, 1.4693f}, {0.0019167f, 0.0095833f, 0.065167f}}},
-      {"Lowfat Chocolate Milk",
-          {{0.64925f, 0.83916f, 1.1057f}, {0.0115f, 0.0368f, 0.1564f}}},
-      {"Regular Chocolate Milk",
-          {{1.4585f, 2.1289f, 2.9527f}, {0.010063f, 0.043125f, 0.14375f}}},
-      {"Coke",
-          {{8.9053e-05f, 8.372e-05f, 0.0f}, {0.10014f, 0.16503f, 0.2468f}}},
-      {"Pepsi",
-          {{6.1697e-05f, 4.2564e-05f, 0.0f}, {0.091641f, 0.14158f, 0.20729f}}},
-      {"Sprite", {{6.0306e-06f, 6.4139e-06f, 6.5504e-06f},
-                     {0.001886f, 0.0018308f, 0.0020025f}}},
-      {"Gatorade", {{0.0024574f, 0.003007f, 0.0037325f},
-                       {0.024794f, 0.019289f, 0.008878f}}},
-      {"Chardonnay", {{1.7982e-05f, 1.3758e-05f, 1.2023e-05f},
-                         {0.010782f, 0.011855f, 0.023997f}}},
-      {"White Zinfandel", {{1.7501e-05f, 1.9069e-05f, 1.288e-05f},
-                              {0.012072f, 0.016184f, 0.019843f}}},
-      {"Merlot", {{2.1129e-05f, 0.0f, 0.0f}, {0.11632f, 0.25191f, 0.29434f}}},
-      {"Budweiser Beer", {{2.4356e-05f, 2.4079e-05f, 1.0564e-05f},
-                             {0.011492f, 0.024911f, 0.057786f}}},
-      {"Coors Light Beer",
-          {{5.0922e-05f, 4.301e-05f, 0.0f}, {0.006164f, 0.013984f, 0.034983f}}},
-      {"Clorox", {{0.0024035f, 0.0031373f, 0.003991f},
-                     {0.0033542f, 0.014892f, 0.026297f}}},
-      {"Apple Juice", {{0.00013612f, 0.00015836f, 0.000227f},
-                          {0.012957f, 0.023741f, 0.052184f}}},
-      {"Cranberry Juice", {{0.00010402f, 0.00011646f, 7.8139e-05f},
-                              {0.039437f, 0.094223f, 0.12426f}}},
-      {"Grape Juice",
-          {{5.382e-05f, 0.0f, 0.0f}, {0.10404f, 0.23958f, 0.29325f}}},
-      {"Ruby Grapefruit Juice",
-          {{0.011002f, 0.010927f, 0.011036f}, {0.085867f, 0.18314f, 0.25262f}}},
-      {"White Grapefruit Juice",
-          {{0.22826f, 0.23998f, 0.32748f}, {0.0138f, 0.018831f, 0.056781f}}},
-      {"Shampoo", {{0.0007176f, 0.0008303f, 0.0009016f},
-                      {0.014107f, 0.045693f, 0.061717f}}},
-      {"Strawberry Shampoo", {{0.00015671f, 0.00015947f, 1.518e-05f},
-                                 {0.01449f, 0.05796f, 0.075823f}}},
-      {"Head & Shoulders Shampoo",
-          {{0.023805f, 0.028804f, 0.034306f}, {0.084621f, 0.15688f, 0.20365f}}},
-      {"Lemon Tea Powder",
-          {{0.040224f, 0.045264f, 0.051081f}, {2.4288f, 4.5757f, 7.2127f}}},
-      {"Orange Powder", {{0.00015617f, 0.00017482f, 0.0001762f},
-                            {0.001449f, 0.003441f, 0.007863f}}},
-      {"Pink Lemonade Powder", {{0.00012103f, 0.00013073f, 0.00012528f},
-                                   {0.001165f, 0.002366f, 0.003195f}}},
-      {"Cappuccino Powder",
-          {{1.8436f, 2.5851f, 2.1662f}, {35.844f, 49.547f, 61.084f}}},
-      {"Salt Powder",
-          {{0.027333f, 0.032451f, 0.031979f}, {0.28415f, 0.3257f, 0.34148f}}},
-      {"Sugar Powder", {{0.00022272f, 0.00025513f, 0.000271f},
-                           {0.012638f, 0.031051f, 0.050124f}}},
-      {"Suisse Mocha Powder",
-          {{2.7979f, 3.5452f, 4.3365f}, {17.502f, 27.004f, 35.433f}}},
-      {"Pacific Ocean Surface Water", {{0.0001764f, 0.00032095f, 0.00019617f},
-                                          {0.031845f, 0.031324f, 0.030147f}}},
-  };
+[[maybe_unused]] static pair<array<float, 3>, array<float, 3>> get_subsurface(
+    const string& name) {
+  static const unordered_map<string, pair<array<float, 3>, array<float, 3>>>
+      params = {
+          // From "A Practical Model for Subsurface Light Transport"
+          // Jensen, Marschner, Levoy, Hanrahan
+          // Proc SIGGRAPH 2001
+          {"Apple", {{2.29f, 2.39f, 1.97f}, {0.0030f, 0.0034f, 0.046f}}},
+          {"Chicken1", {{0.15f, 0.21f, 0.38f}, {0.015f, 0.077f, 0.19f}}},
+          {"Chicken2", {{0.19f, 0.25f, 0.32f}, {0.018f, 0.088f, 0.20f}}},
+          {"Cream", {{7.38f, 5.47f, 3.15f}, {0.0002f, 0.0028f, 0.0163f}}},
+          {"Ketchup", {{0.18f, 0.07f, 0.03f}, {0.061f, 0.97f, 1.45f}}},
+          {"Marble", {{2.19f, 2.62f, 3.00f}, {0.0021f, 0.0041f, 0.0071f}}},
+          {"Potato", {{0.68f, 0.70f, 0.55f}, {0.0024f, 0.0090f, 0.12f}}},
+          {"Skimmilk", {{0.70f, 1.22f, 1.90f}, {0.0014f, 0.0025f, 0.0142f}}},
+          {"Skin1", {{0.74f, 0.88f, 1.01f}, {0.032f, 0.17f, 0.48f}}},
+          {"Skin2", {{1.09f, 1.59f, 1.79f}, {0.013f, 0.070f, 0.145f}}},
+          {"Spectralon", {{11.6f, 20.4f, 14.9f}, {0.00f, 0.00f, 0.00f}}},
+          {"Wholemilk", {{2.55f, 3.21f, 3.77f}, {0.0011f, 0.0024f, 0.014f}}},
+          // From "Acquiring Scattering Properties of Participating Media by
+          // Dilution",
+          // Narasimhan, Gupta, Donner, Ramamoorthi, Nayar, Jensen
+          // Proc SIGGRAPH 2006
+          {"Lowfat Milk",
+              {{0.89187f, 1.5136f, 2.532f}, {0.002875f, 0.00575f, 0.0115f}}},
+          {"Reduced Milk", {{2.4858f, 3.1669f, 4.5214f},
+                               {0.0025556f, 0.0051111f, 0.012778f}}},
+          {"Regular Milk",
+              {{4.5513f, 5.8294f, 7.136f}, {0.0015333f, 0.0046f, 0.019933f}}},
+          {"Espresso",
+              {{0.72378f, 0.84557f, 1.0247f}, {4.7984f, 6.5751f, 8.8493f}}},
+          {"Mint Mocha Coffee",
+              {{0.31602f, 0.38538f, 0.48131f}, {3.772f, 5.8228f, 7.82f}}},
+          {"Lowfat Soy Milk", {{0.30576f, 0.34233f, 0.61664f},
+                                  {0.0014375f, 0.0071875f, 0.035937f}}},
+          {"Regular Soy Milk", {{0.59223f, 0.73866f, 1.4693f},
+                                   {0.0019167f, 0.0095833f, 0.065167f}}},
+          {"Lowfat Chocolate Milk",
+              {{0.64925f, 0.83916f, 1.1057f}, {0.0115f, 0.0368f, 0.1564f}}},
+          {"Regular Chocolate Milk",
+              {{1.4585f, 2.1289f, 2.9527f}, {0.010063f, 0.043125f, 0.14375f}}},
+          {"Coke",
+              {{8.9053e-05f, 8.372e-05f, 0.0f}, {0.10014f, 0.16503f, 0.2468f}}},
+          {"Pepsi", {{6.1697e-05f, 4.2564e-05f, 0.0f},
+                        {0.091641f, 0.14158f, 0.20729f}}},
+          {"Sprite", {{6.0306e-06f, 6.4139e-06f, 6.5504e-06f},
+                         {0.001886f, 0.0018308f, 0.0020025f}}},
+          {"Gatorade", {{0.0024574f, 0.003007f, 0.0037325f},
+                           {0.024794f, 0.019289f, 0.008878f}}},
+          {"Chardonnay", {{1.7982e-05f, 1.3758e-05f, 1.2023e-05f},
+                             {0.010782f, 0.011855f, 0.023997f}}},
+          {"White Zinfandel", {{1.7501e-05f, 1.9069e-05f, 1.288e-05f},
+                                  {0.012072f, 0.016184f, 0.019843f}}},
+          {"Merlot",
+              {{2.1129e-05f, 0.0f, 0.0f}, {0.11632f, 0.25191f, 0.29434f}}},
+          {"Budweiser Beer", {{2.4356e-05f, 2.4079e-05f, 1.0564e-05f},
+                                 {0.011492f, 0.024911f, 0.057786f}}},
+          {"Coors Light Beer", {{5.0922e-05f, 4.301e-05f, 0.0f},
+                                   {0.006164f, 0.013984f, 0.034983f}}},
+          {"Clorox", {{0.0024035f, 0.0031373f, 0.003991f},
+                         {0.0033542f, 0.014892f, 0.026297f}}},
+          {"Apple Juice", {{0.00013612f, 0.00015836f, 0.000227f},
+                              {0.012957f, 0.023741f, 0.052184f}}},
+          {"Cranberry Juice", {{0.00010402f, 0.00011646f, 7.8139e-05f},
+                                  {0.039437f, 0.094223f, 0.12426f}}},
+          {"Grape Juice",
+              {{5.382e-05f, 0.0f, 0.0f}, {0.10404f, 0.23958f, 0.29325f}}},
+          {"Ruby Grapefruit Juice", {{0.011002f, 0.010927f, 0.011036f},
+                                        {0.085867f, 0.18314f, 0.25262f}}},
+          {"White Grapefruit Juice", {{0.22826f, 0.23998f, 0.32748f},
+                                         {0.0138f, 0.018831f, 0.056781f}}},
+          {"Shampoo", {{0.0007176f, 0.0008303f, 0.0009016f},
+                          {0.014107f, 0.045693f, 0.061717f}}},
+          {"Strawberry Shampoo", {{0.00015671f, 0.00015947f, 1.518e-05f},
+                                     {0.01449f, 0.05796f, 0.075823f}}},
+          {"Head & Shoulders Shampoo", {{0.023805f, 0.028804f, 0.034306f},
+                                           {0.084621f, 0.15688f, 0.20365f}}},
+          {"Lemon Tea Powder",
+              {{0.040224f, 0.045264f, 0.051081f}, {2.4288f, 4.5757f, 7.2127f}}},
+          {"Orange Powder", {{0.00015617f, 0.00017482f, 0.0001762f},
+                                {0.001449f, 0.003441f, 0.007863f}}},
+          {"Pink Lemonade Powder", {{0.00012103f, 0.00013073f, 0.00012528f},
+                                       {0.001165f, 0.002366f, 0.003195f}}},
+          {"Cappuccino Powder",
+              {{1.8436f, 2.5851f, 2.1662f}, {35.844f, 49.547f, 61.084f}}},
+          {"Salt Powder", {{0.027333f, 0.032451f, 0.031979f},
+                              {0.28415f, 0.3257f, 0.34148f}}},
+          {"Sugar Powder", {{0.00022272f, 0.00025513f, 0.000271f},
+                               {0.012638f, 0.031051f, 0.050124f}}},
+          {"Suisse Mocha Powder",
+              {{2.7979f, 3.5452f, 4.3365f}, {17.502f, 27.004f, 35.433f}}},
+          {"Pacific Ocean Surface Water",
+              {{0.0001764f, 0.00032095f, 0.00019617f},
+                  {0.031845f, 0.031324f, 0.030147f}}},
+      };
   return params.at(name);
 }
 
@@ -3603,6 +3168,40 @@ template <typename T, typename V>
     if (!parse_value(str, value)) return false;
   }
   return true;
+}
+
+// Approximate color of blackbody radiation from wavelength in nm.
+static array<float, 3> blackbody_to_rgb_(float temperature) {
+  // clamp to valid range
+  auto t = std::min(std::max(temperature, 1667.0f), 25000.0f) / 1000.0f;
+  // compute x
+  auto x = 0.0f;
+  if (temperature < 4000.0f) {
+    x = -0.2661239f * 1 / (t * t * t) - 0.2343589f * 1 / (t * t) +
+        0.8776956f * (1 / t) + 0.179910f;
+  } else {
+    x = -3.0258469f * 1 / (t * t * t) + 2.1070379f * 1 / (t * t) +
+        0.2226347f * (1 / t) + 0.240390f;
+  }
+  // compute y
+  auto y = 0.0f;
+  if (temperature < 2222.0f) {
+    y = -1.1063814f * (x * x * x) - 1.34811020f * (x * x) + 2.18555832f * x -
+        0.20219683f;
+  } else if (temperature < 4000.0f) {
+    y = -0.9549476f * (x * x * x) - 1.37418593f * (x * x) + 2.09137015f * x -
+        0.16748867f;
+  } else {
+    y = +3.0817580f * (x * x * x) - 5.87338670f * (x * x) + 3.75112997f * x -
+        0.37001483f;
+  }
+  auto xyY = array<float, 3>{x, y, 1};
+  auto xyz = array<float, 3>{xyY[0] * xyY[2] / xyY[1], xyY[2],
+      (1 - xyY[0] - xyY[1]) * xyY[2] / xyY[1]};
+  auto rgb = add(mul(array<float, 3>{+3.2406f, -0.9689f, +0.0557f}, xyz[0]),
+      add(mul(array<float, 3>{-1.5372f, +1.8758f, -0.2040f}, xyz[1]),
+          mul(array<float, 3>{-0.4986f, +0.0415f, +1.0570f}, xyz[2])));
+  return rgb;
 }
 
 [[nodiscard]] static bool parse_params(
@@ -3665,17 +3264,17 @@ template <typename T, typename V>
     } else if (type == "blackbody") {
       value.type = pbrt_type::color;
       // auto blackbody = zero2f;
-      // auto vec tor2f  = vector<vec2f>{};
+      // auto vec tor2f  = vector<array<float, 2>>{};
       // parse_pvalues(str, blackbody, vector2f);
       // if (!vector2f.empty()) return false;
-      // value.value3f = blackbody_to_rgb(blackbody.x) * blackbody.y;
+      // value.value3f = blackbody_to_rgb(blackbody[0]) * blackbody[1];
       auto blackbody = 0.0f;
       auto vector1f  = vector<float>{};
       if (!parse_pvalues(str, blackbody, vector1f)) return false;
       if (vector1f.size() < 2) {
-        value.value3f = blackbody_to_rgb(blackbody);
+        value.value3f = blackbody_to_rgb_(blackbody);
       } else {
-        value.value3f = blackbody_to_rgb(vector1f[0]) * vector1f[1];
+        value.value3f = mul(blackbody_to_rgb_(vector1f[0]), vector1f[1]);
       }
     } else if (type == "color" || type == "rgb") {
       value.type = pbrt_type::color;
@@ -3719,11 +3318,11 @@ template <typename T, typename V>
           } else if (ends_with(name, ".eta")) {
             name.remove_suffix(4);
             auto eta      = get_etak(string{name}).first;
-            value.value3f = {eta.x, eta.y, eta.z};
+            value.value3f = {eta[0], eta[1], eta[2]};
           } else if (ends_with(name, ".k")) {
             name.remove_suffix(2);
             auto k        = get_etak(string{name}).second;
-            value.value3f = {k.x, k.y, k.z};
+            value.value3f = {k[0], k[1], k[2]};
           } else {
             return false;
           }
@@ -3732,11 +3331,11 @@ template <typename T, typename V>
           if (ends_with(name, "-eta")) {
             name.remove_suffix(4);
             auto eta      = get_etak(string{name}).first;
-            value.value3f = {eta.x, eta.y, eta.z};
+            value.value3f = {eta[0], eta[1], eta[2]};
           } else if (ends_with(name, "-k")) {
             name.remove_suffix(2);
             auto k        = get_etak(string{name}).second;
-            value.value3f = {k.x, k.y, k.z};
+            value.value3f = {k[0], k[1], k[2]};
           } else {
             return false;
           }
@@ -3760,15 +3359,15 @@ template <typename T, typename V>
 // Other pbrt elements
 struct pbrt_film {
   // film approximation
-  string filename   = "";
-  vec2i  resolution = {0, 0};
+  string        filename   = "";
+  array<int, 2> resolution = {0, 0};
 };
 
 // Pbrt area light
 struct pbrt_arealight {
   // arealight parameters
-  string name     = "";
-  vec3f  emission = {0, 0, 0};
+  string          name     = "";
+  array<float, 3> emission = {0, 0, 0};
 };
 
 // Pbrt medium. Not parsed at the moment.
@@ -3782,14 +3381,14 @@ struct pbrt_medium {
     const pbrt_command& command, const string& filename, bool verbose = false) {
   if (command.type == "image") {
     film.resolution = {512, 512};
-    get_pbrt_value(command.values, "xresolution", film.resolution.x);
-    get_pbrt_value(command.values, "yresolution", film.resolution.y);
+    get_pbrt_value(command.values, "xresolution", film.resolution[0]);
+    get_pbrt_value(command.values, "yresolution", film.resolution[1]);
     film.filename = "out.png"s;
     get_pbrt_value(command.values, "filename", film.filename);
   } else if (command.type == "rgb") {
     film.resolution = {512, 512};
-    get_pbrt_value(command.values, "xresolution", film.resolution.x);
-    get_pbrt_value(command.values, "yresolution", film.resolution.y);
+    get_pbrt_value(command.values, "xresolution", film.resolution[0]);
+    get_pbrt_value(command.values, "yresolution", film.resolution[1]);
     film.filename = "out.png"s;
     get_pbrt_value(command.values, "filename", film.filename);
   } else {
@@ -3800,24 +3399,29 @@ struct pbrt_medium {
 
 // convert pbrt elements
 [[nodiscard]] static bool convert_camera(pbrt_camera& pcamera,
-    const pbrt_command& command, const vec2i& resolution,
+    const pbrt_command& command, const array<int, 2>& resolution,
     const string& filename, bool verbose = false) {
-  pcamera.frame      = command.frame;
-  pcamera.frend      = command.frend;
-  pcamera.frame      = inverse((frame3f)pcamera.frame);
-  pcamera.frame.z    = -pcamera.frame.z;
+  auto cframe        = inverse(command.frame);
+  cframe[2]          = neg(cframe[2]);
+  auto cfrend        = inverse(command.frend);
+  cfrend[2]          = neg(cfrend[2]);
+  pcamera.frame      = flatten(cframe);
+  pcamera.frend      = flatten(cfrend);
   pcamera.resolution = resolution;
-  auto film_aspect =
-      (resolution == zero2i) ? 1 : (float)resolution.x / (float)resolution.y;
+  auto film_aspect   = (resolution[0] == 0 || resolution[1] == 0)
+                           ? 1
+                           : (float)resolution[0] / (float)resolution[1];
   if (command.type == "perspective") {
     auto fov = 90.0f;
     get_pbrt_value(command.values, "fov", fov);
     // auto lensradius = if(!get_pbrt_value(values, "lensradius", 0.0f);
     pcamera.aspect = film_aspect;
     if (pcamera.aspect >= 1) {
-      pcamera.lens = (0.036f / pcamera.aspect) / (2 * tan(radians(fov) / 2));
+      pcamera.lens = (0.036f / pcamera.aspect) /
+                     (2 * std::tan((fov * (float)M_PI / 180) / 2));
     } else {
-      pcamera.lens = (0.036f * pcamera.aspect) / (2 * tan(radians(fov) / 2));
+      pcamera.lens = (0.036f * pcamera.aspect) /
+                     (2 * std::tan((fov * (float)M_PI / 180) / 2));
     }
     get_pbrt_value(command.values, "frameaspectratio", pcamera.aspect);
     pcamera.focus = 10.0f;
@@ -3825,11 +3429,11 @@ struct pbrt_medium {
   } else if (command.type == "realistic") {
     auto lensfile = ""s;
     get_pbrt_value(command.values, "lensfile", lensfile);
-    lensfile         = lensfile.substr(0, lensfile.size() - 4);
-    lensfile         = lensfile.substr(lensfile.find('.') + 1);
-    lensfile         = lensfile.substr(0, lensfile.size() - 2);
-    auto lens        = max((float)std::atof(lensfile.c_str()), 35.0f) * 0.001f;
-    pcamera.lens     = 2 * atan(0.036f / (2 * lens));
+    lensfile     = lensfile.substr(0, lensfile.size() - 4);
+    lensfile     = lensfile.substr(lensfile.find('.') + 1);
+    lensfile     = lensfile.substr(0, lensfile.size() - 2);
+    auto lens    = std::max((float)std::atof(lensfile.c_str()), 35.0f) * 0.001f;
+    pcamera.lens = 2 * atan(0.036f / (2 * lens));
     pcamera.aperture = 0.0f;
     get_pbrt_value(command.values, "aperturediameter", pcamera.aperture);
     pcamera.focus = 10.0f;
@@ -3858,22 +3462,22 @@ struct pbrt_medium {
     ptexture.filename = "";
     get_pbrt_value(command.values, "filename", ptexture.filename);
   } else if (command.type == "constant") {
-    ptexture.constant = vec3f{1, 1, 1};
+    ptexture.constant = array<float, 3>{1, 1, 1};
     get_pbrt_value(command.values, "value", ptexture.constant);
   } else if (command.type == "bilerp") {
     ptexture.constant = {1, 0, 0};
   } else if (command.type == "checkerboard") {
     // auto tex1     = if(!get_pbrt_value(command.values, "tex1",
-    // pair{vec3f{1,1,1},
+    // pair{array<float, 3>{1,1,1},
     // ""s}); auto tex2     = if(!get_pbrt_value(command.values, "tex2",
-    //  pair{vec3f{0}, ""s}); auto rgb1     = tex1.second == "" ?
+    //  pair{array<float, 3>{0}, ""s}); auto rgb1     = tex1.second == "" ?
     //  tex1.first :
-    // vec3f{0.4f, 0.4f, 0.4f}; auto rgb2     = tex1.second == "" ? tex2.first
-    // : vec3f{0.6f, 0.6f, 0.6f}; auto params   = proc_image_params{};
-    // params.type = proc_image_params::type_t::checker; params.color0 =
-    // {rgb1.x, rgb1.y, rgb1.z, 1}; params.color1 = {rgb2.x, rgb2.y, rgb2.z,
-    // 1}; params.scale = 2; make_proc_image(texture.hdr, params);
-    // float_to_byte(texture.ldr, texture.hdr); texture.hdr = {};
+    // array<float, 3>{0.4f, 0.4f, 0.4f}; auto rgb2     = tex1.second == "" ?
+    // tex2.first : array<float, 3>{0.6f, 0.6f, 0.6f}; auto params   =
+    // proc_image_params{}; params.type = proc_image_params::type_t::checker;
+    // params.color0 = {rgb1[0], rgb1[1], rgb1[2], 1}; params.color1 = {rgb2[0],
+    // rgb2[1], rgb2[2], 1}; params.scale = 2; make_proc_image(texture.hdr,
+    // params); float_to_byte(texture.ldr, texture.hdr); texture.hdr = {};
     ptexture.constant = {0.5, 0.5, 0.5};
   } else if (command.type == "dots") {
     ptexture.constant = {0.5, 0.5, 0.5};
@@ -3882,7 +3486,8 @@ struct pbrt_medium {
   } else if (command.type == "marble") {
     ptexture.constant = {0.5, 0.5, 0.5};
   } else if (command.type == "mix") {
-    auto tex1 = pair{vec3f{0, 0, 0}, ""s}, tex2 = pair{vec3f{1, 1, 1}, ""s};
+    auto tex1 = pair{array<float, 3>{0, 0, 0}, ""s},
+         tex2 = pair{array<float, 3>{1, 1, 1}, ""s};
     get_pbrt_value(command.values, "tex1", tex1);
     get_pbrt_value(command.values, "tex2", tex2);
     if (!make_filename(tex1.second).empty()) {
@@ -3893,7 +3498,8 @@ struct pbrt_medium {
       ptexture.constant = {1, 0, 0};
     }
   } else if (command.type == "scale") {
-    auto tex1 = pair{vec3f{1, 1, 1}, ""s}, tex2 = pair{vec3f{1, 1, 1}, ""s};
+    auto tex1 = pair{array<float, 3>{1, 1, 1}, ""s},
+         tex2 = pair{array<float, 3>{1, 1, 1}, ""s};
     get_pbrt_value(command.values, "tex1", tex2);
     get_pbrt_value(command.values, "tex2", tex1);
     if (!make_filename(tex1.second).empty()) {
@@ -3934,7 +3540,8 @@ struct pbrt_medium {
     }
   };
   auto get_texture = [&](const vector<pbrt_value>& values, const string& name,
-                         vec3f& color, int& texture_id, const vec3f& def) {
+                         array<float, 3>& color, int& texture_id,
+                         const array<float, 3>& def) {
     auto textured = pair{def, ""s};
     get_pbrt_value(values, name, textured);
     if (textured.second.empty()) {
@@ -3953,21 +3560,23 @@ struct pbrt_medium {
   };
   auto get_scalar = [&](const vector<pbrt_value>& values, const string& name,
                         float& scalar, float def) {
-    auto textured = pair{vec3f{def, def, def}, ""s};
+    auto textured = pair{array<float, 3>{def, def, def}, ""s};
     get_pbrt_value(values, name, textured);
     if (textured.second.empty()) {
-      scalar = mean(textured.first);
+      scalar = (textured.first[0] + textured.first[1] + textured.first[2]) / 3;
     } else {
       auto& texture = named_textures.at(textured.second);
       if (texture.filename.empty()) {
-        scalar = mean(texture.constant);
+        scalar =
+            (texture.constant[0] + texture.constant[1] + texture.constant[2]) /
+            3;
       } else {
         scalar = def;
       }
     }
   };
   auto get_color = [&](const vector<pbrt_value>& values, const string& name,
-                       vec3f& color, const vec3f& def) {
+                       array<float, 3>& color, const array<float, 3>& def) {
     auto textured = pair{def, ""s};
     get_pbrt_value(values, name, textured);
     if (textured.second.empty()) {
@@ -3984,7 +3593,7 @@ struct pbrt_medium {
 
   auto get_roughness = [&](const vector<pbrt_value>& values, float& roughness,
                            float def = 0.1) {
-    auto roughness_ = pair{vec3f{def, def, def}, ""s};
+    auto roughness_ = pair{array<float, 3>{def, def, def}, ""s};
     get_pbrt_value(values, "roughness", roughness_);
     auto uroughness = roughness_, vroughness = roughness_;
     auto remaproughness = true;
@@ -3993,13 +3602,17 @@ struct pbrt_medium {
     get_pbrt_value(values, "remaproughness", remaproughness);
 
     roughness = 0;
-    if (uroughness.first == vec3f{0, 0, 0} ||
-        vroughness.first == vec3f{0, 0, 0})
+    if (uroughness.first == array<float, 3>{0, 0, 0} ||
+        vroughness.first == array<float, 3>{0, 0, 0})
       return;
-    roughness = mean(vec2f{mean(uroughness.first), mean(vroughness.first)});
+    auto uroughness_mean =
+        (uroughness.first[0], uroughness.first[1], uroughness.first[2]) / 3;
+    auto vroughness_mean =
+        (vroughness.first[0], vroughness.first[1], vroughness.first[2]) / 3;
+    roughness = (uroughness_mean + vroughness_mean) / 2;
     // from pbrt code
     if (remaproughness) {
-      roughness = max(roughness, 1e-3f);
+      roughness = std::max(roughness, 1e-3f);
       auto x    = log(roughness);
       roughness = 1.62142f + 0.819955f * x + 0.1734f * x * x +
                   0.0171201f * x * x * x + 0.000640711f * x * x * x * x;
@@ -4007,28 +3620,37 @@ struct pbrt_medium {
     roughness = sqrt(roughness);
   };
 
-  auto eta_to_reflectivity = [](const vec3f&  eta,
-                                 const vec3f& etak = {0, 0, 0}) -> vec3f {
+  auto eta_to_reflectivity1 = [](float eta, float etak) -> float {
     return ((eta - 1) * (eta - 1) + etak * etak) /
            ((eta + 1) * (eta + 1) + etak * etak);
+  };
+  auto eta_to_reflectivity =
+      [&](const array<float, 3>& eta,
+          const array<float, 3>& etak = {0, 0, 0}) -> array<float, 3> {
+    return {eta_to_reflectivity1(eta[0], etak[0]),
+        eta_to_reflectivity1(eta[1], etak[1]),
+        eta_to_reflectivity1(eta[2], etak[2])};
   };
 
   pmaterial.name = command.name;
   if (command.type == "uber") {
-    auto diffuse = vec3f{0, 0, 0}, specular = vec3f{0, 0, 0},
-         transmission = vec3f{0, 0, 0};
+    auto diffuse      = array<float, 3>{0, 0, 0},
+         specular     = array<float, 3>{0, 0, 0},
+         transmission = array<float, 3>{0, 0, 0};
     auto diffuse_map = -1, specular_map = -1, transmission_map = -1;
-    get_texture(
-        command.values, "Kd", diffuse, diffuse_map, vec3f{0.25, 0.25, 0.25});
-    get_texture(
-        command.values, "Ks", specular, specular_map, vec3f{0.25, 0.25, 0.25});
-    get_texture(
-        command.values, "Kt", transmission, transmission_map, vec3f{0, 0, 0});
-    if (max(transmission) > 0.1) {
+    get_texture(command.values, "Kd", diffuse, diffuse_map,
+        array<float, 3>{0.25, 0.25, 0.25});
+    get_texture(command.values, "Ks", specular, specular_map,
+        array<float, 3>{0.25, 0.25, 0.25});
+    get_texture(command.values, "Kt", transmission, transmission_map,
+        array<float, 3>{0, 0, 0});
+    if (std::max(transmission[0], std::max(transmission[1], transmission[2])) >
+        0.1) {
       pmaterial.type      = pbrt_mtype::thinglass;
       pmaterial.color     = transmission;
       pmaterial.color_tex = transmission_map;
-    } else if (max(specular) > 0.1) {
+    } else if (std::max(specular[0], std::max(specular[1], specular[2])) >
+               0.1) {
       pmaterial.type      = pbrt_mtype::plastic;
       pmaterial.color     = diffuse;
       pmaterial.color_tex = diffuse_map;
@@ -4043,7 +3665,7 @@ struct pbrt_medium {
   } else if (command.type == "plastic") {
     pmaterial.type = pbrt_mtype::plastic;
     get_texture(command.values, "Kd", pmaterial.color, pmaterial.color_tex,
-        vec3f{0.25, 0.25, 0.25});
+        array<float, 3>{0.25, 0.25, 0.25});
     // get_scalar(command.values, "Ks", pmaterial.specular, 0.25))
     //   return parse_error();
     get_scalar(command.values, "eta", pmaterial.ior, 1.5f);
@@ -4052,7 +3674,7 @@ struct pbrt_medium {
   } else if (command.type == "coateddiffuse") {
     pmaterial.type = pbrt_mtype::plastic;
     get_texture(command.values, "reflectance", pmaterial.color,
-        pmaterial.color_tex, vec3f{0.25, 0.25, 0.25});
+        pmaterial.color_tex, array<float, 3>{0.25, 0.25, 0.25});
     get_scalar(command.values, "eta", pmaterial.ior, 1.5f);
     pmaterial.roughness = 0.1f;
     get_roughness(command.values, pmaterial.roughness, 0.1f);
@@ -4060,7 +3682,7 @@ struct pbrt_medium {
     // not well supported yet
     pmaterial.type = pbrt_mtype::matte;
     get_texture(command.values, "Kd", pmaterial.color, pmaterial.color_tex,
-        vec3f{0.25, 0.25, 0.25});
+        array<float, 3>{0.25, 0.25, 0.25});
     // get_scalar(command.values, "Ks", pmaterial.specular, 0.25))
     //   return parse_error();
     // get_scalar(command.values, "eta", pmaterial.ior, 1.5))
@@ -4071,53 +3693,53 @@ struct pbrt_medium {
     // not well supported yet
     pmaterial.type = pbrt_mtype::matte;
     get_texture(command.values, "reflectance", pmaterial.color,
-        pmaterial.color_tex, vec3f{0.25f, 0.25f, 0.25f});
+        pmaterial.color_tex, array<float, 3>{0.25f, 0.25f, 0.25f});
     // get_texture(command.values, "transmittance", pmaterial.color,
-    //         pmaterial.color_tex, vec3f{0.25, 0.25, 0.25}))
+    //         pmaterial.color_tex, array<float, 3>{0.25, 0.25, 0.25}))
     //   return parse_error();
   } else if (command.type == "matte") {
     pmaterial.type = pbrt_mtype::matte;
     get_texture(command.values, "Kd", pmaterial.color, pmaterial.color_tex,
-        vec3f{0.5, 0.5, 0.5});
+        array<float, 3>{0.5, 0.5, 0.5});
   } else if (command.type == "diffuse") {
     pmaterial.type = pbrt_mtype::matte;
     get_texture(command.values, "reflectance", pmaterial.color,
-        pmaterial.color_tex, vec3f{0.5f, 0.5f, 0.5f});
+        pmaterial.color_tex, array<float, 3>{0.5f, 0.5f, 0.5f});
   } else if (command.type == "mirror") {
     pmaterial.type = pbrt_mtype::metal;
     get_texture(command.values, "Kr", pmaterial.color, pmaterial.color_tex,
-        vec3f{0.9f, 0.9f, 0.9f});
+        array<float, 3>{0.9f, 0.9f, 0.9f});
     pmaterial.roughness = 0;
   } else if (command.type == "metal") {
     pmaterial.type = pbrt_mtype::metal;
     // get_texture(
     //     values, "Kr", material->specular, material->specular_tex,
-    //     vec3f{1,1,1});
-    auto eta = vec3f{0, 0, 0}, etak = vec3f{0, 0, 0};
+    //     array<float, 3>{1,1,1});
+    auto eta = array<float, 3>{0, 0, 0}, etak = array<float, 3>{0, 0, 0};
     get_color(command.values, "eta", eta,
-        vec3f{0.2004376970f, 0.9240334304f, 1.1022119527f});
+        array<float, 3>{0.2004376970f, 0.9240334304f, 1.1022119527f});
     get_color(command.values, "k", etak,
-        vec3f{3.9129485033f, 2.4528477015f, 2.1421879552f});
+        array<float, 3>{3.9129485033f, 2.4528477015f, 2.1421879552f});
     pmaterial.color     = eta_to_reflectivity(eta, etak);
     pmaterial.roughness = 0.01f;
     get_roughness(command.values, pmaterial.roughness, 0.01f);
   } else if (command.type == "conductor") {
     pmaterial.type = pbrt_mtype::metal;
-    auto eta = vec3f{0, 0, 0}, etak = vec3f{0, 0, 0};
+    auto eta = array<float, 3>{0, 0, 0}, etak = array<float, 3>{0, 0, 0};
     get_color(command.values, "eta", eta,
-        vec3f{0.2004376970f, 0.9240334304f, 1.1022119527f});
+        array<float, 3>{0.2004376970f, 0.9240334304f, 1.1022119527f});
     get_color(command.values, "k", etak,
-        vec3f{3.9129485033f, 2.4528477015f, 2.1421879552f});
+        array<float, 3>{3.9129485033f, 2.4528477015f, 2.1421879552f});
     pmaterial.color     = eta_to_reflectivity(eta, etak);
     pmaterial.roughness = 0.01f;
     get_roughness(command.values, pmaterial.roughness, 0.01f);
   } else if (command.type == "coatedconductor") {
     pmaterial.type = pbrt_mtype::metal;
-    auto eta = vec3f{0, 0, 0}, etak = vec3f{0, 0, 0};
+    auto eta = array<float, 3>{0, 0, 0}, etak = array<float, 3>{0, 0, 0};
     get_color(command.values, "conductor.eta", eta,
-        vec3f{0.2004376970f, 0.9240334304f, 1.1022119527f});
+        array<float, 3>{0.2004376970f, 0.9240334304f, 1.1022119527f});
     get_color(command.values, "conductor.k", etak,
-        vec3f{3.9129485033f, 2.4528477015f, 2.1421879552f});
+        array<float, 3>{3.9129485033f, 2.4528477015f, 2.1421879552f});
     pmaterial.color     = eta_to_reflectivity(eta, etak);
     pmaterial.roughness = 0.01f;
     get_roughness(command.values, pmaterial.roughness, 0.01f);
@@ -4125,7 +3747,7 @@ struct pbrt_medium {
     // not well supported
     pmaterial.type = pbrt_mtype::plastic;
     get_texture(command.values, "Kd", pmaterial.color, pmaterial.color_tex,
-        vec3f{0.5f, 0.5f, 0.5f});
+        array<float, 3>{0.5f, 0.5f, 0.5f});
     auto specular = 0.0f;
     get_scalar(command.values, "Ks", specular, 0.5f);
     get_scalar(command.values, "eta", pmaterial.ior, 1.5f);
@@ -4134,7 +3756,7 @@ struct pbrt_medium {
   } else if (command.type == "glass") {
     pmaterial.type = pbrt_mtype::glass;
     get_texture(command.values, "Kt", pmaterial.color, pmaterial.color_tex,
-        vec3f{1, 1, 1});
+        array<float, 3>{1, 1, 1});
     get_scalar(command.values, "eta", pmaterial.ior, 1.5f);
     pmaterial.roughness = 0;
     get_roughness(command.values, pmaterial.roughness, 0.0f);
@@ -4153,19 +3775,19 @@ struct pbrt_medium {
   } else if (command.type == "hair") {
     pmaterial.type = pbrt_mtype::matte;
     get_texture(command.values, "color", pmaterial.color, pmaterial.color_tex,
-        vec3f{0, 0, 0});
+        array<float, 3>{0, 0, 0});
     pmaterial.roughness = 1;
     if (verbose) printf("hair material not properly supported\n");
   } else if (command.type == "disney") {
     pmaterial.type = pbrt_mtype::matte;
     get_texture(command.values, "color", pmaterial.color, pmaterial.color_tex,
-        vec3f{0.5f, 0.5f, 0.5f});
+        array<float, 3>{0.5f, 0.5f, 0.5f});
     pmaterial.roughness = 1;
     if (verbose) printf("disney material not properly supported\n");
   } else if (command.type == "kdsubsurface") {
     pmaterial.type = pbrt_mtype::plastic;
     get_texture(command.values, "Kd", pmaterial.color, pmaterial.color_tex,
-        vec3f{0.5f, 0.5f, 0.5f});
+        array<float, 3>{0.5f, 0.5f, 0.5f});
     // get_scalar(command.values, "Kr", pmaterial.specular, 1))
     //   return parse_error();
     get_scalar(command.values, "eta", pmaterial.ior, 1.5f);
@@ -4185,14 +3807,17 @@ struct pbrt_medium {
     auto scale = 1.0f;
     get_pbrt_value(command.values, "scale", scale);
     pmaterial.volscale = 1 / scale;
-    auto sigma_a = vec3f{0, 0, 0}, sigma_s = vec3f{0, 0, 0};
+    auto sigma_a = array<float, 3>{0, 0, 0}, sigma_s = array<float, 3>{0, 0, 0};
     auto sigma_a_tex = -1, sigma_s_tex = -1;
     get_texture(command.values, "sigma_a", sigma_a, sigma_a_tex,
-        vec3f{0.011f, .0024f, .014f});
+        array<float, 3>{0.011f, .0024f, .014f});
     get_texture(command.values, "sigma_prime_s", sigma_s, sigma_s_tex,
-        vec3f{2.55f, 3.12f, 3.77f});
-    pmaterial.volmeanfreepath = 1 / (sigma_a + sigma_s);
-    pmaterial.volscatter      = sigma_s / (sigma_a + sigma_s);
+        array<float, 3>{2.55f, 3.12f, 3.77f});
+    pmaterial.volmeanfreepath = {1 / (sigma_a[0] + sigma_s[0]),
+        1 / (sigma_a[1] + sigma_s[1]), 1 / (sigma_a[2] + sigma_s[2])};
+    pmaterial.volscatter      = {sigma_s[0] / (sigma_a[0] + sigma_s[0]),
+        sigma_s[1] / (sigma_a[1] + sigma_s[1]),
+        sigma_s[2] / (sigma_a[2] + sigma_s[2])};
     if (verbose) printf("subsurface material not properly supported\n");
   } else if (command.type == "mix") {
     auto namedmaterial1 = ""s, namedmaterial2 = ""s;
@@ -4226,9 +3851,9 @@ struct pbrt_medium {
       pmaterial.ior       = 1.5f;
       pmaterial.roughness = 0.3f;
     } else if (bsdffile == "coated_copper.bsdf") {
-      pmaterial.type      = pbrt_mtype::metal;
-      auto eta            = vec3f{0.2004376970f, 0.9240334304f, 1.1022119527f};
-      auto etak           = vec3f{3.9129485033f, 2.4528477015f, 2.1421879552f};
+      pmaterial.type = pbrt_mtype::metal;
+      auto eta  = array<float, 3>{0.2004376970f, 0.9240334304f, 1.1022119527f};
+      auto etak = array<float, 3>{3.9129485033f, 2.4528477015f, 2.1421879552f};
       pmaterial.color     = eta_to_reflectivity(eta, etak);
       pmaterial.roughness = 0.01f;
     } else if (bsdffile == "roughglass_alpha_0.2.bsdf") {
@@ -4237,9 +3862,9 @@ struct pbrt_medium {
       pmaterial.ior       = 1.5f;
       pmaterial.roughness = 0.2f;
     } else if (bsdffile == "roughgold_alpha_0.2.bsdf") {
-      pmaterial.type      = pbrt_mtype::metal;
-      auto eta            = vec3f{0.1431189557f, 0.3749570432f, 1.4424785571f};
-      auto etak           = vec3f{3.9831604247f, 2.3857207478f, 1.6032152899f};
+      pmaterial.type = pbrt_mtype::metal;
+      auto eta  = array<float, 3>{0.1431189557f, 0.3749570432f, 1.4424785571f};
+      auto etak = array<float, 3>{3.9831604247f, 2.3857207478f, 1.6032152899f};
       pmaterial.color     = eta_to_reflectivity(eta, etak);
       pmaterial.roughness = 0.2f;
     } else {
@@ -4253,25 +3878,27 @@ struct pbrt_medium {
 
 // Make a triangle shape from a quad grid
 template <typename PositionFunc, typename NormalFunc>
-static void make_shape(vector<vec3i>& triangles, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps,
+static void make_shape(vector<array<int, 3>>& triangles,
+    vector<array<float, 3>>& positions, vector<array<float, 3>>& normals,
+    vector<array<float, 2>>& texcoords, const array<int, 2>& steps,
     const PositionFunc& position_func, const NormalFunc& normal_func) {
-  auto vid = [steps](int i, int j) { return j * (steps.x + 1) + i; };
-  auto tid = [steps](int i, int j, int c) { return (j * steps.x + i) * 2 + c; };
-  positions.resize((steps.x + 1) * (steps.y + 1));
-  normals.resize((steps.x + 1) * (steps.y + 1));
-  texcoords.resize((steps.x + 1) * (steps.y + 1));
-  for (auto j = 0; j < steps.y + 1; j++) {
-    for (auto i = 0; i < steps.x + 1; i++) {
-      auto uv              = vec2f{i / (float)steps.x, j / (float)steps.y};
+  auto vid = [steps](int i, int j) { return j * (steps[0] + 1) + i; };
+  auto tid = [steps](
+                 int i, int j, int c) { return (j * steps[0] + i) * 2 + c; };
+  positions.resize((steps[0] + 1) * (steps[1] + 1));
+  normals.resize((steps[0] + 1) * (steps[1] + 1));
+  texcoords.resize((steps[0] + 1) * (steps[1] + 1));
+  for (auto j = 0; j < steps[1] + 1; j++) {
+    for (auto i = 0; i < steps[0] + 1; i++) {
+      auto uv = array<float, 2>{i / (float)steps[0], j / (float)steps[1]};
       positions[vid(i, j)] = position_func(uv);
       normals[vid(i, j)]   = normal_func(uv);
       texcoords[vid(i, j)] = uv;
     }
   }
-  triangles.resize(steps.x * steps.y * 2);
-  for (auto j = 0; j < steps.y; j++) {
-    for (auto i = 0; i < steps.x; i++) {
+  triangles.resize(steps[0] * steps[1] * 2);
+  for (auto j = 0; j < steps[1]; j++) {
+    for (auto i = 0; i < steps[0]; i++) {
       triangles[tid(i, j, 0)] = {vid(i, j), vid(i + 1, j), vid(i + 1, j + 1)};
       triangles[tid(i, j, 1)] = {vid(i, j), vid(i + 1, j + 1), vid(i, j + 1)};
     }
@@ -4279,44 +3906,52 @@ static void make_shape(vector<vec3i>& triangles, vector<vec3f>& positions,
 }
 
 // pbrt sphere
-static void make_sphere(vector<vec3i>& triangles, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps,
+static void make_sphere(vector<array<int, 3>>& triangles,
+    vector<array<float, 3>>& positions, vector<array<float, 3>>& normals,
+    vector<array<float, 2>>& texcoords, const array<int, 2>& steps,
     float radius) {
   make_shape(
       triangles, positions, normals, texcoords, steps,
-      [radius](const vec2f& uv) {
-        auto pt = vec2f{2 * pif * uv.x, pif * (1 - uv.y)};
-        return radius *
-               vec3f{cos(pt.x) * sin(pt.y), sin(pt.x) * sin(pt.y), cos(pt.y)};
+      [radius](const array<float, 2>& uv) {
+        auto pt = array<float, 2>{
+            2 * (float)M_PI * uv[0], (float)M_PI * (1 - uv[1])};
+        return array<float, 3>{radius * cos(pt[0]) * sin(pt[1]),
+            radius * sin(pt[0]) * sin(pt[1]), radius * cos(pt[1])};
       },
-      [](const vec2f& uv) {
-        auto pt = vec2f{2 * pif * uv.x, pif * (1 - uv.y)};
-        return vec3f{cos(pt.x) * sin(pt.y), sin(pt.x) * sin(pt.y), cos(pt.y)};
+      [](const array<float, 2>& uv) {
+        auto pt = array<float, 2>{
+            2 * (float)M_PI * uv[0], (float)M_PI * (1 - uv[1])};
+        return array<float, 3>{
+            cos(pt[0]) * sin(pt[1]), sin(pt[0]) * sin(pt[1]), cos(pt[1])};
       });
 }
-static void make_disk(vector<vec3i>& triangles, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps,
+static void make_disk(vector<array<int, 3>>& triangles,
+    vector<array<float, 3>>& positions, vector<array<float, 3>>& normals,
+    vector<array<float, 2>>& texcoords, const array<int, 2>& steps,
     float radius) {
   make_shape(
       triangles, positions, normals, texcoords, steps,
-      [radius](const vec2f& uv) {
-        auto a = 2 * pif * uv.x;
-        return radius * (1 - uv.y) * vec3f{cos(a), sin(a), 0};
+      [radius](const array<float, 2>& uv) {
+        auto a = 2 * (float)M_PI * uv[0];
+        return array<float, 3>{
+            radius * (1 - uv[1]) * cos(a), radius * (1 - uv[1]) * sin(a), 0};
       },
-      [](const vec2f& uv) {
-        return vec3f{0, 0, 1};
+      [](const array<float, 2>& uv) {
+        return array<float, 3>{0, 0, 1};
       });
 }
-static void make_quad(vector<vec3i>& triangles, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps,
+static void make_quad(vector<array<int, 3>>& triangles,
+    vector<array<float, 3>>& positions, vector<array<float, 3>>& normals,
+    vector<array<float, 2>>& texcoords, const array<int, 2>& steps,
     float radius) {
   make_shape(
       triangles, positions, normals, texcoords, steps,
-      [radius](const vec2f& uv) {
-        return vec3f{(uv.x - 0.5f) * radius, (uv.y - 0.5f) * radius, 0};
+      [radius](const array<float, 2>& uv) {
+        return array<float, 3>{
+            (uv[0] - 0.5f) * radius, (uv[1] - 0.5f) * radius, 0};
       },
-      [](const vec2f& uv) {
-        return vec3f{0, 0, 1};
+      [](const array<float, 2>& uv) {
+        return array<float, 3>{0, 0, 1};
       });
 }
 
@@ -4340,8 +3975,8 @@ static void make_quad(vector<vec3i>& triangles, vector<vec3f>& positions,
     return true;
   };
 
-  pshape.frame = command.frame;
-  pshape.frend = command.frend;
+  pshape.frame = flatten(command.frame);
+  pshape.frend = flatten(command.frend);
   if (command.type == "trianglemesh") {
     pshape.positions = {};
     pshape.normals   = {};
@@ -4350,7 +3985,7 @@ static void make_quad(vector<vec3i>& triangles, vector<vec3f>& positions,
     get_pbrt_value(command.values, "P", pshape.positions);
     get_pbrt_value(command.values, "N", pshape.normals);
     get_pbrt_value(command.values, "uv", pshape.texcoords);
-    for (auto& uv : pshape.texcoords) uv.y = (1 - uv.y);
+    for (auto& uv : pshape.texcoords) uv[1] = (1 - uv[1]);
     get_pbrt_value(command.values, "indices", pshape.triangles);
   } else if (command.type == "loopsubdiv") {
     pshape.positions = {};
@@ -4368,10 +4003,11 @@ static void make_quad(vector<vec3i>& triangles, vector<vec3f>& positions,
       auto ply   = ply_model{};
       if (!load_ply(path_join(ply_dirname, pshape.filename_), ply, error))
         return false;
-      get_positions(ply, pshape.positions);
-      get_normals(ply, pshape.normals);
-      get_texcoords(ply, pshape.texcoords);
-      get_triangles(ply, pshape.triangles);
+      // TODO: remove once all using arrays
+      get_positions(ply, (vector<array<float, 3>>&)pshape.positions);
+      get_normals(ply, (vector<array<float, 3>>&)pshape.normals);
+      get_texcoords(ply, (vector<array<float, 2>>&)pshape.texcoords);
+      get_triangles(ply, (vector<array<int, 3>>&)pshape.triangles);
     }
   } else if (command.type == "sphere") {
     auto radius = 1.0f;
@@ -4394,10 +4030,10 @@ static void make_quad(vector<vec3i>& triangles, vector<vec3f>& positions,
     const pbrt_command& command, const string& filename, bool verbose = false) {
   parealight.name = command.name;
   if (command.type == "diffuse") {
-    auto l = vec3f{1, 1, 1}, scale = vec3f{1, 1, 1};
+    auto l = array<float, 3>{1, 1, 1}, scale = array<float, 3>{1, 1, 1};
     get_pbrt_value(command.values, "L", l);
     get_pbrt_value(command.values, "scale", scale);
-    parealight.emission = l * scale;
+    parealight.emission = {l[0] * scale[0], l[1] * scale[1], l[2] * scale[2]};
   } else {
     return false;
   }
@@ -4407,45 +4043,46 @@ static void make_quad(vector<vec3i>& triangles, vector<vec3f>& positions,
 // Convert pbrt lights
 [[nodiscard]] static bool convert_light(pbrt_light& plight,
     const pbrt_command& command, const string& filename, bool verbose = false) {
-  plight.frame = command.frame;
-  plight.frend = command.frend;
+  plight.frame = flatten(command.frame);
+  plight.frend = flatten(command.frend);
   if (command.type == "distant") {
-    auto l = vec3f{1, 1, 1}, scale = vec3f{1, 1, 1};
+    auto l = array<float, 3>{1, 1, 1}, scale = array<float, 3>{1, 1, 1};
     get_pbrt_value(command.values, "L", l);
     get_pbrt_value(command.values, "scale", scale);
-    plight.emission = l * scale;
-    plight.from     = vec3f{0, 0, 0};
-    plight.to       = vec3f{0, 0, 1};
+    plight.emission = {l[0] * scale[0], l[1] * scale[1], l[2] * scale[2]};
+    plight.from     = array<float, 3>{0, 0, 0};
+    plight.to       = array<float, 3>{0, 0, 1};
     get_pbrt_value(command.values, "from", plight.from);
     get_pbrt_value(command.values, "to", plight.to);
     plight.distant       = true;
     auto distant_dist    = 100.0f;
-    auto size            = distant_dist * sin(5 * pif / 180);
-    plight.area_emission = plight.emission * (distant_dist * distant_dist) /
-                           (size * size);
-    plight.area_frame = plight.frame *
-                        lookat_frame(
-                            normalize(plight.from - plight.to) * distant_dist,
-                            {0, 0, 0}, {0, 1, 0}, true);
-    plight.area_frend = plight.frend *
-                        lookat_frame(
-                            normalize(plight.from - plight.to) * distant_dist,
-                            {0, 0, 0}, {0, 1, 0}, true);
-    auto texcoords = vector<vec2f>{};
+    auto size            = distant_dist * std::sin(5 * (float)M_PI / 180);
+    auto dscale          = (distant_dist * distant_dist) / (size * size);
+    plight.area_emission = {plight.emission[0] * dscale,
+        plight.emission[1] * dscale, plight.emission[2] * dscale};
+    plight.area_frame    = flatten(mul(unflatten(plight.frame),
+        lookat_frame(mul(normalize(sub(plight.from, plight.to)), distant_dist),
+            {0, 0, 0}, {0, 1, 0}, true)));
+    plight.area_frend    = flatten(mul(unflatten(plight.frend),
+        lookat_frame(mul(normalize(sub(plight.from, plight.to)), distant_dist),
+            {0, 0, 0}, {0, 1, 0}, true)));
+    auto texcoords       = vector<array<float, 2>>{};
     make_quad(plight.area_triangles, plight.area_positions, plight.area_normals,
         texcoords, {4, 2}, size);
   } else if (command.type == "point" || command.type == "goniometric" ||
              command.type == "spot") {
-    auto i = vec3f{1, 1, 1}, scale = vec3f{1, 1, 1};
+    auto i = array<float, 3>{1, 1, 1}, scale = array<float, 3>{1, 1, 1};
     get_pbrt_value(command.values, "I", i);
     get_pbrt_value(command.values, "scale", scale);
-    plight.emission = i * scale;
+    plight.emission = {i[0] * scale[0], i[1] * scale[1], i[2] * scale[2]};
     plight.from     = {0, 0, 0};
     get_pbrt_value(command.values, "from", plight.from);
     plight.area_emission = plight.emission;
-    plight.area_frame    = plight.frame * translation_frame(plight.from);
-    plight.area_frend    = plight.frend * translation_frame(plight.from);
-    auto texcoords       = vector<vec2f>{};
+    plight.area_frame    = flatten(
+        mul(unflatten(plight.frame), translation_frame(plight.from)));
+    plight.area_frend = flatten(
+        mul(unflatten(plight.frend), translation_frame(plight.from)));
+    auto texcoords = vector<array<float, 2>>{};
     make_sphere(plight.area_triangles, plight.area_positions,
         plight.area_normals, texcoords, {4, 2}, 0.0025f);
   } else {
@@ -4457,17 +4094,21 @@ static void make_quad(vector<vec3i>& triangles, vector<vec3f>& positions,
 [[nodiscard]] static bool convert_environment(pbrt_environment& penvironment,
     const pbrt_command& command, unordered_map<string, int>& texture_map,
     const string& filename, bool verbose = false) {
-  penvironment.frame = command.frame;
-  penvironment.frend = command.frend;
-  penvironment.frame = penvironment.frame *
-                       frame3f{{1, 0, 0}, {0, 0, 1}, {0, 1, 0}, {0, 0, 0}};
-  penvironment.frend = penvironment.frend *
-                       frame3f{{1, 0, 0}, {0, 0, 1}, {0, 1, 0}, {0, 0, 0}};
+  penvironment.frame = flatten(command.frame);
+  penvironment.frend = flatten(command.frend);
+  penvironment.frame = flatten(mul(unflatten(penvironment.frame),
+      array<array<float, 3>, 4>{array<float, 3>{1, 0, 0},
+          array<float, 3>{0, 0, 1}, array<float, 3>{0, 1, 0},
+          array<float, 3>{0, 0, 0}}));
+  penvironment.frend = flatten(mul(unflatten(penvironment.frend),
+      array<array<float, 3>, 4>{array<float, 3>{1, 0, 0},
+          array<float, 3>{0, 0, 1}, array<float, 3>{0, 1, 0},
+          array<float, 3>{0, 0, 0}}));
   if (command.type == "infinite") {
-    auto l = vec3f{1, 1, 1}, scale = vec3f{1, 1, 1};
+    auto l = array<float, 3>{1, 1, 1}, scale = array<float, 3>{1, 1, 1};
     get_pbrt_value(command.values, "L", l);
     get_pbrt_value(command.values, "scale", scale);
-    penvironment.emission     = scale * l;
+    penvironment.emission = {l[0] * scale[0], l[1] * scale[1], l[2] * scale[2]};
     penvironment.emission_tex = -1;
     auto mapname              = ""s;
     get_pbrt_value(command.values, "mapname", mapname);
@@ -4486,15 +4127,19 @@ static void make_quad(vector<vec3i>& triangles, vector<vec3f>& positions,
 
 // pbrt stack ctm
 struct pbrt_stack_element {
-  frame3f        transform_start        = identity3x4f;
-  frame3f        transform_end          = identity3x4f;
-  pbrt_material  material               = {};
-  pbrt_arealight arealight              = {};
-  pbrt_medium    interior               = {};
-  pbrt_medium    exterior               = {};
-  bool           reverse                = false;
-  bool           active_transform_start = true;
-  bool           active_transform_end   = true;
+  array<array<float, 3>, 4> transform_start        = {array<float, 3>{1, 0, 0},
+      array<float, 3>{0, 1, 0}, array<float, 3>{0, 0, 1},
+      array<float, 3>{0, 0, 0}};
+  array<array<float, 3>, 4> transform_end          = {array<float, 3>{1, 0, 0},
+      array<float, 3>{0, 1, 0}, array<float, 3>{0, 0, 1},
+      array<float, 3>{0, 0, 0}};
+  pbrt_material             material               = {};
+  pbrt_arealight            arealight              = {};
+  pbrt_medium               interior               = {};
+  pbrt_medium               exterior               = {};
+  bool                      reverse                = false;
+  bool                      active_transform_start = true;
+  bool                      active_transform_end   = true;
 };
 
 // pbrt parsing context
@@ -4502,7 +4147,7 @@ struct pbrt_context {
   vector<pbrt_stack_element>                stack           = {};
   unordered_map<string, pbrt_stack_element> coordsys        = {};
   string                                    cur_object      = "";
-  vec2i                                     film_resolution = {512, 512};
+  array<int, 2>                             film_resolution = {512, 512};
 };
 
 // load pbrt
@@ -4519,13 +4164,17 @@ static bool load_pbrt(const string& filename, pbrt_model& pbrt, string& error,
   if (!load_text(filename, data, error)) return false;
 
   // helpers
-  auto set_transform = [](pbrt_stack_element& ctx, const frame3f& xform) {
+  auto set_transform = [](pbrt_stack_element&               ctx,
+                           const array<array<float, 3>, 4>& xform) {
     if (ctx.active_transform_start) ctx.transform_start = xform;
     if (ctx.active_transform_end) ctx.transform_end = xform;
   };
-  auto concat_transform = [](pbrt_stack_element& ctx, const frame3f& xform) {
-    if (ctx.active_transform_start) ctx.transform_start *= xform;
-    if (ctx.active_transform_end) ctx.transform_end *= xform;
+  auto concat_transform = [](pbrt_stack_element&               ctx,
+                              const array<array<float, 3>, 4>& xform) {
+    if (ctx.active_transform_start)
+      ctx.transform_start = mul(ctx.transform_start, xform);
+    if (ctx.active_transform_end)
+      ctx.transform_end = mul(ctx.transform_end, xform);
   };
 
   // init stack
@@ -4578,9 +4227,9 @@ static bool load_pbrt(const string& filename, pbrt_model& pbrt, string& error,
       auto& named_object = named_objects.at(object);
       for (auto& shape_id : named_object) {
         pbrt.shapes[shape_id].instances.push_back(
-            ctx.stack.back().transform_start);
+            flatten(ctx.stack.back().transform_start));
         pbrt.shapes[shape_id].instaends.push_back(
-            ctx.stack.back().transform_end);
+            flatten(ctx.stack.back().transform_end));
       }
     } else if (cmd == "ActiveTransform") {
       auto name = ""s;
@@ -4598,28 +4247,30 @@ static bool load_pbrt(const string& filename, pbrt_model& pbrt, string& error,
         std::out_of_range{"invalid command"};
       }
     } else if (cmd == "Transform") {
-      auto xf = identity4x4f;
+      auto xf = array<float, 16>{};
       if (!parse_param(str, xf)) return parse_error();
-      set_transform(ctx.stack.back(), mat_to_frame(xf));
+      set_transform(ctx.stack.back(), mat_to_frame(unflatten(xf)));
     } else if (cmd == "ConcatTransform") {
-      auto xf = identity4x4f;
+      auto xf = array<float, 16>{};
       if (!parse_param(str, xf)) return parse_error();
-      concat_transform(ctx.stack.back(), mat_to_frame(xf));
+      concat_transform(ctx.stack.back(), mat_to_frame(unflatten(xf)));
     } else if (cmd == "Scale") {
-      auto v = vec3f{0, 0, 0};
+      auto v = array<float, 3>{0, 0, 0};
       if (!parse_param(str, v)) return parse_error();
       concat_transform(ctx.stack.back(), scaling_frame(v));
     } else if (cmd == "Translate") {
-      auto v = vec3f{0, 0, 0};
+      auto v = array<float, 3>{0, 0, 0};
       if (!parse_param(str, v)) return parse_error();
       concat_transform(ctx.stack.back(), translation_frame(v));
     } else if (cmd == "Rotate") {
-      auto v = zero4f;
+      auto v = array<float, 4>{0, 0, 0, 0};
       if (!parse_param(str, v)) return parse_error();
       concat_transform(
-          ctx.stack.back(), rotation_frame(vec3f{v.y, v.z, v.w}, radians(v.x)));
+          ctx.stack.back(), rotation_frame(array<float, 3>{v[1], v[2], v[3]},
+                                v[0] * (float)M_PI / 180));
     } else if (cmd == "LookAt") {
-      auto from = vec3f{0, 0, 0}, to = vec3f{0, 0, 0}, up = vec3f{0, 0, 0};
+      auto from = array<float, 3>{0, 0, 0}, to = array<float, 3>{0, 0, 0},
+           up = array<float, 3>{0, 0, 0};
       if (!parse_param(str, from)) return parse_error();
       if (!parse_param(str, to)) return parse_error();
       if (!parse_param(str, up)) return parse_error();
@@ -4908,9 +4559,9 @@ bool save_pbrt(const string& filename, const pbrt_model& pbrt, string& error,
     auto command = pbrt_command{};
     command.type = "image";
     command.values.push_back(
-        make_pbrt_value("xresolution", camera.resolution.x));
+        make_pbrt_value("xresolution", camera.resolution[0]));
     command.values.push_back(
-        make_pbrt_value("yresolution", camera.resolution.y));
+        make_pbrt_value("yresolution", camera.resolution[1]));
     command.values.push_back(make_pbrt_value("filename", "image.exr"s));
     format_values(buffer, "Film \"{}\" {}\n", command.type, command.values);
   }
@@ -4918,11 +4569,12 @@ bool save_pbrt(const string& filename, const pbrt_model& pbrt, string& error,
   for (auto& camera : pbrt.cameras) {
     auto command  = pbrt_command{};
     command.type  = "perspective";
-    command.frame = camera.frame;
+    auto cframe   = unflatten(camera.frame);
+    command.frame = unflatten(camera.frame);
     command.values.push_back(make_pbrt_value(
-        "fov", 2 * tan(0.036f / (2 * camera.lens)) * 180 / pif));
-    format_values(buffer, "LookAt {} {} {}\n", command.frame.o,
-        command.frame.o - command.frame.z, command.frame.y);
+        "fov", 2 * std::tan(0.036f / (2 * camera.lens)) * 180 / (float)M_PI));
+    format_values(buffer, "LookAt {} {} {}\n", cframe[3],
+        sub(cframe[3], cframe[2]), cframe[1]);
     format_values(buffer, "Camera \"{}\" {}\n", command.type, command.values);
   }
 
@@ -4930,7 +4582,7 @@ bool save_pbrt(const string& filename, const pbrt_model& pbrt, string& error,
 
   for (auto& light : pbrt.lights) {
     auto command  = pbrt_command{};
-    command.frame = light.frame;
+    command.frame = unflatten(light.frame);
     if (light.distant) {
       command.type = "distance";
       command.values.push_back(make_pbrt_value("L", light.emission));
@@ -4947,7 +4599,7 @@ bool save_pbrt(const string& filename, const pbrt_model& pbrt, string& error,
 
   for (auto& environment : pbrt.environments) {
     auto command  = pbrt_command{};
-    command.frame = environment.frame;
+    command.frame = unflatten(environment.frame);
     command.type  = "infinite";
     command.values.push_back(make_pbrt_value("L", environment.emission));
     command.values.push_back(
@@ -4959,8 +4611,14 @@ bool save_pbrt(const string& filename, const pbrt_model& pbrt, string& error,
     format_values(buffer, "AttributeEnd\n");
   }
 
-  auto reflectivity_to_eta = [](const vec3f& reflectivity) {
-    return (1 + sqrt(reflectivity)) / (1 - sqrt(reflectivity));
+  auto reflectivity_to_eta1 = [](float reflectivity) {
+    return (1 + std::sqrt(reflectivity)) / (1 - std::sqrt(reflectivity));
+  };
+  auto reflectivity_to_eta =
+      [&](const array<float, 3>& reflectivity) -> array<float, 3> {
+    return {reflectivity_to_eta1(reflectivity[0]),
+        reflectivity_to_eta1(reflectivity[1]),
+        reflectivity_to_eta1(reflectivity[2])};
   };
 
   for (auto& material : pbrt.materials) {
@@ -4973,38 +4631,43 @@ bool save_pbrt(const string& filename, const pbrt_model& pbrt, string& error,
       case pbrt_mtype::plastic: {
         command.type = "matte";
         command.values.push_back(make_pbrt_value("Kd", material.color));
-        command.values.push_back(make_pbrt_value("Ks", vec3f{1, 1, 1}));
         command.values.push_back(
-            make_pbrt_value("roughness", pow(material.roughness, 2)));
+            make_pbrt_value("Ks", array<float, 3>{1, 1, 1}));
+        command.values.push_back(
+            make_pbrt_value("roughness", std::pow(material.roughness, 2.0f)));
         command.values.push_back(
             make_pbrt_value("eta", reflectivity_to_eta(material.color)));
         command.values.push_back(make_pbrt_value("remaproughness", false));
       } break;
       case pbrt_mtype::metal: {
         command.type = "metal";
-        command.values.push_back(make_pbrt_value("Kr", vec3f{1, 1, 1}));
         command.values.push_back(
-            make_pbrt_value("roughness", pow(material.roughness, 2)));
+            make_pbrt_value("Kr", array<float, 3>{1, 1, 1}));
+        command.values.push_back(
+            make_pbrt_value("roughness", std::pow(material.roughness, 2.0f)));
         command.values.push_back(
             make_pbrt_value("eta", reflectivity_to_eta(material.color)));
         command.values.push_back(make_pbrt_value("remaproughness", false));
       } break;
       case pbrt_mtype::thinglass: {
         command.type = "uber";
-        command.values.push_back(make_pbrt_value("Ks", vec3f{1, 1, 1}));
+        command.values.push_back(
+            make_pbrt_value("Ks", array<float, 3>{1, 1, 1}));
         command.values.push_back(make_pbrt_value("Kt", material.color));
         command.values.push_back(
-            make_pbrt_value("roughness", pow(material.roughness, 2)));
+            make_pbrt_value("roughness", std::pow(material.roughness, 2.0f)));
         command.values.push_back(
             make_pbrt_value("eta", reflectivity_to_eta(material.color)));
         command.values.push_back(make_pbrt_value("remaproughness", false));
       } break;
       case pbrt_mtype::glass: {
         command.type = "glass";
-        command.values.push_back(make_pbrt_value("Kr", vec3f{1, 1, 1}));
-        command.values.push_back(make_pbrt_value("Kt", vec3f{1, 1, 1}));
         command.values.push_back(
-            make_pbrt_value("roughness", pow(material.roughness, 2)));
+            make_pbrt_value("Kr", array<float, 3>{1, 1, 1}));
+        command.values.push_back(
+            make_pbrt_value("Kt", array<float, 3>{1, 1, 1}));
+        command.values.push_back(
+            make_pbrt_value("roughness", std::pow(material.roughness, 2.0f)));
         command.values.push_back(make_pbrt_value("eta", material.ior));
         command.values.push_back(make_pbrt_value("remaproughness", false));
       } break;
@@ -5023,7 +4686,7 @@ bool save_pbrt(const string& filename, const pbrt_model& pbrt, string& error,
   for (auto& shape : pbrt.shapes) {
     auto& material = pbrt.materials.at(shape.material);
     auto  command  = pbrt_command{};
-    command.frame  = shape.frame;
+    command.frame  = unflatten(shape.frame);
     if (ply_meshes) {
       command.type = "plymesh";
       command.values.push_back(make_pbrt_value("filename", shape.filename_));
@@ -5040,10 +4703,11 @@ bool save_pbrt(const string& filename, const pbrt_model& pbrt, string& error,
     }
     if (ply_meshes) {
       auto ply = ply_model{};
-      add_positions(ply, shape.positions);
-      add_normals(ply, shape.normals);
-      add_texcoords(ply, shape.texcoords);
-      add_triangles(ply, shape.triangles);
+      // TODO: remove once all using arrays
+      add_positions(ply, (const vector<array<float, 3>>&)shape.positions);
+      add_normals(ply, (const vector<array<float, 3>>&)shape.normals);
+      add_texcoords(ply, (const vector<array<float, 2>>&)shape.texcoords);
+      add_triangles(ply, (const vector<array<int, 3>>&)shape.triangles);
       if (!save_ply(path_dirname(filename) + "/" + shape.filename_, ply, error))
         return false;
     }
@@ -5051,8 +4715,9 @@ bool save_pbrt(const string& filename, const pbrt_model& pbrt, string& error,
     if (!shape.instances.empty())
       format_values(buffer, "ObjectBegin \"{}\"\n", object);
     format_values(buffer, "AttributeBegin\n");
-    format_values(buffer, "Transform {}\n", frame_to_mat(shape.frame));
-    if (material.emission != vec3f{0, 0, 0}) {
+    format_values(
+        buffer, "Transform {}\n", frame_to_mat(unflatten(shape.frame)));
+    if (material.emission != array<float, 3>{0, 0, 0}) {
       auto acommand = pbrt_command{};
       acommand.type = "diffuse";
       acommand.values.push_back(make_pbrt_value("L", material.emission));
@@ -5065,7 +4730,7 @@ bool save_pbrt(const string& filename, const pbrt_model& pbrt, string& error,
     if (!shape.instances.empty()) format_values(buffer, "ObjectEnd\n");
     for (auto& iframe : shape.instances) {
       format_values(buffer, "AttributeBegin\n");
-      format_values(buffer, "Transform {}\n", frame_to_mat(iframe));
+      format_values(buffer, "Transform {}\n", frame_to_mat(unflatten(iframe)));
       format_values(buffer, "ObjectInstance \"{}\"\n", object);
       format_values(buffer, "AttributeEnd\n");
     }

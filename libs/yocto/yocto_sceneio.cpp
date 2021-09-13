@@ -389,6 +389,25 @@ using json_value = nlohmann::ordered_json;
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// MATH TYPE SUPPORT
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+static vec3f   to_math(const array<float, 3>& value) { return (vec3f&)value; }
+static frame3f to_math(const array<float, 12>& value) {
+  return (frame3f&)value;
+}
+
+static array<float, 3> to_array(const vec3f& value) {
+  return (array<float, 3>&)value;
+}
+static array<float, 12> to_array(const frame3f& value) {
+  return (array<float, 12>&)value;
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // IMAGE IO
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -894,13 +913,16 @@ bool load_shape(const string& filename, shape_data& shape, string& error,
   if (ext == ".ply" || ext == ".PLY") {
     auto ply = ply_model{};
     if (!load_ply(filename, ply, error)) return false;
-    get_positions(ply, shape.positions);
-    get_normals(ply, shape.normals);
-    get_texcoords(ply, shape.texcoords, flip_texcoord);
-    get_colors(ply, shape.colors);
+    // TODO: remove when all as arrays
+    get_positions(ply, (vector<array<float, 3>>&)shape.positions);
+    get_normals(ply, (vector<array<float, 3>>&)shape.normals);
+    get_texcoords(
+        ply, (vector<array<float, 2>>&)shape.texcoords, flip_texcoord);
+    get_colors(ply, (vector<array<float, 4>>&)shape.colors);
     get_radius(ply, shape.radius);
-    get_faces(ply, shape.triangles, shape.quads);
-    get_lines(ply, shape.lines);
+    get_faces(ply, (vector<array<int, 3>>&)shape.triangles,
+        (vector<array<int, 4>>&)shape.quads);
+    get_lines(ply, (vector<array<int, 2>>&)shape.lines);
     get_points(ply, shape.points);
     if (shape.points.empty() && shape.lines.empty() &&
         shape.triangles.empty() && shape.quads.empty())
@@ -910,11 +932,14 @@ bool load_shape(const string& filename, shape_data& shape, string& error,
     auto obj = obj_shape{};
     if (!load_obj(filename, obj, error, false)) return false;
     auto materials = vector<int>{};
-    get_positions(obj, shape.positions);
-    get_normals(obj, shape.normals);
-    get_texcoords(obj, shape.texcoords, flip_texcoord);
-    get_faces(obj, shape.triangles, shape.quads, materials);
-    get_lines(obj, shape.lines, materials);
+    // TODO: remove when all as arrays
+    get_positions(obj, (vector<array<float, 3>>&)shape.positions);
+    get_normals(obj, (vector<array<float, 3>>&)shape.normals);
+    get_texcoords(
+        obj, (vector<array<float, 2>>&)shape.texcoords, flip_texcoord);
+    get_faces(obj, (vector<array<int, 3>>&)shape.triangles,
+        (vector<array<int, 4>>&)shape.quads, materials);
+    get_lines(obj, (vector<array<int, 2>>&)shape.lines, materials);
     get_points(obj, shape.points, materials);
     if (shape.points.empty() && shape.lines.empty() &&
         shape.triangles.empty() && shape.quads.empty())
@@ -925,7 +950,9 @@ bool load_shape(const string& filename, shape_data& shape, string& error,
     if (!load_stl(filename, stl, error, true)) return false;
     if (stl.shapes.size() != 1) return shape_error();
     auto fnormals = vector<vec3f>{};
-    if (!get_triangles(stl, 0, shape.triangles, shape.positions, fnormals))
+    if (!get_triangles(stl, 0, (vector<array<int, 3>>&)shape.triangles,
+            (vector<array<float, 3>>&)shape.positions,
+            (vector<array<float, 3>>&)fnormals))
       return shape_error();
     return true;
   } else if (ext == ".ypreset" || ext == ".YPRESET") {
@@ -948,27 +975,32 @@ bool save_shape(const string& filename, const shape_data& shape, string& error,
   auto ext = path_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     auto ply = ply_model{};
-    add_positions(ply, shape.positions);
-    add_normals(ply, shape.normals);
-    add_texcoords(ply, shape.texcoords, flip_texcoord);
-    add_colors(ply, shape.colors);
+    // TODO: remove when all as arrays
+    add_positions(ply, (const vector<array<float, 3>>&)shape.positions);
+    add_normals(ply, (const vector<array<float, 3>>&)shape.normals);
+    add_texcoords(
+        ply, (const vector<array<float, 2>>&)shape.texcoords, flip_texcoord);
+    add_colors(ply, (const vector<array<float, 4>>&)shape.colors);
     add_radius(ply, shape.radius);
-    add_faces(ply, shape.triangles, shape.quads);
-    add_lines(ply, shape.lines);
+    add_faces(ply, (const vector<array<int, 3>>&)shape.triangles,
+        (const vector<array<int, 4>>&)shape.quads);
+    add_lines(ply, (const vector<array<int, 2>>&)shape.lines);
     add_points(ply, shape.points);
     if (!save_ply(filename, ply, error)) return false;
     return true;
   } else if (ext == ".obj" || ext == ".OBJ") {
     auto obj = obj_shape{};
-    add_positions(obj, shape.positions);
-    add_normals(obj, shape.normals);
-    add_texcoords(obj, shape.texcoords, flip_texcoord);
-    add_triangles(obj, shape.triangles, 0, !shape.normals.empty(),
-        !shape.texcoords.empty());
-    add_quads(
-        obj, shape.quads, 0, !shape.normals.empty(), !shape.texcoords.empty());
-    add_lines(
-        obj, shape.lines, 0, !shape.normals.empty(), !shape.texcoords.empty());
+    // TODO: remove when all as arrays
+    add_positions(obj, (const vector<array<float, 3>>&)shape.positions);
+    add_normals(obj, (const vector<array<float, 3>>&)shape.normals);
+    add_texcoords(
+        obj, (const vector<array<float, 2>>&)shape.texcoords, flip_texcoord);
+    add_triangles(obj, (const vector<array<int, 3>>&)shape.triangles, 0,
+        !shape.normals.empty(), !shape.texcoords.empty());
+    add_quads(obj, (const vector<array<int, 4>>&)shape.quads, 0,
+        !shape.normals.empty(), !shape.texcoords.empty());
+    add_lines(obj, (const vector<array<int, 2>>&)shape.lines, 0,
+        !shape.normals.empty(), !shape.texcoords.empty());
     add_points(
         obj, shape.points, 0, !shape.normals.empty(), !shape.texcoords.empty());
     if (!save_obj(filename, obj, error)) return false;
@@ -978,9 +1010,12 @@ bool save_shape(const string& filename, const shape_data& shape, string& error,
     if (!shape.lines.empty()) return shape_error();
     if (!shape.points.empty()) return shape_error();
     if (!shape.triangles.empty()) {
-      add_triangles(stl, shape.triangles, shape.positions, {});
+      add_triangles(stl, (const vector<array<int, 3>>&)shape.triangles,
+          (const vector<array<float, 3>>&)shape.positions, {});
     } else if (!shape.quads.empty()) {
-      add_triangles(stl, quads_to_triangles(shape.quads), shape.positions, {});
+      auto triangles = quads_to_triangles(shape.quads);
+      add_triangles(stl, (const vector<array<int, 3>>&)triangles,
+          (const vector<array<float, 3>>&)shape.positions, {});
     } else {
       return shape_error();
     }
@@ -1058,10 +1093,12 @@ bool load_fvshape(const string& filename, fvshape_data& shape, string& error,
   if (ext == ".ply" || ext == ".PLY") {
     auto ply = ply_model{};
     if (!load_ply(filename, ply, error)) return false;
-    get_positions(ply, shape.positions);
-    get_normals(ply, shape.normals);
-    get_texcoords(ply, shape.texcoords, flip_texcoord);
-    get_quads(ply, shape.quadspos);
+    // TODO: remove when all as arrays
+    get_positions(ply, (vector<array<float, 3>>&)shape.positions);
+    get_normals(ply, (vector<array<float, 3>>&)shape.normals);
+    get_texcoords(
+        ply, (vector<array<float, 2>>&)shape.texcoords, flip_texcoord);
+    get_quads(ply, (vector<array<int, 4>>&)shape.quadspos);
     if (!shape.normals.empty()) shape.quadsnorm = shape.quadspos;
     if (!shape.texcoords.empty()) shape.quadstexcoord = shape.quadspos;
     if (shape.quadspos.empty()) return shape_error();
@@ -1069,12 +1106,15 @@ bool load_fvshape(const string& filename, fvshape_data& shape, string& error,
   } else if (ext == ".obj" || ext == ".OBJ") {
     auto obj = obj_shape{};
     if (!load_obj(filename, obj, error, true)) return false;
+    // TODO: remove when all as arrays
     auto materials = vector<int>{};
-    get_positions(obj, shape.positions);
-    get_normals(obj, shape.normals);
-    get_texcoords(obj, shape.texcoords, flip_texcoord);
-    get_fvquads(
-        obj, shape.quadspos, shape.quadsnorm, shape.quadstexcoord, materials);
+    get_positions(obj, (vector<array<float, 3>>&)shape.positions);
+    get_normals(obj, (vector<array<float, 3>>&)shape.normals);
+    get_texcoords(
+        obj, (vector<array<float, 2>>&)shape.texcoords, flip_texcoord);
+    get_fvquads(obj, (vector<array<int, 4>>&)shape.quadspos,
+        (vector<array<int, 4>>&)shape.quadsnorm,
+        (vector<array<int, 4>>&)shape.quadstexcoord, materials);
     if (shape.quadspos.empty()) return shape_error();
     return true;
   } else if (ext == ".stl" || ext == ".STL") {
@@ -1084,7 +1124,9 @@ bool load_fvshape(const string& filename, fvshape_data& shape, string& error,
     if (stl.shapes.size() > 1) return shape_error();
     auto fnormals  = vector<vec3f>{};
     auto triangles = vector<vec3i>{};
-    if (!get_triangles(stl, 0, triangles, shape.positions, fnormals))
+    if (!get_triangles(stl, 0, (vector<array<int, 3>>&)triangles,
+            (vector<array<float, 3>>&)shape.positions,
+            (vector<array<float, 3>>&)fnormals))
       return shape_error();
     shape.quadspos = triangles_to_quads(triangles);
     return true;
@@ -1115,18 +1157,24 @@ bool save_fvshape(const string& filename, const fvshape_data& shape,
     split_facevarying(split_quads, split_positions, split_normals,
         split_texcoords, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
         shape.positions, shape.normals, shape.texcoords);
-    add_positions(ply, split_positions);
-    add_normals(ply, split_normals);
-    add_texcoords(ply, split_texcoords, flip_texcoord);
-    add_faces(ply, {}, split_quads);
+    // TODO: remove when all as arrays
+    add_positions(ply, (const vector<array<float, 3>>&)split_positions);
+    add_normals(ply, (const vector<array<float, 3>>&)split_normals);
+    add_texcoords(
+        ply, (const vector<array<float, 2>>&)split_texcoords, flip_texcoord);
+    add_quads(ply, (const vector<array<int, 4>>&)split_quads);
     if (!save_ply(filename, ply, error)) return false;
     return true;
   } else if (ext == ".obj" || ext == ".OBJ") {
     auto obj = obj_shape{};
-    add_positions(obj, shape.positions);
-    add_normals(obj, shape.positions);
-    add_texcoords(obj, shape.texcoords, flip_texcoord);
-    add_fvquads(obj, shape.quadspos, shape.quadsnorm, shape.quadstexcoord, 0);
+    // TODO: remove when all as arrays
+    add_positions(obj, (const vector<array<float, 3>>&)shape.positions);
+    add_normals(obj, (const vector<array<float, 3>>&)shape.normals);
+    add_texcoords(
+        obj, (const vector<array<float, 2>>&)shape.texcoords, flip_texcoord);
+    add_fvquads(obj, (const vector<array<int, 4>>&)shape.quadspos,
+        (const vector<array<int, 4>>&)shape.quadsnorm,
+        (const vector<array<int, 4>>&)shape.quadstexcoord, 0);
     if (!save_obj(filename, obj, error)) return false;
     return true;
   } else if (ext == ".stl" || ext == ".STL") {
@@ -1139,7 +1187,9 @@ bool save_fvshape(const string& filename, const fvshape_data& shape,
       split_facevarying(split_quads, split_positions, split_normals,
           split_texcoords, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
           shape.positions, shape.normals, shape.texcoords);
-      add_triangles(stl, quads_to_triangles(split_quads), split_positions, {});
+      auto triangles = quads_to_triangles(split_quads);
+      add_triangles(stl, (const vector<array<int, 3>>&)triangles,
+          (const vector<array<float, 3>>&)split_positions, {});
     } else {
       return shape_error();
     }
@@ -2706,10 +2756,11 @@ static bool load_instance(
   if (ext == ".ply" || ext == ".PLY") {
     auto ply = ply_model{};
     if (!load_ply(filename, ply, error)) return false;
+    // TODO: remove when all as arrays
     if (!get_values(ply, "instance",
             {"xx", "xy", "xz", "yx", "yy", "yz", "zx", "zy", "zz", "ox", "oy",
                 "oz"},
-            frames)) {
+            (vector<array<float, 12>>&)frames)) {
       error = filename + ": parse error";
       return false;
     }
@@ -2726,10 +2777,11 @@ static bool load_instance(
   auto ext = path_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     auto ply = ply_model{};
+    // TODO: remove when all as arrays
     add_values(ply, "instance",
         {"xx", "xy", "xz", "yx", "yy", "yz", "zx", "zy", "zz", "ox", "oy",
             "oz"},
-        frames);
+        (const vector<array<float, 12>>&)frames);
     if (!save_ply(filename, ply, error)) return false;
     return true;
   } else {
@@ -3924,7 +3976,7 @@ static bool load_obj_scene(
   scene.cameras.reserve(obj.cameras.size());
   for (auto& ocamera : obj.cameras) {
     auto& camera        = scene.cameras.emplace_back();
-    camera.frame        = ocamera.frame;
+    camera.frame        = to_math(ocamera.frame);
     camera.orthographic = ocamera.ortho;
     camera.film         = ocamera.film;
     camera.aspect       = ocamera.aspect;
@@ -3955,23 +4007,23 @@ static bool load_obj_scene(
   for (auto& omaterial : obj.materials) {
     auto& material        = scene.materials.emplace_back();
     material.type         = material_type::gltfpbr;
-    material.emission     = omaterial.emission;
+    material.emission     = to_math(omaterial.emission);
     material.emission_tex = omaterial.emission_tex;
-    if (max(omaterial.transmission) > 0.1) {
+    if (max(to_math(omaterial.transmission)) > 0.1) {
       material.type      = material_type::transparent;
-      material.color     = omaterial.transmission;
+      material.color     = to_math(omaterial.transmission);
       material.color_tex = omaterial.transmission_tex;
-    } else if (max(omaterial.specular) > 0.2) {
+    } else if (max(to_math(omaterial.specular)) > 0.2) {
       material.type      = material_type::reflective;
-      material.color     = omaterial.specular;
+      material.color     = to_math(omaterial.specular);
       material.color_tex = omaterial.specular_tex;
-    } else if (max(omaterial.specular) > 0) {
+    } else if (max(to_math(omaterial.specular)) > 0) {
       material.type      = material_type::glossy;
-      material.color     = omaterial.diffuse;
+      material.color     = to_math(omaterial.diffuse);
       material.color_tex = omaterial.diffuse_tex;
     } else {
       material.type      = material_type::matte;
-      material.color     = omaterial.diffuse;
+      material.color     = to_math(omaterial.diffuse);
       material.color_tex = omaterial.diffuse_tex;
     }
     material.roughness  = exponent_to_roughness(omaterial.exponent);
@@ -3990,11 +4042,13 @@ static bool load_obj_scene(
     auto& instance    = scene.instances.emplace_back();
     instance.shape    = (int)scene.shapes.size() - 1;
     instance.material = oshape.elements.front().material;
-    get_positions(oshape, shape.positions);
-    get_normals(oshape, shape.normals);
-    get_texcoords(oshape, shape.texcoords, true);
-    get_faces(oshape, instance.material, shape.triangles, shape.quads);
-    get_lines(oshape, instance.material, shape.lines);
+    get_positions(oshape, (vector<array<float, 3>>&)shape.positions);
+    get_normals(oshape, (vector<array<float, 3>>&)shape.normals);
+    get_texcoords(oshape, (vector<array<float, 2>>&)shape.texcoords, true);
+    get_faces(oshape, instance.material,
+        (vector<array<int, 3>>&)shape.triangles,
+        (vector<array<int, 4>>&)shape.quads);
+    get_lines(oshape, instance.material, (vector<array<int, 2>>&)shape.lines);
     get_points(oshape, instance.material, shape.points);
   }
 
@@ -4002,8 +4056,8 @@ static bool load_obj_scene(
   scene.environments.reserve(obj.environments.size());
   for (auto& oenvironment : obj.environments) {
     auto& environment        = scene.environments.emplace_back();
-    environment.frame        = oenvironment.frame;
-    environment.emission     = oenvironment.emission;
+    environment.frame        = to_math(oenvironment.frame);
+    environment.emission     = to_math(oenvironment.emission);
     environment.emission_tex = oenvironment.emission_tex;
   }
 
@@ -4056,7 +4110,7 @@ static bool save_obj_scene(const string& filename, const scene_data& scene,
   for (auto& camera : scene.cameras) {
     auto& ocamera    = obj.cameras.emplace_back();
     ocamera.name     = get_camera_name(scene, camera);
-    ocamera.frame    = camera.frame;
+    ocamera.frame    = to_array(camera.frame);
     ocamera.ortho    = camera.orthographic;
     ocamera.film     = camera.film;
     ocamera.aspect   = camera.aspect;
@@ -4084,8 +4138,8 @@ static bool save_obj_scene(const string& filename, const scene_data& scene,
     auto& omaterial        = obj.materials.emplace_back();
     omaterial.name         = get_material_name(scene, material);
     omaterial.illum        = 2;
-    omaterial.emission     = material.emission;
-    omaterial.diffuse      = material.color;
+    omaterial.emission     = to_array(material.emission);
+    omaterial.diffuse      = to_array(material.color);
     omaterial.specular     = {0, 0, 0};
     omaterial.exponent     = roughness_to_exponent(material.roughness);
     omaterial.opacity      = material.opacity;
@@ -4102,15 +4156,16 @@ static bool save_obj_scene(const string& filename, const scene_data& scene,
     for (auto& n : normals) n = transform_normal(instance.frame, n);
     auto& oshape = obj.shapes.emplace_back();
     oshape.name  = get_shape_name(scene, shape);
-    add_positions(oshape, positions);
-    add_normals(oshape, normals);
-    add_texcoords(oshape, shape.texcoords, true);
-    add_triangles(oshape, shape.triangles, instance.material,
-        !shape.normals.empty(), !shape.texcoords.empty());
-    add_quads(oshape, shape.quads, instance.material, !shape.normals.empty(),
-        !shape.texcoords.empty());
-    add_lines(oshape, shape.lines, instance.material, !shape.normals.empty(),
-        !shape.texcoords.empty());
+    add_positions(oshape, (const vector<array<float, 3>>&)positions);
+    add_normals(oshape, (const vector<array<float, 3>>&)normals);
+    add_texcoords(
+        oshape, (const vector<array<float, 2>>&)shape.texcoords, true);
+    add_triangles(oshape, (const vector<array<int, 3>>&)shape.triangles,
+        instance.material, !shape.normals.empty(), !shape.texcoords.empty());
+    add_quads(oshape, (const vector<array<int, 4>>&)shape.quads,
+        instance.material, !shape.normals.empty(), !shape.texcoords.empty());
+    add_lines(oshape, (const vector<array<int, 2>>&)shape.lines,
+        instance.material, !shape.normals.empty(), !shape.texcoords.empty());
     add_points(oshape, shape.points, instance.material, !shape.normals.empty(),
         !shape.texcoords.empty());
   }
@@ -4119,8 +4174,8 @@ static bool save_obj_scene(const string& filename, const scene_data& scene,
   for (auto& environment : scene.environments) {
     auto& oenvironment        = obj.environments.emplace_back();
     oenvironment.name         = get_environment_name(scene, environment);
-    oenvironment.frame        = environment.frame;
-    oenvironment.emission     = environment.emission;
+    oenvironment.frame        = to_array(environment.frame);
+    oenvironment.emission     = to_array(environment.emission);
     oenvironment.emission_tex = environment.emission_tex;
   }
 
@@ -5052,7 +5107,7 @@ static bool load_pbrt_scene(
   // convert cameras
   for (auto& pcamera : pbrt.cameras) {
     auto& camera  = scene.cameras.emplace_back();
-    camera.frame  = pcamera.frame;
+    camera.frame  = to_math(pcamera.frame);
     camera.aspect = pcamera.aspect;
     camera.film   = 0.036f;
     camera.lens   = pcamera.lens;
@@ -5080,11 +5135,11 @@ static bool load_pbrt_scene(
   for (auto& pmaterial : pbrt.materials) {
     auto& material = scene.materials.emplace_back();
     material.type  = material_type_map.at(pmaterial.type);
-    if (pmaterial.emission != vec3f{0, 0, 0}) {
+    if (to_math(pmaterial.emission) != vec3f{0, 0, 0}) {
       material.type = material_type::matte;
     }
-    material.emission  = pmaterial.emission;
-    material.color     = pmaterial.color;
+    material.emission  = to_math(pmaterial.emission);
+    material.color     = to_math(pmaterial.color);
     material.ior       = pmaterial.ior;
     material.roughness = pmaterial.roughness;
     material.opacity   = pmaterial.opacity;
@@ -5096,20 +5151,20 @@ static bool load_pbrt_scene(
   for (auto& pshape : pbrt.shapes) {
     auto& shape = scene.shapes.emplace_back();
     shapes_paths.emplace_back(pshape.filename_);
-    shape.positions = pshape.positions;
-    shape.normals   = pshape.normals;
-    shape.texcoords = pshape.texcoords;
-    shape.triangles = pshape.triangles;
+    shape.positions = (const vector<vec3f>&)pshape.positions;
+    shape.normals   = (const vector<vec3f>&)pshape.normals;
+    shape.texcoords = (const vector<vec2f>&)pshape.texcoords;
+    shape.triangles = (const vector<vec3i>&)pshape.triangles;
     for (auto& uv : shape.texcoords) uv.y = 1 - uv.y;
     if (!pshape.instanced) {
       auto& instance    = scene.instances.emplace_back();
-      instance.frame    = pshape.frame;
+      instance.frame    = to_math(pshape.frame);
       instance.shape    = (int)scene.shapes.size() - 1;
       instance.material = pshape.material;
     } else {
       for (auto& frame : pshape.instances) {
         auto& instance    = scene.instances.emplace_back();
-        instance.frame    = frame * pshape.frame;
+        instance.frame    = to_math(frame) * to_math(pshape.frame);
         instance.shape    = (int)scene.shapes.size() - 1;
         instance.material = pshape.material;
       }
@@ -5119,8 +5174,8 @@ static bool load_pbrt_scene(
   // convert environments
   for (auto& penvironment : pbrt.environments) {
     auto& environment        = scene.environments.emplace_back();
-    environment.frame        = penvironment.frame;
-    environment.emission     = penvironment.emission;
+    environment.frame        = to_math(penvironment.frame);
+    environment.emission     = to_math(penvironment.emission);
     environment.emission_tex = penvironment.emission_tex;
   }
 
@@ -5128,15 +5183,15 @@ static bool load_pbrt_scene(
   for (auto& plight : pbrt.lights) {
     auto& shape = scene.shapes.emplace_back();
     shapes_paths.emplace_back();
-    shape.triangles   = plight.area_triangles;
-    shape.positions   = plight.area_positions;
-    shape.normals     = plight.area_normals;
+    shape.triangles   = (const vector<vec3i>&)plight.area_triangles;
+    shape.positions   = (const vector<vec3f>&)plight.area_positions;
+    shape.normals     = (const vector<vec3f>&)plight.area_normals;
     auto& material    = scene.materials.emplace_back();
-    material.emission = plight.area_emission;
+    material.emission = to_math(plight.area_emission);
     auto& instance    = scene.instances.emplace_back();
     instance.shape    = (int)scene.shapes.size() - 1;
     instance.material = (int)scene.materials.size() - 1;
-    instance.frame    = plight.area_frame;
+    instance.frame    = to_math(plight.area_frame);
   }
 
   // dirname
@@ -5194,7 +5249,7 @@ static bool save_pbrt_scene(const string& filename, const scene_data& scene,
   // convert camera
   auto& camera       = scene.cameras.front();
   auto& pcamera      = pbrt.cameras.emplace_back();
-  pcamera.frame      = camera.frame;
+  pcamera.frame      = to_array(camera.frame);
   pcamera.lens       = camera.lens;
   pcamera.aspect     = camera.aspect;
   pcamera.resolution = {1280, (int)(1280 / pcamera.aspect)};
@@ -5222,8 +5277,8 @@ static bool save_pbrt_scene(const string& filename, const scene_data& scene,
     auto& pmaterial     = pbrt.materials.emplace_back();
     pmaterial.name      = get_material_name(scene, material);
     pmaterial.type      = material_type_map.at(material.type);
-    pmaterial.emission  = material.emission;
-    pmaterial.color     = material.color;
+    pmaterial.emission  = to_array(material.emission);
+    pmaterial.color     = to_array(material.color);
     pmaterial.roughness = material.roughness;
     pmaterial.ior       = material.ior;
     pmaterial.opacity   = material.opacity;
@@ -5234,15 +5289,15 @@ static bool save_pbrt_scene(const string& filename, const scene_data& scene,
   for (auto& instance : scene.instances) {
     auto& pshape     = pbrt.shapes.emplace_back();
     pshape.filename_ = get_shape_name(scene, instance.shape) + ".ply";
-    pshape.frame     = instance.frame;
-    pshape.frend     = instance.frame;
+    pshape.frame     = to_array(instance.frame);
+    pshape.frend     = to_array(instance.frame);
     pshape.material  = instance.material;
   }
 
   // convert environments
   for (auto& environment : scene.environments) {
     auto& penvironment        = pbrt.environments.emplace_back();
-    penvironment.emission     = environment.emission;
+    penvironment.emission     = to_array(environment.emission);
     penvironment.emission_tex = environment.emission_tex;
   }
 
