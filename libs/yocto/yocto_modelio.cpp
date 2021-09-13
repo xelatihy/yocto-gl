@@ -3128,9 +3128,9 @@ static array<float, 3> blackbody_to_rgb_(float temperature) {
   auto xyY = array<float, 3>{x, y, 1};
   auto xyz = array<float, 3>{xyY[0] * xyY[2] / xyY[1], xyY[2],
       (1 - xyY[0] - xyY[1]) * xyY[2] / xyY[1]};
-  auto rgb = array<float, 3>{dot({+3.2406f, -0.9689f, +0.0557f}, xyz),
-      dot({-1.5372f, +1.8758f, -0.2040f}, xyz),
-      dot({-0.4986f, +0.0415f, +1.0570f}, xyz)};
+  auto rgb = add(mul({+3.2406f, -0.9689f, +0.0557f}, xyz[0]),
+      add(mul({-1.5372f, +1.8758f, -0.2040f}, xyz[1]),
+          mul({-0.4986f, +0.0415f, +1.0570f}, xyz[2])));
   return rgb;
 }
 
