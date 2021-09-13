@@ -294,7 +294,7 @@ static array<float, 3> mul(
     const array<array<float, 3>, 3>& a, const array<float, 3>& b) {
   return add(mul(a[0], b[0]), add(mul(a[1], b[1]), mul(a[2], b[2])));
 }
-static array<array<float, 3>, 3> mul(
+[[maybe_unused]] static array<array<float, 3>, 3> mul(
     const array<array<float, 3>, 3>& a, const array<array<float, 3>, 3>& b) {
   return {mul(a, b[0]), mul(a, b[1]), mul(a, b[2])};
 }
@@ -375,10 +375,12 @@ static array<array<float, 3>, 4> unflatten(const array<float, 12>& a) {
   return (const array<array<float, 3>, 4>&)a;
 }
 
-static array<float, 16> flatten(const array<array<float, 4>, 4>& a) {
+[[maybe_unused]] static array<float, 16> flatten(
+    const array<array<float, 4>, 4>& a) {
   return (const array<float, 16>&)a;
 }
-static array<array<float, 4>, 4> unflatten(const array<float, 16>& a) {
+[[maybe_unused]] static array<array<float, 4>, 4> unflatten(
+    const array<float, 16>& a) {
   return (const array<array<float, 4>, 4>&)a;
 }
 
@@ -2606,11 +2608,15 @@ struct pbrt_value {
 
 // Pbrt command
 struct pbrt_command {
-  string             name   = "";
-  string             type   = "";
-  vector<pbrt_value> values = {};
-  array<float, 12>   frame  = {1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0};
-  array<float, 12>   frend  = {1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0};
+  string                    name   = "";
+  string                    type   = "";
+  vector<pbrt_value>        values = {};
+  array<array<float, 3>, 4> frame  = {array<float, 3>{1, 0, 0},
+      array<float, 3>{0, 1, 0}, array<float, 3>{0, 0, 1},
+      array<float, 3>{0, 0, 0}};
+  array<array<float, 3>, 4> frend  = {array<float, 3>{1, 0, 0},
+      array<float, 3>{0, 1, 0}, array<float, 3>{0, 0, 1},
+      array<float, 3>{0, 0, 0}};
 };
 
 // get pbrt value
@@ -3389,11 +3395,12 @@ struct pbrt_medium {
 [[nodiscard]] static bool convert_camera(pbrt_camera& pcamera,
     const pbrt_command& command, const array<int, 2>& resolution,
     const string& filename, bool verbose = false) {
-  pcamera.frame      = command.frame;
-  pcamera.frend      = command.frend;
-  auto cframe        = inverse(unflatten(pcamera.frame));
+  auto cframe        = inverse(command.frame);
   cframe[2]          = neg(cframe[2]);
+  auto cfrend        = inverse(command.frend);
+  cfrend[2]          = neg(cfrend[2]);
   pcamera.frame      = flatten(cframe);
+  pcamera.frend      = flatten(cfrend);
   pcamera.resolution = resolution;
   auto film_aspect   = (resolution[0] == 0 || resolution[1] == 0)
                            ? 1
@@ -3962,8 +3969,8 @@ static void make_quad(vector<array<int, 3>>& triangles,
     return true;
   };
 
-  pshape.frame = command.frame;
-  pshape.frend = command.frend;
+  pshape.frame = flatten(command.frame);
+  pshape.frend = flatten(command.frend);
   if (command.type == "trianglemesh") {
     pshape.positions = {};
     pshape.normals   = {};
@@ -4030,8 +4037,8 @@ static void make_quad(vector<array<int, 3>>& triangles,
 // Convert pbrt lights
 [[nodiscard]] static bool convert_light(pbrt_light& plight,
     const pbrt_command& command, const string& filename, bool verbose = false) {
-  plight.frame = command.frame;
-  plight.frend = command.frend;
+  plight.frame = flatten(command.frame);
+  plight.frend = flatten(command.frend);
   if (command.type == "distant") {
     auto l = array<float, 3>{1, 1, 1}, scale = array<float, 3>{1, 1, 1};
     get_pbrt_value(command.values, "L", l);
@@ -4081,8 +4088,8 @@ static void make_quad(vector<array<int, 3>>& triangles,
 [[nodiscard]] static bool convert_environment(pbrt_environment& penvironment,
     const pbrt_command& command, unordered_map<string, int>& texture_map,
     const string& filename, bool verbose = false) {
-  penvironment.frame = command.frame;
-  penvironment.frend = command.frend;
+  penvironment.frame = flatten(command.frame);
+  penvironment.frend = flatten(command.frend);
   penvironment.frame = flatten(mul(unflatten(penvironment.frame),
       array<array<float, 3>, 4>{array<float, 3>{1, 0, 0},
           array<float, 3>{0, 0, 1}, array<float, 3>{0, 1, 0},
@@ -4114,15 +4121,19 @@ static void make_quad(vector<array<int, 3>>& triangles,
 
 // pbrt stack ctm
 struct pbrt_stack_element {
-  array<float, 12> transform_start = {1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0};
-  array<float, 12> transform_end   = {1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0};
-  pbrt_material    material        = {};
-  pbrt_arealight   arealight       = {};
-  pbrt_medium      interior        = {};
-  pbrt_medium      exterior        = {};
-  bool             reverse         = false;
-  bool             active_transform_start = true;
-  bool             active_transform_end   = true;
+  array<array<float, 3>, 4> transform_start        = {array<float, 3>{1, 0, 0},
+      array<float, 3>{0, 1, 0}, array<float, 3>{0, 0, 1},
+      array<float, 3>{0, 0, 0}};
+  array<array<float, 3>, 4> transform_end          = {array<float, 3>{1, 0, 0},
+      array<float, 3>{0, 1, 0}, array<float, 3>{0, 0, 1},
+      array<float, 3>{0, 0, 0}};
+  pbrt_material             material               = {};
+  pbrt_arealight            arealight              = {};
+  pbrt_medium               interior               = {};
+  pbrt_medium               exterior               = {};
+  bool                      reverse                = false;
+  bool                      active_transform_start = true;
+  bool                      active_transform_end   = true;
 };
 
 // pbrt parsing context
@@ -4149,15 +4160,15 @@ static bool load_pbrt(const string& filename, pbrt_model& pbrt, string& error,
   // helpers
   auto set_transform = [](pbrt_stack_element&               ctx,
                            const array<array<float, 3>, 4>& xform) {
-    if (ctx.active_transform_start) ctx.transform_start = flatten(xform);
-    if (ctx.active_transform_end) ctx.transform_end = flatten(xform);
+    if (ctx.active_transform_start) ctx.transform_start = xform;
+    if (ctx.active_transform_end) ctx.transform_end = xform;
   };
   auto concat_transform = [](pbrt_stack_element&               ctx,
                               const array<array<float, 3>, 4>& xform) {
     if (ctx.active_transform_start)
-      ctx.transform_start = flatten(mul(unflatten(ctx.transform_start), xform));
+      ctx.transform_start = mul(ctx.transform_start, xform);
     if (ctx.active_transform_end)
-      ctx.transform_end = flatten(mul(unflatten(ctx.transform_end), xform));
+      ctx.transform_end = mul(ctx.transform_end, xform);
   };
 
   // init stack
@@ -4210,9 +4221,9 @@ static bool load_pbrt(const string& filename, pbrt_model& pbrt, string& error,
       auto& named_object = named_objects.at(object);
       for (auto& shape_id : named_object) {
         pbrt.shapes[shape_id].instances.push_back(
-            ctx.stack.back().transform_start);
+            flatten(ctx.stack.back().transform_start));
         pbrt.shapes[shape_id].instaends.push_back(
-            ctx.stack.back().transform_end);
+            flatten(ctx.stack.back().transform_end));
       }
     } else if (cmd == "ActiveTransform") {
       auto name = ""s;
@@ -4552,15 +4563,12 @@ bool save_pbrt(const string& filename, const pbrt_model& pbrt, string& error,
   for (auto& camera : pbrt.cameras) {
     auto command  = pbrt_command{};
     command.type  = "perspective";
-    command.frame = camera.frame;
+    auto cframe   = unflatten(camera.frame);
+    command.frame = unflatten(camera.frame);
     command.values.push_back(make_pbrt_value(
         "fov", 2 * std::tan(0.036f / (2 * camera.lens)) * 180 / (float)M_PI));
-    format_values(buffer, "LookAt {} {} {}\n",
-        array<float, 3>{command.frame[9], command.frame[10], command.frame[11]},
-        array<float, 3>{command.frame[9] - command.frame[6],
-            command.frame[10] - command.frame[7],
-            command.frame[11] - command.frame[8]},
-        array<float, 3>{command.frame[3], command.frame[4], command.frame[5]});
+    format_values(buffer, "LookAt {} {} {}\n", cframe[3],
+        sub(cframe[3], cframe[2]), cframe[1]);
     format_values(buffer, "Camera \"{}\" {}\n", command.type, command.values);
   }
 
@@ -4568,7 +4576,7 @@ bool save_pbrt(const string& filename, const pbrt_model& pbrt, string& error,
 
   for (auto& light : pbrt.lights) {
     auto command  = pbrt_command{};
-    command.frame = light.frame;
+    command.frame = unflatten(light.frame);
     if (light.distant) {
       command.type = "distance";
       command.values.push_back(make_pbrt_value("L", light.emission));
@@ -4577,8 +4585,7 @@ bool save_pbrt(const string& filename, const pbrt_model& pbrt, string& error,
       command.values.push_back(make_pbrt_value("I", light.emission));
     }
     format_values(buffer, "AttributeBegin\n");
-    format_values(
-        buffer, "Transform {}\n", frame_to_mat(unflatten(command.frame)));
+    format_values(buffer, "Transform {}\n", frame_to_mat(command.frame));
     format_values(
         buffer, "LightSource \"{}\" {}\n", command.type, command.values);
     format_values(buffer, "AttributeEnd\n");
@@ -4586,14 +4593,13 @@ bool save_pbrt(const string& filename, const pbrt_model& pbrt, string& error,
 
   for (auto& environment : pbrt.environments) {
     auto command  = pbrt_command{};
-    command.frame = environment.frame;
+    command.frame = unflatten(environment.frame);
     command.type  = "infinite";
     command.values.push_back(make_pbrt_value("L", environment.emission));
     command.values.push_back(
         make_pbrt_value("mapname", environment.emission_tex));
     format_values(buffer, "AttributeBegin\n");
-    format_values(
-        buffer, "Transform {}\n", frame_to_mat(unflatten(command.frame)));
+    format_values(buffer, "Transform {}\n", frame_to_mat(command.frame));
     format_values(
         buffer, "LightSource \"{}\" {}\n", command.type, command.values);
     format_values(buffer, "AttributeEnd\n");
@@ -4674,7 +4680,7 @@ bool save_pbrt(const string& filename, const pbrt_model& pbrt, string& error,
   for (auto& shape : pbrt.shapes) {
     auto& material = pbrt.materials.at(shape.material);
     auto  command  = pbrt_command{};
-    command.frame  = shape.frame;
+    command.frame  = unflatten(shape.frame);
     if (ply_meshes) {
       command.type = "plymesh";
       command.values.push_back(make_pbrt_value("filename", shape.filename_));
