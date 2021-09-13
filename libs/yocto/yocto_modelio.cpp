@@ -28,7 +28,9 @@
 
 #include "yocto_modelio.h"
 
+#define _USE_MATH_DEFINES
 #include <charconv>
+#include <cmath>
 #include <cstdio>
 #include <cstring>
 #include <filesystem>
