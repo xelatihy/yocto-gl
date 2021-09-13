@@ -450,20 +450,20 @@ namespace yocto {
 // Pbrt camera
 struct pbrt_camera {
   // camera parameters
-  frame3f frame      = identity3x4f;
-  frame3f frend      = identity3x4f;
-  vec2i   resolution = {0, 0};
-  float   lens       = 0;
-  float   aspect     = 0;
-  float   focus      = 0;
-  float   aperture   = 0;
+  array<float, 12> frame      = {1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0};
+  array<float, 12> frend      = {1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0};
+  array<int, 2>    resolution = {0, 0};
+  float            lens       = 0;
+  float            aspect     = 0;
+  float            focus      = 0;
+  float            aperture   = 0;
 };
 
 // Pbrt material
 struct pbrt_texture {
-  string name     = "";
-  vec3f  constant = {1, 1, 1};
-  string filename = "";
+  string          name     = "";
+  array<float, 3> constant = {1, 1, 1};
+  string          filename = "";
 };
 
 // Pbrt material type (simplified and only for the materials that matter here)
@@ -475,54 +475,54 @@ enum struct pbrt_mtype {
 
 // Pbrt material
 struct pbrt_material {
-  string     name            = "";
-  pbrt_mtype type            = pbrt_mtype::matte;
-  vec3f      emission        = {0, 0, 0};
-  vec3f      color           = {0, 0, 0};
-  float      roughness       = 0;
-  float      ior             = 1.5f;
-  float      opacity         = 1;
-  int        color_tex       = -1;
-  vec3f      volmeanfreepath = {0, 0, 0};
-  vec3f      volscatter      = {0, 0, 0};
-  float      volscale        = 0.01f;
+  string          name            = "";
+  pbrt_mtype      type            = pbrt_mtype::matte;
+  array<float, 3> emission        = {0, 0, 0};
+  array<float, 3> color           = {0, 0, 0};
+  float           roughness       = 0;
+  float           ior             = 1.5f;
+  float           opacity         = 1;
+  int             color_tex       = -1;
+  array<float, 3> volmeanfreepath = {0, 0, 0};
+  array<float, 3> volscatter      = {0, 0, 0};
+  float           volscale        = 0.01f;
 };
 
 // Pbrt shape
 struct pbrt_shape {
-  frame3f         frame     = identity3x4f;
-  frame3f         frend     = identity3x4f;
-  bool            instanced = false;
-  vector<frame3f> instances = {};
-  vector<frame3f> instaends = {};
-  int             material  = -1;
-  string          filename_ = "";
-  vector<vec3f>   positions = {};
-  vector<vec3f>   normals   = {};
-  vector<vec2f>   texcoords = {};
-  vector<vec3i>   triangles = {};
+  array<float, 12>         frame     = {1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0};
+  array<float, 12>         frend     = {1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0};
+  bool                     instanced = false;
+  vector<array<float, 12>> instances = {};
+  vector<array<float, 12>> instaends = {};
+  int                      material  = -1;
+  string                   filename_ = "";
+  vector<array<float, 3>>  positions = {};
+  vector<array<float, 3>>  normals   = {};
+  vector<array<float, 2>>  texcoords = {};
+  vector<array<int, 3>>    triangles = {};
 };
 
 // Pbrt lights
 struct pbrt_light {
-  frame3f       frame          = identity3x4f;
-  frame3f       frend          = identity3x4f;
-  vec3f         emission       = {0, 0, 0};
-  vec3f         from           = {0, 0, 0};
-  vec3f         to             = {0, 0, 0};
-  bool          distant        = false;
-  vec3f         area_emission  = {0, 0, 0};
-  frame3f       area_frame     = identity3x4f;
-  frame3f       area_frend     = identity3x4f;
-  vector<vec3i> area_triangles = {};
-  vector<vec3f> area_positions = {};
-  vector<vec3f> area_normals   = {};
+  array<float, 12>        frame          = {1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0};
+  array<float, 12>        frend          = {1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0};
+  array<float, 3>         emission       = {0, 0, 0};
+  array<float, 3>         from           = {0, 0, 0};
+  array<float, 3>         to             = {0, 0, 0};
+  bool                    distant        = false;
+  array<float, 3>         area_emission  = {0, 0, 0};
+  array<float, 12>        area_frame     = {1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0};
+  array<float, 12>        area_frend     = {1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0};
+  vector<array<int, 3>>   area_triangles = {};
+  vector<array<float, 3>> area_positions = {};
+  vector<array<float, 3>> area_normals   = {};
 };
 struct pbrt_environment {
-  frame3f frame        = identity3x4f;
-  frame3f frend        = identity3x4f;
-  vec3f   emission     = {0, 0, 0};
-  int     emission_tex = -1;
+  array<float, 12> frame        = {1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0};
+  array<float, 12> frend        = {1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0};
+  array<float, 3>  emission     = {0, 0, 0};
+  int              emission_tex = -1;
 };
 
 // Pbrt model

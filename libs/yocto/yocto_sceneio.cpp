@@ -5107,7 +5107,7 @@ static bool load_pbrt_scene(
   // convert cameras
   for (auto& pcamera : pbrt.cameras) {
     auto& camera  = scene.cameras.emplace_back();
-    camera.frame  = pcamera.frame;
+    camera.frame  = to_math(pcamera.frame);
     camera.aspect = pcamera.aspect;
     camera.film   = 0.036f;
     camera.lens   = pcamera.lens;
@@ -5135,11 +5135,11 @@ static bool load_pbrt_scene(
   for (auto& pmaterial : pbrt.materials) {
     auto& material = scene.materials.emplace_back();
     material.type  = material_type_map.at(pmaterial.type);
-    if (pmaterial.emission != vec3f{0, 0, 0}) {
+    if (to_math(pmaterial.emission) != vec3f{0, 0, 0}) {
       material.type = material_type::matte;
     }
-    material.emission  = pmaterial.emission;
-    material.color     = pmaterial.color;
+    material.emission  = to_math(pmaterial.emission);
+    material.color     = to_math(pmaterial.color);
     material.ior       = pmaterial.ior;
     material.roughness = pmaterial.roughness;
     material.opacity   = pmaterial.opacity;
@@ -5151,20 +5151,20 @@ static bool load_pbrt_scene(
   for (auto& pshape : pbrt.shapes) {
     auto& shape = scene.shapes.emplace_back();
     shapes_paths.emplace_back(pshape.filename_);
-    shape.positions = pshape.positions;
-    shape.normals   = pshape.normals;
-    shape.texcoords = pshape.texcoords;
-    shape.triangles = pshape.triangles;
+    shape.positions = (const vector<vec3f>&)pshape.positions;
+    shape.normals   = (const vector<vec3f>&)pshape.normals;
+    shape.texcoords = (const vector<vec2f>&)pshape.texcoords;
+    shape.triangles = (const vector<vec3i>&)pshape.triangles;
     for (auto& uv : shape.texcoords) uv.y = 1 - uv.y;
     if (!pshape.instanced) {
       auto& instance    = scene.instances.emplace_back();
-      instance.frame    = pshape.frame;
+      instance.frame    = to_math(pshape.frame);
       instance.shape    = (int)scene.shapes.size() - 1;
       instance.material = pshape.material;
     } else {
       for (auto& frame : pshape.instances) {
         auto& instance    = scene.instances.emplace_back();
-        instance.frame    = frame * pshape.frame;
+        instance.frame    = to_math(frame) * to_math(pshape.frame);
         instance.shape    = (int)scene.shapes.size() - 1;
         instance.material = pshape.material;
       }
@@ -5174,8 +5174,8 @@ static bool load_pbrt_scene(
   // convert environments
   for (auto& penvironment : pbrt.environments) {
     auto& environment        = scene.environments.emplace_back();
-    environment.frame        = penvironment.frame;
-    environment.emission     = penvironment.emission;
+    environment.frame        = to_math(penvironment.frame);
+    environment.emission     = to_math(penvironment.emission);
     environment.emission_tex = penvironment.emission_tex;
   }
 
@@ -5183,15 +5183,15 @@ static bool load_pbrt_scene(
   for (auto& plight : pbrt.lights) {
     auto& shape = scene.shapes.emplace_back();
     shapes_paths.emplace_back();
-    shape.triangles   = plight.area_triangles;
-    shape.positions   = plight.area_positions;
-    shape.normals     = plight.area_normals;
+    shape.triangles   = (const vector<vec3i>&)plight.area_triangles;
+    shape.positions   = (const vector<vec3f>&)plight.area_positions;
+    shape.normals     = (const vector<vec3f>&)plight.area_normals;
     auto& material    = scene.materials.emplace_back();
-    material.emission = plight.area_emission;
+    material.emission = to_math(plight.area_emission);
     auto& instance    = scene.instances.emplace_back();
     instance.shape    = (int)scene.shapes.size() - 1;
     instance.material = (int)scene.materials.size() - 1;
-    instance.frame    = plight.area_frame;
+    instance.frame    = to_math(plight.area_frame);
   }
 
   // dirname
@@ -5249,7 +5249,7 @@ static bool save_pbrt_scene(const string& filename, const scene_data& scene,
   // convert camera
   auto& camera       = scene.cameras.front();
   auto& pcamera      = pbrt.cameras.emplace_back();
-  pcamera.frame      = camera.frame;
+  pcamera.frame      = to_array(camera.frame);
   pcamera.lens       = camera.lens;
   pcamera.aspect     = camera.aspect;
   pcamera.resolution = {1280, (int)(1280 / pcamera.aspect)};
@@ -5277,8 +5277,8 @@ static bool save_pbrt_scene(const string& filename, const scene_data& scene,
     auto& pmaterial     = pbrt.materials.emplace_back();
     pmaterial.name      = get_material_name(scene, material);
     pmaterial.type      = material_type_map.at(material.type);
-    pmaterial.emission  = material.emission;
-    pmaterial.color     = material.color;
+    pmaterial.emission  = to_array(material.emission);
+    pmaterial.color     = to_array(material.color);
     pmaterial.roughness = material.roughness;
     pmaterial.ior       = material.ior;
     pmaterial.opacity   = material.opacity;
@@ -5289,15 +5289,15 @@ static bool save_pbrt_scene(const string& filename, const scene_data& scene,
   for (auto& instance : scene.instances) {
     auto& pshape     = pbrt.shapes.emplace_back();
     pshape.filename_ = get_shape_name(scene, instance.shape) + ".ply";
-    pshape.frame     = instance.frame;
-    pshape.frend     = instance.frame;
+    pshape.frame     = to_array(instance.frame);
+    pshape.frend     = to_array(instance.frame);
     pshape.material  = instance.material;
   }
 
   // convert environments
   for (auto& environment : scene.environments) {
     auto& penvironment        = pbrt.environments.emplace_back();
-    penvironment.emission     = environment.emission;
+    penvironment.emission     = to_array(environment.emission);
     penvironment.emission_tex = environment.emission_tex;
   }
 
