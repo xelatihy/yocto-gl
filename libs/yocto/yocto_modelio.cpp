@@ -1365,31 +1365,76 @@ bool has_quads(const ply_model& ply) {
 }
 
 // Add ply properties
-static ply_element& add_element(
+template <typename T>
+static ply_type get_ply_type() {
+  static_assert(std::is_arithmetic_v<T>, "not a supported type");
+  if constexpr (std::is_same_v<T, int8_t>) return ply_type::i8;
+  if constexpr (std::is_same_v<T, int16_t>) return ply_type::i16;
+  if constexpr (std::is_same_v<T, int32_t>) return ply_type::i32;
+  if constexpr (std::is_same_v<T, int64_t>) return ply_type::i64;
+  if constexpr (std::is_same_v<T, uint8_t>) return ply_type::u8;
+  if constexpr (std::is_same_v<T, uint16_t>) return ply_type::u16;
+  if constexpr (std::is_same_v<T, uint32_t>) return ply_type::u32;
+  if constexpr (std::is_same_v<T, uint64_t>) return ply_type::u64;
+  if constexpr (std::is_same_v<T, float>) return ply_type::f32;
+  if constexpr (std::is_same_v<T, double>) return ply_type::f64;
+}
+static bool add_element(
     ply_model& ply, const string& element_name, size_t count) {
   for (auto& elem : ply.elements) {
-    if (elem.name == element_name) return elem;
+    if (elem.name == element_name) return true;
   }
   auto& elem = ply.elements.emplace_back();
   elem.name  = element_name;
   elem.count = count;
-  return elem;
+  return true;
 }
-static ply_property& add_property(ply_model& ply, const string& element_name,
+static bool add_property(ply_model& ply, const string& element_name,
     const string& property_name, size_t count, ply_type type, bool is_list) {
-  add_element(ply, element_name, count);
+  if (!add_element(ply, element_name, count)) return false;
   for (auto& elem : ply.elements) {
     if (elem.name != element_name) continue;
     for (auto& prop : elem.properties) {
-      if (prop.name == property_name) return prop;
+      if (prop.name == property_name) return true;
     }
     auto& prop   = elem.properties.emplace_back();
     prop.name    = property_name;
     prop.type    = type;
     prop.is_list = is_list;
-    return prop;
+    return true;
   }
-  throw std::invalid_argument{"should not have gotten here"};
+  return false;
+}
+template <typename T>
+static bool set_value(ply_property& prop, size_t index, T value) {
+  switch (prop.type) {
+    case ply_type::i8: prop.data_i8[index] = (int8_t)value; return true;
+    case ply_type::i16: prop.data_i16[index] = (int16_t)value; return true;
+    case ply_type::i32: prop.data_i32[index] = (int32_t)value; return true;
+    case ply_type::i64: prop.data_i64[index] = (int64_t)value; return true;
+    case ply_type::u8: prop.data_u8[index] = (uint8_t)value; return true;
+    case ply_type::u16: prop.data_u16[index] = (uint16_t)value; return true;
+    case ply_type::u32: prop.data_u32[index] = (uint32_t)value; return true;
+    case ply_type::u64: prop.data_u64[index] = (uint64_t)value; return true;
+    case ply_type::f32: prop.data_f32[index] = (float)value; return true;
+    case ply_type::f64: prop.data_f64[index] = (double)value; return true;
+  }
+  return false;
+}
+static bool resize_values(ply_property& prop, size_t size) {
+  switch (prop.type) {
+    case ply_type::i8: prop.data_i8.resize(size); return true;
+    case ply_type::i16: prop.data_i16.resize(size); return true;
+    case ply_type::i32: prop.data_i32.resize(size); return true;
+    case ply_type::i64: prop.data_i64.resize(size); return true;
+    case ply_type::u8: prop.data_u8.resize(size); return true;
+    case ply_type::u16: prop.data_u16.resize(size); return true;
+    case ply_type::u32: prop.data_u32.resize(size); return true;
+    case ply_type::u64: prop.data_u64.resize(size); return true;
+    case ply_type::f32: prop.data_f32.resize(size); return true;
+    case ply_type::f64: prop.data_f64.resize(size); return true;
+  }
+  return false;
 }
 template <typename T>
 static vector<T> make_vector(const T* value, size_t count, int stride) {
@@ -1422,6 +1467,98 @@ static bool add_values(ply_model& ply, const int* values, size_t count,
   return true;
 }
 
+template <typename T>
+bool add_value(ply_model& ply, const string& element, const string& property,
+    const vector<T>& values) {
+  if (values.empty()) return false;
+  if (!add_property(
+          ply, element, property, values.size(), get_ply_type<T>(), false))
+    return false;
+  auto& prop = get_property(ply, element, property);
+  resize_values(prop, values.size());
+  for (auto index = (size_t)0; index < values.size(); index++) {
+    if (!set_value(prop, index, values[index])) return false;
+  }
+  return true;
+}
+template <typename T, size_t N>
+bool add_values(ply_model& ply, const string& element,
+    const array<string, N>& properties, const vector<array<T, N>>& values) {
+  if (values.empty()) return false;
+  for (auto& property : properties) {
+    if (!add_property(
+            ply, element, property, values.size(), get_ply_type<T>(), false))
+      return false;
+  }
+  auto item = (size_t)0;
+  for (auto& property : properties) {
+    auto& prop = get_property(ply, element, property);
+    resize_values(prop, values.size());
+    for (auto index = (size_t)0; index < values.size(); index++) {
+      if (!set_value(prop, index, values[index][item])) return false;
+    }
+    item++;
+  }
+  return true;
+}
+
+template <typename T>
+bool add_lists(ply_model& ply, const string& element, const string& property,
+    const vector<vector<T>>& values) {
+  if (values.empty()) return false;
+  if (!add_property(
+          ply, element, property, values.size(), get_ply_type<T>(), true))
+    return false;
+  auto& prop = get_property(ply, element, property);
+  prop.ldata_u8.resize(values.size());
+  auto count = (size_t)0;
+  for (auto list = 0; list < values.size(); list++) {
+    prop.ldata_u8[list] = values[list].size();
+    count += values[list].size();
+  }
+  resize_values(prop, count);
+  auto current = (size_t)0;
+  for (auto list = (size_t)0; list < values.size(); list++) {
+    for (auto item = (size_t)0; item < values[list].size(); item++) {
+      if (!set_value(prop, current++, values[list][item])) return false;
+    }
+  }
+  return true;
+}
+template <typename T>
+bool add_lists(ply_model& ply, const string& element, const string& property,
+    const vector<byte>& sizes, const vector<T>& values) {
+  if (values.empty()) return false;
+  if (!add_property(
+          ply, element, property, values.size(), get_ply_type<T>(), true))
+    return false;
+  auto& prop    = get_property(ply, element, property);
+  prop.ldata_u8 = sizes;
+  resize_values(prop, values.size());
+  for (auto index = (size_t)0; index < values.size(); index++) {
+    if (!set_value(prop, index, values[index])) return false;
+  }
+  return true;
+}
+template <typename T, size_t N>
+bool add_lists(ply_model& ply, const string& element, const string& property,
+    const vector<array<T, N>>& values) {
+  if (values.empty()) return false;
+  if (!add_property(
+          ply, element, property, values.size(), get_ply_type<T>(), true))
+    return false;
+  auto& prop = get_property(ply, element, property);
+  prop.ldata_u8.assign(values.size(), (uint8_t)N);
+  resize_values(prop, values.size() * N);
+  auto current = (size_t)0;
+  for (auto list = (size_t)0; list < values.size(); list++) {
+    for (auto item = (size_t)0; item < values[list].size(); item++) {
+      if (!set_value(prop, current++, values[list][item])) return false;
+    }
+  }
+  return true;
+}
+
 bool add_value(ply_model& ply, const string& element, const string& property,
     const vector<float>& values) {
   if (values.empty()) return false;
@@ -1431,27 +1568,23 @@ bool add_value(ply_model& ply, const string& element, const string& property,
 }
 bool add_values(ply_model& ply, const string& element,
     const array<string, 2>& properties, const vector<vec2f>& values) {
-  if (values.empty()) return false;
   return add_values(
-      ply, &values.front().x, values.size(), element, properties.data(), 2);
+      ply, element, properties, (const vector<array<float, 2>>&)values);
 }
 bool add_values(ply_model& ply, const string& element,
     const array<string, 3>& properties, const vector<vec3f>& values) {
-  if (values.empty()) return false;
   return add_values(
-      ply, &values.front().x, values.size(), element, properties.data(), 3);
+      ply, element, properties, (const vector<array<float, 3>>&)values);
 }
 bool add_values(ply_model& ply, const string& element,
     const array<string, 4>& properties, const vector<vec4f>& values) {
-  if (values.empty()) return false;
   return add_values(
-      ply, &values.front().x, values.size(), element, properties.data(), 4);
+      ply, element, properties, (const vector<array<float, 4>>&)values);
 }
 bool add_values(ply_model& ply, const string& element,
     const array<string, 12>& properties, const vector<frame3f>& values) {
-  if (values.empty()) return false;
-  return add_values(ply, &values.front().x.x, values.size(), element,
-      properties.data(), (int)properties.size());
+  return add_values(
+      ply, element, properties, (const vector<array<float, 12>>&)values);
 }
 
 bool add_value(ply_model& ply, const string& element, const string& property,
@@ -1463,21 +1596,18 @@ bool add_value(ply_model& ply, const string& element, const string& property,
 }
 bool add_values(ply_model& ply, const string& element,
     const array<string, 2>& properties, const vector<vec2i>& values) {
-  if (values.empty()) return false;
   return add_values(
-      ply, &values.front().x, values.size(), element, properties.data(), 2);
+      ply, element, properties, (const vector<array<int, 2>>&)values);
 }
 bool add_values(ply_model& ply, const string& element,
     const array<string, 3>& properties, const vector<vec3i>& values) {
-  if (values.empty()) return false;
   return add_values(
-      ply, &values.front().x, values.size(), element, properties.data(), 3);
+      ply, element, properties, (const vector<array<int, 3>>&)values);
 }
 bool add_values(ply_model& ply, const string& element,
     const array<string, 4>& properties, const vector<vec4i>& values) {
-  if (values.empty()) return false;
   return add_values(
-      ply, &values.front().x, values.size(), element, properties.data(), 4);
+      ply, element, properties, (const vector<array<int, 4>>&)values);
 }
 
 bool add_lists(ply_model& ply, const string& element, const string& property,
