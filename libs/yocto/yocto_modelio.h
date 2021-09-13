@@ -121,7 +121,7 @@ bool has_property(
 bool get_value(const ply_model& ply, const string& element,
     const string& property, vector<float>& values);
 bool get_values(const ply_model& ply, const string& element,
-    const array<string, 2>& properties, vector<vec4f>& values);
+    const array<string, 2>& properties, vector<vec2f>& values);
 bool get_values(const ply_model& ply, const string& element,
     const array<string, 3>& properties, vector<vec3f>& values);
 bool get_values(const ply_model& ply, const string& element,

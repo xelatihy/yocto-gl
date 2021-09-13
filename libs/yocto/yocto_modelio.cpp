@@ -1022,6 +1022,86 @@ static bool convert_property(const ply_property& prop, vector<T>& values) {
   throw std::runtime_error{"should not have gotten here"};
   return false;
 }
+inline size_t get_size(const ply_property& prop) {
+  switch (prop.type) {
+    case ply_type::i8: return prop.data_i8.size();
+    case ply_type::i16: return prop.data_i16.size();
+    case ply_type::i32: return prop.data_i32.size();
+    case ply_type::i64: return prop.data_i64.size();
+    case ply_type::u8: return prop.data_u8.size();
+    case ply_type::u16: return prop.data_u16.size();
+    case ply_type::u32: return prop.data_u32.size();
+    case ply_type::u64: return prop.data_u64.size();
+    case ply_type::f32: return prop.data_f32.size();
+    case ply_type::f64: return prop.data_f64.size();
+  }
+  return 0;
+}
+template <typename T>
+inline bool get_value(const ply_property& prop, size_t index, T& value) {
+  switch (prop.type) {
+    case ply_type::i8: value = (T)prop.data_i8[index]; return true;
+    case ply_type::i16: value = (T)prop.data_i16[index]; return true;
+    case ply_type::i32: value = (T)prop.data_i32[index]; return true;
+    case ply_type::i64: value = (T)prop.data_i64[index]; return true;
+    case ply_type::u8: value = (T)prop.data_u8[index]; return true;
+    case ply_type::u16: value = (T)prop.data_u16[index]; return true;
+    case ply_type::u32: value = (T)prop.data_u32[index]; return true;
+    case ply_type::u64: value = (T)prop.data_u64[index]; return true;
+    case ply_type::f32: value = (T)prop.data_f32[index]; return true;
+    case ply_type::f64: value = (T)prop.data_f64[index]; return true;
+  }
+  return false;
+}
+template <typename T>
+inline T get_value(const ply_property& prop, size_t index) {
+  switch (prop.type) {
+    case ply_type::i8: return (T)prop.data_i8[index];
+    case ply_type::i16: return (T)prop.data_i16[index];
+    case ply_type::i32: return (T)prop.data_i32[index];
+    case ply_type::i64: return (T)prop.data_i64[index];
+    case ply_type::u8: return (T)prop.data_u8[index];
+    case ply_type::u16: return (T)prop.data_u16[index];
+    case ply_type::u32: return (T)prop.data_u32[index];
+    case ply_type::u64: return (T)prop.data_u64[index];
+    case ply_type::f32: return (T)prop.data_f32[index];
+    case ply_type::f64: return (T)prop.data_f64[index];
+  }
+  return 0;
+}
+template <typename T>
+inline bool get_value(const ply_model& ply, const string& element,
+    const string& property, vector<T>& values) {
+  values.clear();
+  if (!has_property(ply, element, property)) return false;
+  auto& prop = get_property(ply, element, property);
+  if (prop.is_list) return false;
+  values.resize(get_size(prop));
+  for (auto index = (size_t)0; index < values.size(); index++) {
+    values[index] = get_value<T>(prop, index);
+  }
+  return true;
+}
+template <typename T, size_t N>
+inline bool get_values(const ply_model& ply, const string& element,
+    const array<string, N>& properties, vector<array<T, N>>& values) {
+  values.clear();
+  for (auto& property : properties) {
+    if (!has_property(ply, element, property)) return false;
+    auto& prop = get_property(ply, element, property);
+    if (prop.is_list) return false;
+  }
+  values.resize(get_size(get_property(ply, element, properties.front())));
+  auto item = (size_t)0;
+  for (auto& property : properties) {
+    auto& prop = get_property(ply, element, property);
+    for (auto index = (size_t)0; index < values.size(); index++) {
+      values[index][item] = get_value<T>(prop, index);
+    }
+    item++;
+  }
+  return true;
+}
 bool get_value(const ply_model& ply, const string& element,
     const string& property, vector<float>& values) {
   values.clear();
@@ -1033,51 +1113,20 @@ bool get_value(const ply_model& ply, const string& element,
 }
 bool get_values(const ply_model& ply, const string& element,
     const array<string, 2>& properties, vector<vec2f>& values) {
-  values.clear();
-  auto x = vector<float>{}, y = vector<float>{};
-  if (!get_value(ply, element, properties[0], x)) return false;
-  if (!get_value(ply, element, properties[1], y)) return false;
-  values = vector<vec2f>(x.size());
-  for (auto i = (size_t)0; i < values.size(); i++) values[i] = {x[i], y[i]};
-  return true;
+  return get_values(ply, element, properties, (vector<array<float, 2>>&)values);
 }
 bool get_values(const ply_model& ply, const string& element,
     const array<string, 3>& properties, vector<vec3f>& values) {
-  values.clear();
-  auto x = vector<float>{}, y = vector<float>{}, z = vector<float>{};
-  if (!get_value(ply, element, properties[0], x)) return false;
-  if (!get_value(ply, element, properties[1], y)) return false;
-  if (!get_value(ply, element, properties[2], z)) return false;
-  values = vector<vec3f>(x.size());
-  for (auto i = (size_t)0; i < values.size(); i++)
-    values[i] = {x[i], y[i], z[i]};
-  return true;
+  return get_values(ply, element, properties, (vector<array<float, 3>>&)values);
 }
 bool get_values(const ply_model& ply, const string& element,
     const array<string, 4>& properties, vector<vec4f>& values) {
-  values.clear();
-  auto x = vector<float>{}, y = vector<float>{}, z = vector<float>{},
-       w = vector<float>{};
-  if (!get_value(ply, element, properties[0], x)) return false;
-  if (!get_value(ply, element, properties[1], y)) return false;
-  if (!get_value(ply, element, properties[2], z)) return false;
-  if (!get_value(ply, element, properties[3], w)) return false;
-  values = vector<vec4f>(x.size());
-  for (auto i = (size_t)0; i < values.size(); i++)
-    values[i] = {x[i], y[i], z[i], w[i]};
-  return true;
+  return get_values(ply, element, properties, (vector<array<float, 4>>&)values);
 }
 bool get_values(const ply_model& ply, const string& element,
     const array<string, 12>& properties, vector<frame3f>& values) {
-  values.clear();
-  auto coords = array<vector<float>, 12>{};
-  for (auto idx = 0; idx < 12; idx++)
-    if (!get_value(ply, element, properties[idx], coords[idx])) return false;
-  values = vector<frame3f>(coords[0].size());
-  for (auto i = (size_t)0; i < values.size(); i++) {
-    for (auto c = 0; c < 12; c++) (&values[i].x.x)[c] = coords[c][i];
-  }
-  return true;
+  return get_values(
+      ply, element, properties, (vector<array<float, 12>>&)values);
 }
 bool get_lists(const ply_model& ply, const string& element,
     const string& property, vector<vector<int>>& lists) {
