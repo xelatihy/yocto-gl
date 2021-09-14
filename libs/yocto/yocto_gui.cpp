@@ -27,7 +27,9 @@
 //
 //
 
-#include "yocto_glview.h"
+#include "yocto_gui.h"
+
+#ifdef YOCTO_OPENGL
 
 #include <glad/glad.h>
 
@@ -2694,3 +2696,7 @@ bool draw_gui_params(const string& name, glwidgets_params& params) {
 }
 
 }  // namespace yocto
+
+#else
+
+#endif

@@ -26,16 +26,14 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
+#include <fmt/chrono.h>
+#include <fmt/core.h>
+#include <yocto/yocto_gui.h>
 #include <yocto/yocto_math.h>
 #include <yocto/yocto_scene.h>
 #include <yocto/yocto_sceneio.h>
 #include <yocto/yocto_shape.h>
 #include <yocto/yocto_trace.h>
-#if YOCTO_OPENGL == 1
-#include <yocto/yocto_glview.h>
-#endif
-#include <fmt/chrono.h>
-#include <fmt/core.h>
 
 using namespace yocto;
 

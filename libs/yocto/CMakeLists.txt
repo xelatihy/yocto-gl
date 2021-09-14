@@ -27,7 +27,7 @@ if(YOCTO_OPENGL)
   target_compile_definitions(yocto PUBLIC -DYOCTO_OPENGL)
 
   target_sources(yocto PRIVATE 
-    yocto_glview.h yocto_glview.cpp
+    yocto_gui.h yocto_gui.cpp
   )
 
   find_package(OpenGL REQUIRED)
