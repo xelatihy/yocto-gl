@@ -306,16 +306,6 @@ void add_options(CLI::App& cli, view_params& params) {
   cli.add_flag("--addsky", params.addsky, "Add sky.");
 }
 
-#ifndef YOCTO_OPENGL
-
-// view shapes
-int run_view(const view_params& params) {
-  fmt::print("error: opengl not compiled\n");
-  return 1;
-}
-
-#else
-
 // view shapes
 int run_view(const view_params& params) {
   fmt::print("viewing {}\n", params.shape);
@@ -337,8 +327,6 @@ int run_view(const view_params& params) {
   // done
   return 0;
 }
-
-#endif
 
 struct heightfield_params {
   string image     = "heightfield.png";
@@ -512,16 +500,6 @@ void add_options(CLI::App& cli, glview_params& params) {
   cli.add_flag("--addsky", params.addsky, "Add sky.");
 }
 
-#ifndef YOCTO_OPENGL
-
-// view shapes
-int run_glview(const glview_params& params) {
-  fmt::print("error: opengl not compiled\n");
-  return 1;
-}
-
-#else
-
 int run_glview(const glview_params& params) {
   // loading shape
   auto error = string{};
@@ -540,8 +518,6 @@ int run_glview(const glview_params& params) {
   // done
   return 0;
 }
-
-#endif
 
 struct app_params {
   string             command     = "convert";

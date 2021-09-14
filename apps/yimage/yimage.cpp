@@ -106,16 +106,6 @@ void add_options(CLI::App& cli, view_params& params) {
   cli.add_option("--output", params.output, "Output image.");
 }
 
-#ifndef YOCTO_OPENGL
-
-// view images
-int run_view(const view_params& params) {
-  fmt::print("error: opengl not compiled\n");
-  return 1;
-}
-
-#else
-
 // view images
 int run_view(const view_params& params) {
   // load
@@ -135,8 +125,6 @@ int run_view(const view_params& params) {
   return 0;
 }
 
-#endif
-
 // grade params
 struct grade_params : colorgrade_params {
   string image  = "image.png";
@@ -148,16 +136,6 @@ void add_options(CLI::App& cli, grade_params& params) {
   cli.add_option("image", params.image, "Input image.");
   cli.add_option("--output", params.output, "Output image.");
 }
-
-#ifndef YOCTO_OPENGL
-
-// grade images
-int run_grade(const grade_params& params) {
-  fmt::print("error: opengl not compiled\n");
-  return 1;
-}
-
-#else
 
 // grade images
 int run_grade(const grade_params& params) {
@@ -175,8 +153,6 @@ int run_grade(const grade_params& params) {
   // done
   return 0;
 }
-
-#endif
 
 // resize params
 struct diff_params {

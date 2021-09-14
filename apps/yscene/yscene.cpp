@@ -313,16 +313,6 @@ void add_options(CLI::App& cli, view_params& params) {
   cli.add_flag("--noparallel", params.noparallel, "Disable threading.");
 }
 
-#ifndef YOCTO_OPENGL
-
-// view scene
-int run_view(const view_params& params) {
-  fmt::print("error: opengl not compiled\n");
-  return 1;
-}
-
-#else
-
 // view scene
 int run_view(const view_params& params_) {
   fmt::print("viewing {}\n", params_.scene);
@@ -364,8 +354,6 @@ int run_view(const view_params& params_) {
   return 0;
 }
 
-#endif
-
 struct glview_params {
   string scene   = "scene.json";
   string camname = "";
@@ -376,16 +364,6 @@ void add_options(CLI::App& cli, glview_params& params) {
   cli.add_option("scene", params.scene, "Input scene.");
   cli.add_option("--camera", params.camname, "Camera name.");
 }
-
-#ifndef YOCTO_OPENGL
-
-// view scene
-int run_glview(const glview_params& params) {
-  fmt::print("error: opengl not compiled\n");
-  return 1;
-}
-
-#else
 
 int run_glview(const glview_params& params_) {
   fmt::print("viewing {}\n", params_.scene);
@@ -416,8 +394,6 @@ int run_glview(const glview_params& params_) {
   // done
   return 0;
 }
-
-#endif
 
 struct app_params {
   string         command = "convert";

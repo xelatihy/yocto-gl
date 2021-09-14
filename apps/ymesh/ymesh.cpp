@@ -56,16 +56,6 @@ void add_options(CLI::App& cli, view_params& params) {
   cli.add_flag("--addsky", params.addsky, "Add sky.");
 }
 
-#ifndef YOCTO_OPENGL
-
-// view shapes
-int run_view(const view_params& params) {
-  fmt::print("error: opengl not compiled\n");
-  return 1;
-}
-
-#else
-
 // view shapes
 int run_view(const view_params& params) {
   // load mesh
@@ -86,8 +76,6 @@ int run_view(const view_params& params) {
   return 0;
 }
 
-#endif
-
 struct glview_params {
   string shape = "shape.ply";
 };
@@ -96,16 +84,6 @@ struct glview_params {
 void add_options(CLI::App& cli, glview_params& params) {
   cli.add_option("shape", params.shape, "Input shape.");
 }
-
-#ifndef YOCTO_OPENGL
-
-// view shapes
-int run_glview(const glview_params& params) {
-  fmt::print("error: opengl not compiled\n");
-  return 1;
-}
-
-#else
 
 static scene_data make_shapescene(const shape_data& ioshape_) {
   // Frame camera
@@ -173,8 +151,6 @@ int run_glview(const glview_params& params) {
   return 0;
 }
 
-#endif
-
 struct glpath_params {
   string shape = "shape.ply";
 };
@@ -183,16 +159,6 @@ struct glpath_params {
 void add_options(CLI::App& cli, glpath_params& params) {
   cli.add_option("shape", params.shape, "Input shape.");
 }
-
-#ifndef YOCTO_OPENGL
-
-// view shapes
-int run_glpath(const glpath_params& params) {
-  fmt::print("error: opengl not compiled\n");
-  return 1;
-}
-
-#else
 
 static scene_data make_pathscene(const shape_data& ioshape_) {
   // Frame camera
@@ -350,8 +316,6 @@ int run_glpath(const glpath_params& params) {
   return 0;
 }
 
-#endif
-
 struct glpathd_params {
   string shape = "shape.ply";
 };
@@ -360,16 +324,6 @@ struct glpathd_params {
 void add_options(CLI::App& cli, glpathd_params& params) {
   cli.add_option("shape", params.shape, "Input shape.");
 }
-
-#ifndef YOCTO_OPENGL
-
-// view shapes
-int run_glpathd(const glpathd_params& params) {
-  fmt::print("error: opengl not compiled\n");
-  return 1;
-}
-
-#else
 
 static scene_data make_pathdscene(const shape_data& ioshape) {
   // Frame camera
@@ -589,8 +543,6 @@ int run_glpathd(const glpathd_params& params) {
   return 0;
 }
 
-#endif
-
 struct glsculpt_params {
   string shape   = "shape.ply";
   string texture = "";
@@ -601,16 +553,6 @@ inline void add_options(CLI::App& cli, glsculpt_params& params) {
   cli.add_option("shape", params.shape, "Input shape.");
   cli.add_option("--texture", params.texture, "Brush texture.");
 }
-
-#ifndef YOCTO_OPENGL
-
-// view scene
-int run_glsculpt(const glsculpt_params& params) {
-  fmt::print("error: opengl not compiled\n");
-  return 1;
-}
-
-#else
 
 enum struct sculpt_brush_type { gaussian, texture, smooth };
 auto const sculpt_brush_names = vector<std::string>{
@@ -1312,8 +1254,6 @@ int run_glsculpt(const glsculpt_params& params_) {
   // done
   return 0;
 }
-
-#endif
 
 struct app_params {
   string          command  = "view";
