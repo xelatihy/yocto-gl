@@ -37,10 +37,14 @@
 #if YOCTO_OPENGL == 1
 #include <yocto_gui/yocto_glview.h>
 #endif
-using namespace yocto;
 
+#include <deque>
 #include <queue>
 #include <unordered_set>
+
+#include "ext/CLI11.hpp"
+
+using namespace yocto;
 
 // view params
 struct view_params {
@@ -49,10 +53,10 @@ struct view_params {
   bool   addsky = false;
 };
 
-void add_options(const cli_command& cli, view_params& params) {
-  add_argument(cli, "shape", params.shape, "Input shape.");
-  add_option(cli, "output", params.output, "Output shape.");
-  add_option(cli, "addsky", params.addsky, "Add sky.");
+void add_options(CLI::App& cli, view_params& params) {
+  cli.add_option("shape", params.shape, "Input shape.");
+  cli.add_option("--output", params.output, "Output shape.");
+  cli.add_option("--addsky", params.addsky, "Add sky.");
 }
 
 #ifndef YOCTO_OPENGL
@@ -83,8 +87,8 @@ struct glview_params {
 };
 
 // Cli
-void add_options(const cli_command& cli, glview_params& params) {
-  add_argument(cli, "shape", params.shape, "Input shape.");
+void add_options(CLI::App& cli, glview_params& params) {
+  cli.add_option("shape", params.shape, "Input shape.");
 }
 
 #ifndef YOCTO_OPENGL
@@ -163,8 +167,8 @@ struct glpath_params {
 };
 
 // Cli
-void add_options(const cli_command& cli, glpath_params& params) {
-  add_argument(cli, "shape", params.shape, "Input shape.");
+void add_options(CLI::App& cli, glpath_params& params) {
+  cli.add_option("shape", params.shape, "Input shape.");
 }
 
 #ifndef YOCTO_OPENGL
@@ -335,8 +339,8 @@ struct glpathd_params {
 };
 
 // Cli
-void add_options(const cli_command& cli, glpathd_params& params) {
-  add_argument(cli, "shape", params.shape, "Input shape.");
+void add_options(CLI::App& cli, glpathd_params& params) {
+  cli.add_option("shape", params.shape, "Input shape.");
 }
 
 #ifndef YOCTO_OPENGL
@@ -569,9 +573,9 @@ struct glsculpt_params {
 };
 
 // Cli
-inline void add_options(const cli_command& cli, glsculpt_params& params) {
-  add_argument(cli, "shape", params.shape, "Input shape.");
-  add_option(cli, "texture", params.texture, "Brush texture.");
+inline void add_options(CLI::App& cli, glsculpt_params& params) {
+  cli.add_option("shape", params.shape, "Input shape.");
+  cli.add_option("--texture", params.texture, "Brush texture.");
 }
 
 #ifndef YOCTO_OPENGL
@@ -1289,38 +1293,49 @@ struct app_params {
 };
 
 // Cli
-void add_options(const cli_command& cli, app_params& params) {
-  set_command_var(cli, params.command);
-  add_command(cli, "view", params.view, "View shapes.");
-  add_command(cli, "glview", params.glview, "View shapes with OpenGL.");
-  add_command(cli, "glpath", params.glpath, "Trace paths with OpenGL.");
-  add_command(cli, "glpathd", params.glpathd, "Trace debug paths with OpenGL.");
-  add_command(cli, "glsculpt", params.glsculpt, "Sculpt meshes with OpenGL.");
-}
-
-// Run
-void run(const vector<string>& args) {
-  // command line parameters
-  auto error  = string{};
+app_params parse_cli(int argc, const char** argv) {
   auto params = app_params{};
-  auto cli    = make_cli("ymesh", params, "Process and view meshes.");
-  if (!parse_cli(cli, args, error)) print_fatal(error);
-
-  // dispatch commands
-  if (params.command == "view") {
-    return run_view(params.view);
-  } else if (params.command == "glview") {
-    return run_glview(params.glview);
-  } else if (params.command == "glpath") {
-    return run_glpath(params.glpath);
-  } else if (params.command == "glpathd") {
-    return run_glpathd(params.glpathd);
-  } else if (params.command == "glsculpt") {
-    return run_glsculpt(params.glsculpt);
-  } else {
-    print_fatal("ymesh: unknown command");
+  auto cli    = CLI::App("Process and view meshes");
+  add_options(*cli.add_subcommand("view", "View shapes."), params.view);
+  add_options(
+      *cli.add_subcommand("glview", "View shapes with OpenGL."), params.glview);
+  add_options(
+      *cli.add_subcommand("glpath", "Trace paths with OpenGL."), params.glpath);
+  add_options(*cli.add_subcommand("glpathd", "Trace debug paths with OpenGL."),
+      params.glpathd);
+  add_options(*cli.add_subcommand("glsculpt", "Sculpt meshes with OpenGL."),
+      params.glsculpt);
+  cli.require_subcommand(1);
+  try {
+    cli.parse(argc, argv);
+    params.command = cli.get_subcommands().front()->get_name();
+    return params;
+  } catch (const CLI::ParseError& e) {
+    cli.exit(e);
+    return {};
   }
 }
 
 // Main
-int main(int argc, const char* argv[]) { run(make_cli_args(argc, argv)); }
+int main(int argc, const char* argv[]) {
+  // command line parameters
+  auto params = parse_cli(argc, argv);
+
+  // dispatch commands
+  if (params.command == "view") {
+    run_view(params.view);
+  } else if (params.command == "glview") {
+    run_glview(params.glview);
+  } else if (params.command == "glpath") {
+    run_glpath(params.glpath);
+  } else if (params.command == "glpathd") {
+    run_glpathd(params.glpathd);
+  } else if (params.command == "glsculpt") {
+    run_glsculpt(params.glsculpt);
+  } else {
+    print_fatal("ymesh: unknown command");
+  }
+
+  // done
+  return 0;
+}

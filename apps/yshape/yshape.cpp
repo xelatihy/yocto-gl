@@ -36,6 +36,9 @@
 #if YOCTO_OPENGL == 1
 #include <yocto_gui/yocto_glview.h>
 #endif
+
+#include "ext/CLI11.hpp"
+
 using namespace yocto;
 
 // convert params
@@ -56,23 +59,23 @@ struct convert_params {
   bool   tovertices   = false;
 };
 
-void add_options(const cli_command& cli, convert_params& params) {
-  add_argument(cli, "shape", params.shape, "Input shape.");
-  add_option(cli, "output", params.output, "Output shape.");
-  add_option(cli, "smooth", params.smooth, "Smooth normals.");
-  add_option(cli, "facet", params.facet, "Facet normals.");
-  add_option(
-      cli, "aspositions", params.aspositions, "Remove all but positions.");
-  add_option(cli, "astriangles", params.astriangles, "Convert to triangles.");
-  add_option(cli, "translate", params.translate, "Translate shape.");
-  add_option(cli, "scale", params.scale, "Scale shape.");
-  add_option(cli, "rotate", params.rotate, "Rotate shape.");
-  add_option(cli, "subdivisions", params.subdivisions, "Apply subdivision.");
-  add_option(
-      cli, "catmullclark", params.catmullclark, "Catmull-Clark subdivision.");
-  add_option(cli, "toedges", params.toedges, "Convert shape to edges.");
-  add_option(
-      cli, "tovertices", params.tovertices, "Convert shape to vertices.");
+void add_options(CLI::App& cli, convert_params& params) {
+  cli.add_option("shape", params.shape, "Input shape.");
+  cli.add_option("--output", params.output, "Output shape.");
+  cli.add_option("--smooth", params.smooth, "Smooth normals.");
+  cli.add_option("--facet", params.facet, "Facet normals.");
+  cli.add_option(
+      "--aspositions", params.aspositions, "Remove all but positions.");
+  cli.add_option("--astriangles", params.astriangles, "Convert to triangles.");
+  cli.add_option("--translate", params.translate, "Translate shape.");
+  cli.add_option("--scale", params.scale, "Scale shape.");
+  cli.add_option("--rotate", params.rotate, "Rotate shape.");
+  cli.add_option("--subdivisions", params.subdivisions, "Apply subdivision.");
+  cli.add_option(
+      "--catmullclark", params.catmullclark, "Catmull-Clark subdivision.");
+  cli.add_option("--toedges", params.toedges, "Convert shape to edges.");
+  cli.add_option(
+      "--tovertices", params.tovertices, "Convert shape to vertices.");
 }
 
 // convert images
@@ -186,19 +189,19 @@ struct fvconvert_params {
   bool   catmullclark = false;
 };
 
-void add_options(const cli_command& cli, fvconvert_params& params) {
-  add_argument(cli, "shape", params.shape, "Input shape.");
-  add_option(cli, "output", params.output, "Output shape.");
-  add_option(cli, "smooth", params.smooth, "Smooth normals.");
-  add_option(cli, "facet", params.facet, "Facet normals.");
-  add_option(
-      cli, "aspositions", params.aspositions, "Remove all but positions.");
-  add_option(cli, "translate", params.translate, "Translate shape.");
-  add_option(cli, "scale", params.scale, "Scale shape.");
-  add_option(cli, "rotate", params.rotate, "Rotate shape.");
-  add_option(cli, "subdivisions", params.subdivisions, "Apply subdivision.");
-  add_option(
-      cli, "catmullclark", params.catmullclark, "Catmull-Clark subdivision.");
+void add_options(CLI::App& cli, fvconvert_params& params) {
+  cli.add_option("shape", params.shape, "Input shape.");
+  cli.add_option("--output", params.output, "Output shape.");
+  cli.add_option("--smooth", params.smooth, "Smooth normals.");
+  cli.add_option("--facet", params.facet, "Facet normals.");
+  cli.add_option(
+      "--aspositions", params.aspositions, "Remove all but positions.");
+  cli.add_option("--translate", params.translate, "Translate shape.");
+  cli.add_option("--scale", params.scale, "Scale shape.");
+  cli.add_option("--rotate", params.rotate, "Rotate shape.");
+  cli.add_option("--subdivisions", params.subdivisions, "Apply subdivision.");
+  cli.add_option(
+      "--catmullclark", params.catmullclark, "Catmull-Clark subdivision.");
 }
 
 // convert images
@@ -274,10 +277,10 @@ struct view_params {
   bool   addsky = false;
 };
 
-void add_options(const cli_command& cli, view_params& params) {
-  add_argument(cli, "shape", params.shape, "Input shape.");
-  add_option(cli, "output", params.output, "Output shape.");
-  add_option(cli, "addsky", params.addsky, "Add sky.");
+void add_options(CLI::App& cli, view_params& params) {
+  cli.add_option("shape", params.shape, "Input shape.");
+  cli.add_option("--output", params.output, "Output shape.");
+  cli.add_option("--addsky", params.addsky, "Add sky.");
 }
 
 #ifndef YOCTO_OPENGL
@@ -314,15 +317,15 @@ struct heightfield_params {
   vec3f  scale     = {1, 1, 1};
 };
 
-void add_options(const cli_command& cli, heightfield_params& params) {
-  add_argument(cli, "image", params.image, "Input image.");
-  add_option(cli, "output", params.output, "Output shape.");
-  add_option(cli, "smooth", params.smooth, "Smoooth normals.");
-  add_option(cli, "height", params.height, "Shape height.");
-  add_option(cli, "info", params.info, "Print info.");
-  add_option(cli, "translate", params.translate, "Translate shape.");
-  add_option(cli, "scale", params.scale, "Scale shape.");
-  add_option(cli, "rotate", params.rotate, "Rotate shape.");
+void add_options(CLI::App& cli, heightfield_params& params) {
+  cli.add_option("image", params.image, "Input image.");
+  cli.add_option("--output", params.output, "Output shape.");
+  cli.add_option("--smooth", params.smooth, "Smoooth normals.");
+  cli.add_option("--height", params.height, "Shape height.");
+  cli.add_option("--info", params.info, "Print info.");
+  cli.add_option("--translate", params.translate, "Translate shape.");
+  cli.add_option("--scale", params.scale, "Scale shape.");
+  cli.add_option("--rotate", params.rotate, "Rotate shape.");
 }
 
 void run_heightfield(const heightfield_params& params) {
@@ -377,15 +380,15 @@ struct hair_params {
   float  radius  = 0.0001f;
 };
 
-void add_options(const cli_command& cli, hair_params& params) {
-  add_argument(cli, "shape", params.shape, "Input shape.");
-  add_option(cli, "output", params.output, "Output shape.");
-  add_option(cli, "hairs", params.hairs, "Number of hairs.");
-  add_option(cli, "steps", params.steps, "Hair steps.");
-  add_option(cli, "length", params.length, "Hair length.");
-  add_option(cli, "noise", params.noise, "Noise weight.");
-  add_option(cli, "gravity", params.gravity, "Gravity scale.");
-  add_option(cli, "radius", params.radius, "Hair radius.");
+void add_options(CLI::App& cli, hair_params& params) {
+  cli.add_option("shape", params.shape, "Input shape.");
+  cli.add_option("--output", params.output, "Output shape.");
+  cli.add_option("--hairs", params.hairs, "Number of hairs.");
+  cli.add_option("--steps", params.steps, "Hair steps.");
+  cli.add_option("--length", params.length, "Hair length.");
+  cli.add_option("--noise", params.noise, "Noise weight.");
+  cli.add_option("--gravity", params.gravity, "Gravity scale.");
+  cli.add_option("--radius", params.radius, "Hair radius.");
 }
 
 void run_hair(const hair_params& params) {
@@ -409,10 +412,10 @@ struct sample_params {
   int    samples = 4096;
 };
 
-void add_options(const cli_command& cli, sample_params& params) {
-  add_argument(cli, "shape", params.shape, "Input shape.");
-  add_option(cli, "output", params.output, "Output shape.");
-  add_option(cli, "samples", params.samples, "Number of samples.");
+void add_options(CLI::App& cli, sample_params& params) {
+  cli.add_option("shape", params.shape, "Input shape.");
+  cli.add_option("--output", params.output, "Output shape.");
+  cli.add_option("--samples", params.samples, "Number of samples.");
 }
 
 void run_sample(const sample_params& params) {
@@ -442,9 +445,9 @@ struct glview_params {
 };
 
 // Cli
-void add_options(const cli_command& cli, glview_params& params) {
-  add_argument(cli, "shape", params.shape, "Input shape.");
-  add_option(cli, "addsky", params.addsky, "Add sky.");
+void add_options(CLI::App& cli, glview_params& params) {
+  cli.add_option("shape", params.shape, "Input shape.");
+  cli.add_option("--addsky", params.addsky, "Add sky.");
 }
 
 #ifndef YOCTO_OPENGL
@@ -483,45 +486,58 @@ struct app_params {
 };
 
 // Cli
-void add_options(const cli_command& cli, app_params& params) {
-  set_command_var(cli, params.command);
-  add_command(cli, "convert", params.convert, "Convert shapes.");
-  add_command(
-      cli, "fvconvert", params.fvconvert, "Convert face-varying shapes.");
-  add_command(cli, "view", params.view, "View shapes.");
-  add_command(cli, "heightfield", params.heightfield, "Create an heightfield.");
-  add_command(cli, "hair", params.hair, "Grow hairs on a shape.");
-  add_command(cli, "sample", params.sample, "Sample shapepoints on a shape.");
-  add_command(cli, "glview", params.glview, "View shapes with OpenGL.");
-}
-
-// Run
-void run(const vector<string>& args) {
-  // command line parameters
-  auto error  = string{};
+app_params parse_cli(int argc, const char** argv) {
   auto params = app_params{};
-  auto cli    = make_cli("yshape", params, "Process and view shapes.");
-  if (!parse_cli(cli, args, error)) print_fatal(error);
-
-  // dispatch commands
-  if (params.command == "convert") {
-    return run_convert(params.convert);
-  } else if (params.command == "fvconvert") {
-    return run_fvconvert(params.fvconvert);
-  } else if (params.command == "view") {
-    return run_view(params.view);
-  } else if (params.command == "heightfield") {
-    return run_heightfield(params.heightfield);
-  } else if (params.command == "hair") {
-    return run_hair(params.hair);
-  } else if (params.command == "sample") {
-    return run_sample(params.sample);
-  } else if (params.command == "glview") {
-    return run_glview(params.glview);
-  } else {
-    print_fatal("yshape: unknown command");
+  auto cli    = CLI::App("Process and view shapes");
+  add_options(
+      *cli.add_subcommand("convert", "Convert shapes."), params.convert);
+  add_options(*cli.add_subcommand("fvconvert", "Convert face-varying shapes."),
+      params.fvconvert);
+  add_options(*cli.add_subcommand("view", "View shapes."), params.view);
+  add_options(*cli.add_subcommand("heightfield", "Create an heightfield."),
+      params.heightfield);
+  add_options(
+      *cli.add_subcommand("hair", "Grow hairs on a shape."), params.hair);
+  add_options(*cli.add_subcommand("sample", "Sample shapepoints on a shape."),
+      params.sample);
+  add_options(
+      *cli.add_subcommand("glview", "View shapes with OpenGL."), params.glview);
+  cli.require_subcommand(1);
+  try {
+    cli.parse(argc, argv);
+    params.command = cli.get_subcommands().front()->get_name();
+    return params;
+  } catch (const CLI::ParseError& e) {
+    cli.exit(e);
+    return {};
   }
 }
 
-// Main
-int main(int argc, const char* argv[]) { run(make_cli_args(argc, argv)); }
+// Run
+int main(int argc, const char** argv) {
+  // command line parameters
+  auto error  = string{};
+  auto params = parse_cli(argc, argv);
+
+  // dispatch commands
+  if (params.command == "convert") {
+    run_convert(params.convert);
+  } else if (params.command == "fvconvert") {
+    run_fvconvert(params.fvconvert);
+  } else if (params.command == "view") {
+    run_view(params.view);
+  } else if (params.command == "heightfield") {
+    run_heightfield(params.heightfield);
+  } else if (params.command == "hair") {
+    run_hair(params.hair);
+  } else if (params.command == "sample") {
+    run_sample(params.sample);
+  } else if (params.command == "glview") {
+    run_glview(params.glview);
+  } else {
+    print_fatal("yshape: unknown command");
+  }
+
+  // done
+  return 0;
+}

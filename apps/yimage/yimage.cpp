@@ -277,7 +277,7 @@ struct app_params {
 // Cli
 app_params parse_cli(int argc, const char** argv) {
   auto params = app_params{};
-  auto cli    = CLI::App("yimage");
+  auto cli    = CLI::App("Process and view images");
   add_options(
       *cli.add_subcommand("convert", "Convert images."), params.convert);
   add_options(*cli.add_subcommand("view", "View images."), params.view);
