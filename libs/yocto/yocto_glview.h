@@ -121,18 +121,13 @@ namespace yocto {
 
 // Input state
 struct glinput_state {
-  bool  mouse_left           = false;   // left button
-  bool  mouse_right          = false;   // right button
-  bool  mouse_middle         = false;   // middle button
-  vec2f mouse_pos            = {};      // position excluding widgets
-  vec2f mouse_last           = {};      // last mouse position excluding widgets
-  vec2f mouse_delta          = {};      // last mouse delta excluding widgets
-  bool  modifier_alt         = false;   // alt modifier
-  bool  modifier_ctrl        = false;   // ctrl modifier
-  bool  modifier_shift       = false;   // shift modifier
-  bool  widgets_active       = false;   // widgets are active
-  vec2i window_size          = {0, 0};  // window size
-  vec4i framebuffer_viewport = {0, 0, 0, 0};  // framebuffer viewport
+  vec3i mouse       = {0, 0, 0};     // mouse buttons (left, right, middle)
+  vec2f cursor      = {0, 0};        // position excluding widgets
+  vec2f last        = {0, 0};        // last mouse position excluding widgets
+  vec3i modifiers   = {0, 0, 0};     // modifieers (alt, shift, control)
+  bool  onwidgets   = false;         // widgets are active
+  vec2i window      = {0, 0};        // window size
+  vec4i framebuffer = {0, 0, 0, 0};  // framebuffer viewport
 };
 
 // Init callback called after the window has opened

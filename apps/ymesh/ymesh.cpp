@@ -307,17 +307,16 @@ int run_glpath(const glpath_params& params) {
         auto& shape   = scene.shapes.at(0);
         auto& camera  = scene.cameras.at(0);
         auto  updated = false;
-        if (input.mouse_left && !input.modifier_alt) {
-          if (input.modifier_shift) {
+        if (input.mouse.x && !input.modifiers.x) {
+          if (input.modifiers.y) {
             stroke.clear();
             updated = true;
           } else {
-            auto mouse_uv = vec2f{
-                input.mouse_pos.x / float(input.window_size.x),
-                input.mouse_pos.y / float(input.window_size.y)};
-            auto ray  = camera_ray(camera.frame, camera.lens, camera.aspect,
+            auto mouse_uv = vec2f{input.cursor.x / float(input.window.x),
+                input.cursor.y / float(input.window.y)};
+            auto ray      = camera_ray(camera.frame, camera.lens, camera.aspect,
                 camera.film, mouse_uv);
-            auto isec = intersect_triangles_bvh(
+            auto isec     = intersect_triangles_bvh(
                 bvh, shape.triangles, shape.positions, ray, false);
             if (isec.hit) {
               if (stroke.empty() || stroke.back().element != isec.element ||
@@ -527,15 +526,15 @@ int run_glpathd(const glpathd_params& params) {
         auto& shape   = scene.shapes.at(0);
         auto& camera  = scene.cameras.at(0);
         auto  updated = false;
-        if (input.mouse_left && !input.modifier_alt) {
-          auto mouse_uv = vec2f{input.mouse_pos.x / float(input.window_size.x),
-              input.mouse_pos.y / float(input.window_size.y)};
+        if (input.mouse.x && !input.modifiers.x) {
+          auto mouse_uv = vec2f{input.cursor.x / float(input.window.x),
+              input.cursor.y / float(input.window.y)};
           auto ray      = camera_ray(
               camera.frame, camera.lens, camera.aspect, camera.film, mouse_uv);
           auto isec = intersect_triangles_bvh(
               bvh, shape.triangles, shape.positions, ray, false);
           if (isec.hit) {
-            if (input.modifier_shift) {
+            if (input.modifiers.y) {
               point2 = {isec.element, isec.uv};
             } else {
               point1 = {isec.element, isec.uv};
@@ -1296,13 +1295,13 @@ int run_glsculpt(const glsculpt_params& params_) {
       },
       [&](const glinput_state& input, vector<int>& updated_shapes,
           vector<int>&) {
-        auto  mouse_uv = vec2f{input.mouse_pos.x / float(input.window_size.x),
-            input.mouse_pos.y / float(input.window_size.y)};
+        auto  mouse_uv = vec2f{input.cursor.x / float(input.window.x),
+            input.cursor.y / float(input.window.y)};
         auto& shape    = scene.shapes.at(0);
         auto& cursor   = scene.shapes.at(1);
         auto& camera   = scene.cameras.at(0);
         auto [updated_shape, updated_cursor] = sculpt_update(state, shape,
-            cursor, camera, mouse_uv, input.mouse_left && !input.modifier_alt,
+            cursor, camera, mouse_uv, input.mouse.x && !input.modifiers.x,
             params);
         if (updated_cursor) {
           updated_shapes.push_back(1);

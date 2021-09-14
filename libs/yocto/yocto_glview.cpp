@@ -187,8 +187,8 @@ namespace yocto {
 
 static void update_image_params(const glinput_state& input,
     const image_data& image, glimage_params& glparams) {
-  glparams.window                           = input.window_size;
-  glparams.framebuffer                      = input.framebuffer_viewport;
+  glparams.window                           = input.window;
+  glparams.framebuffer                      = input.framebuffer;
   std::tie(glparams.center, glparams.scale) = camera_imview(glparams.center,
       glparams.scale, {image.width, image.height}, glparams.window,
       glparams.fit);
@@ -197,13 +197,12 @@ static void update_image_params(const glinput_state& input,
 static bool uiupdate_image_params(
     const glinput_state& input, glimage_params& glparams) {
   // handle mouse
-  if (input.mouse_left && input.modifier_alt && !input.widgets_active) {
-    if (input.modifier_ctrl) {
-      glparams.scale *= pow(
-          2.0f, (input.mouse_pos.y - input.mouse_last.y) * 0.001f);
+  if (input.mouse.x && input.modifiers.x && !input.onwidgets) {
+    if (input.modifiers.z) {
+      glparams.scale *= pow(2.0f, (input.cursor.y - input.last.y) * 0.001f);
       return true;
     } else {
-      glparams.center += input.mouse_pos - input.mouse_last;
+      glparams.center += input.cursor - input.last;
       return true;
     }
   }
@@ -212,17 +211,17 @@ static bool uiupdate_image_params(
 
 static bool uiupdate_camera_params(
     const glinput_state& input, camera_data& camera) {
-  if (input.mouse_left && input.modifier_alt && !input.widgets_active) {
+  if (input.mouse.x && input.modifiers.x && !input.onwidgets) {
     auto dolly  = 0.0f;
     auto pan    = zero2f;
     auto rotate = zero2f;
-    if (input.modifier_shift) {
-      pan   = (input.mouse_pos - input.mouse_last) * camera.focus / 200.0f;
+    if (input.modifiers.y) {
+      pan   = (input.cursor - input.last) * camera.focus / 200.0f;
       pan.x = -pan.x;
-    } else if (input.modifier_ctrl) {
-      dolly = (input.mouse_pos.y - input.mouse_last.y) / 100.0f;
+    } else if (input.modifiers.z) {
+      dolly = (input.cursor.y - input.last.y) / 100.0f;
     } else {
-      rotate = (input.mouse_pos - input.mouse_last) / 100.0f;
+      rotate = (input.cursor - input.last) / 100.0f;
     }
     auto [frame, focus] = camera_turntable(
         camera.frame, camera.focus, rotate, dolly, pan);
@@ -253,7 +252,7 @@ static bool draw_image_inspector(const glinput_state& input,
     draw_glslider("zoom", glparams.scale, 0.1, 10);
     draw_glcheckbox("fit", glparams.fit);
     draw_glcoloredit("background", glparams.background);
-    auto [i, j] = image_coords(input.mouse_pos, glparams.center, glparams.scale,
+    auto [i, j] = image_coords(input.cursor, glparams.center, glparams.scale,
         {image.width, image.height});
     auto ij     = vec2i{i, j};
     draw_gldragger("mouse", ij);
@@ -797,7 +796,7 @@ void glview_scene(const string& title, const string& name, scene_data& scene,
     clear_scene(glscene);
   };
   callbacks.draw_cb = [&](const glinput_state& input) {
-    draw_scene(glscene, scene, input.framebuffer_viewport, params);
+    draw_scene(glscene, scene, input.framebuffer, params);
   };
   callbacks.widgets_cb = [&](const glinput_state& input) {
     draw_glcombobox("name", selected, names);
@@ -968,12 +967,12 @@ static auto glimage_vertex =
 #version 330
 in vec2 positions;
 out vec2 frag_texcoord;
-uniform vec2 window_size, image_size;
+uniform vec2 window, image_size;
 uniform vec2 image_center;
 uniform float image_scale;
 void main() {
     vec2 pos = (positions * 0.5) * image_size * image_scale + image_center;
-    gl_Position = vec4(2 * pos.x / window_size.x - 1, 1 - 2 * pos.y / window_size.y, 0, 1);
+    gl_Position = vec4(2 * pos.x / window.x - 1, 1 - 2 * pos.y / window.y, 0, 1);
     frag_texcoord = positions * 0.5 + 0.5;
 }
 )";
@@ -982,12 +981,12 @@ static auto glimage_vertex = R"(
 #version 330
 in vec2 positions;
 out vec2 frag_texcoord;
-uniform vec2 window_size, image_size, border_size;
+uniform vec2 window, image_size, border_size;
 uniform vec2 image_center;
 uniform float image_scale;
 void main() {
     vec2 pos = (positions * 0.5) * (image_size + border_size*2) * image_scale + image_center;
-    gl_Position = vec4(2 * pos.x / window_size.x - 1, 1 - 2 * pos.y / window_size.y, 0.1, 1);
+    gl_Position = vec4(2 * pos.x / window.x - 1, 1 - 2 * pos.y / window.y, 0.1, 1);
     frag_texcoord = positions * 0.5 + 0.5;
 }
 )";
@@ -1107,7 +1106,7 @@ void draw_image(glimage_state& glimage, const glimage_params& params) {
   glActiveTexture(GL_TEXTURE0);
   glBindTexture(GL_TEXTURE_2D, glimage.texture);
   glUniform1i(glGetUniformLocation(glimage.program, "txt"), 0);
-  glUniform2f(glGetUniformLocation(glimage.program, "window_size"),
+  glUniform2f(glGetUniformLocation(glimage.program, "window"),
       (float)params.window.x, (float)params.window.y);
   glUniform2f(glGetUniformLocation(glimage.program, "image_size"),
       (float)glimage.width, (float)glimage.height);
@@ -1790,7 +1789,7 @@ struct glwindow_state {
   int                 widgets_width = 0;
   bool                widgets_left  = true;
   glinput_state       input         = {};
-  vec2i               window_size   = {0, 0};
+  vec2i               window        = {0, 0};
   vec4f               background    = {0.15f, 0.15f, 0.15f, 1.0f};
 };
 
@@ -1803,7 +1802,7 @@ static void draw_window(glwindow_state& state) {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
-    auto window = state.window_size;
+    auto window = state.window;
     if (state.widgets_left) {
       ImGui::SetNextWindowPos({0, 0});
       ImGui::SetNextWindowSize({(float)state.widgets_width, (float)window.y});
@@ -1862,29 +1861,26 @@ void run_ui(const vec2i& size, const string& title,
   // set callbacks
   glfwSetWindowRefreshCallback(window, [](GLFWwindow* window) {
     auto& state = *(glwindow_state*)glfwGetWindowUserPointer(window);
-    glfwGetWindowSize(window, &state.window_size.x, &state.window_size.y);
+    glfwGetWindowSize(window, &state.window.x, &state.window.y);
     draw_window(state);
     glfwSwapBuffers(window);
   });
   glfwSetWindowSizeCallback(
       window, [](GLFWwindow* window, int width, int height) {
         auto& state = *(glwindow_state*)glfwGetWindowUserPointer(window);
-        glfwGetWindowSize(
-            window, &state.input.window_size.x, &state.input.window_size.y);
-        if (state.widgets_width)
-          state.input.window_size.x -= state.widgets_width;
-        glfwGetFramebufferSize(window, &state.input.framebuffer_viewport.z,
-            &state.input.framebuffer_viewport.w);
-        state.input.framebuffer_viewport.x = 0;
-        state.input.framebuffer_viewport.y = 0;
+        glfwGetWindowSize(window, &state.input.window.x, &state.input.window.y);
+        if (state.widgets_width) state.input.window.x -= state.widgets_width;
+        glfwGetFramebufferSize(
+            window, &state.input.framebuffer.z, &state.input.framebuffer.w);
+        state.input.framebuffer.x = 0;
+        state.input.framebuffer.y = 0;
         if (state.widgets_width) {
           auto win_size = zero2i;
           glfwGetWindowSize(window, &win_size.x, &win_size.y);
           auto offset = (int)(state.widgets_width *
-                              (float)state.input.framebuffer_viewport.z /
-                              win_size.x);
-          state.input.framebuffer_viewport.z -= offset;
-          if (state.widgets_left) state.input.framebuffer_viewport.x += offset;
+                              (float)state.input.framebuffer.z / win_size.x);
+          state.input.framebuffer.z -= offset;
+          if (state.widgets_left) state.input.framebuffer.x += offset;
         }
       });
 
@@ -1914,56 +1910,56 @@ void run_ui(const vec2i& size, const string& title,
   // run ui
   while (!glfwWindowShouldClose(window)) {
     // update input
-    state.input.mouse_last = state.input.mouse_pos;
+    state.input.last = state.input.cursor;
     auto mouse_posx = 0.0, mouse_posy = 0.0;
     glfwGetCursorPos(window, &mouse_posx, &mouse_posy);
-    state.input.mouse_pos = vec2f{(float)mouse_posx, (float)mouse_posy};
+    state.input.cursor = vec2f{(float)mouse_posx, (float)mouse_posy};
     if (state.widgets_width && state.widgets_left)
-      state.input.mouse_pos.x -= state.widgets_width;
-    state.input.mouse_left = glfwGetMouseButton(
-                                 window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
-    state.input.mouse_right =
-        glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS;
-    state.input.modifier_alt =
-        glfwGetKey(window, GLFW_KEY_LEFT_ALT) == GLFW_PRESS ||
-        glfwGetKey(window, GLFW_KEY_RIGHT_ALT) == GLFW_PRESS;
-    state.input.modifier_shift =
-        glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ||
-        glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
-    state.input.modifier_ctrl =
-        glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS ||
-        glfwGetKey(window, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS;
-    glfwGetWindowSize(
-        window, &state.input.window_size.x, &state.input.window_size.y);
-    if (state.widgets_width) state.input.window_size.x -= state.widgets_width;
-    glfwGetFramebufferSize(window, &state.input.framebuffer_viewport.z,
-        &state.input.framebuffer_viewport.w);
-    state.input.framebuffer_viewport.x = 0;
-    state.input.framebuffer_viewport.y = 0;
+      state.input.cursor.x -= state.widgets_width;
+    state.input.mouse = {
+        glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS ? 1
+                                                                         : 0,
+        glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS ? 1
+                                                                          : 0,
+        glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_MIDDLE) == GLFW_PRESS ? 1
+                                                                           : 0,
+    };
+    state.input.modifiers = {
+         (glfwGetKey(window, GLFW_KEY_LEFT_ALT) == GLFW_PRESS ||
+        glfwGetKey(window, GLFW_KEY_RIGHT_ALT) == GLFW_PRESS) ? 1 : 0,
+        (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ||
+        glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS) ? 1 : 0,
+        (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS ||
+        glfwGetKey(window, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS) ? 1: 0};
+    glfwGetWindowSize(window, &state.input.window.x, &state.input.window.y);
+    if (state.widgets_width) state.input.window.x -= state.widgets_width;
+    glfwGetFramebufferSize(
+        window, &state.input.framebuffer.z, &state.input.framebuffer.w);
+    state.input.framebuffer.x = 0;
+    state.input.framebuffer.y = 0;
     if (state.widgets_width) {
       auto win_size = zero2i;
       glfwGetWindowSize(window, &win_size.x, &win_size.y);
       auto offset = (int)(state.widgets_width *
-                          (float)state.input.framebuffer_viewport.z /
-                          win_size.x);
-      state.input.framebuffer_viewport.z -= offset;
-      if (state.widgets_left) state.input.framebuffer_viewport.x += offset;
+                          (float)state.input.framebuffer.z / win_size.x);
+      state.input.framebuffer.z -= offset;
+      if (state.widgets_left) state.input.framebuffer.x += offset;
     }
     if (state.widgets_width) {
-      auto io                    = &ImGui::GetIO();
-      state.input.widgets_active = io->WantTextInput || io->WantCaptureMouse ||
-                                   io->WantCaptureKeyboard;
+      auto io               = &ImGui::GetIO();
+      state.input.onwidgets = io->WantTextInput || io->WantCaptureMouse ||
+                              io->WantCaptureKeyboard;
     }
 
     // update ui
-    if (state.uiupdate_cb && !state.input.widgets_active)
+    if (state.uiupdate_cb && !state.input.onwidgets)
       state.uiupdate_cb(state.input);
 
     // update
     if (state.update_cb) state.update_cb(state.input);
 
     // draw
-    glfwGetWindowSize(window, &state.window_size.x, &state.window_size.y);
+    glfwGetWindowSize(window, &state.window.x, &state.window.y);
     draw_window(state);
     glfwSwapBuffers(window);
 
@@ -1977,7 +1973,7 @@ void run_ui(const vec2i& size, const string& title,
   // clear
   glfwDestroyWindow(window);
   glfwTerminate();
-}
+}  // namespace yocto
 
 }  // namespace yocto
 
