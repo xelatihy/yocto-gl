@@ -147,10 +147,10 @@ void add_options(CLI::App& cli, render_params& params) {
   cli.add_option("--envname", params.envname, "Add environment map.");
   cli.add_option("--savebatch", params.savebatch, "Save batch.");
   cli.add_option("--resolution", params.resolution, "Image resolution.");
-  cli.add_option(
-      "--sampler", params.sampler, "Sampler type.", trace_sampler_names);
-  cli.add_option("--falsecolor", params.falsecolor, "False color type.",
-      trace_falsecolor_names);
+  cli.add_option("--sampler", params.sampler, "Sampler type.")
+      ->transform(CLI::CheckedTransformer(trace_sampler_labels));
+  cli.add_option("--falsecolor", params.falsecolor, "False color type.")
+      ->transform(CLI::CheckedTransformer(trace_sampler_labels));
   cli.add_option("--samples", params.samples, "Number of samples.");
   cli.add_option("--bounces", params.bounces, "Number of bounces.");
   cli.add_option("--denoise", params.denoise, "Enable denoiser.");
@@ -261,10 +261,10 @@ void add_options(CLI::App& cli, view_params& params) {
   cli.add_option("--addsky", params.addsky, "Add sky.");
   cli.add_option("--envname", params.envname, "Add environment map.");
   cli.add_option("--resolution", params.resolution, "Image resolution.");
-  cli.add_option(
-      "--sampler", params.sampler, "Sampler type.", trace_sampler_names);
-  cli.add_option("--falsecolor", params.falsecolor, "False color type.",
-      trace_falsecolor_names);
+  cli.add_option("--sampler", params.sampler, "Sampler type.")
+      ->transform(CLI::CheckedTransformer(trace_sampler_labels));
+  cli.add_option("--falsecolor", params.falsecolor, "False color type.")
+      ->transform(CLI::CheckedTransformer(trace_falsecolor_labels));
   cli.add_option("--samples", params.samples, "Number of samples.");
   cli.add_option("--bounces", params.bounces, "Number of bounces.");
   cli.add_option("--denoise", params.denoise, "Enable denoiser.");
