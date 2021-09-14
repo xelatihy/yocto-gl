@@ -37,8 +37,9 @@
 
 using namespace yocto;
 
-#include <CLI/CLI.hpp>
 #include <chrono>
+
+#include "ext/CLI11.hpp"
 using clock_ = std::chrono::high_resolution_clock;
 
 // convert params

@@ -36,10 +36,11 @@
 #include <yocto/yocto_sceneio.h>
 #include <yocto/yocto_shape.h>
 
-#include <CLI/CLI.hpp>
 #include <deque>
 #include <queue>
 #include <unordered_set>
+
+#include "ext/CLI11.hpp"
 
 using namespace yocto;
 

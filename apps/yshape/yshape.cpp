@@ -35,7 +35,7 @@
 #include <yocto/yocto_sceneio.h>
 #include <yocto/yocto_shape.h>
 
-#include <CLI/CLI.hpp>
+#include "ext/CLI11.hpp"
 
 using namespace yocto;
 

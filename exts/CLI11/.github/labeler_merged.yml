@@ -1,4 +1,0 @@
-needs changelog:
-  - all: ['!CHANGELOG.md']
-needs README:
-  - all: ['!README.md']
