@@ -409,11 +409,11 @@ int run_glview(const glview_params& params_) {
   }
 
   // camera
-  auto glparams   = glscene_params{};
-  glparams.camera = find_camera(scene, params.camname);
+  auto viewparams   = shade_params{};
+  viewparams.camera = find_camera(scene, params.camname);
 
   // run viewer
-  show_shade_gui("yscene", params.scene, scene, glparams);
+  show_shade_gui("yscene", params.scene, scene, viewparams);
 
   // done
   return 0;

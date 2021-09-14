@@ -177,7 +177,7 @@ static void clear_scene(glscene_state& scene);
 
 // draw scene
 static void draw_scene(glscene_state& glscene, const scene_data& scene,
-    const vec4i& viewport, const glscene_params& params);
+    const vec4i& viewport, const shade_params& params);
 
 }  // namespace yocto
 
@@ -763,7 +763,7 @@ void show_trace_gui(const string& title, const string& name, scene_data& scene,
 }
 
 void show_shade_gui(const string& title, const string& name, scene_data& scene,
-    const glscene_params& params_, const glview_callback& widgets_callback,
+    const shade_params& params_, const glview_callback& widgets_callback,
     const glview_callback& uiupdate_callback,
     const glview_callback& update_callback) {
   // glscene
@@ -808,8 +808,7 @@ void show_shade_gui(const string& title, const string& name, scene_data& scene,
       draw_glcheckbox("faceted", params.faceted);
       continue_glline();
       draw_glcheckbox("double sided", params.double_sided);
-      draw_glcombobox(
-          "lighting", (int&)params.lighting, glscene_lighting_names);
+      draw_glcombobox("lighting", (int&)params.lighting, shade_lighting_names);
       draw_glslider("exposure", params.exposure, -10, 10);
       draw_glslider("gamma", params.gamma, 0.1f, 4);
       draw_glslider("near", params.near, 0.01f, 1.0f);
@@ -1601,7 +1600,7 @@ static void clear_scene(glscene_state& glscene) {
 }
 
 static void draw_scene(glscene_state& glscene, const scene_data& scene,
-    const vec4i& viewport, const glscene_params& params) {
+    const vec4i& viewport, const shade_params& params) {
   // check errors
   assert_glerror();
 
@@ -1645,7 +1644,7 @@ static void draw_scene(glscene_state& glscene, const scene_data& scene,
   static auto lights_emission  = vector<vec3f>{vec3f{pif / 2, pif / 2, pif / 2},
       vec3f{pif / 2, pif / 2, pif / 2}, vec3f{pif / 4, pif / 4, pif / 4},
       vec3f{pif / 4, pif / 4, pif / 4}};
-  if (params.lighting == glscene_lighting_type::camlight) {
+  if (params.lighting == shade_lighting::camlight) {
     glUniform1i(glGetUniformLocation(program, "lighting"), 1);
     glUniform3f(glGetUniformLocation(program, "ambient"), 0, 0, 0);
     glUniform1i(glGetUniformLocation(program, "lights_num"),
@@ -1661,7 +1660,7 @@ static void draw_scene(glscene_state& glscene, const scene_data& scene,
           lights_emission[lid].x, lights_emission[lid].y,
           lights_emission[lid].z);
     }
-  } else if (params.lighting == glscene_lighting_type::eyelight) {
+  } else if (params.lighting == shade_lighting::eyelight) {
     glUniform1i(glGetUniformLocation(program, "lighting"), 0);
     glUniform1i(glGetUniformLocation(program, "lights_num"), 0);
   } else {

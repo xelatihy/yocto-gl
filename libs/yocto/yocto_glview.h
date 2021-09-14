@@ -83,32 +83,32 @@ using glview_callback = std::function<void(const glinput_state& input,
     vector<int>& updated_shapes, vector<int>& updated_textures)>;
 
 // Shading type
-enum struct glscene_lighting_type { camlight, eyelight };
+enum struct shade_lighting { camlight, eyelight };
 
 // Shading name
-const auto glscene_lighting_names = vector<string>{"camlight", "eyelight"};
+inline const auto shade_lighting_names = vector<string>{"camlight", "eyelight"};
 
 // Draw options
-struct glscene_params {
-  int                   camera           = 0;
-  int                   resolution       = 1280;
-  bool                  wireframe        = false;
-  glscene_lighting_type lighting         = glscene_lighting_type::camlight;
-  float                 exposure         = 0;
-  float                 gamma            = 2.2f;
-  bool                  faceted          = false;
-  bool                  double_sided     = true;
-  bool                  non_rigid_frames = true;
-  float                 near             = 0.01f;
-  float                 far              = 10000.0f;
-  bool                  hide_environment = false;
-  vec4f                 background       = vec4f{0.15f, 0.15f, 0.15f, 1.0f};
+struct shade_params {
+  int            camera           = 0;
+  int            resolution       = 1280;
+  bool           wireframe        = false;
+  shade_lighting lighting         = shade_lighting::camlight;
+  float          exposure         = 0;
+  float          gamma            = 2.2f;
+  bool           faceted          = false;
+  bool           double_sided     = true;
+  bool           non_rigid_frames = true;
+  float          near             = 0.01f;
+  float          far              = 10000.0f;
+  bool           hide_environment = false;
+  vec4f          background       = vec4f{0.15f, 0.15f, 0.15f, 1.0f};
 };
 
 // Open a window and show an scene via OpenGL shading
-struct glscene_params;
+struct shade_params;
 void show_shade_gui(const string& title, const string& name, scene_data& scene,
-    const glscene_params& params, const glview_callback& widgets_callback = {},
+    const shade_params& params, const glview_callback& widgets_callback = {},
     const glview_callback& uiupdate_callback = {},
     const glview_callback& update_callback   = {});
 
