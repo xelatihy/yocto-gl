@@ -37,12 +37,10 @@
 #if YOCTO_OPENGL == 1
 #include <yocto_gui/yocto_glview.h>
 #endif
-
+#include <CLI/CLI11.hpp>
 #include <deque>
 #include <queue>
 #include <unordered_set>
-
-#include "ext/CLI11.hpp"
 
 using namespace yocto;
 

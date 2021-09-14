@@ -36,8 +36,7 @@
 #if YOCTO_OPENGL == 1
 #include <yocto_gui/yocto_glview.h>
 #endif
-
-#include "ext/CLI11.hpp"
+#include <CLI/CLI11.hpp>
 
 using namespace yocto;
 
