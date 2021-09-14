@@ -35,6 +35,8 @@
 #if YOCTO_OPENGL == 1
 #include <yocto_gui/yocto_glview.h>
 #endif
+#include <fmt/core.h>
+
 #include <CLI/CLI.hpp>
 
 using namespace yocto;
@@ -59,11 +61,16 @@ void add_options(CLI::App& cli, convert_params& params) {
 
 // convert images
 int run_convert(const convert_params& params) {
+  fmt::print("converting {}\n", params.scene);
+
   // load scene
   auto error = string{};
   auto scene = scene_data{};
   print_progress_begin("load scene");
-  if (!load_scene(params.scene, scene, error)) return print_fatal(error);
+  if (!load_scene(params.scene, scene, error)) {
+    fmt::print("error: cannot load {}\n", params.scene);
+    return 1;
+  }
   print_progress_end();
 
   // copyright
@@ -92,7 +99,10 @@ int run_convert(const convert_params& params) {
   // save scene
   print_progress_begin("save scene");
   make_scene_directories(params.output, scene);
-  save_scene(params.output, scene);
+  if (!save_scene(params.output, scene, error)) {
+    fmt::print("error: cannot save {}\n", params.output);
+    return 1;
+  }
   print_progress_end();
 
   // done
@@ -113,11 +123,16 @@ void add_options(CLI::App& cli, info_params& params) {
 
 // print info for scenes
 int run_info(const info_params& params) {
+  fmt::print("info for {}\n", params.scene);
+
   // load scene
   auto error = string{};
   print_progress_begin("load scene");
   auto scene = scene_data{};
-  if (!load_scene(params.scene, scene, error)) return print_fatal(error);
+  if (!load_scene(params.scene, scene, error)) {
+    fmt::print("error: cannot load {}\n", params.scene);
+    return 1;
+  }
   print_progress_end();
 
   // validate scene
@@ -126,8 +141,8 @@ int run_info(const info_params& params) {
   }
 
   // print info
-  print_info("scene stats ------------");
-  for (auto stat : scene_stats(scene)) print_info(stat);
+  fmt::print("scene stats ------------\n");
+  for (auto stat : scene_stats(scene)) fmt::print("{}\n", stat);
 
   // done
   return 0;
@@ -174,6 +189,8 @@ void add_options(CLI::App& cli, render_params& params) {
 
 // convert images
 int run_render(const render_params& params_) {
+  fmt::print("rendering {}\n", params_.scene);
+
   // copy params
   auto params = params_;
 
@@ -181,7 +198,10 @@ int run_render(const render_params& params_) {
   auto error = string{};
   print_progress_begin("load scene");
   auto scene = scene_data{};
-  if (!load_scene(params.scene, scene, error)) return print_fatal(error);
+  if (!load_scene(params.scene, scene, error)) {
+    fmt::print("error: cannot load {}\n", params.scene);
+    return 1;
+  }
   print_progress_end();
 
   // add sky
@@ -245,7 +265,10 @@ int run_render(const render_params& params_) {
   auto image = params.denoise ? get_denoised(state) : get_render(state);
   if (!is_hdr_filename(params.output))
     image = tonemap_image(image, params.exposure, params.filmic);
-  if (!save_image(params.output, image, error)) return print_fatal(error);
+  if (!save_image(params.output, image, error)) {
+    fmt::print("error: cannot save {}\n", params.output);
+    return 1;
+  }
   print_progress_end();
 
   // done
@@ -298,6 +321,8 @@ int run_view(const view_params& params) { print_fatal("Opengl not compiled"); }
 
 // view scene
 int run_view(const view_params& params_) {
+  fmt::print("viewing {}\n", params_.scene);
+
   // copy params
   auto params = params_;
 
@@ -305,7 +330,10 @@ int run_view(const view_params& params_) {
   auto error = string{};
   print_progress_begin("load scene");
   auto scene = scene_data{};
-  if (!load_scene(params.scene, scene, error)) return print_fatal(error);
+  if (!load_scene(params.scene, scene, error)) {
+    fmt::print("error: cannot load {}\n", params.scene);
+    return 1;
+  }
   print_progress_end();
 
   // add sky
@@ -358,6 +386,8 @@ int run_glview(const glview_params& params) {
 #else
 
 int run_glview(const glview_params& params_) {
+  fmt::print("viewing {}\n", params_.scene);
+
   // copy params
   auto params = params_;
 
@@ -365,7 +395,10 @@ int run_glview(const glview_params& params_) {
   auto error = string{};
   print_progress_begin("load scene");
   auto scene = scene_data{};
-  if (!load_scene(params.scene, scene, error)) return print_fatal(error);
+  if (!load_scene(params.scene, scene, error)) {
+    fmt::print("error: cannot load {}\n", params.scene);
+    return 1;
+  }
   print_progress_end();
 
   // tesselation

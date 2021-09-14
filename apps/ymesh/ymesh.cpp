@@ -37,6 +37,8 @@
 #if YOCTO_OPENGL == 1
 #include <yocto_gui/yocto_glview.h>
 #endif
+#include <fmt/core.h>
+
 #include <CLI/CLI.hpp>
 #include <deque>
 #include <queue>

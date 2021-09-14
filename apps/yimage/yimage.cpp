@@ -35,6 +35,9 @@
 #if YOCTO_OPENGL == 1
 #include <yocto_gui/yocto_glview.h>
 #endif
+#include <fmt/core.h>
+#include <fmt/ranges.h>
+
 #include <CLI/CLI.hpp>
 
 using namespace yocto;
@@ -64,10 +67,15 @@ void add_options(CLI::App& cli, convert_params& params) {
 
 // convert images
 int run_convert(const convert_params& params) {
+  fmt::print("converting {}\n", params.image);
+
   // load
   auto error = string{};
   auto image = image_data{};
-  if (!load_image(params.image, image, error)) return print_fatal(error);
+  if (!load_image(params.image, image, error)) {
+    fmt::print("error: cannot load {}\n", params.image);
+    return 1;
+  }
 
   // resize if needed
   if (params.width != 0 || params.height != 0) {
@@ -80,7 +88,10 @@ int run_convert(const convert_params& params) {
   }
 
   // save
-  if (!save_image(params.output, image, error)) return print_fatal(error);
+  if (!save_image(params.output, image, error)) {
+    fmt::print("error: cannot save {}\n", params.output);
+    return print_fatal(error);
+  }
 
   // done
   return 0;
@@ -113,8 +124,10 @@ int run_view(const view_params& params) {
   auto error  = string{};
   auto images = vector<image_data>(params.images.size());
   for (auto idx = 0; idx < (int)params.images.size(); idx++) {
-    if (!load_image(params.images[idx], images[idx], error))
-      return print_fatal(error);
+    if (!load_image(params.images[idx], images[idx], error)) {
+      fmt::print("error loading {}\n", params.images[idx]);
+      return 1;
+    }
   }
 
   // run viewer
@@ -152,7 +165,10 @@ int run_grade(const grade_params& params) {
   // load image
   auto error = string{};
   auto image = image_data{};
-  if (!load_image(params.image, image, error)) return print_fatal(error);
+  if (!load_image(params.image, image, error)) {
+    fmt::print("error loading {}\n", params.image);
+    return 1;
+  }
 
   // run viewer
   colorgrade_image("yimage", params.image, image);
@@ -183,21 +199,30 @@ void add_options(CLI::App& cli, diff_params& params) {
 
 // resize images
 int run_diff(const diff_params& params) {
+  fmt::print("diffing {} and {}\n", params.image1, params.image2);
+
   // load
   auto error  = string{};
   auto image1 = image_data{}, image2 = image_data{};
-  if (!load_image(params.image1, image1, error)) return print_fatal(error);
-  if (!load_image(params.image2, image2, error)) return print_fatal(error);
+  if (!load_image(params.image1, image1, error)) {
+    fmt::print("error: cannot load {}\n", params.image1);
+    return 1;
+  }
+  if (!load_image(params.image2, image2, error)) {
+    fmt::print("error: cannot load {}\n", params.image2);
+    return 1;
+  }
 
   // check sizes
   if (image1.width != image2.width || image1.height != image2.height) {
-    print_fatal(
-        params.image1 + "," + params.image2 + ": image different sizes");
+    fmt::print("error: different image sizes");
+    return 1;
   }
 
   // check types
   if (image1.linear != image2.linear) {
-    print_fatal(params.image1 + "," + params.image2 + "image different types");
+    fmt::print("error: different image types\n");
+    return 1;
   }
 
   // compute diff
@@ -205,7 +230,10 @@ int run_diff(const diff_params& params) {
 
   // save
   if (params.output != "")
-    if (!save_image(params.output, diff, error)) return print_fatal(error);
+    if (!save_image(params.output, diff, error)) {
+      fmt::print("error: different image sizes\n");
+      return 1;
+    }
 
   // check diff
   if (params.signal) {

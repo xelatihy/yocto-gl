@@ -36,6 +36,8 @@
 #if YOCTO_OPENGL == 1
 #include <yocto_gui/yocto_glview.h>
 #endif
+#include <fmt/core.h>
+
 #include <CLI/CLI.hpp>
 
 using namespace yocto;
@@ -80,10 +82,15 @@ void add_options(CLI::App& cli, convert_params& params) {
 
 // convert images
 int run_convert(const convert_params& params) {
+  fmt::print("converting {}\n", params.shape);
+
   // load mesh
   auto error = string{};
   auto shape = shape_data{};
-  if (!load_shape(params.shape, shape, error, true)) return print_fatal(error);
+  if (!load_shape(params.shape, shape, error, true)) {
+    fmt::print("error: cannot load {}\n", params.shape);
+    return 1;
+  }
 
   // remove data
   if (params.aspositions) {
@@ -165,13 +172,16 @@ int run_convert(const convert_params& params) {
   }
 
   if (params.info) {
-    print_info("shape stats ------------");
+    fmt::print("shape stats ------------\n");
     auto stats = shape_stats(shape);
-    for (auto& stat : stats) print_info(stat);
+    for (auto& stat : stats) fmt::print("{}\n", stat);
   }
 
   // save mesh
-  if (!save_shape(params.output, shape, error, true)) return print_fatal(error);
+  if (!save_shape(params.output, shape, error, true)) {
+    fmt::print("error: cannot save {}\n", params.output);
+    return 1;
+  }
 
   // done
   return 0;
@@ -210,11 +220,15 @@ void add_options(CLI::App& cli, fvconvert_params& params) {
 
 // convert images
 int run_fvconvert(const fvconvert_params& params) {
+  fmt::print("converting {}\n", params.shape);
+
   // load mesh
   auto error = string{};
   auto shape = fvshape_data{};
-  if (!load_fvshape(params.shape, shape, error, true))
-    return print_fatal(error);
+  if (!load_fvshape(params.shape, shape, error, true)) {
+    fmt::print("error: cannot load {}\n", params.shape);
+    return 1;
+  }
 
   // remove data
   if (params.aspositions) {
@@ -266,14 +280,16 @@ int run_fvconvert(const fvconvert_params& params) {
   }
 
   if (params.info) {
-    print_info("shape stats ------------");
+    fmt::print("shape stats ------------\n");
     auto stats = fvshape_stats(shape);
-    for (auto& stat : stats) print_info(stat);
+    for (auto& stat : stats) fmt::print("{}\n", stat);
   }
 
   // save mesh
-  if (!save_fvshape(params.output, shape, error, true))
-    return print_fatal(error);
+  if (!save_fvshape(params.output, shape, error, true)) {
+    fmt::print("error: cannot save {}\n", params.output);
+    return 1;
+  }
 
   // done
   return 0;
@@ -303,10 +319,15 @@ int run_view(const view_params& params) {
 
 // view shapes
 int run_view(const view_params& params) {
+  fmt::print("viewing {}\n", params.shape);
+
   // load shape
   auto error = string{};
   auto shape = shape_data{};
-  if (!load_shape(params.shape, shape, error, true)) return print_fatal(error);
+  if (!load_shape(params.shape, shape, error, true)) {
+    fmt::print("error: cannot load {}\n", params.shape);
+    return 1;
+  }
 
   // make scene
   auto scene = make_shape_scene(shape, params.addsky);
@@ -347,7 +368,10 @@ int run_heightfield(const heightfield_params& params) {
   // load image
   auto error = string{};
   auto image = image_data{};
-  if (!load_image(params.image, image, error)) return print_fatal(error);
+  if (!load_image(params.image, image, error)) {
+    fmt::print("error: cannot load {}\n", params.image);
+    return 1;
+  }
 
   // adjust height
   if (params.height != 1) {
@@ -381,7 +405,10 @@ int run_heightfield(const heightfield_params& params) {
   }
 
   // save mesh
-  if (!save_shape(params.output, shape, error, true)) return print_fatal(error);
+  if (!save_shape(params.output, shape, error, true)) {
+    fmt::print("error: cannot save {}\n", params.output);
+    return 1;
+  }
 
   // done
   return 0;
