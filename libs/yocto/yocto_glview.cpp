@@ -1955,14 +1955,6 @@ void run_ui(const vec2i& size, const string& title,
                                    io->WantCaptureKeyboard;
     }
 
-    // time
-    state.input.clock_last = state.input.clock_now;
-    state.input.clock_now =
-        std::chrono::high_resolution_clock::now().time_since_epoch().count();
-    state.input.time_now = (double)state.input.clock_now / 1000000000.0;
-    state.input.time_delta =
-        (double)(state.input.clock_now - state.input.clock_last) / 1000000000.0;
-
     // update ui
     if (state.uiupdate_cb && !state.input.widgets_active)
       state.uiupdate_cb(state.input);
