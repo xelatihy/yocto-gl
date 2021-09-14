@@ -26,7 +26,6 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include <yocto/yocto_cli.h>
 #include <yocto/yocto_color.h>
 #include <yocto/yocto_image.h>
 #include <yocto/yocto_math.h>
@@ -35,6 +34,11 @@
 #if YOCTO_OPENGL == 1
 #include <yocto_gui/yocto_glview.h>
 #endif
+#include <fmt/core.h>
+#include <fmt/ranges.h>
+
+#include <CLI/CLI.hpp>
+
 using namespace yocto;
 
 // convert params
@@ -48,22 +52,29 @@ struct convert_params {
 };
 
 // Cli
-void add_options(const cli_command& cli, convert_params& params) {
-  add_argument(cli, "image", params.image, "Input image.");
-  add_option(cli, "output", params.output, "Output image.");
-  add_option(
-      cli, "exposure", params.exposure, "Tonemap exposure.", {-100, +100});
-  add_option(cli, "filmic", params.filmic, "Tonemap filmic.");
-  add_option(cli, "width", params.width, "Resize width.", {1, int_max});
-  add_option(cli, "height", params.height, "Resize height.", {1, int_max});
+void add_options(CLI::App& cli, convert_params& params) {
+  cli.add_option("image", params.image, "Input image.");
+  cli.add_option("--output", params.output, "Output image.");
+  cli.add_option("--exposure", params.exposure, "Tonemap exposure.")
+      ->check(CLI::Range(-100, +100));
+  cli.add_flag("--filmic", params.filmic, "Tonemap filmic.");
+  cli.add_option("--width", params.width, "Resize width.")
+      ->check(CLI::Range(1, int_max));
+  cli.add_option("--height", params.height, "Resize height.")
+      ->check(CLI::Range(1, int_max));
 }
 
 // convert images
-void run_convert(const convert_params& params) {
+int run_convert(const convert_params& params) {
+  fmt::print("converting {}\n", params.image);
+
   // load
   auto error = string{};
   auto image = image_data{};
-  if (!load_image(params.image, image, error)) print_fatal(error);
+  if (!load_image(params.image, image, error)) {
+    fmt::print("error: cannot load {}\n", params.image);
+    return 1;
+  }
 
   // resize if needed
   if (params.width != 0 || params.height != 0) {
@@ -76,7 +87,13 @@ void run_convert(const convert_params& params) {
   }
 
   // save
-  if (!save_image(params.output, image, error)) print_fatal(error);
+  if (!save_image(params.output, image, error)) {
+    fmt::print("error: cannot save {}\n", params.output);
+    return 1;
+  }
+
+  // done
+  return 0;
 }
 
 // view params
@@ -86,29 +103,38 @@ struct view_params {
 };
 
 // Cli
-void add_options(const cli_command& cli, view_params& params) {
-  add_argument(cli, "images", params.images, "Input images.");
-  add_option(cli, "output", params.output, "Output image.");
+void add_options(CLI::App& cli, view_params& params) {
+  cli.add_option("images", params.images, "Input images.");
+  cli.add_option("--output", params.output, "Output image.");
 }
 
 #ifndef YOCTO_OPENGL
 
 // view images
-void run_view(const view_params& params) { print_fatal("Opengl not compiled"); }
+int run_view(const view_params& params) {
+  fmt::print("error: opengl not compiled\n");
+  return 1;
+}
 
 #else
 
 // view images
-void run_view(const view_params& params) {
+int run_view(const view_params& params) {
   // load
   auto error  = string{};
   auto images = vector<image_data>(params.images.size());
   for (auto idx = 0; idx < (int)params.images.size(); idx++) {
-    if (!load_image(params.images[idx], images[idx], error)) print_fatal(error);
+    if (!load_image(params.images[idx], images[idx], error)) {
+      fmt::print("error loading {}\n", params.images[idx]);
+      return 1;
+    }
   }
 
   // run viewer
   view_images("yimage", params.images, images);
+
+  // done
+  return 0;
 }
 
 #endif
@@ -120,29 +146,36 @@ struct grade_params : colorgrade_params {
 };
 
 // Cli
-void add_options(const cli_command& cli, grade_params& params) {
-  add_argument(cli, "image", params.image, "Input image.");
-  add_option(cli, "output", params.output, "Output image.");
+void add_options(CLI::App& cli, grade_params& params) {
+  cli.add_option("image", params.image, "Input image.");
+  cli.add_option("--output", params.output, "Output image.");
 }
 
 #ifndef YOCTO_OPENGL
 
 // grade images
-void run_grade(const grade_params& params) {
-  print_fatal("Opengl not compiled");
+int run_grade(const grade_params& params) {
+  fmt::print("error: opengl not compiled\n");
+  return 1;
 }
 
 #else
 
 // grade images
-void run_grade(const grade_params& params) {
+int run_grade(const grade_params& params) {
   // load image
   auto error = string{};
   auto image = image_data{};
-  if (!load_image(params.image, image, error)) print_fatal(error);
+  if (!load_image(params.image, image, error)) {
+    fmt::print("error loading {}\n", params.image);
+    return 1;
+  }
 
   // run viewer
   colorgrade_image("yimage", params.image, image);
+
+  // done
+  return 0;
 }
 
 #endif
@@ -157,31 +190,40 @@ struct diff_params {
 };
 
 // Cli
-void add_options(const cli_command& cli, diff_params& params) {
-  add_argument(cli, "image1", params.image1, "Input image 1.");
-  add_argument(cli, "image2", params.image2, "Input image 2.");
-  add_option(cli, "output", params.output, "Output image.");
-  add_option(cli, "signal", params.signal, "Error on diff.");
-  add_option(cli, "threshold", params.threshold, "Diff threshold.");
+void add_options(CLI::App& cli, diff_params& params) {
+  cli.add_option("image1", params.image1, "Input image 1.");
+  cli.add_option("image2", params.image2, "Input image 2.");
+  cli.add_option("--output", params.output, "Output image.");
+  cli.add_flag("--signal", params.signal, "Error on diff.");
+  cli.add_option("--threshold", params.threshold, "Diff threshold.");
 }
 
 // resize images
-void run_diff(const diff_params& params) {
+int run_diff(const diff_params& params) {
+  fmt::print("diffing {} and {}\n", params.image1, params.image2);
+
   // load
   auto error  = string{};
   auto image1 = image_data{}, image2 = image_data{};
-  if (!load_image(params.image1, image1, error)) print_fatal(error);
-  if (!load_image(params.image2, image2, error)) print_fatal(error);
+  if (!load_image(params.image1, image1, error)) {
+    fmt::print("error: cannot load {}\n", params.image1);
+    return 1;
+  }
+  if (!load_image(params.image2, image2, error)) {
+    fmt::print("error: cannot load {}\n", params.image2);
+    return 1;
+  }
 
   // check sizes
   if (image1.width != image2.width || image1.height != image2.height) {
-    print_fatal(
-        params.image1 + "," + params.image2 + ": image different sizes");
+    fmt::print("error: different image sizes");
+    return 1;
   }
 
   // check types
   if (image1.linear != image2.linear) {
-    print_fatal(params.image1 + "," + params.image2 + "image different types");
+    fmt::print("error: different image types\n");
+    return 1;
   }
 
   // compute diff
@@ -189,17 +231,22 @@ void run_diff(const diff_params& params) {
 
   // save
   if (params.output != "")
-    if (!save_image(params.output, diff, error)) print_fatal(error);
+    if (!save_image(params.output, diff, error)) {
+      fmt::print("error: different image sizes\n");
+      return 1;
+    }
 
   // check diff
   if (params.signal) {
     for (auto& c : diff.pixels) {
       if (max(xyz(c)) > params.threshold) {
-        print_fatal(
-            params.image1 + "," + params.image2 + "image content differs");
+        fmt::print("error: image conten differs\n");
       }
     }
   }
+
+  // done
+  return 0;
 }
 
 // setalpha params
@@ -213,31 +260,41 @@ struct setalpha_params {
 };
 
 // Cli
-void add_options(const cli_command& cli, setalpha_params& params) {
-  add_argument(cli, "image", params.image, "Input image.");
-  add_argument(cli, "alpha", params.alpha, "Alpha image.");
-  add_option(cli, "output", params.output, "Output image.");
-  add_option(cli, "from-color", params.from_color, "Alpha from color.");
-  add_option(cli, "from-black", params.from_black, "Alpha from black.");
-  add_option(cli, "to-color", params.to_color, "Color from alpha.");
+void add_options(CLI::App& cli, setalpha_params& params) {
+  cli.add_option("image", params.image, "Input image.");
+  cli.add_option("alpha", params.alpha, "Alpha image.");
+  cli.add_option("--output", params.output, "Output image.");
+  cli.add_flag("--from-color", params.from_color, "Alpha from color.");
+  cli.add_flag("--from-black", params.from_black, "Alpha from black.");
+  cli.add_flag("--to-color", params.to_color, "Color from alpha.");
 }
 
 // setalpha images
-void run_setalpha(const setalpha_params& params) {
+int run_setalpha(const setalpha_params& params) {
+  fmt::print("setting alpha for {}\n", params.image);
+
   // load
   auto error = string{};
   auto image = image_data{}, alpha = image_data{};
-  if (!load_image(params.image, image, error)) print_fatal(error);
-  if (!load_image(params.alpha, alpha, error)) print_fatal(error);
+  if (!load_image(params.image, image, error)) {
+    fmt::print("error: cannot load {}\n", params.image);
+    return 1;
+  }
+  if (!load_image(params.alpha, alpha, error)) {
+    fmt::print("error: cannot load {}\n", params.alpha);
+    return 1;
+  }
 
   // check sizes
   if (image.width != alpha.width || image.height != alpha.height) {
-    print_fatal(params.image + "," + params.alpha + ": image different size");
+    fmt::print("error: image size differs\n");
+    return 1;
   }
 
   // check types
   if (image.linear != alpha.linear) {
-    print_fatal(params.image + "," + params.alpha + ": image different types");
+    fmt::print("error: image type differs\n");
+    return 1;
   }
 
   // edit alpha
@@ -257,7 +314,13 @@ void run_setalpha(const setalpha_params& params) {
   }
 
   // save
-  if (!save_image(params.output, out, error)) print_fatal(error);
+  if (!save_image(params.output, out, error)) {
+    fmt::print("error: cannot save {}\n", params.output);
+    return 1;
+  }
+
+  // done
+  return 0;
 }
 
 struct app_params {
@@ -269,23 +332,25 @@ struct app_params {
   setalpha_params setalpha = {};
 };
 
-// Cli
-void add_options(const cli_command& cli, app_params& params) {
-  set_command_var(cli, params.command);
-  add_command(cli, "convert", params.convert, "Convert images.");
-  add_command(cli, "view", params.view, "View images.");
-  add_command(cli, "grade", params.grade, "Grade images.");
-  add_command(cli, "diff", params.diff, "Diff two images.");
-  add_command(cli, "setalpha", params.setalpha, "Set alpha in images.");
-}
-
-// Run
-void run(const vector<string>& args) {
+// Main
+int main(int argc, const char* argv[]) {
   // command line parameters
   auto params = app_params{};
-  auto error  = string{};
-  auto cli    = make_cli("yimage", params, "Process and view images.");
-  if (!parse_cli(cli, args, error)) print_fatal(error);
+  auto cli    = CLI::App("Process and view images");
+  add_options(
+      *cli.add_subcommand("convert", "Convert images."), params.convert);
+  add_options(*cli.add_subcommand("view", "View images."), params.view);
+  add_options(*cli.add_subcommand("grade", "Grade images."), params.grade);
+  add_options(*cli.add_subcommand("diff", "Diff two images."), params.diff);
+  add_options(
+      *cli.add_subcommand("setalpha", "Set alpha in images."), params.setalpha);
+  cli.require_subcommand(1);
+  try {
+    cli.parse(argc, argv);
+    params.command = cli.get_subcommands().front()->get_name();
+  } catch (const CLI::ParseError& e) {
+    return cli.exit(e);
+  }
 
   // dispatch commands
   if (params.command == "convert") {
@@ -299,9 +364,7 @@ void run(const vector<string>& args) {
   } else if (params.command == "setalpha") {
     return run_setalpha(params.setalpha);
   } else {
-    print_fatal("yimage: unknown command");
+    fmt::print("error: unknown command\n");
+    return 1;
   }
 }
-
-// Main
-int main(int argc, const char* argv[]) { run(make_cli_args(argc, argv)); }

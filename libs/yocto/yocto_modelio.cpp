@@ -3592,7 +3592,7 @@ struct pbrt_medium {
   };
 
   auto get_roughness = [&](const vector<pbrt_value>& values, float& roughness,
-                           float def = 0.1) {
+                           float def = 0.1f) {
     auto roughness_ = pair{array<float, 3>{def, def, def}, ""s};
     get_pbrt_value(values, "roughness", roughness_);
     auto uroughness = roughness_, vroughness = roughness_;

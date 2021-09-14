@@ -183,19 +183,19 @@ shape_data make_rect(const vec2i& steps = {1, 1}, const vec2f& scale = {1, 1},
     const vec2f& uvscale = {1, 1});
 shape_data make_bulged_rect(const vec2i& steps = {1, 1},
     const vec2f& scale = {1, 1}, const vec2f& uvscale = {1, 1},
-    float radius = 0.3);
+    float radius = 0.3f);
 // Make a plane in the xz plane.
 shape_data make_recty(const vec2i& steps = {1, 1}, const vec2f& scale = {1, 1},
     const vec2f& uvscale = {1, 1});
 shape_data make_bulged_recty(const vec2i& steps = {1, 1},
     const vec2f& scale = {1, 1}, const vec2f& uvscale = {1, 1},
-    float radius = 0.3);
+    float radius = 0.3f);
 // Make a box.
 shape_data make_box(const vec3i& steps = {1, 1, 1},
     const vec3f& scale = {1, 1, 1}, const vec3f& uvscale = {1, 1, 1});
 shape_data make_rounded_box(const vec3i& steps = {1, 1, 1},
     const vec3f& scale = {1, 1, 1}, const vec3f& uvscale = {1, 1, 1},
-    float radius = 0.3);
+    float radius = 0.3f);
 // Make a quad stack
 shape_data make_rect_stack(const vec3i& steps = {1, 1, 1},
     const vec3f& scale = {1, 1, 1}, const vec2f& uvscale = {1, 1});
@@ -204,7 +204,7 @@ shape_data make_floor(const vec2i& steps = {1, 1},
     const vec2f& scale = {10, 10}, const vec2f& uvscale = {10, 10});
 shape_data make_bent_floor(const vec2i& steps = {1, 1},
     const vec2f& scale = {10, 10}, const vec2f& uvscale = {10, 10},
-    float bent = 0.5);
+    float bent = 0.5f);
 // Make a sphere.
 shape_data make_sphere(int steps = 32, float scale = 1, float uvscale = 1);
 // Make a sphere.
@@ -214,14 +214,14 @@ shape_data make_uvspherey(const vec2i& steps = {32, 32}, float scale = 1,
     const vec2f& uvscale = {1, 1});
 // Make a sphere with slipped caps.
 shape_data make_capped_uvsphere(const vec2i& steps = {32, 32}, float scale = 1,
-    const vec2f& uvscale = {1, 1}, float height = 0.3);
+    const vec2f& uvscale = {1, 1}, float height = 0.3f);
 shape_data make_capped_uvspherey(const vec2i& steps = {32, 32}, float scale = 1,
-    const vec2f& uvscale = {1, 1}, float height = 0.3);
+    const vec2f& uvscale = {1, 1}, float height = 0.3f);
 // Make a disk
 shape_data make_disk(int steps = 32, float scale = 1, float uvscale = 1);
 // Make a bulged disk
 shape_data make_bulged_disk(
-    int steps = 32, float scale = 1, float uvscale = 1, float height = 0.3);
+    int steps = 32, float scale = 1, float uvscale = 1, float height = 0.3f);
 // Make a uv disk
 shape_data make_uvdisk(const vec2i& steps = {32, 32}, float scale = 1,
     const vec2f& uvscale = {1, 1});
@@ -231,7 +231,7 @@ shape_data make_uvcylinder(const vec3i& steps = {32, 32, 32},
 // Make a rounded uv cylinder
 shape_data make_rounded_uvcylinder(const vec3i& steps = {32, 32, 32},
     const vec2f& scale = {1, 1}, const vec3f& uvscale = {1, 1, 1},
-    float radius = 0.3);
+    float radius = 0.3f);
 
 // Make a facevarying rect
 fvshape_data make_fvrect(const vec2i& steps = {1, 1},

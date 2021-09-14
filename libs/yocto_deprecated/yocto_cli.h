@@ -39,13 +39,13 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
+#include <yocto/yocto_math.h>
+
 #include <array>
 #include <sstream>
 #include <string>
 #include <type_traits>
 #include <vector>
-
-#include "yocto_math.h"
 
 #define JSON_USE_IMPLICIT_CONVERSIONS 0
 #include "ext/json.hpp"
@@ -72,11 +72,11 @@ namespace yocto {
 void print_info(const string& message);
 void print_info(const char* message);
 // Prints a message to the console and exit with an error. Returns error code.
-void print_fatal(const string& message);
-void print_fatal(const char* message);
+int print_fatal(const string& message);
+int print_fatal(const char* message);
 template <typename T>
-inline void print_fatal(const T& error) {
-  print_fatal(error.error);
+inline int print_fatal(const T& error) {
+  return print_fatal(error.error);
 }
 
 // Timer that prints as scope end. Create with `print_timed` and print with

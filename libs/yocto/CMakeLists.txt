@@ -9,7 +9,6 @@ add_library(yocto
   yocto_scene.h yocto_scene.cpp
   yocto_trace.h yocto_trace.cpp
   yocto_sceneio.h yocto_sceneio.cpp
-  yocto_cli.h yocto_cli.cpp
   yocto_parallel.h
   ext/stb_image.h ext/stb_image_resize.h ext/stb_image_write.h ext/stb_image.cpp
   ext/tinyexr.h ext/tinyexr.cpp ext/json.hpp ext/fast_float.h

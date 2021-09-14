@@ -34,12 +34,12 @@ See each header file for documentation.
 - `yocto/yocto_trace.{h,cpp}`: path tracing of surfaces and hairs supporting
   area and environment illumination, microfacet GGX and subsurface scattering,
   multiple importance sampling
-- `yocto/yocto_cli.{h,cpp}`: printing utilities and command line parsing
 - `yocto/yocto_sceneio.{h,cpp}`: image, shape and scene serialization
 - `yocto/yocto_modelio.{h,cpp}`: low-level parsing and writing for 
   Ply, Obj, Stl, Pbrt formats
 - `yocto/yocto_parallel.h`: concurrency utilities
 - `yocto/yocto_json.{h,cpp}`: Json data model and serialization (deprecated)
+- `yocto/yocto_cli.{h,cpp}`: printing utilities and command line parsing (deprecated)
 
 You can see Yocto/GL in action in the following applications written to
 test the library:

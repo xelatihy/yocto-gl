@@ -1,5 +1,7 @@
 add_library(yocto_unsupported
-  yocto_json.h yocto_json.cpp ext/json.hpp
+  yocto_json.h yocto_json.cpp 
+  yocto_cli.h yocto_cli.cpp 
+  ext/json.hpp
 )
 
 set_target_properties(yocto_unsupported PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)

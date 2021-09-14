@@ -29,7 +29,6 @@
 
 #include "yocto_glview.h"
 
-#include <yocto/yocto_cli.h>
 #include <yocto/yocto_geometry.h>
 #include <yocto/yocto_parallel.h>
 
@@ -440,28 +439,21 @@ void view_scene(const string& title, const string& name, scene_data& scene,
   auto params = params_;
 
   // build bvh
-  if (print) print_progress_begin("build bvh");
   auto bvh = make_bvh(scene, params);
-  if (print) print_progress_end();
 
   // init renderer
-  if (print) print_progress_begin("init lights");
   auto lights = make_lights(scene, params);
-  if (print) print_progress_end();
 
   // fix renderer type if no lights
   if (lights.lights.empty() && is_sampler_lit(params)) {
-    if (print) print_info("no lights presents --- switching to eyelight");
     params.sampler = trace_sampler_type::eyelight;
   }
 
   // init state
-  if (print) print_progress_begin("init state");
   auto state   = make_state(scene, params);
   auto image   = make_image(state.width, state.height, true);
   auto display = make_image(state.width, state.height, false);
   auto render  = make_image(state.width, state.height, true);
-  if (print) print_progress_end();
 
   // opengl image
   auto glimage  = glimage_state{};
@@ -748,7 +740,7 @@ namespace yocto {
 [[maybe_unused]] static GLenum _assert_ogl_error() {
   auto error_code = glGetError();
   if (error_code != GL_NO_ERROR) {
-    auto error = ""s;
+    auto error = string{};
     switch (error_code) {
       case GL_INVALID_ENUM: error = "INVALID_ENUM"; break;
       case GL_INVALID_VALUE: error = "INVALID_VALUE"; break;
@@ -2034,8 +2026,8 @@ bool draw_glcoloredithdr(const char* lbl, vec3f& value) {
     exposure = log2(scale);
   }
   auto edit_exposure = draw_glslider(
-      (lbl + " [exp]"s).c_str(), exposure, 0, 10);
-  auto edit_color = draw_glcoloredit((lbl + " [col]"s).c_str(), color);
+      (string{lbl} + " [exp]").c_str(), exposure, 0, 10);
+  auto edit_color = draw_glcoloredit((string{lbl} + " [col]").c_str(), color);
   if (edit_exposure || edit_color) {
     value = color * exp2(exposure);
     return true;
@@ -2054,8 +2046,8 @@ bool draw_glcoloredithdr(const char* lbl, vec4f& value) {
     exposure = log2(scale);
   }
   auto edit_exposure = draw_glslider(
-      (lbl + " [exp]"s).c_str(), exposure, 0, 10);
-  auto edit_color = draw_glcoloredit((lbl + " [col]"s).c_str(), color);
+      (string{lbl} + " [exp]").c_str(), exposure, 0, 10);
+  auto edit_color = draw_glcoloredit((string{lbl} + " [col]").c_str(), color);
   if (edit_exposure || edit_color) {
     value.x = color.x * exp2(exposure);
     value.y = color.y * exp2(exposure);
@@ -2167,28 +2159,37 @@ void draw_histogram(const char* lbl, const vector<float>& values) {
       flt_max, flt_max, {0, 0}, 4);
 }
 void draw_histogram(const char* lbl, const vector<vec2f>& values) {
-  ImGui::PlotHistogram((lbl + " x"s).c_str(), (const float*)values.data() + 0,
-      (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec2f));
-  ImGui::PlotHistogram((lbl + " y"s).c_str(), (const float*)values.data() + 1,
-      (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec2f));
+  ImGui::PlotHistogram((string{lbl} + " x").c_str(),
+      (const float*)values.data() + 0, (int)values.size(), 0, nullptr, flt_max,
+      flt_max, {0, 0}, sizeof(vec2f));
+  ImGui::PlotHistogram((string{lbl} + " y").c_str(),
+      (const float*)values.data() + 1, (int)values.size(), 0, nullptr, flt_max,
+      flt_max, {0, 0}, sizeof(vec2f));
 }
 void draw_histogram(const char* lbl, const vector<vec3f>& values) {
-  ImGui::PlotHistogram((lbl + " x"s).c_str(), (const float*)values.data() + 0,
-      (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec3f));
-  ImGui::PlotHistogram((lbl + " y"s).c_str(), (const float*)values.data() + 1,
-      (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec3f));
-  ImGui::PlotHistogram((lbl + " z"s).c_str(), (const float*)values.data() + 2,
-      (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec3f));
+  ImGui::PlotHistogram((string{lbl} + " x").c_str(),
+      (const float*)values.data() + 0, (int)values.size(), 0, nullptr, flt_max,
+      flt_max, {0, 0}, sizeof(vec3f));
+  ImGui::PlotHistogram((string{lbl} + " y").c_str(),
+      (const float*)values.data() + 1, (int)values.size(), 0, nullptr, flt_max,
+      flt_max, {0, 0}, sizeof(vec3f));
+  ImGui::PlotHistogram((string{lbl} + " z").c_str(),
+      (const float*)values.data() + 2, (int)values.size(), 0, nullptr, flt_max,
+      flt_max, {0, 0}, sizeof(vec3f));
 }
 void draw_histogram(const char* lbl, const vector<vec4f>& values) {
-  ImGui::PlotHistogram((lbl + " x"s).c_str(), (const float*)values.data() + 0,
-      (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec4f));
-  ImGui::PlotHistogram((lbl + " y"s).c_str(), (const float*)values.data() + 1,
-      (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec4f));
-  ImGui::PlotHistogram((lbl + " z"s).c_str(), (const float*)values.data() + 2,
-      (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec4f));
-  ImGui::PlotHistogram((lbl + " w"s).c_str(), (const float*)values.data() + 3,
-      (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec4f));
+  ImGui::PlotHistogram((string{lbl} + " x").c_str(),
+      (const float*)values.data() + 0, (int)values.size(), 0, nullptr, flt_max,
+      flt_max, {0, 0}, sizeof(vec4f));
+  ImGui::PlotHistogram((string{lbl} + " y").c_str(),
+      (const float*)values.data() + 1, (int)values.size(), 0, nullptr, flt_max,
+      flt_max, {0, 0}, sizeof(vec4f));
+  ImGui::PlotHistogram((string{lbl} + " z").c_str(),
+      (const float*)values.data() + 2, (int)values.size(), 0, nullptr, flt_max,
+      flt_max, {0, 0}, sizeof(vec4f));
+  ImGui::PlotHistogram((string{lbl} + " w").c_str(),
+      (const float*)values.data() + 3, (int)values.size(), 0, nullptr, flt_max,
+      flt_max, {0, 0}, sizeof(vec4f));
 }
 
 }  // namespace yocto
