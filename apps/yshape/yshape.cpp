@@ -80,11 +80,11 @@ void add_options(CLI::App& cli, convert_params& params) {
 }
 
 // convert images
-void run_convert(const convert_params& params) {
+int run_convert(const convert_params& params) {
   // load mesh
   auto error = string{};
   auto shape = shape_data{};
-  if (!load_shape(params.shape, shape, error, true)) print_fatal(error);
+  if (!load_shape(params.shape, shape, error, true)) return print_fatal(error);
 
   // remove data
   if (params.aspositions) {
@@ -172,7 +172,10 @@ void run_convert(const convert_params& params) {
   }
 
   // save mesh
-  if (!save_shape(params.output, shape, error, true)) print_fatal(error);
+  if (!save_shape(params.output, shape, error, true)) return print_fatal(error);
+
+  // done
+  return 0;
 }
 
 // fvconvert params
@@ -207,11 +210,12 @@ void add_options(CLI::App& cli, fvconvert_params& params) {
 }
 
 // convert images
-void run_fvconvert(const fvconvert_params& params) {
+int run_fvconvert(const fvconvert_params& params) {
   // load mesh
   auto error = string{};
   auto shape = fvshape_data{};
-  if (!load_fvshape(params.shape, shape, error, true)) print_fatal(error);
+  if (!load_fvshape(params.shape, shape, error, true))
+    return print_fatal(error);
 
   // remove data
   if (params.aspositions) {
@@ -269,7 +273,11 @@ void run_fvconvert(const fvconvert_params& params) {
   }
 
   // save mesh
-  if (!save_fvshape(params.output, shape, error, true)) print_fatal(error);
+  if (!save_fvshape(params.output, shape, error, true))
+    return print_fatal(error);
+
+  // done
+  return 0;
 }
 
 // view params
@@ -288,22 +296,27 @@ void add_options(CLI::App& cli, view_params& params) {
 #ifndef YOCTO_OPENGL
 
 // view shapes
-void run_view(const view_params& params) { print_fatal("Opengl not compiled"); }
+int run_view(const view_params& params) {
+  return print_fatal("Opengl not compiled");
+}
 
 #else
 
 // view shapes
-void run_view(const view_params& params) {
+int run_view(const view_params& params) {
   // load shape
   auto error = string{};
   auto shape = shape_data{};
-  if (!load_shape(params.shape, shape, error, true)) print_fatal(error);
+  if (!load_shape(params.shape, shape, error, true)) return print_fatal(error);
 
   // make scene
   auto scene = make_shape_scene(shape, params.addsky);
 
   // run view
   view_scene("yshape", params.shape, scene);
+
+  // done
+  return 0;
 }
 
 #endif
@@ -331,11 +344,11 @@ void add_options(CLI::App& cli, heightfield_params& params) {
   cli.add_option("--rotate", (array<float, 3>&)params.rotate, "Rotate shape.");
 }
 
-void run_heightfield(const heightfield_params& params) {
+int run_heightfield(const heightfield_params& params) {
   // load image
   auto error = string{};
   auto image = image_data{};
-  if (!load_image(params.image, image, error)) print_fatal(error);
+  if (!load_image(params.image, image, error)) return print_fatal(error);
 
   // adjust height
   if (params.height != 1) {
@@ -369,7 +382,10 @@ void run_heightfield(const heightfield_params& params) {
   }
 
   // save mesh
-  if (!save_shape(params.output, shape, error, true)) print_fatal(error);
+  if (!save_shape(params.output, shape, error, true)) return print_fatal(error);
+
+  // done
+  return 0;
 }
 
 struct hair_params {
@@ -394,11 +410,11 @@ void add_options(CLI::App& cli, hair_params& params) {
   cli.add_option("--radius", params.radius, "Hair radius.");
 }
 
-void run_hair(const hair_params& params) {
+int run_hair(const hair_params& params) {
   // load mesh
   auto error = string{};
   auto shape = shape_data{};
-  if (!load_shape(params.shape, shape, error)) print_fatal(error);
+  if (!load_shape(params.shape, shape, error)) return print_fatal(error);
 
   // generate hair
   auto hair = make_hair2(shape, {params.steps, params.hairs},
@@ -406,7 +422,10 @@ void run_hair(const hair_params& params) {
       params.noise, params.gravity);
 
   // save mesh
-  if (!save_shape(params.output, hair, error, true)) print_fatal(error);
+  if (!save_shape(params.output, hair, error, true)) return print_fatal(error);
+
+  // done
+  return 0;
 }
 
 struct sample_params {
@@ -421,11 +440,11 @@ void add_options(CLI::App& cli, sample_params& params) {
   cli.add_option("--samples", params.samples, "Number of samples.");
 }
 
-void run_sample(const sample_params& params) {
+int run_sample(const sample_params& params) {
   // load mesh
   auto error = string{};
   auto shape = shape_data{};
-  if (!load_shape(params.shape, shape, error)) print_fatal(error);
+  if (!load_shape(params.shape, shape, error)) return print_fatal(error);
 
   // generate samples
   auto samples = sample_shape(shape, params.samples);
@@ -439,7 +458,10 @@ void run_sample(const sample_params& params) {
   }
 
   // save mesh
-  if (!save_shape(params.output, sshape, error)) print_fatal(error);
+  if (!save_shape(params.output, sshape, error)) return print_fatal(error);
+
+  // done
+  return 0;
 }
 
 struct glview_params {
@@ -456,23 +478,26 @@ void add_options(CLI::App& cli, glview_params& params) {
 #ifndef YOCTO_OPENGL
 
 // view shapes
-void run_glview(const glview_params& params) {
+int run_glview(const glview_params& params) {
   print_fatal("Opengl not compiled");
 }
 
 #else
 
-void run_glview(const glview_params& params) {
+int run_glview(const glview_params& params) {
   // loading shape
   auto error = string{};
   auto shape = shape_data{};
-  if (!load_shape(params.shape, shape, error)) print_fatal(error);
+  if (!load_shape(params.shape, shape, error)) return print_fatal(error);
 
   // make scene
   auto scene = make_shape_scene(shape, params.addsky);
 
   // run viewer
   glview_scene("yshape", params.shape, scene, {});
+
+  // done
+  return 0;
 }
 
 #endif
@@ -488,8 +513,9 @@ struct app_params {
   glview_params      glview      = {};
 };
 
-// Cli
-app_params parse_cli(int argc, const char** argv) {
+// Run
+int main(int argc, const char** argv) {
+  // command line parameters
   auto params = app_params{};
   auto cli    = CLI::App("Process and view shapes");
   add_options(
@@ -509,38 +535,26 @@ app_params parse_cli(int argc, const char** argv) {
   try {
     cli.parse(argc, argv);
     params.command = cli.get_subcommands().front()->get_name();
-    return params;
   } catch (const CLI::ParseError& e) {
-    cli.exit(e);
-    return {};
+    return cli.exit(e);
   }
-}
-
-// Run
-int main(int argc, const char** argv) {
-  // command line parameters
-  auto error  = string{};
-  auto params = parse_cli(argc, argv);
 
   // dispatch commands
   if (params.command == "convert") {
-    run_convert(params.convert);
+    return run_convert(params.convert);
   } else if (params.command == "fvconvert") {
-    run_fvconvert(params.fvconvert);
+    return run_fvconvert(params.fvconvert);
   } else if (params.command == "view") {
-    run_view(params.view);
+    return run_view(params.view);
   } else if (params.command == "heightfield") {
-    run_heightfield(params.heightfield);
+    return run_heightfield(params.heightfield);
   } else if (params.command == "hair") {
-    run_hair(params.hair);
+    return run_hair(params.hair);
   } else if (params.command == "sample") {
-    run_sample(params.sample);
+    return run_sample(params.sample);
   } else if (params.command == "glview") {
-    run_glview(params.glview);
+    return run_glview(params.glview);
   } else {
-    print_fatal("yshape: unknown command");
+    return print_fatal("yshape: unknown command");
   }
-
-  // done
-  return 0;
 }

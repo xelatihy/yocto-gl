@@ -64,11 +64,11 @@ void add_options(CLI::App& cli, convert_params& params) {
 }
 
 // convert images
-void run_convert(const convert_params& params) {
+int run_convert(const convert_params& params) {
   // load
   auto error = string{};
   auto image = image_data{};
-  if (!load_image(params.image, image, error)) print_fatal(error);
+  if (!load_image(params.image, image, error)) return print_fatal(error);
 
   // resize if needed
   if (params.width != 0 || params.height != 0) {
@@ -81,7 +81,10 @@ void run_convert(const convert_params& params) {
   }
 
   // save
-  if (!save_image(params.output, image, error)) print_fatal(error);
+  if (!save_image(params.output, image, error)) return print_fatal(error);
+
+  // done
+  return 0;
 }
 
 // view params
@@ -99,21 +102,27 @@ void add_options(CLI::App& cli, view_params& params) {
 #ifndef YOCTO_OPENGL
 
 // view images
-void run_view(const view_params& params) { print_fatal("Opengl not compiled"); }
+int run_view(const view_params& params) {
+  return print_fatal("Opengl not compiled");
+}
 
 #else
 
 // view images
-void run_view(const view_params& params) {
+int run_view(const view_params& params) {
   // load
   auto error  = string{};
   auto images = vector<image_data>(params.images.size());
   for (auto idx = 0; idx < (int)params.images.size(); idx++) {
-    if (!load_image(params.images[idx], images[idx], error)) print_fatal(error);
+    if (!load_image(params.images[idx], images[idx], error))
+      return print_fatal(error);
   }
 
   // run viewer
   view_images("yimage", params.images, images);
+
+  // done
+  return 0;
 }
 
 #endif
@@ -133,21 +142,24 @@ void add_options(CLI::App& cli, grade_params& params) {
 #ifndef YOCTO_OPENGL
 
 // grade images
-void run_grade(const grade_params& params) {
-  print_fatal("Opengl not compiled");
+int run_grade(const grade_params& params) {
+  return print_fatal("Opengl not compiled");
 }
 
 #else
 
 // grade images
-void run_grade(const grade_params& params) {
+int run_grade(const grade_params& params) {
   // load image
   auto error = string{};
   auto image = image_data{};
-  if (!load_image(params.image, image, error)) print_fatal(error);
+  if (!load_image(params.image, image, error)) return print_fatal(error);
 
   // run viewer
   colorgrade_image("yimage", params.image, image);
+
+  // done
+  return 0;
 }
 
 #endif
@@ -171,12 +183,12 @@ void add_options(CLI::App& cli, diff_params& params) {
 }
 
 // resize images
-void run_diff(const diff_params& params) {
+int run_diff(const diff_params& params) {
   // load
   auto error  = string{};
   auto image1 = image_data{}, image2 = image_data{};
-  if (!load_image(params.image1, image1, error)) print_fatal(error);
-  if (!load_image(params.image2, image2, error)) print_fatal(error);
+  if (!load_image(params.image1, image1, error)) return print_fatal(error);
+  if (!load_image(params.image2, image2, error)) return print_fatal(error);
 
   // check sizes
   if (image1.width != image2.width || image1.height != image2.height) {
@@ -194,7 +206,7 @@ void run_diff(const diff_params& params) {
 
   // save
   if (params.output != "")
-    if (!save_image(params.output, diff, error)) print_fatal(error);
+    if (!save_image(params.output, diff, error)) return print_fatal(error);
 
   // check diff
   if (params.signal) {
@@ -205,6 +217,9 @@ void run_diff(const diff_params& params) {
       }
     }
   }
+
+  // done
+  return 0;
 }
 
 // setalpha params
@@ -228,12 +243,12 @@ void add_options(CLI::App& cli, setalpha_params& params) {
 }
 
 // setalpha images
-void run_setalpha(const setalpha_params& params) {
+int run_setalpha(const setalpha_params& params) {
   // load
   auto error = string{};
   auto image = image_data{}, alpha = image_data{};
-  if (!load_image(params.image, image, error)) print_fatal(error);
-  if (!load_image(params.alpha, alpha, error)) print_fatal(error);
+  if (!load_image(params.image, image, error)) return print_fatal(error);
+  if (!load_image(params.alpha, alpha, error)) return print_fatal(error);
 
   // check sizes
   if (image.width != alpha.width || image.height != alpha.height) {
@@ -262,7 +277,10 @@ void run_setalpha(const setalpha_params& params) {
   }
 
   // save
-  if (!save_image(params.output, out, error)) print_fatal(error);
+  if (!save_image(params.output, out, error)) return print_fatal(error);
+
+  // done
+  return 0;
 }
 
 struct app_params {
@@ -274,8 +292,9 @@ struct app_params {
   setalpha_params setalpha = {};
 };
 
-// Cli
-app_params parse_cli(int argc, const char** argv) {
+// Main
+int main(int argc, const char* argv[]) {
+  // command line parameters
   auto params = app_params{};
   auto cli    = CLI::App("Process and view images");
   add_options(
@@ -289,33 +308,22 @@ app_params parse_cli(int argc, const char** argv) {
   try {
     cli.parse(argc, argv);
     params.command = cli.get_subcommands().front()->get_name();
-    return params;
   } catch (const CLI::ParseError& e) {
-    cli.exit(e);
-    return {};
+    return cli.exit(e);
   }
-}
-
-// Main
-int main(int argc, const char* argv[]) {
-  // command line parameters
-  auto params = parse_cli(argc, argv);
 
   // dispatch commands
   if (params.command == "convert") {
-    run_convert(params.convert);
+    return run_convert(params.convert);
   } else if (params.command == "view") {
-    run_view(params.view);
+    return run_view(params.view);
   } else if (params.command == "grade") {
-    run_grade(params.grade);
+    return run_grade(params.grade);
   } else if (params.command == "diff") {
-    run_diff(params.diff);
+    return run_diff(params.diff);
   } else if (params.command == "setalpha") {
-    run_setalpha(params.setalpha);
+    return run_setalpha(params.setalpha);
   } else {
-    print_fatal("yimage: unknown command");
+    return print_fatal("yimage: unknown command");
   }
-
-  // done
-  return 0;
 }

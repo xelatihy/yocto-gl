@@ -59,12 +59,12 @@ void add_options(CLI::App& cli, convert_params& params) {
 }
 
 // convert images
-void run_convert(const convert_params& params) {
+int run_convert(const convert_params& params) {
   // load scene
   auto error = string{};
   auto scene = scene_data{};
   print_progress_begin("load scene");
-  if (!load_scene(params.scene, scene, error)) print_fatal(error);
+  if (!load_scene(params.scene, scene, error)) return print_fatal(error);
   print_progress_end();
 
   // copyright
@@ -95,6 +95,9 @@ void run_convert(const convert_params& params) {
   make_scene_directories(params.output, scene);
   save_scene(params.output, scene);
   print_progress_end();
+
+  // done
+  return 0;
 }
 
 // info params
@@ -110,12 +113,12 @@ void add_options(CLI::App& cli, info_params& params) {
 }
 
 // print info for scenes
-void run_info(const info_params& params) {
+int run_info(const info_params& params) {
   // load scene
   auto error = string{};
   print_progress_begin("load scene");
   auto scene = scene_data{};
-  if (!load_scene(params.scene, scene, error)) print_fatal(error);
+  if (!load_scene(params.scene, scene, error)) return print_fatal(error);
   print_progress_end();
 
   // validate scene
@@ -126,6 +129,9 @@ void run_info(const info_params& params) {
   // print info
   print_info("scene stats ------------");
   for (auto stat : scene_stats(scene)) print_info(stat);
+
+  // done
+  return 0;
 }
 
 // render params
@@ -168,7 +174,7 @@ void add_options(CLI::App& cli, render_params& params) {
 }
 
 // convert images
-void run_render(const render_params& params_) {
+int run_render(const render_params& params_) {
   // copy params
   auto params = params_;
 
@@ -176,7 +182,7 @@ void run_render(const render_params& params_) {
   auto error = string{};
   print_progress_begin("load scene");
   auto scene = scene_data{};
-  if (!load_scene(params.scene, scene, error)) print_fatal(error);
+  if (!load_scene(params.scene, scene, error)) return print_fatal(error);
   print_progress_end();
 
   // add sky
@@ -230,7 +236,7 @@ void run_render(const render_params& params_) {
       auto outfilename = replace_extension(params.output, ext);
       if (!is_hdr_filename(params.output))
         image = tonemap_image(image, params.exposure, params.filmic);
-      if (!save_image(outfilename, image, error)) print_fatal(error);
+      if (!save_image(outfilename, image, error)) return print_fatal(error);
     }
     print_progress_next();
   }
@@ -240,8 +246,11 @@ void run_render(const render_params& params_) {
   auto image = params.denoise ? get_denoised(state) : get_render(state);
   if (!is_hdr_filename(params.output))
     image = tonemap_image(image, params.exposure, params.filmic);
-  if (!save_image(params.output, image, error)) print_fatal(error);
+  if (!save_image(params.output, image, error)) return print_fatal(error);
   print_progress_end();
+
+  // done
+  return 0;
 }
 
 // convert params
@@ -284,12 +293,12 @@ void add_options(CLI::App& cli, view_params& params) {
 #ifndef YOCTO_OPENGL
 
 // view scene
-void run_view(const view_params& params) { print_fatal("Opengl not compiled"); }
+int run_view(const view_params& params) { print_fatal("Opengl not compiled"); }
 
 #else
 
 // view scene
-void run_view(const view_params& params_) {
+int run_view(const view_params& params_) {
   // copy params
   auto params = params_;
 
@@ -297,7 +306,7 @@ void run_view(const view_params& params_) {
   auto error = string{};
   print_progress_begin("load scene");
   auto scene = scene_data{};
-  if (!load_scene(params.scene, scene, error)) print_fatal(error);
+  if (!load_scene(params.scene, scene, error)) return print_fatal(error);
   print_progress_end();
 
   // add sky
@@ -322,6 +331,9 @@ void run_view(const view_params& params_) {
 
   // run view
   view_scene("yscene", params.scene, scene, params);
+
+  // done
+  return 0;
 }
 
 #endif
@@ -340,13 +352,13 @@ void add_options(CLI::App& cli, glview_params& params) {
 #ifndef YOCTO_OPENGL
 
 // view scene
-void run_glview(const glview_params& params) {
+int run_glview(const glview_params& params) {
   print_fatal("Opengl not compiled");
 }
 
 #else
 
-void run_glview(const glview_params& params_) {
+int run_glview(const glview_params& params_) {
   // copy params
   auto params = params_;
 
@@ -354,7 +366,7 @@ void run_glview(const glview_params& params_) {
   auto error = string{};
   print_progress_begin("load scene");
   auto scene = scene_data{};
-  if (!load_scene(params.scene, scene, error)) print_fatal(error);
+  if (!load_scene(params.scene, scene, error)) return print_fatal(error);
   print_progress_end();
 
   // tesselation
@@ -370,6 +382,9 @@ void run_glview(const glview_params& params_) {
 
   // run viewer
   glview_scene("yscene", params.scene, scene, glparams);
+
+  // done
+  return 0;
 }
 
 #endif
@@ -383,8 +398,9 @@ struct app_params {
   glview_params  glview  = {};
 };
 
-// Cli
-app_params parse_cli(int argc, const char** argv) {
+// Run
+int main(int argc, const char* argv[]) {
+  // command line parameters
   auto params = app_params{};
   auto cli    = CLI::App("Process and view scenes");
   add_options(
@@ -398,30 +414,22 @@ app_params parse_cli(int argc, const char** argv) {
   try {
     cli.parse(argc, argv);
     params.command = cli.get_subcommands().front()->get_name();
-    return params;
   } catch (const CLI::ParseError& e) {
-    cli.exit(e);
-    return {};
+    return cli.exit(e);
   }
-}
-
-// Run
-int main(int argc, const char* argv[]) {
-  // command line parameters
-  auto params = parse_cli(argc, argv);
 
   // dispatch commands
   if (params.command == "convert") {
-    run_convert(params.convert);
+    return run_convert(params.convert);
   } else if (params.command == "info") {
-    run_info(params.info);
+    return run_info(params.info);
   } else if (params.command == "render") {
-    run_render(params.render);
+    return run_render(params.render);
   } else if (params.command == "view") {
-    run_view(params.view);
+    return run_view(params.view);
   } else if (params.command == "glview") {
-    run_glview(params.glview);
+    return run_glview(params.glview);
   } else {
-    print_fatal("yscene; unknown command");
+    return print_fatal("yscene; unknown command");
   }
 }

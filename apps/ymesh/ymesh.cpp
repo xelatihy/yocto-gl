@@ -62,22 +62,25 @@ void add_options(CLI::App& cli, view_params& params) {
 #ifndef YOCTO_OPENGL
 
 // view shapes
-void run_view(const view_params& params) { print_fatal("Opengl not compiled"); }
+int run_view(const view_params& params) { print_fatal("Opengl not compiled"); }
 
 #else
 
 // view shapes
-void run_view(const view_params& params) {
+int run_view(const view_params& params) {
   // load mesh
   auto error = string{};
   auto shape = shape_data{};
-  if (!load_shape(params.shape, shape, error, true)) print_fatal(error);
+  if (!load_shape(params.shape, shape, error, true)) return print_fatal(error);
 
   // make scene
   auto scene = make_shape_scene(shape, params.addsky);
 
   // run view
   view_scene("ymesh", params.shape, scene);
+
+  // done
+  return 0;
 }
 
 #endif
@@ -94,7 +97,7 @@ void add_options(CLI::App& cli, glview_params& params) {
 #ifndef YOCTO_OPENGL
 
 // view shapes
-void run_glview(const glview_params& params) {
+int run_glview(const glview_params& params) {
   print_fatal("Opengl not compiled");
 }
 
@@ -147,17 +150,20 @@ static scene_data make_shapescene(const shape_data& ioshape_) {
   return scene;
 }
 
-void run_glview(const glview_params& params) {
+int run_glview(const glview_params& params) {
   // loading shape
   auto error = string{};
   auto shape = shape_data{};
-  if (!load_shape(params.shape, shape, error, true)) print_fatal(error);
+  if (!load_shape(params.shape, shape, error, true)) return print_fatal(error);
 
   // create scene
   auto scene = make_shapescene(shape);
 
   // run viewer
   glview_scene("ymesh", params.shape, scene, {});
+
+  // done
+  return 0;
 }
 
 #endif
@@ -174,7 +180,7 @@ void add_options(CLI::App& cli, glpath_params& params) {
 #ifndef YOCTO_OPENGL
 
 // view shapes
-void run_glpath(const glpath_params& params) {
+int run_glpath(const glpath_params& params) {
   print_fatal("Opengl not compiled");
 }
 
@@ -243,11 +249,12 @@ static scene_data make_pathscene(const shape_data& ioshape_) {
   return scene;
 }
 
-void run_glpath(const glpath_params& params) {
+int run_glpath(const glpath_params& params) {
   // loading shape
   auto error   = string{};
   auto ioshape = shape_data{};
-  if (!load_shape(params.shape, ioshape, error, true)) print_fatal(error);
+  if (!load_shape(params.shape, ioshape, error, true))
+    return print_fatal(error);
   if (!ioshape.quads.empty()) {
     ioshape.triangles = quads_to_triangles(ioshape.quads);
     ioshape.quads     = {};
@@ -330,6 +337,9 @@ void run_glpath(const glpath_params& params) {
           updated_shapes.push_back(2);
         }
       });
+
+  // done
+  return 0;
 }
 
 #endif
@@ -346,7 +356,7 @@ void add_options(CLI::App& cli, glpathd_params& params) {
 #ifndef YOCTO_OPENGL
 
 // view shapes
-void run_glpathd(const glpathd_params& params) {
+int run_glpathd(const glpathd_params& params) {
   print_fatal("Opengl not compiled");
 }
 
@@ -444,11 +454,12 @@ static scene_data make_pathdscene(const shape_data& ioshape) {
   return scene;
 }
 
-void run_glpathd(const glpathd_params& params) {
+int run_glpathd(const glpathd_params& params) {
   // loading shape
   auto error   = string{};
   auto ioshape = shape_data{};
-  if (!load_shape(params.shape, ioshape, error, true)) print_fatal(error);
+  if (!load_shape(params.shape, ioshape, error, true))
+    return print_fatal(error);
   if (!ioshape.quads.empty()) {
     ioshape.triangles = quads_to_triangles(ioshape.quads);
     ioshape.quads     = {};
@@ -563,6 +574,9 @@ void run_glpathd(const glpathd_params& params) {
           // set_quads(glscene.shapes.at(5), lines4.quads);
         }
       });
+
+  // done
+  return 0;
 }
 
 #endif
@@ -581,7 +595,7 @@ inline void add_options(CLI::App& cli, glsculpt_params& params) {
 #ifndef YOCTO_OPENGL
 
 // view scene
-void run_glsculpt(const glsculpt_params& params) {
+int run_glsculpt(const glsculpt_params& params) {
   print_fatal("Opengl not compiled");
 }
 
@@ -1215,11 +1229,12 @@ static pair<bool, bool> sculpt_update(sculpt_state& state, shape_data& shape,
   return {updated_shape, updated_cursor};
 }
 
-void run_glsculpt(const glsculpt_params& params_) {
+int run_glsculpt(const glsculpt_params& params_) {
   // loading shape
   auto error   = string{};
   auto ioshape = shape_data{};
-  if (!load_shape(params_.shape, ioshape, error, true)) print_fatal(error);
+  if (!load_shape(params_.shape, ioshape, error, true))
+    return print_fatal(error);
   if (!ioshape.quads.empty()) {
     ioshape.triangles = quads_to_triangles(ioshape.quads);
     ioshape.quads.clear();
@@ -1228,7 +1243,8 @@ void run_glsculpt(const glsculpt_params& params_) {
   // loading texture
   auto texture = texture_data{};
   if (!params_.texture.empty())
-    if (!load_texture(params_.texture, texture, error)) print_fatal(error);
+    if (!load_texture(params_.texture, texture, error))
+      return print_fatal(error);
 
   // setup app
   auto scene = make_sculptscene(ioshape);
@@ -1279,6 +1295,9 @@ void run_glsculpt(const glsculpt_params& params_) {
           updated_shapes.push_back(0);
         }
       });
+
+  // done
+  return 0;
 }
 
 #endif
@@ -1292,8 +1311,9 @@ struct app_params {
   glsculpt_params glsculpt = {};
 };
 
-// Cli
-app_params parse_cli(int argc, const char** argv) {
+// Main
+int main(int argc, const char* argv[]) {
+  // command line parameters
   auto params = app_params{};
   auto cli    = CLI::App("Process and view meshes");
   add_options(*cli.add_subcommand("view", "View shapes."), params.view);
@@ -1309,33 +1329,22 @@ app_params parse_cli(int argc, const char** argv) {
   try {
     cli.parse(argc, argv);
     params.command = cli.get_subcommands().front()->get_name();
-    return params;
   } catch (const CLI::ParseError& e) {
-    cli.exit(e);
-    return {};
+    return cli.exit(e);
   }
-}
-
-// Main
-int main(int argc, const char* argv[]) {
-  // command line parameters
-  auto params = parse_cli(argc, argv);
 
   // dispatch commands
   if (params.command == "view") {
-    run_view(params.view);
+    return run_view(params.view);
   } else if (params.command == "glview") {
-    run_glview(params.glview);
+    return run_glview(params.glview);
   } else if (params.command == "glpath") {
-    run_glpath(params.glpath);
+    return run_glpath(params.glpath);
   } else if (params.command == "glpathd") {
-    run_glpathd(params.glpathd);
+    return run_glpathd(params.glpathd);
   } else if (params.command == "glsculpt") {
-    run_glsculpt(params.glsculpt);
+    return run_glsculpt(params.glsculpt);
   } else {
-    print_fatal("ymesh: unknown command");
+    return print_fatal("ymesh: unknown command");
   }
-
-  // done
-  return 0;
 }
