@@ -2699,4 +2699,177 @@ bool draw_gui_params(const string& name, glwidgets_params& params) {
 
 #else
 
+// -----------------------------------------------------------------------------
+// NO OPENGL
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+static void exit_nogl() {
+  printf("opngl not linked\n");
+  exit(1)
+}
+
+// Open a window and show an image
+void show_image_gui(
+    const string& title, const string& name, const image_data& image) {
+  exit_nogl();
+}
+
+// Open a window and show a set of images
+void show_image_gui(const string& title, const vector<string>& names,
+    const vector<image_data>& images) {
+  exit_nogl();
+}
+
+// Open a window and show an image for color grading
+void show_colorgrade_gui(
+    const string& title, const string& name, const image_data& image) {
+  exit_nogl();
+}
+
+// Open a window and show an scene via path tracing
+void show_trace_gui(const string& title, const string& name, scene_data& scene,
+    const trace_params& params, bool print, bool edit) {
+  exit_nogl();
+}
+
+// Open a window and show an scene via OpenGL shading
+struct shade_params;
+void show_shade_gui(const string& title, const string& name, scene_data& scene,
+    const shade_params& params, const glview_callback& widgets_callback,
+    const glview_callback& uiupdate_callback,
+    const glview_callback& update_callback) {
+  exit_nogl();
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// WINDOW
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// run the user interface with the give callbacks
+void show_gui_window(const vec2i& size, const string& title,
+    const gui_callbacks& callbaks, int widgets_width, bool widgets_left) {
+  exit_nogl();
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// WIDGETS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Headers
+bool draw_gui_header(const char* title) { exit_nogl(); }
+void end_gui_header() { exit_nogl(); }
+
+// Labels
+void draw_gui_label(const char* lbl, const string& text) { exit_nogl(); }
+void draw_gui_label(const char* lbl, int value) { exit_nogl(); }
+void draw_gui_label(const char* lbl, bool value) { exit_nogl(); }
+
+// Lines
+void draw_gui_separator() { exit_nogl(); }
+void continue_gui_line() { exit_nogl(); }
+
+// Buttons
+bool draw_gui_button(const char* lbl, bool enabled) { exit_nogl(); }
+
+// Text
+bool draw_gui_textinput(const char* lbl, string& value) { exit_nogl(); }
+
+// Slider
+bool draw_gui_slider(const char* lbl, float& value, float min, float max) {
+  exit_nogl();
+}
+bool draw_gui_slider(const char* lbl, vec2f& value, float min, float max) {
+  exit_nogl();
+}
+bool draw_gui_slider(const char* lbl, vec3f& value, float min, float max) {
+  exit_nogl();
+}
+bool draw_gui_slider(const char* lbl, vec4f& value, float min, float max) {
+  exit_nogl();
+}
+bool draw_gui_slider(const char* lbl, int& value, int min, int max) {
+  exit_nogl();
+}
+bool draw_gui_slider(const char* lbl, vec2i& value, int min, int max) {
+  exit_nogl();
+}
+bool draw_gui_slider(const char* lbl, vec3i& value, int min, int max) {
+  exit_nogl();
+}
+bool draw_gui_slider(const char* lbl, vec4i& value, int min, int max) {
+  exit_nogl();
+}
+
+// Dragger
+bool draw_gui_dragger(
+    const char* lbl, float& value, float speed, float min, float max) {
+  exit_nogl();
+}
+bool draw_gui_dragger(
+    const char* lbl, vec2f& value, float speed, float min, float max) {
+  exit_nogl();
+}
+bool draw_gui_dragger(
+    const char* lbl, vec3f& value, float speed, float min, float max) {
+  exit_nogl();
+}
+bool draw_gui_dragger(
+    const char* lbl, vec4f& value, float speed, float min, float max) {
+  exit_nogl();
+}
+bool draw_gui_dragger(
+    const char* lbl, int& value, float speed, int min, int max) {
+  exit_nogl();
+}
+bool draw_gui_dragger(
+    const char* lbl, vec2i& value, float speed, int min, int max) {
+  exit_nogl();
+}
+bool draw_gui_dragger(
+    const char* lbl, vec3i& value, float speed, int min, int max) {
+  exit_nogl();
+}
+bool draw_gui_dragger(
+    const char* lbl, vec4i& value, float speed, int min, int max) {
+  exit_nogl();
+}
+
+// Checkbox
+bool draw_gui_checkbox(const char* lbl, bool& value) { exit_nogl(); }
+bool draw_gui_checkbox(const char* lbl, bool& value, bool invert) {
+  exit_nogl();
+}
+
+// Color editor
+bool draw_gui_coloredit(const char* lbl, vec3f& value) { exit_nogl(); }
+bool draw_gui_coloredit(const char* lbl, vec4f& value) { exit_nogl(); }
+bool draw_gui_coloredit(const char* lbl, vec4b& value) { exit_nogl(); }
+bool draw_gui_coloredithdr(const char* lbl, vec3f& value) { exit_nogl(); }
+bool draw_gui_coloredithdr(const char* lbl, vec4f& value) { exit_nogl(); }
+
+// Combo box
+bool draw_gui_combobox(const char* lbl, int& idx, const vector<string>& labels,
+    bool include_null) {
+  exit_nogl();
+}
+bool draw_gui_combobox(const char* lbl, string& value,
+    const vector<string>& labels, bool include_null) {
+  exit_nogl();
+}
+
+// Progress bar
+void draw_gui_progressbar(const char* lbl, float fraction) { exit_nogl(); }
+void draw_gui_progressbar(const char* lbl, int current, int total) {
+  exit_nogl();
+}
+
+}  // namespace yocto
+
 #endif
