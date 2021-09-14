@@ -34,15 +34,14 @@
 
 #include <algorithm>
 #include <array>
-#include <atomic>
 #include <cstring>
+#include <future>
 #include <memory>
 #include <stdexcept>
 #include <string>
 #include <utility>
 
 #include "yocto_geometry.h"
-#include "yocto_parallel.h"
 
 #ifdef YOCTO_EMBREE
 #include <embree3/rtcore.h>
@@ -59,6 +58,40 @@ using std::atomic;
 using std::pair;
 using std::string;
 using namespace std::string_literals;
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// PARALLEL HELPERS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Simple parallel for used since our target platforms do not yet support
+// parallel algorithms. `Func` takes the integer index.
+template <typename T, typename Func>
+inline void parallel_for(T num, Func&& func) {
+  auto              futures  = vector<std::future<void>>{};
+  auto              nthreads = std::thread::hardware_concurrency();
+  std::atomic<T>    next_idx(0);
+  std::atomic<bool> has_error(false);
+  for (auto thread_id = 0; thread_id < (int)nthreads; thread_id++) {
+    futures.emplace_back(
+        std::async(std::launch::async, [&func, &next_idx, &has_error, num]() {
+          try {
+            while (true) {
+              auto idx = next_idx.fetch_add(1);
+              if (idx >= num) break;
+              if (has_error) break;
+              func(idx);
+            }
+          } catch (...) {
+            has_error = true;
+            throw;
+          }
+        }));
+  }
+  for (auto& f : futures) f.get();
+}
 
 }  // namespace yocto
 

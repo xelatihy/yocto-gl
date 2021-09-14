@@ -32,13 +32,13 @@
 
 #include "yocto_image.h"
 
+#include <future>
 #include <memory>
 #include <stdexcept>
 
 #include "ext/stb_image_resize.h"
 #include "yocto_color.h"
 #include "yocto_noise.h"
-#include "yocto_parallel.h"
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
@@ -47,6 +47,41 @@ namespace yocto {
 
 // using directives
 using std::unique_ptr;
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// PARALLEL HELPERS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Simple parallel for used since our target platforms do not yet support
+// parallel algorithms. `Func` takes the integer index.
+template <typename T, typename Func>
+inline void parallel_for_batch(T num, T batch, Func&& func) {
+  auto              futures  = vector<std::future<void>>{};
+  auto              nthreads = std::thread::hardware_concurrency();
+  std::atomic<T>    next_idx(0);
+  std::atomic<bool> has_error(false);
+  for (auto thread_id = 0; thread_id < (int)nthreads; thread_id++) {
+    futures.emplace_back(std::async(
+        std::launch::async, [&func, &next_idx, &has_error, num, batch]() {
+          try {
+            while (true) {
+              auto start = next_idx.fetch_add(batch);
+              if (start >= num) break;
+              if (has_error) break;
+              auto end = std::min(num, start + batch);
+              for (auto i = (T)start; i < end; i++) func(i);
+            }
+          } catch (...) {
+            has_error = true;
+            throw;
+          }
+        }));
+  }
+  for (auto& f : futures) f.get();
+}
 
 }  // namespace yocto
 

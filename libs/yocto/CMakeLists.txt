@@ -10,7 +10,6 @@ add_library(yocto STATIC
   yocto_trace.h yocto_trace.cpp
   yocto_sceneio.h yocto_sceneio.cpp
   yocto_gui.h yocto_gui.cpp
-  yocto_parallel.h
   ext/stb_image.h ext/stb_image_resize.h ext/stb_image_write.h ext/stb_image.cpp
   ext/tinyexr.h ext/tinyexr.cpp ext/json.hpp ext/fast_float.h
 )

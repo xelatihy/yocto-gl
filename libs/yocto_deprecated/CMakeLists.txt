@@ -2,6 +2,7 @@ add_library(yocto_deprecated STATIC)
 target_sources(yocto_deprecated PRIVATE 
   yocto_json.h yocto_json.cpp 
   yocto_cli.h yocto_cli.cpp 
+  yocto_parallel.h
   ext/json.hpp
 )
 

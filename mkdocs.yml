@@ -47,6 +47,6 @@ nav:
   - Path tracing: yocto/yocto_trace.md
   - Image, shape and scene serialization: yocto/yocto_sceneio.md
   - Model serialization: yocto/yocto_modelio.md
-  - Concurrency utilities: yocto/yocto_parallel.md
+  # - Concurrency utilities: yocto/yocto_parallel.md
   # - Json and serialization utilities: yocto/yocto_json.md
   # - Command-line utilities: yocto/yocto_cli.md

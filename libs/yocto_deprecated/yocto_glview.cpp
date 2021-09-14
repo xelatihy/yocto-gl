@@ -31,10 +31,11 @@
 
 #include <glad/glad.h>
 #include <yocto/yocto_geometry.h>
-#include <yocto/yocto_parallel.h>
 
 #include <cassert>
 #include <stdexcept>
+
+#include "yocto_parallel.h"
 
 #ifdef __APPLE__
 #define GL_SILENCE_DEPRECATION

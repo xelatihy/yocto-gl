@@ -35,6 +35,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <filesystem>
+#include <future>
 #include <memory>
 #include <stdexcept>
 #include <unordered_map>
@@ -49,7 +50,6 @@
 #include "yocto_geometry.h"
 #include "yocto_image.h"
 #include "yocto_modelio.h"
-#include "yocto_parallel.h"
 #include "yocto_shading.h"
 #include "yocto_shape.h"
 
@@ -61,6 +61,61 @@ namespace yocto {
 // using directives
 using std::unique_ptr;
 using namespace std::string_literals;
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// PARALLEL HELPERS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Simple parallel for used since our target platforms do not yet support
+// parallel algorithms. `Func` takes the integer index.
+template <typename T, typename Func>
+inline bool parallel_for(T num, string& error, Func&& func) {
+  auto              futures  = vector<std::future<void>>{};
+  auto              nthreads = std::thread::hardware_concurrency();
+  std::atomic<T>    next_idx(0);
+  std::atomic<bool> has_error(false);
+  std::mutex        error_mutex;
+  for (auto thread_id = 0; thread_id < (int)nthreads; thread_id++) {
+    futures.emplace_back(std::async(std::launch::async,
+        [&func, &next_idx, &has_error, &error_mutex, &error, num]() {
+          auto this_error = string{};
+          while (true) {
+            if (has_error) break;
+            auto idx = next_idx.fetch_add(1);
+            if (idx >= num) break;
+            if (!func(idx, this_error)) {
+              has_error = true;
+              auto _    = std::lock_guard{error_mutex};
+              error     = this_error;
+              break;
+            }
+          }
+        }));
+  }
+  for (auto& f : futures) f.get();
+  return !(bool)has_error;
+}
+
+// Simple parallel for used since our target platforms do not yet support
+// parallel algorithms. `Func` takes a reference to a `T`.
+template <typename T, typename Func>
+inline bool parallel_foreach(vector<T>& values, string& error, Func&& func) {
+  return parallel_for(
+      values.size(), error, [&func, &values](size_t idx, string& error) {
+        return func(values[idx], error);
+      });
+}
+template <typename T, typename Func>
+inline bool parallel_foreach(
+    const vector<T>& values, string& error, Func&& func) {
+  return parallel_for(
+      values.size(), error, [&func, &values](size_t idx, string& error) {
+        return func(values[idx], error);
+      });
+}
 
 }  // namespace yocto
 
