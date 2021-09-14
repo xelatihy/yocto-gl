@@ -26,17 +26,15 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
+#include <fmt/core.h>
 #include <yocto/yocto_geometry.h>
+#include <yocto/yocto_gui.h>
 #include <yocto/yocto_image.h>
 #include <yocto/yocto_math.h>
 #include <yocto/yocto_mesh.h>
 #include <yocto/yocto_scene.h>
 #include <yocto/yocto_sceneio.h>
 #include <yocto/yocto_shape.h>
-#if YOCTO_OPENGL == 1
-#include <yocto_gui/yocto_glview.h>
-#endif
-#include <fmt/core.h>
 
 #include <CLI/CLI.hpp>
 #include <deque>
@@ -58,16 +56,6 @@ void add_options(CLI::App& cli, view_params& params) {
   cli.add_flag("--addsky", params.addsky, "Add sky.");
 }
 
-#ifndef YOCTO_OPENGL
-
-// view shapes
-int run_view(const view_params& params) {
-  fmt::print("error: opengl not compiled\n");
-  return 1;
-}
-
-#else
-
 // view shapes
 int run_view(const view_params& params) {
   // load mesh
@@ -82,13 +70,11 @@ int run_view(const view_params& params) {
   auto scene = make_shape_scene(shape, params.addsky);
 
   // run view
-  view_scene("ymesh", params.shape, scene);
+  show_trace_gui("ymesh", params.shape, scene);
 
   // done
   return 0;
 }
-
-#endif
 
 struct glview_params {
   string shape = "shape.ply";
@@ -99,21 +85,11 @@ void add_options(CLI::App& cli, glview_params& params) {
   cli.add_option("shape", params.shape, "Input shape.");
 }
 
-#ifndef YOCTO_OPENGL
-
-// view shapes
-int run_glview(const glview_params& params) {
-  fmt::print("error: opengl not compiled\n");
-  return 1;
-}
-
-#else
-
 static scene_data make_shapescene(const shape_data& ioshape_) {
   // Frame camera
   auto camera_frame = [](float lens, float aspect,
-                          float film = 0.036) -> frame3f {
-    auto camera_dir  = normalize(vec3f{0, 0.5, 1});
+                          float film = 0.036f) -> frame3f {
+    auto camera_dir  = normalize(vec3f{0, 0.5f, 1});
     auto bbox_radius = 2.0f;
     auto camera_dist = bbox_radius * lens / (film / aspect);
     return lookat_frame(camera_dir * camera_dist, {0, 0, 0}, {0, 1, 0});
@@ -132,17 +108,17 @@ static scene_data make_shapescene(const shape_data& ioshape_) {
 
   // camera
   auto& camera  = scene.cameras.emplace_back();
-  camera.frame  = camera_frame(0.050, 16.0f / 9.0f, 0.036);
-  camera.lens   = 0.050;
+  camera.frame  = camera_frame(0.050f, 16.0f / 9.0f, 0.036f);
+  camera.lens   = 0.050f;
   camera.aspect = 16.0f / 9.0f;
-  camera.film   = 0.036;
+  camera.film   = 0.036f;
   camera.focus  = length(camera.frame.o - center(bbox));
 
   // material
   auto& shape_material     = scene.materials.emplace_back();
   shape_material.type      = material_type::glossy;
-  shape_material.color     = {0.5, 1, 0.5};
-  shape_material.roughness = 0.2;
+  shape_material.color     = {0.5f, 1, 0.5f};
+  shape_material.roughness = 0.2f;
 
   // shapes
   scene.shapes.emplace_back(ioshape);
@@ -169,13 +145,11 @@ int run_glview(const glview_params& params) {
   auto scene = make_shapescene(shape);
 
   // run viewer
-  glview_scene("ymesh", params.shape, scene, {});
+  show_shade_gui("ymesh", params.shape, scene, {});
 
   // done
   return 0;
 }
-
-#endif
 
 struct glpath_params {
   string shape = "shape.ply";
@@ -186,21 +160,11 @@ void add_options(CLI::App& cli, glpath_params& params) {
   cli.add_option("shape", params.shape, "Input shape.");
 }
 
-#ifndef YOCTO_OPENGL
-
-// view shapes
-int run_glpath(const glpath_params& params) {
-  fmt::print("error: opengl not compiled\n");
-  return 1;
-}
-
-#else
-
 static scene_data make_pathscene(const shape_data& ioshape_) {
   // Frame camera
   auto camera_frame = [](float lens, float aspect,
-                          float film = 0.036) -> frame3f {
-    auto camera_dir  = normalize(vec3f{0, 0.5, 1});
+                          float film = 0.036f) -> frame3f {
+    auto camera_dir  = normalize(vec3f{0, 0.5f, 1});
     auto bbox_radius = 2.0f;
     auto camera_dist = bbox_radius * lens / (film / aspect);
     return lookat_frame(camera_dir * camera_dist, {0, 0, 0}, {0, 1, 0});
@@ -219,25 +183,25 @@ static scene_data make_pathscene(const shape_data& ioshape_) {
 
   // camera
   auto& camera  = scene.cameras.emplace_back();
-  camera.frame  = camera_frame(0.050, 16.0f / 9.0f, 0.036);
-  camera.lens   = 0.050;
+  camera.frame  = camera_frame(0.050f, 16.0f / 9.0f, 0.036f);
+  camera.lens   = 0.050f;
   camera.aspect = 16.0f / 9.0f;
-  camera.film   = 0.036;
+  camera.film   = 0.036f;
   camera.focus  = length(camera.frame.o - center(bbox));
 
   // material
   auto& shape_material      = scene.materials.emplace_back();
   shape_material.type       = material_type::glossy;
-  shape_material.color      = {0.5, 1, 0.5};
-  shape_material.roughness  = 0.2;
+  shape_material.color      = {0.5f, 1, 0.5f};
+  shape_material.roughness  = 0.2f;
   auto& points_material     = scene.materials.emplace_back();
   points_material.type      = material_type::glossy;
-  points_material.color     = {1, 0.5, 0.5};
-  points_material.roughness = 0.2;
+  points_material.color     = {1, 0.5f, 0.5f};
+  points_material.roughness = 0.2f;
   auto& lines_material      = scene.materials.emplace_back();
   lines_material.type       = material_type::glossy;
-  lines_material.color      = {0.5, 0.5, 1};
-  lines_material.roughness  = 0.2;
+  lines_material.color      = {0.5f, 0.5f, 1};
+  lines_material.roughness  = 0.2f;
 
   // shapes
   scene.shapes.emplace_back(ioshape);
@@ -299,25 +263,23 @@ int run_glpath(const glpath_params& params) {
   params4.algorithm = spline_algorithm::lane_riesenfeld_adaptive;
 
   // run viewer
-  glview_scene(
+  show_shade_gui(
       "ymesh", params.shape, scene, {},
-      [&](const glinput_state&, vector<int>&, vector<int>&) {},
-      [&](const glinput_state& input, vector<int>& updated_shapes,
-          vector<int>&) {
+      [&](const gui_input&, vector<int>&, vector<int>&) {},
+      [&](const gui_input& input, vector<int>& updated_shapes, vector<int>&) {
         auto& shape   = scene.shapes.at(0);
         auto& camera  = scene.cameras.at(0);
         auto  updated = false;
-        if (input.mouse_left && !input.modifier_alt) {
-          if (input.modifier_shift) {
+        if (input.mouse.x && !input.modifiers.x) {
+          if (input.modifiers.y) {
             stroke.clear();
             updated = true;
           } else {
-            auto mouse_uv = vec2f{
-                input.mouse_pos.x / float(input.window_size.x),
-                input.mouse_pos.y / float(input.window_size.y)};
-            auto ray  = camera_ray(camera.frame, camera.lens, camera.aspect,
+            auto mouse_uv = vec2f{input.cursor.x / float(input.window.x),
+                input.cursor.y / float(input.window.y)};
+            auto ray      = camera_ray(camera.frame, camera.lens, camera.aspect,
                 camera.film, mouse_uv);
-            auto isec = intersect_triangles_bvh(
+            auto isec     = intersect_triangles_bvh(
                 bvh, shape.triangles, shape.positions, ray, false);
             if (isec.hit) {
               if (stroke.empty() || stroke.back().element != isec.element ||
@@ -354,8 +316,6 @@ int run_glpath(const glpath_params& params) {
   return 0;
 }
 
-#endif
-
 struct glpathd_params {
   string shape = "shape.ply";
 };
@@ -365,21 +325,11 @@ void add_options(CLI::App& cli, glpathd_params& params) {
   cli.add_option("shape", params.shape, "Input shape.");
 }
 
-#ifndef YOCTO_OPENGL
-
-// view shapes
-int run_glpathd(const glpathd_params& params) {
-  fmt::print("error: opengl not compiled\n");
-  return 1;
-}
-
-#else
-
 static scene_data make_pathdscene(const shape_data& ioshape) {
   // Frame camera
   auto camera_frame = [](float lens, float aspect,
-                          float film = 0.036) -> frame3f {
-    auto camera_dir  = normalize(vec3f{0, 0.5, 1});
+                          float film = 0.036f) -> frame3f {
+    auto camera_dir  = normalize(vec3f{0, 0.5f, 1});
     auto bbox_radius = 2.0f;
     auto camera_dist = bbox_radius * lens / (film / aspect);
     return lookat_frame(camera_dir * camera_dist, {0, 0, 0}, {0, 1, 0});
@@ -390,32 +340,32 @@ static scene_data make_pathdscene(const shape_data& ioshape) {
 
   // camera
   auto& camera  = scene.cameras.emplace_back();
-  camera.frame  = camera_frame(0.050, 16.0f / 9.0f, 0.036);
-  camera.lens   = 0.050;
+  camera.frame  = camera_frame(0.050f, 16.0f / 9.0f, 0.036f);
+  camera.lens   = 0.050f;
   camera.aspect = 16.0f / 9.0f;
-  camera.film   = 0.036;
+  camera.film   = 0.036f;
   camera.focus  = length(camera.frame.o);
 
   // material
   auto& shape_material     = scene.materials.emplace_back();
   shape_material.type      = material_type::glossy;
-  shape_material.color     = {0.5, 1, 0.5};
-  shape_material.roughness = 0.2;
+  shape_material.color     = {0.5f, 1, 0.5f};
+  shape_material.roughness = 0.2f;
   auto& points_material    = scene.materials.emplace_back();
   points_material.type     = material_type::matte;
-  points_material.color    = {1, 0.5, 0.5};
+  points_material.color    = {1, 0.5f, 0.5f};
   auto& lines1_material    = scene.materials.emplace_back();
   lines1_material.type     = material_type::matte;
-  lines1_material.color    = {0.5, 0.5, 1};
+  lines1_material.color    = {0.5f, 0.5f, 1};
   auto& lines2_material    = scene.materials.emplace_back();
   lines2_material.type     = material_type::matte;
-  lines2_material.color    = {1, 1, 0.5};
+  lines2_material.color    = {1, 1, 0.5f};
   auto& lines3_material    = scene.materials.emplace_back();
   lines3_material.type     = material_type::matte;
-  lines3_material.color    = {1, 0.5, 1};
+  lines3_material.color    = {1, 0.5f, 1};
   auto& lines4_material    = scene.materials.emplace_back();
   lines4_material.type     = material_type::matte;
-  lines4_material.color    = {0.5, 0.5, 0.5};
+  lines4_material.color    = {0.5f, 0.5f, 0.5f};
   auto& edges_material     = scene.materials.emplace_back();
   edges_material.type      = material_type::matte;
   edges_material.color     = {0, 0, 0};
@@ -519,23 +469,22 @@ int run_glpathd(const glpathd_params& params) {
   auto point2 = mesh_point{1, {0.5, 0.5}};
 
   // run viewer
-  glview_scene(
+  show_shade_gui(
       "ymesh", params.shape, scene, {},
-      [&](const glinput_state&, vector<int>&, vector<int>&) {},
-      [&](const glinput_state& input, vector<int>& updated_shapes,
-          vector<int>&) {
+      [&](const gui_input&, vector<int>&, vector<int>&) {},
+      [&](const gui_input& input, vector<int>& updated_shapes, vector<int>&) {
         auto& shape   = scene.shapes.at(0);
         auto& camera  = scene.cameras.at(0);
         auto  updated = false;
-        if (input.mouse_left && !input.modifier_alt) {
-          auto mouse_uv = vec2f{input.mouse_pos.x / float(input.window_size.x),
-              input.mouse_pos.y / float(input.window_size.y)};
+        if (input.mouse.x && !input.modifiers.x) {
+          auto mouse_uv = vec2f{input.cursor.x / float(input.window.x),
+              input.cursor.y / float(input.window.y)};
           auto ray      = camera_ray(
               camera.frame, camera.lens, camera.aspect, camera.film, mouse_uv);
           auto isec = intersect_triangles_bvh(
               bvh, shape.triangles, shape.positions, ray, false);
           if (isec.hit) {
-            if (input.modifier_shift) {
+            if (input.modifiers.y) {
               point2 = {isec.element, isec.uv};
             } else {
               point1 = {isec.element, isec.uv};
@@ -547,7 +496,7 @@ int run_glpathd(const glpathd_params& params) {
           auto positions = vector<vec3f>{};
           positions.push_back(eval_position(shape, point1.face, point1.uv));
           positions.push_back(eval_position(shape, point2.face, point2.uv));
-          scene.shapes.at(1) = points_to_spheres(positions, 2, 0.002);
+          scene.shapes.at(1) = points_to_spheres(positions, 2, 0.002f);
           updated_shapes.push_back(1);
           auto path1      = compute_shortest_path(solver, shape.triangles,
               shape.positions, adjacencies, point1, point2);
@@ -555,11 +504,11 @@ int run_glpathd(const glpathd_params& params) {
           for (auto [element, uv] : path1) {
             positions1.push_back(eval_position(shape, element, uv));
           }
-          scene.shapes.at(2) = polyline_to_cylinders(positions1, 4, 0.002);
+          scene.shapes.at(2) = polyline_to_cylinders(positions1, 4, 0.002f);
           updated_shapes.push_back(2);
           auto positions2    = visualize_shortest_path(solver, shape.triangles,
               shape.positions, adjacencies, point1, point2, true);
-          scene.shapes.at(3) = polyline_to_cylinders(positions2, 4, 0.002);
+          scene.shapes.at(3) = polyline_to_cylinders(positions2, 4, 0.002f);
           updated_shapes.push_back(3);
           // auto path3 = visualize_shortest_path(solver2, shape.triangles,
           //     shape.positions, adjacencies, v2t, angles, point1, point2,
@@ -594,8 +543,6 @@ int run_glpathd(const glpathd_params& params) {
   return 0;
 }
 
-#endif
-
 struct glsculpt_params {
   string shape   = "shape.ply";
   string texture = "";
@@ -606,16 +553,6 @@ inline void add_options(CLI::App& cli, glsculpt_params& params) {
   cli.add_option("shape", params.shape, "Input shape.");
   cli.add_option("--texture", params.texture, "Brush texture.");
 }
-
-#ifndef YOCTO_OPENGL
-
-// view scene
-int run_glsculpt(const glsculpt_params& params) {
-  fmt::print("error: opengl not compiled\n");
-  return 1;
-}
-
-#else
 
 enum struct sculpt_brush_type { gaussian, texture, smooth };
 auto const sculpt_brush_names = vector<std::string>{
@@ -1095,8 +1032,8 @@ bool smooth_brush(vector<vec3f>& positions, const geodesic_solver& solver,
 static scene_data make_sculptscene(const shape_data& ioshape_) {
   // Frame camera
   auto camera_frame = [](float lens, float aspect,
-                          float film = 0.036) -> frame3f {
-    auto camera_dir  = normalize(vec3f{0, 0.5, 1});
+                          float film = 0.036f) -> frame3f {
+    auto camera_dir  = normalize(vec3f{0, 0.5f, 1});
     auto bbox_radius = 2.0f;
     auto camera_dist = bbox_radius * lens / (film / aspect);
     return lookat_frame(camera_dir * camera_dist, {0, 0, 0}, {0, 1, 0});
@@ -1114,10 +1051,10 @@ static scene_data make_sculptscene(const shape_data& ioshape_) {
 
   // camera
   auto& camera  = scene.cameras.emplace_back();
-  camera.frame  = camera_frame(0.050, 16.0f / 9.0f, 0.036);
-  camera.lens   = 0.050;
+  camera.frame  = camera_frame(0.050f, 16.0f / 9.0f, 0.036f);
+  camera.lens   = 0.050f;
   camera.aspect = 16.0f / 9.0f;
-  camera.film   = 0.036;
+  camera.film   = 0.036f;
   camera.focus  = length(camera.frame.o - center(bbox));
 
   // material
@@ -1273,36 +1210,35 @@ int run_glsculpt(const glsculpt_params& params_) {
   auto state  = make_sculpt_state(scene.shapes.front(), texture);
 
   // callbacks
-  glview_scene(
+  show_shade_gui(
       "ymesh", params_.shape, scene, {},
-      [&](const glinput_state&, vector<int>&, vector<int>&) {
-        draw_glcombobox("brush type", (int&)params.type, sculpt_brush_names);
+      [&](const gui_input&, vector<int>&, vector<int>&) {
+        draw_gui_combobox("brush type", (int&)params.type, sculpt_brush_names);
         if (params.type == sculpt_brush_type::gaussian) {
           if (params.strength < 0.8f || params.strength > 1.5f)
             params.strength = 1.0f;
-          draw_glslider("radius", params.radius, 0.1f, 0.8f);
-          draw_glslider("strength", params.strength, 1.5f, 0.9f);
-          draw_glcheckbox("negative", params.negative);
+          draw_gui_slider("radius", params.radius, 0.1f, 0.8f);
+          draw_gui_slider("strength", params.strength, 1.5f, 0.9f);
+          draw_gui_checkbox("negative", params.negative);
         } else if (params.type == sculpt_brush_type::texture) {
           if (params.strength < 0.8f || params.strength > 1.5f)
             params.strength = 1.0f;
-          draw_glslider("radius", params.radius, 0.1f, 0.8f);
-          draw_glslider("strength", params.strength, 1.5f, 0.9f);
-          draw_glcheckbox("negative", params.negative);
+          draw_gui_slider("radius", params.radius, 0.1f, 0.8f);
+          draw_gui_slider("strength", params.strength, 1.5f, 0.9f);
+          draw_gui_checkbox("negative", params.negative);
         } else if (params.type == sculpt_brush_type::smooth) {
-          draw_glslider("radius", params.radius, 0.1f, 0.8f);
-          draw_glslider("strength", params.strength, 0.1f, 1.0f);
+          draw_gui_slider("radius", params.radius, 0.1f, 0.8f);
+          draw_gui_slider("strength", params.strength, 0.1f, 1.0f);
         }
       },
-      [&](const glinput_state& input, vector<int>& updated_shapes,
-          vector<int>&) {
-        auto  mouse_uv = vec2f{input.mouse_pos.x / float(input.window_size.x),
-            input.mouse_pos.y / float(input.window_size.y)};
+      [&](const gui_input& input, vector<int>& updated_shapes, vector<int>&) {
+        auto  mouse_uv = vec2f{input.cursor.x / float(input.window.x),
+            input.cursor.y / float(input.window.y)};
         auto& shape    = scene.shapes.at(0);
         auto& cursor   = scene.shapes.at(1);
         auto& camera   = scene.cameras.at(0);
         auto [updated_shape, updated_cursor] = sculpt_update(state, shape,
-            cursor, camera, mouse_uv, input.mouse_left && !input.modifier_alt,
+            cursor, camera, mouse_uv, input.mouse.x && !input.modifiers.x,
             params);
         if (updated_cursor) {
           updated_shapes.push_back(1);
@@ -1318,8 +1254,6 @@ int run_glsculpt(const glsculpt_params& params_) {
   // done
   return 0;
 }
-
-#endif
 
 struct app_params {
   string          command  = "view";

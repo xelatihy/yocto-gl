@@ -26,16 +26,14 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
+#include <fmt/chrono.h>
+#include <fmt/core.h>
+#include <yocto/yocto_gui.h>
 #include <yocto/yocto_math.h>
 #include <yocto/yocto_scene.h>
 #include <yocto/yocto_sceneio.h>
 #include <yocto/yocto_shape.h>
 #include <yocto/yocto_trace.h>
-#if YOCTO_OPENGL == 1
-#include <yocto_gui/yocto_glview.h>
-#endif
-#include <fmt/chrono.h>
-#include <fmt/core.h>
 
 using namespace yocto;
 
@@ -315,16 +313,6 @@ void add_options(CLI::App& cli, view_params& params) {
   cli.add_flag("--noparallel", params.noparallel, "Disable threading.");
 }
 
-#ifndef YOCTO_OPENGL
-
-// view scene
-int run_view(const view_params& params) {
-  fmt::print("error: opengl not compiled\n");
-  return 1;
-}
-
-#else
-
 // view scene
 int run_view(const view_params& params_) {
   fmt::print("viewing {}\n", params_.scene);
@@ -360,13 +348,11 @@ int run_view(const view_params& params_) {
   params.camera = find_camera(scene, params.camname);
 
   // run view
-  view_scene("yscene", params.scene, scene, params);
+  show_trace_gui("yscene", params.scene, scene, params);
 
   // done
   return 0;
 }
-
-#endif
 
 struct glview_params {
   string scene   = "scene.json";
@@ -378,16 +364,6 @@ void add_options(CLI::App& cli, glview_params& params) {
   cli.add_option("scene", params.scene, "Input scene.");
   cli.add_option("--camera", params.camname, "Camera name.");
 }
-
-#ifndef YOCTO_OPENGL
-
-// view scene
-int run_glview(const glview_params& params) {
-  fmt::print("error: opengl not compiled\n");
-  return 1;
-}
-
-#else
 
 int run_glview(const glview_params& params_) {
   fmt::print("viewing {}\n", params_.scene);
@@ -409,17 +385,15 @@ int run_glview(const glview_params& params_) {
   }
 
   // camera
-  auto glparams   = glscene_params{};
-  glparams.camera = find_camera(scene, params.camname);
+  auto viewparams   = shade_params{};
+  viewparams.camera = find_camera(scene, params.camname);
 
   // run viewer
-  glview_scene("yscene", params.scene, scene, glparams);
+  show_shade_gui("yscene", params.scene, scene, viewparams);
 
   // done
   return 0;
 }
-
-#endif
 
 struct app_params {
   string         command = "convert";

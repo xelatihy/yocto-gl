@@ -26,16 +26,14 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
+#include <fmt/core.h>
 #include <yocto/yocto_geometry.h>
+#include <yocto/yocto_gui.h>
 #include <yocto/yocto_image.h>
 #include <yocto/yocto_math.h>
 #include <yocto/yocto_scene.h>
 #include <yocto/yocto_sceneio.h>
 #include <yocto/yocto_shape.h>
-#if YOCTO_OPENGL == 1
-#include <yocto_gui/yocto_glview.h>
-#endif
-#include <fmt/core.h>
 
 #include <CLI/CLI.hpp>
 
@@ -308,16 +306,6 @@ void add_options(CLI::App& cli, view_params& params) {
   cli.add_flag("--addsky", params.addsky, "Add sky.");
 }
 
-#ifndef YOCTO_OPENGL
-
-// view shapes
-int run_view(const view_params& params) {
-  fmt::print("error: opengl not compiled\n");
-  return 1;
-}
-
-#else
-
 // view shapes
 int run_view(const view_params& params) {
   fmt::print("viewing {}\n", params.shape);
@@ -334,13 +322,11 @@ int run_view(const view_params& params) {
   auto scene = make_shape_scene(shape, params.addsky);
 
   // run view
-  view_scene("yshape", params.shape, scene);
+  show_trace_gui("yshape", params.shape, scene);
 
   // done
   return 0;
 }
-
-#endif
 
 struct heightfield_params {
   string image     = "heightfield.png";
@@ -514,16 +500,6 @@ void add_options(CLI::App& cli, glview_params& params) {
   cli.add_flag("--addsky", params.addsky, "Add sky.");
 }
 
-#ifndef YOCTO_OPENGL
-
-// view shapes
-int run_glview(const glview_params& params) {
-  fmt::print("error: opengl not compiled\n");
-  return 1;
-}
-
-#else
-
 int run_glview(const glview_params& params) {
   // loading shape
   auto error = string{};
@@ -537,13 +513,11 @@ int run_glview(const glview_params& params) {
   auto scene = make_shape_scene(shape, params.addsky);
 
   // run viewer
-  glview_scene("yshape", params.shape, scene, {});
+  show_shade_gui("yshape", params.shape, scene, {});
 
   // done
   return 0;
 }
-
-#endif
 
 struct app_params {
   string             command     = "convert";

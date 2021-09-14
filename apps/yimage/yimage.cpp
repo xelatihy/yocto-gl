@@ -26,16 +26,14 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
+#include <fmt/core.h>
+#include <fmt/ranges.h>
 #include <yocto/yocto_color.h>
+#include <yocto/yocto_gui.h>
 #include <yocto/yocto_image.h>
 #include <yocto/yocto_math.h>
 #include <yocto/yocto_scene.h>
 #include <yocto/yocto_sceneio.h>
-#if YOCTO_OPENGL == 1
-#include <yocto_gui/yocto_glview.h>
-#endif
-#include <fmt/core.h>
-#include <fmt/ranges.h>
 
 #include <CLI/CLI.hpp>
 
@@ -108,16 +106,6 @@ void add_options(CLI::App& cli, view_params& params) {
   cli.add_option("--output", params.output, "Output image.");
 }
 
-#ifndef YOCTO_OPENGL
-
-// view images
-int run_view(const view_params& params) {
-  fmt::print("error: opengl not compiled\n");
-  return 1;
-}
-
-#else
-
 // view images
 int run_view(const view_params& params) {
   // load
@@ -131,13 +119,11 @@ int run_view(const view_params& params) {
   }
 
   // run viewer
-  view_images("yimage", params.images, images);
+  show_image_gui("yimage", params.images, images);
 
   // done
   return 0;
 }
-
-#endif
 
 // grade params
 struct grade_params : colorgrade_params {
@@ -151,16 +137,6 @@ void add_options(CLI::App& cli, grade_params& params) {
   cli.add_option("--output", params.output, "Output image.");
 }
 
-#ifndef YOCTO_OPENGL
-
-// grade images
-int run_grade(const grade_params& params) {
-  fmt::print("error: opengl not compiled\n");
-  return 1;
-}
-
-#else
-
 // grade images
 int run_grade(const grade_params& params) {
   // load image
@@ -172,13 +148,11 @@ int run_grade(const grade_params& params) {
   }
 
   // run viewer
-  colorgrade_image("yimage", params.image, image);
+  show_colorgrade_gui("yimage", params.image, image);
 
   // done
   return 0;
 }
-
-#endif
 
 // resize params
 struct diff_params {
