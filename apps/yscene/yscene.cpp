@@ -360,7 +360,7 @@ int run_view(const view_params& params_) {
   params.camera = find_camera(scene, params.camname);
 
   // run view
-  view_scene("yscene", params.scene, scene, params);
+  show_trace_gui("yscene", params.scene, scene, params);
 
   // done
   return 0;
@@ -413,7 +413,7 @@ int run_glview(const glview_params& params_) {
   glparams.camera = find_camera(scene, params.camname);
 
   // run viewer
-  glview_scene("yscene", params.scene, scene, glparams);
+  show_shade_gui("yscene", params.scene, scene, glparams);
 
   // done
   return 0;

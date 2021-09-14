@@ -334,7 +334,7 @@ int run_view(const view_params& params) {
   auto scene = make_shape_scene(shape, params.addsky);
 
   // run view
-  view_scene("yshape", params.shape, scene);
+  show_trace_gui("yshape", params.shape, scene);
 
   // done
   return 0;
@@ -537,7 +537,7 @@ int run_glview(const glview_params& params) {
   auto scene = make_shape_scene(shape, params.addsky);
 
   // run viewer
-  glview_scene("yshape", params.shape, scene, {});
+  show_shade_gui("yshape", params.shape, scene, {});
 
   // done
   return 0;

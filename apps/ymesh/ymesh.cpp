@@ -82,7 +82,7 @@ int run_view(const view_params& params) {
   auto scene = make_shape_scene(shape, params.addsky);
 
   // run view
-  view_scene("ymesh", params.shape, scene);
+  show_trace_gui("ymesh", params.shape, scene);
 
   // done
   return 0;
@@ -169,7 +169,7 @@ int run_glview(const glview_params& params) {
   auto scene = make_shapescene(shape);
 
   // run viewer
-  glview_scene("ymesh", params.shape, scene, {});
+  show_shade_gui("ymesh", params.shape, scene, {});
 
   // done
   return 0;
@@ -299,7 +299,7 @@ int run_glpath(const glpath_params& params) {
   params4.algorithm = spline_algorithm::lane_riesenfeld_adaptive;
 
   // run viewer
-  glview_scene(
+  show_shade_gui(
       "ymesh", params.shape, scene, {},
       [&](const glinput_state&, vector<int>&, vector<int>&) {},
       [&](const glinput_state& input, vector<int>& updated_shapes,
@@ -518,7 +518,7 @@ int run_glpathd(const glpathd_params& params) {
   auto point2 = mesh_point{1, {0.5, 0.5}};
 
   // run viewer
-  glview_scene(
+  show_shade_gui(
       "ymesh", params.shape, scene, {},
       [&](const glinput_state&, vector<int>&, vector<int>&) {},
       [&](const glinput_state& input, vector<int>& updated_shapes,
@@ -1272,7 +1272,7 @@ int run_glsculpt(const glsculpt_params& params_) {
   auto state  = make_sculpt_state(scene.shapes.front(), texture);
 
   // callbacks
-  glview_scene(
+  show_shade_gui(
       "ymesh", params_.shape, scene, {},
       [&](const glinput_state&, vector<int>&, vector<int>&) {
         draw_glcombobox("brush type", (int&)params.type, sculpt_brush_names);

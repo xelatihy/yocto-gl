@@ -131,7 +131,7 @@ int run_view(const view_params& params) {
   }
 
   // run viewer
-  view_images("yimage", params.images, images);
+  show_image_gui("yimage", params.images, images);
 
   // done
   return 0;
@@ -172,7 +172,7 @@ int run_grade(const grade_params& params) {
   }
 
   // run viewer
-  colorgrade_image("yimage", params.image, image);
+  show_colorgrade_gui("yimage", params.image, image);
 
   // done
   return 0;

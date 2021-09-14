@@ -392,7 +392,7 @@ static bool draw_scene_editor(scene_data& scene, scene_selection& selection,
 namespace yocto {
 
 // Open a window and show an image
-void view_image(
+void show_image_gui(
     const string& title, const string& name, const image_data& image) {
   // display image
   auto  display  = make_image(image.width, image.height, false);
@@ -438,7 +438,7 @@ void view_image(
 }
 
 // Open a window and show an image
-void view_images(const string& title, const vector<string>& names,
+void show_image_gui(const string& title, const vector<string>& names,
     const vector<image_data>& images) {
   // display image
   auto displays  = vector<image_data>(images.size());
@@ -494,7 +494,7 @@ void view_images(const string& title, const vector<string>& names,
 }
 
 // Open a window and show an image
-void colorgrade_image(
+void show_colorgrade_gui(
     const string& title, const string& name, const image_data& image) {
   // color grading parameters
   auto params = colorgrade_params{};
@@ -561,7 +561,7 @@ void colorgrade_image(
 }
 
 // Open a window and show an scene via path tracing
-void view_scene(const string& title, const string& name, scene_data& scene,
+void show_trace_gui(const string& title, const string& name, scene_data& scene,
     const trace_params& params_, bool print, bool edit) {
   // copy params and camera
   auto params = params_;
@@ -762,7 +762,7 @@ void view_scene(const string& title, const string& name, scene_data& scene,
   stop_render();
 }
 
-void glview_scene(const string& title, const string& name, scene_data& scene,
+void show_shade_gui(const string& title, const string& name, scene_data& scene,
     const glscene_params& params_, const glview_callback& widgets_callback,
     const glview_callback& uiupdate_callback,
     const glview_callback& update_callback) {
