@@ -1,5 +1,4 @@
-add_library(yocto STATIC)
-target_sources(yocto PRIVATE
+add_library(yocto STATIC
   yocto_math.h yocto_color.h yocto_geometry.h
   yocto_noise.h yocto_sampling.h yocto_shading.h
   yocto_modelio.h yocto_modelio.cpp
@@ -10,6 +9,7 @@ target_sources(yocto PRIVATE
   yocto_scene.h yocto_scene.cpp
   yocto_trace.h yocto_trace.cpp
   yocto_sceneio.h yocto_sceneio.cpp
+  yocto_gui.h yocto_gui.cpp
   yocto_parallel.h
   ext/stb_image.h ext/stb_image_resize.h ext/stb_image_write.h ext/stb_image.cpp
   ext/tinyexr.h ext/tinyexr.cpp ext/json.hpp ext/fast_float.h
@@ -25,11 +25,6 @@ endif(UNIX AND NOT APPLE)
 
 if(YOCTO_OPENGL)
   target_compile_definitions(yocto PUBLIC -DYOCTO_OPENGL)
-
-  target_sources(yocto PRIVATE 
-    yocto_gui.h yocto_gui.cpp
-  )
-
   find_package(OpenGL REQUIRED)
   target_link_libraries(yocto PUBLIC glad imgui glfw ${OPENGL_gl_LIBRARY})
 endif(YOCTO_OPENGL)

@@ -34,6 +34,7 @@
 #include <glad/glad.h>
 
 #include <cassert>
+#include <cstdlib>
 #include <stdexcept>
 
 #include "yocto_geometry.h"
@@ -2706,7 +2707,7 @@ namespace yocto {
 
 static void exit_nogl() {
   printf("opngl not linked\n");
-  exit(1)
+  exit(1);
 }
 
 // Open a window and show an image
@@ -2763,7 +2764,10 @@ void show_gui_window(const vec2i& size, const string& title,
 namespace yocto {
 
 // Headers
-bool draw_gui_header(const char* title) { exit_nogl(); }
+bool draw_gui_header(const char* title) {
+  exit_nogl();
+  return false;
+}
 void end_gui_header() { exit_nogl(); }
 
 // Labels
@@ -2776,92 +2780,136 @@ void draw_gui_separator() { exit_nogl(); }
 void continue_gui_line() { exit_nogl(); }
 
 // Buttons
-bool draw_gui_button(const char* lbl, bool enabled) { exit_nogl(); }
+bool draw_gui_button(const char* lbl, bool enabled) {
+  exit_nogl();
+  return false;
+}
 
 // Text
-bool draw_gui_textinput(const char* lbl, string& value) { exit_nogl(); }
+bool draw_gui_textinput(const char* lbl, string& value) {
+  exit_nogl();
+  return false;
+}
 
 // Slider
 bool draw_gui_slider(const char* lbl, float& value, float min, float max) {
   exit_nogl();
+  return false;
 }
 bool draw_gui_slider(const char* lbl, vec2f& value, float min, float max) {
   exit_nogl();
+  return false;
 }
 bool draw_gui_slider(const char* lbl, vec3f& value, float min, float max) {
   exit_nogl();
+  return false;
 }
 bool draw_gui_slider(const char* lbl, vec4f& value, float min, float max) {
   exit_nogl();
+  return false;
 }
 bool draw_gui_slider(const char* lbl, int& value, int min, int max) {
   exit_nogl();
+  return false;
 }
 bool draw_gui_slider(const char* lbl, vec2i& value, int min, int max) {
   exit_nogl();
+  return false;
 }
 bool draw_gui_slider(const char* lbl, vec3i& value, int min, int max) {
   exit_nogl();
+  return false;
 }
 bool draw_gui_slider(const char* lbl, vec4i& value, int min, int max) {
   exit_nogl();
+  return false;
 }
 
 // Dragger
 bool draw_gui_dragger(
     const char* lbl, float& value, float speed, float min, float max) {
   exit_nogl();
+  return false;
 }
 bool draw_gui_dragger(
     const char* lbl, vec2f& value, float speed, float min, float max) {
   exit_nogl();
+  return false;
 }
 bool draw_gui_dragger(
     const char* lbl, vec3f& value, float speed, float min, float max) {
   exit_nogl();
+  return false;
 }
 bool draw_gui_dragger(
     const char* lbl, vec4f& value, float speed, float min, float max) {
   exit_nogl();
+  return false;
 }
 bool draw_gui_dragger(
     const char* lbl, int& value, float speed, int min, int max) {
   exit_nogl();
+  return false;
 }
 bool draw_gui_dragger(
     const char* lbl, vec2i& value, float speed, int min, int max) {
   exit_nogl();
+  return false;
 }
 bool draw_gui_dragger(
     const char* lbl, vec3i& value, float speed, int min, int max) {
   exit_nogl();
+  return false;
 }
 bool draw_gui_dragger(
     const char* lbl, vec4i& value, float speed, int min, int max) {
   exit_nogl();
+  return false;
 }
 
 // Checkbox
-bool draw_gui_checkbox(const char* lbl, bool& value) { exit_nogl(); }
+bool draw_gui_checkbox(const char* lbl, bool& value) {
+  exit_nogl();
+  return false;
+  return false;
+}
 bool draw_gui_checkbox(const char* lbl, bool& value, bool invert) {
   exit_nogl();
+  return false;
 }
 
 // Color editor
-bool draw_gui_coloredit(const char* lbl, vec3f& value) { exit_nogl(); }
-bool draw_gui_coloredit(const char* lbl, vec4f& value) { exit_nogl(); }
-bool draw_gui_coloredit(const char* lbl, vec4b& value) { exit_nogl(); }
-bool draw_gui_coloredithdr(const char* lbl, vec3f& value) { exit_nogl(); }
-bool draw_gui_coloredithdr(const char* lbl, vec4f& value) { exit_nogl(); }
+bool draw_gui_coloredit(const char* lbl, vec3f& value) {
+  exit_nogl();
+  return false;
+}
+bool draw_gui_coloredit(const char* lbl, vec4f& value) {
+  exit_nogl();
+  return false;
+}
+bool draw_gui_coloredit(const char* lbl, vec4b& value) {
+  exit_nogl();
+  return false;
+}
+bool draw_gui_coloredithdr(const char* lbl, vec3f& value) {
+  exit_nogl();
+  return false;
+}
+bool draw_gui_coloredithdr(const char* lbl, vec4f& value) {
+  exit_nogl();
+  return false;
+}
 
 // Combo box
 bool draw_gui_combobox(const char* lbl, int& idx, const vector<string>& labels,
     bool include_null) {
   exit_nogl();
+  return false;
 }
 bool draw_gui_combobox(const char* lbl, string& value,
     const vector<string>& labels, bool include_null) {
   exit_nogl();
+  return false;
 }
 
 // Progress bar
