@@ -82,128 +82,6 @@ struct glinput_state;
 using glview_callback = std::function<void(const glinput_state& input,
     vector<int>& updated_shapes, vector<int>& updated_textures)>;
 
-// Open a window and show an scene via OpenGL shading
-struct glscene_params;
-void glview_scene(const string& title, const string& name, scene_data& scene,
-    const glscene_params& params, const glview_callback& widgets_callback = {},
-    const glview_callback& uiupdate_callback = {},
-    const glview_callback& update_callback   = {});
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// IMAGE DRAWING
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// OpenGL image data
-struct glimage_state {
-  // image properties
-  int width  = 0;
-  int height = 0;
-
-  // Opengl state
-  uint texture     = 0;  // texture
-  uint program     = 0;  // program
-  uint vertex      = 0;
-  uint fragment    = 0;
-  uint vertexarray = 0;  // vertex
-  uint positions   = 0;
-  uint triangles   = 0;  // elements
-};
-
-// create image drawing program
-bool init_image(glimage_state& glimage);
-
-// clear image
-void clear_image(glimage_state& glimage);
-
-// update image data
-void set_image(glimage_state& glimage, const image_data& image);
-
-// OpenGL image drawing params
-struct glimage_params {
-  vec2i window      = {512, 512};
-  vec4i framebuffer = {0, 0, 512, 512};
-  vec2f center      = {0, 0};
-  float scale       = 1;
-  bool  fit         = true;
-  bool  checker     = true;
-  float border_size = 2;
-  vec4f background  = {0.15f, 0.15f, 0.15f, 1.0f};
-};
-
-// draw image
-void draw_image(glimage_state& image, const glimage_params& params);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// SCENE DRAWING
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Opengl texture
-struct glscene_texture {
-  // texture properties
-  int width  = 0;
-  int height = 0;
-
-  // opengl state
-  uint texture = 0;
-};
-
-// Create texture
-void set_texture(glscene_texture& gltexture, const texture_data& texture);
-
-// Clean texture
-void clear_texture(glscene_texture& gltexture);
-
-// Opengl shape
-struct glscene_shape {
-  // Shape properties
-  int num_positions = 0;
-  int num_normals   = 0;
-  int num_texcoords = 0;
-  int num_colors    = 0;
-  int num_tangents  = 0;
-  int num_points    = 0;
-  int num_lines     = 0;
-  int num_triangles = 0;
-  int num_quads     = 0;
-
-  // OpenGl state
-  uint  vertexarray = 0;
-  uint  positions   = 0;
-  uint  normals     = 0;
-  uint  texcoords   = 0;
-  uint  colors      = 0;
-  uint  tangents    = 0;
-  uint  points      = 0;
-  uint  lines       = 0;
-  uint  triangles   = 0;
-  uint  quads       = 0;
-  float point_size  = 1;
-};
-
-// Create shape
-void set_shape(glscene_shape& glshape, const shape_data& shape);
-
-// Clean shape
-void clear_shape(glscene_shape& glshape);
-
-// Opengl scene
-struct glscene_state {
-  // scene objects
-  vector<glscene_shape>   shapes   = {};
-  vector<glscene_texture> textures = {};
-
-  // programs
-  uint program  = 0;
-  uint vertex   = 0;
-  uint fragment = 0;
-};
-
 // Shading type
 enum struct glscene_lighting_type { camlight, eyelight };
 
@@ -227,19 +105,12 @@ struct glscene_params {
   vec4f                 background       = vec4f{0.15f, 0.15f, 0.15f, 1.0f};
 };
 
-// init scene
-void init_glscene(glscene_state& glscene, const scene_data& scene);
-
-// update scene
-void update_glscene(glscene_state& glscene, const scene_data& scene,
-    const vector<int>& updated_shapes, const vector<int>& updated_textures);
-
-// Clear an OpenGL scene
-void clear_scene(glscene_state& scene);
-
-// draw scene
-void draw_scene(glscene_state& glscene, const scene_data& scene,
-    const vec4i& viewport, const glscene_params& params);
+// Open a window and show an scene via OpenGL shading
+struct glscene_params;
+void glview_scene(const string& title, const string& name, scene_data& scene,
+    const glscene_params& params, const glview_callback& widgets_callback = {},
+    const glview_callback& uiupdate_callback = {},
+    const glview_callback& update_callback   = {});
 
 }  // namespace yocto
 
