@@ -20,7 +20,7 @@ target_include_directories(yocto PRIVATE ext/)
 
 if(UNIX AND NOT APPLE)
   find_package(Threads REQUIRED)
-  target_link_libraries(yocto Threads::Threads)
+  target_link_libraries(yocto PUBLIC Threads::Threads)
 endif(UNIX AND NOT APPLE)
 
 if(YOCTO_OPENGL)
