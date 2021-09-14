@@ -39,13 +39,13 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
+#include <yocto/yocto_math.h>
+
 #include <array>
 #include <sstream>
 #include <string>
 #include <type_traits>
 #include <vector>
-
-#include "yocto_math.h"
 
 #define JSON_USE_IMPLICIT_CONVERSIONS 0
 #include "ext/json.hpp"
