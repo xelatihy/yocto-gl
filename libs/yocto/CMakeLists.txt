@@ -1,4 +1,5 @@
-add_library(yocto
+add_library(yocto STATIC)
+target_sources(yocto PRIVATE
   yocto_math.h yocto_color.h yocto_geometry.h
   yocto_noise.h yocto_sampling.h yocto_shading.h
   yocto_modelio.h yocto_modelio.cpp
@@ -15,7 +16,6 @@ add_library(yocto
 )
 
 set_target_properties(yocto PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
-
 target_include_directories(yocto PRIVATE ext/)
 
 if(UNIX AND NOT APPLE)
@@ -23,11 +23,18 @@ if(UNIX AND NOT APPLE)
   target_link_libraries(yocto Threads::Threads)
 endif(UNIX AND NOT APPLE)
 
+if(YOCTO_OPENGL)
+  target_compile_definitions(yocto PUBLIC -DYOCTO_OPENGL)
+
+  find_package(OpenGL REQUIRED)
+  target_link_libraries(yocto PUBLIC glad imgui glfw ${OPENGL_gl_LIBRARY})
+endif(YOCTO_OPENGL)
+
 if(YOCTO_EMBREE)
   target_compile_definitions(yocto PUBLIC -DYOCTO_EMBREE)
   if(APPLE)
     target_include_directories(yocto PUBLIC /usr/local/include)
-    target_link_libraries(yocto /usr/local/lib/libembree3.dylib)
+    target_link_libraries(yocto PUBLIC /usr/local/lib/libembree3.dylib)
   endif(APPLE)
   if(MSVC)
     target_include_directories(yocto PUBLIC "/Program\ Files/Intel/Embree3/include"  "C:/Program\ Files/Intel/Embree3/include")
@@ -43,15 +50,15 @@ if(YOCTO_DENOISE)
   target_compile_definitions(yocto PUBLIC -DYOCTO_DENOISE)
   if(APPLE)
     target_include_directories(yocto PUBLIC /usr/local/include)
-    target_link_libraries(yocto /usr/local/lib/libOpenImageDenoise.dylib)
+    target_link_libraries(yocto PUBLIC /usr/local/lib/libOpenImageDenoise.dylib)
   endif(APPLE)
   if(MSVC)
     target_include_directories(yocto PUBLIC "/Program\ Files/Intel/Embree3/include"  "C:/Program\ Files/Intel/Embree3/include")
     target_link_directories(yocto PUBLIC "/Program\ Files/Intel/Embree3/lib" "C:/Program\ Files/Intel/Embree3/lib")
-    target_link_libraries(yocto embree3 tbb)
+    target_link_libraries(yocto PUBLIC embree3 tbb)
   endif(MSVC)
   if(UNIX AND NOT APPLE)
-    target_link_libraries(yocto embree3)
+    target_link_libraries(yocto PUBLIC embree3)
   endif()
 endif(YOCTO_DENOISE)
 
