@@ -432,7 +432,7 @@ void show_image_gui(
   };
 
   // run ui
-  show_gui({1280 + 320, 720}, title, callbacks);
+  show_gui_window({1280 + 320, 720}, title, callbacks);
 }
 
 // Open a window and show an image
@@ -488,7 +488,7 @@ void show_image_gui(const string& title, const vector<string>& names,
   };
 
   // run ui
-  show_gui({1280 + 320, 720}, title, callbacks);
+  show_gui_window({1280 + 320, 720}, title, callbacks);
 }
 
 // Open a window and show an image
@@ -553,7 +553,7 @@ void show_colorgrade_gui(
   };
 
   // run ui
-  show_gui({1280 + 320, 720}, title, callbacks);
+  show_gui_window({1280 + 320, 720}, title, callbacks);
 }
 
 // Open a window and show an scene via path tracing
@@ -750,7 +750,7 @@ void show_trace_gui(const string& title, const string& name, scene_data& scene,
   };
 
   // run ui
-  show_gui({1280 + 320, 720}, title, callbacks);
+  show_gui_window({1280 + 320, 720}, title, callbacks);
 
   // done
   stop_render();
@@ -846,7 +846,7 @@ void show_shade_gui(const string& title, const string& name, scene_data& scene,
   };
 
   // run ui
-  show_gui({1280 + 320, 720}, "yshade", callbacks);
+  show_gui_window({1280 + 320, 720}, "yshade", callbacks);
 }
 
 }  // namespace yocto
@@ -1819,7 +1819,7 @@ static void draw_window(glwindow_state& state) {
 }
 
 // run the user interface with the give callbacks
-void show_gui(const vec2i& size, const string& title,
+void show_gui_window(const vec2i& size, const string& title,
     const gui_callbacks& callbacks, int widgets_width, bool widgets_left) {
   // init glfw
   if (!glfwInit())

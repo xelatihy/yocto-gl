@@ -144,7 +144,7 @@ struct gui_callbacks {
 };
 
 // run the user interface with the give callbacks
-void show_gui(const vec2i& size, const string& title,
+void show_gui_window(const vec2i& size, const string& title,
     const gui_callbacks& callbaks, int widgets_width = 320,
     bool widgets_left = true);
 
