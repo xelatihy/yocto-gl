@@ -29,11 +29,11 @@
 
 #include "yocto_opengl.h"
 
+#include <glad/glad.h>
+
 #include <cassert>
 #include <stdexcept>
 #include <unordered_set>
-
-#include "ext/glad/glad.h"
 
 #ifdef _WIN32
 #undef near

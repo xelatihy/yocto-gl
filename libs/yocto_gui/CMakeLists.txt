@@ -9,14 +9,7 @@ if(YOCTO_OPENGL)
     yocto_imgui.h 
     yocto_imgui.cpp
     yocto_glview.h 
-    yocto_glview.cpp 
-    ext/imgui/imgui.cpp ext/imgui/imgui_demo.cpp 
-    ext/imgui/imgui_draw.cpp 
-    ext/imgui/imgui_widgets.cpp
-    ext/imgui/imgui_tables.cpp 
-    ext/imgui/imgui_impl_glfw.cpp 
-    ext/imgui/imgui_impl_opengl3.cpp 
-    ext/glad/glad.c)
+    yocto_glview.cpp)
   
   target_include_directories(yocto_gui PRIVATE .)
   target_include_directories(yocto_gui PRIVATE ./ext)
@@ -28,7 +21,7 @@ if(YOCTO_OPENGL)
   target_link_libraries(yocto_gui PUBLIC yocto)
 
   target_include_directories(yocto_gui PRIVATE ${CMAKE_SOURCE_DIR}/exts/glfw/include)
-  target_link_libraries(yocto_gui PUBLIC glfw ${OPENGL_gl_LIBRARY})
+  target_link_libraries(yocto_gui PUBLIC glad imgui glfw ${OPENGL_gl_LIBRARY})
 
   if(UNIX AND NOT APPLE)
     target_link_libraries(yocto_gui PUBLIC dl)
