@@ -35,6 +35,9 @@
 #if YOCTO_OPENGL == 1
 #include <yocto_gui/yocto_glview.h>
 #endif
+
+#include "ext/CLI11.hpp"
+
 using namespace yocto;
 
 // convert params
@@ -48,14 +51,16 @@ struct convert_params {
 };
 
 // Cli
-void add_options(const cli_command& cli, convert_params& params) {
-  add_argument(cli, "image", params.image, "Input image.");
-  add_option(cli, "output", params.output, "Output image.");
-  add_option(
-      cli, "exposure", params.exposure, "Tonemap exposure.", {-100, +100});
-  add_option(cli, "filmic", params.filmic, "Tonemap filmic.");
-  add_option(cli, "width", params.width, "Resize width.", {1, int_max});
-  add_option(cli, "height", params.height, "Resize height.", {1, int_max});
+void add_options(CLI::App& cli, convert_params& params) {
+  cli.add_option("image", params.image, "Input image.");
+  cli.add_option("--output", params.output, "Output image.");
+  cli.add_option("--exposure", params.exposure, "Tonemap exposure.")
+      ->check(CLI::Range(-100, +100));
+  cli.add_option("--filmic", params.filmic, "Tonemap filmic.");
+  cli.add_option("--width", params.width, "Resize width.")
+      ->check(CLI::Range(1, int_max));
+  cli.add_option("--height", params.height, "Resize height.")
+      ->check(CLI::Range(1, int_max));
 }
 
 // convert images
@@ -86,9 +91,9 @@ struct view_params {
 };
 
 // Cli
-void add_options(const cli_command& cli, view_params& params) {
-  add_argument(cli, "images", params.images, "Input images.");
-  add_option(cli, "output", params.output, "Output image.");
+void add_options(CLI::App& cli, view_params& params) {
+  cli.add_option("images", params.images, "Input images.");
+  cli.add_option("--output", params.output, "Output image.");
 }
 
 #ifndef YOCTO_OPENGL
@@ -120,9 +125,9 @@ struct grade_params : colorgrade_params {
 };
 
 // Cli
-void add_options(const cli_command& cli, grade_params& params) {
-  add_argument(cli, "image", params.image, "Input image.");
-  add_option(cli, "output", params.output, "Output image.");
+void add_options(CLI::App& cli, grade_params& params) {
+  cli.add_option("image", params.image, "Input image.");
+  cli.add_option("--output", params.output, "Output image.");
 }
 
 #ifndef YOCTO_OPENGL
@@ -157,12 +162,12 @@ struct diff_params {
 };
 
 // Cli
-void add_options(const cli_command& cli, diff_params& params) {
-  add_argument(cli, "image1", params.image1, "Input image 1.");
-  add_argument(cli, "image2", params.image2, "Input image 2.");
-  add_option(cli, "output", params.output, "Output image.");
-  add_option(cli, "signal", params.signal, "Error on diff.");
-  add_option(cli, "threshold", params.threshold, "Diff threshold.");
+void add_options(CLI::App& cli, diff_params& params) {
+  cli.add_option("image1", params.image1, "Input image 1.");
+  cli.add_option("image2", params.image2, "Input image 2.");
+  cli.add_option("--output", params.output, "Output image.");
+  cli.add_option("--signal", params.signal, "Error on diff.");
+  cli.add_option("--threshold", params.threshold, "Diff threshold.");
 }
 
 // resize images
@@ -213,13 +218,13 @@ struct setalpha_params {
 };
 
 // Cli
-void add_options(const cli_command& cli, setalpha_params& params) {
-  add_argument(cli, "image", params.image, "Input image.");
-  add_argument(cli, "alpha", params.alpha, "Alpha image.");
-  add_option(cli, "output", params.output, "Output image.");
-  add_option(cli, "from-color", params.from_color, "Alpha from color.");
-  add_option(cli, "from-black", params.from_black, "Alpha from black.");
-  add_option(cli, "to-color", params.to_color, "Color from alpha.");
+void add_options(CLI::App& cli, setalpha_params& params) {
+  cli.add_option("image", params.image, "Input image.");
+  cli.add_option("alpha", params.alpha, "Alpha image.");
+  cli.add_option("--output", params.output, "Output image.");
+  cli.add_option("--from-color", params.from_color, "Alpha from color.");
+  cli.add_option("--from-black", params.from_black, "Alpha from black.");
+  cli.add_option("--to-color", params.to_color, "Color from alpha.");
 }
 
 // setalpha images
@@ -270,38 +275,47 @@ struct app_params {
 };
 
 // Cli
-void add_options(const cli_command& cli, app_params& params) {
-  set_command_var(cli, params.command);
-  add_command(cli, "convert", params.convert, "Convert images.");
-  add_command(cli, "view", params.view, "View images.");
-  add_command(cli, "grade", params.grade, "Grade images.");
-  add_command(cli, "diff", params.diff, "Diff two images.");
-  add_command(cli, "setalpha", params.setalpha, "Set alpha in images.");
-}
-
-// Run
-void run(const vector<string>& args) {
-  // command line parameters
+app_params parse_cli(int argc, const char** argv) {
   auto params = app_params{};
-  auto error  = string{};
-  auto cli    = make_cli("yimage", params, "Process and view images.");
-  if (!parse_cli(cli, args, error)) print_fatal(error);
-
-  // dispatch commands
-  if (params.command == "convert") {
-    return run_convert(params.convert);
-  } else if (params.command == "view") {
-    return run_view(params.view);
-  } else if (params.command == "grade") {
-    return run_grade(params.grade);
-  } else if (params.command == "diff") {
-    return run_diff(params.diff);
-  } else if (params.command == "setalpha") {
-    return run_setalpha(params.setalpha);
-  } else {
-    print_fatal("yimage: unknown command");
+  auto cli    = CLI::App("yimage");
+  add_options(
+      *cli.add_subcommand("convert", "Convert images."), params.convert);
+  add_options(*cli.add_subcommand("view", "View images."), params.view);
+  add_options(*cli.add_subcommand("grade", "Grade images."), params.grade);
+  add_options(*cli.add_subcommand("diff", "Diff two images."), params.diff);
+  add_options(
+      *cli.add_subcommand("setalpha", "Set alpha in images."), params.setalpha);
+  cli.require_subcommand(1);
+  try {
+    cli.parse(argc, argv);
+    params.command = cli.get_subcommands().front()->get_name();
+    return params;
+  } catch (const CLI::ParseError& e) {
+    cli.exit(e);
+    return {};
   }
 }
 
 // Main
-int main(int argc, const char* argv[]) { run(make_cli_args(argc, argv)); }
+int main(int argc, const char* argv[]) {
+  // command line parameters
+  auto params = parse_cli(argc, argv);
+
+  // dispatch commands
+  if (params.command == "convert") {
+    run_convert(params.convert);
+  } else if (params.command == "view") {
+    run_view(params.view);
+  } else if (params.command == "grade") {
+    run_grade(params.grade);
+  } else if (params.command == "diff") {
+    run_diff(params.diff);
+  } else if (params.command == "setalpha") {
+    run_setalpha(params.setalpha);
+  } else {
+    print_fatal("yimage: unknown command");
+  }
+
+  // done
+  return 0;
+}
