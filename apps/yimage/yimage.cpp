@@ -26,8 +26,6 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include <fmt/core.h>
-#include <fmt/ranges.h>
 #include <yocto/yocto_color.h>
 #include <yocto/yocto_gui.h>
 #include <yocto/yocto_image.h>
@@ -35,7 +33,7 @@
 #include <yocto/yocto_scene.h>
 #include <yocto/yocto_sceneio.h>
 
-#include <CLI/CLI.hpp>
+#include "ext/CLI11.hpp"
 
 using namespace yocto;
 
@@ -64,13 +62,13 @@ void add_options(CLI::App& cli, convert_params& params) {
 
 // convert images
 int run_convert(const convert_params& params) {
-  fmt::print("converting {}\n", params.image);
+  std::cout << "converting " + params.image + "\n";
 
   // load
   auto error = string{};
   auto image = image_data{};
   if (!load_image(params.image, image, error)) {
-    fmt::print("error: cannot load {}\n", params.image);
+    std::cerr << "error: cannot load " + params.image + "\n";
     return 1;
   }
 
@@ -86,7 +84,7 @@ int run_convert(const convert_params& params) {
 
   // save
   if (!save_image(params.output, image, error)) {
-    fmt::print("error: cannot save {}\n", params.output);
+    std::cerr << "error: cannot save " + params.output + "\n";
     return 1;
   }
 
@@ -113,7 +111,7 @@ int run_view(const view_params& params) {
   auto images = vector<image_data>(params.images.size());
   for (auto idx = 0; idx < (int)params.images.size(); idx++) {
     if (!load_image(params.images[idx], images[idx], error)) {
-      fmt::print("error loading {}\n", params.images[idx]);
+      std::cerr << "error: error loading " + params.images[idx] + "\n";
       return 1;
     }
   }
@@ -143,7 +141,7 @@ int run_grade(const grade_params& params) {
   auto error = string{};
   auto image = image_data{};
   if (!load_image(params.image, image, error)) {
-    fmt::print("error loading {}\n", params.image);
+    std::cerr << "error: error loading " + params.image + "\n";
     return 1;
   }
 
@@ -174,29 +172,29 @@ void add_options(CLI::App& cli, diff_params& params) {
 
 // resize images
 int run_diff(const diff_params& params) {
-  fmt::print("diffing {} and {}\n", params.image1, params.image2);
+  std::cout << "error: diffing {} and " + params.image1, params.image2 + "\n";
 
   // load
   auto error  = string{};
   auto image1 = image_data{}, image2 = image_data{};
   if (!load_image(params.image1, image1, error)) {
-    fmt::print("error: cannot load {}\n", params.image1);
+    std::cerr << "error: cannot load " + params.image1 + "\n";
     return 1;
   }
   if (!load_image(params.image2, image2, error)) {
-    fmt::print("error: cannot load {}\n", params.image2);
+    std::cerr << "error: cannot load " + params.image2 + "\n";
     return 1;
   }
 
   // check sizes
   if (image1.width != image2.width || image1.height != image2.height) {
-    fmt::print("error: different image sizes");
+    std::cerr << "error: different image sizes\n";
     return 1;
   }
 
   // check types
   if (image1.linear != image2.linear) {
-    fmt::print("error: different image types\n");
+    std::cerr << "error: different image types\n";
     return 1;
   }
 
@@ -206,7 +204,7 @@ int run_diff(const diff_params& params) {
   // save
   if (params.output != "")
     if (!save_image(params.output, diff, error)) {
-      fmt::print("error: different image sizes\n");
+      std::cerr << "error: different image sizes\n";
       return 1;
     }
 
@@ -214,7 +212,7 @@ int run_diff(const diff_params& params) {
   if (params.signal) {
     for (auto& c : diff.pixels) {
       if (max(xyz(c)) > params.threshold) {
-        fmt::print("error: image conten differs\n");
+        std::cerr << "error: image conten differs\n";
       }
     }
   }
@@ -245,29 +243,29 @@ void add_options(CLI::App& cli, setalpha_params& params) {
 
 // setalpha images
 int run_setalpha(const setalpha_params& params) {
-  fmt::print("setting alpha for {}\n", params.image);
+  std::cout << "error: setting alpha for " + params.image + "\n";
 
   // load
   auto error = string{};
   auto image = image_data{}, alpha = image_data{};
   if (!load_image(params.image, image, error)) {
-    fmt::print("error: cannot load {}\n", params.image);
+    std::cerr << "error: cannot load " + params.image + "\n";
     return 1;
   }
   if (!load_image(params.alpha, alpha, error)) {
-    fmt::print("error: cannot load {}\n", params.alpha);
+    std::cerr << "error: cannot load " + params.alpha + "\n";
     return 1;
   }
 
   // check sizes
   if (image.width != alpha.width || image.height != alpha.height) {
-    fmt::print("error: image size differs\n");
+    std::cerr << "error: image size differs\n";
     return 1;
   }
 
   // check types
   if (image.linear != alpha.linear) {
-    fmt::print("error: image type differs\n");
+    std::cerr << "error: image type differs\n";
     return 1;
   }
 
@@ -289,7 +287,7 @@ int run_setalpha(const setalpha_params& params) {
 
   // save
   if (!save_image(params.output, out, error)) {
-    fmt::print("error: cannot save {}\n", params.output);
+    std::cerr << "error: cannot save " + params.output + "\n";
     return 1;
   }
 
@@ -338,7 +336,7 @@ int main(int argc, const char* argv[]) {
   } else if (params.command == "setalpha") {
     return run_setalpha(params.setalpha);
   } else {
-    fmt::print("error: unknown command\n");
+    std::cerr << "error: unknown command\n";
     return 1;
   }
 }

@@ -26,7 +26,6 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include <fmt/core.h>
 #include <yocto/yocto_geometry.h>
 #include <yocto/yocto_gui.h>
 #include <yocto/yocto_image.h>
@@ -36,10 +35,11 @@
 #include <yocto/yocto_sceneio.h>
 #include <yocto/yocto_shape.h>
 
-#include <CLI/CLI.hpp>
 #include <deque>
 #include <queue>
 #include <unordered_set>
+
+#include "ext/CLI11.hpp"
 
 using namespace yocto;
 
@@ -62,7 +62,7 @@ int run_view(const view_params& params) {
   auto error = string{};
   auto shape = shape_data{};
   if (!load_shape(params.shape, shape, error, true)) {
-    fmt::print("error: cannot load {}\n", params.shape);
+    std::cerr << "error: cannot load " + params.shape + "\n";
     return 1;
   }
 
@@ -137,7 +137,7 @@ int run_glview(const glview_params& params) {
   auto error = string{};
   auto shape = shape_data{};
   if (!load_shape(params.shape, shape, error, true)) {
-    fmt::print("error: cannot load {}\n", params.shape);
+    std::cerr << "error: cannot load " + params.shape + "\n";
     return 1;
   }
 
@@ -228,7 +228,7 @@ int run_glpath(const glpath_params& params) {
   auto error   = string{};
   auto ioshape = shape_data{};
   if (!load_shape(params.shape, ioshape, error, true)) {
-    fmt::print("error: cannot load {}\n", params.shape);
+    std::cerr << "error: cannot load " + params.shape + "\n";
     return 1;
   }
   if (!ioshape.quads.empty()) {
@@ -422,7 +422,7 @@ int run_glpathd(const glpathd_params& params) {
   auto error   = string{};
   auto ioshape = shape_data{};
   if (!load_shape(params.shape, ioshape, error, true)) {
-    fmt::print("error: cannot load {}\n", params.shape);
+    std::cerr << "error: cannot load " + params.shape + "\n";
     return 1;
   }
   if (!ioshape.quads.empty()) {
@@ -1187,7 +1187,7 @@ int run_glsculpt(const glsculpt_params& params_) {
   auto error   = string{};
   auto ioshape = shape_data{};
   if (!load_shape(params_.shape, ioshape, error, true)) {
-    fmt::print("error: cannot load {}\n", params_.shape);
+    std::cerr << "error: cannot load " + params_.shape + "\n";
     return 1;
   }
   if (!ioshape.quads.empty()) {
@@ -1199,7 +1199,7 @@ int run_glsculpt(const glsculpt_params& params_) {
   auto texture = texture_data{};
   if (!params_.texture.empty())
     if (!load_texture(params_.texture, texture, error)) {
-      fmt::print("error: cannot load {}\n", params_.texture);
+      std::cerr << "error: cannot load " + params_.texture + "\n";
       return 1;
     }
   // setup app
@@ -1298,7 +1298,7 @@ int main(int argc, const char* argv[]) {
   } else if (params.command == "glsculpt") {
     return run_glsculpt(params.glsculpt);
   } else {
-    fmt::print("error: unknown command\n");
+    std::cerr << "error: unknown command\n";
     return 1;
   }
 }

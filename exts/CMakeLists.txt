@@ -1,6 +1,3 @@
-add_subdirectory(CLI11)
-add_subdirectory(fmt)
-
 if(YOCTO_OPENGL)
 
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL " " FORCE)

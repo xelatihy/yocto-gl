@@ -26,7 +26,6 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include <fmt/core.h>
 #include <yocto/yocto_geometry.h>
 #include <yocto/yocto_gui.h>
 #include <yocto/yocto_image.h>
@@ -35,7 +34,7 @@
 #include <yocto/yocto_sceneio.h>
 #include <yocto/yocto_shape.h>
 
-#include <CLI/CLI.hpp>
+#include "ext/CLI11.hpp"
 
 using namespace yocto;
 
@@ -78,13 +77,13 @@ void add_options(CLI::App& cli, convert_params& params) {
 
 // convert images
 int run_convert(const convert_params& params) {
-  fmt::print("converting {}\n", params.shape);
+  std::cout << "converting " + params.shape + "\n";
 
   // load mesh
   auto error = string{};
   auto shape = shape_data{};
   if (!load_shape(params.shape, shape, error, true)) {
-    fmt::print("error: cannot load {}\n", params.shape);
+    std::cerr << "error: cannot load " + params.shape + "\n";
     return 1;
   }
 
@@ -106,9 +105,9 @@ int run_convert(const convert_params& params) {
 
   // print stats
   if (params.info) {
-    fmt::print("shape stats ------------\n");
+    std::cout << "shape stats ------------\n";
     auto stats = shape_stats(shape);
-    for (auto& stat : stats) fmt::print("{}\n", stat);
+    for (auto& stat : stats) std::cout << "" + stat + "\n";
   }
 
   // subdivision
@@ -135,7 +134,7 @@ int run_convert(const convert_params& params) {
   if (params.toedges) {
     // check faces
     if (shape.triangles.empty() && shape.quads.empty()) {
-      fmt::print("error: empty shape {}\n", params.shape);
+      std::cerr << "error: empty shape " + params.shape + "\n";
       return 1;
     }
 
@@ -170,14 +169,14 @@ int run_convert(const convert_params& params) {
   }
 
   if (params.info) {
-    fmt::print("shape stats ------------\n");
+    std::cout << "shape stats ------------\n";
     auto stats = shape_stats(shape);
-    for (auto& stat : stats) fmt::print("{}\n", stat);
+    for (auto& stat : stats) std::cout << stat + "\n";
   }
 
   // save mesh
   if (!save_shape(params.output, shape, error, true)) {
-    fmt::print("error: cannot save {}\n", params.output);
+    std::cerr << "error: cannot save " + params.output + "\n";
     return 1;
   }
 
@@ -218,13 +217,13 @@ void add_options(CLI::App& cli, fvconvert_params& params) {
 
 // convert images
 int run_fvconvert(const fvconvert_params& params) {
-  fmt::print("converting {}\n", params.shape);
+  std::cout << "converting " + params.shape + "\n";
 
   // load mesh
   auto error = string{};
   auto shape = fvshape_data{};
   if (!load_fvshape(params.shape, shape, error, true)) {
-    fmt::print("error: cannot load {}\n", params.shape);
+    std::cerr << "error: cannot load " + params.shape + "\n";
     return 1;
   }
 
@@ -238,9 +237,9 @@ int run_fvconvert(const fvconvert_params& params) {
 
   // print info
   if (params.info) {
-    fmt::print("shape stats ------------\n");
+    std::cout << "shape stats ------------\n";
     auto stats = fvshape_stats(shape);
-    for (auto& stat : stats) fmt::print("{}\n", stat);
+    for (auto& stat : stats) std::cout << stat + "\n";
   }
 
   // subdivision
@@ -278,14 +277,14 @@ int run_fvconvert(const fvconvert_params& params) {
   }
 
   if (params.info) {
-    fmt::print("shape stats ------------\n");
+    std::cout << "shape stats ------------\n";
     auto stats = fvshape_stats(shape);
-    for (auto& stat : stats) fmt::print("{}\n", stat);
+    for (auto& stat : stats) std::cout << stat + "\n";
   }
 
   // save mesh
   if (!save_fvshape(params.output, shape, error, true)) {
-    fmt::print("error: cannot save {}\n", params.output);
+    std::cerr << "error: cannot save " + params.output + "\n";
     return 1;
   }
 
@@ -308,13 +307,13 @@ void add_options(CLI::App& cli, view_params& params) {
 
 // view shapes
 int run_view(const view_params& params) {
-  fmt::print("viewing {}\n", params.shape);
+  std::cout << "viewing " + params.shape + "\n";
 
   // load shape
   auto error = string{};
   auto shape = shape_data{};
   if (!load_shape(params.shape, shape, error, true)) {
-    fmt::print("error: cannot load {}\n", params.shape);
+    std::cerr << "error: cannot load " + params.shape + "\n";
     return 1;
   }
 
@@ -356,7 +355,7 @@ int run_heightfield(const heightfield_params& params) {
   auto error = string{};
   auto image = image_data{};
   if (!load_image(params.image, image, error)) {
-    fmt::print("error: cannot load {}\n", params.image);
+    std::cerr << "error: cannot load " + params.image + "\n";
     return 1;
   }
 
@@ -371,9 +370,9 @@ int run_heightfield(const heightfield_params& params) {
 
   // print info
   if (params.info) {
-    fmt::print("shape stats ------------\n");
+    std::cout << "shape stats ------------\n";
     auto stats = shape_stats(shape);
-    for (auto& stat : stats) fmt::print("{}\n", stat);
+    for (auto& stat : stats) std::cout << stat + "\n";
   }
 
   // transform
@@ -393,7 +392,7 @@ int run_heightfield(const heightfield_params& params) {
 
   // save mesh
   if (!save_shape(params.output, shape, error, true)) {
-    fmt::print("error: cannot save {}\n", params.output);
+    std::cerr << "error: cannot save " + params.output + "\n";
     return 1;
   }
 
@@ -428,7 +427,7 @@ int run_hair(const hair_params& params) {
   auto error = string{};
   auto shape = shape_data{};
   if (!load_shape(params.shape, shape, error)) {
-    fmt::print("error: cannot load {}\n", params.shape);
+    std::cerr << "error: cannot load " + params.shape + "\n";
     return 1;
   }
 
@@ -439,7 +438,7 @@ int run_hair(const hair_params& params) {
 
   // save mesh
   if (!save_shape(params.output, hair, error, true)) {
-    fmt::print("error: cannot save {}\n", params.output);
+    std::cerr << "error: cannot save " + params.output + "\n";
     return 1;
   }
 
@@ -464,7 +463,7 @@ int run_sample(const sample_params& params) {
   auto error = string{};
   auto shape = shape_data{};
   if (!load_shape(params.shape, shape, error)) {
-    fmt::print("error: cannot load {}\n", params.shape);
+    std::cerr << "error: cannot load " + params.shape + "\n";
     return 1;
   }
 
@@ -481,7 +480,7 @@ int run_sample(const sample_params& params) {
 
   // save mesh
   if (!save_shape(params.output, sshape, error)) {
-    fmt::print("error: cannot save {}\n", params.output);
+    std::cerr << "error: cannot save " + params.output + "\n";
     return 1;
   }
 
@@ -505,7 +504,7 @@ int run_glview(const glview_params& params) {
   auto error = string{};
   auto shape = shape_data{};
   if (!load_shape(params.shape, shape, error)) {
-    fmt::print("error: cannot load {}\n", params.shape);
+    std::cerr << "error: cannot load " + params.shape + "\n";
     return 1;
   }
 
@@ -572,7 +571,7 @@ int main(int argc, const char** argv) {
   } else if (params.command == "glview") {
     return run_glview(params.glview);
   } else {
-    fmt::print("error: unknown command\n");
+    std::cerr << "error: unknown command\n";
     return 1;
   }
 }
