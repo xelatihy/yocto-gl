@@ -37,8 +37,6 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
-#include <atomic>
-#include <future>
 #include <memory>
 #include <string>
 #include <utility>
@@ -56,8 +54,6 @@
 namespace yocto {
 
 // using directives
-using std::atomic;
-using std::future;
 using std::pair;
 using std::string;
 using std::vector;
