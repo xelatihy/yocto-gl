@@ -68,10 +68,10 @@ inline const auto glinvalid_handle = -1;
 // Opengl caemra
 struct shade_camera {
   frame3f frame    = identity3x4f;
-  float   lens     = 0.050;
-  float   aspect   = 1.000;
-  float   film     = 0.036;
-  float   near     = 0.001;
+  float   lens     = 0.050f;
+  float   aspect   = 1.000f;
+  float   film     = 0.036f;
+  float   near     = 0.001f;
   float   far      = 10000;
   float   aperture = 0;
   float   focus    = 0;
@@ -272,7 +272,7 @@ void set_emission(shade_environment& environment, const vec3f& emission,
 
 // shortcuts
 glcamera_handle add_camera(shade_scene& scene, const frame3f& frame, float lens,
-    float aspect, float film = 0.036, float near = 0.001, float far = 10000);
+    float aspect, float film = 0.036f, float near = 0.001f, float far = 10000);
 glmaterial_handle    add_material(shade_scene& scene, const vec3f& emission,
        const vec3f& color, float specular, float metallic, float roughness,
        gltexture_handle emission_tex  = glinvalid_handle,

@@ -120,7 +120,7 @@ static bool draw_image_inspector(const glinput_state& input,
     const image_data& image, const image_data& display,
     glimage_params& glparams) {
   if (begin_glheader("inspect")) {
-    draw_glslider("zoom", glparams.scale, 0.1, 10);
+    draw_glslider("zoom", glparams.scale, 0.1f, 10);
     draw_glcheckbox("fit", glparams.fit);
     draw_glcoloredit("background", glparams.background);
     auto [i, j] = image_coords(input.mouse_pos, glparams.center, glparams.scale,
@@ -157,10 +157,10 @@ static bool draw_scene_editor(scene_data& scene, scene_selection& selection,
     draw_glcombobox("camera", selection.camera, scene.camera_names);
     auto camera = scene.cameras.at(selection.camera);
     edited += draw_glcheckbox("ortho", camera.orthographic);
-    edited += draw_glslider("lens", camera.lens, 0.001, 1);
-    edited += draw_glslider("aspect", camera.aspect, 0.1, 5);
-    edited += draw_glslider("film", camera.film, 0.1, 0.5);
-    edited += draw_glslider("focus", camera.focus, 0.001, 100);
+    edited += draw_glslider("lens", camera.lens, 0.001f, 1);
+    edited += draw_glslider("aspect", camera.aspect, 0.1f, 5);
+    edited += draw_glslider("film", camera.film, 0.1f, 0.5f);
+    edited += draw_glslider("focus", camera.focus, 0.001f, 100);
     edited += draw_glslider("aperture", camera.aperture, 0, 1);
     //   frame3f frame        = identity3x4f;
     if (edited) {
@@ -209,7 +209,7 @@ static bool draw_scene_editor(scene_data& scene, scene_selection& selection,
     edited += draw_glcombobox(
         "roughness_tex", material.roughness_tex, scene.texture_names, true);
     edited += draw_glslider("metallic", material.metallic, 0, 1);
-    edited += draw_glslider("ior", material.ior, 0.1, 5);
+    edited += draw_glslider("ior", material.ior, 0.1f, 5);
     if (edited) {
       if (before_edit) before_edit();
       scene.materials.at(selection.material) = material;
@@ -1510,7 +1510,7 @@ void draw_scene(glscene_state& glscene, const scene_data& scene,
 
   static auto lights_direction = vector<vec3f>{normalize(vec3f{1, 1, 1}),
       normalize(vec3f{-1, 1, 1}), normalize(vec3f{-1, -1, 1}),
-      normalize(vec3f{0.1, 0.5, -1})};
+      normalize(vec3f{0.1f, 0.5f, -1})};
   static auto lights_emission  = vector<vec3f>{vec3f{pif / 2, pif / 2, pif / 2},
       vec3f{pif / 2, pif / 2, pif / 2}, vec3f{pif / 4, pif / 4, pif / 4},
       vec3f{pif / 4, pif / 4, pif / 4}};

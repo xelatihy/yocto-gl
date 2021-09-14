@@ -510,7 +510,7 @@ void set_lighting_uniforms(ogl_program& program, const shade_scene& scene,
   static auto camera_light2 = gui_light{
       normalize(vec3f{-1, -1, 1}), vec3f{pif / 4, pif / 4, pif / 4}, true};
   static auto camera_light3 = gui_light{
-      normalize(vec3f{0.1, 0.5, -1}), vec3f{pif / 4, pif / 4, pif / 4}, true};
+      normalize(vec3f{0.1f, 0.5f, -1}), vec3f{pif / 4, pif / 4, pif / 4}, true};
   static auto camera_lights = vector<gui_light*>{
       &camera_light0, &camera_light1, &camera_light2, &camera_light3};
 

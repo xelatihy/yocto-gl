@@ -88,8 +88,8 @@ void add_options(CLI::App& cli, glview_params& params) {
 static scene_data make_shapescene(const shape_data& ioshape_) {
   // Frame camera
   auto camera_frame = [](float lens, float aspect,
-                          float film = 0.036) -> frame3f {
-    auto camera_dir  = normalize(vec3f{0, 0.5, 1});
+                          float film = 0.036f) -> frame3f {
+    auto camera_dir  = normalize(vec3f{0, 0.5f, 1});
     auto bbox_radius = 2.0f;
     auto camera_dist = bbox_radius * lens / (film / aspect);
     return lookat_frame(camera_dir * camera_dist, {0, 0, 0}, {0, 1, 0});
@@ -108,17 +108,17 @@ static scene_data make_shapescene(const shape_data& ioshape_) {
 
   // camera
   auto& camera  = scene.cameras.emplace_back();
-  camera.frame  = camera_frame(0.050, 16.0f / 9.0f, 0.036);
-  camera.lens   = 0.050;
+  camera.frame  = camera_frame(0.050f, 16.0f / 9.0f, 0.036f);
+  camera.lens   = 0.050f;
   camera.aspect = 16.0f / 9.0f;
-  camera.film   = 0.036;
+  camera.film   = 0.036f;
   camera.focus  = length(camera.frame.o - center(bbox));
 
   // material
   auto& shape_material     = scene.materials.emplace_back();
   shape_material.type      = material_type::glossy;
-  shape_material.color     = {0.5, 1, 0.5};
-  shape_material.roughness = 0.2;
+  shape_material.color     = {0.5f, 1, 0.5f};
+  shape_material.roughness = 0.2f;
 
   // shapes
   scene.shapes.emplace_back(ioshape);
@@ -163,8 +163,8 @@ void add_options(CLI::App& cli, glpath_params& params) {
 static scene_data make_pathscene(const shape_data& ioshape_) {
   // Frame camera
   auto camera_frame = [](float lens, float aspect,
-                          float film = 0.036) -> frame3f {
-    auto camera_dir  = normalize(vec3f{0, 0.5, 1});
+                          float film = 0.036f) -> frame3f {
+    auto camera_dir  = normalize(vec3f{0, 0.5f, 1});
     auto bbox_radius = 2.0f;
     auto camera_dist = bbox_radius * lens / (film / aspect);
     return lookat_frame(camera_dir * camera_dist, {0, 0, 0}, {0, 1, 0});
@@ -183,25 +183,25 @@ static scene_data make_pathscene(const shape_data& ioshape_) {
 
   // camera
   auto& camera  = scene.cameras.emplace_back();
-  camera.frame  = camera_frame(0.050, 16.0f / 9.0f, 0.036);
-  camera.lens   = 0.050;
+  camera.frame  = camera_frame(0.050f, 16.0f / 9.0f, 0.036f);
+  camera.lens   = 0.050f;
   camera.aspect = 16.0f / 9.0f;
-  camera.film   = 0.036;
+  camera.film   = 0.036f;
   camera.focus  = length(camera.frame.o - center(bbox));
 
   // material
   auto& shape_material      = scene.materials.emplace_back();
   shape_material.type       = material_type::glossy;
-  shape_material.color      = {0.5, 1, 0.5};
-  shape_material.roughness  = 0.2;
+  shape_material.color      = {0.5f, 1, 0.5f};
+  shape_material.roughness  = 0.2f;
   auto& points_material     = scene.materials.emplace_back();
   points_material.type      = material_type::glossy;
-  points_material.color     = {1, 0.5, 0.5};
-  points_material.roughness = 0.2;
+  points_material.color     = {1, 0.5f, 0.5f};
+  points_material.roughness = 0.2f;
   auto& lines_material      = scene.materials.emplace_back();
   lines_material.type       = material_type::glossy;
-  lines_material.color      = {0.5, 0.5, 1};
-  lines_material.roughness  = 0.2;
+  lines_material.color      = {0.5f, 0.5f, 1};
+  lines_material.roughness  = 0.2f;
 
   // shapes
   scene.shapes.emplace_back(ioshape);
@@ -328,8 +328,8 @@ void add_options(CLI::App& cli, glpathd_params& params) {
 static scene_data make_pathdscene(const shape_data& ioshape) {
   // Frame camera
   auto camera_frame = [](float lens, float aspect,
-                          float film = 0.036) -> frame3f {
-    auto camera_dir  = normalize(vec3f{0, 0.5, 1});
+                          float film = 0.036f) -> frame3f {
+    auto camera_dir  = normalize(vec3f{0, 0.5f, 1});
     auto bbox_radius = 2.0f;
     auto camera_dist = bbox_radius * lens / (film / aspect);
     return lookat_frame(camera_dir * camera_dist, {0, 0, 0}, {0, 1, 0});
@@ -340,32 +340,32 @@ static scene_data make_pathdscene(const shape_data& ioshape) {
 
   // camera
   auto& camera  = scene.cameras.emplace_back();
-  camera.frame  = camera_frame(0.050, 16.0f / 9.0f, 0.036);
-  camera.lens   = 0.050;
+  camera.frame  = camera_frame(0.050f, 16.0f / 9.0f, 0.036f);
+  camera.lens   = 0.050f;
   camera.aspect = 16.0f / 9.0f;
-  camera.film   = 0.036;
+  camera.film   = 0.036f;
   camera.focus  = length(camera.frame.o);
 
   // material
   auto& shape_material     = scene.materials.emplace_back();
   shape_material.type      = material_type::glossy;
-  shape_material.color     = {0.5, 1, 0.5};
-  shape_material.roughness = 0.2;
+  shape_material.color     = {0.5f, 1, 0.5f};
+  shape_material.roughness = 0.2f;
   auto& points_material    = scene.materials.emplace_back();
   points_material.type     = material_type::matte;
-  points_material.color    = {1, 0.5, 0.5};
+  points_material.color    = {1, 0.5f, 0.5f};
   auto& lines1_material    = scene.materials.emplace_back();
   lines1_material.type     = material_type::matte;
-  lines1_material.color    = {0.5, 0.5, 1};
+  lines1_material.color    = {0.5f, 0.5f, 1};
   auto& lines2_material    = scene.materials.emplace_back();
   lines2_material.type     = material_type::matte;
-  lines2_material.color    = {1, 1, 0.5};
+  lines2_material.color    = {1, 1, 0.5f};
   auto& lines3_material    = scene.materials.emplace_back();
   lines3_material.type     = material_type::matte;
-  lines3_material.color    = {1, 0.5, 1};
+  lines3_material.color    = {1, 0.5f, 1};
   auto& lines4_material    = scene.materials.emplace_back();
   lines4_material.type     = material_type::matte;
-  lines4_material.color    = {0.5, 0.5, 0.5};
+  lines4_material.color    = {0.5f, 0.5f, 0.5f};
   auto& edges_material     = scene.materials.emplace_back();
   edges_material.type      = material_type::matte;
   edges_material.color     = {0, 0, 0};
@@ -496,7 +496,7 @@ int run_glpathd(const glpathd_params& params) {
           auto positions = vector<vec3f>{};
           positions.push_back(eval_position(shape, point1.face, point1.uv));
           positions.push_back(eval_position(shape, point2.face, point2.uv));
-          scene.shapes.at(1) = points_to_spheres(positions, 2, 0.002);
+          scene.shapes.at(1) = points_to_spheres(positions, 2, 0.002f);
           updated_shapes.push_back(1);
           auto path1      = compute_shortest_path(solver, shape.triangles,
               shape.positions, adjacencies, point1, point2);
@@ -504,11 +504,11 @@ int run_glpathd(const glpathd_params& params) {
           for (auto [element, uv] : path1) {
             positions1.push_back(eval_position(shape, element, uv));
           }
-          scene.shapes.at(2) = polyline_to_cylinders(positions1, 4, 0.002);
+          scene.shapes.at(2) = polyline_to_cylinders(positions1, 4, 0.002f);
           updated_shapes.push_back(2);
           auto positions2    = visualize_shortest_path(solver, shape.triangles,
               shape.positions, adjacencies, point1, point2, true);
-          scene.shapes.at(3) = polyline_to_cylinders(positions2, 4, 0.002);
+          scene.shapes.at(3) = polyline_to_cylinders(positions2, 4, 0.002f);
           updated_shapes.push_back(3);
           // auto path3 = visualize_shortest_path(solver2, shape.triangles,
           //     shape.positions, adjacencies, v2t, angles, point1, point2,
@@ -1032,8 +1032,8 @@ bool smooth_brush(vector<vec3f>& positions, const geodesic_solver& solver,
 static scene_data make_sculptscene(const shape_data& ioshape_) {
   // Frame camera
   auto camera_frame = [](float lens, float aspect,
-                          float film = 0.036) -> frame3f {
-    auto camera_dir  = normalize(vec3f{0, 0.5, 1});
+                          float film = 0.036f) -> frame3f {
+    auto camera_dir  = normalize(vec3f{0, 0.5f, 1});
     auto bbox_radius = 2.0f;
     auto camera_dist = bbox_radius * lens / (film / aspect);
     return lookat_frame(camera_dir * camera_dist, {0, 0, 0}, {0, 1, 0});
@@ -1051,10 +1051,10 @@ static scene_data make_sculptscene(const shape_data& ioshape_) {
 
   // camera
   auto& camera  = scene.cameras.emplace_back();
-  camera.frame  = camera_frame(0.050, 16.0f / 9.0f, 0.036);
-  camera.lens   = 0.050;
+  camera.frame  = camera_frame(0.050f, 16.0f / 9.0f, 0.036f);
+  camera.lens   = 0.050f;
   camera.aspect = 16.0f / 9.0f;
-  camera.film   = 0.036;
+  camera.film   = 0.036f;
   camera.focus  = length(camera.frame.o - center(bbox));
 
   // material
