@@ -76,7 +76,7 @@ void add_options(CLI::App& cli, convert_params& params) {
 
 // convert images
 int run_convert(const convert_params& params) {
-  std::cout << ("converting " + params.scene + "\n");
+  std::cout << "converting " + params.scene + "\n";
   auto start = now();
 
   // load scene
@@ -84,10 +84,10 @@ int run_convert(const convert_params& params) {
   auto scene = scene_data{};
   start      = now();
   if (!load_scene(params.scene, scene, error)) {
-    std::cerr << ("error: cannot load " + params.scene + "\n");
+    std::cerr << "error: cannot load " + params.scene + "\n";
     return 1;
   }
-  std::cout << ("load scene: " + format_duration(now() - start) + "\n");
+  std::cout << "load scene: " + format_duration(now() - start) + "\n";
 
   // copyright
   if (params.copyright != "") {
@@ -97,13 +97,13 @@ int run_convert(const convert_params& params) {
   // validate scene
   if (params.validate) {
     for (auto& error : scene_validation(scene))
-      std::cerr << ("error: " + error + "\n");
+      std::cerr << "error: " + error + "\n";
   }
 
   // print info
   if (params.info) {
-    std::cout << ("scene stats ------------\n");
-    for (auto stat : scene_stats(scene)) std::cout << (stat + "\n");
+    std::cout << "scene stats ------------\n";
+    for (auto stat : scene_stats(scene)) std::cout << stat + "\n";
   }
 
   // tesselate if needed
@@ -118,10 +118,10 @@ int run_convert(const convert_params& params) {
   start = now();
   make_scene_directories(params.output, scene);
   if (!save_scene(params.output, scene, error)) {
-    std::cerr << ("error: cannot save " + params.output + "\n");
+    std::cerr << "error: cannot save " + params.output + "\n";
     return 1;
   }
-  std::cout << ("save scene: " + format_duration(now() - start) + "\n");
+  std::cout << "save scene: " + format_duration(now() - start) + "\n";
 
   // done
   return 0;
@@ -141,7 +141,7 @@ void add_options(CLI::App& cli, info_params& params) {
 
 // print info for scenes
 int run_info(const info_params& params) {
-  std::cout << ("info for " + params.scene + "\n");
+  std::cout << "info for " + params.scene + "\n";
   auto start = now();
 
   // load scene
@@ -149,20 +149,20 @@ int run_info(const info_params& params) {
   start      = now();
   auto scene = scene_data{};
   if (!load_scene(params.scene, scene, error)) {
-    std::cerr << ("error: cannot load " + params.scene + "\n");
+    std::cerr << "error: cannot load " + params.scene + "\n";
     return 1;
   }
-  std::cout << ("load scene: " + format_duration(now() - start) + "\n");
+  std::cout << "load scene: " + format_duration(now() - start) + "\n";
 
   // validate scene
   if (params.validate) {
     for (auto& error : scene_validation(scene))
-      std::cerr << ("error: " + error + "\n");
+      std::cerr << "error: " + error + "\n";
   }
 
   // print info
-  std::cout << ("scene stats ------------\n");
-  for (auto stat : scene_stats(scene)) std::cout << (stat + "\n");
+  std::cout << "scene stats ------------\n";
+  for (auto stat : scene_stats(scene)) std::cout << stat + "\n";
 
   // done
   return 0;
@@ -209,7 +209,7 @@ void add_options(CLI::App& cli, render_params& params) {
 
 // convert images
 int run_render(const render_params& params_) {
-  std::cout << ("rendering " + params_.scene + "\n");
+  std::cout << "rendering " + params_.scene + "\n";
   auto start = now();
 
   // copy params
@@ -220,10 +220,10 @@ int run_render(const render_params& params_) {
   start      = now();
   auto scene = scene_data{};
   if (!load_scene(params.scene, scene, error)) {
-    std::cerr << ("error: cannot load " + params.scene + "\n");
+    std::cerr << "error: cannot load " + params.scene + "\n";
     return 1;
   }
-  std::cout << ("load scene: " + format_duration(now() - start) + "\n");
+  std::cout << "load scene: " + format_duration(now() - start) + "\n";
 
   // add sky
   if (params.addsky) add_sky(scene);
@@ -249,7 +249,7 @@ int run_render(const render_params& params_) {
 
   // fix renderer type if no lights
   if (lights.lights.empty() && is_sampler_lit(params)) {
-    std::cout << ("no lights presents, image will be black\n");
+    std::cout << "no lights presents, image will be black\n";
     params.sampler = trace_sampler_type::eyelight;
   }
 
@@ -271,12 +271,12 @@ int run_render(const render_params& params_) {
       if (!is_hdr_filename(params.output))
         image = tonemap_image(image, params.exposure, params.filmic);
       if (!save_image(outfilename, image, error)) {
-        std::cerr << ("error: cannot save " + outfilename + "\n");
+        std::cerr << "error: cannot save " + outfilename + "\n";
         return 1;
       }
     }
   }
-  std::cout << ("render image: " + format_duration(now() - start) + "\n");
+  std::cout << "render image: " + format_duration(now() - start) + "\n";
 
   // save image
   start      = now();
@@ -284,10 +284,10 @@ int run_render(const render_params& params_) {
   if (!is_hdr_filename(params.output))
     image = tonemap_image(image, params.exposure, params.filmic);
   if (!save_image(params.output, image, error)) {
-    std::cerr << ("error: cannot save " + params.output + "\n");
+    std::cerr << "error: cannot save " + params.output + "\n";
     return 1;
   }
-  std::cout << ("save image: " + format_duration(now() - start) + "\n");
+  std::cout << "save image: " + format_duration(now() - start) + "\n";
 
   // done
   return 0;
@@ -332,7 +332,7 @@ void add_options(CLI::App& cli, view_params& params) {
 
 // view scene
 int run_view(const view_params& params_) {
-  std::cout << ("viewing " + params_.scene + "\n");
+  std::cout << "viewing " + params_.scene + "\n";
   auto start = now();
 
   // copy params
@@ -343,10 +343,10 @@ int run_view(const view_params& params_) {
   start      = now();
   auto scene = scene_data{};
   if (!load_scene(params.scene, scene, error)) {
-    std::cerr << ("error: cannot load " + params.scene + "\n");
+    std::cerr << "error: cannot load " + params.scene + "\n";
     return 1;
   }
-  std::cout << ("load scene: " + format_duration(now() - start) + "\n");
+  std::cout << "load scene: " + format_duration(now() - start) + "\n";
 
   // add sky
   if (params.addsky) add_sky(scene);
@@ -383,7 +383,7 @@ void add_options(CLI::App& cli, glview_params& params) {
 }
 
 int run_glview(const glview_params& params_) {
-  std::cout << ("viewing " + params_.scene + "\n");
+  std::cout << "viewing " + params_.scene + "\n";
 
   // copy params
   auto params = params_;
@@ -392,7 +392,7 @@ int run_glview(const glview_params& params_) {
   auto error = string{};
   auto scene = scene_data{};
   if (!load_scene(params.scene, scene, error)) {
-    std::cerr << ("error: cannot load " + params.scene + "\n");
+    std::cerr << "error: cannot load " + params.scene + "\n";
     return 1;
   }
 
@@ -453,7 +453,7 @@ int main(int argc, const char* argv[]) {
   } else if (params.command == "glview") {
     return run_glview(params.glview);
   } else {
-    std::cerr << ("error: unknown command\n");
+    std::cerr << "error: unknown command\n";
     return 1;
   }
 }
