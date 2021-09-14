@@ -32,7 +32,7 @@
 #include <yocto/yocto_shape.h>
 #include <yocto/yocto_trace.h>
 #if YOCTO_OPENGL == 1
-#include <yocto_gui/yocto_glview.h>
+#include <yocto/yocto_glview.h>
 #endif
 #include <fmt/chrono.h>
 #include <fmt/core.h>

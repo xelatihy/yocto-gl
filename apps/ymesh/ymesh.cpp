@@ -34,7 +34,7 @@
 #include <yocto/yocto_sceneio.h>
 #include <yocto/yocto_shape.h>
 #if YOCTO_OPENGL == 1
-#include <yocto_gui/yocto_glview.h>
+#include <yocto/yocto_glview.h>
 #endif
 #include <fmt/core.h>
 

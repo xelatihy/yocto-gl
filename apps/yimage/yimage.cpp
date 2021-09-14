@@ -32,7 +32,7 @@
 #include <yocto/yocto_scene.h>
 #include <yocto/yocto_sceneio.h>
 #if YOCTO_OPENGL == 1
-#include <yocto_gui/yocto_glview.h>
+#include <yocto/yocto_glview.h>
 #endif
 #include <fmt/core.h>
 #include <fmt/ranges.h>
