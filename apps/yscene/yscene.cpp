@@ -35,10 +35,8 @@
 
 using namespace yocto;
 
-#include <chrono>
-
 #include "ext/CLI11.hpp"
-using clock_ = std::chrono::high_resolution_clock;
+#include "ext/Timer.hpp"
 
 // convert params
 struct convert_params {
@@ -60,18 +58,18 @@ void add_options(CLI::App& cli, convert_params& params) {
 
 // convert images
 int run_convert(const convert_params& params) {
-  fmt::print("converting {}\n", params.scene);
-  auto start_time = clock_::now();
+  std::cout << ("error: converting " + params.scene + "\n");
+  auto timer = CLI::Timer();
 
   // load scene
   auto error = string{};
   auto scene = scene_data{};
-  start_time = clock_::now();
+  timer      = CLI::Timer{};
   if (!load_scene(params.scene, scene, error)) {
-    fmt::print("error: cannot load {}\n", params.scene);
+    std::cerr << ("error: cannot load " + params.scene + "\n");
     return 1;
   }
-  fmt::print("load scene: {:%H:%M:%S}\n", clock_::now() - start_time);
+  std::cout << ("load scene: " + timer.to_string() + "\n");
 
   // copyright
   if (params.copyright != "") {
@@ -81,30 +79,30 @@ int run_convert(const convert_params& params) {
   // validate scene
   if (params.validate) {
     for (auto& error : scene_validation(scene))
-      fmt::print("error: {}\n", error);
+      std::cerr << ("error: " + error + "\n");
   }
 
   // print info
   if (params.info) {
-    fmt::print("scene stats ------------\n");
-    for (auto stat : scene_stats(scene)) fmt::print("{}\n", stat);
+    std::cout << ("scene stats ------------\n");
+    for (auto stat : scene_stats(scene)) std::cout << (stat + "\n");
   }
 
   // tesselate if needed
   if (!scene.subdivs.empty()) {
-    auto start_time = clock_::now();
+    timer = CLI::Timer{};
     tesselate_subdivs(scene);
-    fmt::print("tesselate subdivs: {}\n", clock_::now() - start_time);
+    std::cout << ("tesselate subdivs: " + timer.to_string() + "\n");
   }
 
   // save scene
-  start_time = clock_::now();
+  timer = CLI::Timer{};
   make_scene_directories(params.output, scene);
   if (!save_scene(params.output, scene, error)) {
-    fmt::print("error: cannot save {}\n", params.output);
+    std::cerr << ("error: cannot save " + params.output + "\n");
     return 1;
   }
-  fmt::print("save scene: {:%H:%M:%S}\n", clock_::now() - start_time);
+  std::cout << ("save scene: " + timer.to_string() + "\n");
 
   // done
   return 0;
@@ -124,28 +122,28 @@ void add_options(CLI::App& cli, info_params& params) {
 
 // print info for scenes
 int run_info(const info_params& params) {
-  fmt::print("info for {}\n", params.scene);
-  auto start_time = clock_::now();
+  std::cout << ("error: info for " + params.scene + "\n");
+  auto timer = CLI::Timer{};
 
   // load scene
   auto error = string{};
-  start_time = clock_::now();
+  timer      = CLI::Timer{};
   auto scene = scene_data{};
   if (!load_scene(params.scene, scene, error)) {
-    fmt::print("error: cannot load {}\n", params.scene);
+    std::cerr << ("error: cannot load " + params.scene + "\n");
     return 1;
   }
-  fmt::print("load scene: {:%H:%M:%S}\n", clock_::now() - start_time);
+  std::cout << ("load scene: " + timer.to_string() + "\n");
 
   // validate scene
   if (params.validate) {
     for (auto& error : scene_validation(scene))
-      fmt::print("error: {}\n", error);
+      std::cerr << ("error: " + error + "\n");
   }
 
   // print info
-  fmt::print("scene stats ------------\n");
-  for (auto stat : scene_stats(scene)) fmt::print("{}\n", stat);
+  std::cout << ("scene stats ------------\n");
+  for (auto stat : scene_stats(scene)) std::cout << (stat + "\n");
 
   // done
   return 0;
@@ -192,21 +190,21 @@ void add_options(CLI::App& cli, render_params& params) {
 
 // convert images
 int run_render(const render_params& params_) {
-  fmt::print("rendering {}\n", params_.scene);
-  auto start_time = clock_::now();
+  std::cout << ("error: rendering " + params_.scene + "\n");
+  auto timer = CLI::Timer{};
 
   // copy params
   auto params = params_;
 
   // scene loading
   auto error = string{};
-  start_time = clock_::now();
+  timer      = CLI::Timer{};
   auto scene = scene_data{};
   if (!load_scene(params.scene, scene, error)) {
-    fmt::print("error: cannot load {}\n", params.scene);
+    std::cerr << ("error: cannot load " + params.scene + "\n");
     return 1;
   }
-  fmt::print("load scene: {:%H:%M:%S}\n", clock_::now() - start_time);
+  std::cout << ("load scene: " + timer.to_string() + "\n");
 
   // add sky
   if (params.addsky) add_sky(scene);
@@ -232,7 +230,7 @@ int run_render(const render_params& params_) {
 
   // fix renderer type if no lights
   if (lights.lights.empty() && is_sampler_lit(params)) {
-    fmt::print("no lights presents, image will be black\n");
+    std::cout << ("no lights presents, image will be black\n");
     params.sampler = trace_sampler_type::eyelight;
   }
 
@@ -240,9 +238,9 @@ int run_render(const render_params& params_) {
   auto state = make_state(scene, params);
 
   // render
-  start_time = clock_::now();
+  timer = CLI::Timer{};
   for (auto sample = 0; sample < params.samples; sample++) {
-    auto start_sample = clock_::now();
+    auto sample_timer = CLI::Timer{};
     trace_samples(state, scene, bvh, lights, params);
     if (params.savebatch && state.samples % params.batch == 0) {
       auto image = params.denoise ? get_denoised(state) : get_render(state);
@@ -251,25 +249,26 @@ int run_render(const render_params& params_) {
       if (!is_hdr_filename(params.output))
         image = tonemap_image(image, params.exposure, params.filmic);
       if (!save_image(outfilename, image, error)) {
-        fmt::print("error: cannot save {}\n", outfilename);
+        std::cerr << ("error: cannot save " + outfilename + "\n");
         return 1;
       }
     }
-    fmt::print("render sample {}/{}: {:%H:%M:%S}\n", sample, params.samples,
-        clock_::now() - start_sample);
+    std::cout << ("render sample " + std::to_string(sample) + "/" +
+                  std::to_string(params.samples) + ":" +
+                  sample_timer.to_string() + "\n");
   }
-  fmt::print("render image: {:%H:%M:%S}\n", clock_::now() - start_time);
+  std::cout << ("render image: " + timer.to_string() + "\n");
 
   // save image
-  start_time = clock_::now();
+  timer      = CLI::Timer{};
   auto image = params.denoise ? get_denoised(state) : get_render(state);
   if (!is_hdr_filename(params.output))
     image = tonemap_image(image, params.exposure, params.filmic);
   if (!save_image(params.output, image, error)) {
-    fmt::print("error: cannot save {}\n", params.output);
+    std::cerr << ("error: cannot save " + params.output + "\n");
     return 1;
   }
-  fmt::print("save image: {:%H:%M:%S}\n", clock_::now() - start_time);
+  std::cout << ("save image: " + timer.to_string() + "\n");
 
   // done
   return 0;
@@ -314,21 +313,21 @@ void add_options(CLI::App& cli, view_params& params) {
 
 // view scene
 int run_view(const view_params& params_) {
-  fmt::print("viewing {}\n", params_.scene);
-  auto start_time = clock_::now();
+  std::cout << ("error: viewing " + params_.scene + "\n");
+  auto timer = CLI::Timer{};
 
   // copy params
   auto params = params_;
 
   // load scene
   auto error = string{};
-  start_time = clock_::now();
+  timer      = CLI::Timer{};
   auto scene = scene_data{};
   if (!load_scene(params.scene, scene, error)) {
-    fmt::print("error: cannot load {}\n", params.scene);
+    std::cerr << ("error: cannot load " + params.scene + "\n");
     return 1;
   }
-  fmt::print("load scene: {:%H:%M:%S}\n", clock_::now() - start_time);
+  std::cout << ("load scene: " + timer.to_string() + "\n");
 
   // add sky
   if (params.addsky) add_sky(scene);
@@ -365,7 +364,7 @@ void add_options(CLI::App& cli, glview_params& params) {
 }
 
 int run_glview(const glview_params& params_) {
-  fmt::print("viewing {}\n", params_.scene);
+  std::cout << ("error: viewing " + params_.scene + "\n");
 
   // copy params
   auto params = params_;
@@ -374,7 +373,7 @@ int run_glview(const glview_params& params_) {
   auto error = string{};
   auto scene = scene_data{};
   if (!load_scene(params.scene, scene, error)) {
-    fmt::print("error: cannot load {}\n", params.scene);
+    std::cerr << ("error: cannot load " + params.scene + "\n");
     return 1;
   }
 
@@ -435,7 +434,7 @@ int main(int argc, const char* argv[]) {
   } else if (params.command == "glview") {
     return run_glview(params.glview);
   } else {
-    fmt::print("error: unknown command\n");
+    std::cerr << ("error: unknown command\n");
     return 1;
   }
 }
