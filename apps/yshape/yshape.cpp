@@ -110,9 +110,9 @@ int run_convert(const convert_params& params) {
 
   // print stats
   if (params.info) {
-    print_info("shape stats ------------");
+    fmt::print("shape stats ------------\n");
     auto stats = shape_stats(shape);
-    for (auto& stat : stats) print_info(stat);
+    for (auto& stat : stats) fmt::print("{}\n", stat);
   }
 
   // subdivision
@@ -138,8 +138,10 @@ int run_convert(const convert_params& params) {
   // convert to edges
   if (params.toedges) {
     // check faces
-    if (shape.triangles.empty() && shape.quads.empty())
-      print_fatal(params.shape + ": empty shape");
+    if (shape.triangles.empty() && shape.quads.empty()) {
+      fmt::print("error: empty shape {}\n", params.shape);
+      return 1;
+    }
 
     // convert to edges
     auto edges = !shape.triangles.empty() ? get_edges(shape.triangles)
@@ -240,9 +242,9 @@ int run_fvconvert(const fvconvert_params& params) {
 
   // print info
   if (params.info) {
-    print_info("shape stats ------------");
+    fmt::print("shape stats ------------\n");
     auto stats = fvshape_stats(shape);
-    for (auto& stat : stats) print_info(stat);
+    for (auto& stat : stats) fmt::print("{}\n", stat);
   }
 
   // subdivision
@@ -312,7 +314,8 @@ void add_options(CLI::App& cli, view_params& params) {
 
 // view shapes
 int run_view(const view_params& params) {
-  return print_fatal("Opengl not compiled");
+  fmt::print("error: opengl not compiled\n");
+  return 1;
 }
 
 #else
@@ -384,9 +387,9 @@ int run_heightfield(const heightfield_params& params) {
 
   // print info
   if (params.info) {
-    print_info("shape stats ------------");
+    fmt::print("shape stats ------------\n");
     auto stats = shape_stats(shape);
-    for (auto& stat : stats) print_info(stat);
+    for (auto& stat : stats) fmt::print("{}\n", stat);
   }
 
   // transform
@@ -440,7 +443,10 @@ int run_hair(const hair_params& params) {
   // load mesh
   auto error = string{};
   auto shape = shape_data{};
-  if (!load_shape(params.shape, shape, error)) return print_fatal(error);
+  if (!load_shape(params.shape, shape, error)) {
+    fmt::print("error: cannot load {}\n", params.shape);
+    return 1;
+  }
 
   // generate hair
   auto hair = make_hair2(shape, {params.steps, params.hairs},
@@ -448,7 +454,10 @@ int run_hair(const hair_params& params) {
       params.noise, params.gravity);
 
   // save mesh
-  if (!save_shape(params.output, hair, error, true)) return print_fatal(error);
+  if (!save_shape(params.output, hair, error, true)) {
+    fmt::print("error: cannot save {}\n", params.output);
+    return 1;
+  }
 
   // done
   return 0;
@@ -470,7 +479,10 @@ int run_sample(const sample_params& params) {
   // load mesh
   auto error = string{};
   auto shape = shape_data{};
-  if (!load_shape(params.shape, shape, error)) return print_fatal(error);
+  if (!load_shape(params.shape, shape, error)) {
+    fmt::print("error: cannot load {}\n", params.shape);
+    return 1;
+  }
 
   // generate samples
   auto samples = sample_shape(shape, params.samples);
@@ -484,7 +496,10 @@ int run_sample(const sample_params& params) {
   }
 
   // save mesh
-  if (!save_shape(params.output, sshape, error)) return print_fatal(error);
+  if (!save_shape(params.output, sshape, error)) {
+    fmt::print("error: cannot save {}\n", params.output);
+    return 1;
+  }
 
   // done
   return 0;
@@ -505,7 +520,8 @@ void add_options(CLI::App& cli, glview_params& params) {
 
 // view shapes
 int run_glview(const glview_params& params) {
-  print_fatal("Opengl not compiled");
+  fmt::print("error: opengl not compiled\n");
+  return 1;
 }
 
 #else
@@ -514,7 +530,10 @@ int run_glview(const glview_params& params) {
   // loading shape
   auto error = string{};
   auto shape = shape_data{};
-  if (!load_shape(params.shape, shape, error)) return print_fatal(error);
+  if (!load_shape(params.shape, shape, error)) {
+    fmt::print("error: cannot load {}\n", params.shape);
+    return 1;
+  }
 
   // make scene
   auto scene = make_shape_scene(shape, params.addsky);
@@ -581,6 +600,7 @@ int main(int argc, const char** argv) {
   } else if (params.command == "glview") {
     return run_glview(params.glview);
   } else {
-    return print_fatal("yshape: unknown command");
+    fmt::print("error: unknown command\n");
+    return 1;
   }
 }

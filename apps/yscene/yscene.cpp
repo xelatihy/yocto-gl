@@ -80,13 +80,14 @@ int run_convert(const convert_params& params) {
 
   // validate scene
   if (params.validate) {
-    for (auto& error : scene_validation(scene)) print_info("error: " + error);
+    for (auto& error : scene_validation(scene))
+      fmt::print("error: {}\n", error);
   }
 
   // print info
   if (params.info) {
-    print_info("scene stats ------------");
-    for (auto stat : scene_stats(scene)) print_info(stat);
+    fmt::print("scene stats ------------\n");
+    for (auto stat : scene_stats(scene)) fmt::print("{}\n", stat);
   }
 
   // tesselate if needed
@@ -137,7 +138,8 @@ int run_info(const info_params& params) {
 
   // validate scene
   if (params.validate) {
-    for (auto& error : scene_validation(scene)) print_info("error: " + error);
+    for (auto& error : scene_validation(scene))
+      fmt::print("error: {}\n", error);
   }
 
   // print info
@@ -236,7 +238,7 @@ int run_render(const render_params& params_) {
 
   // fix renderer type if no lights
   if (lights.lights.empty() && is_sampler_lit(params)) {
-    print_info("no lights presents, image will be black");
+    fmt::print("no lights presents, image will be black\n");
     params.sampler = trace_sampler_type::eyelight;
   }
 
@@ -255,7 +257,10 @@ int run_render(const render_params& params_) {
       auto outfilename = replace_extension(params.output, ext);
       if (!is_hdr_filename(params.output))
         image = tonemap_image(image, params.exposure, params.filmic);
-      if (!save_image(outfilename, image, error)) return print_fatal(error);
+      if (!save_image(outfilename, image, error)) {
+        fmt::print("error: cannot save {}\n", outfilename);
+        return 1;
+      }
     }
     print_progress_next();
   }
@@ -315,7 +320,10 @@ void add_options(CLI::App& cli, view_params& params) {
 #ifndef YOCTO_OPENGL
 
 // view scene
-int run_view(const view_params& params) { print_fatal("Opengl not compiled"); }
+int run_view(const view_params& params) {
+  fmt::print("error: opengl not compiled\n");
+  return 1;
+}
 
 #else
 
@@ -380,7 +388,8 @@ void add_options(CLI::App& cli, glview_params& params) {
 
 // view scene
 int run_glview(const glview_params& params) {
-  print_fatal("Opengl not compiled");
+  fmt::print("error: opengl not compiled\n");
+  return 1;
 }
 
 #else
@@ -462,6 +471,7 @@ int main(int argc, const char* argv[]) {
   } else if (params.command == "glview") {
     return run_glview(params.glview);
   } else {
-    return print_fatal("yscene; unknown command");
+    fmt::print("error: unknown command\n");
+    return 1;
   }
 }

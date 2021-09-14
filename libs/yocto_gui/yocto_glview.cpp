@@ -451,7 +451,6 @@ void view_scene(const string& title, const string& name, scene_data& scene,
 
   // fix renderer type if no lights
   if (lights.lights.empty() && is_sampler_lit(params)) {
-    if (print) print_info("no lights presents --- switching to eyelight");
     params.sampler = trace_sampler_type::eyelight;
   }
 

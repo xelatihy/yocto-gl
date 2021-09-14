@@ -90,7 +90,7 @@ int run_convert(const convert_params& params) {
   // save
   if (!save_image(params.output, image, error)) {
     fmt::print("error: cannot save {}\n", params.output);
-    return print_fatal(error);
+    return 1;
   }
 
   // done
@@ -113,7 +113,8 @@ void add_options(CLI::App& cli, view_params& params) {
 
 // view images
 int run_view(const view_params& params) {
-  return print_fatal("Opengl not compiled");
+  fmt::print("error: opengl not compiled\n");
+  return 1;
 }
 
 #else
@@ -155,7 +156,8 @@ void add_options(CLI::App& cli, grade_params& params) {
 
 // grade images
 int run_grade(const grade_params& params) {
-  return print_fatal("Opengl not compiled");
+  fmt::print("error: opengl not compiled\n");
+  return 1;
 }
 
 #else
@@ -239,8 +241,7 @@ int run_diff(const diff_params& params) {
   if (params.signal) {
     for (auto& c : diff.pixels) {
       if (max(xyz(c)) > params.threshold) {
-        print_fatal(
-            params.image1 + "," + params.image2 + "image content differs");
+        fmt::print("error: image conten differs\n");
       }
     }
   }
@@ -271,20 +272,30 @@ void add_options(CLI::App& cli, setalpha_params& params) {
 
 // setalpha images
 int run_setalpha(const setalpha_params& params) {
+  fmt::print("setting alpha for {}\n", params.image);
+
   // load
   auto error = string{};
   auto image = image_data{}, alpha = image_data{};
-  if (!load_image(params.image, image, error)) return print_fatal(error);
-  if (!load_image(params.alpha, alpha, error)) return print_fatal(error);
+  if (!load_image(params.image, image, error)) {
+    fmt::print("error: cannot load {}\n", params.image);
+    return 1;
+  }
+  if (!load_image(params.alpha, alpha, error)) {
+    fmt::print("error: cannot load {}\n", params.alpha);
+    return 1;
+  }
 
   // check sizes
   if (image.width != alpha.width || image.height != alpha.height) {
-    print_fatal(params.image + "," + params.alpha + ": image different size");
+    fmt::print("error: image size differs\n");
+    return 1;
   }
 
   // check types
   if (image.linear != alpha.linear) {
-    print_fatal(params.image + "," + params.alpha + ": image different types");
+    fmt::print("error: image type differs\n");
+    return 1;
   }
 
   // edit alpha
@@ -304,7 +315,10 @@ int run_setalpha(const setalpha_params& params) {
   }
 
   // save
-  if (!save_image(params.output, out, error)) return print_fatal(error);
+  if (!save_image(params.output, out, error)) {
+    fmt::print("error: cannot save {}\n", params.output);
+    return 1;
+  }
 
   // done
   return 0;
@@ -351,6 +365,7 @@ int main(int argc, const char* argv[]) {
   } else if (params.command == "setalpha") {
     return run_setalpha(params.setalpha);
   } else {
-    return print_fatal("yimage: unknown command");
+    fmt::print("error: unknown command\n");
+    return 1;
   }
 }
