@@ -62,7 +62,7 @@ void add_options(CLI::App& cli, convert_params& params) {
 
 // convert images
 int run_convert(const convert_params& params) {
-  std::cout << ("error: converting " + params.image + "\n");
+  std::cout << ("converting " + params.image + "\n");
 
   // load
   auto error = string{};
@@ -111,7 +111,7 @@ int run_view(const view_params& params) {
   auto images = vector<image_data>(params.images.size());
   for (auto idx = 0; idx < (int)params.images.size(); idx++) {
     if (!load_image(params.images[idx], images[idx], error)) {
-      std::cout << ("error: error loading " + params.images[idx] + "\n");
+      std::cerr << ("error: error loading " + params.images[idx] + "\n");
       return 1;
     }
   }
@@ -141,7 +141,7 @@ int run_grade(const grade_params& params) {
   auto error = string{};
   auto image = image_data{};
   if (!load_image(params.image, image, error)) {
-    std::cout << ("error: error loading " + params.image + "\n");
+    std::cerr << ("error: error loading " + params.image + "\n");
     return 1;
   }
 

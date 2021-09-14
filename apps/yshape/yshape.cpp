@@ -77,7 +77,7 @@ void add_options(CLI::App& cli, convert_params& params) {
 
 // convert images
 int run_convert(const convert_params& params) {
-  std::cout << ("error: converting " + params.shape + "\n");
+  std::cout << ("converting " + params.shape + "\n");
 
   // load mesh
   auto error = string{};
@@ -107,7 +107,7 @@ int run_convert(const convert_params& params) {
   if (params.info) {
     std::cout << ("shape stats ------------\n");
     auto stats = shape_stats(shape);
-    for (auto& stat : stats) std::cout << ("error: " + stat + "\n");
+    for (auto& stat : stats) std::cout << ("" + stat + "\n");
   }
 
   // subdivision
@@ -217,7 +217,7 @@ void add_options(CLI::App& cli, fvconvert_params& params) {
 
 // convert images
 int run_fvconvert(const fvconvert_params& params) {
-  std::cout << ("error: converting " + params.shape + "\n");
+  std::cout << ("converting " + params.shape + "\n");
 
   // load mesh
   auto error = string{};
@@ -279,7 +279,7 @@ int run_fvconvert(const fvconvert_params& params) {
   if (params.info) {
     std::cout << ("shape stats ------------\n");
     auto stats = fvshape_stats(shape);
-    for (auto& stat : stats) std::cout << ("error: " + stat + "\n");
+    for (auto& stat : stats) std::cout << (stat + "\n");
   }
 
   // save mesh
@@ -307,7 +307,7 @@ void add_options(CLI::App& cli, view_params& params) {
 
 // view shapes
 int run_view(const view_params& params) {
-  std::cout << ("error: viewing " + params.shape + "\n");
+  std::cout << ("viewing " + params.shape + "\n");
 
   // load shape
   auto error = string{};
@@ -372,7 +372,7 @@ int run_heightfield(const heightfield_params& params) {
   if (params.info) {
     std::cout << ("shape stats ------------\n");
     auto stats = shape_stats(shape);
-    for (auto& stat : stats) std::cout << ("error: " + stat + "\n");
+    for (auto& stat : stats) std::cout << (stat + "\n");
   }
 
   // transform
