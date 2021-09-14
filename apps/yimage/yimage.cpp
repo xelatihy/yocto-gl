@@ -26,8 +26,6 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include <fmt/core.h>
-#include <fmt/ranges.h>
 #include <yocto/yocto_color.h>
 #include <yocto/yocto_gui.h>
 #include <yocto/yocto_image.h>

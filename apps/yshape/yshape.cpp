@@ -26,7 +26,6 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include <fmt/core.h>
 #include <yocto/yocto_geometry.h>
 #include <yocto/yocto_gui.h>
 #include <yocto/yocto_image.h>
