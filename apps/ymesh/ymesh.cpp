@@ -26,7 +26,6 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include <yocto/yocto_cli.h>
 #include <yocto/yocto_geometry.h>
 #include <yocto/yocto_image.h>
 #include <yocto/yocto_math.h>
@@ -598,7 +597,7 @@ int run_glpathd(const glpathd_params& params) {
 #endif
 
 struct glsculpt_params {
-  string shape   = "shape.ply"s;
+  string shape   = "shape.ply";
   string texture = "";
 };
 

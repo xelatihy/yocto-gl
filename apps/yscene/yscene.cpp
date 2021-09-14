@@ -26,7 +26,6 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include <yocto/yocto_cli.h>
 #include <yocto/yocto_math.h>
 #include <yocto/yocto_scene.h>
 #include <yocto/yocto_sceneio.h>
@@ -35,11 +34,14 @@
 #if YOCTO_OPENGL == 1
 #include <yocto_gui/yocto_glview.h>
 #endif
+#include <fmt/chrono.h>
 #include <fmt/core.h>
 
-#include <CLI/CLI.hpp>
-
 using namespace yocto;
+
+#include <CLI/CLI.hpp>
+#include <chrono>
+using clock_ = std::chrono::high_resolution_clock;
 
 // convert params
 struct convert_params {
@@ -62,16 +64,17 @@ void add_options(CLI::App& cli, convert_params& params) {
 // convert images
 int run_convert(const convert_params& params) {
   fmt::print("converting {}\n", params.scene);
+  auto start_time = clock_::now();
 
   // load scene
   auto error = string{};
   auto scene = scene_data{};
-  print_progress_begin("load scene");
+  start_time = clock_::now();
   if (!load_scene(params.scene, scene, error)) {
     fmt::print("error: cannot load {}\n", params.scene);
     return 1;
   }
-  print_progress_end();
+  fmt::print("load scene: {}\n", clock_::now() - start_time);
 
   // copyright
   if (params.copyright != "") {
@@ -92,19 +95,19 @@ int run_convert(const convert_params& params) {
 
   // tesselate if needed
   if (!scene.subdivs.empty()) {
-    print_progress_begin("tesselate subdivs");
+    auto start_time = clock_::now();
     tesselate_subdivs(scene);
-    print_progress_end();
+    fmt::print("tesselate subdivs: {}\n", clock_::now() - start_time);
   }
 
   // save scene
-  print_progress_begin("save scene");
+  start_time = clock_::now();
   make_scene_directories(params.output, scene);
   if (!save_scene(params.output, scene, error)) {
     fmt::print("error: cannot save {}\n", params.output);
     return 1;
   }
-  print_progress_end();
+  fmt::print("save scene: {}\n", clock_::now() - start_time);
 
   // done
   return 0;
@@ -125,16 +128,17 @@ void add_options(CLI::App& cli, info_params& params) {
 // print info for scenes
 int run_info(const info_params& params) {
   fmt::print("info for {}\n", params.scene);
+  auto start_time = clock_::now();
 
   // load scene
   auto error = string{};
-  print_progress_begin("load scene");
+  start_time = clock_::now();
   auto scene = scene_data{};
   if (!load_scene(params.scene, scene, error)) {
     fmt::print("error: cannot load {}\n", params.scene);
     return 1;
   }
-  print_progress_end();
+  fmt::print("load scene: {}\n", clock_::now() - start_time);
 
   // validate scene
   if (params.validate) {
@@ -192,28 +196,27 @@ void add_options(CLI::App& cli, render_params& params) {
 // convert images
 int run_render(const render_params& params_) {
   fmt::print("rendering {}\n", params_.scene);
+  auto start_time = clock_::now();
 
   // copy params
   auto params = params_;
 
   // scene loading
   auto error = string{};
-  print_progress_begin("load scene");
+  start_time = clock_::now();
   auto scene = scene_data{};
   if (!load_scene(params.scene, scene, error)) {
     fmt::print("error: cannot load {}\n", params.scene);
     return 1;
   }
-  print_progress_end();
+  fmt::print("load scene: {}\n", clock_::now() - start_time);
 
   // add sky
   if (params.addsky) add_sky(scene);
 
   // add environment
   if (!params.envname.empty()) {
-    print_progress_begin("add environment");
     add_environment(scene, params.envname);
-    print_progress_end();
   }
 
   // camera
@@ -221,20 +224,14 @@ int run_render(const render_params& params_) {
 
   // tesselation
   if (!scene.subdivs.empty()) {
-    print_progress_begin("tesselate subdivs");
     tesselate_subdivs(scene);
-    print_progress_end();
   }
 
   // build bvh
-  print_progress_begin("build bvh");
   auto bvh = make_bvh(scene, params);
-  print_progress_end();
 
   // init renderer
-  print_progress_begin("build lights");
   auto lights = make_lights(scene, params);
-  print_progress_end();
 
   // fix renderer type if no lights
   if (lights.lights.empty() && is_sampler_lit(params)) {
@@ -243,13 +240,12 @@ int run_render(const render_params& params_) {
   }
 
   // state
-  print_progress_begin("init state");
   auto state = make_state(scene, params);
-  print_progress_end();
 
   // render
-  print_progress_begin("render image", params.samples);
+  start_time = clock_::now();
   for (auto sample = 0; sample < params.samples; sample++) {
+    auto start_sample = clock_::now();
     trace_samples(state, scene, bvh, lights, params);
     if (params.savebatch && state.samples % params.batch == 0) {
       auto image = params.denoise ? get_denoised(state) : get_render(state);
@@ -262,11 +258,13 @@ int run_render(const render_params& params_) {
         return 1;
       }
     }
-    print_progress_next();
+    fmt::print("render sample {}/{}: {}\n", sample, params.samples,
+        clock_::now() - start_sample);
   }
+  fmt::print("render image: {}\n", clock_::now() - start_time);
 
   // save image
-  print_progress_begin("save image");
+  start_time = clock_::now();
   auto image = params.denoise ? get_denoised(state) : get_render(state);
   if (!is_hdr_filename(params.output))
     image = tonemap_image(image, params.exposure, params.filmic);
@@ -274,7 +272,7 @@ int run_render(const render_params& params_) {
     fmt::print("error: cannot save {}\n", params.output);
     return 1;
   }
-  print_progress_end();
+  fmt::print("save image: {}\n", clock_::now() - start_time);
 
   // done
   return 0;
@@ -330,35 +328,32 @@ int run_view(const view_params& params) {
 // view scene
 int run_view(const view_params& params_) {
   fmt::print("viewing {}\n", params_.scene);
+  auto start_time = clock_::now();
 
   // copy params
   auto params = params_;
 
   // load scene
   auto error = string{};
-  print_progress_begin("load scene");
+  start_time = clock_::now();
   auto scene = scene_data{};
   if (!load_scene(params.scene, scene, error)) {
     fmt::print("error: cannot load {}\n", params.scene);
     return 1;
   }
-  print_progress_end();
+  fmt::print("load scene: {}\n", clock_::now() - start_time);
 
   // add sky
   if (params.addsky) add_sky(scene);
 
   // add environment
   if (!params.envname.empty()) {
-    print_progress_begin("add environment");
     add_environment(scene, params.envname);
-    print_progress_end();
   }
 
   // tesselation
   if (!scene.subdivs.empty()) {
-    print_progress_begin("tesselate subdivs");
     tesselate_subdivs(scene);
-    print_progress_end();
   }
 
   // find camera
@@ -374,7 +369,7 @@ int run_view(const view_params& params_) {
 #endif
 
 struct glview_params {
-  string scene   = "scene.json"s;
+  string scene   = "scene.json";
   string camname = "";
 };
 
@@ -402,19 +397,15 @@ int run_glview(const glview_params& params_) {
 
   // loading scene
   auto error = string{};
-  print_progress_begin("load scene");
   auto scene = scene_data{};
   if (!load_scene(params.scene, scene, error)) {
     fmt::print("error: cannot load {}\n", params.scene);
     return 1;
   }
-  print_progress_end();
 
   // tesselation
   if (!scene.subdivs.empty()) {
-    print_progress_begin("tesselate subdivs");
     tesselate_subdivs(scene);
-    print_progress_end();
   }
 
   // camera

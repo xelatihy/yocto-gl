@@ -26,7 +26,6 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include <yocto/yocto_cli.h>
 #include <yocto/yocto_geometry.h>
 #include <yocto/yocto_image.h>
 #include <yocto/yocto_math.h>
@@ -345,8 +344,8 @@ int run_view(const view_params& params) {
 #endif
 
 struct heightfield_params {
-  string image     = "heightfield.png"s;
-  string output    = "out.ply"s;
+  string image     = "heightfield.png";
+  string output    = "out.ply";
   bool   smooth    = false;
   float  height    = 1.0f;
   bool   info      = false;
@@ -418,8 +417,8 @@ int run_heightfield(const heightfield_params& params) {
 }
 
 struct hair_params {
-  string shape   = "shape.ply"s;
-  string output  = "out.ply"s;
+  string shape   = "shape.ply";
+  string output  = "out.ply";
   int    hairs   = 65536;
   int    steps   = 8;
   float  length  = 0.02f;
@@ -464,8 +463,8 @@ int run_hair(const hair_params& params) {
 }
 
 struct sample_params {
-  string shape   = "shape.ply"s;
-  string output  = "out.ply"s;
+  string shape   = "shape.ply";
+  string output  = "out.ply";
   int    samples = 4096;
 };
 
