@@ -219,14 +219,14 @@ vector<mesh_point> compute_bezier_path(const dual_geodesic_solver& solver,
 mesh_point eval_bezier_point(const dual_geodesic_solver& solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>& adjacencies, const array<mesh_point, 4>& segment,
-    float t, bool lane_riesenfeld, float precision = 0.1);
+    float t, bool lane_riesenfeld, float precision = 0.1f);
 
 // evaluates a point a bezier by subdivision
 array<array<mesh_point, 4>, 2> insert_bezier_point(
     const dual_geodesic_solver& solver, const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
     const array<mesh_point, 4>& segment, float t, bool lane_riesenfeld,
-    float precision = 0.1);
+    float precision = 0.1f);
 
 enum struct spline_algorithm {
   de_casteljau_uniform = 0,
