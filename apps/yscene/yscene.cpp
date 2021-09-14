@@ -74,7 +74,7 @@ int run_convert(const convert_params& params) {
     fmt::print("error: cannot load {}\n", params.scene);
     return 1;
   }
-  fmt::print("load scene: {}\n", clock_::now() - start_time);
+  fmt::print("load scene: {:%H:%M:%S}\n", clock_::now() - start_time);
 
   // copyright
   if (params.copyright != "") {
@@ -107,7 +107,7 @@ int run_convert(const convert_params& params) {
     fmt::print("error: cannot save {}\n", params.output);
     return 1;
   }
-  fmt::print("save scene: {}\n", clock_::now() - start_time);
+  fmt::print("save scene: {:%H:%M:%S}\n", clock_::now() - start_time);
 
   // done
   return 0;
@@ -138,7 +138,7 @@ int run_info(const info_params& params) {
     fmt::print("error: cannot load {}\n", params.scene);
     return 1;
   }
-  fmt::print("load scene: {}\n", clock_::now() - start_time);
+  fmt::print("load scene: {:%H:%M:%S}\n", clock_::now() - start_time);
 
   // validate scene
   if (params.validate) {
@@ -209,7 +209,7 @@ int run_render(const render_params& params_) {
     fmt::print("error: cannot load {}\n", params.scene);
     return 1;
   }
-  fmt::print("load scene: {}\n", clock_::now() - start_time);
+  fmt::print("load scene: {:%H:%M:%S}\n", clock_::now() - start_time);
 
   // add sky
   if (params.addsky) add_sky(scene);
@@ -258,10 +258,10 @@ int run_render(const render_params& params_) {
         return 1;
       }
     }
-    fmt::print("render sample {}/{}: {}\n", sample, params.samples,
+    fmt::print("render sample {}/{}: {:%H:%M:%S}\n", sample, params.samples,
         clock_::now() - start_sample);
   }
-  fmt::print("render image: {}\n", clock_::now() - start_time);
+  fmt::print("render image: {:%H:%M:%S}\n", clock_::now() - start_time);
 
   // save image
   start_time = clock_::now();
@@ -272,7 +272,7 @@ int run_render(const render_params& params_) {
     fmt::print("error: cannot save {}\n", params.output);
     return 1;
   }
-  fmt::print("save image: {}\n", clock_::now() - start_time);
+  fmt::print("save image: {:%H:%M:%S}\n", clock_::now() - start_time);
 
   // done
   return 0;
@@ -341,7 +341,7 @@ int run_view(const view_params& params_) {
     fmt::print("error: cannot load {}\n", params.scene);
     return 1;
   }
-  fmt::print("load scene: {}\n", clock_::now() - start_time);
+  fmt::print("load scene: {:%H:%M:%S}\n", clock_::now() - start_time);
 
   // add sky
   if (params.addsky) add_sky(scene);
