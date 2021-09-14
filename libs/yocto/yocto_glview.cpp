@@ -73,13 +73,13 @@ struct glimage_state {
 };
 
 // create image drawing program
-bool init_image(glimage_state& glimage);
+static bool init_image(glimage_state& glimage);
 
 // clear image
-void clear_image(glimage_state& glimage);
+static void clear_image(glimage_state& glimage);
 
 // update image data
-void set_image(glimage_state& glimage, const image_data& image);
+static void set_image(glimage_state& glimage, const image_data& image);
 
 // OpenGL image drawing params
 struct glimage_params {
@@ -94,7 +94,7 @@ struct glimage_params {
 };
 
 // draw image
-void draw_image(glimage_state& image, const glimage_params& params);
+static void draw_image(glimage_state& image, const glimage_params& params);
 
 }  // namespace yocto
 
@@ -114,10 +114,11 @@ struct glscene_texture {
 };
 
 // Create texture
-void set_texture(glscene_texture& gltexture, const texture_data& texture);
+static void set_texture(
+    glscene_texture& gltexture, const texture_data& texture);
 
 // Clean texture
-void clear_texture(glscene_texture& gltexture);
+static void clear_texture(glscene_texture& gltexture);
 
 // Opengl shape
 struct glscene_shape {
@@ -147,10 +148,10 @@ struct glscene_shape {
 };
 
 // Create shape
-void set_shape(glscene_shape& glshape, const shape_data& shape);
+static void set_shape(glscene_shape& glshape, const shape_data& shape);
 
 // Clean shape
-void clear_shape(glscene_shape& glshape);
+static void clear_shape(glscene_shape& glshape);
 
 // Opengl scene
 struct glscene_state {
@@ -165,17 +166,17 @@ struct glscene_state {
 };
 
 // init scene
-void init_glscene(glscene_state& glscene, const scene_data& scene);
+static void init_glscene(glscene_state& glscene, const scene_data& scene);
 
 // update scene
-void update_glscene(glscene_state& glscene, const scene_data& scene,
+static void update_glscene(glscene_state& glscene, const scene_data& scene,
     const vector<int>& updated_shapes, const vector<int>& updated_textures);
 
 // Clear an OpenGL scene
-void clear_scene(glscene_state& scene);
+static void clear_scene(glscene_state& scene);
 
 // draw scene
-void draw_scene(glscene_state& glscene, const scene_data& scene,
+static void draw_scene(glscene_state& glscene, const scene_data& scene,
     const vec4i& viewport, const glscene_params& params);
 
 }  // namespace yocto
@@ -886,7 +887,7 @@ namespace yocto {
 static void assert_glerror() { assert(_assert_ogl_error() == GL_NO_ERROR); }
 
 // initialize program
-void set_program(uint& program_id, uint& vertex_id, uint& fragment_id,
+static void set_program(uint& program_id, uint& vertex_id, uint& fragment_id,
     const string& vertex, const string& fragment) {
   // error
   auto program_error = [&](const char* message, const char* log) {
@@ -1022,7 +1023,7 @@ void main() {
 #endif
 
 // init image program
-bool init_image(glimage_state& glimage) {
+static bool init_image(glimage_state& glimage) {
   // program
   set_program(glimage.program, glimage.vertex, glimage.fragment, glimage_vertex,
       glimage_fragment);
@@ -1054,7 +1055,7 @@ bool init_image(glimage_state& glimage) {
 }
 
 // clear an opengl image
-void clear_image(glimage_state& glimage) {
+static void clear_image(glimage_state& glimage) {
   if (glimage.texture) glDeleteTextures(1, &glimage.texture);
   if (glimage.program) glDeleteProgram(glimage.program);
   if (glimage.vertex) glDeleteProgram(glimage.vertex);
@@ -1065,7 +1066,7 @@ void clear_image(glimage_state& glimage) {
   glimage = {};
 }
 
-void set_image(glimage_state& glimage, const image_data& image) {
+static void set_image(glimage_state& glimage, const image_data& image) {
   if (!glimage.texture || glimage.width != image.width ||
       glimage.height != image.height) {
     if (!glimage.texture) glGenTextures(1, &glimage.texture);
@@ -1084,7 +1085,7 @@ void set_image(glimage_state& glimage, const image_data& image) {
 }
 
 // draw image
-void draw_image(glimage_state& glimage, const glimage_params& params) {
+static void draw_image(glimage_state& glimage, const glimage_params& params) {
   // check errors
   assert_glerror();
 
@@ -1395,7 +1396,8 @@ void main() {
 #endif
 
 // Create texture
-void set_texture(glscene_texture& gltexture, const texture_data& texture) {
+static void set_texture(
+    glscene_texture& gltexture, const texture_data& texture) {
   if (!gltexture.texture || gltexture.width != texture.width ||
       gltexture.height != texture.height) {
     if (!gltexture.texture) glGenTextures(1, &gltexture.texture);
@@ -1425,7 +1427,7 @@ void set_texture(glscene_texture& gltexture, const texture_data& texture) {
 }
 
 // Clean texture
-void clear_texture(glscene_texture& gltexture) {
+static void clear_texture(glscene_texture& gltexture) {
   if (gltexture.texture) {
     glDeleteTextures(1, &gltexture.texture);
     gltexture.texture = 0;
@@ -1433,7 +1435,7 @@ void clear_texture(glscene_texture& gltexture) {
 }
 
 // Create shape
-void set_shape(glscene_shape& glshape, const shape_data& shape) {
+static void set_shape(glscene_shape& glshape, const shape_data& shape) {
   auto set_vertex = [](uint& buffer, int& num, const auto& data,
                         const auto& def, int location) {
     if (data.empty()) {
@@ -1513,7 +1515,7 @@ void set_shape(glscene_shape& glshape, const shape_data& shape) {
 }
 
 // Clean shape
-void clear_shape(glscene_shape& glshape) {
+static void clear_shape(glscene_shape& glshape) {
   if (glshape.vertexarray) glDeleteVertexArrays(1, &glshape.vertexarray);
   if (glshape.positions) glDeleteBuffers(1, &glshape.positions);
   if (glshape.normals) glDeleteBuffers(1, &glshape.normals);
@@ -1529,7 +1531,7 @@ void clear_shape(glscene_shape& glshape) {
 }
 
 // init scene
-void init_glscene(glscene_state& glscene, const scene_data& ioscene) {
+static void init_glscene(glscene_state& glscene, const scene_data& ioscene) {
   // program
   set_program(glscene.program, glscene.vertex, glscene.fragment, glscene_vertex,
       glscene_fragment);
@@ -1548,7 +1550,7 @@ void init_glscene(glscene_state& glscene, const scene_data& ioscene) {
 }
 
 // update scene
-void update_glscene(glscene_state& glscene, const scene_data& scene,
+static void update_glscene(glscene_state& glscene, const scene_data& scene,
     const vector<int>& updated_shapes, const vector<int>& updated_textures) {
   for (auto shape_id : updated_shapes) {
     set_shape(glscene.shapes[shape_id], scene.shapes[shape_id]);
@@ -1559,7 +1561,7 @@ void update_glscene(glscene_state& glscene, const scene_data& scene,
 }
 
 // Clear an OpenGL scene
-void clear_scene(glscene_state& glscene) {
+static void clear_scene(glscene_state& glscene) {
   for (auto& texture : glscene.textures) clear_texture(texture);
   for (auto& shape : glscene.shapes) clear_shape(shape);
   if (glscene.program) glDeleteProgram(glscene.program);
@@ -1598,7 +1600,7 @@ void clear_scene(glscene_state& glscene) {
   assert_glerror();
 }
 
-void draw_scene(glscene_state& glscene, const scene_data& scene,
+static void draw_scene(glscene_state& glscene, const scene_data& scene,
     const vec4i& viewport, const glscene_params& params) {
   // check errors
   assert_glerror();
@@ -1925,12 +1927,18 @@ void run_ui(const vec2i& size, const string& title,
                                                                            : 0,
     };
     state.input.modifiers = {
-         (glfwGetKey(window, GLFW_KEY_LEFT_ALT) == GLFW_PRESS ||
-        glfwGetKey(window, GLFW_KEY_RIGHT_ALT) == GLFW_PRESS) ? 1 : 0,
+        (glfwGetKey(window, GLFW_KEY_LEFT_ALT) == GLFW_PRESS ||
+            glfwGetKey(window, GLFW_KEY_RIGHT_ALT) == GLFW_PRESS)
+            ? 1
+            : 0,
         (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ||
-        glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS) ? 1 : 0,
+            glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS)
+            ? 1
+            : 0,
         (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS ||
-        glfwGetKey(window, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS) ? 1: 0};
+            glfwGetKey(window, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS)
+            ? 1
+            : 0};
     glfwGetWindowSize(window, &state.input.window.x, &state.input.window.y);
     if (state.widgets_width) state.input.window.x -= state.widgets_width;
     glfwGetFramebufferSize(
