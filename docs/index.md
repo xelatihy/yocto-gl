@@ -37,12 +37,12 @@ Here is a list of the main libraries.
 - [Yocto/Trace](yocto/yocto_trace.md): path tracing of surfaces and hairs
   supporting area and environment illumination, microfacet GGX and subsurface
   scattering, multiple importance sampling
-- [Yocto/Cli](yocto/yocto_cli.md): printing utilities and command line parsing
 - [Yocto/SceneIO](yocto/yocto_sceneio.md): image, shape and scene serialization
 - [Yocto/ModelIO](yocto/yocto_modelio.md): low-level parsing and writing for 
   Ply, Obj, Stl, Pbrt formats
 - [Yocto/Parallel](yocto/yocto_parallel.md): concurrency utilities
 - [Yocto/Json](yocto/yocto_json.md): Json data model and serialization (deprecated)
+- [Yocto/Cli](yocto/yocto_cli.md): printing utilities and command line parsing (deprecated)
 
 ## Example Applications
 
