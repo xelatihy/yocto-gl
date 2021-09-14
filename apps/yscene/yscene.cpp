@@ -56,8 +56,8 @@ struct convert_params {
 void add_options(CLI::App& cli, convert_params& params) {
   cli.add_option("scene", params.scene, "Input scene.");
   cli.add_option("--output", params.output, "Output scene.");
-  cli.add_option("--info", params.info, "Print info.");
-  cli.add_option("--validate", params.validate, "Validate scene.");
+  cli.add_flag("--info", params.info, "Print info.");
+  cli.add_flag("--validate", params.validate, "Validate scene.");
   cli.add_option("--copyright", params.copyright, "Set scene copyright.");
 }
 
@@ -122,7 +122,7 @@ struct info_params {
 // Cli
 void add_options(CLI::App& cli, info_params& params) {
   cli.add_option("scene", params.scene, "Input scene.");
-  cli.add_option("--validate", params.validate, "Validate scene.");
+  cli.add_flag("--validate", params.validate, "Validate scene.");
 }
 
 // print info for scenes
@@ -169,9 +169,9 @@ void add_options(CLI::App& cli, render_params& params) {
   cli.add_option("scene", params.scene, "Scene filename.");
   cli.add_option("--output", params.output, "Output filename.");
   cli.add_option("--camera", params.camname, "Camera name.");
-  cli.add_option("--addsky", params.addsky, "Add sky.");
+  cli.add_flag("--addsky", params.addsky, "Add sky.");
   cli.add_option("--envname", params.envname, "Add environment map.");
-  cli.add_option("--savebatch", params.savebatch, "Save batch.");
+  cli.add_flag("--savebatch", params.savebatch, "Save batch.");
   cli.add_option("--resolution", params.resolution, "Image resolution.");
   cli.add_option("--sampler", params.sampler, "Sampler type.")
       ->transform(CLI::CheckedTransformer(trace_sampler_labels));
@@ -179,18 +179,18 @@ void add_options(CLI::App& cli, render_params& params) {
       ->transform(CLI::CheckedTransformer(trace_sampler_labels));
   cli.add_option("--samples", params.samples, "Number of samples.");
   cli.add_option("--bounces", params.bounces, "Number of bounces.");
-  cli.add_option("--denoise", params.denoise, "Enable denoiser.");
+  cli.add_flag("--denoise", params.denoise, "Enable denoiser.");
   cli.add_option("--batch", params.batch, "Sample batch.");
   cli.add_option("--clamp", params.clamp, "Clamp params.");
-  cli.add_option("--nocaustics", params.nocaustics, "Disable caustics.");
-  cli.add_option("--envhidden", params.envhidden, "Hide environment.");
-  cli.add_option("--tentfilter", params.tentfilter, "Filter image.");
-  cli.add_option("--embreebvh", params.embreebvh, "Use Embree as BVH.");
-  cli.add_option(
+  cli.add_flag("--nocaustics", params.nocaustics, "Disable caustics.");
+  cli.add_flag("--envhidden", params.envhidden, "Hide environment.");
+  cli.add_flag("--tentfilter", params.tentfilter, "Filter image.");
+  cli.add_flag("--embreebvh", params.embreebvh, "Use Embree as BVH.");
+  cli.add_flag(
       "--highqualitybvh", params.highqualitybvh, "Use high quality BVH.");
   cli.add_option("--exposure", params.exposure, "Exposure value.");
-  cli.add_option("--filmic", params.filmic, "Filmic tone mapping.");
-  cli.add_option("--noparallel", params.noparallel, "Disable threading.");
+  cli.add_flag("--filmic", params.filmic, "Filmic tone mapping.");
+  cli.add_flag("--noparallel", params.noparallel, "Disable threading.");
 }
 
 // convert images
@@ -292,7 +292,7 @@ void add_options(CLI::App& cli, view_params& params) {
   cli.add_option("scene", params.scene, "Scene filename.");
   cli.add_option("--output", params.output, "Output filename.");
   cli.add_option("--camera", params.camname, "Camera name.");
-  cli.add_option("--addsky", params.addsky, "Add sky.");
+  cli.add_flag("--addsky", params.addsky, "Add sky.");
   cli.add_option("--envname", params.envname, "Add environment map.");
   cli.add_option("--resolution", params.resolution, "Image resolution.");
   cli.add_option("--sampler", params.sampler, "Sampler type.")
@@ -301,18 +301,18 @@ void add_options(CLI::App& cli, view_params& params) {
       ->transform(CLI::CheckedTransformer(trace_falsecolor_labels));
   cli.add_option("--samples", params.samples, "Number of samples.");
   cli.add_option("--bounces", params.bounces, "Number of bounces.");
-  cli.add_option("--denoise", params.denoise, "Enable denoiser.");
+  cli.add_flag("--denoise", params.denoise, "Enable denoiser.");
   cli.add_option("--batch", params.batch, "Sample batch.");
   cli.add_option("--clamp", params.clamp, "Clamp params.");
-  cli.add_option("--nocaustics", params.nocaustics, "Disable caustics.");
-  cli.add_option("--envhidden", params.envhidden, "Hide environment.");
-  cli.add_option("--tentfilter", params.tentfilter, "Filter image.");
-  cli.add_option("--embreebvh", params.embreebvh, "Use Embree as BVH.");
-  cli.add_option(
+  cli.add_flag("--nocaustics", params.nocaustics, "Disable caustics.");
+  cli.add_flag("--envhidden", params.envhidden, "Hide environment.");
+  cli.add_flag("--tentfilter", params.tentfilter, "Filter image.");
+  cli.add_flag("--embreebvh", params.embreebvh, "Use Embree as BVH.");
+  cli.add_flag(
       "--highqualitybvh", params.highqualitybvh, "Use high quality BVH.");
   cli.add_option("--exposure", params.exposure, "Exposure value.");
-  cli.add_option("--filmic", params.filmic, "Filmic tone mapping.");
-  cli.add_option("--noparallel", params.noparallel, "Disable threading.");
+  cli.add_flag("--filmic", params.filmic, "Filmic tone mapping.");
+  cli.add_flag("--noparallel", params.noparallel, "Disable threading.");
 }
 
 #ifndef YOCTO_OPENGL

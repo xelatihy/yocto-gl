@@ -57,7 +57,7 @@ void add_options(CLI::App& cli, convert_params& params) {
   cli.add_option("--output", params.output, "Output image.");
   cli.add_option("--exposure", params.exposure, "Tonemap exposure.")
       ->check(CLI::Range(-100, +100));
-  cli.add_option("--filmic", params.filmic, "Tonemap filmic.");
+  cli.add_flag("--filmic", params.filmic, "Tonemap filmic.");
   cli.add_option("--width", params.width, "Resize width.")
       ->check(CLI::Range(1, int_max));
   cli.add_option("--height", params.height, "Resize height.")
@@ -194,7 +194,7 @@ void add_options(CLI::App& cli, diff_params& params) {
   cli.add_option("image1", params.image1, "Input image 1.");
   cli.add_option("image2", params.image2, "Input image 2.");
   cli.add_option("--output", params.output, "Output image.");
-  cli.add_option("--signal", params.signal, "Error on diff.");
+  cli.add_flag("--signal", params.signal, "Error on diff.");
   cli.add_option("--threshold", params.threshold, "Diff threshold.");
 }
 
@@ -264,9 +264,9 @@ void add_options(CLI::App& cli, setalpha_params& params) {
   cli.add_option("image", params.image, "Input image.");
   cli.add_option("alpha", params.alpha, "Alpha image.");
   cli.add_option("--output", params.output, "Output image.");
-  cli.add_option("--from-color", params.from_color, "Alpha from color.");
-  cli.add_option("--from-black", params.from_black, "Alpha from black.");
-  cli.add_option("--to-color", params.to_color, "Color from alpha.");
+  cli.add_flag("--from-color", params.from_color, "Alpha from color.");
+  cli.add_flag("--from-black", params.from_black, "Alpha from black.");
+  cli.add_flag("--to-color", params.to_color, "Color from alpha.");
 }
 
 // setalpha images

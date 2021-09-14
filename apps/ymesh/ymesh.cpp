@@ -55,7 +55,7 @@ struct view_params {
 void add_options(CLI::App& cli, view_params& params) {
   cli.add_option("shape", params.shape, "Input shape.");
   cli.add_option("--output", params.output, "Output shape.");
-  cli.add_option("--addsky", params.addsky, "Add sky.");
+  cli.add_flag("--addsky", params.addsky, "Add sky.");
 }
 
 #ifndef YOCTO_OPENGL

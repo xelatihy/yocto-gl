@@ -62,21 +62,20 @@ struct convert_params {
 void add_options(CLI::App& cli, convert_params& params) {
   cli.add_option("shape", params.shape, "Input shape.");
   cli.add_option("--output", params.output, "Output shape.");
-  cli.add_option("--smooth", params.smooth, "Smooth normals.");
-  cli.add_option("--facet", params.facet, "Facet normals.");
-  cli.add_option(
+  cli.add_flag("--smooth", params.smooth, "Smooth normals.");
+  cli.add_flag("--facet", params.facet, "Facet normals.");
+  cli.add_flag(
       "--aspositions", params.aspositions, "Remove all but positions.");
-  cli.add_option("--astriangles", params.astriangles, "Convert to triangles.");
+  cli.add_flag("--astriangles", params.astriangles, "Convert to triangles.");
   cli.add_option(
       "--translate", (array<float, 3>&)params.translate, "Translate shape.");
   cli.add_option("--scale", (array<float, 3>&)params.scale, "Scale shape.");
   cli.add_option("--rotate", (array<float, 3>&)params.rotate, "Rotate shape.");
   cli.add_option("--subdivisions", params.subdivisions, "Apply subdivision.");
-  cli.add_option(
+  cli.add_flag(
       "--catmullclark", params.catmullclark, "Catmull-Clark subdivision.");
-  cli.add_option("--toedges", params.toedges, "Convert shape to edges.");
-  cli.add_option(
-      "--tovertices", params.tovertices, "Convert shape to vertices.");
+  cli.add_flag("--toedges", params.toedges, "Convert shape to edges.");
+  cli.add_flag("--tovertices", params.tovertices, "Convert shape to vertices.");
 }
 
 // convert images
@@ -206,16 +205,16 @@ struct fvconvert_params {
 void add_options(CLI::App& cli, fvconvert_params& params) {
   cli.add_option("shape", params.shape, "Input shape.");
   cli.add_option("--output", params.output, "Output shape.");
-  cli.add_option("--smooth", params.smooth, "Smooth normals.");
-  cli.add_option("--facet", params.facet, "Facet normals.");
-  cli.add_option(
+  cli.add_flag("--smooth", params.smooth, "Smooth normals.");
+  cli.add_flag("--facet", params.facet, "Facet normals.");
+  cli.add_flag(
       "--aspositions", params.aspositions, "Remove all but positions.");
   cli.add_option(
       "--translate", (array<float, 3>&)params.translate, "Translate shape.");
   cli.add_option("--scale", (array<float, 3>&)params.scale, "Scale shape.");
   cli.add_option("--rotate", (array<float, 3>&)params.rotate, "Rotate shape.");
   cli.add_option("--subdivisions", params.subdivisions, "Apply subdivision.");
-  cli.add_option(
+  cli.add_flag(
       "--catmullclark", params.catmullclark, "Catmull-Clark subdivision.");
 }
 
@@ -306,7 +305,7 @@ struct view_params {
 void add_options(CLI::App& cli, view_params& params) {
   cli.add_option("shape", params.shape, "Input shape.");
   cli.add_option("--output", params.output, "Output shape.");
-  cli.add_option("--addsky", params.addsky, "Add sky.");
+  cli.add_flag("--addsky", params.addsky, "Add sky.");
 }
 
 #ifndef YOCTO_OPENGL
@@ -357,9 +356,9 @@ struct heightfield_params {
 void add_options(CLI::App& cli, heightfield_params& params) {
   cli.add_option("image", params.image, "Input image.");
   cli.add_option("--output", params.output, "Output shape.");
-  cli.add_option("--smooth", params.smooth, "Smoooth normals.");
+  cli.add_flag("--smooth", params.smooth, "Smoooth normals.");
   cli.add_option("--height", params.height, "Shape height.");
-  cli.add_option("--info", params.info, "Print info.");
+  cli.add_flag("--info", params.info, "Print info.");
   cli.add_option(
       "--translate", (array<float, 3>&)params.translate, "Translate shape.");
   cli.add_option("--scale", (array<float, 3>&)params.scale, "Scale shape.");
@@ -512,7 +511,7 @@ struct glview_params {
 // Cli
 void add_options(CLI::App& cli, glview_params& params) {
   cli.add_option("shape", params.shape, "Input shape.");
-  cli.add_option("--addsky", params.addsky, "Add sky.");
+  cli.add_flag("--addsky", params.addsky, "Add sky.");
 }
 
 #ifndef YOCTO_OPENGL
