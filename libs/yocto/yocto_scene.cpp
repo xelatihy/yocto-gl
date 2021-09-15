@@ -488,14 +488,7 @@ vec3f eval_shading_normal(const scene_data& scene,
     auto normal = eval_normal(scene, instance, element, uv);
     return orthonormalize(outgoing, normal);
   } else if (!shape.points.empty()) {
-    // HACK: sphere
-    if (true) {
-      return transform_direction(instance.frame,
-          vec3f{cos(2 * pif * uv.x) * sin(pif * uv.y),
-              sin(2 * pif * uv.x) * sin(pif * uv.y), cos(pif * uv.y)});
-    } else {
-      return outgoing;
-    }
+    return outgoing;
   } else {
     return {0, 0, 0};
   }

@@ -990,7 +990,6 @@ inline float sample_refractive_pdf(const vec3f& color, float ior,
 // Evaluate a translucent BRDF lobe.
 inline vec3f eval_translucent(const vec3f& color, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
-  // TODO (fabio): fix me
   if (dot(normal, incoming) * dot(normal, outgoing) >= 0) return {0, 0, 0};
   return color / pif * abs(dot(normal, incoming));
 }
@@ -998,7 +997,6 @@ inline vec3f eval_translucent(const vec3f& color, const vec3f& normal,
 // Sample a translucency BRDF lobe.
 inline vec3f sample_translucent(const vec3f& color, const vec3f& normal,
     const vec3f& outgoing, const vec2f& rn) {
-  // TODO (fabio): fix me
   auto up_normal = dot(normal, outgoing) <= 0 ? -normal : normal;
   return sample_hemisphere_cos(-up_normal, rn);
 }
@@ -1006,7 +1004,6 @@ inline vec3f sample_translucent(const vec3f& color, const vec3f& normal,
 // Pdf for translucency BRDF lobe sampling.
 inline float sample_translucent_pdf(const vec3f& color, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
-  // TODO (fabio): fix me
   if (dot(normal, incoming) * dot(normal, outgoing) >= 0) return 0;
   auto up_normal = dot(normal, outgoing) <= 0 ? -normal : normal;
   return sample_hemisphere_cos_pdf(-up_normal, incoming);
