@@ -129,11 +129,6 @@ static std::filesystem::path make_path(const string& filename) {
   return std::filesystem::u8path(filename);
 }
 
-// Normalize path
-static string normalize_path(const string& filename) {
-  return make_path(filename).generic_u8string();
-}
-
 // Get directory name (not including /)
 static string path_dirname(const string& filename) {
   return make_path(filename).parent_path().generic_u8string();
@@ -142,11 +137,6 @@ static string path_dirname(const string& filename) {
 // Get extension (including .)
 static string path_extension(const string& filename) {
   return make_path(filename).extension().u8string();
-}
-
-// Get filename without directory.
-static string path_filename(const string& filename) {
-  return make_path(filename).filename().u8string();
 }
 
 // Get filename without directory and extension.
@@ -164,29 +154,9 @@ static string path_join(
       .generic_u8string();
 }
 
-// Replaces extensions
-static string replace_extension(const string& filename, const string& ext) {
-  return make_path(filename).replace_extension(ext).u8string();
-}
-
 // Check if a file can be opened for reading.
 static bool path_exists(const string& filename) {
   return exists(make_path(filename));
-}
-
-// Check if a file is a directory
-static bool path_isdir(const string& filename) {
-  return is_directory(make_path(filename));
-}
-
-// Check if a file is a file
-static bool path_isfile(const string& filename) {
-  return is_regular_file(make_path(filename));
-}
-
-// Get the current directory
-static string path_current() {
-  return std::filesystem::current_path().u8string();
 }
 
 // Create a directory and all missing parent directories if needed
@@ -199,35 +169,6 @@ static bool make_directory(const string& dirname, string& error) {
     error = dirname + ": cannot create directory";
     return false;
   }
-}
-
-// List the contents of a directory
-static bool list_directory(
-    const string& dirname, vector<string>& entries, string& error) {
-  entries.clear();
-  try {
-    for (auto entry : std::filesystem::directory_iterator(make_path(dirname))) {
-      entries.push_back(entry.path().generic_u8string());
-    }
-    return true;
-  } catch (...) {
-    error = dirname + ": cannot list directory";
-    return false;
-  }
-}
-
-// Create a directory and all missing parent directories if needed
-static void make_directory(const string& dirname) {
-  auto error = string{};
-  if (!make_directory(dirname, error)) throw io_error{error};
-}
-
-// List the contents of a directory
-static vector<string> list_directory(const string& dirname) {
-  auto error   = string{};
-  auto entries = vector<string>{};
-  if (!list_directory(dirname, entries, error)) throw io_error{error};
-  return entries;
 }
 
 }  // namespace yocto
