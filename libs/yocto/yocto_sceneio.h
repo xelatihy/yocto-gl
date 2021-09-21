@@ -241,63 +241,6 @@ vector<byte> load_binary(const string& filename);
 void         load_binary(const string& filename, vector<byte>& data);
 void         save_binary(const string& filename, const vector<byte>& data);
 
-// Opens a file with utf8 filename
-FILE* fopen_utf8(const string& filename, const string& mode);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// PATH UTILITIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Utility to normalize a path
-string normalize_path(const string& filename);
-
-// Get directory name (not including '/').
-string path_dirname(const string& filename);
-
-// Get extension (including '.').
-string path_extension(const string& filename);
-
-// Get filename without directory.
-string path_filename(const string& filename);
-
-// Get filename without directory and extension.
-string path_basename(const string& filename);
-
-// Joins paths
-string path_join(const string& patha, const string& pathb);
-string path_join(const string& patha, const string& pathb, const string& pathc);
-
-// Replaces extensions
-string replace_extension(const string& filename, const string& ext);
-
-// Check if a file can be opened for reading.
-bool path_exists(const string& filename);
-
-// Check if a file is a directory
-bool path_isdir(const string& filename);
-
-// Check if a file is a file
-bool path_isfile(const string& filename);
-
-// Get the current directory
-string path_current();
-
-// Create a directory and all missing parent directories if needed
-bool make_directory(const string& dirname, string& error);
-
-// List the contents of a directory
-bool list_directory(
-    const string& dirname, vector<string>& entries, string& error);
-
-// Create a directory and all missing parent directories if needed
-void make_directory(const string& dirname);
-
-// List the contents of a directory
-vector<string> list_directory(const string& dirname);
-
 }  // namespace yocto
 
 #endif

@@ -33,9 +33,11 @@
 #include <yocto/yocto_shape.h>
 #include <yocto/yocto_trace.h>
 
-#include <chrono>
-
 using namespace yocto;
+
+#include <chrono>
+#include <filesystem>
+namespace fs = std::filesystem;
 
 #include "ext/CLI11.hpp"
 
@@ -266,8 +268,11 @@ int run_render(const render_params& params_) {
                   format_duration(now() - sample_start) + "\n");
     if (params.savebatch && state.samples % params.batch == 0) {
       auto image = params.denoise ? get_denoised(state) : get_render(state);
-      auto ext = "-s" + std::to_string(sample) + path_extension(params.output);
-      auto outfilename = replace_extension(params.output, ext);
+      auto outfilename = fs::path(params.output)
+                             .replace_extension(
+                                 "-s" + std::to_string(sample) +
+                                 fs::path(params.output).extension().string())
+                             .string();
       if (!is_hdr_filename(params.output))
         image = tonemap_image(image, params.exposure, params.filmic);
       if (!save_image(outfilename, image, error)) {
