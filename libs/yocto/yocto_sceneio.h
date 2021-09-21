@@ -53,14 +53,13 @@ using std::string;
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// IO RESULT
+// IO ERROR
 // -----------------------------------------------------------------------------
 namespace yocto {
 
 // Result object modeled on std::expected
-struct io_status {
-  string   error = "";
-  explicit operator bool() const { return error.empty(); }
+struct io_error : std::runtime_error {
+  using std::runtime_error::runtime_error;
 };
 
 }  // namespace yocto
@@ -75,16 +74,16 @@ bool is_hdr_filename(const string& filename);
 bool is_ldr_filename(const string& filename);
 
 // Loads/saves a 4 channels float/byte image in linear/srgb color space.
-pair<io_status, image_data> load_image(const string& filename);
-io_status load_image(const string& filename, image_data& image);
-io_status save_image(const string& filename, const image_data& image);
+bool load_image(const string& filename, image_data& img, string& error);
+bool save_image(const string& filename, const image_data& img, string& error);
+
+// Loads/saves a 4 channels float/byte image in linear/srgb color space.
+image_data load_image(const string& filename);
+void       load_image(const string& filename, image_data& image);
+void       save_image(const string& filename, const image_data& image);
 
 // Make presets. Supported mostly in IO.
 image_data make_image_preset(const string& type);
-
-// Loads/saves a 4 channels float/byte image in linear/srgb color space.
-bool load_image(const string& filename, image_data& img, string& error);
-bool save_image(const string& filename, const image_data& img, string& error);
 
 // Make presets. Supported mostly in IO.
 bool make_image_preset(
@@ -98,17 +97,17 @@ bool make_image_preset(
 namespace yocto {
 
 // Load/save a texture in the supported formats.
-pair<io_status, texture_data> load_texture(const string& filename);
-io_status load_texture(const string& filename, texture_data& texture);
-io_status save_texture(const string& filename, const texture_data& texture);
-
-// Make presets. Supported mostly in IO.
-texture_data make_texture_preset(const string& type);
-
-// Load/save a texture in the supported formats.
 bool load_texture(const string& filename, texture_data& texture, string& error);
 bool save_texture(
     const string& filename, const texture_data& texture, string& error);
+
+// Load/save a texture in the supported formats.
+texture_data load_texture(const string& filename);
+void         load_texture(const string& filename, texture_data& texture);
+void         save_texture(const string& filename, const texture_data& texture);
+
+// Make presets. Supported mostly in IO.
+texture_data make_texture_preset(const string& type);
 
 // Make presets. Supported mostly in IO.
 bool make_texture_preset(
@@ -122,29 +121,16 @@ bool make_texture_preset(
 namespace yocto {
 
 // Load/save a shape
-pair<io_status, shape_data> load_shape(
-    const string& filename, bool flip_texcoords = true);
-io_status load_shape(
-    const string& filename, shape_data& shape, bool flip_texcoords = true);
-io_status save_shape(const string& filename, const shape_data& shape,
-    bool flip_texcoords = true, bool ascii = false);
-
-// Load/save a subdiv
-pair<io_status, fvshape_data> load_fvshape(
-    const string& filename, bool flip_texcoords = true);
-io_status load_fvshape(
-    const string& filename, fvshape_data& shape, bool flip_texcoords = true);
-io_status save_fvshape(const string& filename, const fvshape_data& shape,
-    bool flip_texcoords = true, bool ascii = false);
-
-// Make presets. Supported mostly in IO.
-shape_data   make_shape_preset(const string& type);
-fvshape_data make_fvshape_preset(const string& type);
-
-// Load/save a shape
 bool load_shape(const string& filename, shape_data& shape, string& error,
     bool flip_texcoords = true);
 bool save_shape(const string& filename, const shape_data& shape, string& error,
+    bool flip_texcoords = true, bool ascii = false);
+
+// Load/save a shape
+shape_data load_shape(const string& filename, bool flip_texcoords = true);
+void       load_shape(
+          const string& filename, shape_data& shape, bool flip_texcoords = true);
+void save_shape(const string& filename, const shape_data& shape,
     bool flip_texcoords = true, bool ascii = false);
 
 // Load/save a subdiv
@@ -152,6 +138,17 @@ bool load_fvshape(const string& filename, fvshape_data& shape, string& error,
     bool flip_texcoords = true);
 bool save_fvshape(const string& filename, const fvshape_data& shape,
     string& error, bool flip_texcoords = true, bool ascii = false);
+
+// Load/save a subdiv
+fvshape_data load_fvshape(const string& filename, bool flip_texcoords = true);
+void         load_fvshape(
+            const string& filename, fvshape_data& shape, bool flip_texcoords = true);
+void save_fvshape(const string& filename, const fvshape_data& shape,
+    bool flip_texcoords = true, bool ascii = false);
+
+// Make presets. Supported mostly in IO.
+shape_data   make_shape_preset(const string& type);
+fvshape_data make_fvshape_preset(const string& type);
 
 // Make presets. Supported mostly in IO.
 bool make_shape_preset(const string& filname, shape_data& shape, string& error);
@@ -166,14 +163,14 @@ bool make_fvshape_preset(
 namespace yocto {
 
 // Load/save a subdiv in the supported formats.
-pair<io_status, subdiv_data> load_subdiv(const string& filename);
-io_status load_subdiv(const string& filename, subdiv_data& subdiv);
-io_status save_subdiv(const string& filename, const subdiv_data& subdiv);
-
-// Load/save a subdiv in the supported formats.
 bool load_subdiv(const string& filename, subdiv_data& subdiv, string& error);
 bool save_subdiv(
     const string& filename, const subdiv_data& subdiv, string& error);
+
+// Load/save a subdiv in the supported formats.
+subdiv_data load_subdiv(const string& filename);
+void        load_subdiv(const string& filename, subdiv_data& subdiv);
+void        save_subdiv(const string& filename, const subdiv_data& subdiv);
 
 }  // namespace yocto
 
@@ -181,24 +178,6 @@ bool save_subdiv(
 // SCENE IO
 // -----------------------------------------------------------------------------
 namespace yocto {
-
-// Load/save a scene in the supported formats.
-pair<io_status, scene_data> load_scene(
-    const string& filename, bool noparallel = false);
-io_status load_scene(
-    const string& filename, scene_data& scene, bool noparallel = false);
-io_status save_scene(
-    const string& filename, const scene_data& scene, bool noparallel = false);
-
-// Make missing scene directories
-io_status make_scene_directories(
-    const string& filename, const scene_data& scene);
-
-// Scene presets used for testing.
-scene_data make_scene_preset(const string& type);
-
-// Add environment
-io_status add_environment(scene_data& scene, const string& filename);
 
 // Load/save a scene in the supported formats.
 bool load_scene(const string& filename, scene_data& scene, string& error,
@@ -210,12 +189,28 @@ bool save_scene(const string& filename, const scene_data& scene, string& error,
 bool make_scene_directories(
     const string& filename, const scene_data& scene, string& error);
 
+// Add environment
+bool add_environment(scene_data& scene, const string& filename, string& error);
+
+// Load/save a scene in the supported formats.
+scene_data load_scene(const string& filename, bool noparallel = false);
+void       load_scene(
+          const string& filename, scene_data& scene, bool noparallel = false);
+void save_scene(
+    const string& filename, const scene_data& scene, bool noparallel = false);
+
+// Add environment
+void add_environment(scene_data& scene, const string& filename);
+
+// Make missing scene directories
+void make_scene_directories(const string& filename, const scene_data& scene);
+
+// Scene presets used for testing.
+scene_data make_scene_preset(const string& type);
+
 // Scene presets used for testing.
 bool make_scene_preset(
     const string& filename, scene_data& scene, string& error);
-
-// Add environment
-bool add_environment(scene_data& scene, const string& filename, string& error);
 
 }  // namespace yocto
 
@@ -228,16 +223,6 @@ namespace yocto {
 using byte = unsigned char;
 
 // Load/save a text file
-pair<io_status, string> load_text(const string& filename);
-io_status               load_text(const string& filename, string& str);
-io_status               save_text(const string& filename, const string& str);
-
-// Load/save a binary file
-pair<io_status, vector<byte>> load_binary(const string& filename);
-io_status load_binary(const string& filename, vector<byte>& data);
-io_status save_binary(const string& filename, const vector<byte>& data);
-
-// Load/save a text file
 bool load_text(const string& filename, string& str, string& error);
 bool save_text(const string& filename, const string& str, string& error);
 
@@ -245,6 +230,16 @@ bool save_text(const string& filename, const string& str, string& error);
 bool load_binary(const string& filename, vector<byte>& data, string& error);
 bool save_binary(
     const string& filename, const vector<byte>& data, string& error);
+
+// Load/save a text file
+string load_text(const string& filename);
+void   load_text(const string& filename, string& str);
+void   save_text(const string& filename, const string& str);
+
+// Load/save a binary file
+vector<byte> load_binary(const string& filename);
+void         load_binary(const string& filename, vector<byte>& data);
+void         save_binary(const string& filename, const vector<byte>& data);
 
 // Opens a file with utf8 filename
 FILE* fopen_utf8(const string& filename, const string& mode);
@@ -298,10 +293,10 @@ bool list_directory(
     const string& dirname, vector<string>& entries, string& error);
 
 // Create a directory and all missing parent directories if needed
-io_status make_directory(const string& dirname);
+void make_directory(const string& dirname);
 
 // List the contents of a directory
-pair<io_status, vector<string>> list_directory(const string& dirname);
+vector<string> list_directory(const string& dirname);
 
 }  // namespace yocto
 
