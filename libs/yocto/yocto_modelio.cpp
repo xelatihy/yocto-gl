@@ -85,7 +85,7 @@ static bool load_text(const string& filename, string& str, string& error) {
   // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
   auto fs = fopen_utf8(filename.c_str(), "rb");
   if (!fs) {
-    error = filename + ": file not found";
+    error = "cannot open " + filename;
     return false;
   }
   fseek(fs, 0, SEEK_END);
@@ -94,7 +94,7 @@ static bool load_text(const string& filename, string& str, string& error) {
   str.resize(length);
   if (fread(str.data(), 1, length, fs) != length) {
     fclose(fs);
-    error = filename + ": read error";
+    error = "cannot read " + filename;
     return false;
   }
   fclose(fs);
@@ -106,12 +106,12 @@ static bool save_text(
     const string& filename, const string& str, string& error) {
   auto fs = fopen_utf8(filename.c_str(), "wt");
   if (!fs) {
-    error = filename + ": file not found";
+    error = "cannot create " + filename;
     return false;
   }
   if (fprintf(fs, "%s", str.c_str()) < 0) {
     fclose(fs);
-    error = filename + ": write error";
+    error = "cannot write " + filename;
     return false;
   }
   fclose(fs);
@@ -124,7 +124,7 @@ static bool load_binary(
   // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
   auto fs = fopen_utf8(filename.c_str(), "rb");
   if (!fs) {
-    error = filename + ": file not found";
+    error = "cannot open " + filename;
     return false;
   }
   fseek(fs, 0, SEEK_END);
@@ -133,7 +133,7 @@ static bool load_binary(
   data.resize(length);
   if (fread(data.data(), 1, length, fs) != length) {
     fclose(fs);
-    error = filename + ": read error";
+    error = "cannot read " + filename;
     return false;
   }
   fclose(fs);
@@ -145,12 +145,12 @@ static bool save_binary(
     const string& filename, const vector<byte>& data, string& error) {
   auto fs = fopen_utf8(filename.c_str(), "wb");
   if (!fs) {
-    error = filename + ": file not found";
+    error = "cannot create " + filename;
     return false;
   }
   if (fwrite(data.data(), 1, data.size(), fs) != data.size()) {
     fclose(fs);
-    error = filename + ": write error";
+    error = "cannot write " + filename;
     return false;
   }
   fclose(fs);
@@ -658,11 +658,11 @@ bool load_ply(const string& filename, ply_model& ply, string& error) {
   auto data_view   = string_view{(const char*)data.data(), data.size()};
   auto str         = string_view{};
   auto parse_error = [&filename, &error]() {
-    error = filename + ": parse error";
+    error = "cannot parse " + filename;
     return false;
   };
   auto read_error = [&filename, &error]() {
-    error = filename + ": parse error";
+    error = "cannot read " + filename;
     return false;
   };
   while (read_line(data_view, str)) {
@@ -1126,7 +1126,7 @@ static bool load_mtl(const string& filename, obj_model& obj, string& error) {
   auto data_view   = string_view{data.data(), data.size()};
   auto str         = string_view{};
   auto parse_error = [&filename, &error]() {
-    error = filename + ": parse error";
+    error = "cannot parse " + filename;
     return false;
   };
   while (read_line(data_view, str)) {
@@ -1238,7 +1238,7 @@ static bool load_obx(const string& filename, obj_model& obj, string& error) {
   auto data_view   = string_view{data.data(), data.size()};
   auto str         = string_view{};
   auto parse_error = [&filename, &error]() {
-    error = filename + ": parse error";
+    error = "cannot parse " + filename;
     return false;
   };
   while (read_line(data_view, str)) {
@@ -1336,11 +1336,11 @@ bool load_obj(const string& filename, obj_model& obj, string& error,
   auto data_view   = string_view{data.data(), data.size()};
   auto str         = string_view{};
   auto parse_error = [&filename, &error]() {
-    error = filename + ": parse error";
+    error = "cannot parse " + filename;
     return false;
   };
   auto dependent_error = [&filename, &error]() {
-    error = filename + ": error in " + error;
+    error = "cannot load " + filename + " since " + error;
     return false;
   };
   while (read_line(data_view, str)) {
@@ -1539,7 +1539,7 @@ bool load_obj(const string& filename, obj_shape& shape, string& error,
   auto data_view   = string_view{data.data(), data.size()};
   auto str         = string_view{};
   auto parse_error = [&filename, &error]() {
-    error = filename + ": parse error";
+    error = "cannot parse " + filename;
     return false;
   };
   while (read_line(data_view, str)) {
@@ -1840,7 +1840,7 @@ bool save_obj(const string& filename, const obj_model& obj, string& error) {
   if (!save_text(filename, buffer, error)) return false;
 
   auto dependent_error = [&filename, &error]() {
-    error = filename + ": error in " + error;
+    error = "cannot save " + filename + " since " + error;
     return false;
   };
 
@@ -2323,7 +2323,7 @@ bool load_stl(const string& filename, stl_model& stl, string& error,
   // parse
   auto data_view  = string_view{(const char*)data.data(), data.size()};
   auto read_error = [&filename, &error]() {
-    error = filename + ": read error";
+    error = "cannot read " + filename;
     return false;
   };
 
@@ -2402,7 +2402,7 @@ bool load_stl(const string& filename, stl_model& stl, string& error,
     auto data_view   = string_view{data.data(), data.size()};
     auto str         = string_view{};
     auto parse_error = [&filename, &error]() {
-      error = filename + ": parse error";
+      error = "cannot parse " + filename;
       return false;
     };
     while (read_line(data_view, str)) {
@@ -4183,11 +4183,11 @@ static bool load_pbrt(const string& filename, pbrt_model& pbrt, string& error,
   auto data_view   = string_view{data.data(), data.size()};
   auto line        = ""s;
   auto parse_error = [&filename, &error]() {
-    error = filename + ": parse error";
+    error = "cannot parse " + filename;
     return false;
   };
   auto dependent_error = [&filename, &error]() {
-    error = filename + ": error in " + error;
+    error = "cannot load " + filename + " since " + error;
     return false;
   };
   while (read_pbrt_cmdline(data_view, line)) {

@@ -242,7 +242,7 @@ bool load_text(const string& filename, string& str, string& error) {
   // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
   auto fs = fopen_utf8(filename.c_str(), "rb");
   if (!fs) {
-    error = filename + ": file not found";
+    error = "cannot open " + filename;
     return false;
   }
   fseek(fs, 0, SEEK_END);
@@ -251,7 +251,7 @@ bool load_text(const string& filename, string& str, string& error) {
   str.resize(length);
   if (fread(str.data(), 1, length, fs) != length) {
     fclose(fs);
-    error = filename + ": read error";
+    error = "cannot read " + filename;
     return false;
   }
   fclose(fs);
@@ -262,12 +262,12 @@ bool load_text(const string& filename, string& str, string& error) {
 bool save_text(const string& filename, const string& str, string& error) {
   auto fs = fopen_utf8(filename.c_str(), "wt");
   if (!fs) {
-    error = filename + ": file not found";
+    error = "cannot create " + filename;
     return false;
   }
   if (fprintf(fs, "%s", str.c_str()) < 0) {
     fclose(fs);
-    error = filename + ": write error";
+    error = "cannot write " + filename;
     return false;
   }
   fclose(fs);
@@ -279,7 +279,7 @@ bool load_binary(const string& filename, vector<byte>& data, string& error) {
   // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
   auto fs = fopen_utf8(filename.c_str(), "rb");
   if (!fs) {
-    error = filename + ": file not found";
+    error = "cannot open " + filename;
     return false;
   }
   fseek(fs, 0, SEEK_END);
@@ -288,7 +288,7 @@ bool load_binary(const string& filename, vector<byte>& data, string& error) {
   data.resize(length);
   if (fread(data.data(), 1, length, fs) != length) {
     fclose(fs);
-    error = filename + ": read error";
+    error = "cannot read " + filename;
     return false;
   }
   fclose(fs);
@@ -300,12 +300,12 @@ bool save_binary(
     const string& filename, const vector<byte>& data, string& error) {
   auto fs = fopen_utf8(filename.c_str(), "wb");
   if (!fs) {
-    error = filename + ": file not found";
+    error = "cannot create " + filename;
     return false;
   }
   if (fwrite(data.data(), 1, data.size(), fs) != data.size()) {
     fclose(fs);
-    error = filename + ": write error";
+    error = "cannot write " + filename;
     return false;
   }
   fclose(fs);
@@ -331,7 +331,7 @@ static bool load_json(
     json = ordered_json::parse(text);
     return true;
   } catch (...) {
-    error = filename + ": json parse error";
+    error = "cannot parse " + filename;
     return false;
   }
 }
@@ -422,7 +422,7 @@ bool is_ldr_filename(const string& filename) {
 // Loads/saves an image. Chooses hdr or ldr based on file name.
 bool load_image(const string& filename, image_data& image, string& error) {
   auto read_error = [&]() {
-    error = filename + ": read error";
+    error = "cannot read " + filename;
     return false;
   };
 
@@ -512,7 +512,7 @@ bool load_image(const string& filename, image_data& image, string& error) {
     if (!make_image_preset(filename, image, error)) return false;
     return true;
   } else {
-    error = filename + ": unknown format";
+    error = "unsupported format " + filename;
     return false;
   }
 }
@@ -521,7 +521,7 @@ bool load_image(const string& filename, image_data& image, string& error) {
 bool save_image(
     const string& filename, const image_data& image, string& error) {
   auto write_error = [&]() {
-    error = filename + ": write error";
+    error = "cannot write " + filename;
     return false;
   };
 
@@ -597,7 +597,7 @@ bool save_image(
     if (!save_binary(filename, buffer, error)) return false;
     return true;
   } else {
-    error = filename + ": unknown format";
+    error = "unsupported format " + filename;
     return false;
   }
 }
@@ -772,15 +772,15 @@ static bool load_yvol(const string& filename, int& width, int& height,
     int& depth, int& components, vector<float>& voxels, string& error) {
   // error helpers
   auto open_error = [filename, &error]() {
-    error = filename + ": file not found";
+    error = "cannot open " + filename;
     return false;
   };
   auto parse_error = [filename, &error]() {
-    error = filename + ": parse error";
+    error = "cannot parse " + filename;
     return false;
   };
   auto read_error = [filename, &error]() {
-    error = filename + ": read error";
+    error = "cannot read " + filename;
     return false;
   };
 
@@ -838,11 +838,11 @@ static bool save_yvol(const string& filename, int width, int height, int depth,
     int components, const vector<float>& voxels, string& error) {
   // error helpers
   auto open_error = [filename, &error]() {
-    error = filename + ": file not found";
+    error = "cannot create " + filename;
     return false;
   };
   auto write_error = [filename, &error]() {
-    error = filename + ": read error";
+    error = "cannot read " + filename;
     return false;
   };
 
@@ -864,7 +864,7 @@ static bool save_yvol(const string& filename, int width, int height, int depth,
 // Loads volume data from binary format.
 bool load_volume(const string& filename, volume<float>& vol, string& error) {
   auto read_error = [filename, &error]() {
-    error = filename + ": read error";
+    error = "cannot read " + filename;
     return false;
   };
   auto width = 0, height = 0, depth = 0, ncomp = 0;
@@ -896,7 +896,7 @@ namespace yocto {
 bool load_shape(const string& filename, shape_data& shape, string& error,
     bool flip_texcoord) {
   auto shape_error = [&]() {
-    error = filename + ": empty shape";
+    error = "empty shape " + filename;
     return false;
   };
 
@@ -952,7 +952,7 @@ bool load_shape(const string& filename, shape_data& shape, string& error,
     if (!make_shape_preset(filename, shape, error)) return false;
     return true;
   } else {
-    error = filename + ": unknown format";
+    error = "unsupported format " + filename;
     return false;
   }
 }
@@ -961,7 +961,7 @@ bool load_shape(const string& filename, shape_data& shape, string& error,
 bool save_shape(const string& filename, const shape_data& shape, string& error,
     bool flip_texcoord, bool ascii) {
   auto shape_error = [&]() {
-    error = filename + ": empty shape";
+    error = "empty shape " + filename;
     return false;
   };
 
@@ -1067,7 +1067,7 @@ bool save_shape(const string& filename, const shape_data& shape, string& error,
     if (!save_text(filename, str, error)) return false;
     return true;
   } else {
-    error = filename + ": unknown format";
+    error = "unsupported format " + filename;
     return false;
   }
 }
@@ -1076,7 +1076,7 @@ bool save_shape(const string& filename, const shape_data& shape, string& error,
 bool load_fvshape(const string& filename, fvshape_data& shape, string& error,
     bool flip_texcoord) {
   auto shape_error = [&]() {
-    error = filename + ": empty shape";
+    error = "empty shape " + filename;
     return false;
   };
 
@@ -1127,7 +1127,7 @@ bool load_fvshape(const string& filename, fvshape_data& shape, string& error,
     if (!make_fvshape_preset(filename, shape, error)) return false;
     return true;
   } else {
-    error = filename + ": unknown format";
+    error = "unsupported format " + filename;
     return false;
   }
 }
@@ -1136,7 +1136,7 @@ bool load_fvshape(const string& filename, fvshape_data& shape, string& error,
 bool save_fvshape(const string& filename, const fvshape_data& shape,
     string& error, bool flip_texcoord, bool ascii) {
   auto shape_error = [&]() {
-    error = filename + ": empty shape";
+    error = "empty shape " + filename;
     return false;
   };
 
@@ -1237,7 +1237,7 @@ bool save_fvshape(const string& filename, const fvshape_data& shape,
     if (!save_text(filename, str, error)) return false;
     return true;
   } else {
-    error = filename + ": unknown format";
+    error = "unsupported format " + filename;
     return false;
   }
 }
@@ -1684,7 +1684,7 @@ namespace yocto {
 bool load_texture(
     const string& filename, texture_data& texture, string& error) {
   auto read_error = [&]() {
-    error = filename + ": rad error";
+    error = "cannot raed " + filename;
     return false;
   };
 
@@ -1764,7 +1764,7 @@ bool load_texture(
     if (!make_texture_preset(filename, texture, error)) return false;
     return true;
   } else {
-    error = filename + ": unknown format";
+    error = "unsupported format " + filename;
     return false;
   }
 }
@@ -1773,17 +1773,17 @@ bool load_texture(
 bool save_texture(
     const string& filename, const texture_data& texture, string& error) {
   auto write_error = [&]() {
-    error = filename + ": write error";
+    error = "cannot write " + filename;
     return false;
   };
 
   // check for correct handling
   if (!texture.pixelsf.empty() && is_ldr_filename(filename))
     throw std::invalid_argument(
-        filename + ": cannot save hdr texture to ldr file");
+        "cannot save hdr texture to ldr file " + filename);
   if (!texture.pixelsb.empty() && is_hdr_filename(filename))
     throw std::invalid_argument(
-        filename + ": cannot save ldr texture to hdr file");
+        "cannot save ldr texture to hdr file " + filename);
 
   // write data
   auto stbi_write_data = [](void* context, void* data, int size) {
@@ -1841,7 +1841,7 @@ bool save_texture(
     if (!save_binary(filename, buffer, error)) return false;
     return true;
   } else {
-    error = filename + ": unknown format";
+    error = "unsupported format " + filename;
     return false;
   }
 }
@@ -2633,7 +2633,7 @@ bool load_scene(
   } else if (ext == ".ypreset" || ext == ".YPRESET") {
     return make_scene_preset(filename, scene, error);
   } else {
-    error = filename + ": unknown format";
+    error = "unsupported format " + filename;
     return false;
   }
 }
@@ -2655,7 +2655,7 @@ bool save_scene(const string& filename, const scene_data& scene, string& error,
   } else if (ext == ".stl" || ext == ".STL") {
     return save_stl_scene(filename, scene, error, noparallel);
   } else {
-    error = filename + ": unknown format";
+    error = "unsupported format " + filename;
     return false;
   }
 }
@@ -2735,12 +2735,12 @@ static bool load_instance(
             {"xx", "xy", "xz", "yx", "yy", "yz", "zx", "zy", "zz", "ox", "oy",
                 "oz"},
             (vector<array<float, 12>>&)frames)) {
-      error = filename + ": parse error";
+      error = "cannot parse " + filename;
       return false;
     }
     return true;
   } else {
-    error = filename + ": unknown format";
+    error = "unsupported format " + filename;
     return false;
   }
 }
@@ -2759,7 +2759,7 @@ static bool load_instance(
     if (!save_ply(filename, ply, error)) return false;
     return true;
   } else {
-    error = filename + ": unknown format";
+    error = "unsupported format " + filename;
     return false;
   }
 }
@@ -2882,7 +2882,7 @@ static bool load_json_scene_version40(const string& filename,
     auto path = patha;
     if (!pathb.empty()) path += "/" + pathb;
     if (!pathc.empty()) path += "/" + pathc;
-    error = filename + ": parse error at " + path;
+    error = "parse error " + filename + " at " + path;
     return false;
   };
   auto key_error = [filename, &error](const string& patha,
@@ -3098,14 +3098,14 @@ static bool load_json_scene_version40(const string& filename,
       }
     }
   } catch (...) {
-    error = filename + ": parse error";
+    error = "cannot parse " + filename;
     return false;
   }
 
   // dirname
   auto dirname         = path_dirname(filename);
   auto dependent_error = [&filename, &error]() {
-    error = filename + ": error in " + error;
+    error = "cannot load " + filename + " since " + error;
     return false;
   };
 
@@ -3397,14 +3397,14 @@ static bool load_json_scene_version41(const string& filename, json_value& json,
       }
     }
   } catch (...) {
-    error = filename + ": parse error";
+    error = "cannot parse " + filename;
     return false;
   }
 
   // prepare data
   auto dirname         = path_dirname(filename);
   auto dependent_error = [&filename, &error]() {
-    error = filename + ": error in " + error;
+    error = "cannot load " + filename + " since " + error;
     return false;
   };
 
@@ -3493,7 +3493,7 @@ static bool load_json_scene(
 
   // errors
   auto parse_error = [&filename, &error]() {
-    error = filename + ": parse error";
+    error = "cannot parse " + filename;
     return false;
   };
 
@@ -3626,7 +3626,7 @@ static bool load_json_scene(
   // prepare data
   auto dirname         = path_dirname(filename);
   auto dependent_error = [&filename, &error]() {
-    error = filename + ": error in " + error;
+    error = "cannot load " + filename + " since " + error;
     return false;
   };
 
@@ -3879,7 +3879,7 @@ static bool save_json_scene(const string& filename, const scene_data& scene,
   // prepare data
   auto dirname         = path_dirname(filename);
   auto dependent_error = [&filename, &error]() {
-    error = filename + ": error in " + error;
+    error = "cannot save " + filename + " since " + error;
     return false;
   };
 
@@ -4044,7 +4044,7 @@ static bool load_obj_scene(
   // dirname
   auto dirname         = path_dirname(filename);
   auto dependent_error = [&filename, &error]() {
-    error = filename + ": error in " + error;
+    error = "cannot load " + filename + " since " + error;
     return false;
   };
 
@@ -4157,7 +4157,7 @@ static bool save_obj_scene(const string& filename, const scene_data& scene,
   // dirname
   auto dirname         = path_dirname(filename);
   auto dependent_error = [&filename, &error]() {
-    error = filename + ": error in " + error;
+    error = "cannot save " + filename + " since " + error;
     return false;
   };
 
@@ -4261,7 +4261,7 @@ static bool load_gltf_scene(
 
   // errors
   auto parse_error = [&filename, &error]() {
-    error = filename + ": parse error";
+    error = "cannot parse " + filename;
     return false;
   };
 
@@ -4283,7 +4283,7 @@ static bool load_gltf_scene(
   // dirname
   auto dirname         = path_dirname(filename);
   auto dependent_error = [&filename, &error]() {
-    error = filename + ": error in " + error;
+    error = "cannot load " + filename + " since " + error;
     return false;
   };
 
@@ -5023,7 +5023,7 @@ static bool save_gltf_scene(const string& filename, const scene_data& scene,
   // dirname
   auto dirname         = path_dirname(filename);
   auto dependent_error = [&filename, &error]() {
-    error = filename + ": error in " + error;
+    error = "cannot save " + filename + " since " + error;
     return false;
   };
 
@@ -5169,7 +5169,7 @@ static bool load_pbrt_scene(
   // dirname
   auto dirname         = path_dirname(filename);
   auto dependent_error = [&filename, &error]() {
-    error = filename + ": error in " + error;
+    error = "cannot load " + filename + " since " + error;
     return false;
   };
 
@@ -5279,7 +5279,7 @@ static bool save_pbrt_scene(const string& filename, const scene_data& scene,
   // dirname
   auto dirname         = path_dirname(filename);
   auto dependent_error = [&filename, &error]() {
-    error = filename + ": error in " + error;
+    error = "cannot save " + filename + " since " + error;
     return false;
   };
 
@@ -5410,15 +5410,15 @@ static bool load_yvol(const string& filename, int& width, int& height,
     int& depth, int& components, vector<float>& voxels, string& error) {
   // error helpers
   auto open_error = [filename, &error]() {
-    error = filename + ": file not found";
+    error = "cannot open " + filename;
     return false;
   };
   auto parse_error = [filename, &error]() {
-    error = filename + ": parse error";
+    error = "cannot parse " + filename;
     return false;
   };
   auto read_error = [filename, &error]() {
-    error = filename + ": read error";
+    error = "cannot read " + filename;
     return false;
   };
 
@@ -5476,11 +5476,11 @@ static bool save_yvol(const string& filename, int width, int height, int depth,
     int components, const vector<float>& voxels, string& error) {
   // error helpers
   auto open_error = [filename, &error]() {
-    error = filename + ": file not found";
+    error = "cannot create " + filename;
     return false;
   };
   auto write_error = [filename, &error]() {
-    error = filename + ": read error";
+    error = "cannot read " + filename;
     return false;
   };
 
@@ -5502,7 +5502,7 @@ static bool save_yvol(const string& filename, int width, int height, int depth,
 // Loads volume data from binary format.
 bool load_volume(const string& filename, volume<float>& vol, string& error) {
   auto read_error = [filename, &error]() {
-    error = filename + ": read error";
+    error = "cannot read " + filename;
     return false;
   };
   auto width = 0, height = 0, depth = 0, ncomp = 0;
