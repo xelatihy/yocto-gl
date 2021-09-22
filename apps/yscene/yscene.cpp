@@ -311,7 +311,6 @@ void run_view(const view_params& params_) {
   auto params = params_;
 
   // load scene
-  auto error = string{};
   start      = now();
   auto scene = load_scene(params.scene);
   std::cout << "load scene: " + format_duration(now() - start) + "\n";
