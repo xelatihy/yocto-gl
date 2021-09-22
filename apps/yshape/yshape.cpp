@@ -76,16 +76,9 @@ void add_options(CLI::App& cli, convert_params& params) {
 }
 
 // convert images
-int run_convert(const convert_params& params) {
-  std::cout << "converting " + params.shape + "\n";
-
+void run_convert(const convert_params& params) {
   // load mesh
-  auto error = string{};
-  auto shape = shape_data{};
-  if (!load_shape(params.shape, shape, error, true)) {
-    std::cerr << "error: cannot load " + params.shape + "\n";
-    return 1;
-  }
+  auto shape = load_shape(params.shape, true);
 
   // remove data
   if (params.aspositions) {
@@ -134,8 +127,7 @@ int run_convert(const convert_params& params) {
   if (params.toedges) {
     // check faces
     if (shape.triangles.empty() && shape.quads.empty()) {
-      std::cerr << "error: empty shape " + params.shape + "\n";
-      return 1;
+      throw io_error{"empty shape " + params.shape};
     }
 
     // convert to edges
@@ -175,13 +167,7 @@ int run_convert(const convert_params& params) {
   }
 
   // save mesh
-  if (!save_shape(params.output, shape, error, true)) {
-    std::cerr << "error: cannot save " + params.output + "\n";
-    return 1;
-  }
-
-  // done
-  return 0;
+  save_shape(params.output, shape, true);
 }
 
 // fvconvert params
@@ -216,16 +202,9 @@ void add_options(CLI::App& cli, fvconvert_params& params) {
 }
 
 // convert images
-int run_fvconvert(const fvconvert_params& params) {
-  std::cout << "converting " + params.shape + "\n";
-
+void run_fvconvert(const fvconvert_params& params) {
   // load mesh
-  auto error = string{};
-  auto shape = fvshape_data{};
-  if (!load_fvshape(params.shape, shape, error, true)) {
-    std::cerr << "error: cannot load " + params.shape + "\n";
-    return 1;
-  }
+  auto shape = load_fvshape(params.shape, true);
 
   // remove data
   if (params.aspositions) {
@@ -283,13 +262,7 @@ int run_fvconvert(const fvconvert_params& params) {
   }
 
   // save mesh
-  if (!save_fvshape(params.output, shape, error, true)) {
-    std::cerr << "error: cannot save " + params.output + "\n";
-    return 1;
-  }
-
-  // done
-  return 0;
+  save_fvshape(params.output, shape, true);
 }
 
 // view params
@@ -306,25 +279,15 @@ void add_options(CLI::App& cli, view_params& params) {
 }
 
 // view shapes
-int run_view(const view_params& params) {
-  std::cout << "viewing " + params.shape + "\n";
-
+void run_view(const view_params& params) {
   // load shape
-  auto error = string{};
-  auto shape = shape_data{};
-  if (!load_shape(params.shape, shape, error, true)) {
-    std::cerr << "error: cannot load " + params.shape + "\n";
-    return 1;
-  }
+  auto shape = load_shape(params.shape, true);
 
   // make scene
   auto scene = make_shape_scene(shape, params.addsky);
 
   // run view
   show_trace_gui("yshape", params.shape, scene);
-
-  // done
-  return 0;
 }
 
 struct heightfield_params {
@@ -350,14 +313,9 @@ void add_options(CLI::App& cli, heightfield_params& params) {
   cli.add_option("--rotate", (array<float, 3>&)params.rotate, "Rotate shape.");
 }
 
-int run_heightfield(const heightfield_params& params) {
+void run_heightfield(const heightfield_params& params) {
   // load image
-  auto error = string{};
-  auto image = image_data{};
-  if (!load_image(params.image, image, error)) {
-    std::cerr << "error: cannot load " + params.image + "\n";
-    return 1;
-  }
+  auto image = load_image(params.image);
 
   // adjust height
   if (params.height != 1) {
@@ -391,13 +349,7 @@ int run_heightfield(const heightfield_params& params) {
   }
 
   // save mesh
-  if (!save_shape(params.output, shape, error, true)) {
-    std::cerr << "error: cannot save " + params.output + "\n";
-    return 1;
-  }
-
-  // done
-  return 0;
+  save_shape(params.output, shape, true);
 }
 
 struct hair_params {
@@ -422,14 +374,9 @@ void add_options(CLI::App& cli, hair_params& params) {
   cli.add_option("--radius", params.radius, "Hair radius.");
 }
 
-int run_hair(const hair_params& params) {
+void run_hair(const hair_params& params) {
   // load mesh
-  auto error = string{};
-  auto shape = shape_data{};
-  if (!load_shape(params.shape, shape, error)) {
-    std::cerr << "error: cannot load " + params.shape + "\n";
-    return 1;
-  }
+  auto shape = load_shape(params.shape);
 
   // generate hair
   auto hair = make_hair2(shape, {params.steps, params.hairs},
@@ -437,13 +384,7 @@ int run_hair(const hair_params& params) {
       params.noise, params.gravity);
 
   // save mesh
-  if (!save_shape(params.output, hair, error, true)) {
-    std::cerr << "error: cannot save " + params.output + "\n";
-    return 1;
-  }
-
-  // done
-  return 0;
+  save_shape(params.output, hair, true);
 }
 
 struct sample_params {
@@ -458,14 +399,9 @@ void add_options(CLI::App& cli, sample_params& params) {
   cli.add_option("--samples", params.samples, "Number of samples.");
 }
 
-int run_sample(const sample_params& params) {
+void run_sample(const sample_params& params) {
   // load mesh
-  auto error = string{};
-  auto shape = shape_data{};
-  if (!load_shape(params.shape, shape, error)) {
-    std::cerr << "error: cannot load " + params.shape + "\n";
-    return 1;
-  }
+  auto shape = load_shape(params.shape);
 
   // generate samples
   auto samples = sample_shape(shape, params.samples);
@@ -479,10 +415,7 @@ int run_sample(const sample_params& params) {
   }
 
   // save mesh
-  if (!save_shape(params.output, sshape, error)) {
-    std::cerr << "error: cannot save " + params.output + "\n";
-    return 1;
-  }
+  save_shape(params.output, sshape);
 
   // done
   return 0;
@@ -499,23 +432,15 @@ void add_options(CLI::App& cli, glview_params& params) {
   cli.add_flag("--addsky", params.addsky, "Add sky.");
 }
 
-int run_glview(const glview_params& params) {
+void run_glview(const glview_params& params) {
   // loading shape
-  auto error = string{};
-  auto shape = shape_data{};
-  if (!load_shape(params.shape, shape, error)) {
-    std::cerr << "error: cannot load " + params.shape + "\n";
-    return 1;
-  }
+  auto shape = load_shape(params.shape);
 
   // make scene
   auto scene = make_shape_scene(shape, params.addsky);
 
   // run viewer
   show_shade_gui("yshape", params.shape, scene, {});
-
-  // done
-  return 0;
 }
 
 struct app_params {
@@ -556,22 +481,29 @@ int main(int argc, const char** argv) {
   }
 
   // dispatch commands
-  if (params.command == "convert") {
-    return run_convert(params.convert);
-  } else if (params.command == "fvconvert") {
-    return run_fvconvert(params.fvconvert);
-  } else if (params.command == "view") {
-    return run_view(params.view);
-  } else if (params.command == "heightfield") {
-    return run_heightfield(params.heightfield);
-  } else if (params.command == "hair") {
-    return run_hair(params.hair);
-  } else if (params.command == "sample") {
-    return run_sample(params.sample);
-  } else if (params.command == "glview") {
-    return run_glview(params.glview);
-  } else {
-    std::cerr << "error: unknown command\n";
+  try {
+    if (params.command == "convert") {
+      run_convert(params.convert);
+    } else if (params.command == "fvconvert") {
+      run_fvconvert(params.fvconvert);
+    } else if (params.command == "view") {
+      run_view(params.view);
+    } else if (params.command == "heightfield") {
+      run_heightfield(params.heightfield);
+    } else if (params.command == "hair") {
+      run_hair(params.hair);
+    } else if (params.command == "sample") {
+      run_sample(params.sample);
+    } else if (params.command == "glview") {
+      run_glview(params.glview);
+    } else {
+      throw io_error{"unknown command"};
+    }
+  } catch (const io_error& error) {
+    std::cerr << "error: " << error.what() << "\n";
     return 1;
   }
+
+  // done
+  return 0;
 }

@@ -77,18 +77,13 @@ void add_options(CLI::App& cli, convert_params& params) {
 }
 
 // convert images
-int run_convert(const convert_params& params) {
+void run_convert(const convert_params& params) {
   std::cout << "converting " + params.scene + "\n";
   auto start = now();
 
   // load scene
-  auto error = string{};
-  auto scene = scene_data{};
   start      = now();
-  if (!load_scene(params.scene, scene, error)) {
-    std::cerr << "error: cannot load " + params.scene + "\n";
-    return 1;
-  }
+  auto scene = load_scene(params.scene);
   std::cout << "load scene: " + format_duration(now() - start) + "\n";
 
   // copyright
@@ -98,8 +93,9 @@ int run_convert(const convert_params& params) {
 
   // validate scene
   if (params.validate) {
-    for (auto& error : scene_validation(scene))
-      std::cerr << "error: " + error + "\n";
+    auto errors = scene_validation(scene);
+    for (auto& error : errors) std::cerr << "error: " + error + "\n";
+    if (!errors.empty()) throw io_error{"invalid scene"};
   }
 
   // print info
@@ -112,21 +108,14 @@ int run_convert(const convert_params& params) {
   if (!scene.subdivs.empty()) {
     start = now();
     tesselate_subdivs(scene);
-    std::cout << ("tesselate subdivs: " + format_duration(now() - start) +
-                  "\n");
+    std::cout << "tesselate subdivs: " + format_duration(now() - start) + "\n";
   }
 
   // save scene
   start = now();
   make_scene_directories(params.output, scene);
-  if (!save_scene(params.output, scene, error)) {
-    std::cerr << "error: cannot save " + params.output + "\n";
-    return 1;
-  }
+  save_scene(params.output, scene);
   std::cout << "save scene: " + format_duration(now() - start) + "\n";
-
-  // done
-  return 0;
 }
 
 // info params
@@ -142,18 +131,13 @@ void add_options(CLI::App& cli, info_params& params) {
 }
 
 // print info for scenes
-int run_info(const info_params& params) {
+void run_info(const info_params& params) {
   std::cout << "info for " + params.scene + "\n";
   auto start = now();
 
   // load scene
-  auto error = string{};
   start      = now();
-  auto scene = scene_data{};
-  if (!load_scene(params.scene, scene, error)) {
-    std::cerr << "error: cannot load " + params.scene + "\n";
-    return 1;
-  }
+  auto scene = load_scene(params.scene);
   std::cout << "load scene: " + format_duration(now() - start) + "\n";
 
   // validate scene
@@ -165,9 +149,6 @@ int run_info(const info_params& params) {
   // print info
   std::cout << "scene stats ------------\n";
   for (auto stat : scene_stats(scene)) std::cout << stat + "\n";
-
-  // done
-  return 0;
 }
 
 // render params
@@ -210,7 +191,7 @@ void add_options(CLI::App& cli, render_params& params) {
 }
 
 // convert images
-int run_render(const render_params& params_) {
+void run_render(const render_params& params_) {
   std::cout << "rendering " + params_.scene + "\n";
   auto start = now();
 
@@ -218,13 +199,8 @@ int run_render(const render_params& params_) {
   auto params = params_;
 
   // scene loading
-  auto error = string{};
   start      = now();
-  auto scene = scene_data{};
-  if (!load_scene(params.scene, scene, error)) {
-    std::cerr << "error: cannot load " + params.scene + "\n";
-    return 1;
-  }
+  auto scene = load_scene(params.scene);
   std::cout << "load scene: " + format_duration(now() - start) + "\n";
 
   // add sky
@@ -275,10 +251,7 @@ int run_render(const render_params& params_) {
                              .string();
       if (!is_hdr_filename(params.output))
         image = tonemap_image(image, params.exposure, params.filmic);
-      if (!save_image(outfilename, image, error)) {
-        std::cerr << "error: cannot save " + outfilename + "\n";
-        return 1;
-      }
+      save_image(outfilename, image);
     }
   }
   std::cout << "render image: " + format_duration(now() - start) + "\n";
@@ -288,14 +261,8 @@ int run_render(const render_params& params_) {
   auto image = params.denoise ? get_denoised(state) : get_render(state);
   if (!is_hdr_filename(params.output))
     image = tonemap_image(image, params.exposure, params.filmic);
-  if (!save_image(params.output, image, error)) {
-    std::cerr << "error: cannot save " + params.output + "\n";
-    return 1;
-  }
+  save_image(params.output, image);
   std::cout << "save image: " + format_duration(now() - start) + "\n";
-
-  // done
-  return 0;
 }
 
 // convert params
@@ -336,7 +303,7 @@ void add_options(CLI::App& cli, view_params& params) {
 }
 
 // view scene
-int run_view(const view_params& params_) {
+void run_view(const view_params& params_) {
   std::cout << "viewing " + params_.scene + "\n";
   auto start = now();
 
@@ -346,11 +313,7 @@ int run_view(const view_params& params_) {
   // load scene
   auto error = string{};
   start      = now();
-  auto scene = scene_data{};
-  if (!load_scene(params.scene, scene, error)) {
-    std::cerr << "error: cannot load " + params.scene + "\n";
-    return 1;
-  }
+  auto scene = load_scene(params.scene);
   std::cout << "load scene: " + format_duration(now() - start) + "\n";
 
   // add sky
@@ -371,9 +334,6 @@ int run_view(const view_params& params_) {
 
   // run view
   show_trace_gui("yscene", params.scene, scene, params);
-
-  // done
-  return 0;
 }
 
 struct glview_params {
@@ -387,19 +347,14 @@ void add_options(CLI::App& cli, glview_params& params) {
   cli.add_option("--camera", params.camname, "Camera name.");
 }
 
-int run_glview(const glview_params& params_) {
+void run_glview(const glview_params& params_) {
   std::cout << "viewing " + params_.scene + "\n";
 
   // copy params
   auto params = params_;
 
   // loading scene
-  auto error = string{};
-  auto scene = scene_data{};
-  if (!load_scene(params.scene, scene, error)) {
-    std::cerr << "error: cannot load " + params.scene + "\n";
-    return 1;
-  }
+  auto scene = load_scene(params.scene);
 
   // tesselation
   if (!scene.subdivs.empty()) {
@@ -412,9 +367,6 @@ int run_glview(const glview_params& params_) {
 
   // run viewer
   show_shade_gui("yscene", params.scene, scene, viewparams);
-
-  // done
-  return 0;
 }
 
 struct app_params {
@@ -447,18 +399,25 @@ int main(int argc, const char* argv[]) {
   }
 
   // dispatch commands
-  if (params.command == "convert") {
-    return run_convert(params.convert);
-  } else if (params.command == "info") {
-    return run_info(params.info);
-  } else if (params.command == "render") {
-    return run_render(params.render);
-  } else if (params.command == "view") {
-    return run_view(params.view);
-  } else if (params.command == "glview") {
-    return run_glview(params.glview);
-  } else {
-    std::cerr << "error: unknown command\n";
+  try {
+    if (params.command == "convert") {
+      run_convert(params.convert);
+    } else if (params.command == "info") {
+      run_info(params.info);
+    } else if (params.command == "render") {
+      run_render(params.render);
+    } else if (params.command == "view") {
+      run_view(params.view);
+    } else if (params.command == "glview") {
+      run_glview(params.glview);
+    } else {
+      throw io_error{"unknown command"};
+    }
+  } catch (const io_error& error) {
+    std::cerr << "error: " << error.what() << "\n";
     return 1;
   }
+
+  // done
+  return 0;
 }

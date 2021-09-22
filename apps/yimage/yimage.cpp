@@ -61,16 +61,9 @@ void add_options(CLI::App& cli, convert_params& params) {
 }
 
 // convert images
-int run_convert(const convert_params& params) {
-  std::cout << "converting " + params.image + "\n";
-
+void run_convert(const convert_params& params) {
   // load
-  auto error = string{};
-  auto image = image_data{};
-  if (!load_image(params.image, image, error)) {
-    std::cerr << "error: cannot load " + params.image + "\n";
-    return 1;
-  }
+  auto image = load_image(params.image);
 
   // resize if needed
   if (params.width != 0 || params.height != 0) {
@@ -83,13 +76,7 @@ int run_convert(const convert_params& params) {
   }
 
   // save
-  if (!save_image(params.output, image, error)) {
-    std::cerr << "error: cannot save " + params.output + "\n";
-    return 1;
-  }
-
-  // done
-  return 0;
+  save_image(params.output, image);
 }
 
 // view params
@@ -105,22 +92,13 @@ void add_options(CLI::App& cli, view_params& params) {
 }
 
 // view images
-int run_view(const view_params& params) {
+void run_view(const view_params& params) {
   // load
-  auto error  = string{};
-  auto images = vector<image_data>(params.images.size());
-  for (auto idx = 0; idx < (int)params.images.size(); idx++) {
-    if (!load_image(params.images[idx], images[idx], error)) {
-      std::cerr << "error: error loading " + params.images[idx] + "\n";
-      return 1;
-    }
-  }
+  auto images = vector<image_data>{};
+  for (auto& image : params.images) images.push_back(load_image(image));
 
   // run viewer
   show_image_gui("yimage", params.images, images);
-
-  // done
-  return 0;
 }
 
 // grade params
@@ -136,20 +114,12 @@ void add_options(CLI::App& cli, grade_params& params) {
 }
 
 // grade images
-int run_grade(const grade_params& params) {
+void run_grade(const grade_params& params) {
   // load image
-  auto error = string{};
-  auto image = image_data{};
-  if (!load_image(params.image, image, error)) {
-    std::cerr << "error: error loading " + params.image + "\n";
-    return 1;
-  }
+  auto image = load_image(params.image);
 
   // run viewer
   show_colorgrade_gui("yimage", params.image, image);
-
-  // done
-  return 0;
 }
 
 // resize params
@@ -171,54 +141,32 @@ void add_options(CLI::App& cli, diff_params& params) {
 }
 
 // resize images
-int run_diff(const diff_params& params) {
-  std::cout << "error: diffing {} and " + params.image1, params.image2 + "\n";
-
+void run_diff(const diff_params& params) {
   // load
-  auto error  = string{};
-  auto image1 = image_data{}, image2 = image_data{};
-  if (!load_image(params.image1, image1, error)) {
-    std::cerr << "error: cannot load " + params.image1 + "\n";
-    return 1;
-  }
-  if (!load_image(params.image2, image2, error)) {
-    std::cerr << "error: cannot load " + params.image2 + "\n";
-    return 1;
-  }
+  auto image1 = load_image(params.image1);
+  auto image2 = load_image(params.image2);
 
   // check sizes
-  if (image1.width != image2.width || image1.height != image2.height) {
-    std::cerr << "error: different image sizes\n";
-    return 1;
-  }
+  if (image1.width != image2.width || image1.height != image2.height)
+    throw io_error("different image sizes");
 
   // check types
-  if (image1.linear != image2.linear) {
-    std::cerr << "error: different image types\n";
-    return 1;
-  }
+  if (image1.linear != image2.linear) throw io_error("different image types");
 
   // compute diff
   auto diff = image_difference(image1, image2, true);
 
   // save
-  if (params.output != "")
-    if (!save_image(params.output, diff, error)) {
-      std::cerr << "error: different image sizes\n";
-      return 1;
-    }
+  if (params.output != "") save_image(params.output, diff);
 
   // check diff
   if (params.signal) {
     for (auto& c : diff.pixels) {
       if (max(xyz(c)) > params.threshold) {
-        std::cerr << "error: image conten differs\n";
+        throw io_error("image content differ");
       }
     }
   }
-
-  // done
-  return 0;
 }
 
 // setalpha params
@@ -242,32 +190,17 @@ void add_options(CLI::App& cli, setalpha_params& params) {
 }
 
 // setalpha images
-int run_setalpha(const setalpha_params& params) {
-  std::cout << "error: setting alpha for " + params.image + "\n";
-
+void run_setalpha(const setalpha_params& params) {
   // load
-  auto error = string{};
-  auto image = image_data{}, alpha = image_data{};
-  if (!load_image(params.image, image, error)) {
-    std::cerr << "error: cannot load " + params.image + "\n";
-    return 1;
-  }
-  if (!load_image(params.alpha, alpha, error)) {
-    std::cerr << "error: cannot load " + params.alpha + "\n";
-    return 1;
-  }
+  auto image = load_image(params.image);
+  auto alpha = load_image(params.alpha);
 
   // check sizes
-  if (image.width != alpha.width || image.height != alpha.height) {
-    std::cerr << "error: image size differs\n";
-    return 1;
-  }
+  if (image.width != alpha.width || image.height != alpha.height)
+    throw io_error("different image sizes");
 
   // check types
-  if (image.linear != alpha.linear) {
-    std::cerr << "error: image type differs\n";
-    return 1;
-  }
+  if (image.linear != alpha.linear) throw io_error("different image types");
 
   // edit alpha
   auto out = make_image(image.width, image.height, image.linear);
@@ -286,13 +219,7 @@ int run_setalpha(const setalpha_params& params) {
   }
 
   // save
-  if (!save_image(params.output, out, error)) {
-    std::cerr << "error: cannot save " + params.output + "\n";
-    return 1;
-  }
-
-  // done
-  return 0;
+  save_image(params.output, out);
 }
 
 struct app_params {
@@ -325,18 +252,25 @@ int main(int argc, const char* argv[]) {
   }
 
   // dispatch commands
-  if (params.command == "convert") {
-    return run_convert(params.convert);
-  } else if (params.command == "view") {
-    return run_view(params.view);
-  } else if (params.command == "grade") {
-    return run_grade(params.grade);
-  } else if (params.command == "diff") {
-    return run_diff(params.diff);
-  } else if (params.command == "setalpha") {
-    return run_setalpha(params.setalpha);
-  } else {
-    std::cerr << "error: unknown command\n";
+  try {
+    if (params.command == "convert") {
+      run_convert(params.convert);
+    } else if (params.command == "view") {
+      run_view(params.view);
+    } else if (params.command == "grade") {
+      run_grade(params.grade);
+    } else if (params.command == "diff") {
+      run_diff(params.diff);
+    } else if (params.command == "setalpha") {
+      run_setalpha(params.setalpha);
+    } else {
+      throw io_error("unknown command");
+    }
+  } catch (const io_error& error) {
+    std::cerr << "error: " << error.what() << "\n";
     return 1;
   }
+
+  // done
+  return 0;
 }
