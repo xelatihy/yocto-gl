@@ -416,9 +416,6 @@ void run_sample(const sample_params& params) {
 
   // save mesh
   save_shape(params.output, sshape);
-
-  // done
-  return 0;
 }
 
 struct glview_params {
