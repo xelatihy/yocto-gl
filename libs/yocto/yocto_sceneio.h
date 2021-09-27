@@ -323,11 +323,6 @@ namespace yocto {
 // Json values
 using json_value = nlohmann::ordered_json;
 
-// Validate a Json value againt a schema. Returns the first error found.
-void validate_json(const json_value& json, const json_value& schema);
-bool validate_json(
-    const json_value& json, const json_value& schema, string& error);
-
 // Converts command line arguments to Json. Never throws since a conversion
 // is always possible in our conventions. Validation is done using a schema.
 json_value make_json_cli(const vector<string>& args);
