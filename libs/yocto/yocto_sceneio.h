@@ -247,7 +247,7 @@ void         save_binary(const string& filename, const vector<byte>& data);
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// JSON MANIPULATION
+// JSON SUPPORT
 // -----------------------------------------------------------------------------
 namespace yocto {
 
@@ -262,6 +262,39 @@ bool save_json(const string& filename, const json_value& json, string& error);
 json_value load_json(const string& filename);
 void       load_json(const string& filename, json_value& json);
 void       save_json(const string& filename, const json_value& json);
+
+// Json conversions
+inline void to_json(json_value& json, const vec2f& value);
+inline void to_json(json_value& json, const vec3f& value);
+inline void to_json(json_value& json, const vec4f& value);
+inline void to_json(json_value& json, const frame2f& value);
+inline void to_json(json_value& json, const frame3f& value);
+inline void to_json(json_value& json, const mat2f& value);
+inline void to_json(json_value& json, const mat3f& value);
+inline void to_json(json_value& json, const mat4f& value);
+inline void from_json(const json_value& json, vec2f& value);
+inline void from_json(const json_value& json, vec3f& value);
+inline void from_json(const json_value& json, vec4f& value);
+inline void from_json(const json_value& json, frame2f& value);
+inline void from_json(const json_value& json, frame3f& value);
+inline void from_json(const json_value& json, mat2f& value);
+inline void from_json(const json_value& json, mat3f& value);
+inline void from_json(const json_value& json, mat4f& value);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+//
+//
+// IMPLEMENTATION
+//
+//
+// -----------------------------------------------------------------------------
+
+// -----------------------------------------------------------------------------
+// JSON MANIPULATION
+// -----------------------------------------------------------------------------
+namespace yocto {
 
 // Json conversions
 inline void to_json(json_value& json, const vec2f& value) {
@@ -312,25 +345,6 @@ inline void from_json(const json_value& json, mat3f& value) {
 inline void from_json(const json_value& json, mat4f& value) {
   nlohmann::from_json(json, (array<float, 16>&)value);
 }
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// JSON CLI
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Json values
-using json_value = nlohmann::ordered_json;
-
-// Converts command line arguments to Json. Never throws since a conversion
-// is always possible in our conventions. Validation is done using a schema.
-json_value make_json_cli(const vector<string>& args);
-json_value make_json_cli(int argc, const char** argv);
-
-// Validates a JSON against a schema including CLI constraints.
-json_value validate_json_cli(const vector<string>& args);
-json_value validate_json_cli(int argc, const char** argv);
 
 }  // namespace yocto
 
