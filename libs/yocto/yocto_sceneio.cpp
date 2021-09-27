@@ -319,67 +319,37 @@ bool save_binary(
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// nlohmann json
-using nlohmann::ordered_json;
-
 // Load/save json
-static bool load_json(
-    const string& filename, ordered_json& json, string& error) {
+bool load_json(const string& filename, json_value& json, string& error) {
   auto text = string{};
   if (!load_text(filename, text, error)) return false;
   try {
-    json = ordered_json::parse(text);
+    json = json_value::parse(text);
     return true;
   } catch (...) {
     error = "cannot parse " + filename;
     return false;
   }
 }
-static bool save_json(
-    const string& filename, const ordered_json& json, string& error) {
+bool save_json(const string& filename, const json_value& json, string& error) {
   return save_text(filename, json.dump(2), error);
 }
 
-// conversions
-inline void to_json(ordered_json& json, const vec2f& value) {
-  nlohmann::to_json(json, (const array<float, 2>&)value);
+// Load/save json
+json_value load_json(const string& filename) {
+  auto error = string{};
+  auto json  = json_value{};
+  if (!load_json(filename, json, error)) throw io_error{error};
+  return json;
 }
-inline void to_json(ordered_json& json, const vec3f& value) {
-  nlohmann::to_json(json, (const array<float, 3>&)value);
+void load_json(const string& filename, json_value& json) {
+  auto error = string{};
+  if (!load_json(filename, json, error)) throw io_error{error};
 }
-inline void to_json(ordered_json& json, const vec4f& value) {
-  nlohmann::to_json(json, (const array<float, 4>&)value);
+void save_json(const string& filename, const json_value& json) {
+  auto error = string{};
+  if (!save_json(filename, json, error)) throw io_error{error};
 }
-inline void to_json(ordered_json& json, const mat3f& value) {
-  nlohmann::to_json(json, (const array<float, 9>&)value);
-}
-inline void to_json(ordered_json& json, const mat4f& value) {
-  nlohmann::to_json(json, (const array<float, 16>&)value);
-}
-inline void to_json(ordered_json& json, const frame3f& value) {
-  nlohmann::to_json(json, (const array<float, 12>&)value);
-}
-inline void from_json(const ordered_json& json, const vec2f& value) {
-  nlohmann::from_json(json, (array<float, 2>&)value);
-}
-inline void from_json(const ordered_json& json, const vec3f& value) {
-  nlohmann::from_json(json, (array<float, 3>&)value);
-}
-inline void from_json(const ordered_json& json, const vec4f& value) {
-  nlohmann::from_json(json, (array<float, 4>&)value);
-}
-inline void from_json(const ordered_json& json, const mat3f& value) {
-  nlohmann::from_json(json, (array<float, 12>&)value);
-}
-inline void from_json(const ordered_json& json, const mat4f& value) {
-  nlohmann::from_json(json, (array<float, 16>&)value);
-}
-inline void from_json(const ordered_json& json, const frame3f& value) {
-  nlohmann::from_json(json, (array<float, 12>&)value);
-}
-
-// setup json value type
-using json_value = nlohmann::ordered_json;
 
 }  // namespace yocto
 
@@ -5389,12 +5359,96 @@ string cli_usage(const ordered_json& json, const ordered_json& schema);
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// JSON SUPPORT FOR YOCTO TYPES
+// HELPERS FOR JSON MANIPULATION
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Validate Json against a schema
-bool validate_json(const ordered_json& json, const ordered_json& schema);
+// Validate a Json value againt a schema. Returns the first error found.
+void validate_json(const json_value& json, const json_value& schema);
+bool validate_json(
+    const json_value& json, const json_value& schema, string& error);
+
+// Converts command line arguments to Json. Never throws since a conversion
+// is always possible in our conventions. Validation is done using a schema.
+json_value make_json_cli(const vector<string>& args) {
+  // init json
+  auto json = json_value{};
+  if (args.size() < 2) return json;
+
+  // split into commans and options; use spans when available for speed
+  auto commands = vector<string>{};
+  auto options  = vector<pair<string, vector<string>>>{};
+  for (auto& arg : args) {
+    if (arg.find("--") == 0) {
+      // start option
+      options.push_back({arg.substr(2), {}});
+    } else if (!options.empty()) {
+      // add value
+      options.back().second.push_back(arg);
+    } else {
+      // add command
+      commands.push_back(arg);
+    }
+  }
+
+  // build commands
+  auto current = &json;
+  for (auto& command : commands) {
+    auto& json      = *current;
+    json["command"] = command;
+    json[command]   = json_value::object();
+    current         = &json[command];
+  }
+
+  // build options
+  for (auto& [name, values] : options) {
+    auto& json = *current;
+    if (values.empty()) {
+      json[name] = true;
+    } else {
+      json[name] = json_value::array();
+      for (auto& value : values) {
+        if (value == "true") {
+          json[name].push_back(true);
+        } else if (value == "false") {
+          json[name].push_back(false);
+        } else if (value == "null") {
+          json[name].push_back(nullptr);
+        } else if (std::isdigit((int)value[0]) || value[0] == '-' ||
+                   value[0] == '+') {
+          try {
+            if (value.find('.') != string::npos) {
+              json[name].push_back(std::stod(value));
+            } else if (value.find('-') == 0) {
+              json[name].push_back(std::stoll(value));
+            } else {
+              json[name].push_back(std::stoull(value));
+            }
+          } catch (...) {
+            json[name].push_back(value);
+          }
+        } else {
+          json[name].push_back(value);
+        }
+      }
+      if (values.size() == 1) {
+        json[name] = json[name].front();
+      }
+    }
+  }
+
+  // done
+  return json;
+}
+json_value make_json_cli(int argc, const char** argv) {
+  return make_json_cli(vector<string>{argv, argv + argc});
+}
+
+// Validates a JSON against a schema including CLI constraints.
+json_value validate_json_cli(const vector<string>& args);
+json_value validate_json_cli(int argc, const char** argv);
+
+// Helpers for creating schemas
 
 }  // namespace yocto
 
