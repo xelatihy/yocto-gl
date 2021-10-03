@@ -38,7 +38,10 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
+#include <functional>
+#include <sstream>
 #include <string>
+#include <vector>
 
 #include "yocto_scene.h"
 
@@ -52,6 +55,7 @@ namespace yocto {
 
 // using directives
 using std::string;
+using std::vector;
 
 }  // namespace yocto
 
@@ -344,6 +348,270 @@ inline void from_json(const json_value& json, mat3f& value) {
 }
 inline void from_json(const json_value& json, mat4f& value) {
   nlohmann::from_json(json, (array<float, 16>&)value);
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// ARGUMENT PARSING
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Immediate mode
+using cli_setter = std::function<bool(const vector<string>&, string&)>;
+struct cli_option {
+  string     name   = "";
+  string     usage  = "";
+  cli_setter setter = {};
+};
+struct cli_command {
+  string              name     = "";
+  string              usage    = "";
+  vector<cli_option>  options  = {};
+  vector<cli_command> commands = {};
+  string              command  = "";
+  cli_setter          setter   = {};
+};
+
+// Helpers
+template <typename T>
+inline bool _cli_contains(const vector<T>& items, const string& name) {
+  for (auto& item : items)
+    if (item.name == name) return true;
+  return false;
+}
+template <typename T>
+inline const T& _cli_get(const vector<T>& items, const string& name) {
+  for (auto& item : items)
+    if (item.name == name) return item;
+  throw std::out_of_range{"missing key " + name};
+}
+template <typename T>
+inline T& _cli_get(vector<T>& items, const string& name) {
+  for (auto& item : items)
+    if (item.name == name) return item;
+  throw std::out_of_range{"missing key " + name};
+}
+inline void _cli_check_option(const cli_command& cli, const string& name) {
+  if (!cli.commands.empty())
+    throw std::invalid_argument{"cannot add options and commands"};
+  if (_cli_contains(cli.options, name))
+    throw std::invalid_argument{"option already added " + name};
+}
+inline void _cli_check_command(const cli_command& cli, const string& name) {
+  if (!cli.options.empty())
+    throw std::invalid_argument{"cannot add options and commands"};
+  if (_cli_contains(cli.commands, name))
+    throw std::invalid_argument{"command already added " + name};
+}
+
+// parse helpers
+inline bool _cli_parse_size(
+    const vector<string>& args, size_t min, size_t max, string& error) {
+  if (args.size() < min || args.size() > max) {
+    error = "wrong number of arguments";
+    return false;
+  }
+  return true;
+}
+template <typename T>
+inline bool _cli_parse_value(const string& arg, T& value, string& error) {
+  if constexpr (std::is_same_v<T, string>) {
+    value = arg;
+    return true;
+  } else {
+    auto stream = std::stringstream(arg);
+    stream >> value;
+    if (!stream) {
+      error = "parse error";
+      return false;
+    }
+    return true;
+  }
+}
+
+// init cli
+inline cli_command make_cli(const string& name, const string& usage) {
+  auto cli  = cli_command{};
+  cli.name  = name;
+  cli.usage = usage;
+  cli.options.reserve(256);
+  cli.commands.reserve(256);
+  cli.setter = [](const vector<string>&, string&) { return true; };
+  return cli;
+}
+
+// add command
+inline cli_command& add_command(
+    cli_command& cli, const string& name, const string& usage) {
+  _cli_check_command(cli, name);
+  auto& cmd = cli.commands.emplace_back();
+  cmd.name  = name;
+  cmd.usage = usage;
+  cmd.options.reserve(256);
+  cmd.commands.reserve(256);
+  cmd.setter = [](const vector<string>&, string&) { return true; };
+  return cmd;
+}
+
+// add command variable
+template <typename T>
+inline void add_command_var(cli_command& cli, T& value) {
+  cli.setter = [&value](const vector<string>& args, string& error) {
+    if (!_cli_parse_size(args, 1, 1, error)) return false;
+    if (!_cli_parse_value(args.front(), value, error)) return false;
+    return true;
+  };
+}
+
+// add option
+template <typename T>
+inline cli_option& add_option(
+    cli_command& cli, const string& name, T& value, const string& usage) {
+  _cli_check_option(cli, name);
+  auto& opt  = cli.options.emplace_back();
+  opt.name   = name;
+  opt.usage  = usage;
+  opt.setter = [&value](const vector<string>& args, string& error) {
+    if (!_cli_parse_size(args, 1, 1, error)) return false;
+    if (!_cli_parse_value(args.front(), value, error)) return false;
+    return true;
+  };
+  return opt;
+}
+
+// add option
+inline cli_option& add_option(
+    cli_command& cli, const string& name, bool& value, const string& usage) {
+  _cli_check_option(cli, name);
+  auto& opt  = cli.options.emplace_back();
+  opt.name   = name;
+  opt.usage  = usage;
+  opt.setter = [&value](const vector<string>& args, string& error) {
+    if (!_cli_parse_size(args, 0, 1, error)) return false;
+    if (!_cli_parse_value(args.empty() ? "true" : args.front(), value, error))
+      return false;
+    return true;
+  };
+  return opt;
+}
+
+// add option
+template <typename T>
+inline cli_option& add_option(cli_command& cli, const string& name,
+    vector<T>& value, const string& usage) {
+  _cli_check_option(cli, name);
+  auto& opt  = cli.options.emplace_back();
+  opt.name   = name;
+  opt.usage  = usage;
+  opt.setter = [&value](const vector<string>& args, string& error) {
+    if (!_cli_parse_size(args, 1, 1024, error)) return false;
+    value.resize(args.size());
+    for (auto idx = (size_t)0; idx < args.size(); idx++) {
+      if (!_cli_parse_value(args[idx], value[idx], error)) return false;
+    }
+    return true;
+  };
+  return opt;
+}
+
+// parse cli
+inline bool parse_cli(
+    cli_command& cli, const vector<string>& args, size_t pos, string& error) {
+  // parsee command or options
+  if (!cli.commands.empty()) {
+    // check command
+    if (pos >= args.size()) {
+      error = "missing command";
+      return false;
+    }
+    // check help
+    if (args[pos] == "--help") {
+      error = "help invoked";
+      return false;
+    }
+    // check option
+    if (args[pos].find("--") == 0) {
+      error = "missing command";
+      return false;
+    }
+    // verify command
+    if (!_cli_contains(cli.commands, args[pos])) {
+      error = "unknown command " + args[pos];
+      return false;
+    }
+    // get command
+    auto name   = args[pos++];
+    cli.command = name;
+    // set command
+    if (!cli.setter({name}, error)) {
+      error += " for command " + name;
+      return false;
+    }
+    // parse command recursively
+    auto& command = _cli_get(cli.commands, name);
+    return parse_cli(command, args, pos, error);
+  } else {
+    // check option
+    if (pos < args.size() - 1 && args[pos].find("--") != 0) {
+      error = "command should start with option";
+      return false;
+    }
+    // parse options till done
+    while (pos < args.size()) {
+      // check for bugs
+      if (args[pos].find("--") != 0) throw std::runtime_error{"parsing bug"};
+      // check help
+      if (args[pos] == "--help") {
+        error = "help invoked";
+        return false;
+      }
+      // verify command
+      if (!_cli_contains(cli.options, args[pos].substr(2))) {
+        error = "unknown option " + args[pos].substr(2);
+        return false;
+      }
+      // get option
+      auto  name   = args[pos++].substr(2);
+      auto& option = _cli_get(cli.options, name);
+      // get args
+      auto values = vector<string>{};
+      while (pos < args.size() && args[pos].find("--") != 0) {
+        values.push_back(args[pos++]);
+      }
+      // set option
+      if (!option.setter(values, error)) {
+        error += " for option " + name;
+        return false;
+      }
+    }
+    // done
+    return true;
+  }
+}
+
+// parse cli
+inline bool parse_cli(
+    cli_command& cli, const vector<string>& args, string& error) {
+  return parse_cli(cli, args, 1, error);
+}
+inline bool parse_cli(
+    cli_command& cli, int argc, const char** argv, string& error) {
+  return parse_cli(cli, vector<string>{argv, argv + argc}, 1, error);
+}
+
+// cli error
+struct cli_error : std::runtime_error {
+  using std::runtime_error::runtime_error;
+};
+
+// parse cli
+inline void parse_cli(cli_command& cli, const vector<string>& args) {
+  auto error = string{};
+  if (!parse_cli(cli, args, 1, error)) throw cli_error{error};
+}
+inline void parse_cli(cli_command& cli, int argc, const char** argv) {
+  return parse_cli(cli, vector<string>{argv, argv + argc});
 }
 
 }  // namespace yocto

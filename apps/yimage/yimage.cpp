@@ -48,16 +48,13 @@ struct convert_params {
 };
 
 // Cli
-void add_options(CLI::App& cli, convert_params& params) {
-  cli.add_option("image", params.image, "Input image.");
-  cli.add_option("--output", params.output, "Output image.");
-  cli.add_option("--exposure", params.exposure, "Tonemap exposure.")
-      ->check(CLI::Range(-100, +100));
-  cli.add_flag("--filmic", params.filmic, "Tonemap filmic.");
-  cli.add_option("--width", params.width, "Resize width.")
-      ->check(CLI::Range(1, int_max));
-  cli.add_option("--height", params.height, "Resize height.")
-      ->check(CLI::Range(1, int_max));
+void add_options(cli_command& cli, convert_params& params) {
+  add_option(cli, "image", params.image, "Input image.");
+  add_option(cli, "output", params.output, "Output image.");
+  add_option(cli, "exposure", params.exposure, "Tonemap exposure.");
+  add_option(cli, "filmic", params.filmic, "Tonemap filmic.");
+  add_option(cli, "width", params.width, "Resize width.");
+  add_option(cli, "height", params.height, "Resize height.");
 }
 
 // convert images
@@ -86,9 +83,9 @@ struct view_params {
 };
 
 // Cli
-void add_options(CLI::App& cli, view_params& params) {
-  cli.add_option("images", params.images, "Input images.");
-  cli.add_option("--output", params.output, "Output image.");
+void add_options(cli_command& cli, view_params& params) {
+  add_option(cli, "images", params.images, "Input images.");
+  add_option(cli, "output", params.output, "Output image.");
 }
 
 // view images
@@ -108,9 +105,9 @@ struct grade_params : colorgrade_params {
 };
 
 // Cli
-void add_options(CLI::App& cli, grade_params& params) {
-  cli.add_option("image", params.image, "Input image.");
-  cli.add_option("--output", params.output, "Output image.");
+void add_options(cli_command& cli, grade_params& params) {
+  add_option(cli, "image", params.image, "Input image.");
+  add_option(cli, "output", params.output, "Output image.");
 }
 
 // grade images
@@ -132,12 +129,12 @@ struct diff_params {
 };
 
 // Cli
-void add_options(CLI::App& cli, diff_params& params) {
-  cli.add_option("image1", params.image1, "Input image 1.");
-  cli.add_option("image2", params.image2, "Input image 2.");
-  cli.add_option("--output", params.output, "Output image.");
-  cli.add_flag("--signal", params.signal, "Error on diff.");
-  cli.add_option("--threshold", params.threshold, "Diff threshold.");
+void add_options(cli_command& cli, diff_params& params) {
+  add_option(cli, "image1", params.image1, "Input image 1.");
+  add_option(cli, "image2", params.image2, "Input image 2.");
+  add_option(cli, "output", params.output, "Output image.");
+  add_option(cli, "signal", params.signal, "Error on diff.");
+  add_option(cli, "threshold", params.threshold, "Diff threshold.");
 }
 
 // resize images
@@ -180,13 +177,13 @@ struct setalpha_params {
 };
 
 // Cli
-void add_options(CLI::App& cli, setalpha_params& params) {
-  cli.add_option("image", params.image, "Input image.");
-  cli.add_option("alpha", params.alpha, "Alpha image.");
-  cli.add_option("--output", params.output, "Output image.");
-  cli.add_flag("--from-color", params.from_color, "Alpha from color.");
-  cli.add_flag("--from-black", params.from_black, "Alpha from black.");
-  cli.add_flag("--to-color", params.to_color, "Color from alpha.");
+void add_options(cli_command& cli, setalpha_params& params) {
+  add_option(cli, "image", params.image, "Input image.");
+  add_option(cli, "alpha", params.alpha, "Alpha image.");
+  add_option(cli, "output", params.output, "Output image.");
+  add_option(cli, "from-color", params.from_color, "Alpha from color.");
+  add_option(cli, "from-black", params.from_black, "Alpha from black.");
+  add_option(cli, "to-color", params.to_color, "Color from alpha.");
 }
 
 // setalpha images
@@ -233,26 +230,20 @@ struct app_params {
 
 // Main
 int main(int argc, const char* argv[]) {
-  // command line parameters
-  auto params = app_params{};
-  auto cli    = CLI::App("Process and view images");
-  add_options(
-      *cli.add_subcommand("convert", "Convert images."), params.convert);
-  add_options(*cli.add_subcommand("view", "View images."), params.view);
-  add_options(*cli.add_subcommand("grade", "Grade images."), params.grade);
-  add_options(*cli.add_subcommand("diff", "Diff two images."), params.diff);
-  add_options(
-      *cli.add_subcommand("setalpha", "Set alpha in images."), params.setalpha);
-  cli.require_subcommand(1);
   try {
-    cli.parse(argc, argv);
-    params.command = cli.get_subcommands().front()->get_name();
-  } catch (const CLI::ParseError& e) {
-    return cli.exit(e);
-  }
+    // command line parameters
+    auto params = app_params{};
+    auto cli    = make_cli("yimage", "Process and view images");
+    add_command_var(cli, params.command);
+    add_options(add_command(cli, "convert", "Convert images."), params.convert);
+    add_options(add_command(cli, "view", "View images."), params.view);
+    add_options(add_command(cli, "grade", "Grade images."), params.grade);
+    add_options(add_command(cli, "diff", "Diff two images."), params.diff);
+    add_options(
+        add_command(cli, "setalpha", "Set alpha in images."), params.setalpha);
+    parse_cli(cli, argc, argv);
 
-  // dispatch commands
-  try {
+    // dispatch commands
     if (params.command == "convert") {
       run_convert(params.convert);
     } else if (params.command == "view") {
@@ -266,6 +257,9 @@ int main(int argc, const char* argv[]) {
     } else {
       throw io_error("unknown command");
     }
+  } catch (const cli_error& error) {
+    std::cerr << "error: " << error.what() << "\n";
+    return 1;
   } catch (const io_error& error) {
     std::cerr << "error: " << error.what() << "\n";
     return 1;
