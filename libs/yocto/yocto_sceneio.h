@@ -420,14 +420,26 @@ inline bool _cli_parse_value(const string& arg, T& value, string& error) {
     value = arg;
     return true;
   } else {
-    auto stream = std::stringstream(arg);
-    stream >> value;
+    auto stream = std::istringstream(arg);
+    stream >> std::boolalpha >> value;
     if (!stream) {
       error = "parse error";
       return false;
     }
     return true;
   }
+}
+template <typename T>
+inline bool _cli_parse_value(const string& arg, T& value, string& error,
+    const vector<pair<T, string>>& labels) {
+  for (auto& label : labels) {
+    if (label.second == arg) {
+      value = label.first;
+      return true;
+    }
+  }
+  error = "unknown value " + arg;
+  return false;
 }
 
 // init cli
@@ -510,6 +522,22 @@ inline cli_option& add_option(cli_command& cli, const string& name,
     for (auto idx = (size_t)0; idx < args.size(); idx++) {
       if (!_cli_parse_value(args[idx], value[idx], error)) return false;
     }
+    return true;
+  };
+  return opt;
+}
+
+// add option
+template <typename T>
+inline cli_option& add_option(cli_command& cli, const string& name, T& value,
+    const string& usage, const vector<pair<T, string>>& labels) {
+  _cli_check_option(cli, name);
+  auto& opt  = cli.options.emplace_back();
+  opt.name   = name;
+  opt.usage  = usage;
+  opt.setter = [&value, labels](const vector<string>& args, string& error) {
+    if (!_cli_parse_size(args, 1, 1, error)) return false;
+    if (!_cli_parse_value(args.front(), value, labels, error)) return false;
     return true;
   };
   return opt;
