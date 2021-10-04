@@ -33,28 +33,12 @@
 #include <yocto/yocto_shape.h>
 #include <yocto/yocto_trace.h>
 
-#include <chrono>
-
 using namespace yocto;
 
-#include "ext/CLI11.hpp"
+#include <filesystem>
+namespace fs = std::filesystem;
 
-int64_t now() {
-  return std::chrono::high_resolution_clock::now().time_since_epoch().count();
-}
-string format_duration(int64_t duration) {
-  auto elapsed = duration / 1000000;  // milliseconds
-  auto hours   = (int)(elapsed / 3600000);
-  elapsed %= 3600000;
-  auto mins = (int)(elapsed / 60000);
-  elapsed %= 60000;
-  auto secs  = (int)(elapsed / 1000);
-  auto msecs = (int)(elapsed % 1000);
-  char buffer[256];
-  snprintf(
-      buffer, sizeof(buffer), "%02d:%02d:%02d.%03d", hours, mins, secs, msecs);
-  return buffer;
-}
+#include <iostream>
 
 // convert params
 struct convert_params {
@@ -66,28 +50,23 @@ struct convert_params {
 };
 
 // Cli
-void add_options(CLI::App& cli, convert_params& params) {
-  cli.add_option("scene", params.scene, "Input scene.");
-  cli.add_option("--output", params.output, "Output scene.");
-  cli.add_flag("--info", params.info, "Print info.");
-  cli.add_flag("--validate", params.validate, "Validate scene.");
-  cli.add_option("--copyright", params.copyright, "Set scene copyright.");
+void add_options(cli_command& cli, convert_params& params) {
+  add_option(cli, "scene", params.scene, "input scene");
+  add_option(cli, "output", params.output, "output scene");
+  add_option(cli, "info", params.info, "print info");
+  add_option(cli, "validate", params.validate, "validate scene");
+  add_option(cli, "copyright", params.copyright, "set scene copyright");
 }
 
 // convert images
-int run_convert(const convert_params& params) {
+void run_convert(const convert_params& params) {
   std::cout << "converting " + params.scene + "\n";
-  auto start = now();
+  auto timer = simple_timer{};
 
   // load scene
-  auto error = string{};
-  auto scene = scene_data{};
-  start      = now();
-  if (!load_scene(params.scene, scene, error)) {
-    std::cerr << "error: cannot load " + params.scene + "\n";
-    return 1;
-  }
-  std::cout << "load scene: " + format_duration(now() - start) + "\n";
+  timer      = simple_timer{};
+  auto scene = load_scene(params.scene);
+  std::cout << "load scene: " + elapsed_formatted(timer) + "\n";
 
   // copyright
   if (params.copyright != "") {
@@ -96,8 +75,9 @@ int run_convert(const convert_params& params) {
 
   // validate scene
   if (params.validate) {
-    for (auto& error : scene_validation(scene))
-      std::cerr << "error: " + error + "\n";
+    auto errors = scene_validation(scene);
+    for (auto& error : errors) std::cerr << "error: " + error + "\n";
+    if (!errors.empty()) throw io_error{"invalid scene"};
   }
 
   // print info
@@ -108,23 +88,16 @@ int run_convert(const convert_params& params) {
 
   // tesselate if needed
   if (!scene.subdivs.empty()) {
-    start = now();
+    timer = simple_timer{};
     tesselate_subdivs(scene);
-    std::cout << ("tesselate subdivs: " + format_duration(now() - start) +
-                  "\n");
+    std::cout << "tesselate subdivs: " + elapsed_formatted(timer) + "\n";
   }
 
   // save scene
-  start = now();
+  timer = simple_timer{};
   make_scene_directories(params.output, scene);
-  if (!save_scene(params.output, scene, error)) {
-    std::cerr << "error: cannot save " + params.output + "\n";
-    return 1;
-  }
-  std::cout << "save scene: " + format_duration(now() - start) + "\n";
-
-  // done
-  return 0;
+  save_scene(params.output, scene);
+  std::cout << "save scene: " + elapsed_formatted(timer) + "\n";
 }
 
 // info params
@@ -134,25 +107,20 @@ struct info_params {
 };
 
 // Cli
-void add_options(CLI::App& cli, info_params& params) {
-  cli.add_option("scene", params.scene, "Input scene.");
-  cli.add_flag("--validate", params.validate, "Validate scene.");
+void add_options(cli_command& cli, info_params& params) {
+  add_option(cli, "scene", params.scene, "input scene");
+  add_option(cli, "validate", params.validate, "validate scene");
 }
 
 // print info for scenes
-int run_info(const info_params& params) {
+void run_info(const info_params& params) {
   std::cout << "info for " + params.scene + "\n";
-  auto start = now();
+  auto timer = simple_timer{};
 
   // load scene
-  auto error = string{};
-  start      = now();
-  auto scene = scene_data{};
-  if (!load_scene(params.scene, scene, error)) {
-    std::cerr << "error: cannot load " + params.scene + "\n";
-    return 1;
-  }
-  std::cout << "load scene: " + format_duration(now() - start) + "\n";
+  timer      = simple_timer{};
+  auto scene = load_scene(params.scene);
+  std::cout << "load scene: " + elapsed_formatted(timer) + "\n";
 
   // validate scene
   if (params.validate) {
@@ -163,9 +131,6 @@ int run_info(const info_params& params) {
   // print info
   std::cout << "scene stats ------------\n";
   for (auto stat : scene_stats(scene)) std::cout << stat + "\n";
-
-  // done
-  return 0;
 }
 
 // render params
@@ -179,51 +144,45 @@ struct render_params : trace_params {
 };
 
 // Cli
-void add_options(CLI::App& cli, render_params& params) {
-  cli.add_option("scene", params.scene, "Scene filename.");
-  cli.add_option("--output", params.output, "Output filename.");
-  cli.add_option("--camera", params.camname, "Camera name.");
-  cli.add_flag("--addsky", params.addsky, "Add sky.");
-  cli.add_option("--envname", params.envname, "Add environment map.");
-  cli.add_flag("--savebatch", params.savebatch, "Save batch.");
-  cli.add_option("--resolution", params.resolution, "Image resolution.");
-  cli.add_option("--sampler", params.sampler, "Sampler type.")
-      ->transform(CLI::CheckedTransformer(trace_sampler_labels));
-  cli.add_option("--falsecolor", params.falsecolor, "False color type.")
-      ->transform(CLI::CheckedTransformer(trace_sampler_labels));
-  cli.add_option("--samples", params.samples, "Number of samples.");
-  cli.add_option("--bounces", params.bounces, "Number of bounces.");
-  cli.add_flag("--denoise", params.denoise, "Enable denoiser.");
-  cli.add_option("--batch", params.batch, "Sample batch.");
-  cli.add_option("--clamp", params.clamp, "Clamp params.");
-  cli.add_flag("--nocaustics", params.nocaustics, "Disable caustics.");
-  cli.add_flag("--envhidden", params.envhidden, "Hide environment.");
-  cli.add_flag("--tentfilter", params.tentfilter, "Filter image.");
-  cli.add_flag("--embreebvh", params.embreebvh, "Use Embree as BVH.");
-  cli.add_flag(
-      "--highqualitybvh", params.highqualitybvh, "Use high quality BVH.");
-  cli.add_option("--exposure", params.exposure, "Exposure value.");
-  cli.add_flag("--filmic", params.filmic, "Filmic tone mapping.");
-  cli.add_flag("--noparallel", params.noparallel, "Disable threading.");
+void add_options(cli_command& cli, render_params& params) {
+  add_option(cli, "scene", params.scene, "scene filename");
+  add_option(cli, "output", params.output, "output filename");
+  add_option(cli, "camera", params.camname, "camera name");
+  add_option(cli, "addsky", params.addsky, "add sky");
+  add_option(cli, "envname", params.envname, "add environment");
+  add_option(cli, "savebatch", params.savebatch, "save batch");
+  add_option(cli, "resolution", params.resolution, "image resolution");
+  add_option(
+      cli, "sampler", params.sampler, "sampler type", trace_sampler_labels);
+  add_option(cli, "falsecolor", params.falsecolor, "false color type",
+      trace_falsecolor_labels);
+  add_option(cli, "samples", params.samples, "number of samples");
+  add_option(cli, "bounces", params.bounces, "number of bounces");
+  add_option(cli, "denoise", params.denoise, "enable denoiser");
+  add_option(cli, "batch", params.batch, "sample batch");
+  add_option(cli, "clamp", params.clamp, "clamp params");
+  add_option(cli, "nocaustics", params.nocaustics, "disable caustics");
+  add_option(cli, "envhidden", params.envhidden, "hide environment");
+  add_option(cli, "tentfilter", params.tentfilter, "filter image");
+  add_option(cli, "embreebvh", params.embreebvh, "use Embree bvh");
+  add_option(cli, "highqualitybvh", params.highqualitybvh, "high quality bvh");
+  add_option(cli, "exposure", params.exposure, "exposure value");
+  add_option(cli, "filmic", params.filmic, "filmic tone mapping");
+  add_option(cli, "noparallel", params.noparallel, "disable threading");
 }
 
 // convert images
-int run_render(const render_params& params_) {
+void run_render(const render_params& params_) {
   std::cout << "rendering " + params_.scene + "\n";
-  auto start = now();
+  auto timer = simple_timer{};
 
   // copy params
   auto params = params_;
 
   // scene loading
-  auto error = string{};
-  start      = now();
-  auto scene = scene_data{};
-  if (!load_scene(params.scene, scene, error)) {
-    std::cerr << "error: cannot load " + params.scene + "\n";
-    return 1;
-  }
-  std::cout << "load scene: " + format_duration(now() - start) + "\n";
+  timer      = simple_timer{};
+  auto scene = load_scene(params.scene);
+  std::cout << "load scene: " + elapsed_formatted(timer) + "\n";
 
   // add sky
   if (params.addsky) add_sky(scene);
@@ -257,40 +216,34 @@ int run_render(const render_params& params_) {
   auto state = make_state(scene, params);
 
   // render
-  start = now();
+  timer = simple_timer{};
   for (auto sample = 0; sample < params.samples; sample++) {
-    auto sample_start = now();
+    auto sample_timer = simple_timer{};
     trace_samples(state, scene, bvh, lights, params);
     std::cout << ("render sample " + std::to_string(sample) + "/" +
                   std::to_string(params.samples) + ":" +
-                  format_duration(now() - sample_start) + "\n");
+                  elapsed_formatted(sample_timer) + "\n");
     if (params.savebatch && state.samples % params.batch == 0) {
       auto image = params.denoise ? get_denoised(state) : get_render(state);
-      auto ext = "-s" + std::to_string(sample) + path_extension(params.output);
-      auto outfilename = replace_extension(params.output, ext);
+      auto outfilename = fs::path(params.output)
+                             .replace_extension(
+                                 "-s" + std::to_string(sample) +
+                                 fs::path(params.output).extension().string())
+                             .string();
       if (!is_hdr_filename(params.output))
         image = tonemap_image(image, params.exposure, params.filmic);
-      if (!save_image(outfilename, image, error)) {
-        std::cerr << "error: cannot save " + outfilename + "\n";
-        return 1;
-      }
+      save_image(outfilename, image);
     }
   }
-  std::cout << "render image: " + format_duration(now() - start) + "\n";
+  std::cout << "render image: " + elapsed_formatted(timer) + "\n";
 
   // save image
-  start      = now();
+  timer      = simple_timer{};
   auto image = params.denoise ? get_denoised(state) : get_render(state);
   if (!is_hdr_filename(params.output))
     image = tonemap_image(image, params.exposure, params.filmic);
-  if (!save_image(params.output, image, error)) {
-    std::cerr << "error: cannot save " + params.output + "\n";
-    return 1;
-  }
-  std::cout << "save image: " + format_duration(now() - start) + "\n";
-
-  // done
-  return 0;
+  save_image(params.output, image);
+  std::cout << "save image: " + elapsed_formatted(timer) + "\n";
 }
 
 // convert params
@@ -303,50 +256,45 @@ struct view_params : trace_params {
 };
 
 // Cli
-void add_options(CLI::App& cli, view_params& params) {
-  cli.add_option("scene", params.scene, "Scene filename.");
-  cli.add_option("--output", params.output, "Output filename.");
-  cli.add_option("--camera", params.camname, "Camera name.");
-  cli.add_flag("--addsky", params.addsky, "Add sky.");
-  cli.add_option("--envname", params.envname, "Add environment map.");
-  cli.add_option("--resolution", params.resolution, "Image resolution.");
-  cli.add_option("--sampler", params.sampler, "Sampler type.")
-      ->transform(CLI::CheckedTransformer(trace_sampler_labels));
-  cli.add_option("--falsecolor", params.falsecolor, "False color type.")
-      ->transform(CLI::CheckedTransformer(trace_falsecolor_labels));
-  cli.add_option("--samples", params.samples, "Number of samples.");
-  cli.add_option("--bounces", params.bounces, "Number of bounces.");
-  cli.add_flag("--denoise", params.denoise, "Enable denoiser.");
-  cli.add_option("--batch", params.batch, "Sample batch.");
-  cli.add_option("--clamp", params.clamp, "Clamp params.");
-  cli.add_flag("--nocaustics", params.nocaustics, "Disable caustics.");
-  cli.add_flag("--envhidden", params.envhidden, "Hide environment.");
-  cli.add_flag("--tentfilter", params.tentfilter, "Filter image.");
-  cli.add_flag("--embreebvh", params.embreebvh, "Use Embree as BVH.");
-  cli.add_flag(
-      "--highqualitybvh", params.highqualitybvh, "Use high quality BVH.");
-  cli.add_option("--exposure", params.exposure, "Exposure value.");
-  cli.add_flag("--filmic", params.filmic, "Filmic tone mapping.");
-  cli.add_flag("--noparallel", params.noparallel, "Disable threading.");
+void add_options(cli_command& cli, view_params& params) {
+  add_option(cli, "scene", params.scene, "scene filename");
+  add_option(cli, "output", params.output, "output filename");
+  add_option(cli, "camera", params.camname, "camera name");
+  add_option(cli, "addsky", params.addsky, "add sky");
+  add_option(cli, "envname", params.envname, "add environment");
+  add_option(cli, "resolution", params.resolution, "image resolution");
+  add_option(
+      cli, "sampler", params.sampler, "sampler type", trace_sampler_labels);
+  add_option(cli, "falsecolor", params.falsecolor, "false color type",
+      trace_falsecolor_labels);
+  add_option(cli, "samples", params.samples, "number of samples");
+  add_option(cli, "bounces", params.bounces, "number of bounces");
+  add_option(cli, "denoise", params.denoise, "enable denoiser");
+  add_option(cli, "batch", params.batch, "sample batch");
+  add_option(cli, "clamp", params.clamp, "clamp params");
+  add_option(cli, "nocaustics", params.nocaustics, "disable caustics");
+  add_option(cli, "envhidden", params.envhidden, "hide environment");
+  add_option(cli, "tentfilter", params.tentfilter, "filter image");
+  add_option(cli, "embreebvh", params.embreebvh, "use Embree as BVH");
+  add_option(
+      cli, "--highqualitybvh", params.highqualitybvh, "use high quality BVH");
+  add_option(cli, "exposure", params.exposure, "exposure value");
+  add_option(cli, "filmic", params.filmic, "filmic tone mapping");
+  add_option(cli, "noparallel", params.noparallel, "disable threading");
 }
 
 // view scene
-int run_view(const view_params& params_) {
+void run_view(const view_params& params_) {
   std::cout << "viewing " + params_.scene + "\n";
-  auto start = now();
+  auto timer = simple_timer{};
 
   // copy params
   auto params = params_;
 
   // load scene
-  auto error = string{};
-  start      = now();
-  auto scene = scene_data{};
-  if (!load_scene(params.scene, scene, error)) {
-    std::cerr << "error: cannot load " + params.scene + "\n";
-    return 1;
-  }
-  std::cout << "load scene: " + format_duration(now() - start) + "\n";
+  timer      = simple_timer{};
+  auto scene = load_scene(params.scene);
+  std::cout << "load scene: " + elapsed_formatted(timer) + "\n";
 
   // add sky
   if (params.addsky) add_sky(scene);
@@ -366,9 +314,6 @@ int run_view(const view_params& params_) {
 
   // run view
   show_trace_gui("yscene", params.scene, scene, params);
-
-  // done
-  return 0;
 }
 
 struct glview_params {
@@ -377,24 +322,19 @@ struct glview_params {
 };
 
 // Cli
-void add_options(CLI::App& cli, glview_params& params) {
-  cli.add_option("scene", params.scene, "Input scene.");
-  cli.add_option("--camera", params.camname, "Camera name.");
+void add_options(cli_command& cli, glview_params& params) {
+  add_option(cli, "scene", params.scene, "input scene");
+  add_option(cli, "camera", params.camname, "camera name");
 }
 
-int run_glview(const glview_params& params_) {
+void run_glview(const glview_params& params_) {
   std::cout << "viewing " + params_.scene + "\n";
 
   // copy params
   auto params = params_;
 
   // loading scene
-  auto error = string{};
-  auto scene = scene_data{};
-  if (!load_scene(params.scene, scene, error)) {
-    std::cerr << "error: cannot load " + params.scene + "\n";
-    return 1;
-  }
+  auto scene = load_scene(params.scene);
 
   // tesselation
   if (!scene.subdivs.empty()) {
@@ -407,9 +347,6 @@ int run_glview(const glview_params& params_) {
 
   // run viewer
   show_shade_gui("yscene", params.scene, scene, viewparams);
-
-  // done
-  return 0;
 }
 
 struct app_params {
@@ -423,37 +360,38 @@ struct app_params {
 
 // Run
 int main(int argc, const char* argv[]) {
-  // command line parameters
-  auto params = app_params{};
-  auto cli    = CLI::App("Process and view scenes");
-  add_options(
-      *cli.add_subcommand("convert", "Convert scenes."), params.convert);
-  add_options(*cli.add_subcommand("info", "Print scenes info."), params.info);
-  add_options(*cli.add_subcommand("render", "Render scenes."), params.render);
-  add_options(*cli.add_subcommand("view", "View scenes."), params.view);
-  add_options(
-      *cli.add_subcommand("glview", "View scenes with OpenGL."), params.glview);
-  cli.require_subcommand(1);
   try {
-    cli.parse(argc, argv);
-    params.command = cli.get_subcommands().front()->get_name();
-  } catch (const CLI::ParseError& e) {
-    return cli.exit(e);
-  }
+    // command line parameters
+    auto params = app_params{};
+    auto cli    = make_cli("yscene", "process and view scenes");
+    add_command_var(cli, params.command);
+    add_options(add_command(cli, "convert", "convert scenes"), params.convert);
+    add_options(add_command(cli, "info", "print scenes info"), params.info);
+    add_options(add_command(cli, "render", "render scenes"), params.render);
+    add_options(add_command(cli, "view", "view scenes"), params.view);
+    add_options(
+        add_command(cli, "glview", "view scenes with OpenGL"), params.glview);
+    parse_cli(cli, argc, argv);
 
-  // dispatch commands
-  if (params.command == "convert") {
-    return run_convert(params.convert);
-  } else if (params.command == "info") {
-    return run_info(params.info);
-  } else if (params.command == "render") {
-    return run_render(params.render);
-  } else if (params.command == "view") {
-    return run_view(params.view);
-  } else if (params.command == "glview") {
-    return run_glview(params.glview);
-  } else {
-    std::cerr << "error: unknown command\n";
+    // dispatch commands
+    if (params.command == "convert") {
+      run_convert(params.convert);
+    } else if (params.command == "info") {
+      run_info(params.info);
+    } else if (params.command == "render") {
+      run_render(params.render);
+    } else if (params.command == "view") {
+      run_view(params.view);
+    } else if (params.command == "glview") {
+      run_glview(params.glview);
+    } else {
+      throw io_error{"unknown command"};
+    }
+  } catch (const std::exception& error) {
+    std::cerr << "error: " << error.what() << "\n";
     return 1;
   }
+
+  // done
+  return 0;
 }

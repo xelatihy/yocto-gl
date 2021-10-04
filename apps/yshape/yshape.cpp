@@ -34,9 +34,9 @@
 #include <yocto/yocto_sceneio.h>
 #include <yocto/yocto_shape.h>
 
-#include "ext/CLI11.hpp"
-
 using namespace yocto;
+
+#include <iostream>
 
 // convert params
 struct convert_params {
@@ -56,36 +56,29 @@ struct convert_params {
   bool   tovertices   = false;
 };
 
-void add_options(CLI::App& cli, convert_params& params) {
-  cli.add_option("shape", params.shape, "Input shape.");
-  cli.add_option("--output", params.output, "Output shape.");
-  cli.add_flag("--smooth", params.smooth, "Smooth normals.");
-  cli.add_flag("--facet", params.facet, "Facet normals.");
-  cli.add_flag(
-      "--aspositions", params.aspositions, "Remove all but positions.");
-  cli.add_flag("--astriangles", params.astriangles, "Convert to triangles.");
-  cli.add_option(
-      "--translate", (array<float, 3>&)params.translate, "Translate shape.");
-  cli.add_option("--scale", (array<float, 3>&)params.scale, "Scale shape.");
-  cli.add_option("--rotate", (array<float, 3>&)params.rotate, "Rotate shape.");
-  cli.add_option("--subdivisions", params.subdivisions, "Apply subdivision.");
-  cli.add_flag(
-      "--catmullclark", params.catmullclark, "Catmull-Clark subdivision.");
-  cli.add_flag("--toedges", params.toedges, "Convert shape to edges.");
-  cli.add_flag("--tovertices", params.tovertices, "Convert shape to vertices.");
+void add_options(cli_command& cli, convert_params& params) {
+  add_option(cli, "shape", params.shape, "input shape");
+  add_option(cli, "output", params.output, "output shape");
+  add_option(cli, "smooth", params.smooth, "smooth normals");
+  add_option(cli, "facet", params.facet, "facet normals");
+  add_option(
+      cli, "aspositions", params.aspositions, "remove all but positions");
+  add_option(cli, "astriangles", params.astriangles, "convert to triangles");
+  add_option(
+      cli, "translate", (array<float, 3>&)params.translate, "translate shape");
+  add_option(cli, "scale", (array<float, 3>&)params.scale, "scale shape");
+  add_option(cli, "rotate", (array<float, 3>&)params.rotate, "rotate shape");
+  add_option(cli, "subdivisions", params.subdivisions, "apply subdivision");
+  add_option(
+      cli, "catmullclark", params.catmullclark, "subdivide as Catmull-Clark");
+  add_option(cli, "toedges", params.toedges, "convert shape to edges");
+  add_option(cli, "tovertices", params.tovertices, "convert shape to vertices");
 }
 
 // convert images
-int run_convert(const convert_params& params) {
-  std::cout << "converting " + params.shape + "\n";
-
+void run_convert(const convert_params& params) {
   // load mesh
-  auto error = string{};
-  auto shape = shape_data{};
-  if (!load_shape(params.shape, shape, error, true)) {
-    std::cerr << "error: cannot load " + params.shape + "\n";
-    return 1;
-  }
+  auto shape = load_shape(params.shape, true);
 
   // remove data
   if (params.aspositions) {
@@ -134,8 +127,7 @@ int run_convert(const convert_params& params) {
   if (params.toedges) {
     // check faces
     if (shape.triangles.empty() && shape.quads.empty()) {
-      std::cerr << "error: empty shape " + params.shape + "\n";
-      return 1;
+      throw io_error{"empty shape " + params.shape};
     }
 
     // convert to edges
@@ -175,13 +167,7 @@ int run_convert(const convert_params& params) {
   }
 
   // save mesh
-  if (!save_shape(params.output, shape, error, true)) {
-    std::cerr << "error: cannot save " + params.output + "\n";
-    return 1;
-  }
-
-  // done
-  return 0;
+  save_shape(params.output, shape, true);
 }
 
 // fvconvert params
@@ -199,33 +185,26 @@ struct fvconvert_params {
   bool   catmullclark = false;
 };
 
-void add_options(CLI::App& cli, fvconvert_params& params) {
-  cli.add_option("shape", params.shape, "Input shape.");
-  cli.add_option("--output", params.output, "Output shape.");
-  cli.add_flag("--smooth", params.smooth, "Smooth normals.");
-  cli.add_flag("--facet", params.facet, "Facet normals.");
-  cli.add_flag(
-      "--aspositions", params.aspositions, "Remove all but positions.");
-  cli.add_option(
-      "--translate", (array<float, 3>&)params.translate, "Translate shape.");
-  cli.add_option("--scale", (array<float, 3>&)params.scale, "Scale shape.");
-  cli.add_option("--rotate", (array<float, 3>&)params.rotate, "Rotate shape.");
-  cli.add_option("--subdivisions", params.subdivisions, "Apply subdivision.");
-  cli.add_flag(
-      "--catmullclark", params.catmullclark, "Catmull-Clark subdivision.");
+void add_options(cli_command& cli, fvconvert_params& params) {
+  add_option(cli, "shape", params.shape, "input shape");
+  add_option(cli, "output", params.output, "output shape");
+  add_option(cli, "smooth", params.smooth, "smooth normals");
+  add_option(cli, "facet", params.facet, "facet normals");
+  add_option(
+      cli, "aspositions", params.aspositions, "remove all but positions");
+  add_option(
+      cli, "translate", (array<float, 3>&)params.translate, "translate shape");
+  add_option(cli, "scale", (array<float, 3>&)params.scale, "scale shape");
+  add_option(cli, "rotate", (array<float, 3>&)params.rotate, "rotate shape");
+  add_option(cli, "subdivisions", params.subdivisions, "apply subdivision");
+  add_option(
+      cli, "catmullclark", params.catmullclark, "subdivide as Catmull-Clark");
 }
 
 // convert images
-int run_fvconvert(const fvconvert_params& params) {
-  std::cout << "converting " + params.shape + "\n";
-
+void run_fvconvert(const fvconvert_params& params) {
   // load mesh
-  auto error = string{};
-  auto shape = fvshape_data{};
-  if (!load_fvshape(params.shape, shape, error, true)) {
-    std::cerr << "error: cannot load " + params.shape + "\n";
-    return 1;
-  }
+  auto shape = load_fvshape(params.shape, true);
 
   // remove data
   if (params.aspositions) {
@@ -283,13 +262,7 @@ int run_fvconvert(const fvconvert_params& params) {
   }
 
   // save mesh
-  if (!save_fvshape(params.output, shape, error, true)) {
-    std::cerr << "error: cannot save " + params.output + "\n";
-    return 1;
-  }
-
-  // done
-  return 0;
+  save_fvshape(params.output, shape, true);
 }
 
 // view params
@@ -299,32 +272,22 @@ struct view_params {
   bool   addsky = false;
 };
 
-void add_options(CLI::App& cli, view_params& params) {
-  cli.add_option("shape", params.shape, "Input shape.");
-  cli.add_option("--output", params.output, "Output shape.");
-  cli.add_flag("--addsky", params.addsky, "Add sky.");
+void add_options(cli_command& cli, view_params& params) {
+  add_option(cli, "shape", params.shape, "input shape");
+  add_option(cli, "output", params.output, "output shape");
+  add_option(cli, "addsky", params.addsky, "add sky");
 }
 
 // view shapes
-int run_view(const view_params& params) {
-  std::cout << "viewing " + params.shape + "\n";
-
+void run_view(const view_params& params) {
   // load shape
-  auto error = string{};
-  auto shape = shape_data{};
-  if (!load_shape(params.shape, shape, error, true)) {
-    std::cerr << "error: cannot load " + params.shape + "\n";
-    return 1;
-  }
+  auto shape = load_shape(params.shape, true);
 
   // make scene
   auto scene = make_shape_scene(shape, params.addsky);
 
   // run view
   show_trace_gui("yshape", params.shape, scene);
-
-  // done
-  return 0;
 }
 
 struct heightfield_params {
@@ -338,26 +301,21 @@ struct heightfield_params {
   vec3f  scale     = {1, 1, 1};
 };
 
-void add_options(CLI::App& cli, heightfield_params& params) {
-  cli.add_option("image", params.image, "Input image.");
-  cli.add_option("--output", params.output, "Output shape.");
-  cli.add_flag("--smooth", params.smooth, "Smoooth normals.");
-  cli.add_option("--height", params.height, "Shape height.");
-  cli.add_flag("--info", params.info, "Print info.");
-  cli.add_option(
-      "--translate", (array<float, 3>&)params.translate, "Translate shape.");
-  cli.add_option("--scale", (array<float, 3>&)params.scale, "Scale shape.");
-  cli.add_option("--rotate", (array<float, 3>&)params.rotate, "Rotate shape.");
+void add_options(cli_command& cli, heightfield_params& params) {
+  add_option(cli, "image", params.image, "input image");
+  add_option(cli, "output", params.output, "output shape");
+  add_option(cli, "smooth", params.smooth, "smoooth normals");
+  add_option(cli, "height", params.height, "shape height");
+  add_option(cli, "info", params.info, "print info");
+  add_option(
+      cli, "translate", (array<float, 3>&)params.translate, "translate shape");
+  add_option(cli, "scale", (array<float, 3>&)params.scale, "scale shape");
+  add_option(cli, "rotate", (array<float, 3>&)params.rotate, "rotate shape");
 }
 
-int run_heightfield(const heightfield_params& params) {
+void run_heightfield(const heightfield_params& params) {
   // load image
-  auto error = string{};
-  auto image = image_data{};
-  if (!load_image(params.image, image, error)) {
-    std::cerr << "error: cannot load " + params.image + "\n";
-    return 1;
-  }
+  auto image = load_image(params.image);
 
   // adjust height
   if (params.height != 1) {
@@ -391,13 +349,7 @@ int run_heightfield(const heightfield_params& params) {
   }
 
   // save mesh
-  if (!save_shape(params.output, shape, error, true)) {
-    std::cerr << "error: cannot save " + params.output + "\n";
-    return 1;
-  }
-
-  // done
-  return 0;
+  save_shape(params.output, shape, true);
 }
 
 struct hair_params {
@@ -411,25 +363,20 @@ struct hair_params {
   float  radius  = 0.0001f;
 };
 
-void add_options(CLI::App& cli, hair_params& params) {
-  cli.add_option("shape", params.shape, "Input shape.");
-  cli.add_option("--output", params.output, "Output shape.");
-  cli.add_option("--hairs", params.hairs, "Number of hairs.");
-  cli.add_option("--steps", params.steps, "Hair steps.");
-  cli.add_option("--length", params.length, "Hair length.");
-  cli.add_option("--noise", params.noise, "Noise weight.");
-  cli.add_option("--gravity", params.gravity, "Gravity scale.");
-  cli.add_option("--radius", params.radius, "Hair radius.");
+void add_options(cli_command& cli, hair_params& params) {
+  add_option(cli, "shape", params.shape, "input shape");
+  add_option(cli, "output", params.output, "output shape");
+  add_option(cli, "hairs", params.hairs, "number of hairs");
+  add_option(cli, "steps", params.steps, "hair steps");
+  add_option(cli, "length", params.length, "hair length");
+  add_option(cli, "noise", params.noise, "noise weight");
+  add_option(cli, "gravity", params.gravity, "gravity scale");
+  add_option(cli, "radius", params.radius, "hair radius");
 }
 
-int run_hair(const hair_params& params) {
+void run_hair(const hair_params& params) {
   // load mesh
-  auto error = string{};
-  auto shape = shape_data{};
-  if (!load_shape(params.shape, shape, error)) {
-    std::cerr << "error: cannot load " + params.shape + "\n";
-    return 1;
-  }
+  auto shape = load_shape(params.shape);
 
   // generate hair
   auto hair = make_hair2(shape, {params.steps, params.hairs},
@@ -437,13 +384,7 @@ int run_hair(const hair_params& params) {
       params.noise, params.gravity);
 
   // save mesh
-  if (!save_shape(params.output, hair, error, true)) {
-    std::cerr << "error: cannot save " + params.output + "\n";
-    return 1;
-  }
-
-  // done
-  return 0;
+  save_shape(params.output, hair, true);
 }
 
 struct sample_params {
@@ -452,20 +393,15 @@ struct sample_params {
   int    samples = 4096;
 };
 
-void add_options(CLI::App& cli, sample_params& params) {
-  cli.add_option("shape", params.shape, "Input shape.");
-  cli.add_option("--output", params.output, "Output shape.");
-  cli.add_option("--samples", params.samples, "Number of samples.");
+void add_options(cli_command& cli, sample_params& params) {
+  add_option(cli, "shape", params.shape, "input shape");
+  add_option(cli, "output", params.output, "output shape");
+  add_option(cli, "samples", params.samples, "number of samples");
 }
 
-int run_sample(const sample_params& params) {
+void run_sample(const sample_params& params) {
   // load mesh
-  auto error = string{};
-  auto shape = shape_data{};
-  if (!load_shape(params.shape, shape, error)) {
-    std::cerr << "error: cannot load " + params.shape + "\n";
-    return 1;
-  }
+  auto shape = load_shape(params.shape);
 
   // generate samples
   auto samples = sample_shape(shape, params.samples);
@@ -479,13 +415,7 @@ int run_sample(const sample_params& params) {
   }
 
   // save mesh
-  if (!save_shape(params.output, sshape, error)) {
-    std::cerr << "error: cannot save " + params.output + "\n";
-    return 1;
-  }
-
-  // done
-  return 0;
+  save_shape(params.output, sshape);
 }
 
 struct glview_params {
@@ -494,28 +424,20 @@ struct glview_params {
 };
 
 // Cli
-void add_options(CLI::App& cli, glview_params& params) {
-  cli.add_option("shape", params.shape, "Input shape.");
-  cli.add_flag("--addsky", params.addsky, "Add sky.");
+void add_options(cli_command& cli, glview_params& params) {
+  add_option(cli, "shape", params.shape, "input shape");
+  add_option(cli, "addsky", params.addsky, "add sky");
 }
 
-int run_glview(const glview_params& params) {
+void run_glview(const glview_params& params) {
   // loading shape
-  auto error = string{};
-  auto shape = shape_data{};
-  if (!load_shape(params.shape, shape, error)) {
-    std::cerr << "error: cannot load " + params.shape + "\n";
-    return 1;
-  }
+  auto shape = load_shape(params.shape);
 
   // make scene
   auto scene = make_shape_scene(shape, params.addsky);
 
   // run viewer
   show_shade_gui("yshape", params.shape, scene, {});
-
-  // done
-  return 0;
 }
 
 struct app_params {
@@ -531,47 +453,47 @@ struct app_params {
 
 // Run
 int main(int argc, const char** argv) {
-  // command line parameters
-  auto params = app_params{};
-  auto cli    = CLI::App("Process and view shapes");
-  add_options(
-      *cli.add_subcommand("convert", "Convert shapes."), params.convert);
-  add_options(*cli.add_subcommand("fvconvert", "Convert face-varying shapes."),
-      params.fvconvert);
-  add_options(*cli.add_subcommand("view", "View shapes."), params.view);
-  add_options(*cli.add_subcommand("heightfield", "Create an heightfield."),
-      params.heightfield);
-  add_options(
-      *cli.add_subcommand("hair", "Grow hairs on a shape."), params.hair);
-  add_options(*cli.add_subcommand("sample", "Sample shapepoints on a shape."),
-      params.sample);
-  add_options(
-      *cli.add_subcommand("glview", "View shapes with OpenGL."), params.glview);
-  cli.require_subcommand(1);
   try {
-    cli.parse(argc, argv);
-    params.command = cli.get_subcommands().front()->get_name();
-  } catch (const CLI::ParseError& e) {
-    return cli.exit(e);
-  }
+    // command line parameters
+    auto params = app_params{};
+    auto cli    = make_cli("yshape", "Process and view shapes");
+    add_command_var(cli, params.command);
+    add_options(add_command(cli, "convert", "convert shapes"), params.convert);
+    add_options(add_command(cli, "fvconvert", "convert face-varying shapes"),
+        params.fvconvert);
+    add_options(add_command(cli, "view", "view shapes"), params.view);
+    add_options(add_command(cli, "heightfield", "create an heightfield"),
+        params.heightfield);
+    add_options(add_command(cli, "hair", "grow hairs on a shape"), params.hair);
+    add_options(
+        add_command(cli, "sample", "sample points on a shape"), params.sample);
+    add_options(
+        add_command(cli, "glview", "view shapes with OpenGL"), params.glview);
+    parse_cli(cli, argc, argv);
 
-  // dispatch commands
-  if (params.command == "convert") {
-    return run_convert(params.convert);
-  } else if (params.command == "fvconvert") {
-    return run_fvconvert(params.fvconvert);
-  } else if (params.command == "view") {
-    return run_view(params.view);
-  } else if (params.command == "heightfield") {
-    return run_heightfield(params.heightfield);
-  } else if (params.command == "hair") {
-    return run_hair(params.hair);
-  } else if (params.command == "sample") {
-    return run_sample(params.sample);
-  } else if (params.command == "glview") {
-    return run_glview(params.glview);
-  } else {
-    std::cerr << "error: unknown command\n";
+    // dispatch commands
+    if (params.command == "convert") {
+      run_convert(params.convert);
+    } else if (params.command == "fvconvert") {
+      run_fvconvert(params.fvconvert);
+    } else if (params.command == "view") {
+      run_view(params.view);
+    } else if (params.command == "heightfield") {
+      run_heightfield(params.heightfield);
+    } else if (params.command == "hair") {
+      run_hair(params.hair);
+    } else if (params.command == "sample") {
+      run_sample(params.sample);
+    } else if (params.command == "glview") {
+      run_glview(params.glview);
+    } else {
+      throw io_error{"unknown command"};
+    }
+  } catch (const std::exception& error) {
+    std::cerr << "error: " << error.what() << "\n";
     return 1;
   }
+
+  // done
+  return 0;
 }

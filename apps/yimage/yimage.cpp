@@ -33,9 +33,9 @@
 #include <yocto/yocto_scene.h>
 #include <yocto/yocto_sceneio.h>
 
-#include "ext/CLI11.hpp"
-
 using namespace yocto;
+
+#include <iostream>
 
 // convert params
 struct convert_params {
@@ -48,29 +48,19 @@ struct convert_params {
 };
 
 // Cli
-void add_options(CLI::App& cli, convert_params& params) {
-  cli.add_option("image", params.image, "Input image.");
-  cli.add_option("--output", params.output, "Output image.");
-  cli.add_option("--exposure", params.exposure, "Tonemap exposure.")
-      ->check(CLI::Range(-100, +100));
-  cli.add_flag("--filmic", params.filmic, "Tonemap filmic.");
-  cli.add_option("--width", params.width, "Resize width.")
-      ->check(CLI::Range(1, int_max));
-  cli.add_option("--height", params.height, "Resize height.")
-      ->check(CLI::Range(1, int_max));
+void add_options(cli_command& cli, convert_params& params) {
+  add_option(cli, "image", params.image, "Input image.");
+  add_option(cli, "output", params.output, "Output image.");
+  add_option(cli, "exposure", params.exposure, "Tonemap exposure.");
+  add_option(cli, "filmic", params.filmic, "Tonemap filmic.");
+  add_option(cli, "width", params.width, "Resize width.");
+  add_option(cli, "height", params.height, "Resize height.");
 }
 
 // convert images
-int run_convert(const convert_params& params) {
-  std::cout << "converting " + params.image + "\n";
-
+void run_convert(const convert_params& params) {
   // load
-  auto error = string{};
-  auto image = image_data{};
-  if (!load_image(params.image, image, error)) {
-    std::cerr << "error: cannot load " + params.image + "\n";
-    return 1;
-  }
+  auto image = load_image(params.image);
 
   // resize if needed
   if (params.width != 0 || params.height != 0) {
@@ -83,13 +73,7 @@ int run_convert(const convert_params& params) {
   }
 
   // save
-  if (!save_image(params.output, image, error)) {
-    std::cerr << "error: cannot save " + params.output + "\n";
-    return 1;
-  }
-
-  // done
-  return 0;
+  save_image(params.output, image);
 }
 
 // view params
@@ -99,28 +83,19 @@ struct view_params {
 };
 
 // Cli
-void add_options(CLI::App& cli, view_params& params) {
-  cli.add_option("images", params.images, "Input images.");
-  cli.add_option("--output", params.output, "Output image.");
+void add_options(cli_command& cli, view_params& params) {
+  add_option(cli, "images", params.images, "Input images.");
+  add_option(cli, "output", params.output, "Output image.");
 }
 
 // view images
-int run_view(const view_params& params) {
+void run_view(const view_params& params) {
   // load
-  auto error  = string{};
-  auto images = vector<image_data>(params.images.size());
-  for (auto idx = 0; idx < (int)params.images.size(); idx++) {
-    if (!load_image(params.images[idx], images[idx], error)) {
-      std::cerr << "error: error loading " + params.images[idx] + "\n";
-      return 1;
-    }
-  }
+  auto images = vector<image_data>{};
+  for (auto& image : params.images) images.push_back(load_image(image));
 
   // run viewer
   show_image_gui("yimage", params.images, images);
-
-  // done
-  return 0;
 }
 
 // grade params
@@ -130,26 +105,18 @@ struct grade_params : colorgrade_params {
 };
 
 // Cli
-void add_options(CLI::App& cli, grade_params& params) {
-  cli.add_option("image", params.image, "Input image.");
-  cli.add_option("--output", params.output, "Output image.");
+void add_options(cli_command& cli, grade_params& params) {
+  add_option(cli, "image", params.image, "Input image.");
+  add_option(cli, "output", params.output, "Output image.");
 }
 
 // grade images
-int run_grade(const grade_params& params) {
+void run_grade(const grade_params& params) {
   // load image
-  auto error = string{};
-  auto image = image_data{};
-  if (!load_image(params.image, image, error)) {
-    std::cerr << "error: error loading " + params.image + "\n";
-    return 1;
-  }
+  auto image = load_image(params.image);
 
   // run viewer
   show_colorgrade_gui("yimage", params.image, image);
-
-  // done
-  return 0;
 }
 
 // resize params
@@ -162,63 +129,41 @@ struct diff_params {
 };
 
 // Cli
-void add_options(CLI::App& cli, diff_params& params) {
-  cli.add_option("image1", params.image1, "Input image 1.");
-  cli.add_option("image2", params.image2, "Input image 2.");
-  cli.add_option("--output", params.output, "Output image.");
-  cli.add_flag("--signal", params.signal, "Error on diff.");
-  cli.add_option("--threshold", params.threshold, "Diff threshold.");
+void add_options(cli_command& cli, diff_params& params) {
+  add_option(cli, "image1", params.image1, "Input image 1.");
+  add_option(cli, "image2", params.image2, "Input image 2.");
+  add_option(cli, "output", params.output, "Output image.");
+  add_option(cli, "signal", params.signal, "Error on diff.");
+  add_option(cli, "threshold", params.threshold, "Diff threshold.");
 }
 
 // resize images
-int run_diff(const diff_params& params) {
-  std::cout << "error: diffing {} and " + params.image1, params.image2 + "\n";
-
+void run_diff(const diff_params& params) {
   // load
-  auto error  = string{};
-  auto image1 = image_data{}, image2 = image_data{};
-  if (!load_image(params.image1, image1, error)) {
-    std::cerr << "error: cannot load " + params.image1 + "\n";
-    return 1;
-  }
-  if (!load_image(params.image2, image2, error)) {
-    std::cerr << "error: cannot load " + params.image2 + "\n";
-    return 1;
-  }
+  auto image1 = load_image(params.image1);
+  auto image2 = load_image(params.image2);
 
   // check sizes
-  if (image1.width != image2.width || image1.height != image2.height) {
-    std::cerr << "error: different image sizes\n";
-    return 1;
-  }
+  if (image1.width != image2.width || image1.height != image2.height)
+    throw io_error("different image sizes");
 
   // check types
-  if (image1.linear != image2.linear) {
-    std::cerr << "error: different image types\n";
-    return 1;
-  }
+  if (image1.linear != image2.linear) throw io_error("different image types");
 
   // compute diff
   auto diff = image_difference(image1, image2, true);
 
   // save
-  if (params.output != "")
-    if (!save_image(params.output, diff, error)) {
-      std::cerr << "error: different image sizes\n";
-      return 1;
-    }
+  if (params.output != "") save_image(params.output, diff);
 
   // check diff
   if (params.signal) {
     for (auto& c : diff.pixels) {
       if (max(xyz(c)) > params.threshold) {
-        std::cerr << "error: image conten differs\n";
+        throw io_error("image content differ");
       }
     }
   }
-
-  // done
-  return 0;
 }
 
 // setalpha params
@@ -232,42 +177,27 @@ struct setalpha_params {
 };
 
 // Cli
-void add_options(CLI::App& cli, setalpha_params& params) {
-  cli.add_option("image", params.image, "Input image.");
-  cli.add_option("alpha", params.alpha, "Alpha image.");
-  cli.add_option("--output", params.output, "Output image.");
-  cli.add_flag("--from-color", params.from_color, "Alpha from color.");
-  cli.add_flag("--from-black", params.from_black, "Alpha from black.");
-  cli.add_flag("--to-color", params.to_color, "Color from alpha.");
+void add_options(cli_command& cli, setalpha_params& params) {
+  add_option(cli, "image", params.image, "Input image");
+  add_option(cli, "alpha", params.alpha, "Alpha image");
+  add_option(cli, "output", params.output, "Output image");
+  add_option(cli, "from-color", params.from_color, "Alpha from color");
+  add_option(cli, "from-black", params.from_black, "Alpha from black");
+  add_option(cli, "to-color", params.to_color, "color from alpha");
 }
 
 // setalpha images
-int run_setalpha(const setalpha_params& params) {
-  std::cout << "error: setting alpha for " + params.image + "\n";
-
+void run_setalpha(const setalpha_params& params) {
   // load
-  auto error = string{};
-  auto image = image_data{}, alpha = image_data{};
-  if (!load_image(params.image, image, error)) {
-    std::cerr << "error: cannot load " + params.image + "\n";
-    return 1;
-  }
-  if (!load_image(params.alpha, alpha, error)) {
-    std::cerr << "error: cannot load " + params.alpha + "\n";
-    return 1;
-  }
+  auto image = load_image(params.image);
+  auto alpha = load_image(params.alpha);
 
   // check sizes
-  if (image.width != alpha.width || image.height != alpha.height) {
-    std::cerr << "error: image size differs\n";
-    return 1;
-  }
+  if (image.width != alpha.width || image.height != alpha.height)
+    throw io_error("different image sizes");
 
   // check types
-  if (image.linear != alpha.linear) {
-    std::cerr << "error: image type differs\n";
-    return 1;
-  }
+  if (image.linear != alpha.linear) throw io_error("different image types");
 
   // edit alpha
   auto out = make_image(image.width, image.height, image.linear);
@@ -286,13 +216,7 @@ int run_setalpha(const setalpha_params& params) {
   }
 
   // save
-  if (!save_image(params.output, out, error)) {
-    std::cerr << "error: cannot save " + params.output + "\n";
-    return 1;
-  }
-
-  // done
-  return 0;
+  save_image(params.output, out);
 }
 
 struct app_params {
@@ -306,37 +230,38 @@ struct app_params {
 
 // Main
 int main(int argc, const char* argv[]) {
-  // command line parameters
-  auto params = app_params{};
-  auto cli    = CLI::App("Process and view images");
-  add_options(
-      *cli.add_subcommand("convert", "Convert images."), params.convert);
-  add_options(*cli.add_subcommand("view", "View images."), params.view);
-  add_options(*cli.add_subcommand("grade", "Grade images."), params.grade);
-  add_options(*cli.add_subcommand("diff", "Diff two images."), params.diff);
-  add_options(
-      *cli.add_subcommand("setalpha", "Set alpha in images."), params.setalpha);
-  cli.require_subcommand(1);
   try {
-    cli.parse(argc, argv);
-    params.command = cli.get_subcommands().front()->get_name();
-  } catch (const CLI::ParseError& e) {
-    return cli.exit(e);
-  }
+    // command line parameters
+    auto params = app_params{};
+    auto cli    = make_cli("yimage", "process and view images");
+    add_command_var(cli, params.command);
+    add_options(add_command(cli, "convert", "convert images"), params.convert);
+    add_options(add_command(cli, "view", "view images"), params.view);
+    add_options(add_command(cli, "grade", "grade images"), params.grade);
+    add_options(add_command(cli, "diff", "diff two images"), params.diff);
+    add_options(
+        add_command(cli, "setalpha", "set images alpha"), params.setalpha);
+    parse_cli(cli, argc, argv);
 
-  // dispatch commands
-  if (params.command == "convert") {
-    return run_convert(params.convert);
-  } else if (params.command == "view") {
-    return run_view(params.view);
-  } else if (params.command == "grade") {
-    return run_grade(params.grade);
-  } else if (params.command == "diff") {
-    return run_diff(params.diff);
-  } else if (params.command == "setalpha") {
-    return run_setalpha(params.setalpha);
-  } else {
-    std::cerr << "error: unknown command\n";
+    // dispatch commands
+    if (params.command == "convert") {
+      run_convert(params.convert);
+    } else if (params.command == "view") {
+      run_view(params.view);
+    } else if (params.command == "grade") {
+      run_grade(params.grade);
+    } else if (params.command == "diff") {
+      run_diff(params.diff);
+    } else if (params.command == "setalpha") {
+      run_setalpha(params.setalpha);
+    } else {
+      throw io_error("unknown command");
+    }
+  } catch (const std::exception& error) {
+    std::cerr << "error: " << error.what() << "\n";
     return 1;
   }
+
+  // done
+  return 0;
 }

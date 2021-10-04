@@ -39,9 +39,9 @@
 #include <queue>
 #include <unordered_set>
 
-#include "ext/CLI11.hpp"
-
 using namespace yocto;
+
+#include <iostream>
 
 // view params
 struct view_params {
@@ -50,30 +50,22 @@ struct view_params {
   bool   addsky = false;
 };
 
-void add_options(CLI::App& cli, view_params& params) {
-  cli.add_option("shape", params.shape, "Input shape.");
-  cli.add_option("--output", params.output, "Output shape.");
-  cli.add_flag("--addsky", params.addsky, "Add sky.");
+void add_options(cli_command& cli, view_params& params) {
+  add_option(cli, "shape", params.shape, "input shape");
+  add_option(cli, "output", params.output, "output shape");
+  add_option(cli, "addsky", params.addsky, "add sky");
 }
 
 // view shapes
-int run_view(const view_params& params) {
+void run_view(const view_params& params) {
   // load mesh
-  auto error = string{};
-  auto shape = shape_data{};
-  if (!load_shape(params.shape, shape, error, true)) {
-    std::cerr << "error: cannot load " + params.shape + "\n";
-    return 1;
-  }
+  auto shape = load_shape(params.shape, true);
 
   // make scene
   auto scene = make_shape_scene(shape, params.addsky);
 
   // run view
   show_trace_gui("ymesh", params.shape, scene);
-
-  // done
-  return 0;
 }
 
 struct glview_params {
@@ -81,8 +73,8 @@ struct glview_params {
 };
 
 // Cli
-void add_options(CLI::App& cli, glview_params& params) {
-  cli.add_option("shape", params.shape, "Input shape.");
+void add_options(cli_command& cli, glview_params& params) {
+  add_option(cli, "shape", params.shape, "input shape");
 }
 
 static scene_data make_shapescene(const shape_data& ioshape_) {
@@ -132,23 +124,15 @@ static scene_data make_shapescene(const shape_data& ioshape_) {
   return scene;
 }
 
-int run_glview(const glview_params& params) {
+void run_glview(const glview_params& params) {
   // loading shape
-  auto error = string{};
-  auto shape = shape_data{};
-  if (!load_shape(params.shape, shape, error, true)) {
-    std::cerr << "error: cannot load " + params.shape + "\n";
-    return 1;
-  }
+  auto shape = load_shape(params.shape, true);
 
   // create scene
   auto scene = make_shapescene(shape);
 
   // run viewer
   show_shade_gui("ymesh", params.shape, scene, {});
-
-  // done
-  return 0;
 }
 
 struct glpath_params {
@@ -156,8 +140,8 @@ struct glpath_params {
 };
 
 // Cli
-void add_options(CLI::App& cli, glpath_params& params) {
-  cli.add_option("shape", params.shape, "Input shape.");
+void add_options(cli_command& cli, glpath_params& params) {
+  add_option(cli, "shape", params.shape, "input shape");
 }
 
 static scene_data make_pathscene(const shape_data& ioshape_) {
@@ -223,14 +207,9 @@ static scene_data make_pathscene(const shape_data& ioshape_) {
   return scene;
 }
 
-int run_glpath(const glpath_params& params) {
+void run_glpath(const glpath_params& params) {
   // loading shape
-  auto error   = string{};
-  auto ioshape = shape_data{};
-  if (!load_shape(params.shape, ioshape, error, true)) {
-    std::cerr << "error: cannot load " + params.shape + "\n";
-    return 1;
-  }
+  auto ioshape = load_shape(params.shape, true);
   if (!ioshape.quads.empty()) {
     ioshape.triangles = quads_to_triangles(ioshape.quads);
     ioshape.quads     = {};
@@ -311,9 +290,6 @@ int run_glpath(const glpath_params& params) {
           updated_shapes.push_back(2);
         }
       });
-
-  // done
-  return 0;
 }
 
 struct glpathd_params {
@@ -321,8 +297,8 @@ struct glpathd_params {
 };
 
 // Cli
-void add_options(CLI::App& cli, glpathd_params& params) {
-  cli.add_option("shape", params.shape, "Input shape.");
+void add_options(cli_command& cli, glpathd_params& params) {
+  add_option(cli, "shape", params.shape, "input shape");
 }
 
 static scene_data make_pathdscene(const shape_data& ioshape) {
@@ -417,14 +393,9 @@ static scene_data make_pathdscene(const shape_data& ioshape) {
   return scene;
 }
 
-int run_glpathd(const glpathd_params& params) {
+void run_glpathd(const glpathd_params& params) {
   // loading shape
-  auto error   = string{};
-  auto ioshape = shape_data{};
-  if (!load_shape(params.shape, ioshape, error, true)) {
-    std::cerr << "error: cannot load " + params.shape + "\n";
-    return 1;
-  }
+  auto ioshape = load_shape(params.shape, true);
   if (!ioshape.quads.empty()) {
     ioshape.triangles = quads_to_triangles(ioshape.quads);
     ioshape.quads     = {};
@@ -538,9 +509,6 @@ int run_glpathd(const glpathd_params& params) {
           // set_quads(glscene.shapes.at(5), lines4.quads);
         }
       });
-
-  // done
-  return 0;
 }
 
 struct glsculpt_params {
@@ -549,9 +517,9 @@ struct glsculpt_params {
 };
 
 // Cli
-inline void add_options(CLI::App& cli, glsculpt_params& params) {
-  cli.add_option("shape", params.shape, "Input shape.");
-  cli.add_option("--texture", params.texture, "Brush texture.");
+inline void add_options(cli_command& cli, glsculpt_params& params) {
+  add_option(cli, "shape", params.shape, "input shape");
+  add_option(cli, "texture", params.texture, "brush texture");
 }
 
 enum struct sculpt_brush_type { gaussian, texture, smooth };
@@ -1182,14 +1150,9 @@ static pair<bool, bool> sculpt_update(sculpt_state& state, shape_data& shape,
   return {updated_shape, updated_cursor};
 }
 
-int run_glsculpt(const glsculpt_params& params_) {
+void run_glsculpt(const glsculpt_params& params_) {
   // loading shape
-  auto error   = string{};
-  auto ioshape = shape_data{};
-  if (!load_shape(params_.shape, ioshape, error, true)) {
-    std::cerr << "error: cannot load " + params_.shape + "\n";
-    return 1;
-  }
+  auto ioshape = load_shape(params_.shape, true);
   if (!ioshape.quads.empty()) {
     ioshape.triangles = quads_to_triangles(ioshape.quads);
     ioshape.quads.clear();
@@ -1197,11 +1160,8 @@ int run_glsculpt(const glsculpt_params& params_) {
 
   // loading texture
   auto texture = texture_data{};
-  if (!params_.texture.empty())
-    if (!load_texture(params_.texture, texture, error)) {
-      std::cerr << "error: cannot load " + params_.texture + "\n";
-      return 1;
-    }
+  if (!params_.texture.empty()) texture = load_texture(params_.texture);
+
   // setup app
   auto scene = make_sculptscene(ioshape);
 
@@ -1250,9 +1210,6 @@ int run_glsculpt(const glsculpt_params& params_) {
           updated_shapes.push_back(0);
         }
       });
-
-  // done
-  return 0;
 }
 
 struct app_params {
@@ -1266,39 +1223,38 @@ struct app_params {
 
 // Main
 int main(int argc, const char* argv[]) {
-  // command line parameters
-  auto params = app_params{};
-  auto cli    = CLI::App("Process and view meshes");
-  add_options(*cli.add_subcommand("view", "View shapes."), params.view);
-  add_options(
-      *cli.add_subcommand("glview", "View shapes with OpenGL."), params.glview);
-  add_options(
-      *cli.add_subcommand("glpath", "Trace paths with OpenGL."), params.glpath);
-  add_options(*cli.add_subcommand("glpathd", "Trace debug paths with OpenGL."),
-      params.glpathd);
-  add_options(*cli.add_subcommand("glsculpt", "Sculpt meshes with OpenGL."),
-      params.glsculpt);
-  cli.require_subcommand(1);
   try {
-    cli.parse(argc, argv);
-    params.command = cli.get_subcommands().front()->get_name();
-  } catch (const CLI::ParseError& e) {
-    return cli.exit(e);
-  }
+    // command line parameters
+    auto params = app_params{};
+    auto cli    = make_cli("ymesh", "process and view meshes");
+    add_command_var(cli, params.command);
+    add_options(add_command(cli, "view", "view shapes"), params.view);
+    add_options(
+        add_command(cli, "glview", "view shapes with OpenGL"), params.glview);
+    add_options(add_command(cli, "glpath", "trace paths"), params.glpath);
+    add_options(add_command(cli, "glpathd", "debug paths"), params.glpathd);
+    add_options(add_command(cli, "glsculpt", "sculpt meshes"), params.glsculpt);
+    parse_cli(cli, argc, argv);
 
-  // dispatch commands
-  if (params.command == "view") {
-    return run_view(params.view);
-  } else if (params.command == "glview") {
-    return run_glview(params.glview);
-  } else if (params.command == "glpath") {
-    return run_glpath(params.glpath);
-  } else if (params.command == "glpathd") {
-    return run_glpathd(params.glpathd);
-  } else if (params.command == "glsculpt") {
-    return run_glsculpt(params.glsculpt);
-  } else {
-    std::cerr << "error: unknown command\n";
+    // dispatch commands
+    if (params.command == "view") {
+      run_view(params.view);
+    } else if (params.command == "glview") {
+      run_glview(params.glview);
+    } else if (params.command == "glpath") {
+      run_glpath(params.glpath);
+    } else if (params.command == "glpathd") {
+      run_glpathd(params.glpathd);
+    } else if (params.command == "glsculpt") {
+      run_glsculpt(params.glsculpt);
+    } else {
+      throw io_error{"unknown command"};
+    }
+  } catch (const std::exception& error) {
+    std::cerr << "error: " << error.what() << "\n";
     return 1;
   }
+
+  // done
+  return 0;
 }
