@@ -41,6 +41,7 @@
 #include <functional>
 #include <sstream>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "yocto_scene.h"
@@ -424,8 +425,8 @@ struct cli_command {
   // name
   string name = "";
   // options and commands
-  vector<cli_option>  options  = {};
-  vector<cli_command> commands = {};
+  unordered_map<string, cli_option>  options  = {};
+  unordered_map<string, cli_command> commands = {};
   // command
   string     command = "";
   cli_setter setter  = {};
@@ -437,34 +438,16 @@ struct cli_command {
 };
 
 // Helpers
-template <typename T>
-inline bool _cli_contains(const vector<T>& items, const string& name) {
-  for (auto& item : items)
-    if (item.name == name) return true;
-  return false;
-}
-template <typename T>
-inline const T& _cli_get(const vector<T>& items, const string& name) {
-  for (auto& item : items)
-    if (item.name == name) return item;
-  throw std::out_of_range{"missing key " + name};
-}
-template <typename T>
-inline T& _cli_get(vector<T>& items, const string& name) {
-  for (auto& item : items)
-    if (item.name == name) return item;
-  throw std::out_of_range{"missing key " + name};
-}
 inline void _cli_check_option(const cli_command& cli, const string& name) {
   if (!cli.commands.empty())
     throw std::invalid_argument{"cannot add options and commands"};
-  if (_cli_contains(cli.options, name))
+  if (cli.options.find(name) != cli.options.end())
     throw std::invalid_argument{"option already added " + name};
 }
 inline void _cli_check_command(const cli_command& cli, const string& name) {
   if (!cli.options.empty())
     throw std::invalid_argument{"cannot add options and commands"};
-  if (_cli_contains(cli.commands, name))
+  if (cli.commands.find(name) != cli.commands.end())
     throw std::invalid_argument{"command already added " + name};
 }
 
@@ -601,7 +584,7 @@ inline cli_command make_cli(const string& name, const string& usage) {
 inline cli_command& add_command(
     cli_command& cli, const string& name, const string& usage) {
   _cli_check_command(cli, name);
-  auto& cmd       = cli.commands.emplace_back();
+  auto& cmd       = cli.commands[name];
   cmd.name        = name;
   cmd.usage_name  = cli.usage_name + " " + name;
   cmd.usage_descr = usage;
@@ -627,7 +610,7 @@ template <typename T>
 inline cli_option& add_option(
     cli_command& cli, const string& name, T& value, const string& usage) {
   _cli_check_option(cli, name);
-  auto& opt = cli.options.emplace_back();
+  auto& opt = cli.options[name];
   opt.name  = name;
   cli.usage_options += _cli_usage_option(name, value, usage);
   opt.setter = [&value](const vector<string>& args, string& error) {
@@ -642,7 +625,7 @@ inline cli_option& add_option(
 inline cli_option& add_option(
     cli_command& cli, const string& name, bool& value, const string& usage) {
   _cli_check_option(cli, name);
-  auto& opt = cli.options.emplace_back();
+  auto& opt = cli.options[name];
   opt.name  = name;
   cli.usage_options += _cli_usage_option(name, value, usage);
   opt.setter = [&value](const vector<string>& args, string& error) {
@@ -659,7 +642,7 @@ template <typename T>
 inline cli_option& add_option(cli_command& cli, const string& name,
     vector<T>& value, const string& usage) {
   _cli_check_option(cli, name);
-  auto& opt = cli.options.emplace_back();
+  auto& opt = cli.options[name];
   opt.name  = name;
   cli.usage_options += _cli_usage_option(name, value, usage);
   opt.setter = [&value](const vector<string>& args, string& error) {
@@ -678,7 +661,7 @@ template <typename T, size_t N>
 inline cli_option& add_option(cli_command& cli, const string& name,
     array<T, N>& value, const string& usage) {
   _cli_check_option(cli, name);
-  auto& opt = cli.options.emplace_back();
+  auto& opt = cli.options[name];
   opt.name  = name;
   cli.usage_options += _cli_usage_option(name, value, usage);
   opt.setter = [&value](const vector<string>& args, string& error) {
@@ -696,7 +679,7 @@ template <typename T>
 inline cli_option& add_option(cli_command& cli, const string& name, T& value,
     const string& usage, const vector<pair<T, string>>& labels) {
   _cli_check_option(cli, name);
-  auto& opt = cli.options.emplace_back();
+  auto& opt = cli.options[name];
   opt.name  = name;
   cli.usage_options += _cli_usage_option(name, value, usage, labels);
   opt.setter = [&value, labels](const vector<string>& args, string& error) {
@@ -728,7 +711,7 @@ inline bool parse_cli(
       return false;
     }
     // verify command
-    if (!_cli_contains(cli.commands, args[pos])) {
+    if (cli.commands.find(args[pos]) == cli.commands.end()) {
       error = "unknown command " + args[pos];
       return false;
     }
@@ -741,7 +724,7 @@ inline bool parse_cli(
       return false;
     }
     // parse command recursively
-    auto& command = _cli_get(cli.commands, name);
+    auto& command = cli.commands.at(name);
     return parse_cli(command, args, pos, error);
   } else {
     // check option
@@ -759,13 +742,13 @@ inline bool parse_cli(
         return false;
       }
       // verify command
-      if (!_cli_contains(cli.options, args[pos].substr(2))) {
+      if (cli.options.find(args[pos].substr(2)) == cli.options.end()) {
         error = "unknown option " + args[pos].substr(2);
         return false;
       }
       // get option
       auto  name   = args[pos++].substr(2);
-      auto& option = _cli_get(cli.options, name);
+      auto& option = cli.options.at(name);
       // get args
       auto values = vector<string>{};
       while (pos < args.size() && args[pos].find("--") != 0) {
@@ -783,8 +766,7 @@ inline bool parse_cli(
 }
 
 inline string get_usage(const cli_command& cli) {
-  if (!cli.command.empty())
-    return get_usage(_cli_get(cli.commands, cli.command));
+  if (!cli.command.empty()) return get_usage(cli.commands.at(cli.command));
   auto usage = cli.usage_name + " [options]" +
                (cli.commands.empty() ? "" : " <command>") + "\n" +
                cli.usage_descr + "\n";
@@ -804,11 +786,6 @@ inline bool parse_cli(
     cli_command& cli, int argc, const char** argv, string& error) {
   return parse_cli(cli, vector<string>{argv, argv + argc}, 1, error);
 }
-
-// cli error
-struct cli_error : std::runtime_error {
-  using std::runtime_error::runtime_error;
-};
 
 // parse cli
 inline void parse_cli(cli_command& cli, const vector<string>& args) {
