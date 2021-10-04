@@ -51,9 +51,9 @@ struct view_params {
 };
 
 void add_options(cli_command& cli, view_params& params) {
-  add_option(cli, "shape", params.shape, "Input shape.");
-  add_option(cli, "output", params.output, "Output shape.");
-  add_option(cli, "addsky", params.addsky, "Add sky.");
+  add_option(cli, "shape", params.shape, "input shape");
+  add_option(cli, "output", params.output, "output shape");
+  add_option(cli, "addsky", params.addsky, "add sky");
 }
 
 // view shapes
@@ -74,7 +74,7 @@ struct glview_params {
 
 // Cli
 void add_options(cli_command& cli, glview_params& params) {
-  add_option(cli, "shape", params.shape, "Input shape.");
+  add_option(cli, "shape", params.shape, "input shape");
 }
 
 static scene_data make_shapescene(const shape_data& ioshape_) {
@@ -141,7 +141,7 @@ struct glpath_params {
 
 // Cli
 void add_options(cli_command& cli, glpath_params& params) {
-  add_option(cli, "shape", params.shape, "Input shape.");
+  add_option(cli, "shape", params.shape, "input shape");
 }
 
 static scene_data make_pathscene(const shape_data& ioshape_) {
@@ -298,7 +298,7 @@ struct glpathd_params {
 
 // Cli
 void add_options(cli_command& cli, glpathd_params& params) {
-  add_option(cli, "shape", params.shape, "Input shape.");
+  add_option(cli, "shape", params.shape, "input shape");
 }
 
 static scene_data make_pathdscene(const shape_data& ioshape) {
@@ -518,8 +518,8 @@ struct glsculpt_params {
 
 // Cli
 inline void add_options(cli_command& cli, glsculpt_params& params) {
-  add_option(cli, "shape", params.shape, "Input shape.");
-  add_option(cli, "texture", params.texture, "Brush texture.");
+  add_option(cli, "shape", params.shape, "input shape");
+  add_option(cli, "texture", params.texture, "brush texture");
 }
 
 enum struct sculpt_brush_type { gaussian, texture, smooth };
@@ -1226,17 +1226,14 @@ int main(int argc, const char* argv[]) {
   try {
     // command line parameters
     auto params = app_params{};
-    auto cli    = make_cli("ymesh", "Process and view meshes");
+    auto cli    = make_cli("ymesh", "process and view meshes");
     add_command_var(cli, params.command);
-    add_options(add_command(cli, "view", "View shapes."), params.view);
+    add_options(add_command(cli, "view", "view shapes"), params.view);
     add_options(
-        add_command(cli, "glview", "View shapes with OpenGL."), params.glview);
-    add_options(
-        add_command(cli, "glpath", "Trace paths with OpenGL."), params.glpath);
-    add_options(add_command(cli, "glpathd", "Trace debug paths with OpenGL."),
-        params.glpathd);
-    add_options(add_command(cli, "glsculpt", "Sculpt meshes with OpenGL."),
-        params.glsculpt);
+        add_command(cli, "glview", "view shapes with OpenGL"), params.glview);
+    add_options(add_command(cli, "glpath", "trace paths"), params.glpath);
+    add_options(add_command(cli, "glpathd", "debug paths"), params.glpathd);
+    add_options(add_command(cli, "glsculpt", "sculpt meshes"), params.glsculpt);
     parse_cli(cli, argc, argv);
 
     // dispatch commands

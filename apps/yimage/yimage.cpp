@@ -233,7 +233,7 @@ int main(int argc, const char* argv[]) {
   try {
     // command line parameters
     auto params = app_params{};
-    auto cli    = make_cli("yimage", "Process and view images");
+    auto cli    = make_cli("yimage", "process and view images");
     add_command_var(cli, params.command);
     add_options(add_command(cli, "convert", "convert images"), params.convert);
     add_options(add_command(cli, "view", "view images"), params.view);
