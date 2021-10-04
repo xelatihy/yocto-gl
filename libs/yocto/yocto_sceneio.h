@@ -360,17 +360,25 @@ namespace yocto {
 // Immediate mode
 using cli_setter = std::function<bool(const vector<string>&, string&)>;
 struct cli_option {
-  string     name   = "";
-  string     usage  = "";
+  // name
+  string name = "";
+  // setter
   cli_setter setter = {};
 };
 struct cli_command {
-  string              name     = "";
-  string              usage    = "";
+  // name
+  string name = "";
+  // options and commands
   vector<cli_option>  options  = {};
   vector<cli_command> commands = {};
-  string              command  = "";
-  cli_setter          setter   = {};
+  // command
+  string     command = "";
+  cli_setter setter  = {};
+  // usage
+  string usage_name     = "";
+  string usage_descr    = "";
+  string usage_options  = "";
+  string usage_commands = "";
 };
 
 // Helpers
@@ -442,11 +450,74 @@ inline bool _cli_parse_value(const string& arg, T& value, string& error,
   return false;
 }
 
+// Usage helpers
+inline string _cli_usage_command(const string& name, const string& descr) {
+  auto usage = "  " + name;
+  usage += string(std::max(22 - (int)usage.size(), 0), ' ');
+  usage += descr + "\n";
+  return usage;
+}
+inline string _cli_usage_option(const string& name, const string& var,
+    const string& descr, const string& def) {
+  auto usage = "  --" + name + " " + var;
+  usage += string(std::max(22 - (int)usage.size(), 0), ' ');
+  usage += descr + "[" + def + "]\n";
+  return usage;
+}
+template <typename T>
+inline string _cli_usage_option(
+    const string& name, const T& value, const string& usage) {
+  auto var = string{"var"};
+  if constexpr (std::is_same_v<T, string>) var = "str";
+  if constexpr (std::is_same_v<T, bool>) var = "";
+  if constexpr (std::is_floating_point_v<T>) var = "num";
+  if constexpr (std::is_integral_v<T> && !std::is_same_v<T, bool>) var = "int";
+  auto stream = std::ostringstream();
+  stream << std::boolalpha << value;
+  auto def = stream.str();
+  return _cli_usage_option(name, var, usage, def);
+}
+template <typename T>
+inline string _cli_usage_option(
+    const string& name, const vector<T>& value, const string& usage) {
+  auto var = string{"var"};
+  if constexpr (std::is_same_v<T, string>) var = "str";
+  if constexpr (std::is_same_v<T, bool>) var = "bool";
+  if constexpr (std::is_floating_point_v<T>) var = "num";
+  if constexpr (std::is_integral_v<T> && !std::is_same_v<T, bool>) var = "int";
+  var += "[]";
+  auto stream = std::ostringstream();
+  for (auto& item : value) {
+    if (&item != &value.front()) stream << ",";
+    stream << std::boolalpha << item;
+  }
+  auto def = stream.str();
+  return _cli_usage_option(name, var, usage, def);
+}
+template <typename T, size_t N>
+inline string _cli_usage_option(
+    const string& name, const array<T, N>& value, const string& usage) {
+  auto var = string{"var"};
+  if constexpr (std::is_same_v<T, string>) var = "str";
+  if constexpr (std::is_same_v<T, bool>) var = "bool";
+  if constexpr (std::is_floating_point_v<T>) var = "num";
+  if constexpr (std::is_integral_v<T> && !std::is_same_v<T, bool>) var = "int";
+  var += "[" + std::to_string(N) + "]";
+  auto stream = std::ostringstream();
+  for (auto& item : value) {
+    if (&item != &value.front()) stream << ",";
+    stream << std::boolalpha << item;
+  }
+  auto def = stream.str();
+  return _cli_usage_option(name, var, usage, def);
+}
+
 // init cli
 inline cli_command make_cli(const string& name, const string& usage) {
-  auto cli  = cli_command{};
-  cli.name  = name;
-  cli.usage = usage;
+  auto cli        = cli_command{};
+  cli.name        = name;
+  cli.usage_name  = name;
+  cli.usage_descr = usage;
   cli.options.reserve(256);
   cli.commands.reserve(256);
   cli.setter = [](const vector<string>&, string&) { return true; };
@@ -457,9 +528,11 @@ inline cli_command make_cli(const string& name, const string& usage) {
 inline cli_command& add_command(
     cli_command& cli, const string& name, const string& usage) {
   _cli_check_command(cli, name);
-  auto& cmd = cli.commands.emplace_back();
-  cmd.name  = name;
-  cmd.usage = usage;
+  auto& cmd       = cli.commands.emplace_back();
+  cmd.name        = name;
+  cmd.usage_name  = cli.usage_name + " " + name;
+  cmd.usage_descr = usage;
+  cli.usage_commands += _cli_usage_command(name, usage);
   cmd.options.reserve(256);
   cmd.commands.reserve(256);
   cmd.setter = [](const vector<string>&, string&) { return true; };
@@ -481,9 +554,9 @@ template <typename T>
 inline cli_option& add_option(
     cli_command& cli, const string& name, T& value, const string& usage) {
   _cli_check_option(cli, name);
-  auto& opt  = cli.options.emplace_back();
-  opt.name   = name;
-  opt.usage  = usage;
+  auto& opt = cli.options.emplace_back();
+  opt.name  = name;
+  cli.usage_options += _cli_usage_option(name, value, usage);
   opt.setter = [&value](const vector<string>& args, string& error) {
     if (!_cli_parse_size(args, 1, 1, error)) return false;
     if (!_cli_parse_value(args.front(), value, error)) return false;
@@ -496,9 +569,9 @@ inline cli_option& add_option(
 inline cli_option& add_option(
     cli_command& cli, const string& name, bool& value, const string& usage) {
   _cli_check_option(cli, name);
-  auto& opt  = cli.options.emplace_back();
-  opt.name   = name;
-  opt.usage  = usage;
+  auto& opt = cli.options.emplace_back();
+  opt.name  = name;
+  cli.usage_options += _cli_usage_option(name, value, usage);
   opt.setter = [&value](const vector<string>& args, string& error) {
     if (!_cli_parse_size(args, 0, 1, error)) return false;
     if (!_cli_parse_value(args.empty() ? "true" : args.front(), value, error))
@@ -513,9 +586,9 @@ template <typename T>
 inline cli_option& add_option(cli_command& cli, const string& name,
     vector<T>& value, const string& usage) {
   _cli_check_option(cli, name);
-  auto& opt  = cli.options.emplace_back();
-  opt.name   = name;
-  opt.usage  = usage;
+  auto& opt = cli.options.emplace_back();
+  opt.name  = name;
+  cli.usage_options += _cli_usage_option(name, value, usage);
   opt.setter = [&value](const vector<string>& args, string& error) {
     if (!_cli_parse_size(args, 1, 1024, error)) return false;
     value.resize(args.size());
@@ -532,9 +605,9 @@ template <typename T>
 inline cli_option& add_option(cli_command& cli, const string& name, T& value,
     const string& usage, const vector<pair<T, string>>& labels) {
   _cli_check_option(cli, name);
-  auto& opt  = cli.options.emplace_back();
-  opt.name   = name;
-  opt.usage  = usage;
+  auto& opt = cli.options.emplace_back();
+  opt.name  = name;
+  cli.usage_options += _cli_usage_option(name, value, usage, labels);
   opt.setter = [&value, labels](const vector<string>& args, string& error) {
     if (!_cli_parse_size(args, 1, 1, error)) return false;
     if (!_cli_parse_value(args.front(), value, labels, error)) return false;
@@ -618,6 +691,19 @@ inline bool parse_cli(
   }
 }
 
+inline string get_usage(const cli_command& cli) {
+  if (!cli.command.empty())
+    return get_usage(_cli_get(cli.commands, cli.command));
+  auto usage = cli.usage_name + " [options]" +
+               (cli.commands.empty() ? "" : " <command>") + "\n" +
+               cli.usage_descr + "\n";
+  if (!cli.usage_commands.empty())
+    usage += "\ncommands:\n" + cli.usage_commands;
+  if (!cli.usage_options.empty()) usage += "\noptions:\n" + cli.usage_options;
+  usage += "\n";
+  return usage;
+}
+
 // parse cli
 inline bool parse_cli(
     cli_command& cli, const vector<string>& args, string& error) {
@@ -636,7 +722,8 @@ struct cli_error : std::runtime_error {
 // parse cli
 inline void parse_cli(cli_command& cli, const vector<string>& args) {
   auto error = string{};
-  if (!parse_cli(cli, args, 1, error)) throw cli_error{error};
+  if (!parse_cli(cli, args, 1, error))
+    throw cli_error{error + "\n\nusage: " + get_usage(cli)};
 }
 inline void parse_cli(cli_command& cli, int argc, const char** argv) {
   return parse_cli(cli, vector<string>{argv, argv + argc});

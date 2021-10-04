@@ -178,12 +178,12 @@ struct setalpha_params {
 
 // Cli
 void add_options(cli_command& cli, setalpha_params& params) {
-  add_option(cli, "image", params.image, "Input image.");
-  add_option(cli, "alpha", params.alpha, "Alpha image.");
-  add_option(cli, "output", params.output, "Output image.");
-  add_option(cli, "from-color", params.from_color, "Alpha from color.");
-  add_option(cli, "from-black", params.from_black, "Alpha from black.");
-  add_option(cli, "to-color", params.to_color, "Color from alpha.");
+  add_option(cli, "image", params.image, "Input image");
+  add_option(cli, "alpha", params.alpha, "Alpha image");
+  add_option(cli, "output", params.output, "Output image");
+  add_option(cli, "from-color", params.from_color, "Alpha from color");
+  add_option(cli, "from-black", params.from_black, "Alpha from black");
+  add_option(cli, "to-color", params.to_color, "color from alpha");
 }
 
 // setalpha images
@@ -235,12 +235,12 @@ int main(int argc, const char* argv[]) {
     auto params = app_params{};
     auto cli    = make_cli("yimage", "Process and view images");
     add_command_var(cli, params.command);
-    add_options(add_command(cli, "convert", "Convert images."), params.convert);
-    add_options(add_command(cli, "view", "View images."), params.view);
-    add_options(add_command(cli, "grade", "Grade images."), params.grade);
-    add_options(add_command(cli, "diff", "Diff two images."), params.diff);
+    add_options(add_command(cli, "convert", "convert images"), params.convert);
+    add_options(add_command(cli, "view", "view images"), params.view);
+    add_options(add_command(cli, "grade", "grade images"), params.grade);
+    add_options(add_command(cli, "diff", "diff two images"), params.diff);
     add_options(
-        add_command(cli, "setalpha", "Set alpha in images."), params.setalpha);
+        add_command(cli, "setalpha", "set images alpha"), params.setalpha);
     parse_cli(cli, argc, argv);
 
     // dispatch commands
@@ -257,10 +257,7 @@ int main(int argc, const char* argv[]) {
     } else {
       throw io_error("unknown command");
     }
-  } catch (const cli_error& error) {
-    std::cerr << "error: " << error.what() << "\n";
-    return 1;
-  } catch (const io_error& error) {
+  } catch (const std::exception& error) {
     std::cerr << "error: " << error.what() << "\n";
     return 1;
   }
