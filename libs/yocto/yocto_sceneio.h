@@ -305,22 +305,21 @@ template <typename T>
 inline void add_command_var(cli_command& cli, T& value);
 
 // add option
-struct cli_option;
 template <typename T>
-inline cli_option& add_option(
+inline void add_option(
     cli_command& cli, const string& name, T& value, const string& usage);
-inline cli_option& add_option(
+inline void add_option(
     cli_command& cli, const string& name, bool& value, const string& usage);
 template <typename T>
-inline cli_option& add_option(cli_command& cli, const string& name,
-    vector<T>& value, const string& usage);
+inline void add_option(cli_command& cli, const string& name, vector<T>& value,
+    const string& usage);
 template <typename T, size_t N>
-inline cli_option& add_option(cli_command& cli, const string& name,
-    array<T, N>& value, const string& usage);
+inline void add_option(cli_command& cli, const string& name, array<T, N>& value,
+    const string& usage);
 
 // add option with labels
 template <typename T>
-inline cli_option& add_option(cli_command& cli, const string& name, T& value,
+inline void add_option(cli_command& cli, const string& name, T& value,
     const string& usage, const vector<pair<T, string>>& labels);
 
 // get usage
@@ -415,21 +414,13 @@ namespace yocto {
 
 // Cli data
 using cli_setter = std::function<bool(const vector<string>&, string&)>;
-struct cli_option {
-  // name
-  string name = "";
-  // setter
-  cli_setter setter = {};
-};
 struct cli_command {
-  // name
-  string name = "";
   // options and commands
-  unordered_map<string, cli_option>  options  = {};
+  unordered_map<string, cli_setter>  options  = {};
   unordered_map<string, cli_command> commands = {};
   // command
-  string     command = "";
-  cli_setter setter  = {};
+  string     command_sel = "";
+  cli_setter command_var = {};
   // usage
   string usage_name     = "";
   string usage_descr    = "";
@@ -571,12 +562,9 @@ inline string _cli_usage_option(const string& name, const T& value,
 // init cli
 inline cli_command make_cli(const string& name, const string& usage) {
   auto cli        = cli_command{};
-  cli.name        = name;
   cli.usage_name  = name;
   cli.usage_descr = usage;
-  cli.options.reserve(256);
-  cli.commands.reserve(256);
-  cli.setter = [](const vector<string>&, string&) { return true; };
+  cli.command_var = [](const vector<string>&, string&) { return true; };
   return cli;
 }
 
@@ -585,20 +573,17 @@ inline cli_command& add_command(
     cli_command& cli, const string& name, const string& usage) {
   _cli_check_command(cli, name);
   auto& cmd       = cli.commands[name];
-  cmd.name        = name;
   cmd.usage_name  = cli.usage_name + " " + name;
   cmd.usage_descr = usage;
   cli.usage_commands += _cli_usage_command(name, usage);
-  cmd.options.reserve(256);
-  cmd.commands.reserve(256);
-  cmd.setter = [](const vector<string>&, string&) { return true; };
+  cmd.command_var = [](const vector<string>&, string&) { return true; };
   return cmd;
 }
 
 // add command variable
 template <typename T>
 inline void add_command_var(cli_command& cli, T& value) {
-  cli.setter = [&value](const vector<string>& args, string& error) {
+  cli.command_var = [&value](const vector<string>& args, string& error) {
     if (!_cli_parse_size(args, 1, 1, error)) return false;
     if (!_cli_parse_value(args.front(), value, error)) return false;
     return true;
@@ -607,45 +592,37 @@ inline void add_command_var(cli_command& cli, T& value) {
 
 // add option
 template <typename T>
-inline cli_option& add_option(
+inline void add_option(
     cli_command& cli, const string& name, T& value, const string& usage) {
   _cli_check_option(cli, name);
-  auto& opt = cli.options[name];
-  opt.name  = name;
   cli.usage_options += _cli_usage_option(name, value, usage);
-  opt.setter = [&value](const vector<string>& args, string& error) {
+  cli.options[name] = [&value](const vector<string>& args, string& error) {
     if (!_cli_parse_size(args, 1, 1, error)) return false;
     if (!_cli_parse_value(args.front(), value, error)) return false;
     return true;
   };
-  return opt;
 }
 
 // add option
-inline cli_option& add_option(
+inline void add_option(
     cli_command& cli, const string& name, bool& value, const string& usage) {
   _cli_check_option(cli, name);
-  auto& opt = cli.options[name];
-  opt.name  = name;
   cli.usage_options += _cli_usage_option(name, value, usage);
-  opt.setter = [&value](const vector<string>& args, string& error) {
+  cli.options[name] = [&value](const vector<string>& args, string& error) {
     if (!_cli_parse_size(args, 0, 1, error)) return false;
     if (!_cli_parse_value(args.empty() ? "true" : args.front(), value, error))
       return false;
     return true;
   };
-  return opt;
 }
 
 // add option
 template <typename T>
-inline cli_option& add_option(cli_command& cli, const string& name,
-    vector<T>& value, const string& usage) {
+inline void add_option(cli_command& cli, const string& name, vector<T>& value,
+    const string& usage) {
   _cli_check_option(cli, name);
-  auto& opt = cli.options[name];
-  opt.name  = name;
   cli.usage_options += _cli_usage_option(name, value, usage);
-  opt.setter = [&value](const vector<string>& args, string& error) {
+  cli.options[name] = [&value](const vector<string>& args, string& error) {
     if (!_cli_parse_size(args, 1, 1024, error)) return false;
     value.resize(args.size());
     for (auto idx = (size_t)0; idx < args.size(); idx++) {
@@ -653,41 +630,35 @@ inline cli_option& add_option(cli_command& cli, const string& name,
     }
     return true;
   };
-  return opt;
 }
 
 // add option
 template <typename T, size_t N>
-inline cli_option& add_option(cli_command& cli, const string& name,
-    array<T, N>& value, const string& usage) {
+inline void add_option(cli_command& cli, const string& name, array<T, N>& value,
+    const string& usage) {
   _cli_check_option(cli, name);
-  auto& opt = cli.options[name];
-  opt.name  = name;
   cli.usage_options += _cli_usage_option(name, value, usage);
-  opt.setter = [&value](const vector<string>& args, string& error) {
+  cli.options[name] = [&value](const vector<string>& args, string& error) {
     if (!_cli_parse_size(args, N, N, error)) return false;
     for (auto idx = (size_t)0; idx < args.size(); idx++) {
       if (!_cli_parse_value(args[idx], value[idx], error)) return false;
     }
     return true;
   };
-  return opt;
 }
 
 // add option
 template <typename T>
-inline cli_option& add_option(cli_command& cli, const string& name, T& value,
+inline void add_option(cli_command& cli, const string& name, T& value,
     const string& usage, const vector<pair<T, string>>& labels) {
   _cli_check_option(cli, name);
-  auto& opt = cli.options[name];
-  opt.name  = name;
   cli.usage_options += _cli_usage_option(name, value, usage, labels);
-  opt.setter = [&value, labels](const vector<string>& args, string& error) {
+  cli.options[name] = [&value, labels](
+                          const vector<string>& args, string& error) {
     if (!_cli_parse_size(args, 1, 1, error)) return false;
     if (!_cli_parse_value(args.front(), value, error, labels)) return false;
     return true;
   };
-  return opt;
 }
 
 // parse cli
@@ -716,10 +687,10 @@ inline bool parse_cli(
       return false;
     }
     // get command
-    auto name   = args[pos++];
-    cli.command = name;
+    auto name       = args[pos++];
+    cli.command_sel = name;
     // set command
-    if (!cli.setter({name}, error)) {
+    if (!cli.command_var({name}, error)) {
       error += " for command " + name;
       return false;
     }
@@ -755,7 +726,7 @@ inline bool parse_cli(
         values.push_back(args[pos++]);
       }
       // set option
-      if (!option.setter(values, error)) {
+      if (!option(values, error)) {
         error += " for option " + name;
         return false;
       }
@@ -766,7 +737,8 @@ inline bool parse_cli(
 }
 
 inline string get_usage(const cli_command& cli) {
-  if (!cli.command.empty()) return get_usage(cli.commands.at(cli.command));
+  if (!cli.command_sel.empty())
+    return get_usage(cli.commands.at(cli.command_sel));
   auto usage = cli.usage_name + " [options]" +
                (cli.commands.empty() ? "" : " <command>") + "\n" +
                cli.usage_descr + "\n";
