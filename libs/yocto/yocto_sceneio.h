@@ -288,6 +288,61 @@ inline void from_json(const json_value& json, mat4f& value);
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// ARGUMENT PARSING
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// init cli
+struct cli_command;
+inline cli_command make_cli(const string& name, const string& usage);
+
+// add command
+inline cli_command& add_command(
+    cli_command& cli, const string& name, const string& usage);
+// add command variable
+template <typename T>
+inline void add_command_var(cli_command& cli, T& value);
+
+// add option
+struct cli_option;
+template <typename T>
+inline cli_option& add_option(
+    cli_command& cli, const string& name, T& value, const string& usage);
+inline cli_option& add_option(
+    cli_command& cli, const string& name, bool& value, const string& usage);
+template <typename T>
+inline cli_option& add_option(cli_command& cli, const string& name,
+    vector<T>& value, const string& usage);
+template <typename T, size_t N>
+inline cli_option& add_option(cli_command& cli, const string& name,
+    array<T, N>& value, const string& usage);
+
+// add option with labels
+template <typename T>
+inline cli_option& add_option(cli_command& cli, const string& name, T& value,
+    const string& usage, const vector<pair<T, string>>& labels);
+
+// get usage
+inline string get_usage(const cli_command& cli);
+
+// parse cli
+inline bool parse_cli(
+    cli_command& cli, const vector<string>& args, string& error);
+inline bool parse_cli(
+    cli_command& cli, int argc, const char** argv, string& error);
+
+// cli error
+struct cli_error : std::runtime_error {
+  using std::runtime_error::runtime_error;
+};
+
+// parse cli, throws cli_error on error
+inline void parse_cli(cli_command& cli, const vector<string>& args);
+inline void parse_cli(cli_command& cli, int argc, const char** argv);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 //
 //
 // IMPLEMENTATION
@@ -357,7 +412,7 @@ inline void from_json(const json_value& json, mat4f& value) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Immediate mode
+// Cli data
 using cli_setter = std::function<bool(const vector<string>&, string&)>;
 struct cli_option {
   // name
@@ -458,10 +513,15 @@ inline string _cli_usage_command(const string& name, const string& descr) {
   return usage;
 }
 inline string _cli_usage_option(const string& name, const string& var,
-    const string& descr, const string& def) {
+    const string& descr, const string& def, const vector<string>& labels = {}) {
   auto usage = "  --" + name + " " + var;
   usage += string(std::max(22 - (int)usage.size(), 0), ' ');
   usage += descr + "[" + def + "]\n";
+  if (!labels.empty()) {
+    usage += "    with labels: ";
+    for (auto& label : labels) usage += label + ",";
+    usage.back() = '\n';
+  }
   return usage;
 }
 template <typename T>
@@ -510,6 +570,19 @@ inline string _cli_usage_option(
   }
   auto def = stream.str();
   return _cli_usage_option(name, var, usage, def);
+}
+template <typename T>
+inline string _cli_usage_option(const string& name, const T& value,
+    const string& usage, const vector<pair<T, string>>& labels) {
+  auto var     = string{"str"};
+  auto def     = string{};
+  auto labels_ = vector<string>{};
+  for (auto& label : labels) {
+    labels_.push_back(label.second);
+    if (label.first == value) def = label.second;
+  }
+  if (def.empty()) throw std::invalid_argument{"undefined key"};
+  return _cli_usage_option(name, var, usage, def, labels_);
 }
 
 // init cli
@@ -601,6 +674,24 @@ inline cli_option& add_option(cli_command& cli, const string& name,
 }
 
 // add option
+template <typename T, size_t N>
+inline cli_option& add_option(cli_command& cli, const string& name,
+    array<T, N>& value, const string& usage) {
+  _cli_check_option(cli, name);
+  auto& opt = cli.options.emplace_back();
+  opt.name  = name;
+  cli.usage_options += _cli_usage_option(name, value, usage);
+  opt.setter = [&value](const vector<string>& args, string& error) {
+    if (!_cli_parse_size(args, N, N, error)) return false;
+    for (auto idx = (size_t)0; idx < args.size(); idx++) {
+      if (!_cli_parse_value(args[idx], value[idx], error)) return false;
+    }
+    return true;
+  };
+  return opt;
+}
+
+// add option
 template <typename T>
 inline cli_option& add_option(cli_command& cli, const string& name, T& value,
     const string& usage, const vector<pair<T, string>>& labels) {
@@ -610,7 +701,7 @@ inline cli_option& add_option(cli_command& cli, const string& name, T& value,
   cli.usage_options += _cli_usage_option(name, value, usage, labels);
   opt.setter = [&value, labels](const vector<string>& args, string& error) {
     if (!_cli_parse_size(args, 1, 1, error)) return false;
-    if (!_cli_parse_value(args.front(), value, labels, error)) return false;
+    if (!_cli_parse_value(args.front(), value, error, labels)) return false;
     return true;
   };
   return opt;

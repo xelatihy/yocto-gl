@@ -33,9 +33,9 @@
 #include <yocto/yocto_scene.h>
 #include <yocto/yocto_sceneio.h>
 
-#include "ext/CLI11.hpp"
-
 using namespace yocto;
+
+#include <iostream>
 
 // convert params
 struct convert_params {

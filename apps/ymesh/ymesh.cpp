@@ -39,9 +39,9 @@
 #include <queue>
 #include <unordered_set>
 
-#include "ext/CLI11.hpp"
-
 using namespace yocto;
+
+#include <iostream>
 
 // view params
 struct view_params {
@@ -50,10 +50,10 @@ struct view_params {
   bool   addsky = false;
 };
 
-void add_options(CLI::App& cli, view_params& params) {
-  cli.add_option("shape", params.shape, "Input shape.");
-  cli.add_option("--output", params.output, "Output shape.");
-  cli.add_flag("--addsky", params.addsky, "Add sky.");
+void add_options(cli_command& cli, view_params& params) {
+  add_option(cli, "shape", params.shape, "Input shape.");
+  add_option(cli, "output", params.output, "Output shape.");
+  add_option(cli, "addsky", params.addsky, "Add sky.");
 }
 
 // view shapes
@@ -73,8 +73,8 @@ struct glview_params {
 };
 
 // Cli
-void add_options(CLI::App& cli, glview_params& params) {
-  cli.add_option("shape", params.shape, "Input shape.");
+void add_options(cli_command& cli, glview_params& params) {
+  add_option(cli, "shape", params.shape, "Input shape.");
 }
 
 static scene_data make_shapescene(const shape_data& ioshape_) {
@@ -140,8 +140,8 @@ struct glpath_params {
 };
 
 // Cli
-void add_options(CLI::App& cli, glpath_params& params) {
-  cli.add_option("shape", params.shape, "Input shape.");
+void add_options(cli_command& cli, glpath_params& params) {
+  add_option(cli, "shape", params.shape, "Input shape.");
 }
 
 static scene_data make_pathscene(const shape_data& ioshape_) {
@@ -297,8 +297,8 @@ struct glpathd_params {
 };
 
 // Cli
-void add_options(CLI::App& cli, glpathd_params& params) {
-  cli.add_option("shape", params.shape, "Input shape.");
+void add_options(cli_command& cli, glpathd_params& params) {
+  add_option(cli, "shape", params.shape, "Input shape.");
 }
 
 static scene_data make_pathdscene(const shape_data& ioshape) {
@@ -517,9 +517,9 @@ struct glsculpt_params {
 };
 
 // Cli
-inline void add_options(CLI::App& cli, glsculpt_params& params) {
-  cli.add_option("shape", params.shape, "Input shape.");
-  cli.add_option("--texture", params.texture, "Brush texture.");
+inline void add_options(cli_command& cli, glsculpt_params& params) {
+  add_option(cli, "shape", params.shape, "Input shape.");
+  add_option(cli, "texture", params.texture, "Brush texture.");
 }
 
 enum struct sculpt_brush_type { gaussian, texture, smooth };
@@ -1223,28 +1223,23 @@ struct app_params {
 
 // Main
 int main(int argc, const char* argv[]) {
-  // command line parameters
-  auto params = app_params{};
-  auto cli    = CLI::App("Process and view meshes");
-  add_options(*cli.add_subcommand("view", "View shapes."), params.view);
-  add_options(
-      *cli.add_subcommand("glview", "View shapes with OpenGL."), params.glview);
-  add_options(
-      *cli.add_subcommand("glpath", "Trace paths with OpenGL."), params.glpath);
-  add_options(*cli.add_subcommand("glpathd", "Trace debug paths with OpenGL."),
-      params.glpathd);
-  add_options(*cli.add_subcommand("glsculpt", "Sculpt meshes with OpenGL."),
-      params.glsculpt);
-  cli.require_subcommand(1);
   try {
-    cli.parse(argc, argv);
-    params.command = cli.get_subcommands().front()->get_name();
-  } catch (const CLI::ParseError& e) {
-    return cli.exit(e);
-  }
+    // command line parameters
+    auto params = app_params{};
+    auto cli    = make_cli("ymesh", "Process and view meshes");
+    add_command_var(cli, params.command);
+    add_options(add_command(cli, "view", "View shapes."), params.view);
+    add_options(
+        add_command(cli, "glview", "View shapes with OpenGL."), params.glview);
+    add_options(
+        add_command(cli, "glpath", "Trace paths with OpenGL."), params.glpath);
+    add_options(add_command(cli, "glpathd", "Trace debug paths with OpenGL."),
+        params.glpathd);
+    add_options(add_command(cli, "glsculpt", "Sculpt meshes with OpenGL."),
+        params.glsculpt);
+    parse_cli(cli, argc, argv);
 
-  // dispatch commands
-  try {
+    // dispatch commands
     if (params.command == "view") {
       run_view(params.view);
     } else if (params.command == "glview") {
@@ -1258,7 +1253,7 @@ int main(int argc, const char* argv[]) {
     } else {
       throw io_error{"unknown command"};
     }
-  } catch (const io_error& error) {
+  } catch (const std::exception& error) {
     std::cerr << "error: " << error.what() << "\n";
     return 1;
   }
