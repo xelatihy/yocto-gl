@@ -38,6 +38,7 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
+#include <chrono>
 #include <functional>
 #include <sstream>
 #include <string>
@@ -339,6 +340,26 @@ struct cli_error : std::runtime_error {
 // parse cli, throws cli_error on error
 inline void parse_cli(cli_command& cli, const vector<string>& args);
 inline void parse_cli(cli_command& cli, int argc, const char** argv);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// SIMPLE TIMER
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Simple timer
+struct simple_timer {
+  int64_t start = -1, stop = -1;
+  simple_timer();
+};
+
+// Timer operations
+inline void    start_timer(simple_timer& timer);
+inline void    stop_timer(simple_timer& timer);
+inline int64_t elapsed_nanoseconds(simple_timer& timer);
+inline double  elapsed_seconds(simple_timer& timer);
+inline string  elapsed_formatted(simple_timer& timer);
 
 }  // namespace yocto
 
@@ -767,6 +788,55 @@ inline void parse_cli(cli_command& cli, const vector<string>& args) {
 }
 inline void parse_cli(cli_command& cli, int argc, const char** argv) {
   return parse_cli(cli, vector<string>{argv, argv + argc});
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// SIMPLE TIMER
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// get time in nanoseconds - useful only to compute difference of times
+inline int64_t _get_time() {
+  return std::chrono::high_resolution_clock::now().time_since_epoch().count();
+}
+
+// Format duration string from nanoseconds
+inline string _format_duration(int64_t duration) {
+  auto elapsed = duration / 1000000;  // milliseconds
+  auto hours   = (int)(elapsed / 3600000);
+  elapsed %= 3600000;
+  auto mins = (int)(elapsed / 60000);
+  elapsed %= 60000;
+  auto secs  = (int)(elapsed / 1000);
+  auto msecs = (int)(elapsed % 1000);
+  char buffer[256];
+  snprintf(
+      buffer, sizeof(buffer), "%02d:%02d:%02d.%03d", hours, mins, secs, msecs);
+  return buffer;
+}
+
+// Simple timer
+inline simple_timer::simple_timer() {
+  start = _get_time();
+  stop  = -1;
+}
+
+// Timer opreations
+inline void start_timer(simple_timer& timer) {
+  timer.start = _get_time();
+  timer.stop  = -1;
+}
+inline void    stop_timer(simple_timer& timer) { timer.stop = _get_time(); }
+inline int64_t elapsed_nanoseconds(simple_timer& timer) {
+  return _get_time() - timer.start;
+}
+inline double elapsed_seconds(simple_timer& timer) {
+  return (double)(_get_time() - timer.start) * 1e-9;
+}
+inline string elapsed_formatted(simple_timer& timer) {
+  return _format_duration(_get_time() - timer.start);
 }
 
 }  // namespace yocto

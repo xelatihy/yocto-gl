@@ -35,28 +35,10 @@
 
 using namespace yocto;
 
-#include <chrono>
 #include <filesystem>
 namespace fs = std::filesystem;
 
 #include <iostream>
-
-int64_t now() {
-  return std::chrono::high_resolution_clock::now().time_since_epoch().count();
-}
-string format_duration(int64_t duration) {
-  auto elapsed = duration / 1000000;  // milliseconds
-  auto hours   = (int)(elapsed / 3600000);
-  elapsed %= 3600000;
-  auto mins = (int)(elapsed / 60000);
-  elapsed %= 60000;
-  auto secs  = (int)(elapsed / 1000);
-  auto msecs = (int)(elapsed % 1000);
-  char buffer[256];
-  snprintf(
-      buffer, sizeof(buffer), "%02d:%02d:%02d.%03d", hours, mins, secs, msecs);
-  return buffer;
-}
 
 // convert params
 struct convert_params {
@@ -79,12 +61,12 @@ void add_options(cli_command& cli, convert_params& params) {
 // convert images
 void run_convert(const convert_params& params) {
   std::cout << "converting " + params.scene + "\n";
-  auto start = now();
+  auto timer = simple_timer{};
 
   // load scene
-  start      = now();
+  timer      = simple_timer{};
   auto scene = load_scene(params.scene);
-  std::cout << "load scene: " + format_duration(now() - start) + "\n";
+  std::cout << "load scene: " + elapsed_formatted(timer) + "\n";
 
   // copyright
   if (params.copyright != "") {
@@ -106,16 +88,16 @@ void run_convert(const convert_params& params) {
 
   // tesselate if needed
   if (!scene.subdivs.empty()) {
-    start = now();
+    timer = simple_timer{};
     tesselate_subdivs(scene);
-    std::cout << "tesselate subdivs: " + format_duration(now() - start) + "\n";
+    std::cout << "tesselate subdivs: " + elapsed_formatted(timer) + "\n";
   }
 
   // save scene
-  start = now();
+  timer = simple_timer{};
   make_scene_directories(params.output, scene);
   save_scene(params.output, scene);
-  std::cout << "save scene: " + format_duration(now() - start) + "\n";
+  std::cout << "save scene: " + elapsed_formatted(timer) + "\n";
 }
 
 // info params
@@ -133,12 +115,12 @@ void add_options(cli_command& cli, info_params& params) {
 // print info for scenes
 void run_info(const info_params& params) {
   std::cout << "info for " + params.scene + "\n";
-  auto start = now();
+  auto timer = simple_timer{};
 
   // load scene
-  start      = now();
+  timer      = simple_timer{};
   auto scene = load_scene(params.scene);
-  std::cout << "load scene: " + format_duration(now() - start) + "\n";
+  std::cout << "load scene: " + elapsed_formatted(timer) + "\n";
 
   // validate scene
   if (params.validate) {
@@ -192,15 +174,15 @@ void add_options(cli_command& cli, render_params& params) {
 // convert images
 void run_render(const render_params& params_) {
   std::cout << "rendering " + params_.scene + "\n";
-  auto start = now();
+  auto timer = simple_timer{};
 
   // copy params
   auto params = params_;
 
   // scene loading
-  start      = now();
+  timer      = simple_timer{};
   auto scene = load_scene(params.scene);
-  std::cout << "load scene: " + format_duration(now() - start) + "\n";
+  std::cout << "load scene: " + elapsed_formatted(timer) + "\n";
 
   // add sky
   if (params.addsky) add_sky(scene);
@@ -234,13 +216,13 @@ void run_render(const render_params& params_) {
   auto state = make_state(scene, params);
 
   // render
-  start = now();
+  timer = simple_timer{};
   for (auto sample = 0; sample < params.samples; sample++) {
-    auto sample_start = now();
+    auto sample_timer = simple_timer{};
     trace_samples(state, scene, bvh, lights, params);
     std::cout << ("render sample " + std::to_string(sample) + "/" +
                   std::to_string(params.samples) + ":" +
-                  format_duration(now() - sample_start) + "\n");
+                  elapsed_formatted(sample_timer) + "\n");
     if (params.savebatch && state.samples % params.batch == 0) {
       auto image = params.denoise ? get_denoised(state) : get_render(state);
       auto outfilename = fs::path(params.output)
@@ -253,15 +235,15 @@ void run_render(const render_params& params_) {
       save_image(outfilename, image);
     }
   }
-  std::cout << "render image: " + format_duration(now() - start) + "\n";
+  std::cout << "render image: " + elapsed_formatted(timer) + "\n";
 
   // save image
-  start      = now();
+  timer      = simple_timer{};
   auto image = params.denoise ? get_denoised(state) : get_render(state);
   if (!is_hdr_filename(params.output))
     image = tonemap_image(image, params.exposure, params.filmic);
   save_image(params.output, image);
-  std::cout << "save image: " + format_duration(now() - start) + "\n";
+  std::cout << "save image: " + elapsed_formatted(timer) + "\n";
 }
 
 // convert params
@@ -304,15 +286,15 @@ void add_options(cli_command& cli, view_params& params) {
 // view scene
 void run_view(const view_params& params_) {
   std::cout << "viewing " + params_.scene + "\n";
-  auto start = now();
+  auto timer = simple_timer{};
 
   // copy params
   auto params = params_;
 
   // load scene
-  start      = now();
+  timer      = simple_timer{};
   auto scene = load_scene(params.scene);
-  std::cout << "load scene: " + format_duration(now() - start) + "\n";
+  std::cout << "load scene: " + elapsed_formatted(timer) + "\n";
 
   // add sky
   if (params.addsky) add_sky(scene);
