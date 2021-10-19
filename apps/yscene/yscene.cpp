@@ -362,12 +362,11 @@ int main(int argc, const char* argv[]) {
     auto params = app_params{};
     auto cli    = make_cli("yscene", "process and view scenes");
     add_command_var(cli, params.command);
-    add_options(add_command(cli, "convert", "convert scenes"), params.convert);
-    add_options(add_command(cli, "info", "print scenes info"), params.info);
-    add_options(add_command(cli, "render", "render scenes"), params.render);
-    add_options(add_command(cli, "view", "view scenes"), params.view);
-    add_options(
-        add_command(cli, "glview", "view scenes with OpenGL"), params.glview);
+    add_command(cli, "convert", params.convert, "convert scenes");
+    add_command(cli, "info", params.info, "print scenes info");
+    add_command(cli, "render", params.render, "render scenes");
+    add_command(cli, "view", params.view, "view scenes");
+    add_command(cli, "glview", params.glview, "view scenes with OpenGL");
     parse_cli(cli, argc, argv);
 
     // dispatch commands
