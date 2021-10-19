@@ -646,6 +646,21 @@ inline void println(const string& format, const Args&... values) {
   printf("%s\n", stream.str().c_str());
 }
 
+// Prints a message line.
+template <typename... Args>
+inline void print_info(const string& format, const Args&... values) {
+  auto stream = std::stringstream{};
+  format_to(stream, format, values...);
+  printf("%s\n", stream.str().c_str());
+}
+// Prints an error.
+template <typename... Args>
+inline void print_error(const string& format, const Args&... values) {
+  auto stream = std::stringstream{};
+  format_to(stream, format, values...);
+  printf("error: %s\n", stream.str().c_str());
+}
+
 }  // namespace yocto
 
 #endif

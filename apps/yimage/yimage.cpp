@@ -259,7 +259,7 @@ int main(int argc, const char* argv[]) {
       throw io_error("unknown command");
     }
   } catch (const std::exception& error) {
-    std::cerr << "error: " << error.what() << "\n";
+    print_error(error.what());
     return 1;
   }
 
