@@ -98,9 +98,9 @@ By default Yocto/Bvh computes the closet element, but this can be
 relaxed to accept any element, by passing an optional flag.
 
 ```cpp
-auto isec = overlap_bvh(bvh,scene,point,dist); // closest element
-if (isec.hit) {                                // check intersection
-  handle_intersection(isec.instance,           // work on intersection data
+auto isec = overlap_scene(bvh,scene,point,dist); // closest element
+if (isec.hit) {                                  // check intersection
+  handle_intersection(isec.instance,             // work on intersection data
     isec.element, isec.uv, isec.distance);
 }
 ```
