@@ -534,7 +534,7 @@ struct sculpt_params {
 
 struct sculpt_state {
   // data structures
-  shape_bvh           bvh         = {};
+  bvh_tree            bvh         = {};
   hash_grid           grid        = {};
   vector<vector<int>> adjacencies = {};
   geodesic_solver     solver      = {};
@@ -1048,7 +1048,7 @@ static scene_data make_sculptscene(const shape_data& ioshape_) {
 }
 
 // To make the stroke sampling (position, normal) following the mouse
-static pair<vector<shape_point>, vec2f> sample_stroke(const shape_bvh& bvh,
+static pair<vector<shape_point>, vec2f> sample_stroke(const bvh_tree& bvh,
     const shape_data& shape, const vec2f& last_uv, const vec2f& mouse_uv,
     const camera_data& camera, const sculpt_params& params) {
   // helper

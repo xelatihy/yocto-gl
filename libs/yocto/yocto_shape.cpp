@@ -2040,7 +2040,7 @@ static pair<int, int> split_middle(vector<int>& primitives,
 const int bvh_max_prims = 4;
 
 // Build BVH nodes
-static void build_bvh(shape_bvh& bvh, vector<bbox3f>& bboxes) {
+static void build_bvh(bvh_tree& bvh, vector<bbox3f>& bboxes) {
   // get values
   auto& nodes      = bvh.nodes;
   auto& primitives = bvh.primitives;
@@ -2104,7 +2104,7 @@ static void build_bvh(shape_bvh& bvh, vector<bbox3f>& bboxes) {
 }
 
 // Update bvh
-static void update_bvh(shape_bvh& bvh, const vector<bbox3f>& bboxes) {
+static void update_bvh(bvh_tree& bvh, const vector<bbox3f>& bboxes) {
   for (auto nodeid = (int)bvh.nodes.size() - 1; nodeid >= 0; nodeid--) {
     auto& node = bvh.nodes[nodeid];
     node.bbox  = invalidb3f;
@@ -2121,7 +2121,7 @@ static void update_bvh(shape_bvh& bvh, const vector<bbox3f>& bboxes) {
 }
 
 // Build shape bvh
-shape_bvh make_points_bvh(const vector<int>& points,
+bvh_tree make_points_bvh(const vector<int>& points,
     const vector<vec3f>& positions, const vector<float>& radius) {
   // build primitives
   auto bboxes = vector<bbox3f>(points.size());
@@ -2131,11 +2131,11 @@ shape_bvh make_points_bvh(const vector<int>& points,
   }
 
   // build nodes
-  auto bvh = shape_bvh{};
+  auto bvh = bvh_tree{};
   build_bvh(bvh, bboxes);
   return bvh;
 }
-shape_bvh make_lines_bvh(const vector<vec2i>& lines,
+bvh_tree make_lines_bvh(const vector<vec2i>& lines,
     const vector<vec3f>& positions, const vector<float>& radius) {
   // build primitives
   auto bboxes = vector<bbox3f>(lines.size());
@@ -2146,11 +2146,11 @@ shape_bvh make_lines_bvh(const vector<vec2i>& lines,
   }
 
   // build nodes
-  auto bvh = shape_bvh{};
+  auto bvh = bvh_tree{};
   build_bvh(bvh, bboxes);
   return bvh;
 }
-shape_bvh make_triangles_bvh(const vector<vec3i>& triangles,
+bvh_tree make_triangles_bvh(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<float>& radius) {
   // build primitives
   auto bboxes = vector<bbox3f>(triangles.size());
@@ -2161,11 +2161,11 @@ shape_bvh make_triangles_bvh(const vector<vec3i>& triangles,
   }
 
   // build nodes
-  auto bvh = shape_bvh{};
+  auto bvh = bvh_tree{};
   build_bvh(bvh, bboxes);
   return bvh;
 }
-shape_bvh make_quads_bvh(const vector<vec4i>& quads,
+bvh_tree make_quads_bvh(const vector<vec4i>& quads,
     const vector<vec3f>& positions, const vector<float>& radius) {
   // build primitives
   auto bboxes = vector<bbox3f>(quads.size());
@@ -2176,12 +2176,12 @@ shape_bvh make_quads_bvh(const vector<vec4i>& quads,
   }
 
   // build nodes
-  auto bvh = shape_bvh{};
+  auto bvh = bvh_tree{};
   build_bvh(bvh, bboxes);
   return bvh;
 }
 
-void update_points_bvh(shape_bvh& bvh, const vector<int>& points,
+void update_points_bvh(bvh_tree& bvh, const vector<int>& points,
     const vector<vec3f>& positions, const vector<float>& radius) {
   // build primitives
   auto bboxes = vector<bbox3f>(points.size());
@@ -2193,7 +2193,7 @@ void update_points_bvh(shape_bvh& bvh, const vector<int>& points,
   // update nodes
   update_bvh(bvh, bboxes);
 }
-void update_lines_bvh(shape_bvh& bvh, const vector<vec2i>& lines,
+void update_lines_bvh(bvh_tree& bvh, const vector<vec2i>& lines,
     const vector<vec3f>& positions, const vector<float>& radius) {
   // build primitives
   auto bboxes = vector<bbox3f>(lines.size());
@@ -2206,7 +2206,7 @@ void update_lines_bvh(shape_bvh& bvh, const vector<vec2i>& lines,
   // update nodes
   update_bvh(bvh, bboxes);
 }
-void update_triangles_bvh(shape_bvh& bvh, const vector<vec3i>& triangles,
+void update_triangles_bvh(bvh_tree& bvh, const vector<vec3i>& triangles,
     const vector<vec3f>& positions) {
   // build primitives
   auto bboxes = vector<bbox3f>(triangles.size());
@@ -2219,7 +2219,7 @@ void update_triangles_bvh(shape_bvh& bvh, const vector<vec3i>& triangles,
   // update nodes
   update_bvh(bvh, bboxes);
 }
-void update_quads_bvh(shape_bvh& bvh, const vector<vec4i>& quads,
+void update_quads_bvh(bvh_tree& bvh, const vector<vec4i>& quads,
     const vector<vec3f>& positions) {
   // build primitives
   auto bboxes = vector<bbox3f>(quads.size());
@@ -2235,7 +2235,7 @@ void update_quads_bvh(shape_bvh& bvh, const vector<vec4i>& quads,
 
 // Intersect ray with a bvh.
 template <typename Intersect>
-static bool intersect_elements_bvh(const shape_bvh& bvh,
+static bool intersect_elements_bvh(const bvh_tree& bvh,
     Intersect&& intersect_element, const ray3f& ray_, int& element, vec2f& uv,
     float& distance, bool find_any) {
   // check empty
@@ -2297,7 +2297,7 @@ static bool intersect_elements_bvh(const shape_bvh& bvh,
 }
 
 // Intersect ray with a bvh.
-shape_intersection intersect_points_bvh(const shape_bvh& bvh,
+shape_intersection intersect_points_bvh(const bvh_tree& bvh,
     const vector<int>& points, const vector<vec3f>& positions,
     const vector<float>& radius, const ray3f& ray, bool find_any) {
   auto intersection = shape_intersection{};
@@ -2312,7 +2312,7 @@ shape_intersection intersect_points_bvh(const shape_bvh& bvh,
       find_any);
   return intersection;
 }
-shape_intersection intersect_lines_bvh(const shape_bvh& bvh,
+shape_intersection intersect_lines_bvh(const bvh_tree& bvh,
     const vector<vec2i>& lines, const vector<vec3f>& positions,
     const vector<float>& radius, const ray3f& ray, bool find_any) {
   auto intersection = shape_intersection{};
@@ -2328,7 +2328,7 @@ shape_intersection intersect_lines_bvh(const shape_bvh& bvh,
       find_any);
   return intersection;
 }
-shape_intersection intersect_triangles_bvh(const shape_bvh& bvh,
+shape_intersection intersect_triangles_bvh(const bvh_tree& bvh,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const ray3f& ray, bool find_any) {
   auto intersection = shape_intersection{};
@@ -2344,7 +2344,7 @@ shape_intersection intersect_triangles_bvh(const shape_bvh& bvh,
       find_any);
   return intersection;
 }
-shape_intersection intersect_quads_bvh(const shape_bvh& bvh,
+shape_intersection intersect_quads_bvh(const bvh_tree& bvh,
     const vector<vec4i>& quads, const vector<vec3f>& positions,
     const ray3f& ray, bool find_any) {
   auto intersection = shape_intersection{};
@@ -2363,7 +2363,7 @@ shape_intersection intersect_quads_bvh(const shape_bvh& bvh,
 
 // Intersect ray with a bvh.
 template <typename Overlap>
-static bool overlap_elements_bvh(const shape_bvh& bvh,
+static bool overlap_elements_bvh(const bvh_tree& bvh,
     Overlap&& overlap_element, const vec3f& pos, float max_distance,
     int& element, vec2f& uv, float& distance, bool find_any) {
   // check if empty
@@ -2413,7 +2413,7 @@ static bool overlap_elements_bvh(const shape_bvh& bvh,
 // max distance, returning either the closest or any overlap depending on
 // `find_any`. Returns the point distance, the instance id, the shape element
 // index and the element barycentric coordinates.
-shape_intersection overlap_points_bvh(const shape_bvh& bvh,
+shape_intersection overlap_points_bvh(const bvh_tree& bvh,
     const vector<int>& points, const vector<vec3f>& positions,
     const vector<float>& radius, const vec3f& pos, float max_distance,
     bool find_any) {
@@ -2430,7 +2430,7 @@ shape_intersection overlap_points_bvh(const shape_bvh& bvh,
       intersection.distance, find_any);
   return intersection;
 }
-shape_intersection overlap_lines_bvh(const shape_bvh& bvh,
+shape_intersection overlap_lines_bvh(const bvh_tree& bvh,
     const vector<vec2i>& lines, const vector<vec3f>& positions,
     const vector<float>& radius, const vec3f& pos, float max_distance,
     bool find_any) {
@@ -2447,7 +2447,7 @@ shape_intersection overlap_lines_bvh(const shape_bvh& bvh,
       intersection.distance, find_any);
   return intersection;
 }
-shape_intersection overlap_triangles_bvh(const shape_bvh& bvh,
+shape_intersection overlap_triangles_bvh(const bvh_tree& bvh,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<float>& radius, const vec3f& pos, float max_distance,
     bool find_any) {
@@ -2465,7 +2465,7 @@ shape_intersection overlap_triangles_bvh(const shape_bvh& bvh,
       intersection.distance, find_any);
   return intersection;
 }
-shape_intersection overlap_quads_bvh(const shape_bvh& bvh,
+shape_intersection overlap_quads_bvh(const bvh_tree& bvh,
     const vector<vec4i>& quads, const vector<vec3f>& positions,
     const vector<float>& radius, const vec3f& pos, float max_distance,
     bool find_any) {

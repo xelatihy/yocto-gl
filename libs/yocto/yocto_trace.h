@@ -155,14 +155,14 @@ trace_state make_state(const scene_data& scene, const trace_params& params);
 trace_lights make_lights(const scene_data& scene, const trace_params& params);
 
 // Build the bvh acceleration structure.
-bvh_data make_bvh(const scene_data& scene, const trace_params& params);
+scene_bvh make_bvh(const scene_data& scene, const trace_params& params);
 
 // Progressively computes an image.
 void trace_samples(trace_state& state, const scene_data& scene,
-    const bvh_data& bvh, const trace_lights& lights,
+    const scene_bvh& bvh, const trace_lights& lights,
     const trace_params& params);
 void trace_sample(trace_state& state, const scene_data& scene,
-    const bvh_data& bvh, const trace_lights& lights, int i, int j,
+    const scene_bvh& bvh, const trace_lights& lights, int i, int j,
     const trace_params& params);
 
 // Get resulting render

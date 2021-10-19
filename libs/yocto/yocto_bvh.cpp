@@ -146,8 +146,8 @@ void clear_embree_bvh(void* embree_bvh) {
 }
 
 // Initialize Embree BVH
-static bvh_data make_embree_bvh(const shape_data& shape, bool highquality) {
-  auto bvh       = bvh_data{};
+static shape_bvh make_embree_bvh(const shape_data& shape, bool highquality) {
+  auto bvh       = shape_bvh{};
   auto edevice   = bvh_embree_device();
   bvh.embree_bvh = unique_ptr<void, void (*)(void*)>{
       rtcNewScene(edevice), &clear_embree_bvh};
@@ -229,10 +229,10 @@ static bvh_data make_embree_bvh(const shape_data& shape, bool highquality) {
   return bvh;
 }
 
-static bvh_data make_embree_bvh(
+static scene_bvh make_embree_bvh(
     const scene_data& scene, bool highquality, bool noparallel) {
   // scene bvh
-  auto bvh = bvh_data{};
+  auto bvh = scene_bvh{};
 
   // shape bvhs
   bvh.shapes.resize(scene.shapes.size());
@@ -272,7 +272,7 @@ static bvh_data make_embree_bvh(
   return bvh;
 }
 
-static void update_embree_bvh(bvh_data& bvh, const scene_data& scene,
+static void update_embree_bvh(scene_bvh& bvh, const scene_data& scene,
     const vector<int>& updated_instances) {
   // scene bvh
   auto escene = (RTCScene)bvh.embree_bvh.get();
@@ -288,7 +288,7 @@ static void update_embree_bvh(bvh_data& bvh, const scene_data& scene,
   rtcCommitScene(escene);
 }
 
-static bool intersect_embree_bvh(const bvh_data& bvh, const shape_data& shape,
+static bool intersect_embree_bvh(const shape_bvh& bvh, const shape_data& shape,
     const ray3f& ray, int& element, vec2f& uv, float& distance, bool find_any) {
   RTCRayHit embree_ray;
   embree_ray.ray.org_x     = ray.o.x;
@@ -312,7 +312,7 @@ static bool intersect_embree_bvh(const bvh_data& bvh, const shape_data& shape,
   return true;
 }
 
-static bool intersect_embree_bvh(const bvh_data& bvh, const scene_data& scene,
+static bool intersect_embree_bvh(const scene_bvh& bvh, const scene_data& scene,
     const ray3f& ray, int& instance, int& element, vec2f& uv, float& distance,
     bool find_any) {
   RTCRayHit embree_ray;
@@ -477,15 +477,15 @@ static pair<int, int> split_middle(vector<int>& primitives,
 const int bvh_max_prims = 4;
 
 // Build BVH nodes
-static void build_bvh(
-    bvh_data& bvh, const vector<bbox3f>& bboxes, bool highquality) {
+static void build_bvh(vector<bvh_node>& nodes, vector<int>& primitives,
+    const vector<bbox3f>& bboxes, bool highquality) {
   // prepare to build nodes
-  bvh.nodes.clear();
-  bvh.nodes.reserve(bboxes.size() * 2);
+  nodes.clear();
+  nodes.reserve(bboxes.size() * 2);
 
   // prepare primitives
-  bvh.primitives.resize(bboxes.size());
-  for (auto idx = 0; idx < bboxes.size(); idx++) bvh.primitives[idx] = idx;
+  primitives.resize(bboxes.size());
+  for (auto idx = 0; idx < bboxes.size(); idx++) primitives[idx] = idx;
 
   // prepare centers
   auto centers = vector<vec3f>(bboxes.size());
@@ -494,7 +494,7 @@ static void build_bvh(
 
   // push first node onto the stack
   auto stack = vector<vec3i>{{0, 0, (int)bboxes.size()}};
-  bvh.nodes.emplace_back();
+  nodes.emplace_back();
 
   // create nodes until the stack is empty
   while (!stack.empty()) {
@@ -503,28 +503,27 @@ static void build_bvh(
     stack.pop_back();
 
     // grab node
-    auto& node = bvh.nodes[nodeid];
+    auto& node = nodes[nodeid];
 
     // compute bounds
     node.bbox = invalidb3f;
     for (auto i = start; i < end; i++)
-      node.bbox = merge(node.bbox, bboxes[bvh.primitives[i]]);
+      node.bbox = merge(node.bbox, bboxes[primitives[i]]);
 
     // split into two children
     if (end - start > bvh_max_prims) {
       // get split
       auto [mid, axis] =
-          highquality
-              ? split_sah(bvh.primitives, bboxes, centers, start, end)
-              : split_middle(bvh.primitives, bboxes, centers, start, end);
+          highquality ? split_sah(primitives, bboxes, centers, start, end)
+                      : split_middle(primitives, bboxes, centers, start, end);
 
       // make an internal node
       node.internal = true;
       node.axis     = (uint8_t)axis;
       node.num      = 2;
-      node.start    = (int)bvh.nodes.size();
-      bvh.nodes.emplace_back();
-      bvh.nodes.emplace_back();
+      node.start    = (int)nodes.size();
+      nodes.emplace_back();
+      nodes.emplace_back();
       stack.push_back({node.start + 0, start, mid});
       stack.push_back({node.start + 1, mid, end});
     } else {
@@ -536,34 +535,35 @@ static void build_bvh(
   }
 
   // cleanup
-  bvh.nodes.shrink_to_fit();
+  nodes.shrink_to_fit();
 }
 
 // Update bvh
-static void refit_bvh(bvh_data& bvh, const vector<bbox3f>& bboxes) {
-  for (auto nodeid = (int)bvh.nodes.size() - 1; nodeid >= 0; nodeid--) {
-    auto& node = bvh.nodes[nodeid];
+static void refit_bvh(vector<bvh_node>& nodes, const vector<int>& primitives,
+    const vector<bbox3f>& bboxes) {
+  for (auto nodeid = (int)nodes.size() - 1; nodeid >= 0; nodeid--) {
+    auto& node = nodes[nodeid];
     node.bbox  = invalidb3f;
     if (node.internal) {
       for (auto idx = 0; idx < 2; idx++) {
-        node.bbox = merge(node.bbox, bvh.nodes[node.start + idx].bbox);
+        node.bbox = merge(node.bbox, nodes[node.start + idx].bbox);
       }
     } else {
       for (auto idx = 0; idx < node.num; idx++) {
-        node.bbox = merge(node.bbox, bboxes[bvh.primitives[node.start + idx]]);
+        node.bbox = merge(node.bbox, bboxes[primitives[node.start + idx]]);
       }
     }
   }
 }
 
-bvh_data make_bvh(const shape_data& shape, bool highquality, bool embree) {
+shape_bvh make_bvh(const shape_data& shape, bool highquality, bool embree) {
   // embree
 #ifdef YOCTO_EMBREE
   if (embree) return make_embree_bvh(shape, highquality);
 #endif
 
   // bvh
-  auto bvh = bvh_data{};
+  auto bvh = shape_bvh{};
 
   // build primitives
   auto bboxes = vector<bbox3f>{};
@@ -598,13 +598,13 @@ bvh_data make_bvh(const shape_data& shape, bool highquality, bool embree) {
   }
 
   // build nodes
-  build_bvh(bvh, bboxes, highquality);
+  build_bvh(bvh.nodes, bvh.primitives, bboxes, highquality);
 
   // done
   return bvh;
 }
 
-bvh_data make_bvh(
+scene_bvh make_bvh(
     const scene_data& scene, bool highquality, bool embree, bool noparallel) {
   // embree
 #ifdef YOCTO_EMBREE
@@ -612,7 +612,7 @@ bvh_data make_bvh(
 #endif
 
   // bvh
-  auto bvh = bvh_data{};
+  auto bvh = scene_bvh{};
 
   // build shape bvh
   bvh.shapes.resize(scene.shapes.size());
@@ -637,13 +637,13 @@ bvh_data make_bvh(
   }
 
   // build nodes
-  build_bvh(bvh, bboxes, highquality);
+  build_bvh(bvh.nodes, bvh.primitives, bboxes, highquality);
 
   // done
   return bvh;
 }
 
-static void refit_bvh(bvh_data& bvh, const shape_data& shape) {
+static void refit_bvh(shape_bvh& bvh, const shape_data& shape) {
 #ifdef YOCTO_EMBREE
   if (bvh.embree_bvh) {
     throw std::runtime_error("embree shape refit not supported");
@@ -682,10 +682,10 @@ static void refit_bvh(bvh_data& bvh, const shape_data& shape) {
   }
 
   // update nodes
-  refit_bvh(bvh, bboxes);
+  refit_bvh(bvh.nodes, bvh.primitives, bboxes);
 }
 
-void refit_bvh(bvh_data& bvh, const scene_data& scene,
+void refit_bvh(scene_bvh& bvh, const scene_data& scene,
     const vector<int>& updated_instances) {
 #ifdef YOCTO_EMBREE
   if (bvh.embree_bvh) {
@@ -702,15 +702,15 @@ void refit_bvh(bvh_data& bvh, const scene_data& scene,
   }
 
   // update nodes
-  refit_bvh(bvh, bboxes);
+  refit_bvh(bvh.nodes, bvh.primitives, bboxes);
 }
 
-void update_bvh(bvh_data& bvh, const shape_data& shape) {
+void update_bvh(shape_bvh& bvh, const shape_data& shape) {
   // handle instances
   refit_bvh(bvh, shape);
 }
 
-void update_bvh(bvh_data& bvh, const scene_data& scene,
+void update_bvh(scene_bvh& bvh, const scene_data& scene,
     const vector<int>& updated_instances, const vector<int>& updated_shapes) {
   // update shapes
   for (auto shape : updated_shapes) {
@@ -729,7 +729,7 @@ void update_bvh(bvh_data& bvh, const scene_data& scene,
 namespace yocto {
 
 // Intersect ray with a bvh.
-static bool intersect_bvh(const bvh_data& bvh, const shape_data& shape,
+static bool intersect_bvh(const shape_bvh& bvh, const shape_data& shape,
     const ray3f& ray_, int& element, vec2f& uv, float& distance,
     bool find_any) {
 #ifdef YOCTO_EMBREE
@@ -830,9 +830,9 @@ static bool intersect_bvh(const bvh_data& bvh, const shape_data& shape,
 }
 
 // Intersect ray with a bvh.
-static bool intersect_bvh(const bvh_data& bvh, const scene_data& scene,
+static bool intersect_bvh(const scene_bvh& bvh, const scene_data& scene,
     const ray3f& ray_, int& instance, int& element, vec2f& uv, float& distance,
-    bool find_any, bool non_rigid_frames) {
+    bool find_any) {
 #ifdef YOCTO_EMBREE
   // call Embree if needed
   if (bvh.embree_bvh) {
@@ -884,8 +884,7 @@ static bool intersect_bvh(const bvh_data& bvh, const scene_data& scene,
     } else {
       for (auto idx = node.start; idx < node.start + node.num; idx++) {
         auto& instance_ = scene.instances[bvh.primitives[idx]];
-        auto  inv_ray   = transform_ray(
-            inverse(instance_.frame, non_rigid_frames), ray);
+        auto  inv_ray   = transform_ray(inverse(instance_.frame, true), ray);
         if (intersect_bvh(bvh.shapes[instance_.shape],
                 scene.shapes[instance_.shape], inv_ray, element, uv, distance,
                 find_any)) {
@@ -904,13 +903,36 @@ static bool intersect_bvh(const bvh_data& bvh, const scene_data& scene,
 }
 
 // Intersect ray with a bvh.
-static bool intersect_bvh(const bvh_data& bvh, const scene_data& scene,
+static bool intersect_bvh(const scene_bvh& bvh, const scene_data& scene,
     int instance_, const ray3f& ray, int& element, vec2f& uv, float& distance,
-    bool find_any, bool non_rigid_frames) {
+    bool find_any) {
   auto& instance = scene.instances[instance_];
-  auto  inv_ray = transform_ray(inverse(instance.frame, non_rigid_frames), ray);
+  auto  inv_ray  = transform_ray(inverse(instance.frame, true), ray);
   return intersect_bvh(bvh.shapes[instance.shape], scene.shapes[instance.shape],
       inv_ray, element, uv, distance, find_any);
+}
+
+shape_intersection intersect_shape(const shape_bvh& bvh,
+    const shape_data& shape, const ray3f& ray, bool find_any) {
+  auto intersection = shape_intersection{};
+  intersection.hit  = intersect_bvh(bvh, shape, ray, intersection.element,
+      intersection.uv, intersection.distance, find_any);
+  return intersection;
+}
+scene_intersection intersect_scene(const scene_bvh& bvh,
+    const scene_data& scene, const ray3f& ray, bool find_any) {
+  auto intersection = scene_intersection{};
+  intersection.hit  = intersect_bvh(bvh, scene, ray, intersection.instance,
+      intersection.element, intersection.uv, intersection.distance, find_any);
+  return intersection;
+}
+scene_intersection intersect_instance(const scene_bvh& bvh,
+    const scene_data& scene, int instance, const ray3f& ray, bool find_any) {
+  auto intersection     = scene_intersection{};
+  intersection.hit      = intersect_bvh(bvh, scene, instance, ray,
+      intersection.element, intersection.uv, intersection.distance, find_any);
+  intersection.instance = instance;
+  return intersection;
 }
 
 }  // namespace yocto
@@ -921,7 +943,7 @@ static bool intersect_bvh(const bvh_data& bvh, const scene_data& scene,
 namespace yocto {
 
 // Intersect ray with a bvh.
-static bool overlap_bvh(const bvh_data& bvh, const shape_data& shape,
+static bool overlap_bvh(const shape_bvh& bvh, const shape_data& shape,
     const vec3f& pos, float max_distance, int& element, vec2f& uv,
     float& distance, bool find_any) {
   // check if empty
@@ -1007,9 +1029,9 @@ static bool overlap_bvh(const bvh_data& bvh, const shape_data& shape,
 }
 
 // Intersect ray with a bvh.
-static bool overlap_bvh(const bvh_data& bvh, const scene_data& scene,
+static bool overlap_bvh(const scene_bvh& bvh, const scene_data& scene,
     const vec3f& pos, float max_distance, int& instance, int& element,
-    vec2f& uv, float& distance, bool find_any, bool non_rigid_frames) {
+    vec2f& uv, float& distance, bool find_any) {
   // check if empty
   if (bvh.nodes.empty()) return false;
 
@@ -1041,8 +1063,7 @@ static bool overlap_bvh(const bvh_data& bvh, const scene_data& scene,
         auto& instance_ = scene.instances[primitive];
         auto& shape     = scene.shapes[instance_.shape];
         auto& sbvh      = bvh.shapes[instance_.shape];
-        auto  inv_pos   = transform_point(
-            inverse(instance_.frame, non_rigid_frames), pos);
+        auto  inv_pos   = transform_point(inverse(instance_.frame, true), pos);
         if (overlap_bvh(sbvh, shape, inv_pos, max_distance, element, uv,
                 distance, find_any)) {
           hit          = true;
@@ -1120,38 +1141,12 @@ void overlap_bvh_elems(const bvh_data& bvh1, const bvh_data& bvh2,
 }
 #endif
 
-bvh_intersection intersect_bvh(const bvh_data& bvh, const shape_data& shape,
-    const ray3f& ray, bool find_any) {
-  auto intersection = bvh_intersection{};
-  intersection.hit  = intersect_bvh(bvh, shape, ray, intersection.element,
-      intersection.uv, intersection.distance, find_any);
-  return intersection;
-}
-bvh_intersection intersect_bvh(const bvh_data& bvh, const scene_data& scene,
-    const ray3f& ray, bool find_any, bool non_rigid_frames) {
-  auto intersection = bvh_intersection{};
-  intersection.hit  = intersect_bvh(bvh, scene, ray, intersection.instance,
-      intersection.element, intersection.uv, intersection.distance, find_any,
-      non_rigid_frames);
-  return intersection;
-}
-bvh_intersection intersect_bvh(const bvh_data& bvh, const scene_data& scene,
-    int instance, const ray3f& ray, bool find_any, bool non_rigid_frames) {
-  auto intersection     = bvh_intersection{};
-  intersection.hit      = intersect_bvh(bvh, scene, instance, ray,
-      intersection.element, intersection.uv, intersection.distance, find_any,
-      non_rigid_frames);
-  intersection.instance = instance;
-  return intersection;
-}
-
-bvh_intersection overlap_bvh(const bvh_data& bvh, const scene_data& scene,
-    const vec3f& pos, float max_distance, bool find_any,
-    bool non_rigid_frames) {
-  auto intersection = bvh_intersection{};
+scene_intersection overlap_scene(const scene_bvh& bvh, const scene_data& scene,
+    const vec3f& pos, float max_distance, bool find_any) {
+  auto intersection = scene_intersection{};
   intersection.hit  = overlap_bvh(bvh, scene, pos, max_distance,
       intersection.instance, intersection.element, intersection.uv,
-      intersection.distance, find_any, non_rigid_frames);
+      intersection.distance, find_any);
   return intersection;
 }
 

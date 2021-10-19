@@ -85,7 +85,7 @@ inline void parallel_for(T num1, T num2, Func&& func) {
 namespace yocto {
 
 // Build the bvh acceleration structure.
-bvh_data make_bvh(const scene_data& scene, const trace_params& params) {
+scene_bvh make_bvh(const scene_data& scene, const trace_params& params) {
   return make_bvh(
       scene, params.highqualitybvh, params.embreebvh, params.noparallel);
 }
@@ -99,42 +99,42 @@ namespace yocto {
 
 // Convenience functions
 [[maybe_unused]] static vec3f eval_position(
-    const scene_data& scene, const bvh_intersection& intersection) {
+    const scene_data& scene, const scene_intersection& intersection) {
   return eval_position(scene, scene.instances[intersection.instance],
       intersection.element, intersection.uv);
 }
 [[maybe_unused]] static vec3f eval_normal(
-    const scene_data& scene, const bvh_intersection& intersection) {
+    const scene_data& scene, const scene_intersection& intersection) {
   return eval_normal(scene, scene.instances[intersection.instance],
       intersection.element, intersection.uv);
 }
 [[maybe_unused]] static vec3f eval_element_normal(
-    const scene_data& scene, const bvh_intersection& intersection) {
+    const scene_data& scene, const scene_intersection& intersection) {
   return eval_element_normal(
       scene, scene.instances[intersection.instance], intersection.element);
 }
 [[maybe_unused]] static vec3f eval_shading_position(const scene_data& scene,
-    const bvh_intersection& intersection, const vec3f& outgoing) {
+    const scene_intersection& intersection, const vec3f& outgoing) {
   return eval_shading_position(scene, scene.instances[intersection.instance],
       intersection.element, intersection.uv, outgoing);
 }
 [[maybe_unused]] static vec3f eval_shading_normal(const scene_data& scene,
-    const bvh_intersection& intersection, const vec3f& outgoing) {
+    const scene_intersection& intersection, const vec3f& outgoing) {
   return eval_shading_normal(scene, scene.instances[intersection.instance],
       intersection.element, intersection.uv, outgoing);
 }
 [[maybe_unused]] static vec2f eval_texcoord(
-    const scene_data& scene, const bvh_intersection& intersection) {
+    const scene_data& scene, const scene_intersection& intersection) {
   return eval_texcoord(scene, scene.instances[intersection.instance],
       intersection.element, intersection.uv);
 }
 [[maybe_unused]] static material_point eval_material(
-    const scene_data& scene, const bvh_intersection& intersection) {
+    const scene_data& scene, const scene_intersection& intersection) {
   return eval_material(scene, scene.instances[intersection.instance],
       intersection.element, intersection.uv);
 }
 [[maybe_unused]] static bool is_volumetric(
-    const scene_data& scene, const bvh_intersection& intersection) {
+    const scene_data& scene, const scene_intersection& intersection) {
   return is_volumetric(scene, scene.instances[intersection.instance]);
 }
 
@@ -364,7 +364,7 @@ static vec3f sample_lights(const scene_data& scene, const trace_lights& lights,
 }
 
 // Sample lights pdf
-static float sample_lights_pdf(const scene_data& scene, const bvh_data& bvh,
+static float sample_lights_pdf(const scene_data& scene, const scene_bvh& bvh,
     const trace_lights& lights, const vec3f& position, const vec3f& direction) {
   auto pdf = 0.0f;
   for (auto& light : lights.lights) {
@@ -374,7 +374,7 @@ static float sample_lights_pdf(const scene_data& scene, const bvh_data& bvh,
       auto lpdf          = 0.0f;
       auto next_position = position;
       for (auto bounce = 0; bounce < 100; bounce++) {
-        auto intersection = intersect_bvh(
+        auto intersection = intersect_instance(
             bvh, scene, light.instance, {next_position, direction});
         if (!intersection.hit) break;
         // accumulate pdf
@@ -426,7 +426,7 @@ struct trace_result {
 };
 
 // Recursive path tracing.
-static trace_result trace_path(const scene_data& scene, const bvh_data& bvh,
+static trace_result trace_path(const scene_data& scene, const scene_bvh& bvh,
     const trace_lights& lights, const ray3f& ray_, rng_state& rng,
     const trace_params& params) {
   // initialize
@@ -443,7 +443,7 @@ static trace_result trace_path(const scene_data& scene, const bvh_data& bvh,
   // trace  path
   for (auto bounce = 0; bounce < params.bounces; bounce++) {
     // intersect next point
-    auto intersection = intersect_bvh(bvh, scene, ray);
+    auto intersection = intersect_scene(bvh, scene, ray);
     if (!intersection.hit) {
       if (bounce > 0 || !params.envhidden)
         radiance += weight * eval_environment(scene, ray.d);
@@ -573,7 +573,7 @@ static trace_result trace_path(const scene_data& scene, const bvh_data& bvh,
 
 // Recursive path tracing.
 static trace_result trace_pathdirect(const scene_data& scene,
-    const bvh_data& bvh, const trace_lights& lights, const ray3f& ray_,
+    const scene_bvh& bvh, const trace_lights& lights, const ray3f& ray_,
     rng_state& rng, const trace_params& params) {
   // initialize
   auto radiance      = vec3f{0, 0, 0};
@@ -590,7 +590,7 @@ static trace_result trace_pathdirect(const scene_data& scene,
   // trace  path
   for (auto bounce = 0; bounce < params.bounces; bounce++) {
     // intersect next point
-    auto intersection = intersect_bvh(bvh, scene, ray);
+    auto intersection = intersect_scene(bvh, scene, ray);
     if (!intersection.hit) {
       if ((bounce > 0 || !params.envhidden) && next_emission)
         radiance += weight * eval_environment(scene, ray.d);
@@ -650,7 +650,7 @@ static trace_result trace_pathdirect(const scene_data& scene,
         auto pdf = sample_lights_pdf(scene, bvh, lights, position, incoming);
         auto bsdfcos = eval_bsdfcos(material, normal, outgoing, incoming);
         if (bsdfcos != vec3f{0, 0, 0} && pdf > 0) {
-          auto intersection = intersect_bvh(bvh, scene, {position, incoming});
+          auto intersection = intersect_scene(bvh, scene, {position, incoming});
           auto emission =
               !intersection.hit
                   ? eval_environment(scene, incoming)
@@ -743,7 +743,7 @@ static trace_result trace_pathdirect(const scene_data& scene,
 }
 
 // Recursive path tracing with MIS.
-static trace_result trace_pathmis(const scene_data& scene, const bvh_data& bvh,
+static trace_result trace_pathmis(const scene_data& scene, const scene_bvh& bvh,
     const trace_lights& lights, const ray3f& ray_, rng_state& rng,
     const trace_params& params) {
   // initialize
@@ -763,12 +763,12 @@ static trace_result trace_pathmis(const scene_data& scene, const bvh_data& bvh,
            (this_pdf * this_pdf + other_pdf * other_pdf);
   };
   auto next_emission     = true;
-  auto next_intersection = bvh_intersection{};
+  auto next_intersection = scene_intersection{};
 
   // trace  path
   for (auto bounce = 0; bounce < params.bounces; bounce++) {
     // intersect next point
-    auto intersection = next_emission ? intersect_bvh(bvh, scene, ray)
+    auto intersection = next_emission ? intersect_scene(bvh, scene, ray)
                                       : next_intersection;
     if (!intersection.hit) {
       if ((bounce > 0 || !params.envhidden) && next_emission)
@@ -842,7 +842,8 @@ static trace_result trace_pathmis(const scene_data& scene, const bvh_data& bvh,
                                 ? mis_heuristic(light_pdf, bsdf_pdf) / light_pdf
                                 : mis_heuristic(bsdf_pdf, light_pdf) / bsdf_pdf;
           if (bsdfcos != vec3f{0, 0, 0} && mis_weight != 0) {
-            auto intersection = intersect_bvh(bvh, scene, {position, incoming});
+            auto intersection = intersect_scene(
+                bvh, scene, {position, incoming});
             if (!sample_light) next_intersection = intersection;
             auto emission = vec3f{0, 0, 0};
             if (!intersection.hit) {
@@ -925,7 +926,7 @@ static trace_result trace_pathmis(const scene_data& scene, const bvh_data& bvh,
 }
 
 // Recursive path tracing.
-static trace_result trace_naive(const scene_data& scene, const bvh_data& bvh,
+static trace_result trace_naive(const scene_data& scene, const scene_bvh& bvh,
     const trace_lights& lights, const ray3f& ray_, rng_state& rng,
     const trace_params& params) {
   // initialize
@@ -940,7 +941,7 @@ static trace_result trace_naive(const scene_data& scene, const bvh_data& bvh,
   // trace  path
   for (auto bounce = 0; bounce < params.bounces; bounce++) {
     // intersect next point
-    auto intersection = intersect_bvh(bvh, scene, ray);
+    auto intersection = intersect_scene(bvh, scene, ray);
     if (!intersection.hit) {
       if (bounce > 0 || !params.envhidden)
         radiance += weight * eval_environment(scene, ray.d);
@@ -1004,9 +1005,9 @@ static trace_result trace_naive(const scene_data& scene, const bvh_data& bvh,
 }
 
 // Eyelight for quick previewing.
-static trace_result trace_eyelight(const scene_data& scene, const bvh_data& bvh,
-    const trace_lights& lights, const ray3f& ray_, rng_state& rng,
-    const trace_params& params) {
+static trace_result trace_eyelight(const scene_data& scene,
+    const scene_bvh& bvh, const trace_lights& lights, const ray3f& ray_,
+    rng_state& rng, const trace_params& params) {
   // initialize
   auto radiance   = vec3f{0, 0, 0};
   auto weight     = vec3f{1, 1, 1};
@@ -1019,7 +1020,7 @@ static trace_result trace_eyelight(const scene_data& scene, const bvh_data& bvh,
   // trace  path
   for (auto bounce = 0; bounce < max(params.bounces, 4); bounce++) {
     // intersect next point
-    auto intersection = intersect_bvh(bvh, scene, ray);
+    auto intersection = intersect_scene(bvh, scene, ray);
     if (!intersection.hit) {
       if (bounce > 0 || !params.envhidden)
         radiance += weight * eval_environment(scene, ray.d);
@@ -1072,7 +1073,7 @@ static trace_result trace_eyelight(const scene_data& scene, const bvh_data& bvh,
 
 // Eyelight with ambient occlusion for quick previewing.
 static trace_result trace_eyelightao(const scene_data& scene,
-    const bvh_data& bvh, const trace_lights& lights, const ray3f& ray_,
+    const scene_bvh& bvh, const trace_lights& lights, const ray3f& ray_,
     rng_state& rng, const trace_params& params) {
   // initialize
   auto radiance   = vec3f{0, 0, 0};
@@ -1086,7 +1087,7 @@ static trace_result trace_eyelightao(const scene_data& scene,
   // trace  path
   for (auto bounce = 0; bounce < max(params.bounces, 4); bounce++) {
     // intersect next point
-    auto intersection = intersect_bvh(bvh, scene, ray);
+    auto intersection = intersect_scene(bvh, scene, ray);
     if (!intersection.hit) {
       if (bounce > 0 || !params.envhidden)
         radiance += weight * eval_environment(scene, ray.d);
@@ -1120,7 +1121,7 @@ static trace_result trace_eyelightao(const scene_data& scene,
 
     // occlusion
     auto occluding = sample_hemisphere_cos(normal, rand2f(rng));
-    if (intersect_bvh(bvh, scene, {position, occluding}).hit) break;
+    if (intersect_scene(bvh, scene, {position, occluding}).hit) break;
 
     // brdf * light
     radiance += weight * pif *
@@ -1142,7 +1143,7 @@ static trace_result trace_eyelightao(const scene_data& scene,
 }
 
 // Furnace test.
-static trace_result trace_furnace(const scene_data& scene, const bvh_scene& bvh,
+static trace_result trace_furnace(const scene_data& scene, const scene_bvh& bvh,
     const trace_lights& lights, const ray3f& ray_, rng_state& rng,
     const trace_params& params) {
   // initialize
@@ -1164,7 +1165,7 @@ static trace_result trace_furnace(const scene_data& scene, const bvh_scene& bvh,
     }
 
     // intersect next point
-    auto intersection = intersect_bvh(bvh, scene, ray);
+    auto intersection = intersect_scene(bvh, scene, ray);
     if (!intersection.hit) {
       if (bounce > 0 || !params.envhidden)
         radiance += weight * eval_environment(scene, ray.d);
@@ -1237,10 +1238,10 @@ static trace_result trace_furnace(const scene_data& scene, const bvh_scene& bvh,
 
 // False color rendering
 static trace_result trace_falsecolor(const scene_data& scene,
-    const bvh_data& bvh, const trace_lights& lights, const ray3f& ray,
+    const scene_bvh& bvh, const trace_lights& lights, const ray3f& ray,
     rng_state& rng, const trace_params& params) {
   // intersect next point
-  auto intersection = intersect_bvh(bvh, scene, ray);
+  auto intersection = intersect_scene(bvh, scene, ray);
   if (!intersection.hit) return {};
 
   // prepare shading point
@@ -1318,7 +1319,7 @@ static trace_result trace_falsecolor(const scene_data& scene,
 
 // Trace a single ray from the camera using the given algorithm.
 using sampler_func = trace_result (*)(const scene_data& scene,
-    const bvh_data& bvh, const trace_lights& lights, const ray3f& ray,
+    const scene_bvh& bvh, const trace_lights& lights, const ray3f& ray,
     rng_state& rng, const trace_params& params);
 static sampler_func get_trace_sampler_func(const trace_params& params) {
   switch (params.sampler) {
@@ -1357,7 +1358,7 @@ bool is_sampler_lit(const trace_params& params) {
 
 // Trace a block of samples
 void trace_sample(trace_state& state, const scene_data& scene,
-    const bvh_data& bvh, const trace_lights& lights, int i, int j,
+    const scene_bvh& bvh, const trace_lights& lights, int i, int j,
     const trace_params& params) {
   auto& camera  = scene.cameras[params.camera];
   auto  sampler = get_trace_sampler_func(params);
@@ -1479,7 +1480,7 @@ image_data trace_image(const scene_data& scene, const trace_params& params) {
 
 // Progressively compute an image by calling trace_samples multiple times.
 void trace_samples(trace_state& state, const scene_data& scene,
-    const bvh_data& bvh, const trace_lights& lights,
+    const scene_bvh& bvh, const trace_lights& lights,
     const trace_params& params) {
   if (state.samples >= params.samples) return;
   if (params.noparallel) {

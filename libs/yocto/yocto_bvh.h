@@ -81,25 +81,36 @@ struct bvh_node {
 // BVH tree stored as a node array with the tree structure is encoded using
 // array indices. BVH nodes indices refer to either the node array,
 // for internal nodes, or the primitive arrays, for leaf nodes.
-// For instance BVHs, we also store the BVH of the contained shapes.
 // Application data is not stored explicitly.
 // Additionally, we support the use of Intel Embree.
-struct bvh_data {
+struct shape_bvh {
   vector<bvh_node>                  nodes      = {};
   vector<int>                       primitives = {};
-  vector<bvh_data>                  shapes     = {};                  // shapes
+  unique_ptr<void, void (*)(void*)> embree_bvh = {nullptr, nullptr};  // embree
+};
+
+// BVH tree stored as a node array with the tree structure is encoded using
+// array indices. BVH nodes indices refer to either the node array,
+// for internal nodes, or the primitive arrays, for leaf nodes.
+// We also store the BVH of the contained shapes.
+// Application data is not stored explicitly.
+// Additionally, we support the use of Intel Embree.
+struct scene_bvh {
+  vector<bvh_node>                  nodes      = {};
+  vector<int>                       primitives = {};
+  vector<shape_bvh>                 shapes     = {};                  // shapes
   unique_ptr<void, void (*)(void*)> embree_bvh = {nullptr, nullptr};  // embree
 };
 
 // Build the bvh acceleration structure.
-bvh_data make_bvh(
+shape_bvh make_bvh(
     const shape_data& shape, bool highquality = false, bool embree = false);
-bvh_data make_bvh(const scene_data& scene, bool highquality = false,
+scene_bvh make_bvh(const scene_data& scene, bool highquality = false,
     bool embree = false, bool noparallel = false);
 
 // Refit bvh data
-void update_bvh(bvh_data& bvh, const shape_data& shape);
-void update_bvh(bvh_data& bvh, const scene_data& scene,
+void update_bvh(shape_bvh& bvh, const shape_data& shape);
+void update_bvh(scene_bvh& bvh, const scene_data& scene,
     const vector<int>& updated_instances, const vector<int>& updated_shapes);
 
 // Results of intersect_xxx and overlap_xxx functions that include hit flag,
@@ -107,7 +118,7 @@ void update_bvh(bvh_data& bvh, const scene_data& scene,
 // The values are all set for scene intersection. Shape intersection does not
 // set the instance id and element intersections do not set shape element id
 // and the instance id. Results values are set only if hit is true.
-struct bvh_intersection {
+struct scene_intersection {
   int   instance = -1;
   int   element  = -1;
   vec2f uv       = {0, 0};
@@ -118,33 +129,60 @@ struct bvh_intersection {
 // Intersect ray with a bvh returning either the first or any intersection
 // depending on `find_any`. Returns the ray distance , the instance id,
 // the shape element index and the element barycentric coordinates.
-bvh_intersection intersect_bvh(const bvh_data& bvh, const shape_data& shape,
-    const ray3f& ray, bool find_any = false, bool non_rigid_frames = true);
-bvh_intersection intersect_bvh(const bvh_data& bvh, const scene_data& scene,
-    const ray3f& ray, bool find_any = false, bool non_rigid_frames = true);
-bvh_intersection intersect_bvh(const bvh_data& bvh, const scene_data& scene,
-    int instance, const ray3f& ray, bool find_any = false,
-    bool non_rigid_frames = true);
+shape_intersection intersect_shape(const shape_bvh& bvh,
+    const shape_data& shape, const ray3f& ray, bool find_any = false);
+scene_intersection intersect_scene(const scene_bvh& bvh,
+    const scene_data& scene, const ray3f& ray, bool find_any = false);
+scene_intersection intersect_instance(const scene_bvh& bvh,
+    const scene_data& scene, int instance, const ray3f& ray,
+    bool find_any = false);
 
 // Find a shape element that overlaps a point within a given distance
 // max distance, returning either the closest or any overlap depending on
 // `find_any`. Returns the point distance, the instance id, the shape element
 // index and the element barycentric coordinates.
-bvh_intersection overlap_bvh(const bvh_data& bvh, const shape_data& shape,
+shape_intersection overlap_shape(const shape_bvh& bvh, const shape_data& shape,
     const vec3f& pos, float max_distance, bool find_any = false);
-bvh_intersection overlap_bvh(const bvh_data& bvh, const scene_data& scene,
-    const vec3f& pos, float max_distance, bool find_any = false,
-    bool non_rigid_frames = true);
+scene_intersection overlap_scene(const scene_bvh& bvh, const scene_data& scene,
+    const vec3f& pos, float max_distance, bool find_any = false);
 
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// BACKWARDS COMPATIBILITY
+// BACKWARD COMPATIBILITY
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-using bvh_shape = bvh_data;
-using bvh_scene = bvh_data;
+// backward compatibility
+using bvh_shape [[deprecated]] = shape_bvh;
+using bvh_scene [[deprecated]] = scene_bvh;
+
+// backward compatibility
+[[deprecated]] inline shape_intersection intersect_bvh(const shape_bvh& bvh,
+    const shape_data& shape, const ray3f& ray, bool find_any = false) {
+  return intersect_shape(bvh, shape, ray, find_any);
+}
+[[deprecated]] inline scene_intersection intersect_bvh(const scene_bvh& bvh,
+    const scene_data& scene, const ray3f& ray, bool find_any = false) {
+  return intersect_scene(bvh, scene, ray, find_any);
+}
+[[deprecated]] inline scene_intersection intersect_bvh(const scene_bvh& bvh,
+    const scene_data& scene, int instance, const ray3f& ray,
+    bool find_any = false) {
+  return intersect_instance(bvh, scene, instance, ray, find_any);
+}
+
+// backward compatibility
+[[deprecated]] inline shape_intersection overlap_bvh(const shape_bvh& bvh,
+    const shape_data& shape, const vec3f& pos, float max_distance,
+    bool find_any = false) {
+  return overlap_shape(bvh, shape, pos, max_distance, find_any);
+}
+[[deprecated]] inline scene_intersection overlap_bvh(const scene_bvh& bvh,
+    const scene_data& scene, const vec3f& pos, float max_distance,
+    bool find_any = false) {
+  return overlap_scene(bvh, scene, pos, max_distance, find_any);
+}
 
 }  // namespace yocto
 
