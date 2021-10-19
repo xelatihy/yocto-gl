@@ -127,11 +127,13 @@ struct simple_timer {
 };
 
 // Timer operations
-inline void    start_timer(simple_timer& timer);
-inline void    stop_timer(simple_timer& timer);
-inline int64_t elapsed_nanoseconds(simple_timer& timer);
-inline double  elapsed_seconds(simple_timer& timer);
-inline string  elapsed_formatted(simple_timer& timer);
+inline void          start_timer(simple_timer& timer);
+inline void          stop_timer(simple_timer& timer);
+inline int64_t       elapsed_nanoseconds(const simple_timer& timer);
+inline double        elapsed_seconds(const simple_timer& timer);
+inline string        elapsed_formatted(const simple_timer& timer);
+inline std::ostream& operator<<(
+    std::ostream& stream, const simple_timer& timer);
 
 }  // namespace yocto
 
@@ -599,14 +601,18 @@ inline void start_timer(simple_timer& timer) {
   timer.stop  = -1;
 }
 inline void    stop_timer(simple_timer& timer) { timer.stop = _get_time(); }
-inline int64_t elapsed_nanoseconds(simple_timer& timer) {
-  return _get_time() - timer.start;
+inline int64_t elapsed_nanoseconds(const simple_timer& timer) {
+  return (timer.stop < 0 ? _get_time() : timer.stop) - timer.start;
 }
-inline double elapsed_seconds(simple_timer& timer) {
-  return (double)(_get_time() - timer.start) * 1e-9;
+inline double elapsed_seconds(const simple_timer& timer) {
+  return (double)elapsed_nanoseconds(timer) * 1e-9;
 }
-inline string elapsed_formatted(simple_timer& timer) {
-  return _format_duration(_get_time() - timer.start);
+inline string elapsed_formatted(const simple_timer& timer) {
+  return _format_duration(elapsed_nanoseconds(timer));
+}
+inline std::ostream& operator<<(
+    std::ostream& stream, const simple_timer& timer) {
+  return stream << elapsed_formatted(timer);
 }
 
 }  // namespace yocto
@@ -628,7 +634,7 @@ inline void format_to(std::stringstream& stream, const string& format,
   auto pos = format.find("{}");
   if (pos == string::npos) throw std::invalid_argument("bad format string");
   stream << format.substr(0, pos) << arg;
-  format_to(stream, format.substr(pos), args...);
+  format_to(stream, format.substr(pos + 2), args...);
 }
 
 // Print a value to stdout. This is using stream for now.
@@ -652,6 +658,7 @@ inline void print_info(const string& format, const Args&... values) {
   auto stream = std::stringstream{};
   format_to(stream, format, values...);
   printf("%s\n", stream.str().c_str());
+  fflush(stdout);
 }
 // Prints an error.
 template <typename... Args>
@@ -659,6 +666,7 @@ inline void print_error(const string& format, const Args&... values) {
   auto stream = std::stringstream{};
   format_to(stream, format, values...);
   printf("error: %s\n", stream.str().c_str());
+  fflush(stdout);
 }
 
 }  // namespace yocto
