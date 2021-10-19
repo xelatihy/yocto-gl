@@ -40,9 +40,9 @@
 
 #include <chrono>
 #include <functional>
+#include <map>
 #include <sstream>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 #include "yocto_scene.h"
@@ -437,8 +437,8 @@ namespace yocto {
 using cli_setter = std::function<bool(const vector<string>&, string&)>;
 struct cli_command {
   // options and commands
-  unordered_map<string, cli_setter>  options  = {};
-  unordered_map<string, cli_command> commands = {};
+  map<string, cli_setter>  options  = {};
+  map<string, cli_command> commands = {};
   // command
   string     command_sel = "";
   cli_setter command_var = {};
