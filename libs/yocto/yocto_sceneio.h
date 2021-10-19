@@ -40,15 +40,11 @@
 
 #include <chrono>
 #include <functional>
-#include <map>
 #include <sstream>
 #include <string>
 #include <vector>
 
 #include "yocto_scene.h"
-
-#define JSON_USE_IMPLICIT_CONVERSIONS 0
-#include "ext/json.hpp"
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
@@ -253,43 +249,6 @@ void         save_binary(const string& filename, const vector<byte>& data);
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// JSON SUPPORT
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Json values
-using json_value = nlohmann::ordered_json;
-
-// Load/save a json file
-bool load_json(const string& filename, json_value& json, string& error);
-bool save_json(const string& filename, const json_value& json, string& error);
-
-// Load/save a json file
-json_value load_json(const string& filename);
-void       load_json(const string& filename, json_value& json);
-void       save_json(const string& filename, const json_value& json);
-
-// Json conversions
-inline void to_json(json_value& json, const vec2f& value);
-inline void to_json(json_value& json, const vec3f& value);
-inline void to_json(json_value& json, const vec4f& value);
-inline void to_json(json_value& json, const frame2f& value);
-inline void to_json(json_value& json, const frame3f& value);
-inline void to_json(json_value& json, const mat2f& value);
-inline void to_json(json_value& json, const mat3f& value);
-inline void to_json(json_value& json, const mat4f& value);
-inline void from_json(const json_value& json, vec2f& value);
-inline void from_json(const json_value& json, vec3f& value);
-inline void from_json(const json_value& json, vec4f& value);
-inline void from_json(const json_value& json, frame2f& value);
-inline void from_json(const json_value& json, frame3f& value);
-inline void from_json(const json_value& json, mat2f& value);
-inline void from_json(const json_value& json, mat3f& value);
-inline void from_json(const json_value& json, mat4f& value);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
 // ARGUMENT PARSING
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -372,73 +331,50 @@ inline string  elapsed_formatted(simple_timer& timer);
 // -----------------------------------------------------------------------------
 
 // -----------------------------------------------------------------------------
-// JSON MANIPULATION
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Json conversions
-inline void to_json(json_value& json, const vec2f& value) {
-  nlohmann::to_json(json, (const array<float, 2>&)value);
-}
-inline void to_json(json_value& json, const vec3f& value) {
-  nlohmann::to_json(json, (const array<float, 3>&)value);
-}
-inline void to_json(json_value& json, const vec4f& value) {
-  nlohmann::to_json(json, (const array<float, 4>&)value);
-}
-inline void to_json(json_value& json, const frame2f& value) {
-  nlohmann::to_json(json, (const array<float, 6>&)value);
-}
-inline void to_json(json_value& json, const frame3f& value) {
-  nlohmann::to_json(json, (const array<float, 12>&)value);
-}
-inline void to_json(json_value& json, const mat2f& value) {
-  nlohmann::to_json(json, (const array<float, 4>&)value);
-}
-inline void to_json(json_value& json, const mat3f& value) {
-  nlohmann::to_json(json, (const array<float, 9>&)value);
-}
-inline void to_json(json_value& json, const mat4f& value) {
-  nlohmann::to_json(json, (const array<float, 16>&)value);
-}
-inline void from_json(const json_value& json, vec2f& value) {
-  nlohmann::from_json(json, (array<float, 2>&)value);
-}
-inline void from_json(const json_value& json, vec3f& value) {
-  nlohmann::from_json(json, (array<float, 3>&)value);
-}
-inline void from_json(const json_value& json, vec4f& value) {
-  nlohmann::from_json(json, (array<float, 4>&)value);
-}
-inline void from_json(const json_value& json, frame2f& value) {
-  nlohmann::from_json(json, (array<float, 6>&)value);
-}
-inline void from_json(const json_value& json, frame3f& value) {
-  nlohmann::from_json(json, (array<float, 12>&)value);
-}
-inline void from_json(const json_value& json, mat2f& value) {
-  nlohmann::from_json(json, (array<float, 4>&)value);
-}
-inline void from_json(const json_value& json, mat3f& value) {
-  nlohmann::from_json(json, (array<float, 9>&)value);
-}
-inline void from_json(const json_value& json, mat4f& value) {
-  nlohmann::from_json(json, (array<float, 16>&)value);
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
 // ARGUMENT PARSING
 // -----------------------------------------------------------------------------
 namespace yocto {
+
+// Cli map. Cannot use map or unordered_map
+template <typename Key, typename Value>
+struct cli_map {
+  bool empty() const { return _data.empty(); }
+  bool contains(const Key& key) const {
+    for (auto& [key_, value] : _data)
+      if (key_ == key) return true;
+    return false;
+  }
+
+  Value& operator[](const Key& key) {
+    for (auto& [key_, value] : _data)
+      if (key_ == key) return value;
+    return _data.emplace_back(key, Value{}).second;
+  }
+  const Value& operator[](const Key& key) const {
+    for (auto& [key_, value] : _data)
+      if (key_ == key) return value;
+    throw std::out_of_range{"missing key"};
+  }
+  Value& at(const Key& key) {
+    for (auto& [key_, value] : _data)
+      if (key_ == key) return value;
+    throw std::out_of_range{"missing key"};
+  }
+  const Value& at(const Key& key) const {
+    for (auto& [key_, value] : _data)
+      if (key_ == key) return value;
+    throw std::out_of_range{"missing key"};
+  }
+
+  vector<pair<Key, Value>> _data = {};
+};
 
 // Cli data
 using cli_setter = std::function<bool(const vector<string>&, string&)>;
 struct cli_command {
   // options and commands
-  std::map<string, cli_setter>  options  = {};
-  std::map<string, cli_command> commands = {};
+  cli_map<string, cli_setter>  options  = {};
+  cli_map<string, cli_command> commands = {};
   // command
   string     command_sel = "";
   cli_setter command_var = {};
@@ -453,13 +389,13 @@ struct cli_command {
 inline void _cli_check_option(const cli_command& cli, const string& name) {
   if (!cli.commands.empty())
     throw std::invalid_argument{"cannot add options and commands"};
-  if (cli.options.find(name) != cli.options.end())
+  if (cli.options.contains(name))
     throw std::invalid_argument{"option already added " + name};
 }
 inline void _cli_check_command(const cli_command& cli, const string& name) {
   if (!cli.options.empty())
     throw std::invalid_argument{"cannot add options and commands"};
-  if (cli.commands.find(name) != cli.commands.end())
+  if (cli.commands.contains(name))
     throw std::invalid_argument{"command already added " + name};
 }
 
@@ -703,7 +639,7 @@ inline bool parse_cli(
       return false;
     }
     // verify command
-    if (cli.commands.find(args[pos]) == cli.commands.end()) {
+    if (!cli.commands.contains(args[pos])) {
       error = "unknown command " + args[pos];
       return false;
     }
@@ -734,7 +670,7 @@ inline bool parse_cli(
         return false;
       }
       // verify command
-      if (cli.options.find(args[pos].substr(2)) == cli.options.end()) {
+      if (!cli.options.contains(args[pos].substr(2))) {
         error = "unknown option " + args[pos].substr(2);
         return false;
       }
