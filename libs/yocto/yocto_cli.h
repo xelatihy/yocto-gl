@@ -136,6 +136,27 @@ inline string  elapsed_formatted(simple_timer& timer);
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// PRINTING VALUES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Print a value to stdout. This is using stream for now.
+// It will be moved to use std::format when it becomes available.
+template <typename... Args>
+inline void print(const string& format, const Args&... values);
+template <typename... Args>
+inline void println(const string& format, const Args&... values);
+
+// Prints a message line.
+template <typename... Args>
+inline void print_info(const string& format, const Args&... values);
+// Prints an error.
+template <typename... Args>
+inline void print_error(const string& format, const Args&... values);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 //
 //
 // IMPLEMENTATION
@@ -586,6 +607,43 @@ inline double elapsed_seconds(simple_timer& timer) {
 }
 inline string elapsed_formatted(simple_timer& timer) {
   return _format_duration(_get_time() - timer.start);
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// PRINTING VALUES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Format to value
+inline void format_to(std::stringstream& stream, const string& format) {
+  auto pos = format.find("{}");
+  if (pos != string::npos) throw std::invalid_argument("bad format string");
+  stream << format;
+}
+template <typename Arg, typename... Args>
+inline void format_to(std::stringstream& stream, const string& format,
+    const Arg& arg, const Args&... args) {
+  auto pos = format.find("{}");
+  if (pos == string::npos) throw std::invalid_argument("bad format string");
+  stream << format.substr(0, pos) << arg;
+  format_to(stream, format.substr(pos), args...);
+}
+
+// Print a value to stdout. This is using stream for now.
+// It will be moved to use std::format when it becomes available.
+template <typename... Args>
+inline void print(const string& format, const Args&... values) {
+  auto stream = std::stringstream{};
+  format_to(stream, format, values...);
+  printf("%s", stream.str().c_str());
+}
+template <typename... Args>
+inline void println(const string& format, const Args&... values) {
+  auto stream = std::stringstream{};
+  format_to(stream, format, values...);
+  printf("%s\n", stream.str().c_str());
 }
 
 }  // namespace yocto
