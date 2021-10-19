@@ -129,7 +129,7 @@ struct scene_intersection {
 // Intersect ray with a bvh returning either the first or any intersection
 // depending on `find_any`. Returns the ray distance , the instance id,
 // the shape element index and the element barycentric coordinates.
-scene_intersection intersect_bvh(const shape_bvh& bvh, const shape_data& shape,
+shape_intersection intersect_bvh(const shape_bvh& bvh, const shape_data& shape,
     const ray3f& ray, bool find_any = false);
 scene_intersection intersect_bvh(const scene_bvh& bvh, const scene_data& scene,
     const ray3f& ray, bool find_any = false);
@@ -140,7 +140,7 @@ scene_intersection intersect_bvh(const scene_bvh& bvh, const scene_data& scene,
 // max distance, returning either the closest or any overlap depending on
 // `find_any`. Returns the point distance, the instance id, the shape element
 // index and the element barycentric coordinates.
-scene_intersection overlap_bvh(const shape_bvh& bvh, const shape_data& shape,
+shape_intersection overlap_bvh(const shape_bvh& bvh, const shape_data& shape,
     const vec3f& pos, float max_distance, bool find_any = false);
 scene_intersection overlap_bvh(const scene_bvh& bvh, const scene_data& scene,
     const vec3f& pos, float max_distance, bool find_any = false);

@@ -912,9 +912,9 @@ static bool intersect_bvh(const scene_bvh& bvh, const scene_data& scene,
       inv_ray, element, uv, distance, find_any);
 }
 
-scene_intersection intersect_bvh(const shape_bvh& bvh, const shape_data& shape,
+shape_intersection intersect_bvh(const shape_bvh& bvh, const shape_data& shape,
     const ray3f& ray, bool find_any) {
-  auto intersection = scene_intersection{};
+  auto intersection = shape_intersection{};
   intersection.hit  = intersect_bvh(bvh, shape, ray, intersection.element,
       intersection.uv, intersection.distance, find_any);
   return intersection;
