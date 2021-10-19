@@ -64,22 +64,23 @@ update_bvh(bvh, scene, shapes, instances);// update bvh
 
 ## Ray intersection
 
-Use `intersect_bvh(bvh,scene,ray)` and `intersect_bvh(bvh,shape,ray)` to
+Use `intersect_scene(bvh,scene,ray)` and `intersect_shape(bvh,shape,ray)` to
 compute the ray-scene and ray-shape intersection respectively, and
-`intersect_bvh(bvh,scene,instance,ray)` to intersect a single scene instance.
-These functions return a `bvh_intersection` that includes a `hit` flag,
-the `instance` index, the shape `element` index and shape element `uv`s and
-the intersection `distance`. Results values are set only if `hit` is true.
+`intersect_instance(bvh,scene,instance,ray)` to intersect a single scene instance.
+These functions return a `scene_intersection` or a `shape_intersection` that
+includes a `hit` flag, the `instance` index, the shape `element` index and
+shape element `uv`s and the intersection `distance`.
+Results values are set only if `hit` is true.
 By default Yocto/Bvh computes the closet intersection, but this can be
 relaxed to accept any intersection, for shadow rays, by passing an optional flag.
 
 ```cpp
-auto isec = intersect_bvh(bvh,scene,ray); // ray-scene intersection
-if (isec.hit) {                           // check intersection
-  handle_intersection(isec.instance,      // work on intersection data
+auto isec = intersect_scene(bvh,scene,ray);  // ray-scene intersection
+if (isec.hit) {                              // check intersection
+  handle_intersection(isec.instance,         // work on intersection data
     isec.element, isec.uv, isec.distance);
 }
-auto isecv = intersect_bvh(bvh,scene,ray,true); // check any intersection
+auto isecv = intersect_scene(bvh,scene,ray,true); // check any intersection
 if (!isecv.hit) {                         // check for not intersection
   handle_unoccluded(...);                 // handle unoccluded case
 }
@@ -87,12 +88,12 @@ if (!isecv.hit) {                         // check for not intersection
 
 ## Point overlap
 
-Use `overlap_bvh(bvh,scene,position,max_distance)` and
-`overlap_bvh(bvh,shape,position,max_distance)` to compute the scene or
+Use `overlap_scene(bvh,scene,position,max_distance)` and
+`overlap_shape(bvh,shape,position,max_distance)` to compute the scene or
 shape element closest to a given point and within a maximum distance.
-Use `overlap_bvh(bvh,scene,instance,position,max_distance)` to test
-a single scene instance. These functions return a `bvh_intersection`
-as the intersection ones.
+Use `overlap_instance(bvh,scene,instance,position,max_distance)` to test
+a single scene instance. These functions return a `scene_intersection` or a
+`shape_intersection`, as the intersection ones.
 By default Yocto/Bvh computes the closet element, but this can be
 relaxed to accept any element, by passing an optional flag.
 
