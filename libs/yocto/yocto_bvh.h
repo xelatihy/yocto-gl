@@ -130,12 +130,11 @@ struct bvh_intersection {
 // depending on `find_any`. Returns the ray distance , the instance id,
 // the shape element index and the element barycentric coordinates.
 bvh_intersection intersect_bvh(const bvh_shape& bvh, const shape_data& shape,
-    const ray3f& ray, bool find_any = false, bool non_rigid_frames = true);
+    const ray3f& ray, bool find_any = false);
 bvh_intersection intersect_bvh(const bvh_scene& bvh, const scene_data& scene,
-    const ray3f& ray, bool find_any = false, bool non_rigid_frames = true);
+    const ray3f& ray, bool find_any = false);
 bvh_intersection intersect_bvh(const bvh_scene& bvh, const scene_data& scene,
-    int instance, const ray3f& ray, bool find_any = false,
-    bool non_rigid_frames = true);
+    int instance, const ray3f& ray, bool find_any = false);
 
 // Find a shape element that overlaps a point within a given distance
 // max distance, returning either the closest or any overlap depending on
@@ -144,8 +143,7 @@ bvh_intersection intersect_bvh(const bvh_scene& bvh, const scene_data& scene,
 bvh_intersection overlap_bvh(const bvh_shape& bvh, const shape_data& shape,
     const vec3f& pos, float max_distance, bool find_any = false);
 bvh_intersection overlap_bvh(const bvh_scene& bvh, const scene_data& scene,
-    const vec3f& pos, float max_distance, bool find_any = false,
-    bool non_rigid_frames = true);
+    const vec3f& pos, float max_distance, bool find_any = false);
 
 }  // namespace yocto
 
