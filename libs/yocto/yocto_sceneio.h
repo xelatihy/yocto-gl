@@ -437,8 +437,8 @@ namespace yocto {
 using cli_setter = std::function<bool(const vector<string>&, string&)>;
 struct cli_command {
   // options and commands
-  map<string, cli_setter>  options  = {};
-  map<string, cli_command> commands = {};
+  std::map<string, cli_setter>  options  = {};
+  std::map<string, cli_command> commands = {};
   // command
   string     command_sel = "";
   cli_setter command_var = {};
