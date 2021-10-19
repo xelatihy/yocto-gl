@@ -83,7 +83,7 @@ struct bvh_node {
 // for internal nodes, or the primitive arrays, for leaf nodes.
 // Application data is not stored explicitly.
 // Additionally, we support the use of Intel Embree.
-struct bvh_shape {
+struct shape_bvh {
   vector<bvh_node>                  nodes      = {};
   vector<int>                       primitives = {};
   unique_ptr<void, void (*)(void*)> embree_bvh = {nullptr, nullptr};  // embree
@@ -95,22 +95,22 @@ struct bvh_shape {
 // We also store the BVH of the contained shapes.
 // Application data is not stored explicitly.
 // Additionally, we support the use of Intel Embree.
-struct bvh_scene {
+struct scene_bvh {
   vector<bvh_node>                  nodes      = {};
   vector<int>                       primitives = {};
-  vector<bvh_shape>                 shapes     = {};                  // shapes
+  vector<shape_bvh>                 shapes     = {};                  // shapes
   unique_ptr<void, void (*)(void*)> embree_bvh = {nullptr, nullptr};  // embree
 };
 
 // Build the bvh acceleration structure.
-bvh_shape make_bvh(
+shape_bvh make_bvh(
     const shape_data& shape, bool highquality = false, bool embree = false);
-bvh_scene make_bvh(const scene_data& scene, bool highquality = false,
+scene_bvh make_bvh(const scene_data& scene, bool highquality = false,
     bool embree = false, bool noparallel = false);
 
 // Refit bvh data
-void update_bvh(bvh_shape& bvh, const shape_data& shape);
-void update_bvh(bvh_scene& bvh, const scene_data& scene,
+void update_bvh(shape_bvh& bvh, const shape_data& shape);
+void update_bvh(scene_bvh& bvh, const scene_data& scene,
     const vector<int>& updated_instances, const vector<int>& updated_shapes);
 
 // Results of intersect_xxx and overlap_xxx functions that include hit flag,
@@ -129,21 +129,32 @@ struct bvh_intersection {
 // Intersect ray with a bvh returning either the first or any intersection
 // depending on `find_any`. Returns the ray distance , the instance id,
 // the shape element index and the element barycentric coordinates.
-bvh_intersection intersect_bvh(const bvh_shape& bvh, const shape_data& shape,
+bvh_intersection intersect_bvh(const shape_bvh& bvh, const shape_data& shape,
     const ray3f& ray, bool find_any = false);
-bvh_intersection intersect_bvh(const bvh_scene& bvh, const scene_data& scene,
+bvh_intersection intersect_bvh(const scene_bvh& bvh, const scene_data& scene,
     const ray3f& ray, bool find_any = false);
-bvh_intersection intersect_bvh(const bvh_scene& bvh, const scene_data& scene,
+bvh_intersection intersect_bvh(const scene_bvh& bvh, const scene_data& scene,
     int instance, const ray3f& ray, bool find_any = false);
 
 // Find a shape element that overlaps a point within a given distance
 // max distance, returning either the closest or any overlap depending on
 // `find_any`. Returns the point distance, the instance id, the shape element
 // index and the element barycentric coordinates.
-bvh_intersection overlap_bvh(const bvh_shape& bvh, const shape_data& shape,
+bvh_intersection overlap_bvh(const shape_bvh& bvh, const shape_data& shape,
     const vec3f& pos, float max_distance, bool find_any = false);
-bvh_intersection overlap_bvh(const bvh_scene& bvh, const scene_data& scene,
+bvh_intersection overlap_bvh(const scene_bvh& bvh, const scene_data& scene,
     const vec3f& pos, float max_distance, bool find_any = false);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// BACKWARD COMPATIBILITY
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// backward compatibility
+using bvh_shape [[deprecated]] = shape_bvh;
+using bvh_scene [[deprecated]] = scene_bvh;
 
 }  // namespace yocto
 
