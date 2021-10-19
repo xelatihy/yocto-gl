@@ -37,9 +37,8 @@ See each header file for documentation.
 - `yocto/yocto_sceneio.{h,cpp}`: image, shape and scene serialization
 - `yocto/yocto_modelio.{h,cpp}`: low-level parsing and writing for 
   Ply, Obj, Stl, Pbrt formats
-- `yocto/yocto_parallel.h`: concurrency utilities (deprecatd)
-- `yocto/yocto_json.{h,cpp}`: Json data model and serialization (deprecated)
-- `yocto/yocto_cli.{h,cpp}`: printing utilities and command line parsing (deprecated)
+- `yocto/yocto_cli.{h}`: printing utilities and command line parsing
+- `yocto/yocto_parallel.h`: concurrency utilities (deprecated)
 
 You can see Yocto/GL in action in the following applications written to
 test the library:

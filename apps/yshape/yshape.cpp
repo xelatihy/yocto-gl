@@ -26,6 +26,7 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
+#include <yocto/yocto_cli.h>
 #include <yocto/yocto_geometry.h>
 #include <yocto/yocto_gui.h>
 #include <yocto/yocto_image.h>
@@ -35,8 +36,6 @@
 #include <yocto/yocto_shape.h>
 
 using namespace yocto;
-
-#include <iostream>
 
 // convert params
 struct convert_params {
@@ -98,9 +97,9 @@ void run_convert(const convert_params& params) {
 
   // print stats
   if (params.info) {
-    std::cout << "shape stats ------------\n";
+    print_info("shape stats ------------");
     auto stats = shape_stats(shape);
-    for (auto& stat : stats) std::cout << "" + stat + "\n";
+    for (auto& stat : stats) print_info(stat);
   }
 
   // subdivision
@@ -161,9 +160,9 @@ void run_convert(const convert_params& params) {
   }
 
   if (params.info) {
-    std::cout << "shape stats ------------\n";
+    print_info("shape stats ------------");
     auto stats = shape_stats(shape);
-    for (auto& stat : stats) std::cout << stat + "\n";
+    for (auto& stat : stats) print_info(stat);
   }
 
   // save mesh
@@ -216,9 +215,9 @@ void run_fvconvert(const fvconvert_params& params) {
 
   // print info
   if (params.info) {
-    std::cout << "shape stats ------------\n";
+    print_info("shape stats ------------");
     auto stats = fvshape_stats(shape);
-    for (auto& stat : stats) std::cout << stat + "\n";
+    for (auto& stat : stats) print_info(stat);
   }
 
   // subdivision
@@ -256,9 +255,9 @@ void run_fvconvert(const fvconvert_params& params) {
   }
 
   if (params.info) {
-    std::cout << "shape stats ------------\n";
+    print_info("shape stats ------------");
     auto stats = fvshape_stats(shape);
-    for (auto& stat : stats) std::cout << stat + "\n";
+    for (auto& stat : stats) print_info(stat);
   }
 
   // save mesh
@@ -328,9 +327,9 @@ void run_heightfield(const heightfield_params& params) {
 
   // print info
   if (params.info) {
-    std::cout << "shape stats ------------\n";
+    print_info("shape stats ------------");
     auto stats = shape_stats(shape);
-    for (auto& stat : stats) std::cout << stat + "\n";
+    for (auto& stat : stats) print_info(stat);
   }
 
   // transform
@@ -490,7 +489,7 @@ int main(int argc, const char** argv) {
       throw io_error{"unknown command"};
     }
   } catch (const std::exception& error) {
-    std::cerr << "error: " << error.what() << "\n";
+    print_error(error.what());
     return 1;
   }
 

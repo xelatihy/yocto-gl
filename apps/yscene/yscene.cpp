@@ -26,6 +26,7 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
+#include <yocto/yocto_cli.h>
 #include <yocto/yocto_gui.h>
 #include <yocto/yocto_math.h>
 #include <yocto/yocto_scene.h>
@@ -37,8 +38,6 @@ using namespace yocto;
 
 #include <filesystem>
 namespace fs = std::filesystem;
-
-#include <iostream>
 
 // convert params
 struct convert_params {
@@ -60,13 +59,13 @@ void add_options(cli_command& cli, convert_params& params) {
 
 // convert images
 void run_convert(const convert_params& params) {
-  std::cout << "converting " + params.scene + "\n";
+  print_info("converting {}", params.scene);
   auto timer = simple_timer{};
 
   // load scene
   timer      = simple_timer{};
   auto scene = load_scene(params.scene);
-  std::cout << "load scene: " + elapsed_formatted(timer) + "\n";
+  print_info("load scene: {}", elapsed_formatted(timer));
 
   // copyright
   if (params.copyright != "") {
@@ -76,28 +75,28 @@ void run_convert(const convert_params& params) {
   // validate scene
   if (params.validate) {
     auto errors = scene_validation(scene);
-    for (auto& error : errors) std::cerr << "error: " + error + "\n";
+    for (auto& error : errors) print_error(error);
     if (!errors.empty()) throw io_error{"invalid scene"};
   }
 
   // print info
   if (params.info) {
-    std::cout << "scene stats ------------\n";
-    for (auto stat : scene_stats(scene)) std::cout << stat + "\n";
+    print_info("scene stats ------------");
+    for (auto stat : scene_stats(scene)) print_info(stat);
   }
 
   // tesselate if needed
   if (!scene.subdivs.empty()) {
     timer = simple_timer{};
     tesselate_subdivs(scene);
-    std::cout << "tesselate subdivs: " + elapsed_formatted(timer) + "\n";
+    print_info("tesselate subdivs: {}", elapsed_formatted(timer));
   }
 
   // save scene
   timer = simple_timer{};
   make_scene_directories(params.output, scene);
   save_scene(params.output, scene);
-  std::cout << "save scene: " + elapsed_formatted(timer) + "\n";
+  print_info("save scene: {}", elapsed_formatted(timer));
 }
 
 // info params
@@ -114,23 +113,22 @@ void add_options(cli_command& cli, info_params& params) {
 
 // print info for scenes
 void run_info(const info_params& params) {
-  std::cout << "info for " + params.scene + "\n";
+  print_info("info for {}", params.scene);
   auto timer = simple_timer{};
 
   // load scene
   timer      = simple_timer{};
   auto scene = load_scene(params.scene);
-  std::cout << "load scene: " + elapsed_formatted(timer) + "\n";
+  print_info("load scene: {}" + elapsed_formatted(timer));
 
   // validate scene
   if (params.validate) {
-    for (auto& error : scene_validation(scene))
-      std::cerr << "error: " + error + "\n";
+    for (auto& error : scene_validation(scene)) print_error(error);
   }
 
   // print info
-  std::cout << "scene stats ------------\n";
-  for (auto stat : scene_stats(scene)) std::cout << stat + "\n";
+  print_info("scene stats ------------");
+  for (auto stat : scene_stats(scene)) print_info(stat);
 }
 
 // render params
@@ -173,7 +171,7 @@ void add_options(cli_command& cli, render_params& params) {
 
 // convert images
 void run_render(const render_params& params_) {
-  std::cout << "rendering " + params_.scene + "\n";
+  print_info("rendering {}", params_.scene);
   auto timer = simple_timer{};
 
   // copy params
@@ -182,7 +180,7 @@ void run_render(const render_params& params_) {
   // scene loading
   timer      = simple_timer{};
   auto scene = load_scene(params.scene);
-  std::cout << "load scene: " + elapsed_formatted(timer) + "\n";
+  print_info("load scene: {}", elapsed_formatted(timer));
 
   // add sky
   if (params.addsky) add_sky(scene);
@@ -208,7 +206,7 @@ void run_render(const render_params& params_) {
 
   // fix renderer type if no lights
   if (lights.lights.empty() && is_sampler_lit(params)) {
-    std::cout << "no lights presents, image will be black\n";
+    print_info("no lights presents, image will be black");
     params.sampler = trace_sampler_type::eyelight;
   }
 
@@ -220,9 +218,8 @@ void run_render(const render_params& params_) {
   for (auto sample = 0; sample < params.samples; sample++) {
     auto sample_timer = simple_timer{};
     trace_samples(state, scene, bvh, lights, params);
-    std::cout << ("render sample " + std::to_string(sample) + "/" +
-                  std::to_string(params.samples) + ":" +
-                  elapsed_formatted(sample_timer) + "\n");
+    print_info("render sample {}/{}: {}", sample, params.samples,
+        elapsed_formatted(sample_timer));
     if (params.savebatch && state.samples % params.batch == 0) {
       auto image = params.denoise ? get_denoised(state) : get_render(state);
       auto outfilename = fs::path(params.output)
@@ -235,7 +232,7 @@ void run_render(const render_params& params_) {
       save_image(outfilename, image);
     }
   }
-  std::cout << "render image: " + elapsed_formatted(timer) + "\n";
+  print_info("render image: {}", elapsed_formatted(timer));
 
   // save image
   timer      = simple_timer{};
@@ -243,7 +240,7 @@ void run_render(const render_params& params_) {
   if (!is_hdr_filename(params.output))
     image = tonemap_image(image, params.exposure, params.filmic);
   save_image(params.output, image);
-  std::cout << "save image: " + elapsed_formatted(timer) + "\n";
+  print_info("save image: {}", elapsed_formatted(timer));
 }
 
 // convert params
@@ -285,7 +282,7 @@ void add_options(cli_command& cli, view_params& params) {
 
 // view scene
 void run_view(const view_params& params_) {
-  std::cout << "viewing " + params_.scene + "\n";
+  print_info("viewing {}", params_.scene);
   auto timer = simple_timer{};
 
   // copy params
@@ -294,7 +291,7 @@ void run_view(const view_params& params_) {
   // load scene
   timer      = simple_timer{};
   auto scene = load_scene(params.scene);
-  std::cout << "load scene: " + elapsed_formatted(timer) + "\n";
+  print_info("load scene: {}", elapsed_formatted(timer));
 
   // add sky
   if (params.addsky) add_sky(scene);
@@ -328,7 +325,7 @@ void add_options(cli_command& cli, glview_params& params) {
 }
 
 void run_glview(const glview_params& params_) {
-  std::cout << "viewing " + params_.scene + "\n";
+  print_info("viewing {}", params_.scene);
 
   // copy params
   auto params = params_;
@@ -388,7 +385,7 @@ int main(int argc, const char* argv[]) {
       throw io_error{"unknown command"};
     }
   } catch (const std::exception& error) {
-    std::cerr << "error: " << error.what() << "\n";
+    print_error(error.what());
     return 1;
   }
 

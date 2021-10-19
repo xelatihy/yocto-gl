@@ -26,6 +26,7 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
+#include <yocto/yocto_cli.h>
 #include <yocto/yocto_geometry.h>
 #include <yocto/yocto_gui.h>
 #include <yocto/yocto_image.h>
@@ -40,8 +41,6 @@
 #include <unordered_set>
 
 using namespace yocto;
-
-#include <iostream>
 
 // view params
 struct view_params {
@@ -1251,7 +1250,7 @@ int main(int argc, const char* argv[]) {
       throw io_error{"unknown command"};
     }
   } catch (const std::exception& error) {
-    std::cerr << "error: " << error.what() << "\n";
+    print_error(error.what());
     return 1;
   }
 

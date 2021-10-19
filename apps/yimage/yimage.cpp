@@ -26,6 +26,7 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
+#include <yocto/yocto_cli.h>
 #include <yocto/yocto_color.h>
 #include <yocto/yocto_gui.h>
 #include <yocto/yocto_image.h>
@@ -34,8 +35,6 @@
 #include <yocto/yocto_sceneio.h>
 
 using namespace yocto;
-
-#include <iostream>
 
 // convert params
 struct convert_params {
@@ -258,7 +257,7 @@ int main(int argc, const char* argv[]) {
       throw io_error("unknown command");
     }
   } catch (const std::exception& error) {
-    std::cerr << "error: " << error.what() << "\n";
+    print_error(error.what());
     return 1;
   }
 

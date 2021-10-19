@@ -319,8 +319,11 @@ bool save_binary(
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// Json values
+using json_value = nlohmann::ordered_json;
+
 // Load/save json
-bool load_json(const string& filename, json_value& json, string& error) {
+static bool load_json(const string& filename, json_value& json, string& error) {
   auto text = string{};
   if (!load_text(filename, text, error)) return false;
   try {
@@ -331,24 +334,77 @@ bool load_json(const string& filename, json_value& json, string& error) {
     return false;
   }
 }
-bool save_json(const string& filename, const json_value& json, string& error) {
+static bool save_json(
+    const string& filename, const json_value& json, string& error) {
   return save_text(filename, json.dump(2), error);
 }
 
 // Load/save json
-json_value load_json(const string& filename) {
+[[maybe_unused]] static json_value load_json(const string& filename) {
   auto error = string{};
   auto json  = json_value{};
   if (!load_json(filename, json, error)) throw io_error{error};
   return json;
 }
-void load_json(const string& filename, json_value& json) {
+[[maybe_unused]] static void load_json(
+    const string& filename, json_value& json) {
   auto error = string{};
   if (!load_json(filename, json, error)) throw io_error{error};
 }
-void save_json(const string& filename, const json_value& json) {
+[[maybe_unused]] static void save_json(
+    const string& filename, const json_value& json) {
   auto error = string{};
   if (!save_json(filename, json, error)) throw io_error{error};
+}
+
+// Json conversions
+inline void to_json(json_value& json, const vec2f& value) {
+  nlohmann::to_json(json, (const array<float, 2>&)value);
+}
+inline void to_json(json_value& json, const vec3f& value) {
+  nlohmann::to_json(json, (const array<float, 3>&)value);
+}
+inline void to_json(json_value& json, const vec4f& value) {
+  nlohmann::to_json(json, (const array<float, 4>&)value);
+}
+inline void to_json(json_value& json, const frame2f& value) {
+  nlohmann::to_json(json, (const array<float, 6>&)value);
+}
+inline void to_json(json_value& json, const frame3f& value) {
+  nlohmann::to_json(json, (const array<float, 12>&)value);
+}
+inline void to_json(json_value& json, const mat2f& value) {
+  nlohmann::to_json(json, (const array<float, 4>&)value);
+}
+inline void to_json(json_value& json, const mat3f& value) {
+  nlohmann::to_json(json, (const array<float, 9>&)value);
+}
+inline void to_json(json_value& json, const mat4f& value) {
+  nlohmann::to_json(json, (const array<float, 16>&)value);
+}
+inline void from_json(const json_value& json, vec2f& value) {
+  nlohmann::from_json(json, (array<float, 2>&)value);
+}
+inline void from_json(const json_value& json, vec3f& value) {
+  nlohmann::from_json(json, (array<float, 3>&)value);
+}
+inline void from_json(const json_value& json, vec4f& value) {
+  nlohmann::from_json(json, (array<float, 4>&)value);
+}
+inline void from_json(const json_value& json, frame2f& value) {
+  nlohmann::from_json(json, (array<float, 6>&)value);
+}
+inline void from_json(const json_value& json, frame3f& value) {
+  nlohmann::from_json(json, (array<float, 12>&)value);
+}
+inline void from_json(const json_value& json, mat2f& value) {
+  nlohmann::from_json(json, (array<float, 4>&)value);
+}
+inline void from_json(const json_value& json, mat3f& value) {
+  nlohmann::from_json(json, (array<float, 9>&)value);
+}
+inline void from_json(const json_value& json, mat4f& value) {
+  nlohmann::from_json(json, (array<float, 16>&)value);
 }
 
 }  // namespace yocto
