@@ -234,12 +234,11 @@ int main(int argc, const char* argv[]) {
     auto params = app_params{};
     auto cli    = make_cli("yimage", "process and view images");
     add_command_var(cli, params.command);
-    add_options(add_command(cli, "convert", "convert images"), params.convert);
-    add_options(add_command(cli, "view", "view images"), params.view);
-    add_options(add_command(cli, "grade", "grade images"), params.grade);
-    add_options(add_command(cli, "diff", "diff two images"), params.diff);
-    add_options(
-        add_command(cli, "setalpha", "set images alpha"), params.setalpha);
+    add_command(cli, "convert", params.convert, "convert images");
+    add_command(cli, "view", params.view, "view images");
+    add_command(cli, "grade", params.grade, "grade images");
+    add_command(cli, "diff", params.diff, "diff two images");
+    add_command(cli, "setalpha", params.setalpha, "set images alpha");
     parse_cli(cli, argc, argv);
 
     // dispatch commands

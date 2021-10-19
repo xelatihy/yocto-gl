@@ -1227,12 +1227,11 @@ int main(int argc, const char* argv[]) {
     auto params = app_params{};
     auto cli    = make_cli("ymesh", "process and view meshes");
     add_command_var(cli, params.command);
-    add_options(add_command(cli, "view", "view shapes"), params.view);
-    add_options(
-        add_command(cli, "glview", "view shapes with OpenGL"), params.glview);
-    add_options(add_command(cli, "glpath", "trace paths"), params.glpath);
-    add_options(add_command(cli, "glpathd", "debug paths"), params.glpathd);
-    add_options(add_command(cli, "glsculpt", "sculpt meshes"), params.glsculpt);
+    add_command(cli, "view", params.view, "view shapes");
+    add_command(cli, "glview", params.glview, "view shapes with OpenGL");
+    add_command(cli, "glpath", params.glpath, "trace paths");
+    add_command(cli, "glpathd", params.glpathd, "debug paths");
+    add_command(cli, "glsculpt", params.glsculpt, "sculpt meshes");
     parse_cli(cli, argc, argv);
 
     // dispatch commands

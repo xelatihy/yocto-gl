@@ -457,17 +457,15 @@ int main(int argc, const char** argv) {
     auto params = app_params{};
     auto cli    = make_cli("yshape", "Process and view shapes");
     add_command_var(cli, params.command);
-    add_options(add_command(cli, "convert", "convert shapes"), params.convert);
-    add_options(add_command(cli, "fvconvert", "convert face-varying shapes"),
-        params.fvconvert);
-    add_options(add_command(cli, "view", "view shapes"), params.view);
-    add_options(add_command(cli, "heightfield", "create an heightfield"),
-        params.heightfield);
-    add_options(add_command(cli, "hair", "grow hairs on a shape"), params.hair);
-    add_options(
-        add_command(cli, "sample", "sample points on a shape"), params.sample);
-    add_options(
-        add_command(cli, "glview", "view shapes with OpenGL"), params.glview);
+    add_command(cli, "convert", params.convert, "convert shapes");
+    add_command(
+        cli, "fvconvert", params.fvconvert, "convert face-varying shapes");
+    add_command(cli, "view", params.view, "view shapes");
+    add_command(
+        cli, "heightfield", params.heightfield, "create an heightfield");
+    add_command(cli, "hair", params.hair, "grow hairs on a shape");
+    add_command(cli, "sample", params.sample, "sample points on a shape");
+    add_command(cli, "glview", params.glview, "view shapes with OpenGL");
     parse_cli(cli, argc, argv);
 
     // dispatch commands

@@ -76,6 +76,10 @@ inline cli_command& add_command(
 // add command variable
 template <typename T>
 inline void add_command_var(cli_command& cli, T& value);
+// add command by invoking add_options for the struct type passed
+template <typename T>
+inline cli_command& add_command(
+    cli_command& cli, const string& name, T& value, const string& usage);
 
 // add option
 template <typename T>
@@ -174,6 +178,9 @@ namespace yocto {
 // Cli map. Cannot use map or unordered_map
 template <typename Key, typename Value>
 struct cli_map {
+  // reserve to ensure pointer stability
+  cli_map() { _data.reserve(256); }
+
   bool empty() const { return _data.empty(); }
   bool contains(const Key& key) const {
     for (auto& [key_, value] : _data)
@@ -381,6 +388,15 @@ inline void add_command_var(cli_command& cli, T& value) {
     if (!_cli_parse_value(args.front(), value, error)) return false;
     return true;
   };
+}
+
+// add command by invoking add_options for the struct type passed
+template <typename T>
+inline cli_command& add_command(
+    cli_command& cli, const string& name, T& value, const string& usage) {
+  auto& cmd = add_command(cli, name, usage);
+  add_options(cmd, value);
+  return cmd;
 }
 
 // add option
