@@ -26,6 +26,7 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
+#include <yocto/yocto_cli.h>
 #include <yocto/yocto_gui.h>
 #include <yocto/yocto_math.h>
 #include <yocto/yocto_scene.h>
