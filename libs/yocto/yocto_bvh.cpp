@@ -912,23 +912,23 @@ static bool intersect_bvh(const scene_bvh& bvh, const scene_data& scene,
       inv_ray, element, uv, distance, find_any);
 }
 
-bvh_intersection intersect_bvh(const shape_bvh& bvh, const shape_data& shape,
+scene_intersection intersect_bvh(const shape_bvh& bvh, const shape_data& shape,
     const ray3f& ray, bool find_any) {
-  auto intersection = bvh_intersection{};
+  auto intersection = scene_intersection{};
   intersection.hit  = intersect_bvh(bvh, shape, ray, intersection.element,
       intersection.uv, intersection.distance, find_any);
   return intersection;
 }
-bvh_intersection intersect_bvh(const scene_bvh& bvh, const scene_data& scene,
+scene_intersection intersect_bvh(const scene_bvh& bvh, const scene_data& scene,
     const ray3f& ray, bool find_any) {
-  auto intersection = bvh_intersection{};
+  auto intersection = scene_intersection{};
   intersection.hit  = intersect_bvh(bvh, scene, ray, intersection.instance,
       intersection.element, intersection.uv, intersection.distance, find_any);
   return intersection;
 }
-bvh_intersection intersect_bvh(const scene_bvh& bvh, const scene_data& scene,
+scene_intersection intersect_bvh(const scene_bvh& bvh, const scene_data& scene,
     int instance, const ray3f& ray, bool find_any) {
-  auto intersection     = bvh_intersection{};
+  auto intersection     = scene_intersection{};
   intersection.hit      = intersect_bvh(bvh, scene, instance, ray,
       intersection.element, intersection.uv, intersection.distance, find_any);
   intersection.instance = instance;
@@ -1141,9 +1141,9 @@ void overlap_bvh_elems(const bvh_data& bvh1, const bvh_data& bvh2,
 }
 #endif
 
-bvh_intersection overlap_bvh(const scene_bvh& bvh, const scene_data& scene,
+scene_intersection overlap_bvh(const scene_bvh& bvh, const scene_data& scene,
     const vec3f& pos, float max_distance, bool find_any) {
-  auto intersection = bvh_intersection{};
+  auto intersection = scene_intersection{};
   intersection.hit  = overlap_bvh(bvh, scene, pos, max_distance,
       intersection.instance, intersection.element, intersection.uv,
       intersection.distance, find_any);

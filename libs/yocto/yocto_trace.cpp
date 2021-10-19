@@ -99,42 +99,42 @@ namespace yocto {
 
 // Convenience functions
 [[maybe_unused]] static vec3f eval_position(
-    const scene_data& scene, const bvh_intersection& intersection) {
+    const scene_data& scene, const scene_intersection& intersection) {
   return eval_position(scene, scene.instances[intersection.instance],
       intersection.element, intersection.uv);
 }
 [[maybe_unused]] static vec3f eval_normal(
-    const scene_data& scene, const bvh_intersection& intersection) {
+    const scene_data& scene, const scene_intersection& intersection) {
   return eval_normal(scene, scene.instances[intersection.instance],
       intersection.element, intersection.uv);
 }
 [[maybe_unused]] static vec3f eval_element_normal(
-    const scene_data& scene, const bvh_intersection& intersection) {
+    const scene_data& scene, const scene_intersection& intersection) {
   return eval_element_normal(
       scene, scene.instances[intersection.instance], intersection.element);
 }
 [[maybe_unused]] static vec3f eval_shading_position(const scene_data& scene,
-    const bvh_intersection& intersection, const vec3f& outgoing) {
+    const scene_intersection& intersection, const vec3f& outgoing) {
   return eval_shading_position(scene, scene.instances[intersection.instance],
       intersection.element, intersection.uv, outgoing);
 }
 [[maybe_unused]] static vec3f eval_shading_normal(const scene_data& scene,
-    const bvh_intersection& intersection, const vec3f& outgoing) {
+    const scene_intersection& intersection, const vec3f& outgoing) {
   return eval_shading_normal(scene, scene.instances[intersection.instance],
       intersection.element, intersection.uv, outgoing);
 }
 [[maybe_unused]] static vec2f eval_texcoord(
-    const scene_data& scene, const bvh_intersection& intersection) {
+    const scene_data& scene, const scene_intersection& intersection) {
   return eval_texcoord(scene, scene.instances[intersection.instance],
       intersection.element, intersection.uv);
 }
 [[maybe_unused]] static material_point eval_material(
-    const scene_data& scene, const bvh_intersection& intersection) {
+    const scene_data& scene, const scene_intersection& intersection) {
   return eval_material(scene, scene.instances[intersection.instance],
       intersection.element, intersection.uv);
 }
 [[maybe_unused]] static bool is_volumetric(
-    const scene_data& scene, const bvh_intersection& intersection) {
+    const scene_data& scene, const scene_intersection& intersection) {
   return is_volumetric(scene, scene.instances[intersection.instance]);
 }
 
@@ -763,7 +763,7 @@ static trace_result trace_pathmis(const scene_data& scene, const scene_bvh& bvh,
            (this_pdf * this_pdf + other_pdf * other_pdf);
   };
   auto next_emission     = true;
-  auto next_intersection = bvh_intersection{};
+  auto next_intersection = scene_intersection{};
 
   // trace  path
   for (auto bounce = 0; bounce < params.bounces; bounce++) {
