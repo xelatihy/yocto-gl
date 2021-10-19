@@ -44,19 +44,19 @@ by setting the `embree` flag to true.
 
 ```cpp
 auto scene = scene_data{...};             // make a complete scene
-auto bvh = build_bvh(scene);              // build a BVH
-auto embree = build_bvh(scene,true,true); // use Embree
+auto bvh = make_bvh(scene);               // build a BVH
+auto embree = make_bvh(scene,true,true);  // use Embree
 ```
 
 Use `update_bvh(bvh,shape)` to update a shape BVH, and
 `update_bvh(bvh,scene,updated_instances,updated_shapes)` to update a scene BVH,
-where we indicate the indices of the instances and shapes that have beed modified.
+where we indicate the indices of the instances and shapes that have been modified.
 Updating works ony for change to instance frames and shapes positions.
 For changes like adding or removing elements, the BVH has to be built again.
 
 ```cpp
 auto scene = scene_data{...};             // make a complete scene
-auto bvh = build_bvh(scene);              // build a BVH
+auto bvh = make_bvh(scene);               // build a BVH
 auto shapes = update_shapes(scene);       // updates some shapes
 auto instances = update_instances(scene); // updates some instances
 update_bvh(bvh, scene, shapes, instances);// update bvh
@@ -99,7 +99,7 @@ relaxed to accept any element, by passing an optional flag.
 ```cpp
 auto isec = overlap_bvh(bvh,scene,point,dist); // closest element
 if (isec.hit) {                                // check intersection
-  handle_intersection(isec.instance,      // work on intersection data
+  handle_intersection(isec.instance,           // work on intersection data
     isec.element, isec.uv, isec.distance);
 }
 ```
