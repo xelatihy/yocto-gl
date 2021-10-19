@@ -467,25 +467,24 @@ vector<vector<int>> vertex_to_faces_adjacencies(
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// BVH tree node containing its bounds, indices to the BVH arrays of either
-// primitives or internal nodes, the node element type,
-// and the split axis. Leaf and internal nodes are identical, except that
-// indices refer to primitives for leaf nodes or other nodes for internal nodes.
-struct shape_bvh_node {
-  bbox3f  bbox     = invalidb3f;
-  int32_t start    = 0;
-  int16_t num      = 0;
-  int8_t  axis     = 0;
-  bool    internal = false;
-};
-
 // BVH tree stored as a node array with the tree structure is encoded using
 // array indices. BVH nodes indices refer to either the node array,
 // for internal nodes, or the primitive arrays, for leaf nodes.
 // Application data is not stored explicitly.
+// BVH tree node containing its bounds, indices to the BVH arrays of either
+// primitives or internal nodes, the node element type,
+// and the split axis. Leaf and internal nodes are identical, except that
+// indices refer to primitives for leaf nodes or other nodes for internal nodes.
 struct bvh_tree {
-  vector<shape_bvh_node> nodes      = {};
-  vector<int>            primitives = {};
+  struct node {
+    bbox3f  bbox     = invalidb3f;
+    int32_t start    = 0;
+    int16_t num      = 0;
+    int8_t  axis     = 0;
+    bool    internal = false;
+  };
+  vector<node> nodes      = {};
+  vector<int>  primitives = {};
 };
 
 // Results of intersect_xxx and overlap_xxx functions that include hit flag,
