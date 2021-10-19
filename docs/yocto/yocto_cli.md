@@ -2,61 +2,48 @@
 
 Yocto/Cli is a collection of utilities used in writing command-line
 applications, including parsing command line arguments, printing values,
-timers and progress bars.
-Yocto/Cli is implemented in `yocto_cli.h` and `yocto_cli.cpp`.
+and timers.
+Yocto/Cli is implemented in `yocto_cli.h`.
 
 ## Printing values
 
-Use `print_info(message)` to print a message, and `print_fatal(message)`
-to print and exit. To time a block of code use `print_timed(message)`
-to use an RIIA timer or call `print_elapsed(timer)` to print the elapsed
-time as needed. Use `print_progress(message, current, total)` to print
-a progress bar with a message for a given current and total number of tasks,
-or `print_progress_start(message, total)`, `print_progress_next()` and
-`print_progress_end()` to use a progress bar without managing manually the
-progress counter.
+Use `print_info(message)` to print a message, and `print_error(message)`
+to print an error. To time a block of code create a `simple_timer` and
+get the elapsed time with `elapsed_format(timer)`.
 
 ```cpp
-print_info("Message");                      // print message
-print_fatal("Error and exit");              // print error and exit
-{ auto timer = print_timed("Timer"); ... }  // time a block of code
-auto timer = print_timed("Timer");          // start timer
-print_elapsed(timer);                       // Print elapsed time
-for(auto task : range(10))                  // iterate over tasks
-  print_progress("Progress bar", task, 10); // print progress bar
-print_progress_start("Progress bar", 10);   // start progress bar
-for(auto task : range(10))                  // iterate over tasks
-  print_progress_next();                    // print progress bar
+print_info("Message");          // print message
+print_fatal("Error and exit");  // print error and exit
+auto timer = simple_timer{};    // start timer
+print_info("elapsed: {}",       // print elapsed time
+  elapsed_formatted(timer));
 ```
 
 ## Command-Line Parsing
 
 Yocto/Cli includes a simple command-line parser that supports optional
-and positional arguments, automatic help generation, and error checking.
+arguments with automatic help generation and error checking. This parser
+is meant to be simple and force a command-line style where an app has several
+commands, all of which are options with default values.
 
 The command-line parser is initialized with `make_cli(name, help)` that takes
 a program name and a help string. Then add command-line options with
-`add_option(cli, name, value, help, check, alt, req)` for optional arguments and
-`add_argument(cli, name, value, help, check, req)` for positional arguments.
+`add_option(cli, name, value, help, check)` for optional arguments.
 In these commands, `name` is the option name, `value` is a reference to the
-variable that we want to set, `help` is a usage message, `alt` is the short
-option flag, and `req` determines whether the option is required, and `check`
+variable that we want to set, `help` is a usage message, and `check`
 is either a range of valid values er a list of valid choices.
 A help flag is automatically added.
 
-For positional arguments, the argument name is only used for printing help.
-For optional arguments, the command line is parsed for options named `--` 
-followed by the option `name` or `-` followed by the `alt` short name.
+The command line is parsed for options named `--` followed by the option `name`.
 The type of each option is determined by the passed reference.
 The parser supports integers, floating point numbers, strings, boolean flags,
-enums and arrays of strings.
-
-An help command is added automatically and checked for printing help and exiting
-without errors.
+enums, arrays and vectors.
 
 After adding all arguments, use `ok = parse_cli(cli, args, error)` to parse the
-command-line. If an error occurs, the parser throws `false` and stores in 
-`error` a message that can be printed to inform the user.
+command-line. If an error occurs, the parser throws `false` and stores in
+`error` a message that can be printed to inform the user. You can also use 
+`parse_cli(cli, args)` in which case a `cli_error` exception is thrown if
+errors occur.
 
 ```cpp
 auto samples = 10; auto flag = false;                // state
@@ -71,7 +58,12 @@ add_option(cli, "scenes", scenes, "scenes");    // positional arguments
 auto args = make_cli_args(argc, argv);          // make a vector of args
 auto error = string{};                          // error string
 if (!parse_cli(cli, args, error))               // parse args
-  print_fatal(error);                           // exit with error
+  print_error(error);                           // print error
+try {
+  parse_cli(cli, args);                         // parse args
+} catch(const cli_error& error) {
+  print_error(error);                           // print error
+}
 ```
 
 ## Command-Line Commands
@@ -114,14 +106,3 @@ Alternatively, you can specify an option that, if specified, indicates a
 filename in a directory where the config might be found, using 
 `add_option_with_config(cli, name, value, usage, config, alt)`.
 Here `config` is the filename of the optional config file.
-
-## Command-Line Positional Arguments And Flags
-
-While for now positional arguments are supported, their use is deprecated.
-The same is true for the use of short flags, like `-h`.
-Th main reasons for this is to make the input to CLI tools more readable by 
-using long names for options and avoiding unnamed positional arguments.
-This is also a better match for the JSON config files and since internally
-the CLI uses JSON as a data model to process values.
-In future releases, positional arguments will be deprecated and eventually
-removed. 
