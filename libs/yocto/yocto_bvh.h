@@ -81,25 +81,36 @@ struct bvh_node {
 // BVH tree stored as a node array with the tree structure is encoded using
 // array indices. BVH nodes indices refer to either the node array,
 // for internal nodes, or the primitive arrays, for leaf nodes.
-// For instance BVHs, we also store the BVH of the contained shapes.
 // Application data is not stored explicitly.
 // Additionally, we support the use of Intel Embree.
-struct bvh_data {
+struct bvh_shape {
   vector<bvh_node>                  nodes      = {};
   vector<int>                       primitives = {};
-  vector<bvh_data>                  shapes     = {};                  // shapes
+  unique_ptr<void, void (*)(void*)> embree_bvh = {nullptr, nullptr};  // embree
+};
+
+// BVH tree stored as a node array with the tree structure is encoded using
+// array indices. BVH nodes indices refer to either the node array,
+// for internal nodes, or the primitive arrays, for leaf nodes.
+// We also store the BVH of the contained shapes.
+// Application data is not stored explicitly.
+// Additionally, we support the use of Intel Embree.
+struct bvh_scene {
+  vector<bvh_node>                  nodes      = {};
+  vector<int>                       primitives = {};
+  vector<bvh_shape>                 shapes     = {};                  // shapes
   unique_ptr<void, void (*)(void*)> embree_bvh = {nullptr, nullptr};  // embree
 };
 
 // Build the bvh acceleration structure.
-bvh_data make_bvh(
+bvh_shape make_bvh(
     const shape_data& shape, bool highquality = false, bool embree = false);
-bvh_data make_bvh(const scene_data& scene, bool highquality = false,
+bvh_scene make_bvh(const scene_data& scene, bool highquality = false,
     bool embree = false, bool noparallel = false);
 
 // Refit bvh data
-void update_bvh(bvh_data& bvh, const shape_data& shape);
-void update_bvh(bvh_data& bvh, const scene_data& scene,
+void update_bvh(bvh_shape& bvh, const shape_data& shape);
+void update_bvh(bvh_scene& bvh, const scene_data& scene,
     const vector<int>& updated_instances, const vector<int>& updated_shapes);
 
 // Results of intersect_xxx and overlap_xxx functions that include hit flag,
@@ -118,11 +129,11 @@ struct bvh_intersection {
 // Intersect ray with a bvh returning either the first or any intersection
 // depending on `find_any`. Returns the ray distance , the instance id,
 // the shape element index and the element barycentric coordinates.
-bvh_intersection intersect_bvh(const bvh_data& bvh, const shape_data& shape,
+bvh_intersection intersect_bvh(const bvh_shape& bvh, const shape_data& shape,
     const ray3f& ray, bool find_any = false, bool non_rigid_frames = true);
-bvh_intersection intersect_bvh(const bvh_data& bvh, const scene_data& scene,
+bvh_intersection intersect_bvh(const bvh_scene& bvh, const scene_data& scene,
     const ray3f& ray, bool find_any = false, bool non_rigid_frames = true);
-bvh_intersection intersect_bvh(const bvh_data& bvh, const scene_data& scene,
+bvh_intersection intersect_bvh(const bvh_scene& bvh, const scene_data& scene,
     int instance, const ray3f& ray, bool find_any = false,
     bool non_rigid_frames = true);
 
@@ -130,21 +141,11 @@ bvh_intersection intersect_bvh(const bvh_data& bvh, const scene_data& scene,
 // max distance, returning either the closest or any overlap depending on
 // `find_any`. Returns the point distance, the instance id, the shape element
 // index and the element barycentric coordinates.
-bvh_intersection overlap_bvh(const bvh_data& bvh, const shape_data& shape,
+bvh_intersection overlap_bvh(const bvh_shape& bvh, const shape_data& shape,
     const vec3f& pos, float max_distance, bool find_any = false);
-bvh_intersection overlap_bvh(const bvh_data& bvh, const scene_data& scene,
+bvh_intersection overlap_bvh(const bvh_scene& bvh, const scene_data& scene,
     const vec3f& pos, float max_distance, bool find_any = false,
     bool non_rigid_frames = true);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// BACKWARDS COMPATIBILITY
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-using bvh_shape = bvh_data;
-using bvh_scene = bvh_data;
 
 }  // namespace yocto
 
