@@ -36,8 +36,6 @@
 
 using namespace yocto;
 
-#include <iostream>
-
 // convert params
 struct convert_params {
   string image    = "image.png";

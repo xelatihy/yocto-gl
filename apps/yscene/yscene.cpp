@@ -39,8 +39,6 @@ using namespace yocto;
 #include <filesystem>
 namespace fs = std::filesystem;
 
-#include <iostream>
-
 // convert params
 struct convert_params {
   string scene     = "scene.ply";
@@ -220,9 +218,8 @@ void run_render(const render_params& params_) {
   for (auto sample = 0; sample < params.samples; sample++) {
     auto sample_timer = simple_timer{};
     trace_samples(state, scene, bvh, lights, params);
-    std::cout << ("render sample " + std::to_string(sample) + "/" +
-                  std::to_string(params.samples) + ":" +
-                  elapsed_formatted(sample_timer) + "\n");
+    print_info("render sample {}/{}: {}", sample, params.samples,
+        elapsed_formatted(sample_timer));
     if (params.savebatch && state.samples % params.batch == 0) {
       auto image = params.denoise ? get_denoised(state) : get_render(state);
       auto outfilename = fs::path(params.output)

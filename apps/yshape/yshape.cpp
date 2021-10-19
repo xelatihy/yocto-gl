@@ -37,8 +37,6 @@
 
 using namespace yocto;
 
-#include <iostream>
-
 // convert params
 struct convert_params {
   string shape        = "shape.ply";

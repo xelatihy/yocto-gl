@@ -42,8 +42,6 @@
 
 using namespace yocto;
 
-#include <iostream>
-
 // view params
 struct view_params {
   string shape  = "shape.ply";
