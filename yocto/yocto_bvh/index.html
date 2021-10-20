@@ -474,21 +474,6 @@
   
   
     <li class="md-nav__item">
-      <a href="../yocto_cli/" class="md-nav__link">
-        Command-line utilities
-      </a>
-    </li>
-  
-
-    
-      
-      
-      
-
-  
-  
-  
-    <li class="md-nav__item">
       <a href="../yocto_sceneio/" class="md-nav__link">
         Image, shape and scene serialization
       </a>
@@ -506,36 +491,6 @@
     <li class="md-nav__item">
       <a href="../yocto_modelio/" class="md-nav__link">
         Model serialization
-      </a>
-    </li>
-  
-
-    
-      
-      
-      
-
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../yocto_parallel/" class="md-nav__link">
-        Concurrency utilities
-      </a>
-    </li>
-  
-
-    
-      
-      
-      
-
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../yocto_json/" class="md-nav__link">
-        Json and serialization utilities
       </a>
     </li>
   
@@ -641,51 +596,52 @@ that can be improved slightly by setting <code>highquality</code> to true.
 By default, Yocto/BVH uses the internal BVH. Intel's Embree can be used
 by setting the <code>embree</code> flag to true.</p>
 <div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">scene</span> <span class="o">=</span> <span class="n">scene_data</span><span class="p">{...};</span>             <span class="c1">// make a complete scene</span>
-<span class="k">auto</span> <span class="n">bvh</span> <span class="o">=</span> <span class="n">build_bvh</span><span class="p">(</span><span class="n">scene</span><span class="p">);</span>              <span class="c1">// build a BVH</span>
-<span class="k">auto</span> <span class="n">embree</span> <span class="o">=</span> <span class="n">build_bvh</span><span class="p">(</span><span class="n">scene</span><span class="p">,</span><span class="nb">true</span><span class="p">,</span><span class="nb">true</span><span class="p">);</span> <span class="c1">// use Embree</span>
+<span class="k">auto</span> <span class="n">bvh</span> <span class="o">=</span> <span class="n">make_bvh</span><span class="p">(</span><span class="n">scene</span><span class="p">);</span>               <span class="c1">// build a BVH</span>
+<span class="k">auto</span> <span class="n">embree</span> <span class="o">=</span> <span class="n">make_bvh</span><span class="p">(</span><span class="n">scene</span><span class="p">,</span><span class="nb">true</span><span class="p">,</span><span class="nb">true</span><span class="p">);</span>  <span class="c1">// use Embree</span>
 </code></pre></div>
 <p>Use <code>update_bvh(bvh,shape)</code> to update a shape BVH, and
 <code>update_bvh(bvh,scene,updated_instances,updated_shapes)</code> to update a scene BVH,
-where we indicate the indices of the instances and shapes that have beed modified.
+where we indicate the indices of the instances and shapes that have been modified.
 Updating works ony for change to instance frames and shapes positions.
 For changes like adding or removing elements, the BVH has to be built again.</p>
 <div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">scene</span> <span class="o">=</span> <span class="n">scene_data</span><span class="p">{...};</span>             <span class="c1">// make a complete scene</span>
-<span class="k">auto</span> <span class="n">bvh</span> <span class="o">=</span> <span class="n">build_bvh</span><span class="p">(</span><span class="n">scene</span><span class="p">);</span>              <span class="c1">// build a BVH</span>
+<span class="k">auto</span> <span class="n">bvh</span> <span class="o">=</span> <span class="n">make_bvh</span><span class="p">(</span><span class="n">scene</span><span class="p">);</span>               <span class="c1">// build a BVH</span>
 <span class="k">auto</span> <span class="n">shapes</span> <span class="o">=</span> <span class="n">update_shapes</span><span class="p">(</span><span class="n">scene</span><span class="p">);</span>       <span class="c1">// updates some shapes</span>
 <span class="k">auto</span> <span class="n">instances</span> <span class="o">=</span> <span class="n">update_instances</span><span class="p">(</span><span class="n">scene</span><span class="p">);</span> <span class="c1">// updates some instances</span>
 <span class="n">update_bvh</span><span class="p">(</span><span class="n">bvh</span><span class="p">,</span> <span class="n">scene</span><span class="p">,</span> <span class="n">shapes</span><span class="p">,</span> <span class="n">instances</span><span class="p">);</span><span class="c1">// update bvh</span>
 </code></pre></div>
 <h2 id="ray-intersection">Ray intersection</h2>
-<p>Use <code>intersect_bvh(bvh,scene,ray)</code> and <code>intersect_bvh(bvh,shape,ray)</code> to
+<p>Use <code>intersect_scene(bvh,scene,ray)</code> and <code>intersect_shape(bvh,shape,ray)</code> to
 compute the ray-scene and ray-shape intersection respectively, and
-<code>intersect_bvh(bvh,scene,instance,ray)</code> to intersect a single scene instance.
-These functions return a <code>bvh_intersection</code> that includes a <code>hit</code> flag,
-the <code>instance</code> index, the shape <code>element</code> index and shape element <code>uv</code>s and
-the intersection <code>distance</code>. Results values are set only if <code>hit</code> is true.
+<code>intersect_instance(bvh,scene,instance,ray)</code> to intersect a single scene instance.
+These functions return a <code>scene_intersection</code> or a <code>shape_intersection</code> that
+includes a <code>hit</code> flag, the <code>instance</code> index, the shape <code>element</code> index and
+shape element <code>uv</code>s and the intersection <code>distance</code>.
+Results values are set only if <code>hit</code> is true.
 By default Yocto/Bvh computes the closet intersection, but this can be
 relaxed to accept any intersection, for shadow rays, by passing an optional flag.</p>
-<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">isec</span> <span class="o">=</span> <span class="n">intersect_bvh</span><span class="p">(</span><span class="n">bvh</span><span class="p">,</span><span class="n">scene</span><span class="p">,</span><span class="n">ray</span><span class="p">);</span> <span class="c1">// ray-scene intersection</span>
-<span class="k">if</span> <span class="p">(</span><span class="n">isec</span><span class="p">.</span><span class="n">hit</span><span class="p">)</span> <span class="p">{</span>                           <span class="c1">// check intersection</span>
-  <span class="n">handle_intersection</span><span class="p">(</span><span class="n">isec</span><span class="p">.</span><span class="n">instance</span><span class="p">,</span>      <span class="c1">// work on intersection data</span>
+<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">isec</span> <span class="o">=</span> <span class="n">intersect_scene</span><span class="p">(</span><span class="n">bvh</span><span class="p">,</span><span class="n">scene</span><span class="p">,</span><span class="n">ray</span><span class="p">);</span>  <span class="c1">// ray-scene intersection</span>
+<span class="k">if</span> <span class="p">(</span><span class="n">isec</span><span class="p">.</span><span class="n">hit</span><span class="p">)</span> <span class="p">{</span>                              <span class="c1">// check intersection</span>
+  <span class="n">handle_intersection</span><span class="p">(</span><span class="n">isec</span><span class="p">.</span><span class="n">instance</span><span class="p">,</span>         <span class="c1">// work on intersection data</span>
     <span class="n">isec</span><span class="p">.</span><span class="n">element</span><span class="p">,</span> <span class="n">isec</span><span class="p">.</span><span class="n">uv</span><span class="p">,</span> <span class="n">isec</span><span class="p">.</span><span class="n">distance</span><span class="p">);</span>
 <span class="p">}</span>
-<span class="k">auto</span> <span class="n">isecv</span> <span class="o">=</span> <span class="n">intersect_bvh</span><span class="p">(</span><span class="n">bvh</span><span class="p">,</span><span class="n">scene</span><span class="p">,</span><span class="n">ray</span><span class="p">,</span><span class="nb">true</span><span class="p">);</span> <span class="c1">// check any intersection</span>
+<span class="k">auto</span> <span class="n">isecv</span> <span class="o">=</span> <span class="n">intersect_scene</span><span class="p">(</span><span class="n">bvh</span><span class="p">,</span><span class="n">scene</span><span class="p">,</span><span class="n">ray</span><span class="p">,</span><span class="nb">true</span><span class="p">);</span> <span class="c1">// check any intersection</span>
 <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">isecv</span><span class="p">.</span><span class="n">hit</span><span class="p">)</span> <span class="p">{</span>                         <span class="c1">// check for not intersection</span>
   <span class="n">handle_unoccluded</span><span class="p">(...);</span>                 <span class="c1">// handle unoccluded case</span>
 <span class="p">}</span>
 </code></pre></div>
 <h2 id="point-overlap">Point overlap</h2>
-<p>Use <code>overlap_bvh(bvh,scene,position,max_distance)</code> and
-<code>overlap_bvh(bvh,shape,position,max_distance)</code> to compute the scene or
+<p>Use <code>overlap_scene(bvh,scene,position,max_distance)</code> and
+<code>overlap_shape(bvh,shape,position,max_distance)</code> to compute the scene or
 shape element closest to a given point and within a maximum distance.
-Use <code>overlap_bvh(bvh,scene,instance,position,max_distance)</code> to test
-a single scene instance. These functions return a <code>bvh_intersection</code>
-as the intersection ones.
+Use <code>overlap_instance(bvh,scene,instance,position,max_distance)</code> to test
+a single scene instance. These functions return a <code>scene_intersection</code> or a
+<code>shape_intersection</code>, as the intersection ones.
 By default Yocto/Bvh computes the closet element, but this can be
 relaxed to accept any element, by passing an optional flag.</p>
-<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">isec</span> <span class="o">=</span> <span class="n">overlap_bvh</span><span class="p">(</span><span class="n">bvh</span><span class="p">,</span><span class="n">scene</span><span class="p">,</span><span class="n">point</span><span class="p">,</span><span class="n">dist</span><span class="p">);</span> <span class="c1">// closest element</span>
-<span class="k">if</span> <span class="p">(</span><span class="n">isec</span><span class="p">.</span><span class="n">hit</span><span class="p">)</span> <span class="p">{</span>                                <span class="c1">// check intersection</span>
-  <span class="n">handle_intersection</span><span class="p">(</span><span class="n">isec</span><span class="p">.</span><span class="n">instance</span><span class="p">,</span>      <span class="c1">// work on intersection data</span>
+<div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">isec</span> <span class="o">=</span> <span class="n">overlap_scene</span><span class="p">(</span><span class="n">bvh</span><span class="p">,</span><span class="n">scene</span><span class="p">,</span><span class="n">point</span><span class="p">,</span><span class="n">dist</span><span class="p">);</span> <span class="c1">// closest element</span>
+<span class="k">if</span> <span class="p">(</span><span class="n">isec</span><span class="p">.</span><span class="n">hit</span><span class="p">)</span> <span class="p">{</span>                                  <span class="c1">// check intersection</span>
+  <span class="n">handle_intersection</span><span class="p">(</span><span class="n">isec</span><span class="p">.</span><span class="n">instance</span><span class="p">,</span>             <span class="c1">// work on intersection data</span>
     <span class="n">isec</span><span class="p">.</span><span class="n">element</span><span class="p">,</span> <span class="n">isec</span><span class="p">.</span><span class="n">uv</span><span class="p">,</span> <span class="n">isec</span><span class="p">.</span><span class="n">distance</span><span class="p">);</span>
 <span class="p">}</span>
 </code></pre></div>

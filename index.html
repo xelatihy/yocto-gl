@@ -481,21 +481,6 @@
   
   
     <li class="md-nav__item">
-      <a href="yocto/yocto_cli/" class="md-nav__link">
-        Command-line utilities
-      </a>
-    </li>
-  
-
-    
-      
-      
-      
-
-  
-  
-  
-    <li class="md-nav__item">
       <a href="yocto/yocto_sceneio/" class="md-nav__link">
         Image, shape and scene serialization
       </a>
@@ -513,36 +498,6 @@
     <li class="md-nav__item">
       <a href="yocto/yocto_modelio/" class="md-nav__link">
         Model serialization
-      </a>
-    </li>
-  
-
-    
-      
-      
-      
-
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="yocto/yocto_parallel/" class="md-nav__link">
-        Concurrency utilities
-      </a>
-    </li>
-  
-
-    
-      
-      
-      
-
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="yocto/yocto_json/" class="md-nav__link">
-        Json and serialization utilities
       </a>
     </li>
   
@@ -656,12 +611,11 @@ Here is a list of the main libraries.</p>
 <li><a href="yocto/yocto_trace/">Yocto/Trace</a>: path tracing of surfaces and hairs
   supporting area and environment illumination, microfacet GGX and subsurface
   scattering, multiple importance sampling</li>
-<li><a href="yocto/yocto_cli/">Yocto/Cli</a>: printing utilities and command line parsing</li>
 <li><a href="yocto/yocto_sceneio/">Yocto/SceneIO</a>: image, shape and scene serialization</li>
-<li><a href="yocto/yocto_modelio/">Yocto/ModelIO</a>: low-level parsing and writing for 
+<li><a href="yocto/yocto_modelio/">Yocto/ModelIO</a>: low-level parsing and writing for
   Ply, Obj, Stl, Pbrt formats</li>
-<li><a href="yocto/yocto_parallel/">Yocto/Parallel</a>: concurrency utilities</li>
-<li><a href="yocto/yocto_json/">Yocto/Json</a>: Json data model and serialization (deprecated)</li>
+<li><a href="yocto/yocto_cli/">Yocto/Cli</a>: printing utilities and command line parsing</li>
+<li><a href="yocto/yocto_parallel/">Yocto/Parallel</a>: concurrency utilities (deprecated)</li>
 </ul>
 <h2 id="example-applications">Example Applications</h2>
 <p>You can see Yocto/GL in action in the following applications written to
@@ -712,7 +666,7 @@ with the chosen one.</p>
 <p>This library requires a C++17 compiler and is know to compiled on
 OsX (Xcode &gt;= 11), Windows (MSVC 2019) and Linux (gcc &gt;= 9, clang &gt;= 9).</p>
 <p>You can build the example applications using CMake with
-<code>mkdir build; cd build; cmake ..; cmake --build</code></p>
+<code>mkdir build; cd build; cmake ..; cmake --build .</code></p>
 <p>Yocto/GL required dependencies are included in the distribution and do not
 need to be installed separately.</p>
 <p>Yocto/GL optionally supports building OpenGL demos. OpenGL support is enabled 

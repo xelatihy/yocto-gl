@@ -16,7 +16,7 @@
     
     
       
-        <title>Command-line utilities - Yocto/GL</title>
+        <title>Yocto/Cli: Utilities for writing command-line apps - Yocto/GL</title>
       
     
     
@@ -96,7 +96,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Command-line utilities
+              Yocto/Cli: Utilities for writing command-line apps
             
           </span>
         </div>
@@ -413,87 +413,6 @@
 
   
   
-    
-  
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          Command-line utilities
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
-        Command-line utilities
-      </a>
-      
-        
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#printing-values" class="md-nav__link">
-    Printing values
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#command-line-parsing" class="md-nav__link">
-    Command-Line Parsing
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#command-line-commands" class="md-nav__link">
-    Command-Line Commands
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#command-line-json-serialization" class="md-nav__link">
-    Command-Line JSON Serialization
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#command-line-positional-arguments-and-flags" class="md-nav__link">
-    Command-Line Positional Arguments And Flags
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
-    </li>
-  
-
-    
-      
-      
-      
-
-  
-  
   
     <li class="md-nav__item">
       <a href="../yocto_sceneio/" class="md-nav__link">
@@ -513,36 +432,6 @@
     <li class="md-nav__item">
       <a href="../yocto_modelio/" class="md-nav__link">
         Model serialization
-      </a>
-    </li>
-  
-
-    
-      
-      
-      
-
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../yocto_parallel/" class="md-nav__link">
-        Concurrency utilities
-      </a>
-    </li>
-  
-
-    
-      
-      
-      
-
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../yocto_json/" class="md-nav__link">
-        Json and serialization utilities
       </a>
     </li>
   
@@ -600,13 +489,6 @@
   
 </li>
       
-        <li class="md-nav__item">
-  <a href="#command-line-positional-arguments-and-flags" class="md-nav__link">
-    Command-Line Positional Arguments And Flags
-  </a>
-  
-</li>
-      
     </ul>
   
 </nav>
@@ -623,51 +505,39 @@
                 <h1 id="yoctocli-utilities-for-writing-command-line-apps">Yocto/Cli: Utilities for writing command-line apps</h1>
 <p>Yocto/Cli is a collection of utilities used in writing command-line
 applications, including parsing command line arguments, printing values,
-timers and progress bars.
-Yocto/Cli is implemented in <code>yocto_cli.h</code> and <code>yocto_cli.cpp</code>.</p>
+and timers.
+Yocto/Cli is implemented in <code>yocto_cli.h</code>.</p>
 <h2 id="printing-values">Printing values</h2>
-<p>Use <code>print_info(message)</code> to print a message, and <code>print_fatal(message)</code>
-to print and exit. To time a block of code use <code>print_timed(message)</code>
-to use an RIIA timer or call <code>print_elapsed(timer)</code> to print the elapsed
-time as needed. Use <code>print_progress(message, current, total)</code> to print
-a progress bar with a message for a given current and total number of tasks,
-or <code>print_progress_start(message, total)</code>, <code>print_progress_next()</code> and
-<code>print_progress_end()</code> to use a progress bar without managing manually the
-progress counter.</p>
-<div class="highlight"><pre><span></span><code><span class="n">print_info</span><span class="p">(</span><span class="s">&quot;Message&quot;</span><span class="p">);</span>                      <span class="c1">// print message</span>
-<span class="n">print_fatal</span><span class="p">(</span><span class="s">&quot;Error and exit&quot;</span><span class="p">);</span>              <span class="c1">// print error and exit</span>
-<span class="p">{</span> <span class="k">auto</span> <span class="n">timer</span> <span class="o">=</span> <span class="n">print_timed</span><span class="p">(</span><span class="s">&quot;Timer&quot;</span><span class="p">);</span> <span class="p">...</span> <span class="p">}</span>  <span class="c1">// time a block of code</span>
-<span class="k">auto</span> <span class="n">timer</span> <span class="o">=</span> <span class="n">print_timed</span><span class="p">(</span><span class="s">&quot;Timer&quot;</span><span class="p">);</span>          <span class="c1">// start timer</span>
-<span class="n">print_elapsed</span><span class="p">(</span><span class="n">timer</span><span class="p">);</span>                       <span class="c1">// Print elapsed time</span>
-<span class="k">for</span><span class="p">(</span><span class="k">auto</span> <span class="nl">task</span> <span class="p">:</span> <span class="n">range</span><span class="p">(</span><span class="mi">10</span><span class="p">))</span>                  <span class="c1">// iterate over tasks</span>
-  <span class="n">print_progress</span><span class="p">(</span><span class="s">&quot;Progress bar&quot;</span><span class="p">,</span> <span class="n">task</span><span class="p">,</span> <span class="mi">10</span><span class="p">);</span> <span class="c1">// print progress bar</span>
-<span class="n">print_progress_start</span><span class="p">(</span><span class="s">&quot;Progress bar&quot;</span><span class="p">,</span> <span class="mi">10</span><span class="p">);</span>   <span class="c1">// start progress bar</span>
-<span class="k">for</span><span class="p">(</span><span class="k">auto</span> <span class="nl">task</span> <span class="p">:</span> <span class="n">range</span><span class="p">(</span><span class="mi">10</span><span class="p">))</span>                  <span class="c1">// iterate over tasks</span>
-  <span class="n">print_progress_next</span><span class="p">();</span>                    <span class="c1">// print progress bar</span>
+<p>Use <code>print_info(message)</code> to print a message, and <code>print_error(message)</code>
+to print an error. To time a block of code create a <code>simple_timer</code> and
+get the elapsed time with <code>elapsed_format(timer)</code>.</p>
+<div class="highlight"><pre><span></span><code><span class="n">print_info</span><span class="p">(</span><span class="s">&quot;Message&quot;</span><span class="p">);</span>          <span class="c1">// print message</span>
+<span class="n">print_fatal</span><span class="p">(</span><span class="s">&quot;Error and exit&quot;</span><span class="p">);</span>  <span class="c1">// print error and exit</span>
+<span class="k">auto</span> <span class="n">timer</span> <span class="o">=</span> <span class="n">simple_timer</span><span class="p">{};</span>    <span class="c1">// start timer</span>
+<span class="n">print_info</span><span class="p">(</span><span class="s">&quot;elapsed: {}&quot;</span><span class="p">,</span>       <span class="c1">// print elapsed time</span>
+  <span class="n">elapsed_formatted</span><span class="p">(</span><span class="n">timer</span><span class="p">));</span>
 </code></pre></div>
 <h2 id="command-line-parsing">Command-Line Parsing</h2>
 <p>Yocto/Cli includes a simple command-line parser that supports optional
-and positional arguments, automatic help generation, and error checking.</p>
+arguments with automatic help generation and error checking. This parser
+is meant to be simple and force a command-line style where an app has several
+commands, all of which are options with default values.</p>
 <p>The command-line parser is initialized with <code>make_cli(name, help)</code> that takes
 a program name and a help string. Then add command-line options with
-<code>add_option(cli, name, value, help, check, alt, req)</code> for optional arguments and
-<code>add_argument(cli, name, value, help, check, req)</code> for positional arguments.
+<code>add_option(cli, name, value, help, check)</code> for optional arguments.
 In these commands, <code>name</code> is the option name, <code>value</code> is a reference to the
-variable that we want to set, <code>help</code> is a usage message, <code>alt</code> is the short
-option flag, and <code>req</code> determines whether the option is required, and <code>check</code>
+variable that we want to set, <code>help</code> is a usage message, and <code>check</code>
 is either a range of valid values er a list of valid choices.
 A help flag is automatically added.</p>
-<p>For positional arguments, the argument name is only used for printing help.
-For optional arguments, the command line is parsed for options named <code>--</code> 
-followed by the option <code>name</code> or <code>-</code> followed by the <code>alt</code> short name.
+<p>The command line is parsed for options named <code>--</code> followed by the option <code>name</code>.
 The type of each option is determined by the passed reference.
 The parser supports integers, floating point numbers, strings, boolean flags,
-enums and arrays of strings.</p>
-<p>An help command is added automatically and checked for printing help and exiting
-without errors.</p>
+enums, arrays and vectors.</p>
 <p>After adding all arguments, use <code>ok = parse_cli(cli, args, error)</code> to parse the
-command-line. If an error occurs, the parser throws <code>false</code> and stores in 
-<code>error</code> a message that can be printed to inform the user.</p>
+command-line. If an error occurs, the parser throws <code>false</code> and stores in
+<code>error</code> a message that can be printed to inform the user. You can also use 
+<code>parse_cli(cli, args)</code> in which case a <code>cli_error</code> exception is thrown if
+errors occur.</p>
 <div class="highlight"><pre><span></span><code><span class="k">auto</span> <span class="n">samples</span> <span class="o">=</span> <span class="mi">10</span><span class="p">;</span> <span class="k">auto</span> <span class="n">flag</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>                <span class="c1">// state</span>
 <span class="k">auto</span> <span class="n">out</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="n">s</span><span class="p">,</span> <span class="n">scene</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="n">s</span><span class="p">;</span>
 <span class="k">auto</span> <span class="n">scenes</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">string</span><span class="o">&gt;</span><span class="p">{};</span>
@@ -680,7 +550,12 @@ command-line. If an error occurs, the parser throws <code>false</code> and store
 <span class="k">auto</span> <span class="n">args</span> <span class="o">=</span> <span class="n">make_cli_args</span><span class="p">(</span><span class="n">argc</span><span class="p">,</span> <span class="n">argv</span><span class="p">);</span>          <span class="c1">// make a vector of args</span>
 <span class="k">auto</span> <span class="n">error</span> <span class="o">=</span> <span class="n">string</span><span class="p">{};</span>                          <span class="c1">// error string</span>
 <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">parse_cli</span><span class="p">(</span><span class="n">cli</span><span class="p">,</span> <span class="n">args</span><span class="p">,</span> <span class="n">error</span><span class="p">))</span>               <span class="c1">// parse args</span>
-  <span class="n">print_fatal</span><span class="p">(</span><span class="n">error</span><span class="p">);</span>                           <span class="c1">// exit with error</span>
+  <span class="n">print_error</span><span class="p">(</span><span class="n">error</span><span class="p">);</span>                           <span class="c1">// print error</span>
+<span class="k">try</span> <span class="p">{</span>
+  <span class="n">parse_cli</span><span class="p">(</span><span class="n">cli</span><span class="p">,</span> <span class="n">args</span><span class="p">);</span>                         <span class="c1">// parse args</span>
+<span class="p">}</span> <span class="k">catch</span><span class="p">(</span><span class="k">const</span> <span class="n">cli_error</span><span class="o">&amp;</span> <span class="n">error</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">print_error</span><span class="p">(</span><span class="n">error</span><span class="p">);</span>                           <span class="c1">// print error</span>
+<span class="p">}</span>
 </code></pre></div>
 <h2 id="command-line-commands">Command-Line Commands</h2>
 <p>The command line parser also support commands, that are created by
@@ -715,15 +590,6 @@ values. The command variable is called <code>command</code>.</p>
 filename in a directory where the config might be found, using 
 <code>add_option_with_config(cli, name, value, usage, config, alt)</code>.
 Here <code>config</code> is the filename of the optional config file.</p>
-<h2 id="command-line-positional-arguments-and-flags">Command-Line Positional Arguments And Flags</h2>
-<p>While for now positional arguments are supported, their use is deprecated.
-The same is true for the use of short flags, like <code>-h</code>.
-Th main reasons for this is to make the input to CLI tools more readable by 
-using long names for options and avoiding unnamed positional arguments.
-This is also a better match for the JSON config files and since internally
-the CLI uses JSON as a data model to process values.
-In future releases, positional arguments will be deprecated and eventually
-removed. </p>
                 
               
               
@@ -738,39 +604,6 @@ removed. </p>
       
         
 <footer class="md-footer">
-  
-    <nav class="md-footer__inner md-grid" aria-label="Footer">
-      
-        <a href="../yocto_trace/" class="md-footer__link md-footer__link--prev" rel="prev">
-          <div class="md-footer__button md-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
-          </div>
-          <div class="md-footer__title">
-            <div class="md-ellipsis">
-              <span class="md-footer__direction">
-                Previous
-              </span>
-              Path tracing
-            </div>
-          </div>
-        </a>
-      
-      
-        <a href="../yocto_sceneio/" class="md-footer__link md-footer__link--next" rel="next">
-          <div class="md-footer__title">
-            <div class="md-ellipsis">
-              <span class="md-footer__direction">
-                Next
-              </span>
-              Image, shape and scene serialization
-            </div>
-          </div>
-          <div class="md-footer__button md-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11H4z"/></svg>
-          </div>
-        </a>
-      
-    </nav>
   
   <div class="md-footer-meta md-typeset">
     <div class="md-footer-meta__inner md-grid">
