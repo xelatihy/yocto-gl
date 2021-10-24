@@ -199,7 +199,7 @@
       "smooth": true,
       "displacement": 0.02500000037252903,
       "displacement_tex": 3,
-      "uri": "sphere-displaced.obj"
+      "uri": "subdivs/sphere-displaced.obj"
     },
     {
       "name": "suzanne-subdiv",
@@ -207,14 +207,14 @@
       "subdivisions": 2,
       "catmullclark": true,
       "smooth": true,
-      "uri": "suzanne-subdiv.obj"
+      "uri": "subdivs/suzanne-subdiv.obj"
     },
     {
       "name": "cube-subdiv",
       "shape": 3,
       "subdivisions": 4,
       "catmullclark": true,
-      "uri": "cube-subdiv.obj"
+      "uri": "subdivs/cube-subdiv.obj"
     }
   ],
   "instances": [

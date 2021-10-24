@@ -330,7 +330,7 @@ def test(scene: odict, name: str):
   asset(scene, 'default')
   camera(scene, 'default')
   environment(scene, 'sky')
-  if name in ['materials1']:
+  if name in ['materials1', 'materials2', 'materials4']:
     arealights(scene, 'large')
   else:
     arealights(scene, 'default')
@@ -346,6 +346,10 @@ def test(scene: odict, name: str):
     instances(scene, ['sphere-sharpglass', 'sphere-roughglass', 'sphere-notopaque', 'sphere-sharpthinglass', 'sphere-roughthinglass'])
   elif name in ['materials4']:
     instances(scene, ['sphere-cloud', 'sphere-redglass', 'sphere-glass', 'sphere-jade', 'sphere-smoke'])
+  elif name in ['shapes1']:
+    instances(scene, ['sphere-uvgrid', 'flipcapuvsphere-uvgrid', 'disk-uvgrid', 'uvcylinder-uvgrid', 'cube-uvgrid'])
+  elif name in ['shapes2']:
+    instances(scene, ['cubesubdiv-uvgrid', 'suzannesubdiv-matte', 'displacedsubdiv-plastic', 'bunny-uvgrid', 'teapot-uvgrid'])
   else:
     raise NameError(name)
 
@@ -381,3 +385,6 @@ if __name__ == '__main__':
   make_scene('materials1')
   make_scene('materials2')
   make_scene('materials4')
+  make_scene('shapes1')
+  make_scene('shapes2')
+  make_scene('shapes3')

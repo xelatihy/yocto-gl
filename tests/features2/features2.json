@@ -203,7 +203,7 @@
     {
       "name": "suzanne-subdiv",
       "shape": 4,
-      "uri": "suzanne-subdiv.obj",
+      "uri": "subdivs/suzanne-subdiv.obj",
       "subdivisions": 2,
       "catmullclark": true,
       "smooth": true
@@ -211,7 +211,7 @@
     {
       "name": "sphere-displaced",
       "shape": 6,
-      "uri": "sphere-displaced.obj",
+      "uri": "subdivs/sphere-displaced.obj",
       "catmullclark": true,
       "smooth": true,
       "displacement": 0.02500000037252903,
