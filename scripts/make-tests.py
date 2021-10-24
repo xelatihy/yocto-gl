@@ -251,8 +251,9 @@ def make_scene(name: str, dirname: str = 'tests2'):
   print(name)
   if os.path.exists(f'{dirname}/{name}'): shutil.rmtree(f'{dirname}/{name}')
   os.mkdir(f'{dirname}/{name}')
-  os.mkdir(f'{dirname}/{name}/shapes')
-  os.mkdir(f'{dirname}/{name}/textures')
+  if scene['shapes']: os.mkdir(f'{dirname}/{name}/shapes')
+  if scene['textures']: os.mkdir(f'{dirname}/{name}/textures')
+  if scene['subdivs']: os.mkdir(f'{dirname}/{name}/subdivs')
   with open(f'{dirname}/{name}/{name}.json', 'w') as f:
     json.dump(scene, f, indent=2)
   for texture in scene['textures']:
@@ -260,6 +261,9 @@ def make_scene(name: str, dirname: str = 'tests2'):
     shutil.copy(f'{dirname}/_assets/{uri}', f'{dirname}/{name}/{uri}')
   for shape in scene['shapes']:
     uri = shape['uri']
+    shutil.copy(f'{dirname}/_assets/{uri}', f'{dirname}/{name}/{uri}')
+  for subdiv in scene['subdivs']:
+    uri = subdiv['uri']
     shutil.copy(f'{dirname}/_assets/{uri}', f'{dirname}/{name}/{uri}')
 
 if __name__ == '__main__':
