@@ -77,10 +77,11 @@ def environment(scene: odict, name: str) -> int:
 def shape(scene: odict, name: str) -> int:
   if name == 'none': return -1
   if find(scene['shapes'], name) < 0:
-    if name in ['floor', 'sphere', 'cube', 'bunny', 
+    if name in ['floor', 'sphere', 'cube', 'bunny', 'teapot', 'disk',
                 'arealight1', 'arealight2', 'largearealight1', 'largearealight2', 
-                'suzannesubdiv', 'displacedsubdiv',
-                'hairball', 'hairballi']:
+                'suzannesubdiv', 'displacedsubdiv', 'cubesubdiv',
+                'hairball', 'hairballi',
+                'flipcapuvsphere', 'uvcylinder']:
       scene['shapes'] += [{
         'name': name,
         'uri': 'shapes/' + name + '.ply'
@@ -110,6 +111,15 @@ def subdiv(scene: odict, name: str) -> int:
         'smooth': True,
         'displacement': 0.025,
         'displacement_tex': texture(scene, 'bumpsdisplacement')
+      }]
+    elif name in ['cubesubdiv']:
+      scene['subdivs'] += [{
+        'name': name,
+        'shape': shape(scene, name),
+        'uri': 'subdivs/' + name + '.obj',
+        'subdivisions': 4,
+        'catmullclark': True,
+        'smooth': True
       }]
     else:
       raise NameError(name)
@@ -152,6 +162,13 @@ def material(scene: odict, name: str) -> int:
         'name': name,
         'type': 'matte',
         'color': [0.7, 0.7, 0.7]
+      }]
+    elif name in ['plastic']:
+      scene['materials'] += [{
+        'name': name,
+        'type': 'glossy',
+        'color': [0.5, 0.7, 0.5],
+        'roughness': 0.2
       }]
     elif name in ['roughplastic']:
       scene['materials'] += [{
@@ -387,4 +404,3 @@ if __name__ == '__main__':
   make_scene('materials4')
   make_scene('shapes1')
   make_scene('shapes2')
-  make_scene('shapes3')
