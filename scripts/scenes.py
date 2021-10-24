@@ -34,7 +34,7 @@ def view(directory='mcguire', scene='*', format='json', mode='path', envname='')
             if format == 'pbrt':
                 with open(filename) as f:
                     if 'WorldBegin' not in f.read(): continue
-            cmd = f'../yocto-gl/bin/yscene view {options} {extraoptions} {envoptions} {filename}'
+            cmd = f'../yocto-gl/bin/yscene view {options} {extraoptions} {envoptions} --scene {filename}'
             print(cmd, file=sys.stderr)
             os.system(cmd)
 
@@ -79,7 +79,7 @@ def render(directory='mcguire', scene='*', format='json', mode='path'):
             os.system(cmd)
             for idx, cam in enumerate(extracams, 1):
                 imagename = f'{directory}/{outprefix}-{format}/{basename}-c{idx}.{outformat}'
-                cmd = f'../yocto-gl/bin/yscene render --output {imagename} --camera {cam} {options} {extraoptions} {filename}'
+                cmd = f'../yocto-gl/bin/yscene render --output {imagename} --camera {cam} {options} {extraoptions} --scene {filename}'
                 print(cmd, file=sys.stderr)
                 os.system(cmd)
 
@@ -106,7 +106,7 @@ def info(directory='mcguire', scene='*', format='json', mode='default'):
             if format == 'pbrt':
                 with open(filename) as f:
                     if 'WorldBegin' not in f.read(): continue
-            cmd = f'../yocto-gl/bin/yscene info {options} {extraoptions} {filename}'
+            cmd = f'../yocto-gl/bin/yscene info {options} {extraoptions} --scene {filename}'
             print(cmd, file=sys.stderr)
             os.system(cmd)
 
@@ -154,7 +154,7 @@ def tonemap(directory='mcguire', scene='*', format='json', mode='filmic'):
             glob.glob(f'{directory}/{outprefix}-{format}/{scene}.exr')):
         imagename = filename.replace(f'.exr', f'.{outformat}').replace(
             f'.hdr', f'.{outformat}')
-        cmd = f'../yocto-gl/bin/yimage convert --output {imagename} {options} {filename}'
+        cmd = f'../yocto-gl/bin/yimage convert --output {imagename} {options} --image {filename}'
         print(cmd, file=sys.stderr)
         os.system(cmd)
         img = Image.open(imagename)
