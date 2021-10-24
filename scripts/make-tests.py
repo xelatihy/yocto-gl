@@ -78,7 +78,7 @@ def shape(scene: odict, name: str) -> int:
   if name == 'none': return -1
   if find(scene['shapes'], name) < 0:
     if name in ['floor', 'sphere', 'cube', 'bunny', 
-                'arealight1', 'arealight2', 
+                'arealight1', 'arealight2', 'largearealight1', 'largearealight2', 
                 'suzannesubdiv', 'displacedsubdiv',
                 'hairball', 'hairballi']:
       scene['shapes'] += [{
@@ -132,6 +132,13 @@ def material(scene: odict, name: str) -> int:
         'emission': [20, 20, 20],
         'color': [0, 0, 0]
       }]
+    elif name in ['largearealight1', 'largearealight2']:
+      scene['materials'] += [{
+        'name': name,
+        'type': 'matte',
+        'emission': [10, 10, 10],
+        'color': [0, 0, 0]
+      }]
     elif name in ['uvgrid']:
       scene['materials'] += [{
         'name': name,
@@ -140,12 +147,25 @@ def material(scene: odict, name: str) -> int:
         'roughness': 0.2,
         'color_tex': texture(scene, name)
       }]
+    elif name in ['matte']:
+      scene['materials'] += [{
+        'name': name,
+        'type': 'matte',
+        'color': [0.7, 0.7, 0.7]
+      }]
     elif name in ['roughplastic']:
       scene['materials'] += [{
         'name': name,
         'type': 'glossy',
         'color': [0.5, 0.7, 0.5],
         'roughness': 0.2
+      }]
+    elif name in ['sharpplastic']:
+      scene['materials'] += [{
+        'name': name,
+        'type': 'glossy',
+        'color': [0.5, 0.5, 0.7],
+        'roughness': 0
       }]
     elif name in ['jade']:
       scene['materials'] += [{
@@ -161,6 +181,13 @@ def material(scene: odict, name: str) -> int:
         'type': 'reflective',
         'color': [0.66, 0.45, 0.34],
         'roughness': 0.2
+      }]
+    elif name in ['sharpmetal']:
+      scene['materials'] += [{
+        'name': name,
+        'type': 'reflective',
+        'color': [0.7, 0.7, 0.7],
+        'roughness': 0
       }]
     elif name in ['redglass']:
       scene['materials'] += [{
@@ -214,29 +241,48 @@ def instances(scene: odict, names: list, offset: list = [0, 0, 0], stride = 0.2,
 
 def arealights(scene: odict, name: str):
   if name == 'none': return -1
-  instance(scene, 'arealight1', [
-      0.8944271802902222, -0.0, 0.4472135901451111, 0.27562475204467773,
-      0.7874992489814758, -0.5512495040893555, -0.3521803617477417,
-      0.6163156628608704, 0.7043607234954834, -0.4000000059604645,
-      0.800000011920929, 0.800000011920929])
-  instance(scene, 'arealight2', [
-      0.8944271802902222, 0.0, -0.4472135901451111, -0.27562475204467773,
-      0.7874992489814758, -0.5512495040893555, 0.3521803617477417,
-      0.6163156628608704, 0.7043607234954834, 0.4000000059604645,
-      0.800000011920929, 0.800000011920929])
+  if name == 'default':
+    instance(scene, 'arealight1', [
+        0.8944271802902222, -0.0, 0.4472135901451111, 0.27562475204467773,
+        0.7874992489814758, -0.5512495040893555, -0.3521803617477417,
+        0.6163156628608704, 0.7043607234954834, -0.4000000059604645,
+        0.800000011920929, 0.800000011920929])
+    instance(scene, 'arealight2', [
+        0.8944271802902222, 0.0, -0.4472135901451111, -0.27562475204467773,
+        0.7874992489814758, -0.5512495040893555, 0.3521803617477417,
+        0.6163156628608704, 0.7043607234954834, 0.4000000059604645,
+        0.800000011920929, 0.800000011920929])
+  elif name in ['large']:
+    instance(scene, 'largearealight1', [
+        0.8944271802902222, -0.0, 0.4472135901451111, 0.2873478829860687,
+        0.766261100769043, -0.5746957659721375, -0.3426823318004608,
+        0.6425293684005737, 0.6853646636009216, -0.800000011920929,
+        1.600000023841858, 1.600000023841858])
+    instance(scene, 'largearealight2', [
+        0.8944271802902222, 0.0, -0.4472135901451111, -0.2873478829860687,
+        0.766261100769043, -0.5746957659721375, 0.3426823318004608,
+        0.6425293684005737, 0.6853646636009216, 0.800000011920929,
+        1.600000023841858, 1.600000023841858])
+  else:
+      raise NameError(name)
 
 def test(scene: odict, name: str):
   init(scene)
   asset(scene, 'default')
   camera(scene, 'default')
   environment(scene, 'sky')
-  arealights(scene, 'small')
+  if name in ['materials1']:
+    arealights(scene, 'large')
+  else:
+    arealights(scene, 'default')
   instance(scene, 'floor')
   if name in ['features1']:
     instances(scene, ['bunny-uvgrid', 'sphere-redglass', 'bunny-jade', 'sphere-bumped', 'bunny-roughmetal'])
   elif name in ['features2']:
     instances(scene, ['sphere-uvgrid', 'suzannesubdiv-roughplastic', 'hairball-hair', 'displacedsubdiv-roughplastic', 'cube-uvgrid'],
       interior=['','','hairballi-hair','',''])
+  elif name in ['materials1']:
+    instances(scene, ['sphere-sharpplastic', 'sphere-roughplastic', 'sphere-matte', 'sphere-sharpmetal', 'sphere-roughmetal'])
   else:
     raise NameError(name)
 
@@ -269,3 +315,4 @@ def make_scene(name: str, dirname: str = 'tests2'):
 if __name__ == '__main__':
   make_scene('features1')
   make_scene('features2')
+  make_scene('materials1')
