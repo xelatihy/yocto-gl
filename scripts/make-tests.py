@@ -19,26 +19,26 @@ def find(array: list, name: str) -> int:
 
 def asset(scene: odict, name: str) -> int :
   scene['asset'] = {
-    "copyright": "Model by Fabio Pellacini from github.com/~xelatihy/yocto-gl",
-    "generator": "Yocto/GL - https://github.com/xelatihy/yocto-gl",
-    "version": "4.2"
+    'copyright': 'Model by Fabio Pellacini from github.com/~xelatihy/yocto-gl',
+    'generator': 'Yocto/GL - https://github.com/xelatihy/yocto-gl',
+    'version': '4.2'
   }
   return 0
 
 def camera(scene: odict, name: str) -> int:
   if name == 'none': return -1
   if find(scene['cameras'], name) < 0:
-    if name == "default":
+    if name == 'default':
       scene['cameras'] += [{
-        "name": "default",
-        "frame": [
+        'name': 'default',
+        'frame': [
           0.8151804208755493, -0.0, 0.579207181930542, 0.16660168766975403,
           0.9577393531799316, -0.23447643220424652, -0.5547295212745667,
           0.28763750195503235, 0.7807304263114929, -0.75, 0.4000000059604645,
           0.8999999761581421
         ],
-        "aspect": 2.4000000953674316,
-        "focus": 1.2168092727661133
+        'aspect': 2.4000000953674316,
+        'focus': 1.2168092727661133
       }]
     else:
       raise NameError(name)
@@ -47,7 +47,7 @@ def camera(scene: odict, name: str) -> int:
 def texture(scene: odict, name: str) -> int:
   if name == 'none': return -1
   if find(scene['textures'], name) < 0:
-    if name in ['floor', 'uvgrid', 'bumps-normal']:
+    if name in ['floor', 'uvgrid', 'bumpsnormal', 'bumpsdisplacement']:
       scene['textures'] += [{
         'name': name,
         'uri': 'textures/' + name + '.png'
@@ -77,14 +77,43 @@ def environment(scene: odict, name: str) -> int:
 def shape(scene: odict, name: str) -> int:
   if name == 'none': return -1
   if find(scene['shapes'], name) < 0:
-    if name in ['floor', 'sphere', 'bunny', 'arealight1', 'arealight2']:
+    if name in ['floor', 'sphere', 'cube', 'bunny', 
+                'arealight1', 'arealight2', 
+                'suzannesubdiv', 'displacedsubdiv',
+                'hairball', 'hairballi']:
       scene['shapes'] += [{
         'name': name,
-        'uri': 'shapes/' + name + ".ply"
+        'uri': 'shapes/' + name + '.ply'
       }]
     else:
       raise NameError(name)
   return find(scene['shapes'], name)
+
+def subdiv(scene: odict, name: str) -> int:
+  if name == 'none': return -1
+  if find(scene['subdivs'], name) < 0:
+    if name in ['suzannesubdiv']:
+      scene['subdivs'] += [{
+        'name': name,
+        'shape': shape(scene, name),
+        'uri': 'subdivs/' + name + '.obj',
+        'subdivisions': 2,
+        'catmullclark': True,
+        'smooth': True
+      }]
+    elif name in ['displacedsubdiv']:
+      scene['subdivs'] += [{
+        'name': name,
+        'shape': shape(scene, name),
+        'uri': 'subdivs/' + name + '.obj',
+        'catmullclark': True,
+        'smooth': True,
+        'displacement': 0.025,
+        'displacement_tex': texture(scene, 'bumpsdisplacement')
+      }]
+    else:
+      raise NameError(name)
+  return find(scene['subdivs'], name)
 
 def material(scene: odict, name: str) -> int:
   if name == 'none': return -1
@@ -110,6 +139,13 @@ def material(scene: odict, name: str) -> int:
         'color': [1, 1, 1],
         'roughness': 0.2,
         'color_tex': texture(scene, name)
+      }]
+    elif name in ['roughplastic']:
+      scene['materials'] += [{
+        'name': name,
+        'type': 'glossy',
+        'color': [0.5, 0.7, 0.5],
+        'roughness': 0.2
       }]
     elif name in ['jade']:
       scene['materials'] += [{
@@ -139,7 +175,13 @@ def material(scene: odict, name: str) -> int:
         'type': 'glossy',
         'color': [0.5, 0.7, 0.5],
         'roughness': 0.2,
-        'normal_tex': texture(scene, 'bumps-normal')
+        'normal_tex': texture(scene, 'bumpsnormal')
+      }]
+    elif name in ['hair']:
+      scene['materials'] += [{
+        'name': name,
+        'type': 'matte',
+        'color': [0.7, 0.7, 0.7]
       }]
     else:
       raise NameError(name)
@@ -155,11 +197,18 @@ def instance(scene: odict, name: str, frame: list = []):
       'shape': shape(scene, shape_name),
       'material': material(scene, mat_name)
     }]
+    if 'subdiv' in shape_name:
+      subdiv(scene, shape_name)
   return find(scene['instances'], name)
 
-def instances(scene: odict, names: list, offset: list = [0, 0, 0], stride = 0.2):
+def instances(scene: odict, names: list, offset: list = [0, 0, 0], stride = 0.2, interior: list = []):
   for idx, name in enumerate(names):
     origin = [ offset[0] + stride * (idx - len(names) // 2), offset[1], offset[2] ]
+    frame = [1, 0, 0, 0, 1, 0, 0, 0, 1] + origin
+    instance(scene, name, frame)
+  for idx, name in enumerate(interior):
+    if name == '': continue
+    origin = [ offset[0] + stride * (idx - len(interior) // 2), offset[1], offset[2] ]
     frame = [1, 0, 0, 0, 1, 0, 0, 0, 1] + origin
     instance(scene, name, frame)
 
@@ -185,6 +234,9 @@ def test(scene: odict, name: str):
   instance(scene, 'floor')
   if name in ['features1']:
     instances(scene, ['bunny-uvgrid', 'sphere-redglass', 'bunny-jade', 'sphere-bumped', 'bunny-roughmetal'])
+  elif name in ['features2']:
+    instances(scene, ['sphere-uvgrid', 'suzannesubdiv-roughplastic', 'hairball-hair', 'displacedsubdiv-roughplastic', 'cube-uvgrid'],
+      interior=['','','hairballi-hair','',''])
   else:
     raise NameError(name)
 
@@ -212,3 +264,4 @@ def make_scene(name: str, dirname: str = 'tests2'):
 
 if __name__ == '__main__':
   make_scene('features1')
+  make_scene('features2')
