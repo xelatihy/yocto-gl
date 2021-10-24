@@ -375,7 +375,7 @@ def make_test(name: str) -> odict:
   test(scene, name)
   return scene
 
-def make_scene(name: str, dirname: str = 'tests2'):
+def make_scene(name: str, dirname: str = 'tests'):
   import os, json, shutil
   scene = make_test(name)
   print(name)
