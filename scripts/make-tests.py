@@ -167,6 +167,13 @@ def material(scene: odict, name: str) -> int:
         'color': [0.5, 0.5, 0.7],
         'roughness': 0
       }]
+    elif name in ['glass']:
+      scene['materials'] += [{
+        'name': name,
+        'type': 'refractive',
+        'color': [1.0, 1.0, 1.0],
+        'roughness': 0
+      }]
     elif name in ['jade']:
       scene['materials'] += [{
         'name': name,
@@ -174,6 +181,22 @@ def material(scene: odict, name: str) -> int:
         'color': [0.5, 0.5, 0.5],
         'roughness': 0,
         'scattering': [0.3, 0.6, 0.3]
+      }]
+    elif name in ['cloud']:
+      scene['materials'] += [{
+        'name': name,
+        'type': 'volume',
+        'color': [0.5, 0.5, 0.5],
+        'roughness': 0,
+        'scattering': [0.9, 0.9, 0.9]
+      }]
+    elif name in ['smoke']:
+      scene['materials'] += [{
+        'name': name,
+        'type': 'volume',
+        'color': [0.65, 0.65, 0.65],
+        'roughness': 0,
+        'scattering': [0.2, 0.2, 0.2]
       }]
     elif name in ['roughmetal']:
       scene['materials'] += [{
@@ -321,6 +344,8 @@ def test(scene: odict, name: str):
     instances(scene, ['sphere-sharpplastic', 'sphere-roughplastic', 'sphere-matte', 'sphere-sharpmetal', 'sphere-roughmetal'])
   elif name in ['materials2']:
     instances(scene, ['sphere-sharpglass', 'sphere-roughglass', 'sphere-notopaque', 'sphere-sharpthinglass', 'sphere-roughthinglass'])
+  elif name in ['materials4']:
+    instances(scene, ['sphere-cloud', 'sphere-redglass', 'sphere-glass', 'sphere-jade', 'sphere-smoke'])
   else:
     raise NameError(name)
 
@@ -355,3 +380,4 @@ if __name__ == '__main__':
   make_scene('features2')
   make_scene('materials1')
   make_scene('materials2')
+  make_scene('materials4')
