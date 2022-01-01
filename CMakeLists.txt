@@ -2,10 +2,11 @@ cmake_minimum_required (VERSION 3.22)
 
 project (yocto_gl VERSION 4.0)
 
-option(YOCTO_OPENGL "Build OpenGL apps" ON)
-option(YOCTO_DENOISE "Build denoise app based on Intel OIDN" OFF)
-option(YOCTO_EMBREE "Use Intel's Embree raytracer" OFF)
-option(YOCTO_TESTING "Enable testing" ON)
+option(YOCTO_APPS "Build apps" ON)
+option(YOCTO_OPENGL "Enable OpenGL" ON)
+option(YOCTO_DENOISE "Enable denoising with Intel's OIDN" OFF)
+option(YOCTO_EMBREE "Enable ray casting with Intel's Embree" OFF)
+option(YOCTO_TESTING "Enable testing" OFF)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -28,4 +29,6 @@ endif(GENERATOR_IS_MULTI_CONFIG)
 
 add_subdirectory(exts)
 add_subdirectory(libs)
-add_subdirectory(apps)
+if(YOCTO_APPS)
+  add_subdirectory(apps)
+endif(YOCTO_APPS)
