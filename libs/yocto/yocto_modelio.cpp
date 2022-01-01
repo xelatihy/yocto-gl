@@ -3608,9 +3608,9 @@ struct pbrt_medium {
         vroughness.first == array<float, 3>{0, 0, 0})
       return;
     auto uroughness_mean =
-        (uroughness.first[0], uroughness.first[1], uroughness.first[2]) / 3;
+        (uroughness.first[0] + uroughness.first[1] + uroughness.first[2]) / 3;
     auto vroughness_mean =
-        (vroughness.first[0], vroughness.first[1], vroughness.first[2]) / 3;
+        (vroughness.first[0] + vroughness.first[1] + vroughness.first[2]) / 3;
     roughness = (uroughness_mean + vroughness_mean) / 2;
     // from pbrt code
     if (remaproughness) {

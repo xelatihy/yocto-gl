@@ -14,7 +14,7 @@
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "RelWithDebInfo",
         "YOCTO_EMBREE": "ON",
-        "YOCTO_DENOISE": "ON",
+        "YOCTO_DENOISE": "OFF",
         "YOCTO_OPENGL": "ON"
       }
     },
@@ -26,7 +26,7 @@
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
         "YOCTO_EMBREE": "ON",
-        "YOCTO_DENOISE": "ON",
+        "YOCTO_DENOISE": "OFF",
         "YOCTO_OPENGL": "ON"
       }
     }

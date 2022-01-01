@@ -3864,9 +3864,9 @@ static bool save_json_scene(const string& filename, const scene_data& scene,
           element, "subdivisions", subdiv.subdivisions, default_.subdivisions);
       set_val(
           element, "catmullclark", subdiv.catmullclark, default_.catmullclark);
-      set_val(element, "smooth", subdiv.smooth, default_.subdivisions);
+      set_val(element, "smooth", subdiv.smooth, default_.smooth);
       set_val(
-          element, "displacement", subdiv.displacement, default_.subdivisions);
+          element, "displacement", subdiv.displacement, default_.displacement);
       set_val(element, "displacement_tex",
           get_texture_name(scene, subdiv.displacement_tex), "");
     }
