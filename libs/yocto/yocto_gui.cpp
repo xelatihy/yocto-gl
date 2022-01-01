@@ -1679,7 +1679,7 @@ static void draw_scene(glscene_state& glscene, const scene_data& scene,
     glUniform3f(glGetUniformLocation(program, "ambient"), 0, 0, 0);
     glUniform1i(glGetUniformLocation(program, "lights_num"),
         (int)lights_direction.size());
-    for (auto lid = 0; lid < lights_direction.size(); lid++) {
+    for (auto lid = 0; lid < (int)lights_direction.size(); lid++) {
       auto is        = std::to_string(lid);
       auto direction = transform_direction(camera.frame, lights_direction[lid]);
       glUniform3f(glGetUniformLocation(
@@ -2232,7 +2232,7 @@ bool draw_gui_combobox(const char* lbl, int& value,
     if (value < 0) ImGui::SetItemDefaultFocus();
     ImGui::PopID();
   }
-  for (auto i = 0; i < labels.size(); i++) {
+  for (auto i = 0; i < (int)labels.size(); i++) {
     ImGui::PushID(i);
     if (ImGui::Selectable(labels[i].c_str(), value == i)) value = i;
     if (value == i) ImGui::SetItemDefaultFocus();
@@ -2252,7 +2252,7 @@ bool draw_gui_combobox(const char* lbl, string& value,
     if (value.empty()) ImGui::SetItemDefaultFocus();
     ImGui::PopID();
   }
-  for (auto i = 0; i < labels.size(); i++) {
+  for (auto i = 0; i < (int)labels.size(); i++) {
     ImGui::PushID(i);
     if (ImGui::Selectable(labels[i].c_str(), value == labels[i]))
       value = labels[i];

@@ -1416,7 +1416,7 @@ static trace_light& add_light(trace_lights& lights) {
 trace_lights make_lights(const scene_data& scene, const trace_params& params) {
   auto lights = trace_lights{};
 
-  for (auto handle = 0; handle < scene.instances.size(); handle++) {
+  for (auto handle = 0; handle < (int)scene.instances.size(); handle++) {
     auto& instance = scene.instances[handle];
     auto& material = scene.materials[instance.material];
     if (material.emission == vec3f{0, 0, 0}) continue;
@@ -1427,7 +1427,7 @@ trace_lights make_lights(const scene_data& scene, const trace_params& params) {
     light.environment = invalidid;
     if (!shape.triangles.empty()) {
       light.elements_cdf = vector<float>(shape.triangles.size());
-      for (auto idx = 0; idx < light.elements_cdf.size(); idx++) {
+      for (auto idx = 0; idx < (int)light.elements_cdf.size(); idx++) {
         auto& t                 = shape.triangles[idx];
         light.elements_cdf[idx] = triangle_area(
             shape.positions[t.x], shape.positions[t.y], shape.positions[t.z]);
@@ -1436,7 +1436,7 @@ trace_lights make_lights(const scene_data& scene, const trace_params& params) {
     }
     if (!shape.quads.empty()) {
       light.elements_cdf = vector<float>(shape.quads.size());
-      for (auto idx = 0; idx < light.elements_cdf.size(); idx++) {
+      for (auto idx = 0; idx < (int)light.elements_cdf.size(); idx++) {
         auto& t                 = shape.quads[idx];
         light.elements_cdf[idx] = quad_area(shape.positions[t.x],
             shape.positions[t.y], shape.positions[t.z], shape.positions[t.w]);
@@ -1444,7 +1444,7 @@ trace_lights make_lights(const scene_data& scene, const trace_params& params) {
       }
     }
   }
-  for (auto handle = 0; handle < scene.environments.size(); handle++) {
+  for (auto handle = 0; handle < (int)scene.environments.size(); handle++) {
     auto& environment = scene.environments[handle];
     if (environment.emission == vec3f{0, 0, 0}) continue;
     auto& light       = add_light(lights);
@@ -1453,7 +1453,7 @@ trace_lights make_lights(const scene_data& scene, const trace_params& params) {
     if (environment.emission_tex != invalidid) {
       auto& texture      = scene.textures[environment.emission_tex];
       light.elements_cdf = vector<float>(texture.width * texture.height);
-      for (auto idx = 0; idx < light.elements_cdf.size(); idx++) {
+      for (auto idx = 0; idx < (int)light.elements_cdf.size(); idx++) {
         auto ij    = vec2i{idx % texture.width, idx / texture.width};
         auto th    = (ij.y + 0.5f) * pif / texture.height;
         auto value = lookup_texture(texture, ij.x, ij.y);

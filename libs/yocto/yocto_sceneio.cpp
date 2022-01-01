@@ -4512,7 +4512,8 @@ static bool load_gltf_scene(
             auto ctype  = gaccessor.value("componentType", 0);
             if (ctype == 5121) {
               if (stride == 0) stride = components * 1;
-              for (auto idx = 0; idx < count; idx++, current += stride) {
+              for (auto idx = (size_t)0; idx < count;
+                   idx++, current += stride) {
                 for (auto comp = 0; comp < components; comp++) {
                   data[idx * dcomponents + comp] =
                       *(byte*)(current + comp * 1) / 255.0f;
@@ -4520,7 +4521,8 @@ static bool load_gltf_scene(
               }
             } else if (ctype == 5123) {
               if (stride == 0) stride = components * 2;
-              for (auto idx = 0; idx < count; idx++, current += stride) {
+              for (auto idx = (size_t)0; idx < count;
+                   idx++, current += stride) {
                 for (auto comp = 0; comp < components; comp++) {
                   data[idx * dcomponents + comp] =
                       *(ushort*)(current + comp * 2) / 65535.0f;
@@ -4528,7 +4530,8 @@ static bool load_gltf_scene(
               }
             } else if (ctype == 5126) {
               if (stride == 0) stride = components * 4;
-              for (auto idx = 0; idx < count; idx++, current += stride) {
+              for (auto idx = (size_t)0; idx < count;
+                   idx++, current += stride) {
                 for (auto comp = 0; comp < components; comp++) {
                   data[idx * dcomponents + comp] = *(
                       float*)(current + comp * 4);
@@ -4548,28 +4551,28 @@ static bool load_gltf_scene(
           if (!gprimitive.contains("indices")) {
             if (mode == 4) {  // triangles
               shape.triangles.resize(shape.positions.size() / 3);
-              for (auto i = 0; i < shape.positions.size() / 3; i++)
+              for (auto i = 0; i < (int)shape.positions.size() / 3; i++)
                 shape.triangles[i] = {i * 3 + 0, i * 3 + 1, i * 3 + 2};
             } else if (mode == 6) {  // fans
               shape.triangles.resize(shape.positions.size() - 2);
-              for (auto i = 2; i < shape.positions.size(); i++)
+              for (auto i = 2; i < (int)shape.positions.size(); i++)
                 shape.triangles[i - 2] = {0, i - 1, i};
             } else if (mode == 5) {  // strips
               shape.triangles.resize(shape.positions.size() - 2);
-              for (auto i = 2; i < shape.positions.size(); i++)
+              for (auto i = 2; i < (int)shape.positions.size(); i++)
                 shape.triangles[i - 2] = {i - 2, i - 1, i};
             } else if (mode == 1) {  // lines
               shape.lines.resize(shape.positions.size() / 2);
-              for (auto i = 0; i < shape.positions.size() / 2; i++)
+              for (auto i = 0; i < (int)shape.positions.size() / 2; i++)
                 shape.lines[i] = {i * 2 + 0, i * 2 + 1};
             } else if (mode == 2) {  // lines loops
               shape.lines.resize(shape.positions.size());
-              for (auto i = 1; i < shape.positions.size(); i++)
+              for (auto i = 1; i < (int)shape.positions.size(); i++)
                 shape.lines[i - 1] = {i - 1, i};
               shape.lines.back() = {(int)shape.positions.size() - 1, 0};
             } else if (mode == 3) {  // lines strips
               shape.lines.resize(shape.positions.size() - 1);
-              for (auto i = 1; i < shape.positions.size(); i++)
+              for (auto i = 1; i < (int)shape.positions.size(); i++)
                 shape.lines[i - 1] = {i - 1, i};
             } else if (mode == 0) {  // points strips
               return parse_error();
@@ -4593,17 +4596,20 @@ static bool load_gltf_scene(
             auto ctype  = gaccessor.value("componentType", 0);
             if (ctype == 5121) {
               if (stride == 0) stride = 1;
-              for (auto idx = 0; idx < count; idx++, current += stride) {
+              for (auto idx = (size_t)0; idx < count;
+                   idx++, current += stride) {
                 indices[idx] = (int)*(byte*)current;
               }
             } else if (ctype == 5123) {
               if (stride == 0) stride = 2;
-              for (auto idx = 0; idx < count; idx++, current += stride) {
+              for (auto idx = (size_t)0; idx < count;
+                   idx++, current += stride) {
                 indices[idx] = (int)*(ushort*)current;
               }
             } else if (ctype == 5125) {
               if (stride == 0) stride = 4;
-              for (auto idx = 0; idx < count; idx++, current += stride) {
+              for (auto idx = (size_t)0; idx < count;
+                   idx++, current += stride) {
                 indices[idx] = (int)*(uint*)current;
               }
             } else {
@@ -5363,7 +5369,7 @@ static bool cli_to_json_value(ordered_json& json, const string& arg) {
 }
 static pair<bool, int> cli_to_json_option(
     ordered_json& json, const vector<string>& args, int pos) {
-  if (pos >= args.size() || args[pos].find("--") == 0) {
+  if (pos >= (int)args.size() || args[pos].find("--") == 0) {
     json = true;
     return {true, pos};
   } else {
@@ -5386,7 +5392,7 @@ static pair<bool, int> cli_to_json_option(
 }
 static bool cli_to_json_command(
     ordered_json& json, const vector<string>& args, int pos) {
-  if (pos >= args.size()) return true;
+  if (pos >= (int)args.size()) return true;
   if (args[pos].find("--") == 0) {
     while (pos < (int)args.size() && args[pos].find("--") == 0) {
       auto result = cli_to_json_option(
