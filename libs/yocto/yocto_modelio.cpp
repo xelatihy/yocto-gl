@@ -761,7 +761,7 @@ bool load_ply(const string& filename, ply_model& ply, string& error) {
   // read data -------------------------------------
   if (ply.format == ply_format::ascii) {
     for (auto& elem : ply.elements) {
-      for (auto idx = 0; idx < elem.count; idx++) {
+      for (auto idx = (size_t)0; idx < elem.count; idx++) {
         if (!read_line(data_view, str)) return read_error();
         for (auto& prop : elem.properties) {
           if (prop.is_list)
@@ -818,7 +818,7 @@ bool load_ply(const string& filename, ply_model& ply, string& error) {
   } else {
     auto big_endian = ply.format == ply_format::binary_big_endian;
     for (auto& elem : ply.elements) {
-      for (auto idx = 0; idx < elem.count; idx++) {
+      for (auto idx = (size_t)0; idx < elem.count; idx++) {
         for (auto& prop : elem.properties) {
           if (prop.is_list) {
             if (!read_value(
@@ -934,7 +934,7 @@ bool save_ply(const string& filename, const ply_model& ply, string& error) {
 
     for (auto& elem : ply.elements) {
       auto cur = vector<size_t>(elem.properties.size(), 0);
-      for (auto idx = 0; idx < elem.count; idx++) {
+      for (auto idx = (size_t)0; idx < elem.count; idx++) {
         for (auto& prop : elem.properties) {
           if (prop.is_list)
             format_values(buffer, "{} ", (int)prop.ldata_u8[idx]);
@@ -988,8 +988,8 @@ bool save_ply(const string& filename, const ply_model& ply, string& error) {
     auto big_endian = ply.format == ply_format::binary_big_endian;
     for (auto& elem : ply.elements) {
       auto cur = vector<size_t>(elem.properties.size(), 0);
-      for (auto idx = 0; idx < elem.count; idx++) {
-        for (auto pidx = 0; pidx < elem.properties.size(); pidx++) {
+      for (auto idx = (size_t)0; idx < elem.count; idx++) {
+        for (auto pidx = (size_t)0; pidx < elem.properties.size(); pidx++) {
           auto& prop = elem.properties[pidx];
           if (prop.is_list) write_value(buffer, prop.ldata_u8[idx], big_endian);
           auto vcount = prop.is_list ? prop.ldata_u8[idx] : 1;
@@ -1088,7 +1088,7 @@ namespace yocto {
 
   // texture params
   auto last = string();
-  for (auto i = 0; i < tokens.size() - 1; i++) {
+  for (auto i = 0; i < (int)tokens.size() - 1; i++) {
     if (tokens[i] == "-bm") info.scale = (float)atof(tokens[i + 1].c_str());
     if (tokens[i] == "-clamp") info.clamp = true;
   }
@@ -2181,7 +2181,7 @@ void add_texcoords(
 }
 void add_triangles(obj_shape& shape, const vector<array<int, 3>>& triangles,
     int material, bool has_normals, bool has_texcoord) {
-  for (auto idx = 0; idx < triangles.size(); idx++) {
+  for (auto idx = 0; idx < (int)triangles.size(); idx++) {
     auto& triangle = triangles[idx];
     for (auto c = 0; c < 3; c++) {
       shape.vertices.push_back({
@@ -2195,7 +2195,7 @@ void add_triangles(obj_shape& shape, const vector<array<int, 3>>& triangles,
 }
 void add_quads(obj_shape& shape, const vector<array<int, 4>>& quads,
     int material, bool has_normals, bool has_texcoord) {
-  for (auto idx = 0; idx < quads.size(); idx++) {
+  for (auto idx = 0; idx < (int)quads.size(); idx++) {
     auto& quad = quads[idx];
     auto  nv   = quad[2] == quad[3] ? 3 : 4;
     for (auto c = 0; c < nv; c++) {
@@ -2210,7 +2210,7 @@ void add_quads(obj_shape& shape, const vector<array<int, 4>>& quads,
 }
 void add_lines(obj_shape& shape, const vector<array<int, 2>>& lines,
     int material, bool has_normals, bool has_texcoord) {
-  for (auto idx = 0; idx < lines.size(); idx++) {
+  for (auto idx = 0; idx < (int)lines.size(); idx++) {
     auto& line = lines[idx];
     for (auto c = 0; c < 2; c++) {
       shape.vertices.push_back({
@@ -2224,7 +2224,7 @@ void add_lines(obj_shape& shape, const vector<array<int, 2>>& lines,
 }
 void add_points(obj_shape& shape, const vector<int>& points, int material,
     bool has_normals, bool has_texcoord) {
-  for (auto idx = 0; idx < points.size(); idx++) {
+  for (auto idx = 0; idx < (int)points.size(); idx++) {
     auto& point = points[idx];
     shape.vertices.push_back({
         point + 1,
@@ -2237,7 +2237,7 @@ void add_points(obj_shape& shape, const vector<int>& points, int material,
 void add_fvquads(obj_shape& shape, const vector<array<int, 4>>& quadspos,
     const vector<array<int, 4>>& quadsnorm,
     const vector<array<int, 4>>& quadstexcoord, int material) {
-  for (auto idx = 0; idx < quadspos.size(); idx++) {
+  for (auto idx = 0; idx < (int)quadspos.size(); idx++) {
     auto nv = quadspos[idx][2] == quadspos[idx][3] ? 3 : 4;
     for (auto c = 0; c < nv; c++) {
       shape.vertices.push_back({
@@ -2251,7 +2251,7 @@ void add_fvquads(obj_shape& shape, const vector<array<int, 4>>& quadspos,
 }
 void add_quads(obj_shape& shape, const vector<array<int, 4>>& quads,
     const vector<int>& materials, bool has_normals, bool has_texcoord) {
-  for (auto idx = 0; idx < quads.size(); idx++) {
+  for (auto idx = 0; idx < (int)quads.size(); idx++) {
     auto& quad = quads[idx];
     auto  nv   = quad[2] == quad[3] ? 3 : 4;
     for (auto c = 0; c < nv; c++) {
@@ -2266,7 +2266,7 @@ void add_quads(obj_shape& shape, const vector<array<int, 4>>& quads,
 }
 void add_lines(obj_shape& shape, const vector<array<int, 2>>& lines,
     const vector<int>& materials, bool has_normals, bool has_texcoord) {
-  for (auto idx = 0; idx < lines.size(); idx++) {
+  for (auto idx = 0; idx < (int)lines.size(); idx++) {
     auto& line = lines[idx];
     for (auto c = 0; c < 2; c++) {
       shape.vertices.push_back({
@@ -2280,7 +2280,7 @@ void add_lines(obj_shape& shape, const vector<array<int, 2>>& lines,
 }
 void add_points(obj_shape& shape, const vector<int>& points,
     const vector<int>& materials, bool has_normals, bool has_texcoord) {
-  for (auto idx = 0; idx < points.size(); idx++) {
+  for (auto idx = 0; idx < (int)points.size(); idx++) {
     auto& point = points[idx];
     shape.vertices.push_back({
         point + 1,
@@ -2293,7 +2293,7 @@ void add_points(obj_shape& shape, const vector<int>& points,
 void add_fvquads(obj_shape& shape, const vector<array<int, 4>>& quadspos,
     const vector<array<int, 4>>& quadsnorm,
     const vector<array<int, 4>>& quadstexcoord, const vector<int>& materials) {
-  for (auto idx = 0; idx < quadspos.size(); idx++) {
+  for (auto idx = 0; idx < (int)quadspos.size(); idx++) {
     auto nv = quadspos[idx][2] == quadspos[idx][3] ? 3 : 4;
     for (auto c = 0; c < nv; c++) {
       shape.vertices.push_back({
@@ -2511,7 +2511,7 @@ bool save_stl(
     for (auto& shape : stl.shapes) {
       auto ntriangles = (uint32_t)shape.triangles.size();
       write_value(buffer, ntriangles);
-      for (auto triangle_idx = 0; triangle_idx < shape.triangles.size();
+      for (auto triangle_idx = 0; triangle_idx < (int)shape.triangles.size();
            triangle_idx++) {
         auto& triangle = shape.triangles[triangle_idx];
         auto  fnormal  = !shape.fnormals.empty()
@@ -2536,7 +2536,7 @@ bool save_stl(
 
     for (auto& shape : stl.shapes) {
       format_values(buffer, "solid \n");
-      for (auto triangle_idx = 0; triangle_idx < shape.triangles.size();
+      for (auto triangle_idx = 0; triangle_idx < (int)shape.triangles.size();
            triangle_idx++) {
         auto& triangle = shape.triangles[triangle_idx];
         auto  fnormal  = !shape.fnormals.empty()
@@ -2567,7 +2567,7 @@ bool save_stl(
 bool get_triangles(const stl_model& stl, int shape_id,
     vector<array<int, 3>>& triangles, vector<array<float, 3>>& positions,
     vector<array<float, 3>>& fnormals) {
-  if (shape_id < 0 || shape_id >= stl.shapes.size()) return false;
+  if (shape_id < 0 || shape_id >= (int)stl.shapes.size()) return false;
   auto& shape = stl.shapes.at(shape_id);
   triangles   = shape.triangles;
   positions   = shape.positions;
@@ -2706,7 +2706,7 @@ static bool get_pbrt_value(
   } else if (pbrt.type == pbrt_type::real) {
     if (pbrt.vector1f.empty() || (pbrt.vector1f.size() % 2) != 0) return false;
     val.resize(pbrt.vector1f.size() / 2);
-    for (auto i = 0; i < val.size(); i++)
+    for (auto i = 0; i < (int)val.size(); i++)
       val[i] = {pbrt.vector1f[i * 2 + 0], pbrt.vector1f[i * 2 + 1]};
     return true;
   } else {
@@ -2726,7 +2726,7 @@ static bool get_pbrt_value(
   } else if (pbrt.type == pbrt_type::real) {
     if (pbrt.vector1f.empty() || (pbrt.vector1f.size() % 3) != 0) return false;
     val.resize(pbrt.vector1f.size() / 3);
-    for (auto i = 0; i < val.size(); i++)
+    for (auto i = 0; i < (int)val.size(); i++)
       val[i] = {pbrt.vector1f[i * 3 + 0], pbrt.vector1f[i * 3 + 1],
           pbrt.vector1f[i * 3 + 2]};
     return true;
@@ -2752,7 +2752,7 @@ static bool get_pbrt_value(const pbrt_value& pbrt, vector<array<int, 3>>& val) {
   if (pbrt.type == pbrt_type::integer) {
     if (pbrt.vector1i.empty() || (pbrt.vector1i.size() % 3) != 0) return false;
     val.resize(pbrt.vector1i.size() / 3);
-    for (auto i = 0; i < val.size(); i++)
+    for (auto i = 0; i < (int)val.size(); i++)
       val[i] = {pbrt.vector1i[i * 3 + 0], pbrt.vector1i[i * 3 + 1],
           pbrt.vector1i[i * 3 + 2]};
     return true;
@@ -3608,9 +3608,9 @@ struct pbrt_medium {
         vroughness.first == array<float, 3>{0, 0, 0})
       return;
     auto uroughness_mean =
-        (uroughness.first[0], uroughness.first[1], uroughness.first[2]) / 3;
+        (uroughness.first[0] + uroughness.first[1] + uroughness.first[2]) / 3;
     auto vroughness_mean =
-        (vroughness.first[0], vroughness.first[1], vroughness.first[2]) / 3;
+        (vroughness.first[0] + vroughness.first[1] + vroughness.first[2]) / 3;
     roughness = (uroughness_mean + vroughness_mean) / 2;
     // from pbrt code
     if (remaproughness) {

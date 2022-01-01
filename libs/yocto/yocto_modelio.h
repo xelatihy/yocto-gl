@@ -880,7 +880,7 @@ inline bool get_colors(const ply_model& ply, vector<array<T, 4>>& colors) {
     if (!get_values(ply, "vertex", {"red", "green", "blue"}, colors3))
       return false;
     colors.resize(colors3.size());
-    for (auto i = 0; i < colors.size(); i++)
+    for (auto i = 0; i < (int)colors.size(); i++)
       colors[i] = {colors3[i][0], colors3[i][1], colors3[i][2], 1};
     return true;
   }

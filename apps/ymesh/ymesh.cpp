@@ -595,7 +595,7 @@ shape_data make_circle(
     auto lenght = length(dir) / steps;
     dir         = normalize(dir);
     for (int i = 0; i < steps; i++) {
-      auto new_pos = pos + dir * lenght * (i + 1);
+      auto new_pos = pos + dir * lenght * (float)(i + 1);
       auto new_dir = normalize(new_pos - center);
       new_pos      = center + new_dir * radius;
       positions.push_back(new_pos);
@@ -729,7 +729,7 @@ vector<int> stroke_parameterization(vector<vec2f>& coords,
     }
 
     // average frames direction of middle stroke vertices
-    for (int i = 1; i < stroke_sampling.size() - 1; i++) {
+    for (size_t i = 1; i < stroke_sampling.size() - 1; i++) {
       int  curr    = stroke_sampling[i];
       int  next    = stroke_sampling[i + 1];
       int  prev    = stroke_sampling[i - 1];
@@ -750,7 +750,7 @@ vector<int> stroke_parameterization(vector<vec2f>& coords,
   coords              = vector<vec2f>(solver.graph.size(), zero2f);
   coords[sampling[0]] = {radius, radius};
   vertices.insert(sampling[0]);
-  for (int i = 1; i < sampling.size(); i++) {
+  for (size_t i = 1; i < sampling.size(); i++) {
     auto edge           = positions[sampling[i]] - positions[sampling[i - 1]];
     coords[sampling[i]] = {coords[sampling[i - 1]].x + length(edge), radius};
     vertices.insert(sampling[i]);
@@ -776,7 +776,7 @@ vector<int> stroke_parameterization(vector<vec2f>& coords,
   auto vec_vertices = vector<int>(vertices.begin(), vertices.end());
 
   // conversion in [0, 1]
-  for (int i = 0; i < vertices.size(); i++)
+  for (auto i : range(vertices.size()))
     coords[vec_vertices[i]] /= radius * 2.0f;
 
   return vec_vertices;
@@ -894,7 +894,7 @@ float laplacian_weight(const vector<vec3f>& positions,
   auto num_neighbors = int(adjacencies[node].size());
 
   int ind = -1;
-  for (int i = 0; i < adjacencies[node].size(); i++) {
+  for (auto i : range(adjacencies[node].size())) {
     if (adjacencies[node][i] == neighbor) {
       ind = i;
       break;
@@ -978,7 +978,7 @@ bool smooth_brush(vector<vec3f>& positions, const geodesic_solver& solver,
     if (node != current_node) {
       auto sum1 = vec3f{0, 0, 0};
       auto sum2 = 0.0f;
-      for (auto i = 0; i < neighbors.size(); i++) {
+      for (auto i : range(neighbors.size())) {
         sum1 += positions[neighbors[i]] * weights[i];
         sum2 += weights[i];
       }

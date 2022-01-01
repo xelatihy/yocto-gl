@@ -1339,6 +1339,16 @@ constexpr auto zip(Sequence1& sequence1, const Sequence2& sequence2);
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// SIGNED-SIZE
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+template <typename T>
+inline std::ptrdiff_t ssize(const T& container);
+
+}
+
+// -----------------------------------------------------------------------------
 //
 //
 // IMPLEMENTATION
@@ -3673,6 +3683,18 @@ constexpr auto zip(Sequence1& sequence1, const Sequence2& sequence2) {
     }
   };
   return zip_helper{sequence1, sequence2};
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// SIGNED-SIZE
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+template <typename T>
+inline std::ptrdiff_t ssize(const T& container) {
+  return (std::ptrdiff_t)std::size(container);
 }
 
 }  // namespace yocto
