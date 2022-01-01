@@ -28,6 +28,7 @@
 
 #include "yocto_sceneio.h"
 
+// system
 #include <algorithm>
 #include <cassert>
 #include <cctype>
@@ -40,8 +41,9 @@
 #include <stdexcept>
 #include <unordered_map>
 
-#define JSON_USE_IMPLICIT_CONVERSIONS 0
-#include "ext/json.hpp"
+// external
+#include <nlohmann/json.hpp>
+
 #include "ext/stb_image.h"
 #include "ext/stb_image_resize.h"
 #include "ext/stb_image_write.h"

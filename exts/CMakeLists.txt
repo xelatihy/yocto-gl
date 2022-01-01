@@ -1,4 +1,5 @@
 add_subdirectory(fast_float)
+add_subdirectory(nlohmann_json)
 
 if(YOCTO_OPENGL)
 
