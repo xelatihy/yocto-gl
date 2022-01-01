@@ -1,3 +1,8 @@
+add_subdirectory(fast_float)
+add_subdirectory(nlohmann_json)
+add_subdirectory(stb_image)
+add_subdirectory(tinyexr)
+
 if(YOCTO_OPENGL)
 
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL " " FORCE)

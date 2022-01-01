@@ -28,6 +28,11 @@
 
 #include "yocto_sceneio.h"
 
+#include <stb_image/stb_image.h>
+#include <stb_image/stb_image_resize.h>
+#include <stb_image/stb_image_write.h>
+#include <tinyexr/tinyexr.h>
+
 #include <algorithm>
 #include <cassert>
 #include <cctype>
@@ -37,15 +42,10 @@
 #include <filesystem>
 #include <future>
 #include <memory>
+#include <nlohmann/json.hpp>
 #include <stdexcept>
 #include <unordered_map>
 
-#define JSON_USE_IMPLICIT_CONVERSIONS 0
-#include "ext/json.hpp"
-#include "ext/stb_image.h"
-#include "ext/stb_image_resize.h"
-#include "ext/stb_image_write.h"
-#include "ext/tinyexr.h"
 #include "yocto_color.h"
 #include "yocto_geometry.h"
 #include "yocto_image.h"

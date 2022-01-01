@@ -32,11 +32,12 @@
 
 #include "yocto_image.h"
 
+#include <stb_image/stb_image_resize.h>
+
 #include <future>
 #include <memory>
 #include <stdexcept>
 
-#include "ext/stb_image_resize.h"
 #include "yocto_color.h"
 #include "yocto_noise.h"
 

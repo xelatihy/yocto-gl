@@ -28,6 +28,8 @@
 
 #include "yocto_modelio.h"
 
+#include <fast_float/fast_float.h>
+
 #define _USE_MATH_DEFINES
 #include <charconv>
 #include <cmath>
@@ -44,8 +46,6 @@
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
-
-#include "ext/fast_float.h"
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
