@@ -11,7 +11,6 @@ add_library(yocto STATIC
   yocto_sceneio.h yocto_sceneio.cpp
   yocto_gui.h yocto_gui.cpp
   yocto_parallel.h yocto_cli.h
-  ext/stb_image.h ext/stb_image_resize.h ext/stb_image_write.h ext/stb_image.cpp
   ext/tinyexr.h ext/tinyexr.cpp
 )
 
@@ -21,6 +20,7 @@ target_include_directories(yocto PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/..")
 
 target_link_libraries(yocto PRIVATE fast_float)
 target_link_libraries(yocto PRIVATE nlohmann_json::nlohmann_json)
+target_link_libraries(yocto PRIVATE stb_image::stb_image)
 
 if(UNIX AND NOT APPLE)
   find_package(Threads REQUIRED)

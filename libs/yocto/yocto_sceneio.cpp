@@ -28,7 +28,10 @@
 
 #include "yocto_sceneio.h"
 
-// system
+#include <stb_image/stb_image.h>
+#include <stb_image/stb_image_resize.h>
+#include <stb_image/stb_image_write.h>
+
 #include <algorithm>
 #include <cassert>
 #include <cctype>
@@ -38,15 +41,10 @@
 #include <filesystem>
 #include <future>
 #include <memory>
+#include <nlohmann/json.hpp>
 #include <stdexcept>
 #include <unordered_map>
 
-// external
-#include <nlohmann/json.hpp>
-
-#include "ext/stb_image.h"
-#include "ext/stb_image_resize.h"
-#include "ext/stb_image_write.h"
 #include "ext/tinyexr.h"
 #include "yocto_color.h"
 #include "yocto_geometry.h"

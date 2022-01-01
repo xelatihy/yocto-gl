@@ -1,5 +1,6 @@
 add_subdirectory(fast_float)
 add_subdirectory(nlohmann_json)
+add_subdirectory(stb_image)
 
 if(YOCTO_OPENGL)
 
