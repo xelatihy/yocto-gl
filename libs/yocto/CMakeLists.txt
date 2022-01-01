@@ -17,6 +17,7 @@ add_library(yocto STATIC
 
 set_target_properties(yocto PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
 target_include_directories(yocto PRIVATE ext/)
+target_include_directories(yocto PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/..")
 
 if(UNIX AND NOT APPLE)
   find_package(Threads REQUIRED)

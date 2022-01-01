@@ -13,6 +13,7 @@
       "binaryDir": "${sourceDir}/build/${presetName}",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "YOCTO_APPS": "ON",
         "YOCTO_EMBREE": "ON",
         "YOCTO_DENOISE": "ON",
         "YOCTO_OPENGL": "ON"
@@ -29,6 +30,7 @@
       "binaryDir": "${sourceDir}/build/${presetName}",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
+        "YOCTO_APPS": "ON",
         "YOCTO_EMBREE": "ON",
         "YOCTO_DENOISE": "ON",
         "YOCTO_OPENGL": "ON"
@@ -45,6 +47,7 @@
       "binaryDir": "${sourceDir}/build/${presetName}",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "YOCTO_APPS": "ON",
         "YOCTO_EMBREE": "OFF",
         "YOCTO_DENOISE": "OFF",
         "YOCTO_OPENGL": "ON"
@@ -61,6 +64,7 @@
       "binaryDir": "${sourceDir}/build/${presetName}",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
+        "YOCTO_APPS": "ON",
         "YOCTO_EMBREE": "OFF",
         "YOCTO_DENOISE": "OFF",
         "YOCTO_OPENGL": "ON"

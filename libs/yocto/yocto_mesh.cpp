@@ -175,11 +175,11 @@ pair<bool, vec2f> point_in_triangle(const vector<vec3i>& triangles,
   if (d == 0) return {false, zero2f};
 
   b[2] = (d00 * d21 - d01 * d20) / d;
-  assert(!isnan(b[2]));
+  assert(!std::isnan(b[2]));
   b[1] = (d11 * d20 - d01 * d21) / d;
-  assert(!isnan(b[1]));
+  assert(!std::isnan(b[1]));
   b[0] = 1 - b[1] - b[2];
-  assert(!isnan(b[0]));
+  assert(!std::isnan(b[0]));
 
   for (auto i = 0; i < 3; ++i) {
     if (b[i] < -tol || b[i] > 1.0 + tol) return {false, zero2f};
