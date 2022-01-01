@@ -3863,7 +3863,7 @@ static bool save_json_scene(const string& filename, const scene_data& scene,
       set_val(
           element, "subdivisions", subdiv.subdivisions, default_.subdivisions);
       set_val(
-          element, "catmullclark", subdiv.catmullclark, default_.subdivisions);
+          element, "catmullclark", subdiv.catmullclark, default_.catmullclark);
       set_val(element, "smooth", subdiv.smooth, default_.subdivisions);
       set_val(
           element, "displacement", subdiv.displacement, default_.subdivisions);

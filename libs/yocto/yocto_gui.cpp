@@ -1749,7 +1749,7 @@ static void draw_scene(glscene_state& glscene, const scene_data& scene,
     if (material.type == material_type::reflective) {
       glUniform1f(glGetUniformLocation(program, "metallic"), 1);
     }
-    glUniform1f(glGetUniformLocation(program, "double_sided"),
+    glUniform1i(glGetUniformLocation(program, "double_sided"),
         params.double_sided ? 1 : 0);
     set_texture(
         program, "emission_tex", "emission_tex_on", material.emission_tex, 0);
