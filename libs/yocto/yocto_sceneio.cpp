@@ -31,6 +31,7 @@
 #include <stb_image/stb_image.h>
 #include <stb_image/stb_image_resize.h>
 #include <stb_image/stb_image_write.h>
+#include <tinyexr/tinyexr.h>
 
 #include <algorithm>
 #include <cassert>
@@ -45,7 +46,6 @@
 #include <stdexcept>
 #include <unordered_map>
 
-#include "ext/tinyexr.h"
 #include "yocto_color.h"
 #include "yocto_geometry.h"
 #include "yocto_image.h"
