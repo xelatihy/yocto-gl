@@ -776,7 +776,7 @@ vector<int> stroke_parameterization(vector<vec2f>& coords,
   auto vec_vertices = vector<int>(vertices.begin(), vertices.end());
 
   // conversion in [0, 1]
-  for (int i = 0; i < vertices.size(); i++)
+  for (auto i : range(vertices.size()))
     coords[vec_vertices[i]] /= radius * 2.0f;
 
   return vec_vertices;
@@ -894,7 +894,7 @@ float laplacian_weight(const vector<vec3f>& positions,
   auto num_neighbors = int(adjacencies[node].size());
 
   int ind = -1;
-  for (int i = 0; i < adjacencies[node].size(); i++) {
+  for (auto i : range(adjacencies[node].size())) {
     if (adjacencies[node][i] == neighbor) {
       ind = i;
       break;
@@ -978,7 +978,7 @@ bool smooth_brush(vector<vec3f>& positions, const geodesic_solver& solver,
     if (node != current_node) {
       auto sum1 = vec3f{0, 0, 0};
       auto sum2 = 0.0f;
-      for (auto i = 0; i < neighbors.size(); i++) {
+      for (auto i : range(neighbors.size())) {
         sum1 += positions[neighbors[i]] * weights[i];
         sum2 += weights[i];
       }
