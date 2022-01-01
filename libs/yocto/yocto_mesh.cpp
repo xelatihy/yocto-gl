@@ -98,7 +98,7 @@ namespace yocto {
 
 // find a value in a vector or vecs
 static int find_in_vec(const vector<int>& vec, int x) {
-  for (int i = 0; i < size(vec); i++)
+  for (auto i = 0; i < (int)size(vec); i++)
     if (vec[i] == x) return i;
   return -1;
 }
@@ -283,7 +283,7 @@ unfold_triangle init_flat_triangle(
 
 static int find_adjacent_triangle(
     const vec3i& triangle, const vec3i& adjacent) {
-  for (int i = 0; i < 3; i++) {
+  for (auto i = 0; i < 3; i++) {
     auto k = find_in_vec(adjacent, triangle[i]);
     if (k != -1) {
       if (find_in_vec(adjacent, triangle[mod3(i + 1)]) != -1) {
@@ -515,7 +515,7 @@ vector<unfold_triangle> unfold_strip(const vector<vec3i>& triangles,
   assert(start.face == strip[0]);
   coords[0] = triangle_coordinates(triangles, positions, start);
 
-  for (auto i = 1; i < strip.size(); i++) {
+  for (auto i = 1; i < (int)strip.size(); i++) {
     assert(coords[i - 1][0] != coords[i - 1][1]);
     assert(coords[i - 1][1] != coords[i - 1][2]);
     assert(coords[i - 1][2] != coords[i - 1][0]);
@@ -534,7 +534,7 @@ vector<unfold_triangled> unfold_strip_double(const vector<vec3i>& triangles,
   assert(start.face == strip[0]);
   coords[0] = triangle_coordinates_double(triangles, positions, start);
 
-  for (auto i = 1; i < strip.size(); i++) {
+  for (auto i = 1; i < (int)strip.size(); i++) {
     assert(coords[i - 1][0] != coords[i - 1][1]);
     assert(coords[i - 1][1] != coords[i - 1][2]);
     assert(coords[i - 1][2] != coords[i - 1][0]);
@@ -550,7 +550,7 @@ static vector<pair<vec2f, vec2f>> make_funnel_portals(
     const vector<vec3i>& triangles, const vector<unfold_triangle>& coords,
     const vector<int>& strip, const mesh_point& to) {
   auto portals = vector<pair<vec2f, vec2f>>(strip.size());
-  for (auto i = 0; i < strip.size() - 1; i++) {
+  for (auto i = 0; i < (int)strip.size() - 1; i++) {
     auto curr = strip[i], next = strip[i + 1];
     auto k     = find_adjacent_triangle(triangles, curr, next);
     auto tr    = coords[i];
@@ -567,7 +567,7 @@ static vector<pair<vec2d, vec2d>> make_funnel_portals_double(
     const vector<vec3i>& triangles, const vector<unfold_triangled>& coords,
     const vector<int>& strip, const mesh_point& to) {
   auto portals = vector<pair<vec2d, vec2d>>(strip.size());
-  for (auto i = 0; i < strip.size() - 1; i++) {
+  for (auto i = 0; i < (int)strip.size() - 1; i++) {
     auto curr = strip[i], next = strip[i + 1];
     auto k     = find_adjacent_triangle(triangles, curr, next);
     auto tr    = coords[i];
@@ -616,7 +616,7 @@ float length_by_flattening(const vector<vec3i>& triangles,
   auto h       = find_in_vec(adjacencies[opp_pid], strip[1]);
   auto coords  = vector<unfold_triangle>(strip.size());
   coords[0]    = init_flat_triangle(positions, triangles[opp_pid]);
-  for (auto i = 1; i < strip.size(); i++) {
+  for (auto i = 1; i < (int)strip.size(); i++) {
     auto k = find_in_vec(adjacencies[strip[i - 1]], strip[i]);
     assert(k != -1);
     auto tr = unfold_face(
@@ -658,7 +658,7 @@ vector<int> triangle_fan(
   auto prev   = face;
   auto node   = adjacencies[face][k];
   auto offset = 2 - (int)clockwise;
-  // for (int i = 0; i < 256; i++) {
+  // for (auto i = 0; i < 256; i++) {
   while (true) {
     if (node == -1) break;
     if (node == face) break;
@@ -778,7 +778,7 @@ namespace yocto {
 void meandering_triangles(const vector<float>& field, float isoline,
     int selected_tag, int t0, int t1, vector<vec3i>& triangles,
     vector<int>& tags, vector<vec3f>& positions, vector<vec3f>& normals) {
-  auto num_triangles = triangles.size();
+  auto num_triangles = (int)triangles.size();
 
   // Edgemap to keep track of the added vertex on each splitted edge.
   // key: edge (ordered std::pair), value: vertex index
@@ -804,7 +804,7 @@ void meandering_triangles(const vector<float>& field, float isoline,
     auto tr = triangles[i];
 
     // Find which vertex has different tag, if any.
-    int j = -1;
+    auto j = -1;
     for (auto k = 0; k < 3; k++) {
       if (get_tag(tr[k]) != get_tag(tr[mod3(k + 1)]) &&
           get_tag(tr[k]) != get_tag(tr[mod3(k + 2)])) {
@@ -936,7 +936,7 @@ geodesic_solver make_geodesic_solver(const vector<vec3i>& triangles,
     const vector<vec3i>& adjacencies, const vector<vec3f>& positions) {
   auto solver = geodesic_solver{};
   solver.graph.resize(positions.size());
-  for (auto face = 0; face < triangles.size(); face++) {
+  for (auto face = 0; face < (int)triangles.size(); face++) {
     for (auto k = 0; k < 3; k++) {
       auto a = triangles[face][k];
       auto b = triangles[face][mod3(k + 1)];
@@ -985,7 +985,7 @@ dual_geodesic_solver make_dual_geodesic_solver(const vector<vec3i>& triangles,
   solver.centroids.resize(triangles.size());
 
   // Init centroids.
-  for (int face = 0; face < triangles.size(); face++) {
+  for (int face = 0; face < (int)triangles.size(); face++) {
     vec3f pos[3] = {positions[triangles[face].x], positions[triangles[face].y],
         positions[triangles[face].z]};
     auto  l0     = length(pos[0] - pos[1]);
@@ -998,7 +998,7 @@ dual_geodesic_solver make_dual_geodesic_solver(const vector<vec3i>& triangles,
   }
 
   solver.graph.resize(triangles.size());
-  for (auto i = 0; i < solver.graph.size(); ++i) {
+  for (auto i = 0; i < (int)solver.graph.size(); ++i) {
     for (auto k = 0; k < 3; ++k) {
       solver.graph[i][k].node = adjacencies[i][k];
 
@@ -1033,11 +1033,11 @@ geodesic_solver make_geodesic_solver(const vector<vec3i>& triangles,
     const vector<vector<int>>& v2t) {
   auto solver = geodesic_solver{};
   solver.graph.resize(positions.size());
-  for (auto i = 0; i < positions.size(); ++i) {
+  for (auto i = 0; i < (int)positions.size(); ++i) {
     auto& star = v2t[i];
     auto& vert = positions[i];
     if (star.size() == 0) continue;
-    for (auto j = 0; j < star.size(); ++j) {
+    for (auto j = 0; j < (int)star.size(); ++j) {
       auto tid    = star[j];
       auto offset = find_in_vec(triangles[tid], i);
       auto p      = triangles[tid][(offset + 1) % 3];
@@ -1067,7 +1067,7 @@ vector<vector<float>> compute_angles(const vector<vec3i>& triangles,
     bool with_opposite) {
   auto angles = vector<vector<float>>(positions.size());
   total_angles.resize(positions.size());
-  for (auto i = 0; i < positions.size(); ++i) {
+  for (auto i = 0; i < (int)positions.size(); ++i) {
     auto& star = v2t[i];
     if (star.size() == 0) continue;
     auto theta       = 0.0f;
@@ -1075,7 +1075,7 @@ vector<vector<float>> compute_angles(const vector<vec3i>& triangles,
     auto tid         = 0;
     auto tr2d        = unfold_triangle{};
     auto tr3d        = zero3i;
-    for (auto j = 0; j < star.size(); ++j) {
+    for (auto j = 0; j < (int)star.size(); ++j) {
       tid  = star[j];
       tr3d = triangles[tid];
       if (with_opposite) {
@@ -1117,7 +1117,7 @@ vector<vector<float>> compute_angles(const vector<vec3i>& triangles,
     total_angles[i]   = theta;
     angles[i].push_back(0);
     theta = 0;
-    for (auto j = 0; j < curr_angles.size() - 1; ++j) {
+    for (auto j = 0; j < (int)curr_angles.size() - 1; ++j) {
       auto curr_angle = curr_angles[j] * scale_factor;
       theta += curr_angle;
       angles[i].push_back(theta);
@@ -1167,7 +1167,7 @@ void visit_geodesic_graph(vector<float>& field, const geodesic_solver& solver,
     auto average_weight = (float)(cumulative_weight / queue.size());
 
     // Large Label Last (see comment at the beginning)
-    for (auto tries = 0; tries < queue.size() + 1; tries++) {
+    for (auto tries = 0; tries < (int)queue.size() + 1; tries++) {
       if (field[node] <= average_weight) break;
       queue.pop_front();
       queue.push_back(node);
@@ -1263,7 +1263,7 @@ vector<int> sample_vertices_poisson(
         (int)(std::max_element(distances.begin(), distances.end()) -
               distances.begin());
     verts.push_back(max_index);
-    if (verts.size() >= num_samples) break;
+    if ((int)verts.size() >= num_samples) break;
     distances[max_index] = 0;
     update_geodesic_distances(distances, solver, {max_index}, flt_max);
   }
@@ -1280,7 +1280,7 @@ vector<vector<float>> compute_voronoi_fields(
   // computation time weakly dependant on the number of generators.
   auto total = compute_geodesic_distances(solver, generators);
   auto max   = *std::max_element(total.begin(), total.end());
-  for (auto i = 0; i < generators.size(); ++i) {
+  for (auto i = 0; i < (int)generators.size(); ++i) {
     fields[i]                = vector<float>(solver.graph.size(), flt_max);
     fields[i][generators[i]] = 0;
     fields[i] = compute_geodesic_distances(solver, {generators[i]}, max);
@@ -1291,7 +1291,7 @@ vector<vector<float>> compute_voronoi_fields(
 vector<vec3f> colors_from_field(
     const vector<float>& field, float scale, const vec3f& c0, const vec3f& c1) {
   auto colors = vector<vec3f>{field.size()};
-  for (auto i = 0; i < colors.size(); i++) {
+  for (auto i = 0; i < (int)colors.size(); i++) {
     colors[i] = ((int64_t)(field[i] * scale)) % 2 ? c0 : c1;
   }
   return colors;
@@ -1341,7 +1341,7 @@ void visit_geodesic_graph(vector<float>& field,
     auto average_weight = (float)(cumulative_weight / queue.size());
 
     // Large Label Last (see comment at the beginning)
-    for (auto tries = 0; tries < queue.size() + 1; tries++) {
+    for (auto tries = 0; tries < (int)queue.size() + 1; tries++) {
       if (field[node] <= average_weight) break;
       queue.pop_front();
       queue.push_back(node);
@@ -1637,7 +1637,7 @@ static vector<int> get_face_ring(const vector<vec3i>& triangles,
   result.reserve(12);
 
   if (face == -1) {
-    for (int i = 0; i < triangles.size(); ++i) {
+    for (auto i = 0; i < (int)triangles.size(); ++i) {
       if (contains(triangles[i], vertex)) {
         face = i;
         break;
@@ -1730,7 +1730,7 @@ static surface_path::vertex step_from_point(const vector<vec3i>& triangles,
   auto best_alignment = 0.0;
   auto fallback_lerp  = surface_path::vertex{vec2i{-1, -1}, -1, 0};
 
-  for (auto i = 0; i < triangle_fan.size(); ++i) {
+  for (auto i = 0; i < (int)triangle_fan.size(); ++i) {
     auto face = triangle_fan[i];
     if (tag != -1 && tags[face] != tag) continue;
     auto edge = opposite_edge(vertex, triangles[face]);
@@ -1848,7 +1848,7 @@ surface_path integrate_field(const vector<vec3i>& triangles,
     const vector<int>& tags, int tag, const vector<float>& field, int from,
     int to) {
   auto opposite_vertex = [](const vec3i& tr, const vec2i& edge) -> int {
-    for (int i = 0; i < 3; ++i) {
+    for (auto i = 0; i < 3; ++i) {
       if (tr[i] != edge.x && tr[i] != edge.y) return tr[i];
     }
     return -1;
@@ -1873,7 +1873,7 @@ surface_path integrate_field(const vector<vec3i>& triangles,
     if (face == -1) break;
 
     if (contains(triangles[face], to)) {
-      for (int k = 0; k < 3; ++k) {
+      for (auto k = 0; k < 3; ++k) {
         auto edge = vec2i{triangles[face][k], triangles[face][mod3(k + 1)]};
         if (edge.x == to) {
           lerps.push_back({edge, face, 0});
@@ -1936,7 +1936,7 @@ vector<vec3f> make_positions_from_path(
   positions.reserve(path.vertices.size() + 1);
   positions.push_back(mesh_positions[path.start]);
 
-  for (auto i = 0; i < path.vertices.size() - 1; ++i) {
+  for (auto i = 0; i < (int)path.vertices.size() - 1; ++i) {
     auto [edge, face, x] = path.vertices[i];
     auto p0              = mesh_positions[edge.x];
     auto p1              = mesh_positions[edge.y];
@@ -1992,9 +1992,9 @@ static vector<pair<int, float>> nodes_around_point(
   } else {
     auto pid = p.face;
     auto pos = eval_position(triangles, positions, p);
-    for (int i = 0; i < 3; ++i) {
-      int   p0 = triangles[pid][i], p1 = triangles[pid][(i + 1) % 3];
-      float d = length(positions[p0] - pos);
+    for (auto i = 0; i < 3; ++i) {
+      int  p0 = triangles[pid][i], p1 = triangles[pid][(i + 1) % 3];
+      auto d = length(positions[p0] - pos);
       nodes.push_back(std::make_pair(p0, d));
       int         CW_pid = adjacencies[pid][i];
       int         opp    = opposite_vertex(triangles, adjacencies, pid, i);
@@ -2061,7 +2061,7 @@ vector<float> solve_with_parents(const geodesic_solver& solver,
   auto stop = [](int node) { return false; };
 
   auto exit_verts = vector<int>(targets.size());
-  for (auto i = 0; i < targets.size(); ++i) {
+  for (auto i = 0; i < (int)targets.size(); ++i) {
     exit_verts[i] = targets[i].first;
   }
   auto exit = [&exit_verts](int node) {
@@ -2074,7 +2074,7 @@ vector<float> solve_with_parents(const geodesic_solver& solver,
 
   auto distances  = vector<float>(solver.graph.size(), flt_max);
   auto sources_id = vector<int>(sources_and_dist.size());
-  for (auto i = 0; i < sources_and_dist.size(); ++i) {
+  for (auto i = 0; i < (int)sources_and_dist.size(); ++i) {
     sources_id[i]                        = sources_and_dist[i].first;
     distances[sources_and_dist[i].first] = sources_and_dist[i].second;
   }
@@ -2093,7 +2093,7 @@ int set_target_parent(const vector<pair<int, float>>& nbr,
   } else {
     auto vid    = -1;
     auto lambda = flt_max;
-    for (auto i = 0; i < nbr.size(); ++i) {
+    for (auto i = 0; i < (int)nbr.size(); ++i) {
       auto val = f[nbr[i].first] + nbr[i].second;
       if (val < lambda) {
         lambda = val;
@@ -2187,7 +2187,7 @@ vector<int> compute_geodesic_parents(const geodesic_solver& solver,
 static vector<pair<int, float>> check_nodes(vector<pair<int, float>>& nodes) {
   sort(nodes.begin(), nodes.end());
   auto new_nodes = vector<pair<int, float>>{};
-  for (auto i = 1; i < nodes.size(); ++i) {
+  for (auto i = 1; i < (int)nodes.size(); ++i) {
     auto prev = nodes[i - 1];
     auto curr = nodes[i];
     if (prev.first == curr.first) {
@@ -2214,7 +2214,7 @@ static vector<float> solve(const geodesic_solver& solver,
   auto distances = vector<float>{};
   distances.assign(solver.graph.size(), flt_max);
   auto sources_id = vector<int>(sources_and_dist.size());
-  for (auto i = 0; i < sources_and_dist.size(); ++i) {
+  for (auto i = 0; i < (int)sources_and_dist.size(); ++i) {
     sources_id[i]                        = sources_and_dist[i].first;
     distances[sources_and_dist[i].first] = sources_and_dist[i].second;
   }
@@ -2236,7 +2236,7 @@ static vector<float> solve_with_parents(const geodesic_solver& solver,
   auto stop = [](int node) { return false; };
 
   vector<int> exit_verts(targets.size());
-  for (int i = 0; i < targets.size(); ++i) {
+  for (auto i = 0; i < (int)targets.size(); ++i) {
     exit_verts[i] = targets[i].first;
   }
   auto exit = [&exit_verts](int node) {
@@ -2249,7 +2249,7 @@ static vector<float> solve_with_parents(const geodesic_solver& solver,
   vector<float> distances;
   distances.assign(solver.graph.size(), flt_max);
   vector<int> sources_id(sources_and_dist.size());
-  for (int i = 0; i < sources_and_dist.size(); ++i) {
+  for (auto i = 0; i < (int)sources_and_dist.size(); ++i) {
     sources_id[i]                        = sources_and_dist[i].first;
     distances[sources_and_dist[i].first] = sources_and_dist[i].second;
   }
@@ -2264,7 +2264,7 @@ vector<float> compute_geodesic_distances(const geodesic_solver& solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>& adjacencies, const vector<mesh_point>& sources) {
   auto source_nodes = vector<pair<int, float>>{};
-  for (auto i = 0; i < sources.size(); ++i) {
+  for (auto i = 0; i < (int)sources.size(); ++i) {
     auto curr_nodes = nodes_around_point(
         triangles, positions, adjacencies, sources[i]);
     source_nodes.insert(
@@ -2316,7 +2316,7 @@ void heuristic_visit_geodesic_graph(vector<float>& field,
     auto average_weight = (float)(cumulative_weight / queue.size());
 
     // Large Label Last (see comment at the beginning)
-    for (auto tries = 0; tries < queue.size() + 1; tries++) {
+    for (auto tries = 0; tries < (int)queue.size() + 1; tries++) {
       if (field[node] <= average_weight) break;
       queue.pop_front();
       queue.push_back(node);
@@ -2433,7 +2433,7 @@ vector<int> strip_ascending_distance_field(const geodesic_solver& solver,
 bool check_strip(const vector<vec3i>& adjacencies, const vector<int>& strip) {
   auto faces = std::unordered_set<int>{};
   faces.insert(strip[0]);
-  for (auto i = 1; i < strip.size(); ++i) {
+  for (auto i = 1; i < (int)strip.size(); ++i) {
     assert(faces.count(strip[i]) == 0);  // face appears twice in the strip
     faces.insert(strip[i]);
     assert(find_in_vec(adjacencies[strip[i - 1]], strip[i]) != -1);
@@ -2471,7 +2471,7 @@ vector<int> strip_on_dual_graph(const dual_geodesic_solver& solver,
   auto node  = end;
   assert(parents[end] != -1);
   strip.reserve((int)sqrt((float)parents.size()));
-  // for (int i = 0; i < parents.size() && node != -1; i++) {
+  // for (auto i = 0; i < (int)parents.size() && node != -1; i++) {
   while (node != -1) {
     assert(find_in_vec(strip, node) != 1);
     strip.push_back(node);
@@ -2491,7 +2491,7 @@ vector<int> strip_on_dual_graph(const dual_geodesic_solver& solver,
 // TODO: cleanup
 static int node_is_neighboor(const geodesic_solver& solver, int vid, int node) {
   auto nbr = solver.graph[vid];
-  for (auto i = 0; i < nbr.size(); ++i) {
+  for (auto i = 0; i < (int)nbr.size(); ++i) {
     if (nbr[i].node == node) {
       return i;
     }
@@ -2793,7 +2793,7 @@ vector<vec3f> path_positions(const geodesic_path& path,
     const vector<vec3i>& adjacencies) {
   auto result = vector<vec3f>(path.lerps.size() + 2);
   result[0]   = eval_position(triangles, positions, path.start);
-  for (auto i = 0; i < path.lerps.size(); i++) {
+  for (auto i = 0; i < (int)path.lerps.size(); i++) {
     auto e = get_edge(
         triangles, positions, adjacencies, path.strip[i], path.strip[i + 1]);
     if (e == vec2i{-1, -1}) continue;
@@ -2820,7 +2820,7 @@ float path_length(const geodesic_path& path, const vector<vec3i>& triangles,
 vector<float> path_parameters(const vector<vec3f>& positions) {
   auto len         = 0.0f;
   auto parameter_t = vector<float>(positions.size());
-  for (auto i = 0; i < positions.size(); i++) {
+  for (auto i = 0; i < (int)positions.size(); i++) {
     if (i) len += length(positions[i] - positions[i - 1]);
     parameter_t[i] = len;
   }
@@ -2830,7 +2830,7 @@ vector<float> path_parameters(const vector<vec3f>& positions) {
 
 float path_length(const vector<vec3f>& positions) {
   auto len = 0.0f;
-  for (auto i = 0; i < positions.size(); i++) {
+  for (auto i = 0; i < (int)positions.size(); i++) {
     if (i) len += length(positions[i] - positions[i - 1]);
   }
   return len;
@@ -2954,7 +2954,7 @@ bool path_check_strip(
     const vector<vec3i>& adjacencies, const vector<int>& strip) {
   auto faces = unordered_set<int>{};
   faces.insert(strip[0]);
-  for (auto i = 1; i < strip.size(); ++i) {
+  for (auto i = 1; i < (int)strip.size(); ++i) {
     if (faces.count(strip[i]) != 0) {
       printf("strip[%d] (face: %d) appears twice\n", i, strip[i]);
     }
@@ -2971,7 +2971,7 @@ static void remove_loops_from_strip(vector<int>& strip) {
   auto result     = vector<int>(strip.size());
   result[0]       = strip[0];
   auto index      = 1;
-  for (auto i = 1; i < strip.size(); ++i) {
+  for (auto i = 1; i < (int)strip.size(); ++i) {
     if (faces.count(strip[i]) != 0) {
       // printf("fixing %d (%d)\n", i, strip[i]);
       auto t = faces[strip[i]];
@@ -3001,7 +3001,7 @@ static int max_curvature_point(const vector<funnel_point>& path) {
   // the index of the first face containing that vertex.
   auto max_index = -1;
   auto max_angle = 0.0f;
-  for (auto i = 1; i < path.size() - 1; ++i) {
+  for (auto i = 1; i < (int)path.size() - 1; ++i) {
     auto pos   = path[i].pos;
     auto prev  = path[i - 1].pos;
     auto next  = path[i + 1].pos;
@@ -3023,7 +3023,7 @@ static int max_curvature_point(const vector<funnel_point>& path) {
   // the index of the first face containing that vertex.
   auto max_index = -1;
   auto max_angle = 0.0;
-  for (auto i = 1; i < path.size() - 1; ++i) {
+  for (auto i = 1; i < (int)path.size() - 1; ++i) {
     auto pos   = path[i].pos;
     auto prev  = path[i - 1].pos;
     auto next  = path[i + 1].pos;
@@ -3058,7 +3058,7 @@ static int max_curvature_point(const vector<funnel_point>& path) {
     return cross(b - a, c - a);
   };
 
-  for (auto i = 1; i < portals.size(); ++i) {
+  for (auto i = 1; i < (int)portals.size(); ++i) {
     auto left = portals[i].first, right = portals[i].second;
     // Update right vertex.
     if (area(apex, right_bound, right) <= 0) {
@@ -3120,7 +3120,7 @@ static int max_curvature_point(const vector<funnel_point>& path) {
 
   auto lerps = vector<float>();
   lerps.reserve(portals.size());
-  for (auto i = 0; i < points.size() - 1; i++) {
+  for (auto i = 0; i < (int)points.size() - 1; i++) {
     auto a = points[i].pos;
     auto b = points[i + 1].pos;
     for (auto k = points[i].face; k < points[i + 1].face; k++) {
@@ -3133,7 +3133,7 @@ static int max_curvature_point(const vector<funnel_point>& path) {
   }
 
   auto index = 1;
-  for (auto i = 1; i < portals.size(); ++i) {
+  for (auto i = 1; i < (int)portals.size(); ++i) {
     if ((portals[i].first == points[index].pos) ||
         (portals[i].second == points[index].pos)) {
       points[index].face = i;
@@ -3165,7 +3165,7 @@ static vector<float> funnel_double(
     return cross(b - a, c - a);
   };
 
-  for (auto i = 1; i < portals.size(); ++i) {
+  for (auto i = 1; i < (int)portals.size(); ++i) {
     auto left = portals[i].first, right = portals[i].second;
     // Update right vertex.
     if (area(apex, right_bound, right) <= 0) {
@@ -3227,7 +3227,7 @@ static vector<float> funnel_double(
 
   auto lerps = vector<float>();
   lerps.reserve(portals.size());
-  for (auto i = 0; i < points.size() - 1; i++) {
+  for (auto i = 0; i < (int)points.size() - 1; i++) {
     auto a = points[i].pos;
     auto b = points[i + 1].pos;
     for (auto k = points[i].face; k < points[i + 1].face; k++) {
@@ -3240,7 +3240,7 @@ static vector<float> funnel_double(
   }
 
   auto index = 1;
-  for (auto i = 1; i < portals.size(); ++i) {
+  for (auto i = 1; i < (int)portals.size(); ++i) {
     if ((portals[i].first == points[index].pos) ||
         (portals[i].second == points[index].pos)) {
       points[index].face = i;
@@ -3263,7 +3263,7 @@ bool check_point(const mesh_point& point) {
 
 static vector<int> fix_strip(const vector<vec3i>& adjacencies,
     const vector<int>& strip, int index, int k, bool left) {
-  assert(index < strip.size() - 1);
+  assert(index < (int)strip.size() - 1);
   auto face = strip[index];
   if (!left) k = mod3(k + 2);
 
@@ -3277,7 +3277,7 @@ static vector<int> fix_strip(const vector<vec3i>& adjacencies,
   // insert there the remaining part of fan, so that we have a new valid strip.
   auto first_strip_intersection = index;
   auto first_fan_intersection   = 0;
-  for (auto i = 1; i < fan.size(); i++) {
+  for (auto i = 1; i < (int)fan.size(); i++) {
     auto fan_index   = i;
     auto strip_index = max(index - i, 0);
     if (strip_index < 0) break;
@@ -3290,7 +3290,7 @@ static vector<int> fix_strip(const vector<vec3i>& adjacencies,
   }
   auto second_strip_intersection = index;
   auto second_fan_intersection   = 0;
-  for (auto i = 0; i < fan.size(); i++) {
+  for (auto i = 0; i < (int)fan.size(); i++) {
     auto fan_index   = (int)fan.size() - 1 - i;
     auto strip_index = index + i + 1;
     if (strip_index >= (int)strip.size()) break;
@@ -3317,7 +3317,7 @@ static vector<int> fix_strip(const vector<vec3i>& adjacencies,
       fan.begin() + second_fan_intersection);
 
   // Append remaining part of strip after intersection with fan.
-  for (auto i = second_strip_intersection; i < strip.size(); ++i)
+  for (auto i = second_strip_intersection; i < (int)strip.size(); ++i)
     result.push_back(strip[i]);
 
   assert(path_check_strip(adjacencies, result));
@@ -3347,7 +3347,7 @@ static void straighten_path(geodesic_path& path, const vector<vec3i>& triangles,
     // with maximum angle. We are going to fix that bend around that vertex.
     auto result    = bend_info{};
     auto max_angle = 0.0;
-    for (auto i = 1; i < points.size() - 1; ++i) {
+    for (auto i = 1; i < (int)points.size() - 1; ++i) {
       auto bend      = bend_info{};
       bend.index     = points[i].face;
       auto face      = path.strip[points[i].face];
@@ -3416,7 +3416,7 @@ mesh_path convert_mesh_path(const vector<vec3i>& triangles,
   auto result = mesh_path{};
   result.points.resize(lerps.size() + 2);
   result.points[0] = start;
-  for (int i = 0; i < lerps.size(); ++i) {
+  for (auto i = 0; i < (int)lerps.size(); ++i) {
     auto  k              = find_in_vec(adjacencies[strip[i]], strip[i + 1]);
     vec2f uvw[3]         = {{0, 0}, {1, 0}, {0, 1}};
     auto  a              = uvw[k];
@@ -3454,7 +3454,7 @@ mesh_point eval_path_point(const geodesic_path& path,
 #if 1
   // linear search
   auto i = 0;
-  for (; i < parameter_t.size() - 1; i++) {
+  for (; i < (int)parameter_t.size() - 1; i++) {
     if (parameter_t[i + 1] >= t) break;
   }
 #else
@@ -3493,7 +3493,7 @@ mesh_point eval_path_point(const geodesic_path& path,
     uv_low         = {uvw.x, uvw.y};
   }
   auto uv_high = vec2f{0, 0};
-  if (i == parameter_t.size() - 2) {
+  if (i == (int)parameter_t.size() - 2) {
     uv_high = path.end.uv;
   } else {
     auto uvw       = lerp(vec3f{1, 0, 0}, vec3f{0, 1, 0}, path.lerps[i]);
@@ -3530,7 +3530,7 @@ namespace yocto {
 
 template <typename T>
 static int find_in_vector(const T& vec, int x) {
-  for (int i = 0; i < size(vec); i++)
+  for (auto i = 0; i < size(vec); i++)
     if (vec[i] == x) return i;
   return -1;
 }
@@ -3539,7 +3539,7 @@ static int find_in_vector(const T& vec, int x) {
     const vector<vec3i>& adjacencies, const vector<int>& strip) {
   auto faces = std::unordered_set<int>{};
   faces.insert(strip[0]);
-  for (auto i = 1; i < strip.size(); ++i) {
+  for (auto i = 1; i < (int)strip.size(); ++i) {
     assert(faces.count(strip[i]) == 0);  // face appears twice in the strip
     faces.insert(strip[i]);
     assert(find_in_vector(adjacencies[strip[i - 1]], strip[i]) != -1);
@@ -3576,7 +3576,7 @@ static void search_strip(vector<float>& weight, vector<bool>& in_queue,
     auto average_weight = (float)(cumulative_weight / queue.size());
 
     // Large Label Last (see comment at the beginning)
-    for (auto tries = 0; tries < queue.size() + 1; tries++) {
+    for (auto tries = 0; tries < (int)queue.size() + 1; tries++) {
       if (weight[node] <= average_weight) break;
       queue.pop_front();
       queue.push_back(node);
@@ -3657,7 +3657,7 @@ static vector<int> compute_strip(const dual_geodesic_solver& solver,
   auto node  = end.face;
   strip.reserve((int)yocto::sqrt((float)parents.size()));
 
-  // for (int i = 0; i < parents.size() && node != -1; i++) {
+  // for (auto i = 0; i < (int)parents.size() && node != -1; i++) {
   while (node != -1) {
     assert(find_in_vector(strip, node) != 1);
     assert(strip.size() < parents.size());
@@ -3732,7 +3732,7 @@ static vector<mesh_point> de_casteljau_uniform(
   auto result   = vector<spline_polygon>();
   for (auto subdivision = 0; subdivision < subdivisions; subdivision++) {
     result.resize(segments.size() * 2);
-    for (auto i = 0; i < segments.size(); i++) {
+    for (auto i = 0; i < (int)segments.size(); i++) {
       auto [split0, split1] = subdivide_bezier_polygon(
           solver, triangles, positions, adjacencies, segments[i], 0.5);
       result[2 * i]     = split0;
@@ -3842,7 +3842,7 @@ static float path_length(const dual_geodesic_solver& solver,
       solver, triangles, positions, adjacencies, path);
 
   auto result = 0.0f;
-  for (int i = 1; i < positions_.size(); ++i)
+  for (auto i = 1; i < (int)positions_.size(); ++i)
     result += length(positions_[i] - positions_[i - 1]);
 
   return result;
@@ -3854,7 +3854,7 @@ static vec2f tangent_path_direction(const dual_geodesic_solver& solver,
     const vector<vec3i>& adjacencies, const geodesic_path& path,
     bool start = true) {
   auto find = [](const vec3i& vec, int x) {
-    for (int i = 0; i < size(vec); i++)
+    for (auto i = 0; i < size(vec); i++)
       if (vec[i] == x) return i;
     return -1;
   };
@@ -4000,7 +4000,7 @@ static mesh_point de_casteljau_point(const dual_geodesic_solver& solver,
   }
 
   // Exact evaluation.
-  float t = (t0 - t_start) / (t_end - t_start);
+  auto t = (t0 - t_start) / (t_end - t_start);
   return eval_bezier_point_cheap(
       solver, triangles, positions, adjacencies, points, t);
 }
@@ -4643,7 +4643,7 @@ static bool is_bezier_straight_enough(const geodesic_path& a,
     pos[2]    = eval_position(triangles, positions, c.start);
     pos[3]    = eval_position(triangles, positions, c.end);
     float len = 0;
-    for (int i = 0; i < 3; i++) {
+    for (auto i = 0; i < 3; i++) {
       len += length(pos[i] - pos[i + 1]);
     }
     if (len < params.min_curve_size) return true;
@@ -4753,10 +4753,10 @@ static vector<mesh_point> de_casteljau_adaptive(
 
   for (auto subdivision = 0; subdivision < params.subdivisions; subdivision++) {
     result.resize(segments.size() * 2);
-    for (auto i = 0; i < segments.size(); i++) {
+    for (auto i = 0; i < (int)segments.size(); i++) {
       threads[i] = std::thread(f, i);
     }
-    for (auto i = 0; i < segments.size(); i++) threads[i].join();
+    for (auto i = 0; i < (int)segments.size(); i++) threads[i].join();
 
     swap(segments, result);
   }
@@ -4774,7 +4774,7 @@ static vector<mesh_point> de_casteljau_uniform(
 
   for (auto subdivision = 0; subdivision < params.subdivisions; subdivision++) {
     result.resize(segments.size() * 2);
-    for (auto i = 0; i < segments.size(); i++) {
+    for (auto i = 0; i < (int)segments.size(); i++) {
       auto [split0, split1] = subdivide_bezier_polygon(
           solver, triangles, positions, adjacencies, segments[i], 0.5);
       result[2 * i]     = split0;
@@ -4801,7 +4801,7 @@ static vector<mesh_point> lane_riesenfeld_adaptive(
     const vector<mesh_point>& points) {
   auto result = vector<vec3f>();
   result.reserve(points.size() * 4);
-  for (int i = 0; i < points.size() - 1; i++) {
+  for (auto i = 0; i < (int)points.size() - 1; i++) {
     auto a    = points[i];
     auto b    = points[i + 1];
     auto path = compute_geodesic_path(
@@ -4866,7 +4866,7 @@ vector<mesh_point> compute_bezier_path(const dual_geodesic_solver& solver,
   vector<vector<vec3f>> gradients(rectangle.size());
   vector<vector<float>> field(rectangle.size());
   vector<mesh_point>    points_on_surface(weights.size(), {-1, zero2f});
-  for (auto i = 0; i < rectangle.size(); ++i) {
+  for (auto i = 0; i < (int)rectangle.size(); ++i) {
     auto f = compute_distance_field(
         triangles, positions, adjacencies, v2t, solver, i, rectangle, graph);
     field[i] = f;
@@ -4876,7 +4876,7 @@ vector<mesh_point> compute_bezier_path(const dual_geodesic_solver& solver,
   }
   // set from as the control points associate to greatest weight
   vector<pair<vector<float>, int>> badones;
-  for (auto i = 0; i < weights.size(); ++i) {
+  for (auto i = 0; i < (int)weights.size(); ++i) {
     auto from = optimal_seed(rectangle, weights[i]);
     auto p = gradient_descent(triangles, positions, adjacencies, v2t, normals,
         solver, angles, total_angles, gradients, weights[i], from);
@@ -4895,7 +4895,7 @@ vector<mesh_point> compute_bezier_path(const dual_geodesic_solver& solver,
   auto curr_processed    = 0;
   while (!stop) {
     stop = true;
-    for (auto i = 0; i < badones.size(); ++i) {
+    for (auto i = 0; i < (int)badones.size(); ++i) {
       if (points_on_surface[badones[i].second].face == -1) {
         stop      = false;
         auto from = optimal_seed(points_on_surface, badones[i].first, weights);
@@ -4919,7 +4919,7 @@ vector<mesh_point> compute_bezier_path(const dual_geodesic_solver& solver,
   }
   // this part doesn't work yet
   if (needs_subdivision) {
-    for (auto i = 0; i < badones.size(); ++i) {
+    for (auto i = 0; i < (int)badones.size(); ++i) {
       if (points_on_surface[badones[i].second].face == -1) {
         auto from = optimal_seed_with_weights(
             points_on_surface, badones[i].first, weights);
@@ -5146,7 +5146,7 @@ static vector<mesh_point> lane_riesenfeld_uniform(
         solver, triangles, positions, adjacencies, prev, curr, 0.5);
     prev = eval_path_point(solver, triangles, positions, adjacencies,
         curr_path.path, curr_path.t, 0.5);
-    for (int j = 4; j < 2 * size - 8; j += 2) {
+    for (auto j = 4; j < 2 * size - 8; j += 2) {
       q[j] = prev;
       prev = eval_path_point(solver, triangles, positions, adjacencies,
           curr_path.path, curr_path.t, 0.75);
@@ -5247,7 +5247,7 @@ static vector<mesh_point> lane_riesenfeld_uniform(
     curr_path.t = path_parameters(
         curr_path.path, triangles, positions, adjacencies);
 
-    for (int j = 2; j < 2 * size - 4; j += 2) {
+    for (auto j = 2; j < 2 * size - 4; j += 2) {
       q[j]     = eval_path_point(solver, triangles, positions, adjacencies,
           curr_path.path, curr_path.t, 0.25);
       q[j + 1] = eval_path_point(solver, triangles, positions, adjacencies,
@@ -5406,7 +5406,7 @@ static vector<mesh_point> lane_riesenfeld_adaptive(
   // std::cout << "Precision";
   // std::cout << yocto::pow(2, -params.precision) / pif * 180 << std::endl;
   auto polyline = vector<mesh_point>{};
-  for (auto i = 0; i < P.size(); ++i) {
+  for (auto i = 0; i < (int)P.size(); ++i) {
     if (i == 0) {
       for (auto j = 0; j < 4; ++j) {
         polyline.push_back(P[i].points[j]);
@@ -5428,7 +5428,7 @@ static vector<mesh_point> lane_riesenfeld_adaptive(
 
   for (auto i = 0; i < num_subdivisions; ++i) {
     std::swap(p, q);
-    auto new_size = p.size() + 1;
+    auto new_size = (int)p.size() + 1;
     q.resize(new_size);
     q[0] = p[0];
     for (auto j = 1; j < new_size - 1; ++j) {

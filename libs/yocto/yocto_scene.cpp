@@ -753,7 +753,7 @@ void tesselate_subdiv(
     // facevarying case
     auto offset = vector<float>(subdiv.positions.size(), 0);
     auto count  = vector<int>(subdiv.positions.size(), 0);
-    for (auto fid = 0; fid < subdiv.quadspos.size(); fid++) {
+    for (auto fid = (size_t)0; fid < subdiv.quadspos.size(); fid++) {
       auto qpos = subdiv.quadspos[fid];
       auto qtxt = subdiv.quadstexcoord[fid];
       for (auto i = 0; i < 4; i++) {
@@ -766,7 +766,7 @@ void tesselate_subdiv(
       }
     }
     auto normals = quads_normals(subdiv.quadspos, subdiv.positions);
-    for (auto vid = 0; vid < subdiv.positions.size(); vid++) {
+    for (auto vid = (size_t)0; vid < subdiv.positions.size(); vid++) {
       subdiv.positions[vid] += normals[vid] * offset[vid] / (float)count[vid];
     }
     if (subdiv.smooth || !subdiv.normals.empty()) {
@@ -1059,7 +1059,7 @@ namespace yocto {
 
 // Find the first keyframe value that is greater than the argument.
 inline int keyframe_index(const vector<float>& times, const float& time) {
-  for (auto i = 0; i < times.size(); i++)
+  for (auto i = 0; i < (int)times.size(); i++)
     if (times[i] > time) return i;
   return (int)times.size();
 }
