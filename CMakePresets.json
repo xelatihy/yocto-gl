@@ -16,11 +16,15 @@
         "YOCTO_EMBREE": "ON",
         "YOCTO_DENOISE": "OFF",
         "YOCTO_OPENGL": "ON"
+      },
+      "architecture": {
+        "value": "x64",
+        "strategy": "external"
       }
     },
     {
       "name": "debug",
-      "description": "Default build",
+      "description": "Debug build",
       "generator": "Ninja",
       "binaryDir": "${sourceDir}/build/${presetName}",
       "cacheVariables": {
@@ -28,6 +32,42 @@
         "YOCTO_EMBREE": "ON",
         "YOCTO_DENOISE": "OFF",
         "YOCTO_OPENGL": "ON"
+      },
+      "architecture": {
+        "value": "x64",
+        "strategy": "external"
+      }
+    },
+    {
+      "name": "release-nodep",
+      "description": "Release build - no dependencies",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "YOCTO_EMBREE": "OFF",
+        "YOCTO_DENOISE": "OFF",
+        "YOCTO_OPENGL": "ON"
+      },
+      "architecture": {
+        "value": "x64",
+        "strategy": "external"
+      }
+    },
+    {
+      "name": "debug-nodep",
+      "description": "Debug build - no dependencies",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "YOCTO_EMBREE": "OFF",
+        "YOCTO_DENOISE": "OFF",
+        "YOCTO_OPENGL": "ON"
+      },
+      "architecture": {
+        "value": "x64",
+        "strategy": "external"
       }
     }
   ],
@@ -39,6 +79,14 @@
     {
       "name": "debug",
       "configurePreset": "debug"
+    },
+    {
+      "name": "release-nodep",
+      "configurePreset": "release-nodep"
+    },
+    {
+      "name": "debug-nodep",
+      "configurePreset": "debug-nodep"
     }
   ]
 }
