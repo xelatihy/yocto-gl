@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.12)
+cmake_minimum_required (VERSION 3.20)
 
 project (yocto_gl VERSION 4.0)
 
