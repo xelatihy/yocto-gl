@@ -4348,7 +4348,7 @@ static bool load_gltf_scene(
     if (gview.texture == nullptr) return -1;
     auto& gtexture = *gview.texture;
     if (gtexture.image == nullptr) return -1;
-    return (int)((gtexture.image - cgltf.images) / sizeof(cgltf_image));
+    return (int)(gtexture.image - cgltf.images);
   };
 
   // https://stackoverflow.com/questions/3418231/replace-part-of-a-string-with-another-string
@@ -4385,6 +4385,7 @@ static bool load_gltf_scene(
     material.normal_tex   = get_texture(gmaterial.normal_texture);
     if (gmaterial.has_pbr_metallic_roughness) {
       auto& gpbr        = gmaterial.pbr_metallic_roughness;
+      material.type     = material_type::gltfpbr;
       material.color    = {gpbr.base_color_factor[0], gpbr.base_color_factor[1],
           gpbr.base_color_factor[2]};
       material.opacity  = gpbr.base_color_factor[3];
@@ -4417,8 +4418,9 @@ static bool load_gltf_scene(
       auto& shape       = scene.shapes.emplace_back();
       auto& instance    = primitives.emplace_back();
       instance.shape    = (int)scene.shapes.size() - 1;
-      instance.material =  gprimitive.material ? (int)((gprimitive.material - cgltf.materials) /
-                                sizeof(cgltf_material)) : -1;
+      instance.material = gprimitive.material
+                              ? (int)(gprimitive.material - cgltf.materials)                                      
+                              : -1;
       for (auto idx = 0; idx < gprimitive.attributes_count; idx++) {
         auto& gattribute = gprimitive.attributes[idx];
         auto& gaccessor  = *gattribute.data;
@@ -4463,7 +4465,8 @@ static bool load_gltf_scene(
         }
         // convert values
         for (auto idx = (size_t)0; idx < count; idx++) {
-          if(!cgltf_accessor_read_float(&gaccessor, idx, &data[idx * dcomponents], components))
+          if (!cgltf_accessor_read_float(
+                  &gaccessor, idx, &data[idx * dcomponents], components))
             return unsupported_error("accessor float conversion");
         }
         // fixes
@@ -4562,14 +4565,14 @@ static bool load_gltf_scene(
     if (gnode.camera != nullptr) {
       auto& camera = scene.cameras.emplace_back();
       camera       = cameras.at(
-          (gnode.camera - cgltf.cameras) / sizeof(cgltf_camera));
+          gnode.camera - cgltf.cameras);
       auto xform = identity4x4f;
       cgltf_node_transform_world(&gnode, &xform.x.x);
       camera.frame = mat_to_frame(xform);
     }
     if (gnode.mesh != nullptr) {
       for (auto& primitive : mesh_primitives.at(
-               (gnode.mesh - cgltf.meshes) / sizeof(cgltf_mesh))) {
+               gnode.mesh - cgltf.meshes)) {
         auto& instance = scene.instances.emplace_back();
         instance       = primitive;
         auto xform     = identity4x4f;
