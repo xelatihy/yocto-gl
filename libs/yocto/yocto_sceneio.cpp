@@ -4304,12 +4304,15 @@ static bool load_gltf_scene(
       &options, cgltf_ptr, dirname_.c_str());
   if (buffer_result != cgltf_result_success) {
     error = "cannot load " + filename + " since cannot load buffers";
+    cgltf_free(cgltf_ptr);
     return false;
   }
 
   // setup parsing
-  auto& cgltf             = *cgltf_ptr;
-  auto  unsupported_error = [&filename, &error](const string& message) {
+  auto& cgltf       = *cgltf_ptr;
+  auto  cgltf_guard = std::unique_ptr<cgltf_data, void (*)(cgltf_data*)>(
+      cgltf_ptr, cgltf_free);
+  auto unsupported_error = [&filename, &error](const string& message) {
     error = "cannot load " + filename + " for sunsupported " + message;
     return false;
   };
@@ -4419,7 +4422,7 @@ static bool load_gltf_scene(
       auto& instance    = primitives.emplace_back();
       instance.shape    = (int)scene.shapes.size() - 1;
       instance.material = gprimitive.material
-                              ? (int)(gprimitive.material - cgltf.materials)                                      
+                              ? (int)(gprimitive.material - cgltf.materials)
                               : -1;
       for (auto idx = 0; idx < gprimitive.attributes_count; idx++) {
         auto& gattribute = gprimitive.attributes[idx];
@@ -4564,15 +4567,13 @@ static bool load_gltf_scene(
     auto& gnode = cgltf.nodes[idx];
     if (gnode.camera != nullptr) {
       auto& camera = scene.cameras.emplace_back();
-      camera       = cameras.at(
-          gnode.camera - cgltf.cameras);
-      auto xform = identity4x4f;
+      camera       = cameras.at(gnode.camera - cgltf.cameras);
+      auto xform   = identity4x4f;
       cgltf_node_transform_world(&gnode, &xform.x.x);
       camera.frame = mat_to_frame(xform);
     }
     if (gnode.mesh != nullptr) {
-      for (auto& primitive : mesh_primitives.at(
-               gnode.mesh - cgltf.meshes)) {
+      for (auto& primitive : mesh_primitives.at(gnode.mesh - cgltf.meshes)) {
         auto& instance = scene.instances.emplace_back();
         instance       = primitive;
         auto xform     = identity4x4f;
