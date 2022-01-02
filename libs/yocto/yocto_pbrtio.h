@@ -2,7 +2,7 @@
 // # Yocto/PbrtIO: Serialization for Pbrt models
 //
 // Yocto/PbrtIO is a collection of utilities for loading and saving scenes
-// in Pbrt formats.
+// in the Pbrt format.
 // Yocto/PbrtIO is implemented in `yocto_pbrtio.h` and `yocto_pbrtio.cpp`,
 // and depends on `fast_float.h` for number parsing.
 //

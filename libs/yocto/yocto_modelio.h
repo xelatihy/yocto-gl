@@ -1,8 +1,8 @@
 //
-// # Yocto/ModelIO: Serialization for Obj, Ply, Stl and Pbrt models
+// # Yocto/ModelIO: Serialization for Obj, Ply, and Stl models
 //
 // Yocto/ModelIO is a collection of utilities for loading and saving scenes
-// and meshes in Ply, Obj, Stl and Pbrt formats.
+// and meshes in Ply, Obj, and Stl formats.
 // Yocto/ModelIO is implemented in `yocto_modelio.h` and `yocto_modelio.cpp`,
 // and depends on `fast_float.h` for number parsing.
 //
