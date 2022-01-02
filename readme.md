@@ -36,7 +36,9 @@ See each header file for documentation.
   multiple importance sampling
 - `yocto/yocto_sceneio.{h,cpp}`: image, shape and scene serialization
 - `yocto/yocto_modelio.{h,cpp}`: low-level parsing and writing for 
-  Ply, Obj, Stl, Pbrt formats
+  Ply, Obj, Stl formats
+- `yocto/yocto_pbrtio.{h,cpp}`: low-level parsing and writing for 
+  Pbrt format
 - `yocto/yocto_cli.{h}`: printing utilities and command line parsing
 - `yocto/yocto_parallel.h`: concurrency utilities (deprecated)
 

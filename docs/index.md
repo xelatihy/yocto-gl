@@ -39,7 +39,9 @@ Here is a list of the main libraries.
   scattering, multiple importance sampling
 - [Yocto/SceneIO](yocto/yocto_sceneio.md): image, shape and scene serialization
 - [Yocto/ModelIO](yocto/yocto_modelio.md): low-level parsing and writing for
-  Ply, Obj, Stl, Pbrt formats
+  Ply, Obj, Stl formats
+- [Yocto/PbrtIO](yocto/yocto_pbrtio.md): low-level parsing and writing for
+  Pbrt format
 - [Yocto/Cli](yocto/yocto_cli.md): printing utilities and command line parsing
 - [Yocto/Parallel](yocto/yocto_parallel.md): concurrency utilities (deprecated)
 
