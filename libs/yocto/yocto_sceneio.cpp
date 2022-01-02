@@ -29,6 +29,7 @@
 #include "yocto_sceneio.h"
 
 #include <cgltf/cgltf.h>
+#include <cgltf/cgltf_write.h>
 #include <stb_image/stb_image.h>
 #include <stb_image/stb_image_resize.h>
 #include <stb_image/stb_image_write.h>
@@ -4288,9 +4289,10 @@ static bool load_gltf_scene(
   if (!load_binary(filename, data, error)) return false;
 
   // parse glTF
-  cgltf_options options      = {0};
-  auto          cgltf_ptr    = (cgltf_data*)nullptr;
-  auto          cgltf_result = cgltf_parse(
+  auto options = cgltf_options{};
+  memset(&options, 0, sizeof(options));
+  auto cgltf_ptr    = (cgltf_data*)nullptr;
+  auto cgltf_result = cgltf_parse(
       &options, data.data(), data.size(), &cgltf_ptr);
   if (cgltf_result != cgltf_result_success) {
     error = "cannot parse " + filename;
@@ -4619,296 +4621,295 @@ static bool load_gltf_scene(
 // Load a scene
 static bool save_gltf_scene(const string& filename, const scene_data& scene,
     string& error, bool noparallel) {
-  // convert scene to json
-  auto gltf = json_value::object();
+  // prepare data
+  auto cgltf_ptr = (cgltf_data*)malloc(sizeof(cgltf_data));
+  memset(cgltf_ptr, 0, sizeof(cgltf_data));
+  auto& cgltf = *cgltf_ptr;
+
+  // helpers
+  auto copy_string = [](const string& str) -> char* {
+    if (str.empty()) return nullptr;
+    auto copy = (char*)malloc(str.size() + 1);
+    memcpy(copy, str.c_str(), str.size() + 1);
+    return copy;
+  };
+  auto alloc_array = [](cgltf_size& size, auto*& ptr, size_t count) {
+    using type =
+        typename std::remove_pointer_t<std::remove_reference_t<decltype(ptr)>>;
+    size = count;
+    ptr  = (type*)malloc(count * sizeof(type));
+    memset(ptr, 0, count * sizeof(type));
+  };
 
   // asset
-  {
-    auto& gasset        = gltf["asset"];
-    gasset              = json_value::object();
-    gasset["version"]   = "2.0";
-    gasset["generator"] = "Yocto/GL - https://github.com/xelatihy/yocto-gl";
-    if (!scene.copyright.empty()) gasset["copyright"] = scene.copyright;
-  }
+  cgltf.asset.generator = copy_string(
+      "Yocto/GL - https://github.com/xelatihy/yocto-gl");
+  cgltf.asset.copyright = copy_string(scene.copyright);
 
   // cameras
   if (!scene.cameras.empty()) {
-    auto& gcameras = gltf["cameras"];
-    gcameras       = json_value::array();
-    for (auto& camera : scene.cameras) {
-      auto& gcamera               = gcameras.emplace_back();
-      gcamera                     = json_value::object();
-      gcamera["name"]             = get_camera_name(scene, camera);
-      gcamera["type"]             = "perspective";
-      auto& gperspective          = gcamera["perspective"];
-      gperspective                = json_value::object();
-      gperspective["aspectRatio"] = camera.aspect;
-      gperspective["yfov"]        = 0.660593;  // TODO(fabio): yfov
-      gperspective["znear"]       = 0.001;     // TODO(fabio): configurable?
+    alloc_array(cgltf.cameras_count, cgltf.cameras, scene.cameras.size());
+    for (auto idx = (size_t)0; idx < scene.cameras.size(); idx++) {
+      auto& camera       = scene.cameras[idx];
+      auto& gcamera      = cgltf.cameras[idx];
+      gcamera.name       = copy_string(get_camera_name(scene, camera));
+      gcamera.type       = cgltf_camera_type_perspective;
+      auto& gperspective = gcamera.data.perspective;
+      gperspective.has_aspect_ratio = true;
+      gperspective.aspect_ratio     = camera.aspect;
+      gperspective.yfov             = 0.660593;  // TODO(fabio): yfov
+      gperspective.znear            = 0.001;     // TODO(fabio): configurable?
     }
   }
 
   // textures
   if (!scene.textures.empty()) {
-    auto& gtextures  = gltf["textures"];
-    gtextures        = json_value::array();
-    auto& gsamplers  = gltf["samplers"];
-    gsamplers        = json_value::array();
-    auto& gimages    = gltf["images"];
-    gimages          = json_value::array();
-    auto& gsampler   = gsamplers.emplace_back();
-    gsampler         = json_value::object();
-    gsampler["name"] = "sampler";
-    for (auto& texture : scene.textures) {
-      auto  name          = get_texture_name(scene, texture);
-      auto& gimage        = gimages.emplace_back();
-      gimage              = json_value::object();
-      gimage["name"]      = name;
-      gimage["uri"]       = "textures/" + name + ".png";
-      auto& gtexture      = gtextures.emplace_back();
-      gtexture            = json_value::object();
-      gtexture["name"]    = name;
-      gtexture["sampler"] = 0;
-      gtexture["source"]  = (int)gimages.size() - 1;
+    alloc_array(cgltf.textures_count, cgltf.textures, scene.textures.size());
+    alloc_array(cgltf.images_count, cgltf.images, scene.textures.size());
+    alloc_array(cgltf.samplers_count, cgltf.samplers, 1);
+    auto& gsampler = cgltf.samplers[0];
+    gsampler.name  = copy_string("sampler");
+    for (auto idx = (size_t)0; idx < scene.textures.size(); idx++) {
+      auto& texture    = scene.textures[idx];
+      auto& gtexture   = cgltf.textures[idx];
+      auto& gimage     = cgltf.images[idx];
+      auto  name       = get_texture_name(scene, texture);
+      gimage.name      = copy_string(name);
+      gimage.uri       = copy_string("textures/" + name + ".png");
+      gtexture.name    = copy_string(name);
+      gtexture.sampler = &gsampler;
+      gtexture.image   = &gimage;
     }
   }
 
   // materials
   if (!scene.materials.empty()) {
-    auto& gmaterials = gltf["materials"];
-    gmaterials       = json_value::array();
-    for (auto& material : scene.materials) {
-      auto& gmaterial             = gmaterials.emplace_back();
-      gmaterial                   = json_value::object();
-      gmaterial["name"]           = get_material_name(scene, material);
-      gmaterial["emissiveFactor"] = material.emission;
-      auto& gpbr                  = gmaterial["pbrMetallicRoughness"];
-      gpbr                        = json_value::object();
-      gpbr["baseColorFactor"]     = vec4f{material.color.x, material.color.y,
-          material.color.z, material.opacity};
-      gpbr["metallicFactor"]      = material.metallic;
-      gpbr["roughnessFactor"]     = material.roughness;
+    alloc_array(cgltf.materials_count, cgltf.materials, scene.materials.size());
+    for (auto idx = (size_t)0; idx < scene.materials.size(); idx++) {
+      auto& material  = scene.materials[idx];
+      auto& gmaterial = cgltf.materials[idx];
+      gmaterial.name  = copy_string(get_material_name(scene, material));
+      gmaterial.emissive_factor[0]         = material.emission.x;
+      gmaterial.emissive_factor[1]         = material.emission.y;
+      gmaterial.emissive_factor[2]         = material.emission.z;
+      gmaterial.has_pbr_metallic_roughness = true;
+      auto& gpbr                           = gmaterial.pbr_metallic_roughness;
+      gpbr.base_color_factor[0]            = material.color.x;
+      gpbr.base_color_factor[1]            = material.color.y;
+      gpbr.base_color_factor[2]            = material.color.z;
+      gpbr.base_color_factor[3]            = material.opacity;
+      gpbr.metallic_factor                 = material.metallic;
+      gpbr.roughness_factor                = material.roughness;
       if (material.emission_tex != invalidid) {
-        gmaterial["emissiveTexture"]          = json_value::object();
-        gmaterial["emissiveTexture"]["index"] = material.emission_tex;
+        gmaterial.emissive_texture.texture = cgltf.textures +
+                                             material.emission_tex;
       }
       if (material.normal_tex != invalidid) {
-        gmaterial["normalTexture"]          = json_value::object();
-        gmaterial["normalTexture"]["index"] = material.normal_tex;
+        gmaterial.normal_texture.texture = cgltf.textures + material.normal_tex;
       }
       if (material.color_tex != invalidid) {
-        gpbr["baseColorTexture"]          = json_value::object();
-        gpbr["baseColorTexture"]["index"] = material.color_tex;
+        gpbr.base_color_texture.texture = cgltf.textures + material.color_tex;
       }
       if (material.roughness_tex != invalidid) {
-        gpbr["metallicRoughnessTexture"]          = json_value::object();
-        gpbr["metallicRoughnessTexture"]["index"] = material.roughness_tex;
+        gpbr.metallic_roughness_texture.texture = cgltf.textures +
+                                                  material.roughness_tex;
       }
     }
   }
 
-  // add an accessor
-  auto set_view = [](json_value& gview, json_value& gbuffer, const auto& data,
-                      size_t buffer_id) {
-    gview                 = json_value::object();
-    gview["buffer"]       = buffer_id;
-    gview["byteLength"]   = data.size() * sizeof(data.front());
-    gview["byteOffset"]   = gbuffer["byteLength"];
-    gbuffer["byteLength"] = gbuffer.value("byteLength", (size_t)0) +
-                            data.size() * sizeof(data.front());
-  };
-  auto set_vaccessor = [](json_value& gaccessor, const auto& data,
-                           size_t view_id, bool minmax = false) {
-    static auto types = unordered_map<size_t, string>{
-        {1, "SCALAR"}, {2, "VEC2"}, {3, "VEC3"}, {4, "VEC4"}};
-    gaccessor                  = json_value::object();
-    gaccessor["bufferView"]    = view_id;
-    gaccessor["componentType"] = 5126;
-    gaccessor["count"]         = data.size();
-    gaccessor["type"]          = types.at(sizeof(data.front()) / sizeof(float));
-    if constexpr (sizeof(data.front()) == sizeof(vec3f)) {
-      if (minmax) {
-        auto bbox = invalidb3f;
-        for (auto& value : data) bbox = merge(bbox, value);
-        gaccessor["min"] = bbox.min;
-        gaccessor["max"] = bbox.max;
-      }
-    }
-  };
-  auto set_iaccessor = [](json_value& gaccessor, const auto& data,
-                           size_t view_id, bool minmax = false) {
-    gaccessor                  = json_value::object();
-    gaccessor["bufferView"]    = view_id;
-    gaccessor["componentType"] = 5125;
-    gaccessor["count"] = data.size() * sizeof(data.front()) / sizeof(int);
-    gaccessor["type"]  = "SCALAR";
-  };
-
-  // meshes
-  auto shape_primitives = vector<json_value>();
-  shape_primitives.reserve(scene.shapes.size());
+  // buffers
+  auto shape_accessor_start = vector<int>{};
   if (!scene.shapes.empty()) {
-    auto& gaccessors = gltf["accessors"];
-    gaccessors       = json_value::array();
-    auto& gviews     = gltf["bufferViews"];
-    gviews           = json_value::array();
-    auto& gbuffers   = gltf["buffers"];
-    gbuffers         = json_value::array();
-    for (auto& shape : scene.shapes) {
-      auto& gbuffer         = gbuffers.emplace_back();
-      gbuffer["uri"]        = "shapes/" + get_shape_name(scene, shape) + ".bin";
-      gbuffer["byteLength"] = (size_t)0;
-      auto& gprimitive      = shape_primitives.emplace_back();
-      gprimitive            = json_value::object();
-      auto& gattributes     = gprimitive["attributes"];
-      gattributes           = json_value::object();
-      if (!shape.positions.empty()) {
-        set_view(gviews.emplace_back(), gbuffer, shape.positions,
-            gbuffers.size() - 1);
-        set_vaccessor(gaccessors.emplace_back(), shape.positions,
-            gviews.size() - 1, true);
-        gattributes["POSITION"] = (int)gaccessors.size() - 1;
+    alloc_array(cgltf.meshes_count, cgltf.meshes, scene.shapes.size());
+    alloc_array(
+        cgltf.accessors_count, cgltf.accessors, scene.shapes.size() * 6);
+    alloc_array(
+        cgltf.buffer_views_count, cgltf.buffer_views, scene.shapes.size() * 6);
+    shape_accessor_start.resize(scene.shapes.size(), 0);
+    cgltf.accessors_count    = 0;
+    cgltf.buffer_views_count = 0;
+    auto add_vertex = [](cgltf_data& cgltf, cgltf_buffer& gbuffer, size_t count,
+                          cgltf_type type, const float* data) {
+      auto  components         = cgltf_size(type);
+      auto& gbufferview        = cgltf.buffer_views[cgltf.buffer_views_count++];
+      gbufferview.buffer       = &gbuffer;
+      gbufferview.offset       = gbuffer.size;
+      gbufferview.size         = sizeof(float) * components * count;
+      gbufferview.type         = cgltf_buffer_view_type_vertices;
+      auto& gaccessor          = cgltf.accessors[cgltf.accessors_count++];
+      gaccessor.count          = count;
+      gaccessor.type           = type;
+      gaccessor.component_type = cgltf_component_type_r_32f;
+      gaccessor.has_min        = true;
+      gaccessor.has_max        = true;
+      for (auto component = 0; component < components; component++) {
+        gaccessor.min[component] = flt_max;
+        gaccessor.max[component] = flt_min;
+        for (auto idx = 0; idx < count; idx++) {
+          gaccessor.min[component] = min(
+              gaccessor.min[component], data[idx * components + component]);
+          gaccessor.max[component] = max(
+              gaccessor.min[component], data[idx * components + component]);
+        }
       }
-      if (!shape.normals.empty()) {
-        set_view(
-            gviews.emplace_back(), gbuffer, shape.normals, gbuffers.size() - 1);
-        set_vaccessor(
-            gaccessors.emplace_back(), shape.normals, gviews.size() - 1);
-        gattributes["NORMAL"] = (int)gaccessors.size() - 1;
-      }
-      if (!shape.texcoords.empty()) {
-        set_view(gviews.emplace_back(), gbuffer, shape.texcoords,
-            gbuffers.size() - 1);
-        set_vaccessor(
-            gaccessors.emplace_back(), shape.texcoords, gviews.size() - 1);
-        gattributes["TEXCOORD_0"] = (int)gaccessors.size() - 1;
-      }
-      if (!shape.colors.empty()) {
-        set_view(
-            gviews.emplace_back(), gbuffer, shape.colors, gbuffers.size() - 1);
-        set_vaccessor(
-            gaccessors.emplace_back(), shape.colors, gviews.size() - 1);
-        gattributes["COLOR_0"] = (int)gaccessors.size() - 1;
-      }
-      if (!shape.radius.empty()) {
-        set_view(
-            gviews.emplace_back(), gbuffer, shape.radius, gbuffers.size() - 1);
-        set_vaccessor(
-            gaccessors.emplace_back(), shape.radius, gviews.size() - 1);
-        gattributes["RADIUS"] = (int)gaccessors.size() - 1;
-      }
-      if (!shape.points.empty()) {
-        set_view(
-            gviews.emplace_back(), gbuffer, shape.points, gbuffers.size() - 1);
-        set_iaccessor(
-            gaccessors.emplace_back(), shape.points, gviews.size() - 1);
-        gprimitive["indices"] = (int)gaccessors.size() - 1;
-        gprimitive["mode"]    = 0;
-      } else if (!shape.lines.empty()) {
-        set_view(
-            gviews.emplace_back(), gbuffer, shape.lines, gbuffers.size() - 1);
-        set_iaccessor(
-            gaccessors.emplace_back(), shape.lines, gviews.size() - 1);
-        gprimitive["indices"] = (int)gaccessors.size() - 1;
-        gprimitive["mode"]    = 1;
-      } else if (!shape.triangles.empty()) {
-        set_view(gviews.emplace_back(), gbuffer, shape.triangles,
-            gbuffers.size() - 1);
-        set_iaccessor(
-            gaccessors.emplace_back(), shape.triangles, gviews.size() - 1);
-        gprimitive["indices"] = (int)gaccessors.size() - 1;
-        gprimitive["mode"]    = 4;
-      } else if (!shape.quads.empty()) {
-        auto triangles = quads_to_triangles(shape.quads);
-        set_view(
-            gviews.emplace_back(), gbuffer, triangles, gbuffers.size() - 1);
-        set_iaccessor(gaccessors.emplace_back(), triangles, gviews.size() - 1);
-        gprimitive["indices"] = (int)gaccessors.size() - 1;
-        gprimitive["mode"]    = 4;
-      }
+      gbuffer.size += gbufferview.size;
+    };
+    auto add_element = [](cgltf_data& cgltf, cgltf_buffer& gbuffer,
+                           size_t count, cgltf_type type) {
+      auto  components         = cgltf_size(type);
+      auto& gbufferview        = cgltf.buffer_views[cgltf.buffer_views_count++];
+      gbufferview.buffer       = &gbuffer;
+      gbufferview.offset       = gbuffer.size;
+      gbufferview.size         = sizeof(int) * components * count;
+      gbufferview.type         = cgltf_buffer_view_type_indices;
+      auto& gaccessor          = cgltf.accessors[cgltf.accessors_count++];
+      gaccessor.buffer_view    = &gbufferview;
+      gaccessor.count          = count * components;
+      gaccessor.type           = cgltf_type_scalar;
+      gaccessor.component_type = cgltf_component_type_r_32u;
+      gbuffer.size += gbufferview.size;
+    };
+    for (auto idx = (size_t)0; idx < scene.shapes.size(); idx++) {
+      auto& shape               = scene.shapes[idx];
+      auto& gbuffer             = cgltf.buffers[idx];
+      shape_accessor_start[idx] = cgltf.accessors_count;
+      gbuffer.uri               = copy_string(
+          "shapes/" + get_shape_name(scene, shape) + ".bin");
+      add_vertex(cgltf, gbuffer, shape.positions.size(), cgltf_type_vec3,
+          (const float*)shape.positions.data());
+      add_vertex(cgltf, gbuffer, shape.normals.size(), cgltf_type_vec3,
+          (const float*)shape.normals.data());
+      add_vertex(cgltf, gbuffer, shape.texcoords.size(), cgltf_type_vec2,
+          (const float*)shape.texcoords.data());
+      add_vertex(cgltf, gbuffer, shape.colors.size(), cgltf_type_vec4,
+          (const float*)shape.colors.data());
+      add_vertex(cgltf, gbuffer, shape.radius.size(), cgltf_type_scalar,
+          (const float*)shape.radius.data());
+      add_element(cgltf, gbuffer, shape.points.size(), cgltf_type_scalar);
+      add_element(cgltf, gbuffer, shape.lines.size(), cgltf_type_vec2);
+      add_element(cgltf, gbuffer, shape.triangles.size(), cgltf_type_vec3);
+      add_element(cgltf, gbuffer, shape.quads.size(), cgltf_type_vec4);
     }
   }
 
   // meshes
   using mesh_key = pair<int, int>;
-  struct mesh_key_hash {
-    size_t operator()(const mesh_key& v) const {
-      const std::hash<int> hasher = std::hash<int>();
-      auto                 h      = (size_t)0;
-      h ^= hasher(v.first) + 0x9e3779b9 + (h << 6) + (h >> 2);
-      h ^= hasher(v.second) + 0x9e3779b9 + (h << 6) + (h >> 2);
-      return h;
+  struct mesh_hash {
+    auto operator()(const pair<int, int>& key) const {
+      auto packed = ((uint64_t)key.first << 32) | (uint64_t)key.second;
+      return std::hash<uint64_t>()(packed);
     }
   };
-  auto mesh_map = unordered_map<mesh_key, size_t, mesh_key_hash>{};
+  auto mesh_map = unordered_map<mesh_key, size_t, mesh_hash>{};
   if (!scene.instances.empty()) {
-    auto& gmeshes = gltf["meshes"];
-    gmeshes       = json_value::array();
-    for (auto& instance : scene.instances) {
-      auto key = mesh_key{instance.shape, instance.material};
-      if (mesh_map.find(key) != mesh_map.end()) continue;
-      auto& gmesh   = gmeshes.emplace_back();
-      gmesh         = json_value::object();
-      gmesh["name"] = get_shape_name(scene, instance.shape) + "_" +
-                      get_material_name(scene, instance.material);
-      gmesh["primitives"] = json_value::array();
-      gmesh["primitives"].push_back(shape_primitives.at(instance.shape));
-      gmesh["primitives"].back()["material"] = instance.material;
-      mesh_map[key]                          = gmeshes.size() - 1;
-    }
-  } else if (!scene.shapes.empty()) {
-    auto& gmeshes = gltf["meshes"];
-    gmeshes       = json_value::array();
-    auto shape_id = 0;
-    for (auto& primitives : shape_primitives) {
-      auto& gmesh         = gmeshes.emplace_back();
-      gmesh               = json_value::object();
-      gmesh["name"]       = get_shape_name(scene, shape_id++);
-      gmesh["primitives"] = json_value::array();
-      gmesh["primitives"].push_back(primitives);
+    alloc_array(cgltf.meshes_count, cgltf.meshes, scene.instances.size());
+    cgltf.meshes_count = 0;
+    for (auto idx = (size_t)0; idx < scene.instances.size(); idx++) {
+      auto& instance = scene.instances[idx];
+      if (mesh_map.find({instance.shape, instance.material}) != mesh_map.end())
+        continue;
+      mesh_map[{instance.shape, instance.material}] = (int)cgltf.meshes_count;
+      auto& shape = scene.shapes[instance.shape];
+      auto& gmesh = cgltf.meshes[cgltf.meshes_count++];
+      alloc_array(gmesh.primitives_count, gmesh.primitives, 1);
+      auto& gprimitive    = gmesh.primitives[0];
+      gprimitive.material = cgltf.materials + instance.material;
+      alloc_array(gprimitive.attributes_count, gprimitive.attributes, 5);
+      gprimitive.attributes_count = 0;
+      auto cur_accessor           = shape_accessor_start[instance.shape];
+      if (!shape.positions.empty()) {
+        auto& gattribute = gprimitive.attributes[gprimitive.attributes_count++];
+        gattribute.type  = cgltf_attribute_type_position;
+        gattribute.name  = copy_string("POSITION");
+        gattribute.data  = cgltf.accessors + cur_accessor++;
+      }
+      if (!shape.normals.empty()) {
+        auto& gattribute = gprimitive.attributes[gprimitive.attributes_count++];
+        gattribute.type  = cgltf_attribute_type_normal;
+        gattribute.name  = copy_string("NORMAL");
+        gattribute.data  = cgltf.accessors + cur_accessor++;
+      }
+      if (!shape.texcoords.empty()) {
+        auto& gattribute = gprimitive.attributes[gprimitive.attributes_count++];
+        gattribute.type  = cgltf_attribute_type_texcoord;
+        gattribute.name  = copy_string("TEXCOORD0");
+        gattribute.data  = cgltf.accessors + cur_accessor++;
+      }
+      if (!shape.colors.empty()) {
+        auto& gattribute = gprimitive.attributes[gprimitive.attributes_count++];
+        gattribute.type  = cgltf_attribute_type_color;
+        gattribute.name  = copy_string("COLOR0");
+        gattribute.data  = cgltf.accessors + cur_accessor++;
+      }
+      if (!shape.radius.empty()) {
+        auto& gattribute = gprimitive.attributes[gprimitive.attributes_count++];
+        gattribute.type  = cgltf_attribute_type_invalid;
+        gattribute.name  = copy_string("RADIUS");
+        gattribute.data  = cgltf.accessors + cur_accessor++;
+      }
+      if (!shape.points.empty()) {
+        gprimitive.type    = cgltf_primitive_type_points;
+        gprimitive.indices = cgltf.accessors + cur_accessor++;
+      } else if (!shape.lines.empty()) {
+        gprimitive.type    = cgltf_primitive_type_lines;
+        gprimitive.indices = cgltf.accessors + cur_accessor++;
+      } else if (!shape.triangles.empty()) {
+        gprimitive.type    = cgltf_primitive_type_triangles;
+        gprimitive.indices = cgltf.accessors + cur_accessor++;
+      } else if (!shape.quads.empty()) {
+        gprimitive.type    = cgltf_primitive_type_triangles;
+        gprimitive.indices = cgltf.accessors + cur_accessor++;
+      }
     }
   }
 
   // nodes
   if (!scene.cameras.empty() || !scene.instances.empty()) {
-    auto& gnodes   = gltf["nodes"];
-    gnodes         = json_value::array();
-    auto camera_id = 0;
-    for (auto& camera : scene.cameras) {
-      auto& gnode     = gnodes.emplace_back();
-      gnode           = json_value::object();
-      gnode["name"]   = get_camera_name(scene, camera);
-      gnode["matrix"] = frame_to_mat(camera.frame);
-      gnode["camera"] = camera_id++;
+    alloc_array(cgltf.nodes_count, cgltf.nodes,
+        scene.cameras.size() + scene.instances.size() + 1);
+    for (auto idx = (size_t)0; idx < scene.cameras.size(); idx++) {
+      auto& camera = scene.cameras[idx];
+      auto& gnode  = cgltf.nodes[idx];
+      gnode.name   = copy_string(get_camera_name(scene, camera));
+      auto xform   = frame_to_mat(camera.frame);
+      memcpy(gnode.matrix, &xform, sizeof(mat4f));
+      gnode.camera = cgltf.cameras + idx;
     }
-    for (auto& instance : scene.instances) {
-      auto& gnode     = gnodes.emplace_back();
-      gnode           = json_value::object();
-      gnode["name"]   = get_instance_name(scene, instance);
-      gnode["matrix"] = frame_to_mat(instance.frame);
-      gnode["mesh"]   = mesh_map.at({instance.shape, instance.material});
+    for (auto idx = (size_t)0; idx < scene.instances.size(); idx++) {
+      auto& instance = scene.instances[idx];
+      auto& gnode    = cgltf.nodes[idx + scene.cameras.size()];
+      gnode.name     = copy_string(get_instance_name(scene, instance));
+      auto xform     = frame_to_mat(instance.frame);
+      memcpy(gnode.matrix, &xform, sizeof(mat4f));
+      gnode.mesh = cgltf.meshes +
+                   mesh_map.at({instance.shape, instance.material});
     }
     // root children
-    auto& groot     = gnodes.emplace_back();
-    groot           = json_value::object();
-    groot["name"]   = "root";
-    auto& gchildren = groot["children"];
-    gchildren       = json_value::array();
-    for (auto idx = (size_t)0; idx < gnodes.size() - 1; idx++)
-      gchildren.push_back(idx);
+    auto& groot = cgltf.nodes[cgltf.nodes_count - 1];
+    groot.name  = copy_string("root");
+    alloc_array(groot.children_count, groot.children, cgltf.nodes_count - 1);
+    for (auto idx = (size_t)0; idx < cgltf.nodes_count - 1; idx++)
+      groot.children[idx] = cgltf.nodes + idx;
     // scene
-    auto& gscenes     = gltf["scenes"];
-    gscenes           = json_value::array();
-    auto& gscene      = gscenes.emplace_back();
-    gscene            = json_value::object();
-    auto& gscenenodes = gscene["nodes"];
-    gscenenodes       = json_value::array();
-    gscenenodes.push_back(gnodes.size() - 1);
-    gltf["scene"] = 0;
+    alloc_array(cgltf.scenes_count, cgltf.scenes, 1);
+    auto& gscene = cgltf.scenes[0];
+    alloc_array(gscene.nodes_count, gscene.nodes, 1);
+    gscene.nodes[0] = cgltf.nodes + cgltf.nodes_count - 1;
+    cgltf.scene     = cgltf.scenes;
   }
 
-  // save json
-  if (!save_json(filename, gltf, error)) return false;
+  // save gltf
+  auto options = cgltf_options{};
+  memset(&options, 0, sizeof(options));
+  auto result = cgltf_write_file(&options, filename.c_str(), &cgltf);
+  if (result != cgltf_result_success) {
+    error = "cannot save " + filename;
+    cgltf_free(&cgltf);
+    return false;
+  }
+
+  // cleanup
+  cgltf_free(&cgltf);
 
   // get filename from name
   auto make_filename = [filename](const string& name, const string& group,
