@@ -5,7 +5,8 @@ scene elements, together with path manipulation utilities. The list of
 supported file formats in included in the sections below.
 Yocto/SceneIO is implemented in `yocto_sceneio.h` and `yocto_sceneio.cpp`,
 and depends on `json.hpp` for Json serialization, and `stb_image.h`,
-`stb_image_write.h` and `tinyexr.h` for the image serialization.
+`stb_image_write.h` and `tinyexr.h` for the image serialization, and
+`cgltf.h` and `cgltf_write.h` for glTF support.
 
 ## Image serialization
 
