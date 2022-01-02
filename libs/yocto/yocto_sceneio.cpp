@@ -4750,9 +4750,9 @@ static bool save_gltf_scene(const string& filename, const scene_data& scene,
   if (!scene.shapes.empty()) {
     alloc_array(cgltf.buffers_count, cgltf.buffers, scene.shapes.size());
     alloc_array(
-        cgltf.accessors_count, cgltf.accessors, scene.shapes.size() * 10);
+        cgltf.accessors_count, cgltf.accessors, scene.shapes.size() * 6);
     alloc_array(
-        cgltf.buffer_views_count, cgltf.buffer_views, scene.shapes.size() * 10);
+        cgltf.buffer_views_count, cgltf.buffer_views, scene.shapes.size() * 6);
     shape_accessor_start.resize(scene.shapes.size(), 0);
     cgltf.accessors_count    = 0;
     cgltf.buffer_views_count = 0;
