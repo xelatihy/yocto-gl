@@ -508,7 +508,7 @@ inline bool parse_cli(
     return parse_cli(command, args, pos, error);
   } else {
     // check option
-    if (pos < args.size() - 1 && args[pos].find("--") != 0) {
+    if (pos < args.size() && args[pos].find("--") != 0) {
       error = "command should start with option";
       return false;
     }
