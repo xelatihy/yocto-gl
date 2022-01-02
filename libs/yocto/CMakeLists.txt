@@ -22,6 +22,7 @@ target_link_libraries(yocto PRIVATE fast_float)
 target_link_libraries(yocto PRIVATE nlohmann_json::nlohmann_json)
 target_link_libraries(yocto PRIVATE stb_image::stb_image)
 target_link_libraries(yocto PRIVATE tinyexr::tinyexr)
+target_link_libraries(yocto PRIVATE cgltf::cgltf)
 
 if(UNIX AND NOT APPLE)
   find_package(Threads REQUIRED)

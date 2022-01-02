@@ -28,6 +28,7 @@
 
 #include "yocto_sceneio.h"
 
+#include <cgltf/cgltf.h>
 #include <stb_image/stb_image.h>
 #include <stb_image/stb_image_resize.h>
 #include <stb_image/stb_image_write.h>
@@ -4282,105 +4283,72 @@ namespace yocto {
 // Load a scene
 static bool load_gltf_scene(
     const string& filename, scene_data& scene, string& error, bool noparallel) {
-  // load gltf
-  auto gltf = json_value{};
-  if (!load_json(filename, gltf, error)) return false;
+  // load gltf data
+  auto data = vector<byte>{};
+  if (!load_binary(filename, data, error)) return false;
 
-  // errors
-  auto parse_error = [&filename, &error]() {
+  // parse glTF
+  cgltf_options options      = {0};
+  auto          cgltf_ptr    = (cgltf_data*)nullptr;
+  auto          cgltf_result = cgltf_parse(
+      &options, data.data(), data.size(), &cgltf_ptr);
+  if (cgltf_result != cgltf_result_success) {
     error = "cannot parse " + filename;
     return false;
-  };
-
-  // parse buffers
-  auto buffers_paths = vector<string>{};
-  auto buffers       = vector<vector<byte>>();
-  try {
-    if (gltf.contains("buffers")) {
-      for (auto& gbuffer : gltf.at("buffers")) {
-        if (!gbuffer.contains("uri")) return parse_error();
-        buffers_paths.push_back(gbuffer.value("uri", ""));
-        buffers.emplace_back();
-      }
-    }
-  } catch (...) {
-    return parse_error();
   }
 
-  // dirname
-  auto dirname         = path_dirname(filename);
-  auto dependent_error = [&filename, &error]() {
-    error = "cannot load " + filename + " since " + error;
+  // load buffers
+  auto dirname_      = path_dirname(filename);
+  dirname_           = dirname_.empty() ? string{"./"} : (dirname_ + "/");
+  auto buffer_result = cgltf_load_buffers(
+      &options, cgltf_ptr, dirname_.c_str());
+  if (buffer_result != cgltf_result_success) {
+    error = "cannot load " + filename + " since cannot load buffers";
+    return false;
+  }
+
+  // setup parsing
+  auto& cgltf             = *cgltf_ptr;
+  auto  unsupported_error = [&filename, &error](const string& message) {
+    error = "cannot load " + filename + " for sunsupported " + message;
     return false;
   };
-
-  if (noparallel) {
-    // load buffers
-    for (auto& buffer : buffers) {
-      auto& path = buffers_paths[&buffer - &buffers.front()];
-      if (!load_binary(path_join(dirname, path), buffer, error))
-        return dependent_error();
-    }
-  } else {
-    // load buffers
-    if (!parallel_foreach(buffers, error, [&](auto& buffer, string& error) {
-          auto& path = buffers_paths[&buffer - &buffers.front()];
-          return load_binary(path_join(dirname, path), buffer, error);
-        }))
-      return dependent_error();
-  }
-
-  // convert asset
-  if (gltf.contains("asset")) {
-    try {
-      scene.copyright = gltf.value("copyright", ""s);
-    } catch (...) {
-      return parse_error();
-    }
-  }
 
   // convert cameras
   auto cameras = vector<camera_data>{};
-  if (gltf.contains("cameras")) {
-    try {
-      for (auto& gcamera : gltf.at("cameras")) {
-        auto& camera = cameras.emplace_back();
-        auto  type   = gcamera.value("type", "perspective");
-        if (type == "orthographic") {
-          auto& gortho  = gcamera.at("orthographic");
-          auto  xmag    = gortho.value("xmag", 1.0f);
-          auto  ymag    = gortho.value("ymag", 1.0f);
-          camera.aspect = xmag / ymag;
-          camera.lens   = ymag;  // this is probably bogus
-          camera.film   = 0.036f;
-        } else if (type == "perspective") {
-          auto& gpersp  = gcamera.at("perspective");
-          camera.aspect = gpersp.value("aspectRatio", 0.0f);
-          auto yfov     = gpersp.value("yfov", radians(45.0f));
-          if (camera.aspect == 0) camera.aspect = 16.0f / 9.0f;
-          camera.film = 0.036f;
-          if (camera.aspect >= 1) {
-            camera.lens = (camera.film / camera.aspect) / (2 * tan(yfov / 2));
-          } else {
-            camera.lens = camera.film / (2 * tan(yfov / 2));
-          }
-          camera.focus = 1;
-        } else {
-          return parse_error();
-        }
+  for (auto idx = 0; idx < cgltf.cameras_count; idx++) {
+    auto& gcamera = cgltf.cameras[idx];
+    auto& camera  = cameras.emplace_back();
+    if (gcamera.type == cgltf_camera_type_orthographic) {
+      auto& gortho  = gcamera.data.orthographic;
+      auto  xmag    = gortho.xmag;
+      auto  ymag    = gortho.ymag;
+      camera.aspect = xmag / ymag;
+      camera.lens   = ymag;  // this is probably bogus
+      camera.film   = 0.036f;
+    } else if (gcamera.type == cgltf_camera_type_perspective) {
+      auto& gpersp  = gcamera.data.perspective;
+      camera.aspect = gpersp.has_aspect_ratio ? gpersp.aspect_ratio : 0.0f;
+      auto yfov     = gpersp.yfov;
+      if (camera.aspect == 0) camera.aspect = 16.0f / 9.0f;
+      camera.film = 0.036f;
+      if (camera.aspect >= 1) {
+        camera.lens = (camera.film / camera.aspect) / (2 * tan(yfov / 2));
+      } else {
+        camera.lens = camera.film / (2 * tan(yfov / 2));
       }
-    } catch (...) {
-      return parse_error();
+      camera.focus = 1;
+    } else {
+      return unsupported_error("camera type");
     }
   }
 
   // convert color textures
-  auto get_texture = [&gltf](
-                         const json_value& json, const string& name) -> int {
-    if (!json.contains(name)) return invalidid;
-    auto& ginfo    = json.at(name);
-    auto& gtexture = gltf.at("textures").at(ginfo.value("index", -1));
-    return gtexture.value("source", -1);
+  auto get_texture = [&cgltf](const cgltf_texture_view& gview) -> int {
+    if (gview.texture == nullptr) return -1;
+    auto& gtexture = *gview.texture;
+    if (gtexture.image == nullptr) return -1;
+    return (int)((gtexture.image - cgltf.images) / sizeof(cgltf_image));
   };
 
   // https://stackoverflow.com/questions/3418231/replace-part-of-a-string-with-another-string
@@ -4398,334 +4366,225 @@ static bool load_gltf_scene(
 
   // convert textures
   auto texture_paths = vector<string>{};
-  if (gltf.contains("images")) {
-    try {
-      for (auto& gimage : gltf.at("images")) {
-        scene.textures.emplace_back();
-        texture_paths.push_back(replace(gimage.value("uri", ""), "%20", " "));
-      }
-    } catch (...) {
-      return parse_error();
-    }
+  for (auto idx = 0; idx < cgltf.images_count; idx++) {
+    auto& gimage = cgltf.images[idx];
+    scene.textures.emplace_back();
+    texture_paths.push_back(replace(gimage.uri, "%20", " "));
   }
 
   // convert materials
-  if (gltf.contains("materials")) {
-    try {
-      for (auto& gmaterial : gltf.at("materials")) {
-        auto& material    = scene.materials.emplace_back();
-        material.type     = material_type::gltfpbr;
-        material.emission = gmaterial.value("emissiveFactor", vec3f{0, 0, 0});
-        material.emission_tex = get_texture(gmaterial, "emissiveTexture");
-        material.normal_tex   = get_texture(gmaterial, "normalTexture");
-        if (gmaterial.contains("pbrMetallicRoughness")) {
-          auto& gpbr         = gmaterial.at("pbrMetallicRoughness");
-          auto  base         = gpbr.value("baseColorFactor", vec4f{1, 1, 1, 1});
-          material.color     = xyz(base);
-          material.opacity   = base.w;
-          material.metallic  = gpbr.value("metallicFactor", 1.0f);
-          material.roughness = gpbr.value("roughnessFactor", 1.0f);
-          material.color_tex = get_texture(gpbr, "baseColorTexture");
-          material.roughness_tex = get_texture(
-              gpbr, "metallicRoughnessTexture");
-        }
-        if (gmaterial.contains("extensions") &&
-            gmaterial.at("extensions").contains("KHR_materials_transmission")) {
-          auto& gtransmission =
-              gmaterial.at("extensions").at("KHR_materials_transmission");
-          auto transmission = gtransmission.value("transmissionFactor", 1.0f);
-          if (transmission > 0) {
-            material.type      = material_type::transparent;
-            material.color     = {transmission, transmission, transmission};
-            material.color_tex = get_texture(gmaterial, "transmissionTexture");
-            // material.roughness = 0; // leave it set from before
-          }
-        }
+  for (auto idx = 0; idx < cgltf.materials_count; idx++) {
+    auto& gmaterial   = cgltf.materials[idx];
+    auto& material    = scene.materials.emplace_back();
+    material.type     = material_type::gltfpbr;
+    material.emission = {gmaterial.emissive_factor[0],
+        gmaterial.emissive_factor[1], gmaterial.emissive_factor[2]};
+    if (gmaterial.has_emissive_strength)
+      material.emission *= gmaterial.emissive_strength.emissive_strength;
+    material.emission_tex = get_texture(gmaterial.emissive_texture);
+    material.normal_tex   = get_texture(gmaterial.normal_texture);
+    if (gmaterial.has_pbr_metallic_roughness) {
+      auto& gpbr        = gmaterial.pbr_metallic_roughness;
+      material.color    = {gpbr.base_color_factor[0], gpbr.base_color_factor[1],
+          gpbr.base_color_factor[2]};
+      material.opacity  = gpbr.base_color_factor[3];
+      material.metallic = gpbr.metallic_factor;
+      material.roughness     = gpbr.roughness_factor;
+      material.color_tex     = get_texture(gpbr.base_color_texture);
+      material.roughness_tex = get_texture(gpbr.metallic_roughness_texture);
+    }
+    if (gmaterial.has_transmission) {
+      auto& gtransmission = gmaterial.transmission;
+      auto  transmission  = gtransmission.transmission_factor;
+      if (transmission > 0) {
+        material.type      = material_type::transparent;
+        material.color     = {transmission, transmission, transmission};
+        material.color_tex = get_texture(gtransmission.transmission_texture);
+        // material.roughness = 0; // leave it set from before
       }
-    } catch (...) {
-      return parse_error();
     }
   }
 
   // convert meshes
   auto mesh_primitives = vector<vector<instance_data>>{};
-  if (gltf.contains("meshes")) {
-    try {
-      auto type_components = unordered_map<string, int>{
-          {"SCALAR", 1}, {"VEC2", 2}, {"VEC3", 3}, {"VEC4", 4}};
-      for (auto& gmesh : gltf.at("meshes")) {
-        auto& primitives = mesh_primitives.emplace_back();
-        if (!gmesh.contains("primitives")) continue;
-        for (auto& gprimitive : gmesh.at("primitives")) {
-          if (!gprimitive.contains("attributes")) continue;
-          auto& shape       = scene.shapes.emplace_back();
-          auto& instance    = primitives.emplace_back();
-          instance.shape    = (int)scene.shapes.size() - 1;
-          instance.material = gprimitive.value("material", -1);
-          for (auto& [gname, gattribute] :
-              gprimitive.at("attributes").items()) {
-            auto& gaccessor = gltf.at("accessors").at(gattribute.get<int>());
-            if (gaccessor.contains("sparse")) return parse_error();
-            auto& gview =
-                gltf.at("bufferViews").at(gaccessor.value("bufferView", -1));
-            auto& buffer      = buffers.at(gview.value("buffer", 0));
-            auto  components  = type_components.at(gaccessor.value("type", ""));
-            auto  dcomponents = components;
-            auto  count       = gaccessor.value("count", (size_t)0);
-            auto  data        = (float*)nullptr;
-            if (gname == "POSITION") {
-              if (components != 3) return parse_error();
-              shape.positions.resize(count);
-              data = (float*)shape.positions.data();
-            } else if (gname == "NORMAL") {
-              if (components != 3) return parse_error();
-              shape.normals.resize(count);
-              data = (float*)shape.normals.data();
-            } else if (gname == "TEXCOORD" || gname == "TEXCOORD_0") {
-              if (components != 2) return parse_error();
-              shape.texcoords.resize(count);
-              data = (float*)shape.texcoords.data();
-            } else if (gname == "COLOR" || gname == "COLOR_0") {
-              if (components != 3 && components != 4) return parse_error();
-              shape.colors.resize(count);
-              data = (float*)shape.colors.data();
-              if (components == 3) {
-                dcomponents = 4;
-                for (auto& c : shape.colors) c.w = 1;
-              }
-            } else if (gname == "TANGENT") {
-              if (components != 4) return parse_error();
-              shape.tangents.resize(count);
-              data = (float*)shape.tangents.data();
-            } else if (gname == "RADIUS") {
-              if (components != 1) return parse_error();
-              shape.radius.resize(count);
-              data = (float*)shape.radius.data();
-            } else {
-              // ignore
-              continue;
-            }
-            // convert values
-            auto current = buffer.data() +
-                           gaccessor.value("byteOffset", (size_t)0) +
-                           gview.value("byteOffset", (size_t)0);
-            auto stride = gaccessor.value("byteStride", (size_t)0);
-            auto ctype  = gaccessor.value("componentType", 0);
-            if (ctype == 5121) {
-              if (stride == 0) stride = components * 1;
-              for (auto idx = (size_t)0; idx < count;
-                   idx++, current += stride) {
-                for (auto comp = 0; comp < components; comp++) {
-                  data[idx * dcomponents + comp] =
-                      *(byte*)(current + comp * 1) / 255.0f;
-                }
-              }
-            } else if (ctype == 5123) {
-              if (stride == 0) stride = components * 2;
-              for (auto idx = (size_t)0; idx < count;
-                   idx++, current += stride) {
-                for (auto comp = 0; comp < components; comp++) {
-                  data[idx * dcomponents + comp] =
-                      *(ushort*)(current + comp * 2) / 65535.0f;
-                }
-              }
-            } else if (ctype == 5126) {
-              if (stride == 0) stride = components * 4;
-              for (auto idx = (size_t)0; idx < count;
-                   idx++, current += stride) {
-                for (auto comp = 0; comp < components; comp++) {
-                  data[idx * dcomponents + comp] = *(
-                      float*)(current + comp * 4);
-                }
-              }
-            } else {
-              return parse_error();
-            }
-            // fixes
-            if (gname == "TANGENT") {
-              for (auto& t : shape.tangents) t.w = -t.w;
-            }
+  for (auto idx = 0; idx < cgltf.meshes_count; idx++) {
+    auto& gmesh      = cgltf.meshes[idx];
+    auto& primitives = mesh_primitives.emplace_back();
+    if (gmesh.primitives == nullptr) continue;
+    for (auto idx = 0; idx < gmesh.primitives_count; idx++) {
+      auto& gprimitive = gmesh.primitives[idx];
+      if (gprimitive.attributes == nullptr) continue;
+      auto& shape       = scene.shapes.emplace_back();
+      auto& instance    = primitives.emplace_back();
+      instance.shape    = (int)scene.shapes.size() - 1;
+      instance.material =  gprimitive.material ? (int)((gprimitive.material - cgltf.materials) /
+                                sizeof(cgltf_material)) : -1;
+      for (auto idx = 0; idx < gprimitive.attributes_count; idx++) {
+        auto& gattribute = gprimitive.attributes[idx];
+        auto& gaccessor  = *gattribute.data;
+        if (gaccessor.is_sparse) return unsupported_error("sparse accessor");
+        auto gname       = string{gattribute.name};
+        auto count       = gaccessor.count;
+        auto components  = cgltf_num_components(gaccessor.type);
+        auto dcomponents = components;
+        auto data        = (float*)nullptr;
+        if (gname == "POSITION") {
+          if (components != 3) return unsupported_error("position components");
+          shape.positions.resize(count);
+          data = (float*)shape.positions.data();
+        } else if (gname == "NORMAL") {
+          if (components != 3) return unsupported_error("normal components");
+          shape.normals.resize(count);
+          data = (float*)shape.normals.data();
+        } else if (gname == "TEXCOORD" || gname == "TEXCOORD_0") {
+          if (components != 2) return unsupported_error("texcoord components");
+          shape.texcoords.resize(count);
+          data = (float*)shape.texcoords.data();
+        } else if (gname == "COLOR" || gname == "COLOR_0") {
+          if (components != 3 && components != 4)
+            return unsupported_error("color components");
+          shape.colors.resize(count);
+          data = (float*)shape.colors.data();
+          if (components == 3) {
+            dcomponents = 4;
+            for (auto& c : shape.colors) c.w = 1;
           }
-          // mode
-          auto mode = gprimitive.value("mode", 4);
-          // indices
-          if (!gprimitive.contains("indices")) {
-            if (mode == 4) {  // triangles
-              shape.triangles.resize(shape.positions.size() / 3);
-              for (auto i = 0; i < (int)shape.positions.size() / 3; i++)
-                shape.triangles[i] = {i * 3 + 0, i * 3 + 1, i * 3 + 2};
-            } else if (mode == 6) {  // fans
-              shape.triangles.resize(shape.positions.size() - 2);
-              for (auto i = 2; i < (int)shape.positions.size(); i++)
-                shape.triangles[i - 2] = {0, i - 1, i};
-            } else if (mode == 5) {  // strips
-              shape.triangles.resize(shape.positions.size() - 2);
-              for (auto i = 2; i < (int)shape.positions.size(); i++)
-                shape.triangles[i - 2] = {i - 2, i - 1, i};
-            } else if (mode == 1) {  // lines
-              shape.lines.resize(shape.positions.size() / 2);
-              for (auto i = 0; i < (int)shape.positions.size() / 2; i++)
-                shape.lines[i] = {i * 2 + 0, i * 2 + 1};
-            } else if (mode == 2) {  // lines loops
-              shape.lines.resize(shape.positions.size());
-              for (auto i = 1; i < (int)shape.positions.size(); i++)
-                shape.lines[i - 1] = {i - 1, i};
-              shape.lines.back() = {(int)shape.positions.size() - 1, 0};
-            } else if (mode == 3) {  // lines strips
-              shape.lines.resize(shape.positions.size() - 1);
-              for (auto i = 1; i < (int)shape.positions.size(); i++)
-                shape.lines[i - 1] = {i - 1, i};
-            } else if (mode == 0) {  // points strips
-              return parse_error();
-            } else {
-              return parse_error();
-            }
-          } else {
-            auto& gaccessor =
-                gltf.at("accessors").at(gprimitive.value("indices", -1));
-            auto& gview =
-                gltf.at("bufferViews").at(gaccessor.value("bufferView", -1));
-            auto& buffer = buffers.at(gview.value("buffer", 0));
-            if (gaccessor.value("type", "") != "SCALAR") return parse_error();
-            auto count   = gaccessor.value("count", (size_t)0);
-            auto indices = vector<int>(count);
-            // convert values
-            auto current = buffer.data() +
-                           gaccessor.value("byteOffset", (size_t)0) +
-                           gview.value("byteOffset", (size_t)0);
-            auto stride = gaccessor.value("byteStride", (size_t)0);
-            auto ctype  = gaccessor.value("componentType", 0);
-            if (ctype == 5121) {
-              if (stride == 0) stride = 1;
-              for (auto idx = (size_t)0; idx < count;
-                   idx++, current += stride) {
-                indices[idx] = (int)*(byte*)current;
-              }
-            } else if (ctype == 5123) {
-              if (stride == 0) stride = 2;
-              for (auto idx = (size_t)0; idx < count;
-                   idx++, current += stride) {
-                indices[idx] = (int)*(ushort*)current;
-              }
-            } else if (ctype == 5125) {
-              if (stride == 0) stride = 4;
-              for (auto idx = (size_t)0; idx < count;
-                   idx++, current += stride) {
-                indices[idx] = (int)*(uint*)current;
-              }
-            } else {
-              return parse_error();
-            }
-            if (mode == 4) {  // triangles
-              shape.triangles.resize(indices.size() / 3);
-              for (auto i = 0; i < (int)indices.size() / 3; i++) {
-                shape.triangles[i] = {
-                    indices[i * 3 + 0], indices[i * 3 + 1], indices[i * 3 + 2]};
-              }
-            } else if (mode == 6) {  // fans
-              shape.triangles.resize(indices.size() - 2);
-              for (auto i = 2; i < (int)indices.size(); i++) {
-                shape.triangles[i - 2] = {
-                    indices[0], indices[i - 1], indices[i + 0]};
-              }
-            } else if (mode == 5) {  // strips
-              shape.triangles.resize(indices.size() - 2);
-              for (auto i = 2; i < (int)indices.size(); i++) {
-                shape.triangles[i - 2] = {
-                    indices[i - 2], indices[i - 1], indices[i + 0]};
-              }
-            } else if (mode == 1) {  // lines
-              shape.lines.resize(indices.size() / 2);
-              for (auto i = 0; i < (int)indices.size() / 2; i++) {
-                shape.lines[i] = {indices[i * 2 + 0], indices[i * 2 + 1]};
-              }
-            } else if (mode == 2) {  // lines loops
-              shape.lines.resize(indices.size());
-              for (auto i = 0; i < (int)indices.size(); i++) {
-                shape.lines[i] = {
-                    indices[i + 0], indices[i + 1] % (int)indices.size()};
-              }
-            } else if (mode == 3) {  // lines strips
-              shape.lines.resize(indices.size() - 1);
-              for (auto i = 0; i < (int)indices.size() - 1; i++) {
-                shape.lines[i] = {indices[i + 0], indices[i + 1]};
-              }
-            } else if (mode == 0) {  // points strips
-                                     // points
-              return parse_error();
-            } else {
-              return parse_error();
-            }
-          }
+        } else if (gname == "TANGENT") {
+          if (components != 4) return unsupported_error("tangent components");
+          shape.tangents.resize(count);
+          data = (float*)shape.tangents.data();
+        } else if (gname == "RADIUS") {
+          if (components != 1) return unsupported_error("radius components");
+          shape.radius.resize(count);
+          data = (float*)shape.radius.data();
+        } else {
+          // ignore
+          continue;
+        }
+        // convert values
+        for (auto idx = (size_t)0; idx < count; idx++) {
+          if(!cgltf_accessor_read_float(&gaccessor, idx, &data[idx * dcomponents], components))
+            return unsupported_error("accessor float conversion");
+        }
+        // fixes
+        if (gname == "TANGENT") {
+          for (auto& t : shape.tangents) t.w = -t.w;
         }
       }
-    } catch (...) {
-      return parse_error();
+      // indices
+      if (gprimitive.indices == nullptr) {
+        if (gprimitive.type == cgltf_primitive_type_triangles) {
+          shape.triangles.resize(shape.positions.size() / 3);
+          for (auto i = 0; i < (int)shape.positions.size() / 3; i++)
+            shape.triangles[i] = {i * 3 + 0, i * 3 + 1, i * 3 + 2};
+        } else if (gprimitive.type == cgltf_primitive_type_triangle_fan) {
+          shape.triangles.resize(shape.positions.size() - 2);
+          for (auto i = 2; i < (int)shape.positions.size(); i++)
+            shape.triangles[i - 2] = {0, i - 1, i};
+        } else if (gprimitive.type == cgltf_primitive_type_triangle_strip) {
+          shape.triangles.resize(shape.positions.size() - 2);
+          for (auto i = 2; i < (int)shape.positions.size(); i++)
+            shape.triangles[i - 2] = {i - 2, i - 1, i};
+        } else if (gprimitive.type == cgltf_primitive_type_lines) {
+          shape.lines.resize(shape.positions.size() / 2);
+          for (auto i = 0; i < (int)shape.positions.size() / 2; i++)
+            shape.lines[i] = {i * 2 + 0, i * 2 + 1};
+        } else if (gprimitive.type == cgltf_primitive_type_line_loop) {
+          shape.lines.resize(shape.positions.size());
+          for (auto i = 1; i < (int)shape.positions.size(); i++)
+            shape.lines[i - 1] = {i - 1, i};
+          shape.lines.back() = {(int)shape.positions.size() - 1, 0};
+        } else if (gprimitive.type == cgltf_primitive_type_line_strip) {
+          shape.lines.resize(shape.positions.size() - 1);
+          for (auto i = 1; i < (int)shape.positions.size(); i++)
+            shape.lines[i - 1] = {i - 1, i};
+        } else if (gprimitive.type == cgltf_primitive_type_points) {
+          return unsupported_error("point primitive");
+        } else {
+          return unsupported_error("primitive type");
+        }
+      } else {
+        auto& gaccessor = *gprimitive.indices;
+        if (gaccessor.type != cgltf_type_scalar)
+          return unsupported_error("non-scalar indices");
+        auto indices = vector<int>(gaccessor.count);
+        for (auto idx = (size_t)0; idx < gaccessor.count; idx++) {
+          if (!cgltf_accessor_read_uint(
+                  &gaccessor, idx, (cgltf_uint*)&indices[idx], 1))
+            return unsupported_error("accessor uint conversion");
+        }
+        if (gprimitive.type == cgltf_primitive_type_triangles) {
+          shape.triangles.resize(indices.size() / 3);
+          for (auto i = 0; i < (int)indices.size() / 3; i++) {
+            shape.triangles[i] = {
+                indices[i * 3 + 0], indices[i * 3 + 1], indices[i * 3 + 2]};
+          }
+        } else if (gprimitive.type == cgltf_primitive_type_triangle_fan) {
+          shape.triangles.resize(indices.size() - 2);
+          for (auto i = 2; i < (int)indices.size(); i++) {
+            shape.triangles[i - 2] = {
+                indices[0], indices[i - 1], indices[i + 0]};
+          }
+        } else if (gprimitive.type == cgltf_primitive_type_triangle_strip) {
+          shape.triangles.resize(indices.size() - 2);
+          for (auto i = 2; i < (int)indices.size(); i++) {
+            shape.triangles[i - 2] = {
+                indices[i - 2], indices[i - 1], indices[i + 0]};
+          }
+        } else if (gprimitive.type == cgltf_primitive_type_lines) {
+          shape.lines.resize(indices.size() / 2);
+          for (auto i = 0; i < (int)indices.size() / 2; i++) {
+            shape.lines[i] = {indices[i * 2 + 0], indices[i * 2 + 1]};
+          }
+        } else if (gprimitive.type == cgltf_primitive_type_line_loop) {
+          shape.lines.resize(indices.size());
+          for (auto i = 0; i < (int)indices.size(); i++) {
+            shape.lines[i] = {
+                indices[i + 0], indices[i + 1] % (int)indices.size()};
+          }
+        } else if (gprimitive.type == cgltf_primitive_type_line_strip) {
+          shape.lines.resize(indices.size() - 1);
+          for (auto i = 0; i < (int)indices.size() - 1; i++) {
+            shape.lines[i] = {indices[i + 0], indices[i + 1]};
+          }
+        } else if (gprimitive.type == cgltf_primitive_type_points) {
+          return unsupported_error("points primitive");
+        } else {
+          return unsupported_error("primitive type");
+        }
+      }
     }
   }
 
   // convert nodes
-  if (gltf.contains("nodes")) {
-    try {
-      auto parents = vector<int>(gltf.at("nodes").size(), -1);
-      auto lxforms = vector<frame3f>(gltf.at("nodes").size(), identity3x4f);
-      auto node_id = 0;
-      for (auto& gnode : gltf.at("nodes")) {
-        auto& xform = lxforms.at(node_id);
-        if (gnode.contains("matrix")) {
-          xform = mat_to_frame(gnode.value("matrix", identity4x4f));
-        }
-        if (gnode.contains("scale")) {
-          xform = scaling_frame(gnode.value("scale", vec3f{1, 1, 1})) * xform;
-        }
-        if (gnode.contains("rotation")) {
-          xform = rotation_frame(gnode.value("rotation", vec4f{0, 0, 0, 1})) *
-                  xform;
-        }
-        if (gnode.contains("translation")) {
-          xform = translation_frame(
-                      gnode.value("translation", vec3f{0, 0, 0})) *
-                  xform;
-        }
-        if (gnode.contains("children")) {
-          for (auto& gchild : gnode.at("children")) {
-            parents.at(gchild.get<int>()) = node_id;
-          }
-        }
-        node_id++;
+  for (auto idx = 0; idx < cgltf.nodes_count; idx++) {
+    auto& gnode = cgltf.nodes[idx];
+    if (gnode.camera != nullptr) {
+      auto& camera = scene.cameras.emplace_back();
+      camera       = cameras.at(
+          (gnode.camera - cgltf.cameras) / sizeof(cgltf_camera));
+      auto xform = identity4x4f;
+      cgltf_node_transform_world(&gnode, &xform.x.x);
+      camera.frame = mat_to_frame(xform);
+    }
+    if (gnode.mesh != nullptr) {
+      for (auto& primitive : mesh_primitives.at(
+               (gnode.mesh - cgltf.meshes) / sizeof(cgltf_mesh))) {
+        auto& instance = scene.instances.emplace_back();
+        instance       = primitive;
+        auto xform     = identity4x4f;
+        cgltf_node_transform_world(&gnode, &xform.x.x);
+        instance.frame = mat_to_frame(xform);
       }
-      auto xforms = vector<frame3f>(gltf.at("nodes").size(), identity3x4f);
-      node_id     = 0;
-      for (auto& gnode : gltf.at("nodes")) {
-        if (!gnode.contains("camera") && !gnode.contains("mesh")) {
-          node_id++;
-          continue;
-        }
-        auto& xform = xforms.at(node_id);
-        xform       = lxforms.at(node_id);
-        auto parent = parents.at(node_id);
-        while (parent >= 0) {
-          xform  = lxforms.at(parent) * xform;
-          parent = parents.at(parent);
-        }
-        if (gnode.contains("camera")) {
-          auto& camera = scene.cameras.emplace_back();
-          camera       = cameras.at(gnode.value("camera", -1));
-          camera.frame = xform;
-        }
-        if (gnode.contains("mesh")) {
-          for (auto& primitive : mesh_primitives.at(gnode.value("mesh", -1))) {
-            auto& instance = scene.instances.emplace_back();
-            instance       = primitive;
-            instance.frame = xform;
-          }
-        }
-        node_id++;
-      }
-    } catch (...) {
-      return parse_error();
     }
   }
+
+  // dirname
+  auto dirname         = path_dirname(filename);
+  auto dependent_error = [&filename, &error]() {
+    error = "cannot save " + filename + " since " + error;
+    return false;
+  };
 
   if (noparallel) {
     // load texture
