@@ -1,8 +1,8 @@
 //
-// # Yocto/ModelIO: Serialization for Obj, Ply, Stl and Pbrt models
+// # Yocto/ModelIO: Serialization for Obj, Ply, and Stl models
 //
 // Yocto/ModelIO is a collection of utilities for loading and saving scenes
-// and meshes in Ply, Obj, Stl and Pbrt formats.
+// and meshes in Ply, Obj, and Stl formats.
 // Yocto/ModelIO is implemented in `yocto_modelio.h` and `yocto_modelio.cpp`,
 // and depends on `fast_float.h` for number parsing.
 //
@@ -410,7 +410,7 @@ struct hash<yocto::obj_vertex> {
 }  // namespace std
 
 // -----------------------------------------------------------------------------
-// PBRT LOADER AND WRITER
+// STL LOADER AND WRITER
 // -----------------------------------------------------------------------------
 namespace yocto {
 
@@ -437,109 +437,6 @@ bool get_triangles(const stl_model& stl, int shape_id,
 void add_triangles(stl_model& stl, const vector<array<int, 3>>& triangles,
     const vector<array<float, 3>>& positions,
     const vector<array<float, 3>>& fnormals);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// PBRT LOADER AND WRITER
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Pbrt camera
-struct pbrt_camera {
-  // camera parameters
-  array<float, 12> frame      = {1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0};
-  array<float, 12> frend      = {1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0};
-  array<int, 2>    resolution = {0, 0};
-  float            lens       = 0;
-  float            aspect     = 0;
-  float            focus      = 0;
-  float            aperture   = 0;
-};
-
-// Pbrt material
-struct pbrt_texture {
-  string          name     = "";
-  array<float, 3> constant = {1, 1, 1};
-  string          filename = "";
-};
-
-// Pbrt material type (simplified and only for the materials that matter here)
-enum struct pbrt_mtype {
-  // clang-format off
-  matte, plastic, metal, glass, thinglass, subsurface
-  // clang-format on
-};
-
-// Pbrt material
-struct pbrt_material {
-  string          name            = "";
-  pbrt_mtype      type            = pbrt_mtype::matte;
-  array<float, 3> emission        = {0, 0, 0};
-  array<float, 3> color           = {0, 0, 0};
-  float           roughness       = 0;
-  float           ior             = 1.5f;
-  float           opacity         = 1;
-  int             color_tex       = -1;
-  array<float, 3> volmeanfreepath = {0, 0, 0};
-  array<float, 3> volscatter      = {0, 0, 0};
-  float           volscale        = 0.01f;
-};
-
-// Pbrt shape
-struct pbrt_shape {
-  array<float, 12>         frame     = {1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0};
-  array<float, 12>         frend     = {1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0};
-  bool                     instanced = false;
-  vector<array<float, 12>> instances = {};
-  vector<array<float, 12>> instaends = {};
-  int                      material  = -1;
-  string                   filename_ = "";
-  vector<array<float, 3>>  positions = {};
-  vector<array<float, 3>>  normals   = {};
-  vector<array<float, 2>>  texcoords = {};
-  vector<array<int, 3>>    triangles = {};
-};
-
-// Pbrt lights
-struct pbrt_light {
-  array<float, 12>        frame          = {1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0};
-  array<float, 12>        frend          = {1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0};
-  array<float, 3>         emission       = {0, 0, 0};
-  array<float, 3>         from           = {0, 0, 0};
-  array<float, 3>         to             = {0, 0, 0};
-  bool                    distant        = false;
-  array<float, 3>         area_emission  = {0, 0, 0};
-  array<float, 12>        area_frame     = {1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0};
-  array<float, 12>        area_frend     = {1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0};
-  vector<array<int, 3>>   area_triangles = {};
-  vector<array<float, 3>> area_positions = {};
-  vector<array<float, 3>> area_normals   = {};
-};
-struct pbrt_environment {
-  array<float, 12> frame        = {1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0};
-  array<float, 12> frend        = {1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0};
-  array<float, 3>  emission     = {0, 0, 0};
-  int              emission_tex = -1;
-};
-
-// Pbrt model
-struct pbrt_model {
-  // pbrt data
-  vector<string>           comments     = {};
-  vector<pbrt_camera>      cameras      = {};
-  vector<pbrt_shape>       shapes       = {};
-  vector<pbrt_environment> environments = {};
-  vector<pbrt_light>       lights       = {};
-  vector<pbrt_material>    materials    = {};
-  vector<pbrt_texture>     textures     = {};
-};
-
-// Load/save pbrt
-[[nodiscard]] bool load_pbrt(const string& filename, pbrt_model& pbrt,
-    string& error, bool ply_meshes = false);
-[[nodiscard]] bool save_pbrt(const string& filename, const pbrt_model& pbrt,
-    string& error, bool ply_meshes = false);
 
 }  // namespace yocto
 

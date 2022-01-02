@@ -50,6 +50,7 @@
 #include "yocto_geometry.h"
 #include "yocto_image.h"
 #include "yocto_modelio.h"
+#include "yocto_pbrtio.h"
 #include "yocto_shading.h"
 #include "yocto_shape.h"
 
