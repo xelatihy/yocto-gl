@@ -1807,12 +1807,26 @@ bool save_texture(
   };
 
   // check for correct handling
-  if (!texture.pixelsf.empty() && is_ldr_filename(filename))
-    throw std::invalid_argument(
-        "cannot save hdr texture to ldr file " + filename);
-  if (!texture.pixelsb.empty() && is_hdr_filename(filename))
-    throw std::invalid_argument(
-        "cannot save ldr texture to hdr file " + filename);
+  if (!texture.pixelsf.empty() && is_ldr_filename(filename)) {
+    auto ntexture = texture_data{};
+    ntexture.width = texture.width;
+    ntexture.height = texture.height;
+    ntexture.pixelsb.resize(texture.pixelsf.size());
+    for (auto idx = (size_t)0; idx < texture.pixelsf.size(); idx++) {
+      ntexture.pixelsb[idx] = float_to_byte(rgb_to_srgb(texture.pixelsf[idx]));
+    }
+    return save_texture(filename, ntexture, error);
+  }
+  if (!texture.pixelsb.empty() && is_hdr_filename(filename)) {
+    auto ntexture   = texture_data{};
+    ntexture.width  = texture.width;
+    ntexture.height = texture.height;
+    ntexture.pixelsf.resize(texture.pixelsb.size());
+    for (auto idx = (size_t)0; idx < texture.pixelsb.size(); idx++) {
+      ntexture.pixelsf[idx] = srgb_to_rgb(byte_to_float(texture.pixelsb[idx]));
+    }
+    return save_texture(filename, ntexture, error);
+  }
 
   // write data
   auto stbi_write_data = [](void* context, void* data, int size) {
@@ -4630,6 +4644,7 @@ static bool save_gltf_scene(const string& filename, const scene_data& scene,
   auto copy_string = [](const string& str) -> char* {
     if (str.empty()) return nullptr;
     auto copy = (char*)malloc(str.size() + 1);
+    if (copy == nullptr) return nullptr;
     memcpy(copy, str.c_str(), str.size() + 1);
     return copy;
   };
@@ -4642,6 +4657,7 @@ static bool save_gltf_scene(const string& filename, const scene_data& scene,
   };
 
   // asset
+  cgltf.asset.version   = copy_string("2.0");
   cgltf.asset.generator = copy_string(
       "Yocto/GL - https://github.com/xelatihy/yocto-gl");
   cgltf.asset.copyright = copy_string(scene.copyright);
@@ -4669,6 +4685,8 @@ static bool save_gltf_scene(const string& filename, const scene_data& scene,
     alloc_array(cgltf.samplers_count, cgltf.samplers, 1);
     auto& gsampler = cgltf.samplers[0];
     gsampler.name  = copy_string("sampler");
+    gsampler.wrap_s = 10497;
+    gsampler.wrap_t = 10497;
     for (auto idx = (size_t)0; idx < scene.textures.size(); idx++) {
       auto& texture    = scene.textures[idx];
       auto& gtexture   = cgltf.textures[idx];
@@ -4689,9 +4707,15 @@ static bool save_gltf_scene(const string& filename, const scene_data& scene,
       auto& material  = scene.materials[idx];
       auto& gmaterial = cgltf.materials[idx];
       gmaterial.name  = copy_string(get_material_name(scene, material));
-      gmaterial.emissive_factor[0]         = material.emission.x;
-      gmaterial.emissive_factor[1]         = material.emission.y;
-      gmaterial.emissive_factor[2]         = material.emission.z;
+      auto emission_scale      = max(material.emission) > 1.0f ? max(material.emission)
+                                                      : 1.0f;
+      gmaterial.emissive_factor[0] = material.emission.x / emission_scale;
+      gmaterial.emissive_factor[1] = material.emission.y / emission_scale;
+      gmaterial.emissive_factor[2] = material.emission.z / emission_scale;
+      if (emission_scale > 1.0f) {
+        gmaterial.has_emissive_strength = true;
+        gmaterial.emissive_strength.emissive_strength     = emission_scale;
+      }
       gmaterial.has_pbr_metallic_roughness = true;
       auto& gpbr                           = gmaterial.pbr_metallic_roughness;
       gpbr.base_color_factor[0]            = material.color.x;
@@ -4703,16 +4727,20 @@ static bool save_gltf_scene(const string& filename, const scene_data& scene,
       if (material.emission_tex != invalidid) {
         gmaterial.emissive_texture.texture = cgltf.textures +
                                              material.emission_tex;
+        gmaterial.emissive_texture.scale = 1.0f;
       }
       if (material.normal_tex != invalidid) {
         gmaterial.normal_texture.texture = cgltf.textures + material.normal_tex;
+        gmaterial.normal_texture.scale   = 1.0f;
       }
       if (material.color_tex != invalidid) {
         gpbr.base_color_texture.texture = cgltf.textures + material.color_tex;
+        gpbr.base_color_texture.scale   = 1.0f;
       }
       if (material.roughness_tex != invalidid) {
         gpbr.metallic_roughness_texture.texture = cgltf.textures +
                                                   material.roughness_tex;
+        gpbr.metallic_roughness_texture.scale = 1.0f;
       }
     }
   }
@@ -4720,23 +4748,25 @@ static bool save_gltf_scene(const string& filename, const scene_data& scene,
   // buffers
   auto shape_accessor_start = vector<int>{};
   if (!scene.shapes.empty()) {
-    alloc_array(cgltf.meshes_count, cgltf.meshes, scene.shapes.size());
+    alloc_array(cgltf.buffers_count, cgltf.buffers, scene.shapes.size());
     alloc_array(
-        cgltf.accessors_count, cgltf.accessors, scene.shapes.size() * 6);
+        cgltf.accessors_count, cgltf.accessors, scene.shapes.size() * 10);
     alloc_array(
-        cgltf.buffer_views_count, cgltf.buffer_views, scene.shapes.size() * 6);
+        cgltf.buffer_views_count, cgltf.buffer_views, scene.shapes.size() * 10);
     shape_accessor_start.resize(scene.shapes.size(), 0);
     cgltf.accessors_count    = 0;
     cgltf.buffer_views_count = 0;
     auto add_vertex = [](cgltf_data& cgltf, cgltf_buffer& gbuffer, size_t count,
                           cgltf_type type, const float* data) {
-      auto  components         = cgltf_size(type);
+      if (count == 0) return;
+      auto  components         = cgltf_num_components(type);
       auto& gbufferview        = cgltf.buffer_views[cgltf.buffer_views_count++];
       gbufferview.buffer       = &gbuffer;
       gbufferview.offset       = gbuffer.size;
       gbufferview.size         = sizeof(float) * components * count;
       gbufferview.type         = cgltf_buffer_view_type_vertices;
       auto& gaccessor          = cgltf.accessors[cgltf.accessors_count++];
+      gaccessor.buffer_view    = &gbufferview;
       gaccessor.count          = count;
       gaccessor.type           = type;
       gaccessor.component_type = cgltf_component_type_r_32f;
@@ -4749,14 +4779,15 @@ static bool save_gltf_scene(const string& filename, const scene_data& scene,
           gaccessor.min[component] = min(
               gaccessor.min[component], data[idx * components + component]);
           gaccessor.max[component] = max(
-              gaccessor.min[component], data[idx * components + component]);
+              gaccessor.max[component], data[idx * components + component]);
         }
       }
       gbuffer.size += gbufferview.size;
     };
     auto add_element = [](cgltf_data& cgltf, cgltf_buffer& gbuffer,
                            size_t count, cgltf_type type) {
-      auto  components         = cgltf_size(type);
+      if (count == 0) return;
+      auto  components         = cgltf_num_components(type);
       auto& gbufferview        = cgltf.buffer_views[cgltf.buffer_views_count++];
       gbufferview.buffer       = &gbuffer;
       gbufferview.offset       = gbuffer.size;
@@ -4788,10 +4819,10 @@ static bool save_gltf_scene(const string& filename, const scene_data& scene,
       add_element(cgltf, gbuffer, shape.points.size(), cgltf_type_scalar);
       add_element(cgltf, gbuffer, shape.lines.size(), cgltf_type_vec2);
       add_element(cgltf, gbuffer, shape.triangles.size(), cgltf_type_vec3);
-      add_element(cgltf, gbuffer, shape.quads.size(), cgltf_type_vec4);
+      add_element(cgltf, gbuffer, quads_to_triangles(shape.quads).size(), cgltf_type_vec3);
     }
   }
-
+  
   // meshes
   using mesh_key = pair<int, int>;
   struct mesh_hash {
@@ -4832,13 +4863,13 @@ static bool save_gltf_scene(const string& filename, const scene_data& scene,
       if (!shape.texcoords.empty()) {
         auto& gattribute = gprimitive.attributes[gprimitive.attributes_count++];
         gattribute.type  = cgltf_attribute_type_texcoord;
-        gattribute.name  = copy_string("TEXCOORD0");
+        gattribute.name  = copy_string("TEXCOORD_0");
         gattribute.data  = cgltf.accessors + cur_accessor++;
       }
       if (!shape.colors.empty()) {
         auto& gattribute = gprimitive.attributes[gprimitive.attributes_count++];
         gattribute.type  = cgltf_attribute_type_color;
-        gattribute.name  = copy_string("COLOR0");
+        gattribute.name  = copy_string("COLOR_0");
         gattribute.data  = cgltf.accessors + cur_accessor++;
       }
       if (!shape.radius.empty()) {
@@ -4873,6 +4904,7 @@ static bool save_gltf_scene(const string& filename, const scene_data& scene,
       gnode.name   = copy_string(get_camera_name(scene, camera));
       auto xform   = frame_to_mat(camera.frame);
       memcpy(gnode.matrix, &xform, sizeof(mat4f));
+      gnode.has_matrix = true;
       gnode.camera = cgltf.cameras + idx;
     }
     for (auto idx = (size_t)0; idx < scene.instances.size(); idx++) {
@@ -4881,7 +4913,8 @@ static bool save_gltf_scene(const string& filename, const scene_data& scene,
       gnode.name     = copy_string(get_instance_name(scene, instance));
       auto xform     = frame_to_mat(instance.frame);
       memcpy(gnode.matrix, &xform, sizeof(mat4f));
-      gnode.mesh = cgltf.meshes +
+      gnode.has_matrix = true;
+      gnode.mesh       = cgltf.meshes +
                    mesh_map.at({instance.shape, instance.material});
     }
     // root children
@@ -4899,8 +4932,10 @@ static bool save_gltf_scene(const string& filename, const scene_data& scene,
   }
 
   // save gltf
-  auto options = cgltf_options{};
+  auto options        = cgltf_options{};
   memset(&options, 0, sizeof(options));
+  options.memory.free = [](void*, void* ptr) { free(ptr); };
+  cgltf.memory.free   = [](void*, void* ptr) { free(ptr); };
   auto result = cgltf_write_file(&options, filename.c_str(), &cgltf);
   if (result != cgltf_result_success) {
     error = "cannot save " + filename;
@@ -4933,8 +4968,7 @@ static bool save_gltf_scene(const string& filename, const scene_data& scene,
     }
     // save textures
     for (auto& texture : scene.textures) {
-      auto path = "textures/" + get_texture_name(scene, texture) +
-                  (!texture.pixelsf.empty() ? ".hdr" : ".png");
+      auto path = "textures/" + get_texture_name(scene, texture) + ".png";
       if (!save_texture(path_join(dirname, path), texture, error))
         return dependent_error();
     }
@@ -4948,8 +4982,7 @@ static bool save_gltf_scene(const string& filename, const scene_data& scene,
     // save textures
     if (!parallel_foreach(
             scene.textures, error, [&](auto& texture, string& error) {
-              auto path = "textures/" + get_texture_name(scene, texture) +
-                          (!texture.pixelsf.empty() ? ".hdr"s : ".png"s);
+              auto path = "textures/" + get_texture_name(scene, texture) + ".png";
               return save_texture(path_join(dirname, path), texture, error);
             }))
       return dependent_error();
