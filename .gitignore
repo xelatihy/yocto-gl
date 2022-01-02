@@ -2,6 +2,7 @@ bin
 build
 out
 out1
+msvc
 .vscode/.cmaketools.json
 /*.hdr
 /*.exr

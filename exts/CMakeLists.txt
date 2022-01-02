@@ -2,6 +2,7 @@ add_subdirectory(fast_float)
 add_subdirectory(nlohmann_json)
 add_subdirectory(stb_image)
 add_subdirectory(tinyexr)
+add_subdirectory(cgltf)
 
 if(YOCTO_OPENGL)
 
