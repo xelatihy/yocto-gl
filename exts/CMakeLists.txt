@@ -17,3 +17,11 @@ add_subdirectory(glad)
 add_subdirectory(imgui)
 
 endif(YOCTO_OPENGL)
+
+if(YOCTO_EMBREE)
+add_subdirectory(embree)
+endif(YOCTO_EMBREE)
+
+if(YOCTO_DENOISE)
+add_subdirectory(openimagedenoise)
+endif(YOCTO_DENOISE)
