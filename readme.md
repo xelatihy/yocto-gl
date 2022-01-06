@@ -73,7 +73,7 @@ can be trivially copied and serialized and there is no need for memory managemen
 While this has the drawback of potentially introducing spurious copies, it does
 have the benefit of ensuring that no memory corruption can occur, which
 turned out was a major issue for novice C++ users, even in a very small
-library like this one. 
+library like this one.
 
 In terms of code style we prefer a functional approach rather than an
 object oriented one, favoring free functions to class methods. All functions
@@ -88,20 +88,20 @@ code, while keeping many APIs explicitly typed.
 For error handling in IO we either return status object or an interface that
 uses boolean flags and error strings. Internally exceptions are used when used
 by external libraries, but otherwise no exception are used. At the moment,
-exceptions are only used to report "programmer errors", namely when 
+exceptions are only used to report "programmer errors", namely when
 preconditions or post conditions are violated in functions, just lime the
 standard library does.
 
 ## License
 
-The library is released under the MIT license. We include various external 
+The library is released under the MIT license. We include various external
 dependencies in the distribution that each have thir own license, compatible
 with the chosen one.
 
 ## Compilation
 
 This library requires a C++17 compiler and is know to compiled on
-OsX (Xcode >= 11), Windows (MSVC 2019) and Linux (gcc >= 9, clang >= 9).
+OsX (Xcode >= 11), Windows (MSVC >= 2019) and Linux (gcc >= 9, clang >= 9).
 
 You can build the example applications using CMake with
 `mkdir build; cd build; cmake ..; cmake --build .`
@@ -109,9 +109,9 @@ You can build the example applications using CMake with
 Yocto/GL required dependencies are included in the distribution and do not
 need to be installed separately.
 
-Yocto/GL optionally supports building OpenGL demos. OpenGL support is enabled 
-by defining the cmake option `YOCTO_OPENGL` and contained in the `yocto_gui` 
-library. OpenGL dependencies are included in this repo.
+Yocto/GL optionally supports building OpenGL demos. OpenGL support is enabled
+by defining the cmake option `YOCTO_OPENGL`. 
+OpenGL dependencies are included in this repo.
 
 Yocto/GL optionally supports the use of Intel's Embree for ray casting.
 See the main CMake file for how to link to it. Embree support is enabled by
@@ -119,5 +119,5 @@ defining the cmake option `YOCTO_EMBREE`. Embree needs to be installed separatel
 
 Yocto/GL optionally supports the use of Intel's Open Image Denoise for denoising.
 See the main CMake file for how to link to it. Open Image Denoise support
-is enabled by defining the cmake option `YOCTO_DENOISE`. 
+is enabled by defining the cmake option `YOCTO_DENOISE`.
 OIDN needs to be installed separately.
