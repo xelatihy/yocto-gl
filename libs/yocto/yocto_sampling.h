@@ -4,7 +4,8 @@
 // Yocto/Sampling provides many functions to generate points and directions
 // useful in path tracing and procedural generation. We also include a random
 // number generator suitable for ray tracing.
-//
+// This library includes a stand-alone implementaton of the PCG32 random number
+// generator by M.E. O'Neill.
 //
 
 //
