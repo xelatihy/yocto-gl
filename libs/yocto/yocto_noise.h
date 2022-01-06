@@ -3,8 +3,9 @@
 //
 // Yocto/Noise provides a Perlin noise implementation.
 // Yocto/Noise is implemented in `yocto_noise.h`.
-// The noise implementation included here is derived from `stb_noise.h`,
-// although we expect this to be changed in the next releases.
+// The noise implementation is a standalone port of `stb_perlin.h`,
+// released in the public domain.
+// We expect the implementation to change in the next releases.
 //
 
 //
