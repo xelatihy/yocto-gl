@@ -34,6 +34,7 @@
 
 #include <algorithm>
 #include <array>
+#include <climits>
 #include <cstring>
 #include <future>
 #include <memory>
@@ -58,6 +59,9 @@ using std::atomic;
 using std::pair;
 using std::string;
 using namespace std::string_literals;
+
+// consts
+inline const auto uint_max = std::numeric_limits<unsigned int>::max();
 
 }  // namespace yocto
 
@@ -300,6 +304,8 @@ static bool intersect_embree_bvh(const shape_bvh& bvh, const shape_data& shape,
   embree_ray.ray.tnear     = ray.tmin;
   embree_ray.ray.tfar      = ray.tmax;
   embree_ray.ray.flags     = 0;
+  embree_ray.ray.mask      = uint_max;
+  embree_ray.ray.id        = 0;
   embree_ray.hit.geomID    = RTC_INVALID_GEOMETRY_ID;
   embree_ray.hit.instID[0] = RTC_INVALID_GEOMETRY_ID;
   RTCIntersectContext embree_ctx;
@@ -325,6 +331,8 @@ static bool intersect_embree_bvh(const scene_bvh& bvh, const scene_data& scene,
   embree_ray.ray.tnear     = ray.tmin;
   embree_ray.ray.tfar      = ray.tmax;
   embree_ray.ray.flags     = 0;
+  embree_ray.ray.mask      = uint_max;
+  embree_ray.ray.id        = 0;
   embree_ray.hit.geomID    = RTC_INVALID_GEOMETRY_ID;
   embree_ray.hit.instID[0] = RTC_INVALID_GEOMETRY_ID;
   RTCIntersectContext embree_ctx;
