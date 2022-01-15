@@ -84,7 +84,7 @@ inline void parallel_for(T num1, T num2, Func&& func) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Build the bvh acceleration structure.
+// Build the Bvh acceleration structure.
 trace_bvh make_bvh(const scene_data& scene, const trace_params& params) {
   if (params.embreebvh) {
     return {

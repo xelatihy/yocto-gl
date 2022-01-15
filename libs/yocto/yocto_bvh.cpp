@@ -391,12 +391,6 @@ scene_bvh make_bvh(const scene_data& scene, bool highquality, bool noparallel) {
 }
 
 static void refit_bvh(shape_bvh& bvh, const shape_data& shape) {
-#ifdef YOCTO_EMBREE
-  if (bvh.embree_bvh) {
-    throw std::runtime_error("embree shape refit not supported");
-  }
-#endif
-
   // build primitives
   auto bboxes = vector<bbox3f>{};
   if (!shape.points.empty()) {

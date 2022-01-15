@@ -82,11 +82,9 @@ struct bvh_node {
 // array indices. BVH nodes indices refer to either the node array,
 // for internal nodes, or the primitive arrays, for leaf nodes.
 // Application data is not stored explicitly.
-// Additionally, we support the use of Intel Embree.
 struct shape_bvh {
-  vector<bvh_node>                  nodes      = {};
-  vector<int>                       primitives = {};
-  unique_ptr<void, void (*)(void*)> embree_bvh = {nullptr, nullptr};  // embree
+  vector<bvh_node> nodes      = {};
+  vector<int>      primitives = {};
 };
 
 // BVH tree stored as a node array with the tree structure is encoded using
@@ -94,12 +92,10 @@ struct shape_bvh {
 // for internal nodes, or the primitive arrays, for leaf nodes.
 // We also store the BVH of the contained shapes.
 // Application data is not stored explicitly.
-// Additionally, we support the use of Intel Embree.
 struct scene_bvh {
-  vector<bvh_node>                  nodes      = {};
-  vector<int>                       primitives = {};
-  vector<shape_bvh>                 shapes     = {};                  // shapes
-  unique_ptr<void, void (*)(void*)> embree_bvh = {nullptr, nullptr};  // embree
+  vector<bvh_node>  nodes      = {};
+  vector<int>       primitives = {};
+  vector<shape_bvh> shapes     = {};  // shapes
 };
 
 // Build the bvh acceleration structure.
