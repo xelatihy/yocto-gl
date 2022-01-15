@@ -390,7 +390,7 @@ scene_bvh make_bvh(const scene_data& scene, bool highquality, bool noparallel) {
   return bvh;
 }
 
-static void refit_bvh(shape_bvh& bvh, const shape_data& shape) {
+void update_bvh(shape_bvh& bvh, const shape_data& shape) {
   // build primitives
   auto bboxes = vector<bbox3f>{};
   if (!shape.points.empty()) {
@@ -426,9 +426,14 @@ static void refit_bvh(shape_bvh& bvh, const shape_data& shape) {
   refit_bvh(bvh.nodes, bvh.primitives, bboxes);
 }
 
-void refit_bvh(scene_bvh& bvh, const scene_data& scene,
-    const vector<int>& updated_instances) {
-  // build primitives
+void update_bvh(scene_bvh& bvh, const scene_data& scene,
+    const vector<int>& updated_instances, const vector<int>& updated_shapes) {
+  // update shapes
+  for (auto shape : updated_shapes) {
+    update_bvh(bvh.shapes[shape], scene.shapes[shape]);
+  }
+
+  // handle instances
   auto bboxes = vector<bbox3f>(scene.instances.size());
   for (auto idx = 0; idx < (int)bboxes.size(); idx++) {
     auto& instance = scene.instances[idx];
@@ -438,22 +443,6 @@ void refit_bvh(scene_bvh& bvh, const scene_data& scene,
 
   // update nodes
   refit_bvh(bvh.nodes, bvh.primitives, bboxes);
-}
-
-void update_bvh(shape_bvh& bvh, const shape_data& shape) {
-  // handle instances
-  refit_bvh(bvh, shape);
-}
-
-void update_bvh(scene_bvh& bvh, const scene_data& scene,
-    const vector<int>& updated_instances, const vector<int>& updated_shapes) {
-  // update shapes
-  for (auto shape : updated_shapes) {
-    refit_bvh(bvh.shapes[shape], scene.shapes[shape]);
-  }
-
-  // handle instances
-  refit_bvh(bvh, scene, updated_instances);
 }
 
 }  // namespace yocto
