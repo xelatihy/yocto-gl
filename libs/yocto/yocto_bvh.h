@@ -149,6 +149,46 @@ scene_intersection overlap_scene(const scene_bvh& bvh, const scene_data& scene,
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// EMBREE WRAPPER
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Wrapper for Intel Embree.
+struct shape_embree_bvh {
+  unique_ptr<void, void (*)(void*)> embree_bvh = {nullptr, nullptr};  // embree
+};
+
+// Wrapper for Intel Embree.
+struct scene_embree_bvh {
+  vector<shape_embree_bvh>          shapes     = {};                  // shapes
+  unique_ptr<void, void (*)(void*)> embree_bvh = {nullptr, nullptr};  // embree
+};
+
+// Build the bvh acceleration structure.
+shape_embree_bvh make_embree_bvh(
+    const shape_data& shape, bool highquality = false);
+scene_embree_bvh make_embree_bvh(
+    const scene_data& scene, bool highquality = false, bool noparallel = false);
+
+// Refit bvh data
+void update_bvh(shape_embree_bvh& bvh, const shape_data& shape);
+void update_bvh(scene_embree_bvh& bvh, const scene_data& scene,
+    const vector<int>& updated_instances, const vector<int>& updated_shapes);
+
+// Intersect ray with a bvh returning either the first or any intersection
+// depending on `find_any`. Returns the ray distance , the instance id,
+// the shape element index and the element barycentric coordinates.
+shape_intersection intersect_shape(const shape_embree_bvh& bvh,
+    const shape_data& shape, const ray3f& ray, bool find_any = false);
+scene_intersection intersect_scene(const scene_embree_bvh& bvh,
+    const scene_data& scene, const ray3f& ray, bool find_any = false);
+scene_intersection intersect_instance(const scene_embree_bvh& bvh,
+    const scene_data& scene, int instance, const ray3f& ray,
+    bool find_any = false);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // BACKWARD COMPATIBILITY
 // -----------------------------------------------------------------------------
 namespace yocto {
