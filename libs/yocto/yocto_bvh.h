@@ -103,10 +103,9 @@ struct scene_bvh {
 };
 
 // Build the bvh acceleration structure.
-shape_bvh make_bvh(
-    const shape_data& shape, bool highquality = false, bool embree = false);
-scene_bvh make_bvh(const scene_data& scene, bool highquality = false,
-    bool embree = false, bool noparallel = false);
+shape_bvh make_bvh(const shape_data& shape, bool highquality = false);
+scene_bvh make_bvh(
+    const scene_data& scene, bool highquality = false, bool noparallel = false);
 
 // Refit bvh data
 void update_bvh(shape_bvh& bvh, const shape_data& shape);

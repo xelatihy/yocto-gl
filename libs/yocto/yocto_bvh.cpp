@@ -314,7 +314,7 @@ static void refit_bvh(vector<bvh_node>& nodes, const vector<int>& primitives,
   }
 }
 
-shape_bvh make_bvh(const shape_data& shape, bool highquality, bool embree) {
+shape_bvh make_bvh(const shape_data& shape, bool highquality) {
   // bvh
   auto bvh = shape_bvh{};
 
@@ -357,8 +357,7 @@ shape_bvh make_bvh(const shape_data& shape, bool highquality, bool embree) {
   return bvh;
 }
 
-scene_bvh make_bvh(
-    const scene_data& scene, bool highquality, bool embree, bool noparallel) {
+scene_bvh make_bvh(const scene_data& scene, bool highquality, bool noparallel) {
   // bvh
   auto bvh = scene_bvh{};
 
@@ -366,11 +365,11 @@ scene_bvh make_bvh(
   bvh.shapes.resize(scene.shapes.size());
   if (noparallel) {
     for (auto idx = (size_t)0; idx < scene.shapes.size(); idx++) {
-      bvh.shapes[idx] = make_bvh(scene.shapes[idx], highquality, embree);
+      bvh.shapes[idx] = make_bvh(scene.shapes[idx], highquality);
     }
   } else {
     parallel_for(scene.shapes.size(), [&](size_t idx) {
-      bvh.shapes[idx] = make_bvh(scene.shapes[idx], highquality, embree);
+      bvh.shapes[idx] = make_bvh(scene.shapes[idx], highquality);
     });
   }
 
