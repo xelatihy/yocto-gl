@@ -296,6 +296,29 @@ inline bool intersect_bbox(const ray3f& ray, const bbox3f& bbox);
 inline bool intersect_bbox(
     const ray3f& ray, const vec3f& ray_dinv, const bbox3f& bbox);
 
+// Primitive intersection
+struct prim_intersection {
+  vec2f uv       = {0, 0};
+  float distance = flt_max;
+  bool  hit      = false;
+};
+
+// Intersect a ray with a point (approximate)
+inline prim_intersection intersect_point(
+    const ray3f& ray, const vec3f& p, float r);
+
+// Intersect a ray with a line
+inline prim_intersection intersect_line(
+    const ray3f& ray, const vec3f& p0, const vec3f& p1, float r0, float r1);
+
+// Intersect a ray with a triangle
+inline prim_intersection intersect_triangle(
+    const ray3f& ray, const vec3f& p0, const vec3f& p1, const vec3f& p2);
+
+// Intersect a ray with a quad.
+inline prim_intersection intersect_quad(const ray3f& ray, const vec3f& p0,
+    const vec3f& p1, const vec3f& p2, const vec3f& p3);
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -836,6 +859,147 @@ inline bool intersect_quad(const ray3f& ray, const vec3f& p0, const vec3f& p1,
     tray.tmax = dist;
   }
   return hit;
+}
+
+// Intersect a ray with a point (approximate)
+inline prim_intersection intersect_point(
+    const ray3f& ray, const vec3f& p, float r) {
+  // find parameter for line-point minimum distance
+  auto w = p - ray.o;
+  auto t = dot(w, ray.d) / dot(ray.d, ray.d);
+
+  // exit if not within bounds
+  if (t < ray.tmin || t > ray.tmax) return {};
+
+  // test for line-point distance vs point radius
+  auto rp  = ray.o + ray.d * t;
+  auto prp = p - rp;
+  if (dot(prp, prp) > r * r) return {};
+
+  // intersection occurred: set params and exit
+  return {{0, 0}, t, true};
+}
+
+// Intersect a ray with a line
+inline prim_intersection intersect_line(
+    const ray3f& ray, const vec3f& p0, const vec3f& p1, float r0, float r1) {
+  // setup intersection params
+  auto u = ray.d;
+  auto v = p1 - p0;
+  auto w = ray.o - p0;
+
+  // compute values to solve a linear system
+  auto a   = dot(u, u);
+  auto b   = dot(u, v);
+  auto c   = dot(v, v);
+  auto d   = dot(u, w);
+  auto e   = dot(v, w);
+  auto det = a * c - b * b;
+
+  // check determinant and exit if lines are parallel
+  // (could use EPSILONS if desired)
+  if (det == 0) return {};
+
+  // compute Parameters on both ray and segment
+  auto t = (b * e - c * d) / det;
+  auto s = (a * e - b * d) / det;
+
+  // exit if not within bounds
+  if (t < ray.tmin || t > ray.tmax) return {};
+
+  // clamp segment param to segment corners
+  s = clamp(s, (float)0, (float)1);
+
+  // compute segment-segment distance on the closest points
+  auto pr  = ray.o + ray.d * t;
+  auto pl  = p0 + (p1 - p0) * s;
+  auto prl = pr - pl;
+
+  // check with the line radius at the same point
+  auto d2 = dot(prl, prl);
+  auto r  = r0 * (1 - s) + r1 * s;
+  if (d2 > r * r) return {};
+
+  // intersection occurred: set params and exit
+  return {{s, sqrt(d2) / r}, t, true};
+}
+
+// Intersect a ray with a sphere
+inline prim_intersection intersect_sphere(
+    const ray3f& ray, const vec3f& p, float r) {
+  // compute parameters
+  auto a = dot(ray.d, ray.d);
+  auto b = 2 * dot(ray.o - p, ray.d);
+  auto c = dot(ray.o - p, ray.o - p) - r * r;
+
+  // check discriminant
+  auto dis = b * b - 4 * a * c;
+  if (dis < 0) return {};
+
+  // compute ray parameter
+  auto t = (-b - sqrt(dis)) / (2 * a);
+
+  // exit if not within bounds
+  if (t < ray.tmin || t > ray.tmax) return {};
+
+  // try other ray parameter
+  t = (-b + sqrt(dis)) / (2 * a);
+
+  // exit if not within bounds
+  if (t < ray.tmin || t > ray.tmax) return {};
+
+  // compute local point for uvs
+  auto plocal = ((ray.o + ray.d * t) - p) / r;
+  auto u      = atan2(plocal.y, plocal.x) / (2 * pif);
+  if (u < 0) u += 1;
+  auto v = acos(clamp(plocal.z, -1.0f, 1.0f)) / pif;
+
+  // intersection occurred: set params and exit
+  return {{u, v}, t, true};
+}
+
+// Intersect a ray with a triangle
+inline prim_intersection intersect_triangle(
+    const ray3f& ray, const vec3f& p0, const vec3f& p1, const vec3f& p2) {
+  // compute triangle edges
+  auto edge1 = p1 - p0;
+  auto edge2 = p2 - p0;
+
+  // compute determinant to solve a linear system
+  auto pvec = cross(ray.d, edge2);
+  auto det  = dot(edge1, pvec);
+
+  // check determinant and exit if triangle and ray are parallel
+  // (could use EPSILONS if desired)
+  if (det == 0) return {};
+  auto inv_det = 1.0f / det;
+
+  // compute and check first bricentric coordinated
+  auto tvec = ray.o - p0;
+  auto u    = dot(tvec, pvec) * inv_det;
+  if (u < 0 || u > 1) return {};
+
+  // compute and check second bricentric coordinated
+  auto qvec = cross(tvec, edge1);
+  auto v    = dot(ray.d, qvec) * inv_det;
+  if (v < 0 || u + v > 1) return {};
+
+  // compute and check ray parameter
+  auto t = dot(edge2, qvec) * inv_det;
+  if (t < ray.tmin || t > ray.tmax) return {};
+
+  // intersection occurred: set params and exit
+  return {{u, v}, t, true};
+}
+
+// Intersect a ray with a quad.
+inline prim_intersection intersect_quad(const ray3f& ray, const vec3f& p0,
+    const vec3f& p1, const vec3f& p2, const vec3f& p3) {
+  if (p2 == p3) return intersect_triangle(ray, p0, p1, p3);
+  auto isec1 = intersect_triangle(ray, p0, p1, p3);
+  auto isec2 = intersect_triangle(ray, p2, p3, p1);
+  if (isec2.hit) isec2.uv = 1 - isec2.uv;
+  return isec1.distance < isec2.distance ? isec1 : isec2;
 }
 
 // Intersect a ray with a axis-aligned bounding box
