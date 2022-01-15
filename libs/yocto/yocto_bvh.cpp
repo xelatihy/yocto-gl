@@ -717,6 +717,7 @@ shape_intersection intersect_shape(const shape_bvh& bvh,
   return intersection;
 #endif
 }
+
 scene_intersection intersect_scene(const scene_bvh& bvh,
     const scene_data& scene, const ray3f& ray_, bool find_any) {
 #if 0
@@ -1066,70 +1067,6 @@ void clear_embree_bvh(void* embree_bvh) {
   if (embree_bvh) rtcReleaseScene((RTCScene)embree_bvh);
 }
 
-static bool intersect_embree_bvh(const shape_embree_bvh& bvh,
-    const shape_data& shape, const ray3f& ray, int& element, vec2f& uv,
-    float& distance, bool find_any) {
-  RTCRayHit embree_ray;
-  embree_ray.ray.org_x     = ray.o.x;
-  embree_ray.ray.org_y     = ray.o.y;
-  embree_ray.ray.org_z     = ray.o.z;
-  embree_ray.ray.dir_x     = ray.d.x;
-  embree_ray.ray.dir_y     = ray.d.y;
-  embree_ray.ray.dir_z     = ray.d.z;
-  embree_ray.ray.tnear     = ray.tmin;
-  embree_ray.ray.tfar      = ray.tmax;
-  embree_ray.ray.flags     = 0;
-  embree_ray.ray.mask      = uint_max;
-  embree_ray.ray.id        = 0;
-  embree_ray.hit.geomID    = RTC_INVALID_GEOMETRY_ID;
-  embree_ray.hit.instID[0] = RTC_INVALID_GEOMETRY_ID;
-  RTCIntersectContext embree_ctx;
-  rtcInitIntersectContext(&embree_ctx);
-  rtcIntersect1((RTCScene)bvh.embree_bvh.get(), &embree_ctx, &embree_ray);
-  if (embree_ray.hit.geomID == RTC_INVALID_GEOMETRY_ID) return false;
-  element  = (int)embree_ray.hit.primID;
-  uv       = {embree_ray.hit.u, embree_ray.hit.v};
-  distance = embree_ray.ray.tfar;
-  return true;
-}
-
-static bool intersect_embree_bvh(const scene_embree_bvh& bvh,
-    const scene_data& scene, const ray3f& ray, int& instance, int& element,
-    vec2f& uv, float& distance, bool find_any) {
-  RTCRayHit embree_ray;
-  embree_ray.ray.org_x     = ray.o.x;
-  embree_ray.ray.org_y     = ray.o.y;
-  embree_ray.ray.org_z     = ray.o.z;
-  embree_ray.ray.dir_x     = ray.d.x;
-  embree_ray.ray.dir_y     = ray.d.y;
-  embree_ray.ray.dir_z     = ray.d.z;
-  embree_ray.ray.tnear     = ray.tmin;
-  embree_ray.ray.tfar      = ray.tmax;
-  embree_ray.ray.flags     = 0;
-  embree_ray.ray.mask      = uint_max;
-  embree_ray.ray.id        = 0;
-  embree_ray.hit.geomID    = RTC_INVALID_GEOMETRY_ID;
-  embree_ray.hit.instID[0] = RTC_INVALID_GEOMETRY_ID;
-  RTCIntersectContext embree_ctx;
-  rtcInitIntersectContext(&embree_ctx);
-  rtcIntersect1((RTCScene)bvh.embree_bvh.get(), &embree_ctx, &embree_ray);
-  if (embree_ray.hit.geomID == RTC_INVALID_GEOMETRY_ID) return false;
-  instance = (int)embree_ray.hit.instID[0];
-  element  = (int)embree_ray.hit.primID;
-  uv       = {embree_ray.hit.u, embree_ray.hit.v};
-  distance = embree_ray.ray.tfar;
-  return true;
-}
-
-static bool intersect_embree_bvh(const scene_embree_bvh& bvh,
-    const scene_data& scene, int instance_, const ray3f& ray, int& element,
-    vec2f& uv, float& distance, bool find_any) {
-  auto& instance = scene.instances[instance_];
-  auto  inv_ray  = transform_ray(inverse(instance.frame, true), ray);
-  return intersect_embree_bvh(bvh.shapes[instance.shape],
-      scene.shapes[instance.shape], inv_ray, element, uv, distance, find_any);
-}
-
 // Build the bvh acceleration structure.
 shape_embree_bvh make_embree_bvh(const shape_data& shape, bool highquality) {
   auto bvh       = shape_embree_bvh{};
@@ -1282,26 +1219,66 @@ void update_bvh(scene_embree_bvh& bvh, const scene_data& scene,
 // the shape element index and the element barycentric coordinates.
 shape_intersection intersect_shape(const shape_embree_bvh& bvh,
     const shape_data& shape, const ray3f& ray, bool find_any) {
-  auto intersection = shape_intersection{};
-  intersection.hit = intersect_embree_bvh(bvh, shape, ray, intersection.element,
-      intersection.uv, intersection.distance, find_any);
-  return intersection;
+  RTCRayHit embree_ray;
+  embree_ray.ray.org_x     = ray.o.x;
+  embree_ray.ray.org_y     = ray.o.y;
+  embree_ray.ray.org_z     = ray.o.z;
+  embree_ray.ray.dir_x     = ray.d.x;
+  embree_ray.ray.dir_y     = ray.d.y;
+  embree_ray.ray.dir_z     = ray.d.z;
+  embree_ray.ray.tnear     = ray.tmin;
+  embree_ray.ray.tfar      = ray.tmax;
+  embree_ray.ray.flags     = 0;
+  embree_ray.ray.mask      = uint_max;
+  embree_ray.ray.id        = 0;
+  embree_ray.hit.geomID    = RTC_INVALID_GEOMETRY_ID;
+  embree_ray.hit.instID[0] = RTC_INVALID_GEOMETRY_ID;
+  RTCIntersectContext embree_ctx;
+  rtcInitIntersectContext(&embree_ctx);
+  rtcIntersect1((RTCScene)bvh.embree_bvh.get(), &embree_ctx, &embree_ray);
+  if (embree_ray.hit.geomID == RTC_INVALID_GEOMETRY_ID) return {};
+  auto element  = (int)embree_ray.hit.primID;
+  auto uv       = vec2f{embree_ray.hit.u, embree_ray.hit.v};
+  auto distance = embree_ray.ray.tfar;
+  return {element, uv, distance, true};
 }
+
 scene_intersection intersect_scene(const scene_embree_bvh& bvh,
     const scene_data& scene, const ray3f& ray, bool find_any) {
-  auto intersection = scene_intersection{};
-  intersection.hit  = intersect_embree_bvh(bvh, scene, ray,
-      intersection.instance, intersection.element, intersection.uv,
-      intersection.distance, find_any);
-  return intersection;
+  RTCRayHit embree_ray;
+  embree_ray.ray.org_x     = ray.o.x;
+  embree_ray.ray.org_y     = ray.o.y;
+  embree_ray.ray.org_z     = ray.o.z;
+  embree_ray.ray.dir_x     = ray.d.x;
+  embree_ray.ray.dir_y     = ray.d.y;
+  embree_ray.ray.dir_z     = ray.d.z;
+  embree_ray.ray.tnear     = ray.tmin;
+  embree_ray.ray.tfar      = ray.tmax;
+  embree_ray.ray.flags     = 0;
+  embree_ray.ray.mask      = uint_max;
+  embree_ray.ray.id        = 0;
+  embree_ray.hit.geomID    = RTC_INVALID_GEOMETRY_ID;
+  embree_ray.hit.instID[0] = RTC_INVALID_GEOMETRY_ID;
+  RTCIntersectContext embree_ctx;
+  rtcInitIntersectContext(&embree_ctx);
+  rtcIntersect1((RTCScene)bvh.embree_bvh.get(), &embree_ctx, &embree_ray);
+  if (embree_ray.hit.geomID == RTC_INVALID_GEOMETRY_ID) return {};
+  auto instance = (int)embree_ray.hit.instID[0];
+  auto element  = (int)embree_ray.hit.primID;
+  auto uv       = vec2f{embree_ray.hit.u, embree_ray.hit.v};
+  auto distance = embree_ray.ray.tfar;
+  return {instance, element, uv, distance, true};
 }
+
 scene_intersection intersect_instance(const scene_embree_bvh& bvh,
-    const scene_data& scene, int instance, const ray3f& ray, bool find_any) {
-  auto intersection     = scene_intersection{};
-  intersection.hit      = intersect_embree_bvh(bvh, scene, instance, ray,
-      intersection.element, intersection.uv, intersection.distance, find_any);
-  intersection.instance = instance;
-  return intersection;
+    const scene_data& scene, int instance_, const ray3f& ray, bool find_any) {
+  auto& instance     = scene.instances[instance_];
+  auto  inv_ray      = transform_ray(inverse(instance.frame, true), ray);
+  auto  intersection = intersect_shape(bvh.shapes[instance.shape],
+      scene.shapes[instance.shape], inv_ray, find_any);
+  if (!intersection.hit) return {};
+  return {instance_, intersection.element, intersection.uv,
+      intersection.distance, true};
 }
 
 #else
