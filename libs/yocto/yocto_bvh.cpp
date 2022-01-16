@@ -746,7 +746,7 @@ scene_intersection overlap_scene_bvh(const scene_bvh& bvh,
         auto& shape     = scene.shapes[instance_.shape];
         auto& sbvh      = bvh.shapes[instance_.shape];
         auto  inv_pos   = transform_point(inverse(instance_.frame, true), pos);
-        auto  sintersection = overlap_shape(
+        auto  sintersection = overlap_shape_bvh(
             sbvh, shape, inv_pos, max_distance, find_any);
         if (!sintersection.hit) continue;
         intersection = {primitive, sintersection.element, sintersection.uv,
