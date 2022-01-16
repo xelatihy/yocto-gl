@@ -287,8 +287,8 @@ void get_region(image_data& region, const image_data& image, int x, int y,
   if (region.width != width || region.height != height) {
     region = make_image(width, height, image.linear);
   }
-  for (auto j = 0; j < height; j++) {
-    for (auto i = 0; i < width; i++) {
+  for (auto j : range(height)) {
+    for (auto i : range(width)) {
       region.pixels[j * region.width + i] =
           image.pixels[(j + y) * image.width + (i + x)];
     }
@@ -452,8 +452,8 @@ static image_data make_proc_image(
     int width, int height, bool linear, Shader&& shader) {
   auto image = make_image(width, height, linear);
   auto scale = 1.0f / max(width, height);
-  for (auto j = 0; j < height; j++) {
-    for (auto i = 0; i < width; i++) {
+  for (auto j : range(height)) {
+    for (auto i : range(width)) {
       auto uv                     = vec2f{i * scale, j * scale};
       image.pixels[j * width + i] = shader(uv);
     }
@@ -798,7 +798,7 @@ image_data make_lights(int width, int height, const vec3f& le, int nlights,
     for (int i = 0; i < width; i++) {
       auto phi     = 2 * pif * (float(i + 0.5f) / width);
       auto inlight = false;
-      for (auto l = 0; l < nlights; l++) {
+      for (auto l : range(nlights)) {
         auto lphi = 2 * pif * (l + 0.5f) / nlights;
         inlight   = inlight || fabs(phi - lphi) < lwidth / 2;
       }
@@ -1045,8 +1045,8 @@ static void make_proc_image(
     vector<vec4f>& pixels, int width, int height, Shader&& shader) {
   pixels.resize((size_t)width * (size_t)height);
   auto scale = 1.0f / max(width, height);
-  for (auto j = 0; j < height; j++) {
-    for (auto i = 0; i < width; i++) {
+  for (auto j : range(height)) {
+    for (auto i : range(width)) {
       auto uv               = vec2f{i * scale, j * scale};
       pixels[j * width + i] = shader(uv);
     }
@@ -1231,8 +1231,8 @@ void add_border(vector<vec4f>& pixels, const vector<vec4f>& source, int width,
     int height, float thickness, const vec4f& color) {
   pixels     = source;
   auto scale = 1.0f / max(width, height);
-  for (auto j = 0; j < height; j++) {
-    for (auto i = 0; i < width; i++) {
+  for (auto j : range(height)) {
+    for (auto i : range(width)) {
       auto uv = vec2f{i * scale, j * scale};
       if (uv.x < thickness || uv.y < thickness ||
           uv.x > width * scale - thickness ||
@@ -1389,7 +1389,7 @@ void make_lights(vector<vec4f>& pixels, int width, int height, const vec3f& le,
     for (int i = 0; i < width; i++) {
       auto phi     = 2 * pif * (float(i + 0.5f) / width);
       auto inlight = false;
-      for (auto l = 0; l < nlights; l++) {
+      for (auto l : range(nlights)) {
         auto lphi = 2 * pif * (l + 0.5f) / nlights;
         inlight   = inlight || fabs(phi - lphi) < lwidth / 2;
       }

@@ -125,7 +125,7 @@ static pair<int, int> split_sah(vector<int>& primitives,
     return 1e-12f + 2 * size.x * size.y + 2 * size.x * size.z +
            2 * size.y * size.z;
   };
-  for (auto saxis = 0; saxis < 3; saxis++) {
+  for (auto saxis : range(3)) {
     for (auto b = 1; b < nbins; b++) {
       auto bsplit    = cbbox.min[saxis] + b * csize[saxis] / nbins;
       auto left_bbox = invalidb3f, right_bbox = invalidb3f;
@@ -303,7 +303,7 @@ static void refit_bvh(vector<bvh_node>& nodes, const vector<int>& primitives,
     auto& node = nodes[nodeid];
     node.bbox  = invalidb3f;
     if (node.internal) {
-      for (auto idx = 0; idx < 2; idx++) {
+      for (auto idx : range(2)) {
         node.bbox = merge(node.bbox, nodes[node.start + idx].bbox);
       }
     } else {

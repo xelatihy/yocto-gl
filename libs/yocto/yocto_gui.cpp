@@ -2275,7 +2275,7 @@ bool draw_gui_combobox(const char* lbl, int& idx, int num,
     if (idx < 0) ImGui::SetItemDefaultFocus();
     ImGui::PopID();
   }
-  for (auto i = 0; i < num; i++) {
+  for (auto i : range(num)) {
     ImGui::PushID(i);
     if (ImGui::Selectable(labels(i).c_str(), idx == i)) idx = i;
     if (idx == i) ImGui::SetItemDefaultFocus();

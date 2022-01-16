@@ -4772,10 +4772,10 @@ static bool save_gltf_scene(const string& filename, const scene_data& scene,
       gaccessor.component_type = cgltf_component_type_r_32f;
       gaccessor.has_min        = true;
       gaccessor.has_max        = true;
-      for (auto component = 0; component < components; component++) {
+      for (auto component : range(components)) {
         gaccessor.min[component] = flt_max;
         gaccessor.max[component] = flt_min;
-        for (auto idx = 0; idx < count; idx++) {
+        for (auto idx : range(count)) {
           gaccessor.min[component] = min(
               gaccessor.min[component], data[idx * components + component]);
           gaccessor.max[component] = max(

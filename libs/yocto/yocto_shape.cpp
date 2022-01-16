@@ -1014,7 +1014,7 @@ shape_data make_point(float radius) {
 shape_data make_points(int num, float uvscale, float radius) {
   auto shape = shape_data{};
   shape.points.resize(num);
-  for (auto i = 0; i < num; i++) shape.points[i] = i;
+  for (auto i : range(num)) shape.points[i] = i;
   shape.positions.assign(num, {0, 0, 0});
   shape.normals.assign(num, {0, 0, 1});
   shape.texcoords.assign(num, {0, 0});
@@ -1873,7 +1873,7 @@ vector<vector<int>> vertex_adjacencies(
   auto face_from_vertex = vector<int>(triangles.size() * 3, -1);
 
   for (auto i = 0; i < (int)triangles.size(); ++i) {
-    for (auto k = 0; k < 3; k++) {
+    for (auto k : range(3)) {
       face_from_vertex[triangles[i][k]] = i;
       num_vertices                      = max(num_vertices, triangles[i][k]);
     }
@@ -1919,7 +1919,7 @@ vector<vector<int>> vertex_to_faces_adjacencies(
   auto face_from_vertex = vector<int>(triangles.size() * 3, -1);
 
   for (auto i = 0; i < (int)triangles.size(); ++i) {
-    for (auto k = 0; k < 3; k++) {
+    for (auto k : range(3)) {
       face_from_vertex[triangles[i][k]] = i;
       num_vertices                      = max(num_vertices, triangles[i][k]);
     }
@@ -2109,7 +2109,7 @@ static void update_bvh(bvh_tree& bvh, const vector<bbox3f>& bboxes) {
     auto& node = bvh.nodes[nodeid];
     node.bbox  = invalidb3f;
     if (node.internal) {
-      for (auto idx = 0; idx < 2; idx++) {
+      for (auto idx : range(2)) {
         node.bbox = merge(node.bbox, bvh.nodes[node.start + idx].bbox);
       }
     } else {
@@ -2604,7 +2604,7 @@ void split_facevarying(vector<vec4i>& split_quads,
   unordered_map<vec3i, int> vert_map;
   split_quads.resize(quadspos.size());
   for (auto fid = 0; fid < (int)quadspos.size(); fid++) {
-    for (auto c = 0; c < 4; c++) {
+    for (auto c : range(4)) {
       auto v = vec3i{
           (&quadspos[fid].x)[c],
           (!quadsnorm.empty()) ? (&quadsnorm[fid].x)[c] : -1,
@@ -3232,7 +3232,7 @@ void sample_triangles(vector<vec3f>& sampled_positions,
   sampled_texcoords.resize(npoints);
   auto cdf = sample_triangles_cdf(triangles, positions);
   auto rng = make_rng(seed);
-  for (auto i = 0; i < npoints; i++) {
+  for (auto i : range(npoints)) {
     auto  sample         = sample_triangles(cdf, rand1f(rng), rand2f(rng));
     auto& t              = triangles[sample.first];
     auto  uv             = sample.second;
@@ -3267,7 +3267,7 @@ void sample_quads(vector<vec3f>& sampled_positions,
   sampled_texcoords.resize(npoints);
   auto cdf = sample_quads_cdf(quads, positions);
   auto rng = make_rng(seed);
-  for (auto i = 0; i < npoints; i++) {
+  for (auto i : range(npoints)) {
     auto  sample         = sample_quads(cdf, rand1f(rng), rand2f(rng));
     auto& q              = quads[sample.first];
     auto  uv             = sample.second;
@@ -3755,7 +3755,7 @@ void make_points(vector<int>& points, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<float>& radius,
     int num, float uvscale, float point_radius) {
   points.resize(num);
-  for (auto i = 0; i < num; i++) points[i] = i;
+  for (auto i : range(num)) points[i] = i;
   positions.assign(num, {0, 0, 0});
   normals.assign(num, {0, 0, 1});
   texcoords.assign(num, {0, 0});

@@ -1073,7 +1073,7 @@ static pair<vector<shape_point>, vec2f> sample_stroke(const bvh_tree& bvh,
   auto update_uv = (mouse_uv - last_uv) * stroke_dist / delta_pos;
   auto cur_uv    = last_uv;
   auto samples   = vector<shape_point>{};
-  for (auto step = 0; step < steps; step++) {
+  for (auto step : range(steps)) {
     cur_uv += update_uv;
     auto isec = intersect_shape(cur_uv);
     if (!isec.hit) continue;
