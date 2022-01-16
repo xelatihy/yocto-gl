@@ -120,45 +120,6 @@ static bool save_text(
   return true;
 }
 
-// Load a binary file
-static bool load_binary(
-    const string& filename, vector<byte>& data, string& error) {
-  // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
-  auto fs = fopen_utf8(filename.c_str(), "rb");
-  if (!fs) {
-    error = "cannot open " + filename;
-    return false;
-  }
-  fseek(fs, 0, SEEK_END);
-  auto length = ftell(fs);
-  fseek(fs, 0, SEEK_SET);
-  data.resize(length);
-  if (fread(data.data(), 1, length, fs) != length) {
-    fclose(fs);
-    error = "cannot read " + filename;
-    return false;
-  }
-  fclose(fs);
-  return true;
-}
-
-// Save a binary file
-static bool save_binary(
-    const string& filename, const vector<byte>& data, string& error) {
-  auto fs = fopen_utf8(filename.c_str(), "wb");
-  if (!fs) {
-    error = "cannot create " + filename;
-    return false;
-  }
-  if (fwrite(data.data(), 1, data.size(), fs) != data.size()) {
-    fclose(fs);
-    error = "cannot write " + filename;
-    return false;
-  }
-  fclose(fs);
-  return true;
-}
-
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -439,9 +400,6 @@ static void format_value(string& str, T value) {
     str.append(buffer.data(), result.ptr);
   }
 }
-static void format_value(string& str, bool value) {
-  format_value(str, value ? 1 : 0);
-}
 template <typename T, size_t N>
 static void format_value(string& str, const array<T, N>& value) {
   for (auto i = 0; i < N; i++) {
@@ -556,12 +514,6 @@ template <typename T>
     if (result.ptr == str.data()) return false;
     str.remove_prefix(result.ptr - str.data());
   }
-  return true;
-}
-[[nodiscard]] static bool parse_value(string_view& str, bool& value) {
-  auto valuei = 0;
-  if (!parse_value(str, valuei)) return false;
-  value = (bool)valuei;
   return true;
 }
 template <typename T, size_t N>

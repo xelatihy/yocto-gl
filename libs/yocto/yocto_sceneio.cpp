@@ -4803,7 +4803,7 @@ static bool save_gltf_scene(const string& filename, const scene_data& scene,
     for (auto idx : range(scene.shapes.size())) {
       auto& shape               = scene.shapes[idx];
       auto& gbuffer             = cgltf.buffers[idx];
-      shape_accessor_start[idx] = cgltf.accessors_count;
+      shape_accessor_start[idx] = (int)cgltf.accessors_count;
       gbuffer.uri               = copy_string(
           "shapes/" + get_shape_name(scene, shape) + ".bin");
       add_vertex(cgltf, gbuffer, shape.positions.size(), cgltf_type_vec3,

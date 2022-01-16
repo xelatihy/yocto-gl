@@ -283,30 +283,19 @@ namespace yocto {
   return {u, v, w, eye};
 }
 
-static array<array<float, 3>, 3> mul(
-    const array<array<float, 3>, 3>& a, float b) {
-  return {mul(a[0], b), mul(a[1], b), mul(a[2], b)};
-}
 static array<float, 3> mul(
     const array<array<float, 3>, 3>& a, const array<float, 3>& b) {
   return add(mul(a[0], b[0]), add(mul(a[1], b[1]), mul(a[2], b[2])));
 }
-[[maybe_unused]] static array<array<float, 3>, 3> mul(
+static array<array<float, 3>, 3> mul(
     const array<array<float, 3>, 3>& a, const array<array<float, 3>, 3>& b) {
   return {mul(a, b[0]), mul(a, b[1]), mul(a, b[2])};
-}
-static array<array<float, 3>, 4> mul(
-    const array<array<float, 3>, 4>& a, const array<array<float, 3>, 4>& b) {
-  auto al = array<array<float, 3>, 3>{a[0], a[1], a[2]};
-  return {
-      mul(al, b[0]), mul(al, b[1]), mul(al, b[2]), add(mul(al, b[3]), a[3])};
 }
 
 static array<float, 12> flatten(const array<array<float, 3>, 4>& a) {
   return (const array<float, 12>&)a;
 }
-[[maybe_unused]] static array<float, 16> flatten(
-    const array<array<float, 4>, 4>& a) {
+static array<float, 16> flatten(const array<array<float, 4>, 4>& a) {
   return (const array<float, 16>&)a;
 }
 
