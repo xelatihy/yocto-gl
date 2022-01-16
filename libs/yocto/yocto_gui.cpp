@@ -657,7 +657,7 @@ void show_trace_gui(const string& title, const string& name, scene_data& scene,
     pparams.samples = 1;
     auto pstate     = make_trace_state(scene, pparams);
     trace_samples(pstate, scene, bvh, lights, pparams);
-    auto preview = get_render(pstate);
+    auto preview = get_rendered_image(pstate);
     for (auto idx = 0; idx < state.width * state.height; idx++) {
       auto i = idx % render.width, j = idx / render.width;
       auto pi            = clamp(i / params.pratio, 0, preview.width - 1),
@@ -688,9 +688,9 @@ void show_trace_gui(const string& title, const string& name, scene_data& scene,
           auto lock      = std::lock_guard{render_mutex};
           render_current = state.samples;
           if (!params.denoise || render_stop) {
-            get_render(render, state);
+            get_rendered_image(render, state);
           } else {
-            get_denoised(render, state);
+            get_denoised_image(render, state);
           }
           image = render;
           tonemap_image_mt(display, image, params.exposure, params.filmic);

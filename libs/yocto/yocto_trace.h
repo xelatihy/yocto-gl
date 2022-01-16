@@ -174,23 +174,23 @@ void trace_sample(trace_state& state, const scene_data& scene,
     const trace_params& params);
 
 // Get resulting render
-image_data get_render(const trace_state& state);
-void       get_render(image_data& render, const trace_state& state);
+image_data get_rendered_image(const trace_state& state);
+void       get_rendered_image(image_data& image, const trace_state& state);
 
 // Get denoised result
-image_data get_denoised(const trace_state& state);
-void       get_denoised(image_data& render, const trace_state& state);
+image_data get_denoised_image(const trace_state& state);
+void       get_denoised_image(image_data& image, const trace_state& state);
 
 // Get denoising buffers
-image_data get_albedo(const trace_state& state);
-void       get_albedo(image_data& albedo, const trace_state& state);
-image_data get_normal(const trace_state& state);
-void       get_normal(image_data& normal, const trace_state& state);
+image_data get_albedo_image(const trace_state& state);
+void       get_albedo_image(image_data& image, const trace_state& state);
+image_data get_normal_image(const trace_state& state);
+void       get_normal_image(image_data& image, const trace_state& state);
 
 // Denoise image
-image_data denoise_render(const image_data& render, const image_data& albedo,
-    const image_data& normal);
-void       denoise_render(image_data& denoised, const image_data& render,
+image_data denoise_rendered_image(const image_data& render,
+    const image_data& albedo, const image_data& normal);
+void       denoise_rendered_image(image_data& image, const image_data& render,
           const image_data& albedo, const image_data& normal);
 
 }  // namespace yocto
@@ -266,6 +266,51 @@ namespace yocto {
 [[deprecated]] inline trace_bvh make_bvh(
     const scene_data& scene, const trace_params& params) {
   return make_trace_bvh(scene, params);
+}
+
+// Get resulting render
+[[deprecated]] inline image_data get_render(const trace_state& state) {
+  return get_rendered_image(state);
+}
+[[deprecated]] inline void get_render(
+    image_data& image, const trace_state& state) {
+  return get_rendered_image(image, state);
+}
+
+// Get denoised result
+[[deprecated]] inline image_data get_denoised(const trace_state& state) {
+  return get_denoised_image(state);
+}
+[[deprecated]] inline void get_denoised(
+    image_data& image, const trace_state& state) {
+  return get_denoised_image(image, state);
+}
+
+// Get denoising buffers
+[[deprecated]] inline image_data get_albedo(const trace_state& state) {
+  return get_albedo_image(state);
+}
+[[deprecated]] inline void get_albedo(
+    image_data& image, const trace_state& state) {
+  return get_albedo_image(image, state);
+}
+[[deprecated]] inline image_data get_normal(const trace_state& state) {
+  return get_normal_image(state);
+}
+[[deprecated]] inline void get_normal(
+    image_data& image, const trace_state& state) {
+  return get_normal_image(image, state);
+}
+
+// Denoise image
+[[deprecated]] inline image_data denoise_render(const image_data& render,
+    const image_data& albedo, const image_data& normal) {
+  return denoise_rendered_image(render, albedo, normal);
+}
+[[deprecated]] inline void denoise_render(image_data& image,
+    const image_data& render, const image_data& albedo,
+    const image_data& normal) {
+  return denoise_rendered_image(image, render, albedo, normal);
 }
 
 }  // namespace yocto

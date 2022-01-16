@@ -1502,7 +1502,7 @@ image_data trace_image(const scene_data& scene, const trace_params& params) {
   for (auto sample = 0; sample < params.samples; sample++) {
     trace_samples(state, scene, bvh, lights, params);
   }
-  return get_render(state);
+  return get_rendered_image(state);
 }
 
 // Progressively compute an image by calling trace_samples multiple times.
@@ -1535,12 +1535,12 @@ static void check_image(
 }
 
 // Get resulting render
-image_data get_render(const trace_state& state) {
+image_data get_rendered_image(const trace_state& state) {
   auto image = make_image(state.width, state.height, true);
-  get_render(image, state);
+  get_rendered_image(image, state);
   return image;
 }
-void get_render(image_data& image, const trace_state& state) {
+void get_rendered_image(image_data& image, const trace_state& state) {
   check_image(image, state.width, state.height, true);
   auto scale = 1.0f / (float)state.samples;
   for (auto idx = 0; idx < state.width * state.height; idx++) {
@@ -1549,19 +1549,19 @@ void get_render(image_data& image, const trace_state& state) {
 }
 
 // Get denoised render
-image_data get_denoised(const trace_state& state) {
+image_data get_denoised_image(const trace_state& state) {
   auto image = make_image(state.width, state.height, true);
-  get_denoised(image, state);
+  get_denoised_image(image, state);
   return image;
 }
-void get_denoised(image_data& image, const trace_state& state) {
+void get_denoised_image(image_data& image, const trace_state& state) {
 #if YOCTO_DENOISE
   // Create an Intel Open Image Denoise device
   oidn::DeviceRef device = oidn::newDevice();
   device.commit();
 
   // get image
-  get_render(image, state);
+  get_rendered_image(image, state);
 
   // get albedo and normal
   auto albedo = vector<vec3f>(image.pixels.size()),
@@ -1589,17 +1589,17 @@ void get_denoised(image_data& image, const trace_state& state) {
   // Filter the image
   filter.execute();
 #else
-  get_render(image, state);
+  get_rendered_image(image, state);
 #endif
 }
 
 // Get denoising buffers
-image_data get_albedo(const trace_state& state) {
+image_data get_albedo_image(const trace_state& state) {
   auto albedo = make_image(state.width, state.height, true);
-  get_albedo(albedo, state);
+  get_albedo_image(albedo, state);
   return albedo;
 }
-void get_albedo(image_data& albedo, const trace_state& state) {
+void get_albedo_image(image_data& albedo, const trace_state& state) {
   check_image(albedo, state.width, state.height, true);
   auto scale = 1.0f / (float)state.samples;
   for (auto idx = 0; idx < state.width * state.height; idx++) {
@@ -1607,12 +1607,12 @@ void get_albedo(image_data& albedo, const trace_state& state) {
         state.albedo[idx].y * scale, state.albedo[idx].z * scale, 1.0f};
   }
 }
-image_data get_normal(const trace_state& state) {
+image_data get_normal_image(const trace_state& state) {
   auto normal = make_image(state.width, state.height, true);
-  get_normal(normal, state);
+  get_normal_image(normal, state);
   return normal;
 }
-void get_normal(image_data& normal, const trace_state& state) {
+void get_normal_image(image_data& normal, const trace_state& state) {
   check_image(normal, state.width, state.height, true);
   auto scale = 1.0f / (float)state.samples;
   for (auto idx = 0; idx < state.width * state.height; idx++) {
@@ -1622,13 +1622,13 @@ void get_normal(image_data& normal, const trace_state& state) {
 }
 
 // Denoise image
-image_data denoise_render(const image_data& render, const image_data& albedo,
-    const image_data& normal) {
+image_data denoise_rendered_image(const image_data& render,
+    const image_data& albedo, const image_data& normal) {
   auto denoised = make_image(render.width, render.height, render.linear);
-  denoise_render(denoised, render, albedo, normal);
+  denoise_rendered_image(denoised, render, albedo, normal);
   return denoised;
 }
-void denoise_render(image_data& denoised, const image_data& render,
+void denoise_rendered_image(image_data& denoised, const image_data& render,
     const image_data& albedo, const image_data& normal) {
   check_image(denoised, render.width, render.height, render.linear);
   check_image(albedo, render.width, render.height, albedo.linear);
