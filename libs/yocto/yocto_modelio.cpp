@@ -1500,9 +1500,6 @@ bool load_obj(const string& filename, obj_shape& shape, string& error,
 }
 
 // Format values
-static void format_value(string& str, const obj_texture& value) {
-  str += value.path.empty() ? "" : value.path;
-}
 static void format_value(string& str, const obj_vertex& value) {
   format_value(str, value.position);
   if (value.texcoord != 0) {
