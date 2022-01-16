@@ -199,10 +199,10 @@ void run_render(const render_params& params_) {
   }
 
   // build bvh
-  auto bvh = make_bvh(scene, params);
+  auto bvh = make_trace_bvh(scene, params);
 
   // init renderer
-  auto lights = make_lights(scene, params);
+  auto lights = make_trace_lights(scene, params);
 
   // fix renderer type if no lights
   if (lights.lights.empty() && is_sampler_lit(params)) {
@@ -211,7 +211,7 @@ void run_render(const render_params& params_) {
   }
 
   // state
-  auto state = make_state(scene, params);
+  auto state = make_trace_state(scene, params);
 
   // render
   timer = simple_timer{};

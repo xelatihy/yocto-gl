@@ -155,13 +155,15 @@ struct trace_state {
 };
 
 // Initialize state.
-trace_state make_state(const scene_data& scene, const trace_params& params);
+trace_state make_trace_state(
+    const scene_data& scene, const trace_params& params);
 
 // Initialize lights.
-trace_lights make_lights(const scene_data& scene, const trace_params& params);
+trace_lights make_trace_lights(
+    const scene_data& scene, const trace_params& params);
 
 // Build the bvh acceleration structure.
-trace_bvh make_bvh(const scene_data& scene, const trace_params& params);
+trace_bvh make_trace_bvh(const scene_data& scene, const trace_params& params);
 
 // Progressively computes an image.
 void trace_samples(trace_state& state, const scene_data& scene,
@@ -240,6 +242,31 @@ inline const auto trace_falsecolor_labels =
         {trace_falsecolor_type::material, "material"},
         {trace_falsecolor_type::element, "element"},
         {trace_falsecolor_type::highlight, "highlight"}};
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// BACKWARD COMPATIBILITY
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Initialize state.
+[[deprecated]] inline trace_state make_state(
+    const scene_data& scene, const trace_params& params) {
+  return make_trace_state(scene, params);
+}
+
+// Initialize lights.
+[[deprecated]] inline trace_lights make_lights(
+    const scene_data& scene, const trace_params& params) {
+  return make_trace_lights(scene, params);
+}
+
+// Build the bvh acceleration structure.
+[[deprecated]] inline trace_bvh make_bvh(
+    const scene_data& scene, const trace_params& params) {
+  return make_trace_bvh(scene, params);
+}
 
 }  // namespace yocto
 

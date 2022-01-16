@@ -85,7 +85,7 @@ inline void parallel_for(T num1, T num2, Func&& func) {
 namespace yocto {
 
 // Build the Bvh acceleration structure.
-trace_bvh make_bvh(const scene_data& scene, const trace_params& params) {
+trace_bvh make_trace_bvh(const scene_data& scene, const trace_params& params) {
   if (params.embreebvh) {
     return {{},
         make_scene_embree_bvh(scene, params.highqualitybvh, params.noparallel)};
@@ -1409,7 +1409,8 @@ void trace_sample(trace_state& state, const scene_data& scene,
 }
 
 // Init a sequence of random number generators.
-trace_state make_state(const scene_data& scene, const trace_params& params) {
+trace_state make_trace_state(
+    const scene_data& scene, const trace_params& params) {
   auto& camera = scene.cameras[params.camera];
   auto  state  = trace_state{};
   if (camera.aspect >= 1) {
@@ -1438,7 +1439,8 @@ static trace_light& add_light(trace_lights& lights) {
 }
 
 // Init trace lights
-trace_lights make_lights(const scene_data& scene, const trace_params& params) {
+trace_lights make_trace_lights(
+    const scene_data& scene, const trace_params& params) {
   auto lights = trace_lights{};
 
   for (auto handle = 0; handle < (int)scene.instances.size(); handle++) {
@@ -1494,9 +1496,9 @@ trace_lights make_lights(const scene_data& scene, const trace_params& params) {
 
 // Progressively computes an image.
 image_data trace_image(const scene_data& scene, const trace_params& params) {
-  auto bvh    = make_bvh(scene, params);
-  auto lights = make_lights(scene, params);
-  auto state  = make_state(scene, params);
+  auto bvh    = make_trace_bvh(scene, params);
+  auto lights = make_trace_lights(scene, params);
+  auto state  = make_trace_state(scene, params);
   for (auto sample = 0; sample < params.samples; sample++) {
     trace_samples(state, scene, bvh, lights, params);
   }
