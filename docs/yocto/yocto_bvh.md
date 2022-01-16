@@ -17,8 +17,8 @@ in the nodes or elements arrays. Nodes indices refer to the nodes array,
 for internal nodes, or the element arrays, for leaf nodes.
 The BVH does not store shape or scene data, which is instead passed explicitly
 to all calls.
-We wrap this data in `shape_bvh` and `scene_bvh` to store the BVH for 
-[Yocto/Scene](yocto_scene.md) shapes and scenes. To support scene intersection, 
+We wrap this data in `shape_bvh` and `scene_bvh` to store the BVH for
+[Yocto/Scene](yocto_scene.md) shapes and scenes. To support scene intersection,
 we store the shapes BVHs together with the other data.
 
 BVH nodes contain their bounds, indices to the BVH arrays of either
@@ -31,7 +31,7 @@ indices refer to primitives for leaf nodes or other nodes for internal nodes.
 Use `make_scene_bvh(scene,highquality)` or `make_shape_bvh(shape,highquaity)`
 to build a bvh for a scene or shape BVH respectively. These functions takes as
 input scenes and shapes from [Yocto/Scene](yocto_scene.md). By default, the BVH
-is build with a fast heuristic, that can be improved slightly by setting 
+is build with a fast heuristic, that can be improved slightly by setting
 `highquality` to true.
 
 ```cpp
@@ -55,7 +55,7 @@ update_scene_bvh(bvh, scene, shapes, instances); // update bvh
 
 ## Ray intersection
 
-Use `intersect_scene_bvh(bvh,scene,ray)` and `intersect_shape_bvh(bvh,shape,ray)` 
+Use `intersect_scene_bvh(bvh,scene,ray)` and `intersect_shape_bvh(bvh,shape,ray)`
 to compute the ray-scene and ray-shape intersection respectively, and
 `intersect_instance_bvh(bvh,scene,instance,ray)` to intersect a single scene instance.
 These functions return a `scene_intersection` or a `shape_intersection` that
@@ -104,11 +104,11 @@ method to build Embree Bvhs and to perform scene-element intersection, with
 as API that matched the one supported by Yocto/Bvh. Embree support is enable
 by setting the `YOCTO_EMBREE` compile flag and linking to Embree's libraries.
 
-Use `make_scene_embree_bvh(scene,highquality)` or 
+Use `make_scene_embree_bvh(scene,highquality)` or
 `make_shape_embree_bvh(shape,highquaity)`,
 to build a bvh for a scene or shape BVH respectively, and
 `update_shape_embree_bvh(bvh,shape)` or
-`update_scene_embree_bvh(bvh,scene,updated_instances,updated_shapes)`, 
+`update_scene_embree_bvh(bvh,scene,updated_instances,updated_shapes)`,
 to update a shape or scene BVH.
 
 ```cpp
@@ -119,10 +119,10 @@ auto instances = update_instances(scene); // updates some instances
 update_scene_embree_bvh(bvh, scene, shapes, instances); // update bvh
 ```
 
-Use `intersect_scene_embree_bvh(bvh,scene,ray)` and 
-`intersect_shape_embree_bvh(bvh,shape,ray)` 
+Use `intersect_scene_embree_bvh(bvh,scene,ray)` and
+`intersect_shape_embree_bvh(bvh,shape,ray)`
 to compute the ray-scene and ray-shape intersection respectively, and
-`intersect_instance_embree_bvh(bvh,scene,instance,ray)` to intersect a single 
+`intersect_instance_embree_bvh(bvh,scene,instance,ray)` to intersect a single
 scene instance.
 
 ```cpp
