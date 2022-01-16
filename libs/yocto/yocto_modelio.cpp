@@ -203,44 +203,36 @@ static bool path_exists(const string& filename) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-static array<float, 3> neg(const array<float, 3>& a) {
-  return {-a[0], -a[1], -a[2]};
-}
-static array<float, 3> sub(const array<float, 3>& a, const array<float, 3>& b) {
-  return {a[0] - b[0], a[1] - b[1], a[2] - b[2]};
-}
-static array<float, 3> div(const array<float, 3>& a, float b) {
-  return {a[0] / b, a[1] / b, a[2] / b};
-}
-
-static float dot(const array<float, 3>& a, const array<float, 3>& b) {
-  return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
-}
 static array<float, 3> cross(
     const array<float, 3>& a, const array<float, 3>& b) {
   return {a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2],
       a[0] * b[1] - a[1] * b[0]};
 }
-static float length(const array<float, 3>& a) { return sqrt(dot(a, a)); }
+static float length(const array<float, 3>& a) {
+  return sqrt(a[0] * a[0] + a[1] * a[1] + a[2] * a[2]);
+}
 static array<float, 3> normalize(const array<float, 3>& a) {
   auto l = length(a);
-  return (l != 0) ? div(a, l) : a;
+  if (l == 0) return a;
+  return {a[0] / l, a[1] / l, a[2] / l};
 }
 
 static array<float, 3> triangle_normal(const array<float, 3>& p0,
     const array<float, 3>& p1, const array<float, 3>& p2) {
-  return normalize(cross(sub(p1, p0), sub(p2, p0)));
+  return normalize(cross({p1[0] - p0[0], p1[1] - p0[1], p1[2] - p0[2]},
+      {p2[0] - p0[0], p2[1] - p0[1], p2[2] - p0[2]}));
 }
 
 static array<array<float, 3>, 4> lookat_frame(const array<float, 3>& eye,
     const array<float, 3>& center, const array<float, 3>& up,
     bool inv_xz = false) {
-  auto w = normalize(sub(eye, center));
+  auto w = normalize(
+      {eye[0] - center[0], eye[1] - center[1], eye[2] - center[2]});
   auto u = normalize(cross(up, w));
   auto v = normalize(cross(w, u));
   if (inv_xz) {
-    w = neg(w);
-    u = neg(u);
+    w = {-w[0], -w[1], -w[2]};
+    u = {-u[0], -u[1], -u[2]};
   }
   return {u, v, w, eye};
 }
@@ -1137,7 +1129,9 @@ static bool load_obx(const string& filename, obj_model& obj, string& error) {
       auto lookat = array<array<float, 3>, 3>{};
       if (!parse_value(str, lookat)) return parse_error();
       camera.frame = flatten(lookat_frame(lookat[0], lookat[1], lookat[2]));
-      if (camera.focus == 0) camera.focus = length(sub(lookat[1], lookat[0]));
+      if (camera.focus == 0)
+        camera.focus = length({lookat[1][0] - lookat[0][0],
+            lookat[1][1] - lookat[0][1], lookat[1][2] - lookat[0][2]});
     } else if (cmd == "newEnv") {
       auto& environment = obj.environments.emplace_back();
       if (!parse_value(str, environment.name)) return parse_error();
