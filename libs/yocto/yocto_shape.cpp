@@ -4013,10 +4013,10 @@ void make_hair(vector<vec2i>& lines, vector<vec3f>& positions,
 
   auto cidx = vector<int>();
   if (clump.x > 0) {
-    for (auto bidx = 0; bidx < (int)bpos.size(); bidx++) {
+    for (auto bidx : range((int)bpos.size())) {
       cidx.push_back(0);
       auto cdist = flt_max;
-      for (auto c : range(clump.y)) {
+      for (auto c : range((int)clump.y)) {
         auto d = length(bpos[bidx] - bpos[c]);
         if (d < cdist) {
           cdist       = d;
@@ -4028,7 +4028,7 @@ void make_hair(vector<vec2i>& lines, vector<vec3f>& positions,
 
   make_lines(lines, positions, normals, texcoords, radius, steps, {1, 1},
       {1, 1}, {1, 1});
-  for (auto i = 0; i < (int)positions.size(); i++) {
+  for (auto i : range((int)positions.size())) {
     auto u       = texcoords[i].x;
     auto bidx    = i / (steps.x + 1);
     positions[i] = bpos[bidx] + bnorm[bidx] * u * blen[bidx];

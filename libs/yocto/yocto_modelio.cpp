@@ -209,38 +209,14 @@ static array<float, 3> neg(const array<float, 3>& a) {
 static array<float, 3> add(const array<float, 3>& a, const array<float, 3>& b) {
   return {a[0] + b[0], a[1] + b[1], a[2] + b[2]};
 }
-static array<float, 3> add(const array<float, 3>& a, float b) {
-  return {a[0] + b, a[1] + b, a[2] + b};
-}
-static array<float, 3> add(float a, const array<float, 3>& b) {
-  return {a + b[0], a + b[1], a + b[2]};
-}
 static array<float, 3> sub(const array<float, 3>& a, const array<float, 3>& b) {
   return {a[0] - b[0], a[1] - b[1], a[2] - b[2]};
-}
-static array<float, 3> sub(const array<float, 3>& a, float b) {
-  return {a[0] - b, a[1] - b, a[2] - b};
-}
-static array<float, 3> sub(float a, const array<float, 3>& b) {
-  return {a - b[0], a - b[1], a - b[2]};
-}
-static array<float, 3> mul(const array<float, 3>& a, const array<float, 3>& b) {
-  return {a[0] * b[0], a[1] * b[1], a[2] * b[2]};
 }
 static array<float, 3> mul(const array<float, 3>& a, float b) {
   return {a[0] * b, a[1] * b, a[2] * b};
 }
-static array<float, 3> mul(float a, const array<float, 3>& b) {
-  return {a * b[0], a * b[1], a * b[2]};
-}
-static array<float, 3> div(const array<float, 3>& a, const array<float, 3>& b) {
-  return {a[0] / b[0], a[1] / b[1], a[2] / b[2]};
-}
 static array<float, 3> div(const array<float, 3>& a, float b) {
   return {a[0] / b, a[1] / b, a[2] / b};
-}
-static array<float, 3> div(float a, const array<float, 3>& b) {
-  return {a / b[0], a / b[1], a / b[2]};
 }
 
 static float dot(const array<float, 3>& a, const array<float, 3>& b) {
@@ -273,11 +249,6 @@ static array<array<float, 3>, 4> lookat_frame(const array<float, 3>& eye,
     u = neg(u);
   }
   return {u, v, w, eye};
-}
-
-static array<float, 3> mul(
-    const array<array<float, 3>, 3>& a, const array<float, 3>& b) {
-  return add(mul(a[0], b[0]), add(mul(a[1], b[1]), mul(a[2], b[2])));
 }
 
 static array<float, 12> flatten(const array<array<float, 3>, 4>& a) {
