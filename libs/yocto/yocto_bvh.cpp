@@ -125,7 +125,7 @@ static pair<int, int> split_sah(vector<int>& primitives,
     return 1e-12f + 2 * size.x * size.y + 2 * size.x * size.z +
            2 * size.y * size.z;
   };
-  for (auto saxis = 0; saxis < 3; saxis++) {
+  for (auto saxis : range(3)) {
     for (auto b = 1; b < nbins; b++) {
       auto bsplit    = cbbox.min[saxis] + b * csize[saxis] / nbins;
       auto left_bbox = invalidb3f, right_bbox = invalidb3f;
@@ -303,11 +303,11 @@ static void refit_bvh(vector<bvh_node>& nodes, const vector<int>& primitives,
     auto& node = nodes[nodeid];
     node.bbox  = invalidb3f;
     if (node.internal) {
-      for (auto idx = 0; idx < 2; idx++) {
+      for (auto idx : range(2)) {
         node.bbox = merge(node.bbox, nodes[node.start + idx].bbox);
       }
     } else {
-      for (auto idx = 0; idx < node.num; idx++) {
+      for (auto idx : range(node.num)) {
         node.bbox = merge(node.bbox, bboxes[primitives[node.start + idx]]);
       }
     }
@@ -365,7 +365,7 @@ scene_bvh make_scene_bvh(
   // build shape bvh
   bvh.shapes.resize(scene.shapes.size());
   if (noparallel) {
-    for (auto idx = (size_t)0; idx < scene.shapes.size(); idx++) {
+    for (auto idx : range(scene.shapes.size())) {
       bvh.shapes[idx] = make_shape_bvh(scene.shapes[idx], highquality);
     }
   } else {
@@ -654,7 +654,7 @@ shape_intersection overlap_shape_bvh(const shape_bvh& bvh,
       node_stack[node_cur++] = node.start + 0;
       node_stack[node_cur++] = node.start + 1;
     } else if (!shape.points.empty()) {
-      for (auto idx = 0; idx < node.num; idx++) {
+      for (auto idx : range(node.num)) {
         auto  primitive     = bvh.primitives[node.start + idx];
         auto& p             = shape.points[primitive];
         auto  eintersection = overlap_point(
@@ -665,7 +665,7 @@ shape_intersection overlap_shape_bvh(const shape_bvh& bvh,
         max_distance = eintersection.distance;
       }
     } else if (!shape.lines.empty()) {
-      for (auto idx = 0; idx < node.num; idx++) {
+      for (auto idx : range(node.num)) {
         auto  primitive     = bvh.primitives[node.start + idx];
         auto& l             = shape.lines[primitive];
         auto  eintersection = overlap_line(pos, max_distance,
@@ -677,7 +677,7 @@ shape_intersection overlap_shape_bvh(const shape_bvh& bvh,
         max_distance = eintersection.distance;
       }
     } else if (!shape.triangles.empty()) {
-      for (auto idx = 0; idx < node.num; idx++) {
+      for (auto idx : range(node.num)) {
         auto  primitive     = bvh.primitives[node.start + idx];
         auto& t             = shape.triangles[primitive];
         auto  eintersection = overlap_triangle(pos, max_distance,
@@ -689,7 +689,7 @@ shape_intersection overlap_shape_bvh(const shape_bvh& bvh,
         max_distance = eintersection.distance;
       }
     } else if (!shape.quads.empty()) {
-      for (auto idx = 0; idx < node.num; idx++) {
+      for (auto idx : range(node.num)) {
         auto  primitive     = bvh.primitives[node.start + idx];
         auto& q             = shape.quads[primitive];
         auto  eintersection = overlap_quad(pos, max_distance,
@@ -740,7 +740,7 @@ scene_intersection overlap_scene_bvh(const scene_bvh& bvh,
       node_stack[node_cur++] = node.start + 0;
       node_stack[node_cur++] = node.start + 1;
     } else {
-      for (auto idx = 0; idx < node.num; idx++) {
+      for (auto idx : range(node.num)) {
         auto  primitive = bvh.primitives[node.start + idx];
         auto& instance_ = scene.instances[primitive];
         auto& shape     = scene.shapes[instance_.shape];
@@ -973,7 +973,7 @@ scene_embree_bvh make_scene_embree_bvh(
   // shape bvhs
   bvh.shapes.resize(scene.shapes.size());
   if (noparallel) {
-    for (auto idx = (size_t)0; idx < scene.shapes.size(); idx++) {
+    for (auto idx : range(scene.shapes.size())) {
       bvh.shapes[idx] = make_shape_embree_bvh(scene.shapes[idx], highquality);
     }
   } else {

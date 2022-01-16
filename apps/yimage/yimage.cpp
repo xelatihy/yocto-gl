@@ -200,7 +200,7 @@ void run_setalpha(const setalpha_params& params) {
 
   // edit alpha
   auto out = make_image(image.width, image.height, image.linear);
-  for (auto idx = (size_t)0; idx < image.pixels.size(); idx++) {
+  for (auto idx : range(image.pixels.size())) {
     auto calpha = alpha.pixels[idx];
     auto alpha_ = params.from_color   ? mean(xyz(calpha))
                   : params.from_black ? (mean(xyz(calpha)) > 0.01 ? 1.0f : 0.0f)

@@ -128,7 +128,7 @@ void convert_image(image_data& result, const image_data& image) {
   if (image.linear == result.linear) {
     result.pixels = image.pixels;
   } else {
-    for (auto idx = (size_t)0; idx < image.pixels.size(); idx++) {
+    for (auto idx : range(image.pixels.size())) {
       result.pixels[idx] = image.linear ? rgb_to_srgb(image.pixels[idx])
                                         : srgb_to_rgb(image.pixels[idx]);
     }
@@ -198,12 +198,12 @@ void tonemap_image(
     throw std::invalid_argument{"image should be the same size"};
   if (result.linear) throw std::invalid_argument{"ldr expected"};
   if (image.linear) {
-    for (auto idx = (size_t)0; idx < image.pixels.size(); idx++) {
+    for (auto idx : range(image.pixels.size())) {
       result.pixels[idx] = tonemap(image.pixels[idx], exposure, filmic);
     }
   } else {
     auto scale = vec4f{pow(2, exposure), pow(2, exposure), pow(2, exposure), 1};
-    for (auto idx = (size_t)0; idx < image.pixels.size(); idx++) {
+    for (auto idx : range(image.pixels.size())) {
       result.pixels[idx] = image.pixels[idx] * scale;
     }
   }
@@ -265,7 +265,7 @@ image_data image_difference(
 
   // compute diff
   auto difference = make_image(image1.width, image1.height, image1.linear);
-  for (auto idx = (size_t)0; idx < difference.pixels.size(); idx++) {
+  for (auto idx : range(difference.pixels.size())) {
     auto diff              = abs(image1.pixels[idx] - image2.pixels[idx]);
     difference.pixels[idx] = display ? vec4f{max(diff), max(diff), max(diff), 1}
                                      : diff;
@@ -274,8 +274,8 @@ image_data image_difference(
 }
 
 void set_region(image_data& image, const image_data& region, int x, int y) {
-  for (auto j = 0; j < region.height; j++) {
-    for (auto i = 0; i < region.width; i++) {
+  for (auto j : range(region.height)) {
+    for (auto i : range(region.width)) {
       image.pixels[(j + y) * image.width + (i + x)] =
           region.pixels[j * region.width + i];
     }
@@ -287,8 +287,8 @@ void get_region(image_data& region, const image_data& image, int x, int y,
   if (region.width != width || region.height != height) {
     region = make_image(width, height, image.linear);
   }
-  for (auto j = 0; j < height; j++) {
-    for (auto i = 0; i < width; i++) {
+  for (auto j : range(height)) {
+    for (auto i : range(width)) {
       region.pixels[j * region.width + i] =
           image.pixels[(j + y) * image.width + (i + x)];
     }
@@ -303,7 +303,7 @@ image_data composite_image(
   if (image_a.linear != image_b.linear)
     throw std::invalid_argument{"image should be of the same type"};
   auto result = make_image(image_a.width, image_a.height, image_a.linear);
-  for (auto idx = (size_t)0; idx < result.pixels.size(); idx++) {
+  for (auto idx : range(result.pixels.size())) {
     result.pixels[idx] = composite(image_a.pixels[idx], image_b.pixels[idx]);
   }
   return result;
@@ -320,7 +320,7 @@ void composite_image(
     throw std::invalid_argument{"image should be the same size"};
   if (image_a.linear != result.linear)
     throw std::invalid_argument{"image should be of the same type"};
-  for (auto idx = (size_t)0; idx < result.pixels.size(); idx++) {
+  for (auto idx : range(result.pixels.size())) {
     result.pixels[idx] = composite(image_a.pixels[idx], image_b.pixels[idx]);
   }
 }
@@ -365,7 +365,7 @@ vec4f colorgradeb(
 image_data colorgrade_image(
     const image_data& image, const colorgrade_params& params) {
   auto result = make_image(image.width, image.height, false);
-  for (auto idx = (size_t)0; idx < image.pixels.size(); idx++) {
+  for (auto idx : range(image.pixels.size())) {
     result.pixels[idx] = colorgrade(image.pixels[idx], image.linear, params);
   }
   return result;
@@ -378,7 +378,7 @@ void colorgrade_image(image_data& result, const image_data& image,
   if (image.width != result.width || image.height != result.height)
     throw std::invalid_argument{"image should be the same size"};
   if (!!result.linear) throw std::invalid_argument{"non linear expected"};
-  for (auto idx = (size_t)0; idx < image.pixels.size(); idx++) {
+  for (auto idx : range(image.pixels.size())) {
     result.pixels[idx] = colorgrade(image.pixels[idx], image.linear, params);
   }
 }
@@ -452,8 +452,8 @@ static image_data make_proc_image(
     int width, int height, bool linear, Shader&& shader) {
   auto image = make_image(width, height, linear);
   auto scale = 1.0f / max(width, height);
-  for (auto j = 0; j < height; j++) {
-    for (auto i = 0; i < width; i++) {
+  for (auto j : range(height)) {
+    for (auto i : range(width)) {
       auto uv                     = vec2f{i * scale, j * scale};
       image.pixels[j * width + i] = shader(uv);
     }
@@ -637,8 +637,8 @@ image_data add_border(
     const image_data& image, float width, const vec4f& color) {
   auto result = image;
   auto scale  = 1.0f / max(image.width, image.height);
-  for (auto j = 0; j < image.height; j++) {
-    for (auto i = 0; i < image.width; i++) {
+  for (auto j : range(image.height)) {
+    for (auto i : range(image.width)) {
       auto uv = vec2f{i * scale, j * scale};
       if (uv.x < width || uv.y < width || uv.x > image.width * scale - width ||
           uv.y > image.height * scale - width) {
@@ -798,7 +798,7 @@ image_data make_lights(int width, int height, const vec3f& le, int nlights,
     for (int i = 0; i < width; i++) {
       auto phi     = 2 * pif * (float(i + 0.5f) / width);
       auto inlight = false;
-      for (auto l = 0; l < nlights; l++) {
+      for (auto l : range(nlights)) {
         auto lphi = 2 * pif * (l + 0.5f) / nlights;
         inlight   = inlight || fabs(phi - lphi) < lwidth / 2;
       }
@@ -1045,8 +1045,8 @@ static void make_proc_image(
     vector<vec4f>& pixels, int width, int height, Shader&& shader) {
   pixels.resize((size_t)width * (size_t)height);
   auto scale = 1.0f / max(width, height);
-  for (auto j = 0; j < height; j++) {
-    for (auto i = 0; i < width; i++) {
+  for (auto j : range(height)) {
+    for (auto i : range(width)) {
       auto uv               = vec2f{i * scale, j * scale};
       pixels[j * width + i] = shader(uv);
     }
@@ -1231,8 +1231,8 @@ void add_border(vector<vec4f>& pixels, const vector<vec4f>& source, int width,
     int height, float thickness, const vec4f& color) {
   pixels     = source;
   auto scale = 1.0f / max(width, height);
-  for (auto j = 0; j < height; j++) {
-    for (auto i = 0; i < width; i++) {
+  for (auto j : range(height)) {
+    for (auto i : range(width)) {
       auto uv = vec2f{i * scale, j * scale};
       if (uv.x < thickness || uv.y < thickness ||
           uv.x > width * scale - thickness ||
@@ -1389,7 +1389,7 @@ void make_lights(vector<vec4f>& pixels, int width, int height, const vec3f& le,
     for (int i = 0; i < width; i++) {
       auto phi     = 2 * pif * (float(i + 0.5f) / width);
       auto inlight = false;
-      for (auto l = 0; l < nlights; l++) {
+      for (auto l : range(nlights)) {
         auto lphi = 2 * pif * (l + 0.5f) / nlights;
         inlight   = inlight || fabs(phi - lphi) < lwidth / 2;
       }

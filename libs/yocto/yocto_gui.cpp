@@ -479,7 +479,7 @@ void show_image_gui(const string& title, const vector<string>& names,
   auto displays  = vector<image_data>(images.size());
   auto exposures = vector<float>(images.size(), 0);
   auto filmics   = vector<bool>(images.size(), false);
-  for (auto idx = 0; idx < (int)images.size(); idx++) {
+  for (auto idx : range((int)images.size())) {
     displays[idx] = make_image(images[idx].width, images[idx].height, false);
     tonemap_image_mt(displays[idx], images[idx], exposures[idx], filmics[idx]);
   }
@@ -678,7 +678,7 @@ void show_trace_gui(const string& title, const string& name, scene_data& scene,
       for (auto sample = 0; sample < params.samples; sample += params.batch) {
         if (render_stop) return;
         parallel_for(state.width, state.height, [&](int i, int j) {
-          for (auto s = 0; s < params.batch; s++) {
+          for (auto s : range(params.batch)) {
             if (render_stop) return;
             trace_sample(state, scene, bvh, lights, i, j, params);
           }
@@ -2275,7 +2275,7 @@ bool draw_gui_combobox(const char* lbl, int& idx, int num,
     if (idx < 0) ImGui::SetItemDefaultFocus();
     ImGui::PopID();
   }
-  for (auto i = 0; i < num; i++) {
+  for (auto i : range(num)) {
     ImGui::PushID(i);
     if (ImGui::Selectable(labels(i).c_str(), idx == i)) idx = i;
     if (idx == i) ImGui::SetItemDefaultFocus();

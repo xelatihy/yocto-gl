@@ -104,7 +104,7 @@ static int find_in_vec(const vector<int>& vec, int x) {
 }
 
 static int find_in_vec(const vec3i& vec, int x) {
-  for (auto i = 0; i < 3; i++)
+  for (auto i : range(3))
     if (vec[i] == x) return i;
   return -1;
 }
@@ -283,7 +283,7 @@ unfold_triangle init_flat_triangle(
 
 static int find_adjacent_triangle(
     const vec3i& triangle, const vec3i& adjacent) {
-  for (auto i = 0; i < 3; i++) {
+  for (auto i : range(3)) {
     auto k = find_in_vec(adjacent, triangle[i]);
     if (k != -1) {
       if (find_in_vec(adjacent, triangle[mod3(i + 1)]) != -1) {
@@ -658,7 +658,7 @@ vector<int> triangle_fan(
   auto prev   = face;
   auto node   = adjacencies[face][k];
   auto offset = 2 - (int)clockwise;
-  // for (auto i = 0; i < 256; i++) {
+  // for(auto i : range(256)) {
   while (true) {
     if (node == -1) break;
     if (node == face) break;
@@ -718,8 +718,8 @@ int opposite_vertex(const vector<vec3i>& triangles,
 
 // Finds common edge between triangles
 vec2i common_edge(const vec3i& triangle0, const vec3i& triangle1) {
-  for (auto i = 0; i < 3; i++) {
-    for (auto k = 0; k < 3; k++) {
+  for (auto i : range(3)) {
+    for (auto k : range(3)) {
       if (triangle0[i] == triangle1[k] &&
           triangle0[mod3(i + 1)] == triangle1[mod3(k + 2)])
         return {triangle0[i], triangle0[mod3(i + 1)]};
@@ -805,7 +805,7 @@ void meandering_triangles(const vector<float>& field, float isoline,
 
     // Find which vertex has different tag, if any.
     auto j = -1;
-    for (auto k = 0; k < 3; k++) {
+    for (auto k : range(3)) {
       if (get_tag(tr[k]) != get_tag(tr[mod3(k + 1)]) &&
           get_tag(tr[k]) != get_tag(tr[mod3(k + 2)])) {
         j = k;
@@ -937,7 +937,7 @@ geodesic_solver make_geodesic_solver(const vector<vec3i>& triangles,
   auto solver = geodesic_solver{};
   solver.graph.resize(positions.size());
   for (auto face = 0; face < (int)triangles.size(); face++) {
-    for (auto k = 0; k < 3; k++) {
+    for (auto k : range(3)) {
       auto a = triangles[face][k];
       auto b = triangles[face][mod3(k + 1)];
 
@@ -1788,7 +1788,7 @@ surface_path integrate_field(const vector<vec3i>& triangles,
 
   const int num_steps = 10000;
 
-  for (auto i = 0; i < num_steps; i++) {
+  for (auto i : range(num_steps)) {
     auto [old_edge, old_face, old_alpha] = lerps.back();
     if (old_face == -1) throw std::runtime_error("programmer error");
     auto point = (1 - old_alpha) * positions[old_edge.x] +
@@ -1864,7 +1864,7 @@ surface_path integrate_field(const vector<vec3i>& triangles,
 
   const int num_steps = 10000;
 
-  for (auto i = 0; i < num_steps; i++) {
+  for (auto i : range(num_steps)) {
     auto [old_edge, old_face, old_alpha] = lerps.back();
     auto point = (1 - old_alpha) * positions[old_edge.x] +
                  old_alpha * positions[old_edge.y];
@@ -3730,7 +3730,7 @@ static vector<mesh_point> de_casteljau_uniform(
     const spline_polygon& control_points, int subdivisions) {
   auto segments = vector<spline_polygon>{control_points};
   auto result   = vector<spline_polygon>();
-  for (auto subdivision = 0; subdivision < subdivisions; subdivision++) {
+  for (auto subdivision : range(subdivisions)) {
     result.resize(segments.size() * 2);
     for (auto i = 0; i < (int)segments.size(); i++) {
       auto [split0, split1] = subdivide_bezier_polygon(
@@ -4643,7 +4643,7 @@ static bool is_bezier_straight_enough(const geodesic_path& a,
     pos[2]    = eval_position(triangles, positions, c.start);
     pos[3]    = eval_position(triangles, positions, c.end);
     float len = 0;
-    for (auto i = 0; i < 3; i++) {
+    for (auto i : range(3)) {
       len += length(pos[i] - pos[i + 1]);
     }
     if (len < params.min_curve_size) return true;
@@ -4751,7 +4751,7 @@ static vector<mesh_point> de_casteljau_adaptive(
     result[k * 2 + 1] = split1;
   };
 
-  for (auto subdivision = 0; subdivision < params.subdivisions; subdivision++) {
+  for (auto subdivision : range(params.subdivisions)) {
     result.resize(segments.size() * 2);
     for (auto i = 0; i < (int)segments.size(); i++) {
       threads[i] = std::thread(f, i);
@@ -4772,7 +4772,7 @@ static vector<mesh_point> de_casteljau_uniform(
   auto segments = vector<spline_polygon>{control_points};
   auto result   = vector<spline_polygon>();
 
-  for (auto subdivision = 0; subdivision < params.subdivisions; subdivision++) {
+  for (auto subdivision : range(params.subdivisions)) {
     result.resize(segments.size() * 2);
     for (auto i = 0; i < (int)segments.size(); i++) {
       auto [split0, split1] = subdivide_bezier_polygon(

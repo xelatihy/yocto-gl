@@ -756,7 +756,7 @@ void tesselate_subdiv(
     for (auto fid = (size_t)0; fid < subdiv.quadspos.size(); fid++) {
       auto qpos = subdiv.quadspos[fid];
       auto qtxt = subdiv.quadstexcoord[fid];
-      for (auto i = 0; i < 4; i++) {
+      for (auto i : range(4)) {
         auto& displacement_tex = scene.textures[subdiv.displacement_tex];
         auto  disp             = mean(
             eval_texture(displacement_tex, subdiv.texcoords[qtxt[i]], false));

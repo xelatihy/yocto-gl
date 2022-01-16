@@ -215,7 +215,7 @@ void run_render(const render_params& params_) {
 
   // render
   timer = simple_timer{};
-  for (auto sample = 0; sample < params.samples; sample++) {
+  for (auto sample : range(params.samples)) {
     auto sample_timer = simple_timer{};
     trace_samples(state, scene, bvh, lights, params);
     print_info("render sample {}/{}: {}", sample, params.samples,
