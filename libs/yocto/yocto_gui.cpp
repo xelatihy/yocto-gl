@@ -600,10 +600,10 @@ void show_trace_gui(const string& title, const string& name, scene_data& scene,
   auto params = params_;
 
   // build bvh
-  auto bvh = make_bvh(scene, params);
+  auto bvh = make_trace_bvh(scene, params);
 
   // init renderer
-  auto lights = make_lights(scene, params);
+  auto lights = make_trace_lights(scene, params);
 
   // fix renderer type if no lights
   if (lights.lights.empty() && is_sampler_lit(params)) {
@@ -611,7 +611,7 @@ void show_trace_gui(const string& title, const string& name, scene_data& scene,
   }
 
   // init state
-  auto state   = make_state(scene, params);
+  auto state   = make_trace_state(scene, params);
   auto image   = make_image(state.width, state.height, true);
   auto display = make_image(state.width, state.height, false);
   auto render  = make_image(state.width, state.height, true);
@@ -643,7 +643,7 @@ void show_trace_gui(const string& title, const string& name, scene_data& scene,
     render_stop = true;
     if (render_worker.valid()) render_worker.get();
 
-    state   = make_state(scene, params);
+    state   = make_trace_state(scene, params);
     image   = make_image(state.width, state.height, true);
     display = make_image(state.width, state.height, false);
     render  = make_image(state.width, state.height, true);
@@ -655,9 +655,9 @@ void show_trace_gui(const string& title, const string& name, scene_data& scene,
     auto pparams = params;
     pparams.resolution /= params.pratio;
     pparams.samples = 1;
-    auto pstate     = make_state(scene, pparams);
+    auto pstate     = make_trace_state(scene, pparams);
     trace_samples(pstate, scene, bvh, lights, pparams);
-    auto preview = get_render(pstate);
+    auto preview = get_rendered_image(pstate);
     for (auto idx = 0; idx < state.width * state.height; idx++) {
       auto i = idx % render.width, j = idx / render.width;
       auto pi            = clamp(i / params.pratio, 0, preview.width - 1),
@@ -688,9 +688,9 @@ void show_trace_gui(const string& title, const string& name, scene_data& scene,
           auto lock      = std::lock_guard{render_mutex};
           render_current = state.samples;
           if (!params.denoise || render_stop) {
-            get_render(render, state);
+            get_rendered_image(render, state);
           } else {
-            get_denoised(render, state);
+            get_denoised_image(render, state);
           }
           image = render;
           tonemap_image_mt(display, image, params.exposure, params.filmic);
