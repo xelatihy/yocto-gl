@@ -259,20 +259,9 @@ namespace yocto {
 [[maybe_unused]] static float length(const array<float, 3>& a) {
   return sqrt(dot(a, a));
 }
-[[maybe_unused]] static float length_squared(const array<float, 3>& a) {
-  return dot(a, a);
-}
 [[maybe_unused]] static array<float, 3> normalize(const array<float, 3>& a) {
   auto l = length(a);
   return (l != 0) ? div(a, l) : a;
-}
-[[maybe_unused]] static float distance(
-    const array<float, 3>& a, const array<float, 3>& b) {
-  return length(sub(a, b));
-}
-[[maybe_unused]] static float distance_squared(
-    const array<float, 3>& a, const array<float, 3>& b) {
-  return dot(sub(a, b), sub(a, b));
 }
 
 [[maybe_unused]] static array<float, 3> triangle_normal(
@@ -313,83 +302,12 @@ static array<array<float, 3>, 4> mul(
       mul(al, b[0]), mul(al, b[1]), mul(al, b[2]), add(mul(al, b[3]), a[3])};
 }
 
-static array<array<float, 3>, 4> translation_frame(const array<float, 3>& a) {
-  return {array<float, 3>{1, 0, 0}, array<float, 3>{0, 1, 0},
-      array<float, 3>{0, 0, 1}, a};
-}
-static array<array<float, 3>, 4> scaling_frame(const array<float, 3>& a) {
-  return {array<float, 3>{a[0], 0, 0}, array<float, 3>{0, a[1], 0},
-      array<float, 3>{0, 0, a[2]}, array<float, 3>{0, 0, 0}};
-}
-static array<array<float, 3>, 4> rotation_frame(
-    const array<float, 3>& axis, float angle) {
-  auto s = std::sin(angle), c = std::cos(angle);
-  auto vv = normalize(axis);
-  return {array<float, 3>{c + (1 - c) * vv[0] * vv[0],
-              (1 - c) * vv[0] * vv[1] + s * vv[2],
-              (1 - c) * vv[0] * vv[2] - s * vv[1]},
-      array<float, 3>{(1 - c) * vv[0] * vv[1] - s * vv[2],
-          c + (1 - c) * vv[1] * vv[1], (1 - c) * vv[1] * vv[2] + s * vv[0]},
-      array<float, 3>{(1 - c) * vv[0] * vv[2] + s * vv[1],
-          (1 - c) * vv[1] * vv[2] - s * vv[0], c + (1 - c) * vv[2] * vv[2]},
-      array<float, 3>{0, 0, 0}};
-}
-
-static array<array<float, 3>, 3> transpose(const array<array<float, 3>, 3>& a) {
-  return {
-      array<float, 3>{a[0][0], a[1][0], a[2][0]},
-      array<float, 3>{a[0][1], a[1][1], a[2][1]},
-      array<float, 3>{a[0][2], a[1][2], a[2][2]},
-  };
-}
-static float determinant(const array<array<float, 3>, 3>& a) {
-  return dot(a[0], cross(a[1], a[2]));
-}
-static array<array<float, 3>, 3> adjoint(const array<array<float, 3>, 3>& a) {
-  return transpose(array<array<float, 3>, 3>{
-      cross(a[1], a[2]), cross(a[2], a[0]), cross(a[0], a[1])});
-}
-static array<array<float, 3>, 3> inverse(const array<array<float, 3>, 3>& a) {
-  return mul(adjoint(a), (1 / determinant(a)));
-}
-
-static array<array<float, 3>, 4> inverse(
-    const array<array<float, 3>, 4>& a, bool non_rigid = false) {
-  auto m    = array<array<float, 3>, 3>{a[0], a[1], a[2]};
-  auto minv = non_rigid ? inverse(m) : transpose(m);
-  return {minv[0], minv[1], minv[2], neg(mul(minv, a[3]))};
-}
-
-// frame/mat conversion
-static array<array<float, 3>, 4> mat_to_frame(
-    const array<array<float, 4>, 4>& m) {
-  return {array<float, 3>{m[0][0], m[0][1], m[0][2]},
-      array<float, 3>{m[1][0], m[1][1], m[1][2]},
-      array<float, 3>{m[2][0], m[2][1], m[2][2]},
-      array<float, 3>{m[3][0], m[3][1], m[3][2]}};
-}
-static array<array<float, 4>, 4> frame_to_mat(
-    const array<array<float, 3>, 4>& f) {
-  return {array<float, 4>{f[0][0], f[0][1], f[0][2], 0},
-      array<float, 4>{f[1][0], f[1][1], f[1][2], 0},
-      array<float, 4>{f[2][0], f[2][1], f[2][2], 0},
-      array<float, 4>{f[3][0], f[3][1], f[3][2], 1}};
-}
-
 static array<float, 12> flatten(const array<array<float, 3>, 4>& a) {
   return (const array<float, 12>&)a;
 }
-static array<array<float, 3>, 4> unflatten(const array<float, 12>& a) {
-  return (const array<array<float, 3>, 4>&)a;
-}
-
 [[maybe_unused]] static array<float, 16> flatten(
     const array<array<float, 4>, 4>& a) {
   return (const array<float, 16>&)a;
-}
-[[maybe_unused]] static array<array<float, 4>, 4> unflatten(
-    const array<float, 16>& a) {
-  return (const array<array<float, 4>, 4>&)a;
 }
 
 }  // namespace yocto

@@ -186,16 +186,6 @@ static string path_join(const string& patha, const string& pathb) {
   return (make_path(patha) / make_path(pathb)).generic_u8string();
 }
 
-// Replaces extensions
-static string replace_extension(const string& filename, const string& ext) {
-  return make_path(filename).replace_extension(ext).u8string();
-}
-
-// Check if a file can be opened for reading.
-static bool path_exists(const string& filename) {
-  return exists(make_path(filename));
-}
-
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
