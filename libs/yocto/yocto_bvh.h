@@ -162,24 +162,24 @@ struct scene_embree_bvh {
 };
 
 // Build the bvh acceleration structure.
-shape_embree_bvh make_embree_bvh(
+shape_embree_bvh make_shape_embree_bvh(
     const shape_data& shape, bool highquality = false);
-scene_embree_bvh make_embree_bvh(
+scene_embree_bvh make_scene_embree_bvh(
     const scene_data& scene, bool highquality = false, bool noparallel = false);
 
 // Refit bvh data
-void update_bvh(shape_embree_bvh& bvh, const shape_data& shape);
-void update_bvh(scene_embree_bvh& bvh, const scene_data& scene,
+void update_shape_embree_bvh(shape_embree_bvh& bvh, const shape_data& shape);
+void update_scene_embree_bvh(scene_embree_bvh& bvh, const scene_data& scene,
     const vector<int>& updated_instances, const vector<int>& updated_shapes);
 
 // Intersect ray with a bvh returning either the first or any intersection
 // depending on `find_any`. Returns the ray distance , the instance id,
 // the shape element index and the element barycentric coordinates.
-shape_intersection intersect_shape(const shape_embree_bvh& bvh,
+shape_intersection intersect_shape_embree_bvh(const shape_embree_bvh& bvh,
     const shape_data& shape, const ray3f& ray, bool find_any = false);
-scene_intersection intersect_scene(const scene_embree_bvh& bvh,
+scene_intersection intersect_scene_embree_bvh(const scene_embree_bvh& bvh,
     const scene_data& scene, const ray3f& ray, bool find_any = false);
-scene_intersection intersect_instance(const scene_embree_bvh& bvh,
+scene_intersection intersect_instance_embree_bvh(const scene_embree_bvh& bvh,
     const scene_data& scene, int instance, const ray3f& ray,
     bool find_any = false);
 

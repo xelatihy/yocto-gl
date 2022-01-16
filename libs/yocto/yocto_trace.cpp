@@ -87,8 +87,8 @@ namespace yocto {
 // Build the Bvh acceleration structure.
 trace_bvh make_bvh(const scene_data& scene, const trace_params& params) {
   if (params.embreebvh) {
-    return {
-        {}, make_embree_bvh(scene, params.highqualitybvh, params.noparallel)};
+    return {{},
+        make_scene_embree_bvh(scene, params.highqualitybvh, params.noparallel)};
   } else {
     return {
         make_scene_bvh(scene, params.highqualitybvh, params.noparallel), {}};
@@ -99,18 +99,19 @@ trace_bvh make_bvh(const scene_data& scene, const trace_params& params) {
 static scene_intersection intersect_scene(const trace_bvh& bvh,
     const scene_data& scene, const ray3f& ray, bool find_any = false) {
   if (bvh.embree.embree_bvh) {
-    return intersect_scene(bvh.embree, scene, ray, find_any);
+    return intersect_scene_embree_bvh(bvh.embree, scene, ray, find_any);
   } else {
-    return intersect_scene(bvh.bvh, scene, ray, find_any);
+    return intersect_scene_bvh(bvh.bvh, scene, ray, find_any);
   }
 }
 static scene_intersection intersect_instance(const trace_bvh& bvh,
     const scene_data& scene, int instance, const ray3f& ray,
     bool find_any = false) {
   if (bvh.embree.embree_bvh) {
-    return intersect_instance(bvh.embree, scene, instance, ray, find_any);
+    return intersect_instance_embree_bvh(
+        bvh.embree, scene, instance, ray, find_any);
   } else {
-    return intersect_instance(bvh.bvh, scene, instance, ray, find_any);
+    return intersect_instance_bvh(bvh.bvh, scene, instance, ray, find_any);
   }
 }
 
