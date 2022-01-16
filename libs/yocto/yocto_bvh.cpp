@@ -590,7 +590,7 @@ scene_intersection intersect_scene_bvh(const scene_bvh& bvh,
       for (auto idx = node.start; idx < node.start + node.num; idx++) {
         auto& instance_ = scene.instances[bvh.primitives[idx]];
         auto  inv_ray   = transform_ray(inverse(instance_.frame, true), ray);
-        auto  sintersection = intersect_shape(bvh.shapes[instance_.shape],
+        auto  sintersection = intersect_shape_bvh(bvh.shapes[instance_.shape],
             scene.shapes[instance_.shape], inv_ray, find_any);
         if (!sintersection.hit) continue;
         intersection = {bvh.primitives[idx], sintersection.element,
@@ -1118,16 +1118,15 @@ void update_scene_embree_bvh(scene_embree_bvh& bvh, const scene_data& scene,
 
 // Not implemented
 shape_intersection intersect_shape_embree_bvh(const shape_embree_bvh& bvh,
-    const shape_data& shape, const ray3f& ray, bool find_any = false) {
+    const shape_data& shape, const ray3f& ray, bool find_any) {
   throw embree_error{"Embree not available"};
 }
 scene_intersection intersect_scene_embree_bvh(const scene_embree_bvh& bvh,
-    const scene_data& scene, const ray3f& ray, bool find_any = false) {
+    const scene_data& scene, const ray3f& ray, bool find_any) {
   throw embree_error{"Embree not available"};
 }
 scene_intersection intersect_instance_embree_bvh(const scene_embree_bvh& bvh,
-    const scene_data& scene, int instance, const ray3f& ray,
-    bool find_any = false) {
+    const scene_data& scene, int instance, const ray3f& ray, bool find_any) {
   throw embree_error{"Embree not available"};
 }
 
