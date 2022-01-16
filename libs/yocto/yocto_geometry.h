@@ -303,22 +303,6 @@ inline bool intersect_bbox(const ray3f& ray, const bbox3f& bbox);
 inline bool intersect_bbox(
     const ray3f& ray, const vec3f& ray_dinv, const bbox3f& bbox);
 
-// Intersect a ray with a point (approximate)
-[[deprecated]] inline bool intersect_point(
-    const ray3f& ray, const vec3f& p, float r, vec2f& uv, float& dist);
-
-// Intersect a ray with a line
-[[deprecated]] inline bool intersect_line(const ray3f& ray, const vec3f& p0,
-    const vec3f& p1, float r0, float r1, vec2f& uv, float& dist);
-
-// Intersect a ray with a triangle
-[[deprecated]] inline bool intersect_triangle(const ray3f& ray, const vec3f& p0,
-    const vec3f& p1, const vec3f& p2, vec2f& uv, float& dist);
-
-// Intersect a ray with a quad.
-[[deprecated]] inline bool intersect_quad(const ray3f& ray, const vec3f& p0,
-    const vec3f& p1, const vec3f& p2, const vec3f& p3, vec2f& uv, float& dist);
-
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -357,26 +341,6 @@ inline bool overlap_bbox(const vec3f& pos, float dist_max, const bbox3f& bbox);
 
 // Check if two bboxes overlap.
 inline bool overlap_bbox(const bbox3f& bbox1, const bbox3f& bbox2);
-
-// Check if a point overlaps a position pos withint a maximum distance dist_max.
-[[deprecated]] inline bool overlap_point(const vec3f& pos, float dist_max,
-    const vec3f& p, float r, vec2f& uv, float& dist);
-
-// Check if a line overlaps a position pos withint a maximum distance dist_max.
-[[deprecated]] inline bool overlap_line(const vec3f& pos, float dist_max,
-    const vec3f& p0, const vec3f& p1, float r0, float r1, vec2f& uv,
-    float& dist);
-
-// Check if a triangle overlaps a position pos withint a maximum distance
-// dist_max.
-[[deprecated]] inline bool overlap_triangle(const vec3f& pos, float dist_max,
-    const vec3f& p0, const vec3f& p1, const vec3f& p2, float r0, float r1,
-    float r2, vec2f& uv, float& dist);
-
-// Check if a quad overlaps a position pos withint a maximum distance dist_max.
-[[deprecated]] inline bool overlap_quad(const vec3f& pos, float dist_max,
-    const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec3f& p3,
-    float r0, float r1, float r2, float r3, vec2f& uv, float& dist);
 
 }  // namespace yocto
 
@@ -718,7 +682,7 @@ inline ray3f camera_ray(const frame3f& frame, float lens, float aspect,
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// IMPLEMENRTATION OF RAY-PRIMITIVE INTERSECTION FUNCTIONS
+// IMPLEMENTATION OF RAY-PRIMITIVE INTERSECTION FUNCTIONS
 // -----------------------------------------------------------------------------
 namespace yocto {
 
@@ -892,165 +856,6 @@ inline bool intersect_bbox(
   return t0 <= t1;
 }
 
-// Intersect a ray with a point (approximate)
-[[deprecated]] inline bool intersect_point(
-    const ray3f& ray, const vec3f& p, float r, vec2f& uv, float& dist) {
-  // find parameter for line-point minimum distance
-  auto w = p - ray.o;
-  auto t = dot(w, ray.d) / dot(ray.d, ray.d);
-
-  // exit if not within bounds
-  if (t < ray.tmin || t > ray.tmax) return false;
-
-  // test for line-point distance vs point radius
-  auto rp  = ray.o + ray.d * t;
-  auto prp = p - rp;
-  if (dot(prp, prp) > r * r) return false;
-
-  // intersection occurred: set params and exit
-  uv   = {0, 0};
-  dist = t;
-  return true;
-}
-
-// Intersect a ray with a line
-[[deprecated]] inline bool intersect_line(const ray3f& ray, const vec3f& p0,
-    const vec3f& p1, float r0, float r1, vec2f& uv, float& dist) {
-  // setup intersection params
-  auto u = ray.d;
-  auto v = p1 - p0;
-  auto w = ray.o - p0;
-
-  // compute values to solve a linear system
-  auto a   = dot(u, u);
-  auto b   = dot(u, v);
-  auto c   = dot(v, v);
-  auto d   = dot(u, w);
-  auto e   = dot(v, w);
-  auto det = a * c - b * b;
-
-  // check determinant and exit if lines are parallel
-  // (could use EPSILONS if desired)
-  if (det == 0) return false;
-
-  // compute Parameters on both ray and segment
-  auto t = (b * e - c * d) / det;
-  auto s = (a * e - b * d) / det;
-
-  // exit if not within bounds
-  if (t < ray.tmin || t > ray.tmax) return false;
-
-  // clamp segment param to segment corners
-  s = clamp(s, (float)0, (float)1);
-
-  // compute segment-segment distance on the closest points
-  auto pr  = ray.o + ray.d * t;
-  auto pl  = p0 + (p1 - p0) * s;
-  auto prl = pr - pl;
-
-  // check with the line radius at the same point
-  auto d2 = dot(prl, prl);
-  auto r  = r0 * (1 - s) + r1 * s;
-  if (d2 > r * r) return {};
-
-  // intersection occurred: set params and exit
-  uv   = {s, sqrt(d2) / r};
-  dist = t;
-  return true;
-}
-
-// Intersect a ray with a sphere
-[[deprecated]] inline bool intersect_sphere(
-    const ray3f& ray, const vec3f& p, float r, vec2f& uv, float& dist) {
-  // compute parameters
-  auto a = dot(ray.d, ray.d);
-  auto b = 2 * dot(ray.o - p, ray.d);
-  auto c = dot(ray.o - p, ray.o - p) - r * r;
-
-  // check discriminant
-  auto dis = b * b - 4 * a * c;
-  if (dis < 0) return false;
-
-  // compute ray parameter
-  auto t = (-b - sqrt(dis)) / (2 * a);
-
-  // exit if not within bounds
-  if (t < ray.tmin || t > ray.tmax) return false;
-
-  // try other ray parameter
-  t = (-b + sqrt(dis)) / (2 * a);
-
-  // exit if not within bounds
-  if (t < ray.tmin || t > ray.tmax) return false;
-
-  // compute local point for uvs
-  auto plocal = ((ray.o + ray.d * t) - p) / r;
-  auto u      = atan2(plocal.y, plocal.x) / (2 * pif);
-  if (u < 0) u += 1;
-  auto v = acos(clamp(plocal.z, -1.0f, 1.0f)) / pif;
-
-  // intersection occurred: set params and exit
-  uv   = {u, v};
-  dist = t;
-  return true;
-}
-
-// Intersect a ray with a triangle
-[[deprecated]] inline bool intersect_triangle(const ray3f& ray, const vec3f& p0,
-    const vec3f& p1, const vec3f& p2, vec2f& uv, float& dist) {
-  // compute triangle edges
-  auto edge1 = p1 - p0;
-  auto edge2 = p2 - p0;
-
-  // compute determinant to solve a linear system
-  auto pvec = cross(ray.d, edge2);
-  auto det  = dot(edge1, pvec);
-
-  // check determinant and exit if triangle and ray are parallel
-  // (could use EPSILONS if desired)
-  if (det == 0) return false;
-  auto inv_det = 1.0f / det;
-
-  // compute and check first bricentric coordinated
-  auto tvec = ray.o - p0;
-  auto u    = dot(tvec, pvec) * inv_det;
-  if (u < 0 || u > 1) return false;
-
-  // compute and check second bricentric coordinated
-  auto qvec = cross(tvec, edge1);
-  auto v    = dot(ray.d, qvec) * inv_det;
-  if (v < 0 || u + v > 1) return false;
-
-  // compute and check ray parameter
-  auto t = dot(edge2, qvec) * inv_det;
-  if (t < ray.tmin || t > ray.tmax) return false;
-
-  // intersection occurred: set params and exit
-  uv   = {u, v};
-  dist = t;
-  return true;
-}
-
-// Intersect a ray with a quad.
-[[deprecated]] inline bool intersect_quad(const ray3f& ray, const vec3f& p0,
-    const vec3f& p1, const vec3f& p2, const vec3f& p3, vec2f& uv, float& dist) {
-  if (p2 == p3) {
-    return intersect_triangle(ray, p0, p1, p3, uv, dist);
-  }
-  auto hit  = false;
-  auto tray = ray;
-  if (intersect_triangle(tray, p0, p1, p3, uv, dist)) {
-    hit       = true;
-    tray.tmax = dist;
-  }
-  if (intersect_triangle(tray, p2, p3, p1, uv, dist)) {
-    hit       = true;
-    uv        = 1 - uv;
-    tray.tmax = dist;
-  }
-  return hit;
-}
-
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -1185,13 +990,70 @@ inline bool overlap_bbox(const bbox3f& bbox1, const bbox3f& bbox2) {
   return true;
 }
 
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// BACKWARD COMPATIBILITY
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Intersect a ray with a point (approximate)
+[[deprecated]] inline bool intersect_point(
+    const ray3f& ray, const vec3f& p, float r, vec2f& uv, float& dist) {
+  auto intersection = intersect_point(ray, p, r);
+  if (!intersection.hit) return false;
+  uv   = intersection.uv;
+  dist = intersection.distance;
+  return true;
+}
+
+// Intersect a ray with a line
+[[deprecated]] inline bool intersect_line(const ray3f& ray, const vec3f& p0,
+    const vec3f& p1, float r0, float r1, vec2f& uv, float& dist) {
+  auto intersection = intersect_line(ray, p0, p1, r0, r1);
+  if (!intersection.hit) return false;
+  uv   = intersection.uv;
+  dist = intersection.distance;
+  return true;
+}
+
+// Intersect a ray with a sphere
+[[deprecated]] inline bool intersect_sphere(
+    const ray3f& ray, const vec3f& p, float r, vec2f& uv, float& dist) {
+  auto intersection = intersect_sphere(ray, p, r);
+  if (!intersection.hit) return false;
+  uv   = intersection.uv;
+  dist = intersection.distance;
+  return true;
+}
+
+// Intersect a ray with a triangle
+[[deprecated]] inline bool intersect_triangle(const ray3f& ray, const vec3f& p0,
+    const vec3f& p1, const vec3f& p2, vec2f& uv, float& dist) {
+  auto intersection = intersect_triangle(ray, p0, p1, p2);
+  if (!intersection.hit) return false;
+  uv   = intersection.uv;
+  dist = intersection.distance;
+  return true;
+}
+
+// Intersect a ray with a quad.
+[[deprecated]] inline bool intersect_quad(const ray3f& ray, const vec3f& p0,
+    const vec3f& p1, const vec3f& p2, const vec3f& p3, vec2f& uv, float& dist) {
+  auto intersection = intersect_quad(ray, p0, p1, p2, p3);
+  if (!intersection.hit) return false;
+  uv   = intersection.uv;
+  dist = intersection.distance;
+  return true;
+}
+
 // Check if a point overlaps a position pos withint a maximum distance dist_max.
 [[deprecated]] inline bool overlap_point(const vec3f& pos, float dist_max,
     const vec3f& p, float r, vec2f& uv, float& dist) {
-  auto d2 = dot(pos - p, pos - p);
-  if (d2 > (dist_max + r) * (dist_max + r)) return false;
-  uv   = {0, 0};
-  dist = sqrt(d2);
+  auto intersection = overlap_point(pos, dist_max, p, r);
+  if (!intersection.hit) return false;
+  uv   = intersection.uv;
+  dist = intersection.distance;
   return true;
 }
 
@@ -1199,16 +1061,10 @@ inline bool overlap_bbox(const bbox3f& bbox1, const bbox3f& bbox2) {
 [[deprecated]] inline bool overlap_line(const vec3f& pos, float dist_max,
     const vec3f& p0, const vec3f& p1, float r0, float r1, vec2f& uv,
     float& dist) {
-  auto u = closestuv_line(pos, p0, p1);
-  // Compute projected position from the clamped t d = a + t * ab;
-  auto p  = p0 + (p1 - p0) * u;
-  auto r  = r0 + (r1 - r0) * u;
-  auto d2 = dot(pos - p, pos - p);
-  // check distance
-  if (d2 > (dist_max + r) * (dist_max + r)) return false;
-  // done
-  uv   = {u, 0};
-  dist = sqrt(d2);
+  auto intersection = overlap_line(pos, dist_max, p0, p1, r0, r1);
+  if (!intersection.hit) return false;
+  uv   = intersection.uv;
+  dist = intersection.distance;
   return true;
 }
 
@@ -1217,13 +1073,10 @@ inline bool overlap_bbox(const bbox3f& bbox1, const bbox3f& bbox2) {
 [[deprecated]] inline bool overlap_triangle(const vec3f& pos, float dist_max,
     const vec3f& p0, const vec3f& p1, const vec3f& p2, float r0, float r1,
     float r2, vec2f& uv, float& dist) {
-  auto cuv = closestuv_triangle(pos, p0, p1, p2);
-  auto p   = p0 * (1 - cuv.x - cuv.y) + p1 * cuv.x + p2 * cuv.y;
-  auto r   = r0 * (1 - cuv.x - cuv.y) + r1 * cuv.x + r2 * cuv.y;
-  auto dd  = dot(p - pos, p - pos);
-  if (dd > (dist_max + r) * (dist_max + r)) return false;
-  uv   = cuv;
-  dist = sqrt(dd);
+  auto intersection = overlap_triangle(pos, dist_max, p0, p1, p2, r0, r1, r2);
+  if (!intersection.hit) return false;
+  uv   = intersection.uv;
+  dist = intersection.distance;
   return true;
 }
 
@@ -1231,20 +1084,12 @@ inline bool overlap_bbox(const bbox3f& bbox1, const bbox3f& bbox2) {
 [[deprecated]] inline bool overlap_quad(const vec3f& pos, float dist_max,
     const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec3f& p3,
     float r0, float r1, float r2, float r3, vec2f& uv, float& dist) {
-  if (p2 == p3) {
-    return overlap_triangle(pos, dist_max, p0, p1, p3, r0, r1, r2, uv, dist);
-  }
-  auto hit = false;
-  if (overlap_triangle(pos, dist_max, p0, p1, p3, r0, r1, r2, uv, dist)) {
-    hit      = true;
-    dist_max = dist;
-  }
-  if (!overlap_triangle(pos, dist_max, p2, p3, p1, r2, r3, r1, uv, dist)) {
-    hit = true;
-    uv  = 1 - uv;
-    // dist_max = dist;
-  }
-  return hit;
+  auto intersection = overlap_quad(
+      pos, dist_max, p0, p1, p2, p3, r0, r1, r2, r3);
+  if (!intersection.hit) return false;
+  uv   = intersection.uv;
+  dist = intersection.distance;
+  return true;
 }
 
 }  // namespace yocto
