@@ -121,7 +121,7 @@ for(auto sample : range(params.samples)) {  // for each sample
 ## Denoising with Intel's Open Image Denoise
 
 We support denoising of rendered images in the low-level interface.
-Just call `get_denoised_image(...)` instead of `get_rendered_image(...)` 
+Just call `get_denoised_image(...)` instead of `get_rendered_image(...)`
 to get a denoised image. Alternatively, you can call `get_albedo_image(state)`
 or `get_normal_image(state)` to get denoising buffers and either run the
 denoiser in a different process, or call

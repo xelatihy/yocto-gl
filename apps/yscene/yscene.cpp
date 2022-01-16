@@ -199,10 +199,10 @@ void run_render(const render_params& params_) {
   }
 
   // build bvh
-  auto bvh = make_bvh(scene, params);
+  auto bvh = make_trace_bvh(scene, params);
 
   // init renderer
-  auto lights = make_lights(scene, params);
+  auto lights = make_trace_lights(scene, params);
 
   // fix renderer type if no lights
   if (lights.lights.empty() && is_sampler_lit(params)) {
@@ -211,7 +211,7 @@ void run_render(const render_params& params_) {
   }
 
   // state
-  auto state = make_state(scene, params);
+  auto state = make_trace_state(scene, params);
 
   // render
   timer = simple_timer{};
@@ -221,7 +221,8 @@ void run_render(const render_params& params_) {
     print_info("render sample {}/{}: {}", sample, params.samples,
         elapsed_formatted(sample_timer));
     if (params.savebatch && state.samples % params.batch == 0) {
-      auto image = params.denoise ? get_denoised(state) : get_render(state);
+      auto image       = params.denoise ? get_denoised_image(state)
+                                        : get_rendered_image(state);
       auto outfilename = fs::path(params.output)
                              .replace_extension(
                                  "-s" + std::to_string(sample) +
@@ -236,7 +237,8 @@ void run_render(const render_params& params_) {
 
   // save image
   timer      = simple_timer{};
-  auto image = params.denoise ? get_denoised(state) : get_render(state);
+  auto image = params.denoise ? get_denoised_image(state)
+                              : get_rendered_image(state);
   if (!is_hdr_filename(params.output))
     image = tonemap_image(image, params.exposure, params.filmic);
   save_image(params.output, image);
