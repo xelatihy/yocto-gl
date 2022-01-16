@@ -94,9 +94,9 @@ progressive computation. Each object need to be initialized separately.
 
 To render a scene, first tesselate shapes for subdivs and displacement,
 with `tesselate_shapes(scene, params, progress)`, then initialize the scene
-bvh and lights, with `make_bvh(scene, params)` and
-`make_lights(scene, params)`, then the rendering state
-with `make_state(state, scene)`.
+bvh and lights, with `make_trace_bvh(scene, params)` and
+`make_trace_lights(scene, params)`, then the rendering state
+with `make_trace_state(state, scene)`.
 
 Then, for each sample, call `trace_samples(state, scene, lights, params)`
 and retrieve the computed image with `get_render(state)` or
@@ -107,9 +107,9 @@ feedback by either saving or displaying partial images.
 auto scene = scene_data{...};              // initialize scene
 auto params = trace_params{};               // default params
 tesselate_shapes(scene, params);            // tesselate shapes if needed
-auto bvh = make_bvh(scene, params);         // init bvh
-auto lights = make_lights(scene, params);   // init lights
-auto state = make_state(scene, params);     // init state
+auto bvh = make_trace_bvh(scene, params);         // init bvh
+auto lights = make_trace_lights(scene, params);   // init lights
+auto state = make_trace_state(scene, params);     // init state
 for(auto sample : range(params.samples)) {  // for each sample
   trace_samples(state, scene, camera, bvh,  // render sample
                 lights, params);
@@ -131,9 +131,9 @@ setting the `YOCTO_DENOISE` compile flag and linking to OIDN's libraries.
 auto scene = scene_data{...};              // initialize scene
 auto params = trace_params{};               // default params
 tesselate_shapes(scene, params);            // tesselate shapes if needed
-auto bvh = make_bvh(scene, params);         // init bvh
-auto lights = make_lights(scene, params);   // init lights
-auto state = make_state(scene, params);     // init state
+auto bvh = make_trace_bvh(scene, params);         // init bvh
+auto lights = make_trace_lights(scene, params);   // init lights
+auto state = make_trace_state(scene, params);     // init state
 for(auto sample : range(params.samples)) {  // for each sample
   trace_samples(state, scene, camera, bvh,  // render sample
                 lights, params);
