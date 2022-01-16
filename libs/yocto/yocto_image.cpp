@@ -882,30 +882,29 @@ vec4f eval_image(const vector<vec4b>& img, int width, int height,
 // Conversion from/to floats.
 void byte_to_float(vector<vec4f>& fl, const vector<vec4b>& bt) {
   fl.resize(bt.size());
-  for (auto i = 0; i < (int)fl.size(); i++) fl[i] = byte_to_float(bt[i]);
+  for (auto i : range(fl.size())) fl[i] = byte_to_float(bt[i]);
 }
 void float_to_byte(vector<vec4b>& bt, const vector<vec4f>& fl) {
   bt.resize(fl.size());
-  for (auto i = 0; i < (int)bt.size(); i++) bt[i] = float_to_byte(fl[i]);
+  for (auto i : range(bt.size())) bt[i] = float_to_byte(fl[i]);
 }
 
 // Conversion between linear and gamma-encoded images.
 void srgb_to_rgb(vector<vec4f>& rgb, const vector<vec4f>& srgb) {
   rgb.resize(srgb.size());
-  for (auto i = 0; i < (int)rgb.size(); i++) rgb[i] = srgb_to_rgb(srgb[i]);
+  for (auto i : range(rgb.size())) rgb[i] = srgb_to_rgb(srgb[i]);
 }
 void rgb_to_srgb(vector<vec4f>& srgb, const vector<vec4f>& rgb) {
   srgb.resize(rgb.size());
-  for (auto i = 0; i < (int)srgb.size(); i++) srgb[i] = rgb_to_srgb(rgb[i]);
+  for (auto i : range(srgb.size())) srgb[i] = rgb_to_srgb(rgb[i]);
 }
 void srgb_to_rgb(vector<vec4f>& rgb, const vector<vec4b>& srgb) {
   rgb.resize(srgb.size());
-  for (auto i = 0; i < (int)rgb.size(); i++)
-    rgb[i] = srgb_to_rgb(byte_to_float(srgb[i]));
+  for (auto i : range(rgb.size())) rgb[i] = srgb_to_rgb(byte_to_float(srgb[i]));
 }
 void rgb_to_srgb(vector<vec4b>& srgb, const vector<vec4f>& rgb) {
   srgb.resize(rgb.size());
-  for (auto i = 0; i < (int)srgb.size(); i++)
+  for (auto i : range(srgb.size()))
     srgb[i] = float_to_byte(rgb_to_srgb(rgb[i]));
 }
 
@@ -913,13 +912,13 @@ void rgb_to_srgb(vector<vec4b>& srgb, const vector<vec4f>& rgb) {
 void tonemap_image(vector<vec4f>& ldr, const vector<vec4f>& hdr, float exposure,
     bool filmic, bool srgb) {
   ldr.resize(hdr.size());
-  for (auto i = 0; i < (int)hdr.size(); i++)
+  for (auto i : range(hdr.size()))
     ldr[i] = tonemap(hdr[i], exposure, filmic, srgb);
 }
 void tonemap_image(vector<vec4b>& ldr, const vector<vec4f>& hdr, float exposure,
     bool filmic, bool srgb) {
   ldr.resize(hdr.size());
-  for (auto i = 0; i < (int)hdr.size(); i++)
+  for (auto i : range(hdr.size()))
     ldr[i] = float_to_byte(tonemap(hdr[i], exposure, filmic, srgb));
 }
 
@@ -939,7 +938,7 @@ void tonemap_image_mt(vector<vec4b>& ldr, const vector<vec4f>& hdr,
 void colorgrade_image(vector<vec4f>& corrected, const vector<vec4f>& img,
     bool linear, const colorgrade_params& params) {
   corrected.resize(img.size());
-  for (auto i = 0; i < (int)img.size(); i++)
+  for (auto i : range(img.size()))
     corrected[i] = colorgrade(img[i], linear, params);
 }
 
@@ -1002,9 +1001,9 @@ void image_difference(vector<vec4f>& diff, const vector<vec4f>& a,
   if (a.size() != b.size())
     throw std::invalid_argument{"image haev different sizes"};
   diff.resize(a.size());
-  for (auto i = 0; i < (int)diff.size(); i++) diff[i] = abs(a[i] - b[i]);
+  for (auto i : range(diff.size())) diff[i] = abs(a[i] - b[i]);
   if (display) {
-    for (auto i = 0; i < (int)diff.size(); i++) {
+    for (auto i : range(diff.size())) {
       auto d  = max(diff[i]);
       diff[i] = {d, d, d, 1};
     }

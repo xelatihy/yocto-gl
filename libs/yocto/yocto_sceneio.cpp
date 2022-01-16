@@ -2422,7 +2422,7 @@ scene_data make_test(const test_params& params) {
   //     };
   //   } break;
   // }
-  // for (auto idx = 0; idx < shapes.size(); idx++) {
+  // for (auto idx : range(shapes.size())) {
   //   if (!shapes[idx]) continue;
   //   if (shapes.size() > 5) {
   //     add_instance(scene,
@@ -4560,7 +4560,7 @@ static bool load_gltf_scene(
           }
         } else if (gprimitive.type == cgltf_primitive_type_line_loop) {
           shape.lines.resize(indices.size());
-          for (auto i = 0; i < (int)indices.size(); i++) {
+          for (auto i : range(indices.size())) {
             shape.lines[i] = {
                 indices[i + 0], indices[i + 1] % (int)indices.size()};
           }
@@ -5554,8 +5554,8 @@ image<vec4f> filter_bilateral(const image<vec4f>& img, float spatial_sigma,
   auto fw           = vector<float>();
   for (auto feature_sigma : features_sigma)
     fw.push_back(1 / (2.0f * feature_sigma * feature_sigma));
-  for (auto j = 0; j < img.height(); j++) {
-    for (auto i = 0; i < img.width(); i++) {
+  for (auto j : range(img.height())) {
+    for (auto i : range(img.width())) {
       auto av = zero4f;
       auto aw = 0.0f;
       for (auto fj = -filter_width; fj <= filter_width; fj++) {
@@ -5567,7 +5567,7 @@ image<vec4f> filter_bilateral(const image<vec4f>& img, float spatial_sigma,
           auto rgb = img[{i, j}] - img[{i, j}];
           auto w   = (float)exp(-dot(uv, uv) * sw) *
                    (float)exp(-dot(rgb, rgb) * rw);
-          for (auto fi = 0; fi < features.size(); fi++) {
+          for (auto fi : range(features.size())) {
             auto feat = features[fi][{i, j}] - features[fi][{i, j}];
             w *= exp(-dot(feat, feat) * fw[fi]);
           }
@@ -5587,8 +5587,8 @@ image<vec4f> filter_bilateral(
   auto fwidth   = (int)ceil(2.57f * spatial_sigma);
   auto sw       = 1 / (2.0f * spatial_sigma * spatial_sigma);
   auto rw       = 1 / (2.0f * range_sigma * range_sigma);
-  for (auto j = 0; j < img.height(); j++) {
-    for (auto i = 0; i < img.width(); i++) {
+  for (auto j : range(img.height())) {
+    for (auto i : range(img.width())) {
       auto av = zero4f;
       auto aw = 0.0f;
       for (auto fj = -fwidth; fj <= fwidth; fj++) {

@@ -646,20 +646,20 @@ void add_sky(scene_data& scene, float sun_angle) {
 int find_camera(const scene_data& scene, const string& name) {
   if (scene.cameras.empty()) return invalidid;
   if (scene.camera_names.empty()) return 0;
-  for (auto idx = 0; idx < (int)scene.camera_names.size(); idx++) {
-    if (scene.camera_names[idx] == name) return idx;
+  for (auto idx : range(scene.camera_names.size())) {
+    if (scene.camera_names[idx] == name) return (int)idx;
   }
-  for (auto idx = 0; idx < (int)scene.camera_names.size(); idx++) {
-    if (scene.camera_names[idx] == "default") return idx;
+  for (auto idx : range(scene.camera_names.size())) {
+    if (scene.camera_names[idx] == "default") return (int)idx;
   }
-  for (auto idx = 0; idx < (int)scene.camera_names.size(); idx++) {
-    if (scene.camera_names[idx] == "camera") return idx;
+  for (auto idx : range(scene.camera_names.size())) {
+    if (scene.camera_names[idx] == "camera") return (int)idx;
   }
-  for (auto idx = 0; idx < (int)scene.camera_names.size(); idx++) {
-    if (scene.camera_names[idx] == "camera0") return idx;
+  for (auto idx : range(scene.camera_names.size())) {
+    if (scene.camera_names[idx] == "camera0") return (int)idx;
   }
-  for (auto idx = 0; idx < (int)scene.camera_names.size(); idx++) {
-    if (scene.camera_names[idx] == "camera1") return idx;
+  for (auto idx : range(scene.camera_names.size())) {
+    if (scene.camera_names[idx] == "camera1") return (int)idx;
   }
   return 0;
 }
@@ -917,7 +917,7 @@ vector<string> scene_validation(const scene_data& scene, bool notextures) {
     }
   };
   auto check_empty_textures = [&errs](const scene_data& scene) {
-    for (auto idx = 0; idx < (int)scene.textures.size(); idx++) {
+    for (auto idx : range(scene.textures.size())) {
       auto& texture = scene.textures[idx];
       if (texture.pixelsf.empty() && texture.pixelsb.empty()) {
         errs.push_back("empty texture " + scene.texture_names[idx]);
@@ -1059,8 +1059,8 @@ namespace yocto {
 
 // Find the first keyframe value that is greater than the argument.
 inline int keyframe_index(const vector<float>& times, const float& time) {
-  for (auto i = 0; i < (int)times.size(); i++)
-    if (times[i] > time) return i;
+  for (auto i : range(times.size()))
+    if (times[i] > time) return (int)i;
   return (int)times.size();
 }
 

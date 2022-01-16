@@ -607,7 +607,7 @@ shape_data make_bulged_rect(const vec2i& steps, const vec2f& scale,
     height      = min(height, min(scale));
     auto radius = (1 + height * height) / (2 * height);
     auto center = vec3f{0, 0, -radius + height};
-    for (auto i = 0; i < (int)shape.positions.size(); i++) {
+    for (auto i : range(shape.positions.size())) {
       auto pn            = normalize(shape.positions[i] - center);
       shape.positions[i] = center + pn * radius;
       shape.normals[i]   = pn;
@@ -666,7 +666,7 @@ shape_data make_box(
   // + y
   qshape = make_rect(
       {steps.x, steps.z}, {scale.x, scale.z}, {uvscale.x, uvscale.z});
-  for (auto i = 0; i < (int)qshape.positions.size(); i++) {
+  for (auto i : range(qshape.positions.size())) {
     qshape.positions[i] = {
         qshape.positions[i].x, scale.y, -qshape.positions[i].y};
     qshape.normals[i] = {0, 1, 0};
@@ -675,7 +675,7 @@ shape_data make_box(
   // - y
   qshape = make_rect(
       {steps.x, steps.z}, {scale.x, scale.z}, {uvscale.x, uvscale.z});
-  for (auto i = 0; i < (int)qshape.positions.size(); i++) {
+  for (auto i : range(qshape.positions.size())) {
     qshape.positions[i] = {
         qshape.positions[i].x, -scale.y, qshape.positions[i].y};
     qshape.normals[i] = {0, -1, 0};
@@ -689,7 +689,7 @@ shape_data make_rounded_box(const vec3i& steps, const vec3f& scale,
   if (radius != 0) {
     radius = min(radius, min(scale));
     auto c = scale - radius;
-    for (auto i = 0; i < (int)shape.positions.size(); i++) {
+    for (auto i : range(shape.positions.size())) {
       auto pc = vec3f{abs(shape.positions[i].x), abs(shape.positions[i].y),
           abs(shape.positions[i].z)};
       auto ps = vec3f{shape.positions[i].x < 0 ? -1.0f : 1.0f,
@@ -751,7 +751,7 @@ shape_data make_bent_floor(const vec2i& steps, const vec2f& scale,
     radius     = min(radius, scale.y);
     auto start = (scale.y - radius) / 2;
     auto end   = start + radius;
-    for (auto i = 0; i < (int)shape.positions.size(); i++) {
+    for (auto i : range(shape.positions.size())) {
       if (shape.positions[i].z < -end) {
         shape.positions[i] = {
             shape.positions[i].x, -shape.positions[i].z - end + radius, -end};
@@ -783,7 +783,7 @@ shape_data make_sphere(int steps, float scale, float uvscale) {
 shape_data make_uvsphere(
     const vec2i& steps, float scale, const vec2f& uvscale) {
   auto shape = make_rect({1, 1}, {1, 1});
-  for (auto i = 0; i < (int)shape.positions.size(); i++) {
+  for (auto i : range(shape.positions.size())) {
     auto uv = shape.texcoords[i];
     auto a  = vec2f{2 * pif * uv.x, pif * (1 - uv.y)};
     shape.positions[i] =
@@ -814,7 +814,7 @@ shape_data make_capped_uvsphere(
   if (cap != 0) {
     cap        = min(cap, scale / 2);
     auto zflip = (scale - cap);
-    for (auto i = 0; i < (int)shape.positions.size(); i++) {
+    for (auto i : range(shape.positions.size())) {
       if (shape.positions[i].z > zflip) {
         shape.positions[i].z = 2 * zflip - shape.positions[i].z;
         shape.normals[i].x   = -shape.normals[i].x;
@@ -864,7 +864,7 @@ shape_data make_bulged_disk(
     height      = min(height, scale);
     auto radius = (1 + height * height) / (2 * height);
     auto center = vec3f{0, 0, -radius + height};
-    for (auto i = 0; i < (int)shape.positions.size(); i++) {
+    for (auto i : range(shape.positions.size())) {
       auto pn            = normalize(shape.positions[i] - center);
       shape.positions[i] = center + pn * radius;
       shape.normals[i]   = pn;
@@ -876,7 +876,7 @@ shape_data make_bulged_disk(
 // Make a uv disk
 shape_data make_uvdisk(const vec2i& steps, float scale, const vec2f& uvscale) {
   auto shape = make_rect(steps, {1, 1}, {1, 1});
-  for (auto i = 0; i < (int)shape.positions.size(); i++) {
+  for (auto i : range(shape.positions.size())) {
     auto uv            = shape.texcoords[i];
     auto phi           = 2 * pif * uv.x;
     shape.positions[i] = vec3f{cos(phi) * uv.y, sin(phi) * uv.y, 0} * scale;
@@ -893,7 +893,7 @@ shape_data make_uvcylinder(
   auto qshape = shape_data{};
   // side
   qshape = make_rect({steps.x, steps.y}, {1, 1}, {1, 1});
-  for (auto i = 0; i < (int)qshape.positions.size(); i++) {
+  for (auto i : range(qshape.positions.size())) {
     auto uv             = qshape.texcoords[i];
     auto phi            = 2 * pif * uv.x;
     qshape.positions[i] = {
@@ -905,7 +905,7 @@ shape_data make_uvcylinder(
   merge_shape_inplace(shape, qshape);
   // top
   qshape = make_rect({steps.x, steps.z}, {1, 1}, {1, 1});
-  for (auto i = 0; i < (int)qshape.positions.size(); i++) {
+  for (auto i : range(qshape.positions.size())) {
     auto uv             = qshape.texcoords[i];
     auto phi            = 2 * pif * uv.x;
     qshape.positions[i] = {
@@ -917,7 +917,7 @@ shape_data make_uvcylinder(
   merge_shape_inplace(shape, qshape);
   // bottom
   qshape = make_rect({steps.x, steps.z}, {1, 1}, {1, 1});
-  for (auto i = 0; i < (int)qshape.positions.size(); i++) {
+  for (auto i : range(qshape.positions.size())) {
     auto uv             = qshape.texcoords[i];
     auto phi            = 2 * pif * uv.x;
     qshape.positions[i] = {
@@ -939,7 +939,7 @@ shape_data make_rounded_uvcylinder(const vec3i& steps, const vec2f& scale,
   if (radius != 0) {
     radius = min(radius, min(scale));
     auto c = scale - radius;
-    for (auto i = 0; i < (int)shape.positions.size(); i++) {
+    for (auto i : range(shape.positions.size())) {
       auto phi = atan2(shape.positions[i].y, shape.positions[i].x);
       auto r   = length(vec2f{shape.positions[i].x, shape.positions[i].y});
       auto z   = shape.positions[i].z;
@@ -1019,7 +1019,7 @@ shape_data make_points(int num, float uvscale, float radius) {
   shape.normals.assign(num, {0, 0, 1});
   shape.texcoords.assign(num, {0, 0});
   shape.radius.assign(num, radius);
-  for (auto i = 0; i < (int)shape.texcoords.size(); i++)
+  for (auto i : range(shape.texcoords.size()))
     shape.texcoords[i] = {(float)i / (float)num, 0};
   return shape;
 }
@@ -1029,9 +1029,9 @@ shape_data make_points(const vec2i& steps, const vec2f& size,
   auto shape  = make_rect(steps, size, uvscale);
   shape.quads = {};
   shape.points.resize(shape.positions.size());
-  for (auto i = 0; i < (int)shape.positions.size(); i++) shape.points[i] = i;
+  for (auto i : range(shape.positions.size())) shape.points[i] = i;
   shape.radius.resize(shape.positions.size());
-  for (auto i = 0; i < (int)shape.texcoords.size(); i++) {
+  for (auto i : range(shape.texcoords.size())) {
     shape.radius[i] = lerp(
         radius.x, radius.y, shape.texcoords[i].y / uvscale.y);
   }
@@ -1585,7 +1585,7 @@ vector<vec4f> triangles_tangent_spaces(const vector<vec3i>& triangles,
 
   auto tangent_spaces = vector<vec4f>(positions.size());
   for (auto& tangent : tangent_spaces) tangent = zero4f;
-  for (auto i = 0; i < (int)positions.size(); i++) {
+  for (auto i : range(positions.size())) {
     tangu[i] = orthonormalize(tangu[i], normals[i]);
     auto s   = (dot(cross(normals[i], tangu[i]), tangv[i]) < 0) ? -1.0f : 1.0f;
     tangent_spaces[i] = {tangu[i].x, tangu[i].y, tangu[i].z, s};
@@ -1599,14 +1599,14 @@ pair<vector<vec3f>, vector<vec3f>> skin_vertices(const vector<vec3f>& positions,
     const vector<vec4i>& joints, const vector<frame3f>& xforms) {
   auto skinned_positions = vector<vec3f>{positions.size()};
   auto skinned_normals   = vector<vec3f>{positions.size()};
-  for (auto i = 0; i < (int)positions.size(); i++) {
+  for (auto i : range(positions.size())) {
     skinned_positions[i] =
         transform_point(xforms[joints[i].x], positions[i]) * weights[i].x +
         transform_point(xforms[joints[i].y], positions[i]) * weights[i].y +
         transform_point(xforms[joints[i].z], positions[i]) * weights[i].z +
         transform_point(xforms[joints[i].w], positions[i]) * weights[i].w;
   }
-  for (auto i = 0; i < (int)normals.size(); i++) {
+  for (auto i : range(normals.size())) {
     skinned_normals[i] = normalize(
         transform_direction(xforms[joints[i].x], normals[i]) * weights[i].x +
         transform_direction(xforms[joints[i].y], normals[i]) * weights[i].y +
@@ -1622,7 +1622,7 @@ pair<vector<vec3f>, vector<vec3f>> skin_matrices(const vector<vec3f>& positions,
     const vector<vec4i>& joints, const vector<mat4f>& xforms) {
   auto skinned_positions = vector<vec3f>{positions.size()};
   auto skinned_normals   = vector<vec3f>{positions.size()};
-  for (auto i = 0; i < (int)positions.size(); i++) {
+  for (auto i : range(positions.size())) {
     auto xform = xforms[joints[i].x] * weights[i].x +
                  xforms[joints[i].y] * weights[i].y +
                  xforms[joints[i].z] * weights[i].z +
@@ -1642,14 +1642,14 @@ void skin_vertices(vector<vec3f>& skinned_positions,
       skinned_normals.size() != normals.size()) {
     throw std::out_of_range("arrays should be the same size");
   }
-  for (auto i = 0; i < (int)positions.size(); i++) {
+  for (auto i : range(positions.size())) {
     skinned_positions[i] =
         transform_point(xforms[joints[i].x], positions[i]) * weights[i].x +
         transform_point(xforms[joints[i].y], positions[i]) * weights[i].y +
         transform_point(xforms[joints[i].z], positions[i]) * weights[i].z +
         transform_point(xforms[joints[i].w], positions[i]) * weights[i].w;
   }
-  for (auto i = 0; i < (int)normals.size(); i++) {
+  for (auto i : range(normals.size())) {
     skinned_normals[i] = normalize(
         transform_direction(xforms[joints[i].x], normals[i]) * weights[i].x +
         transform_direction(xforms[joints[i].y], normals[i]) * weights[i].y +
@@ -1667,7 +1667,7 @@ void skin_matrices(vector<vec3f>& skinned_positions,
       skinned_normals.size() != normals.size()) {
     throw std::out_of_range("arrays should be the same size");
   }
-  for (auto i = 0; i < (int)positions.size(); i++) {
+  for (auto i : range(positions.size())) {
     auto xform = xforms[joints[i].x] * weights[i].x +
                  xforms[joints[i].y] * weights[i].y +
                  xforms[joints[i].z] * weights[i].z +
@@ -1964,12 +1964,12 @@ vector<vector<int>> ordered_boundaries(const vector<vec3i>& triangles,
   auto boundaries = vector<vector<int>>();
 
   // arrange boundary vertices in loops
-  for (auto i = 0; i < (int)next_vert.size(); i++) {
+  for (auto i : range(next_vert.size())) {
     if (next_vert[i] == -1) continue;
 
     // add new empty boundary
     boundaries.emplace_back();
-    auto current = i;
+    auto current = (int)i;
 
     while (true) {
       auto next = next_vert[current];
@@ -2051,12 +2051,11 @@ static void build_bvh(bvh_tree& bvh, vector<bbox3f>& bboxes) {
 
   // prepare primitives
   bvh.primitives.resize(bboxes.size());
-  for (auto idx = 0; idx < (int)bboxes.size(); idx++) bvh.primitives[idx] = idx;
+  for (auto idx : range(bboxes.size())) bvh.primitives[idx] = (int)idx;
 
   // prepare centers
   auto centers = vector<vec3f>(bboxes.size());
-  for (auto idx = 0; idx < (int)bboxes.size(); idx++)
-    centers[idx] = center(bboxes[idx]);
+  for (auto idx : range(bboxes.size())) centers[idx] = center(bboxes[idx]);
 
   // queue up first node
   auto queue = deque<vec3i>{{0, 0, (int)bboxes.size()}};
@@ -2125,7 +2124,7 @@ bvh_tree make_points_bvh(const vector<int>& points,
     const vector<vec3f>& positions, const vector<float>& radius) {
   // build primitives
   auto bboxes = vector<bbox3f>(points.size());
-  for (auto idx = 0; idx < (int)bboxes.size(); idx++) {
+  for (auto idx : range(bboxes.size())) {
     auto& p     = points[idx];
     bboxes[idx] = point_bounds(positions[p], radius[p]);
   }
@@ -2139,7 +2138,7 @@ bvh_tree make_lines_bvh(const vector<vec2i>& lines,
     const vector<vec3f>& positions, const vector<float>& radius) {
   // build primitives
   auto bboxes = vector<bbox3f>(lines.size());
-  for (auto idx = 0; idx < (int)bboxes.size(); idx++) {
+  for (auto idx : range(bboxes.size())) {
     auto& l     = lines[idx];
     bboxes[idx] = line_bounds(
         positions[l.x], positions[l.y], radius[l.x], radius[l.y]);
@@ -2154,7 +2153,7 @@ bvh_tree make_triangles_bvh(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<float>& radius) {
   // build primitives
   auto bboxes = vector<bbox3f>(triangles.size());
-  for (auto idx = 0; idx < (int)bboxes.size(); idx++) {
+  for (auto idx : range(bboxes.size())) {
     auto& t     = triangles[idx];
     bboxes[idx] = triangle_bounds(
         positions[t.x], positions[t.y], positions[t.z]);
@@ -2169,7 +2168,7 @@ bvh_tree make_quads_bvh(const vector<vec4i>& quads,
     const vector<vec3f>& positions, const vector<float>& radius) {
   // build primitives
   auto bboxes = vector<bbox3f>(quads.size());
-  for (auto idx = 0; idx < (int)bboxes.size(); idx++) {
+  for (auto idx : range(bboxes.size())) {
     auto& q     = quads[idx];
     bboxes[idx] = quad_bounds(
         positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
@@ -2185,7 +2184,7 @@ void update_points_bvh(bvh_tree& bvh, const vector<int>& points,
     const vector<vec3f>& positions, const vector<float>& radius) {
   // build primitives
   auto bboxes = vector<bbox3f>(points.size());
-  for (auto idx = 0; idx < (int)bboxes.size(); idx++) {
+  for (auto idx : range(bboxes.size())) {
     auto& p     = points[idx];
     bboxes[idx] = point_bounds(positions[p], radius[p]);
   }
@@ -2197,7 +2196,7 @@ void update_lines_bvh(bvh_tree& bvh, const vector<vec2i>& lines,
     const vector<vec3f>& positions, const vector<float>& radius) {
   // build primitives
   auto bboxes = vector<bbox3f>(lines.size());
-  for (auto idx = 0; idx < (int)bboxes.size(); idx++) {
+  for (auto idx : range(bboxes.size())) {
     auto& l     = lines[idx];
     bboxes[idx] = line_bounds(
         positions[l.x], positions[l.y], radius[l.x], radius[l.y]);
@@ -2210,7 +2209,7 @@ void update_triangles_bvh(bvh_tree& bvh, const vector<vec3i>& triangles,
     const vector<vec3f>& positions) {
   // build primitives
   auto bboxes = vector<bbox3f>(triangles.size());
-  for (auto idx = 0; idx < (int)bboxes.size(); idx++) {
+  for (auto idx : range(bboxes.size())) {
     auto& t     = triangles[idx];
     bboxes[idx] = triangle_bounds(
         positions[t.x], positions[t.y], positions[t.z]);
@@ -2223,7 +2222,7 @@ void update_quads_bvh(
     bvh_tree& bvh, const vector<vec4i>& quads, const vector<vec3f>& positions) {
   // build primitives
   auto bboxes = vector<bbox3f>(quads.size());
-  for (auto idx = 0; idx < (int)bboxes.size(); idx++) {
+  for (auto idx : range(bboxes.size())) {
     auto& q     = quads[idx];
     bboxes[idx] = quad_bounds(
         positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
@@ -2573,7 +2572,7 @@ void split_facevarying(vector<vec4i>& split_quads,
   // make faces unique
   unordered_map<vec3i, int> vert_map;
   split_quads.resize(quadspos.size());
-  for (auto fid = 0; fid < (int)quadspos.size(); fid++) {
+  for (auto fid : range(quadspos.size())) {
     for (auto c : range(4)) {
       auto v = vec3i{
           (&quadspos[fid].x)[c],
@@ -2622,7 +2621,7 @@ pair<vector<vec3f>, vector<int>> weld_vertices(
   auto welded    = vector<vec3f>{};
   auto grid      = make_hash_grid(threshold);
   auto neighbors = vector<int>{};
-  for (auto vertex = 0; vertex < (int)positions.size(); vertex++) {
+  for (auto vertex : range(positions.size())) {
     auto& position = positions[vertex];
     find_neighbors(grid, neighbors, position, threshold);
     if (neighbors.empty()) {
@@ -2980,11 +2979,11 @@ static pair<vector<vec4i>, vector<T>> subdivide_catmullclark_impl(
       acount[vid] += 1;
     }
   }
-  for (auto i = 0; i < (int)tvertices.size(); i++) avert[i] /= (float)acount[i];
+  for (auto i : range(tvertices.size())) avert[i] /= (float)acount[i];
 
   // correction pass ----------------------------------
   // p = p + (avg_p - p) * (4/avg_count)
-  for (auto i = 0; i < (int)tvertices.size(); i++) {
+  for (auto i : range(tvertices.size())) {
     if (tvert_val[i] != 2) continue;
     avert[i] = tvertices[i] +
                (avert[i] - tvertices[i]) * (4 / (float)acount[i]);
@@ -3098,13 +3097,11 @@ int sample_points(const vector<float>& cdf, float re) {
 }
 vector<float> sample_points_cdf(int npoints) {
   auto cdf = vector<float>(npoints);
-  for (auto i = 0; i < (int)cdf.size(); i++)
-    cdf[i] = 1 + (i != 0 ? cdf[i - 1] : 0);
+  for (auto i : range(cdf.size())) cdf[i] = 1 + (i != 0 ? cdf[i - 1] : 0);
   return cdf;
 }
 void sample_points_cdf(vector<float>& cdf, int npoints) {
-  for (auto i = 0; i < (int)cdf.size(); i++)
-    cdf[i] = 1 + (i != 0 ? cdf[i - 1] : 0);
+  for (auto i : range(cdf.size())) cdf[i] = 1 + (i != 0 ? cdf[i - 1] : 0);
 }
 
 // Pick a point on lines uniformly.
@@ -3114,7 +3111,7 @@ pair<int, float> sample_lines(const vector<float>& cdf, float re, float ru) {
 vector<float> sample_lines_cdf(
     const vector<vec2i>& lines, const vector<vec3f>& positions) {
   auto cdf = vector<float>(lines.size());
-  for (auto i = 0; i < (int)cdf.size(); i++) {
+  for (auto i : range(cdf.size())) {
     auto& l = lines[i];
     auto  w = line_length(positions[l.x], positions[l.y]);
     cdf[i]  = w + (i != 0 ? cdf[i - 1] : 0);
@@ -3123,7 +3120,7 @@ vector<float> sample_lines_cdf(
 }
 void sample_lines_cdf(vector<float>& cdf, const vector<vec2i>& lines,
     const vector<vec3f>& positions) {
-  for (auto i = 0; i < (int)cdf.size(); i++) {
+  for (auto i : range(cdf.size())) {
     auto& l = lines[i];
     auto  w = line_length(positions[l.x], positions[l.y]);
     cdf[i]  = w + (i != 0 ? cdf[i - 1] : 0);
@@ -3138,7 +3135,7 @@ pair<int, vec2f> sample_triangles(
 vector<float> sample_triangles_cdf(
     const vector<vec3i>& triangles, const vector<vec3f>& positions) {
   auto cdf = vector<float>(triangles.size());
-  for (auto i = 0; i < (int)cdf.size(); i++) {
+  for (auto i : range(cdf.size())) {
     auto& t = triangles[i];
     auto  w = triangle_area(positions[t.x], positions[t.y], positions[t.z]);
     cdf[i]  = w + (i != 0 ? cdf[i - 1] : 0);
@@ -3147,7 +3144,7 @@ vector<float> sample_triangles_cdf(
 }
 void sample_triangles_cdf(vector<float>& cdf, const vector<vec3i>& triangles,
     const vector<vec3f>& positions) {
-  for (auto i = 0; i < (int)cdf.size(); i++) {
+  for (auto i : range(cdf.size())) {
     auto& t = triangles[i];
     auto  w = triangle_area(positions[t.x], positions[t.y], positions[t.z]);
     cdf[i]  = w + (i != 0 ? cdf[i - 1] : 0);
@@ -3171,7 +3168,7 @@ pair<int, vec2f> sample_quads(const vector<vec4i>& quads,
 vector<float> sample_quads_cdf(
     const vector<vec4i>& quads, const vector<vec3f>& positions) {
   auto cdf = vector<float>(quads.size());
-  for (auto i = 0; i < (int)cdf.size(); i++) {
+  for (auto i : range(cdf.size())) {
     auto& q = quads[i];
     auto  w = quad_area(
         positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
@@ -3181,7 +3178,7 @@ vector<float> sample_quads_cdf(
 }
 void sample_quads_cdf(vector<float>& cdf, const vector<vec4i>& quads,
     const vector<vec3f>& positions) {
-  for (auto i = 0; i < (int)cdf.size(); i++) {
+  for (auto i : range(cdf.size())) {
     auto& q = quads[i];
     auto  w = quad_area(
         positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
@@ -3301,7 +3298,7 @@ void make_bulged_rect(vector<vec4i>& quads, vector<vec3f>& positions,
     height      = min(height, min(scale));
     auto radius = (1 + height * height) / (2 * height);
     auto center = vec3f{0, 0, -radius + height};
-    for (auto i = 0; i < (int)positions.size(); i++) {
+    for (auto i : range(positions.size())) {
       auto pn      = normalize(positions[i] - center);
       positions[i] = center + pn * radius;
       normals[i]   = pn;
@@ -3372,7 +3369,7 @@ void make_box(vector<vec4i>& quads, vector<vec3f>& positions,
   // + y
   make_rect(qquads, qpositions, qnormals, qtexturecoords, {steps.x, steps.z},
       {scale.x, scale.z}, {uvscale.x, uvscale.z});
-  for (auto i = 0; i < (int)qpositions.size(); i++) {
+  for (auto i : range(qpositions.size())) {
     qpositions[i] = {qpositions[i].x, scale.y, -qpositions[i].y};
     qnormals[i]   = {0, 1, 0};
   }
@@ -3381,7 +3378,7 @@ void make_box(vector<vec4i>& quads, vector<vec3f>& positions,
   // - y
   make_rect(qquads, qpositions, qnormals, qtexturecoords, {steps.x, steps.z},
       {scale.x, scale.z}, {uvscale.x, uvscale.z});
-  for (auto i = 0; i < (int)qpositions.size(); i++) {
+  for (auto i : range(qpositions.size())) {
     qpositions[i] = {qpositions[i].x, -scale.y, qpositions[i].y};
     qnormals[i]   = {0, -1, 0};
   }
@@ -3396,7 +3393,7 @@ void make_rounded_box(vector<vec4i>& quads, vector<vec3f>& positions,
   if (radius != 0) {
     radius = min(radius, min(scale));
     auto c = scale - radius;
-    for (auto i = 0; i < (int)positions.size(); i++) {
+    for (auto i : range(positions.size())) {
       auto pc = vec3f{
           abs(positions[i].x), abs(positions[i].y), abs(positions[i].z)};
       auto ps = vec3f{positions[i].x < 0 ? -1.0f : 1.0f,
@@ -3459,7 +3456,7 @@ void make_bent_floor(vector<vec4i>& quads, vector<vec3f>& positions,
     radius     = min(radius, scale.y);
     auto start = (scale.y - radius) / 2;
     auto end   = start + radius;
-    for (auto i = 0; i < (int)positions.size(); i++) {
+    for (auto i : range(positions.size())) {
       if (positions[i].z < -end) {
         positions[i] = {positions[i].x, -positions[i].z - end + radius, -end};
         normals[i]   = {0, 0, 1};
@@ -3490,7 +3487,7 @@ void make_uvsphere(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps,
     float scale, const vec2f& uvscale) {
   make_rect(quads, positions, normals, texcoords, steps, {1, 1}, {1, 1});
-  for (auto i = 0; i < (int)positions.size(); i++) {
+  for (auto i : range(positions.size())) {
     auto uv      = texcoords[i];
     auto a       = vec2f{2 * pif * uv.x, pif * (1 - uv.y)};
     positions[i] = vec3f{cos(a.x) * sin(a.y), sin(a.x) * sin(a.y), cos(a.y)} *
@@ -3507,7 +3504,7 @@ void make_capped_uvsphere(vector<vec4i>& quads, vector<vec3f>& positions,
   if (cap != 0) {
     cap        = min(cap, scale / 2);
     auto zflip = (scale - cap);
-    for (auto i = 0; i < (int)positions.size(); i++) {
+    for (auto i : range(positions.size())) {
       if (positions[i].z > zflip) {
         positions[i].z = 2 * zflip - positions[i].z;
         normals[i].x   = -normals[i].x;
@@ -3569,7 +3566,7 @@ void make_bulged_disk(vector<vec4i>& quads, vector<vec3f>& positions,
     height      = min(height, scale);
     auto radius = (1 + height * height) / (2 * height);
     auto center = vec3f{0, 0, -radius + height};
-    for (auto i = 0; i < (int)positions.size(); i++) {
+    for (auto i : range(positions.size())) {
       auto pn      = normalize(positions[i] - center);
       positions[i] = center + pn * radius;
       normals[i]   = pn;
@@ -3582,7 +3579,7 @@ void make_uvdisk(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps,
     float scale, const vec2f& uvscale) {
   make_rect(quads, positions, normals, texcoords, steps, {1, 1}, {1, 1});
-  for (auto i = 0; i < (int)positions.size(); i++) {
+  for (auto i : range(positions.size())) {
     auto uv      = texcoords[i];
     auto phi     = 2 * pif * uv.x;
     positions[i] = vec3f{cos(phi) * uv.y, sin(phi) * uv.y, 0} * scale;
@@ -3602,7 +3599,7 @@ void make_uvcylinder(vector<vec4i>& quads, vector<vec3f>& positions,
   // side
   make_rect(qquads, qpositions, qnormals, qtexcoords, {steps.x, steps.y},
       {1, 1}, {1, 1});
-  for (auto i = 0; i < (int)qpositions.size(); i++) {
+  for (auto i : range(qpositions.size())) {
     auto uv       = qtexcoords[i];
     auto phi      = 2 * pif * uv.x;
     qpositions[i] = {
@@ -3616,7 +3613,7 @@ void make_uvcylinder(vector<vec4i>& quads, vector<vec3f>& positions,
   // top
   make_rect(qquads, qpositions, qnormals, qtexcoords, {steps.x, steps.z},
       {1, 1}, {1, 1});
-  for (auto i = 0; i < (int)qpositions.size(); i++) {
+  for (auto i : range(qpositions.size())) {
     auto uv         = qtexcoords[i];
     auto phi        = 2 * pif * uv.x;
     qpositions[i]   = {cos(phi) * uv.y * scale.x, sin(phi) * uv.y * scale.x, 0};
@@ -3629,7 +3626,7 @@ void make_uvcylinder(vector<vec4i>& quads, vector<vec3f>& positions,
   // bottom
   make_rect(qquads, qpositions, qnormals, qtexcoords, {steps.x, steps.z},
       {1, 1}, {1, 1});
-  for (auto i = 0; i < (int)qpositions.size(); i++) {
+  for (auto i : range(qpositions.size())) {
     auto uv         = qtexcoords[i];
     auto phi        = 2 * pif * uv.x;
     qpositions[i]   = {cos(phi) * uv.y * scale.x, sin(phi) * uv.y * scale.x, 0};
@@ -3651,7 +3648,7 @@ void make_rounded_uvcylinder(vector<vec4i>& quads, vector<vec3f>& positions,
   if (radius != 0) {
     radius = min(radius, min(scale));
     auto c = scale - radius;
-    for (auto i = 0; i < (int)positions.size(); i++) {
+    for (auto i : range(positions.size())) {
       auto phi = atan2(positions[i].y, positions[i].x);
       auto r   = length(vec2f{positions[i].x, positions[i].y});
       auto z   = positions[i].z;
@@ -3730,7 +3727,7 @@ void make_points(vector<int>& points, vector<vec3f>& positions,
   normals.assign(num, {0, 0, 1});
   texcoords.assign(num, {0, 0});
   radius.assign(num, point_radius);
-  for (auto i = 0; i < (int)texcoords.size(); i++)
+  for (auto i : range(texcoords.size()))
     texcoords[i] = {(float)i / (float)num, 0};
 }
 
@@ -3742,9 +3739,9 @@ void make_points(vector<int>& points, vector<vec3f>& positions,
   auto quads = vector<vec4i>{};
   make_rect(quads, positions, normals, texcoords, steps, size, uvscale);
   points.resize(positions.size());
-  for (auto i = 0; i < (int)positions.size(); i++) points[i] = i;
+  for (auto i : range(positions.size())) points[i] = (int)i;
   radius.resize(positions.size());
-  for (auto i = 0; i < (int)texcoords.size(); i++)
+  for (auto i : range(texcoords.size()))
     radius[i] = lerp(rad.x, rad.y, texcoords[i].y / uvscale.y);
 }
 
