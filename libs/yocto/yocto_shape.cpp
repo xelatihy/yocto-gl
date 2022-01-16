@@ -1282,10 +1282,10 @@ shape_data make_hair(const shape_data& base, const vec2i& steps,
 
   auto cidx = vector<int>();
   if (clump.x > 0) {
-    for (auto bidx = 0; bidx < (int)bpos.size(); bidx++) {
+    for (auto bidx : range((int)bpos.size())) {
       cidx.push_back(0);
       auto cdist = flt_max;
-      for (auto c : range(clump.y)) {
+      for (auto c : range((int)clump.y)) {
         auto d = length(bpos[bidx] - bpos[c]);
         if (d < cdist) {
           cdist       = d;
@@ -1296,7 +1296,7 @@ shape_data make_hair(const shape_data& base, const vec2i& steps,
   }
 
   auto shape = make_lines(steps, {1, 1}, {1, 1}, {1, 1});
-  for (auto i = 0; i < (int)shape.positions.size(); i++) {
+  for (auto i : range((int)shape.positions.size())) {
     auto u             = shape.texcoords[i].x;
     auto bidx          = i / (steps.x + 1);
     shape.positions[i] = bpos[bidx] + bnorm[bidx] * u * blen[bidx];
