@@ -243,12 +243,11 @@ static void build_bvh(vector<bvh_node>& nodes, vector<int>& primitives,
 
   // prepare primitives
   primitives.resize(bboxes.size());
-  for (auto idx = 0; idx < (int)bboxes.size(); idx++) primitives[idx] = idx;
+  for (auto idx : range(bboxes.size())) primitives[idx] = (int)idx;
 
   // prepare centers
   auto centers = vector<vec3f>(bboxes.size());
-  for (auto idx = 0; idx < (int)bboxes.size(); idx++)
-    centers[idx] = center(bboxes[idx]);
+  for (auto idx : range(bboxes.size())) centers[idx] = center(bboxes[idx]);
 
   // push first node onto the stack
   auto stack = vector<vec3i>{{0, 0, (int)bboxes.size()}};
@@ -322,27 +321,27 @@ shape_bvh make_shape_bvh(const shape_data& shape, bool highquality) {
   auto bboxes = vector<bbox3f>{};
   if (!shape.points.empty()) {
     bboxes = vector<bbox3f>(shape.points.size());
-    for (auto idx = 0; idx < (int)shape.points.size(); idx++) {
+    for (auto idx : range(shape.points.size())) {
       auto& point = shape.points[idx];
       bboxes[idx] = point_bounds(shape.positions[point], shape.radius[point]);
     }
   } else if (!shape.lines.empty()) {
     bboxes = vector<bbox3f>(shape.lines.size());
-    for (auto idx = 0; idx < (int)shape.lines.size(); idx++) {
+    for (auto idx : range(shape.lines.size())) {
       auto& line  = shape.lines[idx];
       bboxes[idx] = line_bounds(shape.positions[line.x],
           shape.positions[line.y], shape.radius[line.x], shape.radius[line.y]);
     }
   } else if (!shape.triangles.empty()) {
     bboxes = vector<bbox3f>(shape.triangles.size());
-    for (auto idx = 0; idx < (int)shape.triangles.size(); idx++) {
+    for (auto idx : range(shape.triangles.size())) {
       auto& triangle = shape.triangles[idx];
       bboxes[idx]    = triangle_bounds(shape.positions[triangle.x],
           shape.positions[triangle.y], shape.positions[triangle.z]);
     }
   } else if (!shape.quads.empty()) {
     bboxes = vector<bbox3f>(shape.quads.size());
-    for (auto idx = 0; idx < (int)shape.quads.size(); idx++) {
+    for (auto idx : range(shape.quads.size())) {
       auto& quad  = shape.quads[idx];
       bboxes[idx] = quad_bounds(shape.positions[quad.x],
           shape.positions[quad.y], shape.positions[quad.z],
@@ -376,7 +375,7 @@ scene_bvh make_scene_bvh(
 
   // instance bboxes
   auto bboxes = vector<bbox3f>(scene.instances.size());
-  for (auto idx = 0; idx < (int)bboxes.size(); idx++) {
+  for (auto idx : range(bboxes.size())) {
     auto& instance = scene.instances[idx];
     auto& sbvh     = bvh.shapes[instance.shape];
     bboxes[idx]    = sbvh.nodes.empty()
@@ -396,27 +395,27 @@ void update_shape_bvh(shape_bvh& bvh, const shape_data& shape) {
   auto bboxes = vector<bbox3f>{};
   if (!shape.points.empty()) {
     bboxes = vector<bbox3f>(shape.points.size());
-    for (auto idx = 0; idx < (int)bboxes.size(); idx++) {
+    for (auto idx : range(bboxes.size())) {
       auto& p     = shape.points[idx];
       bboxes[idx] = point_bounds(shape.positions[p], shape.radius[p]);
     }
   } else if (!shape.lines.empty()) {
     bboxes = vector<bbox3f>(shape.lines.size());
-    for (auto idx = 0; idx < (int)bboxes.size(); idx++) {
+    for (auto idx : range(bboxes.size())) {
       auto& l     = shape.lines[idx];
       bboxes[idx] = line_bounds(shape.positions[l.x], shape.positions[l.y],
           shape.radius[l.x], shape.radius[l.y]);
     }
   } else if (!shape.triangles.empty()) {
     bboxes = vector<bbox3f>(shape.triangles.size());
-    for (auto idx = 0; idx < (int)bboxes.size(); idx++) {
+    for (auto idx : range(bboxes.size())) {
       auto& t     = shape.triangles[idx];
       bboxes[idx] = triangle_bounds(
           shape.positions[t.x], shape.positions[t.y], shape.positions[t.z]);
     }
   } else if (!shape.quads.empty()) {
     bboxes = vector<bbox3f>(shape.quads.size());
-    for (auto idx = 0; idx < (int)bboxes.size(); idx++) {
+    for (auto idx : range(bboxes.size())) {
       auto& q     = shape.quads[idx];
       bboxes[idx] = quad_bounds(shape.positions[q.x], shape.positions[q.y],
           shape.positions[q.z], shape.positions[q.w]);
@@ -436,7 +435,7 @@ void update_scene_bvh(scene_bvh& bvh, const scene_data& scene,
 
   // handle instances
   auto bboxes = vector<bbox3f>(scene.instances.size());
-  for (auto idx = 0; idx < (int)bboxes.size(); idx++) {
+  for (auto idx : range(bboxes.size())) {
     auto& instance = scene.instances[idx];
     auto& sbvh     = bvh.shapes[instance.shape];
     bboxes[idx]    = transform_bbox(instance.frame, sbvh.nodes[0].bbox);
@@ -746,7 +745,7 @@ scene_intersection overlap_scene_bvh(const scene_bvh& bvh,
         auto& shape     = scene.shapes[instance_.shape];
         auto& sbvh      = bvh.shapes[instance_.shape];
         auto  inv_pos   = transform_point(inverse(instance_.frame, true), pos);
-        auto  sintersection = overlap_shape(
+        auto  sintersection = overlap_shape_bvh(
             sbvh, shape, inv_pos, max_distance, find_any);
         if (!sintersection.hit) continue;
         intersection = {primitive, sintersection.element, sintersection.uv,

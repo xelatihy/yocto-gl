@@ -494,13 +494,13 @@ void show_image_gui(const string& title, const vector<string>& names,
   // callbacks
   auto callbacks = gui_callbacks{};
   callbacks.init = [&](const gui_input& input) {
-    for (auto idx = 0; idx < (int)images.size(); idx++) {
+    for (auto idx : range(images.size())) {
       init_image(glimages[idx]);
       set_image(glimages[idx], displays[idx]);
     }
   };
   callbacks.clear = [&](const gui_input& input) {
-    for (auto idx = 0; idx < (int)images.size(); idx++) {
+    for (auto idx : range(images.size())) {
       clear_image(glimages[idx]);
     }
   };
@@ -627,7 +627,7 @@ void show_trace_gui(const string& title, const string& name, scene_data& scene,
   // camera names
   auto camera_names = scene.camera_names;
   if (camera_names.empty()) {
-    for (auto idx = 0; idx < (int)scene.cameras.size(); idx++) {
+    for (auto idx : range(scene.cameras.size())) {
       camera_names.push_back("camera" + std::to_string(idx + 1));
     }
   }
@@ -810,7 +810,7 @@ void show_shade_gui(const string& title, const string& name, scene_data& scene,
   // camera names
   auto camera_names = scene.camera_names;
   if (camera_names.empty()) {
-    for (auto idx = 0; idx < (int)scene.cameras.size(); idx++) {
+    for (auto idx : range((int)scene.cameras.size())) {
       camera_names.push_back("camera" + std::to_string(idx + 1));
     }
   }
@@ -1679,7 +1679,7 @@ static void draw_scene(glscene_state& glscene, const scene_data& scene,
     glUniform3f(glGetUniformLocation(program, "ambient"), 0, 0, 0);
     glUniform1i(glGetUniformLocation(program, "lights_num"),
         (int)lights_direction.size());
-    for (auto lid = 0; lid < (int)lights_direction.size(); lid++) {
+    for (auto lid : range((int)lights_direction.size())) {
       auto is        = std::to_string(lid);
       auto direction = transform_direction(camera.frame, lights_direction[lid]);
       glUniform3f(glGetUniformLocation(
@@ -2232,7 +2232,7 @@ bool draw_gui_combobox(const char* lbl, int& value,
     if (value < 0) ImGui::SetItemDefaultFocus();
     ImGui::PopID();
   }
-  for (auto i = 0; i < (int)labels.size(); i++) {
+  for (auto i : range((int)labels.size())) {
     ImGui::PushID(i);
     if (ImGui::Selectable(labels[i].c_str(), value == i)) value = i;
     if (value == i) ImGui::SetItemDefaultFocus();
@@ -2252,8 +2252,8 @@ bool draw_gui_combobox(const char* lbl, string& value,
     if (value.empty()) ImGui::SetItemDefaultFocus();
     ImGui::PopID();
   }
-  for (auto i = 0; i < (int)labels.size(); i++) {
-    ImGui::PushID(i);
+  for (auto i : range(labels.size())) {
+    ImGui::PushID((int)i);
     if (ImGui::Selectable(labels[i].c_str(), value == labels[i]))
       value = labels[i];
     if (value == labels[i]) ImGui::SetItemDefaultFocus();

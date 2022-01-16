@@ -1443,18 +1443,18 @@ trace_lights make_trace_lights(
     const scene_data& scene, const trace_params& params) {
   auto lights = trace_lights{};
 
-  for (auto handle = 0; handle < (int)scene.instances.size(); handle++) {
+  for (auto handle : range(scene.instances.size())) {
     auto& instance = scene.instances[handle];
     auto& material = scene.materials[instance.material];
     if (material.emission == vec3f{0, 0, 0}) continue;
     auto& shape = scene.shapes[instance.shape];
     if (shape.triangles.empty() && shape.quads.empty()) continue;
     auto& light       = add_light(lights);
-    light.instance    = handle;
+    light.instance    = (int)handle;
     light.environment = invalidid;
     if (!shape.triangles.empty()) {
       light.elements_cdf = vector<float>(shape.triangles.size());
-      for (auto idx = 0; idx < (int)light.elements_cdf.size(); idx++) {
+      for (auto idx : range(light.elements_cdf.size())) {
         auto& t                 = shape.triangles[idx];
         light.elements_cdf[idx] = triangle_area(
             shape.positions[t.x], shape.positions[t.y], shape.positions[t.z]);
@@ -1463,7 +1463,7 @@ trace_lights make_trace_lights(
     }
     if (!shape.quads.empty()) {
       light.elements_cdf = vector<float>(shape.quads.size());
-      for (auto idx = 0; idx < (int)light.elements_cdf.size(); idx++) {
+      for (auto idx : range(light.elements_cdf.size())) {
         auto& t                 = shape.quads[idx];
         light.elements_cdf[idx] = quad_area(shape.positions[t.x],
             shape.positions[t.y], shape.positions[t.z], shape.positions[t.w]);
@@ -1471,17 +1471,17 @@ trace_lights make_trace_lights(
       }
     }
   }
-  for (auto handle = 0; handle < (int)scene.environments.size(); handle++) {
+  for (auto handle : range(scene.environments.size())) {
     auto& environment = scene.environments[handle];
     if (environment.emission == vec3f{0, 0, 0}) continue;
     auto& light       = add_light(lights);
     light.instance    = invalidid;
-    light.environment = handle;
+    light.environment = (int)handle;
     if (environment.emission_tex != invalidid) {
       auto& texture      = scene.textures[environment.emission_tex];
       light.elements_cdf = vector<float>(texture.width * texture.height);
-      for (auto idx = 0; idx < (int)light.elements_cdf.size(); idx++) {
-        auto ij    = vec2i{idx % texture.width, idx / texture.width};
+      for (auto idx : range(light.elements_cdf.size())) {
+        auto ij    = vec2i{(int)idx % texture.width, (int)idx / texture.width};
         auto th    = (ij.y + 0.5f) * pif / texture.height;
         auto value = lookup_texture(texture, ij.x, ij.y);
         light.elements_cdf[idx] = max(value) * sin(th);

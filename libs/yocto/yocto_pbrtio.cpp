@@ -120,45 +120,6 @@ static bool save_text(
   return true;
 }
 
-// Load a binary file
-static bool load_binary(
-    const string& filename, vector<byte>& data, string& error) {
-  // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
-  auto fs = fopen_utf8(filename.c_str(), "rb");
-  if (!fs) {
-    error = "cannot open " + filename;
-    return false;
-  }
-  fseek(fs, 0, SEEK_END);
-  auto length = ftell(fs);
-  fseek(fs, 0, SEEK_SET);
-  data.resize(length);
-  if (fread(data.data(), 1, length, fs) != length) {
-    fclose(fs);
-    error = "cannot read " + filename;
-    return false;
-  }
-  fclose(fs);
-  return true;
-}
-
-// Save a binary file
-static bool save_binary(
-    const string& filename, const vector<byte>& data, string& error) {
-  auto fs = fopen_utf8(filename.c_str(), "wb");
-  if (!fs) {
-    error = "cannot create " + filename;
-    return false;
-  }
-  if (fwrite(data.data(), 1, data.size(), fs) != data.size()) {
-    fclose(fs);
-    error = "cannot write " + filename;
-    return false;
-  }
-  fclose(fs);
-  return true;
-}
-
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -186,16 +147,6 @@ static string path_join(const string& patha, const string& pathb) {
   return (make_path(patha) / make_path(pathb)).generic_u8string();
 }
 
-// Replaces extensions
-static string replace_extension(const string& filename, const string& ext) {
-  return make_path(filename).replace_extension(ext).u8string();
-}
-
-// Check if a file can be opened for reading.
-static bool path_exists(const string& filename) {
-  return exists(make_path(filename));
-}
-
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -203,87 +154,39 @@ static bool path_exists(const string& filename) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-[[maybe_unused]] static array<float, 3> neg(const array<float, 3>& a) {
+static array<float, 3> neg(const array<float, 3>& a) {
   return {-a[0], -a[1], -a[2]};
 }
-[[maybe_unused]] static array<float, 3> add(
-    const array<float, 3>& a, const array<float, 3>& b) {
+static array<float, 3> add(const array<float, 3>& a, const array<float, 3>& b) {
   return {a[0] + b[0], a[1] + b[1], a[2] + b[2]};
 }
-[[maybe_unused]] static array<float, 3> add(const array<float, 3>& a, float b) {
-  return {a[0] + b, a[1] + b, a[2] + b};
-}
-[[maybe_unused]] static array<float, 3> add(float a, const array<float, 3>& b) {
-  return {a + b[0], a + b[1], a + b[2]};
-}
-[[maybe_unused]] static array<float, 3> sub(
-    const array<float, 3>& a, const array<float, 3>& b) {
+static array<float, 3> sub(const array<float, 3>& a, const array<float, 3>& b) {
   return {a[0] - b[0], a[1] - b[1], a[2] - b[2]};
 }
-[[maybe_unused]] static array<float, 3> sub(const array<float, 3>& a, float b) {
-  return {a[0] - b, a[1] - b, a[2] - b};
-}
-[[maybe_unused]] static array<float, 3> sub(float a, const array<float, 3>& b) {
-  return {a - b[0], a - b[1], a - b[2]};
-}
-[[maybe_unused]] static array<float, 3> mul(
-    const array<float, 3>& a, const array<float, 3>& b) {
-  return {a[0] * b[0], a[1] * b[1], a[2] * b[2]};
-}
-[[maybe_unused]] static array<float, 3> mul(const array<float, 3>& a, float b) {
+static array<float, 3> mul(const array<float, 3>& a, float b) {
   return {a[0] * b, a[1] * b, a[2] * b};
 }
-[[maybe_unused]] static array<float, 3> mul(float a, const array<float, 3>& b) {
-  return {a * b[0], a * b[1], a * b[2]};
-}
-[[maybe_unused]] static array<float, 3> div(
-    const array<float, 3>& a, const array<float, 3>& b) {
-  return {a[0] / b[0], a[1] / b[1], a[2] / b[2]};
-}
-[[maybe_unused]] static array<float, 3> div(const array<float, 3>& a, float b) {
+static array<float, 3> div(const array<float, 3>& a, float b) {
   return {a[0] / b, a[1] / b, a[2] / b};
 }
-[[maybe_unused]] static array<float, 3> div(float a, const array<float, 3>& b) {
-  return {a / b[0], a / b[1], a / b[2]};
-}
 
-[[maybe_unused]] static float dot(
-    const array<float, 3>& a, const array<float, 3>& b) {
+static float dot(const array<float, 3>& a, const array<float, 3>& b) {
   return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 }
-[[maybe_unused]] static array<float, 3> cross(
+static array<float, 3> cross(
     const array<float, 3>& a, const array<float, 3>& b) {
   return {a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2],
       a[0] * b[1] - a[1] * b[0]};
 }
-[[maybe_unused]] static float length(const array<float, 3>& a) {
-  return sqrt(dot(a, a));
-}
-[[maybe_unused]] static float length_squared(const array<float, 3>& a) {
-  return dot(a, a);
-}
-[[maybe_unused]] static array<float, 3> normalize(const array<float, 3>& a) {
+static float length(const array<float, 3>& a) { return sqrt(dot(a, a)); }
+static array<float, 3> normalize(const array<float, 3>& a) {
   auto l = length(a);
   return (l != 0) ? div(a, l) : a;
 }
-[[maybe_unused]] static float distance(
-    const array<float, 3>& a, const array<float, 3>& b) {
-  return length(sub(a, b));
-}
-[[maybe_unused]] static float distance_squared(
-    const array<float, 3>& a, const array<float, 3>& b) {
-  return dot(sub(a, b), sub(a, b));
-}
 
-[[maybe_unused]] static array<float, 3> triangle_normal(
-    const array<float, 3>& p0, const array<float, 3>& p1,
-    const array<float, 3>& p2) {
-  return normalize(cross(sub(p1, p0), sub(p2, p0)));
-}
-
-[[maybe_unused]] static array<array<float, 3>, 4> lookat_frame(
-    const array<float, 3>& eye, const array<float, 3>& center,
-    const array<float, 3>& up, bool inv_xz = false) {
+static array<array<float, 3>, 4> lookat_frame(const array<float, 3>& eye,
+    const array<float, 3>& center, const array<float, 3>& up,
+    bool inv_xz = false) {
   auto w = normalize(sub(eye, center));
   auto u = normalize(cross(up, w));
   auto v = normalize(cross(w, u));
@@ -301,10 +204,6 @@ static array<array<float, 3>, 3> mul(
 static array<float, 3> mul(
     const array<array<float, 3>, 3>& a, const array<float, 3>& b) {
   return add(mul(a[0], b[0]), add(mul(a[1], b[1]), mul(a[2], b[2])));
-}
-[[maybe_unused]] static array<array<float, 3>, 3> mul(
-    const array<array<float, 3>, 3>& a, const array<array<float, 3>, 3>& b) {
-  return {mul(a, b[0]), mul(a, b[1]), mul(a, b[2])};
 }
 static array<array<float, 3>, 4> mul(
     const array<array<float, 3>, 4>& a, const array<array<float, 3>, 4>& b) {
@@ -383,12 +282,7 @@ static array<array<float, 3>, 4> unflatten(const array<float, 12>& a) {
   return (const array<array<float, 3>, 4>&)a;
 }
 
-[[maybe_unused]] static array<float, 16> flatten(
-    const array<array<float, 4>, 4>& a) {
-  return (const array<float, 16>&)a;
-}
-[[maybe_unused]] static array<array<float, 4>, 4> unflatten(
-    const array<float, 16>& a) {
+static array<array<float, 4>, 4> unflatten(const array<float, 16>& a) {
   return (const array<array<float, 4>, 4>&)a;
 }
 
@@ -448,9 +342,6 @@ static void format_value(string& str, T value) {
         buffer.data(), buffer.data() + buffer.size(), value);
     str.append(buffer.data(), result.ptr);
   }
-}
-static void format_value(string& str, bool value) {
-  format_value(str, value ? 1 : 0);
 }
 template <typename T, size_t N>
 static void format_value(string& str, const array<T, N>& value) {
@@ -566,12 +457,6 @@ template <typename T>
     if (result.ptr == str.data()) return false;
     str.remove_prefix(result.ptr - str.data());
   }
-  return true;
-}
-[[nodiscard]] static bool parse_value(string_view& str, bool& value) {
-  auto valuei = 0;
-  if (!parse_value(str, valuei)) return false;
-  value = (bool)valuei;
   return true;
 }
 template <typename T, size_t N>
@@ -704,15 +589,6 @@ static bool get_pbrt_value(const pbrt_value& pbrt, float& val) {
     return false;
   }
 }
-[[maybe_unused]] static bool get_pbrt_value(
-    const pbrt_value& pbrt, array<float, 2>& val) {
-  if (pbrt.type == pbrt_type::point2 || pbrt.type == pbrt_type::vector2) {
-    val = pbrt.value2f;
-    return true;
-  } else {
-    return false;
-  }
-}
 static bool get_pbrt_value(const pbrt_value& pbrt, array<float, 3>& val) {
   if (pbrt.type == pbrt_type::point || pbrt.type == pbrt_type::vector ||
       pbrt.type == pbrt_type::normal || pbrt.type == pbrt_type::color) {
@@ -720,19 +596,6 @@ static bool get_pbrt_value(const pbrt_value& pbrt, array<float, 3>& val) {
     return true;
   } else if (pbrt.type == pbrt_type::real) {
     val = array<float, 3>{pbrt.value1f, pbrt.value1f, pbrt.value1f};
-    return true;
-  } else {
-    return false;
-  }
-}
-[[maybe_unused]] static bool get_pbrt_value(
-    const pbrt_value& pbrt, vector<float>& val) {
-  if (pbrt.type == pbrt_type::real) {
-    if (!pbrt.vector1f.empty()) {
-      val = pbrt.vector1f;
-    } else {
-      val = {pbrt.value1f};
-    }
     return true;
   } else {
     return false;
@@ -779,19 +642,6 @@ static bool get_pbrt_value(
   }
 }
 
-[[maybe_unused]] static bool get_pbrt_value(
-    const pbrt_value& pbrt, vector<int>& val) {
-  if (pbrt.type == pbrt_type::integer) {
-    if (!pbrt.vector1i.empty()) {
-      val = pbrt.vector1i;
-    } else {
-      val = {pbrt.vector1i};
-    }
-    return true;
-  } else {
-    return false;
-  }
-}
 static bool get_pbrt_value(const pbrt_value& pbrt, vector<array<int, 3>>& val) {
   if (pbrt.type == pbrt_type::integer) {
     if (pbrt.vector1i.empty() || (pbrt.vector1i.size() % 3) != 0) return false;
@@ -865,14 +715,6 @@ static pbrt_value make_pbrt_value(
   pbrt.name    = name;
   pbrt.type    = type;
   pbrt.value1f = val;
-  return pbrt;
-}
-[[maybe_unused]] static pbrt_value make_pbrt_value(const string& name,
-    const array<float, 2>& val, pbrt_type type = pbrt_type::point2) {
-  auto pbrt    = pbrt_value{};
-  pbrt.name    = name;
-  pbrt.type    = type;
-  pbrt.value2f = val;
   return pbrt;
 }
 static pbrt_value make_pbrt_value(const string& name,
