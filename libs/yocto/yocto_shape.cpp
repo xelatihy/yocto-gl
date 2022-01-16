@@ -1029,7 +1029,7 @@ shape_data make_points(const vec2i& steps, const vec2f& size,
   auto shape  = make_rect(steps, size, uvscale);
   shape.quads = {};
   shape.points.resize(shape.positions.size());
-  for (auto i : range(shape.positions.size())) shape.points[i] = i;
+  for (auto i : range(shape.positions.size())) shape.points[i] = (int)i;
   shape.radius.resize(shape.positions.size());
   for (auto i : range(shape.texcoords.size())) {
     shape.radius[i] = lerp(

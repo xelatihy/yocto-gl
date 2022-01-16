@@ -206,14 +206,8 @@ namespace yocto {
 static array<float, 3> neg(const array<float, 3>& a) {
   return {-a[0], -a[1], -a[2]};
 }
-static array<float, 3> add(const array<float, 3>& a, const array<float, 3>& b) {
-  return {a[0] + b[0], a[1] + b[1], a[2] + b[2]};
-}
 static array<float, 3> sub(const array<float, 3>& a, const array<float, 3>& b) {
   return {a[0] - b[0], a[1] - b[1], a[2] - b[2]};
-}
-static array<float, 3> mul(const array<float, 3>& a, float b) {
-  return {a[0] * b, a[1] * b, a[2] * b};
 }
 static array<float, 3> div(const array<float, 3>& a, float b) {
   return {a[0] / b, a[1] / b, a[2] / b};

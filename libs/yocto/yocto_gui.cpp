@@ -2253,7 +2253,7 @@ bool draw_gui_combobox(const char* lbl, string& value,
     ImGui::PopID();
   }
   for (auto i : range(labels.size())) {
-    ImGui::PushID(i);
+    ImGui::PushID((int)i);
     if (ImGui::Selectable(labels[i].c_str(), value == labels[i]))
       value = labels[i];
     if (value == labels[i]) ImGui::SetItemDefaultFocus();
