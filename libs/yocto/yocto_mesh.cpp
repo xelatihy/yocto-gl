@@ -69,6 +69,46 @@ using namespace std::string_literals;
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// MATH FUNCTIONS IN DOUBLE
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+inline const auto dbl_max = std::numeric_limits<double>::max();
+inline const auto dbl_min = std::numeric_limits<double>::lowest();
+inline const auto dbl_eps = std::numeric_limits<double>::epsilon();
+
+inline double abs(double a);
+inline double min(double a, double b);
+inline double max(double a, double b);
+inline double clamp(double a, double min, double max);
+inline double sign(double a);
+inline double sqr(double a);
+inline double sqrt(double a);
+inline double sin(double a);
+inline double cos(double a);
+inline double tan(double a);
+inline double asin(double a);
+inline double acos(double a);
+inline double atan(double a);
+inline double log(double a);
+inline double exp(double a);
+inline double log2(double a);
+inline double exp2(double a);
+inline double pow(double a, double b);
+inline bool   isfinite(double a);
+inline double atan2(double a, double b);
+inline double fmod(double a, double b);
+inline double radians(double a);
+inline double degrees(double a);
+inline double lerp(double a, double b, double u);
+inline void   swap(double& a, double& b);
+inline double smoothstep(double a, double b, double u);
+inline double bias(double a, double bias);
+inline double gain(double a, double gain);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // VECTORS
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -361,6 +401,53 @@ inline vec4d quat_mul(const vec4d& a, double b);
 inline vec4d quat_mul(const vec4d& a, const vec4d& b);
 inline vec4d quat_conjugate(const vec4d& a);
 inline vec4d quat_inverse(const vec4d& a);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// MATH CONSTANTS AND FUNCTIONS IN DOUBLE
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+inline double abs(double a) { return a < 0 ? -a : a; }
+inline double min(double a, double b) { return (a < b) ? a : b; }
+inline double max(double a, double b) { return (a > b) ? a : b; }
+inline double clamp(double a, double min_, double max_) {
+  return min(max(a, min_), max_);
+}
+inline double sign(double a) { return a < 0 ? -1 : 1; }
+inline double sqr(double a) { return a * a; }
+inline double sqrt(double a) { return std::sqrt(a); }
+inline double sin(double a) { return std::sin(a); }
+inline double cos(double a) { return std::cos(a); }
+inline double tan(double a) { return std::tan(a); }
+inline double asin(double a) { return std::asin(a); }
+inline double acos(double a) { return std::acos(a); }
+inline double atan(double a) { return std::atan(a); }
+inline double log(double a) { return std::log(a); }
+inline double exp(double a) { return std::exp(a); }
+inline double log2(double a) { return std::log2(a); }
+inline double exp2(double a) { return std::exp2(a); }
+inline double pow(double a, double b) { return std::pow(a, b); }
+inline bool   isfinite(double a) { return std::isfinite(a); }
+inline double atan2(double a, double b) { return std::atan2(a, b); }
+inline double fmod(double a, double b) { return std::fmod(a, b); }
+inline void   swap(double& a, double& b) { std::swap(a, b); }
+inline double radians(double a) { return a * pif / 180; }
+inline double degrees(double a) { return a * 180 / pif; }
+inline double lerp(double a, double b, double u) { return a * (1 - u) + b * u; }
+inline double step(double a, double u) { return u < a ? 0 : 1; }
+inline double smoothstep(double a, double b, double u) {
+  auto t = clamp((u - a) / (b - a), 0.0, 1.0);
+  return t * t * (3 - 2 * t);
+}
+inline double bias(double a, double bias) {
+  return a / ((1 / bias - 2) * (1 - a) + 1);
+}
+inline double gain(double a, double gain) {
+  return (a < 0.5) ? bias(a * 2, gain) / 2
+                   : bias(a * 2 - 1, 1 - gain) / 2 + 0.5;
+}
 
 }  // namespace yocto
 
