@@ -47,7 +47,7 @@ endif(YOCTO_DENOISE)
 
 # warning flags
 if(APPLE)
-  target_compile_options(yocto PUBLIC -Wall -Wconversion -Wno-sign-conversion -Wno-implicit-float-conversion)
+  target_compile_options(yocto PUBLIC -Wall -Wconversion -Wno-sign-conversion -Wno-implicit-float-conversion -Wno-unused-variable)
 endif(APPLE)
 if(MSVC)
   target_compile_options(yocto PUBLIC /D_CRT_SECURE_NO_WARNINGS)

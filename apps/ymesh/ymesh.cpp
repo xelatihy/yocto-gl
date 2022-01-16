@@ -893,10 +893,10 @@ float laplacian_weight(const vector<vec3f>& positions,
 
   auto num_neighbors = int(adjacencies[node].size());
 
-  int ind = -1;
+  auto ind = -1;
   for (auto i : range(adjacencies[node].size())) {
     if (adjacencies[node][i] == neighbor) {
-      ind = i;
+      ind = (int)i;
       break;
     }
   }
