@@ -154,87 +154,76 @@ static string path_join(const string& patha, const string& pathb) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-[[maybe_unused]] static array<float, 3> neg(const array<float, 3>& a) {
+static array<float, 3> neg(const array<float, 3>& a) {
   return {-a[0], -a[1], -a[2]};
 }
-[[maybe_unused]] static array<float, 3> add(
-    const array<float, 3>& a, const array<float, 3>& b) {
+static array<float, 3> add(const array<float, 3>& a, const array<float, 3>& b) {
   return {a[0] + b[0], a[1] + b[1], a[2] + b[2]};
 }
-[[maybe_unused]] static array<float, 3> add(const array<float, 3>& a, float b) {
+static array<float, 3> add(const array<float, 3>& a, float b) {
   return {a[0] + b, a[1] + b, a[2] + b};
 }
-[[maybe_unused]] static array<float, 3> add(float a, const array<float, 3>& b) {
+static array<float, 3> add(float a, const array<float, 3>& b) {
   return {a + b[0], a + b[1], a + b[2]};
 }
-[[maybe_unused]] static array<float, 3> sub(
-    const array<float, 3>& a, const array<float, 3>& b) {
+static array<float, 3> sub(const array<float, 3>& a, const array<float, 3>& b) {
   return {a[0] - b[0], a[1] - b[1], a[2] - b[2]};
 }
-[[maybe_unused]] static array<float, 3> sub(const array<float, 3>& a, float b) {
+static array<float, 3> sub(const array<float, 3>& a, float b) {
   return {a[0] - b, a[1] - b, a[2] - b};
 }
-[[maybe_unused]] static array<float, 3> sub(float a, const array<float, 3>& b) {
+static array<float, 3> sub(float a, const array<float, 3>& b) {
   return {a - b[0], a - b[1], a - b[2]};
 }
-[[maybe_unused]] static array<float, 3> mul(
-    const array<float, 3>& a, const array<float, 3>& b) {
+static array<float, 3> mul(const array<float, 3>& a, const array<float, 3>& b) {
   return {a[0] * b[0], a[1] * b[1], a[2] * b[2]};
 }
-[[maybe_unused]] static array<float, 3> mul(const array<float, 3>& a, float b) {
+static array<float, 3> mul(const array<float, 3>& a, float b) {
   return {a[0] * b, a[1] * b, a[2] * b};
 }
-[[maybe_unused]] static array<float, 3> mul(float a, const array<float, 3>& b) {
+static array<float, 3> mul(float a, const array<float, 3>& b) {
   return {a * b[0], a * b[1], a * b[2]};
 }
-[[maybe_unused]] static array<float, 3> div(
-    const array<float, 3>& a, const array<float, 3>& b) {
+static array<float, 3> div(const array<float, 3>& a, const array<float, 3>& b) {
   return {a[0] / b[0], a[1] / b[1], a[2] / b[2]};
 }
-[[maybe_unused]] static array<float, 3> div(const array<float, 3>& a, float b) {
+static array<float, 3> div(const array<float, 3>& a, float b) {
   return {a[0] / b, a[1] / b, a[2] / b};
 }
-[[maybe_unused]] static array<float, 3> div(float a, const array<float, 3>& b) {
+static array<float, 3> div(float a, const array<float, 3>& b) {
   return {a / b[0], a / b[1], a / b[2]};
 }
 
-[[maybe_unused]] static float dot(
-    const array<float, 3>& a, const array<float, 3>& b) {
+static float dot(const array<float, 3>& a, const array<float, 3>& b) {
   return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 }
-[[maybe_unused]] static array<float, 3> cross(
+static array<float, 3> cross(
     const array<float, 3>& a, const array<float, 3>& b) {
   return {a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2],
       a[0] * b[1] - a[1] * b[0]};
 }
-[[maybe_unused]] static float length(const array<float, 3>& a) {
-  return sqrt(dot(a, a));
-}
-[[maybe_unused]] static float length_squared(const array<float, 3>& a) {
-  return dot(a, a);
-}
-[[maybe_unused]] static array<float, 3> normalize(const array<float, 3>& a) {
+static float length(const array<float, 3>& a) { return sqrt(dot(a, a)); }
+static float length_squared(const array<float, 3>& a) { return dot(a, a); }
+static array<float, 3> normalize(const array<float, 3>& a) {
   auto l = length(a);
   return (l != 0) ? div(a, l) : a;
 }
-[[maybe_unused]] static float distance(
-    const array<float, 3>& a, const array<float, 3>& b) {
+static float distance(const array<float, 3>& a, const array<float, 3>& b) {
   return length(sub(a, b));
 }
-[[maybe_unused]] static float distance_squared(
+static float distance_squared(
     const array<float, 3>& a, const array<float, 3>& b) {
   return dot(sub(a, b), sub(a, b));
 }
 
-[[maybe_unused]] static array<float, 3> triangle_normal(
-    const array<float, 3>& p0, const array<float, 3>& p1,
-    const array<float, 3>& p2) {
+static array<float, 3> triangle_normal(const array<float, 3>& p0,
+    const array<float, 3>& p1, const array<float, 3>& p2) {
   return normalize(cross(sub(p1, p0), sub(p2, p0)));
 }
 
-[[maybe_unused]] static array<array<float, 3>, 4> lookat_frame(
-    const array<float, 3>& eye, const array<float, 3>& center,
-    const array<float, 3>& up, bool inv_xz = false) {
+static array<array<float, 3>, 4> lookat_frame(const array<float, 3>& eye,
+    const array<float, 3>& center, const array<float, 3>& up,
+    bool inv_xz = false) {
   auto w = normalize(sub(eye, center));
   auto u = normalize(cross(up, w));
   auto v = normalize(cross(w, u));
@@ -253,7 +242,7 @@ static array<float, 3> mul(
     const array<array<float, 3>, 3>& a, const array<float, 3>& b) {
   return add(mul(a[0], b[0]), add(mul(a[1], b[1]), mul(a[2], b[2])));
 }
-[[maybe_unused]] static array<array<float, 3>, 3> mul(
+static array<array<float, 3>, 3> mul(
     const array<array<float, 3>, 3>& a, const array<array<float, 3>, 3>& b) {
   return {mul(a, b[0]), mul(a, b[1]), mul(a, b[2])};
 }
@@ -334,12 +323,10 @@ static array<array<float, 3>, 4> unflatten(const array<float, 12>& a) {
   return (const array<array<float, 3>, 4>&)a;
 }
 
-[[maybe_unused]] static array<float, 16> flatten(
-    const array<array<float, 4>, 4>& a) {
+static array<float, 16> flatten(const array<array<float, 4>, 4>& a) {
   return (const array<float, 16>&)a;
 }
-[[maybe_unused]] static array<array<float, 4>, 4> unflatten(
-    const array<float, 16>& a) {
+static array<array<float, 4>, 4> unflatten(const array<float, 16>& a) {
   return (const array<array<float, 4>, 4>&)a;
 }
 
@@ -646,8 +633,7 @@ static bool get_pbrt_value(const pbrt_value& pbrt, float& val) {
     return false;
   }
 }
-[[maybe_unused]] static bool get_pbrt_value(
-    const pbrt_value& pbrt, array<float, 2>& val) {
+static bool get_pbrt_value(const pbrt_value& pbrt, array<float, 2>& val) {
   if (pbrt.type == pbrt_type::point2 || pbrt.type == pbrt_type::vector2) {
     val = pbrt.value2f;
     return true;
@@ -667,8 +653,7 @@ static bool get_pbrt_value(const pbrt_value& pbrt, array<float, 3>& val) {
     return false;
   }
 }
-[[maybe_unused]] static bool get_pbrt_value(
-    const pbrt_value& pbrt, vector<float>& val) {
+static bool get_pbrt_value(const pbrt_value& pbrt, vector<float>& val) {
   if (pbrt.type == pbrt_type::real) {
     if (!pbrt.vector1f.empty()) {
       val = pbrt.vector1f;
@@ -721,8 +706,7 @@ static bool get_pbrt_value(
   }
 }
 
-[[maybe_unused]] static bool get_pbrt_value(
-    const pbrt_value& pbrt, vector<int>& val) {
+static bool get_pbrt_value(const pbrt_value& pbrt, vector<int>& val) {
   if (pbrt.type == pbrt_type::integer) {
     if (!pbrt.vector1i.empty()) {
       val = pbrt.vector1i;
@@ -809,7 +793,7 @@ static pbrt_value make_pbrt_value(
   pbrt.value1f = val;
   return pbrt;
 }
-[[maybe_unused]] static pbrt_value make_pbrt_value(const string& name,
+static pbrt_value make_pbrt_value(const string& name,
     const array<float, 2>& val, pbrt_type type = pbrt_type::point2) {
   auto pbrt    = pbrt_value{};
   pbrt.name    = name;
@@ -850,8 +834,7 @@ static pbrt_value make_pbrt_value(const string& name,
   return pbrt;
 }
 
-[[maybe_unused]] static void remove_pbrt_comment(
-    string_view& str, char comment_char = '#') {
+static void remove_pbrt_comment(string_view& str, char comment_char = '#') {
   while (!str.empty() && is_newline(str.back())) str.remove_suffix(1);
   auto cpy       = str;
   auto in_string = false;
@@ -1033,7 +1016,7 @@ static pair<array<float, 3>, array<float, 3>> get_etak(const string& name) {
 
 // Pbrt measure subsurface parameters (sigma_prime_s, sigma_a in mm^-1)
 // from pbrt code at pbrt/code/medium.cpp
-[[maybe_unused]] static pair<array<float, 3>, array<float, 3>> get_subsurface(
+static pair<array<float, 3>, array<float, 3>> get_subsurface(
     const string& name) {
   static const unordered_map<string, pair<array<float, 3>, array<float, 3>>>
       params = {

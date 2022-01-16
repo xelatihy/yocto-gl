@@ -203,76 +203,68 @@ static bool path_exists(const string& filename) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-[[maybe_unused]] static array<float, 3> neg(const array<float, 3>& a) {
+static array<float, 3> neg(const array<float, 3>& a) {
   return {-a[0], -a[1], -a[2]};
 }
-[[maybe_unused]] static array<float, 3> add(
-    const array<float, 3>& a, const array<float, 3>& b) {
+static array<float, 3> add(const array<float, 3>& a, const array<float, 3>& b) {
   return {a[0] + b[0], a[1] + b[1], a[2] + b[2]};
 }
-[[maybe_unused]] static array<float, 3> add(const array<float, 3>& a, float b) {
+static array<float, 3> add(const array<float, 3>& a, float b) {
   return {a[0] + b, a[1] + b, a[2] + b};
 }
-[[maybe_unused]] static array<float, 3> add(float a, const array<float, 3>& b) {
+static array<float, 3> add(float a, const array<float, 3>& b) {
   return {a + b[0], a + b[1], a + b[2]};
 }
-[[maybe_unused]] static array<float, 3> sub(
-    const array<float, 3>& a, const array<float, 3>& b) {
+static array<float, 3> sub(const array<float, 3>& a, const array<float, 3>& b) {
   return {a[0] - b[0], a[1] - b[1], a[2] - b[2]};
 }
-[[maybe_unused]] static array<float, 3> sub(const array<float, 3>& a, float b) {
+static array<float, 3> sub(const array<float, 3>& a, float b) {
   return {a[0] - b, a[1] - b, a[2] - b};
 }
-[[maybe_unused]] static array<float, 3> sub(float a, const array<float, 3>& b) {
+static array<float, 3> sub(float a, const array<float, 3>& b) {
   return {a - b[0], a - b[1], a - b[2]};
 }
-[[maybe_unused]] static array<float, 3> mul(
-    const array<float, 3>& a, const array<float, 3>& b) {
+static array<float, 3> mul(const array<float, 3>& a, const array<float, 3>& b) {
   return {a[0] * b[0], a[1] * b[1], a[2] * b[2]};
 }
-[[maybe_unused]] static array<float, 3> mul(const array<float, 3>& a, float b) {
+static array<float, 3> mul(const array<float, 3>& a, float b) {
   return {a[0] * b, a[1] * b, a[2] * b};
 }
-[[maybe_unused]] static array<float, 3> mul(float a, const array<float, 3>& b) {
+static array<float, 3> mul(float a, const array<float, 3>& b) {
   return {a * b[0], a * b[1], a * b[2]};
 }
-[[maybe_unused]] static array<float, 3> div(
-    const array<float, 3>& a, const array<float, 3>& b) {
+static array<float, 3> div(const array<float, 3>& a, const array<float, 3>& b) {
   return {a[0] / b[0], a[1] / b[1], a[2] / b[2]};
 }
-[[maybe_unused]] static array<float, 3> div(const array<float, 3>& a, float b) {
+static array<float, 3> div(const array<float, 3>& a, float b) {
   return {a[0] / b, a[1] / b, a[2] / b};
 }
-[[maybe_unused]] static array<float, 3> div(float a, const array<float, 3>& b) {
+static array<float, 3> div(float a, const array<float, 3>& b) {
   return {a / b[0], a / b[1], a / b[2]};
 }
 
-[[maybe_unused]] static float dot(
-    const array<float, 3>& a, const array<float, 3>& b) {
+static float dot(const array<float, 3>& a, const array<float, 3>& b) {
   return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 }
-[[maybe_unused]] static array<float, 3> cross(
+static array<float, 3> cross(
     const array<float, 3>& a, const array<float, 3>& b) {
   return {a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2],
       a[0] * b[1] - a[1] * b[0]};
 }
-[[maybe_unused]] static float length(const array<float, 3>& a) {
-  return sqrt(dot(a, a));
-}
-[[maybe_unused]] static array<float, 3> normalize(const array<float, 3>& a) {
+static float length(const array<float, 3>& a) { return sqrt(dot(a, a)); }
+static array<float, 3> normalize(const array<float, 3>& a) {
   auto l = length(a);
   return (l != 0) ? div(a, l) : a;
 }
 
-[[maybe_unused]] static array<float, 3> triangle_normal(
-    const array<float, 3>& p0, const array<float, 3>& p1,
-    const array<float, 3>& p2) {
+static array<float, 3> triangle_normal(const array<float, 3>& p0,
+    const array<float, 3>& p1, const array<float, 3>& p2) {
   return normalize(cross(sub(p1, p0), sub(p2, p0)));
 }
 
-[[maybe_unused]] static array<array<float, 3>, 4> lookat_frame(
-    const array<float, 3>& eye, const array<float, 3>& center,
-    const array<float, 3>& up, bool inv_xz = false) {
+static array<array<float, 3>, 4> lookat_frame(const array<float, 3>& eye,
+    const array<float, 3>& center, const array<float, 3>& up,
+    bool inv_xz = false) {
   auto w = normalize(sub(eye, center));
   auto u = normalize(cross(up, w));
   auto v = normalize(cross(w, u));
@@ -287,16 +279,9 @@ static array<float, 3> mul(
     const array<array<float, 3>, 3>& a, const array<float, 3>& b) {
   return add(mul(a[0], b[0]), add(mul(a[1], b[1]), mul(a[2], b[2])));
 }
-static array<array<float, 3>, 3> mul(
-    const array<array<float, 3>, 3>& a, const array<array<float, 3>, 3>& b) {
-  return {mul(a, b[0]), mul(a, b[1]), mul(a, b[2])};
-}
 
 static array<float, 12> flatten(const array<array<float, 3>, 4>& a) {
   return (const array<float, 12>&)a;
-}
-static array<float, 16> flatten(const array<array<float, 4>, 4>& a) {
-  return (const array<float, 16>&)a;
 }
 
 }  // namespace yocto
@@ -1550,8 +1535,7 @@ bool load_obj(const string& filename, obj_shape& shape, string& error,
 }
 
 // Format values
-[[maybe_unused]] static void format_value(
-    string& str, const obj_texture& value) {
+static void format_value(string& str, const obj_texture& value) {
   str += value.path.empty() ? "" : value.path;
 }
 static void format_value(string& str, const obj_vertex& value) {
