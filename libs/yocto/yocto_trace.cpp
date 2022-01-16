@@ -90,7 +90,8 @@ trace_bvh make_bvh(const scene_data& scene, const trace_params& params) {
     return {
         {}, make_embree_bvh(scene, params.highqualitybvh, params.noparallel)};
   } else {
-    return {make_bvh(scene, params.highqualitybvh, params.noparallel), {}};
+    return {
+        make_scene_bvh(scene, params.highqualitybvh, params.noparallel), {}};
   }
 }
 
