@@ -678,7 +678,7 @@ void show_trace_gui(const string& title, const string& name, scene_data& scene,
       for (auto sample = 0; sample < params.samples; sample += params.batch) {
         if (render_stop) return;
         parallel_for(state.width, state.height, [&](int i, int j) {
-          for (auto s = 0; s < params.batch; s++) {
+          for (auto s : range(params.batch)) {
             if (render_stop) return;
             trace_sample(state, scene, bvh, lights, i, j, params);
           }
