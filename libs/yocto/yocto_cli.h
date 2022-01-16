@@ -434,7 +434,7 @@ inline void add_option(cli_command& cli, const string& name, vector<T>& value,
   cli.options[name] = [&value](const vector<string>& args, string& error) {
     if (!_cli_parse_size(args, 1, 1024, error)) return false;
     value.resize(args.size());
-    for (auto idx = (size_t)0; idx < args.size(); idx++) {
+    for (auto idx : range(args.size())) {
       if (!_cli_parse_value(args[idx], value[idx], error)) return false;
     }
     return true;
@@ -449,7 +449,7 @@ inline void add_option(cli_command& cli, const string& name, array<T, N>& value,
   cli.usage_options += _cli_usage_option(name, value, usage);
   cli.options[name] = [&value](const vector<string>& args, string& error) {
     if (!_cli_parse_size(args, N, N, error)) return false;
-    for (auto idx = (size_t)0; idx < args.size(); idx++) {
+    for (auto idx : range(args.size())) {
       if (!_cli_parse_value(args[idx], value[idx], error)) return false;
     }
     return true;

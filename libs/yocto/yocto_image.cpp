@@ -128,7 +128,7 @@ void convert_image(image_data& result, const image_data& image) {
   if (image.linear == result.linear) {
     result.pixels = image.pixels;
   } else {
-    for (auto idx = (size_t)0; idx < image.pixels.size(); idx++) {
+    for (auto idx : range(image.pixels.size())) {
       result.pixels[idx] = image.linear ? rgb_to_srgb(image.pixels[idx])
                                         : srgb_to_rgb(image.pixels[idx]);
     }
@@ -198,12 +198,12 @@ void tonemap_image(
     throw std::invalid_argument{"image should be the same size"};
   if (result.linear) throw std::invalid_argument{"ldr expected"};
   if (image.linear) {
-    for (auto idx = (size_t)0; idx < image.pixels.size(); idx++) {
+    for (auto idx : range(image.pixels.size())) {
       result.pixels[idx] = tonemap(image.pixels[idx], exposure, filmic);
     }
   } else {
     auto scale = vec4f{pow(2, exposure), pow(2, exposure), pow(2, exposure), 1};
-    for (auto idx = (size_t)0; idx < image.pixels.size(); idx++) {
+    for (auto idx : range(image.pixels.size())) {
       result.pixels[idx] = image.pixels[idx] * scale;
     }
   }
@@ -265,7 +265,7 @@ image_data image_difference(
 
   // compute diff
   auto difference = make_image(image1.width, image1.height, image1.linear);
-  for (auto idx = (size_t)0; idx < difference.pixels.size(); idx++) {
+  for (auto idx : range(difference.pixels.size())) {
     auto diff              = abs(image1.pixels[idx] - image2.pixels[idx]);
     difference.pixels[idx] = display ? vec4f{max(diff), max(diff), max(diff), 1}
                                      : diff;
@@ -303,7 +303,7 @@ image_data composite_image(
   if (image_a.linear != image_b.linear)
     throw std::invalid_argument{"image should be of the same type"};
   auto result = make_image(image_a.width, image_a.height, image_a.linear);
-  for (auto idx = (size_t)0; idx < result.pixels.size(); idx++) {
+  for (auto idx : range(result.pixels.size())) {
     result.pixels[idx] = composite(image_a.pixels[idx], image_b.pixels[idx]);
   }
   return result;
@@ -320,7 +320,7 @@ void composite_image(
     throw std::invalid_argument{"image should be the same size"};
   if (image_a.linear != result.linear)
     throw std::invalid_argument{"image should be of the same type"};
-  for (auto idx = (size_t)0; idx < result.pixels.size(); idx++) {
+  for (auto idx : range(result.pixels.size())) {
     result.pixels[idx] = composite(image_a.pixels[idx], image_b.pixels[idx]);
   }
 }
@@ -365,7 +365,7 @@ vec4f colorgradeb(
 image_data colorgrade_image(
     const image_data& image, const colorgrade_params& params) {
   auto result = make_image(image.width, image.height, false);
-  for (auto idx = (size_t)0; idx < image.pixels.size(); idx++) {
+  for (auto idx : range(image.pixels.size())) {
     result.pixels[idx] = colorgrade(image.pixels[idx], image.linear, params);
   }
   return result;
@@ -378,7 +378,7 @@ void colorgrade_image(image_data& result, const image_data& image,
   if (image.width != result.width || image.height != result.height)
     throw std::invalid_argument{"image should be the same size"};
   if (!!result.linear) throw std::invalid_argument{"non linear expected"};
-  for (auto idx = (size_t)0; idx < image.pixels.size(); idx++) {
+  for (auto idx : range(image.pixels.size())) {
     result.pixels[idx] = colorgrade(image.pixels[idx], image.linear, params);
   }
 }

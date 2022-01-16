@@ -365,7 +365,7 @@ scene_bvh make_scene_bvh(
   // build shape bvh
   bvh.shapes.resize(scene.shapes.size());
   if (noparallel) {
-    for (auto idx = (size_t)0; idx < scene.shapes.size(); idx++) {
+    for (auto idx : range(scene.shapes.size())) {
       bvh.shapes[idx] = make_shape_bvh(scene.shapes[idx], highquality);
     }
   } else {
@@ -973,7 +973,7 @@ scene_embree_bvh make_scene_embree_bvh(
   // shape bvhs
   bvh.shapes.resize(scene.shapes.size());
   if (noparallel) {
-    for (auto idx = (size_t)0; idx < scene.shapes.size(); idx++) {
+    for (auto idx : range(scene.shapes.size())) {
       bvh.shapes[idx] = make_shape_embree_bvh(scene.shapes[idx], highquality);
     }
   } else {

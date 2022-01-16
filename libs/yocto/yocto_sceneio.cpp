@@ -462,7 +462,7 @@ bool load_image(const string& filename, image_data& image, string& error) {
   };
   auto from_srgb = [](const byte* pixels, int width, int height) {
     auto pixelsf = vector<vec4f>((size_t)width * (size_t)height);
-    for (auto idx = (size_t)0; idx < pixelsf.size(); idx++) {
+    for (auto idx : range(pixelsf.size())) {
       pixelsf[idx] = byte_to_float(((vec4b*)pixels)[idx]);
     }
     return pixelsf;
@@ -1808,11 +1808,11 @@ bool save_texture(
 
   // check for correct handling
   if (!texture.pixelsf.empty() && is_ldr_filename(filename)) {
-    auto ntexture = texture_data{};
-    ntexture.width = texture.width;
+    auto ntexture   = texture_data{};
+    ntexture.width  = texture.width;
     ntexture.height = texture.height;
     ntexture.pixelsb.resize(texture.pixelsf.size());
-    for (auto idx = (size_t)0; idx < texture.pixelsf.size(); idx++) {
+    for (auto idx : range(texture.pixelsf.size())) {
       ntexture.pixelsb[idx] = float_to_byte(rgb_to_srgb(texture.pixelsf[idx]));
     }
     return save_texture(filename, ntexture, error);
@@ -1822,7 +1822,7 @@ bool save_texture(
     ntexture.width  = texture.width;
     ntexture.height = texture.height;
     ntexture.pixelsf.resize(texture.pixelsb.size());
-    for (auto idx = (size_t)0; idx < texture.pixelsb.size(); idx++) {
+    for (auto idx : range(texture.pixelsb.size())) {
       ntexture.pixelsf[idx] = srgb_to_rgb(byte_to_float(texture.pixelsb[idx]));
     }
     return save_texture(filename, ntexture, error);
@@ -4483,7 +4483,7 @@ static bool load_gltf_scene(
           continue;
         }
         // convert values
-        for (auto idx = (size_t)0; idx < count; idx++) {
+        for (auto idx : range(count)) {
           if (!cgltf_accessor_read_float(
                   &gaccessor, idx, &data[idx * dcomponents], components))
             return unsupported_error("accessor float conversion");
@@ -4530,7 +4530,7 @@ static bool load_gltf_scene(
         if (gaccessor.type != cgltf_type_scalar)
           return unsupported_error("non-scalar indices");
         auto indices = vector<int>(gaccessor.count);
-        for (auto idx = (size_t)0; idx < gaccessor.count; idx++) {
+        for (auto idx : range(gaccessor.count)) {
           if (!cgltf_accessor_read_uint(
                   &gaccessor, idx, (cgltf_uint*)&indices[idx], 1))
             return unsupported_error("accessor uint conversion");
@@ -4665,7 +4665,7 @@ static bool save_gltf_scene(const string& filename, const scene_data& scene,
   // cameras
   if (!scene.cameras.empty()) {
     alloc_array(cgltf.cameras_count, cgltf.cameras, scene.cameras.size());
-    for (auto idx = (size_t)0; idx < scene.cameras.size(); idx++) {
+    for (auto idx : range(scene.cameras.size())) {
       auto& camera       = scene.cameras[idx];
       auto& gcamera      = cgltf.cameras[idx];
       gcamera.name       = copy_string(get_camera_name(scene, camera));
@@ -4683,11 +4683,11 @@ static bool save_gltf_scene(const string& filename, const scene_data& scene,
     alloc_array(cgltf.textures_count, cgltf.textures, scene.textures.size());
     alloc_array(cgltf.images_count, cgltf.images, scene.textures.size());
     alloc_array(cgltf.samplers_count, cgltf.samplers, 1);
-    auto& gsampler = cgltf.samplers[0];
-    gsampler.name  = copy_string("sampler");
+    auto& gsampler  = cgltf.samplers[0];
+    gsampler.name   = copy_string("sampler");
     gsampler.wrap_s = 10497;
     gsampler.wrap_t = 10497;
-    for (auto idx = (size_t)0; idx < scene.textures.size(); idx++) {
+    for (auto idx : range(scene.textures.size())) {
       auto& texture    = scene.textures[idx];
       auto& gtexture   = cgltf.textures[idx];
       auto& gimage     = cgltf.images[idx];
@@ -4703,18 +4703,18 @@ static bool save_gltf_scene(const string& filename, const scene_data& scene,
   // materials
   if (!scene.materials.empty()) {
     alloc_array(cgltf.materials_count, cgltf.materials, scene.materials.size());
-    for (auto idx = (size_t)0; idx < scene.materials.size(); idx++) {
+    for (auto idx : range(scene.materials.size())) {
       auto& material  = scene.materials[idx];
       auto& gmaterial = cgltf.materials[idx];
       gmaterial.name  = copy_string(get_material_name(scene, material));
-      auto emission_scale      = max(material.emission) > 1.0f ? max(material.emission)
-                                                      : 1.0f;
+      auto emission_scale =
+          max(material.emission) > 1.0f ? max(material.emission) : 1.0f;
       gmaterial.emissive_factor[0] = material.emission.x / emission_scale;
       gmaterial.emissive_factor[1] = material.emission.y / emission_scale;
       gmaterial.emissive_factor[2] = material.emission.z / emission_scale;
       if (emission_scale > 1.0f) {
-        gmaterial.has_emissive_strength = true;
-        gmaterial.emissive_strength.emissive_strength     = emission_scale;
+        gmaterial.has_emissive_strength               = true;
+        gmaterial.emissive_strength.emissive_strength = emission_scale;
       }
       gmaterial.has_pbr_metallic_roughness = true;
       auto& gpbr                           = gmaterial.pbr_metallic_roughness;
@@ -4800,7 +4800,7 @@ static bool save_gltf_scene(const string& filename, const scene_data& scene,
       gaccessor.component_type = cgltf_component_type_r_32u;
       gbuffer.size += gbufferview.size;
     };
-    for (auto idx = (size_t)0; idx < scene.shapes.size(); idx++) {
+    for (auto idx : range(scene.shapes.size())) {
       auto& shape               = scene.shapes[idx];
       auto& gbuffer             = cgltf.buffers[idx];
       shape_accessor_start[idx] = cgltf.accessors_count;
@@ -4819,10 +4819,11 @@ static bool save_gltf_scene(const string& filename, const scene_data& scene,
       add_element(cgltf, gbuffer, shape.points.size(), cgltf_type_scalar);
       add_element(cgltf, gbuffer, shape.lines.size(), cgltf_type_vec2);
       add_element(cgltf, gbuffer, shape.triangles.size(), cgltf_type_vec3);
-      add_element(cgltf, gbuffer, quads_to_triangles(shape.quads).size(), cgltf_type_vec3);
+      add_element(cgltf, gbuffer, quads_to_triangles(shape.quads).size(),
+          cgltf_type_vec3);
     }
   }
-  
+
   // meshes
   using mesh_key = pair<int, int>;
   struct mesh_hash {
@@ -4835,7 +4836,7 @@ static bool save_gltf_scene(const string& filename, const scene_data& scene,
   if (!scene.instances.empty()) {
     alloc_array(cgltf.meshes_count, cgltf.meshes, scene.instances.size());
     cgltf.meshes_count = 0;
-    for (auto idx = (size_t)0; idx < scene.instances.size(); idx++) {
+    for (auto idx : range(scene.instances.size())) {
       auto& instance = scene.instances[idx];
       if (mesh_map.find({instance.shape, instance.material}) != mesh_map.end())
         continue;
@@ -4898,16 +4899,16 @@ static bool save_gltf_scene(const string& filename, const scene_data& scene,
   if (!scene.cameras.empty() || !scene.instances.empty()) {
     alloc_array(cgltf.nodes_count, cgltf.nodes,
         scene.cameras.size() + scene.instances.size() + 1);
-    for (auto idx = (size_t)0; idx < scene.cameras.size(); idx++) {
+    for (auto idx : range(scene.cameras.size())) {
       auto& camera = scene.cameras[idx];
       auto& gnode  = cgltf.nodes[idx];
       gnode.name   = copy_string(get_camera_name(scene, camera));
       auto xform   = frame_to_mat(camera.frame);
       memcpy(gnode.matrix, &xform, sizeof(mat4f));
       gnode.has_matrix = true;
-      gnode.camera = cgltf.cameras + idx;
+      gnode.camera     = cgltf.cameras + idx;
     }
-    for (auto idx = (size_t)0; idx < scene.instances.size(); idx++) {
+    for (auto idx : range(scene.instances.size())) {
       auto& instance = scene.instances[idx];
       auto& gnode    = cgltf.nodes[idx + scene.cameras.size()];
       gnode.name     = copy_string(get_instance_name(scene, instance));
@@ -4921,7 +4922,7 @@ static bool save_gltf_scene(const string& filename, const scene_data& scene,
     auto& groot = cgltf.nodes[cgltf.nodes_count - 1];
     groot.name  = copy_string("root");
     alloc_array(groot.children_count, groot.children, cgltf.nodes_count - 1);
-    for (auto idx = (size_t)0; idx < cgltf.nodes_count - 1; idx++)
+    for (auto idx : range(cgltf.nodes_count - 1))
       groot.children[idx] = cgltf.nodes + idx;
     // scene
     alloc_array(cgltf.scenes_count, cgltf.scenes, 1);
@@ -4932,11 +4933,11 @@ static bool save_gltf_scene(const string& filename, const scene_data& scene,
   }
 
   // save gltf
-  auto options        = cgltf_options{};
+  auto options = cgltf_options{};
   memset(&options, 0, sizeof(options));
   options.memory.free = [](void*, void* ptr) { free(ptr); };
   cgltf.memory.free   = [](void*, void* ptr) { free(ptr); };
-  auto result = cgltf_write_file(&options, filename.c_str(), &cgltf);
+  auto result         = cgltf_write_file(&options, filename.c_str(), &cgltf);
   if (result != cgltf_result_success) {
     error = "cannot save " + filename;
     cgltf_free(&cgltf);
@@ -4982,7 +4983,8 @@ static bool save_gltf_scene(const string& filename, const scene_data& scene,
     // save textures
     if (!parallel_foreach(
             scene.textures, error, [&](auto& texture, string& error) {
-              auto path = "textures/" + get_texture_name(scene, texture) + ".png";
+              auto path = "textures/" + get_texture_name(scene, texture) +
+                          ".png";
               return save_texture(path_join(dirname, path), texture, error);
             }))
       return dependent_error();
