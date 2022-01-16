@@ -1511,8 +1511,8 @@ void trace_samples(trace_state& state, const scene_data& scene,
     const trace_params& params) {
   if (state.samples >= params.samples) return;
   if (params.noparallel) {
-    for (auto j = 0; j < state.height; j++) {
-      for (auto i = 0; i < state.width; i++) {
+    for (auto j : range(state.height)) {
+      for (auto i : range(state.width)) {
         trace_sample(state, scene, bvh, lights, i, j, params);
       }
     }

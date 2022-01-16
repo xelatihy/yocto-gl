@@ -274,8 +274,8 @@ image_data image_difference(
 }
 
 void set_region(image_data& image, const image_data& region, int x, int y) {
-  for (auto j = 0; j < region.height; j++) {
-    for (auto i = 0; i < region.width; i++) {
+  for (auto j : range(region.height)) {
+    for (auto i : range(region.width)) {
       image.pixels[(j + y) * image.width + (i + x)] =
           region.pixels[j * region.width + i];
     }
@@ -637,8 +637,8 @@ image_data add_border(
     const image_data& image, float width, const vec4f& color) {
   auto result = image;
   auto scale  = 1.0f / max(image.width, image.height);
-  for (auto j = 0; j < image.height; j++) {
-    for (auto i = 0; i < image.width; i++) {
+  for (auto j : range(image.height)) {
+    for (auto i : range(image.width)) {
       auto uv = vec2f{i * scale, j * scale};
       if (uv.x < width || uv.y < width || uv.x > image.width * scale - width ||
           uv.y > image.height * scale - width) {

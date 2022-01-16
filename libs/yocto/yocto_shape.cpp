@@ -550,8 +550,8 @@ static shape_data make_quads(
   shape.positions.resize((steps.x + 1) * (steps.y + 1));
   shape.normals.resize((steps.x + 1) * (steps.y + 1));
   shape.texcoords.resize((steps.x + 1) * (steps.y + 1));
-  for (auto j = 0; j <= steps.y; j++) {
-    for (auto i = 0; i <= steps.x; i++) {
+  for (auto j : range(steps.y + 1)) {
+    for (auto i : range(steps.x + 1)) {
       auto uv = vec2f{i / (float)steps.x, j / (float)steps.y};
       shape.positions[j * (steps.x + 1) + i] = {
           (2 * uv.x - 1) * scale.x, (2 * uv.y - 1) * scale.y, 0};
@@ -561,8 +561,8 @@ static shape_data make_quads(
   }
 
   shape.quads.resize(steps.x * steps.y);
-  for (auto j = 0; j < steps.y; j++) {
-    for (auto i = 0; i < steps.x; i++) {
+  for (auto j : range(steps.y)) {
+    for (auto i : range(steps.x)) {
       shape.quads[j * steps.x + i] = {j * (steps.x + 1) + i,
           j * (steps.x + 1) + i + 1, (j + 1) * (steps.x + 1) + i + 1,
           (j + 1) * (steps.x + 1) + i};
@@ -726,7 +726,7 @@ shape_data make_rect_stack(
     const vec3i& steps, const vec3f& scale, const vec2f& uvscale) {
   auto shape  = shape_data{};
   auto qshape = shape_data{};
-  for (auto i = 0; i <= steps.z; i++) {
+  for (auto i : range(steps.z + 1)) {
     qshape = make_rect({steps.x, steps.y}, {scale.x, scale.y}, uvscale);
     for (auto& p : qshape.positions)
       p.z = (-1 + 2 * (float)i / steps.z) * scale.z;
@@ -967,8 +967,8 @@ shape_data make_lines(const vec2i& steps, const vec2f& scale,
   shape.texcoords.resize((steps.x + 1) * steps.y);
   shape.radius.resize((steps.x + 1) * steps.y);
   if (steps.y > 1) {
-    for (auto j = 0; j < steps.y; j++) {
-      for (auto i = 0; i <= steps.x; i++) {
+    for (auto j : range(steps.y)) {
+      for (auto i : range(steps.x + 1)) {
         auto uv = vec2f{i / (float)steps.x, j / (float)(steps.y - 1)};
         shape.positions[j * (steps.x + 1) + i] = {
             (uv.x - 0.5f) * scale.x, (uv.y - 0.5f) * scale.y, 0};
@@ -978,7 +978,7 @@ shape_data make_lines(const vec2i& steps, const vec2f& scale,
       }
     }
   } else {
-    for (auto i = 0; i <= steps.x; i++) {
+    for (auto i : range(steps.x + 1)) {
       auto uv            = vec2f{i / (float)steps.x, 0};
       shape.positions[i] = {(uv.x - 0.5f) * scale.x, 0, 0};
       shape.normals[i]   = {1, 0, 0};
@@ -1285,7 +1285,7 @@ shape_data make_hair(const shape_data& base, const vec2i& steps,
     for (auto bidx = 0; bidx < (int)bpos.size(); bidx++) {
       cidx.push_back(0);
       auto cdist = flt_max;
-      for (auto c = 0; c < clump.y; c++) {
+      for (auto c : range(clump.y)) {
         auto d = length(bpos[bidx] - bpos[c]);
         if (d < cdist) {
           cdist       = d;
@@ -1349,7 +1349,7 @@ shape_data make_hair2(const shape_data& base, const vec2i& steps,
 
   auto shape = make_lines(steps, {1, 1}, {1, 1}, radius);
   auto rng   = make_rng(seed);
-  for (auto idx = 0; idx < steps.y; idx++) {
+  for (auto idx : range(steps.y)) {
     auto offset             = idx * (steps.x + 1);
     auto position           = bpositions[idx];
     auto direction          = bnormals[idx];
@@ -1374,8 +1374,8 @@ shape_data make_hair2(const shape_data& base, const vec2i& steps,
 shape_data make_heightfield(const vec2i& size, const vector<float>& height) {
   auto shape = make_recty({size.x - 1, size.y - 1},
       vec2f{(float)size.x, (float)size.y} / (float)max(size), {1, 1});
-  for (auto j = 0; j < size.y; j++)
-    for (auto i = 0; i < size.x; i++)
+  for (auto j : range(size.y))
+    for (auto i : range(size.x))
       shape.positions[j * size.x + i].y = height[j * size.x + i];
   shape.normals = quads_normals(shape.quads, shape.positions);
   return shape;
@@ -1383,8 +1383,8 @@ shape_data make_heightfield(const vec2i& size, const vector<float>& height) {
 shape_data make_heightfield(const vec2i& size, const vector<vec4f>& color) {
   auto shape = make_recty({size.x - 1, size.y - 1},
       vec2f{(float)size.x, (float)size.y} / (float)max(size), {1, 1});
-  for (auto j = 0; j < size.y; j++)
-    for (auto i = 0; i < size.x; i++)
+  for (auto j : range(size.y))
+    for (auto i : range(size.x))
       shape.positions[j * size.x + i].y = mean(xyz(color[j * size.x + i]));
   shape.normals = quads_normals(shape.quads, shape.positions);
   return shape;
@@ -2113,7 +2113,7 @@ static void update_bvh(bvh_tree& bvh, const vector<bbox3f>& bboxes) {
         node.bbox = merge(node.bbox, bvh.nodes[node.start + idx].bbox);
       }
     } else {
-      for (auto idx = 0; idx < node.num; idx++) {
+      for (auto idx : range(node.num)) {
         node.bbox = merge(node.bbox, bboxes[bvh.primitives[node.start + idx]]);
       }
     }
@@ -2279,7 +2279,7 @@ static bool intersect_elements_bvh(const bvh_tree& bvh,
         node_stack[node_cur++] = node.start + 0;
       }
     } else {
-      for (auto idx = 0; idx < node.num; idx++) {
+      for (auto idx : range(node.num)) {
         auto primitive = bvh.primitives[node.start + idx];
         if (intersect_element(primitive, ray, uv, distance)) {
           hit      = true;
@@ -2392,7 +2392,7 @@ static bool overlap_elements_bvh(const bvh_tree& bvh, Overlap&& overlap_element,
       node_stack[node_cur++] = node.start + 0;
       node_stack[node_cur++] = node.start + 1;
     } else {
-      for (auto idx = 0; idx < node.num; idx++) {
+      for (auto idx : range(node.num)) {
         auto primitive = bvh.primitives[node.start + idx];
         if (overlap_element(primitive, pos, max_distance, uv, distance)) {
           hit          = true;
@@ -3303,8 +3303,8 @@ void make_rect(vector<vec4i>& quads, vector<vec3f>& positions,
   positions.resize((steps.x + 1) * (steps.y + 1));
   normals.resize((steps.x + 1) * (steps.y + 1));
   texcoords.resize((steps.x + 1) * (steps.y + 1));
-  for (auto j = 0; j <= steps.y; j++) {
-    for (auto i = 0; i <= steps.x; i++) {
+  for (auto j : range(steps.y + 1)) {
+    for (auto i : range(steps.x + 1)) {
       auto uv = vec2f{i / (float)steps.x, j / (float)steps.y};
       positions[j * (steps.x + 1) + i] = {
           (2 * uv.x - 1) * scale.x, (2 * uv.y - 1) * scale.y, 0};
@@ -3314,8 +3314,8 @@ void make_rect(vector<vec4i>& quads, vector<vec3f>& positions,
   }
 
   quads.resize(steps.x * steps.y);
-  for (auto j = 0; j < steps.y; j++) {
-    for (auto i = 0; i < steps.x; i++) {
+  for (auto j : range(steps.y)) {
+    for (auto i : range(steps.x)) {
       quads[j * steps.x + i] = {j * (steps.x + 1) + i,
           j * (steps.x + 1) + i + 1, (j + 1) * (steps.x + 1) + i + 1,
           (j + 1) * (steps.x + 1) + i};
@@ -3463,7 +3463,7 @@ void make_rect_stack(vector<vec4i>& quads, vector<vec3f>& positions,
   auto qpositions     = vector<vec3f>{};
   auto qnormals       = vector<vec3f>{};
   auto qtexturecoords = vector<vec2f>{};
-  for (auto i = 0; i <= steps.z; i++) {
+  for (auto i : range(steps.z + 1)) {
     make_rect(qquads, qpositions, qnormals, qtexturecoords, {steps.x, steps.y},
         {scale.x, scale.y}, uvscale);
     for (auto& p : qpositions) p.z = (-1 + 2 * (float)i / steps.z) * scale.z;
@@ -3709,8 +3709,8 @@ void make_lines(vector<vec2i>& lines, vector<vec3f>& positions,
   texcoords.resize((steps.x + 1) * steps.y);
   radius.resize((steps.x + 1) * steps.y);
   if (steps.y > 1) {
-    for (auto j = 0; j < steps.y; j++) {
-      for (auto i = 0; i <= steps.x; i++) {
+    for (auto j : range(steps.y)) {
+      for (auto i : range(steps.x + 1)) {
         auto uv = vec2f{i / (float)steps.x, j / (float)(steps.y - 1)};
         positions[j * (steps.x + 1) + i] = {
             (uv.x - 0.5f) * size.x, (uv.y - 0.5f) * size.y, 0};
@@ -3720,7 +3720,7 @@ void make_lines(vector<vec2i>& lines, vector<vec3f>& positions,
       }
     }
   } else {
-    for (auto i = 0; i <= steps.x; i++) {
+    for (auto i : range(steps.x + 1)) {
       auto uv      = vec2f{i / (float)steps.x, 0};
       positions[i] = {(uv.x - 0.5f) * size.x, 0, 0};
       normals[i]   = {1, 0, 0};
@@ -4046,7 +4046,7 @@ void make_hair(vector<vec2i>& lines, vector<vec3f>& positions,
     for (auto bidx = 0; bidx < (int)bpos.size(); bidx++) {
       cidx.push_back(0);
       auto cdist = flt_max;
-      for (auto c = 0; c < clump.y; c++) {
+      for (auto c : range(clump.y)) {
         auto d = length(bpos[bidx] - bpos[c]);
         if (d < cdist) {
           cdist       = d;
@@ -4109,7 +4109,7 @@ void make_hair2(vector<vec2i>& lines, vector<vec3f>& positions,
   make_lines(
       lines, positions, normals, texcoords, radius, steps, {1, 1}, {1, 1}, rad);
   auto rng = make_rng(seed);
-  for (auto idx = 0; idx < steps.y; idx++) {
+  for (auto idx : range(steps.y)) {
     auto offset       = idx * (steps.x + 1);
     auto position     = bpositions[idx];
     auto direction    = bnormals[idx];
@@ -4152,8 +4152,8 @@ void make_heightfield(vector<vec4i>& quads, vector<vec3f>& positions,
     const vector<float>& height) {
   make_recty(quads, positions, normals, texcoords, size - 1,
       vec2f{(float)size.x, (float)size.y} / (float)max(size), {1, 1});
-  for (auto j = 0; j < size.y; j++)
-    for (auto i = 0; i < size.x; i++)
+  for (auto j : range(size.y))
+    for (auto i : range(size.x))
       positions[j * size.x + i].y = height[j * size.x + i];
   normals = quads_normals(quads, positions);
 }
@@ -4162,8 +4162,8 @@ void make_heightfield(vector<vec4i>& quads, vector<vec3f>& positions,
     const vector<vec4f>& color) {
   make_recty(quads, positions, normals, texcoords, size - 1,
       vec2f{(float)size.x, (float)size.y} / (float)max(size), {1, 1});
-  for (auto j = 0; j < size.y; j++)
-    for (auto i = 0; i < size.x; i++)
+  for (auto j : range(size.y))
+    for (auto i : range(size.x))
       positions[j * size.x + i].y = mean(xyz(color[j * size.x + i]));
   normals = quads_normals(quads, positions);
 }

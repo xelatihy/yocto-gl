@@ -4335,7 +4335,7 @@ static bool load_gltf_scene(
 
   // convert cameras
   auto cameras = vector<camera_data>{};
-  for (auto idx = 0; idx < cgltf.cameras_count; idx++) {
+  for (auto idx : range(cgltf.cameras_count)) {
     auto& gcamera = cgltf.cameras[idx];
     auto& camera  = cameras.emplace_back();
     if (gcamera.type == cgltf_camera_type_orthographic) {
@@ -4385,14 +4385,14 @@ static bool load_gltf_scene(
 
   // convert textures
   auto texture_paths = vector<string>{};
-  for (auto idx = 0; idx < cgltf.images_count; idx++) {
+  for (auto idx : range(cgltf.images_count)) {
     auto& gimage = cgltf.images[idx];
     scene.textures.emplace_back();
     texture_paths.push_back(replace(gimage.uri, "%20", " "));
   }
 
   // convert materials
-  for (auto idx = 0; idx < cgltf.materials_count; idx++) {
+  for (auto idx : range(cgltf.materials_count)) {
     auto& gmaterial   = cgltf.materials[idx];
     auto& material    = scene.materials.emplace_back();
     material.type     = material_type::gltfpbr;
@@ -4427,11 +4427,11 @@ static bool load_gltf_scene(
 
   // convert meshes
   auto mesh_primitives = vector<vector<instance_data>>{};
-  for (auto idx = 0; idx < cgltf.meshes_count; idx++) {
+  for (auto idx : range(cgltf.meshes_count)) {
     auto& gmesh      = cgltf.meshes[idx];
     auto& primitives = mesh_primitives.emplace_back();
     if (gmesh.primitives == nullptr) continue;
-    for (auto idx = 0; idx < gmesh.primitives_count; idx++) {
+    for (auto idx : range(gmesh.primitives_count)) {
       auto& gprimitive = gmesh.primitives[idx];
       if (gprimitive.attributes == nullptr) continue;
       auto& shape       = scene.shapes.emplace_back();
@@ -4440,7 +4440,7 @@ static bool load_gltf_scene(
       instance.material = gprimitive.material
                               ? (int)(gprimitive.material - cgltf.materials)
                               : -1;
-      for (auto idx = 0; idx < gprimitive.attributes_count; idx++) {
+      for (auto idx : range(gprimitive.attributes_count)) {
         auto& gattribute = gprimitive.attributes[idx];
         auto& gaccessor  = *gattribute.data;
         if (gaccessor.is_sparse) return unsupported_error("sparse accessor");
@@ -4579,7 +4579,7 @@ static bool load_gltf_scene(
   }
 
   // convert nodes
-  for (auto idx = 0; idx < cgltf.nodes_count; idx++) {
+  for (auto idx : range(cgltf.nodes_count)) {
     auto& gnode = cgltf.nodes[idx];
     if (gnode.camera != nullptr) {
       auto& camera = scene.cameras.emplace_back();

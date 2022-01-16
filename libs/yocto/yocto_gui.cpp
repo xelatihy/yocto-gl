@@ -479,7 +479,7 @@ void show_image_gui(const string& title, const vector<string>& names,
   auto displays  = vector<image_data>(images.size());
   auto exposures = vector<float>(images.size(), 0);
   auto filmics   = vector<bool>(images.size(), false);
-  for (auto idx = 0; idx < (int)images.size(); idx++) {
+  for (auto idx : range((int)images.size())) {
     displays[idx] = make_image(images[idx].width, images[idx].height, false);
     tonemap_image_mt(displays[idx], images[idx], exposures[idx], filmics[idx]);
   }

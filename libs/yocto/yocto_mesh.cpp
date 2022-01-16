@@ -4751,7 +4751,7 @@ static vector<mesh_point> de_casteljau_adaptive(
     result[k * 2 + 1] = split1;
   };
 
-  for (auto subdivision = 0; subdivision < params.subdivisions; subdivision++) {
+  for (auto subdivision : range(params.subdivisions)) {
     result.resize(segments.size() * 2);
     for (auto i = 0; i < (int)segments.size(); i++) {
       threads[i] = std::thread(f, i);
@@ -4772,7 +4772,7 @@ static vector<mesh_point> de_casteljau_uniform(
   auto segments = vector<spline_polygon>{control_points};
   auto result   = vector<spline_polygon>();
 
-  for (auto subdivision = 0; subdivision < params.subdivisions; subdivision++) {
+  for (auto subdivision : range(params.subdivisions)) {
     result.resize(segments.size() * 2);
     for (auto i = 0; i < (int)segments.size(); i++) {
       auto [split0, split1] = subdivide_bezier_polygon(
