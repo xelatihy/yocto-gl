@@ -2131,7 +2131,7 @@ static bool load_pbrt(const string& filename, pbrt_model& pbrt, string& error,
         ctx.stack.back().active_transform_start = true;
         ctx.stack.back().active_transform_end   = true;
       } else {
-        std::out_of_range{"invalid command"};
+        throw std::out_of_range{"invalid command"};
       }
     } else if (cmd == "Transform") {
       auto xf = array<float, 16>{};

@@ -4163,7 +4163,7 @@ static vector<float> funnel_double(
     auto a = points[i].pos;
     auto b = points[i + 1].pos;
     for (auto k = points[i].face; k < points[i + 1].face; k++) {
-      auto portal = portals[k];
+      auto& portal = portals[k];
       auto s = intersect_segments_double(a, b, portal.first, portal.second);
       report_floating_point(s);
       auto p = clamp(s, 0.0, 1.0);
