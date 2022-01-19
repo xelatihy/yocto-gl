@@ -1716,19 +1716,25 @@ vector<vec3f> align_vertices(
   for (auto& p : positions) bounds = merge(bounds, p);
   auto offset = vec3f{0, 0, 0};
   switch (alignment.x) {
+    case 0: break;
     case 1: offset.x = bounds.min.x; break;
     case 2: offset.x = (bounds.min.x + bounds.max.x) / 2; break;
     case 3: offset.x = bounds.max.x; break;
+    default: throw std::invalid_argument{"invalid alignment"};
   }
   switch (alignment.y) {
+    case 0: break;
     case 1: offset.y = bounds.min.y; break;
     case 2: offset.y = (bounds.min.y + bounds.max.y) / 2; break;
     case 3: offset.y = bounds.max.y; break;
+    default: throw std::invalid_argument{"invalid alignment"};
   }
   switch (alignment.z) {
+    case 0: break;
     case 1: offset.z = bounds.min.z; break;
     case 2: offset.z = (bounds.min.z + bounds.max.z) / 2; break;
     case 3: offset.z = bounds.max.z; break;
+    default: throw std::invalid_argument{"invalid alignment"};
   }
   auto aligned = positions;
   for (auto& p : aligned) p -= offset;
