@@ -4163,7 +4163,7 @@ static vector<float> funnel_double(
     auto a = points[i].pos;
     auto b = points[i + 1].pos;
     for (auto k = points[i].face; k < points[i + 1].face; k++) {
-      auto portal = portals[k];
+      auto& portal = portals[k];
       auto s = intersect_segments_double(a, b, portal.first, portal.second);
       report_floating_point(s);
       auto p = clamp(s, 0.0, 1.0);
@@ -5166,6 +5166,7 @@ static pair<bool, spline_polygon> handle_boundary(
             adjacencies, control_points[1], control_points[2],
             control_points[3], true);
       } break;
+
       case 1: {
         new_ones[0] = geodesic_lerp(solver, triangles, positions, adjacencies,
             control_points[0], control_points[1], 0.5);
@@ -5178,6 +5179,7 @@ static pair<bool, spline_polygon> handle_boundary(
             control_points[2], control_points[3], 0.5);
 
       } break;
+
       case 2: {
         new_ones[0] = geodesic_lerp(solver, triangles, positions, adjacencies,
             control_points[0], control_points[1], 0.25);
@@ -5189,7 +5191,6 @@ static pair<bool, spline_polygon> handle_boundary(
         new_ones[3] = lane_riesenfeld_regular(solver, triangles, positions,
             adjacencies, control_points[1], control_points[2],
             control_points[3]);
-
       } break;
 
       case 3: {
@@ -5203,8 +5204,9 @@ static pair<bool, spline_polygon> handle_boundary(
             control_points[3]);
         new_ones[3] = geodesic_lerp(solver, triangles, positions, adjacencies,
             control_points[2], control_points[3], 0.5);
-
       } break;
+
+      default: break;
     }
   } else {
     if (new_ones_entries.back() == pow((float)2, (float)k) + 2) {

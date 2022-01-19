@@ -457,10 +457,12 @@ bool load_image(const string& filename, image_data& image, string& error) {
 
   // conversion helpers
   auto from_linear = [](const float* pixels, int width, int height) {
+    if (pixels == nullptr) return vector<vec4f>{};
     return vector<vec4f>{
         (vec4f*)pixels, (vec4f*)pixels + (size_t)width * (size_t)height};
   };
   auto from_srgb = [](const byte* pixels, int width, int height) {
+    if (pixels == nullptr) return vector<vec4f>{};
     auto pixelsf = vector<vec4f>((size_t)width * (size_t)height);
     for (auto idx : range(pixelsf.size())) {
       pixelsf[idx] = byte_to_float(((vec4b*)pixels)[idx]);

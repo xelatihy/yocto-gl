@@ -1199,7 +1199,7 @@ static trace_result trace_furnace(const scene_data& scene, const trace_bvh& bvh,
 
     // prepare shading point
     auto outgoing = -ray.d;
-    auto instance = scene.instances[intersection.instance];
+    auto& instance = scene.instances[intersection.instance];
     auto element  = intersection.element;
     auto uv       = intersection.uv;
     auto position = eval_position(scene, instance, element, uv);
