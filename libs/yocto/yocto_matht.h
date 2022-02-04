@@ -362,34 +362,56 @@ inline vec<T, 4> quat_inverse(const vec<T, 4>& a);
 namespace yocto {
 
 // Small Fixed-size matrices stored in column major format.
-struct mat2f {
-  vec2f x = {1, 0};
-  vec2f y = {0, 1};
+template <typename T, int N>
+struct mat;
 
-  vec2f&       operator[](int i);
-  const vec2f& operator[](int i) const;
+// Small Fixed-size matrices stored in column major format.
+template <typename T>
+struct mat<T, 1> {
+  vec<T, 1> x = {1};
+
+  vec<T, 1>&       operator[](int i);
+  const vec<T, 1>& operator[](int i) const;
 };
 
 // Small Fixed-size matrices stored in column major format.
-struct mat3f {
-  vec3f x = {1, 0, 0};
-  vec3f y = {0, 1, 0};
-  vec3f z = {0, 0, 1};
+template <typename T>
+struct mat<T, 2> {
+  vec<T, 2> x = {1, 0};
+  vec<T, 2> y = {0, 1};
 
-  vec3f&       operator[](int i);
-  const vec3f& operator[](int i) const;
+  vec<T, 2>&       operator[](int i);
+  const vec<T, 2>& operator[](int i) const;
 };
 
 // Small Fixed-size matrices stored in column major format.
-struct mat4f {
-  vec4f x = {1, 0, 0, 0};
-  vec4f y = {0, 1, 0, 0};
-  vec4f z = {0, 0, 1, 0};
-  vec4f w = {0, 0, 0, 1};
+template <typename T>
+struct mat<T, 3> {
+  vec<T, 3> x = {1, 0, 0};
+  vec<T, 3> y = {0, 1, 0};
+  vec<T, 3> z = {0, 0, 1};
 
-  vec4f&       operator[](int i);
-  const vec4f& operator[](int i) const;
+  vec<T, 3>&       operator[](int i);
+  const vec<T, 3>& operator[](int i) const;
 };
+
+// Small Fixed-size matrices stored in column major format.
+template <typename T>
+struct mat<T, 4> {
+  vec<T, 4> x = {1, 0, 0, 0};
+  vec<T, 4> y = {0, 1, 0, 0};
+  vec<T, 4> z = {0, 0, 1, 0};
+  vec<T, 4> w = {0, 0, 0, 1};
+
+  vec<T, 4>&       operator[](int i);
+  const vec<T, 4>& operator[](int i) const;
+};
+
+// Matrix aliases
+using mat1f = mat<float, 1>;
+using mat2f = mat<float, 2>;
+using mat3f = mat<float, 3>;
+using mat4f = mat<float, 4>;
 
 // Identity matrices constants.
 inline const auto identity2x2f = mat2f{{1, 0}, {0, 1}};
@@ -398,77 +420,48 @@ inline const auto identity4x4f = mat4f{
     {1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
 
 // Matrix comparisons.
-inline bool operator==(const mat2f& a, const mat2f& b);
-inline bool operator!=(const mat2f& a, const mat2f& b);
+template <typename T, int N>
+inline bool operator==(const mat<T, N>& a, const mat<T, N>& b);
+template <typename T, int N>
+inline bool operator!=(const mat<T, N>& a, const mat<T, N>& b);
 
 // Matrix operations.
-inline mat2f operator+(const mat2f& a, const mat2f& b);
-inline mat2f operator*(const mat2f& a, float b);
-inline vec2f operator*(const mat2f& a, const vec2f& b);
-inline vec2f operator*(const vec2f& a, const mat2f& b);
-inline mat2f operator*(const mat2f& a, const mat2f& b);
+template <typename T, int N>
+inline mat<T, N> operator+(const mat<T, N>& a, const mat<T, N>& b);
+template <typename T, int N, typename T1>
+inline mat<T, N> operator*(const mat<T, N>& a, T1 b);
+template <typename T, int N>
+inline vec<T, N> operator*(const mat<T, N>& a, const vec<T, N>& b);
+template <typename T, int N>
+inline vec<T, N> operator*(const vec<T, N>& a, const mat<T, N>& b);
+template <typename T, int N>
+inline mat<T, N> operator*(const mat<T, N>& a, const mat<T, N>& b);
 
 // Matrix assignments.
-inline mat2f& operator+=(mat2f& a, const mat2f& b);
-inline mat2f& operator*=(mat2f& a, const mat2f& b);
-inline mat2f& operator*=(mat2f& a, float b);
+template <typename T, int N>
+inline mat<T, N>& operator+=(mat<T, N>& a, const mat<T, N>& b);
+template <typename T, int N>
+inline mat<T, N>& operator*=(mat<T, N>& a, const mat<T, N>& b);
+template <typename T, int N, typename T1>
+inline mat<T, N>& operator*=(mat<T, N>& a, T1 b);
 
 // Matrix diagonals and transposes.
-inline vec2f diagonal(const mat2f& a);
-inline mat2f transpose(const mat2f& a);
+template <typename T, int N>
+inline vec<T, N> diagonal(const mat<T, N>& a);
+template <typename T, int N>
+inline mat<T, N> transpose(const mat<T, N>& a);
 
 // Matrix adjoints, determinants and inverses.
-inline float determinant(const mat2f& a);
-inline mat2f adjoint(const mat2f& a);
-inline mat2f inverse(const mat2f& a);
-
-// Matrix comparisons.
-inline bool operator==(const mat3f& a, const mat3f& b);
-inline bool operator!=(const mat3f& a, const mat3f& b);
-
-// Matrix operations.
-inline mat3f operator+(const mat3f& a, const mat3f& b);
-inline mat3f operator*(const mat3f& a, float b);
-inline vec3f operator*(const mat3f& a, const vec3f& b);
-inline vec3f operator*(const vec3f& a, const mat3f& b);
-inline mat3f operator*(const mat3f& a, const mat3f& b);
-
-// Matrix assignments.
-inline mat3f& operator+=(mat3f& a, const mat3f& b);
-inline mat3f& operator*=(mat3f& a, const mat3f& b);
-inline mat3f& operator*=(mat3f& a, float b);
-
-// Matrix diagonals and transposes.
-inline vec3f diagonal(const mat3f& a);
-inline mat3f transpose(const mat3f& a);
-
-// Matrix adjoints, determinants and inverses.
-inline float determinant(const mat3f& a);
-inline mat3f adjoint(const mat3f& a);
-inline mat3f inverse(const mat3f& a);
+template <typename T, int N>
+inline T determinant(const mat<T, N>& a);
+template <typename T, int N>
+inline mat<T, N> adjoint(const mat<T, N>& a);
+template <typename T, int N>
+inline mat<T, N> inverse(const mat<T, N>& a);
 
 // Constructs a basis from a direction
-inline mat3f basis_fromz(const vec3f& v);
-
-// Matrix comparisons.
-inline bool operator==(const mat4f& a, const mat4f& b);
-inline bool operator!=(const mat4f& a, const mat4f& b);
-
-// Matrix operations.
-inline mat4f operator+(const mat4f& a, const mat4f& b);
-inline mat4f operator*(const mat4f& a, float b);
-inline vec4f operator*(const mat4f& a, const vec4f& b);
-inline vec4f operator*(const vec4f& a, const mat4f& b);
-inline mat4f operator*(const mat4f& a, const mat4f& b);
-
-// Matrix assignments.
-inline mat4f& operator+=(mat4f& a, const mat4f& b);
-inline mat4f& operator*=(mat4f& a, const mat4f& b);
-inline mat4f& operator*=(mat4f& a, float b);
-
-// Matrix diagonals and transposes.
-inline vec4f diagonal(const mat4f& a);
-inline mat4f transpose(const mat4f& a);
+template <typename T>
+inline mat<T, 3> basis_fromz(const vec<T, 3>& v);
 
 }  // namespace yocto
 
@@ -478,25 +471,35 @@ inline mat4f transpose(const mat4f& a);
 namespace yocto {
 
 // Rigid frames stored as a column-major affine transform matrix.
-struct frame2f {
-  vec2f x = {1, 0};
-  vec2f y = {0, 1};
-  vec2f o = {0, 0};
+template <typename T, int N>
+struct frame;
 
-  vec2f&       operator[](int i);
-  const vec2f& operator[](int i) const;
+// Rigid frames stored as a column-major affine transform matrix.
+template <typename T>
+struct frame<T, 2> {
+  vec<T, 2> x = {1, 0};
+  vec<T, 2> y = {0, 1};
+  vec<T, 2> o = {0, 0};
+
+  vec<T, 2>&       operator[](int i);
+  const vec<T, 2>& operator[](int i) const;
 };
 
 // Rigid frames stored as a column-major affine transform matrix.
-struct frame3f {
-  vec3f x = {1, 0, 0};
-  vec3f y = {0, 1, 0};
-  vec3f z = {0, 0, 1};
-  vec3f o = {0, 0, 0};
+template <typename T>
+struct frame<T, 3> {
+  vec<T, 3> x = {1, 0, 0};
+  vec<T, 3> y = {0, 1, 0};
+  vec<T, 3> z = {0, 0, 1};
+  vec<T, 3> o = {0, 0, 0};
 
-  vec3f&       operator[](int i);
-  const vec3f& operator[](int i) const;
+  vec<T, 3>&       operator[](int i);
+  const vec<T, 3>& operator[](int i) const;
 };
+
+// Frame aliases
+using frame2f = frame<float, 2>;
+using frame3f = frame<float, 3>;
 
 // Indentity frames.
 inline const auto identity2x3f = frame2f{{1, 0}, {0, 1}, {0, 0}};
@@ -504,52 +507,43 @@ inline const auto identity3x4f = frame3f{
     {1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}};
 
 // Frame properties
-inline mat2f rotation(const frame2f& a);
-inline vec2f translation(const frame2f& a);
+template <typename T, int N>
+inline mat<T, N> rotation(const frame<T, N>& a);
+template <typename T, int N>
+inline vec<T, N> translation(const frame<T, N>& a);
 
 // Frame construction
-inline frame2f make_frame(const mat2f& m, const vec2f& t);
+template <typename T, int N>
+inline frame<T, N> make_frame(const mat2f& m, const vec2f& t);
 
 // Conversion between frame and mat
-inline mat3f   frame_to_mat(const frame2f& f);
-inline frame2f mat_to_frame(const mat3f& ma);
+template <typename T, int N>
+inline mat<T, N + 1> frame_to_mat(const frame<T, N>& f);
+template <typename T, int N>
+inline frame<T, N - 1> mat_to_frame(const mat<T, N>& ma);
 
 // Frame comparisons.
-inline bool operator==(const frame2f& a, const frame2f& b);
-inline bool operator!=(const frame2f& a, const frame2f& b);
+template <typename T, int N>
+inline bool operator==(const frame<T, N>& a, const frame<T, N>& b);
+template <typename T, int N>
+inline bool operator!=(const frame<T, N>& a, const frame<T, N>& b);
 
 // Frame composition, equivalent to affine matrix product.
-inline frame2f  operator*(const frame2f& a, const frame2f& b);
-inline frame2f& operator*=(frame2f& a, const frame2f& b);
+template <typename T, int N>
+inline frame<T, N> operator*(const frame<T, N>& a, const frame<T, N>& b);
+template <typename T, int N>
+inline frame<T, N>& operator*=(frame<T, N>& a, const frame<T, N>& b);
 
 // Frame inverse, equivalent to rigid affine inverse.
-inline frame2f inverse(const frame2f& a, bool non_rigid = false);
-
-// Frame properties
-inline mat3f rotation(const frame3f& a);
-inline vec3f translation(const frame3f& a);
-
-// Frame construction
-inline frame3f make_frame(const mat3f& m, const vec3f& t);
-
-// Conversion between frame and mat
-inline mat4f   frame_to_mat(const frame3f& f);
-inline frame3f mat_to_frame(const mat4f& m);
-
-// Frame comparisons.
-inline bool operator==(const frame3f& a, const frame3f& b);
-inline bool operator!=(const frame3f& a, const frame3f& b);
-
-// Frame composition, equivalent to affine matrix product.
-inline frame3f  operator*(const frame3f& a, const frame3f& b);
-inline frame3f& operator*=(frame3f& a, const frame3f& b);
-
-// Frame inverse, equivalent to rigid affine inverse.
-inline frame3f inverse(const frame3f& a, bool non_rigid = false);
+template <typename T, int N>
+inline frame<T, N> inverse(const frame<T, N>& a, bool non_rigid = false);
 
 // Frame construction from axis.
-inline frame3f frame_fromz(const vec3f& o, const vec3f& v);
-inline frame3f frame_fromzx(const vec3f& o, const vec3f& z_, const vec3f& x_);
+template <typename T>
+inline frame<T, 3> frame_fromz(const vec<T, 3>& o, const vec<T, 3>& v);
+template <typename T, int N>
+inline frame<T, 3> frame_fromzx(
+    const vec<T, 3>& o, const vec<T, 3>& z_, const vec<T, 3>& x_);
 
 }  // namespace yocto
 
@@ -1468,433 +1462,225 @@ inline vec<T, 4> quat_inverse(const vec<T, 4>& a) {
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// INTEGER VECTORS
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Vector sequence operations.
-inline int        size(const vec2i& a) { return 2; }
-inline const int* begin(const vec2i& a) { return &a.x; }
-inline const int* end(const vec2i& a) { return &a.x + 2; }
-inline int*       begin(vec2i& a) { return &a.x; }
-inline int*       end(vec2i& a) { return &a.x + 2; }
-inline const int* data(const vec2i& a) { return &a.x; }
-inline int*       data(vec2i& a) { return &a.x; }
-
-// Vector comparison operations.
-inline bool operator==(const vec2i& a, const vec2i& b) {
-  return a.x == b.x && a.y == b.y;
-}
-inline bool operator!=(const vec2i& a, const vec2i& b) {
-  return a.x != b.x || a.y != b.y;
-}
-
-// Vector operations.
-inline vec2i operator+(const vec2i& a) { return a; }
-inline vec2i operator-(const vec2i& a) { return {-a.x, -a.y}; }
-inline vec2i operator+(const vec2i& a, const vec2i& b) {
-  return {a.x + b.x, a.y + b.y};
-}
-inline vec2i operator+(const vec2i& a, int b) { return {a.x + b, a.y + b}; }
-inline vec2i operator+(int a, const vec2i& b) { return {a + b.x, a + b.y}; }
-inline vec2i operator-(const vec2i& a, const vec2i& b) {
-  return {a.x - b.x, a.y - b.y};
-}
-inline vec2i operator-(const vec2i& a, int b) { return {a.x - b, a.y - b}; }
-inline vec2i operator-(int a, const vec2i& b) { return {a - b.x, a - b.y}; }
-inline vec2i operator*(const vec2i& a, const vec2i& b) {
-  return {a.x * b.x, a.y * b.y};
-}
-inline vec2i operator*(const vec2i& a, int b) { return {a.x * b, a.y * b}; }
-inline vec2i operator*(int a, const vec2i& b) { return {a * b.x, a * b.y}; }
-inline vec2i operator/(const vec2i& a, const vec2i& b) {
-  return {a.x / b.x, a.y / b.y};
-}
-inline vec2i operator/(const vec2i& a, int b) { return {a.x / b, a.y / b}; }
-inline vec2i operator/(int a, const vec2i& b) { return {a / b.x, a / b.y}; }
-
-// Vector assignments
-inline vec2i& operator+=(vec2i& a, const vec2i& b) { return a = a + b; }
-inline vec2i& operator+=(vec2i& a, int b) { return a = a + b; }
-inline vec2i& operator-=(vec2i& a, const vec2i& b) { return a = a - b; }
-inline vec2i& operator-=(vec2i& a, int b) { return a = a - b; }
-inline vec2i& operator*=(vec2i& a, const vec2i& b) { return a = a * b; }
-inline vec2i& operator*=(vec2i& a, int b) { return a = a * b; }
-inline vec2i& operator/=(vec2i& a, const vec2i& b) { return a = a / b; }
-inline vec2i& operator/=(vec2i& a, int b) { return a = a / b; }
-
-// Max element and clamp.
-inline vec2i max(const vec2i& a, int b) { return {max(a.x, b), max(a.y, b)}; }
-inline vec2i min(const vec2i& a, int b) { return {min(a.x, b), min(a.y, b)}; }
-inline vec2i max(const vec2i& a, const vec2i& b) {
-  return {max(a.x, b.x), max(a.y, b.y)};
-}
-inline vec2i min(const vec2i& a, const vec2i& b) {
-  return {min(a.x, b.x), min(a.y, b.y)};
-}
-inline vec2i clamp(const vec2i& x, int min, int max) {
-  return {clamp(x.x, min, max), clamp(x.y, min, max)};
-}
-
-inline int max(const vec2i& a) { return max(a.x, a.y); }
-inline int min(const vec2i& a) { return min(a.x, a.y); }
-inline int sum(const vec2i& a) { return a.x + a.y; }
-
-// Functions applied to vector elements
-inline vec2i abs(const vec2i& a) { return {abs(a.x), abs(a.y)}; }
-inline void  swap(vec2i& a, vec2i& b) { std::swap(a, b); }
-
-// Vector sequence operations.
-inline int        size(const vec3i& a) { return 3; }
-inline const int* begin(const vec3i& a) { return &a.x; }
-inline const int* end(const vec3i& a) { return &a.x + 3; }
-inline int*       begin(vec3i& a) { return &a.x; }
-inline int*       end(vec3i& a) { return &a.x + 3; }
-inline const int* data(const vec3i& a) { return &a.x; }
-inline int*       data(vec3i& a) { return &a.x; }
-
-// Vector comparison operations.
-inline bool operator==(const vec3i& a, const vec3i& b) {
-  return a.x == b.x && a.y == b.y && a.z == b.z;
-}
-inline bool operator!=(const vec3i& a, const vec3i& b) {
-  return a.x != b.x || a.y != b.y || a.z != b.z;
-}
-
-// Vector operations.
-inline vec3i operator+(const vec3i& a) { return a; }
-inline vec3i operator-(const vec3i& a) { return {-a.x, -a.y, -a.z}; }
-inline vec3i operator+(const vec3i& a, const vec3i& b) {
-  return {a.x + b.x, a.y + b.y, a.z + b.z};
-}
-inline vec3i operator+(const vec3i& a, int b) {
-  return {a.x + b, a.y + b, a.z + b};
-}
-inline vec3i operator+(int a, const vec3i& b) {
-  return {a + b.x, a + b.y, a + b.z};
-}
-inline vec3i operator-(const vec3i& a, const vec3i& b) {
-  return {a.x - b.x, a.y - b.y, a.z - b.z};
-}
-inline vec3i operator-(const vec3i& a, int b) {
-  return {a.x - b, a.y - b, a.z - b};
-}
-inline vec3i operator-(int a, const vec3i& b) {
-  return {a - b.x, a - b.y, a - b.z};
-}
-inline vec3i operator*(const vec3i& a, const vec3i& b) {
-  return {a.x * b.x, a.y * b.y, a.z * b.z};
-}
-inline vec3i operator*(const vec3i& a, int b) {
-  return {a.x * b, a.y * b, a.z * b};
-}
-inline vec3i operator*(int a, const vec3i& b) {
-  return {a * b.x, a * b.y, a * b.z};
-}
-inline vec3i operator/(const vec3i& a, const vec3i& b) {
-  return {a.x / b.x, a.y / b.y, a.z / b.z};
-}
-inline vec3i operator/(const vec3i& a, int b) {
-  return {a.x / b, a.y / b, a.z / b};
-}
-inline vec3i operator/(int a, const vec3i& b) {
-  return {a / b.x, a / b.y, a / b.z};
-}
-
-// Vector assignments
-inline vec3i& operator+=(vec3i& a, const vec3i& b) { return a = a + b; }
-inline vec3i& operator+=(vec3i& a, int b) { return a = a + b; }
-inline vec3i& operator-=(vec3i& a, const vec3i& b) { return a = a - b; }
-inline vec3i& operator-=(vec3i& a, int b) { return a = a - b; }
-inline vec3i& operator*=(vec3i& a, const vec3i& b) { return a = a * b; }
-inline vec3i& operator*=(vec3i& a, int b) { return a = a * b; }
-inline vec3i& operator/=(vec3i& a, const vec3i& b) { return a = a / b; }
-inline vec3i& operator/=(vec3i& a, int b) { return a = a / b; }
-
-// Max element and clamp.
-inline vec3i max(const vec3i& a, int b) {
-  return {max(a.x, b), max(a.y, b), max(a.z, b)};
-}
-inline vec3i min(const vec3i& a, int b) {
-  return {min(a.x, b), min(a.y, b), min(a.z, b)};
-}
-inline vec3i max(const vec3i& a, const vec3i& b) {
-  return {max(a.x, b.x), max(a.y, b.y), max(a.z, b.z)};
-}
-inline vec3i min(const vec3i& a, const vec3i& b) {
-  return {min(a.x, b.x), min(a.y, b.y), min(a.z, b.z)};
-}
-inline vec3i clamp(const vec3i& x, int min, int max) {
-  return {clamp(x.x, min, max), clamp(x.y, min, max), clamp(x.z, min, max)};
-}
-
-inline int max(const vec3i& a) { return max(max(a.x, a.y), a.z); }
-inline int min(const vec3i& a) { return min(min(a.x, a.y), a.z); }
-inline int sum(const vec3i& a) { return a.x + a.y + a.z; }
-
-// Functions applied to vector elements
-inline vec3i abs(const vec3i& a) { return {abs(a.x), abs(a.y), abs(a.z)}; }
-inline void  swap(vec3i& a, vec3i& b) { std::swap(a, b); }
-
-// Vector sequence operations.
-inline int        size(const vec4i& a) { return 4; }
-inline const int* begin(const vec4i& a) { return &a.x; }
-inline const int* end(const vec4i& a) { return &a.x + 4; }
-inline int*       begin(vec4i& a) { return &a.x; }
-inline int*       end(vec4i& a) { return &a.x + 4; }
-inline const int* data(const vec4i& a) { return &a.x; }
-inline int*       data(vec4i& a) { return &a.x; }
-
-// Vector comparison operations.
-inline bool operator==(const vec4i& a, const vec4i& b) {
-  return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
-}
-inline bool operator!=(const vec4i& a, const vec4i& b) {
-  return a.x != b.x || a.y != b.y || a.z != b.z || a.w != b.w;
-}
-
-// Vector operations.
-inline vec4i operator+(const vec4i& a) { return a; }
-inline vec4i operator-(const vec4i& a) { return {-a.x, -a.y, -a.z, -a.w}; }
-inline vec4i operator+(const vec4i& a, const vec4i& b) {
-  return {a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w};
-}
-inline vec4i operator+(const vec4i& a, int b) {
-  return {a.x + b, a.y + b, a.z + b, a.w + b};
-}
-inline vec4i operator+(int a, const vec4i& b) {
-  return {a + b.x, a + b.y, a + b.z, a + b.w};
-}
-inline vec4i operator-(const vec4i& a, const vec4i& b) {
-  return {a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w};
-}
-inline vec4i operator-(const vec4i& a, int b) {
-  return {a.x - b, a.y - b, a.z - b, a.w - b};
-}
-inline vec4i operator-(int a, const vec4i& b) {
-  return {a - b.x, a - b.y, a - b.z, a - b.w};
-}
-inline vec4i operator*(const vec4i& a, const vec4i& b) {
-  return {a.x * b.x, a.y * b.y, a.z * b.z, a.w * b.w};
-}
-inline vec4i operator*(const vec4i& a, int b) {
-  return {a.x * b, a.y * b, a.z * b, a.w * b};
-}
-inline vec4i operator*(int a, const vec4i& b) {
-  return {a * b.x, a * b.y, a * b.z, a * b.w};
-}
-inline vec4i operator/(const vec4i& a, const vec4i& b) {
-  return {a.x / b.x, a.y / b.y, a.z / b.z, a.w / b.w};
-}
-inline vec4i operator/(const vec4i& a, int b) {
-  return {a.x / b, a.y / b, a.z / b, a.w / b};
-}
-inline vec4i operator/(int a, const vec4i& b) {
-  return {a / b.x, a / b.y, a / b.z, a / b.w};
-}
-
-// Vector assignments
-inline vec4i& operator+=(vec4i& a, const vec4i& b) { return a = a + b; }
-inline vec4i& operator+=(vec4i& a, int b) { return a = a + b; }
-inline vec4i& operator-=(vec4i& a, const vec4i& b) { return a = a - b; }
-inline vec4i& operator-=(vec4i& a, int b) { return a = a - b; }
-inline vec4i& operator*=(vec4i& a, const vec4i& b) { return a = a * b; }
-inline vec4i& operator*=(vec4i& a, int b) { return a = a * b; }
-inline vec4i& operator/=(vec4i& a, const vec4i& b) { return a = a / b; }
-inline vec4i& operator/=(vec4i& a, int b) { return a = a / b; }
-
-// Max element and clamp.
-inline vec4i max(const vec4i& a, int b) {
-  return {max(a.x, b), max(a.y, b), max(a.z, b), max(a.w, b)};
-}
-inline vec4i min(const vec4i& a, int b) {
-  return {min(a.x, b), min(a.y, b), min(a.z, b), min(a.w, b)};
-}
-inline vec4i max(const vec4i& a, const vec4i& b) {
-  return {max(a.x, b.x), max(a.y, b.y), max(a.z, b.z), max(a.w, b.w)};
-}
-inline vec4i min(const vec4i& a, const vec4i& b) {
-  return {min(a.x, b.x), min(a.y, b.y), min(a.z, b.z), min(a.w, b.w)};
-}
-inline vec4i clamp(const vec4i& x, int min, int max) {
-  return {clamp(x.x, min, max), clamp(x.y, min, max), clamp(x.z, min, max),
-      clamp(x.w, min, max)};
-}
-
-inline int max(const vec4i& a) { return max(max(max(a.x, a.y), a.z), a.w); }
-inline int min(const vec4i& a) { return min(min(min(a.x, a.y), a.z), a.w); }
-inline int sum(const vec4i& a) { return a.x + a.y + a.z + a.w; }
-
-// Functions applied to vector elements
-inline vec4i abs(const vec4i& a) {
-  return {abs(a.x), abs(a.y), abs(a.z), abs(a.w)};
-}
-inline void swap(vec4i& a, vec4i& b) { std::swap(a, b); }
-
-// Vector comparison operations.
-inline bool operator==(const vec4b& a, const vec4b& b) {
-  return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
-}
-inline bool operator!=(const vec4b& a, const vec4b& b) {
-  return a.x != b.x || a.y != b.y || a.z != b.z || a.w != b.w;
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
 // MATRICES
 // -----------------------------------------------------------------------------
 namespace yocto {
 
 // Small Fixed-size matrices stored in column major format.
-inline vec2f& mat2f::operator[](int i) { return (&x)[i]; }
-inline const vec2f& mat2f::operator[](int i) const { return (&x)[i]; }
+template <typename T>
+inline vec<T, 1>& mat<T, 1>::operator[](int i) {
+  return (&x)[i];
+}
+template <typename T>
+inline const vec<T, 1>& mat<T, 1>::operator[](int i) const {
+  return (&x)[i];
+}
 
 // Small Fixed-size matrices stored in column major format.
-inline vec3f& mat3f::operator[](int i) { return (&x)[i]; }
-inline const vec3f& mat3f::operator[](int i) const { return (&x)[i]; }
+template <typename T>
+inline vec<T, 2>& mat<T, 2>::operator[](int i) {
+  return (&x)[i];
+}
+template <typename T>
+inline const vec<T, 2>& mat<T, 2>::operator[](int i) const {
+  return (&x)[i];
+}
 
 // Small Fixed-size matrices stored in column major format.
-inline vec4f& mat4f::operator[](int i) { return (&x)[i]; }
-inline const vec4f& mat4f::operator[](int i) const { return (&x)[i]; }
-
-// Matrix comparisons.
-inline bool operator==(const mat2f& a, const mat2f& b) {
-  return a.x == b.x && a.y == b.y;
+template <typename T>
+inline vec<T, 3>& mat<T, 3>::operator[](int i) {
+  return (&x)[i];
 }
-inline bool operator!=(const mat2f& a, const mat2f& b) { return !(a == b); }
-
-// Matrix operations.
-inline mat2f operator+(const mat2f& a, const mat2f& b) {
-  return {a.x + b.x, a.y + b.y};
-}
-inline mat2f operator*(const mat2f& a, float b) { return {a.x * b, a.y * b}; }
-inline vec2f operator*(const mat2f& a, const vec2f& b) {
-  return a.x * b.x + a.y * b.y;
-}
-inline vec2f operator*(const vec2f& a, const mat2f& b) {
-  return {dot(a, b.x), dot(a, b.y)};
-}
-inline mat2f operator*(const mat2f& a, const mat2f& b) {
-  return {a * b.x, a * b.y};
+template <typename T>
+inline const vec<T, 3>& mat<T, 3>::operator[](int i) const {
+  return (&x)[i];
 }
 
-// Matrix assignments.
-inline mat2f& operator+=(mat2f& a, const mat2f& b) { return a = a + b; }
-inline mat2f& operator*=(mat2f& a, const mat2f& b) { return a = a * b; }
-inline mat2f& operator*=(mat2f& a, float b) { return a = a * b; }
-
-// Matrix diagonals and transposes.
-inline vec2f diagonal(const mat2f& a) { return {a.x.x, a.y.y}; }
-inline mat2f transpose(const mat2f& a) {
-  return {{a.x.x, a.y.x}, {a.x.y, a.y.y}};
+// Small Fixed-size matrices stored in column major format.
+template <typename T>
+inline vec<T, 4>& mat<T, 4>::operator[](int i) {
+  return (&x)[i];
 }
-
-// Matrix adjoints, determinants and inverses.
-inline float determinant(const mat2f& a) { return cross(a.x, a.y); }
-inline mat2f adjoint(const mat2f& a) {
-  return {{a.y.y, -a.x.y}, {-a.y.x, a.x.x}};
-}
-inline mat2f inverse(const mat2f& a) {
-  return adjoint(a) * (1 / determinant(a));
+template <typename T>
+inline const vec<T, 4>& mat<T, 4>::operator[](int i) const {
+  return (&x)[i];
 }
 
 // Matrix comparisons.
-inline bool operator==(const mat3f& a, const mat3f& b) {
-  return a.x == b.x && a.y == b.y && a.z == b.z;
+template <typename T, int N>
+inline bool operator==(const mat<T, N>& a, const mat<T, N>& b) {
+  if constexpr (N == 1) {
+    return a.x == b.x;
+  } else if constexpr (N == 2) {
+    return a.x == b.x && a.y == b.y;
+  } else if constexpr (N == 3) {
+    return a.x == b.x && a.y == b.y && a.z == b.z;
+  } else if constexpr (N == 4) {
+    return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
+  }
 }
-inline bool operator!=(const mat3f& a, const mat3f& b) { return !(a == b); }
+template <typename T, int N>
+inline bool operator!=(const mat<T, N>& a, const mat<T, N>& b) {
+  return !(a == b);
+}
 
 // Matrix operations.
-inline mat3f operator+(const mat3f& a, const mat3f& b) {
-  return {a.x + b.x, a.y + b.y, a.z + b.z};
+template <typename T, int N>
+inline mat<T, N> operator+(const mat<T, N>& a, const mat<T, N>& b) {
+  if constexpr (N == 1) {
+    return {a.x + b.x};
+  } else if constexpr (N == 2) {
+    return {a.x + b.x, a.y + b.y};
+  } else if constexpr (N == 3) {
+    return {a.x + b.x, a.y + b.y, a.z + b.z};
+  } else if constexpr (N == 4) {
+    return {a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w};
+  }
 }
-inline mat3f operator*(const mat3f& a, float b) {
-  return {a.x * b, a.y * b, a.z * b};
+template <typename T, int N, typename T1>
+inline mat<T, N> operator*(const mat<T, N>& a, T1 b) {
+  if constexpr (N == 1) {
+    return {a.x * b};
+  } else if constexpr (N == 2) {
+    return {a.x * b, a.y * b};
+  } else if constexpr (N == 3) {
+    return {a.x * b, a.y * b, a.z * b};
+  } else if constexpr (N == 4) {
+    return {a.x * b, a.y * b, a.z * b, a.w * b};
+  }
 }
-inline vec3f operator*(const mat3f& a, const vec3f& b) {
-  return a.x * b.x + a.y * b.y + a.z * b.z;
+template <typename T, int N>
+inline vec<T, N> operator*(const mat<T, N>& a, const vec<T, N>& b) {
+  if constexpr (N == 1) {
+    return a.x * b.x;
+  } else if constexpr (N == 2) {
+    return a.x * b.x + a.y * b.y;
+  } else if constexpr (N == 3) {
+    return a.x * b.x + a.y * b.y + a.z * b.z;
+  } else if constexpr (N == 4) {
+    return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
+  }
 }
-inline vec3f operator*(const vec3f& a, const mat3f& b) {
-  return {dot(a, b.x), dot(a, b.y), dot(a, b.z)};
+template <typename T, int N>
+inline vec<T, N> operator*(const vec<T, N>& a, const mat<T, N>& b) {
+  if constexpr (N == 1) {
+    return {dot(a, b.x)};
+  } else if constexpr (N == 2) {
+    return {dot(a, b.x), dot(a, b.y)};
+  } else if constexpr (N == 3) {
+    return {dot(a, b.x), dot(a, b.y), dot(a, b.z)};
+  } else if constexpr (N == 4) {
+    return {dot(a, b.x), dot(a, b.y), dot(a, b.z), dot(a, b.w)};
+  }
 }
-inline mat3f operator*(const mat3f& a, const mat3f& b) {
-  return {a * b.x, a * b.y, a * b.z};
+template <typename T, int N>
+inline mat<T, N> operator*(const mat<T, N>& a, const mat<T, N>& b) {
+  if constexpr (N == 1) {
+    return {a * b.x};
+  } else if constexpr (N == 2) {
+    return {a * b.x, a * b.y};
+  } else if constexpr (N == 3) {
+    return {a * b.x, a * b.y, a * b.z};
+  } else if constexpr (N == 4) {
+    return {a * b.x, a * b.y, a * b.z, a * b.w};
+  }
 }
 
 // Matrix assignments.
-inline mat3f& operator+=(mat3f& a, const mat3f& b) { return a = a + b; }
-inline mat3f& operator*=(mat3f& a, const mat3f& b) { return a = a * b; }
-inline mat3f& operator*=(mat3f& a, float b) { return a = a * b; }
+template <typename T, int N>
+inline mat<T, N>& operator+=(mat<T, N>& a, const mat<T, N>& b) {
+  return a = a + b;
+}
+template <typename T, int N>
+inline mat<T, N>& operator*=(mat<T, N>& a, const mat<T, N>& b) {
+  return a = a * b;
+}
+template <typename T, int N, typename T1>
+inline mat<T, N>& operator*=(mat<T, N>& a, T1 b) {
+  return a = a * b;
+}
 
 // Matrix diagonals and transposes.
-inline vec3f diagonal(const mat3f& a) { return {a.x.x, a.y.y, a.z.z}; }
-inline mat3f transpose(const mat3f& a) {
-  return {
-      {a.x.x, a.y.x, a.z.x},
-      {a.x.y, a.y.y, a.z.y},
-      {a.x.z, a.y.z, a.z.z},
-  };
+template <typename T, int N>
+inline vec<T, N> diagonal(const mat<T, N>& a) {
+  if constexpr (N == 1) {
+    return {a.x.x};
+  } else if constexpr (N == 2) {
+    return {a.x.x, a.y.y};
+  } else if constexpr (N == 3) {
+    return {a.x.x, a.y.y, a.z.z};
+  } else if constexpr (N == 4) {
+    return {a.x.x, a.y.y, a.z.z, a.w.w};
+  }
+}
+template <typename T, int N>
+inline mat<T, N> transpose(const mat<T, N>& a) {
+  if constexpr (N == 1) {
+    return {{a.x.x}};
+  } else if constexpr (N == 2) {
+    return {{a.x.x, a.y.x}, {a.x.y, a.y.y}};
+  } else if constexpr (N == 3) {
+    return {
+        {a.x.x, a.y.x, a.z.x},
+        {a.x.y, a.y.y, a.z.y},
+        {a.x.z, a.y.z, a.z.z},
+    };
+  } else if constexpr (N == 4) {
+    return {
+        {a.x.x, a.y.x, a.z.x, a.w.x},
+        {a.x.y, a.y.y, a.z.y, a.w.y},
+        {a.x.z, a.y.z, a.z.z, a.w.z},
+        {a.x.w, a.y.w, a.z.w, a.w.w},
+    };
+  }
 }
 
 // Matrix adjoints, determinants and inverses.
-inline float determinant(const mat3f& a) { return dot(a.x, cross(a.y, a.z)); }
-inline mat3f adjoint(const mat3f& a) {
-  return transpose(mat3f{cross(a.y, a.z), cross(a.z, a.x), cross(a.x, a.y)});
+template <typename T, int N>
+inline T determinant(const mat<T, N>& a) {
+  if constexpr (N == 1) {
+    return a.x;
+  } else if constexpr (N == 2) {
+    return cross(a.x, a.y);
+  } else if constexpr (N == 3) {
+    return dot(a.x, cross(a.y, a.z));
+  } else if constexpr (N == 4) {
+    return 0;  // TODO
+  }
 }
-inline mat3f inverse(const mat3f& a) {
+template <typename T, int N>
+inline mat<T, N> adjoint(const mat<T, N>& a) {
+  if constexpr (N == 1) {
+    return {{a.x.x}};
+  } else if constexpr (N == 2) {
+    return {{a.y.y, -a.x.y}, {-a.y.x, a.x.x}};
+  } else if constexpr (N == 3) {
+    return transpose(mat3f{cross(a.y, a.z), cross(a.z, a.x), cross(a.x, a.y)});
+  } else if constexpr (N == 4) {
+    return {};  // TODO
+  }
+}
+template <typename T, int N>
+inline mat<T, N> inverse(const mat<T, N>& a) {
   return adjoint(a) * (1 / determinant(a));
 }
 
 // Constructs a basis from a direction
-inline mat3f basis_fromz(const vec3f& v) {
+template <typename T>
+inline mat<T, 3> basis_fromz(const vec<T, 3>& v) {
   // https://graphics.pixar.com/library/OrthonormalB/paper.pdf
-  auto z    = normalize(v);
-  auto sign = copysignf(1.0f, z.z);
-  auto a    = -1.0f / (sign + z.z);
-  auto b    = z.x * z.y * a;
-  auto x    = vec3f{1.0f + sign * z.x * z.x * a, sign * b, -sign * z.x};
-  auto y    = vec3f{b, sign + z.y * z.y * a, -z.y};
-  return {x, y, z};
-}
-
-// Matrix comparisons.
-inline bool operator==(const mat4f& a, const mat4f& b) {
-  return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
-}
-inline bool operator!=(const mat4f& a, const mat4f& b) { return !(a == b); }
-
-// Matrix operations.
-inline mat4f operator+(const mat4f& a, const mat4f& b) {
-  return {a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w};
-}
-inline mat4f operator*(const mat4f& a, float b) {
-  return {a.x * b, a.y * b, a.z * b, a.w * b};
-}
-inline vec4f operator*(const mat4f& a, const vec4f& b) {
-  return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
-}
-inline vec4f operator*(const vec4f& a, const mat4f& b) {
-  return {dot(a, b.x), dot(a, b.y), dot(a, b.z), dot(a, b.w)};
-}
-inline mat4f operator*(const mat4f& a, const mat4f& b) {
-  return {a * b.x, a * b.y, a * b.z, a * b.w};
-}
-
-// Matrix assignments.
-inline mat4f& operator+=(mat4f& a, const mat4f& b) { return a = a + b; }
-inline mat4f& operator*=(mat4f& a, const mat4f& b) { return a = a * b; }
-inline mat4f& operator*=(mat4f& a, float b) { return a = a * b; }
-
-// Matrix diagonals and transposes.
-inline vec4f diagonal(const mat4f& a) { return {a.x.x, a.y.y, a.z.z, a.w.w}; }
-inline mat4f transpose(const mat4f& a) {
-  return {
-      {a.x.x, a.y.x, a.z.x, a.w.x},
-      {a.x.y, a.y.y, a.z.y, a.w.y},
-      {a.x.z, a.y.z, a.z.z, a.w.z},
-      {a.x.w, a.y.w, a.z.w, a.w.w},
-  };
+  if constexpr (std::is_same_v<T, float>) {
+    auto z    = normalize(v);
+    auto sign = copysignf(1.0f, z.z);
+    auto a    = -1.0f / (sign + z.z);
+    auto b    = z.x * z.y * a;
+    auto x    = vec3f{1.0f + sign * z.x * z.x * a, sign * b, -sign * z.x};
+    auto y    = vec3f{b, sign + z.y * z.y * a, -z.y};
+    return {x, y, z};
+  } else if constexpr (std::is_same_v<T, float>) {
+    // TODO: double
+    return {};
+  }
 }
 
 }  // namespace yocto
@@ -1905,86 +1691,101 @@ inline mat4f transpose(const mat4f& a) {
 namespace yocto {
 
 // Rigid frames stored as a column-major affine transform matrix.
-inline vec2f& frame2f::operator[](int i) { return (&x)[i]; }
-inline const vec2f& frame2f::operator[](int i) const { return (&x)[i]; }
+template <typename T>
+inline vec<T, 2>& frame<T, 2>::operator[](int i) {
+  return (&x)[i];
+}
+template <typename T>
+inline const vec<T, 2>& frame<T, 2>::operator[](int i) const {
+  return (&x)[i];
+}
 
 // Rigid frames stored as a column-major affine transform matrix.
-inline vec3f& frame3f::operator[](int i) { return (&x)[i]; }
-inline const vec3f& frame3f::operator[](int i) const { return (&x)[i]; }
+template <typename T>
+inline vec<T, 3>& frame<T, 3>::operator[](int i) {
+  return (&x)[i];
+}
+template <typename T>
+inline const vec<T, 3>& frame<T, 3>::operator[](int i) const {
+  return (&x)[i];
+}
 
 // Frame properties
-inline mat2f rotation(const frame2f& a) { return {a.x, a.y}; }
-inline vec2f translation(const frame2f& a) { return a.o; }
-
-// Frame construction
-inline frame2f make_frame(const mat2f& m, const vec2f& t) {
-  return {m.x, m.y, t};
+template <typename T, int N>
+inline mat<T, N> rotation(const frame<T, N>& a) {
+  if constexpr (N == 2) {
+    return {a.x, a.y};
+  } else if constexpr (N == 3) {
+    return {a.x, a.y, a.z};
+  }
 }
-
-// Frame/mat conversion
-inline frame2f mat_to_frame(const mat3f& m) {
-  return {{m.x.x, m.x.y}, {m.y.x, m.y.y}, {m.z.x, m.z.y}};
-}
-inline mat3f frame_to_mat(const frame2f& f) {
-  return {{f.x.x, f.x.y, 0}, {f.y.x, f.y.y, 0}, {f.o.x, f.o.y, 1}};
-}
-
-// Frame comparisons.
-inline bool operator==(const frame2f& a, const frame2f& b) {
-  return a.x == b.x && a.y == b.y && a.o == b.o;
-}
-inline bool operator!=(const frame2f& a, const frame2f& b) { return !(a == b); }
-
-// Frame composition, equivalent to affine matrix product.
-inline frame2f operator*(const frame2f& a, const frame2f& b) {
-  return make_frame(rotation(a) * rotation(b), rotation(a) * b.o + a.o);
-}
-inline frame2f& operator*=(frame2f& a, const frame2f& b) { return a = a * b; }
-
-// Frame inverse, equivalent to rigid affine inverse.
-inline frame2f inverse(const frame2f& a, bool non_rigid) {
-  if (non_rigid) {
-    auto minv = inverse(rotation(a));
-    return make_frame(minv, -(minv * a.o));
-  } else {
-    auto minv = transpose(rotation(a));
-    return make_frame(minv, -(minv * a.o));
+template <typename T, int N>
+inline vec<T, N> translation(const frame<T, N>& a) {
+  if constexpr (N == 2) {
+    return a.o;
+  } else if constexpr (N == 3) {
+    return a.o;
   }
 }
 
-// Frame properties
-inline mat3f rotation(const frame3f& a) { return {a.x, a.y, a.z}; }
-inline vec3f translation(const frame3f& a) { return a.o; }
-
 // Frame construction
-inline frame3f make_frame(const mat3f& m, const vec3f& t) {
-  return {m.x, m.y, m.z, t};
+template <typename T, int N>
+inline frame<T, N> make_frame(const mat<T, N>& m, const vec<T, N>& t) {
+  if constexpr (N == 2) {
+    return {m.x, m.y, t};
+  } else if constexpr (N == 3) {
+    return {m.x, m.y, m.z, t};
+  }
 }
 
-// frame/mat conversion
-inline frame3f mat_to_frame(const mat4f& m) {
-  return {{m.x.x, m.x.y, m.x.z}, {m.y.x, m.y.y, m.y.z}, {m.z.x, m.z.y, m.z.z},
-      {m.w.x, m.w.y, m.w.z}};
+// Frame/mat conversion
+template <typename T, int N_>
+inline frame<T, N_ - 1> mat_to_frame(const mat<T, N_>& m) {
+  constexpr auto N = N_ - 1;
+  if constexpr (N == 2) {
+    return {{m.x.x, m.x.y}, {m.y.x, m.y.y}, {m.z.x, m.z.y}};
+  } else if constexpr (N == 3) {
+    return {{m.x.x, m.x.y, m.x.z}, {m.y.x, m.y.y, m.y.z}, {m.z.x, m.z.y, m.z.z},
+        {m.w.x, m.w.y, m.w.z}};
+  }
 }
-inline mat4f frame_to_mat(const frame3f& f) {
-  return {{f.x.x, f.x.y, f.x.z, 0}, {f.y.x, f.y.y, f.y.z, 0},
-      {f.z.x, f.z.y, f.z.z, 0}, {f.o.x, f.o.y, f.o.z, 1}};
+template <typename T, int N>
+inline mat<T, N + 1> frame_to_mat(const frame<T, N>& f) {
+  if constexpr (N == 2) {
+    return {{f.x.x, f.x.y, 0}, {f.y.x, f.y.y, 0}, {f.o.x, f.o.y, 1}};
+  } else if constexpr (N == 3) {
+    return {{f.x.x, f.x.y, f.x.z, 0}, {f.y.x, f.y.y, f.y.z, 0},
+        {f.z.x, f.z.y, f.z.z, 0}, {f.o.x, f.o.y, f.o.z, 1}};
+  }
 }
 
 // Frame comparisons.
-inline bool operator==(const frame3f& a, const frame3f& b) {
-  return a.x == b.x && a.y == b.y && a.z == b.z && a.o == b.o;
+template <typename T, int N>
+inline bool operator==(const frame<T, N>& a, const frame<T, N>& b) {
+  if constexpr (N == 2) {
+    return a.x == b.x && a.y == b.y && a.o == b.o;
+  } else if constexpr (N == 3) {
+    return a.x == b.x && a.y == b.y && a.z == b.z && a.o == b.o;
+  }
 }
-inline bool operator!=(const frame3f& a, const frame3f& b) { return !(a == b); }
+template <typename T, int N>
+inline bool operator!=(const frame<T, N>& a, const frame<T, N>& b) {
+  return !(a == b);
+}
 
 // Frame composition, equivalent to affine matrix product.
-inline frame3f operator*(const frame3f& a, const frame3f& b) {
+template <typename T, int N>
+inline frame<T, N> operator*(const frame<T, N>& a, const frame<T, N>& b) {
   return make_frame(rotation(a) * rotation(b), rotation(a) * b.o + a.o);
 }
-inline frame3f& operator*=(frame3f& a, const frame3f& b) { return a = a * b; }
+template <typename T, int N>
+inline frame<T, N>& operator*=(frame<T, N>& a, const frame<T, N>& b) {
+  return a = a * b;
+}
 
 // Frame inverse, equivalent to rigid affine inverse.
-inline frame3f inverse(const frame3f& a, bool non_rigid) {
+template <typename T, int N>
+inline frame<T, N> inverse(const frame<T, N>& a, bool non_rigid) {
   if (non_rigid) {
     auto minv = inverse(rotation(a));
     return make_frame(minv, -(minv * a.o));
@@ -1995,17 +1796,25 @@ inline frame3f inverse(const frame3f& a, bool non_rigid) {
 }
 
 // Frame construction from axis.
-inline frame3f frame_fromz(const vec3f& o, const vec3f& v) {
+template <typename T>
+inline frame<T, 3> frame_fromz(const vec<T, 3>& o, const vec<T, 3>& v) {
   // https://graphics.pixar.com/library/OrthonormalB/paper.pdf
-  auto z    = normalize(v);
-  auto sign = copysignf(1.0f, z.z);
-  auto a    = -1.0f / (sign + z.z);
-  auto b    = z.x * z.y * a;
-  auto x    = vec3f{1.0f + sign * z.x * z.x * a, sign * b, -sign * z.x};
-  auto y    = vec3f{b, sign + z.y * z.y * a, -z.y};
-  return {x, y, z, o};
+  if constexpr (std::is_same_v<T, float>) {
+    auto z    = normalize(v);
+    auto sign = copysignf(1.0f, z.z);
+    auto a    = -1.0f / (sign + z.z);
+    auto b    = z.x * z.y * a;
+    auto x    = vec3f{1.0f + sign * z.x * z.x * a, sign * b, -sign * z.x};
+    auto y    = vec3f{b, sign + z.y * z.y * a, -z.y};
+    return {x, y, z, o};
+  } else if constexpr (std::is_same_v<T, double>) {
+    // TODO: double
+    return {};
+  }
 }
-inline frame3f frame_fromzx(const vec3f& o, const vec3f& z_, const vec3f& x_) {
+template <typename T>
+inline frame<T, 3> frame_fromzx(
+    const vec<T, 3>& o, const vec<T, 3>& z_, const vec<T, 3>& x_) {
   auto z = normalize(z_);
   auto x = orthonormalize(x_, z);
   auto y = normalize(cross(z, x));
