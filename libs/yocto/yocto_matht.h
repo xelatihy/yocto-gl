@@ -2245,8 +2245,8 @@ template <typename T, typename I>
 inline vec<I, 2> image_coords(const vec<T, 2>& mouse_pos,
     const vec<T, 2>& center, T scale, const vec<I, 2>& txt_size) {
   auto xyf = (mouse_pos - center) / scale;
-  return vec<I, 2>{(int)round(xyf.x + txt_size.x / 2.0f),
-      (int)round(xyf.y + txt_size.y / 2.0f)};
+  return vec<I, 2>{(int)round(xyf.x + txt_size.x / (T)2),
+      (int)round(xyf.y + txt_size.y / (T)2)};
 }
 
 // Center image and autofit. Returns center and scale.
@@ -2277,7 +2277,7 @@ inline pair<vec<T, 3>, vec<T, 3>> camera_turntable(const vec<T, 3>& from_,
     auto lz    = length(to - from);
     auto phi   = atan2(z.z, z.x) + rotate.x;
     auto theta = acos(z.y) + rotate.y;
-    theta      = clamp(theta, 0.001f, pif - 0.001f);
+    theta      = clamp(theta, (T)0.001, (T)pi - (T)0.001);
     auto nz    = vec<T, 3>{sin(theta) * cos(phi) * lz, cos(theta) * lz,
         sin(theta) * sin(phi) * lz};
     from       = to - nz;
@@ -2286,7 +2286,7 @@ inline pair<vec<T, 3>, vec<T, 3>> camera_turntable(const vec<T, 3>& from_,
   // dolly if necessary
   if (dolly != 0) {
     auto z  = normalize(to - from);
-    auto lz = max(0.001f, length(to - from) * (1 + dolly));
+    auto lz = max((T)0.001, length(to - from) * (1 + dolly));
     z *= lz;
     from = to - z;
   }
@@ -2317,7 +2317,7 @@ inline pair<frame<T, 3>, T> camera_turntable(const frame<T, 3>& frame_, T focus,
   if (rotate != zero2f) {
     auto phi   = atan2(frame.z.z, frame.z.x) + rotate.x;
     auto theta = acos(frame.z.y) + rotate.y;
-    theta      = clamp(theta, 0.001f, pif - 0.001f);
+    theta      = clamp(theta, (T)0.001, (T)pi - (T)0.001);
     auto new_z = vec<T, 3>{
         sin(theta) * cos(phi), cos(theta), sin(theta) * sin(phi)};
     auto new_center = frame.o - frame.z * focus;
@@ -2329,7 +2329,7 @@ inline pair<frame<T, 3>, T> camera_turntable(const frame<T, 3>& frame_, T focus,
   // pan if necessary
   if (dolly != 0) {
     auto c  = frame.o - frame.z * focus;
-    focus   = max(focus * (1 + dolly), 0.001f);
+    focus   = max(focus * (1 + dolly), (T)0.001);
     frame.o = c + frame.z * focus;
   }
 
@@ -2365,8 +2365,8 @@ template <typename T, typename I>
 inline vec2i get_image_coords(const vec<T, 2>& mouse_pos,
     const vec<T, 2>& center, T scale, const vec<I, 2>& txt_size) {
   auto xyf = (mouse_pos - center) / scale;
-  return vec2i{(int)round(xyf.x + txt_size.x / 2.0f),
-      (int)round(xyf.y + txt_size.y / 2.0f)};
+  return vec2i{(int)round(xyf.x + txt_size.x / (T)2),
+      (int)round(xyf.y + txt_size.y / (T)2)};
 }
 
 // Center image and autofit.
@@ -2392,7 +2392,7 @@ inline void update_turntable(vec<T, 3>& from, vec<T, 3>& to, vec<T, 3>& up,
     auto lz    = length(to - from);
     auto phi   = atan2(z.z, z.x) + rotate.x;
     auto theta = acos(z.y) + rotate.y;
-    theta      = clamp(theta, 0.001f, pif - 0.001f);
+    theta      = clamp(theta, (T)0.001, (T)pi - (T)0.001);
     auto nz    = vec<T, 3>{sin(theta) * cos(phi) * lz, cos(theta) * lz,
         sin(theta) * sin(phi) * lz};
     from       = to - nz;
@@ -2426,7 +2426,7 @@ inline void update_turntable(frame<T, 3>& frame, T& focus,
   if (rotate != zero2f) {
     auto phi   = atan2(frame.z.z, frame.z.x) + rotate.x;
     auto theta = acos(frame.z.y) + rotate.y;
-    theta      = clamp(theta, 0.001f, pif - 0.001f);
+    theta      = clamp(theta, (T)0.001, (T)pi - (T)0.001);
     auto new_z = vec<T, 3>{
         sin(theta) * cos(phi), cos(theta), sin(theta) * sin(phi)};
     auto new_center = frame.o - frame.z * focus;
@@ -2438,7 +2438,7 @@ inline void update_turntable(frame<T, 3>& frame, T& focus,
   // pan if necessary
   if (dolly != 0) {
     auto c  = frame.o - frame.z * focus;
-    focus   = max(focus * (1 + dolly), 0.001f);
+    focus   = max(focus * (1 + dolly), (T)0.001);
     frame.o = c + frame.z * focus;
   }
 
