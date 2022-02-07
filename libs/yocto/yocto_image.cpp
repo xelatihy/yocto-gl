@@ -202,7 +202,8 @@ void tonemap_image(
       result.pixels[idx] = tonemap(image.pixels[idx], exposure, filmic);
     }
   } else {
-    auto scale = vec4f{pow(2, exposure), pow(2, exposure), pow(2, exposure), 1};
+    auto scale = vec4f{
+        pow(2.0f, exposure), pow(2.0f, exposure), pow(2.0f, exposure), 1};
     for (auto idx : range(image.pixels.size())) {
       result.pixels[idx] = image.pixels[idx] * scale;
     }
@@ -220,7 +221,8 @@ void tonemap_image_mt(
           result.pixels[idx] = tonemap(image.pixels[idx], exposure, filmic);
         });
   } else {
-    auto scale = vec4f{pow(2, exposure), pow(2, exposure), pow(2, exposure), 1};
+    auto scale = vec4f{
+        pow(2.0f, exposure), pow(2.0f, exposure), pow(2.0f, exposure), 1};
     parallel_for_batch((size_t)image.width * (size_t)image.height,
         (size_t)image.width, [&result, &image, scale](size_t idx) {
           result.pixels[idx] = image.pixels[idx] * scale;

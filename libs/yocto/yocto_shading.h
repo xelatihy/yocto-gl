@@ -893,7 +893,8 @@ inline vec3f eval_refractive(const vec3f& color, float ior, float roughness,
            abs((dot(outgoing, halfway) * dot(incoming, halfway)) /
                (dot(outgoing, normal) * dot(incoming, normal))) *
            (1 - F) * D * G /
-           pow(rel_ior * dot(halfway, incoming) + dot(halfway, outgoing), 2) *
+           pow(rel_ior * dot(halfway, incoming) + dot(halfway, outgoing),
+               2.0f) *
            abs(dot(normal, incoming));
   }
 }
@@ -937,7 +938,7 @@ inline float sample_refractive_pdf(const vec3f& color, float ior,
            sample_microfacet_pdf(roughness, up_normal, halfway) *
            //  sample_microfacet_pdf(roughness, up_normal, halfway, outgoing) /
            abs(dot(halfway, incoming)) /  // here we use incoming as from pbrt
-           pow(rel_ior * dot(halfway, incoming) + dot(halfway, outgoing), 2);
+           pow(rel_ior * dot(halfway, incoming) + dot(halfway, outgoing), 2.0f);
   }
 }
 
