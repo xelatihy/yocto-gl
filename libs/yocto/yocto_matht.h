@@ -667,9 +667,9 @@ inline frame<T, 3> scaling_frame(const vec<T, 3>& a);
 template <typename T>
 inline frame<T, 3> rotation_frame(const vec<T, 3>& axis, T angle);
 template <typename T>
-inline frame<T, 3> rotation_frame(const vec4f& quat);
+inline frame<T, 3> rotation_frame(const vec<T, 4>& quat);
 template <typename T>
-inline frame<T, 3> rotation_frame(const quat4f& quat);
+inline frame<T, 3> rotation_frame(const quat<T, 4>& quat);
 template <typename T>
 inline frame<T, 3> rotation_frame(const mat<T, 3>& rot);
 
@@ -694,11 +694,11 @@ inline mat<T, 4> perspective_mat(T fovy, T aspect, T near);
 
 // Rotation conversions.
 template <typename T>
-inline pair<vec<T, 3>, T> rotation_axisangle(const vec4f& quat);
+inline pair<vec<T, 3>, T> rotation_axisangle(const vec<T, 4>& quat);
 template <typename T>
-inline vec4f rotation_quat(const vec<T, 3>& axis, T angle);
+inline vec<T, 4> rotation_quat(const vec<T, 3>& axis, T angle);
 template <typename T>
-inline vec4f rotation_quat(const vec4f& axisangle);
+inline vec<T, 4> rotation_quat(const vec<T, 4>& axisangle);
 
 }  // namespace yocto
 
@@ -2004,12 +2004,12 @@ inline vec<T, 2> transform_normal(const mat<T, 2>& a, const vec<T, 2>& b) {
 
 template <typename T>
 inline vec<T, 3> transform_point(const mat<T, 4>& a, const vec<T, 3>& b) {
-  auto tvb = a * vec4f{b.x, b.y, b.z, 1};
+  auto tvb = a * vec<T, 4>{b.x, b.y, b.z, 1};
   return vec<T, 3>{tvb.x, tvb.y, tvb.z} / tvb.w;
 }
 template <typename T>
 inline vec<T, 3> transform_vector(const mat<T, 4>& a, const vec<T, 3>& b) {
-  auto tvb = a * vec4f{b.x, b.y, b.z, 0};
+  auto tvb = a * vec<T, 4>{b.x, b.y, b.z, 0};
   return vec<T, 3>{tvb.x, tvb.y, tvb.z};
 }
 template <typename T>
@@ -2097,7 +2097,7 @@ inline frame<T, 3> rotation_frame(const vec<T, 3>& axis, T angle) {
       {0, 0, 0}};
 }
 template <typename T>
-inline frame<T, 3> rotation_frame(const vec4f& quat) {
+inline frame<T, 3> rotation_frame(const vec<T, 4>& quat) {
   auto v = quat;
   return {{v.w * v.w + v.x * v.x - v.y * v.y - v.z * v.z,
               (v.x * v.y + v.z * v.w) * 2, (v.z * v.x - v.y * v.w) * 2},
@@ -2109,7 +2109,7 @@ inline frame<T, 3> rotation_frame(const vec4f& quat) {
       {0, 0, 0}};
 }
 template <typename T>
-inline frame<T, 3> rotation_frame(const quat4f& quat) {
+inline frame<T, 3> rotation_frame(const quat<T, 4>& quat) {
   auto v = quat;
   return {{v.w * v.w + v.x * v.x - v.y * v.y - v.z * v.z,
               (v.x * v.y + v.z * v.w) * 2, (v.z * v.x - v.y * v.w) * 2},
@@ -2177,18 +2177,18 @@ inline mat<T, 4> perspective_mat(T fovy, T aspect, T near) {
 
 // Rotation conversions.
 template <typename T>
-inline pair<vec<T, 3>, T> rotation_axisangle(const vec4f& quat) {
+inline pair<vec<T, 3>, T> rotation_axisangle(const vec<T, 4>& quat) {
   return {normalize(vec<T, 3>{quat.x, quat.y, quat.z}), 2 * acos(quat.w)};
 }
 template <typename T>
-inline vec4f rotation_quat(const vec<T, 3>& axis, T angle) {
+inline vec<T, 4> rotation_quat(const vec<T, 3>& axis, T angle) {
   auto len = length(axis);
   if (len == 0) return {0, 0, 0, 1};
-  return vec4f{sin(angle / 2) * axis.x / len, sin(angle / 2) * axis.y / len,
+  return vec<T, 4>{sin(angle / 2) * axis.x / len, sin(angle / 2) * axis.y / len,
       sin(angle / 2) * axis.z / len, cos(angle / 2)};
 }
 template <typename T>
-inline vec4f rotation_quat(const vec4f& axisangle) {
+inline vec<T, 4> rotation_quat(const vec<T, 4>& axisangle) {
   return rotation_quat(
       vec<T, 3>{axisangle.x, axisangle.y, axisangle.z}, axisangle.w);
 }
