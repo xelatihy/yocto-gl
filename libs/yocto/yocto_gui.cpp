@@ -291,7 +291,7 @@ static bool draw_image_inspector(const gui_input& input,
     draw_gui_checkbox("fit", glparams.fit);
     draw_gui_coloredit("background", glparams.background);
     auto [i, j] = image_coords(input.cursor, glparams.center, glparams.scale,
-        {image.width, image.height});
+        vec2i{image.width, image.height});
     auto ij     = vec2i{i, j};
     draw_gui_dragger("mouse", ij);
     auto image_pixel   = zero4f;

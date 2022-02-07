@@ -609,55 +609,32 @@ inline quat<T, 4> slerp(const quat<T, 4>& a, const quat<T, 4>& b, T t);
 namespace yocto {
 
 // Transforms points, vectors and directions by matrices.
-template <typename T>
-inline vec<T, 2> transform_point(const mat<T, 3>& a, const vec<T, 2>& b);
-template <typename T>
-inline vec<T, 2> transform_vector(const mat<T, 3>& a, const vec<T, 2>& b);
-template <typename T>
-inline vec<T, 2> transform_direction(const mat<T, 3>& a, const vec<T, 2>& b);
-template <typename T>
-inline vec<T, 2> transform_normal(const mat<T, 3>& a, const vec<T, 2>& b);
-template <typename T>
-inline vec<T, 2> transform_vector(const mat<T, 2>& a, const vec<T, 2>& b);
-template <typename T>
-inline vec<T, 2> transform_direction(const mat<T, 2>& a, const vec<T, 2>& b);
-template <typename T>
-inline vec<T, 2> transform_normal(const mat<T, 2>& a, const vec<T, 2>& b);
-
-template <typename T>
-inline vec<T, 3> transform_point(const mat<T, 4>& a, const vec<T, 3>& b);
-template <typename T>
-inline vec<T, 3> transform_vector(const mat<T, 4>& a, const vec<T, 3>& b);
-template <typename T>
-inline vec<T, 3> transform_direction(const mat<T, 4>& a, const vec<T, 3>& b);
-template <typename T>
-inline vec<T, 3> transform_vector(const mat<T, 3>& a, const vec<T, 3>& b);
-template <typename T>
-inline vec<T, 3> transform_direction(const mat<T, 3>& a, const vec<T, 3>& b);
-template <typename T>
-inline vec<T, 3> transform_normal(const mat<T, 3>& a, const vec<T, 3>& b);
+template <typename T, int N>
+inline vec<T, N> transform_point(const mat<T, N + 1>& a, const vec<T, N>& b);
+template <typename T, int N>
+inline vec<T, N> transform_vector(const mat<T, N + 1>& a, const vec<T, N>& b);
+template <typename T, int N>
+inline vec<T, N> transform_direction(
+    const mat<T, N + 1>& a, const vec<T, N>& b);
+template <typename T, int N>
+inline vec<T, N> transform_normal(const mat<T, N + 1>& a, const vec<T, N>& b);
+template <typename T, int N>
+inline vec<T, N> transform_vector(const mat<T, N>& a, const vec<T, N>& b);
+template <typename T, int N>
+inline vec<T, N> transform_direction(const mat<T, N>& a, const vec<T, N>& b);
+template <typename T, int N>
+inline vec<T, N> transform_normal(const mat<T, N>& a, const vec<T, N>& b);
 
 // Transforms points, vectors and directions by frames.
-template <typename T>
-inline vec<T, 2> transform_point(const frame<T, 2>& a, const vec<T, 2>& b);
-template <typename T>
-inline vec<T, 2> transform_vector(const frame<T, 2>& a, const vec<T, 2>& b);
-template <typename T>
-inline vec<T, 2> transform_direction(const frame<T, 2>& a, const vec<T, 2>& b);
-template <typename T>
-inline vec<T, 2> transform_normal(
-    const frame<T, 2>& a, const vec<T, 2>& b, bool non_rigid = false);
-
-// Transforms points, vectors and directions by frames.
-template <typename T>
-inline vec<T, 3> transform_point(const frame<T, 3>& a, const vec<T, 3>& b);
-template <typename T>
-inline vec<T, 3> transform_vector(const frame<T, 3>& a, const vec<T, 3>& b);
-template <typename T>
-inline vec<T, 3> transform_direction(const frame<T, 3>& a, const vec<T, 3>& b);
-template <typename T>
-inline vec<T, 3> transform_normal(
-    const frame<T, 3>& a, const vec<T, 3>& b, bool non_rigid = false);
+template <typename T, int N>
+inline vec<T, N> transform_point(const frame<T, N>& a, const vec<T, N>& b);
+template <typename T, int N>
+inline vec<T, N> transform_vector(const frame<T, N>& a, const vec<T, N>& b);
+template <typename T, int N>
+inline vec<T, N> transform_direction(const frame<T, N>& a, const vec<T, N>& b);
+template <typename T, int N>
+inline vec<T, N> transform_normal(
+    const frame<T, N>& a, const vec<T, N>& b, bool non_rigid = false);
 
 // Translation, scaling and rotations transforms.
 template <typename T>
@@ -709,14 +686,14 @@ namespace yocto {
 
 // Computes the image uv coordinates corresponding to the view parameters.
 // Returns negative coordinates if out of the image.
-template <typename T>
-inline vec2i image_coords(const vec<T, 2>& mouse_pos, const vec<T, 2>& center,
-    T scale, const vec2i& txt_size);
+template <typename T, typename I>
+inline vec<I, 2> image_coords(const vec<T, 2>& mouse_pos,
+    const vec<T, 2>& center, T scale, const vec<I, 2>& txt_size);
 
 // Center image and autofit. Returns center and scale.
-template <typename T>
+template <typename T, typename I>
 inline pair<vec<T, 2>, T> camera_imview(const vec<T, 2>& center, T scale,
-    const vec2i& imsize, const vec2i& winsize, bool zoom_to_fit);
+    const vec<I, 2>& imsize, const vec<I, 2>& winsize, bool zoom_to_fit);
 
 // Turntable for UI navigation. Returns from and to.
 template <typename T>
@@ -736,14 +713,14 @@ inline frame<T, 3> camera_fpscam(
 
 // Computes the image uv coordinates corresponding to the view parameters.
 // Returns negative coordinates if out of the image.
-template <typename T>
-[[deprecated]] inline vec2i get_image_coords(const vec<T, 2>& mouse_pos,
-    const vec<T, 2>& center, T scale, const vec2i& txt_size);
+template <typename T, typename I>
+[[deprecated]] inline vec<I, 2> get_image_coords(const vec<T, 2>& mouse_pos,
+    const vec<T, 2>& center, T scale, const vec<I, 2>& txt_size);
 
 // Center image and autofit.
-template <typename T>
+template <typename T, typename I>
 [[deprecated]] inline void update_imview(vec<T, 2>& center, T& scale,
-    const vec2i& imsize, const vec2i& winsize, bool zoom_to_fit);
+    const vec<I, 2>& imsize, const vec<I, 2>& winsize, bool zoom_to_fit);
 
 // Turntable for UI navigation.
 template <typename T>
@@ -1971,103 +1948,72 @@ inline quat<T, 4> slerp(const quat<T, 4>& a, const quat<T, 4>& b, T t) {
 namespace yocto {
 
 // Transforms points, vectors and directions by matrices.
-template <typename T>
-inline vec<T, 2> transform_point(const mat<T, 3>& a, const vec<T, 2>& b) {
-  auto tvb = a * vec<T, 3>{b.x, b.y, 1};
-  return vec<T, 2>{tvb.x, tvb.y} / tvb.z;
-}
-template <typename T>
-inline vec<T, 2> transform_vector(const mat<T, 3>& a, const vec<T, 2>& b) {
-  auto tvb = a * vec<T, 3>{b.x, b.y, 0};
-  return vec<T, 2>{tvb.x, tvb.y} / tvb.z;
-}
-template <typename T>
-inline vec<T, 2> transform_direction(const mat<T, 3>& a, const vec<T, 2>& b) {
-  return normalize(transform_vector(a, b));
-}
-template <typename T>
-inline vec<T, 2> transform_normal(const mat<T, 3>& a, const vec<T, 2>& b) {
-  return normalize(transform_vector(transpose(inverse(a)), b));
-}
-template <typename T>
-inline vec<T, 2> transform_vector(const mat<T, 2>& a, const vec<T, 2>& b) {
-  return a * b;
-}
-template <typename T>
-inline vec<T, 2> transform_direction(const mat<T, 2>& a, const vec<T, 2>& b) {
-  return normalize(transform_vector(a, b));
-}
-template <typename T>
-inline vec<T, 2> transform_normal(const mat<T, 2>& a, const vec<T, 2>& b) {
-  return normalize(transform_vector(transpose(inverse(a)), b));
-}
-
-template <typename T>
-inline vec<T, 3> transform_point(const mat<T, 4>& a, const vec<T, 3>& b) {
-  auto tvb = a * vec<T, 4>{b.x, b.y, b.z, 1};
-  return vec<T, 3>{tvb.x, tvb.y, tvb.z} / tvb.w;
-}
-template <typename T>
-inline vec<T, 3> transform_vector(const mat<T, 4>& a, const vec<T, 3>& b) {
-  auto tvb = a * vec<T, 4>{b.x, b.y, b.z, 0};
-  return vec<T, 3>{tvb.x, tvb.y, tvb.z};
-}
-template <typename T>
-inline vec<T, 3> transform_direction(const mat<T, 4>& a, const vec<T, 3>& b) {
-  return normalize(transform_vector(a, b));
-}
-template <typename T>
-inline vec<T, 3> transform_vector(const mat<T, 3>& a, const vec<T, 3>& b) {
-  return a * b;
-}
-template <typename T>
-inline vec<T, 3> transform_direction(const mat<T, 3>& a, const vec<T, 3>& b) {
-  return normalize(transform_vector(a, b));
-}
-template <typename T>
-inline vec<T, 3> transform_normal(const mat<T, 3>& a, const vec<T, 3>& b) {
-  return normalize(transform_vector(transpose(inverse(a)), b));
-}
-
-// Transforms points, vectors and directions by frames.
-template <typename T>
-inline vec<T, 2> transform_point(const frame<T, 2>& a, const vec<T, 2>& b) {
-  return a.x * b.x + a.y * b.y + a.o;
-}
-template <typename T>
-inline vec<T, 2> transform_vector(const frame<T, 2>& a, const vec<T, 2>& b) {
-  return a.x * b.x + a.y * b.y;
-}
-template <typename T>
-inline vec<T, 2> transform_direction(const frame<T, 2>& a, const vec<T, 2>& b) {
-  return normalize(transform_vector(a, b));
-}
-template <typename T>
-inline vec<T, 2> transform_normal(
-    const frame<T, 2>& a, const vec<T, 2>& b, bool non_rigid) {
-  if (non_rigid) {
-    return transform_normal(rotation(a), b);
-  } else {
-    return normalize(transform_vector(a, b));
+template <typename T, int N>
+inline vec<T, N> transform_point(const mat<T, N + 1>& a, const vec<T, N>& b) {
+  if constexpr (N == 2) {
+    auto tvb = a * vec<T, 3>{b.x, b.y, 1};
+    return vec<T, 2>{tvb.x, tvb.y} / tvb.z;
+  } else if constexpr (N == 3) {
+    auto tvb = a * vec<T, 4>{b.x, b.y, b.z, 1};
+    return vec<T, 3>{tvb.x, tvb.y, tvb.z} / tvb.w;
   }
 }
-
-// Transforms points, vectors and directions by frames.
-template <typename T>
-inline vec<T, 3> transform_point(const frame<T, 3>& a, const vec<T, 3>& b) {
-  return a.x * b.x + a.y * b.y + a.z * b.z + a.o;
+template <typename T, int N>
+inline vec<T, N> transform_vector(const mat<T, N + 1>& a, const vec<T, N>& b) {
+  if constexpr (N == 2) {
+    auto tvb = a * vec<T, 3>{b.x, b.y, 0};
+    return vec<T, 2>{tvb.x, tvb.y} / tvb.z;
+  } else if constexpr (N == 3) {
+    auto tvb = a * vec<T, 4>{b.x, b.y, b.z, 0};
+    return vec<T, 3>{tvb.x, tvb.y, tvb.z} / tvb.w;
+  }
 }
-template <typename T>
-inline vec<T, 3> transform_vector(const frame<T, 3>& a, const vec<T, 3>& b) {
-  return a.x * b.x + a.y * b.y + a.z * b.z;
-}
-template <typename T>
-inline vec<T, 3> transform_direction(const frame<T, 3>& a, const vec<T, 3>& b) {
+template <typename T, int N>
+inline vec<T, N> transform_direction(
+    const mat<T, N + 1>& a, const vec<T, N>& b) {
   return normalize(transform_vector(a, b));
 }
-template <typename T>
-inline vec<T, 3> transform_normal(
-    const frame<T, 3>& a, const vec<T, 3>& b, bool non_rigid) {
+template <typename T, int N>
+inline vec<T, N> transform_normal(const mat<T, N + 1>& a, const vec<T, N>& b) {
+  return normalize(transform_vector(transpose(inverse(a)), b));
+}
+template <typename T, int N>
+inline vec<T, N> transform_vector(const mat<T, N>& a, const vec<T, N>& b) {
+  return a * b;
+}
+template <typename T, int N>
+inline vec<T, N> transform_direction(const mat<T, N>& a, const vec<T, N>& b) {
+  return normalize(transform_vector(a, b));
+}
+template <typename T, int N>
+inline vec<T, N> transform_normal(const mat<T, N>& a, const vec<T, N>& b) {
+  return normalize(transform_vector(transpose(inverse(a)), b));
+}
+
+// Transforms points, vectors and directions by frames.
+template <typename T, int N>
+inline vec<T, N> transform_point(const frame<T, N>& a, const vec<T, N>& b) {
+  if constexpr (N == 2) {
+    return a.x * b.x + a.y * b.y + a.o;
+  } else if constexpr (N == 3) {
+    return a.x * b.x + a.y * b.y + a.z * b.z + a.o;
+  }
+}
+template <typename T, int N>
+inline vec<T, N> transform_vector(const frame<T, N>& a, const vec<T, N>& b) {
+  if constexpr (N == 2) {
+    return a.x * b.x + a.y * b.y;
+  } else if constexpr (N == 3) {
+    return a.x * b.x + a.y * b.y + a.z * b.z;
+  }
+}
+template <typename T, int N>
+inline vec<T, N> transform_direction(const frame<T, N>& a, const vec<T, N>& b) {
+  return normalize(transform_vector(a, b));
+}
+template <typename T, int N>
+inline vec<T, N> transform_normal(
+    const frame<T, N>& a, const vec<T, N>& b, bool non_rigid) {
   if (non_rigid) {
     return transform_normal(rotation(a), b);
   } else {
@@ -2202,18 +2148,18 @@ namespace yocto {
 
 // Computes the image uv coordinates corresponding to the view parameters.
 // Returns negative coordinates if out of the image.
-template <typename T>
-inline vec2i image_coords(const vec<T, 2>& mouse_pos, const vec<T, 2>& center,
-    T scale, const vec2i& txt_size) {
+template <typename T, typename I>
+inline vec<I, 2> image_coords(const vec<T, 2>& mouse_pos,
+    const vec<T, 2>& center, T scale, const vec<I, 2>& txt_size) {
   auto xyf = (mouse_pos - center) / scale;
-  return vec2i{(int)round(xyf.x + txt_size.x / 2.0f),
+  return vec<I, 2>{(int)round(xyf.x + txt_size.x / 2.0f),
       (int)round(xyf.y + txt_size.y / 2.0f)};
 }
 
 // Center image and autofit. Returns center and scale.
-template <typename T>
+template <typename T, typename I>
 inline pair<vec<T, 2>, T> camera_imview(const vec<T, 2>& center, T scale,
-    const vec2i& imsize, const vec2i& winsize, bool zoom_to_fit) {
+    const vec<I, 2>& imsize, const vec<I, 2>& winsize, bool zoom_to_fit) {
   if (zoom_to_fit) {
     return {{(T)winsize.x / 2, (T)winsize.y / 2},
         min(winsize.x / (T)imsize.x, winsize.y / (T)imsize.y)};
@@ -2322,18 +2268,18 @@ inline frame<T, 3> camera_fpscam(const frame<T, 3>& frame,
 
 // Computes the image uv coordinates corresponding to the view parameters.
 // Returns negative coordinates if out of the image.
-template <typename T>
+template <typename T, typename I>
 inline vec2i get_image_coords(const vec<T, 2>& mouse_pos,
-    const vec<T, 2>& center, T scale, const vec2i& txt_size) {
+    const vec<T, 2>& center, T scale, const vec<I, 2>& txt_size) {
   auto xyf = (mouse_pos - center) / scale;
   return vec2i{(int)round(xyf.x + txt_size.x / 2.0f),
       (int)round(xyf.y + txt_size.y / 2.0f)};
 }
 
 // Center image and autofit.
-template <typename T>
-inline void update_imview(vec<T, 2>& center, T& scale, const vec2i& imsize,
-    const vec2i& winsize, bool zoom_to_fit) {
+template <typename T, typename I>
+inline void update_imview(vec<T, 2>& center, T& scale, const vec<I, 2>& imsize,
+    const vec<I, 2>& winsize, bool zoom_to_fit) {
   if (zoom_to_fit) {
     scale  = min(winsize.x / (T)imsize.x, winsize.y / (T)imsize.y);
     center = {(T)winsize.x / 2, (T)winsize.y / 2};
