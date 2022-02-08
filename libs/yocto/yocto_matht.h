@@ -71,6 +71,13 @@ inline const auto flt_max = std::numeric_limits<float>::max();
 inline const auto flt_min = std::numeric_limits<float>::lowest();
 inline const auto flt_eps = std::numeric_limits<float>::epsilon();
 
+template <typename T>
+inline const auto num_max = std::numeric_limits<T>::max();
+template <typename T>
+inline const auto num_min = std::numeric_limits<T>::lowest();
+template <typename T>
+inline const auto num_eps = std::numeric_limits<T>::epsilon();
+
 using std::swap;
 
 template <typename T>

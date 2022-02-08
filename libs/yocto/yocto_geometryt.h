@@ -57,9 +57,6 @@ using std::pair;
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// TODO: flt_max
-// TODO: bbox of all sizes
-
 // Axis aligned bounding box represented as a min/max vector pairs.
 template <typename T, int N>
 struct bbox;
@@ -67,8 +64,8 @@ struct bbox;
 // Axis aligned bounding box represented as a min/max vector pairs.
 template <typename T>
 struct bbox<T, 2> {
-  vec<T, 2> min = {flt_max, flt_max};
-  vec<T, 2> max = {flt_min, flt_min};
+  vec<T, 2> min = {num_max<T>, num_max<T>};
+  vec<T, 2> max = {num_min<T>, num_min<T>};
 
   vec<T, 2>&       operator[](int i);
   const vec<T, 2>& operator[](int i) const;
@@ -77,8 +74,8 @@ struct bbox<T, 2> {
 // Axis aligned bounding box represented as a min/max vector pairs.
 template <typename T>
 struct bbox<T, 3> {
-  vec<T, 3> min = {flt_max, flt_max, flt_max};
-  vec<T, 3> max = {flt_min, flt_min, flt_min};
+  vec<T, 3> min = {num_max<T>, num_max<T>, num_max<T>};
+  vec<T, 3> max = {num_min<T>, num_min<T>, num_min<T>};
 
   vec<T, 3>&       operator[](int i);
   const vec<T, 3>& operator[](int i) const;
@@ -121,11 +118,9 @@ inline void expand(bbox<T, 2>& a, const bbox<T, 2>& b);
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// TODO: ray epsilon
-// TODO: flt_max
-
 // Ray epsilon
-inline const auto ray_eps = 1e-4f;
+template <typename T>
+inline const auto ray_eps = (T)1e-4;
 
 // Rays with origin, direction and min/max t value.
 template <typename T, int N>
@@ -136,8 +131,8 @@ template <typename T>
 struct ray<T, 2> {
   vec<T, 2> o    = {0, 0};
   vec<T, 2> d    = {0, 1};
-  T         tmin = ray_eps;
-  T         tmax = flt_max;
+  T         tmin = ray_eps<T>;
+  T         tmax = num_max<T>;
 };
 
 // Rays with origin, direction and min/max t value.
@@ -145,8 +140,8 @@ template <typename T>
 struct ray<T, 3> {
   vec<T, 3> o    = {0, 0, 0};
   vec<T, 3> d    = {0, 0, 1};
-  T         tmin = ray_eps;
-  T         tmax = flt_max;
+  T         tmin = ray_eps<T>;
+  T         tmax = num_max<T>;
 };
 
 // Ray aliases
@@ -333,7 +328,7 @@ namespace yocto {
 template <typename T = float>
 struct prim_intersection {
   vec<T, 2> uv       = {0, 0};
-  T         distance = flt_max;  // TODO: flt_max
+  T         distance = num_max<T>;  // TODO: num_max<T>
   bool      hit      = false;
 };
 
