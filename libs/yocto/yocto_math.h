@@ -30,8 +30,6 @@
 // SOFTWARE.
 //
 
-#include "yocto_matht.h"
-
 #ifndef _YOCTO_MATH_H_
 #define _YOCTO_MATH_H_
 

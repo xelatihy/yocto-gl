@@ -31,8 +31,6 @@
 // SOFTWARE.
 //
 
-#include "yocto_geometryt.h"
-
 #ifndef _YOCTO_GEOMETRY_H_
 #define _YOCTO_GEOMETRY_H_
 
