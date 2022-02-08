@@ -723,13 +723,14 @@ inline vec<T, 3> quad_normal(const vec<T, 3>& n0, const vec<T, 3>& n1,
 // Interpolated sphere properties.
 template <typename T>
 inline vec<T, 3> sphere_point(const vec<T, 3> p, T r, const vec<T, 2>& uv) {
-  return p + r * vec<T, 3>{cos(uv.x * 2 * pif) * sin(uv.y * pif),
-                     sin(uv.x * 2 * pif) * sin(uv.y * pif), cos(uv.y * pif)};
+  return p + r * vec<T, 3>{cos(uv.x * 2 * (T)pi) * sin(uv.y * (T)pi),
+                     sin(uv.x * 2 * (T)pi) * sin(uv.y * (T)pi),
+                     cos(uv.y * (T)pi)};
 }
 template <typename T>
 inline vec<T, 3> sphere_normal(const vec<T, 3> p, T r, const vec<T, 2>& uv) {
-  return normalize(vec<T, 3>{cos(uv.x * 2 * pif) * sin(uv.y * pif),
-      sin(uv.x * 2 * pif) * sin(uv.y * pif), cos(uv.y * pif)});
+  return normalize(vec<T, 3>{cos(uv.x * 2 * (T)pi) * sin(uv.y * (T)pi),
+      sin(uv.x * 2 * (T)pi) * sin(uv.y * (T)pi), cos(uv.y * (T)pi)});
 }
 
 // Triangle tangent and bitangent from uv
@@ -785,7 +786,7 @@ inline ray<T, 3> camera_ray(const frame3f& frame, T lens, const vec<T, 2>& film,
     const vec<T, 2>& image_uv) {
   auto e = vec<T, 3>{0, 0, 0};
   auto q = vec<T, 3>{
-      film.x * (0.5f - image_uv.x), film.y * (image_uv.y - 0.5f), lens};
+      film.x * ((T)0.5 - image_uv.x), film.y * (image_uv.y - (T)0.5), lens};
   auto q1  = -q;
   auto d   = normalize(q1 - e);
   auto ray = yocto::ray<T, 3>{
@@ -801,7 +802,7 @@ inline ray<T, 3> camera_ray(const frame3f& frame, T lens, T aspect, T film_,
                           : vec<T, 2>{film_ * aspect, film_};
   auto e    = vec<T, 3>{0, 0, 0};
   auto q    = vec<T, 3>{
-      film.x * (0.5f - image_uv.x), film.y * (image_uv.y - 0.5f), lens};
+      film.x * ((T)0.5 - image_uv.x), film.y * (image_uv.y - (T)0.5), lens};
   auto q1  = -q;
   auto d   = normalize(q1 - e);
   auto ray = yocto::ray<T, 3>{
@@ -897,7 +898,7 @@ inline prim_intersection<T> intersect_sphere(
   // compute ray parameter
   auto t = (-b - sqrt(dis)) / (2 * a);
 
-  // exit if not within bounds
+  // exit if not within bound(T)pi
   if (t < ray.tmin || t > ray.tmax) return {};
 
   // try other ray parameter
@@ -908,9 +909,9 @@ inline prim_intersection<T> intersect_sphere(
 
   // compute local point for uvs
   auto plocal = ((ray.o + ray.d * t) - p) / r;
-  auto u      = atan2(plocal.y, plocal.x) / (2 * pif);
+  auto u      = atan2(plocal.y, plocal.x) / (2 * (T)pi);
   if (u < 0) u += 1;
-  auto v = acos(clamp(plocal.z, -1.0f, 1.0f)) / pif;
+  auto v = acos(clamp(plocal.z, (T)-1, (T)1)) / (T)pi;
 
   // intersection occurred: set params and exit
   return {{u, v}, t, true};
@@ -931,7 +932,7 @@ inline prim_intersection<T> intersect_triangle(const ray<T, 3>& ray,
   // check determinant and exit if triangle and ray are parallel
   // (could use EPSILONS if desired)
   if (det == 0) return {};
-  auto inv_det = 1.0f / det;
+  auto inv_det = (T)1.0 / det;
 
   // compute and check first bricentric coordinated
   auto tvec = ray.o - p0;
@@ -967,16 +968,17 @@ inline prim_intersection<T> intersect_quad(const ray<T, 3>& ray,
 template <typename T>
 inline bool intersect_bbox(const ray<T, 3>& ray, const bbox<T, 3>& bbox) {
   // determine intersection ranges
-  auto invd = 1.0f / ray.d;
+  auto invd = (T)1.0 / ray.d;
   auto t0   = (bbox.min - ray.o) * invd;
   auto t1   = (bbox.max - ray.o) * invd;
   // flip based on range directions
-  if (invd.x < 0.0f) swap(t0.x, t1.x);
-  if (invd.y < 0.0f) swap(t0.y, t1.y);
-  if (invd.z < 0.0f) swap(t0.z, t1.z);
+  if (invd.x < (T)0.0) swap(t0.x, t1.x);
+  if (invd.y < (T)0.0) swap(t0.y, t1.y);
+  if (invd.z < (T)0.0) swap(t0.z, t1.z);
   auto tmin = max(t0.z, max(t0.y, max(t0.x, ray.tmin)));
   auto tmax = min(t1.z, min(t1.y, min(t1.x, ray.tmax)));
-  tmax *= 1.00000024f;  // for double: 1.0000000000000004
+  if constexpr (std::is_same_v<T, float>) tmax *= 1.00000024f;
+  if constexpr (std::is_same_v<T, double>) tmax *= 1.0000000000000004;
   return tmin <= tmax;
 }
 
@@ -990,7 +992,8 @@ inline bool intersect_bbox(
   auto tmax   = max(it_min, it_max);
   auto t0     = max(max(tmin), ray.tmin);
   auto t1     = min(min(tmax), ray.tmax);
-  t1 *= 1.00000024f;  // for double: 1.0000000000000004
+  if constexpr (std::is_same_v<T, float>) t1 *= 1.00000024f;
+  if constexpr (std::is_same_v<T, double>) t1 *= 1.0000000000000004;
   return t0 <= t1;
 }
 
@@ -1114,7 +1117,7 @@ template <typename T>
 inline bool overlap_bbox(
     const vec<T, 3>& pos, T dist_max, const bbox<T, 3>& bbox) {
   // computing distance
-  auto dd = 0.0f;
+  auto dd = (T)0.0;
 
   // For each axis count any excess distance outside box extents
   if (pos.x < bbox.min.x) dd += (bbox.min.x - pos.x) * (bbox.min.x - pos.x);
