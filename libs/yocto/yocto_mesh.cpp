@@ -4164,7 +4164,7 @@ static vector<float> funnel_double(
     auto b = points[i + 1].pos;
     for (auto k = points[i].face; k < points[i + 1].face; k++) {
       auto& portal = portals[k];
-      auto s = intersect_segments_double(a, b, portal.first, portal.second);
+      auto  s = intersect_segments_double(a, b, portal.first, portal.second);
       report_floating_point(s);
       auto p = clamp(s, 0.0, 1.0);
       lerps.push_back((float)p);
@@ -4714,7 +4714,7 @@ static mesh_point geodesic_midpoint(const dual_geodesic_solver& solver,
   // profile_function();
 
   if (start.face == end.face) {
-    return mesh_point{start.face, (start.uv + end.uv) * 0.5};
+    return mesh_point{start.face, (start.uv + end.uv) * 0.5f};
   }
 
   auto path = compute_geodesic_path(

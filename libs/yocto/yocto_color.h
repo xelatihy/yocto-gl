@@ -546,7 +546,7 @@ inline vec3f colorgrade(
     gamma     = log(((float)0.5 - lift) / (gain - lift)) / log(grey);
 
     // apply_image
-    auto lerp_value = clamp(pow(rgb, 1 / gamma), 0, 1);
+    auto lerp_value = clamp(pow(rgb, 1 / gamma), (float)0, (float)1);
     rgb             = gain * lerp_value + lift * (1 - lerp_value);
   }
   return rgb;

@@ -202,7 +202,8 @@ void tonemap_image(
       result.pixels[idx] = tonemap(image.pixels[idx], exposure, filmic);
     }
   } else {
-    auto scale = vec4f{pow(2, exposure), pow(2, exposure), pow(2, exposure), 1};
+    auto scale = vec4f{
+        pow(2.0f, exposure), pow(2.0f, exposure), pow(2.0f, exposure), 1};
     for (auto idx : range(image.pixels.size())) {
       result.pixels[idx] = image.pixels[idx] * scale;
     }
@@ -220,7 +221,8 @@ void tonemap_image_mt(
           result.pixels[idx] = tonemap(image.pixels[idx], exposure, filmic);
         });
   } else {
-    auto scale = vec4f{pow(2, exposure), pow(2, exposure), pow(2, exposure), 1};
+    auto scale = vec4f{
+        pow(2.0f, exposure), pow(2.0f, exposure), pow(2.0f, exposure), 1};
     parallel_for_batch((size_t)image.width * (size_t)image.height,
         (size_t)image.width, [&result, &image, scale](size_t idx) {
           result.pixels[idx] = image.pixels[idx] * scale;
@@ -355,7 +357,7 @@ vec4f colorgradeb(
     auto grey  = gamma - mean(gamma) + params.midtones;
     gamma      = log(((float)0.5 - lift) / (gain - lift)) / log(grey);
     // apply_image
-    auto lerp_value = clamp(pow(rgb, 1 / gamma), 0, 1);
+    auto lerp_value = clamp(pow(rgb, 1 / gamma), (float)0, (float)1);
     rgb             = gain * lerp_value + lift * (1 - lerp_value);
   }
   return vec4f{rgb.x, rgb.y, rgb.z, alpha};
