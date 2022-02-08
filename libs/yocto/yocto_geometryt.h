@@ -57,6 +57,9 @@ using std::pair;
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// TODO: flt_max
+// TODO: bbox of all sizes
+
 // Axis aligned bounding box represented as a min/max vector pairs.
 template <typename T, int N>
 struct bbox;
@@ -118,27 +121,41 @@ inline void expand(bbox<T, 2>& a, const bbox<T, 2>& b);
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// TODO: ray epsilon
+// TODO: flt_max
+
 // Ray epsilon
 inline const auto ray_eps = 1e-4f;
 
-struct ray2f {
-  vec2f o    = {0, 0};
-  vec2f d    = {0, 1};
-  float tmin = ray_eps;
-  float tmax = flt_max;
+// Rays with origin, direction and min/max t value.
+template <typename T, int N>
+struct ray;
+
+// Rays with origin, direction and min/max t value.
+template <typename T>
+struct ray<T, 2> {
+  vec<T, 2> o    = {0, 0};
+  vec<T, 2> d    = {0, 1};
+  T         tmin = ray_eps;
+  T         tmax = flt_max;
 };
 
 // Rays with origin, direction and min/max t value.
-struct ray3f {
-  vec3f o    = {0, 0, 0};
-  vec3f d    = {0, 0, 1};
-  float tmin = ray_eps;
-  float tmax = flt_max;
+template <typename T>
+struct ray<T, 3> {
+  vec<T, 3> o    = {0, 0, 0};
+  vec<T, 3> d    = {0, 0, 1};
+  T         tmin = ray_eps;
+  T         tmax = flt_max;
 };
 
+// Ray aliases
+using ray2f = ray<float, 2>;
+using ray3f = ray<float, 3>;
+
 // Computes a point on a ray
-inline vec2f ray_point(const ray2f& ray, float t);
-inline vec3f ray_point(const ray3f& ray, float t);
+template <typename T, int N>
+inline vec<T, N> ray_point(const ray<T, N>& ray, T t);
 
 }  // namespace yocto
 
@@ -148,14 +165,16 @@ inline vec3f ray_point(const ray3f& ray, float t);
 namespace yocto {
 
 // Transforms rays.
-inline ray3f transform_ray(const mat4f& a, const ray3f& b);
-inline ray3f transform_ray(const frame3f& a, const ray3f& b);
+template <typename T, int N>
+inline ray<T, N> transform_ray(const mat<T, N + 1>& a, const ray<T, N>& b);
+template <typename T, int N>
+inline ray<T, N> transform_ray(const frame<T, N>& a, const ray<T, N>& b);
 
 // Transforms bounding boxes by matrices.
 template <typename T, int N>
-inline bbox<T, 3> transform_bbox(const mat<T, N + 1>& a, const bbox<T, 3>& b);
+inline bbox<T, N> transform_bbox(const mat<T, N + 1>& a, const bbox<T, N>& b);
 template <typename T, int N>
-inline bbox<T, 3> transform_bbox(const frame<T, N>& a, const bbox<T, 3>& b);
+inline bbox<T, N> transform_bbox(const frame<T, N>& a, const bbox<T, N>& b);
 
 }  // namespace yocto
 
@@ -438,8 +457,10 @@ inline void expand(bbox<T, N>& a, const bbox<T, N>& b) {
 namespace yocto {
 
 // Computes a point on a ray
-inline vec2f ray_point(const ray2f& ray, float t) { return ray.o + ray.d * t; }
-inline vec3f ray_point(const ray3f& ray, float t) { return ray.o + ray.d * t; }
+template <typename T, int N>
+inline vec<T, N> ray_point(const ray<T, N>& ray, T t) {
+  return ray.o + ray.d * t;
+}
 
 }  // namespace yocto
 
@@ -449,33 +470,41 @@ inline vec3f ray_point(const ray3f& ray, float t) { return ray.o + ray.d * t; }
 namespace yocto {
 
 // Transforms rays and bounding boxes by matrices.
-inline ray3f transform_ray(const mat4f& a, const ray3f& b) {
+template <typename T, int N>
+inline ray<T, N> transform_ray(const mat<T, N + 1>& a, const ray<T, N>& b) {
   return {transform_point(a, b.o), transform_vector(a, b.d), b.tmin, b.tmax};
 }
-inline ray3f transform_ray(const frame3f& a, const ray3f& b) {
+template <typename T, int N>
+inline ray<T, N> transform_ray(const frame<T, N>& a, const ray<T, N>& b) {
   return {transform_point(a, b.o), transform_vector(a, b.d), b.tmin, b.tmax};
 }
-inline bbox3f transform_bbox(const mat4f& a, const bbox3f& b) {
-  auto corners = {vec3f{b.min.x, b.min.y, b.min.z},
-      vec3f{b.min.x, b.min.y, b.max.z}, vec3f{b.min.x, b.max.y, b.min.z},
-      vec3f{b.min.x, b.max.y, b.max.z}, vec3f{b.max.x, b.min.y, b.min.z},
-      vec3f{b.max.x, b.min.y, b.max.z}, vec3f{b.max.x, b.max.y, b.min.z},
-      vec3f{b.max.x, b.max.y, b.max.z}};
-  auto xformed = bbox3f();
-  for (auto& corner : corners)
-    xformed = merge(xformed, transform_point(a, corner));
-  return xformed;
+template <typename T, int N>
+inline bbox<T, N> transform_bbox(const mat<T, N + 1>& a, const bbox<T, N>& b) {
+  if constexpr (N == 3) {
+    auto corners = {vec3f{b.min.x, b.min.y, b.min.z},
+        vec3f{b.min.x, b.min.y, b.max.z}, vec3f{b.min.x, b.max.y, b.min.z},
+        vec3f{b.min.x, b.max.y, b.max.z}, vec3f{b.max.x, b.min.y, b.min.z},
+        vec3f{b.max.x, b.min.y, b.max.z}, vec3f{b.max.x, b.max.y, b.min.z},
+        vec3f{b.max.x, b.max.y, b.max.z}};
+    auto xformed = bbox<T, N>();
+    for (auto& corner : corners)
+      xformed = merge(xformed, transform_point(a, corner));
+    return xformed;
+  }
 }
-inline bbox3f transform_bbox(const frame3f& a, const bbox3f& b) {
-  auto corners = {vec3f{b.min.x, b.min.y, b.min.z},
-      vec3f{b.min.x, b.min.y, b.max.z}, vec3f{b.min.x, b.max.y, b.min.z},
-      vec3f{b.min.x, b.max.y, b.max.z}, vec3f{b.max.x, b.min.y, b.min.z},
-      vec3f{b.max.x, b.min.y, b.max.z}, vec3f{b.max.x, b.max.y, b.min.z},
-      vec3f{b.max.x, b.max.y, b.max.z}};
-  auto xformed = bbox3f();
-  for (auto& corner : corners)
-    xformed = merge(xformed, transform_point(a, corner));
-  return xformed;
+template <typename T, int N>
+inline bbox<T, N> transform_bbox(const frame<T, N>& a, const bbox<T, N>& b) {
+  if constexpr (N == 3) {
+    auto corners = {vec3f{b.min.x, b.min.y, b.min.z},
+        vec3f{b.min.x, b.min.y, b.max.z}, vec3f{b.min.x, b.max.y, b.min.z},
+        vec3f{b.min.x, b.max.y, b.max.z}, vec3f{b.max.x, b.min.y, b.min.z},
+        vec3f{b.max.x, b.min.y, b.max.z}, vec3f{b.max.x, b.max.y, b.min.z},
+        vec3f{b.max.x, b.max.y, b.max.z}};
+    auto xformed = bbox<T, N>();
+    for (auto& corner : corners)
+      xformed = merge(xformed, transform_point(a, corner));
+    return xformed;
+  }
 }
 
 }  // namespace yocto
