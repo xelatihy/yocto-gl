@@ -682,7 +682,7 @@ void show_trace_gui(const string& title, const string& name, scene_data& scene,
             if (render_stop) return;
             trace_sample(state, scene, bvh, lights, i, j, params);
           }
-        });
+         });
         state.samples += params.batch;
         if (!render_stop) {
           auto lock      = std::lock_guard{render_mutex};
@@ -697,7 +697,7 @@ void show_trace_gui(const string& title, const string& name, scene_data& scene,
           render_update = true;
         }
       }
-    });
+     });
   };
 
   // stop render
@@ -2739,10 +2739,7 @@ bool draw_gui_params(const string& name, glwidgets_params& params) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-static void exit_nogl() {
-  printf("opngl not linked\n");
-  exit(1);
-}
+static void exit_nogl() { throw std::runtime_error{"opengl not linked\n"}; }
 
 // Open a window and show an image
 void show_image_gui(
@@ -2904,7 +2901,6 @@ bool draw_gui_dragger(
 // Checkbox
 bool draw_gui_checkbox(const char* lbl, bool& value) {
   exit_nogl();
-  return false;
   return false;
 }
 bool draw_gui_checkbox(const char* lbl, bool& value, bool invert) {

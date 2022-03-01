@@ -25,3 +25,8 @@ endif(YOCTO_EMBREE)
 if(YOCTO_DENOISE)
 add_subdirectory(openimagedenoise)
 endif(YOCTO_DENOISE)
+
+if(YOCTO_CUDA)
+add_subdirectory(embed_ptx)
+endif(YOCTO_CUDA)
+
