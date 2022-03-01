@@ -4,8 +4,42 @@
 // Yocto/CuTrace is a simple path tracer written on the Yocto/Scene model.
 // Yocto/CuTrace is implemented in `yocto_cutrace.h`, `yocto_cutrace.cpp`,
 // and `yocto_cutrace.cu`.
+// This library includes a stand-alone implementaton of the PCG32 random number
+// generator by M.E. O'Neill.
 //
 // THIS IS AN EXPERIMENTAL LIBRARY THAT IS NOT READY FOR PRIME TIME
+//
+
+//
+// LICENSE:
+//
+// Copyright (c) 2016 -- 2021 Fabio Pellacini
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+//
+//
+// LICENSE OF INCLUDED SOFTWARE for Pcg random number generator
+//
+// This code also includes a small exerpt from http://www.pcg-random.org/
+// licensed as follows
+// *Really* minimal PCG32 code / (c) 2014 M.E. O'Neill / pcg-random.org
+// Licensed under Apache License 2.0 (NO WARRANTY, etc. see website)
 //
 
 #include <optix_device.h>
@@ -838,6 +872,74 @@ inline pair<vec3f, vec3f> quad_tangents_fromuv(const vec3f& p0, const vec3f& p1,
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// RANDOM NUMBER GENERATION
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// PCG random numbers from http://www.pcg-random.org/
+struct rng_state {
+  uint64_t state = 0x853c49e6748fea9bULL;
+  uint64_t inc   = 0xda3e39cb94b95bdbULL;
+
+  rng_state() = default;
+  rng_state(uint64_t state, uint64_t inc);
+};
+
+// PCG random numbers from http://www.pcg-random.org/
+inline rng_state::rng_state(uint64_t state, uint64_t inc)
+    : state{state}, inc{inc} {}
+
+// Next random number, used internally only.
+inline uint32_t _advance_rng(rng_state& rng) {
+  uint64_t oldstate = rng.state;
+  rng.state         = oldstate * 6364136223846793005ULL + rng.inc;
+  auto xorshifted   = (uint32_t)(((oldstate >> 18u) ^ oldstate) >> 27u);
+  auto rot          = (uint32_t)(oldstate >> 59u);
+  // return (xorshifted >> rot) | (xorshifted << ((-rot) & 31));
+  return (xorshifted >> rot) | (xorshifted << ((~rot + 1u) & 31));
+}
+
+// Init a random number generator with a state state from the sequence seq.
+inline rng_state make_rng(uint64_t seed, uint64_t seq) {
+  auto rng  = rng_state();
+  rng.state = 0U;
+  rng.inc   = (seq << 1u) | 1u;
+  _advance_rng(rng);
+  rng.state += seed;
+  _advance_rng(rng);
+  return rng;
+}
+
+// Next random numbers: floats in [0,1), ints in [0,n).
+inline int   rand1i(rng_state& rng, int n) { return _advance_rng(rng) % n; }
+inline float rand1f(rng_state& rng) {
+  union {
+    uint32_t u;
+    float    f;
+  } x;
+  x.u = (_advance_rng(rng) >> 9) | 0x3f800000u;
+  return x.f - 1.0f;
+  // alternate implementation
+  // const static auto scale = (float)(1.0 / numeric_limits<uint32_t>::max());
+  // return advance_rng(rng) * scale;
+}
+inline vec2f rand2f(rng_state& rng) {
+  // force order of evaluation by using separate assignments.
+  auto x = rand1f(rng);
+  auto y = rand1f(rng);
+  return {x, y};
+}
+inline vec3f rand3f(rng_state& rng) {
+  // force order of evaluation by using separate assignments.
+  auto x = rand1f(rng);
+  auto y = rand1f(rng);
+  auto z = rand1f(rng);
+  return {x, y, z};
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // CUDA HELPERS
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -880,10 +982,15 @@ inline T* getPRD() {
 namespace yocto {
 
 struct cutrace_state {
-  int              width       = 0;
-  int              height      = 0;
-  int              samples     = 0;
-  cubuffer<float4> colorBuffer = {};
+  int                 width   = 0;
+  int                 height  = 0;
+  int                 samples = 0;
+  cubuffer<float4>    image   = {};
+  cubuffer<vec3f>     albedo  = {};
+  cubuffer<vec3f>     normal  = {};
+  cubuffer<int>       hits    = {};
+  cubuffer<rng_state> rngs    = {};
+  cubuffer<float4>    display = {};
 };
 
 struct cutrace_camera {
@@ -1069,13 +1176,11 @@ static ray3f eval_camera(
 static void trace_pixel(cutrace_state& state, const cutrace_scene& scene,
     const cutrace_bvh& bvh, const cutrace_lights& lights, int i, int j,
     const cutrace_params& params) {
-  // get camera
-  auto& camera = scene.cameras[0];
-
-  // compute pixel uvs
-  auto uv = vec2f{(i + 0.5f) / state.width, (j + 0.5f) / state.height};
-
-  // generate ray direction
+  auto& camera = scene.cameras[params.camera];
+  // auto  sampler = get_trace_sampler_func(params);
+  auto idx = state.width * j + i;
+  auto uv  = vec2f{(i + rand1f(state.rngs[idx])) / state.width,
+      (j + rand1f(state.rngs[idx])) / state.height};
   auto ray = eval_camera(camera, uv, {0, 0});
 
   // trace ray
@@ -1100,17 +1205,33 @@ static void trace_pixel(cutrace_state& state, const cutrace_scene& scene,
       color *= vec3f{fromTexture.x, fromTexture.y, fromTexture.z};
     }
 
-    state.colorBuffer[i + j * state.width] = {color.x, color.y, color.z, 1};
+    state.image[i + j * state.width] += {color.x, color.y, color.z, 1};
   } else {
-    state.colorBuffer[i + j * state.width] = {0, 1, 0, 1};
+    state.image[i + j * state.width] += {0, 1, 0, 1};
   }
 }
 
 // raygen shader
 optix_shader void __raygen__trace_pixel() {
+  // pixel index
+  auto ij  = optixGetLaunchIndex();
+  auto idx = ij.y * globals.state.width + ij.x;
+
+  // initialize state on first sample
+  if (globals.state.samples == 0) {
+    globals.state.image[idx] = {0, 0, 0, 0};
+    globals.state.rngs[idx]  = make_rng(98273987, idx * 2 + 1);
+  }
+
   // run shading
-  trace_pixel(globals.state, globals.scene, globals.bvh, cutrace_lights{},
-      optixGetLaunchIndex().x, optixGetLaunchIndex().y, cutrace_params{});
+  auto nsamples = 16;
+  for (auto sample = 0; sample < nsamples; sample++) {
+    trace_pixel(globals.state, globals.scene, globals.bvh, cutrace_lights{},
+        optixGetLaunchIndex().x, optixGetLaunchIndex().y, cutrace_params{});
+  }
+
+  // normalize output
+  globals.state.image[idx] /= nsamples;
 }
 
 }  // namespace yocto

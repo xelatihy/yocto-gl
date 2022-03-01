@@ -35,6 +35,8 @@
 
 #include "yocto_cutrace.h"
 
+#include "yocto_sampling.h"
+
 #if YOCTO_CUDA
 
 // do not reorder
@@ -221,10 +223,15 @@ struct cubvh_data {
 
 // state
 struct cutrace_state {
-  int             width       = 0;
-  int             height      = 0;
-  int             samples     = 0;
-  cubuffer<vec4f> colorBuffer = {};
+  int                 width   = 0;
+  int                 height  = 0;
+  int                 samples = 0;
+  cubuffer<vec4f>     image   = {};
+  cubuffer<vec3f>     albedo  = {};
+  cubuffer<vec3f>     normal  = {};
+  cubuffer<int>       hits    = {};
+  cubuffer<rng_state> rngs    = {};
+  cubuffer<vec4f>     display = {};
 };
 
 // params
@@ -694,8 +701,13 @@ static cutrace_state make_cutrace_state(
     state.height = params.resolution;
     state.width  = (int)round(params.resolution * camera.aspect);
   }
-  state.samples     = 0;
-  state.colorBuffer = make_buffer(state.width * state.height, (vec4f*)nullptr);
+  state.samples = 0;
+  state.image   = make_buffer(state.width * state.height, (vec4f*)nullptr);
+  state.albedo  = make_buffer(state.width * state.height, (vec3f*)nullptr);
+  state.normal  = make_buffer(state.width * state.height, (vec3f*)nullptr);
+  state.hits    = make_buffer(state.width * state.height, (int*)nullptr);
+  state.rngs    = make_buffer(state.width * state.height, (rng_state*)nullptr);
+  state.display = make_buffer(state.width * state.height, (vec4f*)nullptr);
   return state;
 };
 
@@ -709,11 +721,13 @@ image_data cutrace_image(
 
   // rendering
   render_start(context, state, cuscene, bvh, scene, params);
+  // for (auto sample = 0; sample < params.samples; sample++) {
   render_samples(context, state, cuscene, bvh, scene, params);
+  // }
 
   // copy back image
   auto image = make_image(state.width, state.height, false);
-  download_buffer(state.colorBuffer, image.pixels);
+  download_buffer(state.image, image.pixels);
 
   // cleanup
 
