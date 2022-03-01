@@ -929,14 +929,59 @@ struct cutrace_scene {
 
 struct cutrace_lights {};
 
-struct cutrace_params {};
+// Type of tracing algorithm
+enum struct cutrace_sampler_type {
+  path,        // path tracing
+  pathdirect,  // path tracing with direct
+  pathmis,     // path tracing with mis
+  naive,       // naive path tracing
+  eyelight,    // eyelight rendering
+  eyelightao,  // eyelight with ambient occlusion
+  furnace,     // furnace test
+  falsecolor,  // false color rendering
+};
+// Type of false color visualization
+enum struct cutrace_falsecolor_type {
+  // clang-format off
+  position, normal, frontfacing, gnormal, gfrontfacing, texcoord, mtype, color,
+  emission, roughness, opacity, metallic, delta, instance, shape, material, 
+  element, highlight
+  // clang-format on
+};
+
+// Default trace seed
+constexpr auto cutrace_default_seed = 961748941ull;
+
+// params
+struct cutrace_params {
+  int                     camera         = 0;
+  int                     resolution     = 1280;
+  cutrace_sampler_type    sampler        = cutrace_sampler_type::path;
+  cutrace_falsecolor_type falsecolor     = cutrace_falsecolor_type::color;
+  int                     samples        = 512;
+  int                     bounces        = 8;
+  float                   clamp          = 10;
+  bool                    nocaustics     = false;
+  bool                    envhidden      = false;
+  bool                    tentfilter     = false;
+  uint64_t                seed           = cutrace_default_seed;
+  bool                    embreebvh      = false;
+  bool                    highqualitybvh = false;
+  bool                    noparallel     = false;
+  int                     pratio         = 8;
+  float                   exposure       = 0;
+  bool                    filmic         = false;
+  bool                    denoise        = false;
+  int                     batch          = 1;
+};
 
 using cutrace_bvh = OptixTraversableHandle;
 
 struct cutrace_globals {
-  cutrace_state          state = {};
-  cutrace_scene          scene = {};
-  OptixTraversableHandle bvh   = 0;
+  cutrace_state          state  = {};
+  cutrace_scene          scene  = {};
+  OptixTraversableHandle bvh    = 0;
+  cutrace_params         params = {};
 };
 
 // global data

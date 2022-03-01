@@ -227,11 +227,35 @@ struct cutrace_state {
   cubuffer<vec4f> colorBuffer = {};
 };
 
+// params
+struct cutrace_dparams {
+  int                     camera         = 0;
+  int                     resolution     = 1280;
+  cutrace_sampler_type    sampler        = cutrace_sampler_type::path;
+  cutrace_falsecolor_type falsecolor     = cutrace_falsecolor_type::color;
+  int                     samples        = 512;
+  int                     bounces        = 8;
+  float                   clamp          = 10;
+  bool                    nocaustics     = false;
+  bool                    envhidden      = false;
+  bool                    tentfilter     = false;
+  uint64_t                seed           = cutrace_default_seed;
+  bool                    embreebvh      = false;
+  bool                    highqualitybvh = false;
+  bool                    noparallel     = false;
+  int                     pratio         = 8;
+  float                   exposure       = 0;
+  bool                    filmic         = false;
+  bool                    denoise        = false;
+  int                     batch          = 1;
+};
+
 // device params
 struct cutrace_globals {
-  cutrace_state          state = {};
-  cutrace_scene          scene = {};
-  OptixTraversableHandle bvh   = {};
+  cutrace_state          state  = {};
+  cutrace_scene          scene  = {};
+  OptixTraversableHandle bvh    = {};
+  cutrace_dparams        params = {};
 };
 
 // empty stb record
@@ -383,22 +407,28 @@ static cutrace_context make_cutrace_context(const cutrace_params& params) {
   return context;
 }
 
-/*! render one frame */
+// start a new render
+static void render_start(cutrace_context& context, cutrace_state& state,
+    const cutrace_scene& cuscene, const cubvh_data& bvh,
+    const scene_data& scene, const cutrace_params& params) {
+  auto globals   = cutrace_globals{};
+  globals.state  = state;
+  globals.scene  = cuscene;
+  globals.bvh    = bvh.instances_bvh.handle;
+  globals.params = (const cutrace_dparams&)params;
+  update_buffer(context.globals_buffer, globals);
+  // sync so we can get the frame
+  check_cusync();
+}
+
+// render a batch of samples
 static void render_samples(cutrace_context& context, cutrace_state& state,
     const cutrace_scene& cuscene, const cubvh_data& bvh,
     const scene_data& scene, const cutrace_params& params) {
-  // launch params
-  auto globals  = cutrace_globals{};
-  globals.state = state;
-  globals.scene = cuscene;
-  globals.bvh   = bvh.instances_bvh.handle;
-  update_buffer(context.globals_buffer, globals);
-
   check_result(optixLaunch(context.optix_pipeline, context.cuda_stream,
       context.globals_buffer.device_ptr(),
       context.globals_buffer.size_in_bytes(), &context.binding_table,
       state.width, state.height, 1));
-
   // sync so we can get the frame
   check_cusync();
 }
@@ -678,6 +708,7 @@ image_data cutrace_image(
   auto state   = make_cutrace_state(scene, params);
 
   // rendering
+  render_start(context, state, cuscene, bvh, scene, params);
   render_samples(context, state, cuscene, bvh, scene, params);
 
   // copy back image
