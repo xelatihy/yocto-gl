@@ -1,11 +1,12 @@
 cmake_minimum_required (VERSION 3.22)
 
-project (yocto_gl VERSION 4.0)
+project (yocto_gl VERSION 4.0 LANGUAGES C CXX)
 
 option(YOCTO_APPS "Build apps" ON)
 option(YOCTO_OPENGL "Enable OpenGL" ON)
 option(YOCTO_DENOISE "Enable denoising with Intel's OIDN" OFF)
 option(YOCTO_EMBREE "Enable ray casting with Intel's Embree" OFF)
+option(YOCTO_CUDA "Enable ray casting with Optix and Cuda" OFF)
 option(YOCTO_TESTING "Enable testing" OFF)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
