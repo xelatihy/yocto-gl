@@ -1203,9 +1203,10 @@ using shape_data    = cutrace_shape;
 constexpr auto min_roughness = 0.03f * 0.03f;
 
 // Evaluates an image at a point `uv`.
-static vec4f eval_texture(const texture_data& texture, const vec2f& uv,
+static vec4f eval_texture(const texture_data& texture, const vec2f& texcoord,
     bool as_linear, bool no_interpolation = false, bool clamp_to_edge = false) {
-  return {1, 0, 0, 0};
+  auto fromTexture = tex2D<float4>(texture.texture, texcoord.x, texcoord.y);
+  return {fromTexture.x, fromTexture.y, fromTexture.z, fromTexture.w};
 }
 
 // Helpers
@@ -1470,6 +1471,28 @@ static material_point eval_material(const scene_data& scene,
   return point;
 }
 
+// check if a material is a delta or volumetric
+static bool is_delta(const material_data& material) {
+  return (material.type == material_type::reflective &&
+             material.roughness == 0) ||
+         (material.type == material_type::refractive &&
+             material.roughness == 0) ||
+         (material.type == material_type::transparent &&
+             material.roughness == 0) ||
+         (material.type == material_type::volumetric);
+}
+static bool is_volumetric(const material_data& material) {
+  return material.type == material_type::refractive ||
+         material.type == material_type::volumetric ||
+         material.type == material_type::subsurface;
+}
+
+// check if an instance is volumetric
+static bool is_volumetric(
+    const scene_data& scene, const instance_data& instance) {
+  return is_volumetric(scene.materials[instance.material]);
+}
+
 // check if a brdf is a delta
 static bool is_delta(const material_point& material) {
   return (material.type == material_type::reflective &&
@@ -1546,6 +1569,54 @@ static scene_intersection intersect_scene(
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// Convenience functions
+[[maybe_unused]] static vec3f eval_position(
+    const scene_data& scene, const scene_intersection& intersection) {
+  return eval_position(scene, scene.instances[intersection.instance],
+      intersection.element, intersection.uv);
+}
+[[maybe_unused]] static vec3f eval_normal(
+    const scene_data& scene, const scene_intersection& intersection) {
+  return eval_normal(scene, scene.instances[intersection.instance],
+      intersection.element, intersection.uv);
+}
+[[maybe_unused]] static vec3f eval_element_normal(
+    const scene_data& scene, const scene_intersection& intersection) {
+  return eval_element_normal(
+      scene, scene.instances[intersection.instance], intersection.element);
+}
+[[maybe_unused]] static vec3f eval_shading_position(const scene_data& scene,
+    const scene_intersection& intersection, const vec3f& outgoing) {
+  return eval_shading_position(scene, scene.instances[intersection.instance],
+      intersection.element, intersection.uv, outgoing);
+}
+[[maybe_unused]] static vec3f eval_shading_normal(const scene_data& scene,
+    const scene_intersection& intersection, const vec3f& outgoing) {
+  return eval_shading_normal(scene, scene.instances[intersection.instance],
+      intersection.element, intersection.uv, outgoing);
+}
+[[maybe_unused]] static vec2f eval_texcoord(
+    const scene_data& scene, const scene_intersection& intersection) {
+  return eval_texcoord(scene, scene.instances[intersection.instance],
+      intersection.element, intersection.uv);
+}
+[[maybe_unused]] static material_point eval_material(
+    const scene_data& scene, const scene_intersection& intersection) {
+  return eval_material(scene, scene.instances[intersection.instance],
+      intersection.element, intersection.uv);
+}
+[[maybe_unused]] static bool is_volumetric(
+    const scene_data& scene, const scene_intersection& intersection) {
+  return is_volumetric(scene, scene.instances[intersection.instance]);
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// TRACE FUNCTIONS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
 static ray3f eval_camera(
     const cutrace_camera& camera, const vec2f& image_uv, const vec2f& lens_uv) {
   auto film = camera.aspect >= 1
@@ -1584,20 +1655,9 @@ static void trace_pixel(cutrace_state& state, const cutrace_scene& scene,
   if (intersection.hit) {
     auto& instance = scene.instances[intersection.instance];
     auto& shape    = scene.shapes[instance.shape];
-    auto& material = scene.materials[instance.material];
+    auto  material = eval_material(scene, intersection);
 
-    auto triangle = shape.triangles[intersection.element];
-    auto texcoord = shape.texcoords.empty()
-                        ? intersection.uv
-                        : interpolate_triangle(shape.texcoords[triangle.x],
-                              shape.texcoords[triangle.y],
-                              shape.texcoords[triangle.z], intersection.uv);
-    auto color    = material.color;
-    if (material.color_tex >= 0) {
-      auto& texture    = scene.textures[material.color_tex];
-      auto fromTexture = tex2D<float4>(texture.texture, texcoord.x, texcoord.y);
-      color *= vec3f{fromTexture.x, fromTexture.y, fromTexture.z};
-    }
+    auto color = material.color;
 
     state.image[i + j * state.width] += {color.x, color.y, color.z, 1};
   } else {
