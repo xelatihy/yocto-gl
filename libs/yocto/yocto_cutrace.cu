@@ -52,10 +52,15 @@
 #define optix_shader extern "C" __global__
 #define optix_constant extern "C" __constant__
 
+// whether to use builtin compound types or yocto's ones
+#define CUTRACE_BUILTIN_VECS 0
+
 // -----------------------------------------------------------------------------
 // MATH TYPES
 // -----------------------------------------------------------------------------
 namespace yocto {
+
+#if CUTRACE_BUILTIN_VECS
 
 using vec2f = float2;
 using vec3f = float3;
@@ -63,6 +68,55 @@ using vec4f = float4;
 using vec2i = int2;
 using vec3i = int3;
 using vec4i = int4;
+
+#else
+
+struct vec2f {
+  float x = 0;
+  float y = 0;
+};
+
+struct vec3f {
+  float x = 0;
+  float y = 0;
+  float z = 0;
+};
+
+struct vec4f {
+  float x = 0;
+  float y = 0;
+  float z = 0;
+  float w = 0;
+};
+
+struct vec2i {
+  int x = 0;
+  int y = 0;
+};
+
+struct vec3i {
+  int x = 0;
+  int y = 0;
+  int z = 0;
+};
+
+struct vec4i {
+  int x = 0;
+  int y = 0;
+  int z = 0;
+  int w = 0;
+};
+
+using byte = unsigned char;
+
+struct vec4b {
+  byte x = 0;
+  byte y = 0;
+  byte z = 0;
+  byte w = 0;
+};
+
+#endif
 
 // Rigid frames stored as a column-major affine transform matrix.
 struct frame2f {
@@ -985,12 +1039,12 @@ struct cutrace_state {
   int                 width   = 0;
   int                 height  = 0;
   int                 samples = 0;
-  cubuffer<float4>    image   = {};
+  cubuffer<vec4f>     image   = {};
   cubuffer<vec3f>     albedo  = {};
   cubuffer<vec3f>     normal  = {};
   cubuffer<int>       hits    = {};
   cubuffer<rng_state> rngs    = {};
-  cubuffer<float4>    display = {};
+  cubuffer<vec4f>     display = {};
 };
 
 struct cutrace_camera {
@@ -1117,7 +1171,8 @@ optix_shader void __closesthit__intersect_scene() {
   auto& intersection    = *getPRD<scene_intersection>();
   intersection.instance = optixGetInstanceIndex();
   intersection.element  = optixGetPrimitiveIndex();
-  intersection.uv       = optixGetTriangleBarycentrics();
+  intersection.uv       = {
+      optixGetTriangleBarycentrics().x, optixGetTriangleBarycentrics().y};
   intersection.distance = 0;
   intersection.hit      = true;
 }
@@ -1141,8 +1196,9 @@ static scene_intersection intersect_scene(
   auto     intersection = scene_intersection{};
   uint32_t u0, u1;
   packPointer(&intersection, u0, u1);
-  optixTrace(bvh, ray.o, ray.d, ray.tmin, ray.tmax, 0.0f,
-      OptixVisibilityMask(255), OPTIX_RAY_FLAG_DISABLE_ANYHIT, 0, 0, 0, u0, u1);
+  optixTrace(bvh, {ray.o.x, ray.o.y, ray.o.z}, {ray.d.x, ray.d.y, ray.d.z},
+      ray.tmin, ray.tmax, 0.0f, OptixVisibilityMask(255),
+      OPTIX_RAY_FLAG_DISABLE_ANYHIT, 0, 0, 0, u0, u1);
   return intersection;
 }
 
