@@ -56,6 +56,20 @@
 #define CUTRACE_BUILTIN_VECS 0
 
 // -----------------------------------------------------------------------------
+// SUBSTITUTES FOR STD TYPES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// pair
+template <typename T1, typename T2>
+struct pair {
+  T1 first;
+  T2 second;
+};
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // MATH TYPES
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -699,7 +713,7 @@ inline vec3f transform_direction(const frame3f& a, const vec3f& b) {
   return normalize(transform_vector(a, b));
 }
 inline vec3f transform_normal(
-    const frame3f& a, const vec3f& b, bool non_rigid) {
+    const frame3f& a, const vec3f& b, bool non_rigid = false) {
   // if (non_rigid) {
   //   return transform_normal(rotation(a), b);
   // } else {
@@ -884,7 +898,6 @@ inline vec3f sphere_normal(const vec3f p, float r, const vec2f& uv) {
       sin(uv.x * 2 * pif) * sin(uv.y * pif), cos(uv.y * pif)});
 }
 
-/*
 // Triangle tangent and bitangent from uv
 inline pair<vec3f, vec3f> triangle_tangents_fromuv(const vec3f& p0,
     const vec3f& p1, const vec3f& p2, const vec2f& uv0, const vec2f& uv1,
@@ -921,7 +934,6 @@ inline pair<vec3f, vec3f> quad_tangents_fromuv(const vec3f& p0, const vec3f& p1,
     return triangle_tangents_fromuv(p2, p3, p1, uv2, uv3, uv1);
   }
 }
-*/
 
 }  // namespace yocto
 
@@ -1171,6 +1183,308 @@ struct cutrace_globals {
 
 // global data
 optix_constant cutrace_globals globals;
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// SCENE FUNCTIONS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// compatibility aliases
+using scene_data    = cutrace_scene;
+using camera_data   = cutrace_camera;
+using material_data = cutrace_material;
+using texture_data  = cutrace_texture;
+using instance_data = cutrace_instance;
+using shape_data    = cutrace_shape;
+
+// constant values
+constexpr auto min_roughness = 0.03f * 0.03f;
+
+// Evaluates an image at a point `uv`.
+static vec4f eval_texture(const texture_data& texture, const vec2f& uv,
+    bool as_linear, bool no_interpolation = false, bool clamp_to_edge = false) {
+  return {1, 0, 0, 0};
+}
+
+// Helpers
+static vec4f eval_texture(const scene_data& scene, int texture, const vec2f& uv,
+    bool ldr_as_linear, bool no_interpolation = false,
+    bool clamp_to_edge = false) {
+  if (texture == invalidid) return {1, 1, 1, 1};
+  return eval_texture(
+      scene.textures[texture], uv, ldr_as_linear, no_interpolation);
+}
+
+// Material parameters evaluated at a point on the surface
+struct material_point {
+  material_type type         = material_type::gltfpbr;
+  vec3f         emission     = {0, 0, 0};
+  vec3f         color        = {0, 0, 0};
+  float         opacity      = 1;
+  float         roughness    = 0;
+  float         metallic     = 0;
+  float         ior          = 1;
+  vec3f         density      = {0, 0, 0};
+  vec3f         scattering   = {0, 0, 0};
+  float         scanisotropy = 0;
+  float         trdepth      = 0.01f;
+};
+
+// Evaluate material
+static material_point eval_material(const scene_data& scene,
+    const material_data& material, const vec2f& texcoord,
+    const vec4f& color_shp) {
+  // evaluate textures
+  auto emission_tex = eval_texture(
+      scene, material.emission_tex, texcoord, true);
+  auto color_tex     = eval_texture(scene, material.color_tex, texcoord, true);
+  auto roughness_tex = eval_texture(
+      scene, material.roughness_tex, texcoord, false);
+  auto scattering_tex = eval_texture(
+      scene, material.scattering_tex, texcoord, true);
+
+  // material point
+  auto point         = material_point{};
+  point.type         = material.type;
+  point.emission     = material.emission * xyz(emission_tex);
+  point.color        = material.color * xyz(color_tex) * xyz(color_shp);
+  point.opacity      = material.opacity * color_tex.w * color_shp.w;
+  point.metallic     = material.metallic * roughness_tex.z;
+  point.roughness    = material.roughness * roughness_tex.y;
+  point.roughness    = point.roughness * point.roughness;
+  point.ior          = material.ior;
+  point.scattering   = material.scattering * xyz(scattering_tex);
+  point.scanisotropy = material.scanisotropy;
+  point.trdepth      = material.trdepth;
+
+  // volume density
+  if (material.type == material_type::refractive ||
+      material.type == material_type::volumetric ||
+      material.type == material_type::subsurface) {
+    point.density = -log(clamp(point.color, 0.0001f, 1.0f)) / point.trdepth;
+  } else {
+    point.density = {0, 0, 0};
+  }
+
+  // fix roughness
+  if (point.type == material_type::matte ||
+      point.type == material_type::gltfpbr ||
+      point.type == material_type::glossy) {
+    point.roughness = clamp(point.roughness, min_roughness, 1.0f);
+  }
+
+  return point;
+}
+
+// Eval position
+static vec3f eval_position(const scene_data& scene,
+    const instance_data& instance, int element, const vec2f& uv) {
+  auto& shape = scene.shapes[instance.shape];
+  if (!shape.triangles.empty()) {
+    auto t = shape.triangles[element];
+    return transform_point(
+        instance.frame, interpolate_triangle(shape.positions[t.x],
+                            shape.positions[t.y], shape.positions[t.z], uv));
+  } else {
+    return {0, 0, 0};
+  }
+}
+
+// Shape element normal.
+static vec3f eval_element_normal(
+    const scene_data& scene, const instance_data& instance, int element) {
+  auto& shape = scene.shapes[instance.shape];
+  if (!shape.triangles.empty()) {
+    auto t = shape.triangles[element];
+    return transform_normal(
+        instance.frame, triangle_normal(shape.positions[t.x],
+                            shape.positions[t.y], shape.positions[t.z]));
+  } else {
+    return {0, 0, 0};
+  }
+}
+
+// Eval normal
+static vec3f eval_normal(const scene_data& scene, const instance_data& instance,
+    int element, const vec2f& uv) {
+  auto& shape = scene.shapes[instance.shape];
+  if (shape.normals.empty())
+    return eval_element_normal(scene, instance, element);
+  if (!shape.triangles.empty()) {
+    auto t = shape.triangles[element];
+    return transform_normal(
+        instance.frame, normalize(interpolate_triangle(shape.normals[t.x],
+                            shape.normals[t.y], shape.normals[t.z], uv)));
+  } else {
+    return {0, 0, 0};
+  }
+}
+
+// Eval texcoord
+static vec2f eval_texcoord(const scene_data& scene,
+    const instance_data& instance, int element, const vec2f& uv) {
+  auto& shape = scene.shapes[instance.shape];
+  if (shape.texcoords.empty()) return uv;
+  if (!shape.triangles.empty()) {
+    auto t = shape.triangles[element];
+    return interpolate_triangle(
+        shape.texcoords[t.x], shape.texcoords[t.y], shape.texcoords[t.z], uv);
+  } else {
+    return {0, 0};
+  }
+}
+
+// Shape element normal.
+static pair<vec3f, vec3f> eval_element_tangents(
+    const scene_data& scene, const instance_data& instance, int element) {
+  auto& shape = scene.shapes[instance.shape];
+  if (!shape.triangles.empty() && !shape.texcoords.empty()) {
+    auto t   = shape.triangles[element];
+    auto tuv = triangle_tangents_fromuv(shape.positions[t.x],
+        shape.positions[t.y], shape.positions[t.z], shape.texcoords[t.x],
+        shape.texcoords[t.y], shape.texcoords[t.z]);
+    return {transform_direction(instance.frame, tuv.first),
+        transform_direction(instance.frame, tuv.second)};
+  } else {
+    return {};
+  }
+}
+
+static vec3f eval_normalmap(const scene_data& scene,
+    const instance_data& instance, int element, const vec2f& uv) {
+  auto& shape    = scene.shapes[instance.shape];
+  auto& material = scene.materials[instance.material];
+  // apply normal mapping
+  auto normal   = eval_normal(scene, instance, element, uv);
+  auto texcoord = eval_texcoord(scene, instance, element, uv);
+  if (material.normal_tex != invalidid && (!shape.triangles.empty())) {
+    auto& normal_tex = scene.textures[material.normal_tex];
+    auto  normalmap  = -1 + 2 * xyz(eval_texture(normal_tex, texcoord, false));
+    auto  tuv        = eval_element_tangents(scene, instance, element);
+    auto  frame      = frame3f{tuv.first, tuv.second, normal, {0, 0, 0}};
+    frame.x          = orthonormalize(frame.x, frame.z);
+    frame.y          = normalize(cross(frame.z, frame.x));
+    auto flip_v      = dot(frame.y, tuv.second) < 0;
+    normalmap.y *= flip_v ? 1 : -1;  // flip vertical axis
+    normal = transform_normal(frame, normalmap);
+  }
+  return normal;
+}
+
+// Eval shading position
+static vec3f eval_shading_position(const scene_data& scene,
+    const instance_data& instance, int element, const vec2f& uv,
+    const vec3f& outgoing) {
+  auto& shape = scene.shapes[instance.shape];
+  if (!shape.triangles.empty()) {
+    return eval_position(scene, instance, element, uv);
+  } else {
+    return {0, 0, 0};
+  }
+}
+
+// Eval shading normal
+static vec3f eval_shading_normal(const scene_data& scene,
+    const instance_data& instance, int element, const vec2f& uv,
+    const vec3f& outgoing) {
+  auto& shape    = scene.shapes[instance.shape];
+  auto& material = scene.materials[instance.material];
+  if (!shape.triangles.empty()) {
+    auto normal = eval_normal(scene, instance, element, uv);
+    if (material.normal_tex != invalidid) {
+      normal = eval_normalmap(scene, instance, element, uv);
+    }
+    if (material.type == material_type::refractive) return normal;
+    return dot(normal, outgoing) >= 0 ? normal : -normal;
+  } else {
+    return {0, 0, 0};
+  }
+}
+
+// Eval color
+static vec4f eval_color(const scene_data& scene, const instance_data& instance,
+    int element, const vec2f& uv) {
+  auto& shape = scene.shapes[instance.shape];
+  if (shape.colors.empty()) return {1, 1, 1, 1};
+  if (!shape.triangles.empty()) {
+    auto t = shape.triangles[element];
+    return interpolate_triangle(
+        shape.colors[t.x], shape.colors[t.y], shape.colors[t.z], uv);
+  } else {
+    return {0, 0, 0, 0};
+  }
+}
+
+// Evaluate material
+static material_point eval_material(const scene_data& scene,
+    const instance_data& instance, int element, const vec2f& uv) {
+  auto& material = scene.materials[instance.material];
+  auto  texcoord = eval_texcoord(scene, instance, element, uv);
+
+  // evaluate textures
+  auto emission_tex = eval_texture(
+      scene, material.emission_tex, texcoord, true);
+  auto color_shp     = eval_color(scene, instance, element, uv);
+  auto color_tex     = eval_texture(scene, material.color_tex, texcoord, true);
+  auto roughness_tex = eval_texture(
+      scene, material.roughness_tex, texcoord, false);
+  auto scattering_tex = eval_texture(
+      scene, material.scattering_tex, texcoord, true);
+
+  // material point
+  auto point         = material_point{};
+  point.type         = material.type;
+  point.emission     = material.emission * xyz(emission_tex);
+  point.color        = material.color * xyz(color_tex) * xyz(color_shp);
+  point.opacity      = material.opacity * color_tex.w * color_shp.w;
+  point.metallic     = material.metallic * roughness_tex.z;
+  point.roughness    = material.roughness * roughness_tex.y;
+  point.roughness    = point.roughness * point.roughness;
+  point.ior          = material.ior;
+  point.scattering   = material.scattering * xyz(scattering_tex);
+  point.scanisotropy = material.scanisotropy;
+  point.trdepth      = material.trdepth;
+
+  // volume density
+  if (material.type == material_type::refractive ||
+      material.type == material_type::volumetric ||
+      material.type == material_type::subsurface) {
+    point.density = -log(clamp(point.color, 0.0001f, 1.0f)) / point.trdepth;
+  } else {
+    point.density = {0, 0, 0};
+  }
+
+  // fix roughness
+  if (point.type == material_type::matte ||
+      point.type == material_type::gltfpbr ||
+      point.type == material_type::glossy) {
+    point.roughness = clamp(point.roughness, min_roughness, 1.0f);
+  } else if (material.type == material_type::volumetric) {
+    point.roughness = 0;
+  } else {
+    if (point.roughness < min_roughness) point.roughness = 0;
+  }
+
+  return point;
+}
+
+// check if a brdf is a delta
+static bool is_delta(const material_point& material) {
+  return (material.type == material_type::reflective &&
+             material.roughness == 0) ||
+         (material.type == material_type::refractive &&
+             material.roughness == 0) ||
+         (material.type == material_type::transparent &&
+             material.roughness == 0) ||
+         (material.type == material_type::volumetric);
+}
+static bool has_volume(const material_point& material) {
+  return material.type == material_type::refractive ||
+         material.type == material_type::volumetric ||
+         material.type == material_type::subsurface;
+}
 
 }  // namespace yocto
 
