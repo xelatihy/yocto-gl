@@ -180,8 +180,22 @@ struct cutrace_texture {
 };
 
 struct cutrace_material {
-  vec3f color;
-  int   color_tex;
+  material_type type         = material_type::matte;
+  vec3f         emission     = {0, 0, 0};
+  vec3f         color        = {0, 0, 0};
+  float         roughness    = 0;
+  float         metallic     = 0;
+  float         ior          = 1.5f;
+  vec3f         scattering   = {0, 0, 0};
+  float         scanisotropy = 0;
+  float         trdepth      = 0.01f;
+  float         opacity      = 1;
+
+  int emission_tex   = invalidid;
+  int color_tex      = invalidid;
+  int roughness_tex  = invalidid;
+  int scattering_tex = invalidid;
+  int normal_tex     = invalidid;
 };
 
 struct cutrace_instance {
@@ -528,9 +542,22 @@ static cutrace_sceneext make_cutrace_scene(
 
   auto materials = vector<cutrace_material>{};
   for (auto& material : scene.materials) {
-    auto& cumaterial     = materials.emplace_back();
-    cumaterial.color     = material.color;
-    cumaterial.color_tex = material.color_tex;
+    auto& cumaterial      = materials.emplace_back();
+    cumaterial.type       = material.type;
+    cumaterial.emission   = material.emission;
+    cumaterial.color      = material.color;
+    cumaterial.roughness  = material.roughness;
+    cumaterial.metallic   = material.metallic;
+    cumaterial.ior        = material.ior;
+    cumaterial.scattering = material.scattering;
+    cumaterial.trdepth    = material.trdepth;
+    cumaterial.opacity    = material.opacity;
+
+    cumaterial.emission_tex   = material.emission_tex;
+    cumaterial.color_tex      = material.color_tex;
+    cumaterial.roughness_tex  = material.roughness_tex;
+    cumaterial.scattering_tex = material.scattering_tex;
+    cumaterial.normal_tex     = material.normal_tex;
   }
   cuscene.materials = make_buffer(materials);
 
