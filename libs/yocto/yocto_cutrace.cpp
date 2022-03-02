@@ -194,6 +194,7 @@ struct cutrace_shape {
   cubuffer<vec3f> positions = {};
   cubuffer<vec3f> normals   = {};
   cubuffer<vec2f> texcoords = {};
+  cubuffer<vec4f> colors    = {};
   cubuffer<vec3i> triangles = {};
 };
 
@@ -465,6 +466,7 @@ static cutrace_sceneext make_cutrace_scene(
     if (!shape.normals.empty()) cushape.normals = make_buffer(shape.normals);
     if (!shape.texcoords.empty())
       cushape.texcoords = make_buffer(shape.texcoords);
+    if (!shape.colors.empty()) cushape.colors = make_buffer(shape.colors);
   }
   cuscene.shapes = make_buffer(cuscene.cushapes);
 

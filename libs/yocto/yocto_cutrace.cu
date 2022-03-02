@@ -1023,6 +1023,7 @@ struct cutrace_shape {
   cubuffer<vec3f> positions = {};
   cubuffer<vec3f> normals   = {};
   cubuffer<vec2f> texcoords = {};
+  cubuffer<vec4f> colors    = {};
   cubuffer<vec3i> triangles = {};
 };
 
