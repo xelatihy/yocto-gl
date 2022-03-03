@@ -141,10 +141,10 @@ void run_render(const render_params& params_) {
   // render
   timer = simple_timer{};
   trace_start(context, state, cuscene, bvh, lights, scene, params__);
-  for (auto sample : range(params.samples)) {
+  for (auto sample : range(0, params__.samples, params__.batch)) {
     auto sample_timer = simple_timer{};
     trace_samples(context, state, cuscene, bvh, lights, scene, params__);
-    print_info("render sample {}/{}: {}", sample, params.samples,
+    print_info("render sample {}/{}: {}", state.samples, params.samples,
         elapsed_formatted(sample_timer));
     if (params.savebatch && state.samples % params.batch == 0) {
       auto image       = params.denoise ? get_denoised_image(state)

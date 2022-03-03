@@ -426,7 +426,7 @@ static float sample_lights_pdf(const scene_data& scene, const trace_bvh& bvh,
         auto i = clamp(
             (int)(texcoord.x * emission_tex.width), 0, emission_tex.width - 1);
         auto j    = clamp((int)(texcoord.y * emission_tex.height), 0,
-            emission_tex.height - 1);
+               emission_tex.height - 1);
         auto prob = sample_discrete_pdf(
                         light.elements_cdf, j * emission_tex.width + i) /
                     light.elements_cdf.back();
@@ -480,7 +480,7 @@ static trace_result trace_path(const scene_data& scene, const trace_bvh& bvh,
     if (!volume_stack.empty()) {
       auto& vsdf     = volume_stack.back();
       auto  distance = sample_transmittance(
-          vsdf.density, intersection.distance, rand1f(rng), rand1f(rng));
+           vsdf.density, intersection.distance, rand1f(rng), rand1f(rng));
       weight *= eval_transmittance(vsdf.density, distance) /
                 sample_transmittance_pdf(
                     vsdf.density, distance, intersection.distance);
@@ -627,7 +627,7 @@ static trace_result trace_pathdirect(const scene_data& scene,
     if (!volume_stack.empty()) {
       auto& vsdf     = volume_stack.back();
       auto  distance = sample_transmittance(
-          vsdf.density, intersection.distance, rand1f(rng), rand1f(rng));
+           vsdf.density, intersection.distance, rand1f(rng), rand1f(rng));
       weight *= eval_transmittance(vsdf.density, distance) /
                 sample_transmittance_pdf(
                     vsdf.density, distance, intersection.distance);
@@ -806,7 +806,7 @@ static trace_result trace_pathmis(const scene_data& scene, const trace_bvh& bvh,
     if (!volume_stack.empty()) {
       auto& vsdf     = volume_stack.back();
       auto  distance = sample_transmittance(
-          vsdf.density, intersection.distance, rand1f(rng), rand1f(rng));
+           vsdf.density, intersection.distance, rand1f(rng), rand1f(rng));
       weight *= eval_transmittance(vsdf.density, distance) /
                 sample_transmittance_pdf(
                     vsdf.density, distance, intersection.distance);
@@ -878,10 +878,10 @@ static trace_result trace_pathmis(const scene_data& scene, const trace_bvh& bvh,
                   scene.instances[intersection.instance], intersection.element,
                   intersection.uv);
               emission      = eval_emission(material,
-                  eval_shading_normal(scene,
-                      scene.instances[intersection.instance],
-                      intersection.element, intersection.uv, -incoming),
-                  -incoming);
+                       eval_shading_normal(scene,
+                           scene.instances[intersection.instance],
+                           intersection.element, intersection.uv, -incoming),
+                       -incoming);
             }
             radiance += weight * bsdfcos * emission * mis_weight;
           }
@@ -1198,13 +1198,13 @@ static trace_result trace_furnace(const scene_data& scene, const trace_bvh& bvh,
     }
 
     // prepare shading point
-    auto outgoing = -ray.d;
+    auto  outgoing = -ray.d;
     auto& instance = scene.instances[intersection.instance];
-    auto element  = intersection.element;
-    auto uv       = intersection.uv;
-    auto position = eval_position(scene, instance, element, uv);
-    auto normal   = eval_shading_normal(scene, instance, element, uv, outgoing);
-    auto material = eval_material(scene, instance, element, uv);
+    auto  element  = intersection.element;
+    auto  uv       = intersection.uv;
+    auto  position = eval_position(scene, instance, element, uv);
+    auto  normal = eval_shading_normal(scene, instance, element, uv, outgoing);
+    auto  material = eval_material(scene, instance, element, uv);
 
     // handle opacity
     if (material.opacity < 1 && rand1f(rng) >= material.opacity) {
@@ -1389,7 +1389,7 @@ void trace_sample(trace_state& state, const scene_data& scene,
   auto  sampler = get_trace_sampler_func(params);
   auto  idx     = state.width * j + i;
   auto  ray     = sample_camera(camera, {i, j}, {state.width, state.height},
-      rand2f(state.rngs[idx]), rand2f(state.rngs[idx]), params.tentfilter);
+           rand2f(state.rngs[idx]), rand2f(state.rngs[idx]), params.tentfilter);
   auto [radiance, hit, albedo, normal] = sampler(
       scene, bvh, lights, ray, state.rngs[idx], params);
   if (!isfinite(radiance)) radiance = {0, 0, 0};
@@ -1513,15 +1513,19 @@ void trace_samples(trace_state& state, const scene_data& scene,
   if (params.noparallel) {
     for (auto j : range(state.height)) {
       for (auto i : range(state.width)) {
-        trace_sample(state, scene, bvh, lights, i, j, params);
+        for (auto s : range(params.batch)) {
+          trace_sample(state, scene, bvh, lights, i, j, params);
+        }
       }
     }
   } else {
     parallel_for(state.width, state.height, [&](int i, int j) {
-      trace_sample(state, scene, bvh, lights, i, j, params);
+      for (auto s : range(params.batch)) {
+        trace_sample(state, scene, bvh, lights, i, j, params);
+      }
     });
   }
-  state.samples += 1;
+  state.samples += params.batch;
 }
 
 // Check image type
