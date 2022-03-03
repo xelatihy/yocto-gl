@@ -2686,7 +2686,7 @@ optix_shader void __closesthit__intersect_scene() {
   intersection.element  = optixGetPrimitiveIndex();
   intersection.uv       = {
       optixGetTriangleBarycentrics().x, optixGetTriangleBarycentrics().y};
-  intersection.distance = 0;
+  intersection.distance = optixGetRayTmax();
   intersection.hit      = true;
 }
 
@@ -2699,7 +2699,7 @@ optix_shader void __miss__intersect_scene() {
   intersection.instance = 0;
   intersection.element  = 0;
   intersection.uv       = {0, 0};
-  intersection.distance = 0;
+  intersection.distance = optixGetRayTmax();
   intersection.hit      = false;
 }
 
