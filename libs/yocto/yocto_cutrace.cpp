@@ -35,6 +35,8 @@
 
 #include "yocto_cutrace.h"
 
+#include "yocto_sampling.h"
+
 #if YOCTO_CUDA
 
 // do not reorder
@@ -175,11 +177,28 @@ struct cutrace_camera {
 struct cutrace_texture {
   CUarray     array;
   CUtexObject texture;
+  int         width  = 0;
+  int         height = 0;
+  bool        linear = false;
 };
 
 struct cutrace_material {
-  vec3f color;
-  int   color_tex;
+  material_type type         = material_type::matte;
+  vec3f         emission     = {0, 0, 0};
+  vec3f         color        = {0, 0, 0};
+  float         roughness    = 0;
+  float         metallic     = 0;
+  float         ior          = 1.5f;
+  vec3f         scattering   = {0, 0, 0};
+  float         scanisotropy = 0;
+  float         trdepth      = 0.01f;
+  float         opacity      = 1;
+
+  int emission_tex   = invalidid;
+  int color_tex      = invalidid;
+  int roughness_tex  = invalidid;
+  int scattering_tex = invalidid;
+  int normal_tex     = invalidid;
 };
 
 struct cutrace_instance {
@@ -192,15 +211,23 @@ struct cutrace_shape {
   cubuffer<vec3f> positions = {};
   cubuffer<vec3f> normals   = {};
   cubuffer<vec2f> texcoords = {};
+  cubuffer<vec4f> colors    = {};
   cubuffer<vec3i> triangles = {};
 };
 
+struct cutrace_environment {
+  frame3f frame        = {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}};
+  vec3f   emission     = {0, 0, 0};
+  int     emission_tex = invalidid;
+};
+
 struct cutrace_scene {
-  cubuffer<cutrace_camera>   cameras   = {};
-  cubuffer<cutrace_texture>  textures  = {};
-  cubuffer<cutrace_material> materials = {};
-  cubuffer<cutrace_shape>    shapes    = {};
-  cubuffer<cutrace_instance> instances = {};
+  cubuffer<cutrace_camera>      cameras      = {};
+  cubuffer<cutrace_texture>     textures     = {};
+  cubuffer<cutrace_material>    materials    = {};
+  cubuffer<cutrace_shape>       shapes       = {};
+  cubuffer<cutrace_instance>    instances    = {};
+  cubuffer<cutrace_environment> environments = {};
 };
 
 struct cutrace_sceneext : cutrace_scene {
@@ -221,17 +248,46 @@ struct cubvh_data {
 
 // state
 struct cutrace_state {
-  int             width       = 0;
-  int             height      = 0;
-  int             samples     = 0;
-  cubuffer<vec4f> colorBuffer = {};
+  int                 width   = 0;
+  int                 height  = 0;
+  int                 samples = 0;
+  cubuffer<vec4f>     image   = {};
+  cubuffer<vec3f>     albedo  = {};
+  cubuffer<vec3f>     normal  = {};
+  cubuffer<int>       hits    = {};
+  cubuffer<rng_state> rngs    = {};
+  cubuffer<vec4f>     display = {};
+};
+
+// params
+struct cutrace_dparams {
+  int                     camera         = 0;
+  int                     resolution     = 1280;
+  cutrace_sampler_type    sampler        = cutrace_sampler_type::path;
+  cutrace_falsecolor_type falsecolor     = cutrace_falsecolor_type::color;
+  int                     samples        = 512;
+  int                     bounces        = 8;
+  float                   clamp          = 10;
+  bool                    nocaustics     = false;
+  bool                    envhidden      = false;
+  bool                    tentfilter     = false;
+  uint64_t                seed           = cutrace_default_seed;
+  bool                    embreebvh      = false;
+  bool                    highqualitybvh = false;
+  bool                    noparallel     = false;
+  int                     pratio         = 8;
+  float                   exposure       = 0;
+  bool                    filmic         = false;
+  bool                    denoise        = false;
+  int                     batch          = 1;
 };
 
 // device params
 struct cutrace_globals {
-  cutrace_state          state = {};
-  cutrace_scene          scene = {};
-  OptixTraversableHandle bvh   = {};
+  cutrace_state          state  = {};
+  cutrace_scene          scene  = {};
+  OptixTraversableHandle bvh    = {};
+  cutrace_dparams        params = {};
 };
 
 // empty stb record
@@ -383,22 +439,28 @@ static cutrace_context make_cutrace_context(const cutrace_params& params) {
   return context;
 }
 
-/*! render one frame */
+// start a new render
+static void render_start(cutrace_context& context, cutrace_state& state,
+    const cutrace_scene& cuscene, const cubvh_data& bvh,
+    const scene_data& scene, const cutrace_params& params) {
+  auto globals   = cutrace_globals{};
+  globals.state  = state;
+  globals.scene  = cuscene;
+  globals.bvh    = bvh.instances_bvh.handle;
+  globals.params = (const cutrace_dparams&)params;
+  update_buffer(context.globals_buffer, globals);
+  // sync so we can get the frame
+  check_cusync();
+}
+
+// render a batch of samples
 static void render_samples(cutrace_context& context, cutrace_state& state,
     const cutrace_scene& cuscene, const cubvh_data& bvh,
     const scene_data& scene, const cutrace_params& params) {
-  // launch params
-  auto globals  = cutrace_globals{};
-  globals.state = state;
-  globals.scene = cuscene;
-  globals.bvh   = bvh.instances_bvh.handle;
-  update_buffer(context.globals_buffer, globals);
-
   check_result(optixLaunch(context.optix_pipeline, context.cuda_stream,
       context.globals_buffer.device_ptr(),
       context.globals_buffer.size_in_bytes(), &context.binding_table,
       state.width, state.height, 1));
-
   // sync so we can get the frame
   check_cusync();
 }
@@ -428,18 +490,25 @@ static cutrace_sceneext make_cutrace_scene(
     if (!shape.normals.empty()) cushape.normals = make_buffer(shape.normals);
     if (!shape.texcoords.empty())
       cushape.texcoords = make_buffer(shape.texcoords);
+    if (!shape.colors.empty()) cushape.colors = make_buffer(shape.colors);
   }
   cuscene.shapes = make_buffer(cuscene.cushapes);
 
   // textures
   for (auto& texture : scene.textures) {
-    auto& cutexture = cuscene.cutextures.emplace_back();
+    auto& cutexture  = cuscene.cutextures.emplace_back();
+    cutexture.width  = texture.width;
+    cutexture.height = texture.height;
+    cutexture.linear = texture.linear;
+
+    auto as_byte = !texture.pixelsb.empty();
 
     auto array_descriptor        = CUDA_ARRAY_DESCRIPTOR{};
     array_descriptor.Width       = texture.width;
     array_descriptor.Height      = texture.height;
     array_descriptor.NumChannels = 4;
-    array_descriptor.Format      = CU_AD_FORMAT_UNSIGNED_INT8;
+    array_descriptor.Format      = as_byte ? CU_AD_FORMAT_UNSIGNED_INT8
+                                           : CU_AD_FORMAT_FLOAT;
     check_result(cuArrayCreate(&cutexture.array, &array_descriptor));
 
     auto memcpy_descriptor          = CUDA_MEMCPY2D{};
@@ -451,17 +520,15 @@ static cutrace_sceneext make_cutrace_scene(
     memcpy_descriptor.srcHost       = nullptr;
     memcpy_descriptor.srcXInBytes   = 0;
     memcpy_descriptor.srcY          = 0;
-    memcpy_descriptor.srcPitch      = texture.width * 4;
-    memcpy_descriptor.WidthInBytes  = texture.width * 4;
+    memcpy_descriptor.srcPitch      = texture.width * (as_byte ? 4 : 16);
+    memcpy_descriptor.WidthInBytes  = texture.width * (as_byte ? 4 : 16);
     memcpy_descriptor.Height        = texture.height;
     if (!texture.pixelsb.empty()) {
       memcpy_descriptor.srcHost = texture.pixelsb.data();
       check_result(cuMemcpy2D(&memcpy_descriptor));
     }
     if (!texture.pixelsf.empty()) {
-      auto pixelsb = vector<vec4b>(texture.pixelsf.size());
-      rgb_to_srgb(pixelsb, texture.pixelsf);
-      memcpy_descriptor.srcHost = pixelsb.data();
+      memcpy_descriptor.srcHost = texture.pixelsf.data();
       check_result(cuMemcpy2D(&memcpy_descriptor));
     }
 
@@ -489,9 +556,22 @@ static cutrace_sceneext make_cutrace_scene(
 
   auto materials = vector<cutrace_material>{};
   for (auto& material : scene.materials) {
-    auto& cumaterial     = materials.emplace_back();
-    cumaterial.color     = material.color;
-    cumaterial.color_tex = material.color_tex;
+    auto& cumaterial      = materials.emplace_back();
+    cumaterial.type       = material.type;
+    cumaterial.emission   = material.emission;
+    cumaterial.color      = material.color;
+    cumaterial.roughness  = material.roughness;
+    cumaterial.metallic   = material.metallic;
+    cumaterial.ior        = material.ior;
+    cumaterial.scattering = material.scattering;
+    cumaterial.trdepth    = material.trdepth;
+    cumaterial.opacity    = material.opacity;
+
+    cumaterial.emission_tex   = material.emission_tex;
+    cumaterial.color_tex      = material.color_tex;
+    cumaterial.roughness_tex  = material.roughness_tex;
+    cumaterial.scattering_tex = material.scattering_tex;
+    cumaterial.normal_tex     = material.normal_tex;
   }
   cuscene.materials = make_buffer(materials);
 
@@ -503,6 +583,15 @@ static cutrace_sceneext make_cutrace_scene(
     cuinstance.material = instance.material;
   }
   cuscene.instances = make_buffer(instances);
+
+  auto environments = vector<cutrace_environment>{};
+  for (auto& environment : scene.environments) {
+    auto& cuenvironment        = environments.emplace_back();
+    cuenvironment.frame        = environment.frame;
+    cuenvironment.emission     = environment.emission;
+    cuenvironment.emission_tex = environment.emission_tex;
+  }
+  cuscene.environments = make_buffer(environments);
 
   return cuscene;
 }
@@ -664,8 +753,13 @@ static cutrace_state make_cutrace_state(
     state.height = params.resolution;
     state.width  = (int)round(params.resolution * camera.aspect);
   }
-  state.samples     = 0;
-  state.colorBuffer = make_buffer(state.width * state.height, (vec4f*)nullptr);
+  state.samples = 0;
+  state.image   = make_buffer(state.width * state.height, (vec4f*)nullptr);
+  state.albedo  = make_buffer(state.width * state.height, (vec3f*)nullptr);
+  state.normal  = make_buffer(state.width * state.height, (vec3f*)nullptr);
+  state.hits    = make_buffer(state.width * state.height, (int*)nullptr);
+  state.rngs    = make_buffer(state.width * state.height, (rng_state*)nullptr);
+  state.display = make_buffer(state.width * state.height, (vec4f*)nullptr);
   return state;
 };
 
@@ -678,11 +772,14 @@ image_data cutrace_image(
   auto state   = make_cutrace_state(scene, params);
 
   // rendering
+  render_start(context, state, cuscene, bvh, scene, params);
+  // for (auto sample = 0; sample < params.samples; sample++) {
   render_samples(context, state, cuscene, bvh, scene, params);
+  // }
 
   // copy back image
-  auto image = make_image(state.width, state.height, false);
-  download_buffer(state.colorBuffer, image.pixels);
+  auto image = make_image(state.width, state.height, true);
+  download_buffer(state.image, image.pixels);
 
   // cleanup
 
@@ -704,6 +801,7 @@ static void exit_nocuda() { throw std::runtime_error{"cuda not linked\n"}; }
 image_data cutrace_image(
     const scene_data& scene, const cutrace_params& params) {
   exit_nocuda();
+  return {};
 }
 
 }  // namespace yocto
