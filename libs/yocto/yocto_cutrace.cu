@@ -2068,6 +2068,9 @@ struct cutrace_camera {
 struct cutrace_texture {
   cudaArray_t         array   = nullptr;
   cudaTextureObject_t texture = 0;
+  int                 width   = 0;
+  int                 height  = 0;
+  bool                linear  = false;
 };
 
 enum struct material_type {
@@ -2216,7 +2219,13 @@ static vec4f eval_texture(const texture_data& texture, const vec2f& texcoord,
     bool as_linear = false, bool no_interpolation = false,
     bool clamp_to_edge = false) {
   auto fromTexture = tex2D<float4>(texture.texture, texcoord.x, texcoord.y);
-  return {fromTexture.x, fromTexture.y, fromTexture.z, fromTexture.w};
+  auto color       = vec4f{
+      fromTexture.x, fromTexture.y, fromTexture.z, fromTexture.w};
+  if (as_linear && !texture.linear) {
+    return srgb_to_rgb(color);
+  } else {
+    return color;
+  }
 }
 
 // Helpers

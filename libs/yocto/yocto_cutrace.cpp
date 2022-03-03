@@ -177,6 +177,9 @@ struct cutrace_camera {
 struct cutrace_texture {
   CUarray     array;
   CUtexObject texture;
+  int         width  = 0;
+  int         height = 0;
+  bool        linear = false;
 };
 
 struct cutrace_material {
@@ -493,7 +496,10 @@ static cutrace_sceneext make_cutrace_scene(
 
   // textures
   for (auto& texture : scene.textures) {
-    auto& cutexture = cuscene.cutextures.emplace_back();
+    auto& cutexture  = cuscene.cutextures.emplace_back();
+    cutexture.width  = texture.width;
+    cutexture.height = texture.height;
+    cutexture.linear = texture.linear;
 
     auto array_descriptor        = CUDA_ARRAY_DESCRIPTOR{};
     array_descriptor.Width       = texture.width;
