@@ -212,12 +212,19 @@ struct cutrace_shape {
   cubuffer<vec3i> triangles = {};
 };
 
+struct cutrace_environment {
+  frame3f frame        = {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}};
+  vec3f   emission     = {0, 0, 0};
+  int     emission_tex = invalidid;
+};
+
 struct cutrace_scene {
-  cubuffer<cutrace_camera>   cameras   = {};
-  cubuffer<cutrace_texture>  textures  = {};
-  cubuffer<cutrace_material> materials = {};
-  cubuffer<cutrace_shape>    shapes    = {};
-  cubuffer<cutrace_instance> instances = {};
+  cubuffer<cutrace_camera>      cameras      = {};
+  cubuffer<cutrace_texture>     textures     = {};
+  cubuffer<cutrace_material>    materials    = {};
+  cubuffer<cutrace_shape>       shapes       = {};
+  cubuffer<cutrace_instance>    instances    = {};
+  cubuffer<cutrace_environment> environments = {};
 };
 
 struct cutrace_sceneext : cutrace_scene {
@@ -569,6 +576,15 @@ static cutrace_sceneext make_cutrace_scene(
     cuinstance.material = instance.material;
   }
   cuscene.instances = make_buffer(instances);
+
+  auto environments = vector<cutrace_environment>{};
+  for (auto& environment : scene.environments) {
+    auto& cuenvironment        = environment.emplace_back();
+    cuenvironment.frame        = environment.frame;
+    cuenvironment.emission     = environment.emission;
+    cuenvironment.emission_tex = environment.emission_tex;
+  }
+  cuscene.environments = make_buffer(ienvironmentsnstances);
 
   return cuscene;
 }

@@ -753,6 +753,11 @@ inline frame3f lookat_frame(
   return {u, v, w, eye};
 }
 
+// Additions
+inline vec3f transform_direction_inverse(const frame3f& frame, const vec3f& v) {
+  return normalize(vec3f{dot(frame.x, v), dot(frame.y, v), dot(frame.z, v)});
+}
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -1047,6 +1052,11 @@ struct cubuffer {
   inline T&       operator[](int idx) { return _data[idx]; }
   inline const T& operator[](int idx) const { return _data[idx]; }
 
+  inline T*       begin() { return _data; }
+  inline T*       end() { return _data + _size; }
+  inline const T* begin() const { return _data; }
+  inline const T* end() const { return _data + _size; }
+
   T*     _data = nullptr;
   size_t _size = 0;
 };
@@ -1146,12 +1156,19 @@ struct cutrace_shape {
   cubuffer<vec3i> triangles = {};
 };
 
+struct cutrace_environment {
+  frame3f frame        = {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}};
+  vec3f   emission     = {0, 0, 0};
+  int     emission_tex = invalidid;
+};
+
 struct cutrace_scene {
-  cubuffer<cutrace_camera>   cameras   = {};
-  cubuffer<cutrace_texture>  textures  = {};
-  cubuffer<cutrace_material> materials = {};
-  cubuffer<cutrace_shape>    shapes    = {};
-  cubuffer<cutrace_instance> instances = {};
+  cubuffer<cutrace_camera>      cameras      = {};
+  cubuffer<cutrace_texture>     textures     = {};
+  cubuffer<cutrace_material>    materials    = {};
+  cubuffer<cutrace_shape>       shapes       = {};
+  cubuffer<cutrace_instance>    instances    = {};
+  cubuffer<cutrace_environment> environments = {};
 };
 
 struct cutrace_lights {};
@@ -1229,26 +1246,28 @@ constexpr auto trace_default_seed = cutrace_default_seed;
 namespace yocto {
 
 // compatibility aliases
-using scene_data    = cutrace_scene;
-using camera_data   = cutrace_camera;
-using material_data = cutrace_material;
-using texture_data  = cutrace_texture;
-using instance_data = cutrace_instance;
-using shape_data    = cutrace_shape;
+using scene_data       = cutrace_scene;
+using camera_data      = cutrace_camera;
+using material_data    = cutrace_material;
+using texture_data     = cutrace_texture;
+using instance_data    = cutrace_instance;
+using shape_data       = cutrace_shape;
+using environment_data = cutrace_environment;
 
 // constant values
 constexpr auto min_roughness = 0.03f * 0.03f;
 
 // Evaluates an image at a point `uv`.
 static vec4f eval_texture(const texture_data& texture, const vec2f& texcoord,
-    bool as_linear, bool no_interpolation = false, bool clamp_to_edge = false) {
+    bool as_linear = false, bool no_interpolation = false,
+    bool clamp_to_edge = false) {
   auto fromTexture = tex2D<float4>(texture.texture, texcoord.x, texcoord.y);
   return {fromTexture.x, fromTexture.y, fromTexture.z, fromTexture.w};
 }
 
 // Helpers
 static vec4f eval_texture(const scene_data& scene, int texture, const vec2f& uv,
-    bool ldr_as_linear, bool no_interpolation = false,
+    bool ldr_as_linear = false, bool no_interpolation = false,
     bool clamp_to_edge = false) {
   if (texture == invalidid) return {1, 1, 1, 1};
   return eval_texture(
@@ -1546,6 +1565,47 @@ static bool has_volume(const material_point& material) {
          material.type == material_type::subsurface;
 }
 
+static ray3f eval_camera(
+    const cutrace_camera& camera, const vec2f& image_uv, const vec2f& lens_uv) {
+  auto film = camera.aspect >= 1
+                  ? vec2f{camera.film, camera.film / camera.aspect}
+                  : vec2f{camera.film * camera.aspect, camera.film};
+  auto q    = vec3f{
+      film.x * (0.5f - image_uv.x), film.y * (image_uv.y - 0.5f), camera.lens};
+  // ray direction through the lens center
+  auto dc = -normalize(q);
+  // point on the lens
+  auto e = vec3f{
+      lens_uv.x * camera.aperture / 2, lens_uv.y * camera.aperture / 2, 0};
+  // point on the focus plane
+  auto p = dc * camera.focus / abs(dc.z);
+  // correct ray direction to account for camera focusing
+  auto d = normalize(p - e);
+  // done
+  return ray3f{
+      transform_point(camera.frame, e), transform_direction(camera.frame, d)};
+}
+
+// Evaluate environment color.
+static vec3f eval_environment(const scene_data& scene,
+    const environment_data& environment, const vec3f& direction) {
+  auto wl       = transform_direction_inverse(environment.frame, direction);
+  auto texcoord = vec2f{
+      atan2(wl.z, wl.x) / (2 * pif), acos(clamp(wl.y, -1.0f, 1.0f)) / pif};
+  if (texcoord.x < 0) texcoord.x += 1;
+  return environment.emission *
+         xyz(eval_texture(scene, environment.emission_tex, texcoord));
+}
+
+// Evaluate all environment color.
+static vec3f eval_environment(const scene_data& scene, const vec3f& direction) {
+  auto emission = vec3f{0, 0, 0};
+  for (auto& environment : scene.environments) {
+    emission += eval_environment(scene, environment, direction);
+  }
+  return emission;
+}
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -1654,33 +1714,81 @@ namespace yocto {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-static ray3f eval_camera(
-    const cutrace_camera& camera, const vec2f& image_uv, const vec2f& lens_uv) {
-  auto film = camera.aspect >= 1
-                  ? vec2f{camera.film, camera.film / camera.aspect}
-                  : vec2f{camera.film * camera.aspect, camera.film};
-  auto q    = vec3f{
-      film.x * (0.5f - image_uv.x), film.y * (image_uv.y - 0.5f), camera.lens};
-  // ray direction through the lens center
-  auto dc = -normalize(q);
-  // point on the lens
-  auto e = vec3f{
-      lens_uv.x * camera.aperture / 2, lens_uv.y * camera.aperture / 2, 0};
-  // point on the focus plane
-  auto p = dc * camera.focus / abs(dc.z);
-  // correct ray direction to account for camera focusing
-  auto d = normalize(p - e);
-  // done
-  return ray3f{
-      transform_point(camera.frame, e), transform_direction(camera.frame, d)};
-}
-
 struct trace_result {
   vec3f radiance = {0, 0, 0};
   bool  hit      = false;
   vec3f albedo   = {0, 0, 0};
   vec3f normal   = {0, 0, 0};
 };
+
+#if 0
+// Eyelight for quick previewing.
+static trace_result trace_eyelight(const scene_data& scene,
+    const trace_bvh& bvh, const trace_lights& lights, const ray3f& ray_,
+    rng_state& rng, const trace_params& params) {
+  // initialize
+  auto radiance   = vec3f{0, 0, 0};
+  auto weight     = vec3f{1, 1, 1};
+  auto ray        = ray_;
+  auto hit        = false;
+  auto hit_albedo = vec3f{0, 0, 0};
+  auto hit_normal = vec3f{0, 0, 0};
+  auto opbounce   = 0;
+
+  // trace  path
+  for (auto bounce = 0; bounce < max(params.bounces, 4); bounce++) {
+    // intersect next point
+    auto intersection = intersect_scene(bvh, scene, ray);
+    if (!intersection.hit) {
+      if (bounce > 0 || !params.envhidden)
+        radiance += weight * eval_environment(scene, ray.d);
+      break;
+    }
+
+    // prepare shading point
+    auto outgoing = -ray.d;
+    auto position = eval_shading_position(scene, intersection, outgoing);
+    auto normal   = eval_shading_normal(scene, intersection, outgoing);
+    auto material = eval_material(scene, intersection);
+
+    // handle opacity
+    if (material.opacity < 1 && rand1f(rng) >= material.opacity) {
+      if (opbounce++ > 128) break;
+      ray = {position + ray.d * 1e-2f, ray.d};
+      bounce -= 1;
+      continue;
+    }
+
+    // set hit variables
+    if (bounce == 0) {
+      hit        = true;
+      hit_albedo = material.color;
+      hit_normal = normal;
+    }
+
+    // accumulate emission
+    auto incoming = outgoing;
+    radiance += weight * eval_emission(material, normal, outgoing);
+
+    // brdf * light
+    radiance += weight * pif *
+                eval_bsdfcos(material, normal, outgoing, incoming);
+
+    // continue path
+    if (!is_delta(material)) break;
+    incoming = sample_delta(material, normal, outgoing, rand1f(rng));
+    if (incoming == vec3f{0, 0, 0}) break;
+    weight *= eval_delta(material, normal, outgoing, incoming) /
+              sample_delta_pdf(material, normal, outgoing, incoming);
+    if (weight == vec3f{0, 0, 0} || !isfinite(weight)) break;
+
+    // setup next iteration
+    ray = {position, incoming};
+  }
+
+  return {radiance, hit, hit_albedo, hit_normal};
+}
+#endif
 
 // False color rendering
 static trace_result trace_falsecolor(const scene_data& scene,
