@@ -116,6 +116,19 @@ static void update_buffer(cubuffer<T>& buffer, const T& data) {
   return update_buffer(buffer, 1, &data);
 }
 
+// update a buffer
+template <typename T, typename T1>
+static void update_buffer_value(
+    cubuffer<T>& buffer, size_t offset, size_t size, const T1* data) {
+  check_result(
+      cuMemcpyHtoD(buffer.device_ptr() + offset, data, size * sizeof(T1)));
+}
+template <typename T, typename T1>
+static void update_buffer_value(
+    cubuffer<T>& buffer, size_t offset, const T1& data) {
+  return update_buffer_value(buffer, offset, 1, &data);
+}
+
 // download buffer
 template <typename T>
 static void download_buffer(
@@ -473,10 +486,15 @@ static void trace_samples(cutrace_context& context, cutrace_state& state,
     const cutrace_scene& cuscene, const cubvh_data& bvh,
     const cutrace_lights& lights, const scene_data& scene,
     const cutrace_params& params) {
+  if (state.samples >= params.samples) return;
+  update_buffer_value(context.globals_buffer,
+      offsetof(cutrace_globals, state) + offsetof(cutrace_state, samples),
+      state.samples);
   check_result(optixLaunch(context.optix_pipeline, context.cuda_stream,
       context.globals_buffer.device_ptr(),
       context.globals_buffer.size_in_bytes(), &context.binding_table,
       state.width, state.height, 1));
+  state.samples++;
   // sync so we can get the frame
   check_cusync();
 }
@@ -806,13 +824,14 @@ image_data cutrace_image(
 
   // rendering
   trace_start(context, state, cuscene, bvh, lights, scene, params);
-  // for (auto sample = 0; sample < params.samples; sample++) {
-  trace_samples(context, state, cuscene, bvh, lights, scene, params);
-  // }
+  for (auto sample = 0; sample < params.samples; sample++) {
+    trace_samples(context, state, cuscene, bvh, lights, scene, params);
+  }
 
   // copy back image
   auto image = make_image(state.width, state.height, true);
   download_buffer(state.image, image.pixels);
+  for (auto& pixel : image.pixels) pixel /= state.samples;
 
   // cleanup
 

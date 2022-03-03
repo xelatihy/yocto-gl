@@ -4077,14 +4077,11 @@ optix_shader void __raygen__trace_pixel() {
   }
 
   // run shading
-  auto nsamples = 256;
+  auto nsamples = globals.params.batch;
   for (auto sample = 0; sample < nsamples; sample++) {
     trace_sample(globals.state, globals.scene, globals.bvh, globals.lights,
         optixGetLaunchIndex().x, optixGetLaunchIndex().y, cutrace_params{});
   }
-
-  // normalize output
-  globals.state.image[idx] /= nsamples;
 }
 
 }  // namespace yocto
