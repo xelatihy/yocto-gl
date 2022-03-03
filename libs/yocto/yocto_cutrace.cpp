@@ -501,11 +501,14 @@ static cutrace_sceneext make_cutrace_scene(
     cutexture.height = texture.height;
     cutexture.linear = texture.linear;
 
+    auto as_byte = !texture.pixelsb.empty();
+
     auto array_descriptor        = CUDA_ARRAY_DESCRIPTOR{};
     array_descriptor.Width       = texture.width;
     array_descriptor.Height      = texture.height;
     array_descriptor.NumChannels = 4;
-    array_descriptor.Format      = CU_AD_FORMAT_UNSIGNED_INT8;
+    array_descriptor.Format      = as_byte ? CU_AD_FORMAT_UNSIGNED_INT8
+                                           : CU_AD_FORMAT_FLOAT;
     check_result(cuArrayCreate(&cutexture.array, &array_descriptor));
 
     auto memcpy_descriptor          = CUDA_MEMCPY2D{};
@@ -517,17 +520,15 @@ static cutrace_sceneext make_cutrace_scene(
     memcpy_descriptor.srcHost       = nullptr;
     memcpy_descriptor.srcXInBytes   = 0;
     memcpy_descriptor.srcY          = 0;
-    memcpy_descriptor.srcPitch      = texture.width * 4;
-    memcpy_descriptor.WidthInBytes  = texture.width * 4;
+    memcpy_descriptor.srcPitch      = texture.width * (as_byte ? 4 : 16);
+    memcpy_descriptor.WidthInBytes  = texture.width * (as_byte ? 4 : 16);
     memcpy_descriptor.Height        = texture.height;
     if (!texture.pixelsb.empty()) {
       memcpy_descriptor.srcHost = texture.pixelsb.data();
       check_result(cuMemcpy2D(&memcpy_descriptor));
     }
     if (!texture.pixelsf.empty()) {
-      auto pixelsb = vector<vec4b>(texture.pixelsf.size());
-      rgb_to_srgb(pixelsb, texture.pixelsf);
-      memcpy_descriptor.srcHost = pixelsb.data();
+      memcpy_descriptor.srcHost = texture.pixelsf.data();
       check_result(cuMemcpy2D(&memcpy_descriptor));
     }
 
