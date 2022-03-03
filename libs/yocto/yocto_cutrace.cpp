@@ -300,7 +300,7 @@ void trace_start(cutrace_context& context, cutrace_state& state,
 }
 
 // render a batch of samples
-static void trace_samples(cutrace_context& context, cutrace_state& state,
+void trace_samples(cutrace_context& context, cutrace_state& state,
     const cutrace_scene& cuscene, const cubvh_data& bvh,
     const cutrace_lights& lights, const scene_data& scene,
     const cutrace_params& params) {
@@ -449,9 +449,8 @@ cutrace_sceneext make_cutrace_scene(
   return cuscene;
 }
 
-static cubvh_data make_cutrace_bvh(cutrace_context& context,
-    cutrace_sceneext& cuscene, const scene_data& scene,
-    const cutrace_params& params) {
+cubvh_data make_cutrace_bvh(cutrace_context& context, cutrace_sceneext& cuscene,
+    const scene_data& scene, const cutrace_params& params) {
   auto bvh = cubvh_data{};
 
   // shapes
@@ -658,6 +657,92 @@ image_data cutrace_image(
 
   // done
   return image;
+}
+
+// Get resulting render
+image_data get_rendered_image(const cutrace_state& state) {
+  auto image = make_image(state.width, state.height, true);
+  get_rendered_image(image, state);
+  return image;
+}
+void get_rendered_image(image_data& image, const cutrace_state& state) {
+  download_buffer(state.image, image.pixels);
+  for (auto& pixel : image.pixels) pixel /= state.samples;
+}
+
+// Get denoised result
+image_data get_denoised_image(const cutrace_state& state) {
+  auto image = make_image(state.width, state.height, true);
+  get_denoised_image(image, state);
+  return image;
+}
+void get_denoised_image(image_data& image, const cutrace_state& state) {
+#if YOCTO_DENOISE
+  // Create an Intel Open Image Denoise device
+  oidn::DeviceRef device = oidn::newDevice();
+  device.commit();
+
+  // get image
+  get_rendered_image(image, state);
+
+  // get albedo and normal
+  auto albedo = vector<vec3f>(image.pixels.size()),
+       normal = vector<vec3f>(image.pixels.size());
+  auto scale  = 1.0f / (float)state.samples;
+  for (auto idx = 0; idx < state.width * state.height; idx++) {
+    albedo[idx] = state.albedo[idx] * scale;
+    normal[idx] = state.normal[idx] * scale;
+  }
+
+  // Create a denoising filter
+  oidn::FilterRef filter = device.newFilter("RT");  // ray tracing filter
+  filter.setImage("color", (void*)image.pixels.data(), oidn::Format::Float3,
+      state.width, state.height, 0, sizeof(vec4f), sizeof(vec4f) * state.width);
+  filter.setImage("albedo", (void*)albedo.data(), oidn::Format::Float3,
+      state.width, state.height);
+  filter.setImage("normal", (void*)normal.data(), oidn::Format::Float3,
+      state.width, state.height);
+  filter.setImage("output", image.pixels.data(), oidn::Format::Float3,
+      state.width, state.height, 0, sizeof(vec4f), sizeof(vec4f) * state.width);
+  filter.set("inputScale", 1.0f);  // set scale as fixed
+  filter.set("hdr", true);         // image is HDR
+  filter.commit();
+
+  // Filter the image
+  filter.execute();
+#else
+  get_rendered_image(image, state);
+#endif
+}
+
+// Get denoising buffers
+image_data get_albedo_image(const cutrace_state& state) {
+  auto albedo = make_image(state.width, state.height, true);
+  get_albedo_image(albedo, state);
+  return albedo;
+}
+void get_albedo_image(image_data& image, const cutrace_state& state) {
+  auto albedo = vector<vec3f>(state.width * state.height);
+  download_buffer(state.albedo, albedo);
+  auto scale = 1.0f / (float)state.samples;
+  for (auto idx = 0; idx < state.width * state.height; idx++) {
+    image.pixels[idx] = {albedo[idx].x * scale, albedo[idx].y * scale,
+        albedo[idx].z * scale, 1.0f};
+  }
+}
+image_data get_normal_image(const cutrace_state& state) {
+  auto normal = make_image(state.width, state.height, true);
+  get_normal_image(normal, state);
+  return normal;
+}
+void get_normal_image(image_data& image, const cutrace_state& state) {
+  auto normal = vector<vec3f>(state.width * state.height);
+  download_buffer(state.normal, normal);
+  auto scale = 1.0f / (float)state.samples;
+  for (auto idx = 0; idx < state.width * state.height; idx++) {
+    image.pixels[idx] = {normal[idx].x * scale, normal[idx].y * scale,
+        normal[idx].z * scale, 1.0f};
+  }
 }
 
 }  // namespace yocto

@@ -160,6 +160,20 @@ void trace_samples(cutrace_context& context, cutrace_state& state,
     const cutrace_lights& lights, const scene_data& scene,
     const cutrace_params& params);
 
+// Get resulting render
+image_data get_rendered_image(const cutrace_state& state);
+void       get_rendered_image(image_data& image, const cutrace_state& state);
+
+// Get denoised result
+image_data get_denoised_image(const cutrace_state& state);
+void       get_denoised_image(image_data& image, const cutrace_state& state);
+
+// Get denoising buffers
+image_data get_albedo_image(const cutrace_state& state);
+void       get_albedo_image(image_data& image, const cutrace_state& state);
+image_data get_normal_image(const cutrace_state& state);
+void       get_normal_image(image_data& image, const cutrace_state& state);
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
