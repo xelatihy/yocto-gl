@@ -69,17 +69,6 @@ static void check_result(OptixResult result) {
   }
 }
 
-// buffer view
-template <typename T>
-struct cubuffer {
-  size_t      size() const { return _size; }
-  CUdeviceptr device_ptr() const { return _data; }
-  size_t      size_in_bytes() const { return _size * sizeof(T); }
-
-  CUdeviceptr _data = 0;
-  size_t      _size = 0;
-};
-
 // make a buffer
 template <typename T>
 static cubuffer<T> make_buffer(size_t size, const T* data) {
@@ -176,179 +165,8 @@ namespace yocto {
 
 extern "C" char yocto_cutrace_ptx[];
 
-// device params
-struct cutrace_camera {
-  frame3f frame;
-  float   lens;
-  float   film;
-  float   aspect;
-  float   focus;
-  float   aperture;
-  bool    orthographic;
-};
-
-struct cutrace_texture {
-  CUarray     array;
-  CUtexObject texture;
-  int         width  = 0;
-  int         height = 0;
-  bool        linear = false;
-};
-
-struct cutrace_material {
-  material_type type         = material_type::matte;
-  vec3f         emission     = {0, 0, 0};
-  vec3f         color        = {0, 0, 0};
-  float         roughness    = 0;
-  float         metallic     = 0;
-  float         ior          = 1.5f;
-  vec3f         scattering   = {0, 0, 0};
-  float         scanisotropy = 0;
-  float         trdepth      = 0.01f;
-  float         opacity      = 1;
-
-  int emission_tex   = invalidid;
-  int color_tex      = invalidid;
-  int roughness_tex  = invalidid;
-  int scattering_tex = invalidid;
-  int normal_tex     = invalidid;
-};
-
-struct cutrace_instance {
-  frame3f frame;
-  int     shape;
-  int     material;
-};
-
-struct cutrace_shape {
-  cubuffer<vec3f> positions = {};
-  cubuffer<vec3f> normals   = {};
-  cubuffer<vec2f> texcoords = {};
-  cubuffer<vec4f> colors    = {};
-  cubuffer<vec3i> triangles = {};
-};
-
-struct cutrace_environment {
-  frame3f frame        = {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}};
-  vec3f   emission     = {0, 0, 0};
-  int     emission_tex = invalidid;
-};
-
-struct cutrace_scene {
-  cubuffer<cutrace_camera>      cameras      = {};
-  cubuffer<cutrace_texture>     textures     = {};
-  cubuffer<cutrace_material>    materials    = {};
-  cubuffer<cutrace_shape>       shapes       = {};
-  cubuffer<cutrace_instance>    instances    = {};
-  cubuffer<cutrace_environment> environments = {};
-};
-
-struct cutrace_sceneext : cutrace_scene {
-  vector<cutrace_texture> cutextures = {};
-  vector<cutrace_shape>   cushapes   = {};
-};
-
-struct cubvh_tree {
-  cubuffer<byte>         buffer = {};
-  OptixTraversableHandle handle;
-};
-
-struct cubvh_data {
-  cubuffer<OptixInstance> instances = {};
-  cubvh_tree              instances_bvh;
-  vector<cubvh_tree>      shapes_bvhs;
-};
-
-// state
-struct cutrace_state {
-  int                 width   = 0;
-  int                 height  = 0;
-  int                 samples = 0;
-  cubuffer<vec4f>     image   = {};
-  cubuffer<vec3f>     albedo  = {};
-  cubuffer<vec3f>     normal  = {};
-  cubuffer<int>       hits    = {};
-  cubuffer<rng_state> rngs    = {};
-  cubuffer<vec4f>     display = {};
-};
-
-// params
-struct cutrace_dparams {
-  int                     camera         = 0;
-  int                     resolution     = 1280;
-  cutrace_sampler_type    sampler        = cutrace_sampler_type::path;
-  cutrace_falsecolor_type falsecolor     = cutrace_falsecolor_type::color;
-  int                     samples        = 512;
-  int                     bounces        = 8;
-  float                   clamp          = 10;
-  bool                    nocaustics     = false;
-  bool                    envhidden      = false;
-  bool                    tentfilter     = false;
-  uint64_t                seed           = cutrace_default_seed;
-  bool                    embreebvh      = false;
-  bool                    highqualitybvh = false;
-  bool                    noparallel     = false;
-  int                     pratio         = 8;
-  float                   exposure       = 0;
-  bool                    filmic         = false;
-  bool                    denoise        = false;
-  int                     batch          = 1;
-};
-
-// light
-struct cutrace_light {
-  int             instance     = invalidid;
-  int             environment  = invalidid;
-  cubuffer<float> elements_cdf = {};
-};
-
-// lights
-struct cutrace_lights {
-  cubuffer<cutrace_light> lights = {};
-};
-
-// device params
-struct cutrace_globals {
-  cutrace_state          state  = {};
-  cutrace_scene          scene  = {};
-  OptixTraversableHandle bvh    = {};
-  cutrace_lights         lights = {};
-  cutrace_dparams        params = {};
-};
-
-// empty stb record
-struct __declspec(align(OPTIX_SBT_RECORD_ALIGNMENT)) cutrace_stbrecord {
-  __declspec(align(
-      OPTIX_SBT_RECORD_ALIGNMENT)) char header[OPTIX_SBT_RECORD_HEADER_SIZE];
-};
-
-struct cutrace_context {
-  // context
-  CUcontext          cuda_context  = nullptr;
-  CUstream           cuda_stream   = nullptr;
-  OptixDeviceContext optix_context = nullptr;
-
-  // pipeline
-  OptixPipeline optix_pipeline = nullptr;
-  OptixModule   optix_module   = nullptr;
-
-  // programs
-  OptixProgramGroup raygen_program   = nullptr;
-  OptixProgramGroup miss_program     = nullptr;
-  OptixProgramGroup hitgroup_program = nullptr;
-
-  // stb
-  cubuffer<cutrace_stbrecord> raygen_records   = {};
-  cubuffer<cutrace_stbrecord> miss_records     = {};
-  cubuffer<cutrace_stbrecord> hitgroup_records = {};
-  OptixShaderBindingTable     binding_table    = {};
-
-  // global buffer
-  cubuffer<cutrace_globals> globals_buffer = {};
-};
-
 // init cuda and optix context
-static cutrace_context make_cutrace_context(const cutrace_params& params) {
+cutrace_context make_cutrace_context(const cutrace_params& params) {
   // context
   auto context = cutrace_context{};
 
@@ -466,7 +284,7 @@ static cutrace_context make_cutrace_context(const cutrace_params& params) {
 }
 
 // start a new render
-static void trace_start(cutrace_context& context, cutrace_state& state,
+void trace_start(cutrace_context& context, cutrace_state& state,
     const cutrace_scene& cuscene, const cubvh_data& bvh,
     const cutrace_lights& lights, const scene_data& scene,
     const cutrace_params& params) {
@@ -500,7 +318,7 @@ static void trace_samples(cutrace_context& context, cutrace_state& state,
   check_cusync();
 }
 
-static cutrace_sceneext make_cutrace_scene(
+cutrace_sceneext make_cutrace_scene(
     const scene_data& scene, const cutrace_params& params) {
   auto cuscene = cutrace_sceneext{};
 
@@ -777,7 +595,8 @@ static cubvh_data make_cutrace_bvh(cutrace_context& context,
   return bvh;
 }
 
-static cutrace_state make_cutrace_state(
+// Initialize state.
+cutrace_state make_cutrace_state(
     const scene_data& scene, const cutrace_params& params) {
   auto& camera = scene.cameras[params.camera];
   auto  state  = cutrace_state{};
@@ -799,7 +618,7 @@ static cutrace_state make_cutrace_state(
 };
 
 // Init trace lights
-static cutrace_lights make_cutrace_lights(
+cutrace_lights make_cutrace_lights(
     const scene_data& scene, const cutrace_params& params) {
   auto lights    = make_trace_lights(scene, (const trace_params&)params);
   auto culights_ = vector<cutrace_light>{};
@@ -814,6 +633,7 @@ static cutrace_lights make_cutrace_lights(
   return culights;
 }
 
+// Copmutes an image
 image_data cutrace_image(
     const scene_data& scene, const cutrace_params& params) {
   // initialization
