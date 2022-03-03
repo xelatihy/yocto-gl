@@ -579,12 +579,12 @@ static cutrace_sceneext make_cutrace_scene(
 
   auto environments = vector<cutrace_environment>{};
   for (auto& environment : scene.environments) {
-    auto& cuenvironment        = environment.emplace_back();
+    auto& cuenvironment        = environments.emplace_back();
     cuenvironment.frame        = environment.frame;
     cuenvironment.emission     = environment.emission;
     cuenvironment.emission_tex = environment.emission_tex;
   }
-  cuscene.environments = make_buffer(ienvironmentsnstances);
+  cuscene.environments = make_buffer(environments);
 
   return cuscene;
 }
