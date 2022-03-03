@@ -15,7 +15,7 @@ jobs:
         run: |
           mkdir build
           cd build
-          cmake .. -G "Visual Studio 17 2022" -DYOCTO_OPENGL=ON -DYOCTO_EMBREE=OFF -DYOCTO_DENOISE=OFF
+          cmake .. -G "Visual Studio 17 2022" -DYOCTO_OPENGL=ON -DYOCTO_EMBREE=OFF -DYOCTO_DENOISE=OFF -DYOCTO_CUDA=OFF
       - name: build
         run: |
           cd build
