@@ -49,6 +49,7 @@ endif(YOCTO_DENOISE)
 if(YOCTO_CUDA)
 
 enable_language(CUDA)
+set_target_properties(yocto PROPERTIES CUDA_STANDARD 17 CUDA_STANDARD_REQUIRED YES)
 
 # Optix
 if (DEFINED ENV{OptiX_INSTALL_DIR})

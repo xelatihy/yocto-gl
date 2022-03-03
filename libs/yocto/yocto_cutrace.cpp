@@ -282,11 +282,24 @@ struct cutrace_dparams {
   int                     batch          = 1;
 };
 
+// light
+struct cutrace_light {
+  int             instance     = invalidid;
+  int             environment  = invalidid;
+  cubuffer<float> elements_cdf = {};
+};
+
+// lights
+struct cutrace_lights {
+  cubuffer<cutrace_light> lights = {};
+};
+
 // device params
 struct cutrace_globals {
   cutrace_state          state  = {};
   cutrace_scene          scene  = {};
   OptixTraversableHandle bvh    = {};
+  cutrace_lights         lights = {};
   cutrace_dparams        params = {};
 };
 
@@ -440,13 +453,15 @@ static cutrace_context make_cutrace_context(const cutrace_params& params) {
 }
 
 // start a new render
-static void render_start(cutrace_context& context, cutrace_state& state,
+static void trace_start(cutrace_context& context, cutrace_state& state,
     const cutrace_scene& cuscene, const cubvh_data& bvh,
-    const scene_data& scene, const cutrace_params& params) {
+    const cutrace_lights& lights, const scene_data& scene,
+    const cutrace_params& params) {
   auto globals   = cutrace_globals{};
   globals.state  = state;
   globals.scene  = cuscene;
   globals.bvh    = bvh.instances_bvh.handle;
+  globals.lights = lights;
   globals.params = (const cutrace_dparams&)params;
   update_buffer(context.globals_buffer, globals);
   // sync so we can get the frame
@@ -454,9 +469,10 @@ static void render_start(cutrace_context& context, cutrace_state& state,
 }
 
 // render a batch of samples
-static void render_samples(cutrace_context& context, cutrace_state& state,
+static void trace_samples(cutrace_context& context, cutrace_state& state,
     const cutrace_scene& cuscene, const cubvh_data& bvh,
-    const scene_data& scene, const cutrace_params& params) {
+    const cutrace_lights& lights, const scene_data& scene,
+    const cutrace_params& params) {
   check_result(optixLaunch(context.optix_pipeline, context.cuda_stream,
       context.globals_buffer.device_ptr(),
       context.globals_buffer.size_in_bytes(), &context.binding_table,
@@ -763,6 +779,22 @@ static cutrace_state make_cutrace_state(
   return state;
 };
 
+// Init trace lights
+static cutrace_lights make_cutrace_lights(
+    const scene_data& scene, const cutrace_params& params) {
+  auto lights    = make_trace_lights(scene, (const trace_params&)params);
+  auto culights_ = vector<cutrace_light>{};
+  for (auto& light : lights.lights) {
+    auto& culight        = culights_.emplace_back();
+    culight.instance     = light.instance;
+    culight.environment  = light.environment;
+    culight.elements_cdf = make_buffer(light.elements_cdf);
+  }
+  auto culights   = cutrace_lights{};
+  culights.lights = make_buffer(culights_);
+  return culights;
+}
+
 image_data cutrace_image(
     const scene_data& scene, const cutrace_params& params) {
   // initialization
@@ -770,11 +802,12 @@ image_data cutrace_image(
   auto cuscene = make_cutrace_scene(scene, params);
   auto bvh     = make_cutrace_bvh(context, cuscene, scene, params);
   auto state   = make_cutrace_state(scene, params);
+  auto lights  = make_cutrace_lights(scene, params);
 
   // rendering
-  render_start(context, state, cuscene, bvh, scene, params);
+  trace_start(context, state, cuscene, bvh, lights, scene, params);
   // for (auto sample = 0; sample < params.samples; sample++) {
-  render_samples(context, state, cuscene, bvh, scene, params);
+  trace_samples(context, state, cuscene, bvh, lights, scene, params);
   // }
 
   // copy back image
