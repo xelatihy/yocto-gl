@@ -801,6 +801,7 @@ static void exit_nocuda() { throw std::runtime_error{"cuda not linked\n"}; }
 image_data cutrace_image(
     const scene_data& scene, const cutrace_params& params) {
   exit_nocuda();
+  return {};
 }
 
 }  // namespace yocto
