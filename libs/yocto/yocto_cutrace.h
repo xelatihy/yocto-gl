@@ -242,6 +242,28 @@ inline const auto cutrace_falsecolor_labels =
 // do not reorder
 #include <optix.h>
 
+#else
+
+// placeholder types
+using CUdeviceptr             = void*;
+using OptixInstance           = yocto::instance_data;
+using OptixTraversableHandle  = unsigned long long;
+using CUcontext               = void*;
+using CUstream                = void*;
+using OptixDeviceContext      = void*;
+using OptixPipeline           = void*;
+using OptixProgramGroup       = void*;
+using OptixModule             = void*;
+using OptixShaderBindingTable = void*;
+using CUarray                 = void*;
+using CUtexObject             = void*;
+
+// placeholder values
+#define OPTIX_SBT_RECORD_ALIGNMENT 16
+#define OPTIX_SBT_RECORD_HEADER_SIZE 16
+
+#endif
+
 // -----------------------------------------------------------------------------
 // DATA DEFINITIONS
 // -----------------------------------------------------------------------------
@@ -430,9 +452,5 @@ struct cutrace_context {
 };
 
 }  // namespace yocto
-
-#else
-
-#endif
 
 #endif

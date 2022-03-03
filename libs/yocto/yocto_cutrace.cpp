@@ -768,6 +768,90 @@ image_data cutrace_image(
   return {};
 }
 
+// Initialize GPU context.
+cutrace_context make_cutrace_context(const cutrace_params& params) {
+  exit_nocuda();
+  return {};
+}
+
+// Upload the scene to the GPU.
+cutrace_sceneext make_cutrace_scene(
+    const scene_data& scene, const cutrace_params& params) {
+  exit_nocuda();
+  return {};
+}
+
+// Build the bvh acceleration structure.
+cubvh_data make_cutrace_bvh(cutrace_context& context, cutrace_sceneext& cuscene,
+    const scene_data& scene, const cutrace_params& params) {
+  exit_nocuda();
+  return {};
+}
+
+// Initialize state.
+cutrace_state make_cutrace_state(
+    const scene_data& scene, const cutrace_params& params) {
+  exit_nocuda();
+  return {};
+}
+
+// Initialize lights.
+cutrace_lights make_cutrace_lights(
+    const scene_data& scene, const cutrace_params& params) {
+  exit_nocuda();
+  return {};
+}
+
+// Start rendering an image.
+void trace_start(cutrace_context& context, cutrace_state& state,
+    const cutrace_scene& cuscene, const cubvh_data& bvh,
+    const cutrace_lights& lights, const scene_data& scene,
+    const cutrace_params& params) {
+  exit_nocuda();
+}
+
+// Progressively computes an image.
+void trace_samples(cutrace_context& context, cutrace_state& state,
+    const cutrace_scene& cuscene, const cubvh_data& bvh,
+    const cutrace_lights& lights, const scene_data& scene,
+    const cutrace_params& params) {
+  exit_nocuda();
+}
+
+// Get resulting render
+image_data get_rendered_image(const cutrace_state& state) {
+  exit_nocuda();
+  return {};
+}
+void get_rendered_image(image_data& image, const cutrace_state& state) {
+  exit_nocuda();
+}
+
+// Get denoised result
+image_data get_denoised_image(const cutrace_state& state) {
+  exit_nocuda();
+  return {};
+}
+void get_denoised_image(image_data& image, const cutrace_state& state) {
+  exit_nocuda();
+}
+
+// Get denoising buffers
+image_data get_albedo_image(const cutrace_state& state) {
+  exit_nocuda();
+  return {};
+}
+void get_albedo_image(image_data& image, const cutrace_state& state) {
+  exit_nocuda();
+}
+image_data get_normal_image(const cutrace_state& state) {
+  exit_nocuda();
+  return {};
+}
+void get_normal_image(image_data& image, const cutrace_state& state) {
+  exit_nocuda();
+}
+
 }  // namespace yocto
 
 #endif
