@@ -760,7 +760,10 @@ void get_normal_image(image_data& image, const cutrace_state& state) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-static void exit_nocuda() { throw std::runtime_error{"cuda not linked\n"}; }
+static void exit_nocuda() {
+  printf("ciao\n");
+  throw std::runtime_error{"cuda not linked\n"};
+}
 
 image_data cutrace_image(
     const scene_data& scene, const cutrace_params& params) {
