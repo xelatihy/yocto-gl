@@ -65,51 +65,13 @@ using std::vector;
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Type of tracing algorithm
-enum struct cutrace_sampler_type {
-  path,        // path tracing
-  pathdirect,  // path tracing with direct
-  pathmis,     // path tracing with mis
-  naive,       // naive path tracing
-  eyelight,    // eyelight rendering
-  eyelightao,  // eyelight with ambient occlusion
-  furnace,     // furnace test
-  falsecolor,  // false color rendering
-};
-// Type of false color visualization
-enum struct cutrace_falsecolor_type {
-  // clang-format off
-  position, normal, frontfacing, gnormal, gfrontfacing, texcoord, mtype, color,
-  emission, roughness, opacity, metallic, delta, instance, shape, material, 
-  element, highlight
-  // clang-format on
-};
-
 // Default trace seed
-const auto cutrace_default_seed = 961748941ull;
+const auto cutrace_default_seed = trace_default_seed;
 
-// Options for trace functions
-struct cutrace_params {
-  int                     camera         = 0;
-  int                     resolution     = 1280;
-  cutrace_sampler_type    sampler        = cutrace_sampler_type::path;
-  cutrace_falsecolor_type falsecolor     = cutrace_falsecolor_type::color;
-  int                     samples        = 512;
-  int                     bounces        = 8;
-  float                   clamp          = 10;
-  bool                    nocaustics     = false;
-  bool                    envhidden      = false;
-  bool                    tentfilter     = false;
-  uint64_t                seed           = cutrace_default_seed;
-  bool                    embreebvh      = false;
-  bool                    highqualitybvh = false;
-  bool                    noparallel     = false;
-  int                     pratio         = 8;
-  float                   exposure       = 0;
-  bool                    filmic         = false;
-  bool                    denoise        = false;
-  int                     batch          = 1;
-};
+// Type aliases
+using cutrace_sampler_type    = trace_sampler_type;
+using cutrace_falsecolor_type = trace_falsecolor_type;
+using cutrace_params          = trace_params;
 
 // Progressively computes an image.
 image_data cutrace_image(const scene_data& scene, const cutrace_params& params);
@@ -182,48 +144,16 @@ void       get_normal_image(image_data& image, const cutrace_state& state);
 namespace yocto {
 
 // trace sampler names
-inline const auto cutrace_sampler_names = vector<string>{"path", "pathdirect",
-    "pathmis", "naive", "eyelight", "eyelightao", "furnace", "falsecolor"};
+inline const auto cutrace_sampler_names = trace_sampler_names;
 
 // false color names
-inline const auto cutrace_falsecolor_names = vector<string>{"position",
-    "normal", "frontfacing", "gnormal", "gfrontfacing", "texcoord", "mtype",
-    "color", "emission", "roughness", "opacity", "metallic", "delta",
-    "instance", "shape", "material", "element", "highlight"};
+inline const auto cutrace_falsecolor_names = trace_falsecolor_names;
 
 // trace sampler labels
-inline const auto cutrace_sampler_labels =
-    vector<pair<cutrace_sampler_type, string>>{
-        {cutrace_sampler_type::path, "path"},
-        {cutrace_sampler_type::pathdirect, "pathdirect"},
-        {cutrace_sampler_type::pathmis, "pathmis"},
-        {cutrace_sampler_type::naive, "naive"},
-        {cutrace_sampler_type::eyelight, "eyelight"},
-        {cutrace_sampler_type::eyelightao, "eyelightao"},
-        {cutrace_sampler_type::furnace, "furnace"},
-        {cutrace_sampler_type::falsecolor, "falsecolor"}};
+inline const auto cutrace_sampler_labels = trace_sampler_labels;
 
 // false color labels
-inline const auto cutrace_falsecolor_labels =
-    vector<pair<cutrace_falsecolor_type, string>>{
-        {cutrace_falsecolor_type::position, "position"},
-        {cutrace_falsecolor_type::normal, "normal"},
-        {cutrace_falsecolor_type::frontfacing, "frontfacing"},
-        {cutrace_falsecolor_type::gnormal, "gnormal"},
-        {cutrace_falsecolor_type::gfrontfacing, "gfrontfacing"},
-        {cutrace_falsecolor_type::texcoord, "texcoord"},
-        {cutrace_falsecolor_type::mtype, "mtype"},
-        {cutrace_falsecolor_type::color, "color"},
-        {cutrace_falsecolor_type::emission, "emission"},
-        {cutrace_falsecolor_type::roughness, "roughness"},
-        {cutrace_falsecolor_type::opacity, "opacity"},
-        {cutrace_falsecolor_type::metallic, "metallic"},
-        {cutrace_falsecolor_type::delta, "delta"},
-        {cutrace_falsecolor_type::instance, "instance"},
-        {cutrace_falsecolor_type::shape, "shape"},
-        {cutrace_falsecolor_type::material, "material"},
-        {cutrace_falsecolor_type::element, "element"},
-        {cutrace_falsecolor_type::highlight, "highlight"}};
+inline const auto cutrace_falsecolor_labels = trace_falsecolor_labels;
 
 }  // namespace yocto
 
