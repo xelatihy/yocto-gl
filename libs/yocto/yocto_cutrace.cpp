@@ -446,6 +446,9 @@ cutrace_sceneext make_cutrace_scene(
   }
   cuscene.environments = make_buffer(environments);
 
+  // sync gpu
+  check_cusync();
+
   return cuscene;
 }
 
@@ -589,6 +592,9 @@ cubvh_data make_cutrace_bvh(cutrace_context& context, cutrace_sceneext& cuscene,
     clear_buffer(temporary_buffer);
     clear_buffer(compacted_size_buffer);
   }
+
+  // sync gpu
+  check_cusync();
 
   // done
   return bvh;

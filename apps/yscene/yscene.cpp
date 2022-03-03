@@ -199,7 +199,9 @@ void run_render(const render_params& params_) {
   }
 
   // build bvh
+  timer    = simple_timer{};
   auto bvh = make_trace_bvh(scene, params);
+  print_info("build bvh: {}", elapsed_formatted(timer));
 
   // init renderer
   auto lights = make_trace_lights(scene, params);

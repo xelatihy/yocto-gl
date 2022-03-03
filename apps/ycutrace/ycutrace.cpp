@@ -118,13 +118,19 @@ void run_render(const render_params& params_) {
   auto params__ = (cutrace_params&)params;
 
   // initialize context
+  timer        = simple_timer{};
   auto context = make_cutrace_context(params__);
+  print_info("init gpu: {}", elapsed_formatted(timer));
 
   // upload scene to the gpu
+  timer        = simple_timer{};
   auto cuscene = make_cutrace_scene(scene, params__);
+  print_info("upload scene: {}", elapsed_formatted(timer));
 
   // build bvh
+  timer    = simple_timer{};
   auto bvh = make_cutrace_bvh(context, cuscene, scene, params__);
+  print_info("build bvh: {}", elapsed_formatted(timer));
 
   // init lights
   auto lights = make_cutrace_lights(scene, params__);
