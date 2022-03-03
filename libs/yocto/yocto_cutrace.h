@@ -222,11 +222,11 @@ struct cucamera_data {
 };
 
 struct cutexture_data {
-  CUarray     array;
-  CUtexObject texture;
-  int         width  = 0;
-  int         height = 0;
-  bool        linear = false;
+  CUarray     array   = nullptr;
+  CUtexObject texture = {};
+  int         width   = 0;
+  int         height  = 0;
+  bool        linear  = false;
 };
 
 struct cumaterial_data {
