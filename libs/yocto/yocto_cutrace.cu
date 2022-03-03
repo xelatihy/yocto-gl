@@ -3048,7 +3048,7 @@ optix_shader void __raygen__trace_pixel() {
   }
 
   // run shading
-  auto nsamples = 16;
+  auto nsamples = 256;
   for (auto sample = 0; sample < nsamples; sample++) {
     trace_pixel(globals.state, globals.scene, globals.bvh, cutrace_lights{},
         optixGetLaunchIndex().x, optixGetLaunchIndex().y, cutrace_params{});
