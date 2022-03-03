@@ -285,7 +285,7 @@ cutrace_context make_cutrace_context(const cutrace_params& params) {
 
 // start a new render
 void trace_start(cutrace_context& context, cutrace_state& state,
-    const cutrace_scene& cuscene, const cubvh_data& bvh,
+    const cuscene_data& cuscene, const cubvh_data& bvh,
     const cutrace_lights& lights, const scene_data& scene,
     const cutrace_params& params) {
   auto globals   = cutrace_globals{};
@@ -293,7 +293,7 @@ void trace_start(cutrace_context& context, cutrace_state& state,
   globals.scene  = cuscene;
   globals.bvh    = bvh.instances_bvh.handle;
   globals.lights = lights;
-  globals.params = (const cutrace_dparams&)params;
+  globals.params = params;
   update_buffer(context.globals_buffer, globals);
   // sync so we can get the frame
   check_cusync();
@@ -301,7 +301,7 @@ void trace_start(cutrace_context& context, cutrace_state& state,
 
 // render a batch of samples
 void trace_samples(cutrace_context& context, cutrace_state& state,
-    const cutrace_scene& cuscene, const cubvh_data& bvh,
+    const cuscene_data& cuscene, const cubvh_data& bvh,
     const cutrace_lights& lights, const scene_data& scene,
     const cutrace_params& params) {
   if (state.samples >= params.samples) return;
@@ -318,11 +318,11 @@ void trace_samples(cutrace_context& context, cutrace_state& state,
   check_cusync();
 }
 
-cutrace_sceneext make_cutrace_scene(
+cusceneext_data make_cutrace_scene(
     const scene_data& scene, const cutrace_params& params) {
-  auto cuscene = cutrace_sceneext{};
+  auto cuscene = cusceneext_data{};
 
-  auto cucameras = vector<cutrace_camera>{};
+  auto cucameras = vector<cucamera_data>{};
   for (auto& camera : scene.cameras) {
     auto& cucamera        = cucameras.emplace_back();
     cucamera.frame        = camera.frame;
@@ -407,7 +407,7 @@ cutrace_sceneext make_cutrace_scene(
   }
   cuscene.textures = make_buffer(cuscene.cutextures);
 
-  auto materials = vector<cutrace_material>{};
+  auto materials = vector<cumaterial_data>{};
   for (auto& material : scene.materials) {
     auto& cumaterial      = materials.emplace_back();
     cumaterial.type       = material.type;
@@ -428,7 +428,7 @@ cutrace_sceneext make_cutrace_scene(
   }
   cuscene.materials = make_buffer(materials);
 
-  auto instances = vector<cutrace_instance>{};
+  auto instances = vector<cuinstance_data>{};
   for (auto& instance : scene.instances) {
     auto& cuinstance    = instances.emplace_back();
     cuinstance.frame    = instance.frame;
@@ -437,7 +437,7 @@ cutrace_sceneext make_cutrace_scene(
   }
   cuscene.instances = make_buffer(instances);
 
-  auto environments = vector<cutrace_environment>{};
+  auto environments = vector<cuenvironment_data>{};
   for (auto& environment : scene.environments) {
     auto& cuenvironment        = environments.emplace_back();
     cuenvironment.frame        = environment.frame;
@@ -452,7 +452,7 @@ cutrace_sceneext make_cutrace_scene(
   return cuscene;
 }
 
-cubvh_data make_cutrace_bvh(cutrace_context& context, cutrace_sceneext& cuscene,
+cubvh_data make_cutrace_bvh(cutrace_context& context, cusceneext_data& cuscene,
     const scene_data& scene, const cutrace_params& params) {
   auto bvh = cubvh_data{};
 
@@ -775,14 +775,14 @@ cutrace_context make_cutrace_context(const cutrace_params& params) {
 }
 
 // Upload the scene to the GPU.
-cutrace_sceneext make_cutrace_scene(
+cusceneext_data make_cutrace_scene(
     const scene_data& scene, const cutrace_params& params) {
   exit_nocuda();
   return {};
 }
 
 // Build the bvh acceleration structure.
-cubvh_data make_cutrace_bvh(cutrace_context& context, cutrace_sceneext& cuscene,
+cubvh_data make_cutrace_bvh(cutrace_context& context, cusceneext_data& cuscene,
     const scene_data& scene, const cutrace_params& params) {
   exit_nocuda();
   return {};
@@ -804,7 +804,7 @@ cutrace_lights make_cutrace_lights(
 
 // Start rendering an image.
 void trace_start(cutrace_context& context, cutrace_state& state,
-    const cutrace_scene& cuscene, const cubvh_data& bvh,
+    const cuscene_data& cuscene, const cubvh_data& bvh,
     const cutrace_lights& lights, const scene_data& scene,
     const cutrace_params& params) {
   exit_nocuda();
@@ -812,7 +812,7 @@ void trace_start(cutrace_context& context, cutrace_state& state,
 
 // Progressively computes an image.
 void trace_samples(cutrace_context& context, cutrace_state& state,
-    const cutrace_scene& cuscene, const cubvh_data& bvh,
+    const cuscene_data& cuscene, const cubvh_data& bvh,
     const cutrace_lights& lights, const scene_data& scene,
     const cutrace_params& params) {
   exit_nocuda();

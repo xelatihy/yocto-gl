@@ -2137,7 +2137,7 @@ struct cutrace_state {
   cubuffer<vec4f>     display = {};
 };
 
-struct cutrace_camera {
+struct cucamera_data {
   frame3f frame        = {};
   float   lens         = {};
   float   film         = {};
@@ -2147,7 +2147,7 @@ struct cutrace_camera {
   bool    orthographic = {};
 };
 
-struct cutrace_texture {
+struct cutexture_data {
   cudaArray_t         array   = nullptr;
   cudaTextureObject_t texture = 0;
   int                 width   = 0;
@@ -2162,7 +2162,7 @@ enum struct material_type {
   // clang-format on
 };
 
-struct cutrace_material {
+struct cumaterial_data {
   material_type type         = material_type::matte;
   vec3f         emission     = {0, 0, 0};
   vec3f         color        = {0, 0, 0};
@@ -2181,13 +2181,13 @@ struct cutrace_material {
   int normal_tex     = invalidid;
 };
 
-struct cutrace_instance {
+struct cuinstance_data {
   frame3f frame    = {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}};
   int     shape    = -1;
   int     material = -1;
 };
 
-struct cutrace_shape {
+struct cushape_data {
   cubuffer<vec3f> positions = {};
   cubuffer<vec3f> normals   = {};
   cubuffer<vec2f> texcoords = {};
@@ -2195,19 +2195,19 @@ struct cutrace_shape {
   cubuffer<vec3i> triangles = {};
 };
 
-struct cutrace_environment {
+struct cuenvironment_data {
   frame3f frame        = {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}};
   vec3f   emission     = {0, 0, 0};
   int     emission_tex = invalidid;
 };
 
-struct cutrace_scene {
-  cubuffer<cutrace_camera>      cameras      = {};
-  cubuffer<cutrace_texture>     textures     = {};
-  cubuffer<cutrace_material>    materials    = {};
-  cubuffer<cutrace_shape>       shapes       = {};
-  cubuffer<cutrace_instance>    instances    = {};
-  cubuffer<cutrace_environment> environments = {};
+struct cuscene_data {
+  cubuffer<cucamera_data>      cameras      = {};
+  cubuffer<cutexture_data>     textures     = {};
+  cubuffer<cumaterial_data>    materials    = {};
+  cubuffer<cushape_data>       shapes       = {};
+  cubuffer<cuinstance_data>    instances    = {};
+  cubuffer<cuenvironment_data> environments = {};
 };
 
 // Type of tracing algorithm
@@ -2272,7 +2272,7 @@ struct cutrace_lights {
 
 struct cutrace_globals {
   cutrace_state          state  = {};
-  cutrace_scene          scene  = {};
+  cuscene_data           scene  = {};
   OptixTraversableHandle bvh    = 0;
   cutrace_lights         lights = {};
   cutrace_params         params = {};
@@ -2297,13 +2297,13 @@ constexpr auto trace_default_seed = cutrace_default_seed;
 namespace yocto {
 
 // compatibility aliases
-using scene_data       = cutrace_scene;
-using camera_data      = cutrace_camera;
-using material_data    = cutrace_material;
-using texture_data     = cutrace_texture;
-using instance_data    = cutrace_instance;
-using shape_data       = cutrace_shape;
-using environment_data = cutrace_environment;
+using scene_data       = cuscene_data;
+using camera_data      = cucamera_data;
+using material_data    = cumaterial_data;
+using texture_data     = cutexture_data;
+using instance_data    = cuinstance_data;
+using shape_data       = cushape_data;
+using environment_data = cuenvironment_data;
 
 // constant values
 constexpr auto min_roughness = 0.03f * 0.03f;
@@ -2623,7 +2623,7 @@ static bool has_volume(const material_point& material) {
 }
 
 static ray3f eval_camera(
-    const cutrace_camera& camera, const vec2f& image_uv, const vec2f& lens_uv) {
+    const cucamera_data& camera, const vec2f& image_uv, const vec2f& lens_uv) {
   auto film = camera.aspect >= 1
                   ? vec2f{camera.film, camera.film / camera.aspect}
                   : vec2f{camera.film * camera.aspect, camera.film};
@@ -2706,7 +2706,7 @@ optix_shader void __miss__intersect_scene() {
 
 // scene intersection via shaders
 static scene_intersection intersect_scene(
-    const trace_bvh& bvh, const cutrace_scene& scene, const ray3f& ray) {
+    const trace_bvh& bvh, const cuscene_data& scene, const ray3f& ray) {
   auto     intersection = scene_intersection{};
   uint32_t u0, u1;
   packPointer(&intersection, u0, u1);
@@ -2759,7 +2759,7 @@ inline prim_intersection intersect_triangle(
 
 // instance intersection, for now manual
 static scene_intersection intersect_instance(const trace_bvh& bvh,
-    const cutrace_scene& scene, int instance_id, const ray3f& ray) {
+    const cuscene_data& scene, int instance_id, const ray3f& ray) {
   auto& instance     = scene.instances[instance_id];
   auto& shape        = scene.shapes[instance.shape];
   auto  intersection = scene_intersection{};
@@ -4033,7 +4033,7 @@ static sampler_func get_trace_sampler_func(const trace_params& params) {
   }
 }
 
-static void trace_sample(cutrace_state& state, const cutrace_scene& scene,
+static void trace_sample(cutrace_state& state, const cuscene_data& scene,
     const cutrace_bvh& bvh, const cutrace_lights& lights, int i, int j,
     const cutrace_params& params) {
   auto& camera  = scene.cameras[params.camera];

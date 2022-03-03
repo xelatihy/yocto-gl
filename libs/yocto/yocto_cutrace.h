@@ -84,8 +84,8 @@ image_data cutrace_image(const scene_data& scene, const cutrace_params& params);
 namespace yocto {
 
 // forward declarations
-struct cutrace_scene;
-struct cutrace_sceneext;
+struct cuscene_data;
+struct cusceneext_data;
 struct cubvh_data;
 struct cutrace_state;
 struct cutrace_lights;
@@ -95,11 +95,11 @@ struct cutrace_context;
 cutrace_context make_cutrace_context(const cutrace_params& params);
 
 // Upload the scene to the GPU.
-cutrace_sceneext make_cutrace_scene(
+cusceneext_data make_cutrace_scene(
     const scene_data& scene, const cutrace_params& params);
 
 // Build the bvh acceleration structure.
-cubvh_data make_cutrace_bvh(cutrace_context& context, cutrace_sceneext& cuscene,
+cubvh_data make_cutrace_bvh(cutrace_context& context, cusceneext_data& cuscene,
     const scene_data& scene, const cutrace_params& params);
 
 // Initialize state.
@@ -112,13 +112,13 @@ cutrace_lights make_cutrace_lights(
 
 // Start rendering an image.
 void trace_start(cutrace_context& context, cutrace_state& state,
-    const cutrace_scene& cuscene, const cubvh_data& bvh,
+    const cuscene_data& cuscene, const cubvh_data& bvh,
     const cutrace_lights& lights, const scene_data& scene,
     const cutrace_params& params);
 
 // Progressively computes an image.
 void trace_samples(cutrace_context& context, cutrace_state& state,
-    const cutrace_scene& cuscene, const cubvh_data& bvh,
+    const cuscene_data& cuscene, const cubvh_data& bvh,
     const cutrace_lights& lights, const scene_data& scene,
     const cutrace_params& params);
 
@@ -211,7 +211,7 @@ struct cubuffer {
 };
 
 // device params
-struct cutrace_camera {
+struct cucamera_data {
   frame3f frame;
   float   lens;
   float   film;
@@ -221,7 +221,7 @@ struct cutrace_camera {
   bool    orthographic;
 };
 
-struct cutrace_texture {
+struct cutexture_data {
   CUarray     array;
   CUtexObject texture;
   int         width  = 0;
@@ -229,7 +229,7 @@ struct cutrace_texture {
   bool        linear = false;
 };
 
-struct cutrace_material {
+struct cumaterial_data {
   material_type type         = material_type::matte;
   vec3f         emission     = {0, 0, 0};
   vec3f         color        = {0, 0, 0};
@@ -248,13 +248,13 @@ struct cutrace_material {
   int normal_tex     = invalidid;
 };
 
-struct cutrace_instance {
+struct cuinstance_data {
   frame3f frame;
   int     shape;
   int     material;
 };
 
-struct cutrace_shape {
+struct cushape_data {
   cubuffer<vec3f> positions = {};
   cubuffer<vec3f> normals   = {};
   cubuffer<vec2f> texcoords = {};
@@ -262,35 +262,35 @@ struct cutrace_shape {
   cubuffer<vec3i> triangles = {};
 };
 
-struct cutrace_environment {
+struct cuenvironment_data {
   frame3f frame        = {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}};
   vec3f   emission     = {0, 0, 0};
   int     emission_tex = invalidid;
 };
 
-struct cutrace_scene {
-  cubuffer<cutrace_camera>      cameras      = {};
-  cubuffer<cutrace_texture>     textures     = {};
-  cubuffer<cutrace_material>    materials    = {};
-  cubuffer<cutrace_shape>       shapes       = {};
-  cubuffer<cutrace_instance>    instances    = {};
-  cubuffer<cutrace_environment> environments = {};
+struct cuscene_data {
+  cubuffer<cucamera_data>      cameras      = {};
+  cubuffer<cutexture_data>     textures     = {};
+  cubuffer<cumaterial_data>    materials    = {};
+  cubuffer<cushape_data>       shapes       = {};
+  cubuffer<cuinstance_data>    instances    = {};
+  cubuffer<cuenvironment_data> environments = {};
 };
 
-struct cutrace_sceneext : cutrace_scene {
-  vector<cutrace_texture> cutextures = {};
-  vector<cutrace_shape>   cushapes   = {};
+struct cusceneext_data : cuscene_data {
+  vector<cutexture_data> cutextures = {};
+  vector<cushape_data>   cushapes   = {};
 };
 
 struct cubvh_tree {
   cubuffer<byte>         buffer = {};
-  OptixTraversableHandle handle;
+  OptixTraversableHandle handle = 0;
 };
 
 struct cubvh_data {
-  cubuffer<OptixInstance> instances = {};
-  cubvh_tree              instances_bvh;
-  vector<cubvh_tree>      shapes_bvhs;
+  cubuffer<OptixInstance> instances     = {};
+  cubvh_tree              instances_bvh = {};
+  vector<cubvh_tree>      shapes_bvhs   = {};
 };
 
 // state
@@ -304,29 +304,6 @@ struct cutrace_state {
   cubuffer<int>       hits    = {};
   cubuffer<rng_state> rngs    = {};
   cubuffer<vec4f>     display = {};
-};
-
-// params
-struct cutrace_dparams {
-  int                     camera         = 0;
-  int                     resolution     = 1280;
-  cutrace_sampler_type    sampler        = cutrace_sampler_type::path;
-  cutrace_falsecolor_type falsecolor     = cutrace_falsecolor_type::color;
-  int                     samples        = 512;
-  int                     bounces        = 8;
-  float                   clamp          = 10;
-  bool                    nocaustics     = false;
-  bool                    envhidden      = false;
-  bool                    tentfilter     = false;
-  uint64_t                seed           = cutrace_default_seed;
-  bool                    embreebvh      = false;
-  bool                    highqualitybvh = false;
-  bool                    noparallel     = false;
-  int                     pratio         = 8;
-  float                   exposure       = 0;
-  bool                    filmic         = false;
-  bool                    denoise        = false;
-  int                     batch          = 1;
 };
 
 // light
@@ -344,10 +321,10 @@ struct cutrace_lights {
 // device params
 struct cutrace_globals {
   cutrace_state          state  = {};
-  cutrace_scene          scene  = {};
+  cuscene_data           scene  = {};
   OptixTraversableHandle bvh    = {};
   cutrace_lights         lights = {};
-  cutrace_dparams        params = {};
+  cutrace_params         params = {};
 };
 
 // empty stb record
