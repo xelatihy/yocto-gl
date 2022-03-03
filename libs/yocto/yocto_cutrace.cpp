@@ -487,6 +487,7 @@ static void trace_samples(cutrace_context& context, cutrace_state& state,
     const cutrace_lights& lights, const scene_data& scene,
     const cutrace_params& params) {
   if (state.samples >= params.samples) return;
+  auto nsamples = params.batch;
   update_buffer_value(context.globals_buffer,
       offsetof(cutrace_globals, state) + offsetof(cutrace_state, samples),
       state.samples);
@@ -494,7 +495,7 @@ static void trace_samples(cutrace_context& context, cutrace_state& state,
       context.globals_buffer.device_ptr(),
       context.globals_buffer.size_in_bytes(), &context.binding_table,
       state.width, state.height, 1));
-  state.samples++;
+  state.samples += nsamples;
   // sync so we can get the frame
   check_cusync();
 }
