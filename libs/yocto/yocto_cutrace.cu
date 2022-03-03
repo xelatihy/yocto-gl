@@ -2286,6 +2286,7 @@ using trace_bvh                   = cutrace_bvh;
 using trace_lights                = cutrace_lights;
 using trace_params                = cutrace_params;
 using trace_falsecolor_type       = cutrace_falsecolor_type;
+using trace_sampler_type          = cutrace_sampler_type;
 constexpr auto trace_default_seed = cutrace_default_seed;
 
 }  // namespace yocto
@@ -3268,74 +3269,164 @@ static trace_result trace_path(const scene_data& scene, const trace_bvh& bvh,
 }
 
 // Recursive path tracing.
-static trace_result trace_path_(const scene_data& scene, const trace_bvh& bvh,
-    const trace_lights& lights, const ray3f& ray_, rng_state& rng,
-    const trace_params& params) {
+static trace_result trace_pathdirect(const scene_data& scene,
+    const trace_bvh& bvh, const trace_lights& lights, const ray3f& ray_,
+    rng_state& rng, const trace_params& params) {
   // initialize
-  auto radiance   = vec3f{0, 0, 0};
-  auto weight     = vec3f{1, 1, 1};
-  auto ray        = ray_;
-  auto hit        = false;
-  auto hit_albedo = vec3f{0, 0, 0};
-  auto hit_normal = vec3f{0, 0, 0};
-  auto opbounce   = 0;
+  auto radiance      = vec3f{0, 0, 0};
+  auto weight        = vec3f{1, 1, 1};
+  auto ray           = ray_;
+  auto volume_stack  = svector<material_point>{};
+  auto max_roughness = 0.0f;
+  auto hit           = false;
+  auto hit_albedo    = vec3f{0, 0, 0};
+  auto hit_normal    = vec3f{0, 0, 0};
+  auto next_emission = true;
+  auto opbounce      = 0;
 
   // trace  path
   for (auto bounce = 0; bounce < params.bounces; bounce++) {
     // intersect next point
     auto intersection = intersect_scene(bvh, scene, ray);
     if (!intersection.hit) {
-      if (bounce > 0 || !params.envhidden)
+      if ((bounce > 0 || !params.envhidden) && next_emission)
         radiance += weight * eval_environment(scene, ray.d);
       break;
     }
 
-    // prepare shading point
-    auto outgoing = -ray.d;
-    auto position = eval_shading_position(scene, intersection, outgoing);
-    auto normal   = eval_shading_normal(scene, intersection, outgoing);
-    auto material = eval_material(scene, intersection);
-
-    // handle opacity
-    if (material.opacity < 1 && rand1f(rng) >= material.opacity) {
-      if (opbounce++ > 128) break;
-      ray = {position + ray.d * 1e-2f, ray.d};
-      bounce -= 1;
-      continue;
+    // handle transmission if inside a volume
+    auto in_volume = false;
+    if (!volume_stack.empty()) {
+      auto& vsdf     = volume_stack.back();
+      auto  distance = sample_transmittance(
+           vsdf.density, intersection.distance, rand1f(rng), rand1f(rng));
+      weight *= eval_transmittance(vsdf.density, distance) /
+                sample_transmittance_pdf(
+                    vsdf.density, distance, intersection.distance);
+      in_volume             = distance < intersection.distance;
+      intersection.distance = distance;
     }
 
-    // set hit variables
-    if (bounce == 0) {
-      hit        = true;
-      hit_albedo = material.color;
-      hit_normal = normal;
-    }
+    // switch between surface and volume
+    if (!in_volume) {
+      // prepare shading point
+      auto outgoing = -ray.d;
+      auto position = eval_shading_position(scene, intersection, outgoing);
+      auto normal   = eval_shading_normal(scene, intersection, outgoing);
+      auto material = eval_material(scene, intersection);
 
-    // accumulate emission
-    radiance += weight * eval_emission(material, normal, outgoing);
+      // correct roughness
+      if (params.nocaustics) {
+        max_roughness      = max(material.roughness, max_roughness);
+        material.roughness = max_roughness;
+      }
 
-    // next direction
-    auto incoming = vec3f{0, 0, 0};
-    if (material.roughness != 0) {
-      incoming = rand1f(rng) > 0.5f
-                     ? sample_bsdfcos(
-                           material, normal, outgoing, rand1f(rng), rand2f(rng))
-                     : sample_lights(scene, lights, position, rand1f(rng),
-                           rand1f(rng), rand2f(rng));
-      if (incoming == vec3f{0, 0, 0}) break;
-      auto pdf = sample_bsdfcos_pdf(material, normal, outgoing, incoming);
-      if (pdf == 0) break;
-      weight *= eval_bsdfcos(material, normal, outgoing, incoming) / pdf;
+      // handle opacity
+      if (material.opacity < 1 && rand1f(rng) >= material.opacity) {
+        if (opbounce++ > 128) break;
+        ray = {position + ray.d * 1e-2f, ray.d};
+        bounce -= 1;
+        continue;
+      }
+
+      // set hit variables
+      if (bounce == 0) {
+        hit        = true;
+        hit_albedo = material.color;
+        hit_normal = normal;
+      }
+
+      // accumulate emission
+      if (next_emission)
+        radiance += weight * eval_emission(material, normal, outgoing);
+
+      // direct
+      if (!is_delta(material)) {
+        auto incoming = sample_lights(
+            scene, lights, position, rand1f(rng), rand1f(rng), rand2f(rng));
+        auto pdf = sample_lights_pdf(scene, bvh, lights, position, incoming);
+        auto bsdfcos = eval_bsdfcos(material, normal, outgoing, incoming);
+        if (bsdfcos != vec3f{0, 0, 0} && pdf > 0) {
+          auto intersection = intersect_scene(bvh, scene, {position, incoming});
+          auto emission =
+              !intersection.hit
+                  ? eval_environment(scene, incoming)
+                  : eval_emission(eval_material(scene,
+                                      scene.instances[intersection.instance],
+                                      intersection.element, intersection.uv),
+                        eval_shading_normal(scene,
+                            scene.instances[intersection.instance],
+                            intersection.element, intersection.uv, -incoming),
+                        -incoming);
+          radiance += weight * bsdfcos * emission / pdf;
+        }
+        next_emission = false;
+      } else {
+        next_emission = true;
+      }
+
+      // next direction
+      auto incoming = vec3f{0, 0, 0};
+      if (!is_delta(material)) {
+        if (rand1f(rng) < 0.5f) {
+          incoming = sample_bsdfcos(
+              material, normal, outgoing, rand1f(rng), rand2f(rng));
+        } else {
+          incoming = sample_lights(
+              scene, lights, position, rand1f(rng), rand1f(rng), rand2f(rng));
+        }
+        if (incoming == vec3f{0, 0, 0}) break;
+        weight *=
+            eval_bsdfcos(material, normal, outgoing, incoming) /
+            (0.5f * sample_bsdfcos_pdf(material, normal, outgoing, incoming) +
+                0.5f *
+                    sample_lights_pdf(scene, bvh, lights, position, incoming));
+      } else {
+        incoming = sample_delta(material, normal, outgoing, rand1f(rng));
+        if (incoming == vec3f{0, 0, 0}) break;
+        weight *= eval_delta(material, normal, outgoing, incoming) /
+                  sample_delta_pdf(material, normal, outgoing, incoming);
+      }
+
+      // update volume stack
+      if (is_volumetric(scene, intersection) &&
+          dot(normal, outgoing) * dot(normal, incoming) < 0) {
+        if (volume_stack.empty()) {
+          auto material = eval_material(scene, intersection);
+          volume_stack.push_back(material);
+        } else {
+          volume_stack.pop_back();
+        }
+      }
+
+      // setup next iteration
+      ray = {position, incoming};
     } else {
-      incoming = sample_delta(material, normal, outgoing, rand1f(rng));
+      // prepare shading point
+      auto  outgoing = -ray.d;
+      auto  position = ray.o + ray.d * intersection.distance;
+      auto& vsdf     = volume_stack.back();
+
+      // next direction
+      auto incoming = vec3f{0, 0, 0};
+      if (rand1f(rng) < 0.5f) {
+        incoming = sample_scattering(vsdf, outgoing, rand1f(rng), rand2f(rng));
+      } else {
+        incoming = sample_lights(
+            scene, lights, position, rand1f(rng), rand1f(rng), rand2f(rng));
+      }
       if (incoming == vec3f{0, 0, 0}) break;
-      auto pdf = sample_delta_pdf(material, normal, outgoing, incoming);
-      if (pdf == 0) break;
-      weight *= eval_delta(material, normal, outgoing, incoming) / pdf;
+      weight *=
+          eval_scattering(vsdf, outgoing, incoming) /
+          (0.5f * sample_scattering_pdf(vsdf, outgoing, incoming) +
+              0.5f * sample_lights_pdf(scene, bvh, lights, position, incoming));
+
+      // setup next iteration
+      ray = {position, incoming};
     }
 
     // check weight
-    if (weight == vec3f{0, 0, 0}) break;
+    if (weight == vec3f{0, 0, 0} || !isfinite(weight)) break;
 
     // russian roulette
     if (bounce > 3) {
@@ -3343,9 +3434,189 @@ static trace_result trace_path_(const scene_data& scene, const trace_bvh& bvh,
       if (rand1f(rng) >= rr_prob) break;
       weight *= 1 / rr_prob;
     }
+  }
 
-    // setup next iteration
-    ray = {position, incoming};
+  return {radiance, hit, hit_albedo, hit_normal};
+}
+
+// Recursive path tracing with MIS.
+static trace_result trace_pathmis(const scene_data& scene, const trace_bvh& bvh,
+    const trace_lights& lights, const ray3f& ray_, rng_state& rng,
+    const trace_params& params) {
+  // initialize
+  auto radiance      = vec3f{0, 0, 0};
+  auto weight        = vec3f{1, 1, 1};
+  auto ray           = ray_;
+  auto volume_stack  = svector<material_point>{};
+  auto max_roughness = 0.0f;
+  auto hit           = false;
+  auto hit_albedo    = vec3f{0, 0, 0};
+  auto hit_normal    = vec3f{0, 0, 0};
+  auto opbounce      = 0;
+
+  // MIS helpers
+  auto mis_heuristic = [](float this_pdf, float other_pdf) {
+    return (this_pdf * this_pdf) /
+           (this_pdf * this_pdf + other_pdf * other_pdf);
+  };
+  auto next_emission     = true;
+  auto next_intersection = scene_intersection{};
+
+  // trace  path
+  for (auto bounce = 0; bounce < params.bounces; bounce++) {
+    // intersect next point
+    auto intersection = next_emission ? intersect_scene(bvh, scene, ray)
+                                      : next_intersection;
+    if (!intersection.hit) {
+      if ((bounce > 0 || !params.envhidden) && next_emission)
+        radiance += weight * eval_environment(scene, ray.d);
+      break;
+    }
+
+    // handle transmission if inside a volume
+    auto in_volume = false;
+    if (!volume_stack.empty()) {
+      auto& vsdf     = volume_stack.back();
+      auto  distance = sample_transmittance(
+           vsdf.density, intersection.distance, rand1f(rng), rand1f(rng));
+      weight *= eval_transmittance(vsdf.density, distance) /
+                sample_transmittance_pdf(
+                    vsdf.density, distance, intersection.distance);
+      in_volume             = distance < intersection.distance;
+      intersection.distance = distance;
+    }
+
+    // switch between surface and volume
+    if (!in_volume) {
+      // prepare shading point
+      auto outgoing = -ray.d;
+      auto position = eval_shading_position(scene, intersection, outgoing);
+      auto normal   = eval_shading_normal(scene, intersection, outgoing);
+      auto material = eval_material(scene, intersection);
+
+      // correct roughness
+      if (params.nocaustics) {
+        max_roughness      = max(material.roughness, max_roughness);
+        material.roughness = max_roughness;
+      }
+
+      // handle opacity
+      if (material.opacity < 1 && rand1f(rng) >= material.opacity) {
+        if (opbounce++ > 128) break;
+        ray = {position + ray.d * 1e-2f, ray.d};
+        bounce -= 1;
+        continue;
+      }
+
+      // set hit variables
+      if (bounce == 0) {
+        hit        = true;
+        hit_albedo = material.color;
+        hit_normal = normal;
+      }
+
+      // accumulate emission
+      if (next_emission) {
+        radiance += weight * eval_emission(material, normal, outgoing);
+      }
+
+      // next direction
+      auto incoming = vec3f{0, 0, 0};
+      if (!is_delta(material)) {
+        // direct with MIS --- light
+        for (auto sample_light : {true, false}) {
+          incoming = sample_light ? sample_lights(scene, lights, position,
+                                        rand1f(rng), rand1f(rng), rand2f(rng))
+                                  : sample_bsdfcos(material, normal, outgoing,
+                                        rand1f(rng), rand2f(rng));
+          if (incoming == vec3f{0, 0, 0}) break;
+          auto bsdfcos   = eval_bsdfcos(material, normal, outgoing, incoming);
+          auto light_pdf = sample_lights_pdf(
+              scene, bvh, lights, position, incoming);
+          auto bsdf_pdf = sample_bsdfcos_pdf(
+              material, normal, outgoing, incoming);
+          auto mis_weight = sample_light
+                                ? mis_heuristic(light_pdf, bsdf_pdf) / light_pdf
+                                : mis_heuristic(bsdf_pdf, light_pdf) / bsdf_pdf;
+          if (bsdfcos != vec3f{0, 0, 0} && mis_weight != 0) {
+            auto intersection = intersect_scene(
+                bvh, scene, {position, incoming});
+            if (!sample_light) next_intersection = intersection;
+            auto emission = vec3f{0, 0, 0};
+            if (!intersection.hit) {
+              emission = eval_environment(scene, incoming);
+            } else {
+              auto material = eval_material(scene,
+                  scene.instances[intersection.instance], intersection.element,
+                  intersection.uv);
+              emission      = eval_emission(material,
+                       eval_shading_normal(scene,
+                           scene.instances[intersection.instance],
+                           intersection.element, intersection.uv, -incoming),
+                       -incoming);
+            }
+            radiance += weight * bsdfcos * emission * mis_weight;
+          }
+        }
+
+        // indirect
+        weight *= eval_bsdfcos(material, normal, outgoing, incoming) /
+                  sample_bsdfcos_pdf(material, normal, outgoing, incoming);
+        next_emission = false;
+      } else {
+        incoming = sample_delta(material, normal, outgoing, rand1f(rng));
+        weight *= eval_delta(material, normal, outgoing, incoming) /
+                  sample_delta_pdf(material, normal, outgoing, incoming);
+        next_emission = true;
+      }
+
+      // update volume stack
+      if (is_volumetric(scene, intersection) &&
+          dot(normal, outgoing) * dot(normal, incoming) < 0) {
+        if (volume_stack.empty()) {
+          auto material = eval_material(scene, intersection);
+          volume_stack.push_back(material);
+        } else {
+          volume_stack.pop_back();
+        }
+      }
+
+      // setup next iteration
+      ray = {position, incoming};
+    } else {
+      // prepare shading point
+      auto  outgoing = -ray.d;
+      auto  position = ray.o + ray.d * intersection.distance;
+      auto& vsdf     = volume_stack.back();
+
+      // next direction
+      auto incoming = vec3f{0, 0, 0};
+      if (rand1f(rng) < 0.5f) {
+        incoming = sample_scattering(vsdf, outgoing, rand1f(rng), rand2f(rng));
+        next_emission = true;
+      } else {
+        incoming = sample_lights(
+            scene, lights, position, rand1f(rng), rand1f(rng), rand2f(rng));
+        next_emission = true;
+      }
+      weight *=
+          eval_scattering(vsdf, outgoing, incoming) /
+          (0.5f * sample_scattering_pdf(vsdf, outgoing, incoming) +
+              0.5f * sample_lights_pdf(scene, bvh, lights, position, incoming));
+
+      // setup next iteration
+      ray = {position, incoming};
+    }
+
+    // check weight
+    if (weight == vec3f{0, 0, 0} || !isfinite(weight)) break;
+
+    // russian roulette
+    if (bounce > 3) {
+      auto rr_prob = min((float)0.99, max(weight));
+      if (rand1f(rng) >= rr_prob) break;
+      weight *= 1 / rr_prob;
+    }
   }
 
   return {radiance, hit, hit_albedo, hit_normal};
@@ -3404,19 +3675,17 @@ static trace_result trace_naive(const scene_data& scene, const trace_bvh& bvh,
       incoming = sample_bsdfcos(
           material, normal, outgoing, rand1f(rng), rand2f(rng));
       if (incoming == vec3f{0, 0, 0}) break;
-      auto pdf = sample_bsdfcos_pdf(material, normal, outgoing, incoming);
-      if (pdf == 0) break;
-      weight *= eval_bsdfcos(material, normal, outgoing, incoming) / pdf;
+      weight *= eval_bsdfcos(material, normal, outgoing, incoming) /
+                sample_bsdfcos_pdf(material, normal, outgoing, incoming);
     } else {
       incoming = sample_delta(material, normal, outgoing, rand1f(rng));
       if (incoming == vec3f{0, 0, 0}) break;
-      auto pdf = sample_delta_pdf(material, normal, outgoing, incoming);
-      if (pdf == 0) break;
-      weight *= eval_delta(material, normal, outgoing, incoming) / pdf;
+      weight *= eval_delta(material, normal, outgoing, incoming) /
+                sample_delta_pdf(material, normal, outgoing, incoming);
     }
 
     // check weight
-    if (weight == vec3f{0, 0, 0}) break;
+    if (weight == vec3f{0, 0, 0} || !isfinite(weight)) break;
 
     // russian roulette
     if (bounce > 3) {
@@ -3488,15 +3757,179 @@ static trace_result trace_eyelight(const scene_data& scene,
     if (!is_delta(material)) break;
     incoming = sample_delta(material, normal, outgoing, rand1f(rng));
     if (incoming == vec3f{0, 0, 0}) break;
-    auto pdf = sample_delta_pdf(material, normal, outgoing, incoming);
-    if (pdf == 0) break;
-    weight *= eval_delta(material, normal, outgoing, incoming) / pdf;
-    if (weight == vec3f{0, 0, 0}) break;
+    weight *= eval_delta(material, normal, outgoing, incoming) /
+              sample_delta_pdf(material, normal, outgoing, incoming);
+    if (weight == vec3f{0, 0, 0} || !isfinite(weight)) break;
 
     // setup next iteration
     ray = {position, incoming};
   }
 
+  return {radiance, hit, hit_albedo, hit_normal};
+}
+
+// Eyelight with ambient occlusion for quick previewing.
+static trace_result trace_eyelightao(const scene_data& scene,
+    const trace_bvh& bvh, const trace_lights& lights, const ray3f& ray_,
+    rng_state& rng, const trace_params& params) {
+  // initialize
+  auto radiance   = vec3f{0, 0, 0};
+  auto weight     = vec3f{1, 1, 1};
+  auto ray        = ray_;
+  auto hit        = false;
+  auto hit_albedo = vec3f{0, 0, 0};
+  auto hit_normal = vec3f{0, 0, 0};
+  auto opbounce   = 0;
+
+  // trace  path
+  for (auto bounce = 0; bounce < max(params.bounces, 4); bounce++) {
+    // intersect next point
+    auto intersection = intersect_scene(bvh, scene, ray);
+    if (!intersection.hit) {
+      if (bounce > 0 || !params.envhidden)
+        radiance += weight * eval_environment(scene, ray.d);
+      break;
+    }
+
+    // prepare shading point
+    auto outgoing = -ray.d;
+    auto position = eval_shading_position(scene, intersection, outgoing);
+    auto normal   = eval_shading_normal(scene, intersection, outgoing);
+    auto material = eval_material(scene, intersection);
+
+    // handle opacity
+    if (material.opacity < 1 && rand1f(rng) >= material.opacity) {
+      if (opbounce++ > 128) break;
+      ray = {position + ray.d * 1e-2f, ray.d};
+      bounce -= 1;
+      continue;
+    }
+
+    // set hit variables
+    if (bounce == 0) {
+      hit        = true;
+      hit_albedo = material.color;
+      hit_normal = normal;
+    }
+
+    // accumulate emission
+    auto incoming = outgoing;
+    radiance += weight * eval_emission(material, normal, outgoing);
+
+    // occlusion
+    auto occluding = sample_hemisphere_cos(normal, rand2f(rng));
+    if (intersect_scene(bvh, scene, {position, occluding}).hit) break;
+
+    // brdf * light
+    radiance += weight * pif *
+                eval_bsdfcos(material, normal, outgoing, incoming);
+
+    // continue path
+    if (!is_delta(material)) break;
+    incoming = sample_delta(material, normal, outgoing, rand1f(rng));
+    if (incoming == vec3f{0, 0, 0}) break;
+    weight *= eval_delta(material, normal, outgoing, incoming) /
+              sample_delta_pdf(material, normal, outgoing, incoming);
+    if (weight == vec3f{0, 0, 0} || !isfinite(weight)) break;
+
+    // setup next iteration
+    ray = {position, incoming};
+  }
+
+  return {radiance, hit, hit_albedo, hit_normal};
+}
+
+// Furnace test.
+static trace_result trace_furnace(const scene_data& scene, const trace_bvh& bvh,
+    const trace_lights& lights, const ray3f& ray_, rng_state& rng,
+    const trace_params& params) {
+  // initialize
+  auto radiance   = vec3f{0, 0, 0};
+  auto weight     = vec3f{1, 1, 1};
+  auto ray        = ray_;
+  auto hit        = false;
+  auto hit_albedo = vec3f{0, 0, 0};
+  auto hit_normal = vec3f{0, 0, 0};
+  auto opbounce   = 0;
+  auto in_volume  = false;
+
+  // trace  path
+  for (auto bounce = 0; bounce < params.bounces; bounce++) {
+    // exit loop
+    if (bounce > 0 && !in_volume) {
+      radiance += weight * eval_environment(scene, ray.d);
+      break;
+    }
+
+    // intersect next point
+    auto intersection = intersect_scene(bvh, scene, ray);
+    if (!intersection.hit) {
+      if (bounce > 0 || !params.envhidden)
+        radiance += weight * eval_environment(scene, ray.d);
+      break;
+    }
+
+    // prepare shading point
+    auto  outgoing = -ray.d;
+    auto& instance = scene.instances[intersection.instance];
+    auto  element  = intersection.element;
+    auto  uv       = intersection.uv;
+    auto  position = eval_position(scene, instance, element, uv);
+    auto  normal = eval_shading_normal(scene, instance, element, uv, outgoing);
+    auto  material = eval_material(scene, instance, element, uv);
+
+    // handle opacity
+    if (material.opacity < 1 && rand1f(rng) >= material.opacity) {
+      if (opbounce++ > 128) break;
+      ray = {position + ray.d * 1e-2f, ray.d};
+      bounce -= 1;
+      continue;
+    }
+
+    // set hit variables
+    if (bounce == 0) {
+      hit        = true;
+      hit_albedo = material.color;
+      hit_normal = normal;
+    }
+
+    // accumulate emission
+    radiance += weight * eval_emission(material, normal, outgoing);
+
+    // next direction
+    auto incoming = vec3f{0, 0, 0};
+    if (material.roughness != 0) {
+      incoming = sample_bsdfcos(
+          material, normal, outgoing, rand1f(rng), rand2f(rng));
+      if (incoming == vec3f{0, 0, 0}) break;
+      weight *= eval_bsdfcos(material, normal, outgoing, incoming) /
+                sample_bsdfcos_pdf(material, normal, outgoing, incoming);
+    } else {
+      incoming = sample_delta(material, normal, outgoing, rand1f(rng));
+      if (incoming == vec3f{0, 0, 0}) break;
+      weight *= eval_delta(material, normal, outgoing, incoming) /
+                sample_delta_pdf(material, normal, outgoing, incoming);
+    }
+
+    // check weight
+    if (weight == vec3f{0, 0, 0} || !isfinite(weight)) break;
+
+    // russian roulette
+    if (bounce > 3) {
+      auto rr_prob = min((float)0.99, max(weight));
+      if (rand1f(rng) >= rr_prob) break;
+      weight *= 1 / rr_prob;
+    }
+
+    // update volume stack
+    if (dot(normal, outgoing) * dot(normal, incoming) < 0)
+      in_volume = !in_volume;
+
+    // setup next iteration
+    ray = {position, incoming};
+  }
+
+  // done
   return {radiance, hit, hit_albedo, hit_normal};
 }
 
@@ -3580,21 +4013,55 @@ static trace_result trace_falsecolor(const scene_data& scene,
   return {srgb_to_rgb(result), true, material.color, normal};
 }
 
-static void trace_pixel(cutrace_state& state, const cutrace_scene& scene,
+// Trace a single ray from the camera using the given algorithm.
+using sampler_func = trace_result (*)(const scene_data& scene,
+    const trace_bvh& bvh, const trace_lights& lights, const ray3f& ray,
+    rng_state& rng, const trace_params& params);
+static sampler_func get_trace_sampler_func(const trace_params& params) {
+  switch (params.sampler) {
+    case trace_sampler_type::path: return trace_path;
+    case trace_sampler_type::pathdirect: return trace_pathdirect;
+    case trace_sampler_type::pathmis: return trace_pathmis;
+    case trace_sampler_type::naive: return trace_naive;
+    case trace_sampler_type::eyelight: return trace_eyelight;
+    case trace_sampler_type::eyelightao: return trace_eyelightao;
+    case trace_sampler_type::furnace: return trace_furnace;
+    case trace_sampler_type::falsecolor: return trace_falsecolor;
+    default: {
+      return nullptr;
+    }
+  }
+}
+
+static void trace_sample(cutrace_state& state, const cutrace_scene& scene,
     const cutrace_bvh& bvh, const cutrace_lights& lights, int i, int j,
     const cutrace_params& params) {
-  auto& camera = scene.cameras[params.camera];
-  // auto  sampler = get_trace_sampler_func(params);
-  auto  idx = state.width * j + i;
-  auto& rng = state.rngs[idx];
-  auto  uv  = vec2f{
-      (i + rand1f(rng)) / state.width, (j + rand1f(rng)) / state.height};
-  auto ray = eval_camera(camera, uv, {0, 0});
-
-  // shade
-  auto result = trace_path(scene, bvh, lights, ray, rng, params);
-  auto color  = result.radiance;
-  state.image[i + j * state.width] += {color.x, color.y, color.z, 1};
+  auto& camera  = scene.cameras[params.camera];
+  auto  sampler = get_trace_sampler_func(params);
+  auto  idx     = state.width * j + i;
+  auto  ray     = sample_camera(camera, {i, j}, {state.width, state.height},
+           rand2f(state.rngs[idx]), rand2f(state.rngs[idx]), params.tentfilter);
+  auto  result  = sampler(scene, bvh, lights, ray, state.rngs[idx], params);
+  // auto [radiance, hit, albedo, normal] = sampler(
+  //    scene, bvh, lights, ray, state.rngs[idx], params);
+  auto radiance = result.radiance;
+  auto hit      = result.hit;
+  auto albedo   = result.albedo;
+  auto normal   = result.normal;
+  if (!isfinite(radiance)) radiance = {0, 0, 0};
+  if (max(radiance) > params.clamp)
+    radiance = radiance * (params.clamp / max(radiance));
+  if (hit) {
+    state.image[idx] += {radiance.x, radiance.y, radiance.z, 1};
+    state.albedo[idx] += albedo;
+    state.normal[idx] += normal;
+    state.hits[idx] += 1;
+  } else if (!params.envhidden && !scene.environments.empty()) {
+    state.image[idx] += {radiance.x, radiance.y, radiance.z, 1};
+    state.albedo[idx] += {1, 1, 1};
+    state.normal[idx] += -ray.d;
+    state.hits[idx] += 1;
+  }
 }
 
 // raygen shader
@@ -3612,7 +4079,7 @@ optix_shader void __raygen__trace_pixel() {
   // run shading
   auto nsamples = 256;
   for (auto sample = 0; sample < nsamples; sample++) {
-    trace_pixel(globals.state, globals.scene, globals.bvh, globals.lights,
+    trace_sample(globals.state, globals.scene, globals.bvh, globals.lights,
         optixGetLaunchIndex().x, optixGetLaunchIndex().y, cutrace_params{});
   }
 
