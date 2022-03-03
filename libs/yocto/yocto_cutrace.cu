@@ -756,6 +756,36 @@ inline frame3f lookat_frame(
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// COLOR
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// sRGB non-linear curve
+inline float srgb_to_rgb(float srgb) {
+  return (srgb <= 0.04045) ? srgb / 12.92f
+                           : pow((srgb + 0.055f) / (1.0f + 0.055f), 2.4f);
+}
+inline float rgb_to_srgb(float rgb) {
+  return (rgb <= 0.0031308f) ? 12.92f * rgb
+                             : (1 + 0.055f) * pow(rgb, 1 / 2.4f) - 0.055f;
+}
+inline vec3f srgb_to_rgb(const vec3f& srgb) {
+  return {srgb_to_rgb(srgb.x), srgb_to_rgb(srgb.y), srgb_to_rgb(srgb.z)};
+}
+inline vec4f srgb_to_rgb(const vec4f& srgb) {
+  return {
+      srgb_to_rgb(srgb.x), srgb_to_rgb(srgb.y), srgb_to_rgb(srgb.z), srgb.w};
+}
+inline vec3f rgb_to_srgb(const vec3f& rgb) {
+  return {rgb_to_srgb(rgb.x), rgb_to_srgb(rgb.y), rgb_to_srgb(rgb.z)};
+}
+inline vec4f rgb_to_srgb(const vec4f& rgb) {
+  return {rgb_to_srgb(rgb.x), rgb_to_srgb(rgb.y), rgb_to_srgb(rgb.z), rgb.w};
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // GEOMETRY TYPES
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -1184,6 +1214,13 @@ struct cutrace_globals {
 // global data
 optix_constant cutrace_globals globals;
 
+// compatibility aliases
+using trace_bvh                   = cutrace_bvh;
+using trace_lights                = cutrace_lights;
+using trace_params                = cutrace_params;
+using trace_falsecolor_type       = cutrace_falsecolor_type;
+constexpr auto trace_default_seed = cutrace_default_seed;
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -1552,7 +1589,7 @@ optix_shader void __miss__intersect_scene() {
 
 // scene intersection via shaders
 static scene_intersection intersect_scene(
-    const cutrace_scene& scene, OptixTraversableHandle bvh, const ray3f& ray) {
+    const trace_bvh& bvh, const cutrace_scene& scene, const ray3f& ray) {
   auto     intersection = scene_intersection{};
   uint32_t u0, u1;
   packPointer(&intersection, u0, u1);
@@ -1638,6 +1675,94 @@ static ray3f eval_camera(
       transform_point(camera.frame, e), transform_direction(camera.frame, d)};
 }
 
+struct trace_result {
+  vec3f radiance = {0, 0, 0};
+  bool  hit      = false;
+  vec3f albedo   = {0, 0, 0};
+  vec3f normal   = {0, 0, 0};
+};
+
+// False color rendering
+static trace_result trace_falsecolor(const scene_data& scene,
+    const trace_bvh& bvh, const trace_lights& lights, const ray3f& ray,
+    rng_state& rng, const trace_params& params) {
+  // intersect next point
+  auto intersection = intersect_scene(bvh, scene, ray);
+  if (!intersection.hit) return {};
+
+  // prepare shading point
+  auto outgoing = -ray.d;
+  auto position = eval_shading_position(scene, intersection, outgoing);
+  auto normal   = eval_shading_normal(scene, intersection, outgoing);
+  auto gnormal  = eval_element_normal(scene, intersection);
+  auto texcoord = eval_texcoord(scene, intersection);
+  auto material = eval_material(scene, intersection);
+  auto delta    = is_delta(material) ? 1.0f : 0.0f;
+
+  // hash color
+  auto hashed_color = [](int id) {
+    auto hashed = std::hash<int>()(id);
+    auto rng    = make_rng(trace_default_seed, hashed);
+    return pow(0.5f + 0.5f * rand3f(rng), 2.2f);
+  };
+
+  // compute result
+  auto result = vec3f{0, 0, 0};
+  switch (params.falsecolor) {
+    case trace_falsecolor_type::position:
+      result = position * 0.5f + 0.5f;
+      break;
+    case trace_falsecolor_type::normal: result = normal * 0.5f + 0.5f; break;
+    case trace_falsecolor_type::frontfacing:
+      result = dot(normal, -ray.d) > 0 ? vec3f{0, 1, 0} : vec3f{1, 0, 0};
+      break;
+    case trace_falsecolor_type::gnormal: result = gnormal * 0.5f + 0.5f; break;
+    case trace_falsecolor_type::gfrontfacing:
+      result = dot(gnormal, -ray.d) > 0 ? vec3f{0, 1, 0} : vec3f{1, 0, 0};
+      break;
+    case trace_falsecolor_type::mtype:
+      result = hashed_color((int)material.type);
+      break;
+    case trace_falsecolor_type::texcoord:
+      result = {fmod(texcoord.x, 1.0f), fmod(texcoord.y, 1.0f), 0};
+      break;
+    case trace_falsecolor_type::color: result = material.color; break;
+    case trace_falsecolor_type::emission: result = material.emission; break;
+    case trace_falsecolor_type::roughness:
+      result = {material.roughness, material.roughness, material.roughness};
+      break;
+    case trace_falsecolor_type::opacity:
+      result = {material.opacity, material.opacity, material.opacity};
+      break;
+    case trace_falsecolor_type::metallic:
+      result = {material.metallic, material.metallic, material.metallic};
+      break;
+    case trace_falsecolor_type::delta: result = {delta, delta, delta}; break;
+    case trace_falsecolor_type::element:
+      result = hashed_color(intersection.element);
+      break;
+    case trace_falsecolor_type::instance:
+      result = hashed_color(intersection.instance);
+      break;
+    case trace_falsecolor_type::shape:
+      result = hashed_color(scene.instances[intersection.instance].shape);
+      break;
+    case trace_falsecolor_type::material:
+      result = hashed_color(scene.instances[intersection.instance].material);
+      break;
+    case trace_falsecolor_type::highlight: {
+      if (material.emission == vec3f{0, 0, 0})
+        material.emission = {0.2f, 0.2f, 0.2f};
+      result = material.emission * abs(dot(-ray.d, normal));
+      break;
+    } break;
+    default: result = {0, 0, 0};
+  }
+
+  // done
+  return {srgb_to_rgb(result), true, material.color, normal};
+}
+
 static void trace_pixel(cutrace_state& state, const cutrace_scene& scene,
     const cutrace_bvh& bvh, const cutrace_lights& lights, int i, int j,
     const cutrace_params& params) {
@@ -1649,7 +1774,7 @@ static void trace_pixel(cutrace_state& state, const cutrace_scene& scene,
   auto ray = eval_camera(camera, uv, {0, 0});
 
   // trace ray
-  auto intersection = intersect_scene(scene, bvh, ray);
+  auto intersection = intersect_scene(bvh, scene, ray);
 
   // and write to frame buffer ...
   if (intersection.hit) {
