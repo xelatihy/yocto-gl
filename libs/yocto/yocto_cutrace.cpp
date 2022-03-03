@@ -778,7 +778,7 @@ image_data cutrace_image(
   // }
 
   // copy back image
-  auto image = make_image(state.width, state.height, false);
+  auto image = make_image(state.width, state.height, true);
   download_buffer(state.image, image.pixels);
 
   // cleanup
