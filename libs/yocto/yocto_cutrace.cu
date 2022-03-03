@@ -2128,8 +2128,6 @@ struct cutrace_scene {
   cubuffer<cutrace_environment> environments = {};
 };
 
-struct cutrace_lights {};
-
 // Type of tracing algorithm
 enum struct cutrace_sampler_type {
   path,        // path tracing
@@ -2178,10 +2176,23 @@ struct cutrace_params {
 
 using cutrace_bvh = OptixTraversableHandle;
 
+// light
+struct cutrace_light {
+  int             instance     = invalidid;
+  int             environment  = invalidid;
+  cubuffer<float> elements_cdf = {};
+};
+
+// lights
+struct cutrace_lights {
+  cubuffer<cutrace_light> lights = {};
+};
+
 struct cutrace_globals {
   cutrace_state          state  = {};
   cutrace_scene          scene  = {};
   OptixTraversableHandle bvh    = 0;
+  cutrace_lights         lights = {};
   cutrace_params         params = {};
 };
 

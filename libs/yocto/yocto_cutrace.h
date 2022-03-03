@@ -40,12 +40,13 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
-#include <yocto/yocto_scene.h>
-
 #include <memory>
 #include <string>
 #include <utility>
 #include <vector>
+
+#include "yocto_scene.h"
+#include "yocto_trace.h"
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
