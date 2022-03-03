@@ -192,7 +192,7 @@ inline float exp(float a) { return std::exp(a); }
 inline float log2(float a) { return std::log2(a); }
 inline float exp2(float a) { return std::exp2(a); }
 inline float pow(float a, float b) { return std::pow(a, b); }
-inline bool  isfinite(float a) { return std::isfinite(a); }
+// inline bool  isfinite(float a) { return std::isfinite(a); }
 inline float atan2(float a, float b) { return std::atan2(a, b); }
 inline float fmod(float a, float b) { return std::fmod(a, b); }
 inline void  swap(float& a, float& b) { std::swap(a, b); }
@@ -338,7 +338,8 @@ inline vec2f exp(const vec2f& a) { return {exp(a.x), exp(a.y)}; }
 inline vec2f log(const vec2f& a) { return {log(a.x), log(a.y)}; }
 inline vec2f exp2(const vec2f& a) { return {exp2(a.x), exp2(a.y)}; }
 inline vec2f log2(const vec2f& a) { return {log2(a.x), log2(a.y)}; }
-inline bool  isfinite(const vec2f& a) { return isfinite(a.x) && isfinite(a.y); }
+// inline bool  isfinite(const vec2f& a) { return isfinite(a.x) &&
+// isfinite(a.y); }
 inline vec2f pow(const vec2f& a, float b) { return {pow(a.x, b), pow(a.y, b)}; }
 inline vec2f pow(const vec2f& a, const vec2f& b) {
   return {pow(a.x, b.x), pow(a.y, b.y)};
@@ -502,9 +503,9 @@ inline vec3f pow(const vec3f& a, const vec3f& b) {
 inline vec3f gain(const vec3f& a, float b) {
   return {gain(a.x, b), gain(a.y, b), gain(a.z, b)};
 }
-inline bool isfinite(const vec3f& a) {
-  return isfinite(a.x) && isfinite(a.y) && isfinite(a.z);
-}
+// inline bool isfinite(const vec3f& a) {
+//   return isfinite(a.x) && isfinite(a.y) && isfinite(a.z);
+// }
 inline void swap(vec3f& a, vec3f& b) { std::swap(a, b); }
 
 // Vector sequence operations.
@@ -666,9 +667,9 @@ inline vec4f pow(const vec4f& a, const vec4f& b) {
 inline vec4f gain(const vec4f& a, float b) {
   return {gain(a.x, b), gain(a.y, b), gain(a.z, b), gain(a.w, b)};
 }
-inline bool isfinite(const vec4f& a) {
-  return isfinite(a.x) && isfinite(a.y) && isfinite(a.z) && isfinite(a.w);
-}
+// inline bool isfinite(const vec4f& a) {
+//   return isfinite(a.x) && isfinite(a.y) && isfinite(a.z) && isfinite(a.w);
+// }
 inline void swap(vec4f& a, vec4f& b) { std::swap(a, b); }
 
 // Quaternion operatons represented as xi + yj + zk + w
@@ -2667,6 +2668,201 @@ namespace yocto {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// Evaluates/sample the BRDF scaled by the cosine of the incoming direction.
+static vec3f eval_emission(const material_point& material, const vec3f& normal,
+    const vec3f& outgoing) {
+  return dot(normal, outgoing) >= 0 ? material.emission : vec3f{0, 0, 0};
+}
+
+// Evaluates/sample the BRDF scaled by the cosine of the incoming direction.
+static vec3f eval_bsdfcos(const material_point& material, const vec3f& normal,
+    const vec3f& outgoing, const vec3f& incoming) {
+  if (material.roughness == 0) return {0, 0, 0};
+
+  if (material.type == material_type::matte) {
+    return eval_matte(material.color, normal, outgoing, incoming);
+  } else if (material.type == material_type::glossy) {
+    return eval_glossy(material.color, material.ior, material.roughness, normal,
+        outgoing, incoming);
+  } else if (material.type == material_type::reflective) {
+    return eval_reflective(
+        material.color, material.roughness, normal, outgoing, incoming);
+  } else if (material.type == material_type::transparent) {
+    return eval_transparent(material.color, material.ior, material.roughness,
+        normal, outgoing, incoming);
+  } else if (material.type == material_type::refractive) {
+    return eval_refractive(material.color, material.ior, material.roughness,
+        normal, outgoing, incoming);
+  } else if (material.type == material_type::subsurface) {
+    return eval_refractive(material.color, material.ior, material.roughness,
+        normal, outgoing, incoming);
+  } else if (material.type == material_type::gltfpbr) {
+    return eval_gltfpbr(material.color, material.ior, material.roughness,
+        material.metallic, normal, outgoing, incoming);
+  } else {
+    return {0, 0, 0};
+  }
+}
+
+static vec3f eval_delta(const material_point& material, const vec3f& normal,
+    const vec3f& outgoing, const vec3f& incoming) {
+  if (material.roughness != 0) return {0, 0, 0};
+
+  if (material.type == material_type::reflective) {
+    return eval_reflective(material.color, normal, outgoing, incoming);
+  } else if (material.type == material_type::transparent) {
+    return eval_transparent(
+        material.color, material.ior, normal, outgoing, incoming);
+  } else if (material.type == material_type::refractive) {
+    return eval_refractive(
+        material.color, material.ior, normal, outgoing, incoming);
+  } else if (material.type == material_type::volumetric) {
+    return eval_passthrough(material.color, normal, outgoing, incoming);
+  } else {
+    return {0, 0, 0};
+  }
+}
+
+// Picks a direction based on the BRDF
+static vec3f sample_bsdfcos(const material_point& material, const vec3f& normal,
+    const vec3f& outgoing, float rnl, const vec2f& rn) {
+  if (material.roughness == 0) return {0, 0, 0};
+
+  if (material.type == material_type::matte) {
+    return sample_matte(material.color, normal, outgoing, rn);
+  } else if (material.type == material_type::glossy) {
+    return sample_glossy(material.color, material.ior, material.roughness,
+        normal, outgoing, rnl, rn);
+  } else if (material.type == material_type::reflective) {
+    return sample_reflective(
+        material.color, material.roughness, normal, outgoing, rn);
+  } else if (material.type == material_type::transparent) {
+    return sample_transparent(material.color, material.ior, material.roughness,
+        normal, outgoing, rnl, rn);
+  } else if (material.type == material_type::refractive) {
+    return sample_refractive(material.color, material.ior, material.roughness,
+        normal, outgoing, rnl, rn);
+  } else if (material.type == material_type::subsurface) {
+    return sample_refractive(material.color, material.ior, material.roughness,
+        normal, outgoing, rnl, rn);
+  } else if (material.type == material_type::gltfpbr) {
+    return sample_gltfpbr(material.color, material.ior, material.roughness,
+        material.metallic, normal, outgoing, rnl, rn);
+  } else {
+    return {0, 0, 0};
+  }
+}
+
+static vec3f sample_delta(const material_point& material, const vec3f& normal,
+    const vec3f& outgoing, float rnl) {
+  if (material.roughness != 0) return {0, 0, 0};
+
+  if (material.type == material_type::reflective) {
+    return sample_reflective(material.color, normal, outgoing);
+  } else if (material.type == material_type::transparent) {
+    return sample_transparent(
+        material.color, material.ior, normal, outgoing, rnl);
+  } else if (material.type == material_type::refractive) {
+    return sample_refractive(
+        material.color, material.ior, normal, outgoing, rnl);
+  } else if (material.type == material_type::volumetric) {
+    return sample_passthrough(material.color, normal, outgoing);
+  } else {
+    return {0, 0, 0};
+  }
+}
+
+// Compute the weight for sampling the BRDF
+static float sample_bsdfcos_pdf(const material_point& material,
+    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
+  if (material.roughness == 0) return 0;
+
+  if (material.type == material_type::matte) {
+    return sample_matte_pdf(material.color, normal, outgoing, incoming);
+  } else if (material.type == material_type::glossy) {
+    return sample_glossy_pdf(material.color, material.ior, material.roughness,
+        normal, outgoing, incoming);
+  } else if (material.type == material_type::reflective) {
+    return sample_reflective_pdf(
+        material.color, material.roughness, normal, outgoing, incoming);
+  } else if (material.type == material_type::transparent) {
+    return sample_tranparent_pdf(material.color, material.ior,
+        material.roughness, normal, outgoing, incoming);
+  } else if (material.type == material_type::refractive) {
+    return sample_refractive_pdf(material.color, material.ior,
+        material.roughness, normal, outgoing, incoming);
+  } else if (material.type == material_type::subsurface) {
+    return sample_refractive_pdf(material.color, material.ior,
+        material.roughness, normal, outgoing, incoming);
+  } else if (material.type == material_type::gltfpbr) {
+    return sample_gltfpbr_pdf(material.color, material.ior, material.roughness,
+        material.metallic, normal, outgoing, incoming);
+  } else {
+    return 0;
+  }
+}
+
+static float sample_delta_pdf(const material_point& material,
+    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
+  if (material.roughness != 0) return 0;
+
+  if (material.type == material_type::reflective) {
+    return sample_reflective_pdf(material.color, normal, outgoing, incoming);
+  } else if (material.type == material_type::transparent) {
+    return sample_tranparent_pdf(
+        material.color, material.ior, normal, outgoing, incoming);
+  } else if (material.type == material_type::refractive) {
+    return sample_refractive_pdf(
+        material.color, material.ior, normal, outgoing, incoming);
+  } else if (material.type == material_type::volumetric) {
+    return sample_passthrough_pdf(material.color, normal, outgoing, incoming);
+  } else {
+    return 0;
+  }
+}
+
+static vec3f eval_scattering(const material_point& material,
+    const vec3f& outgoing, const vec3f& incoming) {
+  if (material.density == vec3f{0, 0, 0}) return {0, 0, 0};
+  return material.scattering * material.density *
+         eval_phasefunction(material.scanisotropy, outgoing, incoming);
+}
+
+static vec3f sample_scattering(const material_point& material,
+    const vec3f& outgoing, float rnl, const vec2f& rn) {
+  if (material.density == vec3f{0, 0, 0}) return {0, 0, 0};
+  return sample_phasefunction(material.scanisotropy, outgoing, rn);
+}
+
+static float sample_scattering_pdf(const material_point& material,
+    const vec3f& outgoing, const vec3f& incoming) {
+  if (material.density == vec3f{0, 0, 0}) return 0;
+  return sample_phasefunction_pdf(material.scanisotropy, outgoing, incoming);
+}
+
+// Sample camera
+static ray3f sample_camera(const camera_data& camera, const vec2i& ij,
+    const vec2i& image_size, const vec2f& puv, const vec2f& luv, bool tent) {
+  if (!tent) {
+    auto uv = vec2f{
+        (ij.x + puv.x) / image_size.x, (ij.y + puv.y) / image_size.y};
+    return eval_camera(camera, uv, sample_disk(luv));
+  } else {
+    const auto width  = 2.0f;
+    const auto offset = 0.5f;
+    auto       fuv =
+        width *
+            vec2f{
+                puv.x < 0.5f ? sqrt(2 * puv.x) - 1 : 1 - sqrt(2 - 2 * puv.x),
+                puv.y < 0.5f ? sqrt(2 * puv.y) - 1 : 1 - sqrt(2 - 2 * puv.y),
+            } +
+        offset;
+    auto uv = vec2f{
+        (ij.x + fuv.x) / image_size.x, (ij.y + fuv.y) / image_size.y};
+    return eval_camera(camera, uv, sample_disk(luv));
+  }
+}
+
 struct trace_result {
   vec3f radiance = {0, 0, 0};
   bool  hit      = false;
@@ -2674,7 +2870,6 @@ struct trace_result {
   vec3f normal   = {0, 0, 0};
 };
 
-#if 0
 // Eyelight for quick previewing.
 static trace_result trace_eyelight(const scene_data& scene,
     const trace_bvh& bvh, const trace_lights& lights, const ray3f& ray_,
@@ -2731,9 +2926,10 @@ static trace_result trace_eyelight(const scene_data& scene,
     if (!is_delta(material)) break;
     incoming = sample_delta(material, normal, outgoing, rand1f(rng));
     if (incoming == vec3f{0, 0, 0}) break;
-    weight *= eval_delta(material, normal, outgoing, incoming) /
-              sample_delta_pdf(material, normal, outgoing, incoming);
-    if (weight == vec3f{0, 0, 0} || !isfinite(weight)) break;
+    auto pdf = sample_delta_pdf(material, normal, outgoing, incoming);
+    if (pdf == 0) break;
+    weight *= eval_delta(material, normal, outgoing, incoming) / pdf;
+    if (weight == vec3f{0, 0, 0}) break;
 
     // setup next iteration
     ray = {position, incoming};
@@ -2741,7 +2937,6 @@ static trace_result trace_eyelight(const scene_data& scene,
 
   return {radiance, hit, hit_albedo, hit_normal};
 }
-#endif
 
 // False color rendering
 static trace_result trace_falsecolor(const scene_data& scene,
@@ -2835,7 +3030,7 @@ static void trace_pixel(cutrace_state& state, const cutrace_scene& scene,
   auto ray = eval_camera(camera, uv, {0, 0});
 
   // shade
-  auto result = trace_falsecolor(scene, bvh, lights, ray, rng, params);
+  auto result = trace_eyelight(scene, bvh, lights, ray, rng, params);
   auto color  = result.radiance;
   state.image[i + j * state.width] += {color.x, color.y, color.z, 1};
 }
