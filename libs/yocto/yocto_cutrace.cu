@@ -1701,8 +1701,7 @@ static trace_result trace_falsecolor(const scene_data& scene,
 
   // hash color
   auto hashed_color = [](int id) {
-    auto hashed = std::hash<int>()(id);
-    auto rng    = make_rng(trace_default_seed, hashed);
+    auto rng = make_rng(trace_default_seed, id * 2 + 1);
     return pow(0.5f + 0.5f * rand3f(rng), 2.2f);
   };
 
@@ -1768,26 +1767,16 @@ static void trace_pixel(cutrace_state& state, const cutrace_scene& scene,
     const cutrace_params& params) {
   auto& camera = scene.cameras[params.camera];
   // auto  sampler = get_trace_sampler_func(params);
-  auto idx = state.width * j + i;
-  auto uv  = vec2f{(i + rand1f(state.rngs[idx])) / state.width,
-      (j + rand1f(state.rngs[idx])) / state.height};
+  auto  idx = state.width * j + i;
+  auto& rng = state.rngs[idx];
+  auto  uv  = vec2f{
+      (i + rand1f(rng)) / state.width, (j + rand1f(rng)) / state.height};
   auto ray = eval_camera(camera, uv, {0, 0});
 
-  // trace ray
-  auto intersection = intersect_scene(bvh, scene, ray);
-
-  // and write to frame buffer ...
-  if (intersection.hit) {
-    auto& instance = scene.instances[intersection.instance];
-    auto& shape    = scene.shapes[instance.shape];
-    auto  material = eval_material(scene, intersection);
-
-    auto color = material.color;
-
-    state.image[i + j * state.width] += {color.x, color.y, color.z, 1};
-  } else {
-    state.image[i + j * state.width] += {0, 1, 0, 1};
-  }
+  // shade
+  auto result = trace_falsecolor(scene, bvh, lights, ray, rng, params);
+  auto color  = result.radiance;
+  state.image[i + j * state.width] += {color.x, color.y, color.z, 1};
 }
 
 // raygen shader
