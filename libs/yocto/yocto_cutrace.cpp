@@ -288,13 +288,17 @@ void trace_start(cutrace_context& context, cutrace_state& state,
     const cuscene_data& cuscene, const cubvh_data& bvh,
     const cutrace_lights& lights, const scene_data& scene,
     const cutrace_params& params) {
-  auto globals   = cutrace_globals{};
-  globals.state  = state;
-  globals.scene  = cuscene;
-  globals.bvh    = bvh.instances_bvh.handle;
-  globals.lights = lights;
-  globals.params = params;
-  update_buffer(context.globals_buffer, globals);
+  auto globals = cutrace_globals{};
+  update_buffer_value(
+      context.globals_buffer, offsetof(cutrace_globals, state), state);
+  update_buffer_value(
+      context.globals_buffer, offsetof(cutrace_globals, scene), cuscene);
+  update_buffer_value(context.globals_buffer, offsetof(cutrace_globals, bvh),
+      bvh.instances_bvh.handle);
+  update_buffer_value(
+      context.globals_buffer, offsetof(cutrace_globals, lights), lights);
+  update_buffer_value(
+      context.globals_buffer, offsetof(cutrace_globals, params), params);
   // sync so we can get the frame
   check_cusync();
 }
