@@ -83,6 +83,7 @@ static cubuffer<T> make_buffer(size_t size, const T* data) {
 }
 template <typename T>
 static cubuffer<T> make_buffer(const vector<T>& data) {
+  if (data.empty()) return {};
   return make_buffer(data.size(), data.data());
 }
 template <typename T>
