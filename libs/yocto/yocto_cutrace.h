@@ -199,7 +199,7 @@ using CUtexObject             = void*;
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// buffer view
+// cuda buffer
 template <typename T>
 struct cubuffer {
   size_t      size() const { return _size; }
@@ -208,6 +208,13 @@ struct cubuffer {
 
   CUdeviceptr _data = 0;
   size_t      _size = 0;
+};
+
+// cuda array
+template <typename T>
+struct cuarray {
+  CUarray device_array() const { return _array; }
+  CUarray _array = nullptr;
 };
 
 // device params
@@ -222,11 +229,11 @@ struct cucamera_data {
 };
 
 struct cutexture_data {
-  CUarray     array   = nullptr;
-  CUtexObject texture = 0;
   int         width   = 0;
   int         height  = 0;
   bool        linear  = false;
+  CUtexObject texture = 0;
+  CUarray     array   = nullptr;
 };
 
 struct cumaterial_data {

@@ -2148,11 +2148,11 @@ struct cucamera_data {
 };
 
 struct cutexture_data {
-  cudaArray_t         array   = nullptr;
-  cudaTextureObject_t texture = 0;
   int                 width   = 0;
   int                 height  = 0;
   bool                linear  = false;
+  cudaTextureObject_t texture = 0;
+  cudaArray_t         array   = nullptr;
 };
 
 enum struct material_type {
