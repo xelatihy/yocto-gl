@@ -850,91 +850,8 @@ void show_cutrace_gui(const string& title, const string& name,
     }
   }
 
-  // renderer update
-  auto render_update  = std::atomic<bool>{};
-  auto render_current = std::atomic<int>{};
-  auto render_mutex   = std::mutex{};
-  auto render_worker  = std::future<void>{};
-  auto render_stop    = std::atomic<bool>{};
-  auto reset_display  = [&]() {
-    // stop render
-    render_stop = true;
-    if (render_worker.valid()) render_worker.get();
-
-    reset_cutrace_state(state, scene, params);
-    image   = make_image(state.width, state.height, true);
-    display = make_image(state.width, state.height, false);
-    render  = make_image(state.width, state.height, true);
-
-    render_worker = {};
-    render_stop   = false;
-
-    // preview
-    auto pparams = params;
-    pparams.resolution /= params.pratio;
-    pparams.samples = 1;
-    reset_cutrace_state(pstate, scene, pparams);
-    trace_start(context, pstate, cuscene, bvh, lights, scene, pparams);
-    trace_samples(context, pstate, cuscene, bvh, lights, scene, pparams);
-    auto preview = get_rendered_image(pstate);
-    for (auto idx = 0; idx < state.width * state.height; idx++) {
-      auto i = idx % render.width, j = idx / render.width;
-      auto pi            = clamp(i / params.pratio, 0, preview.width - 1),
-           pj            = clamp(j / params.pratio, 0, preview.height - 1);
-      render.pixels[idx] = preview.pixels[pj * preview.width + pi];
-    }
-    // if (current > 0) return;
-    {
-      auto lock      = std::lock_guard{render_mutex};
-      render_current = 0;
-      image          = render;
-      tonemap_image_mt(display, image, params.exposure, params.filmic);
-      render_update = true;
-    }
-
-    // start renderer
-    render_worker = std::async(std::launch::async, [&]() {
-      try {
-        printf("start...\n");
-        trace_start(context, state, cuscene, bvh, lights, scene, params);
-        printf("started...\n");
-        for (auto sample = 0; sample < params.samples; sample += params.batch) {
-          printf("render %d\n", state.samples);
-          if (render_stop) return;
-          trace_samples(context, state, cuscene, bvh, lights, scene, params);
-          state.samples += params.batch;
-          printf("rendered %d\n", state.samples);
-          if (!render_stop) {
-            auto lock      = std::lock_guard{render_mutex};
-            render_current = state.samples;
-            if (!params.denoise || render_stop) {
-              get_rendered_image(render, state);
-            } else {
-              get_denoised_image(render, state);
-            }
-            image = render;
-            tonemap_image_mt(display, image, params.exposure, params.filmic);
-            render_update = true;
-          }
-        }
-      } catch (...) {
-        printf("nope\n");
-      }
-     });
-  };
-
-  // stop render
-  auto stop_render = [&]() {
-    render_stop = true;
-    if (render_worker.valid()) render_worker.get();
-  };
-
-  // start rendering
-  // TODO: async
-  // reset_display();
-
   // TODO: render preview
-  auto render_preview = [&]() {
+  auto render_preview = [&]() -> bool {
     auto pparams = params;
     pparams.resolution /= params.pratio;
     pparams.samples = 1;
@@ -948,26 +865,27 @@ void show_cutrace_gui(const string& title, const string& name,
            pj            = clamp(j / params.pratio, 0, preview.height - 1);
       render.pixels[idx] = preview.pixels[pj * preview.width + pi];
     }
-    render_current = 0;
-    image          = render;
+    image = render;
     tonemap_image_mt(display, image, params.exposure, params.filmic);
-    render_update = true;
+    reset_cutrace_state(state, scene, params);
+    return true;
   };
 
   // TODO: render batch
   auto render_batch = [&]() {
-    if (state.samples == 0)
+    if (state.samples >= params.samples) return false;
+    if (state.samples == 0) {
       trace_start(context, state, cuscene, bvh, lights, scene, params);
+    }
     trace_samples(context, state, cuscene, bvh, lights, scene, params);
-    render_current = state.samples;
-    if (!params.denoise || render_stop) {
+    if (!params.denoise) {
       get_rendered_image(render, state);
     } else {
       get_denoised_image(render, state);
     }
     image = render;
     tonemap_image_mt(display, image, params.exposure, params.filmic);
-    render_update = true;
+    return true;
   };
 
   // prepare selection
@@ -976,27 +894,19 @@ void show_cutrace_gui(const string& title, const string& name,
   // callbacks
   auto callbacks = gui_callbacks{};
   callbacks.init = [&](const gui_input& input) {
-    auto lock = std::lock_guard{render_mutex};
     init_image(glimage);
-    set_image(glimage, display);
-    render_preview();
+    if (render_preview()) set_image(glimage, display);
   };
   callbacks.clear = [&](const gui_input& input) { clear_image(glimage); };
   callbacks.draw  = [&](const gui_input& input) {
-    // update image
-    if (render_update) {
-      auto lock = std::lock_guard{render_mutex};
-      set_image(glimage, display);
-      render_update = false;
-    }
     update_image_params(input, image, glparams);
     draw_image(glimage, glparams);
-    render_batch();
+    if (render_batch()) set_image(glimage, display);
   };
   callbacks.widgets = [&](const gui_input& input) {
     auto edited = 0;
     draw_gui_combobox("name", selected, names);
-    auto current = (int)render_current;
+    auto current = state.samples;
     draw_gui_progressbar("sample", current, params.samples);
     if (draw_gui_header("render")) {
       auto edited  = 0;
@@ -1018,11 +928,8 @@ void show_cutrace_gui(const string& title, const string& name,
       // edited += draw_gui_slider("exposure", tparams.exposure, -5, 5);
       end_gui_header();
       if (edited) {
-        stop_render();
         params = tparams;
-        // TODO: async
-        // reset_display();
-        render_preview();
+        if (render_preview()) set_image(glimage, display);
       }
     }
     if (draw_gui_header("tonemap")) {
@@ -1037,29 +944,22 @@ void show_cutrace_gui(const string& title, const string& name,
     }
     draw_image_inspector(input, image, display, glparams);
     if (edit) {
-      if (draw_scene_editor(scene, selection, [&]() { stop_render(); })) {
-        // TODO: async
-        // reset_display();
-        render_preview();
+      if (draw_scene_editor(scene, selection, [&]() {})) {
+        if (render_preview()) set_image(glimage, display);
       }
     }
   };
   callbacks.uiupdate = [&](const gui_input& input) {
     auto camera = scene.cameras[params.camera];
     if (uiupdate_camera_params(input, camera)) {
-      // TODO: async
-      // stop_render();
       scene.cameras[params.camera] = camera;
-      // reset_display();
-      render_preview();
+      // TODO: update camera
+      if (render_preview()) set_image(glimage, display);
     }
   };
 
   // run ui
   show_gui_window({1280 + 320, 720}, title, callbacks);
-
-  // done
-  stop_render();
 }
 
 #else
