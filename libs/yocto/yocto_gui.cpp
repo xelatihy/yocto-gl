@@ -779,7 +779,7 @@ void show_trace_gui(const string& title, const string& name, scene_data& scene,
       continue_gui_line();
       edited += draw_gui_checkbox("filter", tparams.tentfilter);
       edited += draw_gui_slider("pratio", tparams.pratio, 1, 64);
-      edited += draw_gui_checkbox("denoise", params.denoise);
+      edited += draw_gui_checkbox("denoise", tparams.denoise);
       end_gui_header();
       if (edited) {
         stop_render();
@@ -943,7 +943,7 @@ void show_cutrace_gui(const string& title, const string& name,
       continue_gui_line();
       edited += draw_gui_checkbox("filter", tparams.tentfilter);
       edited += draw_gui_slider("pratio", tparams.pratio, 1, 64);
-      edited += draw_gui_checkbox("denoise", params.denoise);
+      edited += draw_gui_checkbox("denoise", tparams.denoise);
       end_gui_header();
       if (edited) {
         params = tparams;
