@@ -944,7 +944,7 @@ void show_cutrace_gui(const string& title, const string& name,
       continue_gui_line();
       edited += draw_gui_checkbox("filter", tparams.tentfilter);
       edited += draw_gui_slider("pratio", tparams.pratio, 1, 64);
-      // edited += draw_gui_slider("exposure", tparams.exposure, -5, 5);
+      edited += draw_gui_checkbox("denoise", params.denoise);
       end_gui_header();
       if (edited) {
         params = tparams;
@@ -954,11 +954,7 @@ void show_cutrace_gui(const string& title, const string& name,
     if (draw_gui_header("tonemap")) {
       edited += draw_gui_slider("exposure", glparams.exposure, -5, 5);
       edited += draw_gui_checkbox("filmic", glparams.filmic);
-      edited += draw_gui_checkbox("denoise", params.denoise);
       end_gui_header();
-      if (edited) {
-        set_image(glimage, image);
-      }
     }
     draw_image_inspector(input, image, glparams);
     if (edit) {
