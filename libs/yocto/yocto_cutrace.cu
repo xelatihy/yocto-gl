@@ -4115,7 +4115,8 @@ optix_shader void __raygen__trace_pixel() {
   auto params   = globals.params;
   for (auto sample = ssample; sample < ssample + nsamples; sample++) {
     trace_sample(globals.state, globals.scene, globals.bvh, globals.lights,
-        optixGetLaunchIndex().x, optixGetLaunchIndex().y, sample, params);
+        optixGetLaunchIndex().x, optixGetLaunchIndex().y, sample,
+        globals.params);
   }
 }
 
