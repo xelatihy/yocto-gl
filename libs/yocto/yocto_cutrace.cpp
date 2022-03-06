@@ -969,6 +969,12 @@ cusceneext_data make_cutrace_scene(
   return {};
 }
 
+// Update cameras
+void update_cutrace_cameras(cusceneext_data& cuscene, const scene_data& scene,
+    const cutrace_params& params) {
+  exit_nocuda();
+}
+
 // Build the bvh acceleration structure.
 cubvh_data make_cutrace_bvh(cutrace_context& context, cusceneext_data& cuscene,
     const scene_data& scene, const cutrace_params& params) {
@@ -985,7 +991,6 @@ cutrace_state make_cutrace_state(
 void reset_cutrace_state(cutrace_state& state, const scene_data& scene,
     const cutrace_params& params) {
   exit_nocuda();
-  return {};
 }
 
 // Initialize lights.
