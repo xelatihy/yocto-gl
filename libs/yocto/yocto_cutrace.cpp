@@ -91,6 +91,20 @@ static cubuffer<T> make_buffer(const T& data) {
   return make_buffer(1, &data);
 }
 
+// resize a buffer
+template <typename T>
+static void resize_buffer(cubuffer<T>& buffer, size_t size, const T* data) {
+  if (buffer._size != size) {
+    check_result(cuMemFree(buffer._data));
+    buffer._size = size;
+    check_result(cuMemAlloc(&buffer._data, buffer.size_in_bytes()));
+  }
+  if (data) {
+    check_result(
+        cuMemcpyHtoD(buffer.device_ptr(), data, buffer.size_in_bytes()));
+  }
+}
+
 // update a buffer
 template <typename T>
 static void update_buffer(cubuffer<T>& buffer, size_t size, const T* data) {
@@ -454,7 +468,7 @@ cusceneext_data make_cutrace_scene(
     cucamera.film         = camera.film;
     cucamera.aperture     = camera.aperture;
     cucamera.focus        = camera.focus;
-    cucamera.orthographic = (int)camera.orthographic;
+    cucamera.orthographic = camera.orthographic;
   }
   cuscene.cameras = make_buffer(cucameras);
 
@@ -573,6 +587,22 @@ cusceneext_data make_cutrace_scene(
   check_cusync();
 
   return cuscene;
+}
+
+void update_cutrace_cameras(cusceneext_data& cuscene, const scene_data& scene,
+    const cutrace_params& params) {
+  auto cucameras = vector<cucamera_data>{};
+  for (auto& camera : scene.cameras) {
+    auto& cucamera        = cucameras.emplace_back();
+    cucamera.frame        = camera.frame;
+    cucamera.lens         = camera.lens;
+    cucamera.aspect       = camera.aspect;
+    cucamera.film         = camera.film;
+    cucamera.aperture     = camera.aperture;
+    cucamera.focus        = camera.focus;
+    cucamera.orthographic = camera.orthographic;
+  }
+  update_buffer(cuscene.cameras, cucameras);
 }
 
 cubvh_data make_cutrace_bvh(cutrace_context& context, cusceneext_data& cuscene,
@@ -745,6 +775,25 @@ cutrace_state make_cutrace_state(
   return state;
 };
 
+void reset_cutrace_state(cutrace_state& state, const scene_data& scene,
+    const cutrace_params& params) {
+  auto& camera = scene.cameras[params.camera];
+  if (camera.aspect >= 1) {
+    state.width  = params.resolution;
+    state.height = (int)round(params.resolution / camera.aspect);
+  } else {
+    state.height = params.resolution;
+    state.width  = (int)round(params.resolution * camera.aspect);
+  }
+  state.samples = 0;
+  resize_buffer(state.image, state.width * state.height, (vec4f*)nullptr);
+  resize_buffer(state.albedo, state.width * state.height, (vec3f*)nullptr);
+  resize_buffer(state.normal, state.width * state.height, (vec3f*)nullptr);
+  resize_buffer(state.hits, state.width * state.height, (int*)nullptr);
+  resize_buffer(state.rngs, state.width * state.height, (rng_state*)nullptr);
+  resize_buffer(state.display, state.width * state.height, (vec4f*)nullptr);
+}
+
 // Init trace lights
 cutrace_lights make_cutrace_lights(
     const scene_data& scene, const cutrace_params& params) {
@@ -777,15 +826,8 @@ image_data cutrace_image(
     trace_samples(context, state, cuscene, bvh, lights, scene, params);
   }
 
-  // copy back image
-  auto image = make_image(state.width, state.height, true);
-  download_buffer(state.image, image.pixels);
-  for (auto& pixel : image.pixels) pixel /= state.samples;
-
-  // cleanup
-
-  // done
-  return image;
+  // copy back image and return
+  return get_rendered_image(state);
 }
 
 // Get resulting render
@@ -796,7 +838,6 @@ image_data get_rendered_image(const cutrace_state& state) {
 }
 void get_rendered_image(image_data& image, const cutrace_state& state) {
   download_buffer(state.image, image.pixels);
-  for (auto& pixel : image.pixels) pixel /= state.samples;
 }
 
 // Get denoised result
@@ -817,10 +858,9 @@ void get_denoised_image(image_data& image, const cutrace_state& state) {
   // get albedo and normal
   auto albedo = vector<vec3f>(image.pixels.size()),
        normal = vector<vec3f>(image.pixels.size());
-  auto scale  = 1.0f / (float)state.samples;
   for (auto idx = 0; idx < state.width * state.height; idx++) {
-    albedo[idx] = state.albedo[idx] * scale;
-    normal[idx] = state.normal[idx] * scale;
+    albedo[idx] = state.albedo[idx];
+    normal[idx] = state.normal[idx];
   }
 
   // Create a denoising filter
@@ -853,10 +893,8 @@ image_data get_albedo_image(const cutrace_state& state) {
 void get_albedo_image(image_data& image, const cutrace_state& state) {
   auto albedo = vector<vec3f>(state.width * state.height);
   download_buffer(state.albedo, albedo);
-  auto scale = 1.0f / (float)state.samples;
   for (auto idx = 0; idx < state.width * state.height; idx++) {
-    image.pixels[idx] = {albedo[idx].x * scale, albedo[idx].y * scale,
-        albedo[idx].z * scale, 1.0f};
+    image.pixels[idx] = {albedo[idx].x, albedo[idx].y, albedo[idx].z, 1.0f};
   }
 }
 image_data get_normal_image(const cutrace_state& state) {
@@ -867,11 +905,17 @@ image_data get_normal_image(const cutrace_state& state) {
 void get_normal_image(image_data& image, const cutrace_state& state) {
   auto normal = vector<vec3f>(state.width * state.height);
   download_buffer(state.normal, normal);
-  auto scale = 1.0f / (float)state.samples;
   for (auto idx = 0; idx < state.width * state.height; idx++) {
-    image.pixels[idx] = {normal[idx].x * scale, normal[idx].y * scale,
-        normal[idx].z * scale, 1.0f};
+    image.pixels[idx] = {normal[idx].x, normal[idx].y, normal[idx].z, 1.0f};
   }
+}
+
+bool is_display(const cutrace_context& context) {
+  auto device = 0, is_display = 0;
+  // check_result(cuDevice(&current_device));
+  check_result(cuDeviceGetAttribute(
+      &is_display, CU_DEVICE_ATTRIBUTE_KERNEL_EXEC_TIMEOUT, device));
+  return (bool)is_display;
 }
 
 }  // namespace yocto
@@ -925,6 +969,12 @@ cusceneext_data make_cutrace_scene(
   return {};
 }
 
+// Update cameras
+void update_cutrace_cameras(cusceneext_data& cuscene, const scene_data& scene,
+    const cutrace_params& params) {
+  exit_nocuda();
+}
+
 // Build the bvh acceleration structure.
 cubvh_data make_cutrace_bvh(cutrace_context& context, cusceneext_data& cuscene,
     const scene_data& scene, const cutrace_params& params) {
@@ -937,6 +987,10 @@ cutrace_state make_cutrace_state(
     const scene_data& scene, const cutrace_params& params) {
   exit_nocuda();
   return {};
+}
+void reset_cutrace_state(cutrace_state& state, const scene_data& scene,
+    const cutrace_params& params) {
+  exit_nocuda();
 }
 
 // Initialize lights.

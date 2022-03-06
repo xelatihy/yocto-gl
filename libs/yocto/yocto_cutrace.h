@@ -97,6 +97,8 @@ cutrace_context make_cutrace_context(const cutrace_params& params);
 // Upload the scene to the GPU.
 cusceneext_data make_cutrace_scene(
     const scene_data& scene, const cutrace_params& params);
+void update_cutrace_cameras(cusceneext_data& cuscene, const scene_data& scene,
+    const cutrace_params& params);
 
 // Build the bvh acceleration structure.
 cubvh_data make_cutrace_bvh(cutrace_context& context, cusceneext_data& cuscene,
@@ -105,6 +107,8 @@ cubvh_data make_cutrace_bvh(cutrace_context& context, cusceneext_data& cuscene,
 // Initialize state.
 cutrace_state make_cutrace_state(
     const scene_data& scene, const cutrace_params& params);
+void reset_cutrace_state(cutrace_state& state, const scene_data& scene,
+    const cutrace_params& params);
 
 // Initialize lights.
 cutrace_lights make_cutrace_lights(
@@ -135,6 +139,9 @@ image_data get_albedo_image(const cutrace_state& state);
 void       get_albedo_image(image_data& image, const cutrace_state& state);
 image_data get_normal_image(const cutrace_state& state);
 void       get_normal_image(image_data& image, const cutrace_state& state);
+
+// check if display
+bool is_display(const cutrace_context& context);
 
 }  // namespace yocto
 

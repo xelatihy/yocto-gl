@@ -38,6 +38,7 @@
 #include <future>
 #include <stdexcept>
 
+#include "yocto_cutrace.h"
 #include "yocto_geometry.h"
 
 #ifdef __APPLE__
@@ -128,6 +129,10 @@ struct glimage_params {
   bool  checker     = true;
   float border_size = 2;
   vec4f background  = {0.15f, 0.15f, 0.15f, 1.0f};
+  bool  tonemap     = false;
+  float exposure    = 0;
+  bool  srgb        = true;
+  bool  filmic      = false;
 };
 
 // draw image
@@ -299,6 +304,30 @@ static bool draw_image_inspector(const gui_input& input,
     if (i >= 0 && i < image.width && j >= 0 && j < image.height) {
       image_pixel   = image.pixels[j * image.width + i];
       display_pixel = image.pixels[j * image.width + i];
+    }
+    draw_gui_coloredit("image", image_pixel);
+    draw_gui_coloredit("display", display_pixel);
+    end_gui_header();
+  }
+  return false;
+}
+
+static bool draw_image_inspector(
+    const gui_input& input, const image_data& image, glimage_params& glparams) {
+  if (draw_gui_header("inspect")) {
+    draw_gui_slider("zoom", glparams.scale, 0.1f, 10);
+    draw_gui_checkbox("fit", glparams.fit);
+    draw_gui_coloredit("background", glparams.background);
+    auto [i, j] = image_coords(input.cursor, glparams.center, glparams.scale,
+        vec2i{image.width, image.height});
+    auto ij     = vec2i{i, j};
+    draw_gui_dragger("mouse", ij);
+    auto image_pixel   = zero4f;
+    auto display_pixel = zero4f;
+    if (i >= 0 && i < image.width && j >= 0 && j < image.height) {
+      image_pixel   = image.pixels[j * image.width + i];
+      display_pixel = tonemap(
+          image_pixel, glparams.exposure, glparams.filmic, glparams.srgb);
     }
     draw_gui_coloredit("image", image_pixel);
     draw_gui_coloredit("display", display_pixel);
@@ -611,14 +640,14 @@ void show_trace_gui(const string& title, const string& name, scene_data& scene,
   }
 
   // init state
-  auto state   = make_trace_state(scene, params);
-  auto image   = make_image(state.width, state.height, true);
-  auto display = make_image(state.width, state.height, false);
-  auto render  = make_image(state.width, state.height, true);
+  auto state  = make_trace_state(scene, params);
+  auto image  = make_image(state.width, state.height, true);
+  auto render = make_image(state.width, state.height, true);
 
   // opengl image
-  auto glimage  = glimage_state{};
-  auto glparams = glimage_params{};
+  auto glimage     = glimage_state{};
+  auto glparams    = glimage_params{};
+  glparams.tonemap = true;
 
   // top level combo
   auto names    = vector<string>{name};
@@ -643,10 +672,9 @@ void show_trace_gui(const string& title, const string& name, scene_data& scene,
     render_stop = true;
     if (render_worker.valid()) render_worker.get();
 
-    state   = make_trace_state(scene, params);
-    image   = make_image(state.width, state.height, true);
-    display = make_image(state.width, state.height, false);
-    render  = make_image(state.width, state.height, true);
+    state  = make_trace_state(scene, params);
+    image  = make_image(state.width, state.height, true);
+    render = make_image(state.width, state.height, true);
 
     render_worker = {};
     render_stop   = false;
@@ -669,8 +697,7 @@ void show_trace_gui(const string& title, const string& name, scene_data& scene,
       auto lock      = std::lock_guard{render_mutex};
       render_current = 0;
       image          = render;
-      tonemap_image_mt(display, image, params.exposure, params.filmic);
-      render_update = true;
+      render_update  = true;
     }
 
     // start renderer
@@ -678,9 +705,10 @@ void show_trace_gui(const string& title, const string& name, scene_data& scene,
       for (auto sample = 0; sample < params.samples; sample += params.batch) {
         if (render_stop) return;
         parallel_for(state.width, state.height, [&](int i, int j) {
-          for (auto s : range(params.batch)) {
+          for (auto sample :
+              range(state.samples, state.samples + params.batch)) {
             if (render_stop) return;
-            trace_sample(state, scene, bvh, lights, i, j, params);
+            trace_sample(state, scene, bvh, lights, i, j, sample, params);
           }
          });
         state.samples += params.batch;
@@ -692,8 +720,7 @@ void show_trace_gui(const string& title, const string& name, scene_data& scene,
           } else {
             get_denoised_image(render, state);
           }
-          image = render;
-          tonemap_image_mt(display, image, params.exposure, params.filmic);
+          image         = render;
           render_update = true;
         }
       }
@@ -717,14 +744,14 @@ void show_trace_gui(const string& title, const string& name, scene_data& scene,
   callbacks.init = [&](const gui_input& input) {
     auto lock = std::lock_guard{render_mutex};
     init_image(glimage);
-    set_image(glimage, display);
+    set_image(glimage, image);
   };
   callbacks.clear = [&](const gui_input& input) { clear_image(glimage); };
   callbacks.draw  = [&](const gui_input& input) {
     // update image
     if (render_update) {
       auto lock = std::lock_guard{render_mutex};
-      set_image(glimage, display);
+      set_image(glimage, image);
       render_update = false;
     }
     update_image_params(input, image, glparams);
@@ -752,7 +779,7 @@ void show_trace_gui(const string& title, const string& name, scene_data& scene,
       continue_gui_line();
       edited += draw_gui_checkbox("filter", tparams.tentfilter);
       edited += draw_gui_slider("pratio", tparams.pratio, 1, 64);
-      // edited += draw_gui_slider("exposure", tparams.exposure, -5, 5);
+      edited += draw_gui_checkbox("denoise", tparams.denoise);
       end_gui_header();
       if (edited) {
         stop_render();
@@ -761,16 +788,14 @@ void show_trace_gui(const string& title, const string& name, scene_data& scene,
       }
     }
     if (draw_gui_header("tonemap")) {
-      edited += draw_gui_slider("exposure", params.exposure, -5, 5);
-      edited += draw_gui_checkbox("filmic", params.filmic);
-      edited += draw_gui_checkbox("denoise", params.denoise);
+      edited += draw_gui_slider("exposure", glparams.exposure, -5, 5);
+      edited += draw_gui_checkbox("filmic", glparams.filmic);
       end_gui_header();
       if (edited) {
-        tonemap_image_mt(display, image, params.exposure, params.filmic);
-        set_image(glimage, display);
+        set_image(glimage, image);
       }
     }
-    draw_image_inspector(input, image, display, glparams);
+    draw_image_inspector(input, image, glparams);
     if (edit) {
       if (draw_scene_editor(scene, selection, [&]() { stop_render(); })) {
         reset_display();
@@ -792,6 +817,175 @@ void show_trace_gui(const string& title, const string& name, scene_data& scene,
   // done
   stop_render();
 }
+
+#if YOCTO_CUDA
+
+// Open a window and show an scene via path tracing
+void show_cutrace_gui(const string& title, const string& name,
+    scene_data& scene, const trace_params& params_, bool print, bool edit) {
+  // copy params and camera
+  auto params = (cutrace_params&)params_;
+
+  // initialize context
+  auto context = make_cutrace_context(params);
+
+  // upload scene to the gpu
+  auto cuscene = make_cutrace_scene(scene, params);
+
+  // build bvh
+  auto bvh = make_cutrace_bvh(context, cuscene, scene, params);
+
+  // init lights
+  auto lights = make_cutrace_lights(scene, params);
+
+  // fix renderer type if no lights
+  // if (lights.lights.empty() && is_sampler_lit(params)) {
+  //   params.sampler = trace_sampler_type::eyelight;
+  // }
+
+  // state
+  auto state = make_cutrace_state(scene, params);
+
+  // preview state
+  auto pparams = params;
+  pparams.resolution /= params.pratio;
+  pparams.samples = 1;
+  auto pstate     = make_cutrace_state(scene, pparams);
+
+  // init state
+  auto image = make_image(state.width, state.height, true);
+
+  // opengl image
+  auto glimage     = glimage_state{};
+  auto glparams    = glimage_params{};
+  glparams.tonemap = true;
+
+  // top level combo
+  auto names    = vector<string>{name};
+  auto selected = 0;
+
+  // camera names
+  auto camera_names = scene.camera_names;
+  if (camera_names.empty()) {
+    for (auto idx : range(scene.cameras.size())) {
+      camera_names.push_back("camera" + std::to_string(idx + 1));
+    }
+  }
+
+  // TODO: render preview
+  auto render_preview = [&]() -> bool {
+    auto pparams = params;
+    pparams.resolution /= params.pratio;
+    pparams.samples = 1;
+    reset_cutrace_state(pstate, scene, pparams);
+    trace_start(context, pstate, cuscene, bvh, lights, scene, pparams);
+    trace_samples(context, pstate, cuscene, bvh, lights, scene, pparams);
+    auto preview = get_rendered_image(pstate);
+    for (auto idx = 0; idx < state.width * state.height; idx++) {
+      auto i = idx % image.width, j = idx / image.width;
+      auto pi           = clamp(i / params.pratio, 0, preview.width - 1),
+           pj           = clamp(j / params.pratio, 0, preview.height - 1);
+      image.pixels[idx] = preview.pixels[pj * preview.width + pi];
+    }
+    reset_cutrace_state(state, scene, params);
+    return true;
+  };
+
+  // TODO: render batch
+  auto render_batch = [&]() {
+    if (state.samples >= params.samples) return false;
+    if (state.samples == 0) {
+      trace_start(context, state, cuscene, bvh, lights, scene, params);
+    }
+    trace_samples(context, state, cuscene, bvh, lights, scene, params);
+    if (!params.denoise) {
+      get_rendered_image(image, state);
+    } else {
+      get_denoised_image(image, state);
+    }
+    return true;
+  };
+
+  // prepare selection
+  auto selection = scene_selection{};
+
+  // callbacks
+  auto callbacks = gui_callbacks{};
+  callbacks.init = [&](const gui_input& input) {
+    init_image(glimage);
+    if (render_preview()) set_image(glimage, image);
+  };
+  callbacks.clear = [&](const gui_input& input) { clear_image(glimage); };
+  callbacks.draw  = [&](const gui_input& input) {
+    update_image_params(input, image, glparams);
+    draw_image(glimage, glparams);
+    if (render_batch()) set_image(glimage, image);
+  };
+  callbacks.widgets = [&](const gui_input& input) {
+    auto edited = 0;
+    draw_gui_combobox("name", selected, names);
+    auto current = state.samples;
+    draw_gui_progressbar("sample", current, params.samples);
+    if (draw_gui_header("render")) {
+      auto edited  = 0;
+      auto tparams = params;
+      edited += draw_gui_combobox("camera", tparams.camera, camera_names);
+      edited += draw_gui_slider("resolution", tparams.resolution, 180, 4096);
+      edited += draw_gui_slider("samples", tparams.samples, 16, 4096);
+      edited += draw_gui_combobox(
+          "tracer", (int&)tparams.sampler, trace_sampler_names);
+      edited += draw_gui_combobox(
+          "false color", (int&)tparams.falsecolor, trace_falsecolor_names);
+      edited += draw_gui_slider("bounces", tparams.bounces, 1, 128);
+      edited += draw_gui_slider("batch", tparams.batch, 1, 16);
+      edited += draw_gui_slider("clamp", tparams.clamp, 10, 1000);
+      edited += draw_gui_checkbox("envhidden", tparams.envhidden);
+      continue_gui_line();
+      edited += draw_gui_checkbox("filter", tparams.tentfilter);
+      edited += draw_gui_slider("pratio", tparams.pratio, 1, 64);
+      edited += draw_gui_checkbox("denoise", tparams.denoise);
+      end_gui_header();
+      if (edited) {
+        params = tparams;
+        if (render_preview()) set_image(glimage, image);
+      }
+    }
+    if (draw_gui_header("tonemap")) {
+      edited += draw_gui_slider("exposure", glparams.exposure, -5, 5);
+      edited += draw_gui_checkbox("filmic", glparams.filmic);
+      end_gui_header();
+    }
+    draw_image_inspector(input, image, glparams);
+    if (edit) {
+      if (draw_scene_editor(scene, selection, [&]() {})) {
+        if (render_preview()) set_image(glimage, image);
+      }
+    }
+  };
+  callbacks.uiupdate = [&](const gui_input& input) {
+    auto camera = scene.cameras[params.camera];
+    if (uiupdate_camera_params(input, camera)) {
+      scene.cameras[params.camera] = camera;
+      update_cutrace_cameras(cuscene, scene, params);
+      if (render_preview()) set_image(glimage, image);
+    }
+  };
+
+  // run ui
+  show_gui_window({1280 + 320, 720}, title, callbacks);
+}
+
+#else
+
+static void exit_nocuda() { throw std::runtime_error{"Cuda not linked"}; }
+
+// Open a window and show an scene via path tracing
+void show_cutrace_gui(const string& title, const string& name,
+    scene_data& scene, const trace_params& params, bool print, bool edit) {
+  exit_nocuda();
+}
+
+#endif
 
 void show_shade_gui(const string& title, const string& name, scene_data& scene,
     const shade_params& params_, const glview_callback& widgets_callback,
@@ -1028,8 +1222,34 @@ in vec2 frag_texcoord;
 out vec4 frag_color;
 uniform sampler2D txt;
 uniform vec4 background;
+uniform bool tonemap;
+uniform float exposure;
+uniform bool srgb;
+uniform bool filmic;
+
+float rgb_to_srgb(float rgb) {
+  return (rgb <= 0.0031308f) ? 12.92f * rgb
+                             : (1 + 0.055f) * pow(rgb, 1 / 2.4f) - 0.055f;
+}
+
+vec3 tonemap_filmic(vec3 hdr_) {
+  // https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/
+  vec3 hdr = hdr_ * 0.6f;  // brings it back to ACES range
+  vec3 ldr = (hdr * hdr * 2.51f + hdr * 0.03f) /
+              (hdr * hdr * 2.43f + hdr * 0.59f + 0.14f);
+  return max(vec3(0,0,0), ldr);
+}
+
 void main() {
-  frag_color = texture(txt, frag_texcoord);
+  if(tonemap) {
+    vec4 color =  texture(txt, frag_texcoord);
+    color.xyz = color.xyz * pow(2, exposure);
+    if (filmic) color.xyz = tonemap_filmic(color.xyz);
+    if (srgb) color.xyz = vec3(rgb_to_srgb(color.x),rgb_to_srgb(color.y),rgb_to_srgb(color.z));
+    frag_color = color;
+  } else { 
+    frag_color = texture(txt, frag_texcoord);
+  }
 }
 )";
 #if 0
@@ -1147,6 +1367,14 @@ static void draw_image(glimage_state& glimage, const glimage_params& params) {
   glUniform4f(glGetUniformLocation(glimage.program, "background"),
       params.background.x, params.background.y, params.background.z,
       params.background.w);
+  glUniform1i(
+      glGetUniformLocation(glimage.program, "tonemap"), params.tonemap ? 1 : 0);
+  glUniform1f(
+      glGetUniformLocation(glimage.program, "exposure"), params.exposure);
+  glUniform1i(
+      glGetUniformLocation(glimage.program, "srgb"), params.srgb ? 1 : 0);
+  glUniform1i(
+      glGetUniformLocation(glimage.program, "filmic"), params.filmic ? 1 : 0);
   assert_glerror();
 
   // draw

@@ -4033,15 +4033,41 @@ static sampler_func get_trace_sampler_func(const trace_params& params) {
   }
 }
 
+static trace_result trace_sampler(const scene_data& scene, const trace_bvh& bvh,
+    const trace_lights& lights, const ray3f& ray, rng_state& rng,
+    const trace_params& params) {
+  switch (params.sampler) {
+    case trace_sampler_type::path:
+      return trace_path(scene, bvh, lights, ray, rng, params);
+    case trace_sampler_type::pathdirect:
+      return trace_pathdirect(scene, bvh, lights, ray, rng, params);
+    case trace_sampler_type::pathmis:
+      return trace_pathmis(scene, bvh, lights, ray, rng, params);
+    case trace_sampler_type::naive:
+      return trace_naive(scene, bvh, lights, ray, rng, params);
+    case trace_sampler_type::eyelight:
+      return trace_eyelight(scene, bvh, lights, ray, rng, params);
+    case trace_sampler_type::eyelightao:
+      return trace_eyelightao(scene, bvh, lights, ray, rng, params);
+    case trace_sampler_type::furnace:
+      return trace_furnace(scene, bvh, lights, ray, rng, params);
+    case trace_sampler_type::falsecolor:
+      return trace_falsecolor(scene, bvh, lights, ray, rng, params);
+    default: {
+      return {};
+    }
+  }
+}
+
 static void trace_sample(cutrace_state& state, const cuscene_data& scene,
     const cutrace_bvh& bvh, const cutrace_lights& lights, int i, int j,
-    const cutrace_params& params) {
-  auto& camera  = scene.cameras[params.camera];
-  auto  sampler = get_trace_sampler_func(params);
-  auto  idx     = state.width * j + i;
-  auto  ray     = sample_camera(camera, {i, j}, {state.width, state.height},
-           rand2f(state.rngs[idx]), rand2f(state.rngs[idx]), params.tentfilter);
-  auto  result  = sampler(scene, bvh, lights, ray, state.rngs[idx], params);
+    int sample, const cutrace_params& params) {
+  auto& camera = scene.cameras[params.camera];
+  // auto  sampler = get_trace_sampler_func(params);
+  auto idx    = state.width * j + i;
+  auto ray    = sample_camera(camera, {i, j}, {state.width, state.height},
+         rand2f(state.rngs[idx]), rand2f(state.rngs[idx]), params.tentfilter);
+  auto result = trace_sampler(scene, bvh, lights, ray, state.rngs[idx], params);
   // auto [radiance, hit, albedo, normal] = sampler(
   //    scene, bvh, lights, ray, state.rngs[idx], params);
   auto radiance = result.radiance;
@@ -4051,16 +4077,23 @@ static void trace_sample(cutrace_state& state, const cuscene_data& scene,
   if (!isfinite(radiance)) radiance = {0, 0, 0};
   if (max(radiance) > params.clamp)
     radiance = radiance * (params.clamp / max(radiance));
+  auto weight = 1.0f / (sample + 1);
   if (hit) {
-    state.image[idx] += {radiance.x, radiance.y, radiance.z, 1};
-    state.albedo[idx] += albedo;
-    state.normal[idx] += normal;
+    state.image[idx] = lerp(
+        state.image[idx], {radiance.x, radiance.y, radiance.z, 1}, weight);
+    state.albedo[idx] = lerp(state.albedo[idx], albedo, weight);
+    state.normal[idx] = lerp(state.normal[idx], normal, weight);
     state.hits[idx] += 1;
   } else if (!params.envhidden && !scene.environments.empty()) {
-    state.image[idx] += {radiance.x, radiance.y, radiance.z, 1};
-    state.albedo[idx] += {1, 1, 1};
-    state.normal[idx] += -ray.d;
+    state.image[idx] = lerp(
+        state.image[idx], {radiance.x, radiance.y, radiance.z, 1}, weight);
+    state.albedo[idx] = lerp(state.albedo[idx], {1, 1, 1}, weight);
+    state.normal[idx] = lerp(state.normal[idx], -ray.d, weight);
     state.hits[idx] += 1;
+  } else {
+    state.image[idx]  = lerp(state.image[idx], {0, 0, 0, 0}, weight);
+    state.albedo[idx] = lerp(state.albedo[idx], {0, 0, 0}, weight);
+    state.normal[idx] = lerp(state.normal[idx], -ray.d, weight);
   }
 }
 
@@ -4077,10 +4110,12 @@ optix_shader void __raygen__trace_pixel() {
   }
 
   // run shading
+  auto ssample  = globals.state.samples;
   auto nsamples = globals.params.batch;
-  for (auto sample = 0; sample < nsamples; sample++) {
+  for (auto sample = ssample; sample < ssample + nsamples; sample++) {
     trace_sample(globals.state, globals.scene, globals.bvh, globals.lights,
-        optixGetLaunchIndex().x, optixGetLaunchIndex().y, cutrace_params{});
+        optixGetLaunchIndex().x, optixGetLaunchIndex().y, sample,
+        globals.params);
   }
 }
 

@@ -170,7 +170,7 @@ void trace_samples(trace_state& state, const scene_data& scene,
     const trace_bvh& bvh, const trace_lights& lights,
     const trace_params& params);
 void trace_sample(trace_state& state, const scene_data& scene,
-    const trace_bvh& bvh, const trace_lights& lights, int i, int j,
+    const trace_bvh& bvh, const trace_lights& lights, int i, int j, int sample,
     const trace_params& params);
 
 // Get resulting render
