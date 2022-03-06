@@ -4112,7 +4112,6 @@ optix_shader void __raygen__trace_pixel() {
   // run shading
   auto ssample  = globals.state.samples;
   auto nsamples = globals.params.batch;
-  auto params   = globals.params;
   for (auto sample = ssample; sample < ssample + nsamples; sample++) {
     trace_sample(globals.state, globals.scene, globals.bvh, globals.lights,
         optixGetLaunchIndex().x, optixGetLaunchIndex().y, sample,
