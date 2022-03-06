@@ -38,6 +38,7 @@
 #include <future>
 #include <stdexcept>
 
+#include "yocto_cutrace.h"
 #include "yocto_geometry.h"
 
 #ifdef __APPLE__
@@ -793,6 +794,231 @@ void show_trace_gui(const string& title, const string& name, scene_data& scene,
   // done
   stop_render();
 }
+
+#if YOCTO_CUDA
+
+// Open a window and show an scene via path tracing
+void show_cutrace_gui(const string& title, const string& name,
+    scene_data& scene, const trace_params& params_, bool print, bool edit) {
+  // copy params and camera
+  auto params = (cutrace_params&)params_;
+
+  // initialize context
+  auto context = make_cutrace_context(params);
+
+  // upload scene to the gpu
+  auto cuscene = make_cutrace_scene(scene, params);
+
+  // build bvh
+  auto bvh = make_cutrace_bvh(context, cuscene, scene, params);
+
+  // init lights
+  auto lights = make_cutrace_lights(scene, params);
+
+  // fix renderer type if no lights
+  // if (lights.lights.empty() && is_sampler_lit(params)) {
+  //   params.sampler = trace_sampler_type::eyelight;
+  // }
+
+  // state
+  auto state = make_cutrace_state(scene, params);
+
+  // preview state
+  auto pparams = params;
+  pparams.resolution /= params.pratio;
+  pparams.samples = 1;
+  auto pstate     = make_cutrace_state(scene, pparams);
+
+  // init state
+  auto image   = make_image(state.width, state.height, true);
+  auto display = make_image(state.width, state.height, false);
+  auto render  = make_image(state.width, state.height, true);
+
+  // opengl image
+  auto glimage  = glimage_state{};
+  auto glparams = glimage_params{};
+
+  // top level combo
+  auto names    = vector<string>{name};
+  auto selected = 0;
+
+  // camera names
+  auto camera_names = scene.camera_names;
+  if (camera_names.empty()) {
+    for (auto idx : range(scene.cameras.size())) {
+      camera_names.push_back("camera" + std::to_string(idx + 1));
+    }
+  }
+
+  // renderer update
+  auto render_update  = std::atomic<bool>{};
+  auto render_current = std::atomic<int>{};
+  auto render_mutex   = std::mutex{};
+  auto render_worker  = std::future<void>{};
+  auto render_stop    = std::atomic<bool>{};
+  auto reset_display  = [&]() {
+    // stop render
+    render_stop = true;
+    if (render_worker.valid()) render_worker.get();
+
+    reset_cutrace_state(state, scene, params);
+    image   = make_image(state.width, state.height, true);
+    display = make_image(state.width, state.height, false);
+    render  = make_image(state.width, state.height, true);
+
+    render_worker = {};
+    render_stop   = false;
+
+    // preview
+    auto pparams = params;
+    pparams.resolution /= params.pratio;
+    pparams.samples = 1;
+    reset_cutrace_state(pstate, scene, pparams);
+    trace_start(context, pstate, cuscene, bvh, lights, scene, pparams);
+    trace_samples(context, pstate, cuscene, bvh, lights, scene, pparams);
+    auto preview = get_rendered_image(pstate);
+    for (auto idx = 0; idx < state.width * state.height; idx++) {
+      auto i = idx % render.width, j = idx / render.width;
+      auto pi            = clamp(i / params.pratio, 0, preview.width - 1),
+           pj            = clamp(j / params.pratio, 0, preview.height - 1);
+      render.pixels[idx] = preview.pixels[pj * preview.width + pi];
+    }
+    // if (current > 0) return;
+    {
+      auto lock      = std::lock_guard{render_mutex};
+      render_current = 0;
+      image          = render;
+      tonemap_image_mt(display, image, params.exposure, params.filmic);
+      render_update = true;
+    }
+
+    // start renderer
+    render_worker = std::async(std::launch::async, [&]() {
+      trace_start(context, state, cuscene, bvh, lights, scene, params);
+      for (auto sample = 0; sample < params.samples; sample += params.batch) {
+        if (render_stop) return;
+        trace_samples(context, state, cuscene, bvh, lights, scene, params);
+        state.samples += params.batch;
+        if (!render_stop) {
+          auto lock      = std::lock_guard{render_mutex};
+          render_current = state.samples;
+          if (!params.denoise || render_stop) {
+            get_rendered_image(render, state);
+          } else {
+            get_denoised_image(render, state);
+          }
+          image = render;
+          tonemap_image_mt(display, image, params.exposure, params.filmic);
+          render_update = true;
+        }
+      }
+     });
+  };
+
+  // stop render
+  auto stop_render = [&]() {
+    render_stop = true;
+    if (render_worker.valid()) render_worker.get();
+  };
+
+  // start rendering
+  reset_display();
+
+  // prepare selection
+  auto selection = scene_selection{};
+
+  // callbacks
+  auto callbacks = gui_callbacks{};
+  callbacks.init = [&](const gui_input& input) {
+    auto lock = std::lock_guard{render_mutex};
+    init_image(glimage);
+    set_image(glimage, display);
+  };
+  callbacks.clear = [&](const gui_input& input) { clear_image(glimage); };
+  callbacks.draw  = [&](const gui_input& input) {
+    // update image
+    if (render_update) {
+      auto lock = std::lock_guard{render_mutex};
+      set_image(glimage, display);
+      render_update = false;
+    }
+    update_image_params(input, image, glparams);
+    draw_image(glimage, glparams);
+  };
+  callbacks.widgets = [&](const gui_input& input) {
+    auto edited = 0;
+    draw_gui_combobox("name", selected, names);
+    auto current = (int)render_current;
+    draw_gui_progressbar("sample", current, params.samples);
+    if (draw_gui_header("render")) {
+      auto edited  = 0;
+      auto tparams = params;
+      edited += draw_gui_combobox("camera", tparams.camera, camera_names);
+      edited += draw_gui_slider("resolution", tparams.resolution, 180, 4096);
+      edited += draw_gui_slider("samples", tparams.samples, 16, 4096);
+      edited += draw_gui_combobox(
+          "tracer", (int&)tparams.sampler, trace_sampler_names);
+      edited += draw_gui_combobox(
+          "false color", (int&)tparams.falsecolor, trace_falsecolor_names);
+      edited += draw_gui_slider("bounces", tparams.bounces, 1, 128);
+      edited += draw_gui_slider("batch", tparams.batch, 1, 16);
+      edited += draw_gui_slider("clamp", tparams.clamp, 10, 1000);
+      edited += draw_gui_checkbox("envhidden", tparams.envhidden);
+      continue_gui_line();
+      edited += draw_gui_checkbox("filter", tparams.tentfilter);
+      edited += draw_gui_slider("pratio", tparams.pratio, 1, 64);
+      // edited += draw_gui_slider("exposure", tparams.exposure, -5, 5);
+      end_gui_header();
+      if (edited) {
+        stop_render();
+        params = tparams;
+        reset_display();
+      }
+    }
+    if (draw_gui_header("tonemap")) {
+      edited += draw_gui_slider("exposure", params.exposure, -5, 5);
+      edited += draw_gui_checkbox("filmic", params.filmic);
+      edited += draw_gui_checkbox("denoise", params.denoise);
+      end_gui_header();
+      if (edited) {
+        tonemap_image_mt(display, image, params.exposure, params.filmic);
+        set_image(glimage, display);
+      }
+    }
+    draw_image_inspector(input, image, display, glparams);
+    if (edit) {
+      if (draw_scene_editor(scene, selection, [&]() { stop_render(); })) {
+        reset_display();
+      }
+    }
+  };
+  callbacks.uiupdate = [&](const gui_input& input) {
+    auto camera = scene.cameras[params.camera];
+    if (uiupdate_camera_params(input, camera)) {
+      stop_render();
+      scene.cameras[params.camera] = camera;
+      reset_display();
+    }
+  };
+
+  // run ui
+  show_gui_window({1280 + 320, 720}, title, callbacks);
+
+  // done
+  stop_render();
+}
+
+#else
+
+static void exit_nocuda() { throw std::runtime_error{"Cuda not linked"}; }
+
+// Open a window and show an scene via path tracing
+void show_cutrace_gui(const string& title, const string& name,
+    scene_data& scene, const trace_params& params, bool print, bool edit) {
+  exit_nocuda();
+}
+
+#endif
 
 void show_shade_gui(const string& title, const string& name, scene_data& scene,
     const shade_params& params_, const glview_callback& widgets_callback,

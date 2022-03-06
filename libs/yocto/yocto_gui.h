@@ -77,6 +77,11 @@ void show_colorgrade_gui(
 void show_trace_gui(const string& title, const string& name, scene_data& scene,
     const trace_params& params = {}, bool print = true, bool edit = false);
 
+// Open a window and show an scene via path tracing in cuda
+void show_cutrace_gui(const string& title, const string& name,
+    scene_data& scene, const trace_params& params = {}, bool print = true,
+    bool edit = false);
+
 // GUI callback
 struct gui_input;
 using glview_callback = std::function<void(const gui_input& input,

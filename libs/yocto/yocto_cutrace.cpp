@@ -91,6 +91,20 @@ static cubuffer<T> make_buffer(const T& data) {
   return make_buffer(1, &data);
 }
 
+// resize a buffer
+template <typename T>
+static void resize_buffer(cubuffer<T>& buffer, size_t size, const T* data) {
+  if (buffer._size != size) {
+    check_result(cuMemFree(buffer._data));
+    buffer._size = size;
+    check_result(cuMemAlloc(&buffer._data, buffer.size_in_bytes()));
+  }
+  if (data) {
+    check_result(
+        cuMemcpyHtoD(buffer.device_ptr(), data, buffer.size_in_bytes()));
+  }
+}
+
 // update a buffer
 template <typename T>
 static void update_buffer(cubuffer<T>& buffer, size_t size, const T* data) {
@@ -745,6 +759,25 @@ cutrace_state make_cutrace_state(
   return state;
 };
 
+void reset_cutrace_state(cutrace_state& state, const scene_data& scene,
+    const cutrace_params& params) {
+  auto& camera = scene.cameras[params.camera];
+  if (camera.aspect >= 1) {
+    state.width  = params.resolution;
+    state.height = (int)round(params.resolution / camera.aspect);
+  } else {
+    state.height = params.resolution;
+    state.width  = (int)round(params.resolution * camera.aspect);
+  }
+  state.samples = 0;
+  resize_buffer(state.image, state.width * state.height, (vec4f*)nullptr);
+  resize_buffer(state.albedo, state.width * state.height, (vec3f*)nullptr);
+  resize_buffer(state.normal, state.width * state.height, (vec3f*)nullptr);
+  resize_buffer(state.hits, state.width * state.height, (int*)nullptr);
+  resize_buffer(state.rngs, state.width * state.height, (rng_state*)nullptr);
+  resize_buffer(state.display, state.width * state.height, (vec4f*)nullptr);
+}
+
 // Init trace lights
 cutrace_lights make_cutrace_lights(
     const scene_data& scene, const cutrace_params& params) {
@@ -922,6 +955,11 @@ cubvh_data make_cutrace_bvh(cutrace_context& context, cusceneext_data& cuscene,
 // Initialize state.
 cutrace_state make_cutrace_state(
     const scene_data& scene, const cutrace_params& params) {
+  exit_nocuda();
+  return {};
+}
+void reset_cutrace_state(cutrace_state& state, const scene_data& scene,
+    const cutrace_params& params) {
   exit_nocuda();
   return {};
 }

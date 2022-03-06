@@ -105,6 +105,8 @@ cubvh_data make_cutrace_bvh(cutrace_context& context, cusceneext_data& cuscene,
 // Initialize state.
 cutrace_state make_cutrace_state(
     const scene_data& scene, const cutrace_params& params);
+void reset_cutrace_state(cutrace_state& state, const scene_data& scene,
+    const cutrace_params& params);
 
 // Initialize lights.
 cutrace_lights make_cutrace_lights(
