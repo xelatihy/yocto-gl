@@ -966,7 +966,7 @@ void show_cutrace_gui(const string& title, const string& name,
     auto camera = scene.cameras[params.camera];
     if (uiupdate_camera_params(input, camera)) {
       scene.cameras[params.camera] = camera;
-      // TODO: update camera
+      update_cutrace_cameras(cuscene, scene, params);
       if (render_preview()) set_image(glimage, image);
     }
   };

@@ -589,6 +589,22 @@ cusceneext_data make_cutrace_scene(
   return cuscene;
 }
 
+void update_cutrace_cameras(cusceneext_data& cuscene, const scene_data& scene,
+    const cutrace_params& params) {
+  auto cucameras = vector<cucamera_data>{};
+  for (auto& camera : scene.cameras) {
+    auto& cucamera        = cucameras.emplace_back();
+    cucamera.frame        = camera.frame;
+    cucamera.lens         = camera.lens;
+    cucamera.aspect       = camera.aspect;
+    cucamera.film         = camera.film;
+    cucamera.aperture     = camera.aperture;
+    cucamera.focus        = camera.focus;
+    cucamera.orthographic = (int)camera.orthographic;
+  }
+  update_buffer(cuscene.cameras, cucameras);
+}
+
 cubvh_data make_cutrace_bvh(cutrace_context& context, cusceneext_data& cuscene,
     const scene_data& scene, const cutrace_params& params) {
   auto bvh = cubvh_data{};

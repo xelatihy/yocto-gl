@@ -97,6 +97,8 @@ cutrace_context make_cutrace_context(const cutrace_params& params);
 // Upload the scene to the GPU.
 cusceneext_data make_cutrace_scene(
     const scene_data& scene, const cutrace_params& params);
+void update_cutrace_cameras(cusceneext_data& cuscene, const scene_data& scene,
+    const cutrace_params& params);
 
 // Build the bvh acceleration structure.
 cubvh_data make_cutrace_bvh(cutrace_context& context, cusceneext_data& cuscene,
