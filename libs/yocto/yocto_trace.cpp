@@ -1383,7 +1383,7 @@ bool is_sampler_lit(const trace_params& params) {
 
 // Trace a block of samples
 void trace_sample(trace_state& state, const scene_data& scene,
-    const trace_bvh& bvh, const trace_lights& lights, int i, int j,
+    const trace_bvh& bvh, const trace_lights& lights, int i, int j, int sample,
     const trace_params& params) {
   auto& camera  = scene.cameras[params.camera];
   auto  sampler = get_trace_sampler_func(params);
@@ -1395,16 +1395,25 @@ void trace_sample(trace_state& state, const scene_data& scene,
   if (!isfinite(radiance)) radiance = {0, 0, 0};
   if (max(radiance) > params.clamp)
     radiance = radiance * (params.clamp / max(radiance));
+  auto weight = 1.0f / (sample + 1);
   if (hit) {
-    state.image[idx] += {radiance.x, radiance.y, radiance.z, 1};
-    state.albedo[idx] += albedo;
-    state.normal[idx] += normal;
+    state.image[idx] = lerp(
+        state.image[idx], {radiance.x, radiance.y, radiance.z, 1}, weight);
+    state.albedo[idx] = lerp(albedo, state.albedo[idx], weight);
+    state.normal[idx] = lerp(normal, state.normal[idx], weight);
     state.hits[idx] += 1;
   } else if (!params.envhidden && !scene.environments.empty()) {
+    state.image[idx] = lerp(
+        state.image[idx], {radiance.x, radiance.y, radiance.z, 1}, weight);
+    state.albedo[idx] = lerp({1, 1, 1}, state.albedo[idx], weight);
+    state.normal[idx] = lerp(-ray.d, state.normal[idx], weight);
     state.image[idx] += {radiance.x, radiance.y, radiance.z, 1};
-    state.albedo[idx] += {1, 1, 1};
-    state.normal[idx] += -ray.d;
     state.hits[idx] += 1;
+  } else {
+    state.image[idx]  = lerp(state.image[idx], {0, 0, 0, 0}, weight);
+    state.albedo[idx] = lerp({0, 0, 0}, state.albedo[idx], weight);
+    state.normal[idx] = lerp(-ray.d, state.normal[idx], weight);
+    state.image[idx] += {radiance.x, radiance.y, radiance.z, 1};
   }
 }
 
@@ -1513,15 +1522,15 @@ void trace_samples(trace_state& state, const scene_data& scene,
   if (params.noparallel) {
     for (auto j : range(state.height)) {
       for (auto i : range(state.width)) {
-        for (auto s : range(params.batch)) {
-          trace_sample(state, scene, bvh, lights, i, j, params);
+        for (auto sample : range(state.samples, state.samples + params.batch)) {
+          trace_sample(state, scene, bvh, lights, i, j, sample, params);
         }
       }
     }
   } else {
     parallel_for(state.width, state.height, [&](int i, int j) {
-      for (auto s : range(params.batch)) {
-        trace_sample(state, scene, bvh, lights, i, j, params);
+      for (auto sample : range(state.samples, state.samples + params.batch)) {
+        trace_sample(state, scene, bvh, lights, i, j, sample, params);
       }
     });
   }
@@ -1546,9 +1555,8 @@ image_data get_rendered_image(const trace_state& state) {
 }
 void get_rendered_image(image_data& image, const trace_state& state) {
   check_image(image, state.width, state.height, true);
-  auto scale = 1.0f / (float)state.samples;
   for (auto idx = 0; idx < state.width * state.height; idx++) {
-    image.pixels[idx] = state.image[idx] * scale;
+    image.pixels[idx] = state.image[idx];
   }
 }
 
@@ -1570,10 +1578,9 @@ void get_denoised_image(image_data& image, const trace_state& state) {
   // get albedo and normal
   auto albedo = vector<vec3f>(image.pixels.size()),
        normal = vector<vec3f>(image.pixels.size());
-  auto scale  = 1.0f / (float)state.samples;
   for (auto idx = 0; idx < state.width * state.height; idx++) {
-    albedo[idx] = state.albedo[idx] * scale;
-    normal[idx] = state.normal[idx] * scale;
+    albedo[idx] = state.albedo[idx];
+    normal[idx] = state.normal[idx];
   }
 
   // Create a denoising filter
