@@ -166,6 +166,124 @@ namespace yocto {
 
 extern "C" char yocto_cutrace_ptx[];
 
+cusceneext_data::cusceneext_data(cusceneext_data&& other) {
+  cutextures.swap(other.cutextures);
+  cushapes.swap(other.cushapes);
+  cameras.swap(other.cameras);
+  textures.swap(other.textures);
+  materials.swap(other.materials);
+  shapes.swap(other.shapes);
+  instances.swap(other.instances);
+  environments.swap(other.environments);
+}
+cusceneext_data& cusceneext_data::operator=(cusceneext_data&& other) {
+  cutextures.swap(other.cutextures);
+  cushapes.swap(other.cushapes);
+  cameras.swap(other.cameras);
+  textures.swap(other.textures);
+  materials.swap(other.materials);
+  shapes.swap(other.shapes);
+  instances.swap(other.instances);
+  environments.swap(other.environments);
+  return *this;
+}
+cusceneext_data::~cusceneext_data() {
+  for (auto& cutexture : cutextures) {
+    cuArrayDestroy(cutexture.array);
+    // TODO: texture
+  }
+  for (auto& cushape : cushapes) {
+    clear_buffer(cushape.positions);
+    clear_buffer(cushape.normals);
+    clear_buffer(cushape.texcoords);
+    clear_buffer(cushape.colors);
+    clear_buffer(cushape.triangles);
+  }
+  clear_buffer(cameras);
+  clear_buffer(textures);
+  clear_buffer(materials);
+  clear_buffer(shapes);
+  clear_buffer(instances);
+  clear_buffer(environments);
+};
+
+cubvh_data::cubvh_data(cubvh_data&& other) {
+  instances.swap(other.instances);
+  shapes_bvhs.swap(other.shapes_bvhs);
+  instances_bvh.buffer.swap(other.instances_bvh.buffer);
+  std::swap(instances_bvh.handle, other.instances_bvh.handle);
+}
+cubvh_data& cubvh_data::operator=(cubvh_data&& other) {
+  instances.swap(other.instances);
+  shapes_bvhs.swap(other.shapes_bvhs);
+  instances_bvh.buffer.swap(other.instances_bvh.buffer);
+  std::swap(instances_bvh.handle, other.instances_bvh.handle);
+  return *this;
+}
+cubvh_data::~cubvh_data() {
+  for (auto& shape_bvh : shapes_bvhs) {
+    clear_buffer(shape_bvh.buffer);
+    // TODO: bvh
+  }
+  clear_buffer(instances);
+}
+
+cutrace_context::cutrace_context(cutrace_context&& other) {
+  globals_buffer.swap(other.globals_buffer);
+  raygen_records.swap(other.raygen_records);
+  miss_records.swap(other.miss_records);
+  hitgroup_records.swap(other.hitgroup_records);
+  std::swap(binding_table, other.binding_table);
+  std::swap(raygen_program, other.raygen_program);
+  std::swap(miss_program, other.miss_program);
+  std::swap(hitgroup_program, other.hitgroup_program);
+  std::swap(optix_pipeline, other.optix_pipeline);
+  std::swap(optix_module, other.optix_module);
+  std::swap(optix_context, other.optix_context);
+  std::swap(cuda_stream, other.cuda_stream);
+  std::swap(cuda_context, other.cuda_context);
+}
+cutrace_context& cutrace_context::operator=(cutrace_context&& other) {
+  globals_buffer.swap(other.globals_buffer);
+  raygen_records.swap(other.raygen_records);
+  miss_records.swap(other.miss_records);
+  hitgroup_records.swap(other.hitgroup_records);
+  std::swap(binding_table, other.binding_table);
+  std::swap(raygen_program, other.raygen_program);
+  std::swap(miss_program, other.miss_program);
+  std::swap(hitgroup_program, other.hitgroup_program);
+  std::swap(optix_pipeline, other.optix_pipeline);
+  std::swap(optix_module, other.optix_module);
+  std::swap(optix_context, other.optix_context);
+  std::swap(cuda_stream, other.cuda_stream);
+  std::swap(cuda_context, other.cuda_context);
+  return *this;
+}
+
+cutrace_context::~cutrace_context() {
+  // global buffer
+  clear_buffer(globals_buffer);
+
+  // stb
+  clear_buffer(raygen_records);
+  clear_buffer(miss_records);
+  clear_buffer(hitgroup_records);
+
+  // programs
+  optixProgramGroupDestroy(raygen_program);
+  optixProgramGroupDestroy(miss_program);
+  optixProgramGroupDestroy(hitgroup_program);
+
+  // pipeline
+  optixPipelineDestroy(optix_pipeline);
+  optixModuleDestroy(optix_module);
+
+  // context
+  optixDeviceContextDestroy(optix_context);
+  cuStreamDestroy(cuda_stream);
+  cuCtxDestroy(cuda_context);
+}
+
 // init cuda and optix context
 cutrace_context make_cutrace_context(const cutrace_params& params) {
   // context

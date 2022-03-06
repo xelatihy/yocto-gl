@@ -205,6 +205,10 @@ struct cubuffer {
   size_t      size() const { return _size; }
   CUdeviceptr device_ptr() const { return _data; }
   size_t      size_in_bytes() const { return _size * sizeof(T); }
+  void        swap(cubuffer& other) {
+    std::swap(_data, other._data);
+    std::swap(_size, other._size);
+  }
 
   CUdeviceptr _data = 0;
   size_t      _size = 0;
@@ -287,6 +291,11 @@ struct cuscene_data {
 struct cusceneext_data : cuscene_data {
   vector<cutexture_data> cutextures = {};
   vector<cushape_data>   cushapes   = {};
+
+  cusceneext_data() {}
+  cusceneext_data(cusceneext_data&&);
+  cusceneext_data& operator=(cusceneext_data&&);
+  ~cusceneext_data();
 };
 
 struct cubvh_tree {
@@ -298,6 +307,11 @@ struct cubvh_data {
   cubuffer<OptixInstance> instances     = {};
   cubvh_tree              instances_bvh = {};
   vector<cubvh_tree>      shapes_bvhs   = {};
+
+  cubvh_data() {}
+  cubvh_data(cubvh_data&&);
+  cubvh_data& operator=(cubvh_data&&);
+  ~cubvh_data();
 };
 
 // state
@@ -363,6 +377,11 @@ struct cutrace_context {
 
   // global buffer
   cubuffer<cutrace_globals> globals_buffer = {};
+
+  cutrace_context() {}
+  cutrace_context(cutrace_context&&);
+  cutrace_context& operator=(cutrace_context&&);
+  ~cutrace_context();
 };
 
 }  // namespace yocto
