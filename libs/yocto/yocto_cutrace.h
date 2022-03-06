@@ -188,10 +188,6 @@ using OptixShaderBindingTable = void*;
 using CUarray                 = void*;
 using CUtexObject             = void*;
 
-// placeholder values
-#define OPTIX_SBT_RECORD_ALIGNMENT 16
-#define OPTIX_SBT_RECORD_HEADER_SIZE 16
-
 #endif
 
 // -----------------------------------------------------------------------------
@@ -348,11 +344,20 @@ struct cutrace_globals {
   cutrace_params         params = {};
 };
 
+#if YOCTO_CUDA
+
 // empty stb record
 struct __declspec(align(OPTIX_SBT_RECORD_ALIGNMENT)) cutrace_stbrecord {
   __declspec(align(
       OPTIX_SBT_RECORD_ALIGNMENT)) char header[OPTIX_SBT_RECORD_HEADER_SIZE];
 };
+
+#else
+
+// empty stb record
+struct cutrace_stbrecord {};
+
+#endif
 
 struct cutrace_context {
   // context
