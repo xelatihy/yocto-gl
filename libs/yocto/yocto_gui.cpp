@@ -131,7 +131,7 @@ struct glimage_params {
   vec4f background  = {0.15f, 0.15f, 0.15f, 1.0f};
   bool  tonemap     = false;
   float exposure    = 0;
-  bool  srgb        = false;
+  bool  srgb        = true;
   bool  filmic      = false;
 };
 
@@ -304,6 +304,30 @@ static bool draw_image_inspector(const gui_input& input,
     if (i >= 0 && i < image.width && j >= 0 && j < image.height) {
       image_pixel   = image.pixels[j * image.width + i];
       display_pixel = image.pixels[j * image.width + i];
+    }
+    draw_gui_coloredit("image", image_pixel);
+    draw_gui_coloredit("display", display_pixel);
+    end_gui_header();
+  }
+  return false;
+}
+
+static bool draw_image_inspector(
+    const gui_input& input, const image_data& image, glimage_params& glparams) {
+  if (draw_gui_header("inspect")) {
+    draw_gui_slider("zoom", glparams.scale, 0.1f, 10);
+    draw_gui_checkbox("fit", glparams.fit);
+    draw_gui_coloredit("background", glparams.background);
+    auto [i, j] = image_coords(input.cursor, glparams.center, glparams.scale,
+        vec2i{image.width, image.height});
+    auto ij     = vec2i{i, j};
+    draw_gui_dragger("mouse", ij);
+    auto image_pixel   = zero4f;
+    auto display_pixel = zero4f;
+    if (i >= 0 && i < image.width && j >= 0 && j < image.height) {
+      image_pixel   = image.pixels[j * image.width + i];
+      display_pixel = tonemap(
+          image_pixel, glparams.exposure, glparams.filmic, glparams.srgb);
     }
     draw_gui_coloredit("image", image_pixel);
     draw_gui_coloredit("display", display_pixel);
@@ -834,13 +858,12 @@ void show_cutrace_gui(const string& title, const string& name,
   auto pstate     = make_cutrace_state(scene, pparams);
 
   // init state
-  auto image   = make_image(state.width, state.height, true);
-  auto display = make_image(state.width, state.height, false);
-  auto render  = make_image(state.width, state.height, true);
+  auto image = make_image(state.width, state.height, true);
 
   // opengl image
-  auto glimage  = glimage_state{};
-  auto glparams = glimage_params{};
+  auto glimage     = glimage_state{};
+  auto glparams    = glimage_params{};
+  glparams.tonemap = true;
 
   // top level combo
   auto names    = vector<string>{name};
@@ -864,13 +887,11 @@ void show_cutrace_gui(const string& title, const string& name,
     trace_samples(context, pstate, cuscene, bvh, lights, scene, pparams);
     auto preview = get_rendered_image(pstate);
     for (auto idx = 0; idx < state.width * state.height; idx++) {
-      auto i = idx % render.width, j = idx / render.width;
-      auto pi            = clamp(i / params.pratio, 0, preview.width - 1),
-           pj            = clamp(j / params.pratio, 0, preview.height - 1);
-      render.pixels[idx] = preview.pixels[pj * preview.width + pi];
+      auto i = idx % image.width, j = idx / image.width;
+      auto pi           = clamp(i / params.pratio, 0, preview.width - 1),
+           pj           = clamp(j / params.pratio, 0, preview.height - 1);
+      image.pixels[idx] = preview.pixels[pj * preview.width + pi];
     }
-    image = render;
-    tonemap_image_mt(display, image, params.exposure, params.filmic);
     reset_cutrace_state(state, scene, params);
     return true;
   };
@@ -883,12 +904,10 @@ void show_cutrace_gui(const string& title, const string& name,
     }
     trace_samples(context, state, cuscene, bvh, lights, scene, params);
     if (!params.denoise) {
-      get_rendered_image(render, state);
+      get_rendered_image(image, state);
     } else {
-      get_denoised_image(render, state);
+      get_denoised_image(image, state);
     }
-    image = render;
-    tonemap_image_mt(display, image, params.exposure, params.filmic);
     return true;
   };
 
@@ -899,13 +918,13 @@ void show_cutrace_gui(const string& title, const string& name,
   auto callbacks = gui_callbacks{};
   callbacks.init = [&](const gui_input& input) {
     init_image(glimage);
-    if (render_preview()) set_image(glimage, display);
+    if (render_preview()) set_image(glimage, image);
   };
   callbacks.clear = [&](const gui_input& input) { clear_image(glimage); };
   callbacks.draw  = [&](const gui_input& input) {
     update_image_params(input, image, glparams);
     draw_image(glimage, glparams);
-    if (render_batch()) set_image(glimage, display);
+    if (render_batch()) set_image(glimage, image);
   };
   callbacks.widgets = [&](const gui_input& input) {
     auto edited = 0;
@@ -933,7 +952,7 @@ void show_cutrace_gui(const string& title, const string& name,
       end_gui_header();
       if (edited) {
         params = tparams;
-        if (render_preview()) set_image(glimage, display);
+        if (render_preview()) set_image(glimage, image);
       }
     }
     if (draw_gui_header("tonemap")) {
@@ -942,14 +961,13 @@ void show_cutrace_gui(const string& title, const string& name,
       edited += draw_gui_checkbox("denoise", params.denoise);
       end_gui_header();
       if (edited) {
-        tonemap_image_mt(display, image, params.exposure, params.filmic);
-        set_image(glimage, display);
+        set_image(glimage, image);
       }
     }
-    draw_image_inspector(input, image, display, glparams);
+    draw_image_inspector(input, image, glparams);
     if (edit) {
       if (draw_scene_editor(scene, selection, [&]() {})) {
-        if (render_preview()) set_image(glimage, display);
+        if (render_preview()) set_image(glimage, image);
       }
     }
   };
@@ -958,7 +976,7 @@ void show_cutrace_gui(const string& title, const string& name,
     if (uiupdate_camera_params(input, camera)) {
       scene.cameras[params.camera] = camera;
       // TODO: update camera
-      if (render_preview()) set_image(glimage, display);
+      if (render_preview()) set_image(glimage, image);
     }
   };
 
@@ -1217,10 +1235,26 @@ uniform bool tonemap;
 uniform float exposure;
 uniform bool srgb;
 uniform bool filmic;
+
+float rgb_to_srgb(float rgb) {
+  return (rgb <= 0.0031308f) ? 12.92f * rgb
+                             : (1 + 0.055f) * pow(rgb, 1 / 2.4f) - 0.055f;
+}
+
+vec3 tonemap_filmic(vec3 hdr_) {
+  // https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/
+  vec3 hdr = hdr_ * 0.6f;  // brings it back to ACES range
+  vec3 ldr = (hdr * hdr * 2.51f + hdr * 0.03f) /
+              (hdr * hdr * 2.43f + hdr * 0.59f + 0.14f);
+  return max(vec3(0,0,0), ldr);
+}
+
 void main() {
   if(tonemap) {
     vec4 color =  texture(txt, frag_texcoord);
     color.xyz = color.xyz * pow(2, exposure);
+    if (filmic) color.xyz = tonemap_filmic(color.xyz);
+    if (srgb) color.xyz = vec3(rgb_to_srgb(color.x),rgb_to_srgb(color.y),rgb_to_srgb(color.z));
     frag_color = color;
   } else { 
     frag_color = texture(txt, frag_texcoord);
