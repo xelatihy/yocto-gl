@@ -129,6 +129,10 @@ struct glimage_params {
   bool  checker     = true;
   float border_size = 2;
   vec4f background  = {0.15f, 0.15f, 0.15f, 1.0f};
+  bool  tonemap     = false;
+  float exposure    = 0;
+  bool  srgb        = false;
+  bool  filmic      = false;
 };
 
 // draw image
@@ -1209,8 +1213,18 @@ in vec2 frag_texcoord;
 out vec4 frag_color;
 uniform sampler2D txt;
 uniform vec4 background;
+uniform bool tonemap;
+uniform float exposure;
+uniform bool srgb;
+uniform bool filmic;
 void main() {
-  frag_color = texture(txt, frag_texcoord);
+  if(tonemap) {
+    vec4 color =  texture(txt, frag_texcoord);
+    color.xyz = color.xyz * pow(2, exposure);
+    frag_color = color;
+  } else { 
+    frag_color = texture(txt, frag_texcoord);
+  }
 }
 )";
 #if 0
@@ -1328,6 +1342,14 @@ static void draw_image(glimage_state& glimage, const glimage_params& params) {
   glUniform4f(glGetUniformLocation(glimage.program, "background"),
       params.background.x, params.background.y, params.background.z,
       params.background.w);
+  glUniform1i(
+      glGetUniformLocation(glimage.program, "tonemap"), params.tonemap ? 1 : 0);
+  glUniform1f(
+      glGetUniformLocation(glimage.program, "exposure"), params.exposure);
+  glUniform1i(
+      glGetUniformLocation(glimage.program, "srgb"), params.srgb ? 1 : 0);
+  glUniform1i(
+      glGetUniformLocation(glimage.program, "filmic"), params.filmic ? 1 : 0);
   assert_glerror();
 
   // draw
