@@ -640,14 +640,14 @@ void show_trace_gui(const string& title, const string& name, scene_data& scene,
   }
 
   // init state
-  auto state   = make_trace_state(scene, params);
-  auto image   = make_image(state.width, state.height, true);
-  auto display = make_image(state.width, state.height, false);
-  auto render  = make_image(state.width, state.height, true);
+  auto state  = make_trace_state(scene, params);
+  auto image  = make_image(state.width, state.height, true);
+  auto render = make_image(state.width, state.height, true);
 
   // opengl image
-  auto glimage  = glimage_state{};
-  auto glparams = glimage_params{};
+  auto glimage     = glimage_state{};
+  auto glparams    = glimage_params{};
+  glparams.tonemap = true;
 
   // top level combo
   auto names    = vector<string>{name};
@@ -672,10 +672,9 @@ void show_trace_gui(const string& title, const string& name, scene_data& scene,
     render_stop = true;
     if (render_worker.valid()) render_worker.get();
 
-    state   = make_trace_state(scene, params);
-    image   = make_image(state.width, state.height, true);
-    display = make_image(state.width, state.height, false);
-    render  = make_image(state.width, state.height, true);
+    state  = make_trace_state(scene, params);
+    image  = make_image(state.width, state.height, true);
+    render = make_image(state.width, state.height, true);
 
     render_worker = {};
     render_stop   = false;
@@ -698,8 +697,7 @@ void show_trace_gui(const string& title, const string& name, scene_data& scene,
       auto lock      = std::lock_guard{render_mutex};
       render_current = 0;
       image          = render;
-      tonemap_image_mt(display, image, params.exposure, params.filmic);
-      render_update = true;
+      render_update  = true;
     }
 
     // start renderer
@@ -722,8 +720,7 @@ void show_trace_gui(const string& title, const string& name, scene_data& scene,
           } else {
             get_denoised_image(render, state);
           }
-          image = render;
-          tonemap_image_mt(display, image, params.exposure, params.filmic);
+          image         = render;
           render_update = true;
         }
       }
@@ -747,14 +744,14 @@ void show_trace_gui(const string& title, const string& name, scene_data& scene,
   callbacks.init = [&](const gui_input& input) {
     auto lock = std::lock_guard{render_mutex};
     init_image(glimage);
-    set_image(glimage, display);
+    set_image(glimage, image);
   };
   callbacks.clear = [&](const gui_input& input) { clear_image(glimage); };
   callbacks.draw  = [&](const gui_input& input) {
     // update image
     if (render_update) {
       auto lock = std::lock_guard{render_mutex};
-      set_image(glimage, display);
+      set_image(glimage, image);
       render_update = false;
     }
     update_image_params(input, image, glparams);
@@ -796,11 +793,10 @@ void show_trace_gui(const string& title, const string& name, scene_data& scene,
       edited += draw_gui_checkbox("denoise", params.denoise);
       end_gui_header();
       if (edited) {
-        tonemap_image_mt(display, image, params.exposure, params.filmic);
-        set_image(glimage, display);
+        set_image(glimage, image);
       }
     }
-    draw_image_inspector(input, image, display, glparams);
+    draw_image_inspector(input, image, glparams);
     if (edit) {
       if (draw_scene_editor(scene, selection, [&]() { stop_render(); })) {
         reset_display();
