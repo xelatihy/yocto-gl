@@ -138,6 +138,9 @@ void       get_albedo_image(image_data& image, const cutrace_state& state);
 image_data get_normal_image(const cutrace_state& state);
 void       get_normal_image(image_data& image, const cutrace_state& state);
 
+// check if display
+bool is_display(const cutrace_context& context);
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------

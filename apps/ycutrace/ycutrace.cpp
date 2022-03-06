@@ -234,11 +234,18 @@ void run_view(const view_params& params_) {
     tesselate_subdivs(scene);
   }
 
+  // triangulation
+  for (auto& shape : scene.shapes) {
+    if (shape.quads.empty()) continue;
+    shape.triangles = quads_to_triangles(shape.quads);
+    shape.quads     = {};
+  }
+
   // find camera
   params.camera = find_camera(scene, params.camname);
 
   // run view
-  show_trace_gui("ycuda", params.scene, scene, params);
+  show_cutrace_gui("ycutrace", params.scene, scene, params);
 }
 
 struct app_params {

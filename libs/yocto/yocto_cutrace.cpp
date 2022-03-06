@@ -894,6 +894,14 @@ void get_normal_image(image_data& image, const cutrace_state& state) {
   }
 }
 
+bool is_display(const cutrace_context& context) {
+  auto device = 0, is_display = 0;
+  // check_result(cuDevice(&current_device));
+  check_result(cuDeviceGetAttribute(
+      &is_display, CU_DEVICE_ATTRIBUTE_KERNEL_EXEC_TIMEOUT, device));
+  return (bool)is_display;
+}
+
 }  // namespace yocto
 
 #else
