@@ -1399,21 +1399,19 @@ void trace_sample(trace_state& state, const scene_data& scene,
   if (hit) {
     state.image[idx] = lerp(
         state.image[idx], {radiance.x, radiance.y, radiance.z, 1}, weight);
-    state.albedo[idx] = lerp(albedo, state.albedo[idx], weight);
-    state.normal[idx] = lerp(normal, state.normal[idx], weight);
+    state.albedo[idx] = lerp(state.albedo[idx], albedo, weight);
+    state.normal[idx] = lerp(state.normal[idx], normal, weight);
     state.hits[idx] += 1;
   } else if (!params.envhidden && !scene.environments.empty()) {
     state.image[idx] = lerp(
         state.image[idx], {radiance.x, radiance.y, radiance.z, 1}, weight);
-    state.albedo[idx] = lerp({1, 1, 1}, state.albedo[idx], weight);
-    state.normal[idx] = lerp(-ray.d, state.normal[idx], weight);
-    state.image[idx] += {radiance.x, radiance.y, radiance.z, 1};
+    state.albedo[idx] = lerp(state.albedo[idx], {1, 1, 1}, weight);
+    state.normal[idx] = lerp(state.normal[idx], -ray.d, weight);
     state.hits[idx] += 1;
   } else {
     state.image[idx]  = lerp(state.image[idx], {0, 0, 0, 0}, weight);
-    state.albedo[idx] = lerp({0, 0, 0}, state.albedo[idx], weight);
-    state.normal[idx] = lerp(-ray.d, state.normal[idx], weight);
-    state.image[idx] += {radiance.x, radiance.y, radiance.z, 1};
+    state.albedo[idx] = lerp(state.albedo[idx], {0, 0, 0}, weight);
+    state.normal[idx] = lerp(state.normal[idx], -ray.d, weight);
   }
 }
 
