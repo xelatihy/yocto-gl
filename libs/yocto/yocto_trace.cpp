@@ -1612,10 +1612,9 @@ image_data get_albedo_image(const trace_state& state) {
 }
 void get_albedo_image(image_data& albedo, const trace_state& state) {
   check_image(albedo, state.width, state.height, true);
-  auto scale = 1.0f / (float)state.samples;
   for (auto idx = 0; idx < state.width * state.height; idx++) {
-    albedo.pixels[idx] = {state.albedo[idx].x * scale,
-        state.albedo[idx].y * scale, state.albedo[idx].z * scale, 1.0f};
+    albedo.pixels[idx] = {
+        state.albedo[idx].x, state.albedo[idx].y, state.albedo[idx].z, 1.0f};
   }
 }
 image_data get_normal_image(const trace_state& state) {
@@ -1625,10 +1624,9 @@ image_data get_normal_image(const trace_state& state) {
 }
 void get_normal_image(image_data& normal, const trace_state& state) {
   check_image(normal, state.width, state.height, true);
-  auto scale = 1.0f / (float)state.samples;
   for (auto idx = 0; idx < state.width * state.height; idx++) {
-    normal.pixels[idx] = {state.normal[idx].x * scale,
-        state.normal[idx].y * scale, state.normal[idx].z * scale, 1.0f};
+    normal.pixels[idx] = {
+        state.normal[idx].x, state.normal[idx].y, state.normal[idx].z, 1.0f};
   }
 }
 
