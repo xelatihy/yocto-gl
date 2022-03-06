@@ -114,30 +114,37 @@ void run_render(const render_params& params_) {
     shape.quads     = {};
   }
 
-  auto image = cutrace_image(scene, {});
+  // slice params
+  auto params__ = (cutrace_params&)params;
 
-#if 0
+  // initialize context
+  timer        = simple_timer{};
+  auto context = make_cutrace_context(params__);
+  print_info("init gpu: {}", elapsed_formatted(timer));
+
+  // upload scene to the gpu
+  timer        = simple_timer{};
+  auto cuscene = make_cutrace_scene(scene, params__);
+  print_info("upload scene: {}", elapsed_formatted(timer));
+
   // build bvh
-  auto bvh = make_trace_bvh(scene, params);
+  timer    = simple_timer{};
+  auto bvh = make_cutrace_bvh(context, cuscene, scene, params__);
+  print_info("build bvh: {}", elapsed_formatted(timer));
 
-  // init renderer
-  auto lights = make_trace_lights(scene, params);
-
-  // fix renderer type if no lights
-  if (lights.lights.empty() && is_sampler_lit(params)) {
-    print_info("no lights presents, image will be black");
-    params.sampler = trace_sampler_type::eyelight;
-  }
+  // init lights
+  auto lights = make_cutrace_lights(scene, params__);
 
   // state
-  auto state = make_trace_state(scene, params);
+  auto state = make_cutrace_state(scene, params__);
 
   // render
   timer = simple_timer{};
-  for (auto sample : range(params.samples)) {
+  trace_start(context, state, cuscene, bvh, lights, scene, params__);
+  for (auto sample : range(0, params__.samples, params__.batch)) {
     auto sample_timer = simple_timer{};
-    trace_samples(state, scene, bvh, lights, params);
-    print_info("render sample {}/{}: {}", sample, params.samples,
+    trace_samples(context, state, cuscene, bvh, lights, scene, params__);
+    print_info("render sample {}/{}: {}", state.samples, params.samples,
         elapsed_formatted(sample_timer));
     if (params.savebatch && state.samples % params.batch == 0) {
       auto image       = params.denoise ? get_denoised_image(state)
@@ -158,7 +165,6 @@ void run_render(const render_params& params_) {
   timer      = simple_timer{};
   auto image = params.denoise ? get_denoised_image(state)
                               : get_rendered_image(state);
-#endif
   if (!is_hdr_filename(params.output))
     image = tonemap_image(image, params.exposure, params.filmic);
   save_image(params.output, image);

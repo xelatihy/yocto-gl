@@ -199,7 +199,9 @@ void run_render(const render_params& params_) {
   }
 
   // build bvh
+  timer    = simple_timer{};
   auto bvh = make_trace_bvh(scene, params);
+  print_info("build bvh: {}", elapsed_formatted(timer));
 
   // init renderer
   auto lights = make_trace_lights(scene, params);
@@ -215,10 +217,10 @@ void run_render(const render_params& params_) {
 
   // render
   timer = simple_timer{};
-  for (auto sample : range(params.samples)) {
+  for (auto sample : range(0, params.samples, params.batch)) {
     auto sample_timer = simple_timer{};
     trace_samples(state, scene, bvh, lights, params);
-    print_info("render sample {}/{}: {}", sample, params.samples,
+    print_info("render sample {}/{}: {}", state.samples, params.samples,
         elapsed_formatted(sample_timer));
     if (params.savebatch && state.samples % params.batch == 0) {
       auto image       = params.denoise ? get_denoised_image(state)

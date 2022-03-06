@@ -65,51 +65,13 @@ using std::vector;
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Type of tracing algorithm
-enum struct cutrace_sampler_type {
-  path,        // path tracing
-  pathdirect,  // path tracing with direct
-  pathmis,     // path tracing with mis
-  naive,       // naive path tracing
-  eyelight,    // eyelight rendering
-  eyelightao,  // eyelight with ambient occlusion
-  furnace,     // furnace test
-  falsecolor,  // false color rendering
-};
-// Type of false color visualization
-enum struct cutrace_falsecolor_type {
-  // clang-format off
-  position, normal, frontfacing, gnormal, gfrontfacing, texcoord, mtype, color,
-  emission, roughness, opacity, metallic, delta, instance, shape, material, 
-  element, highlight
-  // clang-format on
-};
-
 // Default trace seed
-const auto cutrace_default_seed = 961748941ull;
+const auto cutrace_default_seed = trace_default_seed;
 
-// Options for trace functions
-struct cutrace_params {
-  int                     camera         = 0;
-  int                     resolution     = 1280;
-  cutrace_sampler_type    sampler        = cutrace_sampler_type::path;
-  cutrace_falsecolor_type falsecolor     = cutrace_falsecolor_type::color;
-  int                     samples        = 512;
-  int                     bounces        = 8;
-  float                   clamp          = 10;
-  bool                    nocaustics     = false;
-  bool                    envhidden      = false;
-  bool                    tentfilter     = false;
-  uint64_t                seed           = cutrace_default_seed;
-  bool                    embreebvh      = false;
-  bool                    highqualitybvh = false;
-  bool                    noparallel     = false;
-  int                     pratio         = 8;
-  float                   exposure       = 0;
-  bool                    filmic         = false;
-  bool                    denoise        = false;
-  int                     batch          = 1;
-};
+// Type aliases
+using cutrace_sampler_type    = trace_sampler_type;
+using cutrace_falsecolor_type = trace_falsecolor_type;
+using cutrace_params          = trace_params;
 
 // Progressively computes an image.
 image_data cutrace_image(const scene_data& scene, const cutrace_params& params);
@@ -119,7 +81,62 @@ image_data cutrace_image(const scene_data& scene, const cutrace_params& params);
 // -----------------------------------------------------------------------------
 // LOWER-LEVEL RENDERING API
 // -----------------------------------------------------------------------------
-namespace yocto {}  // namespace yocto
+namespace yocto {
+
+// forward declarations
+struct cuscene_data;
+struct cusceneext_data;
+struct cubvh_data;
+struct cutrace_state;
+struct cutrace_lights;
+struct cutrace_context;
+
+// Initialize GPU context.
+cutrace_context make_cutrace_context(const cutrace_params& params);
+
+// Upload the scene to the GPU.
+cusceneext_data make_cutrace_scene(
+    const scene_data& scene, const cutrace_params& params);
+
+// Build the bvh acceleration structure.
+cubvh_data make_cutrace_bvh(cutrace_context& context, cusceneext_data& cuscene,
+    const scene_data& scene, const cutrace_params& params);
+
+// Initialize state.
+cutrace_state make_cutrace_state(
+    const scene_data& scene, const cutrace_params& params);
+
+// Initialize lights.
+cutrace_lights make_cutrace_lights(
+    const scene_data& scene, const cutrace_params& params);
+
+// Start rendering an image.
+void trace_start(cutrace_context& context, cutrace_state& state,
+    const cuscene_data& cuscene, const cubvh_data& bvh,
+    const cutrace_lights& lights, const scene_data& scene,
+    const cutrace_params& params);
+
+// Progressively computes an image.
+void trace_samples(cutrace_context& context, cutrace_state& state,
+    const cuscene_data& cuscene, const cubvh_data& bvh,
+    const cutrace_lights& lights, const scene_data& scene,
+    const cutrace_params& params);
+
+// Get resulting render
+image_data get_rendered_image(const cutrace_state& state);
+void       get_rendered_image(image_data& image, const cutrace_state& state);
+
+// Get denoised result
+image_data get_denoised_image(const cutrace_state& state);
+void       get_denoised_image(image_data& image, const cutrace_state& state);
+
+// Get denoising buffers
+image_data get_albedo_image(const cutrace_state& state);
+void       get_albedo_image(image_data& image, const cutrace_state& state);
+image_data get_normal_image(const cutrace_state& state);
+void       get_normal_image(image_data& image, const cutrace_state& state);
+
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // ENUM LABELS
@@ -127,48 +144,250 @@ namespace yocto {}  // namespace yocto
 namespace yocto {
 
 // trace sampler names
-inline const auto cutrace_sampler_names = vector<string>{"path", "pathdirect",
-    "pathmis", "naive", "eyelight", "eyelightao", "furnace", "falsecolor"};
+inline const auto cutrace_sampler_names = trace_sampler_names;
 
 // false color names
-inline const auto cutrace_falsecolor_names = vector<string>{"position",
-    "normal", "frontfacing", "gnormal", "gfrontfacing", "texcoord", "mtype",
-    "color", "emission", "roughness", "opacity", "metallic", "delta",
-    "instance", "shape", "material", "element", "highlight"};
+inline const auto cutrace_falsecolor_names = trace_falsecolor_names;
 
 // trace sampler labels
-inline const auto cutrace_sampler_labels =
-    vector<pair<cutrace_sampler_type, string>>{
-        {cutrace_sampler_type::path, "path"},
-        {cutrace_sampler_type::pathdirect, "pathdirect"},
-        {cutrace_sampler_type::pathmis, "pathmis"},
-        {cutrace_sampler_type::naive, "naive"},
-        {cutrace_sampler_type::eyelight, "eyelight"},
-        {cutrace_sampler_type::eyelightao, "eyelightao"},
-        {cutrace_sampler_type::furnace, "furnace"},
-        {cutrace_sampler_type::falsecolor, "falsecolor"}};
+inline const auto cutrace_sampler_labels = trace_sampler_labels;
 
 // false color labels
-inline const auto cutrace_falsecolor_labels =
-    vector<pair<cutrace_falsecolor_type, string>>{
-        {cutrace_falsecolor_type::position, "position"},
-        {cutrace_falsecolor_type::normal, "normal"},
-        {cutrace_falsecolor_type::frontfacing, "frontfacing"},
-        {cutrace_falsecolor_type::gnormal, "gnormal"},
-        {cutrace_falsecolor_type::gfrontfacing, "gfrontfacing"},
-        {cutrace_falsecolor_type::texcoord, "texcoord"},
-        {cutrace_falsecolor_type::mtype, "mtype"},
-        {cutrace_falsecolor_type::color, "color"},
-        {cutrace_falsecolor_type::emission, "emission"},
-        {cutrace_falsecolor_type::roughness, "roughness"},
-        {cutrace_falsecolor_type::opacity, "opacity"},
-        {cutrace_falsecolor_type::metallic, "metallic"},
-        {cutrace_falsecolor_type::delta, "delta"},
-        {cutrace_falsecolor_type::instance, "instance"},
-        {cutrace_falsecolor_type::shape, "shape"},
-        {cutrace_falsecolor_type::material, "material"},
-        {cutrace_falsecolor_type::element, "element"},
-        {cutrace_falsecolor_type::highlight, "highlight"}};
+inline const auto cutrace_falsecolor_labels = trace_falsecolor_labels;
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+//
+//
+// IMPLEMENTATION
+//
+//
+// -----------------------------------------------------------------------------
+
+#if YOCTO_CUDA
+
+// do not reorder
+#include <cuda.h>
+// do not reorder
+#include <optix.h>
+
+#else
+
+// placeholder types
+using CUdeviceptr             = void*;
+using OptixInstance           = yocto::instance_data;
+using OptixTraversableHandle  = unsigned long long;
+using CUcontext               = void*;
+using CUstream                = void*;
+using OptixDeviceContext      = void*;
+using OptixPipeline           = void*;
+using OptixProgramGroup       = void*;
+using OptixModule             = void*;
+using OptixShaderBindingTable = void*;
+using CUarray                 = void*;
+using CUtexObject             = void*;
+
+#endif
+
+// -----------------------------------------------------------------------------
+// DATA DEFINITIONS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// cuda buffer
+template <typename T>
+struct cubuffer {
+  size_t      size() const { return _size; }
+  CUdeviceptr device_ptr() const { return _data; }
+  size_t      size_in_bytes() const { return _size * sizeof(T); }
+  void        swap(cubuffer& other) {
+    std::swap(_data, other._data);
+    std::swap(_size, other._size);
+  }
+
+  CUdeviceptr _data = 0;
+  size_t      _size = 0;
+};
+
+// cuda array
+template <typename T>
+struct cuarray {
+  CUarray device_array() const { return _array; }
+  CUarray _array = nullptr;
+};
+
+// device params
+struct cucamera_data {
+  frame3f frame        = {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}};
+  float   lens         = 0.050f;
+  float   film         = 0.036f;
+  float   aspect       = 1.500f;
+  float   focus        = 10000;
+  float   aperture     = 0;
+  bool    orthographic = false;
+};
+
+struct cutexture_data {
+  int         width   = 0;
+  int         height  = 0;
+  bool        linear  = false;
+  CUtexObject texture = 0;
+  CUarray     array   = nullptr;
+};
+
+struct cumaterial_data {
+  material_type type         = material_type::matte;
+  vec3f         emission     = {0, 0, 0};
+  vec3f         color        = {0, 0, 0};
+  float         roughness    = 0;
+  float         metallic     = 0;
+  float         ior          = 1.5f;
+  vec3f         scattering   = {0, 0, 0};
+  float         scanisotropy = 0;
+  float         trdepth      = 0.01f;
+  float         opacity      = 1;
+
+  int emission_tex   = invalidid;
+  int color_tex      = invalidid;
+  int roughness_tex  = invalidid;
+  int scattering_tex = invalidid;
+  int normal_tex     = invalidid;
+};
+
+struct cuinstance_data {
+  frame3f frame;
+  int     shape;
+  int     material;
+};
+
+struct cushape_data {
+  cubuffer<vec3f> positions = {};
+  cubuffer<vec3f> normals   = {};
+  cubuffer<vec2f> texcoords = {};
+  cubuffer<vec4f> colors    = {};
+  cubuffer<vec3i> triangles = {};
+};
+
+struct cuenvironment_data {
+  frame3f frame        = {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}};
+  vec3f   emission     = {0, 0, 0};
+  int     emission_tex = invalidid;
+};
+
+struct cuscene_data {
+  cubuffer<cucamera_data>      cameras      = {};
+  cubuffer<cutexture_data>     textures     = {};
+  cubuffer<cumaterial_data>    materials    = {};
+  cubuffer<cushape_data>       shapes       = {};
+  cubuffer<cuinstance_data>    instances    = {};
+  cubuffer<cuenvironment_data> environments = {};
+};
+
+struct cusceneext_data : cuscene_data {
+  vector<cutexture_data> cutextures = {};
+  vector<cushape_data>   cushapes   = {};
+
+  cusceneext_data() {}
+  cusceneext_data(cusceneext_data&&);
+  cusceneext_data& operator=(cusceneext_data&&);
+  ~cusceneext_data();
+};
+
+struct cubvh_tree {
+  cubuffer<byte>         buffer = {};
+  OptixTraversableHandle handle = 0;
+};
+
+struct cubvh_data {
+  cubuffer<OptixInstance> instances     = {};
+  cubvh_tree              instances_bvh = {};
+  vector<cubvh_tree>      shapes_bvhs   = {};
+
+  cubvh_data() {}
+  cubvh_data(cubvh_data&&);
+  cubvh_data& operator=(cubvh_data&&);
+  ~cubvh_data();
+};
+
+// state
+struct cutrace_state {
+  int                 width   = 0;
+  int                 height  = 0;
+  int                 samples = 0;
+  cubuffer<vec4f>     image   = {};
+  cubuffer<vec3f>     albedo  = {};
+  cubuffer<vec3f>     normal  = {};
+  cubuffer<int>       hits    = {};
+  cubuffer<rng_state> rngs    = {};
+  cubuffer<vec4f>     display = {};
+};
+
+// light
+struct cutrace_light {
+  int             instance     = invalidid;
+  int             environment  = invalidid;
+  cubuffer<float> elements_cdf = {};
+};
+
+// lights
+struct cutrace_lights {
+  cubuffer<cutrace_light> lights = {};
+};
+
+// device params
+struct cutrace_globals {
+  cutrace_state          state  = {};
+  cuscene_data           scene  = {};
+  OptixTraversableHandle bvh    = {};
+  cutrace_lights         lights = {};
+  cutrace_params         params = {};
+};
+
+#if YOCTO_CUDA
+
+// empty stb record
+struct __declspec(align(OPTIX_SBT_RECORD_ALIGNMENT)) cutrace_stbrecord {
+  __declspec(align(
+      OPTIX_SBT_RECORD_ALIGNMENT)) char header[OPTIX_SBT_RECORD_HEADER_SIZE];
+};
+
+#else
+
+// empty stb record
+struct cutrace_stbrecord {};
+
+#endif
+
+struct cutrace_context {
+  // context
+  CUcontext          cuda_context  = nullptr;
+  CUstream           cuda_stream   = nullptr;
+  OptixDeviceContext optix_context = nullptr;
+
+  // pipeline
+  OptixPipeline optix_pipeline = nullptr;
+  OptixModule   optix_module   = nullptr;
+
+  // programs
+  OptixProgramGroup raygen_program   = nullptr;
+  OptixProgramGroup miss_program     = nullptr;
+  OptixProgramGroup hitgroup_program = nullptr;
+
+  // stb
+  cubuffer<cutrace_stbrecord> raygen_records   = {};
+  cubuffer<cutrace_stbrecord> miss_records     = {};
+  cubuffer<cutrace_stbrecord> hitgroup_records = {};
+  OptixShaderBindingTable     binding_table    = {};
+
+  // global buffer
+  cubuffer<cutrace_globals> globals_buffer = {};
+
+  cutrace_context() {}
+  cutrace_context(cutrace_context&&);
+  cutrace_context& operator=(cutrace_context&&);
+  ~cutrace_context();
+};
 
 }  // namespace yocto
 

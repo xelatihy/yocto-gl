@@ -69,17 +69,6 @@ static void check_result(OptixResult result) {
   }
 }
 
-// buffer view
-template <typename T>
-struct cubuffer {
-  size_t      size() const { return _size; }
-  CUdeviceptr device_ptr() const { return _data; }
-  size_t      size_in_bytes() const { return _size * sizeof(T); }
-
-  CUdeviceptr _data = 0;
-  size_t      _size = 0;
-};
-
 // make a buffer
 template <typename T>
 static cubuffer<T> make_buffer(size_t size, const T* data) {
@@ -94,6 +83,7 @@ static cubuffer<T> make_buffer(size_t size, const T* data) {
 }
 template <typename T>
 static cubuffer<T> make_buffer(const vector<T>& data) {
+  if (data.empty()) return {};
   return make_buffer(data.size(), data.data());
 }
 template <typename T>
@@ -114,6 +104,19 @@ static void update_buffer(cubuffer<T>& buffer, const vector<T>& data) {
 template <typename T>
 static void update_buffer(cubuffer<T>& buffer, const T& data) {
   return update_buffer(buffer, 1, &data);
+}
+
+// update a buffer
+template <typename T, typename T1>
+static void update_buffer_value(
+    cubuffer<T>& buffer, size_t offset, size_t size, const T1* data) {
+  check_result(
+      cuMemcpyHtoD(buffer.device_ptr() + offset, data, size * sizeof(T1)));
+}
+template <typename T, typename T1>
+static void update_buffer_value(
+    cubuffer<T>& buffer, size_t offset, const T1& data) {
+  return update_buffer_value(buffer, offset, 1, &data);
 }
 
 // download buffer
@@ -163,179 +166,126 @@ namespace yocto {
 
 extern "C" char yocto_cutrace_ptx[];
 
-// device params
-struct cutrace_camera {
-  frame3f frame;
-  float   lens;
-  float   film;
-  float   aspect;
-  float   focus;
-  float   aperture;
-  bool    orthographic;
+cusceneext_data::cusceneext_data(cusceneext_data&& other) {
+  cutextures.swap(other.cutextures);
+  cushapes.swap(other.cushapes);
+  cameras.swap(other.cameras);
+  textures.swap(other.textures);
+  materials.swap(other.materials);
+  shapes.swap(other.shapes);
+  instances.swap(other.instances);
+  environments.swap(other.environments);
+}
+cusceneext_data& cusceneext_data::operator=(cusceneext_data&& other) {
+  cutextures.swap(other.cutextures);
+  cushapes.swap(other.cushapes);
+  cameras.swap(other.cameras);
+  textures.swap(other.textures);
+  materials.swap(other.materials);
+  shapes.swap(other.shapes);
+  instances.swap(other.instances);
+  environments.swap(other.environments);
+  return *this;
+}
+cusceneext_data::~cusceneext_data() {
+  for (auto& cutexture : cutextures) {
+    cuArrayDestroy(cutexture.array);
+    // TODO: texture
+  }
+  for (auto& cushape : cushapes) {
+    clear_buffer(cushape.positions);
+    clear_buffer(cushape.normals);
+    clear_buffer(cushape.texcoords);
+    clear_buffer(cushape.colors);
+    clear_buffer(cushape.triangles);
+  }
+  clear_buffer(cameras);
+  clear_buffer(textures);
+  clear_buffer(materials);
+  clear_buffer(shapes);
+  clear_buffer(instances);
+  clear_buffer(environments);
 };
 
-struct cutrace_texture {
-  CUarray     array;
-  CUtexObject texture;
-  int         width  = 0;
-  int         height = 0;
-  bool        linear = false;
-};
+cubvh_data::cubvh_data(cubvh_data&& other) {
+  instances.swap(other.instances);
+  shapes_bvhs.swap(other.shapes_bvhs);
+  instances_bvh.buffer.swap(other.instances_bvh.buffer);
+  std::swap(instances_bvh.handle, other.instances_bvh.handle);
+}
+cubvh_data& cubvh_data::operator=(cubvh_data&& other) {
+  instances.swap(other.instances);
+  shapes_bvhs.swap(other.shapes_bvhs);
+  instances_bvh.buffer.swap(other.instances_bvh.buffer);
+  std::swap(instances_bvh.handle, other.instances_bvh.handle);
+  return *this;
+}
+cubvh_data::~cubvh_data() {
+  for (auto& shape_bvh : shapes_bvhs) {
+    clear_buffer(shape_bvh.buffer);
+    // TODO: bvh
+  }
+  clear_buffer(instances);
+}
 
-struct cutrace_material {
-  material_type type         = material_type::matte;
-  vec3f         emission     = {0, 0, 0};
-  vec3f         color        = {0, 0, 0};
-  float         roughness    = 0;
-  float         metallic     = 0;
-  float         ior          = 1.5f;
-  vec3f         scattering   = {0, 0, 0};
-  float         scanisotropy = 0;
-  float         trdepth      = 0.01f;
-  float         opacity      = 1;
+cutrace_context::cutrace_context(cutrace_context&& other) {
+  globals_buffer.swap(other.globals_buffer);
+  raygen_records.swap(other.raygen_records);
+  miss_records.swap(other.miss_records);
+  hitgroup_records.swap(other.hitgroup_records);
+  std::swap(binding_table, other.binding_table);
+  std::swap(raygen_program, other.raygen_program);
+  std::swap(miss_program, other.miss_program);
+  std::swap(hitgroup_program, other.hitgroup_program);
+  std::swap(optix_pipeline, other.optix_pipeline);
+  std::swap(optix_module, other.optix_module);
+  std::swap(optix_context, other.optix_context);
+  std::swap(cuda_stream, other.cuda_stream);
+  std::swap(cuda_context, other.cuda_context);
+}
+cutrace_context& cutrace_context::operator=(cutrace_context&& other) {
+  globals_buffer.swap(other.globals_buffer);
+  raygen_records.swap(other.raygen_records);
+  miss_records.swap(other.miss_records);
+  hitgroup_records.swap(other.hitgroup_records);
+  std::swap(binding_table, other.binding_table);
+  std::swap(raygen_program, other.raygen_program);
+  std::swap(miss_program, other.miss_program);
+  std::swap(hitgroup_program, other.hitgroup_program);
+  std::swap(optix_pipeline, other.optix_pipeline);
+  std::swap(optix_module, other.optix_module);
+  std::swap(optix_context, other.optix_context);
+  std::swap(cuda_stream, other.cuda_stream);
+  std::swap(cuda_context, other.cuda_context);
+  return *this;
+}
 
-  int emission_tex   = invalidid;
-  int color_tex      = invalidid;
-  int roughness_tex  = invalidid;
-  int scattering_tex = invalidid;
-  int normal_tex     = invalidid;
-};
-
-struct cutrace_instance {
-  frame3f frame;
-  int     shape;
-  int     material;
-};
-
-struct cutrace_shape {
-  cubuffer<vec3f> positions = {};
-  cubuffer<vec3f> normals   = {};
-  cubuffer<vec2f> texcoords = {};
-  cubuffer<vec4f> colors    = {};
-  cubuffer<vec3i> triangles = {};
-};
-
-struct cutrace_environment {
-  frame3f frame        = {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}};
-  vec3f   emission     = {0, 0, 0};
-  int     emission_tex = invalidid;
-};
-
-struct cutrace_scene {
-  cubuffer<cutrace_camera>      cameras      = {};
-  cubuffer<cutrace_texture>     textures     = {};
-  cubuffer<cutrace_material>    materials    = {};
-  cubuffer<cutrace_shape>       shapes       = {};
-  cubuffer<cutrace_instance>    instances    = {};
-  cubuffer<cutrace_environment> environments = {};
-};
-
-struct cutrace_sceneext : cutrace_scene {
-  vector<cutrace_texture> cutextures = {};
-  vector<cutrace_shape>   cushapes   = {};
-};
-
-struct cubvh_tree {
-  cubuffer<byte>         buffer = {};
-  OptixTraversableHandle handle;
-};
-
-struct cubvh_data {
-  cubuffer<OptixInstance> instances = {};
-  cubvh_tree              instances_bvh;
-  vector<cubvh_tree>      shapes_bvhs;
-};
-
-// state
-struct cutrace_state {
-  int                 width   = 0;
-  int                 height  = 0;
-  int                 samples = 0;
-  cubuffer<vec4f>     image   = {};
-  cubuffer<vec3f>     albedo  = {};
-  cubuffer<vec3f>     normal  = {};
-  cubuffer<int>       hits    = {};
-  cubuffer<rng_state> rngs    = {};
-  cubuffer<vec4f>     display = {};
-};
-
-// params
-struct cutrace_dparams {
-  int                     camera         = 0;
-  int                     resolution     = 1280;
-  cutrace_sampler_type    sampler        = cutrace_sampler_type::path;
-  cutrace_falsecolor_type falsecolor     = cutrace_falsecolor_type::color;
-  int                     samples        = 512;
-  int                     bounces        = 8;
-  float                   clamp          = 10;
-  bool                    nocaustics     = false;
-  bool                    envhidden      = false;
-  bool                    tentfilter     = false;
-  uint64_t                seed           = cutrace_default_seed;
-  bool                    embreebvh      = false;
-  bool                    highqualitybvh = false;
-  bool                    noparallel     = false;
-  int                     pratio         = 8;
-  float                   exposure       = 0;
-  bool                    filmic         = false;
-  bool                    denoise        = false;
-  int                     batch          = 1;
-};
-
-// light
-struct cutrace_light {
-  int             instance     = invalidid;
-  int             environment  = invalidid;
-  cubuffer<float> elements_cdf = {};
-};
-
-// lights
-struct cutrace_lights {
-  cubuffer<cutrace_light> lights = {};
-};
-
-// device params
-struct cutrace_globals {
-  cutrace_state          state  = {};
-  cutrace_scene          scene  = {};
-  OptixTraversableHandle bvh    = {};
-  cutrace_lights         lights = {};
-  cutrace_dparams        params = {};
-};
-
-// empty stb record
-struct __declspec(align(OPTIX_SBT_RECORD_ALIGNMENT)) cutrace_stbrecord {
-  __declspec(align(
-      OPTIX_SBT_RECORD_ALIGNMENT)) char header[OPTIX_SBT_RECORD_HEADER_SIZE];
-};
-
-struct cutrace_context {
-  // context
-  CUcontext          cuda_context  = nullptr;
-  CUstream           cuda_stream   = nullptr;
-  OptixDeviceContext optix_context = nullptr;
-
-  // pipeline
-  OptixPipeline optix_pipeline = nullptr;
-  OptixModule   optix_module   = nullptr;
-
-  // programs
-  OptixProgramGroup raygen_program   = nullptr;
-  OptixProgramGroup miss_program     = nullptr;
-  OptixProgramGroup hitgroup_program = nullptr;
+cutrace_context::~cutrace_context() {
+  // global buffer
+  clear_buffer(globals_buffer);
 
   // stb
-  cubuffer<cutrace_stbrecord> raygen_records   = {};
-  cubuffer<cutrace_stbrecord> miss_records     = {};
-  cubuffer<cutrace_stbrecord> hitgroup_records = {};
-  OptixShaderBindingTable     binding_table    = {};
+  clear_buffer(raygen_records);
+  clear_buffer(miss_records);
+  clear_buffer(hitgroup_records);
 
-  // global buffer
-  cubuffer<cutrace_globals> globals_buffer = {};
-};
+  // programs
+  optixProgramGroupDestroy(raygen_program);
+  optixProgramGroupDestroy(miss_program);
+  optixProgramGroupDestroy(hitgroup_program);
+
+  // pipeline
+  optixPipelineDestroy(optix_pipeline);
+  optixModuleDestroy(optix_module);
+
+  // context
+  optixDeviceContextDestroy(optix_context);
+  cuStreamDestroy(cuda_stream);
+  cuCtxDestroy(cuda_context);
+}
 
 // init cuda and optix context
-static cutrace_context make_cutrace_context(const cutrace_params& params) {
+cutrace_context make_cutrace_context(const cutrace_params& params) {
   // context
   auto context = cutrace_context{};
 
@@ -453,39 +403,49 @@ static cutrace_context make_cutrace_context(const cutrace_params& params) {
 }
 
 // start a new render
-static void trace_start(cutrace_context& context, cutrace_state& state,
-    const cutrace_scene& cuscene, const cubvh_data& bvh,
+void trace_start(cutrace_context& context, cutrace_state& state,
+    const cuscene_data& cuscene, const cubvh_data& bvh,
     const cutrace_lights& lights, const scene_data& scene,
     const cutrace_params& params) {
-  auto globals   = cutrace_globals{};
-  globals.state  = state;
-  globals.scene  = cuscene;
-  globals.bvh    = bvh.instances_bvh.handle;
-  globals.lights = lights;
-  globals.params = (const cutrace_dparams&)params;
-  update_buffer(context.globals_buffer, globals);
+  auto globals = cutrace_globals{};
+  update_buffer_value(
+      context.globals_buffer, offsetof(cutrace_globals, state), state);
+  update_buffer_value(
+      context.globals_buffer, offsetof(cutrace_globals, scene), cuscene);
+  update_buffer_value(context.globals_buffer, offsetof(cutrace_globals, bvh),
+      bvh.instances_bvh.handle);
+  update_buffer_value(
+      context.globals_buffer, offsetof(cutrace_globals, lights), lights);
+  update_buffer_value(
+      context.globals_buffer, offsetof(cutrace_globals, params), params);
   // sync so we can get the frame
   check_cusync();
 }
 
 // render a batch of samples
-static void trace_samples(cutrace_context& context, cutrace_state& state,
-    const cutrace_scene& cuscene, const cubvh_data& bvh,
+void trace_samples(cutrace_context& context, cutrace_state& state,
+    const cuscene_data& cuscene, const cubvh_data& bvh,
     const cutrace_lights& lights, const scene_data& scene,
     const cutrace_params& params) {
+  if (state.samples >= params.samples) return;
+  auto nsamples = params.batch;
+  update_buffer_value(context.globals_buffer,
+      offsetof(cutrace_globals, state) + offsetof(cutrace_state, samples),
+      state.samples);
   check_result(optixLaunch(context.optix_pipeline, context.cuda_stream,
       context.globals_buffer.device_ptr(),
       context.globals_buffer.size_in_bytes(), &context.binding_table,
       state.width, state.height, 1));
+  state.samples += nsamples;
   // sync so we can get the frame
   check_cusync();
 }
 
-static cutrace_sceneext make_cutrace_scene(
+cusceneext_data make_cutrace_scene(
     const scene_data& scene, const cutrace_params& params) {
-  auto cuscene = cutrace_sceneext{};
+  auto cuscene = cusceneext_data{};
 
-  auto cucameras = vector<cutrace_camera>{};
+  auto cucameras = vector<cucamera_data>{};
   for (auto& camera : scene.cameras) {
     auto& cucamera        = cucameras.emplace_back();
     cucamera.frame        = camera.frame;
@@ -570,7 +530,7 @@ static cutrace_sceneext make_cutrace_scene(
   }
   cuscene.textures = make_buffer(cuscene.cutextures);
 
-  auto materials = vector<cutrace_material>{};
+  auto materials = vector<cumaterial_data>{};
   for (auto& material : scene.materials) {
     auto& cumaterial      = materials.emplace_back();
     cumaterial.type       = material.type;
@@ -591,7 +551,7 @@ static cutrace_sceneext make_cutrace_scene(
   }
   cuscene.materials = make_buffer(materials);
 
-  auto instances = vector<cutrace_instance>{};
+  auto instances = vector<cuinstance_data>{};
   for (auto& instance : scene.instances) {
     auto& cuinstance    = instances.emplace_back();
     cuinstance.frame    = instance.frame;
@@ -600,7 +560,7 @@ static cutrace_sceneext make_cutrace_scene(
   }
   cuscene.instances = make_buffer(instances);
 
-  auto environments = vector<cutrace_environment>{};
+  auto environments = vector<cuenvironment_data>{};
   for (auto& environment : scene.environments) {
     auto& cuenvironment        = environments.emplace_back();
     cuenvironment.frame        = environment.frame;
@@ -609,12 +569,14 @@ static cutrace_sceneext make_cutrace_scene(
   }
   cuscene.environments = make_buffer(environments);
 
+  // sync gpu
+  check_cusync();
+
   return cuscene;
 }
 
-static cubvh_data make_cutrace_bvh(cutrace_context& context,
-    cutrace_sceneext& cuscene, const scene_data& scene,
-    const cutrace_params& params) {
+cubvh_data make_cutrace_bvh(cutrace_context& context, cusceneext_data& cuscene,
+    const scene_data& scene, const cutrace_params& params) {
   auto bvh = cubvh_data{};
 
   // shapes
@@ -754,11 +716,15 @@ static cubvh_data make_cutrace_bvh(cutrace_context& context,
     clear_buffer(compacted_size_buffer);
   }
 
+  // sync gpu
+  check_cusync();
+
   // done
   return bvh;
 }
 
-static cutrace_state make_cutrace_state(
+// Initialize state.
+cutrace_state make_cutrace_state(
     const scene_data& scene, const cutrace_params& params) {
   auto& camera = scene.cameras[params.camera];
   auto  state  = cutrace_state{};
@@ -780,7 +746,7 @@ static cutrace_state make_cutrace_state(
 };
 
 // Init trace lights
-static cutrace_lights make_cutrace_lights(
+cutrace_lights make_cutrace_lights(
     const scene_data& scene, const cutrace_params& params) {
   auto lights    = make_trace_lights(scene, (const trace_params&)params);
   auto culights_ = vector<cutrace_light>{};
@@ -795,6 +761,7 @@ static cutrace_lights make_cutrace_lights(
   return culights;
 }
 
+// Copmutes an image
 image_data cutrace_image(
     const scene_data& scene, const cutrace_params& params) {
   // initialization
@@ -806,18 +773,105 @@ image_data cutrace_image(
 
   // rendering
   trace_start(context, state, cuscene, bvh, lights, scene, params);
-  // for (auto sample = 0; sample < params.samples; sample++) {
-  trace_samples(context, state, cuscene, bvh, lights, scene, params);
-  // }
+  for (auto sample = 0; sample < params.samples; sample++) {
+    trace_samples(context, state, cuscene, bvh, lights, scene, params);
+  }
 
   // copy back image
   auto image = make_image(state.width, state.height, true);
   download_buffer(state.image, image.pixels);
+  for (auto& pixel : image.pixels) pixel /= state.samples;
 
   // cleanup
 
   // done
   return image;
+}
+
+// Get resulting render
+image_data get_rendered_image(const cutrace_state& state) {
+  auto image = make_image(state.width, state.height, true);
+  get_rendered_image(image, state);
+  return image;
+}
+void get_rendered_image(image_data& image, const cutrace_state& state) {
+  download_buffer(state.image, image.pixels);
+  for (auto& pixel : image.pixels) pixel /= state.samples;
+}
+
+// Get denoised result
+image_data get_denoised_image(const cutrace_state& state) {
+  auto image = make_image(state.width, state.height, true);
+  get_denoised_image(image, state);
+  return image;
+}
+void get_denoised_image(image_data& image, const cutrace_state& state) {
+#if YOCTO_DENOISE
+  // Create an Intel Open Image Denoise device
+  oidn::DeviceRef device = oidn::newDevice();
+  device.commit();
+
+  // get image
+  get_rendered_image(image, state);
+
+  // get albedo and normal
+  auto albedo = vector<vec3f>(image.pixels.size()),
+       normal = vector<vec3f>(image.pixels.size());
+  auto scale  = 1.0f / (float)state.samples;
+  for (auto idx = 0; idx < state.width * state.height; idx++) {
+    albedo[idx] = state.albedo[idx] * scale;
+    normal[idx] = state.normal[idx] * scale;
+  }
+
+  // Create a denoising filter
+  oidn::FilterRef filter = device.newFilter("RT");  // ray tracing filter
+  filter.setImage("color", (void*)image.pixels.data(), oidn::Format::Float3,
+      state.width, state.height, 0, sizeof(vec4f), sizeof(vec4f) * state.width);
+  filter.setImage("albedo", (void*)albedo.data(), oidn::Format::Float3,
+      state.width, state.height);
+  filter.setImage("normal", (void*)normal.data(), oidn::Format::Float3,
+      state.width, state.height);
+  filter.setImage("output", image.pixels.data(), oidn::Format::Float3,
+      state.width, state.height, 0, sizeof(vec4f), sizeof(vec4f) * state.width);
+  filter.set("inputScale", 1.0f);  // set scale as fixed
+  filter.set("hdr", true);         // image is HDR
+  filter.commit();
+
+  // Filter the image
+  filter.execute();
+#else
+  get_rendered_image(image, state);
+#endif
+}
+
+// Get denoising buffers
+image_data get_albedo_image(const cutrace_state& state) {
+  auto albedo = make_image(state.width, state.height, true);
+  get_albedo_image(albedo, state);
+  return albedo;
+}
+void get_albedo_image(image_data& image, const cutrace_state& state) {
+  auto albedo = vector<vec3f>(state.width * state.height);
+  download_buffer(state.albedo, albedo);
+  auto scale = 1.0f / (float)state.samples;
+  for (auto idx = 0; idx < state.width * state.height; idx++) {
+    image.pixels[idx] = {albedo[idx].x * scale, albedo[idx].y * scale,
+        albedo[idx].z * scale, 1.0f};
+  }
+}
+image_data get_normal_image(const cutrace_state& state) {
+  auto normal = make_image(state.width, state.height, true);
+  get_normal_image(normal, state);
+  return normal;
+}
+void get_normal_image(image_data& image, const cutrace_state& state) {
+  auto normal = vector<vec3f>(state.width * state.height);
+  download_buffer(state.normal, normal);
+  auto scale = 1.0f / (float)state.samples;
+  for (auto idx = 0; idx < state.width * state.height; idx++) {
+    image.pixels[idx] = {normal[idx].x * scale, normal[idx].y * scale,
+        normal[idx].z * scale, 1.0f};
+  }
 }
 
 }  // namespace yocto
@@ -829,12 +883,117 @@ image_data cutrace_image(
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-static void exit_nocuda() { throw std::runtime_error{"cuda not linked\n"}; }
+static void exit_nocuda() { throw std::runtime_error{"Cuda not linked"}; }
+
+cusceneext_data::cusceneext_data(cusceneext_data&& other) { exit_nocuda(); }
+cusceneext_data& cusceneext_data::operator=(cusceneext_data&& other) {
+  exit_nocuda();
+  return *this;
+}
+cusceneext_data::~cusceneext_data() { exit_nocuda(); };
+
+cubvh_data::cubvh_data(cubvh_data&& other) { exit_nocuda(); }
+cubvh_data& cubvh_data::operator=(cubvh_data&& other) {
+  exit_nocuda();
+  return *this;
+}
+cubvh_data::~cubvh_data() { exit_nocuda(); }
+
+cutrace_context::cutrace_context(cutrace_context&& other) { exit_nocuda(); }
+cutrace_context& cutrace_context::operator=(cutrace_context&& other) {
+  exit_nocuda();
+  return *this;
+}
+cutrace_context::~cutrace_context() { exit_nocuda(); }
 
 image_data cutrace_image(
     const scene_data& scene, const cutrace_params& params) {
   exit_nocuda();
   return {};
+}
+
+// Initialize GPU context.
+cutrace_context make_cutrace_context(const cutrace_params& params) {
+  exit_nocuda();
+  return {};
+}
+
+// Upload the scene to the GPU.
+cusceneext_data make_cutrace_scene(
+    const scene_data& scene, const cutrace_params& params) {
+  exit_nocuda();
+  return {};
+}
+
+// Build the bvh acceleration structure.
+cubvh_data make_cutrace_bvh(cutrace_context& context, cusceneext_data& cuscene,
+    const scene_data& scene, const cutrace_params& params) {
+  exit_nocuda();
+  return {};
+}
+
+// Initialize state.
+cutrace_state make_cutrace_state(
+    const scene_data& scene, const cutrace_params& params) {
+  exit_nocuda();
+  return {};
+}
+
+// Initialize lights.
+cutrace_lights make_cutrace_lights(
+    const scene_data& scene, const cutrace_params& params) {
+  exit_nocuda();
+  return {};
+}
+
+// Start rendering an image.
+void trace_start(cutrace_context& context, cutrace_state& state,
+    const cuscene_data& cuscene, const cubvh_data& bvh,
+    const cutrace_lights& lights, const scene_data& scene,
+    const cutrace_params& params) {
+  exit_nocuda();
+}
+
+// Progressively computes an image.
+void trace_samples(cutrace_context& context, cutrace_state& state,
+    const cuscene_data& cuscene, const cubvh_data& bvh,
+    const cutrace_lights& lights, const scene_data& scene,
+    const cutrace_params& params) {
+  exit_nocuda();
+}
+
+// Get resulting render
+image_data get_rendered_image(const cutrace_state& state) {
+  exit_nocuda();
+  return {};
+}
+void get_rendered_image(image_data& image, const cutrace_state& state) {
+  exit_nocuda();
+}
+
+// Get denoised result
+image_data get_denoised_image(const cutrace_state& state) {
+  exit_nocuda();
+  return {};
+}
+void get_denoised_image(image_data& image, const cutrace_state& state) {
+  exit_nocuda();
+}
+
+// Get denoising buffers
+image_data get_albedo_image(const cutrace_state& state) {
+  exit_nocuda();
+  return {};
+}
+void get_albedo_image(image_data& image, const cutrace_state& state) {
+  exit_nocuda();
+}
+image_data get_normal_image(const cutrace_state& state) {
+  exit_nocuda();
+  return {};
+}
+void get_normal_image(image_data& image, const cutrace_state& state) {
+  exit_nocuda();
 }
 
 }  // namespace yocto
