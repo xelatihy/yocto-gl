@@ -888,6 +888,7 @@ static void exit_nocuda() { throw std::runtime_error{"Cuda not linked"}; }
 cusceneext_data::cusceneext_data(cusceneext_data&& other) { exit_nocuda(); }
 cusceneext_data& cusceneext_data::operator=(cusceneext_data&& other) {
   exit_nocuda();
+  return *this;
 }
 cusceneext_data::~cusceneext_data() { exit_nocuda(); };
 
@@ -898,61 +899,12 @@ cubvh_data& cubvh_data::operator=(cubvh_data&& other) {
 }
 cubvh_data::~cubvh_data() { exit_nocuda(); }
 
-cutrace_context::cutrace_context(cutrace_context&& other) {
-  globals_buffer.swap(other.globals_buffer);
-  raygen_records.swap(other.raygen_records);
-  miss_records.swap(other.miss_records);
-  hitgroup_records.swap(other.hitgroup_records);
-  std::swap(binding_table, other.binding_table);
-  std::swap(raygen_program, other.raygen_program);
-  std::swap(miss_program, other.miss_program);
-  std::swap(hitgroup_program, other.hitgroup_program);
-  std::swap(optix_pipeline, other.optix_pipeline);
-  std::swap(optix_module, other.optix_module);
-  std::swap(optix_context, other.optix_context);
-  std::swap(cuda_stream, other.cuda_stream);
-  std::swap(cuda_context, other.cuda_context);
-}
+cutrace_context::cutrace_context(cutrace_context&& other) { exit_nocuda(); }
 cutrace_context& cutrace_context::operator=(cutrace_context&& other) {
-  globals_buffer.swap(other.globals_buffer);
-  raygen_records.swap(other.raygen_records);
-  miss_records.swap(other.miss_records);
-  hitgroup_records.swap(other.hitgroup_records);
-  std::swap(binding_table, other.binding_table);
-  std::swap(raygen_program, other.raygen_program);
-  std::swap(miss_program, other.miss_program);
-  std::swap(hitgroup_program, other.hitgroup_program);
-  std::swap(optix_pipeline, other.optix_pipeline);
-  std::swap(optix_module, other.optix_module);
-  std::swap(optix_context, other.optix_context);
-  std::swap(cuda_stream, other.cuda_stream);
-  std::swap(cuda_context, other.cuda_context);
+  exit_nocuda();
   return *this;
 }
-
-cutrace_context::~cutrace_context() {
-  // global buffer
-  clear_buffer(globals_buffer);
-
-  // stb
-  clear_buffer(raygen_records);
-  clear_buffer(miss_records);
-  clear_buffer(hitgroup_records);
-
-  // programs
-  optixProgramGroupDestroy(raygen_program);
-  optixProgramGroupDestroy(miss_program);
-  optixProgramGroupDestroy(hitgroup_program);
-
-  // pipeline
-  optixPipelineDestroy(optix_pipeline);
-  optixModuleDestroy(optix_module);
-
-  // context
-  optixDeviceContextDestroy(optix_context);
-  cuStreamDestroy(cuda_stream);
-  cuCtxDestroy(cuda_context);
-}
+cutrace_context::~cutrace_context() { exit_nocuda(); }
 
 image_data cutrace_image(
     const scene_data& scene, const cutrace_params& params) {
