@@ -219,13 +219,13 @@ struct cuarray {
 
 // device params
 struct cucamera_data {
-  frame3f frame;
-  float   lens;
-  float   film;
-  float   aspect;
-  float   focus;
-  float   aperture;
-  bool    orthographic;
+  frame3f frame        = {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}};
+  float   lens         = 0.050f;
+  float   film         = 0.036f;
+  float   aspect       = 1.500f;
+  float   focus        = 10000;
+  float   aperture     = 0;
+  bool    orthographic = false;
 };
 
 struct cutexture_data {
