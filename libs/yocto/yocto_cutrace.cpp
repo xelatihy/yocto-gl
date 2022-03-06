@@ -468,7 +468,7 @@ cusceneext_data make_cutrace_scene(
     cucamera.film         = camera.film;
     cucamera.aperture     = camera.aperture;
     cucamera.focus        = camera.focus;
-    cucamera.orthographic = (int)camera.orthographic;
+    cucamera.orthographic = camera.orthographic;
   }
   cuscene.cameras = make_buffer(cucameras);
 
@@ -600,7 +600,7 @@ void update_cutrace_cameras(cusceneext_data& cuscene, const scene_data& scene,
     cucamera.film         = camera.film;
     cucamera.aperture     = camera.aperture;
     cucamera.focus        = camera.focus;
-    cucamera.orthographic = (int)camera.orthographic;
+    cucamera.orthographic = camera.orthographic;
   }
   update_buffer(cuscene.cameras, cucameras);
 }
