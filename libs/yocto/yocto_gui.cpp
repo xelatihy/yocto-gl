@@ -779,7 +779,7 @@ void show_trace_gui(const string& title, const string& name, scene_data& scene,
       continue_gui_line();
       edited += draw_gui_checkbox("filter", tparams.tentfilter);
       edited += draw_gui_slider("pratio", tparams.pratio, 1, 64);
-      // edited += draw_gui_slider("exposure", tparams.exposure, -5, 5);
+      edited += draw_gui_checkbox("denoise", params.denoise);
       end_gui_header();
       if (edited) {
         stop_render();
@@ -790,7 +790,6 @@ void show_trace_gui(const string& title, const string& name, scene_data& scene,
     if (draw_gui_header("tonemap")) {
       edited += draw_gui_slider("exposure", glparams.exposure, -5, 5);
       edited += draw_gui_checkbox("filmic", glparams.filmic);
-      edited += draw_gui_checkbox("denoise", params.denoise);
       end_gui_header();
       if (edited) {
         set_image(glimage, image);
