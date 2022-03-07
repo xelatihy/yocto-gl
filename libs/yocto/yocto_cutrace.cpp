@@ -59,7 +59,7 @@ static void check_result(CUresult result) {
   }
 }
 
-static void check_cusync() {
+static void sync_gpu() {
   check_result(cuStreamSynchronize(nullptr));  // TODO: cuda_stream
 }
 
@@ -146,15 +146,15 @@ static void update_buffer(cubuffer<T>& buffer, const T& data) {
 
 // update a buffer
 template <typename T, typename T1>
-static void update_buffer_value(
+static void update_buffer_value(const cutrace_context& context,
     cubuffer<T>& buffer, size_t offset, size_t size, const T1* data) {
-  check_result(
-      cuMemcpyHtoD(buffer.device_ptr() + offset, data, size * sizeof(T1)));
+  check_result(cuMemcpyHtoDAsync(buffer.device_ptr() + offset, data,
+      size * sizeof(T1), context.cuda_stream));
 }
 template <typename T, typename T1>
-static void update_buffer_value(
+static void update_buffer_value(const cutrace_context& context,
     cubuffer<T>& buffer, size_t offset, const T1& data) {
-  return update_buffer_value(buffer, offset, 1, &data);
+  return update_buffer_value(context, buffer, offset, 1, &data);
 }
 
 // download buffer
@@ -438,7 +438,7 @@ cutrace_context make_cutrace_context(const cutrace_params& params) {
   context.globals_buffer = make_buffer(context, cutrace_globals{});
 
   // sync gpu
-  check_cusync();
+  sync_gpu();
 
   return context;
 }
@@ -450,17 +450,17 @@ void trace_start(cutrace_context& context, cutrace_state& state,
     const cutrace_params& params) {
   auto globals = cutrace_globals{};
   update_buffer_value(
-      context.globals_buffer, offsetof(cutrace_globals, state), state);
-  update_buffer_value(
-      context.globals_buffer, offsetof(cutrace_globals, scene), cuscene);
-  update_buffer_value(context.globals_buffer, offsetof(cutrace_globals, bvh),
-      bvh.instances_bvh.handle);
-  update_buffer_value(
-      context.globals_buffer, offsetof(cutrace_globals, lights), lights);
-  update_buffer_value(
-      context.globals_buffer, offsetof(cutrace_globals, params), params);
+      context, context.globals_buffer, offsetof(cutrace_globals, state), state);
+  update_buffer_value(context, context.globals_buffer,
+      offsetof(cutrace_globals, scene), cuscene);
+  update_buffer_value(context, context.globals_buffer,
+      offsetof(cutrace_globals, bvh), bvh.instances_bvh.handle);
+  update_buffer_value(context, context.globals_buffer,
+      offsetof(cutrace_globals, lights), lights);
+  update_buffer_value(context, context.globals_buffer,
+      offsetof(cutrace_globals, params), params);
   // sync so we can get the frame
-  check_cusync();
+  sync_gpu();
 }
 
 // render a batch of samples
@@ -470,7 +470,7 @@ void trace_samples(cutrace_context& context, cutrace_state& state,
     const cutrace_params& params) {
   if (state.samples >= params.samples) return;
   auto nsamples = params.batch;
-  update_buffer_value(context.globals_buffer,
+  update_buffer_value(context, context.globals_buffer,
       offsetof(cutrace_globals, state) + offsetof(cutrace_state, samples),
       state.samples);
   check_result(optixLaunch(context.optix_pipeline, context.cuda_stream,
@@ -479,7 +479,7 @@ void trace_samples(cutrace_context& context, cutrace_state& state,
       state.width, state.height, 1));
   state.samples += nsamples;
   // sync so we can get the frame
-  check_cusync();
+  sync_gpu();
 }
 
 cusceneext_data make_cutrace_scene(
@@ -611,7 +611,7 @@ cusceneext_data make_cutrace_scene(
   cuscene.environments = make_buffer(environments);
 
   // sync gpu
-  check_cusync();
+  sync_gpu();
 
   return cuscene;
 }
@@ -689,7 +689,7 @@ cubvh_data make_cutrace_bvh(cutrace_context& context, cusceneext_data& cuscene,
         temporary_buffer.device_ptr(), temporary_buffer.size_in_bytes(),
         bvh_buffer.device_ptr(), bvh_buffer.size_in_bytes(), &sbvh.handle,
         &readback_descriptor, 1));
-    check_cusync();
+    sync_gpu();
 
     // compact
     auto compacted_size = download_buffer_value(compacted_size_buffer);
@@ -697,7 +697,7 @@ cubvh_data make_cutrace_bvh(cutrace_context& context, cusceneext_data& cuscene,
     check_result(optixAccelCompact(context.optix_context,
         /*cuda_stream:*/ 0, sbvh.handle, sbvh.buffer.device_ptr(),
         sbvh.buffer.size_in_bytes(), &sbvh.handle));
-    check_cusync();
+    sync_gpu();
 
     // cleanup
     clear_buffer(bvh_buffer);
@@ -756,7 +756,7 @@ cubvh_data make_cutrace_bvh(cutrace_context& context, cusceneext_data& cuscene,
         temporary_buffer.device_ptr(), temporary_buffer.size_in_bytes(),
         bvh_buffer.device_ptr(), bvh_buffer.size_in_bytes(), &ibvh.handle,
         &readback_descriptor, 1));
-    check_cusync();
+    sync_gpu();
 
     // compact
     auto compacted_size = download_buffer_value(compacted_size_buffer);
@@ -765,7 +765,7 @@ cubvh_data make_cutrace_bvh(cutrace_context& context, cusceneext_data& cuscene,
     check_result(optixAccelCompact(context.optix_context,
         /*cuda_stream:*/ 0, ibvh.handle, ibvh.buffer.device_ptr(),
         ibvh.buffer.size_in_bytes(), &ibvh.handle));
-    check_cusync();
+    sync_gpu();
 
     // cleanup
     clear_buffer(bvh_buffer);
@@ -774,7 +774,7 @@ cubvh_data make_cutrace_bvh(cutrace_context& context, cusceneext_data& cuscene,
   }
 
   // sync gpu
-  check_cusync();
+  sync_gpu();
 
   // done
   return bvh;
