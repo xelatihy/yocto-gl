@@ -91,6 +91,30 @@ static cubuffer<T> make_buffer(const T& data) {
   return make_buffer(1, &data);
 }
 
+// make a buffer
+template <typename T>
+static cubuffer<T> make_buffer(
+    const cutrace_context& context, size_t size, const T* data) {
+  auto buffer  = cubuffer<T>{};
+  buffer._size = size;
+  check_result(cuMemAlloc(&buffer._data, buffer.size_in_bytes()));
+  if (data) {
+    check_result(cuMemcpyHtoDAsync(buffer.device_ptr(), data,
+        buffer.size_in_bytes(), context.cuda_stream));
+  }
+  return buffer;
+}
+template <typename T>
+static cubuffer<T> make_buffer(
+    const cutrace_context& context, const vector<T>& data) {
+  if (data.empty()) return {};
+  return make_buffer(context, data.size(), data.data());
+}
+template <typename T>
+static cubuffer<T> make_buffer(const cutrace_context& context, const T& data) {
+  return make_buffer(context, 1, &data);
+}
+
 // resize a buffer
 template <typename T>
 static void resize_buffer(cubuffer<T>& buffer, size_t size, const T* data) {
@@ -389,13 +413,13 @@ cutrace_context make_cutrace_context(const cutrace_params& params) {
   auto raygen_record = cutrace_stbrecord{};
   check_result(
       optixSbtRecordPackHeader(context.raygen_program, &raygen_record));
-  context.raygen_records             = make_buffer(raygen_record);
+  context.raygen_records             = make_buffer(context, raygen_record);
   context.binding_table.raygenRecord = context.raygen_records.device_ptr();
 
   // stb miss
   auto miss_record = cutrace_stbrecord{};
   check_result(optixSbtRecordPackHeader(context.miss_program, &miss_record));
-  context.miss_records                 = make_buffer(miss_record);
+  context.miss_records                 = make_buffer(context, miss_record);
   context.binding_table.missRecordBase = context.miss_records.device_ptr();
   context.binding_table.missRecordStrideInBytes = sizeof(cutrace_stbrecord);
   context.binding_table.missRecordCount         = 1;
@@ -404,14 +428,17 @@ cutrace_context make_cutrace_context(const cutrace_params& params) {
   auto hitgroup_record = cutrace_stbrecord{};
   check_result(
       optixSbtRecordPackHeader(context.hitgroup_program, &hitgroup_record));
-  context.hitgroup_records = make_buffer(hitgroup_record);
+  context.hitgroup_records = make_buffer(context, hitgroup_record);
   context.binding_table.hitgroupRecordBase =
       context.hitgroup_records.device_ptr();
   context.binding_table.hitgroupRecordStrideInBytes = sizeof(cutrace_stbrecord);
   context.binding_table.hitgroupRecordCount         = 1;
 
   // globals
-  context.globals_buffer = make_buffer(cutrace_globals{});
+  context.globals_buffer = make_buffer(context, cutrace_globals{});
+
+  // sync gpu
+  check_cusync();
 
   return context;
 }
