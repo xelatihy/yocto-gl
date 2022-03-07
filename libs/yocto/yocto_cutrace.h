@@ -263,9 +263,9 @@ struct cumaterial_data {
 };
 
 struct cuinstance_data {
-  frame3f frame;
-  int     shape;
-  int     material;
+  frame3f frame    = {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}};
+  int     shape    = invalidid;
+  int     material = invalidid;
 };
 
 struct cushape_data {
