@@ -71,93 +71,73 @@ static void check_result(OptixResult result) {
 
 // make a buffer
 template <typename T>
-static cubuffer<T> make_buffer(size_t size, const T* data) {
+static cubuffer<T> make_buffer(CUstream stream, size_t size, const T* data) {
   auto buffer  = cubuffer<T>{};
   buffer._size = size;
   check_result(cuMemAlloc(&buffer._data, buffer.size_in_bytes()));
   if (data) {
-    check_result(
-        cuMemcpyHtoD(buffer.device_ptr(), data, buffer.size_in_bytes()));
+    check_result(cuMemcpyHtoDAsync(
+        buffer.device_ptr(), data, buffer.size_in_bytes(), stream));
   }
   return buffer;
 }
 template <typename T>
-static cubuffer<T> make_buffer(const vector<T>& data) {
+static cubuffer<T> make_buffer(CUstream stream, const vector<T>& data) {
   if (data.empty()) return {};
-  return make_buffer(data.size(), data.data());
+  return make_buffer(stream, data.size(), data.data());
 }
 template <typename T>
-static cubuffer<T> make_buffer(const T& data) {
-  return make_buffer(1, &data);
-}
-
-// make a buffer
-template <typename T>
-static cubuffer<T> make_buffer(
-    const cutrace_context& context, size_t size, const T* data) {
-  auto buffer  = cubuffer<T>{};
-  buffer._size = size;
-  check_result(cuMemAlloc(&buffer._data, buffer.size_in_bytes()));
-  if (data) {
-    check_result(cuMemcpyHtoDAsync(buffer.device_ptr(), data,
-        buffer.size_in_bytes(), context.cuda_stream));
-  }
-  return buffer;
-}
-template <typename T>
-static cubuffer<T> make_buffer(
-    const cutrace_context& context, const vector<T>& data) {
-  if (data.empty()) return {};
-  return make_buffer(context, data.size(), data.data());
-}
-template <typename T>
-static cubuffer<T> make_buffer(const cutrace_context& context, const T& data) {
-  return make_buffer(context, 1, &data);
+static cubuffer<T> make_buffer(CUstream stream, const T& data) {
+  return make_buffer(stream, 1, &data);
 }
 
 // resize a buffer
 template <typename T>
-static void resize_buffer(cubuffer<T>& buffer, size_t size, const T* data) {
+static void resize_buffer(
+    CUstream stream, cubuffer<T>& buffer, size_t size, const T* data) {
   if (buffer._size != size) {
     check_result(cuMemFree(buffer._data));
     buffer._size = size;
     check_result(cuMemAlloc(&buffer._data, buffer.size_in_bytes()));
   }
   if (data) {
-    check_result(
-        cuMemcpyHtoD(buffer.device_ptr(), data, buffer.size_in_bytes()));
+    check_result(cuMemcpyHtoDAsync(
+        buffer.device_ptr(), data, buffer.size_in_bytes(), stream));
   }
 }
 
 // update a buffer
 template <typename T>
-static void update_buffer(cubuffer<T>& buffer, size_t size, const T* data) {
+static void update_buffer(
+    CUstream stream, cubuffer<T>& buffer, size_t size, const T* data) {
   if (buffer.size() != size) throw std::runtime_error{"Cuda buffer error"};
-  check_result(cuMemcpyHtoD(buffer.device_ptr(), data, buffer.size_in_bytes()));
+  check_result(cuMemcpyHtoDAsync(
+      buffer.device_ptr(), data, buffer.size_in_bytes(), stream));
 }
 template <typename T>
-static void update_buffer(cubuffer<T>& buffer, const vector<T>& data) {
-  return update_buffer(buffer, data.size(), data.data());
+static void update_buffer(
+    CUstream stream, cubuffer<T>& buffer, const vector<T>& data) {
+  return update_buffer(stream, buffer, data.size(), data.data());
 }
 template <typename T>
-static void update_buffer(cubuffer<T>& buffer, const T& data) {
-  return update_buffer(buffer, 1, &data);
+static void update_buffer(CUstream stream, cubuffer<T>& buffer, const T& data) {
+  return update_buffer(stream, buffer, 1, &data);
 }
 
 // update a buffer
 template <typename T, typename T1>
-static void update_buffer_value(const cutrace_context& context,
-    cubuffer<T>& buffer, size_t offset, size_t size, const T1* data) {
-  check_result(cuMemcpyHtoDAsync(buffer.device_ptr() + offset, data,
-      size * sizeof(T1), context.cuda_stream));
+static void update_buffer_value(CUstream stream, cubuffer<T>& buffer,
+    size_t offset, size_t size, const T1* data) {
+  check_result(cuMemcpyHtoDAsync(
+      buffer.device_ptr() + offset, data, size * sizeof(T1), stream));
 }
 template <typename T, typename T1>
-static void update_buffer_value(const cutrace_context& context,
-    cubuffer<T>& buffer, size_t offset, const T1& data) {
-  return update_buffer_value(context, buffer, offset, 1, &data);
+static void update_buffer_value(
+    CUstream stream, cubuffer<T>& buffer, size_t offset, const T1& data) {
+  return update_buffer_value(stream, buffer, offset, 1, &data);
 }
 
-// download buffer
+// download buffer --- these are synched to avoid errors
 template <typename T>
 static void download_buffer(
     const cubuffer<T>& buffer, size_t size, void* data) {
@@ -413,13 +393,13 @@ cutrace_context make_cutrace_context(const cutrace_params& params) {
   auto raygen_record = cutrace_stbrecord{};
   check_result(
       optixSbtRecordPackHeader(context.raygen_program, &raygen_record));
-  context.raygen_records             = make_buffer(context, raygen_record);
+  context.raygen_records = make_buffer(context.cuda_stream, raygen_record);
   context.binding_table.raygenRecord = context.raygen_records.device_ptr();
 
   // stb miss
   auto miss_record = cutrace_stbrecord{};
   check_result(optixSbtRecordPackHeader(context.miss_program, &miss_record));
-  context.miss_records                 = make_buffer(context, miss_record);
+  context.miss_records = make_buffer(context.cuda_stream, miss_record);
   context.binding_table.missRecordBase = context.miss_records.device_ptr();
   context.binding_table.missRecordStrideInBytes = sizeof(cutrace_stbrecord);
   context.binding_table.missRecordCount         = 1;
@@ -428,14 +408,14 @@ cutrace_context make_cutrace_context(const cutrace_params& params) {
   auto hitgroup_record = cutrace_stbrecord{};
   check_result(
       optixSbtRecordPackHeader(context.hitgroup_program, &hitgroup_record));
-  context.hitgroup_records = make_buffer(context, hitgroup_record);
+  context.hitgroup_records = make_buffer(context.cuda_stream, hitgroup_record);
   context.binding_table.hitgroupRecordBase =
       context.hitgroup_records.device_ptr();
   context.binding_table.hitgroupRecordStrideInBytes = sizeof(cutrace_stbrecord);
   context.binding_table.hitgroupRecordCount         = 1;
 
   // globals
-  context.globals_buffer = make_buffer(context, cutrace_globals{});
+  context.globals_buffer = make_buffer(context.cuda_stream, cutrace_globals{});
 
   // sync gpu
   sync_gpu();
@@ -449,17 +429,17 @@ void trace_start(cutrace_context& context, cutrace_state& state,
     const cutrace_lights& lights, const scene_data& scene,
     const cutrace_params& params) {
   auto globals = cutrace_globals{};
-  update_buffer_value(
-      context, context.globals_buffer, offsetof(cutrace_globals, state), state);
-  update_buffer_value(context, context.globals_buffer,
+  update_buffer_value(context.cuda_stream, context.globals_buffer,
+      offsetof(cutrace_globals, state), state);
+  update_buffer_value(context.cuda_stream, context.globals_buffer,
       offsetof(cutrace_globals, scene), cuscene);
-  update_buffer_value(context, context.globals_buffer,
+  update_buffer_value(context.cuda_stream, context.globals_buffer,
       offsetof(cutrace_globals, bvh), bvh.instances_bvh.handle);
-  update_buffer_value(context, context.globals_buffer,
+  update_buffer_value(context.cuda_stream, context.globals_buffer,
       offsetof(cutrace_globals, lights), lights);
-  update_buffer_value(context, context.globals_buffer,
+  update_buffer_value(context.cuda_stream, context.globals_buffer,
       offsetof(cutrace_globals, params), params);
-  // sync so we can get the frame
+  // sync to avoid errors
   sync_gpu();
 }
 
@@ -470,7 +450,7 @@ void trace_samples(cutrace_context& context, cutrace_state& state,
     const cutrace_params& params) {
   if (state.samples >= params.samples) return;
   auto nsamples = params.batch;
-  update_buffer_value(context, context.globals_buffer,
+  update_buffer_value(context.cuda_stream, context.globals_buffer,
       offsetof(cutrace_globals, state) + offsetof(cutrace_state, samples),
       state.samples);
   check_result(optixLaunch(context.optix_pipeline, context.cuda_stream,
@@ -478,7 +458,7 @@ void trace_samples(cutrace_context& context, cutrace_state& state,
       context.globals_buffer.size_in_bytes(), &context.binding_table,
       state.width, state.height, 1));
   state.samples += nsamples;
-  // sync so we can get the frame
+  // sync so we can get the image
   sync_gpu();
 }
 
@@ -497,19 +477,21 @@ cusceneext_data make_cutrace_scene(cutrace_context& context,
     cucamera.focus        = camera.focus;
     cucamera.orthographic = camera.orthographic;
   }
-  cuscene.cameras = make_buffer(cucameras);
+  cuscene.cameras = make_buffer(context.cuda_stream, cucameras);
 
   // shapes
   for (auto& shape : scene.shapes) {
     auto& cushape     = cuscene.cushapes.emplace_back();
-    cushape.positions = make_buffer(shape.positions);
-    cushape.triangles = make_buffer(shape.triangles);
-    if (!shape.normals.empty()) cushape.normals = make_buffer(shape.normals);
+    cushape.positions = make_buffer(context.cuda_stream, shape.positions);
+    cushape.triangles = make_buffer(context.cuda_stream, shape.triangles);
+    if (!shape.normals.empty())
+      cushape.normals = make_buffer(context.cuda_stream, shape.normals);
     if (!shape.texcoords.empty())
-      cushape.texcoords = make_buffer(shape.texcoords);
-    if (!shape.colors.empty()) cushape.colors = make_buffer(shape.colors);
+      cushape.texcoords = make_buffer(context.cuda_stream, shape.texcoords);
+    if (!shape.colors.empty())
+      cushape.colors = make_buffer(context.cuda_stream, shape.colors);
   }
-  cuscene.shapes = make_buffer(cuscene.cushapes);
+  cuscene.shapes = make_buffer(context.cuda_stream, cuscene.cushapes);
 
   // textures
   for (auto& texture : scene.textures) {
@@ -569,7 +551,7 @@ cusceneext_data make_cutrace_scene(cutrace_context& context,
     check_result(cuTexObjectCreate(&cutexture.texture, &resource_descriptor,
         &texture_descriptor, nullptr));
   }
-  cuscene.textures = make_buffer(cuscene.cutextures);
+  cuscene.textures = make_buffer(context.cuda_stream, cuscene.cutextures);
 
   auto materials = vector<cumaterial_data>{};
   for (auto& material : scene.materials) {
@@ -590,7 +572,7 @@ cusceneext_data make_cutrace_scene(cutrace_context& context,
     cumaterial.scattering_tex = material.scattering_tex;
     cumaterial.normal_tex     = material.normal_tex;
   }
-  cuscene.materials = make_buffer(materials);
+  cuscene.materials = make_buffer(context.cuda_stream, materials);
 
   auto instances = vector<cuinstance_data>{};
   for (auto& instance : scene.instances) {
@@ -599,7 +581,7 @@ cusceneext_data make_cutrace_scene(cutrace_context& context,
     cuinstance.shape    = instance.shape;
     cuinstance.material = instance.material;
   }
-  cuscene.instances = make_buffer(instances);
+  cuscene.instances = make_buffer(context.cuda_stream, instances);
 
   auto environments = vector<cuenvironment_data>{};
   for (auto& environment : scene.environments) {
@@ -608,7 +590,7 @@ cusceneext_data make_cutrace_scene(cutrace_context& context,
     cuenvironment.emission     = environment.emission;
     cuenvironment.emission_tex = environment.emission_tex;
   }
-  cuscene.environments = make_buffer(environments);
+  cuscene.environments = make_buffer(context.cuda_stream, environments);
 
   // sync gpu
   sync_gpu();
@@ -629,7 +611,8 @@ void update_cutrace_cameras(cutrace_context& context, cusceneext_data& cuscene,
     cucamera.focus        = camera.focus;
     cucamera.orthographic = camera.orthographic;
   }
-  update_buffer(cuscene.cameras, cucameras);
+  update_buffer(context.cuda_stream, cuscene.cameras, cucameras);
+  sync_gpu();
 }
 
 cubvh_data make_cutrace_bvh(cutrace_context& context, cusceneext_data& cuscene,
@@ -673,30 +656,36 @@ cubvh_data make_cutrace_bvh(cutrace_context& context, cusceneext_data& cuscene,
     check_result(optixAccelComputeMemoryUsage(context.optix_context,
         &accelerator_options, &built_input, (int)1, &accelerator_sizes));
 
-    auto compacted_size_buffer = make_buffer(1, (uint64_t*)nullptr);
+    auto compacted_size_buffer = make_buffer(
+        context.cuda_stream, 1, (uint64_t*)nullptr);
     auto readback_descriptor   = OptixAccelEmitDesc{};
     readback_descriptor.type   = OPTIX_PROPERTY_TYPE_COMPACTED_SIZE;
     readback_descriptor.result = compacted_size_buffer.device_ptr();
 
     // build
     auto temporary_buffer = make_buffer(
-        accelerator_sizes.tempSizeInBytes, (byte*)nullptr);
-    auto bvh_buffer = make_buffer(
-        accelerator_sizes.outputSizeInBytes, (byte*)nullptr);
-    auto& sbvh = bvh.shapes_bvhs[shape_id];
+        context.cuda_stream, accelerator_sizes.tempSizeInBytes, (byte*)nullptr);
+    auto  bvh_buffer = make_buffer(context.cuda_stream,
+         accelerator_sizes.outputSizeInBytes, (byte*)nullptr);
+    auto& sbvh       = bvh.shapes_bvhs[shape_id];
     check_result(optixAccelBuild(context.optix_context,
         /* cuda_stream */ 0, &accelerator_options, &built_input, (int)1,
         temporary_buffer.device_ptr(), temporary_buffer.size_in_bytes(),
         bvh_buffer.device_ptr(), bvh_buffer.size_in_bytes(), &sbvh.handle,
         &readback_descriptor, 1));
+
+    // sync
     sync_gpu();
 
     // compact
     auto compacted_size = download_buffer_value(compacted_size_buffer);
-    sbvh.buffer         = make_buffer(compacted_size, (byte*)nullptr);
+    sbvh.buffer         = make_buffer(
+                context.cuda_stream, compacted_size, (byte*)nullptr);
     check_result(optixAccelCompact(context.optix_context,
         /*cuda_stream:*/ 0, sbvh.handle, sbvh.buffer.device_ptr(),
         sbvh.buffer.size_in_bytes(), &sbvh.handle));
+
+    // sync
     sync_gpu();
 
     // cleanup
@@ -721,7 +710,7 @@ cubvh_data make_cutrace_bvh(cutrace_context& context, cusceneext_data& cuscene,
       cuinstance.flags             = OPTIX_INSTANCE_FLAG_NONE;
       cuinstance.visibilityMask    = 0xff;
     }
-    bvh.instances = make_buffer(instances);
+    bvh.instances = make_buffer(context.cuda_stream, instances);
 
     // config
     auto build_input                       = OptixBuildInput{};
@@ -739,15 +728,16 @@ cubvh_data make_cutrace_bvh(cutrace_context& context, cusceneext_data& cuscene,
     check_result(optixAccelComputeMemoryUsage(context.optix_context,
         &accelerator_options, &build_input, (int)1, &accelerator_sizes));
 
-    auto compacted_size_buffer = make_buffer(1, (uint64_t*)nullptr);
+    auto compacted_size_buffer = make_buffer(
+        context.cuda_stream, 1, (uint64_t*)nullptr);
     auto readback_descriptor   = OptixAccelEmitDesc{};
     readback_descriptor.type   = OPTIX_PROPERTY_TYPE_COMPACTED_SIZE;
     readback_descriptor.result = compacted_size_buffer.device_ptr();
 
     // build
     auto temporary_buffer = make_buffer(
-        accelerator_sizes.tempSizeInBytes, (byte*)nullptr);
-    auto bvh_buffer = make_buffer(
+        context.cuda_stream, accelerator_sizes.tempSizeInBytes, (byte*)nullptr);
+    auto bvh_buffer = make_buffer(context.cuda_stream,
         accelerator_sizes.outputSizeInBytes, (byte*)nullptr);
 
     auto& ibvh = bvh.instances_bvh;
@@ -756,15 +746,19 @@ cubvh_data make_cutrace_bvh(cutrace_context& context, cusceneext_data& cuscene,
         temporary_buffer.device_ptr(), temporary_buffer.size_in_bytes(),
         bvh_buffer.device_ptr(), bvh_buffer.size_in_bytes(), &ibvh.handle,
         &readback_descriptor, 1));
+
+    // sync gpu
     sync_gpu();
 
     // compact
     auto compacted_size = download_buffer_value(compacted_size_buffer);
-
-    ibvh.buffer = make_buffer(compacted_size, (byte*)nullptr);
+    ibvh.buffer         = make_buffer(
+                context.cuda_stream, compacted_size, (byte*)nullptr);
     check_result(optixAccelCompact(context.optix_context,
         /*cuda_stream:*/ 0, ibvh.handle, ibvh.buffer.device_ptr(),
         ibvh.buffer.size_in_bytes(), &ibvh.handle));
+
+    // sync gpu
     sync_gpu();
 
     // cleanup
@@ -793,12 +787,19 @@ cutrace_state make_cutrace_state(cutrace_context& context,
     state.width  = (int)round(params.resolution * camera.aspect);
   }
   state.samples = 0;
-  state.image   = make_buffer(state.width * state.height, (vec4f*)nullptr);
-  state.albedo  = make_buffer(state.width * state.height, (vec3f*)nullptr);
-  state.normal  = make_buffer(state.width * state.height, (vec3f*)nullptr);
-  state.hits    = make_buffer(state.width * state.height, (int*)nullptr);
-  state.rngs    = make_buffer(state.width * state.height, (rng_state*)nullptr);
-  state.display = make_buffer(state.width * state.height, (vec4f*)nullptr);
+  state.image   = make_buffer(
+        context.cuda_stream, state.width * state.height, (vec4f*)nullptr);
+  state.albedo = make_buffer(
+      context.cuda_stream, state.width * state.height, (vec3f*)nullptr);
+  state.normal = make_buffer(
+      context.cuda_stream, state.width * state.height, (vec3f*)nullptr);
+  state.hits = make_buffer(
+      context.cuda_stream, state.width * state.height, (int*)nullptr);
+  state.rngs = make_buffer(
+      context.cuda_stream, state.width * state.height, (rng_state*)nullptr);
+  state.display = make_buffer(
+      context.cuda_stream, state.width * state.height, (vec4f*)nullptr);
+  sync_gpu();
   return state;
 };
 
@@ -813,12 +814,19 @@ void reset_cutrace_state(cutrace_context& context, cutrace_state& state,
     state.width  = (int)round(params.resolution * camera.aspect);
   }
   state.samples = 0;
-  resize_buffer(state.image, state.width * state.height, (vec4f*)nullptr);
-  resize_buffer(state.albedo, state.width * state.height, (vec3f*)nullptr);
-  resize_buffer(state.normal, state.width * state.height, (vec3f*)nullptr);
-  resize_buffer(state.hits, state.width * state.height, (int*)nullptr);
-  resize_buffer(state.rngs, state.width * state.height, (rng_state*)nullptr);
-  resize_buffer(state.display, state.width * state.height, (vec4f*)nullptr);
+  resize_buffer(context.cuda_stream, state.image, state.width * state.height,
+      (vec4f*)nullptr);
+  resize_buffer(context.cuda_stream, state.albedo, state.width * state.height,
+      (vec3f*)nullptr);
+  resize_buffer(context.cuda_stream, state.normal, state.width * state.height,
+      (vec3f*)nullptr);
+  resize_buffer(context.cuda_stream, state.hits, state.width * state.height,
+      (int*)nullptr);
+  resize_buffer(context.cuda_stream, state.rngs, state.width * state.height,
+      (rng_state*)nullptr);
+  resize_buffer(context.cuda_stream, state.display, state.width * state.height,
+      (vec4f*)nullptr);
+  sync_gpu();
 }
 
 // Init trace lights
@@ -830,10 +838,11 @@ cutrace_lights make_cutrace_lights(cutrace_context& context,
     auto& culight        = culights_.emplace_back();
     culight.instance     = light.instance;
     culight.environment  = light.environment;
-    culight.elements_cdf = make_buffer(light.elements_cdf);
+    culight.elements_cdf = make_buffer(context.cuda_stream, light.elements_cdf);
   }
   auto culights   = cutrace_lights{};
-  culights.lights = make_buffer(culights_);
+  culights.lights = make_buffer(context.cuda_stream, culights_);
+  sync_gpu();
   return culights;
 }
 
