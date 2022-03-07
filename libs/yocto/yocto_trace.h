@@ -173,6 +173,10 @@ void trace_sample(trace_state& state, const scene_data& scene,
     const trace_bvh& bvh, const trace_lights& lights, int i, int j, int sample,
     const trace_params& params);
 
+// Get resulting render, denoised if requested
+image_data get_image(const trace_state& state);
+void       get_image(image_data& image, const trace_state& state);
+
 // Get resulting render
 image_data get_rendered_image(const trace_state& state);
 void       get_rendered_image(image_data& image, const trace_state& state);

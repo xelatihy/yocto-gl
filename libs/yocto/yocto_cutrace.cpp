@@ -46,6 +46,10 @@
 #include <optix_function_table_definition.h>
 #include <optix_stubs.h>
 
+#ifdef YOCTO_DENOISE
+#include <OpenImageDenoise/oidn.hpp>
+#endif
+
 // -----------------------------------------------------------------------------
 // CUDA HELPERS
 // -----------------------------------------------------------------------------
@@ -950,12 +954,8 @@ void get_denoised_image(image_data& image, const cutrace_state& state) {
   get_rendered_image(image, state);
 
   // get albedo and normal
-  auto albedo = vector<vec3f>(image.pixels.size()),
-       normal = vector<vec3f>(image.pixels.size());
-  for (auto idx = 0; idx < state.width * state.height; idx++) {
-    albedo[idx] = state.albedo[idx];
-    normal[idx] = state.normal[idx];
-  }
+  auto albedo = download_buffer_vector(state.albedo);
+  auto normal = download_buffer_vector(state.normal);
 
   // Create a denoising filter
   oidn::FilterRef filter = device.newFilter("RT");  // ray tracing filter
