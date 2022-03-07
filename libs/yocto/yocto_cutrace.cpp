@@ -482,7 +482,7 @@ void trace_samples(cutrace_context& context, cutrace_state& state,
   sync_gpu();
 }
 
-cusceneext_data make_cutrace_scene(
+cusceneext_data make_cutrace_scene(cutrace_context& context,
     const scene_data& scene, const cutrace_params& params) {
   auto cuscene = cusceneext_data{};
 
@@ -616,8 +616,8 @@ cusceneext_data make_cutrace_scene(
   return cuscene;
 }
 
-void update_cutrace_cameras(cusceneext_data& cuscene, const scene_data& scene,
-    const cutrace_params& params) {
+void update_cutrace_cameras(cutrace_context& context, cusceneext_data& cuscene,
+    const scene_data& scene, const cutrace_params& params) {
   auto cucameras = vector<cucamera_data>{};
   for (auto& camera : scene.cameras) {
     auto& cucamera        = cucameras.emplace_back();
@@ -781,7 +781,7 @@ cubvh_data make_cutrace_bvh(cutrace_context& context, cusceneext_data& cuscene,
 }
 
 // Initialize state.
-cutrace_state make_cutrace_state(
+cutrace_state make_cutrace_state(cutrace_context& context,
     const scene_data& scene, const cutrace_params& params) {
   auto& camera = scene.cameras[params.camera];
   auto  state  = cutrace_state{};
@@ -802,8 +802,8 @@ cutrace_state make_cutrace_state(
   return state;
 };
 
-void reset_cutrace_state(cutrace_state& state, const scene_data& scene,
-    const cutrace_params& params) {
+void reset_cutrace_state(cutrace_context& context, cutrace_state& state,
+    const scene_data& scene, const cutrace_params& params) {
   auto& camera = scene.cameras[params.camera];
   if (camera.aspect >= 1) {
     state.width  = params.resolution;
@@ -822,7 +822,7 @@ void reset_cutrace_state(cutrace_state& state, const scene_data& scene,
 }
 
 // Init trace lights
-cutrace_lights make_cutrace_lights(
+cutrace_lights make_cutrace_lights(cutrace_context& context,
     const scene_data& scene, const cutrace_params& params) {
   auto lights    = make_trace_lights(scene, (const trace_params&)params);
   auto culights_ = vector<cutrace_light>{};
@@ -842,10 +842,10 @@ image_data cutrace_image(
     const scene_data& scene, const cutrace_params& params) {
   // initialization
   auto context = make_cutrace_context(params);
-  auto cuscene = make_cutrace_scene(scene, params);
+  auto cuscene = make_cutrace_scene(context, scene, params);
   auto bvh     = make_cutrace_bvh(context, cuscene, scene, params);
-  auto state   = make_cutrace_state(scene, params);
-  auto lights  = make_cutrace_lights(scene, params);
+  auto state   = make_cutrace_state(context, scene, params);
+  auto lights  = make_cutrace_lights(context, scene, params);
 
   // rendering
   trace_start(context, state, cuscene, bvh, lights, scene, params);
@@ -990,15 +990,15 @@ cutrace_context make_cutrace_context(const cutrace_params& params) {
 }
 
 // Upload the scene to the GPU.
-cusceneext_data make_cutrace_scene(
+cusceneext_data make_cutrace_scene(cutrace_context& context,
     const scene_data& scene, const cutrace_params& params) {
   exit_nocuda();
   return {};
 }
 
 // Update cameras
-void update_cutrace_cameras(cusceneext_data& cuscene, const scene_data& scene,
-    const cutrace_params& params) {
+void update_cutrace_cameras(cutrace_context& context, cusceneext_data& cuscene,
+    const scene_data& scene, const cutrace_params& params) {
   exit_nocuda();
 }
 
@@ -1010,18 +1010,18 @@ cubvh_data make_cutrace_bvh(cutrace_context& context, cusceneext_data& cuscene,
 }
 
 // Initialize state.
-cutrace_state make_cutrace_state(
+cutrace_state make_cutrace_state(cutrace_context& context,
     const scene_data& scene, const cutrace_params& params) {
   exit_nocuda();
   return {};
 }
-void reset_cutrace_state(cutrace_state& state, const scene_data& scene,
-    const cutrace_params& params) {
+void reset_cutrace_state(cutrace_context& context, cutrace_state& state,
+    const scene_data& scene, const cutrace_params& params) {
   exit_nocuda();
 }
 
 // Initialize lights.
-cutrace_lights make_cutrace_lights(
+cutrace_lights make_cutrace_lights(cutrace_context& context,
     const scene_data& scene, const cutrace_params& params) {
   exit_nocuda();
   return {};

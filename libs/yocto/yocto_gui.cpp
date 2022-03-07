@@ -830,13 +830,13 @@ void show_cutrace_gui(const string& title, const string& name,
   auto context = make_cutrace_context(params);
 
   // upload scene to the gpu
-  auto cuscene = make_cutrace_scene(scene, params);
+  auto cuscene = make_cutrace_scene(context, scene, params);
 
   // build bvh
   auto bvh = make_cutrace_bvh(context, cuscene, scene, params);
 
   // init lights
-  auto lights = make_cutrace_lights(scene, params);
+  auto lights = make_cutrace_lights(context, scene, params);
 
   // fix renderer type if no lights
   // if (lights.lights.empty() && is_sampler_lit(params)) {
@@ -844,13 +844,13 @@ void show_cutrace_gui(const string& title, const string& name,
   // }
 
   // state
-  auto state = make_cutrace_state(scene, params);
+  auto state = make_cutrace_state(context, scene, params);
 
   // preview state
   auto pparams = params;
   pparams.resolution /= params.pratio;
   pparams.samples = 1;
-  auto pstate     = make_cutrace_state(scene, pparams);
+  auto pstate     = make_cutrace_state(context, scene, pparams);
 
   // init state
   auto image = make_image(state.width, state.height, true);
@@ -877,7 +877,7 @@ void show_cutrace_gui(const string& title, const string& name,
     auto pparams = params;
     pparams.resolution /= params.pratio;
     pparams.samples = 1;
-    reset_cutrace_state(pstate, scene, pparams);
+    reset_cutrace_state(context, pstate, scene, pparams);
     trace_start(context, pstate, cuscene, bvh, lights, scene, pparams);
     trace_samples(context, pstate, cuscene, bvh, lights, scene, pparams);
     auto preview = get_rendered_image(pstate);
@@ -887,7 +887,7 @@ void show_cutrace_gui(const string& title, const string& name,
            pj           = clamp(j / params.pratio, 0, preview.height - 1);
       image.pixels[idx] = preview.pixels[pj * preview.width + pi];
     }
-    reset_cutrace_state(state, scene, params);
+    reset_cutrace_state(context, state, scene, params);
     return true;
   };
 
@@ -966,7 +966,7 @@ void show_cutrace_gui(const string& title, const string& name,
     auto camera = scene.cameras[params.camera];
     if (uiupdate_camera_params(input, camera)) {
       scene.cameras[params.camera] = camera;
-      update_cutrace_cameras(cuscene, scene, params);
+      update_cutrace_cameras(context, cuscene, scene, params);
       if (render_preview()) set_image(glimage, image);
     }
   };

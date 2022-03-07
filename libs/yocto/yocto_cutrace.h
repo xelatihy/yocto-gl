@@ -95,23 +95,23 @@ struct cutrace_context;
 cutrace_context make_cutrace_context(const cutrace_params& params);
 
 // Upload the scene to the GPU.
-cusceneext_data make_cutrace_scene(
+cusceneext_data make_cutrace_scene(cutrace_context& context,
     const scene_data& scene, const cutrace_params& params);
-void update_cutrace_cameras(cusceneext_data& cuscene, const scene_data& scene,
-    const cutrace_params& params);
+void update_cutrace_cameras(cutrace_context& context, cusceneext_data& cuscene,
+    const scene_data& scene, const cutrace_params& params);
 
 // Build the bvh acceleration structure.
 cubvh_data make_cutrace_bvh(cutrace_context& context, cusceneext_data& cuscene,
     const scene_data& scene, const cutrace_params& params);
 
 // Initialize state.
-cutrace_state make_cutrace_state(
+cutrace_state make_cutrace_state(cutrace_context& context,
     const scene_data& scene, const cutrace_params& params);
-void reset_cutrace_state(cutrace_state& state, const scene_data& scene,
-    const cutrace_params& params);
+void reset_cutrace_state(cutrace_context& context, cutrace_state& state,
+    const scene_data& scene, const cutrace_params& params);
 
 // Initialize lights.
-cutrace_lights make_cutrace_lights(
+cutrace_lights make_cutrace_lights(cutrace_context& context,
     const scene_data& scene, const cutrace_params& params);
 
 // Start rendering an image.
