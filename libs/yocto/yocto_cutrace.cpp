@@ -59,8 +59,8 @@ static void check_result(CUresult result) {
   }
 }
 
-static void sync_gpu() {
-  check_result(cuStreamSynchronize(nullptr));  // TODO: cuda_stream
+static void sync_gpu(CUstream stream) {
+  check_result(cuStreamSynchronize(stream));
 }
 
 static void check_result(OptixResult result) {
@@ -418,7 +418,7 @@ cutrace_context make_cutrace_context(const cutrace_params& params) {
   context.globals_buffer = make_buffer(context.cuda_stream, cutrace_globals{});
 
   // sync gpu
-  sync_gpu();
+  sync_gpu(context.cuda_stream);
 
   return context;
 }
@@ -440,7 +440,7 @@ void trace_start(cutrace_context& context, cutrace_state& state,
   update_buffer_value(context.cuda_stream, context.globals_buffer,
       offsetof(cutrace_globals, params), params);
   // sync to avoid errors
-  sync_gpu();
+  sync_gpu(context.cuda_stream);
 }
 
 // render a batch of samples
@@ -459,7 +459,7 @@ void trace_samples(cutrace_context& context, cutrace_state& state,
       state.width, state.height, 1));
   state.samples += nsamples;
   // sync so we can get the image
-  sync_gpu();
+  sync_gpu(context.cuda_stream);
 }
 
 cusceneext_data make_cutrace_scene(cutrace_context& context,
@@ -593,7 +593,7 @@ cusceneext_data make_cutrace_scene(cutrace_context& context,
   cuscene.environments = make_buffer(context.cuda_stream, environments);
 
   // sync gpu
-  sync_gpu();
+  sync_gpu(context.cuda_stream);
 
   return cuscene;
 }
@@ -612,7 +612,7 @@ void update_cutrace_cameras(cutrace_context& context, cusceneext_data& cuscene,
     cucamera.orthographic = camera.orthographic;
   }
   update_buffer(context.cuda_stream, cuscene.cameras, cucameras);
-  sync_gpu();
+  sync_gpu(context.cuda_stream);
 }
 
 cubvh_data make_cutrace_bvh(cutrace_context& context, cusceneext_data& cuscene,
@@ -675,7 +675,7 @@ cubvh_data make_cutrace_bvh(cutrace_context& context, cusceneext_data& cuscene,
         &readback_descriptor, 1));
 
     // sync
-    sync_gpu();
+    sync_gpu(context.cuda_stream);
 
     // compact
     auto compacted_size = download_buffer_value(compacted_size_buffer);
@@ -686,7 +686,7 @@ cubvh_data make_cutrace_bvh(cutrace_context& context, cusceneext_data& cuscene,
         sbvh.buffer.size_in_bytes(), &sbvh.handle));
 
     // sync
-    sync_gpu();
+    sync_gpu(context.cuda_stream);
 
     // cleanup
     clear_buffer(bvh_buffer);
@@ -748,7 +748,7 @@ cubvh_data make_cutrace_bvh(cutrace_context& context, cusceneext_data& cuscene,
         &readback_descriptor, 1));
 
     // sync gpu
-    sync_gpu();
+    sync_gpu(context.cuda_stream);
 
     // compact
     auto compacted_size = download_buffer_value(compacted_size_buffer);
@@ -759,7 +759,7 @@ cubvh_data make_cutrace_bvh(cutrace_context& context, cusceneext_data& cuscene,
         ibvh.buffer.size_in_bytes(), &ibvh.handle));
 
     // sync gpu
-    sync_gpu();
+    sync_gpu(context.cuda_stream);
 
     // cleanup
     clear_buffer(bvh_buffer);
@@ -768,7 +768,7 @@ cubvh_data make_cutrace_bvh(cutrace_context& context, cusceneext_data& cuscene,
   }
 
   // sync gpu
-  sync_gpu();
+  sync_gpu(context.cuda_stream);
 
   // done
   return bvh;
@@ -799,7 +799,7 @@ cutrace_state make_cutrace_state(cutrace_context& context,
       context.cuda_stream, state.width * state.height, (rng_state*)nullptr);
   state.display = make_buffer(
       context.cuda_stream, state.width * state.height, (vec4f*)nullptr);
-  sync_gpu();
+  sync_gpu(context.cuda_stream);
   return state;
 };
 
@@ -826,7 +826,7 @@ void reset_cutrace_state(cutrace_context& context, cutrace_state& state,
       (rng_state*)nullptr);
   resize_buffer(context.cuda_stream, state.display, state.width * state.height,
       (vec4f*)nullptr);
-  sync_gpu();
+  sync_gpu(context.cuda_stream);
 }
 
 // Init trace lights
@@ -842,7 +842,7 @@ cutrace_lights make_cutrace_lights(cutrace_context& context,
   }
   auto culights   = cutrace_lights{};
   culights.lights = make_buffer(context.cuda_stream, culights_);
-  sync_gpu();
+  sync_gpu(context.cuda_stream);
   return culights;
 }
 
