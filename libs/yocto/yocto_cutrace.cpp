@@ -184,9 +184,7 @@ namespace yocto {
 
 extern "C" char yocto_cutrace_ptx[];
 
-cusceneext_data::cusceneext_data(cusceneext_data&& other) {
-  cutextures.swap(other.cutextures);
-  cushapes.swap(other.cushapes);
+cuscene_data::cuscene_data(cuscene_data&& other) {
   cameras.swap(other.cameras);
   textures.swap(other.textures);
   materials.swap(other.materials);
@@ -194,9 +192,7 @@ cusceneext_data::cusceneext_data(cusceneext_data&& other) {
   instances.swap(other.instances);
   environments.swap(other.environments);
 }
-cusceneext_data& cusceneext_data::operator=(cusceneext_data&& other) {
-  cutextures.swap(other.cutextures);
-  cushapes.swap(other.cushapes);
+cuscene_data& cuscene_data::operator=(cuscene_data&& other) {
   cameras.swap(other.cameras);
   textures.swap(other.textures);
   materials.swap(other.materials);
@@ -205,17 +201,23 @@ cusceneext_data& cusceneext_data::operator=(cusceneext_data&& other) {
   environments.swap(other.environments);
   return *this;
 }
-cusceneext_data::~cusceneext_data() {
-  for (auto& cutexture : cutextures) {
-    cuArrayDestroy(cutexture.array);
-    // TODO: texture
+cuscene_data::~cuscene_data() {
+  if (!textures.empty()) {
+    auto textures_ = download_buffer_vector(textures);
+    for (auto& texture : textures_) {
+      cuArrayDestroy(texture.array);
+      // TODO: texture
+    }
   }
-  for (auto& cushape : cushapes) {
-    clear_buffer(cushape.positions);
-    clear_buffer(cushape.normals);
-    clear_buffer(cushape.texcoords);
-    clear_buffer(cushape.colors);
-    clear_buffer(cushape.triangles);
+  if (!shapes.empty()) {
+    auto shapes_ = download_buffer_vector(shapes);
+    for (auto& shape : shapes_) {
+      clear_buffer(shape.positions);
+      clear_buffer(shape.normals);
+      clear_buffer(shape.texcoords);
+      clear_buffer(shape.colors);
+      clear_buffer(shape.triangles);
+    }
   }
   clear_buffer(cameras);
   clear_buffer(textures);
@@ -276,6 +278,55 @@ cutrace_context& cutrace_context::operator=(cutrace_context&& other) {
   std::swap(cuda_stream, other.cuda_stream);
   std::swap(cuda_context, other.cuda_context);
   return *this;
+}
+
+cutrace_state::cutrace_state(cutrace_state&& other) {
+  std::swap(width, other.width);
+  std::swap(height, other.height);
+  std::swap(samples, other.samples);
+  image.swap(other.image);
+  albedo.swap(other.albedo);
+  normal.swap(other.normal);
+  hits.swap(other.hits);
+  rngs.swap(other.rngs);
+  display.swap(other.display);
+}
+cutrace_state& cutrace_state::operator=(cutrace_state&& other) {
+  std::swap(width, other.width);
+  std::swap(height, other.height);
+  std::swap(samples, other.samples);
+  image.swap(other.image);
+  albedo.swap(other.albedo);
+  normal.swap(other.normal);
+  hits.swap(other.hits);
+  rngs.swap(other.rngs);
+  display.swap(other.display);
+  return *this;
+}
+cutrace_state::~cutrace_state() {
+  clear_buffer(image);
+  clear_buffer(albedo);
+  clear_buffer(normal);
+  clear_buffer(hits);
+  clear_buffer(rngs);
+  clear_buffer(display);
+}
+
+cutrace_lights::cutrace_lights(cutrace_lights&& other) {
+  lights.swap(other.lights);
+}
+cutrace_lights& cutrace_lights::operator=(cutrace_lights&& other) {
+  lights.swap(other.lights);
+  return *this;
+}
+cutrace_lights::~cutrace_lights() {
+  if (!lights.empty()) {
+    auto lights_ = download_buffer_vector(lights);
+    for (auto& light : lights_) {
+      clear_buffer(light.elements_cdf);
+    }
+  }
+  clear_buffer(lights);
 }
 
 cutrace_context::~cutrace_context() {
@@ -462,9 +513,9 @@ void trace_samples(cutrace_context& context, cutrace_state& state,
   sync_gpu(context.cuda_stream);
 }
 
-cusceneext_data make_cutrace_scene(cutrace_context& context,
+cuscene_data make_cutrace_scene(cutrace_context& context,
     const scene_data& scene, const cutrace_params& params) {
-  auto cuscene = cusceneext_data{};
+  auto cuscene = cuscene_data{};
 
   auto cucameras = vector<cucamera_data>{};
   for (auto& camera : scene.cameras) {
@@ -480,8 +531,9 @@ cusceneext_data make_cutrace_scene(cutrace_context& context,
   cuscene.cameras = make_buffer(context.cuda_stream, cucameras);
 
   // shapes
+  auto cushapes = vector<cushape_data>{};
   for (auto& shape : scene.shapes) {
-    auto& cushape     = cuscene.cushapes.emplace_back();
+    auto& cushape     = cushapes.emplace_back();
     cushape.positions = make_buffer(context.cuda_stream, shape.positions);
     cushape.triangles = make_buffer(context.cuda_stream, shape.triangles);
     if (!shape.normals.empty())
@@ -491,11 +543,12 @@ cusceneext_data make_cutrace_scene(cutrace_context& context,
     if (!shape.colors.empty())
       cushape.colors = make_buffer(context.cuda_stream, shape.colors);
   }
-  cuscene.shapes = make_buffer(context.cuda_stream, cuscene.cushapes);
+  cuscene.shapes = make_buffer(context.cuda_stream, cushapes);
 
   // textures
+  auto cutextures = vector<cutexture_data>{};
   for (auto& texture : scene.textures) {
-    auto& cutexture  = cuscene.cutextures.emplace_back();
+    auto& cutexture  = cutextures.emplace_back();
     cutexture.width  = texture.width;
     cutexture.height = texture.height;
     cutexture.linear = texture.linear;
@@ -551,7 +604,7 @@ cusceneext_data make_cutrace_scene(cutrace_context& context,
     check_result(cuTexObjectCreate(&cutexture.texture, &resource_descriptor,
         &texture_descriptor, nullptr));
   }
-  cuscene.textures = make_buffer(context.cuda_stream, cuscene.cutextures);
+  cuscene.textures = make_buffer(context.cuda_stream, cutextures);
 
   auto materials = vector<cumaterial_data>{};
   for (auto& material : scene.materials) {
@@ -598,7 +651,7 @@ cusceneext_data make_cutrace_scene(cutrace_context& context,
   return cuscene;
 }
 
-void update_cutrace_cameras(cutrace_context& context, cusceneext_data& cuscene,
+void update_cutrace_cameras(cutrace_context& context, cuscene_data& cuscene,
     const scene_data& scene, const cutrace_params& params) {
   auto cucameras = vector<cucamera_data>{};
   for (auto& camera : scene.cameras) {
@@ -615,15 +668,20 @@ void update_cutrace_cameras(cutrace_context& context, cusceneext_data& cuscene,
   sync_gpu(context.cuda_stream);
 }
 
-cubvh_data make_cutrace_bvh(cutrace_context& context, cusceneext_data& cuscene,
-    const scene_data& scene, const cutrace_params& params) {
+cubvh_data make_cutrace_bvh(cutrace_context& context, const cuscene_data& scene,
+    const cutrace_params& params) {
   auto bvh = cubvh_data{};
+
+  // download shapes and instances
+  // this is not efficient, but keeps the API very clean
+  // in the future, we might want to merge scene and bvh creation
+  auto shapes_data    = download_buffer_vector(scene.shapes);
+  auto instances_data = download_buffer_vector(scene.instances);
 
   // shapes
   bvh.shapes_bvhs.resize(scene.shapes.size());
   for (auto shape_id = (size_t)0; shape_id < scene.shapes.size(); shape_id++) {
-    auto& shape   = scene.shapes[shape_id];
-    auto& cushape = cuscene.cushapes[shape_id];
+    auto& shape = shapes_data[shape_id];
 
     // input
     auto built_input                       = OptixBuildInput{};
@@ -631,16 +689,16 @@ cubvh_data make_cutrace_bvh(cutrace_context& context, cusceneext_data& cuscene,
     built_input.triangleArray.vertexFormat = OPTIX_VERTEX_FORMAT_FLOAT3;
     built_input.triangleArray.vertexStrideInBytes = sizeof(vec3f);
     built_input.triangleArray.numVertices         = (int)shape.positions.size();
-    auto vertex_buffer                      = cushape.positions.device_ptr();
+    auto vertex_buffer                      = shape.positions.device_ptr();
     built_input.triangleArray.vertexBuffers = &vertex_buffer;
     built_input.triangleArray.indexFormat = OPTIX_INDICES_FORMAT_UNSIGNED_INT3;
     built_input.triangleArray.indexStrideInBytes = sizeof(vec3i);
     built_input.triangleArray.numIndexTriplets   = (int)shape.triangles.size();
-    auto index_buffer                       = cushape.triangles.device_ptr();
-    built_input.triangleArray.indexBuffer   = index_buffer;
-    auto input_flags                        = (unsigned int)0;
-    built_input.triangleArray.flags         = &input_flags;
-    built_input.triangleArray.numSbtRecords = 1;
+    auto index_buffer                            = shape.triangles.device_ptr();
+    built_input.triangleArray.indexBuffer        = index_buffer;
+    auto input_flags                             = (unsigned int)0;
+    built_input.triangleArray.flags              = &input_flags;
+    built_input.triangleArray.numSbtRecords      = 1;
     built_input.triangleArray.sbtIndexOffsetBuffer        = 0;
     built_input.triangleArray.sbtIndexOffsetSizeInBytes   = 0;
     built_input.triangleArray.sbtIndexOffsetStrideInBytes = 0;
@@ -697,20 +755,20 @@ cubvh_data make_cutrace_bvh(cutrace_context& context, cusceneext_data& cuscene,
   // instances
   {
     // upload data
-    auto instances = vector<OptixInstance>(scene.instances.size());
+    auto opinstances = vector<OptixInstance>(scene.instances.size());
     for (auto instance_id = 0; instance_id < scene.instances.size();
          instance_id++) {
-      auto& instance   = scene.instances[instance_id];
-      auto& cuinstance = instances[instance_id];
+      auto& instance   = instances_data[instance_id];
+      auto& opinstance = opinstances[instance_id];
       auto  transform  = transpose(frame_to_mat(instance.frame));
-      memcpy(cuinstance.transform, &transform, sizeof(float) * 12);
-      cuinstance.sbtOffset         = 0;
-      cuinstance.instanceId        = instance_id;
-      cuinstance.traversableHandle = bvh.shapes_bvhs[instance.shape].handle;
-      cuinstance.flags             = OPTIX_INSTANCE_FLAG_NONE;
-      cuinstance.visibilityMask    = 0xff;
+      memcpy(opinstance.transform, &transform, sizeof(float) * 12);
+      opinstance.sbtOffset         = 0;
+      opinstance.instanceId        = instance_id;
+      opinstance.traversableHandle = bvh.shapes_bvhs[instance.shape].handle;
+      opinstance.flags             = OPTIX_INSTANCE_FLAG_NONE;
+      opinstance.visibilityMask    = 0xff;
     }
-    bvh.instances = make_buffer(context.cuda_stream, instances);
+    bvh.instances = make_buffer(context.cuda_stream, opinstances);
 
     // config
     auto build_input                       = OptixBuildInput{};
@@ -852,7 +910,7 @@ image_data cutrace_image(
   // initialization
   auto context = make_cutrace_context(params);
   auto cuscene = make_cutrace_scene(context, scene, params);
-  auto bvh     = make_cutrace_bvh(context, cuscene, scene, params);
+  auto bvh     = make_cutrace_bvh(context, cuscene, params);
   auto state   = make_cutrace_state(context, scene, params);
   auto lights  = make_cutrace_lights(context, scene, params);
 
@@ -965,12 +1023,12 @@ namespace yocto {
 
 static void exit_nocuda() { throw std::runtime_error{"Cuda not linked"}; }
 
-cusceneext_data::cusceneext_data(cusceneext_data&& other) { exit_nocuda(); }
-cusceneext_data& cusceneext_data::operator=(cusceneext_data&& other) {
+cuscene_data::cuscene_data(cuscene_data&& other) { exit_nocuda(); }
+cuscene_data& cuscene_data::operator=(cuscene_data&& other) {
   exit_nocuda();
   return *this;
 }
-cusceneext_data::~cusceneext_data() { exit_nocuda(); };
+cuscene_data::~cuscene_data() { exit_nocuda(); };
 
 cubvh_data::cubvh_data(cubvh_data&& other) { exit_nocuda(); }
 cubvh_data& cubvh_data::operator=(cubvh_data&& other) {
@@ -999,20 +1057,20 @@ cutrace_context make_cutrace_context(const cutrace_params& params) {
 }
 
 // Upload the scene to the GPU.
-cusceneext_data make_cutrace_scene(cutrace_context& context,
+cuscene_data make_cutrace_scene(cutrace_context& context,
     const scene_data& scene, const cutrace_params& params) {
   exit_nocuda();
   return {};
 }
 
 // Update cameras
-void update_cutrace_cameras(cutrace_context& context, cusceneext_data& cuscene,
+void update_cutrace_cameras(cutrace_context& context, cuscene_data& cuscene,
     const scene_data& scene, const cutrace_params& params) {
   exit_nocuda();
 }
 
 // Build the bvh acceleration structure.
-cubvh_data make_cutrace_bvh(cutrace_context& context, cusceneext_data& cuscene,
+cubvh_data make_cutrace_bvh(cutrace_context& context, cuscene_data& cuscene,
     const scene_data& scene, const cutrace_params& params) {
   exit_nocuda();
   return {};

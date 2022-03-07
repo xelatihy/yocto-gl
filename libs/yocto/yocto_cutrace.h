@@ -85,7 +85,7 @@ namespace yocto {
 
 // forward declarations
 struct cuscene_data;
-struct cusceneext_data;
+struct cuscene_data;
 struct cubvh_data;
 struct cutrace_state;
 struct cutrace_lights;
@@ -95,14 +95,14 @@ struct cutrace_context;
 cutrace_context make_cutrace_context(const cutrace_params& params);
 
 // Upload the scene to the GPU.
-cusceneext_data make_cutrace_scene(cutrace_context& context,
+cuscene_data make_cutrace_scene(cutrace_context& context,
     const scene_data& scene, const cutrace_params& params);
-void update_cutrace_cameras(cutrace_context& context, cusceneext_data& cuscene,
+void update_cutrace_cameras(cutrace_context& context, cuscene_data& cuscene,
     const scene_data& scene, const cutrace_params& params);
 
 // Build the bvh acceleration structure.
-cubvh_data make_cutrace_bvh(cutrace_context& context, cusceneext_data& cuscene,
-    const scene_data& scene, const cutrace_params& params);
+cubvh_data make_cutrace_bvh(cutrace_context& context,
+    const cuscene_data& cuscene, const cutrace_params& params);
 
 // Initialize state.
 cutrace_state make_cutrace_state(cutrace_context& context,
@@ -205,6 +205,7 @@ namespace yocto {
 // cuda buffer
 template <typename T>
 struct cubuffer {
+  bool        empty() const { return _size == 0; }
   size_t      size() const { return _size; }
   CUdeviceptr device_ptr() const { return _data; }
   size_t      size_in_bytes() const { return _size * sizeof(T); }
@@ -289,16 +290,11 @@ struct cuscene_data {
   cubuffer<cushape_data>       shapes       = {};
   cubuffer<cuinstance_data>    instances    = {};
   cubuffer<cuenvironment_data> environments = {};
-};
 
-struct cusceneext_data : cuscene_data {
-  vector<cutexture_data> cutextures = {};
-  vector<cushape_data>   cushapes   = {};
-
-  cusceneext_data() {}
-  cusceneext_data(cusceneext_data&&);
-  cusceneext_data& operator=(cusceneext_data&&);
-  ~cusceneext_data();
+  cuscene_data() {}
+  cuscene_data(cuscene_data&&);
+  cuscene_data& operator=(cuscene_data&&);
+  ~cuscene_data();
 };
 
 struct cubvh_tree {
@@ -328,6 +324,11 @@ struct cutrace_state {
   cubuffer<int>       hits    = {};
   cubuffer<rng_state> rngs    = {};
   cubuffer<vec4f>     display = {};
+
+  cutrace_state() {}
+  cutrace_state(cutrace_state&&);
+  cutrace_state& operator=(cutrace_state&&);
+  ~cutrace_state();
 };
 
 // light
@@ -340,6 +341,11 @@ struct cutrace_light {
 // lights
 struct cutrace_lights {
   cubuffer<cutrace_light> lights = {};
+
+  cutrace_lights() {}
+  cutrace_lights(cutrace_lights&&);
+  cutrace_lights& operator=(cutrace_lights&&);
+  ~cutrace_lights();
 };
 
 // device params

@@ -833,7 +833,7 @@ void show_cutrace_gui(const string& title, const string& name,
   auto cuscene = make_cutrace_scene(context, scene, params);
 
   // build bvh
-  auto bvh = make_cutrace_bvh(context, cuscene, scene, params);
+  auto bvh = make_cutrace_bvh(context, cuscene, params);
 
   // init lights
   auto lights = make_cutrace_lights(context, scene, params);

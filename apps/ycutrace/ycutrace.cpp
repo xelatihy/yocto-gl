@@ -129,7 +129,7 @@ void run_render(const render_params& params_) {
 
   // build bvh
   timer    = simple_timer{};
-  auto bvh = make_cutrace_bvh(context, cuscene, scene, params__);
+  auto bvh = make_cutrace_bvh(context, cuscene, params__);
   print_info("build bvh: {}", elapsed_formatted(timer));
 
   // init lights
