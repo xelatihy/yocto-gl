@@ -431,12 +431,6 @@ using mat2f = mat<float, 2>;
 using mat3f = mat<float, 3>;
 using mat4f = mat<float, 4>;
 
-// Identity matrices constants.
-inline const auto identity2x2f = mat2f{{1, 0}, {0, 1}};
-inline const auto identity3x3f = mat3f{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
-inline const auto identity4x4f = mat4f{
-    {1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
-
 // Matrix comparisons.
 template <typename T, int N>
 inline bool operator==(const mat<T, N>& a, const mat<T, N>& b);
@@ -580,9 +574,6 @@ struct quat<T, 4> {
 
 // Quaternion aliases
 using quat4f = quat<float, 4>;
-
-// Constants
-inline const auto identity_quat4f = quat4f{0, 0, 0, 1};
 
 // Quaternion operatons
 template <typename T>
@@ -2725,8 +2716,8 @@ namespace yocto {
 [[deprecated]] inline const auto zero4b = vec4b{0, 0, 0, 0};
 
 // Indentity frames.
-inline const auto identity2x3f = frame2f{{1, 0}, {0, 1}, {0, 0}};
-inline const auto identity3x4f = frame3f{
+[[deprecated]] inline const auto identity2x3f = frame2f{{1, 0}, {0, 1}, {0, 0}};
+[[deprecated]] inline const auto identity3x4f = frame3f{
     {1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}};
 
 // Identity matrices constants.
@@ -2735,6 +2726,9 @@ inline const auto identity3x4f = frame3f{
     {1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
 [[deprecated]] inline const auto identity4x4f = mat4f{
     {1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
+
+// Constants
+[[deprecated]] inline const auto identity_quat4f = quat4f{0, 0, 0, 1};
 
 }  // namespace yocto
 

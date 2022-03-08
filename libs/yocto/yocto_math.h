@@ -811,9 +811,6 @@ struct quat4f {
   float w = 1;
 };
 
-// Constants
-inline const auto identity_quat4f = quat4f{0, 0, 0, 1};
-
 // Quaternion operatons
 inline quat4f operator+(const quat4f& a, const quat4f& b);
 inline quat4f operator*(const quat4f& a, float b);
@@ -2839,6 +2836,9 @@ namespace yocto {
     {1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
 [[deprecated]] inline const auto identity4x4f = mat4f{
     {1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
+
+// Constants
+[[deprecated]] inline const auto identity_quat4f = quat4f{0, 0, 0, 1};
 
 }  // namespace yocto
 
