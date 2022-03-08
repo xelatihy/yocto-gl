@@ -85,7 +85,7 @@ namespace yocto {
 
 // forward declarations
 struct cuscene_data;
-struct cusceneext_data;
+struct cuscene_data;
 struct cubvh_data;
 struct cutrace_state;
 struct cutrace_lights;
@@ -95,23 +95,23 @@ struct cutrace_context;
 cutrace_context make_cutrace_context(const cutrace_params& params);
 
 // Upload the scene to the GPU.
-cusceneext_data make_cutrace_scene(
+cuscene_data make_cutrace_scene(cutrace_context& context,
     const scene_data& scene, const cutrace_params& params);
-void update_cutrace_cameras(cusceneext_data& cuscene, const scene_data& scene,
-    const cutrace_params& params);
+void update_cutrace_cameras(cutrace_context& context, cuscene_data& cuscene,
+    const scene_data& scene, const cutrace_params& params);
 
 // Build the bvh acceleration structure.
-cubvh_data make_cutrace_bvh(cutrace_context& context, cusceneext_data& cuscene,
-    const scene_data& scene, const cutrace_params& params);
+cubvh_data make_cutrace_bvh(cutrace_context& context,
+    const cuscene_data& cuscene, const cutrace_params& params);
 
 // Initialize state.
-cutrace_state make_cutrace_state(
+cutrace_state make_cutrace_state(cutrace_context& context,
     const scene_data& scene, const cutrace_params& params);
-void reset_cutrace_state(cutrace_state& state, const scene_data& scene,
-    const cutrace_params& params);
+void reset_cutrace_state(cutrace_context& context, cutrace_state& state,
+    const scene_data& scene, const cutrace_params& params);
 
 // Initialize lights.
-cutrace_lights make_cutrace_lights(
+cutrace_lights make_cutrace_lights(cutrace_context& context,
     const scene_data& scene, const cutrace_params& params);
 
 // Start rendering an image.
@@ -126,19 +126,22 @@ void trace_samples(cutrace_context& context, cutrace_state& state,
     const cutrace_lights& lights, const scene_data& scene,
     const cutrace_params& params);
 
-// Get resulting render
+// Get resulting render, denoised if requested
+image_data get_image(const cutrace_state& state);
+void       get_image(image_data& image, const cutrace_state& state);
+
+// Get internal images from state
 image_data get_rendered_image(const cutrace_state& state);
 void       get_rendered_image(image_data& image, const cutrace_state& state);
-
-// Get denoised result
 image_data get_denoised_image(const cutrace_state& state);
 void       get_denoised_image(image_data& image, const cutrace_state& state);
-
-// Get denoising buffers
 image_data get_albedo_image(const cutrace_state& state);
 void       get_albedo_image(image_data& image, const cutrace_state& state);
 image_data get_normal_image(const cutrace_state& state);
 void       get_normal_image(image_data& image, const cutrace_state& state);
+
+// denoise image
+void denoise_image(cutrace_context& context, cutrace_state& state);
 
 // check if display
 bool is_display(const cutrace_context& context);
@@ -194,6 +197,7 @@ using OptixModule             = void*;
 using OptixShaderBindingTable = void*;
 using CUarray                 = void*;
 using CUtexObject             = void*;
+using OptixDenoiser           = void*;
 
 #endif
 
@@ -204,11 +208,12 @@ namespace yocto {
 
 // cuda buffer
 template <typename T>
-struct cubuffer {
+struct cuspan {
+  bool        empty() const { return _size == 0; }
   size_t      size() const { return _size; }
   CUdeviceptr device_ptr() const { return _data; }
   size_t      size_in_bytes() const { return _size * sizeof(T); }
-  void        swap(cubuffer& other) {
+  void        swap(cuspan& other) {
     std::swap(_data, other._data);
     std::swap(_size, other._size);
   }
@@ -263,17 +268,17 @@ struct cumaterial_data {
 };
 
 struct cuinstance_data {
-  frame3f frame;
-  int     shape;
-  int     material;
+  frame3f frame    = {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}};
+  int     shape    = invalidid;
+  int     material = invalidid;
 };
 
 struct cushape_data {
-  cubuffer<vec3f> positions = {};
-  cubuffer<vec3f> normals   = {};
-  cubuffer<vec2f> texcoords = {};
-  cubuffer<vec4f> colors    = {};
-  cubuffer<vec3i> triangles = {};
+  cuspan<vec3f> positions = {};
+  cuspan<vec3f> normals   = {};
+  cuspan<vec2f> texcoords = {};
+  cuspan<vec4f> colors    = {};
+  cuspan<vec3i> triangles = {};
 };
 
 struct cuenvironment_data {
@@ -283,33 +288,28 @@ struct cuenvironment_data {
 };
 
 struct cuscene_data {
-  cubuffer<cucamera_data>      cameras      = {};
-  cubuffer<cutexture_data>     textures     = {};
-  cubuffer<cumaterial_data>    materials    = {};
-  cubuffer<cushape_data>       shapes       = {};
-  cubuffer<cuinstance_data>    instances    = {};
-  cubuffer<cuenvironment_data> environments = {};
-};
+  cuspan<cucamera_data>      cameras      = {};
+  cuspan<cutexture_data>     textures     = {};
+  cuspan<cumaterial_data>    materials    = {};
+  cuspan<cushape_data>       shapes       = {};
+  cuspan<cuinstance_data>    instances    = {};
+  cuspan<cuenvironment_data> environments = {};
 
-struct cusceneext_data : cuscene_data {
-  vector<cutexture_data> cutextures = {};
-  vector<cushape_data>   cushapes   = {};
-
-  cusceneext_data() {}
-  cusceneext_data(cusceneext_data&&);
-  cusceneext_data& operator=(cusceneext_data&&);
-  ~cusceneext_data();
+  cuscene_data() {}
+  cuscene_data(cuscene_data&&);
+  cuscene_data& operator=(cuscene_data&&);
+  ~cuscene_data();
 };
 
 struct cubvh_tree {
-  cubuffer<byte>         buffer = {};
+  cuspan<byte>           buffer = {};
   OptixTraversableHandle handle = 0;
 };
 
 struct cubvh_data {
-  cubuffer<OptixInstance> instances     = {};
-  cubvh_tree              instances_bvh = {};
-  vector<cubvh_tree>      shapes_bvhs   = {};
+  cuspan<OptixInstance> instances     = {};
+  cubvh_tree            instances_bvh = {};
+  vector<cubvh_tree>    shapes_bvhs   = {};
 
   cubvh_data() {}
   cubvh_data(cubvh_data&&);
@@ -319,27 +319,39 @@ struct cubvh_data {
 
 // state
 struct cutrace_state {
-  int                 width   = 0;
-  int                 height  = 0;
-  int                 samples = 0;
-  cubuffer<vec4f>     image   = {};
-  cubuffer<vec3f>     albedo  = {};
-  cubuffer<vec3f>     normal  = {};
-  cubuffer<int>       hits    = {};
-  cubuffer<rng_state> rngs    = {};
-  cubuffer<vec4f>     display = {};
+  int               width            = 0;
+  int               height           = 0;
+  int               samples          = 0;
+  cuspan<vec4f>     image            = {};
+  cuspan<vec3f>     albedo           = {};
+  cuspan<vec3f>     normal           = {};
+  cuspan<int>       hits             = {};
+  cuspan<rng_state> rngs             = {};
+  cuspan<vec4f>     denoised         = {};
+  cuspan<byte>      denoiser_state   = {};
+  cuspan<byte>      denoiser_scratch = {};
+
+  cutrace_state() {}
+  cutrace_state(cutrace_state&&);
+  cutrace_state& operator=(cutrace_state&&);
+  ~cutrace_state();
 };
 
 // light
 struct cutrace_light {
-  int             instance     = invalidid;
-  int             environment  = invalidid;
-  cubuffer<float> elements_cdf = {};
+  int           instance     = invalidid;
+  int           environment  = invalidid;
+  cuspan<float> elements_cdf = {};
 };
 
 // lights
 struct cutrace_lights {
-  cubuffer<cutrace_light> lights = {};
+  cuspan<cutrace_light> lights = {};
+
+  cutrace_lights() {}
+  cutrace_lights(cutrace_lights&&);
+  cutrace_lights& operator=(cutrace_lights&&);
+  ~cutrace_lights();
 };
 
 // device params
@@ -382,13 +394,16 @@ struct cutrace_context {
   OptixProgramGroup hitgroup_program = nullptr;
 
   // stb
-  cubuffer<cutrace_stbrecord> raygen_records   = {};
-  cubuffer<cutrace_stbrecord> miss_records     = {};
-  cubuffer<cutrace_stbrecord> hitgroup_records = {};
-  OptixShaderBindingTable     binding_table    = {};
+  cuspan<cutrace_stbrecord> raygen_records   = {};
+  cuspan<cutrace_stbrecord> miss_records     = {};
+  cuspan<cutrace_stbrecord> hitgroup_records = {};
+  OptixShaderBindingTable   binding_table    = {};
 
   // global buffer
-  cubuffer<cutrace_globals> globals_buffer = {};
+  cuspan<cutrace_globals> globals_buffer = {};
+
+  // denoiser
+  OptixDenoiser denoiser = nullptr;
 
   cutrace_context() {}
   cutrace_context(cutrace_context&&);

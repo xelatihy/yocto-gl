@@ -46,6 +46,10 @@
 #include <optix_function_table_definition.h>
 #include <optix_stubs.h>
 
+#ifdef YOCTO_DENOISE
+#include <OpenImageDenoise/oidn.hpp>
+#endif
+
 // -----------------------------------------------------------------------------
 // CUDA HELPERS
 // -----------------------------------------------------------------------------
@@ -59,8 +63,8 @@ static void check_result(CUresult result) {
   }
 }
 
-static void check_cusync() {
-  check_result(cuStreamSynchronize(nullptr));  // TODO: cuda_stream
+static void sync_gpu(CUstream stream) {
+  check_result(cuStreamSynchronize(stream));
 }
 
 static void check_result(OptixResult result) {
@@ -71,91 +75,94 @@ static void check_result(OptixResult result) {
 
 // make a buffer
 template <typename T>
-static cubuffer<T> make_buffer(size_t size, const T* data) {
-  auto buffer  = cubuffer<T>{};
+static cuspan<T> make_buffer(CUstream stream, size_t size, const T* data) {
+  auto buffer  = cuspan<T>{};
   buffer._size = size;
   check_result(cuMemAlloc(&buffer._data, buffer.size_in_bytes()));
   if (data) {
-    check_result(
-        cuMemcpyHtoD(buffer.device_ptr(), data, buffer.size_in_bytes()));
+    check_result(cuMemcpyHtoDAsync(
+        buffer.device_ptr(), data, buffer.size_in_bytes(), stream));
   }
   return buffer;
 }
 template <typename T>
-static cubuffer<T> make_buffer(const vector<T>& data) {
+static cuspan<T> make_buffer(CUstream stream, const vector<T>& data) {
   if (data.empty()) return {};
-  return make_buffer(data.size(), data.data());
+  return make_buffer(stream, data.size(), data.data());
 }
 template <typename T>
-static cubuffer<T> make_buffer(const T& data) {
-  return make_buffer(1, &data);
+static cuspan<T> make_buffer(CUstream stream, const T& data) {
+  return make_buffer(stream, 1, &data);
 }
 
 // resize a buffer
 template <typename T>
-static void resize_buffer(cubuffer<T>& buffer, size_t size, const T* data) {
+static void resize_buffer(
+    CUstream stream, cuspan<T>& buffer, size_t size, const T* data) {
   if (buffer._size != size) {
-    check_result(cuMemFree(buffer._data));
+    if (buffer._size != 0) check_result(cuMemFree(buffer._data));
     buffer._size = size;
     check_result(cuMemAlloc(&buffer._data, buffer.size_in_bytes()));
   }
   if (data) {
-    check_result(
-        cuMemcpyHtoD(buffer.device_ptr(), data, buffer.size_in_bytes()));
+    check_result(cuMemcpyHtoDAsync(
+        buffer.device_ptr(), data, buffer.size_in_bytes(), stream));
   }
 }
 
 // update a buffer
 template <typename T>
-static void update_buffer(cubuffer<T>& buffer, size_t size, const T* data) {
+static void update_buffer(
+    CUstream stream, cuspan<T>& buffer, size_t size, const T* data) {
   if (buffer.size() != size) throw std::runtime_error{"Cuda buffer error"};
-  check_result(cuMemcpyHtoD(buffer.device_ptr(), data, buffer.size_in_bytes()));
+  check_result(cuMemcpyHtoDAsync(
+      buffer.device_ptr(), data, buffer.size_in_bytes(), stream));
 }
 template <typename T>
-static void update_buffer(cubuffer<T>& buffer, const vector<T>& data) {
-  return update_buffer(buffer, data.size(), data.data());
+static void update_buffer(
+    CUstream stream, cuspan<T>& buffer, const vector<T>& data) {
+  return update_buffer(stream, buffer, data.size(), data.data());
 }
 template <typename T>
-static void update_buffer(cubuffer<T>& buffer, const T& data) {
-  return update_buffer(buffer, 1, &data);
+static void update_buffer(CUstream stream, cuspan<T>& buffer, const T& data) {
+  return update_buffer(stream, buffer, 1, &data);
 }
 
 // update a buffer
 template <typename T, typename T1>
-static void update_buffer_value(
-    cubuffer<T>& buffer, size_t offset, size_t size, const T1* data) {
-  check_result(
-      cuMemcpyHtoD(buffer.device_ptr() + offset, data, size * sizeof(T1)));
+static void update_buffer_value(CUstream stream, cuspan<T>& buffer,
+    size_t offset, size_t size, const T1* data) {
+  check_result(cuMemcpyHtoDAsync(
+      buffer.device_ptr() + offset, data, size * sizeof(T1), stream));
 }
 template <typename T, typename T1>
 static void update_buffer_value(
-    cubuffer<T>& buffer, size_t offset, const T1& data) {
-  return update_buffer_value(buffer, offset, 1, &data);
+    CUstream stream, cuspan<T>& buffer, size_t offset, const T1& data) {
+  return update_buffer_value(stream, buffer, offset, 1, &data);
 }
 
-// download buffer
+// download buffer --- these are synched to avoid errors
 template <typename T>
-static void download_buffer(
-    const cubuffer<T>& buffer, size_t size, void* data) {
+static void download_buffer(const cuspan<T>& buffer, size_t size, void* data) {
   if (buffer.size() != size) throw std::runtime_error{"Cuda download error"};
   check_result(cuMemcpyDtoH(data, buffer.device_ptr(), buffer.size_in_bytes()));
 }
 template <typename T>
-static void download_buffer(const cubuffer<T>& buffer, vector<T>& data) {
+static void download_buffer(const cuspan<T>& buffer, vector<T>& data) {
   return download_buffer(buffer, data.size(), data.data());
 }
 template <typename T>
-static void download_buffer(const cubuffer<T>& buffer, T& data) {
+static void download_buffer(const cuspan<T>& buffer, T& data) {
   return download_buffer(buffer, 1, &data);
 }
 template <typename T>
-static vector<T> download_buffer_vector(const cubuffer<T>& buffer) {
+static vector<T> download_buffer_vector(const cuspan<T>& buffer) {
   auto data = vector<T>(buffer.size());
   download_buffer(buffer, data.size(), data.data());
   return data;
 }
 template <typename T>
-static T download_buffer_value(const cubuffer<T>& buffer) {
+static T download_buffer_value(const cuspan<T>& buffer) {
   if (buffer.size() != 1) throw std::runtime_error{"Cuda download error"};
   auto data = T{};
   download_buffer(buffer, 1, &data);
@@ -164,7 +171,7 @@ static T download_buffer_value(const cubuffer<T>& buffer) {
 
 // free buffer
 template <typename T>
-static void clear_buffer(cubuffer<T>& buffer) {
+static void clear_buffer(cuspan<T>& buffer) {
   if (buffer.device_ptr() == 0) return;
   check_result(cuMemFree(buffer.device_ptr()));
   buffer._data = 0;
@@ -180,9 +187,7 @@ namespace yocto {
 
 extern "C" char yocto_cutrace_ptx[];
 
-cusceneext_data::cusceneext_data(cusceneext_data&& other) {
-  cutextures.swap(other.cutextures);
-  cushapes.swap(other.cushapes);
+cuscene_data::cuscene_data(cuscene_data&& other) {
   cameras.swap(other.cameras);
   textures.swap(other.textures);
   materials.swap(other.materials);
@@ -190,9 +195,7 @@ cusceneext_data::cusceneext_data(cusceneext_data&& other) {
   instances.swap(other.instances);
   environments.swap(other.environments);
 }
-cusceneext_data& cusceneext_data::operator=(cusceneext_data&& other) {
-  cutextures.swap(other.cutextures);
-  cushapes.swap(other.cushapes);
+cuscene_data& cuscene_data::operator=(cuscene_data&& other) {
   cameras.swap(other.cameras);
   textures.swap(other.textures);
   materials.swap(other.materials);
@@ -201,17 +204,23 @@ cusceneext_data& cusceneext_data::operator=(cusceneext_data&& other) {
   environments.swap(other.environments);
   return *this;
 }
-cusceneext_data::~cusceneext_data() {
-  for (auto& cutexture : cutextures) {
-    cuArrayDestroy(cutexture.array);
-    // TODO: texture
+cuscene_data::~cuscene_data() {
+  if (!textures.empty()) {
+    auto textures_ = download_buffer_vector(textures);
+    for (auto& texture : textures_) {
+      cuArrayDestroy(texture.array);
+      // TODO: texture
+    }
   }
-  for (auto& cushape : cushapes) {
-    clear_buffer(cushape.positions);
-    clear_buffer(cushape.normals);
-    clear_buffer(cushape.texcoords);
-    clear_buffer(cushape.colors);
-    clear_buffer(cushape.triangles);
+  if (!shapes.empty()) {
+    auto shapes_ = download_buffer_vector(shapes);
+    for (auto& shape : shapes_) {
+      clear_buffer(shape.positions);
+      clear_buffer(shape.normals);
+      clear_buffer(shape.texcoords);
+      clear_buffer(shape.colors);
+      clear_buffer(shape.triangles);
+    }
   }
   clear_buffer(cameras);
   clear_buffer(textures);
@@ -243,6 +252,7 @@ cubvh_data::~cubvh_data() {
 }
 
 cutrace_context::cutrace_context(cutrace_context&& other) {
+  std::swap(denoiser, other.denoiser);
   globals_buffer.swap(other.globals_buffer);
   raygen_records.swap(other.raygen_records);
   miss_records.swap(other.miss_records);
@@ -258,6 +268,7 @@ cutrace_context::cutrace_context(cutrace_context&& other) {
   std::swap(cuda_context, other.cuda_context);
 }
 cutrace_context& cutrace_context::operator=(cutrace_context&& other) {
+  std::swap(denoiser, other.denoiser);
   globals_buffer.swap(other.globals_buffer);
   raygen_records.swap(other.raygen_records);
   miss_records.swap(other.miss_records);
@@ -274,7 +285,65 @@ cutrace_context& cutrace_context::operator=(cutrace_context&& other) {
   return *this;
 }
 
+cutrace_state::cutrace_state(cutrace_state&& other) {
+  std::swap(width, other.width);
+  std::swap(height, other.height);
+  std::swap(samples, other.samples);
+  image.swap(other.image);
+  albedo.swap(other.albedo);
+  normal.swap(other.normal);
+  hits.swap(other.hits);
+  rngs.swap(other.rngs);
+  denoised.swap(other.denoised);
+  denoiser_state.swap(other.denoiser_state);
+  denoiser_scratch.swap(other.denoiser_scratch);
+}
+cutrace_state& cutrace_state::operator=(cutrace_state&& other) {
+  std::swap(width, other.width);
+  std::swap(height, other.height);
+  std::swap(samples, other.samples);
+  image.swap(other.image);
+  albedo.swap(other.albedo);
+  normal.swap(other.normal);
+  hits.swap(other.hits);
+  rngs.swap(other.rngs);
+  denoised.swap(other.denoised);
+  denoiser_state.swap(other.denoiser_state);
+  denoiser_scratch.swap(other.denoiser_scratch);
+  return *this;
+}
+cutrace_state::~cutrace_state() {
+  clear_buffer(image);
+  clear_buffer(albedo);
+  clear_buffer(normal);
+  clear_buffer(hits);
+  clear_buffer(rngs);
+  clear_buffer(denoised);
+  clear_buffer(denoiser_state);
+  clear_buffer(denoiser_scratch);
+}
+
+cutrace_lights::cutrace_lights(cutrace_lights&& other) {
+  lights.swap(other.lights);
+}
+cutrace_lights& cutrace_lights::operator=(cutrace_lights&& other) {
+  lights.swap(other.lights);
+  return *this;
+}
+cutrace_lights::~cutrace_lights() {
+  if (!lights.empty()) {
+    auto lights_ = download_buffer_vector(lights);
+    for (auto& light : lights_) {
+      clear_buffer(light.elements_cdf);
+    }
+  }
+  clear_buffer(lights);
+}
+
 cutrace_context::~cutrace_context() {
+  // denoiser
+  optixDenoiserDestroy(denoiser);
+
   // global buffer
   clear_buffer(globals_buffer);
 
@@ -298,6 +367,11 @@ cutrace_context::~cutrace_context() {
   cuCtxDestroy(cuda_context);
 }
 
+static void optix_log_callback(
+    unsigned int level, const char* tag, const char* message, void* cbdata) {
+  printf("[%s] %s\n", tag, message);
+}
+
 // init cuda and optix context
 cutrace_context make_cutrace_context(const cutrace_params& params) {
   // context
@@ -314,10 +388,16 @@ cutrace_context make_cutrace_context(const cutrace_params& params) {
   // init cuda device
   check_result(cuStreamCreate(&context.cuda_stream, CU_STREAM_DEFAULT));
 
-  // init optix device
+  // init optix device --- disable logging
+  auto enable_logging          = false;
+  auto ooptions                = OptixDeviceContextOptions{};
+  ooptions.logCallbackFunction = optix_log_callback;
+  ooptions.logCallbackData     = nullptr;
+  ooptions.logCallbackLevel    = 4;
+  ooptions.validationMode      = OPTIX_DEVICE_CONTEXT_VALIDATION_MODE_ALL;
   check_result(cuCtxGetCurrent(&context.cuda_context));
-  check_result(optixDeviceContextCreate(
-      context.cuda_context, 0, &context.optix_context));
+  check_result(optixDeviceContextCreate(context.cuda_context,
+      enable_logging ? &ooptions : nullptr, &context.optix_context));
 
   // options
   auto module_options             = OptixModuleCompileOptions{};
@@ -389,13 +469,13 @@ cutrace_context make_cutrace_context(const cutrace_params& params) {
   auto raygen_record = cutrace_stbrecord{};
   check_result(
       optixSbtRecordPackHeader(context.raygen_program, &raygen_record));
-  context.raygen_records             = make_buffer(raygen_record);
+  context.raygen_records = make_buffer(context.cuda_stream, raygen_record);
   context.binding_table.raygenRecord = context.raygen_records.device_ptr();
 
   // stb miss
   auto miss_record = cutrace_stbrecord{};
   check_result(optixSbtRecordPackHeader(context.miss_program, &miss_record));
-  context.miss_records                 = make_buffer(miss_record);
+  context.miss_records = make_buffer(context.cuda_stream, miss_record);
   context.binding_table.missRecordBase = context.miss_records.device_ptr();
   context.binding_table.missRecordStrideInBytes = sizeof(cutrace_stbrecord);
   context.binding_table.missRecordCount         = 1;
@@ -404,14 +484,28 @@ cutrace_context make_cutrace_context(const cutrace_params& params) {
   auto hitgroup_record = cutrace_stbrecord{};
   check_result(
       optixSbtRecordPackHeader(context.hitgroup_program, &hitgroup_record));
-  context.hitgroup_records = make_buffer(hitgroup_record);
+  context.hitgroup_records = make_buffer(context.cuda_stream, hitgroup_record);
   context.binding_table.hitgroupRecordBase =
       context.hitgroup_records.device_ptr();
   context.binding_table.hitgroupRecordStrideInBytes = sizeof(cutrace_stbrecord);
   context.binding_table.hitgroupRecordCount         = 1;
 
   // globals
-  context.globals_buffer = make_buffer(cutrace_globals{});
+  context.globals_buffer = make_buffer(context.cuda_stream, cutrace_globals{});
+
+  // denoiser
+  auto doptions        = OptixDenoiserOptions{};
+  doptions.guideAlbedo = (uint) true;
+  doptions.guideNormal = (uint) true;
+  check_result(optixDenoiserCreate(context.optix_context,
+      OPTIX_DENOISER_MODEL_KIND_HDR, &doptions, &context.denoiser));
+
+  auto denoiser_sizes = OptixDenoiserSizes{};
+  check_result(optixDenoiserComputeMemoryResources(
+      context.denoiser, 1280, 1280, &denoiser_sizes));
+
+  // sync gpu
+  sync_gpu(context.cuda_stream);
 
   return context;
 }
@@ -422,18 +516,18 @@ void trace_start(cutrace_context& context, cutrace_state& state,
     const cutrace_lights& lights, const scene_data& scene,
     const cutrace_params& params) {
   auto globals = cutrace_globals{};
-  update_buffer_value(
-      context.globals_buffer, offsetof(cutrace_globals, state), state);
-  update_buffer_value(
-      context.globals_buffer, offsetof(cutrace_globals, scene), cuscene);
-  update_buffer_value(context.globals_buffer, offsetof(cutrace_globals, bvh),
-      bvh.instances_bvh.handle);
-  update_buffer_value(
-      context.globals_buffer, offsetof(cutrace_globals, lights), lights);
-  update_buffer_value(
-      context.globals_buffer, offsetof(cutrace_globals, params), params);
-  // sync so we can get the frame
-  check_cusync();
+  update_buffer_value(context.cuda_stream, context.globals_buffer,
+      offsetof(cutrace_globals, state), state);
+  update_buffer_value(context.cuda_stream, context.globals_buffer,
+      offsetof(cutrace_globals, scene), cuscene);
+  update_buffer_value(context.cuda_stream, context.globals_buffer,
+      offsetof(cutrace_globals, bvh), bvh.instances_bvh.handle);
+  update_buffer_value(context.cuda_stream, context.globals_buffer,
+      offsetof(cutrace_globals, lights), lights);
+  update_buffer_value(context.cuda_stream, context.globals_buffer,
+      offsetof(cutrace_globals, params), params);
+  // sync to avoid errors
+  sync_gpu(context.cuda_stream);
 }
 
 // render a batch of samples
@@ -443,7 +537,7 @@ void trace_samples(cutrace_context& context, cutrace_state& state,
     const cutrace_params& params) {
   if (state.samples >= params.samples) return;
   auto nsamples = params.batch;
-  update_buffer_value(context.globals_buffer,
+  update_buffer_value(context.cuda_stream, context.globals_buffer,
       offsetof(cutrace_globals, state) + offsetof(cutrace_state, samples),
       state.samples);
   check_result(optixLaunch(context.optix_pipeline, context.cuda_stream,
@@ -451,13 +545,16 @@ void trace_samples(cutrace_context& context, cutrace_state& state,
       context.globals_buffer.size_in_bytes(), &context.binding_table,
       state.width, state.height, 1));
   state.samples += nsamples;
-  // sync so we can get the frame
-  check_cusync();
+  if (params.denoise) {
+    denoise_image(context, state);
+  }
+  // sync so we can get the image
+  sync_gpu(context.cuda_stream);
 }
 
-cusceneext_data make_cutrace_scene(
+cuscene_data make_cutrace_scene(cutrace_context& context,
     const scene_data& scene, const cutrace_params& params) {
-  auto cuscene = cusceneext_data{};
+  auto cuscene = cuscene_data{};
 
   auto cucameras = vector<cucamera_data>{};
   for (auto& camera : scene.cameras) {
@@ -470,23 +567,27 @@ cusceneext_data make_cutrace_scene(
     cucamera.focus        = camera.focus;
     cucamera.orthographic = camera.orthographic;
   }
-  cuscene.cameras = make_buffer(cucameras);
+  cuscene.cameras = make_buffer(context.cuda_stream, cucameras);
 
   // shapes
+  auto cushapes = vector<cushape_data>{};
   for (auto& shape : scene.shapes) {
-    auto& cushape     = cuscene.cushapes.emplace_back();
-    cushape.positions = make_buffer(shape.positions);
-    cushape.triangles = make_buffer(shape.triangles);
-    if (!shape.normals.empty()) cushape.normals = make_buffer(shape.normals);
+    auto& cushape     = cushapes.emplace_back();
+    cushape.positions = make_buffer(context.cuda_stream, shape.positions);
+    cushape.triangles = make_buffer(context.cuda_stream, shape.triangles);
+    if (!shape.normals.empty())
+      cushape.normals = make_buffer(context.cuda_stream, shape.normals);
     if (!shape.texcoords.empty())
-      cushape.texcoords = make_buffer(shape.texcoords);
-    if (!shape.colors.empty()) cushape.colors = make_buffer(shape.colors);
+      cushape.texcoords = make_buffer(context.cuda_stream, shape.texcoords);
+    if (!shape.colors.empty())
+      cushape.colors = make_buffer(context.cuda_stream, shape.colors);
   }
-  cuscene.shapes = make_buffer(cuscene.cushapes);
+  cuscene.shapes = make_buffer(context.cuda_stream, cushapes);
 
   // textures
+  auto cutextures = vector<cutexture_data>{};
   for (auto& texture : scene.textures) {
-    auto& cutexture  = cuscene.cutextures.emplace_back();
+    auto& cutexture  = cutextures.emplace_back();
     cutexture.width  = texture.width;
     cutexture.height = texture.height;
     cutexture.linear = texture.linear;
@@ -542,7 +643,7 @@ cusceneext_data make_cutrace_scene(
     check_result(cuTexObjectCreate(&cutexture.texture, &resource_descriptor,
         &texture_descriptor, nullptr));
   }
-  cuscene.textures = make_buffer(cuscene.cutextures);
+  cuscene.textures = make_buffer(context.cuda_stream, cutextures);
 
   auto materials = vector<cumaterial_data>{};
   for (auto& material : scene.materials) {
@@ -563,7 +664,7 @@ cusceneext_data make_cutrace_scene(
     cumaterial.scattering_tex = material.scattering_tex;
     cumaterial.normal_tex     = material.normal_tex;
   }
-  cuscene.materials = make_buffer(materials);
+  cuscene.materials = make_buffer(context.cuda_stream, materials);
 
   auto instances = vector<cuinstance_data>{};
   for (auto& instance : scene.instances) {
@@ -572,7 +673,7 @@ cusceneext_data make_cutrace_scene(
     cuinstance.shape    = instance.shape;
     cuinstance.material = instance.material;
   }
-  cuscene.instances = make_buffer(instances);
+  cuscene.instances = make_buffer(context.cuda_stream, instances);
 
   auto environments = vector<cuenvironment_data>{};
   for (auto& environment : scene.environments) {
@@ -581,16 +682,16 @@ cusceneext_data make_cutrace_scene(
     cuenvironment.emission     = environment.emission;
     cuenvironment.emission_tex = environment.emission_tex;
   }
-  cuscene.environments = make_buffer(environments);
+  cuscene.environments = make_buffer(context.cuda_stream, environments);
 
   // sync gpu
-  check_cusync();
+  sync_gpu(context.cuda_stream);
 
   return cuscene;
 }
 
-void update_cutrace_cameras(cusceneext_data& cuscene, const scene_data& scene,
-    const cutrace_params& params) {
+void update_cutrace_cameras(cutrace_context& context, cuscene_data& cuscene,
+    const scene_data& scene, const cutrace_params& params) {
   auto cucameras = vector<cucamera_data>{};
   for (auto& camera : scene.cameras) {
     auto& cucamera        = cucameras.emplace_back();
@@ -602,18 +703,24 @@ void update_cutrace_cameras(cusceneext_data& cuscene, const scene_data& scene,
     cucamera.focus        = camera.focus;
     cucamera.orthographic = camera.orthographic;
   }
-  update_buffer(cuscene.cameras, cucameras);
+  update_buffer(context.cuda_stream, cuscene.cameras, cucameras);
+  sync_gpu(context.cuda_stream);
 }
 
-cubvh_data make_cutrace_bvh(cutrace_context& context, cusceneext_data& cuscene,
-    const scene_data& scene, const cutrace_params& params) {
+cubvh_data make_cutrace_bvh(cutrace_context& context, const cuscene_data& scene,
+    const cutrace_params& params) {
   auto bvh = cubvh_data{};
+
+  // download shapes and instances
+  // this is not efficient, but keeps the API very clean
+  // in the future, we might want to merge scene and bvh creation
+  auto shapes_data    = download_buffer_vector(scene.shapes);
+  auto instances_data = download_buffer_vector(scene.instances);
 
   // shapes
   bvh.shapes_bvhs.resize(scene.shapes.size());
   for (auto shape_id = (size_t)0; shape_id < scene.shapes.size(); shape_id++) {
-    auto& shape   = scene.shapes[shape_id];
-    auto& cushape = cuscene.cushapes[shape_id];
+    auto& shape = shapes_data[shape_id];
 
     // input
     auto built_input                       = OptixBuildInput{};
@@ -621,16 +728,16 @@ cubvh_data make_cutrace_bvh(cutrace_context& context, cusceneext_data& cuscene,
     built_input.triangleArray.vertexFormat = OPTIX_VERTEX_FORMAT_FLOAT3;
     built_input.triangleArray.vertexStrideInBytes = sizeof(vec3f);
     built_input.triangleArray.numVertices         = (int)shape.positions.size();
-    auto vertex_buffer                      = cushape.positions.device_ptr();
+    auto vertex_buffer                      = shape.positions.device_ptr();
     built_input.triangleArray.vertexBuffers = &vertex_buffer;
     built_input.triangleArray.indexFormat = OPTIX_INDICES_FORMAT_UNSIGNED_INT3;
     built_input.triangleArray.indexStrideInBytes = sizeof(vec3i);
     built_input.triangleArray.numIndexTriplets   = (int)shape.triangles.size();
-    auto index_buffer                       = cushape.triangles.device_ptr();
-    built_input.triangleArray.indexBuffer   = index_buffer;
-    auto input_flags                        = (unsigned int)0;
-    built_input.triangleArray.flags         = &input_flags;
-    built_input.triangleArray.numSbtRecords = 1;
+    auto index_buffer                            = shape.triangles.device_ptr();
+    built_input.triangleArray.indexBuffer        = index_buffer;
+    auto input_flags                             = (unsigned int)0;
+    built_input.triangleArray.flags              = &input_flags;
+    built_input.triangleArray.numSbtRecords      = 1;
     built_input.triangleArray.sbtIndexOffsetBuffer        = 0;
     built_input.triangleArray.sbtIndexOffsetSizeInBytes   = 0;
     built_input.triangleArray.sbtIndexOffsetStrideInBytes = 0;
@@ -646,31 +753,37 @@ cubvh_data make_cutrace_bvh(cutrace_context& context, cusceneext_data& cuscene,
     check_result(optixAccelComputeMemoryUsage(context.optix_context,
         &accelerator_options, &built_input, (int)1, &accelerator_sizes));
 
-    auto compacted_size_buffer = make_buffer(1, (uint64_t*)nullptr);
+    auto compacted_size_buffer = make_buffer(
+        context.cuda_stream, 1, (uint64_t*)nullptr);
     auto readback_descriptor   = OptixAccelEmitDesc{};
     readback_descriptor.type   = OPTIX_PROPERTY_TYPE_COMPACTED_SIZE;
     readback_descriptor.result = compacted_size_buffer.device_ptr();
 
     // build
     auto temporary_buffer = make_buffer(
-        accelerator_sizes.tempSizeInBytes, (byte*)nullptr);
-    auto bvh_buffer = make_buffer(
-        accelerator_sizes.outputSizeInBytes, (byte*)nullptr);
-    auto& sbvh = bvh.shapes_bvhs[shape_id];
+        context.cuda_stream, accelerator_sizes.tempSizeInBytes, (byte*)nullptr);
+    auto  bvh_buffer = make_buffer(context.cuda_stream,
+         accelerator_sizes.outputSizeInBytes, (byte*)nullptr);
+    auto& sbvh       = bvh.shapes_bvhs[shape_id];
     check_result(optixAccelBuild(context.optix_context,
         /* cuda_stream */ 0, &accelerator_options, &built_input, (int)1,
         temporary_buffer.device_ptr(), temporary_buffer.size_in_bytes(),
         bvh_buffer.device_ptr(), bvh_buffer.size_in_bytes(), &sbvh.handle,
         &readback_descriptor, 1));
-    check_cusync();
+
+    // sync
+    sync_gpu(context.cuda_stream);
 
     // compact
     auto compacted_size = download_buffer_value(compacted_size_buffer);
-    sbvh.buffer         = make_buffer(compacted_size, (byte*)nullptr);
+    sbvh.buffer         = make_buffer(
+                context.cuda_stream, compacted_size, (byte*)nullptr);
     check_result(optixAccelCompact(context.optix_context,
         /*cuda_stream:*/ 0, sbvh.handle, sbvh.buffer.device_ptr(),
         sbvh.buffer.size_in_bytes(), &sbvh.handle));
-    check_cusync();
+
+    // sync
+    sync_gpu(context.cuda_stream);
 
     // cleanup
     clear_buffer(bvh_buffer);
@@ -681,20 +794,20 @@ cubvh_data make_cutrace_bvh(cutrace_context& context, cusceneext_data& cuscene,
   // instances
   {
     // upload data
-    auto instances = vector<OptixInstance>(scene.instances.size());
+    auto opinstances = vector<OptixInstance>(scene.instances.size());
     for (auto instance_id = 0; instance_id < scene.instances.size();
          instance_id++) {
-      auto& instance   = scene.instances[instance_id];
-      auto& cuinstance = instances[instance_id];
+      auto& instance   = instances_data[instance_id];
+      auto& opinstance = opinstances[instance_id];
       auto  transform  = transpose(frame_to_mat(instance.frame));
-      memcpy(cuinstance.transform, &transform, sizeof(float) * 12);
-      cuinstance.sbtOffset         = 0;
-      cuinstance.instanceId        = instance_id;
-      cuinstance.traversableHandle = bvh.shapes_bvhs[instance.shape].handle;
-      cuinstance.flags             = OPTIX_INSTANCE_FLAG_NONE;
-      cuinstance.visibilityMask    = 0xff;
+      memcpy(opinstance.transform, &transform, sizeof(float) * 12);
+      opinstance.sbtOffset         = 0;
+      opinstance.instanceId        = instance_id;
+      opinstance.traversableHandle = bvh.shapes_bvhs[instance.shape].handle;
+      opinstance.flags             = OPTIX_INSTANCE_FLAG_NONE;
+      opinstance.visibilityMask    = 0xff;
     }
-    bvh.instances = make_buffer(instances);
+    bvh.instances = make_buffer(context.cuda_stream, opinstances);
 
     // config
     auto build_input                       = OptixBuildInput{};
@@ -712,15 +825,16 @@ cubvh_data make_cutrace_bvh(cutrace_context& context, cusceneext_data& cuscene,
     check_result(optixAccelComputeMemoryUsage(context.optix_context,
         &accelerator_options, &build_input, (int)1, &accelerator_sizes));
 
-    auto compacted_size_buffer = make_buffer(1, (uint64_t*)nullptr);
+    auto compacted_size_buffer = make_buffer(
+        context.cuda_stream, 1, (uint64_t*)nullptr);
     auto readback_descriptor   = OptixAccelEmitDesc{};
     readback_descriptor.type   = OPTIX_PROPERTY_TYPE_COMPACTED_SIZE;
     readback_descriptor.result = compacted_size_buffer.device_ptr();
 
     // build
     auto temporary_buffer = make_buffer(
-        accelerator_sizes.tempSizeInBytes, (byte*)nullptr);
-    auto bvh_buffer = make_buffer(
+        context.cuda_stream, accelerator_sizes.tempSizeInBytes, (byte*)nullptr);
+    auto bvh_buffer = make_buffer(context.cuda_stream,
         accelerator_sizes.outputSizeInBytes, (byte*)nullptr);
 
     auto& ibvh = bvh.instances_bvh;
@@ -729,16 +843,20 @@ cubvh_data make_cutrace_bvh(cutrace_context& context, cusceneext_data& cuscene,
         temporary_buffer.device_ptr(), temporary_buffer.size_in_bytes(),
         bvh_buffer.device_ptr(), bvh_buffer.size_in_bytes(), &ibvh.handle,
         &readback_descriptor, 1));
-    check_cusync();
+
+    // sync gpu
+    sync_gpu(context.cuda_stream);
 
     // compact
     auto compacted_size = download_buffer_value(compacted_size_buffer);
-
-    ibvh.buffer = make_buffer(compacted_size, (byte*)nullptr);
+    ibvh.buffer         = make_buffer(
+                context.cuda_stream, compacted_size, (byte*)nullptr);
     check_result(optixAccelCompact(context.optix_context,
         /*cuda_stream:*/ 0, ibvh.handle, ibvh.buffer.device_ptr(),
         ibvh.buffer.size_in_bytes(), &ibvh.handle));
-    check_cusync();
+
+    // sync gpu
+    sync_gpu(context.cuda_stream);
 
     // cleanup
     clear_buffer(bvh_buffer);
@@ -747,14 +865,14 @@ cubvh_data make_cutrace_bvh(cutrace_context& context, cusceneext_data& cuscene,
   }
 
   // sync gpu
-  check_cusync();
+  sync_gpu(context.cuda_stream);
 
   // done
   return bvh;
 }
 
 // Initialize state.
-cutrace_state make_cutrace_state(
+cutrace_state make_cutrace_state(cutrace_context& context,
     const scene_data& scene, const cutrace_params& params) {
   auto& camera = scene.cameras[params.camera];
   auto  state  = cutrace_state{};
@@ -766,17 +884,33 @@ cutrace_state make_cutrace_state(
     state.width  = (int)round(params.resolution * camera.aspect);
   }
   state.samples = 0;
-  state.image   = make_buffer(state.width * state.height, (vec4f*)nullptr);
-  state.albedo  = make_buffer(state.width * state.height, (vec3f*)nullptr);
-  state.normal  = make_buffer(state.width * state.height, (vec3f*)nullptr);
-  state.hits    = make_buffer(state.width * state.height, (int*)nullptr);
-  state.rngs    = make_buffer(state.width * state.height, (rng_state*)nullptr);
-  state.display = make_buffer(state.width * state.height, (vec4f*)nullptr);
+  state.image   = make_buffer(
+        context.cuda_stream, state.width * state.height, (vec4f*)nullptr);
+  state.albedo = make_buffer(
+      context.cuda_stream, state.width * state.height, (vec3f*)nullptr);
+  state.normal = make_buffer(
+      context.cuda_stream, state.width * state.height, (vec3f*)nullptr);
+  state.hits = make_buffer(
+      context.cuda_stream, state.width * state.height, (int*)nullptr);
+  state.rngs = make_buffer(
+      context.cuda_stream, state.width * state.height, (rng_state*)nullptr);
+  if (params.denoise) {
+    auto denoiser_sizes = OptixDenoiserSizes{};
+    check_result(optixDenoiserComputeMemoryResources(
+        context.denoiser, state.width, state.height, &denoiser_sizes));
+    state.denoised = make_buffer(
+        context.cuda_stream, state.width * state.height, (vec4f*)nullptr);
+    state.denoiser_state = make_buffer(
+        context.cuda_stream, denoiser_sizes.stateSizeInBytes, (byte*)nullptr);
+    state.denoiser_scratch = make_buffer(context.cuda_stream,
+        denoiser_sizes.withoutOverlapScratchSizeInBytes, (byte*)nullptr);
+  }
+  sync_gpu(context.cuda_stream);
   return state;
 };
 
-void reset_cutrace_state(cutrace_state& state, const scene_data& scene,
-    const cutrace_params& params) {
+void reset_cutrace_state(cutrace_context& context, cutrace_state& state,
+    const scene_data& scene, const cutrace_params& params) {
   auto& camera = scene.cameras[params.camera];
   if (camera.aspect >= 1) {
     state.width  = params.resolution;
@@ -786,16 +920,36 @@ void reset_cutrace_state(cutrace_state& state, const scene_data& scene,
     state.width  = (int)round(params.resolution * camera.aspect);
   }
   state.samples = 0;
-  resize_buffer(state.image, state.width * state.height, (vec4f*)nullptr);
-  resize_buffer(state.albedo, state.width * state.height, (vec3f*)nullptr);
-  resize_buffer(state.normal, state.width * state.height, (vec3f*)nullptr);
-  resize_buffer(state.hits, state.width * state.height, (int*)nullptr);
-  resize_buffer(state.rngs, state.width * state.height, (rng_state*)nullptr);
-  resize_buffer(state.display, state.width * state.height, (vec4f*)nullptr);
+  resize_buffer(context.cuda_stream, state.image, state.width * state.height,
+      (vec4f*)nullptr);
+  resize_buffer(context.cuda_stream, state.albedo, state.width * state.height,
+      (vec3f*)nullptr);
+  resize_buffer(context.cuda_stream, state.normal, state.width * state.height,
+      (vec3f*)nullptr);
+  resize_buffer(context.cuda_stream, state.hits, state.width * state.height,
+      (int*)nullptr);
+  resize_buffer(context.cuda_stream, state.rngs, state.width * state.height,
+      (rng_state*)nullptr);
+  if (params.denoise) {
+    auto denoiser_sizes = OptixDenoiserSizes{};
+    check_result(optixDenoiserComputeMemoryResources(
+        context.denoiser, state.width, state.height, &denoiser_sizes));
+    resize_buffer(context.cuda_stream, state.denoised,
+        state.width * state.height, (vec4f*)nullptr);
+    resize_buffer(context.cuda_stream, state.denoiser_state,
+        denoiser_sizes.stateSizeInBytes, (byte*)nullptr);
+    resize_buffer(context.cuda_stream, state.denoiser_scratch,
+        denoiser_sizes.withoutOverlapScratchSizeInBytes, (byte*)nullptr);
+  } else {
+    clear_buffer(state.denoised);
+    clear_buffer(state.denoiser_state);
+    clear_buffer(state.denoiser_scratch);
+  }
+  sync_gpu(context.cuda_stream);
 }
 
 // Init trace lights
-cutrace_lights make_cutrace_lights(
+cutrace_lights make_cutrace_lights(cutrace_context& context,
     const scene_data& scene, const cutrace_params& params) {
   auto lights    = make_trace_lights(scene, (const trace_params&)params);
   auto culights_ = vector<cutrace_light>{};
@@ -803,10 +957,11 @@ cutrace_lights make_cutrace_lights(
     auto& culight        = culights_.emplace_back();
     culight.instance     = light.instance;
     culight.environment  = light.environment;
-    culight.elements_cdf = make_buffer(light.elements_cdf);
+    culight.elements_cdf = make_buffer(context.cuda_stream, light.elements_cdf);
   }
   auto culights   = cutrace_lights{};
-  culights.lights = make_buffer(culights_);
+  culights.lights = make_buffer(context.cuda_stream, culights_);
+  sync_gpu(context.cuda_stream);
   return culights;
 }
 
@@ -815,10 +970,10 @@ image_data cutrace_image(
     const scene_data& scene, const cutrace_params& params) {
   // initialization
   auto context = make_cutrace_context(params);
-  auto cuscene = make_cutrace_scene(scene, params);
-  auto bvh     = make_cutrace_bvh(context, cuscene, scene, params);
-  auto state   = make_cutrace_state(scene, params);
-  auto lights  = make_cutrace_lights(scene, params);
+  auto cuscene = make_cutrace_scene(context, scene, params);
+  auto bvh     = make_cutrace_bvh(context, cuscene, params);
+  auto state   = make_cutrace_state(context, scene, params);
+  auto lights  = make_cutrace_lights(context, scene, params);
 
   // rendering
   trace_start(context, state, cuscene, bvh, lights, scene, params);
@@ -827,7 +982,21 @@ image_data cutrace_image(
   }
 
   // copy back image and return
-  return get_rendered_image(state);
+  return get_image(state);
+}
+
+// Get resulting render
+image_data get_image(const cutrace_state& state) {
+  auto image = make_image(state.width, state.height, true);
+  get_image(image, state);
+  return image;
+}
+void get_image(image_data& image, const cutrace_state& state) {
+  if (state.denoised.empty()) {
+    download_buffer(state.image, image.pixels);
+  } else {
+    download_buffer(state.denoised, image.pixels);
+  }
 }
 
 // Get resulting render
@@ -856,12 +1025,8 @@ void get_denoised_image(image_data& image, const cutrace_state& state) {
   get_rendered_image(image, state);
 
   // get albedo and normal
-  auto albedo = vector<vec3f>(image.pixels.size()),
-       normal = vector<vec3f>(image.pixels.size());
-  for (auto idx = 0; idx < state.width * state.height; idx++) {
-    albedo[idx] = state.albedo[idx];
-    normal[idx] = state.normal[idx];
-  }
+  auto albedo = download_buffer_vector(state.albedo);
+  auto normal = download_buffer_vector(state.normal);
 
   // Create a denoising filter
   oidn::FilterRef filter = device.newFilter("RT");  // ray tracing filter
@@ -910,6 +1075,41 @@ void get_normal_image(image_data& image, const cutrace_state& state) {
   }
 }
 
+// denoise image
+void denoise_image(cutrace_context& context, cutrace_state& state) {
+  // denoiser setup
+  check_result(optixDenoiserSetup(context.denoiser, context.cuda_stream,
+      state.width, state.height, state.denoiser_state.device_ptr(),
+      state.denoiser_state.size_in_bytes(), state.denoiser_scratch.device_ptr(),
+      state.denoiser_scratch.size_in_bytes()));
+
+  // params
+  auto dparams = OptixDenoiserParams{};
+
+  // layers
+  auto guides   = OptixDenoiserGuideLayer{};
+  guides.albedo = OptixImage2D{state.albedo.device_ptr(), (uint)state.width,
+      (uint)state.height, (uint)state.width * sizeof(vec3f), sizeof(vec3f),
+      OPTIX_PIXEL_FORMAT_FLOAT3};
+  guides.normal = OptixImage2D{state.normal.device_ptr(), (uint)state.width,
+      (uint)state.height, (uint)state.width * sizeof(vec3f), sizeof(vec3f),
+      OPTIX_PIXEL_FORMAT_FLOAT3};
+  auto layers   = OptixDenoiserLayer{};
+  layers.input  = OptixImage2D{state.image.device_ptr(), (uint)state.width,
+      (uint)state.height, (uint)state.width * sizeof(vec4f), sizeof(vec4f),
+      OPTIX_PIXEL_FORMAT_FLOAT4};
+  layers.output = OptixImage2D{state.denoised.device_ptr(), (uint)state.width,
+      (uint)state.height, (uint)state.width * sizeof(vec4f), sizeof(vec4f),
+      OPTIX_PIXEL_FORMAT_FLOAT4};
+
+  // denoiser execution
+  check_result(optixDenoiserInvoke(context.denoiser, context.cuda_stream,
+      &dparams, state.denoiser_state.device_ptr(),
+      state.denoiser_state.size_in_bytes(), &guides, &layers, 1, 0, 0,
+      state.denoiser_scratch.device_ptr(),
+      state.denoiser_scratch.size_in_bytes()));
+}
+
 bool is_display(const cutrace_context& context) {
   auto device = 0, is_display = 0;
   // check_result(cuDevice(&current_device));
@@ -927,14 +1127,19 @@ bool is_display(const cutrace_context& context) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable : 4722)
+#endif
+
 static void exit_nocuda() { throw std::runtime_error{"Cuda not linked"}; }
 
-cusceneext_data::cusceneext_data(cusceneext_data&& other) { exit_nocuda(); }
-cusceneext_data& cusceneext_data::operator=(cusceneext_data&& other) {
+cuscene_data::cuscene_data(cuscene_data&& other) { exit_nocuda(); }
+cuscene_data& cuscene_data::operator=(cuscene_data&& other) {
   exit_nocuda();
   return *this;
 }
-cusceneext_data::~cusceneext_data() { exit_nocuda(); };
+cuscene_data::~cuscene_data() { exit_nocuda(); };
 
 cubvh_data::cubvh_data(cubvh_data&& other) { exit_nocuda(); }
 cubvh_data& cubvh_data::operator=(cubvh_data&& other) {
@@ -950,6 +1155,13 @@ cutrace_context& cutrace_context::operator=(cutrace_context&& other) {
 }
 cutrace_context::~cutrace_context() { exit_nocuda(); }
 
+cutrace_state::~cutrace_state() { exit_nocuda(); }
+cutrace_lights::~cutrace_lights() { exit_nocuda(); }
+
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
+
 image_data cutrace_image(
     const scene_data& scene, const cutrace_params& params) {
   exit_nocuda();
@@ -963,38 +1175,38 @@ cutrace_context make_cutrace_context(const cutrace_params& params) {
 }
 
 // Upload the scene to the GPU.
-cusceneext_data make_cutrace_scene(
+cuscene_data make_cutrace_scene(cutrace_context& context,
     const scene_data& scene, const cutrace_params& params) {
   exit_nocuda();
   return {};
 }
 
 // Update cameras
-void update_cutrace_cameras(cusceneext_data& cuscene, const scene_data& scene,
-    const cutrace_params& params) {
+void update_cutrace_cameras(cutrace_context& context, cuscene_data& cuscene,
+    const scene_data& scene, const cutrace_params& params) {
   exit_nocuda();
 }
 
 // Build the bvh acceleration structure.
-cubvh_data make_cutrace_bvh(cutrace_context& context, cusceneext_data& cuscene,
-    const scene_data& scene, const cutrace_params& params) {
+cubvh_data make_cutrace_bvh(cutrace_context& context,
+    const cuscene_data& cuscene, const cutrace_params& params) {
   exit_nocuda();
   return {};
 }
 
 // Initialize state.
-cutrace_state make_cutrace_state(
+cutrace_state make_cutrace_state(cutrace_context& context,
     const scene_data& scene, const cutrace_params& params) {
   exit_nocuda();
   return {};
 }
-void reset_cutrace_state(cutrace_state& state, const scene_data& scene,
-    const cutrace_params& params) {
+void reset_cutrace_state(cutrace_context& context, cutrace_state& state,
+    const scene_data& scene, const cutrace_params& params) {
   exit_nocuda();
 }
 
 // Initialize lights.
-cutrace_lights make_cutrace_lights(
+cutrace_lights make_cutrace_lights(cutrace_context& context,
     const scene_data& scene, const cutrace_params& params) {
   exit_nocuda();
   return {};
@@ -1015,6 +1227,13 @@ void trace_samples(cutrace_context& context, cutrace_state& state,
     const cutrace_params& params) {
   exit_nocuda();
 }
+
+// Get render
+image_data get_image(const cutrace_state& state) {
+  exit_nocuda();
+  return {};
+}
+void get_image(image_data& image, const cutrace_state& state) { exit_nocuda(); }
 
 // Get resulting render
 image_data get_rendered_image(const cutrace_state& state) {

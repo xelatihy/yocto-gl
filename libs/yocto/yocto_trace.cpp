@@ -1437,6 +1437,9 @@ trace_state make_trace_state(
   for (auto& rng : state.rngs) {
     rng = make_rng(params.seed, rand1i(rng_, 1 << 31) / 2 + 1);
   }
+  if (params.denoise) {
+    state.denoised.assign(state.width * state.height, {0, 0, 0, 0});
+  }
   return state;
 }
 
@@ -1509,7 +1512,7 @@ image_data trace_image(const scene_data& scene, const trace_params& params) {
   for (auto sample = 0; sample < params.samples; sample++) {
     trace_samples(state, scene, bvh, lights, params);
   }
-  return get_rendered_image(state);
+  return get_image(state);
 }
 
 // Progressively compute an image by calling trace_samples multiple times.
@@ -1533,6 +1536,10 @@ void trace_samples(trace_state& state, const scene_data& scene,
     });
   }
   state.samples += params.batch;
+  if (params.denoise && !state.denoised.empty()) {
+    denoise_image(state.denoised, state.width, state.height, state.image,
+        state.albedo, state.normal);
+  }
 }
 
 // Check image type
@@ -1543,6 +1550,28 @@ static void check_image(
   if (image.linear != linear)
     throw std::invalid_argument{
         linear ? "expected linear image" : "expected srgb image"};
+}
+template <typename T>
+static void check_image(const vector<T>& image, int width, int height) {
+  if (image.size() != (size_t)width * (size_t)height)
+    throw std::invalid_argument{"image should have the same size"};
+}
+
+// Get resulting render, denoised if requested
+image_data get_image(const trace_state& state) {
+  auto image = make_image(state.width, state.height, true);
+  get_image(image, state);
+  return image;
+}
+void get_image(image_data& image, const trace_state& state) {
+  image.width  = state.width;
+  image.height = state.height;
+  image.linear = true;
+  if (state.denoised.empty()) {
+    image.pixels = state.image;
+  } else {
+    image.pixels = state.denoised;
+  }
 }
 
 // Get resulting render
@@ -1629,13 +1658,13 @@ void get_normal_image(image_data& normal, const trace_state& state) {
 }
 
 // Denoise image
-image_data denoise_rendered_image(const image_data& render,
-    const image_data& albedo, const image_data& normal) {
+image_data denoise_image(const image_data& render, const image_data& albedo,
+    const image_data& normal) {
   auto denoised = make_image(render.width, render.height, render.linear);
-  denoise_rendered_image(denoised, render, albedo, normal);
+  denoise_image(denoised, render, albedo, normal);
   return denoised;
 }
-void denoise_rendered_image(image_data& denoised, const image_data& render,
+void denoise_image(image_data& denoised, const image_data& render,
     const image_data& albedo, const image_data& normal) {
   check_image(denoised, render.width, render.height, render.linear);
   check_image(albedo, render.width, render.height, albedo.linear);
@@ -1662,6 +1691,42 @@ void denoise_rendered_image(image_data& denoised, const image_data& render,
   filter.setImage("output", denoised.pixels.data(), oidn::Format::Float3,
       denoised.width, denoised.height, 0, sizeof(vec4f),
       sizeof(vec4f) * denoised.width);
+  filter.set("inputScale", 1.0f);  // set scale as fixed
+  filter.set("hdr", true);         // image is HDR
+  filter.commit();
+
+  // Filter the image
+  filter.execute();
+#else
+  denoised = render;
+#endif
+}
+
+void denoise_image(vector<vec4f>& denoised, int width, int height,
+    const vector<vec4f>& render, const vector<vec3f>& albedo,
+    const vector<vec3f>& normal) {
+  check_image(denoised, width, height);
+  check_image(render, width, height);
+  check_image(albedo, width, height);
+  check_image(normal, width, height);
+#if YOCTO_DENOISE
+  // Create an Intel Open Image Denoise device
+  oidn::DeviceRef device = oidn::newDevice();
+  device.commit();
+
+  // set image
+  denoised = render;
+
+  // Create a denoising filter
+  oidn::FilterRef filter = device.newFilter("RT");  // ray tracing filter
+  filter.setImage("color", (void*)render.data(), oidn::Format::Float3, width,
+      height, 0, sizeof(vec4f), sizeof(vec4f) * width);
+  filter.setImage("albedo", (void*)albedo.data(), oidn::Format::Float3, width,
+      height, 0, sizeof(vec3f), sizeof(vec3f) * width);
+  filter.setImage("normal", (void*)normal.data(), oidn::Format::Float3, width,
+      height, 0, sizeof(vec3f), sizeof(vec3f) * width);
+  filter.setImage("output", denoised.data(), oidn::Format::Float3, width,
+      height, 0, sizeof(vec4f), sizeof(vec4f) * width);
   filter.set("inputScale", 1.0f);  // set scale as fixed
   filter.set("hdr", true);         // image is HDR
   filter.commit();
