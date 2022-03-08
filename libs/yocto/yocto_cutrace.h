@@ -197,6 +197,7 @@ using OptixModule             = void*;
 using OptixShaderBindingTable = void*;
 using CUarray                 = void*;
 using CUtexObject             = void*;
+using OptixDenoiser           = void*;
 
 #endif
 

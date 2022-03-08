@@ -1128,6 +1128,11 @@ bool is_display(const cutrace_context& context) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable : 4722)
+#endif
+
 static void exit_nocuda() { throw std::runtime_error{"Cuda not linked"}; }
 
 cuscene_data::cuscene_data(cuscene_data&& other) { exit_nocuda(); }
@@ -1150,6 +1155,13 @@ cutrace_context& cutrace_context::operator=(cutrace_context&& other) {
   return *this;
 }
 cutrace_context::~cutrace_context() { exit_nocuda(); }
+
+cutrace_state::~cutrace_state() { exit_nocuda(); }
+cutrace_lights::~cutrace_lights() { exit_nocuda(); }
+
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 
 image_data cutrace_image(
     const scene_data& scene, const cutrace_params& params) {
@@ -1177,8 +1189,8 @@ void update_cutrace_cameras(cutrace_context& context, cuscene_data& cuscene,
 }
 
 // Build the bvh acceleration structure.
-cubvh_data make_cutrace_bvh(cutrace_context& context, cuscene_data& cuscene,
-    const scene_data& scene, const cutrace_params& params) {
+cubvh_data make_cutrace_bvh(cutrace_context& context,
+    const cuscene_data& cuscene, const cutrace_params& params) {
   exit_nocuda();
   return {};
 }
