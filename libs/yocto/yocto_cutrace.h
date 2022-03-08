@@ -130,15 +130,11 @@ void trace_samples(cutrace_context& context, cutrace_state& state,
 image_data get_image(const cutrace_state& state);
 void       get_image(image_data& image, const cutrace_state& state);
 
-// Get resulting render
+// Get internal images from state
 image_data get_rendered_image(const cutrace_state& state);
 void       get_rendered_image(image_data& image, const cutrace_state& state);
-
-// Get denoised result
 image_data get_denoised_image(const cutrace_state& state);
 void       get_denoised_image(image_data& image, const cutrace_state& state);
-
-// Get denoising buffers
 image_data get_albedo_image(const cutrace_state& state);
 void       get_albedo_image(image_data& image, const cutrace_state& state);
 image_data get_normal_image(const cutrace_state& state);

@@ -1658,13 +1658,13 @@ void get_normal_image(image_data& normal, const trace_state& state) {
 }
 
 // Denoise image
-image_data denoise_rendered_image(const image_data& render,
-    const image_data& albedo, const image_data& normal) {
+image_data denoise_image(const image_data& render, const image_data& albedo,
+    const image_data& normal) {
   auto denoised = make_image(render.width, render.height, render.linear);
-  denoise_rendered_image(denoised, render, albedo, normal);
+  denoise_image(denoised, render, albedo, normal);
   return denoised;
 }
-void denoise_rendered_image(image_data& denoised, const image_data& render,
+void denoise_image(image_data& denoised, const image_data& render,
     const image_data& albedo, const image_data& normal) {
   check_image(denoised, render.width, render.height, render.linear);
   check_image(albedo, render.width, render.height, albedo.linear);
