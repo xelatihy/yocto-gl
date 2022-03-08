@@ -519,11 +519,6 @@ struct frame<T, 3> {
 using frame2f = frame<float, 2>;
 using frame3f = frame<float, 3>;
 
-// Indentity frames.
-inline const auto identity2x3f = frame2f{{1, 0}, {0, 1}, {0, 0}};
-inline const auto identity3x4f = frame3f{
-    {1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}};
-
 // Frame properties
 template <typename T, int N>
 inline mat<T, N> rotation(const frame<T, N>& a);
@@ -2728,6 +2723,18 @@ namespace yocto {
 [[deprecated]] inline const auto zero3i = vec3i{0, 0, 0};
 [[deprecated]] inline const auto zero4i = vec4i{0, 0, 0, 0};
 [[deprecated]] inline const auto zero4b = vec4b{0, 0, 0, 0};
+
+// Indentity frames.
+inline const auto identity2x3f = frame2f{{1, 0}, {0, 1}, {0, 0}};
+inline const auto identity3x4f = frame3f{
+    {1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}};
+
+// Identity matrices constants.
+[[deprecated]] inline const auto identity2x2f = mat2f{{1, 0}, {0, 1}};
+[[deprecated]] inline const auto identity3x3f = mat3f{
+    {1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
+[[deprecated]] inline const auto identity4x4f = mat4f{
+    {1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
 
 }  // namespace yocto
 

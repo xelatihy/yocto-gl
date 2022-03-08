@@ -647,12 +647,6 @@ struct mat4f {
   const vec4f& operator[](int i) const;
 };
 
-// Identity matrices constants.
-inline const auto identity2x2f = mat2f{{1, 0}, {0, 1}};
-inline const auto identity3x3f = mat3f{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
-inline const auto identity4x4f = mat4f{
-    {1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
-
 // Matrix comparisons.
 inline bool operator==(const mat2f& a, const mat2f& b);
 inline bool operator!=(const mat2f& a, const mat2f& b);
@@ -753,11 +747,6 @@ struct frame3f {
   vec3f&       operator[](int i);
   const vec3f& operator[](int i) const;
 };
-
-// Indentity frames.
-inline const auto identity2x3f = frame2f{{1, 0}, {0, 1}, {0, 0}};
-inline const auto identity3x4f = frame3f{
-    {1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}};
 
 // Frame properties
 inline mat2f rotation(const frame2f& a);
@@ -2838,6 +2827,18 @@ namespace yocto {
 [[deprecated]] inline const auto zero3i = vec3i{0, 0, 0};
 [[deprecated]] inline const auto zero4i = vec4i{0, 0, 0, 0};
 [[deprecated]] inline const auto zero4b = vec4b{0, 0, 0, 0};
+
+// Indentity frames.
+[[deprecated]] inline const auto identity2x3f = frame2f{{1, 0}, {0, 1}, {0, 0}};
+[[deprecated]] inline const auto identity3x4f = frame3f{
+    {1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}};
+
+// Identity matrices constants.
+[[deprecated]] inline const auto identity2x2f = mat2f{{1, 0}, {0, 1}};
+[[deprecated]] inline const auto identity3x3f = mat3f{
+    {1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
+[[deprecated]] inline const auto identity4x4f = mat4f{
+    {1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
 
 }  // namespace yocto
 

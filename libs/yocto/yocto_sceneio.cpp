@@ -2169,7 +2169,8 @@ scene_data make_test(const test_params& params) {
   // switch (params.environments) {
   //   case test_environments_type::none: break;
   //   case test_environments_type::sky: {
-  //     add_environment(scene, "sky", identity3x4f, {0.5, 0.5, 0.5},
+  //     add_environment(scene, "sky", {{1,0,0}, {0,1,0}, {0,0,1}, {0,0,0}},
+  //     {0.5, 0.5, 0.5},
   //         add_texture(scene, "sky",
   //             make_sunsky(
   //                 {2048, 1024}, pif / 4, 3.0, false, 1.0, 1.0, {0.7, 0.7,
@@ -2177,7 +2178,8 @@ scene_data make_test(const test_params& params) {
   //             true));
   //   } break;
   //   case test_environments_type::sunsky: {
-  //     add_environment(scene, "sunsky", identity3x4f, {0.5, 0.5, 0.5},
+  //     add_environment(scene, "sunsky", {{1,0,0}, {0,1,0}, {0,0,1}, {0,0,0}},
+  //     {0.5, 0.5, 0.5},
   //         add_texture(scene, "sky",
   //             make_sunsky(
   //                 {2048, 1024}, pif / 4, 3.0, true, 1.0, 1.0, {0.7, 0.7,
@@ -2215,7 +2217,7 @@ scene_data make_test(const test_params& params) {
   // switch (params.floor) {
   //   case test_floor_type::none: break;
   //   case test_floor_type::standard: {
-  //     add_instance(scene, "floor", identity3x4f,
+  //     add_instance(scene, "floor", {{1,0,0}, {0,1,0}, {0,0,1}, {0,0,0}},
   //         add_shape(scene, "floor", make_floor({1, 1}, {2, 2}, {20, 20})),
   //         add_matte_material(scene, "floor", {1, 1, 1},
   //             add_texture(scene, "floor", make_grid({1024, 1024}))));
@@ -2744,8 +2746,8 @@ bool add_environment(scene_data& scene, const string& filename, string& error) {
   auto texture = texture_data{};
   if (!load_texture(filename, texture, error)) return false;
   scene.textures.push_back(std::move(texture));
-  scene.environments.push_back(
-      {identity3x4f, {1, 1, 1}, (int)scene.textures.size() - 1});
+  scene.environments.push_back({{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}},
+      {1, 1, 1}, (int)scene.textures.size() - 1});
   return true;
 }
 
@@ -4242,7 +4244,8 @@ static bool load_ply_scene(
   auto shape = shape_data{};
   if (!load_shape(filename, shape, error, true)) return false;
   scene.shapes.push_back(shape);
-  scene.instances.push_back({identity3x4f, (int)scene.shapes.size() - 1, -1});
+  scene.instances.push_back({{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}},
+      (int)scene.shapes.size() - 1, -1});
 
   // fix scene
   add_missing_material(scene);
@@ -4272,7 +4275,8 @@ static bool load_stl_scene(
   // load ply mesh and make instance
   auto shape = shape_data{};
   if (!load_shape(filename, shape, error, true)) return false;
-  scene.instances.push_back({identity3x4f, (int)scene.shapes.size() - 1, -1});
+  scene.instances.push_back({{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}},
+      (int)scene.shapes.size() - 1, -1});
 
   // fix scene
   add_missing_material(scene);

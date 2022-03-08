@@ -358,7 +358,6 @@ static bool draw_scene_editor(scene_data& scene, scene_selection& selection,
     edited += draw_gui_slider("film", camera.film, 0.1f, 0.5f);
     edited += draw_gui_slider("focus", camera.focus, 0.001f, 100);
     edited += draw_gui_slider("aperture", camera.aperture, 0, 1);
-    //   frame3f frame        = identity3x4f;
     if (edited) {
       if (before_edit) before_edit();
       scene.cameras.at(selection.camera) = camera;
@@ -372,7 +371,6 @@ static bool draw_scene_editor(scene_data& scene, scene_selection& selection,
     edited += draw_gui_coloredithdr("emission", environment.emission);
     edited += draw_gui_combobox(
         "emission_tex", environment.emission_tex, scene.texture_names, true);
-    //   frame3f frame        = identity3x4f;
     if (edited) {
       if (before_edit) before_edit();
       scene.environments.at(selection.environment) = environment;
@@ -385,7 +383,6 @@ static bool draw_scene_editor(scene_data& scene, scene_selection& selection,
     edited += draw_gui_combobox("shape", instance.shape, scene.shape_names);
     edited += draw_gui_combobox(
         "material", instance.material, scene.material_names);
-    //   frame3f frame        = identity3x4f;
     if (edited) {
       if (before_edit) before_edit();
       scene.instances.at(selection.instance) = instance;
