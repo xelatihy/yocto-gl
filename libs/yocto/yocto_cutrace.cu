@@ -2256,7 +2256,6 @@ struct cutrace_params {
   bool                    filmic         = false;
   bool                    denoise        = false;
   int                     batch          = 1;
-  bool                    optixdenoise   = false;
 };
 
 using cutrace_bvh = OptixTraversableHandle;

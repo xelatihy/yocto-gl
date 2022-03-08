@@ -109,7 +109,6 @@ struct trace_params {
   bool                  filmic         = false;
   bool                  denoise        = false;
   int                   batch          = 1;
-  bool                  optixdenoise   = true;
 };
 
 // Progressively computes an image.

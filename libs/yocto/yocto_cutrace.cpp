@@ -546,7 +546,7 @@ void trace_samples(cutrace_context& context, cutrace_state& state,
       context.globals_buffer.size_in_bytes(), &context.binding_table,
       state.width, state.height, 1));
   state.samples += nsamples;
-  if (params.denoise && params.optixdenoise) {
+  if (params.denoise) {
     denoise_image(context, state);
   }
   // sync so we can get the image
@@ -895,7 +895,7 @@ cutrace_state make_cutrace_state(cutrace_context& context,
       context.cuda_stream, state.width * state.height, (int*)nullptr);
   state.rngs = make_buffer(
       context.cuda_stream, state.width * state.height, (rng_state*)nullptr);
-  if (params.denoise && params.optixdenoise) {
+  if (params.denoise) {
     auto denoiser_sizes = OptixDenoiserSizes{};
     check_result(optixDenoiserComputeMemoryResources(
         context.denoiser, state.width, state.height, &denoiser_sizes));
@@ -931,7 +931,7 @@ void reset_cutrace_state(cutrace_context& context, cutrace_state& state,
       (int*)nullptr);
   resize_buffer(context.cuda_stream, state.rngs, state.width * state.height,
       (rng_state*)nullptr);
-  if (params.denoise && params.optixdenoise) {
+  if (params.denoise) {
     auto denoiser_sizes = OptixDenoiserSizes{};
     check_result(optixDenoiserComputeMemoryResources(
         context.denoiser, state.width, state.height, &denoiser_sizes));
