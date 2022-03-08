@@ -73,9 +73,9 @@ using namespace std::string_literals;
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-inline const auto dbl_max = std::numeric_limits<double>::max();
-inline const auto dbl_min = std::numeric_limits<double>::lowest();
-inline const auto dbl_eps = std::numeric_limits<double>::epsilon();
+constexpr auto dbl_max = std::numeric_limits<double>::max();
+constexpr auto dbl_min = std::numeric_limits<double>::lowest();
+constexpr auto dbl_eps = std::numeric_limits<double>::epsilon();
 
 inline double abs(double a);
 inline double min(double a, double b);
@@ -141,14 +141,14 @@ struct vec4d {
 };
 
 // Zero vector constants.
-inline const auto zero2d = vec2d{0, 0};
-inline const auto zero3d = vec3d{0, 0, 0};
-inline const auto zero4d = vec4d{0, 0, 0, 0};
+[[deprecated]] constexpr auto zero2d = vec2d{0, 0};
+[[deprecated]] constexpr auto zero3d = vec3d{0, 0, 0};
+[[deprecated]] constexpr auto zero4d = vec4d{0, 0, 0, 0};
 
 // One vector constants.
-inline const auto one2d = vec2d{1, 1};
-inline const auto one3d = vec3d{1, 1, 1};
-inline const auto one4d = vec4d{1, 1, 1, 1};
+[[deprecated]] constexpr auto one2d = vec2d{1, 1};
+[[deprecated]] constexpr auto one3d = vec3d{1, 1, 1};
+[[deprecated]] constexpr auto one4d = vec4d{1, 1, 1, 1};
 
 // Element access
 inline vec3d xyz(const vec4d& a);

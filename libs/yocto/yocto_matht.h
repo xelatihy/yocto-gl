@@ -65,18 +65,18 @@ using ushort = unsigned short;
 inline const double pi  = 3.14159265358979323846;
 inline const float  pif = (float)pi;
 
-inline const auto int_max = std::numeric_limits<int>::max();
-inline const auto int_min = std::numeric_limits<int>::lowest();
-inline const auto flt_max = std::numeric_limits<float>::max();
-inline const auto flt_min = std::numeric_limits<float>::lowest();
-inline const auto flt_eps = std::numeric_limits<float>::epsilon();
+constexpr auto int_max = std::numeric_limits<int>::max();
+constexpr auto int_min = std::numeric_limits<int>::lowest();
+constexpr auto flt_max = std::numeric_limits<float>::max();
+constexpr auto flt_min = std::numeric_limits<float>::lowest();
+constexpr auto flt_eps = std::numeric_limits<float>::epsilon();
 
 template <typename T>
-inline const auto num_max = std::numeric_limits<T>::max();
+constexpr auto num_max = std::numeric_limits<T>::max();
 template <typename T>
-inline const auto num_min = std::numeric_limits<T>::lowest();
+constexpr auto num_min = std::numeric_limits<T>::lowest();
 template <typename T>
-inline const auto num_eps = std::numeric_limits<T>::epsilon();
+constexpr auto num_eps = std::numeric_limits<T>::epsilon();
 
 using std::swap;
 
@@ -2742,29 +2742,29 @@ inline std::ptrdiff_t ssize(const T& container) {
 namespace yocto {
 
 // Zero vector constants.
-[[deprecated]] inline const auto zero1f = vec1f{0};
-[[deprecated]] inline const auto zero2f = vec2f{0, 0};
-[[deprecated]] inline const auto zero3f = vec3f{0, 0, 0};
-[[deprecated]] inline const auto zero4f = vec4f{0, 0, 0, 0};
-[[deprecated]] inline const auto zero2i = vec2i{0, 0};
-[[deprecated]] inline const auto zero3i = vec3i{0, 0, 0};
-[[deprecated]] inline const auto zero4i = vec4i{0, 0, 0, 0};
-[[deprecated]] inline const auto zero4b = vec4b{0, 0, 0, 0};
+[[deprecated]] constexpr auto zero1f = vec1f{0};
+[[deprecated]] constexpr auto zero2f = vec2f{0, 0};
+[[deprecated]] constexpr auto zero3f = vec3f{0, 0, 0};
+[[deprecated]] constexpr auto zero4f = vec4f{0, 0, 0, 0};
+[[deprecated]] constexpr auto zero2i = vec2i{0, 0};
+[[deprecated]] constexpr auto zero3i = vec3i{0, 0, 0};
+[[deprecated]] constexpr auto zero4i = vec4i{0, 0, 0, 0};
+[[deprecated]] constexpr auto zero4b = vec4b{0, 0, 0, 0};
 
 // Indentity frames.
-[[deprecated]] inline const auto identity2x3f = frame2f{{1, 0}, {0, 1}, {0, 0}};
-[[deprecated]] inline const auto identity3x4f = frame3f{
+[[deprecated]] constexpr auto identity2x3f = frame2f{{1, 0}, {0, 1}, {0, 0}};
+[[deprecated]] constexpr auto identity3x4f = frame3f{
     {1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}};
 
 // Identity matrices constants.
-[[deprecated]] inline const auto identity2x2f = mat2f{{1, 0}, {0, 1}};
-[[deprecated]] inline const auto identity3x3f = mat3f{
+[[deprecated]] constexpr auto identity2x2f = mat2f{{1, 0}, {0, 1}};
+[[deprecated]] constexpr auto identity3x3f = mat3f{
     {1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
-[[deprecated]] inline const auto identity4x4f = mat4f{
+[[deprecated]] constexpr auto identity4x4f = mat4f{
     {1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
 
 // Constants
-[[deprecated]] inline const auto identity_quat4f = quat4f{0, 0, 0, 1};
+[[deprecated]] constexpr auto identity_quat4f = quat4f{0, 0, 0, 1};
 
 }  // namespace yocto
 

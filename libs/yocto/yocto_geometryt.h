@@ -86,8 +86,8 @@ using bbox2f = bbox<float, 2>;
 using bbox3f = bbox<float, 3>;
 
 // Empty bbox constant.
-inline const auto invalidb2f = bbox2f{};
-inline const auto invalidb3f = bbox3f{};
+constexpr auto invalidb2f = bbox2f{};
+constexpr auto invalidb3f = bbox3f{};
 
 // Bounding box properties
 template <typename T, int N>
@@ -120,7 +120,7 @@ namespace yocto {
 
 // Ray epsilon
 template <typename T>
-inline const auto ray_eps = (T)1e-4;
+constexpr auto ray_eps = (T)1e-4;
 
 // Rays with origin, direction and min/max t value.
 template <typename T, int N>

@@ -76,8 +76,8 @@ struct bbox3f {
 };
 
 // Empty bbox constant.
-inline const auto invalidb2f = bbox2f{};
-inline const auto invalidb3f = bbox3f{};
+constexpr auto invalidb2f = bbox2f{};
+constexpr auto invalidb3f = bbox3f{};
 
 // Bounding box properties
 inline vec2f center(const bbox2f& a);
@@ -115,7 +115,7 @@ inline void   expand(bbox3f& a, const bbox3f& b);
 namespace yocto {
 
 // Ray epsilon
-inline const auto ray_eps = 1e-4f;
+constexpr auto ray_eps = 1e-4f;
 
 struct ray2f {
   vec2f o    = {0, 0};
