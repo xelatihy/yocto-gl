@@ -144,6 +144,9 @@ void       get_albedo_image(image_data& image, const cutrace_state& state);
 image_data get_normal_image(const cutrace_state& state);
 void       get_normal_image(image_data& image, const cutrace_state& state);
 
+// denoise image
+void denoise_image(cutrace_context& context, cutrace_state& state);
+
 // check if display
 bool is_display(const cutrace_context& context);
 
@@ -319,15 +322,17 @@ struct cubvh_data {
 
 // state
 struct cutrace_state {
-  int                 width   = 0;
-  int                 height  = 0;
-  int                 samples = 0;
-  cubuffer<vec4f>     image   = {};
-  cubuffer<vec3f>     albedo  = {};
-  cubuffer<vec3f>     normal  = {};
-  cubuffer<int>       hits    = {};
-  cubuffer<rng_state> rngs    = {};
-  cubuffer<vec4f>     display = {};
+  int                 width            = 0;
+  int                 height           = 0;
+  int                 samples          = 0;
+  cubuffer<vec4f>     image            = {};
+  cubuffer<vec3f>     albedo           = {};
+  cubuffer<vec3f>     normal           = {};
+  cubuffer<int>       hits             = {};
+  cubuffer<rng_state> rngs             = {};
+  cubuffer<vec4f>     denoised         = {};
+  cubuffer<byte>      denoiser_state   = {};
+  cubuffer<byte>      denoiser_scratch = {};
 
   cutrace_state() {}
   cutrace_state(cutrace_state&&);
@@ -399,6 +404,9 @@ struct cutrace_context {
 
   // global buffer
   cubuffer<cutrace_globals> globals_buffer = {};
+
+  // denoiser
+  OptixDenoiser denoiser = nullptr;
 
   cutrace_context() {}
   cutrace_context(cutrace_context&&);

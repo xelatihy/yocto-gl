@@ -712,14 +712,14 @@ void show_trace_gui(const string& title, const string& name, scene_data& scene,
           }
          });
         state.samples += params.batch;
+        if (params.denoise && !state.denoised.empty()) {
+          denoise_image(state.denoised, state.width, state.height, state.image,
+               state.albedo, state.normal);
+        }
         if (!render_stop) {
           auto lock      = std::lock_guard{render_mutex};
           render_current = state.samples;
-          if (!params.denoise || render_stop) {
-            get_rendered_image(render, state);
-          } else {
-            get_denoised_image(render, state);
-          }
+          get_image(render, state);
           image         = render;
           render_update = true;
         }
@@ -898,11 +898,7 @@ void show_cutrace_gui(const string& title, const string& name,
       trace_start(context, state, cuscene, bvh, lights, scene, params);
     }
     trace_samples(context, state, cuscene, bvh, lights, scene, params);
-    if (!params.denoise) {
-      get_rendered_image(image, state);
-    } else {
-      get_denoised_image(image, state);
-    }
+    get_image(image, state);
     return true;
   };
 

@@ -109,6 +109,7 @@ struct trace_params {
   bool                  filmic         = false;
   bool                  denoise        = false;
   int                   batch          = 1;
+  bool                  optixdenoise   = true;
 };
 
 // Progressively computes an image.
@@ -144,14 +145,15 @@ bool is_sampler_lit(const trace_params& params);
 
 // Trace state
 struct trace_state {
-  int               width   = 0;
-  int               height  = 0;
-  int               samples = 0;
-  vector<vec4f>     image   = {};
-  vector<vec3f>     albedo  = {};
-  vector<vec3f>     normal  = {};
-  vector<int>       hits    = {};
-  vector<rng_state> rngs    = {};
+  int               width    = 0;
+  int               height   = 0;
+  int               samples  = 0;
+  vector<vec4f>     image    = {};
+  vector<vec3f>     albedo   = {};
+  vector<vec3f>     normal   = {};
+  vector<int>       hits     = {};
+  vector<rng_state> rngs     = {};
+  vector<vec4f>     denoised = {};
 };
 
 // Initialize state.
@@ -196,6 +198,9 @@ image_data denoise_rendered_image(const image_data& render,
     const image_data& albedo, const image_data& normal);
 void       denoise_rendered_image(image_data& image, const image_data& render,
           const image_data& albedo, const image_data& normal);
+void       denoise_image(vector<vec4f>& denoised, int width, int height,
+          const vector<vec4f>& render, const vector<vec3f>& albedo,
+          const vector<vec3f>& normal);
 
 }  // namespace yocto
 

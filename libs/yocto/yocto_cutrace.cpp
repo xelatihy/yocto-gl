@@ -100,7 +100,7 @@ template <typename T>
 static void resize_buffer(
     CUstream stream, cubuffer<T>& buffer, size_t size, const T* data) {
   if (buffer._size != size) {
-    check_result(cuMemFree(buffer._data));
+    if (buffer._size != 0) check_result(cuMemFree(buffer._data));
     buffer._size = size;
     check_result(cuMemAlloc(&buffer._data, buffer.size_in_bytes()));
   }
@@ -253,6 +253,7 @@ cubvh_data::~cubvh_data() {
 }
 
 cutrace_context::cutrace_context(cutrace_context&& other) {
+  std::swap(denoiser, other.denoiser);
   globals_buffer.swap(other.globals_buffer);
   raygen_records.swap(other.raygen_records);
   miss_records.swap(other.miss_records);
@@ -268,6 +269,7 @@ cutrace_context::cutrace_context(cutrace_context&& other) {
   std::swap(cuda_context, other.cuda_context);
 }
 cutrace_context& cutrace_context::operator=(cutrace_context&& other) {
+  std::swap(denoiser, other.denoiser);
   globals_buffer.swap(other.globals_buffer);
   raygen_records.swap(other.raygen_records);
   miss_records.swap(other.miss_records);
@@ -293,7 +295,9 @@ cutrace_state::cutrace_state(cutrace_state&& other) {
   normal.swap(other.normal);
   hits.swap(other.hits);
   rngs.swap(other.rngs);
-  display.swap(other.display);
+  denoised.swap(other.denoised);
+  denoiser_state.swap(other.denoiser_state);
+  denoiser_scratch.swap(other.denoiser_scratch);
 }
 cutrace_state& cutrace_state::operator=(cutrace_state&& other) {
   std::swap(width, other.width);
@@ -304,7 +308,9 @@ cutrace_state& cutrace_state::operator=(cutrace_state&& other) {
   normal.swap(other.normal);
   hits.swap(other.hits);
   rngs.swap(other.rngs);
-  display.swap(other.display);
+  denoised.swap(other.denoised);
+  denoiser_state.swap(other.denoiser_state);
+  denoiser_scratch.swap(other.denoiser_scratch);
   return *this;
 }
 cutrace_state::~cutrace_state() {
@@ -313,7 +319,9 @@ cutrace_state::~cutrace_state() {
   clear_buffer(normal);
   clear_buffer(hits);
   clear_buffer(rngs);
-  clear_buffer(display);
+  clear_buffer(denoised);
+  clear_buffer(denoiser_state);
+  clear_buffer(denoiser_scratch);
 }
 
 cutrace_lights::cutrace_lights(cutrace_lights&& other) {
@@ -334,6 +342,9 @@ cutrace_lights::~cutrace_lights() {
 }
 
 cutrace_context::~cutrace_context() {
+  // denoiser
+  optixDenoiserDestroy(denoiser);
+
   // global buffer
   clear_buffer(globals_buffer);
 
@@ -357,6 +368,11 @@ cutrace_context::~cutrace_context() {
   cuCtxDestroy(cuda_context);
 }
 
+static void optix_callback(
+    unsigned int level, const char* tag, const char* message, void* cbdata) {
+  printf("[%s] %s\n", tag, message);
+}
+
 // init cuda and optix context
 cutrace_context make_cutrace_context(const cutrace_params& params) {
   // context
@@ -374,9 +390,14 @@ cutrace_context make_cutrace_context(const cutrace_params& params) {
   check_result(cuStreamCreate(&context.cuda_stream, CU_STREAM_DEFAULT));
 
   // init optix device
+  auto ooptions                = OptixDeviceContextOptions{};
+  ooptions.logCallbackFunction = optix_callback;
+  ooptions.logCallbackData     = nullptr;
+  ooptions.logCallbackLevel    = 4;
+  ooptions.validationMode      = OPTIX_DEVICE_CONTEXT_VALIDATION_MODE_ALL;
   check_result(cuCtxGetCurrent(&context.cuda_context));
   check_result(optixDeviceContextCreate(
-      context.cuda_context, 0, &context.optix_context));
+      context.cuda_context, &ooptions, &context.optix_context));
 
   // options
   auto module_options             = OptixModuleCompileOptions{};
@@ -472,6 +493,17 @@ cutrace_context make_cutrace_context(const cutrace_params& params) {
   // globals
   context.globals_buffer = make_buffer(context.cuda_stream, cutrace_globals{});
 
+  // denoiser
+  auto doptions        = OptixDenoiserOptions{};
+  doptions.guideAlbedo = (uint) true;
+  doptions.guideNormal = (uint) true;
+  check_result(optixDenoiserCreate(context.optix_context,
+      OPTIX_DENOISER_MODEL_KIND_HDR, &doptions, &context.denoiser));
+
+  auto denoiser_sizes = OptixDenoiserSizes{};
+  check_result(optixDenoiserComputeMemoryResources(
+      context.denoiser, 1280, 1280, &denoiser_sizes));
+
   // sync gpu
   sync_gpu(context.cuda_stream);
 
@@ -513,6 +545,9 @@ void trace_samples(cutrace_context& context, cutrace_state& state,
       context.globals_buffer.size_in_bytes(), &context.binding_table,
       state.width, state.height, 1));
   state.samples += nsamples;
+  if (params.denoise && params.optixdenoise) {
+    denoise_image(context, state);
+  }
   // sync so we can get the image
   sync_gpu(context.cuda_stream);
 }
@@ -859,8 +894,17 @@ cutrace_state make_cutrace_state(cutrace_context& context,
       context.cuda_stream, state.width * state.height, (int*)nullptr);
   state.rngs = make_buffer(
       context.cuda_stream, state.width * state.height, (rng_state*)nullptr);
-  state.display = make_buffer(
-      context.cuda_stream, state.width * state.height, (vec4f*)nullptr);
+  if (params.denoise && params.optixdenoise) {
+    auto denoiser_sizes = OptixDenoiserSizes{};
+    check_result(optixDenoiserComputeMemoryResources(
+        context.denoiser, state.width, state.height, &denoiser_sizes));
+    state.denoised = make_buffer(
+        context.cuda_stream, state.width * state.height, (vec4f*)nullptr);
+    state.denoiser_state = make_buffer(
+        context.cuda_stream, denoiser_sizes.stateSizeInBytes, (byte*)nullptr);
+    state.denoiser_scratch = make_buffer(context.cuda_stream,
+        denoiser_sizes.withoutOverlapScratchSizeInBytes, (byte*)nullptr);
+  }
   sync_gpu(context.cuda_stream);
   return state;
 };
@@ -886,8 +930,21 @@ void reset_cutrace_state(cutrace_context& context, cutrace_state& state,
       (int*)nullptr);
   resize_buffer(context.cuda_stream, state.rngs, state.width * state.height,
       (rng_state*)nullptr);
-  resize_buffer(context.cuda_stream, state.display, state.width * state.height,
-      (vec4f*)nullptr);
+  if (params.denoise && params.optixdenoise) {
+    auto denoiser_sizes = OptixDenoiserSizes{};
+    check_result(optixDenoiserComputeMemoryResources(
+        context.denoiser, state.width, state.height, &denoiser_sizes));
+    resize_buffer(context.cuda_stream, state.denoised,
+        state.width * state.height, (vec4f*)nullptr);
+    resize_buffer(context.cuda_stream, state.denoiser_state,
+        denoiser_sizes.stateSizeInBytes, (byte*)nullptr);
+    resize_buffer(context.cuda_stream, state.denoiser_scratch,
+        denoiser_sizes.withoutOverlapScratchSizeInBytes, (byte*)nullptr);
+  } else {
+    clear_buffer(state.denoised);
+    clear_buffer(state.denoiser_state);
+    clear_buffer(state.denoiser_scratch);
+  }
   sync_gpu(context.cuda_stream);
 }
 
@@ -925,7 +982,21 @@ image_data cutrace_image(
   }
 
   // copy back image and return
-  return get_rendered_image(state);
+  return get_image(state);
+}
+
+// Get resulting render
+image_data get_image(const cutrace_state& state) {
+  auto image = make_image(state.width, state.height, true);
+  get_image(image, state);
+  return image;
+}
+void get_image(image_data& image, const cutrace_state& state) {
+  if (state.denoised.empty()) {
+    download_buffer(state.image, image.pixels);
+  } else {
+    download_buffer(state.denoised, image.pixels);
+  }
 }
 
 // Get resulting render
@@ -1002,6 +1073,41 @@ void get_normal_image(image_data& image, const cutrace_state& state) {
   for (auto idx = 0; idx < state.width * state.height; idx++) {
     image.pixels[idx] = {normal[idx].x, normal[idx].y, normal[idx].z, 1.0f};
   }
+}
+
+// denoise image
+void denoise_image(cutrace_context& context, cutrace_state& state) {
+  // denoiser setup
+  check_result(optixDenoiserSetup(context.denoiser, context.cuda_stream,
+      state.width, state.height, state.denoiser_state.device_ptr(),
+      state.denoiser_state.size_in_bytes(), state.denoiser_scratch.device_ptr(),
+      state.denoiser_scratch.size_in_bytes()));
+
+  // params
+  auto dparams = OptixDenoiserParams{};
+
+  // layers
+  auto guides   = OptixDenoiserGuideLayer{};
+  guides.albedo = OptixImage2D{state.albedo.device_ptr(), (uint)state.width,
+      (uint)state.height, (uint)state.width * sizeof(vec3f), sizeof(vec3f),
+      OPTIX_PIXEL_FORMAT_FLOAT3};
+  guides.normal = OptixImage2D{state.normal.device_ptr(), (uint)state.width,
+      (uint)state.height, (uint)state.width * sizeof(vec3f), sizeof(vec3f),
+      OPTIX_PIXEL_FORMAT_FLOAT3};
+  auto layers   = OptixDenoiserLayer{};
+  layers.input  = OptixImage2D{state.image.device_ptr(), (uint)state.width,
+      (uint)state.height, (uint)state.width * sizeof(vec4f), sizeof(vec4f),
+      OPTIX_PIXEL_FORMAT_FLOAT4};
+  layers.output = OptixImage2D{state.denoised.device_ptr(), (uint)state.width,
+      (uint)state.height, (uint)state.width * sizeof(vec4f), sizeof(vec4f),
+      OPTIX_PIXEL_FORMAT_FLOAT4};
+
+  // denoiser execution
+  check_result(optixDenoiserInvoke(context.denoiser, context.cuda_stream,
+      &dparams, state.denoiser_state.device_ptr(),
+      state.denoiser_state.size_in_bytes(), &guides, &layers, 1, 0, 0,
+      state.denoiser_scratch.device_ptr(),
+      state.denoiser_scratch.size_in_bytes()));
 }
 
 bool is_display(const cutrace_context& context) {
@@ -1109,6 +1215,13 @@ void trace_samples(cutrace_context& context, cutrace_state& state,
     const cutrace_params& params) {
   exit_nocuda();
 }
+
+// Get render
+image_data get_image(const cutrace_state& state) {
+  exit_nocuda();
+  return {};
+}
+void get_image(image_data& image, const cutrace_state& state) { exit_nocuda(); }
 
 // Get resulting render
 image_data get_rendered_image(const cutrace_state& state) {

@@ -2126,15 +2126,17 @@ namespace yocto {
 constexpr int invalidid = -1;
 
 struct cutrace_state {
-  int                 width   = 0;
-  int                 height  = 0;
-  int                 samples = 0;
-  cubuffer<vec4f>     image   = {};
-  cubuffer<vec3f>     albedo  = {};
-  cubuffer<vec3f>     normal  = {};
-  cubuffer<int>       hits    = {};
-  cubuffer<rng_state> rngs    = {};
-  cubuffer<vec4f>     display = {};
+  int                 width            = 0;
+  int                 height           = 0;
+  int                 samples          = 0;
+  cubuffer<vec4f>     image            = {};
+  cubuffer<vec3f>     albedo           = {};
+  cubuffer<vec3f>     normal           = {};
+  cubuffer<int>       hits             = {};
+  cubuffer<rng_state> rngs             = {};
+  cubuffer<vec4f>     denoised         = {};
+  cubuffer<byte>      denoiser_state   = {};
+  cubuffer<byte>      denoiser_scratch = {};
 };
 
 struct cucamera_data {
@@ -2254,6 +2256,7 @@ struct cutrace_params {
   bool                    filmic         = false;
   bool                    denoise        = false;
   int                     batch          = 1;
+  bool                    optixdenoise   = false;
 };
 
 using cutrace_bvh = OptixTraversableHandle;
