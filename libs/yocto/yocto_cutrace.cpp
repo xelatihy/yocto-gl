@@ -368,7 +368,7 @@ cutrace_context::~cutrace_context() {
   cuCtxDestroy(cuda_context);
 }
 
-static void optix_callback(
+static void optix_log_callback(
     unsigned int level, const char* tag, const char* message, void* cbdata) {
   printf("[%s] %s\n", tag, message);
 }
@@ -389,15 +389,16 @@ cutrace_context make_cutrace_context(const cutrace_params& params) {
   // init cuda device
   check_result(cuStreamCreate(&context.cuda_stream, CU_STREAM_DEFAULT));
 
-  // init optix device
+  // init optix device --- disable logging
+  auto enable_logging          = false;
   auto ooptions                = OptixDeviceContextOptions{};
-  ooptions.logCallbackFunction = optix_callback;
+  ooptions.logCallbackFunction = optix_log_callback;
   ooptions.logCallbackData     = nullptr;
   ooptions.logCallbackLevel    = 4;
   ooptions.validationMode      = OPTIX_DEVICE_CONTEXT_VALIDATION_MODE_ALL;
   check_result(cuCtxGetCurrent(&context.cuda_context));
-  check_result(optixDeviceContextCreate(
-      context.cuda_context, &ooptions, &context.optix_context));
+  check_result(optixDeviceContextCreate(context.cuda_context,
+      enable_logging ? &ooptions : nullptr, &context.optix_context));
 
   // options
   auto module_options             = OptixModuleCompileOptions{};
