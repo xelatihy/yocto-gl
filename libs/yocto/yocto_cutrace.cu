@@ -1038,14 +1038,7 @@ namespace yocto {
 struct rng_state {
   uint64_t state = 0x853c49e6748fea9bULL;
   uint64_t inc   = 0xda3e39cb94b95bdbULL;
-
-  rng_state() = default;
-  rng_state(uint64_t state, uint64_t inc);
 };
-
-// PCG random numbers from http://www.pcg-random.org/
-inline rng_state::rng_state(uint64_t state, uint64_t inc)
-    : state{state}, inc{inc} {}
 
 // Next random number, used internally only.
 inline uint32_t _advance_rng(rng_state& rng) {
@@ -2051,7 +2044,7 @@ inline float sample_phasefunction_pdf(
 namespace yocto {
 
 template <typename T>
-struct cubuffer {
+struct cuspan {
   inline bool     empty() const { return _size == 0; }
   inline size_t   size() const { return _size; }
   inline T&       operator[](int idx) { return _data[idx]; }
@@ -2126,17 +2119,17 @@ namespace yocto {
 constexpr int invalidid = -1;
 
 struct cutrace_state {
-  int                 width            = 0;
-  int                 height           = 0;
-  int                 samples          = 0;
-  cubuffer<vec4f>     image            = {};
-  cubuffer<vec3f>     albedo           = {};
-  cubuffer<vec3f>     normal           = {};
-  cubuffer<int>       hits             = {};
-  cubuffer<rng_state> rngs             = {};
-  cubuffer<vec4f>     denoised         = {};
-  cubuffer<byte>      denoiser_state   = {};
-  cubuffer<byte>      denoiser_scratch = {};
+  int               width            = 0;
+  int               height           = 0;
+  int               samples          = 0;
+  cuspan<vec4f>     image            = {};
+  cuspan<vec3f>     albedo           = {};
+  cuspan<vec3f>     normal           = {};
+  cuspan<int>       hits             = {};
+  cuspan<rng_state> rngs             = {};
+  cuspan<vec4f>     denoised         = {};
+  cuspan<byte>      denoiser_state   = {};
+  cuspan<byte>      denoiser_scratch = {};
 };
 
 struct cucamera_data {
@@ -2190,11 +2183,11 @@ struct cuinstance_data {
 };
 
 struct cushape_data {
-  cubuffer<vec3f> positions = {};
-  cubuffer<vec3f> normals   = {};
-  cubuffer<vec2f> texcoords = {};
-  cubuffer<vec4f> colors    = {};
-  cubuffer<vec3i> triangles = {};
+  cuspan<vec3f> positions = {};
+  cuspan<vec3f> normals   = {};
+  cuspan<vec2f> texcoords = {};
+  cuspan<vec4f> colors    = {};
+  cuspan<vec3i> triangles = {};
 };
 
 struct cuenvironment_data {
@@ -2204,12 +2197,12 @@ struct cuenvironment_data {
 };
 
 struct cuscene_data {
-  cubuffer<cucamera_data>      cameras      = {};
-  cubuffer<cutexture_data>     textures     = {};
-  cubuffer<cumaterial_data>    materials    = {};
-  cubuffer<cushape_data>       shapes       = {};
-  cubuffer<cuinstance_data>    instances    = {};
-  cubuffer<cuenvironment_data> environments = {};
+  cuspan<cucamera_data>      cameras      = {};
+  cuspan<cutexture_data>     textures     = {};
+  cuspan<cumaterial_data>    materials    = {};
+  cuspan<cushape_data>       shapes       = {};
+  cuspan<cuinstance_data>    instances    = {};
+  cuspan<cuenvironment_data> environments = {};
 };
 
 // Type of tracing algorithm
@@ -2262,14 +2255,14 @@ using cutrace_bvh = OptixTraversableHandle;
 
 // light
 struct cutrace_light {
-  int             instance     = invalidid;
-  int             environment  = invalidid;
-  cubuffer<float> elements_cdf = {};
+  int           instance     = invalidid;
+  int           environment  = invalidid;
+  cuspan<float> elements_cdf = {};
 };
 
 // lights
 struct cutrace_lights {
-  cubuffer<cutrace_light> lights = {};
+  cuspan<cutrace_light> lights = {};
 };
 
 struct cutrace_globals {
@@ -2347,52 +2340,6 @@ struct material_point {
   float         scanisotropy = 0;
   float         trdepth      = 0.01f;
 };
-
-// Evaluate material
-static material_point eval_material(const scene_data& scene,
-    const material_data& material, const vec2f& texcoord,
-    const vec4f& color_shp) {
-  // evaluate textures
-  auto emission_tex = eval_texture(
-      scene, material.emission_tex, texcoord, true);
-  auto color_tex     = eval_texture(scene, material.color_tex, texcoord, true);
-  auto roughness_tex = eval_texture(
-      scene, material.roughness_tex, texcoord, false);
-  auto scattering_tex = eval_texture(
-      scene, material.scattering_tex, texcoord, true);
-
-  // material point
-  auto point         = material_point{};
-  point.type         = material.type;
-  point.emission     = material.emission * xyz(emission_tex);
-  point.color        = material.color * xyz(color_tex) * xyz(color_shp);
-  point.opacity      = material.opacity * color_tex.w * color_shp.w;
-  point.metallic     = material.metallic * roughness_tex.z;
-  point.roughness    = material.roughness * roughness_tex.y;
-  point.roughness    = point.roughness * point.roughness;
-  point.ior          = material.ior;
-  point.scattering   = material.scattering * xyz(scattering_tex);
-  point.scanisotropy = material.scanisotropy;
-  point.trdepth      = material.trdepth;
-
-  // volume density
-  if (material.type == material_type::refractive ||
-      material.type == material_type::volumetric ||
-      material.type == material_type::subsurface) {
-    point.density = -log(clamp(point.color, 0.0001f, 1.0f)) / point.trdepth;
-  } else {
-    point.density = {0, 0, 0};
-  }
-
-  // fix roughness
-  if (point.type == material_type::matte ||
-      point.type == material_type::gltfpbr ||
-      point.type == material_type::glossy) {
-    point.roughness = clamp(point.roughness, min_roughness, 1.0f);
-  }
-
-  return point;
-}
 
 // Eval position
 static vec3f eval_position(const scene_data& scene,
@@ -4013,26 +3960,6 @@ static trace_result trace_falsecolor(const scene_data& scene,
 
   // done
   return {srgb_to_rgb(result), true, material.color, normal};
-}
-
-// Trace a single ray from the camera using the given algorithm.
-using sampler_func = trace_result (*)(const scene_data& scene,
-    const trace_bvh& bvh, const trace_lights& lights, const ray3f& ray,
-    rng_state& rng, const trace_params& params);
-static sampler_func get_trace_sampler_func(const trace_params& params) {
-  switch (params.sampler) {
-    case trace_sampler_type::path: return trace_path;
-    case trace_sampler_type::pathdirect: return trace_pathdirect;
-    case trace_sampler_type::pathmis: return trace_pathmis;
-    case trace_sampler_type::naive: return trace_naive;
-    case trace_sampler_type::eyelight: return trace_eyelight;
-    case trace_sampler_type::eyelightao: return trace_eyelightao;
-    case trace_sampler_type::furnace: return trace_furnace;
-    case trace_sampler_type::falsecolor: return trace_falsecolor;
-    default: {
-      return nullptr;
-    }
-  }
 }
 
 static trace_result trace_sampler(const scene_data& scene, const trace_bvh& bvh,

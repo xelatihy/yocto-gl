@@ -208,12 +208,12 @@ namespace yocto {
 
 // cuda buffer
 template <typename T>
-struct cubuffer {
+struct cuspan {
   bool        empty() const { return _size == 0; }
   size_t      size() const { return _size; }
   CUdeviceptr device_ptr() const { return _data; }
   size_t      size_in_bytes() const { return _size * sizeof(T); }
-  void        swap(cubuffer& other) {
+  void        swap(cuspan& other) {
     std::swap(_data, other._data);
     std::swap(_size, other._size);
   }
@@ -274,11 +274,11 @@ struct cuinstance_data {
 };
 
 struct cushape_data {
-  cubuffer<vec3f> positions = {};
-  cubuffer<vec3f> normals   = {};
-  cubuffer<vec2f> texcoords = {};
-  cubuffer<vec4f> colors    = {};
-  cubuffer<vec3i> triangles = {};
+  cuspan<vec3f> positions = {};
+  cuspan<vec3f> normals   = {};
+  cuspan<vec2f> texcoords = {};
+  cuspan<vec4f> colors    = {};
+  cuspan<vec3i> triangles = {};
 };
 
 struct cuenvironment_data {
@@ -288,12 +288,12 @@ struct cuenvironment_data {
 };
 
 struct cuscene_data {
-  cubuffer<cucamera_data>      cameras      = {};
-  cubuffer<cutexture_data>     textures     = {};
-  cubuffer<cumaterial_data>    materials    = {};
-  cubuffer<cushape_data>       shapes       = {};
-  cubuffer<cuinstance_data>    instances    = {};
-  cubuffer<cuenvironment_data> environments = {};
+  cuspan<cucamera_data>      cameras      = {};
+  cuspan<cutexture_data>     textures     = {};
+  cuspan<cumaterial_data>    materials    = {};
+  cuspan<cushape_data>       shapes       = {};
+  cuspan<cuinstance_data>    instances    = {};
+  cuspan<cuenvironment_data> environments = {};
 
   cuscene_data() {}
   cuscene_data(cuscene_data&&);
@@ -302,14 +302,14 @@ struct cuscene_data {
 };
 
 struct cubvh_tree {
-  cubuffer<byte>         buffer = {};
+  cuspan<byte>           buffer = {};
   OptixTraversableHandle handle = 0;
 };
 
 struct cubvh_data {
-  cubuffer<OptixInstance> instances     = {};
-  cubvh_tree              instances_bvh = {};
-  vector<cubvh_tree>      shapes_bvhs   = {};
+  cuspan<OptixInstance> instances     = {};
+  cubvh_tree            instances_bvh = {};
+  vector<cubvh_tree>    shapes_bvhs   = {};
 
   cubvh_data() {}
   cubvh_data(cubvh_data&&);
@@ -319,17 +319,17 @@ struct cubvh_data {
 
 // state
 struct cutrace_state {
-  int                 width            = 0;
-  int                 height           = 0;
-  int                 samples          = 0;
-  cubuffer<vec4f>     image            = {};
-  cubuffer<vec3f>     albedo           = {};
-  cubuffer<vec3f>     normal           = {};
-  cubuffer<int>       hits             = {};
-  cubuffer<rng_state> rngs             = {};
-  cubuffer<vec4f>     denoised         = {};
-  cubuffer<byte>      denoiser_state   = {};
-  cubuffer<byte>      denoiser_scratch = {};
+  int               width            = 0;
+  int               height           = 0;
+  int               samples          = 0;
+  cuspan<vec4f>     image            = {};
+  cuspan<vec3f>     albedo           = {};
+  cuspan<vec3f>     normal           = {};
+  cuspan<int>       hits             = {};
+  cuspan<rng_state> rngs             = {};
+  cuspan<vec4f>     denoised         = {};
+  cuspan<byte>      denoiser_state   = {};
+  cuspan<byte>      denoiser_scratch = {};
 
   cutrace_state() {}
   cutrace_state(cutrace_state&&);
@@ -339,14 +339,14 @@ struct cutrace_state {
 
 // light
 struct cutrace_light {
-  int             instance     = invalidid;
-  int             environment  = invalidid;
-  cubuffer<float> elements_cdf = {};
+  int           instance     = invalidid;
+  int           environment  = invalidid;
+  cuspan<float> elements_cdf = {};
 };
 
 // lights
 struct cutrace_lights {
-  cubuffer<cutrace_light> lights = {};
+  cuspan<cutrace_light> lights = {};
 
   cutrace_lights() {}
   cutrace_lights(cutrace_lights&&);
@@ -394,13 +394,13 @@ struct cutrace_context {
   OptixProgramGroup hitgroup_program = nullptr;
 
   // stb
-  cubuffer<cutrace_stbrecord> raygen_records   = {};
-  cubuffer<cutrace_stbrecord> miss_records     = {};
-  cubuffer<cutrace_stbrecord> hitgroup_records = {};
-  OptixShaderBindingTable     binding_table    = {};
+  cuspan<cutrace_stbrecord> raygen_records   = {};
+  cuspan<cutrace_stbrecord> miss_records     = {};
+  cuspan<cutrace_stbrecord> hitgroup_records = {};
+  OptixShaderBindingTable   binding_table    = {};
 
   // global buffer
-  cubuffer<cutrace_globals> globals_buffer = {};
+  cuspan<cutrace_globals> globals_buffer = {};
 
   // denoiser
   OptixDenoiser denoiser = nullptr;

@@ -75,8 +75,8 @@ static void check_result(OptixResult result) {
 
 // make a buffer
 template <typename T>
-static cubuffer<T> make_buffer(CUstream stream, size_t size, const T* data) {
-  auto buffer  = cubuffer<T>{};
+static cuspan<T> make_buffer(CUstream stream, size_t size, const T* data) {
+  auto buffer  = cuspan<T>{};
   buffer._size = size;
   check_result(cuMemAlloc(&buffer._data, buffer.size_in_bytes()));
   if (data) {
@@ -86,19 +86,19 @@ static cubuffer<T> make_buffer(CUstream stream, size_t size, const T* data) {
   return buffer;
 }
 template <typename T>
-static cubuffer<T> make_buffer(CUstream stream, const vector<T>& data) {
+static cuspan<T> make_buffer(CUstream stream, const vector<T>& data) {
   if (data.empty()) return {};
   return make_buffer(stream, data.size(), data.data());
 }
 template <typename T>
-static cubuffer<T> make_buffer(CUstream stream, const T& data) {
+static cuspan<T> make_buffer(CUstream stream, const T& data) {
   return make_buffer(stream, 1, &data);
 }
 
 // resize a buffer
 template <typename T>
 static void resize_buffer(
-    CUstream stream, cubuffer<T>& buffer, size_t size, const T* data) {
+    CUstream stream, cuspan<T>& buffer, size_t size, const T* data) {
   if (buffer._size != size) {
     if (buffer._size != 0) check_result(cuMemFree(buffer._data));
     buffer._size = size;
@@ -113,57 +113,56 @@ static void resize_buffer(
 // update a buffer
 template <typename T>
 static void update_buffer(
-    CUstream stream, cubuffer<T>& buffer, size_t size, const T* data) {
+    CUstream stream, cuspan<T>& buffer, size_t size, const T* data) {
   if (buffer.size() != size) throw std::runtime_error{"Cuda buffer error"};
   check_result(cuMemcpyHtoDAsync(
       buffer.device_ptr(), data, buffer.size_in_bytes(), stream));
 }
 template <typename T>
 static void update_buffer(
-    CUstream stream, cubuffer<T>& buffer, const vector<T>& data) {
+    CUstream stream, cuspan<T>& buffer, const vector<T>& data) {
   return update_buffer(stream, buffer, data.size(), data.data());
 }
 template <typename T>
-static void update_buffer(CUstream stream, cubuffer<T>& buffer, const T& data) {
+static void update_buffer(CUstream stream, cuspan<T>& buffer, const T& data) {
   return update_buffer(stream, buffer, 1, &data);
 }
 
 // update a buffer
 template <typename T, typename T1>
-static void update_buffer_value(CUstream stream, cubuffer<T>& buffer,
+static void update_buffer_value(CUstream stream, cuspan<T>& buffer,
     size_t offset, size_t size, const T1* data) {
   check_result(cuMemcpyHtoDAsync(
       buffer.device_ptr() + offset, data, size * sizeof(T1), stream));
 }
 template <typename T, typename T1>
 static void update_buffer_value(
-    CUstream stream, cubuffer<T>& buffer, size_t offset, const T1& data) {
+    CUstream stream, cuspan<T>& buffer, size_t offset, const T1& data) {
   return update_buffer_value(stream, buffer, offset, 1, &data);
 }
 
 // download buffer --- these are synched to avoid errors
 template <typename T>
-static void download_buffer(
-    const cubuffer<T>& buffer, size_t size, void* data) {
+static void download_buffer(const cuspan<T>& buffer, size_t size, void* data) {
   if (buffer.size() != size) throw std::runtime_error{"Cuda download error"};
   check_result(cuMemcpyDtoH(data, buffer.device_ptr(), buffer.size_in_bytes()));
 }
 template <typename T>
-static void download_buffer(const cubuffer<T>& buffer, vector<T>& data) {
+static void download_buffer(const cuspan<T>& buffer, vector<T>& data) {
   return download_buffer(buffer, data.size(), data.data());
 }
 template <typename T>
-static void download_buffer(const cubuffer<T>& buffer, T& data) {
+static void download_buffer(const cuspan<T>& buffer, T& data) {
   return download_buffer(buffer, 1, &data);
 }
 template <typename T>
-static vector<T> download_buffer_vector(const cubuffer<T>& buffer) {
+static vector<T> download_buffer_vector(const cuspan<T>& buffer) {
   auto data = vector<T>(buffer.size());
   download_buffer(buffer, data.size(), data.data());
   return data;
 }
 template <typename T>
-static T download_buffer_value(const cubuffer<T>& buffer) {
+static T download_buffer_value(const cuspan<T>& buffer) {
   if (buffer.size() != 1) throw std::runtime_error{"Cuda download error"};
   auto data = T{};
   download_buffer(buffer, 1, &data);
@@ -172,7 +171,7 @@ static T download_buffer_value(const cubuffer<T>& buffer) {
 
 // free buffer
 template <typename T>
-static void clear_buffer(cubuffer<T>& buffer) {
+static void clear_buffer(cuspan<T>& buffer) {
   if (buffer.device_ptr() == 0) return;
   check_result(cuMemFree(buffer.device_ptr()));
   buffer._data = 0;
