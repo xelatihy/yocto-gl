@@ -146,14 +146,14 @@ struct vec4f {
 };
 
 // Zero vector constants.
-inline const auto zero2f = vec2f{0, 0};
-inline const auto zero3f = vec3f{0, 0, 0};
-inline const auto zero4f = vec4f{0, 0, 0, 0};
+[[deprecated]] inline const auto zero2f = vec2f{0, 0};
+[[deprecated]] inline const auto zero3f = vec3f{0, 0, 0};
+[[deprecated]] inline const auto zero4f = vec4f{0, 0, 0, 0};
 
 // One vector constants.
-inline const auto one2f = vec2f{1, 1};
-inline const auto one3f = vec3f{1, 1, 1};
-inline const auto one4f = vec4f{1, 1, 1, 1};
+[[deprecated]] inline const auto one2f = vec2f{1, 1};
+[[deprecated]] inline const auto one3f = vec3f{1, 1, 1};
+[[deprecated]] inline const auto one4f = vec4f{1, 1, 1, 1};
 
 // Element access
 inline vec3f xyz(const vec4f& a);
@@ -452,10 +452,10 @@ struct vec4b {
 };
 
 // Zero vector constants.
-inline const auto zero2i = vec2i{0, 0};
-inline const auto zero3i = vec3i{0, 0, 0};
-inline const auto zero4i = vec4i{0, 0, 0, 0};
-inline const auto zero4b = vec4b{0, 0, 0, 0};
+[[deprecated]] inline const auto zero2i = vec2i{0, 0};
+[[deprecated]] inline const auto zero3i = vec3i{0, 0, 0};
+[[deprecated]] inline const auto zero4i = vec4i{0, 0, 0, 0};
+[[deprecated]] inline const auto zero4b = vec4b{0, 0, 0, 0};
 
 // Element access
 inline vec3i xyz(const vec4i& a);
@@ -2396,7 +2396,7 @@ inline pair<vec3f, vec3f> camera_turntable(const vec3f& from_, const vec3f& to_,
   auto from = from_, to = to_;
 
   // rotate if necessary
-  if (rotate != zero2f) {
+  if (rotate != vec2f{0, 0}) {
     auto z     = normalize(to - from);
     auto lz    = length(to - from);
     auto phi   = atan2(z.z, z.x) + rotate.x;
@@ -2416,7 +2416,7 @@ inline pair<vec3f, vec3f> camera_turntable(const vec3f& from_, const vec3f& to_,
   }
 
   // pan if necessary
-  if (pan != zero2f) {
+  if (pan != vec2f{0, 0}) {
     auto z = normalize(to - from);
     auto x = normalize(cross(up, z));
     auto y = normalize(cross(z, x));
@@ -2437,7 +2437,7 @@ inline pair<frame3f, float> camera_turntable(const frame3f& frame_, float focus,
   auto frame = frame_;
 
   // rotate if necessary
-  if (rotate != zero2f) {
+  if (rotate != vec2f{0, 0}) {
     auto phi   = atan2(frame.z.z, frame.z.x) + rotate.x;
     auto theta = acos(frame.z.y) + rotate.y;
     theta      = clamp(theta, 0.001f, pif - 0.001f);
@@ -2457,7 +2457,7 @@ inline pair<frame3f, float> camera_turntable(const frame3f& frame_, float focus,
   }
 
   // pan if necessary
-  if (pan != zero2f) {
+  if (pan != vec2f{0, 0}) {
     frame.o += frame.x * pan.x + frame.y * pan.y;
   }
 
@@ -2506,7 +2506,7 @@ inline void update_imview(vec2f& center, float& scale, const vec2i& imsize,
 inline void update_turntable(vec3f& from, vec3f& to, vec3f& up,
     const vec2f& rotate, float dolly, const vec2f& pan) {
   // rotate if necessary
-  if (rotate != zero2f) {
+  if (rotate != vec2f{0, 0}) {
     auto z     = normalize(to - from);
     auto lz    = length(to - from);
     auto phi   = atan2(z.z, z.x) + rotate.x;
@@ -2526,7 +2526,7 @@ inline void update_turntable(vec3f& from, vec3f& to, vec3f& up,
   }
 
   // pan if necessary
-  if (pan != zero2f) {
+  if (pan != vec2f{0, 0}) {
     auto z = normalize(to - from);
     auto x = normalize(cross(up, z));
     auto y = normalize(cross(z, x));
@@ -2541,7 +2541,7 @@ inline void update_turntable(vec3f& from, vec3f& to, vec3f& up,
 inline void update_turntable(frame3f& frame, float& focus, const vec2f& rotate,
     float dolly, const vec2f& pan) {
   // rotate if necessary
-  if (rotate != zero2f) {
+  if (rotate != vec2f{0, 0}) {
     auto phi   = atan2(frame.z.z, frame.z.x) + rotate.x;
     auto theta = acos(frame.z.y) + rotate.y;
     theta      = clamp(theta, 0.001f, pif - 0.001f);
@@ -2561,7 +2561,7 @@ inline void update_turntable(frame3f& frame, float& focus, const vec2f& rotate,
   }
 
   // pan if necessary
-  if (pan != zero2f) {
+  if (pan != vec2f{0, 0}) {
     frame.o += frame.x * pan.x + frame.y * pan.y;
   }
 }

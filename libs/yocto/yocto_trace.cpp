@@ -1172,7 +1172,7 @@ static trace_result trace_furnace(const scene_data& scene, const trace_bvh& bvh,
     const trace_lights& lights, const ray3f& ray_, rng_state& rng,
     const trace_params& params) {
   // initialize
-  auto radiance   = zero3f;
+  auto radiance   = vec3f{0, 0, 0};
   auto weight     = vec3f{1, 1, 1};
   auto ray        = ray_;
   auto hit        = false;
@@ -1225,7 +1225,7 @@ static trace_result trace_furnace(const scene_data& scene, const trace_bvh& bvh,
     radiance += weight * eval_emission(material, normal, outgoing);
 
     // next direction
-    auto incoming = zero3f;
+    auto incoming = vec3f{0, 0, 0};
     if (material.roughness != 0) {
       incoming = sample_bsdfcos(
           material, normal, outgoing, rand1f(rng), rand2f(rng));
@@ -1240,7 +1240,7 @@ static trace_result trace_furnace(const scene_data& scene, const trace_bvh& bvh,
     }
 
     // check weight
-    if (weight == zero3f || !isfinite(weight)) break;
+    if (weight == vec3f{0, 0, 0} || !isfinite(weight)) break;
 
     // russian roulette
     if (bounce > 3) {

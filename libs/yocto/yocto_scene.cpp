@@ -373,7 +373,7 @@ vec2f eval_texcoord(const scene_data& scene, const instance_data& instance,
   } else if (!shape.points.empty()) {
     return shape.texcoords[shape.points[element]];
   } else {
-    return zero2f;
+    return vec2f{0, 0};
   }
 }
 
@@ -759,7 +759,7 @@ void tesselate_subdiv(
       for (auto i : range(4)) {
         auto& displacement_tex = scene.textures[subdiv.displacement_tex];
         auto  disp             = mean(
-            eval_texture(displacement_tex, subdiv.texcoords[qtxt[i]], false));
+                         eval_texture(displacement_tex, subdiv.texcoords[qtxt[i]], false));
         if (!displacement_tex.pixelsb.empty()) disp -= 0.5f;
         offset[qpos[i]] += subdiv.displacement * disp;
         count[qpos[i]] += 1;

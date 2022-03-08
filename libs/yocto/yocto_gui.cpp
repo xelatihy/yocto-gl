@@ -256,8 +256,8 @@ static bool uiupdate_camera_params(
     const gui_input& input, camera_data& camera) {
   if (input.mouse.x && input.modifiers.x && !input.onwidgets) {
     auto dolly  = 0.0f;
-    auto pan    = zero2f;
-    auto rotate = zero2f;
+    auto pan    = vec2f{0, 0};
+    auto rotate = vec2f{0, 0};
     if (input.modifiers.y) {
       pan   = (input.cursor - input.last) * camera.focus / 200.0f;
       pan.x = -pan.x;
@@ -299,8 +299,8 @@ static bool draw_image_inspector(const gui_input& input,
         vec2i{image.width, image.height});
     auto ij     = vec2i{i, j};
     draw_gui_dragger("mouse", ij);
-    auto image_pixel   = zero4f;
-    auto display_pixel = zero4f;
+    auto image_pixel   = vec4f{0, 0, 0, 0};
+    auto display_pixel = vec4f{0, 0, 0, 0};
     if (i >= 0 && i < image.width && j >= 0 && j < image.height) {
       image_pixel   = image.pixels[j * image.width + i];
       display_pixel = image.pixels[j * image.width + i];
@@ -322,8 +322,8 @@ static bool draw_image_inspector(
         vec2i{image.width, image.height});
     auto ij     = vec2i{i, j};
     draw_gui_dragger("mouse", ij);
-    auto image_pixel   = zero4f;
-    auto display_pixel = zero4f;
+    auto image_pixel   = vec4f{0, 0, 0, 0};
+    auto display_pixel = vec4f{0, 0, 0, 0};
     if (i >= 0 && i < image.width && j >= 0 && j < image.height) {
       image_pixel   = image.pixels[j * image.width + i];
       display_pixel = tonemap(

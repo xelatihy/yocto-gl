@@ -204,7 +204,7 @@ inline pair<vec3f, vec3f> triangle_tangents_fromuv(const vec3f& p0,
 
 // Quad tangent and bitangent from uv. Note that we pass a current_uv since
 // internally we may want to split the quad in two and we need to known where
-// to do it. If not interested in the split, just pass zero2f here.
+// to do it. If not interested in the split, just pass vec2f{0,0} here.
 inline pair<vec3f, vec3f> quad_tangents_fromuv(const vec3f& p0, const vec3f& p1,
     const vec3f& p2, const vec3f& p3, const vec2f& uv0, const vec2f& uv1,
     const vec2f& uv2, const vec2f& uv3, const vec2f& current_uv);

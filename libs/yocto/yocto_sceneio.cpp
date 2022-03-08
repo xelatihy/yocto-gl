@@ -4807,7 +4807,7 @@ static bool save_gltf_scene(const string& filename, const scene_data& scene,
       auto& gbuffer             = cgltf.buffers[idx];
       shape_accessor_start[idx] = (int)cgltf.accessors_count;
       gbuffer.uri               = copy_string(
-          "shapes/" + get_shape_name(scene, shape) + ".bin");
+                        "shapes/" + get_shape_name(scene, shape) + ".bin");
       add_vertex(cgltf, gbuffer, shape.positions.size(), cgltf_type_vec3,
           (const float*)shape.positions.data());
       add_vertex(cgltf, gbuffer, shape.normals.size(), cgltf_type_vec3,
@@ -5549,7 +5549,7 @@ namespace yocto {
 image<vec4f> filter_bilateral(const image<vec4f>& img, float spatial_sigma,
     float range_sigma, const vector<image<vec4f>>& features,
     const vector<float>& features_sigma) {
-  auto filtered     = image{img.imsize(), zero4f};
+  auto filtered     = image{img.imsize(), vec4f{0,0,0,0}};
   auto filter_width = (int)ceil(2.57f * spatial_sigma);
   auto sw           = 1 / (2.0f * spatial_sigma * spatial_sigma);
   auto rw           = 1 / (2.0f * range_sigma * range_sigma);
@@ -5558,7 +5558,7 @@ image<vec4f> filter_bilateral(const image<vec4f>& img, float spatial_sigma,
     fw.push_back(1 / (2.0f * feature_sigma * feature_sigma));
   for (auto j : range(img.height())) {
     for (auto i : range(img.width())) {
-      auto av = zero4f;
+      auto av = vec4f{0,0,0,0};
       auto aw = 0.0f;
       for (auto fj = -filter_width; fj <= filter_width; fj++) {
         for (auto fi = -filter_width; fi <= filter_width; fi++) {
@@ -5585,13 +5585,13 @@ image<vec4f> filter_bilateral(const image<vec4f>& img, float spatial_sigma,
 
 image<vec4f> filter_bilateral(
     const image<vec4f>& img, float spatial_sigma, float range_sigma) {
-  auto filtered = image{img.imsize(), zero4f};
+  auto filtered = image{img.imsize(), vec4f{0,0,0,0}};
   auto fwidth   = (int)ceil(2.57f * spatial_sigma);
   auto sw       = 1 / (2.0f * spatial_sigma * spatial_sigma);
   auto rw       = 1 / (2.0f * range_sigma * range_sigma);
   for (auto j : range(img.height())) {
     for (auto i : range(img.width())) {
-      auto av = zero4f;
+      auto av = vec4f{0,0,0,0};
       auto aw = 0.0f;
       for (auto fj = -fwidth; fj <= fwidth; fj++) {
         for (auto fi = -fwidth; fi <= fwidth; fi++) {

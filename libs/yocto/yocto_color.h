@@ -617,12 +617,14 @@ inline color_space_params get_color_scape_params(color_space space) {
   };
   static auto make_gamma_rgb_space =
       [](const vec2f& red, const vec2f& green, const vec2f& blue,
-          const vec2f& white, float gamma, const vec4f& curve_abcd = zero4f) {
+          const vec2f& white, float gamma,
+          const vec4f& curve_abcd = vec4f{0, 0, 0, 0}) {
         return color_space_params{red, green, blue, white,
             rgb_to_xyz_mat(red, green, blue, white),
             inverse(rgb_to_xyz_mat(red, green, blue, white)),
-            curve_abcd == zero4f ? color_space_params::curve_t::gamma
-                                 : color_space_params::curve_t::linear_gamma};
+            curve_abcd == vec4f{0, 0, 0, 0}
+                ? color_space_params::curve_t::gamma
+                : color_space_params::curve_t::linear_gamma};
       };
   static auto make_other_rgb_space =
       [](const vec2f& red, const vec2f& green, const vec2f& blue,
