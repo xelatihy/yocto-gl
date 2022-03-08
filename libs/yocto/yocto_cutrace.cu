@@ -43,8 +43,6 @@
 //
 
 #include <optix_device.h>
-// do not flip it
-#include <cuda_runtime.h>
 
 // HACK TO ALLOW CUT&PASTING FROM YOCTO'S CODE
 #define inline __forceinline__ __device__
