@@ -640,6 +640,17 @@ template <typename T, int N>
 inline vec<T, N> transform_normal(
     const frame<T, N>& a, const vec<T, N>& b, bool non_rigid = false);
 
+// Transforms points, vectors and directions by frames.
+template <typename T, int N>
+inline vec<T, N> transform_point_inverse(
+    const frame<T, N>& a, const vec<T, N>& b);
+template <typename T, int N>
+inline vec<T, N> transform_vector_inverse(
+    const frame<T, N>& a, const vec<T, N>& b);
+template <typename T, int N>
+inline vec<T, N> transform_direction_inverse(
+    const frame<T, N>& a, const vec<T, N>& b);
+
 // Translation, scaling and rotations transforms.
 template <typename T>
 inline frame<T, 3> translation_frame(const vec<T, 3>& a);
@@ -2095,6 +2106,31 @@ inline vec<T, N> transform_normal(
   } else {
     return normalize(transform_vector(a, b));
   }
+}
+
+// Transforms points, vectors and directions by frames.
+template <typename T, int N>
+inline vec<T, N> transform_point_inverse(
+    const frame<T, N>& a, const vec<T, N>& b) {
+  if constexpr (N == 2) {
+    return {dot(a.x, (b - a.o)), dot(a.y, (b - a.o))};
+  } else if constexpr (N == 3) {
+    return {dot(a.x, (b - a.o)), dot(a.y, (b - a.o)), dot(a.z, (b - a.o))};
+  }
+}
+template <typename T, int N>
+inline vec<T, N> transform_vector_inverse(
+    const frame<T, N>& a, const vec<T, N>& b) {
+  if constexpr (N == 2) {
+    return {dot(a.x, b), dot(a.y, b)};
+  } else if constexpr (N == 3) {
+    return {dot(a.x, b), dot(a.y, b), dot(a.z, b)};
+  }
+}
+template <typename T, int N>
+inline vec<T, N> transform_direction_inverse(
+    const frame<T, N>& a, const vec<T, N>& b) {
+  return normalize(transform_vector_inverse(a, b));
 }
 
 // Translation, scaling and rotations transforms.

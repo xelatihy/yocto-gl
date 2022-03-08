@@ -865,6 +865,16 @@ inline vec3f transform_direction(const frame3f& a, const vec3f& b);
 inline vec3f transform_normal(
     const frame3f& a, const vec3f& b, bool non_rigid = false);
 
+// Transforms points, vectors and directions by frames.
+inline vec2f transform_point_inverse(const frame2f& a, const vec2f& b);
+inline vec2f transform_vector_inverse(const frame2f& a, const vec2f& b);
+inline vec2f transform_direction_inverse(const frame2f& a, const vec2f& b);
+
+// Transforms points, vectors and directions by frames.
+inline vec3f transform_point_inverse(const frame3f& a, const vec3f& b);
+inline vec3f transform_vector_inverse(const frame3f& a, const vec3f& b);
+inline vec3f transform_direction_inverse(const frame3f& a, const vec3f& b);
+
 // Translation, scaling and rotations transforms.
 inline frame3f translation_frame(const vec3f& a);
 inline frame3f scaling_frame(const vec3f& a);
@@ -2225,6 +2235,28 @@ inline vec3f transform_normal(
   } else {
     return normalize(transform_vector(a, b));
   }
+}
+
+// Transforms points, vectors and directions by frames.
+inline vec2f transform_point_inverse(const frame2f& a, const vec2f& b) {
+  return {dot(a.x, b - a.o), dot(a.y, b - a.o)};
+}
+inline vec2f transform_vector_inverse(const frame2f& a, const vec2f& b) {
+  return {dot(a.x, b), dot(a.y, b)};
+}
+inline vec2f transform_direction_inverse(const frame2f& a, const vec2f& b) {
+  return normalize(transform_vector_inverse(a, b));
+}
+
+// Transforms points, vectors and directions by frames.
+inline vec3f transform_point_inverse(const frame3f& a, const vec3f& b) {
+  return {dot(a.x, b - a.o), dot(a.y, b - a.o), dot(a.z, b - a.o)};
+}
+inline vec3f transform_vector_inverse(const frame3f& a, const vec3f& b) {
+  return {dot(a.x, b), dot(a.y, b), dot(a.z, b)};
+}
+inline vec3f transform_direction_inverse(const frame3f& a, const vec3f& b) {
+  return normalize(transform_vector_inverse(a, b));
 }
 
 // Translation, scaling and rotations transforms.
