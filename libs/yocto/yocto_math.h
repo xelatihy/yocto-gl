@@ -145,16 +145,6 @@ struct vec4f {
   const float& operator[](int i) const;
 };
 
-// Zero vector constants.
-[[deprecated]] inline const auto zero2f = vec2f{0, 0};
-[[deprecated]] inline const auto zero3f = vec3f{0, 0, 0};
-[[deprecated]] inline const auto zero4f = vec4f{0, 0, 0, 0};
-
-// One vector constants.
-[[deprecated]] inline const auto one2f = vec2f{1, 1};
-[[deprecated]] inline const auto one3f = vec3f{1, 1, 1};
-[[deprecated]] inline const auto one4f = vec4f{1, 1, 1, 1};
-
 // Element access
 inline vec3f xyz(const vec4f& a);
 
@@ -450,12 +440,6 @@ struct vec4b {
   byte&       operator[](int i);
   const byte& operator[](int i) const;
 };
-
-// Zero vector constants.
-[[deprecated]] inline const auto zero2i = vec2i{0, 0};
-[[deprecated]] inline const auto zero3i = vec3i{0, 0, 0};
-[[deprecated]] inline const auto zero4i = vec4i{0, 0, 0, 0};
-[[deprecated]] inline const auto zero4b = vec4b{0, 0, 0, 0};
 
 // Element access
 inline vec3i xyz(const vec4i& a);
@@ -2831,6 +2815,29 @@ template <typename T>
 inline std::ptrdiff_t ssize(const T& container) {
   return (std::ptrdiff_t)std::size(container);
 }
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// BACKWARD COMPATIBILITY
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Zero vector constants.
+[[deprecated]] inline const auto zero2f = vec2f{0, 0};
+[[deprecated]] inline const auto zero3f = vec3f{0, 0, 0};
+[[deprecated]] inline const auto zero4f = vec4f{0, 0, 0, 0};
+
+// One vector constants.
+[[deprecated]] inline const auto one2f = vec2f{1, 1};
+[[deprecated]] inline const auto one3f = vec3f{1, 1, 1};
+[[deprecated]] inline const auto one4f = vec4f{1, 1, 1, 1};
+
+// Zero vector constants.
+[[deprecated]] inline const auto zero2i = vec2i{0, 0};
+[[deprecated]] inline const auto zero3i = vec3i{0, 0, 0};
+[[deprecated]] inline const auto zero4i = vec4i{0, 0, 0, 0};
+[[deprecated]] inline const auto zero4b = vec4b{0, 0, 0, 0};
 
 }  // namespace yocto
 

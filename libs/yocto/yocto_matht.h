@@ -198,16 +198,6 @@ using vec3i = vec<int, 3>;
 using vec4i = vec<int, 4>;
 using vec4b = vec<byte, 4>;
 
-// Zero vector constants.
-[[deprecated]] inline const auto zero1f = vec1f{0};
-[[deprecated]] inline const auto zero2f = vec2f{0, 0};
-[[deprecated]] inline const auto zero3f = vec3f{0, 0, 0};
-[[deprecated]] inline const auto zero4f = vec4f{0, 0, 0, 0};
-[[deprecated]] inline const auto zero2i = vec2i{0, 0};
-[[deprecated]] inline const auto zero3i = vec3i{0, 0, 0};
-[[deprecated]] inline const auto zero4i = vec4i{0, 0, 0, 0};
-[[deprecated]] inline const auto zero4b = vec4b{0, 0, 0, 0};
-
 // Element access
 template <typename T>
 inline vec<T, 3> xyz(const vec<T, 4>& a);
@@ -2721,6 +2711,23 @@ template <typename T>
 inline std::ptrdiff_t ssize(const T& container) {
   return (std::ptrdiff_t)std::size(container);
 }
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// BACKWARD COMPATIBILITY
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Zero vector constants.
+[[deprecated]] inline const auto zero1f = vec1f{0};
+[[deprecated]] inline const auto zero2f = vec2f{0, 0};
+[[deprecated]] inline const auto zero3f = vec3f{0, 0, 0};
+[[deprecated]] inline const auto zero4f = vec4f{0, 0, 0, 0};
+[[deprecated]] inline const auto zero2i = vec2i{0, 0};
+[[deprecated]] inline const auto zero3i = vec3i{0, 0, 0};
+[[deprecated]] inline const auto zero4i = vec4i{0, 0, 0, 0};
+[[deprecated]] inline const auto zero4b = vec4b{0, 0, 0, 0};
 
 }  // namespace yocto
 
