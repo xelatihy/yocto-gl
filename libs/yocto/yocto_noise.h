@@ -114,7 +114,7 @@ namespace yocto {
 // print('};')
 
 // not same permutation table as Perlin's reference to avoid copyright issues;
-inline const auto __perlin_permutation = array<unsigned char, 512>{
+constexpr auto __perlin_permutation = array<unsigned char, 512>{
     // clang-format off
   124, 56, 113, 233, 69, 219, 244, 236, 246, 92, 26, 82, 218, 176, 78, 143, 238,
   145, 119, 38, 132, 112, 51, 7, 27, 81, 158, 241, 98, 37, 91, 230, 198, 205,
