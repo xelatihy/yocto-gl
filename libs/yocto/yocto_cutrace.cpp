@@ -323,14 +323,14 @@ cutrace_state::~cutrace_state() {
   clear_buffer(denoiser_scratch);
 }
 
-culights_data::culights_data(culights_data&& other) {
+cutrace_lights::cutrace_lights(cutrace_lights&& other) {
   lights.swap(other.lights);
 }
-culights_data& culights_data::operator=(culights_data&& other) {
+cutrace_lights& cutrace_lights::operator=(cutrace_lights&& other) {
   lights.swap(other.lights);
   return *this;
 }
-culights_data::~culights_data() {
+cutrace_lights::~cutrace_lights() {
   if (!lights.empty()) {
     auto lights_ = download_buffer_vector(lights);
     for (auto& light : lights_) {
@@ -513,7 +513,7 @@ cutrace_context make_cutrace_context(const trace_params& params) {
 // start a new render
 void trace_start(cutrace_context& context, cutrace_state& state,
     const cuscene_data& cuscene, const cubvh_data& bvh,
-    const culights_data& lights, const scene_data& scene,
+    const cutrace_lights& lights, const scene_data& scene,
     const trace_params& params) {
   auto globals = cutrace_globals{};
   update_buffer_value(context.cuda_stream, context.globals_buffer,
@@ -533,7 +533,7 @@ void trace_start(cutrace_context& context, cutrace_state& state,
 // render a batch of samples
 void trace_samples(cutrace_context& context, cutrace_state& state,
     const cuscene_data& cuscene, const cubvh_data& bvh,
-    const culights_data& lights, const scene_data& scene,
+    const cutrace_lights& lights, const scene_data& scene,
     const trace_params& params) {
   if (state.samples >= params.samples) return;
   auto nsamples = params.batch;
@@ -949,7 +949,7 @@ void reset_cutrace_state(cutrace_context& context, cutrace_state& state,
 }
 
 // Init trace lights
-culights_data make_cutrace_lights(cutrace_context& context,
+cutrace_lights make_cutrace_lights(cutrace_context& context,
     const scene_data& scene, const trace_params& params) {
   auto lights    = make_trace_lights(scene, (const trace_params&)params);
   auto culights_ = vector<cutrace_light>{};
@@ -959,7 +959,7 @@ culights_data make_cutrace_lights(cutrace_context& context,
     culight.environment  = light.environment;
     culight.elements_cdf = make_buffer(context.cuda_stream, light.elements_cdf);
   }
-  auto culights   = culights_data{};
+  auto culights   = cutrace_lights{};
   culights.lights = make_buffer(context.cuda_stream, culights_);
   sync_gpu(context.cuda_stream);
   return culights;
@@ -1155,7 +1155,7 @@ cutrace_context& cutrace_context::operator=(cutrace_context&& other) {
 cutrace_context::~cutrace_context() { exit_nocuda(); }
 
 cutrace_state::~cutrace_state() { exit_nocuda(); }
-culights_data::~culights_data() { exit_nocuda(); }
+cutrace_lights::~cutrace_lights() { exit_nocuda(); }
 
 #ifdef _MSC_VER
 #pragma warning(pop)
@@ -1204,7 +1204,7 @@ void reset_cutrace_state(cutrace_context& context, cutrace_state& state,
 }
 
 // Initialize lights.
-culights_data make_cutrace_lights(cutrace_context& context,
+cutrace_lights make_cutrace_lights(cutrace_context& context,
     const scene_data& scene, const trace_params& params) {
   exit_nocuda();
   return {};
@@ -1213,7 +1213,7 @@ culights_data make_cutrace_lights(cutrace_context& context,
 // Start rendering an image.
 void trace_start(cutrace_context& context, cutrace_state& state,
     const cuscene_data& cuscene, const cubvh_data& bvh,
-    const culights_data& lights, const scene_data& scene,
+    const cutrace_lights& lights, const scene_data& scene,
     const trace_params& params) {
   exit_nocuda();
 }
@@ -1221,7 +1221,7 @@ void trace_start(cutrace_context& context, cutrace_state& state,
 // Progressively computes an image.
 void trace_samples(cutrace_context& context, cutrace_state& state,
     const cuscene_data& cuscene, const cubvh_data& bvh,
-    const culights_data& lights, const scene_data& scene,
+    const cutrace_lights& lights, const scene_data& scene,
     const trace_params& params) {
   exit_nocuda();
 }
