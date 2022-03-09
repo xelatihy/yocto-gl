@@ -821,7 +821,7 @@ void show_trace_gui(const string& title, const string& name, scene_data& scene,
 void show_cutrace_gui(const string& title, const string& name,
     scene_data& scene, const trace_params& params_, bool print, bool edit) {
   // copy params and camera
-  auto params = (cutrace_params&)params_;
+  auto params = params_;
 
   // initialize context
   auto context = make_cutrace_context(params);

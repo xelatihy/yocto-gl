@@ -65,16 +65,8 @@ using std::vector;
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Default trace seed
-const auto cutrace_default_seed = trace_default_seed;
-
-// Type aliases
-using cutrace_sampler_type    = trace_sampler_type;
-using cutrace_falsecolor_type = trace_falsecolor_type;
-using cutrace_params          = trace_params;
-
 // Progressively computes an image.
-image_data cutrace_image(const scene_data& scene, const cutrace_params& params);
+image_data cutrace_image(const scene_data& scene, const trace_params& params);
 
 }  // namespace yocto
 
@@ -92,39 +84,39 @@ struct cutrace_lights;
 struct cutrace_context;
 
 // Initialize GPU context.
-cutrace_context make_cutrace_context(const cutrace_params& params);
+cutrace_context make_cutrace_context(const trace_params& params);
 
 // Upload the scene to the GPU.
 cuscene_data make_cutrace_scene(cutrace_context& context,
-    const scene_data& scene, const cutrace_params& params);
+    const scene_data& scene, const trace_params& params);
 void update_cutrace_cameras(cutrace_context& context, cuscene_data& cuscene,
-    const scene_data& scene, const cutrace_params& params);
+    const scene_data& scene, const trace_params& params);
 
 // Build the bvh acceleration structure.
 cubvh_data make_cutrace_bvh(cutrace_context& context,
-    const cuscene_data& cuscene, const cutrace_params& params);
+    const cuscene_data& cuscene, const trace_params& params);
 
 // Initialize state.
 cutrace_state make_cutrace_state(cutrace_context& context,
-    const scene_data& scene, const cutrace_params& params);
+    const scene_data& scene, const trace_params& params);
 void reset_cutrace_state(cutrace_context& context, cutrace_state& state,
-    const scene_data& scene, const cutrace_params& params);
+    const scene_data& scene, const trace_params& params);
 
 // Initialize lights.
 cutrace_lights make_cutrace_lights(cutrace_context& context,
-    const scene_data& scene, const cutrace_params& params);
+    const scene_data& scene, const trace_params& params);
 
 // Start rendering an image.
 void trace_start(cutrace_context& context, cutrace_state& state,
     const cuscene_data& cuscene, const cubvh_data& bvh,
     const cutrace_lights& lights, const scene_data& scene,
-    const cutrace_params& params);
+    const trace_params& params);
 
 // Progressively computes an image.
 void trace_samples(cutrace_context& context, cutrace_state& state,
     const cuscene_data& cuscene, const cubvh_data& bvh,
     const cutrace_lights& lights, const scene_data& scene,
-    const cutrace_params& params);
+    const trace_params& params);
 
 // Get resulting render, denoised if requested
 image_data get_image(const cutrace_state& state);
@@ -360,7 +352,7 @@ struct cutrace_globals {
   cuscene_data           scene  = {};
   OptixTraversableHandle bvh    = {};
   cutrace_lights         lights = {};
-  cutrace_params         params = {};
+  trace_params           params = {};
 };
 
 #if YOCTO_CUDA

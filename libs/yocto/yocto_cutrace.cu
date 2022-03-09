@@ -2204,7 +2204,7 @@ struct cuscene_data {
 };
 
 // Type of tracing algorithm
-enum struct cutrace_sampler_type {
+enum struct trace_sampler_type {
   path,        // path tracing
   pathdirect,  // path tracing with direct
   pathmis,     // path tracing with mis
@@ -2215,7 +2215,7 @@ enum struct cutrace_sampler_type {
   falsecolor,  // false color rendering
 };
 // Type of false color visualization
-enum struct cutrace_falsecolor_type {
+enum struct trace_falsecolor_type {
   // clang-format off
   position, normal, frontfacing, gnormal, gfrontfacing, texcoord, mtype, color,
   emission, roughness, opacity, metallic, delta, instance, shape, material, 
@@ -2224,29 +2224,29 @@ enum struct cutrace_falsecolor_type {
 };
 
 // Default trace seed
-constexpr auto cutrace_default_seed = 961748941ull;
+constexpr auto trace_default_seed = 961748941ull;
 
 // params
-struct cutrace_params {
-  int                     camera         = 0;
-  int                     resolution     = 1280;
-  cutrace_sampler_type    sampler        = cutrace_sampler_type::path;
-  cutrace_falsecolor_type falsecolor     = cutrace_falsecolor_type::color;
-  int                     samples        = 512;
-  int                     bounces        = 8;
-  float                   clamp          = 10;
-  bool                    nocaustics     = false;
-  bool                    envhidden      = false;
-  bool                    tentfilter     = false;
-  uint64_t                seed           = cutrace_default_seed;
-  bool                    embreebvh      = false;
-  bool                    highqualitybvh = false;
-  bool                    noparallel     = false;
-  int                     pratio         = 8;
-  float                   exposure       = 0;
-  bool                    filmic         = false;
-  bool                    denoise        = false;
-  int                     batch          = 1;
+struct trace_params {
+  int                   camera         = 0;
+  int                   resolution     = 1280;
+  trace_sampler_type    sampler        = trace_sampler_type::path;
+  trace_falsecolor_type falsecolor     = trace_falsecolor_type::color;
+  int                   samples        = 512;
+  int                   bounces        = 8;
+  float                 clamp          = 10;
+  bool                  nocaustics     = false;
+  bool                  envhidden      = false;
+  bool                  tentfilter     = false;
+  uint64_t              seed           = trace_default_seed;
+  bool                  embreebvh      = false;
+  bool                  highqualitybvh = false;
+  bool                  noparallel     = false;
+  int                   pratio         = 8;
+  float                 exposure       = 0;
+  bool                  filmic         = false;
+  bool                  denoise        = false;
+  int                   batch          = 1;
 };
 
 using cutrace_bvh = OptixTraversableHandle;
@@ -2268,19 +2268,15 @@ struct cutrace_globals {
   cuscene_data           scene  = {};
   OptixTraversableHandle bvh    = 0;
   cutrace_lights         lights = {};
-  cutrace_params         params = {};
+  trace_params           params = {};
 };
 
 // global data
 optix_constant cutrace_globals globals;
 
 // compatibility aliases
-using trace_bvh                   = cutrace_bvh;
-using trace_lights                = cutrace_lights;
-using trace_params                = cutrace_params;
-using trace_falsecolor_type       = cutrace_falsecolor_type;
-using trace_sampler_type          = cutrace_sampler_type;
-constexpr auto trace_default_seed = cutrace_default_seed;
+using trace_bvh    = cutrace_bvh;
+using trace_lights = cutrace_lights;
 
 }  // namespace yocto
 
@@ -2531,16 +2527,6 @@ static material_point eval_material(const scene_data& scene,
   return point;
 }
 
-// check if a material is a delta or volumetric
-static bool is_delta(const material_data& material) {
-  return (material.type == material_type::reflective &&
-             material.roughness == 0) ||
-         (material.type == material_type::refractive &&
-             material.roughness == 0) ||
-         (material.type == material_type::transparent &&
-             material.roughness == 0) ||
-         (material.type == material_type::volumetric);
-}
 static bool is_volumetric(const material_data& material) {
   return material.type == material_type::refractive ||
          material.type == material_type::volumetric ||
@@ -3988,7 +3974,7 @@ static trace_result trace_sampler(const scene_data& scene, const trace_bvh& bvh,
 
 static void trace_sample(cutrace_state& state, const cuscene_data& scene,
     const cutrace_bvh& bvh, const cutrace_lights& lights, int i, int j,
-    int sample, const cutrace_params& params) {
+    int sample, const trace_params& params) {
   auto& camera = scene.cameras[params.camera];
   // auto  sampler = get_trace_sampler_func(params);
   auto idx    = state.width * j + i;
