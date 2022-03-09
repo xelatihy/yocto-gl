@@ -2259,7 +2259,7 @@ struct cutrace_light {
 };
 
 // lights
-struct cutrace_lights {
+struct culights_data {
   cuspan<cutrace_light> lights = {};
 };
 
@@ -2267,7 +2267,7 @@ struct cutrace_globals {
   cutrace_state          state  = {};
   cuscene_data           scene  = {};
   OptixTraversableHandle bvh    = 0;
-  cutrace_lights         lights = {};
+  culights_data          lights = {};
   trace_params           params = {};
 };
 
@@ -2276,7 +2276,7 @@ optix_constant cutrace_globals globals;
 
 // compatibility aliases
 using trace_bvh    = cutrace_bvh;
-using trace_lights = cutrace_lights;
+using trace_lights = culights_data;
 
 }  // namespace yocto
 
@@ -3973,7 +3973,7 @@ static trace_result trace_sampler(const scene_data& scene, const trace_bvh& bvh,
 }
 
 static void trace_sample(cutrace_state& state, const cuscene_data& scene,
-    const cutrace_bvh& bvh, const cutrace_lights& lights, int i, int j,
+    const cutrace_bvh& bvh, const culights_data& lights, int i, int j,
     int sample, const trace_params& params) {
   auto& camera = scene.cameras[params.camera];
   // auto  sampler = get_trace_sampler_func(params);

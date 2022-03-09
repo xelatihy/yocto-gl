@@ -77,10 +77,9 @@ namespace yocto {
 
 // forward declarations
 struct cuscene_data;
-struct cuscene_data;
 struct cubvh_data;
 struct cutrace_state;
-struct cutrace_lights;
+struct culights_data;
 struct cutrace_context;
 
 // Initialize GPU context.
@@ -103,19 +102,19 @@ void reset_cutrace_state(cutrace_context& context, cutrace_state& state,
     const scene_data& scene, const trace_params& params);
 
 // Initialize lights.
-cutrace_lights make_cutrace_lights(cutrace_context& context,
+culights_data make_cutrace_lights(cutrace_context& context,
     const scene_data& scene, const trace_params& params);
 
 // Start rendering an image.
 void trace_start(cutrace_context& context, cutrace_state& state,
     const cuscene_data& cuscene, const cubvh_data& bvh,
-    const cutrace_lights& lights, const scene_data& scene,
+    const culights_data& lights, const scene_data& scene,
     const trace_params& params);
 
 // Progressively computes an image.
 void trace_samples(cutrace_context& context, cutrace_state& state,
     const cuscene_data& cuscene, const cubvh_data& bvh,
-    const cutrace_lights& lights, const scene_data& scene,
+    const culights_data& lights, const scene_data& scene,
     const trace_params& params);
 
 // Get resulting render, denoised if requested
@@ -337,13 +336,13 @@ struct cutrace_light {
 };
 
 // lights
-struct cutrace_lights {
+struct culights_data {
   cuspan<cutrace_light> lights = {};
 
-  cutrace_lights() {}
-  cutrace_lights(cutrace_lights&&);
-  cutrace_lights& operator=(cutrace_lights&&);
-  ~cutrace_lights();
+  culights_data() {}
+  culights_data(culights_data&&);
+  culights_data& operator=(culights_data&&);
+  ~culights_data();
 };
 
 // device params
@@ -351,7 +350,7 @@ struct cutrace_globals {
   cutrace_state          state  = {};
   cuscene_data           scene  = {};
   OptixTraversableHandle bvh    = {};
-  cutrace_lights         lights = {};
+  culights_data          lights = {};
   trace_params           params = {};
 };
 
