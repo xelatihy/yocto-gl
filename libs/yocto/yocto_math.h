@@ -54,6 +54,14 @@ using std::pair;
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// HACKS FOR CUDA SUPPORT
+// -----------------------------------------------------------------------------
+#ifdef __NVCC__
+// #ifdef __CUDACC__
+#define inline inline __device__ __forceinline__
+#endif
+
+// -----------------------------------------------------------------------------
 // MATH CONSTANTS AND FUNCTIONS
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -62,8 +70,8 @@ using byte   = unsigned char;
 using uint   = unsigned int;
 using ushort = unsigned short;
 
-inline const double pi  = 3.14159265358979323846;
-inline const float  pif = (float)pi;
+constexpr auto pi  = 3.14159265358979323846;
+constexpr auto pif = (float)pi;
 
 constexpr auto int_max = std::numeric_limits<int>::max();
 constexpr auto int_min = std::numeric_limits<int>::lowest();
@@ -122,8 +130,8 @@ struct vec2f {
   float x = 0;
   float y = 0;
 
-  float&       operator[](int i);
-  const float& operator[](int i) const;
+  inline float&       operator[](int i);
+  inline const float& operator[](int i) const;
 };
 
 struct vec3f {
@@ -131,8 +139,8 @@ struct vec3f {
   float y = 0;
   float z = 0;
 
-  float&       operator[](int i);
-  const float& operator[](int i) const;
+  inline float&       operator[](int i);
+  inline const float& operator[](int i) const;
 };
 
 struct vec4f {
@@ -141,8 +149,8 @@ struct vec4f {
   float z = 0;
   float w = 0;
 
-  float&       operator[](int i);
-  const float& operator[](int i) const;
+  inline float&       operator[](int i);
+  inline const float& operator[](int i) const;
 };
 
 // Element access
@@ -408,8 +416,8 @@ struct vec2i {
   int x = 0;
   int y = 0;
 
-  int&       operator[](int i);
-  const int& operator[](int i) const;
+  inline int&       operator[](int i);
+  inline const int& operator[](int i) const;
 };
 
 struct vec3i {
@@ -417,8 +425,8 @@ struct vec3i {
   int y = 0;
   int z = 0;
 
-  int&       operator[](int i);
-  const int& operator[](int i) const;
+  inline int&       operator[](int i);
+  inline const int& operator[](int i) const;
 };
 
 struct vec4i {
@@ -427,8 +435,8 @@ struct vec4i {
   int z = 0;
   int w = 0;
 
-  int&       operator[](int i);
-  const int& operator[](int i) const;
+  inline int&       operator[](int i);
+  inline const int& operator[](int i) const;
 };
 
 struct vec4b {
@@ -437,8 +445,8 @@ struct vec4b {
   byte z = 0;
   byte w = 0;
 
-  byte&       operator[](int i);
-  const byte& operator[](int i) const;
+  inline byte&       operator[](int i);
+  inline const byte& operator[](int i) const;
 };
 
 // Element access
@@ -622,8 +630,8 @@ struct mat2f {
   vec2f x = {1, 0};
   vec2f y = {0, 1};
 
-  vec2f&       operator[](int i);
-  const vec2f& operator[](int i) const;
+  inline vec2f&       operator[](int i);
+  inline const vec2f& operator[](int i) const;
 };
 
 // Small Fixed-size matrices stored in column major format.
@@ -632,8 +640,8 @@ struct mat3f {
   vec3f y = {0, 1, 0};
   vec3f z = {0, 0, 1};
 
-  vec3f&       operator[](int i);
-  const vec3f& operator[](int i) const;
+  inline vec3f&       operator[](int i);
+  inline const vec3f& operator[](int i) const;
 };
 
 // Small Fixed-size matrices stored in column major format.
@@ -643,8 +651,8 @@ struct mat4f {
   vec4f z = {0, 0, 1, 0};
   vec4f w = {0, 0, 0, 1};
 
-  vec4f&       operator[](int i);
-  const vec4f& operator[](int i) const;
+  inline vec4f&       operator[](int i);
+  inline const vec4f& operator[](int i) const;
 };
 
 // Matrix comparisons.
@@ -733,8 +741,8 @@ struct frame2f {
   vec2f y = {0, 1};
   vec2f o = {0, 0};
 
-  vec2f&       operator[](int i);
-  const vec2f& operator[](int i) const;
+  inline vec2f&       operator[](int i);
+  inline const vec2f& operator[](int i) const;
 };
 
 // Rigid frames stored as a column-major affine transform matrix.
@@ -744,8 +752,8 @@ struct frame3f {
   vec3f z = {0, 0, 1};
   vec3f o = {0, 0, 0};
 
-  vec3f&       operator[](int i);
-  const vec3f& operator[](int i) const;
+  inline vec3f&       operator[](int i);
+  inline const vec3f& operator[](int i) const;
 };
 
 // Frame properties
@@ -1025,7 +1033,9 @@ inline float exp(float a) { return std::exp(a); }
 inline float log2(float a) { return std::log2(a); }
 inline float exp2(float a) { return std::exp2(a); }
 inline float pow(float a, float b) { return std::pow(a, b); }
-inline bool  isfinite(float a) { return std::isfinite(a); }
+inline bool  isfinite(float a) {
+  return ::isfinite(a);  // no namespace for CUDA
+}
 inline float atan2(float a, float b) { return std::atan2(a, b); }
 inline float fmod(float a, float b) { return std::fmod(a, b); }
 inline void  swap(float& a, float& b) { std::swap(a, b); }
@@ -2873,5 +2883,13 @@ namespace yocto {
 [[deprecated]] constexpr auto identity_quat4f = quat4f{0, 0, 0, 1};
 
 }  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// HACKS FOR CUDA SUPPORT
+// -----------------------------------------------------------------------------
+#ifdef __NVCC__
+// #ifdef __CUDACC__
+#undef inline
+#endif
 
 #endif

@@ -44,6 +44,8 @@
 
 #include <optix_device.h>
 
+#include "yocto_math.h"
+
 // HACK TO ALLOW CUT&PASTING FROM YOCTO'S CODE
 #define inline __forceinline__ __device__
 #define static static __forceinline__ __device__
@@ -60,7 +62,7 @@ namespace yocto {
 
 // pair
 template <typename T1, typename T2>
-struct pair {
+struct pair_ {
   T1 first;
   T2 second;
 };
@@ -109,6 +111,8 @@ using vec3i = int3;
 using vec4i = int4;
 
 #else
+
+/*
 
 struct vec2f {
   float x = 0;
@@ -163,8 +167,6 @@ struct vec4b {
   byte z = 0;
   byte w = 0;
 };
-
-#endif
 
 // Rigid frames stored as a column-major affine transform matrix.
 struct frame2f {
@@ -464,7 +466,8 @@ inline float angle(const vec3f& a, const vec3f& b) {
 
 // Orthogonal vectors.
 inline vec3f orthogonal(const vec3f& v) {
-  // http://lolengine.net/blog/2013/09/21/picking-orthogonal-vector-combing-coconuts)
+  //
+http://lolengine.net/blog/2013/09/21/picking-orthogonal-vector-combing-coconuts)
   return abs(v.x) > abs(v.z) ? vec3f{-v.y, v.x, 0} : vec3f{0, -v.z, v.y};
 }
 inline vec3f orthonormalize(const vec3f& a, const vec3f& b) {
@@ -813,6 +816,10 @@ inline vec3f transform_direction_inverse(const frame3f& frame, const vec3f& v) {
   return normalize(vec3f{dot(frame.x, v), dot(frame.y, v), dot(frame.z, v)});
 }
 
+*/
+
+#endif
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -989,7 +996,7 @@ inline vec3f sphere_normal(const vec3f p, float r, const vec2f& uv) {
 }
 
 // Triangle tangent and bitangent from uv
-inline pair<vec3f, vec3f> triangle_tangents_fromuv(const vec3f& p0,
+inline pair_<vec3f, vec3f> triangle_tangents_fromuv(const vec3f& p0,
     const vec3f& p1, const vec3f& p2, const vec2f& uv0, const vec2f& uv1,
     const vec2f& uv2) {
   // Follows the definition in http://www.terathon.com/code/tangent.html and
@@ -1015,9 +1022,10 @@ inline pair<vec3f, vec3f> triangle_tangents_fromuv(const vec3f& p0,
 }
 
 // Quad tangent and bitangent from uv.
-inline pair<vec3f, vec3f> quad_tangents_fromuv(const vec3f& p0, const vec3f& p1,
-    const vec3f& p2, const vec3f& p3, const vec2f& uv0, const vec2f& uv1,
-    const vec2f& uv2, const vec2f& uv3, const vec2f& current_uv) {
+inline pair_<vec3f, vec3f> quad_tangents_fromuv(const vec3f& p0,
+    const vec3f& p1, const vec3f& p2, const vec3f& p3, const vec2f& uv0,
+    const vec2f& uv1, const vec2f& uv2, const vec2f& uv3,
+    const vec2f& current_uv) {
   if (current_uv.x + current_uv.y <= 1) {
     return triangle_tangents_fromuv(p0, p1, p3, uv0, uv1, uv3);
   } else {
@@ -2394,7 +2402,7 @@ static vec2f eval_texcoord(const scene_data& scene,
 }
 
 // Shape element normal.
-static pair<vec3f, vec3f> eval_element_tangents(
+static pair_<vec3f, vec3f> eval_element_tangents(
     const scene_data& scene, const instance_data& instance, int element) {
   auto& shape = scene.shapes[instance.shape];
   if (!shape.triangles.empty() && !shape.texcoords.empty()) {
