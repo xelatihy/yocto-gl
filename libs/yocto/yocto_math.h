@@ -56,7 +56,7 @@ using std::pair;
 // -----------------------------------------------------------------------------
 // HACKS FOR CUDA SUPPORT
 // -----------------------------------------------------------------------------
-#ifdef __NVCC__
+#ifdef __CUDACC__
 // #ifdef __CUDACC__
 #define inline inline __device__ __forceinline__
 #endif
@@ -2887,7 +2887,7 @@ namespace yocto {
 // -----------------------------------------------------------------------------
 // HACKS FOR CUDA SUPPORT
 // -----------------------------------------------------------------------------
-#ifdef __NVCC__
+#ifdef __CUDACC__
 // #ifdef __CUDACC__
 #undef inline
 #endif

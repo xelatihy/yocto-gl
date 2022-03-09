@@ -57,6 +57,14 @@
 #include "yocto_math.h"
 
 // -----------------------------------------------------------------------------
+// HACKS FOR CUDA SUPPORT
+// -----------------------------------------------------------------------------
+#ifdef __CUDACC__
+// #ifdef __CUDACC__
+#define inline inline __device__ __forceinline__
+#endif
+
+// -----------------------------------------------------------------------------
 // COLOR OPERATIONS
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -156,6 +164,8 @@ inline vec4f colorgrade(
 
 }  // namespace yocto
 
+#ifndef __CUDACC__
+
 // -----------------------------------------------------------------------------
 // COLOR SPACE CONVERSION
 // -----------------------------------------------------------------------------
@@ -189,6 +199,8 @@ inline vec3f xyz_to_color(const vec3f& xyz, color_space to);
 inline vec3f convert_color(const vec3f& col, color_space from, color_space to);
 
 }  // namespace yocto
+
+#endif
 
 // -----------------------------------------------------------------------------
 //
@@ -270,6 +282,8 @@ inline vec3f saturate(
   return max({0, 0, 0}, grey + (rgb - grey) * (saturation * 2));
 }
 
+#ifndef __CUDACC__
+
 // Filmic tonemapping
 inline vec3f tonemap_filmic(const vec3f& hdr_, bool accurate_fit = false) {
   if (!accurate_fit) {
@@ -302,6 +316,43 @@ inline vec3f tonemap_filmic(const vec3f& hdr_, bool accurate_fit = false) {
     return max({0, 0, 0}, ldr);
   }
 }
+
+#else
+
+// Filmic tonemapping
+inline vec3f tonemap_filmic(const vec3f& hdr_, bool accurate_fit = false) {
+  if (!accurate_fit) {
+    // https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/
+    auto hdr = hdr_ * 0.6f;  // brings it back to ACES range
+    auto ldr = (hdr * hdr * 2.51f + hdr * 0.03f) /
+               (hdr * hdr * 2.43f + hdr * 0.59f + 0.14f);
+    return max({0, 0, 0}, ldr);
+  } else {
+    // https://github.com/TheRealMJP/BakingLab/blob/master/BakingLab/ACES.hlsl
+    // sRGB => XYZ => D65_2_D60 => AP1 => RRT_SAT
+    auto ACESInputMat = transpose(mat3f{
+        {0.59719f, 0.35458f, 0.04823f},
+        {0.07600f, 0.90834f, 0.01566f},
+        {0.02840f, 0.13383f, 0.83777f},
+    });
+    // ODT_SAT => XYZ => D60_2_D65 => sRGB
+    auto ACESOutputMat = transpose(mat3f{
+        {1.60475f, -0.53108f, -0.07367f},
+        {-0.10208f, 1.10813f, -0.00605f},
+        {-0.00327f, -0.07276f, 1.07602f},
+    });
+    // RRT => ODT
+    auto RRTAndODTFit = [](const vec3f& v) -> vec3f {
+      return (v * v + v * 0.0245786f - 0.000090537f) /
+             (v * v * 0.983729f + v * 0.4329510f + 0.238081f);
+    };
+
+    auto ldr = ACESOutputMat * RRTAndODTFit(ACESInputMat * hdr_);
+    return max({0, 0, 0}, ldr);
+  }
+}
+
+#endif
 
 inline vec3f tonemap(const vec3f& hdr, float exposure, bool filmic, bool srgb) {
   auto rgb = hdr;
@@ -558,6 +609,8 @@ inline vec4f colorgrade(
 }
 
 }  // namespace yocto
+
+#ifndef __CUDACC__
 
 // -----------------------------------------------------------------------------
 // COLOR SPACES
@@ -919,5 +972,15 @@ inline vec3f convert_color(const vec3f& col, color_space from, color_space to) {
 }
 
 }  // namespace yocto
+
+#endif
+
+// -----------------------------------------------------------------------------
+// HACKS FOR CUDA SUPPORT
+// -----------------------------------------------------------------------------
+#ifdef __CUDACC__
+// #ifdef __CUDACC__
+#undef inline
+#endif
 
 #endif
