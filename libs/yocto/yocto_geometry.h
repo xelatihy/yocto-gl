@@ -53,6 +53,14 @@ using std::pair;
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// HACKS FOR CUDA SUPPORT
+// -----------------------------------------------------------------------------
+#ifdef __CUDACC__
+// #ifdef __CUDACC__
+#define inline inline __device__ __forceinline__
+#endif
+
+// -----------------------------------------------------------------------------
 // AXIS ALIGNED BOUNDING BOXES
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -62,8 +70,8 @@ struct bbox2f {
   vec2f min = {flt_max, flt_max};
   vec2f max = {flt_min, flt_min};
 
-  vec2f&       operator[](int i);
-  const vec2f& operator[](int i) const;
+  inline vec2f&       operator[](int i);
+  inline const vec2f& operator[](int i) const;
 };
 
 // Axis aligned bounding box represented as a min/max vector pairs.
@@ -71,8 +79,8 @@ struct bbox3f {
   vec3f min = {flt_max, flt_max, flt_max};
   vec3f max = {flt_min, flt_min, flt_min};
 
-  vec3f&       operator[](int i);
-  const vec3f& operator[](int i) const;
+  inline vec3f&       operator[](int i);
+  inline const vec3f& operator[](int i) const;
 };
 
 // Empty bbox constant.
@@ -1093,5 +1101,13 @@ namespace yocto {
 }
 
 }  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// HACKS FOR CUDA SUPPORT
+// -----------------------------------------------------------------------------
+#ifdef __CUDACC__
+// #ifdef __CUDACC__
+#undef inline
+#endif
 
 #endif

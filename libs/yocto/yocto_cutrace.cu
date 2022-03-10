@@ -45,6 +45,7 @@
 #include <optix_device.h>
 
 #include "yocto_color.h"
+#include "yocto_geometry.h"
 #include "yocto_math.h"
 
 // HACK TO ALLOW CUT&PASTING FROM YOCTO'S CODE
@@ -94,189 +95,6 @@ struct span {
   T*     _data = nullptr;
   size_t _size = 0;
 };
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// GEOMETRY TYPES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Ray epsilon
-constexpr auto ray_eps = 1e-4f;
-constexpr auto ray_far = 1e20f;
-
-struct ray2f {
-  vec2f o    = {0, 0};
-  vec2f d    = {0, 1};
-  float tmin = ray_eps;
-  float tmax = ray_far;
-};
-
-// Rays with origin, direction and min/max t value.
-struct ray3f {
-  vec3f o    = {0, 0, 0};
-  vec3f d    = {0, 0, 1};
-  float tmin = ray_eps;
-  float tmax = ray_far;
-};
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// GEOMETRY UTILITIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Line properties.
-inline vec3f line_tangent(const vec3f& p0, const vec3f& p1) {
-  return normalize(p1 - p0);
-}
-inline float line_length(const vec3f& p0, const vec3f& p1) {
-  return length(p1 - p0);
-}
-
-// Triangle properties.
-inline vec3f triangle_normal(
-    const vec3f& p0, const vec3f& p1, const vec3f& p2) {
-  return normalize(cross(p1 - p0, p2 - p0));
-}
-inline float triangle_area(const vec3f& p0, const vec3f& p1, const vec3f& p2) {
-  return length(cross(p1 - p0, p2 - p0)) / 2;
-}
-
-// Quad propeties.
-inline vec3f quad_normal(
-    const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec3f& p3) {
-  return normalize(triangle_normal(p0, p1, p3) + triangle_normal(p2, p3, p1));
-}
-inline float quad_area(
-    const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec3f& p3) {
-  return triangle_area(p0, p1, p3) + triangle_area(p2, p3, p1);
-}
-
-// Interpolates values over a line parameterized from a to b by u. Same as lerp.
-template <typename T>
-inline T interpolate_line(const T& p0, const T& p1, float u) {
-  return p0 * (1 - u) + p1 * u;
-}
-// Interpolates values over a triangle parameterized by u and v along the
-// (p1-p0) and (p2-p0) directions. Same as barycentric interpolation.
-template <typename T>
-inline T interpolate_triangle(
-    const T& p0, const T& p1, const T& p2, const vec2f& uv) {
-  return p0 * (1 - uv.x - uv.y) + p1 * uv.x + p2 * uv.y;
-}
-// Interpolates values over a quad parameterized by u and v along the
-// (p1-p0) and (p2-p1) directions. Same as bilinear interpolation.
-template <typename T>
-inline T interpolate_quad(
-    const T& p0, const T& p1, const T& p2, const T& p3, const vec2f& uv) {
-  if (uv.x + uv.y <= 1) {
-    return interpolate_triangle(p0, p1, p3, uv);
-  } else {
-    return interpolate_triangle(p2, p3, p1, 1 - uv);
-  }
-}
-
-// Interpolates values along a cubic Bezier segment parametrized by u.
-template <typename T>
-inline T interpolate_bezier(
-    const T& p0, const T& p1, const T& p2, const T& p3, float u) {
-  return p0 * (1 - u) * (1 - u) * (1 - u) + p1 * 3 * u * (1 - u) * (1 - u) +
-         p2 * 3 * u * u * (1 - u) + p3 * u * u * u;
-}
-// Computes the derivative of a cubic Bezier segment parametrized by u.
-template <typename T>
-inline T interpolate_bezier_derivative(
-    const T& p0, const T& p1, const T& p2, const T& p3, float u) {
-  return (p1 - p0) * 3 * (1 - u) * (1 - u) + (p2 - p1) * 6 * u * (1 - u) +
-         (p3 - p2) * 3 * u * u;
-}
-
-// Interpolated line properties.
-inline vec3f line_point(const vec3f& p0, const vec3f& p1, float u) {
-  return p0 * (1 - u) + p1 * u;
-}
-inline vec3f line_tangent(const vec3f& t0, const vec3f& t1, float u) {
-  return normalize(t0 * (1 - u) + t1 * u);
-}
-
-// Interpolated triangle properties.
-inline vec3f triangle_point(
-    const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec2f& uv) {
-  return p0 * (1 - uv.x - uv.y) + p1 * uv.x + p2 * uv.y;
-}
-inline vec3f triangle_normal(
-    const vec3f& n0, const vec3f& n1, const vec3f& n2, const vec2f& uv) {
-  return normalize(n0 * (1 - uv.x - uv.y) + n1 * uv.x + n2 * uv.y);
-}
-
-// Interpolated quad properties.
-inline vec3f quad_point(const vec3f& p0, const vec3f& p1, const vec3f& p2,
-    const vec3f& p3, const vec2f& uv) {
-  if (uv.x + uv.y <= 1) {
-    return triangle_point(p0, p1, p3, uv);
-  } else {
-    return triangle_point(p2, p3, p1, 1 - uv);
-  }
-}
-inline vec3f quad_normal(const vec3f& n0, const vec3f& n1, const vec3f& n2,
-    const vec3f& n3, const vec2f& uv) {
-  if (uv.x + uv.y <= 1) {
-    return triangle_normal(n0, n1, n3, uv);
-  } else {
-    return triangle_normal(n2, n3, n1, 1 - uv);
-  }
-}
-
-// Interpolated sphere properties.
-inline vec3f sphere_point(const vec3f p, float r, const vec2f& uv) {
-  return p + r * vec3f{cos(uv.x * 2 * pif) * sin(uv.y * pif),
-                     sin(uv.x * 2 * pif) * sin(uv.y * pif), cos(uv.y * pif)};
-}
-inline vec3f sphere_normal(const vec3f p, float r, const vec2f& uv) {
-  return normalize(vec3f{cos(uv.x * 2 * pif) * sin(uv.y * pif),
-      sin(uv.x * 2 * pif) * sin(uv.y * pif), cos(uv.y * pif)});
-}
-
-// Triangle tangent and bitangent from uv
-inline pair_<vec3f, vec3f> triangle_tangents_fromuv(const vec3f& p0,
-    const vec3f& p1, const vec3f& p2, const vec2f& uv0, const vec2f& uv1,
-    const vec2f& uv2) {
-  // Follows the definition in http://www.terathon.com/code/tangent.html and
-  // https://gist.github.com/aras-p/2843984
-  // normal points up from texture space
-  auto p   = p1 - p0;
-  auto q   = p2 - p0;
-  auto s   = vec2f{uv1.x - uv0.x, uv2.x - uv0.x};
-  auto t   = vec2f{uv1.y - uv0.y, uv2.y - uv0.y};
-  auto div = s.x * t.y - s.y * t.x;
-
-  if (div != 0) {
-    auto tu = vec3f{t.y * p.x - t.x * q.x, t.y * p.y - t.x * q.y,
-                  t.y * p.z - t.x * q.z} /
-              div;
-    auto tv = vec3f{s.x * q.x - s.y * p.x, s.x * q.y - s.y * p.y,
-                  s.x * q.z - s.y * p.z} /
-              div;
-    return {tu, tv};
-  } else {
-    return {{1, 0, 0}, {0, 1, 0}};
-  }
-}
-
-// Quad tangent and bitangent from uv.
-inline pair_<vec3f, vec3f> quad_tangents_fromuv(const vec3f& p0,
-    const vec3f& p1, const vec3f& p2, const vec3f& p3, const vec2f& uv0,
-    const vec2f& uv1, const vec2f& uv2, const vec2f& uv3,
-    const vec2f& current_uv) {
-  if (current_uv.x + current_uv.y <= 1) {
-    return triangle_tangents_fromuv(p0, p1, p3, uv0, uv1, uv3);
-  } else {
-    return triangle_tangents_fromuv(p2, p3, p1, uv2, uv3, uv1);
-  }
-}
 
 }  // namespace yocto
 
@@ -1802,11 +1620,6 @@ static bool is_delta(const material_point& material) {
              material.roughness == 0) ||
          (material.type == material_type::volumetric);
 }
-static bool has_volume(const material_point& material) {
-  return material.type == material_type::refractive ||
-         material.type == material_type::volumetric ||
-         material.type == material_type::subsurface;
-}
 
 static ray3f eval_camera(
     const cucamera_data& camera, const vec2f& image_uv, const vec2f& lens_uv) {
@@ -1900,47 +1713,6 @@ static scene_intersection intersect_scene(
       ray.tmin, ray.tmax, 0.0f, OptixVisibilityMask(255),
       OPTIX_RAY_FLAG_DISABLE_ANYHIT, 0, 0, 0, u0, u1);
   return intersection;
-}
-
-// Primitive intersection
-struct prim_intersection {
-  vec2f uv       = {0, 0};
-  float distance = flt_max;
-  bool  hit      = false;
-};
-
-// Intersect a ray with a triangle
-inline prim_intersection intersect_triangle(
-    const ray3f& ray, const vec3f& p0, const vec3f& p1, const vec3f& p2) {
-  // compute triangle edges
-  auto edge1 = p1 - p0;
-  auto edge2 = p2 - p0;
-
-  // compute determinant to solve a linear system
-  auto pvec = cross(ray.d, edge2);
-  auto det  = dot(edge1, pvec);
-
-  // check determinant and exit if triangle and ray are parallel
-  // (could use EPSILONS if desired)
-  if (det == 0) return {};
-  auto inv_det = 1.0f / det;
-
-  // compute and check first bricentric coordinated
-  auto tvec = ray.o - p0;
-  auto u    = dot(tvec, pvec) * inv_det;
-  if (u < 0 || u > 1) return {};
-
-  // compute and check second bricentric coordinated
-  auto qvec = cross(tvec, edge1);
-  auto v    = dot(ray.d, qvec) * inv_det;
-  if (v < 0 || u + v > 1) return {};
-
-  // compute and check ray parameter
-  auto t = dot(edge2, qvec) * inv_det;
-  if (t < ray.tmin || t > ray.tmax) return {};
-
-  // intersection occurred: set params and exit
-  return {{u, v}, t, true};
 }
 
 // instance intersection, for now manual

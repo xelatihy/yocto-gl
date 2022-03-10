@@ -67,8 +67,8 @@ struct bbox<T, 2> {
   vec<T, 2> min = {num_max<T>, num_max<T>};
   vec<T, 2> max = {num_min<T>, num_min<T>};
 
-  vec<T, 2>&       operator[](int i);
-  const vec<T, 2>& operator[](int i) const;
+  inline vec<T, 2>&       operator[](int i);
+  inline const vec<T, 2>& operator[](int i) const;
 };
 
 // Axis aligned bounding box represented as a min/max vector pairs.
@@ -77,8 +77,8 @@ struct bbox<T, 3> {
   vec<T, 3> min = {num_max<T>, num_max<T>, num_max<T>};
   vec<T, 3> max = {num_min<T>, num_min<T>, num_min<T>};
 
-  vec<T, 3>&       operator[](int i);
-  const vec<T, 3>& operator[](int i) const;
+  inline vec<T, 3>&       operator[](int i);
+  inline const vec<T, 3>& operator[](int i) const;
 };
 
 // Bbox aliases
