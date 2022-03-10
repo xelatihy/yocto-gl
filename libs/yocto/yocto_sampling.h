@@ -55,6 +55,14 @@
 #include "yocto_math.h"
 
 // -----------------------------------------------------------------------------
+// HACKS FOR CUDA SUPPORT
+// -----------------------------------------------------------------------------
+#ifdef __CUDACC__
+// #ifdef __CUDACC__
+#define inline inline __device__ __forceinline__
+#endif
+
+// -----------------------------------------------------------------------------
 // USING DIRECTIVES
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -391,5 +399,13 @@ inline float sample_discrete_pdf(const vector<float>& cdf, int idx) {
 }
 
 }  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// HACKS FOR CUDA SUPPORT
+// -----------------------------------------------------------------------------
+#ifdef __CUDACC__
+// #ifdef __CUDACC__
+#undef inline
+#endif
 
 #endif
