@@ -57,10 +57,9 @@ using std::vector;
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// HACKS FOR CUDA SUPPORT
+// CUDA SUPPORT
 // -----------------------------------------------------------------------------
 #ifdef __CUDACC__
-// #ifdef __CUDACC__
 #define inline inline __device__ __forceinline__
 #endif
 
@@ -509,7 +508,7 @@ inline vec3f sample_microfacet(float roughness, const vec3f& normal,
     auto local_halfway = Ne;
     return transform_direction(basis, local_halfway);
   } else {
-#ifndef __NVCC__
+#ifndef __CUDACC__
     throw std::invalid_argument{"not implemented yet"};
 #else
     return {0, 0, 0};
@@ -1111,7 +1110,7 @@ inline float sample_phasefunction_pdf(
   return eval_phasefunction(anisotropy, outgoing, incoming);
 }
 
-#ifndef __NVCC__
+#ifndef __CUDACC__
 
 // Conductor etas
 inline pair<vec3f, vec3f> conductor_eta(const string& name) {
@@ -1265,10 +1264,9 @@ namespace yocto {
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// HACKS FOR CUDA SUPPORT
+// CUDA SUPPORT
 // -----------------------------------------------------------------------------
 #ifdef __CUDACC__
-// #ifdef __CUDACC__
 #undef inline
 #endif
 

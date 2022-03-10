@@ -57,10 +57,9 @@
 #include "yocto_math.h"
 
 // -----------------------------------------------------------------------------
-// HACKS FOR CUDA SUPPORT
+// CUDA SUPPORT
 // -----------------------------------------------------------------------------
 #ifdef __CUDACC__
-// #ifdef __CUDACC__
 #define inline inline __device__ __forceinline__
 #endif
 
@@ -976,10 +975,9 @@ inline vec3f convert_color(const vec3f& col, color_space from, color_space to) {
 #endif
 
 // -----------------------------------------------------------------------------
-// HACKS FOR CUDA SUPPORT
+// CUDA SUPPORT
 // -----------------------------------------------------------------------------
 #ifdef __CUDACC__
-// #ifdef __CUDACC__
 #undef inline
 #endif
 
