@@ -37,6 +37,8 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
+#include <atomic>
+#include <future>
 #include <memory>
 #include <string>
 #include <utility>
@@ -196,6 +198,27 @@ void       denoise_image(image_data& image, const image_data& render,
 void       denoise_image(vector<vec4f>& denoised, int width, int height,
           const vector<vec4f>& render, const vector<vec3f>& albedo,
           const vector<vec3f>& normal);
+
+// Async implementation
+struct trace_context {
+  std::future<void> worker = {};
+  std::atomic<bool> done   = false;
+  std::atomic<bool> stop   = false;
+};
+
+// Trace context
+trace_context make_trace_context(const trace_params& params);
+
+// Async start
+void trace_samples_start(trace_context& context, trace_state& state,
+    const scene_data& scene, const trace_bvh& bvh, const trace_lights& lights,
+    const trace_params& params);
+
+// Async cancel
+void trace_samples_cancel(trace_context& context);
+
+// Async done
+void trace_samples_done(trace_context& context);
 
 }  // namespace yocto
 
