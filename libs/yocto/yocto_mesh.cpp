@@ -73,9 +73,9 @@ using namespace std::string_literals;
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-inline const auto dbl_max = std::numeric_limits<double>::max();
-inline const auto dbl_min = std::numeric_limits<double>::lowest();
-inline const auto dbl_eps = std::numeric_limits<double>::epsilon();
+constexpr auto dbl_max = std::numeric_limits<double>::max();
+constexpr auto dbl_min = std::numeric_limits<double>::lowest();
+constexpr auto dbl_eps = std::numeric_limits<double>::epsilon();
 
 inline double abs(double a);
 inline double min(double a, double b);
@@ -141,14 +141,14 @@ struct vec4d {
 };
 
 // Zero vector constants.
-inline const auto zero2d = vec2d{0, 0};
-inline const auto zero3d = vec3d{0, 0, 0};
-inline const auto zero4d = vec4d{0, 0, 0, 0};
+[[deprecated]] constexpr auto zero2d = vec2d{0, 0};
+[[deprecated]] constexpr auto zero3d = vec3d{0, 0, 0};
+[[deprecated]] constexpr auto zero4d = vec4d{0, 0, 0, 0};
 
 // One vector constants.
-inline const auto one2d = vec2d{1, 1};
-inline const auto one3d = vec3d{1, 1, 1};
-inline const auto one4d = vec4d{1, 1, 1, 1};
+[[deprecated]] constexpr auto one2d = vec2d{1, 1};
+[[deprecated]] constexpr auto one3d = vec3d{1, 1, 1};
+[[deprecated]] constexpr auto one4d = vec4d{1, 1, 1, 1};
 
 // Element access
 inline vec3d xyz(const vec4d& a);
@@ -1104,7 +1104,7 @@ pair<bool, vec2f> point_in_triangle(const vector<vec3i>& triangles,
   auto d00 = dot(u, u), d01 = dot(u, v), d11 = dot(v, v), d20 = dot(w, u),
        d21 = dot(w, v), d = d00 * d11 - d01 * d01;
 
-  if (d == 0) return {false, zero2f};
+  if (d == 0) return {false, vec2f{0, 0}};
 
   b[2] = (d00 * d21 - d01 * d20) / d;
   assert(!std::isnan(b[2]));
@@ -1114,7 +1114,7 @@ pair<bool, vec2f> point_in_triangle(const vector<vec3i>& triangles,
   assert(!std::isnan(b[0]));
 
   for (auto i = 0; i < 3; ++i) {
-    if (b[i] < -tol || b[i] > 1.0 + tol) return {false, zero2f};
+    if (b[i] < -tol || b[i] > 1.0 + tol) return {false, vec2f{0, 0}};
   }
   auto uv = vec2f{b.y, b.z};
   uv      = clamp(uv, 0.f, 1.f);
@@ -1978,14 +1978,14 @@ geodesic_solver make_geodesic_solver(const vector<vec3i>& triangles,
       auto opp   = opposite_face(triangles, adjacencies, tid, i);
       auto strip = vector<int>{tid, opp};
       auto k     = find_in_vec(
-          adjacencies[tid], opp);  // TODO(fabio): this is not needeed
+              adjacencies[tid], opp);  // TODO(fabio): this is not needeed
       assert(k != -1);
       auto a       = opposite_vertex(triangles, adjacencies, tid, k);
       offset       = find_in_vec(triangles[opp], a);
       auto bary    = vec3f{0, 0, 0};
       bary[offset] = 1;
       auto l       = length_by_flattening(
-          triangles, positions, adjacencies, {opp, {bary.y, bary.z}}, strip);
+                triangles, positions, adjacencies, {opp, {bary.y, bary.z}}, strip);
       solver.graph[i].push_back({a, l});
     }
   }
@@ -2405,7 +2405,7 @@ vector<vec3f> visualize_shortest_path(const dual_geodesic_solver& graph,
       //     graph, triangles, positions, end.face, start.face);
       auto strip = compute_strip(graph, triangles, positions, end, start);
       path       = shortest_path(
-          triangles, positions, adjacencies, start, end, strip);
+                triangles, positions, adjacencies, start, end, strip);
     }
     // get mesh points
     auto points = convert_mesh_path(
@@ -2476,9 +2476,9 @@ vector<vec3f> visualize_shortest_path(const geodesic_solver& graph,
     } else {
       auto parents = vector<int>{};
       auto strip   = get_strip(graph, triangles, positions, adjacencies, v2t,
-          angles, end, start, parents);
+            angles, end, start, parents);
       path         = shortest_path(
-          triangles, positions, adjacencies, start, end, strip);
+                  triangles, positions, adjacencies, start, end, strip);
     }
 
     // get mesh points
@@ -2714,7 +2714,7 @@ surface_path integrate_field(const vector<vec3i>& triangles,
   // trace function
   auto lerps = vector<surface_path::vertex>();
   auto lerp  = step_from_point(
-      triangles, positions, adjacency, tags, field, from, -1, tag);
+       triangles, positions, adjacency, tags, field, from, -1, tag);
   if (lerp.face == -1) return {};
   lerps.push_back(lerp);
 
@@ -2827,7 +2827,7 @@ surface_path integrate_field(const vector<vec3i>& triangles,
     if (old_alpha == 0 || old_alpha == 1) {
       int  vertex = old_alpha == 0 ? old_edge.x : old_edge.y;
       auto lerp   = step_from_point(
-          triangles, positions, adjacency, tags, field, vertex, old_face);
+            triangles, positions, adjacency, tags, field, vertex, old_face);
       lerps.push_back(lerp);
       if (lerp.alpha == 0 && lerp.edge.x == to) break;
       if (lerp.alpha == 1 && lerp.edge.y == to) break;
@@ -2932,7 +2932,7 @@ static vector<pair<int, float>> nodes_around_point(
       int         opp    = opposite_vertex(triangles, adjacencies, pid, i);
       vector<int> strip  = {CW_pid, pid};
       float       l      = length_by_flattening(
-          triangles, positions, adjacencies, p, strip);
+                     triangles, positions, adjacencies, p, strip);
       nodes.push_back(std::make_pair(opp, l));
       int opp_pid = opposite_face(triangles, adjacencies, CW_pid, p0);
       strip       = {opp_pid, CW_pid, pid};
@@ -3626,7 +3626,7 @@ static vector<int> short_strip(const geodesic_solver& solver,
   if (auto [is_vert, offset] = point_is_vert(target); is_vert) {
     auto vid = triangles[target.face][offset];
     entry    = get_entry(strip, solver, triangles, positions, adjacencies, v2t,
-        angles, vid, source);
+           angles, vid, source);
     if (strip.back() != target.face) {
       close_strip(strip, v2t, vid, strip.back(), target.face);
     }
@@ -3634,7 +3634,7 @@ static vector<int> short_strip(const geodesic_solver& solver,
   } else if (auto [is_vert, offset] = point_is_vert(source); is_vert) {
     auto vid = triangles[source.face][offset];
     entry    = get_entry(strip, solver, triangles, positions, adjacencies, v2t,
-        angles, vid, target);
+           angles, vid, target);
     if (strip.back() != source.face) {
       close_strip(strip, v2t, vid, strip.back(), source.face);
     }
@@ -3667,9 +3667,9 @@ vector<int> get_strip(const geodesic_solver& solver,
   } else if (N == 1) {
     auto v      = parents[0];
     prev_entry  = get_entry(strip, solver, triangles, positions, adjacencies,
-        v2t, angles, v, target);
+         v2t, angles, v, target);
     next_entry  = get_entry(strip_to_point, solver, triangles, positions,
-        adjacencies, v2t, angles, v, source);
+         adjacencies, v2t, angles, v, source);
     first       = find_in_vec(v2t[v], strip.back());
     nei_is_dual = next_entry % 2;
     last        = (nei_is_dual) ? (next_entry - 1) / 2 : next_entry / 2;
@@ -4826,7 +4826,7 @@ static vec2f tangent_path_direction(const dual_geodesic_solver& solver,
     const vector<vec3i>& adjacencies) {
   auto& segment = input.segment;
   auto  Q0      = eval_path_midpoint(
-      solver, triangles, positions, adjacencies, input.lines[0]);
+            solver, triangles, positions, adjacencies, input.lines[0]);
   auto Q1 = eval_path_midpoint(
       solver, triangles, positions, adjacencies, input.lines[1]);
   auto Q2 = eval_path_midpoint(
@@ -5263,7 +5263,7 @@ static std::tuple<int, vec2f, spline_polygon> find_leaf(
   auto& p = control_points;
   q[0]    = p[0];
   q[1]    = geodesic_lerp(
-      solver, triangles, positions, adjacencies, p[0], p[1], 1 / 4.f);
+         solver, triangles, positions, adjacencies, p[0], p[1], 1 / 4.f);
   auto p0p1 = geodesic_lerp(
       solver, triangles, positions, adjacencies, p[0], p[1], 1 / 2.f);
   auto p1p2 = geodesic_lerp(
@@ -5281,7 +5281,7 @@ static std::tuple<int, vec2f, spline_polygon> find_leaf(
   q[6] = p[3];
 
   spline_polygon leaf = {};
-  auto           t    = zero2f;
+  auto           t    = vec2f{0, 0};
   if (t0 <= 0.25) {
     leaf = {q[0], q[1], q[2], q[3]};
     t    = {0, 0.25};
@@ -5438,7 +5438,7 @@ static std::array<spline_polygon, 2> de_casteljau_insert(
   auto [segment_left, segment_right] = subdivide_bezier_polygon(
       solver, triangles, positions, adjacencies, points, tP_local);
   auto left_side  = compute_geodesic_path(solver, triangles, positions,
-      adjacencies, segment_left.back(), segment_left[2]);
+       adjacencies, segment_left.back(), segment_left[2]);
   auto right_side = compute_geodesic_path(solver, triangles, positions,
       adjacencies, segment_right[0], segment_right[1]);
   // P is the inserted mesh point that sepraters segment_left and
@@ -5454,7 +5454,7 @@ static std::array<spline_polygon, 2> de_casteljau_insert(
     //    assert(left_leaf.start == P);
     auto delta_len = t_start * Pp2_len / (t0 - t_start);
     auto path      = straightest_path(
-        triangles, positions, adjacencies, P, Pp2_dir, delta_len + Pp2_len);
+             triangles, positions, adjacencies, P, Pp2_dir, delta_len + Pp2_len);
     auto Pp2 = path.end;
     auto Pp1 = geodesic_lerp(
         solver, triangles, positions, adjacencies, polygon[0], polygon[1], t0);
@@ -5468,7 +5468,7 @@ static std::array<spline_polygon, 2> de_casteljau_insert(
         solver, triangles, positions, adjacencies, right_side);
     auto delta_len = (1 - t_end) / (t_end - t0) * Pp1_len;
     auto path      = straightest_path(
-        triangles, positions, adjacencies, P, Pp1_dir, delta_len + Pp1_len);
+             triangles, positions, adjacencies, P, Pp1_dir, delta_len + Pp1_len);
     auto Pp1 = path.end;
     auto Pp2 = geodesic_lerp(
         solver, triangles, positions, adjacencies, polygon[2], polygon[3], t0);
@@ -5501,7 +5501,7 @@ static std::array<spline_polygon, 2> lane_riesenfeld_insert(
         max(t.x - step, 0.f), t.x, t.y, min(t.y + step, 1.f),
         min(t.y + 2 * step, 1.f), min(t.y + 3 * step, 1.f)};
     auto          spline_polygon = from_spline_to_bezier(
-        solver, triangles, positions, adjacencies, knots, leaf);
+                 solver, triangles, positions, adjacencies, knots, leaf);
     auto t_rel         = (t0 - t.x) / (t.y - t.x);
     auto [left, right] = subdivide_bezier_polygon(
         solver, triangles, positions, adjacencies, spline_polygon, t_rel);
@@ -5515,7 +5515,7 @@ static std::array<spline_polygon, 2> lane_riesenfeld_insert(
           solver, triangles, positions, adjacencies, L32);
       auto delta_len = t0 * Pp2_len / (t0 - t.x);
       auto path      = straightest_path(
-          triangles, positions, adjacencies, left[3], Pp2_dir, delta_len);
+               triangles, positions, adjacencies, left[3], Pp2_dir, delta_len);
       auto Pp2 = path.end;
 
       auto Pp1 = geodesic_lerp(solver, triangles, positions, adjacencies,
@@ -5537,7 +5537,7 @@ static std::array<spline_polygon, 2> lane_riesenfeld_insert(
           Pp1_dir, Pp1_len / t0_local);
       auto Pp1  = path.end;
       auto Pp2  = geodesic_lerp(solver, triangles, positions, adjacencies,
-          polygon[2], polygon[3], t.y);
+           polygon[2], polygon[3], t.y);
       result[1] = {right[0], Pp1, Pp2, polygon[3]};
     }
   }
@@ -5799,7 +5799,7 @@ vector<mesh_point> compute_bezier_path(const dual_geodesic_solver& solver,
 #if HEAVY
   vector<vector<vec3f>> gradients(rectangle.size());
   vector<vector<float>> field(rectangle.size());
-  vector<mesh_point>    points_on_surface(weights.size(), {-1, zero2f});
+  vector<mesh_point>    points_on_surface(weights.size(), {-1, vec2f{0, 0}});
   for (auto i = 0; i < (int)rectangle.size(); ++i) {
     auto f = compute_distance_field(
         triangles, positions, adjacencies, v2t, solver, i, rectangle, graph);
@@ -5834,8 +5834,8 @@ vector<mesh_point> compute_bezier_path(const dual_geodesic_solver& solver,
         stop      = false;
         auto from = optimal_seed(points_on_surface, badones[i].first, weights);
         auto p    = gradient_descent(triangles, positions, adjacencies, v2t,
-            normals, solver, angles, total_angles, gradients, badones[i].first,
-            from);
+               normals, solver, angles, total_angles, gradients, badones[i].first,
+               from);
         if (p.face != -1)
           points_on_surface[badones[i].second] = p;
         else
@@ -5984,7 +5984,7 @@ static pair<spline_node, spline_node> lane_riesenfeld_split_node(
   spline_node P0 = {{new_ones[0], new_ones[1], new_ones[2], new_ones[3]},
       {L01, L12, L23}, {leaf.t.x, curr_t}, leaf.depth + 1};
   L01            = compute_geodesic_path(
-      solver, triangles, positions, adjacencies, new_ones[3], new_ones[4]);
+                 solver, triangles, positions, adjacencies, new_ones[3], new_ones[4]);
   spline_node P1 = {{new_ones[1], new_ones[2], new_ones[3], new_ones[4]},
       {L12, L23, L01}, {curr_t, leaf.t.y}, leaf.depth + 1};
   return {P0, P1};
@@ -6022,21 +6022,21 @@ static vector<mesh_point> lane_riesenfeld_uniform(
         curr_path.path, triangles, positions, adjacencies);
     q[0]           = p[0];
     q[1]           = eval_path_point(solver, triangles, positions, adjacencies,
-        gamma01.path, gamma01.t, 0.25);
+                  gamma01.path, gamma01.t, 0.25);
     auto p0p1      = eval_path_point(solver, triangles, positions, adjacencies,
-        gamma01.path, gamma01.t, 0.5);
+             gamma01.path, gamma01.t, 0.5);
     auto p1p2      = eval_path_point(solver, triangles, positions, adjacencies,
-        curr_path.path, curr_path.t, 0.5);
+             curr_path.path, curr_path.t, 0.5);
     curr_path.path = compute_geodesic_path(
         solver, triangles, positions, adjacencies, p0p1, p1p2);
     curr_path.t = path_parameters(
         curr_path.path, triangles, positions, adjacencies);
     q[2]           = eval_path_point(solver, triangles, positions, adjacencies,
-        curr_path.path, curr_path.t, 0.25);
+                  curr_path.path, curr_path.t, 0.25);
     auto p2p3      = eval_path_point(solver, triangles, positions, adjacencies,
-        gamma32.path, gamma32.t, 0.5);
+             gamma32.path, gamma32.t, 0.5);
     prev           = eval_path_point(solver, triangles, positions, adjacencies,
-        curr_path.path, curr_path.t, 5 / 8.f);
+                  curr_path.path, curr_path.t, 5 / 8.f);
     curr_path.path = compute_geodesic_path(
         solver, triangles, positions, adjacencies, p1p2, p2p3);
     curr_path.t = path_parameters(
@@ -6061,15 +6061,15 @@ static vector<mesh_point> lane_riesenfeld_uniform(
     q.resize(new_size);
     q[0]           = p[0];
     q[1]           = eval_path_point(solver, triangles, positions, adjacencies,
-        gamma01.path, gamma01.t, 1.f / pow((float)2, (float)3 + subdiv));
+                  gamma01.path, gamma01.t, 1.f / pow((float)2, (float)3 + subdiv));
     curr_path.path = compute_geodesic_path(
         solver, triangles, positions, adjacencies, p[1], p[2]);
     curr_path.t = path_parameters(
         curr_path.path, triangles, positions, adjacencies);
     q[2]           = eval_path_point(solver, triangles, positions, adjacencies,
-        curr_path.path, curr_path.t, 0.25);
+                  curr_path.path, curr_path.t, 0.25);
     prev           = eval_path_point(solver, triangles, positions, adjacencies,
-        curr_path.path, curr_path.t, 5 / 8.f);
+                  curr_path.path, curr_path.t, 5 / 8.f);
     curr_path.path = compute_geodesic_path(
         solver, triangles, positions, adjacencies, p[2], p[3]);
     curr_path.t = path_parameters(
@@ -6087,9 +6087,9 @@ static vector<mesh_point> lane_riesenfeld_uniform(
       curr_path.path = compute_geodesic_path(solver, triangles, positions,
           adjacencies, p[j / 2 + 1], p[j / 2 + 2]);
       curr_path.t    = path_parameters(
-          curr_path.path, triangles, positions, adjacencies);
+             curr_path.path, triangles, positions, adjacencies);
       curr     = eval_path_point(solver, triangles, positions, adjacencies,
-          curr_path.path, curr_path.t, 0.25);
+              curr_path.path, curr_path.t, 0.25);
       q[j + 1] = geodesic_lerp(
           solver, triangles, positions, adjacencies, prev, curr, 1 / 2.f);
       prev = eval_path_point(solver, triangles, positions, adjacencies,
@@ -6100,13 +6100,13 @@ static vector<mesh_point> lane_riesenfeld_uniform(
       auto qq = &q[new_size - 4];
       auto pp = &p[size - 4];
       prev    = eval_path_point(solver, triangles, positions, adjacencies,
-          curr_path.path, curr_path.t, 0.75);
+             curr_path.path, curr_path.t, 0.75);
       curr_path.path = compute_geodesic_path(
           solver, triangles, positions, adjacencies, pp[1], pp[2]);
       curr_path.t = path_parameters(
           curr_path.path, triangles, positions, adjacencies);
       curr  = eval_path_point(solver, triangles, positions, adjacencies,
-          curr_path.path, curr_path.t, 3 / 8.f);
+           curr_path.path, curr_path.t, 3 / 8.f);
       qq[0] = geodesic_lerp(
           solver, triangles, positions, adjacencies, prev, curr, 0.5);
       qq[1] = eval_path_point(solver, triangles, positions, adjacencies,
@@ -6175,7 +6175,7 @@ static vector<mesh_point> lane_riesenfeld_uniform(
     q.resize(new_size);
     q[0]           = p[0];
     q[1]           = eval_path_point(solver, triangles, positions, adjacencies,
-        gamma01.path, gamma01.t, 1.f / pow((float)2, (float)3 + subdiv));
+                  gamma01.path, gamma01.t, 1.f / pow((float)2, (float)3 + subdiv));
     curr_path.path = compute_geodesic_path(
         solver, triangles, positions, adjacencies, p[1], p[2]);
     curr_path.t = path_parameters(
@@ -6183,13 +6183,13 @@ static vector<mesh_point> lane_riesenfeld_uniform(
 
     for (auto j = 2; j < 2 * size - 4; j += 2) {
       q[j]     = eval_path_point(solver, triangles, positions, adjacencies,
-          curr_path.path, curr_path.t, 0.25);
+              curr_path.path, curr_path.t, 0.25);
       q[j + 1] = eval_path_point(solver, triangles, positions, adjacencies,
           curr_path.path, curr_path.t, 0.75);
       curr_path.path = compute_geodesic_path(solver, triangles, positions,
           adjacencies, p[j / 2 + 1], p[j / 2 + 2]);
       curr_path.t    = path_parameters(
-          curr_path.path, triangles, positions, adjacencies);
+             curr_path.path, triangles, positions, adjacencies);
     }
 
     q[2 * size - 4] = eval_path_point(solver, triangles, positions, adjacencies,
@@ -6209,7 +6209,7 @@ static vector<mesh_point> lane_riesenfeld_adaptive(
   auto& p = polygon;
   q[0]    = p[0];
   q[1]    = geodesic_lerp(
-      solver, triangles, positions, adjacencies, p[0], p[1], 1 / 4.f);
+         solver, triangles, positions, adjacencies, p[0], p[1], 1 / 4.f);
   auto p0p1 = geodesic_lerp(
       solver, triangles, positions, adjacencies, p[0], p[1], 1 / 2.f);
   auto p1p2 = geodesic_lerp(
@@ -6233,13 +6233,13 @@ static vector<mesh_point> lane_riesenfeld_adaptive(
       solver, triangles, positions, adjacencies, q[2], q[3]);
   spline_node P0 = {{q[0], q[1], q[2], q[3]}, {L01, L12, L23}, {0, 0.25}, 2};
   L01            = compute_geodesic_path(
-      solver, triangles, positions, adjacencies, q[3], q[4]);
+                 solver, triangles, positions, adjacencies, q[3], q[4]);
   spline_node P1 = {{q[1], q[2], q[3], q[4]}, {L12, L23, L01}, {0.25, 0.5}, 2};
   L12            = compute_geodesic_path(
-      solver, triangles, positions, adjacencies, q[4], q[5]);
+                 solver, triangles, positions, adjacencies, q[4], q[5]);
   spline_node P2 = {{q[2], q[3], q[4], q[5]}, {L23, L01, L12}, {0.5, 0.75}, 2};
   L23            = compute_geodesic_path(
-      solver, triangles, positions, adjacencies, q[5], q[6]);
+                 solver, triangles, positions, adjacencies, q[5], q[6]);
   spline_node P3 = {{q[3], q[4], q[5], q[6]}, {L01, L12, L23}, {0.75, 1}, 2};
 
   P0.is_good = is_bezier_straight_enough(P0.lines[0], P0.lines[1], P0.lines[2],
@@ -6273,7 +6273,7 @@ static vector<mesh_point> lane_riesenfeld_adaptive(
         if (P.size() > 0) {
           auto last = P.back();
           auto L    = compute_geodesic_path(solver, triangles, positions,
-              adjacencies, last.points[0], curr.points[0]);
+                 adjacencies, last.points[0], curr.points[0]);
           if (is_bezier_straight_enough(L, curr.lines[0], curr.lines[1], solver,
                   triangles, positions, adjacencies, params))
             P.push_back(curr);
@@ -6291,7 +6291,7 @@ static vector<mesh_point> lane_riesenfeld_adaptive(
         max_depth_reached = false;
       } else {
         left.is_good  = is_bezier_straight_enough(left.lines[0], left.lines[1],
-            left.lines[2], solver, triangles, positions, adjacencies, params);
+             left.lines[2], solver, triangles, positions, adjacencies, params);
         right.is_good = is_bezier_straight_enough(right.lines[0],
             right.lines[1], right.lines[2], solver, triangles, positions,
             adjacencies, params);
@@ -6302,7 +6302,7 @@ static vector<mesh_point> lane_riesenfeld_adaptive(
           } else {
             auto last = P.back();
             auto L    = compute_geodesic_path(solver, triangles, positions,
-                adjacencies, last.points[0], left.points[0]);
+                   adjacencies, last.points[0], left.points[0]);
             if (is_bezier_straight_enough(L, left.lines[0], left.lines[1],
                     solver, triangles, positions, adjacencies, params)) {
               last     = {{last.points[0], left.points[0], left.points[1],
@@ -6368,7 +6368,7 @@ static vector<mesh_point> lane_riesenfeld_adaptive(
     for (auto j = 1; j < new_size - 1; ++j) {
       float alpha = (new_size - 1 - j) / (float)(new_size - 1);
       q[j]        = geodesic_lerp(
-          solver, triangles, positions, adjacencies, p[j - 1], p[j], alpha);
+                 solver, triangles, positions, adjacencies, p[j - 1], p[j], alpha);
     }
     q.back() = p.back();
   }

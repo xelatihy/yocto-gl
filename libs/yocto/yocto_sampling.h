@@ -66,6 +66,13 @@ using std::vector;
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// CUDA SUPPORT
+// -----------------------------------------------------------------------------
+#ifdef __CUDACC__
+#define inline inline __device__ __forceinline__
+#endif
+
+// -----------------------------------------------------------------------------
 // RANDOM NUMBER GENERATION
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -74,9 +81,6 @@ namespace yocto {
 struct rng_state {
   uint64_t state = 0x853c49e6748fea9bULL;
   uint64_t inc   = 0xda3e39cb94b95bdbULL;
-
-  rng_state() = default;
-  rng_state(uint64_t state, uint64_t inc);
 };
 
 // Init a random number generator with a state state from the sequence seq.
@@ -178,8 +182,6 @@ inline float sample_discrete_pdf(const vector<float>& cdf, int idx);
 namespace yocto {
 
 // PCG random numbers from http://www.pcg-random.org/
-inline rng_state::rng_state(uint64_t state, uint64_t inc)
-    : state{state}, inc{inc} {}
 
 // Next random number, used internally only.
 inline uint32_t _advance_rng(rng_state& rng) {
@@ -396,5 +398,12 @@ inline float sample_discrete_pdf(const vector<float>& cdf, int idx) {
 }
 
 }  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// CUDA SUPPORT
+// -----------------------------------------------------------------------------
+#ifdef __CUDACC__
+#undef inline
+#endif
 
 #endif

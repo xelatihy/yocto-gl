@@ -54,6 +54,13 @@ using std::pair;
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// CUDA SUPPORT
+// -----------------------------------------------------------------------------
+#ifdef __CUDACC__
+#define inline inline __device__ __forceinline__
+#endif
+
+// -----------------------------------------------------------------------------
 // MATH CONSTANTS AND FUNCTIONS
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -62,14 +69,14 @@ using byte   = unsigned char;
 using uint   = unsigned int;
 using ushort = unsigned short;
 
-inline const double pi  = 3.14159265358979323846;
-inline const float  pif = (float)pi;
+constexpr auto pi  = 3.14159265358979323846;
+constexpr auto pif = (float)pi;
 
-inline const auto int_max = std::numeric_limits<int>::max();
-inline const auto int_min = std::numeric_limits<int>::lowest();
-inline const auto flt_max = std::numeric_limits<float>::max();
-inline const auto flt_min = std::numeric_limits<float>::lowest();
-inline const auto flt_eps = std::numeric_limits<float>::epsilon();
+constexpr auto int_max = std::numeric_limits<int>::max();
+constexpr auto int_min = std::numeric_limits<int>::lowest();
+constexpr auto flt_max = std::numeric_limits<float>::max();
+constexpr auto flt_min = std::numeric_limits<float>::lowest();
+constexpr auto flt_eps = std::numeric_limits<float>::epsilon();
 
 inline float abs(float a);
 inline float min(float a, float b);
@@ -122,8 +129,8 @@ struct vec2f {
   float x = 0;
   float y = 0;
 
-  float&       operator[](int i);
-  const float& operator[](int i) const;
+  inline float&       operator[](int i);
+  inline const float& operator[](int i) const;
 };
 
 struct vec3f {
@@ -131,8 +138,8 @@ struct vec3f {
   float y = 0;
   float z = 0;
 
-  float&       operator[](int i);
-  const float& operator[](int i) const;
+  inline float&       operator[](int i);
+  inline const float& operator[](int i) const;
 };
 
 struct vec4f {
@@ -141,19 +148,9 @@ struct vec4f {
   float z = 0;
   float w = 0;
 
-  float&       operator[](int i);
-  const float& operator[](int i) const;
+  inline float&       operator[](int i);
+  inline const float& operator[](int i) const;
 };
-
-// Zero vector constants.
-inline const auto zero2f = vec2f{0, 0};
-inline const auto zero3f = vec3f{0, 0, 0};
-inline const auto zero4f = vec4f{0, 0, 0, 0};
-
-// One vector constants.
-inline const auto one2f = vec2f{1, 1};
-inline const auto one3f = vec3f{1, 1, 1};
-inline const auto one4f = vec4f{1, 1, 1, 1};
 
 // Element access
 inline vec3f xyz(const vec4f& a);
@@ -418,8 +415,8 @@ struct vec2i {
   int x = 0;
   int y = 0;
 
-  int&       operator[](int i);
-  const int& operator[](int i) const;
+  inline int&       operator[](int i);
+  inline const int& operator[](int i) const;
 };
 
 struct vec3i {
@@ -427,8 +424,8 @@ struct vec3i {
   int y = 0;
   int z = 0;
 
-  int&       operator[](int i);
-  const int& operator[](int i) const;
+  inline int&       operator[](int i);
+  inline const int& operator[](int i) const;
 };
 
 struct vec4i {
@@ -437,8 +434,8 @@ struct vec4i {
   int z = 0;
   int w = 0;
 
-  int&       operator[](int i);
-  const int& operator[](int i) const;
+  inline int&       operator[](int i);
+  inline const int& operator[](int i) const;
 };
 
 struct vec4b {
@@ -447,15 +444,9 @@ struct vec4b {
   byte z = 0;
   byte w = 0;
 
-  byte&       operator[](int i);
-  const byte& operator[](int i) const;
+  inline byte&       operator[](int i);
+  inline const byte& operator[](int i) const;
 };
-
-// Zero vector constants.
-inline const auto zero2i = vec2i{0, 0};
-inline const auto zero3i = vec3i{0, 0, 0};
-inline const auto zero4i = vec4i{0, 0, 0, 0};
-inline const auto zero4b = vec4b{0, 0, 0, 0};
 
 // Element access
 inline vec3i xyz(const vec4i& a);
@@ -638,8 +629,8 @@ struct mat2f {
   vec2f x = {1, 0};
   vec2f y = {0, 1};
 
-  vec2f&       operator[](int i);
-  const vec2f& operator[](int i) const;
+  inline vec2f&       operator[](int i);
+  inline const vec2f& operator[](int i) const;
 };
 
 // Small Fixed-size matrices stored in column major format.
@@ -648,8 +639,8 @@ struct mat3f {
   vec3f y = {0, 1, 0};
   vec3f z = {0, 0, 1};
 
-  vec3f&       operator[](int i);
-  const vec3f& operator[](int i) const;
+  inline vec3f&       operator[](int i);
+  inline const vec3f& operator[](int i) const;
 };
 
 // Small Fixed-size matrices stored in column major format.
@@ -659,15 +650,9 @@ struct mat4f {
   vec4f z = {0, 0, 1, 0};
   vec4f w = {0, 0, 0, 1};
 
-  vec4f&       operator[](int i);
-  const vec4f& operator[](int i) const;
+  inline vec4f&       operator[](int i);
+  inline const vec4f& operator[](int i) const;
 };
-
-// Identity matrices constants.
-inline const auto identity2x2f = mat2f{{1, 0}, {0, 1}};
-inline const auto identity3x3f = mat3f{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
-inline const auto identity4x4f = mat4f{
-    {1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
 
 // Matrix comparisons.
 inline bool operator==(const mat2f& a, const mat2f& b);
@@ -755,8 +740,8 @@ struct frame2f {
   vec2f y = {0, 1};
   vec2f o = {0, 0};
 
-  vec2f&       operator[](int i);
-  const vec2f& operator[](int i) const;
+  inline vec2f&       operator[](int i);
+  inline const vec2f& operator[](int i) const;
 };
 
 // Rigid frames stored as a column-major affine transform matrix.
@@ -766,14 +751,9 @@ struct frame3f {
   vec3f z = {0, 0, 1};
   vec3f o = {0, 0, 0};
 
-  vec3f&       operator[](int i);
-  const vec3f& operator[](int i) const;
+  inline vec3f&       operator[](int i);
+  inline const vec3f& operator[](int i) const;
 };
-
-// Indentity frames.
-inline const auto identity2x3f = frame2f{{1, 0}, {0, 1}, {0, 0}};
-inline const auto identity3x4f = frame3f{
-    {1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}};
 
 // Frame properties
 inline mat2f rotation(const frame2f& a);
@@ -838,9 +818,6 @@ struct quat4f {
   float w = 1;
 };
 
-// Constants
-inline const auto identity_quat4f = quat4f{0, 0, 0, 1};
-
 // Quaternion operatons
 inline quat4f operator+(const quat4f& a, const quat4f& b);
 inline quat4f operator*(const quat4f& a, float b);
@@ -894,6 +871,16 @@ inline vec3f transform_vector(const frame3f& a, const vec3f& b);
 inline vec3f transform_direction(const frame3f& a, const vec3f& b);
 inline vec3f transform_normal(
     const frame3f& a, const vec3f& b, bool non_rigid = false);
+
+// Transforms points, vectors and directions by frames.
+inline vec2f transform_point_inverse(const frame2f& a, const vec2f& b);
+inline vec2f transform_vector_inverse(const frame2f& a, const vec2f& b);
+inline vec2f transform_direction_inverse(const frame2f& a, const vec2f& b);
+
+// Transforms points, vectors and directions by frames.
+inline vec3f transform_point_inverse(const frame3f& a, const vec3f& b);
+inline vec3f transform_vector_inverse(const frame3f& a, const vec3f& b);
+inline vec3f transform_direction_inverse(const frame3f& a, const vec3f& b);
 
 // Translation, scaling and rotations transforms.
 inline frame3f translation_frame(const vec3f& a);
@@ -1045,7 +1032,9 @@ inline float exp(float a) { return std::exp(a); }
 inline float log2(float a) { return std::log2(a); }
 inline float exp2(float a) { return std::exp2(a); }
 inline float pow(float a, float b) { return std::pow(a, b); }
-inline bool  isfinite(float a) { return std::isfinite(a); }
+inline bool  isfinite(float a) {
+  return ::isfinite(a);  // no namespace for CUDA
+}
 inline float atan2(float a, float b) { return std::atan2(a, b); }
 inline float fmod(float a, float b) { return std::fmod(a, b); }
 inline void  swap(float& a, float& b) { std::swap(a, b); }
@@ -2257,6 +2246,28 @@ inline vec3f transform_normal(
   }
 }
 
+// Transforms points, vectors and directions by frames.
+inline vec2f transform_point_inverse(const frame2f& a, const vec2f& b) {
+  return {dot(a.x, b - a.o), dot(a.y, b - a.o)};
+}
+inline vec2f transform_vector_inverse(const frame2f& a, const vec2f& b) {
+  return {dot(a.x, b), dot(a.y, b)};
+}
+inline vec2f transform_direction_inverse(const frame2f& a, const vec2f& b) {
+  return normalize(transform_vector_inverse(a, b));
+}
+
+// Transforms points, vectors and directions by frames.
+inline vec3f transform_point_inverse(const frame3f& a, const vec3f& b) {
+  return {dot(a.x, b - a.o), dot(a.y, b - a.o), dot(a.z, b - a.o)};
+}
+inline vec3f transform_vector_inverse(const frame3f& a, const vec3f& b) {
+  return {dot(a.x, b), dot(a.y, b), dot(a.z, b)};
+}
+inline vec3f transform_direction_inverse(const frame3f& a, const vec3f& b) {
+  return normalize(transform_vector_inverse(a, b));
+}
+
 // Translation, scaling and rotations transforms.
 inline frame3f translation_frame(const vec3f& a) {
   return {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, a};
@@ -2396,7 +2407,7 @@ inline pair<vec3f, vec3f> camera_turntable(const vec3f& from_, const vec3f& to_,
   auto from = from_, to = to_;
 
   // rotate if necessary
-  if (rotate != zero2f) {
+  if (rotate != vec2f{0, 0}) {
     auto z     = normalize(to - from);
     auto lz    = length(to - from);
     auto phi   = atan2(z.z, z.x) + rotate.x;
@@ -2416,7 +2427,7 @@ inline pair<vec3f, vec3f> camera_turntable(const vec3f& from_, const vec3f& to_,
   }
 
   // pan if necessary
-  if (pan != zero2f) {
+  if (pan != vec2f{0, 0}) {
     auto z = normalize(to - from);
     auto x = normalize(cross(up, z));
     auto y = normalize(cross(z, x));
@@ -2437,7 +2448,7 @@ inline pair<frame3f, float> camera_turntable(const frame3f& frame_, float focus,
   auto frame = frame_;
 
   // rotate if necessary
-  if (rotate != zero2f) {
+  if (rotate != vec2f{0, 0}) {
     auto phi   = atan2(frame.z.z, frame.z.x) + rotate.x;
     auto theta = acos(frame.z.y) + rotate.y;
     theta      = clamp(theta, 0.001f, pif - 0.001f);
@@ -2457,7 +2468,7 @@ inline pair<frame3f, float> camera_turntable(const frame3f& frame_, float focus,
   }
 
   // pan if necessary
-  if (pan != zero2f) {
+  if (pan != vec2f{0, 0}) {
     frame.o += frame.x * pan.x + frame.y * pan.y;
   }
 
@@ -2506,7 +2517,7 @@ inline void update_imview(vec2f& center, float& scale, const vec2i& imsize,
 inline void update_turntable(vec3f& from, vec3f& to, vec3f& up,
     const vec2f& rotate, float dolly, const vec2f& pan) {
   // rotate if necessary
-  if (rotate != zero2f) {
+  if (rotate != vec2f{0, 0}) {
     auto z     = normalize(to - from);
     auto lz    = length(to - from);
     auto phi   = atan2(z.z, z.x) + rotate.x;
@@ -2526,7 +2537,7 @@ inline void update_turntable(vec3f& from, vec3f& to, vec3f& up,
   }
 
   // pan if necessary
-  if (pan != zero2f) {
+  if (pan != vec2f{0, 0}) {
     auto z = normalize(to - from);
     auto x = normalize(cross(up, z));
     auto y = normalize(cross(z, x));
@@ -2541,7 +2552,7 @@ inline void update_turntable(vec3f& from, vec3f& to, vec3f& up,
 inline void update_turntable(frame3f& frame, float& focus, const vec2f& rotate,
     float dolly, const vec2f& pan) {
   // rotate if necessary
-  if (rotate != zero2f) {
+  if (rotate != vec2f{0, 0}) {
     auto phi   = atan2(frame.z.z, frame.z.x) + rotate.x;
     auto theta = acos(frame.z.y) + rotate.y;
     theta      = clamp(theta, 0.001f, pif - 0.001f);
@@ -2561,7 +2572,7 @@ inline void update_turntable(frame3f& frame, float& focus, const vec2f& rotate,
   }
 
   // pan if necessary
-  if (pan != zero2f) {
+  if (pan != vec2f{0, 0}) {
     frame.o += frame.x * pan.x + frame.y * pan.y;
   }
 }
@@ -2833,5 +2844,50 @@ inline std::ptrdiff_t ssize(const T& container) {
 }
 
 }  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// BACKWARD COMPATIBILITY
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Zero vector constants.
+[[deprecated]] constexpr auto zero2f = vec2f{0, 0};
+[[deprecated]] constexpr auto zero3f = vec3f{0, 0, 0};
+[[deprecated]] constexpr auto zero4f = vec4f{0, 0, 0, 0};
+
+// One vector constants.
+[[deprecated]] constexpr auto one2f = vec2f{1, 1};
+[[deprecated]] constexpr auto one3f = vec3f{1, 1, 1};
+[[deprecated]] constexpr auto one4f = vec4f{1, 1, 1, 1};
+
+// Zero vector constants.
+[[deprecated]] constexpr auto zero2i = vec2i{0, 0};
+[[deprecated]] constexpr auto zero3i = vec3i{0, 0, 0};
+[[deprecated]] constexpr auto zero4i = vec4i{0, 0, 0, 0};
+[[deprecated]] constexpr auto zero4b = vec4b{0, 0, 0, 0};
+
+// Indentity frames.
+[[deprecated]] constexpr auto identity2x3f = frame2f{{1, 0}, {0, 1}, {0, 0}};
+[[deprecated]] constexpr auto identity3x4f = frame3f{
+    {1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}};
+
+// Identity matrices constants.
+[[deprecated]] constexpr auto identity2x2f = mat2f{{1, 0}, {0, 1}};
+[[deprecated]] constexpr auto identity3x3f = mat3f{
+    {1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
+[[deprecated]] constexpr auto identity4x4f = mat4f{
+    {1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
+
+// Constants
+[[deprecated]] constexpr auto identity_quat4f = quat4f{0, 0, 0, 1};
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// CUDA SUPPORT
+// -----------------------------------------------------------------------------
+#ifdef __CUDACC__
+#undef inline
+#endif
 
 #endif

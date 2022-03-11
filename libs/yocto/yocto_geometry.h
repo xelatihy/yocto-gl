@@ -53,6 +53,13 @@ using std::pair;
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// CUDA SUPPORT
+// -----------------------------------------------------------------------------
+#ifdef __CUDACC__
+#define inline inline __device__ __forceinline__
+#endif
+
+// -----------------------------------------------------------------------------
 // AXIS ALIGNED BOUNDING BOXES
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -62,8 +69,8 @@ struct bbox2f {
   vec2f min = {flt_max, flt_max};
   vec2f max = {flt_min, flt_min};
 
-  vec2f&       operator[](int i);
-  const vec2f& operator[](int i) const;
+  inline vec2f&       operator[](int i);
+  inline const vec2f& operator[](int i) const;
 };
 
 // Axis aligned bounding box represented as a min/max vector pairs.
@@ -71,13 +78,13 @@ struct bbox3f {
   vec3f min = {flt_max, flt_max, flt_max};
   vec3f max = {flt_min, flt_min, flt_min};
 
-  vec3f&       operator[](int i);
-  const vec3f& operator[](int i) const;
+  inline vec3f&       operator[](int i);
+  inline const vec3f& operator[](int i) const;
 };
 
 // Empty bbox constant.
-inline const auto invalidb2f = bbox2f{};
-inline const auto invalidb3f = bbox3f{};
+constexpr auto invalidb2f = bbox2f{};
+constexpr auto invalidb3f = bbox3f{};
 
 // Bounding box properties
 inline vec2f center(const bbox2f& a);
@@ -115,7 +122,7 @@ inline void   expand(bbox3f& a, const bbox3f& b);
 namespace yocto {
 
 // Ray epsilon
-inline const auto ray_eps = 1e-4f;
+constexpr auto ray_eps = 1e-4f;
 
 struct ray2f {
   vec2f o    = {0, 0};
@@ -204,7 +211,7 @@ inline pair<vec3f, vec3f> triangle_tangents_fromuv(const vec3f& p0,
 
 // Quad tangent and bitangent from uv. Note that we pass a current_uv since
 // internally we may want to split the quad in two and we need to known where
-// to do it. If not interested in the split, just pass zero2f here.
+// to do it. If not interested in the split, just pass vec2f{0,0} here.
 inline pair<vec3f, vec3f> quad_tangents_fromuv(const vec3f& p0, const vec3f& p1,
     const vec3f& p2, const vec3f& p3, const vec2f& uv0, const vec2f& uv1,
     const vec2f& uv2, const vec2f& uv3, const vec2f& current_uv);
@@ -1093,5 +1100,12 @@ namespace yocto {
 }
 
 }  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// CUDA SUPPORT
+// -----------------------------------------------------------------------------
+#ifdef __CUDACC__
+#undef inline
+#endif
 
 #endif

@@ -57,6 +57,13 @@ using std::vector;
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// CUDA SUPPORT
+// -----------------------------------------------------------------------------
+#ifdef __CUDACC__
+#define inline inline __device__ __forceinline__
+#endif
+
+// -----------------------------------------------------------------------------
 // SHADING FUNCTIONS
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -501,7 +508,11 @@ inline vec3f sample_microfacet(float roughness, const vec3f& normal,
     auto local_halfway = Ne;
     return transform_direction(basis, local_halfway);
   } else {
+#ifndef __CUDACC__
     throw std::invalid_argument{"not implemented yet"};
+#else
+    return {0, 0, 0};
+#endif
   }
 }
 
@@ -571,7 +582,7 @@ inline vec3f eval_glossy(const vec3f& color, float ior, float roughness,
   auto F         = fresnel_dielectric(ior, halfway, incoming);
   auto D         = microfacet_distribution(roughness, up_normal, halfway);
   auto G         = microfacet_shadowing(
-      roughness, up_normal, halfway, outgoing, incoming);
+              roughness, up_normal, halfway, outgoing, incoming);
   return color * (1 - F1) / pif * abs(dot(up_normal, incoming)) +
          vec3f{1, 1, 1} * F * D * G /
              (4 * dot(up_normal, outgoing) * dot(up_normal, incoming)) *
@@ -611,7 +622,7 @@ inline vec3f eval_reflective(const vec3f& color, float roughness,
   auto up_normal = dot(normal, outgoing) <= 0 ? -normal : normal;
   auto halfway   = normalize(incoming + outgoing);
   auto F         = fresnel_conductor(
-      reflectivity_to_eta(color), {0, 0, 0}, halfway, incoming);
+              reflectivity_to_eta(color), {0, 0, 0}, halfway, incoming);
   auto D = microfacet_distribution(roughness, up_normal, halfway);
   auto G = microfacet_shadowing(
       roughness, up_normal, halfway, outgoing, incoming);
@@ -649,7 +660,7 @@ inline vec3f eval_reflective(const vec3f& eta, const vec3f& etak,
   auto F         = fresnel_conductor(eta, etak, halfway, incoming);
   auto D         = microfacet_distribution(roughness, up_normal, halfway);
   auto G         = microfacet_shadowing(
-      roughness, up_normal, halfway, outgoing, incoming);
+              roughness, up_normal, halfway, outgoing, incoming);
   return F * D * G / (4 * dot(up_normal, outgoing) * dot(up_normal, incoming)) *
          abs(dot(up_normal, incoming));
 }
@@ -732,7 +743,7 @@ inline vec3f eval_gltfpbr(const vec3f& color, float ior, float roughness,
   auto F         = fresnel_schlick(reflectivity, halfway, incoming);
   auto D         = microfacet_distribution(roughness, up_normal, halfway);
   auto G         = microfacet_shadowing(
-      roughness, up_normal, halfway, outgoing, incoming);
+              roughness, up_normal, halfway, outgoing, incoming);
   return color * (1 - metallic) * (1 - F1) / pif *
              abs(dot(up_normal, incoming)) +
          F * D * G / (4 * dot(up_normal, outgoing) * dot(up_normal, incoming)) *
@@ -780,7 +791,7 @@ inline vec3f eval_transparent(const vec3f& color, float ior, float roughness,
     auto F       = fresnel_dielectric(ior, halfway, outgoing);
     auto D       = microfacet_distribution(roughness, up_normal, halfway);
     auto G       = microfacet_shadowing(
-        roughness, up_normal, halfway, outgoing, incoming);
+              roughness, up_normal, halfway, outgoing, incoming);
     return vec3f{1, 1, 1} * F * D * G /
            (4 * dot(up_normal, outgoing) * dot(up_normal, incoming)) *
            abs(dot(up_normal, incoming));
@@ -790,7 +801,7 @@ inline vec3f eval_transparent(const vec3f& color, float ior, float roughness,
     auto F         = fresnel_dielectric(ior, halfway, outgoing);
     auto D         = microfacet_distribution(roughness, up_normal, halfway);
     auto G         = microfacet_shadowing(
-        roughness, up_normal, halfway, outgoing, reflected);
+                roughness, up_normal, halfway, outgoing, reflected);
     return color * (1 - F) * D * G /
            (4 * dot(up_normal, outgoing) * dot(up_normal, reflected)) *
            (abs(dot(up_normal, reflected)));
@@ -877,7 +888,7 @@ inline vec3f eval_refractive(const vec3f& color, float ior, float roughness,
     auto F       = fresnel_dielectric(rel_ior, halfway, outgoing);
     auto D       = microfacet_distribution(roughness, up_normal, halfway);
     auto G       = microfacet_shadowing(
-        roughness, up_normal, halfway, outgoing, incoming);
+              roughness, up_normal, halfway, outgoing, incoming);
     return vec3f{1, 1, 1} * F * D * G /
            abs(4 * dot(normal, outgoing) * dot(normal, incoming)) *
            abs(dot(normal, incoming));
@@ -1099,6 +1110,8 @@ inline float sample_phasefunction_pdf(
   return eval_phasefunction(anisotropy, outgoing, incoming);
 }
 
+#ifndef __CUDACC__
+
 // Conductor etas
 inline pair<vec3f, vec3f> conductor_eta(const string& name) {
   static const vector<pair<string, pair<vec3f, vec3f>>> metal_ior_table = {
@@ -1183,11 +1196,13 @@ inline pair<vec3f, vec3f> conductor_eta(const string& name) {
       {"W", {{4.3707029924f, 3.3002972445f, 2.9982666528f},
                 {3.5006778591f, 2.6048652781f, 2.2731930614f}}},
   };
-  for (auto& [ename, etas] : metal_ior_table) {
-    if (ename == name) return etas;
+  for (auto& [ename, eta] : metal_ior_table) {
+    if (ename == name) return eta;
   }
   return {{0, 0, 0}, {0, 0, 0}};
 }
+
+#endif
 
 }  // namespace yocto
 
@@ -1247,5 +1262,12 @@ namespace yocto {
 }
 
 }  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// CUDA SUPPORT
+// -----------------------------------------------------------------------------
+#ifdef __CUDACC__
+#undef inline
+#endif
 
 #endif

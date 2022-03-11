@@ -81,7 +81,7 @@ inline const int invalidid = -1;
 // To compute good apertures, one can use the F-stop number from photography
 // and set the aperture to focal length over f-stop.
 struct camera_data {
-  frame3f frame        = identity3x4f;
+  frame3f frame        = {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}};
   bool    orthographic = false;
   float   lens         = 0.050f;
   float   film         = 0.036f;
@@ -141,7 +141,7 @@ struct material_data {
 // Instance.
 struct instance_data {
   // instance data
-  frame3f frame    = identity3x4f;
+  frame3f frame    = {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}};
   int     shape    = invalidid;
   int     material = invalidid;
 };
@@ -149,7 +149,7 @@ struct instance_data {
 // Environment map.
 struct environment_data {
   // environment data
-  frame3f frame        = identity3x4f;
+  frame3f frame        = {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}};
   vec3f   emission     = {0, 0, 0};
   int     emission_tex = invalidid;
 };

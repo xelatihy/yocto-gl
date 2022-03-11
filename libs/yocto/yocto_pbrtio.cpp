@@ -1151,7 +1151,7 @@ static array<float, 3> blackbody_to_rgb_(float temperature) {
       if (!parse_pvalues(str, value.value2f, value.vector2f)) return false;
     } else if (type == "blackbody") {
       value.type = pbrt_type::color;
-      // auto blackbody = zero2f;
+      // auto blackbody = vec2f{0, 0};
       // auto vec tor2f  = vector<array<float, 2>>{};
       // parse_pvalues(str, blackbody, vector2f);
       // if (!vector2f.empty()) return false;
@@ -1948,11 +1948,11 @@ static void make_quad(vector<array<int, 3>>& triangles,
     plight.area_emission = {plight.emission[0] * dscale,
         plight.emission[1] * dscale, plight.emission[2] * dscale};
     plight.area_frame    = flatten(mul(unflatten(plight.frame),
-        lookat_frame(mul(normalize(sub(plight.from, plight.to)), distant_dist),
-            {0, 0, 0}, {0, 1, 0}, true)));
+           lookat_frame(mul(normalize(sub(plight.from, plight.to)), distant_dist),
+               {0, 0, 0}, {0, 1, 0}, true)));
     plight.area_frend    = flatten(mul(unflatten(plight.frend),
-        lookat_frame(mul(normalize(sub(plight.from, plight.to)), distant_dist),
-            {0, 0, 0}, {0, 1, 0}, true)));
+           lookat_frame(mul(normalize(sub(plight.from, plight.to)), distant_dist),
+               {0, 0, 0}, {0, 1, 0}, true)));
     auto texcoords       = vector<array<float, 2>>{};
     make_quad(plight.area_triangles, plight.area_positions, plight.area_normals,
         texcoords, {4, 2}, size);
@@ -1966,7 +1966,7 @@ static void make_quad(vector<array<int, 3>>& triangles,
     get_pbrt_value(command.values, "from", plight.from);
     plight.area_emission = plight.emission;
     plight.area_frame    = flatten(
-        mul(unflatten(plight.frame), translation_frame(plight.from)));
+           mul(unflatten(plight.frame), translation_frame(plight.from)));
     plight.area_frend = flatten(
         mul(unflatten(plight.frend), translation_frame(plight.from)));
     auto texcoords = vector<array<float, 2>>{};

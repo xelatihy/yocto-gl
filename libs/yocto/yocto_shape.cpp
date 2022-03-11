@@ -1409,7 +1409,7 @@ shape_data polyline_to_cylinders(
   for (auto idx = 0; idx < (int)vertices.size() - 1; idx++) {
     auto cylinder = make_uvcylinder({steps, 1, 1}, {scale, 1}, {1, 1, 1});
     auto frame    = frame_fromz((vertices[idx] + vertices[idx + 1]) / 2,
-        vertices[idx] - vertices[idx + 1]);
+           vertices[idx] - vertices[idx + 1]);
     auto length   = distance(vertices[idx], vertices[idx + 1]);
     for (auto& position : cylinder.positions)
       position = transform_point(frame, position * vec3f{1, 1, length / 2});
@@ -1425,7 +1425,7 @@ shape_data lines_to_cylinders(
   for (auto idx = 0; idx < (int)vertices.size(); idx += 2) {
     auto cylinder = make_uvcylinder({steps, 1, 1}, {scale, 1}, {1, 1, 1});
     auto frame    = frame_fromz((vertices[idx + 0] + vertices[idx + 1]) / 2,
-        vertices[idx + 0] - vertices[idx + 1]);
+           vertices[idx + 0] - vertices[idx + 1]);
     auto length   = distance(vertices[idx + 0], vertices[idx + 1]);
     for (auto& position : cylinder.positions)
       position = transform_point(frame, position * vec3f{1, 1, length / 2});
@@ -1441,7 +1441,7 @@ shape_data lines_to_cylinders(const vector<vec2i>& lines,
   for (auto& line : lines) {
     auto cylinder = make_uvcylinder({steps, 1, 1}, {scale, 1}, {1, 1, 1});
     auto frame    = frame_fromz((positions[line.x] + positions[line.y]) / 2,
-        positions[line.x] - positions[line.y]);
+           positions[line.x] - positions[line.y]);
     auto length   = distance(positions[line.x], positions[line.y]);
     for (auto& position : cylinder.positions)
       position = transform_point(frame, position * vec3f{1, 1, length / 2});
@@ -1584,7 +1584,7 @@ vector<vec4f> triangles_tangent_spaces(const vector<vec3i>& triangles,
   for (auto& t : tangv) t = normalize(t);
 
   auto tangent_spaces = vector<vec4f>(positions.size());
-  for (auto& tangent : tangent_spaces) tangent = zero4f;
+  for (auto& tangent : tangent_spaces) tangent = vec4f{0, 0, 0, 0};
   for (auto i : range(positions.size())) {
     tangu[i] = orthonormalize(tangu[i], normals[i]);
     auto s   = (dot(cross(normals[i], tangu[i]), tangv[i]) < 0) ? -1.0f : 1.0f;
@@ -3177,7 +3177,7 @@ vector<float> sample_quads_cdf(
   for (auto i : range(cdf.size())) {
     auto& q = quads[i];
     auto  w = quad_area(
-        positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
+         positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
     cdf[i] = w + (i ? cdf[i - 1] : 0);
   }
   return cdf;
@@ -3187,7 +3187,7 @@ void sample_quads_cdf(vector<float>& cdf, const vector<vec4i>& quads,
   for (auto i : range(cdf.size())) {
     auto& q = quads[i];
     auto  w = quad_area(
-        positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
+         positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
     cdf[i] = w + (i ? cdf[i - 1] : 0);
   }
 }
@@ -3222,7 +3222,7 @@ void sample_triangles(vector<vec3f>& sampled_positions,
       sampled_texcoords[i] = interpolate_triangle(
           texcoords[t.x], texcoords[t.y], texcoords[t.z], uv);
     } else {
-      sampled_texcoords[i] = zero2f;
+      sampled_texcoords[i] = vec2f{0, 0};
     }
   }
 }
@@ -3257,7 +3257,7 @@ void sample_quads(vector<vec3f>& sampled_positions,
       sampled_texcoords[i] = interpolate_quad(
           texcoords[q.x], texcoords[q.y], texcoords[q.z], texcoords[q.w], uv);
     } else {
-      sampled_texcoords[i] = zero2f;
+      sampled_texcoords[i] = vec2f{0, 0};
     }
   }
 }
@@ -4173,7 +4173,7 @@ void polyline_to_cylinders(vector<vec4i>& quads, vector<vec3f>& positions,
       cylinder_texcoords, {steps, 1, 1}, {scale, 1}, {1, 1, 1});
   for (auto idx = 0; idx < (int)vertices.size() - 1; idx++) {
     auto frame  = frame_fromz((vertices[idx] + vertices[idx + 1]) / 2,
-        vertices[idx] - vertices[idx + 1]);
+         vertices[idx] - vertices[idx + 1]);
     auto length = distance(vertices[idx], vertices[idx + 1]);
     auto transformed_positions = cylinder_positions;
     auto transformed_normals   = cylinder_normals;
@@ -4197,7 +4197,7 @@ void lines_to_cylinders(vector<vec4i>& quads, vector<vec3f>& positions,
       cylinder_texcoords, {steps, 1, 1}, {scale, 1}, {1, 1, 1});
   for (auto idx = 0; idx < (int)vertices.size(); idx += 2) {
     auto frame  = frame_fromz((vertices[idx + 0] + vertices[idx + 1]) / 2,
-        vertices[idx + 0] - vertices[idx + 1]);
+         vertices[idx + 0] - vertices[idx + 1]);
     auto length = distance(vertices[idx + 0], vertices[idx + 1]);
     auto transformed_positions = cylinder_positions;
     auto transformed_normals   = cylinder_normals;
@@ -4222,7 +4222,7 @@ void lines_to_cylinders(vector<vec4i>& quads, vector<vec3f>& positions,
       cylinder_texcoords, {steps, 1, 1}, {scale, 1}, {1, 1, 1});
   for (auto& line : lines) {
     auto frame  = frame_fromz((vertices[line.x] + vertices[line.y]) / 2,
-        vertices[line.x] - vertices[line.y]);
+         vertices[line.x] - vertices[line.y]);
     auto length = distance(vertices[line.x], vertices[line.y]);
     auto transformed_positions = cylinder_positions;
     auto transformed_normals   = cylinder_normals;

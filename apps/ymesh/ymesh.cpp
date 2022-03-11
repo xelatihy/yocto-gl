@@ -227,7 +227,7 @@ void run_glpath(const glpath_params& params) {
   // geodesic solver
   auto adjacencies = face_adjacencies(shape.triangles);
   auto solver      = make_dual_geodesic_solver(
-      shape.triangles, shape.positions, adjacencies);
+           shape.triangles, shape.positions, adjacencies);
   auto bezier = true;
 
   // bezier algos
@@ -256,9 +256,9 @@ void run_glpath(const glpath_params& params) {
             auto mouse_uv = vec2f{input.cursor.x / float(input.window.x),
                 input.cursor.y / float(input.window.y)};
             auto ray      = camera_ray(camera.frame, camera.lens, camera.aspect,
-                camera.film, mouse_uv);
+                     camera.film, mouse_uv);
             auto isec     = intersect_triangles_bvh(
-                bvh, shape.triangles, shape.positions, ray, false);
+                    bvh, shape.triangles, shape.positions, ray, false);
             if (isec.hit) {
               if (stroke.empty() || stroke.back().element != isec.element ||
                   stroke.back().uv != isec.uv) {
@@ -423,7 +423,7 @@ void run_glpathd(const glpathd_params& params) {
   // geodesic solver
   auto adjacencies = face_adjacencies(shape.triangles);
   auto solver      = make_dual_geodesic_solver(
-      shape.triangles, shape.positions, adjacencies);
+           shape.triangles, shape.positions, adjacencies);
 
   // other solver
   //  auto v2t = vertex_to_triangles(shape.triangles, shape.positions,
@@ -450,7 +450,7 @@ void run_glpathd(const glpathd_params& params) {
           auto mouse_uv = vec2f{input.cursor.x / float(input.window.x),
               input.cursor.y / float(input.window.y)};
           auto ray      = camera_ray(
-              camera.frame, camera.lens, camera.aspect, camera.film, mouse_uv);
+                   camera.frame, camera.lens, camera.aspect, camera.film, mouse_uv);
           auto isec = intersect_triangles_bvh(
               bvh, shape.triangles, shape.positions, ray, false);
           if (isec.hit) {
@@ -469,7 +469,7 @@ void run_glpathd(const glpathd_params& params) {
           scene.shapes.at(1) = points_to_spheres(positions, 2, 0.002f);
           updated_shapes.push_back(1);
           auto path1      = compute_shortest_path(solver, shape.triangles,
-              shape.positions, adjacencies, point1, point2);
+                   shape.positions, adjacencies, point1, point2);
           auto positions1 = vector<vec3f>{};
           for (auto [element, uv] : path1) {
             positions1.push_back(eval_position(shape, element, uv));
@@ -477,7 +477,7 @@ void run_glpathd(const glpathd_params& params) {
           scene.shapes.at(2) = polyline_to_cylinders(positions1, 4, 0.002f);
           updated_shapes.push_back(2);
           auto positions2    = visualize_shortest_path(solver, shape.triangles,
-              shape.positions, adjacencies, point1, point2, true);
+                 shape.positions, adjacencies, point1, point2, true);
           scene.shapes.at(3) = polyline_to_cylinders(positions2, 4, 0.002f);
           updated_shapes.push_back(3);
           // auto path3 = visualize_shortest_path(solver2, shape.triangles,
@@ -553,11 +553,11 @@ sculpt_state make_sculpt_state(
     const shape_data& shape, const texture_data& texture) {
   auto state = sculpt_state{};
   state.bvh  = make_triangles_bvh(
-      shape.triangles, shape.positions, shape.radius);
+       shape.triangles, shape.positions, shape.radius);
   state.grid       = make_hash_grid(shape.positions, 0.05f);
   auto adjacencies = face_adjacencies(shape.triangles);
   state.solver     = make_geodesic_solver(
-      shape.triangles, adjacencies, shape.positions);
+          shape.triangles, adjacencies, shape.positions);
   state.adjacencies = vertex_adjacencies(shape.triangles, adjacencies);
   state.tex_image   = texture;
   state.base_shape  = shape;
@@ -650,7 +650,8 @@ vector<int> stroke_parameterization(vector<vec2f>& coords,
     auto new_coord     = coords[neighbor] + projection;
     auto avg_lenght    = (length(current_coord) + length(new_coord)) / 2;
     auto new_dir       = normalize(current_coord + new_coord);
-    coords[node] = current_coord == zero2f ? new_coord : new_dir * avg_lenght;
+    coords[node]       = current_coord == vec2f{0, 0} ? new_coord
+                                                      : new_dir * avg_lenght;
 
     // following doesn't work
     // coords[node] = current_coord + (weight * (coords[neighbor] +
@@ -747,7 +748,7 @@ vector<int> stroke_parameterization(vector<vec2f>& coords,
   auto visited = vector<bool>(positions.size(), false);
   for (auto sample : sampling) visited[sample] = true;
 
-  coords              = vector<vec2f>(solver.graph.size(), zero2f);
+  coords              = vector<vec2f>(solver.graph.size(), vec2f{0, 0});
   coords[sampling[0]] = {radius, radius};
   vertices.insert(sampling[0]);
   for (size_t i = 1; i < sampling.size(); i++) {
@@ -868,7 +869,7 @@ bool texture_brush(vector<vec3f>& positions, vector<vec2f>& texcoords,
 
   auto scale_factor = 3.5f / params.radius;
   auto max_height   = gaussian_distribution(
-      {0, 0, 0}, {0, 0, 0}, 0.7f, scale_factor, params.strength, params.radius);
+        {0, 0, 0}, {0, 0, 0}, 0.7f, scale_factor, params.strength, params.radius);
 
   for (auto idx : vertices) {
     auto uv     = texcoords[idx];
@@ -1066,7 +1067,7 @@ static pair<vector<shape_point>, vec2f> sample_stroke(const bvh_tree& bvh,
 
   // sample
   auto delta_pos   = distance(eval_position(shape, last.element, last.uv),
-      eval_position(shape, mouse.element, mouse.uv));
+        eval_position(shape, mouse.element, mouse.uv));
   auto stroke_dist = params.radius * 0.2f;
   auto steps       = int(delta_pos / stroke_dist);
   if (steps == 0) return {};
@@ -1094,9 +1095,9 @@ static pair<bool, bool> sculpt_update(sculpt_state& state, shape_data& shape,
       state.bvh, shape.triangles, shape.positions, ray, false);
   if (isec.hit) {
     cursor         = make_cursor(eval_position(shape, isec.element, isec.uv),
-        eval_normal(shape, isec.element, isec.uv),
-        params.radius *
-            (params.type == sculpt_brush_type::gaussian ? 0.5f : 1.0f));
+                eval_normal(shape, isec.element, isec.uv),
+                params.radius *
+                    (params.type == sculpt_brush_type::gaussian ? 0.5f : 1.0f));
     updated_cursor = true;
   }
 

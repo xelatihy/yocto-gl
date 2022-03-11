@@ -114,36 +114,33 @@ void run_render(const render_params& params_) {
     shape.quads     = {};
   }
 
-  // slice params
-  auto params__ = (cutrace_params&)params;
-
   // initialize context
   timer        = simple_timer{};
-  auto context = make_cutrace_context(params__);
+  auto context = make_cutrace_context(params);
   print_info("init gpu: {}", elapsed_formatted(timer));
 
   // upload scene to the gpu
   timer        = simple_timer{};
-  auto cuscene = make_cutrace_scene(context, scene, params__);
+  auto cuscene = make_cutrace_scene(context, scene, params);
   print_info("upload scene: {}", elapsed_formatted(timer));
 
   // build bvh
   timer    = simple_timer{};
-  auto bvh = make_cutrace_bvh(context, cuscene, params__);
+  auto bvh = make_cutrace_bvh(context, cuscene, params);
   print_info("build bvh: {}", elapsed_formatted(timer));
 
   // init lights
-  auto lights = make_cutrace_lights(context, scene, params__);
+  auto lights = make_cutrace_lights(context, scene, params);
 
   // state
-  auto state = make_cutrace_state(context, scene, params__);
+  auto state = make_cutrace_state(context, scene, params);
 
   // render
   timer = simple_timer{};
-  trace_start(context, state, cuscene, bvh, lights, scene, params__);
-  for (auto sample : range(0, params__.samples, params__.batch)) {
+  trace_start(context, state, cuscene, bvh, lights, scene, params);
+  for (auto sample : range(0, params.samples, params.batch)) {
     auto sample_timer = simple_timer{};
-    trace_samples(context, state, cuscene, bvh, lights, scene, params__);
+    trace_samples(context, state, cuscene, bvh, lights, scene, params);
     print_info("render sample {}/{}: {}", state.samples, params.samples,
         elapsed_formatted(sample_timer));
     if (params.savebatch && state.samples % params.batch == 0) {

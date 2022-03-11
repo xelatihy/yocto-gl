@@ -373,7 +373,7 @@ static void optix_log_callback(
 }
 
 // init cuda and optix context
-cutrace_context make_cutrace_context(const cutrace_params& params) {
+cutrace_context make_cutrace_context(const trace_params& params) {
   // context
   auto context = cutrace_context{};
 
@@ -514,7 +514,7 @@ cutrace_context make_cutrace_context(const cutrace_params& params) {
 void trace_start(cutrace_context& context, cutrace_state& state,
     const cuscene_data& cuscene, const cubvh_data& bvh,
     const cutrace_lights& lights, const scene_data& scene,
-    const cutrace_params& params) {
+    const trace_params& params) {
   auto globals = cutrace_globals{};
   update_buffer_value(context.cuda_stream, context.globals_buffer,
       offsetof(cutrace_globals, state), state);
@@ -534,7 +534,7 @@ void trace_start(cutrace_context& context, cutrace_state& state,
 void trace_samples(cutrace_context& context, cutrace_state& state,
     const cuscene_data& cuscene, const cubvh_data& bvh,
     const cutrace_lights& lights, const scene_data& scene,
-    const cutrace_params& params) {
+    const trace_params& params) {
   if (state.samples >= params.samples) return;
   auto nsamples = params.batch;
   update_buffer_value(context.cuda_stream, context.globals_buffer,
@@ -553,7 +553,7 @@ void trace_samples(cutrace_context& context, cutrace_state& state,
 }
 
 cuscene_data make_cutrace_scene(cutrace_context& context,
-    const scene_data& scene, const cutrace_params& params) {
+    const scene_data& scene, const trace_params& params) {
   auto cuscene = cuscene_data{};
 
   auto cucameras = vector<cucamera_data>{};
@@ -691,7 +691,7 @@ cuscene_data make_cutrace_scene(cutrace_context& context,
 }
 
 void update_cutrace_cameras(cutrace_context& context, cuscene_data& cuscene,
-    const scene_data& scene, const cutrace_params& params) {
+    const scene_data& scene, const trace_params& params) {
   auto cucameras = vector<cucamera_data>{};
   for (auto& camera : scene.cameras) {
     auto& cucamera        = cucameras.emplace_back();
@@ -708,7 +708,7 @@ void update_cutrace_cameras(cutrace_context& context, cuscene_data& cuscene,
 }
 
 cubvh_data make_cutrace_bvh(cutrace_context& context, const cuscene_data& scene,
-    const cutrace_params& params) {
+    const trace_params& params) {
   auto bvh = cubvh_data{};
 
   // download shapes and instances
@@ -873,7 +873,7 @@ cubvh_data make_cutrace_bvh(cutrace_context& context, const cuscene_data& scene,
 
 // Initialize state.
 cutrace_state make_cutrace_state(cutrace_context& context,
-    const scene_data& scene, const cutrace_params& params) {
+    const scene_data& scene, const trace_params& params) {
   auto& camera = scene.cameras[params.camera];
   auto  state  = cutrace_state{};
   if (camera.aspect >= 1) {
@@ -910,7 +910,7 @@ cutrace_state make_cutrace_state(cutrace_context& context,
 };
 
 void reset_cutrace_state(cutrace_context& context, cutrace_state& state,
-    const scene_data& scene, const cutrace_params& params) {
+    const scene_data& scene, const trace_params& params) {
   auto& camera = scene.cameras[params.camera];
   if (camera.aspect >= 1) {
     state.width  = params.resolution;
@@ -950,7 +950,7 @@ void reset_cutrace_state(cutrace_context& context, cutrace_state& state,
 
 // Init trace lights
 cutrace_lights make_cutrace_lights(cutrace_context& context,
-    const scene_data& scene, const cutrace_params& params) {
+    const scene_data& scene, const trace_params& params) {
   auto lights    = make_trace_lights(scene, (const trace_params&)params);
   auto culights_ = vector<cutrace_light>{};
   for (auto& light : lights.lights) {
@@ -966,8 +966,7 @@ cutrace_lights make_cutrace_lights(cutrace_context& context,
 }
 
 // Copmutes an image
-image_data cutrace_image(
-    const scene_data& scene, const cutrace_params& params) {
+image_data cutrace_image(const scene_data& scene, const trace_params& params) {
   // initialization
   auto context = make_cutrace_context(params);
   auto cuscene = make_cutrace_scene(context, scene, params);
@@ -1162,52 +1161,51 @@ cutrace_lights::~cutrace_lights() { exit_nocuda(); }
 #pragma warning(pop)
 #endif
 
-image_data cutrace_image(
-    const scene_data& scene, const cutrace_params& params) {
+image_data cutrace_image(const scene_data& scene, const trace_params& params) {
   exit_nocuda();
   return {};
 }
 
 // Initialize GPU context.
-cutrace_context make_cutrace_context(const cutrace_params& params) {
+cutrace_context make_cutrace_context(const trace_params& params) {
   exit_nocuda();
   return {};
 }
 
 // Upload the scene to the GPU.
 cuscene_data make_cutrace_scene(cutrace_context& context,
-    const scene_data& scene, const cutrace_params& params) {
+    const scene_data& scene, const trace_params& params) {
   exit_nocuda();
   return {};
 }
 
 // Update cameras
 void update_cutrace_cameras(cutrace_context& context, cuscene_data& cuscene,
-    const scene_data& scene, const cutrace_params& params) {
+    const scene_data& scene, const trace_params& params) {
   exit_nocuda();
 }
 
 // Build the bvh acceleration structure.
 cubvh_data make_cutrace_bvh(cutrace_context& context,
-    const cuscene_data& cuscene, const cutrace_params& params) {
+    const cuscene_data& cuscene, const trace_params& params) {
   exit_nocuda();
   return {};
 }
 
 // Initialize state.
 cutrace_state make_cutrace_state(cutrace_context& context,
-    const scene_data& scene, const cutrace_params& params) {
+    const scene_data& scene, const trace_params& params) {
   exit_nocuda();
   return {};
 }
 void reset_cutrace_state(cutrace_context& context, cutrace_state& state,
-    const scene_data& scene, const cutrace_params& params) {
+    const scene_data& scene, const trace_params& params) {
   exit_nocuda();
 }
 
 // Initialize lights.
 cutrace_lights make_cutrace_lights(cutrace_context& context,
-    const scene_data& scene, const cutrace_params& params) {
+    const scene_data& scene, const trace_params& params) {
   exit_nocuda();
   return {};
 }
@@ -1216,7 +1214,7 @@ cutrace_lights make_cutrace_lights(cutrace_context& context,
 void trace_start(cutrace_context& context, cutrace_state& state,
     const cuscene_data& cuscene, const cubvh_data& bvh,
     const cutrace_lights& lights, const scene_data& scene,
-    const cutrace_params& params) {
+    const trace_params& params) {
   exit_nocuda();
 }
 
@@ -1224,7 +1222,7 @@ void trace_start(cutrace_context& context, cutrace_state& state,
 void trace_samples(cutrace_context& context, cutrace_state& state,
     const cuscene_data& cuscene, const cubvh_data& bvh,
     const cutrace_lights& lights, const scene_data& scene,
-    const cutrace_params& params) {
+    const trace_params& params) {
   exit_nocuda();
 }
 

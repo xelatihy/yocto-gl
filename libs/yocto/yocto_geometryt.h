@@ -67,8 +67,8 @@ struct bbox<T, 2> {
   vec<T, 2> min = {num_max<T>, num_max<T>};
   vec<T, 2> max = {num_min<T>, num_min<T>};
 
-  vec<T, 2>&       operator[](int i);
-  const vec<T, 2>& operator[](int i) const;
+  inline vec<T, 2>&       operator[](int i);
+  inline const vec<T, 2>& operator[](int i) const;
 };
 
 // Axis aligned bounding box represented as a min/max vector pairs.
@@ -77,8 +77,8 @@ struct bbox<T, 3> {
   vec<T, 3> min = {num_max<T>, num_max<T>, num_max<T>};
   vec<T, 3> max = {num_min<T>, num_min<T>, num_min<T>};
 
-  vec<T, 3>&       operator[](int i);
-  const vec<T, 3>& operator[](int i) const;
+  inline vec<T, 3>&       operator[](int i);
+  inline const vec<T, 3>& operator[](int i) const;
 };
 
 // Bbox aliases
@@ -86,8 +86,8 @@ using bbox2f = bbox<float, 2>;
 using bbox3f = bbox<float, 3>;
 
 // Empty bbox constant.
-inline const auto invalidb2f = bbox2f{};
-inline const auto invalidb3f = bbox3f{};
+constexpr auto invalidb2f = bbox2f{};
+constexpr auto invalidb3f = bbox3f{};
 
 // Bounding box properties
 template <typename T, int N>
@@ -120,7 +120,7 @@ namespace yocto {
 
 // Ray epsilon
 template <typename T>
-inline const auto ray_eps = (T)1e-4;
+constexpr auto ray_eps = (T)1e-4;
 
 // Rays with origin, direction and min/max t value.
 template <typename T, int N>
@@ -245,7 +245,7 @@ inline pair<vec<T, 3>, vec<T, 3>> triangle_tangents_fromuv(const vec<T, 3>& p0,
 
 // Quad tangent and bitangent from uv. Note that we pass a current_uv since
 // internally we may want to split the quad in two and we need to known where
-// to do it. If not interested in the split, just pass zero2f here.
+// to do it. If not interested in the split, just pass vec2f{0,0} here.
 template <typename T>
 inline pair<vec<T, 3>, vec<T, 3>> quad_tangents_fromuv(const vec<T, 3>& p0,
     const vec<T, 3>& p1, const vec<T, 3>& p2, const vec<T, 3>& p3,

@@ -256,8 +256,8 @@ static bool uiupdate_camera_params(
     const gui_input& input, camera_data& camera) {
   if (input.mouse.x && input.modifiers.x && !input.onwidgets) {
     auto dolly  = 0.0f;
-    auto pan    = zero2f;
-    auto rotate = zero2f;
+    auto pan    = vec2f{0, 0};
+    auto rotate = vec2f{0, 0};
     if (input.modifiers.y) {
       pan   = (input.cursor - input.last) * camera.focus / 200.0f;
       pan.x = -pan.x;
@@ -299,8 +299,8 @@ static bool draw_image_inspector(const gui_input& input,
         vec2i{image.width, image.height});
     auto ij     = vec2i{i, j};
     draw_gui_dragger("mouse", ij);
-    auto image_pixel   = zero4f;
-    auto display_pixel = zero4f;
+    auto image_pixel   = vec4f{0, 0, 0, 0};
+    auto display_pixel = vec4f{0, 0, 0, 0};
     if (i >= 0 && i < image.width && j >= 0 && j < image.height) {
       image_pixel   = image.pixels[j * image.width + i];
       display_pixel = image.pixels[j * image.width + i];
@@ -322,8 +322,8 @@ static bool draw_image_inspector(
         vec2i{image.width, image.height});
     auto ij     = vec2i{i, j};
     draw_gui_dragger("mouse", ij);
-    auto image_pixel   = zero4f;
-    auto display_pixel = zero4f;
+    auto image_pixel   = vec4f{0, 0, 0, 0};
+    auto display_pixel = vec4f{0, 0, 0, 0};
     if (i >= 0 && i < image.width && j >= 0 && j < image.height) {
       image_pixel   = image.pixels[j * image.width + i];
       display_pixel = tonemap(
@@ -358,7 +358,6 @@ static bool draw_scene_editor(scene_data& scene, scene_selection& selection,
     edited += draw_gui_slider("film", camera.film, 0.1f, 0.5f);
     edited += draw_gui_slider("focus", camera.focus, 0.001f, 100);
     edited += draw_gui_slider("aperture", camera.aperture, 0, 1);
-    //   frame3f frame        = identity3x4f;
     if (edited) {
       if (before_edit) before_edit();
       scene.cameras.at(selection.camera) = camera;
@@ -372,7 +371,6 @@ static bool draw_scene_editor(scene_data& scene, scene_selection& selection,
     edited += draw_gui_coloredithdr("emission", environment.emission);
     edited += draw_gui_combobox(
         "emission_tex", environment.emission_tex, scene.texture_names, true);
-    //   frame3f frame        = identity3x4f;
     if (edited) {
       if (before_edit) before_edit();
       scene.environments.at(selection.environment) = environment;
@@ -385,7 +383,6 @@ static bool draw_scene_editor(scene_data& scene, scene_selection& selection,
     edited += draw_gui_combobox("shape", instance.shape, scene.shape_names);
     edited += draw_gui_combobox(
         "material", instance.material, scene.material_names);
-    //   frame3f frame        = identity3x4f;
     if (edited) {
       if (before_edit) before_edit();
       scene.instances.at(selection.instance) = instance;
@@ -824,7 +821,7 @@ void show_trace_gui(const string& title, const string& name, scene_data& scene,
 void show_cutrace_gui(const string& title, const string& name,
     scene_data& scene, const trace_params& params_, bool print, bool edit) {
   // copy params and camera
-  auto params = (cutrace_params&)params_;
+  auto params = params_;
 
   // initialize context
   auto context = make_cutrace_context(params);

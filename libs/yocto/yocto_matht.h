@@ -65,18 +65,18 @@ using ushort = unsigned short;
 inline const double pi  = 3.14159265358979323846;
 inline const float  pif = (float)pi;
 
-inline const auto int_max = std::numeric_limits<int>::max();
-inline const auto int_min = std::numeric_limits<int>::lowest();
-inline const auto flt_max = std::numeric_limits<float>::max();
-inline const auto flt_min = std::numeric_limits<float>::lowest();
-inline const auto flt_eps = std::numeric_limits<float>::epsilon();
+constexpr auto int_max = std::numeric_limits<int>::max();
+constexpr auto int_min = std::numeric_limits<int>::lowest();
+constexpr auto flt_max = std::numeric_limits<float>::max();
+constexpr auto flt_min = std::numeric_limits<float>::lowest();
+constexpr auto flt_eps = std::numeric_limits<float>::epsilon();
 
 template <typename T>
-inline const auto num_max = std::numeric_limits<T>::max();
+constexpr auto num_max = std::numeric_limits<T>::max();
 template <typename T>
-inline const auto num_min = std::numeric_limits<T>::lowest();
+constexpr auto num_min = std::numeric_limits<T>::lowest();
 template <typename T>
-inline const auto num_eps = std::numeric_limits<T>::epsilon();
+constexpr auto num_eps = std::numeric_limits<T>::epsilon();
 
 using std::swap;
 
@@ -197,16 +197,6 @@ using vec2i = vec<int, 2>;
 using vec3i = vec<int, 3>;
 using vec4i = vec<int, 4>;
 using vec4b = vec<byte, 4>;
-
-// Zero vector constants.
-inline const auto zero1f = vec1f{0};
-inline const auto zero2f = vec2f{0, 0};
-inline const auto zero3f = vec3f{0, 0, 0};
-inline const auto zero4f = vec4f{0, 0, 0, 0};
-inline const auto zero2i = vec2i{0, 0};
-inline const auto zero3i = vec3i{0, 0, 0};
-inline const auto zero4i = vec4i{0, 0, 0, 0};
-inline const auto zero4b = vec4b{0, 0, 0, 0};
 
 // Element access
 template <typename T>
@@ -441,12 +431,6 @@ using mat2f = mat<float, 2>;
 using mat3f = mat<float, 3>;
 using mat4f = mat<float, 4>;
 
-// Identity matrices constants.
-inline const auto identity2x2f = mat2f{{1, 0}, {0, 1}};
-inline const auto identity3x3f = mat3f{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
-inline const auto identity4x4f = mat4f{
-    {1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
-
 // Matrix comparisons.
 template <typename T, int N>
 inline bool operator==(const mat<T, N>& a, const mat<T, N>& b);
@@ -529,11 +513,6 @@ struct frame<T, 3> {
 using frame2f = frame<float, 2>;
 using frame3f = frame<float, 3>;
 
-// Indentity frames.
-inline const auto identity2x3f = frame2f{{1, 0}, {0, 1}, {0, 0}};
-inline const auto identity3x4f = frame3f{
-    {1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}};
-
 // Frame properties
 template <typename T, int N>
 inline mat<T, N> rotation(const frame<T, N>& a);
@@ -595,9 +574,6 @@ struct quat<T, 4> {
 
 // Quaternion aliases
 using quat4f = quat<float, 4>;
-
-// Constants
-inline const auto identity_quat4f = quat4f{0, 0, 0, 1};
 
 // Quaternion operatons
 template <typename T>
@@ -663,6 +639,17 @@ inline vec<T, N> transform_direction(const frame<T, N>& a, const vec<T, N>& b);
 template <typename T, int N>
 inline vec<T, N> transform_normal(
     const frame<T, N>& a, const vec<T, N>& b, bool non_rigid = false);
+
+// Transforms points, vectors and directions by frames.
+template <typename T, int N>
+inline vec<T, N> transform_point_inverse(
+    const frame<T, N>& a, const vec<T, N>& b);
+template <typename T, int N>
+inline vec<T, N> transform_vector_inverse(
+    const frame<T, N>& a, const vec<T, N>& b);
+template <typename T, int N>
+inline vec<T, N> transform_direction_inverse(
+    const frame<T, N>& a, const vec<T, N>& b);
 
 // Translation, scaling and rotations transforms.
 template <typename T>
@@ -2121,6 +2108,31 @@ inline vec<T, N> transform_normal(
   }
 }
 
+// Transforms points, vectors and directions by frames.
+template <typename T, int N>
+inline vec<T, N> transform_point_inverse(
+    const frame<T, N>& a, const vec<T, N>& b) {
+  if constexpr (N == 2) {
+    return {dot(a.x, (b - a.o)), dot(a.y, (b - a.o))};
+  } else if constexpr (N == 3) {
+    return {dot(a.x, (b - a.o)), dot(a.y, (b - a.o)), dot(a.z, (b - a.o))};
+  }
+}
+template <typename T, int N>
+inline vec<T, N> transform_vector_inverse(
+    const frame<T, N>& a, const vec<T, N>& b) {
+  if constexpr (N == 2) {
+    return {dot(a.x, b), dot(a.y, b)};
+  } else if constexpr (N == 3) {
+    return {dot(a.x, b), dot(a.y, b), dot(a.z, b)};
+  }
+}
+template <typename T, int N>
+inline vec<T, N> transform_direction_inverse(
+    const frame<T, N>& a, const vec<T, N>& b) {
+  return normalize(transform_vector_inverse(a, b));
+}
+
 // Translation, scaling and rotations transforms.
 template <typename T>
 inline frame<T, 3> translation_frame(const vec<T, 3>& a) {
@@ -2279,7 +2291,7 @@ inline pair<vec<T, 3>, vec<T, 3>> camera_turntable(const vec<T, 3>& from_,
   auto from = from_, to = to_;
 
   // rotate if necessary
-  if (rotate != zero2f) {
+  if (rotate != vec<T, 2>{0, 0}) {
     auto z     = normalize(to - from);
     auto lz    = length(to - from);
     auto phi   = atan2(z.z, z.x) + rotate.x;
@@ -2299,7 +2311,7 @@ inline pair<vec<T, 3>, vec<T, 3>> camera_turntable(const vec<T, 3>& from_,
   }
 
   // pan if necessary
-  if (pan != zero2f) {
+  if (pan != vec<T, 2>{0, 0}) {
     auto z = normalize(to - from);
     auto x = normalize(cross(up, z));
     auto y = normalize(cross(z, x));
@@ -2321,7 +2333,7 @@ inline pair<frame<T, 3>, T> camera_turntable(const frame<T, 3>& frame_, T focus,
   auto frame = frame_;
 
   // rotate if necessary
-  if (rotate != zero2f) {
+  if (rotate != vec<T, 2>{0, 0}) {
     auto phi   = atan2(frame.z.z, frame.z.x) + rotate.x;
     auto theta = acos(frame.z.y) + rotate.y;
     theta      = clamp(theta, (T)0.001, (T)pi - (T)0.001);
@@ -2341,7 +2353,7 @@ inline pair<frame<T, 3>, T> camera_turntable(const frame<T, 3>& frame_, T focus,
   }
 
   // pan if necessary
-  if (pan != zero2f) {
+  if (pan != vec<T, 2>{0, 0}) {
     frame.o += frame.x * pan.x + frame.y * pan.y;
   }
 
@@ -2394,7 +2406,7 @@ template <typename T>
 inline void update_turntable(vec<T, 3>& from, vec<T, 3>& to, vec<T, 3>& up,
     const vec<T, 2>& rotate, T dolly, const vec<T, 2>& pan) {
   // rotate if necessary
-  if (rotate != zero2f) {
+  if (rotate != vec<T, 2>{0, 0}) {
     auto z     = normalize(to - from);
     auto lz    = length(to - from);
     auto phi   = atan2(z.z, z.x) + rotate.x;
@@ -2414,7 +2426,7 @@ inline void update_turntable(vec<T, 3>& from, vec<T, 3>& to, vec<T, 3>& up,
   }
 
   // pan if necessary
-  if (pan != zero2f) {
+  if (pan != vec<T, 2>{0, 0}) {
     auto z = normalize(to - from);
     auto x = normalize(cross(up, z));
     auto y = normalize(cross(z, x));
@@ -2430,7 +2442,7 @@ template <typename T>
 inline void update_turntable(frame<T, 3>& frame, T& focus,
     const vec<T, 2>& rotate, T dolly, const vec<T, 2>& pan) {
   // rotate if necessary
-  if (rotate != zero2f) {
+  if (rotate != vec<T, 2>{0, 0}) {
     auto phi   = atan2(frame.z.z, frame.z.x) + rotate.x;
     auto theta = acos(frame.z.y) + rotate.y;
     theta      = clamp(theta, (T)0.001, (T)pi - (T)0.001);
@@ -2450,7 +2462,7 @@ inline void update_turntable(frame<T, 3>& frame, T& focus,
   }
 
   // pan if necessary
-  if (pan != zero2f) {
+  if (pan != vec<T, 2>{0, 0}) {
     frame.o += frame.x * pan.x + frame.y * pan.y;
   }
 }
@@ -2721,6 +2733,38 @@ template <typename T>
 inline std::ptrdiff_t ssize(const T& container) {
   return (std::ptrdiff_t)std::size(container);
 }
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// BACKWARD COMPATIBILITY
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Zero vector constants.
+[[deprecated]] constexpr auto zero1f = vec1f{0};
+[[deprecated]] constexpr auto zero2f = vec2f{0, 0};
+[[deprecated]] constexpr auto zero3f = vec3f{0, 0, 0};
+[[deprecated]] constexpr auto zero4f = vec4f{0, 0, 0, 0};
+[[deprecated]] constexpr auto zero2i = vec2i{0, 0};
+[[deprecated]] constexpr auto zero3i = vec3i{0, 0, 0};
+[[deprecated]] constexpr auto zero4i = vec4i{0, 0, 0, 0};
+[[deprecated]] constexpr auto zero4b = vec4b{0, 0, 0, 0};
+
+// Indentity frames.
+[[deprecated]] constexpr auto identity2x3f = frame2f{{1, 0}, {0, 1}, {0, 0}};
+[[deprecated]] constexpr auto identity3x4f = frame3f{
+    {1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}};
+
+// Identity matrices constants.
+[[deprecated]] constexpr auto identity2x2f = mat2f{{1, 0}, {0, 1}};
+[[deprecated]] constexpr auto identity3x3f = mat3f{
+    {1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
+[[deprecated]] constexpr auto identity4x4f = mat4f{
+    {1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
+
+// Constants
+[[deprecated]] constexpr auto identity_quat4f = quat4f{0, 0, 0, 1};
 
 }  // namespace yocto
 
