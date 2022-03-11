@@ -662,10 +662,6 @@ void show_trace_gui(const string& title, const string& name, scene_data& scene,
 
   // render previews
   auto render_preview = [&]() -> bool {
-    // make sure we can start
-    trace_samples_cancel(context);
-    state = make_trace_state(scene, params);
-    image = make_image(state.width, state.height, true);
     // preview
     auto pparams = params;
     pparams.resolution /= params.pratio;
@@ -680,6 +676,15 @@ void show_trace_gui(const string& title, const string& name, scene_data& scene,
       image.pixels[idx] = preview.pixels[pj * preview.width + pi];
     }
     return true;
+  };
+
+  // reset rendering
+  auto render_reset = [&]() {
+    // make sure we can start
+    trace_samples_cancel(context);
+    state = make_trace_state(scene, params);
+    if (image.width != state.width || image.height != state.height)
+      image = make_image(state.width, state.height, true);
   };
 
   // start rendering batch
@@ -708,6 +713,7 @@ void show_trace_gui(const string& title, const string& name, scene_data& scene,
   auto callbacks = gui_callbacks{};
   callbacks.init = [&](const gui_input& input) {
     init_image(glimage);
+    render_reset();
     render_preview();
     set_image(glimage, image);
     render_start();
@@ -749,6 +755,7 @@ void show_trace_gui(const string& title, const string& name, scene_data& scene,
       if (edited) {
         render_cancel();
         params = tparams;
+        render_reset();
         if (render_preview()) set_image(glimage, image);
         render_start();
       }
@@ -762,6 +769,7 @@ void show_trace_gui(const string& title, const string& name, scene_data& scene,
     draw_image_inspector(input, image, glparams);
     if (edit) {
       if (draw_scene_editor(scene, selection, [&]() { render_cancel(); })) {
+        render_reset();
         if (render_preview()) set_image(glimage, image);
         render_start();
       }
@@ -772,6 +780,7 @@ void show_trace_gui(const string& title, const string& name, scene_data& scene,
     if (uiupdate_camera_params(input, camera)) {
       render_cancel();
       scene.cameras[params.camera] = camera;
+      render_reset();
       if (render_preview()) set_image(glimage, image);
       render_start();
     }
@@ -838,7 +847,7 @@ void show_cutrace_gui(const string& title, const string& name,
     }
   }
 
-  // TODO: render preview
+  // render preview
   auto render_preview = [&]() -> bool {
     auto pparams = params;
     pparams.resolution /= params.pratio;
@@ -853,12 +862,18 @@ void show_cutrace_gui(const string& title, const string& name,
            pj           = clamp(j / params.pratio, 0, preview.height - 1);
       image.pixels[idx] = preview.pixels[pj * preview.width + pi];
     }
-    reset_cutrace_state(context, state, scene, params);
     return true;
   };
 
-  // TODO: render batch
-  auto render_batch = [&]() {
+  // reset renderer
+  auto render_reset = [&]() {
+    reset_cutrace_state(context, state, scene, params);
+    if (image.width != state.width || image.height != state.height)
+      image = make_image(state.width, state.height, true);
+  };
+
+  // render samples synchronously
+  auto render_samples = [&]() {
     if (state.samples >= params.samples) return false;
     if (state.samples == 0) {
       trace_start(context, state, cuscene, bvh, lights, scene, params);
@@ -875,13 +890,14 @@ void show_cutrace_gui(const string& title, const string& name,
   auto callbacks = gui_callbacks{};
   callbacks.init = [&](const gui_input& input) {
     init_image(glimage);
+    render_reset();
     if (render_preview()) set_image(glimage, image);
   };
   callbacks.clear = [&](const gui_input& input) { clear_image(glimage); };
   callbacks.draw  = [&](const gui_input& input) {
     update_image_params(input, image, glparams);
     draw_image(glimage, glparams);
-    if (render_batch()) set_image(glimage, image);
+    if (render_samples()) set_image(glimage, image);
   };
   callbacks.widgets = [&](const gui_input& input) {
     auto edited = 0;
@@ -909,6 +925,7 @@ void show_cutrace_gui(const string& title, const string& name,
       end_gui_header();
       if (edited) {
         params = tparams;
+        render_reset();
         if (render_preview()) set_image(glimage, image);
       }
     }
@@ -920,6 +937,7 @@ void show_cutrace_gui(const string& title, const string& name,
     draw_image_inspector(input, image, glparams);
     if (edit) {
       if (draw_scene_editor(scene, selection, [&]() {})) {
+        render_reset();
         if (render_preview()) set_image(glimage, image);
       }
     }
@@ -929,6 +947,7 @@ void show_cutrace_gui(const string& title, const string& name,
     if (uiupdate_camera_params(input, camera)) {
       scene.cameras[params.camera] = camera;
       update_cutrace_cameras(context, cuscene, scene, params);
+      render_reset();
       if (render_preview()) set_image(glimage, image);
     }
   };
