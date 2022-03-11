@@ -625,6 +625,9 @@ void show_trace_gui(const string& title, const string& name, scene_data& scene,
   // copy params and camera
   auto params = params_;
 
+  // rendering context
+  auto context = make_trace_context(params);
+
   // build bvh
   auto bvh = make_trace_bvh(scene, params);
 
@@ -637,9 +640,8 @@ void show_trace_gui(const string& title, const string& name, scene_data& scene,
   }
 
   // init state
-  auto state  = make_trace_state(scene, params);
-  auto image  = make_image(state.width, state.height, true);
-  auto render = make_image(state.width, state.height, true);
+  auto state = make_trace_state(scene, params);
+  auto image = make_image(state.width, state.height, true);
 
   // opengl image
   auto glimage     = glimage_state{};
@@ -658,80 +660,46 @@ void show_trace_gui(const string& title, const string& name, scene_data& scene,
     }
   }
 
-  // renderer update
-  auto render_update  = std::atomic<bool>{};
-  auto render_current = std::atomic<int>{};
-  auto render_mutex   = std::mutex{};
-  auto render_worker  = std::future<void>{};
-  auto render_stop    = std::atomic<bool>{};
-  auto reset_display  = [&]() {
-    // stop render
-    render_stop = true;
-    if (render_worker.valid()) render_worker.get();
-
-    state  = make_trace_state(scene, params);
-    image  = make_image(state.width, state.height, true);
-    render = make_image(state.width, state.height, true);
-
-    render_worker = {};
-    render_stop   = false;
-
+  // render previews
+  auto render_preview = [&]() -> bool {
+    // make sure we can start
+    trace_samples_cancel(context);
+    state = make_trace_state(scene, params);
+    image = make_image(state.width, state.height, true);
     // preview
     auto pparams = params;
     pparams.resolution /= params.pratio;
     pparams.samples = 1;
     auto pstate     = make_trace_state(scene, pparams);
     trace_samples(pstate, scene, bvh, lights, pparams);
-    auto preview = get_rendered_image(pstate);
+    auto preview = get_image(pstate);
     for (auto idx = 0; idx < state.width * state.height; idx++) {
-      auto i = idx % render.width, j = idx / render.width;
-      auto pi            = clamp(i / params.pratio, 0, preview.width - 1),
-           pj            = clamp(j / params.pratio, 0, preview.height - 1);
-      render.pixels[idx] = preview.pixels[pj * preview.width + pi];
+      auto i = idx % image.width, j = idx / image.width;
+      auto pi           = clamp(i / params.pratio, 0, preview.width - 1),
+           pj           = clamp(j / params.pratio, 0, preview.height - 1);
+      image.pixels[idx] = preview.pixels[pj * preview.width + pi];
     }
-    // if (current > 0) return;
-    {
-      auto lock      = std::lock_guard{render_mutex};
-      render_current = 0;
-      image          = render;
-      render_update  = true;
-    }
-
-    // start renderer
-    render_worker = std::async(std::launch::async, [&]() {
-      for (auto sample = 0; sample < params.samples; sample += params.batch) {
-        if (render_stop) return;
-        parallel_for(state.width, state.height, [&](int i, int j) {
-          for (auto sample :
-              range(state.samples, state.samples + params.batch)) {
-            if (render_stop) return;
-            trace_sample(state, scene, bvh, lights, i, j, sample, params);
-          }
-         });
-        state.samples += params.batch;
-        if (params.denoise && !state.denoised.empty()) {
-          denoise_image(state.denoised, state.width, state.height, state.image,
-               state.albedo, state.normal);
-        }
-        if (!render_stop) {
-          auto lock      = std::lock_guard{render_mutex};
-          render_current = state.samples;
-          get_image(render, state);
-          image         = render;
-          render_update = true;
-        }
-      }
-     });
+    return true;
   };
 
-  // stop render
-  auto stop_render = [&]() {
-    render_stop = true;
-    if (render_worker.valid()) render_worker.get();
+  // start rendering batch
+  auto render_start = [&]() {
+    trace_samples_cancel(context);
+    trace_samples_start(context, state, scene, bvh, lights, params);
   };
 
-  // start rendering
-  reset_display();
+  // cancel
+  auto render_cancel = [&]() { trace_samples_cancel(context); };
+
+  // check if batch is done and update image
+  auto render_done = [&]() {
+    if (context.done) {
+      get_image(image, state);
+      return true;
+    } else {
+      return false;
+    }
+  };
 
   // prepare selection
   auto selection = scene_selection{};
@@ -739,17 +707,17 @@ void show_trace_gui(const string& title, const string& name, scene_data& scene,
   // callbacks
   auto callbacks = gui_callbacks{};
   callbacks.init = [&](const gui_input& input) {
-    auto lock = std::lock_guard{render_mutex};
     init_image(glimage);
+    render_preview();
     set_image(glimage, image);
+    render_start();
   };
   callbacks.clear = [&](const gui_input& input) { clear_image(glimage); };
   callbacks.draw  = [&](const gui_input& input) {
     // update image
-    if (render_update) {
-      auto lock = std::lock_guard{render_mutex};
+    if (render_done()) {
       set_image(glimage, image);
-      render_update = false;
+      render_start();
     }
     update_image_params(input, image, glparams);
     draw_image(glimage, glparams);
@@ -757,7 +725,7 @@ void show_trace_gui(const string& title, const string& name, scene_data& scene,
   callbacks.widgets = [&](const gui_input& input) {
     auto edited = 0;
     draw_gui_combobox("name", selected, names);
-    auto current = (int)render_current;
+    auto current = (int)state.samples;  // TODO maybe an atomic?
     draw_gui_progressbar("sample", current, params.samples);
     if (draw_gui_header("render")) {
       auto edited  = 0;
@@ -779,32 +747,39 @@ void show_trace_gui(const string& title, const string& name, scene_data& scene,
       edited += draw_gui_checkbox("denoise", tparams.denoise);
       end_gui_header();
       if (edited) {
-        stop_render();
+        render_cancel();
         params = tparams;
-        reset_display();
+        if (render_preview()) {
+          set_image(glimage, image);
+        }
+        render_start();
       }
     }
     if (draw_gui_header("tonemap")) {
       edited += draw_gui_slider("exposure", glparams.exposure, -5, 5);
       edited += draw_gui_checkbox("filmic", glparams.filmic);
       end_gui_header();
-      if (edited) {
-        set_image(glimage, image);
-      }
+      if (edited) set_image(glimage, image);
     }
     draw_image_inspector(input, image, glparams);
     if (edit) {
-      if (draw_scene_editor(scene, selection, [&]() { stop_render(); })) {
-        reset_display();
+      if (draw_scene_editor(scene, selection, [&]() { render_cancel(); })) {
+        if (render_preview()) {
+          set_image(glimage, image);
+        }
+        render_start();
       }
     }
   };
   callbacks.uiupdate = [&](const gui_input& input) {
     auto camera = scene.cameras[params.camera];
     if (uiupdate_camera_params(input, camera)) {
-      stop_render();
+      render_cancel();
       scene.cameras[params.camera] = camera;
-      reset_display();
+      if (render_preview()) {
+        set_image(glimage, image);
+      }
+      render_start();
     }
   };
 
@@ -812,7 +787,7 @@ void show_trace_gui(const string& title, const string& name, scene_data& scene,
   show_gui_window({1280 + 320, 720}, title, callbacks);
 
   // done
-  stop_render();
+  render_cancel();
 }
 
 #if YOCTO_CUDA

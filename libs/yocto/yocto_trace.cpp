@@ -1542,6 +1542,45 @@ void trace_samples(trace_state& state, const scene_data& scene,
   }
 }
 
+// Trace context
+trace_context make_trace_context(const trace_params& params) {
+  return {{}, false, false};
+}
+
+// Async start
+void trace_samples_start(trace_context& context, trace_state& state,
+    const scene_data& scene, const trace_bvh& bvh, const trace_lights& lights,
+    const trace_params& params) {
+  if (state.samples >= params.samples) return;
+  context.stop   = false;
+  context.done   = false;
+  context.worker = std::async(std::launch::async, [&]() {
+    if (context.stop) return;
+    parallel_for(state.width, state.height, [&](int i, int j) {
+      for (auto sample : range(state.samples, state.samples + params.batch)) {
+        if (context.stop) return;
+        trace_sample(state, scene, bvh, lights, i, j, sample, params);
+      }
+    });
+    state.samples += params.batch;
+    if (context.stop) return;
+    if (params.denoise && !state.denoised.empty()) {
+      denoise_image(state.denoised, state.width, state.height, state.image,
+          state.albedo, state.normal);
+    }
+    context.done = true;
+  });
+}
+
+// Async cancel
+void trace_samples_cancel(trace_context& context) {
+  context.stop = true;
+  if (context.worker.valid()) context.worker.get();
+}
+
+// Async done
+bool trace_samples_done(const trace_context& context) { return context.done; }
+
 // Check image type
 static void check_image(
     const image_data& image, int width, int height, bool linear) {
