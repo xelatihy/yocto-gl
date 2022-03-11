@@ -749,9 +749,7 @@ void show_trace_gui(const string& title, const string& name, scene_data& scene,
       if (edited) {
         render_cancel();
         params = tparams;
-        if (render_preview()) {
-          set_image(glimage, image);
-        }
+        if (render_preview()) set_image(glimage, image);
         render_start();
       }
     }
@@ -764,9 +762,7 @@ void show_trace_gui(const string& title, const string& name, scene_data& scene,
     draw_image_inspector(input, image, glparams);
     if (edit) {
       if (draw_scene_editor(scene, selection, [&]() { render_cancel(); })) {
-        if (render_preview()) {
-          set_image(glimage, image);
-        }
+        if (render_preview()) set_image(glimage, image);
         render_start();
       }
     }
@@ -776,9 +772,7 @@ void show_trace_gui(const string& title, const string& name, scene_data& scene,
     if (uiupdate_camera_params(input, camera)) {
       render_cancel();
       scene.cameras[params.camera] = camera;
-      if (render_preview()) {
-        set_image(glimage, image);
-      }
+      if (render_preview()) set_image(glimage, image);
       render_start();
     }
   };
