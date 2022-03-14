@@ -40,14 +40,14 @@ void run(const vector<string>& args) {
   // parameters
   auto filename1 = "image1.png"s;
   auto filename2 = "image2.png"s;
-  auto output    = ""s;
+  auto outname   = ""s;
   auto signal    = false;
   auto threshold = 0.0f;
 
   auto cli = make_cli("yimdiff", "tonemap image");
   add_option(cli, "image1", filename1, "Input image 1.");
   add_option(cli, "image2", filename2, "Input image 2.");
-  add_option(cli, "output", output, "Output image.");
+  add_option(cli, "output", outname, "Output image.");
   add_option(cli, "signal", signal, "Error on diff.");
   add_option(cli, "threshold", threshold, "Diff threshold.");
   parse_cli(cli, args);
@@ -67,7 +67,7 @@ void run(const vector<string>& args) {
   auto diff = image_difference(image1, image2, true);
 
   // save
-  if (output != "") save_image(output, diff);
+  if (outname != "") save_image(outname, diff);
 
   // check diff
   if (signal) {

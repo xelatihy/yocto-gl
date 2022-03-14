@@ -40,7 +40,7 @@ using namespace std::string_literals;
 void run(const vector<string>& args) {
   // parameters
   auto filename    = "image.png"s;
-  auto output      = "out.png"s;
+  auto outname     = "out.png"s;
   auto exposure    = 0.0f;
   auto filmic      = false;
   auto width       = 0;
@@ -50,7 +50,7 @@ void run(const vector<string>& args) {
   // parse command line
   auto cli = make_cli("ytonemap", "tonemap image");
   add_option(cli, "image", filename, "Input image.");
-  add_option(cli, "output", output, "Output image.");
+  add_option(cli, "output", outname, "Output image.");
   add_option(cli, "exposure", exposure, "Tonemap exposure.");
   add_option(cli, "filmic", filmic, "Tonemap filmic.");
   add_option(cli, "width", width, "Resize width.");
@@ -69,12 +69,12 @@ void run(const vector<string>& args) {
   // switch between interactive and offline
   if (!interactive) {
     // tonemap if needed
-    if (image.linear && is_ldr_filename(output)) {
+    if (image.linear && is_ldr_filename(outname)) {
       image = tonemap_image(image, exposure, filmic);
     }
 
     // save
-    save_image(output, image);
+    save_image(outname, image);
   } else {
     // run viewer
     show_image_gui("ytonemap", filename, image);

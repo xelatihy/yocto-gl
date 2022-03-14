@@ -40,20 +40,20 @@ using namespace std::string_literals;
 // main function
 void run(const vector<string>& args) {
   // parameters
-  auto filename = "scene.json"s;
-  auto camname  = ""s;
+  auto scenename = "scene.json"s;
+  auto camname   = ""s;
 
   // parse command line
   auto cli = make_cli("yview", "render with raytracing");
-  add_option(cli, "scene", filename, "input scene");
+  add_option(cli, "scene", scenename, "input scene");
   add_option(cli, "camera", camname, "camera name");
   parse_cli(cli, args);
 
   // start
-  print_info("viewing {}", filename);
+  print_info("viewing {}", scenename);
 
   // loading scene
-  auto scene = load_scene(filename);
+  auto scene = load_scene(scenename);
 
   // tesselation
   if (!scene.subdivs.empty()) {
@@ -65,7 +65,7 @@ void run(const vector<string>& args) {
   params.camera = find_camera(scene, camname);
 
   // run viewer
-  show_shade_gui("yview", filename, scene, params);
+  show_shade_gui("yview", scenename, scene, params);
 }
 
 // Run

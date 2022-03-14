@@ -44,7 +44,7 @@ namespace fs = std::filesystem;
 void run(const vector<string>& args) {
   // parameters
   auto filename    = "scene.json"s;
-  auto output      = "out.png"s;
+  auto outname     = "out.png"s;
   auto interactive = false;
   auto camname     = ""s;
   bool addsky      = false;
@@ -55,7 +55,7 @@ void run(const vector<string>& args) {
   // parse command line
   auto cli = make_cli("ytrace", "render with raytracing");
   add_option(cli, "scene", filename, "scene filename");
-  add_option(cli, "output", output, "output filename");
+  add_option(cli, "output", outname, "output filename");
   add_option(cli, "interactive", interactive, "run interactively");
   add_option(cli, "camera", camname, "camera name");
   add_option(cli, "addsky", addsky, "add sky");
@@ -133,12 +133,12 @@ void run(const vector<string>& args) {
           elapsed_formatted(sample_timer));
       if (savebatch && state.samples % params.batch == 0) {
         auto image       = get_image(state);
-        auto outfilename = fs::path(output)
+        auto outfilename = fs::path(outname)
                                .replace_extension(
                                    "-s" + std::to_string(sample) +
-                                   fs::path(output).extension().string())
+                                   fs::path(outname).extension().string())
                                .string();
-        if (!is_hdr_filename(output))
+        if (!is_hdr_filename(outname))
           image = tonemap_image(image, params.exposure, params.filmic);
         save_image(outfilename, image);
       }
@@ -148,9 +148,9 @@ void run(const vector<string>& args) {
     // save image
     timer      = simple_timer{};
     auto image = get_image(state);
-    if (!is_hdr_filename(output))
+    if (!is_hdr_filename(outname))
       image = tonemap_image(image, params.exposure, params.filmic);
-    save_image(output, image);
+    save_image(outname, image);
     print_info("save image: {}", elapsed_formatted(timer));
   } else {
     // run view

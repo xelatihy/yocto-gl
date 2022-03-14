@@ -41,7 +41,7 @@ using namespace std::string_literals;
 void run(const vector<string>& args) {
   // parameters
   auto filename  = "scene.json"s;
-  auto output    = "out.json"s;
+  auto outname   = "out.json"s;
   auto info      = false;
   auto validate  = false;
   auto copyright = ""s;
@@ -49,7 +49,7 @@ void run(const vector<string>& args) {
   // parse command line
   auto cli = make_cli("yconvert", "convert scenes, shapes and images");
   add_option(cli, "scene", filename, "input scene");
-  add_option(cli, "output", output, "output filename");
+  add_option(cli, "output", outname, "output filename");
   add_option(cli, "info", info, "print info");
   add_option(cli, "validate", validate, "run validate");
   add_option(cli, "copyright", copyright, "set scene copyright");
@@ -91,8 +91,8 @@ void run(const vector<string>& args) {
 
   // save scene
   timer = simple_timer{};
-  make_scene_directories(output, scene);
-  save_scene(output, scene);
+  make_scene_directories(outname, scene);
+  save_scene(outname, scene);
   print_info("save scene: {}", elapsed_formatted(timer));
 }
 

@@ -40,7 +40,7 @@ void run(const vector<string>& args) {
   // parameters
   auto filename   = "image.png"s;
   auto alphaname  = "alpha.png"s;
-  auto output     = "out.png"s;
+  auto outname    = "out.png"s;
   auto from_color = false;
   auto from_black = false;
   auto to_color   = false;
@@ -49,7 +49,7 @@ void run(const vector<string>& args) {
   auto cli = make_cli("yimalpha", "set image alpha");
   add_option(cli, "image", filename, "Input image");
   add_option(cli, "alpha", alphaname, "Alpha image");
-  add_option(cli, "output", output, "Output image");
+  add_option(cli, "output", outname, "Output image");
   add_option(cli, "from-color", from_color, "Alpha from color");
   add_option(cli, "from-black", from_black, "Alpha from black");
   add_option(cli, "to-color", to_color, "color from alpha");
@@ -83,7 +83,7 @@ void run(const vector<string>& args) {
   }
 
   // save
-  save_image(output, out);
+  save_image(outname, out);
 }
 
 // Main

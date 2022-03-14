@@ -41,14 +41,14 @@ using namespace std::string_literals;
 void run(const vector<string>& args) {
   // parameters
   auto filename    = "image.png"s;
-  auto output      = "out.png"s;
+  auto outname     = "out.png"s;
   auto interactive = true;
   auto params      = colorgrade_params{};
 
   // parse command line
   auto cli = make_cli("ycolorgrade", "adjust image colors");
   add_option(cli, "image", filename, "Input image.");
-  add_option(cli, "output", output, "Output image.");
+  add_option(cli, "output", outname, "Output image.");
   add_option(cli, "interactive", interactive, "Run interactively.");
   parse_cli(cli, args);
 
@@ -61,7 +61,7 @@ void run(const vector<string>& args) {
     image = colorgrade_image(image, params);
 
     // save image
-    save_image(output, image);
+    save_image(outname, image);
   } else {
     // run viewer
     show_colorgrade_gui("ycolorgrade", filename, image);

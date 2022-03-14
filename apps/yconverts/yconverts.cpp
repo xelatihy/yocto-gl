@@ -42,7 +42,7 @@ using namespace std::string_literals;
 void run(const vector<string>& args) {
   // parameters
   auto shapename    = "shape.ply"s;
-  auto output       = "out.ply"s;
+  auto outname      = "out.ply"s;
   auto facevarying  = false;
   auto info         = false;
   auto smooth       = false;
@@ -60,7 +60,7 @@ void run(const vector<string>& args) {
   // parse command line
   auto cli = make_cli("yconverts", "convert scenes");
   add_option(cli, "shape", shapename, "input shape");
-  add_option(cli, "output", output, "output shape");
+  add_option(cli, "output", outname, "output shape");
   add_option(cli, "facevarying", facevarying, "process as facevarying");
   add_option(cli, "smooth", smooth, "smooth normals");
   add_option(cli, "facet", facet, "facet normals");
@@ -169,7 +169,7 @@ void run(const vector<string>& args) {
     }
 
     // save mesh
-    save_shape(output, shape, true);
+    save_shape(outname, shape, true);
   } else {
     // load mesh
     auto shape = load_fvshape(shapename, true);
@@ -230,7 +230,7 @@ void run(const vector<string>& args) {
     }
 
     // save mesh
-    save_fvshape(output, shape, true);
+    save_fvshape(outname, shape, true);
   }
 }
 
