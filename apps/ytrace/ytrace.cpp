@@ -27,7 +27,6 @@
 //
 
 #include <yocto/yocto_cli.h>
-#include <yocto/yocto_cutrace.h>
 #include <yocto/yocto_gui.h>
 #include <yocto/yocto_math.h>
 #include <yocto/yocto_scene.h>
@@ -35,7 +34,6 @@
 #include <yocto/yocto_shape.h>
 #include <yocto/yocto_trace.h>
 
-using namespace yocto;
 using namespace yocto;
 using namespace std::string_literals;
 
@@ -106,41 +104,29 @@ void run(const vector<string>& args) {
     tesselate_subdivs(scene);
   }
 
-  // triangulation
-  for (auto& shape : scene.shapes) {
-    if (shape.quads.empty()) continue;
-    shape.triangles = quads_to_triangles(shape.quads);
-    shape.quads     = {};
-  }
-
   if (!interactive) {
-    // initialize context
-    timer        = simple_timer{};
-    auto context = make_cutrace_context(params);
-    print_info("init gpu: {}", elapsed_formatted(timer));
-
-    // upload scene to the gpu
-    timer        = simple_timer{};
-    auto cuscene = make_cutrace_scene(context, scene, params);
-    print_info("upload scene: {}", elapsed_formatted(timer));
-
     // build bvh
     timer    = simple_timer{};
-    auto bvh = make_cutrace_bvh(context, cuscene, params);
+    auto bvh = make_trace_bvh(scene, params);
     print_info("build bvh: {}", elapsed_formatted(timer));
 
-    // init lights
-    auto lights = make_cutrace_lights(context, scene, params);
+    // init renderer
+    auto lights = make_trace_lights(scene, params);
+
+    // fix renderer type if no lights
+    if (lights.lights.empty() && is_sampler_lit(params)) {
+      print_info("no lights presents, image will be black");
+      params.sampler = trace_sampler_type::eyelight;
+    }
 
     // state
-    auto state = make_cutrace_state(context, scene, params);
+    auto state = make_trace_state(scene, params);
 
     // render
     timer = simple_timer{};
-    trace_start(context, state, cuscene, bvh, lights, scene, params);
     for (auto sample : range(0, params.samples, params.batch)) {
       auto sample_timer = simple_timer{};
-      trace_samples(context, state, cuscene, bvh, lights, scene, params);
+      trace_samples(state, scene, bvh, lights, params);
       print_info("render sample {}/{}: {}", state.samples, params.samples,
           elapsed_formatted(sample_timer));
       if (savebatch && state.samples % params.batch == 0) {
@@ -162,7 +148,7 @@ void run(const vector<string>& args) {
     print_info("save image: {}", elapsed_formatted(timer));
   } else {
     // run view
-    show_cutrace_gui("ycutrace", scenename, scene, params);
+    show_trace_gui("ytrace", scenename, scene, params);
   }
 }
 
