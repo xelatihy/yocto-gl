@@ -24,8 +24,6 @@ See each header file for documentation.
   for manipulating triangle meshes, quads meshes and line sets, computation of 
   normals and tangents, linear and Catmull-Clark subdivision, 
   procedural shapes generation, ray intersection and closest point queries
-- `yocto/yocto_mesh.{h,cpp}`: computational geometry utilities for
-  triangle meshes, mesh geodesic, mesh cutting
 - `yocto/yocto_scene.{h,cpp}`: scene representation and properties
   evaluation
 - `yocto/yocto_bvh.{h,cpp}`: ray intersection and closest point queries

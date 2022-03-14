@@ -3,7 +3,6 @@ add_library(yocto STATIC
   yocto_noise.h yocto_sampling.h yocto_shading.h
   yocto_bvh.h yocto_bvh.cpp
   yocto_shape.h yocto_shape.cpp
-  yocto_mesh.h yocto_mesh.cpp 
   yocto_image.h yocto_image.cpp
   yocto_scene.h yocto_scene.cpp
   yocto_trace.h yocto_trace.cpp

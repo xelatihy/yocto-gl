@@ -27,8 +27,6 @@ Here is a list of the main libraries.
   for manipulating triangle meshes, quads meshes and line sets, computation of 
   normals and tangents, linear and Catmull-Clark subdivision, 
   procedural shapes generation, ray intersection and closest point queries
-- [Yocto/Mesh](yocto/yocto_mesh.md): computational geometry utilities for
-  triangle meshes, mesh geodesic, mesh cutting
 - [Yocto/Scene](yocto/yocto_scene.md): scene representation and properties
   evaluation
 - [Yocto/Bvh](yocto/yocto_bvh.md): ray intersection and closest point queries
