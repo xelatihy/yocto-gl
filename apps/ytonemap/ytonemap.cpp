@@ -36,45 +36,65 @@
 
 using namespace yocto;
 
-// grade params
-struct app_params : colorgrade_params {
+// tonemap params
+struct app_params {
   string image       = "image.png";
   string output      = "out.png";
-  bool   interactive = true;
+  float  exposure    = 0;
+  bool   filmic      = false;
+  int    width       = 0;
+  int    height      = 0;
+  bool   interactive = false;
 };
 
 // Cli
 app_params parse_params(int argc, const char* argv[]) {
   auto params = app_params{};
 
-  auto cli = make_cli("ycolorgrade", "adjust image colors");
+  auto cli = make_cli("ytonemap", "tonemap image");
   add_option(cli, "image", params.image, "Input image.");
   add_option(cli, "output", params.output, "Output image.");
+  add_option(cli, "exposure", params.exposure, "Tonemap exposure.");
+  add_option(cli, "filmic", params.filmic, "Tonemap filmic.");
+  add_option(cli, "width", params.width, "Resize width.");
+  add_option(cli, "height", params.height, "Resize height.");
   add_option(cli, "interactive", params.interactive, "Run interactively.");
   parse_cli(cli, argc, argv);
 
   return params;
 }
 
-// grade images
-void colorgrade_offline(const app_params& params) {
-  // load image
+// convert images
+void tonemap_offline(const app_params& params) {
+  // load
   auto image = load_image(params.image);
 
-  // apply color grade
-  image = colorgrade_image(image, params);
+  // resize if needed
+  if (params.width != 0 || params.height != 0) {
+    image = resize_image(image, params.width, params.height);
+  }
 
-  // save image
+  // tonemap if needed
+  if (image.linear && is_ldr_filename(params.output)) {
+    image = tonemap_image(image, params.exposure, params.filmic);
+  }
+
+  // save
   save_image(params.output, image);
 }
 
-// grade images
-void colorgrade_interactive(const app_params& params) {
-  // load image
+// view images
+void tonemap_interactive(const app_params& params) {
+  // load
   auto image = load_image(params.image);
 
+  // resize if needed
+  if (params.width != 0 || params.height != 0) {
+    image = resize_image(image, params.width, params.height);
+  }
+
   // run viewer
-  show_colorgrade_gui("ycolorgrade", params.image, image);
+  show_image_gui("ytonemap", params.image, image);
 }
 
 // Main
@@ -85,9 +105,9 @@ int main(int argc, const char* argv[]) {
 
     // dispatch commands
     if (!params.interactive) {
-      colorgrade_offline(params);
+      tonemap_offline(params);
     } else {
-      colorgrade_interactive(params);
+      tonemap_interactive(params);
     }
   } catch (const std::exception& error) {
     print_error(error.what());
