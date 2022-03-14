@@ -36,28 +36,33 @@
 #include <yocto/yocto_trace.h>
 
 using namespace yocto;
+using namespace yocto;
+using namespace std::string_literals;
 
 #include <filesystem>
 namespace fs = std::filesystem;
 
-// render params
-struct render_params : trace_params {
-  string scene     = "scene.json";
-  string output    = "out.png";
-  string camname   = "";
-  bool   addsky    = false;
-  string envname   = "";
-  bool   savebatch = false;
-};
+// main function
+void run(const vector<string>& args) {
+  // parameters
+  auto scenename   = "scene.json"s;
+  auto outname     = "out.png"s;
+  auto interactive = false;
+  auto camname     = ""s;
+  bool addsky      = false;
+  auto envname     = ""s;
+  auto savebatch   = false;
+  auto params      = trace_params{};
 
-// Cli
-void add_options(cli_command& cli, render_params& params) {
-  add_option(cli, "scene", params.scene, "scene filename");
-  add_option(cli, "output", params.output, "output filename");
-  add_option(cli, "camera", params.camname, "camera name");
-  add_option(cli, "addsky", params.addsky, "add sky");
-  add_option(cli, "envname", params.envname, "add environment");
-  add_option(cli, "savebatch", params.savebatch, "save batch");
+  // parse command line
+  auto cli = make_cli("ytrace", "render with raytracing");
+  add_option(cli, "scene", scenename, "scene scenename");
+  add_option(cli, "output", outname, "output scenename");
+  add_option(cli, "interactive", interactive, "run interactively");
+  add_option(cli, "camera", camname, "camera name");
+  add_option(cli, "addsky", addsky, "add sky");
+  add_option(cli, "envname", envname, "add environment");
+  add_option(cli, "savebatch", savebatch, "save batch");
   add_option(cli, "resolution", params.resolution, "image resolution");
   add_option(
       cli, "sampler", params.sampler, "sampler type", trace_sampler_labels);
@@ -76,31 +81,27 @@ void add_options(cli_command& cli, render_params& params) {
   add_option(cli, "exposure", params.exposure, "exposure value");
   add_option(cli, "filmic", params.filmic, "filmic tone mapping");
   add_option(cli, "noparallel", params.noparallel, "disable threading");
-}
+  parse_cli(cli, args);
 
-// convert images
-void run_render(const render_params& params_) {
-  print_info("rendering {}", params_.scene);
+  // start rendering
+  print_info("rendering {}", scenename);
   auto timer = simple_timer{};
-
-  // copy params
-  auto params = params_;
 
   // scene loading
   timer      = simple_timer{};
-  auto scene = load_scene(params.scene);
+  auto scene = load_scene(scenename);
   print_info("load scene: {}", elapsed_formatted(timer));
 
   // add sky
-  if (params.addsky) add_sky(scene);
+  if (addsky) add_sky(scene);
 
   // add environment
-  if (!params.envname.empty()) {
-    add_environment(scene, params.envname);
+  if (!envname.empty()) {
+    add_environment(scene, envname);
   }
 
   // camera
-  params.camera = find_camera(scene, params.camname);
+  params.camera = find_camera(scene, camname);
 
   // tesselation
   if (!scene.subdivs.empty()) {
@@ -114,167 +115,72 @@ void run_render(const render_params& params_) {
     shape.quads     = {};
   }
 
-  // initialize context
-  timer        = simple_timer{};
-  auto context = make_cutrace_context(params);
-  print_info("init gpu: {}", elapsed_formatted(timer));
+  if (!interactive) {
+    // initialize context
+    timer        = simple_timer{};
+    auto context = make_cutrace_context(params);
+    print_info("init gpu: {}", elapsed_formatted(timer));
 
-  // upload scene to the gpu
-  timer        = simple_timer{};
-  auto cuscene = make_cutrace_scene(context, scene, params);
-  print_info("upload scene: {}", elapsed_formatted(timer));
+    // upload scene to the gpu
+    timer        = simple_timer{};
+    auto cuscene = make_cutrace_scene(context, scene, params);
+    print_info("upload scene: {}", elapsed_formatted(timer));
 
-  // build bvh
-  timer    = simple_timer{};
-  auto bvh = make_cutrace_bvh(context, cuscene, params);
-  print_info("build bvh: {}", elapsed_formatted(timer));
+    // build bvh
+    timer    = simple_timer{};
+    auto bvh = make_cutrace_bvh(context, cuscene, params);
+    print_info("build bvh: {}", elapsed_formatted(timer));
 
-  // init lights
-  auto lights = make_cutrace_lights(context, scene, params);
+    // init lights
+    auto lights = make_cutrace_lights(context, scene, params);
 
-  // state
-  auto state = make_cutrace_state(context, scene, params);
+    // state
+    auto state = make_cutrace_state(context, scene, params);
 
-  // render
-  timer = simple_timer{};
-  trace_start(context, state, cuscene, bvh, lights, scene, params);
-  for (auto sample : range(0, params.samples, params.batch)) {
-    auto sample_timer = simple_timer{};
-    trace_samples(context, state, cuscene, bvh, lights, scene, params);
-    print_info("render sample {}/{}: {}", state.samples, params.samples,
-        elapsed_formatted(sample_timer));
-    if (params.savebatch && state.samples % params.batch == 0) {
-      auto image       = params.denoise ? get_denoised_image(state)
-                                        : get_rendered_image(state);
-      auto outfilename = fs::path(params.output)
-                             .replace_extension(
-                                 "-s" + std::to_string(sample) +
-                                 fs::path(params.output).extension().string())
-                             .string();
-      if (!is_hdr_filename(params.output))
-        image = tonemap_image(image, params.exposure, params.filmic);
-      save_image(outfilename, image);
+    // render
+    timer = simple_timer{};
+    trace_start(context, state, cuscene, bvh, lights, scene, params);
+    for (auto sample : range(0, params.samples, params.batch)) {
+      auto sample_timer = simple_timer{};
+      trace_samples(context, state, cuscene, bvh, lights, scene, params);
+      print_info("render sample {}/{}: {}", state.samples, params.samples,
+          elapsed_formatted(sample_timer));
+      if (savebatch && state.samples % params.batch == 0) {
+        auto image       = params.denoise ? get_denoised_image(state)
+                                          : get_rendered_image(state);
+        auto outfilename = fs::path(outname)
+                               .replace_extension(
+                                   "-s" + std::to_string(sample) +
+                                   fs::path(outname).extension().string())
+                               .string();
+        if (!is_hdr_filename(outname))
+          image = tonemap_image(image, params.exposure, params.filmic);
+        save_image(outfilename, image);
+      }
     }
-  }
-  print_info("render image: {}", elapsed_formatted(timer));
+    print_info("render image: {}", elapsed_formatted(timer));
 
-  // save image
-  timer      = simple_timer{};
-  auto image = params.denoise ? get_denoised_image(state)
-                              : get_rendered_image(state);
-  if (!is_hdr_filename(params.output))
-    image = tonemap_image(image, params.exposure, params.filmic);
-  save_image(params.output, image);
-  print_info("save image: {}", elapsed_formatted(timer));
+    // save image
+    timer      = simple_timer{};
+    auto image = params.denoise ? get_denoised_image(state)
+                                : get_rendered_image(state);
+    if (!is_hdr_filename(outname))
+      image = tonemap_image(image, params.exposure, params.filmic);
+    save_image(outname, image);
+    print_info("save image: {}", elapsed_formatted(timer));
+  } else {
+    // run view
+    show_cutrace_gui("ycutrace", scenename, scene, params);
+  }
 }
-
-// convert params
-struct view_params : trace_params {
-  string scene   = "scene.json";
-  string output  = "out.png";
-  string camname = "";
-  bool   addsky  = false;
-  string envname = "";
-};
-
-// Cli
-void add_options(cli_command& cli, view_params& params) {
-  add_option(cli, "scene", params.scene, "scene filename");
-  add_option(cli, "output", params.output, "output filename");
-  add_option(cli, "camera", params.camname, "camera name");
-  add_option(cli, "addsky", params.addsky, "add sky");
-  add_option(cli, "envname", params.envname, "add environment");
-  add_option(cli, "resolution", params.resolution, "image resolution");
-  add_option(
-      cli, "sampler", params.sampler, "sampler type", trace_sampler_labels);
-  add_option(cli, "falsecolor", params.falsecolor, "false color type",
-      trace_falsecolor_labels);
-  add_option(cli, "samples", params.samples, "number of samples");
-  add_option(cli, "bounces", params.bounces, "number of bounces");
-  add_option(cli, "denoise", params.denoise, "enable denoiser");
-  add_option(cli, "batch", params.batch, "sample batch");
-  add_option(cli, "clamp", params.clamp, "clamp params");
-  add_option(cli, "nocaustics", params.nocaustics, "disable caustics");
-  add_option(cli, "envhidden", params.envhidden, "hide environment");
-  add_option(cli, "tentfilter", params.tentfilter, "filter image");
-  add_option(cli, "embreebvh", params.embreebvh, "use Embree as BVH");
-  add_option(
-      cli, "--highqualitybvh", params.highqualitybvh, "use high quality BVH");
-  add_option(cli, "exposure", params.exposure, "exposure value");
-  add_option(cli, "filmic", params.filmic, "filmic tone mapping");
-  add_option(cli, "noparallel", params.noparallel, "disable threading");
-}
-
-// view scene
-void run_view(const view_params& params_) {
-  print_info("viewing {}", params_.scene);
-  auto timer = simple_timer{};
-
-  // copy params
-  auto params = params_;
-
-  // load scene
-  timer      = simple_timer{};
-  auto scene = load_scene(params.scene);
-  print_info("load scene: {}", elapsed_formatted(timer));
-
-  // add sky
-  if (params.addsky) add_sky(scene);
-
-  // add environment
-  if (!params.envname.empty()) {
-    add_environment(scene, params.envname);
-  }
-
-  // tesselation
-  if (!scene.subdivs.empty()) {
-    tesselate_subdivs(scene);
-  }
-
-  // triangulation
-  for (auto& shape : scene.shapes) {
-    if (shape.quads.empty()) continue;
-    shape.triangles = quads_to_triangles(shape.quads);
-    shape.quads     = {};
-  }
-
-  // find camera
-  params.camera = find_camera(scene, params.camname);
-
-  // run view
-  show_cutrace_gui("ycutrace", params.scene, scene, params);
-}
-
-struct app_params {
-  string        command = "render";
-  render_params render  = {};
-  view_params   view    = {};
-};
 
 // Run
 int main(int argc, const char* argv[]) {
   try {
-    // command line parameters
-    auto params = app_params{};
-    auto cli    = make_cli("ycuda", "render and view scenes with cuda");
-    add_command_var(cli, params.command);
-    add_command(cli, "render", params.render, "render scenes");
-    add_command(cli, "view", params.view, "view scenes");
-    parse_cli(cli, argc, argv);
-
-    // dispatch commands
-    if (params.command == "render") {
-      run_render(params.render);
-    } else if (params.command == "view") {
-      run_view(params.view);
-    } else {
-      throw io_error{"unknown command"};
-    }
+    run({argv, argv + argc});
+    return 0;
   } catch (const std::exception& error) {
     print_error(error.what());
     return 1;
   }
-
-  // done
-  return 0;
 }
