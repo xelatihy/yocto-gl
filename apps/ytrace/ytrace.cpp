@@ -35,33 +35,32 @@
 #include <yocto/yocto_trace.h>
 
 using namespace yocto;
+using namespace std::string_literals;
 
 #include <filesystem>
 namespace fs = std::filesystem;
 
-// render params
-struct app_params : trace_params {
-  string scene       = "scene.json";
-  string output      = "out.png";
-  bool   interactive = false;
-  string camname     = "";
-  bool   addsky      = false;
-  string envname     = "";
-  bool   savebatch   = false;
-};
+// main function
+void run(const vector<string>& args) {
+  // parameters
+  auto filename    = "scene.json"s;
+  auto output      = "out.png"s;
+  auto interactive = false;
+  auto camname     = ""s;
+  bool addsky      = false;
+  auto envname     = ""s;
+  auto savebatch   = false;
+  auto params      = trace_params{};
 
-// Cli
-app_params parse_params(int argc, const char* argv[]) {
-  auto params = app_params{};
-
+  // parse command line
   auto cli = make_cli("ytrace", "render with raytracing");
-  add_option(cli, "scene", params.scene, "scene filename");
-  add_option(cli, "output", params.output, "output filename");
-  add_option(cli, "interactive", params.interactive, "run interactively");
-  add_option(cli, "camera", params.camname, "camera name");
-  add_option(cli, "addsky", params.addsky, "add sky");
-  add_option(cli, "envname", params.envname, "add environment");
-  add_option(cli, "savebatch", params.savebatch, "save batch");
+  add_option(cli, "scene", filename, "scene filename");
+  add_option(cli, "output", output, "output filename");
+  add_option(cli, "interactive", interactive, "run interactively");
+  add_option(cli, "camera", camname, "camera name");
+  add_option(cli, "addsky", addsky, "add sky");
+  add_option(cli, "envname", envname, "add environment");
+  add_option(cli, "savebatch", savebatch, "save batch");
   add_option(cli, "resolution", params.resolution, "image resolution");
   add_option(
       cli, "sampler", params.sampler, "sampler type", trace_sampler_labels);
@@ -80,139 +79,92 @@ app_params parse_params(int argc, const char* argv[]) {
   add_option(cli, "exposure", params.exposure, "exposure value");
   add_option(cli, "filmic", params.filmic, "filmic tone mapping");
   add_option(cli, "noparallel", params.noparallel, "disable threading");
-  parse_cli(cli, argc, argv);
+  parse_cli(cli, args);
 
-  return params;
-}
-
-// convert images
-void run_offline(const app_params& params_) {
-  print_info("rendering {}", params_.scene);
+  // start rendering
+  print_info("rendering {}", filename);
   auto timer = simple_timer{};
-
-  // copy params
-  auto params = params_;
 
   // scene loading
   timer      = simple_timer{};
-  auto scene = load_scene(params.scene);
+  auto scene = load_scene(filename);
   print_info("load scene: {}", elapsed_formatted(timer));
 
   // add sky
-  if (params.addsky) add_sky(scene);
+  if (addsky) add_sky(scene);
 
   // add environment
-  if (!params.envname.empty()) {
-    add_environment(scene, params.envname);
+  if (!envname.empty()) {
+    add_environment(scene, envname);
   }
 
   // camera
-  params.camera = find_camera(scene, params.camname);
+  params.camera = find_camera(scene, camname);
 
   // tesselation
   if (!scene.subdivs.empty()) {
     tesselate_subdivs(scene);
   }
 
-  // build bvh
-  timer    = simple_timer{};
-  auto bvh = make_trace_bvh(scene, params);
-  print_info("build bvh: {}", elapsed_formatted(timer));
+  if (!interactive) {
+    // build bvh
+    timer    = simple_timer{};
+    auto bvh = make_trace_bvh(scene, params);
+    print_info("build bvh: {}", elapsed_formatted(timer));
 
-  // init renderer
-  auto lights = make_trace_lights(scene, params);
+    // init renderer
+    auto lights = make_trace_lights(scene, params);
 
-  // fix renderer type if no lights
-  if (lights.lights.empty() && is_sampler_lit(params)) {
-    print_info("no lights presents, image will be black");
-    params.sampler = trace_sampler_type::eyelight;
-  }
-
-  // state
-  auto state = make_trace_state(scene, params);
-
-  // render
-  timer = simple_timer{};
-  for (auto sample : range(0, params.samples, params.batch)) {
-    auto sample_timer = simple_timer{};
-    trace_samples(state, scene, bvh, lights, params);
-    print_info("render sample {}/{}: {}", state.samples, params.samples,
-        elapsed_formatted(sample_timer));
-    if (params.savebatch && state.samples % params.batch == 0) {
-      auto image       = params.denoise ? get_denoised_image(state)
-                                        : get_rendered_image(state);
-      auto outfilename = fs::path(params.output)
-                             .replace_extension(
-                                 "-s" + std::to_string(sample) +
-                                 fs::path(params.output).extension().string())
-                             .string();
-      if (!is_hdr_filename(params.output))
-        image = tonemap_image(image, params.exposure, params.filmic);
-      save_image(outfilename, image);
+    // fix renderer type if no lights
+    if (lights.lights.empty() && is_sampler_lit(params)) {
+      print_info("no lights presents, image will be black");
+      params.sampler = trace_sampler_type::eyelight;
     }
+
+    // state
+    auto state = make_trace_state(scene, params);
+
+    // render
+    timer = simple_timer{};
+    for (auto sample : range(0, params.samples, params.batch)) {
+      auto sample_timer = simple_timer{};
+      trace_samples(state, scene, bvh, lights, params);
+      print_info("render sample {}/{}: {}", state.samples, params.samples,
+          elapsed_formatted(sample_timer));
+      if (savebatch && state.samples % params.batch == 0) {
+        auto image       = get_image(state);
+        auto outfilename = fs::path(output)
+                               .replace_extension(
+                                   "-s" + std::to_string(sample) +
+                                   fs::path(output).extension().string())
+                               .string();
+        if (!is_hdr_filename(output))
+          image = tonemap_image(image, params.exposure, params.filmic);
+        save_image(outfilename, image);
+      }
+    }
+    print_info("render image: {}", elapsed_formatted(timer));
+
+    // save image
+    timer      = simple_timer{};
+    auto image = get_image(state);
+    if (!is_hdr_filename(output))
+      image = tonemap_image(image, params.exposure, params.filmic);
+    save_image(output, image);
+    print_info("save image: {}", elapsed_formatted(timer));
+  } else {
+    // run view
+    show_trace_gui("ytrace", filename, scene, params);
   }
-  print_info("render image: {}", elapsed_formatted(timer));
-
-  // save image
-  timer      = simple_timer{};
-  auto image = params.denoise ? get_denoised_image(state)
-                              : get_rendered_image(state);
-  if (!is_hdr_filename(params.output))
-    image = tonemap_image(image, params.exposure, params.filmic);
-  save_image(params.output, image);
-  print_info("save image: {}", elapsed_formatted(timer));
-}
-
-// view scene
-void run_interactive(const app_params& params_) {
-  print_info("viewing {}", params_.scene);
-  auto timer = simple_timer{};
-
-  // copy params
-  auto params = params_;
-
-  // load scene
-  timer      = simple_timer{};
-  auto scene = load_scene(params.scene);
-  print_info("load scene: {}", elapsed_formatted(timer));
-
-  // add sky
-  if (params.addsky) add_sky(scene);
-
-  // add environment
-  if (!params.envname.empty()) {
-    add_environment(scene, params.envname);
-  }
-
-  // tesselation
-  if (!scene.subdivs.empty()) {
-    tesselate_subdivs(scene);
-  }
-
-  // find camera
-  params.camera = find_camera(scene, params.camname);
-
-  // run view
-  show_trace_gui("ytrace", params.scene, scene, params);
 }
 
 // Run
 int main(int argc, const char* argv[]) {
   try {
-    // command line parameters
-    auto params = parse_params(argc, argv);
-
-    // dispatch commands
-    if (!params.interactive) {
-      run_offline(params);
-    } else {
-      run_interactive(params);
-    }
+    run({argv, argv + argc});
+    return 0;
   } catch (const std::exception& error) {
     print_error(error.what());
     return 1;
   }
-
-  // done
-  return 0;
 }

@@ -35,15 +35,13 @@
 #include <yocto/yocto_trace.h>
 
 using namespace yocto;
-
-#include <filesystem>
-namespace fs = std::filesystem;
+using namespace std::string_literals;
 
 // main function
 void run(const vector<string>& args) {
   // parameters
-  string filename = "scene.json";
-  string camname  = "";
+  auto filename = "scene.json"s;
+  auto camname  = ""s;
 
   // parse command line
   auto cli = make_cli("yview", "render with raytracing");
