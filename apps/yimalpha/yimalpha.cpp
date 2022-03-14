@@ -38,7 +38,7 @@ using namespace std::string_literals;
 // main function
 void run(const vector<string>& args) {
   // parameters
-  auto filename   = "image.png"s;
+  auto imagename  = "image.png"s;
   auto alphaname  = "alpha.png"s;
   auto outname    = "out.png"s;
   auto from_color = false;
@@ -47,7 +47,7 @@ void run(const vector<string>& args) {
 
   // parse command line
   auto cli = make_cli("yimalpha", "set image alpha");
-  add_option(cli, "image", filename, "Input image");
+  add_option(cli, "image", imagename, "Input image");
   add_option(cli, "alpha", alphaname, "Alpha image");
   add_option(cli, "output", outname, "Output image");
   add_option(cli, "from-color", from_color, "Alpha from color");
@@ -56,7 +56,7 @@ void run(const vector<string>& args) {
   parse_cli(cli, args);
 
   // load
-  auto image = load_image(filename);
+  auto image = load_image(imagename);
   auto alpha = load_image(alphaname);
 
   // check sizes

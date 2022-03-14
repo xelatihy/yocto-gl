@@ -39,7 +39,7 @@ using namespace std::string_literals;
 // main function
 void run(const vector<string>& args) {
   // parameters
-  auto filename    = "image.png"s;
+  auto imagename   = "image.png"s;
   auto outname     = "out.png"s;
   auto exposure    = 0.0f;
   auto filmic      = false;
@@ -49,7 +49,7 @@ void run(const vector<string>& args) {
 
   // parse command line
   auto cli = make_cli("ytonemap", "tonemap image");
-  add_option(cli, "image", filename, "Input image.");
+  add_option(cli, "image", imagename, "Input image.");
   add_option(cli, "output", outname, "Output image.");
   add_option(cli, "exposure", exposure, "Tonemap exposure.");
   add_option(cli, "filmic", filmic, "Tonemap filmic.");
@@ -59,7 +59,7 @@ void run(const vector<string>& args) {
   parse_cli(cli, args);
 
   // load
-  auto image = load_image(filename);
+  auto image = load_image(imagename);
 
   // resize if needed
   if (width != 0 || height != 0) {
@@ -77,7 +77,7 @@ void run(const vector<string>& args) {
     save_image(outname, image);
   } else {
     // run viewer
-    show_image_gui("ytonemap", filename, image);
+    show_image_gui("ytonemap", imagename, image);
   }
 }
 

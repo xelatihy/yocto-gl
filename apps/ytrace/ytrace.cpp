@@ -43,7 +43,7 @@ namespace fs = std::filesystem;
 // main function
 void run(const vector<string>& args) {
   // parameters
-  auto filename    = "scene.json"s;
+  auto scenename   = "scene.json"s;
   auto outname     = "out.png"s;
   auto interactive = false;
   auto camname     = ""s;
@@ -54,8 +54,8 @@ void run(const vector<string>& args) {
 
   // parse command line
   auto cli = make_cli("ytrace", "render with raytracing");
-  add_option(cli, "scene", filename, "scene filename");
-  add_option(cli, "output", outname, "output filename");
+  add_option(cli, "scene", scenename, "scene scenename");
+  add_option(cli, "output", outname, "output scenename");
   add_option(cli, "interactive", interactive, "run interactively");
   add_option(cli, "camera", camname, "camera name");
   add_option(cli, "addsky", addsky, "add sky");
@@ -82,12 +82,12 @@ void run(const vector<string>& args) {
   parse_cli(cli, args);
 
   // start rendering
-  print_info("rendering {}", filename);
+  print_info("rendering {}", scenename);
   auto timer = simple_timer{};
 
   // scene loading
   timer      = simple_timer{};
-  auto scene = load_scene(filename);
+  auto scene = load_scene(scenename);
   print_info("load scene: {}", elapsed_formatted(timer));
 
   // add sky
@@ -154,7 +154,7 @@ void run(const vector<string>& args) {
     print_info("save image: {}", elapsed_formatted(timer));
   } else {
     // run view
-    show_trace_gui("ytrace", filename, scene, params);
+    show_trace_gui("ytrace", scenename, scene, params);
   }
 }
 
