@@ -39,31 +39,23 @@ using namespace yocto;
 #include <filesystem>
 namespace fs = std::filesystem;
 
-struct app_params {
-  string scene   = "scene.json";
-  string camname = "";
-};
+// main function
+void run(const vector<string>& args) {
+  // parameters
+  string filename = "scene.json";
+  string camname  = "";
 
-// Cli
-app_params parse_params(int argc, const char* argv[]) {
-  auto params = app_params{};
+  // parse command line
+  auto cli = make_cli("yview", "render with raytracing");
+  add_option(cli, "scene", filename, "input scene");
+  add_option(cli, "camera", camname, "camera name");
+  parse_cli(cli, args);
 
-  auto cli = make_cli("ytrace", "render with raytracing");
-  add_option(cli, "scene", params.scene, "input scene");
-  add_option(cli, "camera", params.camname, "camera name");
-  parse_cli(cli, argc, argv);
-
-  return params;
-}
-
-void view_interactively(const app_params& params_) {
-  print_info("viewing {}", params_.scene);
-
-  // copy params
-  auto params = params_;
+  // start
+  print_info("viewing {}", filename);
 
   // loading scene
-  auto scene = load_scene(params.scene);
+  auto scene = load_scene(filename);
 
   // tesselation
   if (!scene.subdivs.empty()) {
@@ -71,30 +63,20 @@ void view_interactively(const app_params& params_) {
   }
 
   // camera
-  auto viewparams   = shade_params{};
-  viewparams.camera = find_camera(scene, params.camname);
+  auto params   = shade_params{};
+  params.camera = find_camera(scene, camname);
 
   // run viewer
-  show_shade_gui("yscene", params.scene, scene, viewparams);
+  show_shade_gui("yview", filename, scene, params);
 }
 
 // Run
 int main(int argc, const char* argv[]) {
   try {
-    // command line parameters
-    auto params = parse_params(argc, argv);
-
-    // dispatch commands
-    if (!params.scene.empty()) {
-      view_interactively(params);
-    } else {
-      throw io_error{"missing scene"};
-    }
+    run({argv, argv + argc});
+    return 0;
   } catch (const std::exception& error) {
     print_error(error.what());
     return 1;
   }
-
-  // done
-  return 0;
 }
