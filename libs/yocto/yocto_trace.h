@@ -107,8 +107,6 @@ struct trace_params {
   bool                  highqualitybvh = false;
   bool                  noparallel     = false;
   int                   pratio         = 8;
-  float                 exposure       = 0;
-  bool                  filmic         = false;
   bool                  denoise        = false;
   int                   batch          = 1;
 };

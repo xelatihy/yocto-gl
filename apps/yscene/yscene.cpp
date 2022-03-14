@@ -164,8 +164,6 @@ void add_options(cli_command& cli, render_params& params) {
   add_option(cli, "tentfilter", params.tentfilter, "filter image");
   add_option(cli, "embreebvh", params.embreebvh, "use Embree bvh");
   add_option(cli, "highqualitybvh", params.highqualitybvh, "high quality bvh");
-  add_option(cli, "exposure", params.exposure, "exposure value");
-  add_option(cli, "filmic", params.filmic, "filmic tone mapping");
   add_option(cli, "noparallel", params.noparallel, "disable threading");
 }
 
@@ -223,26 +221,20 @@ void run_render(const render_params& params_) {
     print_info("render sample {}/{}: {}", state.samples, params.samples,
         elapsed_formatted(sample_timer));
     if (params.savebatch && state.samples % params.batch == 0) {
-      auto image       = params.denoise ? get_denoised_image(state)
-                                        : get_rendered_image(state);
-      auto outfilename = fs::path(params.output)
-                             .replace_extension(
-                                 "-s" + std::to_string(sample) +
-                                 fs::path(params.output).extension().string())
-                             .string();
-      if (!is_hdr_filename(params.output))
-        image = tonemap_image(image, params.exposure, params.filmic);
-      save_image(outfilename, image);
+      auto image     = get_image(state);
+      auto batchname = fs::path(params.output)
+                           .replace_extension(
+                               "-s" + std::to_string(sample) +
+                               fs::path(params.output).extension().string())
+                           .string();
+      save_image(batchname, image);
     }
   }
   print_info("render image: {}", elapsed_formatted(timer));
 
   // save image
   timer      = simple_timer{};
-  auto image = params.denoise ? get_denoised_image(state)
-                              : get_rendered_image(state);
-  if (!is_hdr_filename(params.output))
-    image = tonemap_image(image, params.exposure, params.filmic);
+  auto image = get_image(state);
   save_image(params.output, image);
   print_info("save image: {}", elapsed_formatted(timer));
 }
@@ -279,8 +271,6 @@ void add_options(cli_command& cli, view_params& params) {
   add_option(cli, "embreebvh", params.embreebvh, "use Embree as BVH");
   add_option(
       cli, "--highqualitybvh", params.highqualitybvh, "use high quality BVH");
-  add_option(cli, "exposure", params.exposure, "exposure value");
-  add_option(cli, "filmic", params.filmic, "filmic tone mapping");
   add_option(cli, "noparallel", params.noparallel, "disable threading");
 }
 
