@@ -35,57 +35,49 @@
 #include <yocto/yocto_trace.h>
 
 using namespace yocto;
+using namespace std::string_literals;
 
-#include <filesystem>
-namespace fs = std::filesystem;
+// main function
+void run(const vector<string>& args) {
+  // parameters
+  auto filename  = "scene.json"s;
+  auto output    = "out.json"s;
+  auto info      = false;
+  auto validate  = false;
+  auto copyright = ""s;
 
-// convert params
-struct app_params {
-  string scene     = "scene.json";
-  string output    = "out.json";
-  bool   info      = false;
-  bool   validate  = false;
-  string copyright = "";
-};
-
-// Cli
-app_params parse_params(int argc, const char* argv[]) {
-  auto params = app_params{};
-
+  // parse command line
   auto cli = make_cli("yconvert", "convert scenes, shapes and images");
-  add_option(cli, "scene", params.scene, "input scene");
-  add_option(cli, "output", params.output, "output filename");
-  add_option(cli, "info", params.info, "print info");
-  add_option(cli, "validate", params.validate, "run validate");
-  add_option(cli, "copyright", params.copyright, "set scene copyright");
+  add_option(cli, "scene", filename, "input scene");
+  add_option(cli, "output", output, "output filename");
+  add_option(cli, "info", info, "print info");
+  add_option(cli, "validate", validate, "run validate");
+  add_option(cli, "copyright", copyright, "set scene copyright");
+  parse_cli(cli, args);
 
-  return params;
-}
-
-// convert scene
-void convert_scene(const app_params& params) {
-  print_info("converting {}", params.scene);
+  // start converting
+  print_info("converting {}", filename);
   auto timer = simple_timer{};
 
   // load scene
   timer      = simple_timer{};
-  auto scene = load_scene(params.scene);
+  auto scene = load_scene(filename);
   print_info("load scene: {}", elapsed_formatted(timer));
 
   // copyright
-  if (params.copyright != "") {
-    scene.copyright = params.copyright;
+  if (copyright != "") {
+    scene.copyright = copyright;
   }
 
   // validate scene
-  if (params.validate) {
+  if (validate) {
     auto errors = scene_validation(scene);
     for (auto& error : errors) print_error(error);
     if (!errors.empty()) throw io_error{"invalid scene"};
   }
 
   // print info
-  if (params.info) {
+  if (info) {
     print_info("scene stats ------------");
     for (auto stat : scene_stats(scene)) print_info(stat);
   }
@@ -99,28 +91,18 @@ void convert_scene(const app_params& params) {
 
   // save scene
   timer = simple_timer{};
-  make_scene_directories(params.output, scene);
-  save_scene(params.output, scene);
+  make_scene_directories(output, scene);
+  save_scene(output, scene);
   print_info("save scene: {}", elapsed_formatted(timer));
 }
 
-// Run
+// Main
 int main(int argc, const char* argv[]) {
   try {
-    // command line parameters
-    auto params = parse_params(argc, argv);
-
-    // dispatch commands
-    if (!params.scene.empty()) {
-      convert_scene(params);
-    } else {
-      throw io_error{"empty scene"};
-    }
+    run({argv, argv + argc});
+    return 0;
   } catch (const std::exception& error) {
     print_error(error.what());
     return 1;
   }
-
-  // done
-  return 0;
 }
