@@ -146,8 +146,7 @@ void run(const vector<string>& args) {
       print_info("render sample {}/{}: {}", state.samples, params.samples,
           elapsed_formatted(sample_timer));
       if (savebatch && state.samples % params.batch == 0) {
-        auto image       = params.denoise ? get_denoised_image(state)
-                                          : get_rendered_image(state);
+        auto image       = get_image(state);
         auto outfilename = fs::path(outname)
                                .replace_extension(
                                    "-s" + std::to_string(sample) +
@@ -162,8 +161,7 @@ void run(const vector<string>& args) {
 
     // save image
     timer      = simple_timer{};
-    auto image = params.denoise ? get_denoised_image(state)
-                                : get_rendered_image(state);
+    auto image = get_image(state);
     if (!is_hdr_filename(outname))
       image = tonemap_image(image, params.exposure, params.filmic);
     save_image(outname, image);
