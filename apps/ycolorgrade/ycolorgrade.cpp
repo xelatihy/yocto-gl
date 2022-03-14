@@ -35,65 +35,46 @@
 #include <yocto/yocto_sceneio.h>
 
 using namespace yocto;
+using namespace std::string_literals;
 
-// grade params
-struct app_params : colorgrade_params {
-  string image       = "image.png";
-  string output      = "out.png";
-  bool   interactive = true;
-};
+// main function
+void run(const vector<string>& args) {
+  // parameters
+  auto filename    = "image.png"s;
+  auto output      = "out.png"s;
+  auto interactive = true;
+  auto params      = colorgrade_params{};
 
-// Cli
-app_params parse_params(int argc, const char* argv[]) {
-  auto params = app_params{};
-
+  // parse command line
   auto cli = make_cli("ycolorgrade", "adjust image colors");
-  add_option(cli, "image", params.image, "Input image.");
-  add_option(cli, "output", params.output, "Output image.");
-  add_option(cli, "interactive", params.interactive, "Run interactively.");
-  parse_cli(cli, argc, argv);
+  add_option(cli, "image", filename, "Input image.");
+  add_option(cli, "output", output, "Output image.");
+  add_option(cli, "interactive", interactive, "Run interactively.");
+  parse_cli(cli, args);
 
-  return params;
-}
-
-// grade images
-void colorgrade_offline(const app_params& params) {
   // load image
-  auto image = load_image(params.image);
+  auto image = load_image(filename);
 
-  // apply color grade
-  image = colorgrade_image(image, params);
+  // switch between interactive and offline
+  if (!interactive) {
+    // apply color grade
+    image = colorgrade_image(image, params);
 
-  // save image
-  save_image(params.output, image);
-}
-
-// grade images
-void colorgrade_interactive(const app_params& params) {
-  // load image
-  auto image = load_image(params.image);
-
-  // run viewer
-  show_colorgrade_gui("ycolorgrade", params.image, image);
+    // save image
+    save_image(output, image);
+  } else {
+    // run viewer
+    show_colorgrade_gui("ycolorgrade", filename, image);
+  }
 }
 
 // Main
 int main(int argc, const char* argv[]) {
   try {
-    // command line parameters
-    auto params = parse_params(argc, argv);
-
-    // dispatch commands
-    if (!params.interactive) {
-      colorgrade_offline(params);
-    } else {
-      colorgrade_interactive(params);
-    }
+    run({argv, argv + argc});
+    return 0;
   } catch (const std::exception& error) {
     print_error(error.what());
     return 1;
   }
-
-  // done
-  return 0;
 }
