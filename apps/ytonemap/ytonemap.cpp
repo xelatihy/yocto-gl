@@ -38,7 +38,7 @@ using namespace yocto;
 using namespace std::string_literals;
 
 // main function
-void run(int argc, const char* argv[]) {
+void run(const vector<string>& args) {
   // parameters
   auto filename    = "image.png"s;
   auto output      = "out.png"s;
@@ -57,7 +57,7 @@ void run(int argc, const char* argv[]) {
   add_option(cli, "width", width, "Resize width.");
   add_option(cli, "height", height, "Resize height.");
   add_option(cli, "interactive", interactive, "Run interactively.");
-  parse_cli(cli, argc, argv);
+  parse_cli(cli, args);
 
   // load
   auto image = load_image(filename);
@@ -85,7 +85,7 @@ void run(int argc, const char* argv[]) {
 // Main
 int main(int argc, const char* argv[]) {
   try {
-    run(argc, argv);
+    run({argv, argv + argc});
     return 0;
   } catch (const std::exception& error) {
     print_error(error.what());
