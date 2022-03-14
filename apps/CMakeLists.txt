@@ -2,6 +2,7 @@ add_subdirectory(yimage)
 add_subdirectory(yshape)
 add_subdirectory(yscene)
 
+add_subdirectory(ycolorgrade)
 add_subdirectory(yconvert)
 add_subdirectory(yview)
 add_subdirectory(ytrace)
