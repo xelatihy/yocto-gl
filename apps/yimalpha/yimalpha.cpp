@@ -28,45 +28,36 @@
 
 #include <yocto/yocto_cli.h>
 #include <yocto/yocto_color.h>
-#include <yocto/yocto_gui.h>
 #include <yocto/yocto_image.h>
 #include <yocto/yocto_math.h>
-#include <yocto/yocto_scene.h>
 #include <yocto/yocto_sceneio.h>
 
 using namespace yocto;
+using namespace std::string_literals;
 
-// setalpha params
-struct app_params {
-  string image      = "image.png";
-  string alpha      = "alpha.png";
-  string output     = "out.png";
-  bool   from_color = false;
-  bool   from_black = false;
-  bool   to_color   = false;
-};
+// main function
+void run(const vector<string>& args) {
+  // parameters
+  auto filename   = "image.png"s;
+  auto alphaname  = "alpha.png"s;
+  auto output     = "out.png"s;
+  auto from_color = false;
+  auto from_black = false;
+  auto to_color   = false;
 
-// Cli
-app_params parse_params(int argc, const char* argv[]) {
-  auto params = app_params{};
-
+  // parse command line
   auto cli = make_cli("yimalpha", "set image alpha");
-  add_option(cli, "image", params.image, "Input image");
-  add_option(cli, "alpha", params.alpha, "Alpha image");
-  add_option(cli, "output", params.output, "Output image");
-  add_option(cli, "from-color", params.from_color, "Alpha from color");
-  add_option(cli, "from-black", params.from_black, "Alpha from black");
-  add_option(cli, "to-color", params.to_color, "color from alpha");
-  parse_cli(cli, argc, argv);
+  add_option(cli, "image", filename, "Input image");
+  add_option(cli, "alpha", alphaname, "Alpha image");
+  add_option(cli, "output", output, "Output image");
+  add_option(cli, "from-color", from_color, "Alpha from color");
+  add_option(cli, "from-black", from_black, "Alpha from black");
+  add_option(cli, "to-color", to_color, "color from alpha");
+  parse_cli(cli, args);
 
-  return params;
-}
-
-// setalpha images
-void setalpha_image(const app_params& params) {
   // load
-  auto image = load_image(params.image);
-  auto alpha = load_image(params.alpha);
+  auto image = load_image(filename);
+  auto alpha = load_image(alphaname);
 
   // check sizes
   if (image.width != alpha.width || image.height != alpha.height)
@@ -79,10 +70,10 @@ void setalpha_image(const app_params& params) {
   auto out = make_image(image.width, image.height, image.linear);
   for (auto idx : range(image.pixels.size())) {
     auto calpha = alpha.pixels[idx];
-    auto alpha_ = params.from_color   ? mean(xyz(calpha))
-                  : params.from_black ? (mean(xyz(calpha)) > 0.01 ? 1.0f : 0.0f)
-                                      : calpha.w;
-    if (params.to_color) {
+    auto alpha_ = from_color   ? mean(xyz(calpha))
+                  : from_black ? (mean(xyz(calpha)) > 0.01 ? 1.0f : 0.0f)
+                               : calpha.w;
+    if (to_color) {
       out.pixels[idx] = {alpha_, alpha_, alpha_, alpha_};
     } else {
       auto color      = image.pixels[idx];
@@ -92,22 +83,16 @@ void setalpha_image(const app_params& params) {
   }
 
   // save
-  save_image(params.output, out);
+  save_image(output, out);
 }
 
 // Main
 int main(int argc, const char* argv[]) {
   try {
-    // command line parameters
-    auto params = parse_params(argc, argv);
-
-    // dispatch commands
-    setalpha_image(params);
+    run({argv, argv + argc});
+    return 0;
   } catch (const std::exception& error) {
     print_error(error.what());
     return 1;
   }
-
-  // done
-  return 0;
 }

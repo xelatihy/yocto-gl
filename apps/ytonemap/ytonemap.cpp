@@ -31,7 +31,6 @@
 #include <yocto/yocto_gui.h>
 #include <yocto/yocto_image.h>
 #include <yocto/yocto_math.h>
-#include <yocto/yocto_scene.h>
 #include <yocto/yocto_sceneio.h>
 
 using namespace yocto;
