@@ -35,85 +35,60 @@
 #include <yocto/yocto_sceneio.h>
 
 using namespace yocto;
+using namespace std::string_literals;
 
-// tonemap params
-struct app_params {
-  string image       = "image.png";
-  string output      = "out.png";
-  float  exposure    = 0;
-  bool   filmic      = false;
-  int    width       = 0;
-  int    height      = 0;
-  bool   interactive = false;
-};
+// main function
+void run(int argc, const char* argv[]) {
+  // parameters
+  auto filename    = "image.png"s;
+  auto output      = "out.png"s;
+  auto exposure    = 0.0f;
+  auto filmic      = false;
+  auto width       = 0;
+  auto height      = 0;
+  auto interactive = false;
 
-// Cli
-app_params parse_params(int argc, const char* argv[]) {
-  auto params = app_params{};
-
+  // parse command line
   auto cli = make_cli("ytonemap", "tonemap image");
-  add_option(cli, "image", params.image, "Input image.");
-  add_option(cli, "output", params.output, "Output image.");
-  add_option(cli, "exposure", params.exposure, "Tonemap exposure.");
-  add_option(cli, "filmic", params.filmic, "Tonemap filmic.");
-  add_option(cli, "width", params.width, "Resize width.");
-  add_option(cli, "height", params.height, "Resize height.");
-  add_option(cli, "interactive", params.interactive, "Run interactively.");
+  add_option(cli, "image", filename, "Input image.");
+  add_option(cli, "output", output, "Output image.");
+  add_option(cli, "exposure", exposure, "Tonemap exposure.");
+  add_option(cli, "filmic", filmic, "Tonemap filmic.");
+  add_option(cli, "width", width, "Resize width.");
+  add_option(cli, "height", height, "Resize height.");
+  add_option(cli, "interactive", interactive, "Run interactively.");
   parse_cli(cli, argc, argv);
 
-  return params;
-}
-
-// convert images
-void tonemap_offline(const app_params& params) {
   // load
-  auto image = load_image(params.image);
+  auto image = load_image(filename);
 
   // resize if needed
-  if (params.width != 0 || params.height != 0) {
-    image = resize_image(image, params.width, params.height);
+  if (width != 0 || height != 0) {
+    image = resize_image(image, width, height);
   }
 
-  // tonemap if needed
-  if (image.linear && is_ldr_filename(params.output)) {
-    image = tonemap_image(image, params.exposure, params.filmic);
+  // switch between interactive and offline
+  if (!interactive) {
+    // tonemap if needed
+    if (image.linear && is_ldr_filename(output)) {
+      image = tonemap_image(image, exposure, filmic);
+    }
+
+    // save
+    save_image(output, image);
+  } else {
+    // run viewer
+    show_image_gui("ytonemap", filename, image);
   }
-
-  // save
-  save_image(params.output, image);
-}
-
-// view images
-void tonemap_interactive(const app_params& params) {
-  // load
-  auto image = load_image(params.image);
-
-  // resize if needed
-  if (params.width != 0 || params.height != 0) {
-    image = resize_image(image, params.width, params.height);
-  }
-
-  // run viewer
-  show_image_gui("ytonemap", params.image, image);
 }
 
 // Main
 int main(int argc, const char* argv[]) {
   try {
-    // command line parameters
-    auto params = parse_params(argc, argv);
-
-    // dispatch commands
-    if (!params.interactive) {
-      tonemap_offline(params);
-    } else {
-      tonemap_interactive(params);
-    }
+    run(argc, argv);
+    return 0;
   } catch (const std::exception& error) {
     print_error(error.what());
     return 1;
   }
-
-  // done
-  return 0;
 }
