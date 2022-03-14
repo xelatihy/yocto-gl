@@ -760,7 +760,8 @@ vector<int> stroke_parameterization(vector<vec2f>& coords,
   auto distances = vector<float>(solver.graph.size(), flt_max);
   for (auto sample : sampling) distances[sample] = 0.0f;
 
-  auto frames = vector<mat3f>(positions.size(), identity3x3f);
+  auto frames = vector<mat3f>(
+      positions.size(), mat3f{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}});
   compute_stroke_frames(frames, positions, normals, sampling);
 
   auto update = [&](int node, int neighbor, float new_distance) {

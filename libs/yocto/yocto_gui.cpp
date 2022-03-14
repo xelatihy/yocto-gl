@@ -2115,7 +2115,7 @@ void show_gui_window(const vec2i& size, const string& title,
         state.input.framebuffer.x = 0;
         state.input.framebuffer.y = 0;
         if (state.widgets_width) {
-          auto win_size = zero2i;
+          auto win_size = vec2i{0, 0};
           glfwGetWindowSize(window, &win_size.x, &win_size.y);
           auto offset = (int)(state.widgets_width *
                               (float)state.input.framebuffer.z / win_size.x);
@@ -2184,7 +2184,7 @@ void show_gui_window(const vec2i& size, const string& title,
     state.input.framebuffer.x = 0;
     state.input.framebuffer.y = 0;
     if (state.widgets_width) {
-      auto win_size = zero2i;
+      auto win_size = vec2i{0, 0};
       glfwGetWindowSize(window, &win_size.x, &win_size.y);
       auto offset = (int)(state.widgets_width *
                           (float)state.input.framebuffer.z / win_size.x);

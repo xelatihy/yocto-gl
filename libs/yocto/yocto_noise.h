@@ -73,11 +73,11 @@ inline float perlin_noise(const vec4f& p, const vec4i& wrap = {0, 0, 0, 0});
 // offset=1.0 (used to invert the ridges).
 inline float perlin_ridge(const vec3f& p, float lacunarity = 2,
     float gain = 0.5, int octaves = 6, float offset = 1,
-    const vec3i& wrap = zero3i);
+    const vec3i& wrap = {0, 0, 0});
 inline float perlin_fbm(const vec3f& p, float lacunarity = 2, float gain = 0.5,
-    int octaves = 6, const vec3i& wrap = zero3i);
+    int octaves = 6, const vec3i& wrap = {0, 0, 0});
 inline float perlin_turbulence(const vec3f& p, float lacunarity = 2,
-    float gain = 0.5, int octaves = 6, const vec3i& wrap = zero3i);
+    float gain = 0.5, int octaves = 6, const vec3i& wrap = {0, 0, 0});
 
 }  // namespace yocto
 

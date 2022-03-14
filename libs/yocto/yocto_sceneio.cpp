@@ -678,7 +678,7 @@ image_data make_image_preset(const string& type_) {
     auto sub_images = vector<image_data>();
     for (auto& sub_type : sub_types)
       sub_images.push_back(make_image_preset(sub_type));
-    auto montage_size = zero2i;
+    auto montage_size = vec2i{0, 0};
     for (auto& sub_image : sub_images) {
       montage_size.x += sub_image.width;
       montage_size.y = max(montage_size.y, sub_image.height);
@@ -696,7 +696,7 @@ image_data make_image_preset(const string& type_) {
     auto sub_images = vector<image_data>();
     for (auto& sub_type : sub_types)
       sub_images.push_back(make_image_preset(sub_type));
-    auto montage_size = zero2i;
+    auto montage_size = vec2i{0, 0};
     for (auto& sub_image : sub_images) {
       montage_size.x += sub_image.width;
       montage_size.y = max(montage_size.y, sub_image.height);
@@ -4590,7 +4590,8 @@ static bool load_gltf_scene(
     if (gnode.camera != nullptr) {
       auto& camera = scene.cameras.emplace_back();
       camera       = cameras.at(gnode.camera - cgltf.cameras);
-      auto xform   = identity4x4f;
+      auto xform   = mat4f{
+          {1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
       cgltf_node_transform_world(&gnode, &xform.x.x);
       camera.frame = mat_to_frame(xform);
     }
@@ -4598,7 +4599,8 @@ static bool load_gltf_scene(
       for (auto& primitive : mesh_primitives.at(gnode.mesh - cgltf.meshes)) {
         auto& instance = scene.instances.emplace_back();
         instance       = primitive;
-        auto xform     = identity4x4f;
+        auto xform     = mat4f{
+            {1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
         cgltf_node_transform_world(&gnode, &xform.x.x);
         instance.frame = mat_to_frame(xform);
       }

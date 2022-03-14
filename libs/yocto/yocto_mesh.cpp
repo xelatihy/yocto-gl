@@ -1158,13 +1158,13 @@ vec2f intersect_circles(const vec2f& c2, float R2, const vec2f& c1, float R1) {
   auto d  = hypot(dx, dy);
   if (d > (r0 + r1)) {  // not a triangle
     if (r0 > r1) {
-      auto q = zero2d;
+      auto q = vec2d{0, 0};
       q.x    = 0;
       q.y    = r0 / (r0 + r1);
       assert(std::isfinite(q.y));
       return q;
     } else {
-      auto q = zero2d;
+      auto q = vec2d{0, 0};
       q.x    = 0;
       q.y    = r1 / (r0 + r1);
       assert(std::isfinite(q.y));
@@ -1174,13 +1174,13 @@ vec2f intersect_circles(const vec2f& c2, float R2, const vec2f& c1, float R1) {
   if (d < fabs(r0 - r1)) return {r0, c0.y};  // not a triangle
   if (d == 0) return {r0, c0.y};             // degenerate case
   auto a = ((r0 * r0) - (r1 * r1) + (d * d)) / (2.0 * d);
-  auto p = zero2d;
+  auto p = vec2d{0, 0};
   p.x    = c0.x + (dx * a / d);
   p.y    = c0.y + (dy * a / d);
   auto h = r0 * r0 - a * a;
   if (h <= 0) return p;
   h       = sqrt(h);
-  auto rx = zero2d;
+  auto rx = vec2d{0, 0};
   rx.x    = -dy * (h / d);
   rx.y    = dx * (h / d);
   auto q  = p + rx;
@@ -2006,7 +2006,7 @@ vector<vector<float>> compute_angles(const vector<vec3i>& triangles,
     auto curr_angles = vector<float>{};
     auto tid         = 0;
     auto tr2d        = unfold_triangle{};
-    auto tr3d        = zero3i;
+    auto tr3d        = vec3i{0, 0, 0};
     for (auto j = 0; j < (int)star.size(); ++j) {
       tid  = star[j];
       tr3d = triangles[tid];
@@ -3841,7 +3841,7 @@ geodesic_path straightest_path(const vector<vec3i>& triangles,
 mat2f parallel_transport_rotation(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
     const geodesic_path& path) {
-  if (path.start.face == path.end.face) return identity2x2f;
+  if (path.start.face == path.end.face) return mat2f{{0, 0}, {0, 0}};
 
   auto coords   = unfold_strip(triangles, positions, path.strip, path.start);
   auto a        = coords.back()[0];
