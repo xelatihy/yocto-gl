@@ -58,7 +58,7 @@ void run(const vector<string>& args) {
   auto tovertices   = false;
 
   // parse command line
-  auto cli = make_cli("yconverts", "convert scenes");
+  auto cli = make_cli("yconverts", "convert shapes");
   add_option(cli, "shape", shapename, "input shape");
   add_option(cli, "output", outname, "output shape");
   add_option(cli, "facevarying", facevarying, "process as facevarying");
