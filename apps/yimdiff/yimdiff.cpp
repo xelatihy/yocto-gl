@@ -28,43 +28,33 @@
 
 #include <yocto/yocto_cli.h>
 #include <yocto/yocto_color.h>
-#include <yocto/yocto_gui.h>
 #include <yocto/yocto_image.h>
 #include <yocto/yocto_math.h>
-#include <yocto/yocto_scene.h>
 #include <yocto/yocto_sceneio.h>
 
 using namespace yocto;
+using namespace std::string_literals;
 
-// resize params
-struct app_params {
-  string image1    = "image1.png";
-  string image2    = "image2.png";
-  string output    = "";
-  bool   signal    = false;
-  float  threshold = 0;
-};
-
-// Cli
-app_params parse_params(int argc, const char* argv[]) {
-  auto params = app_params{};
+// main function
+void run(const vector<string>& args) {
+  // parameters
+  auto filename1 = "image1.png"s;
+  auto filename2 = "image2.png"s;
+  auto output    = ""s;
+  auto signal    = false;
+  auto threshold = 0.0f;
 
   auto cli = make_cli("yimdiff", "tonemap image");
-  add_option(cli, "image1", params.image1, "Input image 1.");
-  add_option(cli, "image2", params.image2, "Input image 2.");
-  add_option(cli, "output", params.output, "Output image.");
-  add_option(cli, "signal", params.signal, "Error on diff.");
-  add_option(cli, "threshold", params.threshold, "Diff threshold.");
-  parse_cli(cli, argc, argv);
+  add_option(cli, "image1", filename1, "Input image 1.");
+  add_option(cli, "image2", filename2, "Input image 2.");
+  add_option(cli, "output", output, "Output image.");
+  add_option(cli, "signal", signal, "Error on diff.");
+  add_option(cli, "threshold", threshold, "Diff threshold.");
+  parse_cli(cli, args);
 
-  return params;
-}
-
-// resize images
-void diff_images(const app_params& params) {
   // load
-  auto image1 = load_image(params.image1);
-  auto image2 = load_image(params.image2);
+  auto image1 = load_image(filename1);
+  auto image2 = load_image(filename2);
 
   // check sizes
   if (image1.width != image2.width || image1.height != image2.height)
@@ -77,13 +67,13 @@ void diff_images(const app_params& params) {
   auto diff = image_difference(image1, image2, true);
 
   // save
-  if (params.output != "") save_image(params.output, diff);
+  if (output != "") save_image(output, diff);
 
   // check diff
-  if (params.signal) {
+  if (signal) {
     for (auto& c : diff.pixels) {
-      if (max(xyz(c)) > params.threshold) {
-        throw io_error("image content differ");
+      if (max(xyz(c)) > threshold) {
+        throw std::runtime_error{"image content differ"};
       }
     }
   }
@@ -92,16 +82,10 @@ void diff_images(const app_params& params) {
 // Main
 int main(int argc, const char* argv[]) {
   try {
-    // command line parameters
-    auto params = parse_params(argc, argv);
-
-    // dispatch commands
-    diff_images(params);
+    run({argv, argv + argc});
+    return 0;
   } catch (const std::exception& error) {
     print_error(error.what());
     return 1;
   }
-
-  // done
-  return 0;
 }
