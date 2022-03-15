@@ -5,7 +5,7 @@
 //
 // LICENSE:
 //
-// Copyright (c) 2016 -- 2021 Fabio Pellacini
+// Copyright (c) 2016 -- 2022 Fabio Pellacini
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -2364,8 +2364,8 @@ bool save_stl(
         auto  fnormal  = !shape.fnormals.empty()
                              ? shape.fnormals[triangle_idx]
                              : triangle_normal(shape.positions[triangle[0]],
-                                 shape.positions[triangle[1]],
-                                 shape.positions[triangle[2]]);
+                                   shape.positions[triangle[1]],
+                                   shape.positions[triangle[2]]);
         write_value(buffer, fnormal);
         write_value(buffer, shape.positions[triangle[0]]);
         write_value(buffer, shape.positions[triangle[1]]);
@@ -2389,8 +2389,8 @@ bool save_stl(
         auto  fnormal  = !shape.fnormals.empty()
                              ? shape.fnormals[triangle_idx]
                              : triangle_normal(shape.positions[triangle[0]],
-                                 shape.positions[triangle[1]],
-                                 shape.positions[triangle[2]]);
+                                   shape.positions[triangle[1]],
+                                   shape.positions[triangle[2]]);
         format_values(buffer, "facet normal {}\n", fnormal);
         format_values(buffer, "outer loop\n");
         format_values(buffer, "vertex {}\n", shape.positions[triangle[0]]);

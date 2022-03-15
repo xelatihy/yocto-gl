@@ -5,7 +5,7 @@
 //
 // LICENSE:
 //
-// Copyright (c) 2016 -- 2021 Fabio Pellacini
+// Copyright (c) 2016 -- 2022 Fabio Pellacini
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -337,7 +337,7 @@ shape_bvh make_shape_bvh(const shape_data& shape, bool highquality) {
     for (auto idx : range(shape.triangles.size())) {
       auto& triangle = shape.triangles[idx];
       bboxes[idx]    = triangle_bounds(shape.positions[triangle.x],
-          shape.positions[triangle.y], shape.positions[triangle.z]);
+             shape.positions[triangle.y], shape.positions[triangle.z]);
     }
   } else if (!shape.quads.empty()) {
     bboxes = vector<bbox3f>(shape.quads.size());
@@ -498,7 +498,7 @@ shape_intersection intersect_shape_bvh(const shape_bvh& bvh,
       for (auto idx = node.start; idx < node.start + node.num; idx++) {
         auto& p             = shape.points[bvh.primitives[idx]];
         auto  pintersection = intersect_point(
-            ray, shape.positions[p], shape.radius[p]);
+             ray, shape.positions[p], shape.radius[p]);
         if (!pintersection.hit) continue;
         intersection = {bvh.primitives[idx], pintersection.uv,
             pintersection.distance, true};
@@ -508,7 +508,7 @@ shape_intersection intersect_shape_bvh(const shape_bvh& bvh,
       for (auto idx = node.start; idx < node.start + node.num; idx++) {
         auto& l             = shape.lines[bvh.primitives[idx]];
         auto  pintersection = intersect_line(ray, shape.positions[l.x],
-            shape.positions[l.y], shape.radius[l.x], shape.radius[l.y]);
+             shape.positions[l.y], shape.radius[l.x], shape.radius[l.y]);
         if (!pintersection.hit) continue;
         intersection = {bvh.primitives[idx], pintersection.uv,
             pintersection.distance, true};
@@ -518,7 +518,7 @@ shape_intersection intersect_shape_bvh(const shape_bvh& bvh,
       for (auto idx = node.start; idx < node.start + node.num; idx++) {
         auto& t             = shape.triangles[bvh.primitives[idx]];
         auto  pintersection = intersect_triangle(ray, shape.positions[t.x],
-            shape.positions[t.y], shape.positions[t.z]);
+             shape.positions[t.y], shape.positions[t.z]);
         if (!pintersection.hit) continue;
         intersection = {bvh.primitives[idx], pintersection.uv,
             pintersection.distance, true};
@@ -528,7 +528,7 @@ shape_intersection intersect_shape_bvh(const shape_bvh& bvh,
       for (auto idx = node.start; idx < node.start + node.num; idx++) {
         auto& q             = shape.quads[bvh.primitives[idx]];
         auto  pintersection = intersect_quad(ray, shape.positions[q.x],
-            shape.positions[q.y], shape.positions[q.z], shape.positions[q.w]);
+             shape.positions[q.y], shape.positions[q.z], shape.positions[q.w]);
         if (!pintersection.hit) continue;
         intersection = {bvh.primitives[idx], pintersection.uv,
             pintersection.distance, true};
@@ -590,7 +590,7 @@ scene_intersection intersect_scene_bvh(const scene_bvh& bvh,
         auto& instance_ = scene.instances[bvh.primitives[idx]];
         auto  inv_ray   = transform_ray(inverse(instance_.frame, true), ray);
         auto  sintersection = intersect_shape_bvh(bvh.shapes[instance_.shape],
-            scene.shapes[instance_.shape], inv_ray, find_any);
+             scene.shapes[instance_.shape], inv_ray, find_any);
         if (!sintersection.hit) continue;
         intersection = {bvh.primitives[idx], sintersection.element,
             sintersection.uv, sintersection.distance, true};
@@ -610,7 +610,7 @@ scene_intersection intersect_instance_bvh(const scene_bvh& bvh,
   auto& instance     = scene.instances[instance_];
   auto  inv_ray      = transform_ray(inverse(instance.frame, true), ray);
   auto  intersection = intersect_shape_bvh(bvh.shapes[instance.shape],
-      scene.shapes[instance.shape], inv_ray, find_any);
+       scene.shapes[instance.shape], inv_ray, find_any);
   if (!intersection.hit) return {};
   return {instance_, intersection.element, intersection.uv,
       intersection.distance, true};
@@ -657,7 +657,7 @@ shape_intersection overlap_shape_bvh(const shape_bvh& bvh,
         auto  primitive     = bvh.primitives[node.start + idx];
         auto& p             = shape.points[primitive];
         auto  eintersection = overlap_point(
-            pos, max_distance, shape.positions[p], shape.radius[p]);
+             pos, max_distance, shape.positions[p], shape.radius[p]);
         if (!eintersection.hit) continue;
         intersection = {
             primitive, eintersection.uv, eintersection.distance, true};
@@ -668,8 +668,8 @@ shape_intersection overlap_shape_bvh(const shape_bvh& bvh,
         auto  primitive     = bvh.primitives[node.start + idx];
         auto& l             = shape.lines[primitive];
         auto  eintersection = overlap_line(pos, max_distance,
-            shape.positions[l.x], shape.positions[l.y], shape.radius[l.x],
-            shape.radius[l.y]);
+             shape.positions[l.x], shape.positions[l.y], shape.radius[l.x],
+             shape.radius[l.y]);
         if (!eintersection.hit) continue;
         intersection = {
             primitive, eintersection.uv, eintersection.distance, true};
@@ -680,8 +680,8 @@ shape_intersection overlap_shape_bvh(const shape_bvh& bvh,
         auto  primitive     = bvh.primitives[node.start + idx];
         auto& t             = shape.triangles[primitive];
         auto  eintersection = overlap_triangle(pos, max_distance,
-            shape.positions[t.x], shape.positions[t.y], shape.positions[t.z],
-            shape.radius[t.x], shape.radius[t.y], shape.radius[t.z]);
+             shape.positions[t.x], shape.positions[t.y], shape.positions[t.z],
+             shape.radius[t.x], shape.radius[t.y], shape.radius[t.z]);
         if (!eintersection.hit) continue;
         intersection = {
             primitive, eintersection.uv, eintersection.distance, true};
@@ -692,9 +692,9 @@ shape_intersection overlap_shape_bvh(const shape_bvh& bvh,
         auto  primitive     = bvh.primitives[node.start + idx];
         auto& q             = shape.quads[primitive];
         auto  eintersection = overlap_quad(pos, max_distance,
-            shape.positions[q.x], shape.positions[q.y], shape.positions[q.z],
-            shape.positions[q.w], shape.radius[q.x], shape.radius[q.y],
-            shape.radius[q.z], shape.radius[q.w]);
+             shape.positions[q.x], shape.positions[q.y], shape.positions[q.z],
+             shape.positions[q.w], shape.radius[q.x], shape.radius[q.y],
+             shape.radius[q.z], shape.radius[q.w]);
         if (!eintersection.hit) continue;
         intersection = {
             primitive, eintersection.uv, eintersection.distance, true};
@@ -746,7 +746,7 @@ scene_intersection overlap_scene_bvh(const scene_bvh& bvh,
         auto& sbvh      = bvh.shapes[instance_.shape];
         auto  inv_pos   = transform_point(inverse(instance_.frame, true), pos);
         auto  sintersection = overlap_shape_bvh(
-            sbvh, shape, inv_pos, max_distance, find_any);
+             sbvh, shape, inv_pos, max_distance, find_any);
         if (!sintersection.hit) continue;
         intersection = {primitive, sintersection.element, sintersection.uv,
             sintersection.distance, true};
@@ -921,7 +921,7 @@ shape_embree_bvh make_shape_embree_bvh(
     auto embree_positions = rtcSetNewGeometryBuffer(egeometry,
         RTC_BUFFER_TYPE_VERTEX, 0, RTC_FORMAT_FLOAT4, 4 * 4, epositions.size());
     auto embree_lines     = rtcSetNewGeometryBuffer(
-        egeometry, RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT, 4, elines.size());
+            egeometry, RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT, 4, elines.size());
     memcpy(embree_positions, epositions.data(), epositions.size() * 16);
     memcpy(embree_lines, elines.data(), elines.size() * 4);
     rtcCommitGeometry(egeometry);
@@ -950,7 +950,7 @@ shape_embree_bvh make_shape_embree_bvh(
         RTC_BUFFER_TYPE_VERTEX, 0, RTC_FORMAT_FLOAT3, 3 * 4,
         shape.positions.size());
     auto embree_quads     = rtcSetNewGeometryBuffer(egeometry,
-        RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT4, 4 * 4, shape.quads.size());
+            RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT4, 4 * 4, shape.quads.size());
     memcpy(
         embree_positions, shape.positions.data(), shape.positions.size() * 12);
     memcpy(embree_quads, shape.quads.data(), shape.quads.size() * 16);
@@ -1088,7 +1088,7 @@ scene_intersection intersect_instance_embree_bvh(const scene_embree_bvh& bvh,
   auto& instance     = scene.instances[instance_];
   auto  inv_ray      = transform_ray(inverse(instance.frame, true), ray);
   auto  intersection = intersect_shape_embree_bvh(bvh.shapes[instance.shape],
-      scene.shapes[instance.shape], inv_ray, find_any);
+       scene.shapes[instance.shape], inv_ray, find_any);
   if (!intersection.hit) return {};
   return {instance_, intersection.element, intersection.uv,
       intersection.distance, true};
