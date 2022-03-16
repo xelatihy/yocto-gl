@@ -178,7 +178,7 @@ static string path_dirname(const string& filename) {
 
 // Get filename without directory.
 static string path_filename(const string& filename) {
-  return make_path(filename).filename().u8string();
+  return make_path(filename).filename().generic_u8string();
 }
 
 // Joins paths
@@ -188,7 +188,7 @@ static string path_join(const string& patha, const string& pathb) {
 
 // Replaces extensions
 static string replace_extension(const string& filename, const string& ext) {
-  return make_path(filename).replace_extension(ext).u8string();
+  return make_path(filename).replace_extension(ext).generic_u8string();
 }
 
 // Check if a file can be opened for reading.

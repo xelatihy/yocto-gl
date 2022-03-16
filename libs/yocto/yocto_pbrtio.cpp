@@ -139,7 +139,7 @@ static string path_dirname(const string& filename) {
 
 // Get filename without directory.
 static string path_filename(const string& filename) {
-  return make_path(filename).filename().u8string();
+  return make_path(filename).filename().generic_u8string();
 }
 
 // Joins paths

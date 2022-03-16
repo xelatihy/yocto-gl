@@ -36,11 +36,7 @@
 #include <yocto/yocto_trace.h>
 
 using namespace yocto;
-using namespace yocto;
 using namespace std::string_literals;
-
-#include <filesystem>
-namespace fs = std::filesystem;
 
 // main function
 void run(const vector<string>& args) {
@@ -145,11 +141,8 @@ void run(const vector<string>& args) {
           elapsed_formatted(sample_timer));
       if (savebatch && state.samples % params.batch == 0) {
         auto image     = get_image(state);
-        auto batchname = fs::path(outname)
-                             .replace_extension(
-                                 "-s" + std::to_string(sample) +
-                                 fs::path(outname).extension().string())
-                             .string();
+        auto batchname = replace_extension(outname,
+            "-" + std::to_string(state.samples) + path_extension(outname));
         save_image(batchname, image);
       }
     }
