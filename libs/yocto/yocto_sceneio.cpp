@@ -156,11 +156,21 @@ string path_extension(const string& path) {
 bool path_exists(const string& path) { return exists(make_path(path)); }
 
 // Replace the extension of a file
-string replace_extension(const string& path, const string& extension);
+string replace_extension(const string& path, const string& extension) {
+  auto ext = make_path(extension).extension();
+  return make_path(path).replace_extension(ext).generic_u8string();
+}
 
 // Replace the extension
 string replace_extension(
-    const string& path, const string& middle, const string& extension);
+    const string& path, const string& middle, const string& extension) {
+  auto ext   = make_path(extension).extension();
+  auto npath = make_path(path);
+  npath.replace_extension();
+  npath += middle;
+  npath += ext;
+  return npath.generic_u8string();
+}
 
 // Create a directory and all missing parent directories if needed
 void make_directory(const string& path) {
@@ -168,7 +178,7 @@ void make_directory(const string& path) {
   try {
     create_directories(make_path(path));
   } catch (...) {
-    throw io_error{dirname + ": cannot create directory"};
+    throw io_error{path + ": cannot create directory"};
   }
 }
 
