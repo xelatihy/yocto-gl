@@ -270,10 +270,6 @@ bool path_exists(const string& path);
 // Replace the extension of a file
 string replace_extension(const string& path, const string& extension);
 
-// Replace the extension
-string replace_extension(
-    const string& path, const string& middle, const string& extension);
-
 // Create a directory and all missing parent directories if needed
 void make_directory(const string& path);
 bool make_directory(const string& path, string& error);

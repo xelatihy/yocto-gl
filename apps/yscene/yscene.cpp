@@ -36,9 +36,6 @@
 
 using namespace yocto;
 
-#include <filesystem>
-namespace fs = std::filesystem;
-
 // convert params
 struct convert_params {
   string scene     = "scene.ply";
@@ -222,11 +219,8 @@ void run_render(const render_params& params_) {
         elapsed_formatted(sample_timer));
     if (params.savebatch && state.samples % params.batch == 0) {
       auto image     = get_image(state);
-      auto batchname = fs::path(params.output)
-                           .replace_extension(
-                               "-s" + std::to_string(sample) +
-                               fs::path(params.output).extension().string())
-                           .string();
+      auto batchname = replace_extension(params.output,
+          "-" + std::to_string(state.samples) + path_extension(params.output));
       save_image(batchname, image);
     }
   }
