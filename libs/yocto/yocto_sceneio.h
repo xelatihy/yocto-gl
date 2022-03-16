@@ -247,4 +247,37 @@ void         save_binary(const string& filename, const vector<byte>& data);
 
 }  // namespace yocto
 
+// -----------------------------------------------------------------------------
+// PATH HELPERS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Get directory name (not including /)
+string path_dirname(const string& path);
+
+// Get filename without directory and extension.
+string path_basename(const string& path);
+
+// Get extension
+string path_extension(const string& path);
+
+// Get path normalized
+string path_normalized(const string& path);
+
+// Check if a path exists.
+bool path_exists(const string& path);
+
+// Replace the extension of a file
+string replace_extension(const string& path, const string& extension);
+
+// Replace the extension
+string replace_extension(
+    const string& path, const string& middle, const string& extension);
+
+// Create a directory and all missing parent directories if needed
+void make_directory(const string& path);
+bool make_directory(const string& path, string& error);
+
+}  // namespace yocto
+
 #endif
