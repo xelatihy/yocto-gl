@@ -1620,7 +1620,6 @@ static trace_result trace_pathtest(const scene_data& scene,
   auto radiance      = vec3f{0, 0, 0};
   auto weight        = vec3f{1, 1, 1};
   auto ray           = ray_;
-  auto volume_stack  = svector<material_point>{};
   auto max_roughness = 0.0f;
   auto hit           = false;
   auto hit_albedo    = vec3f{0, 0, 0};
@@ -1637,112 +1636,46 @@ static trace_result trace_pathtest(const scene_data& scene,
       break;
     }
 
-    // handle transmission if inside a volume
-    auto in_volume = false;
-    if (!volume_stack.empty()) {
-      auto& vsdf     = volume_stack.back();
-      auto  distance = sample_transmittance(
-           vsdf.density, intersection.distance, rand1f(rng), rand1f(rng));
-      weight *= eval_transmittance(vsdf.density, distance) /
-                sample_transmittance_pdf(
-                    vsdf.density, distance, intersection.distance);
-      in_volume             = distance < intersection.distance;
-      intersection.distance = distance;
+    // prepare shading point
+    auto outgoing = -ray.d;
+    auto position = eval_shading_position(scene, intersection, outgoing);
+    auto normal   = eval_shading_normal(scene, intersection, outgoing);
+    auto material = eval_material(scene, intersection);
+    material.type = material_type::matte;
+
+    // set hit variables
+    if (bounce == 0) {
+      hit        = true;
+      hit_albedo = material.color;
+      hit_normal = normal;
     }
 
-    // switch between surface and volume
-    if (!in_volume) {
-      // prepare shading point
-      auto outgoing = -ray.d;
-      auto position = eval_shading_position(scene, intersection, outgoing);
-      auto normal   = eval_shading_normal(scene, intersection, outgoing);
-      auto material = eval_material(scene, intersection);
+    // accumulate emission
+    radiance += weight * eval_emission(material, normal, outgoing);
 
-      // correct roughness
-      if (params.nocaustics) {
-        max_roughness      = max(material.roughness, max_roughness);
-        material.roughness = max_roughness;
-      }
-
-      // handle opacity
-      if (material.opacity < 1 && rand1f(rng) >= material.opacity) {
-        if (opbounce++ > 128) break;
-        ray = {position + ray.d * 1e-2f, ray.d};
-        bounce -= 1;
-        continue;
-      }
-
-      // set hit variables
-      if (bounce == 0) {
-        hit        = true;
-        hit_albedo = material.color;
-        hit_normal = normal;
-      }
-
-      // accumulate emission
-      radiance += weight * eval_emission(material, normal, outgoing);
-
-      // next direction
-      auto incoming = vec3f{0, 0, 0};
-      if (!is_delta(material)) {
-        if (rand1f(rng) < 0.5f) {
-          incoming = sample_bsdfcos(
-              material, normal, outgoing, rand1f(rng), rand2f(rng));
-        } else {
-          incoming = sample_lights(
-              scene, lights, position, rand1f(rng), rand1f(rng), rand2f(rng));
-        }
-        if (incoming == vec3f{0, 0, 0}) break;
-        weight *=
-            eval_bsdfcos(material, normal, outgoing, incoming) /
-            (0.5f * sample_bsdfcos_pdf(material, normal, outgoing, incoming) +
-                0.5f *
-                    sample_lights_pdf(scene, bvh, lights, position, incoming));
-      } else {
-        incoming = sample_delta(material, normal, outgoing, rand1f(rng));
-        weight *= eval_delta(material, normal, outgoing, incoming) /
-                  sample_delta_pdf(material, normal, outgoing, incoming);
-      }
-
-      // update volume stack
-      if (is_volumetric(scene, intersection) &&
-          dot(normal, outgoing) * dot(normal, incoming) < 0) {
-        if (volume_stack.empty()) {
-          auto material = eval_material(scene, intersection);
-          volume_stack.push_back(material);
-        } else {
-          volume_stack.pop_back();
-        }
-      }
-
-      // setup next iteration
-      ray = {position, incoming};
-    } else {
-      // prepare shading point
-      auto  outgoing = -ray.d;
-      auto  position = ray.o + ray.d * intersection.distance;
-      auto& vsdf     = volume_stack.back();
-
-      // accumulate emission
-      // radiance += weight * eval_volemission(emission, outgoing);
-
-      // next direction
-      auto incoming = vec3f{0, 0, 0};
+    // next direction
+    auto incoming = vec3f{0, 0, 0};
+    if (!is_delta(material)) {
       if (rand1f(rng) < 0.5f) {
-        incoming = sample_scattering(vsdf, outgoing, rand1f(rng), rand2f(rng));
+        incoming = sample_bsdfcos(
+            material, normal, outgoing, rand1f(rng), rand2f(rng));
       } else {
         incoming = sample_lights(
             scene, lights, position, rand1f(rng), rand1f(rng), rand2f(rng));
       }
       if (incoming == vec3f{0, 0, 0}) break;
       weight *=
-          eval_scattering(vsdf, outgoing, incoming) /
-          (0.5f * sample_scattering_pdf(vsdf, outgoing, incoming) +
+          eval_bsdfcos(material, normal, outgoing, incoming) /
+          (0.5f * sample_bsdfcos_pdf(material, normal, outgoing, incoming) +
               0.5f * sample_lights_pdf(scene, bvh, lights, position, incoming));
-
-      // setup next iteration
-      ray = {position, incoming};
+    } else {
+      incoming = sample_delta(material, normal, outgoing, rand1f(rng));
+      weight *= eval_delta(material, normal, outgoing, incoming) /
+                sample_delta_pdf(material, normal, outgoing, incoming);
     }
+
+    // setup next iteration
+    ray = {position, incoming};
 
     // check weight
     if (weight == vec3f{0, 0, 0} || !isfinite(weight)) break;
