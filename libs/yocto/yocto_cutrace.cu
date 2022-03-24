@@ -105,12 +105,12 @@ struct span {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// simplified version of possiblr implementation from cpprenference.com
+// simplified version of possible implementation from cpprenference.com
 template <class T>
 static const T* _upper_bound(const T* first, const T* last, const T& value) {
   const T*  it;
   ptrdiff_t count, step;
-  count = first - last;
+  count = last - first;
 
   while (count > 0) {
     it   = first;
