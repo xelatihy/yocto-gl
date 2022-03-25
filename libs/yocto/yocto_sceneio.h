@@ -44,6 +44,7 @@
 #include <vector>
 
 #include "yocto_scene.h"
+#include "yocto_trace.h"
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
@@ -244,6 +245,43 @@ void   save_text(const string& filename, const string& str);
 vector<byte> load_binary(const string& filename);
 void         load_binary(const string& filename, vector<byte>& data);
 void         save_binary(const string& filename, const vector<byte>& data);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// PARAMETER IO
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Load/Save/Update trace params
+trace_params load_trace_params(const string& filename);
+void         load_trace_params(const string& filename, trace_params& params);
+void         update_trace_params(const string& filename, trace_params& params);
+void save_trace_params(const string& filename, const trace_params& params);
+
+// Load/Save/Update color grade params
+colorgrade_params load_colorgrade_params(const string& filename);
+void load_colorgrade_params(const string& filename, colorgrade_params& params);
+void update_colorgrade_params(
+    const string& filename, colorgrade_params& params);
+void save_colorgrade_params(
+    const string& filename, const colorgrade_params& params);
+
+// Load/Save/Update trace params
+bool load_trace_params(
+    const string& filename, trace_params& params, string& error);
+bool update_trace_params(
+    const string& filename, trace_params& params, string& error);
+bool save_trace_params(
+    const string& filename, const trace_params& params, string& error);
+
+// Load/Save/Update color grade params
+bool load_colorgrade_params(
+    const string& filename, colorgrade_params& params, string& error);
+bool update_colorgrade_params(
+    const string& filename, colorgrade_params& params, string& error);
+bool save_colorgrade_params(
+    const string& filename, const colorgrade_params& params, string& error);
 
 }  // namespace yocto
 
