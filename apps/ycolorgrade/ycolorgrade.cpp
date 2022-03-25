@@ -44,6 +44,7 @@ void run(const vector<string>& args) {
   auto outname     = "out.png"s;
   auto paramsname  = ""s;
   auto interactive = true;
+  auto dumpname    = ""s;
   auto params      = colorgrade_params{};
 
   // parse command line
@@ -52,11 +53,17 @@ void run(const vector<string>& args) {
   add_option(cli, "output", outname, "Output image.");
   add_option(cli, "params", paramsname, "params filename");
   add_option(cli, "interactive", interactive, "Run interactively.");
+  add_option(cli, "dumpparams", dumpname, "dump params filename");
   parse_cli(cli, args);
 
   // load config
   if (!paramsname.empty()) {
     update_colorgrade_params(paramsname, params);
+  }
+
+  // dump config
+  if (!dumpname.empty()) {
+    save_colorgrade_params(dumpname, params);
   }
 
   // load image
