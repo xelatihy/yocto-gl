@@ -287,12 +287,13 @@ void draw_gui_progressbar(const char* lbl, int current, int total);
 namespace yocto {
 
 // draw tonemap params
-bool draw_tonemap_params(const gui_input& input, float& exposure, bool& filmic);
+bool draw_tonemap_widgets(
+    const gui_input& input, float& exposure, bool& filmic);
 
 // draw image inspector
-bool draw_image_inspector(const gui_input& input, const image_data& image,
+bool draw_image_widgets(const gui_input& input, const image_data& image,
     const image_data& display, glimage_params& glparams);
-bool draw_image_inspector(
+bool draw_image_widgets(
     const gui_input& input, const image_data& image, glimage_params& glparams);
 
 // update image params
@@ -306,8 +307,8 @@ bool uiupdate_image_params(const gui_input& input, glimage_params& glparams);
 bool uiupdate_camera_params(const gui_input& input, camera_data& camera);
 
 // draw trace params
-bool draw_trace_params(const gui_input& input, int sample, trace_params& params,
-    const vector<string>& camera_names);
+bool draw_trace_widgets(const gui_input& input, int sample,
+    trace_params& params, const vector<string>& camera_names);
 
 // scene selection
 struct scene_selection {
@@ -321,7 +322,7 @@ struct scene_selection {
 };
 
 // draw scene editor
-bool draw_scene_editor(scene_data& scene, scene_selection& selection,
+bool draw_scene_widgets(scene_data& scene, scene_selection& selection,
     const function<void()>& before_edit = {});
 
 }  // namespace yocto

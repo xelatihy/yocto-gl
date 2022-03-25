@@ -249,15 +249,15 @@ void run(const vector<string>& args) {
     };
     callbacks.widgets = [&](const gui_input& input) {
       auto tparams = params;
-      if (draw_trace_params(input, state.samples, tparams, camera_names)) {
+      if (draw_trace_widgets(input, state.samples, tparams, camera_names)) {
         render_cancel();
         params = tparams;
         render_restart();
       }
-      draw_tonemap_params(input, glparams.exposure, glparams.filmic);
-      draw_image_inspector(input, image, glparams);
+      draw_tonemap_widgets(input, glparams.exposure, glparams.filmic);
+      draw_image_widgets(input, image, glparams);
       if (edit) {
-        if (draw_scene_editor(scene, selection, render_cancel)) {
+        if (draw_scene_widgets(scene, selection, render_cancel)) {
           render_restart();
         }
       }

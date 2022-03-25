@@ -224,7 +224,7 @@ bool uiupdate_camera_params(const gui_input& input, camera_data& camera) {
   return false;
 }
 
-bool draw_tonemap_params(
+bool draw_tonemap_widgets(
     const gui_input& input, float& exposure, bool& filmic) {
   auto edited = 0;
   if (draw_gui_header("tonemap")) {
@@ -235,7 +235,7 @@ bool draw_tonemap_params(
   return (bool)edited;
 }
 
-bool draw_image_inspector(const gui_input& input, const image_data& image,
+bool draw_image_widgets(const gui_input& input, const image_data& image,
     const image_data& display, glimage_params& glparams) {
   if (draw_gui_header("inspect")) {
     draw_gui_slider("zoom", glparams.scale, 0.1f, 10);
@@ -258,7 +258,7 @@ bool draw_image_inspector(const gui_input& input, const image_data& image,
   return false;
 }
 
-bool draw_image_inspector(
+bool draw_image_widgets(
     const gui_input& input, const image_data& image, glimage_params& glparams) {
   if (draw_gui_header("inspect")) {
     draw_gui_slider("zoom", glparams.scale, 0.1f, 10);
@@ -283,8 +283,8 @@ bool draw_image_inspector(
 }
 
 // draw trace params
-bool draw_trace_params(const gui_input& input, int sample, trace_params& params,
-    const vector<string>& camera_names) {
+bool draw_trace_widgets(const gui_input& input, int sample,
+    trace_params& params, const vector<string>& camera_names) {
   auto edited = 0;
   draw_gui_progressbar("sample", sample, params.samples);
   if (draw_gui_header("render")) {
@@ -308,7 +308,7 @@ bool draw_trace_params(const gui_input& input, int sample, trace_params& params,
   return (bool)edited;
 }
 
-bool draw_scene_editor(scene_data& scene, scene_selection& selection,
+bool draw_scene_widgets(scene_data& scene, scene_selection& selection,
     const function<void()>& before_edit) {
   auto edited = 0;
   if (draw_gui_header("cameras")) {
@@ -446,11 +446,11 @@ void show_image_gui(
   };
   callbacks.widgets = [&](const gui_input& input) {
     draw_gui_combobox("name", selected, names);
-    if (draw_tonemap_params(input, exposure, filmic)) {
+    if (draw_tonemap_widgets(input, exposure, filmic)) {
       tonemap_image_mt(display, image, exposure, filmic);
       set_image(glimage, display);
     }
-    draw_image_inspector(input, image, display, glparams);
+    draw_image_widgets(input, image, display, glparams);
   };
   callbacks.uiupdate = [&](const gui_input& input) {
     uiupdate_image_params(input, glparams);
@@ -499,13 +499,13 @@ void show_image_gui(const string& title, const vector<string>& names,
   callbacks.widgets = [&](const gui_input& input) {
     draw_gui_combobox("name", selected, names);
     auto filmic = (bool)filmics[selected];  // vector of bool ...
-    if (draw_tonemap_params(input, exposures[selected], filmic)) {
+    if (draw_tonemap_widgets(input, exposures[selected], filmic)) {
       filmics[selected] = filmic;
       tonemap_image_mt(displays[selected], images[selected],
           exposures[selected], filmics[selected]);
       set_image(glimages[selected], displays[selected]);
     }
-    draw_image_inspector(
+    draw_image_widgets(
         input, images[selected], displays[selected], glparamss[selected]);
   };
   callbacks.uiupdate = [&](const gui_input& input) {
@@ -571,7 +571,7 @@ void show_colorgrade_gui(
         set_image(glimage, display);
       }
     }
-    draw_image_inspector(input, image, display, glparams);
+    draw_image_widgets(input, image, display, glparams);
   };
   callbacks.uiupdate = [&glparams](const gui_input& input) {
     uiupdate_image_params(input, glparams);
@@ -728,9 +728,9 @@ void show_trace_gui(const string& title, const string& name, scene_data& scene,
       end_gui_header();
       if (edited) set_image(glimage, image);
     }
-    draw_image_inspector(input, image, glparams);
+    draw_image_widgets(input, image, glparams);
     if (edit) {
-      if (draw_scene_editor(scene, selection, [&]() { render_cancel(); })) {
+      if (draw_scene_widgets(scene, selection, [&]() { render_cancel(); })) {
         render_reset();
         if (render_preview()) set_image(glimage, image);
         render_start();
@@ -896,9 +896,9 @@ void show_cutrace_gui(const string& title, const string& name,
       edited += draw_gui_checkbox("filmic", glparams.filmic);
       end_gui_header();
     }
-    draw_image_inspector(input, image, glparams);
+    draw_image_widgets(input, image, glparams);
     if (edit) {
-      if (draw_scene_editor(scene, selection, [&]() {})) {
+      if (draw_scene_widgets(scene, selection, [&]() {})) {
         render_reset();
         if (render_preview()) set_image(glimage, image);
       }
@@ -983,7 +983,7 @@ void show_shade_gui(const string& title, const string& name, scene_data& scene,
       draw_gui_coloredit("background", params.background);
       end_gui_header();
     }
-    // draw_scene_editor(scene, selection, {});
+    // draw_scene_widgets(scene, selection, {});
     if (widgets_callback) {
       widgets_callback(input, updated_shapes, updated_textures);
       if (!updated_shapes.empty() || !updated_textures.empty()) {
