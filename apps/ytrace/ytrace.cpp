@@ -257,7 +257,7 @@ void run(const vector<string>& args) {
       draw_tonemap_params(input, glparams.exposure, glparams.filmic);
       draw_image_inspector(input, image, glparams);
       if (edit) {
-        if (draw_scene_editor(scene, selection, [&]() { render_cancel(); })) {
+        if (draw_scene_editor(scene, selection, render_cancel)) {
           render_restart();
         }
       }
