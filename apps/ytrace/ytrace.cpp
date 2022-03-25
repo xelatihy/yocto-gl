@@ -44,6 +44,7 @@ void run(const vector<string>& args) {
   auto outname     = "out.png"s;
   auto paramsname  = ""s;
   auto interactive = false;
+  auto edit        = false;
   auto camname     = ""s;
   bool addsky      = false;
   auto envname     = ""s;
@@ -78,6 +79,7 @@ void run(const vector<string>& args) {
   add_option(cli, "highqualitybvh", params.highqualitybvh, "high quality bvh");
   add_option(cli, "noparallel", params.noparallel, "disable threading");
   add_option(cli, "dumpparams", dumpname, "dump params filename");
+  add_option(cli, "edit", edit, "edit interactively");
   parse_cli(cli, args);
 
   // load config
@@ -117,24 +119,24 @@ void run(const vector<string>& args) {
     tesselate_subdivs(scene);
   }
 
+  // build bvh
+  timer    = simple_timer{};
+  auto bvh = make_trace_bvh(scene, params);
+  print_info("build bvh: {}", elapsed_formatted(timer));
+
+  // init renderer
+  auto lights = make_trace_lights(scene, params);
+
+  // fix renderer type if no lights
+  if (lights.lights.empty() && is_sampler_lit(params)) {
+    print_info("no lights presents, image will be black");
+    params.sampler = trace_sampler_type::eyelight;
+  }
+
+  // state
+  auto state = make_trace_state(scene, params);
+
   if (!interactive) {
-    // build bvh
-    timer    = simple_timer{};
-    auto bvh = make_trace_bvh(scene, params);
-    print_info("build bvh: {}", elapsed_formatted(timer));
-
-    // init renderer
-    auto lights = make_trace_lights(scene, params);
-
-    // fix renderer type if no lights
-    if (lights.lights.empty() && is_sampler_lit(params)) {
-      print_info("no lights presents, image will be black");
-      params.sampler = trace_sampler_type::eyelight;
-    }
-
-    // state
-    auto state = make_trace_state(scene, params);
-
     // render
     timer = simple_timer{};
     for (auto sample : range(0, params.samples, params.batch)) {
@@ -157,8 +159,123 @@ void run(const vector<string>& args) {
     save_image(outname, image);
     print_info("save image: {}", elapsed_formatted(timer));
   } else {
-    // run view
-    show_trace_gui("ytrace", scenename, scene, params);
+    // rendering context
+    auto context = make_trace_context(params);
+
+    // init image
+    auto image = make_image(state.width, state.height, true);
+
+    // opengl image
+    auto glimage     = glimage_state{};
+    auto glparams    = glimage_params{};
+    glparams.tonemap = true;
+
+    // camera names
+    auto camera_names = scene.camera_names;
+    if (camera_names.empty()) {
+      for (auto idx : range(scene.cameras.size())) {
+        camera_names.push_back("camera" + std::to_string(idx + 1));
+      }
+    }
+
+    // render previews
+    auto render_preview = [&]() -> bool {
+      // preview
+      auto pparams = params;
+      pparams.resolution /= params.pratio;
+      pparams.samples = 1;
+      auto pstate     = make_trace_state(scene, pparams);
+      trace_samples(pstate, scene, bvh, lights, pparams);
+      auto preview = get_image(pstate);
+      for (auto idx = 0; idx < state.width * state.height; idx++) {
+        auto i = idx % image.width, j = idx / image.width;
+        auto pi           = clamp(i / params.pratio, 0, preview.width - 1),
+             pj           = clamp(j / params.pratio, 0, preview.height - 1);
+        image.pixels[idx] = preview.pixels[pj * preview.width + pi];
+      }
+      return true;
+    };
+
+    // start rendering batch
+    auto render_next = [&]() {
+      trace_samples_cancel(context);
+      trace_samples_start(context, state, scene, bvh, lights, params);
+    };
+
+    // restart renderer
+    auto render_restart = [&]() {
+      // make sure we can start
+      trace_samples_cancel(context);
+      state = make_trace_state(scene, params);
+      if (image.width != state.width || image.height != state.height)
+        image = make_image(state.width, state.height, true);
+
+      // render preview
+      render_preview();
+
+      // update image
+      set_image(glimage, image);
+
+      // start
+      trace_samples_start(context, state, scene, bvh, lights, params);
+    };
+
+    // render cancel
+    auto render_cancel = [&]() { trace_samples_cancel(context); };
+
+    // render update
+    auto render_update = [&]() {
+      if (context.done) {
+        get_image(image, state);
+        set_image(glimage, image);
+        trace_samples_start(context, state, scene, bvh, lights, params);
+      }
+    };
+
+    // prepare selection
+    auto selection = scene_selection{};
+
+    // callbacks
+    auto callbacks = gui_callbacks{};
+    callbacks.init = [&](const gui_input& input) {
+      init_image(glimage);
+      render_restart();
+    };
+    callbacks.clear = [&](const gui_input& input) { clear_image(glimage); };
+    callbacks.draw  = [&](const gui_input& input) {
+      render_update();
+      update_image_params(input, image, glparams);
+      draw_image(glimage, glparams);
+    };
+    callbacks.widgets = [&](const gui_input& input) {
+      auto tparams = params;
+      if (draw_trace_params(input, state.samples, tparams, camera_names)) {
+        render_cancel();
+        params = tparams;
+        render_restart();
+      }
+      draw_tonemap_params(input, glparams.exposure, glparams.filmic);
+      draw_image_inspector(input, image, glparams);
+      if (edit) {
+        if (draw_scene_editor(scene, selection, [&]() { render_cancel(); })) {
+          render_restart();
+        }
+      }
+    };
+    callbacks.uiupdate = [&](const gui_input& input) {
+      auto camera = scene.cameras[params.camera];
+      if (uiupdate_camera_params(input, camera)) {
+        render_cancel();
+        scene.cameras[params.camera] = camera;
+        render_restart();
+      }
+    };
+
+    // run ui
+    show_gui_window({1280 + 320, 720}, "ytrace - " + scenename, callbacks);
+
+    // done
+    render_cancel();
   }
 }
 
