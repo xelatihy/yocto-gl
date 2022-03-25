@@ -43,6 +43,7 @@ void run(const vector<string>& args) {
   // parameters
   auto scenename   = "scene.json"s;
   auto outname     = "out.png"s;
+  auto paramsname  = ""s;
   auto interactive = false;
   auto camname     = ""s;
   bool addsky      = false;
@@ -51,9 +52,10 @@ void run(const vector<string>& args) {
   auto params      = trace_params{};
 
   // parse command line
-  auto cli = make_cli("ytrace", "render with raytracing");
-  add_option(cli, "scene", scenename, "scene scenename");
-  add_option(cli, "output", outname, "output scenename");
+  auto cli = make_cli("ycutrace", "render with raytracing");
+  add_option(cli, "scene", scenename, "scene filename");
+  add_option(cli, "output", outname, "output filename");
+  add_option(cli, "params", paramsname, "params filename");
   add_option(cli, "interactive", interactive, "run interactively");
   add_option(cli, "camera", camname, "camera name");
   add_option(cli, "addsky", addsky, "add sky");
@@ -76,6 +78,12 @@ void run(const vector<string>& args) {
   add_option(cli, "highqualitybvh", params.highqualitybvh, "high quality bvh");
   add_option(cli, "noparallel", params.noparallel, "disable threading");
   parse_cli(cli, args);
+
+  // load config
+  if (!paramsname.empty()) {
+    update_trace_params(paramsname, params);
+    print_info("loading params {}", paramsname);
+  }
 
   // start rendering
   print_info("rendering {}", scenename);

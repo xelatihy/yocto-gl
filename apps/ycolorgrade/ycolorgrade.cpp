@@ -42,6 +42,7 @@ void run(const vector<string>& args) {
   // parameters
   auto imagename   = "image.png"s;
   auto outname     = "out.png"s;
+  auto paramsname  = ""s;
   auto interactive = true;
   auto params      = colorgrade_params{};
 
@@ -49,8 +50,14 @@ void run(const vector<string>& args) {
   auto cli = make_cli("ycolorgrade", "adjust image colors");
   add_option(cli, "image", imagename, "Input image.");
   add_option(cli, "output", outname, "Output image.");
+  add_option(cli, "params", paramsname, "params filename");
   add_option(cli, "interactive", interactive, "Run interactively.");
   parse_cli(cli, args);
+
+  // load config
+  if (!paramsname.empty()) {
+    update_colorgrade_params(paramsname, params);
+  }
 
   // load image
   auto image = load_image(imagename);
