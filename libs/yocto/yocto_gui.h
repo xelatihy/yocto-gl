@@ -149,7 +149,7 @@ struct glimage_params {
   bool  fit         = true;
   bool  checker     = true;
   float border_size = 2;
-  vec4f background  = {0.15f, 0.15f, 0.15f, 1.0f};
+  vec4f background  = {0.5f, 0.5f, 0.5f, 1.0f};
   bool  tonemap     = false;
   float exposure    = 0;
   bool  srgb        = true;
