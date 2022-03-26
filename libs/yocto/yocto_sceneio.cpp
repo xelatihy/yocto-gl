@@ -2092,6 +2092,7 @@ void add_missing_material(scene_data& scene) {
     if (instance.material >= 0) continue;
     if (default_material == invalidid) {
       auto& material   = scene.materials.emplace_back();
+      material.type    = material_type::matte;
       material.color   = {0.8f, 0.8f, 0.8f};
       default_material = (int)scene.materials.size() - 1;
     }
