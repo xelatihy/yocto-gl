@@ -2100,6 +2100,12 @@ void add_missing_material(scene_data& scene) {
   }
 }
 
+// Add missing cameras.
+void add_missing_lights(scene_data& scene) {
+  if (has_lights(scene)) return;
+  add_sky(scene);
+}
+
 // Reduce memory usage
 static void trim_memory(scene_data& scene) {
   for (auto& shape : scene.shapes) {
@@ -4271,6 +4277,7 @@ static bool load_ply_scene(
   add_missing_material(scene);
   add_missing_camera(scene);
   add_missing_radius(scene);
+  add_missing_lights(scene);
 
   // done
   return true;
@@ -4302,6 +4309,7 @@ static bool load_stl_scene(
   add_missing_material(scene);
   add_missing_camera(scene);
   add_missing_radius(scene);
+  add_missing_lights(scene);
 
   // done
   return true;
@@ -4655,6 +4663,7 @@ static bool load_gltf_scene(
   add_missing_material(scene);
   add_missing_camera(scene);
   add_missing_radius(scene);
+  add_missing_lights(scene);
 
   // done
   return true;

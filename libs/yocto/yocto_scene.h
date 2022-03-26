@@ -343,6 +343,9 @@ void add_sky(scene_data& scene, float sun_angle = pif / 4);
 // get named camera or default if name is empty
 int find_camera(const scene_data& scene, const string& name);
 
+// Check if lights are present
+bool has_lights(const scene_data& scene);
+
 // create a scene from a shape
 scene_data make_shape_scene(const shape_data& shape, bool add_sky = false);
 
