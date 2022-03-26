@@ -2092,11 +2092,18 @@ void add_missing_material(scene_data& scene) {
     if (instance.material >= 0) continue;
     if (default_material == invalidid) {
       auto& material   = scene.materials.emplace_back();
+      material.type    = material_type::matte;
       material.color   = {0.8f, 0.8f, 0.8f};
       default_material = (int)scene.materials.size() - 1;
     }
     instance.material = default_material;
   }
+}
+
+// Add missing cameras.
+void add_missing_lights(scene_data& scene) {
+  if (has_lights(scene)) return;
+  add_sky(scene);
 }
 
 // Reduce memory usage
@@ -4270,6 +4277,7 @@ static bool load_ply_scene(
   add_missing_material(scene);
   add_missing_camera(scene);
   add_missing_radius(scene);
+  add_missing_lights(scene);
 
   // done
   return true;
@@ -4301,6 +4309,7 @@ static bool load_stl_scene(
   add_missing_material(scene);
   add_missing_camera(scene);
   add_missing_radius(scene);
+  add_missing_lights(scene);
 
   // done
   return true;
@@ -4654,6 +4663,7 @@ static bool load_gltf_scene(
   add_missing_material(scene);
   add_missing_camera(scene);
   add_missing_radius(scene);
+  add_missing_lights(scene);
 
   // done
   return true;
@@ -5275,6 +5285,236 @@ static bool save_pbrt_scene(const string& filename, const scene_data& scene,
 
   // done
   return true;
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// PARAMETER IO
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Conversion to/from json
+template <typename T>
+static void to_json(
+    json_value& json, const T& value, const vector<pair<T, string>>& labels) {
+  auto it = std::find_if(labels.begin(), labels.end(),
+      [value](const pair<T, string>& kv) -> bool { return kv.first == value; });
+  if (it == labels.end()) throw std::invalid_argument{"bad enum value"};
+  json = it->second;
+}
+template <typename T>
+static void from_json(
+    const json_value& json, T& value, const vector<pair<T, string>>& labels) {
+  auto label = json.get<string>();
+  auto it    = std::find_if(labels.begin(), labels.end(),
+         [&label](
+          const pair<T, string>& kv) -> bool { return kv.second == label; });
+  // TODO: better error type
+  if (it == labels.end()) throw std::invalid_argument{"bad enum value"};
+  value = it->first;
+}
+
+// Conversion to/from json
+static void to_json(json_value& json, const trace_sampler_type& value) {
+  to_json(json, value, trace_sampler_labels);
+}
+static void from_json(const json_value& json, trace_sampler_type& value) {
+  from_json(json, value, trace_sampler_labels);
+}
+static void to_json(json_value& json, const trace_falsecolor_type& value) {
+  to_json(json, value, trace_falsecolor_labels);
+}
+static void from_json(const json_value& json, trace_falsecolor_type& value) {
+  from_json(json, value, trace_falsecolor_labels);
+}
+
+// Conversion to/from json
+static void to_json(json_value& json, const trace_params& value) {
+  json["camera"]         = value.camera;
+  json["resolution"]     = value.resolution;
+  json["sampler"]        = value.sampler;
+  json["falsecolor"]     = value.falsecolor;
+  json["samples"]        = value.samples;
+  json["bounces"]        = value.bounces;
+  json["clamp"]          = value.clamp;
+  json["nocaustics"]     = value.nocaustics;
+  json["envhidden"]      = value.envhidden;
+  json["tentfilter"]     = value.tentfilter;
+  json["seed"]           = value.seed;
+  json["embreebvh"]      = value.embreebvh;
+  json["highqualitybvh"] = value.highqualitybvh;
+  json["noparallel"]     = value.noparallel;
+  json["pratio"]         = value.pratio;
+  json["denoise"]        = value.denoise;
+  json["batch"]          = value.batch;
+}
+static void from_json(const json_value& json, trace_params& value) {
+  value.camera         = json.value("camera", value.camera);
+  value.resolution     = json.value("resolution", value.resolution);
+  value.sampler        = json.value("sampler", value.sampler);
+  value.falsecolor     = json.value("falsecolor", value.falsecolor);
+  value.samples        = json.value("samples", value.samples);
+  value.bounces        = json.value("bounces", value.bounces);
+  value.clamp          = json.value("clamp", value.clamp);
+  value.nocaustics     = json.value("nocaustics", value.nocaustics);
+  value.envhidden      = json.value("envhidden", value.envhidden);
+  value.tentfilter     = json.value("tentfilter", value.tentfilter);
+  value.seed           = json.value("seed", value.seed);
+  value.embreebvh      = json.value("embreebvh", value.embreebvh);
+  value.highqualitybvh = json.value("highqualitybvh", value.highqualitybvh);
+  value.noparallel     = json.value("noparallel", value.noparallel);
+  value.pratio         = json.value("pratio", value.pratio);
+  value.denoise        = json.value("denoise", value.denoise);
+  value.batch          = json.value("batch", value.batch);
+}
+
+// Conversion to/from json
+static void to_json(json_value& json, const colorgrade_params& value) {
+  json["exposure"]         = value.exposure;
+  json["tint"]             = value.tint;
+  json["lincontrast"]      = value.lincontrast;
+  json["logcontrast"]      = value.logcontrast;
+  json["linsaturation"]    = value.linsaturation;
+  json["filmic"]           = value.filmic;
+  json["srgb"]             = value.srgb;
+  json["contrast"]         = value.contrast;
+  json["saturation"]       = value.saturation;
+  json["shadows"]          = value.shadows;
+  json["midtones"]         = value.midtones;
+  json["highlights"]       = value.highlights;
+  json["shadows_color"]    = value.shadows_color;
+  json["midtones_color"]   = value.midtones_color;
+  json["highlights_color"] = value.highlights_color;
+}
+static void from_json(const json_value& json, colorgrade_params& value) {
+  value.exposure         = json.value("exposure", value.exposure);
+  value.tint             = json.value("tint", value.tint);
+  value.lincontrast      = json.value("lincontrast", value.lincontrast);
+  value.logcontrast      = json.value("logcontrast", value.logcontrast);
+  value.linsaturation    = json.value("linsaturation", value.linsaturation);
+  value.filmic           = json.value("filmic", value.filmic);
+  value.srgb             = json.value("srgb", value.srgb);
+  value.contrast         = json.value("contrast", value.contrast);
+  value.saturation       = json.value("saturation", value.saturation);
+  value.shadows          = json.value("shadows", value.shadows);
+  value.midtones         = json.value("midtones", value.midtones);
+  value.highlights       = json.value("highlights", value.highlights);
+  value.shadows_color    = json.value("shadows_color", value.shadows_color);
+  value.midtones_color   = json.value("midtones_color", value.midtones_color);
+  value.highlights_color = json.value(
+      "highlights_color", value.highlights_color);
+}
+
+// Load/Save/Update trace params
+template <typename Params>
+static bool load_params(const string& filename, Params& params, string& error) {
+  // json
+  auto json = json_value{};
+  if (!load_json(filename, json, error)) return false;
+
+  // conversion
+  try {
+    params = {};
+    from_json(json, params);
+    return true;
+  } catch (...) {
+    error = "error parsing params";
+    return false;
+  }
+}
+template <typename Params>
+static bool update_params(
+    const string& filename, Params& params, string& error) {
+  // json
+  auto json = json_value{};
+  if (!load_json(filename, json, error)) return false;
+
+  // conversion
+  try {
+    from_json(json, params);
+    return true;
+  } catch (...) {
+    error = "error parsing params";
+    return false;
+  }
+}
+template <typename Params>
+static bool save_params(
+    const string& filename, const Params& params, string& error) {
+  auto json = json_value{};
+  to_json(json, params);
+  return save_json(filename, json, error);
+}
+
+// Load/Save/Update trace params
+trace_params load_trace_params(const string& filename) {
+  auto params = trace_params{};
+  auto error  = string{};
+  if (!load_trace_params(filename, params, error)) throw io_error{error};
+  return params;
+}
+void load_trace_params(const string& filename, trace_params& params) {
+  auto error = string{};
+  if (!load_trace_params(filename, params, error)) throw io_error{error};
+}
+void update_trace_params(const string& filename, trace_params& params) {
+  auto error = string{};
+  if (!update_trace_params(filename, params, error)) throw io_error{error};
+}
+void save_trace_params(const string& filename, const trace_params& params) {
+  auto error = string{};
+  if (!save_trace_params(filename, params, error)) throw io_error{error};
+}
+
+// Load/Save/Update color grade params
+colorgrade_params load_colorgrade_params(const string& filename) {
+  auto params = colorgrade_params{};
+  auto error  = string{};
+  if (!load_colorgrade_params(filename, params, error)) throw io_error{error};
+  return params;
+}
+void load_colorgrade_params(const string& filename, colorgrade_params& params) {
+  auto error = string{};
+  if (!load_colorgrade_params(filename, params, error)) throw io_error{error};
+}
+void update_colorgrade_params(
+    const string& filename, colorgrade_params& params) {
+  auto error = string{};
+  if (!update_colorgrade_params(filename, params, error)) throw io_error{error};
+}
+void save_colorgrade_params(
+    const string& filename, const colorgrade_params& params) {
+  auto error = string{};
+  if (!save_colorgrade_params(filename, params, error)) throw io_error{error};
+}
+
+// Load/Save/Update trace params
+bool load_trace_params(
+    const string& filename, trace_params& params, string& error) {
+  return load_params(filename, params, error);
+}
+bool update_trace_params(
+    const string& filename, trace_params& params, string& error) {
+  return update_params(filename, params, error);
+}
+bool save_trace_params(
+    const string& filename, const trace_params& params, string& error) {
+  return save_params(filename, params, error);
+}
+
+// Load/Save/Update color grade params
+bool load_colorgrade_params(
+    const string& filename, colorgrade_params& params, string& error) {
+  return load_params(filename, params, error);
+}
+bool update_colorgrade_params(
+    const string& filename, colorgrade_params& params, string& error) {
+  return update_params(filename, params, error);
+}
+bool save_colorgrade_params(
+    const string& filename, const colorgrade_params& params, string& error) {
+  return save_params(filename, params, error);
 }
 
 }  // namespace yocto

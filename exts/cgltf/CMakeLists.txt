@@ -2,8 +2,6 @@ cmake_minimum_required(VERSION 3.12.0)
 
 project(cgltf)
 
-find_package(OpenGL REQUIRED)
-
 add_library(cgltf STATIC 
   cgltf/cgltf.c
   cgltf/cgltf.h

@@ -664,6 +664,20 @@ int find_camera(const scene_data& scene, const string& name) {
   return 0;
 }
 
+// check if it has lights
+bool has_lights(const scene_data& scene) {
+  for (auto& environment : scene.environments) {
+    if (environment.emission != vec3f{0, 0, 0}) return true;
+  }
+  for (auto& instance : scene.instances) {
+    auto& shape = scene.shapes[instance.shape];
+    if (shape.triangles.empty() || shape.quads.empty()) continue;
+    auto& material = scene.materials[instance.material];
+    if (material.emission != vec3f{0, 0, 0}) return true;
+  }
+  return false;
+}
+
 // create a scene from a shape
 scene_data make_shape_scene(const shape_data& shape, bool addsky) {
   // scene

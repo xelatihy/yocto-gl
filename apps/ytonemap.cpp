@@ -31,7 +31,6 @@
 #include <yocto/yocto_gui.h>
 #include <yocto/yocto_image.h>
 #include <yocto/yocto_math.h>
-#include <yocto/yocto_scene.h>
 #include <yocto/yocto_sceneio.h>
 
 using namespace yocto;
@@ -42,29 +41,75 @@ void run(const vector<string>& args) {
   // parameters
   auto imagename   = "image.png"s;
   auto outname     = "out.png"s;
-  auto interactive = true;
-  auto params      = colorgrade_params{};
+  auto exposure    = 0.0f;
+  auto filmic      = false;
+  auto width       = 0;
+  auto height      = 0;
+  auto interactive = false;
 
   // parse command line
-  auto cli = make_cli("ycolorgrade", "adjust image colors");
+  auto cli = make_cli("ytonemap", "tonemap image");
   add_option(cli, "image", imagename, "Input image.");
   add_option(cli, "output", outname, "Output image.");
+  add_option(cli, "exposure", exposure, "Tonemap exposure.");
+  add_option(cli, "filmic", filmic, "Tonemap filmic.");
+  add_option(cli, "width", width, "Resize width.");
+  add_option(cli, "height", height, "Resize height.");
   add_option(cli, "interactive", interactive, "Run interactively.");
   parse_cli(cli, args);
 
-  // load image
+  // load
   auto image = load_image(imagename);
+
+  // resize if needed
+  if (width != 0 || height != 0) {
+    image = resize_image(image, width, height);
+  }
 
   // switch between interactive and offline
   if (!interactive) {
-    // apply color grade
-    image = colorgrade_image(image, params);
+    // tonemap if needed
+    if (image.linear && is_ldr_filename(outname)) {
+      image = tonemap_image(image, exposure, filmic);
+    }
 
-    // save image
+    // save
     save_image(outname, image);
   } else {
-    // run viewer
-    show_colorgrade_gui("ycolorgrade", imagename, image);
+    // display image
+    auto  display  = make_image(image.width, image.height, false);
+    float exposure = 0;
+    bool  filmic   = false;
+    tonemap_image_mt(display, image, exposure, filmic);
+
+    // opengl image
+    auto glimage  = glimage_state{};
+    auto glparams = glimage_params{};
+
+    // callbacks
+    auto callbacks = gui_callbacks{};
+    callbacks.init = [&](const gui_input& input) {
+      init_image(glimage);
+      set_image(glimage, display);
+    };
+    callbacks.clear = [&](const gui_input& input) { clear_image(glimage); };
+    callbacks.draw  = [&](const gui_input& input) {
+      update_image_params(input, image, glparams);
+      draw_image(glimage, glparams);
+    };
+    callbacks.widgets = [&](const gui_input& input) {
+      if (draw_tonemap_widgets(input, exposure, filmic)) {
+        tonemap_image_mt(display, image, exposure, filmic);
+        set_image(glimage, display);
+      }
+      draw_image_widgets(input, image, display, glparams);
+    };
+    callbacks.uiupdate = [&](const gui_input& input) {
+      uiupdate_image_params(input, glparams);
+    };
+
+    // run ui
+    show_gui_window({1280 + 320, 720}, "ytonemap - " + imagename, callbacks);
   }
 }
 

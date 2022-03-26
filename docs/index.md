@@ -48,9 +48,13 @@ Here is a list of the main libraries.
 You can see Yocto/GL in action in the following applications written to
 test the library:
 
-- `apps/yscene.cpp`: command-line scene manipulation and rendering, and interactive viewing
-- `apps/yshape.cpp`: command-line shape manipulation and rendering, and interactive viewing
-- `apps/yimage.cpp`: command-line image manipulation, and interactive viewing
+- `apps/ytonemap.cpp`: image conversion and viewing
+- `apps/ycolorgrade.cpp`: image color grading
+- `apps/yconvert.cpp`: scene conversion
+- `apps/yconverts.cpp`: shape conversion
+- `apps/ytrace.cpp`: offline and interactive scene rendering
+- `apps/ycutrace.cpp`: offline and interactive scene rendering with CUDA
+- `apps/ytrace.cpp`: interactive scene viewing
 
 Here are some test images rendered with the path tracer. More images are
 included in the [project site](https://xelatihy.github.io/yocto-gl/).

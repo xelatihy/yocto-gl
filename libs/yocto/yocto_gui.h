@@ -107,7 +107,7 @@ struct shade_params {
   float          near             = 0.01f;
   float          far              = 10000.0f;
   bool           hide_environment = false;
-  vec4f          background       = vec4f{0.15f, 0.15f, 0.15f, 1.0f};
+  vec4f          background       = vec4f{0.5f, 0.5f, 0.5f, 0.5f};
 };
 
 // Open a window and show an scene via OpenGL shading
@@ -116,6 +116,57 @@ void show_shade_gui(const string& title, const string& name, scene_data& scene,
     const shade_params& params, const glview_callback& widgets_callback = {},
     const glview_callback& uiupdate_callback = {},
     const glview_callback& update_callback   = {});
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// IMAGE
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// OpenGL image data
+struct glimage_state {
+  // image properties
+  int width  = 0;
+  int height = 0;
+
+  // Opengl state
+  uint texture     = 0;  // texture
+  uint program     = 0;  // program
+  uint vertex      = 0;
+  uint fragment    = 0;
+  uint vertexarray = 0;  // vertex
+  uint positions   = 0;
+  uint triangles   = 0;  // elements
+};
+
+// OpenGL image drawing params
+struct glimage_params {
+  vec2i window      = {512, 512};
+  vec4i framebuffer = {0, 0, 512, 512};
+  vec2f center      = {0, 0};
+  float scale       = 1;
+  bool  fit         = true;
+  bool  checker     = true;
+  float border_size = 2;
+  vec4f background  = {0.5f, 0.5f, 0.5f, 1.0f};
+  bool  tonemap     = false;
+  float exposure    = 0;
+  bool  srgb        = true;
+  bool  filmic      = false;
+};
+
+// create image drawing program
+bool init_image(glimage_state& glimage);
+
+// clear image
+void clear_image(glimage_state& glimage);
+
+// update image data
+void set_image(glimage_state& glimage, const image_data& image);
+
+// draw image
+void draw_image(glimage_state& image, const glimage_params& params);
 
 }  // namespace yocto
 
@@ -227,6 +278,52 @@ bool draw_gui_combobox(const char* lbl, string& value,
 // Progress bar
 void draw_gui_progressbar(const char* lbl, float fraction);
 void draw_gui_progressbar(const char* lbl, int current, int total);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// HIGH LEVEL WIDGETS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// draw tonemap params
+bool draw_tonemap_widgets(
+    const gui_input& input, float& exposure, bool& filmic);
+
+// draw image inspector
+bool draw_image_widgets(const gui_input& input, const image_data& image,
+    const image_data& display, glimage_params& glparams);
+bool draw_image_widgets(
+    const gui_input& input, const image_data& image, glimage_params& glparams);
+
+// update image params
+void update_image_params(
+    const gui_input& input, const image_data& image, glimage_params& glparams);
+
+// update image params from mouse
+bool uiupdate_image_params(const gui_input& input, glimage_params& glparams);
+
+// update camera from mouse
+bool uiupdate_camera_params(const gui_input& input, camera_data& camera);
+
+// draw trace params
+bool draw_trace_widgets(const gui_input& input, int sample,
+    trace_params& params, const vector<string>& camera_names);
+
+// scene selection
+struct scene_selection {
+  int camera      = 0;
+  int instance    = 0;
+  int environment = 0;
+  int shape       = 0;
+  int texture     = 0;
+  int material    = 0;
+  int subdiv      = 0;
+};
+
+// draw scene editor
+bool draw_scene_widgets(scene_data& scene, scene_selection& selection,
+    const function<void()>& before_edit = {});
 
 }  // namespace yocto
 

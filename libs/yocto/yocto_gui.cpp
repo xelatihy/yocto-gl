@@ -90,57 +90,6 @@ inline void parallel_for(T num1, T num2, Func&& func) {
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// IMAGE DRAWING
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// OpenGL image data
-struct glimage_state {
-  // image properties
-  int width  = 0;
-  int height = 0;
-
-  // Opengl state
-  uint texture     = 0;  // texture
-  uint program     = 0;  // program
-  uint vertex      = 0;
-  uint fragment    = 0;
-  uint vertexarray = 0;  // vertex
-  uint positions   = 0;
-  uint triangles   = 0;  // elements
-};
-
-// create image drawing program
-static bool init_image(glimage_state& glimage);
-
-// clear image
-static void clear_image(glimage_state& glimage);
-
-// update image data
-static void set_image(glimage_state& glimage, const image_data& image);
-
-// OpenGL image drawing params
-struct glimage_params {
-  vec2i window      = {512, 512};
-  vec4i framebuffer = {0, 0, 512, 512};
-  vec2f center      = {0, 0};
-  float scale       = 1;
-  bool  fit         = true;
-  bool  checker     = true;
-  float border_size = 2;
-  vec4f background  = {0.15f, 0.15f, 0.15f, 1.0f};
-  bool  tonemap     = false;
-  float exposure    = 0;
-  bool  srgb        = true;
-  bool  filmic      = false;
-};
-
-// draw image
-static void draw_image(glimage_state& image, const glimage_params& params);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
 // SCENE DRAWING
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -228,7 +177,7 @@ static void draw_scene(glscene_state& glscene, const scene_data& scene,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-static void update_image_params(
+void update_image_params(
     const gui_input& input, const image_data& image, glimage_params& glparams) {
   glparams.window                           = input.window;
   glparams.framebuffer                      = input.framebuffer;
@@ -237,8 +186,7 @@ static void update_image_params(
       glparams.fit);
 }
 
-static bool uiupdate_image_params(
-    const gui_input& input, glimage_params& glparams) {
+bool uiupdate_image_params(const gui_input& input, glimage_params& glparams) {
   // handle mouse
   if (input.mouse.x && input.modifiers.x && !input.onwidgets) {
     if (input.modifiers.z) {
@@ -252,8 +200,7 @@ static bool uiupdate_image_params(
   return false;
 }
 
-static bool uiupdate_camera_params(
-    const gui_input& input, camera_data& camera) {
+bool uiupdate_camera_params(const gui_input& input, camera_data& camera) {
   if (input.mouse.x && input.modifiers.x && !input.onwidgets) {
     auto dolly  = 0.0f;
     auto pan    = vec2f{0, 0};
@@ -277,7 +224,7 @@ static bool uiupdate_camera_params(
   return false;
 }
 
-static bool draw_tonemap_params(
+bool draw_tonemap_widgets(
     const gui_input& input, float& exposure, bool& filmic) {
   auto edited = 0;
   if (draw_gui_header("tonemap")) {
@@ -288,9 +235,8 @@ static bool draw_tonemap_params(
   return (bool)edited;
 }
 
-static bool draw_image_inspector(const gui_input& input,
-    const image_data& image, const image_data& display,
-    glimage_params& glparams) {
+bool draw_image_widgets(const gui_input& input, const image_data& image,
+    const image_data& display, glimage_params& glparams) {
   if (draw_gui_header("inspect")) {
     draw_gui_slider("zoom", glparams.scale, 0.1f, 10);
     draw_gui_checkbox("fit", glparams.fit);
@@ -312,7 +258,7 @@ static bool draw_image_inspector(const gui_input& input,
   return false;
 }
 
-static bool draw_image_inspector(
+bool draw_image_widgets(
     const gui_input& input, const image_data& image, glimage_params& glparams) {
   if (draw_gui_header("inspect")) {
     draw_gui_slider("zoom", glparams.scale, 0.1f, 10);
@@ -336,17 +282,33 @@ static bool draw_image_inspector(
   return false;
 }
 
-struct scene_selection {
-  int camera      = 0;
-  int instance    = 0;
-  int environment = 0;
-  int shape       = 0;
-  int texture     = 0;
-  int material    = 0;
-  int subdiv      = 0;
-};
+// draw trace params
+bool draw_trace_widgets(const gui_input& input, int sample,
+    trace_params& params, const vector<string>& camera_names) {
+  auto edited = 0;
+  draw_gui_progressbar("sample", sample, params.samples);
+  if (draw_gui_header("render")) {
+    edited += draw_gui_combobox("camera", params.camera, camera_names);
+    edited += draw_gui_slider("resolution", params.resolution, 180, 4096);
+    edited += draw_gui_slider("samples", params.samples, 16, 4096);
+    edited += draw_gui_combobox(
+        "tracer", (int&)params.sampler, trace_sampler_names);
+    edited += draw_gui_combobox(
+        "false color", (int&)params.falsecolor, trace_falsecolor_names);
+    edited += draw_gui_slider("bounces", params.bounces, 1, 128);
+    edited += draw_gui_slider("batch", params.batch, 1, 16);
+    edited += draw_gui_slider("clamp", params.clamp, 10, 1000);
+    edited += draw_gui_checkbox("envhidden", params.envhidden);
+    continue_gui_line();
+    edited += draw_gui_checkbox("filter", params.tentfilter);
+    edited += draw_gui_slider("pratio", params.pratio, 1, 64);
+    edited += draw_gui_checkbox("denoise", params.denoise);
+    end_gui_header();
+  }
+  return (bool)edited;
+}
 
-static bool draw_scene_editor(scene_data& scene, scene_selection& selection,
+bool draw_scene_widgets(scene_data& scene, scene_selection& selection,
     const function<void()>& before_edit) {
   auto edited = 0;
   if (draw_gui_header("cameras")) {
@@ -484,11 +446,11 @@ void show_image_gui(
   };
   callbacks.widgets = [&](const gui_input& input) {
     draw_gui_combobox("name", selected, names);
-    if (draw_tonemap_params(input, exposure, filmic)) {
+    if (draw_tonemap_widgets(input, exposure, filmic)) {
       tonemap_image_mt(display, image, exposure, filmic);
       set_image(glimage, display);
     }
-    draw_image_inspector(input, image, display, glparams);
+    draw_image_widgets(input, image, display, glparams);
   };
   callbacks.uiupdate = [&](const gui_input& input) {
     uiupdate_image_params(input, glparams);
@@ -537,13 +499,13 @@ void show_image_gui(const string& title, const vector<string>& names,
   callbacks.widgets = [&](const gui_input& input) {
     draw_gui_combobox("name", selected, names);
     auto filmic = (bool)filmics[selected];  // vector of bool ...
-    if (draw_tonemap_params(input, exposures[selected], filmic)) {
+    if (draw_tonemap_widgets(input, exposures[selected], filmic)) {
       filmics[selected] = filmic;
       tonemap_image_mt(displays[selected], images[selected],
           exposures[selected], filmics[selected]);
       set_image(glimages[selected], displays[selected]);
     }
-    draw_image_inspector(
+    draw_image_widgets(
         input, images[selected], displays[selected], glparamss[selected]);
   };
   callbacks.uiupdate = [&](const gui_input& input) {
@@ -609,7 +571,7 @@ void show_colorgrade_gui(
         set_image(glimage, display);
       }
     }
-    draw_image_inspector(input, image, display, glparams);
+    draw_image_widgets(input, image, display, glparams);
   };
   callbacks.uiupdate = [&glparams](const gui_input& input) {
     uiupdate_image_params(input, glparams);
@@ -681,7 +643,7 @@ void show_trace_gui(const string& title, const string& name, scene_data& scene,
   // reset rendering
   auto render_reset = [&]() {
     // make sure we can start
-    trace_samples_cancel(context);
+    trace_cancel(context);
     state = make_trace_state(scene, params);
     if (image.width != state.width || image.height != state.height)
       image = make_image(state.width, state.height, true);
@@ -689,12 +651,12 @@ void show_trace_gui(const string& title, const string& name, scene_data& scene,
 
   // start rendering batch
   auto render_start = [&]() {
-    trace_samples_cancel(context);
-    trace_samples_start(context, state, scene, bvh, lights, params);
+    trace_cancel(context);
+    trace_start(context, state, scene, bvh, lights, params);
   };
 
   // cancel
-  auto render_cancel = [&]() { trace_samples_cancel(context); };
+  auto render_cancel = [&]() { trace_cancel(context); };
 
   // check if batch is done and update image
   auto render_done = [&]() {
@@ -766,9 +728,9 @@ void show_trace_gui(const string& title, const string& name, scene_data& scene,
       end_gui_header();
       if (edited) set_image(glimage, image);
     }
-    draw_image_inspector(input, image, glparams);
+    draw_image_widgets(input, image, glparams);
     if (edit) {
-      if (draw_scene_editor(scene, selection, [&]() { render_cancel(); })) {
+      if (draw_scene_widgets(scene, selection, [&]() { render_cancel(); })) {
         render_reset();
         if (render_preview()) set_image(glimage, image);
         render_start();
@@ -934,9 +896,9 @@ void show_cutrace_gui(const string& title, const string& name,
       edited += draw_gui_checkbox("filmic", glparams.filmic);
       end_gui_header();
     }
-    draw_image_inspector(input, image, glparams);
+    draw_image_widgets(input, image, glparams);
     if (edit) {
-      if (draw_scene_editor(scene, selection, [&]() {})) {
+      if (draw_scene_widgets(scene, selection, [&]() {})) {
         render_reset();
         if (render_preview()) set_image(glimage, image);
       }
@@ -1021,7 +983,7 @@ void show_shade_gui(const string& title, const string& name, scene_data& scene,
       draw_gui_coloredit("background", params.background);
       end_gui_header();
     }
-    // draw_scene_editor(scene, selection, {});
+    // draw_scene_widgets(scene, selection, {});
     if (widgets_callback) {
       widgets_callback(input, updated_shapes, updated_textures);
       if (!updated_shapes.empty() || !updated_textures.empty()) {
@@ -1253,7 +1215,7 @@ void main() {
 #endif
 
 // init image program
-static bool init_image(glimage_state& glimage) {
+bool init_image(glimage_state& glimage) {
   // program
   set_program(glimage.program, glimage.vertex, glimage.fragment, glimage_vertex,
       glimage_fragment);
@@ -1285,7 +1247,7 @@ static bool init_image(glimage_state& glimage) {
 }
 
 // clear an opengl image
-static void clear_image(glimage_state& glimage) {
+void clear_image(glimage_state& glimage) {
   if (glimage.texture) glDeleteTextures(1, &glimage.texture);
   if (glimage.program) glDeleteProgram(glimage.program);
   if (glimage.vertex) glDeleteProgram(glimage.vertex);
@@ -1296,12 +1258,12 @@ static void clear_image(glimage_state& glimage) {
   glimage = {};
 }
 
-static void set_image(glimage_state& glimage, const image_data& image) {
+void set_image(glimage_state& glimage, const image_data& image) {
   if (!glimage.texture || glimage.width != image.width ||
       glimage.height != image.height) {
     if (!glimage.texture) glGenTextures(1, &glimage.texture);
     glBindTexture(GL_TEXTURE_2D, glimage.texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image.width, image.height, 0,
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, image.width, image.height, 0,
         GL_RGBA, GL_FLOAT, image.pixels.data());
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -1315,7 +1277,7 @@ static void set_image(glimage_state& glimage, const image_data& image) {
 }
 
 // draw image
-static void draw_image(glimage_state& glimage, const glimage_params& params) {
+void draw_image(glimage_state& glimage, const glimage_params& params) {
   // check errors
   assert_glerror();
 
@@ -2139,7 +2101,8 @@ void show_gui_window(const vec2i& size, const string& title,
 #else
     ImGui_ImplOpenGL3_Init("#version 330");
 #endif
-    ImGui::StyleColorsDark();
+    // ImGui::StyleColorsDark();
+    ImGui::StyleColorsLight();
     state.widgets_width = widgets_width;
     state.widgets_left  = widgets_left;
   }
@@ -2949,6 +2912,71 @@ bool draw_gui_params(const string& name, glwidgets_params& params) {
 namespace yocto {
 
 static void exit_nogl() { throw std::runtime_error{"opengl not linked\n"}; }
+
+// create image drawing program
+bool init_image(glimage_state& glimage) { exit_nogl(); }
+
+// clear image
+void clear_image(glimage_state& glimage) { exit_nogl(); }
+
+// update image data
+void set_image(glimage_state& glimage, const image_data& image) { exit_nogl(); }
+
+// draw image
+void draw_image(glimage_state& image, const glimage_params& params) {
+  exit_nogl();
+}
+
+// draw tonemap params
+bool draw_tonemap_widgets(
+    const gui_input& input, float& exposure, bool& filmic) {
+  exit_nogl();
+  return false;
+}
+
+// draw image inspector
+bool draw_image_widgets(const gui_input& input, const image_data& image,
+    const image_data& display, glimage_params& glparams) {
+  exit_nogl();
+  return false;
+}
+bool draw_image_widgets(
+    const gui_input& input, const image_data& image, glimage_params& glparams) {
+  exit_nogl();
+  return false;
+}
+
+// update image params
+void update_image_params(
+    const gui_input& input, const image_data& image, glimage_params& glparams) {
+  exit_nogl();
+}
+
+// update image params from mouse
+bool uiupdate_image_params(const gui_input& input, glimage_params& glparams) {
+  exit_nogl();
+  return false;
+}
+
+// update camera from mouse
+bool uiupdate_camera_params(const gui_input& input, camera_data& camera) {
+  exit_nogl();
+  return false;
+}
+
+// draw trace params
+bool draw_trace_widgets(const gui_input& input, int sample,
+    trace_params& params, const vector<string>& camera_names) {
+  exit_nogl();
+  return false;
+}
+
+// draw scene editor
+bool draw_scene_widgets(scene_data& scene, scene_selection& selection,
+    const function<void()>& before_edit) {
+  exit_nogl();
+  return false;
+}
 
 // Open a window and show an image
 void show_image_gui(
