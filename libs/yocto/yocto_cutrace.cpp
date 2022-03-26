@@ -986,7 +986,7 @@ image_data cutrace_image(const scene_data& scene, const trace_params& params) {
 
 // render preview
 void trace_preview(image_data& image, cutrace_context& context,
-    cutrace_state& state, const cuscene_data& cuscene, const cubvh_data& bvh,
+    cutrace_state& pstate, const cuscene_data& cuscene, const cubvh_data& bvh,
     const cutrace_lights& lights, const scene_data& scene,
     const trace_params& params) {
   auto pparams = params;
@@ -996,13 +996,12 @@ void trace_preview(image_data& image, cutrace_context& context,
   trace_start(context, pstate, cuscene, bvh, lights, scene, pparams);
   trace_samples(context, pstate, cuscene, bvh, lights, scene, pparams);
   auto preview = get_image(pstate);
-  for (auto idx = 0; idx < state.width * state.height; idx++) {
+  for (auto idx = 0; idx < image.width * image.height; idx++) {
     auto i = idx % image.width, j = idx / image.width;
     auto pi           = clamp(i / params.pratio, 0, preview.width - 1),
          pj           = clamp(j / params.pratio, 0, preview.height - 1);
     image.pixels[idx] = preview.pixels[pj * preview.width + pi];
   }
-  return true;
 }
 
 // Get resulting render

@@ -194,24 +194,6 @@ void run(const vector<string>& args) {
       }
     }
 
-    // render preview
-    auto render_preview = [&]() -> bool {
-      auto pparams = params;
-      pparams.resolution /= params.pratio;
-      pparams.samples = 1;
-      reset_cutrace_state(context, pstate, scene, pparams);
-      trace_start(context, pstate, cuscene, bvh, lights, scene, pparams);
-      trace_samples(context, pstate, cuscene, bvh, lights, scene, pparams);
-      auto preview = get_rendered_image(pstate);
-      for (auto idx = 0; idx < state.width * state.height; idx++) {
-        auto i = idx % image.width, j = idx / image.width;
-        auto pi           = clamp(i / params.pratio, 0, preview.width - 1),
-             pj           = clamp(j / params.pratio, 0, preview.height - 1);
-        image.pixels[idx] = preview.pixels[pj * preview.width + pi];
-      }
-      return true;
-    };
-
     // reset renderer
     auto render_reset = [&]() {
       reset_cutrace_state(context, state, scene, params);
@@ -227,6 +209,13 @@ void run(const vector<string>& args) {
       }
       trace_samples(context, state, cuscene, bvh, lights, scene, params);
       get_image(image, state);
+      return true;
+    };
+
+    // render preview
+    auto render_preview = [&]() {
+      trace_preview(
+          image, context, pstate, cuscene, bvh, lights, scene, params);
       return true;
     };
 
