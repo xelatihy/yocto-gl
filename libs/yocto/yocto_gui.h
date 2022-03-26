@@ -107,7 +107,7 @@ struct shade_params {
   float          near             = 0.01f;
   float          far              = 10000.0f;
   bool           hide_environment = false;
-  vec4f          background       = vec4f{0.15f, 0.15f, 0.15f, 1.0f};
+  vec4f          background       = vec4f{0.5f, 0.5f, 0.5f, 0.5f};
 };
 
 // Open a window and show an scene via OpenGL shading
