@@ -76,8 +76,40 @@ void run(const vector<string>& args) {
     // save
     save_image(outname, image);
   } else {
-    // run viewer
-    show_image_gui("ytonemap", imagename, image);
+    // display image
+    auto  display  = make_image(image.width, image.height, false);
+    float exposure = 0;
+    bool  filmic   = false;
+    tonemap_image_mt(display, image, exposure, filmic);
+
+    // opengl image
+    auto glimage  = glimage_state{};
+    auto glparams = glimage_params{};
+
+    // callbacks
+    auto callbacks = gui_callbacks{};
+    callbacks.init = [&](const gui_input& input) {
+      init_image(glimage);
+      set_image(glimage, display);
+    };
+    callbacks.clear = [&](const gui_input& input) { clear_image(glimage); };
+    callbacks.draw  = [&](const gui_input& input) {
+      update_image_params(input, image, glparams);
+      draw_image(glimage, glparams);
+    };
+    callbacks.widgets = [&](const gui_input& input) {
+      if (draw_tonemap_widgets(input, exposure, filmic)) {
+        tonemap_image_mt(display, image, exposure, filmic);
+        set_image(glimage, display);
+      }
+      draw_image_widgets(input, image, display, glparams);
+    };
+    callbacks.uiupdate = [&](const gui_input& input) {
+      uiupdate_image_params(input, glparams);
+    };
+
+    // run ui
+    show_gui_window({1280 + 320, 720}, "ytonemap - " + imagename, callbacks);
   }
 }
 
