@@ -178,57 +178,39 @@ void run(const vector<string>& args) {
       }
     }
 
-    // render previews
-    auto render_preview = [&]() -> bool {
-      // preview
-      auto pparams = params;
-      pparams.resolution /= params.pratio;
-      pparams.samples = 1;
-      auto pstate     = make_trace_state(scene, pparams);
-      trace_samples(pstate, scene, bvh, lights, pparams);
-      auto preview = get_image(pstate);
-      for (auto idx = 0; idx < state.width * state.height; idx++) {
-        auto i = idx % image.width, j = idx / image.width;
-        auto pi           = clamp(i / params.pratio, 0, preview.width - 1),
-             pj           = clamp(j / params.pratio, 0, preview.height - 1);
-        image.pixels[idx] = preview.pixels[pj * preview.width + pi];
-      }
-      return true;
-    };
-
     // start rendering batch
     auto render_next = [&]() {
-      trace_samples_cancel(context);
-      trace_samples_start(context, state, scene, bvh, lights, params);
+      trace_cancel(context);
+      trace_start(context, state, scene, bvh, lights, params);
     };
 
     // restart renderer
     auto render_restart = [&]() {
       // make sure we can start
-      trace_samples_cancel(context);
+      trace_cancel(context);
       state = make_trace_state(scene, params);
       if (image.width != state.width || image.height != state.height)
         image = make_image(state.width, state.height, true);
 
       // render preview
-      render_preview();
+      trace_preview(image, context, state, scene, bvh, lights, params);
 
       // update image
       set_image(glimage, image);
 
       // start
-      trace_samples_start(context, state, scene, bvh, lights, params);
+      trace_start(context, state, scene, bvh, lights, params);
     };
 
     // render cancel
-    auto render_cancel = [&]() { trace_samples_cancel(context); };
+    auto render_cancel = [&]() { trace_cancel(context); };
 
     // render update
     auto render_update = [&]() {
       if (context.done) {
         get_image(image, state);
         set_image(glimage, image);
-        trace_samples_start(context, state, scene, bvh, lights, params);
+        trace_start(context, state, scene, bvh, lights, params);
       }
     };
 

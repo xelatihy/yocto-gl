@@ -117,6 +117,11 @@ void trace_samples(cutrace_context& context, cutrace_state& state,
     const cutrace_lights& lights, const scene_data& scene,
     const trace_params& params);
 
+void trace_preview(image_data& image, cutrace_context& context,
+    cutrace_state& state, const cuscene_data& cuscene, const cubvh_data& bvh,
+    const cutrace_lights& lights, const scene_data& scene,
+    const trace_params& params);
+
 // Get resulting render, denoised if requested
 image_data get_image(const cutrace_state& state);
 void       get_image(image_data& image, const cutrace_state& state);

@@ -984,6 +984,27 @@ image_data cutrace_image(const scene_data& scene, const trace_params& params) {
   return get_image(state);
 }
 
+// render preview
+void trace_preview(image_data& image, cutrace_context& context,
+    cutrace_state& state, const cuscene_data& cuscene, const cubvh_data& bvh,
+    const cutrace_lights& lights, const scene_data& scene,
+    const trace_params& params) {
+  auto pparams = params;
+  pparams.resolution /= params.pratio;
+  pparams.samples = 1;
+  reset_cutrace_state(context, pstate, scene, pparams);
+  trace_start(context, pstate, cuscene, bvh, lights, scene, pparams);
+  trace_samples(context, pstate, cuscene, bvh, lights, scene, pparams);
+  auto preview = get_image(pstate);
+  for (auto idx = 0; idx < state.width * state.height; idx++) {
+    auto i = idx % image.width, j = idx / image.width;
+    auto pi           = clamp(i / params.pratio, 0, preview.width - 1),
+         pj           = clamp(j / params.pratio, 0, preview.height - 1);
+    image.pixels[idx] = preview.pixels[pj * preview.width + pi];
+  }
+  return true;
+}
+
 // Get resulting render
 image_data get_image(const cutrace_state& state) {
   auto image = make_image(state.width, state.height, true);
@@ -1224,6 +1245,15 @@ void trace_samples(cutrace_context& context, cutrace_state& state,
     const cutrace_lights& lights, const scene_data& scene,
     const trace_params& params) {
   exit_nocuda();
+}
+
+// render preview
+void trace_preview(image_data& image, cutrace_context& context,
+    cutrace_state& state, const cuscene_data& cuscene, const cubvh_data& bvh,
+    const cutrace_lights& lights, const scene_data& scene,
+    const trace_params& params) {
+  exit_nocuda();
+  return;
 }
 
 // Get render

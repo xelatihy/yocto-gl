@@ -1628,7 +1628,7 @@ trace_context make_trace_context(const trace_params& params) {
 }
 
 // Async start
-void trace_samples_start(trace_context& context, trace_state& state,
+void trace_start(trace_context& context, trace_state& state,
     const scene_data& scene, const trace_bvh& bvh, const trace_lights& lights,
     const trace_params& params) {
   if (state.samples >= params.samples) return;
@@ -1653,13 +1653,31 @@ void trace_samples_start(trace_context& context, trace_state& state,
 }
 
 // Async cancel
-void trace_samples_cancel(trace_context& context) {
+void trace_cancel(trace_context& context) {
   context.stop = true;
   if (context.worker.valid()) context.worker.get();
 }
 
 // Async done
-bool trace_samples_done(const trace_context& context) { return context.done; }
+bool trace_done(const trace_context& context) { return context.done; }
+
+void trace_preview(color_image& image, trace_context& context,
+    trace_state& state, const scene_data& scene, const trace_bvh& bvh,
+    const trace_lights& lights, const trace_params& params) {
+  // preview
+  auto pparams = params;
+  pparams.resolution /= params.pratio;
+  pparams.samples = 1;
+  auto pstate     = make_trace_state(scene, pparams);
+  trace_samples(pstate, scene, bvh, lights, pparams);
+  auto preview = get_image(pstate);
+  for (auto idx = 0; idx < state.width * state.height; idx++) {
+    auto i = idx % image.width, j = idx / image.width;
+    auto pi           = clamp(i / params.pratio, 0, preview.width - 1),
+         pj           = clamp(j / params.pratio, 0, preview.height - 1);
+    image.pixels[idx] = preview.pixels[pj * preview.width + pi];
+  }
+};
 
 // Check image type
 static void check_image(

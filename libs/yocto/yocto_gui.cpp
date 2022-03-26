@@ -643,7 +643,7 @@ void show_trace_gui(const string& title, const string& name, scene_data& scene,
   // reset rendering
   auto render_reset = [&]() {
     // make sure we can start
-    trace_samples_cancel(context);
+    trace_cancel(context);
     state = make_trace_state(scene, params);
     if (image.width != state.width || image.height != state.height)
       image = make_image(state.width, state.height, true);
@@ -651,12 +651,12 @@ void show_trace_gui(const string& title, const string& name, scene_data& scene,
 
   // start rendering batch
   auto render_start = [&]() {
-    trace_samples_cancel(context);
-    trace_samples_start(context, state, scene, bvh, lights, params);
+    trace_cancel(context);
+    trace_start(context, state, scene, bvh, lights, params);
   };
 
   // cancel
-  auto render_cancel = [&]() { trace_samples_cancel(context); };
+  auto render_cancel = [&]() { trace_cancel(context); };
 
   // check if batch is done and update image
   auto render_done = [&]() {
