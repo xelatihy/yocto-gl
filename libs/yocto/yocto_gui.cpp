@@ -2913,6 +2913,71 @@ namespace yocto {
 
 static void exit_nogl() { throw std::runtime_error{"opengl not linked\n"}; }
 
+// create image drawing program
+bool init_image(glimage_state& glimage) { exit_nogl(); }
+
+// clear image
+void clear_image(glimage_state& glimage) { exit_nogl(); }
+
+// update image data
+void set_image(glimage_state& glimage, const image_data& image) { exit_nogl(); }
+
+// draw image
+void draw_image(glimage_state& image, const glimage_params& params) {
+  exit_nogl();
+}
+
+// draw tonemap params
+bool draw_tonemap_widgets(
+    const gui_input& input, float& exposure, bool& filmic) {
+  exit_nogl();
+  return false;
+}
+
+// draw image inspector
+bool draw_image_widgets(const gui_input& input, const image_data& image,
+    const image_data& display, glimage_params& glparams) {
+  exit_nogl();
+  return false;
+}
+bool draw_image_widgets(
+    const gui_input& input, const image_data& image, glimage_params& glparams) {
+  exit_nogl();
+  return false;
+}
+
+// update image params
+void update_image_params(
+    const gui_input& input, const image_data& image, glimage_params& glparams) {
+  exit_nogl();
+}
+
+// update image params from mouse
+bool uiupdate_image_params(const gui_input& input, glimage_params& glparams) {
+  exit_nogl();
+  return false;
+}
+
+// update camera from mouse
+bool uiupdate_camera_params(const gui_input& input, camera_data& camera) {
+  exit_nogl();
+  return false;
+}
+
+// draw trace params
+bool draw_trace_widgets(const gui_input& input, int sample,
+    trace_params& params, const vector<string>& camera_names) {
+  exit_nogl();
+  return false;
+}
+
+// draw scene editor
+bool draw_scene_widgets(scene_data& scene, scene_selection& selection,
+    const function<void()>& before_edit) {
+  exit_nogl();
+  return false;
+}
+
 // Open a window and show an image
 void show_image_gui(
     const string& title, const string& name, const image_data& image) {
