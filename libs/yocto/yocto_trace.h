@@ -75,7 +75,6 @@ enum struct trace_sampler_type {
   pathtest,    // path tracing test
   naive,       // naive path tracing
   eyelight,    // eyelight rendering
-  eyelightao,  // eyelight with ambient occlusion
   furnace,     // furnace test
   falsecolor,  // false color rendering
 };
@@ -233,8 +232,7 @@ namespace yocto {
 
 // trace sampler names
 inline const auto trace_sampler_names = vector<string>{"path", "pathdirect",
-    "pathmis", "pathtest", "naive", "eyelight", "eyelightao", "furnace",
-    "falsecolor"};
+    "pathmis", "pathtest", "naive", "eyelight", "furnace", "falsecolor"};
 
 // false color names
 inline const auto trace_falsecolor_names = vector<string>{"position", "normal",
@@ -250,7 +248,6 @@ inline const auto trace_sampler_labels =
         {trace_sampler_type::pathtest, "pathtest"},
         {trace_sampler_type::naive, "naive"},
         {trace_sampler_type::eyelight, "eyelight"},
-        {trace_sampler_type::eyelightao, "eyelightao"},
         {trace_sampler_type::furnace, "furnace"},
         {trace_sampler_type::falsecolor, "falsecolor"}};
 
