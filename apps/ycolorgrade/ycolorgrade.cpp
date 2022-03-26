@@ -77,8 +77,62 @@ void run(const vector<string>& args) {
     // save image
     save_image(outname, image);
   } else {
-    // run viewer
-    show_colorgrade_gui("ycolorgrade", imagename, image);
+    // color grading parameters
+    auto params = colorgrade_params{};
+
+    // display image
+    auto display = make_image(image.width, image.height, false);
+    colorgrade_image_mt(display, image, params);
+
+    // opengl image
+    auto glimage  = glimage_state{};
+    auto glparams = glimage_params{};
+
+    // callbacks
+    auto callbacks = gui_callbacks{};
+    callbacks.init = [&](const gui_input& input) {
+      init_image(glimage);
+      set_image(glimage, display);
+    };
+    callbacks.clear = [&](const gui_input& input) { clear_image(glimage); };
+    callbacks.draw  = [&](const gui_input& input) {
+      update_image_params(input, image, glparams);
+      draw_image(glimage, glparams);
+    };
+    callbacks.widgets = [&](const gui_input& input) {
+      if (draw_gui_header("colorgrade")) {
+        auto edited = 0;
+        edited += draw_gui_slider("exposure", params.exposure, -5, 5);
+        edited += draw_gui_coloredit("tint", params.tint);
+        edited += draw_gui_slider("lincontrast", params.lincontrast, 0, 1);
+        edited += draw_gui_slider("logcontrast", params.logcontrast, 0, 1);
+        edited += draw_gui_slider("linsaturation", params.linsaturation, 0, 1);
+        edited += draw_gui_checkbox("filmic", params.filmic);
+        continue_gui_line();
+        edited += draw_gui_checkbox("srgb", params.srgb);
+        edited += draw_gui_slider("contrast", params.contrast, 0, 1);
+        edited += draw_gui_slider("saturation", params.saturation, 0, 1);
+        edited += draw_gui_slider("shadows", params.shadows, 0, 1);
+        edited += draw_gui_slider("midtones", params.midtones, 0, 1);
+        edited += draw_gui_slider("highlights", params.highlights, 0, 1);
+        edited += draw_gui_coloredit("shadows color", params.shadows_color);
+        edited += draw_gui_coloredit("midtones color", params.midtones_color);
+        edited += draw_gui_coloredit(
+            "highlights color", params.highlights_color);
+        end_gui_header();
+        if (edited) {
+          colorgrade_image_mt(display, image, params);
+          set_image(glimage, display);
+        }
+      }
+      draw_image_widgets(input, image, display, glparams);
+    };
+    callbacks.uiupdate = [&glparams](const gui_input& input) {
+      uiupdate_image_params(input, glparams);
+    };
+
+    // run ui
+    show_gui_window({1280 + 320, 720}, "ycolorgrade - " + imagename, callbacks);
   }
 }
 

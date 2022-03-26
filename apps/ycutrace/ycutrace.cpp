@@ -45,6 +45,7 @@ void run(const vector<string>& args) {
   auto outname     = "out.png"s;
   auto paramsname  = ""s;
   auto interactive = false;
+  auto edit        = false;
   auto camname     = ""s;
   bool addsky      = false;
   auto envname     = ""s;
@@ -79,6 +80,7 @@ void run(const vector<string>& args) {
   add_option(cli, "highqualitybvh", params.highqualitybvh, "high quality bvh");
   add_option(cli, "noparallel", params.noparallel, "disable threading");
   add_option(cli, "dumpparams", dumpname, "dump params filename");
+  add_option(cli, "edit", edit, "edit interactively");
   parse_cli(cli, args);
 
   // load config
@@ -125,28 +127,28 @@ void run(const vector<string>& args) {
     shape.quads     = {};
   }
 
+  // initialize context
+  timer        = simple_timer{};
+  auto context = make_cutrace_context(params);
+  print_info("init gpu: {}", elapsed_formatted(timer));
+
+  // upload scene to the gpu
+  timer        = simple_timer{};
+  auto cuscene = make_cutrace_scene(context, scene, params);
+  print_info("upload scene: {}", elapsed_formatted(timer));
+
+  // build bvh
+  timer    = simple_timer{};
+  auto bvh = make_cutrace_bvh(context, cuscene, params);
+  print_info("build bvh: {}", elapsed_formatted(timer));
+
+  // init lights
+  auto lights = make_cutrace_lights(context, scene, params);
+
+  // state
+  auto state = make_cutrace_state(context, scene, params);
+
   if (!interactive) {
-    // initialize context
-    timer        = simple_timer{};
-    auto context = make_cutrace_context(params);
-    print_info("init gpu: {}", elapsed_formatted(timer));
-
-    // upload scene to the gpu
-    timer        = simple_timer{};
-    auto cuscene = make_cutrace_scene(context, scene, params);
-    print_info("upload scene: {}", elapsed_formatted(timer));
-
-    // build bvh
-    timer    = simple_timer{};
-    auto bvh = make_cutrace_bvh(context, cuscene, params);
-    print_info("build bvh: {}", elapsed_formatted(timer));
-
-    // init lights
-    auto lights = make_cutrace_lights(context, scene, params);
-
-    // state
-    auto state = make_cutrace_state(context, scene, params);
-
     // render
     timer = simple_timer{};
     trace_start(context, state, cuscene, bvh, lights, scene, params);
@@ -170,8 +172,108 @@ void run(const vector<string>& args) {
     save_image(outname, image);
     print_info("save image: {}", elapsed_formatted(timer));
   } else {
-    // run view
-    show_cutrace_gui("ycutrace", scenename, scene, params);
+    // preview state
+    auto pparams = params;
+    pparams.resolution /= params.pratio;
+    pparams.samples = 1;
+    auto pstate     = make_cutrace_state(context, scene, pparams);
+
+    // init state
+    auto image = make_image(state.width, state.height, true);
+
+    // opengl image
+    auto glimage     = glimage_state{};
+    auto glparams    = glimage_params{};
+    glparams.tonemap = true;
+
+    // camera names
+    auto camera_names = scene.camera_names;
+    if (camera_names.empty()) {
+      for (auto idx : range(scene.cameras.size())) {
+        camera_names.push_back("camera" + std::to_string(idx + 1));
+      }
+    }
+
+    // render preview
+    auto render_preview = [&]() -> bool {
+      auto pparams = params;
+      pparams.resolution /= params.pratio;
+      pparams.samples = 1;
+      reset_cutrace_state(context, pstate, scene, pparams);
+      trace_start(context, pstate, cuscene, bvh, lights, scene, pparams);
+      trace_samples(context, pstate, cuscene, bvh, lights, scene, pparams);
+      auto preview = get_rendered_image(pstate);
+      for (auto idx = 0; idx < state.width * state.height; idx++) {
+        auto i = idx % image.width, j = idx / image.width;
+        auto pi           = clamp(i / params.pratio, 0, preview.width - 1),
+             pj           = clamp(j / params.pratio, 0, preview.height - 1);
+        image.pixels[idx] = preview.pixels[pj * preview.width + pi];
+      }
+      return true;
+    };
+
+    // reset renderer
+    auto render_reset = [&]() {
+      reset_cutrace_state(context, state, scene, params);
+      if (image.width != state.width || image.height != state.height)
+        image = make_image(state.width, state.height, true);
+    };
+
+    // render samples synchronously
+    auto render_samples = [&]() {
+      if (state.samples >= params.samples) return false;
+      if (state.samples == 0) {
+        trace_start(context, state, cuscene, bvh, lights, scene, params);
+      }
+      trace_samples(context, state, cuscene, bvh, lights, scene, params);
+      get_image(image, state);
+      return true;
+    };
+
+    // prepare selection
+    auto selection = scene_selection{};
+
+    // callbacks
+    auto callbacks = gui_callbacks{};
+    callbacks.init = [&](const gui_input& input) {
+      init_image(glimage);
+      render_reset();
+      if (render_preview()) set_image(glimage, image);
+    };
+    callbacks.clear = [&](const gui_input& input) { clear_image(glimage); };
+    callbacks.draw  = [&](const gui_input& input) {
+      update_image_params(input, image, glparams);
+      draw_image(glimage, glparams);
+      if (render_samples()) set_image(glimage, image);
+    };
+    callbacks.widgets = [&](const gui_input& input) {
+      auto tparams = params;
+      if (draw_trace_widgets(input, state.samples, tparams, camera_names)) {
+        params = tparams;
+        render_reset();
+        if (render_preview()) set_image(glimage, image);
+      }
+      draw_tonemap_widgets(input, glparams.exposure, glparams.filmic);
+      draw_image_widgets(input, image, glparams);
+      if (edit) {
+        if (draw_scene_widgets(scene, selection, [&]() {})) {
+          render_reset();
+          if (render_preview()) set_image(glimage, image);
+        }
+      }
+    };
+    callbacks.uiupdate = [&](const gui_input& input) {
+      auto camera = scene.cameras[params.camera];
+      if (uiupdate_camera_params(input, camera)) {
+        scene.cameras[params.camera] = camera;
+        update_cutrace_cameras(context, cuscene, scene, params);
+        render_reset();
+        if (render_preview()) set_image(glimage, image);
+      }
+    };
+
+    // run ui
+    show_gui_window({1280 + 320, 720}, "ycutrace - " + scenename, callbacks);
   }
 }
 
