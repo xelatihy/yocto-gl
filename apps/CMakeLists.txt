@@ -1,15 +1,22 @@
-add_subdirectory(ytonemap)
-add_subdirectory(ycolorgrade)
+function(add_yapp name)
+  add_executable(${name}  ${name}.cpp)
+  set_target_properties(${name}  PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
+  target_include_directories(${name}  PRIVATE ${CMAKE_SOURCE_DIR}/libs)
+  target_link_libraries(${name} PRIVATE yocto)
+endfunction()
 
-add_subdirectory(ytrace)
-add_subdirectory(ycutrace)
+add_yapp(ytonemap)
+add_yapp(ycolorgrade)
 
-add_subdirectory(yview)
+add_yapp(ytrace)
+add_yapp(ycutrace)
 
-add_subdirectory(yimdiff)
-add_subdirectory(yimalpha)
+add_yapp(yview)
 
-add_subdirectory(yconvert)
+add_yapp(yimdiff)
+add_yapp(yimalpha)
 
-add_subdirectory(yconverts)
-add_subdirectory(ysamples)
+add_yapp(yconvert)
+
+add_yapp(yconverts)
+add_yapp(ysamples)
