@@ -2101,7 +2101,8 @@ void show_gui_window(const vec2i& size, const string& title,
 #else
     ImGui_ImplOpenGL3_Init("#version 330");
 #endif
-    ImGui::StyleColorsDark();
+    // ImGui::StyleColorsDark();
+    ImGui::StyleColorsLight();
     state.widgets_width = widgets_width;
     state.widgets_left  = widgets_left;
   }
