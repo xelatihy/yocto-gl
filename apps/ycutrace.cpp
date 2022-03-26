@@ -212,11 +212,19 @@ void run(const vector<string>& args) {
       return true;
     };
 
-    // render preview
-    auto render_preview = [&]() {
+    // restart renderer
+    auto render_restart = [&]() {
+      // reset state
+      reset_cutrace_state(context, state, scene, params);
+      if (image.width != state.width || image.height != state.height)
+        image = make_image(state.width, state.height, true);
+
+      // render preview
       trace_preview(
           image, context, pstate, cuscene, bvh, lights, scene, params);
-      return true;
+
+      // update image
+      set_image(glimage, image);
     };
 
     // prepare selection
@@ -226,8 +234,7 @@ void run(const vector<string>& args) {
     auto callbacks = gui_callbacks{};
     callbacks.init = [&](const gui_input& input) {
       init_image(glimage);
-      render_reset();
-      if (render_preview()) set_image(glimage, image);
+      render_restart();
     };
     callbacks.clear = [&](const gui_input& input) { clear_image(glimage); };
     callbacks.draw  = [&](const gui_input& input) {
@@ -239,15 +246,13 @@ void run(const vector<string>& args) {
       auto tparams = params;
       if (draw_trace_widgets(input, state.samples, tparams, camera_names)) {
         params = tparams;
-        render_reset();
-        if (render_preview()) set_image(glimage, image);
+        render_restart();
       }
       draw_tonemap_widgets(input, glparams.exposure, glparams.filmic);
       draw_image_widgets(input, image, glparams);
       if (edit) {
         if (draw_scene_widgets(scene, selection, [&]() {})) {
-          render_reset();
-          if (render_preview()) set_image(glimage, image);
+          render_restart();
         }
       }
     };
@@ -256,8 +261,7 @@ void run(const vector<string>& args) {
       if (uiupdate_camera_params(input, camera)) {
         scene.cameras[params.camera] = camera;
         update_cutrace_cameras(context, cuscene, scene, params);
-        render_reset();
-        if (render_preview()) set_image(glimage, image);
+        render_restart();
       }
     };
 
