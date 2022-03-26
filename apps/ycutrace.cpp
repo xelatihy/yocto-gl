@@ -194,13 +194,6 @@ void run(const vector<string>& args) {
       }
     }
 
-    // reset renderer
-    auto render_reset = [&]() {
-      reset_cutrace_state(context, state, scene, params);
-      if (image.width != state.width || image.height != state.height)
-        image = make_image(state.width, state.height, true);
-    };
-
     // render samples synchronously
     auto render_samples = [&]() {
       if (state.samples >= params.samples) return false;
