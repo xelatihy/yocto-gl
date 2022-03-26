@@ -1032,13 +1032,11 @@ inline float exp(float a) { return std::exp(a); }
 inline float log2(float a) { return std::log2(a); }
 inline float exp2(float a) { return std::exp2(a); }
 inline float pow(float a, float b) { return std::pow(a, b); }
-inline bool  isfinite(float a) {
 #ifndef __CUDACC__
-  return std::isfinite(a);
+inline bool isfinite(float a) { return std::isfinite(a); }
 #else
-  return ::isfinite(a);  // no namespace for CUDA
+inline bool isfinite(float a) { return ::isfinite(a); }
 #endif
-}
 inline float atan2(float a, float b) { return std::atan2(a, b); }
 inline float fmod(float a, float b) { return std::fmod(a, b); }
 inline void  swap(float& a, float& b) { std::swap(a, b); }
