@@ -743,8 +743,7 @@ image_data make_sunsky(int width, int height, float theta_sun, float turbidity,
   };
 
   // Make the sun sky image
-  auto img          = make_image(width, height, true);
-  auto sky_integral = 0.0f, sun_integral = 0.0f;
+  auto img = make_image(width, height, true);
   for (auto j = 0; j < height / 2; j++) {
     auto theta = pif * ((j + 0.5f) / height);
     theta      = clamp(theta, 0.0f, pif / 2 - flt_eps);
@@ -754,9 +753,7 @@ image_data make_sunsky(int width, int height, float theta_sun, float turbidity,
       auto gamma   = acos(clamp(dot(w, sun_direction), -1.0f, 1.0f));
       auto sky_col = sky(theta, gamma, theta_sun);
       auto sun_col = sun(theta, gamma);
-      sky_integral += mean(sky_col) * sin(theta);
-      sun_integral += mean(sun_col) * sin(theta);
-      auto col                  = sky_col + sun_col;
+      auto col     = sky_col + sun_col;
       img.pixels[j * width + i] = {col.x, col.y, col.z, 1};
     }
   }
@@ -1337,18 +1334,15 @@ void make_sunsky(vector<vec4f>& pixels, int width, int height, float theta_sun,
 
   // Make the sun sky image
   pixels.resize(width * height);
-  auto sky_integral = 0.0f, sun_integral = 0.0f;
   for (auto j = 0; j < height / 2; j++) {
     auto theta = pif * ((j + 0.5f) / height);
     theta      = clamp(theta, 0.0f, pif / 2 - flt_eps);
     for (int i = 0; i < width; i++) {
       auto phi = 2 * pif * (float(i + 0.5f) / width);
       auto w = vec3f{cos(phi) * sin(theta), cos(theta), sin(phi) * sin(theta)};
-      auto gamma   = acos(clamp(dot(w, sun_direction), -1.0f, 1.0f));
-      auto sky_col = sky(theta, gamma, theta_sun);
-      auto sun_col = sun(theta, gamma);
-      sky_integral += mean(sky_col) * sin(theta);
-      sun_integral += mean(sun_col) * sin(theta);
+      auto gamma            = acos(clamp(dot(w, sun_direction), -1.0f, 1.0f));
+      auto sky_col          = sky(theta, gamma, theta_sun);
+      auto sun_col          = sun(theta, gamma);
       auto col              = sky_col + sun_col;
       pixels[j * width + i] = {col.x, col.y, col.z, 1};
     }

@@ -2218,14 +2218,14 @@ inline vec2f transform_vector(const frame2f& a, const vec2f& b) {
   return a.x * b.x + a.y * b.y;
 }
 inline vec2f transform_direction(const frame2f& a, const vec2f& b) {
-  return normalize(transform_vector(a, b));
+  return normalize(a.x * b.x + a.y * b.y);
 }
 inline vec2f transform_normal(
     const frame2f& a, const vec2f& b, bool non_rigid) {
   if (non_rigid) {
     return transform_normal(rotation(a), b);
   } else {
-    return normalize(transform_vector(a, b));
+    return normalize(a.x * b.x + a.y * b.y);
   }
 }
 
@@ -2237,14 +2237,14 @@ inline vec3f transform_vector(const frame3f& a, const vec3f& b) {
   return a.x * b.x + a.y * b.y + a.z * b.z;
 }
 inline vec3f transform_direction(const frame3f& a, const vec3f& b) {
-  return normalize(transform_vector(a, b));
+  return normalize(a.x * b.x + a.y * b.y + a.z * b.z);
 }
 inline vec3f transform_normal(
     const frame3f& a, const vec3f& b, bool non_rigid) {
   if (non_rigid) {
     return transform_normal(rotation(a), b);
   } else {
-    return normalize(transform_vector(a, b));
+    return normalize(a.x * b.x + a.y * b.y + a.z * b.z);
   }
 }
 
@@ -2256,7 +2256,7 @@ inline vec2f transform_vector_inverse(const frame2f& a, const vec2f& b) {
   return {dot(a.x, b), dot(a.y, b)};
 }
 inline vec2f transform_direction_inverse(const frame2f& a, const vec2f& b) {
-  return normalize(transform_vector_inverse(a, b));
+  return normalize(vec2f{dot(a.x, b), dot(a.y, b)});
 }
 
 // Transforms points, vectors and directions by frames.
@@ -2267,7 +2267,7 @@ inline vec3f transform_vector_inverse(const frame3f& a, const vec3f& b) {
   return {dot(a.x, b), dot(a.y, b), dot(a.z, b)};
 }
 inline vec3f transform_direction_inverse(const frame3f& a, const vec3f& b) {
-  return normalize(transform_vector_inverse(a, b));
+  return normalize(vec3f{dot(a.x, b), dot(a.y, b), dot(a.z, b)});
 }
 
 // Translation, scaling and rotations transforms.
