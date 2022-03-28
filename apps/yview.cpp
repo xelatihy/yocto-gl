@@ -39,6 +39,7 @@ using namespace std::string_literals;
 
 // main function
 void run(const vector<string>& args) {
+#ifdef YOCTO_OPENGL
   // parameters
   auto scenename = "scene.json"s;
   auto camname   = ""s;
@@ -66,6 +67,9 @@ void run(const vector<string>& args) {
 
   // run viewer
   show_shade_gui("yview", scenename, scene, params);
+#else
+  throw io_error{"Interactive requires OpenGL"};
+#endif
 }
 
 // Run

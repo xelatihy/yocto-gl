@@ -172,6 +172,7 @@ void run(const vector<string>& args) {
     save_image(outname, image);
     print_info("save image: {}", elapsed_formatted(timer));
   } else {
+#ifdef YOCTO_OPENGL
     // preview state
     auto pparams = params;
     pparams.resolution /= params.pratio;
@@ -260,6 +261,9 @@ void run(const vector<string>& args) {
 
     // run ui
     show_gui_window({1280 + 320, 720}, "ycutrace - " + scenename, callbacks);
+#else
+    throw io_error{"Interactive requires OpenGL"};
+#endif
   }
 }
 
