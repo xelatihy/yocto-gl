@@ -36,6 +36,8 @@
 #ifndef _YOCTO_CUTRACE_H_
 #define _YOCTO_CUTRACE_H_
 
+#ifdef YOCTO_CUDA
+
 // -----------------------------------------------------------------------------
 // INCLUDES
 // -----------------------------------------------------------------------------
@@ -171,31 +173,10 @@ inline const auto cutrace_falsecolor_labels = trace_falsecolor_labels;
 //
 // -----------------------------------------------------------------------------
 
-#if YOCTO_CUDA
-
 // do not reorder
 #include <cuda.h>
 // do not reorder
 #include <optix.h>
-
-#else
-
-// placeholder types
-using CUdeviceptr             = void*;
-using OptixInstance           = yocto::instance_data;
-using OptixTraversableHandle  = unsigned long long;
-using CUcontext               = void*;
-using CUstream                = void*;
-using OptixDeviceContext      = void*;
-using OptixPipeline           = void*;
-using OptixProgramGroup       = void*;
-using OptixModule             = void*;
-using OptixShaderBindingTable = void*;
-using CUarray                 = void*;
-using CUtexObject             = void*;
-using OptixDenoiser           = void*;
-
-#endif
 
 // -----------------------------------------------------------------------------
 // DATA DEFINITIONS
@@ -359,20 +340,11 @@ struct cutrace_globals {
   trace_params           params = {};
 };
 
-#if YOCTO_CUDA
-
 // empty stb record
 struct __declspec(align(OPTIX_SBT_RECORD_ALIGNMENT)) cutrace_stbrecord {
   __declspec(align(
       OPTIX_SBT_RECORD_ALIGNMENT)) char header[OPTIX_SBT_RECORD_HEADER_SIZE];
 };
-
-#else
-
-// empty stb record
-struct cutrace_stbrecord {};
-
-#endif
 
 struct cutrace_context {
   // context
@@ -408,5 +380,7 @@ struct cutrace_context {
 };
 
 }  // namespace yocto
+
+#endif
 
 #endif

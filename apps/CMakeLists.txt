@@ -9,7 +9,10 @@ add_yapp(ytonemap)
 add_yapp(ycolorgrade)
 
 add_yapp(ytrace)
+
+if(YOCTO_CUDA)
 add_yapp(ycutrace)
+endif()
 
 add_yapp(yview)
 
