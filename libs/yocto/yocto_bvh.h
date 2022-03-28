@@ -161,6 +161,9 @@ struct scene_embree_bvh {
   unique_ptr<void, void (*)(void*)> embree_bvh = {nullptr, nullptr};  // embree
 };
 
+// Check if embree is supported
+bool embree_supported();
+
 // Build the bvh acceleration structure.
 shape_embree_bvh make_shape_embree_bvh(
     const shape_data& shape, bool highquality = false);
