@@ -836,6 +836,9 @@ struct embree_error : std::runtime_error {
 
 #ifdef YOCTO_EMBREE
 
+// Check if embree is supported
+bool embree_supported() { return true; }
+
 // Get Embree device
 atomic<ssize_t>  embree_memory = 0;
 static RTCDevice embree_device() {
@@ -1095,6 +1098,9 @@ scene_intersection intersect_instance_embree_bvh(const scene_embree_bvh& bvh,
 }
 
 #else
+
+// Check if embree is supported
+bool embree_supported() { return false; }
 
 // Not implemented
 shape_embree_bvh make_shape_embree_bvh(

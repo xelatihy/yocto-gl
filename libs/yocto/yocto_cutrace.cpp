@@ -26,18 +26,11 @@
 // SOFTWARE.
 //
 
-//
-// TODO: upload
-// TODO: path tracing
-// TODO: environments
-// TODO: interactive rendering
-//
-
 #include "yocto_cutrace.h"
 
-#include "yocto_sampling.h"
-
 #if YOCTO_CUDA
+
+#include "yocto_sampling.h"
 
 // do not reorder
 #include <cuda.h>
@@ -1135,165 +1128,6 @@ bool is_display(const cutrace_context& context) {
   check_result(cuDeviceGetAttribute(
       &is_display, CU_DEVICE_ATTRIBUTE_KERNEL_EXEC_TIMEOUT, device));
   return (bool)is_display;
-}
-
-}  // namespace yocto
-
-#else
-
-// -----------------------------------------------------------------------------
-// NO CUDA
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-#ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable : 4722)
-#endif
-
-static void exit_nocuda() { throw std::runtime_error{"Cuda not linked"}; }
-
-cuscene_data::cuscene_data(cuscene_data&& other) { exit_nocuda(); }
-cuscene_data& cuscene_data::operator=(cuscene_data&& other) {
-  exit_nocuda();
-  return *this;
-}
-cuscene_data::~cuscene_data() { exit_nocuda(); };
-
-cubvh_data::cubvh_data(cubvh_data&& other) { exit_nocuda(); }
-cubvh_data& cubvh_data::operator=(cubvh_data&& other) {
-  exit_nocuda();
-  return *this;
-}
-cubvh_data::~cubvh_data() { exit_nocuda(); }
-
-cutrace_context::cutrace_context(cutrace_context&& other) { exit_nocuda(); }
-cutrace_context& cutrace_context::operator=(cutrace_context&& other) {
-  exit_nocuda();
-  return *this;
-}
-cutrace_context::~cutrace_context() { exit_nocuda(); }
-
-cutrace_state::~cutrace_state() { exit_nocuda(); }
-cutrace_lights::~cutrace_lights() { exit_nocuda(); }
-
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif
-
-image_data cutrace_image(const scene_data& scene, const trace_params& params) {
-  exit_nocuda();
-  return {};
-}
-
-// Initialize GPU context.
-cutrace_context make_cutrace_context(const trace_params& params) {
-  exit_nocuda();
-  return {};
-}
-
-// Upload the scene to the GPU.
-cuscene_data make_cutrace_scene(cutrace_context& context,
-    const scene_data& scene, const trace_params& params) {
-  exit_nocuda();
-  return {};
-}
-
-// Update cameras
-void update_cutrace_cameras(cutrace_context& context, cuscene_data& cuscene,
-    const scene_data& scene, const trace_params& params) {
-  exit_nocuda();
-}
-
-// Build the bvh acceleration structure.
-cubvh_data make_cutrace_bvh(cutrace_context& context,
-    const cuscene_data& cuscene, const trace_params& params) {
-  exit_nocuda();
-  return {};
-}
-
-// Initialize state.
-cutrace_state make_cutrace_state(cutrace_context& context,
-    const scene_data& scene, const trace_params& params) {
-  exit_nocuda();
-  return {};
-}
-void reset_cutrace_state(cutrace_context& context, cutrace_state& state,
-    const scene_data& scene, const trace_params& params) {
-  exit_nocuda();
-}
-
-// Initialize lights.
-cutrace_lights make_cutrace_lights(cutrace_context& context,
-    const scene_data& scene, const trace_params& params) {
-  exit_nocuda();
-  return {};
-}
-
-// Start rendering an image.
-void trace_start(cutrace_context& context, cutrace_state& state,
-    const cuscene_data& cuscene, const cubvh_data& bvh,
-    const cutrace_lights& lights, const scene_data& scene,
-    const trace_params& params) {
-  exit_nocuda();
-}
-
-// Progressively computes an image.
-void trace_samples(cutrace_context& context, cutrace_state& state,
-    const cuscene_data& cuscene, const cubvh_data& bvh,
-    const cutrace_lights& lights, const scene_data& scene,
-    const trace_params& params) {
-  exit_nocuda();
-}
-
-// render preview
-void trace_preview(image_data& image, cutrace_context& context,
-    cutrace_state& state, const cuscene_data& cuscene, const cubvh_data& bvh,
-    const cutrace_lights& lights, const scene_data& scene,
-    const trace_params& params) {
-  exit_nocuda();
-  return;
-}
-
-// Get render
-image_data get_image(const cutrace_state& state) {
-  exit_nocuda();
-  return {};
-}
-void get_image(image_data& image, const cutrace_state& state) { exit_nocuda(); }
-
-// Get resulting render
-image_data get_rendered_image(const cutrace_state& state) {
-  exit_nocuda();
-  return {};
-}
-void get_rendered_image(image_data& image, const cutrace_state& state) {
-  exit_nocuda();
-}
-
-// Get denoised result
-image_data get_denoised_image(const cutrace_state& state) {
-  exit_nocuda();
-  return {};
-}
-void get_denoised_image(image_data& image, const cutrace_state& state) {
-  exit_nocuda();
-}
-
-// Get denoising buffers
-image_data get_albedo_image(const cutrace_state& state) {
-  exit_nocuda();
-  return {};
-}
-void get_albedo_image(image_data& image, const cutrace_state& state) {
-  exit_nocuda();
-}
-image_data get_normal_image(const cutrace_state& state) {
-  exit_nocuda();
-  return {};
-}
-void get_normal_image(image_data& image, const cutrace_state& state) {
-  exit_nocuda();
 }
 
 }  // namespace yocto

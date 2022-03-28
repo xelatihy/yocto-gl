@@ -159,6 +159,7 @@ void run(const vector<string>& args) {
     save_image(outname, image);
     print_info("save image: {}", elapsed_formatted(timer));
   } else {
+#ifdef YOCTO_OPENGL
     // rendering context
     auto context = make_trace_context(params);
 
@@ -258,6 +259,9 @@ void run(const vector<string>& args) {
 
     // done
     render_cancel();
+#else
+    throw io_error{"Interactive requires OpenGL"};
+#endif
   }
 }
 

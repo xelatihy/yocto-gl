@@ -77,6 +77,8 @@ void run(const vector<string>& args) {
     // save image
     save_image(outname, image);
   } else {
+#ifdef YOCTO_OPENGL
+
     // color grading parameters
     auto params = colorgrade_params{};
 
@@ -133,6 +135,9 @@ void run(const vector<string>& args) {
 
     // run ui
     show_gui_window({1280 + 320, 720}, "ycolorgrade - " + imagename, callbacks);
+#else
+    throw io_error{"Interactive requires OpenGL"};
+#endif
   }
 }
 

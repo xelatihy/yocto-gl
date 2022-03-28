@@ -79,6 +79,42 @@
       }
     },
     {
+      "name": "release-nogl",
+      "description": "Release build - no OpenGL",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "YOCTO_APPS": "ON",
+        "YOCTO_EMBREE": "OFF",
+        "YOCTO_DENOISE": "OFF",
+        "YOCTO_OPENGL": "OFF",
+        "YOCTO_CUDA": "OFF"
+      },
+      "architecture": {
+        "value": "x64",
+        "strategy": "external"
+      }
+    },
+    {
+      "name": "debug-nogl",
+      "description": "Debug build - no OpenGL",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "YOCTO_APPS": "ON",
+        "YOCTO_EMBREE": "OFF",
+        "YOCTO_DENOISE": "OFF",
+        "YOCTO_OPENGL": "OFF",
+        "YOCTO_CUDA": "OFF"
+      },
+      "architecture": {
+        "value": "x64",
+        "strategy": "external"
+      }
+    },
+    {
       "name": "release-cuda",
       "description": "Release build",
       "generator": "Ninja",

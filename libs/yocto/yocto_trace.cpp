@@ -86,7 +86,7 @@ namespace yocto {
 
 // Build the Bvh acceleration structure.
 trace_bvh make_trace_bvh(const scene_data& scene, const trace_params& params) {
-  if (params.embreebvh) {
+  if (params.embreebvh && embree_supported()) {
     return {{},
         make_scene_embree_bvh(scene, params.highqualitybvh, params.noparallel)};
   } else {

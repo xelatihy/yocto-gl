@@ -76,6 +76,7 @@ void run(const vector<string>& args) {
     // save
     save_image(outname, image);
   } else {
+#ifdef YOCTO_OPENGL
     // display image
     auto  display  = make_image(image.width, image.height, false);
     float exposure = 0;
@@ -110,6 +111,9 @@ void run(const vector<string>& args) {
 
     // run ui
     show_gui_window({1280 + 320, 720}, "ytonemap - " + imagename, callbacks);
+#else
+    throw io_error{"Interactive requires OpenGL"};
+#endif
   }
 }
 

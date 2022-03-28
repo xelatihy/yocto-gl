@@ -30,6 +30,8 @@
 #ifndef _YOCTO_GLVIEW_
 #define _YOCTO_GLVIEW_
 
+#ifdef YOCTO_OPENGL
+
 // -----------------------------------------------------------------------------
 // INCLUDES
 // -----------------------------------------------------------------------------
@@ -326,5 +328,7 @@ bool draw_scene_widgets(scene_data& scene, scene_selection& selection,
     const function<void()>& before_edit = {});
 
 }  // namespace yocto
+
+#endif
 
 #endif
