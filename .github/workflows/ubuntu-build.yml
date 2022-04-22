@@ -7,9 +7,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      # - name: dependencies
-      #   run: |
-      #     sudo apt-get install xorg-dev
+      - name: dependencies
+        run: |
+          sudo apt update
+          sudo apt-get install -y mesa-utils xvfb libgl1 freeglut3-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libxext-dev
       - name: configure
         env:
           CC: gcc-9
@@ -17,7 +18,7 @@ jobs:
         run: |
           mkdir build
           cd build
-          cmake .. -G"Unix Makefiles" -DYOCTO_OPENGL=OFF -DYOCTO_EMBREE=OFF -DYOCTO_DENOISE=OFF -DYOCTO_CUDA=OFF
+          cmake .. -G"Unix Makefiles" -DYOCTO_OPENGL=ON -DYOCTO_EMBREE=OFF -DYOCTO_DENOISE=OFF -DYOCTO_CUDA=OFF
       - name: build
         run: |
           cd build
