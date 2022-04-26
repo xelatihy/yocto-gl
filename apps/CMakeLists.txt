@@ -7,19 +7,15 @@ endfunction()
 
 add_yapp(ytonemap)
 add_yapp(ycolorgrade)
-
 add_yapp(ytrace)
+add_yapp(yview)
+add_yapp(yimdiff)
+add_yapp(yimalpha)
+add_yapp(yconvert)
+add_yapp(yconverts)
+add_yapp(ysamples)
 
 if(YOCTO_CUDA)
 add_yapp(ycutrace)
 endif()
 
-add_yapp(yview)
-
-add_yapp(yimdiff)
-add_yapp(yimalpha)
-
-add_yapp(yconvert)
-
-add_yapp(yconverts)
-add_yapp(ysamples)

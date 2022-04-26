@@ -49,7 +49,7 @@ test the library:
 - `apps/yconverts.cpp`: shape conversion
 - `apps/ytrace.cpp`: offline and interactive scene rendering
 - `apps/ycutrace.cpp`: offline and interactive scene rendering with CUDA
-- `apps/ytrace.cpp`: interactive scene viewing
+- `apps/yview.cpp`: interactive scene viewing
 
 Here are some test images rendered with the path tracer. More images are
 included in the [project site](https://xelatihy.github.io/yocto-gl/).
