@@ -693,7 +693,7 @@ image_data make_image_preset(const string& type_) {
     // img   = srgb_to_rgb(bump_to_normal(img, 0.05f));
   } else if (type == "images1") {
     auto sub_types  = vector<string>{"grid", "uvgrid", "checker", "gammaramp",
-        "bumps", "bump-normal", "noise", "fbm", "blackbodyramp"};
+         "bumps", "bump-normal", "noise", "fbm", "blackbodyramp"};
     auto sub_images = vector<image_data>();
     for (auto& sub_type : sub_types)
       sub_images.push_back(make_image_preset(sub_type));
@@ -1975,7 +1975,7 @@ namespace yocto {
 [[maybe_unused]] static string get_shape_name(
     const scene_data& scene, int idx) {
   if (idx < 0) return "";
-  if (scene.shape_names.empty())
+  if (scene.shape_names.empty() || scene.shape_names[idx].empty())
     return get_element_name("shape", idx, scene.shapes.size());
   return scene.shape_names[idx];
 }
@@ -2679,12 +2679,20 @@ static bool load_gltf_scene(
 static bool save_gltf_scene(const string& filename, const scene_data& scene,
     string& error, bool noparallel);
 
-// Load/save a scene from/to pbrt-> This is not robust at all and only
+// Load/save a scene from/to pbrt. This is not robust at all and only
 // works on scene that have been previously adapted since the two renderers
 // are too different to match.
 static bool load_pbrt_scene(
     const string& filename, scene_data& scene, string& error, bool noparallel);
 static bool save_pbrt_scene(const string& filename, const scene_data& scene,
+    string& error, bool noparallel);
+
+// Load/save a scene from/to mitsuba. This is not robust at all and only
+// works on scene that have been previously adapted since the two renderers
+// are too different to match. For now, only saving is allowed.
+static bool load_mitsuba_scene(
+    const string& filename, scene_data& scene, string& error, bool noparallel);
+static bool save_mitsuba_scene(const string& filename, const scene_data& scene,
     string& error, bool noparallel);
 
 // Load a scene
@@ -2699,6 +2707,8 @@ bool load_scene(
     return load_gltf_scene(filename, scene, error, noparallel);
   } else if (ext == ".pbrt" || ext == ".PBRT") {
     return load_pbrt_scene(filename, scene, error, noparallel);
+  } else if (ext == ".xml" || ext == ".XML") {
+    return load_mitsuba_scene(filename, scene, error, noparallel);
   } else if (ext == ".ply" || ext == ".PLY") {
     return load_ply_scene(filename, scene, error, noparallel);
   } else if (ext == ".stl" || ext == ".STL") {
@@ -2719,10 +2729,12 @@ bool save_scene(const string& filename, const scene_data& scene, string& error,
     return save_json_scene(filename, scene, error, noparallel);
   } else if (ext == ".obj" || ext == ".OBJ") {
     return save_obj_scene(filename, scene, error, noparallel);
-  } else if (ext == ".pbrt" || ext == ".PBRT") {
-    return save_pbrt_scene(filename, scene, error, noparallel);
   } else if (ext == ".gltf" || ext == ".GLTF") {
     return save_gltf_scene(filename, scene, error, noparallel);
+  } else if (ext == ".pbrt" || ext == ".PBRT") {
+    return save_pbrt_scene(filename, scene, error, noparallel);
+  } else if (ext == ".xml" || ext == ".XML") {
+    return save_mitsuba_scene(filename, scene, error, noparallel);
   } else if (ext == ".ply" || ext == ".PLY") {
     return save_ply_scene(filename, scene, error, noparallel);
   } else if (ext == ".stl" || ext == ".STL") {
@@ -3038,7 +3050,7 @@ static bool load_json_scene_version40(const string& filename,
   auto ply_instances        = vector<ply_instance>{};
   auto ply_instances_names  = vector<string>{};
   auto ply_instance_map     = unordered_map<string, ply_instance_handle>{
-      {"", invalidid}};
+          {"", invalidid}};
   auto instance_ply = unordered_map<int, ply_instance_handle>{};
   auto get_ist      = [&scene, &ply_instances, &ply_instances_names,
                      &ply_instance_map, &instance_ply](const json_value& json,
@@ -4440,7 +4452,7 @@ static bool load_gltf_scene(
       auto& gpbr        = gmaterial.pbr_metallic_roughness;
       material.type     = material_type::gltfpbr;
       material.color    = {gpbr.base_color_factor[0], gpbr.base_color_factor[1],
-          gpbr.base_color_factor[2]};
+             gpbr.base_color_factor[2]};
       material.opacity  = gpbr.base_color_factor[3];
       material.metallic = gpbr.metallic_factor;
       material.roughness     = gpbr.roughness_factor;
@@ -5271,6 +5283,391 @@ static bool save_pbrt_scene(const string& filename, const scene_data& scene,
     if (!parallel_foreach(scene.shapes, error, [&](auto& shape, string& error) {
           auto path = "shapes/" + get_shape_name(scene, shape) + ".ply";
           return save_shape(path_join(dirname, path), shape, error, true);
+        }))
+      return dependent_error();
+    // save textures
+    if (!parallel_foreach(
+            scene.textures, error, [&](auto& texture, string& error) {
+              auto path = "textures/" + get_texture_name(scene, texture) +
+                          (!texture.pixelsf.empty() ? ".hdr"s : ".png"s);
+              return save_texture(path_join(dirname, path), texture, error);
+            }))
+      return dependent_error();
+  }
+
+  // done
+  return true;
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION OF MITSUBA
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// load mitsuba scenes
+static bool load_mitsuba_scene(
+    const string& filename, scene_data& scene, string& error, bool noparallel) {
+  // not implemented
+  error = "cannot load " + filename +
+          " since format is not supported for reading";
+  return false;
+}
+
+// To xml helpers
+static void xml_attribute(string& xml, const string& name, bool value) {
+  xml += " " + name + "=\"" + (value ? string("true") : string("false")) + "\"";
+}
+static void xml_attribute(string& xml, const string& name, int value) {
+  xml += " " + name + "=\"" + std::to_string(value) + "\"";
+}
+static void xml_attribute(string& xml, const string& name, float value) {
+  xml += " " + name + "=\"" + std::to_string(value) + "\"";
+}
+static void xml_attribute(string& xml, const string& name, const char* value) {
+  xml += " " + name + "=\"" + string(value) + "\"";
+}
+static void xml_attribute(
+    string& xml, const string& name, const string& value) {
+  xml += " " + name + "=\"" + value + "\"";
+}
+static void xml_attribute(string& xml, const string& name, const vec3f& value) {
+  xml += " " + name + "=\"" + std::to_string(value.x) + " " +
+         std::to_string(value.y) + " " + std::to_string(value.z) + "\"";
+}
+static void xml_attribute(
+    string& xml, const string& name, const frame3f& value) {
+  xml += " " + name + "=\"" + std::to_string(value.x.x) + " " +
+         std::to_string(value.y.x) + " " + std::to_string(value.z.x) + " " +
+         std::to_string(value.o.x) + " " + std::to_string(value.x.y) + " " +
+         std::to_string(value.y.y) + " " + std::to_string(value.z.y) + " " +
+         std::to_string(value.o.y) + " " + std::to_string(value.x.z) + " " +
+         std::to_string(value.y.z) + " " + std::to_string(value.z.z) + " " +
+         std::to_string(value.o.z) + " 0 0 0 1\"";
+}
+template <typename T, typename... Ts>
+static void xml_attributes(
+    string& xml, const string& name, const T& value, const Ts&... attributes) {
+  xml_attribute(xml, name, value);
+  if constexpr (sizeof...(attributes) != 0) xml_attributes(xml, attributes...);
+}
+template <typename... Ts>
+static void xml_element(string& xml, const string& indent, const string& name,
+    const Ts&... attributes) {
+  xml += indent + "<" + name;
+  xml_attributes(xml, attributes...);
+  xml += "/>\n";
+}
+template <typename... Ts>
+static void xml_begin(
+    string& xml, string& indent, const string& name, const Ts&... attributes) {
+  xml += indent + "<" + name;
+  xml_attributes(xml, attributes...);
+  xml += ">\n";
+  indent += "  ";
+}
+static void xml_end(string& xml, string& indent, const string& name) {
+  indent = indent.substr(0, indent.size() - 2);
+  xml += indent + "</" + name + ">\n";
+}
+template <typename T>
+static void xml_default(
+    string& xml, const string& indent, const string& name, const T& value) {
+  xml_element(xml, indent, "default", "name", name, "value", value);
+}
+template <typename T>
+static void xml_property(string& xml, const string& indent, const string& type,
+    const string& name, const T& value, const string& ref) {
+  if (ref.empty()) {
+    if (name.empty()) {
+      xml_element(xml, indent, type, "value", value);
+    } else {
+      xml_element(xml, indent, type, "name", name, "value", value);
+    }
+  } else {
+    xml_element(xml, indent, type, "name", name, "value", ref);
+  }
+}
+static void xml_property(string& xml, const string& indent, const string& name,
+    int value, const string& ref = "") {
+  xml_property(xml, indent, "integer", name, value, ref);
+}
+static void xml_property(string& xml, const string& indent, const string& name,
+    float value, const string& ref = "") {
+  xml_property(xml, indent, "float", name, value, ref);
+}
+static void xml_property(string& xml, const string& indent, const string& name,
+    bool value, const string& ref = "") {
+  xml_property(xml, indent, "boolean", name, value, ref);
+}
+static void xml_property(string& xml, const string& indent, const string& name,
+    const char* value, const string& ref = "") {
+  xml_property(xml, indent, "string", name, value, ref);
+}
+static void xml_property(string& xml, const string& indent, const string& name,
+    const string& value, const string& ref = "") {
+  xml_property(xml, indent, "string", name, value, ref);
+}
+static void xml_property(string& xml, const string& indent, const string& name,
+    const frame3f& value, const string& ref = "") {
+  xml_property(xml, indent, "matrix", name, value, ref);
+}
+static void xml_property(string& xml, const string& indent, const string& name,
+    const vec3f& value, const string& ref = "") {
+  xml_property(xml, indent, "rgb", name, value, ref);
+}
+
+// Save a mitsuba scene
+static bool save_mitsuba_scene(const string& filename, const scene_data& scene,
+    string& error, bool noparallel) {
+  // write xml directly
+  auto xml = string{};
+
+  // begin
+  auto indent = string{};
+  xml_begin(xml, indent, "scene", "version", "3.0.0");
+
+  // defaults
+  xml_default(xml, indent, "integrator", "path");
+  xml_default(xml, indent, "spp", 64);
+  xml_default(xml, indent, "resx", 1440);
+  xml_default(xml, indent, "resy", 720);
+  xml_default(xml, indent, "pixel_format", "rgb");
+  xml_default(xml, indent, "max_depth", 8);
+  xml_default(xml, indent, "rr_depth", 64);
+
+  // integrator
+  xml_begin(xml, indent, "integrator", "type", "$integrator");
+  xml_property(xml, indent, "max_depth", 0, "$max_depth");
+  xml_property(xml, indent, "rr_depth", 0, "$rr_depth");
+  xml_property(xml, indent, "hide_emitters", false);
+  xml_end(xml, indent, "integrator");
+
+  // film
+  xml_begin(xml, indent, "film", "type", "hdrfilm", "id", "film");
+  xml_property(xml, indent, "width", 0, "$resx");
+  xml_property(xml, indent, "height", 0, "$resy");
+  xml_element(xml, indent, "rfilter", "type", "box");
+  xml_property(xml, indent, "pixel_format", "", "$pixel_format");
+  xml_end(xml, indent, "film");
+
+  // sampler
+  xml_begin(xml, indent, "sampler", "type", "independent", "id", "sampler");
+  xml_property(xml, indent, "sample_count", 0, "$spp");
+  xml_end(xml, indent, "sampler");
+
+  // camera
+  auto& camera = scene.cameras.at(0);
+  xml_begin(xml, indent, "sensor", "type", "perspective");
+  xml_property(xml, indent, "fov_axis", "smaller");
+  xml_property(xml, indent, "fov", 20.0f);
+  xml_begin(xml, indent, "transform", "name", "to_world");
+  xml_element(xml, indent, "lookat", "origin", camera.frame.o, "target",
+      camera.frame.o - camera.frame.z, "up", vec3f{0, 1, 0});
+  xml_end(xml, indent, "transform");
+  xml_element(xml, indent, "ref", "id", "sampler");
+  xml_element(xml, indent, "ref", "id", "film");
+  xml_end(xml, indent, "sensor");
+
+  // textures
+  auto tid = 0;
+  for (auto& texture : scene.textures) {
+    if (texture.pixelsf.empty()) {
+      xml_begin(xml, indent, "texture", "type", "bitmap", "id",
+          "texture" + std::to_string(tid));
+      xml_property(xml, indent, "filename",
+          "textures/" + get_texture_name(scene, texture) +
+              (texture.pixelsf.empty() ? ".png" : ".hdr"));
+      xml_end(xml, indent, "texture");
+    }
+    tid += 1;
+  }
+
+  // environments
+  for (auto& environment : scene.environments) {
+    if (environment.emission_tex != invalidid) {
+      auto& texture = scene.textures.at(environment.emission_tex);
+      xml_begin(xml, indent, "emitter", "type", "envmap");
+      xml_property(xml, indent, "scale", mean(environment.emission));
+      xml_property(xml, indent, "filename",
+          "textures/" + get_texture_name(scene, texture) + ".hdr");
+      xml_end(xml, indent, "emitter");
+    } else {
+      xml_begin(xml, indent, "emitter", "type", "constant");
+      xml_property(xml, indent, "rgb", "radiance", environment.emission, "");
+      xml_end(xml, indent, "emitter");
+    }
+  }
+
+  // property or texture
+  auto xml_property_or_texture = [](string& xml, const string& indent,
+                                     const string& name, auto value,
+                                     int texture) {
+    if (texture == invalidid) {
+      xml_property(xml, indent, "rgb", name, value, "");
+    } else {
+      xml_element(xml, indent, "ref", "id", "texture" + std::to_string(texture),
+          "name", name);
+    }
+  };
+
+  // materials
+  auto mid = 0;
+  for (auto& material : scene.materials) {
+    // xml_begin(xml, indent, "bsdf", "type", "twosided", "id",
+    //     "material" + std::to_string(mid));
+    switch (material.type) {
+      case material_type::matte: {
+        xml_begin(xml, indent, "bsdf", "type", "diffuse", "id",
+            "material" + std::to_string(mid));
+        xml_property_or_texture(
+            xml, indent, "reflectance", material.color, material.color_tex);
+        xml_end(xml, indent, "bsdf");
+      } break;
+      case material_type::reflective: {
+        xml_begin(xml, indent, "bsdf", "type",
+            material.roughness < 0.03f ? "conductor" : "roughconductor", "id",
+            "material" + std::to_string(mid));
+        xml_property_or_texture(
+            xml, indent, "eta", reflectivity_to_eta(material.color), invalidid);
+        xml_property_or_texture(xml, indent, "k", vec3f{0, 0, 0}, invalidid);
+        if (material.roughness >= 0.03f) {
+          xml_property(
+              xml, indent, "alpha", material.roughness * material.roughness);
+        }
+        xml_end(xml, indent, "bsdf");
+      } break;
+      case material_type::glossy: {
+        xml_begin(xml, indent, "bsdf", "type",
+            material.roughness < 0.03f ? "plastic" : "roughplastic", "id",
+            "material" + std::to_string(mid));
+        xml_property_or_texture(xml, indent, "diffuse_reflectance",
+            material.color, material.color_tex);
+        if (material.roughness >= 0.03f) {
+          xml_property(
+              xml, indent, "alpha", material.roughness * material.roughness);
+        }
+        xml_end(xml, indent, "bsdf");
+      } break;
+      case material_type::transparent: {
+        xml_begin(xml, indent, "bsdf", "type",
+            material.roughness < 0.03f ? "conductor" : "roughconductor", "id",
+            "material" + std::to_string(mid));
+        xml_property_or_texture(
+            xml, indent, "eta", reflectivity_to_eta(material.color), invalidid);
+        xml_property_or_texture(xml, indent, "k", vec3f{0, 0, 0}, invalidid);
+        if (material.roughness >= 0.03f) {
+          xml_property_or_texture(
+              xml, indent, "alpha", material.roughness, invalidid);
+        }
+        xml_end(xml, indent, "bsdf");
+      } break;
+      case material_type::volumetric:
+      case material_type::subsurface:
+      case material_type::refractive: {
+        xml_begin(xml, indent, "bsdf", "type",
+            material.roughness < 0.03f ? "dielectric" : "roughdielectric", "id",
+            "material" + std::to_string(mid));
+        xml_property(xml, indent, "int_ior", 1.5f);
+        if (material.roughness >= 0.03f) {
+          xml_property_or_texture(
+              xml, indent, "alpha", material.roughness, invalidid);
+        }
+        xml_end(xml, indent, "bsdf");
+        if (material.color != vec3f{1, 1, 1}) {
+          xml_begin(xml, indent, "medium", "type", "homogeneous", "id",
+              "medium" + std::to_string(mid));
+          xml_property(xml, indent, "albedo", material.scattering);
+          auto density = -log(clamp(material.color, 0.0001f, 1.0f)) /
+                         material.trdepth;
+          xml_property(xml, indent, "sigma_t", mean(density));
+          xml_end(xml, indent, "medium");
+        }
+      } break;
+      case material_type::gltfpbr: {
+        xml_begin(xml, indent, "bsdf", "type", "diffuse", "id",
+            "material" + std::to_string(mid));
+        xml_property_or_texture(
+            xml, indent, "reflectance", material.color, material.color_tex);
+        xml_end(xml, indent, "bsdf");
+      } break;
+    }
+    // todo
+    // xml_end(xml, indent, "bsdf");
+    mid += 1;
+  }
+
+  // flattened instances
+  for (auto& instance : scene.instances) {
+    auto& shape    = scene.shapes[instance.shape];
+    auto& material = scene.materials[instance.material];
+    xml_begin(xml, indent, "shape", "type", "ply");
+    xml_property(xml, indent, "filename",
+        "shapes/" + get_shape_name(scene, shape) + ".ply");
+    if (instance.frame != frame3f{}) {
+      xml_begin(xml, indent, "transform", "name", "to_world");
+      xml_property(xml, indent, "", instance.frame);
+      xml_end(xml, indent, "transform");
+    }
+    if (material.emission != vec3f{0, 0, 0}) {
+      xml_property(xml, indent, "flip_normals", true);
+      xml_begin(xml, indent, "emitter", "type", "area");
+      xml_property(xml, indent, "rgb", "radiance", material.emission, "");
+      xml_end(xml, indent, "emitter");
+    }
+    xml_element(xml, indent, "ref", "id",
+        "material" + std::to_string(instance.material));
+    if (material.type == material_type::refractive &&
+        material.color != vec3f{1, 1, 1}) {
+      xml_element(xml, indent, "ref", "name", "interior", "id",
+          "medium" + std::to_string(instance.material));
+    }
+    xml_end(xml, indent, "shape");
+  }
+
+  // close
+  xml_end(xml, indent, "scene");
+
+  // save xml
+  if (!save_text(filename, xml, error)) return false;
+
+  // dirname
+  auto dirname         = path_dirname(filename);
+  auto dependent_error = [&filename, &error]() {
+    error = "cannot save " + filename + " since " + error;
+    return false;
+  };
+
+  auto triangulate = [](const shape_data& shape) -> shape_data {
+    if (shape.quads.empty()) return shape;
+    auto tshape      = shape;
+    tshape.triangles = quads_to_triangles(shape.quads);
+    tshape.quads.clear();
+    return tshape;
+  };
+
+  if (noparallel) {
+    // save shapes
+    for (auto& shape : scene.shapes) {
+      auto path = "shapes/" + get_shape_name(scene, shape) + ".ply";
+      if (!save_shape(
+              path_join(dirname, path), triangulate(shape), error, true))
+        return dependent_error();
+    }
+    // save textures
+    for (auto& texture : scene.textures) {
+      auto path = "textures/" + get_texture_name(scene, texture) +
+                  (!texture.pixelsf.empty() ? ".hdr" : ".png");
+      if (!save_texture(path_join(dirname, path), texture, error))
+        return dependent_error();
+    }
+  } else {
+    // save shapes
+    if (!parallel_foreach(scene.shapes, error, [&](auto& shape, string& error) {
+          auto path = "shapes/" + get_shape_name(scene, shape) + ".ply";
+          return save_shape(
+              path_join(dirname, path), triangulate(shape), error, true);
         }))
       return dependent_error();
     // save textures
