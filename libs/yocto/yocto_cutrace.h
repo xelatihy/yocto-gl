@@ -282,6 +282,11 @@ struct cuscene_data {
 struct cubvh_tree {
   cuspan<byte>           buffer = {};
   OptixTraversableHandle handle = 0;
+
+  cubvh_tree() {}
+  cubvh_tree(cubvh_tree&&);
+  cubvh_tree& operator=(cubvh_tree&&);
+  ~cubvh_tree();
 };
 
 struct cushape_bvh {

@@ -223,6 +223,17 @@ cuscene_data::~cuscene_data() {
   clear_buffer(environments);
 };
 
+cubvh_tree::cubvh_tree(cubvh_tree&& other) {
+  buffer.swap(other.buffer);
+  std::swap(handle, other.handle);
+}
+cubvh_tree& cubvh_tree::operator=(cubvh_tree&& other) {
+  buffer.swap(other.buffer);
+  std::swap(handle, other.handle);
+  return *this;
+}
+cubvh_tree::~cubvh_tree() { clear_buffer(buffer); }
+
 cushape_bvh::cushape_bvh(cushape_bvh&& other) {
   bvh.buffer.swap(other.bvh.buffer);
   std::swap(bvh.handle, other.bvh.handle);
@@ -232,7 +243,7 @@ cushape_bvh& cushape_bvh::operator=(cushape_bvh&& other) {
   std::swap(bvh.handle, other.bvh.handle);
   return *this;
 }
-cushape_bvh::~cushape_bvh() { clear_buffer(bvh.buffer); }
+cushape_bvh::~cushape_bvh() {}
 
 cuscene_bvh::cuscene_bvh(cuscene_bvh&& other) {
   instances.swap(other.instances);
