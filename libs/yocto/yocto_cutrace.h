@@ -284,9 +284,18 @@ struct cubvh_tree {
   OptixTraversableHandle handle = 0;
 };
 
+struct cushape_bvh {
+  cubvh_tree bvh = {};
+
+  cushape_bvh() {}
+  cushape_bvh(cushape_bvh&&);
+  cushape_bvh& operator=(cushape_bvh&&);
+  ~cushape_bvh();
+};
+
 struct cuscene_bvh {
   cubvh_tree            bvh       = {};
-  vector<cubvh_tree>    shapes    = {};
+  vector<cushape_bvh>   shapes    = {};
   cuspan<OptixInstance> instances = {};
 
   cuscene_bvh() {}

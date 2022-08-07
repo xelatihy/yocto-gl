@@ -223,6 +223,17 @@ cuscene_data::~cuscene_data() {
   clear_buffer(environments);
 };
 
+cushape_bvh::cushape_bvh(cushape_bvh&& other) {
+  bvh.buffer.swap(other.bvh.buffer);
+  std::swap(bvh.handle, other.bvh.handle);
+}
+cushape_bvh& cushape_bvh::operator=(cushape_bvh&& other) {
+  bvh.buffer.swap(other.bvh.buffer);
+  std::swap(bvh.handle, other.bvh.handle);
+  return *this;
+}
+cushape_bvh::~cushape_bvh() { clear_buffer(bvh.buffer); }
+
 cuscene_bvh::cuscene_bvh(cuscene_bvh&& other) {
   instances.swap(other.instances);
   shapes.swap(other.shapes);
@@ -236,13 +247,7 @@ cuscene_bvh& cuscene_bvh::operator=(cuscene_bvh&& other) {
   std::swap(bvh.handle, other.bvh.handle);
   return *this;
 }
-cuscene_bvh::~cuscene_bvh() {
-  for (auto& bvh : shapes) {
-    clear_buffer(bvh.buffer);
-    // TODO: bvh
-  }
-  clear_buffer(instances);
-}
+cuscene_bvh::~cuscene_bvh() { clear_buffer(instances); }
 
 cutrace_context::cutrace_context(cutrace_context&& other) {
   std::swap(denoiser, other.denoiser);
@@ -757,7 +762,7 @@ cutrace_bvh make_cutrace_bvh(cutrace_context& context,
         context.cuda_stream, accelerator_sizes.tempSizeInBytes, (byte*)nullptr);
     auto  bvh_buffer = make_buffer(context.cuda_stream,
          accelerator_sizes.outputSizeInBytes, (byte*)nullptr);
-    auto& sbvh       = bvh.shapes[shape_id];
+    auto& sbvh       = bvh.shapes[shape_id].bvh;
     check_result(optixAccelBuild(context.optix_context,
         /* cuda_stream */ 0, &accelerator_options, &built_input, (int)1,
         temporary_buffer.device_ptr(), temporary_buffer.size_in_bytes(),
@@ -796,7 +801,7 @@ cutrace_bvh make_cutrace_bvh(cutrace_context& context,
       memcpy(opinstance.transform, &transform, sizeof(float) * 12);
       opinstance.sbtOffset         = 0;
       opinstance.instanceId        = instance_id;
-      opinstance.traversableHandle = bvh.shapes[instance.shape].handle;
+      opinstance.traversableHandle = bvh.shapes[instance.shape].bvh.handle;
       opinstance.flags             = OPTIX_INSTANCE_FLAG_NONE;
       opinstance.visibilityMask    = 0xff;
     }
