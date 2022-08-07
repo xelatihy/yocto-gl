@@ -67,13 +67,15 @@ using std::vector;
 namespace yocto {
 
 // Shape BVHs are just the bvh for the shape.
-using shape_bvh = bvh_tree;
+struct shape_bvh {
+  bvh_tree bvh = {};
+};
 
 // Scene BVHs store the bvh for instances and shapes.
 // Application data is not stored explicitly.
 struct scene_bvh {
-  bvh_tree         instances = {};
-  vector<bvh_tree> shapes    = {};
+  bvh_tree          bvh    = {};
+  vector<shape_bvh> shapes = {};
 };
 
 // Build the bvh acceleration structure.
