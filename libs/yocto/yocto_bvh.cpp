@@ -235,15 +235,17 @@ static pair<int, int> split_middle(vector<int>& primitives,
 const int bvh_max_prims = 4;
 
 // Build BVH nodes
-static void build_bvh(vector<bvh_node>& nodes, vector<int>& primitives,
-    const vector<bbox3f>& bboxes, bool highquality) {
+static bvh_tree make_bvh(const vector<bbox3f>& bboxes, bool highquality) {
+  // bvh
+  auto bvh = bvh_tree{};
+
   // prepare to build nodes
-  nodes.clear();
-  nodes.reserve(bboxes.size() * 2);
+  bvh.nodes.clear();
+  bvh.nodes.reserve(bboxes.size() * 2);
 
   // prepare primitives
-  primitives.resize(bboxes.size());
-  for (auto idx : range(bboxes.size())) primitives[idx] = (int)idx;
+  bvh.primitives.resize(bboxes.size());
+  for (auto idx : range(bboxes.size())) bvh.primitives[idx] = (int)idx;
 
   // prepare centers
   auto centers = vector<vec3f>(bboxes.size());
@@ -251,7 +253,7 @@ static void build_bvh(vector<bvh_node>& nodes, vector<int>& primitives,
 
   // push first node onto the stack
   auto stack = vector<vec3i>{{0, 0, (int)bboxes.size()}};
-  nodes.emplace_back();
+  bvh.nodes.emplace_back();
 
   // create nodes until the stack is empty
   while (!stack.empty()) {
@@ -260,27 +262,28 @@ static void build_bvh(vector<bvh_node>& nodes, vector<int>& primitives,
     stack.pop_back();
 
     // grab node
-    auto& node = nodes[nodeid];
+    auto& node = bvh.nodes[nodeid];
 
     // compute bounds
     node.bbox = invalidb3f;
     for (auto i = start; i < end; i++)
-      node.bbox = merge(node.bbox, bboxes[primitives[i]]);
+      node.bbox = merge(node.bbox, bboxes[bvh.primitives[i]]);
 
     // split into two children
     if (end - start > bvh_max_prims) {
       // get split
       auto [mid, axis] =
-          highquality ? split_sah(primitives, bboxes, centers, start, end)
-                      : split_middle(primitives, bboxes, centers, start, end);
+          highquality
+              ? split_sah(bvh.primitives, bboxes, centers, start, end)
+              : split_middle(bvh.primitives, bboxes, centers, start, end);
 
       // make an internal node
       node.internal = true;
       node.axis     = (uint8_t)axis;
       node.num      = 2;
-      node.start    = (int)nodes.size();
-      nodes.emplace_back();
-      nodes.emplace_back();
+      node.start    = (int)bvh.nodes.size();
+      bvh.nodes.emplace_back();
+      bvh.nodes.emplace_back();
       stack.push_back({node.start + 0, start, mid});
       stack.push_back({node.start + 1, mid, end});
     } else {
@@ -292,22 +295,24 @@ static void build_bvh(vector<bvh_node>& nodes, vector<int>& primitives,
   }
 
   // cleanup
-  nodes.shrink_to_fit();
+  bvh.nodes.shrink_to_fit();
+
+  // done
+  return bvh;
 }
 
 // Update bvh
-static void refit_bvh(vector<bvh_node>& nodes, const vector<int>& primitives,
-    const vector<bbox3f>& bboxes) {
-  for (auto nodeid = (int)nodes.size() - 1; nodeid >= 0; nodeid--) {
-    auto& node = nodes[nodeid];
+static void refit_bvh(bvh_tree& bvh, const vector<bbox3f>& bboxes) {
+  for (auto nodeid = (int)bvh.nodes.size() - 1; nodeid >= 0; nodeid--) {
+    auto& node = bvh.nodes[nodeid];
     node.bbox  = invalidb3f;
     if (node.internal) {
       for (auto idx : range(2)) {
-        node.bbox = merge(node.bbox, nodes[node.start + idx].bbox);
+        node.bbox = merge(node.bbox, bvh.nodes[node.start + idx].bbox);
       }
     } else {
       for (auto idx : range(node.num)) {
-        node.bbox = merge(node.bbox, bboxes[primitives[node.start + idx]]);
+        node.bbox = merge(node.bbox, bboxes[bvh.primitives[node.start + idx]]);
       }
     }
   }
@@ -350,10 +355,7 @@ shape_bvh make_shape_bvh(const shape_data& shape, bool highquality) {
   }
 
   // build nodes
-  build_bvh(bvh.nodes, bvh.primitives, bboxes, highquality);
-
-  // done
-  return bvh;
+  return make_bvh(bboxes, highquality);
 }
 
 scene_bvh make_scene_bvh(
@@ -384,7 +386,7 @@ scene_bvh make_scene_bvh(
   }
 
   // build nodes
-  build_bvh(bvh.nodes, bvh.primitives, bboxes, highquality);
+  bvh.instances = make_bvh(bboxes, highquality);
 
   // done
   return bvh;
@@ -423,7 +425,7 @@ void update_shape_bvh(shape_bvh& bvh, const shape_data& shape) {
   }
 
   // update nodes
-  refit_bvh(bvh.nodes, bvh.primitives, bboxes);
+  refit_bvh(bvh, bboxes);
 }
 
 void update_scene_bvh(scene_bvh& bvh, const scene_data& scene,
@@ -442,7 +444,7 @@ void update_scene_bvh(scene_bvh& bvh, const scene_data& scene,
   }
 
   // update nodes
-  refit_bvh(bvh.nodes, bvh.primitives, bboxes);
+  refit_bvh(bvh.instances, bboxes);
 }
 
 }  // namespace yocto
@@ -543,8 +545,11 @@ shape_intersection intersect_shape_bvh(const shape_bvh& bvh,
   return intersection;
 }
 
-scene_intersection intersect_scene_bvh(const scene_bvh& bvh,
+scene_intersection intersect_scene_bvh(const scene_bvh& sbvh,
     const scene_data& scene, const ray3f& ray_, bool find_any) {
+  // get instances bvh
+  auto& bvh = sbvh.instances;
+
   // check empty
   if (bvh.nodes.empty()) return {};
 
@@ -589,7 +594,7 @@ scene_intersection intersect_scene_bvh(const scene_bvh& bvh,
       for (auto idx = node.start; idx < node.start + node.num; idx++) {
         auto& instance_ = scene.instances[bvh.primitives[idx]];
         auto  inv_ray   = transform_ray(inverse(instance_.frame, true), ray);
-        auto  sintersection = intersect_shape_bvh(bvh.shapes[instance_.shape],
+        auto  sintersection = intersect_shape_bvh(sbvh.shapes[instance_.shape],
              scene.shapes[instance_.shape], inv_ray, find_any);
         if (!sintersection.hit) continue;
         intersection = {bvh.primitives[idx], sintersection.element,
@@ -710,9 +715,12 @@ shape_intersection overlap_shape_bvh(const shape_bvh& bvh,
 }
 
 // Intersect ray with a bvh.
-scene_intersection overlap_scene_bvh(const scene_bvh& bvh,
+scene_intersection overlap_scene_bvh(const scene_bvh& sbvh,
     const scene_data& scene, const vec3f& pos, float max_distance,
     bool find_any) {
+  // get instances bvh
+  auto& bvh = sbvh.instances;
+
   // check if empty
   if (bvh.nodes.empty()) return {};
 
@@ -742,11 +750,9 @@ scene_intersection overlap_scene_bvh(const scene_bvh& bvh,
       for (auto idx : range(node.num)) {
         auto  primitive = bvh.primitives[node.start + idx];
         auto& instance_ = scene.instances[primitive];
-        auto& shape     = scene.shapes[instance_.shape];
-        auto& sbvh      = bvh.shapes[instance_.shape];
         auto  inv_pos   = transform_point(inverse(instance_.frame, true), pos);
-        auto  sintersection = overlap_shape_bvh(
-             sbvh, shape, inv_pos, max_distance, find_any);
+        auto  sintersection = overlap_shape_bvh(sbvh.shapes[instance_.shape],
+             scene.shapes[instance_.shape], inv_pos, max_distance, find_any);
         if (!sintersection.hit) continue;
         intersection = {primitive, sintersection.element, sintersection.uv,
             sintersection.distance, true};
@@ -886,9 +892,9 @@ void clear_ebvh(void* ebvh) {
 shape_ebvh make_shape_ebvh(const shape_data& shape, bool highquality) {
   auto bvh     = shape_ebvh{};
   auto edevice = embree_device();
-  bvh.bvh      = unique_ptr<void, void (*)(void*)>{
-           rtcNewScene(edevice), &clear_ebvh};
-  auto escene = (RTCScene)bvh.bvh.get();
+  bvh.ebvh     = unique_ptr<void, void (*)(void*)>{
+          rtcNewScene(edevice), &clear_ebvh};
+  auto escene = (RTCScene)bvh.ebvh.get();
   if (highquality) {
     rtcSetSceneBuildQuality(escene, RTC_BUILD_QUALITY_HIGH);
   } else {
@@ -984,10 +990,10 @@ scene_ebvh make_scene_ebvh(
   }
 
   // scene bvh
-  auto edevice = embree_device();
-  bvh.bvh      = unique_ptr<void, void (*)(void*)>{
-           rtcNewScene(edevice), &clear_ebvh};
-  auto escene = (RTCScene)bvh.bvh.get();
+  auto edevice       = embree_device();
+  bvh.instances.ebvh = unique_ptr<void, void (*)(void*)>{
+      rtcNewScene(edevice), &clear_ebvh};
+  auto escene = (RTCScene)bvh.instances.ebvh.get();
   if (highquality) {
     rtcSetSceneBuildQuality(escene, RTC_BUILD_QUALITY_HIGH);
   } else {
@@ -996,9 +1002,9 @@ scene_ebvh make_scene_ebvh(
   for (auto instance_id = 0; instance_id < (int)scene.instances.size();
        instance_id++) {
     auto& instance  = scene.instances[instance_id];
-    auto& sbvh      = bvh.shapes[instance.shape];
     auto  egeometry = rtcNewGeometry(edevice, RTC_GEOMETRY_TYPE_INSTANCE);
-    rtcSetGeometryInstancedScene(egeometry, (RTCScene)sbvh.bvh.get());
+    rtcSetGeometryInstancedScene(
+        egeometry, (RTCScene)bvh.shapes[instance.shape].ebvh.get());
     rtcSetGeometryTransform(
         egeometry, 0, RTC_FORMAT_FLOAT3X4_COLUMN_MAJOR, &instance.frame);
     rtcCommitGeometry(egeometry);
@@ -1016,12 +1022,12 @@ void update_shape_ebvh(shape_ebvh& bvh, const shape_data& shape) {
 void update_scene_ebvh(scene_ebvh& bvh, const scene_data& scene,
     const vector<int>& updated_instances, const vector<int>& updated_shapes) {
   // scene bvh
-  auto escene = (RTCScene)bvh.bvh.get();
+  auto escene = (RTCScene)bvh.instances.ebvh.get();
   for (auto instance_id : updated_instances) {
     auto& instance    = scene.instances[instance_id];
-    auto& sbvh        = bvh.shapes[instance.shape];
     auto  embree_geom = rtcGetGeometry(escene, instance_id);
-    rtcSetGeometryInstancedScene(embree_geom, (RTCScene)sbvh.bvh.get());
+    rtcSetGeometryInstancedScene(
+        embree_geom, (RTCScene)bvh.shapes[instance.shape].ebvh.get());
     rtcSetGeometryTransform(
         embree_geom, 0, RTC_FORMAT_FLOAT3X4_COLUMN_MAJOR, &instance.frame);
     rtcCommitGeometry(embree_geom);
@@ -1050,7 +1056,7 @@ shape_intersection intersect_shape_ebvh(const shape_ebvh& bvh,
   embree_ray.hit.instID[0] = RTC_INVALID_GEOMETRY_ID;
   RTCIntersectContext embree_ctx;
   rtcInitIntersectContext(&embree_ctx);
-  rtcIntersect1((RTCScene)bvh.bvh.get(), &embree_ctx, &embree_ray);
+  rtcIntersect1((RTCScene)bvh.ebvh.get(), &embree_ctx, &embree_ray);
   if (embree_ray.hit.geomID == RTC_INVALID_GEOMETRY_ID) return {};
   auto element  = (int)embree_ray.hit.primID;
   auto uv       = vec2f{embree_ray.hit.u, embree_ray.hit.v};
@@ -1076,7 +1082,7 @@ scene_intersection intersect_scene_ebvh(const scene_ebvh& bvh,
   embree_ray.hit.instID[0] = RTC_INVALID_GEOMETRY_ID;
   RTCIntersectContext embree_ctx;
   rtcInitIntersectContext(&embree_ctx);
-  rtcIntersect1((RTCScene)bvh.bvh.get(), &embree_ctx, &embree_ray);
+  rtcIntersect1((RTCScene)bvh.instances.ebvh.get(), &embree_ctx, &embree_ray);
   if (embree_ray.hit.geomID == RTC_INVALID_GEOMETRY_ID) return {};
   auto instance = (int)embree_ray.hit.instID[0];
   auto element  = (int)embree_ray.hit.primID;

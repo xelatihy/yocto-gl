@@ -66,24 +66,14 @@ using std::vector;
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// BVH tree stored as a node array with the tree structure is encoded using
-// array indices. BVH nodes indices refer to either the node array,
-// for internal nodes, or the primitive arrays, for leaf nodes.
-// Application data is not stored explicitly.
-struct shape_bvh {
-  vector<bvh_node> nodes      = {};
-  vector<int>      primitives = {};
-};
+// Shape BVHs are just the bvh for the shape.
+using shape_bvh = bvh_tree;
 
-// BVH tree stored as a node array with the tree structure is encoded using
-// array indices. BVH nodes indices refer to either the node array,
-// for internal nodes, or the primitive arrays, for leaf nodes.
-// We also store the BVH of the contained shapes.
+// Scene BVHs store the bvh for instances and shapes.
 // Application data is not stored explicitly.
 struct scene_bvh {
-  vector<bvh_node>  nodes      = {};
-  vector<int>       primitives = {};
-  vector<shape_bvh> shapes     = {};  // shapes
+  bvh_tree         instances = {};
+  vector<bvh_tree> shapes    = {};
 };
 
 // Build the bvh acceleration structure.
@@ -138,18 +128,18 @@ scene_intersection overlap_scene_bvh(const scene_bvh& bvh,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Intel Embree tree
-using ebvh_tree = unique_ptr<void, void (*)(void*)>;
-
-// Wrapper for Intel Embree.
-struct shape_ebvh {
-  unique_ptr<void, void (*)(void*)> bvh = {nullptr, nullptr};  // embree
+// Wrapper for Intel's Embree
+struct ebvh_tree {
+  unique_ptr<void, void (*)(void*)> ebvh = {nullptr, nullptr};
 };
 
 // Wrapper for Intel Embree.
+using shape_ebvh = ebvh_tree;
+
+// Wrapper for Intel Embree.
 struct scene_ebvh {
-  vector<shape_ebvh>                shapes = {};                  // shapes
-  unique_ptr<void, void (*)(void*)> bvh    = {nullptr, nullptr};  // embree
+  ebvh_tree         instances = {};  // instances
+  vector<ebvh_tree> shapes    = {};  // shapes
 };
 
 // Check if embree is supported
