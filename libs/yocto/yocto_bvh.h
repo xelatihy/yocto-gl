@@ -66,36 +66,16 @@ using std::vector;
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// BVH tree node containing its bounds, indices to the BVH arrays of either
-// primitives or internal nodes, the node element type,
-// and the split axis. Leaf and internal nodes are identical, except that
-// indices refer to primitives for leaf nodes or other nodes for internal nodes.
-struct bvh_node {
-  bbox3f  bbox     = invalidb3f;
-  int32_t start    = 0;
-  int16_t num      = 0;
-  int8_t  axis     = 0;
-  bool    internal = false;
-};
-
-// BVH tree stored as a node array with the tree structure is encoded using
-// array indices. BVH nodes indices refer to either the node array,
-// for internal nodes, or the primitive arrays, for leaf nodes.
-// Application data is not stored explicitly.
+// Shape BVHs are just the bvh for the shape.
 struct shape_bvh {
-  vector<bvh_node> nodes      = {};
-  vector<int>      primitives = {};
+  bvh_tree bvh = {};
 };
 
-// BVH tree stored as a node array with the tree structure is encoded using
-// array indices. BVH nodes indices refer to either the node array,
-// for internal nodes, or the primitive arrays, for leaf nodes.
-// We also store the BVH of the contained shapes.
+// Scene BVHs store the bvh for instances and shapes.
 // Application data is not stored explicitly.
 struct scene_bvh {
-  vector<bvh_node>  nodes      = {};
-  vector<int>       primitives = {};
-  vector<shape_bvh> shapes     = {};  // shapes
+  bvh_tree          bvh    = {};
+  vector<shape_bvh> shapes = {};
 };
 
 // Build the bvh acceleration structure.
@@ -150,39 +130,41 @@ scene_intersection overlap_scene_bvh(const scene_bvh& bvh,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// Wrapper for Intel's Embree
+using ebvh_tree = unique_ptr<void, void (*)(void*)>;
+
 // Wrapper for Intel Embree.
-struct shape_embree_bvh {
-  unique_ptr<void, void (*)(void*)> embree_bvh = {nullptr, nullptr};  // embree
+struct shape_ebvh {
+  ebvh_tree ebvh = {nullptr, nullptr};
 };
 
 // Wrapper for Intel Embree.
-struct scene_embree_bvh {
-  vector<shape_embree_bvh>          shapes     = {};                  // shapes
-  unique_ptr<void, void (*)(void*)> embree_bvh = {nullptr, nullptr};  // embree
+struct scene_ebvh {
+  ebvh_tree          ebvh   = {nullptr, nullptr};  // instances
+  vector<shape_ebvh> shapes = {};                  // shapes
 };
 
 // Check if embree is supported
 bool embree_supported();
 
 // Build the bvh acceleration structure.
-shape_embree_bvh make_shape_embree_bvh(
-    const shape_data& shape, bool highquality = false);
-scene_embree_bvh make_scene_embree_bvh(
+shape_ebvh make_shape_ebvh(const shape_data& shape, bool highquality = false);
+scene_ebvh make_scene_ebvh(
     const scene_data& scene, bool highquality = false, bool noparallel = false);
 
 // Refit bvh data
-void update_shape_embree_bvh(shape_embree_bvh& bvh, const shape_data& shape);
-void update_scene_embree_bvh(scene_embree_bvh& bvh, const scene_data& scene,
+void update_shape_ebvh(shape_ebvh& bvh, const shape_data& shape);
+void update_scene_ebvh(scene_ebvh& bvh, const scene_data& scene,
     const vector<int>& updated_instances, const vector<int>& updated_shapes);
 
 // Intersect ray with a bvh returning either the first or any intersection
 // depending on `find_any`. Returns the ray distance , the instance id,
 // the shape element index and the element barycentric coordinates.
-shape_intersection intersect_shape_embree_bvh(const shape_embree_bvh& bvh,
+shape_intersection intersect_shape_ebvh(const shape_ebvh& bvh,
     const shape_data& shape, const ray3f& ray, bool find_any = false);
-scene_intersection intersect_scene_embree_bvh(const scene_embree_bvh& bvh,
+scene_intersection intersect_scene_ebvh(const scene_ebvh& bvh,
     const scene_data& scene, const ray3f& ray, bool find_any = false);
-scene_intersection intersect_instance_embree_bvh(const scene_embree_bvh& bvh,
+scene_intersection intersect_instance_ebvh(const scene_ebvh& bvh,
     const scene_data& scene, int instance, const ray3f& ray,
     bool find_any = false);
 
@@ -268,6 +250,58 @@ using bvh_scene [[deprecated]] = scene_bvh;
     const scene_data& scene, const vec3f& pos, float max_distance,
     bool find_any = false) {
   return overlap_scene_bvh(bvh, scene, pos, max_distance, find_any);
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// EMBREE BACKWARD COMPATIBILITY
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// backward compatibility
+using shape_embree_bvh = shape_ebvh;
+using scene_embree_bvh = scene_ebvh;
+
+// Build the bvh acceleration structure.
+[[deprecated]] inline shape_embree_bvh make_shape_embree_bvh(
+    const shape_data& shape, bool highquality = false) {
+  return make_shape_ebvh(shape, highquality);
+}
+[[deprecated]] inline scene_embree_bvh make_scene_embree_bvh(
+    const scene_data& scene, bool highquality = false,
+    bool noparallel = false) {
+  return make_scene_ebvh(scene, highquality, noparallel);
+}
+
+// Refit bvh data
+[[deprecated]] inline void update_shape_embree_bvh(
+    shape_embree_bvh& bvh, const shape_data& shape) {
+  return update_shape_ebvh(bvh, shape);
+}
+[[deprecated]] inline void update_scene_embree_bvh(scene_ebvh& bvh,
+    const scene_data& scene, const vector<int>& updated_instances,
+    const vector<int>& updated_shapes) {
+  return update_scene_ebvh(bvh, scene, updated_instances, updated_shapes);
+}
+
+// Intersect ray with a bvh returning either the first or any intersection
+// depending on `find_any`. Returns the ray distance , the instance id,
+// the shape element index and the element barycentric coordinates.
+[[deprecated]] inline shape_intersection intersect_shape_embree_bvh(
+    const shape_ebvh& bvh, const shape_data& shape, const ray3f& ray,
+    bool find_any = false) {
+  return intersect_shape_ebvh(bvh, shape, ray, find_any);
+}
+[[deprecated]] inline scene_intersection intersect_scene_embree_bvh(
+    const scene_ebvh& bvh, const scene_data& scene, const ray3f& ray,
+    bool find_any = false) {
+  return intersect_scene_ebvh(bvh, scene, ray, find_any);
+}
+[[deprecated]] inline scene_intersection intersect_instance_embree_bvh(
+    const scene_ebvh& bvh, const scene_data& scene, int instance,
+    const ray3f& ray, bool find_any = false) {
+  return intersect_instance_ebvh(bvh, scene, instance, ray, find_any);
 }
 
 }  // namespace yocto

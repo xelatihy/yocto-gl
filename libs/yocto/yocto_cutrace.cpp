@@ -223,26 +223,42 @@ cuscene_data::~cuscene_data() {
   clear_buffer(environments);
 };
 
-cubvh_data::cubvh_data(cubvh_data&& other) {
-  instances.swap(other.instances);
-  shapes_bvhs.swap(other.shapes_bvhs);
-  instances_bvh.buffer.swap(other.instances_bvh.buffer);
-  std::swap(instances_bvh.handle, other.instances_bvh.handle);
+cubvh_tree::cubvh_tree(cubvh_tree&& other) {
+  buffer.swap(other.buffer);
+  std::swap(handle, other.handle);
 }
-cubvh_data& cubvh_data::operator=(cubvh_data&& other) {
-  instances.swap(other.instances);
-  shapes_bvhs.swap(other.shapes_bvhs);
-  instances_bvh.buffer.swap(other.instances_bvh.buffer);
-  std::swap(instances_bvh.handle, other.instances_bvh.handle);
+cubvh_tree& cubvh_tree::operator=(cubvh_tree&& other) {
+  buffer.swap(other.buffer);
+  std::swap(handle, other.handle);
   return *this;
 }
-cubvh_data::~cubvh_data() {
-  for (auto& shape_bvh : shapes_bvhs) {
-    clear_buffer(shape_bvh.buffer);
-    // TODO: bvh
-  }
-  clear_buffer(instances);
+cubvh_tree::~cubvh_tree() { clear_buffer(buffer); }
+
+cushape_bvh::cushape_bvh(cushape_bvh&& other) {
+  bvh.buffer.swap(other.bvh.buffer);
+  std::swap(bvh.handle, other.bvh.handle);
 }
+cushape_bvh& cushape_bvh::operator=(cushape_bvh&& other) {
+  bvh.buffer.swap(other.bvh.buffer);
+  std::swap(bvh.handle, other.bvh.handle);
+  return *this;
+}
+cushape_bvh::~cushape_bvh() {}
+
+cuscene_bvh::cuscene_bvh(cuscene_bvh&& other) {
+  instances.swap(other.instances);
+  shapes.swap(other.shapes);
+  bvh.buffer.swap(other.bvh.buffer);
+  std::swap(bvh.handle, other.bvh.handle);
+}
+cuscene_bvh& cuscene_bvh::operator=(cuscene_bvh&& other) {
+  instances.swap(other.instances);
+  shapes.swap(other.shapes);
+  bvh.buffer.swap(other.bvh.buffer);
+  std::swap(bvh.handle, other.bvh.handle);
+  return *this;
+}
+cuscene_bvh::~cuscene_bvh() { clear_buffer(instances); }
 
 cutrace_context::cutrace_context(cutrace_context&& other) {
   std::swap(denoiser, other.denoiser);
@@ -505,7 +521,7 @@ cutrace_context make_cutrace_context(const trace_params& params) {
 
 // start a new render
 void trace_start(cutrace_context& context, cutrace_state& state,
-    const cuscene_data& cuscene, const cubvh_data& bvh,
+    const cuscene_data& cuscene, const cuscene_bvh& bvh,
     const cutrace_lights& lights, const scene_data& scene,
     const trace_params& params) {
   auto globals = cutrace_globals{};
@@ -514,7 +530,7 @@ void trace_start(cutrace_context& context, cutrace_state& state,
   update_buffer_value(context.cuda_stream, context.globals_buffer,
       offsetof(cutrace_globals, scene), cuscene);
   update_buffer_value(context.cuda_stream, context.globals_buffer,
-      offsetof(cutrace_globals, bvh), bvh.instances_bvh.handle);
+      offsetof(cutrace_globals, bvh), bvh.bvh.handle);
   update_buffer_value(context.cuda_stream, context.globals_buffer,
       offsetof(cutrace_globals, lights), lights);
   update_buffer_value(context.cuda_stream, context.globals_buffer,
@@ -525,7 +541,7 @@ void trace_start(cutrace_context& context, cutrace_state& state,
 
 // render a batch of samples
 void trace_samples(cutrace_context& context, cutrace_state& state,
-    const cuscene_data& cuscene, const cubvh_data& bvh,
+    const cuscene_data& cuscene, const cuscene_bvh& bvh,
     const cutrace_lights& lights, const scene_data& scene,
     const trace_params& params) {
   if (state.samples >= params.samples) return;
@@ -700,9 +716,9 @@ void update_cutrace_cameras(cutrace_context& context, cuscene_data& cuscene,
   sync_gpu(context.cuda_stream);
 }
 
-cubvh_data make_cutrace_bvh(cutrace_context& context, const cuscene_data& scene,
-    const trace_params& params) {
-  auto bvh = cubvh_data{};
+cutrace_bvh make_cutrace_bvh(cutrace_context& context,
+    const cuscene_data& scene, const trace_params& params) {
+  auto bvh = cutrace_bvh{};
 
   // download shapes and instances
   // this is not efficient, but keeps the API very clean
@@ -711,7 +727,7 @@ cubvh_data make_cutrace_bvh(cutrace_context& context, const cuscene_data& scene,
   auto instances_data = download_buffer_vector(scene.instances);
 
   // shapes
-  bvh.shapes_bvhs.resize(scene.shapes.size());
+  bvh.shapes.resize(scene.shapes.size());
   for (auto shape_id = (size_t)0; shape_id < scene.shapes.size(); shape_id++) {
     auto& shape = shapes_data[shape_id];
 
@@ -757,7 +773,7 @@ cubvh_data make_cutrace_bvh(cutrace_context& context, const cuscene_data& scene,
         context.cuda_stream, accelerator_sizes.tempSizeInBytes, (byte*)nullptr);
     auto  bvh_buffer = make_buffer(context.cuda_stream,
          accelerator_sizes.outputSizeInBytes, (byte*)nullptr);
-    auto& sbvh       = bvh.shapes_bvhs[shape_id];
+    auto& sbvh       = bvh.shapes[shape_id].bvh;
     check_result(optixAccelBuild(context.optix_context,
         /* cuda_stream */ 0, &accelerator_options, &built_input, (int)1,
         temporary_buffer.device_ptr(), temporary_buffer.size_in_bytes(),
@@ -796,7 +812,7 @@ cubvh_data make_cutrace_bvh(cutrace_context& context, const cuscene_data& scene,
       memcpy(opinstance.transform, &transform, sizeof(float) * 12);
       opinstance.sbtOffset         = 0;
       opinstance.instanceId        = instance_id;
-      opinstance.traversableHandle = bvh.shapes_bvhs[instance.shape].handle;
+      opinstance.traversableHandle = bvh.shapes[instance.shape].bvh.handle;
       opinstance.flags             = OPTIX_INSTANCE_FLAG_NONE;
       opinstance.visibilityMask    = 0xff;
     }
@@ -830,7 +846,7 @@ cubvh_data make_cutrace_bvh(cutrace_context& context, const cuscene_data& scene,
     auto bvh_buffer = make_buffer(context.cuda_stream,
         accelerator_sizes.outputSizeInBytes, (byte*)nullptr);
 
-    auto& ibvh = bvh.instances_bvh;
+    auto& ibvh = bvh.bvh;
     check_result(optixAccelBuild(context.optix_context,
         /* cuda_stream */ 0, &accelerator_options, &build_input, (int)1,
         temporary_buffer.device_ptr(), temporary_buffer.size_in_bytes(),
@@ -979,7 +995,7 @@ image_data cutrace_image(const scene_data& scene, const trace_params& params) {
 
 // render preview
 void trace_preview(image_data& image, cutrace_context& context,
-    cutrace_state& pstate, const cuscene_data& cuscene, const cubvh_data& bvh,
+    cutrace_state& pstate, const cuscene_data& cuscene, const cutrace_bvh& bvh,
     const cutrace_lights& lights, const scene_data& scene,
     const trace_params& params) {
   auto pparams = params;

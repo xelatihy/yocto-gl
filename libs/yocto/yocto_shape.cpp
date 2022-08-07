@@ -1159,16 +1159,16 @@ shape_data make_cube(float scale, int subdivisions) {
       {+1, +1, +1}, {+1, +1, -1}, {-1, +1, -1}, {+1, -1, +1}, {-1, -1, +1},
       {-1, -1, -1}, {+1, -1, -1}};
   static const auto cube_normals   = vector<vec3f>{{0, 0, +1}, {0, 0, +1},
-      {0, 0, +1}, {0, 0, +1}, {0, 0, -1}, {0, 0, -1}, {0, 0, -1}, {0, 0, -1},
-      {+1, 0, 0}, {+1, 0, 0}, {+1, 0, 0}, {+1, 0, 0}, {-1, 0, 0}, {-1, 0, 0},
-      {-1, 0, 0}, {-1, 0, 0}, {0, +1, 0}, {0, +1, 0}, {0, +1, 0}, {0, +1, 0},
-      {0, -1, 0}, {0, -1, 0}, {0, -1, 0}, {0, -1, 0}};
+        {0, 0, +1}, {0, 0, +1}, {0, 0, -1}, {0, 0, -1}, {0, 0, -1}, {0, 0, -1},
+        {+1, 0, 0}, {+1, 0, 0}, {+1, 0, 0}, {+1, 0, 0}, {-1, 0, 0}, {-1, 0, 0},
+        {-1, 0, 0}, {-1, 0, 0}, {0, +1, 0}, {0, +1, 0}, {0, +1, 0}, {0, +1, 0},
+        {0, -1, 0}, {0, -1, 0}, {0, -1, 0}, {0, -1, 0}};
   static const auto cube_texcoords = vector<vec2f>{{0, 1}, {1, 1}, {1, 0},
       {0, 0}, {0, 1}, {1, 1}, {1, 0}, {0, 0}, {0, 1}, {1, 1}, {1, 0}, {0, 0},
       {0, 1}, {1, 1}, {1, 0}, {0, 0}, {0, 1}, {1, 1}, {1, 0}, {0, 0}, {0, 1},
       {1, 1}, {1, 0}, {0, 0}};
   static const auto cube_quads     = vector<vec4i>{{0, 1, 2, 3}, {4, 5, 6, 7},
-      {8, 9, 10, 11}, {12, 13, 14, 15}, {16, 17, 18, 19}, {20, 21, 22, 23}};
+          {8, 9, 10, 11}, {12, 13, 14, 15}, {16, 17, 18, 19}, {20, 21, 22, 23}};
 
   auto shape = shape_data{};
   if (subdivisions == 0) {
@@ -1194,16 +1194,16 @@ fvshape_data make_fvcube(float scale, int subdivisions) {
       {+1, +1, +1}, {-1, +1, +1}, {+1, -1, -1}, {-1, -1, -1}, {-1, +1, -1},
       {+1, +1, -1}};
   static const auto fvcube_normals   = vector<vec3f>{{0, 0, +1}, {0, 0, +1},
-      {0, 0, +1}, {0, 0, +1}, {0, 0, -1}, {0, 0, -1}, {0, 0, -1}, {0, 0, -1},
-      {+1, 0, 0}, {+1, 0, 0}, {+1, 0, 0}, {+1, 0, 0}, {-1, 0, 0}, {-1, 0, 0},
-      {-1, 0, 0}, {-1, 0, 0}, {0, +1, 0}, {0, +1, 0}, {0, +1, 0}, {0, +1, 0},
-      {0, -1, 0}, {0, -1, 0}, {0, -1, 0}, {0, -1, 0}};
+        {0, 0, +1}, {0, 0, +1}, {0, 0, -1}, {0, 0, -1}, {0, 0, -1}, {0, 0, -1},
+        {+1, 0, 0}, {+1, 0, 0}, {+1, 0, 0}, {+1, 0, 0}, {-1, 0, 0}, {-1, 0, 0},
+        {-1, 0, 0}, {-1, 0, 0}, {0, +1, 0}, {0, +1, 0}, {0, +1, 0}, {0, +1, 0},
+        {0, -1, 0}, {0, -1, 0}, {0, -1, 0}, {0, -1, 0}};
   static const auto fvcube_texcoords = vector<vec2f>{{0, 1}, {1, 1}, {1, 0},
       {0, 0}, {0, 1}, {1, 1}, {1, 0}, {0, 0}, {0, 1}, {1, 1}, {1, 0}, {0, 0},
       {0, 1}, {1, 1}, {1, 0}, {0, 0}, {0, 1}, {1, 1}, {1, 0}, {0, 0}, {0, 1},
       {1, 1}, {1, 0}, {0, 0}};
   static const auto fvcube_quadspos  = vector<vec4i>{{0, 1, 2, 3}, {4, 5, 6, 7},
-      {1, 4, 7, 2}, {5, 0, 3, 6}, {3, 2, 7, 6}, {1, 0, 5, 4}};
+       {1, 4, 7, 2}, {5, 0, 3, 6}, {3, 2, 7, 6}, {1, 0, 5, 4}};
   static const auto fvcube_quadsnorm = vector<vec4i>{{0, 1, 2, 3}, {4, 5, 6, 7},
       {8, 9, 10, 11}, {12, 13, 14, 15}, {16, 17, 18, 19}, {20, 21, 22, 23}};
   static const auto fvcube_quadstexcoord = vector<vec4i>{{0, 1, 2, 3},
@@ -2046,14 +2046,13 @@ static pair<int, int> split_middle(vector<int>& primitives,
 const int bvh_max_prims = 4;
 
 // Build BVH nodes
-static void build_bvh(bvh_tree& bvh, vector<bbox3f>& bboxes) {
-  // get values
-  auto& nodes      = bvh.nodes;
-  auto& primitives = bvh.primitives;
+static bvh_tree make_bvh(vector<bbox3f>& bboxes) {
+  // bvh
+  auto bvh = bvh_tree{};
 
   // prepare to build nodes
-  nodes.clear();
-  nodes.reserve(bboxes.size() * 2);
+  bvh.nodes.clear();
+  bvh.nodes.reserve(bboxes.size() * 2);
 
   // prepare primitives
   bvh.primitives.resize(bboxes.size());
@@ -2065,7 +2064,7 @@ static void build_bvh(bvh_tree& bvh, vector<bbox3f>& bboxes) {
 
   // queue up first node
   auto queue = deque<vec3i>{{0, 0, (int)bboxes.size()}};
-  nodes.emplace_back();
+  bvh.nodes.emplace_back();
 
   // create nodes until the queue is empty
   while (!queue.empty()) {
@@ -2075,25 +2074,26 @@ static void build_bvh(bvh_tree& bvh, vector<bbox3f>& bboxes) {
     auto nodeid = next.x, start = next.y, end = next.z;
 
     // grab node
-    auto& node = nodes[nodeid];
+    auto& node = bvh.nodes[nodeid];
 
     // compute bounds
     node.bbox = invalidb3f;
     for (auto i = start; i < end; i++)
-      node.bbox = merge(node.bbox, bboxes[primitives[i]]);
+      node.bbox = merge(node.bbox, bboxes[bvh.primitives[i]]);
 
     // split into two children
     if (end - start > bvh_max_prims) {
       // get split
-      auto [mid, axis] = split_middle(primitives, bboxes, centers, start, end);
+      auto [mid, axis] = split_middle(
+          bvh.primitives, bboxes, centers, start, end);
 
       // make an internal node
       node.internal = true;
       node.axis     = (int8_t)axis;
       node.num      = 2;
-      node.start    = (int)nodes.size();
-      nodes.emplace_back();
-      nodes.emplace_back();
+      node.start    = (int)bvh.nodes.size();
+      bvh.nodes.emplace_back();
+      bvh.nodes.emplace_back();
       queue.push_back({node.start + 0, start, mid});
       queue.push_back({node.start + 1, mid, end});
     } else {
@@ -2105,7 +2105,10 @@ static void build_bvh(bvh_tree& bvh, vector<bbox3f>& bboxes) {
   }
 
   // cleanup
-  nodes.shrink_to_fit();
+  bvh.nodes.shrink_to_fit();
+
+  // done
+  return bvh;
 }
 
 // Update bvh
@@ -2136,9 +2139,7 @@ bvh_tree make_points_bvh(const vector<int>& points,
   }
 
   // build nodes
-  auto bvh = bvh_tree{};
-  build_bvh(bvh, bboxes);
-  return bvh;
+  return make_bvh(bboxes);
 }
 bvh_tree make_lines_bvh(const vector<vec2i>& lines,
     const vector<vec3f>& positions, const vector<float>& radius) {
@@ -2151,9 +2152,7 @@ bvh_tree make_lines_bvh(const vector<vec2i>& lines,
   }
 
   // build nodes
-  auto bvh = bvh_tree{};
-  build_bvh(bvh, bboxes);
-  return bvh;
+  return make_bvh(bboxes);
 }
 bvh_tree make_triangles_bvh(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<float>& radius) {
@@ -2166,9 +2165,7 @@ bvh_tree make_triangles_bvh(const vector<vec3i>& triangles,
   }
 
   // build nodes
-  auto bvh = bvh_tree{};
-  build_bvh(bvh, bboxes);
-  return bvh;
+  return make_bvh(bboxes);
 }
 bvh_tree make_quads_bvh(const vector<vec4i>& quads,
     const vector<vec3f>& positions, const vector<float>& radius) {
@@ -2181,9 +2178,7 @@ bvh_tree make_quads_bvh(const vector<vec4i>& quads,
   }
 
   // build nodes
-  auto bvh = bvh_tree{};
-  build_bvh(bvh, bboxes);
-  return bvh;
+  return make_bvh(bboxes);
 }
 
 void update_points_bvh(bvh_tree& bvh, const vector<int>& points,
@@ -3769,8 +3764,8 @@ void make_bezier_circle(
   // constant from http://spencermortensen.com/articles/bezier-circle/
   const auto  c              = 0.551915024494f;
   static auto circle_pos     = vector<vec3f>{{1, 0, 0}, {1, c, 0}, {c, 1, 0},
-      {0, 1, 0}, {-c, 1, 0}, {-1, c, 0}, {-1, 0, 0}, {-1, -c, 0}, {-c, -1, 0},
-      {0, -1, 0}, {c, -1, 0}, {1, -c, 0}};
+          {0, 1, 0}, {-c, 1, 0}, {-1, c, 0}, {-1, 0, 0}, {-1, -c, 0}, {-c, -1, 0},
+          {0, -1, 0}, {c, -1, 0}, {1, -c, 0}};
   static auto circle_beziers = vector<vec4i>{
       {0, 1, 2, 3}, {3, 4, 5, 6}, {6, 7, 8, 9}, {9, 10, 11, 0}};
   positions = circle_pos;
@@ -3892,16 +3887,16 @@ void make_cube(vector<vec4i>& quads, vector<vec3f>& positions,
       {+1, +1, +1}, {+1, +1, -1}, {-1, +1, -1}, {+1, -1, +1}, {-1, -1, +1},
       {-1, -1, -1}, {+1, -1, -1}};
   static const auto cube_normals   = vector<vec3f>{{0, 0, +1}, {0, 0, +1},
-      {0, 0, +1}, {0, 0, +1}, {0, 0, -1}, {0, 0, -1}, {0, 0, -1}, {0, 0, -1},
-      {+1, 0, 0}, {+1, 0, 0}, {+1, 0, 0}, {+1, 0, 0}, {-1, 0, 0}, {-1, 0, 0},
-      {-1, 0, 0}, {-1, 0, 0}, {0, +1, 0}, {0, +1, 0}, {0, +1, 0}, {0, +1, 0},
-      {0, -1, 0}, {0, -1, 0}, {0, -1, 0}, {0, -1, 0}};
+        {0, 0, +1}, {0, 0, +1}, {0, 0, -1}, {0, 0, -1}, {0, 0, -1}, {0, 0, -1},
+        {+1, 0, 0}, {+1, 0, 0}, {+1, 0, 0}, {+1, 0, 0}, {-1, 0, 0}, {-1, 0, 0},
+        {-1, 0, 0}, {-1, 0, 0}, {0, +1, 0}, {0, +1, 0}, {0, +1, 0}, {0, +1, 0},
+        {0, -1, 0}, {0, -1, 0}, {0, -1, 0}, {0, -1, 0}};
   static const auto cube_texcoords = vector<vec2f>{{0, 1}, {1, 1}, {1, 0},
       {0, 0}, {0, 1}, {1, 1}, {1, 0}, {0, 0}, {0, 1}, {1, 1}, {1, 0}, {0, 0},
       {0, 1}, {1, 1}, {1, 0}, {0, 0}, {0, 1}, {1, 1}, {1, 0}, {0, 0}, {0, 1},
       {1, 1}, {1, 0}, {0, 0}};
   static const auto cube_quads     = vector<vec4i>{{0, 1, 2, 3}, {4, 5, 6, 7},
-      {8, 9, 10, 11}, {12, 13, 14, 15}, {16, 17, 18, 19}, {20, 21, 22, 23}};
+          {8, 9, 10, 11}, {12, 13, 14, 15}, {16, 17, 18, 19}, {20, 21, 22, 23}};
   if (subdivisions == 0) {
     quads     = cube_quads;
     positions = cube_positions;
@@ -3928,16 +3923,16 @@ void make_fvcube(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
       {+1, +1, +1}, {-1, +1, +1}, {+1, -1, -1}, {-1, -1, -1}, {-1, +1, -1},
       {+1, +1, -1}};
   static const auto fvcube_normals   = vector<vec3f>{{0, 0, +1}, {0, 0, +1},
-      {0, 0, +1}, {0, 0, +1}, {0, 0, -1}, {0, 0, -1}, {0, 0, -1}, {0, 0, -1},
-      {+1, 0, 0}, {+1, 0, 0}, {+1, 0, 0}, {+1, 0, 0}, {-1, 0, 0}, {-1, 0, 0},
-      {-1, 0, 0}, {-1, 0, 0}, {0, +1, 0}, {0, +1, 0}, {0, +1, 0}, {0, +1, 0},
-      {0, -1, 0}, {0, -1, 0}, {0, -1, 0}, {0, -1, 0}};
+        {0, 0, +1}, {0, 0, +1}, {0, 0, -1}, {0, 0, -1}, {0, 0, -1}, {0, 0, -1},
+        {+1, 0, 0}, {+1, 0, 0}, {+1, 0, 0}, {+1, 0, 0}, {-1, 0, 0}, {-1, 0, 0},
+        {-1, 0, 0}, {-1, 0, 0}, {0, +1, 0}, {0, +1, 0}, {0, +1, 0}, {0, +1, 0},
+        {0, -1, 0}, {0, -1, 0}, {0, -1, 0}, {0, -1, 0}};
   static const auto fvcube_texcoords = vector<vec2f>{{0, 1}, {1, 1}, {1, 0},
       {0, 0}, {0, 1}, {1, 1}, {1, 0}, {0, 0}, {0, 1}, {1, 1}, {1, 0}, {0, 0},
       {0, 1}, {1, 1}, {1, 0}, {0, 0}, {0, 1}, {1, 1}, {1, 0}, {0, 0}, {0, 1},
       {1, 1}, {1, 0}, {0, 0}};
   static const auto fvcube_quadspos  = vector<vec4i>{{0, 1, 2, 3}, {4, 5, 6, 7},
-      {1, 4, 7, 2}, {5, 0, 3, 6}, {3, 2, 7, 6}, {1, 0, 5, 4}};
+       {1, 4, 7, 2}, {5, 0, 3, 6}, {3, 2, 7, 6}, {1, 0, 5, 4}};
   static const auto fvcube_quadsnorm = vector<vec4i>{{0, 1, 2, 3}, {4, 5, 6, 7},
       {8, 9, 10, 11}, {12, 13, 14, 15}, {16, 17, 18, 19}, {20, 21, 22, 23}};
   static const auto fvcube_quadstexcoord = vector<vec4i>{{0, 1, 2, 3},
