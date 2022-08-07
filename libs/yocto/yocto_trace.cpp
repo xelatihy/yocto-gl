@@ -98,7 +98,7 @@ trace_bvh make_trace_bvh(const scene_data& scene, const trace_params& params) {
 // Ray-intersection shortcuts
 static scene_intersection intersect_scene(const trace_bvh& bvh,
     const scene_data& scene, const ray3f& ray, bool find_any = false) {
-  if (bvh.ebvh.instances.ebvh) {
+  if (bvh.ebvh.ebvh) {
     return intersect_scene_ebvh(bvh.ebvh, scene, ray, find_any);
   } else {
     return intersect_scene_bvh(bvh.bvh, scene, ray, find_any);
@@ -107,7 +107,7 @@ static scene_intersection intersect_scene(const trace_bvh& bvh,
 static scene_intersection intersect_instance(const trace_bvh& bvh,
     const scene_data& scene, int instance, const ray3f& ray,
     bool find_any = false) {
-  if (bvh.ebvh.instances.ebvh) {
+  if (bvh.ebvh.ebvh) {
     return intersect_instance_ebvh(bvh.ebvh, scene, instance, ray, find_any);
   } else {
     return intersect_instance_bvh(bvh.bvh, scene, instance, ray, find_any);

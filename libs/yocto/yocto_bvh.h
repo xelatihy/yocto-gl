@@ -131,17 +131,17 @@ scene_intersection overlap_scene_bvh(const scene_bvh& bvh,
 namespace yocto {
 
 // Wrapper for Intel's Embree
-struct ebvh_tree {
-  unique_ptr<void, void (*)(void*)> ebvh = {nullptr, nullptr};
+using ebvh_tree = unique_ptr<void, void (*)(void*)>;
+
+// Wrapper for Intel Embree.
+struct shape_ebvh {
+  ebvh_tree ebvh = {nullptr, nullptr};
 };
 
 // Wrapper for Intel Embree.
-using shape_ebvh = ebvh_tree;
-
-// Wrapper for Intel Embree.
 struct scene_ebvh {
-  ebvh_tree         instances = {};  // instances
-  vector<ebvh_tree> shapes    = {};  // shapes
+  ebvh_tree          ebvh   = {nullptr, nullptr};  // instances
+  vector<shape_ebvh> shapes = {};                  // shapes
 };
 
 // Check if embree is supported

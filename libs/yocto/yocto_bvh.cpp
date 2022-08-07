@@ -999,10 +999,10 @@ scene_ebvh make_scene_ebvh(
   }
 
   // scene bvh
-  auto edevice        = embree_device();
-  sbvh.instances.ebvh = unique_ptr<void, void (*)(void*)>{
-      rtcNewScene(edevice), &clear_ebvh};
-  auto escene = (RTCScene)sbvh.instances.ebvh.get();
+  auto edevice = embree_device();
+  sbvh.ebvh    = unique_ptr<void, void (*)(void*)>{
+         rtcNewScene(edevice), &clear_ebvh};
+  auto escene = (RTCScene)sbvh.ebvh.get();
   if (highquality) {
     rtcSetSceneBuildQuality(escene, RTC_BUILD_QUALITY_HIGH);
   } else {
@@ -1031,7 +1031,7 @@ void update_shape_ebvh(shape_ebvh& sbvh, const shape_data& shape) {
 void update_scene_ebvh(scene_ebvh& sbvh, const scene_data& scene,
     const vector<int>& updated_instances, const vector<int>& updated_shapes) {
   // scene bvh
-  auto escene = (RTCScene)sbvh.instances.ebvh.get();
+  auto escene = (RTCScene)sbvh.ebvh.get();
   for (auto instance_id : updated_instances) {
     auto& instance    = scene.instances[instance_id];
     auto  embree_geom = rtcGetGeometry(escene, instance_id);
@@ -1091,7 +1091,7 @@ scene_intersection intersect_scene_ebvh(const scene_ebvh& sbvh,
   embree_ray.hit.instID[0] = RTC_INVALID_GEOMETRY_ID;
   RTCIntersectContext embree_ctx;
   rtcInitIntersectContext(&embree_ctx);
-  rtcIntersect1((RTCScene)sbvh.instances.ebvh.get(), &embree_ctx, &embree_ray);
+  rtcIntersect1((RTCScene)sbvh.ebvh.get(), &embree_ctx, &embree_ray);
   if (embree_ray.hit.geomID == RTC_INVALID_GEOMETRY_ID) return {};
   auto instance = (int)embree_ray.hit.instID[0];
   auto element  = (int)embree_ray.hit.primID;
