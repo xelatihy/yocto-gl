@@ -79,10 +79,11 @@ namespace yocto {
 
 // forward declarations
 struct cuscene_data;
-struct cubvh_data;
+struct cuscene_bvh;
 struct cutrace_state;
 struct cutrace_lights;
 struct cutrace_context;
+using cutrace_bvh = cuscene_bvh;
 
 // Initialize GPU context.
 cutrace_context make_cutrace_context(const trace_params& params);
@@ -94,7 +95,7 @@ void update_cutrace_cameras(cutrace_context& context, cuscene_data& cuscene,
     const scene_data& scene, const trace_params& params);
 
 // Build the bvh acceleration structure.
-cubvh_data make_cutrace_bvh(cutrace_context& context,
+cutrace_bvh make_cutrace_bvh(cutrace_context& context,
     const cuscene_data& cuscene, const trace_params& params);
 
 // Initialize state.
@@ -109,18 +110,18 @@ cutrace_lights make_cutrace_lights(cutrace_context& context,
 
 // Start rendering an image.
 void trace_start(cutrace_context& context, cutrace_state& state,
-    const cuscene_data& cuscene, const cubvh_data& bvh,
+    const cuscene_data& cuscene, const cutrace_bvh& bvh,
     const cutrace_lights& lights, const scene_data& scene,
     const trace_params& params);
 
 // Progressively computes an image.
 void trace_samples(cutrace_context& context, cutrace_state& state,
-    const cuscene_data& cuscene, const cubvh_data& bvh,
+    const cuscene_data& cuscene, const cutrace_bvh& bvh,
     const cutrace_lights& lights, const scene_data& scene,
     const trace_params& params);
 
 void trace_preview(image_data& image, cutrace_context& context,
-    cutrace_state& pstate, const cuscene_data& cuscene, const cubvh_data& bvh,
+    cutrace_state& pstate, const cuscene_data& cuscene, const cutrace_bvh& bvh,
     const cutrace_lights& lights, const scene_data& scene,
     const trace_params& params);
 
@@ -191,8 +192,8 @@ struct cuspan {
   CUdeviceptr device_ptr() const { return _data; }
   size_t      size_in_bytes() const { return _size * sizeof(T); }
   void        swap(cuspan& other) {
-    std::swap(_data, other._data);
-    std::swap(_size, other._size);
+           std::swap(_data, other._data);
+           std::swap(_size, other._size);
   }
 
   CUdeviceptr _data = 0;
@@ -283,15 +284,15 @@ struct cubvh_tree {
   OptixTraversableHandle handle = 0;
 };
 
-struct cubvh_data {
-  cuspan<OptixInstance> instances     = {};
-  cubvh_tree            instances_bvh = {};
-  vector<cubvh_tree>    shapes_bvhs   = {};
+struct cuscene_bvh {
+  cubvh_tree            bvh       = {};
+  vector<cubvh_tree>    shapes    = {};
+  cuspan<OptixInstance> instances = {};
 
-  cubvh_data() {}
-  cubvh_data(cubvh_data&&);
-  cubvh_data& operator=(cubvh_data&&);
-  ~cubvh_data();
+  cuscene_bvh() {}
+  cuscene_bvh(cuscene_bvh&&);
+  cuscene_bvh& operator=(cuscene_bvh&&);
+  ~cuscene_bvh();
 };
 
 // state
