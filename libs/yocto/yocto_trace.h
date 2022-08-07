@@ -135,8 +135,8 @@ struct trace_lights {
 
 // Trace Bvh, a wrapper of a Yocto/Bvh and an Embree one
 struct trace_bvh {
-  scene_bvh        bvh    = {};
-  scene_embree_bvh embree = {};
+  scene_bvh  bvh  = {};
+  scene_ebvh ebvh = {};
 };
 
 // Check is a sampler requires lights

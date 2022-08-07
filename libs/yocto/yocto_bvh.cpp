@@ -878,18 +878,17 @@ static RTCDevice embree_device() {
 }
 
 // Clear Embree bvh
-void clear_embree_bvh(void* embree_bvh) {
-  if (embree_bvh) rtcReleaseScene((RTCScene)embree_bvh);
+void clear_ebvh(void* ebvh) {
+  if (ebvh) rtcReleaseScene((RTCScene)ebvh);
 }
 
 // Build the bvh acceleration structure.
-shape_embree_bvh make_shape_embree_bvh(
-    const shape_data& shape, bool highquality) {
-  auto bvh       = shape_embree_bvh{};
-  auto edevice   = embree_device();
-  bvh.embree_bvh = unique_ptr<void, void (*)(void*)>{
-      rtcNewScene(edevice), &clear_embree_bvh};
-  auto escene = (RTCScene)bvh.embree_bvh.get();
+shape_ebvh make_shape_ebvh(const shape_data& shape, bool highquality) {
+  auto bvh     = shape_ebvh{};
+  auto edevice = embree_device();
+  bvh.bvh      = unique_ptr<void, void (*)(void*)>{
+           rtcNewScene(edevice), &clear_ebvh};
+  auto escene = (RTCScene)bvh.bvh.get();
   if (highquality) {
     rtcSetSceneBuildQuality(escene, RTC_BUILD_QUALITY_HIGH);
   } else {
@@ -967,28 +966,28 @@ shape_embree_bvh make_shape_embree_bvh(
   return bvh;
 }
 
-scene_embree_bvh make_scene_embree_bvh(
+scene_ebvh make_scene_ebvh(
     const scene_data& scene, bool highquality, bool noparallel) {
   // scene bvh
-  auto bvh = scene_embree_bvh{};
+  auto bvh = scene_ebvh{};
 
   // shape bvhs
   bvh.shapes.resize(scene.shapes.size());
   if (noparallel) {
     for (auto idx : range(scene.shapes.size())) {
-      bvh.shapes[idx] = make_shape_embree_bvh(scene.shapes[idx], highquality);
+      bvh.shapes[idx] = make_shape_ebvh(scene.shapes[idx], highquality);
     }
   } else {
     parallel_for(scene.shapes.size(), [&](size_t idx) {
-      bvh.shapes[idx] = make_shape_embree_bvh(scene.shapes[idx], highquality);
+      bvh.shapes[idx] = make_shape_ebvh(scene.shapes[idx], highquality);
     });
   }
 
   // scene bvh
-  auto edevice   = embree_device();
-  bvh.embree_bvh = unique_ptr<void, void (*)(void*)>{
-      rtcNewScene(edevice), &clear_embree_bvh};
-  auto escene = (RTCScene)bvh.embree_bvh.get();
+  auto edevice = embree_device();
+  bvh.bvh      = unique_ptr<void, void (*)(void*)>{
+           rtcNewScene(edevice), &clear_ebvh};
+  auto escene = (RTCScene)bvh.bvh.get();
   if (highquality) {
     rtcSetSceneBuildQuality(escene, RTC_BUILD_QUALITY_HIGH);
   } else {
@@ -999,7 +998,7 @@ scene_embree_bvh make_scene_embree_bvh(
     auto& instance  = scene.instances[instance_id];
     auto& sbvh      = bvh.shapes[instance.shape];
     auto  egeometry = rtcNewGeometry(edevice, RTC_GEOMETRY_TYPE_INSTANCE);
-    rtcSetGeometryInstancedScene(egeometry, (RTCScene)sbvh.embree_bvh.get());
+    rtcSetGeometryInstancedScene(egeometry, (RTCScene)sbvh.bvh.get());
     rtcSetGeometryTransform(
         egeometry, 0, RTC_FORMAT_FLOAT3X4_COLUMN_MAJOR, &instance.frame);
     rtcCommitGeometry(egeometry);
@@ -1011,18 +1010,18 @@ scene_embree_bvh make_scene_embree_bvh(
 }
 
 // Refit bvh data
-void update_shape_embree_bvh(shape_embree_bvh& bvh, const shape_data& shape) {
+void update_shape_ebvh(shape_ebvh& bvh, const shape_data& shape) {
   throw embree_error{"feature not supported"};
 }
-void update_scene_embree_bvh(scene_embree_bvh& bvh, const scene_data& scene,
+void update_scene_ebvh(scene_ebvh& bvh, const scene_data& scene,
     const vector<int>& updated_instances, const vector<int>& updated_shapes) {
   // scene bvh
-  auto escene = (RTCScene)bvh.embree_bvh.get();
+  auto escene = (RTCScene)bvh.bvh.get();
   for (auto instance_id : updated_instances) {
     auto& instance    = scene.instances[instance_id];
     auto& sbvh        = bvh.shapes[instance.shape];
     auto  embree_geom = rtcGetGeometry(escene, instance_id);
-    rtcSetGeometryInstancedScene(embree_geom, (RTCScene)sbvh.embree_bvh.get());
+    rtcSetGeometryInstancedScene(embree_geom, (RTCScene)sbvh.bvh.get());
     rtcSetGeometryTransform(
         embree_geom, 0, RTC_FORMAT_FLOAT3X4_COLUMN_MAJOR, &instance.frame);
     rtcCommitGeometry(embree_geom);
@@ -1033,7 +1032,7 @@ void update_scene_embree_bvh(scene_embree_bvh& bvh, const scene_data& scene,
 // Intersect ray with a bvh returning either the first or any intersection
 // depending on `find_any`. Returns the ray distance , the instance id,
 // the shape element index and the element barycentric coordinates.
-shape_intersection intersect_shape_embree_bvh(const shape_embree_bvh& bvh,
+shape_intersection intersect_shape_ebvh(const shape_ebvh& bvh,
     const shape_data& shape, const ray3f& ray, bool find_any) {
   RTCRayHit embree_ray;
   embree_ray.ray.org_x     = ray.o.x;
@@ -1051,7 +1050,7 @@ shape_intersection intersect_shape_embree_bvh(const shape_embree_bvh& bvh,
   embree_ray.hit.instID[0] = RTC_INVALID_GEOMETRY_ID;
   RTCIntersectContext embree_ctx;
   rtcInitIntersectContext(&embree_ctx);
-  rtcIntersect1((RTCScene)bvh.embree_bvh.get(), &embree_ctx, &embree_ray);
+  rtcIntersect1((RTCScene)bvh.bvh.get(), &embree_ctx, &embree_ray);
   if (embree_ray.hit.geomID == RTC_INVALID_GEOMETRY_ID) return {};
   auto element  = (int)embree_ray.hit.primID;
   auto uv       = vec2f{embree_ray.hit.u, embree_ray.hit.v};
@@ -1059,7 +1058,7 @@ shape_intersection intersect_shape_embree_bvh(const shape_embree_bvh& bvh,
   return {element, uv, distance, true};
 }
 
-scene_intersection intersect_scene_embree_bvh(const scene_embree_bvh& bvh,
+scene_intersection intersect_scene_ebvh(const scene_ebvh& bvh,
     const scene_data& scene, const ray3f& ray, bool find_any) {
   RTCRayHit embree_ray;
   embree_ray.ray.org_x     = ray.o.x;
@@ -1077,7 +1076,7 @@ scene_intersection intersect_scene_embree_bvh(const scene_embree_bvh& bvh,
   embree_ray.hit.instID[0] = RTC_INVALID_GEOMETRY_ID;
   RTCIntersectContext embree_ctx;
   rtcInitIntersectContext(&embree_ctx);
-  rtcIntersect1((RTCScene)bvh.embree_bvh.get(), &embree_ctx, &embree_ray);
+  rtcIntersect1((RTCScene)bvh.bvh.get(), &embree_ctx, &embree_ray);
   if (embree_ray.hit.geomID == RTC_INVALID_GEOMETRY_ID) return {};
   auto instance = (int)embree_ray.hit.instID[0];
   auto element  = (int)embree_ray.hit.primID;
@@ -1086,11 +1085,11 @@ scene_intersection intersect_scene_embree_bvh(const scene_embree_bvh& bvh,
   return {instance, element, uv, distance, true};
 }
 
-scene_intersection intersect_instance_embree_bvh(const scene_embree_bvh& bvh,
+scene_intersection intersect_instance_ebvh(const scene_ebvh& bvh,
     const scene_data& scene, int instance_, const ray3f& ray, bool find_any) {
   auto& instance     = scene.instances[instance_];
   auto  inv_ray      = transform_ray(inverse(instance.frame, true), ray);
-  auto  intersection = intersect_shape_embree_bvh(bvh.shapes[instance.shape],
+  auto  intersection = intersect_shape_ebvh(bvh.shapes[instance.shape],
        scene.shapes[instance.shape], inv_ray, find_any);
   if (!intersection.hit) return {};
   return {instance_, intersection.element, intersection.uv,
@@ -1103,34 +1102,33 @@ scene_intersection intersect_instance_embree_bvh(const scene_embree_bvh& bvh,
 bool embree_supported() { return false; }
 
 // Not implemented
-shape_embree_bvh make_shape_embree_bvh(
-    const shape_data& shape, bool highquality) {
+shape_ebvh make_shape_ebvh(const shape_data& shape, bool highquality) {
   throw embree_error{"Embree not available"};
 }
-scene_embree_bvh make_scene_embree_bvh(
+scene_ebvh make_scene_ebvh(
     const scene_data& scene, bool highquality, bool noparallel) {
   throw embree_error{"Embree not available"};
 }
 
 // Not implemented
-void update_shape_embree_bvh(shape_embree_bvh& bvh, const shape_data& shape) {
+void update_shape_ebvh(shape_ebvh& bvh, const shape_data& shape) {
   throw embree_error{"Embree not available"};
 }
-void update_scene_embree_bvh(scene_embree_bvh& bvh, const scene_data& scene,
+void update_scene_ebvh(scene_ebvh& bvh, const scene_data& scene,
     const vector<int>& updated_instances, const vector<int>& updated_shapes) {
   throw embree_error{"Embree not available"};
 }
 
 // Not implemented
-shape_intersection intersect_shape_embree_bvh(const shape_embree_bvh& bvh,
+shape_intersection intersect_shape_ebvh(const shape_ebvh& bvh,
     const shape_data& shape, const ray3f& ray, bool find_any) {
   throw embree_error{"Embree not available"};
 }
-scene_intersection intersect_scene_embree_bvh(const scene_embree_bvh& bvh,
+scene_intersection intersect_scene_ebvh(const scene_ebvh& bvh,
     const scene_data& scene, const ray3f& ray, bool find_any) {
   throw embree_error{"Embree not available"};
 }
-scene_intersection intersect_instance_embree_bvh(const scene_embree_bvh& bvh,
+scene_intersection intersect_instance_ebvh(const scene_ebvh& bvh,
     const scene_data& scene, int instance, const ray3f& ray, bool find_any) {
   throw embree_error{"Embree not available"};
 }
