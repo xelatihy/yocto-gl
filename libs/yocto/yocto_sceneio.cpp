@@ -3695,6 +3695,11 @@ static bool load_json_scene(
         get_opt(element, "frame", instance.frame);
         get_opt(element, "shape", instance.shape);
         get_opt(element, "material", instance.material);
+        if (element.contains("lookat")) {
+          get_opt(element, "lookat", (mat3f&)instance.frame);
+          instance.frame = lookat_frame(
+              instance.frame.x, instance.frame.y, instance.frame.z, true);
+        }
       }
     }
     if (json.contains("environments")) {
@@ -3708,6 +3713,11 @@ static bool load_json_scene(
         get_opt(element, "frame", environment.frame);
         get_opt(element, "emission", environment.emission);
         get_opt(element, "emission_tex", environment.emission_tex);
+        if (element.contains("lookat")) {
+          get_opt(element, "lookat", (mat3f&)environment.frame);
+          environment.frame = lookat_frame(environment.frame.x,
+              environment.frame.y, environment.frame.z, true);
+        }
       }
     }
   } catch (...) {
