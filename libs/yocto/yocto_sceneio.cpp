@@ -3606,6 +3606,12 @@ static bool load_json_scene(
         get_opt(element, "film", camera.film);
         get_opt(element, "focus", camera.focus);
         get_opt(element, "aperture", camera.aperture);
+        if (element.contains("lookat")) {
+          get_opt(element, "lookat", (mat3f&)camera.frame);
+          camera.focus = length(camera.frame.x - camera.frame.y);
+          camera.frame = lookat_frame(
+              camera.frame.x, camera.frame.y, camera.frame.z);
+        }
       }
     }
     if (json.contains("textures")) {
