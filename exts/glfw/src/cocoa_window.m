@@ -875,6 +875,11 @@ static GLFWbool createNativeWindow(_GLFWwindow* window,
     _glfwPlatformGetWindowSize(window, &window->ns.width, &window->ns.height);
     _glfwPlatformGetFramebufferSize(window, &window->ns.fbWidth, &window->ns.fbHeight);
 
+    // Fabio FIX
+    // from https://github.com/google/filament/blob/main/libs/filamentapp/src/NativeWindowHelperCocoa.mm
+    // function prepareNativeWindow
+    [window->ns.object setColorSpace:[NSColorSpace sRGBColorSpace]];
+
     return GLFW_TRUE;
 }
 
