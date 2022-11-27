@@ -196,6 +196,67 @@ static string path_join(
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// FILE WATCHER
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Initialize file watcher
+watch_context make_watch_context(const vector<string>& filenames, int delay) {
+  return {{0}, {}, filenames, vector<int64_t>(filenames.size(), 0),
+      (int64_t)delay, {false}};
+}
+
+// Start file watcher
+void watch_start(watch_context& context) {
+  // stop
+  if (context.worker.valid()) context.worker.get();
+  context.stop = false;
+
+  // initialize file times
+  for (auto index : range(context.filenames.size())) {
+    auto time = std::filesystem::last_write_time(context.filenames[index])
+                    .time_since_epoch()
+                    .count();
+    context.filetimes[index] = (int64_t)time;
+  }
+
+  // start watcher
+  context.worker = std::async(std::launch::async, [&]() {
+    // until done
+    while (!context.stop) {
+      // sleep
+      std::this_thread::sleep_for(std::chrono::milliseconds(context.delay));
+
+      // check times
+      auto changed = false;
+      for (auto index : range(context.filenames.size())) {
+        auto time = std::filesystem::last_write_time(context.filenames[index])
+                        .time_since_epoch()
+                        .count();
+        if ((int64_t)time != context.filetimes[index]) {
+          changed                  = true;
+          context.filetimes[index] = (int64_t)time;
+        }
+      }
+
+      // update version
+      if (changed) context.version++;
+    }
+  });
+}
+
+// Stop file watcher
+void watch_stop(watch_context& context) {
+  context.stop = true;
+  if (context.worker.valid()) context.worker.get();
+}
+
+// Got file versions
+int get_version(const watch_context& context) { return context.version; }
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // FILE IO
 // -----------------------------------------------------------------------------
 namespace yocto {

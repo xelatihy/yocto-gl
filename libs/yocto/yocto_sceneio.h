@@ -314,4 +314,31 @@ bool make_directory(const string& path, string& error);
 
 }  // namespace yocto
 
+// -----------------------------------------------------------------------------
+// FILE WATCHER
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// File watcher
+struct watch_context {
+  std::atomic<int>  version   = 0;
+  std::future<void> worker    = {};
+  vector<string>    filenames = {};
+  vector<int64_t>   filetimes = {};
+  int64_t           delay     = 500;
+  std::atomic<bool> stop      = false;
+};
+
+// Initialize file watcher
+watch_context make_watch_context(
+    const vector<string>& filenames, int delay = 500);
+// Start file watcher
+void watch_start(watch_context& context);
+// Stop file watcher
+void watch_stop(watch_context& context);
+// Get file version
+int get_version(const watch_context& context);
+
+}  // namespace yocto
+
 #endif
