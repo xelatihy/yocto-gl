@@ -583,7 +583,7 @@ void show_colorgrade_gui(
 
 // Open a window and show an scene via path tracing
 void show_trace_gui(const string& title, const string& name, scene_data& scene,
-    const trace_params& params_, bool print, bool edit) {
+    const trace_params& params_, float scale, bool print, bool edit) {
   // copy params and camera
   auto params = params_;
 
@@ -609,6 +609,10 @@ void show_trace_gui(const string& title, const string& name, scene_data& scene,
   auto glimage     = glimage_state{};
   auto glparams    = glimage_params{};
   glparams.tonemap = true;
+  if (scale > 0) {
+    glparams.scale = scale;
+    glparams.fit   = false;
+  }
 
   // top level combo
   auto names    = vector<string>{name};
@@ -1843,8 +1847,8 @@ static void draw_scene(glscene_state& glscene, const scene_data& scene,
       normalize(vec3f{-1, 1, 1}), normalize(vec3f{-1, -1, 1}),
       normalize(vec3f{0.1f, 0.5f, -1})};
   static auto lights_emission  = vector<vec3f>{vec3f{pif / 2, pif / 2, pif / 2},
-      vec3f{pif / 2, pif / 2, pif / 2}, vec3f{pif / 4, pif / 4, pif / 4},
-      vec3f{pif / 4, pif / 4, pif / 4}};
+       vec3f{pif / 2, pif / 2, pif / 2}, vec3f{pif / 4, pif / 4, pif / 4},
+       vec3f{pif / 4, pif / 4, pif / 4}};
   if (params.lighting == shade_lighting::camlight) {
     glUniform1i(glGetUniformLocation(program, "lighting"), 1);
     glUniform3f(glGetUniformLocation(program, "ambient"), 0, 0, 0);

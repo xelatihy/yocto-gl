@@ -77,7 +77,8 @@ void show_colorgrade_gui(
 
 // Open a window and show an scene via path tracing
 void show_trace_gui(const string& title, const string& name, scene_data& scene,
-    const trace_params& params = {}, bool print = true, bool edit = false);
+    const trace_params& params = {}, float scale = 0, bool print = true,
+    bool edit = false);
 
 // Open a window and show an scene via path tracing in cuda
 void show_cutrace_gui(const string& title, const string& name,
