@@ -222,6 +222,8 @@ struct cutexture_data {
   int         width   = 0;
   int         height  = 0;
   bool        linear  = false;
+  bool        nearest = false;
+  bool        clamp   = false;
   CUtexObject texture = 0;
   CUarray     array   = nullptr;
 };

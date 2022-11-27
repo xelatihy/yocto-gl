@@ -596,10 +596,12 @@ cuscene_data make_cutrace_scene(cutrace_context& context,
   // textures
   auto cutextures = vector<cutexture_data>{};
   for (auto& texture : scene.textures) {
-    auto& cutexture  = cutextures.emplace_back();
-    cutexture.width  = texture.width;
-    cutexture.height = texture.height;
-    cutexture.linear = texture.linear;
+    auto& cutexture   = cutextures.emplace_back();
+    cutexture.width   = texture.width;
+    cutexture.height  = texture.height;
+    cutexture.linear  = texture.linear;
+    cutexture.nearest = texture.nearest;
+    cutexture.clamp   = texture.clamp;
 
     auto as_byte = !texture.pixelsb.empty();
 

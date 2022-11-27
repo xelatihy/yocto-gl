@@ -152,6 +152,16 @@ struct vec4f {
   inline const float& operator[](int i) const;
 };
 
+// Zero vector constants.
+constexpr auto zero2f = vec2f{0, 0};
+constexpr auto zero3f = vec3f{0, 0, 0};
+constexpr auto zero4f = vec4f{0, 0, 0, 0};
+
+// One vector constants.
+constexpr auto one2f = vec2f{1, 1};
+constexpr auto one3f = vec3f{1, 1, 1};
+constexpr auto one4f = vec4f{1, 1, 1, 1};
+
 // Element access
 inline vec3f xyz(const vec4f& a);
 
@@ -448,6 +458,12 @@ struct vec4b {
   inline const byte& operator[](int i) const;
 };
 
+// Zero vector constants.
+constexpr auto zero2i = vec2i{0, 0};
+constexpr auto zero3i = vec3i{0, 0, 0};
+constexpr auto zero4i = vec4i{0, 0, 0, 0};
+constexpr auto zero4b = vec4b{0, 0, 0, 0};
+
 // Element access
 inline vec3i xyz(const vec4i& a);
 
@@ -654,6 +670,12 @@ struct mat4f {
   inline const vec4f& operator[](int i) const;
 };
 
+// Identity matrices constants.
+constexpr auto identity2x2f = mat2f{{1, 0}, {0, 1}};
+constexpr auto identity3x3f = mat3f{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
+constexpr auto identity4x4f = mat4f{
+    {1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
+
 // Matrix comparisons.
 inline bool operator==(const mat2f& a, const mat2f& b);
 inline bool operator!=(const mat2f& a, const mat2f& b);
@@ -755,6 +777,11 @@ struct frame3f {
   inline const vec3f& operator[](int i) const;
 };
 
+// Identity frames.
+constexpr auto identity2x3f = frame2f{{1, 0}, {0, 1}, {0, 0}};
+constexpr auto identity3x4f = frame3f{
+    {1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}};
+
 // Frame properties
 inline mat2f rotation(const frame2f& a);
 inline vec2f translation(const frame2f& a);
@@ -817,6 +844,9 @@ struct quat4f {
   float z = 0;
   float w = 1;
 };
+
+// Constants
+constexpr auto identity_quat4f = quat4f{0, 0, 0, 1};
 
 // Quaternion operatons
 inline quat4f operator+(const quat4f& a, const quat4f& b);
@@ -2145,8 +2175,8 @@ inline quat4f normalize(const quat4f& a) {
 inline quat4f conjugate(const quat4f& a) { return {-a.x, -a.y, -a.z, a.w}; }
 inline quat4f inverse(const quat4f& a) { return conjugate(a) / dot(a, a); }
 inline float  uangle(const quat4f& a, const quat4f& b) {
-  auto d = dot(a, b);
-  return d > 1 ? 0 : acos(d < -1 ? -1 : d);
+   auto d = dot(a, b);
+   return d > 1 ? 0 : acos(d < -1 ? -1 : d);
 }
 inline quat4f lerp(const quat4f& a, const quat4f& b, float t) {
   return a * (1 - t) + b * t;
@@ -2654,7 +2684,7 @@ constexpr auto enumerate(const Sequence& sequence, T start) {
     T        index;
     Iterator iterator;
     bool     operator!=(const enumerate_iterator& other) const {
-      return index != other.index;
+          return index != other.index;
     }
     void operator++() {
       ++index;
@@ -2680,7 +2710,7 @@ constexpr auto enumerate(Sequence& sequence, T start) {
     T        index;
     Iterator iterator;
     bool     operator!=(const enumerate_iterator& other) const {
-      return index != other.index;
+          return index != other.index;
     }
     void operator++() {
       ++index;
@@ -2708,7 +2738,7 @@ constexpr auto zip(const Sequence1& sequence1, const Sequence2& sequence2) {
     Iterator1 iterator1;
     Iterator2 iterator2;
     bool      operator!=(const zip_iterator& other) const {
-      return iterator1 != other.iterator1;
+           return iterator1 != other.iterator1;
     }
     void operator++() {
       ++iterator1;
@@ -2722,7 +2752,7 @@ constexpr auto zip(const Sequence1& sequence1, const Sequence2& sequence2) {
     const Sequence1& sequence1;
     const Sequence2& sequence2;
     auto             begin() {
-      return zip_iterator{std::begin(sequence1), std::begin(sequence2)};
+                  return zip_iterator{std::begin(sequence1), std::begin(sequence2)};
     }
     auto end() {
       return zip_iterator{std::end(sequence1), std::end(sequence2)};
@@ -2742,7 +2772,7 @@ constexpr auto zip(Sequence1& sequence1, Sequence2& sequence2) {
     Iterator1 iterator1;
     Iterator2 iterator2;
     bool      operator!=(const zip_iterator& other) const {
-      return iterator1 != other.iterator1;
+           return iterator1 != other.iterator1;
     }
     void operator++() {
       ++iterator1;
@@ -2756,7 +2786,7 @@ constexpr auto zip(Sequence1& sequence1, Sequence2& sequence2) {
     Sequence1& sequence1;
     Sequence2& sequence2;
     auto       begin() {
-      return zip_iterator{std::begin(sequence1), std::begin(sequence2)};
+            return zip_iterator{std::begin(sequence1), std::begin(sequence2)};
     }
     auto end() {
       return zip_iterator{std::end(sequence1), std::end(sequence2)};
@@ -2776,7 +2806,7 @@ constexpr auto zip(const Sequence1& sequence1, Sequence2& sequence2) {
     Iterator1 iterator1;
     Iterator2 iterator2;
     bool      operator!=(const zip_iterator& other) const {
-      return iterator1 != other.iterator1;
+           return iterator1 != other.iterator1;
     }
     void operator++() {
       ++iterator1;
@@ -2790,7 +2820,7 @@ constexpr auto zip(const Sequence1& sequence1, Sequence2& sequence2) {
     const Sequence1& sequence1;
     Sequence2&       sequence2;
     auto             begin() {
-      return zip_iterator{std::begin(sequence1), std::begin(sequence2)};
+                  return zip_iterator{std::begin(sequence1), std::begin(sequence2)};
     }
     auto end() {
       return zip_iterator{std::end(sequence1), std::end(sequence2)};
@@ -2810,7 +2840,7 @@ constexpr auto zip(Sequence1& sequence1, const Sequence2& sequence2) {
     Iterator1 iterator1;
     Iterator2 iterator2;
     bool      operator!=(const zip_iterator& other) const {
-      return iterator1 != other.iterator1;
+           return iterator1 != other.iterator1;
     }
     void operator++() {
       ++iterator1;
@@ -2824,7 +2854,7 @@ constexpr auto zip(Sequence1& sequence1, const Sequence2& sequence2) {
     Sequence1&       sequence1;
     const Sequence2& sequence2;
     auto             begin() {
-      return zip_iterator{std::begin(sequence1), std::begin(sequence2)};
+                  return zip_iterator{std::begin(sequence1), std::begin(sequence2)};
     }
     auto end() {
       return zip_iterator{std::end(sequence1), std::end(sequence2)};
@@ -2844,44 +2874,6 @@ template <typename T>
 inline std::ptrdiff_t ssize(const T& container) {
   return (std::ptrdiff_t)std::size(container);
 }
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// BACKWARD COMPATIBILITY
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Zero vector constants.
-[[deprecated]] constexpr auto zero2f = vec2f{0, 0};
-[[deprecated]] constexpr auto zero3f = vec3f{0, 0, 0};
-[[deprecated]] constexpr auto zero4f = vec4f{0, 0, 0, 0};
-
-// One vector constants.
-[[deprecated]] constexpr auto one2f = vec2f{1, 1};
-[[deprecated]] constexpr auto one3f = vec3f{1, 1, 1};
-[[deprecated]] constexpr auto one4f = vec4f{1, 1, 1, 1};
-
-// Zero vector constants.
-[[deprecated]] constexpr auto zero2i = vec2i{0, 0};
-[[deprecated]] constexpr auto zero3i = vec3i{0, 0, 0};
-[[deprecated]] constexpr auto zero4i = vec4i{0, 0, 0, 0};
-[[deprecated]] constexpr auto zero4b = vec4b{0, 0, 0, 0};
-
-// Indentity frames.
-[[deprecated]] constexpr auto identity2x3f = frame2f{{1, 0}, {0, 1}, {0, 0}};
-[[deprecated]] constexpr auto identity3x4f = frame3f{
-    {1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}};
-
-// Identity matrices constants.
-[[deprecated]] constexpr auto identity2x2f = mat2f{{1, 0}, {0, 1}};
-[[deprecated]] constexpr auto identity3x3f = mat3f{
-    {1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
-[[deprecated]] constexpr auto identity4x4f = mat4f{
-    {1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
-
-// Constants
-[[deprecated]] constexpr auto identity_quat4f = quat4f{0, 0, 0, 1};
 
 }  // namespace yocto
 

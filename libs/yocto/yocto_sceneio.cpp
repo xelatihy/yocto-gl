@@ -3625,6 +3625,9 @@ static bool load_json_scene(
         auto&                  uri     = texture_filenames.emplace_back();
         get_opt(element, "name", name);
         get_opt(element, "uri", uri);
+        get_opt(element, "linear", texture.linear);
+        get_opt(element, "nearest", texture.nearest);
+        get_opt(element, "clamp", texture.clamp);
       }
     }
     if (json.contains("materials")) {
@@ -3878,12 +3881,16 @@ static bool save_json_scene(const string& filename, const scene_data& scene,
   }
 
   if (!scene.textures.empty()) {
-    auto& group = add_array(json, "textures");
+    auto  default_ = texture_data{};
+    auto& group    = add_array(json, "textures");
     reserve_values(group, scene.textures.size());
     for (auto&& [idx, texture] : enumerate(scene.textures)) {
       auto& element = append_object(group);
       set_val(element, "name", get_name(scene.texture_names, idx), "");
       set_val(element, "uri", texture_filenames[idx], ""s);
+      set_val(element, "linear", texture.linear, default_.linear);
+      set_val(element, "nearest", texture.nearest, default_.nearest);
+      set_val(element, "clamp", texture.clamp, default_.clamp);
     }
   }
 

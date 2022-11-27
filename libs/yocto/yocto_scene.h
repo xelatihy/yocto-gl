@@ -96,6 +96,8 @@ struct texture_data {
   int           width   = 0;
   int           height  = 0;
   bool          linear  = false;
+  bool          nearest = false;
+  bool          clamp   = false;
   vector<vec4f> pixelsf = {};
   vector<vec4b> pixelsb = {};
 };
@@ -229,12 +231,14 @@ ray3f eval_camera(
 namespace yocto {
 
 // Evaluates a texture
-vec4f eval_texture(const texture_data& texture, const vec2f& uv,
-    bool as_linear = false, bool no_interpolation = false,
-    bool clamp_to_edge = false);
+vec4f eval_texture(
+    const texture_data& texture, const vec2f& uv, bool as_linear = false);
 vec4f eval_texture(const scene_data& scene, int texture, const vec2f& uv,
-    bool as_linear = false, bool no_interpolation = false,
-    bool clamp_to_edge = false);
+    bool as_linear = false);
+vec4f eval_texture(const texture_data& texture, const vec2f& uv, bool as_linear,
+    bool no_interpolation, bool clamp_to_edge);
+vec4f eval_texture(const scene_data& scene, int texture, const vec2f& uv,
+    bool as_linear, bool no_interpolation, bool clamp_to_edge);
 
 // pixel access
 vec4f lookup_texture(

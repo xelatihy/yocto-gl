@@ -782,7 +782,7 @@ shape_data make_sphere(int steps, float scale, float uvscale) {
 // Make a sphere.
 shape_data make_uvsphere(
     const vec2i& steps, float scale, const vec2f& uvscale) {
-  auto shape = make_rect({1, 1}, {1, 1});
+  auto shape = make_rect(steps, {1, 1});
   for (auto i : range(shape.positions.size())) {
     auto uv = shape.texcoords[i];
     auto a  = vec2f{2 * pif * uv.x, pif * (1 - uv.y)};
@@ -3172,7 +3172,7 @@ vector<float> sample_quads_cdf(
   for (auto i : range(cdf.size())) {
     auto& q = quads[i];
     auto  w = quad_area(
-         positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
+        positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
     cdf[i] = w + (i ? cdf[i - 1] : 0);
   }
   return cdf;
@@ -3182,7 +3182,7 @@ void sample_quads_cdf(vector<float>& cdf, const vector<vec4i>& quads,
   for (auto i : range(cdf.size())) {
     auto& q = quads[i];
     auto  w = quad_area(
-         positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
+        positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
     cdf[i] = w + (i ? cdf[i - 1] : 0);
   }
 }

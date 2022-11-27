@@ -158,13 +158,23 @@ vec4f eval_texture(const texture_data& texture, const vec2f& uv, bool as_linear,
            lookup_texture(texture, ii, jj, as_linear) * u * v;
   }
 }
+vec4f eval_texture(
+    const texture_data& texture, const vec2f& uv, bool as_linear) {
+  return eval_texture(texture, uv, as_linear, texture.nearest, texture.clamp);
+}
 
 // Helpers
+vec4f eval_texture(
+    const scene_data& scene, int texture, const vec2f& uv, bool ldr_as_linear) {
+  if (texture == invalidid) return {1, 1, 1, 1};
+  return eval_texture(scene.textures[texture], uv, ldr_as_linear,
+      scene.textures[texture].nearest, scene.textures[texture].clamp);
+}
 vec4f eval_texture(const scene_data& scene, int texture, const vec2f& uv,
     bool ldr_as_linear, bool no_interpolation, bool clamp_to_edge) {
   if (texture == invalidid) return {1, 1, 1, 1};
-  return eval_texture(
-      scene.textures[texture], uv, ldr_as_linear, no_interpolation);
+  return eval_texture(scene.textures[texture], uv, ldr_as_linear,
+      no_interpolation, clamp_to_edge);
 }
 
 // conversion from image
@@ -205,7 +215,7 @@ material_point eval_material(const scene_data& scene,
   // material point
   auto point         = material_point{};
   point.type         = material.type;
-  point.emission     = material.emission * xyz(emission_tex);
+  point.emission     = material.emission * xyz(emission_tex) * xyz(color_shp);
   point.color        = material.color * xyz(color_tex) * xyz(color_shp);
   point.opacity      = material.opacity * color_tex.w * color_shp.w;
   point.metallic     = material.metallic * roughness_tex.z;
@@ -536,7 +546,7 @@ material_point eval_material(const scene_data& scene,
   // material point
   auto point         = material_point{};
   point.type         = material.type;
-  point.emission     = material.emission * xyz(emission_tex);
+  point.emission     = material.emission * xyz(emission_tex) * xyz(color_shp);
   point.color        = material.color * xyz(color_tex) * xyz(color_shp);
   point.opacity      = material.opacity * color_tex.w * color_shp.w;
   point.metallic     = material.metallic * roughness_tex.z;
@@ -773,7 +783,7 @@ void tesselate_subdiv(
       for (auto i : range(4)) {
         auto& displacement_tex = scene.textures[subdiv.displacement_tex];
         auto  disp             = mean(
-                         eval_texture(displacement_tex, subdiv.texcoords[qtxt[i]], false));
+            eval_texture(displacement_tex, subdiv.texcoords[qtxt[i]], false));
         if (!displacement_tex.pixelsb.empty()) disp -= 0.5f;
         offset[qpos[i]] += subdiv.displacement * disp;
         count[qpos[i]] += 1;
@@ -1015,17 +1025,17 @@ scene_data make_cornellbox() {
 
   auto& shortbox_shape       = scene.shapes.emplace_back();
   shortbox_shape.positions   = {{0.53f, 0.6f, 0.75f}, {0.7f, 0.6f, 0.17f},
-      {0.13f, 0.6f, 0.0f}, {-0.05f, 0.6f, 0.57f}, {-0.05f, 0.0f, 0.57f},
-      {-0.05f, 0.6f, 0.57f}, {0.13f, 0.6f, 0.0f}, {0.13f, 0.0f, 0.0f},
-      {0.53f, 0.0f, 0.75f}, {0.53f, 0.6f, 0.75f}, {-0.05f, 0.6f, 0.57f},
-      {-0.05f, 0.0f, 0.57f}, {0.7f, 0.0f, 0.17f}, {0.7f, 0.6f, 0.17f},
-      {0.53f, 0.6f, 0.75f}, {0.53f, 0.0f, 0.75f}, {0.13f, 0.0f, 0.0f},
-      {0.13f, 0.6f, 0.0f}, {0.7f, 0.6f, 0.17f}, {0.7f, 0.0f, 0.17f},
-      {0.53f, 0.0f, 0.75f}, {0.7f, 0.0f, 0.17f}, {0.13f, 0.0f, 0.0f},
-      {-0.05f, 0.0f, 0.57f}};
+        {0.13f, 0.6f, 0.0f}, {-0.05f, 0.6f, 0.57f}, {-0.05f, 0.0f, 0.57f},
+        {-0.05f, 0.6f, 0.57f}, {0.13f, 0.6f, 0.0f}, {0.13f, 0.0f, 0.0f},
+        {0.53f, 0.0f, 0.75f}, {0.53f, 0.6f, 0.75f}, {-0.05f, 0.6f, 0.57f},
+        {-0.05f, 0.0f, 0.57f}, {0.7f, 0.0f, 0.17f}, {0.7f, 0.6f, 0.17f},
+        {0.53f, 0.6f, 0.75f}, {0.53f, 0.0f, 0.75f}, {0.13f, 0.0f, 0.0f},
+        {0.13f, 0.6f, 0.0f}, {0.7f, 0.6f, 0.17f}, {0.7f, 0.0f, 0.17f},
+        {0.53f, 0.0f, 0.75f}, {0.7f, 0.0f, 0.17f}, {0.13f, 0.0f, 0.0f},
+        {-0.05f, 0.0f, 0.57f}};
   shortbox_shape.triangles   = {{0, 1, 2}, {2, 3, 0}, {4, 5, 6}, {6, 7, 4},
-      {8, 9, 10}, {10, 11, 8}, {12, 13, 14}, {14, 15, 12}, {16, 17, 18},
-      {18, 19, 16}, {20, 21, 22}, {22, 23, 20}};
+        {8, 9, 10}, {10, 11, 8}, {12, 13, 14}, {14, 15, 12}, {16, 17, 18},
+        {18, 19, 16}, {20, 21, 22}, {22, 23, 20}};
   auto& shortbox_material    = scene.materials.emplace_back();
   shortbox_material.color    = {0.725f, 0.71f, 0.68f};
   auto& shortbox_instance    = scene.instances.emplace_back();
@@ -1034,17 +1044,17 @@ scene_data make_cornellbox() {
 
   auto& tallbox_shape       = scene.shapes.emplace_back();
   tallbox_shape.positions   = {{-0.53f, 1.2f, 0.09f}, {0.04f, 1.2f, -0.09f},
-      {-0.14f, 1.2f, -0.67f}, {-0.71f, 1.2f, -0.49f}, {-0.53f, 0.0f, 0.09f},
-      {-0.53f, 1.2f, 0.09f}, {-0.71f, 1.2f, -0.49f}, {-0.71f, 0.0f, -0.49f},
-      {-0.71f, 0.0f, -0.49f}, {-0.71f, 1.2f, -0.49f}, {-0.14f, 1.2f, -0.67f},
-      {-0.14f, 0.0f, -0.67f}, {-0.14f, 0.0f, -0.67f}, {-0.14f, 1.2f, -0.67f},
-      {0.04f, 1.2f, -0.09f}, {0.04f, 0.0f, -0.09f}, {0.04f, 0.0f, -0.09f},
-      {0.04f, 1.2f, -0.09f}, {-0.53f, 1.2f, 0.09f}, {-0.53f, 0.0f, 0.09f},
-      {-0.53f, 0.0f, 0.09f}, {0.04f, 0.0f, -0.09f}, {-0.14f, 0.0f, -0.67f},
-      {-0.71f, 0.0f, -0.49f}};
+        {-0.14f, 1.2f, -0.67f}, {-0.71f, 1.2f, -0.49f}, {-0.53f, 0.0f, 0.09f},
+        {-0.53f, 1.2f, 0.09f}, {-0.71f, 1.2f, -0.49f}, {-0.71f, 0.0f, -0.49f},
+        {-0.71f, 0.0f, -0.49f}, {-0.71f, 1.2f, -0.49f}, {-0.14f, 1.2f, -0.67f},
+        {-0.14f, 0.0f, -0.67f}, {-0.14f, 0.0f, -0.67f}, {-0.14f, 1.2f, -0.67f},
+        {0.04f, 1.2f, -0.09f}, {0.04f, 0.0f, -0.09f}, {0.04f, 0.0f, -0.09f},
+        {0.04f, 1.2f, -0.09f}, {-0.53f, 1.2f, 0.09f}, {-0.53f, 0.0f, 0.09f},
+        {-0.53f, 0.0f, 0.09f}, {0.04f, 0.0f, -0.09f}, {-0.14f, 0.0f, -0.67f},
+        {-0.71f, 0.0f, -0.49f}};
   tallbox_shape.triangles   = {{0, 1, 2}, {2, 3, 0}, {4, 5, 6}, {6, 7, 4},
-      {8, 9, 10}, {10, 11, 8}, {12, 13, 14}, {14, 15, 12}, {16, 17, 18},
-      {18, 19, 16}, {20, 21, 22}, {22, 23, 20}};
+        {8, 9, 10}, {10, 11, 8}, {12, 13, 14}, {14, 15, 12}, {16, 17, 18},
+        {18, 19, 16}, {20, 21, 22}, {22, 23, 20}};
   auto& tallbox_material    = scene.materials.emplace_back();
   tallbox_material.color    = {0.725f, 0.71f, 0.68f};
   auto& tallbox_instance    = scene.instances.emplace_back();
@@ -1053,7 +1063,7 @@ scene_data make_cornellbox() {
 
   auto& light_shape       = scene.shapes.emplace_back();
   light_shape.positions   = {{-0.25f, 1.99f, 0.25f}, {-0.25f, 1.99f, -0.25f},
-      {0.25f, 1.99f, -0.25f}, {0.25f, 1.99f, 0.25f}};
+        {0.25f, 1.99f, -0.25f}, {0.25f, 1.99f, 0.25f}};
   light_shape.triangles   = {{0, 1, 2}, {2, 3, 0}};
   auto& light_material    = scene.materials.emplace_back();
   light_material.emission = {17, 12, 4};

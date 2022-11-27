@@ -75,6 +75,7 @@ enum struct trace_sampler_type {
   pathtest,    // path tracing test
   naive,       // naive path tracing
   eyelight,    // eyelight rendering
+  diagram,     // diagram rendering
   furnace,     // furnace test
   falsecolor,  // false color rendering
 };
@@ -248,6 +249,7 @@ inline const auto trace_sampler_labels =
         {trace_sampler_type::pathtest, "pathtest"},
         {trace_sampler_type::naive, "naive"},
         {trace_sampler_type::eyelight, "eyelight"},
+        {trace_sampler_type::diagram, "diagram"},
         {trace_sampler_type::furnace, "furnace"},
         {trace_sampler_type::falsecolor, "falsecolor"}};
 
