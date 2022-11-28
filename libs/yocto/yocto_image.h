@@ -53,6 +53,7 @@
 namespace yocto {
 
 // using directives
+using std::array;
 using std::string;
 using std::vector;
 

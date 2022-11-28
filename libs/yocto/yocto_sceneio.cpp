@@ -528,6 +528,55 @@ bool is_ldr_filename(const string& filename) {
          ext == ".tga";
 }
 
+// Loads/saves a 3/4 channels float/byte image in linear/srgb color space.
+// Supports data as vec3f, vec4f, vec3b, vec4b.
+template <typename T>
+bool load_image(const string& filename, array2d<T>& image, string& error) {
+  if constexpr (std::is_same_v<T, vec4f>) {
+    auto image_ = color_image{};
+    if (!load_image(filename, image_, error)) return false;
+    image = array2d<T>{image_.width, image_.height};
+    for(auto idx : range(image.size())) image[idx] = image_.pixels[idx];
+    return true;
+  } else {
+    error = filename + ": unsupported image channels";
+    return false;
+  }
+}
+template <typename T>
+bool save_image(
+    const string& filename, const array2d<T>& image, string& error) {
+  if constexpr (std::is_same_v<T, vec4f>) {
+    auto image_ = make_image((int)image.extent(0), (int)image.extent(1), is_hdr_filename(filename));
+    for (auto idx : range(image.size())) image_.pixels[idx] = image[idx];
+    return save_image(filename, image_, error);
+  } else {
+    error = filename + ": unsupported image channels";
+    return false;
+  }
+}
+
+// Explicit instantiations
+template bool load_image(const string&, array2d<vec4f>&, string&);
+template bool save_image(const string&, const array2d<vec4f>&, string&);
+
+// Loads/saves a 3/4 channels float/byte image in linear/srgb color space.
+// Supports data as vec3f, vec4f, vec3b, vec4b.
+template <typename T>
+void load_image(const string& filename, array2d<T>& image) {
+  auto error = string{};
+  if (!load_image(filename, image, error)) throw io_error{error};
+}
+template <typename T>
+void save_image(const string& filename, const array2d<T>& image) {
+  auto error = string{};
+  if (!save_image(filename, image, error)) throw io_error{error};
+}
+
+// Explicit instantiations
+template void load_image(const string&, array2d<vec4f>&);
+template void save_image(const string&, const array2d<vec4f>&);
+
 // Loads/saves an image. Chooses hdr or ldr based on file name.
 bool load_image(const string& filename, image_data& image, string& error) {
   auto read_error = [&]() {

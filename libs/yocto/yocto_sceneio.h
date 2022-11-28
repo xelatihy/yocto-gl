@@ -43,6 +43,7 @@
 #include <string>
 #include <vector>
 
+#include "yocto_ndarray.h"
 #include "yocto_scene.h"
 #include "yocto_trace.h"
 
@@ -77,6 +78,20 @@ namespace yocto {
 // Check if an image is HDR or LDR based on filename.
 bool is_hdr_filename(const string& filename);
 bool is_ldr_filename(const string& filename);
+
+// Loads/saves a 3/4 channels float/byte image in linear/srgb color space.
+// Supports data as vec3f, vec4f, vec3b, vec4b.
+template <typename T>
+bool load_image(const string& filename, array2d<T>& img, string& error);
+template <typename T>
+bool save_image(const string& filename, const array2d<T>& img, string& error);
+
+// Loads/saves a 3/4 channels float/byte image in linear/srgb color space.
+// Supports data as vec3f, vec4f, vec3b, vec4b.
+template <typename T>
+void load_image(const string& filename, array2d<T>& image);
+template <typename T>
+void save_image(const string& filename, const array2d<T>& image);
 
 // Loads/saves a 4 channels float/byte image in linear/srgb color space.
 bool load_image(const string& filename, image_data& img, string& error);

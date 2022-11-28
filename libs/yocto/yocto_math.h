@@ -448,6 +448,15 @@ struct vec4i {
   inline const int& operator[](int i) const;
 };
 
+struct vec3b {
+  byte x = 0;
+  byte y = 0;
+  byte z = 0;
+
+  inline byte&       operator[](int i);
+  inline const byte& operator[](int i) const;
+};
+
 struct vec4b {
   byte x = 0;
   byte y = 0;
@@ -462,10 +471,12 @@ struct vec4b {
 constexpr auto zero2i = vec2i{0, 0};
 constexpr auto zero3i = vec3i{0, 0, 0};
 constexpr auto zero4i = vec4i{0, 0, 0, 0};
+constexpr auto zero3b = vec3b{0, 0, 0};
 constexpr auto zero4b = vec4b{0, 0, 0, 0};
 
 // Element access
 inline vec3i xyz(const vec4i& a);
+inline vec3b xyz(const vec4b& a);
 
 // Vector sequence operations.
 inline int        size(const vec2i& a);
@@ -628,6 +639,10 @@ inline int sum(const vec4i& a);
 // Functions applied to vector elements
 inline vec4i abs(const vec4i& a);
 inline void  swap(vec4i& a, vec4i& b);
+
+// Vector comparison operations.
+inline bool operator==(const vec3b& a, const vec3b& b);
+inline bool operator!=(const vec3b& a, const vec3b& b);
 
 // Vector comparison operations.
 inline bool operator==(const vec4b& a, const vec4b& b);
@@ -1593,6 +1608,10 @@ inline int& vec4i::operator[](int i) { return (&x)[i]; }
 inline const int& vec4i::operator[](int i) const { return (&x)[i]; }
 
 // Vector data types
+inline byte& vec3b::operator[](int i) { return (&x)[i]; }
+inline const byte& vec3b::operator[](int i) const { return (&x)[i]; }
+
+// Vector data types
 inline byte& vec4b::operator[](int i) { return (&x)[i]; }
 inline const byte& vec4b::operator[](int i) const { return (&x)[i]; }
 
@@ -1857,6 +1876,14 @@ inline vec4i abs(const vec4i& a) {
   return {abs(a.x), abs(a.y), abs(a.z), abs(a.w)};
 }
 inline void swap(vec4i& a, vec4i& b) { std::swap(a, b); }
+
+// Vector comparison operations.
+inline bool operator==(const vec3b& a, const vec3b& b) {
+  return a.x == b.x && a.y == b.y && a.z == b.z;
+}
+inline bool operator!=(const vec3b& a, const vec3b& b) {
+  return a.x != b.x || a.y != b.y || a.z != b.z;
+}
 
 // Vector comparison operations.
 inline bool operator==(const vec4b& a, const vec4b& b) {

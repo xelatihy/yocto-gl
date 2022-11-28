@@ -1,6 +1,7 @@
 add_library(yocto STATIC
   yocto_math.h yocto_color.h yocto_geometry.h
   yocto_noise.h yocto_sampling.h yocto_shading.h
+  yocto_ndarray.h
   yocto_bvh.h yocto_bvh.cpp
   yocto_shape.h yocto_shape.cpp
   yocto_image.h yocto_image.cpp
@@ -46,42 +47,42 @@ if(YOCTO_DENOISE)
 endif(YOCTO_DENOISE)
 
 if(YOCTO_CUDA)
+  enable_language(CUDA)
+  set_target_properties(yocto PROPERTIES CUDA_STANDARD 17 CUDA_STANDARD_REQUIRED YES)
 
-enable_language(CUDA)
-set_target_properties(yocto PROPERTIES CUDA_STANDARD 17 CUDA_STANDARD_REQUIRED YES)
+  # Optix
+  if(DEFINED ENV{OptiX_INSTALL_DIR})
+    find_path(OptiX_ROOT_DIR NAMES include/optix.h PATHS $ENV{OptiX_INSTALL_DIR})
+  else()
+    find_path(OptiX_ROOT_DIR NAMES include/optix.h)
+  endif()
 
-# Optix
-if (DEFINED ENV{OptiX_INSTALL_DIR})
-  find_path(OptiX_ROOT_DIR NAMES include/optix.h PATHS $ENV{OptiX_INSTALL_DIR})
-else()
-  find_path(OptiX_ROOT_DIR NAMES include/optix.h)
-endif()
-include(FindPackageHandleStandardArgs)
-find_package_handle_standard_args(OptiX FOUND_VAR OptiX_FOUND REQUIRED_VARS OptiX_ROOT_DIR)
+  include(FindPackageHandleStandardArgs)
+  find_package_handle_standard_args(OptiX FOUND_VAR OptiX_FOUND REQUIRED_VARS OptiX_ROOT_DIR)
 
-add_library(OptiX::OptiX INTERFACE IMPORTED)
-target_include_directories(OptiX::OptiX INTERFACE ${OptiX_ROOT_DIR}/include)
+  add_library(OptiX::OptiX INTERFACE IMPORTED)
+  target_include_directories(OptiX::OptiX INTERFACE ${OptiX_ROOT_DIR}/include)
 
-embed_ptx(
-  OUTPUT_TARGET
+  embed_ptx(
+    OUTPUT_TARGET
     yocto_cutrace_device
-  PTX_LINK_LIBRARIES
+    PTX_LINK_LIBRARIES
     OptiX::OptiX
-  SOURCES
+    SOURCES
     yocto_cutrace.cu
-)
+  )
 
-target_compile_definitions(yocto PUBLIC -DYOCTO_CUDA)
+  target_compile_definitions(yocto PUBLIC -DYOCTO_CUDA)
 
-find_package(CUDAToolkit REQUIRED)
-target_link_libraries(yocto PUBLIC OptiX::OptiX yocto_cutrace_device CUDA::cuda_driver CUDA::cudart_static)
-
+  find_package(CUDAToolkit REQUIRED)
+  target_link_libraries(yocto PUBLIC OptiX::OptiX yocto_cutrace_device CUDA::cuda_driver CUDA::cudart_static)
 endif(YOCTO_CUDA)
 
 # warning flags
 if(APPLE)
   target_compile_options(yocto PUBLIC -Wall -Wconversion -Wno-sign-conversion -Wno-implicit-float-conversion -Wno-unused-variable)
 endif(APPLE)
+
 if(MSVC)
   target_compile_options(yocto PUBLIC /D_CRT_SECURE_NO_WARNINGS)
   target_compile_options(yocto PUBLIC /EHsc)
