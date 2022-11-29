@@ -411,8 +411,13 @@ template <typename T>
 struct mat<T, 1> {
   vec<T, 1> x = {1};
 
-  vec<T, 1>&       operator[](int i);
-  const vec<T, 1>& operator[](int i) const;
+  constexpr mat() : x{1} {}
+  constexpr mat(const vec<T, 1>& x_) : x{x_} {}
+
+  constexpr vec<T, 1>&       operator[](int i) { return ((vec<T, 1>*)this)[i]; }
+  constexpr const vec<T, 1>& operator[](int i) const {
+    return ((vec<T, 1>*)this)[i];
+  }
 };
 
 // Small Fixed-size matrices stored in column major format.
@@ -421,8 +426,13 @@ struct mat<T, 2> {
   vec<T, 2> x = {1, 0};
   vec<T, 2> y = {0, 1};
 
-  vec<T, 2>&       operator[](int i);
-  const vec<T, 2>& operator[](int i) const;
+  constexpr mat() : x{1, 0}, y{0, 1} {}
+  constexpr mat(const vec<T, 2>& x_, const vec<T, 2>& y_) : x{x_}, y{y_} {}
+
+  constexpr vec<T, 2>&       operator[](int i) { return ((vec<T, 2>*)this)[i]; }
+  constexpr const vec<T, 2>& operator[](int i) const {
+    return ((vec<T, 2>*)this)[i];
+  }
 };
 
 // Small Fixed-size matrices stored in column major format.
@@ -432,8 +442,14 @@ struct mat<T, 3> {
   vec<T, 3> y = {0, 1, 0};
   vec<T, 3> z = {0, 0, 1};
 
-  vec<T, 3>&       operator[](int i);
-  const vec<T, 3>& operator[](int i) const;
+  constexpr mat() : x{1, 0, 0}, y{0, 1, 0}, z{0, 0, 1} {}
+  constexpr mat(const vec<T, 3>& x_, const vec<T, 3>& y_, const vec<T, 3>& z_)
+      : x{x_}, y{y_}, z{z_} {}
+
+  constexpr vec<T, 3>&       operator[](int i) { return ((vec<T, 3>*)this)[i]; }
+  constexpr const vec<T, 3>& operator[](int i) const {
+    return ((vec<T, 3>*)this)[i];
+  }
 };
 
 // Small Fixed-size matrices stored in column major format.
@@ -444,8 +460,16 @@ struct mat<T, 4> {
   vec<T, 4> z = {0, 0, 1, 0};
   vec<T, 4> w = {0, 0, 0, 1};
 
-  vec<T, 4>&       operator[](int i);
-  const vec<T, 4>& operator[](int i) const;
+  constexpr mat()
+      : x{1, 0, 0, 0}, y{0, 1, 0, 0}, z{0, 0, 1, 0}, w{0, 0, 0, 1} {}
+  constexpr mat(const vec<T, 4>& x_, const vec<T, 4>& y_, const vec<T, 4>& z_,
+      const vec<T, 4>& w_)
+      : x{x_}, y{y_}, z{z_}, w{w_} {}
+
+  constexpr vec<T, 4>&       operator[](int i) { return ((vec<T, 4>*)this)[i]; }
+  constexpr const vec<T, 4>& operator[](int i) const {
+    return ((vec<T, 4>*)this)[i];
+  }
 };
 
 // Matrix aliases
@@ -522,8 +546,14 @@ struct frame<T, 2> {
   vec<T, 2> y = {0, 1};
   vec<T, 2> o = {0, 0};
 
-  vec<T, 2>&       operator[](int i);
-  const vec<T, 2>& operator[](int i) const;
+  constexpr frame() : x{1, 0}, y{0, 1}, o{0, 0} {}
+  constexpr frame(const vec<T, 2>& x_, const vec<T, 2>& y_, const vec<T, 2>& o_)
+      : x{x_}, y{y_}, o{o_} {}
+
+  constexpr vec<T, 2>&       operator[](int i) { return ((vec<T, 2>*)this)[i]; }
+  constexpr const vec<T, 2>& operator[](int i) const {
+    return ((vec<T, 2>*)this)[i];
+  }
 };
 
 // Rigid frames stored as a column-major affine transform matrix.
@@ -534,8 +564,15 @@ struct frame<T, 3> {
   vec<T, 3> z = {0, 0, 1};
   vec<T, 3> o = {0, 0, 0};
 
-  vec<T, 3>&       operator[](int i);
-  const vec<T, 3>& operator[](int i) const;
+  constexpr frame() : x{1, 0, 0}, y{0, 1, 0}, z{0, 0, 1}, o{0, 0, 0} {}
+  constexpr frame(const vec<T, 3>& x_, const vec<T, 3>& y_, const vec<T, 3>& z_,
+      const vec<T, 3>& o_)
+      : x{x_}, y{y_}, z{z_}, o{o_} {}
+
+  constexpr vec<T, 3>&       operator[](int i) { return ((vec<T, 3>*)this)[i]; }
+  constexpr const vec<T, 3>& operator[](int i) const {
+    return ((vec<T, 3>*)this)[i];
+  }
 };
 
 // Frame aliases
@@ -1606,46 +1643,6 @@ inline vec<T, 4> quat_inverse(const vec<T, 4>& a) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Small Fixed-size matrices stored in column major format.
-template <typename T>
-inline vec<T, 1>& mat<T, 1>::operator[](int i) {
-  return (&x)[i];
-}
-template <typename T>
-inline const vec<T, 1>& mat<T, 1>::operator[](int i) const {
-  return (&x)[i];
-}
-
-// Small Fixed-size matrices stored in column major format.
-template <typename T>
-inline vec<T, 2>& mat<T, 2>::operator[](int i) {
-  return (&x)[i];
-}
-template <typename T>
-inline const vec<T, 2>& mat<T, 2>::operator[](int i) const {
-  return (&x)[i];
-}
-
-// Small Fixed-size matrices stored in column major format.
-template <typename T>
-inline vec<T, 3>& mat<T, 3>::operator[](int i) {
-  return (&x)[i];
-}
-template <typename T>
-inline const vec<T, 3>& mat<T, 3>::operator[](int i) const {
-  return (&x)[i];
-}
-
-// Small Fixed-size matrices stored in column major format.
-template <typename T>
-inline vec<T, 4>& mat<T, 4>::operator[](int i) {
-  return (&x)[i];
-}
-template <typename T>
-inline const vec<T, 4>& mat<T, 4>::operator[](int i) const {
-  return (&x)[i];
-}
-
 // Matrix comparisons.
 template <typename T, int N>
 inline bool operator==(const mat<T, N>& a, const mat<T, N>& b) {
@@ -1830,26 +1827,6 @@ inline mat<T, 3> basis_fromz(const vec<T, 3>& v) {
 // RIGID BODY TRANSFORMS/FRAMES
 // -----------------------------------------------------------------------------
 namespace yocto {
-
-// Rigid frames stored as a column-major affine transform matrix.
-template <typename T>
-inline vec<T, 2>& frame<T, 2>::operator[](int i) {
-  return (&x)[i];
-}
-template <typename T>
-inline const vec<T, 2>& frame<T, 2>::operator[](int i) const {
-  return (&x)[i];
-}
-
-// Rigid frames stored as a column-major affine transform matrix.
-template <typename T>
-inline vec<T, 3>& frame<T, 3>::operator[](int i) {
-  return (&x)[i];
-}
-template <typename T>
-inline const vec<T, 3>& frame<T, 3>::operator[](int i) const {
-  return (&x)[i];
-}
 
 // Frame properties
 template <typename T, int N>
