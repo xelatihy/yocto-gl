@@ -186,13 +186,13 @@ void update_image_params(
       glparams.fit);
 }
 
-void update_image_params(
-    const gui_input& input, const array2d<vec4f>& image, glimage_params& glparams) {
+void update_image_params(const gui_input& input, const array2d<vec4f>& image,
+    glimage_params& glparams) {
   glparams.window                           = input.window;
   glparams.framebuffer                      = input.framebuffer;
   std::tie(glparams.center, glparams.scale) = camera_imview(glparams.center,
-      glparams.scale, {(int)image.extent(0), (int)image.extent(1)}, glparams.window,
-      glparams.fit);
+      glparams.scale, {(int)image.extent(0), (int)image.extent(1)},
+      glparams.window, glparams.fit);
 }
 
 bool uiupdate_image_params(const gui_input& input, glimage_params& glparams) {
@@ -314,8 +314,8 @@ bool draw_image_widgets(
   return false;
 }
 
-bool draw_image_widgets(
-    const gui_input& input, const array2d<vec4f>& image, glimage_params& glparams) {
+bool draw_image_widgets(const gui_input& input, const array2d<vec4f>& image,
+    glimage_params& glparams) {
   if (draw_gui_header("inspect")) {
     draw_gui_slider("zoom", glparams.scale, 0.1f, 10);
     draw_gui_checkbox("fit", glparams.fit);
@@ -1341,17 +1341,17 @@ void set_image(glimage_state& glimage, const array2d<vec4f>& image) {
       glimage.height != image.extent(1)) {
     if (!glimage.texture) glGenTextures(1, &glimage.texture);
     glBindTexture(GL_TEXTURE_2D, glimage.texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, (int)image.extent(0), (int)image.extent(1), 0,
-        GL_RGBA, GL_FLOAT, image.data());
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, (int)image.extent(0),
+        (int)image.extent(1), 0, GL_RGBA, GL_FLOAT, image.data());
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   } else {
     glBindTexture(GL_TEXTURE_2D, glimage.texture);
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, (int)image.extent(0), (int)image.extent(1), GL_RGBA,
-        GL_FLOAT, image.data());
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, (int)image.extent(0),
+        (int)image.extent(1), GL_RGBA, GL_FLOAT, image.data());
   }
   glimage.width  = (int)image.extent(0);
-  glimage.height  = (int)image.extent(1);
+  glimage.height = (int)image.extent(1);
 }
 
 // draw image
@@ -2631,7 +2631,7 @@ struct glwidgets_param {
   glwidgets_param(
       vec3f value, const vec2f& minmax = {0, 0}, bool readonly = false)
       : type{glwidgets_param_type::value3f}
-      , valuef{value.x, value.y, value.z}
+      , valuef{value.x, value.y, value.z, 1}
       , minmaxf{minmax}
       , readonly{readonly} {}
   glwidgets_param(
