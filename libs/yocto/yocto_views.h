@@ -62,14 +62,11 @@ namespace yocto {
 template <typename T>
 struct span {
  public:
-  // Constants
-  static constexpr std::size_t extent = dynamic_extent;
-
   // Constructors
   constexpr span() noexcept : _data{nullptr}, _size{0} {}
   constexpr span(const span&) noexcept = default;
   constexpr span(span&&) noexcept      = default;
-  constexpr span(T* data, size_type size) noexcept : _data{data}, _size{size} {}
+  constexpr span(T* data, size_t size) noexcept : _data{data}, _size{size} {}
   template <class It>
   constexpr span(T* begin, T* end) noexcept
       : _data{begin}, _size{end - begin} {}
@@ -113,44 +110,45 @@ template <typename T, size_t N>
 struct ndspan {
  public:
   // Constructors
-  constexpr ndspan() noexcept: _extents{0}, _data{nullptr} {}
+  constexpr ndspan() noexcept : _extents{0}, _data{nullptr} {}
   template <typename... Indices>
   constexpr explicit ndspan(T* data, Indices... extents) noexcept
-      : _extents{size_t(extents)...}
-      , _data{data} {
+      : _data{data}, _extents{size_t(extents)...} {
     static_assert(N == sizeof...(Indices));
   }
-  constexpr ndarray(T* data, const array<T, N>& extents) noexcept
-      : _extents{extents}, _data{data} {}
-  constexpr ndarray(const ndarray& other) noexcept = default;
-  constexpr ndarray(ndarray&& other) noexcept = default;
+  constexpr ndspan(T* data, const array<T, N>& extents) noexcept
+      : _data{data}, _extents{extents} {}
+  constexpr ndspan(const ndspan& other) noexcept = default;
+  constexpr ndspan(ndspan&& other) noexcept      = default;
 
   // Assignments
-  constexpr ndarray& operator=(const ndarray& other) noexcept = default;
-  constexpr ndarray& operator=(ndarray&& other) noexcept = default;
+  constexpr ndspan& operator=(const ndspan& other) noexcept = default;
+  constexpr ndspan& operator=(ndspan&& other) noexcept      = default;
 
   // Size
   constexpr bool             empty() const noexcept { return size() == 0; }
   constexpr size_t           size() const noexcept { return _size(_extents); }
   constexpr array<size_t, N> extents() const noexcept { return _extents; }
-  constexpr size_t extent(size_t dimension) const noexcept { return _extents[dimension]; }
+  constexpr size_t           extent(size_t dimension) const noexcept {
+    return _extents[dimension];
+  }
 
   // Access
-  constexpr T&       operator[](size_t idx) const noexcept { return _data[idx]; }
-  constexpr T&       operator[](const array<size_t, N>& idx) const noexcept {
-          return _data[_index(idx, _extents)];
+  constexpr T& operator[](size_t idx) const noexcept { return _data[idx]; }
+  constexpr T& operator[](const array<size_t, N>& idx) const noexcept {
+    return _data[_index(idx, _extents)];
   }
 
   // Iteration
-  constexpr T*       begin()  const noexcept { return _data.data(); }
-  constexpr T*       end()  const noexcept { return _data.data() + size(); }
+  constexpr T* begin() const noexcept { return _data; }
+  constexpr T* end() const noexcept { return _data + _size; }
 
   // Data access
-  constexpr T*       data()  const noexcept { return _data.data(); }
+  constexpr T* data() const noexcept { return _data; }
 
  private:
+  T*               _data    = nullptr;
   array<size_t, N> _extents = {0};
-  T*        _data    = nullptr;
 
   static size_t _size(const array<size_t, 1>& extents) { return extents[0]; }
   static size_t _size(const array<size_t, 2>& extents) {
@@ -181,7 +179,7 @@ using span2d = ndspan<T, 2>;
 template <typename T>
 using span3d = ndspan<T, 3>;
 
-}
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 //
