@@ -58,7 +58,7 @@ using std::pair;
 namespace yocto {
 
 // Axis aligned bounding box represented as a min/max vector pairs.
-template <typename T, int N>
+template <typename T, size_t N>
 struct bbox;
 
 // Axis aligned bounding box represented as a min/max vector pairs.
@@ -104,25 +104,25 @@ constexpr auto invalidb2f = bbox2f{};
 constexpr auto invalidb3f = bbox3f{};
 
 // Bounding box properties
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, 2> center(const bbox<T, 2>& a);
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, 2> size(const bbox<T, 2>& a);
 
 // Bounding box comparisons.
-template <typename T, int N>
+template <typename T, size_t N>
 inline bool operator==(const bbox<T, 2>& a, const bbox<T, 2>& b);
-template <typename T, int N>
+template <typename T, size_t N>
 inline bool operator!=(const bbox<T, 2>& a, const bbox<T, 2>& b);
 
 // Bounding box expansions with points and other boxes.
-template <typename T, int N>
+template <typename T, size_t N>
 inline bbox<T, N> merge(const bbox<T, N>& a, const vec<T, N>& b);
-template <typename T, int N>
+template <typename T, size_t N>
 inline bbox<T, N> merge(const bbox<T, N>& a, const bbox<T, 2>& b);
-template <typename T, int N>
+template <typename T, size_t N>
 inline void expand(bbox<T, 2>& a, const vec<T, N>& b);
-template <typename T, int N>
+template <typename T, size_t N>
 inline void expand(bbox<T, 2>& a, const bbox<T, 2>& b);
 
 }  // namespace yocto
@@ -137,7 +137,7 @@ template <typename T>
 constexpr auto ray_eps = (T)1e-4;
 
 // Rays with origin, direction and min/max t value.
-template <typename T, int N>
+template <typename T, size_t N>
 struct ray;
 
 // Rays with origin, direction and min/max t value.
@@ -174,7 +174,7 @@ using ray2f = ray<float, 2>;
 using ray3f = ray<float, 3>;
 
 // Computes a point on a ray
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> ray_point(const ray<T, N>& ray, T t);
 
 }  // namespace yocto
@@ -185,15 +185,15 @@ inline vec<T, N> ray_point(const ray<T, N>& ray, T t);
 namespace yocto {
 
 // Transforms rays.
-template <typename T, int N>
+template <typename T, size_t N>
 inline ray<T, N> transform_ray(const mat<T, N + 1>& a, const ray<T, N>& b);
-template <typename T, int N>
+template <typename T, size_t N>
 inline ray<T, N> transform_ray(const frame<T, N>& a, const ray<T, N>& b);
 
 // Transforms bounding boxes by matrices.
-template <typename T, int N>
+template <typename T, size_t N>
 inline bbox<T, N> transform_bbox(const mat<T, N + 1>& a, const bbox<T, N>& b);
-template <typename T, int N>
+template <typename T, size_t N>
 inline bbox<T, N> transform_bbox(const frame<T, N>& a, const bbox<T, N>& b);
 
 }  // namespace yocto
@@ -204,24 +204,24 @@ inline bbox<T, N> transform_bbox(const frame<T, N>& a, const bbox<T, N>& b);
 namespace yocto {
 
 // Primitive bounds.
-template <typename T, int N>
+template <typename T, size_t N>
 inline bbox<T, N> point_bounds(const vec<T, N>& p);
-template <typename T, int N>
+template <typename T, size_t N>
 inline bbox<T, N> point_bounds(const vec<T, N>& p, T r);
-template <typename T, int N>
+template <typename T, size_t N>
 inline bbox<T, N> line_bounds(const vec<T, N>& p0, const vec<T, N>& p1);
-template <typename T, int N>
+template <typename T, size_t N>
 inline bbox<T, N> line_bounds(
     const vec<T, N>& p0, const vec<T, N>& p1, T r0, T r1);
-template <typename T, int N>
+template <typename T, size_t N>
 inline bbox<T, N> triangle_bounds(
     const vec<T, N>& p0, const vec<T, N>& p1, const vec<T, N>& p2);
-template <typename T, int N>
+template <typename T, size_t N>
 inline bbox<T, N> quad_bounds(const vec<T, N>& p0, const vec<T, N>& p1,
     const vec<T, N>& p2, const vec<T, N>& p3);
-template <typename T, int N>
+template <typename T, size_t N>
 inline bbox<T, N> sphere_bounds(const vec<T, N>& p, T r);
-template <typename T, int N>
+template <typename T, size_t N>
 inline bbox<T, N> capsule_bounds(
     const vec<T, N>& p0, const vec<T, N>& p1, T r0, T r1);
 
@@ -452,39 +452,39 @@ inline bool overlap_bbox(const bbox<T, 3>& bbox1, const bbox<T, 3>& bbox2);
 namespace yocto {
 
 // Bounding box properties
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> center(const bbox<T, N>& a) {
   return (a.min + a.max) / 2;
 }
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> size(const bbox<T, N>& a) {
   return a.max - a.min;
 }
 
 // Bounding box comparisons.
-template <typename T, int N>
+template <typename T, size_t N>
 inline bool operator==(const bbox<T, N>& a, const bbox<T, N>& b) {
   return a.min == b.min && a.max == b.max;
 }
-template <typename T, int N>
+template <typename T, size_t N>
 inline bool operator!=(const bbox<T, N>& a, const bbox<T, N>& b) {
   return a.min != b.min || a.max != b.max;
 }
 
 // Bounding box expansions with points and other boxes.
-template <typename T, int N>
+template <typename T, size_t N>
 inline bbox<T, N> merge(const bbox<T, N>& a, const vec<T, N>& b) {
   return {min(a.min, b), max(a.max, b)};
 }
-template <typename T, int N>
+template <typename T, size_t N>
 inline bbox<T, N> merge(const bbox<T, N>& a, const bbox<T, N>& b) {
   return {min(a.min, b.min), max(a.max, b.max)};
 }
-template <typename T, int N>
+template <typename T, size_t N>
 inline void expand(bbox<T, N>& a, const vec<T, N>& b) {
   a = merge(a, b);
 }
-template <typename T, int N>
+template <typename T, size_t N>
 inline void expand(bbox<T, N>& a, const bbox<T, N>& b) {
   a = merge(a, b);
 }
@@ -497,7 +497,7 @@ inline void expand(bbox<T, N>& a, const bbox<T, N>& b) {
 namespace yocto {
 
 // Computes a point on a ray
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> ray_point(const ray<T, N>& ray, T t) {
   return ray.o + ray.d * t;
 }
@@ -510,15 +510,15 @@ inline vec<T, N> ray_point(const ray<T, N>& ray, T t) {
 namespace yocto {
 
 // Transforms rays and bounding boxes by matrices.
-template <typename T, int N>
+template <typename T, size_t N>
 inline ray<T, N> transform_ray(const mat<T, N + 1>& a, const ray<T, N>& b) {
   return {transform_point(a, b.o), transform_vector(a, b.d), b.tmin, b.tmax};
 }
-template <typename T, int N>
+template <typename T, size_t N>
 inline ray<T, N> transform_ray(const frame<T, N>& a, const ray<T, N>& b) {
   return {transform_point(a, b.o), transform_vector(a, b.d), b.tmin, b.tmax};
 }
-template <typename T, int N>
+template <typename T, size_t N>
 inline bbox<T, N> transform_bbox(const mat<T, N + 1>& a, const bbox<T, N>& b) {
   if constexpr (N == 3) {
     auto corners = {vec<T, 3>{b.min.x, b.min.y, b.min.z},
@@ -535,7 +535,7 @@ inline bbox<T, N> transform_bbox(const mat<T, N + 1>& a, const bbox<T, N>& b) {
     return xformed;
   }
 }
-template <typename T, int N>
+template <typename T, size_t N>
 inline bbox<T, N> transform_bbox(const frame<T, N>& a, const bbox<T, N>& b) {
   if constexpr (N == 3) {
     auto corners = {vec<T, 3>{b.min.x, b.min.y, b.min.z},
@@ -561,38 +561,38 @@ inline bbox<T, N> transform_bbox(const frame<T, N>& a, const bbox<T, N>& b) {
 namespace yocto {
 
 // Primitive bounds.
-template <typename T, int N>
+template <typename T, size_t N>
 inline bbox<T, N> point_bounds(const vec<T, N>& p) {
   return {p, p};
 }
-template <typename T, int N>
+template <typename T, size_t N>
 inline bbox<T, N> point_bounds(const vec<T, N>& p, T r) {
   return {min(p - r, p + r), max(p - r, p + r)};
 }
-template <typename T, int N>
+template <typename T, size_t N>
 inline bbox<T, N> line_bounds(const vec<T, N>& p0, const vec<T, N>& p1) {
   return {min(p0, p1), max(p0, p1)};
 }
-template <typename T, int N>
+template <typename T, size_t N>
 inline bbox<T, N> line_bounds(
     const vec<T, N>& p0, const vec<T, N>& p1, T r0, T r1) {
   return {min(p0 - r0, p1 - r1), max(p0 + r0, p1 + r1)};
 }
-template <typename T, int N>
+template <typename T, size_t N>
 inline bbox<T, N> triangle_bounds(
     const vec<T, N>& p0, const vec<T, N>& p1, const vec<T, N>& p2) {
   return {min(p0, min(p1, p2)), max(p0, max(p1, p2))};
 }
-template <typename T, int N>
+template <typename T, size_t N>
 inline bbox<T, N> quad_bounds(const vec<T, N>& p0, const vec<T, N>& p1,
     const vec<T, N>& p2, const vec<T, N>& p3) {
   return {min(p0, min(p1, min(p2, p3))), max(p0, max(p1, max(p2, p3)))};
 }
-template <typename T, int N>
+template <typename T, size_t N>
 inline bbox<T, N> sphere_bounds(const vec<T, N>& p, T r) {
   return {p - r, p + r};
 }
-template <typename T, int N>
+template <typename T, size_t N>
 inline bbox<T, N> capsule_bounds(
     const vec<T, N>& p0, const vec<T, N>& p1, T r0, T r1) {
   return {min(p0 - r0, p1 - r1), max(p0 + r0, p1 + r1)};
@@ -802,7 +802,7 @@ inline ray<T, 3> camera_ray(const frame<T, 3>& frame, T lens, T aspect, T film_,
                           : vec<T, 2>{film_ * aspect, film_};
   auto e    = vec<T, 3>{0, 0, 0};
   auto q    = vec<T, 3>{
-         film.x * ((T)0.5 - image_uv.x), film.y * (image_uv.y - (T)0.5), lens};
+      film.x * ((T)0.5 - image_uv.x), film.y * (image_uv.y - (T)0.5), lens};
   auto q1  = -q;
   auto d   = normalize(q1 - e);
   auto ray = yocto::ray<T, 3>{
