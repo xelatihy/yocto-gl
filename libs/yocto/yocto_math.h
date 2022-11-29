@@ -147,7 +147,7 @@ inline int pow2(int a);
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-template <typename T, int N>
+template <typename T, size_t N>
 struct vec;
 
 template <typename T>
@@ -265,94 +265,94 @@ template <typename T>
 inline vec<T, 3> xyz(const vec<T, 4>& a);
 
 // Vector sequence operations.
-template <typename T, int N>
+template <typename T, size_t N>
 inline int size(const vec<T, N>& a);
-template <typename T, int N>
+template <typename T, size_t N>
 inline const T* begin(const vec<T, N>& a);
-template <typename T, int N>
+template <typename T, size_t N>
 inline const T* end(const vec<T, N>& a);
-template <typename T, int N>
+template <typename T, size_t N>
 inline T* begin(vec<T, N>& a);
-template <typename T, int N>
+template <typename T, size_t N>
 inline T* end(vec<T, N>& a);
-template <typename T, int N>
+template <typename T, size_t N>
 inline const T* data(const vec<T, N>& a);
-template <typename T, int N>
+template <typename T, size_t N>
 inline T* data(vec<T, N>& a);
 
 // Vector comparison operations.
-template <typename T, int N>
+template <typename T, size_t N>
 inline bool operator==(const vec<T, N>& a, const vec<T, N>& b);
-template <typename T, int N>
+template <typename T, size_t N>
 inline bool operator!=(const vec<T, N>& a, const vec<T, N>& b);
 
 // Vector operations.
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> operator+(const vec<T, N>& a);
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> operator-(const vec<T, N>& a);
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> operator+(const vec<T, N>& a, const vec<T, N>& b);
-template <typename T, int N, typename T1>
+template <typename T, size_t N, typename T1>
 inline vec<T, N> operator+(const vec<T, N>& a, T1 b);
-template <typename T, int N, typename T1>
+template <typename T, size_t N, typename T1>
 inline vec<T, N> operator+(T1 a, const vec<T, N>& b);
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> operator-(const vec<T, N>& a, const vec<T, N>& b);
-template <typename T, int N, typename T1>
+template <typename T, size_t N, typename T1>
 inline vec<T, N> operator-(const vec<T, N>& a, T1 b);
-template <typename T, int N, typename T1>
+template <typename T, size_t N, typename T1>
 inline vec<T, N> operator-(T1 a, const vec<T, N>& b);
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> operator*(const vec<T, N>& a, const vec<T, N>& b);
-template <typename T, int N, typename T1>
+template <typename T, size_t N, typename T1>
 inline vec<T, N> operator*(const vec<T, N>& a, T1 b);
-template <typename T, int N, typename T1>
+template <typename T, size_t N, typename T1>
 inline vec<T, N> operator*(T1 a, const vec<T, N>& b);
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> operator/(const vec<T, N>& a, const vec<T, N>& b);
-template <typename T, int N, typename T1>
+template <typename T, size_t N, typename T1>
 inline vec<T, N> operator/(const vec<T, N>& a, T1 b);
-template <typename T, int N, typename T1>
+template <typename T, size_t N, typename T1>
 inline vec<T, N> operator/(T1 a, const vec<T, N>& b);
 
 // Vector assignments
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N>& operator+=(vec<T, N>& a, const vec<T, N>& b);
-template <typename T, int N, typename T1>
+template <typename T, size_t N, typename T1>
 inline vec<T, N>& operator+=(vec<T, N>& a, T1 b);
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N>& operator-=(vec<T, N>& a, const vec<T, N>& b);
-template <typename T, int N, typename T1>
+template <typename T, size_t N, typename T1>
 inline vec<T, N>& operator-=(vec<T, N>& a, T1 b);
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N>& operator*=(vec<T, N>& a, const vec<T, N>& b);
-template <typename T, int N, typename T1>
+template <typename T, size_t N, typename T1>
 inline vec<T, N>& operator*=(vec<T, N>& a, T1 b);
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N>& operator/=(vec<T, N>& a, const vec<T, N>& b);
-template <typename T, int N, typename T1>
+template <typename T, size_t N, typename T1>
 inline vec<T, N>& operator/=(vec<T, N>& a, T1 b);
 
 // Vector products and lengths.
-template <typename T, int N>
+template <typename T, size_t N>
 inline T dot(const vec<T, N>& a, const vec<T, N>& b);
 template <typename T>
 inline T cross(const vec<T, 2>& a, const vec<T, 2>& b);
 template <typename T>
 inline vec<T, 3> cross(const vec<T, 3>& a, const vec<T, 3>& b);
 
-template <typename T, int N>
+template <typename T, size_t N>
 inline T length(const vec<T, N>& a);
-template <typename T, int N>
+template <typename T, size_t N>
 inline T length_squared(const vec<T, N>& a);
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> normalize(const vec<T, N>& a);
-template <typename T, int N>
+template <typename T, size_t N>
 inline T distance(const vec<T, N>& a, const vec<T, N>& b);
-template <typename T, int N>
+template <typename T, size_t N>
 inline T distance_squared(const vec<T, N>& a, const vec<T, N>& b);
-template <typename T, int N>
+template <typename T, size_t N>
 inline T angle(const vec<T, N>& a, const vec<T, N>& b);
 
 // Orthogonal vectors.
@@ -372,55 +372,55 @@ template <typename T>
 inline vec<T, 4> slerp(const vec<T, 4>& a, const vec<T, 4>& b, T u);
 
 // Max element and clamp.
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> max(const vec<T, N>& a, T b);
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> min(const vec<T, N>& a, T b);
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> max(const vec<T, N>& a, const vec<T, N>& b);
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> min(const vec<T, N>& a, const vec<T, N>& b);
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> clamp(const vec<T, N>& x, T min, T max);
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> lerp(const vec<T, N>& a, const vec<T, N>& b, T u);
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> lerp(
     const vec<T, N>& a, const vec<T, N>& b, const vec<T, N>& u);
 
-template <typename T, int N>
+template <typename T, size_t N>
 inline T max(const vec<T, N>& a);
-template <typename T, int N>
+template <typename T, size_t N>
 inline T min(const vec<T, N>& a);
-template <typename T, int N>
+template <typename T, size_t N>
 inline T sum(const vec<T, N>& a);
-template <typename T, int N>
+template <typename T, size_t N>
 inline T mean(const vec<T, N>& a);
 
 // Functions applied to vector elements
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> abs(const vec<T, N>& a);
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> sqr(const vec<T, N>& a);
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> sqrt(const vec<T, N>& a);
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> exp(const vec<T, N>& a);
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> log(const vec<T, N>& a);
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> exp2(const vec<T, N>& a);
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> log2(const vec<T, N>& a);
-template <typename T, int N>
+template <typename T, size_t N>
 inline bool isfinite(const vec<T, N>& a);
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> pow(const vec<T, N>& a, T b);
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> pow(const vec<T, N>& a, const vec<T, N>& b);
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> gain(const vec<T, N>& a, T b);
-// template <typename T, int N>
+// template <typename T, size_t N>
 // inline void swap(vec<T, N>& a, vec<T, N>& b);
 
 // Quaternion operations represented as xi + yj + zk + w
@@ -441,7 +441,7 @@ inline vec<T, 4> quat_inverse(const vec<T, 4>& a);
 namespace yocto {
 
 // Small Fixed-size matrices stored in column major format.
-template <typename T, int N>
+template <typename T, size_t N>
 struct mat;
 
 // Small Fixed-size matrices stored in column major format.
@@ -523,43 +523,43 @@ constexpr auto identity4x4f = mat4f{
     {1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
 
 // Matrix comparisons.
-template <typename T, int N>
+template <typename T, size_t N>
 inline bool operator==(const mat<T, N>& a, const mat<T, N>& b);
-template <typename T, int N>
+template <typename T, size_t N>
 inline bool operator!=(const mat<T, N>& a, const mat<T, N>& b);
 
 // Matrix operations.
-template <typename T, int N>
+template <typename T, size_t N>
 inline mat<T, N> operator+(const mat<T, N>& a, const mat<T, N>& b);
-template <typename T, int N, typename T1>
+template <typename T, size_t N, typename T1>
 inline mat<T, N> operator*(const mat<T, N>& a, T1 b);
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> operator*(const mat<T, N>& a, const vec<T, N>& b);
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> operator*(const vec<T, N>& a, const mat<T, N>& b);
-template <typename T, int N>
+template <typename T, size_t N>
 inline mat<T, N> operator*(const mat<T, N>& a, const mat<T, N>& b);
 
 // Matrix assignments.
-template <typename T, int N>
+template <typename T, size_t N>
 inline mat<T, N>& operator+=(mat<T, N>& a, const mat<T, N>& b);
-template <typename T, int N>
+template <typename T, size_t N>
 inline mat<T, N>& operator*=(mat<T, N>& a, const mat<T, N>& b);
-template <typename T, int N, typename T1>
+template <typename T, size_t N, typename T1>
 inline mat<T, N>& operator*=(mat<T, N>& a, T1 b);
 
 // Matrix diagonals and transposes.
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> diagonal(const mat<T, N>& a);
-template <typename T, int N>
+template <typename T, size_t N>
 inline mat<T, N> transpose(const mat<T, N>& a);
 
 // Matrix adjoints, determinants and inverses.
-template <typename T, int N>
+template <typename T, size_t N>
 inline T determinant(const mat<T, N>& a);
-template <typename T, int N>
+template <typename T, size_t N>
 inline mat<T, N> adjoint(const mat<T, N>& a);
-template <typename T, int N>
+template <typename T, size_t N>
 inline mat<T, N> inverse(const mat<T, N>& a);
 
 // Constructs a basis from a direction
@@ -574,7 +574,7 @@ inline mat<T, 3> basis_fromz(const vec<T, 3>& v);
 namespace yocto {
 
 // Rigid frames stored as a column-major affine transform matrix.
-template <typename T, int N>
+template <typename T, size_t N>
 struct frame;
 
 // Rigid frames stored as a column-major affine transform matrix.
@@ -623,41 +623,41 @@ constexpr auto identity3x4f = frame3f{
     {1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}};
 
 // Frame properties
-template <typename T, int N>
+template <typename T, size_t N>
 inline mat<T, N> rotation(const frame<T, N>& a);
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> translation(const frame<T, N>& a);
 
 // Frame construction
-template <typename T, int N>
+template <typename T, size_t N>
 inline frame<T, N> make_frame(const mat<T, 2>& m, const vec<T, 2>& t);
 
 // Conversion between frame and mat
-template <typename T, int N>
+template <typename T, size_t N>
 inline mat<T, N + 1> frame_to_mat(const frame<T, N>& f);
-template <typename T, int N>
+template <typename T, size_t N>
 inline frame<T, N - 1> mat_to_frame(const mat<T, N>& ma);
 
 // Frame comparisons.
-template <typename T, int N>
+template <typename T, size_t N>
 inline bool operator==(const frame<T, N>& a, const frame<T, N>& b);
-template <typename T, int N>
+template <typename T, size_t N>
 inline bool operator!=(const frame<T, N>& a, const frame<T, N>& b);
 
 // Frame composition, equivalent to affine matrix product.
-template <typename T, int N>
+template <typename T, size_t N>
 inline frame<T, N> operator*(const frame<T, N>& a, const frame<T, N>& b);
-template <typename T, int N>
+template <typename T, size_t N>
 inline frame<T, N>& operator*=(frame<T, N>& a, const frame<T, N>& b);
 
 // Frame inverse, equivalent to rigid affine inverse.
-template <typename T, int N>
+template <typename T, size_t N>
 inline frame<T, N> inverse(const frame<T, N>& a, bool non_rigid = false);
 
 // Frame construction from axis.
 template <typename T>
 inline frame<T, 3> frame_fromz(const vec<T, 3>& o, const vec<T, 3>& v);
-template <typename T, int N>
+template <typename T, size_t N>
 inline frame<T, 3> frame_fromzx(
     const vec<T, 3>& o, const vec<T, 3>& z_, const vec<T, 3>& x_);
 
@@ -669,7 +669,7 @@ inline frame<T, 3> frame_fromzx(
 namespace yocto {
 
 // Quaternions to represent rotations
-template <typename T, int N>
+template <typename T, size_t N>
 struct quat;
 
 // Quaternions to represent rotations
@@ -730,41 +730,41 @@ inline quat<T, 4> slerp(const quat<T, 4>& a, const quat<T, 4>& b, T t);
 namespace yocto {
 
 // Transforms points, vectors and directions by matrices.
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> transform_point(const mat<T, N + 1>& a, const vec<T, N>& b);
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> transform_vector(const mat<T, N + 1>& a, const vec<T, N>& b);
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> transform_direction(
     const mat<T, N + 1>& a, const vec<T, N>& b);
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> transform_normal(const mat<T, N + 1>& a, const vec<T, N>& b);
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> transform_vector(const mat<T, N>& a, const vec<T, N>& b);
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> transform_direction(const mat<T, N>& a, const vec<T, N>& b);
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> transform_normal(const mat<T, N>& a, const vec<T, N>& b);
 
 // Transforms points, vectors and directions by frames.
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> transform_point(const frame<T, N>& a, const vec<T, N>& b);
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> transform_vector(const frame<T, N>& a, const vec<T, N>& b);
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> transform_direction(const frame<T, N>& a, const vec<T, N>& b);
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> transform_normal(
     const frame<T, N>& a, const vec<T, N>& b, bool non_rigid = false);
 
 // Transforms points, vectors and directions by frames.
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> transform_point_inverse(
     const frame<T, N>& a, const vec<T, N>& b);
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> transform_vector_inverse(
     const frame<T, N>& a, const vec<T, N>& b);
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> transform_direction_inverse(
     const frame<T, N>& a, const vec<T, N>& b);
 
@@ -1063,37 +1063,37 @@ inline vec<T, 3> xyz(const vec<T, 4>& a) {
 }
 
 // Vector sequence operations.
-template <typename T, int N>
+template <typename T, size_t N>
 inline int size(const vec<T, N>& a) {
   return N;
 }
-template <typename T, int N>
+template <typename T, size_t N>
 inline const T* begin(const vec<T, N>& a) {
   return &a.x;
 }
-template <typename T, int N>
+template <typename T, size_t N>
 inline const T* end(const vec<T, N>& a) {
   return &a.x + N;
 }
-template <typename T, int N>
+template <typename T, size_t N>
 inline T* begin(vec<T, N>& a) {
   return &a.x;
 }
-template <typename T, int N>
+template <typename T, size_t N>
 inline T* end(vec<T, N>& a) {
   return &a.x + N;
 }
-template <typename T, int N>
+template <typename T, size_t N>
 inline const T* data(const vec<T, N>& a) {
   return &a.x;
 }
-template <typename T, int N>
+template <typename T, size_t N>
 inline T* data(vec<T, N>& a) {
   return &a.x;
 }
 
 // Vector comparison operations.
-template <typename T, int N>
+template <typename T, size_t N>
 inline bool operator==(const vec<T, N>& a, const vec<T, N>& b) {
   if constexpr (N == 1) {
     return a.x == b.x;
@@ -1105,7 +1105,7 @@ inline bool operator==(const vec<T, N>& a, const vec<T, N>& b) {
     return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
   }
 }
-template <typename T, int N>
+template <typename T, size_t N>
 inline bool operator!=(const vec<T, N>& a, const vec<T, N>& b) {
   if constexpr (N == 1) {
     return a.x != b.x;
@@ -1119,11 +1119,11 @@ inline bool operator!=(const vec<T, N>& a, const vec<T, N>& b) {
 }
 
 // Vector operations.
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> operator+(const vec<T, N>& a) {
   return a;
 }
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> operator-(const vec<T, N>& a) {
   if constexpr (N == 1) {
     return {-a.x};
@@ -1136,7 +1136,7 @@ inline vec<T, N> operator-(const vec<T, N>& a) {
   }
 }
 
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> operator+(const vec<T, N>& a, const vec<T, N>& b) {
   if constexpr (N == 1) {
     return {a.x + b.x};
@@ -1148,7 +1148,7 @@ inline vec<T, N> operator+(const vec<T, N>& a, const vec<T, N>& b) {
     return {a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w};
   }
 }
-template <typename T, int N, typename T1>
+template <typename T, size_t N, typename T1>
 inline vec<T, N> operator+(const vec<T, N>& a, T1 b) {
   if constexpr (N == 1) {
     return {a.x + b};
@@ -1160,7 +1160,7 @@ inline vec<T, N> operator+(const vec<T, N>& a, T1 b) {
     return {a.x + b, a.y + b, a.z + b, a.w + b};
   }
 }
-template <typename T, int N, typename T1>
+template <typename T, size_t N, typename T1>
 inline vec<T, N> operator+(T1 a, const vec<T, N>& b) {
   if constexpr (N == 1) {
     return {a + b.x};
@@ -1172,7 +1172,7 @@ inline vec<T, N> operator+(T1 a, const vec<T, N>& b) {
     return {a + b.x, a + b.y, a + b.z, a + b.w};
   }
 }
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> operator-(const vec<T, N>& a, const vec<T, N>& b) {
   if constexpr (N == 1) {
     return {a.x - b.x};
@@ -1184,7 +1184,7 @@ inline vec<T, N> operator-(const vec<T, N>& a, const vec<T, N>& b) {
     return {a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w};
   }
 }
-template <typename T, int N, typename T1>
+template <typename T, size_t N, typename T1>
 inline vec<T, N> operator-(const vec<T, N>& a, T1 b) {
   if constexpr (N == 1) {
     return {a.x - b};
@@ -1196,7 +1196,7 @@ inline vec<T, N> operator-(const vec<T, N>& a, T1 b) {
     return {a.x - b, a.y - b, a.z - b, a.w - b};
   }
 }
-template <typename T, int N, typename T1>
+template <typename T, size_t N, typename T1>
 inline vec<T, N> operator-(T1 a, const vec<T, N>& b) {
   if constexpr (N == 1) {
     return {a - b.x};
@@ -1208,7 +1208,7 @@ inline vec<T, N> operator-(T1 a, const vec<T, N>& b) {
     return {a - b.x, a - b.y, a - b.z, a - b.w};
   }
 }
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> operator*(const vec<T, N>& a, const vec<T, N>& b) {
   if constexpr (N == 1) {
     return {a.x * b.x};
@@ -1220,7 +1220,7 @@ inline vec<T, N> operator*(const vec<T, N>& a, const vec<T, N>& b) {
     return {a.x * b.x, a.y * b.y, a.z * b.z, a.w * b.w};
   }
 }
-template <typename T, int N, typename T1>
+template <typename T, size_t N, typename T1>
 inline vec<T, N> operator*(const vec<T, N>& a, T1 b) {
   if constexpr (N == 1) {
     return {a.x * b};
@@ -1232,7 +1232,7 @@ inline vec<T, N> operator*(const vec<T, N>& a, T1 b) {
     return {a.x * b, a.y * b, a.z * b, a.w * b};
   }
 }
-template <typename T, int N, typename T1>
+template <typename T, size_t N, typename T1>
 inline vec<T, N> operator*(T1 a, const vec<T, N>& b) {
   if constexpr (N == 1) {
     return {a * b.x};
@@ -1244,7 +1244,7 @@ inline vec<T, N> operator*(T1 a, const vec<T, N>& b) {
     return {a * b.x, a * b.y, a * b.z, a * b.w};
   }
 }
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> operator/(const vec<T, N>& a, const vec<T, N>& b) {
   if constexpr (N == 1) {
     return {a.x / b.x};
@@ -1256,7 +1256,7 @@ inline vec<T, N> operator/(const vec<T, N>& a, const vec<T, N>& b) {
     return {a.x / b.x, a.y / b.y, a.z / b.z, a.w / b.w};
   }
 }
-template <typename T, int N, typename T1>
+template <typename T, size_t N, typename T1>
 inline vec<T, N> operator/(const vec<T, N>& a, T1 b) {
   if constexpr (N == 1) {
     return {a.x / b};
@@ -1268,7 +1268,7 @@ inline vec<T, N> operator/(const vec<T, N>& a, T1 b) {
     return {a.x / b, a.y / b, a.z / b, a.w / b};
   }
 }
-template <typename T, int N, typename T1>
+template <typename T, size_t N, typename T1>
 inline vec<T, N> operator/(T1 a, const vec<T, N>& b) {
   if constexpr (N == 1) {
     return {a / b.x};
@@ -1282,41 +1282,41 @@ inline vec<T, N> operator/(T1 a, const vec<T, N>& b) {
 }
 
 // Vector assignments
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N>& operator+=(vec<T, N>& a, const vec<T, N>& b) {
   return a = a + b;
 }
-template <typename T, int N, typename T1>
+template <typename T, size_t N, typename T1>
 inline vec<T, N>& operator+=(vec<T, N>& a, T1 b) {
   return a = a + b;
 }
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N>& operator-=(vec<T, N>& a, const vec<T, N>& b) {
   return a = a - b;
 }
-template <typename T, int N, typename T1>
+template <typename T, size_t N, typename T1>
 inline vec<T, N>& operator-=(vec<T, N>& a, T1 b) {
   return a = a - b;
 }
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N>& operator*=(vec<T, N>& a, const vec<T, N>& b) {
   return a = a * b;
 }
-template <typename T, int N, typename T1>
+template <typename T, size_t N, typename T1>
 inline vec<T, N>& operator*=(vec<T, N>& a, T1 b) {
   return a = a * b;
 }
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N>& operator/=(vec<T, N>& a, const vec<T, N>& b) {
   return a = a / b;
 }
-template <typename T, int N, typename T1>
+template <typename T, size_t N, typename T1>
 inline vec<T, N>& operator/=(vec<T, N>& a, T1 b) {
   return a = a / b;
 }
 
 // Vector products and lengths.
-template <typename T, int N>
+template <typename T, size_t N>
 inline T dot(const vec<T, N>& a, const vec<T, N>& b) {
   if constexpr (N == 1) {
     return a.x * b.x;
@@ -1366,28 +1366,28 @@ inline vec<T, 3> refract(const vec<T, 3>& w, const vec<T, 3>& n, T inv_eta) {
   return -w * inv_eta + (inv_eta * cosine - sqrt(k)) * n;
 }
 
-template <typename T, int N>
+template <typename T, size_t N>
 inline T length(const vec<T, N>& a) {
   return sqrt(dot(a, a));
 }
-template <typename T, int N>
+template <typename T, size_t N>
 inline T length_squared(const vec<T, N>& a) {
   return dot(a, a);
 }
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> normalize(const vec<T, N>& a) {
   auto l = length(a);
   return (l != 0) ? a / l : a;
 }
-template <typename T, int N>
+template <typename T, size_t N>
 inline T distance(const vec<T, N>& a, const vec<T, N>& b) {
   return length(a - b);
 }
-template <typename T, int N>
+template <typename T, size_t N>
 inline T distance_squared(const vec<T, N>& a, const vec<T, N>& b) {
   return dot(a - b, a - b);
 }
-template <typename T, int N>
+template <typename T, size_t N>
 inline T angle(const vec<T, N>& a, const vec<T, N>& b) {
   return acos(clamp(dot(normalize(a), normalize(b)), (T)-1, (T)1));
 }
@@ -1408,7 +1408,7 @@ inline vec<T, 4> slerp(const vec<T, 4>& a, const vec<T, 4>& b, T u) {
 }
 
 // Max element and clamp.
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> max(const vec<T, N>& a, T b) {
   if constexpr (N == 1) {
     return {max(a.x, b)};
@@ -1420,7 +1420,7 @@ inline vec<T, N> max(const vec<T, N>& a, T b) {
     return {max(a.x, b), max(a.y, b), max(a.z, b), max(a.w, b)};
   }
 }
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> min(const vec<T, N>& a, T b) {
   if constexpr (N == 1) {
     return {min(a.x, b)};
@@ -1432,7 +1432,7 @@ inline vec<T, N> min(const vec<T, N>& a, T b) {
     return {min(a.x, b), min(a.y, b), min(a.z, b), min(a.w, b)};
   }
 }
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> max(const vec<T, N>& a, const vec<T, N>& b) {
   if constexpr (N == 1) {
     return {max(a.x, b.x)};
@@ -1444,7 +1444,7 @@ inline vec<T, N> max(const vec<T, N>& a, const vec<T, N>& b) {
     return {max(a.x, b.x), max(a.y, b.y), max(a.z, b.z), max(a.w, b.w)};
   }
 }
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> min(const vec<T, N>& a, const vec<T, N>& b) {
   if constexpr (N == 1) {
     return {min(a.x, b.x)};
@@ -1456,7 +1456,7 @@ inline vec<T, N> min(const vec<T, N>& a, const vec<T, N>& b) {
     return {min(a.x, b.x), min(a.y, b.y), min(a.z, b.z), min(a.w, b.w)};
   }
 }
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> clamp(const vec<T, N>& x, T min, T max) {
   if constexpr (N == 1) {
     return {clamp(x.x, min, max)};
@@ -1469,17 +1469,17 @@ inline vec<T, N> clamp(const vec<T, N>& x, T min, T max) {
         clamp(x.w, min, max)};
   }
 }
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> lerp(const vec<T, N>& a, const vec<T, N>& b, T u) {
   return a * (1 - u) + b * u;
 }
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> lerp(
     const vec<T, N>& a, const vec<T, N>& b, const vec<T, N>& u) {
   return a * (1 - u) + b * u;
 }
 
-template <typename T, int N>
+template <typename T, size_t N>
 inline T max(const vec<T, N>& a) {
   if constexpr (N == 1) {
     return a.x;
@@ -1491,7 +1491,7 @@ inline T max(const vec<T, N>& a) {
     return max(max(max(a.x, a.y), a.z), a.w);
   }
 }
-template <typename T, int N>
+template <typename T, size_t N>
 inline T min(const vec<T, N>& a) {
   if constexpr (N == 1) {
     return a.x;
@@ -1503,7 +1503,7 @@ inline T min(const vec<T, N>& a) {
     return min(min(min(a.x, a.y), a.z), a.w);
   }
 }
-template <typename T, int N>
+template <typename T, size_t N>
 inline T sum(const vec<T, N>& a) {
   if constexpr (N == 1) {
     return a.x;
@@ -1515,13 +1515,13 @@ inline T sum(const vec<T, N>& a) {
     return a.x + a.y + a.z + a.w;
   }
 }
-template <typename T, int N>
+template <typename T, size_t N>
 inline T mean(const vec<T, N>& a) {
   return sum(a) / N;
 }
 
 // Functions applied to vector elements
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> abs(const vec<T, N>& a) {
   if constexpr (N == 1) {
     return {abs(a.x)};
@@ -1533,7 +1533,7 @@ inline vec<T, N> abs(const vec<T, N>& a) {
     return {abs(a.x), abs(a.y), abs(a.z), abs(a.w)};
   }
 }
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> sqr(const vec<T, N>& a) {
   if constexpr (N == 1) {
     return {sqr(a.x)};
@@ -1545,7 +1545,7 @@ inline vec<T, N> sqr(const vec<T, N>& a) {
     return {sqr(a.x), sqr(a.y), sqr(a.z), sqr(a.w)};
   }
 }
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> sqrt(const vec<T, N>& a) {
   if constexpr (N == 1) {
     return {sqrt(a.x)};
@@ -1557,7 +1557,7 @@ inline vec<T, N> sqrt(const vec<T, N>& a) {
     return {sqrt(a.x), sqrt(a.y), sqrt(a.z), sqrt(a.w)};
   }
 }
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> exp(const vec<T, N>& a) {
   if constexpr (N == 1) {
     return {exp(a.x)};
@@ -1569,7 +1569,7 @@ inline vec<T, N> exp(const vec<T, N>& a) {
     return {exp(a.x), exp(a.y), exp(a.z), exp(a.w)};
   }
 }
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> log(const vec<T, N>& a) {
   if constexpr (N == 1) {
     return {log(a.x)};
@@ -1581,7 +1581,7 @@ inline vec<T, N> log(const vec<T, N>& a) {
     return {log(a.x), log(a.y), log(a.z), log(a.w)};
   }
 }
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> exp2(const vec<T, N>& a) {
   if constexpr (N == 1) {
     return {exp2(a.x)};
@@ -1593,7 +1593,7 @@ inline vec<T, N> exp2(const vec<T, N>& a) {
     return {exp2(a.x), exp2(a.y), exp2(a.z), exp2(a.w)};
   }
 }
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> log2(const vec<T, N>& a) {
   if constexpr (N == 1) {
     return {log2(a.x)};
@@ -1605,7 +1605,7 @@ inline vec<T, N> log2(const vec<T, N>& a) {
     return {log2(a.x), log2(a.y), log2(a.z), log2(a.w)};
   }
 }
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> pow(const vec<T, N>& a, T b) {
   if constexpr (N == 1) {
     return {pow(a.x, b)};
@@ -1617,7 +1617,7 @@ inline vec<T, N> pow(const vec<T, N>& a, T b) {
     return {pow(a.x, b), pow(a.y, b), pow(a.z, b), pow(a.w, b)};
   }
 }
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> pow(const vec<T, N>& a, const vec<T, N>& b) {
   if constexpr (N == 1) {
     return {pow(a.x, b.x)};
@@ -1629,7 +1629,7 @@ inline vec<T, N> pow(const vec<T, N>& a, const vec<T, N>& b) {
     return {pow(a.x, b.x), pow(a.y, b.y), pow(a.z, b.z), pow(a.w, b.w)};
   }
 }
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> gain(const vec<T, N>& a, T b) {
   if constexpr (N == 1) {
     return {gain(a.x, b)};
@@ -1641,11 +1641,11 @@ inline vec<T, N> gain(const vec<T, N>& a, T b) {
     return {gain(a.x, b), gain(a.y, b), gain(a.z, b), gain(a.w, b)};
   }
 }
-// template <typename T, int N>
+// template <typename T, size_t N>
 // inline void swap(vec<T, N>& a, vec<T, N>& b) {
 //   std::swap(a, b);
 // }
-template <typename T, int N>
+template <typename T, size_t N>
 inline bool isfinite(const vec<T, N>& a) {
   if constexpr (N == 1) {
     return isfinite(a.x);
@@ -1688,7 +1688,7 @@ inline vec<T, 4> quat_inverse(const vec<T, 4>& a) {
 namespace yocto {
 
 // Matrix comparisons.
-template <typename T, int N>
+template <typename T, size_t N>
 inline bool operator==(const mat<T, N>& a, const mat<T, N>& b) {
   if constexpr (N == 1) {
     return a.x == b.x;
@@ -1700,13 +1700,13 @@ inline bool operator==(const mat<T, N>& a, const mat<T, N>& b) {
     return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
   }
 }
-template <typename T, int N>
+template <typename T, size_t N>
 inline bool operator!=(const mat<T, N>& a, const mat<T, N>& b) {
   return !(a == b);
 }
 
 // Matrix operations.
-template <typename T, int N>
+template <typename T, size_t N>
 inline mat<T, N> operator+(const mat<T, N>& a, const mat<T, N>& b) {
   if constexpr (N == 1) {
     return {a.x + b.x};
@@ -1718,7 +1718,7 @@ inline mat<T, N> operator+(const mat<T, N>& a, const mat<T, N>& b) {
     return {a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w};
   }
 }
-template <typename T, int N, typename T1>
+template <typename T, size_t N, typename T1>
 inline mat<T, N> operator*(const mat<T, N>& a, T1 b) {
   if constexpr (N == 1) {
     return {a.x * b};
@@ -1730,7 +1730,7 @@ inline mat<T, N> operator*(const mat<T, N>& a, T1 b) {
     return {a.x * b, a.y * b, a.z * b, a.w * b};
   }
 }
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> operator*(const mat<T, N>& a, const vec<T, N>& b) {
   if constexpr (N == 1) {
     return a.x * b.x;
@@ -1742,7 +1742,7 @@ inline vec<T, N> operator*(const mat<T, N>& a, const vec<T, N>& b) {
     return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
   }
 }
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> operator*(const vec<T, N>& a, const mat<T, N>& b) {
   if constexpr (N == 1) {
     return {dot(a, b.x)};
@@ -1754,7 +1754,7 @@ inline vec<T, N> operator*(const vec<T, N>& a, const mat<T, N>& b) {
     return {dot(a, b.x), dot(a, b.y), dot(a, b.z), dot(a, b.w)};
   }
 }
-template <typename T, int N>
+template <typename T, size_t N>
 inline mat<T, N> operator*(const mat<T, N>& a, const mat<T, N>& b) {
   if constexpr (N == 1) {
     return {a * b.x};
@@ -1768,21 +1768,21 @@ inline mat<T, N> operator*(const mat<T, N>& a, const mat<T, N>& b) {
 }
 
 // Matrix assignments.
-template <typename T, int N>
+template <typename T, size_t N>
 inline mat<T, N>& operator+=(mat<T, N>& a, const mat<T, N>& b) {
   return a = a + b;
 }
-template <typename T, int N>
+template <typename T, size_t N>
 inline mat<T, N>& operator*=(mat<T, N>& a, const mat<T, N>& b) {
   return a = a * b;
 }
-template <typename T, int N, typename T1>
+template <typename T, size_t N, typename T1>
 inline mat<T, N>& operator*=(mat<T, N>& a, T1 b) {
   return a = a * b;
 }
 
 // Matrix diagonals and transposes.
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> diagonal(const mat<T, N>& a) {
   if constexpr (N == 1) {
     return {a.x.x};
@@ -1794,7 +1794,7 @@ inline vec<T, N> diagonal(const mat<T, N>& a) {
     return {a.x.x, a.y.y, a.z.z, a.w.w};
   }
 }
-template <typename T, int N>
+template <typename T, size_t N>
 inline mat<T, N> transpose(const mat<T, N>& a) {
   if constexpr (N == 1) {
     return {{a.x.x}};
@@ -1817,7 +1817,7 @@ inline mat<T, N> transpose(const mat<T, N>& a) {
 }
 
 // Matrix adjoints, determinants and inverses.
-template <typename T, int N>
+template <typename T, size_t N>
 inline T determinant(const mat<T, N>& a) {
   if constexpr (N == 1) {
     return a.x;
@@ -1829,7 +1829,7 @@ inline T determinant(const mat<T, N>& a) {
     return 0;  // TODO
   }
 }
-template <typename T, int N>
+template <typename T, size_t N>
 inline mat<T, N> adjoint(const mat<T, N>& a) {
   if constexpr (N == 1) {
     return {{a.x.x}};
@@ -1842,7 +1842,7 @@ inline mat<T, N> adjoint(const mat<T, N>& a) {
     return {};  // TODO
   }
 }
-template <typename T, int N>
+template <typename T, size_t N>
 inline mat<T, N> inverse(const mat<T, N>& a) {
   return adjoint(a) * (1 / determinant(a));
 }
@@ -1873,7 +1873,7 @@ inline mat<T, 3> basis_fromz(const vec<T, 3>& v) {
 namespace yocto {
 
 // Frame properties
-template <typename T, int N>
+template <typename T, size_t N>
 inline mat<T, N> rotation(const frame<T, N>& a) {
   if constexpr (N == 2) {
     return {a.x, a.y};
@@ -1881,7 +1881,7 @@ inline mat<T, N> rotation(const frame<T, N>& a) {
     return {a.x, a.y, a.z};
   }
 }
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> translation(const frame<T, N>& a) {
   if constexpr (N == 2) {
     return a.o;
@@ -1891,7 +1891,7 @@ inline vec<T, N> translation(const frame<T, N>& a) {
 }
 
 // Frame construction
-template <typename T, int N>
+template <typename T, size_t N>
 inline frame<T, N> make_frame(const mat<T, N>& m, const vec<T, N>& t) {
   if constexpr (N == 2) {
     return {m.x, m.y, t};
@@ -1901,7 +1901,7 @@ inline frame<T, N> make_frame(const mat<T, N>& m, const vec<T, N>& t) {
 }
 
 // Frame/mat conversion
-template <typename T, int N_>
+template <typename T, size_t N_>
 inline frame<T, N_ - 1> mat_to_frame(const mat<T, N_>& m) {
   constexpr auto N = N_ - 1;
   if constexpr (N == 2) {
@@ -1911,7 +1911,7 @@ inline frame<T, N_ - 1> mat_to_frame(const mat<T, N_>& m) {
         {m.w.x, m.w.y, m.w.z}};
   }
 }
-template <typename T, int N>
+template <typename T, size_t N>
 inline mat<T, N + 1> frame_to_mat(const frame<T, N>& f) {
   if constexpr (N == 2) {
     return {{f.x.x, f.x.y, 0}, {f.y.x, f.y.y, 0}, {f.o.x, f.o.y, 1}};
@@ -1922,7 +1922,7 @@ inline mat<T, N + 1> frame_to_mat(const frame<T, N>& f) {
 }
 
 // Frame comparisons.
-template <typename T, int N>
+template <typename T, size_t N>
 inline bool operator==(const frame<T, N>& a, const frame<T, N>& b) {
   if constexpr (N == 2) {
     return a.x == b.x && a.y == b.y && a.o == b.o;
@@ -1930,23 +1930,23 @@ inline bool operator==(const frame<T, N>& a, const frame<T, N>& b) {
     return a.x == b.x && a.y == b.y && a.z == b.z && a.o == b.o;
   }
 }
-template <typename T, int N>
+template <typename T, size_t N>
 inline bool operator!=(const frame<T, N>& a, const frame<T, N>& b) {
   return !(a == b);
 }
 
 // Frame composition, equivalent to affine matrix product.
-template <typename T, int N>
+template <typename T, size_t N>
 inline frame<T, N> operator*(const frame<T, N>& a, const frame<T, N>& b) {
   return make_frame(rotation(a) * rotation(b), rotation(a) * b.o + a.o);
 }
-template <typename T, int N>
+template <typename T, size_t N>
 inline frame<T, N>& operator*=(frame<T, N>& a, const frame<T, N>& b) {
   return a = a * b;
 }
 
 // Frame inverse, equivalent to rigid affine inverse.
-template <typename T, int N>
+template <typename T, size_t N>
 inline frame<T, N> inverse(const frame<T, N>& a, bool non_rigid) {
   if (non_rigid) {
     auto minv = inverse(rotation(a));
@@ -2062,7 +2062,7 @@ inline quat<T, 4> slerp(const quat<T, 4>& a, const quat<T, 4>& b, T t) {
 namespace yocto {
 
 // Transforms points, vectors and directions by matrices.
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> transform_point(const mat<T, N + 1>& a, const vec<T, N>& b) {
   if constexpr (N == 2) {
     auto tvb = a * vec<T, 3>{b.x, b.y, 1};
@@ -2072,7 +2072,7 @@ inline vec<T, N> transform_point(const mat<T, N + 1>& a, const vec<T, N>& b) {
     return vec<T, 3>{tvb.x, tvb.y, tvb.z} / tvb.w;
   }
 }
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> transform_vector(const mat<T, N + 1>& a, const vec<T, N>& b) {
   if constexpr (N == 2) {
     auto tvb = a * vec<T, 3>{b.x, b.y, 0};
@@ -2082,30 +2082,30 @@ inline vec<T, N> transform_vector(const mat<T, N + 1>& a, const vec<T, N>& b) {
     return vec<T, 3>{tvb.x, tvb.y, tvb.z} / tvb.w;
   }
 }
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> transform_direction(
     const mat<T, N + 1>& a, const vec<T, N>& b) {
   return normalize(transform_vector(a, b));
 }
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> transform_normal(const mat<T, N + 1>& a, const vec<T, N>& b) {
   return normalize(transform_vector(transpose(inverse(a)), b));
 }
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> transform_vector(const mat<T, N>& a, const vec<T, N>& b) {
   return a * b;
 }
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> transform_direction(const mat<T, N>& a, const vec<T, N>& b) {
   return normalize(transform_vector(a, b));
 }
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> transform_normal(const mat<T, N>& a, const vec<T, N>& b) {
   return normalize(transform_vector(transpose(inverse(a)), b));
 }
 
 // Transforms points, vectors and directions by frames.
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> transform_point(const frame<T, N>& a, const vec<T, N>& b) {
   if constexpr (N == 2) {
     return a.x * b.x + a.y * b.y + a.o;
@@ -2113,7 +2113,7 @@ inline vec<T, N> transform_point(const frame<T, N>& a, const vec<T, N>& b) {
     return a.x * b.x + a.y * b.y + a.z * b.z + a.o;
   }
 }
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> transform_vector(const frame<T, N>& a, const vec<T, N>& b) {
   if constexpr (N == 2) {
     return a.x * b.x + a.y * b.y;
@@ -2121,11 +2121,11 @@ inline vec<T, N> transform_vector(const frame<T, N>& a, const vec<T, N>& b) {
     return a.x * b.x + a.y * b.y + a.z * b.z;
   }
 }
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> transform_direction(const frame<T, N>& a, const vec<T, N>& b) {
   return normalize(transform_vector(a, b));
 }
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> transform_normal(
     const frame<T, N>& a, const vec<T, N>& b, bool non_rigid) {
   if (non_rigid) {
@@ -2136,7 +2136,7 @@ inline vec<T, N> transform_normal(
 }
 
 // Transforms points, vectors and directions by frames.
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> transform_point_inverse(
     const frame<T, N>& a, const vec<T, N>& b) {
   if constexpr (N == 2) {
@@ -2145,7 +2145,7 @@ inline vec<T, N> transform_point_inverse(
     return {dot(a.x, (b - a.o)), dot(a.y, (b - a.o)), dot(a.z, (b - a.o))};
   }
 }
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> transform_vector_inverse(
     const frame<T, N>& a, const vec<T, N>& b) {
   if constexpr (N == 2) {
@@ -2154,7 +2154,7 @@ inline vec<T, N> transform_vector_inverse(
     return {dot(a.x, b), dot(a.y, b), dot(a.z, b)};
   }
 }
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> transform_direction_inverse(
     const frame<T, N>& a, const vec<T, N>& b) {
   return normalize(transform_vector_inverse(a, b));
@@ -2570,7 +2570,7 @@ constexpr auto enumerate(const Sequence& sequence, T start) {
     T        index;
     Iterator iterator;
     bool     operator!=(const enumerate_iterator& other) const {
-          return index != other.index;
+      return index != other.index;
     }
     void operator++() {
       ++index;
@@ -2596,7 +2596,7 @@ constexpr auto enumerate(Sequence& sequence, T start) {
     T        index;
     Iterator iterator;
     bool     operator!=(const enumerate_iterator& other) const {
-          return index != other.index;
+      return index != other.index;
     }
     void operator++() {
       ++index;
@@ -2624,7 +2624,7 @@ constexpr auto zip(const Sequence1& sequence1, const Sequence2& sequence2) {
     Iterator1 iterator1;
     Iterator2 iterator2;
     bool      operator!=(const zip_iterator& other) const {
-           return iterator1 != other.iterator1;
+      return iterator1 != other.iterator1;
     }
     void operator++() {
       ++iterator1;
@@ -2638,7 +2638,7 @@ constexpr auto zip(const Sequence1& sequence1, const Sequence2& sequence2) {
     const Sequence1& sequence1;
     const Sequence2& sequence2;
     auto             begin() {
-                  return zip_iterator{std::begin(sequence1), std::begin(sequence2)};
+      return zip_iterator{std::begin(sequence1), std::begin(sequence2)};
     }
     auto end() {
       return zip_iterator{std::end(sequence1), std::end(sequence2)};
@@ -2658,7 +2658,7 @@ constexpr auto zip(Sequence1& sequence1, Sequence2& sequence2) {
     Iterator1 iterator1;
     Iterator2 iterator2;
     bool      operator!=(const zip_iterator& other) const {
-           return iterator1 != other.iterator1;
+      return iterator1 != other.iterator1;
     }
     void operator++() {
       ++iterator1;
@@ -2672,7 +2672,7 @@ constexpr auto zip(Sequence1& sequence1, Sequence2& sequence2) {
     Sequence1& sequence1;
     Sequence2& sequence2;
     auto       begin() {
-            return zip_iterator{std::begin(sequence1), std::begin(sequence2)};
+      return zip_iterator{std::begin(sequence1), std::begin(sequence2)};
     }
     auto end() {
       return zip_iterator{std::end(sequence1), std::end(sequence2)};
@@ -2692,7 +2692,7 @@ constexpr auto zip(const Sequence1& sequence1, Sequence2& sequence2) {
     Iterator1 iterator1;
     Iterator2 iterator2;
     bool      operator!=(const zip_iterator& other) const {
-           return iterator1 != other.iterator1;
+      return iterator1 != other.iterator1;
     }
     void operator++() {
       ++iterator1;
@@ -2706,7 +2706,7 @@ constexpr auto zip(const Sequence1& sequence1, Sequence2& sequence2) {
     const Sequence1& sequence1;
     Sequence2&       sequence2;
     auto             begin() {
-                  return zip_iterator{std::begin(sequence1), std::begin(sequence2)};
+      return zip_iterator{std::begin(sequence1), std::begin(sequence2)};
     }
     auto end() {
       return zip_iterator{std::end(sequence1), std::end(sequence2)};
@@ -2726,7 +2726,7 @@ constexpr auto zip(Sequence1& sequence1, const Sequence2& sequence2) {
     Iterator1 iterator1;
     Iterator2 iterator2;
     bool      operator!=(const zip_iterator& other) const {
-           return iterator1 != other.iterator1;
+      return iterator1 != other.iterator1;
     }
     void operator++() {
       ++iterator1;
@@ -2740,7 +2740,7 @@ constexpr auto zip(Sequence1& sequence1, const Sequence2& sequence2) {
     Sequence1&       sequence1;
     const Sequence2& sequence2;
     auto             begin() {
-                  return zip_iterator{std::begin(sequence1), std::begin(sequence2)};
+      return zip_iterator{std::begin(sequence1), std::begin(sequence2)};
     }
     auto end() {
       return zip_iterator{std::end(sequence1), std::end(sequence2)};

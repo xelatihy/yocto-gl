@@ -73,9 +73,9 @@ template <typename T>
 inline byte float_to_byte(T a);
 template <typename T = float>
 inline T byte_to_float(byte a);
-template <int N, typename T>
+template <size_t N, typename T>
 inline vec<byte, N> float_to_byte(const vec<T, N>& a);
-template <int N, typename T = float>
+template <size_t N, typename T = float>
 inline vec<T, N> byte_to_float(const vec<byte, N>& a);
 
 // Luminance
@@ -87,9 +87,9 @@ template <typename T>
 inline T srgb_to_rgb(T srgb);
 template <typename T>
 inline T rgb_to_srgb(T rgb);
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> srgb_to_rgb(const vec<T, N>& srgb);
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> rgb_to_srgb(const vec<T, N>& rgb);
 
 // sRGB non-linear curve
@@ -97,9 +97,9 @@ template <typename T>
 inline T srgbb_to_rgb(byte srgb);
 template <typename T>
 inline byte rgb_to_srgbb(T rgb);
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> srgbb_to_rgb(const vec<byte, N>& srgb);
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<byte, N> rgb_to_srgbb(const vec<T, N>& rgb);
 
 // Conversion between number of channels.
@@ -268,7 +268,7 @@ template <typename T>
 inline T byte_to_float(byte a) {
   return a / (T)255;
 }
-template <int N, typename T>
+template <size_t N, typename T>
 inline vec<byte, N> float_to_byte(const vec<T, N>& a) {
   if constexpr (N == 1) {
     return {(byte)clamp(int(a.x * 256), 0, 255)};
@@ -286,7 +286,7 @@ inline vec<byte, N> float_to_byte(const vec<T, N>& a) {
         (byte)clamp(int(a.w * 256), 0, 255)};
   }
 }
-template <int N, typename T>
+template <size_t N, typename T>
 inline vec<T, N> byte_to_float(const vec<byte, N>& a) {
   if constexpr (N == 1) {
     return {a.x / (T)255};
@@ -317,7 +317,7 @@ inline T rgb_to_srgb(T rgb) {
              ? (T)12.92 * rgb
              : (1 + (T)0.055) * pow(rgb, 1 / (T)2.4) - (T)0.055;
 }
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> srgb_to_rgb(const vec<T, N>& srgb) {
   if constexpr (N == 1) {
     return {srgb_to_rgb(srgb.x)};
@@ -330,7 +330,7 @@ inline vec<T, N> srgb_to_rgb(const vec<T, N>& srgb) {
         srgb_to_rgb(srgb.x), srgb_to_rgb(srgb.y), srgb_to_rgb(srgb.z), srgb.w};
   }
 }
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> rgb_to_srgb(const vec<T, N>& rgb) {
   if constexpr (N == 1) {
     return {rgb_to_srgb(rgb.x)};
@@ -352,11 +352,11 @@ template <typename T>
 inline byte rgb_to_srgbb(T rgb) {
   return float_to_byte(srgb_to_rgb(rgb));
 }
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<T, N> srgbb_to_rgb(const vec<byte, N>& srgb) {
   return srgb_to_rgb(byte_to_float<N, T>(srgb));
 }
-template <typename T, int N>
+template <typename T, size_t N>
 inline vec<byte, N> rgb_to_srgbb(const vec<T, N>& rgb) {
   return float_to_byte(rgb_to_srgbb(rgb));
 }

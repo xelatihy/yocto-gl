@@ -128,44 +128,51 @@ inline bool parallel_foreach(
 namespace yocto {
 
 // Make a path from a utf8 string
-static std::filesystem::path make_path(const string& path) {
-  return std::filesystem::u8path(path);
+static std::filesystem::path to_path(const string& filename) {
+  auto filename8 = std::u8string((char8_t*)filename.data(), filename.size());
+  return std::filesystem::path(filename8);
+}
+
+// Make a utf8 string from a path
+static string to_string(const std::filesystem::path& path) {
+  auto string8 = path.u8string();
+  return string((char*)string8.data(), string8.size());
 }
 
 // Normalize a path
 string path_normalized(const string& path) {
-  return make_path(path).generic_u8string();
+  return to_string(to_path(path));
 }
 
 // Get directory name (not including /)
 string path_dirname(const string& path) {
-  return make_path(path).parent_path().generic_u8string();
+  return to_string(to_path(path).parent_path());
 }
 
 // Get filename without directory and extension.
 string path_basename(const string& path) {
-  return make_path(path).stem().generic_u8string();
+  return to_string(to_path(path).stem());
 }
 
 // Get extension
 string path_extension(const string& path) {
-  return make_path(path).extension().generic_u8string();
+  return to_string(to_path(path).extension());
 }
 
 // Check if a file can be opened for reading.
-bool path_exists(const string& path) { return exists(make_path(path)); }
+bool path_exists(const string& path) { return exists(to_path(path)); }
 
 // Replace the extension of a file
 string replace_extension(const string& path, const string& extension) {
-  auto ext = make_path(extension).extension();
-  return make_path(path).replace_extension(ext).generic_u8string();
+  auto ext = to_path(extension).extension();
+  return to_string(to_path(path).replace_extension(ext));
 }
 
 // Create a directory and all missing parent directories if needed
 void make_directory(const string& path) {
   if (path_exists(path)) return;
   try {
-    create_directories(make_path(path));
+    create_directories(to_path(path));
   } catch (...) {
     throw io_error{path + ": cannot create directory"};
   }
@@ -175,7 +182,7 @@ void make_directory(const string& path) {
 bool make_directory(const string& path, string& error) {
   if (path_exists(path)) return true;
   try {
-    create_directories(make_path(path));
+    create_directories(to_path(path));
     return true;
   } catch (...) {
     error = path + ": cannot create directory";
@@ -185,12 +192,11 @@ bool make_directory(const string& path, string& error) {
 
 // Joins paths
 static string path_join(const string& patha, const string& pathb) {
-  return (make_path(patha) / make_path(pathb)).generic_u8string();
+  return to_string(to_path(patha) / to_path(pathb));
 }
 static string path_join(
     const string& patha, const string& pathb, const string& pathc) {
-  return (make_path(patha) / make_path(pathb) / make_path(pathc))
-      .generic_u8string();
+  return to_string(to_path(patha) / to_path(pathb) / to_path(pathc));
 }
 
 }  // namespace yocto
