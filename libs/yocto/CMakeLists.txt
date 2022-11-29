@@ -48,7 +48,7 @@ endif(YOCTO_DENOISE)
 
 if(YOCTO_CUDA)
   enable_language(CUDA)
-  set_target_properties(yocto PROPERTIES CUDA_STANDARD 17 CUDA_STANDARD_REQUIRED YES)
+  set_target_properties(yocto PROPERTIES CUDA_STANDARD 20 CUDA_STANDARD_REQUIRED YES)
 
   # Optix
   if(DEFINED ENV{OptiX_INSTALL_DIR})
@@ -80,7 +80,7 @@ endif(YOCTO_CUDA)
 
 # warning flags
 if(APPLE)
-  target_compile_options(yocto PUBLIC -Wall -Wconversion -Wno-sign-conversion -Wno-implicit-float-conversion -Wno-unused-variable)
+  target_compile_options(yocto PUBLIC -Wall -Wconversion -Wno-sign-conversion -Wno-implicit-float-conversion -Wno-unused-variable -Wno-c++20-extensions)
 endif(APPLE)
 
 if(MSVC)

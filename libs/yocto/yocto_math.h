@@ -41,6 +41,7 @@
 #include <cmath>
 #include <cstdint>
 #include <limits>
+#include <type_traits>
 #include <utility>
 
 // -----------------------------------------------------------------------------
@@ -158,9 +159,10 @@ struct vec<T, 1> {
   constexpr vec(T x_) : x{x_} {}
 
   template <typename U>
-  constexpr vec(vec<U, 1> v) : x{(T)v.x} {}
+  constexpr explicit(!std::is_convertible_v<U, T>) vec(vec<U, 1> v)
+      : x{(T)v.x} {}
   template <typename U>
-  constexpr operator vec<U, 1>() {
+  constexpr explicit(!std::is_convertible_v<T, U>) operator vec<U, 1>() {
     return {(U)x};
   }
 
@@ -177,12 +179,14 @@ struct vec<T, 2> {
   T y = 0;
 
   constexpr vec() : x{0}, y{0} {}
+  constexpr explicit vec(T v_) : x{v_}, y{v_} {}
   constexpr vec(T x_, T y_) : x{x_}, y{y_} {}
 
   template <typename U>
-  constexpr vec(vec<U, 2> v) : x{(T)v.x}, y{(T)v.y} {}
+  constexpr explicit(!std::is_convertible_v<U, T>) vec(vec<U, 2> v)
+      : x{(T)v.x}, y{(T)v.y} {}
   template <typename U>
-  constexpr operator vec<U, 2>() {
+  constexpr explicit(!std::is_convertible_v<T, U>) operator vec<U, 2>() {
     return {(U)x, (U)y};
   }
 
@@ -200,12 +204,14 @@ struct vec<T, 3> {
   T z = 0;
 
   constexpr vec() : x{0}, y{0}, z{0} {}
+  constexpr explicit vec(T v_) : x{v_}, y{v_}, z{v_} {}
   constexpr vec(T x_, T y_, T z_) : x{x_}, y{y_}, z{z_} {}
 
   template <typename U>
-  constexpr vec(vec<U, 3> v) : x{(T)v.x}, y{(T)v.y}, z{(T)v.z} {}
+  constexpr explicit(!std::is_convertible_v<U, T>) vec(vec<U, 3> v)
+      : x{(T)v.x}, y{(T)v.y}, z{(T)v.z} {}
   template <typename U>
-  constexpr operator vec<U, 3>() {
+  constexpr explicit(!std::is_convertible_v<T, U>) operator vec<U, 3>() {
     return {(U)x, (U)y, (U)z};
   }
   constexpr vec(array<T, 3> v) : x{v[0]}, y{v[1]}, z{v[2]} {}
@@ -223,12 +229,14 @@ struct vec<T, 4> {
   T w = 0;
 
   constexpr vec() : x{0}, y{0}, z{0}, w{0} {}
+  constexpr explicit vec(T v_) : x{v_}, y{v_}, z{v_}, w{v_} {}
   constexpr vec(T x_, T y_, T z_, T w_) : x{x_}, y{y_}, z{z_}, w{w_} {}
 
   template <typename U>
-  constexpr vec(vec<U, 4> v) : x{(T)v.x}, y{(T)v.y}, z{(T)v.z}, w{(T)v.w} {}
+  constexpr explicit(!std::is_convertible_v<U, T>) vec(vec<U, 4> v)
+      : x{(T)v.x}, y{(T)v.y}, z{(T)v.z}, w{(T)v.w} {}
   template <typename U>
-  constexpr operator vec<U, 4>() {
+  constexpr explicit(!std::is_convertible_v<T, U>) operator vec<U, 4>() {
     return {(U)x, (U)y, (U)z, (U)w};
   }
   constexpr vec(array<T, 4> v) : x{v[0]}, y{v[1]}, z{v[2]}, w{v[3]} {}
@@ -2570,7 +2578,7 @@ constexpr auto enumerate(const Sequence& sequence, T start) {
     T        index;
     Iterator iterator;
     bool     operator!=(const enumerate_iterator& other) const {
-      return index != other.index;
+          return index != other.index;
     }
     void operator++() {
       ++index;
@@ -2596,7 +2604,7 @@ constexpr auto enumerate(Sequence& sequence, T start) {
     T        index;
     Iterator iterator;
     bool     operator!=(const enumerate_iterator& other) const {
-      return index != other.index;
+          return index != other.index;
     }
     void operator++() {
       ++index;
@@ -2624,7 +2632,7 @@ constexpr auto zip(const Sequence1& sequence1, const Sequence2& sequence2) {
     Iterator1 iterator1;
     Iterator2 iterator2;
     bool      operator!=(const zip_iterator& other) const {
-      return iterator1 != other.iterator1;
+           return iterator1 != other.iterator1;
     }
     void operator++() {
       ++iterator1;
@@ -2638,7 +2646,7 @@ constexpr auto zip(const Sequence1& sequence1, const Sequence2& sequence2) {
     const Sequence1& sequence1;
     const Sequence2& sequence2;
     auto             begin() {
-      return zip_iterator{std::begin(sequence1), std::begin(sequence2)};
+                  return zip_iterator{std::begin(sequence1), std::begin(sequence2)};
     }
     auto end() {
       return zip_iterator{std::end(sequence1), std::end(sequence2)};
@@ -2658,7 +2666,7 @@ constexpr auto zip(Sequence1& sequence1, Sequence2& sequence2) {
     Iterator1 iterator1;
     Iterator2 iterator2;
     bool      operator!=(const zip_iterator& other) const {
-      return iterator1 != other.iterator1;
+           return iterator1 != other.iterator1;
     }
     void operator++() {
       ++iterator1;
@@ -2672,7 +2680,7 @@ constexpr auto zip(Sequence1& sequence1, Sequence2& sequence2) {
     Sequence1& sequence1;
     Sequence2& sequence2;
     auto       begin() {
-      return zip_iterator{std::begin(sequence1), std::begin(sequence2)};
+            return zip_iterator{std::begin(sequence1), std::begin(sequence2)};
     }
     auto end() {
       return zip_iterator{std::end(sequence1), std::end(sequence2)};
@@ -2692,7 +2700,7 @@ constexpr auto zip(const Sequence1& sequence1, Sequence2& sequence2) {
     Iterator1 iterator1;
     Iterator2 iterator2;
     bool      operator!=(const zip_iterator& other) const {
-      return iterator1 != other.iterator1;
+           return iterator1 != other.iterator1;
     }
     void operator++() {
       ++iterator1;
@@ -2706,7 +2714,7 @@ constexpr auto zip(const Sequence1& sequence1, Sequence2& sequence2) {
     const Sequence1& sequence1;
     Sequence2&       sequence2;
     auto             begin() {
-      return zip_iterator{std::begin(sequence1), std::begin(sequence2)};
+                  return zip_iterator{std::begin(sequence1), std::begin(sequence2)};
     }
     auto end() {
       return zip_iterator{std::end(sequence1), std::end(sequence2)};
@@ -2726,7 +2734,7 @@ constexpr auto zip(Sequence1& sequence1, const Sequence2& sequence2) {
     Iterator1 iterator1;
     Iterator2 iterator2;
     bool      operator!=(const zip_iterator& other) const {
-      return iterator1 != other.iterator1;
+           return iterator1 != other.iterator1;
     }
     void operator++() {
       ++iterator1;
@@ -2740,7 +2748,7 @@ constexpr auto zip(Sequence1& sequence1, const Sequence2& sequence2) {
     Sequence1&       sequence1;
     const Sequence2& sequence2;
     auto             begin() {
-      return zip_iterator{std::begin(sequence1), std::begin(sequence2)};
+                  return zip_iterator{std::begin(sequence1), std::begin(sequence2)};
     }
     auto end() {
       return zip_iterator{std::end(sequence1), std::end(sequence2)};
