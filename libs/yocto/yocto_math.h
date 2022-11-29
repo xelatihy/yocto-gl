@@ -49,6 +49,7 @@
 namespace yocto {
 
 // using directives
+using std::array;
 using std::pair;
 
 }  // namespace yocto
@@ -156,6 +157,16 @@ struct vec<T, 1> {
   constexpr vec() : x{0} {}
   constexpr vec(T x_) : x{x_} {}
 
+  template <typename U>
+  constexpr vec(vec<U, 1> v) : x{(T)v.x} {}
+  template <typename U>
+  constexpr operator vec<U, 1>() {
+    return {(U)x};
+  }
+
+  constexpr vec(array<T, 1> v) : x{v[0]} {}
+  constexpr operator array<T, 1>() { return {x}; }
+
   constexpr T&       operator[](int i) { return ((T*)this)[i]; }
   constexpr const T& operator[](int i) const { return ((T*)this)[i]; }
 };
@@ -167,6 +178,16 @@ struct vec<T, 2> {
 
   constexpr vec() : x{0}, y{0} {}
   constexpr vec(T x_, T y_) : x{x_}, y{y_} {}
+
+  template <typename U>
+  constexpr vec(vec<U, 2> v) : x{(T)v.x}, y{(T)v.y} {}
+  template <typename U>
+  constexpr operator vec<U, 2>() {
+    return {(U)x, (U)y};
+  }
+
+  constexpr vec(array<T, 2> v) : x{v[0]}, y{v[1]} {}
+  constexpr operator array<T, 2>() { return {x, y}; }
 
   constexpr T&       operator[](int i) { return ((T*)this)[i]; }
   constexpr const T& operator[](int i) const { return ((T*)this)[i]; }
@@ -181,6 +202,15 @@ struct vec<T, 3> {
   constexpr vec() : x{0}, y{0}, z{0} {}
   constexpr vec(T x_, T y_, T z_) : x{x_}, y{y_}, z{z_} {}
 
+  template <typename U>
+  constexpr vec(vec<U, 3> v) : x{(T)v.x}, y{(T)v.y}, z{(T)v.z} {}
+  template <typename U>
+  constexpr operator vec<U, 3>() {
+    return {(U)x, (U)y, (U)z};
+  }
+  constexpr vec(array<T, 3> v) : x{v[0]}, y{v[1]}, z{v[2]} {}
+  constexpr operator array<T, 3>() { return {x, y, z}; }
+
   constexpr T&       operator[](int i) { return ((T*)this)[i]; }
   constexpr const T& operator[](int i) const { return ((T*)this)[i]; }
 };
@@ -194,6 +224,15 @@ struct vec<T, 4> {
 
   constexpr vec() : x{0}, y{0}, z{0}, w{0} {}
   constexpr vec(T x_, T y_, T z_, T w_) : x{x_}, y{y_}, z{z_}, w{w_} {}
+
+  template <typename U>
+  constexpr vec(vec<U, 4> v) : x{(T)v.x}, y{(T)v.y}, z{(T)v.z}, w{(T)v.w} {}
+  template <typename U>
+  constexpr operator vec<U, 4>() {
+    return {(U)x, (U)y, (U)z, (U)w};
+  }
+  constexpr vec(array<T, 4> v) : x{v[0]}, y{v[1]}, z{v[2]}, w{v[3]} {}
+  constexpr operator array<T, 4>() { return {x, y, z, w}; }
 
   constexpr T&       operator[](int i) { return ((T*)this)[i]; }
   constexpr const T& operator[](int i) const { return ((T*)this)[i]; }
@@ -641,6 +680,12 @@ struct quat<T, 4> {
   T y = 0;
   T z = 0;
   T w = 1;
+
+  constexpr quat() : x{0}, y{0}, z{0}, w{1} {}
+  constexpr quat(T x_, T y_, T z_, T w_) : x{x_}, y{y_}, z{z_}, w{w_} {}
+
+  constexpr T&       operator[](int i) { return ((T*)this)[i]; }
+  constexpr const T& operator[](int i) const { return ((T*)this)[i]; }
 };
 
 // Quaternion aliases
@@ -2526,7 +2571,7 @@ constexpr auto enumerate(const Sequence& sequence, T start) {
     T        index;
     Iterator iterator;
     bool     operator!=(const enumerate_iterator& other) const {
-          return index != other.index;
+      return index != other.index;
     }
     void operator++() {
       ++index;
@@ -2552,7 +2597,7 @@ constexpr auto enumerate(Sequence& sequence, T start) {
     T        index;
     Iterator iterator;
     bool     operator!=(const enumerate_iterator& other) const {
-          return index != other.index;
+      return index != other.index;
     }
     void operator++() {
       ++index;
@@ -2580,7 +2625,7 @@ constexpr auto zip(const Sequence1& sequence1, const Sequence2& sequence2) {
     Iterator1 iterator1;
     Iterator2 iterator2;
     bool      operator!=(const zip_iterator& other) const {
-           return iterator1 != other.iterator1;
+      return iterator1 != other.iterator1;
     }
     void operator++() {
       ++iterator1;
@@ -2594,7 +2639,7 @@ constexpr auto zip(const Sequence1& sequence1, const Sequence2& sequence2) {
     const Sequence1& sequence1;
     const Sequence2& sequence2;
     auto             begin() {
-                  return zip_iterator{std::begin(sequence1), std::begin(sequence2)};
+      return zip_iterator{std::begin(sequence1), std::begin(sequence2)};
     }
     auto end() {
       return zip_iterator{std::end(sequence1), std::end(sequence2)};
@@ -2614,7 +2659,7 @@ constexpr auto zip(Sequence1& sequence1, Sequence2& sequence2) {
     Iterator1 iterator1;
     Iterator2 iterator2;
     bool      operator!=(const zip_iterator& other) const {
-           return iterator1 != other.iterator1;
+      return iterator1 != other.iterator1;
     }
     void operator++() {
       ++iterator1;
@@ -2628,7 +2673,7 @@ constexpr auto zip(Sequence1& sequence1, Sequence2& sequence2) {
     Sequence1& sequence1;
     Sequence2& sequence2;
     auto       begin() {
-            return zip_iterator{std::begin(sequence1), std::begin(sequence2)};
+      return zip_iterator{std::begin(sequence1), std::begin(sequence2)};
     }
     auto end() {
       return zip_iterator{std::end(sequence1), std::end(sequence2)};
@@ -2648,7 +2693,7 @@ constexpr auto zip(const Sequence1& sequence1, Sequence2& sequence2) {
     Iterator1 iterator1;
     Iterator2 iterator2;
     bool      operator!=(const zip_iterator& other) const {
-           return iterator1 != other.iterator1;
+      return iterator1 != other.iterator1;
     }
     void operator++() {
       ++iterator1;
@@ -2662,7 +2707,7 @@ constexpr auto zip(const Sequence1& sequence1, Sequence2& sequence2) {
     const Sequence1& sequence1;
     Sequence2&       sequence2;
     auto             begin() {
-                  return zip_iterator{std::begin(sequence1), std::begin(sequence2)};
+      return zip_iterator{std::begin(sequence1), std::begin(sequence2)};
     }
     auto end() {
       return zip_iterator{std::end(sequence1), std::end(sequence2)};
@@ -2682,7 +2727,7 @@ constexpr auto zip(Sequence1& sequence1, const Sequence2& sequence2) {
     Iterator1 iterator1;
     Iterator2 iterator2;
     bool      operator!=(const zip_iterator& other) const {
-           return iterator1 != other.iterator1;
+      return iterator1 != other.iterator1;
     }
     void operator++() {
       ++iterator1;
@@ -2696,7 +2741,7 @@ constexpr auto zip(Sequence1& sequence1, const Sequence2& sequence2) {
     Sequence1&       sequence1;
     const Sequence2& sequence2;
     auto             begin() {
-                  return zip_iterator{std::begin(sequence1), std::begin(sequence2)};
+      return zip_iterator{std::begin(sequence1), std::begin(sequence2)};
     }
     auto end() {
       return zip_iterator{std::end(sequence1), std::end(sequence2)};
