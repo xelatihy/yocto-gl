@@ -130,7 +130,7 @@ void rgb_to_srgb(array2d<vec4f>& srgb, const array2d<vec4f>& rgb) {
 // Conversion between linear and gamma-encoded images.
 array2d<vec4f> srgbb_to_rgb(const array2d<vec4b>& srgb) {
   auto rgb = array2d<vec4f>{srgb.extents()};
-  for (auto idx : range(rgb.size())) rgb[idx] = srgbb_to_rgb(srgb[idx]);
+  for (auto idx : range(rgb.size())) rgb[idx] = srgbb_to_rgb<float>(srgb[idx]);
   return rgb;
 }
 array2d<vec4b> rgb_to_srgbb(const array2d<vec4f>& rgb) {
@@ -139,7 +139,7 @@ array2d<vec4b> rgb_to_srgbb(const array2d<vec4f>& rgb) {
   return srgb;
 }
 void srgbb_to_rgb(array2d<vec4f>& rgb, const array2d<vec4b>& srgb) {
-  for (auto idx : range(rgb.size())) rgb[idx] = srgbb_to_rgb(srgb[idx]);
+  for (auto idx : range(rgb.size())) rgb[idx] = srgbb_to_rgb<float>(srgb[idx]);
 }
 void rgb_to_srgbb(array2d<vec4b>& srgb, const array2d<vec4f>& rgb) {
   for (auto idx : range(rgb.size())) srgb[idx] = rgb_to_srgbb(rgb[idx]);

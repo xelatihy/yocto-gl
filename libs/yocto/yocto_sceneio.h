@@ -100,8 +100,8 @@ bool load_image(const string& filename, image_data& img, string& error);
 bool save_image(const string& filename, const image_data& img, string& error);
 
 // Loads/saves a 4 channels float/byte image in linear/srgb color space.
-void       load_image(const string& filename, image_data& image);
-void       save_image(const string& filename, const image_data& image);
+void load_image(const string& filename, image_data& image);
+void save_image(const string& filename, const image_data& image);
 
 // Make presets. Supported mostly in IO.
 image_data make_image_preset(const string& type);
