@@ -358,7 +358,7 @@ inline vec<T, N> srgbb_to_rgb(const vec<byte, N>& srgb) {
 }
 template <typename T, size_t N>
 inline vec<byte, N> rgb_to_srgbb(const vec<T, N>& rgb) {
-  return float_to_byte(rgb_to_srgbb(rgb));
+  return float_to_byte(rgb_to_srgb(rgb));
 }
 
 // Conversion between number of channels.
