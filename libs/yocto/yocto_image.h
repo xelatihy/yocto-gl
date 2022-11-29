@@ -46,6 +46,7 @@
 
 #include "yocto_color.h"
 #include "yocto_math.h"
+#include "yocto_ndarray.h"
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
@@ -56,6 +57,88 @@ namespace yocto {
 using std::array;
 using std::string;
 using std::vector;
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// IMAGE UTILITIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Conversion from/to floats.
+array2d<vec4f> byte_to_float(const array2d<vec4b>& bt);
+array2d<vec4b> float_to_byte(const array2d<vec4f>& fl);
+// Conversion from/to floats.
+void byte_to_float(array2d<vec4f>& fl, const array2d<vec4b>& bt);
+void float_to_byte(array2d<vec4b>& bt, const array2d<vec4f>& fl);
+
+// Conversion between linear and gamma-encoded images.
+array2d<vec4f> srgb_to_rgb(const array2d<vec4f>& srgb);
+array2d<vec4f> rgb_to_srgb(const array2d<vec4f>& rgb);
+// Conversion between linear and gamma-encoded images.
+void srgb_to_rgb(array2d<vec4f>& rgb, const array2d<vec4f>& srgb);
+void rgb_to_srgb(array2d<vec4f>& srgb, const array2d<vec4f>& rgb);
+
+// Conversion between linear and gamma-encoded images.
+array2d<vec4f> srgbb_to_rgb(const array2d<vec4b>& srgb);
+array2d<vec4b> rgb_to_srgbb(const array2d<vec4f>& rgb);
+// Conversion between linear and gamma-encoded images.
+void srgbb_to_rgb(array2d<vec4f>& rgb, const array2d<vec4b>& srgb);
+void rgb_to_srgbb(array2d<vec4b>& srgb, const array2d<vec4f>& rgb);
+
+// Evaluates an image at a point `uv`.
+vec4f eval_image(const array2d<vec4f>& image, const vec2f& uv,
+    bool as_linear = false, bool no_interpolation = false,
+    bool clamp_to_edge = false);
+
+// Apply tone mapping returning a float or byte image.
+array2d<vec4f> tonemap_image(
+    const array2d<vec4f>& image, float exposure, bool filmic = false);
+
+// Apply tone mapping. If the input image is an ldr, does nothing.
+void tonemap_image(array2d<vec4f>& ldr, const array2d<vec4f>& image,
+    float exposure, bool filmic = false);
+// Apply tone mapping using multithreading for speed.
+void tonemap_image_mt(array2d<vec4f>& ldr, const array2d<vec4f>& image,
+    float exposure, bool filmic = false);
+
+// Resize an image.
+array2d<vec4f> resize_image(const array2d<vec4f>& image, int width, int height);
+
+// set/get region
+void set_region(
+    array2d<vec4f>& image, const array2d<vec4f>& region, int x, int y);
+void get_region(array2d<vec4f>& region, const array2d<vec4f>& image, int x,
+    int y, int width, int height);
+
+// Compute the difference between two images.
+array2d<vec4f> image_difference(const array2d<vec4f>& image_a,
+    const array2d<vec4f>& image_b, bool display_diff);
+
+// Composite two images together.
+array2d<vec4f> composite_image(
+    const array2d<vec4f>& image_a, const array2d<vec4f>& image_b);
+
+// Composite two images together.
+void composite_image(array2d<vec4f>& result, const array2d<vec4f>& image_a,
+    const array2d<vec4f>& image_b);
+
+// Color grade an hsr or ldr image to an ldr image.
+array2d<vec4f> colorgrade_image(
+    const array2d<vec4f>& image, bool linear, const colorgrade_params& params);
+
+// Color grade an hsr or ldr image to an ldr image.
+// Uses multithreading for speed.
+void colorgrade_image(array2d<vec4f>& result, const array2d<vec4f>& image,
+    bool linear, const colorgrade_params& params);
+
+// Color grade an hsr or ldr image to an ldr image.
+// Uses multithreading for speed.
+void colorgrade_image_mt(array2d<vec4f>& result, const array2d<vec4f>& image,
+    bool linear, const colorgrade_params& params);
+
+// determine white balance colors
+vec3f compute_white_balance(const array2d<vec4f>& image);
 
 }  // namespace yocto
 
@@ -102,8 +185,8 @@ vec4f eval_image(const image_data& image, const vec2f& uv,
     bool clamp_to_edge = false);
 
 // Apply tone mapping returning a float or byte image.
-image_data tonemap_image(
-    const image_data& image, float exposure, bool filmic = false);
+image_data tonemap_image(const image_data& image, float exposure,
+    bool filmic = false);
 
 // Apply tone mapping. If the input image is an ldr, does nothing.
 void tonemap_image(image_data& ldr, const image_data& image, float exposure,
@@ -150,7 +233,7 @@ void colorgrade_image_mt(image_data& result, const image_data& image,
     const colorgrade_params& params);
 
 // determine white balance colors
-vec4f compute_white_balance(const image_data& image);
+vec3f compute_white_balance(const image_data& image);
 
 }  // namespace yocto
 

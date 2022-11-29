@@ -87,6 +87,305 @@ inline void parallel_for_batch(T num, T batch, Func&& func) {
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// IMPLEMENTATION OF IMAGE UTILITIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Conversion from/to floats.
+array2d<vec4f> byte_to_float(const array2d<vec4b>& bt) {
+  auto fl = array2d<vec4f>{bt.extents()};
+  for (auto idx : range(fl.size())) fl[idx] = byte_to_float(bt[idx]);
+  return fl;
+}
+array2d<vec4b> float_to_byte(const array2d<vec4f>& fl) {
+  auto bt = array2d<vec4b>{fl.extents()};
+  for (auto idx : range(fl.size())) bt[idx] = float_to_byte(fl[idx]);
+  return bt;
+}
+void byte_to_float(array2d<vec4f>& fl, const array2d<vec4b>& bt) {
+  for (auto idx : range(fl.size())) fl[idx] = byte_to_float(bt[idx]);
+}
+void float_to_byte(array2d<vec4b>& bt, const array2d<vec4f>& fl) {
+  for (auto idx : range(fl.size())) bt[idx] = float_to_byte(fl[idx]);
+}
+
+// Conversion between linear and gamma-encoded images.
+array2d<vec4f> srgb_to_rgb(const array2d<vec4f>& srgb) {
+  auto rgb = array2d<vec4f>{srgb.extents()};
+  for (auto idx : range(rgb.size())) rgb[idx] = srgb_to_rgb(srgb[idx]);
+  return rgb;
+}
+array2d<vec4f> rgb_to_srgb(const array2d<vec4f>& rgb) {
+  auto srgb = array2d<vec4f>{rgb.extents()};
+  for (auto idx : range(rgb.size())) srgb[idx] = rgb_to_srgb(rgb[idx]);
+  return srgb;
+}
+void srgb_to_rgb(array2d<vec4f>& rgb, const array2d<vec4f>& srgb) {
+  for (auto idx : range(rgb.size())) rgb[idx] = srgb_to_rgb(srgb[idx]);
+}
+void rgb_to_srgb(array2d<vec4f>& srgb, const array2d<vec4f>& rgb) {
+  for (auto idx : range(rgb.size())) srgb[idx] = rgb_to_srgb(rgb[idx]);
+}
+
+// Conversion between linear and gamma-encoded images.
+array2d<vec4f> srgbb_to_rgb(const array2d<vec4b>& srgb) {
+  auto rgb = array2d<vec4f>{srgb.extents()};
+  for (auto idx : range(rgb.size())) rgb[idx] = srgbb_to_rgb(srgb[idx]);
+  return rgb;
+}
+array2d<vec4b> rgb_to_srgbb(const array2d<vec4f>& rgb) {
+  auto srgb = array2d<vec4b>{rgb.extents()};
+  for (auto idx : range(rgb.size())) srgb[idx] = rgb_to_srgbb(rgb[idx]);
+  return srgb;
+}
+void srgbb_to_rgb(array2d<vec4f>& rgb, const array2d<vec4b>& srgb) {
+  for (auto idx : range(rgb.size())) rgb[idx] = srgbb_to_rgb(srgb[idx]);
+}
+void rgb_to_srgbb(array2d<vec4b>& srgb, const array2d<vec4f>& rgb) {
+  for (auto idx : range(rgb.size())) srgb[idx] = rgb_to_srgbb(rgb[idx]);
+}
+
+// Lookup pixel for evaluation
+static vec4f lookup_image(
+    const array2d<vec4f>& image, int i, int j, bool as_linear) {
+  if (as_linear) {
+    return srgb_to_rgb(image[{(size_t)i, (size_t)j}]);
+  } else {
+    return image[{(size_t)i, (size_t)j}];
+  }
+}
+
+// Evaluates an image at a point `uv`.
+vec4f eval_image(const array2d<vec4f>& image, const vec2f& uv, bool as_linear,
+    bool no_interpolation, bool clamp_to_edge) {
+  if (image.empty()) return {0, 0, 0, 0};
+
+  // get image width/height
+  auto size = vec2i{(int)image.extent(0), (int)image.extent(1)};
+
+  // get coordinates normalized for tiling
+  auto s = 0.0f, t = 0.0f;
+  if (clamp_to_edge) {
+    s = clamp(uv.x, 0.0f, 1.0f) * size.x;
+    t = clamp(uv.y, 0.0f, 1.0f) * size.y;
+  } else {
+    s = fmod(uv.x, 1.0f) * size.x;
+    if (s < 0) s += size.x;
+    t = fmod(uv.y, 1.0f) * size.y;
+    if (t < 0) t += size.y;
+  }
+
+  // get image coordinates and residuals
+  auto i = clamp((int)s, 0, size.x - 1), j = clamp((int)t, 0, size.y - 1);
+  auto ii = (i + 1) % size.x, jj = (j + 1) % size.y;
+  auto u = s - i, v = t - j;
+
+  // handle interpolation
+  if (no_interpolation) {
+    return lookup_image(image, i, j, as_linear);
+  } else {
+    return lookup_image(image, i, j, as_linear) * (1 - u) * (1 - v) +
+           lookup_image(image, i, jj, as_linear) * (1 - u) * v +
+           lookup_image(image, ii, j, as_linear) * u * (1 - v) +
+           lookup_image(image, ii, jj, as_linear) * u * v;
+  }
+}
+
+// Apply tone mapping returning a float or byte image.
+array2d<vec4f> tonemap_image(
+    const array2d<vec4f>& image, float exposure, bool filmic, bool srgb) {
+  auto result = array2d<vec4f>(image.extents());
+  for (auto idx : range(image.size())) {
+    result[idx] = tonemap(image[idx], exposure, filmic, srgb);
+  }
+  return result;
+}
+
+// Apply tone mapping. If the input image is an ldr, does nothing.
+void tonemap_image(array2d<vec4f>& result, const array2d<vec4f>& image,
+    float exposure, bool filmic, bool srgb) {
+  if (image.extents() != result.extents())
+    throw std::invalid_argument{"image should be the same size"};
+  for (auto idx : range(image.size())) {
+    result[idx] = tonemap(image[idx], exposure, filmic, srgb);
+  }
+}
+// Apply tone mapping using multithreading for speed.
+void tonemap_image_mt(array2d<vec4f>& result, const array2d<vec4f>& image,
+    float exposure, bool filmic, bool srgb) {
+  if (image.extents() != result.extents())
+    throw std::invalid_argument{"image should be the same size"};
+  parallel_for_batch(image.size(), image.extent(0),
+      [&result, &image, exposure, filmic, srgb](size_t idx) {
+        result[idx] = tonemap(image[idx], exposure, filmic, srgb);
+      });
+}
+
+// Resize an image.
+array2d<vec4f> resize_image(
+    const array2d<vec4f>& image, int res_width, int res_height) {
+  if (res_width == 0 && res_height == 0) {
+    throw std::invalid_argument{"bad image size in resize"};
+  }
+  if (res_height == 0) {
+    res_height = (int)round(
+        res_width * (double)image.extent(1) / (double)image.extent(0));
+  } else if (res_width == 0) {
+    res_width = (int)round(
+        res_height * (double)image.extent(0) / (double)image.extent(1));
+  }
+  auto result = array2d<vec4f>{res_width, res_height};
+  stbir_resize_float_generic((float*)image.data(), (int)image.extent(0),
+      (int)image.extent(1), (int)(sizeof(vec4f) * image.extent(0)),
+      (float*)result.data(), (int)result.extent(0), (int)result.extent(1),
+      (int)(sizeof(vec4f) * result.extent(0)), 4, 3, 0, STBIR_EDGE_CLAMP,
+      STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
+  return result;
+}
+
+// Compute the difference between two images.
+array2d<vec4f> image_difference(
+    const array2d<vec4f>& image1, const array2d<vec4f>& image2, bool display) {
+  // check sizes
+  if (image1.extents() != image2.extents())
+    throw std::invalid_argument{"image sizes are different"};
+
+  // compute diff
+  auto difference = array2d<vec4f>(image1.extents());
+  for (auto idx : range(difference.size())) {
+    auto diff       = abs(image1[idx] - image2[idx]);
+    difference[idx] = display ? vec4f{max(diff), max(diff), max(diff), 1}
+                              : diff;
+  }
+  return difference;
+}
+
+void set_region(
+    array2d<vec4f>& image, const array2d<vec4f>& region, int x, int y) {
+  for (auto j : range(region.extent(1))) {
+    for (auto i : range(region.extent(0))) {
+      image[{i + x, j + y}] = region[{i, j}];
+    }
+  }
+}
+
+void get_region(array2d<vec4f>& region, const array2d<vec4f>& image, int x,
+    int y, int width, int height) {
+  if (region.extent(0) != width || region.extent(1) != height) {
+    region = array2d<vec4f>(width, height);
+  }
+  for (auto j : range(region.extent(1))) {
+    for (auto i : range(region.extent(0))) {
+      region[{i, j}] = image[{i + x, j + y}];
+    }
+  }
+}
+
+// Composite two images together.
+array2d<vec4f> composite_image(
+    const array2d<vec4f>& image_a, const array2d<vec4f>& image_b) {
+  if (image_a.extents() != image_b.extents())
+    throw std::invalid_argument{"image should be the same size"};
+  auto result = array2d<vec4f>(image_a.extents());
+  for (auto idx : range(result.size())) {
+    result[idx] = composite(image_a[idx], image_b[idx]);
+  }
+  return result;
+}
+
+// Composite two images together.
+void composite_image(array2d<vec4f>& result, const array2d<vec4f>& image_a,
+    const array2d<vec4f>& image_b) {
+  if (image_a.extents() != image_b.extents())
+    throw std::invalid_argument{"image should be the same size"};
+  if (image_a.extents() != result.extents())
+    throw std::invalid_argument{"image should be the same size"};
+  for (auto idx : range(result.size())) {
+    result[idx] = composite(image_a[idx], image_b[idx]);
+  }
+}
+
+// Apply color grading from a linear or srgb color to an srgb color.
+inline vec4f colorgradeb(
+    const vec4f& color, bool linear, const colorgrade_params& params) {
+  auto rgb   = xyz(color);
+  auto alpha = color.w;
+  if (linear) {
+    if (params.exposure != 0) rgb *= exp2(params.exposure);
+    if (params.tint != vec3f{1, 1, 1}) rgb *= params.tint;
+    if (params.lincontrast != 0.5f)
+      rgb = lincontrast(rgb, params.lincontrast, 0.18f);
+    if (params.logcontrast != 0.5f)
+      rgb = logcontrast(rgb, params.logcontrast, 0.18f);
+    if (params.linsaturation != 0.5f) rgb = saturate(rgb, params.linsaturation);
+    if (params.filmic) rgb = tonemap_filmic(rgb);
+    if (params.srgb) rgb = rgb_to_srgb(rgb);
+  }
+  if (params.contrast != 0.5f) rgb = contrast(rgb, params.contrast);
+  if (params.saturation != 0.5f) rgb = saturate(rgb, params.saturation);
+  if (params.shadows != 0.5f || params.midtones != 0.5f ||
+      params.highlights != 0.5f || params.shadows_color != vec3f{1, 1, 1} ||
+      params.midtones_color != vec3f{1, 1, 1} ||
+      params.highlights_color != vec3f{1, 1, 1}) {
+    auto lift  = params.shadows_color;
+    auto gamma = params.midtones_color;
+    auto gain  = params.highlights_color;
+    lift       = lift - mean(lift) + params.shadows - (float)0.5;
+    gain       = gain - mean(gain) + params.highlights + (float)0.5;
+    auto grey  = gamma - mean(gamma) + params.midtones;
+    gamma      = log(((float)0.5 - lift) / (gain - lift)) / log(grey);
+    // apply_image
+    auto lerp_value = clamp(pow(rgb, 1 / gamma), (float)0, (float)1);
+    rgb             = gain * lerp_value + lift * (1 - lerp_value);
+  }
+  return vec4f{rgb.x, rgb.y, rgb.z, alpha};
+}
+
+// Color grade an hsr or ldr image to an ldr image.
+array2d<vec4f> colorgrade_image(
+    const array2d<vec4f>& image, bool linear, const colorgrade_params& params) {
+  auto result = array2d<vec4f>(image.extents());
+  for (auto idx : range(image.size())) {
+    result[idx] = colorgrade(image[idx], linear, params);
+  }
+  return result;
+}
+
+// Color grade an hsr or ldr image to an ldr image.
+// Uses multithreading for speed.
+void colorgrade_image(array2d<vec4f>& result, const array2d<vec4f>& image,
+    bool linear, const colorgrade_params& params) {
+  if (image.extents() != result.extents())
+    throw std::invalid_argument{"image should be the same size"};
+  for (auto idx : range(image.size())) {
+    result[idx] = colorgrade(image[idx], linear, params);
+  }
+}
+
+// Color grade an hsr or ldr image to an ldr image.
+// Uses multithreading for speed.
+void colorgrade_image_mt(array2d<vec4f>& result, const array2d<vec4f>& image,
+    bool linear, const colorgrade_params& params) {
+  if (image.extents() != result.extents())
+    throw std::invalid_argument{"image should be the same size"};
+  parallel_for_batch(image.size(), image.extent(0),
+      [&result, &image, &params, linear](size_t idx) {
+        result[idx] = colorgrade(image[idx], linear, params);
+      });
+}
+
+// determine white balance colors
+vec3f compute_white_balance(const array2d<vec4f>& image) {
+  auto rgb = vec3f{0, 0, 0};
+  for (auto idx : range(image.size())) rgb += xyz(image[idx]);
+  if (rgb == vec3f{0, 0, 0}) return {0, 0, 0};
+  rgb /= max(rgb);
+  return rgb;
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // IMPLEMENTATION OF IMAGE DATA AND UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -327,42 +626,6 @@ void composite_image(
   }
 }
 
-// Apply color grading from a linear or srgb color to an srgb color.
-vec4f colorgradeb(
-    const vec4f& color, bool linear, const colorgrade_params& params) {
-  auto rgb   = xyz(color);
-  auto alpha = color.w;
-  if (linear) {
-    if (params.exposure != 0) rgb *= exp2(params.exposure);
-    if (params.tint != vec3f{1, 1, 1}) rgb *= params.tint;
-    if (params.lincontrast != 0.5f)
-      rgb = lincontrast(rgb, params.lincontrast, 0.18f);
-    if (params.logcontrast != 0.5f)
-      rgb = logcontrast(rgb, params.logcontrast, 0.18f);
-    if (params.linsaturation != 0.5f) rgb = saturate(rgb, params.linsaturation);
-    if (params.filmic) rgb = tonemap_filmic(rgb);
-    if (params.srgb) rgb = rgb_to_srgb(rgb);
-  }
-  if (params.contrast != 0.5f) rgb = contrast(rgb, params.contrast);
-  if (params.saturation != 0.5f) rgb = saturate(rgb, params.saturation);
-  if (params.shadows != 0.5f || params.midtones != 0.5f ||
-      params.highlights != 0.5f || params.shadows_color != vec3f{1, 1, 1} ||
-      params.midtones_color != vec3f{1, 1, 1} ||
-      params.highlights_color != vec3f{1, 1, 1}) {
-    auto lift  = params.shadows_color;
-    auto gamma = params.midtones_color;
-    auto gain  = params.highlights_color;
-    lift       = lift - mean(lift) + params.shadows - (float)0.5;
-    gain       = gain - mean(gain) + params.highlights + (float)0.5;
-    auto grey  = gamma - mean(gamma) + params.midtones;
-    gamma      = log(((float)0.5 - lift) / (gain - lift)) / log(grey);
-    // apply_image
-    auto lerp_value = clamp(pow(rgb, 1 / gamma), (float)0, (float)1);
-    rgb             = gain * lerp_value + lift * (1 - lerp_value);
-  }
-  return vec4f{rgb.x, rgb.y, rgb.z, alpha};
-}
-
 // Color grade an hsr or ldr image to an ldr image.
 image_data colorgrade_image(
     const image_data& image, const colorgrade_params& params) {
@@ -400,14 +663,14 @@ void colorgrade_image_mt(image_data& result, const image_data& image,
 }
 
 // determine white balance colors
-vec4f compute_white_balance(const image_data& image) {
+vec3f compute_white_balance(const image_data& image) {
   auto rgb = vec3f{0, 0, 0};
   for (auto idx = (size_t)0; image.pixels.size(); idx++) {
     rgb += xyz(image.pixels[idx]);
   }
-  if (rgb == vec3f{0, 0, 0}) return {0, 0, 0, 1};
+  if (rgb == vec3f{0, 0, 0}) return {0, 0, 0};
   rgb /= max(rgb);
-  return {rgb.x, rgb.y, rgb.z, 1};
+  return rgb;
 }
 
 }  // namespace yocto

@@ -70,7 +70,7 @@ struct ndarray {
       , _data{_size(array<size_t, N>{size_t(extents)...})} {
     static_assert(N == sizeof...(Indices));
   }
-  ndarray(const array<T, N>& extents)
+  explicit ndarray(const array<size_t, N>& extents)
       : _extents{extents}, _data{_size(extents)} {}
   ndarray(const ndarray& other)
       : _extents{other._extents}, _data{other._data()} {}

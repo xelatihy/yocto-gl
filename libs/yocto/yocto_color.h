@@ -87,6 +87,14 @@ inline vec4f srgb_to_rgb(const vec4f& srgb);
 inline vec3f rgb_to_srgb(const vec3f& rgb);
 inline vec4f rgb_to_srgb(const vec4f& rgb);
 
+// sRGB non-linear curve
+inline float srgb_to_rgb(byte srgb);
+inline byte  rgb_to_srgbb(float rgb);
+inline vec3f srgb_to_rgb(const vec3b& srgb);
+inline vec4f srgb_to_rgb(const vec4b& srgb);
+inline vec3b rgb_to_srgbb(const vec3f& rgb);
+inline vec4b rgb_to_srgbb(const vec4f& rgb);
+
 // Conversion between number of channels.
 inline vec4f rgb_to_rgba(const vec3f& rgb);
 inline vec3f rgba_to_rgb(const vec4f& rgba);
@@ -261,6 +269,26 @@ inline vec3f rgb_to_srgb(const vec3f& rgb) {
 }
 inline vec4f rgb_to_srgb(const vec4f& rgb) {
   return {rgb_to_srgb(rgb.x), rgb_to_srgb(rgb.y), rgb_to_srgb(rgb.z), rgb.w};
+}
+
+// sRGB non-linear curve
+inline float srgbb_to_rgb(byte srgb) {
+  return srgb_to_rgb(byte_to_float(srgb));
+}
+inline byte  rgb_to_srgbb(float rgb) { return float_to_byte(srgb_to_rgb(rgb)); }
+inline vec3f srgbb_to_rgb(const vec3b& srgb) {
+  return {srgbb_to_rgb(srgb.x), srgbb_to_rgb(srgb.y), srgbb_to_rgb(srgb.z)};
+}
+inline vec4f srgbb_to_rgb(const vec4b& srgb) {
+  return {srgbb_to_rgb(srgb.x), srgbb_to_rgb(srgb.y), srgbb_to_rgb(srgb.z),
+      byte_to_float(srgb.w)};
+}
+inline vec3b rgb_to_srgbb(const vec3f& rgb) {
+  return {rgb_to_srgbb(rgb.x), rgb_to_srgbb(rgb.y), rgb_to_srgbb(rgb.z)};
+}
+inline vec4b rgb_to_srgbb(const vec4f& rgb) {
+  return {rgb_to_srgbb(rgb.x), rgb_to_srgbb(rgb.y), rgb_to_srgbb(rgb.z),
+      float_to_byte(rgb.w)};
 }
 
 // Conversion between number of channels.
