@@ -186,6 +186,15 @@ void update_image_params(
       glparams.fit);
 }
 
+void update_image_params(
+    const gui_input& input, const array2d<vec4f>& image, glimage_params& glparams) {
+  glparams.window                           = input.window;
+  glparams.framebuffer                      = input.framebuffer;
+  std::tie(glparams.center, glparams.scale) = camera_imview(glparams.center,
+      glparams.scale, {(int)image.extent(0), (int)image.extent(1)}, glparams.window,
+      glparams.fit);
+}
+
 bool uiupdate_image_params(const gui_input& input, glimage_params& glparams) {
   // handle mouse
   if (input.mouse.x && input.modifiers.x && !input.onwidgets) {
@@ -258,6 +267,29 @@ bool draw_image_widgets(const gui_input& input, const image_data& image,
   return false;
 }
 
+bool draw_image_widgets(const gui_input& input, const array2d<vec4f>& image,
+    const array2d<vec4f>& display, glimage_params& glparams) {
+  if (draw_gui_header("inspect")) {
+    draw_gui_slider("zoom", glparams.scale, 0.1f, 10);
+    draw_gui_checkbox("fit", glparams.fit);
+    draw_gui_coloredit("background", glparams.background);
+    auto [i, j] = image_coords(input.cursor, glparams.center, glparams.scale,
+        vec2i{(int)image.extent(0), (int)image.extent(1)});
+    auto ij     = vec2i{i, j};
+    draw_gui_dragger("mouse", ij);
+    auto image_pixel   = vec4f{0, 0, 0, 0};
+    auto display_pixel = vec4f{0, 0, 0, 0};
+    if (i >= 0 && i < image.extent(0) && j >= 0 && j < image.extent(1)) {
+      image_pixel   = image[{(size_t)i, (size_t)j}];
+      display_pixel = image[{(size_t)i, (size_t)j}];
+    }
+    draw_gui_coloredit("image", image_pixel);
+    draw_gui_coloredit("display", display_pixel);
+    end_gui_header();
+  }
+  return false;
+}
+
 bool draw_image_widgets(
     const gui_input& input, const image_data& image, glimage_params& glparams) {
   if (draw_gui_header("inspect")) {
@@ -272,6 +304,30 @@ bool draw_image_widgets(
     auto display_pixel = vec4f{0, 0, 0, 0};
     if (i >= 0 && i < image.width && j >= 0 && j < image.height) {
       image_pixel   = image.pixels[j * image.width + i];
+      display_pixel = tonemap(
+          image_pixel, glparams.exposure, glparams.filmic, glparams.srgb);
+    }
+    draw_gui_coloredit("image", image_pixel);
+    draw_gui_coloredit("display", display_pixel);
+    end_gui_header();
+  }
+  return false;
+}
+
+bool draw_image_widgets(
+    const gui_input& input, const array2d<vec4f>& image, glimage_params& glparams) {
+  if (draw_gui_header("inspect")) {
+    draw_gui_slider("zoom", glparams.scale, 0.1f, 10);
+    draw_gui_checkbox("fit", glparams.fit);
+    draw_gui_coloredit("background", glparams.background);
+    auto [i, j] = image_coords(input.cursor, glparams.center, glparams.scale,
+        vec2i{(int)image.extent(0), (int)image.extent(1)});
+    auto ij     = vec2i{i, j};
+    draw_gui_dragger("mouse", ij);
+    auto image_pixel   = vec4f{0, 0, 0, 0};
+    auto display_pixel = vec4f{0, 0, 0, 0};
+    if (i >= 0 && i < image.extent(0) && j >= 0 && j < image.extent(1)) {
+      image_pixel   = image[{(size_t)i, (size_t)j}];
       display_pixel = tonemap(
           image_pixel, glparams.exposure, glparams.filmic, glparams.srgb);
     }
@@ -1278,6 +1334,24 @@ void set_image(glimage_state& glimage, const image_data& image) {
   }
   glimage.width  = image.width;
   glimage.height = image.height;
+}
+
+void set_image(glimage_state& glimage, const array2d<vec4f>& image) {
+  if (!glimage.texture || glimage.width != image.extent(0) ||
+      glimage.height != image.extent(1)) {
+    if (!glimage.texture) glGenTextures(1, &glimage.texture);
+    glBindTexture(GL_TEXTURE_2D, glimage.texture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, (int)image.extent(0), (int)image.extent(1), 0,
+        GL_RGBA, GL_FLOAT, image.data());
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  } else {
+    glBindTexture(GL_TEXTURE_2D, glimage.texture);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, (int)image.extent(0), (int)image.extent(1), GL_RGBA,
+        GL_FLOAT, image.data());
+  }
+  glimage.width  = (int)image.extent(0);
+  glimage.height  = (int)image.extent(1);
 }
 
 // draw image

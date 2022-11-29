@@ -60,25 +60,22 @@ void run(const vector<string>& args) {
   auto alpha = load_image(alphaname);
 
   // check sizes
-  if (image.width != alpha.width || image.height != alpha.height)
+  if (image.extents() != alpha.extents())
     throw io_error("different image sizes");
 
-  // check types
-  if (image.linear != alpha.linear) throw io_error("different image types");
-
   // edit alpha
-  auto out = make_image(image.width, image.height, image.linear);
-  for (auto idx : range(image.pixels.size())) {
-    auto calpha = alpha.pixels[idx];
+  auto out = array2d<vec4f>{image.extents()};
+  for (auto idx : range(image.size())) {
+    auto calpha = alpha[idx];
     auto alpha_ = from_color   ? mean(xyz(calpha))
                   : from_black ? (mean(xyz(calpha)) > 0.01 ? 1.0f : 0.0f)
                                : calpha.w;
     if (to_color) {
-      out.pixels[idx] = {alpha_, alpha_, alpha_, alpha_};
+      out[idx] = {alpha_, alpha_, alpha_, alpha_};
     } else {
-      auto color      = image.pixels[idx];
+      auto color      = image[idx];
       color.w         = alpha_;
-      out.pixels[idx] = color;
+      out[idx] = color;
     }
   }
 

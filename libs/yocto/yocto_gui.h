@@ -65,6 +65,18 @@ namespace yocto {
 
 // Open a window and show an image
 void show_image_gui(
+    const string& title, const string& name, const array2d<vec4f>& image);
+
+// Open a window and show a set of images
+void show_image_gui(const string& title, const vector<string>& names,
+    const vector<array2d<vec4f>>& images);
+
+// Open a window and show an image for color grading
+void show_colorgrade_gui(
+    const string& title, const string& name, const array2d<vec4f>& image);
+
+// Open a window and show an image
+void show_image_gui(
     const string& title, const string& name, const image_data& image);
 
 // Open a window and show a set of images
@@ -167,6 +179,7 @@ void clear_image(glimage_state& glimage);
 
 // update image data
 void set_image(glimage_state& glimage, const image_data& image);
+void set_image(glimage_state& glimage, const array2d<vec4f>& image);
 
 // draw image
 void draw_image(glimage_state& image, const glimage_params& params);
@@ -298,10 +311,16 @@ bool draw_image_widgets(const gui_input& input, const image_data& image,
     const image_data& display, glimage_params& glparams);
 bool draw_image_widgets(
     const gui_input& input, const image_data& image, glimage_params& glparams);
+bool draw_image_widgets(const gui_input& input, const array2d<vec4f>& image,
+    const array2d<vec4f>& display, glimage_params& glparams);
+bool draw_image_widgets(
+    const gui_input& input, const array2d<vec4f>& image, glimage_params& glparams);
 
 // update image params
 void update_image_params(
     const gui_input& input, const image_data& image, glimage_params& glparams);
+void update_image_params(
+    const gui_input& input, const array2d<vec4f>& image, glimage_params& glparams);
 
 // update image params from mouse
 bool uiupdate_image_params(const gui_input& input, glimage_params& glparams);

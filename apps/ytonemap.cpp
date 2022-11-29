@@ -60,6 +60,7 @@ void run(const vector<string>& args) {
 
   // load
   auto image = load_image(imagename);
+  auto linear = is_hdr_filename(imagename);
 
   // resize if needed
   if (width != 0 || height != 0) {
@@ -69,8 +70,8 @@ void run(const vector<string>& args) {
   // switch between interactive and offline
   if (!interactive) {
     // tonemap if needed
-    if (image.linear && is_ldr_filename(outname)) {
-      image = tonemap_image(image, exposure, filmic);
+    if (linear && is_ldr_filename(outname)) {
+      image = tonemap_image(image, exposure, filmic, true);
     }
 
     // save
@@ -78,10 +79,10 @@ void run(const vector<string>& args) {
   } else {
 #ifdef YOCTO_OPENGL
     // display image
-    auto  display  = make_image(image.width, image.height, false);
+    auto  display  = array2d<vec4f>{image.extents()};
     float exposure = 0;
     bool  filmic   = false;
-    tonemap_image_mt(display, image, exposure, filmic);
+    tonemap_image_mt(display, image, exposure, filmic, linear);
 
     // opengl image
     auto glimage  = glimage_state{};
@@ -100,7 +101,7 @@ void run(const vector<string>& args) {
     };
     callbacks.widgets = [&](const gui_input& input) {
       if (draw_tonemap_widgets(input, exposure, filmic)) {
-        tonemap_image_mt(display, image, exposure, filmic);
+        tonemap_image_mt(display, image, exposure, filmic, linear);
         set_image(glimage, display);
       }
       draw_image_widgets(input, image, display, glparams);

@@ -529,6 +529,18 @@ bool is_ldr_filename(const string& filename) {
 }
 
 // Loads/saves a 3/4 channels float/byte image in linear/srgb color space.
+template<typename T>
+array2d<T> load_image(const string& filename) {
+  auto error = string{};
+  auto image = array2d<T>{};
+  if (!load_image(filename, image, error)) throw io_error{error};
+  return image;
+}
+
+// Explicit instantiations
+template array2d<vec4f> load_image(const string&);
+
+// Loads/saves a 3/4 channels float/byte image in linear/srgb color space.
 // Supports data as vec3f, vec4f, vec3b, vec4b.
 template <typename T>
 bool load_image(const string& filename, array2d<T>& image, string& error) {
@@ -888,17 +900,6 @@ image_data make_image_preset(const string& type_) {
 }
 
 // Loads/saves an image. Chooses hdr or ldr based on file name.
-image_data load_image(const string& filename, string& error) {
-  auto image = image_data{};
-  if (!load_image(filename, image, error)) return image_data{};
-  return image;
-}
-image_data load_image(const string& filename) {
-  auto error = string{};
-  auto image = image_data{};
-  if (!load_image(filename, image, error)) throw io_error{error};
-  return image;
-}
 void load_image(const string& filename, image_data& image) {
   auto error = string{};
   if (!load_image(filename, image, error)) throw io_error{error};

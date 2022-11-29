@@ -93,14 +93,14 @@ vec4f eval_image(const array2d<vec4f>& image, const vec2f& uv,
 
 // Apply tone mapping returning a float or byte image.
 array2d<vec4f> tonemap_image(
-    const array2d<vec4f>& image, float exposure, bool filmic = false);
+    const array2d<vec4f>& image, float exposure, bool filmic = false, bool srgb= true);
 
 // Apply tone mapping. If the input image is an ldr, does nothing.
-void tonemap_image(array2d<vec4f>& ldr, const array2d<vec4f>& image,
-    float exposure, bool filmic = false);
+// void tonemap_image(array2d<vec4f>& ldr, const array2d<vec4f>& image,
+//     float exposure, bool filmic = false, bool srgb= true);
 // Apply tone mapping using multithreading for speed.
 void tonemap_image_mt(array2d<vec4f>& ldr, const array2d<vec4f>& image,
-    float exposure, bool filmic = false);
+    float exposure, bool filmic = false, bool srgb= true);
 
 // Resize an image.
 array2d<vec4f> resize_image(const array2d<vec4f>& image, int width, int height);
