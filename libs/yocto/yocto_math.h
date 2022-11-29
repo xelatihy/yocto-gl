@@ -86,16 +86,16 @@ template <typename T>
 constexpr T abs(T a) {
   return a < 0 ? -a : a;
 }
-template <typename T>
-constexpr T min(T a, T b) {
-  return (a < b) ? a : b;
+template <typename T1, typename T2, typename T = std::common_type_t<T1, T2>>
+constexpr T min(T1 a, T2 b) {
+  return (a < b) ? (T)a : (T)b;
 }
-template <typename T>
-constexpr T max(T a, T b) {
-  return (a > b) ? a : b;
+template <typename T1, typename T2, typename T = std::common_type_t<T1, T2>>
+constexpr T max(T1 a, T2 b) {
+  return (a > b) ? (T)a : (T)b;
 }
-template <typename T>
-constexpr T clamp(T a, T min_, T max_) {
+template <typename T, typename T1, typename T2>
+constexpr T clamp(T a, T1 min_, T2 max_) {
   return min(max(a, min_), max_);
 }
 template <typename T>
@@ -150,17 +150,17 @@ template <typename T>
 constexpr T exp2(T a) {
   return std::exp2(a);
 }
-template <typename T>
-constexpr T pow(T a, T b) {
-  return std::pow(a, b);
+template <typename T1, typename T2, typename T = std::common_type_t<T1, T2>>
+constexpr T pow(T1 a, T2 b) {
+  return std::pow((T)a, (T)b);
 }
 template <typename T>
 constexpr bool isfinite(T a) {
   return std::isfinite(a);
 }
-template <typename T>
-constexpr T atan2(T a, T b) {
-  return std::atan2(a, b);
+template <typename T1, typename T2, typename T = std::common_type_t<T1, T2>>
+constexpr T atan2(T1 a, T2 b) {
+  return std::atan2((T)a, (T)b);
 }
 template <typename T>
 constexpr T fmod(T a, T b) {
@@ -178,25 +178,26 @@ template <typename T>
 constexpr T degrees(T a) {
   return a * 180 / (T)pi;
 }
-template <typename T>
-constexpr T lerp(T a, T b, T u) {
+template <typename T1, typename T2, typename T3,
+    typename T = std::common_type_t<T1, T2>>
+constexpr T lerp(T1 a, T2 b, T3 u) {
   return a * (1 - u) + b * u;
 }
-template <typename T>
-constexpr T step(T a, T u) {
+template <typename T, typename T1>
+constexpr T step(T a, T1 u) {
   return u < a ? (T)0 : (T)1;
 }
-template <typename T>
-constexpr T smoothstep(T a, T b, T u) {
+template <typename T, typename T1>
+constexpr T smoothstep(T a, T b, T1 u) {
   auto t = clamp((u - a) / (b - a), (T)0, (T)1);
   return t * t * (3 - 2 * t);
 }
-template <typename T>
-constexpr T bias(T a, T bias) {
+template <typename T1, typename T2, typename T = std::common_type_t<T1, T2>>
+constexpr T bias(T1 a, T2 bias) {
   return a / ((1 / bias - 2) * (1 - a) + 1);
 }
-template <typename T>
-constexpr T gain(T a, T gain) {
+template <typename T1, typename T2, typename T = std::common_type_t<T1, T2>>
+constexpr T gain(T1 a, T2 gain) {
   return (a < (T)0.5) ? bias(a * 2, gain) / 2
                       : bias(a * 2 - 1, 1 - gain) / 2 + (T)0.5;
 }
