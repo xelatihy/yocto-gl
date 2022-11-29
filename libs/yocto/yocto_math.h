@@ -83,63 +83,127 @@ constexpr auto num_eps = std::numeric_limits<T>::epsilon();
 using std::swap;
 
 template <typename T>
-inline T abs(T a);
+constexpr T abs(T a) {
+  return a < 0 ? -a : a;
+}
 template <typename T>
-inline T min(T a, T b);
+constexpr T min(T a, T b) {
+  return (a < b) ? a : b;
+}
 template <typename T>
-inline T max(T a, T b);
+constexpr T max(T a, T b) {
+  return (a > b) ? a : b;
+}
 template <typename T>
-inline T clamp(T a, T min, T max);
+constexpr T clamp(T a, T min_, T max_) {
+  return min(max(a, min_), max_);
+}
 template <typename T>
-inline T sign(T a);
+constexpr T sign(T a) {
+  return a < 0 ? (T)-1 : (T)1;
+}
 template <typename T>
-inline T sqr(T a);
+constexpr T sqr(T a) {
+  return a * a;
+}
 template <typename T>
-inline T sqrt(T a);
+constexpr T sqrt(T a) {
+  return std::sqrt(a);
+}
 template <typename T>
-inline T sin(T a);
+constexpr T sin(T a) {
+  return std::sin(a);
+}
 template <typename T>
-inline T cos(T a);
+constexpr T cos(T a) {
+  return std::cos(a);
+}
 template <typename T>
-inline T tan(T a);
+constexpr T tan(T a) {
+  return std::tan(a);
+}
 template <typename T>
-inline T asin(T a);
+constexpr T asin(T a) {
+  return std::asin(a);
+}
 template <typename T>
-inline T acos(T a);
+constexpr T acos(T a) {
+  return std::acos(a);
+}
 template <typename T>
-inline T atan(T a);
+constexpr T atan(T a) {
+  return std::atan(a);
+}
 template <typename T>
-inline T log(T a);
+constexpr T log(T a) {
+  return std::log(a);
+}
 template <typename T>
-inline T exp(T a);
+constexpr T exp(T a) {
+  return std::exp(a);
+}
 template <typename T>
-inline T log2(T a);
+constexpr T log2(T a) {
+  return std::log2(a);
+}
 template <typename T>
-inline T exp2(T a);
+constexpr T exp2(T a) {
+  return std::exp2(a);
+}
 template <typename T>
-inline T pow(T a, T b);
+constexpr T pow(T a, T b) {
+  return std::pow(a, b);
+}
 template <typename T>
-inline bool isfinite(T a);
+constexpr bool isfinite(T a) {
+  return std::isfinite(a);
+}
 template <typename T>
-inline T atan2(T a, T b);
+constexpr T atan2(T a, T b) {
+  return std::atan2(a, b);
+}
 template <typename T>
-inline T fmod(T a, T b);
-template <typename T>
-inline T radians(T a);
-template <typename T>
-inline T degrees(T a);
-template <typename T>
-inline T lerp(T a, T b, T u);
+constexpr T fmod(T a, T b) {
+  return std::fmod(a, b);
+}
 // template <typename T>
-// inline void swap(T& a, T& b);
+// inline void swap(T& a, T& b) {
+//   std::swap(a, b);
+// }
 template <typename T>
-inline T smoothstep(T a, T b, T u);
+constexpr T radians(T a) {
+  return a * (T)pi / 180;
+}
 template <typename T>
-inline T bias(T a, T bias);
+constexpr T degrees(T a) {
+  return a * 180 / (T)pi;
+}
 template <typename T>
-inline T gain(T a, T gain);
+constexpr T lerp(T a, T b, T u) {
+  return a * (1 - u) + b * u;
+}
+template <typename T>
+constexpr T step(T a, T u) {
+  return u < a ? (T)0 : (T)1;
+}
+template <typename T>
+constexpr T smoothstep(T a, T b, T u) {
+  auto t = clamp((u - a) / (b - a), (T)0, (T)1);
+  return t * t * (3 - 2 * t);
+}
+template <typename T>
+constexpr T bias(T a, T bias) {
+  return a / ((1 / bias - 2) * (1 - a) + 1);
+}
+template <typename T>
+constexpr T gain(T a, T gain) {
+  return (a < (T)0.5) ? bias(a * 2, gain) / 2
+                      : bias(a * 2 - 1, 1 - gain) / 2 + (T)0.5;
+}
 template <typename I>
-inline int pow2(int a);
+constexpr I pow2(I a) {
+  return 1 << a;
+}
 
 }  // namespace yocto
 
@@ -928,136 +992,6 @@ inline std::ptrdiff_t ssize(const T& container);
 //
 //
 // -----------------------------------------------------------------------------
-
-// -----------------------------------------------------------------------------
-// MATH CONSTANTS AND FUNCTIONS
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-template <typename T>
-inline T abs(T a) {
-  return a < 0 ? -a : a;
-}
-template <typename T>
-inline T min(T a, T b) {
-  return (a < b) ? a : b;
-}
-template <typename T>
-inline T max(T a, T b) {
-  return (a > b) ? a : b;
-}
-template <typename T>
-inline T clamp(T a, T min_, T max_) {
-  return min(max(a, min_), max_);
-}
-template <typename T>
-inline T sign(T a) {
-  return a < 0 ? (T)-1 : (T)1;
-}
-template <typename T>
-inline T sqr(T a) {
-  return a * a;
-}
-template <typename T>
-inline T sqrt(T a) {
-  return std::sqrt(a);
-}
-template <typename T>
-inline T sin(T a) {
-  return std::sin(a);
-}
-template <typename T>
-inline T cos(T a) {
-  return std::cos(a);
-}
-template <typename T>
-inline T tan(T a) {
-  return std::tan(a);
-}
-template <typename T>
-inline T asin(T a) {
-  return std::asin(a);
-}
-template <typename T>
-inline T acos(T a) {
-  return std::acos(a);
-}
-template <typename T>
-inline T atan(T a) {
-  return std::atan(a);
-}
-template <typename T>
-inline T log(T a) {
-  return std::log(a);
-}
-template <typename T>
-inline T exp(T a) {
-  return std::exp(a);
-}
-template <typename T>
-inline T log2(T a) {
-  return std::log2(a);
-}
-template <typename T>
-inline T exp2(T a) {
-  return std::exp2(a);
-}
-template <typename T>
-inline T pow(T a, T b) {
-  return std::pow(a, b);
-}
-template <typename T>
-inline bool isfinite(T a) {
-  return std::isfinite(a);
-}
-template <typename T>
-inline T atan2(T a, T b) {
-  return std::atan2(a, b);
-}
-template <typename T>
-inline T fmod(T a, T b) {
-  return std::fmod(a, b);
-}
-// template <typename T>
-// inline void swap(T& a, T& b) {
-//   std::swap(a, b);
-// }
-template <typename T>
-inline T radians(T a) {
-  return a * (T)pi / 180;
-}
-template <typename T>
-inline T degrees(T a) {
-  return a * 180 / (T)pi;
-}
-template <typename T>
-inline T lerp(T a, T b, T u) {
-  return a * (1 - u) + b * u;
-}
-template <typename T>
-inline T step(T a, T u) {
-  return u < a ? (T)0 : (T)1;
-}
-template <typename T>
-inline T smoothstep(T a, T b, T u) {
-  auto t = clamp((u - a) / (b - a), (T)0, (T)1);
-  return t * t * (3 - 2 * t);
-}
-template <typename T>
-inline T bias(T a, T bias) {
-  return a / ((1 / bias - 2) * (1 - a) + 1);
-}
-template <typename T>
-inline T gain(T a, T gain) {
-  return (a < (T)0.5) ? bias(a * 2, gain) / 2
-                      : bias(a * 2 - 1, 1 - gain) / 2 + (T)0.5;
-}
-template <typename I>
-inline I pow2(I a) {
-  return 1 << a;
-}
-
-}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // VECTORS
