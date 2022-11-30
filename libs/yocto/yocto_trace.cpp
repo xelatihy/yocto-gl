@@ -408,7 +408,7 @@ static float sample_lights_pdf(const scene_data& scene, const trace_bvh& bvh,
             scene, instance, intersection.element);
         // prob triangle * area triangle = area triangle mesh
         auto area = light.elements_cdf.back();
-        lpdf += distance_squared(lposition, position) /
+        lpdf += distance2(lposition, position) /
                 (abs(dot(lnormal, direction)) * area);
         // continue
         next_position = lposition + direction * 1e-3f;

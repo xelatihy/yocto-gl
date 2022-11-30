@@ -2505,7 +2505,7 @@ void find_neighbors(const hash_grid& grid, vector<int>& neighbors,
         if (cell_iterator == grid.cells.end()) continue;
         auto& ncell_vertices = cell_iterator->second;
         for (auto vertex_id : ncell_vertices) {
-          if (distance_squared(grid.positions[vertex_id], position) >
+          if (distance2(grid.positions[vertex_id], position) >
               max_radius_squared)
             continue;
           if (vertex_id == skip_id) continue;
