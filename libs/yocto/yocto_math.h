@@ -344,6 +344,12 @@ constexpr auto zero3i = vec3i{0, 0, 0};
 constexpr auto zero4i = vec4i{0, 0, 0, 0};
 constexpr auto zero4b = vec4b{0, 0, 0, 0};
 
+// Generic constants
+template <typename T, int N>
+constexpr auto zero = vec<T, N>{0};
+template <typename T, int N>
+constexpr auto one = vec<T, N>{1};
+
 // Element access
 template <typename T>
 constexpr vec<T, 3> xyz(const vec<T, 4>& a) {
@@ -352,8 +358,16 @@ constexpr vec<T, 3> xyz(const vec<T, 4>& a) {
 
 // Vector sequence operations.
 template <typename T, size_t N>
+constexpr bool empty(const vec<T, N>& a) {
+  return false;
+}
+template <typename T, size_t N>
 constexpr size_t size(const vec<T, N>& a) {
   return N;
+}
+template <typename T, size_t N>
+constexpr ptrdiff_t ssize(const vec<T, N>& a) {
+  return (ptrdiff_t)N;
 }
 template <typename T, size_t N>
 constexpr const T* begin(const vec<T, N>& a) {
@@ -1355,6 +1369,12 @@ struct frame<T, 2> {
   constexpr frame(const mat<T, 2>& xy_, const vec<T, 2>& o_)
       : x{xy_.x}, y{xy_.y}, o{o_} {}
 
+  explicit constexpr frame(const mat<T, 3>& m)
+      : x{m.x.x, m.x.y}, y{m.y.x, m.y.y}, o{m.z.x, m.z.y} {}
+  explicit constexpr operator mat<T, 3>() const {
+    return {{x.x, x.y, 0}, {y.x, y.y, 0}, {o.x, o.y, 1}};
+  }
+
   constexpr vec<T, 2>&       operator[](int i) { return ((vec<T, 2>*)this)[i]; }
   constexpr const vec<T, 2>& operator[](int i) const {
     return ((vec<T, 2>*)this)[i];
@@ -1375,6 +1395,16 @@ struct frame<T, 3> {
       : x{x_}, y{y_}, z{z_}, o{o_} {}
   constexpr frame(const mat<T, 3>& xyz_, const vec<T, 3>& o_)
       : x{xyz_.x}, y{xyz_.y}, z{xyz_.z}, o{o_} {}
+
+  explicit constexpr frame(const mat<T, 4>& m)
+      : x{m.x.x, m.x.y, m.x.z}
+      , y{m.y.x, m.y.y, m.y.z}
+      , z{m.z.x, m.z.y, m.z.z}
+      , o{m.w.x, m.w.y, m.w.z} {}
+  explicit constexpr operator mat<T, 4>() const {
+    return {{x.x, x.y, x.z, 0}, {y.x, y.y, y.z, 0}, {z.x, z.y, z.z, 0},
+        {o.x, o.y, o.z, 1}};
+  }
 
   constexpr vec<T, 3>&       operator[](int i) { return ((vec<T, 3>*)this)[i]; }
   constexpr const vec<T, 3>& operator[](int i) const {
@@ -1409,35 +1439,14 @@ inline vec<T, N> translation(const frame<T, N>& a) {
   }
 }
 
-// Frame construction
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
-inline frame<T, N> make_frame(const mat<T1, N>& m, const vec<T2, N>& t) {
-  if constexpr (N == 2) {
-    return {m.x, m.y, t};
-  } else if constexpr (N == 3) {
-    return {m.x, m.y, m.z, t};
-  }
-}
-
 // Frame/mat conversion
-template <typename T, size_t N_>
-inline frame<T, N_ - 1> mat_to_frame(const mat<T, N_>& m) {
-  constexpr auto N = N_ - 1;
-  if constexpr (N == 2) {
-    return {{m.x.x, m.x.y}, {m.y.x, m.y.y}, {m.z.x, m.z.y}};
-  } else if constexpr (N == 3) {
-    return {{m.x.x, m.x.y, m.x.z}, {m.y.x, m.y.y, m.y.z}, {m.z.x, m.z.y, m.z.z},
-        {m.w.x, m.w.y, m.w.z}};
-  }
+template <typename T, size_t N>
+inline frame<T, N - 1> mat_to_frame(const mat<T, N>& m) {
+  return (frame<T, N - 1>)m;
 }
 template <typename T, size_t N>
 inline mat<T, N + 1> frame_to_mat(const frame<T, N>& f) {
-  if constexpr (N == 2) {
-    return {{f.x.x, f.x.y, 0}, {f.y.x, f.y.y, 0}, {f.o.x, f.o.y, 1}};
-  } else if constexpr (N == 3) {
-    return {{f.x.x, f.x.y, f.x.z, 0}, {f.y.x, f.y.y, f.y.z, 0},
-        {f.z.x, f.z.y, f.z.z, 0}, {f.o.x, f.o.y, f.o.z, 1}};
-  }
+  return (mat<T, N + 1>)f;
 }
 
 // Frame comparisons.
@@ -1457,7 +1466,7 @@ inline bool operator!=(const frame<T1, N>& a, const frame<T2, N>& b) {
 // Frame composition, equivalent to affine matrix product.
 template <typename T, size_t N>
 inline frame<T, N> operator*(const frame<T, N>& a, const frame<T, N>& b) {
-  return make_frame(rotation(a) * rotation(b), rotation(a) * b.o + a.o);
+  return {rotation(a) * rotation(b), rotation(a) * b.o + a.o};
 }
 template <typename T, size_t N>
 inline frame<T, N>& operator*=(frame<T, N>& a, const frame<T, N>& b) {
@@ -1469,10 +1478,10 @@ template <typename T, size_t N>
 inline frame<T, N> inverse(const frame<T, N>& a, bool non_rigid = false) {
   if (non_rigid) {
     auto minv = inverse(rotation(a));
-    return make_frame(minv, -(minv * a.o));
+    return {minv, -(minv * a.o)};
   } else {
     auto minv = transpose(rotation(a));
-    return make_frame(minv, -(minv * a.o));
+    return {minv, -(minv * a.o)};
   }
 }
 
