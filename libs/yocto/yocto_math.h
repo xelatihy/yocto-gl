@@ -225,10 +225,10 @@ struct vec;
 
 template <typename T>
 struct vec<T, 1> {
-  union { // clang-format off
+  union {  // clang-format off
     T x;
     array<T, 1> d;
-  };      // clang-format on
+  };  // clang-format on
 
   constexpr vec() : x{0} {}
   constexpr vec(T x_) : x{x_} {}
@@ -250,10 +250,10 @@ struct vec<T, 1> {
 
 template <typename T>
 struct vec<T, 2> {
-  union { // clang-format off
+  union {  // clang-format off
     struct { T x, y; };
     array<T, 2> d;
-  };      // clang-format on
+  };  // clang-format on
 
   constexpr vec() : x{0}, y{0} {}
   constexpr explicit vec(T v_) : x{v_}, y{v_} {}
@@ -276,10 +276,10 @@ struct vec<T, 2> {
 
 template <typename T>
 struct vec<T, 3> {
-  union { // clang-format off
+  union {  // clang-format off
     struct { T x, y, z; };
     array<T, 3> d;
-  };      // clang-format on
+  };  // clang-format on
 
   constexpr vec() : x{0}, y{0}, z{0} {}
   constexpr explicit vec(T v_) : x{v_}, y{v_}, z{v_} {}
@@ -301,10 +301,10 @@ struct vec<T, 3> {
 
 template <typename T>
 struct vec<T, 4> {
-  union { // clang-format off
+  union {  // clang-format off
     struct { T x, y, z, w; };
     array<T, 4> d;
-  };      // clang-format on
+  };  // clang-format on
 
   constexpr vec() : x{0}, y{0}, z{0}, w{0} {}
   constexpr explicit vec(T v_) : x{v_}, y{v_}, z{v_}, w{v_} {}
@@ -399,14 +399,22 @@ template <typename T, size_t N>
 constexpr T* data(vec<T, N>& a) {
   return &a.x;
 }
-template<size_t I, typename T, size_t N>
-constexpr T& get(vec<T, N>& a) noexcept { return a.d[I]; }
-template<size_t I, typename T, size_t N>
-constexpr T&& get(vec<T, N>&& a) noexcept { return (T&&)(a.d[I]); }
-template<size_t I, typename T, size_t N>
-constexpr const T& get(const vec<T, N>& a) noexcept { return a.d[I]; }
-template<size_t I, typename T, size_t N>
-constexpr const T&& get(const vec<T, N>&& a) noexcept { return (const T&&)(a.d[I]); }
+template <size_t I, typename T, size_t N>
+constexpr T& get(vec<T, N>& a) noexcept {
+  return a.d[I];
+}
+template <size_t I, typename T, size_t N>
+constexpr T&& get(vec<T, N>&& a) noexcept {
+  return (T &&)(a.d[I]);
+}
+template <size_t I, typename T, size_t N>
+constexpr const T& get(const vec<T, N>& a) noexcept {
+  return a.d[I];
+}
+template <size_t I, typename T, size_t N>
+constexpr const T&& get(const vec<T, N>&& a) noexcept {
+  return (const T&&)(a.d[I]);
+}
 
 // Broadcast functions
 template <typename T1, size_t N, typename Func,
@@ -1100,16 +1108,16 @@ constexpr vec<T, 4> quat_inverse(const vec<T, 4>& a) {
 namespace std {
 
 // Structured binding support
-template<typename T, size_t N>
-struct std::tuple_size<yocto::vec<T, N>> {
+template <typename T, size_t N>
+struct tuple_size<yocto::vec<T, N>> {
   static const size_t value = N;
 };
-template<size_t I, typename T, size_t N>
-struct std::tuple_element<I, yocto::vec<T, N>> {
+template <size_t I, typename T, size_t N>
+struct tuple_element<I, yocto::vec<T, N>> {
   using type = T;
 };
 
-}  // namespace yocto
+}  // namespace std
 
 // -----------------------------------------------------------------------------
 // MATRICES
@@ -1123,11 +1131,11 @@ struct mat;
 // Small Fixed-size matrices stored in column major format.
 template <typename T>
 struct mat<T, 1> {
-  union { // clang-format off
+  union {  // clang-format off
     vec<T, 1> x;
     array<vec<T, 1>, 1> cols;
     array<T, 1*1> d;
-  };      // clang-format on
+  };  // clang-format on
 
   constexpr mat() : x{1} {}
   constexpr mat(const vec<T, 1>& x_) : x{x_} {}
@@ -1139,11 +1147,11 @@ struct mat<T, 1> {
 // Small Fixed-size matrices stored in column major format.
 template <typename T>
 struct mat<T, 2> {
-  union { // clang-format off
+  union {  // clang-format off
     struct { vec<T, 2> x, y; };
     array<vec<T, 2>, 2> cols;
     array<T, 2*2> d;
-  };      // clang-format on
+  };  // clang-format on
 
   constexpr mat() : x{1, 0}, y{0, 1} {}
   constexpr mat(const vec<T, 2>& x_, const vec<T, 2>& y_) : x{x_}, y{y_} {}
@@ -1155,11 +1163,11 @@ struct mat<T, 2> {
 // Small Fixed-size matrices stored in column major format.
 template <typename T>
 struct mat<T, 3> {
-  union { // clang-format off
+  union {  // clang-format off
     struct { vec<T, 3> x, y, z; };
     array<vec<T, 3>, 3> cols;
     array<T, 3*3> d;
-  };      // clang-format on
+  };  // clang-format on
 
   constexpr mat() : x{1, 0, 0}, y{0, 1, 0}, z{0, 0, 1} {}
   constexpr mat(const vec<T, 3>& x_, const vec<T, 3>& y_, const vec<T, 3>& z_)
@@ -1172,11 +1180,11 @@ struct mat<T, 3> {
 // Small Fixed-size matrices stored in column major format.
 template <typename T>
 struct mat<T, 4> {
-  union { // clang-format off
+  union {  // clang-format off
     struct { vec<T, 4> x, y, z, w; };
     array<vec<T, 4>, 4> cols;
     array<T, 4*4> d;
-  };      // clang-format on
+  };  // clang-format on
 
   constexpr mat()
       : x{1, 0, 0, 0}, y{0, 1, 0, 0}, z{0, 0, 1, 0}, w{0, 0, 0, 1} {}
@@ -1185,9 +1193,7 @@ struct mat<T, 4> {
       : x{x_}, y{y_}, z{z_}, w{w_} {}
 
   constexpr vec<T, 4>&       operator[](size_t i) { return cols[i]; }
-  constexpr const vec<T, 4>& operator[](size_t i) const {
-    return cols[i];
-  }
+  constexpr const vec<T, 4>& operator[](size_t i) const { return cols[i]; }
 };
 
 // Matrix aliases
@@ -1569,10 +1575,10 @@ struct quat;
 // Quaternions to represent rotations
 template <typename T>
 struct quat<T, 4> {
-  union { // clang-format off
+  union {  // clang-format off
     struct { T x, y, z, w; };
     array<T, 4> d;
-  };      // clang-format on
+  };  // clang-format on
 
   constexpr quat() : x{0}, y{0}, z{0}, w{1} {}
   constexpr quat(T x_, T y_, T z_, T w_) : x{x_}, y{y_}, z{z_}, w{w_} {}
