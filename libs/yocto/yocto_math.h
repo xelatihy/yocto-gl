@@ -225,7 +225,10 @@ struct vec;
 
 template <typename T>
 struct vec<T, 1> {
-  T x = 0;
+  union { // clang-format off
+    T x;
+    array<T, 1> d;
+  };      // clang-format on
 
   constexpr vec() : x{0} {}
   constexpr vec(T x_) : x{x_} {}
@@ -241,14 +244,16 @@ struct vec<T, 1> {
   constexpr vec(array<T, 1> v) : x{v[0]} {}
   constexpr operator array<T, 1>() { return {x}; }
 
-  constexpr T&       operator[](int i) { return ((T*)this)[i]; }
-  constexpr const T& operator[](int i) const { return ((T*)this)[i]; }
+  constexpr T&       operator[](int i) { return d[i]; }
+  constexpr const T& operator[](int i) const { return d[i]; }
 };
 
 template <typename T>
 struct vec<T, 2> {
-  T x = 0;
-  T y = 0;
+  union { // clang-format off
+    struct { T x, y; };
+    array<T, 2> d;
+  };      // clang-format on
 
   constexpr vec() : x{0}, y{0} {}
   constexpr explicit vec(T v_) : x{v_}, y{v_} {}
@@ -265,15 +270,16 @@ struct vec<T, 2> {
   constexpr vec(array<T, 2> v) : x{v[0]}, y{v[1]} {}
   constexpr operator array<T, 2>() { return {x, y}; }
 
-  constexpr T&       operator[](int i) { return ((T*)this)[i]; }
-  constexpr const T& operator[](int i) const { return ((T*)this)[i]; }
+  constexpr T&       operator[](int i) { return d[i]; }
+  constexpr const T& operator[](int i) const { return d[i]; }
 };
 
 template <typename T>
 struct vec<T, 3> {
-  T x = 0;
-  T y = 0;
-  T z = 0;
+  union { // clang-format off
+    struct { T x, y, z; };
+    array<T, 3> d;
+  };      // clang-format on
 
   constexpr vec() : x{0}, y{0}, z{0} {}
   constexpr explicit vec(T v_) : x{v_}, y{v_}, z{v_} {}
@@ -289,16 +295,16 @@ struct vec<T, 3> {
   constexpr vec(array<T, 3> v) : x{v[0]}, y{v[1]}, z{v[2]} {}
   constexpr operator array<T, 3>() { return {x, y, z}; }
 
-  constexpr T&       operator[](int i) { return ((T*)this)[i]; }
-  constexpr const T& operator[](int i) const { return ((T*)this)[i]; }
+  constexpr T&       operator[](int i) { return d[i]; }
+  constexpr const T& operator[](int i) const { return d[i]; }
 };
 
 template <typename T>
 struct vec<T, 4> {
-  T x = 0;
-  T y = 0;
-  T z = 0;
-  T w = 0;
+  union { // clang-format off
+    struct { T x, y, z, w; };
+    array<T, 4> d;
+  };      // clang-format on
 
   constexpr vec() : x{0}, y{0}, z{0}, w{0} {}
   constexpr explicit vec(T v_) : x{v_}, y{v_}, z{v_}, w{v_} {}
@@ -314,8 +320,8 @@ struct vec<T, 4> {
   constexpr vec(array<T, 4> v) : x{v[0]}, y{v[1]}, z{v[2]}, w{v[3]} {}
   constexpr operator array<T, 4>() { return {x, y, z, w}; }
 
-  constexpr T&       operator[](int i) { return ((T*)this)[i]; }
-  constexpr const T& operator[](int i) const { return ((T*)this)[i]; }
+  constexpr T&       operator[](int i) { return d[i]; }
+  constexpr const T& operator[](int i) const { return d[i]; }
 };
 
 // Vector deduction guides
@@ -393,6 +399,14 @@ template <typename T, size_t N>
 constexpr T* data(vec<T, N>& a) {
   return &a.x;
 }
+template<size_t I, typename T, size_t N>
+constexpr T& get(vec<T, N>& a) noexcept { return a.d[I]; }
+template<size_t I, typename T, size_t N>
+constexpr T&& get(vec<T, N>&& a) noexcept { return (T&&)(a.d[I]); }
+template<size_t I, typename T, size_t N>
+constexpr const T& get(const vec<T, N>& a) noexcept { return a.d[I]; }
+template<size_t I, typename T, size_t N>
+constexpr const T&& get(const vec<T, N>&& a) noexcept { return (const T&&)(a.d[I]); }
 
 // Broadcast functions
 template <typename T1, size_t N, typename Func,
@@ -1081,6 +1095,23 @@ constexpr vec<T, 4> quat_inverse(const vec<T, 4>& a) {
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// CUSTOMIZATION POINTS FOR STD
+// -----------------------------------------------------------------------------
+namespace std {
+
+// Structured binding support
+template<typename T, size_t N>
+struct std::tuple_size<yocto::vec<T, N>> {
+  static const size_t value = N;
+};
+template<size_t I, typename T, size_t N>
+struct std::tuple_element<I, yocto::vec<T, N>> {
+  using type = T;
+};
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // MATRICES
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -1092,7 +1123,11 @@ struct mat;
 // Small Fixed-size matrices stored in column major format.
 template <typename T>
 struct mat<T, 1> {
-  vec<T, 1> x = {1};
+  union { // clang-format off
+    vec<T, 1> x;
+    array<vec<T, 1>, 1> cols;
+    array<T, 1*1> d;
+  };      // clang-format on
 
   constexpr mat() : x{1} {}
   constexpr mat(const vec<T, 1>& x_) : x{x_} {}
@@ -1106,42 +1141,46 @@ struct mat<T, 1> {
 // Small Fixed-size matrices stored in column major format.
 template <typename T>
 struct mat<T, 2> {
-  vec<T, 2> x = {1, 0};
-  vec<T, 2> y = {0, 1};
+  union { // clang-format off
+    struct { vec<T, 2> x, y; };
+    array<vec<T, 2>, 2> cols;
+    array<T, 2*2> d;
+  };      // clang-format on
 
   constexpr mat() : x{1, 0}, y{0, 1} {}
   constexpr mat(const vec<T, 2>& x_, const vec<T, 2>& y_) : x{x_}, y{y_} {}
 
-  constexpr vec<T, 2>&       operator[](int i) { return ((vec<T, 2>*)this)[i]; }
+  constexpr vec<T, 2>&       operator[](int i) { return cols[i]; }
   constexpr const vec<T, 2>& operator[](int i) const {
-    return ((vec<T, 2>*)this)[i];
+    return cols[i];
   }
 };
 
 // Small Fixed-size matrices stored in column major format.
 template <typename T>
 struct mat<T, 3> {
-  vec<T, 3> x = {1, 0, 0};
-  vec<T, 3> y = {0, 1, 0};
-  vec<T, 3> z = {0, 0, 1};
+  union { // clang-format off
+    struct { vec<T, 3> x, y, z; };
+    array<vec<T, 3>, 3> cols;
+    array<T, 3*3> d;
+  };      // clang-format on
 
   constexpr mat() : x{1, 0, 0}, y{0, 1, 0}, z{0, 0, 1} {}
   constexpr mat(const vec<T, 3>& x_, const vec<T, 3>& y_, const vec<T, 3>& z_)
       : x{x_}, y{y_}, z{z_} {}
 
-  constexpr vec<T, 3>&       operator[](int i) { return ((vec<T, 3>*)this)[i]; }
-  constexpr const vec<T, 3>& operator[](int i) const {
-    return ((vec<T, 3>*)this)[i];
-  }
+  constexpr vec<T, 3>&       operator[](int i) { return cols[i]; }
+  constexpr const vec<T, 3>& operator[](int i) const { return cols[i]; }
 };
 
 // Small Fixed-size matrices stored in column major format.
 template <typename T>
 struct mat<T, 4> {
-  vec<T, 4> x = {1, 0, 0, 0};
-  vec<T, 4> y = {0, 1, 0, 0};
-  vec<T, 4> z = {0, 0, 1, 0};
-  vec<T, 4> w = {0, 0, 0, 1};
+  union { // clang-format off
+    struct { vec<T, 4> x, y, z, w; };
+    array<vec<T, 4>, 4> cols;
+    array<T, 4*4> d;
+  };      // clang-format on
 
   constexpr mat()
       : x{1, 0, 0, 0}, y{0, 1, 0, 0}, z{0, 0, 1, 0}, w{0, 0, 0, 1} {}
@@ -1149,9 +1188,9 @@ struct mat<T, 4> {
       const vec<T, 4>& w_)
       : x{x_}, y{y_}, z{z_}, w{w_} {}
 
-  constexpr vec<T, 4>&       operator[](int i) { return ((vec<T, 4>*)this)[i]; }
+  constexpr vec<T, 4>&       operator[](int i) { return cols[i]; }
   constexpr const vec<T, 4>& operator[](int i) const {
-    return ((vec<T, 4>*)this)[i];
+    return cols[i];
   }
 };
 
@@ -1367,7 +1406,7 @@ struct frame<T, 2> {
       mat<T, 2> m;
       vec<T, 2> t;
     };
-    array<vec<T, 2>, 3> c;
+    array<vec<T, 2>, 3> cols;
   };
 
   constexpr frame() : x{1, 0}, y{0, 1}, o{0, 0} {}
@@ -1393,16 +1432,13 @@ template <typename T>
 struct frame<T, 3> {
   union {
     struct {
-      vec<T, 3> x = {1, 0, 0};
-      vec<T, 3> y = {0, 1, 0};
-      vec<T, 3> z = {0, 0, 1};
-      vec<T, 3> o = {0, 0, 0};
+      vec<T, 3> x, y, z, o;
     };
     struct {
       mat<T, 3> m;
       vec<T, 3> t;
     };
-    array<vec<T, 3>, 4> c;
+    array<vec<T, 3>, 4> cols;
   };
 
   constexpr frame() : x{1, 0, 0}, y{0, 1, 0}, z{0, 0, 1}, o{0, 0, 0} {}
