@@ -102,7 +102,7 @@ struct ndarray {
   T&       operator[](size_t idx) { return _data[idx]; }
   const T& operator[](size_t idx) const { return _data[idx]; }
   T&       operator[](const array<size_t, N>& idx) {
-          return _data[_index(idx, _extents)];
+    return _data[_index(idx, _extents)];
   }
   const T& operator[](const array<size_t, N>& idx) const {
     return _data[_index(idx, _extents)];

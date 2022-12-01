@@ -556,11 +556,11 @@ struct pbrt_command {
   string                    type   = "";
   vector<pbrt_value>        values = {};
   array<array<float, 3>, 4> frame  = {array<float, 3>{1, 0, 0},
-      array<float, 3>{0, 1, 0}, array<float, 3>{0, 0, 1},
-      array<float, 3>{0, 0, 0}};
+       array<float, 3>{0, 1, 0}, array<float, 3>{0, 0, 1},
+       array<float, 3>{0, 0, 0}};
   array<array<float, 3>, 4> frend  = {array<float, 3>{1, 0, 0},
-      array<float, 3>{0, 1, 0}, array<float, 3>{0, 0, 1},
-      array<float, 3>{0, 0, 0}};
+       array<float, 3>{0, 1, 0}, array<float, 3>{0, 0, 1},
+       array<float, 3>{0, 0, 0}};
 };
 
 // get pbrt value
@@ -1711,8 +1711,8 @@ struct pbrt_medium {
     pmaterial.volmeanfreepath = {1 / (sigma_a[0] + sigma_s[0]),
         1 / (sigma_a[1] + sigma_s[1]), 1 / (sigma_a[2] + sigma_s[2])};
     pmaterial.volscatter      = {sigma_s[0] / (sigma_a[0] + sigma_s[0]),
-        sigma_s[1] / (sigma_a[1] + sigma_s[1]),
-        sigma_s[2] / (sigma_a[2] + sigma_s[2])};
+             sigma_s[1] / (sigma_a[1] + sigma_s[1]),
+             sigma_s[2] / (sigma_a[2] + sigma_s[2])};
     if (verbose) printf("subsurface material not properly supported\n");
   } else if (command.type == "mix") {
     auto namedmaterial1 = ""s, namedmaterial2 = ""s;
@@ -1973,7 +1973,7 @@ static void make_quad(vector<array<int, 3>>& triangles,
     get_pbrt_value(command.values, "from", plight.from);
     plight.area_emission = plight.emission;
     plight.area_frame    = flatten(
-           mul(unflatten(plight.frame), translation_frame(plight.from)));
+        mul(unflatten(plight.frame), translation_frame(plight.from)));
     plight.area_frend = flatten(
         mul(unflatten(plight.frend), translation_frame(plight.from)));
     auto texcoords = vector<array<float, 2>>{};
@@ -2022,11 +2022,11 @@ static void make_quad(vector<array<int, 3>>& triangles,
 // pbrt stack ctm
 struct pbrt_stack_element {
   array<array<float, 3>, 4> transform_start        = {array<float, 3>{1, 0, 0},
-      array<float, 3>{0, 1, 0}, array<float, 3>{0, 0, 1},
-      array<float, 3>{0, 0, 0}};
+             array<float, 3>{0, 1, 0}, array<float, 3>{0, 0, 1},
+             array<float, 3>{0, 0, 0}};
   array<array<float, 3>, 4> transform_end          = {array<float, 3>{1, 0, 0},
-      array<float, 3>{0, 1, 0}, array<float, 3>{0, 0, 1},
-      array<float, 3>{0, 0, 0}};
+               array<float, 3>{0, 1, 0}, array<float, 3>{0, 0, 1},
+               array<float, 3>{0, 0, 0}};
   pbrt_material             material               = {};
   pbrt_arealight            arealight              = {};
   pbrt_medium               interior               = {};

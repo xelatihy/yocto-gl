@@ -92,15 +92,15 @@ vec4f eval_image(const array2d<vec4f>& image, const vec2f& uv,
     bool clamp_to_edge = false);
 
 // Apply tone mapping returning a float or byte image.
-array2d<vec4f> tonemap_image(
-    const array2d<vec4f>& image, float exposure, bool filmic = false, bool srgb= true);
+array2d<vec4f> tonemap_image(const array2d<vec4f>& image, float exposure,
+    bool filmic = false, bool srgb = true);
 
 // Apply tone mapping. If the input image is an ldr, does nothing.
 // void tonemap_image(array2d<vec4f>& ldr, const array2d<vec4f>& image,
 //     float exposure, bool filmic = false, bool srgb= true);
 // Apply tone mapping using multithreading for speed.
 void tonemap_image_mt(array2d<vec4f>& ldr, const array2d<vec4f>& image,
-    float exposure, bool filmic = false, bool srgb= true);
+    float exposure, bool filmic = false, bool srgb = true);
 
 // Resize an image.
 array2d<vec4f> resize_image(const array2d<vec4f>& image, int width, int height);
@@ -185,8 +185,8 @@ vec4f eval_image(const image_data& image, const vec2f& uv,
     bool clamp_to_edge = false);
 
 // Apply tone mapping returning a float or byte image.
-image_data tonemap_image(const image_data& image, float exposure,
-    bool filmic = false);
+image_data tonemap_image(
+    const image_data& image, float exposure, bool filmic = false);
 
 // Apply tone mapping. If the input image is an ldr, does nothing.
 void tonemap_image(image_data& ldr, const image_data& image, float exposure,

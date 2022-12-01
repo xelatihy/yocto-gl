@@ -443,7 +443,7 @@ void update_scene_bvh(scene_bvh& sbvh, const scene_data& scene,
   for (auto idx : range(bboxes.size())) {
     auto& instance = scene.instances[idx];
     bboxes[idx]    = transform_bbox(
-           instance.frame, sbvh.shapes[instance.shape].bvh.nodes[0].bbox);
+        instance.frame, sbvh.shapes[instance.shape].bvh.nodes[0].bbox);
   }
 
   // update nodes
@@ -506,7 +506,7 @@ shape_intersection intersect_shape_bvh(const shape_bvh& sbvh,
       for (auto idx = node.start; idx < node.start + node.num; idx++) {
         auto& p             = shape.points[bvh.primitives[idx]];
         auto  pintersection = intersect_point(
-             ray, shape.positions[p], shape.radius[p]);
+            ray, shape.positions[p], shape.radius[p]);
         if (!pintersection.hit) continue;
         intersection = {bvh.primitives[idx], pintersection.uv,
             pintersection.distance, true};
@@ -671,7 +671,7 @@ shape_intersection overlap_shape_bvh(const shape_bvh& sbvh,
         auto  primitive     = bvh.primitives[node.start + idx];
         auto& p             = shape.points[primitive];
         auto  eintersection = overlap_point(
-             pos, max_distance, shape.positions[p], shape.radius[p]);
+            pos, max_distance, shape.positions[p], shape.radius[p]);
         if (!eintersection.hit) continue;
         intersection = {
             primitive, eintersection.uv, eintersection.distance, true};
@@ -902,7 +902,7 @@ shape_ebvh make_shape_ebvh(const shape_data& shape, bool highquality) {
   auto sbvh    = shape_ebvh{};
   auto edevice = embree_device();
   sbvh.ebvh    = unique_ptr<void, void (*)(void*)>{
-         rtcNewScene(edevice), &clear_ebvh};
+      rtcNewScene(edevice), &clear_ebvh};
   auto escene = (RTCScene)sbvh.ebvh.get();
   if (highquality) {
     rtcSetSceneBuildQuality(escene, RTC_BUILD_QUALITY_HIGH);
@@ -938,7 +938,7 @@ shape_ebvh make_shape_ebvh(const shape_data& shape, bool highquality) {
     auto embree_positions = rtcSetNewGeometryBuffer(egeometry,
         RTC_BUFFER_TYPE_VERTEX, 0, RTC_FORMAT_FLOAT4, 4 * 4, epositions.size());
     auto embree_lines     = rtcSetNewGeometryBuffer(
-            egeometry, RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT, 4, elines.size());
+        egeometry, RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT, 4, elines.size());
     memcpy(embree_positions, epositions.data(), epositions.size() * 16);
     memcpy(embree_lines, elines.data(), elines.size() * 4);
     rtcCommitGeometry(egeometry);
@@ -1001,7 +1001,7 @@ scene_ebvh make_scene_ebvh(
   // scene bvh
   auto edevice = embree_device();
   sbvh.ebvh    = unique_ptr<void, void (*)(void*)>{
-         rtcNewScene(edevice), &clear_ebvh};
+      rtcNewScene(edevice), &clear_ebvh};
   auto escene = (RTCScene)sbvh.ebvh.get();
   if (highquality) {
     rtcSetSceneBuildQuality(escene, RTC_BUILD_QUALITY_HIGH);

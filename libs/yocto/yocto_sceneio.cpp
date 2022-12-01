@@ -3166,7 +3166,7 @@ static bool load_json_scene_version40(const string& filename,
   auto ply_instances        = vector<ply_instance>{};
   auto ply_instances_names  = vector<string>{};
   auto ply_instance_map     = unordered_map<string, ply_instance_handle>{
-          {"", invalidid}};
+      {"", invalidid}};
   auto instance_ply = unordered_map<int, ply_instance_handle>{};
   auto get_ist      = [&scene, &ply_instances, &ply_instances_names,
                      &ply_instance_map, &instance_ply](const json_value& json,
@@ -4770,7 +4770,7 @@ static bool load_gltf_scene(
       auto& camera = scene.cameras.emplace_back();
       camera       = cameras.at(gnode.camera - cgltf.cameras);
       auto xform   = mat4f{
-          {1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
+            {1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
       cgltf_node_transform_world(&gnode, &xform.x.x);
       camera.frame = mat_to_frame(xform);
     }
@@ -4779,7 +4779,7 @@ static bool load_gltf_scene(
         auto& instance = scene.instances.emplace_back();
         instance       = primitive;
         auto xform     = mat4f{
-            {1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
+                {1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
         cgltf_node_transform_world(&gnode, &xform.x.x);
         instance.frame = mat_to_frame(xform);
       }
@@ -4993,7 +4993,7 @@ static bool save_gltf_scene(const string& filename, const scene_data& scene,
       auto& gbuffer             = cgltf.buffers[idx];
       shape_accessor_start[idx] = (int)cgltf.accessors_count;
       gbuffer.uri               = copy_string(
-                        "shapes/" + get_shape_name(scene, shape) + ".bin");
+          "shapes/" + get_shape_name(scene, shape) + ".bin");
       add_vertex(cgltf, gbuffer, shape.positions.size(), cgltf_type_vec3,
           (const float*)shape.positions.data());
       add_vertex(cgltf, gbuffer, shape.normals.size(), cgltf_type_vec3,

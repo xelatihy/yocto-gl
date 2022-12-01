@@ -3172,7 +3172,7 @@ vector<float> sample_quads_cdf(
   for (auto i : range(cdf.size())) {
     auto& q = quads[i];
     auto  w = quad_area(
-         positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
+        positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
     cdf[i] = w + (i ? cdf[i - 1] : 0);
   }
   return cdf;
@@ -3182,7 +3182,7 @@ void sample_quads_cdf(vector<float>& cdf, const vector<vec4i>& quads,
   for (auto i : range(cdf.size())) {
     auto& q = quads[i];
     auto  w = quad_area(
-         positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
+        positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
     cdf[i] = w + (i ? cdf[i - 1] : 0);
   }
 }

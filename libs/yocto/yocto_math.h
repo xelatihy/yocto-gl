@@ -319,7 +319,7 @@ struct vec<T, 4> {
 };
 
 // Vector deduction guides
-template<typename ... Ts>
+template <typename... Ts>
 vec(Ts...) -> vec<std::common_type_t<Ts...>, sizeof...(Ts)>;
 
 // Vector aliases
@@ -1441,7 +1441,7 @@ inline mat<T, N + 1> frame_to_mat(const frame<T, N>& f) {
 }
 
 // Frame comparisons.
-template <typename T1,typename T2, size_t N>
+template <typename T1, typename T2, size_t N>
 inline bool operator==(const frame<T1, N>& a, const frame<T2, N>& b) {
   if constexpr (N == 2) {
     return a.x == b.x && a.y == b.y && a.o == b.o;
@@ -1449,7 +1449,7 @@ inline bool operator==(const frame<T1, N>& a, const frame<T2, N>& b) {
     return a.x == b.x && a.y == b.y && a.z == b.z && a.o == b.o;
   }
 }
-template <typename T1,typename T2, size_t N>
+template <typename T1, typename T2, size_t N>
 inline bool operator!=(const frame<T1, N>& a, const frame<T2, N>& b) {
   return !(a == b);
 }
@@ -1597,7 +1597,6 @@ inline quat<T, 4> slerp(const quat<T, 4>& a, const quat<T, 4>& b, T t) {
              : a * (sin(th * (1 - t)) / sin(th)) + b * (sin(th * t) / sin(th));
 }
 
-
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -1671,7 +1670,7 @@ inline vec<T, N> transform_direction(const frame<T, N>& a, const vec<T, N>& b) {
 }
 template <typename T, size_t N>
 inline vec<T, N> transform_normal(
-    const frame<T, N>& a, const vec<T, N>& b, bool non_rigid=false) {
+    const frame<T, N>& a, const vec<T, N>& b, bool non_rigid = false) {
   if (non_rigid) {
     return transform_normal(rotation(a), b);
   } else {
@@ -2055,7 +2054,6 @@ inline void update_fpscam(
   frame = {rot.x, rot.y, rot.z, pos};
 }
 
-
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -2087,32 +2085,7 @@ constexpr auto zip(const Sequence1& sequence1, Sequence2& sequence2);
 template <typename Sequence1, typename Sequence2>
 constexpr auto zip(Sequence1& sequence1, const Sequence2& sequence2);
 
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// SIGNED-SIZE
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-template <typename T>
-inline std::ptrdiff_t ssize(const T& container);
-
-}
-
-// -----------------------------------------------------------------------------
-//
-//
-// IMPLEMENTATION
-//
-//
-// -----------------------------------------------------------------------------
-
-// -----------------------------------------------------------------------------
-// PYTHON-LIKE ITERATORS
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Python `range()` equivalent. Construct an object to iterate over a sequence.
+// Implementation of Python range.
 template <typename T>
 constexpr auto range(T max) {
   return range((T)0, max);
@@ -2155,7 +2128,7 @@ constexpr auto range(T min, T max, T step) {
   return range_helper{min, max, step};
 }
 
-// Python enumerate
+// Implementation of Python enumerate.
 template <typename Sequence, typename T>
 constexpr auto enumerate(const Sequence& sequence, T start) {
   using Iterator  = typename Sequence::const_iterator;
@@ -2164,7 +2137,7 @@ constexpr auto enumerate(const Sequence& sequence, T start) {
     T        index;
     Iterator iterator;
     bool     operator!=(const enumerate_iterator& other) const {
-          return index != other.index;
+      return index != other.index;
     }
     void operator++() {
       ++index;
@@ -2190,7 +2163,7 @@ constexpr auto enumerate(Sequence& sequence, T start) {
     T        index;
     Iterator iterator;
     bool     operator!=(const enumerate_iterator& other) const {
-          return index != other.index;
+      return index != other.index;
     }
     void operator++() {
       ++index;
@@ -2218,7 +2191,7 @@ constexpr auto zip(const Sequence1& sequence1, const Sequence2& sequence2) {
     Iterator1 iterator1;
     Iterator2 iterator2;
     bool      operator!=(const zip_iterator& other) const {
-           return iterator1 != other.iterator1;
+      return iterator1 != other.iterator1;
     }
     void operator++() {
       ++iterator1;
@@ -2232,7 +2205,7 @@ constexpr auto zip(const Sequence1& sequence1, const Sequence2& sequence2) {
     const Sequence1& sequence1;
     const Sequence2& sequence2;
     auto             begin() {
-                  return zip_iterator{std::begin(sequence1), std::begin(sequence2)};
+      return zip_iterator{std::begin(sequence1), std::begin(sequence2)};
     }
     auto end() {
       return zip_iterator{std::end(sequence1), std::end(sequence2)};
@@ -2241,7 +2214,7 @@ constexpr auto zip(const Sequence1& sequence1, const Sequence2& sequence2) {
   return zip_helper{sequence1, sequence2};
 }
 
-// Python zip
+// Implementation of Python zip
 template <typename Sequence1, typename Sequence2>
 constexpr auto zip(Sequence1& sequence1, Sequence2& sequence2) {
   using Iterator1  = typename Sequence1::iterator;
@@ -2252,7 +2225,7 @@ constexpr auto zip(Sequence1& sequence1, Sequence2& sequence2) {
     Iterator1 iterator1;
     Iterator2 iterator2;
     bool      operator!=(const zip_iterator& other) const {
-           return iterator1 != other.iterator1;
+      return iterator1 != other.iterator1;
     }
     void operator++() {
       ++iterator1;
@@ -2266,7 +2239,7 @@ constexpr auto zip(Sequence1& sequence1, Sequence2& sequence2) {
     Sequence1& sequence1;
     Sequence2& sequence2;
     auto       begin() {
-            return zip_iterator{std::begin(sequence1), std::begin(sequence2)};
+      return zip_iterator{std::begin(sequence1), std::begin(sequence2)};
     }
     auto end() {
       return zip_iterator{std::end(sequence1), std::end(sequence2)};
@@ -2275,7 +2248,7 @@ constexpr auto zip(Sequence1& sequence1, Sequence2& sequence2) {
   return zip_helper{sequence1, sequence2};
 }
 
-// Python zip
+// Implementation of Python zip
 template <typename Sequence1, typename Sequence2>
 constexpr auto zip(const Sequence1& sequence1, Sequence2& sequence2) {
   using Iterator1  = typename Sequence1::const_iterator;
@@ -2286,7 +2259,7 @@ constexpr auto zip(const Sequence1& sequence1, Sequence2& sequence2) {
     Iterator1 iterator1;
     Iterator2 iterator2;
     bool      operator!=(const zip_iterator& other) const {
-           return iterator1 != other.iterator1;
+      return iterator1 != other.iterator1;
     }
     void operator++() {
       ++iterator1;
@@ -2300,7 +2273,7 @@ constexpr auto zip(const Sequence1& sequence1, Sequence2& sequence2) {
     const Sequence1& sequence1;
     Sequence2&       sequence2;
     auto             begin() {
-                  return zip_iterator{std::begin(sequence1), std::begin(sequence2)};
+      return zip_iterator{std::begin(sequence1), std::begin(sequence2)};
     }
     auto end() {
       return zip_iterator{std::end(sequence1), std::end(sequence2)};
@@ -2309,7 +2282,7 @@ constexpr auto zip(const Sequence1& sequence1, Sequence2& sequence2) {
   return zip_helper{sequence1, sequence2};
 }
 
-// Python zip
+// Implementation of Python zip
 template <typename Sequence1, typename Sequence2>
 constexpr auto zip(Sequence1& sequence1, const Sequence2& sequence2) {
   using Iterator1  = typename Sequence1::iterator;
@@ -2320,7 +2293,7 @@ constexpr auto zip(Sequence1& sequence1, const Sequence2& sequence2) {
     Iterator1 iterator1;
     Iterator2 iterator2;
     bool      operator!=(const zip_iterator& other) const {
-           return iterator1 != other.iterator1;
+      return iterator1 != other.iterator1;
     }
     void operator++() {
       ++iterator1;
@@ -2334,7 +2307,7 @@ constexpr auto zip(Sequence1& sequence1, const Sequence2& sequence2) {
     Sequence1&       sequence1;
     const Sequence2& sequence2;
     auto             begin() {
-                  return zip_iterator{std::begin(sequence1), std::begin(sequence2)};
+      return zip_iterator{std::begin(sequence1), std::begin(sequence2)};
     }
     auto end() {
       return zip_iterator{std::end(sequence1), std::end(sequence2)};
