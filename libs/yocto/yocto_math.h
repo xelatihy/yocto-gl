@@ -244,8 +244,8 @@ struct vec<T, 1> {
   constexpr vec(array<T, 1> v) : x{v[0]} {}
   constexpr operator array<T, 1>() { return {x}; }
 
-  constexpr T&       operator[](int i) { return d[i]; }
-  constexpr const T& operator[](int i) const { return d[i]; }
+  constexpr T&       operator[](size_t i) { return d[i]; }
+  constexpr const T& operator[](size_t i) const { return d[i]; }
 };
 
 template <typename T>
@@ -270,8 +270,8 @@ struct vec<T, 2> {
   constexpr vec(array<T, 2> v) : x{v[0]}, y{v[1]} {}
   constexpr operator array<T, 2>() { return {x, y}; }
 
-  constexpr T&       operator[](int i) { return d[i]; }
-  constexpr const T& operator[](int i) const { return d[i]; }
+  constexpr T&       operator[](size_t i) { return d[i]; }
+  constexpr const T& operator[](size_t i) const { return d[i]; }
 };
 
 template <typename T>
@@ -295,8 +295,8 @@ struct vec<T, 3> {
   constexpr vec(array<T, 3> v) : x{v[0]}, y{v[1]}, z{v[2]} {}
   constexpr operator array<T, 3>() { return {x, y, z}; }
 
-  constexpr T&       operator[](int i) { return d[i]; }
-  constexpr const T& operator[](int i) const { return d[i]; }
+  constexpr T&       operator[](size_t i) { return d[i]; }
+  constexpr const T& operator[](size_t i) const { return d[i]; }
 };
 
 template <typename T>
@@ -320,8 +320,8 @@ struct vec<T, 4> {
   constexpr vec(array<T, 4> v) : x{v[0]}, y{v[1]}, z{v[2]}, w{v[3]} {}
   constexpr operator array<T, 4>() { return {x, y, z, w}; }
 
-  constexpr T&       operator[](int i) { return d[i]; }
-  constexpr const T& operator[](int i) const { return d[i]; }
+  constexpr T&       operator[](size_t i) { return d[i]; }
+  constexpr const T& operator[](size_t i) const { return d[i]; }
 };
 
 // Vector deduction guides
@@ -1132,10 +1132,8 @@ struct mat<T, 1> {
   constexpr mat() : x{1} {}
   constexpr mat(const vec<T, 1>& x_) : x{x_} {}
 
-  constexpr vec<T, 1>&       operator[](int i) { return ((vec<T, 1>*)this)[i]; }
-  constexpr const vec<T, 1>& operator[](int i) const {
-    return ((vec<T, 1>*)this)[i];
-  }
+  constexpr vec<T, 1>&       operator[](size_t i) { return cols[i]; }
+  constexpr const vec<T, 1>& operator[](size_t i) const { return cols[i]; }
 };
 
 // Small Fixed-size matrices stored in column major format.
@@ -1150,10 +1148,8 @@ struct mat<T, 2> {
   constexpr mat() : x{1, 0}, y{0, 1} {}
   constexpr mat(const vec<T, 2>& x_, const vec<T, 2>& y_) : x{x_}, y{y_} {}
 
-  constexpr vec<T, 2>&       operator[](int i) { return cols[i]; }
-  constexpr const vec<T, 2>& operator[](int i) const {
-    return cols[i];
-  }
+  constexpr vec<T, 2>&       operator[](size_t i) { return cols[i]; }
+  constexpr const vec<T, 2>& operator[](size_t i) const { return cols[i]; }
 };
 
 // Small Fixed-size matrices stored in column major format.
@@ -1169,8 +1165,8 @@ struct mat<T, 3> {
   constexpr mat(const vec<T, 3>& x_, const vec<T, 3>& y_, const vec<T, 3>& z_)
       : x{x_}, y{y_}, z{z_} {}
 
-  constexpr vec<T, 3>&       operator[](int i) { return cols[i]; }
-  constexpr const vec<T, 3>& operator[](int i) const { return cols[i]; }
+  constexpr vec<T, 3>&       operator[](size_t i) { return cols[i]; }
+  constexpr const vec<T, 3>& operator[](size_t i) const { return cols[i]; }
 };
 
 // Small Fixed-size matrices stored in column major format.
@@ -1188,8 +1184,8 @@ struct mat<T, 4> {
       const vec<T, 4>& w_)
       : x{x_}, y{y_}, z{z_}, w{w_} {}
 
-  constexpr vec<T, 4>&       operator[](int i) { return cols[i]; }
-  constexpr const vec<T, 4>& operator[](int i) const {
+  constexpr vec<T, 4>&       operator[](size_t i) { return cols[i]; }
+  constexpr const vec<T, 4>& operator[](size_t i) const {
     return cols[i];
   }
 };
@@ -1421,10 +1417,8 @@ struct frame<T, 2> {
     return {{x.x, x.y, 0}, {y.x, y.y, 0}, {o.x, o.y, 1}};
   }
 
-  constexpr vec<T, 2>&       operator[](int i) { return ((vec<T, 2>*)this)[i]; }
-  constexpr const vec<T, 2>& operator[](int i) const {
-    return ((vec<T, 2>*)this)[i];
-  }
+  constexpr vec<T, 2>&       operator[](size_t i) { return cols[i]; }
+  constexpr const vec<T, 2>& operator[](size_t i) const { return cols[i]; }
 };
 
 // Rigid frames stored as a column-major affine transform matrix.
@@ -1458,10 +1452,8 @@ struct frame<T, 3> {
         {o.x, o.y, o.z, 1}};
   }
 
-  constexpr vec<T, 3>&       operator[](int i) { return ((vec<T, 3>*)this)[i]; }
-  constexpr const vec<T, 3>& operator[](int i) const {
-    return ((vec<T, 3>*)this)[i];
-  }
+  constexpr vec<T, 3>&       operator[](size_t i) { return cols[i]; }
+  constexpr const vec<T, 3>& operator[](size_t i) const { return cols[i]; }
 };
 
 // Frame aliases
@@ -1577,16 +1569,16 @@ struct quat;
 // Quaternions to represent rotations
 template <typename T>
 struct quat<T, 4> {
-  T x = 0;
-  T y = 0;
-  T z = 0;
-  T w = 1;
+  union { // clang-format off
+    struct { T x, y, z, w; };
+    array<T, 4> d;
+  };      // clang-format on
 
   constexpr quat() : x{0}, y{0}, z{0}, w{1} {}
   constexpr quat(T x_, T y_, T z_, T w_) : x{x_}, y{y_}, z{z_}, w{w_} {}
 
-  constexpr T&       operator[](int i) { return ((T*)this)[i]; }
-  constexpr const T& operator[](int i) const { return ((T*)this)[i]; }
+  constexpr T&       operator[](size_t i) { return d[i]; }
+  constexpr const T& operator[](size_t i) const { return d[i]; }
 };
 
 // Quaternion aliases
@@ -1594,7 +1586,7 @@ using quat4f = quat<float, 4>;
 
 [[deprecated]] constexpr auto identity_quat4f = quat4f{0, 0, 0, 1};
 
-// Quaternion operatons
+// Quaternion operations
 template <typename T>
 inline quat<T, 4> operator+(const quat<T, 4>& a, const quat<T, 4>& b) {
   return {a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w};
