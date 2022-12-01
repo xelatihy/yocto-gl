@@ -1359,9 +1359,18 @@ struct frame;
 // Rigid frames stored as a column-major affine transform matrix.
 template <typename T>
 struct frame<T, 2> {
-  vec<T, 2> x = {1, 0};
-  vec<T, 2> y = {0, 1};
-  vec<T, 2> o = {0, 0};
+  union {
+    struct {
+      vec<T, 2> x = {1, 0};
+      vec<T, 2> y = {0, 1};
+      vec<T, 2> o = {0, 0};
+    };
+    struct {
+      mat<T, 2> m;
+      vec<T, 2> t;
+    };
+    array<vec<T, 2>, 3> c;
+  };
 
   constexpr frame() : x{1, 0}, y{0, 1}, o{0, 0} {}
   constexpr frame(const vec<T, 2>& x_, const vec<T, 2>& y_, const vec<T, 2>& o_)
@@ -1384,10 +1393,19 @@ struct frame<T, 2> {
 // Rigid frames stored as a column-major affine transform matrix.
 template <typename T>
 struct frame<T, 3> {
-  vec<T, 3> x = {1, 0, 0};
-  vec<T, 3> y = {0, 1, 0};
-  vec<T, 3> z = {0, 0, 1};
-  vec<T, 3> o = {0, 0, 0};
+  union {
+    struct {
+      vec<T, 3> x = {1, 0, 0};
+      vec<T, 3> y = {0, 1, 0};
+      vec<T, 3> z = {0, 0, 1};
+      vec<T, 3> o = {0, 0, 0};
+    };
+    struct {
+      mat<T, 3> m;
+      vec<T, 3> t;
+    };
+    array<vec<T, 3>, 4> c;
+  };
 
   constexpr frame() : x{1, 0, 0}, y{0, 1, 0}, z{0, 0, 1}, o{0, 0, 0} {}
   constexpr frame(const vec<T, 3>& x_, const vec<T, 3>& y_, const vec<T, 3>& z_,
@@ -1466,7 +1484,7 @@ inline bool operator!=(const frame<T1, N>& a, const frame<T2, N>& b) {
 // Frame composition, equivalent to affine matrix product.
 template <typename T, size_t N>
 inline frame<T, N> operator*(const frame<T, N>& a, const frame<T, N>& b) {
-  return {rotation(a) * rotation(b), rotation(a) * b.o + a.o};
+  return {a.m * b.m, a.m * b.t + a.t};
 }
 template <typename T, size_t N>
 inline frame<T, N>& operator*=(frame<T, N>& a, const frame<T, N>& b) {
@@ -1477,11 +1495,11 @@ inline frame<T, N>& operator*=(frame<T, N>& a, const frame<T, N>& b) {
 template <typename T, size_t N>
 inline frame<T, N> inverse(const frame<T, N>& a, bool non_rigid = false) {
   if (non_rigid) {
-    auto minv = inverse(rotation(a));
-    return {minv, -(minv * a.o)};
+    auto minv = inverse(a.m);
+    return {minv, -(minv * a.t)};
   } else {
-    auto minv = transpose(rotation(a));
-    return {minv, -(minv * a.o)};
+    auto minv = transpose(a.m);
+    return {minv, -(minv * a.t)};
   }
 }
 
