@@ -1352,6 +1352,8 @@ struct frame<T, 2> {
   constexpr frame() : x{1, 0}, y{0, 1}, o{0, 0} {}
   constexpr frame(const vec<T, 2>& x_, const vec<T, 2>& y_, const vec<T, 2>& o_)
       : x{x_}, y{y_}, o{o_} {}
+  constexpr frame(const mat<T, 2>& xy_, const vec<T, 2>& o_)
+      : x{xy_.x}, y{xy_.y}, o{o_} {}
 
   constexpr vec<T, 2>&       operator[](int i) { return ((vec<T, 2>*)this)[i]; }
   constexpr const vec<T, 2>& operator[](int i) const {
@@ -1371,6 +1373,8 @@ struct frame<T, 3> {
   constexpr frame(const vec<T, 3>& x_, const vec<T, 3>& y_, const vec<T, 3>& z_,
       const vec<T, 3>& o_)
       : x{x_}, y{y_}, z{z_}, o{o_} {}
+  constexpr frame(const mat<T, 3>& xyz_, const vec<T, 3>& o_)
+      : x{xyz_.x}, y{xyz_.y}, z{xyz_.z}, o{o_} {}
 
   constexpr vec<T, 3>&       operator[](int i) { return ((vec<T, 3>*)this)[i]; }
   constexpr const vec<T, 3>& operator[](int i) const {
@@ -1389,42 +1393,114 @@ constexpr auto identity3x4f = frame3f{
 
 // Frame properties
 template <typename T, size_t N>
-inline mat<T, N> rotation(const frame<T, N>& a);
+inline mat<T, N> rotation(const frame<T, N>& a) {
+  if constexpr (N == 2) {
+    return {a.x, a.y};
+  } else if constexpr (N == 3) {
+    return {a.x, a.y, a.z};
+  }
+}
 template <typename T, size_t N>
-inline vec<T, N> translation(const frame<T, N>& a);
+inline vec<T, N> translation(const frame<T, N>& a) {
+  if constexpr (N == 2) {
+    return a.o;
+  } else if constexpr (N == 3) {
+    return a.o;
+  }
+}
 
 // Frame construction
-template <typename T, size_t N>
-inline frame<T, N> make_frame(const mat<T, 2>& m, const vec<T, 2>& t);
+template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
+inline frame<T, N> make_frame(const mat<T1, N>& m, const vec<T2, N>& t) {
+  if constexpr (N == 2) {
+    return {m.x, m.y, t};
+  } else if constexpr (N == 3) {
+    return {m.x, m.y, m.z, t};
+  }
+}
 
-// Conversion between frame and mat
+// Frame/mat conversion
+template <typename T, size_t N_>
+inline frame<T, N_ - 1> mat_to_frame(const mat<T, N_>& m) {
+  constexpr auto N = N_ - 1;
+  if constexpr (N == 2) {
+    return {{m.x.x, m.x.y}, {m.y.x, m.y.y}, {m.z.x, m.z.y}};
+  } else if constexpr (N == 3) {
+    return {{m.x.x, m.x.y, m.x.z}, {m.y.x, m.y.y, m.y.z}, {m.z.x, m.z.y, m.z.z},
+        {m.w.x, m.w.y, m.w.z}};
+  }
+}
 template <typename T, size_t N>
-inline mat<T, N + 1> frame_to_mat(const frame<T, N>& f);
-template <typename T, size_t N>
-inline frame<T, N - 1> mat_to_frame(const mat<T, N>& ma);
+inline mat<T, N + 1> frame_to_mat(const frame<T, N>& f) {
+  if constexpr (N == 2) {
+    return {{f.x.x, f.x.y, 0}, {f.y.x, f.y.y, 0}, {f.o.x, f.o.y, 1}};
+  } else if constexpr (N == 3) {
+    return {{f.x.x, f.x.y, f.x.z, 0}, {f.y.x, f.y.y, f.y.z, 0},
+        {f.z.x, f.z.y, f.z.z, 0}, {f.o.x, f.o.y, f.o.z, 1}};
+  }
+}
 
 // Frame comparisons.
-template <typename T, size_t N>
-inline bool operator==(const frame<T, N>& a, const frame<T, N>& b);
-template <typename T, size_t N>
-inline bool operator!=(const frame<T, N>& a, const frame<T, N>& b);
+template <typename T1,typename T2, size_t N>
+inline bool operator==(const frame<T1, N>& a, const frame<T2, N>& b) {
+  if constexpr (N == 2) {
+    return a.x == b.x && a.y == b.y && a.o == b.o;
+  } else if constexpr (N == 3) {
+    return a.x == b.x && a.y == b.y && a.z == b.z && a.o == b.o;
+  }
+}
+template <typename T1,typename T2, size_t N>
+inline bool operator!=(const frame<T1, N>& a, const frame<T2, N>& b) {
+  return !(a == b);
+}
 
 // Frame composition, equivalent to affine matrix product.
 template <typename T, size_t N>
-inline frame<T, N> operator*(const frame<T, N>& a, const frame<T, N>& b);
+inline frame<T, N> operator*(const frame<T, N>& a, const frame<T, N>& b) {
+  return make_frame(rotation(a) * rotation(b), rotation(a) * b.o + a.o);
+}
 template <typename T, size_t N>
-inline frame<T, N>& operator*=(frame<T, N>& a, const frame<T, N>& b);
+inline frame<T, N>& operator*=(frame<T, N>& a, const frame<T, N>& b) {
+  return a = a * b;
+}
 
 // Frame inverse, equivalent to rigid affine inverse.
 template <typename T, size_t N>
-inline frame<T, N> inverse(const frame<T, N>& a, bool non_rigid = false);
+inline frame<T, N> inverse(const frame<T, N>& a, bool non_rigid = false) {
+  if (non_rigid) {
+    auto minv = inverse(rotation(a));
+    return make_frame(minv, -(minv * a.o));
+  } else {
+    auto minv = transpose(rotation(a));
+    return make_frame(minv, -(minv * a.o));
+  }
+}
 
 // Frame construction from axis.
 template <typename T>
-inline frame<T, 3> frame_fromz(const vec<T, 3>& o, const vec<T, 3>& v);
-template <typename T, size_t N>
+inline frame<T, 3> frame_fromz(const vec<T, 3>& o, const vec<T, 3>& v) {
+  // https://graphics.pixar.com/library/OrthonormalB/paper.pdf
+  if constexpr (std::is_same_v<T, float>) {
+    auto z    = normalize(v);
+    auto sign = copysignf((T)1, z.z);
+    auto a    = -1 / (sign + z.z);
+    auto b    = z.x * z.y * a;
+    auto x    = vec<T, 3>{1 + sign * z.x * z.x * a, sign * b, -sign * z.x};
+    auto y    = vec<T, 3>{b, sign + z.y * z.y * a, -z.y};
+    return {x, y, z, o};
+  } else if constexpr (std::is_same_v<T, double>) {
+    // TODO: double
+    return {};
+  }
+}
+template <typename T>
 inline frame<T, 3> frame_fromzx(
-    const vec<T, 3>& o, const vec<T, 3>& z_, const vec<T, 3>& x_);
+    const vec<T, 3>& o, const vec<T, 3>& z_, const vec<T, 3>& x_) {
+  auto z = normalize(z_);
+  auto x = orthonormalize(x_, z);
+  auto y = normalize(cross(z, x));
+  return {x, y, z, o};
+}
 
 }  // namespace yocto
 
@@ -1685,124 +1761,6 @@ inline std::ptrdiff_t ssize(const T& container);
 //
 //
 // -----------------------------------------------------------------------------
-
-// -----------------------------------------------------------------------------
-// RIGID BODY TRANSFORMS/FRAMES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Frame properties
-template <typename T, size_t N>
-inline mat<T, N> rotation(const frame<T, N>& a) {
-  if constexpr (N == 2) {
-    return {a.x, a.y};
-  } else if constexpr (N == 3) {
-    return {a.x, a.y, a.z};
-  }
-}
-template <typename T, size_t N>
-inline vec<T, N> translation(const frame<T, N>& a) {
-  if constexpr (N == 2) {
-    return a.o;
-  } else if constexpr (N == 3) {
-    return a.o;
-  }
-}
-
-// Frame construction
-template <typename T, size_t N>
-inline frame<T, N> make_frame(const mat<T, N>& m, const vec<T, N>& t) {
-  if constexpr (N == 2) {
-    return {m.x, m.y, t};
-  } else if constexpr (N == 3) {
-    return {m.x, m.y, m.z, t};
-  }
-}
-
-// Frame/mat conversion
-template <typename T, size_t N_>
-inline frame<T, N_ - 1> mat_to_frame(const mat<T, N_>& m) {
-  constexpr auto N = N_ - 1;
-  if constexpr (N == 2) {
-    return {{m.x.x, m.x.y}, {m.y.x, m.y.y}, {m.z.x, m.z.y}};
-  } else if constexpr (N == 3) {
-    return {{m.x.x, m.x.y, m.x.z}, {m.y.x, m.y.y, m.y.z}, {m.z.x, m.z.y, m.z.z},
-        {m.w.x, m.w.y, m.w.z}};
-  }
-}
-template <typename T, size_t N>
-inline mat<T, N + 1> frame_to_mat(const frame<T, N>& f) {
-  if constexpr (N == 2) {
-    return {{f.x.x, f.x.y, 0}, {f.y.x, f.y.y, 0}, {f.o.x, f.o.y, 1}};
-  } else if constexpr (N == 3) {
-    return {{f.x.x, f.x.y, f.x.z, 0}, {f.y.x, f.y.y, f.y.z, 0},
-        {f.z.x, f.z.y, f.z.z, 0}, {f.o.x, f.o.y, f.o.z, 1}};
-  }
-}
-
-// Frame comparisons.
-template <typename T, size_t N>
-inline bool operator==(const frame<T, N>& a, const frame<T, N>& b) {
-  if constexpr (N == 2) {
-    return a.x == b.x && a.y == b.y && a.o == b.o;
-  } else if constexpr (N == 3) {
-    return a.x == b.x && a.y == b.y && a.z == b.z && a.o == b.o;
-  }
-}
-template <typename T, size_t N>
-inline bool operator!=(const frame<T, N>& a, const frame<T, N>& b) {
-  return !(a == b);
-}
-
-// Frame composition, equivalent to affine matrix product.
-template <typename T, size_t N>
-inline frame<T, N> operator*(const frame<T, N>& a, const frame<T, N>& b) {
-  return make_frame(rotation(a) * rotation(b), rotation(a) * b.o + a.o);
-}
-template <typename T, size_t N>
-inline frame<T, N>& operator*=(frame<T, N>& a, const frame<T, N>& b) {
-  return a = a * b;
-}
-
-// Frame inverse, equivalent to rigid affine inverse.
-template <typename T, size_t N>
-inline frame<T, N> inverse(const frame<T, N>& a, bool non_rigid) {
-  if (non_rigid) {
-    auto minv = inverse(rotation(a));
-    return make_frame(minv, -(minv * a.o));
-  } else {
-    auto minv = transpose(rotation(a));
-    return make_frame(minv, -(minv * a.o));
-  }
-}
-
-// Frame construction from axis.
-template <typename T>
-inline frame<T, 3> frame_fromz(const vec<T, 3>& o, const vec<T, 3>& v) {
-  // https://graphics.pixar.com/library/OrthonormalB/paper.pdf
-  if constexpr (std::is_same_v<T, float>) {
-    auto z    = normalize(v);
-    auto sign = copysignf(1.0f, z.z);
-    auto a    = -1.0f / (sign + z.z);
-    auto b    = z.x * z.y * a;
-    auto x    = vec<T, 3>{1.0f + sign * z.x * z.x * a, sign * b, -sign * z.x};
-    auto y    = vec<T, 3>{b, sign + z.y * z.y * a, -z.y};
-    return {x, y, z, o};
-  } else if constexpr (std::is_same_v<T, double>) {
-    // TODO: double
-    return {};
-  }
-}
-template <typename T>
-inline frame<T, 3> frame_fromzx(
-    const vec<T, 3>& o, const vec<T, 3>& z_, const vec<T, 3>& x_) {
-  auto z = normalize(z_);
-  auto x = orthonormalize(x_, z);
-  auto y = normalize(cross(z, x));
-  return {x, y, z, o};
-}
-
-}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // QUATERNIONS
