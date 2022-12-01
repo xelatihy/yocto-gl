@@ -1833,116 +1833,6 @@ namespace yocto {
 // Returns negative coordinates if out of the image.
 template <typename T, typename I>
 inline vec<I, 2> image_coords(const vec<T, 2>& mouse_pos,
-    const vec<T, 2>& center, T scale, const vec<I, 2>& txt_size);
-
-// Center image and autofit. Returns center and scale.
-template <typename T, typename I>
-inline pair<vec<T, 2>, T> camera_imview(const vec<T, 2>& center, T scale,
-    const vec<I, 2>& imsize, const vec<I, 2>& winsize, bool zoom_to_fit);
-
-// Turntable for UI navigation. Returns from and to.
-template <typename T>
-inline pair<vec<T, 3>, vec<T, 3>> camera_turntable(const vec<T, 3>& from,
-    const vec<T, 3>& to, const vec<T, 3>& up, const vec<T, 2>& rotate, T dolly,
-    const vec<T, 2>& pan);
-
-// Turntable for UI navigation. Returns frame and focus.
-template <typename T>
-inline pair<frame<T, 3>, T> camera_turntable(const frame<T, 3>& frame, T focus,
-    const vec<T, 2>& rotate, T dolly, const vec<T, 2>& pan);
-
-// FPS camera for UI navigation for a frame parametrization. Returns frame.
-template <typename T>
-inline frame<T, 3> camera_fpscam(
-    const frame<T, 3>& frame, const vec<T, 3>& transl, const vec<T, 2>& rotate);
-
-// Computes the image uv coordinates corresponding to the view parameters.
-// Returns negative coordinates if out of the image.
-template <typename T, typename I>
-[[deprecated]] inline vec<I, 2> get_image_coords(const vec<T, 2>& mouse_pos,
-    const vec<T, 2>& center, T scale, const vec<I, 2>& txt_size);
-
-// Center image and autofit.
-template <typename T, typename I>
-[[deprecated]] inline void update_imview(vec<T, 2>& center, T& scale,
-    const vec<I, 2>& imsize, const vec<I, 2>& winsize, bool zoom_to_fit);
-
-// Turntable for UI navigation.
-template <typename T>
-[[deprecated]] inline void update_turntable(vec<T, 3>& from, vec<T, 3>& to,
-    const vec<T, 3>& up, const vec<T, 2>& rotate, T dolly,
-    const vec<T, 2>& pan);
-
-// Turntable for UI navigation.
-template <typename T>
-[[deprecated]] inline void update_turntable(frame<T, 3>& frame, T& focus,
-    const vec<T, 2>& rotate, T dolly, const vec<T, 2>& pan);
-
-// FPS camera for UI navigation for a frame parametrization.
-template <typename T>
-[[deprecated]] inline void update_fpscam(
-    frame<T, 3>& frame, const vec<T, 3>& transl, const vec<T, 2>& rotate);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// PYTHON-LIKE ITERATORS
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Python range. Construct an object that iterates over an integer sequence.
-template <typename T>
-constexpr auto range(T max);
-template <typename T>
-constexpr auto range(T min, T max);
-template <typename T>
-constexpr auto range(T min, T max, T step);
-
-// Python enumerate
-template <typename Sequence, typename T = size_t>
-constexpr auto enumerate(const Sequence& sequence, T start = 0);
-template <typename Sequence, typename T = size_t>
-constexpr auto enumerate(Sequence& sequence, T start = 0);
-
-// Python zip
-template <typename Sequence1, typename Sequence2>
-constexpr auto zip(const Sequence1& sequence1, const Sequence2& sequence2);
-template <typename Sequence1, typename Sequence2>
-constexpr auto zip(Sequence1& sequence1, Sequence2& sequence2);
-template <typename Sequence1, typename Sequence2>
-constexpr auto zip(const Sequence1& sequence1, Sequence2& sequence2);
-template <typename Sequence1, typename Sequence2>
-constexpr auto zip(Sequence1& sequence1, const Sequence2& sequence2);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// SIGNED-SIZE
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-template <typename T>
-inline std::ptrdiff_t ssize(const T& container);
-
-}
-
-// -----------------------------------------------------------------------------
-//
-//
-// IMPLEMENTATION
-//
-//
-// -----------------------------------------------------------------------------
-
-// -----------------------------------------------------------------------------
-// USER INTERFACE UTILITIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Computes the image uv coordinates corresponding to the view parameters.
-// Returns negative coordinates if out of the image.
-template <typename T, typename I>
-inline vec<I, 2> image_coords(const vec<T, 2>& mouse_pos,
     const vec<T, 2>& center, T scale, const vec<I, 2>& txt_size) {
   auto xyf = (mouse_pos - center) / scale;
   return vec<I, 2>{(int)round(xyf.x + txt_size.x / (T)2),
@@ -2165,7 +2055,57 @@ inline void update_fpscam(
   frame = {rot.x, rot.y, rot.z, pos};
 }
 
+
 }  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// PYTHON-LIKE ITERATORS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Python range. Construct an object that iterates over an integer sequence.
+template <typename T>
+constexpr auto range(T max);
+template <typename T>
+constexpr auto range(T min, T max);
+template <typename T>
+constexpr auto range(T min, T max, T step);
+
+// Python enumerate
+template <typename Sequence, typename T = size_t>
+constexpr auto enumerate(const Sequence& sequence, T start = 0);
+template <typename Sequence, typename T = size_t>
+constexpr auto enumerate(Sequence& sequence, T start = 0);
+
+// Python zip
+template <typename Sequence1, typename Sequence2>
+constexpr auto zip(const Sequence1& sequence1, const Sequence2& sequence2);
+template <typename Sequence1, typename Sequence2>
+constexpr auto zip(Sequence1& sequence1, Sequence2& sequence2);
+template <typename Sequence1, typename Sequence2>
+constexpr auto zip(const Sequence1& sequence1, Sequence2& sequence2);
+template <typename Sequence1, typename Sequence2>
+constexpr auto zip(Sequence1& sequence1, const Sequence2& sequence2);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// SIGNED-SIZE
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+template <typename T>
+inline std::ptrdiff_t ssize(const T& container);
+
+}
+
+// -----------------------------------------------------------------------------
+//
+//
+// IMPLEMENTATION
+//
+//
+// -----------------------------------------------------------------------------
 
 // -----------------------------------------------------------------------------
 // PYTHON-LIKE ITERATORS
