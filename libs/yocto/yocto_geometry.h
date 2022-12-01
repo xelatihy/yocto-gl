@@ -105,25 +105,41 @@ constexpr auto invalidb3f = bbox3f{};
 
 // Bounding box properties
 template <typename T, size_t N>
-inline vec<T, 2> center(const bbox<T, 2>& a);
+inline vec<T, N> center(const bbox<T, N>& a) {
+  return (a.min + a.max) / 2;
+}
 template <typename T, size_t N>
-inline vec<T, 2> size(const bbox<T, 2>& a);
+inline vec<T, N> size(const bbox<T, N>& a) {
+  return a.max - a.min;
+}
 
 // Bounding box comparisons.
 template <typename T, size_t N>
-inline bool operator==(const bbox<T, 2>& a, const bbox<T, 2>& b);
+inline bool operator==(const bbox<T, N>& a, const bbox<T, N>& b) {
+  return a.min == b.min && a.max == b.max;
+}
 template <typename T, size_t N>
-inline bool operator!=(const bbox<T, 2>& a, const bbox<T, 2>& b);
+inline bool operator!=(const bbox<T, N>& a, const bbox<T, N>& b) {
+  return a.min != b.min || a.max != b.max;
+}
 
 // Bounding box expansions with points and other boxes.
 template <typename T, size_t N>
-inline bbox<T, N> merge(const bbox<T, N>& a, const vec<T, N>& b);
+inline bbox<T, N> merge(const bbox<T, N>& a, const vec<T, N>& b) {
+  return {min(a.min, b), max(a.max, b)};
+}
 template <typename T, size_t N>
-inline bbox<T, N> merge(const bbox<T, N>& a, const bbox<T, 2>& b);
+inline bbox<T, N> merge(const bbox<T, N>& a, const bbox<T, N>& b) {
+  return {min(a.min, b.min), max(a.max, b.max)};
+}
 template <typename T, size_t N>
-inline void expand(bbox<T, 2>& a, const vec<T, N>& b);
+inline void expand(bbox<T, N>& a, const vec<T, N>& b) {
+  a = merge(a, b);
+}
 template <typename T, size_t N>
-inline void expand(bbox<T, 2>& a, const bbox<T, 2>& b);
+inline void expand(bbox<T, N>& a, const bbox<T, N>& b) {
+  a = merge(a, b);
+}
 
 }  // namespace yocto
 
@@ -175,329 +191,6 @@ using ray3f = ray<float, 3>;
 
 // Computes a point on a ray
 template <typename T, size_t N>
-inline vec<T, N> ray_point(const ray<T, N>& ray, T t);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// TRANSFORMS
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Transforms rays.
-template <typename T, size_t N>
-inline ray<T, N> transform_ray(const mat<T, N + 1, N + 1>& a, const ray<T, N>& b);
-template <typename T, size_t N>
-inline ray<T, N> transform_ray(const frame<T, N>& a, const ray<T, N>& b);
-
-// Transforms bounding boxes by matrices.
-template <typename T, size_t N>
-inline bbox<T, N> transform_bbox(const mat<T, N + 1, N + 1>& a, const bbox<T, N>& b);
-template <typename T, size_t N>
-inline bbox<T, N> transform_bbox(const frame<T, N>& a, const bbox<T, N>& b);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// PRIMITIVE BOUNDS
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Primitive bounds.
-template <typename T, size_t N>
-inline bbox<T, N> point_bounds(const vec<T, N>& p);
-template <typename T, size_t N>
-inline bbox<T, N> point_bounds(const vec<T, N>& p, T r);
-template <typename T, size_t N>
-inline bbox<T, N> line_bounds(const vec<T, N>& p0, const vec<T, N>& p1);
-template <typename T, size_t N>
-inline bbox<T, N> line_bounds(
-    const vec<T, N>& p0, const vec<T, N>& p1, T r0, T r1);
-template <typename T, size_t N>
-inline bbox<T, N> triangle_bounds(
-    const vec<T, N>& p0, const vec<T, N>& p1, const vec<T, N>& p2);
-template <typename T, size_t N>
-inline bbox<T, N> quad_bounds(const vec<T, N>& p0, const vec<T, N>& p1,
-    const vec<T, N>& p2, const vec<T, N>& p3);
-template <typename T, size_t N>
-inline bbox<T, N> sphere_bounds(const vec<T, N>& p, T r);
-template <typename T, size_t N>
-inline bbox<T, N> capsule_bounds(
-    const vec<T, N>& p0, const vec<T, N>& p1, T r0, T r1);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// GEOMETRY UTILITIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Line properties.
-template <typename T>
-inline vec<T, 3> line_point(const vec<T, 3>& p0, const vec<T, 3>& p1, T u);
-template <typename T>
-inline vec<T, 3> line_tangent(const vec<T, 3>& p0, const vec<T, 3>& p1);
-template <typename T>
-inline T line_length(const vec<T, 3>& p0, const vec<T, 3>& p1);
-
-// Triangle properties.
-template <typename T>
-inline vec<T, 3> triangle_point(const vec<T, 3>& p0, const vec<T, 3>& p1,
-    const vec<T, 3>& p2, const vec<T, 2>& uv);
-template <typename T>
-inline vec<T, 3> triangle_normal(
-    const vec<T, 3>& p0, const vec<T, 3>& p1, const vec<T, 3>& p2);
-template <typename T>
-inline T triangle_area(
-    const vec<T, 3>& p0, const vec<T, 3>& p1, const vec<T, 3>& p2);
-
-// Quad properties.
-template <typename T>
-inline vec<T, 3> quad_point(const vec<T, 3>& p0, const vec<T, 3>& p1,
-    const vec<T, 3>& p2, const vec<T, 2>& uv);
-template <typename T>
-inline vec<T, 3> quad_normal(const vec<T, 3>& p0, const vec<T, 3>& p1,
-    const vec<T, 3>& p2, const vec<T, 3>& p3);
-template <typename T>
-inline T quad_area(const vec<T, 3>& p0, const vec<T, 3>& p1,
-    const vec<T, 3>& p2, const vec<T, 3>& p3);
-
-// Triangle tangent and bitangent from uv
-template <typename T>
-inline pair<vec<T, 3>, vec<T, 3>> triangle_tangents_fromuv(const vec<T, 3>& p0,
-    const vec<T, 3>& p1, const vec<T, 3>& p2, const vec<T, 2>& uv0,
-    const vec<T, 2>& uv1, const vec<T, 2>& uv2);
-
-// Quad tangent and bitangent from uv. Note that we pass a current_uv since
-// internally we may want to split the quad in two and we need to known where
-// to do it. If not interested in the split, just pass vec2f{0,0} here.
-template <typename T>
-inline pair<vec<T, 3>, vec<T, 3>> quad_tangents_fromuv(const vec<T, 3>& p0,
-    const vec<T, 3>& p1, const vec<T, 3>& p2, const vec<T, 3>& p3,
-    const vec<T, 2>& uv0, const vec<T, 2>& uv1, const vec<T, 2>& uv2,
-    const vec<T, 2>& uv3, const vec<T, 2>& current_uv);
-
-// Interpolates values over a line parameterized from a to b by u. Same as lerp.
-template <typename T, typename T1>
-inline T interpolate_line(const T& p0, const T& p1, T1 u);
-
-// Interpolates values over a triangle parameterized by u and v along the
-// (p1-p0) and (p2-p0) directions. Same as barycentric interpolation.
-template <typename T, typename T1>
-inline T interpolate_triangle(
-    const T& p0, const T& p1, const T& p2, const vec<T1, 2>& uv);
-
-// Interpolates values over a quad parameterized by u and v along the
-// (p1-p0) and (p2-p1) directions. Same as bilinear interpolation.
-template <typename T, typename T1>
-inline T interpolate_quad(
-    const T& p0, const T& p1, const T& p2, const T& p3, const vec<T1, 2>& uv);
-
-// Interpolates values along a cubic Bezier segment parametrized by u.
-template <typename T, typename T1>
-inline T interpolate_bezier(
-    const T& p0, const T& p1, const T& p2, const T& p3, T1 u);
-
-// Computes the derivative of a cubic Bezier segment parametrized by u.
-template <typename T, typename T1>
-inline T interpolate_bezier_derivative(
-    const T& p0, const T& p1, const T& p2, const T& p3, T1 u);
-
-// Interpolated line properties.
-template <typename T>
-inline vec<T, 3> line_point(const vec<T, 3>& p0, const vec<T, 3>& p1, T u);
-template <typename T>
-inline vec<T, 3> line_tangent(const vec<T, 3>& t0, const vec<T, 3>& t1, T u);
-
-// Interpolated triangle properties.
-template <typename T>
-inline vec<T, 3> triangle_point(const vec<T, 3>& p0, const vec<T, 3>& p1,
-    const vec<T, 3>& p2, const vec<T, 2>& uv);
-template <typename T>
-inline vec<T, 3> triangle_normal(const vec<T, 3>& n0, const vec<T, 3>& n1,
-    const vec<T, 3>& n2, const vec<T, 2>& uv);
-
-// Interpolated quad properties.
-template <typename T>
-inline vec<T, 3> quad_point(const vec<T, 3>& p0, const vec<T, 3>& p1,
-    const vec<T, 3>& p2, const vec<T, 3>& p3, const vec<T, 2>& uv);
-template <typename T>
-inline vec<T, 3> quad_normal(const vec<T, 3>& n0, const vec<T, 3>& n1,
-    const vec<T, 3>& n2, const vec<T, 3>& n3, const vec<T, 2>& uv);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// USER INTERFACE UTILITIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Generate a ray from a camera
-template <typename T>
-inline ray<T, 3> camera_ray(const frame<T, 3>& frame, T lens,
-    const vec<T, 2>& film, const vec<T, 2>& image_uv);
-
-// Generate a ray from a camera
-template <typename T>
-inline ray<T, 3> camera_ray(const frame<T, 3>& frame, T lens, T aspect, T film,
-    const vec<T, 2>& image_uv);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// RAY-PRIMITIVE INTERSECTION FUNCTIONS
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Primitive intersection
-template <typename T = float>
-struct prim_intersection {
-  vec<T, 2> uv       = {0, 0};
-  T         distance = num_max<T>;  // TODO: num_max<T>
-  bool      hit      = false;
-};
-
-// Intersect a ray with a point (approximate)
-template <typename T>
-inline prim_intersection<T> intersect_point(
-    const ray<T, 3>& ray, const vec<T, 3>& p, T r);
-
-// Intersect a ray with a line
-template <typename T>
-inline prim_intersection<T> intersect_line(
-    const ray<T, 3>& ray, const vec<T, 3>& p0, const vec<T, 3>& p1, T r0, T r1);
-
-// Intersect a ray with a triangle
-template <typename T>
-inline prim_intersection<T> intersect_triangle(const ray<T, 3>& ray,
-    const vec<T, 3>& p0, const vec<T, 3>& p1, const vec<T, 3>& p2);
-
-// Intersect a ray with a quad.
-template <typename T>
-inline prim_intersection<T> intersect_quad(const ray<T, 3>& ray,
-    const vec<T, 3>& p0, const vec<T, 3>& p1, const vec<T, 3>& p2,
-    const vec<T, 3>& p3);
-
-// Intersect a ray with a axis-aligned bounding box
-template <typename T>
-inline bool intersect_bbox(const ray<T, 3>& ray, const bbox<T, 3>& bbox);
-
-// Intersect a ray with a axis-aligned bounding box
-template <typename T>
-inline bool intersect_bbox(
-    const ray<T, 3>& ray, const vec<T, 3>& ray_dinv, const bbox<T, 3>& bbox);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// POINT-PRIMITIVE DISTANCE FUNCTIONS
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Check if a point overlaps a position pos withint a maximum distance dist_max.
-template <typename T>
-inline prim_intersection<T> overlap_point(
-    const vec<T, 3>& pos, T dist_max, const vec<T, 3>& p, T r);
-
-// Compute the closest line uv to a give position pos.
-template <typename T>
-inline T closestuv_line(
-    const vec<T, 3>& pos, const vec<T, 3>& p0, const vec<T, 3>& p1);
-
-// Check if a line overlaps a position pos withint a maximum distance dist_max.
-template <typename T>
-inline prim_intersection<T> overlap_line(const vec<T, 3>& pos, T dist_max,
-    const vec<T, 3>& p0, const vec<T, 3>& p1, T r0, T r1);
-
-// Compute the closest triangle uv to a give position pos.
-template <typename T>
-inline vec<T, 2> closestuv_triangle(const vec<T, 3>& pos, const vec<T, 3>& p0,
-    const vec<T, 3>& p1, const vec<T, 3>& p2);
-
-// Check if a triangle overlaps a position pos withint a maximum distance
-// dist_max.
-template <typename T>
-inline prim_intersection<T> overlap_triangle(const vec<T, 3>& pos, T dist_max,
-    const vec<T, 3>& p0, const vec<T, 3>& p1, const vec<T, 3>& p2, T r0, T r1,
-    T r2);
-
-// Check if a quad overlaps a position pos withint a maximum distance dist_max.
-template <typename T>
-inline prim_intersection<T> overlap_quad(const vec<T, 3>& pos, T dist_max,
-    const vec<T, 3>& p0, const vec<T, 3>& p1, const vec<T, 3>& p2,
-    const vec<T, 3>& p3, T r0, T r1, T r2, T r3);
-
-// Check if a bbox overlaps a position pos withint a maximum distance dist_max.
-template <typename T>
-inline bool overlap_bbox(
-    const vec<T, 3>& pos, T dist_max, const bbox<T, 3>& bbox);
-
-// Check if two bboxes overlap.
-template <typename T>
-inline bool overlap_bbox(const bbox<T, 3>& bbox1, const bbox<T, 3>& bbox2);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-//
-//
-// IMPLEMENTATION
-//
-//
-// -----------------------------------------------------------------------------
-
-// -----------------------------------------------------------------------------
-// AXIS ALIGNED BOUNDING BOXES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Bounding box properties
-template <typename T, size_t N>
-inline vec<T, N> center(const bbox<T, N>& a) {
-  return (a.min + a.max) / 2;
-}
-template <typename T, size_t N>
-inline vec<T, N> size(const bbox<T, N>& a) {
-  return a.max - a.min;
-}
-
-// Bounding box comparisons.
-template <typename T, size_t N>
-inline bool operator==(const bbox<T, N>& a, const bbox<T, N>& b) {
-  return a.min == b.min && a.max == b.max;
-}
-template <typename T, size_t N>
-inline bool operator!=(const bbox<T, N>& a, const bbox<T, N>& b) {
-  return a.min != b.min || a.max != b.max;
-}
-
-// Bounding box expansions with points and other boxes.
-template <typename T, size_t N>
-inline bbox<T, N> merge(const bbox<T, N>& a, const vec<T, N>& b) {
-  return {min(a.min, b), max(a.max, b)};
-}
-template <typename T, size_t N>
-inline bbox<T, N> merge(const bbox<T, N>& a, const bbox<T, N>& b) {
-  return {min(a.min, b.min), max(a.max, b.max)};
-}
-template <typename T, size_t N>
-inline void expand(bbox<T, N>& a, const vec<T, N>& b) {
-  a = merge(a, b);
-}
-template <typename T, size_t N>
-inline void expand(bbox<T, N>& a, const bbox<T, N>& b) {
-  a = merge(a, b);
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// RAYS
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Computes a point on a ray
-template <typename T, size_t N>
 inline vec<T, N> ray_point(const ray<T, N>& ray, T t) {
   return ray.o + ray.d * t;
 }
@@ -509,15 +202,18 @@ inline vec<T, N> ray_point(const ray<T, N>& ray, T t) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Transforms rays and bounding boxes by matrices.
+// Transforms rays.
 template <typename T, size_t N>
 inline ray<T, N> transform_ray(const mat<T, N + 1, N + 1>& a, const ray<T, N>& b) {
   return {transform_point(a, b.o), transform_vector(a, b.d), b.tmin, b.tmax};
 }
+
 template <typename T, size_t N>
 inline ray<T, N> transform_ray(const frame<T, N>& a, const ray<T, N>& b) {
   return {transform_point(a, b.o), transform_vector(a, b.d), b.tmin, b.tmax};
 }
+
+// Transforms bboxes.
 template <typename T, size_t N>
 inline bbox<T, N> transform_bbox(const mat<T, N + 1, N + 1>& a, const bbox<T, N>& b) {
   if constexpr (N == 3) {
@@ -627,7 +323,7 @@ inline T triangle_area(
   return length(cross(p1 - p0, p2 - p0)) / 2;
 }
 
-// Quad propeties.
+// Quad properties.
 template <typename T>
 inline vec<T, 3> quad_normal(const vec<T, 3>& p0, const vec<T, 3>& p1,
     const vec<T, 3>& p2, const vec<T, 3>& p3) {
@@ -733,7 +429,7 @@ inline vec<T, 3> sphere_normal(const vec<T, 3> p, T r, const vec<T, 2>& uv) {
       sin(uv.x * 2 * (T)pi) * sin(uv.y * (T)pi), cos(uv.y * (T)pi)});
 }
 
-// Triangle tangent and bitangent from uv
+// Triangle tangent and bi-tangent from uv
 template <typename T>
 inline pair<vec<T, 3>, vec<T, 3>> triangle_tangents_fromuv(const vec<T, 3>& p0,
     const vec<T, 3>& p1, const vec<T, 3>& p2, const vec<T, 2>& uv0,
@@ -760,7 +456,7 @@ inline pair<vec<T, 3>, vec<T, 3>> triangle_tangents_fromuv(const vec<T, 3>& p0,
   }
 }
 
-// Quad tangent and bitangent from uv.
+// Quad tangent and bi-tangent from uv.
 template <typename T>
 inline pair<vec<T, 3>, vec<T, 3>> quad_tangents_fromuv(const vec<T, 3>& p0,
     const vec<T, 3>& p1, const vec<T, 3>& p2, const vec<T, 3>& p3,
@@ -776,7 +472,7 @@ inline pair<vec<T, 3>, vec<T, 3>> quad_tangents_fromuv(const vec<T, 3>& p0,
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// IMPLEMENTATION OF USER INTERFACE UTILITIES
+// USER INTERFACE UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto {
 
@@ -813,9 +509,17 @@ inline ray<T, 3> camera_ray(const frame<T, 3>& frame, T lens, T aspect, T film_,
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// IMPLEMENTATION OF RAY-PRIMITIVE INTERSECTION FUNCTIONS
+// RAY-PRIMITIVE INTERSECTION FUNCTIONS
 // -----------------------------------------------------------------------------
 namespace yocto {
+
+// Primitive intersection
+template <typename T = float>
+struct prim_intersection {
+  vec<T, 2> uv       = {0, 0};
+  T         distance = num_max<T>;  // TODO: num_max<T>
+  bool      hit      = false;
+};
 
 // Intersect a ray with a point (approximate)
 template <typename T>
@@ -1000,7 +704,7 @@ inline bool intersect_bbox(
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// IMPLEMENTATION OF POINT-PRIMITIVE DISTANCE FUNCTIONS
+// POINT-PRIMITIVE DISTANCE FUNCTIONS
 // -----------------------------------------------------------------------------
 namespace yocto {
 
