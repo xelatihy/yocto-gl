@@ -1379,7 +1379,7 @@ static trace_result trace_falsecolor(const scene_data& scene,
       result = hashed_color((int)material.type);
       break;
     case trace_falsecolor_type::texcoord:
-      result = {fmod(texcoord.x, 1.0f), fmod(texcoord.y, 1.0f), 0};
+      result = vec3f{fmod(texcoord, 1.0f), 0};
       break;
     case trace_falsecolor_type::color: result = material.color; break;
     case trace_falsecolor_type::emission: result = material.emission; break;
@@ -1473,14 +1473,12 @@ void trace_sample(trace_state& state, const scene_data& scene,
     radiance = radiance * (params.clamp / max(radiance));
   auto weight = 1.0f / (sample + 1);
   if (hit) {
-    state.image[idx] = lerp(
-        state.image[idx], vec4f{radiance.x, radiance.y, radiance.z, 1}, weight);
+    state.image[idx] = lerp(state.image[idx], vec4f{radiance, 1}, weight);
     state.albedo[idx] = lerp(state.albedo[idx], albedo, weight);
     state.normal[idx] = lerp(state.normal[idx], normal, weight);
     state.hits[idx] += 1;
   } else if (!params.envhidden && !scene.environments.empty()) {
-    state.image[idx] = lerp(
-        state.image[idx], vec4f{radiance.x, radiance.y, radiance.z, 1}, weight);
+    state.image[idx] = lerp(state.image[idx], vec4f{radiance, 1}, weight);
     state.albedo[idx] = lerp(state.albedo[idx], vec3f{1, 1, 1}, weight);
     state.normal[idx] = lerp(state.normal[idx], -ray.d, weight);
     state.hits[idx] += 1;
@@ -1541,18 +1539,18 @@ trace_lights make_trace_lights(
     if (!shape.triangles.empty()) {
       light.elements_cdf = vector<float>(shape.triangles.size());
       for (auto idx : range(light.elements_cdf.size())) {
-        auto& t                 = shape.triangles[idx];
+        auto& [t0, t1, t2]                 = shape.triangles[idx];
         light.elements_cdf[idx] = triangle_area(
-            shape.positions[t.x], shape.positions[t.y], shape.positions[t.z]);
+          shape.positions[t0], shape.positions[t1], shape.positions[t2]);
         if (idx != 0) light.elements_cdf[idx] += light.elements_cdf[idx - 1];
       }
     }
     if (!shape.quads.empty()) {
       light.elements_cdf = vector<float>(shape.quads.size());
       for (auto idx : range(light.elements_cdf.size())) {
-        auto& t                 = shape.quads[idx];
-        light.elements_cdf[idx] = quad_area(shape.positions[t.x],
-            shape.positions[t.y], shape.positions[t.z], shape.positions[t.w]);
+        auto& [q0, q1, q2, q3]                 = shape.quads[idx];
+        light.elements_cdf[idx] = quad_area(shape.positions[q0],
+            shape.positions[q1], shape.positions[q2], shape.positions[q3]);
         if (idx != 0) light.elements_cdf[idx] += light.elements_cdf[idx - 1];
       }
     }
@@ -1773,8 +1771,7 @@ image_data get_albedo_image(const trace_state& state) {
 void get_albedo_image(image_data& albedo, const trace_state& state) {
   check_image(albedo, state.width, state.height, true);
   for (auto idx = 0; idx < state.width * state.height; idx++) {
-    albedo.pixels[idx] = {
-        state.albedo[idx].x, state.albedo[idx].y, state.albedo[idx].z, 1.0f};
+    albedo.pixels[idx] = {state.albedo[idx], 1.0f};
   }
 }
 image_data get_normal_image(const trace_state& state) {
@@ -1785,8 +1782,7 @@ image_data get_normal_image(const trace_state& state) {
 void get_normal_image(image_data& normal, const trace_state& state) {
   check_image(normal, state.width, state.height, true);
   for (auto idx = 0; idx < state.width * state.height; idx++) {
-    normal.pixels[idx] = {
-        state.normal[idx].x, state.normal[idx].y, state.normal[idx].z, 1.0f};
+    normal.pixels[idx] = {state.normal[idx], 1.0f};
   }
 }
 

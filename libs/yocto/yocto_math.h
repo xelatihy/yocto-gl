@@ -284,6 +284,7 @@ struct vec<T, 3> {
   constexpr vec() : x{0}, y{0}, z{0} {}
   constexpr explicit vec(T v_) : x{v_}, y{v_}, z{v_} {}
   constexpr vec(T x_, T y_, T z_) : x{x_}, y{y_}, z{z_} {}
+  constexpr vec(vec<T, 2> xy_, T z_) : x{xy_.x}, y{xy_.y}, z{z_} {}
 
   template <typename U>
   constexpr explicit(!std::is_convertible_v<U, T>) vec(vec<U, 3> v)
@@ -309,6 +310,7 @@ struct vec<T, 4> {
   constexpr vec() : x{0}, y{0}, z{0}, w{0} {}
   constexpr explicit vec(T v_) : x{v_}, y{v_}, z{v_}, w{v_} {}
   constexpr vec(T x_, T y_, T z_, T w_) : x{x_}, y{y_}, z{z_}, w{w_} {}
+  constexpr vec(vec<T, 3> xyz_, T w_) : x{xyz_.x}, y{xyz_.y}, z{xyz_.z}, w{w_} {}
 
   template <typename U>
   constexpr explicit(!std::is_convertible_v<U, T>) vec(vec<U, 4> v)
@@ -1035,6 +1037,18 @@ constexpr vec<T, N> pow(const vec<T1, N>& a, const vec<T2, N>& b) {
     return {pow(a.x, b.x), pow(a.y, b.y), pow(a.z, b.z)};
   } else if constexpr (N == 4) {
     return {pow(a.x, b.x), pow(a.y, b.y), pow(a.z, b.z), pow(a.w, b.w)};
+  }
+}
+template <typename T, typename T1, size_t N>
+constexpr vec<T, N> fmod(const vec<T, N>& a, T1 b) {
+  if constexpr (N == 1) {
+    return {fmod(a.x, b)};
+  } else if constexpr (N == 2) {
+    return {fmod(a.x, b), fmod(a.y, b)};
+  } else if constexpr (N == 3) {
+    return {fmod(a.x, b), fmod(a.y, b), fmod(a.z, b)};
+  } else if constexpr (N == 4) {
+    return {fmod(a.x, b), fmod(a.y, b), fmod(a.z, b), fmod(a.w, b)};
   }
 }
 template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
