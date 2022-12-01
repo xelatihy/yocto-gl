@@ -176,10 +176,7 @@ static pair<int, int> split_sah(vector<int>& primitives,
   if (csize == vec3f{0, 0, 0}) return {(start + end) / 2, 0};
 
   // split along largest
-  auto axis = 0;
-  if (csize.x >= csize.y && csize.x >= csize.z) axis = 0;
-  if (csize.y >= csize.x && csize.y >= csize.z) axis = 1;
-  if (csize.z >= csize.x && csize.z >= csize.y) axis = 2;
+  auto axis = (int)argmax(csize);
 
   // balanced tree split: find the largest axis of the
   // bounding box and split along this one right in the middle
@@ -210,10 +207,7 @@ static pair<int, int> split_middle(vector<int>& primitives,
   if (csize == vec3f{0, 0, 0}) return {(start + end) / 2, 0};
 
   // split along largest
-  auto axis = 0;
-  if (csize.x >= csize.y && csize.x >= csize.z) axis = 0;
-  if (csize.y >= csize.x && csize.y >= csize.z) axis = 1;
-  if (csize.z >= csize.x && csize.z >= csize.y) axis = 2;
+  auto axis = (int)argmax(csize);
 
   // split the space in the middle along the largest axis
   auto split = center(cbbox)[axis];

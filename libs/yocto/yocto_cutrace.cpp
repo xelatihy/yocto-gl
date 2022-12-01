@@ -1089,7 +1089,7 @@ void get_albedo_image(image_data& image, const cutrace_state& state) {
   auto albedo = vector<vec3f>(state.width * state.height);
   download_buffer(state.albedo, albedo);
   for (auto idx = 0; idx < state.width * state.height; idx++) {
-    image.pixels[idx] = {albedo[idx].x, albedo[idx].y, albedo[idx].z, 1.0f};
+    image.pixels[idx] = {albedo[idx], 1.0f};
   }
 }
 image_data get_normal_image(const cutrace_state& state) {
@@ -1101,7 +1101,7 @@ void get_normal_image(image_data& image, const cutrace_state& state) {
   auto normal = vector<vec3f>(state.width * state.height);
   download_buffer(state.normal, normal);
   for (auto idx = 0; idx < state.width * state.height; idx++) {
-    image.pixels[idx] = {normal[idx].x, normal[idx].y, normal[idx].z, 1.0f};
+    image.pixels[idx] = {normal[idx], 1.0f};
   }
 }
 

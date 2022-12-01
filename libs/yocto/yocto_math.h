@@ -914,6 +914,30 @@ constexpr T min(const vec<T, N>& a) {
   }
 }
 template <typename T, size_t N>
+constexpr size_t argmax(const vec<T, N>& a) {
+  if constexpr (N == 1) {
+    return 0;
+  } else if constexpr (N == 2) {
+    return a.x >= a.y ? 0 : 1;
+  } else if constexpr (N == 3) {
+    return a.x >= a.y ? (a.x >= a.z ? 0 : 2) : (a.y >= a.z ? 1 : 2);
+  } else if constexpr (N == 4) {
+    if(a.w >= a.x && a.w >= a.y && a.w >= a.z) return 0; else return argmax(xyz(a));
+  }
+}
+template <typename T, size_t N>
+constexpr size_t argmin(const vec<T, N>& a) {
+  if constexpr (N == 1) {
+    return 0;
+  } else if constexpr (N == 2) {
+    return a.x <= a.y ? 0 : 1;
+  } else if constexpr (N == 3) {
+    return a.x <= a.y ? (a.x <= a.z ? 0 : 2) : (a.y <= a.z ? 1 : 2);
+  } else if constexpr (N == 4) {
+    if(a.w <= a.x && a.w <= a.y && a.w <= a.z) return 0; else return argmin(xyz(a));
+  }
+}
+template <typename T, size_t N>
 constexpr T sum(const vec<T, N>& a) {
   if constexpr (N == 1) {
     return a.x;
