@@ -1361,9 +1361,7 @@ template <typename T>
 struct frame<T, 2> {
   union {
     struct {
-      vec<T, 2> x = {1, 0};
-      vec<T, 2> y = {0, 1};
-      vec<T, 2> o = {0, 0};
+      vec<T, 2> x, y, o;
     };
     struct {
       mat<T, 2> m;
