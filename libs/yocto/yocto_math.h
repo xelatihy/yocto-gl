@@ -1154,48 +1154,182 @@ constexpr auto identity4x4f = mat4f{
     {1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
 
 // Matrix comparisons.
-template <typename T, size_t N>
-inline bool operator==(const mat<T, N>& a, const mat<T, N>& b);
-template <typename T, size_t N>
-inline bool operator!=(const mat<T, N>& a, const mat<T, N>& b);
+template <typename T1, typename T2, size_t N>
+inline bool operator==(const mat<T1, N>& a, const mat<T2, N>& b) {
+  if constexpr (N == 1) {
+    return a.x == b.x;
+  } else if constexpr (N == 2) {
+    return a.x == b.x && a.y == b.y;
+  } else if constexpr (N == 3) {
+    return a.x == b.x && a.y == b.y && a.z == b.z;
+  } else if constexpr (N == 4) {
+    return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
+  }
+}
+template <typename T1, typename T2, size_t N>
+inline bool operator!=(const mat<T1, N>& a, const mat<T2, N>& b) {
+  return !(a == b);
+}
 
 // Matrix operations.
-template <typename T, size_t N>
-inline mat<T, N> operator+(const mat<T, N>& a, const mat<T, N>& b);
-template <typename T, size_t N, typename T1>
-inline mat<T, N> operator*(const mat<T, N>& a, T1 b);
-template <typename T, size_t N>
-inline vec<T, N> operator*(const mat<T, N>& a, const vec<T, N>& b);
-template <typename T, size_t N>
-inline vec<T, N> operator*(const vec<T, N>& a, const mat<T, N>& b);
-template <typename T, size_t N>
-inline mat<T, N> operator*(const mat<T, N>& a, const mat<T, N>& b);
+template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
+inline mat<T, N> operator+(const mat<T1, N>& a, const mat<T2, N>& b) {
+  if constexpr (N == 1) {
+    return {a.x + b.x};
+  } else if constexpr (N == 2) {
+    return {a.x + b.x, a.y + b.y};
+  } else if constexpr (N == 3) {
+    return {a.x + b.x, a.y + b.y, a.z + b.z};
+  } else if constexpr (N == 4) {
+    return {a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w};
+  }
+}
+template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
+inline mat<T, N> operator*(const mat<T1, N>& a, T2 b) {
+  if constexpr (N == 1) {
+    return {a.x * b};
+  } else if constexpr (N == 2) {
+    return {a.x * b, a.y * b};
+  } else if constexpr (N == 3) {
+    return {a.x * b, a.y * b, a.z * b};
+  } else if constexpr (N == 4) {
+    return {a.x * b, a.y * b, a.z * b, a.w * b};
+  }
+}
+template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
+inline vec<T, N> operator*(const mat<T1, N>& a, const vec<T2, N>& b) {
+  if constexpr (N == 1) {
+    return a.x * b.x;
+  } else if constexpr (N == 2) {
+    return a.x * b.x + a.y * b.y;
+  } else if constexpr (N == 3) {
+    return a.x * b.x + a.y * b.y + a.z * b.z;
+  } else if constexpr (N == 4) {
+    return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
+  }
+}
+template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
+inline vec<T, N> operator*(const vec<T1, N>& a, const mat<T2, N>& b) {
+  if constexpr (N == 1) {
+    return {dot(a, b.x)};
+  } else if constexpr (N == 2) {
+    return {dot(a, b.x), dot(a, b.y)};
+  } else if constexpr (N == 3) {
+    return {dot(a, b.x), dot(a, b.y), dot(a, b.z)};
+  } else if constexpr (N == 4) {
+    return {dot(a, b.x), dot(a, b.y), dot(a, b.z), dot(a, b.w)};
+  }
+}
+template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
+inline mat<T, N> operator*(const mat<T1, N>& a, const mat<T2, N>& b) {
+  if constexpr (N == 1) {
+    return {a * b.x};
+  } else if constexpr (N == 2) {
+    return {a * b.x, a * b.y};
+  } else if constexpr (N == 3) {
+    return {a * b.x, a * b.y, a * b.z};
+  } else if constexpr (N == 4) {
+    return {a * b.x, a * b.y, a * b.z, a * b.w};
+  }
+}
 
 // Matrix assignments.
-template <typename T, size_t N>
-inline mat<T, N>& operator+=(mat<T, N>& a, const mat<T, N>& b);
-template <typename T, size_t N>
-inline mat<T, N>& operator*=(mat<T, N>& a, const mat<T, N>& b);
-template <typename T, size_t N, typename T1>
-inline mat<T, N>& operator*=(mat<T, N>& a, T1 b);
+template <typename T, typename T1, size_t N>
+inline mat<T, N>& operator+=(mat<T, N>& a, const mat<T1, N>& b) {
+  return a = a + b;
+}
+template <typename T, typename T1, size_t N>
+inline mat<T, N>& operator*=(mat<T, N>& a, const mat<T1, N>& b) {
+  return a = a * b;
+}
+template <typename T, typename T1, size_t N>
+inline mat<T, N>& operator*=(mat<T, N>& a, T1 b) {
+  return a = a * b;
+}
 
 // Matrix diagonals and transposes.
 template <typename T, size_t N>
-inline vec<T, N> diagonal(const mat<T, N>& a);
+inline vec<T, N> diagonal(const mat<T, N>& a) {
+  if constexpr (N == 1) {
+    return {a.x.x};
+  } else if constexpr (N == 2) {
+    return {a.x.x, a.y.y};
+  } else if constexpr (N == 3) {
+    return {a.x.x, a.y.y, a.z.z};
+  } else if constexpr (N == 4) {
+    return {a.x.x, a.y.y, a.z.z, a.w.w};
+  }
+}
 template <typename T, size_t N>
-inline mat<T, N> transpose(const mat<T, N>& a);
+inline mat<T, N> transpose(const mat<T, N>& a) {
+  if constexpr (N == 1) {
+    return {{a.x.x}};
+  } else if constexpr (N == 2) {
+    return {{a.x.x, a.y.x}, {a.x.y, a.y.y}};
+  } else if constexpr (N == 3) {
+    return {
+        {a.x.x, a.y.x, a.z.x},
+        {a.x.y, a.y.y, a.z.y},
+        {a.x.z, a.y.z, a.z.z},
+    };
+  } else if constexpr (N == 4) {
+    return {
+        {a.x.x, a.y.x, a.z.x, a.w.x},
+        {a.x.y, a.y.y, a.z.y, a.w.y},
+        {a.x.z, a.y.z, a.z.z, a.w.z},
+        {a.x.w, a.y.w, a.z.w, a.w.w},
+    };
+  }
+}
 
 // Matrix adjoints, determinants and inverses.
 template <typename T, size_t N>
-inline T determinant(const mat<T, N>& a);
+inline T determinant(const mat<T, N>& a) {
+  if constexpr (N == 1) {
+    return a.x;
+  } else if constexpr (N == 2) {
+    return cross(a.x, a.y);
+  } else if constexpr (N == 3) {
+    return dot(a.x, cross(a.y, a.z));
+  } else if constexpr (N == 4) {
+    return 0;  // TODO
+  }
+}
 template <typename T, size_t N>
-inline mat<T, N> adjoint(const mat<T, N>& a);
+inline mat<T, N> adjoint(const mat<T, N>& a) {
+  if constexpr (N == 1) {
+    return {{a.x.x}};
+  } else if constexpr (N == 2) {
+    return {{a.y.y, -a.x.y}, {-a.y.x, a.x.x}};
+  } else if constexpr (N == 3) {
+    return transpose(
+        mat<T, 3>{cross(a.y, a.z), cross(a.z, a.x), cross(a.x, a.y)});
+  } else if constexpr (N == 4) {
+    return {};  // TODO
+  }
+}
 template <typename T, size_t N>
-inline mat<T, N> inverse(const mat<T, N>& a);
+inline mat<T, N> inverse(const mat<T, N>& a) {
+  return adjoint(a) * (1 / determinant(a));
+}
 
 // Constructs a basis from a direction
 template <typename T>
-inline mat<T, 3> basis_fromz(const vec<T, 3>& v);
+inline mat<T, 3> basis_fromz(const vec<T, 3>& v) {
+  // https://graphics.pixar.com/library/OrthonormalB/paper.pdf
+  if constexpr (std::is_same_v<T, float>) {
+    auto z    = normalize(v);
+    auto sign = copysignf(1.0f, z.z);
+    auto a    = -1.0f / (sign + z.z);
+    auto b    = z.x * z.y * a;
+    auto x    = vec<T, 3>{1.0f + sign * z.x * z.x * a, sign * b, -sign * z.x};
+    auto y    = vec<T, 3>{b, sign + z.y * z.y * a, -z.y};
+    return {x, y, z};
+  } else if constexpr (std::is_same_v<T, float>) {
+    // TODO: double
+    return {};
+  }
+}
 
 }  // namespace yocto
 
@@ -1551,191 +1685,6 @@ inline std::ptrdiff_t ssize(const T& container);
 //
 //
 // -----------------------------------------------------------------------------
-
-// -----------------------------------------------------------------------------
-// MATRICES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Matrix comparisons.
-template <typename T, size_t N>
-inline bool operator==(const mat<T, N>& a, const mat<T, N>& b) {
-  if constexpr (N == 1) {
-    return a.x == b.x;
-  } else if constexpr (N == 2) {
-    return a.x == b.x && a.y == b.y;
-  } else if constexpr (N == 3) {
-    return a.x == b.x && a.y == b.y && a.z == b.z;
-  } else if constexpr (N == 4) {
-    return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
-  }
-}
-template <typename T, size_t N>
-inline bool operator!=(const mat<T, N>& a, const mat<T, N>& b) {
-  return !(a == b);
-}
-
-// Matrix operations.
-template <typename T, size_t N>
-inline mat<T, N> operator+(const mat<T, N>& a, const mat<T, N>& b) {
-  if constexpr (N == 1) {
-    return {a.x + b.x};
-  } else if constexpr (N == 2) {
-    return {a.x + b.x, a.y + b.y};
-  } else if constexpr (N == 3) {
-    return {a.x + b.x, a.y + b.y, a.z + b.z};
-  } else if constexpr (N == 4) {
-    return {a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w};
-  }
-}
-template <typename T, size_t N, typename T1>
-inline mat<T, N> operator*(const mat<T, N>& a, T1 b) {
-  if constexpr (N == 1) {
-    return {a.x * b};
-  } else if constexpr (N == 2) {
-    return {a.x * b, a.y * b};
-  } else if constexpr (N == 3) {
-    return {a.x * b, a.y * b, a.z * b};
-  } else if constexpr (N == 4) {
-    return {a.x * b, a.y * b, a.z * b, a.w * b};
-  }
-}
-template <typename T, size_t N>
-inline vec<T, N> operator*(const mat<T, N>& a, const vec<T, N>& b) {
-  if constexpr (N == 1) {
-    return a.x * b.x;
-  } else if constexpr (N == 2) {
-    return a.x * b.x + a.y * b.y;
-  } else if constexpr (N == 3) {
-    return a.x * b.x + a.y * b.y + a.z * b.z;
-  } else if constexpr (N == 4) {
-    return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
-  }
-}
-template <typename T, size_t N>
-inline vec<T, N> operator*(const vec<T, N>& a, const mat<T, N>& b) {
-  if constexpr (N == 1) {
-    return {dot(a, b.x)};
-  } else if constexpr (N == 2) {
-    return {dot(a, b.x), dot(a, b.y)};
-  } else if constexpr (N == 3) {
-    return {dot(a, b.x), dot(a, b.y), dot(a, b.z)};
-  } else if constexpr (N == 4) {
-    return {dot(a, b.x), dot(a, b.y), dot(a, b.z), dot(a, b.w)};
-  }
-}
-template <typename T, size_t N>
-inline mat<T, N> operator*(const mat<T, N>& a, const mat<T, N>& b) {
-  if constexpr (N == 1) {
-    return {a * b.x};
-  } else if constexpr (N == 2) {
-    return {a * b.x, a * b.y};
-  } else if constexpr (N == 3) {
-    return {a * b.x, a * b.y, a * b.z};
-  } else if constexpr (N == 4) {
-    return {a * b.x, a * b.y, a * b.z, a * b.w};
-  }
-}
-
-// Matrix assignments.
-template <typename T, size_t N>
-inline mat<T, N>& operator+=(mat<T, N>& a, const mat<T, N>& b) {
-  return a = a + b;
-}
-template <typename T, size_t N>
-inline mat<T, N>& operator*=(mat<T, N>& a, const mat<T, N>& b) {
-  return a = a * b;
-}
-template <typename T, size_t N, typename T1>
-inline mat<T, N>& operator*=(mat<T, N>& a, T1 b) {
-  return a = a * b;
-}
-
-// Matrix diagonals and transposes.
-template <typename T, size_t N>
-inline vec<T, N> diagonal(const mat<T, N>& a) {
-  if constexpr (N == 1) {
-    return {a.x.x};
-  } else if constexpr (N == 2) {
-    return {a.x.x, a.y.y};
-  } else if constexpr (N == 3) {
-    return {a.x.x, a.y.y, a.z.z};
-  } else if constexpr (N == 4) {
-    return {a.x.x, a.y.y, a.z.z, a.w.w};
-  }
-}
-template <typename T, size_t N>
-inline mat<T, N> transpose(const mat<T, N>& a) {
-  if constexpr (N == 1) {
-    return {{a.x.x}};
-  } else if constexpr (N == 2) {
-    return {{a.x.x, a.y.x}, {a.x.y, a.y.y}};
-  } else if constexpr (N == 3) {
-    return {
-        {a.x.x, a.y.x, a.z.x},
-        {a.x.y, a.y.y, a.z.y},
-        {a.x.z, a.y.z, a.z.z},
-    };
-  } else if constexpr (N == 4) {
-    return {
-        {a.x.x, a.y.x, a.z.x, a.w.x},
-        {a.x.y, a.y.y, a.z.y, a.w.y},
-        {a.x.z, a.y.z, a.z.z, a.w.z},
-        {a.x.w, a.y.w, a.z.w, a.w.w},
-    };
-  }
-}
-
-// Matrix adjoints, determinants and inverses.
-template <typename T, size_t N>
-inline T determinant(const mat<T, N>& a) {
-  if constexpr (N == 1) {
-    return a.x;
-  } else if constexpr (N == 2) {
-    return cross(a.x, a.y);
-  } else if constexpr (N == 3) {
-    return dot(a.x, cross(a.y, a.z));
-  } else if constexpr (N == 4) {
-    return 0;  // TODO
-  }
-}
-template <typename T, size_t N>
-inline mat<T, N> adjoint(const mat<T, N>& a) {
-  if constexpr (N == 1) {
-    return {{a.x.x}};
-  } else if constexpr (N == 2) {
-    return {{a.y.y, -a.x.y}, {-a.y.x, a.x.x}};
-  } else if constexpr (N == 3) {
-    return transpose(
-        mat<T, 3>{cross(a.y, a.z), cross(a.z, a.x), cross(a.x, a.y)});
-  } else if constexpr (N == 4) {
-    return {};  // TODO
-  }
-}
-template <typename T, size_t N>
-inline mat<T, N> inverse(const mat<T, N>& a) {
-  return adjoint(a) * (1 / determinant(a));
-}
-
-// Constructs a basis from a direction
-template <typename T>
-inline mat<T, 3> basis_fromz(const vec<T, 3>& v) {
-  // https://graphics.pixar.com/library/OrthonormalB/paper.pdf
-  if constexpr (std::is_same_v<T, float>) {
-    auto z    = normalize(v);
-    auto sign = copysignf(1.0f, z.z);
-    auto a    = -1.0f / (sign + z.z);
-    auto b    = z.x * z.y * a;
-    auto x    = vec<T, 3>{1.0f + sign * z.x * z.x * a, sign * b, -sign * z.x};
-    auto y    = vec<T, 3>{b, sign + z.y * z.y * a, -z.y};
-    return {x, y, z};
-  } else if constexpr (std::is_same_v<T, float>) {
-    // TODO: double
-    return {};
-  }
-}
-
-}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // RIGID BODY TRANSFORMS/FRAMES
