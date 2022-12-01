@@ -378,7 +378,7 @@ inline vec<T, 3> rgba_to_rgb(const vec<T, 4>& rgba) {
 // Apply contrast. Grey should be 0.18 for linear and 0.5 for gamma.
 template <typename T>
 inline vec<T, 3> lincontrast(const vec<T, 3>& rgb, T contrast, T grey) {
-  return max({0, 0, 0}, grey + (rgb - grey) * (contrast * 2));
+  return max(vec<T, 3>{0, 0, 0}, grey + (rgb - grey) * (contrast * 2));
 }
 // Apply contrast in log2. Grey should be 0.18 for linear and 0.5 for gamma.
 template <typename T>
@@ -387,7 +387,7 @@ inline vec<T, 3> logcontrast(const vec<T, 3>& rgb, T logcontrast, T grey) {
   auto log_grey = log2(grey);
   auto log_ldr  = log2(rgb + epsilon);
   auto adjusted = log_grey + (log_ldr - log_grey) * (logcontrast * 2);
-  return max({0, 0, 0}, exp2(adjusted) - epsilon);
+  return max(vec<T, 3>{0, 0, 0}, exp2(adjusted) - epsilon);
 }
 // Apply an s-shaped contrast.
 template <typename T>
@@ -399,7 +399,7 @@ template <typename T>
 inline vec<T, 3> saturate(
     const vec<T, 3>& rgb, T saturation, const vec<T, 3>& weights) {
   auto grey = dot(weights, rgb);
-  return max({0, 0, 0}, grey + (rgb - grey) * (saturation * 2));
+  return max(vec<T, 3>{0, 0, 0}, grey + (rgb - grey) * (saturation * 2));
 }
 
 #ifndef __CUDACC__
@@ -413,7 +413,7 @@ inline vec<T, 3> tonemap_filmic(
     auto hdr = hdr_ * (T)0.6;  // brings it back to ACES range
     auto ldr = (hdr * hdr * (T)2.51 + hdr * (T)0.03) /
                (hdr * hdr * (T)2.43 + hdr * (T)0.59 + (T)0.14);
-    return max({0, 0, 0}, ldr);
+    return max(vec<T, 3>{0, 0, 0}, ldr);
   } else {
     // https://github.com/TheRealMJP/BakingLab/blob/master/BakingLab/ACES.hlsl
     // sRGB => XYZ => D65_2_D60 => AP1 => RRT_SAT
@@ -435,7 +435,7 @@ inline vec<T, 3> tonemap_filmic(
     };
 
     auto ldr = ACESOutputMat * RRTAndODTFit(ACESInputMat * hdr_);
-    return max({0, 0, 0}, ldr);
+    return max(vec<T, 3>{0, 0, 0}, ldr);
   }
 }
 
@@ -448,7 +448,7 @@ inline vec3f tonemap_filmic(const vec3f& hdr_, bool accurate_fit = false) {
     auto hdr = hdr_ * 0.6f;  // brings it back to ACES range
     auto ldr = (hdr * hdr * 2.51f + hdr * 0.03f) /
                (hdr * hdr * 2.43f + hdr * 0.59f + 0.14f);
-    return max({0, 0, 0}, ldr);
+    return max(vec<T, 3>{0, 0, 0}, ldr);
   } else {
     // https://github.com/TheRealMJP/BakingLab/blob/master/BakingLab/ACES.hlsl
     // sRGB => XYZ => D65_2_D60 => AP1 => RRT_SAT

@@ -1322,7 +1322,7 @@ shape_data make_hair(const shape_data& base, const vec2i& steps,
           (perlin_noise(shape.positions[i] * noise.y + vec3f{13, 17, 19}) * 2 -
               1) *
           noise.x;
-      shape.positions[i] += {nx, ny, nz};
+      shape.positions[i] += vec3f{nx, ny, nz};
     }
   }
 
@@ -2505,7 +2505,7 @@ void find_neighbors(const hash_grid& grid, vector<int>& neighbors,
         if (cell_iterator == grid.cells.end()) continue;
         auto& ncell_vertices = cell_iterator->second;
         for (auto vertex_id : ncell_vertices) {
-          if (distance_squared(grid.positions[vertex_id], position) >
+          if (distance2(grid.positions[vertex_id], position) >
               max_radius_squared)
             continue;
           if (vertex_id == skip_id) continue;
@@ -3172,7 +3172,7 @@ vector<float> sample_quads_cdf(
   for (auto i : range(cdf.size())) {
     auto& q = quads[i];
     auto  w = quad_area(
-         positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
+        positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
     cdf[i] = w + (i ? cdf[i - 1] : 0);
   }
   return cdf;
@@ -3182,7 +3182,7 @@ void sample_quads_cdf(vector<float>& cdf, const vector<vec4i>& quads,
   for (auto i : range(cdf.size())) {
     auto& q = quads[i];
     auto  w = quad_area(
-         positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
+        positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
     cdf[i] = w + (i ? cdf[i - 1] : 0);
   }
 }
@@ -4048,7 +4048,7 @@ void make_hair(vector<vec2i>& lines, vector<vec3f>& positions,
       auto nz =
           (perlin_noise(positions[i] * noise.y + vec3f{13, 17, 19}) * 2 - 1) *
           noise.x;
-      positions[i] += {nx, ny, nz};
+      positions[i] += vec3f{nx, ny, nz};
     }
   }
 

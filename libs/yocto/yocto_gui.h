@@ -313,14 +313,14 @@ bool draw_image_widgets(
     const gui_input& input, const image_data& image, glimage_params& glparams);
 bool draw_image_widgets(const gui_input& input, const array2d<vec4f>& image,
     const array2d<vec4f>& display, glimage_params& glparams);
-bool draw_image_widgets(
-    const gui_input& input, const array2d<vec4f>& image, glimage_params& glparams);
+bool draw_image_widgets(const gui_input& input, const array2d<vec4f>& image,
+    glimage_params& glparams);
 
 // update image params
 void update_image_params(
     const gui_input& input, const image_data& image, glimage_params& glparams);
-void update_image_params(
-    const gui_input& input, const array2d<vec4f>& image, glimage_params& glparams);
+void update_image_params(const gui_input& input, const array2d<vec4f>& image,
+    glimage_params& glparams);
 
 // update image params from mouse
 bool uiupdate_image_params(const gui_input& input, glimage_params& glparams);

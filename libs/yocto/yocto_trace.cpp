@@ -408,7 +408,7 @@ static float sample_lights_pdf(const scene_data& scene, const trace_bvh& bvh,
             scene, instance, intersection.element);
         // prob triangle * area triangle = area triangle mesh
         auto area = light.elements_cdf.back();
-        lpdf += distance_squared(lposition, position) /
+        lpdf += distance2(lposition, position) /
                 (abs(dot(lnormal, direction)) * area);
         // continue
         next_position = lposition + direction * 1e-3f;
@@ -479,7 +479,7 @@ static trace_result trace_path(const scene_data& scene, const trace_bvh& bvh,
     if (!volume_stack.empty()) {
       auto& vsdf     = volume_stack.back();
       auto  distance = sample_transmittance(
-           vsdf.density, intersection.distance, rand1f(rng), rand1f(rng));
+          vsdf.density, intersection.distance, rand1f(rng), rand1f(rng));
       weight *= eval_transmittance(vsdf.density, distance) /
                 sample_transmittance_pdf(
                     vsdf.density, distance, intersection.distance);
@@ -626,7 +626,7 @@ static trace_result trace_pathdirect(const scene_data& scene,
     if (!volume_stack.empty()) {
       auto& vsdf     = volume_stack.back();
       auto  distance = sample_transmittance(
-           vsdf.density, intersection.distance, rand1f(rng), rand1f(rng));
+          vsdf.density, intersection.distance, rand1f(rng), rand1f(rng));
       weight *= eval_transmittance(vsdf.density, distance) /
                 sample_transmittance_pdf(
                     vsdf.density, distance, intersection.distance);
@@ -805,7 +805,7 @@ static trace_result trace_pathmis(const scene_data& scene, const trace_bvh& bvh,
     if (!volume_stack.empty()) {
       auto& vsdf     = volume_stack.back();
       auto  distance = sample_transmittance(
-           vsdf.density, intersection.distance, rand1f(rng), rand1f(rng));
+          vsdf.density, intersection.distance, rand1f(rng), rand1f(rng));
       weight *= eval_transmittance(vsdf.density, distance) /
                 sample_transmittance_pdf(
                     vsdf.density, distance, intersection.distance);
@@ -1474,19 +1474,19 @@ void trace_sample(trace_state& state, const scene_data& scene,
   auto weight = 1.0f / (sample + 1);
   if (hit) {
     state.image[idx] = lerp(
-        state.image[idx], {radiance.x, radiance.y, radiance.z, 1}, weight);
+        state.image[idx], vec4f{radiance.x, radiance.y, radiance.z, 1}, weight);
     state.albedo[idx] = lerp(state.albedo[idx], albedo, weight);
     state.normal[idx] = lerp(state.normal[idx], normal, weight);
     state.hits[idx] += 1;
   } else if (!params.envhidden && !scene.environments.empty()) {
     state.image[idx] = lerp(
-        state.image[idx], {radiance.x, radiance.y, radiance.z, 1}, weight);
-    state.albedo[idx] = lerp(state.albedo[idx], {1, 1, 1}, weight);
+        state.image[idx], vec4f{radiance.x, radiance.y, radiance.z, 1}, weight);
+    state.albedo[idx] = lerp(state.albedo[idx], vec3f{1, 1, 1}, weight);
     state.normal[idx] = lerp(state.normal[idx], -ray.d, weight);
     state.hits[idx] += 1;
   } else {
-    state.image[idx]  = lerp(state.image[idx], {0, 0, 0, 0}, weight);
-    state.albedo[idx] = lerp(state.albedo[idx], {0, 0, 0}, weight);
+    state.image[idx]  = lerp(state.image[idx], vec4f{0, 0, 0, 0}, weight);
+    state.albedo[idx] = lerp(state.albedo[idx], vec3f{0, 0, 0}, weight);
     state.normal[idx] = lerp(state.normal[idx], -ray.d, weight);
   }
 }

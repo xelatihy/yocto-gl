@@ -2202,8 +2202,8 @@ inline quat4f normalize(const quat4f& a) {
 inline quat4f conjugate(const quat4f& a) { return {-a.x, -a.y, -a.z, a.w}; }
 inline quat4f inverse(const quat4f& a) { return conjugate(a) / dot(a, a); }
 inline float  uangle(const quat4f& a, const quat4f& b) {
-   auto d = dot(a, b);
-   return d > 1 ? 0 : acos(d < -1 ? -1 : d);
+  auto d = dot(a, b);
+  return d > 1 ? 0 : acos(d < -1 ? -1 : d);
 }
 inline quat4f lerp(const quat4f& a, const quat4f& b, float t) {
   return a * (1 - t) + b * t;
@@ -2711,7 +2711,7 @@ constexpr auto enumerate(const Sequence& sequence, T start) {
     T        index;
     Iterator iterator;
     bool     operator!=(const enumerate_iterator& other) const {
-          return index != other.index;
+      return index != other.index;
     }
     void operator++() {
       ++index;
@@ -2737,7 +2737,7 @@ constexpr auto enumerate(Sequence& sequence, T start) {
     T        index;
     Iterator iterator;
     bool     operator!=(const enumerate_iterator& other) const {
-          return index != other.index;
+      return index != other.index;
     }
     void operator++() {
       ++index;
@@ -2765,7 +2765,7 @@ constexpr auto zip(const Sequence1& sequence1, const Sequence2& sequence2) {
     Iterator1 iterator1;
     Iterator2 iterator2;
     bool      operator!=(const zip_iterator& other) const {
-           return iterator1 != other.iterator1;
+      return iterator1 != other.iterator1;
     }
     void operator++() {
       ++iterator1;
@@ -2779,7 +2779,7 @@ constexpr auto zip(const Sequence1& sequence1, const Sequence2& sequence2) {
     const Sequence1& sequence1;
     const Sequence2& sequence2;
     auto             begin() {
-                  return zip_iterator{std::begin(sequence1), std::begin(sequence2)};
+      return zip_iterator{std::begin(sequence1), std::begin(sequence2)};
     }
     auto end() {
       return zip_iterator{std::end(sequence1), std::end(sequence2)};
@@ -2799,7 +2799,7 @@ constexpr auto zip(Sequence1& sequence1, Sequence2& sequence2) {
     Iterator1 iterator1;
     Iterator2 iterator2;
     bool      operator!=(const zip_iterator& other) const {
-           return iterator1 != other.iterator1;
+      return iterator1 != other.iterator1;
     }
     void operator++() {
       ++iterator1;
@@ -2813,7 +2813,7 @@ constexpr auto zip(Sequence1& sequence1, Sequence2& sequence2) {
     Sequence1& sequence1;
     Sequence2& sequence2;
     auto       begin() {
-            return zip_iterator{std::begin(sequence1), std::begin(sequence2)};
+      return zip_iterator{std::begin(sequence1), std::begin(sequence2)};
     }
     auto end() {
       return zip_iterator{std::end(sequence1), std::end(sequence2)};
@@ -2833,7 +2833,7 @@ constexpr auto zip(const Sequence1& sequence1, Sequence2& sequence2) {
     Iterator1 iterator1;
     Iterator2 iterator2;
     bool      operator!=(const zip_iterator& other) const {
-           return iterator1 != other.iterator1;
+      return iterator1 != other.iterator1;
     }
     void operator++() {
       ++iterator1;
@@ -2847,7 +2847,7 @@ constexpr auto zip(const Sequence1& sequence1, Sequence2& sequence2) {
     const Sequence1& sequence1;
     Sequence2&       sequence2;
     auto             begin() {
-                  return zip_iterator{std::begin(sequence1), std::begin(sequence2)};
+      return zip_iterator{std::begin(sequence1), std::begin(sequence2)};
     }
     auto end() {
       return zip_iterator{std::end(sequence1), std::end(sequence2)};
@@ -2867,7 +2867,7 @@ constexpr auto zip(Sequence1& sequence1, const Sequence2& sequence2) {
     Iterator1 iterator1;
     Iterator2 iterator2;
     bool      operator!=(const zip_iterator& other) const {
-           return iterator1 != other.iterator1;
+      return iterator1 != other.iterator1;
     }
     void operator++() {
       ++iterator1;
@@ -2881,7 +2881,7 @@ constexpr auto zip(Sequence1& sequence1, const Sequence2& sequence2) {
     Sequence1&       sequence1;
     const Sequence2& sequence2;
     auto             begin() {
-                  return zip_iterator{std::begin(sequence1), std::begin(sequence2)};
+      return zip_iterator{std::begin(sequence1), std::begin(sequence2)};
     }
     auto end() {
       return zip_iterator{std::end(sequence1), std::end(sequence2)};
