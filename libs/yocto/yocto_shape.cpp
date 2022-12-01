@@ -1322,7 +1322,7 @@ shape_data make_hair(const shape_data& base, const vec2i& steps,
           (perlin_noise(shape.positions[i] * noise.y + vec3f{13, 17, 19}) * 2 -
               1) *
           noise.x;
-      shape.positions[i] += {nx, ny, nz};
+      shape.positions[i] += vec3f{nx, ny, nz};
     }
   }
 
@@ -4048,7 +4048,7 @@ void make_hair(vector<vec2i>& lines, vector<vec3f>& positions,
       auto nz =
           (perlin_noise(positions[i] * noise.y + vec3f{13, 17, 19}) * 2 - 1) *
           noise.x;
-      positions[i] += {nx, ny, nz};
+      positions[i] += vec3f{nx, ny, nz};
     }
   }
 
