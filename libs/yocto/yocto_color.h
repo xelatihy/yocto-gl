@@ -417,13 +417,13 @@ inline vec<T, 3> tonemap_filmic(
   } else {
     // https://github.com/TheRealMJP/BakingLab/blob/master/BakingLab/ACES.hlsl
     // sRGB => XYZ => D65_2_D60 => AP1 => RRT_SAT
-    static const auto ACESInputMat = transpose(mat<T, 3>{
+    static const auto ACESInputMat = transpose(mat<T, 3, 3>{
         {0.59719, 0.35458, 0.04823},
         {0.07600, 0.90834, 0.01566},
         {0.02840, 0.13383, 0.83777},
     });
     // ODT_SAT => XYZ => D60_2_D65 => sRGB
-    static const auto ACESOutputMat = transpose(mat<T, 3>{
+    static const auto ACESOutputMat = transpose(mat<T, 3, 3>{
         {1.60475, -0.53108, -0.07367},
         {-0.10208, 1.10813, -0.00605},
         {-0.00327, -0.07276, 1.07602},
@@ -505,7 +505,7 @@ inline vec<T, 4> composite(const vec<T, 4>& a, const vec<T, 4>& b) {
 template <typename T>
 inline vec<T, 3> rgb_to_xyz(const vec<T, 3>& rgb) {
   // https://en.wikipedia.org/wiki/SRGB
-  static const auto m = mat<T, 3>{
+  static const auto m = mat<T, 3, 3>{
       {(T)0.4124, (T)0.2126, (T)0.0193},
       {(T)0.3576, (T)0.7152, (T)0.1192},
       {(T)0.1805, (T)0.0722, (T)0.9504},
@@ -515,7 +515,7 @@ inline vec<T, 3> rgb_to_xyz(const vec<T, 3>& rgb) {
 template <typename T>
 inline vec<T, 3> xyz_to_rgb(const vec<T, 3>& xyz) {
   // https://en.wikipedia.org/wiki/SRGB
-  static const auto m = mat<T, 3>{
+  static const auto m = mat<T, 3, 3>{
       {(T) + 3.2406, (T)-0.9689, (T) + 0.0557},
       {(T)-1.5372, (T) + 1.8758, (T)-0.2040},
       {(T)-0.4986, (T) + 0.0415, (T) + 1.0570},

@@ -186,13 +186,13 @@ namespace yocto {
 
 // Transforms rays.
 template <typename T, size_t N>
-inline ray<T, N> transform_ray(const mat<T, N + 1>& a, const ray<T, N>& b);
+inline ray<T, N> transform_ray(const mat<T, N + 1, N + 1>& a, const ray<T, N>& b);
 template <typename T, size_t N>
 inline ray<T, N> transform_ray(const frame<T, N>& a, const ray<T, N>& b);
 
 // Transforms bounding boxes by matrices.
 template <typename T, size_t N>
-inline bbox<T, N> transform_bbox(const mat<T, N + 1>& a, const bbox<T, N>& b);
+inline bbox<T, N> transform_bbox(const mat<T, N + 1, N + 1>& a, const bbox<T, N>& b);
 template <typename T, size_t N>
 inline bbox<T, N> transform_bbox(const frame<T, N>& a, const bbox<T, N>& b);
 
@@ -511,7 +511,7 @@ namespace yocto {
 
 // Transforms rays and bounding boxes by matrices.
 template <typename T, size_t N>
-inline ray<T, N> transform_ray(const mat<T, N + 1>& a, const ray<T, N>& b) {
+inline ray<T, N> transform_ray(const mat<T, N + 1, N + 1>& a, const ray<T, N>& b) {
   return {transform_point(a, b.o), transform_vector(a, b.d), b.tmin, b.tmax};
 }
 template <typename T, size_t N>
@@ -519,7 +519,7 @@ inline ray<T, N> transform_ray(const frame<T, N>& a, const ray<T, N>& b) {
   return {transform_point(a, b.o), transform_vector(a, b.d), b.tmin, b.tmax};
 }
 template <typename T, size_t N>
-inline bbox<T, N> transform_bbox(const mat<T, N + 1>& a, const bbox<T, N>& b) {
+inline bbox<T, N> transform_bbox(const mat<T, N + 1, N + 1>& a, const bbox<T, N>& b) {
   if constexpr (N == 3) {
     auto corners = {vec<T, 3>{b.min.x, b.min.y, b.min.z},
         vec<T, 3>{b.min.x, b.min.y, b.max.z},

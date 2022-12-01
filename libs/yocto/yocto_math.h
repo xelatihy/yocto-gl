@@ -1163,186 +1163,190 @@ struct tuple_element<I, yocto::vec<T, N>> {
 namespace yocto {
 
 // Small Fixed-size matrices stored in column major format.
-template <typename T, size_t N>
+template <typename T, size_t N, size_t M>
 struct mat;
 
 // Small Fixed-size matrices stored in column major format.
-template <typename T>
-struct mat<T, 1> {
+template <typename T, size_t N>
+struct mat<T, N, 1> {
   union {  // clang-format off
-    array<T, 1*1> d;
-    array<vec<T, 1>, 1> cols;
-    vec<T, 1> x;
+    array<T, N * 1> d;
+    array<vec<T, N>, 1> cols;
+    vec<T, N> x;
   };  // clang-format on
 
   constexpr mat() : x{1} {}
-  constexpr mat(const vec<T, 1>& x_) : x{x_} {}
+  constexpr mat(const vec<T, N>& x_) : x{x_} {}
 
-  constexpr vec<T, 1>&       operator[](size_t i) { return cols[i]; }
-  constexpr const vec<T, 1>& operator[](size_t i) const { return cols[i]; }
+  constexpr vec<T, N>&       operator[](size_t i) { return cols[i]; }
+  constexpr const vec<T, N>& operator[](size_t i) const { return cols[i]; }
 };
 
 // Small Fixed-size matrices stored in column major format.
-template <typename T>
-struct mat<T, 2> {
+template <typename T, size_t N>
+struct mat<T, N, 2> {
   union {  // clang-format off
-    array<T, 2*2> d;
-    array<vec<T, 2>, 2> cols;
-    struct { vec<T, 2> x, y; };
+    array<T, N * 2> d;
+    array<vec<T, N>, 2> cols;
+    struct { vec<T, N> x, y; };
   };  // clang-format on
 
   constexpr mat() : x{1, 0}, y{0, 1} {}
-  constexpr mat(const vec<T, 2>& x_, const vec<T, 2>& y_) : x{x_}, y{y_} {}
+  constexpr mat(const vec<T, N>& x_, const vec<T, N>& y_) : x{x_}, y{y_} {}
 
-  constexpr vec<T, 2>&       operator[](size_t i) { return cols[i]; }
-  constexpr const vec<T, 2>& operator[](size_t i) const { return cols[i]; }
+  constexpr vec<T, N>&       operator[](size_t i) { return cols[i]; }
+  constexpr const vec<T, N>& operator[](size_t i) const { return cols[i]; }
 };
 
 // Small Fixed-size matrices stored in column major format.
-template <typename T>
-struct mat<T, 3> {
+template <typename T, size_t N>
+struct mat<T, N, 3> {
   union {  // clang-format off
-    array<T, 3*3> d;
-    array<vec<T, 3>, 3> cols;
-    struct { vec<T, 3> x, y, z; };
+    array<T, N * 3> d;
+    array<vec<T, N>, 3> cols;
+    struct { vec<T, N> x, y, z; };
   };  // clang-format on
 
   constexpr mat() : x{1, 0, 0}, y{0, 1, 0}, z{0, 0, 1} {}
-  constexpr mat(const vec<T, 3>& x_, const vec<T, 3>& y_, const vec<T, 3>& z_)
+  constexpr mat(const vec<T, N>& x_, const vec<T, N>& y_, const vec<T, N>& z_)
       : x{x_}, y{y_}, z{z_} {}
 
-  constexpr vec<T, 3>&       operator[](size_t i) { return cols[i]; }
-  constexpr const vec<T, 3>& operator[](size_t i) const { return cols[i]; }
+  constexpr vec<T, N>&       operator[](size_t i) { return cols[i]; }
+  constexpr const vec<T, N>& operator[](size_t i) const { return cols[i]; }
 };
 
 // Small Fixed-size matrices stored in column major format.
-template <typename T>
-struct mat<T, 4> {
+template <typename T, size_t N>
+struct mat<T, N, 4> {
   union {  // clang-format off
-    array<T, 4*4> d;
-    array<vec<T, 4>, 4> cols;
-    struct { vec<T, 4> x, y, z, w; };
+    array<T, N * 4> d;
+    array<vec<T, N>, 4> cols;
+    struct { vec<T, N> x, y, z, w; };
   };  // clang-format on
 
   constexpr mat()
       : x{1, 0, 0, 0}, y{0, 1, 0, 0}, z{0, 0, 1, 0}, w{0, 0, 0, 1} {}
-  constexpr mat(const vec<T, 4>& x_, const vec<T, 4>& y_, const vec<T, 4>& z_,
-      const vec<T, 4>& w_)
+  constexpr mat(const vec<T, N>& x_, const vec<T, N>& y_, const vec<T, N>& z_,
+      const vec<T, N>& w_)
       : x{x_}, y{y_}, z{z_}, w{w_} {}
 
-  constexpr vec<T, 4>&       operator[](size_t i) { return cols[i]; }
-  constexpr const vec<T, 4>& operator[](size_t i) const { return cols[i]; }
+  constexpr vec<T, N>&       operator[](size_t i) { return cols[i]; }
+  constexpr const vec<T, N>& operator[](size_t i) const { return cols[i]; }
 };
 
 // Matrix aliases
-using mat1f = mat<float, 1>;
-using mat2f = mat<float, 2>;
-using mat3f = mat<float, 3>;
-using mat4f = mat<float, 4>;
+using mat1f = mat<float, 1, 1>;
+using mat2f = mat<float, 2, 2>;
+using mat3f = mat<float, 3, 3>;
+using mat4f = mat<float, 4, 4>;
+using mat1x1f = mat<float, 1, 1>;
+using mat2x2f = mat<float, 2, 2>;
+using mat3x3f = mat<float, 3, 3>;
+using mat4x4f = mat<float, 4, 4>;
 
 // Identity matrices constants.
-constexpr auto identity2x2f = mat2f{{1, 0}, {0, 1}};
-constexpr auto identity3x3f = mat3f{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
-constexpr auto identity4x4f = mat4f{
+constexpr auto identity2x2f = mat2x2f{{1, 0}, {0, 1}};
+constexpr auto identity3x3f = mat3x3f{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
+constexpr auto identity4x4f = mat4x4f{
     {1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
 
 // Matrix comparisons.
-template <typename T1, typename T2, size_t N>
-inline bool operator==(const mat<T1, N>& a, const mat<T2, N>& b) {
-  if constexpr (N == 1) {
+template <typename T1, typename T2, size_t N, size_t M>
+inline bool operator==(const mat<T1, N, M>& a, const mat<T2, N, M>& b) {
+  if constexpr (M == 1) {
     return a.x == b.x;
-  } else if constexpr (N == 2) {
+  } else if constexpr (M == 2) {
     return a.x == b.x && a.y == b.y;
-  } else if constexpr (N == 3) {
+  } else if constexpr (M == 3) {
     return a.x == b.x && a.y == b.y && a.z == b.z;
-  } else if constexpr (N == 4) {
+  } else if constexpr (M == 4) {
     return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
   }
 }
-template <typename T1, typename T2, size_t N>
-inline bool operator!=(const mat<T1, N>& a, const mat<T2, N>& b) {
+template <typename T1, typename T2, size_t N, size_t M>
+inline bool operator!=(const mat<T1, N, M>& a, const mat<T2, N, M>& b) {
   return !(a == b);
 }
 
 // Matrix operations.
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
-inline mat<T, N> operator+(const mat<T1, N>& a, const mat<T2, N>& b) {
-  if constexpr (N == 1) {
+template <typename T1, typename T2, size_t N, size_t M, typename T = common_t<T1, T2>>
+inline mat<T, N, M> operator+(const mat<T1, N, M>& a, const mat<T2, N, M>& b) {
+  if constexpr (M == 1) {
     return {a.x + b.x};
-  } else if constexpr (N == 2) {
+  } else if constexpr (M == 2) {
     return {a.x + b.x, a.y + b.y};
-  } else if constexpr (N == 3) {
+  } else if constexpr (M == 3) {
     return {a.x + b.x, a.y + b.y, a.z + b.z};
-  } else if constexpr (N == 4) {
+  } else if constexpr (M == 4) {
     return {a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w};
   }
 }
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
-inline mat<T, N> operator*(const mat<T1, N>& a, T2 b) {
-  if constexpr (N == 1) {
+template <typename T1, typename T2, size_t N, size_t M, typename T = common_t<T1, T2>>
+inline mat<T, N, M> operator*(const mat<T1, N, M>& a, T2 b) {
+  if constexpr (M == 1) {
     return {a.x * b};
-  } else if constexpr (N == 2) {
+  } else if constexpr (M == 2) {
     return {a.x * b, a.y * b};
-  } else if constexpr (N == 3) {
+  } else if constexpr (M == 3) {
     return {a.x * b, a.y * b, a.z * b};
-  } else if constexpr (N == 4) {
+  } else if constexpr (M == 4) {
     return {a.x * b, a.y * b, a.z * b, a.w * b};
   }
 }
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
-inline vec<T, N> operator*(const mat<T1, N>& a, const vec<T2, N>& b) {
-  if constexpr (N == 1) {
+template <typename T1, typename T2, size_t N, size_t M, typename T = common_t<T1, T2>>
+inline vec<T, N> operator*(const mat<T1, N, M>& a, const vec<T2, M>& b) {
+  if constexpr (M == 1) {
     return a.x * b.x;
-  } else if constexpr (N == 2) {
+  } else if constexpr (M == 2) {
     return a.x * b.x + a.y * b.y;
-  } else if constexpr (N == 3) {
+  } else if constexpr (M == 3) {
     return a.x * b.x + a.y * b.y + a.z * b.z;
-  } else if constexpr (N == 4) {
+  } else if constexpr (M == 4) {
     return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
   }
 }
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
-inline vec<T, N> operator*(const vec<T1, N>& a, const mat<T2, N>& b) {
-  if constexpr (N == 1) {
+template <typename T1, typename T2, size_t N, size_t M, typename T = common_t<T1, T2>>
+inline vec<T, M> operator*(const vec<T1, N>& a, const mat<T2, N, M>& b) {
+  if constexpr (M == 1) {
     return {dot(a, b.x)};
-  } else if constexpr (N == 2) {
+  } else if constexpr (M == 2) {
     return {dot(a, b.x), dot(a, b.y)};
-  } else if constexpr (N == 3) {
+  } else if constexpr (M == 3) {
     return {dot(a, b.x), dot(a, b.y), dot(a, b.z)};
-  } else if constexpr (N == 4) {
+  } else if constexpr (M == 4) {
     return {dot(a, b.x), dot(a, b.y), dot(a, b.z), dot(a, b.w)};
   }
 }
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
-inline mat<T, N> operator*(const mat<T1, N>& a, const mat<T2, N>& b) {
-  if constexpr (N == 1) {
+template <typename T1, typename T2, size_t N, size_t M, size_t K, typename T = common_t<T1, T2>>
+inline mat<T, N, M> operator*(const mat<T1, N, K>& a, const mat<T2, K, M>& b) {
+  if constexpr (M == 1) {
     return {a * b.x};
-  } else if constexpr (N == 2) {
+  } else if constexpr (M == 2) {
     return {a * b.x, a * b.y};
-  } else if constexpr (N == 3) {
+  } else if constexpr (M == 3) {
     return {a * b.x, a * b.y, a * b.z};
-  } else if constexpr (N == 4) {
+  } else if constexpr (M == 4) {
     return {a * b.x, a * b.y, a * b.z, a * b.w};
   }
 }
 
 // Matrix assignments.
-template <typename T, typename T1, size_t N>
-inline mat<T, N>& operator+=(mat<T, N>& a, const mat<T1, N>& b) {
+template <typename T, typename T1, size_t N, size_t M>
+inline mat<T, N, M>& operator+=(mat<T, N, M>& a, const mat<T1, N, M>& b) {
   return a = a + b;
 }
 template <typename T, typename T1, size_t N>
-inline mat<T, N>& operator*=(mat<T, N>& a, const mat<T1, N>& b) {
+inline mat<T, N, N>& operator*=(mat<T, N, N>& a, const mat<T1, N, N>& b) {
   return a = a * b;
 }
-template <typename T, typename T1, size_t N>
-inline mat<T, N>& operator*=(mat<T, N>& a, T1 b) {
+template <typename T, typename T1, size_t N, size_t M>
+inline mat<T, N, M>& operator*=(mat<T, N, M>& a, T1 b) {
   return a = a * b;
 }
 
 // Matrix diagonals and transposes.
 template <typename T, size_t N>
-inline vec<T, N> diagonal(const mat<T, N>& a) {
+inline vec<T, N> diagonal(const mat<T, N, N>& a) {
   if constexpr (N == 1) {
     return {a.x.x};
   } else if constexpr (N == 2) {
@@ -1354,7 +1358,7 @@ inline vec<T, N> diagonal(const mat<T, N>& a) {
   }
 }
 template <typename T, size_t N>
-inline mat<T, N> transpose(const mat<T, N>& a) {
+inline mat<T, N, N> transpose(const mat<T, N, N>& a) {
   if constexpr (N == 1) {
     return {{a.x.x}};
   } else if constexpr (N == 2) {
@@ -1377,7 +1381,7 @@ inline mat<T, N> transpose(const mat<T, N>& a) {
 
 // Matrix adjoints, determinants and inverses.
 template <typename T, size_t N>
-inline T determinant(const mat<T, N>& a) {
+inline T determinant(const mat<T, N, N>& a) {
   if constexpr (N == 1) {
     return a.x;
   } else if constexpr (N == 2) {
@@ -1389,26 +1393,26 @@ inline T determinant(const mat<T, N>& a) {
   }
 }
 template <typename T, size_t N>
-inline mat<T, N> adjoint(const mat<T, N>& a) {
+inline mat<T, N, N> adjoint(const mat<T, N, N>& a) {
   if constexpr (N == 1) {
     return {{a.x.x}};
   } else if constexpr (N == 2) {
     return {{a.y.y, -a.x.y}, {-a.y.x, a.x.x}};
   } else if constexpr (N == 3) {
     return transpose(
-        mat<T, 3>{cross(a.y, a.z), cross(a.z, a.x), cross(a.x, a.y)});
+        mat<T, 3, 3>{cross(a.y, a.z), cross(a.z, a.x), cross(a.x, a.y)});
   } else if constexpr (N == 4) {
     return {};  // TODO
   }
 }
 template <typename T, size_t N>
-inline mat<T, N> inverse(const mat<T, N>& a) {
+inline mat<T, N, N> inverse(const mat<T, N, N>& a) {
   return adjoint(a) * (1 / determinant(a));
 }
 
 // Constructs a basis from a direction
 template <typename T>
-inline mat<T, 3> basis_fromz(const vec<T, 3>& v) {
+inline mat<T, 3, 3> basis_fromz(const vec<T, 3>& v) {
   // https://graphics.pixar.com/library/OrthonormalB/paper.pdf
   if constexpr (std::is_same_v<T, float>) {
     auto z    = normalize(v);
@@ -1441,18 +1445,18 @@ struct frame<T, 2> {
   union { // clang-format off
     array<vec<T, 2>, 3> cols;
     struct { vec<T, 2> x, y, o; };
-    struct { mat<T, 2> m; vec<T, 2> t; };
+    struct { mat<T, 2, 2> m; vec<T, 2> t; };
   };      // clang-format on
 
   constexpr frame() : x{1, 0}, y{0, 1}, o{0, 0} {}
   constexpr frame(const vec<T, 2>& x_, const vec<T, 2>& y_, const vec<T, 2>& o_)
       : x{x_}, y{y_}, o{o_} {}
-  constexpr frame(const mat<T, 2>& xy_, const vec<T, 2>& o_)
+  constexpr frame(const mat<T, 2, 2>& xy_, const vec<T, 2>& o_)
       : x{xy_.x}, y{xy_.y}, o{o_} {}
 
-  explicit constexpr frame(const mat<T, 3>& m)
+  explicit constexpr frame(const mat<T, 3, 3>& m)
       : x{m.x.x, m.x.y}, y{m.y.x, m.y.y}, o{m.z.x, m.z.y} {}
-  explicit constexpr operator mat<T, 3>() const {
+  explicit constexpr operator mat<T, 3, 3>() const {
     return {{x.x, x.y, 0}, {y.x, y.y, 0}, {o.x, o.y, 1}};
   }
 
@@ -1466,22 +1470,22 @@ struct frame<T, 3> {
   union { // clang-format off
     array<vec<T, 3>, 4> cols;
     struct { vec<T, 3> x, y, z, o; };
-    struct { mat<T, 3> m; vec<T, 3> t; };
+    struct { mat<T, 3, 3> m; vec<T, 3> t; };
   };      // clang-format off
 
   constexpr frame() : x{1, 0, 0}, y{0, 1, 0}, z{0, 0, 1}, o{0, 0, 0} {}
   constexpr frame(const vec<T, 3>& x_, const vec<T, 3>& y_, const vec<T, 3>& z_,
       const vec<T, 3>& o_)
       : x{x_}, y{y_}, z{z_}, o{o_} {}
-  constexpr frame(const mat<T, 3>& xyz_, const vec<T, 3>& o_)
+  constexpr frame(const mat<T, 3, 3>& xyz_, const vec<T, 3>& o_)
       : x{xyz_.x}, y{xyz_.y}, z{xyz_.z}, o{o_} {}
 
-  explicit constexpr frame(const mat<T, 4>& m)
+  explicit constexpr frame(const mat<T, 4, 4>& m)
       : x{m.x.x, m.x.y, m.x.z}
       , y{m.y.x, m.y.y, m.y.z}
       , z{m.z.x, m.z.y, m.z.z}
       , o{m.w.x, m.w.y, m.w.z} {}
-  explicit constexpr operator mat<T, 4>() const {
+  explicit constexpr operator mat<T, 4, 4>() const {
     return {{x.x, x.y, x.z, 0}, {y.x, y.y, y.z, 0}, {z.x, z.y, z.z, 0},
         {o.x, o.y, o.z, 1}};
   }
@@ -1501,7 +1505,7 @@ constexpr auto identity3x4f = frame3f{
 
 // Frame properties
 template <typename T, size_t N>
-inline mat<T, N> rotation(const frame<T, N>& a) {
+inline mat<T, N, N> rotation(const frame<T, N>& a) {
   if constexpr (N == 2) {
     return {a.x, a.y};
   } else if constexpr (N == 3) {
@@ -1519,12 +1523,12 @@ inline vec<T, N> translation(const frame<T, N>& a) {
 
 // Frame/mat conversion
 template <typename T, size_t N>
-inline frame<T, N - 1> mat_to_frame(const mat<T, N>& m) {
+inline frame<T, N - 1> mat_to_frame(const mat<T, N, N>& m) {
   return (frame<T, N - 1>)m;
 }
 template <typename T, size_t N>
-inline mat<T, N + 1> frame_to_mat(const frame<T, N>& f) {
-  return (mat<T, N + 1>)f;
+inline mat<T, N + 1, N + 1> frame_to_mat(const frame<T, N>& f) {
+  return (mat<T, N + 1, N + 1>)f;
 }
 
 // Frame comparisons.
@@ -1693,7 +1697,7 @@ namespace yocto {
 
 // Transforms points, vectors and directions by matrices.
 template <typename T, size_t N>
-inline vec<T, N> transform_point(const mat<T, N + 1>& a, const vec<T, N>& b) {
+inline vec<T, N> transform_point(const mat<T, N + 1, N + 1>& a, const vec<T, N>& b) {
   if constexpr (N == 2) {
     auto tvb = a * vec<T, 3>{b.x, b.y, 1};
     return vec<T, 2>{tvb.x, tvb.y} / tvb.z;
@@ -1703,7 +1707,7 @@ inline vec<T, N> transform_point(const mat<T, N + 1>& a, const vec<T, N>& b) {
   }
 }
 template <typename T, size_t N>
-inline vec<T, N> transform_vector(const mat<T, N + 1>& a, const vec<T, N>& b) {
+inline vec<T, N> transform_vector(const mat<T, N + 1, N + 1>& a, const vec<T, N>& b) {
   if constexpr (N == 2) {
     auto tvb = a * vec<T, 3>{b.x, b.y, 0};
     return vec<T, 2>{tvb.x, tvb.y} / tvb.z;
@@ -1714,23 +1718,23 @@ inline vec<T, N> transform_vector(const mat<T, N + 1>& a, const vec<T, N>& b) {
 }
 template <typename T, size_t N>
 inline vec<T, N> transform_direction(
-    const mat<T, N + 1>& a, const vec<T, N>& b) {
+    const mat<T, N + 1, N + 1>& a, const vec<T, N>& b) {
   return normalize(transform_vector(a, b));
 }
 template <typename T, size_t N>
-inline vec<T, N> transform_normal(const mat<T, N + 1>& a, const vec<T, N>& b) {
+inline vec<T, N> transform_normal(const mat<T, N + 1, N + 1>& a, const vec<T, N>& b) {
   return normalize(transform_vector(transpose(inverse(a)), b));
 }
 template <typename T, size_t N>
-inline vec<T, N> transform_vector(const mat<T, N>& a, const vec<T, N>& b) {
+inline vec<T, N> transform_vector(const mat<T, N, N>& a, const vec<T, N>& b) {
   return a * b;
 }
 template <typename T, size_t N>
-inline vec<T, N> transform_direction(const mat<T, N>& a, const vec<T, N>& b) {
+inline vec<T, N> transform_direction(const mat<T, N, N>& a, const vec<T, N>& b) {
   return normalize(transform_vector(a, b));
 }
 template <typename T, size_t N>
-inline vec<T, N> transform_normal(const mat<T, N>& a, const vec<T, N>& b) {
+inline vec<T, N> transform_normal(const mat<T, N, N>& a, const vec<T, N>& b) {
   return normalize(transform_vector(transpose(inverse(a)), b));
 }
 
@@ -1836,7 +1840,7 @@ inline frame<T, 3> rotation_frame(const quat<T, 4>& quat) {
       {0, 0, 0}};
 }
 template <typename T>
-inline frame<T, 3> rotation_frame(const mat<T, 3>& rot) {
+inline frame<T, 3> rotation_frame(const mat<T, 3, 3>& rot) {
   return {rot.x, rot.y, rot.z, {0, 0, 0}};
 }
 
@@ -1856,35 +1860,35 @@ inline frame<T, 3> lookat_frame(const vec<T, 3>& eye, const vec<T, 3>& center,
 
 // OpenGL frustum, ortho and perspecgive matrices.
 template <typename T>
-inline mat<T, 4> frustum_mat(T l, T r, T b, T t, T n, T f) {
+inline mat<T, 4, 4> frustum_mat(T l, T r, T b, T t, T n, T f) {
   return {{2 * n / (r - l), 0, 0, 0}, {0, 2 * n / (t - b), 0, 0},
       {(r + l) / (r - l), (t + b) / (t - b), -(f + n) / (f - n), -1},
       {0, 0, -2 * f * n / (f - n), 0}};
 }
 template <typename T>
-inline mat<T, 4> ortho_mat(T l, T r, T b, T t, T n, T f) {
+inline mat<T, 4, 4> ortho_mat(T l, T r, T b, T t, T n, T f) {
   return {{2 / (r - l), 0, 0, 0}, {0, 2 / (t - b), 0, 0},
       {0, 0, -2 / (f - n), 0},
       {-(r + l) / (r - l), -(t + b) / (t - b), -(f + n) / (f - n), 1}};
 }
 template <typename T>
-inline mat<T, 4> ortho2d_mat(T left, T right, T bottom, T top) {
+inline mat<T, 4, 4> ortho2d_mat(T left, T right, T bottom, T top) {
   return ortho_mat(left, right, bottom, top, -1, 1);
 }
 template <typename T>
-inline mat<T, 4> ortho_mat(T xmag, T ymag, T near, T far) {
+inline mat<T, 4, 4> ortho_mat(T xmag, T ymag, T near, T far) {
   return {{1 / xmag, 0, 0, 0}, {0, 1 / ymag, 0, 0}, {0, 0, 2 / (near - far), 0},
       {0, 0, (far + near) / (near - far), 1}};
 }
 template <typename T>
-inline mat<T, 4> perspective_mat(T fovy, T aspect, T near, T far) {
+inline mat<T, 4, 4> perspective_mat(T fovy, T aspect, T near, T far) {
   auto tg = tan(fovy / 2);
   return {{1 / (aspect * tg), 0, 0, 0}, {0, 1 / tg, 0, 0},
       {0, 0, (far + near) / (near - far), -1},
       {0, 0, 2 * far * near / (near - far), 0}};
 }
 template <typename T>
-inline mat<T, 4> perspective_mat(T fovy, T aspect, T near) {
+inline mat<T, 4, 4> perspective_mat(T fovy, T aspect, T near) {
   auto tg = tan(fovy / 2);
   return {{1 / (aspect * tg), 0, 0, 0}, {0, 1 / tg, 0, 0}, {0, 0, -1, -1},
       {0, 0, 2 * near, 0}};
