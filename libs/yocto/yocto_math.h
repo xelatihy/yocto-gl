@@ -226,8 +226,8 @@ struct vec;
 template <typename T>
 struct vec<T, 1> {
   union {  // clang-format off
-    T x;
     array<T, 1> d;
+    T x;
   };  // clang-format on
 
   constexpr vec() : x{0} {}
@@ -251,8 +251,8 @@ struct vec<T, 1> {
 template <typename T>
 struct vec<T, 2> {
   union {  // clang-format off
-    struct { T x, y; };
     array<T, 2> d;
+    struct { T x, y; };
   };  // clang-format on
 
   constexpr vec() : x{0}, y{0} {}
@@ -277,8 +277,8 @@ struct vec<T, 2> {
 template <typename T>
 struct vec<T, 3> {
   union {  // clang-format off
-    struct { T x, y, z; };
     array<T, 3> d;
+    struct { T x, y, z; };
   };  // clang-format on
 
   constexpr vec() : x{0}, y{0}, z{0} {}
@@ -303,8 +303,8 @@ struct vec<T, 3> {
 template <typename T>
 struct vec<T, 4> {
   union {  // clang-format off
-    struct { T x, y, z, w; };
     array<T, 4> d;
+    struct { T x, y, z, w; };
   };  // clang-format on
 
   constexpr vec() : x{0}, y{0}, z{0}, w{0} {}
@@ -1146,9 +1146,9 @@ struct mat;
 template <typename T>
 struct mat<T, 1> {
   union {  // clang-format off
-    vec<T, 1> x;
-    array<vec<T, 1>, 1> cols;
     array<T, 1*1> d;
+    array<vec<T, 1>, 1> cols;
+    vec<T, 1> x;
   };  // clang-format on
 
   constexpr mat() : x{1} {}
@@ -1162,9 +1162,9 @@ struct mat<T, 1> {
 template <typename T>
 struct mat<T, 2> {
   union {  // clang-format off
-    struct { vec<T, 2> x, y; };
-    array<vec<T, 2>, 2> cols;
     array<T, 2*2> d;
+    array<vec<T, 2>, 2> cols;
+    struct { vec<T, 2> x, y; };
   };  // clang-format on
 
   constexpr mat() : x{1, 0}, y{0, 1} {}
@@ -1178,9 +1178,9 @@ struct mat<T, 2> {
 template <typename T>
 struct mat<T, 3> {
   union {  // clang-format off
-    struct { vec<T, 3> x, y, z; };
-    array<vec<T, 3>, 3> cols;
     array<T, 3*3> d;
+    array<vec<T, 3>, 3> cols;
+    struct { vec<T, 3> x, y, z; };
   };  // clang-format on
 
   constexpr mat() : x{1, 0, 0}, y{0, 1, 0}, z{0, 0, 1} {}
@@ -1195,9 +1195,9 @@ struct mat<T, 3> {
 template <typename T>
 struct mat<T, 4> {
   union {  // clang-format off
-    struct { vec<T, 4> x, y, z, w; };
-    array<vec<T, 4>, 4> cols;
     array<T, 4*4> d;
+    array<vec<T, 4>, 4> cols;
+    struct { vec<T, 4> x, y, z, w; };
   };  // clang-format on
 
   constexpr mat()
@@ -1414,16 +1414,11 @@ struct frame;
 // Rigid frames stored as a column-major affine transform matrix.
 template <typename T>
 struct frame<T, 2> {
-  union {
-    struct {
-      vec<T, 2> x, y, o;
-    };
-    struct {
-      mat<T, 2> m;
-      vec<T, 2> t;
-    };
+  union { // clang-format off
     array<vec<T, 2>, 3> cols;
-  };
+    struct { vec<T, 2> x, y, o; };
+    struct { mat<T, 2> m; vec<T, 2> t; };
+  };      // clang-format on
 
   constexpr frame() : x{1, 0}, y{0, 1}, o{0, 0} {}
   constexpr frame(const vec<T, 2>& x_, const vec<T, 2>& y_, const vec<T, 2>& o_)
@@ -1444,16 +1439,11 @@ struct frame<T, 2> {
 // Rigid frames stored as a column-major affine transform matrix.
 template <typename T>
 struct frame<T, 3> {
-  union {
-    struct {
-      vec<T, 3> x, y, z, o;
-    };
-    struct {
-      mat<T, 3> m;
-      vec<T, 3> t;
-    };
+  union { // clang-format off
     array<vec<T, 3>, 4> cols;
-  };
+    struct { vec<T, 3> x, y, z, o; };
+    struct { mat<T, 3> m; vec<T, 3> t; };
+  };      // clang-format off
 
   constexpr frame() : x{1, 0, 0}, y{0, 1, 0}, z{0, 0, 1}, o{0, 0, 0} {}
   constexpr frame(const vec<T, 3>& x_, const vec<T, 3>& y_, const vec<T, 3>& z_,
@@ -1590,8 +1580,8 @@ struct quat;
 template <typename T>
 struct quat<T, 4> {
   union {  // clang-format off
-    struct { T x, y, z, w; };
     array<T, 4> d;
+    struct { T x, y, z, w; };
   };  // clang-format on
 
   constexpr quat() : x{0}, y{0}, z{0}, w{1} {}
