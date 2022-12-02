@@ -69,9 +69,18 @@ struct span {
   constexpr span(T* data, size_t size) noexcept : _data{data}, _size{size} {}
   constexpr span(T* begin, T* end) noexcept
       : _data{begin}, _size{end - begin} {}
-  template <size_t N>
-  constexpr span(std::array<T, N>& arr) noexcept
+  template <typename U, size_t N>
+  constexpr span(std::array<U, N>& arr) noexcept
       : _data{arr.data()}, _size{N} {}
+  template <typename U, size_t N>
+  constexpr span(const std::array<U, N>& arr) noexcept
+      : _data{arr.data()}, _size{N} {}
+  template <typename U>
+  constexpr span(std::vector<U>& arr) noexcept
+      : _data{arr.data()}, _size{arr.size()} {}
+  template <typename U>
+  constexpr span(const std::vector<U>& arr) noexcept
+      : _data{arr.data()}, _size{arr.size()} {}
 
   // Assignments
   constexpr span& operator=(const span&) noexcept  = default;
@@ -97,6 +106,18 @@ struct span {
   T*     _data = nullptr;
   size_t _size = 0;
 };
+
+// Deduction guides
+template <typename T, typename EndOrSize>
+span(T*, EndOrSize) -> span<T>;
+template <typename T, size_t N>
+span(array<T, N>&) -> span<T>;
+template <typename T, size_t N>
+span(const array<T, N>&) -> span<const T>;
+template <typename T>
+span(vector<T>&) -> span<T>;
+template <typename T>
+span(const vector<T>&) -> span<const T>;
 
 }  // namespace yocto
 
