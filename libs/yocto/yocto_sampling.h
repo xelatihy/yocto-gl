@@ -299,15 +299,30 @@ constexpr kernel float sample_uniform_pdf(span<const float> elements) {
   return 1.0f / (int)elements.size();
 }
 
+// TODO: this should be constexpr, once we understand why
 // Sample a discrete distribution represented by its cdf.
-constexpr kernel int sample_discrete(span<const float> cdf, float r) {
+inline kernel int sample_discrete(span<const float> cdf, float r) {
   r        = clamp(r * cdf.back(), (float)0, cdf.back() - (float)0.00001);
   auto idx = (int)(std::upper_bound(cdf.data(), cdf.data() + cdf.size(), r) -
                    cdf.data());
   return clamp(idx, 0, (int)cdf.size() - 1);
 }
 // Pdf for uniform discrete distribution sampling.
-constexpr kernel float sample_discrete_pdf(span<const float> cdf, int idx) {
+inline kernel float sample_discrete_pdf(span<const float> cdf, int idx) {
+  if (idx == 0) return cdf[0];
+  return cdf[idx] - cdf[idx - 1];
+}
+
+// TODO: eventually remove these
+// Sample a discrete distribution represented by its cdf.
+inline kernel int sample_discrete(const vector<float>& cdf, float r) {
+  r        = clamp(r * cdf.back(), (float)0, cdf.back() - (float)0.00001);
+  auto idx = (int)(std::upper_bound(cdf.data(), cdf.data() + cdf.size(), r) -
+                   cdf.data());
+  return clamp(idx, 0, (int)cdf.size() - 1);
+}
+// Pdf for uniform discrete distribution sampling.
+inline kernel float sample_discrete_pdf(const vector<float>& cdf, int idx) {
   if (idx == 0) return cdf[0];
   return cdf[idx] - cdf[idx - 1];
 }
