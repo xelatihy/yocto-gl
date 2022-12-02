@@ -4,7 +4,7 @@
 // Yocto/Sampling provides many functions to generate points and directions
 // useful in path tracing and procedural generation. We also include a random
 // number generator suitable for ray tracing.
-// This library includes a stand-alone implementaton of the PCG32 random number
+// This library includes a stand-alone implementation of the PCG32 random number
 // generator by M.E. O'Neill.
 //
 
@@ -351,16 +351,12 @@ inline kernel T sample_discrete_pdf(span<const T> cdf, I idx) {
 // Sample a discrete distribution represented by its cdf.
 template <typename T, typename I = int>
 inline kernel int sample_discrete(const vector<T>& cdf, T r) {
-  r        = clamp(r * cdf.back(), (T)0, cdf.back() - (T)0.00001);
-  auto idx = (I)(std::upper_bound(cdf.data(), cdf.data() + cdf.size(), r) -
-                 cdf.data());
-  return clamp(idx, (I)0, (I)cdf.size() - 1);
+  return sample_discrete(span<const T>{cdf}, r);
 }
 // Pdf for uniform discrete distribution sampling.
 template <typename T, typename I>
 inline kernel T sample_discrete_pdf(const vector<T>& cdf, I idx) {
-  if (idx == 0) return cdf[0];
-  return cdf[idx] - cdf[idx - 1];
+  return sample_discrete_pdf(span<const T>{cdf}, idx);
 }
 
 }  // namespace yocto
