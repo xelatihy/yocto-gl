@@ -258,7 +258,7 @@ constexpr kernel vec<T, 3> tonemap_filmic(
 #else
 
 // Filmic tonemapping
-constexpr kernel vec3f tonemap_filmic(
+inline kernel vec3f tonemap_filmic(
     const vec3f& hdr_, bool accurate_fit = false) {
   if (!accurate_fit) {
     // https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/

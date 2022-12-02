@@ -289,27 +289,27 @@ constexpr kernel float sample_uniform_pdf(int size) {
 }
 
 // Sample an index with uniform distribution.
-constexpr kernel float sample_uniform(const vector<float>& elements, float r) {
+constexpr kernel float sample_uniform(span<const float> elements, float r) {
   if (elements.empty()) return {};
   auto size = (int)elements.size();
   return elements[clamp((int)(r * size), 0, size - 1)];
 }
-constexpr kernel float sample_uniform_pdf(const vector<float>& elements) {
+constexpr kernel float sample_uniform_pdf(span<const float> elements) {
   if (elements.empty()) return 0;
   return 1.0f / (int)elements.size();
 }
 
 // Sample a discrete distribution represented by its cdf.
-constexpr kernel int sample_discrete(const vector<float>& cdf, float r) {
+constexpr kernel int sample_discrete(span<const float> cdf, float r) {
   r        = clamp(r * cdf.back(), (float)0, cdf.back() - (float)0.00001);
   auto idx = (int)(std::upper_bound(cdf.data(), cdf.data() + cdf.size(), r) -
                    cdf.data());
   return clamp(idx, 0, (int)cdf.size() - 1);
 }
 // Pdf for uniform discrete distribution sampling.
-constexpr kernel float sample_discrete_pdf(const vector<float>& cdf, int idx) {
-  if (idx == 0) return cdf.at(0);
-  return cdf.at(idx) - cdf.at(idx - 1);
+constexpr kernel float sample_discrete_pdf(span<const float> cdf, int idx) {
+  if (idx == 0) return cdf[0];
+  return cdf[idx] - cdf[idx - 1];
 }
 
 }  // namespace yocto
