@@ -59,8 +59,12 @@
 // -----------------------------------------------------------------------------
 // CUDA SUPPORT
 // -----------------------------------------------------------------------------
+#ifndef kernel
 #ifdef __CUDACC__
-#define inline inline __device__ __forceinline__
+#define kernel __device__
+#else
+#define kernel
+#endif
 #endif
 
 // -----------------------------------------------------------------------------
@@ -70,15 +74,15 @@ namespace yocto {
 
 // Conversion between floats and bytes
 template <typename T>
-inline byte float_to_byte(T a) {
+constexpr kernel byte float_to_byte(T a) {
   return (byte)clamp(int(a * 256), 0, 255);
 }
 template <typename T = float>
-inline T byte_to_float(byte a) {
+constexpr kernel T byte_to_float(byte a) {
   return a / (T)255;
 }
 template <size_t N, typename T>
-inline vec<byte, N> float_to_byte(const vec<T, N>& a) {
+constexpr kernel vec<byte, N> float_to_byte(const vec<T, N>& a) {
   if constexpr (N == 1) {
     return {(byte)clamp(int(a.x * 256), 0, 255)};
   } else if constexpr (N == 2) {
@@ -96,7 +100,7 @@ inline vec<byte, N> float_to_byte(const vec<T, N>& a) {
   }
 }
 template <size_t N, typename T = float>
-inline vec<T, N> byte_to_float(const vec<byte, N>& a) {
+constexpr kernel vec<T, N> byte_to_float(const vec<byte, N>& a) {
   if constexpr (N == 1) {
     return {a.x / (T)255};
   } else if constexpr (N == 2) {
@@ -110,24 +114,24 @@ inline vec<T, N> byte_to_float(const vec<byte, N>& a) {
 
 // Luminance
 template <typename T>
-inline T luminance(const vec<T, 3>& a) {
+constexpr kernel T luminance(const vec<T, 3>& a) {
   return ((T)0.2126 * a.x + (T)0.7152 * a.y + (T)0.0722 * a.z);
 }
 
 // sRGB non-linear curve
 template <typename T>
-inline T srgb_to_rgb(T srgb) {
+constexpr kernel T srgb_to_rgb(T srgb) {
   return (srgb <= (T)0.04045) ? srgb / (T)12.92
                               : pow((srgb + (T)0.055) / (1 + (T)0.055), (T)2.4);
 }
 template <typename T>
-inline T rgb_to_srgb(T rgb) {
+constexpr kernel T rgb_to_srgb(T rgb) {
   return (rgb <= (T)0.0031308)
              ? (T)12.92 * rgb
              : (1 + (T)0.055) * pow(rgb, 1 / (T)2.4) - (T)0.055;
 }
 template <typename T, size_t N>
-inline vec<T, N> srgb_to_rgb(const vec<T, N>& srgb) {
+constexpr kernel vec<T, N> srgb_to_rgb(const vec<T, N>& srgb) {
   if constexpr (N == 1) {
     return {srgb_to_rgb(srgb.x)};
   } else if constexpr (N == 2) {
@@ -140,7 +144,7 @@ inline vec<T, N> srgb_to_rgb(const vec<T, N>& srgb) {
   }
 }
 template <typename T, size_t N>
-inline vec<T, N> rgb_to_srgb(const vec<T, N>& rgb) {
+constexpr kernel vec<T, N> rgb_to_srgb(const vec<T, N>& rgb) {
   if constexpr (N == 1) {
     return {rgb_to_srgb(rgb.x)};
   } else if constexpr (N == 2) {
@@ -154,25 +158,25 @@ inline vec<T, N> rgb_to_srgb(const vec<T, N>& rgb) {
 
 // sRGB non-linear curve
 template <typename T>
-inline T srgbb_to_rgb(byte srgb) {
+constexpr kernel T srgbb_to_rgb(byte srgb) {
   return srgb_to_rgb(byte_to_float<T>(srgb));
 }
 template <typename T>
-inline byte rgb_to_srgbb(T rgb) {
+constexpr kernel byte rgb_to_srgbb(T rgb) {
   return float_to_byte(srgb_to_rgb(rgb));
 }
 template <typename T, size_t N>
-inline vec<T, N> srgbb_to_rgb(const vec<byte, N>& srgb) {
+constexpr kernel vec<T, N> srgbb_to_rgb(const vec<byte, N>& srgb) {
   return srgb_to_rgb(byte_to_float<N, T>(srgb));
 }
 template <typename T, size_t N>
-inline vec<byte, N> rgb_to_srgbb(const vec<T, N>& rgb) {
+constexpr kernel vec<byte, N> rgb_to_srgbb(const vec<T, N>& rgb) {
   return float_to_byte(rgb_to_srgb(rgb));
 }
 
 // Conversion between number of channels.
 template <typename T>
-inline vec<T, 4> rgb_to_rgba(const vec<T, 3>& rgb) {
+constexpr kernel vec<T, 4> rgb_to_rgba(const vec<T, 3>& rgb) {
   if constexpr (!std::is_same_v<T, byte>) {
     return {rgb, (T)1};
   } else {
@@ -180,18 +184,20 @@ inline vec<T, 4> rgb_to_rgba(const vec<T, 3>& rgb) {
   }
 }
 template <typename T>
-inline vec<T, 3> rgba_to_rgb(const vec<T, 4>& rgba) {
+constexpr kernel vec<T, 3> rgba_to_rgb(const vec<T, 4>& rgba) {
   return xyz(rgba);
 }
 
 // Apply contrast. Grey should be 0.18 for linear and 0.5 for gamma.
 template <typename T>
-inline vec<T, 3> lincontrast(const vec<T, 3>& rgb, T contrast, T grey) {
+constexpr kernel vec<T, 3> lincontrast(
+    const vec<T, 3>& rgb, T contrast, T grey) {
   return max(vec<T, 3>{0, 0, 0}, grey + (rgb - grey) * (contrast * 2));
 }
 // Apply contrast in log2. Grey should be 0.18 for linear and 0.5 for gamma.
 template <typename T>
-inline vec<T, 3> logcontrast(const vec<T, 3>& rgb, T logcontrast, T grey) {
+constexpr kernel vec<T, 3> logcontrast(
+    const vec<T, 3>& rgb, T logcontrast, T grey) {
   auto epsilon  = (T)0.0001;
   auto log_grey = log2(grey);
   auto log_ldr  = log2(rgb + epsilon);
@@ -200,12 +206,12 @@ inline vec<T, 3> logcontrast(const vec<T, 3>& rgb, T logcontrast, T grey) {
 }
 // Apply an s-shaped contrast.
 template <typename T>
-inline vec<T, 3> contrast(const vec<T, 3>& rgb, T contrast) {
+constexpr kernel vec<T, 3> contrast(const vec<T, 3>& rgb, T contrast) {
   return gain(rgb, 1 - contrast);
 }
 // Apply saturation.
 template <typename T>
-inline vec<T, 3> saturate(const vec<T, 3>& rgb, T saturation,
+constexpr kernel vec<T, 3> saturate(const vec<T, 3>& rgb, T saturation,
     const vec<T, 3>& weights = vec<T, 3>{
         (T)(1.0 / 3.0), (T)(1.0 / 3.0), (T)(1.0 / 3.0)}) {
   auto grey = dot(weights, rgb);
@@ -216,7 +222,7 @@ inline vec<T, 3> saturate(const vec<T, 3>& rgb, T saturation,
 
 // Filmic tonemapping
 template <typename T>
-inline vec<T, 3> tonemap_filmic(
+constexpr kernel vec<T, 3> tonemap_filmic(
     const vec<T, 3>& hdr_, bool accurate_fit = false) {
   if (!accurate_fit) {
     // https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/
@@ -227,13 +233,13 @@ inline vec<T, 3> tonemap_filmic(
   } else {
     // https://github.com/TheRealMJP/BakingLab/blob/master/BakingLab/ACES.hlsl
     // sRGB => XYZ => D65_2_D60 => AP1 => RRT_SAT
-    static const auto ACESInputMat = transpose(mat<T, 3, 3>{
+    constexpr auto ACESInputMat = transpose(mat<T, 3, 3>{
         {0.59719, 0.35458, 0.04823},
         {0.07600, 0.90834, 0.01566},
         {0.02840, 0.13383, 0.83777},
     });
     // ODT_SAT => XYZ => D60_2_D65 => sRGB
-    static const auto ACESOutputMat = transpose(mat<T, 3, 3>{
+    constexpr auto ACESOutputMat = transpose(mat<T, 3, 3>{
         {1.60475, -0.53108, -0.07367},
         {-0.10208, 1.10813, -0.00605},
         {-0.00327, -0.07276, 1.07602},
@@ -252,7 +258,8 @@ inline vec<T, 3> tonemap_filmic(
 #else
 
 // Filmic tonemapping
-inline vec3f tonemap_filmic(const vec3f& hdr_, bool accurate_fit = false) {
+inline kernel vec3f tonemap_filmic(
+    const vec3f& hdr_, bool accurate_fit = false) {
   if (!accurate_fit) {
     // https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/
     auto hdr = hdr_ * 0.6f;  // brings it back to ACES range
@@ -287,7 +294,7 @@ inline vec3f tonemap_filmic(const vec3f& hdr_, bool accurate_fit = false) {
 #endif
 
 template <typename T>
-inline vec<T, 3> tonemap(
+constexpr kernel vec<T, 3> tonemap(
     const vec<T, 3>& hdr, T exposure, bool filmic, bool srgb = true) {
   auto rgb = hdr;
   if (exposure != 0) rgb *= exp2(exposure);
@@ -296,7 +303,7 @@ inline vec<T, 3> tonemap(
   return rgb;
 }
 template <typename T>
-inline vec<T, 4> tonemap(
+constexpr kernel vec<T, 4> tonemap(
     const vec<T, 4>& hdr, T exposure, bool filmic, bool srgb = true) {
   auto ldr = tonemap(xyz(hdr), exposure, filmic, srgb);
   return {ldr, hdr.w};
@@ -304,7 +311,7 @@ inline vec<T, 4> tonemap(
 
 // Composite colors
 template <typename T>
-inline vec<T, 4> composite(const vec<T, 4>& a, const vec<T, 4>& b) {
+constexpr kernel vec<T, 4> composite(const vec<T, 4>& a, const vec<T, 4>& b) {
   if (a.w == 0 && b.w == 0) return {0, 0, 0, 0};
   auto cc = xyz(a) * a.w + xyz(b) * b.w * (1 - a.w);
   auto ca = a.w + b.w * (1 - a.w);
@@ -313,9 +320,9 @@ inline vec<T, 4> composite(const vec<T, 4>& a, const vec<T, 4>& b) {
 
 // Convert between CIE XYZ and RGB
 template <typename T>
-inline vec<T, 3> rgb_to_xyz(const vec<T, 3>& rgb) {
+constexpr kernel vec<T, 3> rgb_to_xyz(const vec<T, 3>& rgb) {
   // https://en.wikipedia.org/wiki/SRGB
-  static const auto m = mat<T, 3, 3>{
+  constexpr auto m = mat<T, 3, 3>{
       {(T)0.4124, (T)0.2126, (T)0.0193},
       {(T)0.3576, (T)0.7152, (T)0.1192},
       {(T)0.1805, (T)0.0722, (T)0.9504},
@@ -323,9 +330,9 @@ inline vec<T, 3> rgb_to_xyz(const vec<T, 3>& rgb) {
   return m * rgb;
 }
 template <typename T>
-inline vec<T, 3> xyz_to_rgb(const vec<T, 3>& xyz) {
+constexpr kernel vec<T, 3> xyz_to_rgb(const vec<T, 3>& xyz) {
   // https://en.wikipedia.org/wiki/SRGB
-  static const auto m = mat<T, 3, 3>{
+  constexpr auto m = mat<T, 3, 3>{
       {(T) + 3.2406, (T)-0.9689, (T) + 0.0557},
       {(T)-1.5372, (T) + 1.8758, (T)-0.2040},
       {(T)-0.4986, (T) + 0.0415, (T) + 1.0570},
@@ -335,20 +342,20 @@ inline vec<T, 3> xyz_to_rgb(const vec<T, 3>& xyz) {
 
 // Convert between CIE XYZ and xyY
 template <typename T>
-inline vec<T, 3> xyz_to_xyY(const vec<T, 3>& xyz) {
+constexpr kernel vec<T, 3> xyz_to_xyY(const vec<T, 3>& xyz) {
   if (xyz == vec3f{0, 0, 0}) return {0, 0, 0};
   return {
       xyz.x / (xyz.x + xyz.y + xyz.z), xyz.y / (xyz.x + xyz.y + xyz.z), xyz.y};
 }
 template <typename T>
-inline vec<T, 3> xyY_to_xyz(const vec<T, 3>& xyY) {
+constexpr kernel vec<T, 3> xyY_to_xyz(const vec<T, 3>& xyY) {
   if (xyY.y == 0) return {0, 0, 0};
   return {xyY.x * xyY.z / xyY.y, xyY.z, (1 - xyY.x - xyY.y) * xyY.z / xyY.y};
 }
 
 // Convert HSV to RGB
 template <typename T>
-inline vec<T, 3> hsv_to_rgb(const vec<T, 3>& hsv) {
+constexpr kernel vec<T, 3> hsv_to_rgb(const vec<T, 3>& hsv) {
   // from Imgui.cpp
   auto h = hsv.x, s = hsv.y, v = hsv.z;
   if (hsv.y == 0) return {v, v, v};
@@ -372,7 +379,7 @@ inline vec<T, 3> hsv_to_rgb(const vec<T, 3>& hsv) {
 }
 
 template <typename T>
-inline vec<T, 3> rgb_to_hsv(const vec<T, 3>& rgb) {
+constexpr kernel vec<T, 3> rgb_to_hsv(const vec<T, 3>& rgb) {
   // from Imgui.cpp
   auto r = rgb.x, g = rgb.y, b = rgb.z;
   auto K = 0.f;
@@ -392,7 +399,7 @@ inline vec<T, 3> rgb_to_hsv(const vec<T, 3>& rgb) {
 
 // Approximate color of blackbody radiation from wavelength in nm.
 template <typename T>
-inline vec<T, 3> blackbody_to_rgb(T temperature) {
+constexpr kernel vec<T, 3> blackbody_to_rgb(T temperature) {
   // clamp to valid range
   auto t = clamp(temperature, (T)1667.0, (T)25000.0) / (T)1000.0;
   // compute x
@@ -427,81 +434,81 @@ inline vec<T, 3> blackbody_to_rgb(T temperature) {
 namespace yocto {
 
 template <typename T>
-inline vec<T, 3> colormap_viridis(T t) {
+constexpr kernel vec<T, 3> colormap_viridis(T t) {
   // https://www.shadertoy.com/view/WlfXRN
-  static const auto c0 = vec<T, 3>{
+  constexpr auto c0 = vec<T, 3>{
       (T)0.2777273272234177, (T)0.005407344544966578, (T)0.3340998053353061};
-  static const auto c1 = vec<T, 3>{
+  constexpr auto c1 = vec<T, 3>{
       (T)0.1050930431085774, (T)1.404613529898575, (T)1.384590162594685};
-  static const auto c2 = vec<T, 3>{
+  constexpr auto c2 = vec<T, 3>{
       (T)-0.3308618287255563, (T)0.214847559468213, (T)0.09509516302823659};
-  static const auto c3 = vec<T, 3>{
+  constexpr auto c3 = vec<T, 3>{
       (T)-4.634230498983486, (T)-5.799100973351585, (T)-19.33244095627987};
-  static const auto c4 = vec<T, 3>{
+  constexpr auto c4 = vec<T, 3>{
       (T)6.228269936347081, (T)14.17993336680509, (T)56.69055260068105};
-  static const auto c5 = vec<T, 3>{
+  constexpr auto c5 = vec<T, 3>{
       (T)4.776384997670288, (T)-13.74514537774601, (T)-65.35303263337234};
-  static const auto c6 = vec<T, 3>{
+  constexpr auto c6 = vec<T, 3>{
       (T)-5.435455855934631, (T)4.645852612178535, (T)26.3124352495832};
   return c0 + t * (c1 + t * (c2 + t * (c3 + t * (c4 + t * (c5 + t * c6)))));
 }
 
 template <typename T>
-inline vec<T, 3> colormap_plasma(T t) {
+constexpr kernel vec<T, 3> colormap_plasma(T t) {
   // https://www.shadertoy.com/view/WlfXRN
-  static const auto c0 = vec<T, 3>{
+  constexpr auto c0 = vec<T, 3>{
       (T)0.05873234392399702, (T)0.02333670892565664, (T)0.5433401826748754};
-  static const auto c1 = vec<T, 3>{
+  constexpr auto c1 = vec<T, 3>{
       (T)2.176514634195958, (T)0.2383834171260182, (T)0.7539604599784036};
-  static const auto c2 = vec<T, 3>{
+  constexpr auto c2 = vec<T, 3>{
       (T)-2.689460476458034, (T)-7.455851135738909, (T)3.110799939717086};
-  static const auto c3 = vec<T, 3>{
+  constexpr auto c3 = vec<T, 3>{
       (T)6.130348345893603, (T)42.3461881477227, (T)-28.51885465332158};
-  static const auto c4 = vec<T, 3>{
+  constexpr auto c4 = vec<T, 3>{
       (T)-11.10743619062271, (T)-82.66631109428045, (T)60.13984767418263};
-  static const auto c5 = vec<T, 3>{
+  constexpr auto c5 = vec<T, 3>{
       (T)10.02306557647065, (T)71.41361770095349, (T)-54.07218655560067};
-  static const auto c6 = vec<T, 3>{
+  constexpr auto c6 = vec<T, 3>{
       (T)-3.658713842777788, (T)-22.93153465461149, (T)18.19190778539828};
   return c0 + t * (c1 + t * (c2 + t * (c3 + t * (c4 + t * (c5 + t * c6)))));
 }
 
 template <typename T>
-inline vec<T, 3> colormap_magma(T t) {
+constexpr kernel vec<T, 3> colormap_magma(T t) {
   // https://www.shadertoy.com/view/WlfXRN
-  static const auto c0 = vec<T, 3>{(T)-0.002136485053939582,
+  constexpr auto c0 = vec<T, 3>{(T)-0.002136485053939582,
       (T)-0.000749655052795221, (T)-0.005386127855323933};
-  static const auto c1 = vec<T, 3>{
+  constexpr auto c1 = vec<T, 3>{
       (T)0.2516605407371642, (T)0.6775232436837668, (T)2.494026599312351};
-  static const auto c2 = vec<T, 3>{
+  constexpr auto c2 = vec<T, 3>{
       (T)8.353717279216625, (T)-3.577719514958484, (T)0.3144679030132573};
-  static const auto c3 = vec<T, 3>{
+  constexpr auto c3 = vec<T, 3>{
       (T)-27.66873308576866, (T)14.26473078096533, (T)-13.64921318813922};
-  static const auto c4 = vec<T, 3>{
+  constexpr auto c4 = vec<T, 3>{
       (T)52.17613981234068, (T)-27.94360607168351, (T)12.94416944238394};
-  static const auto c5 = vec<T, 3>{
+  constexpr auto c5 = vec<T, 3>{
       (T)-50.76852536473588, (T)29.04658282127291, (T)4.23415299384598};
-  static const auto c6 = vec<T, 3>{
+  constexpr auto c6 = vec<T, 3>{
       (T)18.65570506591883, (T)-11.48977351997711, (T)-5.601961508734096};
   return c0 + t * (c1 + t * (c2 + t * (c3 + t * (c4 + t * (c5 + t * c6)))));
 }
 
 template <typename T>
-inline vec<T, 3> colormap_inferno(T t) {
+constexpr kernel vec<T, 3> colormap_inferno(T t) {
   // https://www.shadertoy.com/view/WlfXRN
-  static const auto c0 = vec<T, 3>{(T)0.0002189403691192265,
+  constexpr auto c0 = vec<T, 3>{(T)0.0002189403691192265,
       (T)0.001651004631001012, (T)-0.01948089843709184};
-  static const auto c1 = vec<T, 3>{
+  constexpr auto c1 = vec<T, 3>{
       (T)0.1065134194856116, 0.5639564367884091, (T)3.932712388889277};
-  static const auto c2 = vec<T, 3>{
+  constexpr auto c2 = vec<T, 3>{
       (T)11.60249308247187, -3.972853965665698, (T)-15.9423941062914};
-  static const auto c3 = vec<T, 3>{
+  constexpr auto c3 = vec<T, 3>{
       (T)-41.70399613139459, 17.43639888205313, (T)44.35414519872813};
-  static const auto c4 = vec<T, 3>{
+  constexpr auto c4 = vec<T, 3>{
       (T)77.162935699427, -33.40235894210092, (T)-81.80730925738993};
-  static const auto c5 = vec<T, 3>{
+  constexpr auto c5 = vec<T, 3>{
       (T)-71.31942824499214, (T)(T)32.62606426397723, (T)73.20951985803202};
-  static const auto c6 = vec<T, 3>{
+  constexpr auto c6 = vec<T, 3>{
       (T)25.13112622477341, (T)-12.24266895238567, (T)-23.07032500287172};
   return c0 + t * (c1 + t * (c2 + t * (c3 + t * (c4 + t * (c5 + t * c6)))));
 }
@@ -511,7 +518,7 @@ enum struct colormap_type { viridis, plasma, magma, inferno };
 
 // Colormaps from {0,1] to color
 template <typename T>
-inline vec<T, 3> colormap(T t, colormap_type type) {
+constexpr kernel vec<T, 3> colormap(T t, colormap_type type) {
   t = clamp(t, (T)0, (T)1);
   switch (type) {
     case colormap_type::viridis: return colormap_viridis(t);
@@ -553,7 +560,7 @@ struct colorgrade_gparams {
 using colorgrade_params = colorgrade_gparams<float>;
 
 template <typename T>
-inline vec<T, 3> colorgrade(
+constexpr kernel vec<T, 3> colorgrade(
     const vec<T, 3>& rgb_, bool linear, const colorgrade_gparams<T>& params) {
   auto rgb = rgb_;
   if (params.exposure != 0) rgb *= exp2(params.exposure);
@@ -588,7 +595,7 @@ inline vec<T, 3> colorgrade(
 }
 
 template <typename T>
-inline vec<T, 4> colorgrade(
+constexpr kernel vec<T, 4> colorgrade(
     const vec<T, 4>& rgba, bool linear, const colorgrade_params& params) {
   auto graded = colorgrade(xyz(rgba), linear, params);
   return {graded, rgba.w};
@@ -1014,8 +1021,8 @@ inline vec3f convert_color(const vec3f& col, color_space from, color_space to) {
 // -----------------------------------------------------------------------------
 // CUDA SUPPORT
 // -----------------------------------------------------------------------------
-#ifdef __CUDACC__
-#undef inline
+#ifdef kernel
+#undef kernel
 #endif
 
 #endif
