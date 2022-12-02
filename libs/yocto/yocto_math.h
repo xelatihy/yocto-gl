@@ -2205,7 +2205,7 @@ constexpr kernel auto range(T min, T max) {
   return range_helper{min, max};
 }
 template <typename T>
-constexpr auto range(T min, T max, T step) {
+constexpr kernel auto range(T min, T max, T step) {
   struct range_iterator {
     T                     index;
     T                     step;
@@ -2291,7 +2291,8 @@ constexpr kernel auto enumerate(Sequence& sequence, T start) {
 
 // Python zip
 template <typename Sequence1, typename Sequence2>
-constexpr auto zip(const Sequence1& sequence1, const Sequence2& sequence2) {
+constexpr kernel auto zip(
+    const Sequence1& sequence1, const Sequence2& sequence2) {
   using Iterator1  = typename Sequence1::const_iterator;
   using Reference1 = typename Sequence1::const_reference;
   using Iterator2  = typename Sequence2::const_iterator;
@@ -2325,7 +2326,7 @@ constexpr auto zip(const Sequence1& sequence1, const Sequence2& sequence2) {
 
 // Implementation of Python zip
 template <typename Sequence1, typename Sequence2>
-constexpr auto zip(Sequence1& sequence1, Sequence2& sequence2) {
+constexpr kernel auto zip(Sequence1& sequence1, Sequence2& sequence2) {
   using Iterator1  = typename Sequence1::iterator;
   using Reference1 = typename Sequence1::reference;
   using Iterator2  = typename Sequence2::iterator;
@@ -2359,7 +2360,7 @@ constexpr auto zip(Sequence1& sequence1, Sequence2& sequence2) {
 
 // Implementation of Python zip
 template <typename Sequence1, typename Sequence2>
-constexpr auto zip(const Sequence1& sequence1, Sequence2& sequence2) {
+constexpr kernel auto zip(const Sequence1& sequence1, Sequence2& sequence2) {
   using Iterator1  = typename Sequence1::const_iterator;
   using Reference1 = typename Sequence1::const_reference;
   using Iterator2  = typename Sequence2::iterator;
@@ -2370,21 +2371,21 @@ constexpr auto zip(const Sequence1& sequence1, Sequence2& sequence2) {
     constexpr kernel bool operator!=(const zip_iterator& other) const {
       return iterator1 != other.iterator1;
     }
-    void operator++() {
+    constexpr kernel void operator++() {
       ++iterator1;
       ++iterator2;
     }
-    pair<Reference1, Reference2> operator*() const {
+    constexpr kernel pair<Reference1, Reference2> operator*() const {
       return {*iterator1, *iterator2};
     }
   };
   struct zip_helper {
-    const Sequence1& sequence1;
-    Sequence2&       sequence2;
-    auto             begin() {
-                  return zip_iterator{std::begin(sequence1), std::begin(sequence2)};
+    const Sequence1&      sequence1;
+    Sequence2&            sequence2;
+    constexpr kernel auto begin() {
+      return zip_iterator{std::begin(sequence1), std::begin(sequence2)};
     }
-    auto end() {
+    constexpr kernel auto end() {
       return zip_iterator{std::end(sequence1), std::end(sequence2)};
     }
   };
