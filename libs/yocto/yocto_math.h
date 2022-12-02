@@ -310,7 +310,8 @@ struct vec<T, 4> {
   constexpr vec() : x{0}, y{0}, z{0}, w{0} {}
   constexpr explicit vec(T v_) : x{v_}, y{v_}, z{v_}, w{v_} {}
   constexpr vec(T x_, T y_, T z_, T w_) : x{x_}, y{y_}, z{z_}, w{w_} {}
-  constexpr vec(vec<T, 3> xyz_, T w_) : x{xyz_.x}, y{xyz_.y}, z{xyz_.z}, w{w_} {}
+  constexpr vec(vec<T, 3> xyz_, T w_)
+      : x{xyz_.x}, y{xyz_.y}, z{xyz_.z}, w{w_} {}
 
   template <typename U>
   constexpr explicit(!std::is_convertible_v<U, T>) vec(vec<U, 4> v)
@@ -325,10 +326,6 @@ struct vec<T, 4> {
   constexpr T&       operator[](size_t i) { return d[i]; }
   constexpr const T& operator[](size_t i) const { return d[i]; }
 };
-
-// Vector deduction guides
-template <typename... Ts>
-vec(Ts...) -> vec<std::common_type_t<Ts...>, sizeof...(Ts)>;
 
 // Vector aliases
 using vec1f = vec<float, 1>;
@@ -416,60 +413,6 @@ constexpr const T& get(const vec<T, N>& a) noexcept {
 template <size_t I, typename T, size_t N>
 constexpr const T&& get(const vec<T, N>&& a) noexcept {
   return (const T&&)(a.d[I]);
-}
-
-// Broadcast functions
-template <typename T1, size_t N, typename Func,
-    typename T = std::invoke_result_t<Func, T1>>
-constexpr vec<T, N> map(const vec<T1, N>& a, Func&& func) {
-  if constexpr (N == 1) {
-    return {func(a.x)};
-  } else if constexpr (N == 2) {
-    return {func(a.x), func(a.y)};
-  } else if constexpr (N == 3) {
-    return {func(a.x), func(a.y), func(a.z)};
-  } else if constexpr (N == 4) {
-    return {func(a.x), func(a.y), func(a.z), func(a.w)};
-  }
-}
-template <typename T1, typename T2, size_t N, typename Func,
-    typename T = std::invoke_result_t<Func, T1, T2>>
-constexpr vec<T, N> map(const vec<T1, N>& a, const vec<T2, N>& b, Func&& func) {
-  if constexpr (N == 1) {
-    return {func(a.x, b.x)};
-  } else if constexpr (N == 2) {
-    return {func(a.x, b.x), func(a.y, b.y)};
-  } else if constexpr (N == 3) {
-    return {func(a.x, b.x), func(a.x, b.y), func(a.z, b.z)};
-  } else if constexpr (N == 4) {
-    return {func(a.x, b.x), func(a.x, b.y), func(a.z, b.z), func(a.w, b.w)};
-  }
-}
-template <typename T1, typename T2, size_t N, typename Func,
-    typename T = std::invoke_result_t<Func, T1, T2>>
-constexpr vec<T, N> map(T1 a, const vec<T2, N>& b, Func&& func) {
-  if constexpr (N == 1) {
-    return {func(a, b.x)};
-  } else if constexpr (N == 2) {
-    return {func(a, b.x), func(a.y, b.y)};
-  } else if constexpr (N == 3) {
-    return {func(a, b.x), func(a.x, b.y), func(a.z, b.z)};
-  } else if constexpr (N == 4) {
-    return {func(a, b.x), func(a.x, b.y), func(a.z, b.z), func(a.w, b.w)};
-  }
-}
-template <typename T1, typename T2, size_t N, typename Func,
-    typename T = std::invoke_result_t<Func, T1, T2>>
-constexpr vec<T, N> map(const vec<T1, N>& a, T2 b, Func&& func) {
-  if constexpr (N == 1) {
-    return {func(a, b.x)};
-  } else if constexpr (N == 2) {
-    return {func(a, b.x), func(a.y, b.y)};
-  } else if constexpr (N == 3) {
-    return {func(a, b.x), func(a.x, b.y), func(a.z, b.z)};
-  } else if constexpr (N == 4) {
-    return {func(a, b.x), func(a.x, b.y), func(a.z, b.z), func(a.w, b.w)};
-  }
 }
 
 // Vector comparison operations.
@@ -922,7 +865,10 @@ constexpr size_t argmax(const vec<T, N>& a) {
   } else if constexpr (N == 3) {
     return a.x >= a.y ? (a.x >= a.z ? 0 : 2) : (a.y >= a.z ? 1 : 2);
   } else if constexpr (N == 4) {
-    if(a.w >= a.x && a.w >= a.y && a.w >= a.z) return 0; else return argmax(xyz(a));
+    if (a.w >= a.x && a.w >= a.y && a.w >= a.z)
+      return 0;
+    else
+      return argmax(xyz(a));
   }
 }
 template <typename T, size_t N>
@@ -934,7 +880,10 @@ constexpr size_t argmin(const vec<T, N>& a) {
   } else if constexpr (N == 3) {
     return a.x <= a.y ? (a.x <= a.z ? 0 : 2) : (a.y <= a.z ? 1 : 2);
   } else if constexpr (N == 4) {
-    if(a.w <= a.x && a.w <= a.y && a.w <= a.z) return 0; else return argmin(xyz(a));
+    if (a.w <= a.x && a.w <= a.y && a.w <= a.z)
+      return 0;
+    else
+      return argmin(xyz(a));
   }
 }
 template <typename T, size_t N>
@@ -1235,10 +1184,10 @@ struct mat<T, N, 4> {
 };
 
 // Matrix aliases
-using mat1f = mat<float, 1, 1>;
-using mat2f = mat<float, 2, 2>;
-using mat3f = mat<float, 3, 3>;
-using mat4f = mat<float, 4, 4>;
+using mat1f   = mat<float, 1, 1>;
+using mat2f   = mat<float, 2, 2>;
+using mat3f   = mat<float, 3, 3>;
+using mat4f   = mat<float, 4, 4>;
 using mat1x1f = mat<float, 1, 1>;
 using mat2x2f = mat<float, 2, 2>;
 using mat3x3f = mat<float, 3, 3>;
@@ -1269,7 +1218,8 @@ inline bool operator!=(const mat<T1, N, M>& a, const mat<T2, N, M>& b) {
 }
 
 // Matrix operations.
-template <typename T1, typename T2, size_t N, size_t M, typename T = common_t<T1, T2>>
+template <typename T1, typename T2, size_t N, size_t M,
+    typename T = common_t<T1, T2>>
 inline mat<T, N, M> operator+(const mat<T1, N, M>& a, const mat<T2, N, M>& b) {
   if constexpr (M == 1) {
     return {a.x + b.x};
@@ -1281,7 +1231,8 @@ inline mat<T, N, M> operator+(const mat<T1, N, M>& a, const mat<T2, N, M>& b) {
     return {a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w};
   }
 }
-template <typename T1, typename T2, size_t N, size_t M, typename T = common_t<T1, T2>>
+template <typename T1, typename T2, size_t N, size_t M,
+    typename T = common_t<T1, T2>>
 inline mat<T, N, M> operator*(const mat<T1, N, M>& a, T2 b) {
   if constexpr (M == 1) {
     return {a.x * b};
@@ -1293,7 +1244,8 @@ inline mat<T, N, M> operator*(const mat<T1, N, M>& a, T2 b) {
     return {a.x * b, a.y * b, a.z * b, a.w * b};
   }
 }
-template <typename T1, typename T2, size_t N, size_t M, typename T = common_t<T1, T2>>
+template <typename T1, typename T2, size_t N, size_t M,
+    typename T = common_t<T1, T2>>
 inline vec<T, N> operator*(const mat<T1, N, M>& a, const vec<T2, M>& b) {
   if constexpr (M == 1) {
     return a.x * b.x;
@@ -1305,7 +1257,8 @@ inline vec<T, N> operator*(const mat<T1, N, M>& a, const vec<T2, M>& b) {
     return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
   }
 }
-template <typename T1, typename T2, size_t N, size_t M, typename T = common_t<T1, T2>>
+template <typename T1, typename T2, size_t N, size_t M,
+    typename T = common_t<T1, T2>>
 inline vec<T, M> operator*(const vec<T1, N>& a, const mat<T2, N, M>& b) {
   if constexpr (M == 1) {
     return {dot(a, b.x)};
@@ -1317,7 +1270,8 @@ inline vec<T, M> operator*(const vec<T1, N>& a, const mat<T2, N, M>& b) {
     return {dot(a, b.x), dot(a, b.y), dot(a, b.z), dot(a, b.w)};
   }
 }
-template <typename T1, typename T2, size_t N, size_t M, size_t K, typename T = common_t<T1, T2>>
+template <typename T1, typename T2, size_t N, size_t M, size_t K,
+    typename T = common_t<T1, T2>>
 inline mat<T, N, M> operator*(const mat<T1, N, K>& a, const mat<T2, K, M>& b) {
   if constexpr (M == 1) {
     return {a * b.x};
@@ -1442,11 +1396,11 @@ struct frame;
 // Rigid frames stored as a column-major affine transform matrix.
 template <typename T>
 struct frame<T, 2> {
-  union { // clang-format off
+  union {  // clang-format off
     array<vec<T, 2>, 3> cols;
     struct { vec<T, 2> x, y, o; };
     struct { mat<T, 2, 2> m; vec<T, 2> t; };
-  };      // clang-format on
+  };  // clang-format on
 
   constexpr frame() : x{1, 0}, y{0, 1}, o{0, 0} {}
   constexpr frame(const vec<T, 2>& x_, const vec<T, 2>& y_, const vec<T, 2>& o_)
@@ -1467,7 +1421,7 @@ struct frame<T, 2> {
 // Rigid frames stored as a column-major affine transform matrix.
 template <typename T>
 struct frame<T, 3> {
-  union { // clang-format off
+  union {  // clang-format off
     array<vec<T, 3>, 4> cols;
     struct { vec<T, 3> x, y, z, o; };
     struct { mat<T, 3, 3> m; vec<T, 3> t; };
@@ -1697,7 +1651,8 @@ namespace yocto {
 
 // Transforms points, vectors and directions by matrices.
 template <typename T, size_t N>
-inline vec<T, N> transform_point(const mat<T, N + 1, N + 1>& a, const vec<T, N>& b) {
+inline vec<T, N> transform_point(
+    const mat<T, N + 1, N + 1>& a, const vec<T, N>& b) {
   if constexpr (N == 2) {
     auto tvb = a * vec<T, 3>{b.x, b.y, 1};
     return vec<T, 2>{tvb.x, tvb.y} / tvb.z;
@@ -1707,7 +1662,8 @@ inline vec<T, N> transform_point(const mat<T, N + 1, N + 1>& a, const vec<T, N>&
   }
 }
 template <typename T, size_t N>
-inline vec<T, N> transform_vector(const mat<T, N + 1, N + 1>& a, const vec<T, N>& b) {
+inline vec<T, N> transform_vector(
+    const mat<T, N + 1, N + 1>& a, const vec<T, N>& b) {
   if constexpr (N == 2) {
     auto tvb = a * vec<T, 3>{b.x, b.y, 0};
     return vec<T, 2>{tvb.x, tvb.y} / tvb.z;
@@ -1722,7 +1678,8 @@ inline vec<T, N> transform_direction(
   return normalize(transform_vector(a, b));
 }
 template <typename T, size_t N>
-inline vec<T, N> transform_normal(const mat<T, N + 1, N + 1>& a, const vec<T, N>& b) {
+inline vec<T, N> transform_normal(
+    const mat<T, N + 1, N + 1>& a, const vec<T, N>& b) {
   return normalize(transform_vector(transpose(inverse(a)), b));
 }
 template <typename T, size_t N>
@@ -1730,7 +1687,8 @@ inline vec<T, N> transform_vector(const mat<T, N, N>& a, const vec<T, N>& b) {
   return a * b;
 }
 template <typename T, size_t N>
-inline vec<T, N> transform_direction(const mat<T, N, N>& a, const vec<T, N>& b) {
+inline vec<T, N> transform_direction(
+    const mat<T, N, N>& a, const vec<T, N>& b) {
   return normalize(transform_vector(a, b));
 }
 template <typename T, size_t N>
@@ -2228,7 +2186,7 @@ constexpr auto enumerate(const Sequence& sequence, T start) {
     T        index;
     Iterator iterator;
     bool     operator!=(const enumerate_iterator& other) const {
-      return index != other.index;
+          return index != other.index;
     }
     void operator++() {
       ++index;
@@ -2254,7 +2212,7 @@ constexpr auto enumerate(Sequence& sequence, T start) {
     T        index;
     Iterator iterator;
     bool     operator!=(const enumerate_iterator& other) const {
-      return index != other.index;
+          return index != other.index;
     }
     void operator++() {
       ++index;
@@ -2282,7 +2240,7 @@ constexpr auto zip(const Sequence1& sequence1, const Sequence2& sequence2) {
     Iterator1 iterator1;
     Iterator2 iterator2;
     bool      operator!=(const zip_iterator& other) const {
-      return iterator1 != other.iterator1;
+           return iterator1 != other.iterator1;
     }
     void operator++() {
       ++iterator1;
@@ -2296,7 +2254,7 @@ constexpr auto zip(const Sequence1& sequence1, const Sequence2& sequence2) {
     const Sequence1& sequence1;
     const Sequence2& sequence2;
     auto             begin() {
-      return zip_iterator{std::begin(sequence1), std::begin(sequence2)};
+                  return zip_iterator{std::begin(sequence1), std::begin(sequence2)};
     }
     auto end() {
       return zip_iterator{std::end(sequence1), std::end(sequence2)};
@@ -2316,7 +2274,7 @@ constexpr auto zip(Sequence1& sequence1, Sequence2& sequence2) {
     Iterator1 iterator1;
     Iterator2 iterator2;
     bool      operator!=(const zip_iterator& other) const {
-      return iterator1 != other.iterator1;
+           return iterator1 != other.iterator1;
     }
     void operator++() {
       ++iterator1;
@@ -2330,7 +2288,7 @@ constexpr auto zip(Sequence1& sequence1, Sequence2& sequence2) {
     Sequence1& sequence1;
     Sequence2& sequence2;
     auto       begin() {
-      return zip_iterator{std::begin(sequence1), std::begin(sequence2)};
+            return zip_iterator{std::begin(sequence1), std::begin(sequence2)};
     }
     auto end() {
       return zip_iterator{std::end(sequence1), std::end(sequence2)};
@@ -2350,7 +2308,7 @@ constexpr auto zip(const Sequence1& sequence1, Sequence2& sequence2) {
     Iterator1 iterator1;
     Iterator2 iterator2;
     bool      operator!=(const zip_iterator& other) const {
-      return iterator1 != other.iterator1;
+           return iterator1 != other.iterator1;
     }
     void operator++() {
       ++iterator1;
@@ -2364,7 +2322,7 @@ constexpr auto zip(const Sequence1& sequence1, Sequence2& sequence2) {
     const Sequence1& sequence1;
     Sequence2&       sequence2;
     auto             begin() {
-      return zip_iterator{std::begin(sequence1), std::begin(sequence2)};
+                  return zip_iterator{std::begin(sequence1), std::begin(sequence2)};
     }
     auto end() {
       return zip_iterator{std::end(sequence1), std::end(sequence2)};
@@ -2384,7 +2342,7 @@ constexpr auto zip(Sequence1& sequence1, const Sequence2& sequence2) {
     Iterator1 iterator1;
     Iterator2 iterator2;
     bool      operator!=(const zip_iterator& other) const {
-      return iterator1 != other.iterator1;
+           return iterator1 != other.iterator1;
     }
     void operator++() {
       ++iterator1;
@@ -2398,7 +2356,7 @@ constexpr auto zip(Sequence1& sequence1, const Sequence2& sequence2) {
     Sequence1&       sequence1;
     const Sequence2& sequence2;
     auto             begin() {
-      return zip_iterator{std::begin(sequence1), std::begin(sequence2)};
+                  return zip_iterator{std::begin(sequence1), std::begin(sequence2)};
     }
     auto end() {
       return zip_iterator{std::end(sequence1), std::end(sequence2)};

@@ -258,7 +258,7 @@ inline vec3f tonemap_filmic(const vec3f& hdr_, bool accurate_fit = false) {
     auto hdr = hdr_ * 0.6f;  // brings it back to ACES range
     auto ldr = (hdr * hdr * 2.51f + hdr * 0.03f) /
                (hdr * hdr * 2.43f + hdr * 0.59f + 0.14f);
-    return max(vec<T, 3>{0, 0, 0}, ldr);
+    return max(vec3f{0, 0, 0}, ldr);
   } else {
     // https://github.com/TheRealMJP/BakingLab/blob/master/BakingLab/ACES.hlsl
     // sRGB => XYZ => D65_2_D60 => AP1 => RRT_SAT
@@ -280,7 +280,7 @@ inline vec3f tonemap_filmic(const vec3f& hdr_, bool accurate_fit = false) {
     };
 
     auto ldr = ACESOutputMat * RRTAndODTFit(ACESInputMat * hdr_);
-    return max({0, 0, 0}, ldr);
+    return max(vec3f{0, 0, 0}, ldr);
   }
 }
 

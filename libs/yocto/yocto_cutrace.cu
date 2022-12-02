@@ -71,33 +71,6 @@ struct pair_ {
   T2 second;
 };
 
-template <typename T>
-struct span {
-  inline bool   empty() const { return _size == 0; }
-  inline size_t size() const { return _size; }
-
-  inline T&       operator[](int idx) { return _data[idx]; }
-  inline const T& operator[](int idx) const { return _data[idx]; }
-  inline T&       at(int idx) { return _data[idx]; }
-  inline const T& at(int idx) const { return _data[idx]; }
-
-  inline T*       begin() { return _data; }
-  inline T*       end() { return _data + _size; }
-  inline const T* begin() const { return _data; }
-  inline const T* end() const { return _data + _size; }
-
-  inline T&       front() { return *_data; }
-  inline T&       back() { return *(_data + _size - 1); }
-  inline const T& front() const { return *_data; }
-  inline const T& back() const { return *(_data + _size - 1); }
-
-  inline T*       data() { return _data; }
-  inline const T* data() const { return _data; }
-
-  T*     _data = nullptr;
-  size_t _size = 0;
-};
-
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -134,8 +107,8 @@ inline int sample_discrete(const span<float>& cdf, float r) {
 }
 // Pdf for uniform discrete distribution sampling.
 inline float sample_discrete_pdf(const span<float>& cdf, int idx) {
-  if (idx == 0) return cdf.at(0);
-  return cdf.at(idx) - cdf.at(idx - 1);
+  if (idx == 0) return cdf[0];
+  return cdf[idx] - cdf[idx - 1];
 }
 
 }  // namespace yocto
@@ -2130,20 +2103,18 @@ static void trace_sample(cutrace_state& state, const cuscene_data& scene,
     radiance = radiance * (params.clamp / max(radiance));
   auto weight = 1.0f / (sample + 1);
   if (hit) {
-    state.image[idx] = lerp(
-        state.image[idx], {radiance.x, radiance.y, radiance.z, 1}, weight);
+    state.image[idx]  = lerp(state.image[idx], vec4f{radiance, 1}, weight);
     state.albedo[idx] = lerp(state.albedo[idx], albedo, weight);
     state.normal[idx] = lerp(state.normal[idx], normal, weight);
     state.hits[idx] += 1;
   } else if (!params.envhidden && !scene.environments.empty()) {
-    state.image[idx] = lerp(
-        state.image[idx], {radiance.x, radiance.y, radiance.z, 1}, weight);
-    state.albedo[idx] = lerp(state.albedo[idx], {1, 1, 1}, weight);
+    state.image[idx]  = lerp(state.image[idx], vec4f{radiance, 1}, weight);
+    state.albedo[idx] = lerp(state.albedo[idx], vec3f{1, 1, 1}, weight);
     state.normal[idx] = lerp(state.normal[idx], -ray.d, weight);
     state.hits[idx] += 1;
   } else {
-    state.image[idx]  = lerp(state.image[idx], {0, 0, 0, 0}, weight);
-    state.albedo[idx] = lerp(state.albedo[idx], {0, 0, 0}, weight);
+    state.image[idx]  = lerp(state.image[idx], vec4f{0, 0, 0, 0}, weight);
+    state.albedo[idx] = lerp(state.albedo[idx], vec3f{0, 0, 0}, weight);
     state.normal[idx] = lerp(state.normal[idx], -ray.d, weight);
   }
 }

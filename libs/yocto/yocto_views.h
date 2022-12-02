@@ -84,6 +84,8 @@ struct span {
 
   // Access
   constexpr T& operator[](size_t idx) const noexcept { return _data[idx]; }
+  constexpr T& front() const noexcept { return _data[0]; }
+  constexpr T& back() const noexcept { return _data[_size - 1]; }
 
   // Iteration
   constexpr T* begin() const noexcept { return _data; }
@@ -130,7 +132,7 @@ struct ndspan {
   constexpr size_t           size() const noexcept { return _size(_extents); }
   constexpr array<size_t, N> extents() const noexcept { return _extents; }
   constexpr size_t           extent(size_t dimension) const noexcept {
-    return _extents[dimension];
+              return _extents[dimension];
   }
 
   // Access
