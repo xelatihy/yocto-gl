@@ -174,7 +174,11 @@ constexpr kernel T pow(T1 a, T2 b) {
 }
 template <typename T>
 constexpr kernel bool isfinite(T a) {
+#ifndef __CUDACC__
   return std::isfinite(a);
+#else
+  return ::isfinite(a);
+#endif
 }
 template <typename T1, typename T2, typename T = common_t<T1, T2>>
 constexpr kernel T atan2(T1 a, T2 b) {
