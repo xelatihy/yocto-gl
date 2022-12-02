@@ -2398,7 +2398,7 @@ constexpr kernel auto zip(const Sequence1& sequence1, Sequence2& sequence2) {
 
 // Implementation of Python zip
 template <typename Sequence1, typename Sequence2>
-constexpr auto zip(Sequence1& sequence1, const Sequence2& sequence2) {
+constexpr kernel auto zip(Sequence1& sequence1, const Sequence2& sequence2) {
   using Iterator1  = typename Sequence1::iterator;
   using Reference1 = typename Sequence1::reference;
   using Iterator2  = typename Sequence2::const_iterator;
