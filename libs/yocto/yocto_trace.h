@@ -233,7 +233,8 @@ namespace yocto {
 
 // trace sampler names
 inline const auto trace_sampler_names = vector<string>{"path", "pathdirect",
-    "pathmis", "pathtest", "naive", "eyelight", "furnace", "falsecolor"};
+    "pathmis", "pathtest", "naive", "eyelight", "diagram", "furnace",
+    "falsecolor"};
 
 // false color names
 inline const auto trace_falsecolor_names = vector<string>{"position", "normal",
