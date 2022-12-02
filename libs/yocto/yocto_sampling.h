@@ -85,6 +85,11 @@ namespace yocto {
 struct rng_state {
   uint64_t state = 0x853c49e6748fea9bULL;
   uint64_t inc   = 0xda3e39cb94b95bdbULL;
+
+  constexpr kernel rng_state()
+      : state{0x853c49e6748fea9bULL}, inc{0xda3e39cb94b95bdbULL} {}
+  constexpr kernel rng_state(uint64_t state_, uint64_t inc_)
+      : state{state_}, inc{inc_} {}
 };
 
 // Next random number, used internally only.
@@ -99,7 +104,7 @@ constexpr kernel uint32_t _advance_rng(rng_state& rng) {
 
 // Init a random number generator with a state state from the sequence seq.
 constexpr kernel rng_state make_rng(uint64_t seed, uint64_t seq = 1) {
-  auto rng  = rng_state();
+  auto rng  = rng_state{};
   rng.state = 0U;
   rng.inc   = (seq << 1u) | 1u;
   _advance_rng(rng);
@@ -155,174 +160,205 @@ constexpr kernel void shuffle(span<T> vals, rng_state& rng) {
 namespace yocto {
 
 // Sample an hemispherical direction with uniform distribution.
-constexpr kernel vec3f sample_hemisphere(const vec2f& ruv) {
+template <typename T>
+constexpr kernel vec<T, 3> sample_hemisphere(const vec<T, 2>& ruv) {
   auto z   = ruv.y;
   auto r   = sqrt(clamp(1 - z * z, 0.0f, 1.0f));
   auto phi = 2 * pif * ruv.x;
   return {r * cos(phi), r * sin(phi), z};
 }
-constexpr kernel float sample_hemisphere_pdf(const vec3f& direction) {
+template <typename T>
+constexpr kernel float sample_hemisphere_pdf(const vec<T, 3>& direction) {
   return (direction.z <= 0) ? 0 : 1 / (2 * pif);
 }
 
 // Sample an hemispherical direction with uniform distribution.
-constexpr kernel vec3f sample_hemisphere(
-    const vec3f& normal, const vec2f& ruv) {
+template <typename T>
+constexpr kernel vec<T, 3> sample_hemisphere(
+    const vec<T, 3>& normal, const vec<T, 2>& ruv) {
   auto z               = ruv.y;
   auto r               = sqrt(clamp(1 - z * z, 0.0f, 1.0f));
   auto phi             = 2 * pif * ruv.x;
-  auto local_direction = vec3f{r * cos(phi), r * sin(phi), z};
+  auto local_direction = vec<T, 3>{r * cos(phi), r * sin(phi), z};
   return transform_direction(basis_fromz(normal), local_direction);
 }
+template <typename T>
 constexpr kernel float sample_hemisphere_pdf(
-    const vec3f& normal, const vec3f& direction) {
+    const vec<T, 3>& normal, const vec<T, 3>& direction) {
   return (dot(normal, direction) <= 0) ? 0 : 1 / (2 * pif);
 }
 
 // Sample a spherical direction with uniform distribution.
-constexpr kernel vec3f sample_sphere(const vec2f& ruv) {
+template <typename T>
+constexpr kernel vec<T, 3> sample_sphere(const vec<T, 2>& ruv) {
   auto z   = 2 * ruv.y - 1;
   auto r   = sqrt(clamp(1 - z * z, 0.0f, 1.0f));
   auto phi = 2 * pif * ruv.x;
   return {r * cos(phi), r * sin(phi), z};
 }
-constexpr kernel float sample_sphere_pdf(const vec3f& w) {
+template <typename T>
+constexpr kernel float sample_sphere_pdf(const vec<T, 3>& w) {
   return 1 / (4 * pif);
 }
 
 // Sample an hemispherical direction with cosine distribution.
-constexpr kernel vec3f sample_hemisphere_cos(const vec2f& ruv) {
+template <typename T>
+constexpr kernel vec<T, 3> sample_hemisphere_cos(const vec<T, 2>& ruv) {
   auto z   = sqrt(ruv.y);
   auto r   = sqrt(1 - z * z);
   auto phi = 2 * pif * ruv.x;
   return {r * cos(phi), r * sin(phi), z};
 }
-constexpr kernel float sample_hemisphere_cos_pdf(const vec3f& direction) {
+template <typename T>
+constexpr kernel float sample_hemisphere_cos_pdf(const vec<T, 3>& direction) {
   return (direction.z <= 0) ? 0 : direction.z / pif;
 }
 
 // Sample an hemispherical direction with cosine distribution.
-constexpr kernel vec3f sample_hemisphere_cos(
-    const vec3f& normal, const vec2f& ruv) {
+template <typename T>
+constexpr kernel vec<T, 3> sample_hemisphere_cos(
+    const vec<T, 3>& normal, const vec<T, 2>& ruv) {
   auto z               = sqrt(ruv.y);
   auto r               = sqrt(1 - z * z);
   auto phi             = 2 * pif * ruv.x;
-  auto local_direction = vec3f{r * cos(phi), r * sin(phi), z};
+  auto local_direction = vec<T, 3>{r * cos(phi), r * sin(phi), z};
   return transform_direction(basis_fromz(normal), local_direction);
 }
+template <typename T>
 constexpr kernel float sample_hemisphere_cos_pdf(
-    const vec3f& normal, const vec3f& direction) {
+    const vec<T, 3>& normal, const vec<T, 3>& direction) {
   auto cosw = dot(normal, direction);
   return (cosw <= 0) ? 0 : cosw / pif;
 }
 
 // Sample an hemispherical direction with cosine power distribution.
-constexpr kernel vec3f sample_hemisphere_cospower(
-    float exponent, const vec2f& ruv) {
+template <typename T>
+constexpr kernel vec<T, 3> sample_hemisphere_cospower(
+    float exponent, const vec<T, 2>& ruv) {
   auto z   = pow(ruv.y, 1 / (exponent + 1));
   auto r   = sqrt(1 - z * z);
   auto phi = 2 * pif * ruv.x;
   return {r * cos(phi), r * sin(phi), z};
 }
+template <typename T>
 constexpr kernel float sample_hemisphere_cospower_pdf(
-    float exponent, const vec3f& direction) {
+    float exponent, const vec<T, 3>& direction) {
   return (direction.z <= 0)
              ? 0
              : pow(direction.z, exponent) * (exponent + 1) / (2 * pif);
 }
 
 // Sample an hemispherical direction with cosine power distribution.
-constexpr kernel vec3f sample_hemisphere_cospower(
-    float exponent, const vec3f& normal, const vec2f& ruv) {
+template <typename T>
+constexpr kernel vec<T, 3> sample_hemisphere_cospower(
+    float exponent, const vec<T, 3>& normal, const vec<T, 2>& ruv) {
   auto z               = pow(ruv.y, 1 / (exponent + 1));
   auto r               = sqrt(1 - z * z);
   auto phi             = 2 * pif * ruv.x;
-  auto local_direction = vec3f{r * cos(phi), r * sin(phi), z};
+  auto local_direction = vec<T, 3>{r * cos(phi), r * sin(phi), z};
   return transform_direction(basis_fromz(normal), local_direction);
 }
+template <typename T>
 constexpr kernel float sample_hemisphere_cospower_pdf(
-    float exponent, const vec3f& normal, const vec3f& direction) {
+    float exponent, const vec<T, 3>& normal, const vec<T, 3>& direction) {
   auto cosw = dot(normal, direction);
   return (cosw <= 0) ? 0 : pow(cosw, exponent) * (exponent + 1) / (2 * pif);
 }
 
 // Sample a point uniformly on a disk.
-constexpr kernel vec2f sample_disk(const vec2f& ruv) {
+template <typename T>
+constexpr kernel vec<T, 2> sample_disk(const vec<T, 2>& ruv) {
   auto r   = sqrt(ruv.y);
   auto phi = 2 * pif * ruv.x;
   return {cos(phi) * r, sin(phi) * r};
 }
-constexpr kernel float sample_disk_pdf() { return 1 / pif; }
+template <typename T>
+constexpr kernel float sample_disk_pdf() {
+  return 1 / pif;
+}
 
 // Sample a point uniformly on a cylinder, without caps.
-constexpr kernel vec3f sample_cylinder(const vec2f& ruv) {
+template <typename T>
+constexpr kernel vec<T, 3> sample_cylinder(const vec<T, 2>& ruv) {
   auto phi = 2 * pif * ruv.x;
   return {sin(phi), cos(phi), ruv.y * 2 - 1};
 }
-constexpr kernel float sample_cylinder_pdf(const vec3f& point) {
+template <typename T>
+constexpr kernel float sample_cylinder_pdf(const vec<T, 3>& point) {
   return 1 / pif;
 }
 
 // Sample a point uniformly on a triangle returning the baricentric coordinates.
-constexpr kernel vec2f sample_triangle(const vec2f& ruv) {
+template <typename T>
+constexpr kernel vec<T, 2> sample_triangle(const vec<T, 2>& ruv) {
   return {1 - sqrt(ruv.x), ruv.y * sqrt(ruv.x)};
 }
 
 // Sample a point uniformly on a triangle.
-constexpr kernel vec3f sample_triangle(
-    const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec2f& ruv) {
+template <typename T>
+constexpr kernel vec<T, 3> sample_triangle(const vec<T, 3>& p0,
+    const vec<T, 3>& p1, const vec<T, 3>& p2, const vec<T, 2>& ruv) {
   auto uv = sample_triangle(ruv);
   return p0 * (1 - uv.x - uv.y) + p1 * uv.x + p2 * uv.y;
 }
 // Pdf for uniform triangle sampling, i.e. triangle area.
+template <typename T>
 constexpr kernel float sample_triangle_pdf(
-    const vec3f& p0, const vec3f& p1, const vec3f& p2) {
+    const vec<T, 3>& p0, const vec<T, 3>& p1, const vec<T, 3>& p2) {
   return 2 / length(cross(p1 - p0, p2 - p0));
 }
 
 // Sample an index with uniform distribution.
-constexpr kernel int sample_uniform(int size, float r) {
-  return clamp((int)(r * size), 0, size - 1);
+template <typename T, typename I>
+constexpr kernel I sample_uniform(I size, T r) {
+  return clamp((I)(r * size), 0, size - 1);
 }
-constexpr kernel float sample_uniform_pdf(int size) {
-  return (float)1 / (float)size;
+template <typename I, typename T = float>
+constexpr kernel T sample_uniform_pdf(I size) {
+  return (T)1 / (T)size;
 }
 
 // Sample an index with uniform distribution.
-constexpr kernel float sample_uniform(span<const float> elements, float r) {
-  if (elements.empty()) return {};
-  auto size = (int)elements.size();
-  return elements[clamp((int)(r * size), 0, size - 1)];
+template <typename T, typename E>
+constexpr kernel E sample_uniform(span<const E> elements, T r) {
+  if (elements.empty()) return E{};
+  auto size = elements.size();
+  return elements[clamp((size_t)(r * size), (size_t)0, size - 1)];
 }
-constexpr kernel float sample_uniform_pdf(span<const float> elements) {
+template <typename E, typename T = float>
+constexpr kernel T sample_uniform_pdf(span<const E> elements) {
   if (elements.empty()) return 0;
-  return 1.0f / (int)elements.size();
+  return (T)1 / (T)elements.size();
 }
 
 // TODO: this should be constexpr, once we understand why
 // Sample a discrete distribution represented by its cdf.
-inline kernel int sample_discrete(span<const float> cdf, float r) {
-  r        = clamp(r * cdf.back(), (float)0, cdf.back() - (float)0.00001);
-  auto idx = (int)(std::upper_bound(cdf.data(), cdf.data() + cdf.size(), r) -
-                   cdf.data());
-  return clamp(idx, 0, (int)cdf.size() - 1);
+template <typename T, typename I = int>
+inline kernel I sample_discrete(span<const T> cdf, T r) {
+  r        = clamp(r * cdf.back(), (T)0, cdf.back() - (T)0.00001);
+  auto idx = (I)(std::upper_bound(cdf.data(), cdf.data() + cdf.size(), r) -
+                 cdf.data());
+  return clamp(idx, (I)0, (I)cdf.size() - 1);
 }
 // Pdf for uniform discrete distribution sampling.
-inline kernel float sample_discrete_pdf(span<const float> cdf, int idx) {
+template <typename T, typename I>
+inline kernel T sample_discrete_pdf(span<const T> cdf, I idx) {
   if (idx == 0) return cdf[0];
   return cdf[idx] - cdf[idx - 1];
 }
 
 // TODO: eventually remove these
 // Sample a discrete distribution represented by its cdf.
-inline kernel int sample_discrete(const vector<float>& cdf, float r) {
-  r        = clamp(r * cdf.back(), (float)0, cdf.back() - (float)0.00001);
-  auto idx = (int)(std::upper_bound(cdf.data(), cdf.data() + cdf.size(), r) -
-                   cdf.data());
-  return clamp(idx, 0, (int)cdf.size() - 1);
+template <typename T, typename I = int>
+inline kernel int sample_discrete(const vector<T>& cdf, T r) {
+  r        = clamp(r * cdf.back(), (T)0, cdf.back() - (T)0.00001);
+  auto idx = (I)(std::upper_bound(cdf.data(), cdf.data() + cdf.size(), r) -
+                 cdf.data());
+  return clamp(idx, (I)0, (I)cdf.size() - 1);
 }
 // Pdf for uniform discrete distribution sampling.
-inline kernel float sample_discrete_pdf(const vector<float>& cdf, int idx) {
+template <typename T, typename I>
+inline kernel T sample_discrete_pdf(const vector<T>& cdf, I idx) {
   if (idx == 0) return cdf[0];
   return cdf[idx] - cdf[idx - 1];
 }

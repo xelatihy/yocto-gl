@@ -117,7 +117,11 @@
     "xstring": "cpp",
     "xtr1common": "cpp",
     "xtree": "cpp",
-    "xutility": "cpp"
+    "xutility": "cpp",
+    "__bits": "cpp",
+    "numbers": "cpp",
+    "semaphore": "cpp",
+    "source_location": "cpp"
   },
   "json.schemas": [
     {
