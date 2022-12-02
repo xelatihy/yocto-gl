@@ -1442,7 +1442,7 @@ void make_colormapramp(
     } else {
       rgb = colormap(uv.x, colormap_type::inferno);
     }
-    return vec4f{rgb.x, rgb.y, rgb.z, 1};
+    return vec4f{rgb, 1};
   });
 }
 
@@ -1450,7 +1450,7 @@ void make_noisemap(vector<vec4f>& pixels, int width, int height, float scale,
     const vec4f& color0, const vec4f& color1) {
   return make_proc_image(pixels, width, height, [=](vec2f uv) {
     uv *= 8 * scale;
-    auto v = perlin_noise(vec3f{uv.x, uv.y, 0});
+    auto v = perlin_noise(vec3f{uv, 0});
     v      = clamp(v, 0.0f, 1.0f);
     return lerp(color0, color1, v);
   });
@@ -1460,7 +1460,7 @@ void make_fbmmap(vector<vec4f>& pixels, int width, int height, float scale,
     const vec4f& noise, const vec4f& color0, const vec4f& color1) {
   return make_proc_image(pixels, width, height, [=](vec2f uv) {
     uv *= 8 * scale;
-    auto v = perlin_fbm({uv.x, uv.y, 0}, noise.x, noise.y, (int)noise.z);
+    auto v = perlin_fbm({uv, 0}, noise.x, noise.y, (int)noise.z);
     v      = clamp(v, 0.0f, 1.0f);
     return lerp(color0, color1, v);
   });
@@ -1470,7 +1470,7 @@ void make_turbulencemap(vector<vec4f>& pixels, int width, int height,
     float scale, const vec4f& noise, const vec4f& color0, const vec4f& color1) {
   return make_proc_image(pixels, width, height, [=](vec2f uv) {
     uv *= 8 * scale;
-    auto v = perlin_turbulence({uv.x, uv.y, 0}, noise.x, noise.y, (int)noise.z);
+    auto v = perlin_turbulence({uv, 0}, noise.x, noise.y, (int)noise.z);
     v      = clamp(v, 0.0f, 1.0f);
     return lerp(color0, color1, v);
   });
@@ -1480,8 +1480,7 @@ void make_ridgemap(vector<vec4f>& pixels, int width, int height, float scale,
     const vec4f& noise, const vec4f& color0, const vec4f& color1) {
   return make_proc_image(pixels, width, height, [=](vec2f uv) {
     uv *= 8 * scale;
-    auto v = perlin_ridge(
-        {uv.x, uv.y, 0}, noise.x, noise.y, (int)noise.z, noise.w);
+    auto v = perlin_ridge({uv, 0}, noise.x, noise.y, (int)noise.z, noise.w);
     v = clamp(v, 0.0f, 1.0f);
     return lerp(color0, color1, v);
   });

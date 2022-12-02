@@ -109,12 +109,12 @@ namespace yocto {
 
 // pixel access
 vec4f lookup_texture(
-    const texture_data& texture, int i, int j, bool as_linear) {
+    const texture_data& texture, const vec2i& ij, bool as_linear) {
   auto color = vec4f{0, 0, 0, 0};
   if (!texture.pixelsf.empty()) {
-    color = texture.pixelsf[j * texture.width + i];
+    color = texture.pixelsf[ij.y * texture.width + ij.x];
   } else {
-    color = byte_to_float(texture.pixelsb[j * texture.width + i]);
+    color = byte_to_float(texture.pixelsb[ij.y * texture.width + ij.x]);
   }
   if (as_linear && !texture.linear) {
     return srgb_to_rgb(color);
@@ -150,44 +150,45 @@ vec4f eval_texture(const texture_data& texture, const vec2f& uv, bool as_linear,
 
   // handle interpolation
   if (no_interpolation) {
-    return lookup_texture(texture, i, j, as_linear);
+    return lookup_texture(texture, {i, j}, as_linear);
   } else {
-    return lookup_texture(texture, i, j, as_linear) * (1 - u) * (1 - v) +
-           lookup_texture(texture, i, jj, as_linear) * (1 - u) * v +
-           lookup_texture(texture, ii, j, as_linear) * u * (1 - v) +
-           lookup_texture(texture, ii, jj, as_linear) * u * v;
+      return lookup_texture(texture, {i, j}, as_linear) * (1 - u) * (1 - v) +
+             lookup_texture(texture, {i, jj}, as_linear) * (1 - u) * v +
+             lookup_texture(texture, {ii, j}, as_linear) * u * (1 - v) +
+             lookup_texture(texture, {ii, jj}, as_linear) * u * v;
   }
-}
-vec4f eval_texture(
-    const texture_data& texture, const vec2f& uv, bool as_linear) {
-  return eval_texture(texture, uv, as_linear, texture.nearest, texture.clamp);
-}
-
-// Helpers
-vec4f eval_texture(
-    const scene_data& scene, int texture, const vec2f& uv, bool ldr_as_linear) {
-  if (texture == invalidid) return {1, 1, 1, 1};
-  return eval_texture(scene.textures[texture], uv, ldr_as_linear,
-      scene.textures[texture].nearest, scene.textures[texture].clamp);
-}
-vec4f eval_texture(const scene_data& scene, int texture, const vec2f& uv,
-    bool ldr_as_linear, bool no_interpolation, bool clamp_to_edge) {
-  if (texture == invalidid) return {1, 1, 1, 1};
-  return eval_texture(scene.textures[texture], uv, ldr_as_linear,
-      no_interpolation, clamp_to_edge);
-}
-
-// conversion from image
-texture_data image_to_texture(const image_data& image) {
-  auto texture = texture_data{image.width, image.height, image.linear, {}, {}};
-  if (image.linear) {
-    texture.pixelsf = image.pixels;
-  } else {
-    texture.pixelsb.resize(image.pixels.size());
-    float_to_byte(texture.pixelsb, image.pixels);
   }
-  return texture;
-}
+  vec4f eval_texture(
+      const texture_data& texture, const vec2f& uv, bool as_linear) {
+    return eval_texture(texture, uv, as_linear, texture.nearest, texture.clamp);
+  }
+
+  // Helpers
+  vec4f eval_texture(const scene_data& scene, int texture, const vec2f& uv,
+      bool ldr_as_linear) {
+    if (texture == invalidid) return {1, 1, 1, 1};
+    return eval_texture(scene.textures[texture], uv, ldr_as_linear,
+        scene.textures[texture].nearest, scene.textures[texture].clamp);
+  }
+  vec4f eval_texture(const scene_data& scene, int texture, const vec2f& uv,
+      bool ldr_as_linear, bool no_interpolation, bool clamp_to_edge) {
+    if (texture == invalidid) return {1, 1, 1, 1};
+    return eval_texture(scene.textures[texture], uv, ldr_as_linear,
+        no_interpolation, clamp_to_edge);
+  }
+
+  // conversion from image
+  texture_data image_to_texture(const image_data& image) {
+    auto texture = texture_data{
+        image.width, image.height, image.linear, {}, {}};
+    if (image.linear) {
+      texture.pixelsf = image.pixels;
+    } else {
+      texture.pixelsb.resize(image.pixels.size());
+      float_to_byte(texture.pixelsb, image.pixels);
+    }
+    return texture;
+  }
 
 }  // namespace yocto
 
@@ -783,7 +784,7 @@ void tesselate_subdiv(
       for (auto i : range(4)) {
         auto& displacement_tex = scene.textures[subdiv.displacement_tex];
         auto  disp             = mean(
-            eval_texture(displacement_tex, subdiv.texcoords[qtxt[i]], false));
+                         eval_texture(displacement_tex, subdiv.texcoords[qtxt[i]], false));
         if (!displacement_tex.pixelsb.empty()) disp -= 0.5f;
         offset[qpos[i]] += subdiv.displacement * disp;
         count[qpos[i]] += 1;
@@ -919,8 +920,8 @@ vector<string> scene_stats(const scene_data& scene, bool verbose) {
   stats.push_back("texels4f:     " +
                   format(accumulate(scene.textures,
                       [](auto& texture) { return texture.pixelsf.size(); })));
-  stats.push_back("center:       " + format3(center(bbox)));
-  stats.push_back("size:         " + format3(size(bbox)));
+  stats.push_back("center:       " + format3(bbox_center(bbox)));
+  stats.push_back("diagonal:     " + format3(bbox_diagonal(bbox)));
 
   return stats;
 }

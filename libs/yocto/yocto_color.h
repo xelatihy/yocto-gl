@@ -70,201 +70,10 @@ namespace yocto {
 
 // Conversion between floats and bytes
 template <typename T>
-inline byte float_to_byte(T a);
-template <typename T = float>
-inline T byte_to_float(byte a);
-template <size_t N, typename T>
-inline vec<byte, N> float_to_byte(const vec<T, N>& a);
-template <size_t N, typename T = float>
-inline vec<T, N> byte_to_float(const vec<byte, N>& a);
-
-// Luminance
-template <typename T>
-inline T luminance(const vec<T, 3>& a);
-
-// sRGB non-linear curve
-template <typename T>
-inline T srgb_to_rgb(T srgb);
-template <typename T>
-inline T rgb_to_srgb(T rgb);
-template <typename T, size_t N>
-inline vec<T, N> srgb_to_rgb(const vec<T, N>& srgb);
-template <typename T, size_t N>
-inline vec<T, N> rgb_to_srgb(const vec<T, N>& rgb);
-
-// sRGB non-linear curve
-template <typename T>
-inline T srgbb_to_rgb(byte srgb);
-template <typename T>
-inline byte rgb_to_srgbb(T rgb);
-template <typename T, size_t N>
-inline vec<T, N> srgbb_to_rgb(const vec<byte, N>& srgb);
-template <typename T, size_t N>
-inline vec<byte, N> rgb_to_srgbb(const vec<T, N>& rgb);
-
-// Conversion between number of channels.
-template <typename T>
-inline vec<T, 4> rgb_to_rgba(const vec<T, 3>& rgb);
-template <typename T>
-inline vec<T, 3> rgba_to_rgb(const vec<T, 4>& rgba);
-
-// Apply contrast. Grey should be 0.18 for linear and 0.5 for gamma.
-template <typename T>
-inline vec<T, 3> lincontrast(const vec<T, 3>& rgb, T contrast, T grey);
-// Apply contrast in log2. Grey should be 0.18 for linear and 0.5 for gamma.
-template <typename T>
-inline vec<T, 3> logcontrast(const vec<T, 3>& rgb, T logcontrast, T grey);
-// Apply an s-shaped contrast.
-template <typename T>
-inline vec<T, 3> contrast(const vec<T, 3>& rgb, T contrast);
-// Apply saturation.
-template <typename T>
-inline vec<T, 3> saturate(const vec<T, 3>& rgb, T saturation,
-    const vec<T, 3>& weights = vec<T, 3>{
-        (T)(1.0 / 3.0), (T)(1.0 / 3.0), (T)(1.0 / 3.0)});
-
-// Apply tone mapping
-template <typename T>
-inline vec<T, 3> tonemap(
-    const vec<T, 3>& hdr, T exposure, bool filmic = false, bool srgb = true);
-template <typename T>
-inline vec<T, 4> tonemap(
-    const vec<T, 4>& hdr, T exposure, bool filmic = false, bool srgb = true);
-
-// Composite colors
-template <typename T>
-inline vec<T, 4> composite(const vec<T, 4>& a, const vec<T, 4>& b);
-
-// Convert between CIE XYZ and RGB
-template <typename T>
-inline vec<T, 3> rgb_to_xyz(const vec<T, 3>& rgb);
-template <typename T>
-inline vec<T, 3> xyz_to_rgb(const vec<T, 3>& xyz);
-
-// Convert between CIE XYZ and xyY
-template <typename T>
-inline vec<T, 3> xyz_to_xyY(const vec<T, 3>& xyz);
-template <typename T>
-inline vec<T, 3> xyY_to_xyz(const vec<T, 3>& xyY);
-
-// Converts between HSV and RGB color spaces.
-template <typename T>
-inline vec<T, 3> hsv_to_rgb(const vec<T, 3>& hsv);
-template <typename T>
-inline vec<T, 3> rgb_to_hsv(const vec<T, 3>& rgb);
-
-// Approximate color of blackbody radiation from wavelength in nm.
-template <typename T>
-inline vec<T, 3> blackbody_to_rgb(T temperature);
-
-// Colormap type
-enum struct colormap_type { viridis, plasma, magma, inferno };
-
-// Colormaps from [0,1] to color
-template <typename T>
-inline vec<T, 3> colormap(T t, colormap_type type = colormap_type::viridis);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// COLOR GRADING
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// minimal color grading
-template <typename T = float>
-struct colorgrade_gparams {
-  T         exposure         = 0;
-  vec<T, 3> tint             = {1, 1, 1};
-  T         lincontrast      = 0.5;
-  T         logcontrast      = 0.5;
-  T         linsaturation    = 0.5;
-  bool      filmic           = false;
-  bool      srgb             = true;
-  T         contrast         = 0.5;
-  T         saturation       = 0.5;
-  T         shadows          = 0.5;
-  T         midtones         = 0.5;
-  T         highlights       = 0.5;
-  vec<T, 3> shadows_color    = {1, 1, 1};
-  vec<T, 3> midtones_color   = {1, 1, 1};
-  vec<T, 3> highlights_color = {1, 1, 1};
-};
-
-// Alias
-using colorgrade_params = colorgrade_gparams<float>;
-
-// Apply color grading from a linear or srgb color to an srgb color.
-template <typename T>
-inline vec<T, 3> colorgrade(
-    const vec<T, 3>& color, bool linear, const colorgrade_gparams<T>& params);
-template <typename T>
-inline vec<T, 4> colorgrade(
-    const vec<T, 4>& color, bool linear, const colorgrade_gparams<T>& params);
-
-}  // namespace yocto
-
-#ifndef __CUDACC__
-
-// -----------------------------------------------------------------------------
-// COLOR SPACE CONVERSION
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// RGB color spaces
-enum struct color_space {
-  rgb,         // default linear space (srgb linear)
-  srgb,        // srgb color space (non-linear)
-  adobe,       // Adobe rgb color space (non-linear)
-  prophoto,    // ProPhoto Kodak rgb color space (non-linear)
-  rec709,      // hdtv color space (non-linear)
-  rec2020,     // uhtv color space (non-linear)
-  rec2100pq,   // hdr color space with perceptual quantizer (non-linear)
-  rec2100hlg,  // hdr color space with hybrid log gamma (non-linear)
-  aces2065,    // ACES storage format (linear)
-  acescg,      // ACES CG computation (linear)
-  acescc,      // ACES color correction (non-linear)
-  acescct,     // ACES color correction 2 (non-linear)
-  p3dci,       // P3 DCI (non-linear)
-  p3d60,       // P3 variation for D60 (non-linear)
-  p3d65,       // P3 variation for D65 (non-linear)
-  p3display,   // Apple display P3
-};
-
-// Conversion between rgb color spaces
-template <typename T>
-inline vec<T, 3> color_to_xyz(const vec<T, 3>& col, color_space from);
-template <typename T>
-inline vec<T, 3> xyz_to_color(const vec<T, 3>& xyz, color_space to);
-
-// Conversion between rgb color spaces
-template <typename T>
-inline vec<T, 3> convert_color(
-    const vec<T, 3>& col, color_space from, color_space to);
-
-}  // namespace yocto
-
-#endif
-
-// -----------------------------------------------------------------------------
-//
-//
-// IMPLEMENTATION
-//
-//
-// -----------------------------------------------------------------------------
-
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION FOR COLOR CONVERSION UTILITIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Conversion between floats and bytes
-template <typename T>
 inline byte float_to_byte(T a) {
   return (byte)clamp(int(a * 256), 0, 255);
 }
-template <typename T>
+template <typename T = float>
 inline T byte_to_float(byte a) {
   return a / (T)255;
 }
@@ -286,7 +95,7 @@ inline vec<byte, N> float_to_byte(const vec<T, N>& a) {
         (byte)clamp(int(a.w * 256), 0, 255)};
   }
 }
-template <size_t N, typename T>
+template <size_t N, typename T = float>
 inline vec<T, N> byte_to_float(const vec<byte, N>& a) {
   if constexpr (N == 1) {
     return {a.x / (T)255};
@@ -365,9 +174,9 @@ inline vec<byte, N> rgb_to_srgbb(const vec<T, N>& rgb) {
 template <typename T>
 inline vec<T, 4> rgb_to_rgba(const vec<T, 3>& rgb) {
   if constexpr (!std::is_same_v<T, byte>) {
-    return {rgb.x, rgb.y, rgb.z, (T)1};
+    return {rgb, (T)1};
   } else {
-    return {rgb.x, rgb.y, rgb.z, (byte)255};
+    return {rgb, (byte)255};
   }
 }
 template <typename T>
@@ -396,8 +205,9 @@ inline vec<T, 3> contrast(const vec<T, 3>& rgb, T contrast) {
 }
 // Apply saturation.
 template <typename T>
-inline vec<T, 3> saturate(
-    const vec<T, 3>& rgb, T saturation, const vec<T, 3>& weights) {
+inline vec<T, 3> saturate(const vec<T, 3>& rgb, T saturation,
+    const vec<T, 3>& weights = vec<T, 3>{
+        (T)(1.0 / 3.0), (T)(1.0 / 3.0), (T)(1.0 / 3.0)}) {
   auto grey = dot(weights, rgb);
   return max(vec<T, 3>{0, 0, 0}, grey + (rgb - grey) * (saturation * 2));
 }
@@ -417,13 +227,13 @@ inline vec<T, 3> tonemap_filmic(
   } else {
     // https://github.com/TheRealMJP/BakingLab/blob/master/BakingLab/ACES.hlsl
     // sRGB => XYZ => D65_2_D60 => AP1 => RRT_SAT
-    static const auto ACESInputMat = transpose(mat<T, 3>{
+    static const auto ACESInputMat = transpose(mat<T, 3, 3>{
         {0.59719, 0.35458, 0.04823},
         {0.07600, 0.90834, 0.01566},
         {0.02840, 0.13383, 0.83777},
     });
     // ODT_SAT => XYZ => D60_2_D65 => sRGB
-    static const auto ACESOutputMat = transpose(mat<T, 3>{
+    static const auto ACESOutputMat = transpose(mat<T, 3, 3>{
         {1.60475, -0.53108, -0.07367},
         {-0.10208, 1.10813, -0.00605},
         {-0.00327, -0.07276, 1.07602},
@@ -478,7 +288,7 @@ inline vec3f tonemap_filmic(const vec3f& hdr_, bool accurate_fit = false) {
 
 template <typename T>
 inline vec<T, 3> tonemap(
-    const vec<T, 3>& hdr, T exposure, bool filmic, bool srgb) {
+    const vec<T, 3>& hdr, T exposure, bool filmic, bool srgb = true) {
   auto rgb = hdr;
   if (exposure != 0) rgb *= exp2(exposure);
   if (filmic) rgb = tonemap_filmic(rgb);
@@ -487,9 +297,9 @@ inline vec<T, 3> tonemap(
 }
 template <typename T>
 inline vec<T, 4> tonemap(
-    const vec<T, 4>& hdr, T exposure, bool filmic, bool srgb) {
+    const vec<T, 4>& hdr, T exposure, bool filmic, bool srgb = true) {
   auto ldr = tonemap(xyz(hdr), exposure, filmic, srgb);
-  return {ldr.x, ldr.y, ldr.z, hdr.w};
+  return {ldr, hdr.w};
 }
 
 // Composite colors
@@ -505,7 +315,7 @@ inline vec<T, 4> composite(const vec<T, 4>& a, const vec<T, 4>& b) {
 template <typename T>
 inline vec<T, 3> rgb_to_xyz(const vec<T, 3>& rgb) {
   // https://en.wikipedia.org/wiki/SRGB
-  static const auto m = mat<T, 3>{
+  static const auto m = mat<T, 3, 3>{
       {(T)0.4124, (T)0.2126, (T)0.0193},
       {(T)0.3576, (T)0.7152, (T)0.1192},
       {(T)0.1805, (T)0.0722, (T)0.9504},
@@ -515,7 +325,7 @@ inline vec<T, 3> rgb_to_xyz(const vec<T, 3>& rgb) {
 template <typename T>
 inline vec<T, 3> xyz_to_rgb(const vec<T, 3>& xyz) {
   // https://en.wikipedia.org/wiki/SRGB
-  static const auto m = mat<T, 3>{
+  static const auto m = mat<T, 3, 3>{
       {(T) + 3.2406, (T)-0.9689, (T) + 0.0557},
       {(T)-1.5372, (T) + 1.8758, (T)-0.2040},
       {(T)-0.4986, (T) + 0.0415, (T) + 1.0570},
@@ -609,6 +419,13 @@ inline vec<T, 3> blackbody_to_rgb(T temperature) {
   return xyz_to_rgb(xyY_to_xyz(vec<T, 3>{x, y, 1}));
 }
 
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// COLOR MAPS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
 template <typename T>
 inline vec<T, 3> colormap_viridis(T t) {
   // https://www.shadertoy.com/view/WlfXRN
@@ -689,6 +506,9 @@ inline vec<T, 3> colormap_inferno(T t) {
   return c0 + t * (c1 + t * (c2 + t * (c3 + t * (c4 + t * (c5 + t * c6)))));
 }
 
+// Colormap type
+enum struct colormap_type { viridis, plasma, magma, inferno };
+
 // Colormaps from {0,1] to color
 template <typename T>
 inline vec<T, 3> colormap(T t, colormap_type type) {
@@ -708,6 +528,29 @@ inline vec<T, 3> colormap(T t, colormap_type type) {
 // COLOR GRADING
 // -----------------------------------------------------------------------------
 namespace yocto {
+
+// minimal color grading
+template <typename T = float>
+struct colorgrade_gparams {
+  T         exposure         = 0;
+  vec<T, 3> tint             = {1, 1, 1};
+  T         lincontrast      = 0.5;
+  T         logcontrast      = 0.5;
+  T         linsaturation    = 0.5;
+  bool      filmic           = false;
+  bool      srgb             = true;
+  T         contrast         = 0.5;
+  T         saturation       = 0.5;
+  T         shadows          = 0.5;
+  T         midtones         = 0.5;
+  T         highlights       = 0.5;
+  vec<T, 3> shadows_color    = {1, 1, 1};
+  vec<T, 3> midtones_color   = {1, 1, 1};
+  vec<T, 3> highlights_color = {1, 1, 1};
+};
+
+// Alias
+using colorgrade_params = colorgrade_gparams<float>;
 
 template <typename T>
 inline vec<T, 3> colorgrade(
@@ -743,13 +586,65 @@ inline vec<T, 3> colorgrade(
   }
   return rgb;
 }
-inline vec4f colorgrade(
-    const vec4f& rgba, bool linear, const colorgrade_params& params) {
+
+template <typename T>
+inline vec<T, 4> colorgrade(
+    const vec<T, 4>& rgba, bool linear, const colorgrade_params& params) {
   auto graded = colorgrade(xyz(rgba), linear, params);
-  return {graded.x, graded.y, graded.z, rgba.w};
+  return {graded, rgba.w};
 }
 
 }  // namespace yocto
+
+#ifndef __CUDACC__
+
+// -----------------------------------------------------------------------------
+// COLOR SPACE CONVERSION
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// RGB color spaces
+enum struct color_space {
+  rgb,         // default linear space (srgb linear)
+  srgb,        // srgb color space (non-linear)
+  adobe,       // Adobe rgb color space (non-linear)
+  prophoto,    // ProPhoto Kodak rgb color space (non-linear)
+  rec709,      // hdtv color space (non-linear)
+  rec2020,     // uhtv color space (non-linear)
+  rec2100pq,   // hdr color space with perceptual quantizer (non-linear)
+  rec2100hlg,  // hdr color space with hybrid log gamma (non-linear)
+  aces2065,    // ACES storage format (linear)
+  acescg,      // ACES CG computation (linear)
+  acescc,      // ACES color correction (non-linear)
+  acescct,     // ACES color correction 2 (non-linear)
+  p3dci,       // P3 DCI (non-linear)
+  p3d60,       // P3 variation for D60 (non-linear)
+  p3d65,       // P3 variation for D65 (non-linear)
+  p3display,   // Apple display P3
+};
+
+// Conversion between rgb color spaces
+template <typename T>
+inline vec<T, 3> color_to_xyz(const vec<T, 3>& col, color_space from);
+template <typename T>
+inline vec<T, 3> xyz_to_color(const vec<T, 3>& xyz, color_space to);
+
+// Conversion between rgb color spaces
+template <typename T>
+inline vec<T, 3> convert_color(
+    const vec<T, 3>& col, color_space from, color_space to);
+
+}  // namespace yocto
+
+#endif
+
+// -----------------------------------------------------------------------------
+//
+//
+// IMPLEMENTATION
+//
+//
+// -----------------------------------------------------------------------------
 
 #ifndef __CUDACC__
 
