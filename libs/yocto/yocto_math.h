@@ -56,6 +56,17 @@ using std::pair;
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// CUDA SUPPORT
+// -----------------------------------------------------------------------------
+#ifndef kernel
+#ifdef __CUDACC__
+#define kernel __device__
+#else
+#define kernel
+#endif
+#endif
+
+// -----------------------------------------------------------------------------
 // MATH CONSTANTS AND FUNCTIONS
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -89,88 +100,92 @@ constexpr auto num_eps = std::numeric_limits<T>::epsilon();
 using std::swap;
 
 template <typename T>
-constexpr T abs(T a) {
+constexpr kernel T abs(T a) {
   return a < 0 ? -a : a;
 }
 template <typename T1, typename T2, typename T = common_t<T1, T2>>
-constexpr T min(T1 a, T2 b) {
+constexpr kernel T min(T1 a, T2 b) {
   return (a < b) ? (T)a : (T)b;
 }
 template <typename T1, typename T2, typename T = common_t<T1, T2>>
-constexpr T max(T1 a, T2 b) {
+constexpr kernel T max(T1 a, T2 b) {
   return (a > b) ? (T)a : (T)b;
 }
 template <typename T1, typename T2, typename T3,
     typename T = common_t<T1, T2, T3>>
-constexpr T clamp(T1 a, T2 min_, T3 max_) {
+constexpr kernel T clamp(T1 a, T2 min_, T3 max_) {
   return min(max(a, min_), max_);
 }
 template <typename T>
-constexpr T sign(T a) {
+constexpr kernel T sign(T a) {
   return a < 0 ? (T)-1 : (T)1;
 }
 template <typename T>
-constexpr T sqr(T a) {
+constexpr kernel T sqr(T a) {
   return a * a;
 }
 template <typename T>
-constexpr T sqrt(T a) {
+constexpr kernel T sqrt(T a) {
   return std::sqrt(a);
 }
 template <typename T>
-constexpr T sin(T a) {
+constexpr kernel T sin(T a) {
   return std::sin(a);
 }
 template <typename T>
-constexpr T cos(T a) {
+constexpr kernel T cos(T a) {
   return std::cos(a);
 }
 template <typename T>
-constexpr T tan(T a) {
+constexpr kernel T tan(T a) {
   return std::tan(a);
 }
 template <typename T>
-constexpr T asin(T a) {
+constexpr kernel T asin(T a) {
   return std::asin(a);
 }
 template <typename T>
-constexpr T acos(T a) {
+constexpr kernel T acos(T a) {
   return std::acos(a);
 }
 template <typename T>
-constexpr T atan(T a) {
+constexpr kernel T atan(T a) {
   return std::atan(a);
 }
 template <typename T>
-constexpr T log(T a) {
+constexpr kernel T log(T a) {
   return std::log(a);
 }
 template <typename T>
-constexpr T exp(T a) {
+constexpr kernel T exp(T a) {
   return std::exp(a);
 }
 template <typename T>
-constexpr T log2(T a) {
+constexpr kernel T log2(T a) {
   return std::log2(a);
 }
 template <typename T>
-constexpr T exp2(T a) {
+constexpr kernel T exp2(T a) {
   return std::exp2(a);
 }
 template <typename T1, typename T2, typename T = common_t<T1, T2>>
-constexpr T pow(T1 a, T2 b) {
+constexpr kernel T pow(T1 a, T2 b) {
   return std::pow((T)a, (T)b);
 }
 template <typename T>
-constexpr bool isfinite(T a) {
+constexpr kernel bool isfinite(T a) {
+#ifndef __CUDACC__
   return std::isfinite(a);
+#else
+  return ::isfinite(a);
+#endif
 }
 template <typename T1, typename T2, typename T = common_t<T1, T2>>
-constexpr T atan2(T1 a, T2 b) {
+constexpr kernel T atan2(T1 a, T2 b) {
   return std::atan2((T)a, (T)b);
 }
 template <typename T, typename T1>
-constexpr T fmod(T a, T1 b) {
+constexpr kernel T fmod(T a, T1 b) {
   return std::fmod(a, b);
 }
 // template <typename T>
@@ -178,38 +193,38 @@ constexpr T fmod(T a, T1 b) {
 //   std::swap(a, b);
 // }
 template <typename T>
-constexpr T radians(T a) {
+constexpr kernel T radians(T a) {
   return a * (T)pi / 180;
 }
 template <typename T>
-constexpr T degrees(T a) {
+constexpr kernel T degrees(T a) {
   return a * 180 / (T)pi;
 }
 template <typename T1, typename T2, typename T3, typename T = common_t<T1, T2>>
-constexpr T lerp(T1 a, T2 b, T3 u) {
+constexpr kernel T lerp(T1 a, T2 b, T3 u) {
   return a * (1 - u) + b * u;
 }
 template <typename T1, typename T2, typename T = common_t<T1, T2>>
-constexpr T step(T1 a, T2 u) {
+constexpr kernel T step(T1 a, T2 u) {
   return u < a ? (T)0 : (T)1;
 }
 template <typename T1, typename T2, typename T3,
     typename T = common_t<T1, T2, T3>>
-constexpr T smoothstep(T1 a, T2 b, T3 u) {
+constexpr kernel T smoothstep(T1 a, T2 b, T3 u) {
   auto t = clamp((u - a) / (b - a), (T)0, (T)1);
   return t * t * (3 - 2 * t);
 }
 template <typename T1, typename T2, typename T = common_t<T1, T2>>
-constexpr T bias(T1 a, T2 bias) {
+constexpr kernel T bias(T1 a, T2 bias) {
   return a / ((1 / bias - 2) * (1 - a) + 1);
 }
 template <typename T1, typename T2, typename T = common_t<T1, T2>>
-constexpr T gain(T1 a, T2 gain) {
+constexpr kernel T gain(T1 a, T2 gain) {
   return (a < (T)0.5) ? bias(a * 2, gain) / 2
                       : bias(a * 2 - 1, 1 - gain) / 2 + (T)0.5;
 }
 template <typename I>
-constexpr I pow2(I a) {
+constexpr kernel I pow2(I a) {
   return 1 << a;
 }
 
@@ -230,22 +245,22 @@ struct vec<T, 1> {
     T x;
   };  // clang-format on
 
-  constexpr vec() : x{0} {}
-  constexpr vec(T x_) : x{x_} {}
+  constexpr kernel vec() : x{0} {}
+  constexpr kernel vec(T x_) : x{x_} {}
 
   template <typename U>
-  constexpr explicit(!std::is_convertible_v<U, T>) vec(vec<U, 1> v)
+  constexpr kernel explicit(!std::is_convertible_v<U, T>) vec(vec<U, 1> v)
       : x{(T)v.x} {}
   template <typename U>
-  constexpr explicit(!std::is_convertible_v<T, U>) operator vec<U, 1>() {
+  constexpr kernel explicit(!std::is_convertible_v<T, U>) operator vec<U, 1>() {
     return {(U)x};
   }
 
-  constexpr vec(array<T, 1> v) : x{v[0]} {}
-  constexpr operator array<T, 1>() { return {x}; }
+  constexpr kernel vec(array<T, 1> v) : x{v[0]} {}
+  constexpr kernel operator array<T, 1>() { return {x}; }
 
-  constexpr T&       operator[](size_t i) { return d[i]; }
-  constexpr const T& operator[](size_t i) const { return d[i]; }
+  constexpr kernel T&       operator[](size_t i) { return d[i]; }
+  constexpr kernel const T& operator[](size_t i) const { return d[i]; }
 };
 
 template <typename T>
@@ -255,23 +270,23 @@ struct vec<T, 2> {
     struct { T x, y; };
   };  // clang-format on
 
-  constexpr vec() : x{0}, y{0} {}
-  constexpr explicit vec(T v_) : x{v_}, y{v_} {}
-  constexpr vec(T x_, T y_) : x{x_}, y{y_} {}
+  constexpr kernel vec() : x{0}, y{0} {}
+  constexpr kernel explicit vec(T v_) : x{v_}, y{v_} {}
+  constexpr kernel vec(T x_, T y_) : x{x_}, y{y_} {}
 
   template <typename U>
-  constexpr explicit(!std::is_convertible_v<U, T>) vec(vec<U, 2> v)
+  constexpr kernel explicit(!std::is_convertible_v<U, T>) vec(vec<U, 2> v)
       : x{(T)v.x}, y{(T)v.y} {}
   template <typename U>
-  constexpr explicit(!std::is_convertible_v<T, U>) operator vec<U, 2>() {
+  constexpr kernel explicit(!std::is_convertible_v<T, U>) operator vec<U, 2>() {
     return {(U)x, (U)y};
   }
 
-  constexpr vec(array<T, 2> v) : x{v[0]}, y{v[1]} {}
-  constexpr operator array<T, 2>() { return {x, y}; }
+  constexpr kernel vec(array<T, 2> v) : x{v[0]}, y{v[1]} {}
+  constexpr kernel operator array<T, 2>() { return {x, y}; }
 
-  constexpr T&       operator[](size_t i) { return d[i]; }
-  constexpr const T& operator[](size_t i) const { return d[i]; }
+  constexpr kernel T&       operator[](size_t i) { return d[i]; }
+  constexpr kernel const T& operator[](size_t i) const { return d[i]; }
 };
 
 template <typename T>
@@ -281,23 +296,23 @@ struct vec<T, 3> {
     struct { T x, y, z; };
   };  // clang-format on
 
-  constexpr vec() : x{0}, y{0}, z{0} {}
-  constexpr explicit vec(T v_) : x{v_}, y{v_}, z{v_} {}
-  constexpr vec(T x_, T y_, T z_) : x{x_}, y{y_}, z{z_} {}
-  constexpr vec(vec<T, 2> xy_, T z_) : x{xy_.x}, y{xy_.y}, z{z_} {}
+  constexpr kernel vec() : x{0}, y{0}, z{0} {}
+  constexpr kernel explicit vec(T v_) : x{v_}, y{v_}, z{v_} {}
+  constexpr kernel vec(T x_, T y_, T z_) : x{x_}, y{y_}, z{z_} {}
+  constexpr kernel vec(vec<T, 2> xy_, T z_) : x{xy_.x}, y{xy_.y}, z{z_} {}
 
   template <typename U>
-  constexpr explicit(!std::is_convertible_v<U, T>) vec(vec<U, 3> v)
+  constexpr kernel explicit(!std::is_convertible_v<U, T>) vec(vec<U, 3> v)
       : x{(T)v.x}, y{(T)v.y}, z{(T)v.z} {}
   template <typename U>
-  constexpr explicit(!std::is_convertible_v<T, U>) operator vec<U, 3>() {
+  constexpr kernel explicit(!std::is_convertible_v<T, U>) operator vec<U, 3>() {
     return {(U)x, (U)y, (U)z};
   }
-  constexpr vec(array<T, 3> v) : x{v[0]}, y{v[1]}, z{v[2]} {}
-  constexpr operator array<T, 3>() { return {x, y, z}; }
+  constexpr kernel vec(array<T, 3> v) : x{v[0]}, y{v[1]}, z{v[2]} {}
+  constexpr kernel operator array<T, 3>() { return {x, y, z}; }
 
-  constexpr T&       operator[](size_t i) { return d[i]; }
-  constexpr const T& operator[](size_t i) const { return d[i]; }
+  constexpr kernel T&       operator[](size_t i) { return d[i]; }
+  constexpr kernel const T& operator[](size_t i) const { return d[i]; }
 };
 
 template <typename T>
@@ -307,28 +322,25 @@ struct vec<T, 4> {
     struct { T x, y, z, w; };
   };  // clang-format on
 
-  constexpr vec() : x{0}, y{0}, z{0}, w{0} {}
-  constexpr explicit vec(T v_) : x{v_}, y{v_}, z{v_}, w{v_} {}
-  constexpr vec(T x_, T y_, T z_, T w_) : x{x_}, y{y_}, z{z_}, w{w_} {}
-  constexpr vec(vec<T, 3> xyz_, T w_) : x{xyz_.x}, y{xyz_.y}, z{xyz_.z}, w{w_} {}
+  constexpr kernel vec() : x{0}, y{0}, z{0}, w{0} {}
+  constexpr kernel explicit vec(T v_) : x{v_}, y{v_}, z{v_}, w{v_} {}
+  constexpr kernel vec(T x_, T y_, T z_, T w_) : x{x_}, y{y_}, z{z_}, w{w_} {}
+  constexpr kernel vec(vec<T, 3> xyz_, T w_)
+      : x{xyz_.x}, y{xyz_.y}, z{xyz_.z}, w{w_} {}
 
   template <typename U>
-  constexpr explicit(!std::is_convertible_v<U, T>) vec(vec<U, 4> v)
+  constexpr kernel explicit(!std::is_convertible_v<U, T>) vec(vec<U, 4> v)
       : x{(T)v.x}, y{(T)v.y}, z{(T)v.z}, w{(T)v.w} {}
   template <typename U>
-  constexpr explicit(!std::is_convertible_v<T, U>) operator vec<U, 4>() {
+  constexpr kernel explicit(!std::is_convertible_v<T, U>) operator vec<U, 4>() {
     return {(U)x, (U)y, (U)z, (U)w};
   }
-  constexpr vec(array<T, 4> v) : x{v[0]}, y{v[1]}, z{v[2]}, w{v[3]} {}
-  constexpr operator array<T, 4>() { return {x, y, z, w}; }
+  constexpr kernel vec(array<T, 4> v) : x{v[0]}, y{v[1]}, z{v[2]}, w{v[3]} {}
+  constexpr kernel operator array<T, 4>() { return {x, y, z, w}; }
 
-  constexpr T&       operator[](size_t i) { return d[i]; }
-  constexpr const T& operator[](size_t i) const { return d[i]; }
+  constexpr kernel T&       operator[](size_t i) { return d[i]; }
+  constexpr kernel const T& operator[](size_t i) const { return d[i]; }
 };
-
-// Vector deduction guides
-template <typename... Ts>
-vec(Ts...) -> vec<std::common_type_t<Ts...>, sizeof...(Ts)>;
 
 // Vector aliases
 using vec1f = vec<float, 1>;
@@ -360,121 +372,67 @@ constexpr auto one = vec<T, N>{1};
 
 // Element access
 template <typename T>
-constexpr vec<T, 3> xyz(const vec<T, 4>& a) {
+constexpr kernel vec<T, 3> xyz(const vec<T, 4>& a) {
   return {a.x, a.y, a.z};
 }
 
 // Vector sequence operations.
 template <typename T, size_t N>
-constexpr bool empty(const vec<T, N>& a) {
+constexpr kernel bool empty(const vec<T, N>& a) {
   return false;
 }
 template <typename T, size_t N>
-constexpr size_t size(const vec<T, N>& a) {
+constexpr kernel size_t size(const vec<T, N>& a) {
   return N;
 }
 template <typename T, size_t N>
-constexpr ptrdiff_t ssize(const vec<T, N>& a) {
+constexpr kernel ptrdiff_t ssize(const vec<T, N>& a) {
   return (ptrdiff_t)N;
 }
 template <typename T, size_t N>
-constexpr const T* begin(const vec<T, N>& a) {
+constexpr kernel const T* begin(const vec<T, N>& a) {
   return &a.x;
 }
 template <typename T, size_t N>
-constexpr const T* end(const vec<T, N>& a) {
+constexpr kernel const T* end(const vec<T, N>& a) {
   return &a.x + N;
 }
 template <typename T, size_t N>
-constexpr T* begin(vec<T, N>& a) {
+constexpr kernel T* begin(vec<T, N>& a) {
   return &a.x;
 }
 template <typename T, size_t N>
-constexpr T* end(vec<T, N>& a) {
+constexpr kernel T* end(vec<T, N>& a) {
   return &a.x + N;
 }
 template <typename T, size_t N>
-constexpr const T* data(const vec<T, N>& a) {
+constexpr kernel const T* data(const vec<T, N>& a) {
   return &a.x;
 }
 template <typename T, size_t N>
-constexpr T* data(vec<T, N>& a) {
+constexpr kernel T* data(vec<T, N>& a) {
   return &a.x;
 }
 template <size_t I, typename T, size_t N>
-constexpr T& get(vec<T, N>& a) noexcept {
+constexpr kernel T& get(vec<T, N>& a) noexcept {
   return a.d[I];
 }
 template <size_t I, typename T, size_t N>
-constexpr T&& get(vec<T, N>&& a) noexcept {
+constexpr kernel T&& get(vec<T, N>&& a) noexcept {
   return (T &&)(a.d[I]);
 }
 template <size_t I, typename T, size_t N>
-constexpr const T& get(const vec<T, N>& a) noexcept {
+constexpr kernel const T& get(const vec<T, N>& a) noexcept {
   return a.d[I];
 }
 template <size_t I, typename T, size_t N>
-constexpr const T&& get(const vec<T, N>&& a) noexcept {
+constexpr kernel const T&& get(const vec<T, N>&& a) noexcept {
   return (const T&&)(a.d[I]);
-}
-
-// Broadcast functions
-template <typename T1, size_t N, typename Func,
-    typename T = std::invoke_result_t<Func, T1>>
-constexpr vec<T, N> map(const vec<T1, N>& a, Func&& func) {
-  if constexpr (N == 1) {
-    return {func(a.x)};
-  } else if constexpr (N == 2) {
-    return {func(a.x), func(a.y)};
-  } else if constexpr (N == 3) {
-    return {func(a.x), func(a.y), func(a.z)};
-  } else if constexpr (N == 4) {
-    return {func(a.x), func(a.y), func(a.z), func(a.w)};
-  }
-}
-template <typename T1, typename T2, size_t N, typename Func,
-    typename T = std::invoke_result_t<Func, T1, T2>>
-constexpr vec<T, N> map(const vec<T1, N>& a, const vec<T2, N>& b, Func&& func) {
-  if constexpr (N == 1) {
-    return {func(a.x, b.x)};
-  } else if constexpr (N == 2) {
-    return {func(a.x, b.x), func(a.y, b.y)};
-  } else if constexpr (N == 3) {
-    return {func(a.x, b.x), func(a.x, b.y), func(a.z, b.z)};
-  } else if constexpr (N == 4) {
-    return {func(a.x, b.x), func(a.x, b.y), func(a.z, b.z), func(a.w, b.w)};
-  }
-}
-template <typename T1, typename T2, size_t N, typename Func,
-    typename T = std::invoke_result_t<Func, T1, T2>>
-constexpr vec<T, N> map(T1 a, const vec<T2, N>& b, Func&& func) {
-  if constexpr (N == 1) {
-    return {func(a, b.x)};
-  } else if constexpr (N == 2) {
-    return {func(a, b.x), func(a.y, b.y)};
-  } else if constexpr (N == 3) {
-    return {func(a, b.x), func(a.x, b.y), func(a.z, b.z)};
-  } else if constexpr (N == 4) {
-    return {func(a, b.x), func(a.x, b.y), func(a.z, b.z), func(a.w, b.w)};
-  }
-}
-template <typename T1, typename T2, size_t N, typename Func,
-    typename T = std::invoke_result_t<Func, T1, T2>>
-constexpr vec<T, N> map(const vec<T1, N>& a, T2 b, Func&& func) {
-  if constexpr (N == 1) {
-    return {func(a, b.x)};
-  } else if constexpr (N == 2) {
-    return {func(a, b.x), func(a.y, b.y)};
-  } else if constexpr (N == 3) {
-    return {func(a, b.x), func(a.x, b.y), func(a.z, b.z)};
-  } else if constexpr (N == 4) {
-    return {func(a, b.x), func(a.x, b.y), func(a.z, b.z), func(a.w, b.w)};
-  }
 }
 
 // Vector comparison operations.
 template <typename T, size_t N>
-constexpr bool operator==(const vec<T, N>& a, const vec<T, N>& b) {
+constexpr kernel bool operator==(const vec<T, N>& a, const vec<T, N>& b) {
   if constexpr (N == 1) {
     return a.x == b.x;
   } else if constexpr (N == 2) {
@@ -486,7 +444,7 @@ constexpr bool operator==(const vec<T, N>& a, const vec<T, N>& b) {
   }
 }
 template <typename T, size_t N>
-constexpr bool operator!=(const vec<T, N>& a, const vec<T, N>& b) {
+constexpr kernel bool operator!=(const vec<T, N>& a, const vec<T, N>& b) {
   if constexpr (N == 1) {
     return a.x != b.x;
   } else if constexpr (N == 2) {
@@ -500,11 +458,11 @@ constexpr bool operator!=(const vec<T, N>& a, const vec<T, N>& b) {
 
 // Vector operations.
 template <typename T, size_t N>
-constexpr vec<T, N> operator+(const vec<T, N>& a) {
+constexpr kernel vec<T, N> operator+(const vec<T, N>& a) {
   return a;
 }
 template <typename T, size_t N>
-constexpr vec<T, N> operator-(const vec<T, N>& a) {
+constexpr kernel vec<T, N> operator-(const vec<T, N>& a) {
   if constexpr (N == 1) {
     return {-a.x};
   } else if constexpr (N == 2) {
@@ -516,7 +474,7 @@ constexpr vec<T, N> operator-(const vec<T, N>& a) {
   }
 }
 template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
-constexpr vec<T, N> operator+(const vec<T1, N>& a, const vec<T2, N>& b) {
+constexpr kernel vec<T, N> operator+(const vec<T1, N>& a, const vec<T2, N>& b) {
   if constexpr (N == 1) {
     return {a.x + b.x};
   } else if constexpr (N == 2) {
@@ -528,7 +486,7 @@ constexpr vec<T, N> operator+(const vec<T1, N>& a, const vec<T2, N>& b) {
   }
 }
 template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
-constexpr vec<T, N> operator+(const vec<T1, N>& a, T2 b) {
+constexpr kernel vec<T, N> operator+(const vec<T1, N>& a, T2 b) {
   if constexpr (N == 1) {
     return {a.x + b};
   } else if constexpr (N == 2) {
@@ -540,7 +498,7 @@ constexpr vec<T, N> operator+(const vec<T1, N>& a, T2 b) {
   }
 }
 template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
-constexpr vec<T, N> operator+(T1 a, const vec<T2, N>& b) {
+constexpr kernel vec<T, N> operator+(T1 a, const vec<T2, N>& b) {
   if constexpr (N == 1) {
     return {a + b.x};
   } else if constexpr (N == 2) {
@@ -552,7 +510,7 @@ constexpr vec<T, N> operator+(T1 a, const vec<T2, N>& b) {
   }
 }
 template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
-constexpr vec<T, N> operator-(const vec<T1, N>& a, const vec<T2, N>& b) {
+constexpr kernel vec<T, N> operator-(const vec<T1, N>& a, const vec<T2, N>& b) {
   if constexpr (N == 1) {
     return {a.x - b.x};
   } else if constexpr (N == 2) {
@@ -564,7 +522,7 @@ constexpr vec<T, N> operator-(const vec<T1, N>& a, const vec<T2, N>& b) {
   }
 }
 template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
-constexpr vec<T, N> operator-(const vec<T1, N>& a, T2 b) {
+constexpr kernel vec<T, N> operator-(const vec<T1, N>& a, T2 b) {
   if constexpr (N == 1) {
     return {a.x - b};
   } else if constexpr (N == 2) {
@@ -576,7 +534,7 @@ constexpr vec<T, N> operator-(const vec<T1, N>& a, T2 b) {
   }
 }
 template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
-constexpr vec<T, N> operator-(T1 a, const vec<T2, N>& b) {
+constexpr kernel vec<T, N> operator-(T1 a, const vec<T2, N>& b) {
   if constexpr (N == 1) {
     return {a - b.x};
   } else if constexpr (N == 2) {
@@ -588,7 +546,7 @@ constexpr vec<T, N> operator-(T1 a, const vec<T2, N>& b) {
   }
 }
 template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
-constexpr vec<T, N> operator*(const vec<T1, N>& a, const vec<T2, N>& b) {
+constexpr kernel vec<T, N> operator*(const vec<T1, N>& a, const vec<T2, N>& b) {
   if constexpr (N == 1) {
     return {a.x * b.x};
   } else if constexpr (N == 2) {
@@ -600,7 +558,7 @@ constexpr vec<T, N> operator*(const vec<T1, N>& a, const vec<T2, N>& b) {
   }
 }
 template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
-constexpr vec<T, N> operator*(const vec<T1, N>& a, T2 b) {
+constexpr kernel vec<T, N> operator*(const vec<T1, N>& a, T2 b) {
   if constexpr (N == 1) {
     return {a.x * b};
   } else if constexpr (N == 2) {
@@ -612,7 +570,7 @@ constexpr vec<T, N> operator*(const vec<T1, N>& a, T2 b) {
   }
 }
 template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
-constexpr vec<T, N> operator*(T1 a, const vec<T2, N>& b) {
+constexpr kernel vec<T, N> operator*(T1 a, const vec<T2, N>& b) {
   if constexpr (N == 1) {
     return {a * b.x};
   } else if constexpr (N == 2) {
@@ -624,7 +582,7 @@ constexpr vec<T, N> operator*(T1 a, const vec<T2, N>& b) {
   }
 }
 template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
-constexpr vec<T, N> operator/(const vec<T1, N>& a, const vec<T2, N>& b) {
+constexpr kernel vec<T, N> operator/(const vec<T1, N>& a, const vec<T2, N>& b) {
   if constexpr (N == 1) {
     return {a.x / b.x};
   } else if constexpr (N == 2) {
@@ -636,7 +594,7 @@ constexpr vec<T, N> operator/(const vec<T1, N>& a, const vec<T2, N>& b) {
   }
 }
 template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
-constexpr vec<T, N> operator/(const vec<T1, N>& a, T2 b) {
+constexpr kernel vec<T, N> operator/(const vec<T1, N>& a, T2 b) {
   if constexpr (N == 1) {
     return {a.x / b};
   } else if constexpr (N == 2) {
@@ -648,7 +606,7 @@ constexpr vec<T, N> operator/(const vec<T1, N>& a, T2 b) {
   }
 }
 template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
-constexpr vec<T, N> operator/(T1 a, const vec<T2, N>& b) {
+constexpr kernel vec<T, N> operator/(T1 a, const vec<T2, N>& b) {
   if constexpr (N == 1) {
     return {a / b.x};
   } else if constexpr (N == 2) {
@@ -662,41 +620,41 @@ constexpr vec<T, N> operator/(T1 a, const vec<T2, N>& b) {
 
 // Vector assignments
 template <typename T, typename T1, size_t N>
-constexpr vec<T, N>& operator+=(vec<T, N>& a, const vec<T1, N>& b) {
+constexpr kernel vec<T, N>& operator+=(vec<T, N>& a, const vec<T1, N>& b) {
   return a = a + b;
 }
 template <typename T, typename T1, size_t N>
-constexpr vec<T, N>& operator+=(vec<T, N>& a, T1 b) {
+constexpr kernel vec<T, N>& operator+=(vec<T, N>& a, T1 b) {
   return a = a + b;
 }
 template <typename T, typename T1, size_t N>
-constexpr vec<T, N>& operator-=(vec<T, N>& a, const vec<T1, N>& b) {
+constexpr kernel vec<T, N>& operator-=(vec<T, N>& a, const vec<T1, N>& b) {
   return a = a - b;
 }
 template <typename T, typename T1, size_t N>
-constexpr vec<T, N>& operator-=(vec<T, N>& a, T1 b) {
+constexpr kernel vec<T, N>& operator-=(vec<T, N>& a, T1 b) {
   return a = a - b;
 }
 template <typename T, typename T1, size_t N>
-constexpr vec<T, N>& operator*=(vec<T, N>& a, const vec<T1, N>& b) {
+constexpr kernel vec<T, N>& operator*=(vec<T, N>& a, const vec<T1, N>& b) {
   return a = a * b;
 }
 template <typename T, typename T1, size_t N>
-constexpr vec<T, N>& operator*=(vec<T, N>& a, T1 b) {
+constexpr kernel vec<T, N>& operator*=(vec<T, N>& a, T1 b) {
   return a = a * b;
 }
 template <typename T, typename T1, size_t N>
-constexpr vec<T, N>& operator/=(vec<T, N>& a, const vec<T1, N>& b) {
+constexpr kernel vec<T, N>& operator/=(vec<T, N>& a, const vec<T1, N>& b) {
   return a = a / b;
 }
 template <typename T, typename T1, size_t N>
-constexpr vec<T, N>& operator/=(vec<T, N>& a, T1 b) {
+constexpr kernel vec<T, N>& operator/=(vec<T, N>& a, T1 b) {
   return a = a / b;
 }
 
 // Vector products and lengths.
 template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
-constexpr T dot(const vec<T1, N>& a, const vec<T2, N>& b) {
+constexpr kernel T dot(const vec<T1, N>& a, const vec<T2, N>& b) {
   if constexpr (N == 1) {
     return a.x * b.x;
   } else if constexpr (N == 2) {
@@ -708,38 +666,39 @@ constexpr T dot(const vec<T1, N>& a, const vec<T2, N>& b) {
   }
 }
 template <typename T1, typename T2, typename T = common_t<T1, T2>>
-constexpr T cross(const vec<T1, 2>& a, const vec<T2, 2>& b) {
+constexpr kernel T cross(const vec<T1, 2>& a, const vec<T2, 2>& b) {
   return a.x * b.y - a.y * b.x;
 }
 template <typename T1, typename T2, typename T = common_t<T1, T2>>
-constexpr vec<T, 3> cross(const vec<T1, 3>& a, const vec<T2, 3>& b) {
+constexpr kernel vec<T, 3> cross(const vec<T1, 3>& a, const vec<T2, 3>& b) {
   return {a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x};
 }
 template <typename T1, typename T2, typename T = common_t<T1, T2>>
-constexpr T angle(const vec<T1, 3>& a, const vec<T2, 3>& b) {
+constexpr kernel T angle(const vec<T1, 3>& a, const vec<T2, 3>& b) {
   return acos(clamp(dot(normalize(a), normalize(b)), (T)-1, (T)1));
 }
 
 // Orthogonal vectors.
 template <typename T>
-constexpr vec<T, 3> orthogonal(const vec<T, 3>& v) {
+constexpr kernel vec<T, 3> orthogonal(const vec<T, 3>& v) {
   // http://lolengine.net/blog/2013/09/21/picking-orthogonal-vector-combing-coconuts)
   return abs(v.x) > abs(v.z) ? vec<T, 3>{-v.y, v.x, 0}
                              : vec<T, 3>{0, -v.z, v.y};
 }
 template <typename T1, typename T2, typename T = common_t<T1, T2>>
-constexpr vec<T, 3> orthonormalize(const vec<T1, 3>& a, const vec<T2, 3>& b) {
+constexpr kernel vec<T, 3> orthonormalize(
+    const vec<T1, 3>& a, const vec<T2, 3>& b) {
   return normalize(a - b * dot(a, b));
 }
 
 // Reflected and refracted vector.
 template <typename T1, typename T2, typename T = common_t<T1, T2>>
-constexpr vec<T, 3> reflect(const vec<T1, 3>& w, const vec<T2, 3>& n) {
+constexpr kernel vec<T, 3> reflect(const vec<T1, 3>& w, const vec<T2, 3>& n) {
   return -w + 2 * dot(n, w) * n;
 }
 template <typename T1, typename T2, typename T3,
     typename T = common_t<T1, T2, T3>>
-constexpr vec<T, 3> refract(
+constexpr kernel vec<T, 3> refract(
     const vec<T1, 3>& w, const vec<T2, 3>& n, T3 inv_eta) {
   auto cosine = dot(n, w);
   auto k      = 1 + inv_eta * inv_eta * (cosine * cosine - 1);
@@ -748,43 +707,44 @@ constexpr vec<T, 3> refract(
 }
 
 template <typename T, size_t N>
-constexpr T length(const vec<T, N>& a) {
+constexpr kernel T length(const vec<T, N>& a) {
   return sqrt(dot(a, a));
 }
 template <typename T, size_t N>
-constexpr T length2(const vec<T, N>& a) {
+constexpr kernel T length2(const vec<T, N>& a) {
   return dot(a, a);
 }
 template <typename T, size_t N>
-[[deprecated]] constexpr T length_squared(const vec<T, N>& a) {
+[[deprecated]] constexpr kernel T length_squared(const vec<T, N>& a) {
   return dot(a, a);
 }
 template <typename T, size_t N>
-constexpr vec<T, N> normalize(const vec<T, N>& a) {
+constexpr kernel vec<T, N> normalize(const vec<T, N>& a) {
   auto l = length(a);
   return (l != 0) ? a / l : a;
 }
 template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
-constexpr T distance(const vec<T1, N>& a, const vec<T2, N>& b) {
+constexpr kernel T distance(const vec<T1, N>& a, const vec<T2, N>& b) {
   return length(a - b);
 }
 template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
-constexpr T distance2(const vec<T1, N>& a, const vec<T2, N>& b) {
+constexpr kernel T distance2(const vec<T1, N>& a, const vec<T2, N>& b) {
   return dot(a - b, a - b);
 }
 template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
-[[deprecated]] constexpr T distance_squared(
+[[deprecated]] constexpr kernel T distance_squared(
     const vec<T1, N>& a, const vec<T2, N>& b) {
   return dot(a - b, a - b);
 }
 template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
-constexpr T angle(const vec<T1, N>& a, const vec<T2, N>& b) {
+constexpr kernel T angle(const vec<T1, N>& a, const vec<T2, N>& b) {
   return acos(clamp(dot(normalize(a), normalize(b)), (T)-1, (T)1));
 }
 
 template <typename T1, typename T2, typename T3,
     typename T = common_t<T1, T2, T3>>
-constexpr vec<T, 4> slerp(const vec<T1, 4>& a, const vec<T2, 4>& b, T3 u) {
+constexpr kernel vec<T, 4> slerp(
+    const vec<T1, 4>& a, const vec<T2, 4>& b, T3 u) {
   // https://en.wikipedia.org/wiki/Slerp
   auto an = normalize(a), bn = normalize(b);
   auto d = dot(an, bn);
@@ -800,7 +760,7 @@ constexpr vec<T, 4> slerp(const vec<T1, 4>& a, const vec<T2, 4>& b, T3 u) {
 
 // Max element and clamp.
 template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
-constexpr vec<T, N> max(const vec<T1, N>& a, T2 b) {
+constexpr kernel vec<T, N> max(const vec<T1, N>& a, T2 b) {
   if constexpr (N == 1) {
     return {max(a.x, b)};
   } else if constexpr (N == 2) {
@@ -812,7 +772,7 @@ constexpr vec<T, N> max(const vec<T1, N>& a, T2 b) {
   }
 }
 template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
-constexpr vec<T, N> min(const vec<T1, N>& a, T2 b) {
+constexpr kernel vec<T, N> min(const vec<T1, N>& a, T2 b) {
   if constexpr (N == 1) {
     return {min(a.x, b)};
   } else if constexpr (N == 2) {
@@ -824,7 +784,7 @@ constexpr vec<T, N> min(const vec<T1, N>& a, T2 b) {
   }
 }
 template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
-constexpr vec<T, N> max(const vec<T1, N>& a, const vec<T2, N>& b) {
+constexpr kernel vec<T, N> max(const vec<T1, N>& a, const vec<T2, N>& b) {
   if constexpr (N == 1) {
     return {max(a.x, b.x)};
   } else if constexpr (N == 2) {
@@ -836,7 +796,7 @@ constexpr vec<T, N> max(const vec<T1, N>& a, const vec<T2, N>& b) {
   }
 }
 template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
-constexpr vec<T, N> min(const vec<T1, N>& a, const vec<T2, N>& b) {
+constexpr kernel vec<T, N> min(const vec<T1, N>& a, const vec<T2, N>& b) {
   if constexpr (N == 1) {
     return {min(a.x, b.x)};
   } else if constexpr (N == 2) {
@@ -849,7 +809,7 @@ constexpr vec<T, N> min(const vec<T1, N>& a, const vec<T2, N>& b) {
 }
 template <typename T1, typename T2, typename T3, size_t N,
     typename T = common_t<T1, T2, T3>>
-constexpr vec<T, N> clamp(const vec<T1, N>& x, T2 min, T3 max) {
+constexpr kernel vec<T, N> clamp(const vec<T1, N>& x, T2 min, T3 max) {
   if constexpr (N == 1) {
     return {clamp(x.x, min, max)};
   } else if constexpr (N == 2) {
@@ -863,7 +823,7 @@ constexpr vec<T, N> clamp(const vec<T1, N>& x, T2 min, T3 max) {
 }
 template <typename T1, typename T2, typename T3, size_t N,
     typename T = common_t<T1, T2, T3>>
-constexpr vec<T, N> clamp(
+constexpr kernel vec<T, N> clamp(
     const vec<T1, N>& x, const vec<T2, N>& min, const vec<T3, N>& max) {
   if constexpr (N == 1) {
     return {clamp(x.x, min.x, max.x)};
@@ -879,18 +839,19 @@ constexpr vec<T, N> clamp(
 }
 template <typename T1, typename T2, typename T3, size_t N,
     typename T = common_t<T1, T2, T3>>
-constexpr vec<T, N> lerp(const vec<T1, N>& a, const vec<T2, N>& b, T3 u) {
+constexpr kernel vec<T, N> lerp(
+    const vec<T1, N>& a, const vec<T2, N>& b, T3 u) {
   return a * (1 - u) + b * u;
 }
 template <typename T1, typename T2, typename T3, size_t N,
     typename T = common_t<T1, T2, T3>>
-constexpr vec<T, N> lerp(
+constexpr kernel vec<T, N> lerp(
     const vec<T1, N>& a, const vec<T2, N>& b, const vec<T3, N>& u) {
   return a * (1 - u) + b * u;
 }
 
 template <typename T, size_t N>
-constexpr T max(const vec<T, N>& a) {
+constexpr kernel T max(const vec<T, N>& a) {
   if constexpr (N == 1) {
     return a.x;
   } else if constexpr (N == 2) {
@@ -902,7 +863,7 @@ constexpr T max(const vec<T, N>& a) {
   }
 }
 template <typename T, size_t N>
-constexpr T min(const vec<T, N>& a) {
+constexpr kernel T min(const vec<T, N>& a) {
   if constexpr (N == 1) {
     return a.x;
   } else if constexpr (N == 2) {
@@ -914,7 +875,7 @@ constexpr T min(const vec<T, N>& a) {
   }
 }
 template <typename T, size_t N>
-constexpr size_t argmax(const vec<T, N>& a) {
+constexpr kernel size_t argmax(const vec<T, N>& a) {
   if constexpr (N == 1) {
     return 0;
   } else if constexpr (N == 2) {
@@ -922,11 +883,14 @@ constexpr size_t argmax(const vec<T, N>& a) {
   } else if constexpr (N == 3) {
     return a.x >= a.y ? (a.x >= a.z ? 0 : 2) : (a.y >= a.z ? 1 : 2);
   } else if constexpr (N == 4) {
-    if(a.w >= a.x && a.w >= a.y && a.w >= a.z) return 0; else return argmax(xyz(a));
+    if (a.w >= a.x && a.w >= a.y && a.w >= a.z)
+      return 0;
+    else
+      return argmax(xyz(a));
   }
 }
 template <typename T, size_t N>
-constexpr size_t argmin(const vec<T, N>& a) {
+constexpr kernel size_t argmin(const vec<T, N>& a) {
   if constexpr (N == 1) {
     return 0;
   } else if constexpr (N == 2) {
@@ -934,11 +898,14 @@ constexpr size_t argmin(const vec<T, N>& a) {
   } else if constexpr (N == 3) {
     return a.x <= a.y ? (a.x <= a.z ? 0 : 2) : (a.y <= a.z ? 1 : 2);
   } else if constexpr (N == 4) {
-    if(a.w <= a.x && a.w <= a.y && a.w <= a.z) return 0; else return argmin(xyz(a));
+    if (a.w <= a.x && a.w <= a.y && a.w <= a.z)
+      return 0;
+    else
+      return argmin(xyz(a));
   }
 }
 template <typename T, size_t N>
-constexpr T sum(const vec<T, N>& a) {
+constexpr kernel T sum(const vec<T, N>& a) {
   if constexpr (N == 1) {
     return a.x;
   } else if constexpr (N == 2) {
@@ -950,13 +917,13 @@ constexpr T sum(const vec<T, N>& a) {
   }
 }
 template <typename T, size_t N>
-constexpr T mean(const vec<T, N>& a) {
+constexpr kernel T mean(const vec<T, N>& a) {
   return sum(a) / N;
 }
 
 // Functions applied to vector elements
 template <typename T, size_t N>
-constexpr vec<T, N> abs(const vec<T, N>& a) {
+constexpr kernel vec<T, N> abs(const vec<T, N>& a) {
   if constexpr (N == 1) {
     return {abs(a.x)};
   } else if constexpr (N == 2) {
@@ -968,7 +935,7 @@ constexpr vec<T, N> abs(const vec<T, N>& a) {
   }
 }
 template <typename T, size_t N>
-constexpr vec<T, N> sqr(const vec<T, N>& a) {
+constexpr kernel vec<T, N> sqr(const vec<T, N>& a) {
   if constexpr (N == 1) {
     return {sqr(a.x)};
   } else if constexpr (N == 2) {
@@ -980,7 +947,7 @@ constexpr vec<T, N> sqr(const vec<T, N>& a) {
   }
 }
 template <typename T, size_t N>
-constexpr vec<T, N> sqrt(const vec<T, N>& a) {
+constexpr kernel vec<T, N> sqrt(const vec<T, N>& a) {
   if constexpr (N == 1) {
     return {sqrt(a.x)};
   } else if constexpr (N == 2) {
@@ -992,7 +959,7 @@ constexpr vec<T, N> sqrt(const vec<T, N>& a) {
   }
 }
 template <typename T, size_t N>
-constexpr vec<T, N> exp(const vec<T, N>& a) {
+constexpr kernel vec<T, N> exp(const vec<T, N>& a) {
   if constexpr (N == 1) {
     return {exp(a.x)};
   } else if constexpr (N == 2) {
@@ -1004,7 +971,7 @@ constexpr vec<T, N> exp(const vec<T, N>& a) {
   }
 }
 template <typename T, size_t N>
-constexpr vec<T, N> log(const vec<T, N>& a) {
+constexpr kernel vec<T, N> log(const vec<T, N>& a) {
   if constexpr (N == 1) {
     return {log(a.x)};
   } else if constexpr (N == 2) {
@@ -1016,7 +983,7 @@ constexpr vec<T, N> log(const vec<T, N>& a) {
   }
 }
 template <typename T, size_t N>
-constexpr vec<T, N> exp2(const vec<T, N>& a) {
+constexpr kernel vec<T, N> exp2(const vec<T, N>& a) {
   if constexpr (N == 1) {
     return {exp2(a.x)};
   } else if constexpr (N == 2) {
@@ -1028,7 +995,7 @@ constexpr vec<T, N> exp2(const vec<T, N>& a) {
   }
 }
 template <typename T, size_t N>
-constexpr vec<T, N> log2(const vec<T, N>& a) {
+constexpr kernel vec<T, N> log2(const vec<T, N>& a) {
   if constexpr (N == 1) {
     return {log2(a.x)};
   } else if constexpr (N == 2) {
@@ -1040,7 +1007,7 @@ constexpr vec<T, N> log2(const vec<T, N>& a) {
   }
 }
 template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
-constexpr vec<T, N> pow(const vec<T1, N>& a, T2 b) {
+constexpr kernel vec<T, N> pow(const vec<T1, N>& a, T2 b) {
   if constexpr (N == 1) {
     return {pow(a.x, b)};
   } else if constexpr (N == 2) {
@@ -1052,7 +1019,7 @@ constexpr vec<T, N> pow(const vec<T1, N>& a, T2 b) {
   }
 }
 template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
-constexpr vec<T, N> pow(const vec<T1, N>& a, const vec<T2, N>& b) {
+constexpr kernel vec<T, N> pow(const vec<T1, N>& a, const vec<T2, N>& b) {
   if constexpr (N == 1) {
     return {pow(a.x, b.x)};
   } else if constexpr (N == 2) {
@@ -1064,7 +1031,7 @@ constexpr vec<T, N> pow(const vec<T1, N>& a, const vec<T2, N>& b) {
   }
 }
 template <typename T, typename T1, size_t N>
-constexpr vec<T, N> fmod(const vec<T, N>& a, T1 b) {
+constexpr kernel vec<T, N> fmod(const vec<T, N>& a, T1 b) {
   if constexpr (N == 1) {
     return {fmod(a.x, b)};
   } else if constexpr (N == 2) {
@@ -1076,7 +1043,7 @@ constexpr vec<T, N> fmod(const vec<T, N>& a, T1 b) {
   }
 }
 template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
-constexpr vec<T, N> bias(const vec<T1, N>& a, T2 b) {
+constexpr kernel vec<T, N> bias(const vec<T1, N>& a, T2 b) {
   if constexpr (N == 1) {
     return {bias(a.x, b)};
   } else if constexpr (N == 2) {
@@ -1088,7 +1055,7 @@ constexpr vec<T, N> bias(const vec<T1, N>& a, T2 b) {
   }
 }
 template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
-constexpr vec<T, N> gain(const vec<T1, N>& a, T2 b) {
+constexpr kernel vec<T, N> gain(const vec<T1, N>& a, T2 b) {
   if constexpr (N == 1) {
     return {gain(a.x, b)};
   } else if constexpr (N == 2) {
@@ -1104,7 +1071,7 @@ constexpr vec<T, N> gain(const vec<T1, N>& a, T2 b) {
 //   std::swap(a, b);
 // }
 template <typename T, size_t N>
-constexpr bool isfinite(const vec<T, N>& a) {
+constexpr kernel bool isfinite(const vec<T, N>& a) {
   if constexpr (N == 1) {
     return isfinite(a.x);
   } else if constexpr (N == 2) {
@@ -1119,22 +1086,22 @@ constexpr bool isfinite(const vec<T, N>& a) {
 // Quaternion operations represented as xi + yj + zk + w
 // const auto identity_quat4f = vec4f{0, 0, 0, 1};
 template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
-constexpr vec<T, 4> quat_mul(const vec<T1, 4>& a, T2 b) {
+constexpr kernel vec<T, 4> quat_mul(const vec<T1, 4>& a, T2 b) {
   return {a.x * b, a.y * b, a.z * b, a.w * b};
 }
 template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
-constexpr vec<T, 4> quat_mul(const vec<T1, 4>& a, const vec<T2, 4>& b) {
+constexpr kernel vec<T, 4> quat_mul(const vec<T1, 4>& a, const vec<T2, 4>& b) {
   return {a.x * b.w + a.w * b.x + a.y * b.w - a.z * b.y,
       a.y * b.w + a.w * b.y + a.z * b.x - a.x * b.z,
       a.z * b.w + a.w * b.z + a.x * b.y - a.y * b.x,
       a.w * b.w - a.x * b.x - a.y * b.y - a.z * b.z};
 }
 template <typename T>
-constexpr vec<T, 4> quat_conjugate(const vec<T, 4>& a) {
+constexpr kernel vec<T, 4> quat_conjugate(const vec<T, 4>& a) {
   return {-a.x, -a.y, -a.z, a.w};
 }
 template <typename T>
-constexpr vec<T, 4> quat_inverse(const vec<T, 4>& a) {
+constexpr kernel vec<T, 4> quat_inverse(const vec<T, 4>& a) {
   return quat_conjugate(a) / dot(a, a);
 }
 
@@ -1175,11 +1142,13 @@ struct mat<T, N, 1> {
     vec<T, N> x;
   };  // clang-format on
 
-  constexpr mat() : x{1} {}
-  constexpr mat(const vec<T, N>& x_) : x{x_} {}
+  constexpr kernel mat() : x{1} {}
+  constexpr kernel mat(const vec<T, N>& x_) : x{x_} {}
 
-  constexpr vec<T, N>&       operator[](size_t i) { return cols[i]; }
-  constexpr const vec<T, N>& operator[](size_t i) const { return cols[i]; }
+  constexpr kernel vec<T, N>& operator[](size_t i) { return cols[i]; }
+  constexpr kernel const vec<T, N>& operator[](size_t i) const {
+    return cols[i];
+  }
 };
 
 // Small Fixed-size matrices stored in column major format.
@@ -1191,11 +1160,14 @@ struct mat<T, N, 2> {
     struct { vec<T, N> x, y; };
   };  // clang-format on
 
-  constexpr mat() : x{1, 0}, y{0, 1} {}
-  constexpr mat(const vec<T, N>& x_, const vec<T, N>& y_) : x{x_}, y{y_} {}
+  constexpr kernel mat() : x{1, 0}, y{0, 1} {}
+  constexpr kernel mat(const vec<T, N>& x_, const vec<T, N>& y_)
+      : x{x_}, y{y_} {}
 
-  constexpr vec<T, N>&       operator[](size_t i) { return cols[i]; }
-  constexpr const vec<T, N>& operator[](size_t i) const { return cols[i]; }
+  constexpr kernel vec<T, N>& operator[](size_t i) { return cols[i]; }
+  constexpr kernel const vec<T, N>& operator[](size_t i) const {
+    return cols[i];
+  }
 };
 
 // Small Fixed-size matrices stored in column major format.
@@ -1207,12 +1179,15 @@ struct mat<T, N, 3> {
     struct { vec<T, N> x, y, z; };
   };  // clang-format on
 
-  constexpr mat() : x{1, 0, 0}, y{0, 1, 0}, z{0, 0, 1} {}
-  constexpr mat(const vec<T, N>& x_, const vec<T, N>& y_, const vec<T, N>& z_)
+  constexpr kernel mat() : x{1, 0, 0}, y{0, 1, 0}, z{0, 0, 1} {}
+  constexpr kernel mat(
+      const vec<T, N>& x_, const vec<T, N>& y_, const vec<T, N>& z_)
       : x{x_}, y{y_}, z{z_} {}
 
-  constexpr vec<T, N>&       operator[](size_t i) { return cols[i]; }
-  constexpr const vec<T, N>& operator[](size_t i) const { return cols[i]; }
+  constexpr kernel vec<T, N>& operator[](size_t i) { return cols[i]; }
+  constexpr kernel const vec<T, N>& operator[](size_t i) const {
+    return cols[i];
+  }
 };
 
 // Small Fixed-size matrices stored in column major format.
@@ -1224,21 +1199,23 @@ struct mat<T, N, 4> {
     struct { vec<T, N> x, y, z, w; };
   };  // clang-format on
 
-  constexpr mat()
+  constexpr kernel mat()
       : x{1, 0, 0, 0}, y{0, 1, 0, 0}, z{0, 0, 1, 0}, w{0, 0, 0, 1} {}
-  constexpr mat(const vec<T, N>& x_, const vec<T, N>& y_, const vec<T, N>& z_,
-      const vec<T, N>& w_)
+  constexpr kernel mat(const vec<T, N>& x_, const vec<T, N>& y_,
+      const vec<T, N>& z_, const vec<T, N>& w_)
       : x{x_}, y{y_}, z{z_}, w{w_} {}
 
-  constexpr vec<T, N>&       operator[](size_t i) { return cols[i]; }
-  constexpr const vec<T, N>& operator[](size_t i) const { return cols[i]; }
+  constexpr kernel vec<T, N>& operator[](size_t i) { return cols[i]; }
+  constexpr kernel const vec<T, N>& operator[](size_t i) const {
+    return cols[i];
+  }
 };
 
 // Matrix aliases
-using mat1f = mat<float, 1, 1>;
-using mat2f = mat<float, 2, 2>;
-using mat3f = mat<float, 3, 3>;
-using mat4f = mat<float, 4, 4>;
+using mat1f   = mat<float, 1, 1>;
+using mat2f   = mat<float, 2, 2>;
+using mat3f   = mat<float, 3, 3>;
+using mat4f   = mat<float, 4, 4>;
 using mat1x1f = mat<float, 1, 1>;
 using mat2x2f = mat<float, 2, 2>;
 using mat3x3f = mat<float, 3, 3>;
@@ -1252,7 +1229,8 @@ constexpr auto identity4x4f = mat4x4f{
 
 // Matrix comparisons.
 template <typename T1, typename T2, size_t N, size_t M>
-inline bool operator==(const mat<T1, N, M>& a, const mat<T2, N, M>& b) {
+constexpr kernel bool operator==(
+    const mat<T1, N, M>& a, const mat<T2, N, M>& b) {
   if constexpr (M == 1) {
     return a.x == b.x;
   } else if constexpr (M == 2) {
@@ -1264,13 +1242,16 @@ inline bool operator==(const mat<T1, N, M>& a, const mat<T2, N, M>& b) {
   }
 }
 template <typename T1, typename T2, size_t N, size_t M>
-inline bool operator!=(const mat<T1, N, M>& a, const mat<T2, N, M>& b) {
+constexpr kernel bool operator!=(
+    const mat<T1, N, M>& a, const mat<T2, N, M>& b) {
   return !(a == b);
 }
 
 // Matrix operations.
-template <typename T1, typename T2, size_t N, size_t M, typename T = common_t<T1, T2>>
-inline mat<T, N, M> operator+(const mat<T1, N, M>& a, const mat<T2, N, M>& b) {
+template <typename T1, typename T2, size_t N, size_t M,
+    typename T = common_t<T1, T2>>
+constexpr kernel mat<T, N, M> operator+(
+    const mat<T1, N, M>& a, const mat<T2, N, M>& b) {
   if constexpr (M == 1) {
     return {a.x + b.x};
   } else if constexpr (M == 2) {
@@ -1281,8 +1262,9 @@ inline mat<T, N, M> operator+(const mat<T1, N, M>& a, const mat<T2, N, M>& b) {
     return {a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w};
   }
 }
-template <typename T1, typename T2, size_t N, size_t M, typename T = common_t<T1, T2>>
-inline mat<T, N, M> operator*(const mat<T1, N, M>& a, T2 b) {
+template <typename T1, typename T2, size_t N, size_t M,
+    typename T = common_t<T1, T2>>
+constexpr kernel mat<T, N, M> operator*(const mat<T1, N, M>& a, T2 b) {
   if constexpr (M == 1) {
     return {a.x * b};
   } else if constexpr (M == 2) {
@@ -1293,8 +1275,10 @@ inline mat<T, N, M> operator*(const mat<T1, N, M>& a, T2 b) {
     return {a.x * b, a.y * b, a.z * b, a.w * b};
   }
 }
-template <typename T1, typename T2, size_t N, size_t M, typename T = common_t<T1, T2>>
-inline vec<T, N> operator*(const mat<T1, N, M>& a, const vec<T2, M>& b) {
+template <typename T1, typename T2, size_t N, size_t M,
+    typename T = common_t<T1, T2>>
+constexpr kernel vec<T, N> operator*(
+    const mat<T1, N, M>& a, const vec<T2, M>& b) {
   if constexpr (M == 1) {
     return a.x * b.x;
   } else if constexpr (M == 2) {
@@ -1305,8 +1289,10 @@ inline vec<T, N> operator*(const mat<T1, N, M>& a, const vec<T2, M>& b) {
     return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
   }
 }
-template <typename T1, typename T2, size_t N, size_t M, typename T = common_t<T1, T2>>
-inline vec<T, M> operator*(const vec<T1, N>& a, const mat<T2, N, M>& b) {
+template <typename T1, typename T2, size_t N, size_t M,
+    typename T = common_t<T1, T2>>
+constexpr kernel vec<T, M> operator*(
+    const vec<T1, N>& a, const mat<T2, N, M>& b) {
   if constexpr (M == 1) {
     return {dot(a, b.x)};
   } else if constexpr (M == 2) {
@@ -1317,8 +1303,10 @@ inline vec<T, M> operator*(const vec<T1, N>& a, const mat<T2, N, M>& b) {
     return {dot(a, b.x), dot(a, b.y), dot(a, b.z), dot(a, b.w)};
   }
 }
-template <typename T1, typename T2, size_t N, size_t M, size_t K, typename T = common_t<T1, T2>>
-inline mat<T, N, M> operator*(const mat<T1, N, K>& a, const mat<T2, K, M>& b) {
+template <typename T1, typename T2, size_t N, size_t M, size_t K,
+    typename T = common_t<T1, T2>>
+constexpr kernel mat<T, N, M> operator*(
+    const mat<T1, N, K>& a, const mat<T2, K, M>& b) {
   if constexpr (M == 1) {
     return {a * b.x};
   } else if constexpr (M == 2) {
@@ -1332,21 +1320,23 @@ inline mat<T, N, M> operator*(const mat<T1, N, K>& a, const mat<T2, K, M>& b) {
 
 // Matrix assignments.
 template <typename T, typename T1, size_t N, size_t M>
-inline mat<T, N, M>& operator+=(mat<T, N, M>& a, const mat<T1, N, M>& b) {
+constexpr kernel mat<T, N, M>& operator+=(
+    mat<T, N, M>& a, const mat<T1, N, M>& b) {
   return a = a + b;
 }
 template <typename T, typename T1, size_t N>
-inline mat<T, N, N>& operator*=(mat<T, N, N>& a, const mat<T1, N, N>& b) {
+constexpr kernel mat<T, N, N>& operator*=(
+    mat<T, N, N>& a, const mat<T1, N, N>& b) {
   return a = a * b;
 }
 template <typename T, typename T1, size_t N, size_t M>
-inline mat<T, N, M>& operator*=(mat<T, N, M>& a, T1 b) {
+constexpr kernel mat<T, N, M>& operator*=(mat<T, N, M>& a, T1 b) {
   return a = a * b;
 }
 
 // Matrix diagonals and transposes.
 template <typename T, size_t N>
-inline vec<T, N> diagonal(const mat<T, N, N>& a) {
+constexpr kernel vec<T, N> diagonal(const mat<T, N, N>& a) {
   if constexpr (N == 1) {
     return {a.x.x};
   } else if constexpr (N == 2) {
@@ -1358,7 +1348,7 @@ inline vec<T, N> diagonal(const mat<T, N, N>& a) {
   }
 }
 template <typename T, size_t N>
-inline mat<T, N, N> transpose(const mat<T, N, N>& a) {
+constexpr kernel mat<T, N, N> transpose(const mat<T, N, N>& a) {
   if constexpr (N == 1) {
     return {{a.x.x}};
   } else if constexpr (N == 2) {
@@ -1381,7 +1371,7 @@ inline mat<T, N, N> transpose(const mat<T, N, N>& a) {
 
 // Matrix adjoints, determinants and inverses.
 template <typename T, size_t N>
-inline T determinant(const mat<T, N, N>& a) {
+constexpr kernel T determinant(const mat<T, N, N>& a) {
   if constexpr (N == 1) {
     return a.x;
   } else if constexpr (N == 2) {
@@ -1393,7 +1383,7 @@ inline T determinant(const mat<T, N, N>& a) {
   }
 }
 template <typename T, size_t N>
-inline mat<T, N, N> adjoint(const mat<T, N, N>& a) {
+constexpr kernel mat<T, N, N> adjoint(const mat<T, N, N>& a) {
   if constexpr (N == 1) {
     return {{a.x.x}};
   } else if constexpr (N == 2) {
@@ -1406,13 +1396,13 @@ inline mat<T, N, N> adjoint(const mat<T, N, N>& a) {
   }
 }
 template <typename T, size_t N>
-inline mat<T, N, N> inverse(const mat<T, N, N>& a) {
+constexpr kernel mat<T, N, N> inverse(const mat<T, N, N>& a) {
   return adjoint(a) * (1 / determinant(a));
 }
 
 // Constructs a basis from a direction
 template <typename T>
-inline mat<T, 3, 3> basis_fromz(const vec<T, 3>& v) {
+constexpr kernel mat<T, 3, 3> basis_fromz(const vec<T, 3>& v) {
   // https://graphics.pixar.com/library/OrthonormalB/paper.pdf
   if constexpr (std::is_same_v<T, float>) {
     auto z    = normalize(v);
@@ -1442,56 +1432,59 @@ struct frame;
 // Rigid frames stored as a column-major affine transform matrix.
 template <typename T>
 struct frame<T, 2> {
-  union { // clang-format off
+  union {  // clang-format off
     array<vec<T, 2>, 3> cols;
     struct { vec<T, 2> x, y, o; };
     struct { mat<T, 2, 2> m; vec<T, 2> t; };
-  };      // clang-format on
+  };  // clang-format on
 
-  constexpr frame() : x{1, 0}, y{0, 1}, o{0, 0} {}
-  constexpr frame(const vec<T, 2>& x_, const vec<T, 2>& y_, const vec<T, 2>& o_)
+  constexpr kernel frame() : x{1, 0}, y{0, 1}, o{0, 0} {}
+  constexpr kernel frame(
+      const vec<T, 2>& x_, const vec<T, 2>& y_, const vec<T, 2>& o_)
       : x{x_}, y{y_}, o{o_} {}
-  constexpr frame(const mat<T, 2, 2>& xy_, const vec<T, 2>& o_)
+  constexpr kernel frame(const mat<T, 2, 2>& xy_, const vec<T, 2>& o_)
       : x{xy_.x}, y{xy_.y}, o{o_} {}
 
-  explicit constexpr frame(const mat<T, 3, 3>& m)
+  explicit constexpr kernel frame(const mat<T, 3, 3>& m)
       : x{m.x.x, m.x.y}, y{m.y.x, m.y.y}, o{m.z.x, m.z.y} {}
-  explicit constexpr operator mat<T, 3, 3>() const {
+  explicit constexpr kernel operator mat<T, 3, 3>() const {
     return {{x.x, x.y, 0}, {y.x, y.y, 0}, {o.x, o.y, 1}};
   }
 
-  constexpr vec<T, 2>&       operator[](size_t i) { return cols[i]; }
-  constexpr const vec<T, 2>& operator[](size_t i) const { return cols[i]; }
+  constexpr kernel vec<T, 2>& operator[](size_t i) { return cols[i]; }
+  constexpr kernel const vec<T, 2>& operator[](size_t i) const {
+    return cols[i];
+  }
 };
 
 // Rigid frames stored as a column-major affine transform matrix.
 template <typename T>
 struct frame<T, 3> {
-  union { // clang-format off
+  union {  // clang-format off
     array<vec<T, 3>, 4> cols;
     struct { vec<T, 3> x, y, z, o; };
     struct { mat<T, 3, 3> m; vec<T, 3> t; };
   };      // clang-format off
 
-  constexpr frame() : x{1, 0, 0}, y{0, 1, 0}, z{0, 0, 1}, o{0, 0, 0} {}
-  constexpr frame(const vec<T, 3>& x_, const vec<T, 3>& y_, const vec<T, 3>& z_,
+  constexpr  kernel frame() : x{1, 0, 0}, y{0, 1, 0}, z{0, 0, 1}, o{0, 0, 0} {}
+  constexpr  kernel frame(const vec<T, 3>& x_, const vec<T, 3>& y_, const vec<T, 3>& z_,
       const vec<T, 3>& o_)
       : x{x_}, y{y_}, z{z_}, o{o_} {}
-  constexpr frame(const mat<T, 3, 3>& xyz_, const vec<T, 3>& o_)
+  constexpr  kernel frame(const mat<T, 3, 3>& xyz_, const vec<T, 3>& o_)
       : x{xyz_.x}, y{xyz_.y}, z{xyz_.z}, o{o_} {}
 
-  explicit constexpr frame(const mat<T, 4, 4>& m)
+  explicit constexpr  kernel frame(const mat<T, 4, 4>& m)
       : x{m.x.x, m.x.y, m.x.z}
       , y{m.y.x, m.y.y, m.y.z}
       , z{m.z.x, m.z.y, m.z.z}
       , o{m.w.x, m.w.y, m.w.z} {}
-  explicit constexpr operator mat<T, 4, 4>() const {
+  explicit constexpr  kernel operator mat<T, 4, 4>() const {
     return {{x.x, x.y, x.z, 0}, {y.x, y.y, y.z, 0}, {z.x, z.y, z.z, 0},
         {o.x, o.y, o.z, 1}};
   }
 
-  constexpr vec<T, 3>&       operator[](size_t i) { return cols[i]; }
-  constexpr const vec<T, 3>& operator[](size_t i) const { return cols[i]; }
+  constexpr  kernel vec<T, 3>&       operator[](size_t i) { return cols[i]; }
+  constexpr  kernel const vec<T, 3>& operator[](size_t i) const { return cols[i]; }
 };
 
 // Frame aliases
@@ -1505,7 +1498,7 @@ constexpr auto identity3x4f = frame3f{
 
 // Frame properties
 template <typename T, size_t N>
-inline mat<T, N, N> rotation(const frame<T, N>& a) {
+constexpr kernel mat<T, N, N> rotation(const frame<T, N>& a) {
   if constexpr (N == 2) {
     return {a.x, a.y};
   } else if constexpr (N == 3) {
@@ -1513,7 +1506,7 @@ inline mat<T, N, N> rotation(const frame<T, N>& a) {
   }
 }
 template <typename T, size_t N>
-inline vec<T, N> translation(const frame<T, N>& a) {
+constexpr kernel vec<T, N> translation(const frame<T, N>& a) {
   if constexpr (N == 2) {
     return a.o;
   } else if constexpr (N == 3) {
@@ -1523,17 +1516,17 @@ inline vec<T, N> translation(const frame<T, N>& a) {
 
 // Frame/mat conversion
 template <typename T, size_t N>
-inline frame<T, N - 1> mat_to_frame(const mat<T, N, N>& m) {
+constexpr kernel frame<T, N - 1> mat_to_frame(const mat<T, N, N>& m) {
   return (frame<T, N - 1>)m;
 }
 template <typename T, size_t N>
-inline mat<T, N + 1, N + 1> frame_to_mat(const frame<T, N>& f) {
+constexpr kernel mat<T, N + 1, N + 1> frame_to_mat(const frame<T, N>& f) {
   return (mat<T, N + 1, N + 1>)f;
 }
 
 // Frame comparisons.
 template <typename T1, typename T2, size_t N>
-inline bool operator==(const frame<T1, N>& a, const frame<T2, N>& b) {
+constexpr kernel bool operator==(const frame<T1, N>& a, const frame<T2, N>& b) {
   if constexpr (N == 2) {
     return a.x == b.x && a.y == b.y && a.o == b.o;
   } else if constexpr (N == 3) {
@@ -1541,23 +1534,23 @@ inline bool operator==(const frame<T1, N>& a, const frame<T2, N>& b) {
   }
 }
 template <typename T1, typename T2, size_t N>
-inline bool operator!=(const frame<T1, N>& a, const frame<T2, N>& b) {
+constexpr kernel bool operator!=(const frame<T1, N>& a, const frame<T2, N>& b) {
   return !(a == b);
 }
 
 // Frame composition, equivalent to affine matrix product.
 template <typename T, size_t N>
-inline frame<T, N> operator*(const frame<T, N>& a, const frame<T, N>& b) {
+constexpr kernel frame<T, N> operator*(const frame<T, N>& a, const frame<T, N>& b) {
   return {a.m * b.m, a.m * b.t + a.t};
 }
 template <typename T, size_t N>
-inline frame<T, N>& operator*=(frame<T, N>& a, const frame<T, N>& b) {
+constexpr kernel frame<T, N>& operator*=(frame<T, N>& a, const frame<T, N>& b) {
   return a = a * b;
 }
 
 // Frame inverse, equivalent to rigid affine inverse.
 template <typename T, size_t N>
-inline frame<T, N> inverse(const frame<T, N>& a, bool non_rigid = false) {
+constexpr kernel frame<T, N> inverse(const frame<T, N>& a, bool non_rigid = false) {
   if (non_rigid) {
     auto minv = inverse(a.m);
     return {minv, -(minv * a.t)};
@@ -1569,7 +1562,7 @@ inline frame<T, N> inverse(const frame<T, N>& a, bool non_rigid = false) {
 
 // Frame construction from axis.
 template <typename T>
-inline frame<T, 3> frame_fromz(const vec<T, 3>& o, const vec<T, 3>& v) {
+constexpr kernel frame<T, 3> frame_fromz(const vec<T, 3>& o, const vec<T, 3>& v) {
   // https://graphics.pixar.com/library/OrthonormalB/paper.pdf
   if constexpr (std::is_same_v<T, float>) {
     auto z    = normalize(v);
@@ -1585,7 +1578,7 @@ inline frame<T, 3> frame_fromz(const vec<T, 3>& o, const vec<T, 3>& v) {
   }
 }
 template <typename T>
-inline frame<T, 3> frame_fromzx(
+constexpr kernel frame<T, 3> frame_fromzx(
     const vec<T, 3>& o, const vec<T, 3>& z_, const vec<T, 3>& x_) {
   auto z = normalize(z_);
   auto x = orthonormalize(x_, z);
@@ -1612,11 +1605,11 @@ struct quat<T, 4> {
     struct { T x, y, z, w; };
   };  // clang-format on
 
-  constexpr quat() : x{0}, y{0}, z{0}, w{1} {}
-  constexpr quat(T x_, T y_, T z_, T w_) : x{x_}, y{y_}, z{z_}, w{w_} {}
+  constexpr kernel quat() : x{0}, y{0}, z{0}, w{1} {}
+  constexpr kernel quat(T x_, T y_, T z_, T w_) : x{x_}, y{y_}, z{z_}, w{w_} {}
 
-  constexpr T&       operator[](size_t i) { return d[i]; }
-  constexpr const T& operator[](size_t i) const { return d[i]; }
+  constexpr kernel T&       operator[](size_t i) { return d[i]; }
+  constexpr kernel const T& operator[](size_t i) const { return d[i]; }
 };
 
 // Quaternion aliases
@@ -1626,19 +1619,21 @@ using quat4f = quat<float, 4>;
 
 // Quaternion operations
 template <typename T>
-inline quat<T, 4> operator+(const quat<T, 4>& a, const quat<T, 4>& b) {
+constexpr kernel quat<T, 4> operator+(
+    const quat<T, 4>& a, const quat<T, 4>& b) {
   return {a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w};
 }
 template <typename T>
-inline quat<T, 4> operator*(const quat<T, 4>& a, T b) {
+constexpr kernel quat<T, 4> operator*(const quat<T, 4>& a, T b) {
   return {a.x * b, a.y * b, a.z * b, a.w * b};
 }
 template <typename T>
-inline quat<T, 4> operator/(const quat<T, 4>& a, T b) {
+constexpr kernel quat<T, 4> operator/(const quat<T, 4>& a, T b) {
   return {a.x / b, a.y / b, a.z / b, a.w / b};
 }
 template <typename T>
-inline quat<T, 4> operator*(const quat<T, 4>& a, const quat<T, 4>& b) {
+constexpr kernel quat<T, 4> operator*(
+    const quat<T, 4>& a, const quat<T, 4>& b) {
   return {a.x * b.w + a.w * b.x + a.y * b.w - a.z * b.y,
       a.y * b.w + a.w * b.y + a.z * b.x - a.x * b.z,
       a.z * b.w + a.w * b.z + a.x * b.y - a.y * b.x,
@@ -1647,41 +1642,44 @@ inline quat<T, 4> operator*(const quat<T, 4>& a, const quat<T, 4>& b) {
 
 // Quaternion operations
 template <typename T>
-inline T dot(const quat<T, 4>& a, const quat<T, 4>& b) {
+constexpr kernel T dot(const quat<T, 4>& a, const quat<T, 4>& b) {
   return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
 }
 template <typename T>
-inline T length(const quat<T, 4>& a) {
+constexpr kernel T length(const quat<T, 4>& a) {
   return sqrt(dot(a, a));
 }
 template <typename T>
-inline quat<T, 4> normalize(const quat<T, 4>& a) {
+constexpr kernel quat<T, 4> normalize(const quat<T, 4>& a) {
   auto l = length(a);
   return (l != 0) ? a / l : a;
 }
 template <typename T>
-inline quat<T, 4> conjugate(const quat<T, 4>& a) {
+constexpr kernel quat<T, 4> conjugate(const quat<T, 4>& a) {
   return {-a.x, -a.y, -a.z, a.w};
 }
 template <typename T>
-inline quat<T, 4> inverse(const quat<T, 4>& a) {
+constexpr kernel quat<T, 4> inverse(const quat<T, 4>& a) {
   return conjugate(a) / dot(a, a);
 }
 template <typename T>
-inline T uangle(const quat<T, 4>& a, const quat<T, 4>& b) {
+constexpr kernel T uangle(const quat<T, 4>& a, const quat<T, 4>& b) {
   auto d = dot(a, b);
   return d > 1 ? 0 : acos(d < -1 ? -1 : d);
 }
 template <typename T>
-inline quat<T, 4> lerp(const quat<T, 4>& a, const quat<T, 4>& b, T t) {
+constexpr kernel quat<T, 4> lerp(
+    const quat<T, 4>& a, const quat<T, 4>& b, T t) {
   return a * (1 - t) + b * t;
 }
 template <typename T>
-inline quat<T, 4> nlerp(const quat<T, 4>& a, const quat<T, 4>& b, T t) {
+constexpr kernel quat<T, 4> nlerp(
+    const quat<T, 4>& a, const quat<T, 4>& b, T t) {
   return normalize(lerp(a, b, t));
 }
 template <typename T>
-inline quat<T, 4> slerp(const quat<T, 4>& a, const quat<T, 4>& b, T t) {
+constexpr kernel quat<T, 4> slerp(
+    const quat<T, 4>& a, const quat<T, 4>& b, T t) {
   auto th = uangle(a, b);
   return th == 0
              ? a
@@ -1697,7 +1695,8 @@ namespace yocto {
 
 // Transforms points, vectors and directions by matrices.
 template <typename T, size_t N>
-inline vec<T, N> transform_point(const mat<T, N + 1, N + 1>& a, const vec<T, N>& b) {
+constexpr kernel vec<T, N> transform_point(
+    const mat<T, N + 1, N + 1>& a, const vec<T, N>& b) {
   if constexpr (N == 2) {
     auto tvb = a * vec<T, 3>{b.x, b.y, 1};
     return vec<T, 2>{tvb.x, tvb.y} / tvb.z;
@@ -1707,7 +1706,8 @@ inline vec<T, N> transform_point(const mat<T, N + 1, N + 1>& a, const vec<T, N>&
   }
 }
 template <typename T, size_t N>
-inline vec<T, N> transform_vector(const mat<T, N + 1, N + 1>& a, const vec<T, N>& b) {
+constexpr kernel vec<T, N> transform_vector(
+    const mat<T, N + 1, N + 1>& a, const vec<T, N>& b) {
   if constexpr (N == 2) {
     auto tvb = a * vec<T, 3>{b.x, b.y, 0};
     return vec<T, 2>{tvb.x, tvb.y} / tvb.z;
@@ -1717,30 +1717,35 @@ inline vec<T, N> transform_vector(const mat<T, N + 1, N + 1>& a, const vec<T, N>
   }
 }
 template <typename T, size_t N>
-inline vec<T, N> transform_direction(
+constexpr kernel vec<T, N> transform_direction(
     const mat<T, N + 1, N + 1>& a, const vec<T, N>& b) {
   return normalize(transform_vector(a, b));
 }
 template <typename T, size_t N>
-inline vec<T, N> transform_normal(const mat<T, N + 1, N + 1>& a, const vec<T, N>& b) {
+constexpr kernel vec<T, N> transform_normal(
+    const mat<T, N + 1, N + 1>& a, const vec<T, N>& b) {
   return normalize(transform_vector(transpose(inverse(a)), b));
 }
 template <typename T, size_t N>
-inline vec<T, N> transform_vector(const mat<T, N, N>& a, const vec<T, N>& b) {
+constexpr kernel vec<T, N> transform_vector(
+    const mat<T, N, N>& a, const vec<T, N>& b) {
   return a * b;
 }
 template <typename T, size_t N>
-inline vec<T, N> transform_direction(const mat<T, N, N>& a, const vec<T, N>& b) {
+constexpr kernel vec<T, N> transform_direction(
+    const mat<T, N, N>& a, const vec<T, N>& b) {
   return normalize(transform_vector(a, b));
 }
 template <typename T, size_t N>
-inline vec<T, N> transform_normal(const mat<T, N, N>& a, const vec<T, N>& b) {
+constexpr kernel vec<T, N> transform_normal(
+    const mat<T, N, N>& a, const vec<T, N>& b) {
   return normalize(transform_vector(transpose(inverse(a)), b));
 }
 
 // Transforms points, vectors and directions by frames.
 template <typename T, size_t N>
-inline vec<T, N> transform_point(const frame<T, N>& a, const vec<T, N>& b) {
+constexpr kernel vec<T, N> transform_point(
+    const frame<T, N>& a, const vec<T, N>& b) {
   if constexpr (N == 2) {
     return a.x * b.x + a.y * b.y + a.o;
   } else if constexpr (N == 3) {
@@ -1748,7 +1753,8 @@ inline vec<T, N> transform_point(const frame<T, N>& a, const vec<T, N>& b) {
   }
 }
 template <typename T, size_t N>
-inline vec<T, N> transform_vector(const frame<T, N>& a, const vec<T, N>& b) {
+constexpr kernel vec<T, N> transform_vector(
+    const frame<T, N>& a, const vec<T, N>& b) {
   if constexpr (N == 2) {
     return a.x * b.x + a.y * b.y;
   } else if constexpr (N == 3) {
@@ -1756,11 +1762,12 @@ inline vec<T, N> transform_vector(const frame<T, N>& a, const vec<T, N>& b) {
   }
 }
 template <typename T, size_t N>
-inline vec<T, N> transform_direction(const frame<T, N>& a, const vec<T, N>& b) {
+constexpr kernel vec<T, N> transform_direction(
+    const frame<T, N>& a, const vec<T, N>& b) {
   return normalize(transform_vector(a, b));
 }
 template <typename T, size_t N>
-inline vec<T, N> transform_normal(
+constexpr kernel vec<T, N> transform_normal(
     const frame<T, N>& a, const vec<T, N>& b, bool non_rigid = false) {
   if (non_rigid) {
     return transform_normal(rotation(a), b);
@@ -1771,7 +1778,7 @@ inline vec<T, N> transform_normal(
 
 // Transforms points, vectors and directions by frames.
 template <typename T, size_t N>
-inline vec<T, N> transform_point_inverse(
+constexpr kernel vec<T, N> transform_point_inverse(
     const frame<T, N>& a, const vec<T, N>& b) {
   if constexpr (N == 2) {
     return {dot(a.x, (b - a.o)), dot(a.y, (b - a.o))};
@@ -1780,7 +1787,7 @@ inline vec<T, N> transform_point_inverse(
   }
 }
 template <typename T, size_t N>
-inline vec<T, N> transform_vector_inverse(
+constexpr kernel vec<T, N> transform_vector_inverse(
     const frame<T, N>& a, const vec<T, N>& b) {
   if constexpr (N == 2) {
     return {dot(a.x, b), dot(a.y, b)};
@@ -1789,22 +1796,22 @@ inline vec<T, N> transform_vector_inverse(
   }
 }
 template <typename T, size_t N>
-inline vec<T, N> transform_direction_inverse(
+constexpr kernel vec<T, N> transform_direction_inverse(
     const frame<T, N>& a, const vec<T, N>& b) {
   return normalize(transform_vector_inverse(a, b));
 }
 
 // Translation, scaling and rotations transforms.
 template <typename T>
-inline frame<T, 3> translation_frame(const vec<T, 3>& a) {
+constexpr kernel frame<T, 3> translation_frame(const vec<T, 3>& a) {
   return {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, a};
 }
 template <typename T>
-inline frame<T, 3> scaling_frame(const vec<T, 3>& a) {
+constexpr kernel frame<T, 3> scaling_frame(const vec<T, 3>& a) {
   return {{a.x, 0, 0}, {0, a.y, 0}, {0, 0, a.z}, {0, 0, 0}};
 }
 template <typename T>
-inline frame<T, 3> rotation_frame(const vec<T, 3>& axis, T angle) {
+constexpr kernel frame<T, 3> rotation_frame(const vec<T, 3>& axis, T angle) {
   auto s = sin(angle), c = cos(angle);
   auto vv = normalize(axis);
   return {{c + (1 - c) * vv.x * vv.x, (1 - c) * vv.x * vv.y + s * vv.z,
@@ -1816,7 +1823,7 @@ inline frame<T, 3> rotation_frame(const vec<T, 3>& axis, T angle) {
       {0, 0, 0}};
 }
 template <typename T>
-inline frame<T, 3> rotation_frame(const vec<T, 4>& quat) {
+constexpr kernel frame<T, 3> rotation_frame(const vec<T, 4>& quat) {
   auto v = quat;
   return {{v.w * v.w + v.x * v.x - v.y * v.y - v.z * v.z,
               (v.x * v.y + v.z * v.w) * 2, (v.z * v.x - v.y * v.w) * 2},
@@ -1828,7 +1835,7 @@ inline frame<T, 3> rotation_frame(const vec<T, 4>& quat) {
       {0, 0, 0}};
 }
 template <typename T>
-inline frame<T, 3> rotation_frame(const quat<T, 4>& quat) {
+constexpr kernel frame<T, 3> rotation_frame(const quat<T, 4>& quat) {
   auto v = quat;
   return {{v.w * v.w + v.x * v.x - v.y * v.y - v.z * v.z,
               (v.x * v.y + v.z * v.w) * 2, (v.z * v.x - v.y * v.w) * 2},
@@ -1840,14 +1847,14 @@ inline frame<T, 3> rotation_frame(const quat<T, 4>& quat) {
       {0, 0, 0}};
 }
 template <typename T>
-inline frame<T, 3> rotation_frame(const mat<T, 3, 3>& rot) {
+constexpr kernel frame<T, 3> rotation_frame(const mat<T, 3, 3>& rot) {
   return {rot.x, rot.y, rot.z, {0, 0, 0}};
 }
 
 // Lookat frame. Z-axis can be inverted with inv_xz.
 template <typename T>
-inline frame<T, 3> lookat_frame(const vec<T, 3>& eye, const vec<T, 3>& center,
-    const vec<T, 3>& up, bool inv_xz = false) {
+constexpr kernel frame<T, 3> lookat_frame(const vec<T, 3>& eye,
+    const vec<T, 3>& center, const vec<T, 3>& up, bool inv_xz = false) {
   auto w = normalize(eye - center);
   auto u = normalize(cross(up, w));
   auto v = normalize(cross(w, u));
@@ -1860,35 +1867,35 @@ inline frame<T, 3> lookat_frame(const vec<T, 3>& eye, const vec<T, 3>& center,
 
 // OpenGL frustum, ortho and perspecgive matrices.
 template <typename T>
-inline mat<T, 4, 4> frustum_mat(T l, T r, T b, T t, T n, T f) {
+constexpr kernel mat<T, 4, 4> frustum_mat(T l, T r, T b, T t, T n, T f) {
   return {{2 * n / (r - l), 0, 0, 0}, {0, 2 * n / (t - b), 0, 0},
       {(r + l) / (r - l), (t + b) / (t - b), -(f + n) / (f - n), -1},
       {0, 0, -2 * f * n / (f - n), 0}};
 }
 template <typename T>
-inline mat<T, 4, 4> ortho_mat(T l, T r, T b, T t, T n, T f) {
+constexpr kernel mat<T, 4, 4> ortho_mat(T l, T r, T b, T t, T n, T f) {
   return {{2 / (r - l), 0, 0, 0}, {0, 2 / (t - b), 0, 0},
       {0, 0, -2 / (f - n), 0},
       {-(r + l) / (r - l), -(t + b) / (t - b), -(f + n) / (f - n), 1}};
 }
 template <typename T>
-inline mat<T, 4, 4> ortho2d_mat(T left, T right, T bottom, T top) {
+constexpr kernel mat<T, 4, 4> ortho2d_mat(T left, T right, T bottom, T top) {
   return ortho_mat(left, right, bottom, top, -1, 1);
 }
 template <typename T>
-inline mat<T, 4, 4> ortho_mat(T xmag, T ymag, T near, T far) {
+constexpr kernel mat<T, 4, 4> ortho_mat(T xmag, T ymag, T near, T far) {
   return {{1 / xmag, 0, 0, 0}, {0, 1 / ymag, 0, 0}, {0, 0, 2 / (near - far), 0},
       {0, 0, (far + near) / (near - far), 1}};
 }
 template <typename T>
-inline mat<T, 4, 4> perspective_mat(T fovy, T aspect, T near, T far) {
+constexpr kernel mat<T, 4, 4> perspective_mat(T fovy, T aspect, T near, T far) {
   auto tg = tan(fovy / 2);
   return {{1 / (aspect * tg), 0, 0, 0}, {0, 1 / tg, 0, 0},
       {0, 0, (far + near) / (near - far), -1},
       {0, 0, 2 * far * near / (near - far), 0}};
 }
 template <typename T>
-inline mat<T, 4, 4> perspective_mat(T fovy, T aspect, T near) {
+constexpr kernel mat<T, 4, 4> perspective_mat(T fovy, T aspect, T near) {
   auto tg = tan(fovy / 2);
   return {{1 / (aspect * tg), 0, 0, 0}, {0, 1 / tg, 0, 0}, {0, 0, -1, -1},
       {0, 0, 2 * near, 0}};
@@ -1896,18 +1903,18 @@ inline mat<T, 4, 4> perspective_mat(T fovy, T aspect, T near) {
 
 // Rotation conversions.
 template <typename T>
-inline pair<vec<T, 3>, T> rotation_axisangle(const vec<T, 4>& quat) {
+constexpr kernel pair<vec<T, 3>, T> rotation_axisangle(const vec<T, 4>& quat) {
   return {normalize(vec<T, 3>{quat.x, quat.y, quat.z}), 2 * acos(quat.w)};
 }
 template <typename T>
-inline vec<T, 4> rotation_quat(const vec<T, 3>& axis, T angle) {
+constexpr kernel vec<T, 4> rotation_quat(const vec<T, 3>& axis, T angle) {
   auto len = length(axis);
   if (len == 0) return {0, 0, 0, 1};
   return vec<T, 4>{sin(angle / 2) * axis.x / len, sin(angle / 2) * axis.y / len,
       sin(angle / 2) * axis.z / len, cos(angle / 2)};
 }
 template <typename T>
-inline vec<T, 4> rotation_quat(const vec<T, 4>& axisangle) {
+constexpr kernel vec<T, 4> rotation_quat(const vec<T, 4>& axisangle) {
   return rotation_quat(
       vec<T, 3>{axisangle.x, axisangle.y, axisangle.z}, axisangle.w);
 }
@@ -1922,7 +1929,7 @@ namespace yocto {
 // Computes the image uv coordinates corresponding to the view parameters.
 // Returns negative coordinates if out of the image.
 template <typename T, typename I>
-inline vec<I, 2> image_coords(const vec<T, 2>& mouse_pos,
+constexpr kernel vec<I, 2> image_coords(const vec<T, 2>& mouse_pos,
     const vec<T, 2>& center, T scale, const vec<I, 2>& txt_size) {
   auto xyf = (mouse_pos - center) / scale;
   return vec<I, 2>{(int)round(xyf.x + txt_size.x / (T)2),
@@ -1931,8 +1938,9 @@ inline vec<I, 2> image_coords(const vec<T, 2>& mouse_pos,
 
 // Center image and autofit. Returns center and scale.
 template <typename T, typename I>
-inline pair<vec<T, 2>, T> camera_imview(const vec<T, 2>& center, T scale,
-    const vec<I, 2>& imsize, const vec<I, 2>& winsize, bool zoom_to_fit) {
+constexpr kernel pair<vec<T, 2>, T> camera_imview(const vec<T, 2>& center,
+    T scale, const vec<I, 2>& imsize, const vec<I, 2>& winsize,
+    bool zoom_to_fit) {
   if (zoom_to_fit) {
     return {{(T)winsize.x / 2, (T)winsize.y / 2},
         min(winsize.x / (T)imsize.x, winsize.y / (T)imsize.y)};
@@ -1945,9 +1953,9 @@ inline pair<vec<T, 2>, T> camera_imview(const vec<T, 2>& center, T scale,
 
 // Turntable for UI navigation. Returns from and to.
 template <typename T>
-inline pair<vec<T, 3>, vec<T, 3>> camera_turntable(const vec<T, 3>& from_,
-    const vec<T, 3>& to_, const vec<T, 3>& up, const vec<T, 2>& rotate, T dolly,
-    const vec<T, 2>& pan) {
+constexpr kernel pair<vec<T, 3>, vec<T, 3>> camera_turntable(
+    const vec<T, 3>& from_, const vec<T, 3>& to_, const vec<T, 3>& up,
+    const vec<T, 2>& rotate, T dolly, const vec<T, 2>& pan) {
   // copy values
   auto from = from_, to = to_;
 
@@ -1988,8 +1996,9 @@ inline pair<vec<T, 3>, vec<T, 3>> camera_turntable(const vec<T, 3>& from_,
 
 // Turntable for UI navigation. Returns frame and focus.
 template <typename T>
-inline pair<frame<T, 3>, T> camera_turntable(const frame<T, 3>& frame_, T focus,
-    const vec<T, 2>& rotate, T dolly, const vec<T, 2>& pan) {
+constexpr kernel pair<frame<T, 3>, T> camera_turntable(
+    const frame<T, 3>& frame_, T focus, const vec<T, 2>& rotate, T dolly,
+    const vec<T, 2>& pan) {
   // copy values
   auto frame = frame_;
 
@@ -2024,7 +2033,7 @@ inline pair<frame<T, 3>, T> camera_turntable(const frame<T, 3>& frame_, T focus,
 
 // FPS camera for UI navigation for a frame parametrization. Returns frame.
 template <typename T>
-inline frame<T, 3> camera_fpscam(const frame<T, 3>& frame,
+constexpr kernel frame<T, 3> camera_fpscam(const frame<T, 3>& frame,
     const vec<T, 3>& transl, const vec<T, 2>& rotate) {
   // https://gamedev.stackexchange.com/questions/30644/how-to-keep-my-quaternion-using-fps-camera-from-tilting-and-messing-up
   auto y = vec<T, 3>{0, 1, 0};
@@ -2042,7 +2051,7 @@ inline frame<T, 3> camera_fpscam(const frame<T, 3>& frame,
 // Computes the image uv coordinates corresponding to the view parameters.
 // Returns negative coordinates if out of the image.
 template <typename T, typename I>
-inline vec2i get_image_coords(const vec<T, 2>& mouse_pos,
+constexpr kernel vec2i get_image_coords(const vec<T, 2>& mouse_pos,
     const vec<T, 2>& center, T scale, const vec<I, 2>& txt_size) {
   auto xyf = (mouse_pos - center) / scale;
   return vec2i{(int)round(xyf.x + txt_size.x / (T)2),
@@ -2051,8 +2060,8 @@ inline vec2i get_image_coords(const vec<T, 2>& mouse_pos,
 
 // Center image and autofit.
 template <typename T, typename I>
-inline void update_imview(vec<T, 2>& center, T& scale, const vec<I, 2>& imsize,
-    const vec<I, 2>& winsize, bool zoom_to_fit) {
+constexpr kernel void update_imview(vec<T, 2>& center, T& scale,
+    const vec<I, 2>& imsize, const vec<I, 2>& winsize, bool zoom_to_fit) {
   if (zoom_to_fit) {
     scale  = min(winsize.x / (T)imsize.x, winsize.y / (T)imsize.y);
     center = {(T)winsize.x / 2, (T)winsize.y / 2};
@@ -2064,8 +2073,8 @@ inline void update_imview(vec<T, 2>& center, T& scale, const vec<I, 2>& imsize,
 
 // Turntable for UI navigation.
 template <typename T>
-inline void update_turntable(vec<T, 3>& from, vec<T, 3>& to, vec<T, 3>& up,
-    const vec<T, 2>& rotate, T dolly, const vec<T, 2>& pan) {
+constexpr kernel void update_turntable(vec<T, 3>& from, vec<T, 3>& to,
+    vec<T, 3>& up, const vec<T, 2>& rotate, T dolly, const vec<T, 2>& pan) {
   // rotate if necessary
   if (rotate != vec<T, 2>{0, 0}) {
     auto z     = normalize(to - from);
@@ -2100,7 +2109,7 @@ inline void update_turntable(vec<T, 3>& from, vec<T, 3>& to, vec<T, 3>& up,
 
 // Turntable for UI navigation.
 template <typename T>
-inline void update_turntable(frame<T, 3>& frame, T& focus,
+constexpr kernel void update_turntable(frame<T, 3>& frame, T& focus,
     const vec<T, 2>& rotate, T dolly, const vec<T, 2>& pan) {
   // rotate if necessary
   if (rotate != vec<T, 2>{0, 0}) {
@@ -2130,7 +2139,7 @@ inline void update_turntable(frame<T, 3>& frame, T& focus,
 
 // FPS camera for UI navigation for a frame parametrization.
 template <typename T>
-inline void update_fpscam(
+constexpr kernel void update_fpscam(
     frame<T, 3>& frame, const vec<T, 3>& transl, const vec<T, 2>& rotate) {
   // https://gamedev.stackexchange.com/questions/30644/how-to-keep-my-quaternion-using-fps-camera-from-tilting-and-messing-up
   auto y = vec<T, 3>{0, 1, 0};
@@ -2154,65 +2163,66 @@ namespace yocto {
 
 // Python range. Construct an object that iterates over an integer sequence.
 template <typename T>
-constexpr auto range(T max);
+constexpr kernel auto range(T max);
 template <typename T>
-constexpr auto range(T min, T max);
+constexpr kernel auto range(T min, T max);
 template <typename T>
-constexpr auto range(T min, T max, T step);
+constexpr kernel auto range(T min, T max, T step);
 
 // Python enumerate
 template <typename Sequence, typename T = size_t>
-constexpr auto enumerate(const Sequence& sequence, T start = 0);
+constexpr kernel auto enumerate(const Sequence& sequence, T start = 0);
 template <typename Sequence, typename T = size_t>
-constexpr auto enumerate(Sequence& sequence, T start = 0);
+constexpr kernel auto enumerate(Sequence& sequence, T start = 0);
 
 // Python zip
 template <typename Sequence1, typename Sequence2>
-constexpr auto zip(const Sequence1& sequence1, const Sequence2& sequence2);
+constexpr kernel auto zip(
+    const Sequence1& sequence1, const Sequence2& sequence2);
 template <typename Sequence1, typename Sequence2>
-constexpr auto zip(Sequence1& sequence1, Sequence2& sequence2);
+constexpr kernel auto zip(Sequence1& sequence1, Sequence2& sequence2);
 template <typename Sequence1, typename Sequence2>
-constexpr auto zip(const Sequence1& sequence1, Sequence2& sequence2);
+constexpr kernel auto zip(const Sequence1& sequence1, Sequence2& sequence2);
 template <typename Sequence1, typename Sequence2>
-constexpr auto zip(Sequence1& sequence1, const Sequence2& sequence2);
+constexpr kernel auto zip(Sequence1& sequence1, const Sequence2& sequence2);
 
 // Implementation of Python range.
 template <typename T>
-constexpr auto range(T max) {
+constexpr kernel auto range(T max) {
   return range((T)0, max);
 }
 template <typename T>
-constexpr auto range(T min, T max) {
+constexpr kernel auto range(T min, T max) {
   struct range_iterator {
-    T    index;
-    void operator++() { ++index; }
-    bool operator!=(const range_iterator& other) const {
+    T                     index;
+    constexpr kernel void operator++() { ++index; }
+    constexpr kernel bool operator!=(const range_iterator& other) const {
       return index != other.index;
     }
-    T operator*() const { return index; }
+    constexpr kernel T operator*() const { return index; }
   };
   struct range_helper {
-    T              begin_ = 0, end_ = 0;
-    range_iterator begin() const { return {begin_}; }
-    range_iterator end() const { return {end_}; }
+    T                               begin_ = 0, end_ = 0;
+    constexpr kernel range_iterator begin() const { return {begin_}; }
+    constexpr kernel range_iterator end() const { return {end_}; }
   };
   return range_helper{min, max};
 }
 template <typename T>
-constexpr auto range(T min, T max, T step) {
+constexpr kernel auto range(T min, T max, T step) {
   struct range_iterator {
-    T    index;
-    T    step;
-    void operator++() { index += step; }
-    bool operator!=(const range_iterator& other) const {
+    T                     index;
+    T                     step;
+    constexpr kernel void operator++() { index += step; }
+    constexpr kernel bool operator!=(const range_iterator& other) const {
       return index != other.index;
     }
-    T operator*() const { return index; }
+    constexpr kernel T operator*() const { return index; }
   };
   struct range_helper {
-    T              begin_ = 0, end_ = 0, step_ = 0;
-    range_iterator begin() const { return {begin_, step_}; }
-    range_iterator end() const {
+    T                               begin_ = 0, end_ = 0, step_ = 0;
+    constexpr kernel range_iterator begin() const { return {begin_, step_}; }
+    constexpr kernel range_iterator end() const {
       return {begin_ + ((end_ - begin_) / step_) * step_, step_};
     }
   };
@@ -2221,84 +2231,97 @@ constexpr auto range(T min, T max, T step) {
 
 // Implementation of Python enumerate.
 template <typename Sequence, typename T>
-constexpr auto enumerate(const Sequence& sequence, T start) {
+constexpr kernel auto enumerate(const Sequence& sequence, T start) {
   using Iterator  = typename Sequence::const_iterator;
   using Reference = typename Sequence::const_reference;
   struct enumerate_iterator {
-    T        index;
-    Iterator iterator;
-    bool     operator!=(const enumerate_iterator& other) const {
+    T                     index;
+    Iterator              iterator;
+    constexpr kernel bool operator!=(const enumerate_iterator& other) const {
       return index != other.index;
     }
-    void operator++() {
+    constexpr kernel void operator++() {
       ++index;
       ++iterator;
     }
-    pair<const T&, Reference> operator*() const { return {index, *iterator}; }
+    constexpr kernel pair<const T&, Reference> operator*() const {
+      return {index, *iterator};
+    }
   };
   struct enumerate_helper {
-    const Sequence& sequence;
-    T               begin_, end_;
-    auto begin() { return enumerate_iterator{begin_, std::begin(sequence)}; }
-    auto end() { return enumerate_iterator{end_, std::end(sequence)}; }
+    const Sequence&       sequence;
+    T                     begin_, end_;
+    constexpr kernel auto begin() {
+      return enumerate_iterator{begin_, std::begin(sequence)};
+    }
+    constexpr kernel auto end() {
+      return enumerate_iterator{end_, std::end(sequence)};
+    }
   };
   return enumerate_helper{sequence, 0, size(sequence)};
 }
 
 // Python enumerate
 template <typename Sequence, typename T>
-constexpr auto enumerate(Sequence& sequence, T start) {
+constexpr kernel auto enumerate(Sequence& sequence, T start) {
   using Iterator  = typename Sequence::iterator;
   using Reference = typename Sequence::reference;
   struct enumerate_iterator {
-    T        index;
-    Iterator iterator;
-    bool     operator!=(const enumerate_iterator& other) const {
+    T                     index;
+    Iterator              iterator;
+    constexpr kernel bool operator!=(const enumerate_iterator& other) const {
       return index != other.index;
     }
-    void operator++() {
+    constexpr kernel void operator++() {
       ++index;
       ++iterator;
     }
-    pair<T&, Reference> operator*() const { return {index, *iterator}; }
+    constexpr kernel pair<T&, Reference> operator*() const {
+      return {index, *iterator};
+    }
   };
   struct enumerate_helper {
-    Sequence& sequence;
-    T         begin_, end_;
-    auto begin() { return enumerate_iterator{begin_, std::begin(sequence)}; }
-    auto end() { return enumerate_iterator{end_, std::end(sequence)}; }
+    Sequence&             sequence;
+    T                     begin_, end_;
+    constexpr kernel auto begin() {
+      return enumerate_iterator{begin_, std::begin(sequence)};
+    }
+    constexpr kernel auto end() {
+      return enumerate_iterator{end_, std::end(sequence)};
+    }
   };
   return enumerate_helper{sequence, 0, size(sequence)};
 }
 
 // Python zip
 template <typename Sequence1, typename Sequence2>
-constexpr auto zip(const Sequence1& sequence1, const Sequence2& sequence2) {
+constexpr kernel auto zip(
+    const Sequence1& sequence1, const Sequence2& sequence2) {
   using Iterator1  = typename Sequence1::const_iterator;
   using Reference1 = typename Sequence1::const_reference;
   using Iterator2  = typename Sequence2::const_iterator;
   using Reference2 = typename Sequence2::const_reference;
   struct zip_iterator {
-    Iterator1 iterator1;
-    Iterator2 iterator2;
-    bool      operator!=(const zip_iterator& other) const {
+    Iterator1             iterator1;
+    Iterator2             iterator2;
+    constexpr kernel bool operator!=(const zip_iterator& other) const {
       return iterator1 != other.iterator1;
     }
-    void operator++() {
+    constexpr kernel void operator++() {
       ++iterator1;
       ++iterator2;
     }
-    pair<Reference1, Reference2> operator*() const {
+    constexpr kernel pair<Reference1, Reference2> operator*() const {
       return {*iterator1, *iterator2};
     }
   };
   struct zip_helper {
-    const Sequence1& sequence1;
-    const Sequence2& sequence2;
-    auto             begin() {
+    const Sequence1&      sequence1;
+    const Sequence2&      sequence2;
+    constexpr kernel auto begin() {
       return zip_iterator{std::begin(sequence1), std::begin(sequence2)};
     }
-    auto end() {
+    constexpr kernel auto end() {
       return zip_iterator{std::end(sequence1), std::end(sequence2)};
     }
   };
@@ -2307,32 +2330,32 @@ constexpr auto zip(const Sequence1& sequence1, const Sequence2& sequence2) {
 
 // Implementation of Python zip
 template <typename Sequence1, typename Sequence2>
-constexpr auto zip(Sequence1& sequence1, Sequence2& sequence2) {
+constexpr kernel auto zip(Sequence1& sequence1, Sequence2& sequence2) {
   using Iterator1  = typename Sequence1::iterator;
   using Reference1 = typename Sequence1::reference;
   using Iterator2  = typename Sequence2::iterator;
   using Reference2 = typename Sequence2::reference;
   struct zip_iterator {
-    Iterator1 iterator1;
-    Iterator2 iterator2;
-    bool      operator!=(const zip_iterator& other) const {
+    Iterator1             iterator1;
+    Iterator2             iterator2;
+    constexpr kernel bool operator!=(const zip_iterator& other) const {
       return iterator1 != other.iterator1;
     }
-    void operator++() {
+    constexpr kernel void operator++() {
       ++iterator1;
       ++iterator2;
     }
-    pair<Reference1, Reference2> operator*() const {
+    constexpr kernel pair<Reference1, Reference2> operator*() const {
       return {*iterator1, *iterator2};
     }
   };
   struct zip_helper {
-    Sequence1& sequence1;
-    Sequence2& sequence2;
-    auto       begin() {
+    Sequence1&            sequence1;
+    Sequence2&            sequence2;
+    constexpr kernel auto begin() {
       return zip_iterator{std::begin(sequence1), std::begin(sequence2)};
     }
-    auto end() {
+    constexpr kernel auto end() {
       return zip_iterator{std::end(sequence1), std::end(sequence2)};
     }
   };
@@ -2341,32 +2364,32 @@ constexpr auto zip(Sequence1& sequence1, Sequence2& sequence2) {
 
 // Implementation of Python zip
 template <typename Sequence1, typename Sequence2>
-constexpr auto zip(const Sequence1& sequence1, Sequence2& sequence2) {
+constexpr kernel auto zip(const Sequence1& sequence1, Sequence2& sequence2) {
   using Iterator1  = typename Sequence1::const_iterator;
   using Reference1 = typename Sequence1::const_reference;
   using Iterator2  = typename Sequence2::iterator;
   using Reference2 = typename Sequence2::reference;
   struct zip_iterator {
-    Iterator1 iterator1;
-    Iterator2 iterator2;
-    bool      operator!=(const zip_iterator& other) const {
+    Iterator1             iterator1;
+    Iterator2             iterator2;
+    constexpr kernel bool operator!=(const zip_iterator& other) const {
       return iterator1 != other.iterator1;
     }
-    void operator++() {
+    constexpr kernel void operator++() {
       ++iterator1;
       ++iterator2;
     }
-    pair<Reference1, Reference2> operator*() const {
+    constexpr kernel pair<Reference1, Reference2> operator*() const {
       return {*iterator1, *iterator2};
     }
   };
   struct zip_helper {
-    const Sequence1& sequence1;
-    Sequence2&       sequence2;
-    auto             begin() {
+    const Sequence1&      sequence1;
+    Sequence2&            sequence2;
+    constexpr kernel auto begin() {
       return zip_iterator{std::begin(sequence1), std::begin(sequence2)};
     }
-    auto end() {
+    constexpr kernel auto end() {
       return zip_iterator{std::end(sequence1), std::end(sequence2)};
     }
   };
@@ -2375,32 +2398,32 @@ constexpr auto zip(const Sequence1& sequence1, Sequence2& sequence2) {
 
 // Implementation of Python zip
 template <typename Sequence1, typename Sequence2>
-constexpr auto zip(Sequence1& sequence1, const Sequence2& sequence2) {
+constexpr kernel auto zip(Sequence1& sequence1, const Sequence2& sequence2) {
   using Iterator1  = typename Sequence1::iterator;
   using Reference1 = typename Sequence1::reference;
   using Iterator2  = typename Sequence2::const_iterator;
   using Reference2 = typename Sequence2::const_reference;
   struct zip_iterator {
-    Iterator1 iterator1;
-    Iterator2 iterator2;
-    bool      operator!=(const zip_iterator& other) const {
+    Iterator1             iterator1;
+    Iterator2             iterator2;
+    constexpr kernel bool operator!=(const zip_iterator& other) const {
       return iterator1 != other.iterator1;
     }
-    void operator++() {
+    constexpr kernel void operator++() {
       ++iterator1;
       ++iterator2;
     }
-    pair<Reference1, Reference2> operator*() const {
+    constexpr kernel pair<Reference1, Reference2> operator*() const {
       return {*iterator1, *iterator2};
     }
   };
   struct zip_helper {
-    Sequence1&       sequence1;
-    const Sequence2& sequence2;
-    auto             begin() {
+    Sequence1&            sequence1;
+    const Sequence2&      sequence2;
+    constexpr kernel auto begin() {
       return zip_iterator{std::begin(sequence1), std::begin(sequence2)};
     }
-    auto end() {
+    constexpr kernel auto end() {
       return zip_iterator{std::end(sequence1), std::end(sequence2)};
     }
   };
@@ -2415,10 +2438,17 @@ constexpr auto zip(Sequence1& sequence1, const Sequence2& sequence2) {
 namespace yocto {
 
 template <typename T>
-inline std::ptrdiff_t ssize(const T& container) {
+constexpr kernel std::ptrdiff_t ssize(const T& container) {
   return (std::ptrdiff_t)std::size(container);
 }
 
 }  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// CUDA SUPPORT
+// -----------------------------------------------------------------------------
+#ifdef kernel
+#undef kernel
+#endif
 
 #endif
