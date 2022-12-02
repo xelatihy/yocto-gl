@@ -116,15 +116,10 @@ static pair<int, int> split_sah(vector<int>& primitives,
   if (csize == vec3f{0, 0, 0}) return {(start + end) / 2, 0};
 
   // consider N bins, compute their cost and keep the minimum
-  auto      axis      = 0;
-  const int nbins     = 16;
-  auto      split     = 0.0f;
-  auto      min_cost  = flt_max;
-  auto      bbox_area = [](const bbox3f& b) {
-    auto size = b.max - b.min;
-    return 1e-12f + 2 * size.x * size.y + 2 * size.x * size.z +
-           2 * size.y * size.z;
-  };
+  auto      axis     = 0;
+  const int nbins    = 16;
+  auto      split    = 0.0f;
+  auto      min_cost = flt_max;
   for (auto saxis : range(3)) {
     for (auto b = 1; b < nbins; b++) {
       auto bsplit    = cbbox.min[saxis] + b * csize[saxis] / nbins;
@@ -139,8 +134,9 @@ static pair<int, int> split_sah(vector<int>& primitives,
           right_nprims += 1;
         }
       }
-      auto cost = 1 + left_nprims * bbox_area(left_bbox) / bbox_area(cbbox) +
-                  right_nprims * bbox_area(right_bbox) / bbox_area(cbbox);
+      auto cost =
+          1 + left_nprims * bbox_area(left_bbox) / (bbox_area(cbbox) + 1e-12f) +
+          right_nprims * bbox_area(right_bbox) / (bbox_area(cbbox) + 1e-12f);
       if (cost < min_cost) {
         min_cost = cost;
         split    = bsplit;
@@ -210,7 +206,7 @@ static pair<int, int> split_middle(vector<int>& primitives,
   auto axis = (int)argmax(csize);
 
   // split the space in the middle along the largest axis
-  auto split = center(cbbox)[axis];
+  auto split = bbox_center(cbbox)[axis];
   auto middle =
       (int)(std::partition(primitives.data() + start, primitives.data() + end,
                 [axis, split, &centers](auto primitive) {
@@ -243,7 +239,7 @@ static bvh_tree make_bvh(const vector<bbox3f>& bboxes, bool highquality) {
 
   // prepare centers
   auto centers = vector<vec3f>(bboxes.size());
-  for (auto idx : range(bboxes.size())) centers[idx] = center(bboxes[idx]);
+  for (auto idx : range(bboxes.size())) centers[idx] = bbox_center(bboxes[idx]);
 
   // push first node onto the stack
   auto stack = vector<vec3i>{{0, 0, (int)bboxes.size()}};
@@ -437,7 +433,7 @@ void update_scene_bvh(scene_bvh& sbvh, const scene_data& scene,
   for (auto idx : range(bboxes.size())) {
     auto& instance = scene.instances[idx];
     bboxes[idx]    = transform_bbox(
-        instance.frame, sbvh.shapes[instance.shape].bvh.nodes[0].bbox);
+           instance.frame, sbvh.shapes[instance.shape].bvh.nodes[0].bbox);
   }
 
   // update nodes
@@ -471,7 +467,7 @@ shape_intersection intersect_shape_bvh(const shape_bvh& sbvh,
   auto ray = ray_;
 
   // prepare ray for fast queries
-  auto ray_dinv  = vec3f{1 / ray.d.x, 1 / ray.d.y, 1 / ray.d.z};
+  auto ray_dinv  = 1 / ray.d;
   auto ray_dsign = vec3i{(ray_dinv.x < 0) ? 1 : 0, (ray_dinv.y < 0) ? 1 : 0,
       (ray_dinv.z < 0) ? 1 : 0};
 
@@ -500,7 +496,7 @@ shape_intersection intersect_shape_bvh(const shape_bvh& sbvh,
       for (auto idx = node.start; idx < node.start + node.num; idx++) {
         auto& p             = shape.points[bvh.primitives[idx]];
         auto  pintersection = intersect_point(
-            ray, shape.positions[p], shape.radius[p]);
+             ray, shape.positions[p], shape.radius[p]);
         if (!pintersection.hit) continue;
         intersection = {bvh.primitives[idx], pintersection.uv,
             pintersection.distance, true};
@@ -665,7 +661,7 @@ shape_intersection overlap_shape_bvh(const shape_bvh& sbvh,
         auto  primitive     = bvh.primitives[node.start + idx];
         auto& p             = shape.points[primitive];
         auto  eintersection = overlap_point(
-            pos, max_distance, shape.positions[p], shape.radius[p]);
+             pos, max_distance, shape.positions[p], shape.radius[p]);
         if (!eintersection.hit) continue;
         intersection = {
             primitive, eintersection.uv, eintersection.distance, true};
@@ -896,7 +892,7 @@ shape_ebvh make_shape_ebvh(const shape_data& shape, bool highquality) {
   auto sbvh    = shape_ebvh{};
   auto edevice = embree_device();
   sbvh.ebvh    = unique_ptr<void, void (*)(void*)>{
-      rtcNewScene(edevice), &clear_ebvh};
+         rtcNewScene(edevice), &clear_ebvh};
   auto escene = (RTCScene)sbvh.ebvh.get();
   if (highquality) {
     rtcSetSceneBuildQuality(escene, RTC_BUILD_QUALITY_HIGH);
@@ -932,7 +928,7 @@ shape_ebvh make_shape_ebvh(const shape_data& shape, bool highquality) {
     auto embree_positions = rtcSetNewGeometryBuffer(egeometry,
         RTC_BUFFER_TYPE_VERTEX, 0, RTC_FORMAT_FLOAT4, 4 * 4, epositions.size());
     auto embree_lines     = rtcSetNewGeometryBuffer(
-        egeometry, RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT, 4, elines.size());
+            egeometry, RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT, 4, elines.size());
     memcpy(embree_positions, epositions.data(), epositions.size() * 16);
     memcpy(embree_lines, elines.data(), elines.size() * 4);
     rtcCommitGeometry(egeometry);
@@ -995,7 +991,7 @@ scene_ebvh make_scene_ebvh(
   // scene bvh
   auto edevice = embree_device();
   sbvh.ebvh    = unique_ptr<void, void (*)(void*)>{
-      rtcNewScene(edevice), &clear_ebvh};
+         rtcNewScene(edevice), &clear_ebvh};
   auto escene = (RTCScene)sbvh.ebvh.get();
   if (highquality) {
     rtcSetSceneBuildQuality(escene, RTC_BUILD_QUALITY_HIGH);

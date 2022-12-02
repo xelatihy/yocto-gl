@@ -380,8 +380,8 @@ vector<string> shape_stats(const shape_data& shape, bool verbose) {
   stats.push_back("texcoords:    " + format(shape.texcoords.size()));
   stats.push_back("colors:       " + format(shape.colors.size()));
   stats.push_back("radius:       " + format(shape.radius.size()));
-  stats.push_back("center:       " + format3(center(bbox)));
-  stats.push_back("size:         " + format3(size(bbox)));
+  stats.push_back("center:       " + format3(bbox_center(bbox)));
+  stats.push_back("diagonal:     " + format3(bbox_diagonal(bbox)));
   stats.push_back("min:          " + format3(bbox.min));
   stats.push_back("max:          " + format3(bbox.max));
 
@@ -527,8 +527,8 @@ vector<string> fvshape_stats(const fvshape_data& shape, bool verbose) {
   stats.push_back("positions:    " + format(shape.positions.size()));
   stats.push_back("normals:      " + format(shape.normals.size()));
   stats.push_back("texcoords:    " + format(shape.texcoords.size()));
-  stats.push_back("center:       " + format3(center(bbox)));
-  stats.push_back("size:         " + format3(size(bbox)));
+  stats.push_back("center:       " + format3(bbox_center(bbox)));
+  stats.push_back("diagonal:     " + format3(bbox_diagonal(bbox)));
   stats.push_back("min:          " + format3(bbox.min));
   stats.push_back("max:          " + format3(bbox.max));
 
@@ -2060,7 +2060,7 @@ static bvh_tree make_bvh(vector<bbox3f>& bboxes) {
 
   // prepare centers
   auto centers = vector<vec3f>(bboxes.size());
-  for (auto idx : range(bboxes.size())) centers[idx] = center(bboxes[idx]);
+  for (auto idx : range(bboxes.size())) centers[idx] = bbox_center(bboxes[idx]);
 
   // queue up first node
   auto queue = deque<vec3i>{{0, 0, (int)bboxes.size()}};
@@ -4103,7 +4103,7 @@ void make_shell(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, float thickness) {
   auto bbox = invalidb3f;
   for (auto p : positions) bbox = merge(bbox, p);
-  auto center              = yocto::center(bbox);
+  auto center              = bbox_center(bbox);
   auto inner_quads         = quads;
   auto inner_positions     = positions;
   auto inner_normals       = normals;

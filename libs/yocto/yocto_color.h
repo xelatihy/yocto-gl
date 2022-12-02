@@ -174,9 +174,9 @@ inline vec<byte, N> rgb_to_srgbb(const vec<T, N>& rgb) {
 template <typename T>
 inline vec<T, 4> rgb_to_rgba(const vec<T, 3>& rgb) {
   if constexpr (!std::is_same_v<T, byte>) {
-    return {rgb.x, rgb.y, rgb.z, (T)1};
+    return {rgb, (T)1};
   } else {
-    return {rgb.x, rgb.y, rgb.z, (byte)255};
+    return {rgb, (byte)255};
   }
 }
 template <typename T>
@@ -205,8 +205,8 @@ inline vec<T, 3> contrast(const vec<T, 3>& rgb, T contrast) {
 }
 // Apply saturation.
 template <typename T>
-inline vec<T, 3> saturate(
-    const vec<T, 3>& rgb, T saturation, const vec<T, 3>& weights = vec<T, 3>{
+inline vec<T, 3> saturate(const vec<T, 3>& rgb, T saturation,
+    const vec<T, 3>& weights = vec<T, 3>{
         (T)(1.0 / 3.0), (T)(1.0 / 3.0), (T)(1.0 / 3.0)}) {
   auto grey = dot(weights, rgb);
   return max(vec<T, 3>{0, 0, 0}, grey + (rgb - grey) * (saturation * 2));
@@ -299,7 +299,7 @@ template <typename T>
 inline vec<T, 4> tonemap(
     const vec<T, 4>& hdr, T exposure, bool filmic, bool srgb = true) {
   auto ldr = tonemap(xyz(hdr), exposure, filmic, srgb);
-  return {ldr.x, ldr.y, ldr.z, hdr.w};
+  return {ldr, hdr.w};
 }
 
 // Composite colors
@@ -419,7 +419,7 @@ inline vec<T, 3> blackbody_to_rgb(T temperature) {
   return xyz_to_rgb(xyY_to_xyz(vec<T, 3>{x, y, 1}));
 }
 
-}
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // COLOR MAPS
@@ -552,13 +552,47 @@ struct colorgrade_gparams {
 // Alias
 using colorgrade_params = colorgrade_gparams<float>;
 
-// Apply color grading from a linear or srgb color to an srgb color.
 template <typename T>
 inline vec<T, 3> colorgrade(
-    const vec<T, 3>& color, bool linear, const colorgrade_gparams<T>& params);
+    const vec<T, 3>& rgb_, bool linear, const colorgrade_gparams<T>& params) {
+  auto rgb = rgb_;
+  if (params.exposure != 0) rgb *= exp2(params.exposure);
+  if (params.tint != vec<T, 3>{1, 1, 1}) rgb *= params.tint;
+  if (params.lincontrast != (T)0.5)
+    rgb = lincontrast(rgb, params.lincontrast, linear ? (T)0.18 : (T)0.5);
+  if (params.logcontrast != (T)0.5)
+    rgb = logcontrast(rgb, params.logcontrast, linear ? (T)0.18 : (T)0.5);
+  if (params.linsaturation != (T)0.5) rgb = saturate(rgb, params.linsaturation);
+  if (params.filmic) rgb = tonemap_filmic(rgb);
+  if (linear && params.srgb) rgb = rgb_to_srgb(rgb);
+  if (params.contrast != (T)0.5) rgb = contrast(rgb, params.contrast);
+  if (params.saturation != (T)0.5) rgb = saturate(rgb, params.saturation);
+  if (params.shadows != (T)0.5 || params.midtones != (T)0.5 ||
+      params.highlights != (T)0.5 || params.shadows_color != vec3f{1, 1, 1} ||
+      params.midtones_color != vec3f{1, 1, 1} ||
+      params.highlights_color != vec3f{1, 1, 1}) {
+    auto lift  = params.shadows_color;
+    auto gamma = params.midtones_color;
+    auto gain  = params.highlights_color;
+
+    lift      = lift - mean(lift) + params.shadows - (T)0.5;
+    gain      = gain - mean(gain) + params.highlights + (T)0.5;
+    auto grey = gamma - mean(gamma) + params.midtones;
+    gamma     = log(((T)0.5 - lift) / (gain - lift)) / log(grey);
+
+    // apply_image
+    auto lerp_value = clamp(pow(rgb, 1 / gamma), (T)0, (T)1);
+    rgb             = gain * lerp_value + lift * (1 - lerp_value);
+  }
+  return rgb;
+}
+
 template <typename T>
 inline vec<T, 4> colorgrade(
-    const vec<T, 4>& color, bool linear, const colorgrade_gparams<T>& params);
+    const vec<T, 4>& rgba, bool linear, const colorgrade_params& params) {
+  auto graded = colorgrade(xyz(rgba), linear, params);
+  return {graded, rgba.w};
+}
 
 }  // namespace yocto
 
@@ -611,53 +645,6 @@ inline vec<T, 3> convert_color(
 //
 //
 // -----------------------------------------------------------------------------
-
-// -----------------------------------------------------------------------------
-// COLOR GRADING
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-template <typename T>
-inline vec<T, 3> colorgrade(
-    const vec<T, 3>& rgb_, bool linear, const colorgrade_gparams<T>& params) {
-  auto rgb = rgb_;
-  if (params.exposure != 0) rgb *= exp2(params.exposure);
-  if (params.tint != vec<T, 3>{1, 1, 1}) rgb *= params.tint;
-  if (params.lincontrast != (T)0.5)
-    rgb = lincontrast(rgb, params.lincontrast, linear ? (T)0.18 : (T)0.5);
-  if (params.logcontrast != (T)0.5)
-    rgb = logcontrast(rgb, params.logcontrast, linear ? (T)0.18 : (T)0.5);
-  if (params.linsaturation != (T)0.5) rgb = saturate(rgb, params.linsaturation);
-  if (params.filmic) rgb = tonemap_filmic(rgb);
-  if (linear && params.srgb) rgb = rgb_to_srgb(rgb);
-  if (params.contrast != (T)0.5) rgb = contrast(rgb, params.contrast);
-  if (params.saturation != (T)0.5) rgb = saturate(rgb, params.saturation);
-  if (params.shadows != (T)0.5 || params.midtones != (T)0.5 ||
-      params.highlights != (T)0.5 || params.shadows_color != vec3f{1, 1, 1} ||
-      params.midtones_color != vec3f{1, 1, 1} ||
-      params.highlights_color != vec3f{1, 1, 1}) {
-    auto lift  = params.shadows_color;
-    auto gamma = params.midtones_color;
-    auto gain  = params.highlights_color;
-
-    lift      = lift - mean(lift) + params.shadows - (T)0.5;
-    gain      = gain - mean(gain) + params.highlights + (T)0.5;
-    auto grey = gamma - mean(gamma) + params.midtones;
-    gamma     = log(((T)0.5 - lift) / (gain - lift)) / log(grey);
-
-    // apply_image
-    auto lerp_value = clamp(pow(rgb, 1 / gamma), (T)0, (T)1);
-    rgb             = gain * lerp_value + lift * (1 - lerp_value);
-  }
-  return rgb;
-}
-inline vec4f colorgrade(
-    const vec4f& rgba, bool linear, const colorgrade_params& params) {
-  auto graded = colorgrade(xyz(rgba), linear, params);
-  return {graded.x, graded.y, graded.z, rgba.w};
-}
-
-}  // namespace yocto
 
 #ifndef __CUDACC__
 
