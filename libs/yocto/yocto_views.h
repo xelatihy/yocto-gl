@@ -67,7 +67,6 @@ struct span {
   constexpr span(const span&) noexcept = default;
   constexpr span(span&&) noexcept      = default;
   constexpr span(T* data, size_t size) noexcept : _data{data}, _size{size} {}
-  template <class It>
   constexpr span(T* begin, T* end) noexcept
       : _data{begin}, _size{end - begin} {}
   template <size_t N>
