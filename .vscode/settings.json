@@ -121,7 +121,8 @@
     "__bits": "cpp",
     "numbers": "cpp",
     "semaphore": "cpp",
-    "source_location": "cpp"
+    "source_location": "cpp",
+    "span": "cpp"
   },
   "json.schemas": [
     {

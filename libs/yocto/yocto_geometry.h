@@ -333,48 +333,47 @@ constexpr kernel bbox<T, N> capsule_bounds(
 
 // Primitive bounds in indexed arrays.
 template <typename T, size_t N, typename I>
-constexpr kernel bbox<T, N> point_bounds(
-    span<const vec<T, N>> positions, I point) {
+constexpr kernel bbox<T, N> point_bounds(cspan<vec<T, N>> positions, I point) {
   return point_bounds(positions[point]);
 }
 template <typename T, size_t N, typename I>
 constexpr kernel bbox<T, N> point_bounds(
-    span<const vec<T, N>> positions, span<const T> radius, I point) {
+    cspan<vec<T, N>> positions, cspan<T> radius, I point) {
   return point_bounds(positions[point], radius[point]);
 }
 template <typename T, size_t N, typename I>
 constexpr kernel bbox<T, N> line_bounds(
-    span<const vec<T, N>> positions, vec<I, 2> line) {
+    cspan<vec<T, N>> positions, vec<I, 2> line) {
   auto [v1, v2] = line;
   return line_bounds(positions[v1], positions[v2]);
 }
 template <typename T, size_t N, typename I>
 constexpr kernel bbox<T, N> line_bounds(
-    span<const vec<T, N>> positions, span<const T> radius, vec<I, 2> line) {
+    cspan<vec<T, N>> positions, cspan<T> radius, vec<I, 2> line) {
   auto [v1, v2] = line;
   return line_bounds(positions[v1], positions[v2], radius[v1], radius[v2]);
 }
 template <typename T, size_t N, typename I>
 constexpr kernel bbox<T, N> triangle_bounds(
-    span<const vec<T, N>> positions, vec<I, 3> triangle) {
+    cspan<vec<T, N>> positions, vec<I, 3> triangle) {
   auto [v1, v2, v3] = triangle;
   return triangle_bounds(positions[v1], positions[v2], positions[v3]);
 }
 template <typename T, size_t N, typename I>
 constexpr kernel bbox<T, N> quad_bounds(
-    span<const vec<T, N>> positions, vec<I, 4> quad) {
+    cspan<vec<T, N>> positions, vec<I, 4> quad) {
   auto [v1, v2, v3, v4] = quad;
   return quad_bounds(
       positions[v1], positions[v2], positions[v3], positions[v4]);
 }
 template <typename T, size_t N, typename I>
 constexpr kernel bbox<T, N> sphere_bounds(
-    span<const vec<T, N>> positions, span<const T> radius, I point) {
+    cspan<vec<T, N>> positions, cspan<T> radius, I point) {
   return sphere_bounds(positions[point], radius[point]);
 }
 template <typename T, size_t N, typename I>
 constexpr kernel bbox<T, N> capsule_bounds(
-    span<const vec<T, N>> positions, span<const T> radius, vec<I, 2> line) {
+    cspan<vec<T, N>> positions, cspan<T> radius, vec<I, 2> line) {
   auto [v1, v2] = line;
   return capsule_bounds(positions[v1], positions[v2], radius[v1], radius[v2]);
 }

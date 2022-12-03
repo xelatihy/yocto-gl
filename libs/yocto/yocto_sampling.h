@@ -320,13 +320,13 @@ constexpr kernel T sample_uniform_pdf(I size) {
 
 // Sample an index with uniform distribution.
 template <typename T, typename E>
-constexpr kernel E sample_uniform(span<const E> elements, T r) {
+constexpr kernel E sample_uniform(cspan<E> elements, T r) {
   if (elements.empty()) return E{};
   auto size = elements.size();
   return elements[clamp((size_t)(r * size), (size_t)0, size - 1)];
 }
 template <typename E, typename T = float>
-constexpr kernel T sample_uniform_pdf(span<const E> elements) {
+constexpr kernel T sample_uniform_pdf(cspan<E> elements) {
   if (elements.empty()) return 0;
   return (T)1 / (T)elements.size();
 }
@@ -334,7 +334,7 @@ constexpr kernel T sample_uniform_pdf(span<const E> elements) {
 // TODO: this should be constexpr, once we understand why
 // Sample a discrete distribution represented by its cdf.
 template <typename T, typename I = int>
-inline kernel I sample_discrete(span<const T> cdf, T r) {
+inline kernel I sample_discrete(cspan<T> cdf, T r) {
   r        = clamp(r * cdf.back(), (T)0, cdf.back() - (T)0.00001);
   auto idx = (I)(std::upper_bound(cdf.data(), cdf.data() + cdf.size(), r) -
                  cdf.data());
@@ -342,7 +342,7 @@ inline kernel I sample_discrete(span<const T> cdf, T r) {
 }
 // Pdf for uniform discrete distribution sampling.
 template <typename T, typename I>
-inline kernel T sample_discrete_pdf(span<const T> cdf, I idx) {
+inline kernel T sample_discrete_pdf(cspan<T> cdf, I idx) {
   if (idx == 0) return cdf[0];
   return cdf[idx] - cdf[idx - 1];
 }
@@ -351,12 +351,12 @@ inline kernel T sample_discrete_pdf(span<const T> cdf, I idx) {
 // Sample a discrete distribution represented by its cdf.
 template <typename T, typename I = int>
 inline kernel int sample_discrete(const vector<T>& cdf, T r) {
-  return sample_discrete(span<const T>{cdf}, r);
+  return sample_discrete(cspan<T>{cdf}, r);
 }
 // Pdf for uniform discrete distribution sampling.
 template <typename T, typename I>
 inline kernel T sample_discrete_pdf(const vector<T>& cdf, I idx) {
-  return sample_discrete_pdf(span<const T>{cdf}, idx);
+  return sample_discrete_pdf(cspan<T>{cdf}, idx);
 }
 
 }  // namespace yocto
