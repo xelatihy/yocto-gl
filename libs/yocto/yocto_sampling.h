@@ -351,12 +351,12 @@ inline kernel T sample_discrete_pdf(cspan<T> cdf, I idx) {
 // Sample a discrete distribution represented by its cdf.
 template <typename T, typename I = int>
 inline kernel int sample_discrete(const vector<T>& cdf, T r) {
-  return sample_discrete(cspan<T>{cdf}, r);
+  return sample_discrete(cspan<T>{cdf.data(), cdf.size()}, r);
 }
 // Pdf for uniform discrete distribution sampling.
 template <typename T, typename I>
 inline kernel T sample_discrete_pdf(const vector<T>& cdf, I idx) {
-  return sample_discrete_pdf(cspan<T>{cdf}, idx);
+  return sample_discrete_pdf(cspan<T>{cdf.data(), cdf.size()}, idx);
 }
 
 }  // namespace yocto

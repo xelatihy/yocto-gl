@@ -101,51 +101,9 @@ struct span {
   size_t _size = 0;
 };
 
-// Span similar to std::span. We'll switch to the standard library version when
-// present in all compilers.
+// Constant span
 template <typename T>
-struct cspan {
- public:
-  // Constructors
-  constexpr cspan() noexcept : _data{nullptr}, _size{0} {}
-  constexpr cspan(const cspan&) noexcept = default;
-  constexpr cspan(cspan&&) noexcept      = default;
-  constexpr cspan(const T* data, size_t size) noexcept
-      : _data{data}, _size{size} {}
-  constexpr cspan(const T* begin, const T* end) noexcept
-      : _data{begin}, _size{end - begin} {}
-  template <size_t N>
-  constexpr cspan(const std::array<T, N>& arr) noexcept
-      : _data{arr.data()}, _size{N} {}
-  constexpr cspan(const std::vector<T>& arr) noexcept
-      : _data{arr.data()}, _size{arr.size()} {}
-
-  // Assignments
-  constexpr cspan& operator=(const cspan&) noexcept  = default;
-  constexpr cspan& operator=(cspan&& other) noexcept = default;
-
-  // Size
-  constexpr bool   empty() const noexcept { return _size == 0; }
-  constexpr size_t size() const noexcept { return _size; }
-
-  // Access
-  constexpr const T& operator[](size_t idx) const noexcept {
-    return _data[idx];
-  }
-  constexpr const T& front() const noexcept { return _data[0]; }
-  constexpr const T& back() const noexcept { return _data[_size - 1]; }
-
-  // Iteration
-  constexpr const T* begin() const noexcept { return _data; }
-  constexpr const T* end() const noexcept { return _data + _size; }
-
-  // Data access
-  constexpr const T* data() const noexcept { return _data; }
-
- private:
-  const T* _data = nullptr;
-  size_t   _size = 0;
-};
+using cspan = span<const T>;
 
 }  // namespace yocto
 
