@@ -72,6 +72,8 @@ struct span {
   template <size_t N>
   constexpr span(std::array<T, N>& arr) noexcept
       : _data{arr.data()}, _size{N} {}
+  constexpr span(std::vector<T>& arr) noexcept
+      : _data{arr.data()}, _size{arr.size()} {}
 
   // Assignments
   constexpr span& operator=(const span&) noexcept  = default;
@@ -97,6 +99,10 @@ struct span {
   T*     _data = nullptr;
   size_t _size = 0;
 };
+
+// Constant span
+template <typename T>
+using cspan = span<const T>;
 
 }  // namespace yocto
 
