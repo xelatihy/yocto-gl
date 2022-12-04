@@ -204,7 +204,9 @@ struct cuspan {
 // cuda buffer
 template <typename T>
 struct cuspan2d {
-  bool        empty() const { return size() == 0; }
+  bool             empty() const { return size() == 0; }
+  array<size_t, 2> extents() const { return _extents; }
+  size_t      extent(size_t dimension) const { return _extents[dimension]; }
   size_t      size() const { return _extents[0] * _extents[1]; }
   CUdeviceptr device_ptr() const { return _data; }
   size_t      size_in_bytes() const { return size() * sizeof(T); }
@@ -330,17 +332,15 @@ struct cuscene_bvh {
 
 // state
 struct cutrace_state {
-  int               width            = 0;
-  int               height           = 0;
-  int               samples          = 0;
-  cuspan<vec4f>     image            = {};
-  cuspan<vec3f>     albedo           = {};
-  cuspan<vec3f>     normal           = {};
-  cuspan<int>       hits             = {};
-  cuspan<rng_state> rngs             = {};
-  cuspan<vec4f>     denoised         = {};
-  cuspan<byte>      denoiser_state   = {};
-  cuspan<byte>      denoiser_scratch = {};
+  int                 samples          = 0;
+  cuspan2d<vec4f>     image            = {};
+  cuspan2d<vec3f>     albedo           = {};
+  cuspan2d<vec3f>     normal           = {};
+  cuspan2d<int>       hits             = {};
+  cuspan2d<rng_state> rngs             = {};
+  cuspan2d<vec4f>     denoised         = {};
+  cuspan<byte>        denoiser_state   = {};
+  cuspan<byte>        denoiser_scratch = {};
 
   cutrace_state() {}
   cutrace_state(cutrace_state&&);

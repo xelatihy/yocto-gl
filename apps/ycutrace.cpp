@@ -180,7 +180,7 @@ void run(const vector<string>& args) {
     auto pstate     = make_cutrace_state(context, scene, pparams);
 
     // init state
-    auto image = array2d<vec4f>{state.width, state.height};
+    auto image = array2d<vec4f>{state.image.extents()};
 
     // opengl image
     auto glimage     = glimage_state{};
@@ -210,9 +210,8 @@ void run(const vector<string>& args) {
     auto render_restart = [&]() {
       // reset state
       reset_cutrace_state(context, state, scene, params);
-      if ((vec2s)image.extents() !=
-          vec2s{(size_t)state.width, (size_t)state.height})
-        image = array2d<vec4f>{state.width, state.height};
+      if (image.extents() != state.image.extents())
+        image = array2d<vec4f>{state.image.extents()};
 
       // render preview
       trace_preview(

@@ -851,7 +851,7 @@ void show_cutrace_gui(const string& title, const string& name,
   auto pstate     = make_cutrace_state(context, scene, pparams);
 
   // init state
-  auto image = array2d<vec4f>{state.width, state.height};
+  auto image = array2d<vec4f>{state.image.extents()};
 
   // opengl image
   auto glimage     = glimage_state{};
@@ -892,9 +892,8 @@ void show_cutrace_gui(const string& title, const string& name,
   // reset renderer
   auto render_reset = [&]() {
     reset_cutrace_state(context, state, scene, params);
-    if ((vec2s)image.extents() !=
-        vec2s{(size_t)state.width, (size_t)state.height})
-      image = array2d<vec4f>{state.width, state.height};
+    if (image.extents() != state.image.extents())
+      image = array2d<vec4f>{state.image.extents()};
   };
 
   // render samples synchronously

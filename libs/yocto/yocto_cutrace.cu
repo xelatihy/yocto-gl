@@ -143,17 +143,15 @@ struct cuspan {
 
 template <typename T>
 struct cuspan2d {
-  inline bool             empty() const { return size() == 0; }
-  inline size_t           size() const { return _extents[0] * _extents[1]; }
-  inline array<size_t, 2> extents() const { return _extents; }
+  inline bool     empty() const { return size() == 0; }
+  inline size_t   size() const { return _extents[0] * _extents[1]; }
+  inline vec2s    extents() const { return _extents; }
   inline size_t   extent(size_t dimension) const { return _extents[dimension]; }
   inline T&       operator[](int idx) { return _data[idx]; }
   inline const T& operator[](int idx) const { return _data[idx]; }
-  inline T&       operator[](array<size_t, 2> idx) {
-          return _data[idx[1] * extents[0] + idx[0]];
-  }
-  inline const T& operator[](array<size_t, 2> idx) const {
-    return _data[iidx[1] * extents[0] + idx[0;];
+  inline T& operator[](vec2s idx) { return _data[idx.y * _extents.x + idx.x]; }
+  inline const T& operator[](vec2s idx) const {
+    return _data[iidx.y * _extents.x + idx.x];
   }
 
   inline T*       begin() { return _data; }
@@ -166,8 +164,8 @@ struct cuspan2d {
   inline const T& front() const { return *_data; }
   inline const T& back() const { return *(_data + size() - 1); }
 
-  T*               _data    = nullptr;
-  array<size_t, 2> _extents = {0, 0};
+  T*    _data    = nullptr;
+  vec2s _extents = {0, 0};
 };
 
 template <typename T, size_t Size = 16>
@@ -222,17 +220,15 @@ namespace yocto {
 constexpr int invalidid = -1;
 
 struct cutrace_state {
-  int               width            = 0;
-  int               height           = 0;
-  int               samples          = 0;
-  cuspan<vec4f>     image            = {};
-  cuspan<vec3f>     albedo           = {};
-  cuspan<vec3f>     normal           = {};
-  cuspan<int>       hits             = {};
-  cuspan<rng_state> rngs             = {};
-  cuspan<vec4f>     denoised         = {};
-  cuspan<byte>      denoiser_state   = {};
-  cuspan<byte>      denoiser_scratch = {};
+  int                 samples          = 0;
+  cuspan2d<vec4f>     image            = {};
+  cuspan2d<vec3f>     albedo           = {};
+  cuspan2d<vec3f>     normal           = {};
+  cuspan2d<int>       hits             = {};
+  cuspan2d<rng_state> rngs             = {};
+  cuspan2d<vec4f>     denoised         = {};
+  cuspan<byte>        denoiser_state   = {};
+  cuspan<byte>        denoiser_scratch = {};
 };
 
 struct cucamera_data {
@@ -2112,14 +2108,14 @@ static trace_result trace_sampler(const scene_data& scene, const trace_bvh& bvh,
 }
 
 static void trace_sample(cutrace_state& state, const cuscene_data& scene,
-    const cutrace_bvh& bvh, const cutrace_lights& lights, int i, int j,
+    const cutrace_bvh& bvh, const cutrace_lights& lights, const vec2i& ij_,
     int sample, const trace_params& params) {
+  auto  ij     = (vec2s)ij_;
   auto& camera = scene.cameras[params.camera];
   // auto  sampler = get_trace_sampler_func(params);
-  auto idx    = state.width * j + i;
-  auto ray    = sample_camera(camera, {i, j}, {state.width, state.height},
-         rand2f(state.rngs[idx]), rand2f(state.rngs[idx]), params.tentfilter);
-  auto result = trace_sampler(scene, bvh, lights, ray, state.rngs[idx], params);
+  auto ray    = sample_camera(camera, ij, (vec2i)state.image.extents(),
+         rand2f(state.rngs[ij]), rand2f(state.rngs[ij]), params.tentfilter);
+  auto result = trace_sampler(scene, bvh, lights, ray, state.rngs[ij], params);
   // auto [radiance, hit, albedo, normal] = sampler(
   //    scene, bvh, lights, ray, state.rngs[idx], params);
   auto radiance = result.radiance;
@@ -2131,41 +2127,41 @@ static void trace_sample(cutrace_state& state, const cuscene_data& scene,
     radiance = radiance * (params.clamp / max(radiance));
   auto weight = 1.0f / (sample + 1);
   if (hit) {
-    state.image[idx]  = lerp(state.image[idx], vec4f{radiance, 1}, weight);
-    state.albedo[idx] = lerp(state.albedo[idx], albedo, weight);
-    state.normal[idx] = lerp(state.normal[idx], normal, weight);
-    state.hits[idx] += 1;
+    state.image[ij]  = lerp(state.image[ij], vec4f{radiance, 1}, weight);
+    state.albedo[ij] = lerp(state.albedo[ij], albedo, weight);
+    state.normal[ij] = lerp(state.normal[ij], normal, weight);
+    state.hits[ij] += 1;
   } else if (!params.envhidden && !scene.environments.empty()) {
-    state.image[idx]  = lerp(state.image[idx], vec4f{radiance, 1}, weight);
-    state.albedo[idx] = lerp(state.albedo[idx], vec3f{1, 1, 1}, weight);
-    state.normal[idx] = lerp(state.normal[idx], -ray.d, weight);
-    state.hits[idx] += 1;
+    state.image[ij]  = lerp(state.image[ij], vec4f{radiance, 1}, weight);
+    state.albedo[ij] = lerp(state.albedo[ij], vec3f{1, 1, 1}, weight);
+    state.normal[ij] = lerp(state.normal[ij], -ray.d, weight);
+    state.hits[ij] += 1;
   } else {
-    state.image[idx]  = lerp(state.image[idx], vec4f{0, 0, 0, 0}, weight);
-    state.albedo[idx] = lerp(state.albedo[idx], vec3f{0, 0, 0}, weight);
-    state.normal[idx] = lerp(state.normal[idx], -ray.d, weight);
+    state.image[ij]  = lerp(state.image[ij], vec4f{0, 0, 0, 0}, weight);
+    state.albedo[ij] = lerp(state.albedo[ij], vec3f{0, 0, 0}, weight);
+    state.normal[ij] = lerp(state.normal[ij], -ray.d, weight);
   }
 }
 
 // raygen shader
 optix_shader void __raygen__trace_pixel() {
   // pixel index
-  auto ij  = optixGetLaunchIndex();
-  auto idx = ij.y * globals.state.width + ij.x;
+  auto ij_ = optixGetLaunchIndex();
+  auto ij  = vec2s{ij_.x, ij_.y};
 
   // initialize state on first sample
   if (globals.state.samples == 0) {
-    globals.state.image[idx] = {0, 0, 0, 0};
-    globals.state.rngs[idx]  = make_rng(98273987, idx * 2 + 1);
+    globals.state.image[ij] = {0, 0, 0, 0};
+    globals.state.rngs[ij]  = make_rng(
+         98273987, (ij.y * globals.state.image.extent(1) + ij.x) * 2 + 1);
   }
 
   // run shading
   auto ssample  = globals.state.samples;
   auto nsamples = globals.params.batch;
   for (auto sample = ssample; sample < ssample + nsamples; sample++) {
-    trace_sample(globals.state, globals.scene, globals.bvh, globals.lights,
-        optixGetLaunchIndex().x, optixGetLaunchIndex().y, sample,
-        globals.params);
+    trace_sample(globals.state, globals.scene, globals.bvh, globals.lights, ij,
+        sample, globals.params);
   }
 }
 
