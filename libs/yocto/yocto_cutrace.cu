@@ -141,6 +141,35 @@ struct cuspan {
   size_t _size = 0;
 };
 
+template <typename T>
+struct cuspan2d {
+  inline bool             empty() const { return size() == 0; }
+  inline size_t           size() const { return _extents[0] * _extents[1]; }
+  inline array<size_t, 2> extents() const { return _extents; }
+  inline size_t   extent(size_t dimension) const { return _extents[dimension]; }
+  inline T&       operator[](int idx) { return _data[idx]; }
+  inline const T& operator[](int idx) const { return _data[idx]; }
+  inline T&       operator[](array<size_t, 2> idx) {
+          return _data[idx[1] * extents[0] + idx[0]];
+  }
+  inline const T& operator[](array<size_t, 2> idx) const {
+    return _data[iidx[1] * extents[0] + idx[0;];
+  }
+
+  inline T*       begin() { return _data; }
+  inline T*       end() { return _data + _size; }
+  inline const T* begin() const { return _data; }
+  inline const T* end() const { return _data + size(); }
+
+  inline T&       front() { return *_data; }
+  inline T&       back() { return *(_data + size() - 1); }
+  inline const T& front() const { return *_data; }
+  inline const T& back() const { return *(_data + size() - 1); }
+
+  T*               _data    = nullptr;
+  array<size_t, 2> _extents = {0, 0};
+};
+
 template <typename T, size_t Size = 16>
 struct svector {
   inline bool     empty() const { return _size == 0; }
@@ -190,7 +219,6 @@ inline T* getPRD() {
 // CUTRACE TYPES
 // -----------------------------------------------------------------------------
 namespace yocto {
-
 constexpr int invalidid = -1;
 
 struct cutrace_state {

@@ -201,6 +201,22 @@ struct cuspan {
   size_t      _size = 0;
 };
 
+// cuda buffer
+template <typename T>
+struct cuspan2d {
+  bool        empty() const { return size() == 0; }
+  size_t      size() const { return _extents[0] * _extents[1]; }
+  CUdeviceptr device_ptr() const { return _data; }
+  size_t      size_in_bytes() const { return size() * sizeof(T); }
+  void        swap(cuspan2d& other) {
+           std::swap(_data, other._data);
+           std::swap(_extents, other._extents);
+  }
+
+  CUdeviceptr      _data    = 0;
+  array<size_t, 2> _extents = {0, 0};
+};
+
 // cuda array
 template <typename T>
 struct cuarray {
