@@ -65,7 +65,9 @@ namespace yocto {
 
 // Result object modeled on std::expected
 struct io_error : std::runtime_error {
-  using std::runtime_error::runtime_error;
+  io_error(const string& msg) : std::runtime_error{msg} {}
+  io_error(const string& filename, const string& msg)
+      : std::runtime_error{filename + ": " + msg} {}
 };
 
 }  // namespace yocto
@@ -84,20 +86,9 @@ bool is_ldr_filename(const string& filename);
 template <typename T = vec4f>
 array2d<T> load_image(const string& filename);
 template <typename T>
-bool load_image(const string& filename, array2d<T>& img, string& error);
-template <typename T>
-bool save_image(const string& filename, const array2d<T>& img, string& error);
-
-// Loads/saves a 3/4 channels float/byte image in linear/srgb color space.
-// Supports data as vec3f, vec4f, vec3b, vec4b.
-template <typename T>
 void load_image(const string& filename, array2d<T>& image);
 template <typename T>
 void save_image(const string& filename, const array2d<T>& image);
-
-// Loads/saves a 4 channels float/byte image in linear/srgb color space.
-bool load_image(const string& filename, image_data& img, string& error);
-bool save_image(const string& filename, const image_data& img, string& error);
 
 // Loads/saves a 4 channels float/byte image in linear/srgb color space.
 void load_image(const string& filename, image_data& image);
@@ -105,10 +96,6 @@ void save_image(const string& filename, const image_data& image);
 
 // Make presets. Supported mostly in IO.
 image_data make_image_preset(const string& type);
-
-// Make presets. Supported mostly in IO.
-bool make_image_preset(
-    const string& filename, image_data& image, string& error);
 
 }  // namespace yocto
 
