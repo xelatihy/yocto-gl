@@ -840,12 +840,7 @@ template void load_image(const string&, array2d<vec4f>&);
 template void save_image(const string&, const array2d<vec4f>&);
 
 // Loads/saves an image. Chooses hdr or ldr based on file name.
-bool load_image(const string& filename, image_data& image, string& error) {
-  auto read_error = [&]() {
-    error = "cannot read " + filename;
-    return false;
-  };
-
+void load_image(const string& filename, image_data& image) {
   // conversion helpers
   auto from_linear = [](const float* pixels, int width, int height) {
     if (pixels == nullptr) return vector<vec4f>{};
@@ -863,90 +858,71 @@ bool load_image(const string& filename, image_data& image, string& error) {
 
   auto ext = path_extension(filename);
   if (ext == ".exr" || ext == ".EXR") {
-    auto buffer = vector<byte>{};
-    if (!load_binary(filename, buffer, error)) return false;
+    auto buffer = load_binary(filename);
     auto pixels = (float*)nullptr;
     if (LoadEXRFromMemory(&pixels, &image.width, &image.height, buffer.data(),
             buffer.size(), nullptr) != 0)
-      return read_error();
+      throw io_error{"cannot read " + filename};
     image.linear = true;
     image.pixels = from_linear(pixels, image.width, image.height);
     free(pixels);
-    return true;
   } else if (ext == ".hdr" || ext == ".HDR") {
-    auto buffer = vector<byte>{};
-    if (!load_binary(filename, buffer, error)) return false;
+    auto buffer = load_binary(filename);
     auto ncomp  = 0;
     auto pixels = stbi_loadf_from_memory(buffer.data(), (int)buffer.size(),
         &image.width, &image.height, &ncomp, 4);
-    if (!pixels) return read_error();
+    if (!pixels) throw io_error{"cannot read " + filename};
     image.linear = true;
     image.pixels = from_linear(pixels, image.width, image.height);
     free(pixels);
-    return true;
   } else if (ext == ".png" || ext == ".PNG") {
-    auto buffer = vector<byte>{};
-    if (!load_binary(filename, buffer, error)) return false;
+    auto buffer = load_binary(filename);
     auto ncomp  = 0;
     auto pixels = stbi_load_from_memory(buffer.data(), (int)buffer.size(),
         &image.width, &image.height, &ncomp, 4);
-    if (!pixels) return read_error();
+    if (!pixels) throw io_error{"cannot read " + filename};
     image.linear = false;
     image.pixels = from_srgb(pixels, image.width, image.height);
     free(pixels);
-    return true;
   } else if (ext == ".jpg" || ext == ".JPG" || ext == ".jpeg" ||
              ext == ".JPEG") {
-    auto buffer = vector<byte>{};
-    if (!load_binary(filename, buffer, error)) return false;
+    auto buffer = load_binary(filename);
     auto ncomp  = 0;
     auto pixels = stbi_load_from_memory(buffer.data(), (int)buffer.size(),
         &image.width, &image.height, &ncomp, 4);
-    if (!pixels) return read_error();
+    if (!pixels) throw io_error{"cannot read " + filename};
     image.linear = false;
     image.pixels = from_srgb(pixels, image.width, image.height);
     free(pixels);
-    return true;
   } else if (ext == ".tga" || ext == ".TGA") {
-    auto buffer = vector<byte>{};
-    if (!load_binary(filename, buffer, error)) return false;
+    auto buffer = load_binary(filename);
     auto ncomp  = 0;
     auto pixels = stbi_load_from_memory(buffer.data(), (int)buffer.size(),
         &image.width, &image.height, &ncomp, 4);
-    if (!pixels) return read_error();
+    if (!pixels) throw io_error{"cannot read " + filename};
     image.linear = false;
     image.pixels = from_srgb(pixels, image.width, image.height);
     free(pixels);
-    return true;
   } else if (ext == ".bmp" || ext == ".BMP") {
-    auto buffer = vector<byte>{};
-    if (!load_binary(filename, buffer, error)) return false;
+    auto buffer = load_binary(filename);
     auto ncomp  = 0;
     auto pixels = stbi_load_from_memory(buffer.data(), (int)buffer.size(),
         &image.width, &image.height, &ncomp, 4);
-    if (!pixels) return read_error();
+    if (!pixels) throw io_error{"cannot read " + filename};
     image.linear = false;
     image.pixels = from_srgb(pixels, image.width, image.height);
     free(pixels);
-    return true;
   } else if (ext == ".ypreset" || ext == ".YPRESET") {
     // create preset
-    if (!make_image_preset(filename, image, error)) return false;
-    return true;
+    auto error = string{};
+    if (!make_image_preset(filename, image, error)) throw io_error{error};
   } else {
-    error = "unsupported format " + filename;
-    return false;
+    throw io_error{"unsupported format " + filename};
   }
 }
 
 // Saves an hdr image.
-bool save_image(
-    const string& filename, const image_data& image, string& error) {
-  auto write_error = [&]() {
-    error = "cannot write " + filename;
-    return false;
-  };
-
+void save_image(const string& filename, const image_data& image) {
   // conversion helpers
   auto to_linear = [](const image_data& image) {
     if (image.linear) return image.pixels;
@@ -975,52 +951,45 @@ bool save_image(
     auto buffer = vector<byte>{};
     if (!stbi_write_hdr_to_func(stbi_write_data, &buffer, (int)image.width,
             (int)image.height, 4, (const float*)to_linear(image).data()))
-      return write_error();
-    if (!save_binary(filename, buffer, error)) return false;
-    return true;
+      throw io_error{"cannot write " + filename};
+    return save_binary(filename, buffer);
   } else if (ext == ".exr" || ext == ".EXR") {
     auto data = (byte*)nullptr;
     auto size = (size_t)0;
     if (SaveEXRToMemory((const float*)to_linear(image).data(), (int)image.width,
             (int)image.height, 4, 1, &data, &size, nullptr) < 0)
-      return write_error();
+      throw io_error{"cannot write " + filename};
     auto buffer = vector<byte>{data, data + size};
     free(data);
-    if (!save_binary(filename, buffer, error)) return false;
-    return true;
+    return save_binary(filename, buffer);
   } else if (ext == ".png" || ext == ".PNG") {
     auto buffer = vector<byte>{};
     if (!stbi_write_png_to_func(stbi_write_data, &buffer, (int)image.width,
             (int)image.height, 4, (const byte*)to_srgb(image).data(),
             (int)image.width * 4))
-      return write_error();
-    if (!save_binary(filename, buffer, error)) return false;
-    return true;
+      throw io_error{"cannot write " + filename};
+    return save_binary(filename, buffer);
   } else if (ext == ".jpg" || ext == ".JPG" || ext == ".jpeg" ||
              ext == ".JPEG") {
     auto buffer = vector<byte>{};
     if (!stbi_write_jpg_to_func(stbi_write_data, &buffer, (int)image.width,
             (int)image.height, 4, (const byte*)to_srgb(image).data(), 75))
-      return write_error();
-    if (!save_binary(filename, buffer, error)) return false;
-    return true;
+      throw io_error{"cannot write " + filename};
+    return save_binary(filename, buffer);
   } else if (ext == ".tga" || ext == ".TGA") {
     auto buffer = vector<byte>{};
     if (!stbi_write_tga_to_func(stbi_write_data, &buffer, (int)image.width,
             (int)image.height, 4, (const byte*)to_srgb(image).data()))
-      return write_error();
-    if (!save_binary(filename, buffer, error)) return false;
-    return true;
+      throw io_error{"cannot write " + filename};
+    return save_binary(filename, buffer);
   } else if (ext == ".bmp" || ext == ".BMP") {
     auto buffer = vector<byte>{};
     if (!stbi_write_bmp_to_func(stbi_write_data, &buffer, (int)image.width,
             (int)image.height, 4, (const byte*)to_srgb(image).data()))
-      return write_error();
-    if (!save_binary(filename, buffer, error)) return false;
-    return true;
+      throw io_error{"cannot write " + filename};
+    return save_binary(filename, buffer);
   } else {
-    error = "unsupported format " + filename;
-    return false;
+    throw io_error{"unsupported format " + filename};
   }
 }
 
@@ -1147,16 +1116,6 @@ image_data make_image_preset(const string& type_) {
   } else {
     return {};
   }
-}
-
-// Loads/saves an image. Chooses hdr or ldr based on file name.
-void load_image(const string& filename, image_data& image) {
-  auto error = string{};
-  if (!load_image(filename, image, error)) throw io_error{error};
-}
-void save_image(const string& filename, const image_data& image) {
-  auto error = string{};
-  if (!save_image(filename, image, error)) throw io_error{error};
 }
 
 bool make_image_preset(
@@ -3415,7 +3374,7 @@ static bool load_json_scene_version40(const string& filename,
   auto ply_instances        = vector<ply_instance>{};
   auto ply_instances_names  = vector<string>{};
   auto ply_instance_map     = unordered_map<string, ply_instance_handle>{
-      {"", invalidid}};
+          {"", invalidid}};
   auto instance_ply = unordered_map<int, ply_instance_handle>{};
   auto get_ist      = [&scene, &ply_instances, &ply_instances_names,
                      &ply_instance_map, &instance_ply](const json_value& json,
@@ -5019,7 +4978,7 @@ static bool load_gltf_scene(
       auto& camera = scene.cameras.emplace_back();
       camera       = cameras.at(gnode.camera - cgltf.cameras);
       auto xform   = mat4f{
-            {1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
+          {1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
       cgltf_node_transform_world(&gnode, &xform.x.x);
       camera.frame = mat_to_frame(xform);
     }
@@ -5028,7 +4987,7 @@ static bool load_gltf_scene(
         auto& instance = scene.instances.emplace_back();
         instance       = primitive;
         auto xform     = mat4f{
-                {1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
+            {1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
         cgltf_node_transform_world(&gnode, &xform.x.x);
         instance.frame = mat_to_frame(xform);
       }
@@ -5242,7 +5201,7 @@ static bool save_gltf_scene(const string& filename, const scene_data& scene,
       auto& gbuffer             = cgltf.buffers[idx];
       shape_accessor_start[idx] = (int)cgltf.accessors_count;
       gbuffer.uri               = copy_string(
-          "shapes/" + get_shape_name(scene, shape) + ".bin");
+                        "shapes/" + get_shape_name(scene, shape) + ".bin");
       add_vertex(cgltf, gbuffer, shape.positions.size(), cgltf_type_vec3,
           (const float*)shape.positions.data());
       add_vertex(cgltf, gbuffer, shape.normals.size(), cgltf_type_vec3,
