@@ -698,14 +698,14 @@ void load_image(const string& filename, array2d<T>& image) {
     auto pixels = (float*)nullptr;
     if (LoadEXRFromMemory(&pixels, &width, &height, buffer.data(),
             buffer.size(), nullptr) != 0)
-      throw io_error{filename, "read error"};
+      throw io_error{"cannot read " + filename};
     image = from_float((vec4f*)pixels, {(size_t)width, (size_t)height});
     free(pixels);
   } else if (ext == ".hdr" || ext == ".HDR") {
     auto width = 0, height = 0, ncomp = 0;
     auto pixels = stbi_loadf_from_memory(
         buffer.data(), (int)buffer.size(), &width, &height, &ncomp, 4);
-    if (!pixels) throw io_error{filename, "read error"};
+    if (!pixels) throw io_error{"cannot read " + filename};
     image = from_float((vec4f*)pixels, {(size_t)width, (size_t)height});
     free(pixels);
   } else if (ext == ".png" || ext == ".PNG" || ext == ".jpg" || ext == ".JPG" ||
@@ -714,7 +714,7 @@ void load_image(const string& filename, array2d<T>& image) {
     auto width = 0, height = 0, ncomp = 0;
     auto pixels = stbi_load_from_memory(
         buffer.data(), (int)buffer.size(), &width, &height, &ncomp, 4);
-    if (!pixels) throw io_error{filename, "read error"};
+    if (!pixels) throw io_error{"cannot read " + filename};
     image = from_byte((vec4b*)pixels, {(size_t)width, (size_t)height});
     free(pixels);
   } else if (ext == ".ypreset" || ext == ".YPRESET") {
@@ -725,7 +725,7 @@ void load_image(const string& filename, array2d<T>& image) {
     image = from_float((vec4f*)image_.pixels.data(),
         {(size_t)image_.width, (size_t)image_.height});
   } else {
-    throw io_error{filename, "unsupported format"};
+    throw io_error{"unsupported format " + filename};
   }
 }
 

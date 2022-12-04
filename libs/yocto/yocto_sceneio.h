@@ -65,9 +65,7 @@ namespace yocto {
 
 // Result object modeled on std::expected
 struct io_error : std::runtime_error {
-  io_error(const string& msg) : std::runtime_error{msg} {}
-  io_error(const string& filename, const string& msg)
-      : std::runtime_error{filename + ": " + msg} {}
+  using std::runtime_error::runtime_error;
 };
 
 }  // namespace yocto
