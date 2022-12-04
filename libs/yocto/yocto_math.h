@@ -249,15 +249,23 @@ struct vec<T, 1> {
   constexpr kernel vec(T x_) : x{x_} {}
 
   template <typename U>
-  constexpr kernel explicit(!std::is_convertible_v<U, T>) vec(vec<U, 1> v)
+  constexpr kernel explicit(!std::is_convertible_v<U, T>) vec(const vec<U, 1>& v)
       : x{(T)v.x} {}
   template <typename U>
   constexpr kernel explicit(!std::is_convertible_v<T, U>) operator vec<U, 1>() {
     return {(U)x};
   }
 
-  constexpr kernel vec(array<T, 1> v) : x{v[0]} {}
+  constexpr kernel vec(const array<T, 1>& v) : x{v[0]} {}
   constexpr kernel operator array<T, 1>() { return {x}; }
+
+  template <typename U>
+  constexpr kernel explicit(!std::is_convertible_v<U, T>) vec(const array<U, 1>& v)
+      : x{(T)v[0]} {}
+  template <typename U>
+  constexpr kernel explicit(!std::is_convertible_v<T, U>) operator array<U, 1>() {
+    return {(U)x};
+  }
 
   constexpr kernel T&       operator[](size_t i) { return d[i]; }
   constexpr kernel const T& operator[](size_t i) const { return d[i]; }
@@ -275,15 +283,23 @@ struct vec<T, 2> {
   constexpr kernel vec(T x_, T y_) : x{x_}, y{y_} {}
 
   template <typename U>
-  constexpr kernel explicit(!std::is_convertible_v<U, T>) vec(vec<U, 2> v)
+  constexpr kernel explicit(!std::is_convertible_v<U, T>) vec(const vec<U, 2>& v)
       : x{(T)v.x}, y{(T)v.y} {}
   template <typename U>
   constexpr kernel explicit(!std::is_convertible_v<T, U>) operator vec<U, 2>() {
     return {(U)x, (U)y};
   }
 
-  constexpr kernel vec(array<T, 2> v) : x{v[0]}, y{v[1]} {}
+  constexpr kernel vec(const array<T, 2>& v) : x{v[0]}, y{v[1]} {}
   constexpr kernel operator array<T, 2>() { return {x, y}; }
+
+  template <typename U>
+  constexpr kernel explicit(!std::is_convertible_v<U, T>) vec(const array<U, 2>& v)
+      : x{(T)v[0]}, y{(T)v[1]} {}
+  template <typename U>
+  constexpr kernel explicit(!std::is_convertible_v<T, U>) operator array<U, 2>() {
+    return {(U)x, (U)y};
+  }
 
   constexpr kernel T&       operator[](size_t i) { return d[i]; }
   constexpr kernel const T& operator[](size_t i) const { return d[i]; }
@@ -302,14 +318,22 @@ struct vec<T, 3> {
   constexpr kernel vec(vec<T, 2> xy_, T z_) : x{xy_.x}, y{xy_.y}, z{z_} {}
 
   template <typename U>
-  constexpr kernel explicit(!std::is_convertible_v<U, T>) vec(vec<U, 3> v)
+  constexpr kernel explicit(!std::is_convertible_v<U, T>) vec(const vec<U, 3>& v)
       : x{(T)v.x}, y{(T)v.y}, z{(T)v.z} {}
   template <typename U>
   constexpr kernel explicit(!std::is_convertible_v<T, U>) operator vec<U, 3>() {
     return {(U)x, (U)y, (U)z};
   }
-  constexpr kernel vec(array<T, 3> v) : x{v[0]}, y{v[1]}, z{v[2]} {}
+  constexpr kernel vec(const array<T, 3>& v) : x{v[0]}, y{v[1]}, z{v[2]} {}
   constexpr kernel operator array<T, 3>() { return {x, y, z}; }
+
+  template <typename U>
+  constexpr kernel explicit(!std::is_convertible_v<U, T>) vec(const array<U, 3>& v)
+      : x{(T)v[0]}, y{(T)v[1]}, z{(T)v[2]} {}
+  template <typename U>
+  constexpr kernel explicit(!std::is_convertible_v<T, U>) operator array<U, 3>() {
+    return {(U)x, (U)y, (U)z};
+  }
 
   constexpr kernel T&       operator[](size_t i) { return d[i]; }
   constexpr kernel const T& operator[](size_t i) const { return d[i]; }
@@ -329,14 +353,22 @@ struct vec<T, 4> {
       : x{xyz_.x}, y{xyz_.y}, z{xyz_.z}, w{w_} {}
 
   template <typename U>
-  constexpr kernel explicit(!std::is_convertible_v<U, T>) vec(vec<U, 4> v)
+  constexpr kernel explicit(!std::is_convertible_v<U, T>) vec(const vec<U, 4>& v)
       : x{(T)v.x}, y{(T)v.y}, z{(T)v.z}, w{(T)v.w} {}
   template <typename U>
   constexpr kernel explicit(!std::is_convertible_v<T, U>) operator vec<U, 4>() {
     return {(U)x, (U)y, (U)z, (U)w};
   }
-  constexpr kernel vec(array<T, 4> v) : x{v[0]}, y{v[1]}, z{v[2]}, w{v[3]} {}
+  constexpr kernel vec(const array<T, 4>& v) : x{v[0]}, y{v[1]}, z{v[2]}, w{v[3]} {}
   constexpr kernel operator array<T, 4>() { return {x, y, z, w}; }
+
+  template <typename U>
+  constexpr kernel explicit(!std::is_convertible_v<U, T>) vec(const array<U, 4>& v)
+      : x{(T)v[0]}, y{(T)v[1]}, z{(T)v[2]}, w{(T)v[3]} {}
+  template <typename U>
+  constexpr kernel explicit(!std::is_convertible_v<T, U>) operator array<U, 4>() {
+    return {(U)x, (U)y, (U)z, (U)w};
+  }
 
   constexpr kernel T&       operator[](size_t i) { return d[i]; }
   constexpr kernel const T& operator[](size_t i) const { return d[i]; }
@@ -353,6 +385,10 @@ using vec3i = vec<int, 3>;
 using vec4i = vec<int, 4>;
 using vec3b = vec<byte, 3>;
 using vec4b = vec<byte, 4>;
+using vec1s = vec<size_t, 1>;
+using vec2s = vec<size_t, 2>;
+using vec3s = vec<size_t, 3>;
+using vec4s = vec<size_t, 4>;
 
 // Zero vector constants.
 constexpr auto zero1f = vec1f{0};
@@ -431,8 +467,8 @@ constexpr kernel const T&& get(const vec<T, N>&& a) noexcept {
 }
 
 // Vector comparison operations.
-template <typename T, size_t N>
-constexpr kernel bool operator==(const vec<T, N>& a, const vec<T, N>& b) {
+template <typename T1, typename T2, size_t N>
+constexpr kernel bool operator==(const vec<T1, N>& a, const vec<T2, N>& b) {
   if constexpr (N == 1) {
     return a.x == b.x;
   } else if constexpr (N == 2) {
@@ -443,8 +479,8 @@ constexpr kernel bool operator==(const vec<T, N>& a, const vec<T, N>& b) {
     return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
   }
 }
-template <typename T, size_t N>
-constexpr kernel bool operator!=(const vec<T, N>& a, const vec<T, N>& b) {
+template <typename T1, typename T2, size_t N>
+constexpr kernel bool operator!=(const vec<T1, N>& a, const vec<T2, N>& b) {
   if constexpr (N == 1) {
     return a.x != b.x;
   } else if constexpr (N == 2) {
