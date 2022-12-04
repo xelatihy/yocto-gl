@@ -68,7 +68,8 @@ using std::vector;
 namespace yocto {
 
 // Progressively computes an image.
-image_data cutrace_image(const scene_data& scene, const trace_params& params);
+array2d<vec4f> cutrace_image(
+    const scene_data& scene, const trace_params& params);
 
 }  // namespace yocto
 
@@ -120,24 +121,24 @@ void trace_samples(cutrace_context& context, cutrace_state& state,
     const cutrace_lights& lights, const scene_data& scene,
     const trace_params& params);
 
-void trace_preview(image_data& image, cutrace_context& context,
+void trace_preview(array2d<vec4f>& image, cutrace_context& context,
     cutrace_state& pstate, const cuscene_data& cuscene, const cutrace_bvh& bvh,
     const cutrace_lights& lights, const scene_data& scene,
     const trace_params& params);
 
 // Get resulting render, denoised if requested
-image_data get_image(const cutrace_state& state);
-void       get_image(image_data& image, const cutrace_state& state);
+array2d<vec4f> get_image(const cutrace_state& state);
+void           get_image(array2d<vec4f>& image, const cutrace_state& state);
 
 // Get internal images from state
-image_data get_rendered_image(const cutrace_state& state);
-void       get_rendered_image(image_data& image, const cutrace_state& state);
-image_data get_denoised_image(const cutrace_state& state);
-void       get_denoised_image(image_data& image, const cutrace_state& state);
-image_data get_albedo_image(const cutrace_state& state);
-void       get_albedo_image(image_data& image, const cutrace_state& state);
-image_data get_normal_image(const cutrace_state& state);
-void       get_normal_image(image_data& image, const cutrace_state& state);
+array2d<vec4f> get_rendered_image(const cutrace_state& state);
+void get_rendered_image(array2d<vec4f>& image, const cutrace_state& state);
+array2d<vec4f> get_denoised_image(const cutrace_state& state);
+void get_denoised_image(array2d<vec4f>& image, const cutrace_state& state);
+array2d<vec3f> get_albedo_image(const cutrace_state& state);
+void get_albedo_image(array2d<vec3f>& image, const cutrace_state& state);
+array2d<vec3f> get_normal_image(const cutrace_state& state);
+void get_normal_image(array2d<vec3f>& image, const cutrace_state& state);
 
 // denoise image
 void denoise_image(cutrace_context& context, cutrace_state& state);
@@ -192,12 +193,30 @@ struct cuspan {
   CUdeviceptr device_ptr() const { return _data; }
   size_t      size_in_bytes() const { return _size * sizeof(T); }
   void        swap(cuspan& other) {
-    std::swap(_data, other._data);
-    std::swap(_size, other._size);
+           std::swap(_data, other._data);
+           std::swap(_size, other._size);
   }
 
   CUdeviceptr _data = 0;
   size_t      _size = 0;
+};
+
+// cuda buffer
+template <typename T>
+struct cuspan2d {
+  bool             empty() const { return size() == 0; }
+  array<size_t, 2> extents() const { return _extents; }
+  size_t      extent(size_t dimension) const { return _extents[dimension]; }
+  size_t      size() const { return _extents[0] * _extents[1]; }
+  CUdeviceptr device_ptr() const { return _data; }
+  size_t      size_in_bytes() const { return size() * sizeof(T); }
+  void        swap(cuspan2d& other) {
+           std::swap(_data, other._data);
+           std::swap(_extents, other._extents);
+  }
+
+  CUdeviceptr      _data    = 0;
+  array<size_t, 2> _extents = {0, 0};
 };
 
 // cuda array
@@ -313,17 +332,15 @@ struct cuscene_bvh {
 
 // state
 struct cutrace_state {
-  int               width            = 0;
-  int               height           = 0;
-  int               samples          = 0;
-  cuspan<vec4f>     image            = {};
-  cuspan<vec3f>     albedo           = {};
-  cuspan<vec3f>     normal           = {};
-  cuspan<int>       hits             = {};
-  cuspan<rng_state> rngs             = {};
-  cuspan<vec4f>     denoised         = {};
-  cuspan<byte>      denoiser_state   = {};
-  cuspan<byte>      denoiser_scratch = {};
+  int                 samples          = 0;
+  cuspan2d<vec4f>     image            = {};
+  cuspan2d<vec3f>     albedo           = {};
+  cuspan2d<vec3f>     normal           = {};
+  cuspan2d<int>       hits             = {};
+  cuspan2d<rng_state> rngs             = {};
+  cuspan2d<vec4f>     denoised         = {};
+  cuspan<byte>        denoiser_state   = {};
+  cuspan<byte>        denoiser_scratch = {};
 
   cutrace_state() {}
   cutrace_state(cutrace_state&&);

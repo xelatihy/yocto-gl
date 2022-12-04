@@ -659,7 +659,7 @@ void show_trace_gui(const string& title, const string& name, scene_data& scene,
 
   // init state
   auto state = make_trace_state(scene, params);
-  auto image = make_image(state.width, state.height, true);
+  auto image = array2d<vec4f>{state.image.extents()};
 
   // opengl image
   auto glimage     = glimage_state{};
@@ -691,11 +691,12 @@ void show_trace_gui(const string& title, const string& name, scene_data& scene,
     auto pstate     = make_trace_state(scene, pparams);
     trace_samples(pstate, scene, bvh, lights, pparams);
     auto preview = get_image(pstate);
-    for (auto idx = 0; idx < state.width * state.height; idx++) {
-      auto i = idx % image.width, j = idx / image.width;
-      auto pi           = clamp(i / params.pratio, 0, preview.width - 1),
-           pj           = clamp(j / params.pratio, 0, preview.height - 1);
-      image.pixels[idx] = preview.pixels[pj * preview.width + pi];
+    for (auto j : range(state.image.extent(1))) {
+      for (auto i : range(state.image.extent(0))) {
+        auto pi       = clamp(i / params.pratio, 0, preview.extent(0) - 1),
+             pj       = clamp(j / params.pratio, 0, preview.extent(1) - 1);
+        image[{i, j}] = preview[{pi, pj}];
+      }
     }
     return true;
   };
@@ -705,8 +706,8 @@ void show_trace_gui(const string& title, const string& name, scene_data& scene,
     // make sure we can start
     trace_cancel(context);
     state = make_trace_state(scene, params);
-    if (image.width != state.width || image.height != state.height)
-      image = make_image(state.width, state.height, true);
+    if (image.extents() != state.image.extents())
+      image = array2d<vec4f>{state.image.extents()};
   };
 
   // start rendering batch
@@ -850,7 +851,7 @@ void show_cutrace_gui(const string& title, const string& name,
   auto pstate     = make_cutrace_state(context, scene, pparams);
 
   // init state
-  auto image = make_image(state.width, state.height, true);
+  auto image = array2d<vec4f>{state.image.extents()};
 
   // opengl image
   auto glimage     = glimage_state{};
@@ -878,11 +879,12 @@ void show_cutrace_gui(const string& title, const string& name,
     trace_start(context, pstate, cuscene, bvh, lights, scene, pparams);
     trace_samples(context, pstate, cuscene, bvh, lights, scene, pparams);
     auto preview = get_rendered_image(pstate);
-    for (auto idx = 0; idx < state.width * state.height; idx++) {
-      auto i = idx % image.width, j = idx / image.width;
-      auto pi           = clamp(i / params.pratio, 0, preview.width - 1),
-           pj           = clamp(j / params.pratio, 0, preview.height - 1);
-      image.pixels[idx] = preview.pixels[pj * preview.width + pi];
+    for (auto j : range(image.extent(1))) {
+      for (auto i : range(image.extent(0))) {
+        auto pi       = clamp(i / params.pratio, 0, (int)preview.extent(0) - 1),
+             pj       = clamp(j / params.pratio, 0, (int)preview.extent(1) - 1);
+        image[{i, j}] = preview[{pi, pj}];
+      }
     }
     return true;
   };
@@ -890,8 +892,8 @@ void show_cutrace_gui(const string& title, const string& name,
   // reset renderer
   auto render_reset = [&]() {
     reset_cutrace_state(context, state, scene, params);
-    if (image.width != state.width || image.height != state.height)
-      image = make_image(state.width, state.height, true);
+    if (image.extents() != state.image.extents())
+      image = array2d<vec4f>{state.image.extents()};
   };
 
   // render samples synchronously

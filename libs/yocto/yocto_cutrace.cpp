@@ -171,6 +171,88 @@ static void clear_buffer(cuspan<T>& buffer) {
   buffer._size = 0;
 }
 
+// make a buffer
+template <typename T>
+static cuspan2d<T> make_buffer(
+    CUstream stream, array<size_t, 2> extents, const T* data) {
+  auto buffer     = cuspan2d<T>{};
+  buffer._extents = extents;
+  check_result(cuMemAlloc(&buffer._data, buffer.size_in_bytes()));
+  if (data) {
+    check_result(cuMemcpyHtoDAsync(
+        buffer.device_ptr(), data, buffer.size_in_bytes(), stream));
+  }
+  return buffer;
+}
+template <typename T>
+static cuspan2d<T> make_buffer(CUstream stream, const array2d<T>& data) {
+  if (data.empty()) return {};
+  return make_buffer(stream, data.extents(), data.data());
+}
+
+// resize a buffer
+template <typename T>
+static void resize_buffer(
+    CUstream stream, cuspan2d<T>& buffer, array<size_t, 2> extents, T* data) {
+  if (buffer._extents != extents) {
+    if (buffer.size() != 0) check_result(cuMemFree(buffer._data));
+    buffer._extents = extents;
+    check_result(cuMemAlloc(&buffer._data, buffer.size_in_bytes()));
+  }
+  if (data) {
+    check_result(cuMemcpyHtoDAsync(
+        buffer.device_ptr(), data, buffer.size_in_bytes(), stream));
+  }
+}
+
+// update a buffer
+template <typename T>
+static void update_buffer(CUstream stream, cuspan2d<T>& buffer,
+    array<size_t, 2> extents, const T* data) {
+  if (buffer.extents() != extents)
+    throw std::runtime_error{"Cuda buffer error"};
+  check_result(cuMemcpyHtoDAsync(
+      buffer.device_ptr(), data, buffer.size_in_bytes(), stream));
+}
+template <typename T>
+static void update_buffer(
+    CUstream stream, cuspan2d<T>& buffer, const array2d<T>& data) {
+  return update_buffer(stream, buffer, data.extents(), data.data());
+}
+
+// download buffer --- these are synched to avoid errors
+template <typename T>
+static void download_buffer(
+    const cuspan2d<T>& buffer, array<size_t, 2> extents, void* data) {
+  if (buffer.extents() != extents)
+    throw std::runtime_error{"Cuda download error"};
+  check_result(cuMemcpyDtoH(data, buffer.device_ptr(), buffer.size_in_bytes()));
+}
+template <typename T>
+static void download_buffer(const cuspan2d<T>& buffer, array2d<T>& data) {
+  return download_buffer(buffer, data.extents(), data.data());
+}
+template <typename T>
+static array2d<T> download_buffer_array(const cuspan2d<T>& buffer) {
+  auto data = array2d<T>(buffer.extents());
+  download_buffer(buffer, data.extents(), data.data());
+  return data;
+}
+
+// free buffer
+template <typename T>
+static void clear_buffer(cuspan2d<T>& buffer) {
+  if (buffer.device_ptr() == 0) return;
+  check_result(cuMemFree(buffer.device_ptr()));
+  buffer._data    = 0;
+  buffer._extents = {0, 0};
+}
+
+template <typename T>
+static void download_buffer(const cuspan<T>& buffer, array2d<T>& data) {
+  return download_buffer(buffer, data.size(), data.data());
+}
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -295,8 +377,6 @@ cutrace_context& cutrace_context::operator=(cutrace_context&& other) {
 }
 
 cutrace_state::cutrace_state(cutrace_state&& other) {
-  std::swap(width, other.width);
-  std::swap(height, other.height);
   std::swap(samples, other.samples);
   image.swap(other.image);
   albedo.swap(other.albedo);
@@ -308,8 +388,6 @@ cutrace_state::cutrace_state(cutrace_state&& other) {
   denoiser_scratch.swap(other.denoiser_scratch);
 }
 cutrace_state& cutrace_state::operator=(cutrace_state&& other) {
-  std::swap(width, other.width);
-  std::swap(height, other.height);
   std::swap(samples, other.samples);
   image.swap(other.image);
   albedo.swap(other.albedo);
@@ -552,7 +630,7 @@ void trace_samples(cutrace_context& context, cutrace_state& state,
   check_result(optixLaunch(context.optix_pipeline, context.cuda_stream,
       context.globals_buffer.device_ptr(),
       context.globals_buffer.size_in_bytes(), &context.binding_table,
-      state.width, state.height, 1));
+      state.image.extent(0), state.image.extent(1), 1));
   state.samples += nsamples;
   if (params.denoise) {
     denoise_image(context, state);
@@ -788,7 +866,7 @@ cutrace_bvh make_cutrace_bvh(cutrace_context& context,
     // compact
     auto compacted_size = download_buffer_value(compacted_size_buffer);
     sbvh.buffer         = make_buffer(
-        context.cuda_stream, compacted_size, (byte*)nullptr);
+                context.cuda_stream, compacted_size, (byte*)nullptr);
     check_result(optixAccelCompact(context.optix_context,
         /*cuda_stream:*/ 0, sbvh.handle, sbvh.buffer.device_ptr(),
         sbvh.buffer.size_in_bytes(), &sbvh.handle));
@@ -861,7 +939,7 @@ cutrace_bvh make_cutrace_bvh(cutrace_context& context,
     // compact
     auto compacted_size = download_buffer_value(compacted_size_buffer);
     ibvh.buffer         = make_buffer(
-        context.cuda_stream, compacted_size, (byte*)nullptr);
+                context.cuda_stream, compacted_size, (byte*)nullptr);
     check_result(optixAccelCompact(context.optix_context,
         /*cuda_stream:*/ 0, ibvh.handle, ibvh.buffer.device_ptr(),
         ibvh.buffer.size_in_bytes(), &ibvh.handle));
@@ -885,32 +963,27 @@ cutrace_bvh make_cutrace_bvh(cutrace_context& context,
 // Initialize state.
 cutrace_state make_cutrace_state(cutrace_context& context,
     const scene_data& scene, const trace_params& params) {
-  auto& camera = scene.cameras[params.camera];
-  auto  state  = cutrace_state{};
-  if (camera.aspect >= 1) {
-    state.width  = params.resolution;
-    state.height = (int)round(params.resolution / camera.aspect);
-  } else {
-    state.height = params.resolution;
-    state.width  = (int)round(params.resolution * camera.aspect);
-  }
-  state.samples = 0;
-  state.image   = make_buffer(
-      context.cuda_stream, state.width * state.height, (vec4f*)nullptr);
-  state.albedo = make_buffer(
-      context.cuda_stream, state.width * state.height, (vec3f*)nullptr);
-  state.normal = make_buffer(
-      context.cuda_stream, state.width * state.height, (vec3f*)nullptr);
-  state.hits = make_buffer(
-      context.cuda_stream, state.width * state.height, (int*)nullptr);
-  state.rngs = make_buffer(
-      context.cuda_stream, state.width * state.height, (rng_state*)nullptr);
+  auto& camera     = scene.cameras[params.camera];
+  auto  state      = cutrace_state{};
+  auto  resolution = (camera.aspect >= 1)
+                         ? array<size_t, 2>{(size_t)params.resolution,
+                               (size_t)round(params.resolution / camera.aspect)}
+                         : array<size_t, 2>{
+                               (size_t)round(params.resolution * camera.aspect),
+                               (size_t)params.resolution};
+  state.samples    = 0;
+  state.image  = make_buffer(context.cuda_stream, resolution, (vec4f*)nullptr);
+  state.albedo = make_buffer(context.cuda_stream, resolution, (vec3f*)nullptr);
+  state.normal = make_buffer(context.cuda_stream, resolution, (vec3f*)nullptr);
+  state.hits   = make_buffer(context.cuda_stream, resolution, (int*)nullptr);
+  state.rngs   = make_buffer(
+        context.cuda_stream, resolution, (rng_state*)nullptr);
   if (params.denoise) {
     auto denoiser_sizes = OptixDenoiserSizes{};
-    check_result(optixDenoiserComputeMemoryResources(
-        context.denoiser, state.width, state.height, &denoiser_sizes));
+    check_result(optixDenoiserComputeMemoryResources(context.denoiser,
+        (uint)resolution[0], (uint)resolution[1], &denoiser_sizes));
     state.denoised = make_buffer(
-        context.cuda_stream, state.width * state.height, (vec4f*)nullptr);
+        context.cuda_stream, resolution, (vec4f*)nullptr);
     state.denoiser_state = make_buffer(
         context.cuda_stream, denoiser_sizes.stateSizeInBytes, (byte*)nullptr);
     state.denoiser_scratch = make_buffer(context.cuda_stream,
@@ -922,31 +995,26 @@ cutrace_state make_cutrace_state(cutrace_context& context,
 
 void reset_cutrace_state(cutrace_context& context, cutrace_state& state,
     const scene_data& scene, const trace_params& params) {
-  auto& camera = scene.cameras[params.camera];
-  if (camera.aspect >= 1) {
-    state.width  = params.resolution;
-    state.height = (int)round(params.resolution / camera.aspect);
-  } else {
-    state.height = params.resolution;
-    state.width  = (int)round(params.resolution * camera.aspect);
-  }
-  state.samples = 0;
-  resize_buffer(context.cuda_stream, state.image, state.width * state.height,
-      (vec4f*)nullptr);
-  resize_buffer(context.cuda_stream, state.albedo, state.width * state.height,
-      (vec3f*)nullptr);
-  resize_buffer(context.cuda_stream, state.normal, state.width * state.height,
-      (vec3f*)nullptr);
-  resize_buffer(context.cuda_stream, state.hits, state.width * state.height,
-      (int*)nullptr);
-  resize_buffer(context.cuda_stream, state.rngs, state.width * state.height,
-      (rng_state*)nullptr);
+  auto& camera     = scene.cameras[params.camera];
+  auto  resolution = (camera.aspect >= 1)
+                         ? array<size_t, 2>{(size_t)params.resolution,
+                               (size_t)round(params.resolution / camera.aspect)}
+                         : array<size_t, 2>{
+                               (size_t)round(params.resolution * camera.aspect),
+                               (size_t)params.resolution};
+  state.samples    = 0;
+  resize_buffer(context.cuda_stream, state.image, resolution, (vec4f*)nullptr);
+  resize_buffer(context.cuda_stream, state.albedo, resolution, (vec3f*)nullptr);
+  resize_buffer(context.cuda_stream, state.normal, resolution, (vec3f*)nullptr);
+  resize_buffer(context.cuda_stream, state.hits, resolution, (int*)nullptr);
+  resize_buffer(
+      context.cuda_stream, state.rngs, resolution, (rng_state*)nullptr);
   if (params.denoise) {
     auto denoiser_sizes = OptixDenoiserSizes{};
-    check_result(optixDenoiserComputeMemoryResources(
-        context.denoiser, state.width, state.height, &denoiser_sizes));
-    resize_buffer(context.cuda_stream, state.denoised,
-        state.width * state.height, (vec4f*)nullptr);
+    check_result(optixDenoiserComputeMemoryResources(context.denoiser,
+        (uint)resolution[0], (uint)resolution[1], &denoiser_sizes));
+    resize_buffer(
+        context.cuda_stream, state.denoised, resolution, (vec4f*)nullptr);
     resize_buffer(context.cuda_stream, state.denoiser_state,
         denoiser_sizes.stateSizeInBytes, (byte*)nullptr);
     resize_buffer(context.cuda_stream, state.denoiser_scratch,
@@ -977,7 +1045,8 @@ cutrace_lights make_cutrace_lights(cutrace_context& context,
 }
 
 // Copmutes an image
-image_data cutrace_image(const scene_data& scene, const trace_params& params) {
+array2d<vec4f> cutrace_image(
+    const scene_data& scene, const trace_params& params) {
   // initialization
   auto context = make_cutrace_context(params);
   auto cuscene = make_cutrace_scene(context, scene, params);
@@ -996,7 +1065,7 @@ image_data cutrace_image(const scene_data& scene, const trace_params& params) {
 }
 
 // render preview
-void trace_preview(image_data& image, cutrace_context& context,
+void trace_preview(array2d<vec4f>& image, cutrace_context& context,
     cutrace_state& pstate, const cuscene_data& cuscene, const cutrace_bvh& bvh,
     const cutrace_lights& lights, const scene_data& scene,
     const trace_params& params) {
@@ -1007,45 +1076,46 @@ void trace_preview(image_data& image, cutrace_context& context,
   trace_start(context, pstate, cuscene, bvh, lights, scene, pparams);
   trace_samples(context, pstate, cuscene, bvh, lights, scene, pparams);
   auto preview = get_image(pstate);
-  for (auto idx = 0; idx < image.width * image.height; idx++) {
-    auto i = idx % image.width, j = idx / image.width;
-    auto pi           = clamp(i / params.pratio, 0, preview.width - 1),
-         pj           = clamp(j / params.pratio, 0, preview.height - 1);
-    image.pixels[idx] = preview.pixels[pj * preview.width + pi];
+  for (auto j : range(image.extent(1))) {
+    for (auto i : range(image.extent(0))) {
+      auto pi       = clamp(i / params.pratio, 0, (int)preview.extent(0) - 1),
+           pj       = clamp(j / params.pratio, 0, (int)preview.extent(1) - 1);
+      image[{i, j}] = preview[{pi, pj}];
+    }
   }
 }
 
 // Get resulting render
-image_data get_image(const cutrace_state& state) {
-  auto image = make_image(state.width, state.height, true);
+array2d<vec4f> get_image(const cutrace_state& state) {
+  auto image = array2d<vec4f>{state.image.extents()};
   get_image(image, state);
   return image;
 }
-void get_image(image_data& image, const cutrace_state& state) {
+void get_image(array2d<vec4f>& image, const cutrace_state& state) {
   if (state.denoised.empty()) {
-    download_buffer(state.image, image.pixels);
+    download_buffer(state.image, image);
   } else {
-    download_buffer(state.denoised, image.pixels);
+    download_buffer(state.denoised, image);
   }
 }
 
 // Get resulting render
-image_data get_rendered_image(const cutrace_state& state) {
-  auto image = make_image(state.width, state.height, true);
+array2d<vec4f> get_rendered_image(const cutrace_state& state) {
+  auto image = array2d<vec4f>{state.image.extents()};
   get_rendered_image(image, state);
   return image;
 }
-void get_rendered_image(image_data& image, const cutrace_state& state) {
-  download_buffer(state.image, image.pixels);
+void get_rendered_image(array2d<vec4f>& image, const cutrace_state& state) {
+  download_buffer(state.image, image);
 }
 
 // Get denoised result
-image_data get_denoised_image(const cutrace_state& state) {
-  auto image = make_image(state.width, state.height, true);
+array2d<vec4f> get_denoised_image(const cutrace_state& state) {
+  auto image = array2d<vec4f>{state.image.extents()};
   get_denoised_image(image, state);
   return image;
 }
-void get_denoised_image(image_data& image, const cutrace_state& state) {
+void get_denoised_image(array2d<vec4f>& image, const cutrace_state& state) {
 #if YOCTO_DENOISE
   // Create an Intel Open Image Denoise device
   oidn::DeviceRef device = oidn::newDevice();
@@ -1055,19 +1125,21 @@ void get_denoised_image(image_data& image, const cutrace_state& state) {
   get_rendered_image(image, state);
 
   // get albedo and normal
-  auto albedo = download_buffer_vector(state.albedo);
-  auto normal = download_buffer_vector(state.normal);
+  auto albedo = download_buffer_array(state.albedo);
+  auto normal = download_buffer_array(state.normal);
 
   // Create a denoising filter
   oidn::FilterRef filter = device.newFilter("RT");  // ray tracing filter
-  filter.setImage("color", (void*)image.pixels.data(), oidn::Format::Float3,
-      state.width, state.height, 0, sizeof(vec4f), sizeof(vec4f) * state.width);
+  filter.setImage("color", (void*)image.data(), oidn::Format::Float3,
+      image.extent(0), image.extent(1), 0, sizeof(vec4f),
+      sizeof(vec4f) * image.extent(0));
   filter.setImage("albedo", (void*)albedo.data(), oidn::Format::Float3,
-      state.width, state.height);
+      image.extent(0), image.extent(1));
   filter.setImage("normal", (void*)normal.data(), oidn::Format::Float3,
-      state.width, state.height);
-  filter.setImage("output", image.pixels.data(), oidn::Format::Float3,
-      state.width, state.height, 0, sizeof(vec4f), sizeof(vec4f) * state.width);
+      image.extent(0), image.extent(1));
+  filter.setImage("output", (void*)image.data(), oidn::Format::Float3,
+      image.extent(0), image.extent(1), 0, sizeof(vec4f),
+      sizeof(vec4f) * image.extent(0));
   filter.set("inputScale", 1.0f);  // set scale as fixed
   filter.set("hdr", true);         // image is HDR
   filter.commit();
@@ -1080,37 +1152,30 @@ void get_denoised_image(image_data& image, const cutrace_state& state) {
 }
 
 // Get denoising buffers
-image_data get_albedo_image(const cutrace_state& state) {
-  auto albedo = make_image(state.width, state.height, true);
+array2d<vec3f> get_albedo_image(const cutrace_state& state) {
+  auto albedo = array2d<vec3f>{state.image.extents()};
   get_albedo_image(albedo, state);
   return albedo;
 }
-void get_albedo_image(image_data& image, const cutrace_state& state) {
-  auto albedo = vector<vec3f>(state.width * state.height);
-  download_buffer(state.albedo, albedo);
-  for (auto idx = 0; idx < state.width * state.height; idx++) {
-    image.pixels[idx] = {albedo[idx], 1.0f};
-  }
+void get_albedo_image(array2d<vec3f>& image, const cutrace_state& state) {
+  download_buffer(state.albedo, image);
 }
-image_data get_normal_image(const cutrace_state& state) {
-  auto normal = make_image(state.width, state.height, true);
+array2d<vec3f> get_normal_image(const cutrace_state& state) {
+  auto normal = array2d<vec3f>{state.image.extents()};
   get_normal_image(normal, state);
   return normal;
 }
-void get_normal_image(image_data& image, const cutrace_state& state) {
-  auto normal = vector<vec3f>(state.width * state.height);
-  download_buffer(state.normal, normal);
-  for (auto idx = 0; idx < state.width * state.height; idx++) {
-    image.pixels[idx] = {normal[idx], 1.0f};
-  }
+void get_normal_image(array2d<vec3f>& image, const cutrace_state& state) {
+  download_buffer(state.normal, image);
 }
 
 // denoise image
 void denoise_image(cutrace_context& context, cutrace_state& state) {
   // denoiser setup
   check_result(optixDenoiserSetup(context.denoiser, context.cuda_stream,
-      state.width, state.height, state.denoiser_state.device_ptr(),
-      state.denoiser_state.size_in_bytes(), state.denoiser_scratch.device_ptr(),
+      state.image.extent(0), state.image.extent(1),
+      state.denoiser_state.device_ptr(), state.denoiser_state.size_in_bytes(),
+      state.denoiser_scratch.device_ptr(),
       state.denoiser_scratch.size_in_bytes()));
 
   // params
@@ -1118,18 +1183,22 @@ void denoise_image(cutrace_context& context, cutrace_state& state) {
 
   // layers
   auto guides   = OptixDenoiserGuideLayer{};
-  guides.albedo = OptixImage2D{state.albedo.device_ptr(), (uint)state.width,
-      (uint)state.height, (uint)state.width * sizeof(vec3f), sizeof(vec3f),
+  guides.albedo = OptixImage2D{state.albedo.device_ptr(),
+      (uint)state.image.extent(0), (uint)state.image.extent(1),
+      (uint)state.image.extent(0) * (uint)sizeof(vec3f), sizeof(vec3f),
       OPTIX_PIXEL_FORMAT_FLOAT3};
-  guides.normal = OptixImage2D{state.normal.device_ptr(), (uint)state.width,
-      (uint)state.height, (uint)state.width * sizeof(vec3f), sizeof(vec3f),
+  guides.normal = OptixImage2D{state.normal.device_ptr(),
+      (uint)state.image.extent(0), (uint)state.image.extent(1),
+      (uint)state.image.extent(0) * (uint)sizeof(vec3f), sizeof(vec3f),
       OPTIX_PIXEL_FORMAT_FLOAT3};
   auto layers   = OptixDenoiserLayer{};
-  layers.input  = OptixImage2D{state.image.device_ptr(), (uint)state.width,
-      (uint)state.height, (uint)state.width * sizeof(vec4f), sizeof(vec4f),
+  layers.input  = OptixImage2D{state.image.device_ptr(),
+      (uint)state.image.extent(0), (uint)state.image.extent(1),
+      (uint)state.image.extent(0) * (uint)sizeof(vec4f), sizeof(vec4f),
       OPTIX_PIXEL_FORMAT_FLOAT4};
-  layers.output = OptixImage2D{state.denoised.device_ptr(), (uint)state.width,
-      (uint)state.height, (uint)state.width * sizeof(vec4f), sizeof(vec4f),
+  layers.output = OptixImage2D{state.denoised.device_ptr(),
+      (uint)state.image.extent(0), (uint)state.image.extent(1),
+      (uint)state.image.extent(0) * (uint)sizeof(vec4f), sizeof(vec4f),
       OPTIX_PIXEL_FORMAT_FLOAT4};
 
   // denoiser execution

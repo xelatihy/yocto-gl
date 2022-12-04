@@ -71,7 +71,7 @@ struct ndarray {
     static_assert(N == sizeof...(Indices));
   }
   explicit ndarray(const array<size_t, N>& extents)
-      : _extents{extents}, _data{_size(extents)} {}
+      : _extents{extents}, _data(_size(extents), T{}) {}
   ndarray(const ndarray& other)
       : _extents{other._extents}, _data{other._data()} {}
   ndarray(ndarray&& other) : _extents{0}, _data{} {
@@ -84,6 +84,7 @@ struct ndarray {
     if (&other == this) return *this;
     _extents = other._extents;
     _data    = other._data;
+    return *this;
   }
   ndarray& operator=(ndarray&& other) {
     if (&other == this) return *this;
