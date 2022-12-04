@@ -171,6 +171,82 @@ static void clear_buffer(cuspan<T>& buffer) {
   buffer._size = 0;
 }
 
+// make a buffer
+template <typename T>
+static cuspan<T> make_buffer(
+    CUstream stream, array<size_t, 2> extents, const T* data) {
+  auto buffer     = cuspan2d<T>{};
+  buffer._extents = extents;
+  check_result(cuMemAlloc(&buffer._data, buffer.size_in_bytes()));
+  if (data) {
+    check_result(cuMemcpyHtoDAsync(
+        buffer.device_ptr(), data, buffer.size_in_bytes(), stream));
+  }
+  return buffer;
+}
+template <typename T>
+static cuspan2d<T> make_buffer(CUstream stream, const array2d<T>& data) {
+  if (data.empty()) return {};
+  return make_buffer(stream, data.extents(), data.data());
+}
+
+// resize a buffer
+template <typename T>
+static void resize_buffer(
+    CUstream stream, cuspan2d<T>& buffer, array<size_t, 2> extents, T* data) {
+  if (buffer._extents != extents) {
+    if (buffer.size() != 0) check_result(cuMemFree(buffer._data));
+    buffer._extents = extents;
+    check_result(cuMemAlloc(&buffer._data, buffer.size_in_bytes()));
+  }
+  if (data) {
+    check_result(cuMemcpyHtoDAsync(
+        buffer.device_ptr(), data, buffer.size_in_bytes(), stream));
+  }
+}
+
+// update a buffer
+template <typename T>
+static void update_buffer(CUstream stream, cuspan2d<T>& buffer,
+    array<size_t, 2> extents, const T* data) {
+  if (buffer.extents() != extents)
+    throw std::runtime_error{"Cuda buffer error"};
+  check_result(cuMemcpyHtoDAsync(
+      buffer.device_ptr(), data, buffer.size_in_bytes(), stream));
+}
+template <typename T>
+static void update_buffer(
+    CUstream stream, cuspan2d<T>& buffer, const array2d<T>& data) {
+  return update_buffer(stream, buffer, data.extents(), data.data());
+}
+
+// download buffer --- these are synched to avoid errors
+template <typename T>
+static void download_buffer(
+    const cuspan2d<T>& buffer, array<size_t, 2> extents, void* data) {
+  if (buffer.size() != size) throw std::runtime_error{"Cuda download error"};
+  check_result(cuMemcpyDtoH(data, buffer.device_ptr(), buffer.size_in_bytes()));
+}
+template <typename T>
+static void download_buffer(const cuspan2d<T>& buffer, array2d<T>& data) {
+  return download_buffer(buffer, data.size(), data.data());
+}
+template <typename T>
+static array2d<T> download_buffer_array(const cuspan2d<T>& buffer) {
+  auto data = array2d<T>(buffer.extents());
+  download_buffer(buffer, data.size(), data.data());
+  return data;
+}
+
+// free buffer
+template <typename T>
+static void clear_buffer(cuspan2d<T>& buffer) {
+  if (buffer.device_ptr() == 0) return;
+  check_result(cuMemFree(buffer.device_ptr()));
+  buffer._data    = 0;
+  buffer._extents = {0, 0};
+}
+
 template <typename T>
 static void download_buffer(const cuspan<T>& buffer, array2d<T>& data) {
   return download_buffer(buffer, data.size(), data.data());
