@@ -146,8 +146,8 @@ bool is_sampler_lit(const trace_params& params);
 // Trace state
 struct trace_state {
   array2d<vec4f>     image    = {};
-  array2d<vec4f>     albedo   = {};
-  array2d<vec4f>     normal   = {};
+  array2d<vec3f>     albedo   = {};
+  array2d<vec3f>     normal   = {};
   array2d<int>       hits     = {};
   array2d<rng_state> rngs     = {};
   array2d<vec4f>     denoised = {};
@@ -182,16 +182,16 @@ array2d<vec4f> get_rendered_image(const trace_state& state);
 void get_rendered_image(array2d<vec4f>& image, const trace_state& state);
 array2d<vec4f> get_denoised_image(const trace_state& state);
 void get_denoised_image(array2d<vec4f>& image, const trace_state& state);
-array2d<vec4f> get_albedo_image(const trace_state& state);
-void get_albedo_image(array2d<vec4f>& image, const trace_state& state);
-array2d<vec4f> get_normal_image(const trace_state& state);
-void get_normal_image(array2d<vec4f>& image, const trace_state& state);
+array2d<vec3f> get_albedo_image(const trace_state& state);
+void get_albedo_image(array2d<vec3f>& image, const trace_state& state);
+array2d<vec3f> get_normal_image(const trace_state& state);
+void get_normal_image(array2d<vec3f>& image, const trace_state& state);
 
 // Denoise image
 array2d<vec4f> denoise_image(const array2d<vec4f>& render,
-    const array2d<vec4f>& albedo, const array2d<vec4f>& normal);
+    const array2d<vec3f>& albedo, const array2d<vec3f>& normal);
 void denoise_image(array2d<vec4f>& image, const array2d<vec4f>& render,
-    const array2d<vec4f>& albedo, const array2d<vec4f>& normal);
+    const array2d<vec3f>& albedo, const array2d<vec3f>& normal);
 
 // Async implementation
 struct trace_context {
@@ -315,18 +315,18 @@ namespace yocto {
 }
 
 // Get denoising buffers
-[[deprecated]] inline array2d<vec4f> get_albedo(const trace_state& state) {
+[[deprecated]] inline array2d<vec3f> get_albedo(const trace_state& state) {
   return get_albedo_image(state);
 }
 [[deprecated]] inline void get_albedo(
-    array2d<vec4f>& image, const trace_state& state) {
+    array2d<vec3f>& image, const trace_state& state) {
   return get_albedo_image(image, state);
 }
-[[deprecated]] inline array2d<vec4f> get_normal(const trace_state& state) {
+[[deprecated]] inline array2d<vec3f> get_normal(const trace_state& state) {
   return get_normal_image(state);
 }
 [[deprecated]] inline void get_normal(
-    array2d<vec4f>& image, const trace_state& state) {
+    array2d<vec3f>& image, const trace_state& state) {
   return get_normal_image(image, state);
 }
 

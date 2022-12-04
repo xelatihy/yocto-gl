@@ -1472,18 +1472,18 @@ void trace_sample(trace_state& state, const scene_data& scene,
   auto weight = 1.0f / (sample + 1);
   if (hit) {
     state.image[ij]  = lerp(state.image[ij], vec4f{radiance, 1}, weight);
-    state.albedo[ij] = lerp(state.albedo[ij], vec4f{albedo, 1}, weight);
-    state.normal[ij] = lerp(state.normal[ij], vec4f{normal, 1}, weight);
+    state.albedo[ij] = lerp(state.albedo[ij], albedo, weight);
+    state.normal[ij] = lerp(state.normal[ij], normal, weight);
     state.hits[ij] += 1;
   } else if (!params.envhidden && !scene.environments.empty()) {
     state.image[ij]  = lerp(state.image[ij], vec4f{radiance, 1}, weight);
-    state.albedo[ij] = lerp(state.albedo[ij], vec4f{1, 1, 1, 1}, weight);
-    state.normal[ij] = lerp(state.normal[ij], vec4f{-ray.d, 1}, weight);
+    state.albedo[ij] = lerp(state.albedo[ij], vec3f{1, 1, 1}, weight);
+    state.normal[ij] = lerp(state.normal[ij], -ray.d, weight);
     state.hits[ij] += 1;
   } else {
     state.image[ij]  = lerp(state.image[ij], vec4f{0, 0, 0, 0}, weight);
-    state.albedo[ij] = lerp(state.albedo[ij], vec4f{0, 0, 0, 0}, weight);
-    state.normal[ij] = lerp(state.normal[ij], vec4f{-ray.d, 1}, weight);
+    state.albedo[ij] = lerp(state.albedo[ij], vec3f{0, 0, 0}, weight);
+    state.normal[ij] = lerp(state.normal[ij], -ray.d, weight);
   }
 }
 
@@ -1497,8 +1497,8 @@ trace_state make_trace_state(
     array<size_t, 2>{(size_t)round(params.resolution * camera.aspect), (size_t)params.resolution};
   state.samples = 0;
   state.image = array2d<vec4f>{resolution};
-  state.albedo = array2d<vec4f>{resolution};
-  state.normal = array2d<vec4f>{resolution};
+  state.albedo = array2d<vec3f>{resolution};
+  state.normal = array2d<vec3f>{resolution};
   state.hits = array2d<int>{resolution};
   state.rngs = array2d<rng_state>{resolution};
   auto rng_ = make_rng(1301081);
@@ -1668,8 +1668,9 @@ void trace_preview(array2d<vec4f>& image, trace_context& context,
 };
 
 // Check image type
+template<typename T>
 static void check_image(
-    const array2d<vec4f>& image, const array<size_t, 2>& extents) {
+    const array2d<T>& image, const array<size_t, 2>& extents) {
   if (image.extents() != extents)
     throw std::invalid_argument{"image should have the same size"};
 }
@@ -1739,34 +1740,34 @@ void get_denoised_image(array2d<vec4f>& image, const trace_state& state) {
 }
 
 // Get denoising buffers
-array2d<vec4f> get_albedo_image(const trace_state& state) {
-  auto albedo = array2d<vec4f>{state.image.extents()};
+array2d<vec3f> get_albedo_image(const trace_state& state) {
+  auto albedo = array2d<vec3f>{state.image.extents()};
   get_albedo_image(albedo, state);
   return albedo;
 }
-void get_albedo_image(array2d<vec4f>& albedo, const trace_state& state) {
+void get_albedo_image(array2d<vec3f>& albedo, const trace_state& state) {
   check_image(albedo, state.image.extents());
   albedo = state.albedo;
 }
-array2d<vec4f> get_normal_image(const trace_state& state) {
-  auto normal = array2d<vec4f>{state.image.extents()};
+array2d<vec3f> get_normal_image(const trace_state& state) {
+  auto normal = array2d<vec3f>{state.image.extents()};
   get_normal_image(normal, state);
   return normal;
 }
-void get_normal_image(array2d<vec4f>& normal, const trace_state& state) {
+void get_normal_image(array2d<vec3f>& normal, const trace_state& state) {
   check_image(normal, state.image.extents());
   normal = state.normal;
 }
 
 // Denoise image
 array2d<vec4f> denoise_image(const array2d<vec4f>& render,
-    const array2d<vec4f>& albedo, const array2d<vec4f>& normal) {
+    const array2d<vec3f>& albedo, const array2d<vec3f>& normal) {
   auto denoised = array2d<vec4f>{render.extents()};
   denoise_image(denoised, render, albedo, normal);
   return denoised;
 }
 void denoise_image(array2d<vec4f>& denoised, const array2d<vec4f>& render,
-    const array2d<vec4f>& albedo, const array2d<vec4f>& normal) {
+    const array2d<vec3f>& albedo, const array2d<vec3f>& normal) {
   check_image(denoised, render.extents());
   check_image(albedo, render.extents());
   check_image(normal, render.extents());
@@ -1784,11 +1785,9 @@ void denoise_image(array2d<vec4f>& denoised, const array2d<vec4f>& render,
       render.extent(0), render.extent(1), 0, sizeof(vec4f),
       sizeof(vec4f) * render.extent(0));
   filter.setImage("albedo", (void*)albedo.data(), oidn::Format::Float3,
-      render.extent(0), render.extent(1), 0, sizeof(vec4f),
-      sizeof(vec4f) * render.extent(0));
+      render.extent(0), render.extent(1));
   filter.setImage("normal", (void*)normal.data(), oidn::Format::Float3,
-      render.extent(0), render.extent(1), 0, sizeof(vec4f),
-      sizeof(vec4f) * render.extent(0));
+      render.extent(0), render.extent(1));
   filter.setImage("output", denoised.data(), oidn::Format::Float3,
       render.extent(0), render.extent(1), 0, sizeof(vec4f),
       sizeof(vec4f) * render.extent(0));
