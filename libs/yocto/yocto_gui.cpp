@@ -693,8 +693,8 @@ void show_trace_gui(const string& title, const string& name, scene_data& scene,
     auto preview = get_image(pstate);
     for (auto j : range(state.image.extent(1))) {
       for (auto i : range(state.image.extent(0))) {
-        auto pi           = clamp(i / params.pratio, 0, preview.extent(0) - 1),
-             pj           = clamp(j / params.pratio, 0, preview.extent(1) - 1);
+        auto pi       = clamp(i / params.pratio, 0, preview.extent(0) - 1),
+             pj       = clamp(j / params.pratio, 0, preview.extent(1) - 1);
         image[{i, j}] = preview[{pi, pj}];
       }
     }
@@ -851,7 +851,7 @@ void show_cutrace_gui(const string& title, const string& name,
   auto pstate     = make_cutrace_state(context, scene, pparams);
 
   // init state
-  auto image = make_image(state.width, state.height, true);
+  auto image = array2d<vec4f>{state.width, state.height};
 
   // opengl image
   auto glimage     = glimage_state{};
@@ -879,11 +879,12 @@ void show_cutrace_gui(const string& title, const string& name,
     trace_start(context, pstate, cuscene, bvh, lights, scene, pparams);
     trace_samples(context, pstate, cuscene, bvh, lights, scene, pparams);
     auto preview = get_rendered_image(pstate);
-    for (auto idx = 0; idx < state.width * state.height; idx++) {
-      auto i = idx % image.width, j = idx / image.width;
-      auto pi           = clamp(i / params.pratio, 0, preview.width - 1),
-           pj           = clamp(j / params.pratio, 0, preview.height - 1);
-      image.pixels[idx] = preview.pixels[pj * preview.width + pi];
+    for (auto j : range(image.extent(1))) {
+      for (auto i : range(image.extent(0))) {
+        auto pi       = clamp(i / params.pratio, 0, (int)preview.extent(0) - 1),
+             pj       = clamp(j / params.pratio, 0, (int)preview.extent(1) - 1);
+        image[{i, j}] = preview[{pi, pj}];
+      }
     }
     return true;
   };
@@ -891,8 +892,9 @@ void show_cutrace_gui(const string& title, const string& name,
   // reset renderer
   auto render_reset = [&]() {
     reset_cutrace_state(context, state, scene, params);
-    if (image.width != state.width || image.height != state.height)
-      image = make_image(state.width, state.height, true);
+    if ((vec2s)image.extents() !=
+        vec2s{(size_t)state.width, (size_t)state.height})
+      image = array2d<vec4f>{state.width, state.height};
   };
 
   // render samples synchronously
