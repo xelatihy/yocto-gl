@@ -283,7 +283,7 @@ inline void composite_image(array2d<vec<T, 4>>& result, const array2d<vec<T, 4>>
 // Color grade an hsr or ldr image to an ldr image.
 template<typename T>
 inline array2d<vec<T, 4>> colorgrade_image(
-    const array2d<vec<T, 4>>& image, bool linear, const colorgrade_params& params) {
+    const array2d<vec<T, 4>>& image, bool linear, const colorgrade_gparams<T>& params) {
   auto result = array2d<vec<T, 4>>(image.extents());
   for (auto idx : range(image.size())) {
     result[idx] = colorgrade(image[idx], linear, params);
@@ -294,7 +294,7 @@ inline array2d<vec<T, 4>> colorgrade_image(
 // Color grade an hsr or ldr image to an ldr image.
 template<typename T>
 void colorgrade_image(array2d<vec<T, 4>>& result, const array2d<vec<T, 4>>& image,
-    bool linear, const colorgrade_params& params) {
+    bool linear, const colorgrade_gparams<T>& params) {
   if (image.extents() != result.extents())
     throw std::invalid_argument{"image should be the same size"};
   for (auto idx : range(image.size())) {
