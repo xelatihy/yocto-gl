@@ -116,18 +116,19 @@ void colorgrade_image_mt(array2d<vec4f>& result, const array2d<vec4f>& image,
 
 // Resize an image.
 array2d<vec4f> resize_image(
-    const array2d<vec4f>& image, int res_width, int res_height) {
-  if (res_width == 0 && res_height == 0) {
+    const array2d<vec4f>& image, const vec2s& extents_) {
+  auto extents = extents_;
+  if (extents == vec2s{0, 0})
     throw std::invalid_argument{"bad image size in resize"};
+  if (extents[1] == 0) {
+    extents = {extents[0], (size_t)round(extents[0] * (double)image.extent(1) /
+                                         (double)image.extent(0))};
+  } else if (extents[0] == 0) {
+    extents = {(size_t)round(extents[1] * (double)image.extent(0) /
+                             (double)image.extent(1)),
+        extents[1]};
   }
-  if (res_height == 0) {
-    res_height = (int)round(
-        res_width * (double)image.extent(1) / (double)image.extent(0));
-  } else if (res_width == 0) {
-    res_width = (int)round(
-        res_height * (double)image.extent(0) / (double)image.extent(1));
-  }
-  auto result = array2d<vec4f>{res_width, res_height};
+  auto result = array2d<vec4f>(extents);
   stbir_resize_float_generic((float*)image.data(), (int)image.extent(0),
       (int)image.extent(1), (int)(sizeof(vec4f) * image.extent(0)),
       (float*)result.data(), (int)result.extent(0), (int)result.extent(1),

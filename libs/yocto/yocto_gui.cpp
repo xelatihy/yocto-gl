@@ -691,12 +691,9 @@ void show_trace_gui(const string& title, const string& name, scene_data& scene,
     auto pstate     = make_trace_state(scene, pparams);
     trace_samples(pstate, scene, bvh, lights, pparams);
     auto preview = get_image(pstate);
-    for (auto j : range(state.image.extent(1))) {
-      for (auto i : range(state.image.extent(0))) {
-        auto pi       = clamp(i / params.pratio, 0, preview.extent(0) - 1),
-             pj       = clamp(j / params.pratio, 0, preview.extent(1) - 1);
-        image[{i, j}] = preview[{pi, pj}];
-      }
+    for (auto ij : range(state.image.extents())) {
+      auto pij  = min(ij / params.pratio, preview.extents() - 1);
+      image[ij] = preview[pij];
     }
     return true;
   };

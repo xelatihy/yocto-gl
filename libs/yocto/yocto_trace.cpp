@@ -477,7 +477,7 @@ static trace_result trace_path(const scene_data& scene, const trace_bvh& bvh,
     if (!volume_stack.empty()) {
       auto& vsdf     = volume_stack.back();
       auto  distance = sample_transmittance(
-          vsdf.density, intersection.distance, rand1f(rng), rand1f(rng));
+           vsdf.density, intersection.distance, rand1f(rng), rand1f(rng));
       weight *= eval_transmittance(vsdf.density, distance) /
                 sample_transmittance_pdf(
                     vsdf.density, distance, intersection.distance);
@@ -624,7 +624,7 @@ static trace_result trace_pathdirect(const scene_data& scene,
     if (!volume_stack.empty()) {
       auto& vsdf     = volume_stack.back();
       auto  distance = sample_transmittance(
-          vsdf.density, intersection.distance, rand1f(rng), rand1f(rng));
+           vsdf.density, intersection.distance, rand1f(rng), rand1f(rng));
       weight *= eval_transmittance(vsdf.density, distance) /
                 sample_transmittance_pdf(
                     vsdf.density, distance, intersection.distance);
@@ -803,7 +803,7 @@ static trace_result trace_pathmis(const scene_data& scene, const trace_bvh& bvh,
     if (!volume_stack.empty()) {
       auto& vsdf     = volume_stack.back();
       auto  distance = sample_transmittance(
-          vsdf.density, intersection.distance, rand1f(rng), rand1f(rng));
+           vsdf.density, intersection.distance, rand1f(rng), rand1f(rng));
       weight *= eval_transmittance(vsdf.density, distance) /
                 sample_transmittance_pdf(
                     vsdf.density, distance, intersection.distance);
@@ -1496,8 +1496,8 @@ trace_state make_trace_state(
                          ? array<size_t, 2>{(size_t)params.resolution,
                                (size_t)round(params.resolution / camera.aspect)}
                          : array<size_t, 2>{
-                              (size_t)round(params.resolution * camera.aspect),
-                              (size_t)params.resolution};
+                               (size_t)round(params.resolution * camera.aspect),
+                               (size_t)params.resolution};
   state.samples    = 0;
   state.image      = array2d<vec4f>{resolution};
   state.albedo     = array2d<vec3f>{resolution};
@@ -1665,19 +1665,15 @@ void trace_preview(array2d<vec4f>& image, trace_context& context,
   auto pstate     = make_trace_state(scene, pparams);
   trace_samples(pstate, scene, bvh, lights, pparams);
   auto preview = get_image(pstate);
-  for (auto j : range(state.image.extent(1))) {
-    for (auto i : range(state.image.extent(0))) {
-      auto pi       = clamp(i / params.pratio, 0, (int)preview.extent(0) - 1),
-           pj       = clamp(j / params.pratio, 0, (int)preview.extent(1) - 1);
-      image[{i, j}] = preview[{pi, pj}];
-    }
+  for (auto ij : range(state.image.extents())) {
+    auto pij  = clamp(ij / params.pratio, 0, (int)preview.extent(0) - 1);
+    image[ij] = preview[pij];
   }
 };
 
 // Check image type
 template <typename T>
-static void check_image(
-    const array2d<T>& image, const array<size_t, 2>& extents) {
+static void check_image(const array2d<T>& image, const vec2s& extents) {
   if (image.extents() != extents)
     throw std::invalid_argument{"image should have the same size"};
 }

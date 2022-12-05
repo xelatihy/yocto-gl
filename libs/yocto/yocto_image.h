@@ -213,25 +213,15 @@ void tonemap_image_mt(array2d<vec4f>& ldr, const array2d<vec4f>& image,
 
 // Get/Set region
 template <typename T>
-constexpr void get_region(array2d<T>& region, const array2d<T>& image, int x,
-    int y, int width, int height) {
-  if (region.extent(0) != width || region.extent(1) != height) {
-    region = array2d<vec4f>(width, height);
-  }
-  for (auto j : range(region.extent(1))) {
-    for (auto i : range(region.extent(0))) {
-      region[{i, j}] = image[{i + x, j + y}];
-    }
-  }
+constexpr void get_region(array2d<T>& region, const array2d<T>& image,
+    const vec2s& offset, const vec2s& extents) {
+  if (region.extents() != extents) region = array2d<vec4f>(extents);
+  for (auto ij : range(region.extents())) region[ij] = image[ij + offset];
 }
 template <typename T>
 constexpr void set_region(
-    array2d<T>& image, const array2d<T>& region, int x, int y) {
-  for (auto j : range(region.extent(1))) {
-    for (auto i : range(region.extent(0))) {
-      image[{i + x, j + y}] = region[{i, j}];
-    }
-  }
+    array2d<T>& image, const array2d<T>& region, const vec2s& offset) {
+  for (auto ij : range(region.extents())) image[ij + offset] = region[ij];
 }
 
 // Compute the difference between two images.
@@ -252,7 +242,7 @@ inline array2d<vec4f> image_difference(
 }
 
 // Composite two images together.
-template<typename T>
+template <typename T>
 inline array2d<vec<T, 4>> composite_image(
     const array2d<vec<T, 4>>& image_a, const array2d<vec<T, 4>>& image_b) {
   if (image_a.extents() != image_b.extents())
@@ -265,9 +255,9 @@ inline array2d<vec<T, 4>> composite_image(
 }
 
 // Composite two images together.
-template<typename T>
-inline void composite_image(array2d<vec<T, 4>>& result, const array2d<vec<T, 4>>& image_a,
-    const array2d<vec<T, 4>>& image_b) {
+template <typename T>
+inline void composite_image(array2d<vec<T, 4>>& result,
+    const array2d<vec<T, 4>>& image_a, const array2d<vec<T, 4>>& image_b) {
   if (image_a.extents() != image_b.extents())
     throw std::invalid_argument{"image should be the same size"};
   if (image_a.extents() != result.extents())
@@ -278,9 +268,9 @@ inline void composite_image(array2d<vec<T, 4>>& result, const array2d<vec<T, 4>>
 }
 
 // Color grade an hsr or ldr image to an ldr image.
-template<typename T>
-inline array2d<vec<T, 4>> colorgrade_image(
-    const array2d<vec<T, 4>>& image, bool linear, const colorgrade_gparams<T>& params) {
+template <typename T>
+inline array2d<vec<T, 4>> colorgrade_image(const array2d<vec<T, 4>>& image,
+    bool linear, const colorgrade_gparams<T>& params) {
   auto result = array2d<vec<T, 4>>(image.extents());
   for (auto idx : range(image.size())) {
     result[idx] = colorgrade(image[idx], linear, params);
@@ -289,9 +279,10 @@ inline array2d<vec<T, 4>> colorgrade_image(
 }
 
 // Color grade an hsr or ldr image to an ldr image.
-template<typename T>
-inline void colorgrade_image(array2d<vec<T, 4>>& result, const array2d<vec<T, 4>>& image,
-    bool linear, const colorgrade_gparams<T>& params) {
+template <typename T>
+inline void colorgrade_image(array2d<vec<T, 4>>& result,
+    const array2d<vec<T, 4>>& image, bool linear,
+    const colorgrade_gparams<T>& params) {
   if (image.extents() != result.extents())
     throw std::invalid_argument{"image should be the same size"};
   for (auto idx : range(image.size())) {
@@ -305,7 +296,7 @@ void colorgrade_image_mt(array2d<vec4f>& result, const array2d<vec4f>& image,
     bool linear, const colorgrade_params& params);
 
 // determine white balance colors
-template<typename T>
+template <typename T>
 inline vec<T, 3> compute_white_balance(const array2d<vec<T, 4>>& image) {
   auto rgb = vec<T, 3>{0, 0, 0};
   for (auto idx : range(image.size())) rgb += xyz(image[idx]);
@@ -315,7 +306,7 @@ inline vec<T, 3> compute_white_balance(const array2d<vec<T, 4>>& image) {
 }
 
 // Resize an image.
-array2d<vec4f> resize_image(const array2d<vec4f>& image, int width, int height);
+array2d<vec4f> resize_image(const array2d<vec4f>& image, const vec2s& extents);
 
 }  // namespace yocto
 
@@ -373,7 +364,7 @@ void tonemap_image_mt(image_data& ldr, const image_data& image, float exposure,
     bool filmic = false);
 
 // Resize an image.
-image_data resize_image(const image_data& image, int width, int height);
+image_data resize_image(const image_data& image, size_t width, size_t height);
 
 // set/get region
 void set_region(image_data& image, const image_data& region, int x, int y);
