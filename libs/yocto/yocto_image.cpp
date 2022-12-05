@@ -102,6 +102,18 @@ void tonemap_image_mt(array2d<vec4f>& result, const array2d<vec4f>& image,
       });
 }
 
+// Color grade an hsr or ldr image to an ldr image.
+// Uses multithreading for speed.
+void colorgrade_image_mt(array2d<vec4f>& result, const array2d<vec4f>& image,
+    bool linear, const colorgrade_params& params) {
+  if (image.extents() != result.extents())
+    throw std::invalid_argument{"image should be the same size"};
+  parallel_for_batch(image.size(), image.extent(0),
+      [&result, &image, &params, linear](size_t idx) {
+        result[idx] = colorgrade(image[idx], linear, params);
+      });
+}
+
 // Resize an image.
 array2d<vec4f> resize_image(
     const array2d<vec4f>& image, int res_width, int res_height) {
@@ -122,18 +134,6 @@ array2d<vec4f> resize_image(
       (int)(sizeof(vec4f) * result.extent(0)), 4, 3, 0, STBIR_EDGE_CLAMP,
       STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
   return result;
-}
-
-// Color grade an hsr or ldr image to an ldr image.
-// Uses multithreading for speed.
-void colorgrade_image_mt(array2d<vec4f>& result, const array2d<vec4f>& image,
-    bool linear, const colorgrade_params& params) {
-  if (image.extents() != result.extents())
-    throw std::invalid_argument{"image should be the same size"};
-  parallel_for_batch(image.size(), image.extent(0),
-      [&result, &image, &params, linear](size_t idx) {
-        result[idx] = colorgrade(image[idx], linear, params);
-      });
 }
 
 }  // namespace yocto

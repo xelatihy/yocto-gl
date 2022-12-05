@@ -211,9 +211,6 @@ constexpr void tonemap_image(array2d<vec<T, N>>& result,
 void tonemap_image_mt(array2d<vec4f>& ldr, const array2d<vec4f>& image,
     float exposure, bool filmic = false, bool srgb = true);
 
-// Resize an image.
-array2d<vec4f> resize_image(const array2d<vec4f>& image, int width, int height);
-
 // Get/Set region
 template <typename T>
 constexpr void get_region(array2d<T>& region, const array2d<T>& image, int x,
@@ -293,7 +290,7 @@ inline array2d<vec<T, 4>> colorgrade_image(
 
 // Color grade an hsr or ldr image to an ldr image.
 template<typename T>
-void colorgrade_image(array2d<vec<T, 4>>& result, const array2d<vec<T, 4>>& image,
+inline void colorgrade_image(array2d<vec<T, 4>>& result, const array2d<vec<T, 4>>& image,
     bool linear, const colorgrade_gparams<T>& params) {
   if (image.extents() != result.extents())
     throw std::invalid_argument{"image should be the same size"};
@@ -316,6 +313,9 @@ inline vec<T, 3> compute_white_balance(const array2d<vec<T, 4>>& image) {
   rgb /= max(rgb);
   return rgb;
 }
+
+// Resize an image.
+array2d<vec4f> resize_image(const array2d<vec4f>& image, int width, int height);
 
 }  // namespace yocto
 
