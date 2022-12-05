@@ -66,25 +66,70 @@ using std::vector;
 namespace yocto {
 
 // Conversion from/to floats.
-array2d<vec4f> byte_to_float(const array2d<vec4b>& bt);
-array2d<vec4b> float_to_byte(const array2d<vec4f>& fl);
-// Conversion from/to floats.
-void byte_to_float(array2d<vec4f>& fl, const array2d<vec4b>& bt);
-void float_to_byte(array2d<vec4b>& bt, const array2d<vec4f>& fl);
+template <size_t N, typename T = float>
+constexpr array2d<vec<T, N>> byte_to_float(const array2d<vec<byte, N>>& bt) {
+  auto fl = array2d<vec<T, N>>{bt.extents()};
+  for (auto idx : range(fl.size())) fl[idx] = byte_to_float(bt[idx]);
+  return fl;
+}
+template <typename T, size_t N>
+constexpr array2d<vec<byte, N>> float_to_byte(const array2d<vec<T, N>>& fl) {
+  auto bt = array2d<vec<byte, N>>{fl.extents()};
+  for (auto idx : range(fl.size())) bt[idx] = float_to_byte(fl[idx]);
+  return bt;
+}
+template <typename T, typename Tb>
+constexpr void byte_to_float(array2d<T>& fl, const array2d<Tb>& bt) {
+  for (auto idx : range(fl.size())) fl[idx] = byte_to_float(bt[idx]);
+}
+template <typename T, typename Tb>
+constexpr void float_to_byte(array2d<Tb>& bt, const array2d<T>& fl) {
+  for (auto idx : range(fl.size())) bt[idx] = float_to_byte(fl[idx]);
+}
 
 // Conversion between linear and gamma-encoded images.
-array2d<vec4f> srgb_to_rgb(const array2d<vec4f>& srgb);
-array2d<vec4f> rgb_to_srgb(const array2d<vec4f>& rgb);
-// Conversion between linear and gamma-encoded images.
-void srgb_to_rgb(array2d<vec4f>& rgb, const array2d<vec4f>& srgb);
-void rgb_to_srgb(array2d<vec4f>& srgb, const array2d<vec4f>& rgb);
+template <typename T>
+constexpr array2d<T> srgb_to_rgb(const array2d<T>& srgb) {
+  auto rgb = array2d<T>{srgb.extents()};
+  for (auto idx : range(rgb.size())) rgb[idx] = srgb_to_rgb(srgb[idx]);
+  return rgb;
+}
+template <typename T>
+constexpr array2d<T> rgb_to_srgb(const array2d<T>& rgb) {
+  auto srgb = array2d<T>{rgb.extents()};
+  for (auto idx : range(srgb.size())) srgb[idx] = rgb_to_srgb(rgb[idx]);
+  return srgb;
+}
+template <typename T>
+constexpr void srgb_to_rgb(array2d<T>& rgb, const array2d<T>& srgb) {
+  for (auto idx : range(rgb.size())) rgb[idx] = srgb_to_rgb(srgb[idx]);
+}
+template <typename T>
+constexpr void rgb_to_srgb(array2d<T>& srgb, const array2d<T>& rgb) {
+  for (auto idx : range(srgb.size())) srgb[idx] = rgb_to_srgb(rgb[idx]);
+}
 
 // Conversion between linear and gamma-encoded images.
-array2d<vec4f> srgbb_to_rgb(const array2d<vec4b>& srgb);
-array2d<vec4b> rgb_to_srgbb(const array2d<vec4f>& rgb);
-// Conversion between linear and gamma-encoded images.
-void srgbb_to_rgb(array2d<vec4f>& rgb, const array2d<vec4b>& srgb);
-void rgb_to_srgbb(array2d<vec4b>& srgb, const array2d<vec4f>& rgb);
+template <size_t N, typename T = float>
+constexpr array2d<vec<T, N>> srgbb_to_rgb(const array2d<vec<byte, N>>& srgb) {
+  auto rgb = array2d<vec<T, N>>{srgb.extents()};
+  for (auto idx : range(rgb.size())) rgb[idx] = srgbb_to_rgb<T>(srgb[idx]);
+  return rgb;
+}
+template <typename T, size_t N>
+constexpr array2d<vec<byte, N>> rgb_to_srgbb(const array2d<vec<T, N>>& rgb) {
+  auto srgb = array2d<vec<byte, N>>{rgb.extents()};
+  for (auto idx : range(rgb.size())) srgb[idx] = rgb_to_srgbb(rgb[idx]);
+  return srgb;
+}
+template <typename T, typename Tb>
+constexpr void srgbb_to_rgb(array2d<T>& rgb, const array2d<Tb>& srgb) {
+  for (auto idx : range(rgb.size())) rgb[idx] = srgbb_to_rgb<float>(srgb[idx]);
+}
+template <typename T, typename Tb>
+constexpr void rgb_to_srgbb(array2d<Tb>& srgb, const array2d<T>& rgb) {
+  for (auto idx : range(rgb.size())) srgb[idx] = rgb_to_srgbb(rgb[idx]);
+}
 
 // Evaluates an image at a point `uv`.
 vec4f eval_image(const array2d<vec4f>& image, const vec2f& uv,

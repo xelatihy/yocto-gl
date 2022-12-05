@@ -91,60 +91,6 @@ inline void parallel_for_batch(T num, T batch, Func&& func) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Conversion from/to floats.
-array2d<vec4f> byte_to_float(const array2d<vec4b>& bt) {
-  auto fl = array2d<vec4f>{bt.extents()};
-  for (auto idx : range(fl.size())) fl[idx] = byte_to_float(bt[idx]);
-  return fl;
-}
-array2d<vec4b> float_to_byte(const array2d<vec4f>& fl) {
-  auto bt = array2d<vec4b>{fl.extents()};
-  for (auto idx : range(fl.size())) bt[idx] = float_to_byte(fl[idx]);
-  return bt;
-}
-void byte_to_float(array2d<vec4f>& fl, const array2d<vec4b>& bt) {
-  for (auto idx : range(fl.size())) fl[idx] = byte_to_float(bt[idx]);
-}
-void float_to_byte(array2d<vec4b>& bt, const array2d<vec4f>& fl) {
-  for (auto idx : range(fl.size())) bt[idx] = float_to_byte(fl[idx]);
-}
-
-// Conversion between linear and gamma-encoded images.
-array2d<vec4f> srgb_to_rgb(const array2d<vec4f>& srgb) {
-  auto rgb = array2d<vec4f>{srgb.extents()};
-  for (auto idx : range(rgb.size())) rgb[idx] = srgb_to_rgb(srgb[idx]);
-  return rgb;
-}
-array2d<vec4f> rgb_to_srgb(const array2d<vec4f>& rgb) {
-  auto srgb = array2d<vec4f>{rgb.extents()};
-  for (auto idx : range(rgb.size())) srgb[idx] = rgb_to_srgb(rgb[idx]);
-  return srgb;
-}
-void srgb_to_rgb(array2d<vec4f>& rgb, const array2d<vec4f>& srgb) {
-  for (auto idx : range(rgb.size())) rgb[idx] = srgb_to_rgb(srgb[idx]);
-}
-void rgb_to_srgb(array2d<vec4f>& srgb, const array2d<vec4f>& rgb) {
-  for (auto idx : range(rgb.size())) srgb[idx] = rgb_to_srgb(rgb[idx]);
-}
-
-// Conversion between linear and gamma-encoded images.
-array2d<vec4f> srgbb_to_rgb(const array2d<vec4b>& srgb) {
-  auto rgb = array2d<vec4f>{srgb.extents()};
-  for (auto idx : range(rgb.size())) rgb[idx] = srgbb_to_rgb<float>(srgb[idx]);
-  return rgb;
-}
-array2d<vec4b> rgb_to_srgbb(const array2d<vec4f>& rgb) {
-  auto srgb = array2d<vec4b>{rgb.extents()};
-  for (auto idx : range(rgb.size())) srgb[idx] = rgb_to_srgbb(rgb[idx]);
-  return srgb;
-}
-void srgbb_to_rgb(array2d<vec4f>& rgb, const array2d<vec4b>& srgb) {
-  for (auto idx : range(rgb.size())) rgb[idx] = srgbb_to_rgb<float>(srgb[idx]);
-}
-void rgb_to_srgbb(array2d<vec4b>& srgb, const array2d<vec4f>& rgb) {
-  for (auto idx : range(rgb.size())) srgb[idx] = rgb_to_srgbb(rgb[idx]);
-}
-
 // Lookup pixel for evaluation
 static vec4f lookup_image(
     const array2d<vec4f>& image, int i, int j, bool as_linear) {
