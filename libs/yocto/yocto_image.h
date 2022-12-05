@@ -255,21 +255,52 @@ inline array2d<vec4f> image_difference(
 }
 
 // Composite two images together.
-array2d<vec4f> composite_image(
-    const array2d<vec4f>& image_a, const array2d<vec4f>& image_b);
+template<typename T>
+inline array2d<vec<T, 4>> composite_image(
+    const array2d<vec<T, 4>>& image_a, const array2d<vec<T, 4>>& image_b) {
+  if (image_a.extents() != image_b.extents())
+    throw std::invalid_argument{"image should be the same size"};
+  auto result = array2d<vec<T, 4>>(image_a.extents());
+  for (auto idx : range(result.size())) {
+    result[idx] = composite(image_a[idx], image_b[idx]);
+  }
+  return result;
+}
 
 // Composite two images together.
-void composite_image(array2d<vec4f>& result, const array2d<vec4f>& image_a,
-    const array2d<vec4f>& image_b);
+template<typename T>
+inline void composite_image(array2d<vec<T, 4>>& result, const array2d<vec<T, 4>>& image_a,
+    const array2d<vec<T, 4>>& image_b) {
+  if (image_a.extents() != image_b.extents())
+    throw std::invalid_argument{"image should be the same size"};
+  if (image_a.extents() != result.extents())
+    throw std::invalid_argument{"image should be the same size"};
+  for (auto idx : range(result.size())) {
+    result[idx] = composite(image_a[idx], image_b[idx]);
+  }
+}
 
 // Color grade an hsr or ldr image to an ldr image.
-array2d<vec4f> colorgrade_image(
-    const array2d<vec4f>& image, bool linear, const colorgrade_params& params);
+template<typename T>
+inline array2d<vec<T, 4>> colorgrade_image(
+    const array2d<vec<T, 4>>& image, bool linear, const colorgrade_params& params) {
+  auto result = array2d<vec<T, 4>>(image.extents());
+  for (auto idx : range(image.size())) {
+    result[idx] = colorgrade(image[idx], linear, params);
+  }
+  return result;
+}
 
 // Color grade an hsr or ldr image to an ldr image.
-// Uses multithreading for speed.
-void colorgrade_image(array2d<vec4f>& result, const array2d<vec4f>& image,
-    bool linear, const colorgrade_params& params);
+template<typename T>
+void colorgrade_image(array2d<vec<T, 4>>& result, const array2d<vec<T, 4>>& image,
+    bool linear, const colorgrade_params& params) {
+  if (image.extents() != result.extents())
+    throw std::invalid_argument{"image should be the same size"};
+  for (auto idx : range(image.size())) {
+    result[idx] = colorgrade(image[idx], linear, params);
+  }
+}
 
 // Color grade an hsr or ldr image to an ldr image.
 // Uses multithreading for speed.
@@ -277,7 +308,14 @@ void colorgrade_image_mt(array2d<vec4f>& result, const array2d<vec4f>& image,
     bool linear, const colorgrade_params& params);
 
 // determine white balance colors
-vec3f compute_white_balance(const array2d<vec4f>& image);
+template<typename T>
+inline vec<T, 3> compute_white_balance(const array2d<vec<T, 4>>& image) {
+  auto rgb = vec<T, 3>{0, 0, 0};
+  for (auto idx : range(image.size())) rgb += xyz(image[idx]);
+  if (rgb == vec<T, 3>{0, 0, 0}) return vec<T, 3>{0, 0, 0};
+  rgb /= max(rgb);
+  return rgb;
+}
 
 }  // namespace yocto
 

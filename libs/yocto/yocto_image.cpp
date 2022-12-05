@@ -124,87 +124,6 @@ array2d<vec4f> resize_image(
   return result;
 }
 
-// Composite two images together.
-array2d<vec4f> composite_image(
-    const array2d<vec4f>& image_a, const array2d<vec4f>& image_b) {
-  if (image_a.extents() != image_b.extents())
-    throw std::invalid_argument{"image should be the same size"};
-  auto result = array2d<vec4f>(image_a.extents());
-  for (auto idx : range(result.size())) {
-    result[idx] = composite(image_a[idx], image_b[idx]);
-  }
-  return result;
-}
-
-// Composite two images together.
-void composite_image(array2d<vec4f>& result, const array2d<vec4f>& image_a,
-    const array2d<vec4f>& image_b) {
-  if (image_a.extents() != image_b.extents())
-    throw std::invalid_argument{"image should be the same size"};
-  if (image_a.extents() != result.extents())
-    throw std::invalid_argument{"image should be the same size"};
-  for (auto idx : range(result.size())) {
-    result[idx] = composite(image_a[idx], image_b[idx]);
-  }
-}
-
-// Apply color grading from a linear or srgb color to an srgb color.
-inline vec4f colorgradeb(
-    const vec4f& color, bool linear, const colorgrade_params& params) {
-  auto rgb   = xyz(color);
-  auto alpha = color.w;
-  if (linear) {
-    if (params.exposure != 0) rgb *= exp2(params.exposure);
-    if (params.tint != vec3f{1, 1, 1}) rgb *= params.tint;
-    if (params.lincontrast != 0.5f)
-      rgb = lincontrast(rgb, params.lincontrast, 0.18f);
-    if (params.logcontrast != 0.5f)
-      rgb = logcontrast(rgb, params.logcontrast, 0.18f);
-    if (params.linsaturation != 0.5f) rgb = saturate(rgb, params.linsaturation);
-    if (params.filmic) rgb = tonemap_filmic(rgb);
-    if (params.srgb) rgb = rgb_to_srgb(rgb);
-  }
-  if (params.contrast != 0.5f) rgb = contrast(rgb, params.contrast);
-  if (params.saturation != 0.5f) rgb = saturate(rgb, params.saturation);
-  if (params.shadows != 0.5f || params.midtones != 0.5f ||
-      params.highlights != 0.5f || params.shadows_color != vec3f{1, 1, 1} ||
-      params.midtones_color != vec3f{1, 1, 1} ||
-      params.highlights_color != vec3f{1, 1, 1}) {
-    auto lift  = params.shadows_color;
-    auto gamma = params.midtones_color;
-    auto gain  = params.highlights_color;
-    lift       = lift - mean(lift) + params.shadows - (float)0.5;
-    gain       = gain - mean(gain) + params.highlights + (float)0.5;
-    auto grey  = gamma - mean(gamma) + params.midtones;
-    gamma      = log(((float)0.5 - lift) / (gain - lift)) / log(grey);
-    // apply_image
-    auto lerp_value = clamp(pow(rgb, 1 / gamma), (float)0, (float)1);
-    rgb             = gain * lerp_value + lift * (1 - lerp_value);
-  }
-  return vec4f{rgb.x, rgb.y, rgb.z, alpha};
-}
-
-// Color grade an hsr or ldr image to an ldr image.
-array2d<vec4f> colorgrade_image(
-    const array2d<vec4f>& image, bool linear, const colorgrade_params& params) {
-  auto result = array2d<vec4f>(image.extents());
-  for (auto idx : range(image.size())) {
-    result[idx] = colorgrade(image[idx], linear, params);
-  }
-  return result;
-}
-
-// Color grade an hsr or ldr image to an ldr image.
-// Uses multithreading for speed.
-void colorgrade_image(array2d<vec4f>& result, const array2d<vec4f>& image,
-    bool linear, const colorgrade_params& params) {
-  if (image.extents() != result.extents())
-    throw std::invalid_argument{"image should be the same size"};
-  for (auto idx : range(image.size())) {
-    result[idx] = colorgrade(image[idx], linear, params);
-  }
-}
-
 // Color grade an hsr or ldr image to an ldr image.
 // Uses multithreading for speed.
 void colorgrade_image_mt(array2d<vec4f>& result, const array2d<vec4f>& image,
@@ -215,15 +134,6 @@ void colorgrade_image_mt(array2d<vec4f>& result, const array2d<vec4f>& image,
       [&result, &image, &params, linear](size_t idx) {
         result[idx] = colorgrade(image[idx], linear, params);
       });
-}
-
-// determine white balance colors
-vec3f compute_white_balance(const array2d<vec4f>& image) {
-  auto rgb = vec3f{0, 0, 0};
-  for (auto idx : range(image.size())) rgb += xyz(image[idx]);
-  if (rgb == vec3f{0, 0, 0}) return {0, 0, 0};
-  rgb /= max(rgb);
-  return rgb;
 }
 
 }  // namespace yocto
