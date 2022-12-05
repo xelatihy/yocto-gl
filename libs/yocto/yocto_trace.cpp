@@ -477,7 +477,7 @@ static trace_result trace_path(const scene_data& scene, const trace_bvh& bvh,
     if (!volume_stack.empty()) {
       auto& vsdf     = volume_stack.back();
       auto  distance = sample_transmittance(
-           vsdf.density, intersection.distance, rand1f(rng), rand1f(rng));
+          vsdf.density, intersection.distance, rand1f(rng), rand1f(rng));
       weight *= eval_transmittance(vsdf.density, distance) /
                 sample_transmittance_pdf(
                     vsdf.density, distance, intersection.distance);
@@ -624,7 +624,7 @@ static trace_result trace_pathdirect(const scene_data& scene,
     if (!volume_stack.empty()) {
       auto& vsdf     = volume_stack.back();
       auto  distance = sample_transmittance(
-           vsdf.density, intersection.distance, rand1f(rng), rand1f(rng));
+          vsdf.density, intersection.distance, rand1f(rng), rand1f(rng));
       weight *= eval_transmittance(vsdf.density, distance) /
                 sample_transmittance_pdf(
                     vsdf.density, distance, intersection.distance);
@@ -803,7 +803,7 @@ static trace_result trace_pathmis(const scene_data& scene, const trace_bvh& bvh,
     if (!volume_stack.empty()) {
       auto& vsdf     = volume_stack.back();
       auto  distance = sample_transmittance(
-           vsdf.density, intersection.distance, rand1f(rng), rand1f(rng));
+          vsdf.density, intersection.distance, rand1f(rng), rand1f(rng));
       weight *= eval_transmittance(vsdf.density, distance) /
                 sample_transmittance_pdf(
                     vsdf.density, distance, intersection.distance);
@@ -1457,9 +1457,9 @@ bool is_sampler_lit(const trace_params& params) {
 
 // Trace a block of samples
 void trace_sample(trace_state& state, const scene_data& scene,
-    const trace_bvh& bvh, const trace_lights& lights, const vec2i& ij_, int sample,
-    const trace_params& params) {
-  auto ij = (vec2s)ij_;
+    const trace_bvh& bvh, const trace_lights& lights, const vec2i& ij_,
+    int sample, const trace_params& params) {
+  auto  ij      = (vec2s)ij_;
   auto& camera  = scene.cameras[params.camera];
   auto  sampler = get_trace_sampler_func(params);
   auto  ray     = sample_camera(camera, ij, (vec2i)state.image.extents(),
@@ -1490,18 +1490,21 @@ void trace_sample(trace_state& state, const scene_data& scene,
 // Init a sequence of random number generators.
 trace_state make_trace_state(
     const scene_data& scene, const trace_params& params) {
-  auto& camera = scene.cameras[params.camera];
-  auto  state  = trace_state{};
-  auto resolution = (camera.aspect >= 1) ?
-    array<size_t, 2>{(size_t)params.resolution, (size_t)round(params.resolution / camera.aspect)}:
-    array<size_t, 2>{(size_t)round(params.resolution * camera.aspect), (size_t)params.resolution};
-  state.samples = 0;
-  state.image = array2d<vec4f>{resolution};
-  state.albedo = array2d<vec3f>{resolution};
-  state.normal = array2d<vec3f>{resolution};
-  state.hits = array2d<int>{resolution};
-  state.rngs = array2d<rng_state>{resolution};
-  auto rng_ = make_rng(1301081);
+  auto& camera     = scene.cameras[params.camera];
+  auto  state      = trace_state{};
+  auto  resolution = (camera.aspect >= 1)
+                         ? array<size_t, 2>{(size_t)params.resolution,
+                               (size_t)round(params.resolution / camera.aspect)}
+                         : array<size_t, 2>{
+                              (size_t)round(params.resolution * camera.aspect),
+                              (size_t)params.resolution};
+  state.samples    = 0;
+  state.image      = array2d<vec4f>{resolution};
+  state.albedo     = array2d<vec3f>{resolution};
+  state.normal     = array2d<vec3f>{resolution};
+  state.hits       = array2d<int>{resolution};
+  state.rngs       = array2d<rng_state>{resolution};
+  auto rng_        = make_rng(1301081);
   for (auto& rng : state.rngs) {
     rng = make_rng(params.seed, rand1i(rng_, 1 << 31) / 2 + 1);
   }
@@ -1598,11 +1601,13 @@ void trace_samples(trace_state& state, const scene_data& scene,
       }
     }
   } else {
-    parallel_for((int)state.image.extent(0), (int)state.image.extent(1), [&](int i, int j) {
-      for (auto sample : range(state.samples, state.samples + params.batch)) {
-        trace_sample(state, scene, bvh, lights, {i, j}, sample, params);
-      }
-    });
+    parallel_for((int)state.image.extent(0), (int)state.image.extent(1),
+        [&](int i, int j) {
+          for (auto sample :
+              range(state.samples, state.samples + params.batch)) {
+            trace_sample(state, scene, bvh, lights, {i, j}, sample, params);
+          }
+        });
   }
   state.samples += params.batch;
   if (params.denoise && !state.denoised.empty()) {
@@ -1624,12 +1629,14 @@ void trace_start(trace_context& context, trace_state& state,
   context.done   = false;
   context.worker = std::async(std::launch::async, [&]() {
     if (context.stop) return;
-    parallel_for((int)state.image.extent(0), (int)state.image.extent(1), [&](int i, int j) {
-      for (auto sample : range(state.samples, state.samples + params.batch)) {
-        if (context.stop) return;
-        trace_sample(state, scene, bvh, lights, {i, j}, sample, params);
-      }
-    });
+    parallel_for((int)state.image.extent(0), (int)state.image.extent(1),
+        [&](int i, int j) {
+          for (auto sample :
+              range(state.samples, state.samples + params.batch)) {
+            if (context.stop) return;
+            trace_sample(state, scene, bvh, lights, {i, j}, sample, params);
+          }
+        });
     state.samples += params.batch;
     if (context.stop) return;
     if (params.denoise && !state.denoised.empty()) {
@@ -1660,15 +1667,15 @@ void trace_preview(array2d<vec4f>& image, trace_context& context,
   auto preview = get_image(pstate);
   for (auto j : range(state.image.extent(1))) {
     for (auto i : range(state.image.extent(0))) {
-      auto pi           = clamp(i / params.pratio, 0, (int)preview.extent(0) - 1),
-           pj           = clamp(j / params.pratio, 0, (int)preview.extent(1) - 1);
+      auto pi       = clamp(i / params.pratio, 0, (int)preview.extent(0) - 1),
+           pj       = clamp(j / params.pratio, 0, (int)preview.extent(1) - 1);
       image[{i, j}] = preview[{pi, pj}];
     }
   }
 };
 
 // Check image type
-template<typename T>
+template <typename T>
 static void check_image(
     const array2d<T>& image, const array<size_t, 2>& extents) {
   if (image.extents() != extents)
@@ -1720,13 +1727,16 @@ void get_denoised_image(array2d<vec4f>& image, const trace_state& state) {
   // Create a denoising filter
   oidn::FilterRef filter = device.newFilter("RT");  // ray tracing filter
   filter.setImage("color", (void*)image.data(), oidn::Format::Float3,
-      (int)image.extent(0), (int)image.extent(1), 0, sizeof(vec4f), sizeof(vec4f) * (int)image.extent(0));
+      (int)image.extent(0), (int)image.extent(1), 0, sizeof(vec4f),
+      sizeof(vec4f) * (int)image.extent(0));
   filter.setImage("albedo", (void*)state.albedo.data(), oidn::Format::Float3,
-      (int)image.extent(0), (int)image.extent(1), 0, sizeof(vec4f), sizeof(vec4f) * (int)image.extent(0));
+      (int)image.extent(0), (int)image.extent(1), 0, sizeof(vec4f),
+      sizeof(vec4f) * (int)image.extent(0));
   filter.setImage("normal", (void*)state.normal.data(), oidn::Format::Float3,
-      (int)image.extent(0), (int)image.extent(1), 0, sizeof(vec4f), sizeof(vec4f) * (int)image.extent(0));
+      (int)image.extent(0), (int)image.extent(1), 0, sizeof(vec4f),
+      sizeof(vec4f) * (int)image.extent(0));
   filter.setImage("output", image.data(), oidn::Format::Float3,
-      (int)image.extent(0), (int)image.extent(1), 0, sizeof(vec4f), 
+      (int)image.extent(0), (int)image.extent(1), 0, sizeof(vec4f),
       sizeof(vec4f) * (int)image.extent(0));
   filter.set("inputScale", 1.0f);  // set scale as fixed
   filter.set("hdr", true);         // image is HDR

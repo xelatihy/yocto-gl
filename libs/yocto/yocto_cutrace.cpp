@@ -866,7 +866,7 @@ cutrace_bvh make_cutrace_bvh(cutrace_context& context,
     // compact
     auto compacted_size = download_buffer_value(compacted_size_buffer);
     sbvh.buffer         = make_buffer(
-                context.cuda_stream, compacted_size, (byte*)nullptr);
+        context.cuda_stream, compacted_size, (byte*)nullptr);
     check_result(optixAccelCompact(context.optix_context,
         /*cuda_stream:*/ 0, sbvh.handle, sbvh.buffer.device_ptr(),
         sbvh.buffer.size_in_bytes(), &sbvh.handle));
@@ -939,7 +939,7 @@ cutrace_bvh make_cutrace_bvh(cutrace_context& context,
     // compact
     auto compacted_size = download_buffer_value(compacted_size_buffer);
     ibvh.buffer         = make_buffer(
-                context.cuda_stream, compacted_size, (byte*)nullptr);
+        context.cuda_stream, compacted_size, (byte*)nullptr);
     check_result(optixAccelCompact(context.optix_context,
         /*cuda_stream:*/ 0, ibvh.handle, ibvh.buffer.device_ptr(),
         ibvh.buffer.size_in_bytes(), &ibvh.handle));
@@ -969,15 +969,15 @@ cutrace_state make_cutrace_state(cutrace_context& context,
                          ? array<size_t, 2>{(size_t)params.resolution,
                                (size_t)round(params.resolution / camera.aspect)}
                          : array<size_t, 2>{
-                               (size_t)round(params.resolution * camera.aspect),
-                               (size_t)params.resolution};
+                              (size_t)round(params.resolution * camera.aspect),
+                              (size_t)params.resolution};
   state.samples    = 0;
   state.image  = make_buffer(context.cuda_stream, resolution, (vec4f*)nullptr);
   state.albedo = make_buffer(context.cuda_stream, resolution, (vec3f*)nullptr);
   state.normal = make_buffer(context.cuda_stream, resolution, (vec3f*)nullptr);
   state.hits   = make_buffer(context.cuda_stream, resolution, (int*)nullptr);
   state.rngs   = make_buffer(
-        context.cuda_stream, resolution, (rng_state*)nullptr);
+      context.cuda_stream, resolution, (rng_state*)nullptr);
   if (params.denoise) {
     auto denoiser_sizes = OptixDenoiserSizes{};
     check_result(optixDenoiserComputeMemoryResources(context.denoiser,
@@ -1000,8 +1000,8 @@ void reset_cutrace_state(cutrace_context& context, cutrace_state& state,
                          ? array<size_t, 2>{(size_t)params.resolution,
                                (size_t)round(params.resolution / camera.aspect)}
                          : array<size_t, 2>{
-                               (size_t)round(params.resolution * camera.aspect),
-                               (size_t)params.resolution};
+                              (size_t)round(params.resolution * camera.aspect),
+                              (size_t)params.resolution};
   state.samples    = 0;
   resize_buffer(context.cuda_stream, state.image, resolution, (vec4f*)nullptr);
   resize_buffer(context.cuda_stream, state.albedo, resolution, (vec3f*)nullptr);

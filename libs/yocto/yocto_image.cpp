@@ -137,25 +137,6 @@ vec4f eval_image(const array2d<vec4f>& image, const vec2f& uv, bool as_linear,
   }
 }
 
-// Apply tone mapping returning a float or byte image.
-array2d<vec4f> tonemap_image(
-    const array2d<vec4f>& image, float exposure, bool filmic, bool srgb) {
-  auto result = array2d<vec4f>(image.extents());
-  for (auto idx : range(image.size())) {
-    result[idx] = tonemap(image[idx], exposure, filmic, srgb);
-  }
-  return result;
-}
-
-// Apply tone mapping. If the input image is an ldr, does nothing.
-void tonemap_image(array2d<vec4f>& result, const array2d<vec4f>& image,
-    float exposure, bool filmic, bool srgb) {
-  if (image.extents() != result.extents())
-    throw std::invalid_argument{"image should be the same size"};
-  for (auto idx : range(image.size())) {
-    result[idx] = tonemap(image[idx], exposure, filmic, srgb);
-  }
-}
 // Apply tone mapping using multithreading for speed.
 void tonemap_image_mt(array2d<vec4f>& result, const array2d<vec4f>& image,
     float exposure, bool filmic, bool srgb) {
@@ -1427,7 +1408,7 @@ void make_ridgemap(vector<vec4f>& pixels, int width, int height, float scale,
   return make_proc_image(pixels, width, height, [=](vec2f uv) {
     uv *= 8 * scale;
     auto v = perlin_ridge({uv, 0}, noise.x, noise.y, (int)noise.z, noise.w);
-    v = clamp(v, 0.0f, 1.0f);
+    v      = clamp(v, 0.0f, 1.0f);
     return lerp(color0, color1, v);
   });
 }

@@ -131,14 +131,78 @@ constexpr void rgb_to_srgbb(array2d<Tb>& srgb, const array2d<T>& rgb) {
   for (auto idx : range(rgb.size())) srgb[idx] = rgb_to_srgbb(rgb[idx]);
 }
 
+// Lookup pixel for evaluation
+template <typename T, typename T1, size_t N>
+constexpr vec<T, N> lookup_image(
+    const array2d<vec<T1, N>>& image, const vec2s& ij, bool as_linear = false) {
+  if constexpr (!std::is_same_v<T1, byte>) {
+    return as_linear ? srgb_to_rgb(image[ij]) : image[ij];
+  } else {
+    return as_linear ? srgbb_to_rgb(image[ij]) : byte_to_float(image[ij]);
+  }
+}
+
 // Evaluates an image at a point `uv`.
-vec4f eval_image(const array2d<vec4f>& image, const vec2f& uv,
-    bool as_linear = false, bool no_interpolation = false,
-    bool clamp_to_edge = false);
+template <typename T, typename T1, size_t N>
+constexpr vec<T, N> eval_image(const array2d<vec<T1, N>>& image,
+    const vec<T, 2>& uv, bool as_linear = false, bool no_interpolation = false,
+    bool clamp_to_edge = false) {
+  if (image.empty()) return {0, 0, 0, 0};
+
+  // get image width/height
+  auto size = image.extents();
+
+  // get coordinates normalized for tiling
+  auto s = (T)0, t = (T)0;
+  if (clamp_to_edge) {
+    s = clamp(uv.x, 0, 1) * size.x;
+    t = clamp(uv.y, 0, 1) * size.y;
+  } else {
+    s = fmod(uv.x, 1) * size.x;
+    if (s < 0) s += size.x;
+    t = fmod(uv.y, 1) * size.y;
+    if (t < 0) t += size.y;
+  }
+
+  // get image coordinates and residuals
+  auto i  = clamp((size_t)s, (size_t)0, size.x - 1),
+       j  = clamp((size_t)t, (size_t)0, size.y - 1);
+  auto ii = (i + 1) % size.x, jj = (j + 1) % size.y;
+  auto u = s - i, v = t - j;
+
+  // handle interpolation
+  if (no_interpolation) {
+    return lookup_image(image, {i, j}, as_linear);
+  } else {
+    return lookup_image(image, {i, j}, as_linear) * (1 - u) * (1 - v) +
+           lookup_image(image, {i, jj}, as_linear) * (1 - u) * v +
+           lookup_image(image, {ii, j}, as_linear) * u * (1 - v) +
+           lookup_image(image, {ii, jj}, as_linear) * u * v;
+  }
+}
 
 // Apply tone mapping returning a float or byte image.
-array2d<vec4f> tonemap_image(const array2d<vec4f>& image, float exposure,
-    bool filmic = false, bool srgb = true);
+template <typename T, size_t N>
+constexpr array2d<vec<T, N>> tonemap_image(const array2d<vec<T, N>>& image,
+    T exposure, bool filmic = false, bool srgb = true) {
+  auto result = array2d<vec<T, N>>(image.extents());
+  for (auto idx : range(image.size())) {
+    result[idx] = tonemap(image[idx], exposure, filmic, srgb);
+  }
+  return result;
+}
+
+// Apply tone mapping. If the input image is an ldr, does nothing.
+template <typename T, size_t N>
+constexpr void tonemap_image(array2d<vec<T, N>>& result,
+    const array2d<vec<T, N>>& image, float exposure, bool filmic = false,
+    bool srgb = true) {
+  if (image.extents() != result.extents())
+    throw std::invalid_argument{"image should be the same size"};
+  for (auto idx : range(image.size())) {
+    result[idx] = tonemap(image[idx], exposure, filmic, srgb);
+  }
+}
 
 // Apply tone mapping. If the input image is an ldr, does nothing.
 // void tonemap_image(array2d<vec4f>& ldr, const array2d<vec4f>& image,
@@ -150,11 +214,28 @@ void tonemap_image_mt(array2d<vec4f>& ldr, const array2d<vec4f>& image,
 // Resize an image.
 array2d<vec4f> resize_image(const array2d<vec4f>& image, int width, int height);
 
-// set/get region
-void set_region(
-    array2d<vec4f>& image, const array2d<vec4f>& region, int x, int y);
-void get_region(array2d<vec4f>& region, const array2d<vec4f>& image, int x,
-    int y, int width, int height);
+// Get/Set region
+template <typename T>
+constexpr void get_region(array2d<T>& region, const array2d<T>& image, int x,
+    int y, int width, int height) {
+  if (region.extent(0) != width || region.extent(1) != height) {
+    region = array2d<vec4f>(width, height);
+  }
+  for (auto j : range(region.extent(1))) {
+    for (auto i : range(region.extent(0))) {
+      region[{i, j}] = image[{i + x, j + y}];
+    }
+  }
+}
+template <typename T>
+constexpr void set_region(
+    array2d<T>& image, const array2d<T>& region, int x, int y) {
+  for (auto j : range(region.extent(1))) {
+    for (auto i : range(region.extent(0))) {
+      image[{i + x, j + y}] = region[{i, j}];
+    }
+  }
+}
 
 // Compute the difference between two images.
 array2d<vec4f> image_difference(const array2d<vec4f>& image_a,
