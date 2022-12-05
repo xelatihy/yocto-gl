@@ -147,7 +147,7 @@ template <typename T, typename T1, size_t N>
 constexpr vec<T, N> eval_image(const array2d<vec<T1, N>>& image,
     const vec<T, 2>& uv, bool as_linear = false, bool no_interpolation = false,
     bool clamp_to_edge = false) {
-  if (image.empty()) return {0, 0, 0, 0};
+  if (image.empty()) return vec<T, N>{0};
 
   // get image width/height
   auto size = image.extents();
@@ -238,8 +238,21 @@ constexpr void set_region(
 }
 
 // Compute the difference between two images.
-array2d<vec4f> image_difference(const array2d<vec4f>& image_a,
-    const array2d<vec4f>& image_b, bool display_diff);
+inline array2d<vec4f> image_difference(
+    const array2d<vec4f>& image1, const array2d<vec4f>& image2, bool display) {
+  // check sizes
+  if (image1.extents() != image2.extents())
+    throw std::invalid_argument{"image sizes are different"};
+
+  // compute diff
+  auto difference = array2d<vec4f>(image1.extents());
+  for (auto idx : range(difference.size())) {
+    auto diff       = abs(image1[idx] - image2[idx]);
+    difference[idx] = display ? vec4f{max(diff), max(diff), max(diff), 1}
+                              : diff;
+  }
+  return difference;
+}
 
 // Composite two images together.
 array2d<vec4f> composite_image(

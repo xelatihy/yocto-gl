@@ -91,52 +91,6 @@ inline void parallel_for_batch(T num, T batch, Func&& func) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Lookup pixel for evaluation
-static vec4f lookup_image(
-    const array2d<vec4f>& image, int i, int j, bool as_linear) {
-  if (as_linear) {
-    return srgb_to_rgb(image[{(size_t)i, (size_t)j}]);
-  } else {
-    return image[{(size_t)i, (size_t)j}];
-  }
-}
-
-// Evaluates an image at a point `uv`.
-vec4f eval_image(const array2d<vec4f>& image, const vec2f& uv, bool as_linear,
-    bool no_interpolation, bool clamp_to_edge) {
-  if (image.empty()) return {0, 0, 0, 0};
-
-  // get image width/height
-  auto size = vec2i{(int)image.extent(0), (int)image.extent(1)};
-
-  // get coordinates normalized for tiling
-  auto s = 0.0f, t = 0.0f;
-  if (clamp_to_edge) {
-    s = clamp(uv.x, 0.0f, 1.0f) * size.x;
-    t = clamp(uv.y, 0.0f, 1.0f) * size.y;
-  } else {
-    s = fmod(uv.x, 1.0f) * size.x;
-    if (s < 0) s += size.x;
-    t = fmod(uv.y, 1.0f) * size.y;
-    if (t < 0) t += size.y;
-  }
-
-  // get image coordinates and residuals
-  auto i = clamp((int)s, 0, size.x - 1), j = clamp((int)t, 0, size.y - 1);
-  auto ii = (i + 1) % size.x, jj = (j + 1) % size.y;
-  auto u = s - i, v = t - j;
-
-  // handle interpolation
-  if (no_interpolation) {
-    return lookup_image(image, i, j, as_linear);
-  } else {
-    return lookup_image(image, i, j, as_linear) * (1 - u) * (1 - v) +
-           lookup_image(image, i, jj, as_linear) * (1 - u) * v +
-           lookup_image(image, ii, j, as_linear) * u * (1 - v) +
-           lookup_image(image, ii, jj, as_linear) * u * v;
-  }
-}
-
 // Apply tone mapping using multithreading for speed.
 void tonemap_image_mt(array2d<vec4f>& result, const array2d<vec4f>& image,
     float exposure, bool filmic, bool srgb) {
@@ -168,44 +122,6 @@ array2d<vec4f> resize_image(
       (int)(sizeof(vec4f) * result.extent(0)), 4, 3, 0, STBIR_EDGE_CLAMP,
       STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
   return result;
-}
-
-// Compute the difference between two images.
-array2d<vec4f> image_difference(
-    const array2d<vec4f>& image1, const array2d<vec4f>& image2, bool display) {
-  // check sizes
-  if (image1.extents() != image2.extents())
-    throw std::invalid_argument{"image sizes are different"};
-
-  // compute diff
-  auto difference = array2d<vec4f>(image1.extents());
-  for (auto idx : range(difference.size())) {
-    auto diff       = abs(image1[idx] - image2[idx]);
-    difference[idx] = display ? vec4f{max(diff), max(diff), max(diff), 1}
-                              : diff;
-  }
-  return difference;
-}
-
-void set_region(
-    array2d<vec4f>& image, const array2d<vec4f>& region, int x, int y) {
-  for (auto j : range(region.extent(1))) {
-    for (auto i : range(region.extent(0))) {
-      image[{i + x, j + y}] = region[{i, j}];
-    }
-  }
-}
-
-void get_region(array2d<vec4f>& region, const array2d<vec4f>& image, int x,
-    int y, int width, int height) {
-  if (region.extent(0) != width || region.extent(1) != height) {
-    region = array2d<vec4f>(width, height);
-  }
-  for (auto j : range(region.extent(1))) {
-    for (auto i : range(region.extent(0))) {
-      region[{i, j}] = image[{i + x, j + y}];
-    }
-  }
 }
 
 // Composite two images together.
