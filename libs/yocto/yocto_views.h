@@ -137,7 +137,7 @@ struct ndspan {
   constexpr size_t           size() const noexcept { return _size(_extents); }
   constexpr array<size_t, N> extents() const noexcept { return _extents; }
   constexpr size_t           extent(size_t dimension) const noexcept {
-              return _extents[dimension];
+    return _extents[dimension];
   }
 
   // Access

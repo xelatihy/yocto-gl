@@ -535,59 +535,304 @@ bool is_ldr_filename(const string& filename) {
 // Loads/saves a 3/4 channels float/byte image in linear/srgb color space.
 template <typename T>
 array2d<T> load_image(const string& filename) {
-  auto error = string{};
   auto image = array2d<T>{};
-  if (!load_image(filename, image, error)) throw io_error{error};
+  load_image(filename, image);
   return image;
 }
 
 // Explicit instantiations
 template array2d<vec4f> load_image(const string&);
 
-// Loads/saves a 3/4 channels float/byte image in linear/srgb color space.
-// Supports data as vec3f, vec4f, vec3b, vec4b.
+// Type traits for images
 template <typename T>
-bool load_image(const string& filename, array2d<T>& image, string& error) {
-  if constexpr (std::is_same_v<T, vec4f>) {
-    auto image_ = color_image{};
-    if (!load_image(filename, image_, error)) return false;
-    image = array2d<T>{image_.width, image_.height};
-    for (auto idx : range(image.size())) image[idx] = image_.pixels[idx];
-    return true;
-  } else {
-    error = filename + ": unsupported image channels";
-    return false;
-  }
+constexpr bool is_image_float() {
+  if constexpr (std::is_same_v<T, float>) return true;
+  if constexpr (std::is_same_v<T, vec1f>) return true;
+  if constexpr (std::is_same_v<T, vec2f>) return true;
+  if constexpr (std::is_same_v<T, vec3f>) return true;
+  if constexpr (std::is_same_v<T, vec4f>) return true;
+  return false;
 }
 template <typename T>
-bool save_image(
-    const string& filename, const array2d<T>& image, string& error) {
-  if constexpr (std::is_same_v<T, vec4f>) {
-    auto image_ = make_image(
-        (int)image.extent(0), (int)image.extent(1), is_hdr_filename(filename));
-    for (auto idx : range(image.size())) image_.pixels[idx] = image[idx];
-    return save_image(filename, image_, error);
+constexpr bool is_image_byte() {
+  if constexpr (std::is_same_v<T, byte>) return true;
+  if constexpr (std::is_same_v<T, vec1b>) return true;
+  if constexpr (std::is_same_v<T, vec2b>) return true;
+  if constexpr (std::is_same_v<T, vec3b>) return true;
+  if constexpr (std::is_same_v<T, vec4b>) return true;
+  return false;
+}
+template <typename T>
+constexpr size_t get_image_channels() {
+  if constexpr (std::is_same_v<T, byte> || std::is_same_v<T, float>) return 1;
+  if constexpr (std::is_same_v<T, vec1b> || std::is_same_v<T, vec1f>) return 1;
+  if constexpr (std::is_same_v<T, vec2b> || std::is_same_v<T, vec2f>) return 2;
+  if constexpr (std::is_same_v<T, vec3b> || std::is_same_v<T, vec3f>) return 3;
+  if constexpr (std::is_same_v<T, vec4b> || std::is_same_v<T, vec4f>) return 4;
+  return 0;
+}
+
+// Convert channels
+template <size_t M, typename T, size_t N>
+constexpr vec<T, M> convert_channels(const vec<T, N>& color) {
+  constexpr auto a1 = std::is_same_v<T, byte> ? (byte)255 : (T)1;
+  if constexpr (N == M) {
+    return color;
+  } else if constexpr (N == 1) {
+    if constexpr (M == 1) return {color[0]};
+    if constexpr (M == 2) return {color[0], a1};
+    if constexpr (M == 3) return {color[0], color[0], color[0]};
+    if constexpr (M == 4) return {color[0], color[0], color[0], a1};
+  } else if constexpr (N == 2) {
+    if constexpr (M == 1) return {color[0]};
+    if constexpr (M == 2) return {color[0], color[1]};
+    if constexpr (M == 3) return {color[0], color[0], color[0]};
+    if constexpr (M == 4) return {color[0], color[0], color[0], color[1]};
+  } else if constexpr (N == 3) {
+    if constexpr (M == 1) return {mean(color[0])};
+    if constexpr (M == 2) return {mean(color[0]), a1};
+    if constexpr (M == 3) return {color[0], color[1], color[2]};
+    if constexpr (M == 4) return {color[0], color[1], color[2], a1};
+  } else if constexpr (N == 4) {
+    if constexpr (M == 1) return {mean(color[0])};
+    if constexpr (M == 2) return {mean(color[0]), color[3]};
+    if constexpr (M == 3) return {color[0], color[1], color[2]};
+    if constexpr (M == 4) return {color[0], color[1], color[2], color[3]};
   } else {
-    error = filename + ": unsupported image channels";
-    return false;
+    return vec<T, M>{0};
   }
 }
 
-// Explicit instantiations
-template bool load_image(const string&, array2d<vec4f>&, string&);
-template bool save_image(const string&, const array2d<vec4f>&, string&);
+// Convert channels
+template <typename T, size_t M, typename T1, size_t N>
+constexpr array2d<vec<T, M>> convert_channels(
+    const array2d<vec<T1, N>>& image) {
+  if constexpr (N == M && std::is_same_v<T, T1>) return image;
+
+  auto converted = array2d<vec<T, M>>(image.extents());
+  for (auto idx : range(converted.extents())) {
+    converted[idx] = convert_channels(image[idx]);
+  }
+  return converted;
+}
+
+// Convert channels
+template <typename T, size_t M, typename T1, size_t N>
+constexpr array2d<vec<T, M>> convert_channels(
+    vec<T1, N>* image, array<size_t, 2> extents) {
+  auto converted = array2d<vec<T, M>>(extents);
+  for (auto idx : range(converted.extents())) {
+    converted[idx] = convert_channels(image[idx]);
+  }
+  return converted;
+}
+
+// TODO: remove
+bool make_image_preset(
+    const string& filename, image_data& image, string& error);
 
 // Loads/saves a 3/4 channels float/byte image in linear/srgb color space.
 // Supports data as vec3f, vec4f, vec3b, vec4b.
 template <typename T>
 void load_image(const string& filename, array2d<T>& image) {
-  auto error = string{};
-  if (!load_image(filename, image, error)) throw io_error{error};
+  static_assert(is_image_float<T>() || is_image_byte<T>(),
+      "support only byte and float images");
+  static_assert(get_image_channels<T>() >= 1 && get_image_channels<T>() <= 4,
+      "support only 1-4 channels");
+
+  // get num channels
+  constexpr auto num_channels = get_image_channels<T>();
+  constexpr auto is_float     = is_image_float<T>();
+
+  // color conversion
+  auto from_float = [](vec4f* pixels, array<size_t, 2> extents) -> array2d<T> {
+    constexpr auto N     = get_image_channels<T>();
+    auto           image = array2d<T>{extents};
+    for (auto idx : range(image.size())) {
+      if constexpr (is_image_float<T>()) {
+        if constexpr (N == 1) image[idx] = pixels[idx][0];
+        if constexpr (N == 2)
+          image[idx] = {mean(xyz(pixels[idx])), pixels[idx][3]};
+        if constexpr (N == 3) image[idx] = xyz(pixels[idx]);
+        if constexpr (N == 4) image[idx] = pixels[idx];
+      } else {
+        if constexpr (N == 1) image[idx] = float_to_byte(pixels[idx][0]);
+        if constexpr (N == 2)
+          image[idx] = {float_to_byte(mean(xyz(pixels[idx]))),
+              float_to_byte(pixels[idx][3])};
+        if constexpr (N == 3) image[idx] = float_to_byte(xyz(pixels[idx]));
+        if constexpr (N == 4) image[idx] = float_to_byte(pixels[idx]);
+      }
+    }
+    return image;
+  };
+  auto from_byte = [](vec4b* pixels, array<size_t, 2> extents) -> array2d<T> {
+    constexpr auto N     = get_image_channels<T>();
+    auto           image = array2d<T>{extents};
+    for (auto idx : range(image.size())) {
+      if constexpr (is_image_byte<T>()) {
+        if constexpr (N == 1) image[idx] = pixels[idx][0];
+        if constexpr (N == 2)
+          image[idx] = {float_to_byte(mean(byte_to_float(xyz(pixels[idx])))),
+              pixels[idx][3]};
+        if constexpr (N == 3) image[idx] = xyz(pixels[idx]);
+        if constexpr (N == 4) image[idx] = pixels[idx];
+      } else {
+        if constexpr (N == 1) image[idx] = byte_to_float(pixels[idx][0]);
+        if constexpr (N == 2)
+          image[idx] = {mean(byte_to_float(xyz(pixels[idx]))),
+              byte_to_float(pixels[idx][3])};
+        if constexpr (N == 3) image[idx] = byte_to_float(xyz(pixels[idx]));
+        if constexpr (N == 4) image[idx] = byte_to_float(pixels[idx]);
+      }
+    }
+    return image;
+  };
+
+  // load data buffer
+  auto buffer = load_binary(filename);
+
+  auto ext = path_extension(filename);
+  if (ext == ".exr" || ext == ".EXR") {
+    auto width = 0, height = 0, ncomp = 0;
+    auto pixels = (float*)nullptr;
+    if (LoadEXRFromMemory(&pixels, &width, &height, buffer.data(),
+            buffer.size(), nullptr) != 0)
+      throw io_error{"cannot read " + filename};
+    image = from_float((vec4f*)pixels, {(size_t)width, (size_t)height});
+    free(pixels);
+  } else if (ext == ".hdr" || ext == ".HDR") {
+    auto width = 0, height = 0, ncomp = 0;
+    auto pixels = stbi_loadf_from_memory(
+        buffer.data(), (int)buffer.size(), &width, &height, &ncomp, 4);
+    if (!pixels) throw io_error{"cannot read " + filename};
+    image = from_float((vec4f*)pixels, {(size_t)width, (size_t)height});
+    free(pixels);
+  } else if (ext == ".png" || ext == ".PNG" || ext == ".jpg" || ext == ".JPG" ||
+             ext == ".jpeg" || ext == ".JPEG" || ext == ".tga" ||
+             ext == ".TGA" || ext == ".bmp" || ext == ".BMP") {
+    auto width = 0, height = 0, ncomp = 0;
+    auto pixels = stbi_load_from_memory(
+        buffer.data(), (int)buffer.size(), &width, &height, &ncomp, 4);
+    if (!pixels) throw io_error{"cannot read " + filename};
+    image = from_byte((vec4b*)pixels, {(size_t)width, (size_t)height});
+    free(pixels);
+  } else if (ext == ".ypreset" || ext == ".YPRESET") {
+    // create preset
+    auto image_ = image_data{};
+    auto error  = string{};
+    if (!make_image_preset(filename, image_, error)) throw io_error{error};
+    image = from_float((vec4f*)image_.pixels.data(),
+        {(size_t)image_.width, (size_t)image_.height});
+  } else {
+    throw io_error{"unsupported format " + filename};
+  }
 }
+
 template <typename T>
 void save_image(const string& filename, const array2d<T>& image) {
-  auto error = string{};
-  if (!save_image(filename, image, error)) throw io_error{error};
+  // get num channels
+  constexpr auto num_channels = get_image_channels<T>();
+  constexpr auto is_float     = is_image_float<T>();
+
+  // write data
+  auto stbi_write_data = [](void* context, void* data, int size) {
+    auto& buffer = *(vector<byte>*)context;
+    buffer.insert(buffer.end(), (byte*)data, (byte*)data + size);
+  };
+
+  auto ext = path_extension(filename);
+  if (ext == ".hdr" || ext == ".HDR") {
+    auto buffer = vector<byte>{};
+    if constexpr (is_float) {
+      if (!stbi_write_hdr_to_func(stbi_write_data, &buffer,
+              (int)image.extent(0), (int)image.extent(1), num_channels,
+              (const float*)image.data()))
+        throw io_error{"cannot write " + filename};
+    } else {
+      if (!stbi_write_hdr_to_func(stbi_write_data, &buffer,
+              (int)image.extent(0), (int)image.extent(1), num_channels,
+              (const float*)byte_to_float(image).data()))
+        throw io_error{"cannot write " + filename};
+    }
+    return save_binary(filename, buffer);
+  } else if (ext == ".exr" || ext == ".EXR") {
+    auto data = (byte*)nullptr;
+    auto size = (size_t)0;
+    if constexpr (is_float) {
+      if (SaveEXRToMemory((const float*)image.data(), (int)image.extent(0),
+              (int)image.extent(1), num_channels, 1, &data, &size, nullptr) < 0)
+        throw io_error{"cannot write " + filename};
+    } else {
+      if (SaveEXRToMemory((const float*)byte_to_float(image).data(),
+              (int)image.extent(0), (int)image.extent(1), num_channels, 1,
+              &data, &size, nullptr) < 0)
+        throw io_error{"cannot write " + filename};
+    }
+    auto buffer = vector<byte>{data, data + size};
+    free(data);
+    return save_binary(filename, buffer);
+  } else if (ext == ".png" || ext == ".PNG") {
+    auto buffer = vector<byte>{};
+    if constexpr (is_float) {
+      if (!stbi_write_png_to_func(stbi_write_data, &buffer,
+              (int)image.extent(0), (int)image.extent(1), num_channels,
+              (const byte*)float_to_byte(image).data(),
+              (int)image.extent(0) * 4))
+        throw io_error{"cannot write " + filename};
+    } else {
+      if (!stbi_write_png_to_func(stbi_write_data, &buffer,
+              (int)image.extent(0), (int)image.extent(1), num_channels,
+              (const byte*)image.data(), (int)image.extent(0) * 4))
+        throw io_error{"cannot write " + filename};
+    }
+    return save_binary(filename, buffer);
+  } else if (ext == ".jpg" || ext == ".JPG" || ext == ".jpeg" ||
+             ext == ".JPEG") {
+    auto buffer = vector<byte>{};
+    if constexpr (is_float) {
+      if (!stbi_write_jpg_to_func(stbi_write_data, &buffer,
+              (int)image.extent(0), (int)image.extent(1), num_channels,
+              (const byte*)float_to_byte(image).data(), 75))
+        throw io_error{"cannot write " + filename};
+    } else {
+      if (!stbi_write_jpg_to_func(stbi_write_data, &buffer,
+              (int)image.extent(0), (int)image.extent(1), num_channels,
+              (const byte*)image.data(), 75))
+        throw io_error{"cannot write " + filename};
+    }
+    return save_binary(filename, buffer);
+  } else if (ext == ".tga" || ext == ".TGA") {
+    auto buffer = vector<byte>{};
+    if constexpr (is_float) {
+      if (!stbi_write_tga_to_func(stbi_write_data, &buffer,
+              (int)image.extent(0), (int)image.extent(1), num_channels,
+              (const byte*)float_to_byte(image).data()))
+        throw io_error{"cannot write " + filename};
+    } else {
+      if (!stbi_write_tga_to_func(stbi_write_data, &buffer,
+              (int)image.extent(0), (int)image.extent(1), num_channels,
+              (const byte*)image.data()))
+        throw io_error{"cannot write " + filename};
+    }
+    return save_binary(filename, buffer);
+  } else if (ext == ".bmp" || ext == ".BMP") {
+    auto buffer = vector<byte>{};
+    if constexpr (is_float) {
+      if (!stbi_write_bmp_to_func(stbi_write_data, &buffer,
+              (int)image.extent(0), (int)image.extent(1), num_channels,
+              (const byte*)float_to_byte(image).data()))
+        throw io_error{"cannot write " + filename};
+    } else {
+      if (!stbi_write_bmp_to_func(stbi_write_data, &buffer,
+              (int)image.extent(0), (int)image.extent(1), num_channels,
+              (const byte*)image.data()))
+        throw io_error{"cannot write " + filename};
+    }
+    return save_binary(filename, buffer);
+  } else {
+    throw io_error{"unsupported format " + filename};
+  }
 }
 
 // Explicit instantiations
@@ -595,12 +840,7 @@ template void load_image(const string&, array2d<vec4f>&);
 template void save_image(const string&, const array2d<vec4f>&);
 
 // Loads/saves an image. Chooses hdr or ldr based on file name.
-bool load_image(const string& filename, image_data& image, string& error) {
-  auto read_error = [&]() {
-    error = "cannot read " + filename;
-    return false;
-  };
-
+void load_image(const string& filename, image_data& image) {
   // conversion helpers
   auto from_linear = [](const float* pixels, int width, int height) {
     if (pixels == nullptr) return vector<vec4f>{};
@@ -618,90 +858,71 @@ bool load_image(const string& filename, image_data& image, string& error) {
 
   auto ext = path_extension(filename);
   if (ext == ".exr" || ext == ".EXR") {
-    auto buffer = vector<byte>{};
-    if (!load_binary(filename, buffer, error)) return false;
+    auto buffer = load_binary(filename);
     auto pixels = (float*)nullptr;
     if (LoadEXRFromMemory(&pixels, &image.width, &image.height, buffer.data(),
             buffer.size(), nullptr) != 0)
-      return read_error();
+      throw io_error{"cannot read " + filename};
     image.linear = true;
     image.pixels = from_linear(pixels, image.width, image.height);
     free(pixels);
-    return true;
   } else if (ext == ".hdr" || ext == ".HDR") {
-    auto buffer = vector<byte>{};
-    if (!load_binary(filename, buffer, error)) return false;
+    auto buffer = load_binary(filename);
     auto ncomp  = 0;
     auto pixels = stbi_loadf_from_memory(buffer.data(), (int)buffer.size(),
         &image.width, &image.height, &ncomp, 4);
-    if (!pixels) return read_error();
+    if (!pixels) throw io_error{"cannot read " + filename};
     image.linear = true;
     image.pixels = from_linear(pixels, image.width, image.height);
     free(pixels);
-    return true;
   } else if (ext == ".png" || ext == ".PNG") {
-    auto buffer = vector<byte>{};
-    if (!load_binary(filename, buffer, error)) return false;
+    auto buffer = load_binary(filename);
     auto ncomp  = 0;
     auto pixels = stbi_load_from_memory(buffer.data(), (int)buffer.size(),
         &image.width, &image.height, &ncomp, 4);
-    if (!pixels) return read_error();
+    if (!pixels) throw io_error{"cannot read " + filename};
     image.linear = false;
     image.pixels = from_srgb(pixels, image.width, image.height);
     free(pixels);
-    return true;
   } else if (ext == ".jpg" || ext == ".JPG" || ext == ".jpeg" ||
              ext == ".JPEG") {
-    auto buffer = vector<byte>{};
-    if (!load_binary(filename, buffer, error)) return false;
+    auto buffer = load_binary(filename);
     auto ncomp  = 0;
     auto pixels = stbi_load_from_memory(buffer.data(), (int)buffer.size(),
         &image.width, &image.height, &ncomp, 4);
-    if (!pixels) return read_error();
+    if (!pixels) throw io_error{"cannot read " + filename};
     image.linear = false;
     image.pixels = from_srgb(pixels, image.width, image.height);
     free(pixels);
-    return true;
   } else if (ext == ".tga" || ext == ".TGA") {
-    auto buffer = vector<byte>{};
-    if (!load_binary(filename, buffer, error)) return false;
+    auto buffer = load_binary(filename);
     auto ncomp  = 0;
     auto pixels = stbi_load_from_memory(buffer.data(), (int)buffer.size(),
         &image.width, &image.height, &ncomp, 4);
-    if (!pixels) return read_error();
+    if (!pixels) throw io_error{"cannot read " + filename};
     image.linear = false;
     image.pixels = from_srgb(pixels, image.width, image.height);
     free(pixels);
-    return true;
   } else if (ext == ".bmp" || ext == ".BMP") {
-    auto buffer = vector<byte>{};
-    if (!load_binary(filename, buffer, error)) return false;
+    auto buffer = load_binary(filename);
     auto ncomp  = 0;
     auto pixels = stbi_load_from_memory(buffer.data(), (int)buffer.size(),
         &image.width, &image.height, &ncomp, 4);
-    if (!pixels) return read_error();
+    if (!pixels) throw io_error{"cannot read " + filename};
     image.linear = false;
     image.pixels = from_srgb(pixels, image.width, image.height);
     free(pixels);
-    return true;
   } else if (ext == ".ypreset" || ext == ".YPRESET") {
     // create preset
-    if (!make_image_preset(filename, image, error)) return false;
-    return true;
+    auto error = string{};
+    if (!make_image_preset(filename, image, error)) throw io_error{error};
   } else {
-    error = "unsupported format " + filename;
-    return false;
+    throw io_error{"unsupported format " + filename};
   }
 }
 
 // Saves an hdr image.
-bool save_image(
-    const string& filename, const image_data& image, string& error) {
-  auto write_error = [&]() {
-    error = "cannot write " + filename;
-    return false;
-  };
-
+void save_image(const string& filename, const image_data& image) {
   // conversion helpers
   auto to_linear = [](const image_data& image) {
     if (image.linear) return image.pixels;
@@ -730,52 +951,45 @@ bool save_image(
     auto buffer = vector<byte>{};
     if (!stbi_write_hdr_to_func(stbi_write_data, &buffer, (int)image.width,
             (int)image.height, 4, (const float*)to_linear(image).data()))
-      return write_error();
-    if (!save_binary(filename, buffer, error)) return false;
-    return true;
+      throw io_error{"cannot write " + filename};
+    return save_binary(filename, buffer);
   } else if (ext == ".exr" || ext == ".EXR") {
     auto data = (byte*)nullptr;
     auto size = (size_t)0;
     if (SaveEXRToMemory((const float*)to_linear(image).data(), (int)image.width,
             (int)image.height, 4, 1, &data, &size, nullptr) < 0)
-      return write_error();
+      throw io_error{"cannot write " + filename};
     auto buffer = vector<byte>{data, data + size};
     free(data);
-    if (!save_binary(filename, buffer, error)) return false;
-    return true;
+    return save_binary(filename, buffer);
   } else if (ext == ".png" || ext == ".PNG") {
     auto buffer = vector<byte>{};
     if (!stbi_write_png_to_func(stbi_write_data, &buffer, (int)image.width,
             (int)image.height, 4, (const byte*)to_srgb(image).data(),
             (int)image.width * 4))
-      return write_error();
-    if (!save_binary(filename, buffer, error)) return false;
-    return true;
+      throw io_error{"cannot write " + filename};
+    return save_binary(filename, buffer);
   } else if (ext == ".jpg" || ext == ".JPG" || ext == ".jpeg" ||
              ext == ".JPEG") {
     auto buffer = vector<byte>{};
     if (!stbi_write_jpg_to_func(stbi_write_data, &buffer, (int)image.width,
             (int)image.height, 4, (const byte*)to_srgb(image).data(), 75))
-      return write_error();
-    if (!save_binary(filename, buffer, error)) return false;
-    return true;
+      throw io_error{"cannot write " + filename};
+    return save_binary(filename, buffer);
   } else if (ext == ".tga" || ext == ".TGA") {
     auto buffer = vector<byte>{};
     if (!stbi_write_tga_to_func(stbi_write_data, &buffer, (int)image.width,
             (int)image.height, 4, (const byte*)to_srgb(image).data()))
-      return write_error();
-    if (!save_binary(filename, buffer, error)) return false;
-    return true;
+      throw io_error{"cannot write " + filename};
+    return save_binary(filename, buffer);
   } else if (ext == ".bmp" || ext == ".BMP") {
     auto buffer = vector<byte>{};
     if (!stbi_write_bmp_to_func(stbi_write_data, &buffer, (int)image.width,
             (int)image.height, 4, (const byte*)to_srgb(image).data()))
-      return write_error();
-    if (!save_binary(filename, buffer, error)) return false;
-    return true;
+      throw io_error{"cannot write " + filename};
+    return save_binary(filename, buffer);
   } else {
-    error = "unsupported format " + filename;
-    return false;
+    throw io_error{"unsupported format " + filename};
   }
 }
 
@@ -902,16 +1116,6 @@ image_data make_image_preset(const string& type_) {
   } else {
     return {};
   }
-}
-
-// Loads/saves an image. Chooses hdr or ldr based on file name.
-void load_image(const string& filename, image_data& image) {
-  auto error = string{};
-  if (!load_image(filename, image, error)) throw io_error{error};
-}
-void save_image(const string& filename, const image_data& image) {
-  auto error = string{};
-  if (!save_image(filename, image, error)) throw io_error{error};
 }
 
 bool make_image_preset(
@@ -2298,12 +2502,14 @@ scene_data make_test(const test_params& params) {
   // // cameras
   // switch (params.cameras) {
   //   case test_cameras_type::standard: {
-  //     add_camera(scene, "default", {-0.75, 0.4, 0.9}, {-0.075, 0.05, -0.05},
+  //     add_camera(scene, "default", {-0.75, 0.4, 0.9}, {-0.075, 0.05,
+  //     -0.05},
   //         {0, 1, 0}, 0.05, 2.4, 0);
   //   } break;
   //   // TODO(fabio): fix wide camera
   //   case test_cameras_type::wide: {
-  //     add_camera(scene, "default", {-0.75, 0.4, 0.9}, {-0.075, 0.05, -0.05},
+  //     add_camera(scene, "default", {-0.75, 0.4, 0.9}, {-0.075, 0.05,
+  //     -0.05},
   //         {0, 1, 0}, 0.05, 2.4, 0);
   //   } break;
   // }
@@ -2320,8 +2526,8 @@ scene_data make_test(const test_params& params) {
   //             true));
   //   } break;
   //   case test_environments_type::sunsky: {
-  //     add_environment(scene, "sunsky", {{1,0,0}, {0,1,0}, {0,0,1}, {0,0,0}},
-  //     {0.5, 0.5, 0.5},
+  //     add_environment(scene, "sunsky", {{1,0,0}, {0,1,0}, {0,0,1},
+  //     {0,0,0}}, {0.5, 0.5, 0.5},
   //         add_texture(scene, "sky",
   //             make_sunsky(
   //                 {2048, 1024}, pif / 4, 3.0, true, 1.0, 1.0, {0.7, 0.7,
@@ -2346,13 +2552,13 @@ scene_data make_test(const test_params& params) {
   //   case test_arealights_type::large: {
   //     add_instance(scene, "largearealight1",
   //         lookat_frame({-0.8, 1.6, 1.6}, {0, 0.1, 0}, {0, 1, 0}, true),
-  //         add_shape(scene, "largearealight1", make_rect({1, 1}, {0.4, 0.4})),
-  //         add_emission_material(
+  //         add_shape(scene, "largearealight1", make_rect({1, 1}, {0.4,
+  //         0.4})), add_emission_material(
   //             scene, "largearealight1", {10, 10, 10}, invalidid));
   //     add_instance(scene, "largearealight2",
   //         lookat_frame({+0.8, 1.6, 1.6}, {0, 0.1, 0}, {0, 1, 0}, true),
-  //         add_shape(scene, "largearealight2", make_rect({1, 1}, {0.4, 0.4})),
-  //         add_emission_material(
+  //         add_shape(scene, "largearealight2", make_rect({1, 1}, {0.4,
+  //         0.4})), add_emission_material(
   //             scene, "largearealight2", {10, 10, 10}, invalidid));
   //   } break;
   // }
@@ -2434,10 +2640,10 @@ scene_data make_test(const test_params& params) {
   //         add_shape(scene, "teapot", make_sphere(32, 0.075, 1)),
   //     };
   //     subdivs = {
-  //         add_subdiv(scene, "cube-subdiv", make_fvcube(0.075), shapes[0], 4),
-  //         add_subdiv(scene, "suzanne-subdiv", make_monkey(0.075), shapes[1],
-  //         2), add_subdiv(scene, "displaced", make_sphere(128, 0.075f, 1),
-  //         shapes[2],
+  //         add_subdiv(scene, "cube-subdiv", make_fvcube(0.075), shapes[0],
+  //         4), add_subdiv(scene, "suzanne-subdiv", make_monkey(0.075),
+  //         shapes[1], 2), add_subdiv(scene, "displaced", make_sphere(128,
+  //         0.075f, 1), shapes[2],
   //             0, 0.025,
   //             add_texture(scene, "bumps-displacement", make_bumps({1024,
   //             1024}),
@@ -2777,13 +2983,15 @@ static bool load_obj_scene(
 static bool save_obj_scene(const string& filename, const scene_data& scene,
     string& error, bool noparallel);
 
-// Load/save a scene from/to PLY. Loads/saves only one mesh with no other data.
+// Load/save a scene from/to PLY. Loads/saves only one mesh with no other
+// data.
 static bool load_ply_scene(
     const string& filename, scene_data& scene, string& error, bool noparallel);
 static bool save_ply_scene(const string& filename, const scene_data& scene,
     string& error, bool noparallel);
 
-// Load/save a scene from/to STL. Loads/saves only one mesh with no other data.
+// Load/save a scene from/to STL. Loads/saves only one mesh with no other
+// data.
 static bool load_stl_scene(
     const string& filename, scene_data& scene, string& error, bool noparallel);
 static bool save_stl_scene(const string& filename, const scene_data& scene,

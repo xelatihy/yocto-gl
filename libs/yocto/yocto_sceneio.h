@@ -84,31 +84,9 @@ bool is_ldr_filename(const string& filename);
 template <typename T = vec4f>
 array2d<T> load_image(const string& filename);
 template <typename T>
-bool load_image(const string& filename, array2d<T>& img, string& error);
-template <typename T>
-bool save_image(const string& filename, const array2d<T>& img, string& error);
-
-// Loads/saves a 3/4 channels float/byte image in linear/srgb color space.
-// Supports data as vec3f, vec4f, vec3b, vec4b.
-template <typename T>
 void load_image(const string& filename, array2d<T>& image);
 template <typename T>
 void save_image(const string& filename, const array2d<T>& image);
-
-// Loads/saves a 4 channels float/byte image in linear/srgb color space.
-bool load_image(const string& filename, image_data& img, string& error);
-bool save_image(const string& filename, const image_data& img, string& error);
-
-// Loads/saves a 4 channels float/byte image in linear/srgb color space.
-void load_image(const string& filename, image_data& image);
-void save_image(const string& filename, const image_data& image);
-
-// Make presets. Supported mostly in IO.
-image_data make_image_preset(const string& type);
-
-// Make presets. Supported mostly in IO.
-bool make_image_preset(
-    const string& filename, image_data& image, string& error);
 
 }  // namespace yocto
 
@@ -354,6 +332,42 @@ void watch_start(watch_context& context);
 void watch_stop(watch_context& context);
 // Get file version
 int get_version(const watch_context& context);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// BACKWARD COMPATIBILITY
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Loads/saves a 4 channels float/byte image in linear/srgb color space.
+void load_image(const string& filename, image_data& image);
+void save_image(const string& filename, const image_data& image);
+
+// Make presets. Supported mostly in IO.
+image_data make_image_preset(const string& type);
+
+// Loads/saves a 4 channels float/byte image in linear/srgb color space.
+inline bool load_image(
+    const string& filename, image_data& image, string& error) {
+  try {
+    load_image(filename, image);
+    return true;
+  } catch (std::exception& exc) {
+    error = exc.what();
+    return false;
+  }
+}
+inline bool save_image(
+    const string& filename, const image_data& image, string& error) {
+  try {
+    save_image(filename, image);
+    return true;
+  } catch (std::exception& exc) {
+    error = exc.what();
+    return false;
+  }
+}
 
 }  // namespace yocto
 

@@ -377,8 +377,8 @@ struct hash<yocto::vec<T, N>> {
   size_t operator()(const yocto::vec<T, N>& v) const {
     static const auto hasher = std::hash<T>();
     auto              h      = (size_t)0;
-    for(auto i = 0; i < N; i ++) {
-        h ^= hasher(v[i]) + 0x9e3779b9 + (h << 6) + (h >> 2);
+    for (auto i = 0; i < N; i++) {
+      h ^= hasher(v[i]) + 0x9e3779b9 + (h << 6) + (h >> 2);
     }
     return h;
   }

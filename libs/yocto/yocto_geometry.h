@@ -587,7 +587,7 @@ constexpr kernel ray<T, 3> camera_ray(const frame<T, 3>& frame, T lens,
                           : vec<T, 2>{film_ * aspect, film_};
   auto e    = vec<T, 3>{0, 0, 0};
   auto q    = vec<T, 3>{
-         film.x * ((T)0.5 - image_uv.x), film.y * (image_uv.y - (T)0.5), lens};
+      film.x * ((T)0.5 - image_uv.x), film.y * (image_uv.y - (T)0.5), lens};
   auto q1  = -q;
   auto d   = normalize(q1 - e);
   auto ray = yocto::ray<T, 3>{
