@@ -1327,17 +1327,18 @@ void set_image(glimage_state& glimage, const image_data& image) {
 }
 
 void set_image(glimage_state& glimage, const array2d<vec4f>& image) {
+  auto [width, height] = (vec2i)image.extents();
   if (!glimage.texture || glimage.extents != image.extents()) {
     if (!glimage.texture) glGenTextures(1, &glimage.texture);
     glBindTexture(GL_TEXTURE_2D, glimage.texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, (int)image.extent(0),
-        (int)image.extent(1), 0, GL_RGBA, GL_FLOAT, image.data());
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGBA,
+        GL_FLOAT, image.data());
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   } else {
     glBindTexture(GL_TEXTURE_2D, glimage.texture);
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, (int)image.extent(0),
-        (int)image.extent(1), GL_RGBA, GL_FLOAT, image.data());
+    glTexSubImage2D(
+        GL_TEXTURE_2D, 0, 0, 0, width, height, GL_RGBA, GL_FLOAT, image.data());
   }
   glimage.extents = (vec2i)image.extents();
 }
