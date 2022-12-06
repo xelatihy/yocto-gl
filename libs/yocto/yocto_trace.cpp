@@ -1798,7 +1798,7 @@ void denoise_image(array2d<vec4f>& denoised, const array2d<vec4f>& image,
   // Filter the image
   filter.execute();
 #else
-  denoised = render;
+  denoised = image;
 #endif
 }
 

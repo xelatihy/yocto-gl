@@ -529,6 +529,7 @@ bool is_hdr_filename(const string& filename) {
 
 bool is_ldr_filename(const string& filename) {
   auto ext = path_extension(filename);
+  if(ext == ".ypreset" || ext == ".YPRESET") return is_ldr_preset(filename);
   return ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".bmp" ||
          ext == ".tga";
 }
@@ -686,11 +687,9 @@ void load_image(const string& filename, array2d<T>& image) {
     return image;
   };
 
-  // load data buffer
-  auto buffer = load_binary(filename);
-
   auto ext = path_extension(filename);
   if (ext == ".exr" || ext == ".EXR") {
+    auto buffer = load_binary(filename);
     auto width = 0, height = 0, ncomp = 0;
     auto pixels = (float*)nullptr;
     if (LoadEXRFromMemory(&pixels, &width, &height, buffer.data(),
@@ -699,6 +698,7 @@ void load_image(const string& filename, array2d<T>& image) {
     image = from_float((vec4f*)pixels, {(size_t)width, (size_t)height});
     free(pixels);
   } else if (ext == ".hdr" || ext == ".HDR") {
+    auto buffer = load_binary(filename);
     auto width = 0, height = 0, ncomp = 0;
     auto pixels = stbi_loadf_from_memory(
         buffer.data(), (int)buffer.size(), &width, &height, &ncomp, 4);
@@ -708,6 +708,7 @@ void load_image(const string& filename, array2d<T>& image) {
   } else if (ext == ".png" || ext == ".PNG" || ext == ".jpg" || ext == ".JPG" ||
              ext == ".jpeg" || ext == ".JPEG" || ext == ".tga" ||
              ext == ".TGA" || ext == ".bmp" || ext == ".BMP") {
+    auto buffer = load_binary(filename);
     auto width = 0, height = 0, ncomp = 0;
     auto pixels = stbi_load_from_memory(
         buffer.data(), (int)buffer.size(), &width, &height, &ncomp, 4);
@@ -831,6 +832,10 @@ template void save_image(const string&, const array2d<vec4f>&);
 bool is_hdr_preset(const string& type_) {
   auto type  = path_basename(type_);
   return type.find("sky") != type.npos;
+}
+bool is_ldr_preset(const string& type_) {
+  auto type  = path_basename(type_);
+  return type.find("sky") == type.npos;
 }
 array2d<vec4f> make_image_preset(const string& type_) {
   auto type  = path_basename(type_);
