@@ -237,36 +237,37 @@ constexpr kernel vec<T, 3> tonemap_filmic(
 #else
 
 // Filmic tonemapping
-inline kernel vec3f tonemap_filmic(
-    const vec3f& hdr_, bool accurate_fit = false) {
+template <typename T>
+inline kernel vec<T, 3> tonemap_filmic(
+    const vec<T, 3>& hdr_, bool accurate_fit = false) {
   if (!accurate_fit) {
     // https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/
-    auto hdr = hdr_ * 0.6f;  // brings it back to ACES range
-    auto ldr = (hdr * hdr * 2.51f + hdr * 0.03f) /
-               (hdr * hdr * 2.43f + hdr * 0.59f + 0.14f);
-    return max(vec3f{0, 0, 0}, ldr);
+    auto hdr = hdr_ * (T)0.6;  // brings it back to ACES range
+    auto ldr = (hdr * hdr * (T)2.51 + hdr * (T)0.03) /
+               (hdr * hdr * (T)2.43 + hdr * (T)0.59 + (T)0.14);
+    return max(vec<T, 3>{0, 0, 0}, ldr);
   } else {
     // https://github.com/TheRealMJP/BakingLab/blob/master/BakingLab/ACES.hlsl
     // sRGB => XYZ => D65_2_D60 => AP1 => RRT_SAT
-    auto ACESInputMat = transpose(mat3f{
-        {0.59719f, 0.35458f, 0.04823f},
-        {0.07600f, 0.90834f, 0.01566f},
-        {0.02840f, 0.13383f, 0.83777f},
+    auto ACESInputMat = transpose(mat<T, 3, 3>{
+        {0.59719, 0.35458, 0.04823},
+        {0.07600, 0.90834, 0.01566},
+        {0.02840, 0.13383, 0.83777},
     });
     // ODT_SAT => XYZ => D60_2_D65 => sRGB
-    auto ACESOutputMat = transpose(mat3f{
-        {1.60475f, -0.53108f, -0.07367f},
-        {-0.10208f, 1.10813f, -0.00605f},
-        {-0.00327f, -0.07276f, 1.07602f},
+    auto ACESOutputMat = transposemat<T, 3, 3>{
+        {1.60475, -0.53108, -0.07367},
+        {-0.10208, 1.10813, -0.00605},
+        {-0.00327, -0.07276, 1.07602},
     });
     // RRT => ODT
-    auto RRTAndODTFit = [](const vec3f& v) -> vec3f {
-      return (v * v + v * 0.0245786f - 0.000090537f) /
-             (v * v * 0.983729f + v * 0.4329510f + 0.238081f);
+    auto RRTAndODTFit = [](const vec<T, 3>& v) -> vec<T, 3> {
+      return (v * v + v * (T)0.0245786 - (T)0.000090537) /
+             (v * v * (T)0.983729(T) + v * (T)0.4329510 + (T)0.238081);
     };
 
     auto ldr = ACESOutputMat * RRTAndODTFit(ACESInputMat * hdr_);
-    return max(vec3f{0, 0, 0}, ldr);
+    return max(vec<T, 3>{0, 0, 0}, ldr);
   }
 }
 
@@ -322,22 +323,23 @@ constexpr kernel vec<T, 3> xyz_to_rgb(const vec<T, 3>& xyz) {
 // Convert between CIE XYZ and xyY
 template <typename T>
 constexpr kernel vec<T, 3> xyz_to_xyY(const vec<T, 3>& xyz) {
-  if (xyz == vec3f{0, 0, 0}) return {0, 0, 0};
-  return {
-      xyz.x / (xyz.x + xyz.y + xyz.z), xyz.y / (xyz.x + xyz.y + xyz.z), xyz.y};
+  if (xyz == 0) return {0, 0, 0};
+  auto [x, y, z] = xyz;
+  return {x / (x + y + z), y / (x + y + z), y};
 }
 template <typename T>
 constexpr kernel vec<T, 3> xyY_to_xyz(const vec<T, 3>& xyY) {
-  if (xyY.y == 0) return {0, 0, 0};
-  return {xyY.x * xyY.z / xyY.y, xyY.z, (1 - xyY.x - xyY.y) * xyY.z / xyY.y};
+  auto [x, y, Y] = xyY;
+  if (y == 0) return {0, 0, 0};
+  return {x * Y / y, Y, (1 - x - y) * Y / y};
 }
 
 // Convert HSV to RGB
 template <typename T>
 constexpr kernel vec<T, 3> hsv_to_rgb(const vec<T, 3>& hsv) {
   // from Imgui.cpp
-  auto h = hsv.x, s = hsv.y, v = hsv.z;
-  if (hsv.y == 0) return {v, v, v};
+  auto [h, s, v] = hsv;
+  if (s == 0) return {v, v, v};
 
   h      = fmod(h, (T)1) / ((T)60 / (T)360);
   auto i = (int)h;
@@ -360,8 +362,8 @@ constexpr kernel vec<T, 3> hsv_to_rgb(const vec<T, 3>& hsv) {
 template <typename T>
 constexpr kernel vec<T, 3> rgb_to_hsv(const vec<T, 3>& rgb) {
   // from Imgui.cpp
-  auto r = rgb.x, g = rgb.y, b = rgb.z;
-  auto K = 0.f;
+  auto [r, g, b] = rgb;
+  auto K = (T)0;
   if (g < b) {
     std::swap(g, b);
     K = -1;
@@ -371,9 +373,8 @@ constexpr kernel vec<T, 3> rgb_to_hsv(const vec<T, 3>& rgb) {
     K = -2 / (T)6 - K;
   }
 
-  auto chroma = r - (g < b ? g : b);
-  return {
-      abs(K + (g - b) / (6 * chroma + (T)1e-20)), chroma / (r + (T)1e-20), r};
+  auto c = r - (g < b ? g : b); // chroma
+  return {abs(K + (g - b) / (6 * c + (T)1e-20)), c / (r + (T)1e-20), r};
 }
 
 // Approximate color of blackbody radiation from wavelength in nm.
@@ -543,7 +544,7 @@ constexpr kernel vec<T, 3> colorgrade(
     const vec<T, 3>& rgb_, bool linear, const colorgrade_gparams<T>& params) {
   auto rgb = rgb_;
   if (params.exposure != 0) rgb *= exp2(params.exposure);
-  if (params.tint != vec<T, 3>{1, 1, 1}) rgb *= params.tint;
+  if (params.tint != 1) rgb *= params.tint;
   if (params.lincontrast != (T)0.5)
     rgb = lincontrast(rgb, params.lincontrast, linear ? (T)0.18 : (T)0.5);
   if (params.logcontrast != (T)0.5)
@@ -554,9 +555,9 @@ constexpr kernel vec<T, 3> colorgrade(
   if (params.contrast != (T)0.5) rgb = contrast(rgb, params.contrast);
   if (params.saturation != (T)0.5) rgb = saturate(rgb, params.saturation);
   if (params.shadows != (T)0.5 || params.midtones != (T)0.5 ||
-      params.highlights != (T)0.5 || params.shadows_color != vec3f{1, 1, 1} ||
-      params.midtones_color != vec3f{1, 1, 1} ||
-      params.highlights_color != vec3f{1, 1, 1}) {
+      params.highlights != (T)0.5 || params.shadows_color != 1 ||
+      params.midtones_color != 1 ||
+      params.highlights_color != 1) {
     auto lift  = params.shadows_color;
     auto gamma = params.midtones_color;
     auto gain  = params.highlights_color;

@@ -503,6 +503,18 @@ constexpr kernel bool operator==(const vec<T1, N>& a, const vec<T2, N>& b) {
   }
 }
 template <typename T1, typename T2, size_t N>
+constexpr kernel bool operator==(const vec<T1, N>& a, T2 b) {
+  if constexpr (N == 1) {
+    return a.x == b;
+  } else if constexpr (N == 2) {
+    return a.x == b && a.y == b;
+  } else if constexpr (N == 3) {
+    return a.x == b && a.y == b && a.z == b;
+  } else if constexpr (N == 4) {
+    return a.x == b && a.y == b && a.z == b && a.w == b;
+  }
+}
+template <typename T1, typename T2, size_t N>
 constexpr kernel bool operator!=(const vec<T1, N>& a, const vec<T2, N>& b) {
   if constexpr (N == 1) {
     return a.x != b.x;
@@ -512,6 +524,18 @@ constexpr kernel bool operator!=(const vec<T1, N>& a, const vec<T2, N>& b) {
     return a.x != b.x || a.y != b.y || a.z != b.z;
   } else if constexpr (N == 4) {
     return a.x != b.x || a.y != b.y || a.z != b.z || a.w != b.w;
+  }
+}
+template <typename T1, typename T2, size_t N>
+constexpr kernel bool operator!=(const vec<T1, N>& a, const T2 b) {
+  if constexpr (N == 1) {
+    return a.x != b;
+  } else if constexpr (N == 2) {
+    return a.x != b || a.y != b;
+  } else if constexpr (N == 3) {
+    return a.x != b || a.y != b || a.z != b;
+  } else if constexpr (N == 4) {
+    return a.x != b || a.y != b || a.z != b || a.w != b;
   }
 }
 
