@@ -326,8 +326,8 @@ inline array2d<T> _make_proc_image(const vec2s& extents, Func&& func) {
 // Make an image
 template <typename T = float>
 inline array2d<vec<T, 4>> make_grid(const vec2s& extents, T scale = 1,
-    const vec<T, 4>& color0 = {0.2, 0.2, 0.2, 1.0},
-    const vec<T, 4>& color1 = {0.5, 0.5, 0.5, 1.0}) {
+    const vec<T, 4>& color0 = {0.5, 0.5, 0.5, 1.0},
+    const vec<T, 4>& color1 = {0.5, 0.5, 0.7, 1.0}) {
   return _make_proc_image(extents, [=](vec2s ij) -> vec<T, 4> {
     auto uv    = fmod((4 * scale * ij) / extents, 1);
     auto thick = (T)0.01 / 2;
@@ -341,8 +341,8 @@ inline array2d<vec<T, 4>> make_grid(const vec2s& extents, T scale = 1,
 
 template <typename T = float>
 inline array2d<vec<T, 4>> make_checker(const vec2s& extents, T scale = 1,
-    const vec<T, 4>& color0 = {0.2, 0.2, 0.2, 1.0},
-    const vec<T, 4>& color1 = {0.5, 0.5, 0.5, 1.0}) {
+    const vec<T, 4>& color0 = {0.5, 0.5, 0.6, 1.0},
+    const vec<T, 4>& color1 = {0.7, 0.7, 0.7, 1.0}) {
   return _make_proc_image(extents, [=](vec2s ij) -> vec<T, 4> {
     auto uv = fmod((4 * scale * ij) / extents, 1);
     auto c  = uv.x <= (T)0.5 != uv.y <= (T)0.5;
@@ -426,7 +426,7 @@ inline array2d<vec<T, 4>> make_uvgrid(
       hsv.y = (T)0.8;
     }
     auto rgb = (colored) ? hsv_to_rgb(hsv) : vec<T, 3>{hsv.z, hsv.z, hsv.z};
-    return vec<T, 4>{rgb, 1};
+    return vec<T, 4>{rgb_to_srgb(rgb), 1};
   });
 }
 
