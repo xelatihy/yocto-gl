@@ -351,7 +351,7 @@ inline array2d<vec<T, 4>> make_checker(const vec2s& extents, T scale = 1,
 }
 
 template <typename T = float>
-inline array2d<vec<T, 4>> make_bumps(const vec2s& extents, T scale,
+inline array2d<vec<T, 4>> make_bumps(const vec2s& extents, T scale = 1,
     const vec<T, 4>& color0 = {0, 0, 0, 1},
     const vec<T, 4>& color1 = {1, 1, 1, 1}) {
   return _make_proc_image(extents, [=](vec2s ij) -> vec<T, 4> {
@@ -461,7 +461,7 @@ inline array2d<vec<T, 4>> make_noisemap(const vec2s& extents, T scale = 1,
 
 template <typename T = float>
 inline array2d<vec<T, 4>> make_fbmmap(const vec2s& extents, T scale = 1,
-    const vec<T, 4>& noise  = {2, 0.5, 8, 1},
+    const vec<T, 4>& noise  = vec<T, 4>{2, 0.5, 8, 1},
     const vec<T, 4>& color0 = {0, 0, 0, 1},
     const vec<T, 4>& color1 = {1, 1, 1, 1}) {
   return _make_proc_image(extents, [=](vec2s ij) -> vec<T, 4> {
@@ -474,7 +474,7 @@ inline array2d<vec<T, 4>> make_fbmmap(const vec2s& extents, T scale = 1,
 
 template <typename T = float>
 inline array2d<vec<T, 4>> make_turbulencemap(const vec2s& extents, T scale = 1,
-    const vec<T, 4>& noise  = {2, 0.5, 8, 1},
+    const vec<T, 4>& noise  = vec<T, 4>{2, 0.5, 8, 1},
     const vec<T, 4>& color0 = {0, 0, 0, 1},
     const vec<T, 4>& color1 = {1, 1, 1, 1}) {
   return _make_proc_image(extents, [=](vec2s ij) -> vec<T, 4> {
@@ -548,8 +548,8 @@ inline array2d<vec<T, 4>> bump_to_normal(
 // Implementation of sunsky modified heavily from pbrt
 template <typename T = float>
 inline array2d<vec<T, 4>> make_sunsky(const vec2s& extents, float theta_sun,
-    float turbidity, bool has_sun, float sun_intensity, float sun_radius,
-    const vec3f& ground_albedo) {
+    T turbidity = 3, bool has_sun = false, T sun_intensity = 1,
+    T sun_radius = 1, const vec<T, 3>& ground_albedo = vec<T, 3>{0.2, 0.2, 0.2}) {
   auto zenith_xyY = vec<T, 3>{
       ((T)0.00165 * pow(theta_sun, 3) - (T)0.00374 * pow(theta_sun, 2) +
           (T)0.00208 * theta_sun + (T)0.00000) *
@@ -691,8 +691,8 @@ inline array2d<vec<T, 4>> make_sunsky(const vec2s& extents, float theta_sun,
 
 // Make an image of multiple lights.
 template <typename T = float>
-inline array2d<vec<T, 4>> make_lights(const vec2s& extents, const vec3f& le,
-    int nlights, float langle, float lwidth, float lheight) {
+inline array2d<vec<T, 4>> make_lights(const vec2s& extents, const vec<T, 3>& le = {1, 1, 1},
+    int nlights= 4, T langle = pif / 4, T lwidth = (T)pi / 16, T lheight = (T)pi / 16) {
   auto [width, height] = extents;
   auto img             = array2d<vec<T, 4>>(extents);
   for (auto j : range(height)) {

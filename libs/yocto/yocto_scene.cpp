@@ -178,6 +178,18 @@ vec4f eval_texture(const scene_data& scene, int texture, const vec2f& uv,
 }
 
 // conversion from image
+texture_data image_to_texture(const array2d<vec4f>& image, bool linear) {
+  auto texture = texture_data{(int)image.extent(0), (int)image.extent(1), linear, {}, {}};
+  if (linear) {
+    texture.pixelsf = image.data_vector();
+  } else {
+    texture.pixelsb.resize(image.size());
+    float_to_byte(texture.pixelsb, image.data_vector());
+  }
+  return texture;
+}
+
+// conversion from image
 texture_data image_to_texture(const image_data& image) {
   auto texture = texture_data{image.width, image.height, image.linear, {}, {}};
   if (image.linear) {
@@ -645,7 +657,7 @@ void add_camera(scene_data& scene) {
 void add_sky(scene_data& scene, float sun_angle) {
   scene.texture_names.emplace_back("sky");
   auto& texture = scene.textures.emplace_back();
-  texture       = image_to_texture(make_sunsky(1024, 512, sun_angle));
+  texture       = image_to_texture(make_sunsky({1024, 512}, sun_angle), true);
   scene.environment_names.emplace_back("sky");
   auto& environment        = scene.environments.emplace_back();
   environment.emission     = {1, 1, 1};
