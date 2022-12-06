@@ -316,270 +316,281 @@ array2d<vec4f> resize_image(const array2d<vec4f>& image, const vec2s& extents);
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+template <typename Func, typename T = std::invoke_result_t<Func, vec2s>>
+inline array2d<T> _make_proc_image(const vec2s& extents, Func&& func) {
+  auto image = array2d<T>(extents);
+  for (auto ij : range(extents)) image[ij] = func(ij);
+  return image;
+}
+
+// Make an image
+template <typename T = float>
+inline array2d<vec<T, 4>> make_grid(const vec2s& extents, T scale = 1,
+    const vec<T, 4>& color0 = {0.2, 0.2, 0.2, 1.0},
+    const vec<T, 4>& color1 = {0.5, 0.5, 0.5, 1.0}) {
+  return _make_proc_image(extents, [=](vec2s ij) -> vec<T, 4> {
+    auto uv    = fmod((4 * scale * ij) / extents, 1);
+    auto thick = (T)0.01 / 2;
+    auto c     = uv.x <= thick || uv.x >= 1 - thick || uv.y <= thick ||
+             uv.y >= 1 - thick ||
+             (uv.x >= (T)0.5 - thick && uv.x <= 0.5f + thick) ||
+             (uv.y >= (T)0.5 - thick && uv.y <= 0.5f + thick);
+    return c ? color0 : color1;
+  });
+}
+
+template <typename T = float>
+inline array2d<vec<T, 4>> make_checker(const vec2s& extents, T scale = 1,
+    const vec<T, 4>& color0 = {0.2, 0.2, 0.2, 1.0},
+    const vec<T, 4>& color1 = {0.5, 0.5, 0.5, 1.0}) {
+  return _make_proc_image(extents, [=](vec2s ij) -> vec<T, 4> {
+    auto uv = fmod((4 * scale * ij) / extents, 1);
+    auto c  = uv.x <= (T)0.5 != uv.y <= (T)0.5;
+    return c ? color0 : color1;
+  });
+}
+
+template <typename T = float>
+inline array2d<vec<T, 4>> make_bumps(const vec2s& extents, T scale,
+    const vec<T, 4>& color0 = {0, 0, 0, 1},
+    const vec<T, 4>& color1 = {1, 1, 1, 1}) {
+  return _make_proc_image(extents, [=](vec2s ij) -> vec<T, 4> {
+    auto uv     = fmod((4 * scale * ij) / extents, 1);
+    auto thick  = (T)0.125;
+    auto center = vec<T, 2>{
+        uv.x <= (T)0.5 ? (T)0.25 : (T)0.75,
+        uv.y <= (T)0.5 ? (T)0.25 : (T)0.75,
+    };
+    auto dist = clamp(length(uv - center), 0, thick) / thick;
+    auto val  = uv.x <= (T)0.5 != uv.y <= (T)0.5 ? (1 + sqrt(1 - dist)) / 2
+                                                 : (dist * dist) / 2;
+    return lerp(color0, color1, val);
+  });
+}
+
+template <typename T = float>
+inline array2d<vec<T, 4>> make_ramp(const vec2s& extents, T scale = 1,
+    const vec<T, 4>& color0 = {0, 0, 0, 1},
+    const vec<T, 4>& color1 = {1, 1, 1, 1}) {
+  return _make_proc_image(extents, [=](vec2s ij) -> vec<T, 4> {
+    auto [u, _] = fmod((scale * ij) / extents, 1);
+    return lerp(color0, color1, u);
+  });
+}
+
+template <typename T = float>
+inline array2d<vec<T, 4>> make_gammaramp(const vec2s& extents, T scale = 1,
+    const vec<T, 4>& color0 = {0, 0, 0, 1},
+    const vec<T, 4>& color1 = {1, 1, 1, 1}) {
+  return _make_proc_image(extents, [=](vec2s ij) -> vec<T, 4> {
+    auto [u, v] = fmod((scale * ij) / extents, 1);
+    auto gamma  = (T)2.2;
+    if (v < (T)1 / 3) {
+      return lerp(color0, color1, pow(u, gamma));
+    } else if (v < (T)2 / 3) {
+      return lerp(color0, color1, u);
+    } else {
+      return lerp(color0, color1, pow(u, 1 / gamma));
+    }
+  });
+}
+
+template <typename T = float>
+inline array2d<vec<T, 4>> make_uvramp(const vec2s& extents, T scale = 1) {
+  return _make_proc_image(extents, [=](vec2s ij) -> vec<T, 4> {
+    auto [u, v] = fmod((scale * ij) / extents, 1);
+    return vec<T, 4>{u, v, 0, 1};
+  });
+}
+
+template <typename T = float>
+inline array2d<vec<T, 4>> make_uvgrid(
+    const vec2s& extents, T scale = 1, bool colored = true) {
+  return _make_proc_image(extents, [=](vec2s ij) -> vec<T, 4> {
+    auto uv  = fmod((scale * ij) / extents, 1);
+    uv.y     = 1 - uv.y;
+    auto hsv = vec<T, 3>{0, 0, 0};
+    hsv.x    = (clamp((int)(uv.x * 8), 0, 7) +
+                (clamp((int)(uv.y * 8), 0, 7) + 5) % 8 * 8) /
+            (T)64.0;
+    auto vuv = fmod(uv * 4, 1);
+    auto vc  = vuv.x <= 0.5f != vuv.y <= 0.5f;
+    hsv.z    = vc ? 0.5f - 0.05f : 0.5f + 0.05f;
+    auto suv = fmod(uv * 16, 1);
+    auto st  = (T)0.01 / 2;
+    auto sc  = suv.x <= st || suv.x >= 1 - st || suv.y <= st || suv.y >= 1 - st;
+    if (sc) {
+      hsv.y = (T)0.2;
+      hsv.z = (T)0.8;
+    } else {
+      hsv.y = (T)0.8;
+    }
+    auto rgb = (colored) ? hsv_to_rgb(hsv) : vec<T, 3>{hsv.z, hsv.z, hsv.z};
+    return vec<T, 4>{rgb, 1};
+  });
+}
+
+template <typename T = float>
+inline array2d<vec<T, 4>> make_colormapramp(const vec2s& extents, T scale = 1) {
+  return _make_proc_image(extents, [=](vec2s ij) -> vec<T, 4> {
+    auto [u, v] = fmod((scale * ij) / extents, 1);
+    auto rgb    = vec<T, 3>{0, 0, 0};
+    if (v < (T)0.25) {
+      rgb = colormap(u, colormap_type::viridis);
+    } else if (v < (T)0.50) {
+      rgb = colormap(u, colormap_type::plasma);
+    } else if (v < (T)0.75) {
+      rgb = colormap(u, colormap_type::magma);
+    } else {
+      rgb = colormap(u, colormap_type::inferno);
+    }
+    return vec<T, 4>{rgb, 1};
+  });
+}
+
+template <typename T = float>
+inline array2d<vec<T, 4>> make_noisemap(const vec2s& extents, T scale = 1,
+    const vec<T, 4>& color0 = {0, 0, 0, 1},
+    const vec<T, 4>& color1 = {1, 1, 1, 1}) {
+  return _make_proc_image(extents, [=](vec2s ij) -> vec<T, 4> {
+    auto [u, v] = (8 * scale * ij) / extents;
+    auto value  = perlin_noise(vec<T, 3>{u, v, 0});
+    return lerp(color0, color1, clamp(value, 0, 1));
+  });
+}
+
+template <typename T = float>
+inline array2d<vec<T, 4>> make_fbmmap(const vec2s& extents, T scale = 1,
+    const vec<T, 4>& noise  = {2, 0.5, 8, 1},
+    const vec<T, 4>& color0 = {0, 0, 0, 1},
+    const vec<T, 4>& color1 = {1, 1, 1, 1}) {
+  return _make_proc_image(extents, [=](vec2s ij) -> vec<T, 4> {
+    auto [u, v]                         = (8 * scale * ij) / extents;
+    auto [lacunarity, gain, octaves, _] = noise;
+    auto value = perlin_fbm({u, v, 0}, lacunarity, gain, (int)octaves);
+    return lerp(color0, color1, clamp(value, 0, 1));
+  });
+}
+
+template <typename T = float>
+inline array2d<vec<T, 4>> make_turbulencemap(const vec2s& extents, T scale = 1,
+    const vec<T, 4>& noise  = {2, 0.5, 8, 1},
+    const vec<T, 4>& color0 = {0, 0, 0, 1},
+    const vec<T, 4>& color1 = {1, 1, 1, 1}) {
+  return _make_proc_image(extents, [=](vec2s ij) -> vec<T, 4> {
+    auto [u, v]                         = (8 * scale * ij) / extents;
+    auto [lacunarity, gain, octaves, _] = noise;
+    auto value = perlin_turbulence({u, v, 0}, lacunarity, gain, (int)octaves);
+    v          = clamp(v, 0.0f, 1.0f);
+    return lerp(color0, color1, clamp(value, 0, 1));
+  });
+}
+
+template <typename T = float>
+inline array2d<vec<T, 4>> make_ridgemap(const vec2s& extents, T scale = 1,
+    const vec<T, 4>& noise  = {2, 0.5, 8, 1},
+    const vec<T, 4>& color0 = {0, 0, 0, 1},
+    const vec<T, 4>& color1 = {1, 1, 1, 1}) {
+  return _make_proc_image(extents, [=](vec2s ij) -> vec<T, 4> {
+    auto [u, v]                              = (8 * scale * ij) / extents;
+    auto [lacunarity, gain, octaves, offset] = noise;
+    auto value                               = perlin_ridge(
+        {u, v, 0}, lacunarity, gain, (int)octaves, offset);
+    return lerp(color0, color1, clamp(value, 0, 1));
+  });
+}
+
+// Add image border
+template <typename T = float>
+inline array2d<vec<T, 4>> add_border(const array2d<vec<T, 4>>& image, T width,
+    const vec<T, 4>& color = {0, 0, 0, 1}) {
+  auto result = image;
+  auto [w, h] = image.extents();
+  auto scale  = (T)1 / max(image.extents());
+  for (auto ij : range(image.extents())) {
+    auto [u, v] = (vec2f)ij * scale;
+    if (u < width || v < width || v > w * scale - width ||
+        v > h * scale - width) {
+      result[ij] = color;
+    }
+  }
+  return result;
+}
+
 // Comvert a bump map to a normal map.
-inline void bump_to_normal(
-    array2d<vec4f>& normalmap, const array2d<vec4f>& bumpmap, float scale) {
-  if (normalmap.extents() != bumpmap.extents()) 
+template <typename T = float>
+inline void bump_to_normal(array2d<vec<T, 4>>& normalmap,
+    const array2d<vec<T, 4>>& bumpmap, float scale) {
+  if (normalmap.extents() != bumpmap.extents())
     throw std::out_of_range{"different image sizes"};
   auto dxy = 1 / (vec2f)bumpmap.extents();
   for (auto ij : range(bumpmap.extents())) {
     auto i1j = (ij + vec2s{1, 0}) % bumpmap.extents();
     auto ij1 = (ij + vec2s{0, 1}) % bumpmap.extents();
-      auto p00    = bumpmap[ij],
-           p10    = bumpmap[i1j],
-           p01    = bumpmap[ij1];
-      auto g00    = mean(p00), g10    = mean(p10), g01    = mean(p01);
-      auto normal = vec3f{
-          scale * (g00 - g10) / dxy[0], scale * (g00 - g01) / dxy[1], 1.0f};
-      normal.y = -normal.y;  // make green pointing up, even if y axis
-                             // points down
-      normal = normalize(normal) * 0.5f + 0.5f;
-      normalmap[ij] = {normal.x, normal.y, normal.z, 1};
-    }
+    auto p00 = bumpmap[ij], p10 = bumpmap[i1j], p01 = bumpmap[ij1];
+    auto g00 = mean(p00), g10 = mean(p10), g01 = mean(p01);
+    auto normal = vec<T, 3>{
+        scale * (g00 - g10) / dxy[0], scale * (g00 - g01) / dxy[1], 1};
+    normal.y = -normal.y;  // make green pointing up, even if y axis
+                           // points down
+    normal        = normalize(normal) * (T)0.5 + (T)0.5;
+    normalmap[ij] = {normal, 1};
+  }
 }
-inline array2d<vec4f> bump_to_normal(const array2d<vec4f>& bumpmap, float scale) {
-  auto normalmap = array2d<vec4f>{bumpmap.extents()};
+template <typename T = float>
+inline array2d<vec<T, 4>> bump_to_normal(
+    const array2d<vec<T, 4>>& bumpmap, float scale) {
+  auto normalmap = array2d<vec<T, 4>>{bumpmap.extents()};
   bump_to_normal(normalmap, bumpmap, scale);
   return normalmap;
 }
 
-template <typename Shader>
-inline  array2d<vec4f> make_proc_image(
-    const vec2s& extents, Shader&& shader) {
-  auto image = array2d<vec4f>(extents);
-  for (auto ij : range(extents)) {
-    auto uv = (vec2f)ij / max(extents);
-    image[ij] = shader(uv);
-  }
-  return image;
-}
-
-// Make an image
-inline array2d<vec4f> make_grid(const vec2s& extents, float scale, const vec4f& color0,
-    const vec4f& color1) {
-  return make_proc_image(extents, [=](vec2f uv) {
-    uv *= 4 * scale;
-    uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
-    auto thick = 0.01f / 2;
-    auto c     = uv.x <= thick || uv.x >= 1 - thick || uv.y <= thick ||
-             uv.y >= 1 - thick ||
-             (uv.x >= 0.5f - thick && uv.x <= 0.5f + thick) ||
-             (uv.y >= 0.5f - thick && uv.y <= 0.5f + thick);
-    return c ? color0 : color1;
-  });
-}
-
-inline array2d<vec4f> make_checker(const vec2s& extents, float scale, const vec4f& color0,
-    const vec4f& color1) {
-  return make_proc_image(extents, [=](vec2f uv) {
-    uv *= 4 * scale;
-    uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
-    auto c = uv.x <= 0.5f != uv.y <= 0.5f;
-    return c ? color0 : color1;
-  });
-}
-
-inline array2d<vec4f> make_bumps(const vec2s& extents, float scale, const vec4f& color0,
-    const vec4f& color1) {
-  return make_proc_image(extents, [=](vec2f uv) {
-    uv *= 4 * scale;
-    uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
-    auto thick  = 0.125f;
-    auto center = vec2f{
-        uv.x <= 0.5f ? 0.25f : 0.75f,
-        uv.y <= 0.5f ? 0.25f : 0.75f,
-    };
-    auto dist = clamp(length(uv - center), 0.0f, thick) / thick;
-    auto val  = uv.x <= 0.5f != uv.y <= 0.5f ? (1 + sqrt(1 - dist)) / 2
-                                             : (dist * dist) / 2;
-    return lerp(color0, color1, val);
-  });
-}
-
-inline array2d<vec4f> make_ramp(const vec2s& extents, float scale, const vec4f& color0,
-    const vec4f& color1) {
-  return make_proc_image(extents, [=](vec2f uv) {
-    uv *= scale;
-    uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
-    return lerp(color0, color1, uv.x);
-  });
-}
-
-inline array2d<vec4f> make_gammaramp(const vec2s& extents, float scale,
-    const vec4f& color0, const vec4f& color1) {
-  return make_proc_image(extents, [=](vec2f uv) {
-    uv *= scale;
-    uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
-    if (uv.y < 1 / 3.0f) {
-      return lerp(color0, color1, pow(uv.x, 2.2f));
-    } else if (uv.y < 2 / 3.0f) {
-      return lerp(color0, color1, uv.x);
-    } else {
-      return lerp(color0, color1, pow(uv.x, 1 / 2.2f));
-    }
-  });
-}
-
-inline array2d<vec4f> make_uvramp(const vec2s& extents, float scale) {
-  return make_proc_image(extents, [=](vec2f uv) {
-    uv *= scale;
-    uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
-    return vec4f{uv.x, uv.y, 0, 1};
-  });
-}
-
-inline array2d<vec4f> make_uvgrid(const vec2s& extents, float scale, bool colored) {
-  return make_proc_image(extents, [=](vec2f uv) {
-    uv *= scale;
-    uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
-    uv.y     = 1 - uv.y;
-    auto hsv = vec3f{0, 0, 0};
-    hsv.x    = (clamp((int)(uv.x * 8), 0, 7) +
-                (clamp((int)(uv.y * 8), 0, 7) + 5) % 8 * 8) /
-            64.0f;
-    auto vuv = uv * 4;
-    vuv -= vec2f{(float)(int)vuv.x, (float)(int)vuv.y};
-    auto vc  = vuv.x <= 0.5f != vuv.y <= 0.5f;
-    hsv.z    = vc ? 0.5f - 0.05f : 0.5f + 0.05f;
-    auto suv = uv * 16;
-    suv -= vec2f{(float)(int)suv.x, (float)(int)suv.y};
-    auto st = 0.01f / 2;
-    auto sc = suv.x <= st || suv.x >= 1 - st || suv.y <= st || suv.y >= 1 - st;
-    if (sc) {
-      hsv.y = 0.2f;
-      hsv.z = 0.8f;
-    } else {
-      hsv.y = 0.8f;
-    }
-    auto rgb = (colored) ? hsv_to_rgb(hsv) : vec3f{hsv.z, hsv.z, hsv.z};
-    return vec4f{rgb.x, rgb.y, rgb.z, 1};
-  });
-}
-
-inline array2d<vec4f> make_blackbodyramp(
-    const vec2s& extents, float scale, float from, float to) {
-  return make_proc_image(extents, [=](vec2f uv) {
-    uv *= scale;
-    uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
-    auto rgb = blackbody_to_rgb(lerp(from, to, uv.x));
-    return vec4f{rgb.x, rgb.y, rgb.z, 1};
-  });
-}
-
-inline array2d<vec4f> make_colormapramp(const vec2s& extents, float scale) {
-  return make_proc_image(extents, [=](vec2f uv) {
-    uv *= scale;
-    uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
-    auto rgb = vec3f{0, 0, 0};
-    if (uv.y < 0.25) {
-      rgb = colormap(uv.x, colormap_type::viridis);
-    } else if (uv.y < 0.50) {
-      rgb = colormap(uv.x, colormap_type::plasma);
-    } else if (uv.y < 0.75) {
-      rgb = colormap(uv.x, colormap_type::magma);
-    } else {
-      rgb = colormap(uv.x, colormap_type::inferno);
-    }
-    return vec4f{rgb.x, rgb.y, rgb.z, 1};
-  });
-}
-
-inline array2d<vec4f> make_noisemap(const vec2s& extents, float scale,
-    const vec4f& color0, const vec4f& color1) {
-  return make_proc_image(extents, [=](vec2f uv) {
-    uv *= 8 * scale;
-    auto v = perlin_noise(vec3f{uv.x, uv.y, 0});
-    v      = clamp(v, 0.0f, 1.0f);
-    return lerp(color0, color1, v);
-  });
-}
-
-inline array2d<vec4f> make_fbmmap(const vec2s& extents, float scale, const vec4f& noise,
-    const vec4f& color0, const vec4f& color1) {
-  return make_proc_image(extents, [=](vec2f uv) {
-    uv *= 8 * scale;
-    auto v = perlin_fbm({uv.x, uv.y, 0}, noise.x, noise.y, (int)noise.z);
-    v      = clamp(v, 0.0f, 1.0f);
-    return lerp(color0, color1, v);
-  });
-}
-
-inline array2d<vec4f> make_turbulencemap(const vec2s& extents, float scale,
-    const vec4f& noise, const vec4f& color0, const vec4f& color1) {
-  return make_proc_image(extents, [=](vec2f uv) {
-    uv *= 8 * scale;
-    auto v = perlin_turbulence({uv.x, uv.y, 0}, noise.x, noise.y, (int)noise.z);
-    v      = clamp(v, 0.0f, 1.0f);
-    return lerp(color0, color1, v);
-  });
-}
-
-inline array2d<vec4f> make_ridgemap(const vec2s& extents, float scale, const vec4f& noise,
-    const vec4f& color0, const vec4f& color1) {
-  return make_proc_image(extents, [=](vec2f uv) {
-    uv *= 8 * scale;
-    auto v = perlin_ridge(
-        {uv.x, uv.y, 0}, noise.x, noise.y, (int)noise.z, noise.w);
-    v = clamp(v, 0.0f, 1.0f);
-    return lerp(color0, color1, v);
-  });
-}
-
-// Add image border
-inline array2d<vec4f> add_border(
-    const array2d<vec4f>& image, float width, const vec4f& color) {
-  auto result = image;
-  auto [w, h] = image.extents();
-  auto scale = 1.0f / max(image.extents());
-  for (auto ij : range(image.extents())) {
-      auto [u, v] = (vec2f)ij * scale;
-      if (u < width || v < width || v > w * scale - width ||
-          v > h * scale - width) {
-        result[ij] = color;
-      }
-  }
-  return result;
-}
-
 // Implementation of sunsky modified heavily from pbrt
-inline array2d<vec4f> make_sunsky(const vec2s& extents, float theta_sun, float turbidity,
-    bool has_sun, float sun_intensity, float sun_radius,
+template <typename T = float>
+inline array2d<vec<T, 4>> make_sunsky(const vec2s& extents, float theta_sun,
+    float turbidity, bool has_sun, float sun_intensity, float sun_radius,
     const vec3f& ground_albedo) {
-  auto zenith_xyY = vec3f{
-      (+0.00165f * pow(theta_sun, 3.f) - 0.00374f * pow(theta_sun, 2.f) +
-          0.00208f * theta_sun + 0.00000f) *
-              pow(turbidity, 2.f) +
-          (-0.02902f * pow(theta_sun, 3.f) + 0.06377f * pow(theta_sun, 2.f) -
-              0.03202f * theta_sun + 0.00394f) *
+  auto zenith_xyY = vec<T, 3>{
+      ((T)0.00165 * pow(theta_sun, 3) - (T)0.00374 * pow(theta_sun, 2) +
+          (T)0.00208 * theta_sun + (T)0.00000) *
+              pow(turbidity, 2) +
+          ((T)-0.02902 * pow(theta_sun, 3) + (T)0.06377 * pow(theta_sun, 2) -
+              (T)0.03202 * theta_sun + (T)0.00394) *
               turbidity +
-          (+0.11693f * pow(theta_sun, 3.f) - 0.21196f * pow(theta_sun, 2.f) +
-              0.06052f * theta_sun + 0.25885f),
-      (+0.00275f * pow(theta_sun, 3.f) - 0.00610f * pow(theta_sun, 2.f) +
-          0.00316f * theta_sun + 0.00000f) *
-              pow(turbidity, 2.f) +
-          (-0.04214f * pow(theta_sun, 3.f) + 0.08970f * pow(theta_sun, 2.f) -
-              0.04153f * theta_sun + 0.00515f) *
+          ((T) + 0.11693 * pow(theta_sun, 3) - (T)0.21196 * pow(theta_sun, 2) +
+              (T)0.06052 * theta_sun + (T)0.25885),
+      ((T) + 0.00275 * pow(theta_sun, 3) - (T)0.00610 * pow(theta_sun, 2) +
+          (T)0.00316 * theta_sun + (T)0.00000) *
+              pow(turbidity, 2) +
+          ((T)-0.04214 * pow(theta_sun, 3) + (T)0.08970 * pow(theta_sun, 2) -
+              (T)0.04153 * theta_sun + (T)0.00515) *
               turbidity +
-          (+0.15346f * pow(theta_sun, 3.f) - 0.26756f * pow(theta_sun, 2.f) +
-              0.06669f * theta_sun + 0.26688f),
-      1000 * (4.0453f * turbidity - 4.9710f) *
-              tan((4.0f / 9.0f - turbidity / 120.0f) * (pif - 2 * theta_sun)) -
-          .2155f * turbidity + 2.4192f,
+          ((T) + 0.15346 * pow(theta_sun, 3) - (T)0.26756 * pow(theta_sun, 2) +
+              (T)0.06669 * theta_sun + (T)0.26688),
+      1000 * ((T)4.0453 * turbidity - (T)4.9710) *
+              tan(((T)4.0 / (T)9.0 - turbidity / (T)120.0) *
+                  ((T)pi - 2 * theta_sun)) -
+          (T)0.2155 * turbidity + 24192,
   };
 
-  auto perez_A_xyY = vec3f{-0.01925f * turbidity - 0.25922f,
-      -0.01669f * turbidity - 0.26078f, +0.17872f * turbidity - 1.46303f};
-  auto perez_B_xyY = vec3f{-0.06651f * turbidity + 0.00081f,
-      -0.09495f * turbidity + 0.00921f, -0.35540f * turbidity + 0.42749f};
-  auto perez_C_xyY = vec3f{-0.00041f * turbidity + 0.21247f,
-      -0.00792f * turbidity + 0.21023f, -0.02266f * turbidity + 5.32505f};
-  auto perez_D_xyY = vec3f{-0.06409f * turbidity - 0.89887f,
-      -0.04405f * turbidity - 1.65369f, +0.12064f * turbidity - 2.57705f};
-  auto perez_E_xyY = vec3f{-0.00325f * turbidity + 0.04517f,
-      -0.01092f * turbidity + 0.05291f, -0.06696f * turbidity + 0.37027f};
+  auto perez_A_xyY = vec<T, 3>{(T)-0.01925 * turbidity - (T)0.25922,
+      (T)-0.01669 * turbidity - (T)0.26078,
+      (T) + 0.17872 * turbidity - (T)1.46303};
+  auto perez_B_xyY = vec<T, 3>{(T)-0.06651 * turbidity + (T)0.00081,
+      (T)-0.09495 * turbidity + (T)0.00921,
+      (T)-0.35540 * turbidity + (T)0.42749};
+  auto perez_C_xyY = vec<T, 3>{(T)-0.00041 * turbidity + (T)0.21247,
+      (T)-0.00792 * turbidity + (T)0.21023,
+      (T)-0.02266 * turbidity + (T)5.32505};
+  auto perez_D_xyY = vec<T, 3>{(T)-0.06409 * turbidity - (T)0.89887,
+      (T)-0.04405 * turbidity - (T)1.65369,
+      (T) + 0.12064 * turbidity - (T)2.57705};
+  auto perez_E_xyY = vec<T, 3>{(T)-0.00325 * turbidity + (T)0.04517,
+      (T)-0.01092 * turbidity + (T)0.05291,
+      (T)-0.06696 * turbidity + (T)0.37027};
 
-  auto perez_f = [](vec3f A, vec3f B, vec3f C, vec3f D, vec3f E, float theta,
-                     float gamma, float theta_sun, vec3f zenith) -> vec3f {
+  auto perez_f = [](vec<T, 3> A, vec<T, 3> B, vec<T, 3> C, vec<T, 3> D, vec<T, 3> E, T theta,
+                     T gamma, T theta_sun, vec<T, 3> zenith) -> vec<T, 3> {
     auto num = ((1 + A * exp(B / cos(theta))) *
                 (1 + C * exp(D * gamma) + E * cos(gamma) * cos(gamma)));
     auto den = ((1 + A * exp(B)) * (1 + C * exp(D * theta_sun) +
@@ -589,7 +600,7 @@ inline array2d<vec4f> make_sunsky(const vec2s& extents, float theta_sun, float t
 
   auto sky = [&perez_f, perez_A_xyY, perez_B_xyY, perez_C_xyY, perez_D_xyY,
                  perez_E_xyY, zenith_xyY](
-                 float theta, float gamma, float theta_sun) -> vec3f {
+                 T theta, T gamma, T theta_sun) -> vec<T, 3> {
     return xyz_to_rgb(xyY_to_xyz(
                perez_f(perez_A_xyY, perez_B_xyY, perez_C_xyY, perez_D_xyY,
                    perez_E_xyY, theta, gamma, theta_sun, zenith_xyY))) /
@@ -597,22 +608,22 @@ inline array2d<vec4f> make_sunsky(const vec2s& extents, float theta_sun, float t
   };
 
   // compute sun luminance
-  auto sun_ko     = vec3f{0.48f, 0.75f, 0.14f};
-  auto sun_kg     = vec3f{0.1f, 0.0f, 0.0f};
-  auto sun_kwa    = vec3f{0.02f, 0.0f, 0.0f};
-  auto sun_sol    = vec3f{20000.0f, 27000.0f, 30000.0f};
-  auto sun_lambda = vec3f{680, 530, 480};
-  auto sun_beta   = 0.04608365822050f * turbidity - 0.04586025928522f;
-  auto sun_m      = 1.0f /
-               (cos(theta_sun) + 0.000940f * pow(1.6386f - theta_sun, -1.253f));
+  auto sun_ko     = vec<T, 3>{0.48f, 0.75f, 0.14f};
+  auto sun_kg     = vec<T, 3>{0.1f, 0.0f, 0.0f};
+  auto sun_kwa    = vec<T, 3>{0.02f, 0.0f, 0.0f};
+  auto sun_sol    = vec<T, 3>{20000.0f, 27000.0f, 30000.0f};
+  auto sun_lambda = vec<T, 3>{680, 530, 480};
+  auto sun_beta   = (T)0.04608365822050 * turbidity - (T)0.04586025928522;
+  auto sun_m      = (T)1.0 /
+               (cos(theta_sun) + (T)0.000940 * pow((T)1.6386 - theta_sun, (T)-1.253));
 
-  auto tauR = exp(-sun_m * 0.008735f * pow(sun_lambda / 1000, -4.08f));
-  auto tauA = exp(-sun_m * sun_beta * pow(sun_lambda / 1000, -1.3f));
-  auto tauO = exp(-sun_m * sun_ko * .35f);
+  auto tauR = exp(-sun_m *(T)0.008735 * pow(sun_lambda / 1000, (T)-4.08));
+  auto tauA = exp(-sun_m * sun_beta * pow(sun_lambda / 1000, (T)-1.3));
+  auto tauO = exp(-sun_m * sun_ko * (T)0.35);
   auto tauG = exp(
-      -1.41f * sun_kg * sun_m / pow(1 + 118.93f * sun_kg * sun_m, 0.45f));
-  auto tauWA  = exp(-0.2385f * sun_kwa * 2.0f * sun_m /
-                    pow(1 + 20.07f * sun_kwa * 2.0f * sun_m, 0.45f));
+      (T)-1.41 * sun_kg * sun_m / pow(1 + (T)118.93 * sun_kg * sun_m, (T)0.45));
+  auto tauWA  = exp((T)-0.2385 * sun_kwa * 2 * sun_m /
+                    pow(1 + (T)20.07 * sun_kwa * 2 * sun_m, (T)0.45));
   auto sun_le = sun_sol * tauR * tauA * tauO * tauG * tauWA * 10000;
 
   // rescale by user
@@ -632,34 +643,33 @@ inline array2d<vec4f> make_sunsky(const vec2s& extents, float theta_sun, float t
 
   auto sun = [has_sun, sun_angular_radius, sun_le](auto theta, auto gamma) {
     return (has_sun && gamma < sun_angular_radius) ? sun_le / 10000
-                                                   : vec3f{0, 0, 0};
+                                                   : vec<T, 3>{0, 0, 0};
   };
 
   // Make the sun sky image
-  auto img = array2d<vec4f>(extents);
+  auto img = array2d<vec<T, 4>>(extents);
   for (auto j : range(height / 2)) {
     auto theta = pif * ((j + 0.5f) / height);
-    theta      = clamp(theta, 0.0f, pif / 2 - flt_eps);
+    theta      = clamp(theta, 0.0f, (T)pi / 2 - flt_eps);
     for (auto i : range(width)) {
-      auto phi = 2 * pif * (float(i + 0.5f) / width);
+      auto phi = 2 * (T)pi * (T(i + 0.5) / width);
       auto w = vec3f{cos(phi) * sin(theta), cos(theta), sin(phi) * sin(theta)};
-      auto gamma   = acos(clamp(dot(w, sun_direction), -1.0f, 1.0f));
+      auto gamma   = acos(clamp(dot(w, sun_direction), -1, 1));
       auto sky_col = sky(theta, gamma, theta_sun);
       auto sun_col = sun(theta, gamma);
       auto col     = sky_col + sun_col;
-      img[{i, j}] = {col.x, col.y, col.z, 1};
+      img[{i, j}]  = {col, 1};
     }
   }
 
-  if (ground_albedo != vec3f{0, 0, 0}) {
-    auto ground = vec3f{0, 0, 0};
+  if (ground_albedo != vec<T, 3>{0, 0, 0}) {
+    auto ground = vec<T, 3>{0, 0, 0};
     for (auto j : range(height / 2)) {
-      auto theta = pif * ((j + 0.5f) / height);
+      auto theta = (T)pi * (T(j + 0.5) / height);
       for (auto i : range(width)) {
-        auto pxl   = img[{i, j}];
-        auto le    = vec3f{pxl.x, pxl.y, pxl.z};
-        auto angle = sin(theta) * 4 * pif / (width * height);
-        ground += le * (ground_albedo / pif) * cos(theta) * angle;
+        auto le   = xyz(img[{i, j}]);
+        auto angle = sin(theta) * 4 * (T)pi / (width * height);
+        ground += le * (ground_albedo / (T)pi) * cos(theta) * angle;
       }
     }
     for (auto j : range(height / 2, height)) {
@@ -680,22 +690,23 @@ inline array2d<vec4f> make_sunsky(const vec2s& extents, float theta_sun, float t
 }
 
 // Make an image of multiple lights.
-inline array2d<vec4f> make_lights(const vec2s& extents, const vec3f& le, int nlights,
-    float langle, float lwidth, float lheight) {
+template <typename T = float>
+inline array2d<vec<T, 4>> make_lights(const vec2s& extents, const vec3f& le,
+    int nlights, float langle, float lwidth, float lheight) {
   auto [width, height] = extents;
-  auto img = array2d<vec4f>(extents);
+  auto img             = array2d<vec<T, 4>>(extents);
   for (auto j : range(height)) {
     auto theta = pif * ((j + 0.5f) / height);
-    theta      = clamp(theta, 0.0f, pif / 2 - 0.00001f);
+    theta      = clamp(theta, 0, (T)pi / 2 - (T)0.00001);
     if (fabs(theta - langle) > lheight / 2) continue;
     for (auto i : range(width)) {
-      auto phi     = 2 * pif * (float(i + 0.5f) / width);
+      auto phi     = 2 * (T)pi * ((i + (T)0.5) / width);
       auto inlight = false;
       for (auto l : range(nlights)) {
-        auto lphi = 2 * pif * (l + 0.5f) / nlights;
+        auto lphi = 2 * (T)pi * (l + (T)0.5) / nlights;
         inlight   = inlight || fabs(phi - lphi) < lwidth / 2;
       }
-      img[{i, j}] = {le.x, le.y, le.z, 1};
+      img[{i, j}] = {le, 1};
     }
   }
   return img;

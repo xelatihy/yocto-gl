@@ -94,7 +94,9 @@ struct ndarray {
 
   // Spans
   constexpr operator ndspan<T, N>() { return {_data.data(), _extents}; }
-  constexpr operator ndspan<const T, N>() const { return {_data.data(), _extents}; }
+  constexpr operator ndspan<const T, N>() const {
+    return {_data.data(), _extents};
+  }
 
   // Size
   bool           empty() const { return size() == 0; }
