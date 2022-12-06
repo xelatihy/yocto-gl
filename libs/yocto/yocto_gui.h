@@ -142,8 +142,7 @@ namespace yocto {
 // OpenGL image data
 struct glimage_state {
   // image properties
-  int width  = 0;
-  int height = 0;
+  vec2i extents = {0, 0};
 
   // Opengl state
   uint texture     = 0;  // texture

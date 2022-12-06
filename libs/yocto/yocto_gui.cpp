@@ -1156,6 +1156,21 @@ static void set_program(uint& program_id, uint& vertex_id, uint& fragment_id,
 #endif
 }
 
+// Parameter setting
+inline void set_uniform(int loc, float v) { glUniform1f(loc, v); }
+inline void set_uniform(int loc, vec2f v) { glUniform2fv(loc, 1, &v[0]); }
+inline void set_uniform(int loc, vec3f v) { glUniform3fv(loc, 1, &v[0]); }
+inline void set_uniform(int loc, vec4f v) { glUniform4fv(loc, 1, &v[0]); }
+inline void set_uniform(int loc, int v) { glUniform1i(loc, v); }
+inline void set_uniform(int loc, vec2i v) { glUniform2iv(loc, 1, &v[0]); }
+inline void set_uniform(int loc, vec3i v) { glUniform3iv(loc, 1, &v[0]); }
+inline void set_uniform(int loc, vec4i v) { glUniform4iv(loc, 1, &v[0]); }
+inline void set_uniform(int loc, bool v) { glUniform1i(loc, v ? 1 : 0); }
+template <typename T>
+inline void set_uniform(uint program, const char* name, T v) {
+  return set_uniform(glGetUniformLocation(program, name), v);
+}
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -1293,8 +1308,7 @@ void clear_image(glimage_state& glimage) {
 }
 
 void set_image(glimage_state& glimage, const image_data& image) {
-  if (!glimage.texture || glimage.width != image.width ||
-      glimage.height != image.height) {
+  if (!glimage.texture || glimage.extents != vec2i{image.width, image.height}) {
     if (!glimage.texture) glGenTextures(1, &glimage.texture);
     glBindTexture(GL_TEXTURE_2D, glimage.texture);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, image.width, image.height, 0,
@@ -1306,13 +1320,11 @@ void set_image(glimage_state& glimage, const image_data& image) {
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, image.width, image.height, GL_RGBA,
         GL_FLOAT, image.pixels.data());
   }
-  glimage.width  = image.width;
-  glimage.height = image.height;
+  glimage.extents = {image.width, image.height};
 }
 
 void set_image(glimage_state& glimage, const array2d<vec4f>& image) {
-  if (!glimage.texture || glimage.width != image.extent(0) ||
-      glimage.height != image.extent(1)) {
+  if (!glimage.texture || glimage.extents != image.extents()) {
     if (!glimage.texture) glGenTextures(1, &glimage.texture);
     glBindTexture(GL_TEXTURE_2D, glimage.texture);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, (int)image.extent(0),
@@ -1324,8 +1336,7 @@ void set_image(glimage_state& glimage, const array2d<vec4f>& image) {
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, (int)image.extent(0),
         (int)image.extent(1), GL_RGBA, GL_FLOAT, image.data());
   }
-  glimage.width  = (int)image.extent(0);
-  glimage.height = (int)image.extent(1);
+  glimage.extents = (vec2i)image.extents();
 }
 
 // draw image
@@ -1350,26 +1361,16 @@ void draw_image(glimage_state& glimage, const glimage_params& params) {
   glUseProgram(glimage.program);
   glActiveTexture(GL_TEXTURE0);
   glBindTexture(GL_TEXTURE_2D, glimage.texture);
-  glUniform1i(glGetUniformLocation(glimage.program, "txt"), 0);
-  glUniform2f(glGetUniformLocation(glimage.program, "window"),
-      (float)params.window.x, (float)params.window.y);
-  glUniform2f(glGetUniformLocation(glimage.program, "image_size"),
-      (float)glimage.width, (float)glimage.height);
-  glUniform2f(glGetUniformLocation(glimage.program, "image_center"),
-      params.center.x, params.center.y);
-  glUniform1f(
-      glGetUniformLocation(glimage.program, "image_scale"), params.scale);
-  glUniform4f(glGetUniformLocation(glimage.program, "background"),
-      params.background.x, params.background.y, params.background.z,
-      params.background.w);
-  glUniform1i(
-      glGetUniformLocation(glimage.program, "tonemap"), params.tonemap ? 1 : 0);
-  glUniform1f(
-      glGetUniformLocation(glimage.program, "exposure"), params.exposure);
-  glUniform1i(
-      glGetUniformLocation(glimage.program, "srgb"), params.srgb ? 1 : 0);
-  glUniform1i(
-      glGetUniformLocation(glimage.program, "filmic"), params.filmic ? 1 : 0);
+  set_uniform(glimage.program, "txt", 0);
+  set_uniform(glimage.program, "window", (vec2f)params.window);
+  set_uniform(glimage.program, "image_size", (vec2f)glimage.extents);
+  set_uniform(glimage.program, "image_center", params.center);
+  set_uniform(glimage.program, "image_scale", params.scale);
+  set_uniform(glimage.program, "background", params.background);
+  set_uniform(glimage.program, "tonemap", params.tonemap);
+  set_uniform(glimage.program, "exposure", params.exposure);
+  set_uniform(glimage.program, "srgb", params.srgb);
+  set_uniform(glimage.program, "filmic", params.filmic);
   assert_glerror();
 
   // draw
@@ -1878,18 +1879,16 @@ static void draw_scene(glscene_state& glscene, const scene_data& scene,
   auto view_matrix       = frame_to_mat(inverse(camera.frame));
   auto projection_matrix = perspective_mat(
       camera_yfov, camera_aspect, params.near, params.far);
-  glUniform3f(glGetUniformLocation(program, "eye"), camera.frame.o.x,
-      camera.frame.o.y, camera.frame.o.z);
+  set_uniform(program, "eye", camera.frame.o);
   glUniformMatrix4fv(
       glGetUniformLocation(program, "view"), 1, false, &view_matrix.x.x);
   glUniformMatrix4fv(glGetUniformLocation(program, "projection"), 1, false,
       &projection_matrix.x.x);
 
   // params
-  glUniform1f(glGetUniformLocation(program, "exposure"), params.exposure);
-  glUniform1f(glGetUniformLocation(program, "gamma"), params.gamma);
-  glUniform1i(glGetUniformLocation(program, "double_sided"),
-      params.double_sided ? 1 : 0);
+  set_uniform(program, "exposure", params.exposure);
+  set_uniform(program, "gamma", params.gamma);
+  set_uniform(program, "double_sided", params.double_sided);
 
   static auto lights_direction = vector<vec3f>{normalize(vec3f{1, 1, 1}),
       normalize(vec3f{-1, 1, 1}), normalize(vec3f{-1, -1, 1}),
@@ -1898,24 +1897,19 @@ static void draw_scene(glscene_state& glscene, const scene_data& scene,
        vec3f{pif / 2, pif / 2, pif / 2}, vec3f{pif / 4, pif / 4, pif / 4},
        vec3f{pif / 4, pif / 4, pif / 4}};
   if (params.lighting == shade_lighting::camlight) {
-    glUniform1i(glGetUniformLocation(program, "lighting"), 1);
-    glUniform3f(glGetUniformLocation(program, "ambient"), 0, 0, 0);
-    glUniform1i(glGetUniformLocation(program, "lights_num"),
-        (int)lights_direction.size());
+    set_uniform(program, "lighting", 1);
+    set_uniform(program, "ambient", vec3f{0, 0, 0});
+    set_uniform(program, "lights_num", (int)lights_direction.size());
     for (auto lid : range((int)lights_direction.size())) {
       auto is        = std::to_string(lid);
       auto direction = transform_direction(camera.frame, lights_direction[lid]);
-      glUniform3f(glGetUniformLocation(
-                      program, ("lights_direction[" + is + "]").c_str()),
-          direction.x, direction.y, direction.z);
-      glUniform3f(glGetUniformLocation(
-                      program, ("lights_emission[" + is + "]").c_str()),
-          lights_emission[lid].x, lights_emission[lid].y,
-          lights_emission[lid].z);
+      set_uniform(program, ("lights_direction[" + is + "]").c_str(), direction);
+      set_uniform(program, ("lights_emission[" + is + "]").c_str(),
+          lights_emission[lid]);
     }
   } else if (params.lighting == shade_lighting::eyelight) {
-    glUniform1i(glGetUniformLocation(program, "lighting"), 0);
-    glUniform1i(glGetUniformLocation(program, "lights_num"), 0);
+    set_uniform(program, "lighting", 0);
+    set_uniform(program, "lights_num", 0);
   } else {
     throw std::invalid_argument{"unknown lighting type"};
   }
@@ -1927,13 +1921,13 @@ static void draw_scene(glscene_state& glscene, const scene_data& scene,
       auto& gltexture = glscene.textures.at(texture_idx);
       glActiveTexture(GL_TEXTURE0 + unit);
       glBindTexture(GL_TEXTURE_2D, gltexture.texture);
-      glUniform1i(glGetUniformLocation(program, name), unit);
-      glUniform1i(glGetUniformLocation(program, name_on), 1);
+      set_uniform(program, name, unit);
+      set_uniform(program, name_on, 1);
     } else {
       glActiveTexture(GL_TEXTURE0 + unit);
       glBindTexture(GL_TEXTURE_2D, 0);
-      glUniform1i(glGetUniformLocation(program, name), unit);
-      glUniform1i(glGetUniformLocation(program, name_on), 0);
+      set_uniform(program, name, unit);
+      set_uniform(program, name_on, 0);
     }
   };
 
@@ -1950,30 +1944,26 @@ static void draw_scene(glscene_state& glscene, const scene_data& scene,
         glGetUniformLocation(program, "frame"), 1, false, &shape_xform.x.x);
     glUniformMatrix4fv(glGetUniformLocation(program, "frameit"), 1, false,
         &shape_inv_xform.x.x);
-    glUniform1i(glGetUniformLocation(program, "faceted"),
-        (params.faceted || glshape.normals == 0) ? 1 : 0);
+    set_uniform(program, "faceted", params.faceted || glshape.normals == 0);
 
-    glUniform1i(glGetUniformLocation(program, "unlit"), 0);
-    glUniform3f(glGetUniformLocation(program, "emission"), material.emission.x,
-        material.emission.y, material.emission.z);
-    glUniform3f(glGetUniformLocation(program, "color"), material.color.x,
-        material.color.y, material.color.z);
-    glUniform1f(glGetUniformLocation(program, "specular"), 1);
-    glUniform1f(glGetUniformLocation(program, "metallic"), material.metallic);
-    glUniform1f(glGetUniformLocation(program, "roughness"), material.roughness);
-    glUniform1f(glGetUniformLocation(program, "opacity"), material.opacity);
+    set_uniform(program, "unlit", 0);
+    set_uniform(program, "emission", material.emission);
+    set_uniform(program, "color", material.color);
+    set_uniform(program, "specular", 1.0f);
+    set_uniform(program, "metallic", material.metallic);
+    set_uniform(program, "roughness", material.roughness);
+    set_uniform(program, "opacity", material.opacity);
     if (material.type == material_type::matte ||
         material.type == material_type::transparent ||
         material.type == material_type::refractive ||
         material.type == material_type::subsurface ||
         material.type == material_type::volumetric) {
-      glUniform1f(glGetUniformLocation(program, "specular"), 0);
+      set_uniform(program, "specular", 0.0f);
     }
     if (material.type == material_type::reflective) {
-      glUniform1f(glGetUniformLocation(program, "metallic"), 1);
+      set_uniform(program, "metallic", 1.0f);
     }
-    glUniform1i(glGetUniformLocation(program, "double_sided"),
-        params.double_sided ? 1 : 0);
+    set_uniform(program, "double_sided", params.double_sided);
     set_texture(
         program, "emission_tex", "emission_tex_on", material.emission_tex, 0);
     set_texture(program, "color_tex", "color_tex_on", material.color_tex, 1);
@@ -1983,12 +1973,10 @@ static void draw_scene(glscene_state& glscene, const scene_data& scene,
         program, "normalmap_tex", "normalmap_tex_on", material.normal_tex, 5);
     assert_glerror();
 
-    if (glshape.points)
-      glUniform1i(glGetUniformLocation(program, "element"), 1);
-    if (glshape.lines) glUniform1i(glGetUniformLocation(program, "element"), 2);
-    if (glshape.triangles)
-      glUniform1i(glGetUniformLocation(program, "element"), 3);
-    if (glshape.quads) glUniform1i(glGetUniformLocation(program, "element"), 3);
+    if (glshape.points) set_uniform(program, "element", 1);
+    if (glshape.lines) set_uniform(program, "element", 2);
+    if (glshape.triangles) set_uniform(program, "element", 3);
+    if (glshape.quads) set_uniform(program, "element", 3);
     assert_glerror();
 
     glBindVertexArray(glshape.vertexarray);
