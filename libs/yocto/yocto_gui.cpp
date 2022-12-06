@@ -268,9 +268,9 @@ bool draw_image_widgets(const gui_input& input, const array2d<vec4f>& image,
     draw_gui_checkbox("fit", glparams.fit);
     draw_gui_coloredit("background", glparams.background);
     auto ij = image_coords(
-      input.cursor, glparams.center, glparams.scale, (vec2i)image.extents());
+        input.cursor, glparams.center, glparams.scale, (vec2i)image.extents());
     draw_gui_dragger("mouse", ij);
-    auto image_pixel   = image[ij], display_pixel = image[ij];
+    auto image_pixel = image[ij], display_pixel = image[ij];
     draw_gui_coloredit("image", image_pixel);
     draw_gui_coloredit("display", display_pixel);
     end_gui_header();
@@ -289,7 +289,7 @@ bool draw_image_widgets(
     draw_gui_dragger("mouse", ij);
     auto image_pixel   = image.pixels[ij.y * image.width + ij.x];
     auto display_pixel = tonemap(
-          image_pixel, glparams.exposure, glparams.filmic, glparams.srgb);
+        image_pixel, glparams.exposure, glparams.filmic, glparams.srgb);
     draw_gui_coloredit("image", image_pixel);
     draw_gui_coloredit("display", display_pixel);
     end_gui_header();
@@ -305,7 +305,7 @@ bool draw_image_widgets(const gui_input& input, const array2d<vec4f>& image,
     draw_gui_coloredit("background", glparams.background);
     auto [i, j] = image_coords(
         input.cursor, glparams.center, glparams.scale, (vec2i)image.extents());
-    auto ij = clamp(vec2i{i, j}, {0, 0}, (vec2i)image.extents());
+    auto ij = clamp(vec2i{i, j}, vec2i{0, 0}, (vec2i)image.extents());
     draw_gui_dragger("mouse", ij);
     auto image_pixel   = vec4f{0, 0, 0, 0};
     auto display_pixel = vec4f{0, 0, 0, 0};

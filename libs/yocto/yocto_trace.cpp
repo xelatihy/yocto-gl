@@ -59,8 +59,8 @@ inline void parallel_for_batch(vec<T, 2> num, Func&& func) {
   std::atomic<T>    next_idx(0);
   std::atomic<bool> has_error(false);
   for (auto thread_id = 0; thread_id < (int)nthreads; thread_id++) {
-    futures.emplace_back(std::async(
-        std::launch::async, [&func, &next_idx, &has_error, num]() {
+    futures.emplace_back(
+        std::async(std::launch::async, [&func, &next_idx, &has_error, num]() {
           try {
             while (true) {
               auto j = next_idx.fetch_add(1);
@@ -477,7 +477,7 @@ static trace_result trace_path(const scene_data& scene, const trace_bvh& bvh,
     if (!volume_stack.empty()) {
       auto& vsdf     = volume_stack.back();
       auto  distance = sample_transmittance(
-           vsdf.density, intersection.distance, rand1f(rng), rand1f(rng));
+          vsdf.density, intersection.distance, rand1f(rng), rand1f(rng));
       weight *= eval_transmittance(vsdf.density, distance) /
                 sample_transmittance_pdf(
                     vsdf.density, distance, intersection.distance);
@@ -624,7 +624,7 @@ static trace_result trace_pathdirect(const scene_data& scene,
     if (!volume_stack.empty()) {
       auto& vsdf     = volume_stack.back();
       auto  distance = sample_transmittance(
-           vsdf.density, intersection.distance, rand1f(rng), rand1f(rng));
+          vsdf.density, intersection.distance, rand1f(rng), rand1f(rng));
       weight *= eval_transmittance(vsdf.density, distance) /
                 sample_transmittance_pdf(
                     vsdf.density, distance, intersection.distance);
@@ -803,7 +803,7 @@ static trace_result trace_pathmis(const scene_data& scene, const trace_bvh& bvh,
     if (!volume_stack.empty()) {
       auto& vsdf     = volume_stack.back();
       auto  distance = sample_transmittance(
-           vsdf.density, intersection.distance, rand1f(rng), rand1f(rng));
+          vsdf.density, intersection.distance, rand1f(rng), rand1f(rng));
       weight *= eval_transmittance(vsdf.density, distance) /
                 sample_transmittance_pdf(
                     vsdf.density, distance, intersection.distance);
@@ -1496,8 +1496,8 @@ trace_state make_trace_state(
                          ? array<size_t, 2>{(size_t)params.resolution,
                                (size_t)round(params.resolution / camera.aspect)}
                          : array<size_t, 2>{
-                               (size_t)round(params.resolution * camera.aspect),
-                               (size_t)params.resolution};
+                              (size_t)round(params.resolution * camera.aspect),
+                              (size_t)params.resolution};
   state.samples    = 0;
   state.image      = array2d<vec4f>{resolution};
   state.albedo     = array2d<vec3f>{resolution};
@@ -1625,14 +1625,12 @@ void trace_start(trace_context& context, trace_state& state,
   context.done   = false;
   context.worker = std::async(std::launch::async, [&]() {
     if (context.stop) return;
-    parallel_for_batch(state.image.extents(),
-        [&](vec2s ij) {
-          for (auto sample :
-              range(state.samples, state.samples + params.batch)) {
-            if (context.stop) return;
-            trace_sample(state, scene, bvh, lights, ij, sample, params);
-          }
-        });
+    parallel_for_batch(state.image.extents(), [&](vec2s ij) {
+      for (auto sample : range(state.samples, state.samples + params.batch)) {
+        if (context.stop) return;
+        trace_sample(state, scene, bvh, lights, ij, sample, params);
+      }
+    });
     state.samples += params.batch;
     if (context.stop) return;
     if (params.denoise && !state.denoised.empty()) {
@@ -1721,18 +1719,14 @@ void get_denoised_image(array2d<vec4f>& image, const trace_state& state) {
 
   // Create a denoising filter
   oidn::FilterRef filter = device.newFilter("RT");  // ray tracing filter
-  filter.setImage("color", (void*)image.data(), oidn::Format::Float3,
-      width, height, 0, sizeof(vec4f),
-      sizeof(vec4f) * width);
+  filter.setImage("color", (void*)image.data(), oidn::Format::Float3, width,
+      height, 0, sizeof(vec4f), sizeof(vec4f) * width);
   filter.setImage("albedo", (void*)state.albedo.data(), oidn::Format::Float3,
-      width, height, 0, sizeof(vec4f),
-      sizeof(vec4f) * width);
+      width, height, 0, sizeof(vec4f), sizeof(vec4f) * width);
   filter.setImage("normal", (void*)state.normal.data(), oidn::Format::Float3,
-      width, height, 0, sizeof(vec4f),
-      sizeof(vec4f) * width);
-  filter.setImage("output", image.data(), oidn::Format::Float3,
-      width, height, 0, sizeof(vec4f),
-      sizeof(vec4f) * width);
+      width, height, 0, sizeof(vec4f), sizeof(vec4f) * width);
+  filter.setImage("output", image.data(), oidn::Format::Float3, width, height,
+      0, sizeof(vec4f), sizeof(vec4f) * width);
   filter.set("inputScale", 1.0f);  // set scale as fixed
   filter.set("hdr", true);         // image is HDR
   filter.commit();
@@ -1789,16 +1783,14 @@ void denoise_image(array2d<vec4f>& denoised, const array2d<vec4f>& image,
 
   // Create a denoising filter
   oidn::FilterRef filter = device.newFilter("RT");  // ray tracing filter
-  filter.setImage("color", (void*)image.data(), oidn::Format::Float3,
-      width, height, 0, sizeof(vec4f),
-      sizeof(vec4f) * width);
-  filter.setImage("albedo", (void*)image.data(), oidn::Format::Float3,
-      width, height);
-  filter.setImage("normal", (void*)image.data(), oidn::Format::Float3,
-      width, height);
-  filter.setImage("output", denoised.data(), oidn::Format::Float3,
-      width, height, 0, sizeof(vec4f),
-      sizeof(vec4f) * width);
+  filter.setImage("color", (void*)image.data(), oidn::Format::Float3, width,
+      height, 0, sizeof(vec4f), sizeof(vec4f) * width);
+  filter.setImage(
+      "albedo", (void*)image.data(), oidn::Format::Float3, width, height);
+  filter.setImage(
+      "normal", (void*)image.data(), oidn::Format::Float3, width, height);
+  filter.setImage("output", denoised.data(), oidn::Format::Float3, width,
+      height, 0, sizeof(vec4f), sizeof(vec4f) * width);
   filter.set("inputScale", 1.0f);  // set scale as fixed
   filter.set("hdr", true);         // image is HDR
   filter.commit();

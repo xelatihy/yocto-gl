@@ -128,11 +128,11 @@ struct ndspan {
   constexpr ndspan& operator=(ndspan&& other) noexcept      = default;
 
   // Size
-  constexpr bool             empty() const noexcept { return size() == 0; }
-  constexpr size_t           size() const noexcept { return _size(_extents); }
+  constexpr bool           empty() const noexcept { return size() == 0; }
+  constexpr size_t         size() const noexcept { return _size(_extents); }
   constexpr vec<size_t, N> extents() const noexcept { return _extents; }
-  constexpr size_t           extent(size_t dimension) const noexcept {
-              return _extents[dimension];
+  constexpr size_t         extent(size_t dimension) const noexcept {
+    return _extents[dimension];
   }
 
   // Access

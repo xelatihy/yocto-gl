@@ -279,8 +279,8 @@ inline void parallel_for_batch(array<T, 2> num, Func&& func) {
   atomic<T>    next_idx(0);
   atomic<bool> has_error(false);
   for (auto thread_id = 0; thread_id < (int)nthreads; thread_id++) {
-    futures.emplace_back(std::async(
-        std::launch::async, [&func, &next_idx, &has_error, num]() {
+    futures.emplace_back(
+        std::async(std::launch::async, [&func, &next_idx, &has_error, num]() {
           try {
             while (true) {
               auto j = next_idx.fetch_add(1);

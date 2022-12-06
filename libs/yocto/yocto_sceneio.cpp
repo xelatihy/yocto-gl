@@ -748,14 +748,12 @@ void save_image(const string& filename, const array2d<T>& image) {
   if (ext == ".hdr" || ext == ".HDR") {
     auto buffer = vector<byte>{};
     if constexpr (is_float) {
-      if (!stbi_write_hdr_to_func(stbi_write_data, &buffer,
-              width, height, num_channels,
-              (const float*)image.data()))
+      if (!stbi_write_hdr_to_func(stbi_write_data, &buffer, width, height,
+              num_channels, (const float*)image.data()))
         throw io_error{"cannot write " + filename};
     } else {
-      if (!stbi_write_hdr_to_func(stbi_write_data, &buffer,
-              width, height, num_channels,
-              (const float*)byte_to_float(image).data()))
+      if (!stbi_write_hdr_to_func(stbi_write_data, &buffer, width, height,
+              num_channels, (const float*)byte_to_float(image).data()))
         throw io_error{"cannot write " + filename};
     }
     return save_binary(filename, buffer);
@@ -763,13 +761,12 @@ void save_image(const string& filename, const array2d<T>& image) {
     auto data = (byte*)nullptr;
     auto size = (size_t)0;
     if constexpr (is_float) {
-      if (SaveEXRToMemory((const float*)image.data(), width,
-              height, num_channels, 1, &data, &size, nullptr) < 0)
+      if (SaveEXRToMemory((const float*)image.data(), width, height,
+              num_channels, 1, &data, &size, nullptr) < 0)
         throw io_error{"cannot write " + filename};
     } else {
-      if (SaveEXRToMemory((const float*)byte_to_float(image).data(),
-              width, height, num_channels, 1,
-              &data, &size, nullptr) < 0)
+      if (SaveEXRToMemory((const float*)byte_to_float(image).data(), width,
+              height, num_channels, 1, &data, &size, nullptr) < 0)
         throw io_error{"cannot write " + filename};
     }
     auto buffer = vector<byte>{data, data + size};
@@ -778,15 +775,13 @@ void save_image(const string& filename, const array2d<T>& image) {
   } else if (ext == ".png" || ext == ".PNG") {
     auto buffer = vector<byte>{};
     if constexpr (is_float) {
-      if (!stbi_write_png_to_func(stbi_write_data, &buffer,
-              width, height, num_channels,
-              (const byte*)float_to_byte(image).data(),
+      if (!stbi_write_png_to_func(stbi_write_data, &buffer, width, height,
+              num_channels, (const byte*)float_to_byte(image).data(),
               width * 4))
         throw io_error{"cannot write " + filename};
     } else {
-      if (!stbi_write_png_to_func(stbi_write_data, &buffer,
-              width, height, num_channels,
-              (const byte*)image.data(), width * 4))
+      if (!stbi_write_png_to_func(stbi_write_data, &buffer, width, height,
+              num_channels, (const byte*)image.data(), width * 4))
         throw io_error{"cannot write " + filename};
     }
     return save_binary(filename, buffer);
@@ -794,42 +789,36 @@ void save_image(const string& filename, const array2d<T>& image) {
              ext == ".JPEG") {
     auto buffer = vector<byte>{};
     if constexpr (is_float) {
-      if (!stbi_write_jpg_to_func(stbi_write_data, &buffer,
-              width, height, num_channels,
-              (const byte*)float_to_byte(image).data(), 75))
+      if (!stbi_write_jpg_to_func(stbi_write_data, &buffer, width, height,
+              num_channels, (const byte*)float_to_byte(image).data(), 75))
         throw io_error{"cannot write " + filename};
     } else {
-      if (!stbi_write_jpg_to_func(stbi_write_data, &buffer,
-              width, height, num_channels,
-              (const byte*)image.data(), 75))
+      if (!stbi_write_jpg_to_func(stbi_write_data, &buffer, width, height,
+              num_channels, (const byte*)image.data(), 75))
         throw io_error{"cannot write " + filename};
     }
     return save_binary(filename, buffer);
   } else if (ext == ".tga" || ext == ".TGA") {
     auto buffer = vector<byte>{};
     if constexpr (is_float) {
-      if (!stbi_write_tga_to_func(stbi_write_data, &buffer,
-              width, height, num_channels,
-              (const byte*)float_to_byte(image).data()))
+      if (!stbi_write_tga_to_func(stbi_write_data, &buffer, width, height,
+              num_channels, (const byte*)float_to_byte(image).data()))
         throw io_error{"cannot write " + filename};
     } else {
-      if (!stbi_write_tga_to_func(stbi_write_data, &buffer,
-              width, height, num_channels,
-              (const byte*)image.data()))
+      if (!stbi_write_tga_to_func(stbi_write_data, &buffer, width, height,
+              num_channels, (const byte*)image.data()))
         throw io_error{"cannot write " + filename};
     }
     return save_binary(filename, buffer);
   } else if (ext == ".bmp" || ext == ".BMP") {
     auto buffer = vector<byte>{};
     if constexpr (is_float) {
-      if (!stbi_write_bmp_to_func(stbi_write_data, &buffer,
-              width, height, num_channels,
-              (const byte*)float_to_byte(image).data()))
+      if (!stbi_write_bmp_to_func(stbi_write_data, &buffer, width, height,
+              num_channels, (const byte*)float_to_byte(image).data()))
         throw io_error{"cannot write " + filename};
     } else {
-      if (!stbi_write_bmp_to_func(stbi_write_data, &buffer,
-              width, height, num_channels,
-              (const byte*)image.data()))
+      if (!stbi_write_bmp_to_func(stbi_write_data, &buffer, width, height,
+              num_channels, (const byte*)image.data()))
         throw io_error{"cannot write " + filename};
     }
     return save_binary(filename, buffer);
