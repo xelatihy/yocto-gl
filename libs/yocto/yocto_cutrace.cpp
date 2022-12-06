@@ -1076,12 +1076,9 @@ void trace_preview(array2d<vec4f>& image, cutrace_context& context,
   trace_start(context, pstate, cuscene, bvh, lights, scene, pparams);
   trace_samples(context, pstate, cuscene, bvh, lights, scene, pparams);
   auto preview = get_image(pstate);
-  for (auto j : range(image.extent(1))) {
-    for (auto i : range(image.extent(0))) {
-      auto pi       = clamp(i / params.pratio, 0, (int)preview.extent(0) - 1),
-           pj       = clamp(j / params.pratio, 0, (int)preview.extent(1) - 1);
-      image[{i, j}] = preview[{pi, pj}];
-    }
+  for (auto ij : range(image.extents())) {
+    auto pij  = min(ij / params.pratio, preview.extents() - 1);
+    image[ij] = preview[pij];
   }
 }
 

@@ -523,11 +523,13 @@ namespace yocto {
 // Check if an image is HDR based on filename.
 bool is_hdr_filename(const string& filename) {
   auto ext = path_extension(filename);
+  if(ext == ".ypreset" || ext == ".YPRESET") return is_hdr_preset(filename);
   return ext == ".hdr" || ext == ".exr" || ext == ".pfm";
 }
 
 bool is_ldr_filename(const string& filename) {
   auto ext = path_extension(filename);
+  if(ext == ".ypreset" || ext == ".YPRESET") return is_ldr_preset(filename);
   return ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".bmp" ||
          ext == ".tga";
 }
@@ -627,10 +629,6 @@ constexpr array2d<vec<T, M>> convert_channels(
   return converted;
 }
 
-// TODO: remove
-bool make_image_preset(
-    const string& filename, image_data& image, string& error);
-
 // Loads/saves a 3/4 channels float/byte image in linear/srgb color space.
 // Supports data as vec3f, vec4f, vec3b, vec4b.
 template <typename T>
@@ -689,11 +687,9 @@ void load_image(const string& filename, array2d<T>& image) {
     return image;
   };
 
-  // load data buffer
-  auto buffer = load_binary(filename);
-
   auto ext = path_extension(filename);
   if (ext == ".exr" || ext == ".EXR") {
+    auto buffer = load_binary(filename);
     auto width = 0, height = 0, ncomp = 0;
     auto pixels = (float*)nullptr;
     if (LoadEXRFromMemory(&pixels, &width, &height, buffer.data(),
@@ -702,6 +698,7 @@ void load_image(const string& filename, array2d<T>& image) {
     image = from_float((vec4f*)pixels, {(size_t)width, (size_t)height});
     free(pixels);
   } else if (ext == ".hdr" || ext == ".HDR") {
+    auto buffer = load_binary(filename);
     auto width = 0, height = 0, ncomp = 0;
     auto pixels = stbi_loadf_from_memory(
         buffer.data(), (int)buffer.size(), &width, &height, &ncomp, 4);
@@ -711,6 +708,7 @@ void load_image(const string& filename, array2d<T>& image) {
   } else if (ext == ".png" || ext == ".PNG" || ext == ".jpg" || ext == ".JPG" ||
              ext == ".jpeg" || ext == ".JPEG" || ext == ".tga" ||
              ext == ".TGA" || ext == ".bmp" || ext == ".BMP") {
+    auto buffer = load_binary(filename);
     auto width = 0, height = 0, ncomp = 0;
     auto pixels = stbi_load_from_memory(
         buffer.data(), (int)buffer.size(), &width, &height, &ncomp, 4);
@@ -718,12 +716,12 @@ void load_image(const string& filename, array2d<T>& image) {
     image = from_byte((vec4b*)pixels, {(size_t)width, (size_t)height});
     free(pixels);
   } else if (ext == ".ypreset" || ext == ".YPRESET") {
-    // create preset
-    auto image_ = image_data{};
-    auto error  = string{};
-    if (!make_image_preset(filename, image_, error)) throw io_error{error};
-    image = from_float((vec4f*)image_.pixels.data(),
-        {(size_t)image_.width, (size_t)image_.height});
+    if constexpr (std::is_same_v<T, vec4f>) {
+      image = make_image_preset(filename);
+    } else {
+      auto preset = make_image_preset(filename);
+      image = from_float(preset.data(), preset.extents());
+    }
   } else {
     throw io_error{"unsupported format " + filename};
   }
@@ -741,18 +739,19 @@ void save_image(const string& filename, const array2d<T>& image) {
     buffer.insert(buffer.end(), (byte*)data, (byte*)data + size);
   };
 
+  // grab data for low level apis
+  auto [width, height] = (vec2i)image.extents();
+
   auto ext = path_extension(filename);
   if (ext == ".hdr" || ext == ".HDR") {
     auto buffer = vector<byte>{};
     if constexpr (is_float) {
-      if (!stbi_write_hdr_to_func(stbi_write_data, &buffer,
-              (int)image.extent(0), (int)image.extent(1), num_channels,
-              (const float*)image.data()))
+      if (!stbi_write_hdr_to_func(stbi_write_data, &buffer, width, height,
+              num_channels, (const float*)image.data()))
         throw io_error{"cannot write " + filename};
     } else {
-      if (!stbi_write_hdr_to_func(stbi_write_data, &buffer,
-              (int)image.extent(0), (int)image.extent(1), num_channels,
-              (const float*)byte_to_float(image).data()))
+      if (!stbi_write_hdr_to_func(stbi_write_data, &buffer, width, height,
+              num_channels, (const float*)byte_to_float(image).data()))
         throw io_error{"cannot write " + filename};
     }
     return save_binary(filename, buffer);
@@ -760,13 +759,12 @@ void save_image(const string& filename, const array2d<T>& image) {
     auto data = (byte*)nullptr;
     auto size = (size_t)0;
     if constexpr (is_float) {
-      if (SaveEXRToMemory((const float*)image.data(), (int)image.extent(0),
-              (int)image.extent(1), num_channels, 1, &data, &size, nullptr) < 0)
+      if (SaveEXRToMemory((const float*)image.data(), width, height,
+              num_channels, 1, &data, &size, nullptr) < 0)
         throw io_error{"cannot write " + filename};
     } else {
-      if (SaveEXRToMemory((const float*)byte_to_float(image).data(),
-              (int)image.extent(0), (int)image.extent(1), num_channels, 1,
-              &data, &size, nullptr) < 0)
+      if (SaveEXRToMemory((const float*)byte_to_float(image).data(), width,
+              height, num_channels, 1, &data, &size, nullptr) < 0)
         throw io_error{"cannot write " + filename};
     }
     auto buffer = vector<byte>{data, data + size};
@@ -775,15 +773,13 @@ void save_image(const string& filename, const array2d<T>& image) {
   } else if (ext == ".png" || ext == ".PNG") {
     auto buffer = vector<byte>{};
     if constexpr (is_float) {
-      if (!stbi_write_png_to_func(stbi_write_data, &buffer,
-              (int)image.extent(0), (int)image.extent(1), num_channels,
-              (const byte*)float_to_byte(image).data(),
-              (int)image.extent(0) * 4))
+      if (!stbi_write_png_to_func(stbi_write_data, &buffer, width, height,
+              num_channels, (const byte*)float_to_byte(image).data(),
+              width * 4))
         throw io_error{"cannot write " + filename};
     } else {
-      if (!stbi_write_png_to_func(stbi_write_data, &buffer,
-              (int)image.extent(0), (int)image.extent(1), num_channels,
-              (const byte*)image.data(), (int)image.extent(0) * 4))
+      if (!stbi_write_png_to_func(stbi_write_data, &buffer, width, height,
+              num_channels, (const byte*)image.data(), width * 4))
         throw io_error{"cannot write " + filename};
     }
     return save_binary(filename, buffer);
@@ -791,42 +787,36 @@ void save_image(const string& filename, const array2d<T>& image) {
              ext == ".JPEG") {
     auto buffer = vector<byte>{};
     if constexpr (is_float) {
-      if (!stbi_write_jpg_to_func(stbi_write_data, &buffer,
-              (int)image.extent(0), (int)image.extent(1), num_channels,
-              (const byte*)float_to_byte(image).data(), 75))
+      if (!stbi_write_jpg_to_func(stbi_write_data, &buffer, width, height,
+              num_channels, (const byte*)float_to_byte(image).data(), 75))
         throw io_error{"cannot write " + filename};
     } else {
-      if (!stbi_write_jpg_to_func(stbi_write_data, &buffer,
-              (int)image.extent(0), (int)image.extent(1), num_channels,
-              (const byte*)image.data(), 75))
+      if (!stbi_write_jpg_to_func(stbi_write_data, &buffer, width, height,
+              num_channels, (const byte*)image.data(), 75))
         throw io_error{"cannot write " + filename};
     }
     return save_binary(filename, buffer);
   } else if (ext == ".tga" || ext == ".TGA") {
     auto buffer = vector<byte>{};
     if constexpr (is_float) {
-      if (!stbi_write_tga_to_func(stbi_write_data, &buffer,
-              (int)image.extent(0), (int)image.extent(1), num_channels,
-              (const byte*)float_to_byte(image).data()))
+      if (!stbi_write_tga_to_func(stbi_write_data, &buffer, width, height,
+              num_channels, (const byte*)float_to_byte(image).data()))
         throw io_error{"cannot write " + filename};
     } else {
-      if (!stbi_write_tga_to_func(stbi_write_data, &buffer,
-              (int)image.extent(0), (int)image.extent(1), num_channels,
-              (const byte*)image.data()))
+      if (!stbi_write_tga_to_func(stbi_write_data, &buffer, width, height,
+              num_channels, (const byte*)image.data()))
         throw io_error{"cannot write " + filename};
     }
     return save_binary(filename, buffer);
   } else if (ext == ".bmp" || ext == ".BMP") {
     auto buffer = vector<byte>{};
     if constexpr (is_float) {
-      if (!stbi_write_bmp_to_func(stbi_write_data, &buffer,
-              (int)image.extent(0), (int)image.extent(1), num_channels,
-              (const byte*)float_to_byte(image).data()))
+      if (!stbi_write_bmp_to_func(stbi_write_data, &buffer, width, height,
+              num_channels, (const byte*)float_to_byte(image).data()))
         throw io_error{"cannot write " + filename};
     } else {
-      if (!stbi_write_bmp_to_func(stbi_write_data, &buffer,
-              (int)image.extent(0), (int)image.extent(1), num_channels,
-              (const byte*)image.data()))
+      if (!stbi_write_bmp_to_func(stbi_write_data, &buffer, width, height,
+              num_channels, (const byte*)image.data()))
         throw io_error{"cannot write " + filename};
     }
     return save_binary(filename, buffer);
@@ -838,6 +828,137 @@ void save_image(const string& filename, const array2d<T>& image) {
 // Explicit instantiations
 template void load_image(const string&, array2d<vec4f>&);
 template void save_image(const string&, const array2d<vec4f>&);
+
+bool is_hdr_preset(const string& type_) {
+  auto type  = path_basename(type_);
+  return type.find("sky") != type.npos;
+}
+bool is_ldr_preset(const string& type_) {
+  auto type  = path_basename(type_);
+  return type.find("sky") == type.npos;
+}
+array2d<vec4f> make_image_preset(const string& type_) {
+  auto type  = path_basename(type_);
+  auto extents = vec2s{1024, 1024};
+  if (type.find("sky") != type.npos) extents = {2048, 1024};
+  if (type.find("images2") != type.npos) extents = {2048, 1024};
+  if (type == "grid") {
+    return make_grid(extents);
+  } else if (type == "checker") {
+    return make_checker(extents);
+  } else if (type == "bumps") {
+    return make_bumps(extents);
+  } else if (type == "uvramp") {
+    return make_uvramp(extents);
+  } else if (type == "gammaramp") {
+    return make_gammaramp(extents);
+  } else if (type == "uvgrid") {
+    return make_uvgrid(extents);
+  } else if (type == "colormapramp") {
+    return make_colormapramp(extents);
+  } else if (type == "sky") {
+    return make_sunsky(extents, pif / 4, 3.0f, false, 1.0f, 1.0f,
+        vec3f{0.7f, 0.7f, 0.7f});
+  } else if (type == "sunsky") {
+    return make_sunsky(extents, pif / 4, 3.0f, true, 1.0f, 1.0f,
+        vec3f{0.7f, 0.7f, 0.7f});
+  } else if (type == "noise") {
+    return make_noisemap(extents, 1.0f);
+  } else if (type == "fbm") {
+    return make_fbmmap(extents, 1.0f);
+  } else if (type == "ridge") {
+    return make_ridgemap(extents, 1.0f);
+  } else if (type == "turbulence") {
+    return make_turbulencemap(extents, 1.0f);
+  } else if (type == "bump-normal") {
+    return make_bumps(extents);
+    // TODO(fabio): fix color space
+    // img   = srgb_to_rgb(bump_to_normal(img, 0.05f));
+  } else if (type == "images1") {
+    auto sub_types  = vector<string>{"grid", "uvgrid", "checker", "gammaramp",
+         "bumps", "bump-normal", "noise", "fbm", "blackbodyramp"};
+    auto sub_images = vector<array2d<vec4f>>();
+    for (auto& sub_type : sub_types)
+      sub_images.push_back(make_image_preset(sub_type));
+    auto montage_size = vec2s{0, 0};
+    for (auto& sub_image : sub_images) {
+      auto [mwidth, mheight] = montage_size;
+      auto [width, height] = sub_image.extents();
+      montage_size = {mwidth + width, max(mheight, height)};
+    }
+    auto image = array2d<vec4f>(montage_size);
+    auto pos = (size_t)0;
+    for (auto& sub_image : sub_images) {
+      auto [width, _] = sub_image.extents();
+      set_region(image, sub_image, {pos, 0});
+      pos += width;
+    }
+    return image;
+  } else if (type == "images2") {
+    auto sub_types  = vector<string>{"sky", "sunsky"};
+    auto sub_images = vector<array2d<vec4f>>();
+    for (auto& sub_type : sub_types)
+      sub_images.push_back(make_image_preset(sub_type));
+    auto montage_size = vec2s{0, 0};
+    for (auto& sub_image : sub_images) {
+      auto [mwidth, mheight] = montage_size;
+      auto [width, height] = sub_image.extents();
+      montage_size = {mwidth + width, max(mheight, height)};
+    }
+    auto image = array2d<vec4f>(montage_size);
+    auto pos = (size_t)0;
+    for (auto& sub_image : sub_images) {
+      auto [width, _] = sub_image.extents();
+      set_region(image, sub_image, {pos, 0});
+      pos += width;
+    }
+    return image;
+  } else if (type == "test-floor") {
+    return add_border(make_grid(extents), 0.0025f);
+  } else if (type == "test-grid") {
+    return make_grid(extents);
+  } else if (type == "test-checker") {
+    return make_checker(extents);
+  } else if (type == "test-bumps") {
+    return make_bumps(extents);
+  } else if (type == "test-uvramp") {
+    return make_uvramp(extents);
+  } else if (type == "test-gammaramp") {
+    return make_gammaramp(extents);
+  } else if (type == "test-colormapramp") {
+    return make_colormapramp(extents);
+    // TODO(fabio): fix color space
+    // img   = srgb_to_rgb(img);
+  } else if (type == "test-uvgrid") {
+    return make_uvgrid(extents);
+  } else if (type == "test-sky") {
+    return make_sunsky(extents, pif / 4, 3.0f, false, 1.0f, 1.0f,
+        vec3f{0.7f, 0.7f, 0.7f});
+  } else if (type == "test-sunsky") {
+    return make_sunsky(extents, pif / 4, 3.0f, true, 1.0f, 1.0f,
+        vec3f{0.7f, 0.7f, 0.7f});
+  } else if (type == "test-noise") {
+    return make_noisemap(extents);
+  } else if (type == "test-fbm") {
+    return make_noisemap(extents);
+  } else if (type == "test-bumps-normal") {
+    return bump_to_normal(make_bumps(extents), 0.05f);
+  } else if (type == "test-bumps-displacement") {
+    return make_bumps(extents);
+    // TODO(fabio): fix color space
+    // img   = srgb_to_rgb(img);
+  } else if (type == "test-fbm-displacement") {
+    return make_fbmmap(extents);
+    // TODO(fabio): fix color space
+    // img   = srgb_to_rgb(img);
+  } else if (type == "test-checker-opacity") {
+    return make_checker(extents, 1.0f, vec4f{1, 1, 1, 1}, vec4f{0, 0, 0, 0});
+  } else if (type == "test-grid-opacity") {
+    return make_grid(extents, 1.0f, vec4f{1, 1, 1, 1}, vec4f{0, 0, 0, 0});
+  } else {
+    return {};
+  }
+}
 
 // Loads/saves an image. Chooses hdr or ldr based on file name.
 void load_image(const string& filename, image_data& image) {
@@ -912,10 +1033,6 @@ void load_image(const string& filename, image_data& image) {
     image.linear = false;
     image.pixels = from_srgb(pixels, image.width, image.height);
     free(pixels);
-  } else if (ext == ".ypreset" || ext == ".YPRESET") {
-    // create preset
-    auto error = string{};
-    if (!make_image_preset(filename, image, error)) throw io_error{error};
   } else {
     throw io_error{"unsupported format " + filename};
   }
@@ -991,141 +1108,6 @@ void save_image(const string& filename, const image_data& image) {
   } else {
     throw io_error{"unsupported format " + filename};
   }
-}
-
-image_data make_image_preset(const string& type_) {
-  auto type  = path_basename(type_);
-  auto width = 1024, height = 1024;
-  if (type.find("sky") != type.npos) width = 2048;
-  if (type.find("images2") != type.npos) width = 2048;
-  if (type == "grid") {
-    return make_grid(width, height);
-  } else if (type == "checker") {
-    return make_checker(width, height);
-  } else if (type == "bumps") {
-    return make_bumps(width, height);
-  } else if (type == "uvramp") {
-    return make_uvramp(width, height);
-  } else if (type == "gammaramp") {
-    return make_gammaramp(width, height);
-  } else if (type == "blackbodyramp") {
-    return make_blackbodyramp(width, height);
-  } else if (type == "uvgrid") {
-    return make_uvgrid(width, height);
-  } else if (type == "colormapramp") {
-    return make_colormapramp(width, height);
-  } else if (type == "sky") {
-    return make_sunsky(width, height, pif / 4, 3.0f, false, 1.0f, 1.0f,
-        vec3f{0.7f, 0.7f, 0.7f});
-  } else if (type == "sunsky") {
-    return make_sunsky(width, height, pif / 4, 3.0f, true, 1.0f, 1.0f,
-        vec3f{0.7f, 0.7f, 0.7f});
-  } else if (type == "noise") {
-    return make_noisemap(width, height, 1);
-  } else if (type == "fbm") {
-    return make_fbmmap(width, height, 1);
-  } else if (type == "ridge") {
-    return make_ridgemap(width, height, 1);
-  } else if (type == "turbulence") {
-    return make_turbulencemap(width, height, 1);
-  } else if (type == "bump-normal") {
-    return make_bumps(width, height);
-    // TODO(fabio): fix color space
-    // img   = srgb_to_rgb(bump_to_normal(img, 0.05f));
-  } else if (type == "images1") {
-    auto sub_types  = vector<string>{"grid", "uvgrid", "checker", "gammaramp",
-         "bumps", "bump-normal", "noise", "fbm", "blackbodyramp"};
-    auto sub_images = vector<image_data>();
-    for (auto& sub_type : sub_types)
-      sub_images.push_back(make_image_preset(sub_type));
-    auto montage_size = vec2i{0, 0};
-    for (auto& sub_image : sub_images) {
-      montage_size.x += sub_image.width;
-      montage_size.y = max(montage_size.y, sub_image.height);
-    }
-    auto image = make_image(
-        montage_size.x, montage_size.y, sub_images[0].linear);
-    auto pos = 0;
-    for (auto& sub_image : sub_images) {
-      set_region(image, sub_image, pos, 0);
-      pos += sub_image.width;
-    }
-    return image;
-  } else if (type == "images2") {
-    auto sub_types  = vector<string>{"sky", "sunsky"};
-    auto sub_images = vector<image_data>();
-    for (auto& sub_type : sub_types)
-      sub_images.push_back(make_image_preset(sub_type));
-    auto montage_size = vec2i{0, 0};
-    for (auto& sub_image : sub_images) {
-      montage_size.x += sub_image.width;
-      montage_size.y = max(montage_size.y, sub_image.height);
-    }
-    auto image = make_image(
-        montage_size.x, montage_size.y, sub_images[0].linear);
-    auto pos = 0;
-    for (auto& sub_image : sub_images) {
-      set_region(image, sub_image, pos, 0);
-      pos += sub_image.width;
-    }
-    return image;
-  } else if (type == "test-floor") {
-    return add_border(make_grid(width, height), 0.0025f);
-  } else if (type == "test-grid") {
-    return make_grid(width, height);
-  } else if (type == "test-checker") {
-    return make_checker(width, height);
-  } else if (type == "test-bumps") {
-    return make_bumps(width, height);
-  } else if (type == "test-uvramp") {
-    return make_uvramp(width, height);
-  } else if (type == "test-gammaramp") {
-    return make_gammaramp(width, height);
-  } else if (type == "test-blackbodyramp") {
-    return make_blackbodyramp(width, height);
-  } else if (type == "test-colormapramp") {
-    return make_colormapramp(width, height);
-    // TODO(fabio): fix color space
-    // img   = srgb_to_rgb(img);
-  } else if (type == "test-uvgrid") {
-    return make_uvgrid(width, height);
-  } else if (type == "test-sky") {
-    return make_sunsky(width, height, pif / 4, 3.0f, false, 1.0f, 1.0f,
-        vec3f{0.7f, 0.7f, 0.7f});
-  } else if (type == "test-sunsky") {
-    return make_sunsky(width, height, pif / 4, 3.0f, true, 1.0f, 1.0f,
-        vec3f{0.7f, 0.7f, 0.7f});
-  } else if (type == "test-noise") {
-    return make_noisemap(width, height);
-  } else if (type == "test-fbm") {
-    return make_noisemap(width, height);
-  } else if (type == "test-bumps-normal") {
-    return bump_to_normal(make_bumps(width, height), 0.05f);
-  } else if (type == "test-bumps-displacement") {
-    return make_bumps(width, height);
-    // TODO(fabio): fix color space
-    // img   = srgb_to_rgb(img);
-  } else if (type == "test-fbm-displacement") {
-    return make_fbmmap(width, height);
-    // TODO(fabio): fix color space
-    // img   = srgb_to_rgb(img);
-  } else if (type == "test-checker-opacity") {
-    return make_checker(width, height, 1, {1, 1, 1, 1}, {0, 0, 0, 0});
-  } else if (type == "test-grid-opacity") {
-    return make_grid(width, height, 1, {1, 1, 1, 1}, {0, 0, 0, 0});
-  } else {
-    return {};
-  }
-}
-
-bool make_image_preset(
-    const string& filename, image_data& image, string& error) {
-  image = make_image_preset(path_basename(filename));
-  if (image.pixels.empty()) {
-    error = "unknown preset";
-    return false;
-  }
-  return true;
 }
 
 }  // namespace yocto
@@ -2231,7 +2213,7 @@ bool save_texture(
 }
 
 texture_data make_texture_preset(const string& type) {
-  return image_to_texture(make_image_preset(type));
+  return image_to_texture(make_image_preset(type), is_hdr_preset(type));
 }
 
 // Loads/saves an image. Chooses hdr or ldr based on file name.

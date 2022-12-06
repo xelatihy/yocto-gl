@@ -184,6 +184,10 @@ template <typename T1, typename T2, typename T = common_t<T1, T2>>
 constexpr kernel T atan2(T1 a, T2 b) {
   return std::atan2((T)a, (T)b);
 }
+template <typename T>
+constexpr kernel T round(T a) {
+  return std::round(a);
+}
 template <typename T, typename T1>
 constexpr kernel T fmod(T a, T1 b) {
   return std::fmod(a, b);
@@ -668,6 +672,42 @@ constexpr kernel vec<T, N> operator/(T1 a, const vec<T2, N>& b) {
     return {a / b.x, a / b.y, a / b.z, a / b.w};
   }
 }
+template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
+constexpr kernel vec<T, N> operator%(const vec<T1, N>& a, const vec<T2, N>& b) {
+  if constexpr (N == 1) {
+    return {a.x % b.x};
+  } else if constexpr (N == 2) {
+    return {a.x % b.x, a.y % b.y};
+  } else if constexpr (N == 3) {
+    return {a.x % b.x, a.y % b.y, a.z % b.z};
+  } else if constexpr (N == 4) {
+    return {a.x % b.x, a.y % b.y, a.z % b.z, a.w % b.w};
+  }
+}
+template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
+constexpr kernel vec<T, N> operator%(const vec<T1, N>& a, T2 b) {
+  if constexpr (N == 1) {
+    return {a.x % b};
+  } else if constexpr (N == 2) {
+    return {a.x % b, a.y % b};
+  } else if constexpr (N == 3) {
+    return {a.x % b, a.y % b, a.z % b};
+  } else if constexpr (N == 4) {
+    return {a.x % b, a.y % b, a.z % b, a.w % b};
+  }
+}
+template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
+constexpr kernel vec<T, N> operator%(T1 a, const vec<T2, N>& b) {
+  if constexpr (N == 1) {
+    return {a % b.x};
+  } else if constexpr (N == 2) {
+    return {a % b.x, a % b.y};
+  } else if constexpr (N == 3) {
+    return {a % b.x, a % b.y, a % b.z};
+  } else if constexpr (N == 4) {
+    return {a % b.x, a % b.y, a % b.z, a % b.w};
+  }
+}
 
 // Vector assignments
 template <typename T, typename T1, size_t N>
@@ -701,6 +741,14 @@ constexpr kernel vec<T, N>& operator/=(vec<T, N>& a, const vec<T1, N>& b) {
 template <typename T, typename T1, size_t N>
 constexpr kernel vec<T, N>& operator/=(vec<T, N>& a, T1 b) {
   return a = a / b;
+}
+template <typename T, typename T1, size_t N>
+constexpr kernel vec<T, N>& operator%=(vec<T, N>& a, const vec<T1, N>& b) {
+  return a = a % b;
+}
+template <typename T, typename T1, size_t N>
+constexpr kernel vec<T, N>& operator%=(vec<T, N>& a, T1 b) {
+  return a = a % b;
 }
 
 // Vector products and lengths.
@@ -870,6 +918,38 @@ constexpr kernel vec<T, N> clamp(const vec<T1, N>& x, T2 min, T3 max) {
   } else if constexpr (N == 4) {
     return {clamp(x.x, min, max), clamp(x.y, min, max), clamp(x.z, min, max),
         clamp(x.w, min, max)};
+  }
+}
+template <typename T1, typename T2, typename T3, size_t N,
+    typename T = common_t<T1, T2, T3>>
+constexpr kernel vec<T, N> clamp(
+    const vec<T1, N>& x, const vec<T2, N>& min, T3 max) {
+  if constexpr (N == 1) {
+    return {clamp(x.x, min.x, max)};
+  } else if constexpr (N == 2) {
+    return {clamp(x.x, min.x, max), clamp(x.y, min.y, max)};
+  } else if constexpr (N == 3) {
+    return {
+        clamp(x.x, min.x, max), clamp(x.y, min.y, max), clamp(x.z, min, max.z)};
+  } else if constexpr (N == 4) {
+    return {clamp(x.x, min.x, max), clamp(x.y, min.y, max),
+        clamp(x.z, min, max.z), clamp(x.w, min, max.w)};
+  }
+}
+template <typename T1, typename T2, typename T3, size_t N,
+    typename T = common_t<T1, T2, T3>>
+constexpr kernel vec<T, N> clamp(
+    const vec<T1, N>& x, T2 min, const vec<T3, N>& max) {
+  if constexpr (N == 1) {
+    return {clamp(x.x, min, max.x)};
+  } else if constexpr (N == 2) {
+    return {clamp(x.x, min, max.x), clamp(x.y, min, max.y)};
+  } else if constexpr (N == 3) {
+    return {
+        clamp(x.x, min, max.x), clamp(x.y, min, max.y), clamp(x.z, min, max.z)};
+  } else if constexpr (N == 4) {
+    return {clamp(x.x, min, max.x), clamp(x.y, min, max.y),
+        clamp(x.z, min, max.z), clamp(x.w, min, max.w)};
   }
 }
 template <typename T1, typename T2, typename T3, size_t N,
@@ -1079,6 +1159,18 @@ constexpr kernel vec<T, N> pow(const vec<T1, N>& a, const vec<T2, N>& b) {
     return {pow(a.x, b.x), pow(a.y, b.y), pow(a.z, b.z)};
   } else if constexpr (N == 4) {
     return {pow(a.x, b.x), pow(a.y, b.y), pow(a.z, b.z), pow(a.w, b.w)};
+  }
+}
+template <typename T, size_t N>
+constexpr kernel vec<T, N> round(const vec<T, N>& a) {
+  if constexpr (N == 1) {
+    return {round(a.x)};
+  } else if constexpr (N == 2) {
+    return {round(a.x), round(a.y)};
+  } else if constexpr (N == 3) {
+    return {round(a.x), round(a.y), round(a.z)};
+  } else if constexpr (N == 4) {
+    return {round(a.x), round(a.y), round(a.z), round(a.w)};
   }
 }
 template <typename T, typename T1, size_t N>
@@ -1981,10 +2073,11 @@ namespace yocto {
 // Returns negative coordinates if out of the image.
 template <typename T, typename I>
 constexpr kernel vec<I, 2> image_coords(const vec<T, 2>& mouse_pos,
-    const vec<T, 2>& center, T scale, const vec<I, 2>& txt_size) {
-  auto xyf = (mouse_pos - center) / scale;
-  return vec<I, 2>{(int)round(xyf.x + txt_size.x / (T)2),
-      (int)round(xyf.y + txt_size.y / (T)2)};
+    const vec<T, 2>& center, T scale, const vec<I, 2>& size,
+    bool clamped = true) {
+  auto xy = (mouse_pos - center) / scale;
+  auto ij = (vec<I, 2>)round(xy + size / (T)2);
+  return clamped ? clamp(ij, vec<I, 2>{0, 0}, size) : ij;
 }
 
 // Center image and autofit. Returns center and scale.
@@ -2220,6 +2313,13 @@ constexpr kernel auto range(T min, T max);
 template <typename T>
 constexpr kernel auto range(T min, T max, T step);
 
+// Python range in 2d. Construct an object that iterates over a 2d integer
+// sequence.
+template <typename T>
+constexpr kernel auto range(vec<T, 2> max);
+template <typename T>
+constexpr kernel auto range(array<T, 2> max);
+
 // Python enumerate
 template <typename Sequence, typename T = size_t>
 constexpr kernel auto enumerate(const Sequence& sequence, T start = 0);
@@ -2278,6 +2378,37 @@ constexpr kernel auto range(T min, T max, T step) {
     }
   };
   return range_helper{min, max, step};
+}
+
+// Python range in 2d. Construct an object that iterates over a 2d integer
+// sequence.
+template <typename T>
+constexpr kernel auto range(vec<T, 2> max) {
+  struct range_sentinel {};
+  struct range_iterator {
+    vec<T, 2>             index, end;
+    constexpr kernel void operator++() {
+      ++index[0];
+      if (index[0] >= end[0]) {
+        index[0] = 0;
+        index[1]++;
+      }
+    }
+    constexpr kernel bool operator!=(const range_sentinel&) const {
+      return index[1] != end[1];
+    }
+    constexpr kernel vec<T, 2> operator*() const { return index; }
+  };
+  struct range_sequence {
+    vec<T, 2>                       end_ = {0, 0};
+    constexpr kernel range_iterator begin() const { return {{0, 0}, end_}; }
+    constexpr kernel range_sentinel end() const { return {}; }
+  };
+  return range_sequence{max};
+}
+template <typename T>
+constexpr kernel auto range(array<T, 2> max) {
+  return range(vec<T, 2>{max});
 }
 
 // Implementation of Python enumerate.

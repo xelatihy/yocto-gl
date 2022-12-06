@@ -88,6 +88,11 @@ void load_image(const string& filename, array2d<T>& image);
 template <typename T>
 void save_image(const string& filename, const array2d<T>& image);
 
+// Make presets. Supported mostly in IO.
+bool is_hdr_preset(const string& type);
+bool is_ldr_preset(const string& type);
+array2d<vec4f> make_image_preset(const string& type);
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -343,9 +348,6 @@ namespace yocto {
 // Loads/saves a 4 channels float/byte image in linear/srgb color space.
 void load_image(const string& filename, image_data& image);
 void save_image(const string& filename, const image_data& image);
-
-// Make presets. Supported mostly in IO.
-image_data make_image_preset(const string& type);
 
 // Loads/saves a 4 channels float/byte image in linear/srgb color space.
 inline bool load_image(

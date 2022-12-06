@@ -118,12 +118,7 @@ struct ndspan {
  public:
   // Constructors
   constexpr ndspan() noexcept : _extents{0}, _data{nullptr} {}
-  template <typename... Indices>
-  constexpr explicit ndspan(T* data, Indices... extents) noexcept
-      : _data{data}, _extents{size_t(extents)...} {
-    static_assert(N == sizeof...(Indices));
-  }
-  constexpr ndspan(T* data, const array<T, N>& extents) noexcept
+  constexpr ndspan(T* data, const vec<size_t, N>& extents) noexcept
       : _data{data}, _extents{extents} {}
   constexpr ndspan(const ndspan& other) noexcept = default;
   constexpr ndspan(ndspan&& other) noexcept      = default;
@@ -133,10 +128,10 @@ struct ndspan {
   constexpr ndspan& operator=(ndspan&& other) noexcept      = default;
 
   // Size
-  constexpr bool             empty() const noexcept { return size() == 0; }
-  constexpr size_t           size() const noexcept { return _size(_extents); }
-  constexpr array<size_t, N> extents() const noexcept { return _extents; }
-  constexpr size_t           extent(size_t dimension) const noexcept {
+  constexpr bool           empty() const noexcept { return size() == 0; }
+  constexpr size_t         size() const noexcept { return _size(_extents); }
+  constexpr vec<size_t, N> extents() const noexcept { return _extents; }
+  constexpr size_t         extent(size_t dimension) const noexcept {
     return _extents[dimension];
   }
 
@@ -154,26 +149,26 @@ struct ndspan {
   constexpr T* data() const noexcept { return _data; }
 
  private:
-  T*               _data    = nullptr;
-  array<size_t, N> _extents = {0};
+  T*             _data    = nullptr;
+  vec<size_t, N> _extents = {0};
 
-  static size_t _size(const array<size_t, 1>& extents) { return extents[0]; }
-  static size_t _size(const array<size_t, 2>& extents) {
+  static size_t _size(const vec<size_t, 1>& extents) { return extents[0]; }
+  static size_t _size(const vec<size_t, 2>& extents) {
     return extents[0] * extents[1];
   }
-  static size_t _size(const array<size_t, 3>& extents) {
+  static size_t _size(const vec<size_t, 3>& extents) {
     return extents[0] * extents[1] * extents[2];
   }
   static size_t _index(
-      const array<size_t, 1>& index, const array<size_t, 1>& extents) {
+      const vec<size_t, 1>& index, const vec<size_t, 1>& extents) {
     return index[0];
   }
   static size_t _index(
-      const array<size_t, 2>& index, const array<size_t, 2>& extents) {
+      const vec<size_t, 2>& index, const vec<size_t, 2>& extents) {
     return index[1] * extents[0] + index[0];
   }
   static size_t _index(
-      const array<size_t, 3>& index, const array<size_t, 3>& extents) {
+      const vec<size_t, 3>& index, const vec<size_t, 3>& extents) {
     return (index[2] * extents[1] + index[1]) * extents[0] + index[0];
   }
 };

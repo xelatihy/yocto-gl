@@ -59,12 +59,12 @@ void run(const vector<string>& args) {
   parse_cli(cli, args);
 
   // load
-  auto image = load_image(imagename);
+  auto image  = load_image(imagename);
   auto linear = is_hdr_filename(imagename);
 
   // resize if needed
   if (width != 0 || height != 0) {
-    image = resize_image(image, width, height);
+    image = resize_image(image, vec2s(width, height));
   }
 
   // switch between interactive and offline

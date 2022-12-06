@@ -245,7 +245,8 @@ vec4f lookup_texture(
     const texture_data& texture, const vec2i&, bool as_linear = false);
 
 // conversion from image
-texture_data image_to_texture(const image_data& image);
+texture_data image_to_texture(const array2d<vec4f>& image, bool linear);
+[[deprecated]] texture_data image_to_texture(const image_data& image);
 
 }  // namespace yocto
 

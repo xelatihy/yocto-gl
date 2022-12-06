@@ -84,6 +84,33 @@ inline void parallel_for_batch(T num, T batch, Func&& func) {
   for (auto& f : futures) f.get();
 }
 
+// Simple parallel for used since our target platforms do not yet support
+// parallel algorithms. `Func` takes the integer index.
+template <typename T, typename Func>
+inline void parallel_for_batch(array<T, 2> num, Func&& func) {
+  auto              futures  = vector<std::future<void>>{};
+  auto              nthreads = std::thread::hardware_concurrency();
+  std::atomic<T>    next_idx(0);
+  std::atomic<bool> has_error(false);
+  for (auto thread_id = 0; thread_id < (int)nthreads; thread_id++) {
+    futures.emplace_back(
+        std::async(std::launch::async, [&func, &next_idx, &has_error, num]() {
+          try {
+            while (true) {
+              auto j = next_idx.fetch_add(1);
+              if (j >= num[1]) break;
+              if (has_error) break;
+              for (auto i = (T)0; i < num[0]; i++) func({i, j});
+            }
+          } catch (...) {
+            has_error = true;
+            throw;
+          }
+        }));
+  }
+  for (auto& f : futures) f.get();
+}
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -116,18 +143,20 @@ void colorgrade_image_mt(array2d<vec4f>& result, const array2d<vec4f>& image,
 
 // Resize an image.
 array2d<vec4f> resize_image(
-    const array2d<vec4f>& image, int res_width, int res_height) {
-  if (res_width == 0 && res_height == 0) {
+    const array2d<vec4f>& image, const vec2s& extents_) {
+  // determine new size
+  auto extents = extents_;
+  auto aspect  = (double)image.extent(0) / (double)image.extent(1);
+  if (extents == vec2s{0, 0})
     throw std::invalid_argument{"bad image size in resize"};
+  if (extents[1] == 0) {
+    extents = {extents[0], (size_t)round(extents[0] / aspect)};
+  } else if (extents[0] == 0) {
+    extents = {(size_t)round(extents[1] * aspect), extents[1]};
   }
-  if (res_height == 0) {
-    res_height = (int)round(
-        res_width * (double)image.extent(1) / (double)image.extent(0));
-  } else if (res_width == 0) {
-    res_width = (int)round(
-        res_height * (double)image.extent(0) / (double)image.extent(1));
-  }
-  auto result = array2d<vec4f>{res_width, res_height};
+
+  // resize
+  auto result = array2d<vec4f>(extents);
   stbir_resize_float_generic((float*)image.data(), (int)image.extent(0),
       (int)image.extent(1), (int)(sizeof(vec4f) * image.extent(0)),
       (float*)result.data(), (int)result.extent(0), (int)result.extent(1),

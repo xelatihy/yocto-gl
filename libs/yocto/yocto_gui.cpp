@@ -191,8 +191,7 @@ void update_image_params(const gui_input& input, const array2d<vec4f>& image,
   glparams.window                           = input.window;
   glparams.framebuffer                      = input.framebuffer;
   std::tie(glparams.center, glparams.scale) = camera_imview(glparams.center,
-      glparams.scale, {(int)image.extent(0), (int)image.extent(1)},
-      glparams.window, glparams.fit);
+      glparams.scale, (vec2i)image.extents(), glparams.window, glparams.fit);
 }
 
 bool uiupdate_image_params(const gui_input& input, glimage_params& glparams) {
@@ -250,16 +249,11 @@ bool draw_image_widgets(const gui_input& input, const image_data& image,
     draw_gui_slider("zoom", glparams.scale, 0.1f, 10);
     draw_gui_checkbox("fit", glparams.fit);
     draw_gui_coloredit("background", glparams.background);
-    auto [i, j] = image_coords(input.cursor, glparams.center, glparams.scale,
+    auto ij = image_coords(input.cursor, glparams.center, glparams.scale,
         vec2i{image.width, image.height});
-    auto ij     = vec2i{i, j};
     draw_gui_dragger("mouse", ij);
-    auto image_pixel   = vec4f{0, 0, 0, 0};
-    auto display_pixel = vec4f{0, 0, 0, 0};
-    if (i >= 0 && i < image.width && j >= 0 && j < image.height) {
-      image_pixel   = image.pixels[j * image.width + i];
-      display_pixel = image.pixels[j * image.width + i];
-    }
+    auto image_pixel   = image.pixels[ij.y * image.width + ij.x],
+         display_pixel = image.pixels[ij.y * image.width + ij.x];
     draw_gui_coloredit("image", image_pixel);
     draw_gui_coloredit("display", display_pixel);
     end_gui_header();
@@ -273,16 +267,10 @@ bool draw_image_widgets(const gui_input& input, const array2d<vec4f>& image,
     draw_gui_slider("zoom", glparams.scale, 0.1f, 10);
     draw_gui_checkbox("fit", glparams.fit);
     draw_gui_coloredit("background", glparams.background);
-    auto [i, j] = image_coords(input.cursor, glparams.center, glparams.scale,
-        vec2i{(int)image.extent(0), (int)image.extent(1)});
-    auto ij     = vec2i{i, j};
+    auto ij = image_coords(
+        input.cursor, glparams.center, glparams.scale, (vec2i)image.extents());
     draw_gui_dragger("mouse", ij);
-    auto image_pixel   = vec4f{0, 0, 0, 0};
-    auto display_pixel = vec4f{0, 0, 0, 0};
-    if (i >= 0 && i < image.extent(0) && j >= 0 && j < image.extent(1)) {
-      image_pixel   = image[{(size_t)i, (size_t)j}];
-      display_pixel = image[{(size_t)i, (size_t)j}];
-    }
+    auto image_pixel = image[ij], display_pixel = image[ij];
     draw_gui_coloredit("image", image_pixel);
     draw_gui_coloredit("display", display_pixel);
     end_gui_header();
@@ -296,17 +284,12 @@ bool draw_image_widgets(
     draw_gui_slider("zoom", glparams.scale, 0.1f, 10);
     draw_gui_checkbox("fit", glparams.fit);
     draw_gui_coloredit("background", glparams.background);
-    auto [i, j] = image_coords(input.cursor, glparams.center, glparams.scale,
+    auto ij = image_coords(input.cursor, glparams.center, glparams.scale,
         vec2i{image.width, image.height});
-    auto ij     = vec2i{i, j};
     draw_gui_dragger("mouse", ij);
-    auto image_pixel   = vec4f{0, 0, 0, 0};
-    auto display_pixel = vec4f{0, 0, 0, 0};
-    if (i >= 0 && i < image.width && j >= 0 && j < image.height) {
-      image_pixel   = image.pixels[j * image.width + i];
-      display_pixel = tonemap(
-          image_pixel, glparams.exposure, glparams.filmic, glparams.srgb);
-    }
+    auto image_pixel   = image.pixels[ij.y * image.width + ij.x];
+    auto display_pixel = tonemap(
+        image_pixel, glparams.exposure, glparams.filmic, glparams.srgb);
     draw_gui_coloredit("image", image_pixel);
     draw_gui_coloredit("display", display_pixel);
     end_gui_header();
@@ -320,17 +303,12 @@ bool draw_image_widgets(const gui_input& input, const array2d<vec4f>& image,
     draw_gui_slider("zoom", glparams.scale, 0.1f, 10);
     draw_gui_checkbox("fit", glparams.fit);
     draw_gui_coloredit("background", glparams.background);
-    auto [i, j] = image_coords(input.cursor, glparams.center, glparams.scale,
-        vec2i{(int)image.extent(0), (int)image.extent(1)});
-    auto ij     = vec2i{i, j};
+    auto ij = image_coords(
+        input.cursor, glparams.center, glparams.scale, (vec2i)image.extents());
     draw_gui_dragger("mouse", ij);
-    auto image_pixel   = vec4f{0, 0, 0, 0};
-    auto display_pixel = vec4f{0, 0, 0, 0};
-    if (i >= 0 && i < image.extent(0) && j >= 0 && j < image.extent(1)) {
-      image_pixel   = image[{(size_t)i, (size_t)j}];
-      display_pixel = tonemap(
-          image_pixel, glparams.exposure, glparams.filmic, glparams.srgb);
-    }
+    auto image_pixel   = image[ij];
+    auto display_pixel = tonemap(
+        image_pixel, glparams.exposure, glparams.filmic, glparams.srgb);
     draw_gui_coloredit("image", image_pixel);
     draw_gui_coloredit("display", display_pixel);
     end_gui_header();
@@ -691,12 +669,9 @@ void show_trace_gui(const string& title, const string& name, scene_data& scene,
     auto pstate     = make_trace_state(scene, pparams);
     trace_samples(pstate, scene, bvh, lights, pparams);
     auto preview = get_image(pstate);
-    for (auto j : range(state.image.extent(1))) {
-      for (auto i : range(state.image.extent(0))) {
-        auto pi       = clamp(i / params.pratio, 0, preview.extent(0) - 1),
-             pj       = clamp(j / params.pratio, 0, preview.extent(1) - 1);
-        image[{i, j}] = preview[{pi, pj}];
-      }
+    for (auto ij : range(state.image.extents())) {
+      auto pij  = min(ij / params.pratio, preview.extents() - 1);
+      image[ij] = preview[pij];
     }
     return true;
   };
@@ -879,12 +854,9 @@ void show_cutrace_gui(const string& title, const string& name,
     trace_start(context, pstate, cuscene, bvh, lights, scene, pparams);
     trace_samples(context, pstate, cuscene, bvh, lights, scene, pparams);
     auto preview = get_rendered_image(pstate);
-    for (auto j : range(image.extent(1))) {
-      for (auto i : range(image.extent(0))) {
-        auto pi       = clamp(i / params.pratio, 0, (int)preview.extent(0) - 1),
-             pj       = clamp(j / params.pratio, 0, (int)preview.extent(1) - 1);
-        image[{i, j}] = preview[{pi, pj}];
-      }
+    for (auto ij : range(image.extents())) {
+      auto pij  = min(ij / params.pratio, preview.extents() - 1);
+      image[ij] = preview[pij];
     }
     return true;
   };
