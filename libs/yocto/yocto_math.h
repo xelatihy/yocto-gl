@@ -184,6 +184,10 @@ template <typename T1, typename T2, typename T = common_t<T1, T2>>
 constexpr kernel T atan2(T1 a, T2 b) {
   return std::atan2((T)a, (T)b);
 }
+template <typename T>
+constexpr kernel T round(T a) {
+  return std::round(a);
+}
 template <typename T, typename T1>
 constexpr kernel T fmod(T a, T1 b) {
   return std::fmod(a, b);
@@ -872,6 +876,34 @@ constexpr kernel vec<T, N> clamp(const vec<T1, N>& x, T2 min, T3 max) {
         clamp(x.w, min, max)};
   }
 }
+template <typename T1, typename T2, typename T3, size_t N,
+    typename T = common_t<T1, T2, T3>>
+constexpr kernel vec<T, N> clamp(const vec<T1, N>& x, const vec<T2, N>& min, T3 max) {
+  if constexpr (N == 1) {
+    return {clamp(x.x, min.x, max)};
+  } else if constexpr (N == 2) {
+    return {clamp(x.x, min.x, max), clamp(x.y, min.y, max)};
+  } else if constexpr (N == 3) {
+    return {clamp(x.x, min.x, max), clamp(x.y, min.y, max), clamp(x.z, min, max.z)};
+  } else if constexpr (N == 4) {
+    return {clamp(x.x, min.x, max), clamp(x.y, min.y, max), clamp(x.z, min, max.z),
+        clamp(x.w, min, max.w)};
+  }
+}
+template <typename T1, typename T2, typename T3, size_t N,
+    typename T = common_t<T1, T2, T3>>
+constexpr kernel vec<T, N> clamp(const vec<T1, N>& x, T2 min, const vec<T3, N>& max) {
+  if constexpr (N == 1) {
+    return {clamp(x.x, min, max.x)};
+  } else if constexpr (N == 2) {
+    return {clamp(x.x, min, max.x), clamp(x.y, min, max.y)};
+  } else if constexpr (N == 3) {
+    return {clamp(x.x, min, max.x), clamp(x.y, min, max.y), clamp(x.z, min, max.z)};
+  } else if constexpr (N == 4) {
+    return {clamp(x.x, min, max.x), clamp(x.y, min, max.y), clamp(x.z, min, max.z),
+        clamp(x.w, min, max.w)};
+  }
+}
 template <typename T, typename T1 = T, typename T2 = T, size_t N,
     typename R = common_t<T, T1, T2>>
 constexpr kernel vec<R, N> clamp(
@@ -1079,6 +1111,18 @@ constexpr kernel vec<T, N> pow(const vec<T1, N>& a, const vec<T2, N>& b) {
     return {pow(a.x, b.x), pow(a.y, b.y), pow(a.z, b.z)};
   } else if constexpr (N == 4) {
     return {pow(a.x, b.x), pow(a.y, b.y), pow(a.z, b.z), pow(a.w, b.w)};
+  }
+}
+template <typename T, size_t N>
+constexpr kernel vec<T, N> round(const vec<T, N>& a) {
+  if constexpr (N == 1) {
+    return {round(a.x)};
+  } else if constexpr (N == 2) {
+    return {round(a.x), round(a.y)};
+  } else if constexpr (N == 3) {
+    return {round(a.x), round(a.y), round(a.z)};
+  } else if constexpr (N == 4) {
+    return {round(a.x), round(a.y), round(a.z), round(a.w)};
   }
 }
 template <typename T, typename T1, size_t N>
@@ -1981,10 +2025,10 @@ namespace yocto {
 // Returns negative coordinates if out of the image.
 template <typename T, typename I>
 constexpr kernel vec<I, 2> image_coords(const vec<T, 2>& mouse_pos,
-    const vec<T, 2>& center, T scale, const vec<I, 2>& txt_size) {
-  auto xyf = (mouse_pos - center) / scale;
-  return vec<I, 2>{(int)round(xyf.x + txt_size.x / (T)2),
-      (int)round(xyf.y + txt_size.y / (T)2)};
+    const vec<T, 2>& center, T scale, const vec<I, 2>& size, bool clamped = true) {
+  auto xy = (mouse_pos - center) / scale;
+  auto ij = (vec<I, 2>)round(xy + size / (T)2);
+  return clamped ? clamp(ij, {0, 0}, size) : ij;
 }
 
 // Center image and autofit. Returns center and scale.
