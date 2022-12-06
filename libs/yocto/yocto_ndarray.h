@@ -43,6 +43,7 @@
 #include <vector>
 
 #include "yocto_math.h"
+#include "yocto_views.h"
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
@@ -90,6 +91,10 @@ struct ndarray {
     std::swap(_data, other._data);
     return *this;
   }
+
+  // Spans
+  constexpr operator ndspan<T, N>() { return {_data.data(), _extents}; }
+  constexpr operator ndspan<const T, N>() const { return {_data.data(), _extents}; }
 
   // Size
   bool           empty() const { return size() == 0; }

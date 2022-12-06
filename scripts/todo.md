@@ -16,5 +16,5 @@
 
 ## Ndspan
 
-- provide ndspans for ndarrays after testing that it works better than 
+- provide ndspans for ndarrays after testing that it works better than
   span/vector in generic code
