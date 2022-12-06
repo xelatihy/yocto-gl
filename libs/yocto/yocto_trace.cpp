@@ -53,20 +53,20 @@ namespace yocto {
 // Simple parallel for used since our target platforms do not yet support
 // parallel algorithms. `Func` takes the two integer indices.
 template <typename T, typename Func>
-inline void parallel_for(T num1, T num2, Func&& func) {
+inline void parallel_for_batch(vec<T, 2> num, Func&& func) {
   auto              futures  = vector<std::future<void>>{};
   auto              nthreads = std::thread::hardware_concurrency();
   std::atomic<T>    next_idx(0);
   std::atomic<bool> has_error(false);
   for (auto thread_id = 0; thread_id < (int)nthreads; thread_id++) {
     futures.emplace_back(std::async(
-        std::launch::async, [&func, &next_idx, &has_error, num1, num2]() {
+        std::launch::async, [&func, &next_idx, &has_error, num]() {
           try {
             while (true) {
               auto j = next_idx.fetch_add(1);
-              if (j >= num2) break;
+              if (j >= num[1]) break;
               if (has_error) break;
-              for (auto i = (T)0; i < num1; i++) func(i, j);
+              for (auto i = (T)0; i < num[0]; i++) func(vec<T, 2>{i, j});
             }
           } catch (...) {
             has_error = true;
@@ -1593,21 +1593,17 @@ void trace_samples(trace_state& state, const scene_data& scene,
     const trace_params& params) {
   if (state.samples >= params.samples) return;
   if (params.noparallel) {
-    for (auto j : range((int)state.image.extent(1))) {
-      for (auto i : range((int)state.image.extent(0))) {
-        for (auto sample : range(state.samples, state.samples + params.batch)) {
-          trace_sample(state, scene, bvh, lights, {i, j}, sample, params);
-        }
+    for (auto ij : range(state.image.extents())) {
+      for (auto sample : range(state.samples, state.samples + params.batch)) {
+        trace_sample(state, scene, bvh, lights, ij, sample, params);
       }
     }
   } else {
-    parallel_for((int)state.image.extent(0), (int)state.image.extent(1),
-        [&](int i, int j) {
-          for (auto sample :
-              range(state.samples, state.samples + params.batch)) {
-            trace_sample(state, scene, bvh, lights, {i, j}, sample, params);
-          }
-        });
+    parallel_for_batch(state.image.extents(), [&](vec2s ij) {
+      for (auto sample : range(state.samples, state.samples + params.batch)) {
+        trace_sample(state, scene, bvh, lights, ij, sample, params);
+      }
+    });
   }
   state.samples += params.batch;
   if (params.denoise && !state.denoised.empty()) {
@@ -1629,12 +1625,12 @@ void trace_start(trace_context& context, trace_state& state,
   context.done   = false;
   context.worker = std::async(std::launch::async, [&]() {
     if (context.stop) return;
-    parallel_for((int)state.image.extent(0), (int)state.image.extent(1),
-        [&](int i, int j) {
+    parallel_for_batch(state.image.extents(),
+        [&](vec2s ij) {
           for (auto sample :
               range(state.samples, state.samples + params.batch)) {
             if (context.stop) return;
-            trace_sample(state, scene, bvh, lights, {i, j}, sample, params);
+            trace_sample(state, scene, bvh, lights, ij, sample, params);
           }
         });
     state.samples += params.batch;
@@ -1666,7 +1662,7 @@ void trace_preview(array2d<vec4f>& image, trace_context& context,
   trace_samples(pstate, scene, bvh, lights, pparams);
   auto preview = get_image(pstate);
   for (auto ij : range(state.image.extents())) {
-    auto pij  = clamp(ij / params.pratio, 0, (int)preview.extent(0) - 1);
+    auto pij  = min(ij / params.pratio, preview.extents() - 1);
     image[ij] = preview[pij];
   }
 };
@@ -1720,20 +1716,23 @@ void get_denoised_image(array2d<vec4f>& image, const trace_state& state) {
   // get image
   get_rendered_image(image, state);
 
+  // width and height
+  auto [width, height] = (vec2i)image.extents();
+
   // Create a denoising filter
   oidn::FilterRef filter = device.newFilter("RT");  // ray tracing filter
   filter.setImage("color", (void*)image.data(), oidn::Format::Float3,
-      (int)image.extent(0), (int)image.extent(1), 0, sizeof(vec4f),
-      sizeof(vec4f) * (int)image.extent(0));
+      width, height, 0, sizeof(vec4f),
+      sizeof(vec4f) * width);
   filter.setImage("albedo", (void*)state.albedo.data(), oidn::Format::Float3,
-      (int)image.extent(0), (int)image.extent(1), 0, sizeof(vec4f),
-      sizeof(vec4f) * (int)image.extent(0));
+      width, height, 0, sizeof(vec4f),
+      sizeof(vec4f) * width);
   filter.setImage("normal", (void*)state.normal.data(), oidn::Format::Float3,
-      (int)image.extent(0), (int)image.extent(1), 0, sizeof(vec4f),
-      sizeof(vec4f) * (int)image.extent(0));
+      width, height, 0, sizeof(vec4f),
+      sizeof(vec4f) * width);
   filter.setImage("output", image.data(), oidn::Format::Float3,
-      (int)image.extent(0), (int)image.extent(1), 0, sizeof(vec4f),
-      sizeof(vec4f) * (int)image.extent(0));
+      width, height, 0, sizeof(vec4f),
+      sizeof(vec4f) * width);
   filter.set("inputScale", 1.0f);  // set scale as fixed
   filter.set("hdr", true);         // image is HDR
   filter.commit();
@@ -1772,31 +1771,34 @@ array2d<vec4f> denoise_image(const array2d<vec4f>& render,
   denoise_image(denoised, render, albedo, normal);
   return denoised;
 }
-void denoise_image(array2d<vec4f>& denoised, const array2d<vec4f>& render,
+void denoise_image(array2d<vec4f>& denoised, const array2d<vec4f>& image,
     const array2d<vec3f>& albedo, const array2d<vec3f>& normal) {
-  check_image(denoised, render.extents());
-  check_image(albedo, render.extents());
-  check_image(normal, render.extents());
+  check_image(denoised, image.extents());
+  check_image(albedo, image.extents());
+  check_image(normal, image.extents());
 #if YOCTO_DENOISE
   // Create an Intel Open Image Denoise device
   oidn::DeviceRef device = oidn::newDevice();
   device.commit();
 
   // set image
-  denoised = render;
+  denoised = image;
+
+  // width, height
+  auto [width, height] = (vec2i)image.extents();
 
   // Create a denoising filter
   oidn::FilterRef filter = device.newFilter("RT");  // ray tracing filter
-  filter.setImage("color", (void*)render.data(), oidn::Format::Float3,
-      render.extent(0), render.extent(1), 0, sizeof(vec4f),
-      sizeof(vec4f) * render.extent(0));
-  filter.setImage("albedo", (void*)albedo.data(), oidn::Format::Float3,
-      render.extent(0), render.extent(1));
-  filter.setImage("normal", (void*)normal.data(), oidn::Format::Float3,
-      render.extent(0), render.extent(1));
+  filter.setImage("color", (void*)image.data(), oidn::Format::Float3,
+      width, height, 0, sizeof(vec4f),
+      sizeof(vec4f) * width);
+  filter.setImage("albedo", (void*)image.data(), oidn::Format::Float3,
+      width, height);
+  filter.setImage("normal", (void*)image.data(), oidn::Format::Float3,
+      width, height);
   filter.setImage("output", denoised.data(), oidn::Format::Float3,
-      render.extent(0), render.extent(1), 0, sizeof(vec4f),
-      sizeof(vec4f) * render.extent(0));
+      width, height, 0, sizeof(vec4f),
+      sizeof(vec4f) * width);
   filter.set("inputScale", 1.0f);  // set scale as fixed
   filter.set("hdr", true);         // image is HDR
   filter.commit();
