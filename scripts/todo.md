@@ -6,8 +6,8 @@
 
 ## Ndarrays
 
+- decide on extents comparing to other languages
 - range with sentinel
-- range in 2d
 - image generation as ndarrays
 - textures as ndarrays
 - consider vecs for ndarrays
