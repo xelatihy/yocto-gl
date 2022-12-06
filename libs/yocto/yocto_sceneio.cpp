@@ -523,13 +523,13 @@ namespace yocto {
 // Check if an image is HDR based on filename.
 bool is_hdr_filename(const string& filename) {
   auto ext = path_extension(filename);
-  if(ext == ".ypreset" || ext == ".YPRESET") return is_hdr_preset(filename);
+  if (ext == ".ypreset" || ext == ".YPRESET") return is_hdr_preset(filename);
   return ext == ".hdr" || ext == ".exr" || ext == ".pfm";
 }
 
 bool is_ldr_filename(const string& filename) {
   auto ext = path_extension(filename);
-  if(ext == ".ypreset" || ext == ".YPRESET") return is_ldr_preset(filename);
+  if (ext == ".ypreset" || ext == ".YPRESET") return is_ldr_preset(filename);
   return ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".bmp" ||
          ext == ".tga";
 }
@@ -720,7 +720,7 @@ void load_image(const string& filename, array2d<T>& image) {
       image = make_image_preset(filename);
     } else {
       auto preset = make_image_preset(filename);
-      image = from_float(preset.data(), preset.extents());
+      image       = from_float(preset.data(), preset.extents());
     }
   } else {
     throw io_error{"unsupported format " + filename};
@@ -830,15 +830,15 @@ template void load_image(const string&, array2d<vec4f>&);
 template void save_image(const string&, const array2d<vec4f>&);
 
 bool is_hdr_preset(const string& type_) {
-  auto type  = path_basename(type_);
+  auto type = path_basename(type_);
   return type.find("sky") != type.npos;
 }
 bool is_ldr_preset(const string& type_) {
-  auto type  = path_basename(type_);
+  auto type = path_basename(type_);
   return type.find("sky") == type.npos;
 }
 array2d<vec4f> make_image_preset(const string& type_) {
-  auto type  = path_basename(type_);
+  auto type    = path_basename(type_);
   auto extents = vec2s{1024, 1024};
   if (type.find("sky") != type.npos) extents = {2048, 1024};
   if (type.find("images2") != type.npos) extents = {2048, 1024};
@@ -857,11 +857,11 @@ array2d<vec4f> make_image_preset(const string& type_) {
   } else if (type == "colormapramp") {
     return make_colormapramp(extents);
   } else if (type == "sky") {
-    return make_sunsky(extents, pif / 4, 3.0f, false, 1.0f, 1.0f,
-        vec3f{0.7f, 0.7f, 0.7f});
+    return make_sunsky(
+        extents, pif / 4, 3.0f, false, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f});
   } else if (type == "sunsky") {
-    return make_sunsky(extents, pif / 4, 3.0f, true, 1.0f, 1.0f,
-        vec3f{0.7f, 0.7f, 0.7f});
+    return make_sunsky(
+        extents, pif / 4, 3.0f, true, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f});
   } else if (type == "noise") {
     return make_noisemap(extents, 1.0f);
   } else if (type == "fbm") {
@@ -883,11 +883,11 @@ array2d<vec4f> make_image_preset(const string& type_) {
     auto montage_size = vec2s{0, 0};
     for (auto& sub_image : sub_images) {
       auto [mwidth, mheight] = montage_size;
-      auto [width, height] = sub_image.extents();
-      montage_size = {mwidth + width, max(mheight, height)};
+      auto [width, height]   = sub_image.extents();
+      montage_size           = {mwidth + width, max(mheight, height)};
     }
     auto image = array2d<vec4f>(montage_size);
-    auto pos = (size_t)0;
+    auto pos   = (size_t)0;
     for (auto& sub_image : sub_images) {
       auto [width, _] = sub_image.extents();
       set_region(image, sub_image, {pos, 0});
@@ -902,11 +902,11 @@ array2d<vec4f> make_image_preset(const string& type_) {
     auto montage_size = vec2s{0, 0};
     for (auto& sub_image : sub_images) {
       auto [mwidth, mheight] = montage_size;
-      auto [width, height] = sub_image.extents();
-      montage_size = {mwidth + width, max(mheight, height)};
+      auto [width, height]   = sub_image.extents();
+      montage_size           = {mwidth + width, max(mheight, height)};
     }
     auto image = array2d<vec4f>(montage_size);
-    auto pos = (size_t)0;
+    auto pos   = (size_t)0;
     for (auto& sub_image : sub_images) {
       auto [width, _] = sub_image.extents();
       set_region(image, sub_image, {pos, 0});
@@ -932,11 +932,11 @@ array2d<vec4f> make_image_preset(const string& type_) {
   } else if (type == "test-uvgrid") {
     return make_uvgrid(extents);
   } else if (type == "test-sky") {
-    return make_sunsky(extents, pif / 4, 3.0f, false, 1.0f, 1.0f,
-        vec3f{0.7f, 0.7f, 0.7f});
+    return make_sunsky(
+        extents, pif / 4, 3.0f, false, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f});
   } else if (type == "test-sunsky") {
-    return make_sunsky(extents, pif / 4, 3.0f, true, 1.0f, 1.0f,
-        vec3f{0.7f, 0.7f, 0.7f});
+    return make_sunsky(
+        extents, pif / 4, 3.0f, true, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f});
   } else if (type == "test-noise") {
     return make_noisemap(extents);
   } else if (type == "test-fbm") {

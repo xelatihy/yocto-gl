@@ -179,7 +179,8 @@ vec4f eval_texture(const scene_data& scene, int texture, const vec2f& uv,
 
 // conversion from image
 texture_data image_to_texture(const array2d<vec4f>& image, bool linear) {
-  auto texture = texture_data{(int)image.extent(0), (int)image.extent(1), linear, {}, {}};
+  auto texture = texture_data{
+      (int)image.extent(0), (int)image.extent(1), linear, {}, {}};
   if (linear) {
     texture.pixelsf = image.data_vector();
   } else {
