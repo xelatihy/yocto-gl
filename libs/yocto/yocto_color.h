@@ -83,39 +83,18 @@ constexpr kernel T byte_to_float(byte a) {
 }
 template <size_t N, typename T>
 constexpr kernel vec<byte, N> float_to_byte(const vec<T, N>& a) {
-  if constexpr (N == 1) {
-    return {(byte)clamp(int(a.x * 256), 0, 255)};
-  } else if constexpr (N == 2) {
-    return {(byte)clamp(int(a.x * 256), 0, 255),
-        (byte)clamp(int(a.y * 256), 0, 255)};
-  } else if constexpr (N == 3) {
-    return {(byte)clamp(int(a.x * 256), 0, 255),
-        (byte)clamp(int(a.y * 256), 0, 255),
-        (byte)clamp(int(a.z * 256), 0, 255)};
-  } else if constexpr (N == 4) {
-    return {(byte)clamp(int(a.x * 256), 0, 255),
-        (byte)clamp(int(a.y * 256), 0, 255),
-        (byte)clamp(int(a.z * 256), 0, 255),
-        (byte)clamp(int(a.w * 256), 0, 255)};
-  }
+  return (vec<byte, N>)clamp(vec<int, N>(a * 256), 0, 255);
 }
 template <size_t N, typename T = float>
 constexpr kernel vec<T, N> byte_to_float(const vec<byte, N>& a) {
-  if constexpr (N == 1) {
-    return {a.x / (T)255};
-  } else if constexpr (N == 2) {
-    return {a.x / (T)255, a.y / (T)255};
-  } else if constexpr (N == 3) {
-    return {a.x / (T)255.0f, a.y / (T)255, a.z / (T)255};
-  } else if constexpr (N == 4) {
-    return {a.x / (T)255, a.y / (T)255, a.z / (T)255, a.w / (T)255};
-  }
+  return a / (T)255;
 }
 
 // Luminance
 template <typename T>
 constexpr kernel T luminance(const vec<T, 3>& a) {
-  return ((T)0.2126 * a.x + (T)0.7152 * a.y + (T)0.0722 * a.z);
+  auto [r, g, b] = a;
+  return (T)0.2126 * r + (T)0.7152 * g + (T)0.0722 * b;
 }
 
 // sRGB non-linear curve
