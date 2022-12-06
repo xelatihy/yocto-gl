@@ -391,6 +391,10 @@ struct vec<T, 4> {
   constexpr kernel const T& operator[](size_t i) const { return d[i]; }
 };
 
+// Deduction guides
+template <typename... Args>
+vec(Args...) -> vec<common_t<Args...>, sizeof...(Args)>;
+
 // Vector aliases
 using vec1f = vec<float, 1>;
 using vec2f = vec<float, 2>;

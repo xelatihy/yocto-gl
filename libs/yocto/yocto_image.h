@@ -66,6 +66,10 @@ using std::vector;
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// Aspect ratio
+template<typename T = float>
+constexpr T image_aspect(const vec2s& extents) { return (T)extents[0] / (T)extents[1]; }
+
 // Conversion from/to floats.
 template <size_t N, typename T = float>
 constexpr array2d<vec<T, N>> byte_to_float(const array2d<vec<byte, N>>& bt) {
@@ -183,25 +187,25 @@ constexpr vec<T, N> eval_image(const array2d<vec<T1, N>>& image,
 }
 
 // Apply tone mapping returning a float or byte image.
-template <typename T, size_t N>
+template <typename T, size_t N, typename T1>
 constexpr array2d<vec<T, N>> tonemap_image(const array2d<vec<T, N>>& image,
-    T exposure, bool filmic = false, bool srgb = true) {
+    T1 exposure, bool filmic = false, bool srgb = true) {
   auto result = array2d<vec<T, N>>(image.extents());
   for (auto idx : range(image.size())) {
-    result[idx] = tonemap(image[idx], exposure, filmic, srgb);
+    result[idx] = tonemap(image[idx], (T)exposure, filmic, srgb);
   }
   return result;
 }
 
 // Apply tone mapping. If the input image is an ldr, does nothing.
-template <typename T, size_t N>
+template <typename T, size_t N, typename T1>
 constexpr void tonemap_image(array2d<vec<T, N>>& result,
-    const array2d<vec<T, N>>& image, float exposure, bool filmic = false,
+    const array2d<vec<T, N>>& image, T1 exposure, bool filmic = false,
     bool srgb = true) {
   if (image.extents() != result.extents())
     throw std::invalid_argument{"image should be the same size"};
   for (auto idx : range(image.size())) {
-    result[idx] = tonemap(image[idx], exposure, filmic, srgb);
+    result[idx] = tonemap(image[idx], (T)exposure, filmic, srgb);
   }
 }
 
