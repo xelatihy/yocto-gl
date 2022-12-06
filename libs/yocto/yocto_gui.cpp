@@ -1166,8 +1166,11 @@ inline void set_uniform(int loc, vec2i v) { glUniform2iv(loc, 1, &v[0]); }
 inline void set_uniform(int loc, vec3i v) { glUniform3iv(loc, 1, &v[0]); }
 inline void set_uniform(int loc, vec4i v) { glUniform4iv(loc, 1, &v[0]); }
 inline void set_uniform(int loc, bool v) { glUniform1i(loc, v ? 1 : 0); }
+inline void set_uniform(int loc, const mat4f& v) {
+  glUniformMatrix4fv(loc, 1, false, &v[0][0]);
+}
 template <typename T>
-inline void set_uniform(uint program, const char* name, T v) {
+inline void set_uniform(uint program, const char* name, const T& v) {
   return set_uniform(glGetUniformLocation(program, name), v);
 }
 
@@ -1880,10 +1883,8 @@ static void draw_scene(glscene_state& glscene, const scene_data& scene,
   auto projection_matrix = perspective_mat(
       camera_yfov, camera_aspect, params.near, params.far);
   set_uniform(program, "eye", camera.frame.o);
-  glUniformMatrix4fv(
-      glGetUniformLocation(program, "view"), 1, false, &view_matrix.x.x);
-  glUniformMatrix4fv(glGetUniformLocation(program, "projection"), 1, false,
-      &projection_matrix.x.x);
+  set_uniform(program, "view", view_matrix);
+  set_uniform(program, "projection", projection_matrix);
 
   // params
   set_uniform(program, "exposure", params.exposure);
@@ -1940,10 +1941,8 @@ static void draw_scene(glscene_state& glscene, const scene_data& scene,
     auto shape_xform     = frame_to_mat(instance.frame);
     auto shape_inv_xform = transpose(
         frame_to_mat(inverse(instance.frame, params.non_rigid_frames)));
-    glUniformMatrix4fv(
-        glGetUniformLocation(program, "frame"), 1, false, &shape_xform.x.x);
-    glUniformMatrix4fv(glGetUniformLocation(program, "frameit"), 1, false,
-        &shape_inv_xform.x.x);
+    set_uniform(program, "frame", shape_xform);
+    set_uniform(program, "frameit", shape_inv_xform);
     set_uniform(program, "faceted", params.faceted || glshape.normals == 0);
 
     set_uniform(program, "unlit", 0);
