@@ -962,152 +962,29 @@ array2d<vec4f> make_image_preset(const string& type_) {
 
 // Loads/saves an image. Chooses hdr or ldr based on file name.
 void load_image(const string& filename, image_data& image) {
-  // conversion helpers
-  auto from_linear = [](const float* pixels, int width, int height) {
-    if (pixels == nullptr) return vector<vec4f>{};
-    return vector<vec4f>{
-        (vec4f*)pixels, (vec4f*)pixels + (size_t)width * (size_t)height};
-  };
-  auto from_srgb = [](const byte* pixels, int width, int height) {
-    if (pixels == nullptr) return vector<vec4f>{};
-    auto pixelsf = vector<vec4f>((size_t)width * (size_t)height);
-    for (auto idx : range(pixelsf.size())) {
-      pixelsf[idx] = byte_to_float(((vec4b*)pixels)[idx]);
-    }
-    return pixelsf;
-  };
+  // load image
+  auto img = load_image<vec4f>(filename);
 
-  auto ext = path_extension(filename);
-  if (ext == ".exr" || ext == ".EXR") {
-    auto buffer = load_binary(filename);
-    auto pixels = (float*)nullptr;
-    if (LoadEXRFromMemory(&pixels, &image.width, &image.height, buffer.data(),
-            buffer.size(), nullptr) != 0)
-      throw io_error{"cannot read " + filename};
-    image.linear = true;
-    image.pixels = from_linear(pixels, image.width, image.height);
-    free(pixels);
-  } else if (ext == ".hdr" || ext == ".HDR") {
-    auto buffer = load_binary(filename);
-    auto ncomp  = 0;
-    auto pixels = stbi_loadf_from_memory(buffer.data(), (int)buffer.size(),
-        &image.width, &image.height, &ncomp, 4);
-    if (!pixels) throw io_error{"cannot read " + filename};
-    image.linear = true;
-    image.pixels = from_linear(pixels, image.width, image.height);
-    free(pixels);
-  } else if (ext == ".png" || ext == ".PNG") {
-    auto buffer = load_binary(filename);
-    auto ncomp  = 0;
-    auto pixels = stbi_load_from_memory(buffer.data(), (int)buffer.size(),
-        &image.width, &image.height, &ncomp, 4);
-    if (!pixels) throw io_error{"cannot read " + filename};
-    image.linear = false;
-    image.pixels = from_srgb(pixels, image.width, image.height);
-    free(pixels);
-  } else if (ext == ".jpg" || ext == ".JPG" || ext == ".jpeg" ||
-             ext == ".JPEG") {
-    auto buffer = load_binary(filename);
-    auto ncomp  = 0;
-    auto pixels = stbi_load_from_memory(buffer.data(), (int)buffer.size(),
-        &image.width, &image.height, &ncomp, 4);
-    if (!pixels) throw io_error{"cannot read " + filename};
-    image.linear = false;
-    image.pixels = from_srgb(pixels, image.width, image.height);
-    free(pixels);
-  } else if (ext == ".tga" || ext == ".TGA") {
-    auto buffer = load_binary(filename);
-    auto ncomp  = 0;
-    auto pixels = stbi_load_from_memory(buffer.data(), (int)buffer.size(),
-        &image.width, &image.height, &ncomp, 4);
-    if (!pixels) throw io_error{"cannot read " + filename};
-    image.linear = false;
-    image.pixels = from_srgb(pixels, image.width, image.height);
-    free(pixels);
-  } else if (ext == ".bmp" || ext == ".BMP") {
-    auto buffer = load_binary(filename);
-    auto ncomp  = 0;
-    auto pixels = stbi_load_from_memory(buffer.data(), (int)buffer.size(),
-        &image.width, &image.height, &ncomp, 4);
-    if (!pixels) throw io_error{"cannot read " + filename};
-    image.linear = false;
-    image.pixels = from_srgb(pixels, image.width, image.height);
-    free(pixels);
-  } else {
-    throw io_error{"unsupported format " + filename};
-  }
+  // set image
+  auto [width, height] = (vec2i)img.extents();
+  image.width          = width;
+  image.height         = height;
+  image.linear         = is_hdr_filename(filename);
+  image.pixels         = {img.data(), img.data() + img.size()};
 }
 
 // Saves an hdr image.
 void save_image(const string& filename, const image_data& image) {
-  // conversion helpers
-  auto to_linear = [](const image_data& image) {
-    if (image.linear) return image.pixels;
-    auto pixelsf = vector<vec4f>(image.pixels.size());
-    srgb_to_rgb(pixelsf, image.pixels);
-    return pixelsf;
-  };
-  auto to_srgb = [](const image_data& image) {
-    auto pixelsb = vector<vec4b>(image.pixels.size());
-    if (image.linear) {
-      rgb_to_srgb(pixelsb, image.pixels);
-    } else {
-      float_to_byte(pixelsb, image.pixels);
-    }
-    return pixelsb;
-  };
+  // convert image
+  auto img = array2d<vec4f>(
+      image.pixels.data(), {(size_t)image.width, (size_t)image.height});
 
-  // write data
-  auto stbi_write_data = [](void* context, void* data, int size) {
-    auto& buffer = *(vector<byte>*)context;
-    buffer.insert(buffer.end(), (byte*)data, (byte*)data + size);
-  };
+  // apply color correction
+  if (image.linear && is_ldr_filename(filename)) img = rgb_to_srgb(img);
+  if (!image.linear && is_hdr_filename(filename)) img = srgb_to_rgb(img);
 
-  auto ext = path_extension(filename);
-  if (ext == ".hdr" || ext == ".HDR") {
-    auto buffer = vector<byte>{};
-    if (!stbi_write_hdr_to_func(stbi_write_data, &buffer, (int)image.width,
-            (int)image.height, 4, (const float*)to_linear(image).data()))
-      throw io_error{"cannot write " + filename};
-    return save_binary(filename, buffer);
-  } else if (ext == ".exr" || ext == ".EXR") {
-    auto data = (byte*)nullptr;
-    auto size = (size_t)0;
-    if (SaveEXRToMemory((const float*)to_linear(image).data(), (int)image.width,
-            (int)image.height, 4, 1, &data, &size, nullptr) < 0)
-      throw io_error{"cannot write " + filename};
-    auto buffer = vector<byte>{data, data + size};
-    free(data);
-    return save_binary(filename, buffer);
-  } else if (ext == ".png" || ext == ".PNG") {
-    auto buffer = vector<byte>{};
-    if (!stbi_write_png_to_func(stbi_write_data, &buffer, (int)image.width,
-            (int)image.height, 4, (const byte*)to_srgb(image).data(),
-            (int)image.width * 4))
-      throw io_error{"cannot write " + filename};
-    return save_binary(filename, buffer);
-  } else if (ext == ".jpg" || ext == ".JPG" || ext == ".jpeg" ||
-             ext == ".JPEG") {
-    auto buffer = vector<byte>{};
-    if (!stbi_write_jpg_to_func(stbi_write_data, &buffer, (int)image.width,
-            (int)image.height, 4, (const byte*)to_srgb(image).data(), 75))
-      throw io_error{"cannot write " + filename};
-    return save_binary(filename, buffer);
-  } else if (ext == ".tga" || ext == ".TGA") {
-    auto buffer = vector<byte>{};
-    if (!stbi_write_tga_to_func(stbi_write_data, &buffer, (int)image.width,
-            (int)image.height, 4, (const byte*)to_srgb(image).data()))
-      throw io_error{"cannot write " + filename};
-    return save_binary(filename, buffer);
-  } else if (ext == ".bmp" || ext == ".BMP") {
-    auto buffer = vector<byte>{};
-    if (!stbi_write_bmp_to_func(stbi_write_data, &buffer, (int)image.width,
-            (int)image.height, 4, (const byte*)to_srgb(image).data()))
-      throw io_error{"cannot write " + filename};
-    return save_binary(filename, buffer);
-  } else {
-    throw io_error{"unsupported format " + filename};
-  }
+  // save image
+  save_image(filename, img);
 }
 
 }  // namespace yocto

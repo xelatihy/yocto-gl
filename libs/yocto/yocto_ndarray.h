@@ -69,7 +69,7 @@ struct ndarray {
   ndarray() : _extents{0}, _data{} {}
   explicit ndarray(const vec<size_t, N>& extents)
       : _extents{extents}, _data(_size(extents), T{}) {}
-  ndarray(T* data, const vec<size_t, N>& extents)
+  ndarray(const T* data, const vec<size_t, N>& extents)
       : _extents{extents}, _data(data, data + _size(extents)) {}
   ndarray(const ndarray& other)
       : _extents{other._extents}, _data{other._data} {}
