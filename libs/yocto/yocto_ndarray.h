@@ -72,7 +72,7 @@ struct ndarray {
   ndarray(T* data, const vec<size_t, N>& extents)
       : _extents{extents}, _data(data, data + _size(extents)) {}
   ndarray(const ndarray& other)
-      : _extents{other._extents}, _data{other._data()} {}
+      : _extents{other._extents}, _data{other._data} {}
   ndarray(ndarray&& other) : _extents{0}, _data{} {
     std::swap(_extents, other._extents);
     std::swap(_data, other._data);
