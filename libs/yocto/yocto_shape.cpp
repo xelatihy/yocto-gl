@@ -1479,13 +1479,10 @@ vector<vec3f> triangles_normals(
     const vector<vec3i>& triangles, const vector<vec3f>& positions) {
   auto normals = vector<vec3f>{positions.size()};
   for (auto& normal : normals) normal = {0, 0, 0};
-  for (auto& t : triangles) {
-    auto normal = triangle_normal(
-        positions[t.x], positions[t.y], positions[t.z]);
-    auto area = triangle_area(positions[t.x], positions[t.y], positions[t.z]);
-    normals[t.x] += normal * area;
-    normals[t.y] += normal * area;
-    normals[t.z] += normal * area;
+  for (auto& triangle : triangles) {
+    auto normal = triangle_normal(positions, triangle);
+    auto area   = triangle_area(positions, triangle);
+    for (auto vid : triangle) normals[vid] += normal * area;
   }
   for (auto& normal : normals) normal = normalize(normal);
   return normals;
@@ -1496,15 +1493,14 @@ vector<vec3f> quads_normals(
     const vector<vec4i>& quads, const vector<vec3f>& positions) {
   auto normals = vector<vec3f>{positions.size()};
   for (auto& normal : normals) normal = {0, 0, 0};
-  for (auto& q : quads) {
-    auto normal = quad_normal(
-        positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
-    auto area = quad_area(
-        positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
-    normals[q.x] += normal * area;
-    normals[q.y] += normal * area;
-    normals[q.z] += normal * area;
-    if (q.z != q.w) normals[q.w] += normal * area;
+  for (auto& quad : quads) {
+    auto normal = quad_normal(positions, quad);
+    auto area   = quad_area(positions, quad);
+    if (!is_triangle(quad)) {
+      for (auto vid : quad) normals[vid] += normal * area;
+    } else {
+      for (auto vid : as_triangle(quad)) normals[vid] += normal * area;
+    }
   }
   for (auto& normal : normals) normal = normalize(normal);
   return normals;
@@ -1517,11 +1513,10 @@ void lines_tangents(vector<vec3f>& tangents, const vector<vec2i>& lines,
     throw std::out_of_range("array should be the same length");
   }
   for (auto& tangent : tangents) tangent = {0, 0, 0};
-  for (auto& l : lines) {
-    auto tangent = line_tangent(positions[l.x], positions[l.y]);
-    auto length  = line_length(positions[l.x], positions[l.y]);
-    tangents[l.x] += tangent * length;
-    tangents[l.y] += tangent * length;
+  for (auto& line : lines) {
+    auto tangent = line_tangent(positions, line);
+    auto length  = line_length(positions, line);
+    for (auto vid : line) tangents[vid] += tangent * length;
   }
   for (auto& tangent : tangents) tangent = normalize(tangent);
 }
@@ -1533,13 +1528,10 @@ void triangles_normals(vector<vec3f>& normals, const vector<vec3i>& triangles,
     throw std::out_of_range("array should be the same length");
   }
   for (auto& normal : normals) normal = {0, 0, 0};
-  for (auto& t : triangles) {
-    auto normal = triangle_normal(
-        positions[t.x], positions[t.y], positions[t.z]);
-    auto area = triangle_area(positions[t.x], positions[t.y], positions[t.z]);
-    normals[t.x] += normal * area;
-    normals[t.y] += normal * area;
-    normals[t.z] += normal * area;
+  for (auto& triangle : triangles) {
+    auto normal = triangle_normal(positions, triangle);
+    auto area   = triangle_area(positions, triangle);
+    for (auto vid : triangle) normals[vid] += normal * area;
   }
   for (auto& normal : normals) normal = normalize(normal);
 }
@@ -1551,15 +1543,14 @@ void quads_normals(vector<vec3f>& normals, const vector<vec4i>& quads,
     throw std::out_of_range("array should be the same length");
   }
   for (auto& normal : normals) normal = {0, 0, 0};
-  for (auto& q : quads) {
-    auto normal = quad_normal(
-        positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
-    auto area = quad_area(
-        positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
-    normals[q.x] += normal * area;
-    normals[q.y] += normal * area;
-    normals[q.z] += normal * area;
-    if (q.z != q.w) normals[q.w] += normal * area;
+  for (auto& quad : quads) {
+    auto normal = quad_normal(positions, quad);
+    auto area   = quad_area(positions, quad);
+    if (!is_triangle(quad)) {
+      for (auto vid : quad) normals[vid] += normal * area;
+    } else {
+      for (auto vid : as_triangle(quad)) normals[vid] += normal * area;
+    }
   }
   for (auto& normal : normals) normal = normalize(normal);
 }
@@ -2484,11 +2475,11 @@ hash_grid make_hash_grid(const vector<vec3f>& positions, float cell_size) {
 }
 // Inserts a point into the grid
 int insert_vertex(hash_grid& grid, const vec3f& position) {
-  auto vertex_id = (int)grid.positions.size();
-  auto cell      = get_cell_index(grid, position);
-  grid.cells[cell].push_back(vertex_id);
+  auto vid  = (int)grid.positions.size();
+  auto cell = get_cell_index(grid, position);
+  grid.cells[cell].push_back(vid);
   grid.positions.push_back(position);
-  return vertex_id;
+  return vid;
 }
 // Finds the nearest neighbors within a given radius
 void find_neighbors(const hash_grid& grid, vector<int>& neighbors,
@@ -2504,12 +2495,11 @@ void find_neighbors(const hash_grid& grid, vector<int>& neighbors,
         auto cell_iterator = grid.cells.find(ncell);
         if (cell_iterator == grid.cells.end()) continue;
         auto& ncell_vertices = cell_iterator->second;
-        for (auto vertex_id : ncell_vertices) {
-          if (distance2(grid.positions[vertex_id], position) >
-              max_radius_squared)
+        for (auto vid : ncell_vertices) {
+          if (distance2(grid.positions[vid], position) > max_radius_squared)
             continue;
-          if (vertex_id == skip_id) continue;
-          neighbors.push_back(vertex_id);
+          if (vid == skip_id) continue;
+          neighbors.push_back(vid);
         }
       }
     }

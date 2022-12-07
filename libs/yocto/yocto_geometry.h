@@ -253,6 +253,26 @@ constexpr kernel bbox<T, N> transform_bbox(
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// QUAD CONVENTIONS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Check if a quad is a triangle
+template <typename I>
+constexpr kernel bool is_triangle(const vec<I, 4>& quad) {
+  auto [v1, v2, v3, v4] = quad;
+  return v3             = v4;
+}
+
+// Get the triangle from the quad
+template <typename I>
+constexpr kernel vec<I, 3> as_triangle(const vec<I, 4>& quad) {
+  return xyz(quad);
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // PRIMITIVE BOUNDS
 // -----------------------------------------------------------------------------
 namespace yocto {
