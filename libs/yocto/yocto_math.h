@@ -1063,6 +1063,7 @@ constexpr kernel size_t argmin(const vec<T, N>& a) {
       return argmin(xyz(a));
   }
 }
+
 template <typename T, size_t N>
 constexpr kernel T sum(const vec<T, N>& a) {
   if constexpr (N == 1) {
@@ -1076,8 +1077,44 @@ constexpr kernel T sum(const vec<T, N>& a) {
   }
 }
 template <typename T, size_t N>
+constexpr kernel T prod(const vec<T, N>& a) {
+  if constexpr (N == 1) {
+    return a.x;
+  } else if constexpr (N == 2) {
+    return a.x * a.y;
+  } else if constexpr (N == 3) {
+    return a.x * a.y * a.z;
+  } else if constexpr (N == 4) {
+    return a.x * a.y * a.z * a.w;
+  }
+}
+template <typename T, size_t N>
 constexpr kernel T mean(const vec<T, N>& a) {
   return sum(a) / N;
+}
+template <typename T, size_t N>
+constexpr kernel T all(const vec<bool, N>& a) {
+  if constexpr (N == 1) {
+    return a.x;
+  } else if constexpr (N == 2) {
+    return a.x && a.y;
+  } else if constexpr (N == 3) {
+    return a.x && a.y && a.z;
+  } else if constexpr (N == 4) {
+    return a.x && a.y && a.z && a.w;
+  }
+}
+template <typename T, size_t N>
+constexpr kernel T any(const vec<bool, N>& a) {
+  if constexpr (N == 1) {
+    return a.x;
+  } else if constexpr (N == 2) {
+    return a.x || a.y;
+  } else if constexpr (N == 3) {
+    return a.x || a.y || a.z;
+  } else if constexpr (N == 4) {
+    return a.x || a.y || a.z || a.w;
+  }
 }
 
 // Functions applied to vector elements
@@ -1278,7 +1315,8 @@ constexpr kernel vec<T, 4> quat_inverse(const vec<T, 4>& a) {
 
 // Component-wise comparison operations.
 template <typename T1, typename T2, size_t N>
-constexpr kernel vec<bool, N> component_equal(const vec<T1, N>& a, const vec<T2, N>& b) {
+constexpr kernel vec<bool, N> component_equal(
+    const vec<T1, N>& a, const vec<T2, N>& b) {
   if constexpr (N == 1) {
     return {a.x == b.x};
   } else if constexpr (N == 2) {
@@ -1294,7 +1332,8 @@ constexpr kernel vec<bool, N> component_equal(const vec<T1, N>& a, T2 b) {
   return component_equal(a, vec<T2, N>(b));
 }
 template <typename T1, typename T2, size_t N>
-constexpr kernel bool component_not_equal(const vec<T1, N>& a, const vec<T2, N>& b) {
+constexpr kernel bool component_not_equal(
+    const vec<T1, N>& a, const vec<T2, N>& b) {
   if constexpr (N == 1) {
     return {a.x != b.x};
   } else if constexpr (N == 2) {
@@ -1326,7 +1365,8 @@ constexpr kernel bool component_less(const vec<T1, N>& a, const T2 b) {
   return component_less(a, vec<T2, N>(b));
 }
 template <typename T1, typename T2, size_t N>
-constexpr kernel bool component_greater(const vec<T1, N>& a, const vec<T2, N>& b) {
+constexpr kernel bool component_greater(
+    const vec<T1, N>& a, const vec<T2, N>& b) {
   if constexpr (N == 1) {
     return {a.x > b.x};
   } else if constexpr (N == 2) {
@@ -1342,7 +1382,8 @@ constexpr kernel bool component_greater(const vec<T1, N>& a, const T2 b) {
   return component_greater(a, vec<T2, N>(b));
 }
 template <typename T1, typename T2, size_t N>
-constexpr kernel bool component_less_equal(const vec<T1, N>& a, const vec<T2, N>& b) {
+constexpr kernel bool component_less_equal(
+    const vec<T1, N>& a, const vec<T2, N>& b) {
   if constexpr (N == 1) {
     return {a.x <= b.x};
   } else if constexpr (N == 2) {
@@ -1358,7 +1399,8 @@ constexpr kernel bool component_less_equal(const vec<T1, N>& a, const T2 b) {
   return component_less_equal(a, vec<T2, N>(b));
 }
 template <typename T1, typename T2, size_t N>
-constexpr kernel bool component_greater_equal(const vec<T1, N>& a, const vec<T2, N>& b) {
+constexpr kernel bool component_greater_equal(
+    const vec<T1, N>& a, const vec<T2, N>& b) {
   if constexpr (N == 1) {
     return {a.x >= b.x};
   } else if constexpr (N == 2) {
