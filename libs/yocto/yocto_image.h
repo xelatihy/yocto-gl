@@ -67,8 +67,10 @@ using std::vector;
 namespace yocto {
 
 // Aspect ratio
-template<typename T = float>
-constexpr T image_aspect(const vec2s& extents) { return (T)extents[0] / (T)extents[1]; }
+template <typename T = float>
+constexpr T image_aspect(const vec2s& extents) {
+  return (T)extents[0] / (T)extents[1];
+}
 
 // Conversion from/to floats.
 template <size_t N, typename T = float>
@@ -158,31 +160,22 @@ constexpr vec<T, N> eval_image(const array2d<vec<T1, N>>& image,
   auto size = image.extents();
 
   // get coordinates normalized for tiling
-  auto s = (T)0, t = (T)0;
-  if (clamp_to_edge) {
-    s = clamp(uv.x, 0, 1) * size.x;
-    t = clamp(uv.y, 0, 1) * size.y;
-  } else {
-    s = fmod(uv.x, 1) * size.x;
-    if (s < 0) s += size.x;
-    t = fmod(uv.y, 1) * size.y;
-    if (t < 0) t += size.y;
-  }
-
-  // get image coordinates and residuals
-  auto i  = clamp((size_t)s, (size_t)0, size.x - 1),
-       j  = clamp((size_t)t, (size_t)0, size.y - 1);
-  auto ii = (i + 1) % size.x, jj = (j + 1) % size.y;
-  auto u = s - i, v = t - j;
+  auto st = (clamp_to_edge ? clamp(uv, 0, 1) : mod(uv, 1)) * size;
 
   // handle interpolation
   if (no_interpolation) {
-    return lookup_image(image, {i, j}, as_linear);
+    auto ij = clamp((vec2s)st, 0, size - 1);
+    return lookup_image(image, ij, as_linear);
   } else {
-    return lookup_image(image, {i, j}, as_linear) * (1 - u) * (1 - v) +
-           lookup_image(image, {i, jj}, as_linear) * (1 - u) * v +
-           lookup_image(image, {ii, j}, as_linear) * u * (1 - v) +
-           lookup_image(image, {ii, jj}, as_linear) * u * v;
+    auto ij     = clamp((vec2s)st, 0, size - 1);
+    auto i1j    = (ij + vec2s{1, 0}) % size;
+    auto ij1    = (ij + vec2s{0, 1}) % size;
+    auto i1j1   = (ij + vec2s{1, 1}) % size;
+    auto [u, v] = st - ij;
+    return lookup_image(image, ij, as_linear) * (1 - u) * (1 - v) +
+           lookup_image(image, ij1, as_linear) * (1 - u) * v +
+           lookup_image(image, i1j, as_linear) * u * (1 - v) +
+           lookup_image(image, i1j1, as_linear) * u * v;
   }
 }
 

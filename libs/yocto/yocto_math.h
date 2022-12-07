@@ -194,6 +194,16 @@ template <typename T, typename T1>
 constexpr kernel T fmod(T a, T1 b) {
   return std::fmod(a, b);
 }
+template <typename T, typename T1>
+constexpr kernel T mod(T a, T1 b) {
+  if constexpr (std::is_floating_point_v<T> || std::is_floating_point_v<T1>) {
+    auto m = fmod(a, b);
+    return (m >= 0) ? m : m + b;
+  } else {
+    auto m = a % b;
+    return (m >= 0) ? m : m + b;
+  }
+}
 // template <typename T>
 // inline void swap(T& a, T& b) {
 //   std::swap(a, b);
@@ -1002,8 +1012,20 @@ constexpr kernel vec<T, N> round(const vec<T, N>& a) {
   return map(a, [](T a) { return round(a); });
 }
 template <typename T, typename T1, size_t N>
+constexpr kernel vec<T, N> fmod(const vec<T, N>& a, const vec<T1, N>& b) {
+  return map(a, b, [](T a, T1 b) { return fmod(a, b); });
+}
+template <typename T, typename T1, size_t N>
 constexpr kernel vec<T, N> fmod(const vec<T, N>& a, T1 b) {
   return map(a, b, [](T a, T1 b) { return fmod(a, b); });
+}
+template <typename T, typename T1, size_t N>
+constexpr kernel vec<T, N> mod(const vec<T, N>& a, const vec<T1, N>& b) {
+  return map(a, b, [](T a, T1 b) { return mod(a, b); });
+}
+template <typename T, typename T1, size_t N>
+constexpr kernel vec<T, N> mod(const vec<T, N>& a, T1 b) {
+  return map(a, b, [](T a, T1 b) { return mod(a, b); });
 }
 template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
 constexpr kernel vec<T, N> bias(const vec<T1, N>& a, T2 b) {
