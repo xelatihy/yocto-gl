@@ -1055,47 +1055,52 @@ constexpr kernel vec<bool, N> component_equal(const vec<T1, N>& a, T2 b) {
   return map(a, b, [](T1 a, T2 b) { return a == b; });
 }
 template <typename T1, typename T2, size_t N>
-constexpr kernel bool component_not_equal(
+constexpr kernel vec<bool, N> component_not_equal(
     const vec<T1, N>& a, const vec<T2, N>& b) {
   return map(a, b, [](T1 a, T2 b) { return a != b; });
 }
 template <typename T1, typename T2, size_t N>
-constexpr kernel bool component_not_equal(const vec<T1, N>& a, const T2 b) {
+constexpr kernel vec<bool, N> component_not_equal(
+    const vec<T1, N>& a, const T2 b) {
   return map(a, b, [](T1 a, T2 b) { return a != b; });
 }
 template <typename T1, typename T2, size_t N>
-constexpr kernel bool component_less(const vec<T1, N>& a, const vec<T2, N>& b) {
+constexpr kernel vec<bool, N> component_less(
+    const vec<T1, N>& a, const vec<T2, N>& b) {
   return map(a, b, [](T1 a, T2 b) { return a < b; });
 }
 template <typename T1, typename T2, size_t N>
-constexpr kernel bool component_less(const vec<T1, N>& a, const T2 b) {
+constexpr kernel vec<bool, N> component_less(const vec<T1, N>& a, const T2 b) {
   return map(a, b, [](T1 a, T2 b) { return a < b; });
 }
 template <typename T1, typename T2, size_t N>
-constexpr kernel bool component_greater(
+constexpr kernel vec<bool, N> component_greater(
     const vec<T1, N>& a, const vec<T2, N>& b) {
   return map(a, b, [](T1 a, T2 b) { return a > b; });
 }
 template <typename T1, typename T2, size_t N>
-constexpr kernel bool component_greater(const vec<T1, N>& a, const T2 b) {
+constexpr kernel vec<bool, N> component_greater(
+    const vec<T1, N>& a, const T2 b) {
   return map(a, b, [](T1 a, T2 b) { return a > b; });
 }
 template <typename T1, typename T2, size_t N>
-constexpr kernel bool component_less_equal(
+constexpr kernel vec<bool, N> component_less_equal(
     const vec<T1, N>& a, const vec<T2, N>& b) {
   return map(a, b, [](T1 a, T2 b) { return a <= b; });
 }
 template <typename T1, typename T2, size_t N>
-constexpr kernel bool component_less_equal(const vec<T1, N>& a, const T2 b) {
+constexpr kernel vec<bool, N> component_less_equal(
+    const vec<T1, N>& a, const T2 b) {
   return map(a, b, [](T1 a, T2 b) { return a <= b; });
 }
 template <typename T1, typename T2, size_t N>
-constexpr kernel bool component_greater_equal(
+constexpr kernel vec<bool, N> component_greater_equal(
     const vec<T1, N>& a, const vec<T2, N>& b) {
   return map(a, b, [](T1 a, T2 b) { return a >= b; });
 }
 template <typename T1, typename T2, size_t N>
-constexpr kernel bool component_greater_equal(const vec<T1, N>& a, const T2 b) {
+constexpr kernel vec<bool, N> component_greater_equal(
+    const vec<T1, N>& a, const T2 b) {
   return map(a, b, [](T1 a, T2 b) { return a >= b; });
 }
 

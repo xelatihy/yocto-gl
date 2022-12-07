@@ -393,14 +393,15 @@ constexpr kernel T interpolate_line(const T& p0, const T& p1, T1 u) {
 template <typename T, typename T1>
 constexpr kernel T interpolate_triangle(
     const T& p0, const T& p1, const T& p2, const vec<T1, 2>& uv) {
-  return p0 * (1 - uv.x - uv.y) + p1 * uv.x + p2 * uv.y;
+  auto [u, v] = uv;
+  return p0 * (1 - u - v) + p1 * u + p2 * v;
 }
 // Interpolates values over a quad parameterized by u and v along the
 // (p1-p0) and (p2-p1) directions. Same as bilinear interpolation.
 template <typename T, typename T1>
 constexpr kernel T interpolate_quad(
     const T& p0, const T& p1, const T& p2, const T& p3, const vec<T1, 2>& uv) {
-  if (uv.x + uv.y <= 1) {
+  if (sum(uv) <= 1) {
     return interpolate_triangle(p0, p1, p3, uv);
   } else {
     return interpolate_triangle(p2, p3, p1, 1 - uv);
@@ -438,19 +439,21 @@ constexpr kernel vec<T, 3> line_tangent(
 template <typename T>
 constexpr kernel vec<T, 3> triangle_point(const vec<T, 3>& p0,
     const vec<T, 3>& p1, const vec<T, 3>& p2, const vec<T, 2>& uv) {
-  return p0 * (1 - uv.x - uv.y) + p1 * uv.x + p2 * uv.y;
+  auto [u, v] = uv;
+  return p0 * (1 - u - v) + p1 * u + p2 * v;
 }
 template <typename T>
 constexpr kernel vec<T, 3> triangle_normal(const vec<T, 3>& n0,
     const vec<T, 3>& n1, const vec<T, 3>& n2, const vec<T, 2>& uv) {
-  return normalize(n0 * (1 - uv.x - uv.y) + n1 * uv.x + n2 * uv.y);
+  auto [u, v] = uv;
+  return normalize(n0 * (1 - u - v) + n1 * u + n2 * v);
 }
 
 // Interpolated quad properties.
 template <typename T>
 constexpr kernel vec<T, 3> quad_point(const vec<T, 3>& p0, const vec<T, 3>& p1,
     const vec<T, 3>& p2, const vec<T, 3>& p3, const vec<T, 2>& uv) {
-  if (uv.x + uv.y <= 1) {
+  if (sum(uv) <= 1) {
     return triangle_point(p0, p1, p3, uv);
   } else {
     return triangle_point(p2, p3, p1, 1 - uv);
@@ -459,7 +462,7 @@ constexpr kernel vec<T, 3> quad_point(const vec<T, 3>& p0, const vec<T, 3>& p1,
 template <typename T>
 constexpr kernel vec<T, 3> quad_normal(const vec<T, 3>& n0, const vec<T, 3>& n1,
     const vec<T, 3>& n2, const vec<T, 3>& n3, const vec<T, 2>& uv) {
-  if (uv.x + uv.y <= 1) {
+  if (sum(uv) <= 1) {
     return triangle_normal(n0, n1, n3, uv);
   } else {
     return triangle_normal(n2, n3, n1, 1 - uv);
@@ -489,11 +492,10 @@ constexpr kernel pair<vec<T, 3>, vec<T, 3>> triangle_tangents_fromuv(
   // Follows the definition in http://www.terathon.com/code/tangent.html and
   // https://gist.github.com/aras-p/2843984
   // normal points up from texture space
-  auto p   = p1 - p0;
-  auto q   = p2 - p0;
+  auto p = p1 - p0, q = p2 - p0;
   auto s   = vec<T, 2>{uv1.x - uv0.x, uv2.x - uv0.x};
   auto t   = vec<T, 2>{uv1.y - uv0.y, uv2.y - uv0.y};
-  auto div = s.x * t.y - s.y * t.x;
+  auto div = cross(s, t);
 
   if (div != 0) {
     auto tu = vec<T, 3>{t.y * p.x - t.x * q.x, t.y * p.y - t.x * q.y,
@@ -514,7 +516,7 @@ constexpr kernel pair<vec<T, 3>, vec<T, 3>> quad_tangents_fromuv(
     const vec<T, 3>& p0, const vec<T, 3>& p1, const vec<T, 3>& p2,
     const vec<T, 3>& p3, const vec<T, 2>& uv0, const vec<T, 2>& uv1,
     const vec<T, 2>& uv2, const vec<T, 2>& uv3, const vec<T, 2>& current_uv) {
-  if (current_uv.x + current_uv.y <= 1) {
+  if (sum(current_uv) <= 1) {
     return triangle_tangents_fromuv(p0, p1, p3, uv0, uv1, uv3);
   } else {
     return triangle_tangents_fromuv(p2, p3, p1, uv2, uv3, uv1);
@@ -532,9 +534,9 @@ namespace yocto {
 template <typename T>
 constexpr kernel ray<T, 3> camera_ray(const frame<T, 3>& frame, T lens,
     const vec<T, 2>& film, const vec<T, 2>& image_uv) {
-  auto e = vec<T, 3>{0, 0, 0};
-  auto q = vec<T, 3>{
-      film.x * ((T)0.5 - image_uv.x), film.y * (image_uv.y - (T)0.5), lens};
+  auto uv  = image_uv * vec{-1, 1};  // flip x
+  auto e   = vec<T, 3>{0, 0, 0};
+  auto q   = vec<T, 3>{film * (uv - (T)0.5), lens};
   auto d   = normalize(e - q);
   auto ray = yocto::ray<T, 3>{
       transform_point(frame, e), transform_direction(frame, d)};
@@ -545,13 +547,13 @@ constexpr kernel ray<T, 3> camera_ray(const frame<T, 3>& frame, T lens,
 template <typename T>
 constexpr kernel ray<T, 3> camera_ray(const frame<T, 3>& frame, T lens,
     T aspect, T film_, const vec<T, 2>& image_uv) {
+  auto uv   = image_uv * vec{-1, 1};  // flip x
   auto film = aspect >= 1 ? vec<T, 2>{film_, film_ / aspect}
                           : vec<T, 2>{film_ * aspect, film_};
   auto e    = vec<T, 3>{0, 0, 0};
-  auto q    = vec<T, 3>{
-      film.x * ((T)0.5 - image_uv.x), film.y * (image_uv.y - (T)0.5), lens};
-  auto d   = normalize(e - q);
-  auto ray = yocto::ray<T, 3>{
+  auto q    = vec<T, 3>{film * (uv - (T)0.5), lens};
+  auto d    = normalize(e - q);
+  auto ray  = yocto::ray<T, 3>{
       transform_point(frame, e), transform_direction(frame, d)};
   return ray;
 }
@@ -725,19 +727,16 @@ constexpr kernel prim_gintersection<T> intersect_quad(const ray<T, 3>& ray,
 template <typename T>
 constexpr kernel bool intersect_bbox(
     const ray<T, 3>& ray, const bbox<T, 3>& bbox) {
-  // determine intersection ranges
-  auto invd = (T)1.0 / ray.d;
-  auto t0   = (bbox.min - ray.o) * invd;
-  auto t1   = (bbox.max - ray.o) * invd;
-  // flip based on range directions
-  if (invd.x < (T)0.0) swap(t0.x, t1.x);
-  if (invd.y < (T)0.0) swap(t0.y, t1.y);
-  if (invd.z < (T)0.0) swap(t0.z, t1.z);
-  auto tmin = max(t0.z, max(t0.y, max(t0.x, ray.tmin)));
-  auto tmax = min(t1.z, min(t1.y, min(t1.x, ray.tmax)));
-  if constexpr (std::is_same_v<T, float>) tmax *= 1.00000024f;
-  if constexpr (std::is_same_v<T, double>) tmax *= 1.0000000000000004;
-  return tmin <= tmax;
+  auto ray_dinv = 1 / ray.d;
+  auto it_min   = (bbox.min - ray.o) * ray_dinv;
+  auto it_max   = (bbox.max - ray.o) * ray_dinv;
+  auto tmin     = min(it_min, it_max);
+  auto tmax     = max(it_min, it_max);
+  auto t0       = max(max(tmin), ray.tmin);
+  auto t1       = min(min(tmax), ray.tmax);
+  if constexpr (std::is_same_v<T, float>) t1 *= 1.00000024f;
+  if constexpr (std::is_same_v<T, double>) t1 *= 1.0000000000000004;
+  return t0 <= t1;
 }
 
 // Intersect a ray with a axis-aligned bounding box
@@ -850,12 +849,12 @@ template <typename T>
 constexpr kernel prim_gintersection<T> overlap_triangle(const vec<T, 3>& pos,
     T dist_max, const vec<T, 3>& p0, const vec<T, 3>& p1, const vec<T, 3>& p2,
     T r0, T r1, T r2) {
-  auto cuv = closestuv_triangle(pos, p0, p1, p2);
-  auto p   = p0 * (1 - cuv.x - cuv.y) + p1 * cuv.x + p2 * cuv.y;
-  auto r   = r0 * (1 - cuv.x - cuv.y) + r1 * cuv.x + r2 * cuv.y;
-  auto dd  = dot(p - pos, p - pos);
+  auto uv = closestuv_triangle(pos, p0, p1, p2);
+  auto p  = interpolate_triangle(p0, p1, p2, uv);
+  auto r  = interpolate_triangle(r0, r1, r2, uv);
+  auto dd = dot(p - pos, p - pos);
   if (dd > (dist_max + r) * (dist_max + r)) return {};
-  return {cuv, sqrt(dd), true};
+  return {uv, sqrt(dd), true};
 }
 
 // Check if a quad overlaps a position pos withint a maximum distance dist_max.

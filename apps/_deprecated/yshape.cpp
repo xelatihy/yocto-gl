@@ -110,11 +110,12 @@ void run_convert(const convert_params& params) {
   // transform
   if (params.translate != vec3f{0, 0, 0} || params.rotate != vec3f{0, 0, 0} ||
       params.scale != vec3f{1, 1, 1}) {
-    auto translation = translation_frame(params.translate);
-    auto scaling     = scaling_frame(params.scale);
-    auto rotation    = rotation_frame({1, 0, 0}, radians(params.rotate.x)) *
-                    rotation_frame({0, 0, 1}, radians(params.rotate.z)) *
-                    rotation_frame({0, 1, 0}, radians(params.rotate.y));
+    auto translation        = translation_frame(params.translate);
+    auto scaling            = scaling_frame(params.scale);
+    auto [rotx, roty, rotz] = radians(rotate);
+    auto rotation           = rotation_frame({1, 0, 0}, rotx) *
+                    rotation_frame({0, 0, 1}, rotz) *
+                    rotation_frame({0, 1, 0}, roty);
     auto xform = translation * scaling * rotation;
     for (auto& p : shape.positions) p = transform_point(xform, p);
     auto nonuniform_scaling = min(params.scale) != max(params.scale);
@@ -228,11 +229,12 @@ void run_fvconvert(const fvconvert_params& params) {
   // transform
   if (params.translate != vec3f{0, 0, 0} || params.rotate != vec3f{0, 0, 0} ||
       params.scale != vec3f{1, 1, 1}) {
-    auto translation = translation_frame(params.translate);
-    auto scaling     = scaling_frame(params.scale);
-    auto rotation    = rotation_frame({1, 0, 0}, radians(params.rotate.x)) *
-                    rotation_frame({0, 0, 1}, radians(params.rotate.z)) *
-                    rotation_frame({0, 1, 0}, radians(params.rotate.y));
+    auto translation        = translation_frame(params.translate);
+    auto scaling            = scaling_frame(params.scale);
+    auto [rotx, roty, rotz] = radians(rotate);
+    auto rotation           = rotation_frame({1, 0, 0}, rotx) *
+                    rotation_frame({0, 0, 1}, rotz) *
+                    rotation_frame({0, 1, 0}, roty);
     auto xform = translation * scaling * rotation;
     for (auto& p : shape.positions) p = transform_point(xform, p);
     auto nonuniform_scaling = min(params.scale) != max(params.scale);
@@ -335,11 +337,12 @@ void run_heightfield(const heightfield_params& params) {
   // transform
   if (params.translate != vec3f{0, 0, 0} || params.rotate != vec3f{0, 0, 0} ||
       params.scale != vec3f{1, 1, 1}) {
-    auto translation = translation_frame(params.translate);
-    auto scaling     = scaling_frame(params.scale);
-    auto rotation    = rotation_frame({1, 0, 0}, radians(params.rotate.x)) *
-                    rotation_frame({0, 0, 1}, radians(params.rotate.z)) *
-                    rotation_frame({0, 1, 0}, radians(params.rotate.y));
+    auto translation        = translation_frame(params.translate);
+    auto scaling            = scaling_frame(params.scale);
+    auto [rotx, roty, rotz] = radians(rotate);
+    auto rotation           = rotation_frame({1, 0, 0}, rotx) *
+                    rotation_frame({0, 0, 1}, rotz) *
+                    rotation_frame({0, 1, 0}, roty);
     auto xform = translation * scaling * rotation;
     for (auto& p : shape.positions) p = transform_point(xform, p);
     auto nonuniform_scaling = min(params.scale) != max(params.scale);

@@ -113,11 +113,12 @@ void run(const vector<string>& args) {
     // transform
     if (translate != vec3f{0, 0, 0} || rotate != vec3f{0, 0, 0} ||
         scale != vec3f{1, 1, 1}) {
-      auto translation = translation_frame(translate);
-      auto scaling     = scaling_frame(scale);
-      auto rotation    = rotation_frame({1, 0, 0}, radians(rotate.x)) *
-                      rotation_frame({0, 0, 1}, radians(rotate.z)) *
-                      rotation_frame({0, 1, 0}, radians(rotate.y));
+      auto translation        = translation_frame(translate);
+      auto scaling            = scaling_frame(scale);
+      auto [rotx, roty, rotz] = radians(rotate);
+      auto rotation           = rotation_frame({1, 0, 0}, rotx) *
+                      rotation_frame({0, 0, 1}, rotz) *
+                      rotation_frame({0, 1, 0}, roty);
       auto xform = translation * scaling * rotation;
       for (auto& p : shape.positions) p = transform_point(xform, p);
       auto nonuniform_scaling = min(scale) != max(scale);
@@ -197,11 +198,12 @@ void run(const vector<string>& args) {
     // transform
     if (translate != vec3f{0, 0, 0} || rotate != vec3f{0, 0, 0} ||
         scale != vec3f{1, 1, 1}) {
-      auto translation = translation_frame(translate);
-      auto scaling     = scaling_frame(scale);
-      auto rotation    = rotation_frame({1, 0, 0}, radians(rotate.x)) *
-                      rotation_frame({0, 0, 1}, radians(rotate.z)) *
-                      rotation_frame({0, 1, 0}, radians(rotate.y));
+      auto translation        = translation_frame(translate);
+      auto scaling            = scaling_frame(scale);
+      auto [rotx, roty, rotz] = radians(rotate);
+      auto rotation           = rotation_frame({1, 0, 0}, rotx) *
+                      rotation_frame({0, 0, 1}, rotz) *
+                      rotation_frame({0, 1, 0}, roty);
       auto xform = translation * scaling * rotation;
       for (auto& p : shape.positions) p = transform_point(xform, p);
       auto nonuniform_scaling = min(scale) != max(scale);
