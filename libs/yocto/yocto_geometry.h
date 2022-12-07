@@ -71,54 +71,33 @@ namespace yocto {
 
 // Axis aligned bounding box represented as a min/max vector pairs.
 template <typename T, size_t N>
-struct bbox;
+struct bbox {
+  vec<T, N> min = {num_max<T>};
+  vec<T, N> max = {num_min<T>};
 
-// Axis aligned bounding box represented as a min/max vector pairs.
-template <typename T>
-struct bbox<T, 2> {
-  vec<T, 2> min = {num_max<T>, num_max<T>};
-  vec<T, 2> max = {num_min<T>, num_min<T>};
-
-  constexpr kernel bbox()
-      : min{num_max<T>, num_max<T>}, max{num_min<T>, num_min<T>} {}
-  constexpr kernel bbox(const vec<T, 2>& min_, const vec<T, 2>& max_)
+  constexpr kernel bbox() : min{num_max<T>}, max{num_min<T>} {}
+  constexpr kernel bbox(const vec<T, N>& min_, const vec<T, N>& max_)
       : min{min_}, max{max_} {}
 
-  constexpr kernel vec<T, 2>& operator[](int i) {
-    return ((vec<T, 2>*)this)[i];
+  constexpr kernel vec<T, N>& operator[](size_t i) {
+    return i == 0 ? min : max;
   }
-  constexpr kernel const vec<T, 2>& operator[](int i) const {
-    return ((vec<T, 2>*)this)[i];
-  }
-};
-
-// Axis aligned bounding box represented as a min/max vector pairs.
-template <typename T>
-struct bbox<T, 3> {
-  vec<T, 3> min = {num_max<T>, num_max<T>, num_max<T>};
-  vec<T, 3> max = {num_min<T>, num_min<T>, num_min<T>};
-
-  constexpr kernel bbox()
-      : min{num_max<T>, num_max<T>, num_max<T>}
-      , max{num_min<T>, num_min<T>, num_min<T>} {}
-  constexpr kernel bbox(const vec<T, 3>& min_, const vec<T, 3>& max_)
-      : min{min_}, max{max_} {}
-
-  constexpr kernel vec<T, 3>& operator[](int i) {
-    return ((vec<T, 3>*)this)[i];
-  }
-  constexpr kernel const vec<T, 3>& operator[](int i) const {
-    return ((vec<T, 3>*)this)[i];
+  constexpr kernel const vec<T, N>& operator[](size_t i) const {
+    return i == 0 ? min : max;
   }
 };
 
 // Bbox aliases
+using bbox1f = bbox<float, 1>;
 using bbox2f = bbox<float, 2>;
 using bbox3f = bbox<float, 3>;
+using bbox4f = bbox<float, 4>;
 
 // Empty bbox constant.
+constexpr auto invalidb1f = bbox1f{};
 constexpr auto invalidb2f = bbox2f{};
 constexpr auto invalidb3f = bbox3f{};
+constexpr auto invalidb4f = bbox4f{};
 
 // Bounding box properties
 template <typename T, size_t N>
@@ -185,34 +164,14 @@ constexpr auto ray_eps = (T)1e-4;
 
 // Rays with origin, direction and min/max t value.
 template <typename T, size_t N>
-struct ray;
-
-// Rays with origin, direction and min/max t value.
-template <typename T>
-struct ray<T, 2> {
-  vec<T, 2> o    = {0, 0};
-  vec<T, 2> d    = {0, 1};
+struct ray {
+  vec<T, N> o    = {0};
+  vec<T, N> d    = {0};  // TODO: initialize this properly
   T         tmin = ray_eps<T>;
   T         tmax = num_max<T>;
 
-  constexpr kernel ray()
-      : o{0, 0}, d{0, 1}, tmin{ray_eps<T>}, tmax{num_max<T>} {}
-  constexpr kernel ray(const vec<T, 2>& o_, const vec<T, 2>& d_,
-      T tmin_ = ray_eps<T>, T tmax_ = num_max<T>)
-      : o{o_}, d{d_}, tmin{tmin_}, tmax{tmax_} {}
-};
-
-// Rays with origin, direction and min/max t value.
-template <typename T>
-struct ray<T, 3> {
-  vec<T, 3> o    = {0, 0, 0};
-  vec<T, 3> d    = {0, 0, 1};
-  T         tmin = ray_eps<T>;
-  T         tmax = num_max<T>;
-
-  constexpr kernel ray()
-      : o{0, 0, 0}, d{0, 0, 1}, tmin{ray_eps<T>}, tmax{num_max<T>} {}
-  constexpr kernel ray(const vec<T, 3>& o_, const vec<T, 3>& d_,
+  constexpr kernel ray() : o{0}, d{0}, tmin{ray_eps<T>}, tmax{num_max<T>} {}
+  constexpr kernel ray(const vec<T, N>& o_, const vec<T, N>& d_,
       T tmin_ = ray_eps<T>, T tmax_ = num_max<T>)
       : o{o_}, d{d_}, tmin{tmin_}, tmax{tmax_} {}
 };
@@ -224,6 +183,10 @@ using ray3f = ray<float, 3>;
 // Computes a point on a ray
 template <typename T, size_t N>
 constexpr kernel vec<T, N> ray_point(const ray<T, N>& ray, T t) {
+  return ray.o + ray.d * t;
+}
+template <typename T, size_t N>
+constexpr kernel vec<T, N> eval_ray(const ray<T, N>& ray, T t) {
   return ray.o + ray.d * t;
 }
 
@@ -386,13 +349,13 @@ constexpr kernel bbox<T, N> capsule_bounds(
 namespace yocto {
 
 // Line properties.
-template <typename T>
-constexpr kernel vec<T, 3> line_tangent(
-    const vec<T, 3>& p0, const vec<T, 3>& p1) {
+template <typename T, size_t N>
+constexpr kernel vec<T, N> line_tangent(
+    const vec<T, N>& p0, const vec<T, N>& p1) {
   return normalize(p1 - p0);
 }
-template <typename T>
-constexpr kernel T line_length(const vec<T, 3>& p0, const vec<T, 3>& p1) {
+template <typename T, size_t N>
+constexpr kernel T line_length(const vec<T, N>& p0, const vec<T, N>& p1) {
   return length(p1 - p0);
 }
 
@@ -572,8 +535,7 @@ constexpr kernel ray<T, 3> camera_ray(const frame<T, 3>& frame, T lens,
   auto e = vec<T, 3>{0, 0, 0};
   auto q = vec<T, 3>{
       film.x * ((T)0.5 - image_uv.x), film.y * (image_uv.y - (T)0.5), lens};
-  auto q1  = -q;
-  auto d   = normalize(q1 - e);
+  auto d   = normalize(e - q);
   auto ray = yocto::ray<T, 3>{
       transform_point(frame, e), transform_direction(frame, d)};
   return ray;
@@ -588,8 +550,7 @@ constexpr kernel ray<T, 3> camera_ray(const frame<T, 3>& frame, T lens,
   auto e    = vec<T, 3>{0, 0, 0};
   auto q    = vec<T, 3>{
       film.x * ((T)0.5 - image_uv.x), film.y * (image_uv.y - (T)0.5), lens};
-  auto q1  = -q;
-  auto d   = normalize(q1 - e);
+  auto d   = normalize(e - q);
   auto ray = yocto::ray<T, 3>{
       transform_point(frame, e), transform_direction(frame, d)};
   return ray;
@@ -604,15 +565,18 @@ namespace yocto {
 
 // Primitive intersection
 template <typename T = float>
-struct prim_intersection {
+struct prim_gintersection {
   vec<T, 2> uv       = {0, 0};
   T         distance = num_max<T>;  // TODO: num_max<T>
   bool      hit      = false;
 };
 
+// Typedefs
+using prim_intersection = prim_gintersection<float>;
+
 // Intersect a ray with a point (approximate)
 template <typename T>
-constexpr kernel prim_intersection<T> intersect_point(
+constexpr kernel prim_gintersection<T> intersect_point(
     const ray<T, 3>& ray, const vec<T, 3>& p, T r) {
   // find parameter for line-point minimum distance
   auto w = p - ray.o;
@@ -632,7 +596,7 @@ constexpr kernel prim_intersection<T> intersect_point(
 
 // Intersect a ray with a line
 template <typename T>
-constexpr kernel prim_intersection<T> intersect_line(const ray<T, 3>& ray,
+constexpr kernel prim_gintersection<T> intersect_line(const ray<T, 3>& ray,
     const vec<T, 3>& p0, const vec<T, 3>& p1, T r0, T r1) {
   // setup intersection params
   auto u = ray.d;
@@ -677,7 +641,7 @@ constexpr kernel prim_intersection<T> intersect_line(const ray<T, 3>& ray,
 
 // Intersect a ray with a sphere
 template <typename T>
-constexpr kernel prim_intersection<T> intersect_sphere(
+constexpr kernel prim_gintersection<T> intersect_sphere(
     const ray<T, 3>& ray, const vec<T, 3>& p, T r) {
   // compute parameters
   auto a = dot(ray.d, ray.d);
@@ -712,7 +676,7 @@ constexpr kernel prim_intersection<T> intersect_sphere(
 
 // Intersect a ray with a triangle
 template <typename T>
-constexpr kernel prim_intersection<T> intersect_triangle(const ray<T, 3>& ray,
+constexpr kernel prim_gintersection<T> intersect_triangle(const ray<T, 3>& ray,
     const vec<T, 3>& p0, const vec<T, 3>& p1, const vec<T, 3>& p2) {
   // compute triangle edges
   auto edge1 = p1 - p0;
@@ -747,7 +711,7 @@ constexpr kernel prim_intersection<T> intersect_triangle(const ray<T, 3>& ray,
 
 // Intersect a ray with a quad.
 template <typename T>
-constexpr kernel prim_intersection<T> intersect_quad(const ray<T, 3>& ray,
+constexpr kernel prim_gintersection<T> intersect_quad(const ray<T, 3>& ray,
     const vec<T, 3>& p0, const vec<T, 3>& p1, const vec<T, 3>& p2,
     const vec<T, 3>& p3) {
   if (p2 == p3) return intersect_triangle(ray, p0, p1, p3);
@@ -800,7 +764,7 @@ namespace yocto {
 
 // Check if a point overlaps a position pos withint a maximum distance dist_max.
 template <typename T>
-constexpr kernel prim_intersection<T> overlap_point(
+constexpr kernel prim_gintersection<T> overlap_point(
     const vec<T, 3>& pos, T dist_max, const vec<T, 3>& p, T r) {
   auto d2 = dot(pos - p, pos - p);
   if (d2 > (dist_max + r) * (dist_max + r)) return {};
@@ -822,7 +786,7 @@ constexpr kernel T closestuv_line(
 
 // Check if a line overlaps a position pos withint a maximum distance dist_max.
 template <typename T>
-constexpr kernel prim_intersection<T> overlap_line(const vec<T, 3>& pos,
+constexpr kernel prim_gintersection<T> overlap_line(const vec<T, 3>& pos,
     T dist_max, const vec<T, 3>& p0, const vec<T, 3>& p1, T r0, T r1) {
   auto u = closestuv_line(pos, p0, p1);
   // Compute projected position from the clamped t d = a + t * ab;
@@ -883,7 +847,7 @@ constexpr kernel vec<T, 2> closestuv_triangle(const vec<T, 3>& pos,
 // Check if a triangle overlaps a position pos withint a maximum distance
 // dist_max.
 template <typename T>
-constexpr kernel prim_intersection<T> overlap_triangle(const vec<T, 3>& pos,
+constexpr kernel prim_gintersection<T> overlap_triangle(const vec<T, 3>& pos,
     T dist_max, const vec<T, 3>& p0, const vec<T, 3>& p1, const vec<T, 3>& p2,
     T r0, T r1, T r2) {
   auto cuv = closestuv_triangle(pos, p0, p1, p2);
@@ -896,7 +860,7 @@ constexpr kernel prim_intersection<T> overlap_triangle(const vec<T, 3>& pos,
 
 // Check if a quad overlaps a position pos withint a maximum distance dist_max.
 template <typename T>
-constexpr kernel prim_intersection<T> overlap_quad(const vec<T, 3>& pos,
+constexpr kernel prim_gintersection<T> overlap_quad(const vec<T, 3>& pos,
     T dist_max, const vec<T, 3>& p0, const vec<T, 3>& p1, const vec<T, 3>& p2,
     const vec<T, 3>& p3, T r0, T r1, T r2, T r3) {
   if (p2 == p3) return overlap_triangle(pos, dist_max, p0, p1, p3, r0, r1, r2);
