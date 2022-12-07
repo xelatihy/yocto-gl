@@ -391,6 +391,10 @@ struct vec<T, 4> {
   constexpr kernel const T& operator[](size_t i) const { return d[i]; }
 };
 
+// Deduction guides
+template <typename... Args>
+vec(Args...) -> vec<common_t<Args...>, sizeof...(Args)>;
+
 // Vector aliases
 using vec1f = vec<float, 1>;
 using vec2f = vec<float, 2>;
@@ -499,6 +503,18 @@ constexpr kernel bool operator==(const vec<T1, N>& a, const vec<T2, N>& b) {
   }
 }
 template <typename T1, typename T2, size_t N>
+constexpr kernel bool operator==(const vec<T1, N>& a, T2 b) {
+  if constexpr (N == 1) {
+    return a.x == b;
+  } else if constexpr (N == 2) {
+    return a.x == b && a.y == b;
+  } else if constexpr (N == 3) {
+    return a.x == b && a.y == b && a.z == b;
+  } else if constexpr (N == 4) {
+    return a.x == b && a.y == b && a.z == b && a.w == b;
+  }
+}
+template <typename T1, typename T2, size_t N>
 constexpr kernel bool operator!=(const vec<T1, N>& a, const vec<T2, N>& b) {
   if constexpr (N == 1) {
     return a.x != b.x;
@@ -508,6 +524,18 @@ constexpr kernel bool operator!=(const vec<T1, N>& a, const vec<T2, N>& b) {
     return a.x != b.x || a.y != b.y || a.z != b.z;
   } else if constexpr (N == 4) {
     return a.x != b.x || a.y != b.y || a.z != b.z || a.w != b.w;
+  }
+}
+template <typename T1, typename T2, size_t N>
+constexpr kernel bool operator!=(const vec<T1, N>& a, const T2 b) {
+  if constexpr (N == 1) {
+    return a.x != b;
+  } else if constexpr (N == 2) {
+    return a.x != b || a.y != b;
+  } else if constexpr (N == 3) {
+    return a.x != b || a.y != b || a.z != b;
+  } else if constexpr (N == 4) {
+    return a.x != b || a.y != b || a.z != b || a.w != b;
   }
 }
 
@@ -1246,6 +1274,104 @@ constexpr kernel vec<T, 4> quat_conjugate(const vec<T, 4>& a) {
 template <typename T>
 constexpr kernel vec<T, 4> quat_inverse(const vec<T, 4>& a) {
   return quat_conjugate(a) / dot(a, a);
+}
+
+// Component-wise comparison operations.
+template <typename T1, typename T2, size_t N>
+constexpr kernel vec<bool, N> component_equal(const vec<T1, N>& a, const vec<T2, N>& b) {
+  if constexpr (N == 1) {
+    return {a.x == b.x};
+  } else if constexpr (N == 2) {
+    return {a.x == b.x, a.y == b.y};
+  } else if constexpr (N == 3) {
+    return {a.x == b.x, a.y == b.y, a.z == b.z};
+  } else if constexpr (N == 4) {
+    return {a.x == b.x, a.y == b.y, a.z == b.z, a.w == b.w};
+  }
+}
+template <typename T1, typename T2, size_t N>
+constexpr kernel vec<bool, N> component_equal(const vec<T1, N>& a, T2 b) {
+  return component_equal(a, vec<T2, N>(b));
+}
+template <typename T1, typename T2, size_t N>
+constexpr kernel bool component_not_equal(const vec<T1, N>& a, const vec<T2, N>& b) {
+  if constexpr (N == 1) {
+    return {a.x != b.x};
+  } else if constexpr (N == 2) {
+    return {a.x != b.x, a.y != b.y};
+  } else if constexpr (N == 3) {
+    return {a.x != b.x, a.y != b.y, a.z != b.z};
+  } else if constexpr (N == 4) {
+    return {a.x != b.x, a.y != b.y, a.z != b.z, a.w != b.w};
+  }
+}
+template <typename T1, typename T2, size_t N>
+constexpr kernel bool component_not_equal(const vec<T1, N>& a, const T2 b) {
+  return component_not_equal(a, vec<T2, N>(b));
+}
+template <typename T1, typename T2, size_t N>
+constexpr kernel bool component_less(const vec<T1, N>& a, const vec<T2, N>& b) {
+  if constexpr (N == 1) {
+    return {a.x < b.x};
+  } else if constexpr (N == 2) {
+    return {a.x < b.x, a.y < b.y};
+  } else if constexpr (N == 3) {
+    return {a.x < b.x, a.y < b.y, a.z < b.z};
+  } else if constexpr (N == 4) {
+    return {a.x < b.x, a.y < b.y, a.z < b.z, a.w < b.w};
+  }
+}
+template <typename T1, typename T2, size_t N>
+constexpr kernel bool component_less(const vec<T1, N>& a, const T2 b) {
+  return component_less(a, vec<T2, N>(b));
+}
+template <typename T1, typename T2, size_t N>
+constexpr kernel bool component_greater(const vec<T1, N>& a, const vec<T2, N>& b) {
+  if constexpr (N == 1) {
+    return {a.x > b.x};
+  } else if constexpr (N == 2) {
+    return {a.x > b.x, a.y > b.y};
+  } else if constexpr (N == 3) {
+    return {a.x > b.x, a.y > b.y, a.z > b.z};
+  } else if constexpr (N == 4) {
+    return {a.x > b.x, a.y > b.y, a.z > b.z, a.w > b.w};
+  }
+}
+template <typename T1, typename T2, size_t N>
+constexpr kernel bool component_greater(const vec<T1, N>& a, const T2 b) {
+  return component_greater(a, vec<T2, N>(b));
+}
+template <typename T1, typename T2, size_t N>
+constexpr kernel bool component_less_equal(const vec<T1, N>& a, const vec<T2, N>& b) {
+  if constexpr (N == 1) {
+    return {a.x <= b.x};
+  } else if constexpr (N == 2) {
+    return {a.x <= b.x, a.y <= b.y};
+  } else if constexpr (N == 3) {
+    return {a.x <= b.x, a.y <= b.y, a.z <= b.z};
+  } else if constexpr (N == 4) {
+    return {a.x <= b.x, a.y <= b.y, a.z <= b.z, a.w <= b.w};
+  }
+}
+template <typename T1, typename T2, size_t N>
+constexpr kernel bool component_less_equal(const vec<T1, N>& a, const T2 b) {
+  return component_less_equal(a, vec<T2, N>(b));
+}
+template <typename T1, typename T2, size_t N>
+constexpr kernel bool component_greater_equal(const vec<T1, N>& a, const vec<T2, N>& b) {
+  if constexpr (N == 1) {
+    return {a.x >= b.x};
+  } else if constexpr (N == 2) {
+    return {a.x >= b.x, a.y >= b.y};
+  } else if constexpr (N == 3) {
+    return {a.x >= b.x, a.y >= b.y, a.z >= b.z};
+  } else if constexpr (N == 4) {
+    return {a.x >= b.x, a.y >= b.y, a.z >= b.z, a.w >= b.w};
+  }
+}
+template <typename T1, typename T2, size_t N>
+constexpr kernel bool component_greater_equal(const vec<T1, N>& a, const T2 b) {
+  return component_greater_equal(a, vec<T2, N>(b));
 }
 
 }  // namespace yocto

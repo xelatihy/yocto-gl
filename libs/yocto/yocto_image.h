@@ -66,6 +66,10 @@ using std::vector;
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// Aspect ratio
+template<typename T = float>
+constexpr T image_aspect(const vec2s& extents) { return (T)extents[0] / (T)extents[1]; }
+
 // Conversion from/to floats.
 template <size_t N, typename T = float>
 constexpr array2d<vec<T, N>> byte_to_float(const array2d<vec<byte, N>>& bt) {
@@ -183,25 +187,25 @@ constexpr vec<T, N> eval_image(const array2d<vec<T1, N>>& image,
 }
 
 // Apply tone mapping returning a float or byte image.
-template <typename T, size_t N>
+template <typename T, size_t N, typename T1>
 constexpr array2d<vec<T, N>> tonemap_image(const array2d<vec<T, N>>& image,
-    T exposure, bool filmic = false, bool srgb = true) {
+    T1 exposure, bool filmic = false, bool srgb = true) {
   auto result = array2d<vec<T, N>>(image.extents());
   for (auto idx : range(image.size())) {
-    result[idx] = tonemap(image[idx], exposure, filmic, srgb);
+    result[idx] = tonemap(image[idx], (T)exposure, filmic, srgb);
   }
   return result;
 }
 
 // Apply tone mapping. If the input image is an ldr, does nothing.
-template <typename T, size_t N>
+template <typename T, size_t N, typename T1>
 constexpr void tonemap_image(array2d<vec<T, N>>& result,
-    const array2d<vec<T, N>>& image, float exposure, bool filmic = false,
+    const array2d<vec<T, N>>& image, T1 exposure, bool filmic = false,
     bool srgb = true) {
   if (image.extents() != result.extents())
     throw std::invalid_argument{"image should be the same size"};
   for (auto idx : range(image.size())) {
-    result[idx] = tonemap(image[idx], exposure, filmic, srgb);
+    result[idx] = tonemap(image[idx], (T)exposure, filmic, srgb);
   }
 }
 
@@ -549,7 +553,8 @@ inline array2d<vec<T, 4>> bump_to_normal(
 template <typename T = float>
 inline array2d<vec<T, 4>> make_sunsky(const vec2s& extents, float theta_sun,
     T turbidity = 3, bool has_sun = false, T sun_intensity = 1,
-    T sun_radius = 1, const vec<T, 3>& ground_albedo = vec<T, 3>{0.2, 0.2, 0.2}) {
+    T                sun_radius    = 1,
+    const vec<T, 3>& ground_albedo = vec<T, 3>{0.2, 0.2, 0.2}) {
   auto zenith_xyY = vec<T, 3>{
       ((T)0.00165 * pow(theta_sun, 3) - (T)0.00374 * pow(theta_sun, 2) +
           (T)0.00208 * theta_sun + (T)0.00000) *
@@ -589,8 +594,9 @@ inline array2d<vec<T, 4>> make_sunsky(const vec2s& extents, float theta_sun,
       (T)-0.01092 * turbidity + (T)0.05291,
       (T)-0.06696 * turbidity + (T)0.37027};
 
-  auto perez_f = [](vec<T, 3> A, vec<T, 3> B, vec<T, 3> C, vec<T, 3> D, vec<T, 3> E, T theta,
-                     T gamma, T theta_sun, vec<T, 3> zenith) -> vec<T, 3> {
+  auto perez_f = [](vec<T, 3> A, vec<T, 3> B, vec<T, 3> C, vec<T, 3> D,
+                     vec<T, 3> E, T theta, T gamma, T theta_sun,
+                     vec<T, 3> zenith) -> vec<T, 3> {
     auto num = ((1 + A * exp(B / cos(theta))) *
                 (1 + C * exp(D * gamma) + E * cos(gamma) * cos(gamma)));
     auto den = ((1 + A * exp(B)) * (1 + C * exp(D * theta_sun) +
@@ -599,8 +605,8 @@ inline array2d<vec<T, 4>> make_sunsky(const vec2s& extents, float theta_sun,
   };
 
   auto sky = [&perez_f, perez_A_xyY, perez_B_xyY, perez_C_xyY, perez_D_xyY,
-                 perez_E_xyY, zenith_xyY](
-                 T theta, T gamma, T theta_sun) -> vec<T, 3> {
+                 perez_E_xyY,
+                 zenith_xyY](T theta, T gamma, T theta_sun) -> vec<T, 3> {
     return xyz_to_rgb(xyY_to_xyz(
                perez_f(perez_A_xyY, perez_B_xyY, perez_C_xyY, perez_D_xyY,
                    perez_E_xyY, theta, gamma, theta_sun, zenith_xyY))) /
@@ -614,10 +620,11 @@ inline array2d<vec<T, 4>> make_sunsky(const vec2s& extents, float theta_sun,
   auto sun_sol    = vec<T, 3>{20000.0f, 27000.0f, 30000.0f};
   auto sun_lambda = vec<T, 3>{680, 530, 480};
   auto sun_beta   = (T)0.04608365822050 * turbidity - (T)0.04586025928522;
-  auto sun_m      = (T)1.0 /
-               (cos(theta_sun) + (T)0.000940 * pow((T)1.6386 - theta_sun, (T)-1.253));
+  auto sun_m =
+      (T)1.0 /
+      (cos(theta_sun) + (T)0.000940 * pow((T)1.6386 - theta_sun, (T)-1.253));
 
-  auto tauR = exp(-sun_m *(T)0.008735 * pow(sun_lambda / 1000, (T)-4.08));
+  auto tauR = exp(-sun_m * (T)0.008735 * pow(sun_lambda / 1000, (T)-4.08));
   auto tauA = exp(-sun_m * sun_beta * pow(sun_lambda / 1000, (T)-1.3));
   auto tauO = exp(-sun_m * sun_ko * (T)0.35);
   auto tauG = exp(
@@ -667,7 +674,7 @@ inline array2d<vec<T, 4>> make_sunsky(const vec2s& extents, float theta_sun,
     for (auto j : range(height / 2)) {
       auto theta = (T)pi * (T(j + 0.5) / height);
       for (auto i : range(width)) {
-        auto le   = xyz(img[{i, j}]);
+        auto le    = xyz(img[{i, j}]);
         auto angle = sin(theta) * 4 * (T)pi / (width * height);
         ground += le * (ground_albedo / (T)pi) * cos(theta) * angle;
       }
@@ -691,8 +698,9 @@ inline array2d<vec<T, 4>> make_sunsky(const vec2s& extents, float theta_sun,
 
 // Make an image of multiple lights.
 template <typename T = float>
-inline array2d<vec<T, 4>> make_lights(const vec2s& extents, const vec<T, 3>& le = {1, 1, 1},
-    int nlights= 4, T langle = pif / 4, T lwidth = (T)pi / 16, T lheight = (T)pi / 16) {
+inline array2d<vec<T, 4>> make_lights(const vec2s& extents,
+    const vec<T, 3>& le = {1, 1, 1}, int nlights = 4, T langle = pif / 4,
+    T lwidth = (T)pi / 16, T lheight = (T)pi / 16) {
   auto [width, height] = extents;
   auto img             = array2d<vec<T, 4>>(extents);
   for (auto j : range(height)) {
