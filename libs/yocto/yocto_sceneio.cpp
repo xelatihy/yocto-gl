@@ -622,7 +622,7 @@ constexpr array2d<vec<T, M>> convert_channels(
 // Convert channels
 template <typename T, size_t M, typename T1, size_t N>
 constexpr array2d<vec<T, M>> convert_channels(
-    vec<T1, N>* image, array<size_t, 2> extents) {
+    vec<T1, N>* image, vec2s extents) {
   auto converted = array2d<vec<T, M>>(extents);
   for (auto idx : range(converted.extents())) {
     converted[idx] = convert_channels(image[idx]);
@@ -644,7 +644,7 @@ void load_image(const string& filename, array2d<T>& image) {
   constexpr auto is_float     = is_image_float<T>();
 
   // color conversion
-  auto from_float = [](vec4f* pixels, array<size_t, 2> extents) -> array2d<T> {
+  auto from_float = [](vec4f* pixels, vec2s extents) -> array2d<T> {
     constexpr auto N     = get_image_channels<T>();
     auto           image = array2d<T>{extents};
     for (auto idx : range(image.size())) {
@@ -665,7 +665,7 @@ void load_image(const string& filename, array2d<T>& image) {
     }
     return image;
   };
-  auto from_byte = [](vec4b* pixels, array<size_t, 2> extents) -> array2d<T> {
+  auto from_byte = [](vec4b* pixels, vec2s extents) -> array2d<T> {
     constexpr auto N     = get_image_channels<T>();
     auto           image = array2d<T>{extents};
     for (auto idx : range(image.size())) {

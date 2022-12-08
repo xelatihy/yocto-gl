@@ -1328,7 +1328,7 @@ void set_image(glimage_state& glimage, const image_data& image) {
 
 void set_image(glimage_state& glimage, const array2d<vec4f>& image) {
   auto [width, height] = (vec2i)image.extents();
-  if (!glimage.texture || glimage.extents != image.extents()) {
+  if (!glimage.texture || glimage.extents != (vec2i)image.extents()) {
     if (!glimage.texture) glGenTextures(1, &glimage.texture);
     glBindTexture(GL_TEXTURE_2D, glimage.texture);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGBA,

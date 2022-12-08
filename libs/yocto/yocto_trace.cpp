@@ -1493,9 +1493,9 @@ trace_state make_trace_state(
   auto& camera     = scene.cameras[params.camera];
   auto  state      = trace_state{};
   auto  resolution = (camera.aspect >= 1)
-                         ? array<size_t, 2>{(size_t)params.resolution,
-                               (size_t)round(params.resolution / camera.aspect)}
-                         : array<size_t, 2>{
+                         ? vec2s{(size_t)params.resolution,
+                              (size_t)round(params.resolution / camera.aspect)}
+                         : vec2s{
                               (size_t)round(params.resolution * camera.aspect),
                               (size_t)params.resolution};
   state.samples    = 0;

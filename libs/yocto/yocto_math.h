@@ -78,8 +78,13 @@ using ushort = unsigned short;
 // Common type
 template <typename... Ts>
 using common_t = std::common_type_t<Ts...>;
+#ifndef __CUDACC__
 template <typename Func, typename... Ts>
 using result_t = std::invoke_result_t<Func, Ts...>;
+#else
+template <typename Func, typename... Ts>
+using result_t = std::result_of_t<Func(Ts...)>;
+#endif
 
 template <typename T = double>
 constexpr auto pi_t = (T)3.14159265358979323846;
@@ -404,8 +409,10 @@ struct vec<T, 4> {
 };
 
 // Deduction guides
+#ifndef __CUDACC__
 template <typename... Args>
 vec(Args...) -> vec<common_t<Args...>, sizeof...(Args)>;
+#endif
 
 // Vector aliases
 using vec1f = vec<float, 1>;
@@ -633,7 +640,7 @@ constexpr kernel bool operator!=(const vec<T1, N>& a, const vec<T2, N>& b) {
   }
 }
 template <typename T1, typename T2, size_t N>
-constexpr kernel bool operator!=(const vec<T1, N>& a, const T2 b) {
+constexpr kernel bool operator!=(const vec<T1, N>& a, T2 b) {
   if constexpr (N == 1) {
     return a.x != b;
   } else if constexpr (N == 2) {

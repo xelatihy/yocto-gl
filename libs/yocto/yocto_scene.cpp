@@ -140,9 +140,9 @@ vec4f eval_texture(const texture_data& texture, const vec2f& uv, bool as_linear,
     return lookup_texture(texture, ij, as_linear);
   } else {
     auto ij     = clamp((vec2i)st, 0, size - 1);
-    auto i1j    = (ij + vec{1, 0}) % size;
-    auto ij1    = (ij + vec{0, 1}) % size;
-    auto i1j1   = (ij + vec{1, 1}) % size;
+    auto i1j    = (ij + vec2i{1, 0}) % size;
+    auto ij1    = (ij + vec2i{0, 1}) % size;
+    auto i1j1   = (ij + vec2i{1, 1}) % size;
     auto [u, v] = st - ij;
     return lookup_texture(texture, ij, as_linear) * (1 - u) * (1 - v) +
            lookup_texture(texture, ij1, as_linear) * (1 - u) * v +
