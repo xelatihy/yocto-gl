@@ -238,8 +238,7 @@ struct cucamera_data {
 };
 
 struct cutexture_data {
-  int         width   = 0;
-  int         height  = 0;
+  vec2i       extents = {0, 0};
   bool        linear  = false;
   bool        nearest = false;
   bool        clamp   = false;

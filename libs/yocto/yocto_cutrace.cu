@@ -242,8 +242,7 @@ struct cucamera_data {
 };
 
 struct cutexture_data {
-  int                 width   = 0;
-  int                 height  = 0;
+  vec2i               extents = {0, 0};
   bool                linear  = false;
   bool                nearest = false;
   bool                clamp   = false;
@@ -716,7 +715,7 @@ optix_shader void __closesthit__intersect_scene() {
   intersection.instance = optixGetInstanceIndex();
   intersection.element  = optixGetPrimitiveIndex();
   intersection.uv       = {
-            optixGetTriangleBarycentrics().x, optixGetTriangleBarycentrics().y};
+      optixGetTriangleBarycentrics().x, optixGetTriangleBarycentrics().y};
   intersection.distance = optixGetRayTmax();
   intersection.hit      = true;
 }
@@ -1141,7 +1140,7 @@ static trace_result trace_path(const scene_data& scene, const trace_bvh& bvh,
     if (!volume_stack.empty()) {
       auto& vsdf     = volume_stack.back();
       auto  distance = sample_transmittance(
-           vsdf.density, intersection.distance, rand1f(rng), rand1f(rng));
+          vsdf.density, intersection.distance, rand1f(rng), rand1f(rng));
       weight *= eval_transmittance(vsdf.density, distance) /
                 sample_transmittance_pdf(
                     vsdf.density, distance, intersection.distance);
@@ -1288,7 +1287,7 @@ static trace_result trace_pathdirect(const scene_data& scene,
     if (!volume_stack.empty()) {
       auto& vsdf     = volume_stack.back();
       auto  distance = sample_transmittance(
-           vsdf.density, intersection.distance, rand1f(rng), rand1f(rng));
+          vsdf.density, intersection.distance, rand1f(rng), rand1f(rng));
       weight *= eval_transmittance(vsdf.density, distance) /
                 sample_transmittance_pdf(
                     vsdf.density, distance, intersection.distance);
@@ -1467,7 +1466,7 @@ static trace_result trace_pathmis(const scene_data& scene, const trace_bvh& bvh,
     if (!volume_stack.empty()) {
       auto& vsdf     = volume_stack.back();
       auto  distance = sample_transmittance(
-           vsdf.density, intersection.distance, rand1f(rng), rand1f(rng));
+          vsdf.density, intersection.distance, rand1f(rng), rand1f(rng));
       weight *= eval_transmittance(vsdf.density, distance) /
                 sample_transmittance_pdf(
                     vsdf.density, distance, intersection.distance);
@@ -2153,7 +2152,7 @@ optix_shader void __raygen__trace_pixel() {
   if (globals.state.samples == 0) {
     globals.state.image[ij] = {0, 0, 0, 0};
     globals.state.rngs[ij]  = make_rng(
-         98273987, (ij.y * globals.state.image.extent(1) + ij.x) * 2 + 1);
+        98273987, (ij.y * globals.state.image.extent(1) + ij.x) * 2 + 1);
   }
 
   // run shading
