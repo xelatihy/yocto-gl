@@ -101,21 +101,12 @@ array2d<vec4f> make_image_preset(const string& type);
 namespace yocto {
 
 // Load/save a texture in the supported formats.
-bool load_texture(const string& filename, texture_data& texture, string& error);
-bool save_texture(
-    const string& filename, const texture_data& texture, string& error);
-
-// Load/save a texture in the supported formats.
 texture_data load_texture(const string& filename);
 void         load_texture(const string& filename, texture_data& texture);
 void         save_texture(const string& filename, const texture_data& texture);
 
 // Make presets. Supported mostly in IO.
 texture_data make_texture_preset(const string& type);
-
-// Make presets. Supported mostly in IO.
-bool make_texture_preset(
-    const string& filname, texture_data& texture, string& error);
 
 }  // namespace yocto
 
@@ -125,23 +116,11 @@ bool make_texture_preset(
 namespace yocto {
 
 // Load/save a shape
-bool load_shape(const string& filename, shape_data& shape, string& error,
-    bool flip_texcoords = true);
-bool save_shape(const string& filename, const shape_data& shape, string& error,
-    bool flip_texcoords = true, bool ascii = false);
-
-// Load/save a shape
 shape_data load_shape(const string& filename, bool flip_texcoords = true);
 void       load_shape(
           const string& filename, shape_data& shape, bool flip_texcoords = true);
 void save_shape(const string& filename, const shape_data& shape,
     bool flip_texcoords = true, bool ascii = false);
-
-// Load/save a subdiv
-bool load_fvshape(const string& filename, fvshape_data& shape, string& error,
-    bool flip_texcoords = true);
-bool save_fvshape(const string& filename, const fvshape_data& shape,
-    string& error, bool flip_texcoords = true, bool ascii = false);
 
 // Load/save a subdiv
 fvshape_data load_fvshape(const string& filename, bool flip_texcoords = true);
@@ -154,22 +133,12 @@ void save_fvshape(const string& filename, const fvshape_data& shape,
 shape_data   make_shape_preset(const string& type);
 fvshape_data make_fvshape_preset(const string& type);
 
-// Make presets. Supported mostly in IO.
-bool make_shape_preset(const string& filname, shape_data& shape, string& error);
-bool make_fvshape_preset(
-    const string& filname, fvshape_data& shape, string& error);
-
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // SUBDIV IO
 // -----------------------------------------------------------------------------
 namespace yocto {
-
-// Load/save a subdiv in the supported formats.
-bool load_subdiv(const string& filename, subdiv_data& subdiv, string& error);
-bool save_subdiv(
-    const string& filename, const subdiv_data& subdiv, string& error);
 
 // Load/save a subdiv in the supported formats.
 subdiv_data load_subdiv(const string& filename);
@@ -182,19 +151,6 @@ void        save_subdiv(const string& filename, const subdiv_data& subdiv);
 // SCENE IO
 // -----------------------------------------------------------------------------
 namespace yocto {
-
-// Load/save a scene in the supported formats.
-bool load_scene(const string& filename, scene_data& scene, string& error,
-    bool noparallel = false);
-bool save_scene(const string& filename, const scene_data& scene, string& error,
-    bool noparallel = false);
-
-// Make missing scene directories
-bool make_scene_directories(
-    const string& filename, const scene_data& scene, string& error);
-
-// Add environment
-bool add_environment(scene_data& scene, const string& filename, string& error);
 
 // Load/save a scene in the supported formats.
 scene_data load_scene(const string& filename, bool noparallel = false);
@@ -212,10 +168,6 @@ void make_scene_directories(const string& filename, const scene_data& scene);
 // Scene presets used for testing.
 scene_data make_scene_preset(const string& type);
 
-// Scene presets used for testing.
-bool make_scene_preset(
-    const string& filename, scene_data& scene, string& error);
-
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -225,15 +177,6 @@ namespace yocto {
 
 // Using directive
 using byte = unsigned char;
-
-// Load/save a text file
-bool load_text(const string& filename, string& str, string& error);
-bool save_text(const string& filename, const string& str, string& error);
-
-// Load/save a binary file
-bool load_binary(const string& filename, vector<byte>& data, string& error);
-bool save_binary(
-    const string& filename, const vector<byte>& data, string& error);
 
 // Load/save a text file
 string load_text(const string& filename);
@@ -266,22 +209,6 @@ void update_colorgrade_params(
 void save_colorgrade_params(
     const string& filename, const colorgrade_params& params);
 
-// Load/Save/Update trace params
-bool load_trace_params(
-    const string& filename, trace_params& params, string& error);
-bool update_trace_params(
-    const string& filename, trace_params& params, string& error);
-bool save_trace_params(
-    const string& filename, const trace_params& params, string& error);
-
-// Load/Save/Update color grade params
-bool load_colorgrade_params(
-    const string& filename, colorgrade_params& params, string& error);
-bool update_colorgrade_params(
-    const string& filename, colorgrade_params& params, string& error);
-bool save_colorgrade_params(
-    const string& filename, const colorgrade_params& params, string& error);
-
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -309,7 +236,6 @@ string replace_extension(const string& path, const string& extension);
 
 // Create a directory and all missing parent directories if needed
 void make_directory(const string& path);
-bool make_directory(const string& path, string& error);
 
 }  // namespace yocto
 
@@ -348,28 +274,6 @@ namespace yocto {
 // Loads/saves a 4 channels float/byte image in linear/srgb color space.
 void load_image(const string& filename, image_data& image);
 void save_image(const string& filename, const image_data& image);
-
-// Loads/saves a 4 channels float/byte image in linear/srgb color space.
-inline bool load_image(
-    const string& filename, image_data& image, string& error) {
-  try {
-    load_image(filename, image);
-    return true;
-  } catch (std::exception& exc) {
-    error = exc.what();
-    return false;
-  }
-}
-inline bool save_image(
-    const string& filename, const image_data& image, string& error) {
-  try {
-    save_image(filename, image);
-    return true;
-  } catch (std::exception& exc) {
-    error = exc.what();
-    return false;
-  }
-}
 
 }  // namespace yocto
 

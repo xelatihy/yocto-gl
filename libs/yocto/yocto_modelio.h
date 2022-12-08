@@ -210,6 +210,27 @@ inline bool add_lines(ply_model& ply, const vector<array<T, 2>>& lines);
 template <typename T>
 inline bool add_points(ply_model& ply, const vector<T>& points);
 
+// exception API
+struct ply_error : std::runtime_error {
+  using std::runtime_error::runtime_error;
+};
+
+// Load and save ply
+inline ply_model load_ply(const string& filename) {
+  auto ply   = ply_model{};
+  auto error = string{};
+  if (!load_ply(filename, ply, error)) throw ply_error(filename);
+  return ply;
+}
+inline void load_ply(const string& filename, ply_model& ply) {
+  auto error = string{};
+  if (!load_ply(filename, ply, error)) throw ply_error(filename);
+}
+inline void save_ply(const string& filename, const ply_model& ply) {
+  auto error = string{};
+  if (!save_ply(filename, ply, error)) throw ply_error(filename);
+}
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -320,12 +341,6 @@ struct obj_model {
   vector<obj_environment> environments = {};
 };
 
-// Load and save obj shape
-obj_shape load_sobj(const string& filename, bool face_varying = false);
-void      load_obj(
-         const string& filename, obj_shape& obj, bool face_varying = false);
-void save_obj(const string& filename, const obj_shape& obj);
-
 // Load and save obj
 [[nodiscard]] bool load_obj(const string& filename, obj_model& obj,
     string& error, bool face_varying = false, bool split_materials = false);
@@ -387,6 +402,48 @@ void add_fvquads(obj_shape& obj, const vector<array<int, 4>>& quadspos,
     const vector<array<int, 4>>& quadsnorm,
     const vector<array<int, 4>>& quadstexcoord, int material);
 
+// exception API
+struct obj_error : std::runtime_error {
+  using std::runtime_error::runtime_error;
+};
+
+// Load and save obj shape
+inline obj_shape load_sobj(const string& filename, bool face_varying = false) {
+  auto obj   = obj_shape{};
+  auto error = string{};
+  if (!load_obj(filename, obj, error, face_varying)) throw obj_error(error);
+  return obj;
+}
+inline void load_obj(
+    const string& filename, obj_shape& obj, bool face_varying = false) {
+  auto error = string{};
+  if (!load_obj(filename, obj, error, face_varying)) throw obj_error(error);
+}
+inline void save_obj(const string& filename, const obj_shape& obj) {
+  auto error = string{};
+  if (!save_obj(filename, obj, error)) throw obj_error(error);
+}
+
+// Load and save obj
+inline obj_model load_obj(const string& filename, bool face_varying = false,
+    bool split_materials = false) {
+  auto obj   = obj_model{};
+  auto error = string{};
+  if (!load_obj(filename, obj, error, face_varying, split_materials))
+    throw obj_error(error);
+  return obj;
+}
+inline void load_obj(const string& filename, obj_model& obj,
+    bool face_varying = false, bool split_materials = false) {
+  auto error = string{};
+  if (!load_obj(filename, obj, error, face_varying, split_materials))
+    throw obj_error(error);
+}
+inline void save_obj(const string& filename, const obj_model& obj) {
+  auto error = string{};
+  if (!save_obj(filename, obj, error)) throw obj_error(error);
+}
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -437,6 +494,31 @@ bool get_triangles(const stl_model& stl, int shape_id,
 void add_triangles(stl_model& stl, const vector<array<int, 3>>& triangles,
     const vector<array<float, 3>>& positions,
     const vector<array<float, 3>>& fnormals);
+
+// exception API
+struct stl_error : std::runtime_error {
+  using std::runtime_error::runtime_error;
+};
+
+// Load and save stl
+inline stl_model load_stl(const string& filename, bool unique_vertices = true) {
+  auto stl   = stl_model{};
+  auto error = string{};
+  if (!load_stl(filename, stl, error, unique_vertices))
+    throw stl_error(filename);
+  return stl;
+}
+inline void load_stl(
+    const string& filename, stl_model& stl, bool unique_vertices = true) {
+  auto error = string{};
+  if (!load_stl(filename, stl, error, unique_vertices))
+    throw stl_error(filename);
+}
+inline void save_stl(
+    const string& filename, const stl_model& stl, bool ascii = false) {
+  auto error = string{};
+  if (!save_stl(filename, stl, error, ascii)) throw stl_error(filename);
+}
 
 }  // namespace yocto
 

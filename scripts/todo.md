@@ -4,6 +4,15 @@
 
 - Docs
 
+## IO
+
+- remove non-exceptions
+
+## Math
+
+- vecs use c array
+- vecs as arrays
+
 ## Ndarrays
 
 - decide on extents comparing to other languages
