@@ -175,6 +175,9 @@ inline const auto cutrace_falsecolor_labels = trace_falsecolor_labels;
 //
 // -----------------------------------------------------------------------------
 
+// widows fixes
+#define NOMINMAX
+
 // do not reorder
 #include <cuda.h>
 // do not reorder
