@@ -404,8 +404,8 @@ struct vec<T, 4> {
 };
 
 // Deduction guides
-template <typename... Args>
-vec(Args...) -> vec<common_t<Args...>, sizeof...(Args)>;
+// template <typename... Args>
+// vec(Args...) -> vec<common_t<Args...>, sizeof...(Args)>;
 
 // Vector aliases
 using vec1f = vec<float, 1>;
