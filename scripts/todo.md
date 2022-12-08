@@ -6,7 +6,9 @@
 
 ## IO
 
-- remove non-exceptions
+- consider exception in modelio
+- consider exception in pbrtio
+- consider directly saving ply and obj
 
 ## Math
 
