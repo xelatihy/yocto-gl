@@ -157,6 +157,29 @@ struct pbrt_model {
 [[nodiscard]] bool save_pbrt(const string& filename, const pbrt_model& pbrt,
     string& error, bool ply_meshes = false);
 
+// exception API
+struct pbrt_error : std::runtime_error {
+  using std::runtime_error::runtime_error;
+};
+
+// Load/save pbrt
+inline pbrt_model load_pbrt(const string& filename, bool ply_meshes = false) {
+  auto pbrt  = pbrt_model{};
+  auto error = string{};
+  if (!load_pbrt(filename, pbrt, error, ply_meshes)) throw pbrt_error{error};
+  return pbrt;
+}
+inline void load_pbrt(
+    const string& filename, pbrt_model& pbrt, bool ply_meshes = false) {
+  auto error = string{};
+  if (!load_pbrt(filename, pbrt, error, ply_meshes)) throw pbrt_error{error};
+}
+inline void save_pbrt(
+    const string& filename, const pbrt_model& pbrt, bool ply_meshes = false) {
+  auto error = string{};
+  if (!save_pbrt(filename, pbrt, error, ply_meshes)) throw pbrt_error{error};
+}
+
 }  // namespace yocto
 
 #endif
