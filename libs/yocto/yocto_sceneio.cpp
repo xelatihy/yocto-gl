@@ -46,6 +46,7 @@
 #include <memory>
 #include <nlohmann/json.hpp>
 #include <stdexcept>
+#include <thread>
 #include <unordered_map>
 
 #include "yocto_color.h"
