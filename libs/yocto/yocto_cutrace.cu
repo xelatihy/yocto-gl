@@ -1033,10 +1033,12 @@ static vec3f sample_lights(const scene_data& scene, const trace_lights& lights,
   } else if (light.environment != invalidid) {
     auto& environment = scene.environments[light.environment];
     if (environment.emission_tex != invalidid) {
-      auto& emission_tex = scene.textures[environment.emission_tex];
-      auto  idx          = sample_discrete(light.elements_cdf, rel);
-      auto  uv = vec2f{((idx % emission_tex.width) + 0.5f) / emission_tex.width,
-          ((idx / emission_tex.width) + 0.5f) / emission_tex.height};
+      auto& texture        = scene.textures[environment.emission_tex];
+      auto  idx            = sample_discrete(light.elements_cdf, rel);
+      auto [width, height] = (vec2i)max(
+          texture.pixelsf.extents(), texture.pixelsb.extents());
+      auto uv = vec2f{
+          ((idx % width) + 0.5f) / width, ((idx / width) + 0.5f) / height};
       return transform_direction(environment.frame,
           {cos(uv.x * 2 * pif) * sin(uv.y * pif), cos(uv.y * pif),
               sin(uv.x * 2 * pif) * sin(uv.y * pif)});
@@ -1078,21 +1080,19 @@ static float sample_lights_pdf(const scene_data& scene, const trace_bvh& bvh,
     } else if (light.environment != invalidid) {
       auto& environment = scene.environments[light.environment];
       if (environment.emission_tex != invalidid) {
-        auto& emission_tex = scene.textures[environment.emission_tex];
-        auto  wl = transform_direction_inverse(environment.frame, direction);
+        auto& texture = scene.textures[environment.emission_tex];
+        auto  wl = transform_direction(inverse(environment.frame), direction);
         auto  texcoord = vec2f{atan2(wl.z, wl.x) / (2 * pif),
             acos(clamp(wl.y, -1.0f, 1.0f)) / pif};
         if (texcoord.x < 0) texcoord.x += 1;
-        auto i = clamp(
-            (int)(texcoord.x * emission_tex.width), 0, emission_tex.width - 1);
-        auto j    = clamp((int)(texcoord.y * emission_tex.height), 0,
-               emission_tex.height - 1);
-        auto prob = sample_discrete_pdf(
-                        light.elements_cdf, j * emission_tex.width + i) /
+        auto extents = (vec2i)max(
+            texture.pixelsf.extents(), texture.pixelsb.extents());
+        auto [width, height] = extents;
+        auto [i, j] = clamp((vec2i)(texcoord * extents), 0, extents - 1);
+        auto prob   = sample_discrete_pdf(light.elements_cdf, j * width + i) /
                     light.elements_cdf.back();
-        auto angle = (2 * pif / emission_tex.width) *
-                     (pif / emission_tex.height) *
-                     sin(pif * (j + 0.5f) / emission_tex.height);
+        auto angle = (2 * pif / width) * (pif / height) *
+                     sin(pif * (j + 0.5f) / height);
         pdf += prob / angle;
       } else {
         pdf += 1 / (4 * pif);
