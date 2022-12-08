@@ -176,15 +176,6 @@ static void draw_scene(glscene_state& glscene, const scene_data& scene,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-void update_image_params(
-    const gui_input& input, const image_data& image, glimage_params& glparams) {
-  glparams.window                           = input.window;
-  glparams.framebuffer                      = input.framebuffer;
-  std::tie(glparams.center, glparams.scale) = camera_imview(glparams.center,
-      glparams.scale, {image.width, image.height}, glparams.window,
-      glparams.fit);
-}
-
 void update_image_params(const gui_input& input, const array2d<vec4f>& image,
     glimage_params& glparams) {
   glparams.window                           = input.window;
@@ -213,8 +204,8 @@ bool uiupdate_camera_params(const gui_input& input, camera_data& camera) {
     auto pan    = vec2f{0, 0};
     auto rotate = vec2f{0, 0};
     if (input.modifiers.shift) {
-      pan   = (input.cursor - input.last) * camera.focus / 200.0f;
-      pan.x = -pan.x;
+      pan = (input.cursor - input.last) * camera.focus / 200.0f;
+      pan *= vec2f{-1, 1};  // flip x
     } else if (input.modifiers.control) {
       dolly = (input.cursor.y - input.last.y) / 100.0f;
     } else {
@@ -242,24 +233,6 @@ bool draw_tonemap_widgets(
   return (bool)edited;
 }
 
-bool draw_image_widgets(const gui_input& input, const image_data& image,
-    const image_data& display, glimage_params& glparams) {
-  if (draw_gui_header("inspect")) {
-    draw_gui_slider("zoom", glparams.scale, 0.1f, 10);
-    draw_gui_checkbox("fit", glparams.fit);
-    draw_gui_coloredit("background", glparams.background);
-    auto ij = image_coords(input.cursor, glparams.center, glparams.scale,
-        vec2i{image.width, image.height});
-    draw_gui_dragger("mouse", ij);
-    auto image_pixel   = image.pixels[ij.y * image.width + ij.x],
-         display_pixel = image.pixels[ij.y * image.width + ij.x];
-    draw_gui_coloredit("image", image_pixel);
-    draw_gui_coloredit("display", display_pixel);
-    end_gui_header();
-  }
-  return false;
-}
-
 bool draw_image_widgets(const gui_input& input, const array2d<vec4f>& image,
     const array2d<vec4f>& display, glimage_params& glparams) {
   if (draw_gui_header("inspect")) {
@@ -270,25 +243,6 @@ bool draw_image_widgets(const gui_input& input, const array2d<vec4f>& image,
         input.cursor, glparams.center, glparams.scale, (vec2i)image.extents());
     draw_gui_dragger("mouse", ij);
     auto image_pixel = image[ij], display_pixel = image[ij];
-    draw_gui_coloredit("image", image_pixel);
-    draw_gui_coloredit("display", display_pixel);
-    end_gui_header();
-  }
-  return false;
-}
-
-bool draw_image_widgets(
-    const gui_input& input, const image_data& image, glimage_params& glparams) {
-  if (draw_gui_header("inspect")) {
-    draw_gui_slider("zoom", glparams.scale, 0.1f, 10);
-    draw_gui_checkbox("fit", glparams.fit);
-    draw_gui_coloredit("background", glparams.background);
-    auto ij = image_coords(input.cursor, glparams.center, glparams.scale,
-        vec2i{image.width, image.height});
-    draw_gui_dragger("mouse", ij);
-    auto image_pixel   = image.pixels[ij.y * image.width + ij.x];
-    auto display_pixel = tonemap(
-        image_pixel, glparams.exposure, glparams.filmic, glparams.srgb);
     draw_gui_coloredit("image", image_pixel);
     draw_gui_coloredit("display", display_pixel);
     end_gui_header();
@@ -452,114 +406,14 @@ bool draw_scene_widgets(scene_data& scene, scene_selection& selection,
 namespace yocto {
 
 // Open a window and show an image
-void show_image_gui(
-    const string& title, const string& name, const image_data& image) {
-  // display image
-  auto  display  = make_image(image.width, image.height, false);
-  float exposure = 0;
-  bool  filmic   = false;
-  tonemap_image_mt(display, image, exposure, filmic);
-
-  // opengl image
-  auto glimage  = glimage_state{};
-  auto glparams = glimage_params{};
-
-  // top level combo
-  auto names    = vector<string>{name};
-  auto selected = 0;
-
-  // callbacks
-  auto callbacks = gui_callbacks{};
-  callbacks.init = [&](const gui_input& input) {
-    init_image(glimage);
-    set_image(glimage, display);
-  };
-  callbacks.clear = [&](const gui_input& input) { clear_image(glimage); };
-  callbacks.draw  = [&](const gui_input& input) {
-    update_image_params(input, image, glparams);
-    draw_image(glimage, glparams);
-  };
-  callbacks.widgets = [&](const gui_input& input) {
-    draw_gui_combobox("name", selected, names);
-    if (draw_tonemap_widgets(input, exposure, filmic)) {
-      tonemap_image_mt(display, image, exposure, filmic);
-      set_image(glimage, display);
-    }
-    draw_image_widgets(input, image, display, glparams);
-  };
-  callbacks.uiupdate = [&](const gui_input& input) {
-    uiupdate_image_params(input, glparams);
-  };
-
-  // run ui
-  show_gui_window({1280 + 320, 720}, title, callbacks);
-}
-
-// Open a window and show an image
-void show_image_gui(const string& title, const vector<string>& names,
-    const vector<image_data>& images) {
-  // display image
-  auto displays  = vector<image_data>(images.size());
-  auto exposures = vector<float>(images.size(), 0);
-  auto filmics   = vector<bool>(images.size(), false);
-  for (auto idx : range((int)images.size())) {
-    displays[idx] = make_image(images[idx].width, images[idx].height, false);
-    tonemap_image_mt(displays[idx], images[idx], exposures[idx], filmics[idx]);
-  }
-
-  // opengl image
-  auto glimages  = vector<glimage_state>(images.size());
-  auto glparamss = vector<glimage_params>(images.size());
-
-  // selection
-  auto selected = 0;
-
-  // callbacks
-  auto callbacks = gui_callbacks{};
-  callbacks.init = [&](const gui_input& input) {
-    for (auto idx : range(images.size())) {
-      init_image(glimages[idx]);
-      set_image(glimages[idx], displays[idx]);
-    }
-  };
-  callbacks.clear = [&](const gui_input& input) {
-    for (auto idx : range(images.size())) {
-      clear_image(glimages[idx]);
-    }
-  };
-  callbacks.draw = [&](const gui_input& input) {
-    update_image_params(input, displays[selected], glparamss[selected]);
-    draw_image(glimages[selected], glparamss[selected]);
-  };
-  callbacks.widgets = [&](const gui_input& input) {
-    draw_gui_combobox("name", selected, names);
-    auto filmic = (bool)filmics[selected];  // vector of bool ...
-    if (draw_tonemap_widgets(input, exposures[selected], filmic)) {
-      filmics[selected] = filmic;
-      tonemap_image_mt(displays[selected], images[selected],
-          exposures[selected], filmics[selected]);
-      set_image(glimages[selected], displays[selected]);
-    }
-    draw_image_widgets(
-        input, images[selected], displays[selected], glparamss[selected]);
-  };
-  callbacks.uiupdate = [&](const gui_input& input) {
-    uiupdate_image_params(input, glparamss[selected]);
-  };
-
-  // run ui
-  show_gui_window({1280 + 320, 720}, title, callbacks);
-}
-
-// Open a window and show an image
-void show_colorgrade_gui(
-    const string& title, const string& name, const image_data& image) {
+void show_colorgrade_gui(const string& title, const string& name,
+    const array2d<vec4f>& image, bool linear) {
   // color grading parameters
   auto params = colorgrade_params{};
 
   // display image
-  auto display = make_image(image.width, image.height, false);
-  colorgrade_image_mt(display, image, params);
+  auto display = image;
+  colorgrade_image_mt(display, image, linear, params);
 
   // opengl image
   auto glimage  = glimage_state{};
@@ -602,7 +456,7 @@ void show_colorgrade_gui(
       edited += draw_gui_coloredit("highlights color", params.highlights_color);
       end_gui_header();
       if (edited) {
-        colorgrade_image_mt(display, image, params);
+        colorgrade_image_mt(display, image, linear, params);
         set_image(glimage, display);
       }
     }
@@ -1309,22 +1163,6 @@ void clear_image(glimage_state& glimage) {
   if (glimage.positions) glDeleteBuffers(1, &glimage.positions);
   if (glimage.triangles) glDeleteBuffers(1, &glimage.triangles);
   glimage = {};
-}
-
-void set_image(glimage_state& glimage, const image_data& image) {
-  if (!glimage.texture || glimage.extents != vec2i{image.width, image.height}) {
-    if (!glimage.texture) glGenTextures(1, &glimage.texture);
-    glBindTexture(GL_TEXTURE_2D, glimage.texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, image.width, image.height, 0,
-        GL_RGBA, GL_FLOAT, image.pixels.data());
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-  } else {
-    glBindTexture(GL_TEXTURE_2D, glimage.texture);
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, image.width, image.height, GL_RGBA,
-        GL_FLOAT, image.pixels.data());
-  }
-  glimage.extents = {image.width, image.height};
 }
 
 void set_image(glimage_state& glimage, const array2d<vec4f>& image) {

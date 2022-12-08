@@ -181,22 +181,6 @@ texture_data image_to_texture(const array2d<vec4f>& image, bool linear) {
   return texture;
 }
 
-// conversion from image
-texture_data image_to_texture(const image_data& image) {
-  auto texture   = texture_data{};
-  texture.linear = image.linear;
-  if (image.linear) {
-    texture.pixelsf = array2d<vec4f>{
-        image.pixels.data(), vec2s{(size_t)image.width, (size_t)image.height}};
-  } else {
-    auto pixelsb = vector<vec4b>{};
-    float_to_byte(pixelsb, image.pixels);
-    texture.pixelsb = array2d<vec4b>{
-        pixelsb.data(), vec2s{(size_t)image.width, (size_t)image.height}};
-  }
-  return texture;
-}
-
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
