@@ -218,7 +218,8 @@ void convert_image(image_data& result, const image_data& image) {
 
 // Lookup pixel for evaluation
 static vec4f lookup_image(
-    const image_data& image, int i, int j, bool as_linear) {
+    const image_data& image, const vec2i& ij, bool as_linear) {
+  auto [i, j] = ij;
   if (as_linear && !image.linear) {
     return srgb_to_rgb(image.pixels[j * image.width + i]);
   } else {
@@ -229,36 +230,28 @@ static vec4f lookup_image(
 // Evaluates an image at a point `uv`.
 vec4f eval_image(const image_data& image, const vec2f& uv, bool as_linear,
     bool no_interpolation, bool clamp_to_edge) {
-  if (image.width == 0 || image.height == 0) return {0, 0, 0, 0};
+  if (image.pixels.empty()) return vec4f{0, 0, 0, 0};
 
   // get image width/height
   auto size = vec2i{image.width, image.height};
 
   // get coordinates normalized for tiling
-  auto s = 0.0f, t = 0.0f;
-  if (clamp_to_edge) {
-    s = clamp(uv.x, 0.0f, 1.0f) * size.x;
-    t = clamp(uv.y, 0.0f, 1.0f) * size.y;
-  } else {
-    s = fmod(uv.x, 1.0f) * size.x;
-    if (s < 0) s += size.x;
-    t = fmod(uv.y, 1.0f) * size.y;
-    if (t < 0) t += size.y;
-  }
-
-  // get image coordinates and residuals
-  auto i = clamp((int)s, 0, size.x - 1), j = clamp((int)t, 0, size.y - 1);
-  auto ii = (i + 1) % size.x, jj = (j + 1) % size.y;
-  auto u = s - i, v = t - j;
+  auto st = (clamp_to_edge ? clamp(uv, 0, 1) : mod(uv, 1)) * size;
 
   // handle interpolation
   if (no_interpolation) {
-    return lookup_image(image, i, j, as_linear);
+    auto ij = clamp((vec2i)st, 0, size - 1);
+    return lookup_image(image, ij, as_linear);
   } else {
-    return lookup_image(image, i, j, as_linear) * (1 - u) * (1 - v) +
-           lookup_image(image, i, jj, as_linear) * (1 - u) * v +
-           lookup_image(image, ii, j, as_linear) * u * (1 - v) +
-           lookup_image(image, ii, jj, as_linear) * u * v;
+    auto ij     = clamp((vec2s)st, 0, size - 1);
+    auto i1j    = (ij + vec2s{1, 0}) % size;
+    auto ij1    = (ij + vec2s{0, 1}) % size;
+    auto i1j1   = (ij + vec2s{1, 1}) % size;
+    auto [u, v] = st - ij;
+    return lookup_image(image, ij, as_linear) * (1 - u) * (1 - v) +
+           lookup_image(image, ij1, as_linear) * (1 - u) * v +
+           lookup_image(image, i1j, as_linear) * u * (1 - v) +
+           lookup_image(image, i1j1, as_linear) * u * v;
   }
 }
 
