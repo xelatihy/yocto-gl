@@ -1921,73 +1921,38 @@ bool load_texture(
   auto ext = path_extension(filename);
   if (ext == ".exr" || ext == ".EXR") {
     auto pixels = (float*)nullptr;
-    if (LoadEXR(&pixels, &texture.width, &texture.height, filename.c_str(),
-            nullptr) != 0)
+    auto width = 0, height = 0;
+    if (LoadEXR(&pixels, &width, &height, filename.c_str(), nullptr) != 0)
       return read_error();
     texture.linear  = true;
-    texture.pixelsf = vector<vec4f>{
-        (vec4f*)pixels, (vec4f*)pixels + texture.width * texture.height};
+    texture.pixelsf = array2d<vec4f>{
+        (vec4f*)pixels, {(size_t)width, (size_t)height}};
     free(pixels);
     return true;
   } else if (ext == ".hdr" || ext == ".HDR") {
     auto buffer = vector<byte>{};
     if (!load_binary(filename, buffer, error)) return false;
-    auto ncomp  = 0;
-    auto pixels = stbi_loadf_from_memory(buffer.data(), (int)buffer.size(),
-        &texture.width, &texture.height, &ncomp, 4);
+    auto width = 0, height = 0, ncomp = 0;
+    auto pixels = stbi_loadf_from_memory(
+        buffer.data(), (int)buffer.size(), &width, &height, &ncomp, 4);
     if (!pixels) return read_error();
     texture.linear  = true;
-    texture.pixelsf = vector<vec4f>{
-        (vec4f*)pixels, (vec4f*)pixels + texture.width * texture.height};
+    texture.pixelsf = array2d<vec4f>{
+        (vec4f*)pixels, {(size_t)width, (size_t)height}};
     free(pixels);
     return true;
-  } else if (ext == ".png" || ext == ".PNG") {
+  } else if (ext == ".png" || ext == ".PNG" || ext == ".jpg" || ext == ".JPG" ||
+             ext == ".jpeg" || ext == ".JPEG" || ext == ".tga" ||
+             ext == ".TGA" || ext == ".bmp" || ext == ".BMP") {
     auto buffer = vector<byte>{};
     if (!load_binary(filename, buffer, error)) return false;
-    auto ncomp  = 0;
-    auto pixels = stbi_load_from_memory(buffer.data(), (int)buffer.size(),
-        &texture.width, &texture.height, &ncomp, 4);
+    auto width = 0, height = 0, ncomp = 0;
+    auto pixels = stbi_load_from_memory(
+        buffer.data(), (int)buffer.size(), &width, &height, &ncomp, 4);
     if (!pixels) return read_error();
     texture.linear  = false;
-    texture.pixelsb = vector<vec4b>{
-        (vec4b*)pixels, (vec4b*)pixels + texture.width * texture.height};
-    free(pixels);
-    return true;
-  } else if (ext == ".jpg" || ext == ".JPG" || ext == ".jpeg" ||
-             ext == ".JPEG") {
-    auto buffer = vector<byte>{};
-    if (!load_binary(filename, buffer, error)) return false;
-    auto ncomp  = 0;
-    auto pixels = stbi_load_from_memory(buffer.data(), (int)buffer.size(),
-        &texture.width, &texture.height, &ncomp, 4);
-    if (!pixels) return read_error();
-    texture.linear  = false;
-    texture.pixelsb = vector<vec4b>{
-        (vec4b*)pixels, (vec4b*)pixels + texture.width * texture.height};
-    free(pixels);
-    return true;
-  } else if (ext == ".tga" || ext == ".TGA") {
-    auto buffer = vector<byte>{};
-    if (!load_binary(filename, buffer, error)) return false;
-    auto ncomp  = 0;
-    auto pixels = stbi_load_from_memory(buffer.data(), (int)buffer.size(),
-        &texture.width, &texture.height, &ncomp, 4);
-    if (!pixels) return read_error();
-    texture.linear  = false;
-    texture.pixelsb = vector<vec4b>{
-        (vec4b*)pixels, (vec4b*)pixels + texture.width * texture.height};
-    free(pixels);
-    return true;
-  } else if (ext == ".bmp" || ext == ".BMP") {
-    auto buffer = vector<byte>{};
-    if (!load_binary(filename, buffer, error)) return false;
-    auto ncomp  = 0;
-    auto pixels = stbi_load_from_memory(buffer.data(), (int)buffer.size(),
-        &texture.width, &texture.height, &ncomp, 4);
-    if (!pixels) return read_error();
-    texture.linear  = false;
-    texture.pixelsb = vector<vec4b>{
-        (vec4b*)pixels, (vec4b*)pixels + texture.width * texture.height};
+    texture.pixelsb = array2d<vec4b>{
+        (vec4b*)pixels, {(size_t)width, (size_t)height}};
     free(pixels);
     return true;
   } else if (ext == ".ypreset" || ext == ".YPRESET") {
@@ -2009,23 +1974,13 @@ bool save_texture(
 
   // check for correct handling
   if (!texture.pixelsf.empty() && is_ldr_filename(filename)) {
-    auto ntexture   = texture_data{};
-    ntexture.width  = texture.width;
-    ntexture.height = texture.height;
-    ntexture.pixelsb.resize(texture.pixelsf.size());
-    for (auto idx : range(texture.pixelsf.size())) {
-      ntexture.pixelsb[idx] = float_to_byte(rgb_to_srgb(texture.pixelsf[idx]));
-    }
+    auto ntexture    = texture_data{};
+    ntexture.pixelsb = rgb_to_srgbb(texture.pixelsf);
     return save_texture(filename, ntexture, error);
   }
   if (!texture.pixelsb.empty() && is_hdr_filename(filename)) {
-    auto ntexture   = texture_data{};
-    ntexture.width  = texture.width;
-    ntexture.height = texture.height;
-    ntexture.pixelsf.resize(texture.pixelsb.size());
-    for (auto idx : range(texture.pixelsb.size())) {
-      ntexture.pixelsf[idx] = srgb_to_rgb(byte_to_float(texture.pixelsb[idx]));
-    }
+    auto ntexture    = texture_data{};
+    ntexture.pixelsf = srgbb_to_rgb(texture.pixelsb);
     return save_texture(filename, ntexture, error);
   }
 
@@ -2035,20 +1990,23 @@ bool save_texture(
     buffer.insert(buffer.end(), (byte*)data, (byte*)data + size);
   };
 
+  // grab data for low level apis
+  auto [width, height] = (vec2i)max(
+      texture.pixelsf.extents(), texture.pixelsb.extents());
+
   auto ext = path_extension(filename);
   if (ext == ".hdr" || ext == ".HDR") {
     auto buffer = vector<byte>{};
-    if (!stbi_write_hdr_to_func(stbi_write_data, &buffer, (int)texture.width,
-            (int)texture.height, 4, (const float*)texture.pixelsf.data()))
+    if (!stbi_write_hdr_to_func(stbi_write_data, &buffer, width, height, 4,
+            (const float*)texture.pixelsf.data()))
       return write_error();
     if (!save_binary(filename, buffer, error)) return false;
     return true;
   } else if (ext == ".exr" || ext == ".EXR") {
     auto data = (byte*)nullptr;
     auto size = (size_t)0;
-    if (SaveEXRToMemory((const float*)texture.pixelsf.data(),
-            (int)texture.width, (int)texture.height, 4, 1, &data, &size,
-            nullptr) < 0)
+    if (SaveEXRToMemory((const float*)texture.pixelsf.data(), width, height, 4,
+            1, &data, &size, nullptr) < 0)
       return write_error();
     auto buffer = vector<byte>{data, data + size};
     free(data);
@@ -2056,31 +2014,30 @@ bool save_texture(
     return true;
   } else if (ext == ".png" || ext == ".PNG") {
     auto buffer = vector<byte>{};
-    if (!stbi_write_png_to_func(stbi_write_data, &buffer, (int)texture.width,
-            (int)texture.height, 4, (const byte*)texture.pixelsb.data(),
-            (int)texture.width * 4))
+    if (!stbi_write_png_to_func(stbi_write_data, &buffer, width, height, 4,
+            (const byte*)texture.pixelsb.data(), width * 4))
       return write_error();
     if (!save_binary(filename, buffer, error)) return false;
     return true;
   } else if (ext == ".jpg" || ext == ".JPG" || ext == ".jpeg" ||
              ext == ".JPEG") {
     auto buffer = vector<byte>{};
-    if (!stbi_write_jpg_to_func(stbi_write_data, &buffer, (int)texture.width,
-            (int)texture.height, 4, (const byte*)texture.pixelsb.data(), 75))
+    if (!stbi_write_jpg_to_func(stbi_write_data, &buffer, width, height, 4,
+            (const byte*)texture.pixelsb.data(), 75))
       return write_error();
     if (!save_binary(filename, buffer, error)) return false;
     return true;
   } else if (ext == ".tga" || ext == ".TGA") {
     auto buffer = vector<byte>{};
-    if (!stbi_write_tga_to_func(stbi_write_data, &buffer, (int)texture.width,
-            (int)texture.height, 4, (const byte*)texture.pixelsb.data()))
+    if (!stbi_write_tga_to_func(stbi_write_data, &buffer, width, height, 4,
+            (const byte*)texture.pixelsb.data()))
       return write_error();
     if (!save_binary(filename, buffer, error)) return false;
     return true;
   } else if (ext == ".bmp" || ext == ".BMP") {
     auto buffer = vector<byte>{};
-    if (!stbi_write_bmp_to_func(stbi_write_data, &buffer, (int)texture.width,
-            (int)texture.height, 4, (const byte*)texture.pixelsb.data()))
+    if (!stbi_write_bmp_to_func(stbi_write_data, &buffer, width, height, 4,
+            (const byte*)texture.pixelsb.data()))
       return write_error();
     if (!save_binary(filename, buffer, error)) return false;
     return true;
@@ -2113,7 +2070,7 @@ void save_texture(const string& filename, const texture_data& texture) {
 bool make_texture_preset(
     const string& filename, texture_data& texture, string& error) {
   texture = make_texture_preset(path_basename(filename));
-  if (texture.width == 0 || texture.height == 0) {
+  if (texture.pixelsf.empty() && texture.pixelsb.empty()) {
     error = "unknown preset";
     return false;
   }
@@ -2307,10 +2264,6 @@ static void trim_memory(scene_data& scene) {
     subdiv.quadspos.shrink_to_fit();
     subdiv.quadsnorm.shrink_to_fit();
     subdiv.quadstexcoord.shrink_to_fit();
-  }
-  for (auto& texture : scene.textures) {
-    texture.pixelsf.shrink_to_fit();
-    texture.pixelsb.shrink_to_fit();
   }
   scene.cameras.shrink_to_fit();
   scene.shapes.shrink_to_fit();

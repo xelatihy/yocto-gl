@@ -242,8 +242,7 @@ struct cucamera_data {
 };
 
 struct cutexture_data {
-  int                 width   = 0;
-  int                 height  = 0;
+  vec2i               extents = {0, 0};
   bool                linear  = false;
   bool                nearest = false;
   bool                clamp   = false;
@@ -716,7 +715,7 @@ optix_shader void __closesthit__intersect_scene() {
   intersection.instance = optixGetInstanceIndex();
   intersection.element  = optixGetPrimitiveIndex();
   intersection.uv       = {
-            optixGetTriangleBarycentrics().x, optixGetTriangleBarycentrics().y};
+      optixGetTriangleBarycentrics().x, optixGetTriangleBarycentrics().y};
   intersection.distance = optixGetRayTmax();
   intersection.hit      = true;
 }
@@ -1034,10 +1033,12 @@ static vec3f sample_lights(const scene_data& scene, const trace_lights& lights,
   } else if (light.environment != invalidid) {
     auto& environment = scene.environments[light.environment];
     if (environment.emission_tex != invalidid) {
-      auto& emission_tex = scene.textures[environment.emission_tex];
-      auto  idx          = sample_discrete(light.elements_cdf, rel);
-      auto  uv = vec2f{((idx % emission_tex.width) + 0.5f) / emission_tex.width,
-          ((idx / emission_tex.width) + 0.5f) / emission_tex.height};
+      auto& texture = scene.textures[environment.emission_tex];
+      auto  idx     = sample_discrete(light.elements_cdf, rel);
+      auto  extents = (vec2i)texture.extents;
+      auto  width = extents.x, height = extents.y;
+      auto  uv = vec2f{
+          ((idx % width) + 0.5f) / width, ((idx / width) + 0.5f) / height};
       return transform_direction(environment.frame,
           {cos(uv.x * 2 * pif) * sin(uv.y * pif), cos(uv.y * pif),
               sin(uv.x * 2 * pif) * sin(uv.y * pif)});
@@ -1079,21 +1080,19 @@ static float sample_lights_pdf(const scene_data& scene, const trace_bvh& bvh,
     } else if (light.environment != invalidid) {
       auto& environment = scene.environments[light.environment];
       if (environment.emission_tex != invalidid) {
-        auto& emission_tex = scene.textures[environment.emission_tex];
-        auto  wl = transform_direction_inverse(environment.frame, direction);
+        auto& texture = scene.textures[environment.emission_tex];
+        auto  wl = transform_direction(inverse(environment.frame), direction);
         auto  texcoord = vec2f{atan2(wl.z, wl.x) / (2 * pif),
             acos(clamp(wl.y, -1.0f, 1.0f)) / pif};
         if (texcoord.x < 0) texcoord.x += 1;
-        auto i = clamp(
-            (int)(texcoord.x * emission_tex.width), 0, emission_tex.width - 1);
-        auto j    = clamp((int)(texcoord.y * emission_tex.height), 0,
-               emission_tex.height - 1);
-        auto prob = sample_discrete_pdf(
-                        light.elements_cdf, j * emission_tex.width + i) /
+        auto extents = (vec2i)texture.extents;
+        auto width = extents.x, height = extents.y;
+        auto ij = clamp((vec2i)(texcoord * extents), 0, extents - 1);
+        auto i = ij.x, j = ij.y;
+        auto prob = sample_discrete_pdf(light.elements_cdf, j * width + i) /
                     light.elements_cdf.back();
-        auto angle = (2 * pif / emission_tex.width) *
-                     (pif / emission_tex.height) *
-                     sin(pif * (j + 0.5f) / emission_tex.height);
+        auto angle = (2 * pif / width) * (pif / height) *
+                     sin(pif * (j + 0.5f) / height);
         pdf += prob / angle;
       } else {
         pdf += 1 / (4 * pif);
@@ -1141,7 +1140,7 @@ static trace_result trace_path(const scene_data& scene, const trace_bvh& bvh,
     if (!volume_stack.empty()) {
       auto& vsdf     = volume_stack.back();
       auto  distance = sample_transmittance(
-           vsdf.density, intersection.distance, rand1f(rng), rand1f(rng));
+          vsdf.density, intersection.distance, rand1f(rng), rand1f(rng));
       weight *= eval_transmittance(vsdf.density, distance) /
                 sample_transmittance_pdf(
                     vsdf.density, distance, intersection.distance);
@@ -1288,7 +1287,7 @@ static trace_result trace_pathdirect(const scene_data& scene,
     if (!volume_stack.empty()) {
       auto& vsdf     = volume_stack.back();
       auto  distance = sample_transmittance(
-           vsdf.density, intersection.distance, rand1f(rng), rand1f(rng));
+          vsdf.density, intersection.distance, rand1f(rng), rand1f(rng));
       weight *= eval_transmittance(vsdf.density, distance) /
                 sample_transmittance_pdf(
                     vsdf.density, distance, intersection.distance);
@@ -1467,7 +1466,7 @@ static trace_result trace_pathmis(const scene_data& scene, const trace_bvh& bvh,
     if (!volume_stack.empty()) {
       auto& vsdf     = volume_stack.back();
       auto  distance = sample_transmittance(
-           vsdf.density, intersection.distance, rand1f(rng), rand1f(rng));
+          vsdf.density, intersection.distance, rand1f(rng), rand1f(rng));
       weight *= eval_transmittance(vsdf.density, distance) /
                 sample_transmittance_pdf(
                     vsdf.density, distance, intersection.distance);
@@ -2153,7 +2152,7 @@ optix_shader void __raygen__trace_pixel() {
   if (globals.state.samples == 0) {
     globals.state.image[ij] = {0, 0, 0, 0};
     globals.state.rngs[ij]  = make_rng(
-         98273987, (ij.y * globals.state.image.extent(1) + ij.x) * 2 + 1);
+        98273987, (ij.y * globals.state.image.extent(1) + ij.x) * 2 + 1);
   }
 
   // run shading
