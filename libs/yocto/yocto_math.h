@@ -78,8 +78,13 @@ using ushort = unsigned short;
 // Common type
 template <typename... Ts>
 using common_t = std::common_type_t<Ts...>;
+#ifdef __CUDACC__
+template <typename Func, typename... Ts>
+using result_t = std::result_of_t<Func(Ts...)>;
+#else
 template <typename Func, typename... Ts>
 using result_t = std::invoke_result_t<Func, Ts...>;
+#endif
 
 template <typename T = double>
 constexpr auto pi_t = (T)3.14159265358979323846;
