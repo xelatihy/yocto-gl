@@ -25,7 +25,7 @@ if(MSVC)
 endif(MSVC)
 if(UNIX AND NOT APPLE)
   target_include_directories(embree INTERFACE /usr/local/include)
-  set_target_properties(embree PROPERTY
+  set_target_properties(embree PROPERTIES
     IMPORTED_LINK_INTERFACE_LANGUAGES "CXX"
     IMPORTED_LOCATION "/usr/local/lib/libembree3.so"
     INTERFACE_INCLUDE_DIRECTORIES "/usr/local/include")
