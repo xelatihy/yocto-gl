@@ -409,8 +409,10 @@ struct vec<T, 4> {
 };
 
 // Deduction guides
-// template <typename... Args>
-// vec(Args...) -> vec<common_t<Args...>, sizeof...(Args)>;
+#ifndef __CUDACC__
+template <typename... Args>
+vec(Args...) -> vec<common_t<Args...>, sizeof...(Args)>;
+#endif
 
 // Vector aliases
 using vec1f = vec<float, 1>;
