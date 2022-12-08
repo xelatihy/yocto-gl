@@ -190,15 +190,29 @@ void draw_image(glimage_state& image, const glimage_params& params);
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// Mouse button
+struct gui_button {
+  bool left   = false;
+  bool right  = false;
+  bool middle = false;
+};
+
+// Mouse modifiers
+struct gui_modifiers {
+  bool alt     = false;
+  bool shift   = false;
+  bool control = false;
+};
+
 // Input state
 struct gui_input {
-  vec3i mouse       = {0, 0, 0};     // mouse buttons (left, right, middle)
-  vec2f cursor      = {0, 0};        // position excluding widgets
-  vec2f last        = {0, 0};        // last mouse position excluding widgets
-  vec3i modifiers   = {0, 0, 0};     // modifieers (alt, shift, control)
-  bool  onwidgets   = false;         // widgets are active
-  vec2i window      = {0, 0};        // window size
-  vec4i framebuffer = {0, 0, 0, 0};  // framebuffer viewport
+  gui_button    mouse       = {false, false, false};  // mouse buttons
+  vec2f         cursor      = {0, 0};                 // position
+  vec2f         last        = {0, 0};                 // last position
+  gui_modifiers modifiers   = {false, false, false};  // modifiers
+  bool          onwidgets   = false;                  // widgets are active
+  vec2i         window      = {0, 0};                 // window size
+  vec4i         framebuffer = {0, 0, 0, 0};           // framebuffer viewport
 };
 
 // Init callback called after the window has opened

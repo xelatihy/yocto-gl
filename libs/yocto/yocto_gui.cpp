@@ -195,8 +195,8 @@ void update_image_params(const gui_input& input, const array2d<vec4f>& image,
 
 bool uiupdate_image_params(const gui_input& input, glimage_params& glparams) {
   // handle mouse
-  if (input.mouse.x && input.modifiers.x && !input.onwidgets) {
-    if (input.modifiers.z) {
+  if (input.mouse.left && input.modifiers.alt && !input.onwidgets) {
+    if (input.modifiers.control) {
       glparams.scale *= pow(2.0f, (input.cursor.y - input.last.y) * 0.001f);
       return true;
     } else {
@@ -208,14 +208,14 @@ bool uiupdate_image_params(const gui_input& input, glimage_params& glparams) {
 }
 
 bool uiupdate_camera_params(const gui_input& input, camera_data& camera) {
-  if (input.mouse.x && input.modifiers.x && !input.onwidgets) {
+  if (input.mouse.left && input.modifiers.alt && !input.onwidgets) {
     auto dolly  = 0.0f;
     auto pan    = vec2f{0, 0};
     auto rotate = vec2f{0, 0};
-    if (input.modifiers.y) {
+    if (input.modifiers.shift) {
       pan   = (input.cursor - input.last) * camera.focus / 200.0f;
       pan.x = -pan.x;
-    } else if (input.modifiers.z) {
+    } else if (input.modifiers.control) {
       dolly = (input.cursor.y - input.last.y) / 100.0f;
     } else {
       rotate = (input.cursor - input.last) / 100.0f;
@@ -2162,26 +2162,16 @@ void show_gui_window(const vec2i& size, const string& title,
     if (state.widgets_width && state.widgets_left)
       state.input.cursor.x -= state.widgets_width;
     state.input.mouse = {
-        glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS ? 1
-                                                                         : 0,
-        glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS ? 1
-                                                                          : 0,
-        glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_MIDDLE) == GLFW_PRESS ? 1
-                                                                           : 0,
-    };
+        glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS,
+        glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS,
+        glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_MIDDLE) == GLFW_PRESS};
     state.input.modifiers = {
-        (glfwGetKey(window, GLFW_KEY_LEFT_ALT) == GLFW_PRESS ||
-            glfwGetKey(window, GLFW_KEY_RIGHT_ALT) == GLFW_PRESS)
-            ? 1
-            : 0,
-        (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ||
-            glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS)
-            ? 1
-            : 0,
-        (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS ||
-            glfwGetKey(window, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS)
-            ? 1
-            : 0};
+        glfwGetKey(window, GLFW_KEY_LEFT_ALT) == GLFW_PRESS ||
+            glfwGetKey(window, GLFW_KEY_RIGHT_ALT) == GLFW_PRESS,
+        glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ||
+            glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS,
+        glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS ||
+            glfwGetKey(window, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS};
     glfwGetWindowSize(window, &state.input.window.x, &state.input.window.y);
     if (state.widgets_width) state.input.window.x -= state.widgets_width;
     glfwGetFramebufferSize(
