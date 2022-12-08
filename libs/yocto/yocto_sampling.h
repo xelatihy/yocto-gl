@@ -162,9 +162,10 @@ namespace yocto {
 // Sample an hemispherical direction with uniform distribution.
 template <typename T>
 constexpr kernel vec<T, 3> sample_hemisphere(const vec<T, 2>& ruv) {
-  auto z   = ruv.y;
-  auto r   = sqrt(clamp(1 - z * z, 0.0f, 1.0f));
-  auto phi = 2 * pif * ruv.x;
+  auto [r1, r2] = ruv;
+  auto z        = r2;
+  auto r        = sqrt(clamp(1 - z * z, 0.0f, 1.0f));
+  auto phi      = 2 * pif * r1;
   return {r * cos(phi), r * sin(phi), z};
 }
 template <typename T>
@@ -176,9 +177,10 @@ constexpr kernel float sample_hemisphere_pdf(const vec<T, 3>& direction) {
 template <typename T>
 constexpr kernel vec<T, 3> sample_hemisphere(
     const vec<T, 3>& normal, const vec<T, 2>& ruv) {
-  auto z               = ruv.y;
+  auto [r1, r2]        = ruv;
+  auto z               = r2;
   auto r               = sqrt(clamp(1 - z * z, 0.0f, 1.0f));
-  auto phi             = 2 * pif * ruv.x;
+  auto phi             = 2 * pif * r1;
   auto local_direction = vec<T, 3>{r * cos(phi), r * sin(phi), z};
   return transform_direction(basis_fromz(normal), local_direction);
 }
@@ -191,9 +193,10 @@ constexpr kernel float sample_hemisphere_pdf(
 // Sample a spherical direction with uniform distribution.
 template <typename T>
 constexpr kernel vec<T, 3> sample_sphere(const vec<T, 2>& ruv) {
-  auto z   = 2 * ruv.y - 1;
-  auto r   = sqrt(clamp(1 - z * z, 0.0f, 1.0f));
-  auto phi = 2 * pif * ruv.x;
+  auto [r1, r2] = ruv;
+  auto z        = 2 * r2 - 1;
+  auto r        = sqrt(clamp(1 - z * z, 0.0f, 1.0f));
+  auto phi      = 2 * pif * r1;
   return {r * cos(phi), r * sin(phi), z};
 }
 template <typename T>
@@ -204,9 +207,10 @@ constexpr kernel float sample_sphere_pdf(const vec<T, 3>& w) {
 // Sample an hemispherical direction with cosine distribution.
 template <typename T>
 constexpr kernel vec<T, 3> sample_hemisphere_cos(const vec<T, 2>& ruv) {
-  auto z   = sqrt(ruv.y);
-  auto r   = sqrt(1 - z * z);
-  auto phi = 2 * pif * ruv.x;
+  auto [r1, r2] = ruv;
+  auto z        = sqrt(r2);
+  auto r        = sqrt(1 - z * z);
+  auto phi      = 2 * pif * r1;
   return {r * cos(phi), r * sin(phi), z};
 }
 template <typename T>
@@ -218,9 +222,10 @@ constexpr kernel float sample_hemisphere_cos_pdf(const vec<T, 3>& direction) {
 template <typename T>
 constexpr kernel vec<T, 3> sample_hemisphere_cos(
     const vec<T, 3>& normal, const vec<T, 2>& ruv) {
-  auto z               = sqrt(ruv.y);
+  auto [r1, r2]        = ruv;
+  auto z               = sqrt(r2);
   auto r               = sqrt(1 - z * z);
-  auto phi             = 2 * pif * ruv.x;
+  auto phi             = 2 * pif * r1;
   auto local_direction = vec<T, 3>{r * cos(phi), r * sin(phi), z};
   return transform_direction(basis_fromz(normal), local_direction);
 }
@@ -235,9 +240,10 @@ constexpr kernel float sample_hemisphere_cos_pdf(
 template <typename T>
 constexpr kernel vec<T, 3> sample_hemisphere_cospower(
     float exponent, const vec<T, 2>& ruv) {
-  auto z   = pow(ruv.y, 1 / (exponent + 1));
-  auto r   = sqrt(1 - z * z);
-  auto phi = 2 * pif * ruv.x;
+  auto [r1, r2] = ruv;
+  auto z        = pow(r2, 1 / (exponent + 1));
+  auto r        = sqrt(1 - z * z);
+  auto phi      = 2 * pif * r1;
   return {r * cos(phi), r * sin(phi), z};
 }
 template <typename T>
@@ -252,9 +258,10 @@ constexpr kernel float sample_hemisphere_cospower_pdf(
 template <typename T>
 constexpr kernel vec<T, 3> sample_hemisphere_cospower(
     float exponent, const vec<T, 3>& normal, const vec<T, 2>& ruv) {
-  auto z               = pow(ruv.y, 1 / (exponent + 1));
+  auto [r1, r2]        = ruv;
+  auto z               = pow(r2, 1 / (exponent + 1));
   auto r               = sqrt(1 - z * z);
-  auto phi             = 2 * pif * ruv.x;
+  auto phi             = 2 * pif * r1;
   auto local_direction = vec<T, 3>{r * cos(phi), r * sin(phi), z};
   return transform_direction(basis_fromz(normal), local_direction);
 }
@@ -268,8 +275,9 @@ constexpr kernel float sample_hemisphere_cospower_pdf(
 // Sample a point uniformly on a disk.
 template <typename T>
 constexpr kernel vec<T, 2> sample_disk(const vec<T, 2>& ruv) {
-  auto r   = sqrt(ruv.y);
-  auto phi = 2 * pif * ruv.x;
+  auto [r1, r2] = ruv;
+  auto r        = sqrt(r2);
+  auto phi      = 2 * pif * r1;
   return {cos(phi) * r, sin(phi) * r};
 }
 template <typename T>
@@ -280,8 +288,9 @@ constexpr kernel float sample_disk_pdf() {
 // Sample a point uniformly on a cylinder, without caps.
 template <typename T>
 constexpr kernel vec<T, 3> sample_cylinder(const vec<T, 2>& ruv) {
-  auto phi = 2 * pif * ruv.x;
-  return {sin(phi), cos(phi), ruv.y * 2 - 1};
+  auto [r1, r2] = ruv;
+  auto phi      = 2 * pif * r1;
+  return {sin(phi), cos(phi), r2 * 2 - 1};
 }
 template <typename T>
 constexpr kernel float sample_cylinder_pdf(const vec<T, 3>& point) {
@@ -291,15 +300,16 @@ constexpr kernel float sample_cylinder_pdf(const vec<T, 3>& point) {
 // Sample a point uniformly on a triangle returning the baricentric coordinates.
 template <typename T>
 constexpr kernel vec<T, 2> sample_triangle(const vec<T, 2>& ruv) {
-  return {1 - sqrt(ruv.x), ruv.y * sqrt(ruv.x)};
+  auto [r1, r2] = ruv;
+  return {1 - sqrt(r1), r2 * sqrt(r1)};
 }
 
 // Sample a point uniformly on a triangle.
 template <typename T>
 constexpr kernel vec<T, 3> sample_triangle(const vec<T, 3>& p0,
     const vec<T, 3>& p1, const vec<T, 3>& p2, const vec<T, 2>& ruv) {
-  auto uv = sample_triangle(ruv);
-  return p0 * (1 - uv.x - uv.y) + p1 * uv.x + p2 * uv.y;
+  auto [u, v] = sample_triangle(ruv);
+  return p0 * (1 - u - v) + p1 * u + p2 * v;
 }
 // Pdf for uniform triangle sampling, i.e. triangle area.
 template <typename T>

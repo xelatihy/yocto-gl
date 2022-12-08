@@ -326,12 +326,11 @@ inline array2d<vec<T, 4>> make_grid(const vec2s& extents, T scale = 1,
     const vec<T, 4>& color0 = {0.5, 0.5, 0.5, 1.0},
     const vec<T, 4>& color1 = {0.5, 0.5, 0.7, 1.0}) {
   return _make_proc_image(extents, [=](vec2s ij) -> vec<T, 4> {
-    auto uv    = fmod((4 * scale * ij) / extents, 1);
-    auto thick = (T)0.01 / 2;
-    auto c     = uv.x <= thick || uv.x >= 1 - thick || uv.y <= thick ||
-             uv.y >= 1 - thick ||
-             (uv.x >= (T)0.5 - thick && uv.x <= 0.5f + thick) ||
-             (uv.y >= (T)0.5 - thick && uv.y <= 0.5f + thick);
+    auto [u, v] = fmod((4 * scale * ij) / extents, 1);
+    auto thick  = (T)0.01 / 2;
+    auto c = u <= thick || u >= 1 - thick || v <= thick || v >= 1 - thick ||
+             (u >= (T)0.5 - thick && u <= 0.5f + thick) ||
+             (v >= (T)0.5 - thick && v <= 0.5f + thick);
     return c ? color0 : color1;
   });
 }
@@ -341,8 +340,8 @@ inline array2d<vec<T, 4>> make_checker(const vec2s& extents, T scale = 1,
     const vec<T, 4>& color0 = {0.5, 0.5, 0.6, 1.0},
     const vec<T, 4>& color1 = {0.7, 0.7, 0.7, 1.0}) {
   return _make_proc_image(extents, [=](vec2s ij) -> vec<T, 4> {
-    auto uv = fmod((4 * scale * ij) / extents, 1);
-    auto c  = uv.x <= (T)0.5 != uv.y <= (T)0.5;
+    auto [u, v] = fmod((4 * scale * ij) / extents, 1);
+    auto c      = u <= (T)0.5 != v <= (T)0.5;
     return c ? color0 : color1;
   });
 }
@@ -353,14 +352,15 @@ inline array2d<vec<T, 4>> make_bumps(const vec2s& extents, T scale = 1,
     const vec<T, 4>& color1 = {1, 1, 1, 1}) {
   return _make_proc_image(extents, [=](vec2s ij) -> vec<T, 4> {
     auto uv     = fmod((4 * scale * ij) / extents, 1);
+    auto [u, v] = uv;
     auto thick  = (T)0.125;
     auto center = vec<T, 2>{
-        uv.x <= (T)0.5 ? (T)0.25 : (T)0.75,
-        uv.y <= (T)0.5 ? (T)0.25 : (T)0.75,
+        u <= (T)0.5 ? (T)0.25 : (T)0.75,
+        v <= (T)0.5 ? (T)0.25 : (T)0.75,
     };
     auto dist = clamp(length(uv - center), 0, thick) / thick;
-    auto val  = uv.x <= (T)0.5 != uv.y <= (T)0.5 ? (1 + sqrt(1 - dist)) / 2
-                                                 : (dist * dist) / 2;
+    auto val  = u <= (T)0.5 != v <= (T)0.5 ? (1 + sqrt(1 - dist)) / 2
+                                           : (dist * dist) / 2;
     return lerp(color0, color1, val);
   });
 }
@@ -404,25 +404,27 @@ template <typename T = float>
 inline array2d<vec<T, 4>> make_uvgrid(
     const vec2s& extents, T scale = 1, bool colored = true) {
   return _make_proc_image(extents, [=](vec2s ij) -> vec<T, 4> {
-    auto uv  = fmod((scale * ij) / extents, 1);
-    uv.y     = 1 - uv.y;
-    auto hsv = vec<T, 3>{0, 0, 0};
-    hsv.x    = (clamp((int)(uv.x * 8), 0, 7) +
-                (clamp((int)(uv.y * 8), 0, 7) + 5) % 8 * 8) /
-            (T)64.0;
-    auto vuv = fmod(uv * 4, 1);
-    auto vc  = vuv.x <= 0.5f != vuv.y <= 0.5f;
-    hsv.z    = vc ? 0.5f - 0.05f : 0.5f + 0.05f;
-    auto suv = fmod(uv * 16, 1);
-    auto st  = (T)0.01 / 2;
-    auto sc  = suv.x <= st || suv.x >= 1 - st || suv.y <= st || suv.y >= 1 - st;
+    auto uv     = fmod((scale * ij) / extents, 1);
+    uv[1]       = 1 - uv[1];
+    auto [u, v] = uv;
+    auto hue =
+        (clamp((int)(u * 8), 0, 7) + (clamp((int)(v * 8), 0, 7) + 5) % 8 * 8) /
+        (T)64.0;
+    auto [vu, vv]   = fmod(uv * 4, 1);
+    auto vc         = vu <= 0.5f != vv <= 0.5f;
+    auto value      = vc ? 0.5f - 0.05f : 0.5f + 0.05f;
+    auto [su, sv]   = fmod(uv * 16, 1);
+    auto st         = (T)0.01 / 2;
+    auto sc         = su <= st || su >= 1 - st || sv <= st || sv >= 1 - st;
+    auto saturation = (T)0;
     if (sc) {
-      hsv.y = (T)0.2;
-      hsv.z = (T)0.8;
+      saturation = (T)0.2;
+      value      = (T)0.8;
     } else {
-      hsv.y = (T)0.8;
+      saturation = (T)0.8;
     }
-    auto rgb = (colored) ? hsv_to_rgb(hsv) : vec<T, 3>{hsv.z, hsv.z, hsv.z};
+    auto hsv = vec<T, 3>{hue, saturation, value};
+    auto rgb = (colored) ? hsv_to_rgb(hsv) : vec<T, 3>{value, value, value};
     return vec<T, 4>{rgb_to_srgb(rgb), 1};
   });
 }
@@ -730,8 +732,14 @@ struct image_data {
   vector<vec4f> pixels = {};
 
   // pixel access
-  vec4f&       operator[](vec2i ij);
-  const vec4f& operator[](vec2i ij) const;
+  inline vec4f& operator[](vec2i ij) {
+    auto [i, j] = ij;
+    return pixels[j * width + i];
+  }
+  inline const vec4f& operator[](vec2i ij) const {
+    auto [i, j] = ij;
+    return pixels[j * width + i];
+  }
 };
 
 // image creation
@@ -745,8 +753,12 @@ bool operator!=(const image_data& a, const image_data& b);
 void swap(image_data& a, image_data& b);
 
 // pixel access
-inline vec4f get_pixel(const image_data& image, int i, int j);
-inline void  set_pixel(image_data& image, int i, int j, const vec4f& pixel);
+inline vec4f get_pixel(const image_data& image, int i, int j) {
+  return image.pixels[j * image.width + i];
+}
+inline void set_pixel(image_data& image, int i, int j, const vec4f& pixel) {
+  image.pixels[j * image.width + i] = pixel;
+}
 
 // conversions
 image_data convert_image(const image_data& image, bool linear);
@@ -856,46 +868,6 @@ void resize_image(vector<vec4b>& res, const vector<vec4b>& img, int width,
 // Compute the difference between two images
 void image_difference(vector<vec4f>& diff, const vector<vec4f>& a,
     const vector<vec4f>& b, bool disply_diff);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// BACKWARDS COMPATIBILITY
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-using color_image = image_data;
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-//
-//
-// IMPLEMENTATION
-//
-//
-// -----------------------------------------------------------------------------
-
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION OF IMAGE FUNCTIONS
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// pixel access
-inline vec4f& image_data::operator[](vec2i ij) {
-  return pixels[ij.y * width + ij.x];
-}
-inline const vec4f& image_data::operator[](vec2i ij) const {
-  return pixels[ij.y * width + ij.x];
-}
-
-// pixel access
-inline vec4f get_pixel(const image_data& image, int i, int j) {
-  return image.pixels[j * image.width + i];
-}
-inline void set_pixel(image_data& image, int i, int j, const vec4f& pixel) {
-  image.pixels[j * image.width + i] = pixel;
-}
 
 }  // namespace yocto
 
