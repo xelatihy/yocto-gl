@@ -109,12 +109,12 @@ namespace yocto {
 
 // pixel access
 vec4f lookup_texture(
-    const texture_data& texture, const vec2i& ij, bool as_linear) {
+    const texture_data& texture, const vec2s& ij, bool as_linear) {
   auto color = vec4f{0, 0, 0, 0};
   if (!texture.pixelsf.empty()) {
-    color = texture.pixelsf[ij.y * texture.width + ij.x];
+    color = texture.pixelsf[ij];
   } else {
-    color = byte_to_float(texture.pixelsb[ij.y * texture.width + ij.x]);
+    color = byte_to_float(texture.pixelsb[ij]);
   }
   if (as_linear && !texture.linear) {
     return srgb_to_rgb(color);
@@ -126,23 +126,23 @@ vec4f lookup_texture(
 // Evaluates an image at a point `uv`.
 vec4f eval_texture(const texture_data& texture, const vec2f& uv, bool as_linear,
     bool no_interpolation, bool clamp_to_edge) {
-  if (texture.width == 0 || texture.height == 0) return {0, 0, 0, 0};
+  if (texture.pixelsf.empty() && texture.pixelsb.empty()) return {0, 0, 0, 0};
 
   // get texture width/height
-  auto size = vec2i{texture.width, texture.height};
+  auto size = max(texture.pixelsf.extents(), texture.pixelsb.extents());
 
   // get coordinates normalized for tiling
   auto st = (clamp_to_edge ? clamp(uv, 0, 1) : fmod(uv, 1)) * size;
 
   // handle interpolation
   if (no_interpolation) {
-    auto ij = clamp((vec2i)st, 0, size - 1);
+    auto ij = clamp((vec2s)st, 0, size - 1);
     return lookup_texture(texture, ij, as_linear);
   } else {
-    auto ij     = clamp((vec2i)st, 0, size - 1);
-    auto i1j    = (ij + vec2i{1, 0}) % size;
-    auto ij1    = (ij + vec2i{0, 1}) % size;
-    auto i1j1   = (ij + vec2i{1, 1}) % size;
+    auto ij     = clamp((vec2s)st, 0, size - 1);
+    auto i1j    = (ij + vec2s{1, 0}) % size;
+    auto ij1    = (ij + vec2s{0, 1}) % size;
+    auto i1j1   = (ij + vec2s{1, 1}) % size;
     auto [u, v] = st - ij;
     return lookup_texture(texture, ij, as_linear) * (1 - u) * (1 - v) +
            lookup_texture(texture, ij1, as_linear) * (1 - u) * v +
@@ -171,25 +171,28 @@ vec4f eval_texture(const scene_data& scene, int texture, const vec2f& uv,
 
 // conversion from image
 texture_data image_to_texture(const array2d<vec4f>& image, bool linear) {
-  auto [width, height] = (vec2i)image.extents();
-  auto texture         = texture_data{width, height, linear, {}, {}};
+  auto texture   = texture_data{};
+  texture.linear = linear;
   if (linear) {
-    texture.pixelsf = image.data_vector();
+    texture.pixelsf = image;
   } else {
-    texture.pixelsb.resize(image.size());
-    float_to_byte(texture.pixelsb, image.data_vector());
+    texture.pixelsb = float_to_byte(image);
   }
   return texture;
 }
 
 // conversion from image
 texture_data image_to_texture(const image_data& image) {
-  auto texture = texture_data{image.width, image.height, image.linear, {}, {}};
+  auto texture   = texture_data{};
+  texture.linear = image.linear;
   if (image.linear) {
-    texture.pixelsf = image.pixels;
+    texture.pixelsf = array2d<vec4f>{
+        image.pixels.data(), vec2s{(size_t)image.width, (size_t)image.height}};
   } else {
-    texture.pixelsb.resize(image.pixels.size());
-    float_to_byte(texture.pixelsb, image.pixels);
+    auto pixelsb = vector<vec4b>{};
+    float_to_byte(pixelsb, image.pixels);
+    texture.pixelsb = array2d<vec4b>{
+        pixelsb.data(), vec2s{(size_t)image.width, (size_t)image.height}};
   }
   return texture;
 }

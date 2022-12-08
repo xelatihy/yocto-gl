@@ -97,8 +97,7 @@ namespace yocto {
 // Opengl texture
 struct glscene_texture {
   // texture properties
-  int width  = 0;
-  int height = 0;
+  vec2i extents = {0, 0};
 
   // opengl state
   uint texture = 0;
@@ -423,8 +422,10 @@ bool draw_scene_widgets(scene_data& scene, scene_selection& selection,
   if (draw_gui_header("textures")) {
     draw_gui_combobox("texture", selection.texture, scene.texture_names);
     auto& texture = scene.textures.at(selection.texture);
-    draw_gui_label("width", texture.width);
-    draw_gui_label("height", texture.height);
+    draw_gui_label("width",
+        (int)max(texture.pixelsf.extent(0), texture.pixelsb.extent(0)));
+    draw_gui_label("height",
+        (int)max(texture.pixelsf.extent(1), texture.pixelsb.extent(1)));
     draw_gui_label("linear", texture.linear);
     draw_gui_label("byte", !texture.pixelsb.empty());
     end_gui_header();
@@ -1655,16 +1656,17 @@ void main() {
 // Create texture
 static void set_texture(
     glscene_texture& gltexture, const texture_data& texture) {
-  if (!gltexture.texture || gltexture.width != texture.width ||
-      gltexture.height != texture.height) {
+  auto extents = max(texture.pixelsf.extents(), texture.pixelsb.extents());
+  auto [width, height] = (vec2i)extents;
+  if (!gltexture.texture || gltexture.extents != extents) {
     if (!gltexture.texture) glGenTextures(1, &gltexture.texture);
     glBindTexture(GL_TEXTURE_2D, gltexture.texture);
     if (!texture.pixelsb.empty()) {
-      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, texture.width, texture.height, 0,
-          GL_RGBA, GL_UNSIGNED_BYTE, texture.pixelsb.data());
+      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA,
+          GL_UNSIGNED_BYTE, texture.pixelsb.data());
     } else {
-      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, texture.width, texture.height, 0,
-          GL_RGBA, GL_FLOAT, texture.pixelsf.data());
+      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA,
+          GL_FLOAT, texture.pixelsf.data());
     }
     glGenerateMipmap(GL_TEXTURE_2D);
     glTexParameteri(
@@ -1673,11 +1675,11 @@ static void set_texture(
   } else {
     glBindTexture(GL_TEXTURE_2D, gltexture.texture);
     if (!texture.pixelsb.empty()) {
-      glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, texture.width, texture.height,
-          GL_RGBA, GL_UNSIGNED_BYTE, texture.pixelsb.data());
+      glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, GL_RGBA,
+          GL_UNSIGNED_BYTE, texture.pixelsb.data());
     } else {
-      glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, texture.width, texture.height,
-          GL_RGBA, GL_FLOAT, texture.pixelsf.data());
+      glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, GL_RGBA, GL_FLOAT,
+          texture.pixelsf.data());
     }
     glGenerateMipmap(GL_TEXTURE_2D);
   }

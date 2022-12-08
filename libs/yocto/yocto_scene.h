@@ -93,13 +93,11 @@ struct camera_data {
 // Texture data as array of float or byte pixels. Textures can be stored in
 // linear or non linear color space.
 struct texture_data {
-  int           width   = 0;
-  int           height  = 0;
-  bool          linear  = false;
-  bool          nearest = false;
-  bool          clamp   = false;
-  vector<vec4f> pixelsf = {};
-  vector<vec4b> pixelsb = {};
+  array2d<vec4f> pixelsf = {};
+  array2d<vec4b> pixelsb = {};
+  bool           linear  = false;
+  bool           nearest = false;
+  bool           clamp   = false;
 };
 
 // Material type
@@ -242,7 +240,7 @@ vec4f eval_texture(const scene_data& scene, int texture, const vec2f& uv,
 
 // pixel access
 vec4f lookup_texture(
-    const texture_data& texture, const vec2i&, bool as_linear = false);
+    const texture_data& texture, const vec2s&, bool as_linear = false);
 
 // conversion from image
 texture_data image_to_texture(const array2d<vec4f>& image, bool linear);
