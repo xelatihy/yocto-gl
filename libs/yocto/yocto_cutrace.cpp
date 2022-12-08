@@ -173,8 +173,7 @@ static void clear_buffer(cuspan<T>& buffer) {
 
 // make a buffer
 template <typename T>
-static cuspan2d<T> make_buffer(
-    CUstream stream, array<size_t, 2> extents, const T* data) {
+static cuspan2d<T> make_buffer(CUstream stream, vec2s extents, const T* data) {
   auto buffer     = cuspan2d<T>{};
   buffer._extents = extents;
   check_result(cuMemAlloc(&buffer._data, buffer.size_in_bytes()));
@@ -193,7 +192,7 @@ static cuspan2d<T> make_buffer(CUstream stream, const array2d<T>& data) {
 // resize a buffer
 template <typename T>
 static void resize_buffer(
-    CUstream stream, cuspan2d<T>& buffer, array<size_t, 2> extents, T* data) {
+    CUstream stream, cuspan2d<T>& buffer, vec2s extents, T* data) {
   if (buffer._extents != extents) {
     if (buffer.size() != 0) check_result(cuMemFree(buffer._data));
     buffer._extents = extents;
@@ -207,8 +206,8 @@ static void resize_buffer(
 
 // update a buffer
 template <typename T>
-static void update_buffer(CUstream stream, cuspan2d<T>& buffer,
-    array<size_t, 2> extents, const T* data) {
+static void update_buffer(
+    CUstream stream, cuspan2d<T>& buffer, vec2s extents, const T* data) {
   if (buffer.extents() != extents)
     throw std::runtime_error{"Cuda buffer error"};
   check_result(cuMemcpyHtoDAsync(
@@ -223,7 +222,7 @@ static void update_buffer(
 // download buffer --- these are synched to avoid errors
 template <typename T>
 static void download_buffer(
-    const cuspan2d<T>& buffer, array<size_t, 2> extents, void* data) {
+    const cuspan2d<T>& buffer, vec2s extents, void* data) {
   if (buffer.extents() != extents)
     throw std::runtime_error{"Cuda download error"};
   check_result(cuMemcpyDtoH(data, buffer.device_ptr(), buffer.size_in_bytes()));
@@ -966,9 +965,9 @@ cutrace_state make_cutrace_state(cutrace_context& context,
   auto& camera     = scene.cameras[params.camera];
   auto  state      = cutrace_state{};
   auto  resolution = (camera.aspect >= 1)
-                         ? array<size_t, 2>{(size_t)params.resolution,
-                               (size_t)round(params.resolution / camera.aspect)}
-                         : array<size_t, 2>{
+                         ? vec2s{(size_t)params.resolution,
+                              (size_t)round(params.resolution / camera.aspect)}
+                         : vec2s{
                               (size_t)round(params.resolution * camera.aspect),
                               (size_t)params.resolution};
   state.samples    = 0;
@@ -997,9 +996,9 @@ void reset_cutrace_state(cutrace_context& context, cutrace_state& state,
     const scene_data& scene, const trace_params& params) {
   auto& camera     = scene.cameras[params.camera];
   auto  resolution = (camera.aspect >= 1)
-                         ? array<size_t, 2>{(size_t)params.resolution,
-                               (size_t)round(params.resolution / camera.aspect)}
-                         : array<size_t, 2>{
+                         ? vec2s{(size_t)params.resolution,
+                              (size_t)round(params.resolution / camera.aspect)}
+                         : vec2s{
                               (size_t)round(params.resolution * camera.aspect),
                               (size_t)params.resolution};
   state.samples    = 0;

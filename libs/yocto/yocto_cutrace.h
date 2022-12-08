@@ -204,8 +204,8 @@ struct cuspan {
 // cuda buffer
 template <typename T>
 struct cuspan2d {
-  bool             empty() const { return size() == 0; }
-  array<size_t, 2> extents() const { return _extents; }
+  bool        empty() const { return size() == 0; }
+  vec2s       extents() const { return _extents; }
   size_t      extent(size_t dimension) const { return _extents[dimension]; }
   size_t      size() const { return _extents[0] * _extents[1]; }
   CUdeviceptr device_ptr() const { return _data; }
@@ -215,8 +215,8 @@ struct cuspan2d {
     std::swap(_extents, other._extents);
   }
 
-  CUdeviceptr      _data    = 0;
-  array<size_t, 2> _extents = {0, 0};
+  CUdeviceptr _data    = 0;
+  vec2s       _extents = {0, 0};
 };
 
 // cuda array
