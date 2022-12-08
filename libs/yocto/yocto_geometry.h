@@ -39,6 +39,7 @@
 // -----------------------------------------------------------------------------
 
 #include <utility>
+#include <vector>
 
 #include "yocto_math.h"
 #include "yocto_views.h"
@@ -50,6 +51,7 @@ namespace yocto {
 
 // using directives
 using std::pair;
+using std::vector;
 
 }  // namespace yocto
 
@@ -71,54 +73,33 @@ namespace yocto {
 
 // Axis aligned bounding box represented as a min/max vector pairs.
 template <typename T, size_t N>
-struct bbox;
+struct bbox {
+  vec<T, N> min = {num_max<T>};
+  vec<T, N> max = {num_min<T>};
 
-// Axis aligned bounding box represented as a min/max vector pairs.
-template <typename T>
-struct bbox<T, 2> {
-  vec<T, 2> min = {num_max<T>, num_max<T>};
-  vec<T, 2> max = {num_min<T>, num_min<T>};
-
-  constexpr kernel bbox()
-      : min{num_max<T>, num_max<T>}, max{num_min<T>, num_min<T>} {}
-  constexpr kernel bbox(const vec<T, 2>& min_, const vec<T, 2>& max_)
+  constexpr kernel bbox() : min{num_max<T>}, max{num_min<T>} {}
+  constexpr kernel bbox(const vec<T, N>& min_, const vec<T, N>& max_)
       : min{min_}, max{max_} {}
 
-  constexpr kernel vec<T, 2>& operator[](int i) {
-    return ((vec<T, 2>*)this)[i];
+  constexpr kernel vec<T, N>& operator[](size_t i) {
+    return i == 0 ? min : max;
   }
-  constexpr kernel const vec<T, 2>& operator[](int i) const {
-    return ((vec<T, 2>*)this)[i];
-  }
-};
-
-// Axis aligned bounding box represented as a min/max vector pairs.
-template <typename T>
-struct bbox<T, 3> {
-  vec<T, 3> min = {num_max<T>, num_max<T>, num_max<T>};
-  vec<T, 3> max = {num_min<T>, num_min<T>, num_min<T>};
-
-  constexpr kernel bbox()
-      : min{num_max<T>, num_max<T>, num_max<T>}
-      , max{num_min<T>, num_min<T>, num_min<T>} {}
-  constexpr kernel bbox(const vec<T, 3>& min_, const vec<T, 3>& max_)
-      : min{min_}, max{max_} {}
-
-  constexpr kernel vec<T, 3>& operator[](int i) {
-    return ((vec<T, 3>*)this)[i];
-  }
-  constexpr kernel const vec<T, 3>& operator[](int i) const {
-    return ((vec<T, 3>*)this)[i];
+  constexpr kernel const vec<T, N>& operator[](size_t i) const {
+    return i == 0 ? min : max;
   }
 };
 
 // Bbox aliases
+using bbox1f = bbox<float, 1>;
 using bbox2f = bbox<float, 2>;
 using bbox3f = bbox<float, 3>;
+using bbox4f = bbox<float, 4>;
 
 // Empty bbox constant.
+constexpr auto invalidb1f = bbox1f{};
 constexpr auto invalidb2f = bbox2f{};
 constexpr auto invalidb3f = bbox3f{};
+constexpr auto invalidb4f = bbox4f{};
 
 // Bounding box properties
 template <typename T, size_t N>
@@ -185,34 +166,14 @@ constexpr auto ray_eps = (T)1e-4;
 
 // Rays with origin, direction and min/max t value.
 template <typename T, size_t N>
-struct ray;
-
-// Rays with origin, direction and min/max t value.
-template <typename T>
-struct ray<T, 2> {
-  vec<T, 2> o    = {0, 0};
-  vec<T, 2> d    = {0, 1};
+struct ray {
+  vec<T, N> o    = {0};
+  vec<T, N> d    = {0};  // TODO: initialize this properly
   T         tmin = ray_eps<T>;
   T         tmax = num_max<T>;
 
-  constexpr kernel ray()
-      : o{0, 0}, d{0, 1}, tmin{ray_eps<T>}, tmax{num_max<T>} {}
-  constexpr kernel ray(const vec<T, 2>& o_, const vec<T, 2>& d_,
-      T tmin_ = ray_eps<T>, T tmax_ = num_max<T>)
-      : o{o_}, d{d_}, tmin{tmin_}, tmax{tmax_} {}
-};
-
-// Rays with origin, direction and min/max t value.
-template <typename T>
-struct ray<T, 3> {
-  vec<T, 3> o    = {0, 0, 0};
-  vec<T, 3> d    = {0, 0, 1};
-  T         tmin = ray_eps<T>;
-  T         tmax = num_max<T>;
-
-  constexpr kernel ray()
-      : o{0, 0, 0}, d{0, 0, 1}, tmin{ray_eps<T>}, tmax{num_max<T>} {}
-  constexpr kernel ray(const vec<T, 3>& o_, const vec<T, 3>& d_,
+  constexpr kernel ray() : o{0}, d{0}, tmin{ray_eps<T>}, tmax{num_max<T>} {}
+  constexpr kernel ray(const vec<T, N>& o_, const vec<T, N>& d_,
       T tmin_ = ray_eps<T>, T tmax_ = num_max<T>)
       : o{o_}, d{d_}, tmin{tmin_}, tmax{tmax_} {}
 };
@@ -224,6 +185,10 @@ using ray3f = ray<float, 3>;
 // Computes a point on a ray
 template <typename T, size_t N>
 constexpr kernel vec<T, N> ray_point(const ray<T, N>& ray, T t) {
+  return ray.o + ray.d * t;
+}
+template <typename T, size_t N>
+constexpr kernel vec<T, N> eval_ray(const ray<T, N>& ray, T t) {
   return ray.o + ray.d * t;
 }
 
@@ -288,6 +253,26 @@ constexpr kernel bbox<T, N> transform_bbox(
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// QUAD CONVENTIONS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Check if a quad is a triangle
+template <typename I>
+constexpr kernel bool is_triangle(const vec<I, 4>& quad) {
+  auto [v1, v2, v3, v4] = quad;
+  return v3             = v4;
+}
+
+// Get the triangle from the quad
+template <typename I>
+constexpr kernel vec<I, 3> as_triangle(const vec<I, 4>& quad) {
+  return xyz(quad);
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // PRIMITIVE BOUNDS
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -303,23 +288,23 @@ constexpr kernel bbox<T, N> point_bounds(const vec<T, N>& p, T r) {
 }
 template <typename T, size_t N>
 constexpr kernel bbox<T, N> line_bounds(
-    const vec<T, N>& p0, const vec<T, N>& p1) {
-  return {min(p0, p1), max(p0, p1)};
+    const vec<T, N>& p1, const vec<T, N>& p2) {
+  return {min(p1, p2), max(p1, p2)};
 }
 template <typename T, size_t N>
 constexpr kernel bbox<T, N> line_bounds(
-    const vec<T, N>& p0, const vec<T, N>& p1, T r0, T r1) {
-  return {min(p0 - r0, p1 - r1), max(p0 + r0, p1 + r1)};
+    const vec<T, N>& p1, const vec<T, N>& p2, T r1, T r2) {
+  return {min(p1 - r1, p2 - r2), max(p1 + r1, p2 + r2)};
 }
 template <typename T, size_t N>
 constexpr kernel bbox<T, N> triangle_bounds(
-    const vec<T, N>& p0, const vec<T, N>& p1, const vec<T, N>& p2) {
-  return {min(p0, min(p1, p2)), max(p0, max(p1, p2))};
+    const vec<T, N>& p1, const vec<T, N>& p2, const vec<T, N>& p3) {
+  return {min(p1, min(p2, p3)), max(p1, max(p2, p3))};
 }
 template <typename T, size_t N>
-constexpr kernel bbox<T, N> quad_bounds(const vec<T, N>& p0,
-    const vec<T, N>& p1, const vec<T, N>& p2, const vec<T, N>& p3) {
-  return {min(p0, min(p1, min(p2, p3))), max(p0, max(p1, max(p2, p3)))};
+constexpr kernel bbox<T, N> quad_bounds(const vec<T, N>& p1,
+    const vec<T, N>& p2, const vec<T, N>& p3, const vec<T, N>& p4) {
+  return {min(p1, min(p2, min(p3, p4))), max(p1, max(p2, max(p3, p4)))};
 }
 template <typename T, size_t N>
 constexpr kernel bbox<T, N> sphere_bounds(const vec<T, N>& p, T r) {
@@ -327,8 +312,47 @@ constexpr kernel bbox<T, N> sphere_bounds(const vec<T, N>& p, T r) {
 }
 template <typename T, size_t N>
 constexpr kernel bbox<T, N> capsule_bounds(
-    const vec<T, N>& p0, const vec<T, N>& p1, T r0, T r1) {
-  return {min(p0 - r0, p1 - r1), max(p0 + r0, p1 + r1)};
+    const vec<T, N>& p1, const vec<T, N>& p2, T r1, T r2) {
+  return {min(p1 - r1, p2 - r2), max(p1 + r1, p2 + r2)};
+}
+
+// Primitive bounds.
+template <typename T, size_t N, typename I>
+constexpr kernel bbox<T, N> point_bounds(
+    const vector<vec<T, N>>& positions, I point) {
+  auto v1 = point;
+  return point_bounds(positions[v1]);
+}
+template <typename T, size_t N, typename I>
+constexpr kernel bbox<T, N> point_bounds(
+    const vector<vec<T, N>>& positions, const vector<T>& radius, I point) {
+  auto v1 = point;
+  return point_bounds(positions[v1], radius[v1]);
+}
+template <typename T, size_t N, typename I>
+constexpr kernel bbox<T, N> line_bounds(
+    const vector<vec<T, N>>& positions, const vec<I, 2>& line) {
+  auto [v1, v2] = line;
+  return line_bounds(positions[v1], positions[v2]);
+}
+template <typename T, size_t N, typename I>
+constexpr kernel bbox<T, N> line_bounds(const vector<vec<T, N>>& positions,
+    const vector<T>& radius, const vec<I, 2>& line) {
+  auto [v1, v2] = line;
+  return line_bounds(positions[v1], positions[v2], radius[v1], radius[v2]);
+}
+template <typename T, size_t N, typename I>
+constexpr kernel bbox<T, N> triangle_bounds(
+    const vector<vec<T, N>>& positions, const vec<I, 3>& triangle) {
+  auto [v1, v2, v3] = triangle;
+  return triangle_bounds(positions[v1], positions[v2], positions[v3]);
+}
+template <typename T, size_t N, typename I>
+constexpr kernel bbox<T, N> quad_bounds(
+    const vector<vec<T, N>>& positions, const vec<I, 4>& quad) {
+  auto [v1, v2, v3, v4] = quad;
+  return quad_bounds(
+      positions[v1], positions[v2], positions[v3], positions[v4]);
 }
 
 // Primitive bounds in indexed arrays.
@@ -388,119 +412,215 @@ namespace yocto {
 // Line properties.
 template <typename T>
 constexpr kernel vec<T, 3> line_tangent(
-    const vec<T, 3>& p0, const vec<T, 3>& p1) {
-  return normalize(p1 - p0);
+    const vec<T, 3>& p1, const vec<T, 3>& p2) {
+  return normalize(p2 - p1);
+}
+template <typename T, typename I>
+constexpr kernel vec<T, 3> line_tangent(
+    const vector<vec<T, 3>>& positions, const vec<I, 2>& line) {
+  auto [v1, v2] = line;
+  return line_tangent(positions[v1], positions[v2]);
 }
 template <typename T>
-constexpr kernel T line_length(const vec<T, 3>& p0, const vec<T, 3>& p1) {
-  return length(p1 - p0);
+constexpr kernel T line_length(const vec<T, 3>& p1, const vec<T, 3>& p2) {
+  return length(p2 - p1);
+}
+template <typename T, typename I>
+constexpr kernel T line_length(
+    const vector<vec<T, 3>>& positions, const vec<I, 2>& line) {
+  auto [v1, v2] = line;
+  return line_length(positions[v1], positions[v2]);
 }
 
 // Triangle properties.
 template <typename T>
 constexpr kernel vec<T, 3> triangle_normal(
-    const vec<T, 3>& p0, const vec<T, 3>& p1, const vec<T, 3>& p2) {
-  return normalize(cross(p1 - p0, p2 - p0));
+    const vec<T, 3>& p1, const vec<T, 3>& p2, const vec<T, 3>& p3) {
+  return normalize(cross(p2 - p1, p3 - p1));
+}
+template <typename T, typename I>
+constexpr kernel vec<T, 3> triangle_normal(
+    const vector<vec<T, 3>>& positions, const vec<I, 3>& triangle) {
+  auto [v1, v2, v3] = triangle;
+  return triangle_normal(positions[v1], positions[v2], positions[v3]);
 }
 template <typename T>
 constexpr kernel T triangle_area(
-    const vec<T, 3>& p0, const vec<T, 3>& p1, const vec<T, 3>& p2) {
-  return length(cross(p1 - p0, p2 - p0)) / 2;
+    const vec<T, 3>& p1, const vec<T, 3>& p2, const vec<T, 3>& p3) {
+  return length(cross(p2 - p1, p3 - p1)) / 2;
+}
+template <typename T, typename I>
+constexpr kernel T triangle_area(
+    const vector<vec<T, 3>>& positions, const vec<I, 3>& triangle) {
+  auto [v1, v2, v3] = triangle;
+  return triangle_area(positions[v1], positions[v2], positions[v3]);
 }
 
 // Quad properties.
 template <typename T>
-constexpr kernel vec<T, 3> quad_normal(const vec<T, 3>& p0, const vec<T, 3>& p1,
-    const vec<T, 3>& p2, const vec<T, 3>& p3) {
-  return normalize(triangle_normal(p0, p1, p3) + triangle_normal(p2, p3, p1));
+constexpr kernel vec<T, 3> quad_normal(const vec<T, 3>& p1, const vec<T, 3>& p2,
+    const vec<T, 3>& p3, const vec<T, 3>& p4) {
+  return normalize(triangle_normal(p1, p2, p4) + triangle_normal(p3, p4, p2));
+}
+template <typename T, typename I>
+constexpr kernel vec<T, 3> quad_normal(
+    const vector<vec<T, 3>>& positions, const vec<I, 4>& quad) {
+  auto [v1, v2, v3, v4] = quad;
+  return quad_normal(
+      positions[v1], positions[v2], positions[v3], positions[v4]);
 }
 template <typename T>
-constexpr kernel T quad_area(const vec<T, 3>& p0, const vec<T, 3>& p1,
-    const vec<T, 3>& p2, const vec<T, 3>& p3) {
-  return triangle_area(p0, p1, p3) + triangle_area(p2, p3, p1);
+constexpr kernel T quad_area(const vec<T, 3>& p1, const vec<T, 3>& p2,
+    const vec<T, 3>& p3, const vec<T, 3>& p4) {
+  return triangle_area(p1, p2, p4) + triangle_area(p3, p4, p2);
+}
+template <typename T, typename I>
+constexpr kernel T quad_area(
+    const vector<vec<T, 3>>& positions, const vec<I, 4>& quad) {
+  auto [v1, v2, v3, v4] = quad;
+  return quad_area(positions[v1], positions[v2], positions[v3], positions[v4]);
 }
 
 // Interpolates values over a line parameterized from a to b by u. Same as lerp.
 template <typename T, typename T1>
-constexpr kernel T interpolate_line(const T& p0, const T& p1, T1 u) {
-  return p0 * (1 - u) + p1 * u;
+constexpr kernel T interpolate_line(const T& p1, const T& p2, T1 u) {
+  return p1 * (1 - u) + p2 * u;
+}
+template <typename T, typename T1, typename I>
+constexpr kernel T interpolate_line(
+    const vector<T>& vertices, const vec<I, 2>& line, T1 u) {
+  auto [v1, v2] = line;
+  return interpolate_line(vertices[v1], vertices[v2], u);
 }
 // Interpolates values over a triangle parameterized by u and v along the
-// (p1-p0) and (p2-p0) directions. Same as barycentric interpolation.
+// (p2-p1) and (p3-p1) directions. Same as barycentric interpolation.
 template <typename T, typename T1>
 constexpr kernel T interpolate_triangle(
-    const T& p0, const T& p1, const T& p2, const vec<T1, 2>& uv) {
-  return p0 * (1 - uv.x - uv.y) + p1 * uv.x + p2 * uv.y;
+    const T& p1, const T& p2, const T& p3, const vec<T1, 2>& uv) {
+  auto [u, v] = uv;
+  return p1 * (1 - u - v) + p2 * u + p3 * v;
+}
+template <typename T, typename T1, typename I>
+constexpr kernel T interpolate_triangle(
+    const vector<T>& vertices, const vec<I, 3>& triangle, T1 u) {
+  auto [v1, v2, v3] = triangle;
+  return interpolate_triangle(vertices[v1], vertices[v2], vertices[v3], u);
 }
 // Interpolates values over a quad parameterized by u and v along the
-// (p1-p0) and (p2-p1) directions. Same as bilinear interpolation.
+// (p2-p1) and (p3-p2) directions. Same as bilinear interpolation.
 template <typename T, typename T1>
 constexpr kernel T interpolate_quad(
-    const T& p0, const T& p1, const T& p2, const T& p3, const vec<T1, 2>& uv) {
-  if (uv.x + uv.y <= 1) {
-    return interpolate_triangle(p0, p1, p3, uv);
+    const T& p1, const T& p2, const T& p3, const T& p4, const vec<T1, 2>& uv) {
+  if (sum(uv) <= 1) {
+    return interpolate_triangle(p1, p2, p4, uv);
   } else {
-    return interpolate_triangle(p2, p3, p1, 1 - uv);
+    return interpolate_triangle(p3, p4, p2, 1 - uv);
   }
+}
+template <typename T, typename T1, typename I>
+constexpr kernel T interpolate_quad(
+    const vector<T>& vertices, const vec<I, 4>& quad, T1 u) {
+  auto [v1, v2, v3, v4] = quad;
+  return interpolate_quad(
+      vertices[v1], vertices[v2], vertices[v3], vertices[v4], u);
 }
 
 // Interpolates values along a cubic Bezier segment parametrized by u.
 template <typename T, typename T1>
 constexpr kernel T interpolate_bezier(
-    const T& p0, const T& p1, const T& p2, const T& p3, T1 u) {
-  return p0 * (1 - u) * (1 - u) * (1 - u) + p1 * 3 * u * (1 - u) * (1 - u) +
-         p2 * 3 * u * u * (1 - u) + p3 * u * u * u;
+    const T& p1, const T& p2, const T& p3, const T& p4, T1 u) {
+  return p1 * (1 - u) * (1 - u) * (1 - u) + p2 * 3 * u * (1 - u) * (1 - u) +
+         p3 * 3 * u * u * (1 - u) + p4 * u * u * u;
 }
 // Computes the derivative of a cubic Bezier segment parametrized by u.
 template <typename T, typename T1>
 constexpr kernel T interpolate_bezier_derivative(
-    const T& p0, const T& p1, const T& p2, const T& p3, T1 u) {
-  return (p1 - p0) * 3 * (1 - u) * (1 - u) + (p2 - p1) * 6 * u * (1 - u) +
-         (p3 - p2) * 3 * u * u;
+    const T& p1, const T& p2, const T& p3, const T& p4, T1 u) {
+  return (p2 - p1) * 3 * (1 - u) * (1 - u) + (p3 - p2) * 6 * u * (1 - u) +
+         (p4 - p3) * 3 * u * u;
 }
 
 // Interpolated line properties.
 template <typename T>
 constexpr kernel vec<T, 3> line_point(
-    const vec<T, 3>& p0, const vec<T, 3>& p1, T u) {
-  return p0 * (1 - u) + p1 * u;
+    const vec<T, 3>& p1, const vec<T, 3>& p2, T u) {
+  return p1 * (1 - u) + p2 * u;
+}
+template <typename T, typename I>
+constexpr kernel vec<T, 3> line_point(
+    const vector<vec<T, 3>>& positions, const vec<I, 2>& line, T u) {
+  auto [v1, v2] = line;
+  return line_point(positions[v1], positions[v2], u);
 }
 template <typename T>
 constexpr kernel vec<T, 3> line_tangent(
     const vec<T, 3>& t0, const vec<T, 3>& t1, T u) {
   return normalize(t0 * (1 - u) + t1 * u);
 }
+template <typename T, typename I>
+constexpr kernel vec<T, 3> line_tangent(
+    const vector<vec<T, 3>>& tangents, const vec<I, 2>& line, T u) {
+  auto [v1, v2] = line;
+  return line_tangent(tangents[v1], tangents[v2], u);
+}
 
 // Interpolated triangle properties.
 template <typename T>
-constexpr kernel vec<T, 3> triangle_point(const vec<T, 3>& p0,
-    const vec<T, 3>& p1, const vec<T, 3>& p2, const vec<T, 2>& uv) {
-  return p0 * (1 - uv.x - uv.y) + p1 * uv.x + p2 * uv.y;
+constexpr kernel vec<T, 3> triangle_point(const vec<T, 3>& p1,
+    const vec<T, 3>& p2, const vec<T, 3>& p3, const vec<T, 2>& uv) {
+  auto [u, v] = uv;
+  return p1 * (1 - u - v) + p2 * u + p3 * v;
+}
+template <typename T, typename I>
+constexpr kernel vec<T, 3> triangle_point(const vector<vec<T, 3>>& positions,
+    const vec<I, 3>& triangle, const vec<T, 2>& uv) {
+  auto [v1, v2, v3] = triangle;
+  return triangle_point(positions[v1], positions[v2], positions[v3], uv);
 }
 template <typename T>
 constexpr kernel vec<T, 3> triangle_normal(const vec<T, 3>& n0,
     const vec<T, 3>& n1, const vec<T, 3>& n2, const vec<T, 2>& uv) {
-  return normalize(n0 * (1 - uv.x - uv.y) + n1 * uv.x + n2 * uv.y);
+  auto [u, v] = uv;
+  return normalize(n0 * (1 - u - v) + n1 * u + n2 * v);
+}
+template <typename T, typename I>
+constexpr kernel vec<T, 3> triangle_normal(const vector<vec<T, 3>>& normals,
+    const vec<I, 3>& triangle, const vec<T, 2>& uv) {
+  auto [v1, v2, v3] = triangle;
+  return triangle_normal(normals[v1], normals[v2], normals[v3], uv);
 }
 
 // Interpolated quad properties.
 template <typename T>
-constexpr kernel vec<T, 3> quad_point(const vec<T, 3>& p0, const vec<T, 3>& p1,
-    const vec<T, 3>& p2, const vec<T, 3>& p3, const vec<T, 2>& uv) {
-  if (uv.x + uv.y <= 1) {
-    return triangle_point(p0, p1, p3, uv);
+constexpr kernel vec<T, 3> quad_point(const vec<T, 3>& p1, const vec<T, 3>& p2,
+    const vec<T, 3>& p3, const vec<T, 3>& p4, const vec<T, 2>& uv) {
+  if (sum(uv) <= 1) {
+    return triangle_point(p1, p2, p4, uv);
   } else {
-    return triangle_point(p2, p3, p1, 1 - uv);
+    return triangle_point(p3, p4, p2, 1 - uv);
   }
+}
+template <typename T, typename I>
+constexpr kernel vec<T, 3> quad_point(const vector<vec<T, 3>>& positions,
+    const vec<I, 4>& quad, const vec<T, 2>& uv) {
+  auto [v1, v2, v3, v4] = quad;
+  return quad_point(
+      positions[v1], positions[v2], positions[v3], positions[v4], uv);
 }
 template <typename T>
 constexpr kernel vec<T, 3> quad_normal(const vec<T, 3>& n0, const vec<T, 3>& n1,
     const vec<T, 3>& n2, const vec<T, 3>& n3, const vec<T, 2>& uv) {
-  if (uv.x + uv.y <= 1) {
+  if (sum(uv) <= 1) {
     return triangle_normal(n0, n1, n3, uv);
   } else {
     return triangle_normal(n2, n3, n1, 1 - uv);
   }
+}
+template <typename T, typename I>
+constexpr kernel vec<T, 3> quad_normal(const vector<vec<T, 3>>& normals,
+    const vec<I, 4>& quad, const vec<T, 2>& uv) {
+  auto [v1, v2, v3, v4] = quad;
+  return quad_normal(normals[v1], normals[v2], normals[v3], normals[v4], uv);
 }
 
 // Interpolated sphere properties.
@@ -521,16 +641,15 @@ constexpr kernel vec<T, 3> sphere_normal(
 // Triangle tangent and bi-tangent from uv
 template <typename T>
 constexpr kernel pair<vec<T, 3>, vec<T, 3>> triangle_tangents_fromuv(
-    const vec<T, 3>& p0, const vec<T, 3>& p1, const vec<T, 3>& p2,
+    const vec<T, 3>& p1, const vec<T, 3>& p2, const vec<T, 3>& p3,
     const vec<T, 2>& uv0, const vec<T, 2>& uv1, const vec<T, 2>& uv2) {
   // Follows the definition in http://www.terathon.com/code/tangent.html and
   // https://gist.github.com/aras-p/2843984
   // normal points up from texture space
-  auto p   = p1 - p0;
-  auto q   = p2 - p0;
+  auto p = p2 - p1, q = p3 - p1;
   auto s   = vec<T, 2>{uv1.x - uv0.x, uv2.x - uv0.x};
   auto t   = vec<T, 2>{uv1.y - uv0.y, uv2.y - uv0.y};
-  auto div = s.x * t.y - s.y * t.x;
+  auto div = cross(s, t);
 
   if (div != 0) {
     auto tu = vec<T, 3>{t.y * p.x - t.x * q.x, t.y * p.y - t.x * q.y,
@@ -544,18 +663,35 @@ constexpr kernel pair<vec<T, 3>, vec<T, 3>> triangle_tangents_fromuv(
     return {{1, 0, 0}, {0, 1, 0}};
   }
 }
+template <typename T, typename I>
+constexpr kernel pair<vec<T, 3>, vec<T, 3>> triangle_tangents_fromuv(
+    const vector<vec<T, 3>>& positions, const vector<vec<T, 2>>& texcoords,
+    const vec<I, 4>& triangle, const vec<T, 2>& uv) {
+  auto [v1, v2, v3] = triangle;
+  return triangle_tangents_fromuv(positions[v1], positions[v2], positions[v3],
+      texcoords[v1], texcoords[v2], texcoords[v3], uv);
+}
 
 // Quad tangent and bi-tangent from uv.
 template <typename T>
 constexpr kernel pair<vec<T, 3>, vec<T, 3>> quad_tangents_fromuv(
-    const vec<T, 3>& p0, const vec<T, 3>& p1, const vec<T, 3>& p2,
-    const vec<T, 3>& p3, const vec<T, 2>& uv0, const vec<T, 2>& uv1,
+    const vec<T, 3>& p1, const vec<T, 3>& p2, const vec<T, 3>& p3,
+    const vec<T, 3>& p4, const vec<T, 2>& uv0, const vec<T, 2>& uv1,
     const vec<T, 2>& uv2, const vec<T, 2>& uv3, const vec<T, 2>& current_uv) {
-  if (current_uv.x + current_uv.y <= 1) {
-    return triangle_tangents_fromuv(p0, p1, p3, uv0, uv1, uv3);
+  if (sum(current_uv) <= 1) {
+    return triangle_tangents_fromuv(p1, p2, p4, uv0, uv1, uv3);
   } else {
-    return triangle_tangents_fromuv(p2, p3, p1, uv2, uv3, uv1);
+    return triangle_tangents_fromuv(p3, p4, p2, uv2, uv3, uv1);
   }
+}
+template <typename T, typename I>
+constexpr kernel pair<vec<T, 3>, vec<T, 3>> quad_tangents_fromuv(
+    const vector<vec<T, 3>>& positions, const vector<vec<T, 2>>& texcoords,
+    const vec<I, 4>& quad, const vec<T, 2>& uv) {
+  auto [v1, v2, v3, v4] = quad;
+  return quad_tangents_fromuv(positions[v1], positions[v2], positions[v3],
+      positions[v4], texcoords[v1], texcoords[v2], texcoords[v3], texcoords[v4],
+      uv);
 }
 
 }  // namespace yocto
@@ -569,11 +705,10 @@ namespace yocto {
 template <typename T>
 constexpr kernel ray<T, 3> camera_ray(const frame<T, 3>& frame, T lens,
     const vec<T, 2>& film, const vec<T, 2>& image_uv) {
-  auto e = vec<T, 3>{0, 0, 0};
-  auto q = vec<T, 3>{
-      film.x * ((T)0.5 - image_uv.x), film.y * (image_uv.y - (T)0.5), lens};
-  auto q1  = -q;
-  auto d   = normalize(q1 - e);
+  auto uv  = image_uv * vec{-1, 1};  // flip x
+  auto e   = vec<T, 3>{0, 0, 0};
+  auto q   = vec<T, 3>{film * (uv - (T)0.5), lens};
+  auto d   = normalize(e - q);
   auto ray = yocto::ray<T, 3>{
       transform_point(frame, e), transform_direction(frame, d)};
   return ray;
@@ -583,14 +718,13 @@ constexpr kernel ray<T, 3> camera_ray(const frame<T, 3>& frame, T lens,
 template <typename T>
 constexpr kernel ray<T, 3> camera_ray(const frame<T, 3>& frame, T lens,
     T aspect, T film_, const vec<T, 2>& image_uv) {
+  auto uv   = image_uv * vec{-1, 1};  // flip x
   auto film = aspect >= 1 ? vec<T, 2>{film_, film_ / aspect}
                           : vec<T, 2>{film_ * aspect, film_};
   auto e    = vec<T, 3>{0, 0, 0};
-  auto q    = vec<T, 3>{
-      film.x * ((T)0.5 - image_uv.x), film.y * (image_uv.y - (T)0.5), lens};
-  auto q1  = -q;
-  auto d   = normalize(q1 - e);
-  auto ray = yocto::ray<T, 3>{
+  auto q    = vec<T, 3>{film * (uv - (T)0.5), lens};
+  auto d    = normalize(e - q);
+  auto ray  = yocto::ray<T, 3>{
       transform_point(frame, e), transform_direction(frame, d)};
   return ray;
 }
@@ -604,15 +738,18 @@ namespace yocto {
 
 // Primitive intersection
 template <typename T = float>
-struct prim_intersection {
+struct prim_gintersection {
   vec<T, 2> uv       = {0, 0};
   T         distance = num_max<T>;  // TODO: num_max<T>
   bool      hit      = false;
 };
 
+// Typedefs
+using prim_intersection = prim_gintersection<float>;
+
 // Intersect a ray with a point (approximate)
 template <typename T>
-constexpr kernel prim_intersection<T> intersect_point(
+constexpr kernel prim_gintersection<T> intersect_point(
     const ray<T, 3>& ray, const vec<T, 3>& p, T r) {
   // find parameter for line-point minimum distance
   auto w = p - ray.o;
@@ -629,15 +766,21 @@ constexpr kernel prim_intersection<T> intersect_point(
   // intersection occurred: set params and exit
   return {{0, 0}, t, true};
 }
+template <typename T, typename I>
+constexpr kernel prim_gintersection<T> intersect_point(const ray<T, 3>& ray,
+    const vector<vec<T, 3>>& positions, const vector<T>& radius, I point) {
+  auto v1 = point;
+  return intersect_point(ray, positions[v1], radius[v1]);
+}
 
 // Intersect a ray with a line
 template <typename T>
-constexpr kernel prim_intersection<T> intersect_line(const ray<T, 3>& ray,
-    const vec<T, 3>& p0, const vec<T, 3>& p1, T r0, T r1) {
+constexpr kernel prim_gintersection<T> intersect_line(const ray<T, 3>& ray,
+    const vec<T, 3>& p1, const vec<T, 3>& p2, T r1, T r2) {
   // setup intersection params
   auto u = ray.d;
-  auto v = p1 - p0;
-  auto w = ray.o - p0;
+  auto v = p2 - p1;
+  auto w = ray.o - p1;
 
   // compute values to solve a linear system
   auto a   = dot(u, u);
@@ -663,21 +806,29 @@ constexpr kernel prim_intersection<T> intersect_line(const ray<T, 3>& ray,
 
   // compute segment-segment distance on the closest points
   auto pr  = ray.o + ray.d * t;
-  auto pl  = p0 + (p1 - p0) * s;
+  auto pl  = p1 + (p2 - p1) * s;
   auto prl = pr - pl;
 
   // check with the line radius at the same point
   auto d2 = dot(prl, prl);
-  auto r  = r0 * (1 - s) + r1 * s;
+  auto r  = r1 * (1 - s) + r2 * s;
   if (d2 > r * r) return {};
 
   // intersection occurred: set params and exit
   return {{s, sqrt(d2) / r}, t, true};
 }
+template <typename T, typename I>
+constexpr kernel prim_gintersection<T> intersect_line(const ray<T, 3>& ray,
+    const vector<vec<T, 3>>& positions, const vector<T>& radius,
+    const vec<I, 2>& line) {
+  auto [v1, v2] = line;
+  return intersect_line(
+      ray, positions[v1], positions[v2], radius[v1], radius[v2]);
+}
 
 // Intersect a ray with a sphere
 template <typename T>
-constexpr kernel prim_intersection<T> intersect_sphere(
+constexpr kernel prim_gintersection<T> intersect_sphere(
     const ray<T, 3>& ray, const vec<T, 3>& p, T r) {
   // compute parameters
   auto a = dot(ray.d, ray.d);
@@ -712,11 +863,11 @@ constexpr kernel prim_intersection<T> intersect_sphere(
 
 // Intersect a ray with a triangle
 template <typename T>
-constexpr kernel prim_intersection<T> intersect_triangle(const ray<T, 3>& ray,
-    const vec<T, 3>& p0, const vec<T, 3>& p1, const vec<T, 3>& p2) {
+constexpr kernel prim_gintersection<T> intersect_triangle(const ray<T, 3>& ray,
+    const vec<T, 3>& p1, const vec<T, 3>& p2, const vec<T, 3>& p3) {
   // compute triangle edges
-  auto edge1 = p1 - p0;
-  auto edge2 = p2 - p0;
+  auto edge1 = p2 - p1;
+  auto edge2 = p3 - p1;
 
   // compute determinant to solve a linear system
   auto pvec = cross(ray.d, edge2);
@@ -728,7 +879,7 @@ constexpr kernel prim_intersection<T> intersect_triangle(const ray<T, 3>& ray,
   auto inv_det = (T)1.0 / det;
 
   // compute and check first bricentric coordinated
-  auto tvec = ray.o - p0;
+  auto tvec = ray.o - p1;
   auto u    = dot(tvec, pvec) * inv_det;
   if (u < 0 || u > 1) return {};
 
@@ -744,36 +895,46 @@ constexpr kernel prim_intersection<T> intersect_triangle(const ray<T, 3>& ray,
   // intersection occurred: set params and exit
   return {{u, v}, t, true};
 }
+template <typename T, typename I>
+constexpr kernel prim_gintersection<T> intersect_triangle(const ray<T, 3>& ray,
+    const vector<vec<T, 3>>& positions, const vec<I, 3>& triangle) {
+  auto [v1, v2, v3] = triangle;
+  return intersect_triangle(ray, positions[v1], positions[v2], positions[v3]);
+}
 
 // Intersect a ray with a quad.
 template <typename T>
-constexpr kernel prim_intersection<T> intersect_quad(const ray<T, 3>& ray,
-    const vec<T, 3>& p0, const vec<T, 3>& p1, const vec<T, 3>& p2,
-    const vec<T, 3>& p3) {
-  if (p2 == p3) return intersect_triangle(ray, p0, p1, p3);
-  auto isec1 = intersect_triangle(ray, p0, p1, p3);
-  auto isec2 = intersect_triangle(ray, p2, p3, p1);
+constexpr kernel prim_gintersection<T> intersect_quad(const ray<T, 3>& ray,
+    const vec<T, 3>& p1, const vec<T, 3>& p2, const vec<T, 3>& p3,
+    const vec<T, 3>& p4) {
+  if (p3 == p4) return intersect_triangle(ray, p1, p2, p4);
+  auto isec1 = intersect_triangle(ray, p1, p2, p4);
+  auto isec2 = intersect_triangle(ray, p3, p4, p2);
   if (isec2.hit) isec2.uv = 1 - isec2.uv;
   return isec1.distance < isec2.distance ? isec1 : isec2;
+}
+template <typename T, typename I>
+constexpr kernel prim_gintersection<T> intersect_quad(const ray<T, 3>& ray,
+    const vector<vec<T, 3>>& positions, const vec<I, 4>& quad) {
+  auto [v1, v2, v3, v4] = quad;
+  return intersect_quad(
+      ray, positions[v1], positions[v2], positions[v3], positions[v4]);
 }
 
 // Intersect a ray with a axis-aligned bounding box
 template <typename T>
 constexpr kernel bool intersect_bbox(
     const ray<T, 3>& ray, const bbox<T, 3>& bbox) {
-  // determine intersection ranges
-  auto invd = (T)1.0 / ray.d;
-  auto t0   = (bbox.min - ray.o) * invd;
-  auto t1   = (bbox.max - ray.o) * invd;
-  // flip based on range directions
-  if (invd.x < (T)0.0) swap(t0.x, t1.x);
-  if (invd.y < (T)0.0) swap(t0.y, t1.y);
-  if (invd.z < (T)0.0) swap(t0.z, t1.z);
-  auto tmin = max(t0.z, max(t0.y, max(t0.x, ray.tmin)));
-  auto tmax = min(t1.z, min(t1.y, min(t1.x, ray.tmax)));
-  if constexpr (std::is_same_v<T, float>) tmax *= 1.00000024f;
-  if constexpr (std::is_same_v<T, double>) tmax *= 1.0000000000000004;
-  return tmin <= tmax;
+  auto ray_dinv = 1 / ray.d;
+  auto it_min   = (bbox.min - ray.o) * ray_dinv;
+  auto it_max   = (bbox.max - ray.o) * ray_dinv;
+  auto tmin     = min(it_min, it_max);
+  auto tmax     = max(it_min, it_max);
+  auto t0       = max(max(tmin), ray.tmin);
+  auto t1       = min(min(tmax), ray.tmax);
+  if constexpr (std::is_same_v<T, float>) t1 *= 1.00000024f;
+  if constexpr (std::is_same_v<T, double>) t1 *= 1.0000000000000004;
+  return t0 <= t1;
 }
 
 // Intersect a ray with a axis-aligned bounding box
@@ -800,50 +961,65 @@ namespace yocto {
 
 // Check if a point overlaps a position pos withint a maximum distance dist_max.
 template <typename T>
-constexpr kernel prim_intersection<T> overlap_point(
+constexpr kernel prim_gintersection<T> overlap_point(
     const vec<T, 3>& pos, T dist_max, const vec<T, 3>& p, T r) {
   auto d2 = dot(pos - p, pos - p);
   if (d2 > (dist_max + r) * (dist_max + r)) return {};
   return {{0, 0}, sqrt(d2), true};
 }
+template <typename T, typename I>
+constexpr kernel prim_gintersection<T> overlap_point(const vec<T, 3>& pos,
+    T dist_max, const vector<vec<T, 3>>& positions, const vector<T> radius,
+    I point) {
+  auto v1 = point;
+  return overlap_point(pos, dist_max, positions[v1], radius[v1]);
+}
 
 // Compute the closest line uv to a give position pos.
 template <typename T>
 constexpr kernel T closestuv_line(
-    const vec<T, 3>& pos, const vec<T, 3>& p0, const vec<T, 3>& p1) {
-  auto ab = p1 - p0;
+    const vec<T, 3>& pos, const vec<T, 3>& p1, const vec<T, 3>& p2) {
+  auto ab = p2 - p1;
   auto d  = dot(ab, ab);
   // Project c onto ab, computing parameterized position d(t) = a + t*(b –
   // a)
-  auto u = dot(pos - p0, ab) / d;
+  auto u = dot(pos - p1, ab) / d;
   u      = clamp(u, (T)0, (T)1);
   return u;
 }
 
 // Check if a line overlaps a position pos withint a maximum distance dist_max.
 template <typename T>
-constexpr kernel prim_intersection<T> overlap_line(const vec<T, 3>& pos,
-    T dist_max, const vec<T, 3>& p0, const vec<T, 3>& p1, T r0, T r1) {
-  auto u = closestuv_line(pos, p0, p1);
+constexpr kernel prim_gintersection<T> overlap_line(const vec<T, 3>& pos,
+    T dist_max, const vec<T, 3>& p1, const vec<T, 3>& p2, T r1, T r2) {
+  auto u = closestuv_line(pos, p1, p2);
   // Compute projected position from the clamped t d = a + t * ab;
-  auto p  = p0 + (p1 - p0) * u;
-  auto r  = r0 + (r1 - r0) * u;
+  auto p  = p1 + (p2 - p1) * u;
+  auto r  = r1 + (r2 - r1) * u;
   auto d2 = dot(pos - p, pos - p);
   // check distance
   if (d2 > (dist_max + r) * (dist_max + r)) return {};
   // done
   return {{u, 0}, sqrt(d2), true};
 }
+template <typename T, typename I>
+constexpr kernel prim_gintersection<T> overlap_line(const vec<T, 3>& pos,
+    T dist_max, const vector<vec<T, 3>>& positions, const vector<T> radius,
+    const vec<I, 2>& line) {
+  auto [v1, v2] = line;
+  return overlap_line(
+      pos, dist_max, positions[v1], positions[v2], radius[v1], radius[v2]);
+}
 
 // Compute the closest triangle uv to a give position pos.
 template <typename T>
 constexpr kernel vec<T, 2> closestuv_triangle(const vec<T, 3>& pos,
-    const vec<T, 3>& p0, const vec<T, 3>& p1, const vec<T, 3>& p2) {
+    const vec<T, 3>& p1, const vec<T, 3>& p2, const vec<T, 3>& p3) {
   // this is a complicated test -> I probably "--"+prefix to use a sequence of
   // test (triangle body, and 3 edges)
-  auto ab = p1 - p0;
-  auto ac = p2 - p0;
-  auto ap = pos - p0;
+  auto ab = p2 - p1;
+  auto ac = p3 - p1;
+  auto ap = pos - p1;
 
   auto d1 = dot(ab, ap);
   auto d2 = dot(ac, ap);
@@ -851,7 +1027,7 @@ constexpr kernel vec<T, 2> closestuv_triangle(const vec<T, 3>& pos,
   // corner and edge cases
   if (d1 <= 0 && d2 <= 0) return {0, 0};
 
-  auto bp = pos - p1;
+  auto bp = pos - p2;
   auto d3 = dot(ab, bp);
   auto d4 = dot(ac, bp);
   if (d3 >= 0 && d4 <= d3) return {1, 0};
@@ -859,7 +1035,7 @@ constexpr kernel vec<T, 2> closestuv_triangle(const vec<T, 3>& pos,
   auto vc = d1 * d4 - d3 * d2;
   if ((vc <= 0) && (d1 >= 0) && (d3 <= 0)) return {d1 / (d1 - d3), 0};
 
-  auto cp = pos - p2;
+  auto cp = pos - p3;
   auto d5 = dot(ab, cp);
   auto d6 = dot(ac, cp);
   if (d6 >= 0 && d5 <= d6) return {0, 1};
@@ -879,31 +1055,55 @@ constexpr kernel vec<T, 2> closestuv_triangle(const vec<T, 3>& pos,
   auto v     = vc * denom;
   return {u, v};
 }
+template <typename T, typename I>
+constexpr kernel prim_gintersection<T> overlap_triangle(const vec<T, 3>& pos,
+    T dist_max, const vector<vec<T, 3>>& positions, const vec<I, 3>& triangle) {
+  auto [v1, v2, v3] = triangle;
+  return overlap_triangle(
+      pos, dist_max, positions[v1], positions[v2], positions[v3]);
+}
 
 // Check if a triangle overlaps a position pos withint a maximum distance
 // dist_max.
 template <typename T>
-constexpr kernel prim_intersection<T> overlap_triangle(const vec<T, 3>& pos,
-    T dist_max, const vec<T, 3>& p0, const vec<T, 3>& p1, const vec<T, 3>& p2,
-    T r0, T r1, T r2) {
-  auto cuv = closestuv_triangle(pos, p0, p1, p2);
-  auto p   = p0 * (1 - cuv.x - cuv.y) + p1 * cuv.x + p2 * cuv.y;
-  auto r   = r0 * (1 - cuv.x - cuv.y) + r1 * cuv.x + r2 * cuv.y;
-  auto dd  = dot(p - pos, p - pos);
+constexpr kernel prim_gintersection<T> overlap_triangle(const vec<T, 3>& pos,
+    T dist_max, const vec<T, 3>& p1, const vec<T, 3>& p2, const vec<T, 3>& p3,
+    T r1, T r2, T r3) {
+  auto uv = closestuv_triangle(pos, p1, p2, p3);
+  auto p  = interpolate_triangle(p1, p2, p3, uv);
+  auto r  = interpolate_triangle(r1, r2, r3, uv);
+  auto dd = dot(p - pos, p - pos);
   if (dd > (dist_max + r) * (dist_max + r)) return {};
-  return {cuv, sqrt(dd), true};
+  return {uv, sqrt(dd), true};
+}
+template <typename T, typename I>
+constexpr kernel prim_gintersection<T> overlap_triangle(const vec<T, 3>& pos,
+    T dist_max, const vector<vec<T, 3>>& positions, const vector<T> radius,
+    const vec<I, 3>& triangle) {
+  auto [v1, v2, v3] = triangle;
+  return overlap_triangle(pos, dist_max, positions[v1], positions[v2],
+      positions[v3], radius[v1], radius[v2], radius[v3]);
 }
 
 // Check if a quad overlaps a position pos withint a maximum distance dist_max.
 template <typename T>
-constexpr kernel prim_intersection<T> overlap_quad(const vec<T, 3>& pos,
-    T dist_max, const vec<T, 3>& p0, const vec<T, 3>& p1, const vec<T, 3>& p2,
-    const vec<T, 3>& p3, T r0, T r1, T r2, T r3) {
-  if (p2 == p3) return overlap_triangle(pos, dist_max, p0, p1, p3, r0, r1, r2);
-  auto isec1 = overlap_triangle(pos, dist_max, p0, p1, p3, r0, r1, r2);
-  auto isec2 = overlap_triangle(pos, dist_max, p2, p3, p1, r2, r3, r1);
+constexpr kernel prim_gintersection<T> overlap_quad(const vec<T, 3>& pos,
+    T dist_max, const vec<T, 3>& p1, const vec<T, 3>& p2, const vec<T, 3>& p3,
+    const vec<T, 3>& p4, T r1, T r2, T r3, T r4) {
+  if (p3 == p4) return overlap_triangle(pos, dist_max, p1, p2, p4, r1, r2, r3);
+  auto isec1 = overlap_triangle(pos, dist_max, p1, p2, p4, r1, r2, r3);
+  auto isec2 = overlap_triangle(pos, dist_max, p3, p4, p2, r3, r4, r2);
   if (isec2.hit) isec2.uv = 1 - isec2.uv;
   return isec1.distance < isec2.distance ? isec1 : isec2;
+}
+template <typename T, typename I>
+constexpr kernel prim_gintersection<T> overlap_quad(const vec<T, 3>& pos,
+    T dist_max, const vector<vec<T, 3>>& positions, const vector<T> radius,
+    const vec<I, 4>& quad) {
+  auto [v1, v2, v3, v4] = quad;
+  return overlap_quad(pos, dist_max, positions[v1], positions[v2],
+      positions[v3], positions[v4], radius[v1], radius[v2], radius[v3],
+      radius[v4]);
 }
 
 // Check if a bbox overlaps a position pos withint a maximum distance dist_max.
@@ -956,9 +1156,9 @@ template <typename T>
 // Intersect a ray with a line
 template <typename T>
 [[deprecated]] constexpr kernel bool intersect_line(const ray<T, 3>& ray,
-    const vec<T, 3>& p0, const vec<T, 3>& p1, T r0, T r1, vec<T, 2>& uv,
+    const vec<T, 3>& p1, const vec<T, 3>& p2, T r1, T r2, vec<T, 2>& uv,
     T& dist) {
-  auto intersection = intersect_line(ray, p0, p1, r0, r1);
+  auto intersection = intersect_line(ray, p1, p2, r1, r2);
   if (!intersection.hit) return false;
   uv   = intersection.uv;
   dist = intersection.distance;
@@ -979,9 +1179,9 @@ template <typename T>
 // Intersect a ray with a triangle
 template <typename T>
 [[deprecated]] constexpr kernel bool intersect_triangle(const ray<T, 3>& ray,
-    const vec<T, 3>& p0, const vec<T, 3>& p1, const vec<T, 3>& p2,
+    const vec<T, 3>& p1, const vec<T, 3>& p2, const vec<T, 3>& p3,
     vec<T, 2>& uv, T& dist) {
-  auto intersection = intersect_triangle(ray, p0, p1, p2);
+  auto intersection = intersect_triangle(ray, p1, p2, p3);
   if (!intersection.hit) return false;
   uv   = intersection.uv;
   dist = intersection.distance;
@@ -991,9 +1191,9 @@ template <typename T>
 // Intersect a ray with a quad.
 template <typename T>
 [[deprecated]] constexpr kernel bool intersect_quad(const ray<T, 3>& ray,
-    const vec<T, 3>& p0, const vec<T, 3>& p1, const vec<T, 3>& p2,
-    const vec<T, 3>& p3, vec<T, 2>& uv, T& dist) {
-  auto intersection = intersect_quad(ray, p0, p1, p2, p3);
+    const vec<T, 3>& p1, const vec<T, 3>& p2, const vec<T, 3>& p3,
+    const vec<T, 3>& p4, vec<T, 2>& uv, T& dist) {
+  auto intersection = intersect_quad(ray, p1, p2, p3, p4);
   if (!intersection.hit) return false;
   uv   = intersection.uv;
   dist = intersection.distance;
@@ -1014,9 +1214,9 @@ template <typename T>
 // Check if a line overlaps a position pos withint a maximum distance dist_max.
 template <typename T>
 [[deprecated]] constexpr kernel bool overlap_line(const vec<T, 3>& pos,
-    T dist_max, const vec<T, 3>& p0, const vec<T, 3>& p1, T r0, T r1,
+    T dist_max, const vec<T, 3>& p1, const vec<T, 3>& p2, T r1, T r2,
     vec<T, 2>& uv, T& dist) {
-  auto intersection = overlap_line(pos, dist_max, p0, p1, r0, r1);
+  auto intersection = overlap_line(pos, dist_max, p1, p2, r1, r2);
   if (!intersection.hit) return false;
   uv   = intersection.uv;
   dist = intersection.distance;
@@ -1027,9 +1227,9 @@ template <typename T>
 // dist_max.
 template <typename T>
 [[deprecated]] constexpr kernel bool overlap_triangle(const vec<T, 3>& pos,
-    T dist_max, const vec<T, 3>& p0, const vec<T, 3>& p1, const vec<T, 3>& p2,
-    T r0, T r1, T r2, vec<T, 2>& uv, T& dist) {
-  auto intersection = overlap_triangle(pos, dist_max, p0, p1, p2, r0, r1, r2);
+    T dist_max, const vec<T, 3>& p1, const vec<T, 3>& p2, const vec<T, 3>& p3,
+    T r1, T r2, T r3, vec<T, 2>& uv, T& dist) {
+  auto intersection = overlap_triangle(pos, dist_max, p1, p2, p3, r1, r2, r3);
   if (!intersection.hit) return false;
   uv   = intersection.uv;
   dist = intersection.distance;
@@ -1039,10 +1239,10 @@ template <typename T>
 // Check if a quad overlaps a position pos withint a maximum distance dist_max.
 template <typename T>
 [[deprecated]] constexpr kernel bool overlap_quad(const vec<T, 3>& pos,
-    T dist_max, const vec<T, 3>& p0, const vec<T, 3>& p1, const vec<T, 3>& p2,
-    const vec<T, 3>& p3, T r0, T r1, T r2, T r3, vec<T, 2>& uv, T& dist) {
+    T dist_max, const vec<T, 3>& p1, const vec<T, 3>& p2, const vec<T, 3>& p3,
+    const vec<T, 3>& p4, T r1, T r2, T r3, T r4, vec<T, 2>& uv, T& dist) {
   auto intersection = overlap_quad(
-      pos, dist_max, p0, p1, p2, p3, r0, r1, r2, r3);
+      pos, dist_max, p1, p2, p3, p4, r1, r2, r3, r4);
   if (!intersection.hit) return false;
   uv   = intersection.uv;
   dist = intersection.distance;

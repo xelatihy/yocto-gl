@@ -111,27 +111,18 @@ constexpr kernel T rgb_to_srgb(T rgb) {
 }
 template <typename T, size_t N>
 constexpr kernel vec<T, N> srgb_to_rgb(const vec<T, N>& srgb) {
-  if constexpr (N == 1) {
-    return {srgb_to_rgb(srgb.x)};
-  } else if constexpr (N == 2) {
-    return {srgb_to_rgb(srgb.x), srgb.y};
-  } else if constexpr (N == 3) {
-    return {srgb_to_rgb(srgb.x), srgb_to_rgb(srgb.y), srgb_to_rgb(srgb.z)};
-  } else if constexpr (N == 4) {
-    return {
-        srgb_to_rgb(srgb.x), srgb_to_rgb(srgb.y), srgb_to_rgb(srgb.z), srgb.w};
+  if constexpr (N == 4) {
+    return {srgb_to_rgb(xyz(srgb)), srgb.w};
+  } else {
+    return map(srgb, [](T srgb) { return srgb_to_rgb(srgb); });
   }
 }
 template <typename T, size_t N>
 constexpr kernel vec<T, N> rgb_to_srgb(const vec<T, N>& rgb) {
-  if constexpr (N == 1) {
-    return {rgb_to_srgb(rgb.x)};
-  } else if constexpr (N == 2) {
-    return {rgb_to_srgb(rgb.x), rgb.y};
-  } else if constexpr (N == 3) {
-    return {rgb_to_srgb(rgb.x), rgb_to_srgb(rgb.y), rgb_to_srgb(rgb.z)};
-  } else if constexpr (N == 4) {
-    return {rgb_to_srgb(rgb.x), rgb_to_srgb(rgb.y), rgb_to_srgb(rgb.z), rgb.w};
+  if constexpr (N == 4) {
+    return {rgb_to_srgb(xyz(rgb)), rgb.w};
+  } else {
+    return map(rgb, [](T rgb) { return rgb_to_srgb(rgb); });
   }
 }
 
@@ -171,7 +162,7 @@ constexpr kernel vec<T, 3> rgba_to_rgb(const vec<T, 4>& rgba) {
 template <typename T>
 constexpr kernel vec<T, 3> lincontrast(
     const vec<T, 3>& rgb, T contrast, T grey) {
-  return max(vec<T, 3>{0, 0, 0}, grey + (rgb - grey) * (contrast * 2));
+  return max(grey + (rgb - grey) * (contrast * 2), 0);
 }
 // Apply contrast in log2. Grey should be 0.18 for linear and 0.5 for gamma.
 template <typename T>
@@ -181,7 +172,7 @@ constexpr kernel vec<T, 3> logcontrast(
   auto log_grey = log2(grey);
   auto log_ldr  = log2(rgb + epsilon);
   auto adjusted = log_grey + (log_ldr - log_grey) * (logcontrast * 2);
-  return max(vec<T, 3>{0, 0, 0}, exp2(adjusted) - epsilon);
+  return max(exp2(adjusted) - epsilon, 0);
 }
 // Apply an s-shaped contrast.
 template <typename T>
@@ -194,7 +185,7 @@ constexpr kernel vec<T, 3> saturate(const vec<T, 3>& rgb, T saturation,
     const vec<T, 3>& weights = vec<T, 3>{
         (T)(1.0 / 3.0), (T)(1.0 / 3.0), (T)(1.0 / 3.0)}) {
   auto grey = dot(weights, rgb);
-  return max(vec<T, 3>{0, 0, 0}, grey + (rgb - grey) * (saturation * 2));
+  return max(grey + (rgb - grey) * (saturation * 2), 0);
 }
 
 #ifndef __CUDACC__
@@ -363,7 +354,7 @@ template <typename T>
 constexpr kernel vec<T, 3> rgb_to_hsv(const vec<T, 3>& rgb) {
   // from Imgui.cpp
   auto [r, g, b] = rgb;
-  auto K = (T)0;
+  auto K         = (T)0;
   if (g < b) {
     std::swap(g, b);
     K = -1;
@@ -373,7 +364,7 @@ constexpr kernel vec<T, 3> rgb_to_hsv(const vec<T, 3>& rgb) {
     K = -2 / (T)6 - K;
   }
 
-  auto c = r - (g < b ? g : b); // chroma
+  auto c = r - (g < b ? g : b);  // chroma
   return {abs(K + (g - b) / (6 * c + (T)1e-20)), c / (r + (T)1e-20), r};
 }
 
@@ -556,8 +547,7 @@ constexpr kernel vec<T, 3> colorgrade(
   if (params.saturation != (T)0.5) rgb = saturate(rgb, params.saturation);
   if (params.shadows != (T)0.5 || params.midtones != (T)0.5 ||
       params.highlights != (T)0.5 || params.shadows_color != 1 ||
-      params.midtones_color != 1 ||
-      params.highlights_color != 1) {
+      params.midtones_color != 1 || params.highlights_color != 1) {
     auto lift  = params.shadows_color;
     auto gamma = params.midtones_color;
     auto gain  = params.highlights_color;

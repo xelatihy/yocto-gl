@@ -316,31 +316,24 @@ shape_bvh make_shape_bvh(const shape_data& shape, bool highquality) {
   auto bboxes = vector<bbox3f>{};
   if (!shape.points.empty()) {
     bboxes = vector<bbox3f>(shape.points.size());
-    for (auto idx : range(shape.points.size())) {
-      auto& point = shape.points[idx];
-      bboxes[idx] = point_bounds(shape.positions[point], shape.radius[point]);
+    for (auto [idx, point] : enumerate(shape.points)) {
+      auto& v1    = shape.points[idx];
+      bboxes[idx] = point_bounds(shape.positions, shape.radius, point);
     }
   } else if (!shape.lines.empty()) {
     bboxes = vector<bbox3f>(shape.lines.size());
-    for (auto idx : range(shape.lines.size())) {
-      auto& line  = shape.lines[idx];
-      bboxes[idx] = line_bounds(shape.positions[line.x],
-          shape.positions[line.y], shape.radius[line.x], shape.radius[line.y]);
+    for (auto [idx, line] : enumerate(shape.lines)) {
+      bboxes[idx] = line_bounds(shape.positions, shape.radius, line);
     }
   } else if (!shape.triangles.empty()) {
     bboxes = vector<bbox3f>(shape.triangles.size());
-    for (auto idx : range(shape.triangles.size())) {
-      auto& triangle = shape.triangles[idx];
-      bboxes[idx]    = triangle_bounds(shape.positions[triangle.x],
-             shape.positions[triangle.y], shape.positions[triangle.z]);
+    for (auto [idx, triangle] : enumerate(shape.triangles)) {
+      bboxes[idx] = triangle_bounds(shape.positions, triangle);
     }
   } else if (!shape.quads.empty()) {
     bboxes = vector<bbox3f>(shape.quads.size());
-    for (auto idx : range(shape.quads.size())) {
-      auto& quad  = shape.quads[idx];
-      bboxes[idx] = quad_bounds(shape.positions[quad.x],
-          shape.positions[quad.y], shape.positions[quad.z],
-          shape.positions[quad.w]);
+    for (auto [idx, quad] : enumerate(shape.quads)) {
+      bboxes[idx] = quad_bounds(shape.positions, quad);
     }
   }
 
@@ -390,30 +383,23 @@ void update_shape_bvh(shape_bvh& sbvh, const shape_data& shape) {
   auto bboxes = vector<bbox3f>{};
   if (!shape.points.empty()) {
     bboxes = vector<bbox3f>(shape.points.size());
-    for (auto idx : range(bboxes.size())) {
-      auto& p     = shape.points[idx];
-      bboxes[idx] = point_bounds(shape.positions[p], shape.radius[p]);
+    for (auto [idx, point] : enumerate(shape.points)) {
+      bboxes[idx] = point_bounds(shape.positions, shape.radius, point);
     }
   } else if (!shape.lines.empty()) {
     bboxes = vector<bbox3f>(shape.lines.size());
-    for (auto idx : range(bboxes.size())) {
-      auto& l     = shape.lines[idx];
-      bboxes[idx] = line_bounds(shape.positions[l.x], shape.positions[l.y],
-          shape.radius[l.x], shape.radius[l.y]);
+    for (auto [idx, line] : enumerate(shape.lines)) {
+      bboxes[idx] = line_bounds(shape.positions, shape.radius, line);
     }
   } else if (!shape.triangles.empty()) {
     bboxes = vector<bbox3f>(shape.triangles.size());
-    for (auto idx : range(bboxes.size())) {
-      auto& t     = shape.triangles[idx];
-      bboxes[idx] = triangle_bounds(
-          shape.positions[t.x], shape.positions[t.y], shape.positions[t.z]);
+    for (auto [idx, triangle] : enumerate(shape.triangles)) {
+      bboxes[idx] = triangle_bounds(shape.positions, triangle);
     }
   } else if (!shape.quads.empty()) {
     bboxes = vector<bbox3f>(shape.quads.size());
-    for (auto idx : range(bboxes.size())) {
-      auto& q     = shape.quads[idx];
-      bboxes[idx] = quad_bounds(shape.positions[q.x], shape.positions[q.y],
-          shape.positions[q.z], shape.positions[q.w]);
+    for (auto [idx, quad] : enumerate(shape.quads)) {
+      bboxes[idx] = quad_bounds(shape.positions, quad);
     }
   }
 
@@ -468,8 +454,7 @@ shape_intersection intersect_shape_bvh(const shape_bvh& sbvh,
 
   // prepare ray for fast queries
   auto ray_dinv  = 1 / ray.d;
-  auto ray_dsign = vec3i{(ray_dinv.x < 0) ? 1 : 0, (ray_dinv.y < 0) ? 1 : 0,
-      (ray_dinv.z < 0) ? 1 : 0};
+  auto ray_dsign = component_less(ray_dinv, 0);
 
   // walking stack
   while (node_cur != 0) {
@@ -485,7 +470,7 @@ shape_intersection intersect_shape_bvh(const shape_bvh& sbvh,
     if (node.internal) {
       // for internal nodes, attempts to proceed along the
       // split axis from smallest to largest nodes
-      if (ray_dsign[node.axis] != 0) {
+      if (ray_dsign[node.axis]) {
         node_stack[node_cur++] = node.start + 0;
         node_stack[node_cur++] = node.start + 1;
       } else {
@@ -494,9 +479,9 @@ shape_intersection intersect_shape_bvh(const shape_bvh& sbvh,
       }
     } else if (!shape.points.empty()) {
       for (auto idx = node.start; idx < node.start + node.num; idx++) {
-        auto& p             = shape.points[bvh.primitives[idx]];
+        auto& v1            = shape.points[bvh.primitives[idx]];
         auto  pintersection = intersect_point(
-            ray, shape.positions[p], shape.radius[p]);
+            ray, shape.positions[v1], shape.radius[v1]);
         if (!pintersection.hit) continue;
         intersection = {bvh.primitives[idx], pintersection.uv,
             pintersection.distance, true};
@@ -504,9 +489,9 @@ shape_intersection intersect_shape_bvh(const shape_bvh& sbvh,
       }
     } else if (!shape.lines.empty()) {
       for (auto idx = node.start; idx < node.start + node.num; idx++) {
-        auto& l             = shape.lines[bvh.primitives[idx]];
-        auto  pintersection = intersect_line(ray, shape.positions[l.x],
-             shape.positions[l.y], shape.radius[l.x], shape.radius[l.y]);
+        auto& line          = shape.lines[bvh.primitives[idx]];
+        auto  pintersection = intersect_line(
+            ray, shape.positions, shape.radius, line);
         if (!pintersection.hit) continue;
         intersection = {bvh.primitives[idx], pintersection.uv,
             pintersection.distance, true};
@@ -514,9 +499,8 @@ shape_intersection intersect_shape_bvh(const shape_bvh& sbvh,
       }
     } else if (!shape.triangles.empty()) {
       for (auto idx = node.start; idx < node.start + node.num; idx++) {
-        auto& t             = shape.triangles[bvh.primitives[idx]];
-        auto  pintersection = intersect_triangle(ray, shape.positions[t.x],
-             shape.positions[t.y], shape.positions[t.z]);
+        auto& triangle     = shape.triangles[bvh.primitives[idx]];
+        auto pintersection = intersect_triangle(ray, shape.positions, triangle);
         if (!pintersection.hit) continue;
         intersection = {bvh.primitives[idx], pintersection.uv,
             pintersection.distance, true};
@@ -524,9 +508,8 @@ shape_intersection intersect_shape_bvh(const shape_bvh& sbvh,
       }
     } else if (!shape.quads.empty()) {
       for (auto idx = node.start; idx < node.start + node.num; idx++) {
-        auto& q             = shape.quads[bvh.primitives[idx]];
-        auto  pintersection = intersect_quad(ray, shape.positions[q.x],
-             shape.positions[q.y], shape.positions[q.z], shape.positions[q.w]);
+        auto& quad          = shape.quads[bvh.primitives[idx]];
+        auto  pintersection = intersect_quad(ray, shape.positions, quad);
         if (!pintersection.hit) continue;
         intersection = {bvh.primitives[idx], pintersection.uv,
             pintersection.distance, true};
@@ -561,9 +544,8 @@ scene_intersection intersect_scene_bvh(const scene_bvh& sbvh,
   auto ray = ray_;
 
   // prepare ray for fast queries
-  auto ray_dinv  = vec3f{1 / ray.d.x, 1 / ray.d.y, 1 / ray.d.z};
-  auto ray_dsign = vec3i{(ray_dinv.x < 0) ? 1 : 0, (ray_dinv.y < 0) ? 1 : 0,
-      (ray_dinv.z < 0) ? 1 : 0};
+  auto ray_dinv  = 1 / ray.d;
+  auto ray_dsign = component_less(ray_dinv, 0);
 
   // walking stack
   while (node_cur != 0) {
@@ -579,7 +561,7 @@ scene_intersection intersect_scene_bvh(const scene_bvh& sbvh,
     if (node.internal) {
       // for internal nodes, attempts to proceed along the
       // split axis from smallest to largest nodes
-      if (ray_dsign[node.axis] != 0) {
+      if (ray_dsign[node.axis]) {
         node_stack[node_cur++] = node.start + 0;
         node_stack[node_cur++] = node.start + 1;
       } else {
@@ -659,9 +641,9 @@ shape_intersection overlap_shape_bvh(const shape_bvh& sbvh,
     } else if (!shape.points.empty()) {
       for (auto idx : range(node.num)) {
         auto  primitive     = bvh.primitives[node.start + idx];
-        auto& p             = shape.points[primitive];
+        auto& point         = shape.points[primitive];
         auto  eintersection = overlap_point(
-            pos, max_distance, shape.positions[p], shape.radius[p]);
+            pos, max_distance, shape.positions, shape.radius, point);
         if (!eintersection.hit) continue;
         intersection = {
             primitive, eintersection.uv, eintersection.distance, true};
@@ -670,10 +652,9 @@ shape_intersection overlap_shape_bvh(const shape_bvh& sbvh,
     } else if (!shape.lines.empty()) {
       for (auto idx : range(node.num)) {
         auto  primitive     = bvh.primitives[node.start + idx];
-        auto& l             = shape.lines[primitive];
-        auto  eintersection = overlap_line(pos, max_distance,
-             shape.positions[l.x], shape.positions[l.y], shape.radius[l.x],
-             shape.radius[l.y]);
+        auto& line          = shape.lines[primitive];
+        auto  eintersection = overlap_line(
+            pos, max_distance, shape.positions, shape.radius, line);
         if (!eintersection.hit) continue;
         intersection = {
             primitive, eintersection.uv, eintersection.distance, true};
@@ -682,10 +663,9 @@ shape_intersection overlap_shape_bvh(const shape_bvh& sbvh,
     } else if (!shape.triangles.empty()) {
       for (auto idx : range(node.num)) {
         auto  primitive     = bvh.primitives[node.start + idx];
-        auto& t             = shape.triangles[primitive];
-        auto  eintersection = overlap_triangle(pos, max_distance,
-             shape.positions[t.x], shape.positions[t.y], shape.positions[t.z],
-             shape.radius[t.x], shape.radius[t.y], shape.radius[t.z]);
+        auto& triangle      = shape.triangles[primitive];
+        auto  eintersection = overlap_triangle(
+            pos, max_distance, shape.positions, shape.radius, triangle);
         if (!eintersection.hit) continue;
         intersection = {
             primitive, eintersection.uv, eintersection.distance, true};
@@ -694,11 +674,9 @@ shape_intersection overlap_shape_bvh(const shape_bvh& sbvh,
     } else if (!shape.quads.empty()) {
       for (auto idx : range(node.num)) {
         auto  primitive     = bvh.primitives[node.start + idx];
-        auto& q             = shape.quads[primitive];
-        auto  eintersection = overlap_quad(pos, max_distance,
-             shape.positions[q.x], shape.positions[q.y], shape.positions[q.z],
-             shape.positions[q.w], shape.radius[q.x], shape.radius[q.y],
-             shape.radius[q.z], shape.radius[q.w]);
+        auto& quad          = shape.quads[primitive];
+        auto  eintersection = overlap_quad(
+            pos, max_distance, shape.positions, shape.radius, quad);
         if (!eintersection.hit) continue;
         intersection = {
             primitive, eintersection.uv, eintersection.distance, true};
@@ -765,67 +743,6 @@ scene_intersection overlap_scene_bvh(const scene_bvh& sbvh,
 
   return intersection;
 }
-
-#if 0
-// Finds the overlap between BVH leaf nodes.
-template <typename OverlapElem>
-void overlap_bvh_elems(const bvh_data& bvh1, const bvh_data& bvh2,
-                bool skip_duplicates, bool skip_self, vector<vec2i>& overlaps,
-                const OverlapElem& overlap_elems) {
-    // node stack
-    vec2i node_stack[128];
-    auto node_cur = 0;
-    node_stack[node_cur++] = {0, 0};
-
-    // walking stack
-    while (node_cur) {
-        // grab node
-        auto node_idx = node_stack[--node_cur];
-        const auto node1 = bvh1->nodes[node_idx.x];
-        const auto node2 = bvh2->nodes[node_idx.y];
-
-        // intersect bbox
-        if (!overlap_bbox(node1.bbox, node2.bbox)) continue;
-
-        // check for leaves
-        if (node1.isleaf && node2.isleaf) {
-            // collide primitives
-            for (auto i1 = node1.start; i1 < node1.start + node1.count; i1++) {
-                for (auto i2 = node2.start; i2 < node2.start + node2.count;
-                      i2++) {
-                    auto idx1 = bvh1->sorted_prim[i1];
-                    auto idx2 = bvh2->sorted_prim[i2];
-                    if (skip_duplicates && idx1 > idx2) continue;
-                    if (skip_self && idx1 == idx2) continue;
-                    if (overlap_elems(idx1, idx2))
-                        overlaps.push_back({idx1, idx2});
-                }
-            }
-        } else {
-            // descend
-            if (node1.isleaf) {
-                for (auto idx2 = node2.start; idx2 < node2.start + node2.count;
-                      idx2++) {
-                    node_stack[node_cur++] = {node_idx.x, (int)idx2};
-                }
-            } else if (node2.isleaf) {
-                for (auto idx1 = node1.start; idx1 < node1.start + node1.count;
-                      idx1++) {
-                    node_stack[node_cur++] = {(int)idx1, node_idx.y};
-                }
-            } else {
-                for (auto idx2 = node2.start; idx2 < node2.start + node2.count;
-                      idx2++) {
-                    for (auto idx1 = node1.start;
-                          idx1 < node1.start + node1.count; idx1++) {
-                        node_stack[node_cur++] = {(int)idx1, (int)idx2};
-                    }
-                }
-            }
-        }
-    }
-}
-#endif
 
 }  // namespace yocto
 
@@ -905,22 +822,16 @@ shape_ebvh make_shape_ebvh(const shape_data& shape, bool highquality) {
     auto elines     = vector<int>{};
     auto epositions = vector<vec4f>{};
     auto last_index = -1;
-    for (auto& l : shape.lines) {
-      if (last_index == l.x) {
+    for (auto& [v1, v2] : shape.lines) {
+      if (last_index == v1) {
         elines.push_back((int)epositions.size() - 1);
-        auto& posy = shape.positions[l.y];
-        auto& rady = shape.radius[l.y];
-        epositions.push_back({posy.x, posy.y, posy.z, rady});
+        epositions.push_back({shape.positions[v2], shape.radius[v2]});
       } else {
         elines.push_back((int)epositions.size());
-        auto& posx = shape.positions[l.x];
-        auto& radx = shape.radius[l.x];
-        epositions.push_back({posx.x, posx.y, posx.z, radx});
-        auto& posy = shape.positions[l.y];
-        auto& rady = shape.radius[l.y];
-        epositions.push_back({posy.x, posy.y, posy.z, rady});
+        epositions.push_back({shape.positions[v1], shape.radius[v1]});
+        epositions.push_back({shape.positions[v2], shape.radius[v2]});
       }
-      last_index = l.y;
+      last_index = v2;
     }
     auto egeometry = rtcNewGeometry(
         edevice, RTC_GEOMETRY_TYPE_FLAT_LINEAR_CURVE);

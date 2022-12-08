@@ -132,30 +132,22 @@ vec4f eval_texture(const texture_data& texture, const vec2f& uv, bool as_linear,
   auto size = vec2i{texture.width, texture.height};
 
   // get coordinates normalized for tiling
-  auto s = 0.0f, t = 0.0f;
-  if (clamp_to_edge) {
-    s = clamp(uv.x, 0.0f, 1.0f) * size.x;
-    t = clamp(uv.y, 0.0f, 1.0f) * size.y;
-  } else {
-    s = fmod(uv.x, 1.0f) * size.x;
-    if (s < 0) s += size.x;
-    t = fmod(uv.y, 1.0f) * size.y;
-    if (t < 0) t += size.y;
-  }
-
-  // get image coordinates and residuals
-  auto i = clamp((int)s, 0, size.x - 1), j = clamp((int)t, 0, size.y - 1);
-  auto ii = (i + 1) % size.x, jj = (j + 1) % size.y;
-  auto u = s - i, v = t - j;
+  auto st = (clamp_to_edge ? clamp(uv, 0, 1) : fmod(uv, 1)) * size;
 
   // handle interpolation
   if (no_interpolation) {
-    return lookup_texture(texture, {i, j}, as_linear);
+    auto ij = clamp((vec2i)st, 0, size - 1);
+    return lookup_texture(texture, ij, as_linear);
   } else {
-    return lookup_texture(texture, {i, j}, as_linear) * (1 - u) * (1 - v) +
-           lookup_texture(texture, {i, jj}, as_linear) * (1 - u) * v +
-           lookup_texture(texture, {ii, j}, as_linear) * u * (1 - v) +
-           lookup_texture(texture, {ii, jj}, as_linear) * u * v;
+    auto ij     = clamp((vec2i)st, 0, size - 1);
+    auto i1j    = (ij + vec{1, 0}) % size;
+    auto ij1    = (ij + vec{0, 1}) % size;
+    auto i1j1   = (ij + vec{1, 1}) % size;
+    auto [u, v] = st - ij;
+    return lookup_texture(texture, ij, as_linear) * (1 - u) * (1 - v) +
+           lookup_texture(texture, ij1, as_linear) * (1 - u) * v +
+           lookup_texture(texture, i1j, as_linear) * u * (1 - v) +
+           lookup_texture(texture, i1j1, as_linear) * u * v;
   }
 }
 vec4f eval_texture(
@@ -796,7 +788,7 @@ void tesselate_subdiv(
       for (auto i : range(4)) {
         auto& displacement_tex = scene.textures[subdiv.displacement_tex];
         auto  disp             = mean(
-                         eval_texture(displacement_tex, subdiv.texcoords[qtxt[i]], false));
+            eval_texture(displacement_tex, subdiv.texcoords[qtxt[i]], false));
         if (!displacement_tex.pixelsb.empty()) disp -= 0.5f;
         offset[qpos[i]] += subdiv.displacement * disp;
         count[qpos[i]] += 1;
