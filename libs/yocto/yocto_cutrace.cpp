@@ -1077,7 +1077,9 @@ void trace_preview(array2d<vec4f>& image, cutrace_context& context,
   trace_samples(context, pstate, cuscene, bvh, lights, scene, pparams);
   auto preview = get_image(pstate);
   for (auto ij : range(image.extents())) {
-    auto pij  = min(ij / params.pratio, preview.extents() - 1);
+    // TODO: Windows fix
+    auto pij  = vec2s{min(ij[0] / params.pratio, preview.extents()[0] - 1),
+        min(ij[1] / params.pratio, preview.extents()[1] - 1)};
     image[ij] = preview[pij];
   }
 }

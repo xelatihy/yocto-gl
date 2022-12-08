@@ -638,7 +638,7 @@ constexpr kernel bool operator!=(const vec<T1, N>& a, const vec<T2, N>& b) {
   }
 }
 template <typename T1, typename T2, size_t N>
-constexpr kernel bool operator!=(const vec<T1, N>& a, const T2 b) {
+constexpr kernel bool operator!=(const vec<T1, N>& a, T2 b) {
   if constexpr (N == 1) {
     return a.x != b;
   } else if constexpr (N == 2) {

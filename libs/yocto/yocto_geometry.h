@@ -494,12 +494,21 @@ constexpr kernel T interpolate_line(
 }
 // Interpolates values over a triangle parameterized by u and v along the
 // (p2-p1) and (p3-p1) directions. Same as barycentric interpolation.
+#ifndef __CUDACC__
 template <typename T, typename T1>
 constexpr kernel T interpolate_triangle(
     const T& p1, const T& p2, const T& p3, const vec<T1, 2>& uv) {
   auto [u, v] = uv;
   return p1 * (1 - u - v) + p2 * u + p3 * v;
 }
+#else
+template <typename T, typename T1>
+constexpr kernel T interpolate_triangle(
+    const T& p1, const T& p2, const T& p3, const vec<T1, 2>& uv) {
+  auto u = uv[0], v = uv[1];
+  return p1 * (1 - u - v) + p2 * u + p3 * v;
+}
+#endif
 template <typename T, typename T1, typename I>
 constexpr kernel T interpolate_triangle(
     const vector<T>& vertices, const vec<I, 3>& triangle, T1 u) {
