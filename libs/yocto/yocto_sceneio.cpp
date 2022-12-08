@@ -1042,16 +1042,19 @@ void save_shape(const string& filename, const shape_data& shape,
           str += std::to_string(value) + ",\n";
         } else if constexpr (std::is_same_v<vec2i, T> ||
                              std::is_same_v<vec2f, T>) {
-          str += "{" + std::to_string(value.x) + "," + std::to_string(value.y) +
+          auto [valuex, valuey] = value;
+          str += "{" + std::to_string(valuex) + "," + std::to_string(valuey) +
                  "},\n";
         } else if constexpr (std::is_same_v<vec3i, T> ||
                              std::is_same_v<vec3f, T>) {
-          str += "{" + std::to_string(value.x) + "," + std::to_string(value.y) +
-                 "," + std::to_string(value.z) + "},\n";
+          auto [valuex, valuey, valuez] = value;
+          str += "{" + std::to_string(valuex) + "," + std::to_string(valuey) +
+                 "," + std::to_string(valuez) + "},\n";
         } else if constexpr (std::is_same_v<vec4i, T> ||
                              std::is_same_v<vec4f, T>) {
-          str += "{" + std::to_string(value.x) + "," + std::to_string(value.y) +
-                 "," + std::to_string(value.z) + "," + std::to_string(value.w) +
+          auto [valuex, valuey, valuez, valuew] = value;
+          str += "{" + std::to_string(valuex) + "," + std::to_string(valuey) +
+                 "," + std::to_string(valuez) + "," + std::to_string(valuew) +
                  "},\n";
         } else {
           throw std::invalid_argument{"cannot print this"};
@@ -1193,16 +1196,19 @@ void save_fvshape(const string& filename, const fvshape_data& shape,
           str += std::to_string(value) + ",\n";
         } else if constexpr (std::is_same_v<vec2i, T> ||
                              std::is_same_v<vec2f, T>) {
-          str += "{" + std::to_string(value.x) + "," + std::to_string(value.y) +
+          auto [valuex, valuey] = value;
+          str += "{" + std::to_string(valuex) + "," + std::to_string(valuey) +
                  "},\n";
         } else if constexpr (std::is_same_v<vec3i, T> ||
                              std::is_same_v<vec3f, T>) {
-          str += "{" + std::to_string(value.x) + "," + std::to_string(value.y) +
-                 "," + std::to_string(value.z) + "},\n";
+          auto [valuex, valuey, valuez] = value;
+          str += "{" + std::to_string(valuex) + "," + std::to_string(valuey) +
+                 "," + std::to_string(valuez) + "},\n";
         } else if constexpr (std::is_same_v<vec4i, T> ||
                              std::is_same_v<vec4f, T>) {
-          str += "{" + std::to_string(value.x) + "," + std::to_string(value.y) +
-                 "," + std::to_string(value.z) + "," + std::to_string(value.w) +
+          auto [valuex, valuey, valuez, valuew] = value;
+          str += "{" + std::to_string(valuex) + "," + std::to_string(valuey) +
+                 "," + std::to_string(valuez) + "," + std::to_string(valuew) +
                  "},\n";
         } else {
           throw std::invalid_argument{"cannot print this"};
@@ -2725,10 +2731,11 @@ static void load_json_scene_version40(const string& filename,
         get_opt(element, "focus", camera.focus);
         get_opt(element, "aperture", camera.aperture);
         if (element.contains("lookat")) {
-          get_om3(element, "lookat", (mat3f&)camera.frame);
-          camera.focus = length(camera.frame.x - camera.frame.y);
-          camera.frame = lookat_frame(
-              camera.frame.x, camera.frame.y, camera.frame.z);
+          auto lookat = mat3f{};
+          get_om3(element, "lookat", lookat);
+          auto from = lookat[0], to = lookat[1], up = lookat[2];
+          camera.focus = length(from - to);
+          camera.frame = lookat_frame(from, to, up);
         }
       }
     }
@@ -2740,9 +2747,10 @@ static void load_json_scene_version40(const string& filename,
         get_opt(element, "emission", environment.emission);
         get_tex(element, "emission_tex", environment.emission_tex);
         if (element.contains("lookat")) {
-          get_om3(element, "lookat", (mat3f&)environment.frame);
-          environment.frame = lookat_frame(environment.frame.x,
-              environment.frame.y, environment.frame.z, false);
+          auto lookat = mat3f{};
+          get_om3(element, "lookat", lookat);
+          auto from = lookat[0], to = lookat[1], up = lookat[2];
+          environment.frame = lookat_frame(from, to, up, false);
         }
       }
     }
@@ -2778,9 +2786,10 @@ static void load_json_scene_version40(const string& filename,
         get_shp(element, "shape", instance.shape);
         get_mat(element, "material", instance.material);
         if (element.contains("lookat")) {
-          get_om3(element, "lookat", (mat3f&)instance.frame);
-          instance.frame = lookat_frame(
-              instance.frame.x, instance.frame.y, instance.frame.z, false);
+          auto lookat = mat3f{};
+          get_om3(element, "lookat", lookat);
+          auto from = lookat[0], to = lookat[1], up = lookat[2];
+          instance.frame = lookat_frame(from, to, up, false);
         }
       }
     }
@@ -2792,9 +2801,10 @@ static void load_json_scene_version40(const string& filename,
         get_shp(element, "shape", instance.shape);
         get_mat(element, "material", instance.material);
         if (element.contains("lookat")) {
-          get_om3(element, "lookat", (mat3f&)instance.frame);
-          instance.frame = lookat_frame(
-              instance.frame.x, instance.frame.y, instance.frame.z, false);
+          auto lookat = mat3f{};
+          get_om3(element, "lookat", lookat);
+          auto from = lookat[0], to = lookat[1], up = lookat[2];
+          instance.frame = lookat_frame(from, to, up, false);
         }
         if (element.contains("instance")) {
           get_ist(element, "instance", instance);
@@ -2974,10 +2984,11 @@ static void load_json_scene_version41(const string& filename, json_value& json,
         get_opt(element, "focus", camera.focus);
         get_opt(element, "aperture", camera.aperture);
         if (element.contains("lookat")) {
-          get_opt(element, "lookat", (mat3f&)camera.frame);
-          camera.focus = length(camera.frame.x - camera.frame.y);
-          camera.frame = lookat_frame(
-              camera.frame.x, camera.frame.y, camera.frame.z);
+          auto lookat = mat3f{};
+          get_opt(element, "lookat", lookat);
+          auto from = lookat[0], to = lookat[1], up = lookat[2];
+          camera.focus = length(from - to);
+          camera.frame = lookat_frame(from, to, up);
         }
       }
     }
@@ -3073,9 +3084,10 @@ static void load_json_scene_version41(const string& filename, json_value& json,
         get_ref(element, "shape", instance.shape, shape_map);
         get_ref(element, "material", instance.material, material_map);
         if (element.contains("lookat")) {
-          get_opt(element, "lookat", (mat3f&)instance.frame);
-          instance.frame = lookat_frame(
-              instance.frame.x, instance.frame.y, instance.frame.z, false);
+          auto lookat = mat3f{};
+          get_opt(element, "lookat", lookat);
+          auto from = lookat[0], to = lookat[1], up = lookat[2];
+          instance.frame = lookat_frame(from, to, up, false);
         }
       }
     }
@@ -3090,9 +3102,10 @@ static void load_json_scene_version41(const string& filename, json_value& json,
         get_opt(element, "emission", environment.emission);
         get_ref(element, "emission_tex", environment.emission_tex, texture_map);
         if (element.contains("lookat")) {
-          get_opt(element, "lookat", (mat3f&)environment.frame);
-          environment.frame = lookat_frame(environment.frame.x,
-              environment.frame.y, environment.frame.z, false);
+          auto lookat = mat3f{};
+          get_opt(element, "lookat", lookat);
+          auto from = lookat[0], to = lookat[1], up = lookat[2];
+          environment.frame = lookat_frame(from, to, up, false);
         }
       }
     }
@@ -3205,10 +3218,11 @@ static void load_json_scene(
         get_opt(element, "focus", camera.focus);
         get_opt(element, "aperture", camera.aperture);
         if (element.contains("lookat")) {
-          get_opt(element, "lookat", (mat3f&)camera.frame);
-          camera.focus = length(camera.frame.x - camera.frame.y);
-          camera.frame = lookat_frame(
-              camera.frame.x, camera.frame.y, camera.frame.z);
+          auto lookat = mat3f{};
+          get_opt(element, "lookat", lookat);
+          auto from = lookat[0], to = lookat[1], up = lookat[2];
+          camera.focus = length(from - to);
+          camera.frame = lookat_frame(from, to, up);
         }
       }
     }
@@ -3297,9 +3311,10 @@ static void load_json_scene(
         get_opt(element, "shape", instance.shape);
         get_opt(element, "material", instance.material);
         if (element.contains("lookat")) {
-          get_opt(element, "lookat", (mat3f&)instance.frame);
-          instance.frame = lookat_frame(
-              instance.frame.x, instance.frame.y, instance.frame.z, true);
+          auto lookat = mat3f{};
+          get_opt(element, "lookat", lookat);
+          auto from = lookat[0], to = lookat[1], up = lookat[2];
+          instance.frame = lookat_frame(from, to, up, true);
         }
       }
     }
@@ -3315,9 +3330,10 @@ static void load_json_scene(
         get_opt(element, "emission", environment.emission);
         get_opt(element, "emission_tex", environment.emission_tex);
         if (element.contains("lookat")) {
-          get_opt(element, "lookat", (mat3f&)environment.frame);
-          environment.frame = lookat_frame(environment.frame.x,
-              environment.frame.y, environment.frame.z, true);
+          auto lookat = mat3f{};
+          get_opt(element, "lookat", lookat);
+          auto from = lookat[0], to = lookat[1], up = lookat[2];
+          environment.frame = lookat_frame(from, to, up, true);
         }
       }
     }

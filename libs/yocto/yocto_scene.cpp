@@ -369,55 +369,20 @@ vec2f eval_texcoord(const scene_data& scene, const instance_data& instance,
   }
 }
 
-#if 0
-// Shape element normal.
-static pair<vec3f, vec3f> eval_tangents(
-    const trace_shape& shape, int element, const vec2f& uv) {
-  if (!shape.triangles.empty()) {
-    auto t = shape.triangles[element];
-    if (shape.texcoords.empty()) {
-      return triangle_tangents_fromuv(shape.positions[t.x],
-          shape.positions[t.y], shape.positions[t.z], {0, 0}, {1, 0}, {0, 1});
-    } else {
-      return triangle_tangents_fromuv(shape.positions[t.x],
-          shape.positions[t.y], shape.positions[t.z], shape.texcoords[t.x],
-          shape.texcoords[t.y], shape.texcoords[t.z]);
-    }
-  } else if (!shape.quads.empty()) {
-    auto q = shape.quads[element];
-    if (shape.texcoords.empty()) {
-      return quad_tangents_fromuv(shape.positions[q.x], shape.positions[q.y],
-          shape.positions[q.z], shape.positions[q.w], {0, 0}, {1, 0}, {0, 1},
-          {1, 1}, uv);
-    } else {
-      return quad_tangents_fromuv(shape.positions[q.x], shape.positions[q.y],
-          shape.positions[q.z], shape.positions[q.w], shape.texcoords[q.x],
-          shape.texcoords[q.y], shape.texcoords[q.z], shape.texcoords[q.w],
-          uv);
-    }
-  } else {
-    return {{0,0,0}, {0,0,0}};
-  }
-}
-#endif
-
 // Shape element normal.
 pair<vec3f, vec3f> eval_element_tangents(
     const scene_data& scene, const instance_data& instance, int element) {
   auto& shape = scene.shapes[instance.shape];
   if (!shape.triangles.empty() && !shape.texcoords.empty()) {
-    auto t        = shape.triangles[element];
-    auto [tu, tv] = triangle_tangents_fromuv(shape.positions[t.x],
-        shape.positions[t.y], shape.positions[t.z], shape.texcoords[t.x],
-        shape.texcoords[t.y], shape.texcoords[t.z]);
+    auto triangle = shape.triangles[element];
+    auto [tu, tv] = triangle_tangents_fromuv(
+        shape.positions, shape.texcoords, triangle);
     return {transform_direction(instance.frame, tu),
         transform_direction(instance.frame, tv)};
   } else if (!shape.quads.empty() && !shape.texcoords.empty()) {
-    auto q        = shape.quads[element];
-    auto [tu, tv] = quad_tangents_fromuv(shape.positions[q.x],
-        shape.positions[q.y], shape.positions[q.z], shape.positions[q.w],
-        shape.texcoords[q.x], shape.texcoords[q.y], shape.texcoords[q.z],
-        shape.texcoords[q.w], {0, 0});
+    auto quad     = shape.quads[element];
+    auto [tu, tv] = quad_tangents_fromuv(
+        shape.positions, shape.texcoords, quad, {0, 0});
     return {transform_direction(instance.frame, tu),
         transform_direction(instance.frame, tv)};
   } else {
@@ -492,16 +457,14 @@ vec4f eval_color(const scene_data& scene, const instance_data& instance,
   auto& shape = scene.shapes[instance.shape];
   if (shape.colors.empty()) return {1, 1, 1, 1};
   if (!shape.triangles.empty()) {
-    auto t = shape.triangles[element];
-    return interpolate_triangle(
-        shape.colors[t.x], shape.colors[t.y], shape.colors[t.z], uv);
+    auto triangle = shape.triangles[element];
+    return interpolate_triangle(shape.colors, triangle, uv);
   } else if (!shape.quads.empty()) {
-    auto q = shape.quads[element];
-    return interpolate_quad(shape.colors[q.x], shape.colors[q.y],
-        shape.colors[q.z], shape.colors[q.w], uv);
+    auto quad = shape.quads[element];
+    return interpolate_quad(shape.colors, quad, uv);
   } else if (!shape.lines.empty()) {
-    auto l = shape.lines[element];
-    return interpolate_line(shape.colors[l.x], shape.colors[l.y], uv);
+    auto line = shape.lines[element];
+    return interpolate_line(shape.colors, line, uv);
   } else if (!shape.points.empty()) {
     return shape.colors[shape.points[element]];
   } else {

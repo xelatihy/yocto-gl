@@ -392,8 +392,7 @@ namespace yocto {
 vec3f eval_position(const fvshape_data& shape, int element, const vec2f& uv) {
   if (!shape.quadspos.empty()) {
     auto& quad = shape.quadspos[element];
-    return interpolate_quad(shape.positions[quad.x], shape.positions[quad.y],
-        shape.positions[quad.z], shape.positions[quad.w], uv);
+    return interpolate_quad(shape.positions, quad, uv);
   } else {
     return {0, 0, 0};
   }
@@ -403,9 +402,7 @@ vec3f eval_normal(const fvshape_data& shape, int element, const vec2f& uv) {
   if (shape.normals.empty()) return eval_element_normal(shape, element);
   if (!shape.quadspos.empty()) {
     auto& quad = shape.quadsnorm[element];
-    return normalize(
-        interpolate_quad(shape.normals[quad.x], shape.normals[quad.y],
-            shape.normals[quad.z], shape.normals[quad.w], uv));
+    return normalize(interpolate_quad(shape.normals, quad, uv));
   } else {
     return {0, 0, 1};
   }
@@ -415,8 +412,7 @@ vec2f eval_texcoord(const fvshape_data& shape, int element, const vec2f& uv) {
   if (shape.texcoords.empty()) return uv;
   if (!shape.quadspos.empty()) {
     auto& quad = shape.quadstexcoord[element];
-    return interpolate_quad(shape.texcoords[quad.x], shape.texcoords[quad.y],
-        shape.texcoords[quad.z], shape.texcoords[quad.w], uv);
+    return interpolate_quad(shape.texcoords, quad, uv);
   } else {
     return uv;
   }
@@ -426,8 +422,7 @@ vec2f eval_texcoord(const fvshape_data& shape, int element, const vec2f& uv) {
 vec3f eval_element_normal(const fvshape_data& shape, int element) {
   if (!shape.quadspos.empty()) {
     auto& quad = shape.quadspos[element];
-    return quad_normal(shape.positions[quad.x], shape.positions[quad.y],
-        shape.positions[quad.z], shape.positions[quad.w]);
+    return quad_normal(shape.positions, quad);
   } else {
     return {0, 0, 0};
   }
@@ -505,9 +500,12 @@ vector<string> fvshape_stats(const fvshape_data& shape, bool verbose) {
     while (str.size() < 13) str = " " + str;
     return str;
   };
-  auto format3 = [](auto num) {
-    auto str = std::to_string(num.x) + " " + std::to_string(num.y) + " " +
-               std::to_string(num.z);
+  auto format3 = [](auto nums) {
+    auto str = string{};
+    for (auto num : nums) {
+      if (!str.empty()) str += " ";
+      str += std::to_string(num);
+    }
     while (str.size() < 13) str = " " + str;
     return str;
   };
@@ -569,13 +567,9 @@ static shape_data make_quads(
 void merge_shape_inplace(shape_data& shape, const shape_data& merge) {
   auto offset = (int)shape.positions.size();
   for (auto& p : merge.points) shape.points.push_back(p + offset);
-  for (auto& l : merge.lines)
-    shape.lines.push_back({l.x + offset, l.y + offset});
-  for (auto& t : merge.triangles)
-    shape.triangles.push_back({t.x + offset, t.y + offset, t.z + offset});
-  for (auto& q : merge.quads)
-    shape.quads.push_back(
-        {q.x + offset, q.y + offset, q.z + offset, q.w + offset});
+  for (auto& l : merge.lines) shape.lines.push_back(l + offset);
+  for (auto& t : merge.triangles) shape.triangles.push_back(t + offset);
+  for (auto& q : merge.quads) shape.quads.push_back(q + offset);
   shape.positions.insert(
       shape.positions.end(), merge.positions.begin(), merge.positions.end());
   shape.tangents.insert(

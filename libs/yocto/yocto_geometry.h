@@ -688,10 +688,10 @@ constexpr kernel pair<vec<T, 3>, vec<T, 3>> triangle_tangents_fromuv(
 template <typename T, typename I>
 constexpr kernel pair<vec<T, 3>, vec<T, 3>> triangle_tangents_fromuv(
     const vector<vec<T, 3>>& positions, const vector<vec<T, 2>>& texcoords,
-    const vec<I, 4>& triangle, const vec<T, 2>& uv) {
+    const vec<I, 3>& triangle) {
   auto [v1, v2, v3] = triangle;
   return triangle_tangents_fromuv(positions[v1], positions[v2], positions[v3],
-      texcoords[v1], texcoords[v2], texcoords[v3], uv);
+      texcoords[v1], texcoords[v2], texcoords[v3]);
 }
 
 // Quad tangent and bi-tangent from uv.
@@ -709,11 +709,11 @@ constexpr kernel pair<vec<T, 3>, vec<T, 3>> quad_tangents_fromuv(
 template <typename T, typename I>
 constexpr kernel pair<vec<T, 3>, vec<T, 3>> quad_tangents_fromuv(
     const vector<vec<T, 3>>& positions, const vector<vec<T, 2>>& texcoords,
-    const vec<I, 4>& quad, const vec<T, 2>& uv) {
+    const vec<I, 4>& quad, const vec<T, 2>& current_uv) {
   auto [v1, v2, v3, v4] = quad;
   return quad_tangents_fromuv(positions[v1], positions[v2], positions[v3],
       positions[v4], texcoords[v1], texcoords[v2], texcoords[v3], texcoords[v4],
-      uv);
+      current_uv);
 }
 
 }  // namespace yocto
