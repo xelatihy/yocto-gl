@@ -1052,17 +1052,22 @@ fvshape_data make_fvrect(
 // Make a facevarying box
 fvshape_data make_fvbox(
     const vec3i& steps, const vec3f& scale, const vec3f& uvscale) {
-  auto shape = fvshape_data{};
-  make_fvbox(shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
-      shape.positions, shape.normals, shape.texcoords, steps, scale, uvscale);
+  auto box                                  = make_box(steps, scale, uvscale);
+  auto shape                                = fvshape_data{};
+  shape.quadsnorm                           = box.quads;
+  shape.quadstexcoord                       = box.quads;
+  std::tie(shape.quadspos, shape.positions) = weld_quads(
+      box.quads, box.positions, 0.1f * min(scale) / max(steps));
   return shape;
 }
 
 // Make a facevarying sphere
 fvshape_data make_fvsphere(int steps, float scale, float uvscale) {
-  auto shape = fvshape_data{};
-  make_fvsphere(shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
-      shape.positions, shape.normals, shape.texcoords, steps, scale, uvscale);
+  auto shape      = make_fvbox({steps, steps, steps}, {scale, scale, scale},
+           {uvscale, uvscale, uvscale});
+  shape.quadsnorm = shape.quadspos;
+  shape.normals   = shape.positions;
+  for (auto& n : shape.normals) n = normalize(n);
   return shape;
 }
 
