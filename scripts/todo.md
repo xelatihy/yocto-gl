@@ -4,6 +4,14 @@
 
 - Docs
 
+## Shape examples
+
+- uniform to using subdivisions for everything
+- leave a grid based option, but do everything as subdivisions
+- probably do everything using transformations and leave out frame
+  in the generators; otherwise include frames everywhere as the only way to
+  deal with sizes and positions
+
 ## IO
 
 - consider exception in modelio

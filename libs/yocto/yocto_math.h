@@ -262,7 +262,7 @@ struct vec;
 template <typename T>
 struct vec<T, 1> {
   union {  // clang-format off
-    array<T, 1> d;
+    T d[1];
     T x;
   };  // clang-format on
 
@@ -281,16 +281,6 @@ struct vec<T, 1> {
   constexpr kernel vec(const array<T, 1>& v) : x{v[0]} {}
   constexpr kernel operator array<T, 1>() { return {x}; }
 
-  template <typename U>
-  constexpr kernel explicit(!std::is_convertible_v<U, T>)
-      vec(const array<U, 1>& v)
-      : x{(T)v[0]} {}
-  template <typename U>
-  constexpr kernel explicit(!std::is_convertible_v<T, U>)
-  operator array<U, 1>() {
-    return {(U)x};
-  }
-
   constexpr kernel T&       operator[](size_t i) { return d[i]; }
   constexpr kernel const T& operator[](size_t i) const { return d[i]; }
 };
@@ -298,7 +288,7 @@ struct vec<T, 1> {
 template <typename T>
 struct vec<T, 2> {
   union {  // clang-format off
-    array<T, 2> d;
+    T d[2];
     struct { T x, y; };
   };  // clang-format on
 
@@ -318,16 +308,6 @@ struct vec<T, 2> {
   constexpr kernel vec(const array<T, 2>& v) : x{v[0]}, y{v[1]} {}
   constexpr kernel operator array<T, 2>() { return {x, y}; }
 
-  template <typename U>
-  constexpr kernel explicit(!std::is_convertible_v<U, T>)
-      vec(const array<U, 2>& v)
-      : x{(T)v[0]}, y{(T)v[1]} {}
-  template <typename U>
-  constexpr kernel explicit(!std::is_convertible_v<T, U>)
-  operator array<U, 2>() {
-    return {(U)x, (U)y};
-  }
-
   constexpr kernel T&       operator[](size_t i) { return d[i]; }
   constexpr kernel const T& operator[](size_t i) const { return d[i]; }
 };
@@ -335,7 +315,7 @@ struct vec<T, 2> {
 template <typename T>
 struct vec<T, 3> {
   union {  // clang-format off
-    array<T, 3> d;
+    T d[3];
     struct { T x, y, z; };
   };  // clang-format on
 
@@ -355,16 +335,6 @@ struct vec<T, 3> {
   constexpr kernel vec(const array<T, 3>& v) : x{v[0]}, y{v[1]}, z{v[2]} {}
   constexpr kernel operator array<T, 3>() { return {x, y, z}; }
 
-  template <typename U>
-  constexpr kernel explicit(!std::is_convertible_v<U, T>)
-      vec(const array<U, 3>& v)
-      : x{(T)v[0]}, y{(T)v[1]}, z{(T)v[2]} {}
-  template <typename U>
-  constexpr kernel explicit(!std::is_convertible_v<T, U>)
-  operator array<U, 3>() {
-    return {(U)x, (U)y, (U)z};
-  }
-
   constexpr kernel T&       operator[](size_t i) { return d[i]; }
   constexpr kernel const T& operator[](size_t i) const { return d[i]; }
 };
@@ -372,7 +342,7 @@ struct vec<T, 3> {
 template <typename T>
 struct vec<T, 4> {
   union {  // clang-format off
-    array<T, 4> d;
+    T d[4];
     struct { T x, y, z, w; };
   };  // clang-format on
 
@@ -393,16 +363,6 @@ struct vec<T, 4> {
   constexpr kernel vec(const array<T, 4>& v)
       : x{v[0]}, y{v[1]}, z{v[2]}, w{v[3]} {}
   constexpr kernel operator array<T, 4>() { return {x, y, z, w}; }
-
-  template <typename U>
-  constexpr kernel explicit(!std::is_convertible_v<U, T>)
-      vec(const array<U, 4>& v)
-      : x{(T)v[0]}, y{(T)v[1]}, z{(T)v[2]}, w{(T)v[3]} {}
-  template <typename U>
-  constexpr kernel explicit(!std::is_convertible_v<T, U>)
-  operator array<U, 4>() {
-    return {(U)x, (U)y, (U)z, (U)w};
-  }
 
   constexpr kernel T&       operator[](size_t i) { return d[i]; }
   constexpr kernel const T& operator[](size_t i) const { return d[i]; }
@@ -1165,8 +1125,8 @@ struct mat;
 template <typename T, size_t N>
 struct mat<T, N, 1> {
   union {  // clang-format off
-    array<T, N * 1> d;
-    array<vec<T, N>, 1> cols;
+    T d[N * 1];
+    vec<T, N> cols[1];
     vec<T, N> x;
   };  // clang-format on
 
@@ -1183,8 +1143,8 @@ struct mat<T, N, 1> {
 template <typename T, size_t N>
 struct mat<T, N, 2> {
   union {  // clang-format off
-    array<T, N * 2> d;
-    array<vec<T, N>, 2> cols;
+    T d[N * 2];
+    vec<T, N> cols[2];
     struct { vec<T, N> x, y; };
   };  // clang-format on
 
@@ -1202,8 +1162,8 @@ struct mat<T, N, 2> {
 template <typename T, size_t N>
 struct mat<T, N, 3> {
   union {  // clang-format off
-    array<T, N * 3> d;
-    array<vec<T, N>, 3> cols;
+    T d[N * 3];
+    vec<T, N> cols[3];
     struct { vec<T, N> x, y, z; };
   };  // clang-format on
 
@@ -1222,8 +1182,8 @@ struct mat<T, N, 3> {
 template <typename T, size_t N>
 struct mat<T, N, 4> {
   union {  // clang-format off
-    array<T, N * 4> d;
-    array<vec<T, N>, 4> cols;
+    T d[N * 4];
+    vec<T, N> cols[4];
     struct { vec<T, N> x, y, z, w; };
   };  // clang-format on
 
@@ -1461,7 +1421,7 @@ struct frame;
 template <typename T>
 struct frame<T, 2> {
   union {  // clang-format off
-    array<vec<T, 2>, 3> cols;
+    vec<T, 2> cols[3];
     struct { vec<T, 2> x, y, o; };
     struct { mat<T, 2, 2> m; vec<T, 2> t; };
   };  // clang-format on
@@ -1489,7 +1449,7 @@ struct frame<T, 2> {
 template <typename T>
 struct frame<T, 3> {
   union {  // clang-format off
-    array<vec<T, 3>, 4> cols;
+    vec<T, 3> cols[4];
     struct { vec<T, 3> x, y, z, o; };
     struct { mat<T, 3, 3> m; vec<T, 3> t; };
   };      // clang-format off
@@ -1629,7 +1589,7 @@ struct quat;
 template <typename T>
 struct quat<T, 4> {
   union {  // clang-format off
-    array<T, 4> d;
+    T d[4];
     struct { T x, y, z, w; };
   };  // clang-format on
 
