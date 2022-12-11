@@ -1629,7 +1629,7 @@ struct quat;
 template <typename T>
 struct quat<T, 4> {
   union {  // clang-format off
-    array<T, 4> d;
+    T d[4];
     struct { T x, y, z, w; };
   };  // clang-format on
 
