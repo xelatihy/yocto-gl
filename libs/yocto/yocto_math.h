@@ -1461,7 +1461,7 @@ struct frame;
 template <typename T>
 struct frame<T, 2> {
   union {  // clang-format off
-    array<vec<T, 2>, 3> cols;
+    vec<T, 2> cols[3];
     struct { vec<T, 2> x, y, o; };
     struct { mat<T, 2, 2> m; vec<T, 2> t; };
   };  // clang-format on
@@ -1489,7 +1489,7 @@ struct frame<T, 2> {
 template <typename T>
 struct frame<T, 3> {
   union {  // clang-format off
-    array<vec<T, 3>, 4> cols;
+    vec<T, 3> cols[4];
     struct { vec<T, 3> x, y, z, o; };
     struct { mat<T, 3, 3> m; vec<T, 3> t; };
   };      // clang-format off
