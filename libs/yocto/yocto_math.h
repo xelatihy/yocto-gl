@@ -262,7 +262,7 @@ struct vec;
 template <typename T>
 struct vec<T, 1> {
   union {  // clang-format off
-    array<T, 1> d;
+    T d[1];
     T x;
   };  // clang-format on
 
@@ -298,7 +298,7 @@ struct vec<T, 1> {
 template <typename T>
 struct vec<T, 2> {
   union {  // clang-format off
-    array<T, 2> d;
+    T d[2];
     struct { T x, y; };
   };  // clang-format on
 
@@ -335,7 +335,7 @@ struct vec<T, 2> {
 template <typename T>
 struct vec<T, 3> {
   union {  // clang-format off
-    array<T, 3> d;
+    T d[3];
     struct { T x, y, z; };
   };  // clang-format on
 
@@ -372,7 +372,7 @@ struct vec<T, 3> {
 template <typename T>
 struct vec<T, 4> {
   union {  // clang-format off
-    array<T, 4> d;
+    T d[4];
     struct { T x, y, z, w; };
   };  // clang-format on
 
@@ -1165,8 +1165,8 @@ struct mat;
 template <typename T, size_t N>
 struct mat<T, N, 1> {
   union {  // clang-format off
-    array<T, N * 1> d;
-    array<vec<T, N>, 1> cols;
+    T d[N * 1];
+    vec<T, N> cols[1];
     vec<T, N> x;
   };  // clang-format on
 
@@ -1183,8 +1183,8 @@ struct mat<T, N, 1> {
 template <typename T, size_t N>
 struct mat<T, N, 2> {
   union {  // clang-format off
-    array<T, N * 2> d;
-    array<vec<T, N>, 2> cols;
+    T d[N * 2];
+    vec<T, N> cols[2];
     struct { vec<T, N> x, y; };
   };  // clang-format on
 
@@ -1202,8 +1202,8 @@ struct mat<T, N, 2> {
 template <typename T, size_t N>
 struct mat<T, N, 3> {
   union {  // clang-format off
-    array<T, N * 3> d;
-    array<vec<T, N>, 3> cols;
+    T d[N * 3];
+    vec<T, N> cols[3];
     struct { vec<T, N> x, y, z; };
   };  // clang-format on
 
@@ -1222,8 +1222,8 @@ struct mat<T, N, 3> {
 template <typename T, size_t N>
 struct mat<T, N, 4> {
   union {  // clang-format off
-    array<T, N * 4> d;
-    array<vec<T, N>, 4> cols;
+    T d[N * 4];
+    vec<T, N> cols[4];
     struct { vec<T, N> x, y, z, w; };
   };  // clang-format on
 
