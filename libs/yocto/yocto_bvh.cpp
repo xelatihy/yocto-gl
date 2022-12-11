@@ -951,12 +951,12 @@ void update_scene_ebvh(scene_ebvh& sbvh, const scene_data& scene,
 shape_intersection intersect_shape_ebvh(const shape_ebvh& sbvh,
     const shape_data& shape, const ray3f& ray, bool find_any) {
   RTCRayHit embree_ray;
-  embree_ray.ray.org_x     = ray.o.x;
-  embree_ray.ray.org_y     = ray.o.y;
-  embree_ray.ray.org_z     = ray.o.z;
-  embree_ray.ray.dir_x     = ray.d.x;
-  embree_ray.ray.dir_y     = ray.d.y;
-  embree_ray.ray.dir_z     = ray.d.z;
+  embree_ray.ray.org_x     = ray.o[0];
+  embree_ray.ray.org_y     = ray.o[1];
+  embree_ray.ray.org_z     = ray.o[2];
+  embree_ray.ray.dir_x     = ray.d[0];
+  embree_ray.ray.dir_y     = ray.d[1];
+  embree_ray.ray.dir_z     = ray.d[2];
   embree_ray.ray.tnear     = ray.tmin;
   embree_ray.ray.tfar      = ray.tmax;
   embree_ray.ray.flags     = 0;
@@ -977,12 +977,12 @@ shape_intersection intersect_shape_ebvh(const shape_ebvh& sbvh,
 scene_intersection intersect_scene_ebvh(const scene_ebvh& sbvh,
     const scene_data& scene, const ray3f& ray, bool find_any) {
   RTCRayHit embree_ray;
-  embree_ray.ray.org_x     = ray.o.x;
-  embree_ray.ray.org_y     = ray.o.y;
-  embree_ray.ray.org_z     = ray.o.z;
-  embree_ray.ray.dir_x     = ray.d.x;
-  embree_ray.ray.dir_y     = ray.d.y;
-  embree_ray.ray.dir_z     = ray.d.z;
+  embree_ray.ray.org_x     = ray.o[0];
+  embree_ray.ray.org_y     = ray.o[1];
+  embree_ray.ray.org_z     = ray.o[2];
+  embree_ray.ray.dir_x     = ray.d[0];
+  embree_ray.ray.dir_y     = ray.d[1];
+  embree_ray.ray.dir_z     = ray.d[2];
   embree_ray.ray.tnear     = ray.tmin;
   embree_ray.ray.tfar      = ray.tmax;
   embree_ray.ray.flags     = 0;

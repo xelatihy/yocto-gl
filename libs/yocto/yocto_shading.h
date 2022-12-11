@@ -232,13 +232,14 @@ constexpr kernel float microfacet_shadowing(float roughness,
 // Sample a microfacet distribution.
 constexpr kernel vec3f sample_microfacet(
     float roughness, const vec3f& normal, const vec2f& rn, bool ggx = true) {
-  auto phi   = 2 * pif * rn.x;
-  auto theta = 0.0f;
+  auto [r1, r2] = rn;
+  auto phi      = 2 * pif * r1;
+  auto theta    = 0.0f;
   if (ggx) {
-    theta = atan(roughness * sqrt(rn.y / (1 - rn.y)));
+    theta = atan(roughness * sqrt(r2 / (1 - r2)));
   } else {
     auto roughness2 = roughness * roughness;
-    theta           = atan(sqrt(-roughness2 * log(1 - rn.y)));
+    theta           = atan(sqrt(-roughness2 * log(1 - r2)));
   }
   auto local_half_vector = vec3f{
       cos(phi) * sin(theta), sin(phi) * sin(theta), cos(theta)};
@@ -875,9 +876,10 @@ constexpr kernel float eval_phasefunction(
 // Sample phase function
 constexpr kernel vec3f sample_phasefunction(
     float anisotropy, const vec3f& outgoing, const vec2f& rn) {
+  auto [r1, r2]  = rn;
   auto cos_theta = 0.0f;
   if (abs(anisotropy) < 1e-3f) {
-    cos_theta = 1 - 2 * rn.y;
+    cos_theta = 1 - 2 * r2;
   } else {
     auto square = (1 - anisotropy * anisotropy) /
                   (1 + anisotropy - 2 * anisotropy * rn.y);
@@ -886,7 +888,7 @@ constexpr kernel vec3f sample_phasefunction(
   }
 
   auto sin_theta      = sqrt(max(0.0f, 1 - cos_theta * cos_theta));
-  auto phi            = 2 * pif * rn.x;
+  auto phi            = 2 * pif * r1;
   auto local_incoming = vec3f{
       sin_theta * cos(phi), sin_theta * sin(phi), cos_theta};
   return basis_fromz(-outgoing) * local_incoming;

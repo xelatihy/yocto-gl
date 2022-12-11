@@ -72,20 +72,8 @@ void show_image_gui(const string& title, const vector<string>& names,
     const vector<array2d<vec4f>>& images);
 
 // Open a window and show an image for color grading
-void show_colorgrade_gui(
-    const string& title, const string& name, const array2d<vec4f>& image);
-
-// Open a window and show an image
-void show_image_gui(
-    const string& title, const string& name, const image_data& image);
-
-// Open a window and show a set of images
-void show_image_gui(const string& title, const vector<string>& names,
-    const vector<image_data>& images);
-
-// Open a window and show an image for color grading
-void show_colorgrade_gui(
-    const string& title, const string& name, const image_data& image);
+void show_colorgrade_gui(const string& title, const string& name,
+    const array2d<vec4f>& image, bool linear);
 
 // Open a window and show an scene via path tracing
 void show_trace_gui(const string& title, const string& name, scene_data& scene,
@@ -177,7 +165,6 @@ bool init_image(glimage_state& glimage);
 void clear_image(glimage_state& glimage);
 
 // update image data
-void set_image(glimage_state& glimage, const image_data& image);
 void set_image(glimage_state& glimage, const array2d<vec4f>& image);
 
 // draw image
@@ -190,15 +177,29 @@ void draw_image(glimage_state& image, const glimage_params& params);
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// Mouse button
+struct gui_button {
+  bool left   = false;
+  bool right  = false;
+  bool middle = false;
+};
+
+// Mouse modifiers
+struct gui_modifiers {
+  bool alt     = false;
+  bool shift   = false;
+  bool control = false;
+};
+
 // Input state
 struct gui_input {
-  vec3i mouse       = {0, 0, 0};     // mouse buttons (left, right, middle)
-  vec2f cursor      = {0, 0};        // position excluding widgets
-  vec2f last        = {0, 0};        // last mouse position excluding widgets
-  vec3i modifiers   = {0, 0, 0};     // modifieers (alt, shift, control)
-  bool  onwidgets   = false;         // widgets are active
-  vec2i window      = {0, 0};        // window size
-  vec4i framebuffer = {0, 0, 0, 0};  // framebuffer viewport
+  gui_button    mouse       = {false, false, false};  // mouse buttons
+  vec2f         cursor      = {0, 0};                 // position
+  vec2f         last        = {0, 0};                 // last position
+  gui_modifiers modifiers   = {false, false, false};  // modifiers
+  bool          onwidgets   = false;                  // widgets are active
+  vec2i         window      = {0, 0};                 // window size
+  vec4i         framebuffer = {0, 0, 0, 0};           // framebuffer viewport
 };
 
 // Init callback called after the window has opened
@@ -306,18 +307,12 @@ bool draw_tonemap_widgets(
     const gui_input& input, float& exposure, bool& filmic);
 
 // draw image inspector
-bool draw_image_widgets(const gui_input& input, const image_data& image,
-    const image_data& display, glimage_params& glparams);
-bool draw_image_widgets(
-    const gui_input& input, const image_data& image, glimage_params& glparams);
 bool draw_image_widgets(const gui_input& input, const array2d<vec4f>& image,
     const array2d<vec4f>& display, glimage_params& glparams);
 bool draw_image_widgets(const gui_input& input, const array2d<vec4f>& image,
     glimage_params& glparams);
 
 // update image params
-void update_image_params(
-    const gui_input& input, const image_data& image, glimage_params& glparams);
 void update_image_params(const gui_input& input, const array2d<vec4f>& image,
     glimage_params& glparams);
 

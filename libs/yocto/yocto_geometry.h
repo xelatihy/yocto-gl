@@ -492,6 +492,19 @@ constexpr kernel T interpolate_line(
   auto [v1, v2] = line;
   return interpolate_line(vertices[v1], vertices[v2], u);
 }
+// Interpolates values over a line parameterized from a to b by u. Same as lerp.
+template <typename T, typename T1>
+constexpr kernel T interpolate_line(
+    const T& p1, const T& p2, const vec<T1, 2>& uv) {
+  auto [u, _] = uv;
+  return interpolate_line(p1, p2, u);
+}
+template <typename T, typename T1, typename I>
+constexpr kernel T interpolate_line(
+    const vector<T>& vertices, const vec<I, 2>& line, const vec<T1, 2>& uv) {
+  auto [u, _] = uv;
+  return interpolate_line(vertices, line, u);
+}
 // Interpolates values over a triangle parameterized by u and v along the
 // (p2-p1) and (p3-p1) directions. Same as barycentric interpolation.
 #ifndef __CUDACC__
@@ -675,10 +688,10 @@ constexpr kernel pair<vec<T, 3>, vec<T, 3>> triangle_tangents_fromuv(
 template <typename T, typename I>
 constexpr kernel pair<vec<T, 3>, vec<T, 3>> triangle_tangents_fromuv(
     const vector<vec<T, 3>>& positions, const vector<vec<T, 2>>& texcoords,
-    const vec<I, 4>& triangle, const vec<T, 2>& uv) {
+    const vec<I, 3>& triangle) {
   auto [v1, v2, v3] = triangle;
   return triangle_tangents_fromuv(positions[v1], positions[v2], positions[v3],
-      texcoords[v1], texcoords[v2], texcoords[v3], uv);
+      texcoords[v1], texcoords[v2], texcoords[v3]);
 }
 
 // Quad tangent and bi-tangent from uv.
@@ -696,11 +709,11 @@ constexpr kernel pair<vec<T, 3>, vec<T, 3>> quad_tangents_fromuv(
 template <typename T, typename I>
 constexpr kernel pair<vec<T, 3>, vec<T, 3>> quad_tangents_fromuv(
     const vector<vec<T, 3>>& positions, const vector<vec<T, 2>>& texcoords,
-    const vec<I, 4>& quad, const vec<T, 2>& uv) {
+    const vec<I, 4>& quad, const vec<T, 2>& current_uv) {
   auto [v1, v2, v3, v4] = quad;
   return quad_tangents_fromuv(positions[v1], positions[v2], positions[v3],
       positions[v4], texcoords[v1], texcoords[v2], texcoords[v3], texcoords[v4],
-      uv);
+      current_uv);
 }
 
 }  // namespace yocto

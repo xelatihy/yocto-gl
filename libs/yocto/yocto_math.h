@@ -1839,6 +1839,10 @@ constexpr kernel frame<T, 3> scaling_frame(const vec<T, 3>& a) {
   return {{a.x, 0, 0}, {0, a.y, 0}, {0, 0, a.z}, {0, 0, 0}};
 }
 template <typename T>
+constexpr kernel frame<T, 3> scaling_frame(T a) {
+  return scaling_frame(vec<T, 3>{a, a, a});
+}
+template <typename T>
 constexpr kernel frame<T, 3> rotation_frame(const vec<T, 3>& axis, T angle) {
   auto s = sin(angle), c = cos(angle);
   auto vv = normalize(axis);

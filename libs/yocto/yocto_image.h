@@ -326,12 +326,11 @@ inline array2d<vec<T, 4>> make_grid(const vec2s& extents, T scale = 1,
     const vec<T, 4>& color0 = {0.5, 0.5, 0.5, 1.0},
     const vec<T, 4>& color1 = {0.5, 0.5, 0.7, 1.0}) {
   return _make_proc_image(extents, [=](vec2s ij) -> vec<T, 4> {
-    auto uv    = fmod((4 * scale * ij) / extents, 1);
-    auto thick = (T)0.01 / 2;
-    auto c     = uv.x <= thick || uv.x >= 1 - thick || uv.y <= thick ||
-             uv.y >= 1 - thick ||
-             (uv.x >= (T)0.5 - thick && uv.x <= 0.5f + thick) ||
-             (uv.y >= (T)0.5 - thick && uv.y <= 0.5f + thick);
+    auto [u, v] = fmod((4 * scale * ij) / extents, 1);
+    auto thick  = (T)0.01 / 2;
+    auto c = u <= thick || u >= 1 - thick || v <= thick || v >= 1 - thick ||
+             (u >= (T)0.5 - thick && u <= 0.5f + thick) ||
+             (v >= (T)0.5 - thick && v <= 0.5f + thick);
     return c ? color0 : color1;
   });
 }
@@ -341,8 +340,8 @@ inline array2d<vec<T, 4>> make_checker(const vec2s& extents, T scale = 1,
     const vec<T, 4>& color0 = {0.5, 0.5, 0.6, 1.0},
     const vec<T, 4>& color1 = {0.7, 0.7, 0.7, 1.0}) {
   return _make_proc_image(extents, [=](vec2s ij) -> vec<T, 4> {
-    auto uv = fmod((4 * scale * ij) / extents, 1);
-    auto c  = uv.x <= (T)0.5 != uv.y <= (T)0.5;
+    auto [u, v] = fmod((4 * scale * ij) / extents, 1);
+    auto c      = u <= (T)0.5 != v <= (T)0.5;
     return c ? color0 : color1;
   });
 }
@@ -353,14 +352,15 @@ inline array2d<vec<T, 4>> make_bumps(const vec2s& extents, T scale = 1,
     const vec<T, 4>& color1 = {1, 1, 1, 1}) {
   return _make_proc_image(extents, [=](vec2s ij) -> vec<T, 4> {
     auto uv     = fmod((4 * scale * ij) / extents, 1);
+    auto [u, v] = uv;
     auto thick  = (T)0.125;
     auto center = vec<T, 2>{
-        uv.x <= (T)0.5 ? (T)0.25 : (T)0.75,
-        uv.y <= (T)0.5 ? (T)0.25 : (T)0.75,
+        u <= (T)0.5 ? (T)0.25 : (T)0.75,
+        v <= (T)0.5 ? (T)0.25 : (T)0.75,
     };
     auto dist = clamp(length(uv - center), 0, thick) / thick;
-    auto val  = uv.x <= (T)0.5 != uv.y <= (T)0.5 ? (1 + sqrt(1 - dist)) / 2
-                                                 : (dist * dist) / 2;
+    auto val  = u <= (T)0.5 != v <= (T)0.5 ? (1 + sqrt(1 - dist)) / 2
+                                           : (dist * dist) / 2;
     return lerp(color0, color1, val);
   });
 }
@@ -404,25 +404,27 @@ template <typename T = float>
 inline array2d<vec<T, 4>> make_uvgrid(
     const vec2s& extents, T scale = 1, bool colored = true) {
   return _make_proc_image(extents, [=](vec2s ij) -> vec<T, 4> {
-    auto uv  = fmod((scale * ij) / extents, 1);
-    uv.y     = 1 - uv.y;
-    auto hsv = vec<T, 3>{0, 0, 0};
-    hsv.x    = (clamp((int)(uv.x * 8), 0, 7) +
-                (clamp((int)(uv.y * 8), 0, 7) + 5) % 8 * 8) /
-            (T)64.0;
-    auto vuv = fmod(uv * 4, 1);
-    auto vc  = vuv.x <= 0.5f != vuv.y <= 0.5f;
-    hsv.z    = vc ? 0.5f - 0.05f : 0.5f + 0.05f;
-    auto suv = fmod(uv * 16, 1);
-    auto st  = (T)0.01 / 2;
-    auto sc  = suv.x <= st || suv.x >= 1 - st || suv.y <= st || suv.y >= 1 - st;
+    auto uv     = fmod((scale * ij) / extents, 1);
+    uv[1]       = 1 - uv[1];
+    auto [u, v] = uv;
+    auto hue =
+        (clamp((int)(u * 8), 0, 7) + (clamp((int)(v * 8), 0, 7) + 5) % 8 * 8) /
+        (T)64.0;
+    auto [vu, vv]   = fmod(uv * 4, 1);
+    auto vc         = vu <= 0.5f != vv <= 0.5f;
+    auto value      = vc ? 0.5f - 0.05f : 0.5f + 0.05f;
+    auto [su, sv]   = fmod(uv * 16, 1);
+    auto st         = (T)0.01 / 2;
+    auto sc         = su <= st || su >= 1 - st || sv <= st || sv >= 1 - st;
+    auto saturation = (T)0;
     if (sc) {
-      hsv.y = (T)0.2;
-      hsv.z = (T)0.8;
+      saturation = (T)0.2;
+      value      = (T)0.8;
     } else {
-      hsv.y = (T)0.8;
+      saturation = (T)0.8;
     }
-    auto rgb = (colored) ? hsv_to_rgb(hsv) : vec<T, 3>{hsv.z, hsv.z, hsv.z};
+    auto hsv = vec<T, 3>{hue, saturation, value};
+    auto rgb = (colored) ? hsv_to_rgb(hsv) : vec<T, 3>{value, value, value};
     return vec<T, 4>{rgb_to_srgb(rgb), 1};
   });
 }
@@ -730,8 +732,14 @@ struct image_data {
   vector<vec4f> pixels = {};
 
   // pixel access
-  vec4f&       operator[](vec2i ij);
-  const vec4f& operator[](vec2i ij) const;
+  inline vec4f& operator[](vec2i ij) {
+    auto [i, j] = ij;
+    return pixels[j * width + i];
+  }
+  inline const vec4f& operator[](vec2i ij) const {
+    auto [i, j] = ij;
+    return pixels[j * width + i];
+  }
 };
 
 // image creation
@@ -745,8 +753,12 @@ bool operator!=(const image_data& a, const image_data& b);
 void swap(image_data& a, image_data& b);
 
 // pixel access
-inline vec4f get_pixel(const image_data& image, int i, int j);
-inline void  set_pixel(image_data& image, int i, int j, const vec4f& pixel);
+inline vec4f get_pixel(const image_data& image, int i, int j) {
+  return image.pixels[j * image.width + i];
+}
+inline void set_pixel(image_data& image, int i, int j, const vec4f& pixel) {
+  image.pixels[j * image.width + i] = pixel;
+}
 
 // conversions
 image_data convert_image(const image_data& image, bool linear);
@@ -811,76 +823,6 @@ vec3f compute_white_balance(const image_data& image);
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// EXAMPLE IMAGES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Make a grid image.
-image_data make_grid(int width, int height, float scale = 1,
-    const vec4f& color0 = vec4f{0.2f, 0.2f, 0.2f, 1.0f},
-    const vec4f& color1 = vec4f{0.5f, 0.5f, 0.5f, 1.0f});
-// Make a checker image.
-image_data make_checker(int width, int height, float scale = 1,
-    const vec4f& color0 = vec4f{0.2f, 0.2f, 0.2f, 1.0f},
-    const vec4f& color1 = vec4f{0.5f, 0.5f, 0.5f, 1.0f});
-// Make a bump map.
-image_data make_bumps(int width, int height, float scale = 1,
-    const vec4f& color0 = vec4f{0, 0, 0, 1},
-    const vec4f& color1 = vec4f{1, 1, 1, 1});
-// Make a ramp
-image_data make_ramp(int width, int height, float scale = 1,
-    const vec4f& color0 = vec4f{0, 0, 0, 1},
-    const vec4f& color1 = vec4f{1, 1, 1, 1});
-// Make a gamma ramp.
-image_data make_gammaramp(int width, int height, float scale = 1,
-    const vec4f& color0 = vec4f{0, 0, 0, 1},
-    const vec4f& color1 = vec4f{1, 1, 1, 1});
-// Make a uv ramp
-image_data make_uvramp(int width, int height, float scale = 1);
-// Make a uv grid
-image_data make_uvgrid(
-    int width, int height, float scale = 1, bool colored = true);
-// Make blackbody ramp.
-image_data make_blackbodyramp(int width, int height, float scale = 1,
-    float from = 1000, float to = 12000);
-// Make color map ramp.
-image_data make_colormapramp(int width, int height, float scale = 1);
-// Make a noise image. Noise parameters: lacunarity, gain, octaves, offset.
-image_data make_noisemap(int width, int height, float scale = 1,
-    const vec4f& color0 = {0, 0, 0, 1}, const vec4f& color1 = {1, 1, 1, 1});
-image_data make_fbmmap(int width, int height, float scale = 1,
-    const vec4f& noise = {2, 0.5, 8, 1}, const vec4f& color0 = {0, 0, 0, 1},
-    const vec4f& color1 = {1, 1, 1, 1});
-image_data make_turbulencemap(int width, int height, float scale = 1,
-    const vec4f& noise = {2, 0.5, 8, 1}, const vec4f& color0 = {0, 0, 0, 1},
-    const vec4f& color1 = {1, 1, 1, 1});
-image_data make_ridgemap(int width, int height, float scale = 1,
-    const vec4f& noise = {2, 0.5, 8, 1}, const vec4f& color0 = {0, 0, 0, 1},
-    const vec4f& color1 = {1, 1, 1, 1});
-
-// Make a sunsky HDR model with sun at sun_angle elevation in [0,pif/2],
-// turbidity in [1.7,10] with or without sun. The sun can be enabled or
-// disabled with has_sun. The sun parameters can be slightly modified by
-// changing the sun intensity and temperature. Has a convention, a temperature
-// of 0 sets the eath sun defaults (ignoring intensity too).
-image_data make_sunsky(int width, int height, float sun_angle,
-    float turbidity = 3, bool has_sun = false, float sun_intensity = 1,
-    float sun_radius = 1, const vec3f& ground_albedo = {0.2f, 0.2f, 0.2f});
-// Make an image of multiple lights.
-image_data make_lights(int width, int height, const vec3f& le = {1, 1, 1},
-    int nlights = 4, float langle = pif / 4, float lwidth = pif / 16,
-    float lheight = pif / 16);
-
-// Comvert a bump map to a normal map. All linear color spaces.
-image_data bump_to_normal(const image_data& image, float scale = 1);
-
-// Add a border to an image
-image_data add_border(
-    const image_data& img, float width, const vec4f& color = {0, 0, 0, 1});
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
 // IMAGE UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -926,127 +868,6 @@ void resize_image(vector<vec4b>& res, const vector<vec4b>& img, int width,
 // Compute the difference between two images
 void image_difference(vector<vec4f>& diff, const vector<vec4f>& a,
     const vector<vec4f>& b, bool disply_diff);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// EXAMPLE IMAGES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Make a grid image.
-void make_grid(vector<vec4f>& pixels, int width, int height, float scale = 1,
-    const vec4f& color0 = vec4f{0.2f, 0.2f, 0.2f, 1.0f},
-    const vec4f& color1 = vec4f{0.5f, 0.5f, 0.5f, 1.0f});
-// Make a checker image.
-void make_checker(vector<vec4f>& pixels, int width, int height, float scale = 1,
-    const vec4f& color0 = vec4f{0.2f, 0.2f, 0.2f, 1.0f},
-    const vec4f& color1 = vec4f{0.5f, 0.5f, 0.5f, 1.0f});
-// Make a bump map.
-void make_bumps(vector<vec4f>& pixels, int width, int height, float scale = 1,
-    const vec4f& color0 = vec4f{0, 0, 0, 1},
-    const vec4f& color1 = vec4f{1, 1, 1, 1});
-// Make a ramp
-void make_ramp(vector<vec4f>& pixels, int width, int height, float scale = 1,
-    const vec4f& color0 = vec4f{0, 0, 0, 1},
-    const vec4f& color1 = vec4f{1, 1, 1, 1});
-// Make a gamma ramp.
-void make_gammaramp(vector<vec4f>& pixels, int width, int height,
-    float scale = 1, const vec4f& color0 = vec4f{0, 0, 0, 1},
-    const vec4f& color1 = vec4f{1, 1, 1, 1});
-// Make a uv ramp
-void make_uvramp(vector<vec4f>& pixels, int width, int height, float scale = 1);
-// Make a uv grid
-void make_uvgrid(vector<vec4f>& pixels, int width, int height, float scale = 1,
-    bool colored = true);
-// Make blackbody ramp.
-void make_blackbodyramp(vector<vec4f>& pixels, int width, int height,
-    float scale = 1, float from = 1000, float to = 12000);
-// Make color map ramp.
-void make_colormapramp(
-    vector<vec4f>& pixels, int width, int height, float scale = 1);
-// Make a noise image. Noise parameters: lacunarity, gain, octaves, offset.
-void make_noisemap(vector<vec4f>& pixels, int width, int height,
-    float scale = 1, const vec4f& color0 = {0, 0, 0, 1},
-    const vec4f& color1 = {1, 1, 1, 1});
-void make_fbmmap(vector<vec4f>& pixels, int width, int height, float scale = 1,
-    const vec4f& noise = {2, 0.5, 8, 1}, const vec4f& color0 = {0, 0, 0, 1},
-    const vec4f& color1 = {1, 1, 1, 1});
-void make_turbulencemap(vector<vec4f>& pixels, int width, int height,
-    float scale = 1, const vec4f& noise = {2, 0.5, 8, 1},
-    const vec4f& color0 = {0, 0, 0, 1}, const vec4f& color1 = {1, 1, 1, 1});
-void make_ridgemap(vector<vec4f>& pixels, int width, int height,
-    float scale = 1, const vec4f& noise = {2, 0.5, 8, 1},
-    const vec4f& color0 = {0, 0, 0, 1}, const vec4f& color1 = {1, 1, 1, 1});
-
-// Make a random image.
-void make_randpoints(vector<vec4f>& pixels, int width, int height,
-    float scale = 1, const vec4f& color0 = vec4f{0.2f, 0.2f, 0.2f, 1.0f},
-    const vec4f& color1 = vec4f{0.5f, 0.5f, 0.5f, 1.0f});
-void make_randlines(vector<vec4f>& pixels, int width, int height,
-    float scale = 1, const vec4f& color0 = vec4f{0.2f, 0.2f, 0.2f, 1.0f},
-    const vec4f& color1 = vec4f{0.5f, 0.5f, 0.5f, 1.0f});
-
-// Make a sunsky HDR model with sun at sun_angle elevation in [0,pif/2],
-// turbidity in [1.7,10] with or without sun. The sun can be enabled or
-// disabled with has_sun. The sun parameters can be slightly modified by
-// changing the sun intensity and temperature. Has a convention, a temperature
-// of 0 sets the eath sun defaults (ignoring intensity too).
-void make_sunsky(vector<vec4f>& pixels, int width, int height, float sun_angle,
-    float turbidity = 3, bool has_sun = false, float sun_intensity = 1,
-    float sun_radius = 1, const vec3f& ground_albedo = {0.2f, 0.2f, 0.2f});
-// Make an image of multiple lights.
-void make_lights(vector<vec4f>& pixels, int width, int height,
-    const vec3f& le = {1, 1, 1}, int nlights = 4, float langle = pif / 4,
-    float lwidth = pif / 16, float lheight = pif / 16);
-
-// Comvert a bump map to a normal map. All linear color spaces.
-void bump_to_normal(vector<vec4f>& normal, const vector<vec4f>& bump, int width,
-    int height, float scale = 1);
-
-// Add a border to an image
-void add_border(vector<vec4f>& pixels, const vector<vec4f>& source, int width,
-    int height, float thickness, const vec4f& color = {0, 0, 0, 1});
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// BACKWARDS COMPATIBILITY
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-using color_image = image_data;
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-//
-//
-// IMPLEMENTATION
-//
-//
-// -----------------------------------------------------------------------------
-
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION OF IMAGE FUNCTIONS
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// pixel access
-inline vec4f& image_data::operator[](vec2i ij) {
-  return pixels[ij.y * width + ij.x];
-}
-inline const vec4f& image_data::operator[](vec2i ij) const {
-  return pixels[ij.y * width + ij.x];
-}
-
-// pixel access
-inline vec4f get_pixel(const image_data& image, int i, int j) {
-  return image.pixels[j * image.width + i];
-}
-inline void set_pixel(image_data& image, int i, int j, const vec4f& pixel) {
-  image.pixels[j * image.width + i] = pixel;
-}
 
 }  // namespace yocto
 
