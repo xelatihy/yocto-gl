@@ -38,10 +38,8 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
-#include <array>
 #include <cstdint>
 #include <memory>
-#include <string>
 #include <vector>
 
 #include "yocto_geometry.h"
@@ -54,8 +52,6 @@
 namespace yocto {
 
 // using directives
-using std::array;
-using std::string;
 using std::unique_ptr;
 using std::vector;
 

@@ -38,7 +38,6 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
-#include <array>
 #include <vector>
 
 // -----------------------------------------------------------------------------
@@ -47,7 +46,6 @@
 namespace yocto {
 
 // using directives
-using std::array;
 using std::vector;
 
 }  // namespace yocto
@@ -69,9 +67,6 @@ struct span {
   constexpr span(T* data, size_t size) noexcept : _data{data}, _size{size} {}
   constexpr span(T* begin, T* end) noexcept
       : _data{begin}, _size{end - begin} {}
-  template <size_t N>
-  constexpr span(std::array<T, N>& arr) noexcept
-      : _data{arr.data()}, _size{N} {}
   constexpr span(std::vector<T>& arr) noexcept
       : _data{arr.data()}, _size{arr.size()} {}
 

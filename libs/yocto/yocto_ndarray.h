@@ -39,7 +39,6 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
-#include <array>
 #include <vector>
 
 #include "yocto_math.h"
@@ -51,7 +50,6 @@
 namespace yocto {
 
 // using directives
-using std::array;
 using std::vector;
 
 }  // namespace yocto

@@ -38,7 +38,6 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
-#include <array>
 #include <cstdint>
 #include <memory>
 #include <string>
@@ -56,7 +55,6 @@
 namespace yocto {
 
 // using directives
-using std::array;
 using std::pair;
 using std::string;
 using std::unordered_map;

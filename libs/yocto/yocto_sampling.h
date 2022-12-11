@@ -48,7 +48,6 @@
 // -----------------------------------------------------------------------------
 
 #include <algorithm>  // std::upper_bound
-#include <array>
 #include <utility>
 #include <vector>
 
@@ -60,7 +59,6 @@
 namespace yocto {
 
 // using directives
-using std::array;
 using std::vector;
 
 }  // namespace yocto
