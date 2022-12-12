@@ -507,21 +507,16 @@ constexpr kernel T interpolate_line(
 }
 // Interpolates values over a triangle parameterized by u and v along the
 // (p2-p1) and (p3-p1) directions. Same as barycentric interpolation.
+template <typename T, typename T1>
+constexpr kernel T interpolate_triangle(
+    const T& p1, const T& p2, const T& p3, const vec<T1, 2>& uv) {
 #ifndef __CUDACC__
-template <typename T, typename T1>
-constexpr kernel T interpolate_triangle(
-    const T& p1, const T& p2, const T& p3, const vec<T1, 2>& uv) {
   auto [u, v] = uv;
-  return p1 * (1 - u - v) + p2 * u + p3 * v;
-}
 #else
-template <typename T, typename T1>
-constexpr kernel T interpolate_triangle(
-    const T& p1, const T& p2, const T& p3, const vec<T1, 2>& uv) {
   auto u = uv[0], v = uv[1];
+#endif
   return p1 * (1 - u - v) + p2 * u + p3 * v;
 }
-#endif
 template <typename T, typename T1, typename I>
 constexpr kernel T interpolate_triangle(
     const vector<T>& vertices, const vec<I, 3>& triangle, T1 u) {
@@ -727,7 +722,7 @@ namespace yocto {
 template <typename T>
 constexpr kernel ray<T, 3> camera_ray(const frame<T, 3>& frame, T lens,
     const vec<T, 2>& film, const vec<T, 2>& image_uv) {
-  auto uv  = image_uv * vec<T, 2>{-1, 1};  // flip x
+  auto uv  = lerp(vec<T, 2>{1, 0}, vec<T, 2>{0, 1}, image_uv);  // flip x
   auto e   = vec<T, 3>{0, 0, 0};
   auto q   = vec<T, 3>{film * (uv - (T)0.5), lens};
   auto d   = normalize(e - q);
@@ -740,7 +735,7 @@ constexpr kernel ray<T, 3> camera_ray(const frame<T, 3>& frame, T lens,
 template <typename T>
 constexpr kernel ray<T, 3> camera_ray(const frame<T, 3>& frame, T lens,
     T aspect, T film_, const vec<T, 2>& image_uv) {
-  auto uv   = image_uv * vec<T, 2>{-1, 1};  // flip x
+  auto uv   = lerp(vec<T, 2>{1, 0}, vec<T, 2>{0, 1}, image_uv);  // flip x
   auto film = aspect >= 1 ? vec<T, 2>{film_, film_ / aspect}
                           : vec<T, 2>{film_ * aspect, film_};
   auto e    = vec<T, 3>{0, 0, 0};

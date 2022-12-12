@@ -69,13 +69,12 @@ ray3f eval_camera(
                   ? vec2f{camera.film, camera.film / camera.aspect}
                   : vec2f{camera.film * camera.aspect, camera.film};
   if (!camera.orthographic) {
-    auto q = vec3f{film.x * (0.5f - image_uv.x), film.y * (image_uv.y - 0.5f),
-        camera.lens};
+    auto uv = lerp(vec2f{1, 0}, vec2f{0, 1}, image_uv);  // flip x
+    auto q  = vec3f{film * (uv - 0.5f), camera.lens};
     // ray direction through the lens center
     auto dc = -normalize(q);
     // point on the lens
-    auto e = vec3f{
-        lens_uv.x * camera.aperture / 2, lens_uv.y * camera.aperture / 2, 0};
+    auto e = vec3f{lens_uv * camera.aperture / 2, 0};
     // point on the focus plane
     auto p = dc * camera.focus / abs(dc.z);
     // correct ray direction to account for camera focusing
@@ -84,12 +83,11 @@ ray3f eval_camera(
     return ray3f{
         transform_point(camera.frame, e), transform_direction(camera.frame, d)};
   } else {
+    auto uv    = lerp(vec2f{1, 0}, vec2f{0, 1}, image_uv);  // flip x
     auto scale = 1 / camera.lens;
-    auto q     = vec3f{film.x * (0.5f - image_uv.x) * scale,
-        film.y * (image_uv.y - 0.5f) * scale, camera.lens};
+    auto q     = vec3f{film * (uv - 0.5f) * scale, camera.lens};
     // point on the lens
-    auto e = vec3f{-q.x, -q.y, 0} + vec3f{lens_uv.x * camera.aperture / 2,
-                                        lens_uv.y * camera.aperture / 2, 0};
+    auto e = vec3f{-q.x, -q.y, 0} + vec3f{lens_uv * camera.aperture / 2, 0};
     // point on the focus plane
     auto p = vec3f{-q.x, -q.y, -camera.focus};
     // correct ray direction to account for camera focusing

@@ -205,7 +205,7 @@ bool uiupdate_camera_params(const gui_input& input, camera_data& camera) {
     auto rotate = vec2f{0, 0};
     if (input.modifiers.shift) {
       pan = (input.cursor - input.last) * camera.focus / 200.0f;
-      pan *= vec2f{-1, 1};  // flip x
+      pan = lerp(vec2f{1, 0}, vec2f{0, 1}, pan);  // flip x
     } else if (input.modifiers.control) {
       dolly = (input.cursor.y - input.last.y) / 100.0f;
     } else {

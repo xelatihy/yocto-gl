@@ -4,6 +4,10 @@
 
 - Docs
 
+## Image examples
+
+- move to resolution
+
 ## Shape examples
 
 - uniform to using subdivisions for everything
@@ -11,6 +15,14 @@
 - probably do everything using transformations and leave out frame
   in the generators; otherwise include frames everywhere as the only way to
   deal with sizes and positions
+
+## Color
+
+- simplify color space conversions by hardcoding matrices
+
+## Random
+
+- implement simpler Perlin noise
 
 ## IO
 

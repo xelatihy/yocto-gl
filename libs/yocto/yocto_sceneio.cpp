@@ -1232,366 +1232,201 @@ void save_fvshape(const string& filename, const fvshape_data& shape,
 }
 
 // Shape presets used for testing.
-shape_data make_shape_preset(const string& type) {
-  if (type == "default-quad") {
-    return make_rect();
-  } else if (type == "default-quady") {
-    return make_recty();
-  } else if (type == "default-cube") {
-    return make_box();
-  } else if (type == "default-cube-rounded") {
-    return make_rounded_box();
-  } else if (type == "default-sphere") {
+shape_data make_shape_preset(const string& type_) {
+  auto type       = path_basename(type_);
+  auto test_xform = translation_frame(vec3f{0, 0.75f, 0}) *
+                    scaling_frame(0.75f);
+  if (type == "quad") {
+    return make_quad();
+  } else if (type == "quady") {
+    return make_quady();
+  } else if (type == "cube") {
+    return make_cube();
+  } else if (type == "rounded_cube") {
+    return make_rounded_cube();
+  } else if (type == "sphere") {
     return make_sphere();
-  } else if (type == "default-matcube") {
-    return make_rounded_box();
-  } else if (type == "default-matsphere") {
+  } else if (type == "matcube") {
+    return make_rounded_cube();
+  } else if (type == "matsphere") {
     return make_uvspherey();
-  } else if (type == "default-disk") {
+  } else if (type == "disk") {
     return make_disk();
-  } else if (type == "default-disk-bulged") {
+  } else if (type == "bulged_disk") {
     return make_bulged_disk();
-  } else if (type == "default-quad-bulged") {
-    return make_bulged_rect();
-  } else if (type == "default-uvsphere") {
+  } else if (type == "bulged_quad") {
+    return make_bulged_quad();
+  } else if (type == "uvsphere") {
     return make_uvsphere();
-  } else if (type == "default-uvsphere-flipcap") {
+  } else if (type == "capped_uvsphere") {
     return make_capped_uvsphere();
-  } else if (type == "default-uvspherey") {
+  } else if (type == "uvspherey") {
     return make_uvspherey();
-  } else if (type == "default-uvspherey-flipcap") {
+  } else if (type == "capped_uvspherey") {
     return make_capped_uvspherey();
-  } else if (type == "default-uvdisk") {
+  } else if (type == "uvdisk") {
     return make_uvdisk();
-  } else if (type == "default-uvcylinder") {
+  } else if (type == "uvcylinder") {
     return make_uvcylinder();
-  } else if (type == "default-uvcylinder-rounded") {
+  } else if (type == "rounded_uvcylinder") {
     return make_rounded_uvcylinder({32, 32, 32});
-  } else if (type == "default-geosphere") {
+  } else if (type == "geosphere") {
     return make_geosphere();
-  } else if (type == "default-floor") {
+  } else if (type == "floor") {
     return make_floor();
-  } else if (type == "default-floor-bent") {
+  } else if (type == "bent_floor") {
     return make_bent_floor();
-  } else if (type == "default-matball") {
+  } else if (type == "matball") {
     return make_sphere();
-  } else if (type == "default-hairball") {
-    auto base = make_sphere(pow2(5), 0.8f);
+  } else if (type == "hairball") {
+    auto base = transform_shape(scaling_frame(0.8f), make_sphere());
     return make_hair(base, {4, 65536}, {0.2f, 0.2f}, {0.002f, 0.001f});
-  } else if (type == "default-hairball-interior") {
-    return make_sphere(pow2(5), 0.8f);
-  } else if (type == "default-suzanne") {
+  } else if (type == "hairball_interior") {
+    return transform_shape(scaling_frame(0.8f), make_sphere());
+  } else if (type == "suzanne") {
     return make_monkey();
-  } else if (type == "default-cube-facevarying") {
+  } else if (type == "wtcube") {
+    return make_wtcube();
+  } else if (type == "wtsphere") {
+    return make_wtsphere();
+  } else if (type == "facevarying_cube") {
     return fvshape_to_shape(make_fvbox());
-  } else if (type == "default-sphere-facevarying") {
+  } else if (type == "facevarying_sphere") {
     return fvshape_to_shape(make_fvsphere());
-  } else if (type == "default-quady-displaced") {
-    return make_recty({256, 256});
-  } else if (type == "default-sphere-displaced") {
-    return make_sphere(128);
-  } else if (type == "test-cube") {
-    auto shape = make_rounded_box(
-        {32, 32, 32}, {0.075f, 0.075f, 0.075f}, {1, 1, 1}, 0.3f * 0.075f);
-    for (auto& p : shape.positions) p += vec3f{0, 0.075f, 0};
-    return shape;
-  } else if (type == "test-uvsphere") {
-    auto shape = make_uvsphere({32, 32}, 0.075f);
-    for (auto& p : shape.positions) p += vec3f{0, 0.075f, 0};
-    return shape;
-  } else if (type == "test-uvsphere-flipcap") {
-    auto shape = make_capped_uvsphere({32, 32}, 0.075f, {1, 1}, 0.3f * 0.075f);
-    for (auto& p : shape.positions) p += vec3f{0, 0.075f, 0};
-    return shape;
-  } else if (type == "test-uvspherey") {
-    auto shape = make_uvspherey({32, 32}, 0.075f);
-    for (auto& p : shape.positions) p += vec3f{0, 0.075f, 0};
-    return shape;
-  } else if (type == "test-uvspherey-flipcap") {
-    auto shape = make_capped_uvspherey({32, 32}, 0.075f, {1, 1}, 0.3f * 0.075f);
-    for (auto& p : shape.positions) p += vec3f{0, 0.075f, 0};
-    return shape;
-  } else if (type == "test-sphere") {
-    auto shape = make_sphere(32, 0.075f, 1);
-    for (auto& p : shape.positions) p += vec3f{0, 0.075f, 0};
-    return shape;
-  } else if (type == "test-matcube") {
-    auto shape = make_rounded_box(
-        {32, 32, 32}, {0.075f, 0.075f, 0.075f}, {1, 1, 1}, 0.3f * 0.075f);
-    for (auto& p : shape.positions) p += vec3f{0, 0.075f, 0};
-    return shape;
-  } else if (type == "test-matsphere") {
-    auto shape = make_uvspherey({32, 32}, 0.075f, {2, 1});
-    for (auto& p : shape.positions) p += vec3f{0, 0.075f, 0};
-    return shape;
-  } else if (type == "test-sphere-displaced") {
-    auto shape = make_sphere(128, 0.075f, 1);
-    for (auto& p : shape.positions) p += vec3f{0, 0.075f, 0};
-    return shape;
-  } else if (type == "test-smallsphere") {
-    auto shape = make_sphere(32, 0.015f, 1);
-    for (auto& p : shape.positions) p += vec3f{0, 0.015f, 0};
-    return shape;
-  } else if (type == "test-disk") {
-    auto shape = make_disk(32, 0.075f, 1);
-    for (auto& p : shape.positions) p += vec3f{0, 0.075f, 0};
-    return shape;
-  } else if (type == "test-uvcylinder") {
-    auto shape = make_rounded_uvcylinder(
-        {32, 32, 32}, {0.075f, 0.075f}, {1, 1, 1}, 0.3f * 0.075f);
-    for (auto& p : shape.positions) p += vec3f{0, 0.075f, 0};
-    return shape;
-  } else if (type == "test-floor") {
-    return make_floor({1, 1}, {2, 2}, {20, 20});
-  } else if (type == "test-smallfloor") {
-    return make_floor({1, 1}, {0.5f, 0.5f}, {1, 1});
-  } else if (type == "test-quad") {
-    return make_rect({1, 1}, {0.075f, 0.075f}, {1, 1});
-  } else if (type == "test-quady") {
-    return make_recty({1, 1}, {0.075f, 0.075f}, {1, 1});
-  } else if (type == "test-quad-displaced") {
-    return make_rect({256, 256}, {0.075f, 0.075f}, {1, 1});
-  } else if (type == "test-quady-displaced") {
-    return make_recty({256, 256}, {0.075f, 0.075f}, {1, 1});
-  } else if (type == "test-matball") {
-    auto shape = make_sphere(32, 0.075f);
-    for (auto& p : shape.positions) p += vec3f{0, 0.075f, 0};
-    return shape;
-  } else if (type == "test-geosphere") {
-    auto shape = make_geosphere(0.075f, 3);
-    for (auto& p : shape.positions) p += vec3f{0, 0.075f, 0};
-    return shape;
-  } else if (type == "test-geosphere-flat") {
-    auto shape = make_geosphere(0.075f, 3);
-    for (auto& p : shape.positions) p += vec3f{0, 0.075f, 0};
-    shape.normals = {};
-    return shape;
-  } else if (type == "test-geosphere-subdivided") {
-    auto shape = make_geosphere(0.075f, 6);
-    for (auto& p : shape.positions) p += vec3f{0, 0.075f, 0};
-    return shape;
-  } else if (type == "test-hairball1") {
-    auto base = make_sphere(32, 0.075f * 0.8f, 1);
-    for (auto& p : base.positions) p += vec3f{0, 0.075f, 0};
+  } else if (type == "displaced_quady") {
+    return make_quady(8);
+  } else if (type == "displaced_sphere") {
+    return make_sphere(7);
+  } else if (type == "floor") {
+    return make_floor();
+  } else if (type == "test_cube") {
+    return transform_shape(test_xform, make_rounded_cube());
+  } else if (type == "test_uvsphere") {
+    return transform_shape(test_xform, make_uvsphere({32, 32}));
+  } else if (type == "test_capped_uvsphere") {
+    return transform_shape(test_xform, make_capped_uvsphere({32, 32}));
+  } else if (type == "test_uvspherey") {
+    return transform_shape(test_xform, make_uvspherey({32, 32}));
+  } else if (type == "test_capped_uvspherey") {
+    return transform_shape(test_xform, make_capped_uvspherey({32, 32}));
+  } else if (type == "test_sphere") {
+    return transform_shape(test_xform, make_sphere());
+  } else if (type == "test_matcube") {
+    return transform_shape(test_xform, make_rounded_cube());
+  } else if (type == "test_matsphere") {
+    return transform_shape(test_xform, make_uvspherey());
+  } else if (type == "test_displaced_sphere") {
+    return transform_shape(test_xform, make_sphere(7));
+  } else if (type == "test_smallsphere") {
+    return transform_shape(
+        translation_frame(vec3f{0, 0.015f, 0}) * scaling_frame(0.015f),
+        make_sphere());
+  } else if (type == "test_disk") {
+    return transform_shape(test_xform, make_disk());
+  } else if (type == "test_uvcylinder") {
+    return transform_shape(test_xform, make_rounded_uvcylinder({32, 32, 32}));
+  } else if (type == "test_floor") {
+    return make_floor();
+  } else if (type == "test_quad") {
+    return transform_shape(test_xform, make_quad());
+  } else if (type == "test_quady") {
+    return transform_shape(test_xform, make_quady());
+  } else if (type == "test_displaced_quad") {
+    return transform_shape(test_xform, make_quad(8));
+  } else if (type == "test_displaced_quady") {
+    return transform_shape(test_xform, make_quady(8));
+  } else if (type == "test_matball") {
+    return transform_shape(test_xform, make_sphere());
+  } else if (type == "test_geosphere") {
+    return transform_shape(test_xform, make_geosphere());
+  } else if (type == "test_faceted_geosphere") {
+    return transform_shape(test_xform, remove_normals(make_geosphere()));
+  } else if (type == "test_subdivided_geosphere") {
+    return transform_shape(test_xform, make_geosphere(6));
+  } else if (type == "test_hairball1") {
+    auto base = transform_shape(
+        test_xform * scaling_frame(0.8f), make_sphere());
     return make_hair(base, {4, 65536}, {0.1f * 0.15f, 0.1f * 0.15f},
         {0.001f * 0.15f, 0.0005f * 0.15f}, {0.03f, 100});
-  } else if (type == "test-hairball2") {
-    auto base = make_sphere(32, 0.075f * 0.8f, 1);
-    for (auto& p : base.positions) p += vec3f{0, 0.075f, 0};
+  } else if (type == "test_hairball2") {
+    auto base = transform_shape(
+        test_xform * scaling_frame(0.8f), make_sphere());
     return make_hair(base, {4, 65536}, {0.1f * 0.15f, 0.1f * 0.15f},
         {0.001f * 0.15f, 0.0005f * 0.15f});
-  } else if (type == "test-hairball3") {
-    auto base = make_sphere(32, 0.075f * 0.8f, 1);
-    for (auto& p : base.positions) p += vec3f{0, 0.075f, 0};
+  } else if (type == "test_hairball3") {
+    auto base = transform_shape(
+        test_xform * scaling_frame(0.8f), make_sphere());
     return make_hair(base, {4, 65536}, {0.1f * 0.15f, 0.1f * 0.15f},
         {0.001f * 0.15f, 0.0005f * 0.15f}, {0, 0}, {0.5, 128});
-  } else if (type == "test-hairball-interior") {
-    auto shape = make_sphere(32, 0.075f * 0.8f, 1);
-    for (auto& p : shape.positions) p += vec3f{0, 0.075f, 0};
-    return shape;
-  } else if (type == "test-suzanne-subdiv") {
-    auto shape = make_monkey(0.075f * 0.8f);
-    for (auto& p : shape.positions) p += vec3f{0, 0.075f, 0};
-    return shape;
-  } else if (type == "test-cube-subdiv") {
-    auto fvshape    = make_fvcube(0.075f);
-    auto shape      = shape_data{};
-    shape.quads     = fvshape.quadspos;
-    shape.positions = fvshape.positions;
-    for (auto& p : shape.positions) p += vec3f{0, 0.075f, 0};
-    return shape;
-  } else if (type == "test-arealight1") {
+  } else if (type == "test_hairball-interior") {
+    return transform_shape(test_xform * scaling_frame(0.8f), make_sphere());
+  } else if (type == "test_suzanne_subdiv") {
+    return transform_shape(test_xform * scaling_frame(0.8f), make_monkey());
+  } else if (type == "test_cube_subdiv") {
+    return transform_shape(test_xform, make_wtcube());
+  } else if (type == "test_arealight1") {
     return make_rect({1, 1}, {0.2f, 0.2f});
-  } else if (type == "test-arealight2") {
+  } else if (type == "test_arealight2") {
     return make_rect({1, 1}, {0.2f, 0.2f});
-  } else if (type == "test-largearealight1") {
+  } else if (type == "test_largearealight1") {
     return make_rect({1, 1}, {0.4f, 0.4f});
-  } else if (type == "test-largearealight2") {
+  } else if (type == "test_largearealight2") {
     return make_rect({1, 1}, {0.4f, 0.4f});
-  } else if (type == "test-pointlight1") {
+  } else if (type == "test_pointlight1") {
     return make_point(0);
-  } else if (type == "test-pointlight2") {
+  } else if (type == "test_pointlight2") {
     return make_point(0);
-  } else if (type == "test-point") {
+  } else if (type == "test_point") {
     return make_points(1);
-  } else if (type == "test-points") {
+  } else if (type == "test_points") {
     return make_points(4096);
-  } else if (type == "test-points-random") {
-    auto shape = make_random_points(4096, {0.075f, 0.075f, 0.075f});
-    for (auto& p : shape.positions) p += vec3f{0, 0.075f, 0};
-    return shape;
-  } else if (type == "test-points-grid") {
+  } else if (type == "test_points_random") {
+    return transform_shape(test_xform, make_random_points(4096));
+  } else if (type == "test_points_grid") {
     auto shape = make_points({256, 256}, {0.075f, 0.075f});
     for (auto& p : shape.positions) p += vec3f{0, 0.075f, 0};
     for (auto& r : shape.radius) r *= 0.075f;
     return shape;
-  } else if (type == "test-lines-grid") {
+  } else if (type == "test_lines_grid") {
     auto shape = make_lines({256, 256}, {0.075f, 0.075f});
     for (auto& p : shape.positions) p += vec3f{0, 0.075f, 0};
     for (auto& r : shape.radius) r *= 0.075f;
     return shape;
-  } else if (type == "test-thickpoints-grid") {
+  } else if (type == "test_thickpoints_grid") {
     auto shape = make_points({16, 16}, {0.075f, 0.075f});
     for (auto& p : shape.positions) p += vec3f{0, 0.075f, 0};
     for (auto& r : shape.radius) r *= 0.075f * 10;
     return shape;
-  } else if (type == "test-thicklines-grid") {
+  } else if (type == "test_thicklines_grid") {
     auto shape = make_lines({16, 16}, {0.075f, 0.075f});
     for (auto& p : shape.positions) p += vec3f{0, 0.075f, 0};
     for (auto& r : shape.radius) r *= 0.075f * 10;
     return shape;
-  } else if (type == "test-particles") {
+  } else if (type == "test_particles") {
     return make_points(4096);
-  } else if (type == "test-cloth") {
+  } else if (type == "test_cloth") {
     return make_rect({64, 64}, {0.2f, 0.2f});
-  } else if (type == "test-clothy") {
+  } else if (type == "test_clothy") {
     return make_recty({64, 64}, {0.2f, 0.2f});
   } else {
-    return {};
+    throw io_error{"unknown preset " + type};
   }
 }
 
 // Shape presets used for testing.
 fvshape_data make_fvshape_preset(const string& type) {
-  if (type == "default-quad") {
-    return shape_to_fvshape(make_rect());
-  } else if (type == "default-quady") {
-    return shape_to_fvshape(make_recty());
-  } else if (type == "default-cube") {
-    return shape_to_fvshape(make_box());
-  } else if (type == "default-cube-rounded") {
-    return shape_to_fvshape(make_rounded_box());
-  } else if (type == "default-sphere") {
-    return shape_to_fvshape(make_sphere());
-  } else if (type == "default-matcube") {
-    return shape_to_fvshape(make_rounded_box());
-  } else if (type == "default-matsphere") {
-    return shape_to_fvshape(make_uvspherey());
-  } else if (type == "default-disk") {
-    return shape_to_fvshape(make_disk());
-  } else if (type == "default-disk-bulged") {
-    return shape_to_fvshape(make_bulged_disk());
-  } else if (type == "default-quad-bulged") {
-    return shape_to_fvshape(make_bulged_rect());
-  } else if (type == "default-uvsphere") {
-    return shape_to_fvshape(make_uvsphere());
-  } else if (type == "default-uvsphere-flipcap") {
-    return shape_to_fvshape(make_capped_uvsphere());
-  } else if (type == "default-uvspherey") {
-    return shape_to_fvshape(make_uvspherey());
-  } else if (type == "default-uvspherey-flipcap") {
-    return shape_to_fvshape(make_capped_uvspherey());
-  } else if (type == "default-uvdisk") {
-    return shape_to_fvshape(make_uvdisk());
-  } else if (type == "default-uvcylinder") {
-    return shape_to_fvshape(make_uvcylinder());
-  } else if (type == "default-uvcylinder-rounded") {
-    return shape_to_fvshape(make_rounded_uvcylinder({32, 32, 32}));
-  } else if (type == "default-geosphere") {
-    return shape_to_fvshape(make_geosphere());
-  } else if (type == "default-floor") {
-    return shape_to_fvshape(make_floor());
-  } else if (type == "default-floor-bent") {
-    return shape_to_fvshape(make_bent_floor());
-  } else if (type == "default-matball") {
-    return shape_to_fvshape(make_sphere());
-  } else if (type == "default-hairball-interior") {
-    return shape_to_fvshape(make_sphere(pow2(5), 0.8f));
-  } else if (type == "default-suzanne") {
-    return shape_to_fvshape(make_monkey());
-  } else if (type == "default-cube-facevarying") {
+  auto test_xform = translation_frame(vec3f{0, 0.75f, 0}) *
+                    scaling_frame(0.75f);
+  if (type == "facevarying_cube") {
     return make_fvbox();
-  } else if (type == "default-sphere-facevarying") {
+  } else if (type == "facevarying_sphere") {
     return make_fvsphere();
-  } else if (type == "default-quady-displaced") {
-    return shape_to_fvshape(make_recty({256, 256}));
-  } else if (type == "default-sphere-displaced") {
-    return shape_to_fvshape(make_sphere(128));
-  } else if (type == "test-cube") {
-    auto shape = make_rounded_box(
-        {32, 32, 32}, {0.075f, 0.075f, 0.075f}, {1, 1, 1}, 0.3f * 0.075f);
-    for (auto& p : shape.positions) p += vec3f{0, 0.075f, 0};
-    return shape_to_fvshape(shape);
-  } else if (type == "test-matsphere") {
-    auto shape = make_uvspherey({32, 32}, 0.075f, {2, 1});
-    for (auto& p : shape.positions) p += vec3f{0, 0.075f, 0};
-    return shape_to_fvshape(shape);
-  } else if (type == "test-uvsphere") {
-    auto shape = make_uvsphere({32, 32}, 0.075f);
-    for (auto& p : shape.positions) p += vec3f{0, 0.075f, 0};
-    return shape_to_fvshape(shape);
-  } else if (type == "test-uvsphere-flipcap") {
-    auto shape = make_capped_uvsphere({32, 32}, 0.075f, {1, 1}, 0.3f * 0.075f);
-    for (auto& p : shape.positions) p += vec3f{0, 0.075f, 0};
-    return shape_to_fvshape(shape);
-  } else if (type == "test-uvspherey") {
-    auto shape = make_uvspherey({32, 32}, 0.075f);
-    for (auto& p : shape.positions) p += vec3f{0, 0.075f, 0};
-    return shape_to_fvshape(shape);
-  } else if (type == "test-uvspherey-flipcap") {
-    auto shape = make_capped_uvspherey({32, 32}, 0.075f, {1, 1}, 0.3f * 0.075f);
-    for (auto& p : shape.positions) p += vec3f{0, 0.075f, 0};
-    return shape_to_fvshape(shape);
-  } else if (type == "test-sphere") {
-    auto shape = make_sphere(32, 0.075f, 1);
-    for (auto& p : shape.positions) p += vec3f{0, 0.075f, 0};
-    return shape_to_fvshape(shape);
-  } else if (type == "test-sphere-displaced") {
-    auto shape = make_sphere(128, 0.075f, 1);
-    for (auto& p : shape.positions) p += vec3f{0, 0.075f, 0};
-    return shape_to_fvshape(shape);
-  } else if (type == "test-matcube") {
-    auto shape = make_rounded_box(
-        {32, 32, 32}, {0.075f, 0.075f, 0.075f}, {1, 1, 1}, 0.3f * 0.075f);
-    for (auto& p : shape.positions) p += vec3f{0, 0.075f, 0};
-    return shape_to_fvshape(shape);
-  } else if (type == "test-disk") {
-    auto shape = make_disk(32, 0.075f, 1);
-    for (auto& p : shape.positions) p += vec3f{0, 0.075f, 0};
-    return shape_to_fvshape(shape);
-  } else if (type == "test-uvcylinder") {
-    auto shape = make_rounded_uvcylinder(
-        {32, 32, 32}, {0.075f, 0.075f}, {1, 1, 1}, 0.3f * 0.075f);
-    for (auto& p : shape.positions) p += vec3f{0, 0.075f, 0};
-    return shape_to_fvshape(shape);
-  } else if (type == "test-floor") {
-    return shape_to_fvshape(make_floor({1, 1}, {2, 2}, {20, 20}));
-  } else if (type == "test-smallfloor") {
-    return shape_to_fvshape(make_floor({1, 1}, {0.5f, 0.5f}, {1, 1}));
-  } else if (type == "test-quad") {
-    return shape_to_fvshape(make_rect({1, 1}, {0.075f, 0.075f}, {1, 1}));
-  } else if (type == "test-quady") {
-    return shape_to_fvshape(make_recty({1, 1}, {0.075f, 0.075f}, {1, 1}));
-  } else if (type == "test-quad-displaced") {
-    return shape_to_fvshape(make_rect({256, 256}, {0.075f, 0.075f}, {1, 1}));
-  } else if (type == "test-quady-displaced") {
-    return shape_to_fvshape(make_recty({256, 256}, {0.075f, 0.075f}, {1, 1}));
-  } else if (type == "test-matball") {
-    auto shape = make_sphere(32, 0.075f);
-    for (auto& p : shape.positions) p += vec3f{0, 0.075f, 0};
-    return shape_to_fvshape(shape);
-  } else if (type == "test-suzanne-subdiv") {
-    auto shape = make_monkey(0.075f * 0.8f);
-    for (auto& p : shape.positions) p += vec3f{0, 0.075f, 0};
-    return shape_to_fvshape(shape);
-  } else if (type == "test-cube-subdiv") {
-    auto fvshape = make_fvcube(0.075f);
-    for (auto& p : fvshape.positions) p += vec3f{0, 0.075f, 0};
-    return fvshape;
-  } else if (type == "test-arealight1") {
-    return shape_to_fvshape(make_rect({1, 1}, {0.2f, 0.2f}));
-  } else if (type == "test-arealight2") {
-    return shape_to_fvshape(make_rect({1, 1}, {0.2f, 0.2f}));
-  } else if (type == "test-largearealight1") {
-    return shape_to_fvshape(make_rect({1, 1}, {0.4f, 0.4f}));
-  } else if (type == "test-largearealight2") {
-    return shape_to_fvshape(make_rect({1, 1}, {0.4f, 0.4f}));
-  } else if (type == "test-cloth") {
-    return shape_to_fvshape(make_rect({64, 64}, {0.2f, 0.2f}));
-  } else if (type == "test-clothy") {
-    return shape_to_fvshape(make_recty({64, 64}, {0.2f, 0.2f}));
+  } else if (type == "test_facevarying_cube") {
+    return transform_fvshape(test_xform, make_fvbox());
+  } else if (type == "test_facevarying_sphere") {
+    return transform_fvshape(test_xform, make_fvsphere());
   } else {
-    return {};
+    return shape_to_fvshape(make_shape_preset(type));
   }
 }
 
@@ -1884,15 +1719,23 @@ static void add_missing_radius(scene_data& scene, float radius = 0.001f) {
 }
 
 // Add missing cameras.
-void add_missing_material(scene_data& scene) {
+void add_missing_material(scene_data& scene, bool textured = false) {
   auto default_material = invalidid;
   for (auto& instance : scene.instances) {
-    if (instance.material >= 0) continue;
+    if (instance.material != invalidid) continue;
     if (default_material == invalidid) {
       auto& material   = scene.materials.emplace_back();
-      material.type    = material_type::matte;
-      material.color   = {0.8f, 0.8f, 0.8f};
       default_material = (int)scene.materials.size() - 1;
+      if (!textured) {
+        material.type  = material_type::matte;
+        material.color = {0.8f, 0.8f, 0.8f};
+      } else {
+        scene.textures.push_back(image_to_texture(make_uvgrid(), false));
+        material.type      = material_type::glossy;
+        material.color     = {1, 1, 1};
+        material.roughness = 0.1f;
+        material.color_tex = (int)scene.textures.size() - 1;
+      }
     }
     instance.material = default_material;
   }
@@ -2343,8 +2186,26 @@ scene_data make_scene_preset(const string& type_) {
         test_arealights_type::standard, test_floor_type::standard,
         test_shapes_type::bunny_sphere, test_materials_type::plastic_metal,
         test_instance_name_type::material});
+  } else if (type.starts_with("shape_")) {
+    auto scene = scene_data{};
+    scene.shapes.push_back(make_shape_preset(type.substr(6)));
+    scene.instances.push_back({identity3x4f, 0, invalidid});
+    add_missing_material(scene);
+    add_missing_camera(scene);
+    add_missing_radius(scene);
+    add_missing_lights(scene);
+    return scene;
+  } else if (type.starts_with("textured_shape_")) {
+    auto scene = scene_data{};
+    scene.shapes.push_back(make_shape_preset(type.substr(15)));
+    scene.instances.push_back({identity3x4f, 0, invalidid});
+    add_missing_material(scene, true);
+    add_missing_camera(scene);
+    add_missing_radius(scene);
+    add_missing_lights(scene);
+    return scene;
   } else {
-    return {};
+    throw io_error{"unknown preset " + type};
   }
 }
 

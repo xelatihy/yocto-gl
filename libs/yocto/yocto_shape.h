@@ -122,6 +122,11 @@ void       quads_to_triangles_inplace(shape_data& shape);
 shape_data subdivide_shape(
     const shape_data& shape, int subdivisions, bool catmullclark);
 
+// Transform shape
+shape_data transform_shape(
+    const frame3f& frame, const shape_data& shape, bool non_rigid = false);
+shape_data remove_normals(const shape_data& shape);
+
 // Shape statistics
 vector<string> shape_stats(const shape_data& shape, bool verbose = false);
 
@@ -166,6 +171,10 @@ fvshape_data shape_to_fvshape(const shape_data& shape);
 fvshape_data subdivide_fvshape(
     const fvshape_data& shape, int subdivisions, bool catmullclark);
 
+// Transform shape
+fvshape_data transform_fvshape(
+    const frame3f& frame, const fvshape_data& shape, bool non_rigid = false);
+
 // Shape statistics
 vector<string> fvshape_stats(const fvshape_data& shape, bool verbose = false);
 
@@ -175,6 +184,36 @@ vector<string> fvshape_stats(const fvshape_data& shape, bool verbose = false);
 // EXAMPLE SHAPES
 // -----------------------------------------------------------------------------
 namespace yocto {
+
+// Predefined meshes
+shape_data make_quad(int subdivisions = 0);
+shape_data make_quady(int subdivisions = 0);
+shape_data make_cube(int subdivisions = 0);
+shape_data make_sphere(int subdivisions = 5);
+shape_data make_geosphere(int subdivisions = 3);
+shape_data make_wtcube(int subdivisions = 0);
+shape_data make_wtsphere(int subdivisions = 5);
+shape_data make_disk(int subdivisions = 5);
+shape_data make_floor(float size = 10, int subdivisions = 0);
+shape_data make_monkey(int subdivisions = 0);
+
+// Anisotropic shape
+shape_data make_quads(
+    const vec2i& steps, int subdivisions = 0, bool uniform_uv = false);
+shape_data make_rect(
+    const vec2f& scale, int subdivisions = 0, bool uniform_uv = false);
+shape_data make_box(
+    const vec3f& scale, int subdivisions = 0, bool uniform_uv = false);
+
+// Deformed meshes
+shape_data make_rounded_cube(float radius = 0.3f, int subdivisions = 5);
+shape_data make_bulged_quad(float radius = 0.3f, int subdivisions = 5);
+shape_data make_bulged_disk(float height = 0.3f, int subdivisions = 5);
+shape_data make_bent_floor(
+    float bent = 0.5f, float size = 10, int subdivisions = 0);
+
+// Predefined meshes
+fvshape_data make_fvcube(int subdivisions = 0);
 
 // Make a plane.
 shape_data make_rect(const vec2i& steps = {1, 1}, const vec2f& scale = {1, 1},
@@ -197,14 +236,9 @@ shape_data make_rounded_box(const vec3i& steps = {1, 1, 1},
 // Make a quad stack
 shape_data make_rect_stack(const vec3i& steps = {1, 1, 1},
     const vec3f& scale = {1, 1, 1}, const vec2f& uvscale = {1, 1});
-// Make a floor.
-shape_data make_floor(const vec2i& steps = {1, 1},
-    const vec2f& scale = {10, 10}, const vec2f& uvscale = {10, 10});
-shape_data make_bent_floor(const vec2i& steps = {1, 1},
-    const vec2f& scale = {10, 10}, const vec2f& uvscale = {10, 10},
-    float bent = 0.5f);
 // Make a sphere.
-shape_data make_sphere(int steps = 32, float scale = 1, float uvscale = 1);
+shape_data make_sphere_(
+    const vec3i& steps = {32, 32, 32}, float scale = 1, float uvscale = 1);
 // Make a sphere.
 shape_data make_uvsphere(const vec2i& steps = {32, 32}, float scale = 1,
     const vec2f& uvscale = {1, 1});
@@ -215,11 +249,6 @@ shape_data make_capped_uvsphere(const vec2i& steps = {32, 32}, float scale = 1,
     const vec2f& uvscale = {1, 1}, float height = 0.3f);
 shape_data make_capped_uvspherey(const vec2i& steps = {32, 32}, float scale = 1,
     const vec2f& uvscale = {1, 1}, float height = 0.3f);
-// Make a disk
-shape_data make_disk(int steps = 32, float scale = 1, float uvscale = 1);
-// Make a bulged disk
-shape_data make_bulged_disk(
-    int steps = 32, float scale = 1, float uvscale = 1, float height = 0.3f);
 // Make a uv disk
 shape_data make_uvdisk(const vec2i& steps = {32, 32}, float scale = 1,
     const vec2f& uvscale = {1, 1});
@@ -256,14 +285,6 @@ shape_data make_points(const vec2i& steps = {256, 256},
 // Make random points in a cube. Returns points, pos, norm, texcoord, radius.
 shape_data make_random_points(int num = 65536, const vec3f& size = {1, 1, 1},
     float uvscale = 1, float radius = 0.001f, uint64_t seed = 17);
-
-// Predefined meshes
-shape_data   make_monkey(float scale = 1, int subdivisions = 0);
-shape_data   make_quad(float scale = 1, int subdivisions = 0);
-shape_data   make_quady(float scale = 1, int subdivisions = 0);
-shape_data   make_cube(float scale = 1, int subdivisions = 0);
-fvshape_data make_fvcube(float scale = 1, int subdivisions = 0);
-shape_data   make_geosphere(float scale = 1, int subdivisions = 0);
 
 // Make a hair ball around a shape.
 // length: minimum and maximum length
