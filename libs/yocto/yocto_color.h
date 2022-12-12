@@ -72,6 +72,16 @@
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// Extracting components
+template <typename T>
+constexpr kernel vec<T, 3> rgb(const vec<T, 4>& color) {
+  return (vec<T, 3>&)color;
+}
+template <typename T>
+constexpr kernel T alpha(const vec<T, 4>& color) {
+  return color[3];
+}
+
 // Conversion between floats and bytes
 template <typename T>
 constexpr kernel byte float_to_byte(T a) {
