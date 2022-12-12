@@ -1965,6 +1965,23 @@ static void draw_window(glwindow_state& state) {
   }
 }
 
+// helpers
+vec2i get_window_size(GLFWwindow* window) {
+  auto width = 0, height = 0;
+  glfwGetWindowSize(window, &width, &height);
+  return {width, height};
+}
+vec2i get_framebuffer_size(GLFWwindow* window) {
+  auto width = 0, height = 0;
+  glfwGetFramebufferSize(window, &width, &height);
+  return {width, height};
+}
+vec4i get_framebuffer_viewport(GLFWwindow* window) {
+  auto width = 0, height = 0;
+  glfwGetFramebufferSize(window, &width, &height);
+  return {0, 0, width, height};
+}
+
 // run the user interface with the give callbacks
 void show_gui_window(const vec2i& size, const string& title,
     const gui_callbacks& callbacks, int widgets_width, bool widgets_left) {
@@ -2002,28 +2019,26 @@ void show_gui_window(const vec2i& size, const string& title,
 
   // set callbacks
   glfwSetWindowRefreshCallback(window, [](GLFWwindow* window) {
-    auto& state           = *(glwindow_state*)glfwGetWindowUserPointer(window);
-    auto& [width, height] = state.window;
-    glfwGetWindowSize(window, &width, &height);
+    auto& state  = *(glwindow_state*)glfwGetWindowUserPointer(window);
+    state.window = get_window_size(window);
     draw_window(state);
     glfwSwapBuffers(window);
   });
   glfwSetWindowSizeCallback(
       window, [](GLFWwindow* window, int width, int height) {
-        auto& state = *(glwindow_state*)glfwGetWindowUserPointer(window);
-        glfwGetWindowSize(window, &state.input.window.x, &state.input.window.y);
-        if (state.widgets_width) state.input.window.x -= state.widgets_width;
-        glfwGetFramebufferSize(
-            window, &state.input.framebuffer.z, &state.input.framebuffer.w);
-        state.input.framebuffer.x = 0;
-        state.input.framebuffer.y = 0;
+        auto& state        = *(glwindow_state*)glfwGetWindowUserPointer(window);
+        state.input.window = get_window_size(window);
+        if (state.widgets_width)
+          state.input.window -= vec2i{state.widgets_width, 0};
+        state.input.framebuffer = get_framebuffer_viewport(window);
         if (state.widgets_width) {
-          auto win_size = vec2i{0, 0};
-          glfwGetWindowSize(window, &win_size.x, &win_size.y);
-          auto offset = (int)(state.widgets_width *
-                              (float)state.input.framebuffer.z / win_size.x);
-          state.input.framebuffer.z -= offset;
-          if (state.widgets_left) state.input.framebuffer.x += offset;
+          auto [win_width, _]          = get_window_size(window);
+          auto [framebuffer_width, __] = get_framebuffer_size(window);
+          auto offset =
+              (int)(state.widgets_width * (float)framebuffer_width / win_width);
+          state.input.framebuffer -= vec4i{0, 0, offset, 0};
+          if (state.widgets_left)
+            state.input.framebuffer += vec4i{offset, 0, 0, 0};
         }
       });
 
