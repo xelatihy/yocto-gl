@@ -727,7 +727,7 @@ namespace yocto {
 template <typename T>
 constexpr kernel ray<T, 3> camera_ray(const frame<T, 3>& frame, T lens,
     const vec<T, 2>& film, const vec<T, 2>& image_uv) {
-  auto uv  = image_uv * vec<T, 2>{-1, 1};  // flip x
+  auto uv  = lerp(vec<T, 2>{1, 0}, vec<T, 2>{0, 1}, image_uv);  // flip x
   auto e   = vec<T, 3>{0, 0, 0};
   auto q   = vec<T, 3>{film * (uv - (T)0.5), lens};
   auto d   = normalize(e - q);
@@ -740,7 +740,7 @@ constexpr kernel ray<T, 3> camera_ray(const frame<T, 3>& frame, T lens,
 template <typename T>
 constexpr kernel ray<T, 3> camera_ray(const frame<T, 3>& frame, T lens,
     T aspect, T film_, const vec<T, 2>& image_uv) {
-  auto uv   = image_uv * vec<T, 2>{-1, 1};  // flip x
+  auto uv   = lerp(vec<T, 2>{1, 0}, vec<T, 2>{0, 1}, image_uv);  // flip x
   auto film = aspect >= 1 ? vec<T, 2>{film_, film_ / aspect}
                           : vec<T, 2>{film_ * aspect, film_};
   auto e    = vec<T, 3>{0, 0, 0};
