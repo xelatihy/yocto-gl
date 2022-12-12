@@ -4377,18 +4377,20 @@ static void save_gltf_scene(
       gmaterial.name  = copy_string(get_material_name(scene, material));
       auto emission_scale =
           max(material.emission) > 1.0f ? max(material.emission) : 1.0f;
-      gmaterial.emissive_factor[0] = material.emission.x / emission_scale;
-      gmaterial.emissive_factor[1] = material.emission.y / emission_scale;
-      gmaterial.emissive_factor[2] = material.emission.z / emission_scale;
+      auto [emission_x, emission_y, emission_z] = material.emission;
+      gmaterial.emissive_factor[0]              = emission_x / emission_scale;
+      gmaterial.emissive_factor[1]              = emission_y / emission_scale;
+      gmaterial.emissive_factor[2]              = emission_z / emission_scale;
       if (emission_scale > 1.0f) {
         gmaterial.has_emissive_strength               = true;
         gmaterial.emissive_strength.emissive_strength = emission_scale;
       }
       gmaterial.has_pbr_metallic_roughness = true;
       auto& gpbr                           = gmaterial.pbr_metallic_roughness;
-      gpbr.base_color_factor[0]            = material.color.x;
-      gpbr.base_color_factor[1]            = material.color.y;
-      gpbr.base_color_factor[2]            = material.color.z;
+      auto [color_x, color_y, color_z]     = material.color;
+      gpbr.base_color_factor[0]            = color_x;
+      gpbr.base_color_factor[1]            = color_y;
+      gpbr.base_color_factor[2]            = color_z;
       gpbr.base_color_factor[3]            = material.opacity;
       gpbr.metallic_factor                 = material.metallic;
       gpbr.roughness_factor                = material.roughness;
