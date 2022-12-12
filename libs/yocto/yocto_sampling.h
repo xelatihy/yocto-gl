@@ -189,6 +189,7 @@ constexpr kernel float sample_hemisphere_pdf(
 }
 
 // Sample a spherical direction with uniform distribution.
+#ifndef __CUDACC__
 template <typename T>
 constexpr kernel vec<T, 3> sample_sphere(const vec<T, 2>& ruv) {
   auto [r1, r2] = ruv;
@@ -197,6 +198,16 @@ constexpr kernel vec<T, 3> sample_sphere(const vec<T, 2>& ruv) {
   auto phi      = 2 * pif * r1;
   return {r * cos(phi), r * sin(phi), z};
 }
+#else
+template <typename T>
+constexpr kernel vec<T, 3> sample_sphere(const vec<T, 2>& ruv) {
+  auto r1 = ruv.x, r2 = ruv.y;
+  auto z   = 2 * r2 - 1;
+  auto r   = sqrt(clamp(1 - z * z, 0.0f, 1.0f));
+  auto phi = 2 * pif * r1;
+  return {r * cos(phi), r * sin(phi), z};
+}
+#endif
 template <typename T>
 constexpr kernel float sample_sphere_pdf(const vec<T, 3>& w) {
   return 1 / (4 * pif);
@@ -217,6 +228,7 @@ constexpr kernel float sample_hemisphere_cos_pdf(const vec<T, 3>& direction) {
 }
 
 // Sample an hemispherical direction with cosine distribution.
+#ifndef __CUDACC__
 template <typename T>
 constexpr kernel vec<T, 3> sample_hemisphere_cos(
     const vec<T, 3>& normal, const vec<T, 2>& ruv) {
@@ -227,6 +239,18 @@ constexpr kernel vec<T, 3> sample_hemisphere_cos(
   auto local_direction = vec<T, 3>{r * cos(phi), r * sin(phi), z};
   return transform_direction(basis_fromz(normal), local_direction);
 }
+#else
+template <typename T>
+constexpr kernel vec<T, 3> sample_hemisphere_cos(
+    const vec<T, 3>& normal, const vec<T, 2>& ruv) {
+  auto r1 = ruv.x, r2 = ruv.y;
+  auto z               = sqrt(r2);
+  auto r               = sqrt(1 - z * z);
+  auto phi             = 2 * pif * r1;
+  auto local_direction = vec<T, 3>{r * cos(phi), r * sin(phi), z};
+  return transform_direction(basis_fromz(normal), local_direction);
+}
+#endif
 template <typename T>
 constexpr kernel float sample_hemisphere_cos_pdf(
     const vec<T, 3>& normal, const vec<T, 3>& direction) {
@@ -273,9 +297,13 @@ constexpr kernel float sample_hemisphere_cospower_pdf(
 // Sample a point uniformly on a disk.
 template <typename T>
 constexpr kernel vec<T, 2> sample_disk(const vec<T, 2>& ruv) {
+#ifndef __CUDACC__
   auto [r1, r2] = ruv;
-  auto r        = sqrt(r2);
-  auto phi      = 2 * pif * r1;
+#else
+  auto r1 = ruv.x, r2 = ruv.y;
+#endif
+  auto r   = sqrt(r2);
+  auto phi = 2 * pif * r1;
   return {cos(phi) * r, sin(phi) * r};
 }
 template <typename T>

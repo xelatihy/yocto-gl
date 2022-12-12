@@ -230,6 +230,7 @@ constexpr kernel float microfacet_shadowing(float roughness,
 }
 
 // Sample a microfacet distribution.
+#ifndef __CUDACC__
 constexpr kernel vec3f sample_microfacet(
     float roughness, const vec3f& normal, const vec2f& rn, bool ggx = true) {
   auto [r1, r2] = rn;
@@ -245,6 +246,23 @@ constexpr kernel vec3f sample_microfacet(
       cos(phi) * sin(theta), sin(phi) * sin(theta), cos(theta)};
   return transform_direction(basis_fromz(normal), local_half_vector);
 }
+#else
+constexpr kernel vec3f sample_microfacet(
+    float roughness, const vec3f& normal, const vec2f& rn, bool ggx = true) {
+  auto r1 = rn.x, r2 = rn.y;
+  auto phi   = 2 * pif * r1;
+  auto theta = 0.0f;
+  if (ggx) {
+    theta = atan(roughness * sqrt(r2 / (1 - r2)));
+  } else {
+    auto roughness2 = roughness * roughness;
+    theta           = atan(sqrt(-roughness2 * log(1 - r2)));
+  }
+  auto local_half_vector = vec3f{
+      cos(phi) * sin(theta), sin(phi) * sin(theta), cos(theta)};
+  return transform_direction(basis_fromz(normal), local_half_vector);
+}
+#endif
 
 // Pdf for microfacet distribution sampling.
 constexpr kernel float sample_microfacet_pdf(float roughness,
