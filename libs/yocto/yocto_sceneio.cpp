@@ -4256,7 +4256,7 @@ static void load_gltf_scene(
       camera       = cameras.at(gnode.camera - cgltf.cameras);
       auto xform   = mat4f{
             {1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
-      cgltf_node_transform_world(&gnode, &xform.x.x);
+      cgltf_node_transform_world(&gnode, yocto::data(xform));
       camera.frame = mat_to_frame(xform);
     }
     if (gnode.mesh != nullptr) {
@@ -4265,7 +4265,7 @@ static void load_gltf_scene(
         instance       = primitive;
         auto xform     = mat4f{
                 {1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
-        cgltf_node_transform_world(&gnode, &xform.x.x);
+        cgltf_node_transform_world(&gnode, yocto::data(xform));
         instance.frame = mat_to_frame(xform);
       }
     }
@@ -4929,8 +4929,11 @@ static void xml_attribute(
   xml += " " + name + "=\"" + value + "\"";
 }
 static void xml_attribute(string& xml, const string& name, const vec3f& value) {
-  xml += " " + name + "=\"" + std::to_string(value.x) + " " +
-         std::to_string(value.y) + " " + std::to_string(value.z) + "\"";
+  xml += " " + name + "=\"";
+  for (auto v : value) {
+    if (xml.back() != '\"') xml += ' ';
+    xml += std::to_string(v);
+  }
 }
 static void xml_attribute(
     string& xml, const string& name, const frame3f& value) {

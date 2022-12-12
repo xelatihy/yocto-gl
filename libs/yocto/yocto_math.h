@@ -1092,6 +1092,11 @@ constexpr kernel vec<bool, N> component_greater_equal(
     const vec<T1, N>& a, const T2 b) {
   return map(a, b, [](T1 a, T2 b) { return a >= b; });
 }
+template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
+constexpr kernel vec<T, N> select(
+    const vec<bool, N>& a, const vec<T1, N>& b, const vec<T2, N>& c) {
+  return map(a, b, c, [](bool a, T1 b, T2 c) { return a ? b : c; });
+}
 
 }  // namespace yocto
 
@@ -1214,6 +1219,12 @@ constexpr auto identity2x2f = mat2x2f{{1, 0}, {0, 1}};
 constexpr auto identity3x3f = mat3x3f{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
 constexpr auto identity4x4f = mat4x4f{
     {1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
+
+// Data access
+template <typename T, size_t N, size_t M>
+constexpr kernel T* data(mat<T, N, M>& a) {
+  return &a.x.x;
+}
 
 // Matrix comparisons.
 template <typename T1, typename T2, size_t N, size_t M>
