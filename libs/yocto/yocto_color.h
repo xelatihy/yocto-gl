@@ -294,9 +294,9 @@ constexpr kernel vec<T, 4> tonemap(
 template <typename T>
 constexpr kernel vec<T, 4> composite(const vec<T, 4>& a, const vec<T, 4>& b) {
   if (a.w == 0 && b.w == 0) return {0, 0, 0, 0};
-  auto cc = xyz(a) * a.w + xyz(b) * b.w * (1 - a.w);
-  auto ca = a.w + b.w * (1 - a.w);
-  return {cc.x / ca, cc.y / ca, cc.z / ca, ca};
+  auto cc = xyz(a) * alpha(a) + xyz(b) * alpha(b) * (1 - alpha(a));
+  auto ca = alpha(a) + alpha(b) * (1 - alpha(a));
+  return {cc / ca, ca};
 }
 
 // Convert between CIE XYZ and RGB
