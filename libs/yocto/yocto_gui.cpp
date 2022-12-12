@@ -942,7 +942,7 @@ namespace yocto {
 static void assert_glerror() { assert(_assert_ogl_error() == GL_NO_ERROR); }
 
 // initialize program
-static void set_glprogram(uint& program_id, uint& vertex_id, uint& fragment_id,
+static void set_program(uint& program_id, uint& vertex_id, uint& fragment_id,
     const string& vertex, const string& fragment) {
   // error
   auto program_error = [&](const char* message, const char* log) {
@@ -1010,35 +1010,165 @@ static void set_glprogram(uint& program_id, uint& vertex_id, uint& fragment_id,
   assert_glerror();
 #endif
 }
+inline void clear_program(uint& program, uint& vertex, uint& fragment) {
+  if (program) glDeleteProgram(program);
+  if (vertex) glDeleteShader(vertex);
+  if (fragment) glDeleteShader(fragment);
+  program  = 0;
+  vertex   = 0;
+  fragment = 0;
+}
+inline void bind_program(uint program) { glUseProgram(program); }
 
 // Viewport and framebuffer
-inline void set_glviewport(const vec4f& framebuffer) {
+inline void set_viewport(const vec4i& framebuffer) {
   auto [x, y, w, h] = framebuffer;
   glViewport(x, y, w, h);
 }
-inline void clear_glframebuffer(const vec4f& background) {
+inline void clear_framebuffer(const vec4f& background) {
   auto [r, g, b, a] = background;
   glClearColor(r, g, b, a);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   glEnable(GL_DEPTH_TEST);
 }
+inline void set_blending(bool enable) {
+  if (enable) {
+    glEnable(GL_BLEND);
+    glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_ADD);
+    glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ZERO);
+  } else {
+    glDisable(GL_BLEND);
+  }
+}
+
+// Vertex arrays
+inline void set_vertexarrays(uint& vertexarray) {
+  if (!vertexarray) glGenVertexArrays(1, &vertexarray);
+  glBindVertexArray(vertexarray);
+}
+inline void clear_vertexarrays(uint& vertexarray) {
+  glDeleteVertexArrays(1, &vertexarray);
+  vertexarray = 0;
+}
+inline void bind_vertexarrays(uint& vertexarray) {
+  glBindVertexArray(vertexarray);
+}
+
+// Vertex buffers
+template <typename T>
+inline void set_vertex(
+    uint& buffer, int& num, const vector<T>& data, const T& def, int location) {
+  if (data.empty()) {
+    if (buffer) glDeleteBuffers(1, &buffer);
+    buffer = 0;
+    num    = 0;
+    glDisableVertexAttribArray(location);
+    if constexpr (sizeof(def) == sizeof(float))
+      glVertexAttrib1f(location, (float)def);
+    if constexpr (sizeof(def) == sizeof(vec2f))
+      glVertexAttrib2fv(location, (float*)&def.x);
+    if constexpr (sizeof(def) == sizeof(vec3f))
+      glVertexAttrib3fv(location, (float*)&def.x);
+    if constexpr (sizeof(def) == sizeof(vec4f))
+      glVertexAttrib4fv(location, (float*)&def.x);
+  } else {
+    if (!buffer || (int)data.size() != num) {
+      if (buffer) glDeleteBuffers(1, &buffer);
+      glGenBuffers(1, &buffer);
+      glBindBuffer(GL_ARRAY_BUFFER, buffer);
+      glBufferData(GL_ARRAY_BUFFER, data.size() * sizeof(data.front()),
+          data.data(), GL_STATIC_DRAW);
+      num = (int)data.size();
+    } else {
+      // we have enough space
+      glBindBuffer(GL_ARRAY_BUFFER, buffer);
+      glBufferSubData(
+          GL_ARRAY_BUFFER, 0, data.size() * sizeof(data.front()), data.data());
+    }
+    glBindBuffer(GL_ARRAY_BUFFER, buffer);
+    glEnableVertexAttribArray(location);
+    glVertexAttribPointer(location, sizeof(data.front()) / sizeof(float),
+        GL_FLOAT, false, 0, nullptr);
+  }
+}
+inline void clear_vertex(uint& buffer) {
+  if (buffer) glDeleteBuffers(1, &buffer);
+  buffer = 0;
+}
+
+// Primitive indices
+template <typename T>
+inline void set_indices(uint& buffer, int& num, const vector<T>& data) {
+  if (data.empty()) {
+    if (buffer) glDeleteBuffers(1, &buffer);
+    buffer = 0;
+    num    = 0;
+  } else {
+    if (!buffer || (int)data.size() != num) {
+      if (buffer) glDeleteBuffers(1, &buffer);
+      glGenBuffers(1, &buffer);
+      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer);
+      glBufferData(GL_ELEMENT_ARRAY_BUFFER, data.size() * sizeof(data.front()),
+          data.data(), GL_STATIC_DRAW);
+      num = (int)data.size();
+    } else {
+      // we have enough space
+      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer);
+      glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0,
+          data.size() * sizeof(data.front()), data.data());
+    }
+  }
+}
+inline void clear_indices(uint& buffer) {
+  if (buffer) glDeleteBuffers(1, &buffer);
+  buffer = 0;
+}
+
+// Buffers
+inline void clear_buffer(uint& buffer) {
+  if (buffer) glDeleteBuffers(1, &buffer);
+  buffer = 0;
+}
+
+// Textures
+inline void set_texture(
+    uint& texture, vec2i& extents, const array2d<vec4f>& image) {
+  auto [width, height] = (vec2i)image.extents();
+  if (!texture || extents != (vec2i)image.extents()) {
+    if (!texture) glGenTextures(1, &texture);
+    glBindTexture(GL_TEXTURE_2D, texture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGBA,
+        GL_FLOAT, image.data());
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  } else {
+    glBindTexture(GL_TEXTURE_2D, texture);
+    glTexSubImage2D(
+        GL_TEXTURE_2D, 0, 0, 0, width, height, GL_RGBA, GL_FLOAT, image.data());
+  }
+  extents = (vec2i)image.extents();
+}
+inline void clear_texture(uint& texture) {
+  if (texture) glDeleteTextures(1, &texture);
+  texture = 0;
+}
 
 // Parameter setting
-inline void set_gluniform(int loc, float v) { glUniform1f(loc, v); }
-inline void set_gluniform(int loc, vec2f v) { glUniform2fv(loc, 1, &v[0]); }
-inline void set_gluniform(int loc, vec3f v) { glUniform3fv(loc, 1, &v[0]); }
-inline void set_gluniform(int loc, vec4f v) { glUniform4fv(loc, 1, &v[0]); }
-inline void set_gluniform(int loc, int v) { glUniform1i(loc, v); }
-inline void set_gluniform(int loc, vec2i v) { glUniform2iv(loc, 1, &v[0]); }
-inline void set_gluniform(int loc, vec3i v) { glUniform3iv(loc, 1, &v[0]); }
-inline void set_gluniform(int loc, vec4i v) { glUniform4iv(loc, 1, &v[0]); }
-inline void set_gluniform(int loc, bool v) { glUniform1i(loc, v ? 1 : 0); }
-inline void set_gluniform(int loc, const mat4f& v) {
+inline void bind_uniform(int loc, float v) { glUniform1f(loc, v); }
+inline void bind_uniform(int loc, vec2f v) { glUniform2fv(loc, 1, &v[0]); }
+inline void bind_uniform(int loc, vec3f v) { glUniform3fv(loc, 1, &v[0]); }
+inline void bind_uniform(int loc, vec4f v) { glUniform4fv(loc, 1, &v[0]); }
+inline void bind_uniform(int loc, int v) { glUniform1i(loc, v); }
+inline void bind_uniform(int loc, vec2i v) { glUniform2iv(loc, 1, &v[0]); }
+inline void bind_uniform(int loc, vec3i v) { glUniform3iv(loc, 1, &v[0]); }
+inline void bind_uniform(int loc, vec4i v) { glUniform4iv(loc, 1, &v[0]); }
+inline void bind_uniform(int loc, bool v) { glUniform1i(loc, v ? 1 : 0); }
+inline void bind_uniform(int loc, const mat4f& v) {
   glUniformMatrix4fv(loc, 1, false, &v[0][0]);
 }
 template <typename T>
-inline void set_gluniform(uint program, const char* name, const T& v) {
-  return set_gluniform(glGetUniformLocation(program, name), v);
+inline void bind_uniform(uint program, const char* name, const T& v) {
+  return bind_uniform(glGetUniformLocation(program, name), v);
 }
 
 }  // namespace yocto
@@ -1136,12 +1266,11 @@ void main() {
 // init image program
 bool init_image(glimage_state& glimage) {
   // program
-  set_glprogram(glimage.program, glimage.vertex, glimage.fragment,
-      glimage_vertex, glimage_fragment);
+  set_program(glimage.program, glimage.vertex, glimage.fragment, glimage_vertex,
+      glimage_fragment);
 
   // vertex arrays
-  glGenVertexArrays(1, &glimage.vertexarray);
-  glBindVertexArray(glimage.vertexarray);
+  set_vertexarrays(glimage.vertexarray);
 
   // buffers
   auto positions = vector<vec3f>{
@@ -1160,38 +1289,21 @@ bool init_image(glimage_state& glimage) {
       triangles.data(), GL_STATIC_DRAW);
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
-  // done
-  // glBindVertexArray(0);
   return true;
 }
 
 // clear an opengl image
 void clear_image(glimage_state& glimage) {
-  if (glimage.texture) glDeleteTextures(1, &glimage.texture);
-  if (glimage.program) glDeleteProgram(glimage.program);
-  if (glimage.vertex) glDeleteProgram(glimage.vertex);
-  if (glimage.fragment) glDeleteProgram(glimage.fragment);
-  if (glimage.vertexarray) glDeleteVertexArrays(1, &glimage.vertexarray);
-  if (glimage.positions) glDeleteBuffers(1, &glimage.positions);
-  if (glimage.triangles) glDeleteBuffers(1, &glimage.triangles);
+  clear_texture(glimage.texture);
+  clear_program(glimage.program, glimage.vertex, glimage.fragment);
+  clear_vertexarrays(glimage.vertexarray);
+  clear_buffer(glimage.positions);
+  clear_buffer(glimage.triangles);
   glimage = {};
 }
 
 void set_image(glimage_state& glimage, const array2d<vec4f>& image) {
-  auto [width, height] = (vec2i)image.extents();
-  if (!glimage.texture || glimage.extents != (vec2i)image.extents()) {
-    if (!glimage.texture) glGenTextures(1, &glimage.texture);
-    glBindTexture(GL_TEXTURE_2D, glimage.texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGBA,
-        GL_FLOAT, image.data());
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-  } else {
-    glBindTexture(GL_TEXTURE_2D, glimage.texture);
-    glTexSubImage2D(
-        GL_TEXTURE_2D, 0, 0, 0, width, height, GL_RGBA, GL_FLOAT, image.data());
-  }
-  glimage.extents = (vec2i)image.extents();
+  set_texture(glimage.texture, glimage.extents, image);
 }
 
 // draw image
@@ -1200,39 +1312,37 @@ void draw_image(glimage_state& glimage, const glimage_params& params) {
   assert_glerror();
 
   // viewport and framebuffer
-  set_glviewport(params.framebuffer);
-  clear_glframebuffer(params.background);
+  set_viewport(params.framebuffer);
+  clear_framebuffer(params.background);
 
   // blend
-  glEnable(GL_BLEND);
-  glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_ADD);
-  glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ZERO);
+  set_blending(true);
 
   // bind program and params
-  glUseProgram(glimage.program);
+  bind_program(glimage.program);
   glActiveTexture(GL_TEXTURE0);
   glBindTexture(GL_TEXTURE_2D, glimage.texture);
-  set_gluniform(glimage.program, "txt", 0);
-  set_gluniform(glimage.program, "window", (vec2f)params.window);
-  set_gluniform(glimage.program, "image_size", (vec2f)glimage.extents);
-  set_gluniform(glimage.program, "image_center", params.center);
-  set_gluniform(glimage.program, "image_scale", params.scale);
-  set_gluniform(glimage.program, "background", params.background);
-  set_gluniform(glimage.program, "tonemap", params.tonemap);
-  set_gluniform(glimage.program, "exposure", params.exposure);
-  set_gluniform(glimage.program, "srgb", params.srgb);
-  set_gluniform(glimage.program, "filmic", params.filmic);
+  bind_uniform(glimage.program, "txt", 0);
+  bind_uniform(glimage.program, "window", (vec2f)params.window);
+  bind_uniform(glimage.program, "image_size", (vec2f)glimage.extents);
+  bind_uniform(glimage.program, "image_center", params.center);
+  bind_uniform(glimage.program, "image_scale", params.scale);
+  bind_uniform(glimage.program, "background", params.background);
+  bind_uniform(glimage.program, "tonemap", params.tonemap);
+  bind_uniform(glimage.program, "exposure", params.exposure);
+  bind_uniform(glimage.program, "srgb", params.srgb);
+  bind_uniform(glimage.program, "filmic", params.filmic);
   assert_glerror();
 
   // draw
-  glBindVertexArray(glimage.vertexarray);
+  bind_vertexarrays(glimage.vertexarray);
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, glimage.triangles);
   glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
   glBindVertexArray(0);
   assert_glerror();
 
   // unbind program
-  glUseProgram(0);
+  bind_program(0);
   assert_glerror();
 
   // blend
@@ -1541,64 +1651,6 @@ static void clear_texture(glscene_texture& gltexture) {
 
 // Create shape
 static void set_shape(glscene_shape& glshape, const shape_data& shape) {
-  auto set_vertex = [](uint& buffer, int& num, const auto& data,
-                        const auto& def, int location) {
-    if (data.empty()) {
-      if (buffer) glDeleteBuffers(1, &buffer);
-      buffer = 0;
-      num    = 0;
-      glDisableVertexAttribArray(location);
-      if constexpr (sizeof(def) == sizeof(float))
-        glVertexAttrib1f(location, (float)def);
-      if constexpr (sizeof(def) == sizeof(vec2f))
-        glVertexAttrib2fv(location, (float*)&def.x);
-      if constexpr (sizeof(def) == sizeof(vec3f))
-        glVertexAttrib3fv(location, (float*)&def.x);
-      if constexpr (sizeof(def) == sizeof(vec4f))
-        glVertexAttrib4fv(location, (float*)&def.x);
-    } else {
-      if (!buffer || (int)data.size() != num) {
-        if (buffer) glDeleteBuffers(1, &buffer);
-        glGenBuffers(1, &buffer);
-        glBindBuffer(GL_ARRAY_BUFFER, buffer);
-        glBufferData(GL_ARRAY_BUFFER, data.size() * sizeof(data.front()),
-            data.data(), GL_STATIC_DRAW);
-        num = (int)data.size();
-      } else {
-        // we have enough space
-        glBindBuffer(GL_ARRAY_BUFFER, buffer);
-        glBufferSubData(GL_ARRAY_BUFFER, 0, data.size() * sizeof(data.front()),
-            data.data());
-      }
-      glBindBuffer(GL_ARRAY_BUFFER, buffer);
-      glEnableVertexAttribArray(location);
-      glVertexAttribPointer(location, sizeof(data.front()) / sizeof(float),
-          GL_FLOAT, false, 0, nullptr);
-    }
-  };
-
-  auto set_indices = [](uint& buffer, int& num, const auto& data) {
-    if (data.empty()) {
-      if (buffer) glDeleteBuffers(1, &buffer);
-      buffer = 0;
-      num    = 0;
-    } else {
-      if (!buffer || (int)data.size() != num) {
-        if (buffer) glDeleteBuffers(1, &buffer);
-        glGenBuffers(1, &buffer);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer);
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-            data.size() * sizeof(data.front()), data.data(), GL_STATIC_DRAW);
-        num = (int)data.size();
-      } else {
-        // we have enough space
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer);
-        glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0,
-            data.size() * sizeof(data.front()), data.data());
-      }
-    }
-  };
-
   if (!glshape.vertexarray) glGenVertexArrays(1, &glshape.vertexarray);
   glBindVertexArray(glshape.vertexarray);
   set_indices(glshape.points, glshape.num_points, shape.points);
@@ -1622,15 +1674,15 @@ static void set_shape(glscene_shape& glshape, const shape_data& shape) {
 // Clean shape
 static void clear_shape(glscene_shape& glshape) {
   if (glshape.vertexarray) glDeleteVertexArrays(1, &glshape.vertexarray);
-  if (glshape.positions) glDeleteBuffers(1, &glshape.positions);
-  if (glshape.normals) glDeleteBuffers(1, &glshape.normals);
-  if (glshape.texcoords) glDeleteBuffers(1, &glshape.texcoords);
-  if (glshape.colors) glDeleteBuffers(1, &glshape.colors);
-  if (glshape.tangents) glDeleteBuffers(1, &glshape.tangents);
-  if (glshape.points) glDeleteBuffers(1, &glshape.points);
-  if (glshape.lines) glDeleteBuffers(1, &glshape.lines);
-  if (glshape.triangles) glDeleteBuffers(1, &glshape.triangles);
-  if (glshape.quads) glDeleteBuffers(1, &glshape.quads);
+  clear_vertex(glshape.positions);
+  clear_vertex(glshape.normals);
+  clear_vertex(glshape.texcoords);
+  clear_vertex(glshape.colors);
+  clear_vertex(glshape.tangents);
+  clear_indices(glshape.points);
+  clear_indices(glshape.lines);
+  clear_indices(glshape.triangles);
+  clear_indices(glshape.quads);
   glshape = {};
   assert_glerror();
 }
@@ -1638,19 +1690,17 @@ static void clear_shape(glscene_shape& glshape) {
 // init scene
 static void init_glscene(glscene_state& glscene, const scene_data& ioscene) {
   // program
-  set_glprogram(glscene.program, glscene.vertex, glscene.fragment,
-      glscene_vertex, glscene_fragment);
+  set_program(glscene.program, glscene.vertex, glscene.fragment, glscene_vertex,
+      glscene_fragment);
 
   // textures
   for (auto& iotexture : ioscene.textures) {
-    auto& gltexture = glscene.textures.emplace_back();
-    set_texture(gltexture, iotexture);
+    set_texture(glscene.textures.emplace_back(), iotexture);
   }
 
   // shapes
   for (auto& ioshape : ioscene.shapes) {
-    auto& glshape = glscene.shapes.emplace_back();
-    set_shape(glshape, ioshape);
+    set_shape(glscene.shapes.emplace_back(), ioshape);
   }
 }
 
@@ -1669,9 +1719,7 @@ static void update_glscene(glscene_state& glscene, const scene_data& scene,
 static void clear_scene(glscene_state& glscene) {
   for (auto& texture : glscene.textures) clear_texture(texture);
   for (auto& shape : glscene.shapes) clear_shape(shape);
-  if (glscene.program) glDeleteProgram(glscene.program);
-  if (glscene.vertex) glDeleteProgram(glscene.vertex);
-  if (glscene.fragment) glDeleteProgram(glscene.fragment);
+  clear_program(glscene.program, glscene.vertex, glscene.fragment);
 }
 
 [[maybe_unused]] static void draw_shape(glscene_shape& shape) {
@@ -1711,12 +1759,12 @@ static void draw_scene(glscene_state& glscene, const scene_data& scene,
   assert_glerror();
 
   // viewport and framebuffer
-  set_glviewport(viewport);
-  clear_glframebuffer(params.background);
+  set_viewport(viewport);
+  clear_framebuffer(params.background);
 
   // set program
   auto& program = glscene.program;
-  glUseProgram(program);
+  bind_program(program);
 
   // camera
   auto& camera        = scene.cameras.at(params.camera);
@@ -1728,14 +1776,14 @@ static void draw_scene(glscene_state& glscene, const scene_data& scene,
   auto view_matrix       = frame_to_mat(inverse(camera.frame));
   auto projection_matrix = perspective_mat(
       camera_yfov, camera_aspect, params.near, params.far);
-  set_gluniform(program, "eye", camera.frame.o);
-  set_gluniform(program, "view", view_matrix);
-  set_gluniform(program, "projection", projection_matrix);
+  bind_uniform(program, "eye", camera.frame.o);
+  bind_uniform(program, "view", view_matrix);
+  bind_uniform(program, "projection", projection_matrix);
 
   // params
-  set_gluniform(program, "exposure", params.exposure);
-  set_gluniform(program, "gamma", params.gamma);
-  set_gluniform(program, "double_sided", params.double_sided);
+  bind_uniform(program, "exposure", params.exposure);
+  bind_uniform(program, "gamma", params.gamma);
+  bind_uniform(program, "double_sided", params.double_sided);
 
   static auto lights_direction = vector<vec3f>{normalize(vec3f{1, 1, 1}),
       normalize(vec3f{-1, 1, 1}), normalize(vec3f{-1, -1, 1}),
@@ -1744,20 +1792,20 @@ static void draw_scene(glscene_state& glscene, const scene_data& scene,
        vec3f{pif / 2, pif / 2, pif / 2}, vec3f{pif / 4, pif / 4, pif / 4},
        vec3f{pif / 4, pif / 4, pif / 4}};
   if (params.lighting == shade_lighting::camlight) {
-    set_gluniform(program, "lighting", 1);
-    set_gluniform(program, "ambient", vec3f{0, 0, 0});
-    set_gluniform(program, "lights_num", (int)lights_direction.size());
+    bind_uniform(program, "lighting", 1);
+    bind_uniform(program, "ambient", vec3f{0, 0, 0});
+    bind_uniform(program, "lights_num", (int)lights_direction.size());
     for (auto lid : range((int)lights_direction.size())) {
       auto is        = std::to_string(lid);
       auto direction = transform_direction(camera.frame, lights_direction[lid]);
-      set_gluniform(
+      bind_uniform(
           program, ("lights_direction[" + is + "]").c_str(), direction);
-      set_gluniform(program, ("lights_emission[" + is + "]").c_str(),
+      bind_uniform(program, ("lights_emission[" + is + "]").c_str(),
           lights_emission[lid]);
     }
   } else if (params.lighting == shade_lighting::eyelight) {
-    set_gluniform(program, "lighting", 0);
-    set_gluniform(program, "lights_num", 0);
+    bind_uniform(program, "lighting", 0);
+    bind_uniform(program, "lights_num", 0);
   } else {
     throw std::invalid_argument{"unknown lighting type"};
   }
@@ -1769,13 +1817,13 @@ static void draw_scene(glscene_state& glscene, const scene_data& scene,
       auto& gltexture = glscene.textures.at(texture_idx);
       glActiveTexture(GL_TEXTURE0 + unit);
       glBindTexture(GL_TEXTURE_2D, gltexture.texture);
-      set_gluniform(program, name, unit);
-      set_gluniform(program, name_on, 1);
+      bind_uniform(program, name, unit);
+      bind_uniform(program, name_on, 1);
     } else {
       glActiveTexture(GL_TEXTURE0 + unit);
       glBindTexture(GL_TEXTURE_2D, 0);
-      set_gluniform(program, name, unit);
-      set_gluniform(program, name_on, 0);
+      bind_uniform(program, name, unit);
+      bind_uniform(program, name_on, 0);
     }
   };
 
@@ -1788,28 +1836,28 @@ static void draw_scene(glscene_state& glscene, const scene_data& scene,
     auto shape_xform     = frame_to_mat(instance.frame);
     auto shape_inv_xform = transpose(
         frame_to_mat(inverse(instance.frame, params.non_rigid_frames)));
-    set_gluniform(program, "frame", shape_xform);
-    set_gluniform(program, "frameit", shape_inv_xform);
-    set_gluniform(program, "faceted", params.faceted || glshape.normals == 0);
+    bind_uniform(program, "frame", shape_xform);
+    bind_uniform(program, "frameit", shape_inv_xform);
+    bind_uniform(program, "faceted", params.faceted || glshape.normals == 0);
 
-    set_gluniform(program, "unlit", 0);
-    set_gluniform(program, "emission", material.emission);
-    set_gluniform(program, "color", material.color);
-    set_gluniform(program, "specular", 1.0f);
-    set_gluniform(program, "metallic", material.metallic);
-    set_gluniform(program, "roughness", material.roughness);
-    set_gluniform(program, "opacity", material.opacity);
+    bind_uniform(program, "unlit", 0);
+    bind_uniform(program, "emission", material.emission);
+    bind_uniform(program, "color", material.color);
+    bind_uniform(program, "specular", 1.0f);
+    bind_uniform(program, "metallic", material.metallic);
+    bind_uniform(program, "roughness", material.roughness);
+    bind_uniform(program, "opacity", material.opacity);
     if (material.type == material_type::matte ||
         material.type == material_type::transparent ||
         material.type == material_type::refractive ||
         material.type == material_type::subsurface ||
         material.type == material_type::volumetric) {
-      set_gluniform(program, "specular", 0.0f);
+      bind_uniform(program, "specular", 0.0f);
     }
     if (material.type == material_type::reflective) {
-      set_gluniform(program, "metallic", 1.0f);
+      bind_uniform(program, "metallic", 1.0f);
     }
-    set_gluniform(program, "double_sided", params.double_sided);
+    bind_uniform(program, "double_sided", params.double_sided);
     set_texture(
         program, "emission_tex", "emission_tex_on", material.emission_tex, 0);
     set_texture(program, "color_tex", "color_tex_on", material.color_tex, 1);
@@ -1819,10 +1867,10 @@ static void draw_scene(glscene_state& glscene, const scene_data& scene,
         program, "normalmap_tex", "normalmap_tex_on", material.normal_tex, 5);
     assert_glerror();
 
-    if (glshape.points) set_gluniform(program, "element", 1);
-    if (glshape.lines) set_gluniform(program, "element", 2);
-    if (glshape.triangles) set_gluniform(program, "element", 3);
-    if (glshape.quads) set_gluniform(program, "element", 3);
+    if (glshape.points) bind_uniform(program, "element", 1);
+    if (glshape.lines) bind_uniform(program, "element", 2);
+    if (glshape.triangles) bind_uniform(program, "element", 3);
+    if (glshape.quads) bind_uniform(program, "element", 3);
     assert_glerror();
 
     glBindVertexArray(glshape.vertexarray);
@@ -1855,7 +1903,7 @@ static void draw_scene(glscene_state& glscene, const scene_data& scene,
   if (params.wireframe) glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
   // done
-  glUseProgram(0);
+  bind_program(0);
 }
 
 }  // namespace yocto
