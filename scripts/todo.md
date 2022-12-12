@@ -4,6 +4,10 @@
 
 - Docs
 
+## Image examples
+
+- move to resolution
+
 ## Shape examples
 
 - uniform to using subdivisions for everything

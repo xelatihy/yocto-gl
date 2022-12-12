@@ -399,7 +399,7 @@ inline array2d<vec<T, 4>> make_uvramp(const vec2s& extents, T scale = 1) {
 
 template <typename T = float>
 inline array2d<vec<T, 4>> make_uvgrid(
-    const vec2s& extents, T scale = 1, bool colored = true) {
+    const vec2s& extents = {1024, 1024}, T scale = 1, bool colored = true) {
   return _make_proc_image(extents, [=](vec2s ij) -> vec<T, 4> {
     auto uv     = fmod((scale * ij) / extents, 1);
     uv[1]       = 1 - uv[1];

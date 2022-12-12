@@ -1721,15 +1721,23 @@ static void add_missing_radius(scene_data& scene, float radius = 0.001f) {
 }
 
 // Add missing cameras.
-void add_missing_material(scene_data& scene) {
+void add_missing_material(scene_data& scene, bool textured = false) {
   auto default_material = invalidid;
   for (auto& instance : scene.instances) {
-    if (instance.material >= 0) continue;
+    if (instance.material != invalidid) continue;
     if (default_material == invalidid) {
       auto& material   = scene.materials.emplace_back();
-      material.type    = material_type::matte;
-      material.color   = {0.8f, 0.8f, 0.8f};
       default_material = (int)scene.materials.size() - 1;
+      if (!textured) {
+        material.type  = material_type::matte;
+        material.color = {0.8f, 0.8f, 0.8f};
+      } else {
+        scene.textures.push_back(image_to_texture(make_uvgrid(), false));
+        material.type      = material_type::glossy;
+        material.color     = {1, 1, 1};
+        material.roughness = 0.1f;
+        material.color_tex = (int)scene.textures.size() - 1;
+      }
     }
     instance.material = default_material;
   }
@@ -2185,6 +2193,15 @@ scene_data make_scene_preset(const string& type_) {
     scene.shapes.push_back(make_shape_preset(type.substr(6)));
     scene.instances.push_back({identity3x4f, 0, invalidid});
     add_missing_material(scene);
+    add_missing_camera(scene);
+    add_missing_radius(scene);
+    add_missing_lights(scene);
+    return scene;
+  } else if (type.starts_with("textured_shape_")) {
+    auto scene = scene_data{};
+    scene.shapes.push_back(make_shape_preset(type.substr(15)));
+    scene.instances.push_back({identity3x4f, 0, invalidid});
+    add_missing_material(scene, true);
     add_missing_camera(scene);
     add_missing_radius(scene);
     add_missing_lights(scene);
