@@ -344,6 +344,22 @@ shape_data subdivide_shape(
   return subdivided;
 }
 
+// Transform shape
+shape_data transform_shape(
+    const frame3f& frame, const shape_data& shape, bool non_rigid) {
+  auto transformed = shape;
+  for (auto& position : transformed.positions)
+    position = transform_point(frame, position);
+  for (auto& normal : transformed.normals)
+    normal = transform_normal(frame, normal, non_rigid);
+  return transformed;
+}
+shape_data remove_normals(const shape_data& shape) {
+  auto transformed    = shape;
+  transformed.normals = {};
+  return transformed;
+}
+
 vector<string> shape_stats(const shape_data& shape, bool verbose) {
   auto format = [](auto num) {
     auto str = std::to_string(num);
@@ -494,6 +510,17 @@ fvshape_data subdivide_fvshape(
   return subdivided;
 }
 
+// Transform shape
+fvshape_data transform_fvshape(
+    const frame3f& frame, const fvshape_data& shape, bool non_rigid) {
+  auto transformed = shape;
+  for (auto& position : transformed.positions)
+    position = transform_point(frame, position);
+  for (auto& normal : transformed.normals)
+    normal = transform_normal(frame, normal, non_rigid);
+  return transformed;
+}
+
 vector<string> fvshape_stats(const fvshape_data& shape, bool verbose) {
   auto format = [](auto num) {
     auto str = std::to_string(num);
@@ -532,6 +559,200 @@ vector<string> fvshape_stats(const fvshape_data& shape, bool verbose) {
 // IMPLEMENTATION FOR SHAPE EXAMPLES
 // -----------------------------------------------------------------------------
 namespace yocto {
+
+// Predefined meshes
+shape_data make_quad(int subdivisions) {
+  static const auto quad_positions = vector<vec3f>{
+      {-1, -1, 0}, {+1, -1, 0}, {+1, +1, 0}, {-1, +1, 0}};
+  static const auto quad_normals = vector<vec3f>{
+      {0, 0, 1}, {0, 0, 1}, {0, 0, 1}, {0, 0, 1}};
+  static const auto quad_texcoords = vector<vec2f>{
+      {0, 1}, {1, 1}, {1, 0}, {0, 0}};
+  static const auto quad_quads = vector<vec4i>{{0, 1, 2, 3}};
+  auto              shape      = shape_data{};
+  if (subdivisions == 0) {
+    shape.quads     = quad_quads;
+    shape.positions = quad_positions;
+    shape.normals   = quad_normals;
+    shape.texcoords = quad_texcoords;
+  } else {
+    std::tie(shape.quads, shape.positions) = subdivide_quads(
+        quad_quads, quad_positions, subdivisions);
+    std::tie(shape.quads, shape.normals) = subdivide_quads(
+        quad_quads, quad_normals, subdivisions);
+    std::tie(shape.quads, shape.texcoords) = subdivide_quads(
+        quad_quads, quad_texcoords, subdivisions);
+  }
+  return shape;
+}
+shape_data make_quady(int subdivisions) {
+  static const auto quady_positions = vector<vec3f>{
+      {-1, 0, -1}, {-1, 0, +1}, {+1, 0, +1}, {+1, 0, -1}};
+  static const auto quady_normals = vector<vec3f>{
+      {0, 1, 0}, {0, 1, 0}, {0, 1, 0}, {0, 1, 0}};
+  static const auto quady_texcoords = vector<vec2f>{
+      {0, 0}, {1, 0}, {1, 1}, {0, 1}};
+  static const auto quady_quads = vector<vec4i>{{0, 1, 2, 3}};
+  auto              shape       = shape_data{};
+  if (subdivisions == 0) {
+    shape.quads     = quady_quads;
+    shape.positions = quady_positions;
+    shape.normals   = quady_normals;
+    shape.texcoords = quady_texcoords;
+  } else {
+    std::tie(shape.quads, shape.positions) = subdivide_quads(
+        quady_quads, quady_positions, subdivisions);
+    std::tie(shape.quads, shape.normals) = subdivide_quads(
+        quady_quads, quady_normals, subdivisions);
+    std::tie(shape.quads, shape.texcoords) = subdivide_quads(
+        quady_quads, quady_texcoords, subdivisions);
+  }
+  return shape;
+}
+shape_data make_cube(int subdivisions) {
+  static const auto cube_positions = vector<vec3f>{{-1, -1, +1}, {+1, -1, +1},
+      {+1, +1, +1}, {-1, +1, +1}, {+1, -1, -1}, {-1, -1, -1}, {-1, +1, -1},
+      {+1, +1, -1}, {+1, -1, +1}, {+1, -1, -1}, {+1, +1, -1}, {+1, +1, +1},
+      {-1, -1, -1}, {-1, -1, +1}, {-1, +1, +1}, {-1, +1, -1}, {-1, +1, +1},
+      {+1, +1, +1}, {+1, +1, -1}, {-1, +1, -1}, {+1, -1, +1}, {-1, -1, +1},
+      {-1, -1, -1}, {+1, -1, -1}};
+  static const auto cube_normals   = vector<vec3f>{{0, 0, +1}, {0, 0, +1},
+        {0, 0, +1}, {0, 0, +1}, {0, 0, -1}, {0, 0, -1}, {0, 0, -1}, {0, 0, -1},
+        {+1, 0, 0}, {+1, 0, 0}, {+1, 0, 0}, {+1, 0, 0}, {-1, 0, 0}, {-1, 0, 0},
+        {-1, 0, 0}, {-1, 0, 0}, {0, +1, 0}, {0, +1, 0}, {0, +1, 0}, {0, +1, 0},
+        {0, -1, 0}, {0, -1, 0}, {0, -1, 0}, {0, -1, 0}};
+  static const auto cube_texcoords = vector<vec2f>{{0, 1}, {1, 1}, {1, 0},
+      {0, 0}, {0, 1}, {1, 1}, {1, 0}, {0, 0}, {0, 1}, {1, 1}, {1, 0}, {0, 0},
+      {0, 1}, {1, 1}, {1, 0}, {0, 0}, {0, 1}, {1, 1}, {1, 0}, {0, 0}, {0, 1},
+      {1, 1}, {1, 0}, {0, 0}};
+  static const auto cube_quads     = vector<vec4i>{{0, 1, 2, 3}, {4, 5, 6, 7},
+          {8, 9, 10, 11}, {12, 13, 14, 15}, {16, 17, 18, 19}, {20, 21, 22, 23}};
+
+  auto shape = shape_data{};
+  if (subdivisions == 0) {
+    shape.quads     = cube_quads;
+    shape.positions = cube_positions;
+    shape.normals   = cube_normals;
+    shape.texcoords = cube_texcoords;
+  } else {
+    std::tie(shape.quads, shape.positions) = subdivide_quads(
+        cube_quads, cube_positions, subdivisions);
+    std::tie(shape.quads, shape.normals) = subdivide_quads(
+        cube_quads, cube_normals, subdivisions);
+    std::tie(shape.quads, shape.texcoords) = subdivide_quads(
+        cube_quads, cube_texcoords, subdivisions);
+  }
+  return shape;
+}
+shape_data make_sphere(int subdivisions) {
+  auto shape = make_cube(subdivisions);
+  for (auto& p : shape.positions) p = normalize(p);
+  shape.normals = shape.positions;
+  return shape;
+}
+shape_data make_geosphere(int subdivisions) {
+  // https://stackoverflow.com/questions/17705621/algorithm-for-a-geodesic-sphere
+  const float X                   = 0.525731112119133606f;
+  const float Z                   = 0.850650808352039932f;
+  static auto geosphere_positions = vector<vec3f>{{-X, 0.0, Z}, {X, 0.0, Z},
+      {-X, 0.0, -Z}, {X, 0.0, -Z}, {0.0, Z, X}, {0.0, Z, -X}, {0.0, -Z, X},
+      {0.0, -Z, -X}, {Z, X, 0.0}, {-Z, X, 0.0}, {Z, -X, 0.0}, {-Z, -X, 0.0}};
+  static auto geosphere_triangles = vector<vec3i>{{0, 1, 4}, {0, 4, 9},
+      {9, 4, 5}, {4, 8, 5}, {4, 1, 8}, {8, 1, 10}, {8, 10, 3}, {5, 8, 3},
+      {5, 3, 2}, {2, 3, 7}, {7, 3, 10}, {7, 10, 6}, {7, 6, 11}, {11, 6, 0},
+      {0, 6, 1}, {6, 10, 1}, {9, 11, 0}, {9, 2, 11}, {9, 5, 2}, {7, 11, 2}};
+
+  auto shape = shape_data{};
+  if (subdivisions == 0) {
+    shape.triangles = geosphere_triangles;
+    shape.positions = geosphere_positions;
+    shape.normals   = geosphere_positions;
+  } else {
+    std::tie(shape.triangles, shape.positions) = subdivide_triangles(
+        geosphere_triangles, geosphere_positions, subdivisions);
+    for (auto& position : shape.positions) position = normalize(position);
+    shape.normals = shape.positions;
+  }
+  return shape;
+}
+shape_data make_wtcube(int subdivisions) {
+  static const auto wtcube_positions = vector<vec3f>{{-1, -1, +1}, {+1, -1, +1},
+      {+1, +1, +1}, {-1, +1, +1}, {+1, -1, -1}, {-1, -1, -1}, {-1, +1, -1},
+      {+1, +1, -1}};
+  static const auto wtcube_quads     = vector<vec4i>{{0, 1, 2, 3}, {4, 5, 6, 7},
+          {1, 4, 7, 2}, {5, 0, 3, 6}, {3, 2, 7, 6}, {1, 0, 5, 4}};
+
+  auto shape = shape_data{};
+  if (subdivisions == 0) {
+    shape.quads     = wtcube_quads;
+    shape.positions = wtcube_positions;
+  } else {
+    std::tie(shape.quads, shape.positions) = subdivide_quads(
+        wtcube_quads, wtcube_positions, subdivisions);
+  }
+  return shape;
+}
+shape_data make_wtsphere(int subdivisions) {
+  auto shape = make_wtcube(subdivisions);
+  for (auto& p : shape.positions) p = normalize(p);
+  shape.normals = shape.positions;
+  return shape;
+}
+shape_data make_monkey(int subdivisions) {
+  extern vector<vec3f> suzanne_positions;
+  extern vector<vec4i> suzanne_quads;
+
+  auto shape = shape_data{};
+  if (subdivisions == 0) {
+    shape.quads     = suzanne_quads;
+    shape.positions = suzanne_positions;
+  } else {
+    std::tie(shape.quads, shape.positions) = subdivide_quads(
+        suzanne_quads, suzanne_positions, subdivisions);
+  }
+  return shape;
+}
+
+// Predefined meshes
+fvshape_data make_fvcube(int subdivisions) {
+  static const auto fvcube_positions = vector<vec3f>{{-1, -1, +1}, {+1, -1, +1},
+      {+1, +1, +1}, {-1, +1, +1}, {+1, -1, -1}, {-1, -1, -1}, {-1, +1, -1},
+      {+1, +1, -1}};
+  static const auto fvcube_normals   = vector<vec3f>{{0, 0, +1}, {0, 0, +1},
+        {0, 0, +1}, {0, 0, +1}, {0, 0, -1}, {0, 0, -1}, {0, 0, -1}, {0, 0, -1},
+        {+1, 0, 0}, {+1, 0, 0}, {+1, 0, 0}, {+1, 0, 0}, {-1, 0, 0}, {-1, 0, 0},
+        {-1, 0, 0}, {-1, 0, 0}, {0, +1, 0}, {0, +1, 0}, {0, +1, 0}, {0, +1, 0},
+        {0, -1, 0}, {0, -1, 0}, {0, -1, 0}, {0, -1, 0}};
+  static const auto fvcube_texcoords = vector<vec2f>{{0, 1}, {1, 1}, {1, 0},
+      {0, 0}, {0, 1}, {1, 1}, {1, 0}, {0, 0}, {0, 1}, {1, 1}, {1, 0}, {0, 0},
+      {0, 1}, {1, 1}, {1, 0}, {0, 0}, {0, 1}, {1, 1}, {1, 0}, {0, 0}, {0, 1},
+      {1, 1}, {1, 0}, {0, 0}};
+  static const auto fvcube_quadspos  = vector<vec4i>{{0, 1, 2, 3}, {4, 5, 6, 7},
+       {1, 4, 7, 2}, {5, 0, 3, 6}, {3, 2, 7, 6}, {1, 0, 5, 4}};
+  static const auto fvcube_quadsnorm = vector<vec4i>{{0, 1, 2, 3}, {4, 5, 6, 7},
+      {8, 9, 10, 11}, {12, 13, 14, 15}, {16, 17, 18, 19}, {20, 21, 22, 23}};
+  static const auto fvcube_quadstexcoord = vector<vec4i>{{0, 1, 2, 3},
+      {4, 5, 6, 7}, {8, 9, 10, 11}, {12, 13, 14, 15}, {16, 17, 18, 19},
+      {20, 21, 22, 23}};
+
+  auto shape = fvshape_data{};
+  if (subdivisions == 0) {
+    shape.quadspos      = fvcube_quadspos;
+    shape.quadsnorm     = fvcube_quadsnorm;
+    shape.quadstexcoord = fvcube_quadstexcoord;
+    shape.positions     = fvcube_positions;
+    shape.normals       = fvcube_normals;
+    shape.texcoords     = fvcube_texcoords;
+  } else {
+    std::tie(shape.quadspos, shape.positions) = subdivide_quads(
+        fvcube_quadspos, fvcube_positions, subdivisions);
+    std::tie(shape.quadsnorm, shape.normals) = subdivide_quads(
+        fvcube_quadsnorm, fvcube_normals, subdivisions);
+    std::tie(shape.quadstexcoord, shape.texcoords) = subdivide_quads(
+        fvcube_quadstexcoord, fvcube_texcoords, subdivisions);
+  }
+  return shape;
+}
 
 // Make a tesselated rectangle. Useful in other subdivisions.
 static shape_data make_quads(
@@ -757,9 +978,9 @@ shape_data make_bent_floor(const vec2i& steps, const vec2f& scale,
 }
 
 // Make a sphere.
-shape_data make_sphere(int steps, float scale, float uvscale) {
-  auto shape = make_box({steps, steps, steps}, {scale, scale, scale},
-      {uvscale, uvscale, uvscale});
+shape_data make_sphere(const vec3i& steps, float scale, float uvscale) {
+  auto shape = make_box(
+      steps, {scale, scale, scale}, {uvscale, uvscale, uvscale});
   for (auto& p : shape.positions) p = normalize(p) * scale;
   shape.normals = shape.positions;
   for (auto& n : shape.normals) n = normalize(n);
@@ -1071,187 +1292,6 @@ fvshape_data make_fvsphere(int steps, float scale, float uvscale) {
   return shape;
 }
 
-// Predefined meshes
-shape_data make_monkey(float scale, int subdivisions) {
-  extern vector<vec3f> suzanne_positions;
-  extern vector<vec4i> suzanne_quads;
-
-  auto shape = shape_data{};
-  if (subdivisions == 0) {
-    shape.quads     = suzanne_quads;
-    shape.positions = suzanne_positions;
-  } else {
-    std::tie(shape.quads, shape.positions) = subdivide_quads(
-        suzanne_quads, suzanne_positions, subdivisions);
-  }
-  if (scale != 1) {
-    for (auto& p : shape.positions) p *= scale;
-  }
-  return shape;
-}
-shape_data make_quad(float scale, int subdivisions) {
-  static const auto quad_positions = vector<vec3f>{
-      {-1, -1, 0}, {+1, -1, 0}, {+1, +1, 0}, {-1, +1, 0}};
-  static const auto quad_normals = vector<vec3f>{
-      {0, 0, 1}, {0, 0, 1}, {0, 0, 1}, {0, 0, 1}};
-  static const auto quad_texcoords = vector<vec2f>{
-      {0, 1}, {1, 1}, {1, 0}, {0, 0}};
-  static const auto quad_quads = vector<vec4i>{{0, 1, 2, 3}};
-  auto              shape      = shape_data{};
-  if (subdivisions == 0) {
-    shape.quads     = quad_quads;
-    shape.positions = quad_positions;
-    shape.normals   = quad_normals;
-    shape.texcoords = quad_texcoords;
-  } else {
-    std::tie(shape.quads, shape.positions) = subdivide_quads(
-        quad_quads, quad_positions, subdivisions);
-    std::tie(shape.quads, shape.normals) = subdivide_quads(
-        quad_quads, quad_normals, subdivisions);
-    std::tie(shape.quads, shape.texcoords) = subdivide_quads(
-        quad_quads, quad_texcoords, subdivisions);
-  }
-  if (scale != 1) {
-    for (auto& p : shape.positions) p *= scale;
-  }
-  return shape;
-}
-shape_data make_quady(float scale, int subdivisions) {
-  static const auto quady_positions = vector<vec3f>{
-      {-1, 0, -1}, {-1, 0, +1}, {+1, 0, +1}, {+1, 0, -1}};
-  static const auto quady_normals = vector<vec3f>{
-      {0, 1, 0}, {0, 1, 0}, {0, 1, 0}, {0, 1, 0}};
-  static const auto quady_texcoords = vector<vec2f>{
-      {0, 0}, {1, 0}, {1, 1}, {0, 1}};
-  static const auto quady_quads = vector<vec4i>{{0, 1, 2, 3}};
-  auto              shape       = shape_data{};
-  if (subdivisions == 0) {
-    shape.quads     = quady_quads;
-    shape.positions = quady_positions;
-    shape.normals   = quady_normals;
-    shape.texcoords = quady_texcoords;
-  } else {
-    std::tie(shape.quads, shape.positions) = subdivide_quads(
-        quady_quads, quady_positions, subdivisions);
-    std::tie(shape.quads, shape.normals) = subdivide_quads(
-        quady_quads, quady_normals, subdivisions);
-    std::tie(shape.quads, shape.texcoords) = subdivide_quads(
-        quady_quads, quady_texcoords, subdivisions);
-  }
-  if (scale != 1) {
-    for (auto& p : shape.positions) p *= scale;
-  }
-  return shape;
-}
-shape_data make_cube(float scale, int subdivisions) {
-  static const auto cube_positions = vector<vec3f>{{-1, -1, +1}, {+1, -1, +1},
-      {+1, +1, +1}, {-1, +1, +1}, {+1, -1, -1}, {-1, -1, -1}, {-1, +1, -1},
-      {+1, +1, -1}, {+1, -1, +1}, {+1, -1, -1}, {+1, +1, -1}, {+1, +1, +1},
-      {-1, -1, -1}, {-1, -1, +1}, {-1, +1, +1}, {-1, +1, -1}, {-1, +1, +1},
-      {+1, +1, +1}, {+1, +1, -1}, {-1, +1, -1}, {+1, -1, +1}, {-1, -1, +1},
-      {-1, -1, -1}, {+1, -1, -1}};
-  static const auto cube_normals   = vector<vec3f>{{0, 0, +1}, {0, 0, +1},
-        {0, 0, +1}, {0, 0, +1}, {0, 0, -1}, {0, 0, -1}, {0, 0, -1}, {0, 0, -1},
-        {+1, 0, 0}, {+1, 0, 0}, {+1, 0, 0}, {+1, 0, 0}, {-1, 0, 0}, {-1, 0, 0},
-        {-1, 0, 0}, {-1, 0, 0}, {0, +1, 0}, {0, +1, 0}, {0, +1, 0}, {0, +1, 0},
-        {0, -1, 0}, {0, -1, 0}, {0, -1, 0}, {0, -1, 0}};
-  static const auto cube_texcoords = vector<vec2f>{{0, 1}, {1, 1}, {1, 0},
-      {0, 0}, {0, 1}, {1, 1}, {1, 0}, {0, 0}, {0, 1}, {1, 1}, {1, 0}, {0, 0},
-      {0, 1}, {1, 1}, {1, 0}, {0, 0}, {0, 1}, {1, 1}, {1, 0}, {0, 0}, {0, 1},
-      {1, 1}, {1, 0}, {0, 0}};
-  static const auto cube_quads     = vector<vec4i>{{0, 1, 2, 3}, {4, 5, 6, 7},
-          {8, 9, 10, 11}, {12, 13, 14, 15}, {16, 17, 18, 19}, {20, 21, 22, 23}};
-
-  auto shape = shape_data{};
-  if (subdivisions == 0) {
-    shape.quads     = cube_quads;
-    shape.positions = cube_positions;
-    shape.normals   = cube_normals;
-    shape.texcoords = cube_texcoords;
-  } else {
-    std::tie(shape.quads, shape.positions) = subdivide_quads(
-        cube_quads, cube_positions, subdivisions);
-    std::tie(shape.quads, shape.normals) = subdivide_quads(
-        cube_quads, cube_normals, subdivisions);
-    std::tie(shape.quads, shape.texcoords) = subdivide_quads(
-        cube_quads, cube_texcoords, subdivisions);
-  }
-  if (scale != 1) {
-    for (auto& p : shape.positions) p *= scale;
-  }
-  return shape;
-}
-fvshape_data make_fvcube(float scale, int subdivisions) {
-  static const auto fvcube_positions = vector<vec3f>{{-1, -1, +1}, {+1, -1, +1},
-      {+1, +1, +1}, {-1, +1, +1}, {+1, -1, -1}, {-1, -1, -1}, {-1, +1, -1},
-      {+1, +1, -1}};
-  static const auto fvcube_normals   = vector<vec3f>{{0, 0, +1}, {0, 0, +1},
-        {0, 0, +1}, {0, 0, +1}, {0, 0, -1}, {0, 0, -1}, {0, 0, -1}, {0, 0, -1},
-        {+1, 0, 0}, {+1, 0, 0}, {+1, 0, 0}, {+1, 0, 0}, {-1, 0, 0}, {-1, 0, 0},
-        {-1, 0, 0}, {-1, 0, 0}, {0, +1, 0}, {0, +1, 0}, {0, +1, 0}, {0, +1, 0},
-        {0, -1, 0}, {0, -1, 0}, {0, -1, 0}, {0, -1, 0}};
-  static const auto fvcube_texcoords = vector<vec2f>{{0, 1}, {1, 1}, {1, 0},
-      {0, 0}, {0, 1}, {1, 1}, {1, 0}, {0, 0}, {0, 1}, {1, 1}, {1, 0}, {0, 0},
-      {0, 1}, {1, 1}, {1, 0}, {0, 0}, {0, 1}, {1, 1}, {1, 0}, {0, 0}, {0, 1},
-      {1, 1}, {1, 0}, {0, 0}};
-  static const auto fvcube_quadspos  = vector<vec4i>{{0, 1, 2, 3}, {4, 5, 6, 7},
-       {1, 4, 7, 2}, {5, 0, 3, 6}, {3, 2, 7, 6}, {1, 0, 5, 4}};
-  static const auto fvcube_quadsnorm = vector<vec4i>{{0, 1, 2, 3}, {4, 5, 6, 7},
-      {8, 9, 10, 11}, {12, 13, 14, 15}, {16, 17, 18, 19}, {20, 21, 22, 23}};
-  static const auto fvcube_quadstexcoord = vector<vec4i>{{0, 1, 2, 3},
-      {4, 5, 6, 7}, {8, 9, 10, 11}, {12, 13, 14, 15}, {16, 17, 18, 19},
-      {20, 21, 22, 23}};
-
-  auto shape = fvshape_data{};
-  if (subdivisions == 0) {
-    shape.quadspos      = fvcube_quadspos;
-    shape.quadsnorm     = fvcube_quadsnorm;
-    shape.quadstexcoord = fvcube_quadstexcoord;
-    shape.positions     = fvcube_positions;
-    shape.normals       = fvcube_normals;
-    shape.texcoords     = fvcube_texcoords;
-  } else {
-    std::tie(shape.quadspos, shape.positions) = subdivide_quads(
-        fvcube_quadspos, fvcube_positions, subdivisions);
-    std::tie(shape.quadsnorm, shape.normals) = subdivide_quads(
-        fvcube_quadsnorm, fvcube_normals, subdivisions);
-    std::tie(shape.quadstexcoord, shape.texcoords) = subdivide_quads(
-        fvcube_quadstexcoord, fvcube_texcoords, subdivisions);
-  }
-  if (scale != 1) {
-    for (auto& p : shape.positions) p *= scale;
-  }
-  return shape;
-}
-shape_data make_geosphere(float scale, int subdivisions) {
-  // https://stackoverflow.com/questions/17705621/algorithm-for-a-geodesic-sphere
-  const float X                   = 0.525731112119133606f;
-  const float Z                   = 0.850650808352039932f;
-  static auto geosphere_positions = vector<vec3f>{{-X, 0.0, Z}, {X, 0.0, Z},
-      {-X, 0.0, -Z}, {X, 0.0, -Z}, {0.0, Z, X}, {0.0, Z, -X}, {0.0, -Z, X},
-      {0.0, -Z, -X}, {Z, X, 0.0}, {-Z, X, 0.0}, {Z, -X, 0.0}, {-Z, -X, 0.0}};
-  static auto geosphere_triangles = vector<vec3i>{{0, 1, 4}, {0, 4, 9},
-      {9, 4, 5}, {4, 8, 5}, {4, 1, 8}, {8, 1, 10}, {8, 10, 3}, {5, 8, 3},
-      {5, 3, 2}, {2, 3, 7}, {7, 3, 10}, {7, 10, 6}, {7, 6, 11}, {11, 6, 0},
-      {0, 6, 1}, {6, 10, 1}, {9, 11, 0}, {9, 2, 11}, {9, 5, 2}, {7, 11, 2}};
-
-  auto shape = shape_data{};
-  if (subdivisions == 0) {
-    shape.triangles = geosphere_triangles;
-    shape.positions = geosphere_positions;
-    shape.normals   = geosphere_positions;
-  } else {
-    std::tie(shape.triangles, shape.positions) = subdivide_triangles(
-        geosphere_triangles, geosphere_positions, subdivisions);
-    for (auto& position : shape.positions) position = normalize(position);
-    shape.normals = shape.positions;
-  }
-  if (scale != 1) {
-    for (auto& p : shape.positions) p *= scale;
-  }
-  return shape;
-}
-
 // Make a hair ball around a shape
 shape_data make_hair(const shape_data& base, const vec2i& steps,
     const vec2f& len, const vec2f& rad, const vec2f& noise, const vec2f& clump,
@@ -1389,7 +1429,7 @@ shape_data points_to_spheres(
     const vector<vec3f>& vertices, int steps, float scale) {
   auto shape = shape_data{};
   for (auto& vertex : vertices) {
-    auto sphere = make_sphere(steps, scale, 1);
+    auto sphere = make_sphere({steps, steps, steps}, scale, 1);
     for (auto& position : sphere.positions) position += vertex;
     merge_shape_inplace(shape, sphere);
   }
