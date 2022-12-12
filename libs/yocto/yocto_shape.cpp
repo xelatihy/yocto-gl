@@ -675,6 +675,17 @@ shape_data make_geosphere(int subdivisions) {
   }
   return shape;
 }
+shape_data make_disk(int subdivisions) {
+  auto shape = make_quad(subdivisions);
+  for (auto& position : shape.positions) {
+    // Analytical Methods for Squaring the Disc, by C. Fong
+    // https://arxiv.org/abs/1509.06344
+    auto [x, y, _] = position;
+    auto uv        = vec2f{x * sqrt(1 - y * y / 2), y * sqrt(1 - x * x / 2)};
+    position       = vec3f{uv, 0};
+  }
+  return shape;
+}
 shape_data make_wtcube(int subdivisions) {
   static const auto wtcube_positions = vector<vec3f>{{-1, -1, +1}, {+1, -1, +1},
       {+1, +1, +1}, {-1, +1, +1}, {+1, -1, -1}, {-1, -1, -1}, {-1, +1, -1},
@@ -709,6 +720,34 @@ shape_data make_monkey(int subdivisions) {
   } else {
     std::tie(shape.quads, shape.positions) = subdivide_quads(
         suzanne_quads, suzanne_positions, subdivisions);
+  }
+  return shape;
+}
+
+// Deformed shapes
+shape_data make_bulged_quad(float height, int subdivisions) {
+  if (height == 0) return make_quad(subdivisions);
+  auto shape  = make_quad(subdivisions);
+  height      = min(height, 1);
+  auto radius = (1 + height * height) / (2 * height);
+  auto center = vec3f{0, 0, -radius + height};
+  for (auto i : range(shape.positions.size())) {
+    auto pn            = normalize(shape.positions[i] - center);
+    shape.positions[i] = center + pn * radius;
+    shape.normals[i]   = pn;
+  }
+  return shape;
+}
+shape_data make_bulged_disk(float height, int subdivisions) {
+  if (height == 0) return make_disk(subdivisions);
+  auto shape  = make_disk(subdivisions);
+  height      = min(height, 1);
+  auto radius = (1 + height * height) / (2 * height);
+  auto center = vec3f{0, 0, -radius + height};
+  for (auto i : range(shape.positions.size())) {
+    auto pn            = normalize(shape.positions[i] - center);
+    shape.positions[i] = center + pn * radius;
+    shape.normals[i]   = pn;
   }
   return shape;
 }
@@ -1047,37 +1086,6 @@ shape_data make_capped_uvspherey(
   for (auto& texcoord : shape.texcoords)
     texcoord = {texcoord.x, 1 - texcoord.y};
   for (auto& quad : shape.quads) quad = {quad.x, quad.w, quad.z, quad.y};
-  return shape;
-}
-
-// Make a disk
-shape_data make_disk(int steps, float scale, float uvscale) {
-  auto shape = make_rect({steps, steps}, {1, 1}, {uvscale, uvscale});
-  for (auto& position : shape.positions) {
-    // Analytical Methods for Squaring the Disc, by C. Fong
-    // https://arxiv.org/abs/1509.06344
-    auto xy = vec2f{position.x, position.y};
-    auto uv = vec2f{
-        xy.x * sqrt(1 - xy.y * xy.y / 2), xy.y * sqrt(1 - xy.x * xy.x / 2)};
-    position = vec3f{uv.x, uv.y, 0} * scale;
-  }
-  return shape;
-}
-
-// Make a bulged disk
-shape_data make_bulged_disk(
-    int steps, float scale, float uvscale, float height) {
-  auto shape = make_disk(steps, scale, uvscale);
-  if (height != 0) {
-    height      = min(height, scale);
-    auto radius = (1 + height * height) / (2 * height);
-    auto center = vec3f{0, 0, -radius + height};
-    for (auto i : range(shape.positions.size())) {
-      auto pn            = normalize(shape.positions[i] - center);
-      shape.positions[i] = center + pn * radius;
-      shape.normals[i]   = pn;
-    }
-  }
   return shape;
 }
 

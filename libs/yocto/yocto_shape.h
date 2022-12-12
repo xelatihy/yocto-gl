@@ -186,7 +186,6 @@ vector<string> fvshape_stats(const fvshape_data& shape, bool verbose = false);
 namespace yocto {
 
 // Predefined meshes
-shape_data make_monkey(int subdivisions = 0);
 shape_data make_quad(int subdivisions = 0);
 shape_data make_quady(int subdivisions = 0);
 shape_data make_cube(int subdivisions = 0);
@@ -194,9 +193,15 @@ shape_data make_sphere(int subdivisions = 5);
 shape_data make_geosphere(int subdivisions = 3);
 shape_data make_wtcube(int subdivisions = 0);
 shape_data make_wtsphere(int subdivisions = 5);
+shape_data make_disk(int subdivisions = 5);
+shape_data make_monkey(int subdivisions = 0);
 
 // Predefined meshes
 fvshape_data make_fvcube(int subdivisions = 0);
+
+// Deformed meshes
+shape_data make_bulged_quad(float radius = 0.3f, int subdivisions = 5);
+shape_data make_bulged_disk(float height = 0.3f, int subdivisions = 5);
 
 // Make a plane.
 shape_data make_rect(const vec2i& steps = {1, 1}, const vec2f& scale = {1, 1},
@@ -238,11 +243,6 @@ shape_data make_capped_uvsphere(const vec2i& steps = {32, 32}, float scale = 1,
     const vec2f& uvscale = {1, 1}, float height = 0.3f);
 shape_data make_capped_uvspherey(const vec2i& steps = {32, 32}, float scale = 1,
     const vec2f& uvscale = {1, 1}, float height = 0.3f);
-// Make a disk
-shape_data make_disk(int steps = 32, float scale = 1, float uvscale = 1);
-// Make a bulged disk
-shape_data make_bulged_disk(
-    int steps = 32, float scale = 1, float uvscale = 1, float height = 0.3f);
 // Make a uv disk
 shape_data make_uvdisk(const vec2i& steps = {32, 32}, float scale = 1,
     const vec2f& uvscale = {1, 1});

@@ -1332,9 +1332,7 @@ shape_data make_shape_preset(const string& type_) {
         translation_frame(vec3f{0, 0.015f, 0}) * scaling_frame(0.015f),
         make_sphere());
   } else if (type == "test-disk") {
-    auto shape = make_disk(32, 0.075f, 1);
-    for (auto& p : shape.positions) p += vec3f{0, 0.075f, 0};
-    return shape;
+    return transform_shape(test_xform, make_disk());
   } else if (type == "test-uvcylinder") {
     auto shape = make_rounded_uvcylinder(
         {32, 32, 32}, {0.075f, 0.075f}, {1, 1, 1}, 0.3f * 0.075f);
