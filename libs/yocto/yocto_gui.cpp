@@ -942,7 +942,7 @@ namespace yocto {
 static void assert_glerror() { assert(_assert_ogl_error() == GL_NO_ERROR); }
 
 // initialize program
-static void set_program(uint& program_id, uint& vertex_id, uint& fragment_id,
+static void set_glprogram(uint& program_id, uint& vertex_id, uint& fragment_id,
     const string& vertex, const string& fragment) {
   // error
   auto program_error = [&](const char* message, const char* log) {
@@ -1009,6 +1009,18 @@ static void set_program(uint& program_id, uint& vertex_id, uint& fragment_id,
   }
   assert_glerror();
 #endif
+}
+
+// Viewport and framebuffer
+inline void set_glviewport(const vec4f& framebuffer) {
+  auto [x, y, w, h] = framebuffer;
+  glViewport(x, y, w, h);
+}
+inline void clear_glframebuffer(const vec4f& background) {
+  auto [r, g, b, a] = background;
+  glClearColor(r, g, b, a);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  glEnable(GL_DEPTH_TEST);
 }
 
 // Parameter setting
@@ -1124,8 +1136,8 @@ void main() {
 // init image program
 bool init_image(glimage_state& glimage) {
   // program
-  set_program(glimage.program, glimage.vertex, glimage.fragment, glimage_vertex,
-      glimage_fragment);
+  set_glprogram(glimage.program, glimage.vertex, glimage.fragment,
+      glimage_vertex, glimage_fragment);
 
   // vertex arrays
   glGenVertexArrays(1, &glimage.vertexarray);
@@ -1188,12 +1200,8 @@ void draw_image(glimage_state& glimage, const glimage_params& params) {
   assert_glerror();
 
   // viewport and framebuffer
-  glViewport(params.framebuffer.x, params.framebuffer.y, params.framebuffer.z,
-      params.framebuffer.w);
-  glClearColor(params.background.x, params.background.y, params.background.z,
-      params.background.w);
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-  glEnable(GL_DEPTH_TEST);
+  set_glviewport(params.framebuffer);
+  clear_glframebuffer(params.background);
 
   // blend
   glEnable(GL_BLEND);
@@ -1630,8 +1638,8 @@ static void clear_shape(glscene_shape& glshape) {
 // init scene
 static void init_glscene(glscene_state& glscene, const scene_data& ioscene) {
   // program
-  set_program(glscene.program, glscene.vertex, glscene.fragment, glscene_vertex,
-      glscene_fragment);
+  set_glprogram(glscene.program, glscene.vertex, glscene.fragment,
+      glscene_vertex, glscene_fragment);
 
   // textures
   for (auto& iotexture : ioscene.textures) {
@@ -1703,11 +1711,8 @@ static void draw_scene(glscene_state& glscene, const scene_data& scene,
   assert_glerror();
 
   // viewport and framebuffer
-  glViewport(viewport.x, viewport.y, viewport.z, viewport.w);
-  glClearColor(params.background.x, params.background.y, params.background.z,
-      params.background.w);
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-  glEnable(GL_DEPTH_TEST);
+  set_glviewport(viewport);
+  clear_glframebuffer(params.background);
 
   // set program
   auto& program = glscene.program;
