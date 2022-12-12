@@ -1063,9 +1063,9 @@ inline void bind_vertexarrays(uint vertexarray) {
 
 // Vertex buffers
 template <typename T>
-inline void set_vertex(
-    uint& buffer, int& num, const vector<T>& data, const T& def, int location) {
-  if (data.empty()) {
+inline void set_vertex(uint& buffer, int& num, const vector<T>& values,
+    const T& def, int location) {
+  if (values.empty()) {
     if (buffer) glDeleteBuffers(1, &buffer);
     buffer = 0;
     num    = 0;
@@ -1073,28 +1073,28 @@ inline void set_vertex(
     if constexpr (sizeof(def) == sizeof(float))
       glVertexAttrib1f(location, (float)def);
     if constexpr (sizeof(def) == sizeof(vec2f))
-      glVertexAttrib2fv(location, (float*)&def.x);
+      glVertexAttrib2fv(location, data(def));
     if constexpr (sizeof(def) == sizeof(vec3f))
-      glVertexAttrib3fv(location, (float*)&def.x);
+      glVertexAttrib3fv(location, data(def));
     if constexpr (sizeof(def) == sizeof(vec4f))
-      glVertexAttrib4fv(location, (float*)&def.x);
+      glVertexAttrib4fv(location, data(def));
   } else {
-    if (!buffer || (int)data.size() != num) {
+    if (!buffer || (int)values.size() != num) {
       if (buffer) glDeleteBuffers(1, &buffer);
       glGenBuffers(1, &buffer);
       glBindBuffer(GL_ARRAY_BUFFER, buffer);
-      glBufferData(GL_ARRAY_BUFFER, data.size() * sizeof(data.front()),
-          data.data(), GL_STATIC_DRAW);
-      num = (int)data.size();
+      glBufferData(GL_ARRAY_BUFFER, values.size() * sizeof(values.front()),
+          values.data(), GL_STATIC_DRAW);
+      num = (int)values.size();
     } else {
       // we have enough space
       glBindBuffer(GL_ARRAY_BUFFER, buffer);
-      glBufferSubData(
-          GL_ARRAY_BUFFER, 0, data.size() * sizeof(data.front()), data.data());
+      glBufferSubData(GL_ARRAY_BUFFER, 0,
+          values.size() * sizeof(values.front()), values.data());
     }
     glBindBuffer(GL_ARRAY_BUFFER, buffer);
     glEnableVertexAttribArray(location);
-    glVertexAttribPointer(location, sizeof(data.front()) / sizeof(float),
+    glVertexAttribPointer(location, sizeof(values.front()) / sizeof(float),
         GL_FLOAT, false, 0, nullptr);
   }
 }
@@ -1934,21 +1934,22 @@ struct glwindow_state {
 };
 
 static void draw_window(glwindow_state& state) {
-  glClearColor(state.background.x, state.background.y, state.background.z,
-      state.background.w);
+  auto [r, g, b, a] = state.background;
+  glClearColor(r, g, b, a);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   if (state.draw) state.draw(state.input);
   if (state.widgets) {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
-    auto window = state.window;
+    auto window          = state.window;
+    auto [width, height] = window;
     if (state.widgets_left) {
       ImGui::SetNextWindowPos({0, 0});
-      ImGui::SetNextWindowSize({(float)state.widgets_width, (float)window.y});
+      ImGui::SetNextWindowSize({(float)state.widgets_width, (float)height});
     } else {
-      ImGui::SetNextWindowPos({(float)(window.x - state.widgets_width), 0});
-      ImGui::SetNextWindowSize({(float)state.widgets_width, (float)window.y});
+      ImGui::SetNextWindowPos({(float)(width - state.widgets_width), 0});
+      ImGui::SetNextWindowSize({(float)state.widgets_width, (float)height});
     }
     ImGui::SetNextWindowCollapsed(false);
     ImGui::SetNextWindowBgAlpha(1);
@@ -1988,8 +1989,9 @@ void show_gui_window(const vec2i& size, const string& title,
   state.uiupdate = callbacks.uiupdate;
 
   // create window
-  auto window = glfwCreateWindow(
-      size.x, size.y, title.c_str(), nullptr, nullptr);
+  auto [width, height] = size;
+  auto window          = glfwCreateWindow(
+      width, height, title.c_str(), nullptr, nullptr);
   if (window == nullptr)
     throw std::runtime_error{"cannot initialize windowing system"};
   glfwMakeContextCurrent(window);
@@ -2000,8 +2002,9 @@ void show_gui_window(const vec2i& size, const string& title,
 
   // set callbacks
   glfwSetWindowRefreshCallback(window, [](GLFWwindow* window) {
-    auto& state = *(glwindow_state*)glfwGetWindowUserPointer(window);
-    glfwGetWindowSize(window, &state.window.x, &state.window.y);
+    auto& state           = *(glwindow_state*)glfwGetWindowUserPointer(window);
+    auto& [width, height] = state.window;
+    glfwGetWindowSize(window, &width, &height);
     draw_window(state);
     glfwSwapBuffers(window);
   });
