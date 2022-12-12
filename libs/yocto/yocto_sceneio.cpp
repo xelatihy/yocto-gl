@@ -1232,7 +1232,8 @@ void save_fvshape(const string& filename, const fvshape_data& shape,
 }
 
 // Shape presets used for testing.
-shape_data make_shape_preset(const string& type) {
+shape_data make_shape_preset(const string& type_) {
+  auto type       = path_basename(type_);
   auto test_xform = translation_frame(vec3f{0, 0.75f, 0}) *
                     scaling_frame(0.75f);
   if (type == "default-quad") {
@@ -1427,7 +1428,7 @@ shape_data make_shape_preset(const string& type) {
   } else if (type == "test-clothy") {
     return make_recty({64, 64}, {0.2f, 0.2f});
   } else {
-    return {};
+    throw io_error{"unknown preset " + type};
   }
 }
 
@@ -2197,7 +2198,7 @@ scene_data make_scene_preset(const string& type_) {
         test_shapes_type::bunny_sphere, test_materials_type::plastic_metal,
         test_instance_name_type::material});
   } else {
-    return {};
+    throw io_error{"unknown preset " + type};
   }
 }
 
