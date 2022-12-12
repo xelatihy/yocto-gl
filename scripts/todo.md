@@ -12,6 +12,10 @@
   in the generators; otherwise include frames everywhere as the only way to
   deal with sizes and positions
 
+## Color
+
+- simplify color space conversions by hardcoding matrices
+
 ## IO
 
 - consider exception in modelio
