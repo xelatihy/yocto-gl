@@ -1021,7 +1021,7 @@ inline void clear_program(uint& program, uint& vertex, uint& fragment) {
 inline void bind_program(uint program) { glUseProgram(program); }
 
 // Viewport and framebuffer
-inline void set_viewport(const vec4i& framebuffer) {
+inline void bind_viewport(const vec4i& framebuffer) {
   auto [x, y, w, h] = framebuffer;
   glViewport(x, y, w, h);
 }
@@ -1312,7 +1312,7 @@ void draw_image(glimage_state& glimage, const glimage_params& params) {
   assert_glerror();
 
   // viewport and framebuffer
-  set_viewport(params.framebuffer);
+  bind_viewport(params.framebuffer);
   clear_framebuffer(params.background);
 
   // blend
@@ -1759,7 +1759,7 @@ static void draw_scene(glscene_state& glscene, const scene_data& scene,
   assert_glerror();
 
   // viewport and framebuffer
-  set_viewport(viewport);
+  bind_viewport(viewport);
   clear_framebuffer(params.background);
 
   // set program
