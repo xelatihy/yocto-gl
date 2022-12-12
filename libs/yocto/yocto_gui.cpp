@@ -1012,21 +1012,21 @@ static void set_program(uint& program_id, uint& vertex_id, uint& fragment_id,
 }
 
 // Parameter setting
-inline void set_uniform(int loc, float v) { glUniform1f(loc, v); }
-inline void set_uniform(int loc, vec2f v) { glUniform2fv(loc, 1, &v[0]); }
-inline void set_uniform(int loc, vec3f v) { glUniform3fv(loc, 1, &v[0]); }
-inline void set_uniform(int loc, vec4f v) { glUniform4fv(loc, 1, &v[0]); }
-inline void set_uniform(int loc, int v) { glUniform1i(loc, v); }
-inline void set_uniform(int loc, vec2i v) { glUniform2iv(loc, 1, &v[0]); }
-inline void set_uniform(int loc, vec3i v) { glUniform3iv(loc, 1, &v[0]); }
-inline void set_uniform(int loc, vec4i v) { glUniform4iv(loc, 1, &v[0]); }
-inline void set_uniform(int loc, bool v) { glUniform1i(loc, v ? 1 : 0); }
-inline void set_uniform(int loc, const mat4f& v) {
+inline void set_gluniform(int loc, float v) { glUniform1f(loc, v); }
+inline void set_gluniform(int loc, vec2f v) { glUniform2fv(loc, 1, &v[0]); }
+inline void set_gluniform(int loc, vec3f v) { glUniform3fv(loc, 1, &v[0]); }
+inline void set_gluniform(int loc, vec4f v) { glUniform4fv(loc, 1, &v[0]); }
+inline void set_gluniform(int loc, int v) { glUniform1i(loc, v); }
+inline void set_gluniform(int loc, vec2i v) { glUniform2iv(loc, 1, &v[0]); }
+inline void set_gluniform(int loc, vec3i v) { glUniform3iv(loc, 1, &v[0]); }
+inline void set_gluniform(int loc, vec4i v) { glUniform4iv(loc, 1, &v[0]); }
+inline void set_gluniform(int loc, bool v) { glUniform1i(loc, v ? 1 : 0); }
+inline void set_gluniform(int loc, const mat4f& v) {
   glUniformMatrix4fv(loc, 1, false, &v[0][0]);
 }
 template <typename T>
-inline void set_uniform(uint program, const char* name, const T& v) {
-  return set_uniform(glGetUniformLocation(program, name), v);
+inline void set_gluniform(uint program, const char* name, const T& v) {
+  return set_gluniform(glGetUniformLocation(program, name), v);
 }
 
 }  // namespace yocto
@@ -1204,16 +1204,16 @@ void draw_image(glimage_state& glimage, const glimage_params& params) {
   glUseProgram(glimage.program);
   glActiveTexture(GL_TEXTURE0);
   glBindTexture(GL_TEXTURE_2D, glimage.texture);
-  set_uniform(glimage.program, "txt", 0);
-  set_uniform(glimage.program, "window", (vec2f)params.window);
-  set_uniform(glimage.program, "image_size", (vec2f)glimage.extents);
-  set_uniform(glimage.program, "image_center", params.center);
-  set_uniform(glimage.program, "image_scale", params.scale);
-  set_uniform(glimage.program, "background", params.background);
-  set_uniform(glimage.program, "tonemap", params.tonemap);
-  set_uniform(glimage.program, "exposure", params.exposure);
-  set_uniform(glimage.program, "srgb", params.srgb);
-  set_uniform(glimage.program, "filmic", params.filmic);
+  set_gluniform(glimage.program, "txt", 0);
+  set_gluniform(glimage.program, "window", (vec2f)params.window);
+  set_gluniform(glimage.program, "image_size", (vec2f)glimage.extents);
+  set_gluniform(glimage.program, "image_center", params.center);
+  set_gluniform(glimage.program, "image_scale", params.scale);
+  set_gluniform(glimage.program, "background", params.background);
+  set_gluniform(glimage.program, "tonemap", params.tonemap);
+  set_gluniform(glimage.program, "exposure", params.exposure);
+  set_gluniform(glimage.program, "srgb", params.srgb);
+  set_gluniform(glimage.program, "filmic", params.filmic);
   assert_glerror();
 
   // draw
@@ -1723,14 +1723,14 @@ static void draw_scene(glscene_state& glscene, const scene_data& scene,
   auto view_matrix       = frame_to_mat(inverse(camera.frame));
   auto projection_matrix = perspective_mat(
       camera_yfov, camera_aspect, params.near, params.far);
-  set_uniform(program, "eye", camera.frame.o);
-  set_uniform(program, "view", view_matrix);
-  set_uniform(program, "projection", projection_matrix);
+  set_gluniform(program, "eye", camera.frame.o);
+  set_gluniform(program, "view", view_matrix);
+  set_gluniform(program, "projection", projection_matrix);
 
   // params
-  set_uniform(program, "exposure", params.exposure);
-  set_uniform(program, "gamma", params.gamma);
-  set_uniform(program, "double_sided", params.double_sided);
+  set_gluniform(program, "exposure", params.exposure);
+  set_gluniform(program, "gamma", params.gamma);
+  set_gluniform(program, "double_sided", params.double_sided);
 
   static auto lights_direction = vector<vec3f>{normalize(vec3f{1, 1, 1}),
       normalize(vec3f{-1, 1, 1}), normalize(vec3f{-1, -1, 1}),
@@ -1739,19 +1739,20 @@ static void draw_scene(glscene_state& glscene, const scene_data& scene,
        vec3f{pif / 2, pif / 2, pif / 2}, vec3f{pif / 4, pif / 4, pif / 4},
        vec3f{pif / 4, pif / 4, pif / 4}};
   if (params.lighting == shade_lighting::camlight) {
-    set_uniform(program, "lighting", 1);
-    set_uniform(program, "ambient", vec3f{0, 0, 0});
-    set_uniform(program, "lights_num", (int)lights_direction.size());
+    set_gluniform(program, "lighting", 1);
+    set_gluniform(program, "ambient", vec3f{0, 0, 0});
+    set_gluniform(program, "lights_num", (int)lights_direction.size());
     for (auto lid : range((int)lights_direction.size())) {
       auto is        = std::to_string(lid);
       auto direction = transform_direction(camera.frame, lights_direction[lid]);
-      set_uniform(program, ("lights_direction[" + is + "]").c_str(), direction);
-      set_uniform(program, ("lights_emission[" + is + "]").c_str(),
+      set_gluniform(
+          program, ("lights_direction[" + is + "]").c_str(), direction);
+      set_gluniform(program, ("lights_emission[" + is + "]").c_str(),
           lights_emission[lid]);
     }
   } else if (params.lighting == shade_lighting::eyelight) {
-    set_uniform(program, "lighting", 0);
-    set_uniform(program, "lights_num", 0);
+    set_gluniform(program, "lighting", 0);
+    set_gluniform(program, "lights_num", 0);
   } else {
     throw std::invalid_argument{"unknown lighting type"};
   }
@@ -1763,13 +1764,13 @@ static void draw_scene(glscene_state& glscene, const scene_data& scene,
       auto& gltexture = glscene.textures.at(texture_idx);
       glActiveTexture(GL_TEXTURE0 + unit);
       glBindTexture(GL_TEXTURE_2D, gltexture.texture);
-      set_uniform(program, name, unit);
-      set_uniform(program, name_on, 1);
+      set_gluniform(program, name, unit);
+      set_gluniform(program, name_on, 1);
     } else {
       glActiveTexture(GL_TEXTURE0 + unit);
       glBindTexture(GL_TEXTURE_2D, 0);
-      set_uniform(program, name, unit);
-      set_uniform(program, name_on, 0);
+      set_gluniform(program, name, unit);
+      set_gluniform(program, name_on, 0);
     }
   };
 
@@ -1782,28 +1783,28 @@ static void draw_scene(glscene_state& glscene, const scene_data& scene,
     auto shape_xform     = frame_to_mat(instance.frame);
     auto shape_inv_xform = transpose(
         frame_to_mat(inverse(instance.frame, params.non_rigid_frames)));
-    set_uniform(program, "frame", shape_xform);
-    set_uniform(program, "frameit", shape_inv_xform);
-    set_uniform(program, "faceted", params.faceted || glshape.normals == 0);
+    set_gluniform(program, "frame", shape_xform);
+    set_gluniform(program, "frameit", shape_inv_xform);
+    set_gluniform(program, "faceted", params.faceted || glshape.normals == 0);
 
-    set_uniform(program, "unlit", 0);
-    set_uniform(program, "emission", material.emission);
-    set_uniform(program, "color", material.color);
-    set_uniform(program, "specular", 1.0f);
-    set_uniform(program, "metallic", material.metallic);
-    set_uniform(program, "roughness", material.roughness);
-    set_uniform(program, "opacity", material.opacity);
+    set_gluniform(program, "unlit", 0);
+    set_gluniform(program, "emission", material.emission);
+    set_gluniform(program, "color", material.color);
+    set_gluniform(program, "specular", 1.0f);
+    set_gluniform(program, "metallic", material.metallic);
+    set_gluniform(program, "roughness", material.roughness);
+    set_gluniform(program, "opacity", material.opacity);
     if (material.type == material_type::matte ||
         material.type == material_type::transparent ||
         material.type == material_type::refractive ||
         material.type == material_type::subsurface ||
         material.type == material_type::volumetric) {
-      set_uniform(program, "specular", 0.0f);
+      set_gluniform(program, "specular", 0.0f);
     }
     if (material.type == material_type::reflective) {
-      set_uniform(program, "metallic", 1.0f);
+      set_gluniform(program, "metallic", 1.0f);
     }
-    set_uniform(program, "double_sided", params.double_sided);
+    set_gluniform(program, "double_sided", params.double_sided);
     set_texture(
         program, "emission_tex", "emission_tex_on", material.emission_tex, 0);
     set_texture(program, "color_tex", "color_tex_on", material.color_tex, 1);
@@ -1813,10 +1814,10 @@ static void draw_scene(glscene_state& glscene, const scene_data& scene,
         program, "normalmap_tex", "normalmap_tex_on", material.normal_tex, 5);
     assert_glerror();
 
-    if (glshape.points) set_uniform(program, "element", 1);
-    if (glshape.lines) set_uniform(program, "element", 2);
-    if (glshape.triangles) set_uniform(program, "element", 3);
-    if (glshape.quads) set_uniform(program, "element", 3);
+    if (glshape.points) set_gluniform(program, "element", 1);
+    if (glshape.lines) set_gluniform(program, "element", 2);
+    if (glshape.triangles) set_gluniform(program, "element", 3);
+    if (glshape.quads) set_gluniform(program, "element", 3);
     assert_glerror();
 
     glBindVertexArray(glshape.vertexarray);
