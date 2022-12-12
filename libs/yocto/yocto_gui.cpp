@@ -1170,6 +1170,15 @@ template <typename T>
 inline void bind_uniform(uint program, const char* name, const T& v) {
   return bind_uniform(glGetUniformLocation(program, name), v);
 }
+inline void bind_texture(int loc, uint texture, int unit) {
+  glActiveTexture(GL_TEXTURE0 + unit);
+  glBindTexture(GL_TEXTURE_2D, texture);
+  bind_uniform(loc, unit);
+}
+inline void bind_texture(
+    uint program, const char* name, uint texture, int unit) {
+  return bind_texture(glGetUniformLocation(program, name), texture, unit);
+}
 
 }  // namespace yocto
 
@@ -1811,21 +1820,18 @@ static void draw_scene(glscene_state& glscene, const scene_data& scene,
   }
 
   // helper
-  auto set_texture = [&glscene](uint program, const char* name,
-                         const char* name_on, int texture_idx, int unit) {
-    if (texture_idx >= 0) {
-      auto& gltexture = glscene.textures.at(texture_idx);
-      glActiveTexture(GL_TEXTURE0 + unit);
-      glBindTexture(GL_TEXTURE_2D, gltexture.texture);
-      bind_uniform(program, name, unit);
-      bind_uniform(program, name_on, 1);
-    } else {
-      glActiveTexture(GL_TEXTURE0 + unit);
-      glBindTexture(GL_TEXTURE_2D, 0);
-      bind_uniform(program, name, unit);
-      bind_uniform(program, name_on, 0);
-    }
-  };
+  auto bind_scene_texture =
+      [](uint program, const char* name, const char* name_on,
+          const glscene_state& glscene, int texture_idx, int unit) {
+        if (texture_idx >= 0) {
+          auto& gltexture = glscene.textures.at(texture_idx);
+          bind_texture(program, name, gltexture.texture, unit);
+          bind_uniform(program, name_on, 1);
+        } else {
+          bind_texture(program, name, 0, unit);
+          bind_uniform(program, name_on, 0);
+        }
+      };
 
   // draw instances
   if (params.wireframe) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -1858,13 +1864,14 @@ static void draw_scene(glscene_state& glscene, const scene_data& scene,
       bind_uniform(program, "metallic", 1.0f);
     }
     bind_uniform(program, "double_sided", params.double_sided);
-    set_texture(
-        program, "emission_tex", "emission_tex_on", material.emission_tex, 0);
-    set_texture(program, "color_tex", "color_tex_on", material.color_tex, 1);
-    set_texture(program, "roughness_tex", "roughness_tex_on",
+    bind_scene_texture(program, "emission_tex", "emission_tex_on", glscene,
+        material.emission_tex, 0);
+    bind_scene_texture(
+        program, "color_tex", "color_tex_on", glscene, material.color_tex, 1);
+    bind_scene_texture(program, "roughness_tex", "roughness_tex_on", glscene,
         material.roughness_tex, 3);
-    set_texture(
-        program, "normalmap_tex", "normalmap_tex_on", material.normal_tex, 5);
+    bind_scene_texture(program, "normalmap_tex", "normalmap_tex_on", glscene,
+        material.normal_tex, 5);
     assert_glerror();
 
     if (glshape.points) bind_uniform(program, "element", 1);
