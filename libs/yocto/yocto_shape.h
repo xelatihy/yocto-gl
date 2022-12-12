@@ -194,6 +194,7 @@ shape_data make_geosphere(int subdivisions = 3);
 shape_data make_wtcube(int subdivisions = 0);
 shape_data make_wtsphere(int subdivisions = 5);
 shape_data make_disk(int subdivisions = 5);
+shape_data make_floor(float size = 10, int subdivisions = 0);
 shape_data make_monkey(int subdivisions = 0);
 
 // Predefined meshes
@@ -203,6 +204,8 @@ fvshape_data make_fvcube(int subdivisions = 0);
 shape_data make_rounded_cube(float radius = 0.3f, int subdivisions = 5);
 shape_data make_bulged_quad(float radius = 0.3f, int subdivisions = 5);
 shape_data make_bulged_disk(float height = 0.3f, int subdivisions = 5);
+shape_data make_bent_floor(
+    float bent = 0.5f, float size = 10, int subdivisions = 0);
 
 // Make a plane.
 shape_data make_rect(const vec2i& steps = {1, 1}, const vec2f& scale = {1, 1},
@@ -225,12 +228,6 @@ shape_data make_rounded_box(const vec3i& steps = {1, 1, 1},
 // Make a quad stack
 shape_data make_rect_stack(const vec3i& steps = {1, 1, 1},
     const vec3f& scale = {1, 1, 1}, const vec2f& uvscale = {1, 1});
-// Make a floor.
-shape_data make_floor(const vec2i& steps = {1, 1},
-    const vec2f& scale = {10, 10}, const vec2f& uvscale = {10, 10});
-shape_data make_bent_floor(const vec2i& steps = {1, 1},
-    const vec2f& scale = {10, 10}, const vec2f& uvscale = {10, 10},
-    float bent = 0.5f);
 // Make a sphere.
 shape_data make_sphere_(
     const vec3i& steps = {32, 32, 32}, float scale = 1, float uvscale = 1);

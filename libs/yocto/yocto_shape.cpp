@@ -709,6 +709,12 @@ shape_data make_wtsphere(int subdivisions) {
   shape.normals = shape.positions;
   return shape;
 }
+shape_data make_floor(float scale, int subdivisions) {
+  auto shape = make_quady(subdivisions);
+  for (auto& position : shape.positions) position *= scale;
+  for (auto& texcoord : shape.texcoords) texcoord *= scale;
+  return shape;
+}
 shape_data make_monkey(int subdivisions) {
   extern vector<vec3f> suzanne_positions;
   extern vector<vec4i> suzanne_quads;
@@ -782,6 +788,27 @@ shape_data make_rounded_cube(float radius, int subdivisions) {
     }
     shape.positions[i] *= ps;
     shape.normals[i] *= ps;
+  }
+  return shape;
+}
+shape_data make_bent_floor(float scale, float radius, int subdivisions) {
+  if (radius == 0) return make_floor(scale, subdivisions);
+  auto shape = make_floor(scale, subdivisions);
+  radius     = min(radius * scale, scale);
+  auto start = (scale - radius) / 2;
+  auto end   = start + radius;
+  for (auto i : range(shape.positions.size())) {
+    if (shape.positions[i].z < -end) {
+      shape.positions[i] = {
+          shape.positions[i].x, -shape.positions[i].z - end + radius, -end};
+      shape.normals[i] = {0, 0, 1};
+    } else if (shape.positions[i].z < -start && shape.positions[i].z >= -end) {
+      auto phi           = (pif / 2) * (-shape.positions[i].z - start) / radius;
+      shape.positions[i] = {shape.positions[i].x, -cos(phi) * radius + radius,
+          -sin(phi) * radius - start};
+      shape.normals[i]   = {0, cos(phi), sin(phi)};
+    } else {
+    }
   }
   return shape;
 }
@@ -1014,40 +1041,6 @@ shape_data make_rect_stack(
     for (auto& p : qshape.positions)
       p.z = (-1 + 2 * (float)i / steps.z) * scale.z;
     merge_shape_inplace(shape, qshape);
-  }
-  return shape;
-}
-
-// Make a floor.
-shape_data make_floor(
-    const vec2i& steps, const vec2f& scale, const vec2f& uvscale) {
-  auto shape = make_rect(steps, scale, uvscale);
-  for (auto& position : shape.positions)
-    position = {position.x, position.z, -position.y};
-  for (auto& normal : shape.normals) normal = {normal.x, normal.z, normal.y};
-  return shape;
-}
-shape_data make_bent_floor(const vec2i& steps, const vec2f& scale,
-    const vec2f& uvscale, float radius) {
-  auto shape = make_floor(steps, scale, uvscale);
-  if (radius != 0) {
-    radius     = min(radius, scale.y);
-    auto start = (scale.y - radius) / 2;
-    auto end   = start + radius;
-    for (auto i : range(shape.positions.size())) {
-      if (shape.positions[i].z < -end) {
-        shape.positions[i] = {
-            shape.positions[i].x, -shape.positions[i].z - end + radius, -end};
-        shape.normals[i] = {0, 0, 1};
-      } else if (shape.positions[i].z < -start &&
-                 shape.positions[i].z >= -end) {
-        auto phi = (pif / 2) * (-shape.positions[i].z - start) / radius;
-        shape.positions[i] = {shape.positions[i].x, -cos(phi) * radius + radius,
-            -sin(phi) * radius - start};
-        shape.normals[i]   = {0, cos(phi), sin(phi)};
-      } else {
-      }
-    }
   }
   return shape;
 }

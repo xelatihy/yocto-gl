@@ -1298,7 +1298,7 @@ shape_data make_shape_preset(const string& type_) {
   } else if (type == "displaced_sphere") {
     return make_sphere(7);
   } else if (type == "floor") {
-    return make_floor({1, 1}, {2, 2}, {20, 20});
+    return make_floor();
   } else if (type == "test_cube") {
     return transform_shape(test_xform, make_rounded_cube());
   } else if (type == "test_uvsphere") {
@@ -1326,17 +1326,15 @@ shape_data make_shape_preset(const string& type_) {
   } else if (type == "test_uvcylinder") {
     return transform_shape(test_xform, make_rounded_uvcylinder({32, 32, 32}));
   } else if (type == "test_floor") {
-    return make_floor({1, 1}, {2, 2}, {20, 20});
-  } else if (type == "test_smallfloor") {
-    return make_floor({1, 1}, {0.5f, 0.5f}, {1, 1});
+    return make_floor();
   } else if (type == "test_quad") {
-    return make_rect({1, 1}, {0.075f, 0.075f}, {1, 1});
+    return transform_shape(test_xform, make_quad());
   } else if (type == "test_quady") {
-    return make_recty({1, 1}, {0.075f, 0.075f}, {1, 1});
+    return transform_shape(test_xform, make_quady());
   } else if (type == "test_displaced_quad") {
-    return make_rect({256, 256}, {0.075f, 0.075f}, {1, 1});
+    return transform_shape(test_xform, make_quad(8));
   } else if (type == "test_displaced_quady") {
-    return make_recty({256, 256}, {0.075f, 0.075f}, {1, 1});
+    return transform_shape(test_xform, make_quady(8));
   } else if (type == "test_matball") {
     return transform_shape(test_xform, make_sphere());
   } else if (type == "test_geosphere") {
