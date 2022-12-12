@@ -52,6 +52,7 @@
 #include <vector>
 
 #include "yocto_math.h"
+#include "yocto_views.h"
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
@@ -310,7 +311,11 @@ constexpr kernel float sample_cylinder_pdf(const vec<T, 3>& point) {
 // Sample a point uniformly on a triangle returning the baricentric coordinates.
 template <typename T>
 constexpr kernel vec<T, 2> sample_triangle(const vec<T, 2>& ruv) {
+#ifndef __CUDACC__
   auto [r1, r2] = ruv;
+#else
+  auto r1 = ruv.x, r2 = ruv.y;
+#endif
   return {1 - sqrt(r1), r2 * sqrt(r1)};
 }
 

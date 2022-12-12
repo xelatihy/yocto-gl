@@ -258,6 +258,7 @@ constexpr kernel float sample_microfacet_pdf(float roughness,
   return microfacet_distribution(roughness, normal, halfway, ggx) * cosine;
 }
 
+#ifndef __CUDACC__
 // Sample a microfacet distribution with the distribution of visible normals.
 constexpr kernel vec3f sample_microfacet(float roughness, const vec3f& normal,
     const vec3f& outgoing, const vec2f& rn, bool ggx = true) {
@@ -292,13 +293,15 @@ constexpr kernel vec3f sample_microfacet(float roughness, const vec3f& normal,
     auto local_halfway = Ne;
     return transform_direction(basis, local_halfway);
   } else {
-#ifndef __CUDACC__
     throw std::invalid_argument{"not implemented yet"};
-#else
-    return {0, 0, 0};
-#endif
   }
 }
+#else
+constexpr kernel vec3f sample_microfacet(float roughness, const vec3f& normal,
+    const vec3f& outgoing, const vec2f& rn, bool ggx = true) {
+  return {0, 0, 0};
+}
+#endif
 
 // Pdf for microfacet distribution sampling with the distribution of visible
 // normals.
@@ -883,7 +886,11 @@ constexpr kernel float eval_phasefunction(
 // Sample phase function
 constexpr kernel vec3f sample_phasefunction(
     float anisotropy, const vec3f& outgoing, const vec2f& rn) {
-  auto [r1, r2]  = rn;
+#ifndef __CUDACC__
+  auto [r1, r2] = rn;
+#else
+  auto r1 = rn[0], r2 = rn[1];
+#endif
   auto cos_theta = 0.0f;
   if (abs(anisotropy) < 1e-3f) {
     cos_theta = 1 - 2 * r2;
