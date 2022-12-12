@@ -1166,6 +1166,42 @@ inline void set_texture(
   }
   extents = (vec2i)image.extents();
 }
+static void set_texture(uint& texture, vec2i& extents,
+    const array2d<vec4f>& imagef, const array2d<vec4b>& imageb, bool mipmap) {
+  auto imextents       = (vec2i)max(imagef.extents(), imageb.extents());
+  auto [width, height] = imextents;
+  if (!texture || extents != imextents) {
+    if (!texture) glGenTextures(1, &texture);
+    glBindTexture(GL_TEXTURE_2D, texture);
+    if (!imageb.empty()) {
+      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA,
+          GL_UNSIGNED_BYTE, imageb.data());
+    } else {
+      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA,
+          GL_FLOAT, imagef.data());
+    }
+    if (mipmap) {
+      glGenerateMipmap(GL_TEXTURE_2D);
+      glTexParameteri(
+          GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    } else {
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    }
+  } else {
+    glBindTexture(GL_TEXTURE_2D, texture);
+    if (!imageb.empty()) {
+      glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, GL_RGBA,
+          GL_UNSIGNED_BYTE, imageb.data());
+    } else {
+      glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, GL_RGBA, GL_FLOAT,
+          imagef.data());
+    }
+    if (mipmap) glGenerateMipmap(GL_TEXTURE_2D);
+  }
+  extents = imextents;
+}
 inline void clear_texture(uint& texture) {
   if (texture) glDeleteTextures(1, &texture);
   texture = 0;
@@ -1638,41 +1674,13 @@ void main() {
 // Create texture
 static void set_texture(
     glscene_texture& gltexture, const texture_data& texture) {
-  auto extents = max(texture.pixelsf.extents(), texture.pixelsb.extents());
-  auto [width, height] = (vec2i)extents;
-  if (!gltexture.texture || gltexture.extents != extents) {
-    if (!gltexture.texture) glGenTextures(1, &gltexture.texture);
-    glBindTexture(GL_TEXTURE_2D, gltexture.texture);
-    if (!texture.pixelsb.empty()) {
-      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA,
-          GL_UNSIGNED_BYTE, texture.pixelsb.data());
-    } else {
-      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA,
-          GL_FLOAT, texture.pixelsf.data());
-    }
-    glGenerateMipmap(GL_TEXTURE_2D);
-    glTexParameteri(
-        GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-  } else {
-    glBindTexture(GL_TEXTURE_2D, gltexture.texture);
-    if (!texture.pixelsb.empty()) {
-      glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, GL_RGBA,
-          GL_UNSIGNED_BYTE, texture.pixelsb.data());
-    } else {
-      glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, GL_RGBA, GL_FLOAT,
-          texture.pixelsf.data());
-    }
-    glGenerateMipmap(GL_TEXTURE_2D);
-  }
+  set_texture(gltexture.texture, gltexture.extents, texture.pixelsf,
+      texture.pixelsb, true);
 }
 
 // Clean texture
 static void clear_texture(glscene_texture& gltexture) {
-  if (gltexture.texture) {
-    glDeleteTextures(1, &gltexture.texture);
-    gltexture.texture = 0;
-  }
+  clear_texture(gltexture.texture);
 }
 
 // Create shape
@@ -1699,7 +1707,7 @@ static void set_shape(glscene_shape& glshape, const shape_data& shape) {
 
 // Clean shape
 static void clear_shape(glscene_shape& glshape) {
-  if (glshape.vertexarray) glDeleteVertexArrays(1, &glshape.vertexarray);
+  clear_vertexarrays(glshape.vertexarray);
   clear_vertex(glshape.positions);
   clear_vertex(glshape.normals);
   clear_vertex(glshape.texcoords);
