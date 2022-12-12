@@ -197,8 +197,13 @@ shape_data make_disk(int subdivisions = 5);
 shape_data make_floor(float size = 10, int subdivisions = 0);
 shape_data make_monkey(int subdivisions = 0);
 
-// Predefined meshes
-fvshape_data make_fvcube(int subdivisions = 0);
+// Anisotropic shape
+shape_data make_quads(
+    const vec2i& steps, int subdivisions = 0, bool uniform_uv = false);
+shape_data make_rect(
+    const vec2f& scale, int subdivisions = 0, bool uniform_uv = false);
+shape_data make_box(
+    const vec3f& scale, int subdivisions = 0, bool uniform_uv = false);
 
 // Deformed meshes
 shape_data make_rounded_cube(float radius = 0.3f, int subdivisions = 5);
@@ -206,6 +211,9 @@ shape_data make_bulged_quad(float radius = 0.3f, int subdivisions = 5);
 shape_data make_bulged_disk(float height = 0.3f, int subdivisions = 5);
 shape_data make_bent_floor(
     float bent = 0.5f, float size = 10, int subdivisions = 0);
+
+// Predefined meshes
+fvshape_data make_fvcube(int subdivisions = 0);
 
 // Make a plane.
 shape_data make_rect(const vec2i& steps = {1, 1}, const vec2f& scale = {1, 1},
