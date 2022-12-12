@@ -666,7 +666,7 @@ struct color_space_params {
 };
 
 // Compute the rgb -> xyz matrix from the color space definition
-// Input: red, green, blue, white (x,y) chromoticities
+// Input: red, green, blue, white (x,y) chromaticities
 // Algorithm from: SMPTE Recommended Practice RP 177-1993
 // http://car.france3.mars.free.fr/HD/INA-%2026%20jan%2006/SMPTE%20normes%20et%20confs/rp177.pdf
 inline mat3f rgb_to_xyz_mat(
@@ -802,23 +802,33 @@ inline float gamma_display_to_linear(float x, float gamma) {
 inline float gamma_linear_to_display(float x, float gamma) {
   return pow(x, 1 / gamma);
 }
+inline vec3f gamma_display_to_linear(const vec3f& rgb, float gamma) {
+  return map(
+      rgb, [gamma](float a) { return gamma_display_to_linear(a, gamma); });
+}
+inline vec3f gamma_linear_to_display(const vec3f& rgb, float gamma) {
+  return map(
+      rgb, [gamma](float a) { return gamma_linear_to_display(a, gamma); });
+}
 
 // https://en.wikipedia.org/wiki/Rec._709
 inline float gamma_display_to_linear(float x, float gamma, const vec4f& abcd) {
   auto& [a, b, c, d] = abcd;
-  if (x < 1 / d) {
-    return x / c;
-  } else {
-    return pow((x + b) / a, gamma);
-  }
+  return (x < 1 / d) ? (x / c) : pow((x + b) / a, gamma);
 }
 inline float gamma_linear_to_display(float x, float gamma, const vec4f& abcd) {
   auto& [a, b, c, d] = abcd;
-  if (x < d) {
-    return x * c;
-  } else {
-    return a * pow(x, 1 / gamma) - b;
-  }
+  return (x < d) ? (x * c) : (a * pow(x, 1 / gamma) - b);
+}
+inline vec3f gamma_display_to_linear(
+    const vec3f& rgb, float gamma, const vec4f& abcd) {
+  return map(
+      rgb, [&](float a) { return gamma_display_to_linear(a, gamma, abcd); });
+}
+inline vec3f gamma_linear_to_display(
+    const vec3f& rgb, float gamma, const vec4f& abcd) {
+  return map(
+      rgb, [&](float a) { return gamma_linear_to_display(a, gamma, abcd); });
 }
 
 // https://en.wikipedia.org/wiki/Academy_Color_Encoding_Systemx
@@ -857,6 +867,18 @@ inline float acescct_linear_to_display(float x) {
     return (log2(x) + 9.72f) / 17.52f;
   }
 }
+inline vec3f acescc_display_to_linear(const vec3f& rgb) {
+  return map(rgb, [](float a) { return acescc_display_to_linear(a); });
+}
+inline vec3f acescct_display_to_linear(const vec3f& rgb) {
+  return map(rgb, [](float a) { return acescct_display_to_linear(a); });
+}
+inline vec3f acescc_linear_to_display(const vec3f& rgb) {
+  return map(rgb, [](float a) { return acescc_linear_to_display(a); });
+}
+inline vec3f acescct_linear_to_display(const vec3f& rgb) {
+  return map(rgb, [](float a) { return acescct_linear_to_display(a); });
+}
 
 // https://en.wikipedia.org/wiki/High-dynamic-range_video#Perceptual_Quantizer
 // https://github.com/ampas/aces-dev/blob/master/transforms/ctl/lib/ACESlib.Utilities_Color.ctl
@@ -874,6 +896,13 @@ inline float pq_linear_to_display(float x) {
                  (1 + 18.6875f * pow(x, 0.1593017578125f)),
       78.84375f);
 }
+inline vec3f pq_display_to_linear(const vec3f& rgb) {
+  return map(rgb, [](float a) { return pq_display_to_linear(a); });
+}
+inline vec3f pq_linear_to_display(const vec3f& rgb) {
+  return map(rgb, [](float a) { return pq_linear_to_display(a); });
+}
+
 // https://en.wikipedia.org/wiki/High-dynamic-range_video#Perceptual_Quantizer
 // In HLG, we assume that the linear luminance in [0,1] corresponds to
 // [0,1000] cd m^2. Note that the version we report here is scaled in [0,1]
@@ -894,6 +923,12 @@ inline float hlg_linear_to_display(float x) {
     return 0.17883277f * log(12 * x - 0.28466892f) + 0.55991073f;
   }
 }
+inline vec3f hlg_display_to_linear(const vec3f& rgb) {
+  return map(rgb, [](float a) { return hlg_display_to_linear(a); });
+}
+inline vec3f hlg_linear_to_display(const vec3f& rgb) {
+  return map(rgb, [](float a) { return hlg_linear_to_display(a); });
+}
 
 // Conversion to/from xyz
 inline vec3f color_to_xyz(const vec3f& col, color_space from) {
@@ -902,41 +937,17 @@ inline vec3f color_to_xyz(const vec3f& col, color_space from) {
   if (space.curve_type == color_space_params::curve_t::linear) {
     // do nothing
   } else if (space.curve_type == color_space_params::curve_t::gamma) {
-    rgb = {
-        gamma_linear_to_display(rgb.x, space.curve_gamma),
-        gamma_linear_to_display(rgb.y, space.curve_gamma),
-        gamma_linear_to_display(rgb.z, space.curve_gamma),
-    };
+    rgb = gamma_linear_to_display(rgb, space.curve_gamma);
   } else if (space.curve_type == color_space_params::curve_t::linear_gamma) {
-    rgb = {
-        gamma_linear_to_display(rgb.x, space.curve_gamma, space.curve_abcd),
-        gamma_linear_to_display(rgb.y, space.curve_gamma, space.curve_abcd),
-        gamma_linear_to_display(rgb.z, space.curve_gamma, space.curve_abcd),
-    };
+    rgb = gamma_linear_to_display(rgb, space.curve_gamma, space.curve_abcd);
   } else if (space.curve_type == color_space_params::curve_t::aces_cc) {
-    rgb = {
-        acescc_linear_to_display(rgb.x),
-        acescc_linear_to_display(rgb.y),
-        acescc_linear_to_display(rgb.z),
-    };
+    rgb = acescc_linear_to_display(rgb);
   } else if (space.curve_type == color_space_params::curve_t::aces_cct) {
-    rgb = {
-        acescct_linear_to_display(rgb.x),
-        acescct_linear_to_display(rgb.y),
-        acescct_linear_to_display(rgb.z),
-    };
+    rgb = acescct_linear_to_display(rgb);
   } else if (space.curve_type == color_space_params::curve_t::pq) {
-    rgb = {
-        pq_linear_to_display(rgb.x),
-        pq_linear_to_display(rgb.y),
-        pq_linear_to_display(rgb.z),
-    };
+    rgb = pq_linear_to_display(rgb);
   } else if (space.curve_type == color_space_params::curve_t::hlg) {
-    rgb = {
-        hlg_linear_to_display(rgb.x),
-        hlg_linear_to_display(rgb.y),
-        hlg_linear_to_display(rgb.z),
-    };
+    rgb = hlg_linear_to_display(rgb);
   } else {
     throw std::runtime_error{"should not have gotten here"};
   }
@@ -948,41 +959,17 @@ inline vec3f xyz_to_color(const vec3f& xyz, color_space to) {
   if (space.curve_type == color_space_params::curve_t::linear) {
     // nothing
   } else if (space.curve_type == color_space_params::curve_t::gamma) {
-    rgb = {
-        gamma_display_to_linear(rgb.x, space.curve_gamma),
-        gamma_display_to_linear(rgb.y, space.curve_gamma),
-        gamma_display_to_linear(rgb.z, space.curve_gamma),
-    };
+    rgb = gamma_display_to_linear(rgb, space.curve_gamma);
   } else if (space.curve_type == color_space_params::curve_t::linear_gamma) {
-    rgb = {
-        gamma_display_to_linear(rgb.x, space.curve_gamma, space.curve_abcd),
-        gamma_display_to_linear(rgb.y, space.curve_gamma, space.curve_abcd),
-        gamma_display_to_linear(rgb.z, space.curve_gamma, space.curve_abcd),
-    };
+    rgb = gamma_display_to_linear(rgb, space.curve_gamma, space.curve_abcd);
   } else if (space.curve_type == color_space_params::curve_t::aces_cc) {
-    rgb = {
-        acescc_display_to_linear(rgb.x),
-        acescc_display_to_linear(rgb.y),
-        acescc_display_to_linear(rgb.z),
-    };
+    rgb = acescc_display_to_linear(rgb);
   } else if (space.curve_type == color_space_params::curve_t::aces_cct) {
-    rgb = {
-        acescct_display_to_linear(rgb.x),
-        acescct_display_to_linear(rgb.y),
-        acescct_display_to_linear(rgb.z),
-    };
+    rgb = acescct_display_to_linear(rgb);
   } else if (space.curve_type == color_space_params::curve_t::pq) {
-    rgb = {
-        pq_display_to_linear(rgb.x),
-        pq_display_to_linear(rgb.y),
-        pq_display_to_linear(rgb.z),
-    };
+    rgb = pq_display_to_linear(rgb);
   } else if (space.curve_type == color_space_params::curve_t::hlg) {
-    rgb = {
-        hlg_display_to_linear(rgb.x),
-        hlg_display_to_linear(rgb.y),
-        hlg_display_to_linear(rgb.z),
-    };
+    rgb = hlg_display_to_linear(rgb);
   } else {
     throw std::runtime_error{"should not have gotten here"};
   }
