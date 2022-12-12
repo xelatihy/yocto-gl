@@ -40,7 +40,6 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
-#include <string>
 #include <utility>
 #include <vector>
 
@@ -55,7 +54,6 @@
 namespace yocto {
 
 // using directives
-using std::string;
 using std::vector;
 
 }  // namespace yocto
