@@ -2074,7 +2074,7 @@ void show_gui_window(const vec2i& size, const string& title,
     glfwGetCursorPos(window, &mouse_posx, &mouse_posy);
     state.input.cursor = vec2f{(float)mouse_posx, (float)mouse_posy};
     if (state.widgets_width && state.widgets_left)
-      state.input.cursor.x -= state.widgets_width;
+      state.input.cursor -= vec2i{state.widgets_width, 0};
     state.input.mouse = {
         glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS,
         glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS,
@@ -2086,19 +2086,17 @@ void show_gui_window(const vec2i& size, const string& title,
             glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS,
         glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS ||
             glfwGetKey(window, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS};
-    glfwGetWindowSize(window, &state.input.window.x, &state.input.window.y);
-    if (state.widgets_width) state.input.window.x -= state.widgets_width;
-    glfwGetFramebufferSize(
-        window, &state.input.framebuffer.z, &state.input.framebuffer.w);
-    state.input.framebuffer.x = 0;
-    state.input.framebuffer.y = 0;
+    state.input.window = get_window_size(window);
+    if (state.widgets_width)
+      state.input.window -= vec2i{state.widgets_width, 0};
+    state.input.framebuffer = get_framebuffer_viewport(window);
     if (state.widgets_width) {
-      auto win_size = vec2i{0, 0};
-      glfwGetWindowSize(window, &win_size.x, &win_size.y);
-      auto offset = (int)(state.widgets_width *
-                          (float)state.input.framebuffer.z / win_size.x);
-      state.input.framebuffer.z -= offset;
-      if (state.widgets_left) state.input.framebuffer.x += offset;
+      auto [win_width, _]          = get_window_size(window);
+      auto [framebuffer_width, __] = get_framebuffer_size(window);
+      auto offset =
+          (int)(state.widgets_width * (float)framebuffer_width / win_width);
+      state.input.framebuffer -= vec4i{0, 0, offset, 0};
+      if (state.widgets_left) state.input.framebuffer += vec4i{offset, 0, 0, 0};
     }
     if (state.widgets_width) {
       auto io               = &ImGui::GetIO();
@@ -2113,7 +2111,7 @@ void show_gui_window(const vec2i& size, const string& title,
     if (state.update) state.update(state.input);
 
     // draw
-    glfwGetWindowSize(window, &state.window.x, &state.window.y);
+    state.window = get_window_size(window);
     draw_window(state);
     glfwSwapBuffers(window);
 
@@ -2184,25 +2182,25 @@ bool draw_gui_slider(const char* lbl, float& value, float min, float max) {
   return ImGui::SliderFloat(lbl, &value, min, max);
 }
 bool draw_gui_slider(const char* lbl, vec2f& value, float min, float max) {
-  return ImGui::SliderFloat2(lbl, &value.x, min, max);
+  return ImGui::SliderFloat2(lbl, data(value), min, max);
 }
 bool draw_gui_slider(const char* lbl, vec3f& value, float min, float max) {
-  return ImGui::SliderFloat3(lbl, &value.x, min, max);
+  return ImGui::SliderFloat3(lbl, data(value), min, max);
 }
 bool draw_gui_slider(const char* lbl, vec4f& value, float min, float max) {
-  return ImGui::SliderFloat4(lbl, &value.x, min, max);
+  return ImGui::SliderFloat4(lbl, data(value), min, max);
 }
 bool draw_gui_slider(const char* lbl, int& value, int min, int max) {
   return ImGui::SliderInt(lbl, &value, min, max);
 }
 bool draw_gui_slider(const char* lbl, vec2i& value, int min, int max) {
-  return ImGui::SliderInt2(lbl, &value.x, min, max);
+  return ImGui::SliderInt2(lbl, data(value), min, max);
 }
 bool draw_gui_slider(const char* lbl, vec3i& value, int min, int max) {
-  return ImGui::SliderInt3(lbl, &value.x, min, max);
+  return ImGui::SliderInt3(lbl, data(value), min, max);
 }
 bool draw_gui_slider(const char* lbl, vec4i& value, int min, int max) {
-  return ImGui::SliderInt4(lbl, &value.x, min, max);
+  return ImGui::SliderInt4(lbl, data(value), min, max);
 }
 
 bool draw_gui_dragger(
@@ -2211,15 +2209,15 @@ bool draw_gui_dragger(
 }
 bool draw_gui_dragger(
     const char* lbl, vec2f& value, float speed, float min, float max) {
-  return ImGui::DragFloat2(lbl, &value.x, speed, min, max);
+  return ImGui::DragFloat2(lbl, data(value), speed, min, max);
 }
 bool draw_gui_dragger(
     const char* lbl, vec3f& value, float speed, float min, float max) {
-  return ImGui::DragFloat3(lbl, &value.x, speed, min, max);
+  return ImGui::DragFloat3(lbl, data(value), speed, min, max);
 }
 bool draw_gui_dragger(
     const char* lbl, vec4f& value, float speed, float min, float max) {
-  return ImGui::DragFloat4(lbl, &value.x, speed, min, max);
+  return ImGui::DragFloat4(lbl, data(value), speed, min, max);
 }
 bool draw_gui_dragger(
     const char* lbl, int& value, float speed, int min, int max) {
@@ -2227,15 +2225,15 @@ bool draw_gui_dragger(
 }
 bool draw_gui_dragger(
     const char* lbl, vec2i& value, float speed, int min, int max) {
-  return ImGui::DragInt2(lbl, &value.x, speed, min, max);
+  return ImGui::DragInt2(lbl, data(value), speed, min, max);
 }
 bool draw_gui_dragger(
     const char* lbl, vec3i& value, float speed, int min, int max) {
-  return ImGui::DragInt3(lbl, &value.x, speed, min, max);
+  return ImGui::DragInt3(lbl, data(value), speed, min, max);
 }
 bool draw_gui_dragger(
     const char* lbl, vec4i& value, float speed, int min, int max) {
-  return ImGui::DragInt4(lbl, &value.x, speed, min, max);
+  return ImGui::DragInt4(lbl, data(value), speed, min, max);
 }
 
 bool draw_gui_dragger(const char* lbl, array<float, 2>& value, float speed,
@@ -2280,11 +2278,11 @@ bool draw_gui_checkbox(const char* lbl, bool& value, bool invert) {
 
 bool draw_gui_coloredit(const char* lbl, vec3f& value) {
   auto flags = ImGuiColorEditFlags_Float;
-  return ImGui::ColorEdit3(lbl, &value.x, flags);
+  return ImGui::ColorEdit3(lbl, data(value), flags);
 }
 bool draw_gui_coloredit(const char* lbl, vec4f& value) {
   auto flags = ImGuiColorEditFlags_Float;
-  return ImGui::ColorEdit4(lbl, &value.x, flags);
+  return ImGui::ColorEdit4(lbl, data(value), flags);
 }
 
 bool draw_gui_coloredithdr(const char* lbl, vec3f& value) {
@@ -2310,19 +2308,14 @@ bool draw_gui_coloredithdr(const char* lbl, vec4f& value) {
   auto exposure = 0.0f;
   auto scale    = max(xyz(color));
   if (scale > 1) {
-    color.x /= scale;
-    color.y /= scale;
-    color.z /= scale;
+    color    = {xyz(color) / scale, alpha(color)};
     exposure = log2(scale);
   }
   auto edit_exposure = draw_gui_slider(
       (string{lbl} + " [exp]").c_str(), exposure, 0, 10);
   auto edit_color = draw_gui_coloredit((string{lbl} + " [col]").c_str(), color);
   if (edit_exposure || edit_color) {
-    value.x = color.x * exp2(exposure);
-    value.y = color.y * exp2(exposure);
-    value.z = color.z * exp2(exposure);
-    value.w = color.w;
+    value = {xyz(color) * exp2(exposure), alpha(color)};
     return true;
   } else {
     return false;
@@ -2331,7 +2324,7 @@ bool draw_gui_coloredithdr(const char* lbl, vec4f& value) {
 
 bool draw_gui_coloredit(const char* lbl, vec4b& value) {
   auto valuef = byte_to_float(value);
-  if (ImGui::ColorEdit4(lbl, &valuef.x)) {
+  if (ImGui::ColorEdit4(lbl, data(valuef))) {
     value = float_to_byte(valuef);
     return true;
   } else {
@@ -2460,392 +2453,6 @@ void draw_histogram(const char* lbl, const vector<vec4f>& values) {
   ImGui::PlotHistogram((string{lbl} + " w").c_str(),
       (const float*)values.data() + 3, (int)values.size(), 0, nullptr, flt_max,
       flt_max, {0, 0}, sizeof(vec4f));
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// OPENGL WIDGETS
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-enum struct glwidgets_param_type {
-  // clang-format off
-  value1f, value2f, value3f, value4f, 
-  value1i, value2i, value3i, value4i, 
-  value1s, value1b
-  // clang-format on
-};
-
-struct glwidgets_param {
-  // constructors
-  glwidgets_param()
-      : type{glwidgets_param_type::value1f}
-      , valuef{0, 0, 0, 0}
-      , minmaxf{0, 0}
-      , readonly{true} {}
-  glwidgets_param(
-      float value, const vec2f& minmax = {0, 0}, bool readonly = false)
-      : type{glwidgets_param_type::value1f}
-      , valuef{value, 0, 0, 0}
-      , minmaxf{minmax}
-      , readonly{readonly} {}
-  glwidgets_param(
-      vec2f value, const vec2f& minmax = {0, 0}, bool readonly = false)
-      : type{glwidgets_param_type::value2f}
-      , valuef{value.x, value.y, 0, 0}
-      , minmaxf{minmax}
-      , readonly{readonly} {}
-  glwidgets_param(
-      vec3f value, const vec2f& minmax = {0, 0}, bool readonly = false)
-      : type{glwidgets_param_type::value3f}
-      , valuef{value.x, value.y, value.z, 1}
-      , minmaxf{minmax}
-      , readonly{readonly} {}
-  glwidgets_param(
-      vec4f value, const vec2f& minmax = {0, 0}, bool readonly = false)
-      : type{glwidgets_param_type::value4f}
-      , valuef{value.x, value.y, value.z, value.w}
-      , minmaxf{minmax}
-      , readonly{readonly} {}
-  glwidgets_param(vec3f value, bool color, bool readonly = false)
-      : type{glwidgets_param_type::value3f}
-      , valuef{value.x, value.y, value.z, 1}
-      , color{color}
-      , readonly{readonly} {}
-  glwidgets_param(vec4f value, bool color, bool readonly = false)
-      : type{glwidgets_param_type::value4f}
-      , valuef{value.x, value.y, value.z, value.w}
-      , color{color}
-      , readonly{readonly} {}
-  glwidgets_param(
-      int value, const vec2i& minmax = {0, 0}, bool readonly = false)
-      : type{glwidgets_param_type::value1i}
-      , valuei{value, 0, 0, 0}
-      , minmaxi{minmax}
-      , readonly{readonly} {}
-  glwidgets_param(
-      vec2i value, const vec2i& minmax = {0, 0}, bool readonly = false)
-      : type{glwidgets_param_type::value2i}
-      , valuei{value.x, value.y, 0, 0}
-      , minmaxi{minmax}
-      , readonly{readonly} {}
-  glwidgets_param(
-      vec3i value, const vec2i& minmax = {0, 0}, bool readonly = false)
-      : type{glwidgets_param_type::value3i}
-      , valuei{value.x, value.y, value.z, 0}
-      , minmaxi{minmax}
-      , readonly{readonly} {}
-  glwidgets_param(
-      vec4i value, const vec2i& minmax = {0, 0}, bool readonly = false)
-      : type{glwidgets_param_type::value4i}
-      , valuei{value.x, value.y, value.z, value.w}
-      , minmaxi{minmax}
-      , readonly{readonly} {}
-  glwidgets_param(bool value, bool readonly = false)
-      : type{glwidgets_param_type::value1b}
-      , valueb{value}
-      , readonly{readonly} {}
-  glwidgets_param(const string& value, bool readonly = false)
-      : type{glwidgets_param_type::value1s}
-      , values{value}
-      , readonly{readonly} {}
-  glwidgets_param(
-      const string& value, const vector<string>& labels, bool readonly = false)
-      : type{glwidgets_param_type::value1s}
-      , values{value}
-      , labels{labels}
-      , readonly{readonly} {}
-  glwidgets_param(
-      int value, const vector<string>& labels, bool readonly = false)
-      : type{glwidgets_param_type::value1i}
-      , valuei{value, 0, 0, 0}
-      , labels{labels}
-      , readonly{readonly} {}
-  template <typename T, typename = std::enable_if_t<std::is_enum_v<T>>>
-  glwidgets_param(T value, const vector<string>& labels, bool readonly = false)
-      : type{glwidgets_param_type::value1i}
-      , valuei{(int)value, 0, 0, 0}
-      , labels{labels}
-      , readonly{readonly} {}
-
-  // conversions
-  operator float() const {
-    check_type(glwidgets_param_type::value1f);
-    return valuef.x;
-  }
-  operator vec2f() const {
-    check_type(glwidgets_param_type::value2f);
-    return {valuef.x, valuef.y};
-  }
-  operator vec3f() const {
-    check_type(glwidgets_param_type::value3f);
-    return {valuef.x, valuef.y, valuef.z};
-  }
-  operator vec4f() const {
-    check_type(glwidgets_param_type::value4f);
-    return {valuef.x, valuef.y, valuef.z, valuef.w};
-  }
-  operator int() const {
-    check_type(glwidgets_param_type::value1i);
-    return valuei.x;
-  }
-  operator vec2i() const {
-    check_type(glwidgets_param_type::value2i);
-    return {valuei.x, valuei.y};
-  }
-  operator vec3i() const {
-    check_type(glwidgets_param_type::value3i);
-    return {valuei.x, valuei.y, valuei.z};
-  }
-  operator vec4i() const {
-    check_type(glwidgets_param_type::value4i);
-    return {valuei.x, valuei.y, valuei.z, valuei.w};
-  }
-  operator bool() const {
-    check_type(glwidgets_param_type::value1b);
-    return valueb;
-  }
-  operator string() const {
-    check_type(glwidgets_param_type::value1s);
-    return values;
-  }
-  template <typename T, typename = std::enable_if_t<std::is_enum_v<T>>>
-  operator T() const {
-    check_type(glwidgets_param_type::value1i);
-    return (T)valuei.x;
-  }
-
-  // type checking
-  void check_type(glwidgets_param_type type) const {
-    if (type != this->type) throw std::invalid_argument{"bad gui type"};
-  }
-
-  // value
-  glwidgets_param_type type   = glwidgets_param_type::value1f;
-  vec4f                valuef = {0, 0, 0, 0};
-  vec4i                valuei = {0, 0, 0, 0};
-  bool                 valueb = false;
-  string               values = "";
-
-  // display properties
-  vec2f          minmaxf  = {0, 0};
-  vec2i          minmaxi  = {0, 0};
-  bool           color    = false;
-  vector<string> labels   = {};
-  bool           readonly = false;
-};
-
-struct glwidgets_params {
-  using container      = vector<pair<string, glwidgets_param>>;
-  using iterator       = container::iterator;
-  using const_iterator = container::const_iterator;
-
-  glwidgets_params() {}
-
-  bool   empty() const { return items.empty(); }
-  size_t size() const { return items.size(); }
-
-  glwidgets_param& operator[](const string& key) {
-    auto item = find(key);
-    if (item == end()) return items.emplace_back(key, glwidgets_param{}).second;
-    return item->second;
-  }
-  const glwidgets_param& operator[](const string& key) const { return at(key); }
-
-  glwidgets_param& at(const string& key) {
-    auto item = find(key);
-    if (item == end()) throw std::out_of_range{"key not found " + key};
-    return item->second;
-  }
-  const glwidgets_param& at(const string& key) const {
-    auto item = find(key);
-    if (item == end()) throw std::out_of_range{"key not found " + key};
-    return item->second;
-  }
-
-  iterator find(const string& key) {
-    for (auto iterator = items.begin(); iterator != items.end(); ++iterator) {
-      if (iterator->first == key) return iterator;
-    }
-    return items.end();
-  }
-  const_iterator find(const string& key) const {
-    for (auto iterator = items.begin(); iterator != items.end(); ++iterator) {
-      if (iterator->first == key) return iterator;
-    }
-    return items.end();
-  }
-
-  iterator       begin() { return items.begin(); }
-  iterator       end() { return items.end(); }
-  const_iterator begin() const { return items.begin(); }
-  const_iterator end() const { return items.end(); }
-
- private:
-  vector<pair<string, glwidgets_param>> items;
-};
-
-// draw param
-bool draw_gui_param(const string& name, glwidgets_param& param) {
-  auto copy = param;
-  switch (param.type) {
-    case glwidgets_param_type::value1f:
-      if (param.minmaxf.x == param.minmaxf.y) {
-        return draw_gui_dragger(name.c_str(), param.readonly
-                                                  ? (float&)copy.valuef
-                                                  : (float&)param.valuef) &&
-               !param.readonly;
-      } else {
-        return draw_gui_slider(name.c_str(),
-                   param.readonly ? (float&)copy.valuef : (float&)param.valuef,
-                   param.minmaxf.x, param.minmaxf.y) &&
-               !param.readonly;
-      }
-      break;
-    case glwidgets_param_type::value2f:
-      if (param.minmaxf.x == param.minmaxf.y) {
-        return draw_gui_dragger(name.c_str(), param.readonly
-                                                  ? (vec2f&)copy.valuef
-                                                  : (vec2f&)param.valuef) &&
-               !param.readonly;
-      } else {
-        return draw_gui_slider(name.c_str(),
-                   param.readonly ? (vec2f&)copy.valuef : (vec2f&)param.valuef,
-                   param.minmaxf.x, param.minmaxf.y) &&
-               !param.readonly;
-      }
-      break;
-    case glwidgets_param_type::value3f:
-      if (param.color) {
-        return draw_gui_coloredit(name.c_str(), param.readonly
-                                                    ? (vec3f&)copy.valuef
-                                                    : (vec3f&)param.valuef) &&
-               !param.readonly;
-      } else if (param.minmaxf.x == param.minmaxf.y) {
-        return draw_gui_dragger(name.c_str(), param.readonly
-                                                  ? (vec3f&)copy.valuef
-                                                  : (vec3f&)param.valuef) &&
-               !param.readonly;
-      } else {
-        return draw_gui_slider(name.c_str(),
-                   param.readonly ? copy.valuef : param.valuef, param.minmaxf.x,
-                   param.minmaxf.y) &&
-               !param.readonly;
-      }
-      break;
-    case glwidgets_param_type::value4f:
-      if (param.color) {
-        return draw_gui_coloredit(name.c_str(), param.readonly
-                                                    ? (vec4f&)copy.valuef
-                                                    : (vec4f&)param.valuef) &&
-               !param.readonly;
-      } else if (param.minmaxf.x == param.minmaxf.y) {
-        return draw_gui_dragger(name.c_str(), param.readonly
-                                                  ? (vec4f&)copy.valuef
-                                                  : (vec4f&)param.valuef) &&
-               !param.readonly;
-      } else {
-        return draw_gui_slider(name.c_str(),
-                   param.readonly ? (vec4f&)copy.valuef : (vec4f&)param.valuef,
-                   param.minmaxf.x, param.minmaxf.y) &&
-               !param.readonly;
-      }
-      break;
-    case glwidgets_param_type::value1i:
-      if (!param.labels.empty()) {
-        return draw_gui_combobox(name.c_str(),
-                   param.readonly ? (int&)copy.valuei : (int&)param.valuei,
-                   param.labels) &&
-               !param.readonly;
-      } else if (param.minmaxi.x == param.minmaxi.y) {
-        return draw_gui_dragger(name.c_str(),
-                   param.readonly ? (int&)copy.valuei : (int&)param.valuei) &&
-               !param.readonly;
-      } else {
-        return draw_gui_slider(name.c_str(),
-                   param.readonly ? (int&)copy.valuei : (int&)param.valuei,
-                   param.minmaxi.x, param.minmaxi.y) &&
-               !param.readonly;
-      }
-      break;
-    case glwidgets_param_type::value2i:
-      if (param.minmaxi.x == param.minmaxi.y) {
-        return draw_gui_dragger(name.c_str(), param.readonly
-                                                  ? (vec2i&)copy.valuei
-                                                  : (vec2i&)param.valuei) &&
-               !param.readonly;
-      } else {
-        return draw_gui_slider(name.c_str(),
-                   param.readonly ? (vec2i&)copy.valuei : (vec2i&)param.valuei,
-                   param.minmaxi.x, param.minmaxi.y) &&
-               !param.readonly;
-      }
-      break;
-    case glwidgets_param_type::value3i:
-      if (param.minmaxi.x == param.minmaxi.y) {
-        return draw_gui_dragger(name.c_str(), param.readonly
-                                                  ? (vec3i&)copy.valuei
-                                                  : (vec3i&)param.valuei) &&
-               !param.readonly;
-      } else {
-        return draw_gui_slider(name.c_str(),
-                   param.readonly ? (vec3i&)copy.valuei : (vec3i&)param.valuei,
-                   param.minmaxi.x, param.minmaxi.y) &&
-               !param.readonly;
-      }
-      break;
-    case glwidgets_param_type::value4i:
-      if (param.minmaxi.x == param.minmaxi.y) {
-        return draw_gui_dragger(name.c_str(), param.readonly
-                                                  ? (vec4i&)copy.valuei
-                                                  : (vec4i&)param.valuei) &&
-               !param.readonly;
-      } else {
-        return draw_gui_slider(name.c_str(),
-                   param.readonly ? (vec4i&)copy.valuei : (vec4i&)param.valuei,
-                   param.minmaxi.x, param.minmaxi.y) &&
-               !param.readonly;
-      }
-      break;
-    case glwidgets_param_type::value1s:
-      if (!param.labels.empty()) {
-        return draw_gui_combobox(name.c_str(),
-                   param.readonly ? copy.values : param.values, param.labels) &&
-               !param.readonly;
-      } else {
-        return draw_gui_textinput(
-                   name.c_str(), param.readonly ? copy.values : param.values) &&
-               !param.readonly;
-      }
-      break;
-    case glwidgets_param_type::value1b:
-      if (!param.labels.empty()) {
-        // maybe we should implement something different here
-        return draw_gui_checkbox(
-                   name.c_str(), param.readonly ? copy.valueb : param.valueb) &&
-               !param.readonly;
-      } else {
-        return draw_gui_checkbox(
-                   name.c_str(), param.readonly ? copy.valueb : param.valueb) &&
-               !param.readonly;
-      }
-      break;
-    default: return false;
-  }
-}
-
-// draw params
-bool draw_gui_params(const string& name, glwidgets_params& params) {
-  auto edited = false;
-  if (draw_gui_header(name.c_str())) {
-    for (auto& [name, param] : params) {
-      auto pedited = draw_gui_param(name, param);
-      edited       = edited || pedited;
-    }
-    end_gui_header();
-  }
-  return edited;
 }
 
 }  // namespace yocto
