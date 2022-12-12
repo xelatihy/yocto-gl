@@ -16,6 +16,10 @@
 
 - simplify color space conversions by hardcoding matrices
 
+## Random
+
+- implement simpler Perlin noise
+
 ## IO
 
 - consider exception in modelio
