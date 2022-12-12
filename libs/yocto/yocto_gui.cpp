@@ -1123,6 +1123,24 @@ inline void clear_indices(uint& buffer) {
   if (buffer) glDeleteBuffers(1, &buffer);
   buffer = 0;
 }
+inline void draw_points(uint buffer, int num) {
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer);
+  glDrawElements(GL_POINTS, (GLsizei)num, GL_UNSIGNED_INT, nullptr);
+}
+inline void draw_points(uint buffer, int num, float size) {
+  glPointSize(size);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer);
+  glDrawElements(GL_POINTS, (GLsizei)num, GL_UNSIGNED_INT, nullptr);
+  glPointSize(1);
+}
+inline void draw_lines(uint buffer, int num) {
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer);
+  glDrawElements(GL_LINES, (GLsizei)num * 2, GL_UNSIGNED_INT, nullptr);
+}
+inline void draw_triangles(uint buffer, int num) {
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer);
+  glDrawElements(GL_TRIANGLES, num * 3, GL_UNSIGNED_INT, nullptr);
+}
 
 // Buffers
 inline void clear_buffer(uint& buffer) {
@@ -1345,9 +1363,8 @@ void draw_image(glimage_state& glimage, const glimage_params& params) {
 
   // draw
   bind_vertexarrays(glimage.vertexarray);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, glimage.triangles);
-  glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
-  glBindVertexArray(0);
+  draw_triangles(glimage.triangles, 2);
+  bind_vertexarrays(0);
   assert_glerror();
 
   // unbind program
@@ -1698,16 +1715,11 @@ static void clear_shape(glscene_shape& glshape) {
 
 // init scene
 static void init_glscene(glscene_state& glscene, const scene_data& ioscene) {
-  // program
   set_program(glscene.program, glscene.vertex, glscene.fragment, glscene_vertex,
       glscene_fragment);
-
-  // textures
   for (auto& iotexture : ioscene.textures) {
     set_texture(glscene.textures.emplace_back(), iotexture);
   }
-
-  // shapes
   for (auto& ioshape : ioscene.shapes) {
     set_shape(glscene.shapes.emplace_back(), ioshape);
   }
@@ -1736,26 +1748,16 @@ static void clear_scene(glscene_state& glscene) {
   bind_vertexarrays(shape.vertexarray);
 
   if (shape.points) {
-    glPointSize(shape.point_size);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape.points);
-    glDrawElements(
-        GL_POINTS, (GLsizei)shape.num_points * 1, GL_UNSIGNED_INT, nullptr);
-    glPointSize(shape.point_size);
+    draw_points(shape.points, shape.num_points, shape.point_size);
   }
   if (shape.lines) {
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape.lines);
-    glDrawElements(
-        GL_LINES, (GLsizei)shape.num_lines * 2, GL_UNSIGNED_INT, nullptr);
+    draw_lines(shape.lines, shape.num_lines);
   }
   if (shape.triangles) {
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape.triangles);
-    glDrawElements(GL_TRIANGLES, (GLsizei)shape.num_triangles * 3,
-        GL_UNSIGNED_INT, nullptr);
+    draw_triangles(shape.triangles, shape.num_triangles);
   }
   if (shape.quads) {
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape.quads);
-    glDrawElements(
-        GL_TRIANGLES, (GLsizei)shape.num_quads * 3, GL_UNSIGNED_INT, nullptr);
+    draw_triangles(shape.quads, shape.num_quads);
   }
 
   bind_vertexarrays(0);
@@ -1882,26 +1884,16 @@ static void draw_scene(glscene_state& glscene, const scene_data& scene,
 
     bind_vertexarrays(glshape.vertexarray);
     if (glshape.points) {
-      glPointSize(glshape.point_size);
-      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, glshape.points);
-      glDrawElements(
-          GL_POINTS, (GLsizei)glshape.num_points * 1, GL_UNSIGNED_INT, nullptr);
-      glPointSize(glshape.point_size);
+      draw_points(glshape.points, glshape.num_points, glshape.point_size);
     }
     if (glshape.lines) {
-      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, glshape.lines);
-      glDrawElements(
-          GL_LINES, (GLsizei)glshape.num_lines * 2, GL_UNSIGNED_INT, nullptr);
+      draw_lines(glshape.lines, glshape.num_lines);
     }
     if (glshape.triangles) {
-      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, glshape.triangles);
-      glDrawElements(GL_TRIANGLES, (GLsizei)glshape.num_triangles * 3,
-          GL_UNSIGNED_INT, nullptr);
+      draw_triangles(glshape.triangles, glshape.num_triangles);
     }
     if (glshape.quads) {
-      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, glshape.quads);
-      glDrawElements(GL_TRIANGLES, (GLsizei)glshape.num_quads * 3,
-          GL_UNSIGNED_INT, nullptr);
+      draw_triangles(glshape.quads, glshape.num_quads);
     }
 
     glBindVertexArray(0);
