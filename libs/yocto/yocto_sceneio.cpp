@@ -1236,62 +1236,62 @@ shape_data make_shape_preset(const string& type_) {
   auto type       = path_basename(type_);
   auto test_xform = translation_frame(vec3f{0, 0.75f, 0}) *
                     scaling_frame(0.75f);
-  if (type == "default-quad") {
-    return make_rect();
-  } else if (type == "default-quady") {
-    return make_recty();
-  } else if (type == "default-cube") {
-    return make_box();
-  } else if (type == "default-cube-rounded") {
+  if (type == "quad") {
+    return make_quad();
+  } else if (type == "quady") {
+    return make_quady();
+  } else if (type == "cube") {
+    return make_cube();
+  } else if (type == "cube-rounded") {
     return make_rounded_box();
-  } else if (type == "default-sphere") {
+  } else if (type == "sphere") {
     return make_sphere();
-  } else if (type == "default-matcube") {
+  } else if (type == "matcube") {
     return make_rounded_box();
-  } else if (type == "default-matsphere") {
+  } else if (type == "matsphere") {
     return make_uvspherey();
-  } else if (type == "default-disk") {
+  } else if (type == "disk") {
     return make_disk();
-  } else if (type == "default-disk-bulged") {
+  } else if (type == "disk-bulged") {
     return make_bulged_disk();
-  } else if (type == "default-quad-bulged") {
+  } else if (type == "quad-bulged") {
     return make_bulged_rect();
-  } else if (type == "default-uvsphere") {
+  } else if (type == "uvsphere") {
     return make_uvsphere();
-  } else if (type == "default-uvsphere-flipcap") {
+  } else if (type == "uvsphere-flipcap") {
     return make_capped_uvsphere();
-  } else if (type == "default-uvspherey") {
+  } else if (type == "uvspherey") {
     return make_uvspherey();
-  } else if (type == "default-uvspherey-flipcap") {
+  } else if (type == "uvspherey-flipcap") {
     return make_capped_uvspherey();
-  } else if (type == "default-uvdisk") {
+  } else if (type == "uvdisk") {
     return make_uvdisk();
-  } else if (type == "default-uvcylinder") {
+  } else if (type == "uvcylinder") {
     return make_uvcylinder();
-  } else if (type == "default-uvcylinder-rounded") {
+  } else if (type == "uvcylinder-rounded") {
     return make_rounded_uvcylinder({32, 32, 32});
-  } else if (type == "default-geosphere") {
+  } else if (type == "geosphere") {
     return make_geosphere();
-  } else if (type == "default-floor") {
+  } else if (type == "floor") {
     return make_floor();
-  } else if (type == "default-floor-bent") {
+  } else if (type == "floor-bent") {
     return make_bent_floor();
-  } else if (type == "default-matball") {
+  } else if (type == "matball") {
     return make_sphere();
-  } else if (type == "default-hairball") {
+  } else if (type == "hairball") {
     auto base = transform_shape(scaling_frame(0.8f), make_sphere());
     return make_hair(base, {4, 65536}, {0.2f, 0.2f}, {0.002f, 0.001f});
-  } else if (type == "default-hairball-interior") {
+  } else if (type == "hairball-interior") {
     return transform_shape(scaling_frame(0.8f), make_sphere());
-  } else if (type == "default-suzanne") {
+  } else if (type == "suzanne") {
     return make_monkey();
-  } else if (type == "default-cube-facevarying") {
+  } else if (type == "cube-facevarying") {
     return fvshape_to_shape(make_fvbox());
-  } else if (type == "default-sphere-facevarying") {
+  } else if (type == "sphere-facevarying") {
     return fvshape_to_shape(make_fvsphere());
-  } else if (type == "default-quady-displaced") {
+  } else if (type == "quady-displaced") {
     return make_recty({256, 256});
-  } else if (type == "default-sphere-displaced") {
+  } else if (type == "sphere-displaced") {
     return make_sphere(128);
   } else if (type == "test-cube") {
     auto shape = make_rounded_box(
