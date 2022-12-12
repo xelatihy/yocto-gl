@@ -200,6 +200,7 @@ shape_data make_monkey(int subdivisions = 0);
 fvshape_data make_fvcube(int subdivisions = 0);
 
 // Deformed meshes
+shape_data make_rounded_cube(float radius = 0.3f, int subdivisions = 5);
 shape_data make_bulged_quad(float radius = 0.3f, int subdivisions = 5);
 shape_data make_bulged_disk(float height = 0.3f, int subdivisions = 5);
 

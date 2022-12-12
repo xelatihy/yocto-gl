@@ -751,6 +751,40 @@ shape_data make_bulged_disk(float height, int subdivisions) {
   }
   return shape;
 }
+shape_data make_rounded_cube(float radius, int subdivisions) {
+  if (radius == 0) return make_cube(subdivisions);
+  auto shape = make_cube(subdivisions);
+  radius     = min(radius, 1);
+  auto c     = 1 - radius;
+  for (auto i : range(shape.positions.size())) {
+    auto pc = abs(shape.positions[i]);
+    auto ps = vec3f{shape.positions[i].x < 0 ? -1.0f : 1.0f,
+        shape.positions[i].y < 0 ? -1.0f : 1.0f,
+        shape.positions[i].z < 0 ? -1.0f : 1.0f};
+    if (pc.x >= c && pc.y >= c && pc.z >= c) {
+      auto pn            = normalize(pc - c);
+      shape.positions[i] = c + radius * pn;
+      shape.normals[i]   = pn;
+    } else if (pc.x >= c && pc.y >= c) {
+      auto pn            = normalize((pc - c) * vec3f{1, 1, 0});
+      shape.positions[i] = {c + radius * pn.x, c + radius * pn.y, pc.z};
+      shape.normals[i]   = pn;
+    } else if (pc.x >= c && pc.z >= c) {
+      auto pn            = normalize((pc - c) * vec3f{1, 0, 1});
+      shape.positions[i] = {c + radius * pn.x, pc.y, c + radius * pn.z};
+      shape.normals[i]   = pn;
+    } else if (pc.y >= c && pc.z >= c) {
+      auto pn            = normalize((pc - c) * vec3f{0, 1, 1});
+      shape.positions[i] = {pc.x, c + radius * pn.y, c + radius * pn.z};
+      shape.normals[i]   = pn;
+    } else {
+      continue;
+    }
+    shape.positions[i] *= ps;
+    shape.normals[i] *= ps;
+  }
+  return shape;
+}
 
 // Predefined meshes
 fvshape_data make_fvcube(int subdivisions) {
@@ -832,6 +866,8 @@ void merge_shape_inplace(shape_data& shape, const shape_data& merge) {
   for (auto& q : merge.quads) shape.quads.push_back(q + offset);
   shape.positions.insert(
       shape.positions.end(), merge.positions.begin(), merge.positions.end());
+  shape.normals.insert(
+      shape.normals.end(), merge.normals.begin(), merge.normals.end());
   shape.tangents.insert(
       shape.tangents.end(), merge.tangents.begin(), merge.tangents.end());
   shape.texcoords.insert(

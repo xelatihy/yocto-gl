@@ -1243,11 +1243,11 @@ shape_data make_shape_preset(const string& type_) {
   } else if (type == "cube") {
     return make_cube();
   } else if (type == "cube-rounded") {
-    return make_rounded_box();
+    return make_rounded_cube();
   } else if (type == "sphere") {
     return make_sphere();
   } else if (type == "matcube") {
-    return make_rounded_box();
+    return make_rounded_cube();
   } else if (type == "matsphere") {
     return make_uvspherey();
   } else if (type == "disk") {
@@ -1255,7 +1255,7 @@ shape_data make_shape_preset(const string& type_) {
   } else if (type == "disk-bulged") {
     return make_bulged_disk();
   } else if (type == "quad-bulged") {
-    return make_bulged_rect();
+    return make_bulged_quad();
   } else if (type == "uvsphere") {
     return make_uvsphere();
   } else if (type == "uvsphere-flipcap") {
@@ -1285,46 +1285,36 @@ shape_data make_shape_preset(const string& type_) {
     return transform_shape(scaling_frame(0.8f), make_sphere());
   } else if (type == "suzanne") {
     return make_monkey();
+  } else if (type == "wtcube") {
+    return make_wtcube();
+  } else if (type == "wtsphere") {
+    return make_wtsphere();
   } else if (type == "cube-facevarying") {
     return fvshape_to_shape(make_fvbox());
   } else if (type == "sphere-facevarying") {
     return fvshape_to_shape(make_fvsphere());
   } else if (type == "quady-displaced") {
-    return make_recty({256, 256});
+    return make_quady(8);
   } else if (type == "sphere-displaced") {
-    return make_sphere(128);
+    return make_sphere(7);
+  } else if (type == "floor") {
+    return make_floor({1, 1}, {2, 2}, {20, 20});
   } else if (type == "test-cube") {
-    auto shape = make_rounded_box(
-        {32, 32, 32}, {0.075f, 0.075f, 0.075f}, {1, 1, 1}, 0.3f * 0.075f);
-    for (auto& p : shape.positions) p += vec3f{0, 0.075f, 0};
-    return shape;
+    return transform_shape(test_xform, make_rounded_cube());
   } else if (type == "test-uvsphere") {
-    auto shape = make_uvsphere({32, 32}, 0.075f);
-    for (auto& p : shape.positions) p += vec3f{0, 0.075f, 0};
-    return shape;
+    return transform_shape(test_xform, make_uvsphere({32, 32}));
   } else if (type == "test-uvsphere-flipcap") {
-    auto shape = make_capped_uvsphere({32, 32}, 0.075f, {1, 1}, 0.3f * 0.075f);
-    for (auto& p : shape.positions) p += vec3f{0, 0.075f, 0};
-    return shape;
+    return transform_shape(test_xform, make_capped_uvsphere({32, 32}));
   } else if (type == "test-uvspherey") {
-    auto shape = make_uvspherey({32, 32}, 0.075f);
-    for (auto& p : shape.positions) p += vec3f{0, 0.075f, 0};
-    return shape;
+    return transform_shape(test_xform, make_uvspherey({32, 32}));
   } else if (type == "test-uvspherey-flipcap") {
-    auto shape = make_capped_uvspherey({32, 32}, 0.075f, {1, 1}, 0.3f * 0.075f);
-    for (auto& p : shape.positions) p += vec3f{0, 0.075f, 0};
-    return shape;
+    return transform_shape(test_xform, make_capped_uvspherey({32, 32}));
   } else if (type == "test-sphere") {
     return transform_shape(test_xform, make_sphere());
   } else if (type == "test-matcube") {
-    auto shape = make_rounded_box(
-        {32, 32, 32}, {0.075f, 0.075f, 0.075f}, {1, 1, 1}, 0.3f * 0.075f);
-    for (auto& p : shape.positions) p += vec3f{0, 0.075f, 0};
-    return shape;
+    return transform_shape(test_xform, make_rounded_cube());
   } else if (type == "test-matsphere") {
-    auto shape = make_uvspherey({32, 32}, 0.075f, {2, 1});
-    for (auto& p : shape.positions) p += vec3f{0, 0.075f, 0};
-    return shape;
+    return transform_shape(test_xform, make_uvspherey());
   } else if (type == "test-sphere-displaced") {
     return transform_shape(test_xform, make_sphere(7));
   } else if (type == "test-smallsphere") {
@@ -1334,10 +1324,7 @@ shape_data make_shape_preset(const string& type_) {
   } else if (type == "test-disk") {
     return transform_shape(test_xform, make_disk());
   } else if (type == "test-uvcylinder") {
-    auto shape = make_rounded_uvcylinder(
-        {32, 32, 32}, {0.075f, 0.075f}, {1, 1, 1}, 0.3f * 0.075f);
-    for (auto& p : shape.positions) p += vec3f{0, 0.075f, 0};
-    return shape;
+    return transform_shape(test_xform, make_rounded_uvcylinder({32, 32, 32}));
   } else if (type == "test-floor") {
     return make_floor({1, 1}, {2, 2}, {20, 20});
   } else if (type == "test-smallfloor") {
@@ -1396,9 +1383,7 @@ shape_data make_shape_preset(const string& type_) {
   } else if (type == "test-points") {
     return make_points(4096);
   } else if (type == "test-points-random") {
-    auto shape = make_random_points(4096, {0.075f, 0.075f, 0.075f});
-    for (auto& p : shape.positions) p += vec3f{0, 0.075f, 0};
-    return shape;
+    return transform_shape(test_xform, make_random_points(4096));
   } else if (type == "test-points-grid") {
     auto shape = make_points({256, 256}, {0.075f, 0.075f});
     for (auto& p : shape.positions) p += vec3f{0, 0.075f, 0};
