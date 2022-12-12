@@ -1031,13 +1031,20 @@ inline void clear_framebuffer(const vec4f& background) {
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   glEnable(GL_DEPTH_TEST);
 }
-inline void set_blending(bool enable) {
+inline void bind_blending(bool enable) {
   if (enable) {
     glEnable(GL_BLEND);
     glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_ADD);
     glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ZERO);
   } else {
     glDisable(GL_BLEND);
+  }
+}
+inline void bind_wireframe(bool enabled) {
+  if (enabled) {
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+  } else {
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
   }
 }
 
@@ -1091,6 +1098,12 @@ inline void set_vertex(
         GL_FLOAT, false, 0, nullptr);
   }
 }
+template <typename T>
+inline void set_vertex(uint& buffer, const vector<T>& data, int location) {
+  auto num = 0;
+  auto def = T{};
+  set_vertex(buffer, num, data, def, location);
+}
 inline void clear_vertex(uint& buffer) {
   if (buffer) glDeleteBuffers(1, &buffer);
   buffer = 0;
@@ -1118,6 +1131,11 @@ inline void set_indices(uint& buffer, int& num, const vector<T>& data) {
           data.size() * sizeof(data.front()), data.data());
     }
   }
+}
+template <typename T>
+inline void set_indices(uint& buffer, const vector<T>& data) {
+  auto num = 0;
+  set_indices(buffer, num, data);
 }
 inline void clear_indices(uint& buffer) {
   if (buffer) glDeleteBuffers(1, &buffer);
@@ -1338,19 +1356,9 @@ bool init_image(glimage_state& glimage) {
   // buffers
   auto positions = vector<vec3f>{
       {-1, -1, 0}, {1, -1, 0}, {1, 1, 0}, {-1, 1, 0}};
-  glGenBuffers(1, &glimage.positions);
-  glBindBuffer(GL_ARRAY_BUFFER, glimage.positions);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(vec3f) * positions.size(),
-      positions.data(), GL_STATIC_DRAW);
-  glEnableVertexAttribArray(0);
-  glVertexAttribPointer(0, 3, GL_FLOAT, false, 0, nullptr);
-  glBindBuffer(GL_ARRAY_BUFFER, 0);
+  set_vertex(glimage.positions, positions, 0);
   auto triangles = vector<vec3i>{{0, 1, 3}, {3, 2, 1}};
-  glGenBuffers(1, &glimage.triangles);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, glimage.triangles);
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(vec3i) * triangles.size(),
-      triangles.data(), GL_STATIC_DRAW);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+  set_indices(glimage.triangles, triangles);
 
   return true;
 }
@@ -1379,13 +1387,11 @@ void draw_image(glimage_state& glimage, const glimage_params& params) {
   clear_framebuffer(params.background);
 
   // blend
-  set_blending(true);
+  bind_blending(true);
 
   // bind program and params
   bind_program(glimage.program);
-  glActiveTexture(GL_TEXTURE0);
-  glBindTexture(GL_TEXTURE_2D, glimage.texture);
-  bind_uniform(glimage.program, "txt", 0);
+  bind_texture(glimage.program, "txt", glimage.texture, 0);
   bind_uniform(glimage.program, "window", (vec2f)params.window);
   bind_uniform(glimage.program, "image_size", (vec2f)glimage.extents);
   bind_uniform(glimage.program, "image_center", params.center);
@@ -1408,7 +1414,7 @@ void draw_image(glimage_state& glimage, const glimage_params& params) {
   assert_glerror();
 
   // blend
-  glDisable(GL_BLEND);
+  bind_blending(false);
 }
 
 }  // namespace yocto
@@ -1685,8 +1691,8 @@ static void clear_texture(glscene_texture& gltexture) {
 
 // Create shape
 static void set_shape(glscene_shape& glshape, const shape_data& shape) {
-  if (!glshape.vertexarray) glGenVertexArrays(1, &glshape.vertexarray);
-  glBindVertexArray(glshape.vertexarray);
+  set_vertexarrays(glshape.vertexarray);
+  bind_vertexarrays(glshape.vertexarray);
   set_indices(glshape.points, glshape.num_points, shape.points);
   set_indices(glshape.lines, glshape.num_lines, shape.lines);
   set_indices(glshape.triangles, glshape.num_triangles, shape.triangles);
@@ -1702,7 +1708,7 @@ static void set_shape(glscene_shape& glshape, const shape_data& shape) {
       glshape.colors, glshape.num_colors, shape.colors, vec4f{1, 1, 1, 1}, 3);
   set_vertex(glshape.tangents, glshape.num_tangents, shape.tangents,
       vec4f{0, 0, 1, 1}, 4);
-  glBindVertexArray(0);
+  bind_vertexarrays(0);
 }
 
 // Clean shape
@@ -1754,20 +1760,11 @@ static void clear_scene(glscene_state& glscene) {
 [[maybe_unused]] static void draw_shape(glscene_shape& shape) {
   if (shape.vertexarray == 0) return;
   bind_vertexarrays(shape.vertexarray);
-
-  if (shape.points) {
+  if (shape.points)
     draw_points(shape.points, shape.num_points, shape.point_size);
-  }
-  if (shape.lines) {
-    draw_lines(shape.lines, shape.num_lines);
-  }
-  if (shape.triangles) {
-    draw_triangles(shape.triangles, shape.num_triangles);
-  }
-  if (shape.quads) {
-    draw_triangles(shape.quads, shape.num_quads);
-  }
-
+  if (shape.lines) draw_lines(shape.lines, shape.num_lines);
+  if (shape.triangles) draw_triangles(shape.triangles, shape.num_triangles);
+  if (shape.quads) draw_triangles(shape.quads, shape.num_quads);
   bind_vertexarrays(0);
   assert_glerror();
 }
@@ -1844,7 +1841,7 @@ static void draw_scene(glscene_state& glscene, const scene_data& scene,
       };
 
   // draw instances
-  if (params.wireframe) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+  bind_wireframe(params.wireframe);
   for (auto& instance : scene.instances) {
     auto& glshape  = glscene.shapes.at(instance.shape);
     auto& material = scene.materials.at(instance.material);
@@ -1904,10 +1901,10 @@ static void draw_scene(glscene_state& glscene, const scene_data& scene,
       draw_triangles(glshape.quads, glshape.num_quads);
     }
 
-    glBindVertexArray(0);
+    bind_vertexarrays(0);
     assert_glerror();
   }
-  if (params.wireframe) glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+  bind_wireframe(false);
 
   // done
   bind_program(0);
