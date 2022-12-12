@@ -1050,7 +1050,7 @@ inline void clear_vertexarrays(uint& vertexarray) {
   glDeleteVertexArrays(1, &vertexarray);
   vertexarray = 0;
 }
-inline void bind_vertexarrays(uint& vertexarray) {
+inline void bind_vertexarrays(uint vertexarray) {
   glBindVertexArray(vertexarray);
 }
 
@@ -1733,7 +1733,7 @@ static void clear_scene(glscene_state& glscene) {
 
 [[maybe_unused]] static void draw_shape(glscene_shape& shape) {
   if (shape.vertexarray == 0) return;
-  glBindVertexArray(shape.vertexarray);
+  bind_vertexarrays(shape.vertexarray);
 
   if (shape.points) {
     glPointSize(shape.point_size);
@@ -1758,7 +1758,7 @@ static void clear_scene(glscene_state& glscene) {
         GL_TRIANGLES, (GLsizei)shape.num_quads * 3, GL_UNSIGNED_INT, nullptr);
   }
 
-  glBindVertexArray(0);
+  bind_vertexarrays(0);
   assert_glerror();
 }
 
@@ -1880,7 +1880,7 @@ static void draw_scene(glscene_state& glscene, const scene_data& scene,
     if (glshape.quads) bind_uniform(program, "element", 3);
     assert_glerror();
 
-    glBindVertexArray(glshape.vertexarray);
+    bind_vertexarrays(glshape.vertexarray);
     if (glshape.points) {
       glPointSize(glshape.point_size);
       glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, glshape.points);
