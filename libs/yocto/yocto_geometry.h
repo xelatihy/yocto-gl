@@ -718,11 +718,30 @@ constexpr kernel pair<vec<T, 3>, vec<T, 3>> quad_tangents_fromuv(
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// Computes the aspect ratio.
+template <typename T>
+constexpr kernel T aspect_ratio(const vec<T, 2>& size) {
+  return size.x / size.y;
+}
+
+// Flip u from [0,1] to [1,0]
+template <typename T>
+constexpr kernel vec<T, 2> flip_u(const vec<T, 2>& uv) {
+  auto [u, v] = uv;
+  return {1 - u, v};
+}
+// Flip v from [0,1] to [1,0]
+template <typename T>
+constexpr kernel vec<T, 2> flip_v(const vec<T, 2>& uv) {
+  auto [u, v] = uv;
+  return {u, 1 - v};
+}
+
 // Generate a ray from a camera
 template <typename T>
 constexpr kernel ray<T, 3> camera_ray(const frame<T, 3>& frame, T lens,
     const vec<T, 2>& film, const vec<T, 2>& image_uv) {
-  auto uv  = lerp(vec<T, 2>{1, 0}, vec<T, 2>{0, 1}, image_uv);  // flip x
+  auto uv  = flip_u(image_uv);
   auto e   = vec<T, 3>{0, 0, 0};
   auto q   = vec<T, 3>{film * (uv - (T)0.5), lens};
   auto d   = normalize(e - q);
@@ -735,7 +754,7 @@ constexpr kernel ray<T, 3> camera_ray(const frame<T, 3>& frame, T lens,
 template <typename T>
 constexpr kernel ray<T, 3> camera_ray(const frame<T, 3>& frame, T lens,
     T aspect, T film_, const vec<T, 2>& image_uv) {
-  auto uv   = lerp(vec<T, 2>{1, 0}, vec<T, 2>{0, 1}, image_uv);  // flip x
+  auto uv   = flip_u(image_uv);
   auto film = aspect >= 1 ? vec<T, 2>{film_, film_ / aspect}
                           : vec<T, 2>{film_ * aspect, film_};
   auto e    = vec<T, 3>{0, 0, 0};

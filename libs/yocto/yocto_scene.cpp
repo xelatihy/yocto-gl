@@ -69,7 +69,7 @@ ray3f eval_camera(
                   ? vec2f{camera.film, camera.film / camera.aspect}
                   : vec2f{camera.film * camera.aspect, camera.film};
   if (!camera.orthographic) {
-    auto uv = lerp(vec2f{1, 0}, vec2f{0, 1}, image_uv);  // flip x
+    auto uv = flip_u(image_uv);
     auto q  = vec3f{film * (uv - 0.5f), camera.lens};
     // ray direction through the lens center
     auto dc = -normalize(q);
@@ -83,7 +83,7 @@ ray3f eval_camera(
     return ray3f{
         transform_point(camera.frame, e), transform_direction(camera.frame, d)};
   } else {
-    auto uv    = lerp(vec2f{1, 0}, vec2f{0, 1}, image_uv);  // flip x
+    auto uv    = flip_u(image_uv);
     auto scale = 1 / camera.lens;
     auto q     = vec3f{film * (uv - 0.5f) * scale, camera.lens};
     // point on the lens
