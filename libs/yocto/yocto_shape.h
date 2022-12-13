@@ -229,8 +229,8 @@ shape_data make_recty(const vec2i& steps = {1, 1}, const vec2f& scale = {1, 1});
 shape_data make_box(
     const vec3i& steps = {1, 1, 1}, const vec3f& scale = {1, 1, 1});
 // Make a rectangle stack
-shape_data make_rect_stack(
-    const vec3i& steps = {1, 1, 1}, const vec3f& scale = {1, 1, 1});
+shape_data make_rect_stack(int vsteps = 1, const vec2i& steps = {1, 1},
+    const vec3f& scale = {1, 1, 1});
 // Make a tesselated sphere
 shape_data make_tsphere(const vec3i& steps = {32, 32, 32}, float scale = 1);
 // Make a uv sphere

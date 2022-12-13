@@ -1094,14 +1094,18 @@ shape_data make_rounded_box(
 }
 
 // Make a quad stack
-shape_data make_rect_stack(const vec3i& steps, const vec3f& scale) {
-  auto shape  = shape_data{};
-  auto qshape = shape_data{};
-  for (auto i : range(steps.z + 1)) {
-    qshape = make_rect({steps.x, steps.y}, {scale.x, scale.y});
-    for (auto& p : qshape.positions)
-      p.z = (-1 + 2 * (float)i / steps.z) * scale.z;
-    merge_shape_inplace(shape, qshape);
+shape_data make_rect_stack(int vsteps, const vec2i& steps, const vec3f& scale) {
+  auto shape = shape_data{};
+  for (auto i : range(vsteps + 1)) {
+    auto w = i / (float)vsteps;
+    merge_shape_inplace(shape, make_quads(
+                                   steps,
+                                   [=](vec2f uv) {
+                                     auto uvw = vec3f{uv, w};
+                                     return scale * (uvw * 2 - 1);
+                                   },
+                                   [=](vec2f uv) { return vec3f(0, 0, 1); },
+                                   [=](vec2f uv) { return flip_v(uv); }));
   }
   return shape;
 }
@@ -1175,46 +1179,45 @@ shape_data make_uvdisk(const vec2i& steps, float scale) {
 
 // Make a uv cylinder
 shape_data make_uvcylinder(const vec3i& steps, const vec2f& scale) {
-  auto shape  = shape_data{};
-  auto qshape = shape_data{};
+  auto shape = shape_data{};
   // side
-  qshape = make_rect({steps.x, steps.y});
-  for (auto i : range(qshape.positions.size())) {
-    auto uv             = qshape.texcoords[i];
-    auto phi            = 2 * pif * uv.x;
-    qshape.positions[i] = {
-        cos(phi) * scale.x, sin(phi) * scale.x, (2 * uv.y - 1) * scale.y};
-    qshape.normals[i]   = {cos(phi), sin(phi), 0};
-    qshape.texcoords[i] = uv;
-  }
-  for (auto& quad : qshape.quads) quad = {quad.x, quad.w, quad.z, quad.y};
-  merge_shape_inplace(shape, qshape);
+  merge_shape_inplace(
+      shape, make_quads(
+                 {steps.x, steps.y},
+                 [=](vec2f uv) {
+                   auto [radius, height] = scale;
+                   auto [phi, h]         = uv * vec2f{2 * pif, 1};
+                   return vec3f{cos(phi) * radius, sin(phi) * radius,
+                       height * (2 * h - 1)};
+                 },
+                 [=](vec2f uv) {
+                   auto [phi, _] = flip_v(uv) * vec2f{2 * pif, 1};
+                   return vec3f{cos(phi), sin(phi), 0};
+                 },
+                 [=](vec2f uv) { return flip_v(uv); }));
   // top
-  qshape = make_rect({steps.x, steps.z});
-  for (auto i : range(qshape.positions.size())) {
-    auto uv             = qshape.texcoords[i];
-    auto phi            = 2 * pif * uv.x;
-    qshape.positions[i] = {
-        cos(phi) * uv.y * scale.x, sin(phi) * uv.y * scale.x, 0};
-    qshape.normals[i]     = {0, 0, 1};
-    qshape.texcoords[i]   = uv;
-    qshape.positions[i].z = scale.y;
-  }
-  merge_shape_inplace(shape, qshape);
+  merge_shape_inplace(shape,
+      make_quads(
+          {steps.x, steps.y},
+          [=](vec2f uv) {
+            auto [radius, height] = scale;
+            auto [phi, r]         = flip_v(uv) * vec2f{2 * pif, 1};
+            return vec3f{r * radius * cos(phi), r * radius * sin(phi), +height};
+          },
+          [=](vec2f uv) { return vec3f(0, 0, 1); },
+          [=](vec2f uv) { return flip_v(uv); }));
   // bottom
-  qshape = make_rect({steps.x, steps.z});
-  for (auto i : range(qshape.positions.size())) {
-    auto uv             = qshape.texcoords[i];
-    auto phi            = 2 * pif * uv.x;
-    qshape.positions[i] = {
-        cos(phi) * uv.y * scale.x, sin(phi) * uv.y * scale.x, 0};
-    qshape.normals[i]     = {0, 0, 1};
-    qshape.texcoords[i]   = uv;
-    qshape.positions[i].z = -scale.y;
-    qshape.normals[i]     = -qshape.normals[i];
-  }
-  for (auto& qquad : qshape.quads) swap(qquad.x, qquad.z);
-  merge_shape_inplace(shape, qshape);
+  merge_shape_inplace(shape,
+      make_quads(
+          {steps.x, steps.y},
+          [=](vec2f uv) {
+            auto [radius, height] = scale;
+            auto [phi, r]         = uv * vec2f{2 * pif, 1};
+            return vec3f{r * radius * cos(phi), r * radius * sin(phi), -height};
+          },
+          [=](vec2f uv) { return vec3f(0, 0, -1); },
+          [=](vec2f uv) { return uv; }));
+  // TODO: flip quads
   return shape;
 }
 
