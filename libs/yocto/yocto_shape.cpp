@@ -987,44 +987,73 @@ shape_data make_bulged_recty(
 
 // Make a box.
 shape_data make_box(const vec3i& steps, const vec3f& scale) {
-  auto shape  = shape_data{};
-  auto qshape = shape_data{};
+  auto shape = shape_data{};
   // + z
-  qshape = make_rect({steps.x, steps.y}, {scale.x, scale.y});
-  for (auto& p : qshape.positions) p = {p.x, p.y, scale.z};
-  for (auto& n : qshape.normals) n = {0, 0, 1};
-  merge_shape_inplace(shape, qshape);
+  merge_shape_inplace(
+      shape, make_quads(
+                 {steps.x, steps.y},
+                 [=](vec2f uv) {
+                   auto [sx, sy, sz] = scale;
+                   auto [u, v]       = uv;
+                   return vec3f(+sx * (u * 2 - 1), +sy * (v * 2 - 1), +sz);
+                 },
+                 [=](vec2f uv) { return vec3f(0, 0, 1); },
+                 [=](vec2f uv) { return flip_v(uv); }));
   // - z
-  qshape = make_rect({steps.x, steps.y}, {scale.x, scale.y});
-  for (auto& p : qshape.positions) p = {-p.x, p.y, -scale.z};
-  for (auto& n : qshape.normals) n = {0, 0, -1};
-  merge_shape_inplace(shape, qshape);
+  merge_shape_inplace(
+      shape, make_quads(
+                 {steps.x, steps.y},
+                 [=](vec2f uv) {
+                   auto [sx, sy, sz] = scale;
+                   auto [u, v]       = uv;
+                   return vec3f(-sx * (u * 2 - 1), +sy * (v * 2 - 1), -sz);
+                 },
+                 [=](vec2f uv) { return vec3f(0, 0, -1); },
+                 [=](vec2f uv) { return flip_v(uv); }));
   // + x
-  qshape = make_rect({steps.z, steps.y}, {scale.z, scale.y});
-  for (auto& p : qshape.positions) p = {scale.x, p.y, -p.x};
-  for (auto& n : qshape.normals) n = {1, 0, 0};
-  merge_shape_inplace(shape, qshape);
+  merge_shape_inplace(
+      shape, make_quads(
+                 {steps.z, steps.y},
+                 [=](vec2f uv) {
+                   auto [sx, sy, sz] = scale;
+                   auto [u, v]       = uv;
+                   return vec3f(+sx, +sy * (v * 2 - 1), -sz * (u * 2 - 1));
+                 },
+                 [=](vec2f uv) { return vec3f(1, 0, 0); },
+                 [=](vec2f uv) { return flip_v(uv); }));
   // - x
-  qshape = make_rect({steps.z, steps.y}, {scale.z, scale.y});
-  for (auto& p : qshape.positions) p = {-scale.x, p.y, p.x};
-  for (auto& n : qshape.normals) n = {-1, 0, 0};
-  merge_shape_inplace(shape, qshape);
+  merge_shape_inplace(
+      shape, make_quads(
+                 {steps.z, steps.y},
+                 [=](vec2f uv) {
+                   auto [sx, sy, sz] = scale;
+                   auto [u, v]       = uv;
+                   return vec3f(-sx, +sy * (v * 2 - 1), +sz * (u * 2 - 1));
+                 },
+                 [=](vec2f uv) { return vec3f(-1, 0, 0); },
+                 [=](vec2f uv) { return flip_v(uv); }));
   // + y
-  qshape = make_rect({steps.x, steps.z}, {scale.x, scale.z});
-  for (auto i : range(qshape.positions.size())) {
-    qshape.positions[i] = {
-        qshape.positions[i].x, scale.y, -qshape.positions[i].y};
-    qshape.normals[i] = {0, 1, 0};
-  }
-  merge_shape_inplace(shape, qshape);
+  merge_shape_inplace(
+      shape, make_quads(
+                 {steps.x, steps.z},
+                 [=](vec2f uv) {
+                   auto [sx, sy, sz] = scale;
+                   auto [u, v]       = uv;
+                   return vec3f(+sx * (u * 2 - 1), +sy, -sz * (v * 2 - 1));
+                 },
+                 [=](vec2f uv) { return vec3f(0, +1, 0); },
+                 [=](vec2f uv) { return flip_v(uv); }));
   // - y
-  qshape = make_rect({steps.x, steps.z}, {scale.x, scale.z});
-  for (auto i : range(qshape.positions.size())) {
-    qshape.positions[i] = {
-        qshape.positions[i].x, -scale.y, qshape.positions[i].y};
-    qshape.normals[i] = {0, -1, 0};
-  }
-  merge_shape_inplace(shape, qshape);
+  merge_shape_inplace(
+      shape, make_quads(
+                 {steps.x, steps.z},
+                 [=](vec2f uv) {
+                   auto [sx, sy, sz] = scale;
+                   auto [u, v]       = uv;
+                   return vec3f(+sx * (u * 2 - 1), -sy, +sz * (v * 2 - 1));
+                 },
+                 [=](vec2f uv) { return vec3f(0, -1, 0); },
+                 [=](vec2f uv) { return flip_v(uv); }));
   return shape;
 }
 shape_data make_rounded_box(
