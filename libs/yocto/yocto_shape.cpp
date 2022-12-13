@@ -941,24 +941,24 @@ void merge_shape_inplace(shape_data& shape, const shape_data& merge) {
 }
 
 // Make a plane.
-shape_data make_quad_grid(const vec2i& steps, float scale_, bool uniform_uv) {
+shape_data make_quad_grid(const vec2i& steps, float scale_) {
   auto scale = scale_ * (vec2f)steps / steps.y;
   return make_quads(
       steps, [=](vec2f uv) { return vec3f(scale * (uv * 2 - 1), 0); },
       [=](vec2f uv) { return vec3f(0, 0, 1); },
-      [=](vec2f uv) { return uniform_uv ? scale * flip_v(uv) : flip_v(uv); });
+      [=](vec2f uv) { return flip_v(uv); });
 }
-shape_data make_rect(const vec2i& steps, const vec2f& scale, bool uniform_uv) {
+shape_data make_rect(const vec2i& steps, const vec2f& scale) {
   auto aspect = (vec2f)scale / scale.y;
   return make_quads(
       steps, [=](vec2f uv) { return vec3f(aspect * (uv * 2 - 1), 0); },
       [=](vec2f uv) { return vec3f(0, 0, 1); },
-      [=](vec2f uv) { return uniform_uv ? aspect * flip_v(uv) : flip_v(uv); });
+      [=](vec2f uv) { return flip_v(uv); });
 }
 shape_data make_bulged_rect(
-    const vec2i& steps, const vec2f& scale, float height, bool uniform_uv) {
-  if (height == 0) return make_rect(steps, scale, uniform_uv);
-  auto shape  = make_rect(steps, scale, uniform_uv);
+    const vec2i& steps, const vec2f& scale, float height) {
+  if (height == 0) return make_rect(steps, scale);
+  auto shape  = make_rect(steps, scale);
   height      = min(height, min(scale));
   auto radius = (1 + height * height) / (2 * height);
   auto center = vec3f{0, 0, -radius + height};
@@ -971,16 +971,16 @@ shape_data make_bulged_rect(
 }
 
 // Make a plane in the xz plane.
-shape_data make_recty(const vec2i& steps, const vec2f& scale, bool uniform_uv) {
-  auto shape = make_rect(steps, scale, uniform_uv);
+shape_data make_recty(const vec2i& steps, const vec2f& scale) {
+  auto shape = make_rect(steps, scale);
   for (auto& position : shape.positions)
     position = {position.x, position.z, -position.y};
   for (auto& normal : shape.normals) normal = {normal.x, normal.z, normal.y};
   return shape;
 }
 shape_data make_bulged_recty(
-    const vec2i& steps, const vec2f& scale, float height, bool uniform_uv) {
-  auto shape = make_bulged_rect(steps, scale, height, uniform_uv);
+    const vec2i& steps, const vec2f& scale, float height) {
+  auto shape = make_bulged_rect(steps, scale, height);
   for (auto& position : shape.positions)
     position = {position.x, position.z, -position.y};
   for (auto& normal : shape.normals) normal = {normal.x, normal.z, normal.y};
@@ -988,36 +988,31 @@ shape_data make_bulged_recty(
 }
 
 // Make a box.
-shape_data make_box(const vec3i& steps, const vec3f& scale, bool uniform_uv) {
+shape_data make_box(const vec3i& steps, const vec3f& scale) {
   auto shape  = shape_data{};
   auto qshape = shape_data{};
   // + z
-  qshape = make_rect(
-      {steps.x, steps.y}, {scale.x, scale.y}, {uvscale.x, uvscale.y});
+  qshape = make_rect({steps.x, steps.y}, {scale.x, scale.y});
   for (auto& p : qshape.positions) p = {p.x, p.y, scale.z};
   for (auto& n : qshape.normals) n = {0, 0, 1};
   merge_shape_inplace(shape, qshape);
   // - z
-  qshape = make_rect(
-      {steps.x, steps.y}, {scale.x, scale.y}, {uvscale.x, uvscale.y});
+  qshape = make_rect({steps.x, steps.y}, {scale.x, scale.y});
   for (auto& p : qshape.positions) p = {-p.x, p.y, -scale.z};
   for (auto& n : qshape.normals) n = {0, 0, -1};
   merge_shape_inplace(shape, qshape);
   // + x
-  qshape = make_rect(
-      {steps.z, steps.y}, {scale.z, scale.y}, {uvscale.z, uvscale.y});
+  qshape = make_rect({steps.z, steps.y}, {scale.z, scale.y});
   for (auto& p : qshape.positions) p = {scale.x, p.y, -p.x};
   for (auto& n : qshape.normals) n = {1, 0, 0};
   merge_shape_inplace(shape, qshape);
   // - x
-  qshape = make_rect(
-      {steps.z, steps.y}, {scale.z, scale.y}, {uvscale.z, uvscale.y});
+  qshape = make_rect({steps.z, steps.y}, {scale.z, scale.y});
   for (auto& p : qshape.positions) p = {-scale.x, p.y, p.x};
   for (auto& n : qshape.normals) n = {-1, 0, 0};
   merge_shape_inplace(shape, qshape);
   // + y
-  qshape = make_rect(
-      {steps.x, steps.z}, {scale.x, scale.z}, {uvscale.x, uvscale.z});
+  qshape = make_rect({steps.x, steps.z}, {scale.x, scale.z});
   for (auto i : range(qshape.positions.size())) {
     qshape.positions[i] = {
         qshape.positions[i].x, scale.y, -qshape.positions[i].y};
@@ -1025,8 +1020,7 @@ shape_data make_box(const vec3i& steps, const vec3f& scale, bool uniform_uv) {
   }
   merge_shape_inplace(shape, qshape);
   // - y
-  qshape = make_rect(
-      {steps.x, steps.z}, {scale.x, scale.z}, {uvscale.x, uvscale.z});
+  qshape = make_rect({steps.x, steps.z}, {scale.x, scale.z});
   for (auto i : range(qshape.positions.size())) {
     qshape.positions[i] = {
         qshape.positions[i].x, -scale.y, qshape.positions[i].y};
@@ -1036,9 +1030,9 @@ shape_data make_box(const vec3i& steps, const vec3f& scale, bool uniform_uv) {
   return shape;
 }
 shape_data make_rounded_box(
-    const vec3i& steps, const vec3f& scale, float radius, bool uniform_uv) {
-  if (radius == 0) make_box(steps, scale, uniform_uv);
-  auto shape = make_box(steps, scale, uniform_uv);
+    const vec3i& steps, const vec3f& scale, float radius) {
+  if (radius == 0) make_box(steps, scale);
+  auto shape = make_box(steps, scale);
   radius     = min(radius, min(scale));
   auto c     = scale - radius;
   for (auto i : range(shape.positions.size())) {
@@ -1073,12 +1067,11 @@ shape_data make_rounded_box(
 }
 
 // Make a quad stack
-shape_data make_rect_stack(
-    const vec3i& steps, const vec3f& scale, bool uniform_uv) {
+shape_data make_rect_stack(const vec3i& steps, const vec3f& scale) {
   auto shape  = shape_data{};
   auto qshape = shape_data{};
   for (auto i : range(steps.z + 1)) {
-    qshape = make_rect({steps.x, steps.y}, {scale.x, scale.y}, uniform_uv);
+    qshape = make_rect({steps.x, steps.y}, {scale.x, scale.y});
     for (auto& p : qshape.positions)
       p.z = (-1 + 2 * (float)i / steps.z) * scale.z;
     merge_shape_inplace(shape, qshape);
@@ -1087,8 +1080,8 @@ shape_data make_rect_stack(
 }
 
 // Make a sphere.
-shape_data make_tsphere(const vec3i& steps, float scale, bool uniform_uv) {
-  auto shape = make_box(steps, {scale, scale, scale}, uniform_uv);
+shape_data make_tsphere(const vec3i& steps, float scale) {
+  auto shape = make_box(steps, {scale, scale, scale});
   for (auto& p : shape.positions) p = normalize(p) * scale;
   shape.normals = shape.positions;
   for (auto& n : shape.normals) n = normalize(n);
@@ -1096,7 +1089,7 @@ shape_data make_tsphere(const vec3i& steps, float scale, bool uniform_uv) {
 }
 
 // Make a sphere.
-shape_data make_uvsphere(const vec2i& steps, float scale, bool uniform_uv) {
+shape_data make_uvsphere(const vec2i& steps, float scale) {
   auto shape = make_rect(steps, {1, 1});
   for (auto i : range(shape.positions.size())) {
     auto uv = shape.texcoords[i];
@@ -1104,14 +1097,14 @@ shape_data make_uvsphere(const vec2i& steps, float scale, bool uniform_uv) {
     shape.positions[i] =
         vec3f{cos(a.x) * sin(a.y), sin(a.x) * sin(a.y), cos(a.y)} * scale;
     shape.normals[i]   = normalize(shape.positions[i]);
-    shape.texcoords[i] = uv * uvscale;
+    shape.texcoords[i] = uv * vec2f{1, 1};
   }
   return shape;
 }
 
 // Make a sphere.
-shape_data make_uvspherey(const vec2i& steps, float scale, bool uniform_uv) {
-  auto shape = make_uvsphere(steps, scale, uniform_uv);
+shape_data make_uvspherey(const vec2i& steps, float scale) {
+  auto shape = make_uvsphere(steps, scale);
   for (auto& position : shape.positions)
     position = {position.x, position.z, position.y};
   for (auto& normal : shape.normals) normal = {normal.x, normal.z, normal.y};
@@ -1122,9 +1115,8 @@ shape_data make_uvspherey(const vec2i& steps, float scale, bool uniform_uv) {
 }
 
 // Make a sphere with slipped caps.
-shape_data make_capped_uvsphere(
-    const vec2i& steps, float scale, float cap, bool uniform_uv) {
-  auto shape = make_uvsphere(steps, scale, uniform_uv);
+shape_data make_capped_uvsphere(const vec2i& steps, float scale, float cap) {
+  auto shape = make_uvsphere(steps, scale);
   if (cap != 0) {
     cap        = min(cap, scale / 2);
     auto zflip = (scale - cap);
@@ -1144,9 +1136,8 @@ shape_data make_capped_uvsphere(
 }
 
 // Make a sphere with slipped caps.
-shape_data make_capped_uvspherey(
-    const vec2i& steps, float scale, float cap, bool uniform_uv) {
-  auto shape = make_capped_uvsphere(steps, scale, cap, uniform_uv);
+shape_data make_capped_uvspherey(const vec2i& steps, float scale, float cap) {
+  auto shape = make_capped_uvsphere(steps, scale, cap);
   for (auto& position : shape.positions)
     position = {position.x, position.z, position.y};
   for (auto& normal : shape.normals) normal = {normal.x, normal.z, normal.y};
@@ -1157,56 +1148,55 @@ shape_data make_capped_uvspherey(
 }
 
 // Make a uv disk
-shape_data make_uvdisk(const vec2i& steps, float scale, bool uniform_uv) {
-  auto shape = make_rect(steps, {1, 1}, {1, 1});
+shape_data make_uvdisk(const vec2i& steps, float scale) {
+  auto shape = make_rect(steps, {1, 1});
   for (auto i : range(shape.positions.size())) {
     auto uv            = shape.texcoords[i];
     auto phi           = 2 * pif * uv.x;
     shape.positions[i] = vec3f{cos(phi) * uv.y, sin(phi) * uv.y, 0} * scale;
     shape.normals[i]   = {0, 0, 1};
-    shape.texcoords[i] = uv * uvscale;
+    shape.texcoords[i] = uv;
   }
   return shape;
 }
 
 // Make a uv cylinder
-shape_data make_uvcylinder(
-    const vec3i& steps, const vec2f& scale, bool uniform_uv) {
+shape_data make_uvcylinder(const vec3i& steps, const vec2f& scale) {
   auto shape  = shape_data{};
   auto qshape = shape_data{};
   // side
-  qshape = make_rect({steps.x, steps.y}, {1, 1}, {1, 1});
+  qshape = make_rect({steps.x, steps.y});
   for (auto i : range(qshape.positions.size())) {
     auto uv             = qshape.texcoords[i];
     auto phi            = 2 * pif * uv.x;
     qshape.positions[i] = {
         cos(phi) * scale.x, sin(phi) * scale.x, (2 * uv.y - 1) * scale.y};
     qshape.normals[i]   = {cos(phi), sin(phi), 0};
-    qshape.texcoords[i] = uv * vec2f{uvscale.x, uvscale.y};
+    qshape.texcoords[i] = uv;
   }
   for (auto& quad : qshape.quads) quad = {quad.x, quad.w, quad.z, quad.y};
   merge_shape_inplace(shape, qshape);
   // top
-  qshape = make_rect({steps.x, steps.z}, {1, 1}, {1, 1});
+  qshape = make_rect({steps.x, steps.z});
   for (auto i : range(qshape.positions.size())) {
     auto uv             = qshape.texcoords[i];
     auto phi            = 2 * pif * uv.x;
     qshape.positions[i] = {
         cos(phi) * uv.y * scale.x, sin(phi) * uv.y * scale.x, 0};
     qshape.normals[i]     = {0, 0, 1};
-    qshape.texcoords[i]   = uv * vec2f{uvscale.x, uvscale.z};
+    qshape.texcoords[i]   = uv;
     qshape.positions[i].z = scale.y;
   }
   merge_shape_inplace(shape, qshape);
   // bottom
-  qshape = make_rect({steps.x, steps.z}, {1, 1}, {1, 1});
+  qshape = make_rect({steps.x, steps.z});
   for (auto i : range(qshape.positions.size())) {
     auto uv             = qshape.texcoords[i];
     auto phi            = 2 * pif * uv.x;
     qshape.positions[i] = {
         cos(phi) * uv.y * scale.x, sin(phi) * uv.y * scale.x, 0};
     qshape.normals[i]     = {0, 0, 1};
-    qshape.texcoords[i]   = uv * vec2f{uvscale.x, uvscale.z};
+    qshape.texcoords[i]   = uv;
     qshape.positions[i].z = -scale.y;
     qshape.normals[i]     = -qshape.normals[i];
   }
@@ -1217,8 +1207,8 @@ shape_data make_uvcylinder(
 
 // Make a rounded uv cylinder
 shape_data make_rounded_uvcylinder(
-    const vec3i& steps, const vec2f& scale, float radius, bool uniform_uv) {
-  auto shape = make_uvcylinder(steps, scale, uniform_uv);
+    const vec3i& steps, const vec2f& scale, float radius) {
+  auto shape = make_uvcylinder(steps, scale);
   if (radius != 0) {
     radius = min(radius, min(scale));
     auto c = scale - radius;
@@ -1242,24 +1232,23 @@ shape_data make_rounded_uvcylinder(
 }
 
 // Make a uv capsule
-shape_data make_uvcapsule(
-    const vec3i& steps, const vec2f& scale, bool uniform_uv) {
+shape_data make_uvcapsule(const vec3i& steps, const vec2f& scale) {
   auto shape  = shape_data{};
   auto qshape = shape_data{};
   // side
-  qshape = make_rect({steps.x, steps.y}, {1, 1}, {1, 1});
+  qshape = make_rect({steps.x, steps.y});
   for (auto i : range(qshape.positions.size())) {
     auto uv             = qshape.texcoords[i];
     auto phi            = 2 * pif * uv.x;
     qshape.positions[i] = {
         cos(phi) * scale.x, sin(phi) * scale.x, (2 * uv.y - 1) * scale.y};
     qshape.normals[i]   = {cos(phi), sin(phi), 0};
-    qshape.texcoords[i] = uv * vec2f{uvscale.x, uvscale.y};
+    qshape.texcoords[i] = uv;
   }
   for (auto& quad : qshape.quads) quad = {quad.x, quad.w, quad.z, quad.y};
   merge_shape_inplace(shape, qshape);
   // top
-  qshape = make_rect({steps.x, steps.z}, {1, 1}, {1, 1});
+  qshape = make_rect({steps.x, steps.z});
   for (auto i : range(qshape.positions.size())) {
     auto uv             = qshape.texcoords[i];
     auto phi            = 2 * pif * uv.x;
@@ -1267,12 +1256,12 @@ shape_data make_uvcapsule(
     qshape.positions[i] = {cos(phi) * sin(theta) * scale.x,
         sin(phi) * sin(theta) * scale.x, cos(theta) * scale.x};
     qshape.normals[i]   = normalize(qshape.positions[i]);
-    qshape.texcoords[i] = uv * vec2f{uvscale.x, uvscale.z};
+    qshape.texcoords[i] = uv;
     qshape.positions[i].z += scale.y;
   }
   merge_shape_inplace(shape, qshape);
   // bottom
-  qshape = make_rect({steps.x, steps.z}, {1, 1}, {1, 1});
+  qshape = make_rect({steps.x, steps.z});
   for (auto i : range(qshape.positions.size())) {
     auto uv             = qshape.texcoords[i];
     auto phi            = 2 * pif * uv.x;
@@ -1280,7 +1269,7 @@ shape_data make_uvcapsule(
     qshape.positions[i] = {cos(phi) * sin(theta) * scale.x,
         sin(phi) * sin(theta) * scale.x, -cos(theta) * scale.x};
     qshape.normals[i]   = normalize(qshape.positions[i]);
-    qshape.texcoords[i] = uv * vec2f{uvscale.x, uvscale.z};
+    qshape.texcoords[i] = uv;
     qshape.positions[i].z += -scale.y;
   }
   for (auto& qquad : qshape.quads) swap(qquad.x, qquad.z);
@@ -1289,30 +1278,29 @@ shape_data make_uvcapsule(
 }
 
 // Make a uv cone
-shape_data make_uvcone(
-    const vec3i& steps, const vec2f& scale, bool uniform_uv) {
+shape_data make_uvcone(const vec3i& steps, const vec2f& scale) {
   auto shape  = shape_data{};
   auto qshape = shape_data{};
   // top
-  qshape = make_rect({steps.x, steps.y}, {1, 1}, {1, 1});
+  qshape = make_rect({steps.x, steps.y});
   for (auto i : range(qshape.positions.size())) {
     auto uv             = qshape.texcoords[i];
     auto phi            = 2 * pif * uv.x;
     qshape.positions[i] = {cos(phi) * uv.y * scale.x, sin(phi) * uv.y * scale.x,
         (2 * uv.y - 1) * scale.y};
     qshape.normals[i]   = normalize(qshape.positions[i]);  // BUG: fixme
-    qshape.texcoords[i] = uv * vec2f{uvscale.x, uvscale.y};
+    qshape.texcoords[i] = uv;
   }
   merge_shape_inplace(shape, qshape);
   // bottom
-  qshape = make_rect({steps.x, steps.z}, {1, 1}, {1, 1});
+  qshape = make_rect({steps.x, steps.z});
   for (auto i : range(qshape.positions.size())) {
     auto uv             = qshape.texcoords[i];
     auto phi            = 2 * pif * uv.x;
     qshape.positions[i] = {
         cos(phi) * uv.y * scale.x, sin(phi) * uv.y * scale.x, scale.y};
     qshape.normals[i]   = {0, 0, -1};
-    qshape.texcoords[i] = uv * vec2f{uvscale.x, uvscale.z};
+    qshape.texcoords[i] = uv;
   }
   for (auto& qquad : qshape.quads) swap(qquad.x, qquad.z);
   merge_shape_inplace(shape, qshape);
@@ -1320,9 +1308,8 @@ shape_data make_uvcone(
 }
 
 // Make a face-varying rect
-fvshape_data make_fvrect(
-    const vec2i& steps, const vec2f& scale, bool uniform_uv) {
-  auto rect           = make_rect(steps, scale, uvscale);
+fvshape_data make_fvrect(const vec2i& steps, const vec2f& scale) {
+  auto rect           = make_rect(steps, scale);
   auto shape          = fvshape_data{};
   shape.positions     = rect.positions;
   shape.normals       = rect.normals;
@@ -1334,21 +1321,19 @@ fvshape_data make_fvrect(
 }
 
 // Make a face-varying box
-fvshape_data make_fvbox(
-    const vec3i& steps, const vec3f& scale, bool uniform_uv) {
-  auto box            = make_box(steps, scale, uniform_uv);
-  auto shape          = fvshape_data{};
-  shape.quadsnorm     = box.quads;
-  shape.quadstexcoord = box.quads;
+fvshape_data make_fvbox(const vec3i& steps, const vec3f& scale) {
+  auto box                                  = make_box(steps, scale);
+  auto shape                                = fvshape_data{};
+  shape.quadsnorm                           = box.quads;
+  shape.quadstexcoord                       = box.quads;
   std::tie(shape.quadspos, shape.positions) = weld_quads(
       box.quads, box.positions, 0.1f * min(scale) / max(steps));
   return shape;
 }
 
 // Make a face-varying sphere
-fvshape_data make_fvsphere(int steps, float scale, bool uniform_uv) {
-  auto shape = make_fvbox(
-      {steps, steps, steps}, {scale, scale, scale}, uniform_uv);
+fvshape_data make_fvsphere(int steps, float scale) {
+  auto shape      = make_fvbox({steps, steps, steps}, {scale, scale, scale});
   shape.quadsnorm = shape.quadspos;
   shape.normals   = shape.positions;
   for (auto& n : shape.normals) n = normalize(n);
@@ -1357,7 +1342,7 @@ fvshape_data make_fvsphere(int steps, float scale, bool uniform_uv) {
 
 // Generate lines set along a quad. Returns lines, pos, norm, texcoord, radius.
 shape_data make_lines(
-    int num, int steps, const vec2f& scale, const vec2f& rad, bool uniform_uv) {
+    int num, int steps, const vec2f& scale, const vec2f& rad) {
   auto shape = shape_data{};
   shape.positions.resize((steps + 1) * num);
   shape.normals.resize((steps + 1) * num);
@@ -1369,7 +1354,7 @@ shape_data make_lines(
         auto uv = vec2f{i / (float)steps, j / (float)(num - 1)};
         shape.positions[j * (steps + 1) + i] = {(uv - 0.5f) * scale, 0};
         shape.normals[j * (steps + 1) + i]   = {1, 0, 0};
-        shape.texcoords[j * (steps + 1) + i] = uv * uvscale;
+        shape.texcoords[j * (steps + 1) + i] = uv;
         shape.radius[j * (steps + 1) + i]    = lerp(rad.x, rad.y, uv.x);
       }
     }
@@ -1378,7 +1363,7 @@ shape_data make_lines(
       auto uv            = vec2f{i / (float)steps, 0};
       shape.positions[i] = {(uv.x - 0.5f) * scale.x, 0, 0};
       shape.normals[i]   = {1, 0, 0};
-      shape.texcoords[i] = uv * uvscale;
+      shape.texcoords[i] = uv;
       shape.radius[i]    = lerp(rad.x, rad.y, uv.x);
     }
   }
@@ -1424,27 +1409,25 @@ shape_data make_points(int num, float radius, bool generate_uv) {
 
 shape_data make_point_grid(const vec2i& steps, const vec2f& size,
     bool uniform_uv, const vec2f& radius) {
-  auto shape  = make_rect(steps, size, uvscale);
+  auto shape  = make_rect(steps, size);
   shape.quads = {};
   shape.points.resize(shape.positions.size());
   for (auto i : range(shape.positions.size())) shape.points[i] = (int)i;
   shape.radius.resize(shape.positions.size());
   for (auto i : range(shape.texcoords.size())) {
-    shape.radius[i] = lerp(
-        radius.x, radius.y, shape.texcoords[i].y / uvscale.y);
+    shape.radius[i] = lerp(radius.x, radius.y, shape.texcoords[i].y);
   }
   return shape;
 }
 
 shape_data make_line_grid(const vec2i& steps, const vec2f& size,
     bool uniform_uv, const vec2f& radius) {
-  auto shape  = make_rect(steps, size, uvscale);
+  auto shape  = make_rect(steps, size);
   shape.lines = get_edges(shape.quads);
   shape.quads = {};
   shape.radius.resize(shape.positions.size());
   for (auto i : range(shape.texcoords.size())) {
-    shape.radius[i] = lerp(
-        radius.x, radius.y, shape.texcoords[i].y / uvscale.y);
+    shape.radius[i] = lerp(radius.x, radius.y, shape.texcoords[i].y);
   }
   return shape;
 }
@@ -1487,7 +1470,7 @@ shape_data make_random_lines(const shape_data& base, int num, int steps,
     btexcoord.push_back(eval_texcoord(base, point.element, point.uv));
   }
 
-  auto shape = make_lines(num, steps, {1, 1}, {1, 1}, radius);
+  auto shape = make_lines(num, steps, {1, 1}, radius);
   auto rng   = make_rng(seed);
   for (auto idx : range(num)) {
     auto offset = idx * (steps + 1);
@@ -1518,7 +1501,7 @@ shape_data make_random_hairs(const shape_data& base, int num, int steps,
     btexcoord.push_back(eval_texcoord(base, point.element, point.uv));
   }
 
-  auto shape = make_lines(num, steps, {1, 1}, {1, 1}, radius);
+  auto shape = make_lines(num, steps, {1, 1}, radius);
   auto rng   = make_rng(seed);
   for (auto idx : range(num)) {
     auto offset             = idx * (steps + 1);
@@ -1574,7 +1557,7 @@ shape_data points_to_spheres(
     const vector<vec3f>& vertices, int steps, float scale) {
   auto shape = shape_data{};
   for (auto& vertex : vertices) {
-    auto sphere = make_tsphere({steps, steps, steps}, scale, 1);
+    auto sphere = make_tsphere({steps, steps, steps}, scale);
     for (auto& position : sphere.positions) position += vertex;
     merge_shape_inplace(shape, sphere);
   }
@@ -1584,7 +1567,7 @@ shape_data polyline_to_cylinders(
     const vector<vec3f>& vertices, int steps, float scale) {
   auto shape = shape_data{};
   for (auto idx = 0; idx < (int)vertices.size() - 1; idx++) {
-    auto cylinder = make_uvcylinder({steps, 1, 1}, {scale, 1}, {1, 1, 1});
+    auto cylinder = make_uvcylinder({steps, 1, 1}, {scale, 1});
     auto frame    = frame_fromz((vertices[idx] + vertices[idx + 1]) / 2,
            vertices[idx] - vertices[idx + 1]);
     auto length   = distance(vertices[idx], vertices[idx + 1]);
@@ -1600,7 +1583,7 @@ shape_data lines_to_cylinders(
     const vector<vec3f>& vertices, int steps, float scale) {
   auto shape = shape_data{};
   for (auto idx = 0; idx < (int)vertices.size(); idx += 2) {
-    auto cylinder = make_uvcylinder({steps, 1, 1}, {scale, 1}, {1, 1, 1});
+    auto cylinder = make_uvcylinder({steps, 1, 1}, {scale, 1});
     auto frame    = frame_fromz((vertices[idx + 0] + vertices[idx + 1]) / 2,
            vertices[idx + 0] - vertices[idx + 1]);
     auto length   = distance(vertices[idx + 0], vertices[idx + 1]);
@@ -1616,7 +1599,7 @@ shape_data lines_to_cylinders(const vector<vec2i>& lines,
     const vector<vec3f>& positions, int steps, float scale) {
   auto shape = shape_data{};
   for (auto& line : lines) {
-    auto cylinder = make_uvcylinder({steps, 1, 1}, {scale, 1}, {1, 1, 1});
+    auto cylinder = make_uvcylinder({steps, 1, 1}, {scale, 1});
     auto frame    = frame_fromz((positions[line.x] + positions[line.y]) / 2,
            positions[line.x] - positions[line.y]);
     auto length   = distance(positions[line.x], positions[line.y]);
