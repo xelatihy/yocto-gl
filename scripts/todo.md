@@ -6,7 +6,8 @@
 
 ## Image examples
 
-- move to resolution
+- move to resolution and set it as default
+- check sky intensity
 
 ## Shape examples
 

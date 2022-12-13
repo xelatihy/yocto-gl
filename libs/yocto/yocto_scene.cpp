@@ -591,7 +591,7 @@ void add_sky(scene_data& scene, float sun_angle) {
   texture       = image_to_texture(make_sunsky({1024, 512}, sun_angle), true);
   scene.environment_names.emplace_back("sky");
   auto& environment        = scene.environments.emplace_back();
-  environment.emission     = {1, 1, 1};
+  environment.emission     = {0.25, 0.25, 0.25};
   environment.emission_tex = (int)scene.textures.size() - 1;
 }
 
