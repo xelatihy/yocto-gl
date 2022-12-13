@@ -390,7 +390,8 @@ inline array2d<vec<T, 4>> make_gammaramp(const vec2s& extents, T scale = 1,
 }
 
 template <typename T = float>
-inline array2d<vec<T, 4>> make_uvramp(const vec2s& extents, T scale = 1) {
+inline array2d<vec<T, 4>> make_uvramp(
+    const vec2s& extents = {1024, 1024}, T scale = 1) {
   return _make_proc_image(extents, [=](vec2s ij) -> vec<T, 4> {
     auto [u, v] = fmod((scale * ij) / extents, 1);
     return vec<T, 4>{u, v, 0, 1};

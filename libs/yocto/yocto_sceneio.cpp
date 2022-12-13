@@ -1717,21 +1717,20 @@ static void add_missing_radius(scene_data& scene, float radius = 0.001f) {
 }
 
 // Add missing cameras.
-void add_missing_material(scene_data& scene, bool textured = false) {
+void add_missing_material(scene_data& scene, bool glossy = false,
+    const array2d<vec4f>& texture = {}) {
   auto default_material = invalidid;
   for (auto& instance : scene.instances) {
     if (instance.material != invalidid) continue;
     if (default_material == invalidid) {
       auto& material   = scene.materials.emplace_back();
       default_material = (int)scene.materials.size() - 1;
-      if (!textured) {
-        material.type  = material_type::matte;
-        material.color = {0.8f, 0.8f, 0.8f};
-      } else {
-        scene.textures.push_back(image_to_texture(make_uvgrid(), false));
-        material.type      = material_type::glossy;
-        material.color     = {1, 1, 1};
-        material.roughness = 0.1f;
+      material.type    = glossy ? material_type::glossy : material_type::matte;
+      material.color   = texture.empty() ? vec3f{0.8f, 0.8f, 0.8f}
+                                         : vec3f{1, 1, 1};
+      material.roughness = 0.1f;
+      if (!texture.empty()) {
+        scene.textures.push_back(image_to_texture(texture, false));
         material.color_tex = (int)scene.textures.size() - 1;
       }
     }
@@ -2193,11 +2192,20 @@ scene_data make_scene_preset(const string& type_) {
     add_missing_radius(scene);
     add_missing_lights(scene);
     return scene;
-  } else if (type.starts_with("textured_shape_")) {
+  } else if (type.starts_with("tshape_")) {
     auto scene = scene_data{};
-    scene.shapes.push_back(make_shape_preset(type.substr(15)));
+    scene.shapes.push_back(make_shape_preset(type.substr(7)));
     scene.instances.push_back({identity3x4f, 0, invalidid});
-    add_missing_material(scene, true);
+    add_missing_material(scene, true, make_uvgrid());
+    add_missing_camera(scene);
+    add_missing_radius(scene);
+    add_missing_lights(scene);
+    return scene;
+  } else if (type.starts_with("uvshape_")) {
+    auto scene = scene_data{};
+    scene.shapes.push_back(make_shape_preset(type.substr(8)));
+    scene.instances.push_back({identity3x4f, 0, invalidid});
+    add_missing_material(scene, true, make_uvramp());
     add_missing_camera(scene);
     add_missing_radius(scene);
     add_missing_lights(scene);

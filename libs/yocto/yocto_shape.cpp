@@ -940,11 +940,24 @@ void merge_shape_inplace(shape_data& shape, const shape_data& merge) {
       shape.radius.end(), merge.radius.begin(), merge.radius.end());
 }
 
+// Flip the y and z axis for example shapes
+shape_data _flip_yz(const shape_data& shape) {
+  auto transformed = shape;
+  for (auto& position : transformed.positions) {
+    auto [px, py, pz] = position;
+    position          = {px, pz, -py};
+  }
+  for (auto& normal : transformed.normals) {
+    auto [nx, ny, nz] = normal;
+    normal            = {nx, nz, -ny};
+  }
+  return transformed;
+}
+
 // Make a plane.
 shape_data make_rect(const vec2i& steps, const vec2f& scale) {
-  auto aspect = (vec2f)scale / scale.y;
   return make_quads(
-      steps, [=](vec2f uv) { return vec3f(aspect * (uv * 2 - 1), 0); },
+      steps, [=](vec2f uv) { return vec3f(scale * (uv * 2 - 1), 0); },
       [=](vec2f uv) { return vec3f(0, 0, 1); },
       [=](vec2f uv) { return flip_v(uv); });
 }
@@ -965,19 +978,11 @@ shape_data make_bulged_rect(
 
 // Make a plane in the xz plane.
 shape_data make_recty(const vec2i& steps, const vec2f& scale) {
-  auto shape = make_rect(steps, scale);
-  for (auto& position : shape.positions)
-    position = {position.x, position.z, -position.y};
-  for (auto& normal : shape.normals) normal = {normal.x, normal.z, normal.y};
-  return shape;
+  return _flip_yz(make_rect(steps, scale));
 }
 shape_data make_bulged_recty(
     const vec2i& steps, const vec2f& scale, float height) {
-  auto shape = make_bulged_rect(steps, scale, height);
-  for (auto& position : shape.positions)
-    position = {position.x, position.z, -position.y};
-  for (auto& normal : shape.normals) normal = {normal.x, normal.z, normal.y};
-  return shape;
+  return _flip_yz(make_bulged_rect(steps, scale, height));
 }
 
 // Make a box.
@@ -1083,46 +1088,40 @@ shape_data make_tsphere(const vec3i& steps, float scale) {
 
 // Make a sphere.
 shape_data make_uvsphere(const vec2i& steps, float scale) {
-  auto shape = make_rect(steps, {1, 1});
-  for (auto i : range(shape.positions.size())) {
-    auto uv = shape.texcoords[i];
-    auto a  = vec2f{2 * pif * uv.x, pif * (1 - uv.y)};
-    shape.positions[i] =
-        vec3f{cos(a.x) * sin(a.y), sin(a.x) * sin(a.y), cos(a.y)} * scale;
-    shape.normals[i]   = normalize(shape.positions[i]);
-    shape.texcoords[i] = uv * vec2f{1, 1};
-  }
-  return shape;
+  return make_quads(
+      steps,
+      [=](vec2f uv) {
+        auto [phi, theta] = flip_v(uv) * vec2f{2 * pif, pif};
+        return vec3f{cos(phi) * sin(theta), sin(phi) * sin(theta), cos(theta)} *
+               scale;
+      },
+      [=](vec2f uv) {
+        auto [phi, theta] = flip_v(uv) * vec2f{2 * pif, pif};
+        return vec3f{cos(phi) * sin(theta), sin(phi) * sin(theta), cos(theta)};
+      },
+      [=](vec2f uv) { return uv; });
 }
 
 // Make a sphere.
 shape_data make_uvspherey(const vec2i& steps, float scale) {
-  auto shape = make_uvsphere(steps, scale);
-  for (auto& position : shape.positions)
-    position = {position.x, position.z, position.y};
-  for (auto& normal : shape.normals) normal = {normal.x, normal.z, normal.y};
-  for (auto& texcoord : shape.texcoords)
-    texcoord = {texcoord.x, 1 - texcoord.y};
-  for (auto& quad : shape.quads) quad = {quad.x, quad.w, quad.z, quad.y};
-  return shape;
+  return _flip_yz(make_uvsphere(steps, scale));
 }
 
 // Make a sphere with slipped caps.
 shape_data make_capped_uvsphere(const vec2i& steps, float scale, float cap) {
+  if (cap != 0) return make_uvsphere(steps, scale);
   auto shape = make_uvsphere(steps, scale);
-  if (cap != 0) {
-    cap        = min(cap, scale / 2);
-    auto zflip = (scale - cap);
-    for (auto i : range(shape.positions.size())) {
-      if (shape.positions[i].z > zflip) {
-        shape.positions[i].z = 2 * zflip - shape.positions[i].z;
-        shape.normals[i].x   = -shape.normals[i].x;
-        shape.normals[i].y   = -shape.normals[i].y;
-      } else if (shape.positions[i].z < -zflip) {
-        shape.positions[i].z = 2 * (-zflip) - shape.positions[i].z;
-        shape.normals[i].x   = -shape.normals[i].x;
-        shape.normals[i].y   = -shape.normals[i].y;
-      }
+  cap        = min(cap, scale / 2);
+  auto zflip = (scale - cap);
+  for (auto i : range(shape.positions.size())) {
+    if (shape.positions[i].z > zflip) {
+      shape.positions[i].z = 2 * zflip - shape.positions[i].z;
+      shape.normals[i].x   = -shape.normals[i].x;
+      shape.normals[i].y   = -shape.normals[i].y;
+    } else if (shape.positions[i].z < -zflip) {
+      shape.positions[i].z = 2 * (-zflip) - shape.positions[i].z;
+      shape.normals[i].x   = -shape.normals[i].x;
+      shape.normals[i].y   = -shape.normals[i].y;
     }
   }
   return shape;
@@ -1130,27 +1129,19 @@ shape_data make_capped_uvsphere(const vec2i& steps, float scale, float cap) {
 
 // Make a sphere with slipped caps.
 shape_data make_capped_uvspherey(const vec2i& steps, float scale, float cap) {
-  auto shape = make_capped_uvsphere(steps, scale, cap);
-  for (auto& position : shape.positions)
-    position = {position.x, position.z, position.y};
-  for (auto& normal : shape.normals) normal = {normal.x, normal.z, normal.y};
-  for (auto& texcoord : shape.texcoords)
-    texcoord = {texcoord.x, 1 - texcoord.y};
-  for (auto& quad : shape.quads) quad = {quad.x, quad.w, quad.z, quad.y};
-  return shape;
+  return _flip_yz(make_capped_uvsphere(steps, scale, cap));
 }
 
 // Make a uv disk
 shape_data make_uvdisk(const vec2i& steps, float scale) {
-  auto shape = make_rect(steps, {1, 1});
-  for (auto i : range(shape.positions.size())) {
-    auto uv            = shape.texcoords[i];
-    auto phi           = 2 * pif * uv.x;
-    shape.positions[i] = vec3f{cos(phi) * uv.y, sin(phi) * uv.y, 0} * scale;
-    shape.normals[i]   = {0, 0, 1};
-    shape.texcoords[i] = uv;
-  }
-  return shape;
+  return make_quads(
+      steps,
+      [=](vec2f uv) {
+        auto [phi, r] = flip_v(uv) * vec2f{2 * pif, 1};
+        return vec3f{r * cos(phi), r * sin(phi), 0} * scale;
+      },
+      [=](vec2f uv) { return vec3f(0, 0, 1); },
+      [=](vec2f uv) { return flip_v(uv); });
 }
 
 // Make a uv cylinder
