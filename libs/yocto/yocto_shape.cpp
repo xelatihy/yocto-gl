@@ -1301,32 +1301,35 @@ shape_data make_uvcapsule(const vec3i& steps, const vec2f& scale) {
 }
 
 // Make a uv cone
-shape_data make_uvcone(const vec3i& steps, const vec2f& scale) {
-  auto shape  = shape_data{};
-  auto qshape = shape_data{};
-  // top
-  qshape = make_rect({steps.x, steps.y});
-  for (auto i : range(qshape.positions.size())) {
-    auto uv             = qshape.texcoords[i];
-    auto phi            = 2 * pif * uv.x;
-    qshape.positions[i] = {cos(phi) * uv.y * scale.x, sin(phi) * uv.y * scale.x,
-        (2 * uv.y - 1) * scale.y};
-    qshape.normals[i]   = normalize(qshape.positions[i]);  // BUG: fixme
-    qshape.texcoords[i] = uv;
-  }
-  merge_shape_inplace(shape, qshape);
+shape_data make_uvcone(const vec3i& steps, const vec2f& scale_) {
+  auto shape = shape_data{};
+  // side
+  merge_shape_inplace(
+      shape, make_quads(
+                 {steps.x, steps.y},
+                 [=](vec2f uv) {
+                   auto [radius, height] = scale;
+                   auto [phi, h]         = uv * vec2f{2 * pif, 1};
+                   return vec3f{cos(phi) * (1 - h) * radius,
+                       sin(phi) * (1 - h) * radius, height * (2 * h - 1)};
+                 },
+                 [=](vec2f uv) {
+                   auto [nr, nh] = normalize(scale * vec2f{1, 2});
+                   auto [phi, _] = flip_v(uv) * vec2f{2 * pif, 1};
+                   return vec3f{cos(phi) * nh, sin(phi) * nh, nr};
+                 },
+                 [=](vec2f uv) { return flip_v(uv); }));
   // bottom
-  qshape = make_rect({steps.x, steps.z});
-  for (auto i : range(qshape.positions.size())) {
-    auto uv             = qshape.texcoords[i];
-    auto phi            = 2 * pif * uv.x;
-    qshape.positions[i] = {
-        cos(phi) * uv.y * scale.x, sin(phi) * uv.y * scale.x, scale.y};
-    qshape.normals[i]   = {0, 0, -1};
-    qshape.texcoords[i] = uv;
-  }
-  for (auto& qquad : qshape.quads) swap(qquad.x, qquad.z);
-  merge_shape_inplace(shape, qshape);
+  merge_shape_inplace(shape,
+      make_quads(
+          {steps.x, steps.y},
+          [=](vec2f uv) {
+            auto [radius, height] = scale;
+            auto [phi, r]         = uv * vec2f{2 * pif, 1};
+            return vec3f{r * radius * cos(phi), r * radius * sin(phi), -height};
+          },
+          [=](vec2f uv) { return vec3f(0, 0, -1); },
+          [=](vec2f uv) { return uv; }));
   return shape;
 }
 
