@@ -1281,6 +1281,8 @@ shape_data make_shape_preset(const string& type_) {
     return make_uvcylinder();
   } else if (type == "rounded_uvcylinder") {
     return make_rounded_uvcylinder({32, 32, 32});
+  } else if (type == "uvcapsule") {
+    return make_uvcapsule();
   } else if (type == "geosphere") {
     return make_geosphere();
   } else if (type == "floor") {
