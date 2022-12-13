@@ -1046,7 +1046,7 @@ shape_data make_rect_stack(
 }
 
 // Make a sphere.
-shape_data make_sphere(const vec3i& steps, float scale, float uvscale) {
+shape_data make_tsphere(const vec3i& steps, float scale, float uvscale) {
   auto shape = make_box(
       steps, {scale, scale, scale}, {uvscale, uvscale, uvscale});
   for (auto& p : shape.positions) p = normalize(p) * scale;

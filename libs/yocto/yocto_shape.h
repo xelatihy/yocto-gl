@@ -185,7 +185,7 @@ vector<string> fvshape_stats(const fvshape_data& shape, bool verbose = false);
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Predefined meshes
+// Subdivided shapes
 shape_data make_quad(int subdivisions = 0);
 shape_data make_quady(int subdivisions = 0);
 shape_data make_cube(int subdivisions = 0);
@@ -196,77 +196,58 @@ shape_data make_wtsphere(int subdivisions = 5);
 shape_data make_disk(int subdivisions = 5);
 shape_data make_floor(float size = 10, int subdivisions = 0);
 shape_data make_monkey(int subdivisions = 0);
-
-// Anisotropic shape
-shape_data make_quads(
-    const vec2i& steps, int subdivisions = 0, bool uniform_uv = false);
-shape_data make_rect(
-    const vec2f& scale, int subdivisions = 0, bool uniform_uv = false);
-shape_data make_box(
-    const vec3f& scale, int subdivisions = 0, bool uniform_uv = false);
-
-// Deformed meshes
 shape_data make_rounded_cube(float radius = 0.3f, int subdivisions = 5);
 shape_data make_bulged_quad(float radius = 0.3f, int subdivisions = 5);
 shape_data make_bulged_disk(float height = 0.3f, int subdivisions = 5);
 shape_data make_bent_floor(
     float bent = 0.5f, float size = 10, int subdivisions = 0);
 
-// Predefined meshes
-fvshape_data make_fvcube(int subdivisions = 0);
-
-// Make a plane.
+// Tessellated shapes
+shape_data make_quads(
+    const vec2i& steps, float scale = 1, const vec2f& uvscale = {1, 1});
 shape_data make_rect(const vec2i& steps = {1, 1}, const vec2f& scale = {1, 1},
     const vec2f& uvscale = {1, 1});
-shape_data make_bulged_rect(const vec2i& steps = {1, 1},
-    const vec2f& scale = {1, 1}, const vec2f& uvscale = {1, 1},
-    float radius = 0.3f);
-// Make a plane in the xz plane.
 shape_data make_recty(const vec2i& steps = {1, 1}, const vec2f& scale = {1, 1},
     const vec2f& uvscale = {1, 1});
-shape_data make_bulged_recty(const vec2i& steps = {1, 1},
-    const vec2f& scale = {1, 1}, const vec2f& uvscale = {1, 1},
-    float radius = 0.3f);
-// Make a box.
 shape_data make_box(const vec3i& steps = {1, 1, 1},
     const vec3f& scale = {1, 1, 1}, const vec3f& uvscale = {1, 1, 1});
-shape_data make_rounded_box(const vec3i& steps = {1, 1, 1},
-    const vec3f& scale = {1, 1, 1}, const vec3f& uvscale = {1, 1, 1},
-    float radius = 0.3f);
-// Make a quad stack
 shape_data make_rect_stack(const vec3i& steps = {1, 1, 1},
     const vec3f& scale = {1, 1, 1}, const vec2f& uvscale = {1, 1});
-// Make a sphere.
-shape_data make_sphere_(
+shape_data make_tsphere(
     const vec3i& steps = {32, 32, 32}, float scale = 1, float uvscale = 1);
-// Make a sphere.
-shape_data make_uvsphere(const vec2i& steps = {32, 32}, float scale = 1,
+shape_data make_uvsphere(const vec2i& steps = {64, 32}, float scale = 1,
     const vec2f& uvscale = {1, 1});
-shape_data make_uvspherey(const vec2i& steps = {32, 32}, float scale = 1,
+shape_data make_uvspherey(const vec2i& steps = {64, 32}, float scale = 1,
     const vec2f& uvscale = {1, 1});
-// Make a sphere with slipped caps.
+shape_data make_uvdisk(const vec2i& steps = {32, 1}, float scale = 1,
+    const vec2f& uvscale = {1, 1});
+shape_data make_uvcylinder(const vec3i& steps = {32, 32, 32},
+    const vec2f& scale = {1, 1}, const vec3f& uvscale = {1, 1, 1});
+shape_data make_bulged_rect(const vec2i& steps = {1, 1},
+    const vec2f& scale = {1, 1}, float radius = 0.3f,
+    const vec2f& uvscale = {1, 1});
+shape_data make_bulged_recty(const vec2i& steps = {1, 1},
+    const vec2f& scale = {1, 1}, float radius = 0.3f,
+    const vec2f& uvscale = {1, 1});
+shape_data make_rounded_box(const vec3i& steps = {32, 32, 32},
+    const vec3f& scale = {1, 1, 1}, float radius = 0.3f,
+    const vec3f& uvscale = {1, 1, 1});
 shape_data make_capped_uvsphere(const vec2i& steps = {32, 32}, float scale = 1,
     const vec2f& uvscale = {1, 1}, float height = 0.3f);
 shape_data make_capped_uvspherey(const vec2i& steps = {32, 32}, float scale = 1,
     const vec2f& uvscale = {1, 1}, float height = 0.3f);
-// Make a uv disk
-shape_data make_uvdisk(const vec2i& steps = {32, 32}, float scale = 1,
-    const vec2f& uvscale = {1, 1});
-// Make a uv cylinder
-shape_data make_uvcylinder(const vec3i& steps = {32, 32, 32},
-    const vec2f& scale = {1, 1}, const vec3f& uvscale = {1, 1, 1});
-// Make a rounded uv cylinder
 shape_data make_rounded_uvcylinder(const vec3i& steps = {32, 32, 32},
     const vec2f& scale = {1, 1}, const vec3f& uvscale = {1, 1, 1},
     float radius = 0.3f);
 
-// Make a facevarying rect
+// Subdivided shapes
+fvshape_data make_fvcube(int subdivisions = 0);
+
+// Tessellated shapes
 fvshape_data make_fvrect(const vec2i& steps = {1, 1},
     const vec2f& scale = {1, 1}, const vec2f& uvscale = {1, 1});
-// Make a facevarying box
 fvshape_data make_fvbox(const vec3i& steps = {1, 1, 1},
     const vec3f& scale = {1, 1, 1}, const vec3f& uvscale = {1, 1, 1});
-// Make a facevarying sphere
 fvshape_data make_fvsphere(int steps = 32, float scale = 1, float uvscale = 1);
 
 // Generate lines set along a quad. Returns lines, pos, norm, texcoord, radius.
