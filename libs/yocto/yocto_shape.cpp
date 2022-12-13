@@ -1407,8 +1407,8 @@ shape_data make_points(int num, float radius, bool generate_uv) {
   return shape;
 }
 
-shape_data make_point_grid(const vec2i& steps, const vec2f& size,
-    bool uniform_uv, const vec2f& radius) {
+shape_data make_point_grid(
+    const vec2i& steps, const vec2f& size, const vec2f& radius) {
   auto shape  = make_rect(steps, size);
   shape.quads = {};
   shape.points.resize(shape.positions.size());
@@ -1420,8 +1420,8 @@ shape_data make_point_grid(const vec2i& steps, const vec2f& size,
   return shape;
 }
 
-shape_data make_line_grid(const vec2i& steps, const vec2f& size,
-    bool uniform_uv, const vec2f& radius) {
+shape_data make_line_grid(
+    const vec2i& steps, const vec2f& size, const vec2f& radius) {
   auto shape  = make_rect(steps, size);
   shape.lines = get_edges(shape.quads);
   shape.quads = {};

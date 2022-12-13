@@ -221,8 +221,6 @@ shape_data make_bulged_disk(float height = 0.3f, int subdivisions = 5);
 shape_data make_bent_floor(
     float bent = 0.5f, float size = 10, int subdivisions = 0);
 
-// Make a grid of quads
-shape_data make_quad_grid(const vec2i& steps, float scale);
 // Make a rectangle
 shape_data make_rect(const vec2i& steps = {1, 1}, const vec2f& scale = {1, 1});
 // Make a rectangle along y
@@ -290,12 +288,14 @@ shape_data make_points(
 shape_data make_lines(int num = 65536, int steps = 4,
     const vec2f& scale = {1, 1}, const vec2f& radius = {0.001f, 0.001f});
 
+// Make a grid of quads
+shape_data make_quad_grid(const vec2i& steps = {256, 256}, float scale = 1);
 // Make points on a grid.
-shape_data make_point_grid(const vec2i& steps = {256, 256},
-    const vec2f& size = {1, 1}, const vec2f& radius = {0.001f, 0.001f});
+shape_data make_point_grid(const vec2i& steps = {256, 256}, float scale = 1,
+    const vec2f& radius = {0.001f, 0.001f});
 // Make lines on a grid.
-shape_data make_line_grid(const vec2i& steps = {256, 256},
-    const vec2f& size = {1, 1}, const vec2f& radius = {0.001f, 0.001f});
+shape_data make_line_grid(const vec2i& steps = {256, 256}, float scale = 1,
+    const vec2f& radius = {0.001f, 0.001f});
 
 // Make random points in a cube.
 // TODO: switch to quad?
