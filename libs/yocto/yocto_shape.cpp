@@ -941,13 +941,6 @@ void merge_shape_inplace(shape_data& shape, const shape_data& merge) {
 }
 
 // Make a plane.
-shape_data make_quad_grid(const vec2i& steps, float scale_) {
-  auto scale = scale_ * (vec2f)steps / steps.y;
-  return make_quads(
-      steps, [=](vec2f uv) { return vec3f(scale * (uv * 2 - 1), 0); },
-      [=](vec2f uv) { return vec3f(0, 0, 1); },
-      [=](vec2f uv) { return flip_v(uv); });
-}
 shape_data make_rect(const vec2i& steps, const vec2f& scale) {
   auto aspect = (vec2f)scale / scale.y;
   return make_quads(
@@ -1407,9 +1400,17 @@ shape_data make_points(int num, float radius, bool generate_uv) {
   return shape;
 }
 
+shape_data make_quad_grid(const vec2i& steps, float scale_) {
+  auto scale = scale_ * (vec2f)steps / steps.y;
+  return make_quads(
+      steps, [=](vec2f uv) { return vec3f(scale * (uv * 2 - 1), 0); },
+      [=](vec2f uv) { return vec3f(0, 0, 1); },
+      [=](vec2f uv) { return flip_v(uv); });
+}
+
 shape_data make_point_grid(
-    const vec2i& steps, const vec2f& size, const vec2f& radius) {
-  auto shape  = make_rect(steps, size);
+    const vec2i& steps, float scale, const vec2f& radius) {
+  auto shape  = make_quad_grid(steps, scale);
   shape.quads = {};
   shape.points.resize(shape.positions.size());
   for (auto i : range(shape.positions.size())) shape.points[i] = (int)i;
@@ -1421,8 +1422,8 @@ shape_data make_point_grid(
 }
 
 shape_data make_line_grid(
-    const vec2i& steps, const vec2f& size, const vec2f& radius) {
-  auto shape  = make_rect(steps, size);
+    const vec2i& steps, float scale, const vec2f& radius) {
+  auto shape  = make_quad_grid(steps, scale);
   shape.lines = get_edges(shape.quads);
   shape.quads = {};
   shape.radius.resize(shape.positions.size());

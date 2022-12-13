@@ -1374,13 +1374,13 @@ shape_data make_shape_preset(const string& type_) {
   } else if (type == "test_cube_subdiv") {
     return transform_shape(test_xform, make_wtcube());
   } else if (type == "test_arealight1") {
-    return make_rect({1, 1}, {0.2f, 0.2f});
+    return transform_shape(scaling_frame(0.2f), make_quad());
   } else if (type == "test_arealight2") {
-    return make_rect({1, 1}, {0.2f, 0.2f});
+    return transform_shape(scaling_frame(0.2f), make_quad());
   } else if (type == "test_largearealight1") {
-    return make_rect({1, 1}, {0.4f, 0.4f});
+    return transform_shape(scaling_frame(0.4f), make_quad());
   } else if (type == "test_largearealight2") {
-    return make_rect({1, 1}, {0.4f, 0.4f});
+    return transform_shape(scaling_frame(0.4f), make_quad());
   } else if (type == "test_pointlight1") {
     return make_point(0);
   } else if (type == "test_pointlight2") {
@@ -1403,9 +1403,9 @@ shape_data make_shape_preset(const string& type_) {
   } else if (type == "test_particles") {
     return make_points(4096);
   } else if (type == "test_cloth") {
-    return make_rect({64, 64}, {0.2f, 0.2f});
+    return transform_shape(scaling_frame(0.2f), make_quad(6));
   } else if (type == "test_clothy") {
-    return make_recty({64, 64}, {0.2f, 0.2f});
+    return transform_shape(scaling_frame(0.2f), make_quady(6));
   } else {
     throw io_error{"unknown preset " + type};
   }
