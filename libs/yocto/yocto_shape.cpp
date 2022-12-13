@@ -347,11 +347,16 @@ shape_data subdivide_shape(
 // Transform shape
 shape_data transform_shape(
     const frame3f& frame, const shape_data& shape, bool non_rigid) {
+  return transform_shape(frame, shape, 1, non_rigid);
+}
+shape_data transform_shape(const frame3f& frame, const shape_data& shape,
+    float radius_scale, bool non_rigid) {
   auto transformed = shape;
   for (auto& position : transformed.positions)
     position = transform_point(frame, position);
   for (auto& normal : transformed.normals)
     normal = transform_normal(frame, normal, non_rigid);
+  for (auto& radius : transformed.radius) radius *= radius_scale;
   return transformed;
 }
 shape_data remove_normals(const shape_data& shape) {
@@ -1203,97 +1208,7 @@ shape_data make_rounded_uvcylinder(const vec3i& steps, const vec2f& scale,
   return shape;
 }
 
-// Generate lines set along a quad. Returns lines, pos, norm, texcoord, radius.
-shape_data make_lines(const vec2i& steps, const vec2f& scale,
-    const vec2f& uvscale, const vec2f& rad) {
-  auto shape = shape_data{};
-  shape.positions.resize((steps.x + 1) * steps.y);
-  shape.normals.resize((steps.x + 1) * steps.y);
-  shape.texcoords.resize((steps.x + 1) * steps.y);
-  shape.radius.resize((steps.x + 1) * steps.y);
-  if (steps.y > 1) {
-    for (auto j : range(steps.y)) {
-      for (auto i : range(steps.x + 1)) {
-        auto uv = vec2f{i / (float)steps.x, j / (float)(steps.y - 1)};
-        shape.positions[j * (steps.x + 1) + i] = {
-            (uv.x - 0.5f) * scale.x, (uv.y - 0.5f) * scale.y, 0};
-        shape.normals[j * (steps.x + 1) + i]   = {1, 0, 0};
-        shape.texcoords[j * (steps.x + 1) + i] = uv * uvscale;
-        shape.radius[j * (steps.x + 1) + i]    = lerp(rad.x, rad.y, uv.x);
-      }
-    }
-  } else {
-    for (auto i : range(steps.x + 1)) {
-      auto uv            = vec2f{i / (float)steps.x, 0};
-      shape.positions[i] = {(uv.x - 0.5f) * scale.x, 0, 0};
-      shape.normals[i]   = {1, 0, 0};
-      shape.texcoords[i] = uv * uvscale;
-      shape.radius[i]    = lerp(rad.x, rad.y, uv.x);
-    }
-  }
-
-  shape.lines.resize(steps.x * steps.y);
-  for (int j = 0; j < steps.y; j++) {
-    for (int i = 0; i < steps.x; i++) {
-      shape.lines[j * steps.x + i] = {
-          j * (steps.x + 1) + i, j * (steps.x + 1) + i + 1};
-    }
-  }
-
-  return shape;
-}
-
-// Make point primitives. Returns points, pos, norm, texcoord, radius.
-shape_data make_point(float radius) {
-  auto shape      = shape_data{};
-  shape.points    = {0};
-  shape.positions = {{0, 0, 0}};
-  shape.normals   = {{0, 0, 1}};
-  shape.texcoords = {{0, 0}};
-  shape.radius    = {radius};
-  return shape;
-}
-
-// Generate a point set with points placed at the origin with texcoords
-// varying along u.
-shape_data make_points(int num, float uvscale, float radius) {
-  auto shape = shape_data{};
-  shape.points.resize(num);
-  for (auto i : range(num)) shape.points[i] = i;
-  shape.positions.assign(num, {0, 0, 0});
-  shape.normals.assign(num, {0, 0, 1});
-  shape.texcoords.assign(num, {0, 0});
-  shape.radius.assign(num, radius);
-  for (auto i : range(shape.texcoords.size()))
-    shape.texcoords[i] = {(float)i / (float)num, 0};
-  return shape;
-}
-
-shape_data make_points(const vec2i& steps, const vec2f& size,
-    const vec2f& uvscale, const vec2f& radius) {
-  auto shape  = make_rect(steps, size, uvscale);
-  shape.quads = {};
-  shape.points.resize(shape.positions.size());
-  for (auto i : range(shape.positions.size())) shape.points[i] = (int)i;
-  shape.radius.resize(shape.positions.size());
-  for (auto i : range(shape.texcoords.size())) {
-    shape.radius[i] = lerp(
-        radius.x, radius.y, shape.texcoords[i].y / uvscale.y);
-  }
-  return shape;
-}
-
-shape_data make_random_points(
-    int num, const vec3f& size, float uvscale, float radius, uint64_t seed) {
-  auto shape = make_points(num, uvscale, radius);
-  auto rng   = make_rng(seed);
-  for (auto& position : shape.positions)
-    position = (2 * rand3f(rng) - 1) * size;
-  for (auto& texcoord : shape.texcoords) texcoord = rand2f(rng);
-  return shape;
-}
-
-// Make a facevarying rect
+// Make a face-varying rect
 fvshape_data make_fvrect(
     const vec2i& steps, const vec2f& scale, const vec2f& uvscale) {
   auto rect           = make_rect(steps, scale, uvscale);
@@ -1307,7 +1222,7 @@ fvshape_data make_fvrect(
   return shape;
 }
 
-// Make a facevarying box
+// Make a face-varying box
 fvshape_data make_fvbox(
     const vec3i& steps, const vec3f& scale, const vec3f& uvscale) {
   auto box                                  = make_box(steps, scale, uvscale);
@@ -1319,7 +1234,7 @@ fvshape_data make_fvbox(
   return shape;
 }
 
-// Make a facevarying sphere
+// Make a face-varying sphere
 fvshape_data make_fvsphere(int steps, float scale, float uvscale) {
   auto shape      = make_fvbox({steps, steps, steps}, {scale, scale, scale},
            {uvscale, uvscale, uvscale});
@@ -1329,84 +1244,129 @@ fvshape_data make_fvsphere(int steps, float scale, float uvscale) {
   return shape;
 }
 
-// Make a hair ball around a shape
-shape_data make_hair(const shape_data& base, const vec2i& steps,
-    const vec2f& len, const vec2f& rad, const vec2f& noise, const vec2f& clump,
-    const vec2f& rotation, int seed) {
-  auto points    = sample_shape(base, steps.y, seed);
-  auto bpos      = vector<vec3f>{};
-  auto bnorm     = vector<vec3f>{};
-  auto btexcoord = vector<vec2f>{};
-  for (auto& point : points) {
-    bpos.push_back(eval_position(base, point.element, point.uv));
-    bnorm.push_back(eval_normal(base, point.element, point.uv));
-    btexcoord.push_back(eval_texcoord(base, point.element, point.uv));
-  }
-
-  auto rng  = make_rng(seed, 3);
-  auto blen = vector<float>(bpos.size());
-  for (auto& l : blen) {
-    l = lerp(len.x, len.y, rand1f(rng));
-  }
-
-  auto cidx = vector<int>();
-  if (clump.x > 0) {
-    for (auto bidx : range((int)bpos.size())) {
-      cidx.push_back(0);
-      auto cdist = flt_max;
-      for (auto c : range((int)clump.y)) {
-        auto d = length(bpos[bidx] - bpos[c]);
-        if (d < cdist) {
-          cdist       = d;
-          cidx.back() = c;
-        }
+// Generate lines set along a quad. Returns lines, pos, norm, texcoord, radius.
+shape_data make_lines(int num, int steps, const vec2f& scale,
+    const vec2f& uvscale, const vec2f& rad) {
+  auto shape = shape_data{};
+  shape.positions.resize((steps + 1) * num);
+  shape.normals.resize((steps + 1) * num);
+  shape.texcoords.resize((steps + 1) * num);
+  shape.radius.resize((steps + 1) * num);
+  if (num > 1) {
+    for (auto j : range(num)) {
+      for (auto i : range(steps + 1)) {
+        auto uv = vec2f{i / (float)steps, j / (float)(num - 1)};
+        shape.positions[j * (steps + 1) + i] = {(uv - 0.5f) * scale, 0};
+        shape.normals[j * (steps + 1) + i]   = {1, 0, 0};
+        shape.texcoords[j * (steps + 1) + i] = uv * uvscale;
+        shape.radius[j * (steps + 1) + i]    = lerp(rad.x, rad.y, uv.x);
       }
     }
-  }
-
-  auto shape = make_lines(steps, {1, 1}, {1, 1}, {1, 1});
-  for (auto i : range((int)shape.positions.size())) {
-    auto u             = shape.texcoords[i].x;
-    auto bidx          = i / (steps.x + 1);
-    shape.positions[i] = bpos[bidx] + bnorm[bidx] * u * blen[bidx];
-    shape.normals[i]   = bnorm[bidx];
-    shape.radius[i]    = lerp(rad.x, rad.y, u);
-    if (clump.x > 0) {
-      shape.positions[i] =
-          shape.positions[i] +
-          (shape.positions[i + (cidx[bidx] - bidx) * (steps.x + 1)] -
-              shape.positions[i]) *
-              u * clump.x;
-    }
-    if (noise.x > 0) {
-      auto nx =
-          (perlin_noise(shape.positions[i] * noise.y + vec3f{0, 0, 0}) * 2 -
-              1) *
-          noise.x;
-      auto ny =
-          (perlin_noise(shape.positions[i] * noise.y + vec3f{3, 7, 11}) * 2 -
-              1) *
-          noise.x;
-      auto nz =
-          (perlin_noise(shape.positions[i] * noise.y + vec3f{13, 17, 19}) * 2 -
-              1) *
-          noise.x;
-      shape.positions[i] += vec3f{nx, ny, nz};
+  } else {
+    for (auto i : range(steps + 1)) {
+      auto uv            = vec2f{i / (float)steps, 0};
+      shape.positions[i] = {(uv.x - 0.5f) * scale.x, 0, 0};
+      shape.normals[i]   = {1, 0, 0};
+      shape.texcoords[i] = uv * uvscale;
+      shape.radius[i]    = lerp(rad.x, rad.y, uv.x);
     }
   }
 
-  if (clump.x > 0 || noise.x > 0 || rotation.x > 0) {
-    shape.normals = lines_tangents(shape.lines, shape.positions);
+  shape.lines.resize(steps * num);
+  for (int j = 0; j < num; j++) {
+    for (int i = 0; i < steps; i++) {
+      shape.lines[j * steps + i] = {
+          j * (steps + 1) + i, j * (steps + 1) + i + 1};
+    }
   }
 
   return shape;
 }
 
-// Grow hairs around a shape
-shape_data make_hair2(const shape_data& base, const vec2i& steps,
-    const vec2f& len, const vec2f& radius, float noise, float gravity,
-    int seed) {
-  auto points     = sample_shape(base, steps.y, seed);
+// Make point primitives. Returns points, pos, norm, texcoord, radius.
+shape_data make_point(float radius, bool generate_uv) {
+  auto shape      = shape_data{};
+  shape.points    = {0};
+  shape.positions = {{0, 0, 0}};
+  shape.normals   = {{0, 0, 1}};
+  if (generate_uv) shape.texcoords = {{0, 0}};
+  shape.radius = {radius};
+  return shape;
+}
+
+// Generate a point set with points placed at the origin with texcoords
+// varying along u.
+shape_data make_points(int num, float radius, bool generate_uv) {
+  auto shape = shape_data{};
+  shape.points.resize(num);
+  for (auto i : range(num)) shape.points[i] = i;
+  shape.positions.assign(num, {0, 0, 0});
+  shape.normals.assign(num, {0, 0, 1});
+  shape.texcoords.assign(num, {0, 0});
+  shape.radius.assign(num, radius);
+  if (generate_uv) {
+    for (auto i : range(shape.texcoords.size()))
+      shape.texcoords[i] = {(float)i / (float)num, 0};
+  }
+  return shape;
+}
+
+shape_data make_point_grid(const vec2i& steps, const vec2f& size,
+    const vec2f& uvscale, const vec2f& radius) {
+  auto shape  = make_rect(steps, size, uvscale);
+  shape.quads = {};
+  shape.points.resize(shape.positions.size());
+  for (auto i : range(shape.positions.size())) shape.points[i] = (int)i;
+  shape.radius.resize(shape.positions.size());
+  for (auto i : range(shape.texcoords.size())) {
+    shape.radius[i] = lerp(
+        radius.x, radius.y, shape.texcoords[i].y / uvscale.y);
+  }
+  return shape;
+}
+
+shape_data make_line_grid(const vec2i& steps, const vec2f& size,
+    const vec2f& uvscale, const vec2f& radius) {
+  auto shape  = make_rect(steps, size, uvscale);
+  shape.lines = get_edges(shape.quads);
+  shape.quads = {};
+  shape.radius.resize(shape.positions.size());
+  for (auto i : range(shape.texcoords.size())) {
+    shape.radius[i] = lerp(
+        radius.x, radius.y, shape.texcoords[i].y / uvscale.y);
+  }
+  return shape;
+}
+
+// Make points inside a cube
+shape_data make_random_points(
+    int num, float radius, bool generate_uv, uint64_t seed) {
+  auto shape = make_points(num, radius);
+  auto rng   = make_rng(seed);
+  for (auto& position : shape.positions) position = (2 * rand3f(rng) - 1);
+  for (auto& texcoord : shape.texcoords) texcoord = rand2f(rng);
+  return shape;
+}
+
+// Grow lines around a shape
+shape_data make_random_points(
+    const shape_data& base, int num, float radius, bool generate_uv, int seed) {
+  auto points     = sample_shape(base, num, seed);
+  auto bpositions = vector<vec3f>{};
+  auto btexcoord  = vector<vec2f>{};
+  for (auto& point : points) {
+    bpositions.push_back(eval_position(base, point.element, point.uv));
+    btexcoord.push_back(eval_texcoord(base, point.element, point.uv));
+  }
+  auto shape      = make_points(num, radius, generate_uv);
+  shape.positions = bpositions;
+  return shape;
+}
+
+// Grow lines around a shape
+shape_data make_random_lines(const shape_data& base, int num, int steps,
+    const vec2f& len, const vec2f& radius, bool generate_uv, int seed) {
+  auto points     = sample_shape(base, num, seed);
   auto bpositions = vector<vec3f>{};
   auto bnormals   = vector<vec3f>{};
   auto btexcoord  = vector<vec2f>{};
@@ -1416,17 +1376,48 @@ shape_data make_hair2(const shape_data& base, const vec2i& steps,
     btexcoord.push_back(eval_texcoord(base, point.element, point.uv));
   }
 
-  auto shape = make_lines(steps, {1, 1}, {1, 1}, radius);
+  auto shape = make_lines(num, steps, {1, 1}, {1, 1}, radius);
   auto rng   = make_rng(seed);
-  for (auto idx : range(steps.y)) {
-    auto offset             = idx * (steps.x + 1);
+  for (auto idx : range(num)) {
+    auto offset = idx * (steps + 1);
+    auto length = rand1f(rng) * (len.y - len.x) + len.x;
+    for (auto iidx : range(steps + 1)) {
+      auto u                         = iidx / (float)steps;
+      shape.positions[offset + iidx] = bpositions[idx] +
+                                       u * length * bnormals[idx];
+    }
+  }
+
+  shape.normals = lines_tangents(shape.lines, shape.positions);
+
+  return shape;
+}
+
+// Grow hairs around a shape
+shape_data make_random_hairs(const shape_data& base, int num, int steps,
+    const vec2f& len, const vec2f& radius, float noise, float gravity,
+    bool generate_uv, int seed) {
+  auto points     = sample_shape(base, num, seed);
+  auto bpositions = vector<vec3f>{};
+  auto bnormals   = vector<vec3f>{};
+  auto btexcoord  = vector<vec2f>{};
+  for (auto& point : points) {
+    bpositions.push_back(eval_position(base, point.element, point.uv));
+    bnormals.push_back(eval_normal(base, point.element, point.uv));
+    btexcoord.push_back(eval_texcoord(base, point.element, point.uv));
+  }
+
+  auto shape = make_lines(num, steps, {1, 1}, {1, 1}, radius);
+  auto rng   = make_rng(seed);
+  for (auto idx : range(num)) {
+    auto offset             = idx * (steps + 1);
     auto position           = bpositions[idx];
     auto direction          = bnormals[idx];
     auto length             = rand1f(rng) * (len.y - len.x) + len.x;
     shape.positions[offset] = position;
-    for (auto iidx = 1; iidx <= steps.x; iidx++) {
+    for (auto iidx = 1; iidx <= steps; iidx++) {
       shape.positions[offset + iidx] = position;
-      shape.positions[offset + iidx] += direction * length / (float)steps.x;
+      shape.positions[offset + iidx] += direction * length / (float)steps;
       shape.positions[offset + iidx] += (2 * rand3f(rng) - 1) * noise;
       shape.positions[offset + iidx] += vec3f{0, -gravity, 0};
       direction = normalize(shape.positions[offset + iidx] - position);
@@ -1466,7 +1457,7 @@ shape_data points_to_spheres(
     const vector<vec3f>& vertices, int steps, float scale) {
   auto shape = shape_data{};
   for (auto& vertex : vertices) {
-    auto sphere = make_sphere({steps, steps, steps}, scale, 1);
+    auto sphere = make_tsphere({steps, steps, steps}, scale, 1);
     for (auto& position : sphere.positions) position += vertex;
     merge_shape_inplace(shape, sphere);
   }

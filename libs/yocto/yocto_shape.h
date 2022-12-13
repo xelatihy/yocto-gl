@@ -125,6 +125,8 @@ shape_data subdivide_shape(
 // Transform shape
 shape_data transform_shape(
     const frame3f& frame, const shape_data& shape, bool non_rigid = false);
+shape_data transform_shape(const frame3f& frame, const shape_data& shape,
+    float radius_scale, bool non_rigid = false);
 shape_data remove_normals(const shape_data& shape);
 
 // Shape statistics
@@ -250,38 +252,43 @@ fvshape_data make_fvbox(const vec3i& steps = {1, 1, 1},
     const vec3f& scale = {1, 1, 1}, const vec3f& uvscale = {1, 1, 1});
 fvshape_data make_fvsphere(int steps = 32, float scale = 1, float uvscale = 1);
 
-// Generate lines set along a quad. Returns lines, pos, norm, texcoord, radius.
-shape_data make_lines(const vec2i& steps = {4, 65536},
+// Make a point primitive.
+shape_data make_point(float radius = 0.001f, bool generate_uv = true);
+// Make many point primitives at the origin (useful for particle systems).
+shape_data make_points(
+    int num = 65536, float radius = 0.001f, bool generate_uv = true);
+
+// Make a point set on a grid.
+shape_data make_point_grid(const vec2i& steps = {256, 256},
+    const vec2f& size = {1, 1}, const vec2f& uvscale = {1, 1},
+    const vec2f& radius = {0.001f, 0.001f});
+// Make a line set on a grid.
+shape_data make_line_grid(const vec2i& steps = {256, 256},
+    const vec2f& size = {1, 1}, const vec2f& uvscale = {1, 1},
+    const vec2f& radius = {0.001f, 0.001f});
+
+// Generate lines set along a quad.
+shape_data make_lines(int num = 65536, int steps = 4,
     const vec2f& scale = {1, 1}, const vec2f& uvscale = {1, 1},
     const vec2f& radius = {0.001f, 0.001f});
 
-// Make a point primitive. Returns points, pos, norm, texcoord, radius.
-shape_data make_point(float radius = 0.001f);
-// Make a point set on a grid. Returns points, pos, norm, texcoord, radius.
-shape_data make_points(
-    int num = 65536, float uvscale = 1, float radius = 0.001f);
-shape_data make_points(const vec2i& steps = {256, 256},
-    const vec2f& size = {1, 1}, const vec2f& uvscale = {1, 1},
-    const vec2f& radius = {0.001f, 0.001f});
-// Make random points in a cube. Returns points, pos, norm, texcoord, radius.
-shape_data make_random_points(int num = 65536, const vec3f& size = {1, 1, 1},
-    float uvscale = 1, float radius = 0.001f, uint64_t seed = 17);
+// Make random points in a cube.
+// TODO: switch to quad?
+shape_data make_random_points(int num = 65536, float radius = 0.001f,
+    bool generate_uv = true, uint64_t seed = 17);
+// Make points around a shape
+shape_data make_random_points(const shape_data& shape, int num = 65536,
+    float radius = 0.001f, bool generate_uv = true, int seed = 7);
 
-// Make a hair ball around a shape.
-// length: minimum and maximum length
-// rad: minimum and maximum radius from base to tip
-// noise: noise added to hair (strength/scale)
-// clump: clump added to hair (strength/number)
-// rotation: rotation added to hair (angle/strength)
-shape_data make_hair(const shape_data& shape, const vec2i& steps = {8, 65536},
-    const vec2f& length = {0.1f, 0.1f}, const vec2f& radius = {0.001f, 0.001f},
-    const vec2f& noise = {0, 10}, const vec2f& clump = {0, 128},
-    const vec2f& rotation = {0, 0}, int seed = 7);
-
-// Grow hairs around a shape
-shape_data make_hair2(const shape_data& shape, const vec2i& steps = {8, 65536},
-    const vec2f& length = {0.1f, 0.1f}, const vec2f& radius = {0.001f, 0.001f},
-    float noise = 0, float gravity = 0.001f, int seed = 7);
+// Make lines around a shape
+shape_data make_random_lines(const shape_data& shape, int num = 65536,
+    int steps = 8, const vec2f& length = {0.1f, 0.1f},
+    const vec2f& radius = {0.001f, 0.001f}, bool generate_uv = true,
+    int seed = 7);
+shape_data make_random_hairs(const shape_data& shape, int num = 65536,
+    int steps = 8, const vec2f& length = {0.1f, 0.1f},
+    const vec2f& radius = {0.001f, 0.001f}, float noise = 0,
+    float gravity = 0.001f, bool generate_uv = true, int seed = 7);
 
 // Convert points to small spheres and lines to small cylinders. This is
 // intended for making very small primitives for display in interactive

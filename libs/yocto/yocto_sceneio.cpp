@@ -1236,6 +1236,7 @@ shape_data make_shape_preset(const string& type_) {
   auto type       = path_basename(type_);
   auto test_xform = translation_frame(vec3f{0, 0.75f, 0}) *
                     scaling_frame(0.75f);
+  auto test_radius_scale = 0.75f;
   if (type == "quad") {
     return make_quad();
   } else if (type == "quady") {
@@ -1278,9 +1279,12 @@ shape_data make_shape_preset(const string& type_) {
     return make_bent_floor();
   } else if (type == "matball") {
     return make_sphere();
+  } else if (type == "lineball") {
+    auto base = transform_shape(scaling_frame(0.8f), make_sphere());
+    return make_random_lines(base, pow2(16), 4, {0.2f, 0.2f}, {0.002f, 0.001f});
   } else if (type == "hairball") {
     auto base = transform_shape(scaling_frame(0.8f), make_sphere());
-    return make_hair(base, {4, 65536}, {0.2f, 0.2f}, {0.002f, 0.001f});
+    return make_random_hairs(base, pow2(16), 4, {0.2f, 0.2f}, {0.002f, 0.001f});
   } else if (type == "hairball_interior") {
     return transform_shape(scaling_frame(0.8f), make_sphere());
   } else if (type == "suzanne") {
@@ -1343,21 +1347,16 @@ shape_data make_shape_preset(const string& type_) {
     return transform_shape(test_xform, remove_normals(make_geosphere()));
   } else if (type == "test_subdivided_geosphere") {
     return transform_shape(test_xform, make_geosphere(6));
-  } else if (type == "test_hairball1") {
+  } else if (type == "test_lineball") {
     auto base = transform_shape(
         test_xform * scaling_frame(0.8f), make_sphere());
-    return make_hair(base, {4, 65536}, {0.1f * 0.15f, 0.1f * 0.15f},
-        {0.001f * 0.15f, 0.0005f * 0.15f}, {0.03f, 100});
-  } else if (type == "test_hairball2") {
-    auto base = transform_shape(
-        test_xform * scaling_frame(0.8f), make_sphere());
-    return make_hair(base, {4, 65536}, {0.1f * 0.15f, 0.1f * 0.15f},
+    return make_random_lines(base, pow2(16), 4, {0.1f * 0.15f, 0.1f * 0.15f},
         {0.001f * 0.15f, 0.0005f * 0.15f});
-  } else if (type == "test_hairball3") {
+  } else if (type == "test_hairball") {
     auto base = transform_shape(
         test_xform * scaling_frame(0.8f), make_sphere());
-    return make_hair(base, {4, 65536}, {0.1f * 0.15f, 0.1f * 0.15f},
-        {0.001f * 0.15f, 0.0005f * 0.15f}, {0, 0}, {0.5, 128});
+    return make_random_hairs(base, pow2(16), 4, {0.1f * 0.15f, 0.1f * 0.15f},
+        {0.001f * 0.15f, 0.0005f * 0.15f});
   } else if (type == "test_hairball-interior") {
     return transform_shape(test_xform * scaling_frame(0.8f), make_sphere());
   } else if (type == "test_suzanne_subdiv") {
@@ -1377,31 +1376,20 @@ shape_data make_shape_preset(const string& type_) {
   } else if (type == "test_pointlight2") {
     return make_point(0);
   } else if (type == "test_point") {
-    return make_points(1);
+    return make_point();
   } else if (type == "test_points") {
-    return make_points(4096);
+    return make_random_points(4096);
   } else if (type == "test_points_random") {
     return transform_shape(test_xform, make_random_points(4096));
   } else if (type == "test_points_grid") {
-    auto shape = make_points({256, 256}, {0.075f, 0.075f});
-    for (auto& p : shape.positions) p += vec3f{0, 0.075f, 0};
-    for (auto& r : shape.radius) r *= 0.075f;
-    return shape;
+    return transform_shape(test_xform, make_point_grid(), test_radius_scale);
   } else if (type == "test_lines_grid") {
-    auto shape = make_lines({256, 256}, {0.075f, 0.075f});
-    for (auto& p : shape.positions) p += vec3f{0, 0.075f, 0};
-    for (auto& r : shape.radius) r *= 0.075f;
-    return shape;
+    return transform_shape(test_xform, make_lines(), test_radius_scale);
   } else if (type == "test_thickpoints_grid") {
-    auto shape = make_points({16, 16}, {0.075f, 0.075f});
-    for (auto& p : shape.positions) p += vec3f{0, 0.075f, 0};
-    for (auto& r : shape.radius) r *= 0.075f * 10;
-    return shape;
+    return transform_shape(
+        test_xform, make_point_grid(), test_radius_scale * 10);
   } else if (type == "test_thicklines_grid") {
-    auto shape = make_lines({16, 16}, {0.075f, 0.075f});
-    for (auto& p : shape.positions) p += vec3f{0, 0.075f, 0};
-    for (auto& r : shape.radius) r *= 0.075f * 10;
-    return shape;
+    return transform_shape(test_xform, make_lines(), test_radius_scale);
   } else if (type == "test_particles") {
     return make_points(4096);
   } else if (type == "test_cloth") {

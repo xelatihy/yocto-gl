@@ -83,7 +83,7 @@ void run(const vector<string>& args) {
     save_shape(outname, sshape);
   } else {
     // generate hair
-    auto sshape = make_hair2(shape, {steps, hairs}, {length, length},
+    auto sshape = make_random_hairs(shape, hairs, steps, {length, length},
         {radius, radius}, noise, gravity);
 
     // save mesh
