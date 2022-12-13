@@ -130,6 +130,9 @@ shape_data transform_shape(const frame3f& frame, const shape_data& shape,
     float radius_scale, bool non_rigid = false);
 shape_data remove_normals(const shape_data& shape);
 
+// Merge a shape into another
+void merge_shape_inplace(shape_data& shape, const shape_data& merge);
+
 // Shape statistics
 vector<string> shape_stats(const shape_data& shape, bool verbose = false);
 
@@ -225,6 +228,12 @@ shape_data make_uvspherey(const vec2i& steps = {64, 32}, float scale = 1,
 shape_data make_uvdisk(const vec2i& steps = {32, 1}, float scale = 1,
     const vec2f& uvscale = {1, 1});
 shape_data make_uvcylinder(const vec3i& steps = {32, 32, 32},
+    const vec2f& scale = {1, 1}, const vec3f& uvscale = {1, 1, 1});
+// Make a uv capsule
+shape_data make_uvcapsule(const vec3i& steps = {32, 32, 32},
+    const vec2f& scale = {1, 1}, const vec3f& uvscale = {1, 1, 1});
+// Make a uv cone
+shape_data make_uvcone(const vec3i& steps = {32, 32, 32},
     const vec2f& scale = {1, 1}, const vec3f& uvscale = {1, 1, 1});
 shape_data make_bulged_rect(const vec2i& steps = {1, 1},
     const vec2f& scale = {1, 1}, float radius = 0.3f,

@@ -1208,6 +1208,84 @@ shape_data make_rounded_uvcylinder(const vec3i& steps, const vec2f& scale,
   return shape;
 }
 
+// Make a uv capsule
+shape_data make_uvcapsule(
+    const vec3i& steps, const vec2f& scale, const vec3f& uvscale) {
+  auto shape  = shape_data{};
+  auto qshape = shape_data{};
+  // side
+  qshape = make_rect({steps.x, steps.y}, {1, 1}, {1, 1});
+  for (auto i : range(qshape.positions.size())) {
+    auto uv             = qshape.texcoords[i];
+    auto phi            = 2 * pif * uv.x;
+    qshape.positions[i] = {
+        cos(phi) * scale.x, sin(phi) * scale.x, (2 * uv.y - 1) * scale.y};
+    qshape.normals[i]   = {cos(phi), sin(phi), 0};
+    qshape.texcoords[i] = uv * vec2f{uvscale.x, uvscale.y};
+  }
+  for (auto& quad : qshape.quads) quad = {quad.x, quad.w, quad.z, quad.y};
+  merge_shape_inplace(shape, qshape);
+  // top
+  qshape = make_rect({steps.x, steps.z}, {1, 1}, {1, 1});
+  for (auto i : range(qshape.positions.size())) {
+    auto uv             = qshape.texcoords[i];
+    auto phi            = 2 * pif * uv.x;
+    auto theta          = pif / 2 * uv.y;
+    qshape.positions[i] = {cos(phi) * sin(theta) * scale.x,
+        sin(phi) * sin(theta) * scale.x, cos(theta) * scale.x};
+    qshape.normals[i]   = normalize(qshape.positions[i]);
+    qshape.texcoords[i] = uv * vec2f{uvscale.x, uvscale.z};
+    qshape.positions[i].z += scale.y;
+  }
+  merge_shape_inplace(shape, qshape);
+  // bottom
+  qshape = make_rect({steps.x, steps.z}, {1, 1}, {1, 1});
+  for (auto i : range(qshape.positions.size())) {
+    auto uv             = qshape.texcoords[i];
+    auto phi            = 2 * pif * uv.x;
+    auto theta          = pif / 2 * uv.y;
+    qshape.positions[i] = {cos(phi) * sin(theta) * scale.x,
+        sin(phi) * sin(theta) * scale.x, -cos(theta) * scale.x};
+    qshape.normals[i]   = normalize(qshape.positions[i]);
+    qshape.texcoords[i] = uv * vec2f{uvscale.x, uvscale.z};
+    qshape.positions[i].z += -scale.y;
+  }
+  for (auto& qquad : qshape.quads) swap(qquad.x, qquad.z);
+  merge_shape_inplace(shape, qshape);
+  return shape;
+}
+
+// Make a uv cone
+shape_data make_uvcone(
+    const vec3i& steps, const vec2f& scale, const vec3f& uvscale) {
+  auto shape  = shape_data{};
+  auto qshape = shape_data{};
+  // top
+  qshape = make_rect({steps.x, steps.y}, {1, 1}, {1, 1});
+  for (auto i : range(qshape.positions.size())) {
+    auto uv             = qshape.texcoords[i];
+    auto phi            = 2 * pif * uv.x;
+    qshape.positions[i] = {cos(phi) * uv.y * scale.x, sin(phi) * uv.y * scale.x,
+        (2 * uv.y - 1) * scale.y};
+    qshape.normals[i]   = normalize(qshape.positions[i]);  // BUG: fixme
+    qshape.texcoords[i] = uv * vec2f{uvscale.x, uvscale.y};
+  }
+  merge_shape_inplace(shape, qshape);
+  // bottom
+  qshape = make_rect({steps.x, steps.z}, {1, 1}, {1, 1});
+  for (auto i : range(qshape.positions.size())) {
+    auto uv             = qshape.texcoords[i];
+    auto phi            = 2 * pif * uv.x;
+    qshape.positions[i] = {
+        cos(phi) * uv.y * scale.x, sin(phi) * uv.y * scale.x, scale.y};
+    qshape.normals[i]   = {0, 0, -1};
+    qshape.texcoords[i] = uv * vec2f{uvscale.x, uvscale.z};
+  }
+  for (auto& qquad : qshape.quads) swap(qquad.x, qquad.z);
+  merge_shape_inplace(shape, qshape);
+  return shape;
+}
+
 // Make a face-varying rect
 fvshape_data make_fvrect(
     const vec2i& steps, const vec2f& scale, const vec2f& uvscale) {
