@@ -1320,13 +1320,13 @@ shape_data make_shape_preset(const string& type_) {
   } else if (type == "test_cube") {
     return transform_shape(test_xform, make_rounded_cube());
   } else if (type == "test_uvsphere") {
-    return transform_shape(test_xform, make_uvsphere({32, 32}));
+    return transform_shape(test_xform, make_uvsphere());
   } else if (type == "test_capped_uvsphere") {
-    return transform_shape(test_xform, make_capped_uvsphere({32, 32}));
+    return transform_shape(test_xform, make_capped_uvsphere());
   } else if (type == "test_uvspherey") {
-    return transform_shape(test_xform, make_uvspherey({32, 32}));
+    return transform_shape(test_xform, make_uvspherey());
   } else if (type == "test_capped_uvspherey") {
-    return transform_shape(test_xform, make_capped_uvspherey({32, 32}));
+    return transform_shape(test_xform, make_capped_uvspherey());
   } else if (type == "test_sphere") {
     return transform_shape(test_xform, make_sphere());
   } else if (type == "test_matcube") {
@@ -1342,7 +1342,7 @@ shape_data make_shape_preset(const string& type_) {
   } else if (type == "test_disk") {
     return transform_shape(test_xform, make_disk());
   } else if (type == "test_uvcylinder") {
-    return transform_shape(test_xform, make_rounded_uvcylinder({32, 32, 32}));
+    return transform_shape(test_xform, make_rounded_uvcylinder());
   } else if (type == "test_floor") {
     return make_floor();
   } else if (type == "test_quad") {
