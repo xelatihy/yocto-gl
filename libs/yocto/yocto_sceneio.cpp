@@ -1257,6 +1257,16 @@ shape_data make_shape_preset(const string& type_) {
     return make_bulged_disk();
   } else if (type == "bulged_quad") {
     return make_bulged_quad();
+  } else if (type == "rect") {
+    return make_rect();
+  } else if (type == "recty") {
+    return make_recty();
+  } else if (type == "box") {
+    return make_box();
+  } else if (type == "rounded_box") {
+    return make_rounded_box();
+  } else if (type == "tsphere") {
+    return make_tsphere();
   } else if (type == "uvsphere") {
     return make_uvsphere();
   } else if (type == "capped_uvsphere") {

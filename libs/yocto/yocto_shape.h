@@ -48,6 +48,7 @@
 
 #include "yocto_geometry.h"
 #include "yocto_math.h"
+#include "yocto_ndarray.h"
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
@@ -303,8 +304,8 @@ shape_data lines_to_cylinders(const vector<vec2i>& lines,
     const vector<vec3f>& positions, int steps = 4, float scale = 0.01f);
 
 // Make a heightfield mesh.
-shape_data make_heightfield(const vec2i& size, const vector<float>& height);
-shape_data make_heightfield(const vec2i& size, const vector<vec4f>& color);
+shape_data make_heightfield(const array2d<float>& height);
+shape_data make_heightfield(const array2d<vec4f>& height);
 
 }  // namespace yocto
 

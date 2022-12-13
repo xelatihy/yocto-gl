@@ -999,7 +999,7 @@ shape_data make_box(
   return shape;
 }
 shape_data make_rounded_box(const vec3i& steps, const vec3f& scale,
-    const vec3f& uvscale, float radius) {
+    float radius, const vec3f& uvscale) {
   auto shape = make_box(steps, scale, uvscale);
   if (radius != 0) {
     radius = min(radius, min(scale));
@@ -1431,21 +1431,27 @@ shape_data make_random_hairs(const shape_data& base, int num, int steps,
 }
 
 // Make a heightfield mesh.
-shape_data make_heightfield(const vec2i& size, const vector<float>& height) {
-  auto shape = make_recty({size.x - 1, size.y - 1},
-      vec2f{(float)size.x, (float)size.y} / (float)max(size), {1, 1});
-  for (auto j : range(size.y))
-    for (auto i : range(size.x))
-      shape.positions[j * size.x + i].y = height[j * size.x + i];
+shape_data make_heightfield(const array2d<float>& height) {
+  auto size       = (vec2i)height.extents();
+  auto shape      = make_recty(size + 1, (vec2f)size / (float)max(size));
+  auto [width, _] = size;
+  for (auto [i, j] : range(size)) {
+    auto& position = shape.positions[j * width + i];
+    auto [x, y, z] = position;
+    position       = {x, height[vec2i{i, j}], z};
+  }
   shape.normals = quads_normals(shape.quads, shape.positions);
   return shape;
 }
-shape_data make_heightfield(const vec2i& size, const vector<vec4f>& color) {
-  auto shape = make_recty({size.x - 1, size.y - 1},
-      vec2f{(float)size.x, (float)size.y} / (float)max(size), {1, 1});
-  for (auto j : range(size.y))
-    for (auto i : range(size.x))
-      shape.positions[j * size.x + i].y = mean(xyz(color[j * size.x + i]));
+shape_data make_heightfield(const array2d<vec4f>& height) {
+  auto size       = (vec2i)height.extents();
+  auto shape      = make_recty(size + 1, (vec2f)size / (float)max(size));
+  auto [width, _] = size;
+  for (auto [i, j] : range(size)) {
+    auto& position = shape.positions[j * width + i];
+    auto [x, y, z] = position;
+    position       = {x, mean(xyz(height[vec2i{i, j}])), z};
+  }
   shape.normals = quads_normals(shape.quads, shape.positions);
   return shape;
 }
