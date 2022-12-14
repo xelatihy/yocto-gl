@@ -1710,18 +1710,17 @@ pair<vector<vec3f>, vector<vec3f>> skin_vertices(const vector<vec3f>& positions,
   auto skinned_positions = vector<vec3f>{positions.size()};
   auto skinned_normals   = vector<vec3f>{positions.size()};
   for (auto i : range(positions.size())) {
-    skinned_positions[i] =
-        transform_point(xforms[joints[i].x], positions[i]) * weights[i].x +
-        transform_point(xforms[joints[i].y], positions[i]) * weights[i].y +
-        transform_point(xforms[joints[i].z], positions[i]) * weights[i].z +
-        transform_point(xforms[joints[i].w], positions[i]) * weights[i].w;
-  }
-  for (auto i : range(normals.size())) {
+    auto [j1, j2, j3, j4] = joints[i];
+    auto [w1, w2, w3, w4] = weights[i];
+    skinned_positions[i]  = transform_point(xforms[j1], positions[i]) * w1 +
+                           transform_point(xforms[j2], positions[i]) * w2 +
+                           transform_point(xforms[j3], positions[i]) * w3 +
+                           transform_point(xforms[j4], positions[i]) * w4;
     skinned_normals[i] = normalize(
-        transform_direction(xforms[joints[i].x], normals[i]) * weights[i].x +
-        transform_direction(xforms[joints[i].y], normals[i]) * weights[i].y +
-        transform_direction(xforms[joints[i].z], normals[i]) * weights[i].z +
-        transform_direction(xforms[joints[i].w], normals[i]) * weights[i].w);
+        transform_direction(xforms[j1], normals[i]) * w1 +
+        transform_direction(xforms[j2], normals[i]) * w2 +
+        transform_direction(xforms[j3], normals[i]) * w3 +
+        transform_direction(xforms[j4], normals[i]) * w4);
   }
   return {skinned_positions, skinned_normals};
 }
@@ -1733,10 +1732,10 @@ pair<vector<vec3f>, vector<vec3f>> skin_matrices(const vector<vec3f>& positions,
   auto skinned_positions = vector<vec3f>{positions.size()};
   auto skinned_normals   = vector<vec3f>{positions.size()};
   for (auto i : range(positions.size())) {
-    auto xform = xforms[joints[i].x] * weights[i].x +
-                 xforms[joints[i].y] * weights[i].y +
-                 xforms[joints[i].z] * weights[i].z +
-                 xforms[joints[i].w] * weights[i].w;
+    auto [j1, j2, j3, j4] = joints[i];
+    auto [w1, w2, w3, w4] = weights[i];
+    auto xform = xforms[j1] * w1 + xforms[j2] * w2 + xforms[j3] * w3 +
+                 xforms[j4] * w4;
     skinned_positions[i] = transform_point(xform, positions[i]);
     skinned_normals[i]   = normalize(transform_direction(xform, normals[i]));
   }
@@ -1753,18 +1752,17 @@ void skin_vertices(vector<vec3f>& skinned_positions,
     throw std::out_of_range("arrays should be the same size");
   }
   for (auto i : range(positions.size())) {
-    skinned_positions[i] =
-        transform_point(xforms[joints[i].x], positions[i]) * weights[i].x +
-        transform_point(xforms[joints[i].y], positions[i]) * weights[i].y +
-        transform_point(xforms[joints[i].z], positions[i]) * weights[i].z +
-        transform_point(xforms[joints[i].w], positions[i]) * weights[i].w;
-  }
-  for (auto i : range(normals.size())) {
+    auto [j1, j2, j3, j4] = joints[i];
+    auto [w1, w2, w3, w4] = weights[i];
+    skinned_positions[i]  = transform_point(xforms[j1], positions[i]) * w1 +
+                           transform_point(xforms[j2], positions[i]) * w2 +
+                           transform_point(xforms[j3], positions[i]) * w3 +
+                           transform_point(xforms[j4], positions[i]) * w4;
     skinned_normals[i] = normalize(
-        transform_direction(xforms[joints[i].x], normals[i]) * weights[i].x +
-        transform_direction(xforms[joints[i].y], normals[i]) * weights[i].y +
-        transform_direction(xforms[joints[i].z], normals[i]) * weights[i].z +
-        transform_direction(xforms[joints[i].w], normals[i]) * weights[i].w);
+        transform_direction(xforms[j1], normals[i]) * w1 +
+        transform_direction(xforms[j2], normals[i]) * w2 +
+        transform_direction(xforms[j3], normals[i]) * w3 +
+        transform_direction(xforms[j4], normals[i]) * w4);
   }
 }
 
@@ -1778,10 +1776,10 @@ void skin_matrices(vector<vec3f>& skinned_positions,
     throw std::out_of_range("arrays should be the same size");
   }
   for (auto i : range(positions.size())) {
-    auto xform = xforms[joints[i].x] * weights[i].x +
-                 xforms[joints[i].y] * weights[i].y +
-                 xforms[joints[i].z] * weights[i].z +
-                 xforms[joints[i].w] * weights[i].w;
+    auto [j1, j2, j3, j4] = joints[i];
+    auto [w1, w2, w3, w4] = weights[i];
+    auto xform = xforms[j1] * w1 + xforms[j2] * w2 + xforms[j3] * w3 +
+                 xforms[j4] * w4;
     skinned_positions[i] = transform_point(xform, positions[i]);
     skinned_normals[i]   = normalize(transform_direction(xform, normals[i]));
   }
@@ -2840,8 +2838,8 @@ static pair<vector<vec3i>, vector<T>> subdivide_triangles_impl(
   auto tvertices = vector<T>{};
   tvertices.reserve(vertices.size() + edges.size());
   for (auto& vertex : vertices) tvertices.push_back(vertex);
-  for (auto& edge : edges)
-    tvertices.push_back((vertices[edge.x] + vertices[edge.y]) / 2);
+  for (auto& [v1, v2] : edges)
+    tvertices.push_back((vertices[v1] + vertices[v2]) / 2);
   // create triangles
   auto ttriangles = vector<vec3i>{};
   ttriangles.reserve(triangles.size() * 4);
@@ -2849,15 +2847,12 @@ static pair<vector<vec3i>, vector<T>> subdivide_triangles_impl(
     return nverts + edge_index(emap, edge);
   };
   for (auto& triangle : triangles) {
-    ttriangles.push_back({triangle.x, edge_vertex({triangle.x, triangle.y}),
-        edge_vertex({triangle.z, triangle.x})});
-    ttriangles.push_back({triangle.y, edge_vertex({triangle.y, triangle.z}),
-        edge_vertex({triangle.x, triangle.y})});
-    ttriangles.push_back({triangle.z, edge_vertex({triangle.z, triangle.x}),
-        edge_vertex({triangle.y, triangle.z})});
-    ttriangles.push_back({edge_vertex({triangle.x, triangle.y}),
-        edge_vertex({triangle.y, triangle.z}),
-        edge_vertex({triangle.z, triangle.x})});
+    auto [v1, v2, v3] = triangle;
+    ttriangles.push_back({v1, edge_vertex({v1, v2}), edge_vertex({v3, v1})});
+    ttriangles.push_back({v2, edge_vertex({v2, v3}), edge_vertex({v1, v2})});
+    ttriangles.push_back({v3, edge_vertex({v3, v1}), edge_vertex({v2, v3})});
+    ttriangles.push_back(
+        {edge_vertex({v1, v2}), edge_vertex({v2, v3}), edge_vertex({v3, v1})});
   }
   // done
   return {ttriangles, tvertices};
@@ -2876,16 +2871,14 @@ static pair<vector<vec4i>, vector<T>> subdivide_quads_impl(
   auto tvertices = vector<T>{};
   tvertices.reserve(vertices.size() + edges.size() + quads.size());
   for (auto& vertex : vertices) tvertices.push_back(vertex);
-  for (auto& edge : edges)
-    tvertices.push_back((vertices[edge.x] + vertices[edge.y]) / 2);
-  for (auto& quad : quads) {
-    if (quad.z != quad.w) {
-      tvertices.push_back((vertices[quad.x] + vertices[quad.y] +
-                              vertices[quad.z] + vertices[quad.w]) /
-                          4);
-    } else {
+  for (auto& [v1, v2] : edges)
+    tvertices.push_back((vertices[v1] + vertices[v2]) / 2);
+  for (auto& [v1, v2, v3, v4] : quads) {
+    if (v3 != v4) {
       tvertices.push_back(
-          (vertices[quad.x] + vertices[quad.y] + vertices[quad.z]) / 3);
+          (vertices[v1] + vertices[v2] + vertices[v3] + vertices[v4]) / 4);
+    } else {
+      tvertices.push_back((vertices[v1] + vertices[v2] + vertices[v3]) / 3);
     }
   }
   // create quads
@@ -2899,22 +2892,23 @@ static pair<vector<vec4i>, vector<T>> subdivide_quads_impl(
     return nverts + nedges + (int)quad_id;
   };
   for (auto&& [quad_id, quad] : enumerate(quads)) {
-    if (quad.z != quad.w) {
-      tquads.push_back({quad.x, edge_vertex({quad.x, quad.y}),
-          quad_vertex(quad_id), edge_vertex({quad.w, quad.x})});
-      tquads.push_back({quad.y, edge_vertex({quad.y, quad.z}),
-          quad_vertex(quad_id), edge_vertex({quad.x, quad.y})});
-      tquads.push_back({quad.z, edge_vertex({quad.z, quad.w}),
-          quad_vertex(quad_id), edge_vertex({quad.y, quad.z})});
-      tquads.push_back({quad.w, edge_vertex({quad.w, quad.x}),
-          quad_vertex(quad_id), edge_vertex({quad.z, quad.w})});
+    auto [v1, v2, v3, v4] = quad;
+    if (v3 != v4) {
+      tquads.push_back({v1, edge_vertex({v1, v2}), quad_vertex(quad_id),
+          edge_vertex({v4, v1})});
+      tquads.push_back({v2, edge_vertex({v2, v3}), quad_vertex(quad_id),
+          edge_vertex({v1, v2})});
+      tquads.push_back({v3, edge_vertex({v3, v4}), quad_vertex(quad_id),
+          edge_vertex({v2, v3})});
+      tquads.push_back({v4, edge_vertex({v4, v1}), quad_vertex(quad_id),
+          edge_vertex({v3, v4})});
     } else {
-      tquads.push_back({quad.x, edge_vertex({quad.x, quad.y}),
-          quad_vertex(quad_id), edge_vertex({quad.z, quad.x})});
-      tquads.push_back({quad.y, edge_vertex({quad.y, quad.z}),
-          quad_vertex(quad_id), edge_vertex({quad.x, quad.y})});
-      tquads.push_back({quad.z, edge_vertex({quad.z, quad.x}),
-          quad_vertex(quad_id), edge_vertex({quad.y, quad.z})});
+      tquads.push_back({v1, edge_vertex({v1, v2}), quad_vertex(quad_id),
+          edge_vertex({v3, v1})});
+      tquads.push_back({v2, edge_vertex({v2, v3}), quad_vertex(quad_id),
+          edge_vertex({v1, v2})});
+      tquads.push_back({v3, edge_vertex({v3, v1}), quad_vertex(quad_id),
+          edge_vertex({v2, v3})});
     }
   }
   // done
@@ -2932,26 +2926,23 @@ static pair<vector<vec4i>, vector<T>> subdivide_beziers_impl(
   auto tvertices = vector<T>();
   auto tbeziers  = vector<vec4i>();
   for (auto& bezier : beziers) {
-    if (vmap.find(bezier.x) == vmap.end()) {
-      vmap[bezier.x] = (int)tvertices.size();
-      tvertices.push_back(vertices[bezier.x]);
-    }
-    if (vmap.find(bezier.w) == vmap.end()) {
-      vmap[bezier.w] = (int)tvertices.size();
-      tvertices.push_back(vertices[bezier.w]);
+    auto [v1, v2, v3, v4] = bezier;
+    for (auto vid : {v1, v4}) {
+      if (vmap.find(vid) == vmap.end()) {
+        vmap[vid] = (int)tvertices.size();
+        tvertices.push_back(vertices[vid]);
+      }
     }
     auto bo = (int)tvertices.size();
-    tbeziers.push_back({vmap.at(bezier.x), bo + 0, bo + 1, bo + 2});
+    tbeziers.push_back({vmap.at(v1), bo + 0, bo + 1, bo + 2});
     tbeziers.push_back({bo + 2, bo + 3, bo + 4, vmap.at(bezier.w)});
-    tvertices.push_back(vertices[bezier.x] / 2 + vertices[bezier.y] / 2);
-    tvertices.push_back(vertices[bezier.x] / 4 + vertices[bezier.y] / 2 +
-                        vertices[bezier.z] / 4);
+    tvertices.push_back(vertices[v1] / 2 + vertices[v2] / 2);
+    tvertices.push_back(vertices[v1] / 4 + vertices[v2] / 2 + vertices[v3] / 4);
     tvertices.push_back(
-        vertices[bezier.x] / 8 + vertices[bezier.y] * ((float)3 / (float)8) +
-        vertices[bezier.z] * ((float)3 / (float)8) + vertices[bezier.w] / 8);
-    tvertices.push_back(vertices[bezier.y] / 4 + vertices[bezier.z] / 2 +
-                        vertices[bezier.w] / 4);
-    tvertices.push_back(vertices[bezier.z] / 2 + vertices[bezier.w] / 2);
+        vertices[v1] / 8 + vertices[v2] * ((float)3 / (float)8) +
+        vertices[v3] * ((float)3 / (float)8) + vertices[v4] / 8);
+    tvertices.push_back(vertices[v2] / 4 + vertices[v3] / 2 + vertices[v4] / 4);
+    tvertices.push_back(vertices[v3] / 2 + vertices[v4] / 2);
   }
 
   // done
@@ -2974,16 +2965,14 @@ static pair<vector<vec4i>, vector<T>> subdivide_catmullclark_impl(
   auto tvertices = vector<T>{};
   tvertices.reserve(vertices.size() + edges.size() + quads.size());
   for (auto& vertex : vertices) tvertices.push_back(vertex);
-  for (auto& edge : edges)
-    tvertices.push_back((vertices[edge.x] + vertices[edge.y]) / 2);
-  for (auto& quad : quads) {
-    if (quad.z != quad.w) {
-      tvertices.push_back((vertices[quad.x] + vertices[quad.y] +
-                              vertices[quad.z] + vertices[quad.w]) /
-                          4);
-    } else {
+  for (auto& [v1, v2] : edges)
+    tvertices.push_back((vertices[v1] + vertices[v2]) / 2);
+  for (auto& [v1, v2, v3, v4] : quads) {
+    if (v3 != v4) {
       tvertices.push_back(
-          (vertices[quad.x] + vertices[quad.y] + vertices[quad.z]) / 3);
+          (vertices[v1] + vertices[v2] + vertices[v3] + vertices[v4]) / 4);
+    } else {
+      tvertices.push_back((vertices[v1] + vertices[v2] + vertices[v3]) / 3);
     }
   }
   // create quads
@@ -2997,40 +2986,41 @@ static pair<vector<vec4i>, vector<T>> subdivide_catmullclark_impl(
     return nverts + nedges + (int)quad_id;
   };
   for (auto&& [quad_id, quad] : enumerate(quads)) {
-    if (quad.z != quad.w) {
-      tquads.push_back({quad.x, edge_vertex({quad.x, quad.y}),
-          quad_vertex(quad_id), edge_vertex({quad.w, quad.x})});
-      tquads.push_back({quad.y, edge_vertex({quad.y, quad.z}),
-          quad_vertex(quad_id), edge_vertex({quad.x, quad.y})});
-      tquads.push_back({quad.z, edge_vertex({quad.z, quad.w}),
-          quad_vertex(quad_id), edge_vertex({quad.y, quad.z})});
-      tquads.push_back({quad.w, edge_vertex({quad.w, quad.x}),
-          quad_vertex(quad_id), edge_vertex({quad.z, quad.w})});
+    auto& [v1, v2, v3, v4] = quad;
+    if (v3 != v4) {
+      tquads.push_back({v1, edge_vertex({v1, v2}), quad_vertex(quad_id),
+          edge_vertex({v4, v1})});
+      tquads.push_back({v2, edge_vertex({v2, v3}), quad_vertex(quad_id),
+          edge_vertex({v1, v2})});
+      tquads.push_back({v3, edge_vertex({v3, v4}), quad_vertex(quad_id),
+          edge_vertex({v2, v3})});
+      tquads.push_back({v4, edge_vertex({v4, v1}), quad_vertex(quad_id),
+          edge_vertex({v3, v4})});
     } else {
-      tquads.push_back({quad.x, edge_vertex({quad.x, quad.y}),
-          quad_vertex(quad_id), edge_vertex({quad.z, quad.x})});
-      tquads.push_back({quad.y, edge_vertex({quad.y, quad.z}),
-          quad_vertex(quad_id), edge_vertex({quad.x, quad.y})});
-      tquads.push_back({quad.z, edge_vertex({quad.z, quad.x}),
-          quad_vertex(quad_id), edge_vertex({quad.y, quad.z})});
+      tquads.push_back({v1, edge_vertex({v1, v2}), quad_vertex(quad_id),
+          edge_vertex({v3, v1})});
+      tquads.push_back({v2, edge_vertex({v2, v3}), quad_vertex(quad_id),
+          edge_vertex({v1, v2})});
+      tquads.push_back({v3, edge_vertex({v3, v1}), quad_vertex(quad_id),
+          edge_vertex({v2, v3})});
     }
   }
 
   // split boundary
   auto tboundary = vector<vec2i>{};
   tboundary.reserve(boundary.size());
-  for (auto& edge : boundary) {
-    tboundary.push_back({edge.x, edge_vertex(edge)});
-    tboundary.push_back({edge_vertex(edge), edge.y});
+  for (auto& [v1, v2] : boundary) {
+    tboundary.push_back({v1, edge_vertex({v1, v2})});
+    tboundary.push_back({edge_vertex({v1, v2}), v2});
   }
 
   // setup creases -----------------------------------
   auto tcrease_edges = vector<vec2i>{};
   auto tcrease_verts = vector<int>{};
   if (lock_boundary) {
-    for (auto& b : tboundary) {
-      tcrease_verts.push_back(b.x);
-      tcrease_verts.push_back(b.y);
+    for (auto& [v1, v2] : tboundary) {
+      tcrease_verts.push_back(v1);
+      tcrease_verts.push_back(v2);
     }
   } else {
     for (auto& b : tboundary) tcrease_edges.push_back(b);
@@ -3038,9 +3028,9 @@ static pair<vector<vec4i>, vector<T>> subdivide_catmullclark_impl(
 
   // define vertices valence ---------------------------
   auto tvert_val = vector<int>(tvertices.size(), 2);
-  for (auto& edge : tboundary) {
-    tvert_val[edge.x] = (lock_boundary) ? 0 : 1;
-    tvert_val[edge.y] = (lock_boundary) ? 0 : 1;
+  for (auto& [v1, v2] : tboundary) {
+    tvert_val[v1] = (lock_boundary) ? 0 : 1;
+    tvert_val[v2] = (lock_boundary) ? 0 : 1;
   }
 
   // averaging pass ----------------------------------
@@ -3052,18 +3042,19 @@ static pair<vector<vec4i>, vector<T>> subdivide_catmullclark_impl(
     acount[point] += 1;
   }
   for (auto& edge : tcrease_edges) {
-    auto centroid = (tvertices[edge.x] + tvertices[edge.y]) / 2;
-    for (auto vid : {edge.x, edge.y}) {
+    auto [v1, v2] = edge;
+    auto centroid = (tvertices[v1] + tvertices[v2]) / 2;
+    for (auto vid : edge) {
       if (tvert_val[vid] != 1) continue;
       avert[vid] += centroid;
       acount[vid] += 1;
     }
   }
   for (auto& quad : tquads) {
-    auto centroid = (tvertices[quad.x] + tvertices[quad.y] + tvertices[quad.z] +
-                        tvertices[quad.w]) /
-                    4;
-    for (auto vid : {quad.x, quad.y, quad.z, quad.w}) {
+    auto [v1, v2, v3, v4] = quad;
+    auto centroid =
+        (tvertices[v1] + tvertices[v2] + tvertices[v3] + tvertices[v4]) / 4;
+    for (auto vid : quad) {
       if (tvert_val[vid] != 2) continue;
       avert[vid] += centroid;
       acount[vid] += 1;
