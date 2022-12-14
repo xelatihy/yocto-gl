@@ -1825,26 +1825,14 @@ vector<vec3f> align_vertices(
   auto bounds = invalidb3f;
   for (auto& p : positions) bounds = merge(bounds, p);
   auto offset = vec3f{0, 0, 0};
-  switch (alignment.x) {
-    case 0: break;
-    case 1: offset.x = bounds.min.x; break;
-    case 2: offset.x = (bounds.min.x + bounds.max.x) / 2; break;
-    case 3: offset.x = bounds.max.x; break;
-    default: throw std::invalid_argument{"invalid alignment"};
-  }
-  switch (alignment.y) {
-    case 0: break;
-    case 1: offset.y = bounds.min.y; break;
-    case 2: offset.y = (bounds.min.y + bounds.max.y) / 2; break;
-    case 3: offset.y = bounds.max.y; break;
-    default: throw std::invalid_argument{"invalid alignment"};
-  }
-  switch (alignment.z) {
-    case 0: break;
-    case 1: offset.z = bounds.min.z; break;
-    case 2: offset.z = (bounds.min.z + bounds.max.z) / 2; break;
-    case 3: offset.z = bounds.max.z; break;
-    default: throw std::invalid_argument{"invalid alignment"};
+  for (auto a : range(3)) {
+    switch (alignment[a]) {
+      case 0: break;
+      case 1: offset[a] = bounds.min[a]; break;
+      case 2: offset[a] = (bounds.min[a] + bounds.max[a]) / 2; break;
+      case 3: offset[a] = bounds.max[a]; break;
+      default: throw std::invalid_argument{"invalid alignment"};
+    }
   }
   auto aligned = positions;
   for (auto& p : aligned) p -= offset;
@@ -2355,9 +2343,8 @@ static shape_intersection intersect_elements_bvh(const bvh_tree& bvh,
   auto ray = ray_;
 
   // prepare ray for fast queries
-  auto ray_dinv  = vec3f{1 / ray.d.x, 1 / ray.d.y, 1 / ray.d.z};
-  auto ray_dsign = vec3i{(ray_dinv.x < 0) ? 1 : 0, (ray_dinv.y < 0) ? 1 : 0,
-      (ray_dinv.z < 0) ? 1 : 0};
+  auto ray_dinv  = 1 / ray.d;
+  auto ray_dsign = component_less(ray_dinv, 0);
 
   // walking stack
   while (node_cur) {
@@ -2567,7 +2554,7 @@ namespace yocto {
 // Gets the cell index
 vec3i get_cell_index(const hash_grid& grid, const vec3f& position) {
   auto scaledpos = position * grid.cell_inv_size;
-  return vec3i{(int)scaledpos.x, (int)scaledpos.y, (int)scaledpos.z};
+  return (vec3i)scaledpos;
 }
 
 // Create a hash_grid
@@ -2655,10 +2642,10 @@ vector<vec4i> triangles_to_quads(const vector<vec3i>& triangles) {
 vector<vec2i> bezier_to_lines(const vector<vec4i>& beziers) {
   auto lines = vector<vec2i>{};
   lines.reserve(beziers.size() * 3);
-  for (auto b : beziers) {
-    lines.push_back({b.x, b.y});
-    lines.push_back({b.y, b.z});
-    lines.push_back({b.z, b.w});
+  for (auto [v1, v2, v3, v4] : beziers) {
+    lines.push_back({v1, v2});
+    lines.push_back({v2, v3});
+    lines.push_back({v3, v4});
   }
   return lines;
 }
@@ -2677,17 +2664,17 @@ void split_facevarying(vector<vec4i>& split_quads,
   for (auto fid : range(quadspos.size())) {
     for (auto c : range(4)) {
       auto v = vec3i{
-          (&quadspos[fid].x)[c],
-          (!quadsnorm.empty()) ? (&quadsnorm[fid].x)[c] : -1,
-          (!quadstexcoord.empty()) ? (&quadstexcoord[fid].x)[c] : -1,
+          quadspos[fid][c],
+          (!quadsnorm.empty()) ? quadsnorm[fid][c] : -1,
+          (!quadstexcoord.empty()) ? quadstexcoord[fid][c] : -1,
       };
       auto it = vert_map.find(v);
       if (it == vert_map.end()) {
         auto s = (int)vert_map.size();
         vert_map.insert(it, {v, s});
-        (&split_quads[fid].x)[c] = s;
+        split_quads[fid][c] = s;
       } else {
-        (&split_quads[fid].x)[c] = it->second;
+        split_quads[fid][c] = it->second;
       }
     }
   }
@@ -2697,21 +2684,24 @@ void split_facevarying(vector<vec4i>& split_quads,
   if (!positions.empty()) {
     split_positions.resize(vert_map.size());
     for (auto& [vert, index] : vert_map) {
-      split_positions[index] = positions[vert.x];
+      auto [vid, _, __]      = vert;
+      split_positions[index] = positions[vid];
     }
   }
   split_normals.clear();
   if (!normals.empty()) {
     split_normals.resize(vert_map.size());
     for (auto& [vert, index] : vert_map) {
-      split_normals[index] = normals[vert.y];
+      auto [_, vid, __]    = vert;
+      split_normals[index] = normals[vid];
     }
   }
   split_texcoords.clear();
   if (!texcoords.empty()) {
     split_texcoords.resize(vert_map.size());
     for (auto& [vert, index] : vert_map) {
-      split_texcoords[index] = texcoords[vert.z];
+      auto [_, __, vid]      = vert;
+      split_texcoords[index] = texcoords[vid];
     }
   }
 }
@@ -2820,8 +2810,8 @@ static pair<vector<vec2i>, vector<T>> subdivide_lines_impl(
   auto tvertices = vector<T>{};
   tvertices.reserve(vertices.size() + lines.size());
   for (auto& vertex : vertices) tvertices.push_back(vertex);
-  for (auto& line : lines) {
-    tvertices.push_back((vertices[line.x] + vertices[line.y]) / 2);
+  for (auto& [v1, v2] : lines) {
+    tvertices.push_back((vertices[v1] + vertices[v2]) / 2);
   }
   // create lines
   auto tlines = vector<vec2i>{};
@@ -2829,8 +2819,9 @@ static pair<vector<vec2i>, vector<T>> subdivide_lines_impl(
   auto line_vertex = [nverts = (int)vertices.size()](
                          size_t line_id) { return nverts + (int)line_id; };
   for (auto&& [line_id, line] : enumerate(lines)) {
-    tlines.push_back({line.x, line_vertex(line_id)});
-    tlines.push_back({line_vertex(line_id), line.y});
+    auto& [v1, v2] = line;
+    tlines.push_back({v1, line_vertex(line_id)});
+    tlines.push_back({line_vertex(line_id), v2});
   }
   // done
   return {tlines, tvertices};
