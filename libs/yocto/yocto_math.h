@@ -410,6 +410,14 @@ constexpr auto one = vec<T, N>{1};
 
 // Element access
 template <typename T>
+constexpr kernel vec<T, 2> xy(const vec<T, 3>& a) {
+  return {a.x, a.y};
+}
+template <typename T>
+constexpr kernel vec<T, 2> xy(const vec<T, 4>& a) {
+  return {a.x, a.y};
+}
+template <typename T>
 constexpr kernel vec<T, 3> xyz(const vec<T, 4>& a) {
   return {a.x, a.y, a.z};
 }
@@ -1609,6 +1617,14 @@ constexpr kernel frame<T, 3> frame_fromzx(
   auto x = orthonormalize(x_, z);
   auto y = normalize(cross(z, x));
   return {x, y, z, o};
+}
+template <typename T>
+constexpr kernel frame<T, 3> orthonormalize(const frame<T, 3>& frame_) {
+  auto z = normalize(frame_.z);
+  auto x = orthonormalize(frame_.x, z);
+  auto y = normalize(cross(z, x));
+  auto o = frame_.o;
+  return frame<T, 3>{x, y, z, o};
 }
 
 }  // namespace yocto
