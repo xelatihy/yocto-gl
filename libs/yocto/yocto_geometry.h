@@ -217,17 +217,11 @@ template <typename T, size_t N>
 constexpr kernel bbox<T, N> transform_bbox(
     const mat<T, N + 1, N + 1>& a, const bbox<T, N>& b) {
   if constexpr (N == 3) {
-    auto corners = {vec<T, 3>{b.min.x, b.min.y, b.min.z},
-        vec<T, 3>{b.min.x, b.min.y, b.max.z},
-        vec<T, 3>{b.min.x, b.max.y, b.min.z},
-        vec<T, 3>{b.min.x, b.max.y, b.max.z},
-        vec<T, 3>{b.max.x, b.min.y, b.min.z},
-        vec<T, 3>{b.max.x, b.min.y, b.max.z},
-        vec<T, 3>{b.max.x, b.max.y, b.min.z},
-        vec<T, 3>{b.max.x, b.max.y, b.max.z}};
     auto xformed = bbox<T, N>();
-    for (auto& corner : corners)
-      xformed = merge(xformed, transform_point(a, corner));
+    for (auto [i, j, k] : range(vec<int, 3>(2, 2, 2))) {
+      auto corner = vec<T, 3>{b[i][0], b[j][1], b[k][2]};
+      xformed     = merge(xformed, transform_point(a, corner));
+    }
     return xformed;
   }
 }
@@ -235,17 +229,11 @@ template <typename T, size_t N>
 constexpr kernel bbox<T, N> transform_bbox(
     const frame<T, N>& a, const bbox<T, N>& b) {
   if constexpr (N == 3) {
-    auto corners = {vec<T, 3>{b.min.x, b.min.y, b.min.z},
-        vec<T, 3>{b.min.x, b.min.y, b.max.z},
-        vec<T, 3>{b.min.x, b.max.y, b.min.z},
-        vec<T, 3>{b.min.x, b.max.y, b.max.z},
-        vec<T, 3>{b.max.x, b.min.y, b.min.z},
-        vec<T, 3>{b.max.x, b.min.y, b.max.z},
-        vec<T, 3>{b.max.x, b.max.y, b.min.z},
-        vec<T, 3>{b.max.x, b.max.y, b.max.z}};
     auto xformed = bbox<T, N>();
-    for (auto& corner : corners)
-      xformed = merge(xformed, transform_point(a, corner));
+    for (auto [i, j, k] : range(vec<int, 3>(2, 2, 2))) {
+      auto corner = vec<T, 3>{b[i][0], b[j][1], b[k][2]};
+      xformed     = merge(xformed, transform_point(a, corner));
+    }
     return xformed;
   }
 }

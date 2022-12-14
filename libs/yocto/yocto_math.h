@@ -2236,6 +2236,13 @@ constexpr kernel auto range(vec<T, 2> max);
 template <typename T>
 constexpr kernel auto range(array<T, 2> max);
 
+// Python range in 3d. Construct an object that iterates over a 3d integer
+// sequence.
+template <typename T>
+constexpr kernel auto range(vec<T, 3> max);
+template <typename T>
+constexpr kernel auto range(array<T, 3> max);
+
 // Python enumerate
 template <typename Sequence, typename T = size_t>
 constexpr kernel auto enumerate(const Sequence& sequence, T start = 0);
@@ -2325,6 +2332,41 @@ constexpr kernel auto range(vec<T, 2> max) {
 template <typename T>
 constexpr kernel auto range(array<T, 2> max) {
   return range(vec<T, 2>{max});
+}
+
+// Python range in 2d. Construct an object that iterates over a 2d integer
+// sequence.
+template <typename T>
+constexpr kernel auto range(vec<T, 3> max) {
+  struct range_sentinel {};
+  struct range_iterator {
+    vec<T, 3>             index, end;
+    constexpr kernel void operator++() {
+      ++index[0];
+      if (index[0] >= end[0]) {
+        index[0] = 0;
+        index[1]++;
+      }
+      if (index[1] >= end[1]) {
+        index[1] = 0;
+        index[2]++;
+      }
+    }
+    constexpr kernel bool operator!=(const range_sentinel&) const {
+      return index[2] != end[2];
+    }
+    constexpr kernel vec<T, 3> operator*() const { return index; }
+  };
+  struct range_sequence {
+    vec<T, 3>                       end_ = {0, 0, 0};
+    constexpr kernel range_iterator begin() const { return {{0, 0, 0}, end_}; }
+    constexpr kernel range_sentinel end() const { return {}; }
+  };
+  return range_sequence{max};
+}
+template <typename T>
+constexpr kernel auto range(array<T, 3> max) {
+  return range(vec<T, 3>{max});
 }
 
 // Implementation of Python enumerate.
