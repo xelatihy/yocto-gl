@@ -69,7 +69,7 @@ ray3f eval_camera(
                   ? vec2f{camera.film, camera.film / camera.aspect}
                   : vec2f{camera.film * camera.aspect, camera.film};
   if (!camera.orthographic) {
-    auto uv = lerp(vec2f{1, 0}, vec2f{0, 1}, image_uv);  // flip x
+    auto uv = flip_u(image_uv);
     auto q  = vec3f{film * (uv - 0.5f), camera.lens};
     // ray direction through the lens center
     auto dc = -normalize(q);
@@ -83,7 +83,7 @@ ray3f eval_camera(
     return ray3f{
         transform_point(camera.frame, e), transform_direction(camera.frame, d)};
   } else {
-    auto uv    = lerp(vec2f{1, 0}, vec2f{0, 1}, image_uv);  // flip x
+    auto uv    = flip_u(image_uv);
     auto scale = 1 / camera.lens;
     auto q     = vec3f{film * (uv - 0.5f) * scale, camera.lens};
     // point on the lens
@@ -591,7 +591,7 @@ void add_sky(scene_data& scene, float sun_angle) {
   texture       = image_to_texture(make_sunsky({1024, 512}, sun_angle), true);
   scene.environment_names.emplace_back("sky");
   auto& environment        = scene.environments.emplace_back();
-  environment.emission     = {1, 1, 1};
+  environment.emission     = {0.25, 0.25, 0.25};
   environment.emission_tex = (int)scene.textures.size() - 1;
 }
 

@@ -1236,6 +1236,7 @@ shape_data make_shape_preset(const string& type_) {
   auto type       = path_basename(type_);
   auto test_xform = translation_frame(vec3f{0, 0.75f, 0}) *
                     scaling_frame(0.75f);
+  auto test_radius_scale = 0.75f;
   if (type == "quad") {
     return make_quad();
   } else if (type == "quady") {
@@ -1256,6 +1257,16 @@ shape_data make_shape_preset(const string& type_) {
     return make_bulged_disk();
   } else if (type == "bulged_quad") {
     return make_bulged_quad();
+  } else if (type == "rect") {
+    return make_rect();
+  } else if (type == "recty") {
+    return make_recty();
+  } else if (type == "box") {
+    return make_box();
+  } else if (type == "rounded_box") {
+    return make_rounded_box();
+  } else if (type == "tsphere") {
+    return make_tsphere();
   } else if (type == "uvsphere") {
     return make_uvsphere();
   } else if (type == "capped_uvsphere") {
@@ -1270,6 +1281,10 @@ shape_data make_shape_preset(const string& type_) {
     return make_uvcylinder();
   } else if (type == "rounded_uvcylinder") {
     return make_rounded_uvcylinder({32, 32, 32});
+  } else if (type == "uvcapsule") {
+    return make_uvcapsule();
+  } else if (type == "uvcone") {
+    return make_uvcone();
   } else if (type == "geosphere") {
     return make_geosphere();
   } else if (type == "floor") {
@@ -1278,9 +1293,12 @@ shape_data make_shape_preset(const string& type_) {
     return make_bent_floor();
   } else if (type == "matball") {
     return make_sphere();
+  } else if (type == "lineball") {
+    auto base = transform_shape(scaling_frame(0.8f), make_sphere());
+    return make_random_lines(base, pow2(16), 4, {0.2f, 0.2f}, {0.002f, 0.001f});
   } else if (type == "hairball") {
     auto base = transform_shape(scaling_frame(0.8f), make_sphere());
-    return make_hair(base, {4, 65536}, {0.2f, 0.2f}, {0.002f, 0.001f});
+    return make_random_hairs(base, pow2(16), 4, {0.2f, 0.2f}, {0.002f, 0.001f});
   } else if (type == "hairball_interior") {
     return transform_shape(scaling_frame(0.8f), make_sphere());
   } else if (type == "suzanne") {
@@ -1302,13 +1320,13 @@ shape_data make_shape_preset(const string& type_) {
   } else if (type == "test_cube") {
     return transform_shape(test_xform, make_rounded_cube());
   } else if (type == "test_uvsphere") {
-    return transform_shape(test_xform, make_uvsphere({32, 32}));
+    return transform_shape(test_xform, make_uvsphere());
   } else if (type == "test_capped_uvsphere") {
-    return transform_shape(test_xform, make_capped_uvsphere({32, 32}));
+    return transform_shape(test_xform, make_capped_uvsphere());
   } else if (type == "test_uvspherey") {
-    return transform_shape(test_xform, make_uvspherey({32, 32}));
+    return transform_shape(test_xform, make_uvspherey());
   } else if (type == "test_capped_uvspherey") {
-    return transform_shape(test_xform, make_capped_uvspherey({32, 32}));
+    return transform_shape(test_xform, make_capped_uvspherey());
   } else if (type == "test_sphere") {
     return transform_shape(test_xform, make_sphere());
   } else if (type == "test_matcube") {
@@ -1324,7 +1342,7 @@ shape_data make_shape_preset(const string& type_) {
   } else if (type == "test_disk") {
     return transform_shape(test_xform, make_disk());
   } else if (type == "test_uvcylinder") {
-    return transform_shape(test_xform, make_rounded_uvcylinder({32, 32, 32}));
+    return transform_shape(test_xform, make_rounded_uvcylinder());
   } else if (type == "test_floor") {
     return make_floor();
   } else if (type == "test_quad") {
@@ -1343,21 +1361,16 @@ shape_data make_shape_preset(const string& type_) {
     return transform_shape(test_xform, remove_normals(make_geosphere()));
   } else if (type == "test_subdivided_geosphere") {
     return transform_shape(test_xform, make_geosphere(6));
-  } else if (type == "test_hairball1") {
+  } else if (type == "test_lineball") {
     auto base = transform_shape(
         test_xform * scaling_frame(0.8f), make_sphere());
-    return make_hair(base, {4, 65536}, {0.1f * 0.15f, 0.1f * 0.15f},
-        {0.001f * 0.15f, 0.0005f * 0.15f}, {0.03f, 100});
-  } else if (type == "test_hairball2") {
-    auto base = transform_shape(
-        test_xform * scaling_frame(0.8f), make_sphere());
-    return make_hair(base, {4, 65536}, {0.1f * 0.15f, 0.1f * 0.15f},
+    return make_random_lines(base, pow2(16), 4, {0.1f * 0.15f, 0.1f * 0.15f},
         {0.001f * 0.15f, 0.0005f * 0.15f});
-  } else if (type == "test_hairball3") {
+  } else if (type == "test_hairball") {
     auto base = transform_shape(
         test_xform * scaling_frame(0.8f), make_sphere());
-    return make_hair(base, {4, 65536}, {0.1f * 0.15f, 0.1f * 0.15f},
-        {0.001f * 0.15f, 0.0005f * 0.15f}, {0, 0}, {0.5, 128});
+    return make_random_hairs(base, pow2(16), 4, {0.1f * 0.15f, 0.1f * 0.15f},
+        {0.001f * 0.15f, 0.0005f * 0.15f});
   } else if (type == "test_hairball-interior") {
     return transform_shape(test_xform * scaling_frame(0.8f), make_sphere());
   } else if (type == "test_suzanne_subdiv") {
@@ -1365,49 +1378,38 @@ shape_data make_shape_preset(const string& type_) {
   } else if (type == "test_cube_subdiv") {
     return transform_shape(test_xform, make_wtcube());
   } else if (type == "test_arealight1") {
-    return make_rect({1, 1}, {0.2f, 0.2f});
+    return transform_shape(scaling_frame(0.2f), make_quad());
   } else if (type == "test_arealight2") {
-    return make_rect({1, 1}, {0.2f, 0.2f});
+    return transform_shape(scaling_frame(0.2f), make_quad());
   } else if (type == "test_largearealight1") {
-    return make_rect({1, 1}, {0.4f, 0.4f});
+    return transform_shape(scaling_frame(0.4f), make_quad());
   } else if (type == "test_largearealight2") {
-    return make_rect({1, 1}, {0.4f, 0.4f});
+    return transform_shape(scaling_frame(0.4f), make_quad());
   } else if (type == "test_pointlight1") {
     return make_point(0);
   } else if (type == "test_pointlight2") {
     return make_point(0);
   } else if (type == "test_point") {
-    return make_points(1);
+    return make_point();
   } else if (type == "test_points") {
-    return make_points(4096);
+    return make_random_points(4096);
   } else if (type == "test_points_random") {
     return transform_shape(test_xform, make_random_points(4096));
   } else if (type == "test_points_grid") {
-    auto shape = make_points({256, 256}, {0.075f, 0.075f});
-    for (auto& p : shape.positions) p += vec3f{0, 0.075f, 0};
-    for (auto& r : shape.radius) r *= 0.075f;
-    return shape;
+    return transform_shape(test_xform, make_point_grid(), test_radius_scale);
   } else if (type == "test_lines_grid") {
-    auto shape = make_lines({256, 256}, {0.075f, 0.075f});
-    for (auto& p : shape.positions) p += vec3f{0, 0.075f, 0};
-    for (auto& r : shape.radius) r *= 0.075f;
-    return shape;
+    return transform_shape(test_xform, make_lines(), test_radius_scale);
   } else if (type == "test_thickpoints_grid") {
-    auto shape = make_points({16, 16}, {0.075f, 0.075f});
-    for (auto& p : shape.positions) p += vec3f{0, 0.075f, 0};
-    for (auto& r : shape.radius) r *= 0.075f * 10;
-    return shape;
+    return transform_shape(
+        test_xform, make_point_grid(), test_radius_scale * 10);
   } else if (type == "test_thicklines_grid") {
-    auto shape = make_lines({16, 16}, {0.075f, 0.075f});
-    for (auto& p : shape.positions) p += vec3f{0, 0.075f, 0};
-    for (auto& r : shape.radius) r *= 0.075f * 10;
-    return shape;
+    return transform_shape(test_xform, make_lines(), test_radius_scale);
   } else if (type == "test_particles") {
     return make_points(4096);
   } else if (type == "test_cloth") {
-    return make_rect({64, 64}, {0.2f, 0.2f});
+    return transform_shape(scaling_frame(0.2f), make_quad(6));
   } else if (type == "test_clothy") {
-    return make_recty({64, 64}, {0.2f, 0.2f});
+    return transform_shape(scaling_frame(0.2f), make_quady(6));
   } else {
     throw io_error{"unknown preset " + type};
   }
@@ -1719,21 +1721,20 @@ static void add_missing_radius(scene_data& scene, float radius = 0.001f) {
 }
 
 // Add missing cameras.
-void add_missing_material(scene_data& scene, bool textured = false) {
+void add_missing_material(scene_data& scene, bool glossy = false,
+    const array2d<vec4f>& texture = {}) {
   auto default_material = invalidid;
   for (auto& instance : scene.instances) {
     if (instance.material != invalidid) continue;
     if (default_material == invalidid) {
       auto& material   = scene.materials.emplace_back();
       default_material = (int)scene.materials.size() - 1;
-      if (!textured) {
-        material.type  = material_type::matte;
-        material.color = {0.8f, 0.8f, 0.8f};
-      } else {
-        scene.textures.push_back(image_to_texture(make_uvgrid(), false));
-        material.type      = material_type::glossy;
-        material.color     = {1, 1, 1};
-        material.roughness = 0.1f;
+      material.type    = glossy ? material_type::glossy : material_type::matte;
+      material.color   = texture.empty() ? vec3f{0.8f, 0.8f, 0.8f}
+                                         : vec3f{1, 1, 1};
+      material.roughness = 0.1f;
+      if (!texture.empty()) {
+        scene.textures.push_back(image_to_texture(texture, false));
         material.color_tex = (int)scene.textures.size() - 1;
       }
     }
@@ -2195,11 +2196,29 @@ scene_data make_scene_preset(const string& type_) {
     add_missing_radius(scene);
     add_missing_lights(scene);
     return scene;
-  } else if (type.starts_with("textured_shape_")) {
+  } else if (type.starts_with("tshape_")) {
     auto scene = scene_data{};
-    scene.shapes.push_back(make_shape_preset(type.substr(15)));
+    scene.shapes.push_back(make_shape_preset(type.substr(7)));
     scene.instances.push_back({identity3x4f, 0, invalidid});
-    add_missing_material(scene, true);
+    add_missing_material(scene, true, make_uvgrid());
+    add_missing_camera(scene);
+    add_missing_radius(scene);
+    add_missing_lights(scene);
+    return scene;
+  } else if (type.starts_with("uvshape_")) {
+    auto scene = scene_data{};
+    scene.shapes.push_back(make_shape_preset(type.substr(8)));
+    scene.instances.push_back({identity3x4f, 0, invalidid});
+    add_missing_material(scene, true, make_uvramp());
+    add_missing_camera(scene);
+    add_missing_radius(scene);
+    add_missing_lights(scene);
+    return scene;
+  } else if (type.starts_with("orshape_")) {
+    auto scene = scene_data{};
+    scene.shapes.push_back(make_shape_preset(type.substr(8)));
+    scene.instances.push_back({identity3x4f, 0, invalidid});
+    add_missing_material(scene, true, make_orgrid());
     add_missing_camera(scene);
     add_missing_radius(scene);
     add_missing_lights(scene);
