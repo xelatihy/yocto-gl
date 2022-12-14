@@ -721,7 +721,8 @@ namespace yocto {
 // Computes the aspect ratio.
 template <typename T>
 constexpr kernel T aspect_ratio(const vec<T, 2>& size) {
-  return size.x / size.y;
+  auto [width, height] = size;
+  return width / height;
 }
 
 // Flip u from [0,1] to [1,0]
@@ -1150,12 +1151,12 @@ constexpr kernel bool overlap_bbox(
   auto dd = (T)0.0;
 
   // For each axis count any excess distance outside box extents
-  if (pos.x < bbox.min.x) dd += (bbox.min.x - pos.x) * (bbox.min.x - pos.x);
-  if (pos.x > bbox.max.x) dd += (pos.x - bbox.max.x) * (pos.x - bbox.max.x);
-  if (pos.y < bbox.min.y) dd += (bbox.min.y - pos.y) * (bbox.min.y - pos.y);
-  if (pos.y > bbox.max.y) dd += (pos.y - bbox.max.y) * (pos.y - bbox.max.y);
-  if (pos.z < bbox.min.z) dd += (bbox.min.z - pos.z) * (bbox.min.z - pos.z);
-  if (pos.z > bbox.max.z) dd += (pos.z - bbox.max.z) * (pos.z - bbox.max.z);
+  for (auto a : range(3)) {
+    if (pos[a] < bbox.min[a])
+      dd += (bbox.min[a] - pos[a]) * (bbox.min[a] - pos[a]);
+    if (pos[a] > bbox.max[a])
+      dd += (pos[a] - bbox.max[a]) * (pos[a] - bbox.max[a]);
+  }
 
   // check distance
   return dd < dist_max * dist_max;
@@ -1165,9 +1166,10 @@ constexpr kernel bool overlap_bbox(
 template <typename T>
 constexpr kernel bool overlap_bbox(
     const bbox<T, 3>& bbox1, const bbox<T, 3>& bbox2) {
-  if (bbox1.max.x < bbox2.min.x || bbox1.min.x > bbox2.max.x) return false;
-  if (bbox1.max.y < bbox2.min.y || bbox1.min.y > bbox2.max.y) return false;
-  if (bbox1.max.z < bbox2.min.z || bbox1.min.z > bbox2.max.z) return false;
+  for (auto a : range(3)) {
+    if (bbox1.max[a] < bbox2.min[a] || bbox1.min[a] > bbox2.max[a])
+      return false;
+  }
   return true;
 }
 
