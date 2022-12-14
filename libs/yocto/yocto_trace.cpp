@@ -1343,6 +1343,7 @@ static trace_result trace_falsecolor(const scene_data& scene,
   auto outgoing = -ray.d;
   auto position = eval_shading_position(scene, intersection, outgoing);
   auto normal   = eval_shading_normal(scene, intersection, outgoing);
+  auto vnormal  = eval_normal(scene, intersection);
   auto gnormal  = eval_element_normal(scene, intersection);
   auto texcoord = eval_texcoord(scene, intersection);
   auto material = eval_material(scene, intersection);
@@ -1368,6 +1369,10 @@ static trace_result trace_falsecolor(const scene_data& scene,
     case trace_falsecolor_type::gnormal: result = gnormal * 0.5f + 0.5f; break;
     case trace_falsecolor_type::gfrontfacing:
       result = dot(gnormal, -ray.d) > 0 ? vec3f{0, 1, 0} : vec3f{1, 0, 0};
+      break;
+    case trace_falsecolor_type::vnormal: result = normal * 0.5f + 0.5f; break;
+    case trace_falsecolor_type::vfrontfacing:
+      result = dot(normal, -ray.d) > 0 ? vec3f{0, 1, 0} : vec3f{1, 0, 0};
       break;
     case trace_falsecolor_type::mtype:
       result = hashed_color((int)material.type);

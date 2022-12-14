@@ -82,7 +82,8 @@ enum struct trace_sampler_type {
 // Type of false color visualization
 enum struct trace_falsecolor_type {
   // clang-format off
-  position, normal, frontfacing, gnormal, gfrontfacing, texcoord, mtype, color,
+  position, normal, frontfacing, gnormal, gfrontfacing, vnormal, vfrontfacing, 
+  texcoord, mtype, color,
   emission, roughness, opacity, metallic, delta, instance, shape, material, 
   element, highlight
   // clang-format on
@@ -233,9 +234,10 @@ inline const auto trace_sampler_names = vector<string>{"path", "pathdirect",
 
 // false color names
 inline const auto trace_falsecolor_names = vector<string>{"position", "normal",
-    "frontfacing", "gnormal", "gfrontfacing", "texcoord", "mtype", "color",
-    "emission", "roughness", "opacity", "metallic", "delta", "instance",
-    "shape", "material", "element", "highlight"};
+    "frontfacing", "gnormal", "gfrontfacing", "vnormal", "vfrontfacing",
+    "texcoord", "mtype", "color", "emission", "roughness", "opacity",
+    "metallic", "delta", "instance", "shape", "material", "element",
+    "highlight"};
 
 // trace sampler labels
 inline const auto trace_sampler_labels =
@@ -257,6 +259,8 @@ inline const auto trace_falsecolor_labels =
         {trace_falsecolor_type::frontfacing, "frontfacing"},
         {trace_falsecolor_type::gnormal, "gnormal"},
         {trace_falsecolor_type::gfrontfacing, "gfrontfacing"},
+        {trace_falsecolor_type::vnormal, "vnormal"},
+        {trace_falsecolor_type::vfrontfacing, "vfrontfacing"},
         {trace_falsecolor_type::texcoord, "texcoord"},
         {trace_falsecolor_type::mtype, "mtype"},
         {trace_falsecolor_type::color, "color"},

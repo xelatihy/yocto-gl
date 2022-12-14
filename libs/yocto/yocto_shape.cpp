@@ -797,8 +797,8 @@ shape_data make_rounded_cube(int subdivisions, float radius) {
   return shape;
 }
 shape_data make_bent_floor(int subdivisions, float scale, float radius) {
-  if (radius == 0) return make_floor(scale, subdivisions);
-  auto shape = make_floor(scale, subdivisions);
+  if (radius == 0) return make_floor(subdivisions, scale);
+  auto shape = make_floor(subdivisions, scale);
   radius     = min(radius * scale, scale);
   auto start = (scale - radius) / 2;
   auto end   = start + radius;
@@ -1153,10 +1153,9 @@ shape_data make_uvcylinder(const vec3i& steps, const vec2f& scale) {
   merge_shape_inplace(shape, make_quads({steps.x, steps.y}, [=](vec2f uv) {
     auto [radius, height] = scale;
     auto [phi, h]         = uv * vec2f{2 * pif, 1};
-    // TODO: flip normal?
     return make_quads_vertex{
         vec3f{cos(phi) * radius, sin(phi) * radius, height * (2 * h - 1)},
-        vec3f{cos(phi), sin(phi), 0}, flip_v(uv)};
+        vec3f{cos(phi), sin(phi), 0}, uv};
   }));
   // top
   merge_shape_inplace(shape, make_quads({steps.x, steps.y}, [=](vec2f uv) {
@@ -1210,9 +1209,9 @@ shape_data make_uvcapsule(const vec3i& steps, const vec2f& scale) {
   merge_shape_inplace(shape, make_quads({steps.x, steps.y}, [=](vec2f uv) {
     auto [radius, height] = scale;
     auto [phi, h]         = uv * vec2f{2 * pif, 1};
-    return make_quads_vertex{// TODO: flip normals
+    return make_quads_vertex{
         vec3f{cos(phi) * radius, sin(phi) * radius, height * (2 * h - 1)},
-        vec3f{cos(phi), sin(phi), 0}, flip_v(uv)};
+        vec3f{cos(phi), sin(phi), 0}, uv};
   }));
   // top
   merge_shape_inplace(shape, make_quads({steps.x, steps.y}, [=](vec2f uv) {
@@ -1245,10 +1244,10 @@ shape_data make_uvcone(const vec3i& steps, const vec2f& scale) {
     auto [radius, height] = scale;
     auto [nr, nh]         = normalize(scale * vec2f{1, 2});
     auto [phi, h]         = uv * vec2f{2 * pif, 1};
-    return make_quads_vertex{// TODO: flip normal
+    return make_quads_vertex{
         vec3f{cos(phi) * (1 - h) * radius, sin(phi) * (1 - h) * radius,
             height * (2 * h - 1)},
-        vec3f{cos(phi) * nh, sin(phi) * nh, nr}, flip_v(uv)};
+        vec3f{cos(phi) * nh, sin(phi) * nh, nr}, uv};
   }));
   // bottom
   merge_shape_inplace(shape, make_quads({steps.x, steps.y}, [=](vec2f uv) {
