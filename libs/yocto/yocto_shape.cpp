@@ -1426,11 +1426,13 @@ shape_data make_random_lines(const shape_data& base, int num, int steps,
     btexcoord.push_back(eval_texcoord(base, point.element, point.uv));
   }
 
+  auto [min_len, max_len] = len;
+
   auto shape = make_lines(num, steps, {1, 1}, radius);
   auto rng   = make_rng(seed);
   for (auto idx : range(num)) {
     auto offset = idx * (steps + 1);
-    auto length = rand1f(rng) * (len.y - len.x) + len.x;
+    auto length = lerp(min_len, max_len, rand1f(rng));
     for (auto iidx : range(steps + 1)) {
       auto u                         = iidx / (float)steps;
       shape.positions[offset + iidx] = bpositions[idx] +
@@ -1457,13 +1459,15 @@ shape_data make_random_hairs(const shape_data& base, int num, int steps,
     btexcoord.push_back(eval_texcoord(base, point.element, point.uv));
   }
 
+  auto [min_len, max_len] = len;
+
   auto shape = make_lines(num, steps, {1, 1}, radius);
   auto rng   = make_rng(seed);
   for (auto idx : range(num)) {
     auto offset             = idx * (steps + 1);
     auto position           = bpositions[idx];
     auto direction          = bnormals[idx];
-    auto length             = rand1f(rng) * (len.y - len.x) + len.x;
+    auto length             = lerp(min_len, max_len, rand1f(rng));
     shape.positions[offset] = position;
     for (auto iidx = 1; iidx <= steps; iidx++) {
       shape.positions[offset + iidx] = position;
