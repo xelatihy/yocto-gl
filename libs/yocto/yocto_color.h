@@ -672,14 +672,11 @@ using color_space_params = color_space_gparams<float>;
 template <typename T>
 constexpr mat<T, 3, 3> rgb_to_xyz_mat(const vec<T, 2>& rc, const vec<T, 2>& gc,
     const vec<T, 2>& bc, const vec<T, 2>& wc) {
-  auto rgb = mat<T, 3, 3>{
-      {rc.x, rc.y, 1 - rc.x - rc.y},
-      {gc.x, gc.y, 1 - gc.x - gc.y},
-      {bc.x, bc.y, 1 - bc.x - bc.y},
-  };
-  auto w = vec<T, 3>{wc.x, wc.y, 1 - wc.x - wc.y};
-  auto c = inverse(rgb) * vec<T, 3>{w.x / w.y, 1, w.z / w.y};
-  return mat<T, 3, 3>{c.x * rgb.x, c.y * rgb.y, c.z * rgb.z};
+  auto r = vec<T, 3>{rc, 1 - sum(rc)}, g = vec<T, 3>{gc, 1 - sum(gc)},
+       b = vec<T, 3>{bc, 1 - sum(bc)}, w = vec<T, 3>{wc, 1 - sum(wc)};
+  auto [_, wy, __]  = w;
+  auto [cr, cg, cb] = inverse({r, g, b}) * w / wy;
+  return mat<T, 3, 3>{cr * r, cg * g, cb * b};
 }
 
 // Construct an RGB color space. Predefined color spaces below
