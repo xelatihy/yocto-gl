@@ -208,18 +208,18 @@ shape_data make_wtsphere(int subdivisions = 5);
 // Make a disk
 shape_data make_disk(int subdivisions = 5);
 // Make a floor
-shape_data make_floor(float size = 10, int subdivisions = 0);
+shape_data make_floor(int subdivisions = 0, float size = 10);
 // Make a monkey
 shape_data make_monkey(int subdivisions = 0);
 // Make a rounded cube
-shape_data make_rounded_cube(float radius = 0.3f, int subdivisions = 5);
+shape_data make_rounded_cube(int subdivisions = 5, float radius = 0.3f);
 // Make a bulged quad
-shape_data make_bulged_quad(float radius = 0.3f, int subdivisions = 5);
+shape_data make_bulged_quad(int subdivisions = 5, float radius = 0.3f);
 // Make a bulged disk
-shape_data make_bulged_disk(float height = 0.3f, int subdivisions = 5);
+shape_data make_bulged_disk(int subdivisions = 5, float height = 0.3f);
 // Make a bent disk
 shape_data make_bent_floor(
-    float bent = 0.5f, float size = 10, int subdivisions = 0);
+    int subdivisions = 5, float size = 10, float bent = 0.5f);
 
 // Make a rectangle
 shape_data make_rect(const vec2i& steps = {1, 1}, const vec2f& scale = {1, 1});

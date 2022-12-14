@@ -714,7 +714,7 @@ shape_data make_wtsphere(int subdivisions) {
   shape.normals = shape.positions;
   return shape;
 }
-shape_data make_floor(float scale, int subdivisions) {
+shape_data make_floor(int subdivisions, float scale) {
   auto shape = make_quady(subdivisions);
   for (auto& position : shape.positions) position *= scale;
   for (auto& texcoord : shape.texcoords) texcoord *= scale;
@@ -736,7 +736,7 @@ shape_data make_monkey(int subdivisions) {
 }
 
 // Deformed shapes
-shape_data make_bulged_quad(float height, int subdivisions) {
+shape_data make_bulged_quad(int subdivisions, float height) {
   if (height == 0) return make_quad(subdivisions);
   auto shape  = make_quad(subdivisions);
   height      = min(height, 1);
@@ -749,7 +749,7 @@ shape_data make_bulged_quad(float height, int subdivisions) {
   }
   return shape;
 }
-shape_data make_bulged_disk(float height, int subdivisions) {
+shape_data make_bulged_disk(int subdivisions, float height) {
   if (height == 0) return make_disk(subdivisions);
   auto shape  = make_disk(subdivisions);
   height      = min(height, 1);
@@ -762,7 +762,7 @@ shape_data make_bulged_disk(float height, int subdivisions) {
   }
   return shape;
 }
-shape_data make_rounded_cube(float radius, int subdivisions) {
+shape_data make_rounded_cube(int subdivisions, float radius) {
   if (radius == 0) return make_cube(subdivisions);
   auto shape = make_cube(subdivisions);
   radius     = min(radius, 1);
@@ -796,7 +796,7 @@ shape_data make_rounded_cube(float radius, int subdivisions) {
   }
   return shape;
 }
-shape_data make_bent_floor(float scale, float radius, int subdivisions) {
+shape_data make_bent_floor(int subdivisions, float scale, float radius) {
   if (radius == 0) return make_floor(scale, subdivisions);
   auto shape = make_floor(scale, subdivisions);
   radius     = min(radius * scale, scale);

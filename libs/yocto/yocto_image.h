@@ -399,6 +399,17 @@ inline array2d<vec<T, 4>> make_uvramp(
 }
 
 template <typename T = float>
+inline array2d<vec<T, 4>> make_orgrid(
+    const vec2s& extents = {1024, 1024}, T scale = 1) {
+  return _make_proc_image(extents, [=](vec2s ij) -> vec<T, 4> {
+    auto [u, v] = fmod((scale * ij) / extents, 1);
+    return u < (T)0.5
+               ? (v < (T)0.5 ? vec<T, 4>{0, 0, 0, 1} : vec<T, 4>{0, 1, 0, 1})
+               : (v < (T)0.5 ? vec<T, 4>{1, 0, 0, 1} : vec<T, 4>{1, 1, 0, 1});
+  });
+}
+
+template <typename T = float>
 inline array2d<vec<T, 4>> make_uvgrid(
     const vec2s& extents = {1024, 1024}, T scale = 1, bool colored = true) {
   return _make_proc_image(extents, [=](vec2s ij) -> vec<T, 4> {

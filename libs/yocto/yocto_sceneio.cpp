@@ -2214,6 +2214,15 @@ scene_data make_scene_preset(const string& type_) {
     add_missing_radius(scene);
     add_missing_lights(scene);
     return scene;
+  } else if (type.starts_with("orshape_")) {
+    auto scene = scene_data{};
+    scene.shapes.push_back(make_shape_preset(type.substr(8)));
+    scene.instances.push_back({identity3x4f, 0, invalidid});
+    add_missing_material(scene, true, make_orgrid());
+    add_missing_camera(scene);
+    add_missing_radius(scene);
+    add_missing_lights(scene);
+    return scene;
   } else {
     throw io_error{"unknown preset " + type};
   }
