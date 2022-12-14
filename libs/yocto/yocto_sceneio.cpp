@@ -4817,13 +4817,12 @@ static void xml_attribute(string& xml, const string& name, const vec3f& value) {
 }
 static void xml_attribute(
     string& xml, const string& name, const frame3f& value) {
-  xml += " " + name + "=\"" + std::to_string(value.x.x) + " " +
-         std::to_string(value.y.x) + " " + std::to_string(value.z.x) + " " +
-         std::to_string(value.o.x) + " " + std::to_string(value.x.y) + " " +
-         std::to_string(value.y.y) + " " + std::to_string(value.z.y) + " " +
-         std::to_string(value.o.y) + " " + std::to_string(value.x.z) + " " +
-         std::to_string(value.y.z) + " " + std::to_string(value.z.z) + " " +
-         std::to_string(value.o.z) + " 0 0 0 1\"";
+  xml += " " + name + "=\"";
+  auto mat = frame_to_mat(value);
+  for (auto [i, j] : range(vec2i(4, 4))) {
+    xml += (xml.back() == '"' ? "" : " ") + std::to_string(value[j][i]);
+  }
+  xml += "\"";
 }
 template <typename T, typename... Ts>
 static void xml_attributes(
