@@ -819,9 +819,11 @@ vector<string> scene_stats(const scene_data& scene, bool verbose) {
     while (str.size() < 20) str = " " + str;
     return str;
   };
-  auto format3 = [](auto num) {
-    auto str = std::to_string(num.x) + " " + std::to_string(num.y) + " " +
-               std::to_string(num.z);
+  auto format3 = [](auto nums) {
+    auto str = string{};
+    for (auto num : nums) {
+      str += (str.empty() ? "" : " ") + std::to_string(num);
+    }
     while (str.size() < 48) str = " " + str;
     return str;
   };

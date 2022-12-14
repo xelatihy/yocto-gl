@@ -291,11 +291,11 @@ shape_data make_lines(int num = 65536, int steps = 4,
 // Make a grid of quads
 shape_data make_quad_grid(const vec2i& steps = {256, 256}, float scale = 1);
 // Make points on a grid.
-shape_data make_point_grid(const vec2i& steps = {256, 256}, float scale = 1,
-    const vec2f& radius = {0.001f, 0.001f});
+shape_data make_point_grid(
+    const vec2i& steps = {256, 256}, float scale = 1, float radius = 0.001f);
 // Make lines on a grid.
-shape_data make_line_grid(const vec2i& steps = {256, 256}, float scale = 1,
-    const vec2f& radius = {0.001f, 0.001f});
+shape_data make_line_grid(
+    const vec2i& steps = {256, 256}, float scale = 1, float radius = 0.001f);
 
 // Make random points in a cube.
 // TODO: switch to quad?

@@ -1131,6 +1131,20 @@ constexpr kernel vec<T, N> select(
     const vec<bool, N>& a, const vec<T1, N>& b, const vec<T2, N>& c) {
   return map(a, b, c, [](bool a, T1 b, T2 c) { return a ? b : c; });
 }
+template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
+constexpr kernel vec<T, N> select(
+    const vec<bool, N>& a, T1 b, const vec<T2, N>& c) {
+  return map(a, b, c, [](bool a, T1 b, T2 c) { return a ? b : c; });
+}
+template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
+constexpr kernel vec<T, N> select(
+    const vec<bool, N>& a, const vec<T1, N>& b, T2 c) {
+  return map(a, b, c, [](bool a, T1 b, T2 c) { return a ? b : c; });
+}
+template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
+constexpr kernel vec<T, N> select(const vec<bool, N>& a, T1 b, T2 c) {
+  return map(a, b, c, [](bool a, T1 b, T2 c) { return a ? b : c; });
+}
 
 }  // namespace yocto
 

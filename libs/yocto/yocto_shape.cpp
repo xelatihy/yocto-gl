@@ -769,25 +769,27 @@ shape_data make_rounded_cube(int subdivisions, float radius) {
   auto c     = 1 - radius;
   for (auto i : range(shape.positions.size())) {
     auto pc = abs(shape.positions[i]);
-    auto ps = vec3f{shape.positions[i].x < 0 ? -1.0f : 1.0f,
-        shape.positions[i].y < 0 ? -1.0f : 1.0f,
-        shape.positions[i].z < 0 ? -1.0f : 1.0f};
-    if (pc.x >= c && pc.y >= c && pc.z >= c) {
+    auto ps = select(component_less(shape.positions[i], 0), -1.0f, 1.0f);
+    auto [pc_x, pc_y, pc_z] = pc;
+    if (pc_x >= c && pc_y >= c && pc_z >= c) {
       auto pn            = normalize(pc - c);
       shape.positions[i] = c + radius * pn;
       shape.normals[i]   = pn;
-    } else if (pc.x >= c && pc.y >= c) {
-      auto pn            = normalize((pc - c) * vec3f{1, 1, 0});
-      shape.positions[i] = {c + radius * pn.x, c + radius * pn.y, pc.z};
-      shape.normals[i]   = pn;
-    } else if (pc.x >= c && pc.z >= c) {
-      auto pn            = normalize((pc - c) * vec3f{1, 0, 1});
-      shape.positions[i] = {c + radius * pn.x, pc.y, c + radius * pn.z};
-      shape.normals[i]   = pn;
-    } else if (pc.y >= c && pc.z >= c) {
-      auto pn            = normalize((pc - c) * vec3f{0, 1, 1});
-      shape.positions[i] = {pc.x, c + radius * pn.y, c + radius * pn.z};
-      shape.normals[i]   = pn;
+    } else if (pc_x >= c && pc_y >= c) {
+      auto pn              = normalize((pc - c) * vec3f{1, 1, 0});
+      auto [pn_x, pn_y, _] = pn;
+      shape.positions[i]   = {c + radius * pn_x, c + radius * pn_y, pc_z};
+      shape.normals[i]     = pn;
+    } else if (pc_x >= c && pc_z >= c) {
+      auto pn              = normalize((pc - c) * vec3f{1, 0, 1});
+      auto [pn_x, _, pn_z] = pn;
+      shape.positions[i]   = {c + radius * pn_x, pc_y, c + radius * pn_z};
+      shape.normals[i]     = pn;
+    } else if (pc_y >= c && pc_z >= c) {
+      auto pn              = normalize((pc - c) * vec3f{0, 1, 1});
+      auto [_, pn_y, pn_z] = pn;
+      shape.positions[i]   = {pc_x, c + radius * pn_y, c + radius * pn_z};
+      shape.normals[i]     = pn;
     } else {
       continue;
     }
@@ -803,15 +805,15 @@ shape_data make_bent_floor(int subdivisions, float scale, float radius) {
   auto start = (scale - radius) / 2;
   auto end   = start + radius;
   for (auto i : range(shape.positions.size())) {
+    auto [px, py, pz] = shape.positions[i];
     if (shape.positions[i].z < -end) {
+      shape.positions[i] = {px, -pz - end + radius, -end};
+      shape.normals[i]   = {0, 0, 1};
+    } else if (pz < -start && pz >= -end) {
+      auto phi           = (pif / 2) * (-pz - start) / radius;
       shape.positions[i] = {
-          shape.positions[i].x, -shape.positions[i].z - end + radius, -end};
-      shape.normals[i] = {0, 0, 1};
-    } else if (shape.positions[i].z < -start && shape.positions[i].z >= -end) {
-      auto phi           = (pif / 2) * (-shape.positions[i].z - start) / radius;
-      shape.positions[i] = {shape.positions[i].x, -cos(phi) * radius + radius,
-          -sin(phi) * radius - start};
-      shape.normals[i]   = {0, cos(phi), sin(phi)};
+          px, -cos(phi) * radius + radius, -sin(phi) * radius - start};
+      shape.normals[i] = {0, cos(phi), sin(phi)};
     } else {
     }
   }
@@ -860,36 +862,6 @@ fvshape_data make_fvcube(int subdivisions) {
 }
 
 // Make a tesselated rectangle. Useful in other subdivisions.
-static shape_data make_quads(
-    const vec2i& steps, const vec2f& scale, const vec2f& uvscale) {
-  auto shape = shape_data{};
-
-  shape.positions.resize((steps.x + 1) * (steps.y + 1));
-  shape.normals.resize((steps.x + 1) * (steps.y + 1));
-  shape.texcoords.resize((steps.x + 1) * (steps.y + 1));
-  for (auto j : range(steps.y + 1)) {
-    for (auto i : range(steps.x + 1)) {
-      auto uv = vec2f{i / (float)steps.x, j / (float)steps.y};
-      shape.positions[j * (steps.x + 1) + i] = {
-          (2 * uv.x - 1) * scale.x, (2 * uv.y - 1) * scale.y, 0};
-      shape.normals[j * (steps.x + 1) + i]   = {0, 0, 1};
-      shape.texcoords[j * (steps.x + 1) + i] = vec2f{uv.x, 1 - uv.y} * uvscale;
-    }
-  }
-
-  shape.quads.resize(steps.x * steps.y);
-  for (auto j : range(steps.y)) {
-    for (auto i : range(steps.x)) {
-      shape.quads[j * steps.x + i] = {j * (steps.x + 1) + i,
-          j * (steps.x + 1) + i + 1, (j + 1) * (steps.x + 1) + i + 1,
-          (j + 1) * (steps.x + 1) + i};
-    }
-  }
-
-  return shape;
-}
-
-// Make a tesselated rectangle. Useful in other subdivisions.
 struct make_quads_vertex {
   vec3f position;
   vec3f normal;
@@ -899,26 +871,24 @@ template <typename Vertex>
 static shape_data make_quads(const vec2i& steps, Vertex&& vertex) {
   auto shape = shape_data{};
 
-  shape.positions.resize((steps.x + 1) * (steps.y + 1));
-  shape.normals.resize((steps.x + 1) * (steps.y + 1));
-  shape.texcoords.resize((steps.x + 1) * (steps.y + 1));
-  for (auto j : range(steps.y + 1)) {
-    for (auto i : range(steps.x + 1)) {
-      auto uv = vec2f{i / (float)steps.x, j / (float)steps.y};
-      auto [position, normal, texcoord]      = vertex(uv);
-      shape.positions[j * (steps.x + 1) + i] = position;
-      shape.normals[j * (steps.x + 1) + i]   = normal;
-      shape.texcoords[j * (steps.x + 1) + i] = texcoord;
-    }
+  auto [stride, _] = steps;
+  auto vid = [stride = stride](int i, int j) { return j * (stride + 1) + i; };
+  auto fid = [stride = stride](int i, int j) { return j * stride + i; };
+
+  shape.positions.resize(prod(steps + 1));
+  shape.normals.resize(prod(steps + 1));
+  shape.texcoords.resize(prod(steps + 1));
+  for (auto [i, j] : range(steps + 1)) {
+    auto [position, normal, texcoord] = vertex(vec2i(i, j) / (vec2f)steps);
+    shape.positions[vid(i, j)]        = position;
+    shape.normals[vid(i, j)]          = normal;
+    shape.texcoords[vid(i, j)]        = texcoord;
   }
 
-  shape.quads.resize(steps.x * steps.y);
-  for (auto j : range(steps.y)) {
-    for (auto i : range(steps.x)) {
-      shape.quads[j * steps.x + i] = {j * (steps.x + 1) + i,
-          j * (steps.x + 1) + i + 1, (j + 1) * (steps.x + 1) + i + 1,
-          (j + 1) * (steps.x + 1) + i};
-    }
+  shape.quads.resize(prod(steps));
+  for (auto [i, j] : range(steps)) {
+    shape.quads[fid(i, j)] = {
+        vid(i, j), vid(i + 1, j), vid(i + 1, j + 1), vid(i, j + 1)};
   }
 
   return shape;
@@ -993,43 +963,45 @@ shape_data make_bulged_recty(
 // Make a box.
 shape_data make_box(const vec3i& steps, const vec3f& scale) {
   auto shape = shape_data{};
+  // steps
+  auto [steps_x, steps_y, steps_z] = steps;
   // + z
-  merge_shape_inplace(shape, make_quads({steps.x, steps.y}, [=](vec2f uv) {
+  merge_shape_inplace(shape, make_quads({steps_x, steps_y}, [=](vec2f uv) {
     auto [sx, sy, sz] = scale;
     auto [u, v]       = uv;
     return make_quads_vertex{vec3f(+sx * (u * 2 - 1), +sy * (v * 2 - 1), +sz),
         vec3f(0, 0, 1), flip_v(uv)};
   }));
   // - z
-  merge_shape_inplace(shape, make_quads({steps.x, steps.y}, [=](vec2f uv) {
+  merge_shape_inplace(shape, make_quads({steps_x, steps_y}, [=](vec2f uv) {
     auto [sx, sy, sz] = scale;
     auto [u, v]       = uv;
     return make_quads_vertex{vec3f(-sx * (u * 2 - 1), +sy * (v * 2 - 1), -sz),
         vec3f(0, 0, -1), flip_v(uv)};
   }));
   // + x
-  merge_shape_inplace(shape, make_quads({steps.z, steps.y}, [=](vec2f uv) {
+  merge_shape_inplace(shape, make_quads({steps_z, steps_y}, [=](vec2f uv) {
     auto [sx, sy, sz] = scale;
     auto [u, v]       = uv;
     return make_quads_vertex{vec3f(+sx, +sy * (v * 2 - 1), -sz * (u * 2 - 1)),
         vec3f(1, 0, 0), flip_v(uv)};
   }));
   // - x
-  merge_shape_inplace(shape, make_quads({steps.z, steps.y}, [=](vec2f uv) {
+  merge_shape_inplace(shape, make_quads({steps_z, steps_y}, [=](vec2f uv) {
     auto [sx, sy, sz] = scale;
     auto [u, v]       = uv;
     return make_quads_vertex{vec3f(-sx, +sy * (v * 2 - 1), +sz * (u * 2 - 1)),
         vec3f(-1, 0, 0), flip_v(uv)};
   }));
   // + y
-  merge_shape_inplace(shape, make_quads({steps.x, steps.z}, [=](vec2f uv) {
+  merge_shape_inplace(shape, make_quads({steps_x, steps_z}, [=](vec2f uv) {
     auto [sx, sy, sz] = scale;
     auto [u, v]       = uv;
     return make_quads_vertex{vec3f(+sx * (u * 2 - 1), +sy, -sz * (v * 2 - 1)),
         vec3f(0, +1, 0), flip_v(uv)};
   }));
   // - y
-  merge_shape_inplace(shape, make_quads({steps.x, steps.z}, [=](vec2f uv) {
+  merge_shape_inplace(shape, make_quads({steps_x, steps_z}, [=](vec2f uv) {
     auto [sx, sy, sz] = scale;
     auto [u, v]       = uv;
     return make_quads_vertex{vec3f(+sx * (u * 2 - 1), -sy, +sz * (v * 2 - 1)),
@@ -1044,27 +1016,29 @@ shape_data make_rounded_box(
   radius     = min(radius, min(scale));
   auto c     = scale - radius;
   for (auto i : range(shape.positions.size())) {
-    auto pc = vec3f{abs(shape.positions[i].x), abs(shape.positions[i].y),
-        abs(shape.positions[i].z)};
-    auto ps = vec3f{shape.positions[i].x < 0 ? -1.0f : 1.0f,
-        shape.positions[i].y < 0 ? -1.0f : 1.0f,
-        shape.positions[i].z < 0 ? -1.0f : 1.0f};
-    if (pc.x >= c.x && pc.y >= c.y && pc.z >= c.z) {
+    auto pc = abs(shape.positions[i]);
+    auto ps = select(component_less(shape.positions[i], 0), -1.0f, 1.0f);
+    auto [pc_x, pc_y, pc_z] = pc;
+    auto [c_x, c_y, c_z]    = pc;
+    if (pc_x >= c_x && pc_y >= c_y && pc_z >= c_z) {
       auto pn            = normalize(pc - c);
       shape.positions[i] = c + radius * pn;
       shape.normals[i]   = pn;
-    } else if (pc.x >= c.x && pc.y >= c.y) {
-      auto pn            = normalize((pc - c) * vec3f{1, 1, 0});
-      shape.positions[i] = {c.x + radius * pn.x, c.y + radius * pn.y, pc.z};
-      shape.normals[i]   = pn;
-    } else if (pc.x >= c.x && pc.z >= c.z) {
-      auto pn            = normalize((pc - c) * vec3f{1, 0, 1});
-      shape.positions[i] = {c.x + radius * pn.x, pc.y, c.z + radius * pn.z};
-      shape.normals[i]   = pn;
-    } else if (pc.y >= c.y && pc.z >= c.z) {
-      auto pn            = normalize((pc - c) * vec3f{0, 1, 1});
-      shape.positions[i] = {pc.x, c.y + radius * pn.y, c.z + radius * pn.z};
-      shape.normals[i]   = pn;
+    } else if (pc_x >= c_x && pc_y >= c_y) {
+      auto pn              = normalize((pc - c) * vec3f{1, 1, 0});
+      auto [pn_x, pn_y, _] = pn;
+      shape.positions[i]   = {c_x + radius * pn_x, c_y + radius * pn_y, pc_z};
+      shape.normals[i]     = pn;
+    } else if (pc_x >= c_x && pc_z >= c_z) {
+      auto pn              = normalize((pc - c) * vec3f{1, 0, 1});
+      auto [pn_x, _, pn_z] = pn;
+      shape.positions[i]   = {c_x + radius * pn_x, pc_y, c_z + radius * pn_z};
+      shape.normals[i]     = pn;
+    } else if (pc_y >= c_y && pc_z >= c_z) {
+      auto pn              = normalize((pc - c) * vec3f{0, 1, 1});
+      auto [_, pn_y, pn_z] = pn;
+      shape.positions[i]   = {pc_x, c_y + radius * pn_y, c_z + radius * pn_z};
+      shape.normals[i]     = pn;
     } else {
       continue;
     }
@@ -1119,14 +1093,14 @@ shape_data make_capped_uvsphere(const vec2i& steps, float scale, float cap) {
   cap        = min(cap, scale / 2);
   auto zflip = (scale - cap);
   for (auto i : range(shape.positions.size())) {
-    if (shape.positions[i].z > zflip) {
-      shape.positions[i].z = 2 * zflip - shape.positions[i].z;
-      shape.normals[i].x   = -shape.normals[i].x;
-      shape.normals[i].y   = -shape.normals[i].y;
+    auto [px, py, pz] = shape.positions[i];
+    auto [nx, ny, nz] = shape.normals[i];
+    if (pz > zflip) {
+      shape.positions[i] = {px, py, 2 * zflip - pz};
+      shape.normals[i]   = {-nx, -ny, nz};
     } else if (shape.positions[i].z < -zflip) {
-      shape.positions[i].z = 2 * (-zflip) - shape.positions[i].z;
-      shape.normals[i].x   = -shape.normals[i].x;
-      shape.normals[i].y   = -shape.normals[i].y;
+      shape.positions[i] = {px, py, 2 * (-zflip) - pz};
+      shape.normals[i]   = {-nx, -ny, nz};
     }
   }
   return shape;
@@ -1149,30 +1123,35 @@ shape_data make_uvdisk(const vec2i& steps, float scale) {
 // Make a uv cylinder
 shape_data make_uvcylinder(const vec3i& steps, const vec2f& scale) {
   auto shape = shape_data{};
+  // steps
+  auto [steps_circle, steps_sides, steps_ends] = steps;
   // side
-  merge_shape_inplace(shape, make_quads({steps.x, steps.y}, [=](vec2f uv) {
-    auto [radius, height] = scale;
-    auto [phi, h]         = uv * vec2f{2 * pif, 1};
-    return make_quads_vertex{
-        vec3f{cos(phi) * radius, sin(phi) * radius, height * (2 * h - 1)},
-        vec3f{cos(phi), sin(phi), 0}, uv};
-  }));
+  merge_shape_inplace(
+      shape, make_quads({steps_circle, steps_sides}, [=](vec2f uv) {
+        auto [radius, height] = scale;
+        auto [phi, h]         = uv * vec2f{2 * pif, 1};
+        return make_quads_vertex{
+            vec3f{cos(phi) * radius, sin(phi) * radius, height * (2 * h - 1)},
+            vec3f{cos(phi), sin(phi), 0}, uv};
+      }));
   // top
-  merge_shape_inplace(shape, make_quads({steps.x, steps.y}, [=](vec2f uv) {
-    auto [radius, height] = scale;
-    auto [phi, r]         = flip_v(uv) * vec2f{2 * pif, 1};
-    return make_quads_vertex{
-        vec3f{r * radius * cos(phi), r * radius * sin(phi), +height},
-        vec3f(0, 0, 1), flip_v(uv)};
-  }));
+  merge_shape_inplace(
+      shape, make_quads({steps_circle, steps_ends}, [=](vec2f uv) {
+        auto [radius, height] = scale;
+        auto [phi, r]         = flip_v(uv) * vec2f{2 * pif, 1};
+        return make_quads_vertex{
+            vec3f{r * radius * cos(phi), r * radius * sin(phi), +height},
+            vec3f(0, 0, 1), flip_v(uv)};
+      }));
   // bottom
-  merge_shape_inplace(shape, make_quads({steps.x, steps.y}, [=](vec2f uv) {
-    auto [radius, height] = scale;
-    auto [phi, r]         = uv * vec2f{2 * pif, 1};
-    return make_quads_vertex{
-        vec3f{r * radius * cos(phi), r * radius * sin(phi), -height},
-        vec3f(0, 0, -1), uv};
-  }));
+  merge_shape_inplace(
+      shape, make_quads({steps_circle, steps_ends}, [=](vec2f uv) {
+        auto [radius, height] = scale;
+        auto [phi, r]         = uv * vec2f{2 * pif, 1};
+        return make_quads_vertex{
+            vec3f{r * radius * cos(phi), r * radius * sin(phi), -height},
+            vec3f(0, 0, -1), uv};
+      }));
   return shape;
 }
 
@@ -1184,16 +1163,20 @@ shape_data make_rounded_uvcylinder(
     radius = min(radius, min(scale));
     auto c = scale - radius;
     for (auto i : range(shape.positions.size())) {
-      auto phi = atan2(shape.positions[i].y, shape.positions[i].x);
-      auto r   = length(vec2f{shape.positions[i].x, shape.positions[i].y});
-      auto z   = shape.positions[i].z;
-      auto pc  = vec2f{r, abs(z)};
-      auto ps  = (z < 0) ? -1.0f : 1.0f;
-      if (pc.x >= c.x && pc.y >= c.y) {
+      auto [px, py, pz] = shape.positions[i];
+      auto phi          = atan2(py, px);
+      auto r            = length(vec2f{px, py});
+      auto z            = pz;
+      auto pc           = vec2f{r, abs(z)};
+      auto [pc_x, pc_y] = pc;
+      auto [c_x, c_y]   = c;
+      auto ps           = (z < 0) ? -1.0f : 1.0f;
+      if (pc_x >= c_x && pc_y >= c_y) {
         auto pn            = normalize(pc - c);
-        shape.positions[i] = {cos(phi) * (c.x + radius * pn.x),
-            sin(phi) * (c.x + radius * pn.x), ps * (c.y + radius * pn.y)};
-        shape.normals[i]   = {cos(phi) * pn.x, sin(phi) * pn.x, ps * pn.y};
+        auto [pn_x, pn_y]  = pn;
+        shape.positions[i] = {cos(phi) * (c_x + radius * pn_x),
+            sin(phi) * (c_x + radius * pn_x), ps * (c_y + radius * pn_y)};
+        shape.normals[i]   = {cos(phi) * pn_x, sin(phi) * pn_x, ps * pn_y};
       } else {
         continue;
       }
@@ -1205,33 +1188,39 @@ shape_data make_rounded_uvcylinder(
 // Make a uv capsule
 shape_data make_uvcapsule(const vec3i& steps, const vec2f& scale) {
   auto shape = shape_data{};
+  // steps
+  auto [steps_circle, steps_sides, steps_ends] = steps;
   // side
-  merge_shape_inplace(shape, make_quads({steps.x, steps.y}, [=](vec2f uv) {
-    auto [radius, height] = scale;
-    auto [phi, h]         = uv * vec2f{2 * pif, 1};
-    return make_quads_vertex{
-        vec3f{cos(phi) * radius, sin(phi) * radius, height * (2 * h - 1)},
-        vec3f{cos(phi), sin(phi), 0}, uv};
-  }));
+  merge_shape_inplace(
+      shape, make_quads({steps_circle, steps_sides}, [=](vec2f uv) {
+        auto [radius, height] = scale;
+        auto [phi, h]         = uv * vec2f{2 * pif, 1};
+        return make_quads_vertex{
+            vec3f{cos(phi) * radius, sin(phi) * radius, height * (2 * h - 1)},
+            vec3f{cos(phi), sin(phi), 0}, uv};
+      }));
   // top
-  merge_shape_inplace(shape, make_quads({steps.x, steps.y}, [=](vec2f uv) {
-    auto [radius, height] = scale;
-    auto [phi, theta]     = flip_v(uv) * vec2f{2 * pif, pif / 2};
-    return make_quads_vertex{
-        vec3f{cos(phi) * sin(theta) * radius, sin(phi) * sin(theta) * radius,
-            cos(theta) * radius + height},
-        vec3f{cos(phi) * sin(theta), sin(phi) * sin(theta), cos(theta)},
-        flip_v(uv)};
-  }));
+  merge_shape_inplace(
+      shape, make_quads({steps_circle, steps_ends}, [=](vec2f uv) {
+        auto [radius, height] = scale;
+        auto [phi, theta]     = flip_v(uv) * vec2f{2 * pif, pif / 2};
+        return make_quads_vertex{
+            vec3f{cos(phi) * sin(theta) * radius,
+                sin(phi) * sin(theta) * radius, cos(theta) * radius + height},
+            vec3f{cos(phi) * sin(theta), sin(phi) * sin(theta), cos(theta)},
+            flip_v(uv)};
+      }));
   // bottom
-  merge_shape_inplace(shape, make_quads({steps.x, steps.y}, [=](vec2f uv) {
-    auto [radius, height] = scale;
-    auto [phi, theta]     = uv * vec2f{2 * pif, pif / 2};
-    return make_quads_vertex{
-        vec3f{cos(phi) * sin(theta) * radius, sin(phi) * sin(theta) * radius,
-            -cos(theta) * radius - height},
-        vec3f{cos(phi) * sin(theta), sin(phi) * sin(theta), -cos(theta)}, uv};
-  }));
+  merge_shape_inplace(
+      shape, make_quads({steps_circle, steps_ends}, [=](vec2f uv) {
+        auto [radius, height] = scale;
+        auto [phi, theta]     = uv * vec2f{2 * pif, pif / 2};
+        return make_quads_vertex{
+            vec3f{cos(phi) * sin(theta) * radius,
+                sin(phi) * sin(theta) * radius, -cos(theta) * radius - height},
+            vec3f{cos(phi) * sin(theta), sin(phi) * sin(theta), -cos(theta)},
+            uv};
+      }));
   // done
   return shape;
 }
@@ -1239,24 +1228,28 @@ shape_data make_uvcapsule(const vec3i& steps, const vec2f& scale) {
 // Make a uv cone
 shape_data make_uvcone(const vec3i& steps, const vec2f& scale) {
   auto shape = shape_data{};
+  // steps
+  auto [steps_circle, steps_sides, steps_ends] = steps;
   // side
-  merge_shape_inplace(shape, make_quads({steps.x, steps.y}, [=](vec2f uv) {
-    auto [radius, height] = scale;
-    auto [nr, nh]         = normalize(scale * vec2f{1, 2});
-    auto [phi, h]         = uv * vec2f{2 * pif, 1};
-    return make_quads_vertex{
-        vec3f{cos(phi) * (1 - h) * radius, sin(phi) * (1 - h) * radius,
-            height * (2 * h - 1)},
-        vec3f{cos(phi) * nh, sin(phi) * nh, nr}, uv};
-  }));
+  merge_shape_inplace(
+      shape, make_quads({steps_circle, steps_sides}, [=](vec2f uv) {
+        auto [radius, height] = scale;
+        auto [nr, nh]         = normalize(scale * vec2f{1, 2});
+        auto [phi, h]         = uv * vec2f{2 * pif, 1};
+        return make_quads_vertex{
+            vec3f{cos(phi) * (1 - h) * radius, sin(phi) * (1 - h) * radius,
+                height * (2 * h - 1)},
+            vec3f{cos(phi) * nh, sin(phi) * nh, nr}, uv};
+      }));
   // bottom
-  merge_shape_inplace(shape, make_quads({steps.x, steps.y}, [=](vec2f uv) {
-    auto [radius, height] = scale;
-    auto [phi, r]         = uv * vec2f{2 * pif, 1};
-    return make_quads_vertex{
-        vec3f{r * radius * cos(phi), r * radius * sin(phi), -height},
-        vec3f(0, 0, -1), uv};
-  }));
+  merge_shape_inplace(
+      shape, make_quads({steps_sides, steps_ends}, [=](vec2f uv) {
+        auto [radius, height] = scale;
+        auto [phi, r]         = uv * vec2f{2 * pif, 1};
+        return make_quads_vertex{
+            vec3f{r * radius * cos(phi), r * radius * sin(phi), -height},
+            vec3f(0, 0, -1), uv};
+      }));
   return shape;
 }
 
@@ -1297,36 +1290,38 @@ fvshape_data make_fvsphere(int steps, float scale) {
 shape_data make_lines(
     int num, int steps, const vec2f& scale, const vec2f& rad) {
   auto shape = shape_data{};
+
+  auto vid = [stride = steps](int i, int j) { return j * (stride + 1) + i; };
+  auto lid = [stride = steps](int i, int j) { return j * stride + i; };
+
+  auto [len, width]              = scale;
+  auto [base_radius, tip_radius] = rad;
+
   shape.positions.resize((steps + 1) * num);
   shape.normals.resize((steps + 1) * num);
   shape.texcoords.resize((steps + 1) * num);
   shape.radius.resize((steps + 1) * num);
   if (num > 1) {
-    for (auto j : range(num)) {
-      for (auto i : range(steps + 1)) {
-        auto uv = vec2f{i / (float)steps, j / (float)(num - 1)};
-        shape.positions[j * (steps + 1) + i] = {(uv - 0.5f) * scale, 0};
-        shape.normals[j * (steps + 1) + i]   = {1, 0, 0};
-        shape.texcoords[j * (steps + 1) + i] = uv;
-        shape.radius[j * (steps + 1) + i]    = lerp(rad.x, rad.y, uv.x);
-      }
+    for (auto [i, j] : range(vec2i(steps + 1, num))) {
+      auto u = i / (float)steps, v = j / (float)(num - 1);
+      shape.positions[vid(i, j)] = {(2 * u - 1) * len, (2 * v - 1) * width, 0};
+      shape.normals[vid(i, j)]   = {1, 0, 0};
+      shape.texcoords[vid(i, j)] = {u, v};
+      shape.radius[vid(i, j)]    = lerp(base_radius, tip_radius, u);
     }
   } else {
     for (auto i : range(steps + 1)) {
-      auto uv            = vec2f{i / (float)steps, 0};
-      shape.positions[i] = {(uv.x - 0.5f) * scale.x, 0, 0};
-      shape.normals[i]   = {1, 0, 0};
-      shape.texcoords[i] = uv;
-      shape.radius[i]    = lerp(rad.x, rad.y, uv.x);
+      auto u                     = i / (float)steps;
+      shape.positions[vid(i, 0)] = {(2 * u - 1) * len, 0, 0};
+      shape.normals[vid(i, 0)]   = {1, 0, 0};
+      shape.texcoords[vid(i, 0)] = {u, 0};
+      shape.radius[vid(i, 0)]    = lerp(base_radius, tip_radius, u);
     }
   }
 
   shape.lines.resize(steps * num);
-  for (int j = 0; j < num; j++) {
-    for (int i = 0; i < steps; i++) {
-      shape.lines[j * steps + i] = {
-          j * (steps + 1) + i, j * (steps + 1) + i + 1};
-    }
+  for (auto [i, j] : range(vec2i(steps, num))) {
+    shape.lines[lid(i, j)] = {vid(i, j), vid(i + 1, j)};
   }
 
   return shape;
@@ -1368,28 +1363,22 @@ shape_data make_quad_grid(const vec2i& steps, float scale_) {
   });
 }
 
-shape_data make_point_grid(
-    const vec2i& steps, float scale, const vec2f& radius) {
+shape_data make_point_grid(const vec2i& steps, float scale, float radius) {
   auto shape  = make_quad_grid(steps, scale);
   shape.quads = {};
   shape.points.resize(shape.positions.size());
-  for (auto i : range(shape.positions.size())) shape.points[i] = (int)i;
   shape.radius.resize(shape.positions.size());
-  for (auto i : range(shape.texcoords.size())) {
-    shape.radius[i] = lerp(radius.x, radius.y, shape.texcoords[i].y);
-  }
+  for (auto i : range(shape.positions.size())) shape.points[i] = (int)i;
+  for (auto i : range(shape.texcoords.size())) shape.radius[i] = radius;
   return shape;
 }
 
-shape_data make_line_grid(
-    const vec2i& steps, float scale, const vec2f& radius) {
+shape_data make_line_grid(const vec2i& steps, float scale, float radius) {
   auto shape  = make_quad_grid(steps, scale);
   shape.lines = get_edges(shape.quads);
   shape.quads = {};
   shape.radius.resize(shape.positions.size());
-  for (auto i : range(shape.texcoords.size())) {
-    shape.radius[i] = lerp(radius.x, radius.y, shape.texcoords[i].y);
-  }
+  for (auto i : range(shape.texcoords.size())) shape.radius[i] = radius;
   return shape;
 }
 
@@ -2115,7 +2104,7 @@ vector<vector<int>> ordered_boundaries(const vector<vec3i>& triangles,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Splits a BVH node using the middle heuristic. Returns split position and
+// Splits a BVH node using the middle heuristic_ Returns split position and
 // axis.
 static pair<int, int> split_middle(vector<int>& primitives,
     const vector<bbox3f>& bboxes, const vector<vec3f>& centers, int start,
