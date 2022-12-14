@@ -1011,6 +1011,32 @@ constexpr kernel bool isfinite(const vec<T, N>& a) {
   return all(map(a, [](T a) { return isfinite(a); }));
 }
 
+// Conversion between coordinates
+template <typename T>
+constexpr kernel vec<T, 2> cartesian_to_sphericaluv(const vec<T, 3>& w) {
+  auto [wx, wy, wz] = w;
+  auto uv           = vec<T, 2>{atan2(wy, wx), acos(clamp(wz, -1, 1))} /
+            vec<T, 2>{2 * (T)pi, (T)pi};
+  return mod(uv, 1);
+}
+template <typename T>
+constexpr kernel vec<T, 2> cartesiany_to_sphericaluv(const vec<T, 3>& w) {
+  auto [wx, wy, wz] = w;
+  auto uv           = vec<T, 2>{atan2(wz, wx), acos(clamp(wy, -1, 1))} /
+            vec<T, 2>{2 * (T)pi, (T)pi};
+  return mod(uv, 1);
+}
+template <typename T>
+constexpr kernel vec<T, 3> sphericaluv_to_cartesian(const vec<T, 2>& uv) {
+  auto [phi, theta] = uv * vec<T, 2>{2 * (T)pi, (T)pi};
+  return {cos(phi) * sin(theta), sin(phi) * sin(theta), cos(theta)};
+}
+template <typename T>
+constexpr kernel vec<T, 3> sphericaluv_to_cartesiany(const vec<T, 2>& uv) {
+  auto [phi, theta] = uv * vec<T, 2>{2 * (T)pi, (T)pi};
+  return {cos(phi) * sin(theta), cos(theta), sin(phi) * sin(theta)};
+}
+
 // Quaternion operations represented as xi + yj + zk + w
 // const auto identity_quat4f = vec4f{0, 0, 0, 1};
 template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>

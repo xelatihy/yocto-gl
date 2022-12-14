@@ -372,9 +372,8 @@ static vec3f sample_lights(const scene_data& scene, const trace_lights& lights,
           texture.pixelsf.extents(), texture.pixelsb.extents());
       auto uv = vec2f{
           ((idx % width) + 0.5f) / width, ((idx / width) + 0.5f) / height};
-      return transform_direction(environment.frame,
-          {cos(uv.x * 2 * pif) * sin(uv.y * pif), cos(uv.y * pif),
-              sin(uv.x * 2 * pif) * sin(uv.y * pif)});
+      return transform_direction(
+          environment.frame, sphericaluv_to_cartesiany(uv));
     } else {
       return sample_sphere(ruv);
     }
@@ -413,11 +412,9 @@ static float sample_lights_pdf(const scene_data& scene, const trace_bvh& bvh,
     } else if (light.environment != invalidid) {
       auto& environment = scene.environments[light.environment];
       if (environment.emission_tex != invalidid) {
-        auto& texture = scene.textures[environment.emission_tex];
-        auto  wl = transform_direction(inverse(environment.frame), direction);
-        auto  texcoord = vec2f{atan2(wl.z, wl.x) / (2 * pif),
-            acos(clamp(wl.y, -1.0f, 1.0f)) / pif};
-        if (texcoord.x < 0) texcoord.x += 1;
+        auto& texture  = scene.textures[environment.emission_tex];
+        auto  texcoord = cartesiany_to_sphericaluv(
+            transform_direction(inverse(environment.frame), direction));
         auto extents = (vec2i)max(
             texture.pixelsf.extents(), texture.pixelsb.extents());
         auto [width, height] = extents;
