@@ -120,9 +120,9 @@ constexpr kernel vec<T, N> bbox_diagonal(const bbox<T, N>& a) {
 }
 template <typename T>
 constexpr kernel T bbox_area(const bbox<T, 3>& a) {
-  auto diagonal = a.max - a.min;
-  return 2 * diagonal.x * diagonal.y + 2 * diagonal.x * diagonal.z +
-         2 * diagonal.y * diagonal.z;
+  auto diagonal     = a.max - a.min;
+  auto [dx, dy, dz] = diagonal;
+  return 2 * dx * dy + 2 * dx * dz + 2 * dy * dz;
 }
 
 // Bounding box comparisons.
@@ -217,17 +217,11 @@ template <typename T, size_t N>
 constexpr kernel bbox<T, N> transform_bbox(
     const mat<T, N + 1, N + 1>& a, const bbox<T, N>& b) {
   if constexpr (N == 3) {
-    auto corners = {vec<T, 3>{b.min.x, b.min.y, b.min.z},
-        vec<T, 3>{b.min.x, b.min.y, b.max.z},
-        vec<T, 3>{b.min.x, b.max.y, b.min.z},
-        vec<T, 3>{b.min.x, b.max.y, b.max.z},
-        vec<T, 3>{b.max.x, b.min.y, b.min.z},
-        vec<T, 3>{b.max.x, b.min.y, b.max.z},
-        vec<T, 3>{b.max.x, b.max.y, b.min.z},
-        vec<T, 3>{b.max.x, b.max.y, b.max.z}};
     auto xformed = bbox<T, N>();
-    for (auto& corner : corners)
-      xformed = merge(xformed, transform_point(a, corner));
+    for (auto [i, j, k] : range(vec<int, 3>(2, 2, 2))) {
+      auto corner = vec<T, 3>{b[i][0], b[j][1], b[k][2]};
+      xformed     = merge(xformed, transform_point(a, corner));
+    }
     return xformed;
   }
 }
@@ -235,17 +229,11 @@ template <typename T, size_t N>
 constexpr kernel bbox<T, N> transform_bbox(
     const frame<T, N>& a, const bbox<T, N>& b) {
   if constexpr (N == 3) {
-    auto corners = {vec<T, 3>{b.min.x, b.min.y, b.min.z},
-        vec<T, 3>{b.min.x, b.min.y, b.max.z},
-        vec<T, 3>{b.min.x, b.max.y, b.min.z},
-        vec<T, 3>{b.min.x, b.max.y, b.max.z},
-        vec<T, 3>{b.max.x, b.min.y, b.min.z},
-        vec<T, 3>{b.max.x, b.min.y, b.max.z},
-        vec<T, 3>{b.max.x, b.max.y, b.min.z},
-        vec<T, 3>{b.max.x, b.max.y, b.max.z}};
     auto xformed = bbox<T, N>();
-    for (auto& corner : corners)
-      xformed = merge(xformed, transform_point(a, corner));
+    for (auto [i, j, k] : range(vec<int, 3>(2, 2, 2))) {
+      auto corner = vec<T, 3>{b[i][0], b[j][1], b[k][2]};
+      xformed     = merge(xformed, transform_point(a, corner));
+    }
     return xformed;
   }
 }
@@ -644,15 +632,16 @@ constexpr kernel vec<T, 3> quad_normal(const vector<vec<T, 3>>& normals,
 template <typename T>
 constexpr kernel vec<T, 3> sphere_point(
     const vec<T, 3> p, T r, const vec<T, 2>& uv) {
-  return p + r * vec<T, 3>{cos(uv.x * 2 * (T)pi) * sin(uv.y * (T)pi),
-                     sin(uv.x * 2 * (T)pi) * sin(uv.y * (T)pi),
-                     cos(uv.y * (T)pi)};
+  auto [phi, theta] = uv * vec<T, 2>{2 * (T)pi, (T)pi};
+  return p + r * vec<T, 3>{
+                     cos(phi) * sin(theta), sin(phi) * sin(theta), cos(theta)};
 }
 template <typename T>
 constexpr kernel vec<T, 3> sphere_normal(
     const vec<T, 3> p, T r, const vec<T, 2>& uv) {
-  return normalize(vec<T, 3>{cos(uv.x * 2 * (T)pi) * sin(uv.y * (T)pi),
-      sin(uv.x * 2 * (T)pi) * sin(uv.y * (T)pi), cos(uv.y * (T)pi)});
+  auto [phi, theta] = uv * vec<T, 2>{2 * (T)pi, (T)pi};
+  return normalize(
+      vec<T, 3>{cos(phi) * sin(theta), sin(phi) * sin(theta), cos(theta)});
 }
 
 // Triangle tangent and bi-tangent from uv
@@ -721,7 +710,8 @@ namespace yocto {
 // Computes the aspect ratio.
 template <typename T>
 constexpr kernel T aspect_ratio(const vec<T, 2>& size) {
-  return size.x / size.y;
+  auto [width, height] = size;
+  return width / height;
 }
 
 // Flip u from [0,1] to [1,0]
@@ -888,13 +878,10 @@ constexpr kernel prim_gintersection<T> intersect_sphere(
   if (t < ray.tmin || t > ray.tmax) return {};
 
   // compute local point for uvs
-  auto plocal = ((ray.o + ray.d * t) - p) / r;
-  auto u      = atan2(plocal.y, plocal.x) / (2 * (T)pi);
-  if (u < 0) u += 1;
-  auto v = acos(clamp(plocal.z, (T)-1, (T)1)) / (T)pi;
+  auto uv = cartesian_to_sphericaluv(((ray.o + ray.d * t) - p) / r);
 
   // intersection occurred: set params and exit
-  return {{u, v}, t, true};
+  return {uv, t, true};
 }
 
 // Intersect a ray with a triangle
@@ -1150,12 +1137,12 @@ constexpr kernel bool overlap_bbox(
   auto dd = (T)0.0;
 
   // For each axis count any excess distance outside box extents
-  if (pos.x < bbox.min.x) dd += (bbox.min.x - pos.x) * (bbox.min.x - pos.x);
-  if (pos.x > bbox.max.x) dd += (pos.x - bbox.max.x) * (pos.x - bbox.max.x);
-  if (pos.y < bbox.min.y) dd += (bbox.min.y - pos.y) * (bbox.min.y - pos.y);
-  if (pos.y > bbox.max.y) dd += (pos.y - bbox.max.y) * (pos.y - bbox.max.y);
-  if (pos.z < bbox.min.z) dd += (bbox.min.z - pos.z) * (bbox.min.z - pos.z);
-  if (pos.z > bbox.max.z) dd += (pos.z - bbox.max.z) * (pos.z - bbox.max.z);
+  for (auto a : range(3)) {
+    if (pos[a] < bbox.min[a])
+      dd += (bbox.min[a] - pos[a]) * (bbox.min[a] - pos[a]);
+    if (pos[a] > bbox.max[a])
+      dd += (pos[a] - bbox.max[a]) * (pos[a] - bbox.max[a]);
+  }
 
   // check distance
   return dd < dist_max * dist_max;
@@ -1165,9 +1152,10 @@ constexpr kernel bool overlap_bbox(
 template <typename T>
 constexpr kernel bool overlap_bbox(
     const bbox<T, 3>& bbox1, const bbox<T, 3>& bbox2) {
-  if (bbox1.max.x < bbox2.min.x || bbox1.min.x > bbox2.max.x) return false;
-  if (bbox1.max.y < bbox2.min.y || bbox1.min.y > bbox2.max.y) return false;
-  if (bbox1.max.z < bbox2.min.z || bbox1.min.z > bbox2.max.z) return false;
+  for (auto a : range(3)) {
+    if (bbox1.max[a] < bbox2.min[a] || bbox1.min[a] > bbox2.max[a])
+      return false;
+  }
   return true;
 }
 

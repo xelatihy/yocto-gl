@@ -410,6 +410,14 @@ constexpr auto one = vec<T, N>{1};
 
 // Element access
 template <typename T>
+constexpr kernel vec<T, 2> xy(const vec<T, 3>& a) {
+  return {a.x, a.y};
+}
+template <typename T>
+constexpr kernel vec<T, 2> xy(const vec<T, 4>& a) {
+  return {a.x, a.y};
+}
+template <typename T>
 constexpr kernel vec<T, 3> xyz(const vec<T, 4>& a) {
   return {a.x, a.y, a.z};
 }
@@ -1011,6 +1019,32 @@ constexpr kernel bool isfinite(const vec<T, N>& a) {
   return all(map(a, [](T a) { return isfinite(a); }));
 }
 
+// Conversion between coordinates
+template <typename T>
+constexpr kernel vec<T, 2> cartesian_to_sphericaluv(const vec<T, 3>& w) {
+  auto [wx, wy, wz] = w;
+  auto uv           = vec<T, 2>{atan2(wy, wx), acos(clamp(wz, -1, 1))} /
+            vec<T, 2>{2 * (T)pi, (T)pi};
+  return mod(uv, 1);
+}
+template <typename T>
+constexpr kernel vec<T, 2> cartesiany_to_sphericaluv(const vec<T, 3>& w) {
+  auto [wx, wy, wz] = w;
+  auto uv           = vec<T, 2>{atan2(wz, wx), acos(clamp(wy, -1, 1))} /
+            vec<T, 2>{2 * (T)pi, (T)pi};
+  return mod(uv, 1);
+}
+template <typename T>
+constexpr kernel vec<T, 3> sphericaluv_to_cartesian(const vec<T, 2>& uv) {
+  auto [phi, theta] = uv * vec<T, 2>{2 * (T)pi, (T)pi};
+  return {cos(phi) * sin(theta), sin(phi) * sin(theta), cos(theta)};
+}
+template <typename T>
+constexpr kernel vec<T, 3> sphericaluv_to_cartesiany(const vec<T, 2>& uv) {
+  auto [phi, theta] = uv * vec<T, 2>{2 * (T)pi, (T)pi};
+  return {cos(phi) * sin(theta), cos(theta), sin(phi) * sin(theta)};
+}
+
 // Quaternion operations represented as xi + yj + zk + w
 // const auto identity_quat4f = vec4f{0, 0, 0, 1};
 template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
@@ -1095,6 +1129,20 @@ constexpr kernel vec<bool, N> component_greater_equal(
 template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
 constexpr kernel vec<T, N> select(
     const vec<bool, N>& a, const vec<T1, N>& b, const vec<T2, N>& c) {
+  return map(a, b, c, [](bool a, T1 b, T2 c) { return a ? b : c; });
+}
+template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
+constexpr kernel vec<T, N> select(
+    const vec<bool, N>& a, T1 b, const vec<T2, N>& c) {
+  return map(a, b, c, [](bool a, T1 b, T2 c) { return a ? b : c; });
+}
+template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
+constexpr kernel vec<T, N> select(
+    const vec<bool, N>& a, const vec<T1, N>& b, T2 c) {
+  return map(a, b, c, [](bool a, T1 b, T2 c) { return a ? b : c; });
+}
+template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
+constexpr kernel vec<T, N> select(const vec<bool, N>& a, T1 b, T2 c) {
   return map(a, b, c, [](bool a, T1 b, T2 c) { return a ? b : c; });
 }
 
@@ -1583,6 +1631,14 @@ constexpr kernel frame<T, 3> frame_fromzx(
   auto x = orthonormalize(x_, z);
   auto y = normalize(cross(z, x));
   return {x, y, z, o};
+}
+template <typename T>
+constexpr kernel frame<T, 3> orthonormalize(const frame<T, 3>& frame_) {
+  auto z = normalize(frame_.z);
+  auto x = orthonormalize(frame_.x, z);
+  auto y = normalize(cross(z, x));
+  auto o = frame_.o;
+  return frame<T, 3>{x, y, z, o};
 }
 
 }  // namespace yocto
@@ -2180,6 +2236,13 @@ constexpr kernel auto range(vec<T, 2> max);
 template <typename T>
 constexpr kernel auto range(array<T, 2> max);
 
+// Python range in 3d. Construct an object that iterates over a 3d integer
+// sequence.
+template <typename T>
+constexpr kernel auto range(vec<T, 3> max);
+template <typename T>
+constexpr kernel auto range(array<T, 3> max);
+
 // Python enumerate
 template <typename Sequence, typename T = size_t>
 constexpr kernel auto enumerate(const Sequence& sequence, T start = 0);
@@ -2269,6 +2332,41 @@ constexpr kernel auto range(vec<T, 2> max) {
 template <typename T>
 constexpr kernel auto range(array<T, 2> max) {
   return range(vec<T, 2>{max});
+}
+
+// Python range in 2d. Construct an object that iterates over a 2d integer
+// sequence.
+template <typename T>
+constexpr kernel auto range(vec<T, 3> max) {
+  struct range_sentinel {};
+  struct range_iterator {
+    vec<T, 3>             index, end;
+    constexpr kernel void operator++() {
+      ++index[0];
+      if (index[0] >= end[0]) {
+        index[0] = 0;
+        index[1]++;
+      }
+      if (index[1] >= end[1]) {
+        index[1] = 0;
+        index[2]++;
+      }
+    }
+    constexpr kernel bool operator!=(const range_sentinel&) const {
+      return index[2] != end[2];
+    }
+    constexpr kernel vec<T, 3> operator*() const { return index; }
+  };
+  struct range_sequence {
+    vec<T, 3>                       end_ = {0, 0, 0};
+    constexpr kernel range_iterator begin() const { return {{0, 0, 0}, end_}; }
+    constexpr kernel range_sentinel end() const { return {}; }
+  };
+  return range_sequence{max};
+}
+template <typename T>
+constexpr kernel auto range(array<T, 3> max) {
+  return range(vec<T, 3>{max});
 }
 
 // Implementation of Python enumerate.

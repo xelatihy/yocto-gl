@@ -87,9 +87,9 @@ ray3f eval_camera(
     auto scale = 1 / camera.lens;
     auto q     = vec3f{film * (uv - 0.5f) * scale, camera.lens};
     // point on the lens
-    auto e = vec3f{-q.x, -q.y, 0} + vec3f{lens_uv * camera.aperture / 2, 0};
+    auto e = vec3f{-xy(q), 0} + vec3f{lens_uv * camera.aperture / 2, 0};
     // point on the focus plane
-    auto p = vec3f{-q.x, -q.y, -camera.focus};
+    auto p = vec3f{-xy(q), -camera.focus};
     // correct ray direction to account for camera focusing
     auto d = normalize(p - e);
     // done
@@ -400,9 +400,7 @@ vec3f eval_normalmap(const scene_data& scene, const instance_data& instance,
     auto& normal_tex = scene.textures[material.normal_tex];
     auto  normalmap  = -1 + 2 * xyz(eval_texture(normal_tex, texcoord, false));
     auto [tu, tv]    = eval_element_tangents(scene, instance, element);
-    auto frame       = frame3f{tu, tv, normal, {0, 0, 0}};
-    frame.x          = orthonormalize(frame.x, frame.z);
-    frame.y          = normalize(cross(frame.z, frame.x));
+    auto frame       = orthonormalize(frame3f{tu, tv, normal, {0, 0, 0}});
     auto flip_v      = dot(frame.y, tv) < 0;
     normalmap.y *= flip_v ? 1 : -1;  // flip vertical axis
     normal = transform_normal(frame, normalmap);
@@ -538,10 +536,8 @@ namespace yocto {
 // Evaluate environment color.
 vec3f eval_environment(const scene_data& scene,
     const environment_data& environment, const vec3f& direction) {
-  auto wl       = transform_direction(inverse(environment.frame), direction);
-  auto texcoord = vec2f{
-      atan2(wl.z, wl.x) / (2 * pif), acos(clamp(wl.y, -1.0f, 1.0f)) / pif};
-  if (texcoord.x < 0) texcoord.x += 1;
+  auto texcoord = cartesiany_to_sphericaluv(
+      transform_direction(inverse(environment.frame), direction));
   return environment.emission *
          xyz(eval_texture(scene, environment.emission_tex, texcoord));
 }
@@ -823,9 +819,11 @@ vector<string> scene_stats(const scene_data& scene, bool verbose) {
     while (str.size() < 20) str = " " + str;
     return str;
   };
-  auto format3 = [](auto num) {
-    auto str = std::to_string(num.x) + " " + std::to_string(num.y) + " " +
-               std::to_string(num.z);
+  auto format3 = [](auto nums) {
+    auto str = string{};
+    for (auto num : nums) {
+      str += (str.empty() ? "" : " ") + std::to_string(num);
+    }
     while (str.size() < 48) str = " " + str;
     return str;
   };
