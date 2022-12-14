@@ -120,9 +120,9 @@ constexpr kernel vec<T, N> bbox_diagonal(const bbox<T, N>& a) {
 }
 template <typename T>
 constexpr kernel T bbox_area(const bbox<T, 3>& a) {
-  auto diagonal = a.max - a.min;
-  return 2 * diagonal.x * diagonal.y + 2 * diagonal.x * diagonal.z +
-         2 * diagonal.y * diagonal.z;
+  auto diagonal     = a.max - a.min;
+  auto [dx, dy, dz] = diagonal;
+  return 2 * dx * dy + 2 * dx * dz + 2 * dy * dz;
 }
 
 // Bounding box comparisons.
@@ -632,15 +632,16 @@ constexpr kernel vec<T, 3> quad_normal(const vector<vec<T, 3>>& normals,
 template <typename T>
 constexpr kernel vec<T, 3> sphere_point(
     const vec<T, 3> p, T r, const vec<T, 2>& uv) {
-  return p + r * vec<T, 3>{cos(uv.x * 2 * (T)pi) * sin(uv.y * (T)pi),
-                     sin(uv.x * 2 * (T)pi) * sin(uv.y * (T)pi),
-                     cos(uv.y * (T)pi)};
+  auto [phi, theta] = uv * vec<T, 2>{2 * (T)pi, (T)pi};
+  return p + r * vec<T, 3>{
+                     cos(phi) * sin(theta), sin(phi) * sin(theta), cos(theta)};
 }
 template <typename T>
 constexpr kernel vec<T, 3> sphere_normal(
     const vec<T, 3> p, T r, const vec<T, 2>& uv) {
-  return normalize(vec<T, 3>{cos(uv.x * 2 * (T)pi) * sin(uv.y * (T)pi),
-      sin(uv.x * 2 * (T)pi) * sin(uv.y * (T)pi), cos(uv.y * (T)pi)});
+  auto [phi, theta] = uv * vec<T, 2>{2 * (T)pi, (T)pi};
+  return normalize(
+      vec<T, 3>{cos(phi) * sin(theta), sin(phi) * sin(theta), cos(theta)});
 }
 
 // Triangle tangent and bi-tangent from uv
@@ -877,13 +878,10 @@ constexpr kernel prim_gintersection<T> intersect_sphere(
   if (t < ray.tmin || t > ray.tmax) return {};
 
   // compute local point for uvs
-  auto plocal = ((ray.o + ray.d * t) - p) / r;
-  auto u      = atan2(plocal.y, plocal.x) / (2 * (T)pi);
-  if (u < 0) u += 1;
-  auto v = acos(clamp(plocal.z, (T)-1, (T)1)) / (T)pi;
+  auto uv = cartesian_to_sphericaluv(((ray.o + ray.d * t) - p) / r);
 
   // intersection occurred: set params and exit
-  return {{u, v}, t, true};
+  return {uv, t, true};
 }
 
 // Intersect a ray with a triangle
