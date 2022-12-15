@@ -202,14 +202,17 @@ material_point eval_material(const scene_data& scene,
   auto scattering_tex = eval_texture(
       scene, material.scattering_tex, texcoord, true);
 
+  // unpack roughness texture
+  auto [_, roughness_tex_roughness, roughness_tex_metallic, __] = roughness_tex;
+
   // material point
   auto point         = material_point{};
   point.type         = material.type;
   point.emission     = material.emission * xyz(emission_tex) * xyz(color_shp);
   point.color        = material.color * xyz(color_tex) * xyz(color_shp);
   point.opacity      = material.opacity * color_tex.w * color_shp.w;
-  point.metallic     = material.metallic * roughness_tex.z;
-  point.roughness    = material.roughness * roughness_tex.y;
+  point.metallic     = material.metallic * roughness_tex_metallic;
+  point.roughness    = material.roughness * roughness_tex_roughness;
   point.roughness    = point.roughness * point.roughness;
   point.ior          = material.ior;
   point.scattering   = material.scattering * xyz(scattering_tex);
@@ -401,8 +404,8 @@ vec3f eval_normalmap(const scene_data& scene, const instance_data& instance,
     auto  normalmap  = -1 + 2 * xyz(eval_texture(normal_tex, texcoord, false));
     auto [tu, tv]    = eval_element_tangents(scene, instance, element);
     auto frame       = orthonormalize(frame3f{tu, tv, normal, {0, 0, 0}});
-    auto flip_v      = dot(frame.y, tv) < 0;
-    normalmap.y *= flip_v ? 1 : -1;  // flip vertical axis
+    auto flip_v      = dot(frame[1], tv) < 0;
+    normalmap[1] *= flip_v ? 1 : -1;  // flip vertical axis
     normal = transform_normal(frame, normalmap);
   }
   return normal;
@@ -484,14 +487,17 @@ material_point eval_material(const scene_data& scene,
   auto scattering_tex = eval_texture(
       scene, material.scattering_tex, texcoord, true);
 
+  // unpack roughness texture
+  auto [_, roughness_tex_roughness, roughness_tex_metallic, __] = roughness_tex;
+
   // material point
   auto point         = material_point{};
   point.type         = material.type;
   point.emission     = material.emission * xyz(emission_tex) * xyz(color_shp);
   point.color        = material.color * xyz(color_tex) * xyz(color_shp);
-  point.opacity      = material.opacity * color_tex.w * color_shp.w;
-  point.metallic     = material.metallic * roughness_tex.z;
-  point.roughness    = material.roughness * roughness_tex.y;
+  point.opacity      = material.opacity * alpha(color_tex) * alpha(color_shp);
+  point.metallic     = material.metallic * roughness_tex_metallic;
+  point.roughness    = material.roughness * roughness_tex_roughness;
   point.roughness    = point.roughness * point.roughness;
   point.ior          = material.ior;
   point.scattering   = material.scattering * xyz(scattering_tex);

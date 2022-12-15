@@ -194,6 +194,7 @@ struct gui_input {
   gui_button    mouse       = {false, false, false};  // mouse buttons
   vec2f         cursor      = {0, 0};                 // position
   vec2f         last        = {0, 0};                 // last position
+  vec2f         delta       = {0, 0};                 // delta position
   gui_modifiers modifiers   = {false, false, false};  // modifiers
   bool          onwidgets   = false;                  // widgets are active
   vec2i         window      = {0, 0};                 // window size

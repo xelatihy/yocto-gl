@@ -188,10 +188,10 @@ bool uiupdate_image_params(const gui_input& input, glimage_params& glparams) {
   // handle mouse
   if (input.mouse.left && input.modifiers.alt && !input.onwidgets) {
     if (input.modifiers.control) {
-      glparams.scale *= pow(2.0f, (input.cursor.y - input.last.y) * 0.001f);
+      glparams.scale *= pow(2.0f, input.delta[1] * 0.001f);
       return true;
     } else {
-      glparams.center += input.cursor - input.last;
+      glparams.center += input.delta;
       return true;
     }
   }
@@ -204,12 +204,12 @@ bool uiupdate_camera_params(const gui_input& input, camera_data& camera) {
     auto pan    = vec2f{0, 0};
     auto rotate = vec2f{0, 0};
     if (input.modifiers.shift) {
-      pan = (input.cursor - input.last) * camera.focus / 200.0f;
+      pan = input.delta * camera.focus / 200.0f;
       pan = lerp(vec2f{1, 0}, vec2f{0, 1}, pan);  // flip x
     } else if (input.modifiers.control) {
-      dolly = (input.cursor.y - input.last.y) / 100.0f;
+      dolly = input.delta[1] / 100.0f;
     } else {
-      rotate = (input.cursor - input.last) / 100.0f;
+      rotate = input.delta / 100.0f;
     }
     auto [frame, focus] = camera_turntable(
         camera.frame, camera.focus, rotate, dolly, pan);
@@ -2075,6 +2075,7 @@ void show_gui_window(const vec2i& size, const string& title,
     state.input.cursor = vec2f{(float)mouse_posx, (float)mouse_posy};
     if (state.widgets_width && state.widgets_left)
       state.input.cursor -= vec2i{state.widgets_width, 0};
+    state.input.delta = state.input.cursor - state.input.last;
     state.input.mouse = {
         glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS,
         glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS,

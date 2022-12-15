@@ -4599,7 +4599,7 @@ static void load_pbrt_scene(
     shape.normals   = (const vector<vec3f>&)pshape.normals;
     shape.texcoords = (const vector<vec2f>&)pshape.texcoords;
     shape.triangles = (const vector<vec3i>&)pshape.triangles;
-    for (auto& uv : shape.texcoords) uv.y = 1 - uv.y;
+    for (auto& uv : shape.texcoords) uv = flip_v(uv);
     if (!pshape.instanced) {
       auto& instance    = scene.instances.emplace_back();
       instance.frame    = to_math(pshape.frame);

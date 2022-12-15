@@ -539,8 +539,8 @@ inline void bump_to_normal(array2d<vec<T, 4>>& normalmap,
     auto g00 = mean(p00), g10 = mean(p10), g01 = mean(p01);
     auto normal = vec<T, 3>{
         scale * (g00 - g10) / dxy[0], scale * (g00 - g01) / dxy[1], 1};
-    normal.y = -normal.y;  // make green pointing up, even if y axis
-                           // points down
+    normal[1] = -normal[1];  // make green pointing up, even if y axis
+                             // points down
     normal        = normalize(normal) * (T)0.5 + (T)0.5;
     normalmap[ij] = {normal, 1};
   }
