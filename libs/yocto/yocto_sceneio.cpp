@@ -796,6 +796,8 @@ array2d<vec4f> make_image_preset(const string& type_) {
     return make_ridgemap(extents, 1.0f);
   } else if (type == "turbulence") {
     return make_turbulencemap(extents, 1.0f);
+  } else if (type == "gnoise") {
+    return make_gnoisemap(extents, 1.0f);
   } else if (type == "bump-normal") {
     return make_bumps(extents);
     // TODO(fabio): fix color space

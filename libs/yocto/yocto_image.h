@@ -508,6 +508,17 @@ inline array2d<vec<T, 4>> make_ridgemap(const vec2s& extents, T scale = 1,
   });
 }
 
+template <typename T = float>
+inline array2d<vec<T, 4>> make_gnoisemap(const vec2s& extents, T scale = 1,
+    const vec<T, 4>& color0 = {0, 0, 0, 1},
+    const vec<T, 4>& color1 = {1, 1, 1, 1}) {
+  return _make_proc_image(extents, [=](vec2s ij) -> vec<T, 4> {
+    auto uv    = (8 * scale * ij) / extents;
+    auto value = gradient_noise(uv) * (T)0.5 + (T)0.5;
+    return lerp(color0, color1, clamp(value, 0, 1));
+  });
+}
+
 // Add image border
 template <typename T = float>
 inline array2d<vec<T, 4>> add_border(const array2d<vec<T, 4>>& image, T width,

@@ -54,9 +54,64 @@ using std::array;
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// PERLIN NOISE FUNCTION
+// CUDA SUPPORT
+// -----------------------------------------------------------------------------
+#ifndef kernel
+#ifdef __CUDACC__
+#define kernel __device__
+#else
+#define kernel
+#endif
+#endif
+
+// -----------------------------------------------------------------------------
+// HASH FUNCTIONS
 // -----------------------------------------------------------------------------
 namespace yocto {
+
+inline kernel vec<uint32_t, 3> hash_pcg(const vec<uint32_t, 3>& v_) {
+  // clang-format off
+  auto v = v_ * 1664525u + 1013904223u;
+  v.x += v.y * v.z; v.y += v.z * v.x; v.z += v.x * v.y;
+  v = v ^ (v >> 16u);
+  v.x += v.y * v.z; v.y += v.z * v.x; v.z += v.x * v.y;
+  // clang-format on
+  return v;
+}
+inline kernel vec<uint32_t, 4> hash_pcg(const vec<uint32_t, 4>& v_) {
+  // clang-format off
+  auto v = v_ * 1664525u + 1013904223u;
+  v.x += v.y * v.w; v.y += v.z * v.x; v.z += v.x * v.y; v.w += v.y * v.z;
+  v = v ^ (v >> 16u);
+  v.x += v.y * v.w; v.y += v.z * v.x; v.z += v.x * v.y; v.w += v.y * v.z;
+  // clang-format on
+  return v;
+}
+inline kernel vec<uint32_t, 2> hash_pcg(const vec<uint32_t, 2>& v) {
+  return xy(hash_pcg(vec<uint32_t, 3>{v, 0}));
+}
+template <typename T, size_t N>
+inline kernel vec<T, N> hash_pcgr(const vec<uint32_t, N>& v) {
+  return hash_pcg(v) * (T)(1.0 / std::numeric_limits<uint32_t>::max());
+}
+template <typename T, size_t N>
+inline kernel vec<T, N> hash_pcgr(const vec<int, N>& v) {
+  auto vu = *(vec<uint32_t, N>*)&v;
+  return hash_pcg(v) * (T)(1.0 / std::numeric_limits<uint32_t>::max());
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// NOISE FUNCTIONS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Compute gradient noise
+template <typename T>
+inline T gradient_noise(T p);
+template <typename T, size_t N>
+inline T gradient_noise(const vec<T, N>& p);
 
 // Compute the revised Perlin noise function with returned values in the range
 // [0,1]. Wrap provides a wrapping noise but must be power of two (wraps at 256
@@ -78,6 +133,53 @@ inline float perlin_fbm(const vec3f& p, float lacunarity = 2, float gain = 0.5,
     int octaves = 6, const vec3i& wrap = {0, 0, 0});
 inline float perlin_turbulence(const vec3f& p, float lacunarity = 2,
     float gain = 0.5, int octaves = 6, const vec3i& wrap = {0, 0, 0});
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION OF NOISE FUNCTIONS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// the implementation follows ideas from "Building up Perlin Noise"
+// http://eastfarthing.com/blog/2015-04-21-noise/
+
+// Interpolants and surflets
+template <typename T>
+constexpr kernel T cubic_kernel(T x_) {
+  auto x = abs(x_);
+  return x >= 1 ? 0 : 1 - (3 - 2 * x) * x * x;
+}
+template <typename T, size_t N>
+constexpr kernel T cubic_kernel(const vec<T, N>& x) {
+  return prod(map(x, [](T x) { return cubic_kernel(x); }));
+}
+template <typename T>
+constexpr kernel T gradient_surflet(T x, T grad) {
+  return cubic_kernel(x) * (grad * x);
+}
+template <typename T, size_t N>
+constexpr kernel T gradient_surflet(const vec<T, N>& x, const vec<T, N>& grad) {
+  return cubic_kernel(x) * dot(grad, x);
+}
+
+// Random values
+template <typename T, size_t N>
+inline kernel vec<T, N> random_gradient(const vec<int, N>& cell) {
+  return normalize(2 * hash_pcgr<T>(cell) - 1);
+}
+
+// Compute gradient noise
+template <typename T, size_t N>
+inline T gradient_noise(const vec<T, N>& p) {
+  auto result = (T)0;
+  auto cell   = (vec<int, N>)p;
+  for (auto offset : range(vec<int, N>(2))) {
+    auto index = cell + offset;
+    result += gradient_surflet(p - (vec<T, N>)index, random_gradient<T>(index));
+  }
+  return result;
+}
 
 }  // namespace yocto
 
@@ -376,5 +478,12 @@ inline float perlin_turbulence(const vec3f& p, float lacunarity, float gain,
 }
 
 }  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// CUDA SUPPORT
+// -----------------------------------------------------------------------------
+#ifdef kernel
+#undef kernel
+#endif
 
 #endif
