@@ -457,53 +457,56 @@ inline array2d<vec<T, 4>> make_colormapramp(const vec2s& extents, T scale = 1) {
 }
 
 template <typename T = float>
-inline array2d<vec<T, 4>> make_noisemap(const vec2s& extents, T scale = 1,
+inline array2d<vec<T, 4>> make_gnoisemap(const vec2s& extents, T scale = 1,
     const vec<T, 4>& color0 = {0, 0, 0, 1},
     const vec<T, 4>& color1 = {1, 1, 1, 1}) {
   return _make_proc_image(extents, [=](vec2s ij) -> vec<T, 4> {
-    auto [u, v] = (8 * scale * ij) / extents;
-    auto value  = perlin_noise(vec<T, 3>{u, v, 0});
+    auto uv    = (8 * scale * ij) / extents;
+    auto value = gradient_noise(uv);
     return lerp(color0, color1, clamp(value, 0, 1));
   });
 }
 
 template <typename T = float>
-inline array2d<vec<T, 4>> make_fbmmap(const vec2s& extents, T scale = 1,
-    const vec<T, 4>& noise  = vec<T, 4>{2, 0.5, 8, 1},
+inline array2d<vec<T, 4>> make_vnoisemap(const vec2s& extents, T scale = 1,
     const vec<T, 4>& color0 = {0, 0, 0, 1},
     const vec<T, 4>& color1 = {1, 1, 1, 1}) {
   return _make_proc_image(extents, [=](vec2s ij) -> vec<T, 4> {
-    auto [u, v]                         = (8 * scale * ij) / extents;
-    auto [lacunarity, gain, octaves, _] = noise;
-    auto value = perlin_fbm({u, v, 0}, lacunarity, gain, (int)octaves);
+    auto uv    = (8 * scale * ij) / extents;
+    auto value = value_noise(uv);
     return lerp(color0, color1, clamp(value, 0, 1));
   });
 }
 
 template <typename T = float>
-inline array2d<vec<T, 4>> make_turbulencemap(const vec2s& extents, T scale = 1,
-    const vec<T, 4>& noise  = vec<T, 4>{2, 0.5, 8, 1},
+inline array2d<vec<T, 4>> make_fnoisemap(const vec2s& extents, T scale = 1,
     const vec<T, 4>& color0 = {0, 0, 0, 1},
     const vec<T, 4>& color1 = {1, 1, 1, 1}) {
   return _make_proc_image(extents, [=](vec2s ij) -> vec<T, 4> {
-    auto [u, v]                         = (8 * scale * ij) / extents;
-    auto [lacunarity, gain, octaves, _] = noise;
-    auto value = perlin_turbulence({u, v, 0}, lacunarity, gain, (int)octaves);
-    v          = clamp(v, 0.0f, 1.0f);
+    auto uv    = (8 * scale * ij) / extents;
+    auto value = fractal_noise(uv);
     return lerp(color0, color1, clamp(value, 0, 1));
   });
 }
 
 template <typename T = float>
-inline array2d<vec<T, 4>> make_ridgemap(const vec2s& extents, T scale = 1,
-    const vec<T, 4>& noise  = {2, 0.5, 8, 1},
+inline array2d<vec<T, 4>> make_tnoisemap(const vec2s& extents, T scale = 1,
     const vec<T, 4>& color0 = {0, 0, 0, 1},
     const vec<T, 4>& color1 = {1, 1, 1, 1}) {
   return _make_proc_image(extents, [=](vec2s ij) -> vec<T, 4> {
-    auto [u, v]                              = (8 * scale * ij) / extents;
-    auto [lacunarity, gain, octaves, offset] = noise;
-    auto value                               = perlin_ridge(
-        {u, v, 0}, lacunarity, gain, (int)octaves, offset);
+    auto uv    = (8 * scale * ij) / extents;
+    auto value = turbulence_noise(uv);
+    return lerp(color0, color1, clamp(value, 0, 1));
+  });
+}
+
+template <typename T = float>
+inline array2d<vec<T, 4>> make_rnoisemap(const vec2s& extents, T scale = 1,
+    const vec<T, 4>& color0 = {0, 0, 0, 1},
+    const vec<T, 4>& color1 = {1, 1, 1, 1}) {
+  return _make_proc_image(extents, [=](vec2s ij) -> vec<T, 4> {
+    auto uv    = (8 * scale * ij) / extents;
+    auto value = ridge_noise(uv);
     return lerp(color0, color1, clamp(value, 0, 1));
   });
 }
@@ -539,8 +542,8 @@ inline void bump_to_normal(array2d<vec<T, 4>>& normalmap,
     auto g00 = mean(p00), g10 = mean(p10), g01 = mean(p01);
     auto normal = vec<T, 3>{
         scale * (g00 - g10) / dxy[0], scale * (g00 - g01) / dxy[1], 1};
-    normal.y = -normal.y;  // make green pointing up, even if y axis
-                           // points down
+    normal[1] = -normal[1];  // make green pointing up, even if y axis
+                             // points down
     normal        = normalize(normal) * (T)0.5 + (T)0.5;
     normalmap[ij] = {normal, 1};
   }

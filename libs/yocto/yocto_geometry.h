@@ -652,17 +652,18 @@ constexpr kernel pair<vec<T, 3>, vec<T, 3>> triangle_tangents_fromuv(
   // Follows the definition in http://www.terathon.com/code/tangent.html and
   // https://gist.github.com/aras-p/2843984
   // normal points up from texture space
+  // TODO: do this without indices
   auto p = p2 - p1, q = p3 - p1;
-  auto s   = vec<T, 2>{uv1.x - uv0.x, uv2.x - uv0.x};
-  auto t   = vec<T, 2>{uv1.y - uv0.y, uv2.y - uv0.y};
+  auto s   = vec<T, 2>{uv1[0] - uv0[0], uv2[0] - uv0[0]};
+  auto t   = vec<T, 2>{uv1[1] - uv0[1], uv2[1] - uv0[1]};
   auto div = cross(s, t);
 
   if (div != 0) {
-    auto tu = vec<T, 3>{t.y * p.x - t.x * q.x, t.y * p.y - t.x * q.y,
-                  t.y * p.z - t.x * q.z} /
+    auto tu = vec<T, 3>{t[1] * p[0] - t[0] * q[0], t[1] * p[1] - t[0] * q[1],
+                  t[1] * p[2] - t[0] * q[2]} /
               div;
-    auto tv = vec<T, 3>{s.x * q.x - s.y * p.x, s.x * q.y - s.y * p.y,
-                  s.x * q.z - s.y * p.z} /
+    auto tv = vec<T, 3>{s[0] * q[0] - s[1] * p[0], s[0] * q[1] - s[1] * p[1],
+                  s[0] * q[2] - s[1] * p[2]} /
               div;
     return {tu, tv};
   } else {

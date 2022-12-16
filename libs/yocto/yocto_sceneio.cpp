@@ -788,14 +788,16 @@ array2d<vec4f> make_image_preset(const string& type_) {
   } else if (type == "sunsky") {
     return make_sunsky(
         extents, pif / 4, 3.0f, true, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f});
-  } else if (type == "noise") {
-    return make_noisemap(extents, 1.0f);
-  } else if (type == "fbm") {
-    return make_fbmmap(extents, 1.0f);
-  } else if (type == "ridge") {
-    return make_ridgemap(extents, 1.0f);
-  } else if (type == "turbulence") {
-    return make_turbulencemap(extents, 1.0f);
+  } else if (type == "gnoisemap") {
+    return make_gnoisemap(extents, 1.0f);
+  } else if (type == "vnoisemap") {
+    return make_vnoisemap(extents, 1.0f);
+  } else if (type == "fnoisemap") {
+    return make_fnoisemap(extents, 1.0f);
+  } else if (type == "rnoisemap") {
+    return make_rnoisemap(extents, 1.0f);
+  } else if (type == "tnoisemap") {
+    return make_tnoisemap(extents, 1.0f);
   } else if (type == "bump-normal") {
     return make_bumps(extents);
     // TODO(fabio): fix color space
@@ -863,18 +865,10 @@ array2d<vec4f> make_image_preset(const string& type_) {
   } else if (type == "test-sunsky") {
     return make_sunsky(
         extents, pif / 4, 3.0f, true, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f});
-  } else if (type == "test-noise") {
-    return make_noisemap(extents);
-  } else if (type == "test-fbm") {
-    return make_noisemap(extents);
   } else if (type == "test-bumps-normal") {
     return bump_to_normal(make_bumps(extents), 0.05f);
   } else if (type == "test-bumps-displacement") {
     return make_bumps(extents);
-    // TODO(fabio): fix color space
-    // img   = srgb_to_rgb(img);
-  } else if (type == "test-fbm-displacement") {
-    return make_fbmmap(extents);
     // TODO(fabio): fix color space
     // img   = srgb_to_rgb(img);
   } else if (type == "test-checker-opacity") {
@@ -882,7 +876,7 @@ array2d<vec4f> make_image_preset(const string& type_) {
   } else if (type == "test-grid-opacity") {
     return make_grid(extents, 1.0f, vec4f{1, 1, 1, 1}, vec4f{0, 0, 0, 0});
   } else {
-    return {};
+    throw io_error{"unknown preset " + type};
   }
 }
 
@@ -4599,7 +4593,7 @@ static void load_pbrt_scene(
     shape.normals   = (const vector<vec3f>&)pshape.normals;
     shape.texcoords = (const vector<vec2f>&)pshape.texcoords;
     shape.triangles = (const vector<vec3i>&)pshape.triangles;
-    for (auto& uv : shape.texcoords) uv.y = 1 - uv.y;
+    for (auto& uv : shape.texcoords) uv = flip_v(uv);
     if (!pshape.instanced) {
       auto& instance    = scene.instances.emplace_back();
       instance.frame    = to_math(pshape.frame);

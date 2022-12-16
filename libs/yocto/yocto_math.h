@@ -689,6 +689,43 @@ template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
 constexpr kernel vec<T, N> operator%(T1 a, const vec<T2, N>& b) {
   return map(a, b, [](T1 a, T2 b) { return a % b; });
 }
+template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
+constexpr kernel vec<T, N> operator^(const vec<T1, N>& a, const vec<T2, N>& b) {
+  return map(a, b, [](T1 a, T2 b) { return a ^ b; });
+}
+template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
+constexpr kernel vec<T, N> operator^(const vec<T1, N>& a, T2 b) {
+  return map(a, b, [](T1 a, T2 b) { return a ^ b; });
+}
+template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
+constexpr kernel vec<T, N> operator^(T1 a, const vec<T2, N>& b) {
+  return map(a, b, [](T1 a, T2 b) { return a ^ b; });
+}
+template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
+constexpr kernel vec<T, N> operator>>(
+    const vec<T1, N>& a, const vec<T2, N>& b) {
+  return map(a, b, [](T1 a, T2 b) { return a >> b; });
+}
+template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
+constexpr kernel vec<T, N> operator>>(const vec<T1, N>& a, T2 b) {
+  return map(a, b, [](T1 a, T2 b) { return a >> b; });
+}
+template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
+constexpr kernel vec<T, N> operator>>(T1 a, const vec<T2, N>& b) {
+  return map(a, b, [](T1 a, T2 b) { return a >> b; });
+}
+template <typename T, size_t N>
+constexpr kernel vec<T, N> operator>>(const vec<T, N>& a, const vec<T, N>& b) {
+  return map(a, b, [](T a, T b) { return a << b; });
+}
+template <typename T, size_t N>
+constexpr kernel vec<T, N> operator>>(const vec<T, N>& a, T b) {
+  return map(a, b, [](T a, T b) { return a << b; });
+}
+template <typename T, size_t N>
+constexpr kernel vec<T, N> operator<<(T a, const vec<T, N>& b) {
+  return map(a, b, [](T a, T b) { return a << b; });
+}
 
 // Vector assignments
 template <typename T, typename T1, size_t N>
@@ -1017,6 +1054,24 @@ constexpr kernel vec<T, N> gain(const vec<T1, N>& a, T2 b) {
 template <typename T, size_t N>
 constexpr kernel bool isfinite(const vec<T, N>& a) {
   return all(map(a, [](T a) { return isfinite(a); }));
+}
+
+// Conversion between ranges
+template <typename T>
+constexpr kernel T unit_to_uv(T a) {
+  return (a + 1) / 2;
+}
+template <typename T, size_t N>
+constexpr kernel vec<T, N> unit_to_uv(const vec<T, N>& a) {
+  return (a + 1) / 2;
+}
+template <typename T>
+constexpr kernel T uv_to_unit(T a) {
+  return a * 2 - 1;
+}
+template <typename T, size_t N>
+constexpr kernel vec<T, N> uv_to_unit(const vec<T, N>& a) {
+  return a * 2 - 1;
 }
 
 // Conversion between coordinates

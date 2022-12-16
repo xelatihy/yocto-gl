@@ -63,6 +63,7 @@ void run(const vector<string>& args) {
   add_option(cli, "noise", noise, "noise weight");
   add_option(cli, "gravity", gravity, "gravity scale");
   add_option(cli, "radius", radius, "hair radius");
+  parse_cli(cli, args);
 
   // load mesh
   auto shape = load_shape(shapename);

@@ -1362,7 +1362,7 @@ shape_data make_points(int num, float radius, bool generate_uv) {
 }
 
 shape_data make_quad_grid(const vec2i& steps, float scale_) {
-  auto scale = scale_ * (vec2f)steps / steps.y;
+  auto scale = scale_ * vec2f{aspect_ratio((vec2f)steps), 1};
   return make_quads(steps, [=](vec2f uv) {
     return make_quads_vertex{
         vec3f(scale * (uv * 2 - 1), 0), vec3f(0, 0, 1), flip_v(uv)};
