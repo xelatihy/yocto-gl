@@ -266,15 +266,4 @@ int get_version(const watch_context& context);
 
 }  // namespace yocto
 
-// -----------------------------------------------------------------------------
-// BACKWARD COMPATIBILITY
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Loads/saves a 4 channels float/byte image in linear/srgb color space.
-void load_image(const string& filename, image_data& image);
-void save_image(const string& filename, const image_data& image);
-
-}  // namespace yocto
-
 #endif
