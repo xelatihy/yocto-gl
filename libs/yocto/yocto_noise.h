@@ -57,18 +57,18 @@ namespace yocto {
 inline kernel vec<uint32_t, 3> hash_pcg(const vec<uint32_t, 3>& v_) {
   // clang-format off
   auto v = v_ * 1664525u + 1013904223u;
-  v.x += v.y * v.z; v.y += v.z * v.x; v.z += v.x * v.y;
+  v[0] += v[1] * v[2]; v[1] += v[2] * v[0]; v[2] += v[0] * v[1];
   v = v ^ (v >> 16u);
-  v.x += v.y * v.z; v.y += v.z * v.x; v.z += v.x * v.y;
+  v[0] += v[1] * v[2]; v[1] += v[2] * v[0]; v[2] += v[0] * v[1];
   // clang-format on
   return v;
 }
 inline kernel vec<uint32_t, 4> hash_pcg(const vec<uint32_t, 4>& v_) {
   // clang-format off
   auto v = v_ * 1664525u + 1013904223u;
-  v.x += v.y * v.w; v.y += v.z * v.x; v.z += v.x * v.y; v.w += v.y * v.z;
+  v[0] += v[1] * v[3]; v[1] += v[2] * v[0]; v[2] += v[0] * v[1]; v[3] += v[1] * v[2];
   v = v ^ (v >> 16u);
-  v.x += v.y * v.w; v.y += v.z * v.x; v.z += v.x * v.y; v.w += v.y * v.z;
+  v[0] += v[1] * v[3]; v[1] += v[2] * v[0]; v[2] += v[0] * v[1]; v[3] += v[1] * v[2];
   // clang-format on
   return v;
 }
