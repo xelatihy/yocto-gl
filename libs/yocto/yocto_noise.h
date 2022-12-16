@@ -54,7 +54,11 @@
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// The implementation follows https://www.jcgt.org/published/0009/03/02/
+// Hash Functions for GPU Rendering", Mark Jarzynski and Marc Olano, JCGT
+
 inline kernel vec<uint32_t, 3> hash_pcg(const vec<uint32_t, 3>& v_) {
+  // https://www.jcgt.org/published/0009/03/02/
   // clang-format off
   auto v = v_ * 1664525u + 1013904223u;
   v[0] += v[1] * v[2]; v[1] += v[2] * v[0]; v[2] += v[0] * v[1];
@@ -64,6 +68,7 @@ inline kernel vec<uint32_t, 3> hash_pcg(const vec<uint32_t, 3>& v_) {
   return v;
 }
 inline kernel vec<uint32_t, 4> hash_pcg(const vec<uint32_t, 4>& v_) {
+  // https://www.jcgt.org/published/0009/03/02/
   // clang-format off
   auto v = v_ * 1664525u + 1013904223u;
   v[0] += v[1] * v[3]; v[1] += v[2] * v[0]; v[2] += v[0] * v[1]; v[3] += v[1] * v[2];
