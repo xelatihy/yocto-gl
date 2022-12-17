@@ -437,27 +437,27 @@ constexpr kernel ptrdiff_t ssize(const vec<T, N>& a) {
 }
 template <typename T, size_t N>
 constexpr kernel const T* begin(const vec<T, N>& a) {
-  return &a.x;
+  return &a.d;
 }
 template <typename T, size_t N>
 constexpr kernel const T* end(const vec<T, N>& a) {
-  return &a.x + N;
+  return &a.d + N;
 }
 template <typename T, size_t N>
 constexpr kernel T* begin(vec<T, N>& a) {
-  return &a.x;
+  return &a.d;
 }
 template <typename T, size_t N>
 constexpr kernel T* end(vec<T, N>& a) {
-  return &a.x + N;
+  return &a.d + N;
 }
 template <typename T, size_t N>
 constexpr kernel const T* data(const vec<T, N>& a) {
-  return &a.x;
+  return a.d;
 }
 template <typename T, size_t N>
 constexpr kernel T* data(vec<T, N>& a) {
-  return &a.x;
+  return a.d;
 }
 template <size_t I, typename T, size_t N>
 constexpr kernel T& get(vec<T, N>& a) noexcept {
@@ -940,7 +940,7 @@ constexpr kernel size_t argmax(const vec<T, N>& a) {
     return a.x >= a.y ? (a.x >= a.z ? 0 : 2) : (a.y >= a.z ? 1 : 2);
   } else if constexpr (N == 4) {
     if (a.w >= a.x && a.w >= a.y && a.w >= a.z)
-      return 0;
+      return 3;
     else
       return argmax(xyz(a));
   }
@@ -955,7 +955,7 @@ constexpr kernel size_t argmin(const vec<T, N>& a) {
     return a.x <= a.y ? (a.x <= a.z ? 0 : 2) : (a.y <= a.z ? 1 : 2);
   } else if constexpr (N == 4) {
     if (a.w <= a.x && a.w <= a.y && a.w <= a.z)
-      return 0;
+      return 3;
     else
       return argmin(xyz(a));
   }
