@@ -3972,7 +3972,7 @@ static void load_gltf_scene(
           data = (float*)shape.colors.data();
           if (components == 3) {
             dcomponents = 4;
-            for (auto& c : shape.colors) c.w = 1;
+            for (auto& c : shape.colors) c.w() = 1;
           }
         } else if (gname == "TANGENT") {
           if (components != 4)
@@ -3999,7 +3999,7 @@ static void load_gltf_scene(
         }
         // fixes
         if (gname == "TANGENT") {
-          for (auto& t : shape.tangents) t.w = -t.w;
+          for (auto& t : shape.tangents) t.w() = -t.w();
         }
       }
       // indices
@@ -4908,8 +4908,8 @@ static void save_mitsuba_scene(
   xml_property(xml, indent, "fov_axis", "smaller");
   xml_property(xml, indent, "fov", 20.0f);
   xml_begin(xml, indent, "transform", "name", "to_world");
-  xml_element(xml, indent, "lookat", "origin", camera.frame.o, "target",
-      camera.frame.o - camera.frame.z, "up", vec3f{0, 1, 0});
+  xml_element(xml, indent, "lookat", "origin", camera.frame.o(), "target",
+      camera.frame.o() - camera.frame.z(), "up", vec3f{0, 1, 0});
   xml_end(xml, indent, "transform");
   xml_element(xml, indent, "ref", "id", "sampler");
   xml_element(xml, indent, "ref", "id", "film");
