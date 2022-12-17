@@ -67,6 +67,20 @@ using std::pair;
 #endif
 
 // -----------------------------------------------------------------------------
+// MATH CONCEPTS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+template <typename T>
+concept integral = std::is_integral_v<T>;
+template <typename T>
+concept real = std::is_floating_point_v<T>;
+template <typename T>
+concept number = std::is_integral_v<T> || std::is_floating_point_v<T>;
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // MATH CONSTANTS AND FUNCTIONS
 // -----------------------------------------------------------------------------
 namespace yocto {
