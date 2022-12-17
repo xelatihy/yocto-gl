@@ -74,6 +74,14 @@ namespace yocto {
 using byte   = unsigned char;
 using uint   = unsigned int;
 using ushort = unsigned short;
+using index  = long;
+
+static_assert(sizeof(index) == sizeof(int64_t), "same size");
+static_assert(sizeof(std::size_t) == sizeof(uint64_t), "same size");
+static_assert(sizeof(std::ptrdiff_t) == sizeof(long), "same size");
+static_assert(std::is_same_v<index, long>, "same type");
+static_assert(std::is_same_v<std::size_t, unsigned long>, "same type");
+static_assert(std::is_same_v<std::ptrdiff_t, long>, "same type");
 
 // Common type
 template <typename... Ts>
@@ -437,19 +445,19 @@ constexpr kernel ptrdiff_t ssize(const vec<T, N>& a) {
 }
 template <typename T, size_t N>
 constexpr kernel const T* begin(const vec<T, N>& a) {
-  return &a.d;
+  return a.d;
 }
 template <typename T, size_t N>
 constexpr kernel const T* end(const vec<T, N>& a) {
-  return &a.d + N;
+  return a.d + N;
 }
 template <typename T, size_t N>
 constexpr kernel T* begin(vec<T, N>& a) {
-  return &a.d;
+  return a.d;
 }
 template <typename T, size_t N>
 constexpr kernel T* end(vec<T, N>& a) {
-  return &a.d + N;
+  return a.d + N;
 }
 template <typename T, size_t N>
 constexpr kernel const T* data(const vec<T, N>& a) {
@@ -573,51 +581,23 @@ constexpr kernel T fold(const vec<T, N>& a, Func&& func) {
 // Vector comparison operations.
 template <typename T1, typename T2, size_t N>
 constexpr kernel bool operator==(const vec<T1, N>& a, const vec<T2, N>& b) {
-  if constexpr (N == 1) {
-    return a.x == b.x;
-  } else if constexpr (N == 2) {
-    return a.x == b.x && a.y == b.y;
-  } else if constexpr (N == 3) {
-    return a.x == b.x && a.y == b.y && a.z == b.z;
-  } else if constexpr (N == 4) {
-    return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
-  }
+  return fold(map(a, b, [](T1 a, T2 b) { return a == b; }),
+      [](bool a, bool b) { return a && b; });
 }
 template <typename T1, typename T2, size_t N>
 constexpr kernel bool operator==(const vec<T1, N>& a, T2 b) {
-  if constexpr (N == 1) {
-    return a.x == b;
-  } else if constexpr (N == 2) {
-    return a.x == b && a.y == b;
-  } else if constexpr (N == 3) {
-    return a.x == b && a.y == b && a.z == b;
-  } else if constexpr (N == 4) {
-    return a.x == b && a.y == b && a.z == b && a.w == b;
-  }
+  return fold(map(a, b, [](T1 a, T2 b) { return a == b; }),
+      [](bool a, bool b) { return a && b; });
 }
 template <typename T1, typename T2, size_t N>
 constexpr kernel bool operator!=(const vec<T1, N>& a, const vec<T2, N>& b) {
-  if constexpr (N == 1) {
-    return a.x != b.x;
-  } else if constexpr (N == 2) {
-    return a.x != b.x || a.y != b.y;
-  } else if constexpr (N == 3) {
-    return a.x != b.x || a.y != b.y || a.z != b.z;
-  } else if constexpr (N == 4) {
-    return a.x != b.x || a.y != b.y || a.z != b.z || a.w != b.w;
-  }
+  return fold(map(a, b, [](T1 a, T2 b) { return a != b; }),
+      [](bool a, bool b) { return a || b; });
 }
 template <typename T1, typename T2, size_t N>
 constexpr kernel bool operator!=(const vec<T1, N>& a, T2 b) {
-  if constexpr (N == 1) {
-    return a.x != b;
-  } else if constexpr (N == 2) {
-    return a.x != b || a.y != b;
-  } else if constexpr (N == 3) {
-    return a.x != b || a.y != b || a.z != b;
-  } else if constexpr (N == 4) {
-    return a.x != b || a.y != b || a.z != b || a.w != b;
-  }
+  return fold(map(a, b, [](T1 a, T2 b) { return a != b; }),
+      [](bool a, bool b) { return a || b; });
 }
 
 // Vector operations.
