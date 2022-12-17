@@ -2038,7 +2038,7 @@ constexpr kernel vec<I, 2> image_coords(const vec<T, 2>& mouse_pos,
     bool clamped = true) {
   auto xy = (mouse_pos - center) / scale;
   auto ij = (vec<I, 2>)round(xy + size / (T)2);
-  return clamped ? clamp(ij, vec<I, 2>{0, 0}, size) : ij;
+  return clamped ? clamp(ij, 0, size) : ij;
 }
 
 // Center image and autofit. Returns center and scale.
