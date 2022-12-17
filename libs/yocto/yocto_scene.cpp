@@ -130,7 +130,7 @@ vec4f eval_texture(const texture_data& texture, const vec2f& uv, bool as_linear,
   auto size = max(texture.pixelsf.extents(), texture.pixelsb.extents());
 
   // get coordinates normalized for tiling
-  auto st = (clamp_to_edge ? clamp(uv, 0, 1) : fmod(uv, 1)) * size;
+  auto st = (clamp_to_edge ? clamp(uv, 0, 1) : mod(uv, 1)) * size;
 
   // handle interpolation
   if (no_interpolation) {
