@@ -718,7 +718,11 @@ constexpr kernel T aspect_ratio(const vec<T, 2>& size) {
 // Flip u from [0,1] to [1,0]
 template <typename T>
 constexpr kernel vec<T, 2> flip_u(const vec<T, 2>& uv) {
+#ifndef __CUDACC__
   auto [u, v] = uv;
+#else
+  auto u = uv[0], v = uv[1];
+#endif
   return {1 - u, v};
 }
 // Flip v from [0,1] to [1,0]

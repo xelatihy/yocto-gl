@@ -314,7 +314,7 @@ constexpr kernel vec<T, 2> sample_triangle(const vec<T, 2>& ruv) {
 #ifndef __CUDACC__
   auto [r1, r2] = ruv;
 #else
-  auto r1 = ruv.x, r2 = ruv.y;
+  auto r1 = ruv[0], r2 = ruv[1];
 #endif
   return {1 - sqrt(r1), r2 * sqrt(r1)};
 }

@@ -76,13 +76,6 @@ using uint   = unsigned int;
 using ushort = unsigned short;
 using index  = long;
 
-static_assert(sizeof(index) == sizeof(int64_t), "same size");
-static_assert(sizeof(std::size_t) == sizeof(uint64_t), "same size");
-static_assert(sizeof(std::ptrdiff_t) == sizeof(long), "same size");
-static_assert(std::is_same_v<index, long>, "same type");
-static_assert(std::is_same_v<std::size_t, unsigned long>, "same type");
-static_assert(std::is_same_v<std::ptrdiff_t, long>, "same type");
-
 // Common type
 template <typename... Ts>
 using common_t = std::common_type_t<Ts...>;
@@ -205,7 +198,7 @@ constexpr kernel T round(T a) {
 }
 template <typename T, typename T1>
 constexpr kernel T fmod(T a, T1 b) {
-  return std::fmod(a, b);
+  return std::fmod(a, (T)b);
 }
 template <typename T, typename T1>
 constexpr kernel T mod(T a, T1 b) {
@@ -1079,8 +1072,12 @@ constexpr kernel vec<T, 2> cartesian_to_sphericaluv(const vec<T, 3>& w) {
 }
 template <typename T>
 constexpr kernel vec<T, 2> cartesiany_to_sphericaluv(const vec<T, 3>& w) {
+#ifndef __CUDACC__
   auto [wx, wy, wz] = w;
-  auto uv           = vec<T, 2>{atan2(wz, wx), acos(clamp(wy, -1, 1))} /
+#else
+  auto wx = w[0], wy = w[1], wz = w[2];
+#endif
+  auto uv = vec<T, 2>{atan2(wz, wx), acos(clamp(wy, -1, 1))} /
             vec<T, 2>{2 * (T)pi, (T)pi};
   return mod(uv, 1);
 }

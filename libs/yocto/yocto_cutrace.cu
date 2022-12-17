@@ -149,9 +149,11 @@ struct cuspan2d {
   inline size_t   extent(size_t dimension) const { return _extents[dimension]; }
   inline T&       operator[](int idx) { return _data[idx]; }
   inline const T& operator[](int idx) const { return _data[idx]; }
-  inline T& operator[](vec2s idx) { return _data[idx.y * _extents.x + idx.x]; }
+  inline T&       operator[](vec2s idx) {
+    return _data[idx[1] * _extents[0] + idx[0]];
+  }
   inline const T& operator[](vec2s idx) const {
-    return _data[iidx.y * _extents.x + idx.x];
+    return _data[iidx[1] * _extents[0] + idx[0]];
   }
 
   inline T*       begin() { return _data; }
@@ -402,7 +404,7 @@ constexpr auto min_roughness = 0.03f * 0.03f;
 static vec4f eval_texture(const texture_data& texture, const vec2f& texcoord,
     bool as_linear = false, bool no_interpolation = false,
     bool clamp_to_edge = false) {
-  auto fromTexture = tex2D<float4>(texture.texture, texcoord.x, texcoord.y);
+  auto fromTexture = tex2D<float4>(texture.texture, texcoord[0], texcoord[1]);
   auto color       = vec4f{
       fromTexture.x, fromTexture.y, fromTexture.z, fromTexture.w};
   if (as_linear && !texture.linear) {
@@ -443,8 +445,8 @@ static vec3f eval_position(const scene_data& scene,
   if (!shape.triangles.empty()) {
     auto t = shape.triangles[element];
     return transform_point(
-        instance.frame, interpolate_triangle(shape.positions[t.x],
-                            shape.positions[t.y], shape.positions[t.z], uv));
+        instance.frame, interpolate_triangle(shape.positions[t[0]],
+                            shape.positions[t[1]], shape.positions[t[2]], uv));
   } else {
     return {0, 0, 0};
   }
@@ -457,8 +459,8 @@ static vec3f eval_element_normal(
   if (!shape.triangles.empty()) {
     auto t = shape.triangles[element];
     return transform_normal(
-        instance.frame, triangle_normal(shape.positions[t.x],
-                            shape.positions[t.y], shape.positions[t.z]));
+        instance.frame, triangle_normal(shape.positions[t[0]],
+                            shape.positions[t[1]], shape.positions[t[2]]));
   } else {
     return {0, 0, 0};
   }
@@ -473,8 +475,8 @@ static vec3f eval_normal(const scene_data& scene, const instance_data& instance,
   if (!shape.triangles.empty()) {
     auto t = shape.triangles[element];
     return transform_normal(
-        instance.frame, normalize(interpolate_triangle(shape.normals[t.x],
-                            shape.normals[t.y], shape.normals[t.z], uv)));
+        instance.frame, normalize(interpolate_triangle(shape.normals[t[0]],
+                            shape.normals[t[1]], shape.normals[t[2]], uv)));
   } else {
     return {0, 0, 0};
   }
@@ -487,8 +489,8 @@ static vec2f eval_texcoord(const scene_data& scene,
   if (shape.texcoords.empty()) return uv;
   if (!shape.triangles.empty()) {
     auto t = shape.triangles[element];
-    return interpolate_triangle(
-        shape.texcoords[t.x], shape.texcoords[t.y], shape.texcoords[t.z], uv);
+    return interpolate_triangle(shape.texcoords[t[0]], shape.texcoords[t[1]],
+        shape.texcoords[t[2]], uv);
   } else {
     return {0, 0};
   }
@@ -500,9 +502,9 @@ static pair_<vec3f, vec3f> eval_element_tangents(
   auto& shape = scene.shapes[instance.shape];
   if (!shape.triangles.empty() && !shape.texcoords.empty()) {
     auto t   = shape.triangles[element];
-    auto tuv = triangle_tangents_fromuv(shape.positions[t.x],
-        shape.positions[t.y], shape.positions[t.z], shape.texcoords[t.x],
-        shape.texcoords[t.y], shape.texcoords[t.z]);
+    auto tuv = triangle_tangents_fromuv(shape.positions[t[0]],
+        shape.positions[t[1]], shape.positions[t[2]], shape.texcoords[t[0]],
+        shape.texcoords[t[1]], shape.texcoords[t[2]]);
     return {transform_direction(instance.frame, tuv.first),
         transform_direction(instance.frame, tuv.second)};
   } else {
@@ -522,10 +524,10 @@ static vec3f eval_normalmap(const scene_data& scene,
     auto  normalmap  = -1 + 2 * xyz(eval_texture(normal_tex, texcoord, false));
     auto  tuv        = eval_element_tangents(scene, instance, element);
     auto  frame      = frame3f{tuv.first, tuv.second, normal, {0, 0, 0}};
-    frame.x          = orthonormalize(frame.x, frame.z);
-    frame.y          = normalize(cross(frame.z, frame.x));
-    auto flip_v      = dot(frame.y, tuv.second) < 0;
-    normalmap.y *= flip_v ? 1 : -1;  // flip vertical axis
+    frame[0]         = orthonormalize(frame[0], frame[2]);
+    frame[1]         = normalize(cross(frame[2], frame[0]));
+    auto flip_v      = dot(frame[1], tuv.second) < 0;
+    normalmap[1] *= flip_v ? 1 : -1;  // flip vertical axis
     normal = transform_normal(frame, normalmap);
   }
   return normal;
@@ -569,7 +571,7 @@ static vec4f eval_color(const scene_data& scene, const instance_data& instance,
   if (!shape.triangles.empty()) {
     auto t = shape.triangles[element];
     return interpolate_triangle(
-        shape.colors[t.x], shape.colors[t.y], shape.colors[t.z], uv);
+        shape.colors[t[0]], shape.colors[t[1]], shape.colors[t[2]], uv);
   } else {
     return {0, 0, 0, 0};
   }
@@ -596,9 +598,9 @@ static material_point eval_material(const scene_data& scene,
   point.type         = material.type;
   point.emission     = material.emission * xyz(emission_tex);
   point.color        = material.color * xyz(color_tex) * xyz(color_shp);
-  point.opacity      = material.opacity * color_tex.w * color_shp.w;
-  point.metallic     = material.metallic * roughness_tex.z;
-  point.roughness    = material.roughness * roughness_tex.y;
+  point.opacity      = material.opacity * alpha(color_tex) * alpha(color_shp);
+  point.metallic     = material.metallic * roughness_tex[2];
+  point.roughness    = material.roughness * roughness_tex[1];
   point.roughness    = point.roughness * point.roughness;
   point.ior          = material.ior;
   point.scattering   = material.scattering * xyz(scattering_tex);
@@ -653,18 +655,17 @@ static bool is_delta(const material_point& material) {
 
 static ray3f eval_camera(
     const cucamera_data& camera, const vec2f& image_uv, const vec2f& lens_uv) {
+  auto uv   = flip_u(image_uv);
   auto film = camera.aspect >= 1
                   ? vec2f{camera.film, camera.film / camera.aspect}
                   : vec2f{camera.film * camera.aspect, camera.film};
-  auto q    = vec3f{
-      film.x * (0.5f - image_uv.x), film.y * (image_uv.y - 0.5f), camera.lens};
+  auto q    = vec3f{film * (uv - 0.5f), camera.lens};
   // ray direction through the lens center
   auto dc = -normalize(q);
   // point on the lens
-  auto e = vec3f{
-      lens_uv.x * camera.aperture / 2, lens_uv.y * camera.aperture / 2, 0};
+  auto e = vec3f{lens_uv * camera.aperture / 2, 0};
   // point on the focus plane
-  auto p = dc * camera.focus / abs(dc.z);
+  auto p = dc * camera.focus / abs(dc.z());
   // correct ray direction to account for camera focusing
   auto d = normalize(p - e);
   // done
@@ -675,10 +676,8 @@ static ray3f eval_camera(
 // Evaluate environment color.
 static vec3f eval_environment(const scene_data& scene,
     const environment_data& environment, const vec3f& direction) {
-  auto wl       = transform_direction_inverse(environment.frame, direction);
-  auto texcoord = vec2f{
-      atan2(wl.z, wl.x) / (2 * pif), acos(clamp(wl.y, -1.0f, 1.0f)) / pif};
-  if (texcoord.x < 0) texcoord.x += 1;
+  auto texcoord = cartesiany_to_sphericaluv(
+      transform_direction_inverse(environment.frame, direction));
   return environment.emission *
          xyz(eval_texture(scene, environment.emission_tex, texcoord));
 }
@@ -739,9 +738,9 @@ static scene_intersection intersect_scene(
   auto     intersection = scene_intersection{};
   uint32_t u0, u1;
   packPointer(&intersection, u0, u1);
-  optixTrace(bvh, {ray.o.x, ray.o.y, ray.o.z}, {ray.d.x, ray.d.y, ray.d.z},
-      ray.tmin, ray.tmax, 0.0f, OptixVisibilityMask(255),
-      OPTIX_RAY_FLAG_DISABLE_ANYHIT, 0, 0, 0, u0, u1);
+  optixTrace(bvh, {ray.o[0], ray.o[1], ray.o[2]},
+      {ray.d[0], ray.d[1], ray.d[2]}, ray.tmin, ray.tmax, 0.0f,
+      OptixVisibilityMask(255), OPTIX_RAY_FLAG_DISABLE_ANYHIT, 0, 0, 0, u0, u1);
   return intersection;
 }
 
@@ -755,8 +754,8 @@ static scene_intersection intersect_instance(const trace_bvh& bvh,
       transform_vector_inverse(instance.frame, ray.d)};
   for (auto element = 0; element < shape.triangles.size(); element++) {
     auto& triangle = shape.triangles[element];
-    auto  isec     = intersect_triangle(tray, shape.positions[triangle.x],
-             shape.positions[triangle.y], shape.positions[triangle.z]);
+    auto  isec     = intersect_triangle(tray, shape.positions[triangle[0]],
+             shape.positions[triangle[1]], shape.positions[triangle[2]]);
     if (!isec.hit) continue;
     intersection.hit      = true;
     intersection.instance = instance_id;
@@ -999,8 +998,7 @@ static float sample_scattering_pdf(const material_point& material,
 static ray3f sample_camera(const camera_data& camera, const vec2i& ij,
     const vec2i& image_size, const vec2f& puv, const vec2f& luv, bool tent) {
   if (!tent) {
-    auto uv = vec2f{
-        (ij.x + puv.x) / image_size.x, (ij.y + puv.y) / image_size.y};
+    auto uv = (ij + puv) / image_size;
     return eval_camera(camera, uv, sample_disk(luv));
   } else {
     const auto width  = 2.0f;
@@ -1008,12 +1006,11 @@ static ray3f sample_camera(const camera_data& camera, const vec2i& ij,
     auto       fuv =
         width *
             vec2f{
-                puv.x < 0.5f ? sqrt(2 * puv.x) - 1 : 1 - sqrt(2 - 2 * puv.x),
-                puv.y < 0.5f ? sqrt(2 * puv.y) - 1 : 1 - sqrt(2 - 2 * puv.y),
+                puv[0] < 0.5f ? sqrt(2 * puv[0]) - 1 : 1 - sqrt(2 - 2 * puv[0]),
+                puv[1] < 0.5f ? sqrt(2 * puv[1]) - 1 : 1 - sqrt(2 - 2 * puv[1]),
             } +
         offset;
-    auto uv = vec2f{
-        (ij.x + fuv.x) / image_size.x, (ij.y + fuv.y) / image_size.y};
+    auto uv = (ij + fuv) / image_size;
     return eval_camera(camera, uv, sample_disk(luv));
   }
 }
@@ -1036,12 +1033,12 @@ static vec3f sample_lights(const scene_data& scene, const trace_lights& lights,
       auto& texture = scene.textures[environment.emission_tex];
       auto  idx     = sample_discrete(light.elements_cdf, rel);
       auto  extents = (vec2i)texture.extents;
-      auto  width = extents.x, height = extents.y;
+      auto  width = extents[0], height = extents[1];
       auto  uv = vec2f{
           ((idx % width) + 0.5f) / width, ((idx / width) + 0.5f) / height};
       return transform_direction(environment.frame,
-          {cos(uv.x * 2 * pif) * sin(uv.y * pif), cos(uv.y * pif),
-              sin(uv.x * 2 * pif) * sin(uv.y * pif)});
+          {cos(uv[0] * 2 * pif) * sin(uv[1] * pif), cos(uv[1] * pif),
+              sin(uv[0] * 2 * pif) * sin(uv[1] * pif)});
     } else {
       return sample_sphere(ruv);
     }
@@ -1082,13 +1079,13 @@ static float sample_lights_pdf(const scene_data& scene, const trace_bvh& bvh,
       if (environment.emission_tex != invalidid) {
         auto& texture = scene.textures[environment.emission_tex];
         auto  wl = transform_direction(inverse(environment.frame), direction);
-        auto  texcoord = vec2f{atan2(wl.z, wl.x) / (2 * pif),
-            acos(clamp(wl.y, -1.0f, 1.0f)) / pif};
-        if (texcoord.x < 0) texcoord.x += 1;
+        auto  texcoord = vec2f{atan2(wl[2], wl[0]) / (2 * pif),
+            acos(clamp(wl[1], -1.0f, 1.0f)) / pif};
+        if (texcoord[0] < 0) texcoord[0] += 1;
         auto extents = (vec2i)texture.extents;
-        auto width = extents.x, height = extents.y;
+        auto width = extents[0], height = extents[1];
         auto ij = clamp((vec2i)(texcoord * extents), 0, extents - 1);
-        auto i = ij.x, j = ij.y;
+        auto i = ij[0], j = ij[1];
         auto prob = sample_discrete_pdf(light.elements_cdf, j * width + i) /
                     light.elements_cdf.back();
         auto angle = (2 * pif / width) * (pif / height) *
@@ -2039,7 +2036,7 @@ static trace_result trace_falsecolor(const scene_data& scene,
       result = hashed_color((int)material.type);
       break;
     case trace_falsecolor_type::texcoord:
-      result = {fmod(texcoord.x, 1.0f), fmod(texcoord.y, 1.0f), 0};
+      result = {fmod(texcoord[0], 1.0f), fmod(texcoord[1], 1.0f), 0};
       break;
     case trace_falsecolor_type::color: result = material.color; break;
     case trace_falsecolor_type::emission: result = material.emission; break;
@@ -2152,7 +2149,7 @@ optix_shader void __raygen__trace_pixel() {
   if (globals.state.samples == 0) {
     globals.state.image[ij] = {0, 0, 0, 0};
     globals.state.rngs[ij]  = make_rng(
-        98273987, (ij.y * globals.state.image.extent(1) + ij.x) * 2 + 1);
+        98273987, (ij[1] * globals.state.image.extent(1) + ij[0]) * 2 + 1);
   }
 
   // run shading
