@@ -2158,9 +2158,8 @@ constexpr kernel frame<T, 3> camera_fpscam(const frame<T, 3>& frame,
 template <typename T, typename I>
 constexpr kernel vec2i get_image_coords(const vec<T, 2>& mouse_pos,
     const vec<T, 2>& center, T scale, const vec<I, 2>& txt_size) {
-  auto xyf = (mouse_pos - center) / scale;
-  return vec2i{(int)round(xyf.x + txt_size.x / (T)2),
-      (int)round(xyf.y + txt_size.y / (T)2)};
+  auto xy = (mouse_pos - center) / scale;
+  return (vec2i)round(xy + txt_size / (T)2);
 }
 
 // Center image and autofit.
@@ -2168,11 +2167,11 @@ template <typename T, typename I>
 constexpr kernel void update_imview(vec<T, 2>& center, T& scale,
     const vec<I, 2>& imsize, const vec<I, 2>& winsize, bool zoom_to_fit) {
   if (zoom_to_fit) {
-    scale  = min(winsize.x / (T)imsize.x, winsize.y / (T)imsize.y);
-    center = {(T)winsize.x / 2, (T)winsize.y / 2};
+    scale  = min((vec<T, 2>)winsize / imsize);
+    center = (vec<T, 2>)winsize / 2;
   } else {
-    if (winsize.x >= imsize.x * scale) center.x = (T)winsize.x / 2;
-    if (winsize.y >= imsize.y * scale) center.y = (T)winsize.y / 2;
+    if (winsize[0] >= imsize[0] * scale) center[0] = (T)winsize[0] / 2;
+    if (winsize[1] >= imsize[1] * scale) center[1] = (T)winsize[1] / 2;
   }
 }
 
@@ -2184,8 +2183,8 @@ constexpr kernel void update_turntable(vec<T, 3>& from, vec<T, 3>& to,
   if (rotate != vec<T, 2>{0, 0}) {
     auto z     = normalize(to - from);
     auto lz    = length(to - from);
-    auto phi   = atan2(z.z, z.x) + rotate.x;
-    auto theta = acos(z.y) + rotate.y;
+    auto phi   = atan2(z.z(), z.x()) + rotate.x();
+    auto theta = acos(z.y()) + rotate.y();
     theta      = clamp(theta, (T)0.001, (T)pi - (T)0.001);
     auto nz    = vec<T, 3>{sin(theta) * cos(phi) * lz, cos(theta) * lz,
            sin(theta) * sin(phi) * lz};
@@ -2205,8 +2204,7 @@ constexpr kernel void update_turntable(vec<T, 3>& from, vec<T, 3>& to,
     auto z = normalize(to - from);
     auto x = normalize(cross(up, z));
     auto y = normalize(cross(z, x));
-    auto t = vec<T, 3>{pan.x * x.x + pan.y * y.x, pan.x * x.y + pan.y * y.y,
-        pan.x * x.z + pan.y * y.z};
+    auto t = pan.x() * x + pan.y() * y;
     from += t;
     to += t;
   }
@@ -2218,8 +2216,8 @@ constexpr kernel void update_turntable(frame<T, 3>& frame, T& focus,
     const vec<T, 2>& rotate, T dolly, const vec<T, 2>& pan) {
   // rotate if necessary
   if (rotate != vec<T, 2>{0, 0}) {
-    auto phi   = atan2(frame.z.z, frame.z.x) + rotate.x;
-    auto theta = acos(frame.z.y) + rotate.y;
+    auto phi   = atan2(frame.z.z(), frame.z.x()) + rotate.x();
+    auto theta = acos(frame.z.y()) + rotate.y();
     theta      = clamp(theta, (T)0.001, (T)pi - (T)0.001);
     auto new_z = vec<T, 3>{
         sin(theta) * cos(phi), cos(theta), sin(theta) * sin(phi)};
@@ -2233,12 +2231,12 @@ constexpr kernel void update_turntable(frame<T, 3>& frame, T& focus,
   if (dolly != 0) {
     auto c  = frame.o - frame.z * focus;
     focus   = max(focus * (1 + dolly), (T)0.001);
-    frame.o = c + frame.z * focus;
+    frame.o = c + frame.z() * focus;
   }
 
   // pan if necessary
   if (pan != vec<T, 2>{0, 0}) {
-    frame.o += frame.x * pan.x + frame.y * pan.y;
+    frame.o() += frame.x() * pan.x() + frame.y() * pan.y();
   }
 }
 
@@ -2253,10 +2251,10 @@ constexpr kernel void update_fpscam(
 
   auto rot = rotation_frame(vec<T, 3>{1, 0, 0}, rotate.y) *
              yocto::frame<T, 3>{frame.x, frame.y, frame.z, vec<T, 3>{0, 0, 0}} *
-             rotation_frame(vec<T, 3>{0, 1, 0}, rotate.x);
-  auto pos = frame.o + transl.x * x + transl.y * y + transl.z * z;
+             rotation_frame(vec<T, 3>{0, 1, 0}, rotate.x());
+  auto pos = frame.o + transl.x() * x + transl.y() * y + transl.z() * z;
 
-  frame = {rot.x, rot.y, rot.z, pos};
+  frame = {rot, pos};
 }
 
 }  // namespace yocto
