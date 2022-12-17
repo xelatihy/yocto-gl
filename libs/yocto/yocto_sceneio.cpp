@@ -880,33 +880,6 @@ array2d<vec4f> make_image_preset(const string& type_) {
   }
 }
 
-// Loads/saves an image. Chooses hdr or ldr based on file name.
-void load_image(const string& filename, image_data& image) {
-  // load image
-  auto img = load_image<vec4f>(filename);
-
-  // set image
-  auto [width, height] = (vec2i)img.extents();
-  image.width          = width;
-  image.height         = height;
-  image.linear         = is_hdr_filename(filename);
-  image.pixels         = {img.data(), img.data() + img.size()};
-}
-
-// Saves an hdr image.
-void save_image(const string& filename, const image_data& image) {
-  // convert image
-  auto img = array2d<vec4f>(
-      image.pixels.data(), {(size_t)image.width, (size_t)image.height});
-
-  // apply color correction
-  if (image.linear && is_ldr_filename(filename)) img = rgb_to_srgb(img);
-  if (!image.linear && is_hdr_filename(filename)) img = srgb_to_rgb(img);
-
-  // save image
-  save_image(filename, img);
-}
-
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
