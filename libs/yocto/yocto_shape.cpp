@@ -806,7 +806,7 @@ shape_data make_bent_floor(int subdivisions, float scale, float radius) {
   auto end   = start + radius;
   for (auto i : range(shape.positions.size())) {
     auto [px, py, pz] = shape.positions[i];
-    if (shape.positions[i].z < -end) {
+    if (pz < -end) {
       shape.positions[i] = {px, -pz - end + radius, -end};
       shape.normals[i]   = {0, 0, 1};
     } else if (pz < -start && pz >= -end) {
@@ -1098,7 +1098,7 @@ shape_data make_capped_uvsphere(const vec2i& steps, float scale, float cap) {
     if (pz > zflip) {
       shape.positions[i] = {px, py, 2 * zflip - pz};
       shape.normals[i]   = {-nx, -ny, nz};
-    } else if (shape.positions[i].z < -zflip) {
+    } else if (pz < -zflip) {
       shape.positions[i] = {px, py, 2 * (-zflip) - pz};
       shape.normals[i]   = {-nx, -ny, nz};
     }
@@ -2939,7 +2939,7 @@ static pair<vector<vec4i>, vector<T>> subdivide_beziers_impl(
     }
     auto bo = (int)tvertices.size();
     tbeziers.push_back({vmap.at(v1), bo + 0, bo + 1, bo + 2});
-    tbeziers.push_back({bo + 2, bo + 3, bo + 4, vmap.at(bezier.w)});
+    tbeziers.push_back({bo + 2, bo + 3, bo + 4, vmap.at(v4)});
     tvertices.push_back(vertices[v1] / 2 + vertices[v2] / 2);
     tvertices.push_back(vertices[v1] / 4 + vertices[v2] / 2 + vertices[v3] / 4);
     tvertices.push_back(
@@ -3244,7 +3244,7 @@ pair<int, vec2f> sample_quads(
 pair<int, vec2f> sample_quads(const vector<vec4i>& quads,
     const vector<float>& cdf, float re, const vec2f& ruv) {
   auto element = sample_discrete(cdf, re);
-  if (quads[element].z == quads[element].w) {
+  if (!is_triangle(quads[element])) {
     return {element, sample_triangle(ruv)};
   } else {
     return {element, ruv};

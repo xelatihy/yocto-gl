@@ -69,13 +69,11 @@ void run(const vector<string>& args) {
     auto calpha = alpha[idx];
     auto alpha_ = from_color   ? mean(xyz(calpha))
                   : from_black ? (mean(xyz(calpha)) > 0.01 ? 1.0f : 0.0f)
-                               : calpha.w;
+                               : yocto::alpha(calpha);
     if (to_color) {
       out[idx] = {alpha_, alpha_, alpha_, alpha_};
     } else {
-      auto color      = image[idx];
-      color.w         = alpha_;
-      out[idx] = color;
+      out[idx] = {xyz(image[idx]), alpha_};
     }
   }
 

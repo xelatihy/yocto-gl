@@ -1784,7 +1784,7 @@ static void draw_scene(glscene_state& glscene, const scene_data& scene,
 
   // camera
   auto& camera        = scene.cameras.at(params.camera);
-  auto  camera_aspect = (float)viewport.z / (float)viewport.w;
+  auto  camera_aspect = (float)viewport.z() / (float)viewport.w();
   auto  camera_yfov =
       camera_aspect >= 0
            ? (2 * atan(camera.film / (camera_aspect * 2 * camera.lens)))
@@ -1792,7 +1792,7 @@ static void draw_scene(glscene_state& glscene, const scene_data& scene,
   auto view_matrix       = frame_to_mat(inverse(camera.frame));
   auto projection_matrix = perspective_mat(
       camera_yfov, camera_aspect, params.near, params.far);
-  bind_uniform(program, "eye", camera.frame.o);
+  bind_uniform(program, "eye", camera.frame.o());
   bind_uniform(program, "view", view_matrix);
   bind_uniform(program, "projection", projection_matrix);
 

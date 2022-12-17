@@ -76,7 +76,7 @@ ray3f eval_camera(
     // point on the lens
     auto e = vec3f{lens_uv * camera.aperture / 2, 0};
     // point on the focus plane
-    auto p = dc * camera.focus / abs(dc.z);
+    auto p = dc * camera.focus / abs(dc.z());
     // correct ray direction to account for camera focusing
     auto d = normalize(p - e);
     // done
@@ -130,7 +130,7 @@ vec4f eval_texture(const texture_data& texture, const vec2f& uv, bool as_linear,
   auto size = max(texture.pixelsf.extents(), texture.pixelsb.extents());
 
   // get coordinates normalized for tiling
-  auto st = (clamp_to_edge ? clamp(uv, 0, 1) : fmod(uv, 1)) * size;
+  auto st = (clamp_to_edge ? clamp(uv, 0, 1) : mod(uv, 1)) * size;
 
   // handle interpolation
   if (no_interpolation) {
@@ -210,7 +210,7 @@ material_point eval_material(const scene_data& scene,
   point.type         = material.type;
   point.emission     = material.emission * xyz(emission_tex) * xyz(color_shp);
   point.color        = material.color * xyz(color_tex) * xyz(color_shp);
-  point.opacity      = material.opacity * color_tex.w * color_shp.w;
+  point.opacity      = material.opacity * alpha(color_tex) * alpha(color_shp);
   point.metallic     = material.metallic * roughness_tex_metallic;
   point.roughness    = material.roughness * roughness_tex_roughness;
   point.roughness    = point.roughness * point.roughness;

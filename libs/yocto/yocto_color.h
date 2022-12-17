@@ -122,7 +122,7 @@ constexpr kernel T rgb_to_srgb(T rgb) {
 template <typename T, size_t N>
 constexpr kernel vec<T, N> srgb_to_rgb(const vec<T, N>& srgb) {
   if constexpr (N == 4) {
-    return {srgb_to_rgb(xyz(srgb)), srgb.w};
+    return {srgb_to_rgb(xyz(srgb)), alpha(srgb)};
   } else {
     return map(srgb, [](T srgb) { return srgb_to_rgb(srgb); });
   }
@@ -130,7 +130,7 @@ constexpr kernel vec<T, N> srgb_to_rgb(const vec<T, N>& srgb) {
 template <typename T, size_t N>
 constexpr kernel vec<T, N> rgb_to_srgb(const vec<T, N>& rgb) {
   if constexpr (N == 4) {
-    return {rgb_to_srgb(xyz(rgb)), rgb.w};
+    return {rgb_to_srgb(xyz(rgb)), alpha(rgb)};
   } else {
     return map(rgb, [](T rgb) { return rgb_to_srgb(rgb); });
   }
@@ -287,7 +287,7 @@ template <typename T>
 constexpr kernel vec<T, 4> tonemap(
     const vec<T, 4>& hdr, T exposure, bool filmic, bool srgb = true) {
   auto ldr = tonemap(xyz(hdr), exposure, filmic, srgb);
-  return {ldr, hdr.w};
+  return {ldr, alpha(hdr)};
 }
 
 // Composite colors
@@ -578,7 +578,7 @@ template <typename T>
 constexpr kernel vec<T, 4> colorgrade(
     const vec<T, 4>& rgba, bool linear, const colorgrade_params& params) {
   auto graded = colorgrade(xyz(rgba), linear, params);
-  return {graded, rgba.w};
+  return {graded, alpha(rgba)};
 }
 
 }  // namespace yocto
