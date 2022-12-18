@@ -82,7 +82,7 @@ constexpr auto is_vec = is_vec_s<T>::value;
 template <typename T>
 struct vec_size_s : std::integral_constant<index_t, 0> {};
 template <typename T>
-constexpr auto vec_size = vec_size_s<T>::value;
+constexpr auto vec_size = vec_size_s<std::remove_cvref_t<T>>::value;
 template <typename T>
 struct vec_etype_s {
   using type = void;
@@ -904,16 +904,14 @@ constexpr kernel auto lerp(
   return a * (1 - u) + b * u;
 }
 
-template <typename T, index_t N>
-constexpr kernel T max(const vec<T, N>& a) {
-  return fold(a, [](T a, T b) { return max(a, b); });
+constexpr kernel auto max(num_vec auto const& a) {
+  return fold(a, [](number auto a, number auto b) { return max(a, b); });
 }
-template <typename T, index_t N>
-constexpr kernel T min(const vec<T, N>& a) {
-  return fold(a, [](T a, T b) { return min(a, b); });
+constexpr kernel auto min(num_vec auto const& a) {
+  return fold(a, [](number auto a, number auto b) { return min(a, b); });
 }
-template <typename T, index_t N>
-constexpr kernel index_t argmax(const vec<T, N>& a) {
+constexpr kernel index_t argmax(num_vec auto const& a) {
+  constexpr auto N = vec_size<decltype(a)>;
   if constexpr (N == 1) {
     return 0;
   } else if constexpr (N == 2) {
@@ -927,8 +925,8 @@ constexpr kernel index_t argmax(const vec<T, N>& a) {
       return argmax(xyz(a));
   }
 }
-template <typename T, index_t N>
-constexpr kernel index_t argmin(const vec<T, N>& a) {
+constexpr kernel index_t argmin(num_vec auto const& a) {
+  constexpr auto N = vec_size<decltype(a)>;
   if constexpr (N == 1) {
     return 0;
   } else if constexpr (N == 2) {
@@ -943,26 +941,11 @@ constexpr kernel index_t argmin(const vec<T, N>& a) {
   }
 }
 
-template <typename T, index_t N>
-constexpr kernel T sum(const vec<T, N>& a) {
-  return fold_sum(a);
-}
-template <typename T, index_t N>
-constexpr kernel T prod(const vec<T, N>& a) {
-  return fold_prod(a);
-}
-template <typename T, index_t N>
-constexpr kernel T mean(const vec<T, N>& a) {
-  return sum(a) / N;
-}
-template <index_t N>
-constexpr kernel bool all(const vec<bool, N>& a) {
-  return fold_and(indices<N>(), a);
-}
-template <typename T, index_t N>
-constexpr kernel T any(const vec<bool, N>& a) {
-  return fold_or(indices<N>(), a);
-}
+constexpr kernel auto sum(num_vec auto const& a) { return fold_sum(a); }
+constexpr kernel auto prod(num_vec auto const& a) { return fold_prod(a); }
+constexpr kernel auto mean(num_vec auto const& a) { return sum(a) / a.size(); }
+constexpr kernel bool all(bool_vec auto const& a) { return fold_and(a); }
+constexpr kernel bool any(bool_vec auto const& a) { return fold_or(a); }
 
 // Functions applied to vector elements
 template <typename T, index_t N>
