@@ -103,12 +103,14 @@ struct vec_vec : std::bool_constant<false> {};
 template <typename T>
 concept any_vec = is_vec_v<T>;
 template <typename T>
-concept int_vec = is_vec_v<T> && std::is_integral_v<T>;
+concept int_vec = is_vec_v<T> && std::is_integral_v<vec_etype_t<T>>;
 template <typename T>
-concept real_vec = is_vec_v<T> && std::is_floating_point_v<T>;
+concept real_vec = is_vec_v<T> && std::is_floating_point_v<vec_etype_t<T>>;
 template <typename T>
-concept num_vec = is_vec_v<T> &&
-                  (std::is_integral_v<T> || std::is_floating_point_v<T>);
+concept num_vec = is_vec_v<T> && (std::is_integral_v<vec_etype_t<T>> ||
+                                     std::is_floating_point_v<vec_etype_t<T>>);
+template <typename T>
+concept bool_vec = is_vec_v<T> && std::is_same_v<vec_etype_t<T>, bool>;
 
 template <index_t N, typename... Ts>
 concept same_size = (sizeof...(Ts) == N);
@@ -457,7 +459,7 @@ template <typename T1, index_t N, typename Func, index_t... Is,
     typename T = result_t<Func, T1>>
 constexpr kernel vec<T, N> map(
     index_seq<Is...>, const vec<T1, N>& a, Func&& func) {
-  return {func(a[Is])...};
+  return vec{func(a[Is])...};
 }
 template <typename T1, index_t N, typename Func,
     typename T = result_t<Func, T1>>
@@ -588,10 +590,7 @@ constexpr kernel bool operator!=(const vec<T1, N>& a, T2 b) {
 }
 
 // Vector operations.
-template <typename T, index_t N>
-constexpr kernel vec<T, N> operator+(const vec<T, N>& a) {
-  return a;
-}
+constexpr kernel auto operator+(num_vec auto const& a) { return a; }
 template <typename T, index_t N>
 constexpr kernel vec<T, N> operator-(const vec<T, N>& a) {
   return map(a, [](T a) { return -a; });
