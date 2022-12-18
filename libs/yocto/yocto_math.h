@@ -176,15 +176,13 @@ constexpr kernel auto round(real auto a) { return std::round(a); }
 constexpr kernel auto fmod(real auto a, number auto b) {
   return std::fmod(a, (decltype(a))b);
 }
-template <typename T, typename T1>
-constexpr kernel T mod(T a, T1 b) {
-  if constexpr (std::is_floating_point_v<T> || std::is_floating_point_v<T1>) {
-    auto m = fmod(a, b);
-    return (m >= 0) ? m : m + b;
-  } else {
-    auto m = a % b;
-    return (m >= 0) ? m : m + b;
-  }
+constexpr kernel auto mod(real auto a, number auto b) {
+  auto m = fmod(a, b);
+  return (m >= 0) ? m : m + b;
+}
+constexpr kernel auto mod(integral auto a, integral auto b) {
+  auto m = a % b;
+  return (m >= 0) ? m : m + b;
 }
 // template <typename T>
 // inline void swap(T& a, T& b) {
