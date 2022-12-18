@@ -1311,6 +1311,43 @@ struct tuple_element<I, yocto::vec<T, N>> {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+#ifndef __CUDACC__
+
+// Small Fixed-size matrices stored in column major format.
+template <typename T, size_t N, size_t M>
+struct mat {
+  vec<T, N> d[M];
+
+  constexpr kernel mat() {
+    for (auto j = 0; j < M; j++) {
+      for (auto i = 0; i < N; i++) {
+        d[j][i] = i == j ? 1 : 0;
+      }
+    }
+  }
+  constexpr kernel mat(T v) {
+    for (auto j = 0; j < M; j++) {
+      for (auto i = 0; i < N; i++) {
+        d[j][i] = i == j ? v : 0;
+      }
+    }
+  }
+
+  // TODO: make generic
+  constexpr kernel mat(const vec<T, N>& c1, const vec<T, N>& c2) : d{c1, c2} {}
+  constexpr kernel mat(
+      const vec<T, N>& c1, const vec<T, N>& c2, const vec<T, N>& c3)
+      : d{c1, c2, c3} {}
+  constexpr kernel mat(const vec<T, N>& c1, const vec<T, N>& c2,
+      const vec<T, N>& c3, const vec<T, N>& c4)
+      : d{c1, c2, c3, c4} {}
+
+  constexpr kernel vec<T, N>& operator[](size_t i) { return d[i]; }
+  constexpr kernel const vec<T, N>& operator[](size_t i) const { return d[i]; }
+};
+
+#else
+
 // Small Fixed-size matrices stored in column major format.
 template <typename T, size_t N, size_t M>
 struct mat;
@@ -1367,6 +1404,8 @@ struct mat<T, N, 4> {
   constexpr kernel vec<T, N>& operator[](size_t i) { return d[i]; }
   constexpr kernel const vec<T, N>& operator[](size_t i) const { return d[i]; }
 };
+
+#endif
 
 // Matrix aliases
 using mat1f   = mat<float, 1, 1>;
@@ -1787,13 +1826,10 @@ struct quat;
 // Quaternions to represent rotations
 template <typename T>
 struct quat<T, 4> {
-  union {  // clang-format off
-    T d[4];
-    struct { T x, y, z, w; };
-  };  // clang-format on
+  T d[4];
 
-  constexpr kernel quat() : x{0}, y{0}, z{0}, w{1} {}
-  constexpr kernel quat(T x_, T y_, T z_, T w_) : x{x_}, y{y_}, z{z_}, w{w_} {}
+  constexpr kernel quat() : d{0, 0, 0, 1} {}
+  constexpr kernel quat(T x, T y, T z, T w) : d{x, y, z, w} {}
 
   constexpr kernel T&       operator[](size_t i) { return d[i]; }
   constexpr kernel const T& operator[](size_t i) const { return d[i]; }
@@ -1804,27 +1840,56 @@ using quat4f = quat<float, 4>;
 
 [[deprecated]] constexpr auto identity_quat4f = quat4f{0, 0, 0, 1};
 
+template <typename T1, typename T2, size_t N, typename Func,
+    typename T = result_t<Func, T1, T2>>
+constexpr kernel vec<T, N> map(
+    const quat<T1, N>& a, const quat<T2, N>& b, Func&& func) {
+  if constexpr (N == 1) {
+    return {func(a[0], b[0])};
+  } else if constexpr (N == 2) {
+    return {func(a[0], b[0]), func(a[1], b[1])};
+  } else if constexpr (N == 3) {
+    return {func(a[0], b[0]), func(a[1], b[1]), func(a[2], b[2])};
+  } else if constexpr (N == 4) {
+    return {
+        func(a[0], b[0]), func(a[1], b[1]), func(a[2], b[2]), func(a[3], b[3])};
+  }
+}
+template <typename T1, typename T2, size_t N, typename Func,
+    typename T = result_t<Func, T1, T2>>
+constexpr kernel quat<T, N> map(const quat<T1, N>& a, T2 b, Func&& func) {
+  if constexpr (N == 1) {
+    return {func(a[0], b)};
+  } else if constexpr (N == 2) {
+    return {func(a[0], b), func(a[1], b)};
+  } else if constexpr (N == 3) {
+    return {func(a[0], b), func(a[1], b), func(a[2], b)};
+  } else if constexpr (N == 4) {
+    return {func(a[0], b), func(a[1], b), func(a[2], b), func(a[3], b)};
+  }
+}
+
 // Quaternion operations
 template <typename T>
 constexpr kernel quat<T, 4> operator+(
     const quat<T, 4>& a, const quat<T, 4>& b) {
-  return {a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w};
+  return map(a, b, [](T a, T b) { return a + b; });
 }
 template <typename T>
 constexpr kernel quat<T, 4> operator*(const quat<T, 4>& a, T b) {
-  return {a.x * b, a.y * b, a.z * b, a.w * b};
+  return map(a, b, [](T a, T b) { return a * b; });
 }
 template <typename T>
 constexpr kernel quat<T, 4> operator/(const quat<T, 4>& a, T b) {
-  return {a.x / b, a.y / b, a.z / b, a.w / b};
+  return map(a, b, [](T a, T b) { return a / b; });
 }
 template <typename T>
 constexpr kernel quat<T, 4> operator*(
     const quat<T, 4>& a, const quat<T, 4>& b) {
-  return {a.x * b.w + a.w * b.x + a.y * b.w - a.z * b.y,
-      a.y * b.w + a.w * b.y + a.z * b.x - a.x * b.z,
-      a.z * b.w + a.w * b.z + a.x * b.y - a.y * b.x,
-      a.w * b.w - a.x * b.x - a.y * b.y - a.z * b.z};
+  return {a.x() * b.w() + a.w() * b.x() + a.y() * b.w() - a.z() * b.y(),
+      a.y() * b.w() + a.w() * b.y() + a.z() * b.x() - a.x() * b.z(),
+      a.z() * b.w() + a.w() * b.z() + a.x() * b.y() - a.y() * b.x(),
+      a.w() * b.w() - a.x() * b.x() - a.y() * b.y() - a.z() * b.z()};
 }
 
 // Quaternion operations
@@ -1843,7 +1908,7 @@ constexpr kernel quat<T, 4> normalize(const quat<T, 4>& a) {
 }
 template <typename T>
 constexpr kernel quat<T, 4> conjugate(const quat<T, 4>& a) {
-  return {-a.x, -a.y, -a.z, a.w};
+  return {-a.xyz(), a.w()};
 }
 template <typename T>
 constexpr kernel quat<T, 4> inverse(const quat<T, 4>& a) {
