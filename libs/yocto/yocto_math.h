@@ -646,21 +646,21 @@ constexpr kernel bool fold_or(const vec<bool, N>& a) {
 }
 
 // Vector comparison operations.
-template <typename T1, typename T2, index_t N>
-constexpr kernel bool operator==(const vec<T1, N>& a, const vec<T2, N>& b) {
-  return fold_and(map(a, b, [](T1 a, T2 b) { return a == b; }));
+constexpr kernel bool operator==(num_vec auto const& a, num_vec auto const& b) {
+  return fold_and(
+      map(a, b, [](number auto a, number auto b) { return a == b; }));
 }
-template <typename T1, typename T2, index_t N>
-constexpr kernel bool operator==(const vec<T1, N>& a, T2 b) {
-  return fold_and(map(a, b, [](T1 a, T2 b) { return a == b; }));
+constexpr kernel bool operator==(num_vec auto const& a, number auto b) {
+  return fold_and(
+      map(a, b, [](number auto a, number auto b) { return a == b; }));
 }
-template <typename T1, typename T2, index_t N>
-constexpr kernel bool operator!=(const vec<T1, N>& a, const vec<T2, N>& b) {
-  return fold_or(map(a, b, [](T1 a, T2 b) { return a != b; }));
+constexpr kernel bool operator!=(num_vec auto const& a, num_vec auto const& b) {
+  return fold_or(
+      map(a, b, [](number auto a, number auto b) { return a != b; }));
 }
-template <typename T1, typename T2, index_t N>
-constexpr kernel bool operator!=(const vec<T1, N>& a, T2 b) {
-  return fold_or(map(a, b, [](T1 a, T2 b) { return a != b; }));
+constexpr kernel bool operator!=(num_vec auto const& a, number auto b) {
+  return fold_or(
+      map(a, b, [](number auto a, number auto b) { return a != b; }));
 }
 
 // Vector operations.
