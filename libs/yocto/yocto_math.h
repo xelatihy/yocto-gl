@@ -85,6 +85,10 @@ concept number = std::is_integral_v<T> || std::is_floating_point_v<T>;
 template <size_t N, typename... Ts>
 concept same_size = (sizeof...(Ts) == N);
 
+// Vectors
+template <typename T>
+struct is_vec : std::bool_constant<false> {};
+
 // Helpers
 template <index_t... Is>
 using index_seq = std::integer_sequence<index_t, Is...>;
@@ -313,6 +317,14 @@ struct vec<T, 1> {
   constexpr kernel T&       x() { return d[0]; }
   constexpr kernel const T& x() const { return d[0]; }
 };
+
+// Deduction guides
+template <number... Args>
+vec(Args...) -> vec<common_t<Args...>, sizeof...(Args)>;
+
+// Vectors
+template <typename T, size_t N>
+struct is_vec<vec<T, N>> : std::bool_constant<true> {};
 
 // Vector aliases
 using vec1f = vec<float, 1>;
