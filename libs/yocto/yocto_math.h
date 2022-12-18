@@ -70,9 +70,7 @@ using std::pair;
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-#define YOCTO_CONCEPTS 0
-
-#if YOCTO_CONCEPTS
+#ifndef __CUDACC__
 
 template <typename T>
 concept integral = std::is_integral_v<T>;
@@ -289,18 +287,14 @@ struct vec {
   constexpr kernel explicit vec(T v) {
     for (auto& e : d) e = v;
   }
+  template <number... Ts>
+    requires same_size<N, Ts...>
+  constexpr kernel vec(Ts... v) : d{(T)v...} {}
 #else
   constexpr kernel explicit vec(T v) : vec(std::make_index_sequence<N>(), v) {}
   template <size_t... Is>
   constexpr kernel explicit vec(std::index_sequence<Is...>, T v)
       : d{(Is, v)...} {}
-#endif
-
-#if YOCTO_CONCEPTS
-  template <number... Ts>
-    requires same_size<N, Ts...>
-  constexpr kernel vec(Ts... v) : d{(T)v...} {}
-#else
   template <typename... Ts, typename = std::enable_if_t<sizeof...(Ts) == N>>
   constexpr kernel vec(Ts... v) : d{(T)v...} {}
 #endif
