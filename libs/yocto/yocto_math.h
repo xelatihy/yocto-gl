@@ -74,43 +74,64 @@ namespace yocto {
 // Index type
 using index_t = std::size_t;
 
-// Type traits
+// Vec type traits
 template <typename T>
-struct is_vec : std::bool_constant<false> {};
+struct is_vec_s : std::bool_constant<false> {};
 template <typename T>
-constexpr auto is_vec_v = is_vec<T>::value;
+constexpr auto is_vec = is_vec_s<T>::value;
 template <typename T>
-struct vec_size : std::integral_constant<index_t, 0> {};
+struct vec_size_s : std::integral_constant<index_t, 0> {};
 template <typename T>
-constexpr auto vec_size_v = vec_size<T>::value;
+constexpr auto vec_size = vec_size_s<T>::value;
 template <typename T>
-struct vec_etype {
+struct vec_etype_s {
   using type = void;
 };
 template <typename... T>
-using vec_etype_t = typename vec_etype<T...>::type;
+using vec_etype = typename vec_etype_s<T...>::type;
+
+// Number type traits
+template <typename T>
+constexpr auto is_integral = std::is_integral_v<T>;
+template <typename T>
+constexpr auto is_real = std::is_floating_point_v<T>;
+template <typename T>
+constexpr auto is_number = std::is_integral_v<T> || std::is_floating_point_v<T>;
+template <typename T>
+constexpr auto is_bool = std::is_same_v<T, bool>;
+
+// Vector type traits
+template <typename T>
+constexpr auto is_any_vec = is_vec<T>;
+template <typename T>
+constexpr auto is_int_vec = is_vec<T> && is_integral<vec_etype<T>>;
+template <typename T>
+constexpr auto is_real_vec = is_vec<T> && is_real<vec_etype<T>>;
+template <typename T>
+constexpr auto is_num_vec = is_vec<T> && is_number<vec_etype<T>>;
+template <typename T>
+constexpr auto is_bool_vec = is_vec<T> && is_bool<vec_etype<T>>;
 
 // Concepts
 template <typename T>
-concept integral = std::is_integral_v<T>;
+concept integral = is_integral<T>;
 template <typename T>
-concept real = std::is_floating_point_v<T>;
+concept real = is_real<T>;
 template <typename T>
-concept number = std::is_integral_v<T> || std::is_floating_point_v<T>;
+concept number = is_number<T>;
 
 template <typename T>
 struct vec_vec : std::bool_constant<false> {};
 template <typename T>
-concept any_vec = is_vec_v<T>;
+concept any_vec = is_any_vec<T>;
 template <typename T>
-concept int_vec = is_vec_v<T> && std::is_integral_v<vec_etype_t<T>>;
+concept int_vec = is_int_vec<T>;
 template <typename T>
-concept real_vec = is_vec_v<T> && std::is_floating_point_v<vec_etype_t<T>>;
+concept real_vec = is_real_vec<T>;
 template <typename T>
-concept num_vec = is_vec_v<T> && (std::is_integral_v<vec_etype_t<T>> ||
-                                     std::is_floating_point_v<vec_etype_t<T>>);
+concept num_vec = is_num_vec<T>;
 template <typename T>
-concept bool_vec = is_vec_v<T> && std::is_same_v<vec_etype_t<T>, bool>;
+concept bool_vec = is_bool_vec<T>;
 
 template <index_t N, typename... Ts>
 concept same_size = (sizeof...(Ts) == N);
@@ -372,11 +393,11 @@ vec(Args...) -> vec<common_t<Args...>, sizeof...(Args)>;
 
 // Vectors
 template <typename T, index_t N>
-struct is_vec<vec<T, N>> : std::bool_constant<true> {};
+struct is_vec_s<vec<T, N>> : std::bool_constant<true> {};
 template <typename T, index_t N>
-struct vec_size<vec<T, N>> : std::integral_constant<index_t, N> {};
+struct vec_size_s<vec<T, N>> : std::integral_constant<index_t, N> {};
 template <typename T, index_t N>
-struct vec_etype<vec<T, N>> {
+struct vec_etype_s<vec<T, N>> {
   using type = T;
 };
 
