@@ -1001,22 +1001,10 @@ constexpr kernel bool isfinite(num_vec auto const& a) {
 }
 
 // Conversion between ranges
-template <typename T>
-constexpr kernel T unit_to_uv(T a) {
-  return (a + 1) / 2;
-}
-template <typename T, index_t N>
-constexpr kernel vec<T, N> unit_to_uv(const vec<T, N>& a) {
-  return (a + 1) / 2;
-}
-template <typename T>
-constexpr kernel T uv_to_unit(T a) {
-  return a * 2 - 1;
-}
-template <typename T, index_t N>
-constexpr kernel vec<T, N> uv_to_unit(const vec<T, N>& a) {
-  return a * 2 - 1;
-}
+constexpr kernel auto unit_to_uv(number auto a) { return (a + 1) / 2; }
+constexpr kernel auto unit_to_uv(num_vec auto const& a) { return (a + 1) / 2; }
+constexpr kernel auto uv_to_unit(number auto a) { return a * 2 - 1; }
+constexpr kernel auto uv_to_unit(num_vec auto const& a) { return a * 2 - 1; }
 
 // Conversion between coordinates
 template <typename T>
