@@ -612,106 +612,80 @@ constexpr kernel bool operator!=(const vec<T1, N>& a, T2 b) {
 
 // Vector operations.
 constexpr kernel auto operator+(num_vec auto const& a) { return a; }
-template <typename T, index_t N>
-constexpr kernel vec<T, N> operator-(const vec<T, N>& a) {
-  return map(a, [](T a) { return -a; });
+constexpr kernel auto operator-(num_vec auto const& a) {
+  return map(a, [](auto a) { return -a; });
 }
-template <typename T1, typename T2, index_t N, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, N> operator+(const vec<T1, N>& a, const vec<T2, N>& b) {
-  return map(a, b, [](T1 a, T2 b) { return a + b; });
+constexpr kernel auto operator+(num_vec auto const& a, num_vec auto const& b) {
+  return map(a, b, [](auto a, auto b) { return a + b; });
 }
-template <typename T1, typename T2, index_t N, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, N> operator+(const vec<T1, N>& a, T2 b) {
-  return map(a, b, [](T1 a, T2 b) { return a + b; });
+constexpr kernel auto operator+(num_vec auto const& a, number auto b) {
+  return map(a, b, [](auto a, auto b) { return a + b; });
 }
-template <typename T1, typename T2, index_t N, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, N> operator+(T1 a, const vec<T2, N>& b) {
-  return map(a, b, [](T1 a, T2 b) { return a + b; });
+constexpr kernel auto operator+(number auto a, num_vec auto const& b) {
+  return map(a, b, [](auto a, auto b) { return a + b; });
 }
-template <typename T1, typename T2, index_t N, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, N> operator-(const vec<T1, N>& a, const vec<T2, N>& b) {
-  return map(a, b, [](T1 a, T2 b) { return a - b; });
+constexpr kernel auto operator-(num_vec auto const& a, num_vec auto const& b) {
+  return map(a, b, [](auto a, auto b) { return a - b; });
 }
-template <typename T1, typename T2, index_t N, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, N> operator-(const vec<T1, N>& a, T2 b) {
-  return map(a, b, [](T1 a, T2 b) { return a - b; });
+constexpr kernel auto operator-(num_vec auto const& a, number auto b) {
+  return map(a, b, [](auto a, auto b) { return a - b; });
 }
-template <typename T1, typename T2, index_t N, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, N> operator-(T1 a, const vec<T2, N>& b) {
-  return map(a, b, [](T1 a, T2 b) { return a - b; });
+constexpr kernel auto operator-(number auto a, num_vec auto const& b) {
+  return map(a, b, [](auto a, auto b) { return a - b; });
 }
-template <typename T1, typename T2, index_t N, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, N> operator*(const vec<T1, N>& a, const vec<T2, N>& b) {
-  return map(a, b, [](T1 a, T2 b) { return a * b; });
+constexpr kernel auto operator*(num_vec auto const& a, num_vec auto const& b) {
+  return map(a, b, [](auto a, auto b) { return a * b; });
 }
-template <typename T1, typename T2, index_t N, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, N> operator*(const vec<T1, N>& a, T2 b) {
-  return map(a, b, [](T1 a, T2 b) { return a * b; });
+constexpr kernel auto operator*(num_vec auto const& a, number auto b) {
+  return map(a, b, [](auto a, auto b) { return a * b; });
 }
-template <typename T1, typename T2, index_t N, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, N> operator*(T1 a, const vec<T2, N>& b) {
-  return map(a, b, [](T1 a, T2 b) { return a * b; });
+constexpr kernel auto operator*(number auto a, num_vec auto const& b) {
+  return map(a, b, [](auto a, auto b) { return a * b; });
 }
-template <typename T1, typename T2, index_t N, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, N> operator/(const vec<T1, N>& a, const vec<T2, N>& b) {
-  return map(a, b, [](T1 a, T2 b) { return a / b; });
+constexpr kernel auto operator/(num_vec auto const& a, num_vec auto const& b) {
+  return map(a, b, [](auto a, auto b) { return a / b; });
 }
-template <typename T1, typename T2, index_t N, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, N> operator/(const vec<T1, N>& a, T2 b) {
-  return map(a, b, [](T1 a, T2 b) { return a / b; });
+constexpr kernel auto operator/(num_vec auto const& a, number auto b) {
+  return map(a, b, [](auto a, auto b) { return a / b; });
 }
-template <typename T1, typename T2, index_t N, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, N> operator/(T1 a, const vec<T2, N>& b) {
-  return map(a, b, [](T1 a, T2 b) { return a / b; });
+constexpr kernel auto operator/(number auto a, num_vec auto const& b) {
+  return map(a, b, [](auto a, auto b) { return a / b; });
 }
-template <typename T1, typename T2, index_t N, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, N> operator%(const vec<T1, N>& a, const vec<T2, N>& b) {
-  return map(a, b, [](T1 a, T2 b) { return a % b; });
+constexpr kernel auto operator%(int_vec auto const& a, int_vec auto const& b) {
+  return map(a, b, [](auto a, auto b) { return a % b; });
 }
-template <typename T1, typename T2, index_t N, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, N> operator%(const vec<T1, N>& a, T2 b) {
-  return map(a, b, [](T1 a, T2 b) { return a % b; });
+constexpr kernel auto operator%(int_vec auto const& a, integral auto b) {
+  return map(a, b, [](auto a, auto b) { return a % b; });
 }
-template <typename T1, typename T2, index_t N, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, N> operator%(T1 a, const vec<T2, N>& b) {
-  return map(a, b, [](T1 a, T2 b) { return a % b; });
+constexpr kernel auto operator%(number auto a, int_vec auto const& b) {
+  return map(a, b, [](auto a, auto b) { return a % b; });
 }
-template <typename T1, typename T2, index_t N, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, N> operator^(const vec<T1, N>& a, const vec<T2, N>& b) {
-  return map(a, b, [](T1 a, T2 b) { return a ^ b; });
+constexpr kernel auto operator^(int_vec auto const& a, int_vec auto const& b) {
+  return map(a, b, [](auto a, auto b) { return a ^ b; });
 }
-template <typename T1, typename T2, index_t N, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, N> operator^(const vec<T1, N>& a, T2 b) {
-  return map(a, b, [](T1 a, T2 b) { return a ^ b; });
+constexpr kernel auto operator^(int_vec auto const& a, integral auto b) {
+  return map(a, b, [](auto a, auto b) { return a ^ b; });
 }
-template <typename T1, typename T2, index_t N, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, N> operator^(T1 a, const vec<T2, N>& b) {
-  return map(a, b, [](T1 a, T2 b) { return a ^ b; });
+constexpr kernel auto operator^(integral auto a, int_vec auto const& b) {
+  return map(a, b, [](auto a, auto b) { return a ^ b; });
 }
-template <typename T1, typename T2, index_t N, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, N> operator>>(
-    const vec<T1, N>& a, const vec<T2, N>& b) {
-  return map(a, b, [](T1 a, T2 b) { return a >> b; });
+constexpr kernel auto operator>>(int_vec auto const& a, int_vec auto const& b) {
+  return map(a, b, [](auto a, auto b) { return a >> b; });
 }
-template <typename T1, typename T2, index_t N, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, N> operator>>(const vec<T1, N>& a, T2 b) {
-  return map(a, b, [](T1 a, T2 b) { return a >> b; });
+constexpr kernel auto operator>>(int_vec auto const& a, integral auto b) {
+  return map(a, b, [](auto a, auto b) { return a >> b; });
 }
-template <typename T1, typename T2, index_t N, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, N> operator>>(T1 a, const vec<T2, N>& b) {
-  return map(a, b, [](T1 a, T2 b) { return a >> b; });
+constexpr kernel auto operator>>(integral auto a, int_vec auto const& b) {
+  return map(a, b, [](auto a, auto b) { return a >> b; });
 }
-template <typename T, index_t N>
-constexpr kernel vec<T, N> operator>>(const vec<T, N>& a, const vec<T, N>& b) {
-  return map(a, b, [](T a, T b) { return a << b; });
+constexpr kernel auto operator<<(int_vec auto const& a, int_vec auto const& b) {
+  return map(a, b, [](auto a, auto b) { return a << b; });
 }
-template <typename T, index_t N>
-constexpr kernel vec<T, N> operator>>(const vec<T, N>& a, T b) {
-  return map(a, b, [](T a, T b) { return a << b; });
+constexpr kernel auto operator<<(int_vec auto const& a, integral auto b) {
+  return map(a, b, [](auto a, auto b) { return a << b; });
 }
-template <typename T, index_t N>
-constexpr kernel vec<T, N> operator<<(T a, const vec<T, N>& b) {
-  return map(a, b, [](T a, T b) { return a << b; });
+constexpr kernel auto operator<<(integral auto a, int_vec auto const& b) {
+  return map(a, b, [](auto a, auto b) { return a << b; });
 }
 
 // Vector assignments
