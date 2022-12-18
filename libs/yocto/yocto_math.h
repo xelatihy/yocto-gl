@@ -70,6 +70,10 @@ using std::pair;
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+#define YOCTO_CONCEPTS 0
+
+#if YOCTO_CONCEPTS
+
 template <typename T>
 concept integral = std::is_integral_v<T>;
 template <typename T>
@@ -79,6 +83,8 @@ concept number = std::is_integral_v<T> || std::is_floating_point_v<T>;
 
 template <size_t N, typename... Ts>
 concept same_size = (sizeof...(Ts) == N);
+
+#endif
 
 }  // namespace yocto
 
@@ -281,13 +287,23 @@ struct vec {
   constexpr kernel explicit vec(T v) {
     for (auto& e : d) e = v;
   }
+
+#if YOCTO_CONCEPTS
   template <number... Ts>
     requires same_size<N, Ts...>
   constexpr kernel vec(Ts... v) : d{(T)v...} {}
+#else
+  template <typename... Ts, typename = std::enable_if_t<sizeof...(Ts) == N>>
+  constexpr kernel vec(Ts... v) : d{(T)v...} {}
+#endif
+
   constexpr kernel vec(const vec<T, N - 1>& first, T last) {
     for (auto idx = 0; idx < N - 1; idx++) d[idx] = (T)first.d[idx];
     d[N - 1] = last;
   }
+
+  constexpr kernel vec(const vec& v) = default;
+  constexpr kernel vec& operator=(const vec& v) = default;
 
   template <typename T1>
   constexpr kernel explicit(!std::is_convertible_v<T1, T>)
@@ -1033,7 +1049,7 @@ constexpr kernel vec<T, 2> cartesiany_to_sphericaluv(const vec<T, 3>& w) {
 #ifndef __CUDACC__
   auto [wx, wy, wz] = w;
 #else
-  auto wx = w[0], wy = w[1], wz = w[2];
+  auto             wx = w[0], wy = w[1], wz = w[2];
 #endif
   auto uv = vec<T, 2>{atan2(wz, wx), acos(clamp(wy, -1, 1))} /
             vec<T, 2>{2 * (T)pi, (T)pi};
