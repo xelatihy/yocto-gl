@@ -689,44 +689,34 @@ constexpr kernel auto operator<<(integral auto a, int_vec auto const& b) {
 }
 
 // Vector assignments
-template <typename T, typename T1, index_t N>
-constexpr kernel vec<T, N>& operator+=(vec<T, N>& a, const vec<T1, N>& b) {
+constexpr kernel auto& operator+=(num_vec auto& a, num_vec auto const& b) {
   return a = a + b;
 }
-template <typename T, typename T1, index_t N>
-constexpr kernel vec<T, N>& operator+=(vec<T, N>& a, T1 b) {
+constexpr kernel auto& operator+=(num_vec auto& a, number auto b) {
   return a = a + b;
 }
-template <typename T, typename T1, index_t N>
-constexpr kernel vec<T, N>& operator-=(vec<T, N>& a, const vec<T1, N>& b) {
+constexpr kernel auto& operator-=(num_vec auto& a, num_vec auto const& b) {
   return a = a - b;
 }
-template <typename T, typename T1, index_t N>
-constexpr kernel vec<T, N>& operator-=(vec<T, N>& a, T1 b) {
+constexpr kernel auto& operator-=(num_vec auto& a, number auto b) {
   return a = a - b;
 }
-template <typename T, typename T1, index_t N>
-constexpr kernel vec<T, N>& operator*=(vec<T, N>& a, const vec<T1, N>& b) {
+constexpr kernel auto& operator*=(num_vec auto& a, num_vec auto const& b) {
   return a = a * b;
 }
-template <typename T, typename T1, index_t N>
-constexpr kernel vec<T, N>& operator*=(vec<T, N>& a, T1 b) {
+constexpr kernel auto& operator*=(num_vec auto& a, number auto b) {
   return a = a * b;
 }
-template <typename T, typename T1, index_t N>
-constexpr kernel vec<T, N>& operator/=(vec<T, N>& a, const vec<T1, N>& b) {
+constexpr kernel auto& operator/=(num_vec auto& a, num_vec auto const& b) {
   return a = a / b;
 }
-template <typename T, typename T1, index_t N>
-constexpr kernel vec<T, N>& operator/=(vec<T, N>& a, T1 b) {
+constexpr kernel auto& operator/=(num_vec auto& a, number auto b) {
   return a = a / b;
 }
-template <typename T, typename T1, index_t N>
-constexpr kernel vec<T, N>& operator%=(vec<T, N>& a, const vec<T1, N>& b) {
+constexpr kernel auto& operator%=(int_vec auto& a, int_vec auto const& b) {
   return a = a % b;
 }
-template <typename T, typename T1, index_t N>
-constexpr kernel vec<T, N>& operator%=(vec<T, N>& a, T1 b) {
+constexpr kernel auto& operator%=(int_vec auto& a, integral auto b) {
   return a = a % b;
 }
 
