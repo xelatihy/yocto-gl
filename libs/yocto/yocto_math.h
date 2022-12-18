@@ -1032,23 +1032,19 @@ constexpr kernel auto sphericaluv_to_cartesiany(num_vec2 auto const& uv) {
 
 // Quaternion operations represented as xi + yj + zk + w
 // const auto identity_quat4f = vec4f{0, 0, 0, 1};
-template <typename T1, typename T2, index_t N, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, 4> quat_mul(const vec<T1, 4>& a, T2 b) {
-  return map(a, b, [](T1 a, T2 b) { return a * b; });
+constexpr kernel auto quat_mul(num_vec4 auto const a, number auto b) {
+  return map(a, b, [](number auto a, number auto b) { return a * b; });
 }
-template <typename T1, typename T2, index_t N, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, 4> quat_mul(const vec<T1, 4>& a, const vec<T2, 4>& b) {
-  return {a.x() * b.w() + a.w() * b.x() + a.y() * b.w() - a.z() * b.y(),
+constexpr kernel auto quat_mul(num_vec4 auto const a, num_vec4 auto const& b) {
+  return vec{a.x() * b.w() + a.w() * b.x() + a.y() * b.w() - a.z() * b.y(),
       a.y() * b.w() + a.w() * b.y() + a.z() * b.x() - a.x() * b.z(),
       a.z() * b.w() + a.w() * b.z() + a.x() * b.y() - a.y() * b.x(),
       a.w() * b.w() - a.x() * b.x() - a.y() * b.y() - a.z() * b.z()};
 }
-template <typename T>
-constexpr kernel vec<T, 4> quat_conjugate(const vec<T, 4>& a) {
-  return {-xyz(a), w(a)};
+constexpr kernel auto quat_conjugate(num_vec4 auto const& a) {
+  return vec{-xyz(a), w(a)};
 }
-template <typename T>
-constexpr kernel vec<T, 4> quat_inverse(const vec<T, 4>& a) {
+constexpr kernel auto quat_inverse(num_vec4 auto const a) {
   return quat_conjugate(a) / dot(a, a);
 }
 
