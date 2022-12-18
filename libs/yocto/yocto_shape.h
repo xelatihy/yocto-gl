@@ -369,7 +369,7 @@ pair<vector<vec3f>, vector<vec3f>> skin_vertices(const vector<vec3f>& positions,
 // Apply skinning as specified in Khronos glTF.
 pair<vector<vec3f>, vector<vec3f>> skin_matrices(const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec4f>& weights,
-    const vector<vec4i>& joints, const vector<mat4f>& xforms);
+    const vector<vec4i>& joints, const vector<mat4x4f>& xforms);
 // Update skinning
 void skin_vertices(vector<vec3f>& skinned_positions,
     vector<vec3f>& skinned_normals, const vector<vec3f>& positions,
@@ -378,7 +378,7 @@ void skin_vertices(vector<vec3f>& skinned_positions,
 void skin_matrices(vector<vec3f>& skinned_positions,
     vector<vec3f>& skinned_normals, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec4f>& weights,
-    const vector<vec4i>& joints, const vector<mat4f>& xforms);
+    const vector<vec4i>& joints, const vector<mat4x4f>& xforms);
 
 }  // namespace yocto
 

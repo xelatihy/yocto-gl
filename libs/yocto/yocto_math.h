@@ -1236,10 +1236,6 @@ struct mat<T, N, 4> {
 #endif
 
 // Matrix aliases
-using mat1f   = mat<float, 1, 1>;
-using mat2f   = mat<float, 2, 2>;
-using mat3f   = mat<float, 3, 3>;
-using mat4f   = mat<float, 4, 4>;
 using mat1x1f = mat<float, 1, 1>;
 using mat2x2f = mat<float, 2, 2>;
 using mat3x3f = mat<float, 3, 3>;

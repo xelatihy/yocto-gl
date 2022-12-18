@@ -1732,7 +1732,7 @@ pair<vector<vec3f>, vector<vec3f>> skin_vertices(const vector<vec3f>& positions,
 // Apply skinning as specified in Khronos glTF
 pair<vector<vec3f>, vector<vec3f>> skin_matrices(const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec4f>& weights,
-    const vector<vec4i>& joints, const vector<mat4f>& xforms) {
+    const vector<vec4i>& joints, const vector<mat4x4f>& xforms) {
   auto skinned_positions = vector<vec3f>{positions.size()};
   auto skinned_normals   = vector<vec3f>{positions.size()};
   for (auto i : range(positions.size())) {
@@ -1774,7 +1774,7 @@ void skin_vertices(vector<vec3f>& skinned_positions,
 void skin_matrices(vector<vec3f>& skinned_positions,
     vector<vec3f>& skinned_normals, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec4f>& weights,
-    const vector<vec4i>& joints, const vector<mat4f>& xforms) {
+    const vector<vec4i>& joints, const vector<mat4x4f>& xforms) {
   if (skinned_positions.size() != positions.size() ||
       skinned_normals.size() != normals.size()) {
     throw std::out_of_range("arrays should be the same size");

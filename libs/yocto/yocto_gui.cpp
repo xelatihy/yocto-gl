@@ -1235,7 +1235,7 @@ inline void bind_uniform(int loc, vec2i v) { glUniform2iv(loc, 1, &v[0]); }
 inline void bind_uniform(int loc, vec3i v) { glUniform3iv(loc, 1, &v[0]); }
 inline void bind_uniform(int loc, vec4i v) { glUniform4iv(loc, 1, &v[0]); }
 inline void bind_uniform(int loc, bool v) { glUniform1i(loc, v ? 1 : 0); }
-inline void bind_uniform(int loc, const mat4f& v) {
+inline void bind_uniform(int loc, const mat4x4f& v) {
   glUniformMatrix4fv(loc, 1, false, &v[0][0]);
 }
 template <typename T>

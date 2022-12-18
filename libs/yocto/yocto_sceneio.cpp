@@ -386,13 +386,13 @@ inline void to_json(json_value& json, const frame2f& value) {
 inline void to_json(json_value& json, const frame3f& value) {
   nlohmann::to_json(json, (const array<float, 12>&)value);
 }
-inline void to_json(json_value& json, const mat2f& value) {
+inline void to_json(json_value& json, const mat2x2f& value) {
   nlohmann::to_json(json, (const array<float, 4>&)value);
 }
-inline void to_json(json_value& json, const mat3f& value) {
+inline void to_json(json_value& json, const mat3x3f& value) {
   nlohmann::to_json(json, (const array<float, 9>&)value);
 }
-inline void to_json(json_value& json, const mat4f& value) {
+inline void to_json(json_value& json, const mat4x4f& value) {
   nlohmann::to_json(json, (const array<float, 16>&)value);
 }
 inline void from_json(const json_value& json, vec2f& value) {
@@ -410,13 +410,13 @@ inline void from_json(const json_value& json, frame2f& value) {
 inline void from_json(const json_value& json, frame3f& value) {
   nlohmann::from_json(json, (array<float, 12>&)value);
 }
-inline void from_json(const json_value& json, mat2f& value) {
+inline void from_json(const json_value& json, mat2x2f& value) {
   nlohmann::from_json(json, (array<float, 4>&)value);
 }
-inline void from_json(const json_value& json, mat3f& value) {
+inline void from_json(const json_value& json, mat3x3f& value) {
   nlohmann::from_json(json, (array<float, 9>&)value);
 }
-inline void from_json(const json_value& json, mat4f& value) {
+inline void from_json(const json_value& json, mat4x4f& value) {
   nlohmann::from_json(json, (array<float, 16>&)value);
 }
 
@@ -2473,7 +2473,7 @@ static void load_json_scene_version40(const string& filename,
   };
   auto get_om3 = [](const json_value& json, const string& key, auto& value) {
     auto valuea = json.value(key, (array<float, 9>&)value);
-    value       = *(mat3f*)&valuea;
+    value       = *(mat3x3f*)&valuea;
   };
 
   // parse json reference
@@ -2578,7 +2578,7 @@ static void load_json_scene_version40(const string& filename,
         get_opt(element, "focus", camera.focus);
         get_opt(element, "aperture", camera.aperture);
         if (element.contains("lookat")) {
-          auto lookat = mat3f{};
+          auto lookat = mat3x3f{};
           get_om3(element, "lookat", lookat);
           auto from = lookat[0], to = lookat[1], up = lookat[2];
           camera.focus = length(from - to);
@@ -2594,7 +2594,7 @@ static void load_json_scene_version40(const string& filename,
         get_opt(element, "emission", environment.emission);
         get_tex(element, "emission_tex", environment.emission_tex);
         if (element.contains("lookat")) {
-          auto lookat = mat3f{};
+          auto lookat = mat3x3f{};
           get_om3(element, "lookat", lookat);
           auto from = lookat[0], to = lookat[1], up = lookat[2];
           environment.frame = lookat_frame(from, to, up, false);
@@ -2633,7 +2633,7 @@ static void load_json_scene_version40(const string& filename,
         get_shp(element, "shape", instance.shape);
         get_mat(element, "material", instance.material);
         if (element.contains("lookat")) {
-          auto lookat = mat3f{};
+          auto lookat = mat3x3f{};
           get_om3(element, "lookat", lookat);
           auto from = lookat[0], to = lookat[1], up = lookat[2];
           instance.frame = lookat_frame(from, to, up, false);
@@ -2648,7 +2648,7 @@ static void load_json_scene_version40(const string& filename,
         get_shp(element, "shape", instance.shape);
         get_mat(element, "material", instance.material);
         if (element.contains("lookat")) {
-          auto lookat = mat3f{};
+          auto lookat = mat3x3f{};
           get_om3(element, "lookat", lookat);
           auto from = lookat[0], to = lookat[1], up = lookat[2];
           instance.frame = lookat_frame(from, to, up, false);
@@ -2831,7 +2831,7 @@ static void load_json_scene_version41(const string& filename, json_value& json,
         get_opt(element, "focus", camera.focus);
         get_opt(element, "aperture", camera.aperture);
         if (element.contains("lookat")) {
-          auto lookat = mat3f{};
+          auto lookat = mat3x3f{};
           get_opt(element, "lookat", lookat);
           auto from = lookat[0], to = lookat[1], up = lookat[2];
           camera.focus = length(from - to);
@@ -2931,7 +2931,7 @@ static void load_json_scene_version41(const string& filename, json_value& json,
         get_ref(element, "shape", instance.shape, shape_map);
         get_ref(element, "material", instance.material, material_map);
         if (element.contains("lookat")) {
-          auto lookat = mat3f{};
+          auto lookat = mat3x3f{};
           get_opt(element, "lookat", lookat);
           auto from = lookat[0], to = lookat[1], up = lookat[2];
           instance.frame = lookat_frame(from, to, up, false);
@@ -2949,7 +2949,7 @@ static void load_json_scene_version41(const string& filename, json_value& json,
         get_opt(element, "emission", environment.emission);
         get_ref(element, "emission_tex", environment.emission_tex, texture_map);
         if (element.contains("lookat")) {
-          auto lookat = mat3f{};
+          auto lookat = mat3x3f{};
           get_opt(element, "lookat", lookat);
           auto from = lookat[0], to = lookat[1], up = lookat[2];
           environment.frame = lookat_frame(from, to, up, false);
@@ -3065,7 +3065,7 @@ static void load_json_scene(
         get_opt(element, "focus", camera.focus);
         get_opt(element, "aperture", camera.aperture);
         if (element.contains("lookat")) {
-          auto lookat = mat3f{};
+          auto lookat = mat3x3f{};
           get_opt(element, "lookat", lookat);
           auto from = lookat[0], to = lookat[1], up = lookat[2];
           camera.focus = length(from - to);
@@ -3158,7 +3158,7 @@ static void load_json_scene(
         get_opt(element, "shape", instance.shape);
         get_opt(element, "material", instance.material);
         if (element.contains("lookat")) {
-          auto lookat = mat3f{};
+          auto lookat = mat3x3f{};
           get_opt(element, "lookat", lookat);
           auto from = lookat[0], to = lookat[1], up = lookat[2];
           instance.frame = lookat_frame(from, to, up, true);
@@ -3177,7 +3177,7 @@ static void load_json_scene(
         get_opt(element, "emission", environment.emission);
         get_opt(element, "emission_tex", environment.emission_tex);
         if (element.contains("lookat")) {
-          auto lookat = mat3f{};
+          auto lookat = mat3x3f{};
           get_opt(element, "lookat", lookat);
           auto from = lookat[0], to = lookat[1], up = lookat[2];
           environment.frame = lookat_frame(from, to, up, true);
@@ -4101,7 +4101,7 @@ static void load_gltf_scene(
     if (gnode.camera != nullptr) {
       auto& camera = scene.cameras.emplace_back();
       camera       = cameras.at(gnode.camera - cgltf.cameras);
-      auto xform   = mat4f{
+      auto xform   = mat4x4f{
             {1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
       cgltf_node_transform_world(&gnode, yocto::data(xform));
       camera.frame = mat_to_frame(xform);
@@ -4110,7 +4110,7 @@ static void load_gltf_scene(
       for (auto& primitive : mesh_primitives.at(gnode.mesh - cgltf.meshes)) {
         auto& instance = scene.instances.emplace_back();
         instance       = primitive;
-        auto xform     = mat4f{
+        auto xform     = mat4x4f{
                 {1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
         cgltf_node_transform_world(&gnode, yocto::data(xform));
         instance.frame = mat_to_frame(xform);
@@ -4421,7 +4421,7 @@ static void save_gltf_scene(
       auto& gnode  = cgltf.nodes[idx];
       gnode.name   = copy_string(get_camera_name(scene, camera));
       auto xform   = frame_to_mat(camera.frame);
-      memcpy(gnode.matrix, &xform, sizeof(mat4f));
+      memcpy(gnode.matrix, &xform, sizeof(mat4x4f));
       gnode.has_matrix = true;
       gnode.camera     = cgltf.cameras + idx;
     }
@@ -4430,7 +4430,7 @@ static void save_gltf_scene(
       auto& gnode    = cgltf.nodes[idx + scene.cameras.size()];
       gnode.name     = copy_string(get_instance_name(scene, instance));
       auto xform     = frame_to_mat(instance.frame);
-      memcpy(gnode.matrix, &xform, sizeof(mat4f));
+      memcpy(gnode.matrix, &xform, sizeof(mat4x4f));
       gnode.has_matrix = true;
       gnode.mesh       = cgltf.meshes +
                    mesh_map.at({instance.shape, instance.material});
