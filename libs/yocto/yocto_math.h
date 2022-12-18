@@ -78,7 +78,7 @@ using index_t = std::size_t;
 template <typename T>
 struct is_vec_s : std::bool_constant<false> {};
 template <typename T>
-constexpr auto is_vec = is_vec_s<T>::value;
+constexpr auto is_vec = is_vec_s<std::remove_cvref_t<T>>::value;
 template <typename T>
 struct vec_size_s : std::integral_constant<index_t, 0> {};
 template <typename T>
@@ -88,7 +88,7 @@ struct vec_etype_s {
   using type = void;
 };
 template <typename T>
-using vec_etype = typename vec_etype_s<T>::type;
+using vec_etype = typename vec_etype_s<std::remove_cvref_t<T>>::type;
 
 // Number type traits
 template <typename T>
@@ -1007,33 +1007,27 @@ constexpr kernel auto uv_to_unit(number auto a) { return a * 2 - 1; }
 constexpr kernel auto uv_to_unit(num_vec auto const& a) { return a * 2 - 1; }
 
 // Conversion between coordinates
-template <typename T>
-constexpr kernel vec<T, 2> cartesian_to_sphericaluv(const vec<T, 3>& w) {
+constexpr kernel auto cartesian_to_sphericaluv(num_vec3 auto const& w) {
+  using T           = vec_etype<decltype(w)>;
   auto [wx, wy, wz] = w;
-  auto uv           = vec<T, 2>{atan2(wy, wx), acos(clamp(wz, -1, 1))} /
-            vec<T, 2>{2 * (T)pi, (T)pi};
+  auto uv = vec{atan2(wy, wx), acos(clamp(wz, -1, 1))} / vec{2 * (T)pi, (T)pi};
   return mod(uv, 1);
 }
-template <typename T>
-constexpr kernel vec<T, 2> cartesiany_to_sphericaluv(const vec<T, 3>& w) {
-#ifndef __CUDACC__
+constexpr kernel auto cartesiany_to_sphericaluv(num_vec3 auto const& w) {
+  using T           = vec_etype<decltype(w)>;
   auto [wx, wy, wz] = w;
-#else
-  auto wx = w[0], wy = w[1], wz = w[2];
-#endif
-  auto uv = vec<T, 2>{atan2(wz, wx), acos(clamp(wy, -1, 1))} /
-            vec<T, 2>{2 * (T)pi, (T)pi};
+  auto uv = vec{atan2(wz, wx), acos(clamp(wy, -1, 1))} / vec{2 * (T)pi, (T)pi};
   return mod(uv, 1);
 }
-template <typename T>
-constexpr kernel vec<T, 3> sphericaluv_to_cartesian(const vec<T, 2>& uv) {
-  auto [phi, theta] = uv * vec<T, 2>{2 * (T)pi, (T)pi};
-  return {cos(phi) * sin(theta), sin(phi) * sin(theta), cos(theta)};
+constexpr kernel auto sphericaluv_to_cartesian(num_vec2 auto const& uv) {
+  using T           = vec_etype<decltype(uv)>;
+  auto [phi, theta] = uv * vec{2 * (T)pi, (T)pi};
+  return vec{cos(phi) * sin(theta), sin(phi) * sin(theta), cos(theta)};
 }
-template <typename T>
-constexpr kernel vec<T, 3> sphericaluv_to_cartesiany(const vec<T, 2>& uv) {
-  auto [phi, theta] = uv * vec<T, 2>{2 * (T)pi, (T)pi};
-  return {cos(phi) * sin(theta), cos(theta), sin(phi) * sin(theta)};
+constexpr kernel auto sphericaluv_to_cartesiany(num_vec2 auto const& uv) {
+  using T           = vec_etype<decltype(uv)>;
+  auto [phi, theta] = uv * vec{2 * (T)pi, (T)pi};
+  return vec{cos(phi) * sin(theta), cos(theta), sin(phi) * sin(theta)};
 }
 
 // Quaternion operations represented as xi + yj + zk + w
