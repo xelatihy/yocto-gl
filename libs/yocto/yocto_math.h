@@ -1253,24 +1253,44 @@ constexpr kernel T* data(mat<T, N, M>& a) {
   return data(a[0]);
 }
 
+// Implementation of operations using map and fold
+template <typename T1, index_t N, index_t M, typename Func, index_t... Is,
+    typename T = result_t<Func, vec<T1, N>>>
+constexpr kernel mat<T, N, M> map(
+    index_seq<Is...>, const mat<T1, N, M>& a, Func&& func) {
+  return mat{func(a[Is])...};
+}
+template <typename T1, index_t N, index_t M, typename Func,
+    typename T = vec_etype<result_t<Func, vec<T1, N>>>>
+constexpr kernel mat<T, N, M> map(const mat<T1, N, M>& a, Func&& func) {
+  return map(indices<M>(), a, std::forward<Func>(func));
+}
+template <typename T1, typename T2, index_t N, index_t M, typename Func,
+    index_t... Is,
+    typename T = vec_etype<result_t<Func, vec<T1, N>, vec<T2, N>>>>
+constexpr kernel mat<T, N, M> map(index_seq<Is...>, const mat<T1, N, M>& a,
+    const mat<T2, N, M>& b, Func&& func) {
+  return {func(a[Is], b[Is])...};
+}
+template <typename T1, typename T2, index_t N, index_t M, typename Func,
+    typename T = vec_etype<result_t<Func, vec<T2, N>, vec<T2, N>>>>
+constexpr kernel mat<T, N, M> map(
+    const mat<T1, N, M>& a, const mat<T2, N, M>& b, Func&& func) {
+  return map(indices<M>(), a, b, std::forward<Func>(func));
+}
+
 // Matrix comparisons.
 template <typename T1, typename T2, index_t N, index_t M>
 constexpr kernel bool operator==(
     const mat<T1, N, M>& a, const mat<T2, N, M>& b) {
-  if constexpr (M == 1) {
-    return a[0] == b[0];
-  } else if constexpr (M == 2) {
-    return a[0] == b[0] && a[1] == b[1];
-  } else if constexpr (M == 3) {
-    return a[0] == b[0] && a[1] == b[1] && a[2] == b[2];
-  } else if constexpr (M == 4) {
-    return a[0] == b[0] && a[1] == b[1] && a[2] == b[2] && a[3] == b[3];
-  }
+  return fold_and(map(a, b,
+      [](num_vec auto const& a, num_vec auto const& b) { return a == b; }));
 }
 template <typename T1, typename T2, index_t N, index_t M>
 constexpr kernel bool operator!=(
     const mat<T1, N, M>& a, const mat<T2, N, M>& b) {
-  return !(a == b);
+  return fold_or(map(a, b,
+      [](num_vec auto const& a, num_vec auto const& b) { return a != b; }));
 }
 
 // Matrix operations.
@@ -1278,15 +1298,8 @@ template <typename T1, typename T2, index_t N, index_t M,
     typename T = common_t<T1, T2>>
 constexpr kernel mat<T, N, M> operator+(
     const mat<T1, N, M>& a, const mat<T2, N, M>& b) {
-  if constexpr (M == 1) {
-    return {a[0] + b[0]};
-  } else if constexpr (M == 2) {
-    return {a[0] + b[0], a[1] + b[1]};
-  } else if constexpr (M == 3) {
-    return {a[0] + b[0], a[1] + b[1], a[2] + b[2]};
-  } else if constexpr (M == 4) {
-    return {a[0] + b[0], a[1] + b[1], a[2] + b[2], a[3] + b[3]};
-  }
+  return map(
+      a, b, [](num_vec auto const& a, num_vec auto const& b) { return a + b; });
 }
 template <typename T1, typename T2, index_t N, index_t M,
     typename T = common_t<T1, T2>>
