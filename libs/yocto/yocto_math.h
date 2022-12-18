@@ -83,6 +83,12 @@ template <typename T>
 struct vec_size : std::integral_constant<index_t, 0> {};
 template <typename T>
 constexpr auto vec_size_v = vec_size<T>::value;
+template <typename T>
+struct vec_etype {
+  using type = void;
+};
+template <typename... T>
+using vec_etype_t = typename vec_etype<T...>::type;
 
 // Concepts
 template <typename T>
@@ -94,6 +100,8 @@ concept number = std::is_integral_v<T> || std::is_floating_point_v<T>;
 
 template <typename T>
 struct vec_vec : std::bool_constant<false> {};
+template <typename T>
+concept any_vec = is_vec_v<T>;
 template <typename T>
 concept int_vec = is_vec_v<T> && std::is_integral_v<T>;
 template <typename T>
@@ -271,8 +279,19 @@ struct vec {
     return to_vec<T1>(indices<N>());
   }
 
+  constexpr kernel bool   empty() const { return false; }
+  constexpr kernel size_t size() const { return N; }
+
   constexpr kernel T&       operator[](index_t i) { return d[i]; }
   constexpr kernel const T& operator[](index_t i) const { return d[i]; }
+
+  constexpr kernel const T* begin() const { return d; }
+  constexpr kernel const T* end() const { return d + N; }
+  constexpr kernel T*       begin() { return d; }
+  constexpr kernel T*       end() { return d + N; }
+
+  constexpr kernel const T* data() const { return d; }
+  constexpr kernel T*       data() { return d; }
 
   constexpr kernel T&       x() { return d[0]; }
   constexpr kernel const T& x() const { return d[0]; }
@@ -327,8 +346,19 @@ struct vec<T, 1> {
   constexpr kernel vec(const std::array<T, 1>& v) : d{v[0]} {}
   constexpr kernel operator std::array<T, 1>() { return {d[0]}; }
 
+  constexpr kernel bool   empty() const { return false; }
+  constexpr kernel size_t size() const { return 1; }
+
   constexpr kernel T&       operator[](index_t i) { return d[i]; }
   constexpr kernel const T& operator[](index_t i) const { return d[i]; }
+
+  constexpr kernel const T* begin() const { return d; }
+  constexpr kernel const T* end() const { return d + 1; }
+  constexpr kernel T*       begin() { return d; }
+  constexpr kernel T*       end() { return d + 1; }
+
+  constexpr kernel const T* data() const { return d; }
+  constexpr kernel T*       data() { return d; }
 
   constexpr kernel T&       x() { return d[0]; }
   constexpr kernel const T& x() const { return d[0]; }
@@ -343,6 +373,10 @@ template <typename T, index_t N>
 struct is_vec<vec<T, N>> : std::bool_constant<true> {};
 template <typename T, index_t N>
 struct vec_size<vec<T, N>> : std::integral_constant<index_t, N> {};
+template <typename T, index_t N>
+struct vec_etype<vec<T, N>> {
+  using type = T;
+};
 
 // Vector aliases
 using vec1f = vec<float, 1>;
@@ -393,57 +427,29 @@ constexpr kernel vec<T, 3> xyz(const vec<T, 4>& a) {
 }
 
 // Vector sequence operations.
-template <typename T, index_t N>
-constexpr kernel bool empty(const vec<T, N>& a) {
-  return false;
-}
-template <typename T, index_t N>
-constexpr kernel index_t size(const vec<T, N>& a) {
-  return N;
-}
-template <typename T, index_t N>
-constexpr kernel ptrdiff_t ssize(const vec<T, N>& a) {
-  return (ptrdiff_t)N;
-}
-template <typename T, index_t N>
-constexpr kernel const T* begin(const vec<T, N>& a) {
-  return a.d;
-}
-template <typename T, index_t N>
-constexpr kernel const T* end(const vec<T, N>& a) {
-  return a.d + N;
-}
-template <typename T, index_t N>
-constexpr kernel T* begin(vec<T, N>& a) {
-  return a.d;
-}
-template <typename T, index_t N>
-constexpr kernel T* end(vec<T, N>& a) {
-  return a.d + N;
-}
-template <typename T, index_t N>
-constexpr kernel const T* data(const vec<T, N>& a) {
-  return a.d;
-}
-template <typename T, index_t N>
-constexpr kernel T* data(vec<T, N>& a) {
-  return a.d;
-}
-template <index_t I, typename T, index_t N>
-constexpr kernel T& get(vec<T, N>& a) noexcept {
+constexpr kernel bool    empty(any_vec auto const& a) { return false; }
+constexpr kernel index_t size(any_vec auto const& a) { return a.size(); }
+constexpr kernel auto    begin(any_vec auto const& a) { return a.begin(); }
+constexpr kernel auto    end(any_vec auto const& a) { return a.end(); }
+constexpr kernel auto    begin(any_vec auto& a) { return a.begin(); }
+constexpr kernel auto    end(any_vec auto& a) { return a.end(); }
+constexpr kernel auto    data(any_vec auto const& a) { return a.data(); }
+constexpr kernel auto    data(any_vec auto& a) { return a.data(); }
+template <std::size_t I>
+constexpr kernel auto const& get(any_vec auto const& a) noexcept {
   return a.d[I];
 }
-template <index_t I, typename T, index_t N>
-constexpr kernel T&& get(vec<T, N>&& a) noexcept {
-  return (T &&)(a.d[I]);
-}
-template <index_t I, typename T, index_t N>
-constexpr kernel const T& get(const vec<T, N>& a) noexcept {
+template <std::size_t I>
+constexpr kernel auto& get(any_vec auto& a) noexcept {
   return a.d[I];
 }
-template <index_t I, typename T, index_t N>
-constexpr kernel const T&& get(const vec<T, N>&& a) noexcept {
-  return (const T&&)(a.d[I]);
+template <std::size_t I>
+constexpr kernel auto const&& get(any_vec auto const&& a) noexcept {
+  return a.d[I];
+}
+template <std::size_t I>
+constexpr kernel auto&& get(any_vec auto&& a) noexcept {
+  return a.d[I];
 }
 
 // Implementation of operations using map and fold
