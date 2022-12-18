@@ -74,6 +74,16 @@ namespace yocto {
 // Index type
 using index_t = std::size_t;
 
+// Type traits
+template <typename T>
+struct is_vec : std::bool_constant<false> {};
+template <typename T>
+constexpr auto is_vec_v = is_vec<T>::value;
+template <typename T>
+struct vec_size : std::integral_constant<index_t, 0> {};
+template <typename T>
+constexpr auto vec_size_v = vec_size<T>::value;
+
 // Concepts
 template <typename T>
 concept integral = std::is_integral_v<T>;
@@ -82,12 +92,18 @@ concept real = std::is_floating_point_v<T>;
 template <typename T>
 concept number = std::is_integral_v<T> || std::is_floating_point_v<T>;
 
-template <size_t N, typename... Ts>
-concept same_size = (sizeof...(Ts) == N);
-
-// Vectors
 template <typename T>
-struct is_vec : std::bool_constant<false> {};
+struct vec_vec : std::bool_constant<false> {};
+template <typename T>
+concept int_vec = is_vec_v<T> && std::is_integral_v<T>;
+template <typename T>
+concept real_vec = is_vec_v<T> && std::is_floating_point_v<T>;
+template <typename T>
+concept num_vec = is_vec_v<T> &&
+                  (std::is_integral_v<T> || std::is_floating_point_v<T>);
+
+template <index_t N, typename... Ts>
+concept same_size = (sizeof...(Ts) == N);
 
 // Helpers
 template <index_t... Is>
@@ -224,7 +240,7 @@ constexpr kernel auto pow2(integral auto a) { return 1 << a; }
 namespace yocto {
 
 // Static vectors
-template <typename T, size_t N>
+template <typename T, index_t N>
 struct vec {
   T d[N];
 
@@ -255,8 +271,8 @@ struct vec {
     return to_vec<T1>(indices<N>());
   }
 
-  constexpr kernel T&       operator[](size_t i) { return d[i]; }
-  constexpr kernel const T& operator[](size_t i) const { return d[i]; }
+  constexpr kernel T&       operator[](index_t i) { return d[i]; }
+  constexpr kernel const T& operator[](index_t i) const { return d[i]; }
 
   constexpr kernel T&       x() { return d[0]; }
   constexpr kernel const T& x() const { return d[0]; }
@@ -311,8 +327,8 @@ struct vec<T, 1> {
   constexpr kernel vec(const std::array<T, 1>& v) : d{v[0]} {}
   constexpr kernel operator std::array<T, 1>() { return {d[0]}; }
 
-  constexpr kernel T&       operator[](size_t i) { return d[i]; }
-  constexpr kernel const T& operator[](size_t i) const { return d[i]; }
+  constexpr kernel T&       operator[](index_t i) { return d[i]; }
+  constexpr kernel const T& operator[](index_t i) const { return d[i]; }
 
   constexpr kernel T&       x() { return d[0]; }
   constexpr kernel const T& x() const { return d[0]; }
@@ -323,8 +339,10 @@ template <number... Args>
 vec(Args...) -> vec<common_t<Args...>, sizeof...(Args)>;
 
 // Vectors
-template <typename T, size_t N>
+template <typename T, index_t N>
 struct is_vec<vec<T, N>> : std::bool_constant<true> {};
+template <typename T, index_t N>
+struct vec_size<vec<T, N>> : std::integral_constant<index_t, N> {};
 
 // Vector aliases
 using vec1f = vec<float, 1>;
@@ -375,128 +393,129 @@ constexpr kernel vec<T, 3> xyz(const vec<T, 4>& a) {
 }
 
 // Vector sequence operations.
-template <typename T, size_t N>
+template <typename T, index_t N>
 constexpr kernel bool empty(const vec<T, N>& a) {
   return false;
 }
-template <typename T, size_t N>
-constexpr kernel size_t size(const vec<T, N>& a) {
+template <typename T, index_t N>
+constexpr kernel index_t size(const vec<T, N>& a) {
   return N;
 }
-template <typename T, size_t N>
+template <typename T, index_t N>
 constexpr kernel ptrdiff_t ssize(const vec<T, N>& a) {
   return (ptrdiff_t)N;
 }
-template <typename T, size_t N>
+template <typename T, index_t N>
 constexpr kernel const T* begin(const vec<T, N>& a) {
   return a.d;
 }
-template <typename T, size_t N>
+template <typename T, index_t N>
 constexpr kernel const T* end(const vec<T, N>& a) {
   return a.d + N;
 }
-template <typename T, size_t N>
+template <typename T, index_t N>
 constexpr kernel T* begin(vec<T, N>& a) {
   return a.d;
 }
-template <typename T, size_t N>
+template <typename T, index_t N>
 constexpr kernel T* end(vec<T, N>& a) {
   return a.d + N;
 }
-template <typename T, size_t N>
+template <typename T, index_t N>
 constexpr kernel const T* data(const vec<T, N>& a) {
   return a.d;
 }
-template <typename T, size_t N>
+template <typename T, index_t N>
 constexpr kernel T* data(vec<T, N>& a) {
   return a.d;
 }
-template <size_t I, typename T, size_t N>
+template <index_t I, typename T, index_t N>
 constexpr kernel T& get(vec<T, N>& a) noexcept {
   return a.d[I];
 }
-template <size_t I, typename T, size_t N>
+template <index_t I, typename T, index_t N>
 constexpr kernel T&& get(vec<T, N>&& a) noexcept {
   return (T &&)(a.d[I]);
 }
-template <size_t I, typename T, size_t N>
+template <index_t I, typename T, index_t N>
 constexpr kernel const T& get(const vec<T, N>& a) noexcept {
   return a.d[I];
 }
-template <size_t I, typename T, size_t N>
+template <index_t I, typename T, index_t N>
 constexpr kernel const T&& get(const vec<T, N>&& a) noexcept {
   return (const T&&)(a.d[I]);
 }
 
 // Implementation of operations using map and fold
-template <typename T1, size_t N, typename Func, index_t... Is,
+template <typename T1, index_t N, typename Func, index_t... Is,
     typename T = result_t<Func, T1>>
 constexpr kernel vec<T, N> map(
     index_seq<Is...>, const vec<T1, N>& a, Func&& func) {
   return {func(a[Is])...};
 }
-template <typename T1, size_t N, typename Func, typename T = result_t<Func, T1>>
+template <typename T1, index_t N, typename Func,
+    typename T = result_t<Func, T1>>
 constexpr kernel vec<T, N> map(const vec<T1, N>& a, Func&& func) {
   return map(indices<N>(), a, std::forward<Func>(func));
 }
-template <typename T1, typename T2, size_t N, typename Func, index_t... Is,
+template <typename T1, typename T2, index_t N, typename Func, index_t... Is,
     typename T = result_t<Func, T1, T2>>
 constexpr kernel vec<T, N> map(
     index_seq<Is...>, const vec<T1, N>& a, const vec<T2, N>& b, Func&& func) {
   return {func(a[Is], b[Is])...};
 }
-template <typename T1, typename T2, size_t N, typename Func,
+template <typename T1, typename T2, index_t N, typename Func,
     typename T = result_t<Func, T1, T2>>
 constexpr kernel vec<T, N> map(
     const vec<T1, N>& a, const vec<T2, N>& b, Func&& func) {
   return map(indices<N>(), a, b, std::forward<Func>(func));
 }
-template <typename T1, typename T2, size_t N, typename Func, index_t... Is,
+template <typename T1, typename T2, index_t N, typename Func, index_t... Is,
     typename T = result_t<Func, T1, T2>>
 constexpr kernel vec<T, N> map(
     index_seq<Is...>, const vec<T1, N>& a, T2 b, Func&& func) {
   return {func(a[Is], b)...};
 }
-template <typename T1, typename T2, size_t N, typename Func,
+template <typename T1, typename T2, index_t N, typename Func,
     typename T = result_t<Func, T1, T2>>
 constexpr kernel vec<T, N> map(const vec<T1, N>& a, T2 b, Func&& func) {
   return map(indices<N>(), a, b, std::forward<Func>(func));
 }
-template <typename T1, typename T2, size_t N, typename Func, index_t... Is,
+template <typename T1, typename T2, index_t N, typename Func, index_t... Is,
     typename T = result_t<Func, T1, T2>>
 constexpr kernel vec<T, N> map(
     index_seq<Is...>, T1 a, const vec<T2, N>& b, Func&& func) {
   return {func(a, b[Is])...};
 }
-template <typename T1, typename T2, size_t N, typename Func,
+template <typename T1, typename T2, index_t N, typename Func,
     typename T = result_t<Func, T1, T2>>
 constexpr kernel vec<T, N> map(T1 a, const vec<T2, N>& b, Func&& func) {
   return map(indices<N>(), a, b, std::forward<Func>(func));
 }
-template <typename T1, typename T2, typename T3, size_t N, typename Func,
+template <typename T1, typename T2, typename T3, index_t N, typename Func,
     index_t... Is, typename T = result_t<Func, T1, T2, T3>>
 constexpr kernel vec<T, N> map(index_seq<Is...>, const vec<T1, N>& a,
     const vec<T2, N>& b, const vec<T3, N>& c, Func&& func) {
   return {func(a[Is], b[Is], c[Is])...};
 }
-template <typename T1, typename T2, typename T3, size_t N, typename Func,
+template <typename T1, typename T2, typename T3, index_t N, typename Func,
     typename T = result_t<Func, T1, T2, T3>>
 constexpr kernel vec<T, N> map(const vec<T1, N>& a, const vec<T2, N>& b,
     const vec<T3, N>& c, Func&& func) {
   return map(indices<N>(), a, b, c, std::forward<Func>(func));
 }
-template <typename T1, typename T2, typename T3, size_t N, typename Func,
+template <typename T1, typename T2, typename T3, index_t N, typename Func,
     index_t... Is, typename T = result_t<Func, T1, T2, T3>>
 constexpr kernel vec<T, N> map(
     index_seq<Is...>, const vec<T1, N>& a, T2 b, T3 c, Func&& func) {
   return {func(a[Is], b, c)...};
 }
-template <typename T1, typename T2, typename T3, size_t N, typename Func,
+template <typename T1, typename T2, typename T3, index_t N, typename Func,
     typename T = result_t<Func, T1, T2, T3>>
 constexpr kernel vec<T, N> map(const vec<T1, N>& a, T2 b, T3 c, Func&& func) {
   return map(indices<N>(), a, b, c, std::forward<Func>(func));
 }
-template <typename T, size_t N, typename Func>
+template <typename T, index_t N, typename Func>
 constexpr kernel T fold(const vec<T, N>& a, Func&& func) {
   if constexpr (N == 1) {
     return a[0];
@@ -511,208 +530,208 @@ constexpr kernel T fold(const vec<T, N>& a, Func&& func) {
         fold((const vec<T, N - 1>&)a, std::forward<Func>(func)), a[N - 1]);
   }
 }
-template <typename T, size_t N, index_t... Is>
+template <typename T, index_t N, index_t... Is>
 constexpr kernel T fold_sum(index_seq<Is...>, const vec<T, N>& a) {
   return (a[Is] + ...);
 }
-template <typename T, size_t N>
+template <typename T, index_t N>
 constexpr kernel T fold_sum(const vec<T, N>& a) {
   return fold_sum(indices<N>(), a);
 }
-template <typename T, size_t N, index_t... Is>
+template <typename T, index_t N, index_t... Is>
 constexpr kernel T fold_prod(index_seq<Is...>, const vec<T, N>& a) {
   return (a[Is] * ...);
 }
-template <typename T, size_t N>
+template <typename T, index_t N>
 constexpr kernel T fold_prod(const vec<T, N>& a) {
   return fold_prod(indices<N>(), a);
 }
-template <size_t N, index_t... Is>
+template <index_t N, index_t... Is>
 constexpr kernel bool fold_and(index_seq<Is...>, const vec<bool, N>& a) {
   return (... && a[Is]);
 }
-template <size_t N>
+template <index_t N>
 constexpr kernel bool fold_and(const vec<bool, N>& a) {
   return fold_and(indices<N>(), a);
 }
-template <size_t N, index_t... Is>
+template <index_t N, index_t... Is>
 constexpr kernel bool fold_or(index_seq<Is...>, const vec<bool, N>& a) {
   return (... || a[Is]);
 }
-template <size_t N>
+template <index_t N>
 constexpr kernel bool fold_or(const vec<bool, N>& a) {
   return fold_and(indices<N>(), a);
 }
 
 // Vector comparison operations.
-template <typename T1, typename T2, size_t N>
+template <typename T1, typename T2, index_t N>
 constexpr kernel bool operator==(const vec<T1, N>& a, const vec<T2, N>& b) {
   return fold_and(map(a, b, [](T1 a, T2 b) { return a == b; }));
 }
-template <typename T1, typename T2, size_t N>
+template <typename T1, typename T2, index_t N>
 constexpr kernel bool operator==(const vec<T1, N>& a, T2 b) {
   return fold_and(map(a, b, [](T1 a, T2 b) { return a == b; }));
 }
-template <typename T1, typename T2, size_t N>
+template <typename T1, typename T2, index_t N>
 constexpr kernel bool operator!=(const vec<T1, N>& a, const vec<T2, N>& b) {
   return fold_or(map(a, b, [](T1 a, T2 b) { return a != b; }));
 }
-template <typename T1, typename T2, size_t N>
+template <typename T1, typename T2, index_t N>
 constexpr kernel bool operator!=(const vec<T1, N>& a, T2 b) {
   return fold_or(map(a, b, [](T1 a, T2 b) { return a != b; }));
 }
 
 // Vector operations.
-template <typename T, size_t N>
+template <typename T, index_t N>
 constexpr kernel vec<T, N> operator+(const vec<T, N>& a) {
   return a;
 }
-template <typename T, size_t N>
+template <typename T, index_t N>
 constexpr kernel vec<T, N> operator-(const vec<T, N>& a) {
   return map(a, [](T a) { return -a; });
 }
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
+template <typename T1, typename T2, index_t N, typename T = common_t<T1, T2>>
 constexpr kernel vec<T, N> operator+(const vec<T1, N>& a, const vec<T2, N>& b) {
   return map(a, b, [](T1 a, T2 b) { return a + b; });
 }
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
+template <typename T1, typename T2, index_t N, typename T = common_t<T1, T2>>
 constexpr kernel vec<T, N> operator+(const vec<T1, N>& a, T2 b) {
   return map(a, b, [](T1 a, T2 b) { return a + b; });
 }
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
+template <typename T1, typename T2, index_t N, typename T = common_t<T1, T2>>
 constexpr kernel vec<T, N> operator+(T1 a, const vec<T2, N>& b) {
   return map(a, b, [](T1 a, T2 b) { return a + b; });
 }
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
+template <typename T1, typename T2, index_t N, typename T = common_t<T1, T2>>
 constexpr kernel vec<T, N> operator-(const vec<T1, N>& a, const vec<T2, N>& b) {
   return map(a, b, [](T1 a, T2 b) { return a - b; });
 }
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
+template <typename T1, typename T2, index_t N, typename T = common_t<T1, T2>>
 constexpr kernel vec<T, N> operator-(const vec<T1, N>& a, T2 b) {
   return map(a, b, [](T1 a, T2 b) { return a - b; });
 }
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
+template <typename T1, typename T2, index_t N, typename T = common_t<T1, T2>>
 constexpr kernel vec<T, N> operator-(T1 a, const vec<T2, N>& b) {
   return map(a, b, [](T1 a, T2 b) { return a - b; });
 }
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
+template <typename T1, typename T2, index_t N, typename T = common_t<T1, T2>>
 constexpr kernel vec<T, N> operator*(const vec<T1, N>& a, const vec<T2, N>& b) {
   return map(a, b, [](T1 a, T2 b) { return a * b; });
 }
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
+template <typename T1, typename T2, index_t N, typename T = common_t<T1, T2>>
 constexpr kernel vec<T, N> operator*(const vec<T1, N>& a, T2 b) {
   return map(a, b, [](T1 a, T2 b) { return a * b; });
 }
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
+template <typename T1, typename T2, index_t N, typename T = common_t<T1, T2>>
 constexpr kernel vec<T, N> operator*(T1 a, const vec<T2, N>& b) {
   return map(a, b, [](T1 a, T2 b) { return a * b; });
 }
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
+template <typename T1, typename T2, index_t N, typename T = common_t<T1, T2>>
 constexpr kernel vec<T, N> operator/(const vec<T1, N>& a, const vec<T2, N>& b) {
   return map(a, b, [](T1 a, T2 b) { return a / b; });
 }
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
+template <typename T1, typename T2, index_t N, typename T = common_t<T1, T2>>
 constexpr kernel vec<T, N> operator/(const vec<T1, N>& a, T2 b) {
   return map(a, b, [](T1 a, T2 b) { return a / b; });
 }
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
+template <typename T1, typename T2, index_t N, typename T = common_t<T1, T2>>
 constexpr kernel vec<T, N> operator/(T1 a, const vec<T2, N>& b) {
   return map(a, b, [](T1 a, T2 b) { return a / b; });
 }
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
+template <typename T1, typename T2, index_t N, typename T = common_t<T1, T2>>
 constexpr kernel vec<T, N> operator%(const vec<T1, N>& a, const vec<T2, N>& b) {
   return map(a, b, [](T1 a, T2 b) { return a % b; });
 }
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
+template <typename T1, typename T2, index_t N, typename T = common_t<T1, T2>>
 constexpr kernel vec<T, N> operator%(const vec<T1, N>& a, T2 b) {
   return map(a, b, [](T1 a, T2 b) { return a % b; });
 }
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
+template <typename T1, typename T2, index_t N, typename T = common_t<T1, T2>>
 constexpr kernel vec<T, N> operator%(T1 a, const vec<T2, N>& b) {
   return map(a, b, [](T1 a, T2 b) { return a % b; });
 }
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
+template <typename T1, typename T2, index_t N, typename T = common_t<T1, T2>>
 constexpr kernel vec<T, N> operator^(const vec<T1, N>& a, const vec<T2, N>& b) {
   return map(a, b, [](T1 a, T2 b) { return a ^ b; });
 }
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
+template <typename T1, typename T2, index_t N, typename T = common_t<T1, T2>>
 constexpr kernel vec<T, N> operator^(const vec<T1, N>& a, T2 b) {
   return map(a, b, [](T1 a, T2 b) { return a ^ b; });
 }
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
+template <typename T1, typename T2, index_t N, typename T = common_t<T1, T2>>
 constexpr kernel vec<T, N> operator^(T1 a, const vec<T2, N>& b) {
   return map(a, b, [](T1 a, T2 b) { return a ^ b; });
 }
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
+template <typename T1, typename T2, index_t N, typename T = common_t<T1, T2>>
 constexpr kernel vec<T, N> operator>>(
     const vec<T1, N>& a, const vec<T2, N>& b) {
   return map(a, b, [](T1 a, T2 b) { return a >> b; });
 }
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
+template <typename T1, typename T2, index_t N, typename T = common_t<T1, T2>>
 constexpr kernel vec<T, N> operator>>(const vec<T1, N>& a, T2 b) {
   return map(a, b, [](T1 a, T2 b) { return a >> b; });
 }
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
+template <typename T1, typename T2, index_t N, typename T = common_t<T1, T2>>
 constexpr kernel vec<T, N> operator>>(T1 a, const vec<T2, N>& b) {
   return map(a, b, [](T1 a, T2 b) { return a >> b; });
 }
-template <typename T, size_t N>
+template <typename T, index_t N>
 constexpr kernel vec<T, N> operator>>(const vec<T, N>& a, const vec<T, N>& b) {
   return map(a, b, [](T a, T b) { return a << b; });
 }
-template <typename T, size_t N>
+template <typename T, index_t N>
 constexpr kernel vec<T, N> operator>>(const vec<T, N>& a, T b) {
   return map(a, b, [](T a, T b) { return a << b; });
 }
-template <typename T, size_t N>
+template <typename T, index_t N>
 constexpr kernel vec<T, N> operator<<(T a, const vec<T, N>& b) {
   return map(a, b, [](T a, T b) { return a << b; });
 }
 
 // Vector assignments
-template <typename T, typename T1, size_t N>
+template <typename T, typename T1, index_t N>
 constexpr kernel vec<T, N>& operator+=(vec<T, N>& a, const vec<T1, N>& b) {
   return a = a + b;
 }
-template <typename T, typename T1, size_t N>
+template <typename T, typename T1, index_t N>
 constexpr kernel vec<T, N>& operator+=(vec<T, N>& a, T1 b) {
   return a = a + b;
 }
-template <typename T, typename T1, size_t N>
+template <typename T, typename T1, index_t N>
 constexpr kernel vec<T, N>& operator-=(vec<T, N>& a, const vec<T1, N>& b) {
   return a = a - b;
 }
-template <typename T, typename T1, size_t N>
+template <typename T, typename T1, index_t N>
 constexpr kernel vec<T, N>& operator-=(vec<T, N>& a, T1 b) {
   return a = a - b;
 }
-template <typename T, typename T1, size_t N>
+template <typename T, typename T1, index_t N>
 constexpr kernel vec<T, N>& operator*=(vec<T, N>& a, const vec<T1, N>& b) {
   return a = a * b;
 }
-template <typename T, typename T1, size_t N>
+template <typename T, typename T1, index_t N>
 constexpr kernel vec<T, N>& operator*=(vec<T, N>& a, T1 b) {
   return a = a * b;
 }
-template <typename T, typename T1, size_t N>
+template <typename T, typename T1, index_t N>
 constexpr kernel vec<T, N>& operator/=(vec<T, N>& a, const vec<T1, N>& b) {
   return a = a / b;
 }
-template <typename T, typename T1, size_t N>
+template <typename T, typename T1, index_t N>
 constexpr kernel vec<T, N>& operator/=(vec<T, N>& a, T1 b) {
   return a = a / b;
 }
-template <typename T, typename T1, size_t N>
+template <typename T, typename T1, index_t N>
 constexpr kernel vec<T, N>& operator%=(vec<T, N>& a, const vec<T1, N>& b) {
   return a = a % b;
 }
-template <typename T, typename T1, size_t N>
+template <typename T, typename T1, index_t N>
 constexpr kernel vec<T, N>& operator%=(vec<T, N>& a, T1 b) {
   return a = a % b;
 }
 
 // Vector products and lengths.
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
+template <typename T1, typename T2, index_t N, typename T = common_t<T1, T2>>
 constexpr kernel T dot(const vec<T1, N>& a, const vec<T2, N>& b) {
   return sum(a * b);
 }
@@ -758,37 +777,37 @@ constexpr kernel vec<T, 3> refract(
   return -w * inv_eta + (inv_eta * cosine - sqrt(k)) * n;
 }
 
-template <typename T, size_t N>
+template <typename T, index_t N>
 constexpr kernel T length(const vec<T, N>& a) {
   return sqrt(dot(a, a));
 }
-template <typename T, size_t N>
+template <typename T, index_t N>
 constexpr kernel T length2(const vec<T, N>& a) {
   return dot(a, a);
 }
-template <typename T, size_t N>
+template <typename T, index_t N>
 [[deprecated]] constexpr kernel T length_squared(const vec<T, N>& a) {
   return dot(a, a);
 }
-template <typename T, size_t N>
+template <typename T, index_t N>
 constexpr kernel vec<T, N> normalize(const vec<T, N>& a) {
   auto l = length(a);
   return (l != 0) ? a / l : a;
 }
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
+template <typename T1, typename T2, index_t N, typename T = common_t<T1, T2>>
 constexpr kernel T distance(const vec<T1, N>& a, const vec<T2, N>& b) {
   return length(a - b);
 }
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
+template <typename T1, typename T2, index_t N, typename T = common_t<T1, T2>>
 constexpr kernel T distance2(const vec<T1, N>& a, const vec<T2, N>& b) {
   return dot(a - b, a - b);
 }
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
+template <typename T1, typename T2, index_t N, typename T = common_t<T1, T2>>
 [[deprecated]] constexpr kernel T distance_squared(
     const vec<T1, N>& a, const vec<T2, N>& b) {
   return dot(a - b, a - b);
 }
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
+template <typename T1, typename T2, index_t N, typename T = common_t<T1, T2>>
 constexpr kernel T angle(const vec<T1, N>& a, const vec<T2, N>& b) {
   return acos(clamp(dot(normalize(a), normalize(b)), (T)-1, (T)1));
 }
@@ -811,78 +830,78 @@ constexpr kernel vec<T, 4> slerp(
 }
 
 // Max element and clamp.
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
+template <typename T1, typename T2, index_t N, typename T = common_t<T1, T2>>
 constexpr kernel vec<T, N> max(const vec<T1, N>& a, const vec<T2, N>& b) {
   return map(a, b, [](T1 a, T2 b) { return max(a, b); });
 }
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
+template <typename T1, typename T2, index_t N, typename T = common_t<T1, T2>>
 constexpr kernel vec<T, N> max(const vec<T1, N>& a, T2 b) {
   return map(a, b, [](T1 a, T2 b) { return max(a, b); });
 }
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
+template <typename T1, typename T2, index_t N, typename T = common_t<T1, T2>>
 constexpr kernel vec<T, N> min(const vec<T1, N>& a, T2 b) {
   return map(a, b, [](T1 a, T2 b) { return min(a, b); });
 }
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
+template <typename T1, typename T2, index_t N, typename T = common_t<T1, T2>>
 constexpr kernel vec<T, N> min(const vec<T1, N>& a, const vec<T2, N>& b) {
   return map(a, b, [](T1 a, T2 b) { return min(a, b); });
 }
-template <typename T1, typename T2, typename T3, size_t N,
+template <typename T1, typename T2, typename T3, index_t N,
     typename T = common_t<T1, T2, T3>>
 constexpr kernel vec<T, N> clamp(
     const vec<T1, N>& x, const vec<T2, N>& min, const vec<T3, N>& max) {
   return map(x, min, max, [](T1 a, T2 b, T3 c) { return clamp(a, b, c); });
 }
-template <typename T1, typename T2, typename T3, size_t N,
+template <typename T1, typename T2, typename T3, index_t N,
     typename T = common_t<T1, T2, T3>>
 constexpr kernel vec<T, N> clamp(const vec<T1, N>& x, T2 min, T3 max) {
   return map(x, min, max, [](T1 a, T2 b, T3 c) { return clamp(a, b, c); });
 }
-template <typename T1, typename T2, typename T3, size_t N,
+template <typename T1, typename T2, typename T3, index_t N,
     typename T = common_t<T1, T2, T3>>
 constexpr kernel vec<T, N> clamp(
     const vec<T1, N>& x, const vec<T2, N>& min, T3 max) {
   return map(
       x, min, vec<T3, N>{max}, [](T1 a, T2 b, T3 c) { return clamp(a, b, c); });
 }
-template <typename T1, typename T2, typename T3, size_t N,
+template <typename T1, typename T2, typename T3, index_t N,
     typename T = common_t<T1, T2, T3>>
 constexpr kernel vec<T, N> clamp(
     const vec<T1, N>& x, T2 min, const vec<T3, N>& max) {
   return map(
       x, vec<T2, N>{min}, max, [](T1 a, T2 b, T3 c) { return clamp(a, b, c); });
 }
-template <typename T, size_t N>
+template <typename T, index_t N>
 constexpr kernel vec<T, N> radians(const vec<T, N>& a) {
   return a * (T)pi / 180;
 }
-template <typename T, size_t N>
+template <typename T, index_t N>
 constexpr kernel vec<T, N> degrees(const vec<T, N>& a) {
   return a * 180 / (T)pi;
 }
-template <typename T1, typename T2, typename T3, size_t N,
+template <typename T1, typename T2, typename T3, index_t N,
     typename T = common_t<T1, T2, T3>>
 constexpr kernel vec<T, N> lerp(
     const vec<T1, N>& a, const vec<T2, N>& b, T3 u) {
   return a * (1 - u) + b * u;
 }
-template <typename T1, typename T2, typename T3, size_t N,
+template <typename T1, typename T2, typename T3, index_t N,
     typename T = common_t<T1, T2, T3>>
 constexpr kernel vec<T, N> lerp(
     const vec<T1, N>& a, const vec<T2, N>& b, const vec<T3, N>& u) {
   return a * (1 - u) + b * u;
 }
 
-template <typename T, size_t N>
+template <typename T, index_t N>
 constexpr kernel T max(const vec<T, N>& a) {
   return fold(a, [](T a, T b) { return max(a, b); });
 }
-template <typename T, size_t N>
+template <typename T, index_t N>
 constexpr kernel T min(const vec<T, N>& a) {
   return fold(a, [](T a, T b) { return min(a, b); });
 }
-template <typename T, size_t N>
-constexpr kernel size_t argmax(const vec<T, N>& a) {
+template <typename T, index_t N>
+constexpr kernel index_t argmax(const vec<T, N>& a) {
   if constexpr (N == 1) {
     return 0;
   } else if constexpr (N == 2) {
@@ -896,8 +915,8 @@ constexpr kernel size_t argmax(const vec<T, N>& a) {
       return argmax(xyz(a));
   }
 }
-template <typename T, size_t N>
-constexpr kernel size_t argmin(const vec<T, N>& a) {
+template <typename T, index_t N>
+constexpr kernel index_t argmin(const vec<T, N>& a) {
   if constexpr (N == 1) {
     return 0;
   } else if constexpr (N == 2) {
@@ -912,97 +931,97 @@ constexpr kernel size_t argmin(const vec<T, N>& a) {
   }
 }
 
-template <typename T, size_t N>
+template <typename T, index_t N>
 constexpr kernel T sum(const vec<T, N>& a) {
   return fold_sum(a);
 }
-template <typename T, size_t N>
+template <typename T, index_t N>
 constexpr kernel T prod(const vec<T, N>& a) {
   return fold_prod(a);
 }
-template <typename T, size_t N>
+template <typename T, index_t N>
 constexpr kernel T mean(const vec<T, N>& a) {
   return sum(a) / N;
 }
-template <size_t N>
+template <index_t N>
 constexpr kernel bool all(const vec<bool, N>& a) {
   return fold_and(indices<N>(), a);
 }
-template <typename T, size_t N>
+template <typename T, index_t N>
 constexpr kernel T any(const vec<bool, N>& a) {
   return fold_or(indices<N>(), a);
 }
 
 // Functions applied to vector elements
-template <typename T, size_t N>
+template <typename T, index_t N>
 constexpr kernel vec<T, N> abs(const vec<T, N>& a) {
   return map(a, [](T a) { return abs(a); });
 }
-template <typename T, size_t N>
+template <typename T, index_t N>
 constexpr kernel vec<T, N> sqr(const vec<T, N>& a) {
   return map(a, [](T a) { return sqr(a); });
 }
-template <typename T, size_t N>
+template <typename T, index_t N>
 constexpr kernel vec<T, N> sqrt(const vec<T, N>& a) {
   return map(a, [](T a) { return sqrt(a); });
 }
-template <typename T, size_t N>
+template <typename T, index_t N>
 constexpr kernel vec<T, N> exp(const vec<T, N>& a) {
   return map(a, [](T a) { return exp(a); });
 }
-template <typename T, size_t N>
+template <typename T, index_t N>
 constexpr kernel vec<T, N> log(const vec<T, N>& a) {
   return map(a, [](T a) { return log(a); });
 }
-template <typename T, size_t N>
+template <typename T, index_t N>
 constexpr kernel vec<T, N> exp2(const vec<T, N>& a) {
   return map(a, [](T a) { return exp2(a); });
 }
-template <typename T, size_t N>
+template <typename T, index_t N>
 constexpr kernel vec<T, N> log2(const vec<T, N>& a) {
   return map(a, [](T a) { return log2(a); });
 }
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
+template <typename T1, typename T2, index_t N, typename T = common_t<T1, T2>>
 constexpr kernel vec<T, N> pow(const vec<T1, N>& a, T2 b) {
   return map(a, b, [](T1 a, T2 b) { return pow(a, b); });
 }
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
+template <typename T1, typename T2, index_t N, typename T = common_t<T1, T2>>
 constexpr kernel vec<T, N> pow(const vec<T1, N>& a, const vec<T2, N>& b) {
   return map(a, b, [](T1 a, T2 b) { return pow(a, b); });
 }
-template <typename T, size_t N>
+template <typename T, index_t N>
 constexpr kernel vec<T, N> round(const vec<T, N>& a) {
   return map(a, [](T a) { return round(a); });
 }
-template <typename T, typename T1, size_t N>
+template <typename T, typename T1, index_t N>
 constexpr kernel vec<T, N> fmod(const vec<T, N>& a, const vec<T1, N>& b) {
   return map(a, b, [](T a, T1 b) { return fmod(a, b); });
 }
-template <typename T, typename T1, size_t N>
+template <typename T, typename T1, index_t N>
 constexpr kernel vec<T, N> fmod(const vec<T, N>& a, T1 b) {
   return map(a, b, [](T a, T1 b) { return fmod(a, b); });
 }
-template <typename T, typename T1, size_t N>
+template <typename T, typename T1, index_t N>
 constexpr kernel vec<T, N> mod(const vec<T, N>& a, const vec<T1, N>& b) {
   return map(a, b, [](T a, T1 b) { return mod(a, b); });
 }
-template <typename T, typename T1, size_t N>
+template <typename T, typename T1, index_t N>
 constexpr kernel vec<T, N> mod(const vec<T, N>& a, T1 b) {
   return map(a, b, [](T a, T1 b) { return mod(a, b); });
 }
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
+template <typename T1, typename T2, index_t N, typename T = common_t<T1, T2>>
 constexpr kernel vec<T, N> bias(const vec<T1, N>& a, T2 b) {
   return map(a, b, [](T1 a, T2 b) { return bias(a, b); });
 }
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
+template <typename T1, typename T2, index_t N, typename T = common_t<T1, T2>>
 constexpr kernel vec<T, N> gain(const vec<T1, N>& a, T2 b) {
   return map(a, b, [](T1 a, T2 b) { return bias(a, b); });
 }
-// template <typename T, size_t N>
+// template <typename T, index_t N>
 // inline void swap(vec<T, N>& a, vec<T, N>& b) {
 //   std::swap(a, b);
 // }
-template <typename T, size_t N>
+template <typename T, index_t N>
 constexpr kernel bool isfinite(const vec<T, N>& a) {
   return all(map(a, [](T a) { return isfinite(a); }));
 }
@@ -1012,7 +1031,7 @@ template <typename T>
 constexpr kernel T unit_to_uv(T a) {
   return (a + 1) / 2;
 }
-template <typename T, size_t N>
+template <typename T, index_t N>
 constexpr kernel vec<T, N> unit_to_uv(const vec<T, N>& a) {
   return (a + 1) / 2;
 }
@@ -1020,7 +1039,7 @@ template <typename T>
 constexpr kernel T uv_to_unit(T a) {
   return a * 2 - 1;
 }
-template <typename T, size_t N>
+template <typename T, index_t N>
 constexpr kernel vec<T, N> uv_to_unit(const vec<T, N>& a) {
   return a * 2 - 1;
 }
@@ -1057,11 +1076,11 @@ constexpr kernel vec<T, 3> sphericaluv_to_cartesiany(const vec<T, 2>& uv) {
 
 // Quaternion operations represented as xi + yj + zk + w
 // const auto identity_quat4f = vec4f{0, 0, 0, 1};
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
+template <typename T1, typename T2, index_t N, typename T = common_t<T1, T2>>
 constexpr kernel vec<T, 4> quat_mul(const vec<T1, 4>& a, T2 b) {
   return map(a, b, [](T1 a, T2 b) { return a * b; });
 }
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
+template <typename T1, typename T2, index_t N, typename T = common_t<T1, T2>>
 constexpr kernel vec<T, 4> quat_mul(const vec<T1, 4>& a, const vec<T2, 4>& b) {
   return {a.x() * b.w() + a.w() * b.x() + a.y() * b.w() - a.z() * b.y(),
       a.y() * b.w() + a.w() * b.y() + a.z() * b.x() - a.x() * b.z(),
@@ -1078,83 +1097,83 @@ constexpr kernel vec<T, 4> quat_inverse(const vec<T, 4>& a) {
 }
 
 // Component-wise comparison operations.
-template <typename T1, typename T2, size_t N>
+template <typename T1, typename T2, index_t N>
 constexpr kernel vec<bool, N> component_equal(
     const vec<T1, N>& a, const vec<T2, N>& b) {
   return map(a, b, [](T1 a, T2 b) { return a == b; });
 }
-template <typename T1, typename T2, size_t N>
+template <typename T1, typename T2, index_t N>
 constexpr kernel vec<bool, N> component_equal(const vec<T1, N>& a, T2 b) {
   return map(a, b, [](T1 a, T2 b) { return a == b; });
 }
-template <typename T1, typename T2, size_t N>
+template <typename T1, typename T2, index_t N>
 constexpr kernel vec<bool, N> component_not_equal(
     const vec<T1, N>& a, const vec<T2, N>& b) {
   return map(a, b, [](T1 a, T2 b) { return a != b; });
 }
-template <typename T1, typename T2, size_t N>
+template <typename T1, typename T2, index_t N>
 constexpr kernel vec<bool, N> component_not_equal(
     const vec<T1, N>& a, const T2 b) {
   return map(a, b, [](T1 a, T2 b) { return a != b; });
 }
-template <typename T1, typename T2, size_t N>
+template <typename T1, typename T2, index_t N>
 constexpr kernel vec<bool, N> component_less(
     const vec<T1, N>& a, const vec<T2, N>& b) {
   return map(a, b, [](T1 a, T2 b) { return a < b; });
 }
-template <typename T1, typename T2, size_t N>
+template <typename T1, typename T2, index_t N>
 constexpr kernel vec<bool, N> component_less(const vec<T1, N>& a, const T2 b) {
   return map(a, b, [](T1 a, T2 b) { return a < b; });
 }
-template <typename T1, typename T2, size_t N>
+template <typename T1, typename T2, index_t N>
 constexpr kernel vec<bool, N> component_greater(
     const vec<T1, N>& a, const vec<T2, N>& b) {
   return map(a, b, [](T1 a, T2 b) { return a > b; });
 }
-template <typename T1, typename T2, size_t N>
+template <typename T1, typename T2, index_t N>
 constexpr kernel vec<bool, N> component_greater(
     const vec<T1, N>& a, const T2 b) {
   return map(a, b, [](T1 a, T2 b) { return a > b; });
 }
-template <typename T1, typename T2, size_t N>
+template <typename T1, typename T2, index_t N>
 constexpr kernel vec<bool, N> component_less_equal(
     const vec<T1, N>& a, const vec<T2, N>& b) {
   return map(a, b, [](T1 a, T2 b) { return a <= b; });
 }
-template <typename T1, typename T2, size_t N>
+template <typename T1, typename T2, index_t N>
 constexpr kernel vec<bool, N> component_less_equal(
     const vec<T1, N>& a, const T2 b) {
   return map(a, b, [](T1 a, T2 b) { return a <= b; });
 }
-template <typename T1, typename T2, size_t N>
+template <typename T1, typename T2, index_t N>
 constexpr kernel vec<bool, N> component_greater_equal(
     const vec<T1, N>& a, const vec<T2, N>& b) {
   return map(a, b, [](T1 a, T2 b) { return a >= b; });
 }
-template <typename T1, typename T2, size_t N>
+template <typename T1, typename T2, index_t N>
 constexpr kernel vec<bool, N> component_greater_equal(
     const vec<T1, N>& a, const T2 b) {
   return map(a, b, [](T1 a, T2 b) { return a >= b; });
 }
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
+template <typename T1, typename T2, index_t N, typename T = common_t<T1, T2>>
 constexpr kernel vec<T, N> select(
     const vec<bool, N>& a, const vec<T1, N>& b, const vec<T2, N>& c) {
   return map(
       indices<N>(), a, b, c, [](bool a, T1 b, T2 c) { return a ? b : c; });
 }
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
+template <typename T1, typename T2, index_t N, typename T = common_t<T1, T2>>
 constexpr kernel vec<T, N> select(
     const vec<bool, N>& a, T1 b, const vec<T2, N>& c) {
   return map(
       indices<N>(), a, b, c, [](bool a, T1 b, T2 c) { return a ? b : c; });
 }
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
+template <typename T1, typename T2, index_t N, typename T = common_t<T1, T2>>
 constexpr kernel vec<T, N> select(
     const vec<bool, N>& a, const vec<T1, N>& b, T2 c) {
   return map(
       indices<N>(), a, b, c, [](bool a, T1 b, T2 c) { return a ? b : c; });
 }
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
+template <typename T1, typename T2, index_t N, typename T = common_t<T1, T2>>
 constexpr kernel vec<T, N> select(const vec<bool, N>& a, T1 b, T2 c) {
   return map(
       indices<N>(), a, b, c, [](bool a, T1 b, T2 c) { return a ? b : c; });
@@ -1187,7 +1206,7 @@ namespace yocto {
 #ifndef __CUDACC__
 
 // Small Fixed-size matrices stored in column major format.
-template <typename T, size_t N, size_t M>
+template <typename T, index_t N, index_t M>
 struct mat {
   vec<T, N> d[M];
 
@@ -1215,42 +1234,42 @@ struct mat {
       const vec<T, N>& c3, const vec<T, N>& c4)
       : d{c1, c2, c3, c4} {}
 
-  constexpr kernel vec<T, N>& operator[](size_t i) { return d[i]; }
-  constexpr kernel const vec<T, N>& operator[](size_t i) const { return d[i]; }
+  constexpr kernel vec<T, N>& operator[](index_t i) { return d[i]; }
+  constexpr kernel const vec<T, N>& operator[](index_t i) const { return d[i]; }
 };
 
 #else
 
 // Small Fixed-size matrices stored in column major format.
-template <typename T, size_t N, size_t M>
+template <typename T, index_t N, index_t M>
 struct mat;
 
 // Small Fixed-size matrices stored in column major format.
-template <typename T, size_t N>
+template <typename T, index_t N>
 struct mat<T, N, 1> {
   vec<T, N> d[1];
 
   constexpr kernel mat() : d{1} {}
   constexpr kernel mat(const vec<T, N>& x_) : d{x_} {}
 
-  constexpr kernel vec<T, N>& operator[](size_t i) { return d[i]; }
-  constexpr kernel const vec<T, N>& operator[](size_t i) const { return d[i]; }
+  constexpr kernel vec<T, N>& operator[](index_t i) { return d[i]; }
+  constexpr kernel const vec<T, N>& operator[](index_t i) const { return d[i]; }
 };
 
 // Small Fixed-size matrices stored in column major format.
-template <typename T, size_t N>
+template <typename T, index_t N>
 struct mat<T, N, 2> {
   vec<T, N> d[2];
 
   constexpr kernel mat() : d{{1, 0}, {0, 1}} {}
   constexpr kernel mat(const vec<T, N>& x_, const vec<T, N>& y_) : d{x_, y_} {}
 
-  constexpr kernel vec<T, N>& operator[](size_t i) { return d[i]; }
-  constexpr kernel const vec<T, N>& operator[](size_t i) const { return d[i]; }
+  constexpr kernel vec<T, N>& operator[](index_t i) { return d[i]; }
+  constexpr kernel const vec<T, N>& operator[](index_t i) const { return d[i]; }
 };
 
 // Small Fixed-size matrices stored in column major format.
-template <typename T, size_t N>
+template <typename T, index_t N>
 struct mat<T, N, 3> {
   vec<T, N> d[3];
 
@@ -1259,12 +1278,12 @@ struct mat<T, N, 3> {
       const vec<T, N>& x_, const vec<T, N>& y_, const vec<T, N>& z_)
       : d{x_, y_, z_} {}
 
-  constexpr kernel vec<T, N>& operator[](size_t i) { return d[i]; }
-  constexpr kernel const vec<T, N>& operator[](size_t i) const { return d[i]; }
+  constexpr kernel vec<T, N>& operator[](index_t i) { return d[i]; }
+  constexpr kernel const vec<T, N>& operator[](index_t i) const { return d[i]; }
 };
 
 // Small Fixed-size matrices stored in column major format.
-template <typename T, size_t N>
+template <typename T, index_t N>
 struct mat<T, N, 4> {
   vec<T, N> d[4];
 
@@ -1274,8 +1293,8 @@ struct mat<T, N, 4> {
       const vec<T, N>& z_, const vec<T, N>& w_)
       : d{x_, y_, z_, w_} {}
 
-  constexpr kernel vec<T, N>& operator[](size_t i) { return d[i]; }
-  constexpr kernel const vec<T, N>& operator[](size_t i) const { return d[i]; }
+  constexpr kernel vec<T, N>& operator[](index_t i) { return d[i]; }
+  constexpr kernel const vec<T, N>& operator[](index_t i) const { return d[i]; }
 };
 
 #endif
@@ -1297,13 +1316,13 @@ constexpr auto identity4x4f = mat4x4f{
     {1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
 
 // Data access
-template <typename T, size_t N, size_t M>
+template <typename T, index_t N, index_t M>
 constexpr kernel T* data(mat<T, N, M>& a) {
   return data(a[0]);
 }
 
 // Matrix comparisons.
-template <typename T1, typename T2, size_t N, size_t M>
+template <typename T1, typename T2, index_t N, index_t M>
 constexpr kernel bool operator==(
     const mat<T1, N, M>& a, const mat<T2, N, M>& b) {
   if constexpr (M == 1) {
@@ -1316,14 +1335,14 @@ constexpr kernel bool operator==(
     return a[0] == b[0] && a[1] == b[1] && a[2] == b[2] && a[3] == b[3];
   }
 }
-template <typename T1, typename T2, size_t N, size_t M>
+template <typename T1, typename T2, index_t N, index_t M>
 constexpr kernel bool operator!=(
     const mat<T1, N, M>& a, const mat<T2, N, M>& b) {
   return !(a == b);
 }
 
 // Matrix operations.
-template <typename T1, typename T2, size_t N, size_t M,
+template <typename T1, typename T2, index_t N, index_t M,
     typename T = common_t<T1, T2>>
 constexpr kernel mat<T, N, M> operator+(
     const mat<T1, N, M>& a, const mat<T2, N, M>& b) {
@@ -1337,7 +1356,7 @@ constexpr kernel mat<T, N, M> operator+(
     return {a[0] + b[0], a[1] + b[1], a[2] + b[2], a[3] + b[3]};
   }
 }
-template <typename T1, typename T2, size_t N, size_t M,
+template <typename T1, typename T2, index_t N, index_t M,
     typename T = common_t<T1, T2>>
 constexpr kernel mat<T, N, M> operator*(const mat<T1, N, M>& a, T2 b) {
   if constexpr (M == 1) {
@@ -1350,7 +1369,7 @@ constexpr kernel mat<T, N, M> operator*(const mat<T1, N, M>& a, T2 b) {
     return {a[0] * b, a[1] * b, a[2] * b, a[3] * b};
   }
 }
-template <typename T1, typename T2, size_t N, size_t M,
+template <typename T1, typename T2, index_t N, index_t M,
     typename T = common_t<T1, T2>>
 constexpr kernel vec<T, N> operator*(
     const mat<T1, N, M>& a, const vec<T2, M>& b) {
@@ -1364,7 +1383,7 @@ constexpr kernel vec<T, N> operator*(
     return a[0] * b[0] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3];
   }
 }
-template <typename T1, typename T2, size_t N, size_t M,
+template <typename T1, typename T2, index_t N, index_t M,
     typename T = common_t<T1, T2>>
 constexpr kernel vec<T, M> operator*(
     const vec<T1, N>& a, const mat<T2, N, M>& b) {
@@ -1378,7 +1397,7 @@ constexpr kernel vec<T, M> operator*(
     return {dot(a, b[0]), dot(a, b[1]), dot(a, b[2]), dot(a, b[3])};
   }
 }
-template <typename T1, typename T2, size_t N, size_t M, size_t K,
+template <typename T1, typename T2, index_t N, index_t M, index_t K,
     typename T = common_t<T1, T2>>
 constexpr kernel mat<T, N, M> operator*(
     const mat<T1, N, K>& a, const mat<T2, K, M>& b) {
@@ -1394,23 +1413,23 @@ constexpr kernel mat<T, N, M> operator*(
 }
 
 // Matrix assignments.
-template <typename T, typename T1, size_t N, size_t M>
+template <typename T, typename T1, index_t N, index_t M>
 constexpr kernel mat<T, N, M>& operator+=(
     mat<T, N, M>& a, const mat<T1, N, M>& b) {
   return a = a + b;
 }
-template <typename T, typename T1, size_t N>
+template <typename T, typename T1, index_t N>
 constexpr kernel mat<T, N, N>& operator*=(
     mat<T, N, N>& a, const mat<T1, N, N>& b) {
   return a = a * b;
 }
-template <typename T, typename T1, size_t N, size_t M>
+template <typename T, typename T1, index_t N, index_t M>
 constexpr kernel mat<T, N, M>& operator*=(mat<T, N, M>& a, T1 b) {
   return a = a * b;
 }
 
 // Matrix diagonals and transposes.
-template <typename T, size_t N>
+template <typename T, index_t N>
 constexpr kernel vec<T, N> diagonal(const mat<T, N, N>& a) {
   if constexpr (N == 1) {
     return {a[0][0]};
@@ -1422,7 +1441,7 @@ constexpr kernel vec<T, N> diagonal(const mat<T, N, N>& a) {
     return {a[0][0], a[1][1], a[2][2], a[3][3]};
   }
 }
-template <typename T, size_t N>
+template <typename T, index_t N>
 constexpr kernel mat<T, N, N> transpose(const mat<T, N, N>& a) {
   if constexpr (N == 1) {
     return {{a[0][0]}};
@@ -1445,7 +1464,7 @@ constexpr kernel mat<T, N, N> transpose(const mat<T, N, N>& a) {
 }
 
 // Matrix adjoints, determinants and inverses.
-template <typename T, size_t N>
+template <typename T, index_t N>
 constexpr kernel T determinant(const mat<T, N, N>& a) {
   if constexpr (N == 1) {
     return a[0];
@@ -1457,7 +1476,7 @@ constexpr kernel T determinant(const mat<T, N, N>& a) {
     return 0;  // TODO
   }
 }
-template <typename T, size_t N>
+template <typename T, index_t N>
 constexpr kernel mat<T, N, N> adjoint(const mat<T, N, N>& a) {
   if constexpr (N == 1) {
     return {{a[0][0]}};
@@ -1470,7 +1489,7 @@ constexpr kernel mat<T, N, N> adjoint(const mat<T, N, N>& a) {
     return {};  // TODO
   }
 }
-template <typename T, size_t N>
+template <typename T, index_t N>
 constexpr kernel mat<T, N, N> inverse(const mat<T, N, N>& a) {
   return adjoint(a) * (1 / determinant(a));
 }
@@ -1502,7 +1521,7 @@ constexpr kernel mat<T, 3, 3> basis_fromz(const vec<T, 3>& v) {
 namespace yocto {
 
 // Rigid frames stored as a column-major affine transform matrix.
-template <typename T, size_t N>
+template <typename T, index_t N>
 struct frame;
 
 // Rigid frames stored as a column-major affine transform matrix.
@@ -1523,8 +1542,8 @@ struct frame<T, 2> {
     return {{d[0], 0}, {d[1], 0}, {d[2], 1}};
   }
 
-  constexpr kernel vec<T, 2>& operator[](size_t i) { return d[i]; }
-  constexpr kernel const vec<T, 2>& operator[](size_t i) const { return d[i]; }
+  constexpr kernel vec<T, 2>& operator[](index_t i) { return d[i]; }
+  constexpr kernel const vec<T, 2>& operator[](index_t i) const { return d[i]; }
 
   constexpr kernel vec<T, 2>& x() { return d[0]; }
   constexpr kernel const vec<T, 2>& x() const { return d[0]; }
@@ -1557,8 +1576,8 @@ struct frame<T, 3> {
     return {{d[0], 0}, {d[1], 0}, {d[2], 0}, {d[3], 1}};
   }
 
-  constexpr kernel vec<T, 3>& operator[](size_t i) { return d[i]; }
-  constexpr kernel const vec<T, 3>& operator[](size_t i) const { return d[i]; }
+  constexpr kernel vec<T, 3>& operator[](index_t i) { return d[i]; }
+  constexpr kernel const vec<T, 3>& operator[](index_t i) const { return d[i]; }
 
   constexpr kernel vec<T, 3>& x() { return d[0]; }
   constexpr kernel const vec<T, 3>& x() const { return d[0]; }
@@ -1585,7 +1604,7 @@ constexpr auto identity3x4f = frame3f{
     {1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}};
 
 // Frame properties
-template <typename T, size_t N>
+template <typename T, index_t N>
 constexpr kernel mat<T, N, N> rotation(const frame<T, N>& a) {
   if constexpr (N == 2) {
     return {a[0], a[1]};
@@ -1593,7 +1612,7 @@ constexpr kernel mat<T, N, N> rotation(const frame<T, N>& a) {
     return {a[0], a[1], a[2]};
   }
 }
-template <typename T, size_t N>
+template <typename T, index_t N>
 constexpr kernel vec<T, N> translation(const frame<T, N>& a) {
   if constexpr (N == 2) {
     return a[2];
@@ -1603,17 +1622,17 @@ constexpr kernel vec<T, N> translation(const frame<T, N>& a) {
 }
 
 // Frame/mat conversion
-template <typename T, size_t N>
+template <typename T, index_t N>
 constexpr kernel frame<T, N - 1> mat_to_frame(const mat<T, N, N>& m) {
   return (frame<T, N - 1>)m;
 }
-template <typename T, size_t N>
+template <typename T, index_t N>
 constexpr kernel mat<T, N + 1, N + 1> frame_to_mat(const frame<T, N>& f) {
   return (mat<T, N + 1, N + 1>)f;
 }
 
 // Frame comparisons.
-template <typename T1, typename T2, size_t N>
+template <typename T1, typename T2, index_t N>
 constexpr kernel bool operator==(const frame<T1, N>& a, const frame<T2, N>& b) {
   if constexpr (N == 2) {
     return a[0] == b[0] && a[1] == b[1] && a[2] == b[2];
@@ -1621,24 +1640,24 @@ constexpr kernel bool operator==(const frame<T1, N>& a, const frame<T2, N>& b) {
     return a[0] == b[0] && a[1] == b[1] && a[2] == b[2] && a[3] == b[3];
   }
 }
-template <typename T1, typename T2, size_t N>
+template <typename T1, typename T2, index_t N>
 constexpr kernel bool operator!=(const frame<T1, N>& a, const frame<T2, N>& b) {
   return !(a == b);
 }
 
 // Frame composition, equivalent to affine matrix product.
-template <typename T, size_t N>
+template <typename T, index_t N>
 constexpr kernel frame<T, N> operator*(
     const frame<T, N>& a, const frame<T, N>& b) {
   return {a.m() * b.m(), a.m() * b.t() + a.t()};
 }
-template <typename T, size_t N>
+template <typename T, index_t N>
 constexpr kernel frame<T, N>& operator*=(frame<T, N>& a, const frame<T, N>& b) {
   return a = a * b;
 }
 
 // Frame inverse, equivalent to rigid affine inverse.
-template <typename T, size_t N>
+template <typename T, index_t N>
 constexpr kernel frame<T, N> inverse(
     const frame<T, N>& a, bool non_rigid = false) {
   if (non_rigid) {
@@ -1693,7 +1712,7 @@ constexpr kernel frame<T, 3> orthonormalize(const frame<T, 3>& frame_) {
 namespace yocto {
 
 // Quaternions to represent 3D rotations
-template <typename T, size_t N>
+template <typename T, index_t N>
 struct quat;
 
 // Quaternions to represent rotations
@@ -1704,8 +1723,8 @@ struct quat<T, 4> {
   constexpr kernel quat() : d{0, 0, 0, 1} {}
   constexpr kernel quat(T x, T y, T z, T w) : d{x, y, z, w} {}
 
-  constexpr kernel T&       operator[](size_t i) { return d[i]; }
-  constexpr kernel const T& operator[](size_t i) const { return d[i]; }
+  constexpr kernel T&       operator[](index_t i) { return d[i]; }
+  constexpr kernel const T& operator[](index_t i) const { return d[i]; }
 };
 
 // Quaternion aliases
@@ -1803,7 +1822,7 @@ constexpr kernel quat<T, 4> slerp(
 namespace yocto {
 
 // Transforms points, vectors and directions by matrices.
-template <typename T, size_t N>
+template <typename T, index_t N>
 constexpr kernel vec<T, N> transform_point(
     const mat<T, N + 1, N + 1>& a, const vec<T, N>& b) {
   if constexpr (N == 2) {
@@ -1814,7 +1833,7 @@ constexpr kernel vec<T, N> transform_point(
     return xyz(tvb) / tvb.w();
   }
 }
-template <typename T, size_t N>
+template <typename T, index_t N>
 constexpr kernel vec<T, N> transform_vector(
     const mat<T, N + 1, N + 1>& a, const vec<T, N>& b) {
   if constexpr (N == 2) {
@@ -1825,34 +1844,34 @@ constexpr kernel vec<T, N> transform_vector(
     return xyz(tvb) / tvb.w();
   }
 }
-template <typename T, size_t N>
+template <typename T, index_t N>
 constexpr kernel vec<T, N> transform_direction(
     const mat<T, N + 1, N + 1>& a, const vec<T, N>& b) {
   return normalize(transform_vector(a, b));
 }
-template <typename T, size_t N>
+template <typename T, index_t N>
 constexpr kernel vec<T, N> transform_normal(
     const mat<T, N + 1, N + 1>& a, const vec<T, N>& b) {
   return normalize(transform_vector(transpose(inverse(a)), b));
 }
-template <typename T, size_t N>
+template <typename T, index_t N>
 constexpr kernel vec<T, N> transform_vector(
     const mat<T, N, N>& a, const vec<T, N>& b) {
   return a * b;
 }
-template <typename T, size_t N>
+template <typename T, index_t N>
 constexpr kernel vec<T, N> transform_direction(
     const mat<T, N, N>& a, const vec<T, N>& b) {
   return normalize(transform_vector(a, b));
 }
-template <typename T, size_t N>
+template <typename T, index_t N>
 constexpr kernel vec<T, N> transform_normal(
     const mat<T, N, N>& a, const vec<T, N>& b) {
   return normalize(transform_vector(transpose(inverse(a)), b));
 }
 
 // Transforms points, vectors and directions by frames.
-template <typename T, size_t N>
+template <typename T, index_t N>
 constexpr kernel vec<T, N> transform_point(
     const frame<T, N>& a, const vec<T, N>& b) {
   if constexpr (N == 2) {
@@ -1861,7 +1880,7 @@ constexpr kernel vec<T, N> transform_point(
     return a.m() * b + a.t();
   }
 }
-template <typename T, size_t N>
+template <typename T, index_t N>
 constexpr kernel vec<T, N> transform_vector(
     const frame<T, N>& a, const vec<T, N>& b) {
   if constexpr (N == 2) {
@@ -1870,12 +1889,12 @@ constexpr kernel vec<T, N> transform_vector(
     return a.m() * b;
   }
 }
-template <typename T, size_t N>
+template <typename T, index_t N>
 constexpr kernel vec<T, N> transform_direction(
     const frame<T, N>& a, const vec<T, N>& b) {
   return normalize(transform_vector(a, b));
 }
-template <typename T, size_t N>
+template <typename T, index_t N>
 constexpr kernel vec<T, N> transform_normal(
     const frame<T, N>& a, const vec<T, N>& b, bool non_rigid = false) {
   if (non_rigid) {
@@ -1886,7 +1905,7 @@ constexpr kernel vec<T, N> transform_normal(
 }
 
 // Transforms points, vectors and directions by frames.
-template <typename T, size_t N>
+template <typename T, index_t N>
 constexpr kernel vec<T, N> transform_point_inverse(
     const frame<T, N>& a, const vec<T, N>& b) {
   if constexpr (N == 2) {
@@ -1895,7 +1914,7 @@ constexpr kernel vec<T, N> transform_point_inverse(
     return (b - a.t()) * a.m();
   }
 }
-template <typename T, size_t N>
+template <typename T, index_t N>
 constexpr kernel vec<T, N> transform_vector_inverse(
     const frame<T, N>& a, const vec<T, N>& b) {
   if constexpr (N == 2) {
@@ -1904,7 +1923,7 @@ constexpr kernel vec<T, N> transform_vector_inverse(
     return b * a.m();
   }
 }
-template <typename T, size_t N>
+template <typename T, index_t N>
 constexpr kernel vec<T, N> transform_direction_inverse(
     const frame<T, N>& a, const vec<T, N>& b) {
   return normalize(transform_vector_inverse(a, b));
@@ -2296,9 +2315,9 @@ template <typename T>
 constexpr kernel auto range(vec<T, 3> max);
 
 // Python enumerate
-template <typename Sequence, typename T = size_t>
+template <typename Sequence, typename T = index_t>
 constexpr kernel auto enumerate(const Sequence& sequence, T start = 0);
-template <typename Sequence, typename T = size_t>
+template <typename Sequence, typename T = index_t>
 constexpr kernel auto enumerate(Sequence& sequence, T start = 0);
 
 // Python zip
