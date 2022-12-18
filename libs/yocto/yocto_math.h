@@ -78,6 +78,9 @@ concept real = std::is_floating_point_v<T>;
 template <typename T>
 concept number = std::is_integral_v<T> || std::is_floating_point_v<T>;
 
+template <size_t N, typename... Ts>
+concept same_size = (sizeof...(Ts) == N);
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -272,7 +275,46 @@ constexpr kernel I pow2(I a) {
 namespace yocto {
 
 template <typename T, size_t N>
-struct vec;
+struct vec {
+  T d[N];
+
+  constexpr kernel vec() : d{0} {}
+  constexpr kernel explicit vec(T v) {
+    for (auto& e : d) e = v;
+  }
+  template <number... Ts>
+    requires same_size<N, Ts...>
+  constexpr kernel vec(Ts... v) : d{(T)v...} {}
+  constexpr kernel vec(const vec<T, N - 1>& first, T last) {
+    for (auto idx = 0; idx < N - 1; idx++) d[idx] = (T)first.d[idx];
+    d[N - 1] = last;
+  }
+
+  template <typename T1>
+  constexpr kernel explicit(!std::is_convertible_v<T1, T>)
+      vec(const vec<T1, N>& v) {
+    for (auto idx = 0; idx < N; idx++) d[idx] = (T)v.d[idx];
+  }
+  template <typename T1>
+  constexpr kernel explicit(!std::is_convertible_v<T, T1>)
+  operator vec<T1, N>() {
+    auto ret = vec<T1, N>();
+    for (auto idx = 0; idx < N; idx++) ret.d[idx] = (T1)d[idx];
+    return ret;
+  }
+
+  constexpr kernel T&       operator[](size_t i) { return d[i]; }
+  constexpr kernel const T& operator[](size_t i) const { return d[i]; }
+
+  constexpr kernel T&       x() { return d[0]; }
+  constexpr kernel const T& x() const { return d[0]; }
+  constexpr kernel T&       y() { return d[1]; }
+  constexpr kernel const T& y() const { return d[1]; }
+  constexpr kernel T&       z() { return d[2]; }
+  constexpr kernel const T& z() const { return d[2]; }
+  constexpr kernel T&       w() { return d[3]; }
+  constexpr kernel const T& w() const { return d[3]; }
+};
 
 template <typename T>
 struct vec<T, 1> {
@@ -298,100 +340,6 @@ struct vec<T, 1> {
 
   constexpr kernel T&       x() { return d[0]; }
   constexpr kernel const T& x() const { return d[0]; }
-};
-
-template <typename T>
-struct vec<T, 2> {
-  T d[2];
-
-  constexpr kernel vec() : d{0, 0} {}
-  constexpr kernel explicit vec(T v_) : d{v_, v_} {}
-  constexpr kernel vec(T x_, T y_) : d{x_, y_} {}
-
-  template <typename U>
-  constexpr kernel explicit(!std::is_convertible_v<U, T>)
-      vec(const vec<U, 2>& v)
-      : d{(T)v.d[0], (T)v.d[1]} {}
-  template <typename U>
-  constexpr kernel explicit(!std::is_convertible_v<T, U>) operator vec<U, 2>() {
-    return {(U)d[0], (U)d[1]};
-  }
-
-  constexpr kernel vec(const array<T, 2>& v) : d{v[0], v[1]} {}
-  constexpr kernel operator array<T, 2>() { return {d[0], d[1]}; }
-
-  constexpr kernel T&       operator[](size_t i) { return d[i]; }
-  constexpr kernel const T& operator[](size_t i) const { return d[i]; }
-
-  constexpr kernel T&       x() { return d[0]; }
-  constexpr kernel const T& x() const { return d[0]; }
-  constexpr kernel T&       y() { return d[1]; }
-  constexpr kernel const T& y() const { return d[1]; }
-};
-
-template <typename T>
-struct vec<T, 3> {
-  T d[3];
-
-  constexpr kernel vec() : d{0, 0, 0} {}
-  constexpr kernel explicit vec(T v_) : d{v_, v_, v_} {}
-  constexpr kernel vec(T x_, T y_, T z_) : d{x_, y_, z_} {}
-  constexpr kernel vec(vec<T, 2> xy_, T z_) : d{xy_.d[0], xy_.d[1], z_} {}
-
-  template <typename U>
-  constexpr kernel explicit(!std::is_convertible_v<U, T>)
-      vec(const vec<U, 3>& v)
-      : d{(T)v.d[0], (T)v.d[1], (T)v.d[2]} {}
-  template <typename U>
-  constexpr kernel explicit(!std::is_convertible_v<T, U>) operator vec<U, 3>() {
-    return {(U)d[0], (U)d[1], (U)d[2]};
-  }
-  constexpr kernel vec(const array<T, 3>& v) : d{v[0], v[1], v[2]} {}
-  constexpr kernel operator array<T, 3>() { return {d[0], d[1], d[2]}; }
-
-  constexpr kernel T&       operator[](size_t i) { return d[i]; }
-  constexpr kernel const T& operator[](size_t i) const { return d[i]; }
-
-  constexpr kernel T&       x() { return d[0]; }
-  constexpr kernel const T& x() const { return d[0]; }
-  constexpr kernel T&       y() { return d[1]; }
-  constexpr kernel const T& y() const { return d[1]; }
-  constexpr kernel T&       z() { return d[2]; }
-  constexpr kernel const T& z() const { return d[2]; }
-};
-
-template <typename T>
-struct vec<T, 4> {
-  T d[4];
-
-  constexpr kernel vec() : d{0, 0, 0, 0} {}
-  constexpr kernel explicit vec(T v_) : d{v_, v_, v_, v_} {}
-  constexpr kernel vec(T x_, T y_, T z_, T w_) : d{x_, y_, z_, w_} {}
-  constexpr kernel vec(vec<T, 3> xyz_, T w_)
-      : d{xyz_.d[0], xyz_.d[1], xyz_.d[2], w_} {}
-
-  template <typename U>
-  constexpr kernel explicit(!std::is_convertible_v<U, T>)
-      vec(const vec<U, 4>& v)
-      : d{(T)v.d[0], (T)v.d[1], (T)v.d[2], (T)v.d[3]} {}
-  template <typename U>
-  constexpr kernel explicit(!std::is_convertible_v<T, U>) operator vec<U, 4>() {
-    return {(U)d[0], (U)d[1], (U)d[2], (U)d[3]};
-  }
-  constexpr kernel vec(const array<T, 4>& v) : d{v[0], v[1], v[2], v[3]} {}
-  constexpr kernel operator array<T, 4>() { return {d[0], d[1], d[2], d[3]}; }
-
-  constexpr kernel T&       operator[](size_t i) { return d[i]; }
-  constexpr kernel const T& operator[](size_t i) const { return d[i]; }
-
-  constexpr kernel T&       x() { return d[0]; }
-  constexpr kernel const T& x() const { return d[0]; }
-  constexpr kernel T&       y() { return d[1]; }
-  constexpr kernel const T& y() const { return d[1]; }
-  constexpr kernel T&       z() { return d[2]; }
-  constexpr kernel const T& z() const { return d[2]; }
-  constexpr kernel T&       w() { return d[3]; }
-  constexpr kernel const T& w() const { return d[3]; }
 };
 
 // Deduction guides
