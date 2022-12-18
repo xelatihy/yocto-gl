@@ -1152,6 +1152,8 @@ constexpr kernel vec<T, N> select(const vec<bool, N>& a, T1 b, T2 c) {
 
 }  // namespace yocto
 
+#include <array>
+
 // -----------------------------------------------------------------------------
 // CUSTOMIZATION POINTS FOR STD
 // -----------------------------------------------------------------------------
@@ -1159,9 +1161,7 @@ namespace std {
 
 // Structured binding support
 template <typename T, size_t N>
-struct tuple_size<yocto::vec<T, N>> {
-  static const size_t value = N;
-};
+struct tuple_size<yocto::vec<T, N>> : std::integral_constant<size_t, N> {};
 template <size_t I, typename T, size_t N>
 struct tuple_element<I, yocto::vec<T, N>> {
   using type = T;
