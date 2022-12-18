@@ -948,77 +948,56 @@ constexpr kernel bool all(bool_vec auto const& a) { return fold_and(a); }
 constexpr kernel bool any(bool_vec auto const& a) { return fold_or(a); }
 
 // Functions applied to vector elements
-template <typename T, index_t N>
-constexpr kernel vec<T, N> abs(const vec<T, N>& a) {
-  return map(a, [](T a) { return abs(a); });
+constexpr kernel auto abs(num_vec auto const& a) {
+  return map(a, [](number auto a) { return abs(a); });
 }
-template <typename T, index_t N>
-constexpr kernel vec<T, N> sqr(const vec<T, N>& a) {
-  return map(a, [](T a) { return sqr(a); });
+constexpr kernel auto sqr(num_vec auto const& a) {
+  return map(a, [](number auto a) { return sqr(a); });
 }
-template <typename T, index_t N>
-constexpr kernel vec<T, N> sqrt(const vec<T, N>& a) {
-  return map(a, [](T a) { return sqrt(a); });
+constexpr kernel auto sqrt(num_vec auto const& a) {
+  return map(a, [](number auto a) { return sqrt(a); });
 }
-template <typename T, index_t N>
-constexpr kernel vec<T, N> exp(const vec<T, N>& a) {
-  return map(a, [](T a) { return exp(a); });
+constexpr kernel auto exp(num_vec auto const& a) {
+  return map(a, [](number auto a) { return exp(a); });
 }
-template <typename T, index_t N>
-constexpr kernel vec<T, N> log(const vec<T, N>& a) {
-  return map(a, [](T a) { return log(a); });
+constexpr kernel auto log(num_vec auto const& a) {
+  return map(a, [](number auto a) { return log(a); });
 }
-template <typename T, index_t N>
-constexpr kernel vec<T, N> exp2(const vec<T, N>& a) {
-  return map(a, [](T a) { return exp2(a); });
+constexpr kernel auto exp2(num_vec auto const& a) {
+  return map(a, [](number auto a) { return exp2(a); });
 }
-template <typename T, index_t N>
-constexpr kernel vec<T, N> log2(const vec<T, N>& a) {
-  return map(a, [](T a) { return log2(a); });
+constexpr kernel auto log2(num_vec auto const& a) {
+  return map(a, [](number auto a) { return log2(a); });
 }
-template <typename T1, typename T2, index_t N, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, N> pow(const vec<T1, N>& a, T2 b) {
-  return map(a, b, [](T1 a, T2 b) { return pow(a, b); });
+constexpr kernel auto pow(num_vec auto const& a, number auto b) {
+  return map(a, b, [](number auto a, number auto b) { return pow(a, b); });
 }
-template <typename T1, typename T2, index_t N, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, N> pow(const vec<T1, N>& a, const vec<T2, N>& b) {
-  return map(a, b, [](T1 a, T2 b) { return pow(a, b); });
+constexpr kernel auto pow(num_vec auto const& a, num_vec auto const& b) {
+  return map(a, b, [](number auto a, number auto b) { return pow(a, b); });
 }
-template <typename T, index_t N>
-constexpr kernel vec<T, N> round(const vec<T, N>& a) {
-  return map(a, [](T a) { return round(a); });
+constexpr kernel auto round(num_vec auto const& a) {
+  return map(a, [](number auto a) { return round(a); });
 }
-template <typename T, typename T1, index_t N>
-constexpr kernel vec<T, N> fmod(const vec<T, N>& a, const vec<T1, N>& b) {
-  return map(a, b, [](T a, T1 b) { return fmod(a, b); });
+constexpr kernel auto fmod(num_vec auto const& a, num_vec auto const& b) {
+  return map(a, b, [](number auto a, number auto b) { return fmod(a, b); });
 }
-template <typename T, typename T1, index_t N>
-constexpr kernel vec<T, N> fmod(const vec<T, N>& a, T1 b) {
-  return map(a, b, [](T a, T1 b) { return fmod(a, b); });
+constexpr kernel auto fmod(num_vec auto const& a, number auto b) {
+  return map(a, b, [](number auto a, number auto b) { return fmod(a, b); });
 }
-template <typename T, typename T1, index_t N>
-constexpr kernel vec<T, N> mod(const vec<T, N>& a, const vec<T1, N>& b) {
-  return map(a, b, [](T a, T1 b) { return mod(a, b); });
+constexpr kernel auto mod(num_vec auto const& a, num_vec auto const& b) {
+  return map(a, b, [](number auto a, number auto b) { return mod(a, b); });
 }
-template <typename T, typename T1, index_t N>
-constexpr kernel vec<T, N> mod(const vec<T, N>& a, T1 b) {
-  return map(a, b, [](T a, T1 b) { return mod(a, b); });
+constexpr kernel auto mod(num_vec auto const& a, number auto b) {
+  return map(a, b, [](number auto a, number auto b) { return mod(a, b); });
 }
-template <typename T1, typename T2, index_t N, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, N> bias(const vec<T1, N>& a, T2 b) {
-  return map(a, b, [](T1 a, T2 b) { return bias(a, b); });
+constexpr kernel auto bias(num_vec auto const& a, number auto b) {
+  return map(a, b, [](number auto a, number auto b) { return bias(a, b); });
 }
-template <typename T1, typename T2, index_t N, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, N> gain(const vec<T1, N>& a, T2 b) {
-  return map(a, b, [](T1 a, T2 b) { return bias(a, b); });
+constexpr kernel auto gain(num_vec auto const& a, number auto b) {
+  return map(a, b, [](number auto a, number auto b) { return bias(a, b); });
 }
-// template <typename T, index_t N>
-// inline void swap(vec<T, N>& a, vec<T, N>& b) {
-//   std::swap(a, b);
-// }
-template <typename T, index_t N>
-constexpr kernel bool isfinite(const vec<T, N>& a) {
-  return all(map(a, [](T a) { return isfinite(a); }));
+constexpr kernel bool isfinite(num_vec auto const& a) {
+  return all(map(a, [](number auto a) { return isfinite(a); }));
 }
 
 // Conversion between ranges
