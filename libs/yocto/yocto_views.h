@@ -38,6 +38,7 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
+#include <array>
 #include <vector>
 
 // -----------------------------------------------------------------------------
@@ -46,6 +47,7 @@
 namespace yocto {
 
 // using directives
+using std::array;
 using std::vector;
 
 }  // namespace yocto

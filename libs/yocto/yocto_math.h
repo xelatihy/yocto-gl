@@ -37,7 +37,6 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
-#include <array>
 #include <cmath>
 #include <cstdint>
 #include <limits>
@@ -50,7 +49,6 @@
 namespace yocto {
 
 // using directives
-using std::array;
 using std::pair;
 
 }  // namespace yocto
@@ -331,9 +329,6 @@ struct vec<T, 1> {
   constexpr kernel explicit(!std::is_convertible_v<T, U>) operator vec<U, 1>() {
     return {(U)d[0]};
   }
-
-  constexpr kernel vec(const array<T, 1>& v) : d{v[0]} {}
-  constexpr kernel operator array<T, 1>() { return {d[0]}; }
 
   constexpr kernel T&       operator[](size_t i) { return d[i]; }
   constexpr kernel const T& operator[](size_t i) const { return d[i]; }
@@ -2235,15 +2230,11 @@ constexpr kernel auto range(T min, T max, T step);
 // sequence.
 template <typename T>
 constexpr kernel auto range(vec<T, 2> max);
-template <typename T>
-constexpr kernel auto range(array<T, 2> max);
 
 // Python range in 3d. Construct an object that iterates over a 3d integer
 // sequence.
 template <typename T>
 constexpr kernel auto range(vec<T, 3> max);
-template <typename T>
-constexpr kernel auto range(array<T, 3> max);
 
 // Python enumerate
 template <typename Sequence, typename T = size_t>
@@ -2331,10 +2322,6 @@ constexpr kernel auto range(vec<T, 2> max) {
   };
   return range_sequence{max};
 }
-template <typename T>
-constexpr kernel auto range(array<T, 2> max) {
-  return range(vec<T, 2>{max});
-}
 
 // Python range in 2d. Construct an object that iterates over a 2d integer
 // sequence.
@@ -2365,10 +2352,6 @@ constexpr kernel auto range(vec<T, 3> max) {
     constexpr kernel range_sentinel end() const { return {}; }
   };
   return range_sequence{max};
-}
-template <typename T>
-constexpr kernel auto range(array<T, 3> max) {
-  return range(vec<T, 3>{max});
 }
 
 // Implementation of Python enumerate.
