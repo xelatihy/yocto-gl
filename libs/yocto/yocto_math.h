@@ -284,9 +284,17 @@ struct vec {
   T d[N];
 
   constexpr kernel vec() : d{0} {}
+
+#ifndef __CUDACC__
   constexpr kernel explicit vec(T v) {
     for (auto& e : d) e = v;
   }
+#else
+  constexpr kernel explicit vec(T v) : vec(std::make_index_sequence<N>(), v) {}
+  template <size_t... Is>
+  constexpr kernel explicit vec(std::index_sequence<Is...>, T v)
+      : d{(Is, v)...} {}
+#endif
 
 #if YOCTO_CONCEPTS
   template <number... Ts>
@@ -302,7 +310,7 @@ struct vec {
     d[N - 1] = last;
   }
 
-  constexpr kernel vec(const vec& v) = default;
+  constexpr kernel      vec(const vec& v)       = default;
   constexpr kernel vec& operator=(const vec& v) = default;
 
   template <typename T1>
