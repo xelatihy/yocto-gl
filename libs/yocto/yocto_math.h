@@ -87,8 +87,8 @@ template <typename T>
 struct vec_etype_s {
   using type = void;
 };
-template <typename... T>
-using vec_etype = typename vec_etype_s<T...>::type;
+template <typename T>
+using vec_etype = typename vec_etype_s<T>::type;
 
 // Number type traits
 template <typename T>
@@ -132,6 +132,27 @@ template <typename T>
 concept num_vec = is_num_vec<T>;
 template <typename T>
 concept bool_vec = is_bool_vec<T>;
+
+template <typename T>
+concept num_vec2 = is_num_vec<T> && vec_size<T> == 2;
+template <typename T>
+concept num_vec3 = is_num_vec<T> && vec_size<T> == 3;
+template <typename T>
+concept num_vec4 = is_num_vec<T> && vec_size<T> == 4;
+
+template <typename T>
+concept int_vec2 = is_int_vec<T> && vec_size<T> == 2;
+template <typename T>
+concept int_vec3 = is_int_vec<T> && vec_size<T> == 3;
+template <typename T>
+concept int_vec4 = is_int_vec<T> && vec_size<T> == 4;
+
+template <typename T>
+concept real_vec2 = is_real_vec<T> && vec_size<T> == 2;
+template <typename T>
+concept real_vec3 = is_real_vec<T> && vec_size<T> == 3;
+template <typename T>
+concept real_vec4 = is_real_vec<T> && vec_size<T> == 4;
 
 template <index_t N, typename... Ts>
 concept same_size = (sizeof...(Ts) == N);
@@ -391,7 +412,7 @@ struct vec<T, 1> {
 template <number... Args>
 vec(Args...) -> vec<common_t<Args...>, sizeof...(Args)>;
 
-// Vectors
+// Vector type traits
 template <typename T, index_t N>
 struct is_vec_s<vec<T, N>> : std::bool_constant<true> {};
 template <typename T, index_t N>
@@ -400,6 +421,20 @@ template <typename T, index_t N>
 struct vec_etype_s<vec<T, N>> {
   using type = T;
 };
+
+// Vector aliases
+template <typename T>
+using vec2 = vec<T, 2>;
+template <typename T>
+using vec3 = vec<T, 3>;
+template <typename T>
+using vec4 = vec<T, 4>;
+
+// Generic constants
+template <typename T, int N>
+constexpr auto zero_vec = vec<T, N>{0};
+template <typename T, int N>
+constexpr auto one_vec = vec<T, N>{1};
 
 // Vector aliases
 using vec1f = vec<float, 1>;
@@ -428,12 +463,6 @@ constexpr auto zero2i = vec2i{0, 0};
 constexpr auto zero3i = vec3i{0, 0, 0};
 constexpr auto zero4i = vec4i{0, 0, 0, 0};
 constexpr auto zero4b = vec4b{0, 0, 0, 0};
-
-// Generic constants
-template <typename T, int N>
-constexpr auto zero = vec<T, N>{0};
-template <typename T, int N>
-constexpr auto one = vec<T, N>{1};
 
 // Element access
 template <typename T>
@@ -542,6 +571,30 @@ constexpr kernel vec<T, N> map(
 template <typename T1, typename T2, typename T3, index_t N, typename Func,
     typename T = result_t<Func, T1, T2, T3>>
 constexpr kernel vec<T, N> map(const vec<T1, N>& a, T2 b, T3 c, Func&& func) {
+  return map(indices<N>(), a, b, c, std::forward<Func>(func));
+}
+template <typename T1, typename T2, typename T3, index_t N, typename Func,
+    index_t... Is, typename T = result_t<Func, T1, T2, T3>>
+constexpr kernel vec<T, N> map(index_seq<Is...>, const vec<T1, N>& a,
+    const vec<T2, N>& b, T3 c, Func&& func) {
+  return {func(a[Is], b[Is], c)...};
+}
+template <typename T1, typename T2, typename T3, index_t N, typename Func,
+    typename T = result_t<Func, T1, T2, T3>>
+constexpr kernel vec<T, N> map(
+    const vec<T1, N>& a, const vec<T2, N>& b, T3 c, Func&& func) {
+  return map(indices<N>(), a, b, c, std::forward<Func>(func));
+}
+template <typename T1, typename T2, typename T3, index_t N, typename Func,
+    index_t... Is, typename T = result_t<Func, T1, T2, T3>>
+constexpr kernel vec<T, N> map(index_seq<Is...>, const vec<T1, N>& a, T2 b,
+    const vec<T3, N>& c, Func&& func) {
+  return {func(a[Is], b, c[Is])...};
+}
+template <typename T1, typename T2, typename T3, index_t N, typename Func,
+    typename T = result_t<Func, T1, T2, T3>>
+constexpr kernel vec<T, N> map(
+    const vec<T1, N>& a, T2 b, const vec<T3, N>& c, Func&& func) {
   return map(indices<N>(), a, b, c, std::forward<Func>(func));
 }
 template <typename T, index_t N, typename Func>
@@ -721,91 +774,71 @@ constexpr kernel auto& operator%=(int_vec auto& a, integral auto b) {
 }
 
 // Vector products and lengths.
-template <typename T1, typename T2, index_t N, typename T = common_t<T1, T2>>
-constexpr kernel T dot(const vec<T1, N>& a, const vec<T2, N>& b) {
+constexpr kernel auto dot(num_vec auto const& a, num_vec auto const& b) {
   return sum(a * b);
 }
-template <typename T1, typename T2, typename T = common_t<T1, T2>>
-constexpr kernel T cross(const vec<T1, 2>& a, const vec<T2, 2>& b) {
+constexpr kernel auto cross(num_vec2 auto const& a, num_vec2 auto const& b) {
   return a.x() * b.y() - a.y() * b.x();
 }
-template <typename T1, typename T2, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, 3> cross(const vec<T1, 3>& a, const vec<T2, 3>& b) {
-  return {a.y() * b.z() - a.z() * b.y(), a.z() * b.x() - a.x() * b.z(),
+constexpr kernel auto cross(num_vec3 auto const& a, num_vec3 auto const& b) {
+  return vec{a.y() * b.z() - a.z() * b.y(), a.z() * b.x() - a.x() * b.z(),
       a.x() * b.y() - a.y() * b.x()};
 }
 template <typename T1, typename T2, typename T = common_t<T1, T2>>
-constexpr kernel T angle(const vec<T1, 3>& a, const vec<T2, 3>& b) {
-  return acos(clamp(dot(normalize(a), normalize(b)), (T)-1, (T)1));
+constexpr kernel auto angle(num_vec auto const& a, num_vec auto const& b) {
+  return acos(clamp(dot(normalize(a), normalize(b)), -1, 1));
 }
 
 // Orthogonal vectors.
-template <typename T>
-constexpr kernel vec<T, 3> orthogonal(const vec<T, 3>& v) {
+constexpr kernel auto orthogonal(num_vec3 auto const& v) {
   // http://lolengine.net/blog/2013/09/21/picking-orthogonal-vector-combing-coconuts)
-  return abs(v.x()) > abs(v.z()) ? vec<T, 3>{-v.y(), v.x(), 0}
-                                 : vec<T, 3>{0, -v.z(), v.y()};
+  return abs(v.x()) > abs(v.z()) ? vec{-v.y(), v.x(), 0}
+                                 : vec{0, -v.z(), v.y()};
 }
-template <typename T1, typename T2, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, 3> orthonormalize(
-    const vec<T1, 3>& a, const vec<T2, 3>& b) {
+constexpr kernel auto orthonormalize(
+    num_vec auto const& a, num_vec auto const& b) {
   return normalize(a - b * dot(a, b));
 }
 
 // Reflected and refracted vector.
-template <typename T1, typename T2, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, 3> reflect(const vec<T1, 3>& w, const vec<T2, 3>& n) {
+constexpr kernel auto reflect(num_vec auto const& w, num_vec auto const& n) {
   return -w + 2 * dot(n, w) * n;
 }
-template <typename T1, typename T2, typename T3,
-    typename T = common_t<T1, T2, T3>>
-constexpr kernel vec<T, 3> refract(
-    const vec<T1, 3>& w, const vec<T2, 3>& n, T3 inv_eta) {
+constexpr kernel auto refract(
+    num_vec3 auto const& w, num_vec3 auto const& n, number auto inv_eta) {
+  using V     = decltype(w);
   auto cosine = dot(n, w);
   auto k      = 1 + inv_eta * inv_eta * (cosine * cosine - 1);
-  if (k < 0) return {0, 0, 0};  // tir
+  if (k < 0) return V{0, 0, 0};
   return -w * inv_eta + (inv_eta * cosine - sqrt(k)) * n;
 }
 
-template <typename T, index_t N>
-constexpr kernel T length(const vec<T, N>& a) {
-  return sqrt(dot(a, a));
-}
-template <typename T, index_t N>
-constexpr kernel T length2(const vec<T, N>& a) {
+constexpr kernel auto length(num_vec auto const& a) { return sqrt(dot(a, a)); }
+constexpr kernel auto length2(num_vec auto const& a) { return dot(a, a); }
+[[deprecated]] constexpr kernel auto length_squared(num_vec auto const& a) {
   return dot(a, a);
 }
-template <typename T, index_t N>
-[[deprecated]] constexpr kernel T length_squared(const vec<T, N>& a) {
-  return dot(a, a);
-}
-template <typename T, index_t N>
-constexpr kernel vec<T, N> normalize(const vec<T, N>& a) {
+constexpr kernel auto normalize(num_vec auto const& a) {
   auto l = length(a);
   return (l != 0) ? a / l : a;
 }
-template <typename T1, typename T2, index_t N, typename T = common_t<T1, T2>>
-constexpr kernel T distance(const vec<T1, N>& a, const vec<T2, N>& b) {
+constexpr kernel auto distance(num_vec auto const& a, num_vec auto const& b) {
   return length(a - b);
 }
-template <typename T1, typename T2, index_t N, typename T = common_t<T1, T2>>
-constexpr kernel T distance2(const vec<T1, N>& a, const vec<T2, N>& b) {
+constexpr kernel auto distance2(num_vec auto const& a, num_vec auto const& b) {
   return dot(a - b, a - b);
 }
-template <typename T1, typename T2, index_t N, typename T = common_t<T1, T2>>
-[[deprecated]] constexpr kernel T distance_squared(
-    const vec<T1, N>& a, const vec<T2, N>& b) {
+[[deprecated]] constexpr kernel auto distance_squared(
+    num_vec auto const& a, num_vec auto const& b) {
   return dot(a - b, a - b);
 }
-template <typename T1, typename T2, index_t N, typename T = common_t<T1, T2>>
-constexpr kernel T angle(const vec<T1, N>& a, const vec<T2, N>& b) {
-  return acos(clamp(dot(normalize(a), normalize(b)), (T)-1, (T)1));
+constexpr kernel auto angle(num_vec auto const& a, num_vec auto const& b) {
+  return acos(clamp(dot(normalize(a), normalize(b)), -1, 1));
 }
 
-template <typename T1, typename T2, typename T3,
-    typename T = common_t<T1, T2, T3>>
-constexpr kernel vec<T, 4> slerp(
-    const vec<T1, 4>& a, const vec<T2, 4>& b, T3 u) {
+constexpr kernel auto slerp(
+    num_vec4 auto const& a, num_vec4 auto const& b, number auto u) {
+  using T = decltype(u);
   // https://en.wikipedia.org/wiki/Slerp
   auto an = normalize(a), bn = normalize(b);
   auto d = dot(an, bn);
@@ -814,71 +847,60 @@ constexpr kernel vec<T, 4> slerp(
     d  = -d;
   }
   if (d > (T)0.9995) return normalize(an + u * (bn - an));
-  auto th = acos(clamp(d, (T)-1, (T)1));
+  auto th = acos(clamp(d, -1, 1));
   if (th == 0) return an;
   return an * (sin(th * (1 - u)) / sin(th)) + bn * (sin(th * u) / sin(th));
 }
 
 // Max element and clamp.
-template <typename T1, typename T2, index_t N, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, N> max(const vec<T1, N>& a, const vec<T2, N>& b) {
-  return map(a, b, [](T1 a, T2 b) { return max(a, b); });
+constexpr kernel auto max(num_vec auto const& a, num_vec auto const& b) {
+  return map(a, b, [](number auto a, number auto b) { return max(a, b); });
 }
-template <typename T1, typename T2, index_t N, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, N> max(const vec<T1, N>& a, T2 b) {
-  return map(a, b, [](T1 a, T2 b) { return max(a, b); });
+constexpr kernel auto max(num_vec auto const& a, number auto b) {
+  return map(a, b, [](number auto a, number auto b) { return max(a, b); });
 }
-template <typename T1, typename T2, index_t N, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, N> min(const vec<T1, N>& a, T2 b) {
-  return map(a, b, [](T1 a, T2 b) { return min(a, b); });
+constexpr kernel auto min(num_vec auto const& a, number auto b) {
+  return map(a, b, [](number auto a, number auto b) { return min(a, b); });
 }
-template <typename T1, typename T2, index_t N, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, N> min(const vec<T1, N>& a, const vec<T2, N>& b) {
-  return map(a, b, [](T1 a, T2 b) { return min(a, b); });
+constexpr kernel auto min(num_vec auto const& a, num_vec auto const& b) {
+  return map(a, b, [](number auto a, number auto b) { return min(a, b); });
 }
-template <typename T1, typename T2, typename T3, index_t N,
-    typename T = common_t<T1, T2, T3>>
-constexpr kernel vec<T, N> clamp(
-    const vec<T1, N>& x, const vec<T2, N>& min, const vec<T3, N>& max) {
-  return map(x, min, max, [](T1 a, T2 b, T3 c) { return clamp(a, b, c); });
+constexpr kernel auto clamp(
+    num_vec auto const& x, num_vec auto const& min, num_vec auto const& max) {
+  return map(x, min, max, [](number auto a, number auto b, number auto c) {
+    return clamp(a, b, c);
+  });
 }
-template <typename T1, typename T2, typename T3, index_t N,
-    typename T = common_t<T1, T2, T3>>
-constexpr kernel vec<T, N> clamp(const vec<T1, N>& x, T2 min, T3 max) {
-  return map(x, min, max, [](T1 a, T2 b, T3 c) { return clamp(a, b, c); });
+constexpr kernel auto clamp(
+    num_vec auto const& x, number auto min, number auto max) {
+  return map(x, min, max, [](number auto a, number auto b, number auto c) {
+    return clamp(a, b, c);
+  });
 }
-template <typename T1, typename T2, typename T3, index_t N,
-    typename T = common_t<T1, T2, T3>>
-constexpr kernel vec<T, N> clamp(
-    const vec<T1, N>& x, const vec<T2, N>& min, T3 max) {
-  return map(
-      x, min, vec<T3, N>{max}, [](T1 a, T2 b, T3 c) { return clamp(a, b, c); });
+constexpr kernel auto clamp(
+    num_vec auto const& x, num_vec auto const& min, number auto max) {
+  return map(x, min, max, [](number auto a, number auto b, number auto c) {
+    return clamp(a, b, c);
+  });
 }
-template <typename T1, typename T2, typename T3, index_t N,
-    typename T = common_t<T1, T2, T3>>
-constexpr kernel vec<T, N> clamp(
-    const vec<T1, N>& x, T2 min, const vec<T3, N>& max) {
-  return map(
-      x, vec<T2, N>{min}, max, [](T1 a, T2 b, T3 c) { return clamp(a, b, c); });
+constexpr kernel auto clamp(
+    num_vec auto const& x, number auto min, num_vec auto const& max) {
+  return map(x, min, max, [](number auto a, number auto b, number auto c) {
+    return clamp(a, b, c);
+  });
 }
-template <typename T, index_t N>
-constexpr kernel vec<T, N> radians(const vec<T, N>& a) {
-  return a * (T)pi / 180;
+constexpr kernel auto radians(num_vec auto const& a) {
+  return map(a, [](number auto a) { return radians(a); });
 }
-template <typename T, index_t N>
-constexpr kernel vec<T, N> degrees(const vec<T, N>& a) {
-  return a * 180 / (T)pi;
+constexpr kernel auto degrees(num_vec auto const& a) {
+  return map(a, [](number auto a) { return degrees(a); });
 }
-template <typename T1, typename T2, typename T3, index_t N,
-    typename T = common_t<T1, T2, T3>>
-constexpr kernel vec<T, N> lerp(
-    const vec<T1, N>& a, const vec<T2, N>& b, T3 u) {
+constexpr kernel auto lerp(
+    num_vec auto const& a, num_vec auto const& b, number auto u) {
   return a * (1 - u) + b * u;
 }
-template <typename T1, typename T2, typename T3, index_t N,
-    typename T = common_t<T1, T2, T3>>
-constexpr kernel vec<T, N> lerp(
-    const vec<T1, N>& a, const vec<T2, N>& b, const vec<T3, N>& u) {
+constexpr kernel auto lerp(
+    num_vec auto const& a, num_vec auto const& b, num_vec auto const& u) {
   return a * (1 - u) + b * u;
 }
 
