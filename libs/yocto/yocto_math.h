@@ -134,98 +134,47 @@ constexpr auto num_eps = std::numeric_limits<T>::epsilon();
 
 using std::swap;
 
-template <typename T>
-constexpr kernel T abs(T a) {
-  return a < 0 ? -a : a;
-}
-template <typename T1, typename T2, typename T = common_t<T1, T2>>
-constexpr kernel T min(T1 a, T2 b) {
+constexpr kernel auto abs(number auto a) { return a < 0 ? -a : a; }
+constexpr kernel auto min(number auto a, number auto b) {
+  using T = common_t<decltype(a), decltype(b)>;
   return (a < b) ? (T)a : (T)b;
 }
-template <typename T1, typename T2, typename T = common_t<T1, T2>>
-constexpr kernel T max(T1 a, T2 b) {
+constexpr kernel auto max(number auto a, number auto b) {
+  using T = common_t<decltype(a), decltype(b)>;
   return (a > b) ? (T)a : (T)b;
 }
-template <typename T1, typename T2, typename T3,
-    typename T = common_t<T1, T2, T3>>
-constexpr kernel T clamp(T1 a, T2 min_, T3 max_) {
-  return min(max(a, min_), max_);
+constexpr kernel auto clamp(number auto a, number auto min_, number auto max_) {
+  using T = decltype(a);
+  return min(max(a, (T)min_), (T)max_);
 }
-template <typename T>
-constexpr kernel T sign(T a) {
+constexpr kernel auto sign(number auto a) {
+  using T = decltype(a);
   return a < 0 ? (T)-1 : (T)1;
 }
-template <typename T>
-constexpr kernel T sqr(T a) {
-  return a * a;
-}
-template <typename T>
-constexpr kernel T sqrt(T a) {
-  return std::sqrt(a);
-}
-template <typename T>
-constexpr kernel T sin(T a) {
-  return std::sin(a);
-}
-template <typename T>
-constexpr kernel T cos(T a) {
-  return std::cos(a);
-}
-template <typename T>
-constexpr kernel T tan(T a) {
-  return std::tan(a);
-}
-template <typename T>
-constexpr kernel T asin(T a) {
-  return std::asin(a);
-}
-template <typename T>
-constexpr kernel T acos(T a) {
-  return std::acos(a);
-}
-template <typename T>
-constexpr kernel T atan(T a) {
-  return std::atan(a);
-}
-template <typename T>
-constexpr kernel T log(T a) {
-  return std::log(a);
-}
-template <typename T>
-constexpr kernel T exp(T a) {
-  return std::exp(a);
-}
-template <typename T>
-constexpr kernel T log2(T a) {
-  return std::log2(a);
-}
-template <typename T>
-constexpr kernel T exp2(T a) {
-  return std::exp2(a);
-}
-template <typename T1, typename T2, typename T = common_t<T1, T2>>
-constexpr kernel T pow(T1 a, T2 b) {
+constexpr kernel auto sqr(number auto a) { return a * a; }
+constexpr kernel auto sqrt(real auto a) { return std::sqrt(a); }
+constexpr kernel auto sin(real auto a) { return std::sin(a); }
+constexpr kernel auto cos(real auto a) { return std::cos(a); }
+constexpr kernel auto tan(real auto a) { return std::tan(a); }
+constexpr kernel auto asin(real auto a) { return std::asin(a); }
+constexpr kernel auto acos(real auto a) { return std::acos(a); }
+constexpr kernel auto atan(real auto a) { return std::atan(a); }
+constexpr kernel auto log(real auto a) { return std::log(a); }
+constexpr kernel auto exp(real auto a) { return std::exp(a); }
+constexpr kernel auto log2(real auto a) { return std::log2(a); }
+constexpr kernel auto exp2(real auto a) { return std::exp2(a); }
+constexpr kernel auto pow(number auto a, number auto b) {
+  using T = common_t<decltype(a), decltype(b)>;
   return std::pow((T)a, (T)b);
 }
-template <typename T>
-constexpr kernel bool isfinite(T a) {
-#ifndef __CUDACC__
-  return std::isfinite(a);
-#else
-  return ::isfinite(a);
-#endif
-}
-template <typename T1, typename T2, typename T = common_t<T1, T2>>
-constexpr kernel T atan2(T1 a, T2 b) {
+constexpr kernel bool isfinite(real auto a) { return std::isfinite(a); }
+constexpr kernel auto atan2(number auto a, number auto b) {
+  using T = common_t<decltype(a), decltype(b)>;
   return std::atan2((T)a, (T)b);
 }
-template <typename T>
-constexpr kernel T round(T a) {
-  return std::round(a);
-}
-template <typename T, typename T1>
-constexpr kernel T fmod(T a, T1 b) {
-  return std::fmod(a, (T)b);
+constexpr kernel auto round(real auto a) { return std::round(a); }
+constexpr kernel auto fmod(real auto a, number auto b) {
+  return std::fmod(a, (decltype(a))b);
 }
 template <typename T, typename T1>
 constexpr kernel T mod(T a, T1 b) {
@@ -241,41 +190,29 @@ constexpr kernel T mod(T a, T1 b) {
 // inline void swap(T& a, T& b) {
 //   std::swap(a, b);
 // }
-template <typename T>
-constexpr kernel T radians(T a) {
-  return a * (T)pi / 180;
-}
-template <typename T>
-constexpr kernel T degrees(T a) {
-  return a * 180 / (T)pi;
-}
-template <typename T1, typename T2, typename T3, typename T = common_t<T1, T2>>
-constexpr kernel T lerp(T1 a, T2 b, T3 u) {
+constexpr kernel auto radians(real auto a) { return a * (decltype(a))pi / 180; }
+constexpr kernel auto degrees(real auto a) { return a * 180 / (decltype(a))pi; }
+constexpr kernel auto lerp(number auto a, number auto b, number auto u) {
   return a * (1 - u) + b * u;
 }
-template <typename T1, typename T2, typename T = common_t<T1, T2>>
-constexpr kernel T step(T1 a, T2 u) {
+constexpr kernel auto step(number auto a, number auto u) {
+  using T = common_t<decltype(a), decltype(u)>;
   return u < a ? (T)0 : (T)1;
 }
-template <typename T1, typename T2, typename T3,
-    typename T = common_t<T1, T2, T3>>
-constexpr kernel T smoothstep(T1 a, T2 b, T3 u) {
-  auto t = clamp((u - a) / (b - a), (T)0, (T)1);
+constexpr kernel auto smoothstep(number auto a, number auto b, number auto u) {
+  using T = common_t<decltype(a), decltype(b), decltype(u)>;
+  auto t  = clamp((u - a) / (b - a), (T)0, (T)1);
   return t * t * (3 - 2 * t);
 }
-template <typename T1, typename T2, typename T = common_t<T1, T2>>
-constexpr kernel T bias(T1 a, T2 bias) {
+constexpr kernel auto bias(number auto a, number auto bias) {
   return a / ((1 / bias - 2) * (1 - a) + 1);
 }
-template <typename T1, typename T2, typename T = common_t<T1, T2>>
-constexpr kernel T gain(T1 a, T2 gain) {
+constexpr kernel auto gain(number auto a, number auto gain) {
+  using T = common_t<decltype(a), decltype(gain)>;
   return (a < (T)0.5) ? bias(a * 2, gain) / 2
                       : bias(a * 2 - 1, 1 - gain) / 2 + (T)0.5;
 }
-template <typename I>
-constexpr kernel I pow2(I a) {
-  return 1 << a;
-}
+constexpr kernel auto pow2(integral auto a) { return 1 << a; }
 
 }  // namespace yocto
 
@@ -904,6 +841,14 @@ constexpr kernel vec<T, N> clamp(
     const vec<T1, N>& x, T2 min, const vec<T3, N>& max) {
   return map(
       x, vec<T2, N>{min}, max, [](T1 a, T2 b, T3 c) { return clamp(a, b, c); });
+}
+template <typename T, size_t N>
+constexpr kernel vec<T, N> radians(const vec<T, N>& a) {
+  return a * (T)pi / 180;
+}
+template <typename T, size_t N>
+constexpr kernel vec<T, N> degrees(const vec<T, N>& a) {
+  return a * 180 / (T)pi;
 }
 template <typename T1, typename T2, typename T3, size_t N,
     typename T = common_t<T1, T2, T3>>
