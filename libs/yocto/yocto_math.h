@@ -37,6 +37,7 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
+#include <array>
 #include <cmath>
 #include <cstdint>
 #include <limits>
@@ -66,12 +67,14 @@ using std::pair;
 #endif
 
 // -----------------------------------------------------------------------------
-// MATH CONCEPTS
+// MATH CONCEPTS AND TYPE TRAITS
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-#ifndef __CUDACC__
+// Index type
+using index_t = std::size_t;
 
+// Concepts
 template <typename T>
 concept integral = std::is_integral_v<T>;
 template <typename T>
@@ -82,7 +85,11 @@ concept number = std::is_integral_v<T> || std::is_floating_point_v<T>;
 template <size_t N, typename... Ts>
 concept same_size = (sizeof...(Ts) == N);
 
-#endif
+// Helpers
+template <index_t... Is>
+using index_seq = std::integer_sequence<index_t, Is...>;
+template <index_t N>
+using indices = std::make_integer_sequence<index_t, N>;
 
 }  // namespace yocto
 
@@ -277,8 +284,7 @@ constexpr kernel I pow2(I a) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-#ifndef __CUDACC__
-
+// Static vectors
 template <typename T, size_t N>
 struct vec {
   T d[N];
@@ -302,15 +308,12 @@ struct vec {
 
   template <typename T1>
   constexpr kernel explicit(!std::is_convertible_v<T1, T>)
-      vec(const vec<T1, N>& v) {
-    for (auto idx = 0; idx < N; idx++) d[idx] = (T)v.d[idx];
-  }
+      vec(const vec<T1, N>& v)
+      : vec(indices<N>(), v) {}
   template <typename T1>
   constexpr kernel explicit(!std::is_convertible_v<T, T1>)
   operator vec<T1, N>() {
-    auto ret = vec<T1, N>();
-    for (auto idx = 0; idx < N; idx++) ret.d[idx] = (T1)d[idx];
-    return ret;
+    return to_vec<T1>(indices<N>());
   }
 
   constexpr kernel T&       operator[](size_t i) { return d[i]; }
@@ -324,6 +327,30 @@ struct vec {
   constexpr kernel const T& z() const { return d[2]; }
   constexpr kernel T&       w() { return d[3]; }
   constexpr kernel const T& w() const { return d[3]; }
+  constexpr kernel vec<T, 2>& xy() { return *(vec<T, 2>)this; }
+  constexpr kernel const vec<T, 2>& xy() const { return *(vec<T, 2>)this; }
+  constexpr kernel vec<T, 3>& xyz() { return *(vec<T, 3>)this; }
+  constexpr kernel const vec<T, 3>& xyz() const { return *(vec<T, 3>)this; }
+
+  constexpr kernel T&       r() { return d[0]; }
+  constexpr kernel const T& r() const { return d[0]; }
+  constexpr kernel T&       g() { return d[1]; }
+  constexpr kernel const T& g() const { return d[1]; }
+  constexpr kernel T&       b() { return d[2]; }
+  constexpr kernel const T& b() const { return d[2]; }
+  constexpr kernel T&       a() { return d[3]; }
+  constexpr kernel const T& a() const { return d[3]; }
+  constexpr kernel vec<T, 3>& rgb() { return *(vec<T, 3>)this; }
+  constexpr kernel const vec<T, 3>& rgb() const { return *(vec<T, 3>)this; }
+
+ private:
+  template <typename T1, index_t... Is>
+  constexpr kernel vec(index_seq<Is...>, const vec<T1, N>& v)
+      : d{(T)v[Is]...} {}
+  template <typename T1, index_t... Is>
+  constexpr kernel vec<T1, N> to_vec(index_seq<Is...>) {
+    return {(T1)d[Is]...};
+  }
 };
 
 template <typename T>
@@ -342,40 +369,8 @@ struct vec<T, 1> {
     return {(U)d[0]};
   }
 
-  constexpr kernel T&       operator[](size_t i) { return d[i]; }
-  constexpr kernel const T& operator[](size_t i) const { return d[i]; }
-
-  constexpr kernel T&       x() { return d[0]; }
-  constexpr kernel const T& x() const { return d[0]; }
-};
-
-// Deduction guides
-template <typename... Args>
-vec(Args...) -> vec<common_t<Args...>, sizeof...(Args)>;
-
-#else
-
-template <typename T, size_t N>
-struct vec;
-
-template <typename T>
-struct vec<T, 1> {
-  T d[1];
-
-  constexpr kernel vec() : d{0} {}
-  constexpr kernel vec(T x_) : d{x_} {}
-
-  template <typename U>
-  constexpr kernel explicit(!std::is_convertible_v<U, T>)
-      vec(const vec<U, 1>& v)
-      : d{(T)v.d[0]} {}
-  template <typename U>
-  constexpr kernel explicit(!std::is_convertible_v<T, U>) operator vec<U, 1>() {
-    return {(U)d[0]};
-  }
-
-  constexpr kernel vec(const array<T, 1>& v) : d{v[0]} {}
-  constexpr kernel operator array<T, 1>() { return {d[0]}; }
+  constexpr kernel vec(const std::array<T, 1>& v) : d{v[0]} {}
+  constexpr kernel operator std::array<T, 1>() { return {d[0]}; }
 
   constexpr kernel T&       operator[](size_t i) { return d[i]; }
   constexpr kernel const T& operator[](size_t i) const { return d[i]; }
@@ -383,102 +378,6 @@ struct vec<T, 1> {
   constexpr kernel T&       x() { return d[0]; }
   constexpr kernel const T& x() const { return d[0]; }
 };
-
-template <typename T>
-struct vec<T, 2> {
-  T d[2];
-
-  constexpr kernel vec() : d{0, 0} {}
-  constexpr kernel explicit vec(T v_) : d{v_, v_} {}
-  constexpr kernel vec(T x_, T y_) : d{x_, y_} {}
-
-  template <typename U>
-  constexpr kernel explicit(!std::is_convertible_v<U, T>)
-      vec(const vec<U, 2>& v)
-      : d{(T)v.d[0], (T)v.d[1]} {}
-  template <typename U>
-  constexpr kernel explicit(!std::is_convertible_v<T, U>) operator vec<U, 2>() {
-    return {(U)d[0], (U)d[1]};
-  }
-
-  constexpr kernel vec(const array<T, 2>& v) : d{v[0], v[1]} {}
-  constexpr kernel operator array<T, 2>() { return {d[0], d[1]}; }
-
-  constexpr kernel T&       operator[](size_t i) { return d[i]; }
-  constexpr kernel const T& operator[](size_t i) const { return d[i]; }
-
-  constexpr kernel T&       x() { return d[0]; }
-  constexpr kernel const T& x() const { return d[0]; }
-  constexpr kernel T&       y() { return d[1]; }
-  constexpr kernel const T& y() const { return d[1]; }
-};
-
-template <typename T>
-struct vec<T, 3> {
-  T d[3];
-
-  constexpr kernel vec() : d{0, 0, 0} {}
-  constexpr kernel explicit vec(T v_) : d{v_, v_, v_} {}
-  constexpr kernel vec(T x_, T y_, T z_) : d{x_, y_, z_} {}
-  constexpr kernel vec(vec<T, 2> xy_, T z_) : d{xy_.d[0], xy_.d[1], z_} {}
-
-  template <typename U>
-  constexpr kernel explicit(!std::is_convertible_v<U, T>)
-      vec(const vec<U, 3>& v)
-      : d{(T)v.d[0], (T)v.d[1], (T)v.d[2]} {}
-  template <typename U>
-  constexpr kernel explicit(!std::is_convertible_v<T, U>) operator vec<U, 3>() {
-    return {(U)d[0], (U)d[1], (U)d[2]};
-  }
-  constexpr kernel vec(const array<T, 3>& v) : d{v[0], v[1], v[2]} {}
-  constexpr kernel operator array<T, 3>() { return {d[0], d[1], d[2]}; }
-
-  constexpr kernel T&       operator[](size_t i) { return d[i]; }
-  constexpr kernel const T& operator[](size_t i) const { return d[i]; }
-
-  constexpr kernel T&       x() { return d[0]; }
-  constexpr kernel const T& x() const { return d[0]; }
-  constexpr kernel T&       y() { return d[1]; }
-  constexpr kernel const T& y() const { return d[1]; }
-  constexpr kernel T&       z() { return d[2]; }
-  constexpr kernel const T& z() const { return d[2]; }
-};
-
-template <typename T>
-struct vec<T, 4> {
-  T d[4];
-
-  constexpr kernel vec() : d{0, 0, 0, 0} {}
-  constexpr kernel explicit vec(T v_) : d{v_, v_, v_, v_} {}
-  constexpr kernel vec(T x_, T y_, T z_, T w_) : d{x_, y_, z_, w_} {}
-  constexpr kernel vec(vec<T, 3> xyz_, T w_)
-      : d{xyz_.d[0], xyz_.d[1], xyz_.d[2], w_} {}
-
-  template <typename U>
-  constexpr kernel explicit(!std::is_convertible_v<U, T>)
-      vec(const vec<U, 4>& v)
-      : d{(T)v.d[0], (T)v.d[1], (T)v.d[2], (T)v.d[3]} {}
-  template <typename U>
-  constexpr kernel explicit(!std::is_convertible_v<T, U>) operator vec<U, 4>() {
-    return {(U)d[0], (U)d[1], (U)d[2], (U)d[3]};
-  }
-  constexpr kernel vec(const array<T, 4>& v) : d{v[0], v[1], v[2], v[3]} {}
-  constexpr kernel operator array<T, 4>() { return {d[0], d[1], d[2], d[3]}; }
-
-  constexpr kernel T&       operator[](size_t i) { return d[i]; }
-  constexpr kernel const T& operator[](size_t i) const { return d[i]; }
-
-  constexpr kernel T&       x() { return d[0]; }
-  constexpr kernel const T& x() const { return d[0]; }
-  constexpr kernel T&       y() { return d[1]; }
-  constexpr kernel const T& y() const { return d[1]; }
-  constexpr kernel T&       z() { return d[2]; }
-  constexpr kernel const T& z() const { return d[2]; }
-  constexpr kernel T&       w() { return d[3]; }
-  constexpr kernel const T& w() const { return d[3]; }
-};
-
-#endif
 
 // Vector aliases
 using vec1f = vec<float, 1>;
@@ -583,88 +482,72 @@ constexpr kernel const T&& get(const vec<T, N>&& a) noexcept {
 }
 
 // Implementation of operations using map and fold
+template <typename T1, size_t N, typename Func, index_t... Is,
+    typename T = result_t<Func, T1>>
+constexpr kernel vec<T, N> map(
+    index_seq<Is...>, const vec<T1, N>& a, Func&& func) {
+  return {func(a[Is])...};
+}
 template <typename T1, size_t N, typename Func, typename T = result_t<Func, T1>>
 constexpr kernel vec<T, N> map(const vec<T1, N>& a, Func&& func) {
-  if constexpr (N == 1) {
-    return {func(a[0])};
-  } else if constexpr (N == 2) {
-    return {func(a[0]), func(a[1])};
-  } else if constexpr (N == 3) {
-    return {func(a[0]), func(a[1]), func(a[2])};
-  } else if constexpr (N == 4) {
-    return {func(a[0]), func(a[1]), func(a[2]), func(a[3])};
-  }
+  return map(indices<N>(), a, std::forward<Func>(func));
+}
+template <typename T1, typename T2, size_t N, typename Func, index_t... Is,
+    typename T = result_t<Func, T1, T2>>
+constexpr kernel vec<T, N> map(
+    index_seq<Is...>, const vec<T1, N>& a, const vec<T2, N>& b, Func&& func) {
+  return {func(a[Is], b[Is])...};
 }
 template <typename T1, typename T2, size_t N, typename Func,
     typename T = result_t<Func, T1, T2>>
 constexpr kernel vec<T, N> map(
     const vec<T1, N>& a, const vec<T2, N>& b, Func&& func) {
-  if constexpr (N == 1) {
-    return {func(a[0], b[0])};
-  } else if constexpr (N == 2) {
-    return {func(a[0], b[0]), func(a[1], b[1])};
-  } else if constexpr (N == 3) {
-    return {func(a[0], b[0]), func(a[1], b[1]), func(a[2], b[2])};
-  } else if constexpr (N == 4) {
-    return {
-        func(a[0], b[0]), func(a[1], b[1]), func(a[2], b[2]), func(a[3], b[3])};
-  }
+  return map(indices<N>(), a, b, std::forward<Func>(func));
+}
+template <typename T1, typename T2, size_t N, typename Func, index_t... Is,
+    typename T = result_t<Func, T1, T2>>
+constexpr kernel vec<T, N> map(
+    index_seq<Is...>, const vec<T1, N>& a, T2 b, Func&& func) {
+  return {func(a[Is], b)...};
 }
 template <typename T1, typename T2, size_t N, typename Func,
     typename T = result_t<Func, T1, T2>>
 constexpr kernel vec<T, N> map(const vec<T1, N>& a, T2 b, Func&& func) {
-  if constexpr (N == 1) {
-    return {func(a[0], b)};
-  } else if constexpr (N == 2) {
-    return {func(a[0], b), func(a[1], b)};
-  } else if constexpr (N == 3) {
-    return {func(a[0], b), func(a[1], b), func(a[2], b)};
-  } else if constexpr (N == 4) {
-    return {func(a[0], b), func(a[1], b), func(a[2], b), func(a[3], b)};
-  }
+  return map(indices<N>(), a, b, std::forward<Func>(func));
+}
+template <typename T1, typename T2, size_t N, typename Func, index_t... Is,
+    typename T = result_t<Func, T1, T2>>
+constexpr kernel vec<T, N> map(
+    index_seq<Is...>, T1 a, const vec<T2, N>& b, Func&& func) {
+  return {func(a, b[Is])...};
 }
 template <typename T1, typename T2, size_t N, typename Func,
     typename T = result_t<Func, T1, T2>>
 constexpr kernel vec<T, N> map(T1 a, const vec<T2, N>& b, Func&& func) {
-  if constexpr (N == 1) {
-    return {func(a, b[0])};
-  } else if constexpr (N == 2) {
-    return {func(a, b[0]), func(a, b[1])};
-  } else if constexpr (N == 3) {
-    return {func(a, b[0]), func(a, b[1]), func(a, b[2])};
-  } else if constexpr (N == 4) {
-    return {func(a, b[0]), func(a, b[1]), func(a, b[2]), func(a, b[3])};
-  }
+  return map(indices<N>(), a, b, std::forward<Func>(func));
+}
+template <typename T1, typename T2, typename T3, size_t N, typename Func,
+    index_t... Is, typename T = result_t<Func, T1, T2, T3>>
+constexpr kernel vec<T, N> map(index_seq<Is...>, const vec<T1, N>& a,
+    const vec<T2, N>& b, const vec<T3, N>& c, Func&& func) {
+  return {func(a[Is], b[Is], c[Is])...};
 }
 template <typename T1, typename T2, typename T3, size_t N, typename Func,
     typename T = result_t<Func, T1, T2, T3>>
 constexpr kernel vec<T, N> map(const vec<T1, N>& a, const vec<T2, N>& b,
     const vec<T3, N>& c, Func&& func) {
-  if constexpr (N == 1) {
-    return {func(a[0], b[0], c[0])};
-  } else if constexpr (N == 2) {
-    return {func(a[0], b[0], c[0]), func(a[1], b[1], c[1])};
-  } else if constexpr (N == 3) {
-    return {
-        func(a[0], b[0], c[0]), func(a[1], b[1], c[1]), func(a[2], b[2], c[2])};
-  } else if constexpr (N == 4) {
-    return {func(a[0], b[0], c[0]), func(a[1], b[1], c[1]),
-        func(a[2], b[2], c[2]), func(a[3], b[3], c[3])};
-  }
+  return map(indices<N>(), a, b, c, std::forward<Func>(func));
+}
+template <typename T1, typename T2, typename T3, size_t N, typename Func,
+    index_t... Is, typename T = result_t<Func, T1, T2, T3>>
+constexpr kernel vec<T, N> map(
+    index_seq<Is...>, const vec<T1, N>& a, T2 b, T3 c, Func&& func) {
+  return {func(a[Is], b, c)...};
 }
 template <typename T1, typename T2, typename T3, size_t N, typename Func,
     typename T = result_t<Func, T1, T2, T3>>
 constexpr kernel vec<T, N> map(const vec<T1, N>& a, T2 b, T3 c, Func&& func) {
-  if constexpr (N == 1) {
-    return {func(a[0], b, c)};
-  } else if constexpr (N == 2) {
-    return {func(a[0], b, c), func(a[1], b, c)};
-  } else if constexpr (N == 3) {
-    return {func(a[0], b, c), func(a[1], b, c), func(a[2], b, c)};
-  } else if constexpr (N == 4) {
-    return {
-        func(a[0], b, c), func(a[1], b, c), func(a[2], b, c), func(a[3], b, c)};
-  }
+  return map(indices<N>(), a, b, c, std::forward<Func>(func));
 }
 template <typename T, size_t N, typename Func>
 constexpr kernel T fold(const vec<T, N>& a, Func&& func) {
@@ -676,29 +559,60 @@ constexpr kernel T fold(const vec<T, N>& a, Func&& func) {
     return func(func(a[0], a[1]), a[2]);
   } else if constexpr (N == 4) {
     return func(func(func(a[0], a[1]), a[2]), a[3]);
+  } else {
+    return func(
+        fold((const vec<T, N - 1>&)a, std::forward<Func>(func)), a[N - 1]);
   }
+}
+template <typename T, size_t N, index_t... Is>
+constexpr kernel T fold_sum(index_seq<Is...>, const vec<T, N>& a) {
+  return (a[Is] + ...);
+}
+template <typename T, size_t N>
+constexpr kernel T fold_sum(const vec<T, N>& a) {
+  return fold_sum(indices<N>(), a);
+}
+template <typename T, size_t N, index_t... Is>
+constexpr kernel T fold_prod(index_seq<Is...>, const vec<T, N>& a) {
+  return (a[Is] * ...);
+}
+template <typename T, size_t N>
+constexpr kernel T fold_prod(const vec<T, N>& a) {
+  return fold_prod(indices<N>(), a);
+}
+template <size_t N, index_t... Is>
+constexpr kernel bool fold_and(index_seq<Is...>, const vec<bool, N>& a) {
+  return (... && a[Is]);
+}
+template <size_t N>
+constexpr kernel bool fold_and(const vec<bool, N>& a) {
+  return fold_and(indices<N>(), a);
+}
+template <size_t N, index_t... Is>
+constexpr kernel bool fold_or(index_seq<Is...>, const vec<bool, N>& a) {
+  return (... || a[Is]);
+}
+template <size_t N>
+constexpr kernel bool fold_or(const vec<bool, N>& a) {
+  return fold_and(indices<N>(), a);
 }
 
 // Vector comparison operations.
 template <typename T1, typename T2, size_t N>
 constexpr kernel bool operator==(const vec<T1, N>& a, const vec<T2, N>& b) {
-  return fold(map(a, b, [](T1 a, T2 b) { return a == b; }),
-      [](bool a, bool b) { return a && b; });
+  return fold_and(map(a, b, [](T1 a, T2 b) { return a == b; }));
 }
 template <typename T1, typename T2, size_t N>
 constexpr kernel bool operator==(const vec<T1, N>& a, T2 b) {
-  return fold(map(a, b, [](T1 a, T2 b) { return a == b; }),
-      [](bool a, bool b) { return a && b; });
+  return fold_and(map(a, b, [](T1 a, T2 b) { return a == b; }));
 }
 template <typename T1, typename T2, size_t N>
 constexpr kernel bool operator!=(const vec<T1, N>& a, const vec<T2, N>& b) {
-  return fold(map(a, b, [](T1 a, T2 b) { return a != b; }),
-      [](bool a, bool b) { return a || b; });
+  return fold_or(map(a, b, [](T1 a, T2 b) { return a != b; }));
 }
 template <typename T1, typename T2, size_t N>
 constexpr kernel bool operator!=(const vec<T1, N>& a, T2 b) {
-  return fold(map(a, b, [](T1 a, T2 b) { return a != b; }),
-      [](bool a, bool b) { return a || b; });
+  return fold_or(map(a, b, [](T1 a, T2 b) { return a != b; }));
 }
 
 // Vector operations.
@@ -1045,11 +959,11 @@ constexpr kernel size_t argmin(const vec<T, N>& a) {
 
 template <typename T, size_t N>
 constexpr kernel T sum(const vec<T, N>& a) {
-  return fold(a, [](T a, T b) { return a + b; });
+  return fold_sum(a);
 }
 template <typename T, size_t N>
 constexpr kernel T prod(const vec<T, N>& a) {
-  return fold(a, [](T a, T b) { return a * b; });
+  return fold_prod(a);
 }
 template <typename T, size_t N>
 constexpr kernel T mean(const vec<T, N>& a) {
@@ -1057,11 +971,11 @@ constexpr kernel T mean(const vec<T, N>& a) {
 }
 template <size_t N>
 constexpr kernel bool all(const vec<bool, N>& a) {
-  return fold(a, [](bool a, bool b) { return a && b; });
+  return fold_and(indices<N>(), a);
 }
 template <typename T, size_t N>
 constexpr kernel T any(const vec<bool, N>& a) {
-  return fold(a, [](bool a, bool b) { return a || b; });
+  return fold_or(indices<N>(), a);
 }
 
 // Functions applied to vector elements
@@ -1190,18 +1104,18 @@ constexpr kernel vec<T, 3> sphericaluv_to_cartesiany(const vec<T, 2>& uv) {
 // const auto identity_quat4f = vec4f{0, 0, 0, 1};
 template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
 constexpr kernel vec<T, 4> quat_mul(const vec<T1, 4>& a, T2 b) {
-  return {a.x * b, a.y * b, a.z * b, a.w * b};
+  return map(a, b, [](T1 a, T2 b) { return a * b; });
 }
 template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
 constexpr kernel vec<T, 4> quat_mul(const vec<T1, 4>& a, const vec<T2, 4>& b) {
-  return {a.x * b.w + a.w * b.x + a.y * b.w - a.z * b.y,
-      a.y * b.w + a.w * b.y + a.z * b.x - a.x * b.z,
-      a.z * b.w + a.w * b.z + a.x * b.y - a.y * b.x,
-      a.w * b.w - a.x * b.x - a.y * b.y - a.z * b.z};
+  return {a.x() * b.w() + a.w() * b.x() + a.y() * b.w() - a.z() * b.y(),
+      a.y() * b.w() + a.w() * b.y() + a.z() * b.x() - a.x() * b.z(),
+      a.z() * b.w() + a.w() * b.z() + a.x() * b.y() - a.y() * b.x(),
+      a.w() * b.w() - a.x() * b.x() - a.y() * b.y() - a.z() * b.z()};
 }
 template <typename T>
 constexpr kernel vec<T, 4> quat_conjugate(const vec<T, 4>& a) {
-  return {-a.x, -a.y, -a.z, a.w};
+  return {-xyz(a), w(a)};
 }
 template <typename T>
 constexpr kernel vec<T, 4> quat_inverse(const vec<T, 4>& a) {
@@ -1270,21 +1184,25 @@ constexpr kernel vec<bool, N> component_greater_equal(
 template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
 constexpr kernel vec<T, N> select(
     const vec<bool, N>& a, const vec<T1, N>& b, const vec<T2, N>& c) {
-  return map(a, b, c, [](bool a, T1 b, T2 c) { return a ? b : c; });
+  return map(
+      indices<N>(), a, b, c, [](bool a, T1 b, T2 c) { return a ? b : c; });
 }
 template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
 constexpr kernel vec<T, N> select(
     const vec<bool, N>& a, T1 b, const vec<T2, N>& c) {
-  return map(a, b, c, [](bool a, T1 b, T2 c) { return a ? b : c; });
+  return map(
+      indices<N>(), a, b, c, [](bool a, T1 b, T2 c) { return a ? b : c; });
 }
 template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
 constexpr kernel vec<T, N> select(
     const vec<bool, N>& a, const vec<T1, N>& b, T2 c) {
-  return map(a, b, c, [](bool a, T1 b, T2 c) { return a ? b : c; });
+  return map(
+      indices<N>(), a, b, c, [](bool a, T1 b, T2 c) { return a ? b : c; });
 }
 template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
 constexpr kernel vec<T, N> select(const vec<bool, N>& a, T1 b, T2 c) {
-  return map(a, b, c, [](bool a, T1 b, T2 c) { return a ? b : c; });
+  return map(
+      indices<N>(), a, b, c, [](bool a, T1 b, T2 c) { return a ? b : c; });
 }
 
 }  // namespace yocto
@@ -1819,7 +1737,7 @@ constexpr kernel frame<T, 3> orthonormalize(const frame<T, 3>& frame_) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Quaternions to represent rotations
+// Quaternions to represent 3D rotations
 template <typename T, size_t N>
 struct quat;
 
@@ -1840,52 +1758,36 @@ using quat4f = quat<float, 4>;
 
 [[deprecated]] constexpr auto identity_quat4f = quat4f{0, 0, 0, 1};
 
-template <typename T1, typename T2, size_t N, typename Func,
+template <typename T1, typename T2, typename Func,
     typename T = result_t<Func, T1, T2>>
-constexpr kernel vec<T, N> map(
-    const quat<T1, N>& a, const quat<T2, N>& b, Func&& func) {
-  if constexpr (N == 1) {
-    return {func(a[0], b[0])};
-  } else if constexpr (N == 2) {
-    return {func(a[0], b[0]), func(a[1], b[1])};
-  } else if constexpr (N == 3) {
-    return {func(a[0], b[0]), func(a[1], b[1]), func(a[2], b[2])};
-  } else if constexpr (N == 4) {
-    return {
-        func(a[0], b[0]), func(a[1], b[1]), func(a[2], b[2]), func(a[3], b[3])};
-  }
+constexpr kernel quat<T, 4> map(
+    const quat<T1, 4>& a, const quat<T2, 4>& b, Func&& func) {
+  return {
+      func(a[0], b[0]), func(a[1], b[1]), func(a[2], b[2]), func(a[3], b[3])};
 }
-template <typename T1, typename T2, size_t N, typename Func,
+template <typename T1, typename T2, typename Func,
     typename T = result_t<Func, T1, T2>>
-constexpr kernel quat<T, N> map(const quat<T1, N>& a, T2 b, Func&& func) {
-  if constexpr (N == 1) {
-    return {func(a[0], b)};
-  } else if constexpr (N == 2) {
-    return {func(a[0], b), func(a[1], b)};
-  } else if constexpr (N == 3) {
-    return {func(a[0], b), func(a[1], b), func(a[2], b)};
-  } else if constexpr (N == 4) {
-    return {func(a[0], b), func(a[1], b), func(a[2], b), func(a[3], b)};
-  }
+constexpr kernel quat<T, 4> map(const quat<T1, 4>& a, T2 b, Func&& func) {
+  return {func(a[0], b), func(a[1], b), func(a[2], b), func(a[3], b)};
 }
 
 // Quaternion operations
-template <typename T>
+template <typename T1, typename T2, typename T = common_t<T1, T2>>
 constexpr kernel quat<T, 4> operator+(
-    const quat<T, 4>& a, const quat<T, 4>& b) {
-  return map(a, b, [](T a, T b) { return a + b; });
+    const quat<T1, 4>& a, const quat<T2, 4>& b) {
+  return map(a, b, [](T1 a, T2 b) { return a + b; });
 }
-template <typename T>
-constexpr kernel quat<T, 4> operator*(const quat<T, 4>& a, T b) {
-  return map(a, b, [](T a, T b) { return a * b; });
+template <typename T1, typename T2, typename T = common_t<T1, T2>>
+constexpr kernel quat<T, 4> operator*(const quat<T1, 4>& a, T2 b) {
+  return map(a, b, [](T1 a, T2 b) { return a * b; });
 }
-template <typename T>
-constexpr kernel quat<T, 4> operator/(const quat<T, 4>& a, T b) {
-  return map(a, b, [](T a, T b) { return a / b; });
+template <typename T1, typename T2, typename T = common_t<T1, T2>>
+constexpr kernel quat<T, 4> operator/(const quat<T1, 4>& a, T2 b) {
+  return map(a, b, [](T1 a, T2 b) { return a / b; });
 }
-template <typename T>
+template <typename T1, typename T2, typename T = common_t<T1, T2>>
 constexpr kernel quat<T, 4> operator*(
-    const quat<T, 4>& a, const quat<T, 4>& b) {
+    const quat<T2, 4>& a, const quat<T1, 4>& b) {
   return {a.x() * b.w() + a.w() * b.x() + a.y() * b.w() - a.z() * b.y(),
       a.y() * b.w() + a.w() * b.y() + a.z() * b.x() - a.x() * b.z(),
       a.z() * b.w() + a.w() * b.z() + a.x() * b.y() - a.y() * b.x(),
@@ -1893,9 +1795,9 @@ constexpr kernel quat<T, 4> operator*(
 }
 
 // Quaternion operations
-template <typename T>
+template <typename T1, typename T2, typename T = common_t<T1, T2>>
 constexpr kernel T dot(const quat<T, 4>& a, const quat<T, 4>& b) {
-  return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
+  return a.x() * b.x() + a.y() * b.y() + a.z() * b.z() + a.w() * b.w();
 }
 template <typename T>
 constexpr kernel T length(const quat<T, 4>& a) {
