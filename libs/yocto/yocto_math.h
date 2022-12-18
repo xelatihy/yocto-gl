@@ -1049,86 +1049,72 @@ constexpr kernel auto quat_inverse(num_vec4 auto const a) {
 }
 
 // Component-wise comparison operations.
-template <typename T1, typename T2, index_t N>
-constexpr kernel vec<bool, N> component_equal(
-    const vec<T1, N>& a, const vec<T2, N>& b) {
-  return map(a, b, [](T1 a, T2 b) { return a == b; });
+constexpr kernel auto component_equal(
+    num_vec auto const& a, num_vec auto const& b) {
+  return map(a, b, [](number auto a, number auto b) { return a == b; });
 }
-template <typename T1, typename T2, index_t N>
-constexpr kernel vec<bool, N> component_equal(const vec<T1, N>& a, T2 b) {
-  return map(a, b, [](T1 a, T2 b) { return a == b; });
+constexpr kernel auto component_equal(num_vec auto const& a, number auto b) {
+  return map(a, b, [](number auto a, number auto b) { return a == b; });
 }
-template <typename T1, typename T2, index_t N>
-constexpr kernel vec<bool, N> component_not_equal(
-    const vec<T1, N>& a, const vec<T2, N>& b) {
-  return map(a, b, [](T1 a, T2 b) { return a != b; });
+constexpr kernel auto component_not_equal(
+    num_vec auto const& a, num_vec auto const& b) {
+  return map(a, b, [](number auto a, number auto b) { return a != b; });
 }
-template <typename T1, typename T2, index_t N>
-constexpr kernel vec<bool, N> component_not_equal(
-    const vec<T1, N>& a, const T2 b) {
-  return map(a, b, [](T1 a, T2 b) { return a != b; });
+constexpr kernel auto component_not_equal(
+    num_vec auto const& a, const number auto b) {
+  return map(a, b, [](number auto a, number auto b) { return a != b; });
 }
-template <typename T1, typename T2, index_t N>
-constexpr kernel vec<bool, N> component_less(
-    const vec<T1, N>& a, const vec<T2, N>& b) {
-  return map(a, b, [](T1 a, T2 b) { return a < b; });
+constexpr kernel auto component_less(
+    num_vec auto const& a, num_vec auto const& b) {
+  return map(a, b, [](number auto a, number auto b) { return a < b; });
 }
-template <typename T1, typename T2, index_t N>
-constexpr kernel vec<bool, N> component_less(const vec<T1, N>& a, const T2 b) {
-  return map(a, b, [](T1 a, T2 b) { return a < b; });
+constexpr kernel auto component_less(
+    num_vec auto const& a, const number auto b) {
+  return map(a, b, [](number auto a, number auto b) { return a < b; });
 }
-template <typename T1, typename T2, index_t N>
-constexpr kernel vec<bool, N> component_greater(
-    const vec<T1, N>& a, const vec<T2, N>& b) {
-  return map(a, b, [](T1 a, T2 b) { return a > b; });
+constexpr kernel auto component_greater(
+    num_vec auto const& a, num_vec auto const& b) {
+  return map(a, b, [](number auto a, number auto b) { return a > b; });
 }
-template <typename T1, typename T2, index_t N>
-constexpr kernel vec<bool, N> component_greater(
-    const vec<T1, N>& a, const T2 b) {
-  return map(a, b, [](T1 a, T2 b) { return a > b; });
+constexpr kernel auto component_greater(
+    num_vec auto const& a, const number auto b) {
+  return map(a, b, [](number auto a, number auto b) { return a > b; });
 }
-template <typename T1, typename T2, index_t N>
-constexpr kernel vec<bool, N> component_less_equal(
-    const vec<T1, N>& a, const vec<T2, N>& b) {
-  return map(a, b, [](T1 a, T2 b) { return a <= b; });
+constexpr kernel auto component_less_equal(
+    num_vec auto const& a, num_vec auto const& b) {
+  return map(a, b, [](number auto a, number auto b) { return a <= b; });
 }
-template <typename T1, typename T2, index_t N>
-constexpr kernel vec<bool, N> component_less_equal(
-    const vec<T1, N>& a, const T2 b) {
-  return map(a, b, [](T1 a, T2 b) { return a <= b; });
+constexpr kernel auto component_less_equal(
+    num_vec auto const& a, const number auto b) {
+  return map(a, b, [](number auto a, number auto b) { return a <= b; });
 }
-template <typename T1, typename T2, index_t N>
-constexpr kernel vec<bool, N> component_greater_equal(
-    const vec<T1, N>& a, const vec<T2, N>& b) {
-  return map(a, b, [](T1 a, T2 b) { return a >= b; });
+constexpr kernel auto component_greater_equal(
+    num_vec auto const& a, num_vec auto const& b) {
+  return map(a, b, [](number auto a, number auto b) { return a >= b; });
 }
-template <typename T1, typename T2, index_t N>
-constexpr kernel vec<bool, N> component_greater_equal(
-    const vec<T1, N>& a, const T2 b) {
-  return map(a, b, [](T1 a, T2 b) { return a >= b; });
+constexpr kernel auto component_greater_equal(
+    num_vec auto const& a, const number auto b) {
+  return map(a, b, [](number auto a, number auto b) { return a >= b; });
 }
-template <typename T1, typename T2, index_t N, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, N> select(
-    const vec<bool, N>& a, const vec<T1, N>& b, const vec<T2, N>& c) {
+constexpr kernel auto select(
+    bool_vec auto const& a, num_vec auto const& b, num_vec auto const& c) {
   return map(
-      indices<N>(), a, b, c, [](bool a, T1 b, T2 c) { return a ? b : c; });
+      a, b, c, [](bool a, number auto b, number auto c) { return a ? b : c; });
 }
-template <typename T1, typename T2, index_t N, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, N> select(
-    const vec<bool, N>& a, T1 b, const vec<T2, N>& c) {
+constexpr kernel auto select(
+    bool_vec auto const& a, number auto b, num_vec auto const& c) {
   return map(
-      indices<N>(), a, b, c, [](bool a, T1 b, T2 c) { return a ? b : c; });
+      a, b, c, [](bool a, number auto b, number auto c) { return a ? b : c; });
 }
-template <typename T1, typename T2, index_t N, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, N> select(
-    const vec<bool, N>& a, const vec<T1, N>& b, T2 c) {
+constexpr kernel auto select(
+    bool_vec auto const& a, num_vec auto const& b, number auto c) {
   return map(
-      indices<N>(), a, b, c, [](bool a, T1 b, T2 c) { return a ? b : c; });
+      a, b, c, [](bool a, number auto b, number auto c) { return a ? b : c; });
 }
-template <typename T1, typename T2, index_t N, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, N> select(const vec<bool, N>& a, T1 b, T2 c) {
+constexpr kernel auto select(
+    bool_vec auto const& a, number auto b, number auto c) {
   return map(
-      indices<N>(), a, b, c, [](bool a, T1 b, T2 c) { return a ? b : c; });
+      a, b, c, [](bool a, number auto b, number auto c) { return a ? b : c; });
 }
 
 }  // namespace yocto
