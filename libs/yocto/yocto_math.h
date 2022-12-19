@@ -1449,8 +1449,8 @@ constexpr kernel auto inverse(num_mat auto const& a) -> num_mat auto{
 }
 
 // Constructs a basis from a direction
-template <typename T>
-constexpr kernel mat<T, 3, 3> basis_fromz(const vec<T, 3>& v) {
+constexpr kernel auto basis_fromz(num_vec3 auto const& v) -> num_mat auto{
+  using T = vec_etype<decltype(v)>;
   // https://graphics.pixar.com/library/OrthonormalB/paper.pdf
   if constexpr (std::is_same_v<T, float>) {
     auto z    = normalize(v);
@@ -1460,10 +1460,10 @@ constexpr kernel mat<T, 3, 3> basis_fromz(const vec<T, 3>& v) {
     auto x    = vec<T, 3>{
         1.0f + sign * z.x() * z.x() * a, sign * b, -sign * z.x()};
     auto y = vec<T, 3>{b, sign + z.y() * z.y() * a, -z.y()};
-    return {x, y, z};
-  } else if constexpr (std::is_same_v<T, float>) {
+    return mat<T, 3, 3>{x, y, z};
+  } else if constexpr (std::is_same_v<T, double>) {
     // TODO: double
-    return {};
+    return mat<T, 3, 3>{};
   }
 }
 
