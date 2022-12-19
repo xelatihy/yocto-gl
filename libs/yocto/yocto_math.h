@@ -2045,22 +2045,19 @@ constexpr kernel auto perspective_mat(
   };
 }
 
-// Rotation conversions.
-template <typename T>
-constexpr kernel pair<vec<T, 3>, T> rotation_axisangle(const vec<T, 4>& quat) {
-  return {normalize(vec<T, 3>{quat.x, quat.y, quat.z}), 2 * acos(quat.w)};
+// Rotation conversions. Returns axis and angle.
+constexpr kernel auto rotation_axisangle(num_vec4 auto const& quat) {
+  return pair{normalize(vec{quat.x(), quat.y(), quat.z()}), 2 * acos(quat.w())};
 }
-template <typename T>
-constexpr kernel vec<T, 4> rotation_quat(const vec<T, 3>& axis, T angle) {
+constexpr kernel auto rotation_quat(
+    num_vec3 auto const& axis, number auto angle) {
   auto len = length(axis);
-  if (len == 0) return {0, 0, 0, 1};
-  return vec<T, 4>{sin(angle / 2) * axis.x / len, sin(angle / 2) * axis.y / len,
+  if (len == 0) return vec{0, 0, 0, 1};
+  return vec{sin(angle / 2) * axis.x / len, sin(angle / 2) * axis.y / len,
       sin(angle / 2) * axis.z / len, cos(angle / 2)};
 }
-template <typename T>
-constexpr kernel vec<T, 4> rotation_quat(const vec<T, 4>& axisangle) {
-  return rotation_quat(
-      vec<T, 3>{axisangle.x, axisangle.y, axisangle.z}, axisangle.w);
+constexpr kernel auto rotation_quat(num_vec4 auto const& axisangle) {
+  return rotation_quat(vec{axisangle.x, axisangle.y, axisangle.z}, axisangle.w);
 }
 
 }  // namespace yocto
