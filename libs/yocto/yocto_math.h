@@ -192,59 +192,59 @@ concept integral = is_integral<T>;
 template <typename T>
 concept real = is_real<T>;
 template <typename T>
-concept number = is_number<T>;
+concept num = is_number<T>;
 
 template <typename T>
-concept any_vec = is_any_vec<T>;
+concept anyN = is_any_vec<T>;
 template <typename T>
-concept int_vec = is_int_vec<T>;
+concept inteN = is_int_vec<T>;
 template <typename T>
-concept real_vec = is_real_vec<T>;
+concept realN = is_real_vec<T>;
 template <typename T>
-concept num_vec = is_num_vec<T>;
+concept numN = is_num_vec<T>;
 template <typename T>
-concept bool_vec = is_bool_vec<T>;
+concept boolN = is_bool_vec<T>;
 
 template <typename T>
-concept num_vec2 = is_num_vec<T> && vec_size<T> == 2;
+concept num2 = is_num_vec<T> && vec_size<T> == 2;
 template <typename T>
-concept num_vec3 = is_num_vec<T> && vec_size<T> == 3;
+concept num3 = is_num_vec<T> && vec_size<T> == 3;
 template <typename T>
-concept num_vec4 = is_num_vec<T> && vec_size<T> == 4;
+concept num4 = is_num_vec<T> && vec_size<T> == 4;
 
 template <typename T>
-concept int_vec2 = is_int_vec<T> && vec_size<T> == 2;
+concept inte2 = is_int_vec<T> && vec_size<T> == 2;
 template <typename T>
-concept int_vec3 = is_int_vec<T> && vec_size<T> == 3;
+concept inte3 = is_int_vec<T> && vec_size<T> == 3;
 template <typename T>
-concept int_vec4 = is_int_vec<T> && vec_size<T> == 4;
+concept inte4 = is_int_vec<T> && vec_size<T> == 4;
 
 template <typename T>
-concept real_vec2 = is_real_vec<T> && vec_size<T> == 2;
+concept real2 = is_real_vec<T> && vec_size<T> == 2;
 template <typename T>
-concept real_vec3 = is_real_vec<T> && vec_size<T> == 3;
+concept real3 = is_real_vec<T> && vec_size<T> == 3;
 template <typename T>
-concept real_vec4 = is_real_vec<T> && vec_size<T> == 4;
+concept real4 = is_real_vec<T> && vec_size<T> == 4;
 
 template <typename T>
-concept real_mat = is_real_mat<T>;
+concept realNxM = is_real_mat<T>;
 template <typename T>
-concept num_mat = is_num_mat<T>;
+concept numNxM = is_num_mat<T>;
 
 template <typename T>
-concept real_frame = is_real_frame<T>;
+concept realNxF = is_real_frame<T>;
 template <typename T>
-concept num_frame = is_num_frame<T>;
+concept numNxF = is_num_frame<T>;
 
 template <typename T>
-concept num_frame2 = is_num_frame<T> && frame_rows<T> == 2;
+concept num2xF = is_num_frame<T> && frame_rows<T> == 2;
 template <typename T>
-concept num_frame3 = is_num_frame<T> && frame_rows<T> == 3;
+concept num3xF = is_num_frame<T> && frame_rows<T> == 3;
 
 template <typename T>
-concept num_quat4 = is_num_quat<T> && quat_size<T> == 4;
+concept numQ = is_num_quat<T> && quat_size<T> == 4;
 template <typename T>
-concept real_quat4 = is_real_quat<T> && quat_size<T> == 4;
+concept realQ = is_real_quat<T> && quat_size<T> == 4;
 
 template <index_t N, typename... Ts>
 concept same_size = (sizeof...(Ts) == N);
@@ -306,24 +306,24 @@ constexpr auto num_eps = std::numeric_limits<T>::epsilon();
 
 using std::swap;
 
-constexpr kernel auto abs(number auto a) { return a < 0 ? -a : a; }
-constexpr kernel auto min(number auto a, number auto b) {
+constexpr kernel auto abs(num auto a) { return a < 0 ? -a : a; }
+constexpr kernel auto min(num auto a, num auto b) {
   using T = common_type<decltype(a), decltype(b)>;
   return (a < b) ? (T)a : (T)b;
 }
-constexpr kernel auto max(number auto a, number auto b) {
+constexpr kernel auto max(num auto a, num auto b) {
   using T = common_type<decltype(a), decltype(b)>;
   return (a > b) ? (T)a : (T)b;
 }
-constexpr kernel auto clamp(number auto a, number auto min_, number auto max_) {
+constexpr kernel auto clamp(num auto a, num auto min_, num auto max_) {
   using T = decltype(a);
   return min(max(a, (T)min_), (T)max_);
 }
-constexpr kernel auto sign(number auto a) {
+constexpr kernel auto sign(num auto a) {
   using T = decltype(a);
   return a < 0 ? (T)-1 : (T)1;
 }
-constexpr kernel auto sqr(number auto a) { return a * a; }
+constexpr kernel auto sqr(num auto a) { return a * a; }
 constexpr kernel auto sqrt(real auto a) { return std::sqrt(a); }
 constexpr kernel auto sin(real auto a) { return std::sin(a); }
 constexpr kernel auto cos(real auto a) { return std::cos(a); }
@@ -335,20 +335,20 @@ constexpr kernel auto log(real auto a) { return std::log(a); }
 constexpr kernel auto exp(real auto a) { return std::exp(a); }
 constexpr kernel auto log2(real auto a) { return std::log2(a); }
 constexpr kernel auto exp2(real auto a) { return std::exp2(a); }
-constexpr kernel auto pow(number auto a, number auto b) {
+constexpr kernel auto pow(num auto a, num auto b) {
   using T = common_type<decltype(a), decltype(b)>;
   return std::pow((T)a, (T)b);
 }
 constexpr kernel bool isfinite(real auto a) { return std::isfinite(a); }
-constexpr kernel auto atan2(number auto a, number auto b) {
+constexpr kernel auto atan2(num auto a, num auto b) {
   using T = common_type<decltype(a), decltype(b)>;
   return std::atan2((T)a, (T)b);
 }
 constexpr kernel auto round(real auto a) { return std::round(a); }
-constexpr kernel auto fmod(real auto a, number auto b) {
+constexpr kernel auto fmod(real auto a, num auto b) {
   return std::fmod(a, (decltype(a))b);
 }
-constexpr kernel auto mod(real auto a, number auto b) {
+constexpr kernel auto mod(real auto a, num auto b) {
   auto m = fmod(a, b);
   return (m >= 0) ? m : m + b;
 }
@@ -362,22 +362,22 @@ constexpr kernel auto mod(integral auto a, integral auto b) {
 // }
 constexpr kernel auto radians(real auto a) { return a * (decltype(a))pi / 180; }
 constexpr kernel auto degrees(real auto a) { return a * 180 / (decltype(a))pi; }
-constexpr kernel auto lerp(number auto a, number auto b, number auto u) {
+constexpr kernel auto lerp(num auto a, num auto b, num auto u) {
   return a * (1 - u) + b * u;
 }
-constexpr kernel auto step(number auto a, number auto u) {
+constexpr kernel auto step(num auto a, num auto u) {
   using T = common_type<decltype(a), decltype(u)>;
   return u < a ? (T)0 : (T)1;
 }
-constexpr kernel auto smoothstep(number auto a, number auto b, number auto u) {
+constexpr kernel auto smoothstep(num auto a, num auto b, num auto u) {
   using T = common_type<decltype(a), decltype(b), decltype(u)>;
   auto t  = clamp((u - a) / (b - a), (T)0, (T)1);
   return t * t * (3 - 2 * t);
 }
-constexpr kernel auto bias(number auto a, number auto bias) {
+constexpr kernel auto bias(num auto a, num auto bias) {
   return a / ((1 / bias - 2) * (1 - a) + 1);
 }
-constexpr kernel auto gain(number auto a, number auto gain) {
+constexpr kernel auto gain(num auto a, num auto gain) {
   using T = common_type<decltype(a), decltype(gain)>;
   return (a < (T)0.5) ? bias(a * 2, gain) / 2
                       : bias(a * 2 - 1, 1 - gain) / 2 + (T)0.5;
@@ -401,7 +401,7 @@ struct vec {
   constexpr kernel explicit vec(T v) {
     for (auto& e : d) e = v;
   }
-  template <number... Ts>
+  template <num... Ts>
     requires same_size<N, Ts...>
   constexpr kernel vec(Ts... v) : d{(T)v...} {}
 
@@ -524,9 +524,9 @@ struct vec<T, 1> {
 };
 
 // Deduction guides
-template <number... Args>
+template <num... Args>
 vec(Args...) -> vec<common_type<Args...>, sizeof...(Args)>;
-template <num_vec V, number N>
+template <numN V, num N>
 vec(V, N) -> vec<common_type<vec_etype<V>, N>, vec_size<V> + 1>;
 
 // Vector type traits
@@ -596,28 +596,28 @@ constexpr kernel vec<T, 3> xyz(const vec<T, 4>& a) {
 }
 
 // Vector sequence operations.
-constexpr kernel bool    empty(any_vec auto const& a) { return false; }
-constexpr kernel index_t size(any_vec auto const& a) { return a.size(); }
-constexpr kernel auto    begin(any_vec auto const& a) { return a.begin(); }
-constexpr kernel auto    end(any_vec auto const& a) { return a.end(); }
-constexpr kernel auto    begin(any_vec auto& a) { return a.begin(); }
-constexpr kernel auto    end(any_vec auto& a) { return a.end(); }
-constexpr kernel auto    data(any_vec auto const& a) { return a.data(); }
-constexpr kernel auto    data(any_vec auto& a) { return a.data(); }
+constexpr kernel bool    empty(anyN auto const& a) { return false; }
+constexpr kernel index_t size(anyN auto const& a) { return a.size(); }
+constexpr kernel auto    begin(anyN auto const& a) { return a.begin(); }
+constexpr kernel auto    end(anyN auto const& a) { return a.end(); }
+constexpr kernel auto    begin(anyN auto& a) { return a.begin(); }
+constexpr kernel auto    end(anyN auto& a) { return a.end(); }
+constexpr kernel auto    data(anyN auto const& a) { return a.data(); }
+constexpr kernel auto    data(anyN auto& a) { return a.data(); }
 template <std::size_t I>
-constexpr kernel auto const& get(any_vec auto const& a) noexcept {
+constexpr kernel auto const& get(anyN auto const& a) noexcept {
   return a.d[I];
 }
 template <std::size_t I>
-constexpr kernel auto& get(any_vec auto& a) noexcept {
+constexpr kernel auto& get(anyN auto& a) noexcept {
   return a.d[I];
 }
 template <std::size_t I>
-constexpr kernel auto const&& get(any_vec auto const&& a) noexcept {
+constexpr kernel auto const&& get(anyN auto const&& a) noexcept {
   return a.d[I];
 }
 template <std::size_t I>
-constexpr kernel auto&& get(any_vec auto&& a) noexcept {
+constexpr kernel auto&& get(anyN auto&& a) noexcept {
   return a.d[I];
 }
 
@@ -763,166 +763,161 @@ constexpr kernel bool fold_or(const vec<bool, N>& a) {
 }
 
 // Vector comparison operations.
-constexpr kernel bool operator==(num_vec auto const& a, num_vec auto const& b) {
-  return fold_and(
-      map(a, b, [](number auto a, number auto b) { return a == b; }));
+constexpr kernel bool operator==(numN auto const& a, numN auto const& b) {
+  return fold_and(map(a, b, [](num auto a, num auto b) { return a == b; }));
 }
-constexpr kernel bool operator==(num_vec auto const& a, number auto b) {
-  return fold_and(
-      map(a, b, [](number auto a, number auto b) { return a == b; }));
+constexpr kernel bool operator==(numN auto const& a, num auto b) {
+  return fold_and(map(a, b, [](num auto a, num auto b) { return a == b; }));
 }
-constexpr kernel bool operator!=(num_vec auto const& a, num_vec auto const& b) {
-  return fold_or(
-      map(a, b, [](number auto a, number auto b) { return a != b; }));
+constexpr kernel bool operator!=(numN auto const& a, numN auto const& b) {
+  return fold_or(map(a, b, [](num auto a, num auto b) { return a != b; }));
 }
-constexpr kernel bool operator!=(num_vec auto const& a, number auto b) {
-  return fold_or(
-      map(a, b, [](number auto a, number auto b) { return a != b; }));
+constexpr kernel bool operator!=(numN auto const& a, num auto b) {
+  return fold_or(map(a, b, [](num auto a, num auto b) { return a != b; }));
 }
 
 // Vector operations.
-constexpr kernel auto operator+(num_vec auto const& a) { return a; }
-constexpr kernel auto operator-(num_vec auto const& a) {
+constexpr kernel auto operator+(numN auto const& a) { return a; }
+constexpr kernel auto operator-(numN auto const& a) {
   return map(a, [](auto a) { return -a; });
 }
-constexpr kernel auto operator+(num_vec auto const& a, num_vec auto const& b) {
+constexpr kernel auto operator+(numN auto const& a, numN auto const& b) {
   return map(a, b, [](auto a, auto b) { return a + b; });
 }
-constexpr kernel auto operator+(num_vec auto const& a, number auto b) {
+constexpr kernel auto operator+(numN auto const& a, num auto b) {
   return map(a, b, [](auto a, auto b) { return a + b; });
 }
-constexpr kernel auto operator+(number auto a, num_vec auto const& b) {
+constexpr kernel auto operator+(num auto a, numN auto const& b) {
   return map(a, b, [](auto a, auto b) { return a + b; });
 }
-constexpr kernel auto operator-(num_vec auto const& a, num_vec auto const& b) {
+constexpr kernel auto operator-(numN auto const& a, numN auto const& b) {
   return map(a, b, [](auto a, auto b) { return a - b; });
 }
-constexpr kernel auto operator-(num_vec auto const& a, number auto b) {
+constexpr kernel auto operator-(numN auto const& a, num auto b) {
   return map(a, b, [](auto a, auto b) { return a - b; });
 }
-constexpr kernel auto operator-(number auto a, num_vec auto const& b) {
+constexpr kernel auto operator-(num auto a, numN auto const& b) {
   return map(a, b, [](auto a, auto b) { return a - b; });
 }
-constexpr kernel auto operator*(num_vec auto const& a, num_vec auto const& b) {
+constexpr kernel auto operator*(numN auto const& a, numN auto const& b) {
   return map(a, b, [](auto a, auto b) { return a * b; });
 }
-constexpr kernel auto operator*(num_vec auto const& a, number auto b) {
+constexpr kernel auto operator*(numN auto const& a, num auto b) {
   return map(a, b, [](auto a, auto b) { return a * b; });
 }
-constexpr kernel auto operator*(number auto a, num_vec auto const& b) {
+constexpr kernel auto operator*(num auto a, numN auto const& b) {
   return map(a, b, [](auto a, auto b) { return a * b; });
 }
-constexpr kernel auto operator/(num_vec auto const& a, num_vec auto const& b) {
+constexpr kernel auto operator/(numN auto const& a, numN auto const& b) {
   return map(a, b, [](auto a, auto b) { return a / b; });
 }
-constexpr kernel auto operator/(num_vec auto const& a, number auto b) {
+constexpr kernel auto operator/(numN auto const& a, num auto b) {
   return map(a, b, [](auto a, auto b) { return a / b; });
 }
-constexpr kernel auto operator/(number auto a, num_vec auto const& b) {
+constexpr kernel auto operator/(num auto a, numN auto const& b) {
   return map(a, b, [](auto a, auto b) { return a / b; });
 }
-constexpr kernel auto operator%(int_vec auto const& a, int_vec auto const& b) {
+constexpr kernel auto operator%(inteN auto const& a, inteN auto const& b) {
   return map(a, b, [](auto a, auto b) { return a % b; });
 }
-constexpr kernel auto operator%(int_vec auto const& a, integral auto b) {
+constexpr kernel auto operator%(inteN auto const& a, integral auto b) {
   return map(a, b, [](auto a, auto b) { return a % b; });
 }
-constexpr kernel auto operator%(number auto a, int_vec auto const& b) {
+constexpr kernel auto operator%(num auto a, inteN auto const& b) {
   return map(a, b, [](auto a, auto b) { return a % b; });
 }
-constexpr kernel auto operator^(int_vec auto const& a, int_vec auto const& b) {
+constexpr kernel auto operator^(inteN auto const& a, inteN auto const& b) {
   return map(a, b, [](auto a, auto b) { return a ^ b; });
 }
-constexpr kernel auto operator^(int_vec auto const& a, integral auto b) {
+constexpr kernel auto operator^(inteN auto const& a, integral auto b) {
   return map(a, b, [](auto a, auto b) { return a ^ b; });
 }
-constexpr kernel auto operator^(integral auto a, int_vec auto const& b) {
+constexpr kernel auto operator^(integral auto a, inteN auto const& b) {
   return map(a, b, [](auto a, auto b) { return a ^ b; });
 }
-constexpr kernel auto operator>>(int_vec auto const& a, int_vec auto const& b) {
+constexpr kernel auto operator>>(inteN auto const& a, inteN auto const& b) {
   return map(a, b, [](auto a, auto b) { return a >> b; });
 }
-constexpr kernel auto operator>>(int_vec auto const& a, integral auto b) {
+constexpr kernel auto operator>>(inteN auto const& a, integral auto b) {
   return map(a, b, [](auto a, auto b) { return a >> b; });
 }
-constexpr kernel auto operator>>(integral auto a, int_vec auto const& b) {
+constexpr kernel auto operator>>(integral auto a, inteN auto const& b) {
   return map(a, b, [](auto a, auto b) { return a >> b; });
 }
-constexpr kernel auto operator<<(int_vec auto const& a, int_vec auto const& b) {
+constexpr kernel auto operator<<(inteN auto const& a, inteN auto const& b) {
   return map(a, b, [](auto a, auto b) { return a << b; });
 }
-constexpr kernel auto operator<<(int_vec auto const& a, integral auto b) {
+constexpr kernel auto operator<<(inteN auto const& a, integral auto b) {
   return map(a, b, [](auto a, auto b) { return a << b; });
 }
-constexpr kernel auto operator<<(integral auto a, int_vec auto const& b) {
+constexpr kernel auto operator<<(integral auto a, inteN auto const& b) {
   return map(a, b, [](auto a, auto b) { return a << b; });
 }
 
 // Vector assignments
-constexpr kernel auto& operator+=(num_vec auto& a, num_vec auto const& b) {
+constexpr kernel auto& operator+=(numN auto& a, numN auto const& b) {
   return a = a + b;
 }
-constexpr kernel auto& operator+=(num_vec auto& a, number auto b) {
+constexpr kernel auto& operator+=(numN auto& a, num auto b) {
   return a = a + b;
 }
-constexpr kernel auto& operator-=(num_vec auto& a, num_vec auto const& b) {
+constexpr kernel auto& operator-=(numN auto& a, numN auto const& b) {
   return a = a - b;
 }
-constexpr kernel auto& operator-=(num_vec auto& a, number auto b) {
+constexpr kernel auto& operator-=(numN auto& a, num auto b) {
   return a = a - b;
 }
-constexpr kernel auto& operator*=(num_vec auto& a, num_vec auto const& b) {
+constexpr kernel auto& operator*=(numN auto& a, numN auto const& b) {
   return a = a * b;
 }
-constexpr kernel auto& operator*=(num_vec auto& a, number auto b) {
+constexpr kernel auto& operator*=(numN auto& a, num auto b) {
   return a = a * b;
 }
-constexpr kernel auto& operator/=(num_vec auto& a, num_vec auto const& b) {
+constexpr kernel auto& operator/=(numN auto& a, numN auto const& b) {
   return a = a / b;
 }
-constexpr kernel auto& operator/=(num_vec auto& a, number auto b) {
+constexpr kernel auto& operator/=(numN auto& a, num auto b) {
   return a = a / b;
 }
-constexpr kernel auto& operator%=(int_vec auto& a, int_vec auto const& b) {
+constexpr kernel auto& operator%=(inteN auto& a, inteN auto const& b) {
   return a = a % b;
 }
-constexpr kernel auto& operator%=(int_vec auto& a, integral auto b) {
+constexpr kernel auto& operator%=(inteN auto& a, integral auto b) {
   return a = a % b;
 }
 
 // Vector products and lengths.
-constexpr kernel auto dot(num_vec auto const& a, num_vec auto const& b) {
+constexpr kernel auto dot(numN auto const& a, numN auto const& b) {
   return sum(a * b);
 }
-constexpr kernel auto cross(num_vec2 auto const& a, num_vec2 auto const& b) {
+constexpr kernel auto cross(num2 auto const& a, num2 auto const& b) {
   return a.x() * b.y() - a.y() * b.x();
 }
-constexpr kernel auto cross(num_vec3 auto const& a, num_vec3 auto const& b) {
+constexpr kernel auto cross(num3 auto const& a, num3 auto const& b) {
   return vec{a.y() * b.z() - a.z() * b.y(), a.z() * b.x() - a.x() * b.z(),
       a.x() * b.y() - a.y() * b.x()};
 }
 template <typename T1, typename T2, typename T = common_type<T1, T2>>
-constexpr kernel auto angle(num_vec auto const& a, num_vec auto const& b) {
+constexpr kernel auto angle(numN auto const& a, numN auto const& b) {
   return acos(clamp(dot(normalize(a), normalize(b)), -1, 1));
 }
 
 // Orthogonal vectors.
-constexpr kernel auto orthogonal(num_vec3 auto const& v) {
+constexpr kernel auto orthogonal(num3 auto const& v) {
   // http://lolengine.net/blog/2013/09/21/picking-orthogonal-vector-combing-coconuts)
   return abs(v.x()) > abs(v.z()) ? vec{-v.y(), v.x(), 0}
                                  : vec{0, -v.z(), v.y()};
 }
-constexpr kernel auto orthonormalize(
-    num_vec auto const& a, num_vec auto const& b) {
+constexpr kernel auto orthonormalize(numN auto const& a, numN auto const& b) {
   return normalize(a - b * dot(a, b));
 }
 
 // Reflected and refracted vector.
-constexpr kernel auto reflect(num_vec auto const& w, num_vec auto const& n) {
+constexpr kernel auto reflect(numN auto const& w, numN auto const& n) {
   return -w + 2 * dot(n, w) * n;
 }
 constexpr kernel auto refract(
-    num_vec3 auto const& w, num_vec3 auto const& n, number auto inv_eta) {
+    num3 auto const& w, num3 auto const& n, num auto inv_eta) {
   using V     = decltype(w);
   auto cosine = dot(n, w);
   auto k      = 1 + inv_eta * inv_eta * (cosine * cosine - 1);
@@ -930,31 +925,31 @@ constexpr kernel auto refract(
   return -w * inv_eta + (inv_eta * cosine - sqrt(k)) * n;
 }
 
-constexpr kernel auto length(num_vec auto const& a) { return sqrt(dot(a, a)); }
-constexpr kernel auto length2(num_vec auto const& a) { return dot(a, a); }
-[[deprecated]] constexpr kernel auto length_squared(num_vec auto const& a) {
+constexpr kernel auto length(numN auto const& a) { return sqrt(dot(a, a)); }
+constexpr kernel auto length2(numN auto const& a) { return dot(a, a); }
+[[deprecated]] constexpr kernel auto length_squared(numN auto const& a) {
   return dot(a, a);
 }
-constexpr kernel auto normalize(num_vec auto const& a) {
+constexpr kernel auto normalize(numN auto const& a) {
   auto l = length(a);
   return (l != 0) ? a / l : a;
 }
-constexpr kernel auto distance(num_vec auto const& a, num_vec auto const& b) {
+constexpr kernel auto distance(numN auto const& a, numN auto const& b) {
   return length(a - b);
 }
-constexpr kernel auto distance2(num_vec auto const& a, num_vec auto const& b) {
+constexpr kernel auto distance2(numN auto const& a, numN auto const& b) {
   return dot(a - b, a - b);
 }
 [[deprecated]] constexpr kernel auto distance_squared(
-    num_vec auto const& a, num_vec auto const& b) {
+    numN auto const& a, numN auto const& b) {
   return dot(a - b, a - b);
 }
-constexpr kernel auto angle(num_vec auto const& a, num_vec auto const& b) {
+constexpr kernel auto angle(numN auto const& a, numN auto const& b) {
   return acos(clamp(dot(normalize(a), normalize(b)), -1, 1));
 }
 
 constexpr kernel auto slerp(
-    num_vec4 auto const& a, num_vec4 auto const& b, number auto u) {
+    num4 auto const& a, num4 auto const& b, num auto u) {
   using T = decltype(u);
   // https://en.wikipedia.org/wiki/Slerp
   auto an = normalize(a), bn = normalize(b);
@@ -970,64 +965,58 @@ constexpr kernel auto slerp(
 }
 
 // Max element and clamp.
-constexpr kernel auto max(num_vec auto const& a, num_vec auto const& b) {
-  return map(a, b, [](number auto a, number auto b) { return max(a, b); });
+constexpr kernel auto max(numN auto const& a, numN auto const& b) {
+  return map(a, b, [](num auto a, num auto b) { return max(a, b); });
 }
-constexpr kernel auto max(num_vec auto const& a, number auto b) {
-  return map(a, b, [](number auto a, number auto b) { return max(a, b); });
+constexpr kernel auto max(numN auto const& a, num auto b) {
+  return map(a, b, [](num auto a, num auto b) { return max(a, b); });
 }
-constexpr kernel auto min(num_vec auto const& a, number auto b) {
-  return map(a, b, [](number auto a, number auto b) { return min(a, b); });
+constexpr kernel auto min(numN auto const& a, num auto b) {
+  return map(a, b, [](num auto a, num auto b) { return min(a, b); });
 }
-constexpr kernel auto min(num_vec auto const& a, num_vec auto const& b) {
-  return map(a, b, [](number auto a, number auto b) { return min(a, b); });
-}
-constexpr kernel auto clamp(
-    num_vec auto const& x, num_vec auto const& min, num_vec auto const& max) {
-  return map(x, min, max, [](number auto a, number auto b, number auto c) {
-    return clamp(a, b, c);
-  });
+constexpr kernel auto min(numN auto const& a, numN auto const& b) {
+  return map(a, b, [](num auto a, num auto b) { return min(a, b); });
 }
 constexpr kernel auto clamp(
-    num_vec auto const& x, number auto min, number auto max) {
-  return map(x, min, max, [](number auto a, number auto b, number auto c) {
-    return clamp(a, b, c);
-  });
+    numN auto const& x, numN auto const& min, numN auto const& max) {
+  return map(x, min, max,
+      [](num auto a, num auto b, num auto c) { return clamp(a, b, c); });
+}
+constexpr kernel auto clamp(numN auto const& x, num auto min, num auto max) {
+  return map(x, min, max,
+      [](num auto a, num auto b, num auto c) { return clamp(a, b, c); });
 }
 constexpr kernel auto clamp(
-    num_vec auto const& x, num_vec auto const& min, number auto max) {
-  return map(x, min, max, [](number auto a, number auto b, number auto c) {
-    return clamp(a, b, c);
-  });
+    numN auto const& x, numN auto const& min, num auto max) {
+  return map(x, min, max,
+      [](num auto a, num auto b, num auto c) { return clamp(a, b, c); });
 }
 constexpr kernel auto clamp(
-    num_vec auto const& x, number auto min, num_vec auto const& max) {
-  return map(x, min, max, [](number auto a, number auto b, number auto c) {
-    return clamp(a, b, c);
-  });
+    numN auto const& x, num auto min, numN auto const& max) {
+  return map(x, min, max,
+      [](num auto a, num auto b, num auto c) { return clamp(a, b, c); });
 }
-constexpr kernel auto radians(num_vec auto const& a) {
-  return map(a, [](number auto a) { return radians(a); });
+constexpr kernel auto radians(numN auto const& a) {
+  return map(a, [](num auto a) { return radians(a); });
 }
-constexpr kernel auto degrees(num_vec auto const& a) {
-  return map(a, [](number auto a) { return degrees(a); });
+constexpr kernel auto degrees(numN auto const& a) {
+  return map(a, [](num auto a) { return degrees(a); });
 }
-constexpr kernel auto lerp(
-    num_vec auto const& a, num_vec auto const& b, number auto u) {
+constexpr kernel auto lerp(numN auto const& a, numN auto const& b, num auto u) {
   return a * (1 - u) + b * u;
 }
 constexpr kernel auto lerp(
-    num_vec auto const& a, num_vec auto const& b, num_vec auto const& u) {
+    numN auto const& a, numN auto const& b, numN auto const& u) {
   return a * (1 - u) + b * u;
 }
 
-constexpr kernel auto max(num_vec auto const& a) {
-  return fold(a, [](number auto a, number auto b) { return max(a, b); });
+constexpr kernel auto max(numN auto const& a) {
+  return fold(a, [](num auto a, num auto b) { return max(a, b); });
 }
-constexpr kernel auto min(num_vec auto const& a) {
-  return fold(a, [](number auto a, number auto b) { return min(a, b); });
+constexpr kernel auto min(numN auto const& a) {
+  return fold(a, [](num auto a, num auto b) { return min(a, b); });
 }
-constexpr kernel index_t argmax(num_vec auto const& a) {
+constexpr kernel index_t argmax(numN auto const& a) {
   constexpr auto N = vec_size<decltype(a)>;
   if constexpr (N == 1) {
     return 0;
@@ -1042,7 +1031,7 @@ constexpr kernel index_t argmax(num_vec auto const& a) {
       return argmax(xyz(a));
   }
 }
-constexpr kernel index_t argmin(num_vec auto const& a) {
+constexpr kernel index_t argmin(numN auto const& a) {
   constexpr auto N = vec_size<decltype(a)>;
   if constexpr (N == 1) {
     return 0;
@@ -1058,90 +1047,90 @@ constexpr kernel index_t argmin(num_vec auto const& a) {
   }
 }
 
-constexpr kernel auto sum(num_vec auto const& a) { return fold_sum(a); }
-constexpr kernel auto prod(num_vec auto const& a) { return fold_prod(a); }
-constexpr kernel auto mean(num_vec auto const& a) { return sum(a) / a.size(); }
-constexpr kernel bool all(bool_vec auto const& a) { return fold_and(a); }
-constexpr kernel bool any(bool_vec auto const& a) { return fold_or(a); }
+constexpr kernel auto sum(numN auto const& a) { return fold_sum(a); }
+constexpr kernel auto prod(numN auto const& a) { return fold_prod(a); }
+constexpr kernel auto mean(numN auto const& a) { return sum(a) / a.size(); }
+constexpr kernel bool all(boolN auto const& a) { return fold_and(a); }
+constexpr kernel bool any(boolN auto const& a) { return fold_or(a); }
 
 // Functions applied to vector elements
-constexpr kernel auto abs(num_vec auto const& a) {
-  return map(a, [](number auto a) { return abs(a); });
+constexpr kernel auto abs(numN auto const& a) {
+  return map(a, [](num auto a) { return abs(a); });
 }
-constexpr kernel auto sqr(num_vec auto const& a) {
-  return map(a, [](number auto a) { return sqr(a); });
+constexpr kernel auto sqr(numN auto const& a) {
+  return map(a, [](num auto a) { return sqr(a); });
 }
-constexpr kernel auto sqrt(num_vec auto const& a) {
-  return map(a, [](number auto a) { return sqrt(a); });
+constexpr kernel auto sqrt(numN auto const& a) {
+  return map(a, [](num auto a) { return sqrt(a); });
 }
-constexpr kernel auto exp(num_vec auto const& a) {
-  return map(a, [](number auto a) { return exp(a); });
+constexpr kernel auto exp(numN auto const& a) {
+  return map(a, [](num auto a) { return exp(a); });
 }
-constexpr kernel auto log(num_vec auto const& a) {
-  return map(a, [](number auto a) { return log(a); });
+constexpr kernel auto log(numN auto const& a) {
+  return map(a, [](num auto a) { return log(a); });
 }
-constexpr kernel auto exp2(num_vec auto const& a) {
-  return map(a, [](number auto a) { return exp2(a); });
+constexpr kernel auto exp2(numN auto const& a) {
+  return map(a, [](num auto a) { return exp2(a); });
 }
-constexpr kernel auto log2(num_vec auto const& a) {
-  return map(a, [](number auto a) { return log2(a); });
+constexpr kernel auto log2(numN auto const& a) {
+  return map(a, [](num auto a) { return log2(a); });
 }
-constexpr kernel auto pow(num_vec auto const& a, number auto b) {
-  return map(a, b, [](number auto a, number auto b) { return pow(a, b); });
+constexpr kernel auto pow(numN auto const& a, num auto b) {
+  return map(a, b, [](num auto a, num auto b) { return pow(a, b); });
 }
-constexpr kernel auto pow(num_vec auto const& a, num_vec auto const& b) {
-  return map(a, b, [](number auto a, number auto b) { return pow(a, b); });
+constexpr kernel auto pow(numN auto const& a, numN auto const& b) {
+  return map(a, b, [](num auto a, num auto b) { return pow(a, b); });
 }
-constexpr kernel auto round(num_vec auto const& a) {
-  return map(a, [](number auto a) { return round(a); });
+constexpr kernel auto round(numN auto const& a) {
+  return map(a, [](num auto a) { return round(a); });
 }
-constexpr kernel auto fmod(num_vec auto const& a, num_vec auto const& b) {
-  return map(a, b, [](number auto a, number auto b) { return fmod(a, b); });
+constexpr kernel auto fmod(numN auto const& a, numN auto const& b) {
+  return map(a, b, [](num auto a, num auto b) { return fmod(a, b); });
 }
-constexpr kernel auto fmod(num_vec auto const& a, number auto b) {
-  return map(a, b, [](number auto a, number auto b) { return fmod(a, b); });
+constexpr kernel auto fmod(numN auto const& a, num auto b) {
+  return map(a, b, [](num auto a, num auto b) { return fmod(a, b); });
 }
-constexpr kernel auto mod(num_vec auto const& a, num_vec auto const& b) {
-  return map(a, b, [](number auto a, number auto b) { return mod(a, b); });
+constexpr kernel auto mod(numN auto const& a, numN auto const& b) {
+  return map(a, b, [](num auto a, num auto b) { return mod(a, b); });
 }
-constexpr kernel auto mod(num_vec auto const& a, number auto b) {
-  return map(a, b, [](number auto a, number auto b) { return mod(a, b); });
+constexpr kernel auto mod(numN auto const& a, num auto b) {
+  return map(a, b, [](num auto a, num auto b) { return mod(a, b); });
 }
-constexpr kernel auto bias(num_vec auto const& a, number auto b) {
-  return map(a, b, [](number auto a, number auto b) { return bias(a, b); });
+constexpr kernel auto bias(numN auto const& a, num auto b) {
+  return map(a, b, [](num auto a, num auto b) { return bias(a, b); });
 }
-constexpr kernel auto gain(num_vec auto const& a, number auto b) {
-  return map(a, b, [](number auto a, number auto b) { return bias(a, b); });
+constexpr kernel auto gain(numN auto const& a, num auto b) {
+  return map(a, b, [](num auto a, num auto b) { return bias(a, b); });
 }
-constexpr kernel bool isfinite(num_vec auto const& a) {
-  return all(map(a, [](number auto a) { return isfinite(a); }));
+constexpr kernel bool isfinite(numN auto const& a) {
+  return all(map(a, [](num auto a) { return isfinite(a); }));
 }
 
 // Conversion between ranges
-constexpr kernel auto unit_to_uv(number auto a) { return (a + 1) / 2; }
-constexpr kernel auto unit_to_uv(num_vec auto const& a) { return (a + 1) / 2; }
-constexpr kernel auto uv_to_unit(number auto a) { return a * 2 - 1; }
-constexpr kernel auto uv_to_unit(num_vec auto const& a) { return a * 2 - 1; }
+constexpr kernel auto unit_to_uv(num auto a) { return (a + 1) / 2; }
+constexpr kernel auto unit_to_uv(numN auto const& a) { return (a + 1) / 2; }
+constexpr kernel auto uv_to_unit(num auto a) { return a * 2 - 1; }
+constexpr kernel auto uv_to_unit(numN auto const& a) { return a * 2 - 1; }
 
 // Conversion between coordinates
-constexpr kernel auto cartesian_to_sphericaluv(num_vec3 auto const& w) {
+constexpr kernel auto cartesian_to_sphericaluv(num3 auto const& w) {
   using T           = vec_etype<decltype(w)>;
   auto [wx, wy, wz] = w;
   auto uv = vec{atan2(wy, wx), acos(clamp(wz, -1, 1))} / vec{2 * (T)pi, (T)pi};
   return mod(uv, 1);
 }
-constexpr kernel auto cartesiany_to_sphericaluv(num_vec3 auto const& w) {
+constexpr kernel auto cartesiany_to_sphericaluv(num3 auto const& w) {
   using T           = vec_etype<decltype(w)>;
   auto [wx, wy, wz] = w;
   auto uv = vec{atan2(wz, wx), acos(clamp(wy, -1, 1))} / vec{2 * (T)pi, (T)pi};
   return mod(uv, 1);
 }
-constexpr kernel auto sphericaluv_to_cartesian(num_vec2 auto const& uv) {
+constexpr kernel auto sphericaluv_to_cartesian(num2 auto const& uv) {
   using T           = vec_etype<decltype(uv)>;
   auto [phi, theta] = uv * vec{2 * (T)pi, (T)pi};
   return vec{cos(phi) * sin(theta), sin(phi) * sin(theta), cos(theta)};
 }
-constexpr kernel auto sphericaluv_to_cartesiany(num_vec2 auto const& uv) {
+constexpr kernel auto sphericaluv_to_cartesiany(num2 auto const& uv) {
   using T           = vec_etype<decltype(uv)>;
   auto [phi, theta] = uv * vec{2 * (T)pi, (T)pi};
   return vec{cos(phi) * sin(theta), cos(theta), sin(phi) * sin(theta)};
@@ -1149,89 +1138,80 @@ constexpr kernel auto sphericaluv_to_cartesiany(num_vec2 auto const& uv) {
 
 // Quaternion operations represented as xi + yj + zk + w
 // const auto identity_quat4f = vec4f{0, 0, 0, 1};
-constexpr kernel auto quat_mul(num_vec4 auto const a, number auto b) {
-  return map(a, b, [](number auto a, number auto b) { return a * b; });
+constexpr kernel auto quat_mul(num4 auto const a, num auto b) {
+  return map(a, b, [](num auto a, num auto b) { return a * b; });
 }
-constexpr kernel auto quat_mul(num_vec4 auto const a, num_vec4 auto const& b) {
+constexpr kernel auto quat_mul(num4 auto const a, num4 auto const& b) {
   return vec{a.x() * b.w() + a.w() * b.x() + a.y() * b.w() - a.z() * b.y(),
       a.y() * b.w() + a.w() * b.y() + a.z() * b.x() - a.x() * b.z(),
       a.z() * b.w() + a.w() * b.z() + a.x() * b.y() - a.y() * b.x(),
       a.w() * b.w() - a.x() * b.x() - a.y() * b.y() - a.z() * b.z()};
 }
-constexpr kernel auto quat_conjugate(num_vec4 auto const& a) {
+constexpr kernel auto quat_conjugate(num4 auto const& a) {
   return vec{-xyz(a), w(a)};
 }
-constexpr kernel auto quat_inverse(num_vec4 auto const a) {
+constexpr kernel auto quat_inverse(num4 auto const a) {
   return quat_conjugate(a) / dot(a, a);
 }
 
 // Component-wise comparison operations.
-constexpr kernel auto component_equal(
-    num_vec auto const& a, num_vec auto const& b) {
-  return map(a, b, [](number auto a, number auto b) { return a == b; });
+constexpr kernel auto component_equal(numN auto const& a, numN auto const& b) {
+  return map(a, b, [](num auto a, num auto b) { return a == b; });
 }
-constexpr kernel auto component_equal(num_vec auto const& a, number auto b) {
-  return map(a, b, [](number auto a, number auto b) { return a == b; });
-}
-constexpr kernel auto component_not_equal(
-    num_vec auto const& a, num_vec auto const& b) {
-  return map(a, b, [](number auto a, number auto b) { return a != b; });
+constexpr kernel auto component_equal(numN auto const& a, num auto b) {
+  return map(a, b, [](num auto a, num auto b) { return a == b; });
 }
 constexpr kernel auto component_not_equal(
-    num_vec auto const& a, const number auto b) {
-  return map(a, b, [](number auto a, number auto b) { return a != b; });
+    numN auto const& a, numN auto const& b) {
+  return map(a, b, [](num auto a, num auto b) { return a != b; });
 }
-constexpr kernel auto component_less(
-    num_vec auto const& a, num_vec auto const& b) {
-  return map(a, b, [](number auto a, number auto b) { return a < b; });
+constexpr kernel auto component_not_equal(
+    numN auto const& a, const num auto b) {
+  return map(a, b, [](num auto a, num auto b) { return a != b; });
 }
-constexpr kernel auto component_less(
-    num_vec auto const& a, const number auto b) {
-  return map(a, b, [](number auto a, number auto b) { return a < b; });
+constexpr kernel auto component_less(numN auto const& a, numN auto const& b) {
+  return map(a, b, [](num auto a, num auto b) { return a < b; });
 }
-constexpr kernel auto component_greater(
-    num_vec auto const& a, num_vec auto const& b) {
-  return map(a, b, [](number auto a, number auto b) { return a > b; });
+constexpr kernel auto component_less(numN auto const& a, const num auto b) {
+  return map(a, b, [](num auto a, num auto b) { return a < b; });
 }
 constexpr kernel auto component_greater(
-    num_vec auto const& a, const number auto b) {
-  return map(a, b, [](number auto a, number auto b) { return a > b; });
+    numN auto const& a, numN auto const& b) {
+  return map(a, b, [](num auto a, num auto b) { return a > b; });
+}
+constexpr kernel auto component_greater(numN auto const& a, const num auto b) {
+  return map(a, b, [](num auto a, num auto b) { return a > b; });
 }
 constexpr kernel auto component_less_equal(
-    num_vec auto const& a, num_vec auto const& b) {
-  return map(a, b, [](number auto a, number auto b) { return a <= b; });
+    numN auto const& a, numN auto const& b) {
+  return map(a, b, [](num auto a, num auto b) { return a <= b; });
 }
 constexpr kernel auto component_less_equal(
-    num_vec auto const& a, const number auto b) {
-  return map(a, b, [](number auto a, number auto b) { return a <= b; });
+    numN auto const& a, const num auto b) {
+  return map(a, b, [](num auto a, num auto b) { return a <= b; });
 }
 constexpr kernel auto component_greater_equal(
-    num_vec auto const& a, num_vec auto const& b) {
-  return map(a, b, [](number auto a, number auto b) { return a >= b; });
+    numN auto const& a, numN auto const& b) {
+  return map(a, b, [](num auto a, num auto b) { return a >= b; });
 }
 constexpr kernel auto component_greater_equal(
-    num_vec auto const& a, const number auto b) {
-  return map(a, b, [](number auto a, number auto b) { return a >= b; });
+    numN auto const& a, const num auto b) {
+  return map(a, b, [](num auto a, num auto b) { return a >= b; });
 }
 constexpr kernel auto select(
-    bool_vec auto const& a, num_vec auto const& b, num_vec auto const& c) {
-  return map(
-      a, b, c, [](bool a, number auto b, number auto c) { return a ? b : c; });
+    boolN auto const& a, numN auto const& b, numN auto const& c) {
+  return map(a, b, c, [](bool a, num auto b, num auto c) { return a ? b : c; });
 }
 constexpr kernel auto select(
-    bool_vec auto const& a, number auto b, num_vec auto const& c) {
-  return map(
-      a, b, c, [](bool a, number auto b, number auto c) { return a ? b : c; });
+    boolN auto const& a, num auto b, numN auto const& c) {
+  return map(a, b, c, [](bool a, num auto b, num auto c) { return a ? b : c; });
 }
 constexpr kernel auto select(
-    bool_vec auto const& a, num_vec auto const& b, number auto c) {
-  return map(
-      a, b, c, [](bool a, number auto b, number auto c) { return a ? b : c; });
+    boolN auto const& a, numN auto const& b, num auto c) {
+  return map(a, b, c, [](bool a, num auto b, num auto c) { return a ? b : c; });
 }
-constexpr kernel auto select(
-    bool_vec auto const& a, number auto b, number auto c) {
-  return map(
-      a, b, c, [](bool a, number auto b, number auto c) { return a ? b : c; });
+constexpr kernel auto select(boolN auto const& a, num auto b, num auto c) {
+  return map(a, b, c, [](bool a, num auto b, num auto c) { return a ? b : c; });
 }
 
 }  // namespace yocto
@@ -1290,7 +1270,7 @@ struct mat {
 };
 
 // Deduction guides
-template <num_vec... Args>
+template <numN... Args>
 mat(Args...) -> mat<common_type<vec_etype<Args>...>,
     common_size<vec_size<Args>...>, sizeof...(Args)>;
 
@@ -1396,46 +1376,46 @@ constexpr kernel mat<T, N, M> mul(
 }
 
 // Matrix comparisons.
-constexpr kernel bool operator==(num_mat auto const& a, num_mat auto const& b) {
-  return fold_and(map(a, b,
-      [](num_vec auto const& a, num_vec auto const& b) { return a == b; }));
+constexpr kernel bool operator==(numNxM auto const& a, numNxM auto const& b) {
+  return fold_and(
+      map(a, b, [](numN auto const& a, numN auto const& b) { return a == b; }));
 }
-constexpr kernel bool operator!=(num_mat auto const& a, num_mat auto const& b) {
-  return fold_or(map(a, b,
-      [](num_vec auto const& a, num_vec auto const& b) { return a != b; }));
+constexpr kernel bool operator!=(numNxM auto const& a, numNxM auto const& b) {
+  return fold_or(
+      map(a, b, [](numN auto const& a, numN auto const& b) { return a != b; }));
 }
 
 // Matrix operations.
-constexpr kernel auto operator+(num_mat auto const& a, num_mat auto const& b) {
+constexpr kernel auto operator+(numNxM auto const& a, numNxM auto const& b) {
   return map(
-      a, b, [](num_vec auto const& a, num_vec auto const& b) { return a + b; });
+      a, b, [](numN auto const& a, numN auto const& b) { return a + b; });
 }
-constexpr kernel auto operator*(num_mat auto const& a, number auto b) {
-  return map(a, b, [](num_vec auto const& a, number auto b) { return a * b; });
+constexpr kernel auto operator*(numNxM auto const& a, num auto b) {
+  return map(a, b, [](numN auto const& a, num auto b) { return a * b; });
 }
-constexpr kernel auto operator*(num_mat auto const& a, num_vec auto const& b) {
+constexpr kernel auto operator*(numNxM auto const& a, numN auto const& b) {
   return mul(a, b);
 }
-constexpr kernel auto operator*(num_vec auto const& a, num_mat auto const& b) {
+constexpr kernel auto operator*(numN auto const& a, numNxM auto const& b) {
   return mul(a, b);
 }
-constexpr kernel auto operator*(num_mat auto const& a, num_mat auto const& b) {
+constexpr kernel auto operator*(numNxM auto const& a, numNxM auto const& b) {
   return mul(a, b);
 }
 
 // Matrix assignments.
-constexpr kernel auto& operator+=(num_mat auto& a, num_mat auto const& b) {
+constexpr kernel auto& operator+=(numNxM auto& a, numNxM auto const& b) {
   return a = a + b;
 }
-constexpr kernel auto& operator*=(num_mat auto& a, num_mat auto const& b) {
+constexpr kernel auto& operator*=(numNxM auto& a, numNxM auto const& b) {
   return a = a * b;
 }
-constexpr kernel auto operator*=(num_mat auto& a, number auto b) {
+constexpr kernel auto operator*=(numNxM auto& a, num auto b) {
   return a = a * b;
 }
 
 // Matrix diagonals and transposes.
-constexpr kernel auto diagonal(num_mat auto const& a) -> num_vec auto{
+constexpr kernel auto diagonal(numNxM auto const& a) -> numN auto{
   constexpr auto N = mat_rows<decltype(a)>;
   constexpr auto M = mat_cols<decltype(a)>;
   static_assert(N == M && N <= 4);
@@ -1449,7 +1429,7 @@ constexpr kernel auto diagonal(num_mat auto const& a) -> num_vec auto{
     return vec{a[0][0], a[1][1], a[2][2], a[3][3]};
   }
 }
-constexpr kernel auto transpose(num_mat auto const& a) -> num_mat auto{
+constexpr kernel auto transpose(numNxM auto const& a) -> numNxM auto{
   using T          = mat_etype<decltype(a)>;
   constexpr auto N = mat_rows<decltype(a)>;
   constexpr auto M = mat_cols<decltype(a)>;
@@ -1475,7 +1455,7 @@ constexpr kernel auto transpose(num_mat auto const& a) -> num_mat auto{
 }
 
 // Matrix adjoints, determinants and inverses.
-constexpr kernel auto determinant(num_mat auto const& a) -> number auto{
+constexpr kernel auto determinant(numNxM auto const& a) -> num auto{
   constexpr auto N = mat_rows<decltype(a)>;
   constexpr auto M = mat_cols<decltype(a)>;
   static_assert(N == M);
@@ -1489,7 +1469,7 @@ constexpr kernel auto determinant(num_mat auto const& a) -> number auto{
     return 0;  // TODO
   }
 }
-constexpr kernel auto adjoint(num_mat auto const& a) -> num_mat auto{
+constexpr kernel auto adjoint(numNxM auto const& a) -> numNxM auto{
   using T          = mat_etype<decltype(a)>;
   constexpr auto N = mat_rows<decltype(a)>;
   constexpr auto M = mat_cols<decltype(a)>;
@@ -1503,7 +1483,7 @@ constexpr kernel auto adjoint(num_mat auto const& a) -> num_mat auto{
         mat<T, N, N>{cross(a[1], a[2]), cross(a[2], a[0]), cross(a[0], a[1])});
   }
 }
-constexpr kernel auto inverse(num_mat auto const& a) -> num_mat auto{
+constexpr kernel auto inverse(numNxM auto const& a) -> numNxM auto{
   constexpr auto N = mat_rows<decltype(a)>;
   constexpr auto M = mat_cols<decltype(a)>;
   static_assert(N == M);
@@ -1511,7 +1491,7 @@ constexpr kernel auto inverse(num_mat auto const& a) -> num_mat auto{
 }
 
 // Constructs a basis from a direction
-constexpr kernel auto basis_fromz(num_vec3 auto const& v) -> num_mat auto{
+constexpr kernel auto basis_fromz(num3 auto const& v) -> numNxM auto{
   using T = vec_etype<decltype(v)>;
   // https://graphics.pixar.com/library/OrthonormalB/paper.pdf
   if constexpr (std::is_same_v<T, float>) {
@@ -1611,9 +1591,9 @@ struct frame<T, 3> {
 };
 
 // Deduction guides
-template <num_vec... Args>
+template <numN... Args>
 frame(Args...) -> frame<common_type<vec_etype<Args>...>, sizeof...(Args) - 1>;
-template <num_mat M, num_vec V>
+template <numNxM M, numN V>
 frame(M, V) -> frame<common_type<mat_etype<M>, vec_etype<V>>, vec_size<V>>;
 
 // Frame type traits
@@ -1638,16 +1618,16 @@ constexpr auto identity3x4f = frame3f{
     {1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}};
 
 // Frame properties
-constexpr kernel auto rotation(num_frame auto const& a) { return a.m(); }
-constexpr kernel auto translation(num_frame auto const& a) { return a.t(); }
+constexpr kernel auto rotation(numNxF auto const& a) { return a.m(); }
+constexpr kernel auto translation(numNxF auto const& a) { return a.t(); }
 
 // Frame/mat conversion
-constexpr kernel auto mat_to_frame(num_mat auto const& m) {
+constexpr kernel auto mat_to_frame(numNxM auto const& m) {
   using T          = mat_etype<decltype(m)>;
   constexpr auto N = mat_rows<decltype(m)>;
   return (frame<T, N - 1>)m;
 }
-constexpr kernel auto frame_to_mat(num_frame auto const& f) {
+constexpr kernel auto frame_to_mat(numNxF auto const& f) {
   using T          = frame_etype<decltype(f)>;
   constexpr auto N = frame_rows<decltype(f)>;
   return (mat<T, N + 1, N + 1>)f;
@@ -1668,16 +1648,15 @@ constexpr kernel bool operator!=(const frame<T1, N>& a, const frame<T2, N>& b) {
 }
 
 // Frame composition, equivalent to affine matrix product.
-constexpr kernel auto operator*(
-    num_frame auto const& a, num_frame auto const& b) {
+constexpr kernel auto operator*(numNxF auto const& a, numNxF auto const& b) {
   return frame{a.m() * b.m(), a.m() * b.t() + a.t()};
 }
-constexpr kernel auto operator*=(num_frame auto& a, num_frame auto const& b) {
+constexpr kernel auto operator*=(numNxF auto& a, numNxF auto const& b) {
   return a = a * b;
 }
 
 // Frame inverse, equivalent to rigid affine inverse.
-constexpr kernel auto inverse(num_frame auto const& a, bool non_rigid = false) {
+constexpr kernel auto inverse(numNxF auto const& a, bool non_rigid = false) {
   if (non_rigid) {
     auto minv = inverse(a.m());
     return frame{minv, -(minv * a.t())};
@@ -1688,8 +1667,7 @@ constexpr kernel auto inverse(num_frame auto const& a, bool non_rigid = false) {
 }
 
 // Frame construction from axis.
-constexpr kernel auto frame_fromz(
-    num_vec3 auto const& o, num_vec3 auto const& v) {
+constexpr kernel auto frame_fromz(num3 auto const& o, num3 auto const& v) {
   using T = vec_etype<common_type<decltype(o), decltype(v)>>;
   // https://graphics.pixar.com/library/OrthonormalB/paper.pdf
   if constexpr (std::is_same_v<T, float>) {
@@ -1706,13 +1684,13 @@ constexpr kernel auto frame_fromz(
   }
 }
 constexpr kernel auto frame_fromzx(
-    num_vec3 auto const& o, num_vec3 auto const& z_, num_vec3 auto const& x_) {
+    num3 auto const& o, num3 auto const& z_, num3 auto const& x_) {
   auto z = normalize(z_);
   auto x = orthonormalize(x_, z);
   auto y = normalize(cross(z, x));
   return frame{x, y, z, o};
 }
-constexpr kernel auto orthonormalize(num_frame3 auto const& frame_) {
+constexpr kernel auto orthonormalize(num3xF auto const& frame_) {
   auto z = normalize(frame_.z());
   auto x = orthonormalize(frame_.x(), z);
   auto y = normalize(cross(z, x));
@@ -1744,7 +1722,7 @@ struct quat<T, 4> {
 };
 
 // Deduction guides
-template <number... Args>
+template <num... Args>
 quat(Args...) -> quat<common_type<Args...>, sizeof...(Args)>;
 
 // Vector type traits
@@ -1776,18 +1754,16 @@ constexpr kernel quat<T, 4> map(const quat<T1, 4>& a, T2 b, Func&& func) {
 }
 
 // Quaternion operations
-constexpr kernel auto operator+(
-    num_quat4 auto const& a, num_quat4 auto const& b) {
-  return map(a, b, [](number auto a, number auto b) { return a + b; });
+constexpr kernel auto operator+(numQ auto const& a, numQ auto const& b) {
+  return map(a, b, [](num auto a, num auto b) { return a + b; });
 }
-constexpr kernel auto operator*(num_quat4 auto const& a, number auto b) {
-  return map(a, b, [](number auto a, number auto b) { return a * b; });
+constexpr kernel auto operator*(numQ auto const& a, num auto b) {
+  return map(a, b, [](num auto a, num auto b) { return a * b; });
 }
-constexpr kernel auto operator/(num_quat4 auto const& a, number auto b) {
-  return map(a, b, [](number auto a, number auto b) { return a / b; });
+constexpr kernel auto operator/(numQ auto const& a, num auto b) {
+  return map(a, b, [](num auto a, num auto b) { return a / b; });
 }
-constexpr kernel auto operator*(
-    num_quat4 auto const& a, num_quat4 auto const& b) {
+constexpr kernel auto operator*(numQ auto const& a, numQ auto const& b) {
   return quat{a.x() * b.w() + a.w() * b.x() + a.y() * b.w() - a.z() * b.y(),
       a.y() * b.w() + a.w() * b.y() + a.z() * b.x() - a.x() * b.z(),
       a.z() * b.w() + a.w() * b.z() + a.x() * b.y() - a.y() * b.x(),
@@ -1795,36 +1771,33 @@ constexpr kernel auto operator*(
 }
 
 // Quaternion operations
-constexpr kernel auto dot(num_quat4 auto const& a, num_quat4 auto const& b) {
+constexpr kernel auto dot(numQ auto const& a, numQ auto const& b) {
   return a.x() * b.x() + a.y() * b.y() + a.z() * b.z() + a.w() * b.w();
 }
-constexpr kernel auto length(num_quat4 auto const& a) {
-  return sqrt(dot(a, a));
-}
-constexpr kernel auto normalize(num_quat4 auto const& a) {
+constexpr kernel auto length(numQ auto const& a) { return sqrt(dot(a, a)); }
+constexpr kernel auto normalize(numQ auto const& a) {
   auto l = length(a);
   return (l != 0) ? a / l : a;
 }
-constexpr kernel auto conjugate(num_quat4 auto const& a) {
+constexpr kernel auto conjugate(numQ auto const& a) {
   return quat{-a.xyz(), a.w()};
 }
-constexpr kernel auto inverse(num_quat4 auto const& a) {
+constexpr kernel auto inverse(numQ auto const& a) {
   return conjugate(a) / dot(a, a);
 }
-constexpr kernel auto uangle(num_quat4 auto const& a, num_quat4 auto const& b) {
+constexpr kernel auto uangle(numQ auto const& a, numQ auto const& b) {
   auto d = dot(a, b);
   return d > 1 ? 0 : acos(d < -1 ? -1 : d);
 }
-constexpr kernel auto lerp(
-    num_quat4 auto const& a, num_quat4 auto const& b, number auto t) {
+constexpr kernel auto lerp(numQ auto const& a, numQ auto const& b, num auto t) {
   return a * (1 - t) + b * t;
 }
 constexpr kernel auto nlerp(
-    num_quat4 auto const& a, num_quat4 auto const& b, number auto t) {
+    numQ auto const& a, numQ auto const& b, num auto t) {
   return normalize(lerp(a, b, t));
 }
 constexpr kernel auto slerp(
-    num_quat4 auto const& a, num_quat4 auto const& b, number auto t) {
+    numQ auto const& a, numQ auto const& b, num auto t) {
   auto th = uangle(a, b);
   return th == 0
              ? a
@@ -1839,46 +1812,41 @@ constexpr kernel auto slerp(
 namespace yocto {
 
 // Transforms points, vectors and directions by matrices.
-constexpr kernel auto transform_point(
-    num_mat auto const& a, num_vec auto const& b)
+constexpr kernel auto transform_point(numNxM auto const& a, numN auto const& b)
   requires(mat_rows<decltype(a)> == vec_size<decltype(b)> + 1)
 {
   auto tb = a * vec{b, 1};
   return tb.first() / tb.back();
 }
-constexpr kernel auto transform_vector(
-    num_mat auto const& a, num_vec auto const& b)
+constexpr kernel auto transform_vector(numNxM auto const& a, numN auto const& b)
   requires(mat_rows<decltype(a)> == vec_size<decltype(b)> + 1)
 {
   auto tb = a * vec{b, 0};
   return tb.first() / tb.back();
 }
 constexpr kernel auto transform_direction(
-    num_mat auto const& a, num_vec auto const& b)
+    numNxM auto const& a, numN auto const& b)
   requires(mat_rows<decltype(a)> == vec_size<decltype(b)> + 1)
 {
   return normalize(transform_vector(a, b));
 }
-constexpr kernel auto transform_normal(
-    num_mat auto const& a, num_vec auto const& b)
+constexpr kernel auto transform_normal(numNxM auto const& a, numN auto const& b)
   requires(mat_rows<decltype(a)> == vec_size<decltype(b)> + 1)
 {
   return normalize(transform_vector(transpose(inverse(a)), b));
 }
-constexpr kernel auto transform_vector(
-    num_mat auto const& a, num_vec auto const& b)
+constexpr kernel auto transform_vector(numNxM auto const& a, numN auto const& b)
   requires(mat_rows<decltype(a)> == vec_size<decltype(b)>)
 {
   return a * b;
 }
 constexpr kernel auto transform_direction(
-    num_mat auto const& a, num_vec auto const& b)
+    numNxM auto const& a, numN auto const& b)
   requires(mat_rows<decltype(a)> == vec_size<decltype(b)>)
 {
   return normalize(transform_vector(a, b));
 }
-constexpr kernel auto transform_normal(
-    num_mat auto const& a, num_vec auto const& b)
+constexpr kernel auto transform_normal(numNxM auto const& a, numN auto const& b)
   requires(mat_rows<decltype(a)> == vec_size<decltype(b)>)
 {
   return normalize(transform_vector(transpose(inverse(a)), b));
@@ -1886,19 +1854,19 @@ constexpr kernel auto transform_normal(
 
 // Transforms points, vectors and directions by frames.
 constexpr kernel auto transform_point(
-    num_frame auto const& a, num_vec auto const& b) {
+    numNxF auto const& a, numN auto const& b) {
   return a.m() * b + a.t();
 }
 constexpr kernel auto transform_vector(
-    num_frame auto const& a, num_vec auto const& b) {
+    numNxF auto const& a, numN auto const& b) {
   return a.m() * b;
 }
 constexpr kernel auto transform_direction(
-    num_frame auto const& a, num_vec auto const& b) {
+    numNxF auto const& a, numN auto const& b) {
   return normalize(transform_vector(a, b));
 }
 constexpr kernel auto transform_normal(
-    num_frame auto const& a, num_vec auto const& b, bool non_rigid = false) {
+    numNxF auto const& a, numN auto const& b, bool non_rigid = false) {
   if (non_rigid) {
     return transform_normal(rotation(a), b);
   } else {
@@ -1909,33 +1877,32 @@ constexpr kernel auto transform_normal(
 // Transforms points, vectors and directions by frames.
 template <typename T, index_t N>
 constexpr kernel auto transform_point_inverse(
-    num_frame auto const& a, num_vec auto const& b) {
+    numNxF auto const& a, numN auto const& b) {
   return (b - a.t()) * a.m();
 }
 template <typename T, index_t N>
 constexpr kernel auto transform_vector_inverse(
-    num_frame auto const& a, num_vec auto const& b) {
+    numNxF auto const& a, numN auto const& b) {
   return b * a.m();
 }
 template <typename T, index_t N>
 constexpr kernel auto transform_direction_inverse(
-    num_frame auto const& a, num_vec auto const& b) {
+    numNxF auto const& a, numN auto const& b) {
   return normalize(transform_vector_inverse(a, b));
 }
 
 // Translation, scaling and rotations transforms.
-constexpr kernel auto translation_frame(num_vec3 auto const& a) {
+constexpr kernel auto translation_frame(num3 auto const& a) {
   return frame{vec{1, 0, 0}, vec{0, 1, 0}, vec{0, 0, 1}, a};
 }
-constexpr kernel auto scaling_frame(num_vec3 auto const& a) {
+constexpr kernel auto scaling_frame(num3 auto const& a) {
   return frame{
       vec{a.x(), 0, 0}, vec{0, a.y(), 0}, vec{0, 0, a.z()}, vec{0, 0, 0}};
 }
-constexpr kernel auto scaling_frame(number auto a) {
+constexpr kernel auto scaling_frame(num auto a) {
   return scaling_frame(vec{a, a, a});
 }
-constexpr kernel auto rotation_frame(
-    num_vec3 auto const& axis, number auto angle) {
+constexpr kernel auto rotation_frame(num3 auto const& axis, num auto angle) {
   auto s = sin(angle), c = cos(angle);
   auto vv = normalize(axis);
   return frame{
@@ -1949,7 +1916,7 @@ constexpr kernel auto rotation_frame(
       vec{0, 0, 0},
   };
 }
-constexpr kernel auto rotation_frame(num_vec4 auto const& quat) {
+constexpr kernel auto rotation_frame(num4 auto const& quat) {
   auto v = quat;
   return frame{
       vec{v.w * v.w + v.x() * v.x() - v.y() * v.y() - v.z() * v.z(),
@@ -1962,7 +1929,7 @@ constexpr kernel auto rotation_frame(num_vec4 auto const& quat) {
       vec{0, 0, 0},
   };
 }
-constexpr kernel auto rotation_frame(num_quat4 auto const& quat) {
+constexpr kernel auto rotation_frame(numQ auto const& quat) {
   auto v = quat;
   return frame{
       vec{v.w * v.w + v.x() * v.x() - v.y() * v.y() - v.z() * v.z(),
@@ -1975,13 +1942,13 @@ constexpr kernel auto rotation_frame(num_quat4 auto const& quat) {
       vec{0, 0, 0},
   };
 }
-constexpr kernel auto rotation_frame(num_mat auto const& rot) {
+constexpr kernel auto rotation_frame(numNxM auto const& rot) {
   return frame{rot.x(), rot.y(), rot.z(), {0, 0, 0}};
 }
 
 // Lookat frame. Z-axis can be inverted with inv_xz.
-constexpr kernel auto lookat_frame(num_vec3 auto const& eye,
-    num_vec3 auto const& center, num_vec3 auto const& up, bool inv_xz = false) {
+constexpr kernel auto lookat_frame(num3 auto const& eye,
+    num3 auto const& center, num3 auto const& up, bool inv_xz = false) {
   auto w = normalize(eye - center);
   auto u = normalize(cross(up, w));
   auto v = normalize(cross(w, u));
@@ -1993,8 +1960,8 @@ constexpr kernel auto lookat_frame(num_vec3 auto const& eye,
 }
 
 // OpenGL frustum, ortho and perspecgive matrices.
-constexpr kernel auto frustum_mat(number auto l, number auto r, number auto b,
-    number auto t, number auto n, number auto f) {
+constexpr kernel auto frustum_mat(
+    num auto l, num auto r, num auto b, num auto t, num auto n, num auto f) {
   return mat{
       vec{2 * n / (r - l), 0, 0, 0},
       vec{0, 2 * n / (t - b), 0, 0},
@@ -2002,8 +1969,8 @@ constexpr kernel auto frustum_mat(number auto l, number auto r, number auto b,
       vec{0, 0, -2 * f * n / (f - n), 0},
   };
 }
-constexpr kernel auto ortho_mat(number auto l, number auto r, number auto b,
-    number auto t, number auto n, number auto f) {
+constexpr kernel auto ortho_mat(
+    num auto l, num auto r, num auto b, num auto t, num auto n, num auto f) {
   return mat{
       vec{2 / (r - l), 0, 0, 0},
       vec{0, 2 / (t - b), 0, 0},
@@ -2012,11 +1979,11 @@ constexpr kernel auto ortho_mat(number auto l, number auto r, number auto b,
   };
 }
 constexpr kernel auto ortho2d_mat(
-    number auto left, number auto right, number auto bottom, number auto top) {
+    num auto left, num auto right, num auto bottom, num auto top) {
   return ortho_mat(left, right, bottom, top, -1, 1);
 }
 constexpr kernel auto ortho_mat(
-    number auto xmag, number auto ymag, number auto near, number auto far) {
+    num auto xmag, num auto ymag, num auto near, num auto far) {
   return mat{
       vec{1 / xmag, 0, 0, 0},
       vec{0, 1 / ymag, 0, 0},
@@ -2025,7 +1992,7 @@ constexpr kernel auto ortho_mat(
   };
 }
 constexpr kernel auto perspective_mat(
-    number auto fovy, number auto aspect, number auto near, number auto far) {
+    num auto fovy, num auto aspect, num auto near, num auto far) {
   auto tg = tan(fovy / 2);
   return mat{
       vec{1 / (aspect * tg), 0, 0, 0},
@@ -2035,7 +2002,7 @@ constexpr kernel auto perspective_mat(
   };
 }
 constexpr kernel auto perspective_mat(
-    number auto fovy, number auto aspect, number auto near) {
+    num auto fovy, num auto aspect, num auto near) {
   auto tg = tan(fovy / 2);
   return mat{
       vec{1 / (aspect * tg), 0, 0, 0},
@@ -2046,17 +2013,16 @@ constexpr kernel auto perspective_mat(
 }
 
 // Rotation conversions. Returns axis and angle.
-constexpr kernel auto rotation_axisangle(num_vec4 auto const& quat) {
+constexpr kernel auto rotation_axisangle(num4 auto const& quat) {
   return pair{normalize(vec{quat.x(), quat.y(), quat.z()}), 2 * acos(quat.w())};
 }
-constexpr kernel auto rotation_quat(
-    num_vec3 auto const& axis, number auto angle) {
+constexpr kernel auto rotation_quat(num3 auto const& axis, num auto angle) {
   auto len = length(axis);
   if (len == 0) return vec{0, 0, 0, 1};
   return vec{sin(angle / 2) * axis.x / len, sin(angle / 2) * axis.y / len,
       sin(angle / 2) * axis.z / len, cos(angle / 2)};
 }
-constexpr kernel auto rotation_quat(num_vec4 auto const& axisangle) {
+constexpr kernel auto rotation_quat(num4 auto const& axisangle) {
   return rotation_quat(vec{axisangle.x, axisangle.y, axisangle.z}, axisangle.w);
 }
 
@@ -2069,8 +2035,8 @@ namespace yocto {
 
 // Computes the image uv coordinates corresponding to the view parameters.
 // Returns negative coordinates if out of the image.
-constexpr kernel auto image_coords(num_vec2 auto const& mouse_pos,
-    num_vec2 auto const& center, number auto scale, int_vec2 auto const& size,
+constexpr kernel auto image_coords(num2 auto const& mouse_pos,
+    num2 auto const& center, num auto scale, inte2 auto const& size,
     bool clamped = true) {
   using I = vec_etype<decltype(size)>;
   using T = vec_etype<decltype(center)>;
@@ -2080,9 +2046,8 @@ constexpr kernel auto image_coords(num_vec2 auto const& mouse_pos,
 }
 
 // Center image and autofit. Returns center and scale.
-constexpr kernel auto camera_imview(num_vec2 auto const& center,
-    number auto scale, int_vec2 auto const& imsize,
-    int_vec2 auto const& winsize, bool zoom_to_fit) {
+constexpr kernel auto camera_imview(num2 auto const& center, num auto scale,
+    inte2 auto const& imsize, inte2 auto const& winsize, bool zoom_to_fit) {
   using T = vec_etype<decltype(center)>;
   if (zoom_to_fit) {
     return pair{(vec<T, 2>)winsize / 2, min(winsize / (vec<T, 2>)imsize)};
@@ -2094,9 +2059,9 @@ constexpr kernel auto camera_imview(num_vec2 auto const& center,
 }
 
 // Turntable for UI navigation. Returns from and to.
-constexpr kernel auto camera_turntable(num_vec3 auto const& from_,
-    num_vec3 auto const& to_, num_vec3 auto const& up,
-    num_vec2 auto const& rotate, number auto dolly, num_vec2 auto const& pan) {
+constexpr kernel auto camera_turntable(num3 auto const& from_,
+    num3 auto const& to_, num3 auto const& up, num2 auto const& rotate,
+    num auto dolly, num2 auto const& pan) {
   using T = vec_etype<decltype(from_)>;
 
   // copy values
@@ -2138,9 +2103,9 @@ constexpr kernel auto camera_turntable(num_vec3 auto const& from_,
 }
 
 // Turntable for UI navigation. Returns frame and focus.
-constexpr kernel auto camera_turntable(num_frame3 auto const& frame_,
-    number auto focus, num_vec2 auto const& rotate, number auto dolly,
-    num_vec2 auto const& pan) {
+constexpr kernel auto camera_turntable(num3xF auto const& frame_,
+    num auto focus, num2 auto const& rotate, num auto dolly,
+    num2 auto const& pan) {
   using T = frame_etype<decltype(frame_)>;
 
   // copy values
@@ -2176,8 +2141,8 @@ constexpr kernel auto camera_turntable(num_frame3 auto const& frame_,
 }
 
 // FPS camera for UI navigation for a frame parametrization. Returns frame.
-constexpr kernel auto camera_fpscam(num_frame3 auto const& frame,
-    num_vec3 auto const& transl, num_vec2 auto const& rotate) {
+constexpr kernel auto camera_fpscam(num3xF auto const& frame,
+    num3 auto const& transl, num2 auto const& rotate) {
   using T = frame_etype<decltype(frame)>;
 
   // https://gamedev.stackexchange.com/questions/30644/how-to-keep-my-quaternion-using-fps-camera-from-tilting-and-messing-up
@@ -2196,18 +2161,16 @@ constexpr kernel auto camera_fpscam(num_frame3 auto const& frame,
 
 // Computes the image uv coordinates corresponding to the view parameters.
 // Returns negative coordinates if out of the image.
-constexpr kernel vec2i get_image_coords(num_vec2 auto const& mouse_pos,
-    num_vec2 auto const& center, number auto scale, int_vec2 auto const& size) {
-  using I = vec_etype<decltype(size)>;
+constexpr kernel vec2i get_image_coords(num2 auto const& mouse_pos,
+    num2 auto const& center, num auto scale, inte2 auto const& size) {
   using T = vec_etype<decltype(center)>;
   auto xy = (mouse_pos - center) / scale;
   return (vec2i)round(xy + size / (T)2);
 }
 
 // Center image and autofit.
-constexpr kernel void update_imview(int_vec2 auto& center, number auto& scale,
-    int_vec2 auto const& imsize, int_vec2 auto const& winsize,
-    bool zoom_to_fit) {
+constexpr kernel void update_imview(inte2 auto& center, num auto& scale,
+    inte2 auto const& imsize, inte2 auto const& winsize, bool zoom_to_fit) {
   using T = vec_etype<decltype(center)>;
   if (zoom_to_fit) {
     scale  = min((vec<T, 2>)winsize / imsize);
@@ -2219,9 +2182,9 @@ constexpr kernel void update_imview(int_vec2 auto& center, number auto& scale,
 }
 
 // Turntable for UI navigation.
-constexpr kernel void update_turntable(num_vec3 auto& from, num_vec3 auto& to,
-    num_vec3 auto& up, num_vec2 auto const& rotate, number auto dolly,
-    num_vec2 auto const& pan) {
+constexpr kernel void update_turntable(num3 auto& from, num3 auto& to,
+    num3 auto& up, num2 auto const& rotate, num auto dolly,
+    num2 auto const& pan) {
   using T = vec_etype<decltype(from)>;
 
   // rotate if necessary
@@ -2256,9 +2219,8 @@ constexpr kernel void update_turntable(num_vec3 auto& from, num_vec3 auto& to,
 }
 
 // Turntable for UI navigation.
-constexpr kernel void update_turntable(num_frame3 auto& frame,
-    number auto& focus, num_vec2 auto const& rotate, number auto dolly,
-    num_vec2 auto const& pan) {
+constexpr kernel void update_turntable(num3xF auto& frame, num auto& focus,
+    num2 auto const& rotate, num auto dolly, num2 auto const& pan) {
   using T = frame_etype<decltype(frame)>;
 
   // rotate if necessary
@@ -2288,8 +2250,8 @@ constexpr kernel void update_turntable(num_frame3 auto& frame,
 }
 
 // FPS camera for UI navigation for a frame parametrization.
-constexpr kernel void update_fpscam(num_frame3 auto& frame,
-    num_vec3 auto const& transl, num_vec2 auto const& rotate) {
+constexpr kernel void update_fpscam(
+    num3xF auto& frame, num3 auto const& transl, num2 auto const& rotate) {
   // https://gamedev.stackexchange.com/questions/30644/how-to-keep-my-quaternion-using-fps-camera-from-tilting-and-messing-up
   using T = frame_etype<decltype(frame)>;
 
