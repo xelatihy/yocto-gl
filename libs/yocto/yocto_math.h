@@ -269,7 +269,15 @@ using index  = long;
 
 // Common type
 template <typename... Ts>
-using common_t = std::common_type_t<Ts...>;
+using common_type = std::common_type_t<Ts...>;
+template <size_t... Is>
+struct common_size_s;
+template <size_t I>
+struct common_size_s<I> : std::integral_constant<size_t, I> {};
+template <size_t I, size_t... Is>
+struct common_size_s<I, Is...> : std::integral_constant<size_t, I> {};
+template <size_t... Is>
+constexpr auto common_size = common_size_s<Is...>::value;
 #ifndef __CUDACC__
 template <typename Func, typename... Ts>
 using result_t = std::invoke_result_t<Func, Ts...>;
@@ -300,11 +308,11 @@ using std::swap;
 
 constexpr kernel auto abs(number auto a) { return a < 0 ? -a : a; }
 constexpr kernel auto min(number auto a, number auto b) {
-  using T = common_t<decltype(a), decltype(b)>;
+  using T = common_type<decltype(a), decltype(b)>;
   return (a < b) ? (T)a : (T)b;
 }
 constexpr kernel auto max(number auto a, number auto b) {
-  using T = common_t<decltype(a), decltype(b)>;
+  using T = common_type<decltype(a), decltype(b)>;
   return (a > b) ? (T)a : (T)b;
 }
 constexpr kernel auto clamp(number auto a, number auto min_, number auto max_) {
@@ -328,12 +336,12 @@ constexpr kernel auto exp(real auto a) { return std::exp(a); }
 constexpr kernel auto log2(real auto a) { return std::log2(a); }
 constexpr kernel auto exp2(real auto a) { return std::exp2(a); }
 constexpr kernel auto pow(number auto a, number auto b) {
-  using T = common_t<decltype(a), decltype(b)>;
+  using T = common_type<decltype(a), decltype(b)>;
   return std::pow((T)a, (T)b);
 }
 constexpr kernel bool isfinite(real auto a) { return std::isfinite(a); }
 constexpr kernel auto atan2(number auto a, number auto b) {
-  using T = common_t<decltype(a), decltype(b)>;
+  using T = common_type<decltype(a), decltype(b)>;
   return std::atan2((T)a, (T)b);
 }
 constexpr kernel auto round(real auto a) { return std::round(a); }
@@ -358,11 +366,11 @@ constexpr kernel auto lerp(number auto a, number auto b, number auto u) {
   return a * (1 - u) + b * u;
 }
 constexpr kernel auto step(number auto a, number auto u) {
-  using T = common_t<decltype(a), decltype(u)>;
+  using T = common_type<decltype(a), decltype(u)>;
   return u < a ? (T)0 : (T)1;
 }
 constexpr kernel auto smoothstep(number auto a, number auto b, number auto u) {
-  using T = common_t<decltype(a), decltype(b), decltype(u)>;
+  using T = common_type<decltype(a), decltype(b), decltype(u)>;
   auto t  = clamp((u - a) / (b - a), (T)0, (T)1);
   return t * t * (3 - 2 * t);
 }
@@ -370,7 +378,7 @@ constexpr kernel auto bias(number auto a, number auto bias) {
   return a / ((1 / bias - 2) * (1 - a) + 1);
 }
 constexpr kernel auto gain(number auto a, number auto gain) {
-  using T = common_t<decltype(a), decltype(gain)>;
+  using T = common_type<decltype(a), decltype(gain)>;
   return (a < (T)0.5) ? bias(a * 2, gain) / 2
                       : bias(a * 2 - 1, 1 - gain) / 2 + (T)0.5;
 }
@@ -428,6 +436,21 @@ struct vec {
 
   constexpr kernel const T* data() const { return d; }
   constexpr kernel T*       data() { return d; }
+
+  constexpr const T& front() const { return d[0]; }
+  constexpr T&       front() { return d[0]; }
+  constexpr const T& back() const { return d[N - 1]; }
+  constexpr T&       back() { return d[N - 1]; }
+  template <index_t M = N - 1>
+  constexpr const vec<T, M>& first() const {
+    static_assert(M < N);
+    return *(vec<T, M>*)this;
+  }
+  template <index_t M = N - 1>
+  constexpr vec<T, M>& first() {
+    static_assert(M < N);
+    return *(vec<T, M>*)this;
+  }
 
   constexpr kernel T&       x() { return d[0]; }
   constexpr kernel const T& x() const { return d[0]; }
@@ -502,7 +525,9 @@ struct vec<T, 1> {
 
 // Deduction guides
 template <number... Args>
-vec(Args...) -> vec<common_t<Args...>, sizeof...(Args)>;
+vec(Args...) -> vec<common_type<Args...>, sizeof...(Args)>;
+template <num_vec V, number N>
+vec(V, N) -> vec<common_type<vec_etype<V>, N>, vec_size<V> + 1>;
 
 // Vector type traits
 template <typename T, index_t N>
@@ -876,7 +901,7 @@ constexpr kernel auto cross(num_vec3 auto const& a, num_vec3 auto const& b) {
   return vec{a.y() * b.z() - a.z() * b.y(), a.z() * b.x() - a.x() * b.z(),
       a.x() * b.y() - a.y() * b.x()};
 }
-template <typename T1, typename T2, typename T = common_t<T1, T2>>
+template <typename T1, typename T2, typename T = common_type<T1, T2>>
 constexpr kernel auto angle(num_vec auto const& a, num_vec auto const& b) {
   return acos(clamp(dot(normalize(a), normalize(b)), -1, 1));
 }
@@ -1264,6 +1289,11 @@ struct mat {
   constexpr kernel const vec<T, N>& operator[](index_t i) const { return d[i]; }
 };
 
+// Deduction guides
+template <num_vec... Args>
+mat(Args...) -> mat<common_type<vec_etype<Args>...>,
+    common_size<vec_size<Args>...>, sizeof...(Args)>;
+
 // Matrix type traits
 template <typename T, index_t N, index_t M>
 struct is_mat_s<mat<T, N, M>> : std::bool_constant<true> {};
@@ -1331,35 +1361,35 @@ constexpr kernel mat<T, N, M> map(const mat<T1, N, M>& a, T2 b, Func&& func) {
   return map(indices<M>(), a, b, std::forward<Func>(func));
 }
 template <typename T1, typename T2, index_t N, index_t M, index_t... Is,
-    typename T = common_t<T1, T2>>
+    typename T = common_type<T1, T2>>
 constexpr kernel vec<T, N> mul(
     index_seq<Is...>, const mat<T1, N, M>& a, const vec<T2, M>& b) {
   return {((a[Is] * b[Is]) + ...)};
 }
 template <typename T1, typename T2, index_t N, index_t M,
-    typename T = common_t<T1, T2>>
+    typename T = common_type<T1, T2>>
 constexpr kernel vec<T, N> mul(const mat<T1, N, M>& a, const vec<T2, M>& b) {
   return mul(indices<M>(), a, b);
 }
 template <typename T1, typename T2, index_t N, index_t M, index_t... Is,
-    typename T = common_t<T1, T2>>
+    typename T = common_type<T1, T2>>
 constexpr kernel vec<T, M> mul(
     index_seq<Is...>, const vec<T1, N>& a, const mat<T2, N, M>& b) {
   return {dot(a, b[Is])...};
 }
 template <typename T1, typename T2, index_t N, index_t M,
-    typename T = common_t<T1, T2>>
+    typename T = common_type<T1, T2>>
 constexpr kernel vec<T, M> mul(const vec<T1, N>& a, const mat<T2, N, M>& b) {
   return mul(indices<M>(), a, b);
 }
 template <typename T1, typename T2, index_t N, index_t M, index_t K,
-    index_t... Is, typename T = common_t<T1, T2>>
+    index_t... Is, typename T = common_type<T1, T2>>
 constexpr kernel mat<T, N, M> mul(
     index_seq<Is...>, const mat<T1, N, K>& a, const mat<T2, K, M>& b) {
   return {(a * b[Is])...};
 }
 template <typename T1, typename T2, index_t N, index_t M, index_t K,
-    typename T = common_t<T1, T2>>
+    typename T = common_type<T1, T2>>
 constexpr kernel mat<T, N, M> mul(
     const mat<T1, N, K>& a, const mat<T2, K, M>& b) {
   return mul(indices<M>(), a, b);
@@ -1582,9 +1612,9 @@ struct frame<T, 3> {
 
 // Deduction guides
 template <num_vec... Args>
-frame(Args...) -> frame<common_t<vec_etype<Args>...>, sizeof...(Args) - 1>;
+frame(Args...) -> frame<common_type<vec_etype<Args>...>, sizeof...(Args) - 1>;
 template <num_mat M, num_vec V>
-frame(M, V) -> frame<common_t<mat_etype<M>, vec_etype<V>>, vec_size<V>>;
+frame(M, V) -> frame<common_type<mat_etype<M>, vec_etype<V>>, vec_size<V>>;
 
 // Frame type traits
 template <typename T, index_t N>
@@ -1660,7 +1690,7 @@ constexpr kernel auto inverse(num_frame auto const& a, bool non_rigid = false) {
 // Frame construction from axis.
 constexpr kernel auto frame_fromz(
     num_vec3 auto const& o, num_vec3 auto const& v) {
-  using T = vec_etype<common_t<decltype(o), decltype(v)>>;
+  using T = vec_etype<common_type<decltype(o), decltype(v)>>;
   // https://graphics.pixar.com/library/OrthonormalB/paper.pdf
   if constexpr (std::is_same_v<T, float>) {
     auto z    = normalize(v);
@@ -1715,7 +1745,7 @@ struct quat<T, 4> {
 
 // Deduction guides
 template <number... Args>
-quat(Args...) -> quat<common_t<Args...>, sizeof...(Args)>;
+quat(Args...) -> quat<common_type<Args...>, sizeof...(Args)>;
 
 // Vector type traits
 template <typename T, index_t N>
@@ -1809,81 +1839,66 @@ constexpr kernel auto slerp(
 namespace yocto {
 
 // Transforms points, vectors and directions by matrices.
-template <typename T, index_t N>
-constexpr kernel vec<T, N> transform_point(
-    const mat<T, N + 1, N + 1>& a, const vec<T, N>& b) {
-  if constexpr (N == 2) {
-    auto tvb = a * vec<T, 3>{b, 1};
-    return xy(tvb) / tvb.z();
-  } else if constexpr (N == 3) {
-    auto tvb = a * vec<T, 4>{b, 1};
-    return xyz(tvb) / tvb.w();
-  }
+constexpr kernel auto transform_point(
+    num_mat auto const& a, num_vec auto const& b)
+  requires(mat_rows<decltype(a)> == vec_size<decltype(b)> + 1)
+{
+  auto tb = a * vec{b, 1};
+  return tb.first() / tb.back();
 }
-template <typename T, index_t N>
-constexpr kernel vec<T, N> transform_vector(
-    const mat<T, N + 1, N + 1>& a, const vec<T, N>& b) {
-  if constexpr (N == 2) {
-    auto tvb = a * vec<T, 3>{b, 0};
-    return xyz(tvb) / tvb.z();
-  } else if constexpr (N == 3) {
-    auto tvb = a * vec<T, 4>{b, 0};
-    return xyz(tvb) / tvb.w();
-  }
+constexpr kernel auto transform_vector(
+    num_mat auto const& a, num_vec auto const& b)
+  requires(mat_rows<decltype(a)> == vec_size<decltype(b)> + 1)
+{
+  auto tb = a * vec{b, 0};
+  return tb.first() / tb.back();
 }
-template <typename T, index_t N>
-constexpr kernel vec<T, N> transform_direction(
-    const mat<T, N + 1, N + 1>& a, const vec<T, N>& b) {
+constexpr kernel auto transform_direction(
+    num_mat auto const& a, num_vec auto const& b)
+  requires(mat_rows<decltype(a)> == vec_size<decltype(b)> + 1)
+{
   return normalize(transform_vector(a, b));
 }
-template <typename T, index_t N>
-constexpr kernel vec<T, N> transform_normal(
-    const mat<T, N + 1, N + 1>& a, const vec<T, N>& b) {
+constexpr kernel auto transform_normal(
+    num_mat auto const& a, num_vec auto const& b)
+  requires(mat_rows<decltype(a)> == vec_size<decltype(b)> + 1)
+{
   return normalize(transform_vector(transpose(inverse(a)), b));
 }
-template <typename T, index_t N>
-constexpr kernel vec<T, N> transform_vector(
-    const mat<T, N, N>& a, const vec<T, N>& b) {
+constexpr kernel auto transform_vector(
+    num_mat auto const& a, num_vec auto const& b)
+  requires(mat_rows<decltype(a)> == vec_size<decltype(b)>)
+{
   return a * b;
 }
-template <typename T, index_t N>
-constexpr kernel vec<T, N> transform_direction(
-    const mat<T, N, N>& a, const vec<T, N>& b) {
+constexpr kernel auto transform_direction(
+    num_mat auto const& a, num_vec auto const& b)
+  requires(mat_rows<decltype(a)> == vec_size<decltype(b)>)
+{
   return normalize(transform_vector(a, b));
 }
-template <typename T, index_t N>
-constexpr kernel vec<T, N> transform_normal(
-    const mat<T, N, N>& a, const vec<T, N>& b) {
+constexpr kernel auto transform_normal(
+    num_mat auto const& a, num_vec auto const& b)
+  requires(mat_rows<decltype(a)> == vec_size<decltype(b)>)
+{
   return normalize(transform_vector(transpose(inverse(a)), b));
 }
 
 // Transforms points, vectors and directions by frames.
-template <typename T, index_t N>
-constexpr kernel vec<T, N> transform_point(
-    const frame<T, N>& a, const vec<T, N>& b) {
-  if constexpr (N == 2) {
-    return a.m() * b + a.t();
-  } else if constexpr (N == 3) {
-    return a.m() * b + a.t();
-  }
+constexpr kernel auto transform_point(
+    num_frame auto const& a, num_vec auto const& b) {
+  return a.m() * b + a.t();
 }
-template <typename T, index_t N>
-constexpr kernel vec<T, N> transform_vector(
-    const frame<T, N>& a, const vec<T, N>& b) {
-  if constexpr (N == 2) {
-    return a.m() * b;
-  } else if constexpr (N == 3) {
-    return a.m() * b;
-  }
+constexpr kernel auto transform_vector(
+    num_frame auto const& a, num_vec auto const& b) {
+  return a.m() * b;
 }
-template <typename T, index_t N>
-constexpr kernel vec<T, N> transform_direction(
-    const frame<T, N>& a, const vec<T, N>& b) {
+constexpr kernel auto transform_direction(
+    num_frame auto const& a, num_vec auto const& b) {
   return normalize(transform_vector(a, b));
 }
-template <typename T, index_t N>
-constexpr kernel vec<T, N> transform_normal(
-    const frame<T, N>& a, const vec<T, N>& b, bool non_rigid = false) {
+constexpr kernel auto transform_normal(
+    num_frame auto const& a, num_vec auto const& b, bool non_rigid = false) {
   if (non_rigid) {
     return transform_normal(rotation(a), b);
   } else {
@@ -1893,91 +1908,81 @@ constexpr kernel vec<T, N> transform_normal(
 
 // Transforms points, vectors and directions by frames.
 template <typename T, index_t N>
-constexpr kernel vec<T, N> transform_point_inverse(
-    const frame<T, N>& a, const vec<T, N>& b) {
-  if constexpr (N == 2) {
-    return (b - a.t()) * a.m();
-  } else if constexpr (N == 3) {
-    return (b - a.t()) * a.m();
-  }
+constexpr kernel auto transform_point_inverse(
+    num_frame auto const& a, num_vec auto const& b) {
+  return (b - a.t()) * a.m();
 }
 template <typename T, index_t N>
-constexpr kernel vec<T, N> transform_vector_inverse(
-    const frame<T, N>& a, const vec<T, N>& b) {
-  if constexpr (N == 2) {
-    return b * a.m();
-  } else if constexpr (N == 3) {
-    return b * a.m();
-  }
+constexpr kernel auto transform_vector_inverse(
+    num_frame auto const& a, num_vec auto const& b) {
+  return b * a.m();
 }
 template <typename T, index_t N>
-constexpr kernel vec<T, N> transform_direction_inverse(
-    const frame<T, N>& a, const vec<T, N>& b) {
+constexpr kernel auto transform_direction_inverse(
+    num_frame auto const& a, num_vec auto const& b) {
   return normalize(transform_vector_inverse(a, b));
 }
 
 // Translation, scaling and rotations transforms.
-template <typename T>
-constexpr kernel frame<T, 3> translation_frame(const vec<T, 3>& a) {
-  return {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, a};
+constexpr kernel auto translation_frame(num_vec3 auto const& a) {
+  return frame{vec{1, 0, 0}, vec{0, 1, 0}, vec{0, 0, 1}, a};
 }
-template <typename T>
-constexpr kernel frame<T, 3> scaling_frame(const vec<T, 3>& a) {
-  return {{a.x(), 0, 0}, {0, a.y(), 0}, {0, 0, a.z()}, {0, 0, 0}};
+constexpr kernel auto scaling_frame(num_vec3 auto const& a) {
+  return frame{
+      vec{a.x(), 0, 0}, vec{0, a.y(), 0}, vec{0, 0, a.z()}, vec{0, 0, 0}};
 }
-template <typename T>
-constexpr kernel frame<T, 3> scaling_frame(T a) {
-  return scaling_frame(vec<T, 3>{a, a, a});
+constexpr kernel auto scaling_frame(number auto a) {
+  return scaling_frame(vec{a, a, a});
 }
-template <typename T>
-constexpr kernel frame<T, 3> rotation_frame(const vec<T, 3>& axis, T angle) {
+constexpr kernel auto rotation_frame(
+    num_vec3 auto const& axis, number auto angle) {
   auto s = sin(angle), c = cos(angle);
   auto vv = normalize(axis);
-  return {
-      {c + (1 - c) * vv.x() * vv.x(), (1 - c) * vv.x() * vv.y() + s * vv.z(),
+  return frame{
+      vec{c + (1 - c) * vv.x() * vv.x(), (1 - c) * vv.x() * vv.y() + s * vv.z(),
           (1 - c) * vv.x() * vv.z() - s * vv.y()},
-      {(1 - c) * vv.x() * vv.y() - s * vv.z(), c + (1 - c) * vv.y() * vv.y(),
+      vec{(1 - c) * vv.x() * vv.y() - s * vv.z(), c + (1 - c) * vv.y() * vv.y(),
           (1 - c) * vv.y() * vv.z() + s * vv.x()},
-      {(1 - c) * vv.x() * vv.z() + s * vv.y(),
+      vec{(1 - c) * vv.x() * vv.z() + s * vv.y(),
           (1 - c) * vv.y() * vv.z() - s * vv.x(),
           c + (1 - c) * vv.z() * vv.z()},
-      {0, 0, 0}};
+      vec{0, 0, 0},
+  };
 }
 template <typename T>
-constexpr kernel frame<T, 3> rotation_frame(const vec<T, 4>& quat) {
+constexpr kernel auto rotation_frame(num_vec4 auto const& quat) {
   auto v = quat;
-  return {
-      {v.w * v.w + v.x() * v.x() - v.y() * v.y() - v.z() * v.z(),
+  return frame{
+      vec{v.w * v.w + v.x() * v.x() - v.y() * v.y() - v.z() * v.z(),
           (v.x() * v.y() + v.z() * v.w) * 2, (v.z() * v.x() - v.y() * v.w) * 2},
-      {(v.x() * v.y() - v.z() * v.w) * 2,
+      vec{(v.x() * v.y() - v.z() * v.w) * 2,
           v.w * v.w - v.x() * v.x() + v.y() * v.y() - v.z() * v.z(),
           (v.y() * v.z() + v.x() * v.w) * 2},
-      {(v.z() * v.x() + v.y() * v.w) * 2, (v.y() * v.z() - v.x() * v.w) * 2,
+      vec{(v.z() * v.x() + v.y() * v.w) * 2, (v.y() * v.z() - v.x() * v.w) * 2,
           v.w * v.w - v.x() * v.x() - v.y() * v.y() + v.z() * v.z()},
-      {0, 0, 0}};
+      vec{0, 0, 0},
+  };
 }
-template <typename T>
-constexpr kernel frame<T, 3> rotation_frame(const quat<T, 4>& quat) {
+constexpr kernel auto rotation_frame(num_quat4 auto const& quat) {
   auto v = quat;
-  return {
-      {v.w * v.w + v.x() * v.x() - v.y() * v.y() - v.z() * v.z(),
+  return frame{
+      vec{v.w * v.w + v.x() * v.x() - v.y() * v.y() - v.z() * v.z(),
           (v.x() * v.y() + v.z() * v.w) * 2, (v.z() * v.x() - v.y() * v.w) * 2},
-      {(v.x() * v.y() - v.z() * v.w) * 2,
+      vec{(v.x() * v.y() - v.z() * v.w) * 2,
           v.w * v.w - v.x() * v.x() + v.y() * v.y() - v.z() * v.z(),
           (v.y() * v.z() + v.x() * v.w) * 2},
-      {(v.z() * v.x() + v.y() * v.w) * 2, (v.y() * v.z() - v.x() * v.w) * 2,
+      vec{(v.z() * v.x() + v.y() * v.w) * 2, (v.y() * v.z() - v.x() * v.w) * 2,
           v.w * v.w - v.x() * v.x() - v.y() * v.y() + v.z() * v.z()},
-      {0, 0, 0}};
+      vec{0, 0, 0},
+  };
 }
-template <typename T>
-constexpr kernel frame<T, 3> rotation_frame(const mat<T, 3, 3>& rot) {
-  return {rot.x(), rot.y(), rot.z(), {0, 0, 0}};
+constexpr kernel auto rotation_frame(num_mat auto const& rot) {
+  return frame{rot.x(), rot.y(), rot.z(), {0, 0, 0}};
 }
 
 // Lookat frame. Z-axis can be inverted with inv_xz.
-template <typename T>
-constexpr kernel frame<T, 3> lookat_frame(const vec<T, 3>& eye,
-    const vec<T, 3>& center, const vec<T, 3>& up, bool inv_xz = false) {
+constexpr kernel auto lookat_frame(num_vec3 auto const& eye,
+    num_vec3 auto const& center, num_vec3 auto const& up, bool inv_xz = false) {
   auto w = normalize(eye - center);
   auto u = normalize(cross(up, w));
   auto v = normalize(cross(w, u));
@@ -1985,43 +1990,60 @@ constexpr kernel frame<T, 3> lookat_frame(const vec<T, 3>& eye,
     w = -w;
     u = -u;
   }
-  return {u, v, w, eye};
+  return frame{u, v, w, eye};
 }
 
 // OpenGL frustum, ortho and perspecgive matrices.
-template <typename T>
-constexpr kernel mat<T, 4, 4> frustum_mat(T l, T r, T b, T t, T n, T f) {
-  return {{2 * n / (r - l), 0, 0, 0}, {0, 2 * n / (t - b), 0, 0},
-      {(r + l) / (r - l), (t + b) / (t - b), -(f + n) / (f - n), -1},
-      {0, 0, -2 * f * n / (f - n), 0}};
+constexpr kernel auto frustum_mat(number auto l, number auto r, number auto b,
+    number auto t, number auto n, number auto f) {
+  return mat{
+      vec{2 * n / (r - l), 0, 0, 0},
+      vec{0, 2 * n / (t - b), 0, 0},
+      vec{(r + l) / (r - l), (t + b) / (t - b), -(f + n) / (f - n), -1},
+      vec{0, 0, -2 * f * n / (f - n), 0},
+  };
 }
-template <typename T>
-constexpr kernel mat<T, 4, 4> ortho_mat(T l, T r, T b, T t, T n, T f) {
-  return {{2 / (r - l), 0, 0, 0}, {0, 2 / (t - b), 0, 0},
-      {0, 0, -2 / (f - n), 0},
-      {-(r + l) / (r - l), -(t + b) / (t - b), -(f + n) / (f - n), 1}};
+constexpr kernel auto ortho_mat(number auto l, number auto r, number auto b,
+    number auto t, number auto n, number auto f) {
+  return mat{
+      vec{2 / (r - l), 0, 0, 0},
+      vec{0, 2 / (t - b), 0, 0},
+      vec{0, 0, -2 / (f - n), 0},
+      vec{-(r + l) / (r - l), -(t + b) / (t - b), -(f + n) / (f - n), 1},
+  };
 }
-template <typename T>
-constexpr kernel mat<T, 4, 4> ortho2d_mat(T left, T right, T bottom, T top) {
+constexpr kernel auto ortho2d_mat(
+    number auto left, number auto right, number auto bottom, number auto top) {
   return ortho_mat(left, right, bottom, top, -1, 1);
 }
-template <typename T>
-constexpr kernel mat<T, 4, 4> ortho_mat(T xmag, T ymag, T near, T far) {
-  return {{1 / xmag, 0, 0, 0}, {0, 1 / ymag, 0, 0}, {0, 0, 2 / (near - far), 0},
-      {0, 0, (far + near) / (near - far), 1}};
+constexpr kernel auto ortho_mat(
+    number auto xmag, number auto ymag, number auto near, number auto far) {
+  return mat{
+      vec{1 / xmag, 0, 0, 0},
+      vec{0, 1 / ymag, 0, 0},
+      vec{0, 0, 2 / (near - far), 0},
+      vec{0, 0, (far + near) / (near - far), 1},
+  };
 }
-template <typename T>
-constexpr kernel mat<T, 4, 4> perspective_mat(T fovy, T aspect, T near, T far) {
+constexpr kernel auto perspective_mat(
+    number auto fovy, number auto aspect, number auto near, number auto far) {
   auto tg = tan(fovy / 2);
-  return {{1 / (aspect * tg), 0, 0, 0}, {0, 1 / tg, 0, 0},
-      {0, 0, (far + near) / (near - far), -1},
-      {0, 0, 2 * far * near / (near - far), 0}};
+  return mat{
+      vec{1 / (aspect * tg), 0, 0, 0},
+      vec{0, 1 / tg, 0, 0},
+      vec{0, 0, (far + near) / (near - far), -1},
+      vec{0, 0, 2 * far * near / (near - far), 0},
+  };
 }
-template <typename T>
-constexpr kernel mat<T, 4, 4> perspective_mat(T fovy, T aspect, T near) {
+constexpr kernel auto perspective_mat(
+    number auto fovy, number auto aspect, number auto near) {
   auto tg = tan(fovy / 2);
-  return {{1 / (aspect * tg), 0, 0, 0}, {0, 1 / tg, 0, 0}, {0, 0, -1, -1},
-      {0, 0, 2 * near, 0}};
+  return mat{
+      vec{1 / (aspect * tg), 0, 0, 0},
+      vec{0, 1 / tg, 0, 0},
+      vec{0, 0, -1, -1},
+      vec{0, 0, 2 * near, 0},
+  };
 }
 
 // Rotation conversions.
