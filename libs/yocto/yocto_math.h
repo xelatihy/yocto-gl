@@ -130,6 +130,22 @@ struct frame_etype_s {
 template <typename T>
 using frame_etype = typename frame_etype_s<std::remove_cvref_t<T>>::type;
 
+// Quat type traits
+template <typename T>
+struct is_quat_s : std::bool_constant<false> {};
+template <typename T>
+constexpr auto is_quat = is_quat_s<std::remove_cvref_t<T>>::value;
+template <typename T>
+struct quat_size_s : std::integral_constant<index_t, 0> {};
+template <typename T>
+constexpr auto quat_size = quat_size_s<std::remove_cvref_t<T>>::value;
+template <typename T>
+struct quat_etype_s {
+  using type = void;
+};
+template <typename T>
+using quat_etype = typename quat_etype_s<std::remove_cvref_t<T>>::type;
+
 // Number type traits
 template <typename T>
 constexpr auto is_integral = std::is_integral_v<T>;
@@ -163,6 +179,12 @@ template <typename T>
 constexpr auto is_real_frame = is_frame<T> && is_real<frame_etype<T>>;
 template <typename T>
 constexpr auto is_num_frame = is_frame<T> && is_number<frame_etype<T>>;
+
+// Vector type traits
+template <typename T>
+constexpr auto is_real_quat = is_quat<T> && is_real<quat_etype<T>>;
+template <typename T>
+constexpr auto is_num_quat = is_quat<T> && is_number<quat_etype<T>>;
 
 // Concepts
 template <typename T>
@@ -213,6 +235,16 @@ template <typename T>
 concept real_frame = is_real_frame<T>;
 template <typename T>
 concept num_frame = is_num_frame<T>;
+
+template <typename T>
+concept num_frame2 = is_num_frame<T> && frame_rows<T> == 2;
+template <typename T>
+concept num_frame3 = is_num_frame<T> && frame_rows<T> == 3;
+
+template <typename T>
+concept num_quat4 = is_num_quat<T> && quat_size<T> == 4;
+template <typename T>
+concept real_quat4 = is_real_quat<T> && quat_size<T> == 4;
 
 template <index_t N, typename... Ts>
 concept same_size = (sizeof...(Ts) == N);
@@ -1548,6 +1580,12 @@ struct frame<T, 3> {
   constexpr kernel const vec<T, 3>& t() const { return d[3]; }
 };
 
+// Deduction guides
+template <num_vec... Args>
+frame(Args...) -> frame<common_t<vec_etype<Args>...>, sizeof...(Args) - 1>;
+template <num_mat M, num_vec V>
+frame(M, V) -> frame<common_t<mat_etype<M>, vec_etype<V>>, vec_size<V>>;
+
 // Frame type traits
 template <typename T, index_t N>
 struct is_frame_s<frame<T, N>> : std::bool_constant<true> {};
@@ -1570,30 +1608,18 @@ constexpr auto identity3x4f = frame3f{
     {1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}};
 
 // Frame properties
-template <typename T, index_t N>
-constexpr kernel mat<T, N, N> rotation(const frame<T, N>& a) {
-  if constexpr (N == 2) {
-    return {a[0], a[1]};
-  } else if constexpr (N == 3) {
-    return {a[0], a[1], a[2]};
-  }
-}
-template <typename T, index_t N>
-constexpr kernel vec<T, N> translation(const frame<T, N>& a) {
-  if constexpr (N == 2) {
-    return a[2];
-  } else if constexpr (N == 3) {
-    return a[3];
-  }
-}
+constexpr kernel auto rotation(num_frame auto const& a) { return a.m(); }
+constexpr kernel auto translation(num_frame auto const& a) { return a.t(); }
 
 // Frame/mat conversion
-template <typename T, index_t N>
-constexpr kernel frame<T, N - 1> mat_to_frame(const mat<T, N, N>& m) {
+constexpr kernel auto mat_to_frame(num_mat auto const& m) {
+  using T          = mat_etype<decltype(m)>;
+  constexpr auto N = mat_rows<decltype(m)>;
   return (frame<T, N - 1>)m;
 }
-template <typename T, index_t N>
-constexpr kernel mat<T, N + 1, N + 1> frame_to_mat(const frame<T, N>& f) {
+constexpr kernel auto frame_to_mat(num_frame auto const& f) {
+  using T          = frame_etype<decltype(f)>;
+  constexpr auto N = frame_rows<decltype(f)>;
   return (mat<T, N + 1, N + 1>)f;
 }
 
@@ -1612,33 +1638,29 @@ constexpr kernel bool operator!=(const frame<T1, N>& a, const frame<T2, N>& b) {
 }
 
 // Frame composition, equivalent to affine matrix product.
-template <typename T, index_t N>
-constexpr kernel frame<T, N> operator*(
-    const frame<T, N>& a, const frame<T, N>& b) {
-  return {a.m() * b.m(), a.m() * b.t() + a.t()};
+constexpr kernel auto operator*(
+    num_frame auto const& a, num_frame auto const& b) {
+  return frame{a.m() * b.m(), a.m() * b.t() + a.t()};
 }
-template <typename T, index_t N>
-constexpr kernel frame<T, N>& operator*=(frame<T, N>& a, const frame<T, N>& b) {
+constexpr kernel auto operator*=(num_frame auto& a, num_frame auto const& b) {
   return a = a * b;
 }
 
 // Frame inverse, equivalent to rigid affine inverse.
-template <typename T, index_t N>
-constexpr kernel frame<T, N> inverse(
-    const frame<T, N>& a, bool non_rigid = false) {
+constexpr kernel auto inverse(num_frame auto const& a, bool non_rigid = false) {
   if (non_rigid) {
     auto minv = inverse(a.m());
-    return {minv, -(minv * a.t())};
+    return frame{minv, -(minv * a.t())};
   } else {
     auto minv = transpose(a.m());
-    return {minv, -(minv * a.t())};
+    return frame{minv, -(minv * a.t())};
   }
 }
 
 // Frame construction from axis.
-template <typename T>
-constexpr kernel frame<T, 3> frame_fromz(
-    const vec<T, 3>& o, const vec<T, 3>& v) {
+constexpr kernel auto frame_fromz(
+    num_vec3 auto const& o, num_vec3 auto const& v) {
+  using T = vec_etype<common_t<decltype(o), decltype(v)>>;
   // https://graphics.pixar.com/library/OrthonormalB/paper.pdf
   if constexpr (std::is_same_v<T, float>) {
     auto z    = normalize(v);
@@ -1647,27 +1669,25 @@ constexpr kernel frame<T, 3> frame_fromz(
     auto b    = z.x() * z.y() * a;
     auto x = vec<T, 3>{1 + sign * z.x() * z.x() * a, sign * b, -sign * z.x()};
     auto y = vec<T, 3>{b, sign + z.y() * z.y() * a, -z.y()};
-    return {x, y, z, o};
+    return frame<T, 3>{x, y, z, o};
   } else if constexpr (std::is_same_v<T, double>) {
     // TODO: double
-    return {};
+    return frame<T, 3>{};
   }
 }
-template <typename T>
-constexpr kernel frame<T, 3> frame_fromzx(
-    const vec<T, 3>& o, const vec<T, 3>& z_, const vec<T, 3>& x_) {
+constexpr kernel auto frame_fromzx(
+    num_vec3 auto const& o, num_vec3 auto const& z_, num_vec3 auto const& x_) {
   auto z = normalize(z_);
   auto x = orthonormalize(x_, z);
   auto y = normalize(cross(z, x));
-  return {x, y, z, o};
+  return frame{x, y, z, o};
 }
-template <typename T>
-constexpr kernel frame<T, 3> orthonormalize(const frame<T, 3>& frame_) {
+constexpr kernel auto orthonormalize(num_frame3 auto const& frame_) {
   auto z = normalize(frame_.z());
   auto x = orthonormalize(frame_.x(), z);
   auto y = normalize(cross(z, x));
   auto o = frame_.o();
-  return frame<T, 3>{x, y, z, o};
+  return frame{x, y, z, o};
 }
 
 }  // namespace yocto
@@ -1693,6 +1713,20 @@ struct quat<T, 4> {
   constexpr kernel const T& operator[](index_t i) const { return d[i]; }
 };
 
+// Deduction guides
+template <number... Args>
+quat(Args...) -> quat<common_t<Args...>, sizeof...(Args)>;
+
+// Vector type traits
+template <typename T, index_t N>
+struct is_quat_s<quat<T, N>> : std::bool_constant<true> {};
+template <typename T, index_t N>
+struct quat_size_s<quat<T, N>> : std::integral_constant<index_t, N> {};
+template <typename T, index_t N>
+struct quat_etype_s<quat<T, N>> {
+  using type = T;
+};
+
 // Quaternion aliases
 using quat4f = quat<float, 4>;
 
@@ -1712,68 +1746,55 @@ constexpr kernel quat<T, 4> map(const quat<T1, 4>& a, T2 b, Func&& func) {
 }
 
 // Quaternion operations
-template <typename T1, typename T2, typename T = common_t<T1, T2>>
-constexpr kernel quat<T, 4> operator+(
-    const quat<T1, 4>& a, const quat<T2, 4>& b) {
-  return map(a, b, [](T1 a, T2 b) { return a + b; });
+constexpr kernel auto operator+(
+    num_quat4 auto const& a, num_quat4 auto const& b) {
+  return map(a, b, [](number auto a, number auto b) { return a + b; });
 }
-template <typename T1, typename T2, typename T = common_t<T1, T2>>
-constexpr kernel quat<T, 4> operator*(const quat<T1, 4>& a, T2 b) {
-  return map(a, b, [](T1 a, T2 b) { return a * b; });
+constexpr kernel auto operator*(num_quat4 auto const& a, number auto b) {
+  return map(a, b, [](number auto a, number auto b) { return a * b; });
 }
-template <typename T1, typename T2, typename T = common_t<T1, T2>>
-constexpr kernel quat<T, 4> operator/(const quat<T1, 4>& a, T2 b) {
-  return map(a, b, [](T1 a, T2 b) { return a / b; });
+constexpr kernel auto operator/(num_quat4 auto const& a, number auto b) {
+  return map(a, b, [](number auto a, number auto b) { return a / b; });
 }
-template <typename T1, typename T2, typename T = common_t<T1, T2>>
-constexpr kernel quat<T, 4> operator*(
-    const quat<T2, 4>& a, const quat<T1, 4>& b) {
-  return {a.x() * b.w() + a.w() * b.x() + a.y() * b.w() - a.z() * b.y(),
+constexpr kernel auto operator*(
+    num_quat4 auto const& a, num_quat4 auto const& b) {
+  return quat{a.x() * b.w() + a.w() * b.x() + a.y() * b.w() - a.z() * b.y(),
       a.y() * b.w() + a.w() * b.y() + a.z() * b.x() - a.x() * b.z(),
       a.z() * b.w() + a.w() * b.z() + a.x() * b.y() - a.y() * b.x(),
       a.w() * b.w() - a.x() * b.x() - a.y() * b.y() - a.z() * b.z()};
 }
 
 // Quaternion operations
-template <typename T1, typename T2, typename T = common_t<T1, T2>>
-constexpr kernel T dot(const quat<T, 4>& a, const quat<T, 4>& b) {
+constexpr kernel auto dot(num_quat4 auto const& a, num_quat4 auto const& b) {
   return a.x() * b.x() + a.y() * b.y() + a.z() * b.z() + a.w() * b.w();
 }
-template <typename T>
-constexpr kernel T length(const quat<T, 4>& a) {
+constexpr kernel auto length(num_quat4 auto const& a) {
   return sqrt(dot(a, a));
 }
-template <typename T>
-constexpr kernel quat<T, 4> normalize(const quat<T, 4>& a) {
+constexpr kernel auto normalize(num_quat4 auto const& a) {
   auto l = length(a);
   return (l != 0) ? a / l : a;
 }
-template <typename T>
-constexpr kernel quat<T, 4> conjugate(const quat<T, 4>& a) {
-  return {-a.xyz(), a.w()};
+constexpr kernel auto conjugate(num_quat4 auto const& a) {
+  return quat{-a.xyz(), a.w()};
 }
-template <typename T>
-constexpr kernel quat<T, 4> inverse(const quat<T, 4>& a) {
+constexpr kernel auto inverse(num_quat4 auto const& a) {
   return conjugate(a) / dot(a, a);
 }
-template <typename T>
-constexpr kernel T uangle(const quat<T, 4>& a, const quat<T, 4>& b) {
+constexpr kernel auto uangle(num_quat4 auto const& a, num_quat4 auto const& b) {
   auto d = dot(a, b);
   return d > 1 ? 0 : acos(d < -1 ? -1 : d);
 }
-template <typename T>
-constexpr kernel quat<T, 4> lerp(
-    const quat<T, 4>& a, const quat<T, 4>& b, T t) {
+constexpr kernel auto lerp(
+    num_quat4 auto const& a, num_quat4 auto const& b, number auto t) {
   return a * (1 - t) + b * t;
 }
-template <typename T>
-constexpr kernel quat<T, 4> nlerp(
-    const quat<T, 4>& a, const quat<T, 4>& b, T t) {
+constexpr kernel auto nlerp(
+    num_quat4 auto const& a, num_quat4 auto const& b, number auto t) {
   return normalize(lerp(a, b, t));
 }
-template <typename T>
-constexpr kernel quat<T, 4> slerp(
-    const quat<T, 4>& a, const quat<T, 4>& b, T t) {
+constexpr kernel auto slerp(
+    num_quat4 auto const& a, num_quat4 auto const& b, number auto t) {
   auto th = uangle(a, b);
   return th == 0
              ? a
