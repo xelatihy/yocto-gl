@@ -90,6 +90,46 @@ struct vec_etype_s {
 template <typename T>
 using vec_etype = typename vec_etype_s<std::remove_cvref_t<T>>::type;
 
+// Mat type traits
+template <typename T>
+struct is_mat_s : std::bool_constant<false> {};
+template <typename T>
+constexpr auto is_mat = is_mat_s<std::remove_cvref_t<T>>::value;
+template <typename T>
+struct mat_cols_s : std::integral_constant<index_t, 0> {};
+template <typename T>
+constexpr auto mat_cols = mat_cols_s<std::remove_cvref_t<T>>::value;
+template <typename T>
+struct mat_rows_s : std::integral_constant<index_t, 0> {};
+template <typename T>
+constexpr auto mat_rows = mat_rows_s<std::remove_cvref_t<T>>::value;
+template <typename T>
+struct mat_etype_s {
+  using type = void;
+};
+template <typename T>
+using mat_etype = typename mat_etype_s<std::remove_cvref_t<T>>::type;
+
+// Frame type traits
+template <typename T>
+struct is_frame_s : std::bool_constant<false> {};
+template <typename T>
+constexpr auto is_frame = is_frame_s<std::remove_cvref_t<T>>::value;
+template <typename T>
+struct frame_cols_s : std::integral_constant<index_t, 0> {};
+template <typename T>
+constexpr auto frame_cols = frame_cols_s<std::remove_cvref_t<T>>::value;
+template <typename T>
+struct frame_rows_s : std::integral_constant<index_t, 0> {};
+template <typename T>
+constexpr auto frame_rows = frame_rows_s<std::remove_cvref_t<T>>::value;
+template <typename T>
+struct frame_etype_s {
+  using type = void;
+};
+template <typename T>
+using frame_etype = typename frame_etype_s<std::remove_cvref_t<T>>::type;
+
 // Number type traits
 template <typename T>
 constexpr auto is_integral = std::is_integral_v<T>;
@@ -112,6 +152,18 @@ constexpr auto is_num_vec = is_vec<T> && is_number<vec_etype<T>>;
 template <typename T>
 constexpr auto is_bool_vec = is_vec<T> && is_bool<vec_etype<T>>;
 
+// Matrix type traits
+template <typename T>
+constexpr auto is_real_mat = is_mat<T> && is_real<mat_etype<T>>;
+template <typename T>
+constexpr auto is_num_mat = is_mat<T> && is_number<mat_etype<T>>;
+
+// Frame type traits
+template <typename T>
+constexpr auto is_real_frame = is_frame<T> && is_real<frame_etype<T>>;
+template <typename T>
+constexpr auto is_num_frame = is_frame<T> && is_number<frame_etype<T>>;
+
 // Concepts
 template <typename T>
 concept integral = is_integral<T>;
@@ -120,8 +172,6 @@ concept real = is_real<T>;
 template <typename T>
 concept number = is_number<T>;
 
-template <typename T>
-struct vec_vec : std::bool_constant<false> {};
 template <typename T>
 concept any_vec = is_any_vec<T>;
 template <typename T>
@@ -153,6 +203,16 @@ template <typename T>
 concept real_vec3 = is_real_vec<T> && vec_size<T> == 3;
 template <typename T>
 concept real_vec4 = is_real_vec<T> && vec_size<T> == 4;
+
+template <typename T>
+concept real_mat = is_real_mat<T>;
+template <typename T>
+concept num_mat = is_num_mat<T>;
+
+template <typename T>
+concept real_frame = is_real_frame<T>;
+template <typename T>
+concept num_frame = is_num_frame<T>;
 
 template <index_t N, typename... Ts>
 concept same_size = (sizeof...(Ts) == N);
@@ -1139,8 +1199,6 @@ struct tuple_element<I, yocto::vec<T, N>> {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-#ifndef __CUDACC__
-
 // Small Fixed-size matrices stored in column major format.
 template <typename T, index_t N, index_t M>
 struct mat {
@@ -1174,66 +1232,17 @@ struct mat {
   constexpr kernel const vec<T, N>& operator[](index_t i) const { return d[i]; }
 };
 
-#else
-
-// Small Fixed-size matrices stored in column major format.
+// Matrix type traits
 template <typename T, index_t N, index_t M>
-struct mat;
-
-// Small Fixed-size matrices stored in column major format.
-template <typename T, index_t N>
-struct mat<T, N, 1> {
-  vec<T, N> d[1];
-
-  constexpr kernel mat() : d{1} {}
-  constexpr kernel mat(const vec<T, N>& x_) : d{x_} {}
-
-  constexpr kernel vec<T, N>& operator[](index_t i) { return d[i]; }
-  constexpr kernel const vec<T, N>& operator[](index_t i) const { return d[i]; }
+struct is_mat_s<mat<T, N, M>> : std::bool_constant<true> {};
+template <typename T, index_t N, index_t M>
+struct mat_rows_s<mat<T, N, M>> : std::integral_constant<index_t, N> {};
+template <typename T, index_t N, index_t M>
+struct mat_cols_s<mat<T, N, M>> : std::integral_constant<index_t, M> {};
+template <typename T, index_t N, index_t M>
+struct mat_etype_s<mat<T, N, M>> {
+  using type = T;
 };
-
-// Small Fixed-size matrices stored in column major format.
-template <typename T, index_t N>
-struct mat<T, N, 2> {
-  vec<T, N> d[2];
-
-  constexpr kernel mat() : d{{1, 0}, {0, 1}} {}
-  constexpr kernel mat(const vec<T, N>& x_, const vec<T, N>& y_) : d{x_, y_} {}
-
-  constexpr kernel vec<T, N>& operator[](index_t i) { return d[i]; }
-  constexpr kernel const vec<T, N>& operator[](index_t i) const { return d[i]; }
-};
-
-// Small Fixed-size matrices stored in column major format.
-template <typename T, index_t N>
-struct mat<T, N, 3> {
-  vec<T, N> d[3];
-
-  constexpr kernel mat() : d{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}} {}
-  constexpr kernel mat(
-      const vec<T, N>& x_, const vec<T, N>& y_, const vec<T, N>& z_)
-      : d{x_, y_, z_} {}
-
-  constexpr kernel vec<T, N>& operator[](index_t i) { return d[i]; }
-  constexpr kernel const vec<T, N>& operator[](index_t i) const { return d[i]; }
-};
-
-// Small Fixed-size matrices stored in column major format.
-template <typename T, index_t N>
-struct mat<T, N, 4> {
-  vec<T, N> d[4];
-
-  constexpr kernel mat()
-      : d{{1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}} {}
-  constexpr kernel mat(const vec<T, N>& x_, const vec<T, N>& y_,
-      const vec<T, N>& z_, const vec<T, N>& w_)
-      : d{x_, y_, z_, w_} {}
-
-  constexpr kernel vec<T, N>& operator[](index_t i) { return d[i]; }
-  constexpr kernel const vec<T, N>& operator[](index_t i) const { return d[i]; }
-};
-
-#endif
 
 // Matrix aliases
 using mat1x1f = mat<float, 1, 1>;
@@ -1278,128 +1287,123 @@ constexpr kernel mat<T, N, M> map(
     const mat<T1, N, M>& a, const mat<T2, N, M>& b, Func&& func) {
   return map(indices<M>(), a, b, std::forward<Func>(func));
 }
+template <typename T1, typename T2, index_t N, index_t M, typename Func,
+    index_t... Is, typename T = vec_etype<result_t<Func, vec<T1, N>, T2>>>
+constexpr kernel mat<T, N, M> map(
+    index_seq<Is...>, const mat<T1, N, M>& a, T2 b, Func&& func) {
+  return {func(a[Is], b)...};
+}
+template <typename T1, typename T2, index_t N, index_t M, typename Func,
+    typename T = vec_etype<result_t<Func, vec<T2, N>, T2>>>
+constexpr kernel mat<T, N, M> map(const mat<T1, N, M>& a, T2 b, Func&& func) {
+  return map(indices<M>(), a, b, std::forward<Func>(func));
+}
+template <typename T1, typename T2, index_t N, index_t M, index_t... Is,
+    typename T = common_t<T1, T2>>
+constexpr kernel vec<T, N> mul(
+    index_seq<Is...>, const mat<T1, N, M>& a, const vec<T2, M>& b) {
+  return {((a[Is] * b[Is]) + ...)};
+}
+template <typename T1, typename T2, index_t N, index_t M,
+    typename T = common_t<T1, T2>>
+constexpr kernel vec<T, N> mul(const mat<T1, N, M>& a, const vec<T2, M>& b) {
+  return mul(indices<M>(), a, b);
+}
+template <typename T1, typename T2, index_t N, index_t M, index_t... Is,
+    typename T = common_t<T1, T2>>
+constexpr kernel vec<T, M> mul(
+    index_seq<Is...>, const vec<T1, N>& a, const mat<T2, N, M>& b) {
+  return {dot(a, b[Is])...};
+}
+template <typename T1, typename T2, index_t N, index_t M,
+    typename T = common_t<T1, T2>>
+constexpr kernel vec<T, M> mul(const vec<T1, N>& a, const mat<T2, N, M>& b) {
+  return mul(indices<M>(), a, b);
+}
+template <typename T1, typename T2, index_t N, index_t M, index_t K,
+    index_t... Is, typename T = common_t<T1, T2>>
+constexpr kernel mat<T, N, M> mul(
+    index_seq<Is...>, const mat<T1, N, K>& a, const mat<T2, K, M>& b) {
+  return {(a * b[Is])...};
+}
+template <typename T1, typename T2, index_t N, index_t M, index_t K,
+    typename T = common_t<T1, T2>>
+constexpr kernel mat<T, N, M> mul(
+    const mat<T1, N, K>& a, const mat<T2, K, M>& b) {
+  return mul(indices<M>(), a, b);
+}
 
 // Matrix comparisons.
-template <typename T1, typename T2, index_t N, index_t M>
-constexpr kernel bool operator==(
-    const mat<T1, N, M>& a, const mat<T2, N, M>& b) {
+constexpr kernel bool operator==(num_mat auto const& a, num_mat auto const& b) {
   return fold_and(map(a, b,
       [](num_vec auto const& a, num_vec auto const& b) { return a == b; }));
 }
-template <typename T1, typename T2, index_t N, index_t M>
-constexpr kernel bool operator!=(
-    const mat<T1, N, M>& a, const mat<T2, N, M>& b) {
+constexpr kernel bool operator!=(num_mat auto const& a, num_mat auto const& b) {
   return fold_or(map(a, b,
       [](num_vec auto const& a, num_vec auto const& b) { return a != b; }));
 }
 
 // Matrix operations.
-template <typename T1, typename T2, index_t N, index_t M,
-    typename T = common_t<T1, T2>>
-constexpr kernel mat<T, N, M> operator+(
-    const mat<T1, N, M>& a, const mat<T2, N, M>& b) {
+constexpr kernel auto operator+(num_mat auto const& a, num_mat auto const& b) {
   return map(
       a, b, [](num_vec auto const& a, num_vec auto const& b) { return a + b; });
 }
-template <typename T1, typename T2, index_t N, index_t M,
-    typename T = common_t<T1, T2>>
-constexpr kernel mat<T, N, M> operator*(const mat<T1, N, M>& a, T2 b) {
-  if constexpr (M == 1) {
-    return {a[0] * b};
-  } else if constexpr (M == 2) {
-    return {a[0] * b, a[1] * b};
-  } else if constexpr (M == 3) {
-    return {a[0] * b, a[1] * b, a[2] * b};
-  } else if constexpr (M == 4) {
-    return {a[0] * b, a[1] * b, a[2] * b, a[3] * b};
-  }
+constexpr kernel auto operator*(num_mat auto const& a, number auto b) {
+  return map(a, b, [](num_vec auto const& a, number auto b) { return a * b; });
 }
-template <typename T1, typename T2, index_t N, index_t M,
-    typename T = common_t<T1, T2>>
-constexpr kernel vec<T, N> operator*(
-    const mat<T1, N, M>& a, const vec<T2, M>& b) {
-  if constexpr (M == 1) {
-    return a[0] * b[0];
-  } else if constexpr (M == 2) {
-    return a[0] * b[0] + a[1] * b[1];
-  } else if constexpr (M == 3) {
-    return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
-  } else if constexpr (M == 4) {
-    return a[0] * b[0] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3];
-  }
+constexpr kernel auto operator*(num_mat auto const& a, num_vec auto const& b) {
+  return mul(a, b);
 }
-template <typename T1, typename T2, index_t N, index_t M,
-    typename T = common_t<T1, T2>>
-constexpr kernel vec<T, M> operator*(
-    const vec<T1, N>& a, const mat<T2, N, M>& b) {
-  if constexpr (M == 1) {
-    return {dot(a, b[0])};
-  } else if constexpr (M == 2) {
-    return {dot(a, b[0]), dot(a, b[1])};
-  } else if constexpr (M == 3) {
-    return {dot(a, b[0]), dot(a, b[1]), dot(a, b[2])};
-  } else if constexpr (M == 4) {
-    return {dot(a, b[0]), dot(a, b[1]), dot(a, b[2]), dot(a, b[3])};
-  }
+constexpr kernel auto operator*(num_vec auto const& a, num_mat auto const& b) {
+  return mul(a, b);
 }
-template <typename T1, typename T2, index_t N, index_t M, index_t K,
-    typename T = common_t<T1, T2>>
-constexpr kernel mat<T, N, M> operator*(
-    const mat<T1, N, K>& a, const mat<T2, K, M>& b) {
-  if constexpr (M == 1) {
-    return {a * b[0]};
-  } else if constexpr (M == 2) {
-    return {a * b[0], a * b[1]};
-  } else if constexpr (M == 3) {
-    return {a * b[0], a * b[1], a * b[2]};
-  } else if constexpr (M == 4) {
-    return {a * b[0], a * b[1], a * b[2], a * b[3]};
-  }
+constexpr kernel auto operator*(num_mat auto const& a, num_mat auto const& b) {
+  return mul(a, b);
 }
 
 // Matrix assignments.
-template <typename T, typename T1, index_t N, index_t M>
-constexpr kernel mat<T, N, M>& operator+=(
-    mat<T, N, M>& a, const mat<T1, N, M>& b) {
+constexpr kernel auto& operator+=(num_mat auto& a, num_mat auto const& b) {
   return a = a + b;
 }
-template <typename T, typename T1, index_t N>
-constexpr kernel mat<T, N, N>& operator*=(
-    mat<T, N, N>& a, const mat<T1, N, N>& b) {
+constexpr kernel auto& operator*=(num_mat auto& a, num_mat auto const& b) {
   return a = a * b;
 }
-template <typename T, typename T1, index_t N, index_t M>
-constexpr kernel mat<T, N, M>& operator*=(mat<T, N, M>& a, T1 b) {
+constexpr kernel auto operator*=(num_mat auto& a, number auto b) {
   return a = a * b;
 }
 
 // Matrix diagonals and transposes.
-template <typename T, index_t N>
-constexpr kernel vec<T, N> diagonal(const mat<T, N, N>& a) {
+constexpr kernel auto diagonal(num_mat auto const& a) -> num_vec auto{
+  constexpr auto N = mat_rows<decltype(a)>;
+  constexpr auto M = mat_cols<decltype(a)>;
+  static_assert(N == M && N <= 4);
   if constexpr (N == 1) {
-    return {a[0][0]};
+    return vec{a[0][0]};
   } else if constexpr (N == 2) {
-    return {a[0][0], a[1][1]};
+    return vec{a[0][0], a[1][1]};
   } else if constexpr (N == 3) {
-    return {a[0][0], a[1][1], a[2][2]};
+    return vec{a[0][0], a[1][1], a[2][2]};
   } else if constexpr (N == 4) {
-    return {a[0][0], a[1][1], a[2][2], a[3][3]};
+    return vec{a[0][0], a[1][1], a[2][2], a[3][3]};
   }
 }
-template <typename T, index_t N>
-constexpr kernel mat<T, N, N> transpose(const mat<T, N, N>& a) {
+constexpr kernel auto transpose(num_mat auto const& a) -> num_mat auto{
+  using T          = mat_etype<decltype(a)>;
+  constexpr auto N = mat_rows<decltype(a)>;
+  constexpr auto M = mat_cols<decltype(a)>;
+  static_assert(N == M);
   if constexpr (N == 1) {
-    return {{a[0][0]}};
+    return mat<T, N, N>{{a[0][0]}};
   } else if constexpr (N == 2) {
-    return {{a[0][0], a[1][0]}, {a[0][1], a[1][1]}};
+    return mat<T, N, N>{{a[0][0], a[1][0]}, {a[0][1], a[1][1]}};
   } else if constexpr (N == 3) {
-    return {
+    return mat<T, N, N>{
         {a[0][0], a[1][0], a[2][0]},
         {a[0][1], a[1][1], a[2][1]},
         {a[0][2], a[1][2], a[2][2]},
     };
   } else if constexpr (N == 4) {
-    return {
+    return mat<T, N, N>{
         {a[0][0], a[1][0], a[2][0], a[3][0]},
         {a[0][1], a[1][1], a[2][1], a[3][1]},
         {a[0][2], a[1][2], a[2][2], a[3][2]},
@@ -1409,8 +1413,10 @@ constexpr kernel mat<T, N, N> transpose(const mat<T, N, N>& a) {
 }
 
 // Matrix adjoints, determinants and inverses.
-template <typename T, index_t N>
-constexpr kernel T determinant(const mat<T, N, N>& a) {
+constexpr kernel auto determinant(num_mat auto const& a) -> number auto{
+  constexpr auto N = mat_rows<decltype(a)>;
+  constexpr auto M = mat_cols<decltype(a)>;
+  static_assert(N == M);
   if constexpr (N == 1) {
     return a[0];
   } else if constexpr (N == 2) {
@@ -1421,21 +1427,24 @@ constexpr kernel T determinant(const mat<T, N, N>& a) {
     return 0;  // TODO
   }
 }
-template <typename T, index_t N>
-constexpr kernel mat<T, N, N> adjoint(const mat<T, N, N>& a) {
+constexpr kernel auto adjoint(num_mat auto const& a) -> num_mat auto{
+  using T          = mat_etype<decltype(a)>;
+  constexpr auto N = mat_rows<decltype(a)>;
+  constexpr auto M = mat_cols<decltype(a)>;
+  static_assert(N == M && N < 4);
   if constexpr (N == 1) {
-    return {{a[0][0]}};
+    return mat<T, N, N>{{a[0][0]}};
   } else if constexpr (N == 2) {
-    return {{a[1][1], -a[0][1]}, {-a[1][0], a[0][0]}};
+    return mat<T, N, N>{{a[1][1], -a[0][1]}, {-a[1][0], a[0][0]}};
   } else if constexpr (N == 3) {
     return transpose(
-        mat<T, 3, 3>{cross(a[1], a[2]), cross(a[2], a[0]), cross(a[0], a[1])});
-  } else if constexpr (N == 4) {
-    return {};  // TODO
+        mat<T, N, N>{cross(a[1], a[2]), cross(a[2], a[0]), cross(a[0], a[1])});
   }
 }
-template <typename T, index_t N>
-constexpr kernel mat<T, N, N> inverse(const mat<T, N, N>& a) {
+constexpr kernel auto inverse(num_mat auto const& a) -> num_mat auto{
+  constexpr auto N = mat_rows<decltype(a)>;
+  constexpr auto M = mat_cols<decltype(a)>;
+  static_assert(N == M);
   return adjoint(a) * (1 / determinant(a));
 }
 
@@ -1537,6 +1546,18 @@ struct frame<T, 3> {
   constexpr kernel const mat<T, 3, 3>& m() const { return (mat<T, 3, 3>&)d[0]; }
   constexpr kernel vec<T, 3>& t() { return d[3]; }
   constexpr kernel const vec<T, 3>& t() const { return d[3]; }
+};
+
+// Frame type traits
+template <typename T, index_t N>
+struct is_frame_s<frame<T, N>> : std::bool_constant<true> {};
+template <typename T, index_t N>
+struct frame_rows_s<frame<T, N>> : std::integral_constant<index_t, N> {};
+template <typename T, index_t N>
+struct frame_cols_s<frame<T, N>> : std::integral_constant<index_t, N + 1> {};
+template <typename T, index_t N>
+struct frame_etype_s<frame<T, N>> {
+  using type = T;
 };
 
 // Frame aliases
