@@ -1949,7 +1949,6 @@ constexpr kernel auto rotation_frame(
       vec{0, 0, 0},
   };
 }
-template <typename T>
 constexpr kernel auto rotation_frame(num_vec4 auto const& quat) {
   auto v = quat;
   return frame{
