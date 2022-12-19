@@ -2275,47 +2275,37 @@ constexpr kernel void update_fpscam(
 namespace yocto {
 
 // Python range. Construct an object that iterates over an integer sequence.
-template <typename T>
-constexpr kernel auto range(T max);
-template <typename T>
-constexpr kernel auto range(T min, T max);
-template <typename T>
-constexpr kernel auto range(T min, T max, T step);
+constexpr kernel auto range(integral auto max);
+constexpr kernel auto range(integral auto min, integral auto max);
+constexpr kernel auto range(
+    integral auto min, integral auto max, integral auto step);
 
 // Python range in 2d. Construct an object that iterates over a 2d integer
 // sequence.
-template <typename T>
-constexpr kernel auto range(vec<T, 2> max);
+constexpr kernel auto range(inte2 auto max);
 
 // Python range in 3d. Construct an object that iterates over a 3d integer
 // sequence.
-template <typename T>
-constexpr kernel auto range(vec<T, 3> max);
+constexpr kernel auto range(inte3 auto max);
 
 // Python enumerate
-template <typename Sequence, typename T = index_t>
-constexpr kernel auto enumerate(const Sequence& sequence, T start = 0);
-template <typename Sequence, typename T = index_t>
-constexpr kernel auto enumerate(Sequence& sequence, T start = 0);
+constexpr kernel auto enumerate(auto const& sequence);
+constexpr kernel auto enumerate(auto& sequence);
+constexpr kernel auto enumerate(auto const& sequence, integral auto start);
+constexpr kernel auto enumerate(auto& sequence, integral auto start);
 
 // Python zip
-template <typename Sequence1, typename Sequence2>
-constexpr kernel auto zip(
-    const Sequence1& sequence1, const Sequence2& sequence2);
-template <typename Sequence1, typename Sequence2>
-constexpr kernel auto zip(Sequence1& sequence1, Sequence2& sequence2);
-template <typename Sequence1, typename Sequence2>
-constexpr kernel auto zip(const Sequence1& sequence1, Sequence2& sequence2);
-template <typename Sequence1, typename Sequence2>
-constexpr kernel auto zip(Sequence1& sequence1, const Sequence2& sequence2);
+constexpr kernel auto zip(auto const& sequence1, auto const& sequence2);
+constexpr kernel auto zip(auto& sequence1, auto& sequence2);
+constexpr kernel auto zip(auto const& sequence1, auto& sequence2);
+constexpr kernel auto zip(auto& sequence1, auto const& sequence2);
 
 // Implementation of Python range.
-template <typename T>
-constexpr kernel auto range(T max) {
-  return range((T)0, max);
+constexpr kernel auto range(integral auto max) {
+  return range((decltype(max))0, max);
 }
-template <typename T>
-constexpr kernel auto range(T min, T max) {
+constexpr kernel auto range(integral auto min, integral auto max) {
+  using T = common_type<decltype(min), decltype(max)>;
   struct range_iterator {
     T                     index;
     constexpr kernel void operator++() { ++index; }
@@ -2331,8 +2321,9 @@ constexpr kernel auto range(T min, T max) {
   };
   return range_helper{min, max};
 }
-template <typename T>
-constexpr kernel auto range(T min, T max, T step) {
+constexpr kernel auto range(
+    integral auto min, integral auto max, integral auto step) {
+  using T = common_type<decltype(min), decltype(max), decltype(step)>;
   struct range_iterator {
     T                     index;
     T                     step;
@@ -2354,8 +2345,8 @@ constexpr kernel auto range(T min, T max, T step) {
 
 // Python range in 2d. Construct an object that iterates over a 2d integer
 // sequence.
-template <typename T>
-constexpr kernel auto range(vec<T, 2> max) {
+constexpr kernel auto range(inte2 auto max) {
+  using T = vec_etype<decltype(max)>;
   struct range_sentinel {};
   struct range_iterator {
     vec<T, 2>             index, end;
@@ -2381,8 +2372,8 @@ constexpr kernel auto range(vec<T, 2> max) {
 
 // Python range in 2d. Construct an object that iterates over a 2d integer
 // sequence.
-template <typename T>
-constexpr kernel auto range(vec<T, 3> max) {
+constexpr kernel auto range(inte3 auto max) {
+  using T = vec_etype<decltype(max)>;
   struct range_sentinel {};
   struct range_iterator {
     vec<T, 3>             index, end;
@@ -2411,8 +2402,15 @@ constexpr kernel auto range(vec<T, 3> max) {
 }
 
 // Implementation of Python enumerate.
-template <typename Sequence, typename T>
-constexpr kernel auto enumerate(const Sequence& sequence, T start) {
+constexpr kernel auto enumerate(auto const& sequence) {
+  return enumerate(sequence, (index_t)0);
+}
+constexpr kernel auto enumerate(auto& sequence) {
+  return enumerate(sequence, (index_t)0);
+}
+constexpr kernel auto enumerate(auto const& sequence, integral auto start) {
+  using Sequence  = std::remove_reference_t<decltype(sequence)>;
+  using T         = decltype(start);
   using Iterator  = typename Sequence::const_iterator;
   using Reference = typename Sequence::const_reference;
   struct enumerate_iterator {
@@ -2443,8 +2441,9 @@ constexpr kernel auto enumerate(const Sequence& sequence, T start) {
 }
 
 // Python enumerate
-template <typename Sequence, typename T>
-constexpr kernel auto enumerate(Sequence& sequence, T start) {
+constexpr kernel auto enumerate(auto& sequence, integral auto start) {
+  using Sequence  = std::remove_reference_t<decltype(sequence)>;
+  using T         = decltype(start);
   using Iterator  = typename Sequence::iterator;
   using Reference = typename Sequence::reference;
   struct enumerate_iterator {
@@ -2475,9 +2474,9 @@ constexpr kernel auto enumerate(Sequence& sequence, T start) {
 }
 
 // Python zip
-template <typename Sequence1, typename Sequence2>
-constexpr kernel auto zip(
-    const Sequence1& sequence1, const Sequence2& sequence2) {
+constexpr kernel auto zip(auto const& sequence1, auto const& sequence2) {
+  using Sequence1  = std::remove_reference_t<decltype(sequence1)>;
+  using Sequence2  = std::remove_reference_t<decltype(sequence2)>;
   using Iterator1  = typename Sequence1::const_iterator;
   using Reference1 = typename Sequence1::const_reference;
   using Iterator2  = typename Sequence2::const_iterator;
@@ -2510,8 +2509,9 @@ constexpr kernel auto zip(
 }
 
 // Implementation of Python zip
-template <typename Sequence1, typename Sequence2>
-constexpr kernel auto zip(Sequence1& sequence1, Sequence2& sequence2) {
+constexpr kernel auto zip(auto& sequence1, auto& sequence2) {
+  using Sequence1  = std::remove_reference_t<decltype(sequence1)>;
+  using Sequence2  = std::remove_reference_t<decltype(sequence2)>;
   using Iterator1  = typename Sequence1::iterator;
   using Reference1 = typename Sequence1::reference;
   using Iterator2  = typename Sequence2::iterator;
@@ -2544,8 +2544,9 @@ constexpr kernel auto zip(Sequence1& sequence1, Sequence2& sequence2) {
 }
 
 // Implementation of Python zip
-template <typename Sequence1, typename Sequence2>
-constexpr kernel auto zip(const Sequence1& sequence1, Sequence2& sequence2) {
+constexpr kernel auto zip(auto const& sequence1, auto& sequence2) {
+  using Sequence1  = std::remove_reference_t<decltype(sequence1)>;
+  using Sequence2  = std::remove_reference_t<decltype(sequence2)>;
   using Iterator1  = typename Sequence1::const_iterator;
   using Reference1 = typename Sequence1::const_reference;
   using Iterator2  = typename Sequence2::iterator;
@@ -2578,8 +2579,9 @@ constexpr kernel auto zip(const Sequence1& sequence1, Sequence2& sequence2) {
 }
 
 // Implementation of Python zip
-template <typename Sequence1, typename Sequence2>
-constexpr kernel auto zip(Sequence1& sequence1, const Sequence2& sequence2) {
+constexpr kernel auto zip(auto& sequence1, auto const& sequence2) {
+  using Sequence1  = std::remove_reference_t<decltype(sequence1)>;
+  using Sequence2  = std::remove_reference_t<decltype(sequence2)>;
   using Iterator1  = typename Sequence1::iterator;
   using Reference1 = typename Sequence1::reference;
   using Iterator2  = typename Sequence2::const_iterator;
