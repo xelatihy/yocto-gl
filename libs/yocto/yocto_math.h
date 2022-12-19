@@ -2069,34 +2069,36 @@ namespace yocto {
 
 // Computes the image uv coordinates corresponding to the view parameters.
 // Returns negative coordinates if out of the image.
-template <typename T, typename I>
-constexpr kernel vec<I, 2> image_coords(const vec<T, 2>& mouse_pos,
-    const vec<T, 2>& center, T scale, const vec<I, 2>& size,
+constexpr kernel auto image_coords(num_vec2 auto const& mouse_pos,
+    num_vec2 auto const& center, number auto scale, int_vec2 auto const& size,
     bool clamped = true) {
+  using I = vec_etype<decltype(size)>;
+  using T = vec_etype<decltype(center)>;
   auto xy = (mouse_pos - center) / scale;
   auto ij = (vec<I, 2>)round(xy + size / (T)2);
   return clamped ? clamp(ij, 0, size) : ij;
 }
 
 // Center image and autofit. Returns center and scale.
-template <typename T, typename I>
-constexpr kernel pair<vec<T, 2>, T> camera_imview(const vec<T, 2>& center,
-    T scale, const vec<I, 2>& imsize, const vec<I, 2>& winsize,
-    bool zoom_to_fit) {
+constexpr kernel auto camera_imview(num_vec2 auto const& center,
+    number auto scale, int_vec2 auto const& imsize,
+    int_vec2 auto const& winsize, bool zoom_to_fit) {
+  using T = vec_etype<decltype(center)>;
   if (zoom_to_fit) {
-    return {(vec<T, 2>)winsize / 2, min(winsize / (vec<T, 2>)imsize)};
+    return pair{(vec<T, 2>)winsize / 2, min(winsize / (vec<T, 2>)imsize)};
   } else {
-    return {select(component_greater_equal(winsize, imsize * scale),
-                (vec<T, 2>)winsize / 2, center),
+    return pair{select(component_greater_equal(winsize, imsize * scale),
+                    (vec<T, 2>)winsize / 2, center),
         scale};
   }
 }
 
 // Turntable for UI navigation. Returns from and to.
-template <typename T>
-constexpr kernel pair<vec<T, 3>, vec<T, 3>> camera_turntable(
-    const vec<T, 3>& from_, const vec<T, 3>& to_, const vec<T, 3>& up,
-    const vec<T, 2>& rotate, T dolly, const vec<T, 2>& pan) {
+constexpr kernel auto camera_turntable(num_vec3 auto const& from_,
+    num_vec3 auto const& to_, num_vec3 auto const& up,
+    num_vec2 auto const& rotate, number auto dolly, num_vec2 auto const& pan) {
+  using T = vec_etype<decltype(from_)>;
+
   // copy values
   auto from = from_, to = to_;
 
@@ -2132,14 +2134,15 @@ constexpr kernel pair<vec<T, 3>, vec<T, 3>> camera_turntable(
   }
 
   // done
-  return {from, to};
+  return pair{from, to};
 }
 
 // Turntable for UI navigation. Returns frame and focus.
-template <typename T>
-constexpr kernel pair<frame<T, 3>, T> camera_turntable(
-    const frame<T, 3>& frame_, T focus, const vec<T, 2>& rotate, T dolly,
-    const vec<T, 2>& pan) {
+constexpr kernel auto camera_turntable(num_frame3 auto const& frame_,
+    number auto focus, num_vec2 auto const& rotate, number auto dolly,
+    num_vec2 auto const& pan) {
+  using T = frame_etype<decltype(frame_)>;
+
   // copy values
   auto frame = frame_;
 
@@ -2169,13 +2172,14 @@ constexpr kernel pair<frame<T, 3>, T> camera_turntable(
   }
 
   // done
-  return {frame, focus};
+  return pair{frame, focus};
 }
 
 // FPS camera for UI navigation for a frame parametrization. Returns frame.
-template <typename T>
-constexpr kernel frame<T, 3> camera_fpscam(const frame<T, 3>& frame,
-    const vec<T, 3>& transl, const vec<T, 2>& rotate) {
+constexpr kernel auto camera_fpscam(num_frame3 auto const& frame,
+    num_vec3 auto const& transl, num_vec2 auto const& rotate) {
+  using T = frame_etype<decltype(frame)>;
+
   // https://gamedev.stackexchange.com/questions/30644/how-to-keep-my-quaternion-using-fps-camera-from-tilting-and-messing-up
   auto y = vec<T, 3>{0, 1, 0};
   auto z = orthonormalize(frame.z(), y);
@@ -2187,22 +2191,24 @@ constexpr kernel frame<T, 3> camera_fpscam(const frame<T, 3>& frame,
              rotation_frame(vec<T, 3>{0, 1, 0}, rotate.x());
   auto pos = frame.o() + transl.x() * x + transl.y() * y + transl.z() * z;
 
-  return {rot.x(), rot.y(), rot.z(), pos};
+  return yocto::frame{rot.x(), rot.y(), rot.z(), pos};
 }
 
 // Computes the image uv coordinates corresponding to the view parameters.
 // Returns negative coordinates if out of the image.
-template <typename T, typename I>
-constexpr kernel vec2i get_image_coords(const vec<T, 2>& mouse_pos,
-    const vec<T, 2>& center, T scale, const vec<I, 2>& txt_size) {
+constexpr kernel vec2i get_image_coords(num_vec2 auto const& mouse_pos,
+    num_vec2 auto const& center, number auto scale, int_vec2 auto const& size) {
+  using I = vec_etype<decltype(size)>;
+  using T = vec_etype<decltype(center)>;
   auto xy = (mouse_pos - center) / scale;
-  return (vec2i)round(xy + txt_size / (T)2);
+  return (vec2i)round(xy + size / (T)2);
 }
 
 // Center image and autofit.
-template <typename T, typename I>
-constexpr kernel void update_imview(vec<T, 2>& center, T& scale,
-    const vec<I, 2>& imsize, const vec<I, 2>& winsize, bool zoom_to_fit) {
+constexpr kernel void update_imview(int_vec2 auto& center, number auto& scale,
+    int_vec2 auto const& imsize, int_vec2 auto const& winsize,
+    bool zoom_to_fit) {
+  using T = vec_etype<decltype(center)>;
   if (zoom_to_fit) {
     scale  = min((vec<T, 2>)winsize / imsize);
     center = (vec<T, 2>)winsize / 2;
@@ -2213,9 +2219,11 @@ constexpr kernel void update_imview(vec<T, 2>& center, T& scale,
 }
 
 // Turntable for UI navigation.
-template <typename T>
-constexpr kernel void update_turntable(vec<T, 3>& from, vec<T, 3>& to,
-    vec<T, 3>& up, const vec<T, 2>& rotate, T dolly, const vec<T, 2>& pan) {
+constexpr kernel void update_turntable(num_vec3 auto& from, num_vec3 auto& to,
+    num_vec3 auto& up, num_vec2 auto const& rotate, number auto dolly,
+    num_vec2 auto const& pan) {
+  using T = vec_etype<decltype(from)>;
+
   // rotate if necessary
   if (rotate != vec<T, 2>{0, 0}) {
     auto z     = normalize(to - from);
@@ -2248,9 +2256,11 @@ constexpr kernel void update_turntable(vec<T, 3>& from, vec<T, 3>& to,
 }
 
 // Turntable for UI navigation.
-template <typename T>
-constexpr kernel void update_turntable(frame<T, 3>& frame, T& focus,
-    const vec<T, 2>& rotate, T dolly, const vec<T, 2>& pan) {
+constexpr kernel void update_turntable(num_frame3 auto& frame,
+    number auto& focus, num_vec2 auto const& rotate, number auto dolly,
+    num_vec2 auto const& pan) {
+  using T = frame_etype<decltype(frame)>;
+
   // rotate if necessary
   if (rotate != vec<T, 2>{0, 0}) {
     auto phi   = atan2(frame.z.z(), frame.z.x()) + rotate.x();
@@ -2278,10 +2288,11 @@ constexpr kernel void update_turntable(frame<T, 3>& frame, T& focus,
 }
 
 // FPS camera for UI navigation for a frame parametrization.
-template <typename T>
-constexpr kernel void update_fpscam(
-    frame<T, 3>& frame, const vec<T, 3>& transl, const vec<T, 2>& rotate) {
+constexpr kernel void update_fpscam(num_frame3 auto& frame,
+    num_vec3 auto const& transl, num_vec2 auto const& rotate) {
   // https://gamedev.stackexchange.com/questions/30644/how-to-keep-my-quaternion-using-fps-camera-from-tilting-and-messing-up
+  using T = frame_etype<decltype(frame)>;
+
   auto y = vec<T, 3>{0, 1, 0};
   auto z = orthonormalize(frame.z, y);
   auto x = cross(y, z);
