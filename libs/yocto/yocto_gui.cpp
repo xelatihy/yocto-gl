@@ -1022,12 +1022,10 @@ inline void bind_program(uint program) { glUseProgram(program); }
 
 // Viewport and framebuffer
 inline void bind_viewport(const vec4i& framebuffer) {
-  auto [x, y, w, h] = framebuffer;
-  glViewport(x, y, w, h);
+  glViewport(framebuffer.x, framebuffer.y, framebuffer.z, framebuffer.w);
 }
 inline void clear_framebuffer(const vec4f& background) {
-  auto [r, g, b, a] = background;
-  glClearColor(r, g, b, a);
+  glClearColor(background.x, background.y, background.z, background.w);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   glEnable(GL_DEPTH_TEST);
 }

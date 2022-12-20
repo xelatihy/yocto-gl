@@ -215,10 +215,17 @@ constexpr kernel ray<T, N> transform_ray(
 template <typename T, size_t N>
 constexpr kernel bbox<T, N> transform_bbox(
     const mat<T, N + 1, N + 1>& a, const bbox<T, N>& b) {
-  if constexpr (N == 3) {
+  if constexpr (N == 2) {
     auto xformed = bbox<T, N>();
-    for (auto [i, j, k] : range(vec<int, 3>(2, 2, 2))) {
-      auto corner = vec<T, 3>{b[i][0], b[j][1], b[k][2]};
+    for (auto ij : range(vec<int, 2>(2, 2))) {
+      auto corner = vec<T, 2>{b[ij.x][0], b[ij.y][1]};
+      xformed     = merge(xformed, transform_point(a, corner));
+    }
+    return xformed;
+  } else if constexpr (N == 3) {
+    auto xformed = bbox<T, N>();
+    for (auto ijk : range(vec<int, 3>(2, 2, 2))) {
+      auto corner = vec<T, 3>{b[ijk.x][0], b[ijk.y][1], b[ijk.z][2]};
       xformed     = merge(xformed, transform_point(a, corner));
     }
     return xformed;
@@ -227,10 +234,17 @@ constexpr kernel bbox<T, N> transform_bbox(
 template <typename T, size_t N>
 constexpr kernel bbox<T, N> transform_bbox(
     const frame<T, N>& a, const bbox<T, N>& b) {
-  if constexpr (N == 3) {
+  if constexpr (N == 2) {
     auto xformed = bbox<T, N>();
-    for (auto [i, j, k] : range(vec<int, 3>(2, 2, 2))) {
-      auto corner = vec<T, 3>{b[i][0], b[j][1], b[k][2]};
+    for (auto ij : range(vec<int, 2>(2, 2))) {
+      auto corner = vec<T, 2>{b[ij.x][0], b[ij.y][1]};
+      xformed     = merge(xformed, transform_point(a, corner));
+    }
+    return xformed;
+  } else if constexpr (N == 3) {
+    auto xformed = bbox<T, N>();
+    for (auto ijk : range(vec<int, 3>(2, 2, 2))) {
+      auto corner = vec<T, 3>{b[ijk.x][0], b[ijk.y][1], b[ijk.z][2]};
       xformed     = merge(xformed, transform_point(a, corner));
     }
     return xformed;

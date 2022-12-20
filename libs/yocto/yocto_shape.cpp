@@ -1047,7 +1047,7 @@ shape_data make_tsphere(const vec3i& steps, float scale) {
 // Make a sphere.
 shape_data make_uvsphere(const vec2i& steps, float scale) {
   return make_quads(steps, [=](vec2f uv) {
-    auto [phi, theta] = flip_v(uv) * vec2f{2 * pif, pif};
+    auto phi = uv.x * 2 * pif, theta = (1 - uv.y) * pif;
     return make_quads_vertex{
         vec3f{cos(phi) * sin(theta), sin(phi) * sin(theta), cos(theta)} * scale,
         vec3f{cos(phi) * sin(theta), sin(phi) * sin(theta), cos(theta)}, uv};
@@ -1086,7 +1086,7 @@ shape_data make_capped_uvspherey(const vec2i& steps, float scale, float cap) {
 // Make a uv disk
 shape_data make_uvdisk(const vec2i& steps, float scale) {
   return make_quads(steps, [=](vec2f uv) {
-    auto [phi, r] = flip_v(uv) * vec2f{2 * pif, 1};
+    auto phi = uv.x * 2 * pif, r = 1 - uv.y;
     return make_quads_vertex{vec3f{r * cos(phi), r * sin(phi), 0} * scale,
         vec3f(0, 0, 1), flip_v(uv)};
   });
@@ -1097,21 +1097,21 @@ shape_data make_uvcylinder(const vec3i& steps, const vec2f& scale) {
   auto shape = shape_data{};
   // side
   merge_shape_inplace(shape, make_quads({steps.x, steps.y}, [=](vec2f uv) {
-    auto [phi, h] = uv * vec2f{2 * pif, 1};
+    auto phi = uv.x * 2 * pif, h = uv.y;
     return make_quads_vertex{
         vec3f{cos(phi) * scale.x, sin(phi) * scale.x, scale.y * (2 * h - 1)},
         vec3f{cos(phi), sin(phi), 0}, uv};
   }));
   // top
   merge_shape_inplace(shape, make_quads({steps.x, steps.z}, [=](vec2f uv) {
-    auto [phi, r] = flip_v(uv) * vec2f{2 * pif, 1};
+    auto phi = uv.x * 2 * pif, r = 1 - uv.y;
     return make_quads_vertex{
         vec3f{r * scale.x * cos(phi), r * scale.x * sin(phi), +scale.y},
         vec3f(0, 0, 1), flip_v(uv)};
   }));
   // bottom
   merge_shape_inplace(shape, make_quads({steps.x, steps.z}, [=](vec2f uv) {
-    auto [phi, r] = uv * vec2f{2 * pif, 1};
+    auto phi = uv.x * 2 * pif, r = uv.y;
     return make_quads_vertex{
         vec3f{r * scale.x * cos(phi), r * scale.x * sin(phi), -scale.y},
         vec3f(0, 0, -1), uv};
@@ -1151,14 +1151,14 @@ shape_data make_uvcapsule(const vec3i& steps, const vec2f& scale) {
   auto shape = shape_data{};
   // side
   merge_shape_inplace(shape, make_quads({steps.x, steps.y}, [=](vec2f uv) {
-    auto [phi, h] = uv * vec2f{2 * pif, 1};
+    auto phi = uv.x * 2 * pif, h = uv.y;
     return make_quads_vertex{
         vec3f{cos(phi) * scale.x, sin(phi) * scale.x, scale.y * (2 * h - 1)},
         vec3f{cos(phi), sin(phi), 0}, uv};
   }));
   // top
   merge_shape_inplace(shape, make_quads({steps.x, steps.z}, [=](vec2f uv) {
-    auto [phi, theta] = flip_v(uv) * vec2f{2 * pif, pif / 2};
+    auto phi = uv.x * 2 * pif, theta = (1 - uv.y) * pif / 2;
     return make_quads_vertex{
         vec3f{cos(phi) * sin(theta) * scale.x, sin(phi) * sin(theta) * scale.x,
             cos(theta) * scale.x + scale.y},
@@ -1167,7 +1167,7 @@ shape_data make_uvcapsule(const vec3i& steps, const vec2f& scale) {
   }));
   // bottom
   merge_shape_inplace(shape, make_quads({steps.x, steps.z}, [=](vec2f uv) {
-    auto [phi, theta] = uv * vec2f{2 * pif, pif / 2};
+    auto phi = uv.x * 2 * pif, theta = (1 - uv.y) * pif / 2;
     return make_quads_vertex{
         vec3f{cos(phi) * sin(theta) * scale.x, sin(phi) * sin(theta) * scale.x,
             -cos(theta) * scale.x - scale.y},
@@ -1183,7 +1183,7 @@ shape_data make_uvcone(const vec3i& steps, const vec2f& scale) {
   // side
   merge_shape_inplace(shape, make_quads({steps.x, steps.y}, [=](vec2f uv) {
     auto normal2d = normalize(scale * vec2f{1, 2});
-    auto [phi, h] = uv * vec2f{2 * pif, 1};
+    auto phi = uv.x * 2 * pif, h = uv.y;
     return make_quads_vertex{
         vec3f{cos(phi) * (1 - h) * scale.x, sin(phi) * (1 - h) * scale.x,
             scale.y * (2 * h - 1)},
@@ -1191,7 +1191,7 @@ shape_data make_uvcone(const vec3i& steps, const vec2f& scale) {
   }));
   // bottom
   merge_shape_inplace(shape, make_quads({steps.y, steps.z}, [=](vec2f uv) {
-    auto [phi, r] = uv * vec2f{2 * pif, 1};
+    auto phi = uv.x * 2 * pif, r = uv.y;
     return make_quads_vertex{
         vec3f{r * scale.x * cos(phi), r * scale.x * sin(phi), -scale.y},
         vec3f(0, 0, -1), uv};
@@ -1244,25 +1244,25 @@ template <typename Func>
 static shape_data make_lines(int num, int steps, Func&& func) {
   auto shape = shape_data{};
 
-  auto vid = [stride = steps](int i, int j) { return j * (stride + 1) + i; };
-  auto lid = [stride = steps](int i, int j) { return j * stride + i; };
+  auto vid = [stride = steps](vec2i ij) { return ij.y * (stride + 1) + ij.x; };
+  auto lid = [stride = steps](vec2i ij) { return ij.y * stride + ij.x; };
 
   shape.positions.resize((steps + 1) * num);
   shape.normals.resize((steps + 1) * num);
   shape.texcoords.resize((steps + 1) * num);
   shape.radius.resize((steps + 1) * num);
-  for (auto [i, j] : range(vec2i(steps + 1, num))) {
-    auto uv = vec2f{i / (float)steps, j / (float)(num - 1)};
+  for (auto ij : range(vec2i(steps + 1, num))) {
+    auto uv = ij / vec2f{(float)steps, (float)(num - 1)};
     auto [position, normal, texcoord, radius] = func(uv);
-    shape.positions[vid(i, j)]                = position;
-    shape.normals[vid(i, j)]                  = normal;
-    shape.texcoords[vid(i, j)]                = texcoord;
-    shape.radius[vid(i, j)]                   = radius;
+    shape.positions[vid(ij)]                  = position;
+    shape.normals[vid(ij)]                    = normal;
+    shape.texcoords[vid(ij)]                  = texcoord;
+    shape.radius[vid(ij)]                     = radius;
   }
 
   shape.lines.resize(steps * num);
-  for (auto [i, j] : range(vec2i(steps, num))) {
-    shape.lines[lid(i, j)] = {vid(i, j), vid(i + 1, j)};
+  for (auto ij : range(vec2i(steps, num))) {
+    shape.lines[lid(ij)] = {vid(ij), vid(ij + vec2i{1, 0})};
   }
 
   return shape;
@@ -1622,9 +1622,9 @@ vector<vec4f> triangles_tangent_spaces(const vector<vec3i>& triangles,
   auto tangu = vector<vec3f>(positions.size(), vec3f{0, 0, 0});
   auto tangv = vector<vec3f>(positions.size(), vec3f{0, 0, 0});
   for (auto& triangle : triangles) {
-    auto [v1, v2, v3] = triangle;
-    auto tutv         = triangle_tangents_fromuv(positions[v1], positions[v2],
-                positions[v3], texcoords[v1], texcoords[v2], texcoords[v3]);
+    auto tutv = triangle_tangents_fromuv(positions[triangle.x],
+        positions[triangle.y], positions[triangle.z], texcoords[triangle.x],
+        texcoords[triangle.y], texcoords[triangle.z]);
     for (auto vid : triangle) tangu[vid] += normalize(tutv.first);
     for (auto vid : triangle) tangv[vid] += normalize(tutv.second);
   }
@@ -1649,17 +1649,16 @@ pair<vector<vec3f>, vector<vec3f>> skin_vertices(const vector<vec3f>& positions,
   auto skinned_positions = vector<vec3f>{positions.size()};
   auto skinned_normals   = vector<vec3f>{positions.size()};
   for (auto i : range(positions.size())) {
-    auto [j1, j2, j3, j4] = joints[i];
-    auto [w1, w2, w3, w4] = weights[i];
-    skinned_positions[i]  = transform_point(xforms[j1], positions[i]) * w1 +
-                           transform_point(xforms[j2], positions[i]) * w2 +
-                           transform_point(xforms[j3], positions[i]) * w3 +
-                           transform_point(xforms[j4], positions[i]) * w4;
+    skinned_positions[i] =
+        transform_point(xforms[joints[i].x], positions[i]) * weights[i].x +
+        transform_point(xforms[joints[i].y], positions[i]) * weights[i].y +
+        transform_point(xforms[joints[i].z], positions[i]) * weights[i].z +
+        transform_point(xforms[joints[i].w], positions[i]) * weights[i].w;
     skinned_normals[i] = normalize(
-        transform_direction(xforms[j1], normals[i]) * w1 +
-        transform_direction(xforms[j2], normals[i]) * w2 +
-        transform_direction(xforms[j3], normals[i]) * w3 +
-        transform_direction(xforms[j4], normals[i]) * w4);
+        transform_direction(xforms[joints[i].x], normals[i]) * weights[i].x +
+        transform_direction(xforms[joints[i].y], normals[i]) * weights[i].y +
+        transform_direction(xforms[joints[i].z], normals[i]) * weights[i].z +
+        transform_direction(xforms[joints[i].w], normals[i]) * weights[i].w);
   }
   return {skinned_positions, skinned_normals};
 }
@@ -1671,10 +1670,10 @@ pair<vector<vec3f>, vector<vec3f>> skin_matrices(const vector<vec3f>& positions,
   auto skinned_positions = vector<vec3f>{positions.size()};
   auto skinned_normals   = vector<vec3f>{positions.size()};
   for (auto i : range(positions.size())) {
-    auto [j1, j2, j3, j4] = joints[i];
-    auto [w1, w2, w3, w4] = weights[i];
-    auto xform = xforms[j1] * w1 + xforms[j2] * w2 + xforms[j3] * w3 +
-                 xforms[j4] * w4;
+    auto xform = xforms[joints[i].x] * weights[i].x +
+                 xforms[joints[i].y] * weights[i].y +
+                 xforms[joints[i].z] * weights[i].z +
+                 xforms[joints[i].w] * weights[i].w;
     skinned_positions[i] = transform_point(xform, positions[i]);
     skinned_normals[i]   = normalize(transform_direction(xform, normals[i]));
   }
@@ -1691,17 +1690,16 @@ void skin_vertices(vector<vec3f>& skinned_positions,
     throw std::out_of_range("arrays should be the same size");
   }
   for (auto i : range(positions.size())) {
-    auto [j1, j2, j3, j4] = joints[i];
-    auto [w1, w2, w3, w4] = weights[i];
-    skinned_positions[i]  = transform_point(xforms[j1], positions[i]) * w1 +
-                           transform_point(xforms[j2], positions[i]) * w2 +
-                           transform_point(xforms[j3], positions[i]) * w3 +
-                           transform_point(xforms[j4], positions[i]) * w4;
+    skinned_positions[i] =
+        transform_point(xforms[joints[i].x], positions[i]) * weights[i].x +
+        transform_point(xforms[joints[i].y], positions[i]) * weights[i].y +
+        transform_point(xforms[joints[i].z], positions[i]) * weights[i].z +
+        transform_point(xforms[joints[i].w], positions[i]) * weights[i].w;
     skinned_normals[i] = normalize(
-        transform_direction(xforms[j1], normals[i]) * w1 +
-        transform_direction(xforms[j2], normals[i]) * w2 +
-        transform_direction(xforms[j3], normals[i]) * w3 +
-        transform_direction(xforms[j4], normals[i]) * w4);
+        transform_direction(xforms[joints[i].x], normals[i]) * weights[i].x +
+        transform_direction(xforms[joints[i].y], normals[i]) * weights[i].y +
+        transform_direction(xforms[joints[i].z], normals[i]) * weights[i].z +
+        transform_direction(xforms[joints[i].w], normals[i]) * weights[i].w);
   }
 }
 
@@ -1715,10 +1713,10 @@ void skin_matrices(vector<vec3f>& skinned_positions,
     throw std::out_of_range("arrays should be the same size");
   }
   for (auto i : range(positions.size())) {
-    auto [j1, j2, j3, j4] = joints[i];
-    auto [w1, w2, w3, w4] = weights[i];
-    auto xform = xforms[j1] * w1 + xforms[j2] * w2 + xforms[j3] * w3 +
-                 xforms[j4] * w4;
+    auto xform = xforms[joints[i].x] * weights[i].x +
+                 xforms[joints[i].y] * weights[i].y +
+                 xforms[joints[i].z] * weights[i].z +
+                 xforms[joints[i].w] * weights[i].w;
     skinned_positions[i] = transform_point(xform, positions[i]);
     skinned_normals[i]   = normalize(transform_direction(xform, normals[i]));
   }
@@ -2579,10 +2577,10 @@ vector<vec4i> triangles_to_quads(const vector<vec3i>& triangles) {
 vector<vec2i> bezier_to_lines(const vector<vec4i>& beziers) {
   auto lines = vector<vec2i>{};
   lines.reserve(beziers.size() * 3);
-  for (auto [v1, v2, v3, v4] : beziers) {
-    lines.push_back({v1, v2});
-    lines.push_back({v2, v3});
-    lines.push_back({v3, v4});
+  for (auto& bezier : beziers) {
+    lines.push_back({bezier.x, bezier.y});
+    lines.push_back({bezier.y, bezier.z});
+    lines.push_back({bezier.z, bezier.w});
   }
   return lines;
 }
@@ -2781,12 +2779,15 @@ static pair<vector<vec3i>, vector<T>> subdivide_triangles_impl(
     return nverts + edge_index(emap, edge);
   };
   for (auto& triangle : triangles) {
-    auto [v1, v2, v3] = triangle;
-    ttriangles.push_back({v1, edge_vertex({v1, v2}), edge_vertex({v3, v1})});
-    ttriangles.push_back({v2, edge_vertex({v2, v3}), edge_vertex({v1, v2})});
-    ttriangles.push_back({v3, edge_vertex({v3, v1}), edge_vertex({v2, v3})});
-    ttriangles.push_back(
-        {edge_vertex({v1, v2}), edge_vertex({v2, v3}), edge_vertex({v3, v1})});
+    ttriangles.push_back({triangle.x, edge_vertex({triangle.x, triangle.y}),
+        edge_vertex({triangle.z, triangle.x})});
+    ttriangles.push_back({triangle.y, edge_vertex({triangle.y, triangle.z}),
+        edge_vertex({triangle.x, triangle.y})});
+    ttriangles.push_back({triangle.z, edge_vertex({triangle.z, triangle.x}),
+        edge_vertex({triangle.y, triangle.z})});
+    ttriangles.push_back({edge_vertex({triangle.x, triangle.y}),
+        edge_vertex({triangle.y, triangle.z}),
+        edge_vertex({triangle.z, triangle.x})});
   }
   // done
   return {ttriangles, tvertices};
@@ -2826,23 +2827,22 @@ static pair<vector<vec4i>, vector<T>> subdivide_quads_impl(
     return nverts + nedges + (int)quad_id;
   };
   for (auto&& [quad_id, quad] : enumerate(quads)) {
-    auto [v1, v2, v3, v4] = quad;
-    if (v3 != v4) {
-      tquads.push_back({v1, edge_vertex({v1, v2}), quad_vertex(quad_id),
-          edge_vertex({v4, v1})});
-      tquads.push_back({v2, edge_vertex({v2, v3}), quad_vertex(quad_id),
-          edge_vertex({v1, v2})});
-      tquads.push_back({v3, edge_vertex({v3, v4}), quad_vertex(quad_id),
-          edge_vertex({v2, v3})});
-      tquads.push_back({v4, edge_vertex({v4, v1}), quad_vertex(quad_id),
-          edge_vertex({v3, v4})});
+    if (!is_triangle(quad)) {
+      tquads.push_back({quad.x, edge_vertex({quad.x, quad.y}),
+          quad_vertex(quad_id), edge_vertex({quad.w, quad.x})});
+      tquads.push_back({quad.y, edge_vertex({quad.y, quad.z}),
+          quad_vertex(quad_id), edge_vertex({quad.x, quad.y})});
+      tquads.push_back({quad.z, edge_vertex({quad.z, quad.w}),
+          quad_vertex(quad_id), edge_vertex({quad.y, quad.z})});
+      tquads.push_back({quad.w, edge_vertex({quad.w, quad.x}),
+          quad_vertex(quad_id), edge_vertex({quad.z, quad.w})});
     } else {
-      tquads.push_back({v1, edge_vertex({v1, v2}), quad_vertex(quad_id),
-          edge_vertex({v3, v1})});
-      tquads.push_back({v2, edge_vertex({v2, v3}), quad_vertex(quad_id),
-          edge_vertex({v1, v2})});
-      tquads.push_back({v3, edge_vertex({v3, v1}), quad_vertex(quad_id),
-          edge_vertex({v2, v3})});
+      tquads.push_back({quad.x, edge_vertex({quad.x, quad.y}),
+          quad_vertex(quad_id), edge_vertex({quad.z, quad.x})});
+      tquads.push_back({quad.y, edge_vertex({quad.y, quad.z}),
+          quad_vertex(quad_id), edge_vertex({quad.x, quad.y})});
+      tquads.push_back({quad.z, edge_vertex({quad.z, quad.x}),
+          quad_vertex(quad_id), edge_vertex({quad.y, quad.z})});
     }
   }
   // done
@@ -2860,23 +2860,24 @@ static pair<vector<vec4i>, vector<T>> subdivide_beziers_impl(
   auto tvertices = vector<T>();
   auto tbeziers  = vector<vec4i>();
   for (auto& bezier : beziers) {
-    auto [v1, v2, v3, v4] = bezier;
-    for (auto vid : {v1, v4}) {
+    for (auto vid : {bezier.x, bezier.w}) {
       if (vmap.find(vid) == vmap.end()) {
         vmap[vid] = (int)tvertices.size();
         tvertices.push_back(vertices[vid]);
       }
     }
     auto bo = (int)tvertices.size();
-    tbeziers.push_back({vmap.at(v1), bo + 0, bo + 1, bo + 2});
-    tbeziers.push_back({bo + 2, bo + 3, bo + 4, vmap.at(v4)});
-    tvertices.push_back(vertices[v1] / 2 + vertices[v2] / 2);
-    tvertices.push_back(vertices[v1] / 4 + vertices[v2] / 2 + vertices[v3] / 4);
+    tbeziers.push_back({vmap.at(bezier.x), bo + 0, bo + 1, bo + 2});
+    tbeziers.push_back({bo + 2, bo + 3, bo + 4, vmap.at(bezier.w)});
+    tvertices.push_back(vertices[bezier.x] / 2 + vertices[bezier.y] / 2);
+    tvertices.push_back(vertices[bezier.x] / 4 + vertices[bezier.y] / 2 +
+                        vertices[bezier.z] / 4);
     tvertices.push_back(
-        vertices[v1] / 8 + vertices[v2] * ((float)3 / (float)8) +
-        vertices[v3] * ((float)3 / (float)8) + vertices[v4] / 8);
-    tvertices.push_back(vertices[v2] / 4 + vertices[v3] / 2 + vertices[v4] / 4);
-    tvertices.push_back(vertices[v3] / 2 + vertices[v4] / 2);
+        vertices[bezier.x] / 8 + vertices[bezier.y] * ((float)3 / (float)8) +
+        vertices[bezier.z] * ((float)3 / (float)8) + vertices[bezier.w] / 8);
+    tvertices.push_back(vertices[bezier.y] / 4 + vertices[bezier.z] / 2 +
+                        vertices[bezier.w] / 4);
+    tvertices.push_back(vertices[bezier.z] / 2 + vertices[bezier.w] / 2);
   }
 
   // done
