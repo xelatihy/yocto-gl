@@ -164,15 +164,15 @@ constexpr vec<T, N> eval_image(const array2d<vec<T1, N>>& image,
     auto ij = clamp((vec2s)st, 0, size - 1);
     return lookup_image(image, ij, as_linear);
   } else {
-    auto ij     = clamp((vec2s)st, 0, size - 1);
-    auto i1j    = (ij + vec2s{1, 0}) % size;
-    auto ij1    = (ij + vec2s{0, 1}) % size;
-    auto i1j1   = (ij + vec2s{1, 1}) % size;
-    auto [u, v] = st - ij;
-    return lookup_image(image, ij, as_linear) * (1 - u) * (1 - v) +
-           lookup_image(image, ij1, as_linear) * (1 - u) * v +
-           lookup_image(image, i1j, as_linear) * u * (1 - v) +
-           lookup_image(image, i1j1, as_linear) * u * v;
+    auto ij   = clamp((vec2s)st, 0, size - 1);
+    auto i1j  = (ij + vec2s{1, 0}) % size;
+    auto ij1  = (ij + vec2s{0, 1}) % size;
+    auto i1j1 = (ij + vec2s{1, 1}) % size;
+    auto w    = st - ij;
+    return lookup_image(image, ij, as_linear) * (1 - w.x) * (1 - w.y) +
+           lookup_image(image, ij1, as_linear) * (1 - w.x) * w.y +
+           lookup_image(image, i1j, as_linear) * w.x * (1 - w.y) +
+           lookup_image(image, i1j1, as_linear) * w.x * w.y;
   }
 }
 
@@ -323,11 +323,12 @@ inline array2d<vec<T, 4>> make_grid(const vec2s& extents, T scale = 1,
     const vec<T, 4>& color0 = {0.5, 0.5, 0.5, 1.0},
     const vec<T, 4>& color1 = {0.5, 0.5, 0.7, 1.0}) {
   return _make_proc_image(extents, [=](vec2s ij) -> vec<T, 4> {
-    auto [u, v] = fmod((4 * scale * ij) / extents, 1);
-    auto thick  = (T)0.01 / 2;
-    auto c = u <= thick || u >= 1 - thick || v <= thick || v >= 1 - thick ||
-             (u >= (T)0.5 - thick && u <= 0.5f + thick) ||
-             (v >= (T)0.5 - thick && v <= 0.5f + thick);
+    auto uv    = fmod((4 * scale * ij) / extents, 1);
+    auto thick = (T)0.01 / 2;
+    auto c     = uv.x <= thick || uv.x >= 1 - thick || uv.y <= thick ||
+             uv.y >= 1 - thick ||
+             (uv.x >= (T)0.5 - thick && uv.x <= 0.5f + thick) ||
+             (uv.y >= (T)0.5 - thick && uv.y <= 0.5f + thick);
     return c ? color0 : color1;
   });
 }
@@ -337,8 +338,8 @@ inline array2d<vec<T, 4>> make_checker(const vec2s& extents, T scale = 1,
     const vec<T, 4>& color0 = {0.5, 0.5, 0.6, 1.0},
     const vec<T, 4>& color1 = {0.7, 0.7, 0.7, 1.0}) {
   return _make_proc_image(extents, [=](vec2s ij) -> vec<T, 4> {
-    auto [u, v] = fmod((4 * scale * ij) / extents, 1);
-    auto c      = u <= (T)0.5 != v <= (T)0.5;
+    auto uv = fmod((4 * scale * ij) / extents, 1);
+    auto c  = uv.x <= (T)0.5 != uv.y <= (T)0.5;
     return c ? color0 : color1;
   });
 }
@@ -349,15 +350,14 @@ inline array2d<vec<T, 4>> make_bumps(const vec2s& extents, T scale = 1,
     const vec<T, 4>& color1 = {1, 1, 1, 1}) {
   return _make_proc_image(extents, [=](vec2s ij) -> vec<T, 4> {
     auto uv     = fmod((4 * scale * ij) / extents, 1);
-    auto [u, v] = uv;
     auto thick  = (T)0.125;
     auto center = vec<T, 2>{
-        u <= (T)0.5 ? (T)0.25 : (T)0.75,
-        v <= (T)0.5 ? (T)0.25 : (T)0.75,
+        uv.x <= (T)0.5 ? (T)0.25 : (T)0.75,
+        uv.y <= (T)0.5 ? (T)0.25 : (T)0.75,
     };
     auto dist = clamp(length(uv - center), 0, thick) / thick;
-    auto val  = u <= (T)0.5 != v <= (T)0.5 ? (1 + sqrt(1 - dist)) / 2
-                                           : (dist * dist) / 2;
+    auto val  = uv.x <= (T)0.5 != uv.y <= (T)0.5 ? (1 + sqrt(1 - dist)) / 2
+                                                 : (dist * dist) / 2;
     return lerp(color0, color1, val);
   });
 }
@@ -367,8 +367,8 @@ inline array2d<vec<T, 4>> make_ramp(const vec2s& extents, T scale = 1,
     const vec<T, 4>& color0 = {0, 0, 0, 1},
     const vec<T, 4>& color1 = {1, 1, 1, 1}) {
   return _make_proc_image(extents, [=](vec2s ij) -> vec<T, 4> {
-    auto [u, _] = fmod((scale * ij) / extents, 1);
-    return lerp(color0, color1, u);
+    auto uv = fmod((scale * ij) / extents, 1);
+    return lerp(color0, color1, uv.x);
   });
 }
 
@@ -377,14 +377,14 @@ inline array2d<vec<T, 4>> make_gammaramp(const vec2s& extents, T scale = 1,
     const vec<T, 4>& color0 = {0, 0, 0, 1},
     const vec<T, 4>& color1 = {1, 1, 1, 1}) {
   return _make_proc_image(extents, [=](vec2s ij) -> vec<T, 4> {
-    auto [u, v] = fmod((scale * ij) / extents, 1);
-    auto gamma  = (T)2.2;
-    if (v < (T)1 / 3) {
-      return lerp(color0, color1, pow(u, gamma));
-    } else if (v < (T)2 / 3) {
-      return lerp(color0, color1, u);
+    auto uv    = fmod((scale * ij) / extents, 1);
+    auto gamma = (T)2.2;
+    if (uv.y < (T)1 / 3) {
+      return lerp(color0, color1, pow(uv.x, gamma));
+    } else if (uv.y < (T)2 / 3) {
+      return lerp(color0, color1, uv.x);
     } else {
-      return lerp(color0, color1, pow(u, 1 / gamma));
+      return lerp(color0, color1, pow(uv.x, 1 / gamma));
     }
   });
 }
@@ -393,8 +393,8 @@ template <typename T = float>
 inline array2d<vec<T, 4>> make_uvramp(
     const vec2s& extents = {1024, 1024}, T scale = 1) {
   return _make_proc_image(extents, [=](vec2s ij) -> vec<T, 4> {
-    auto [u, v] = fmod((scale * ij) / extents, 1);
-    return vec<T, 4>{u, v, 0, 1};
+    auto uv = fmod((scale * ij) / extents, 1);
+    return vec<T, 4>{uv.x, uv.y, 0, 1};
   });
 }
 
@@ -402,10 +402,11 @@ template <typename T = float>
 inline array2d<vec<T, 4>> make_orgrid(
     const vec2s& extents = {1024, 1024}, T scale = 1) {
   return _make_proc_image(extents, [=](vec2s ij) -> vec<T, 4> {
-    auto [u, v] = fmod((scale * ij) / extents, 1);
-    return u < (T)0.5
-               ? (v < (T)0.5 ? vec<T, 4>{0, 0, 0, 1} : vec<T, 4>{0, 1, 0, 1})
-               : (v < (T)0.5 ? vec<T, 4>{1, 0, 0, 1} : vec<T, 4>{1, 1, 0, 1});
+    auto uv = fmod((scale * ij) / extents, 1);
+    return uv.x < (T)0.5
+               ? (uv.y < (T)0.5 ? vec<T, 4>{0, 0, 0, 1} : vec<T, 4>{0, 1, 0, 1})
+               : (uv.y < (T)0.5 ? vec<T, 4>{1, 0, 0, 1}
+                                : vec<T, 4>{1, 1, 0, 1});
   });
 }
 
@@ -413,18 +414,16 @@ template <typename T = float>
 inline array2d<vec<T, 4>> make_uvgrid(
     const vec2s& extents = {1024, 1024}, T scale = 1, bool colored = true) {
   return _make_proc_image(extents, [=](vec2s ij) -> vec<T, 4> {
-    auto uv     = fmod((scale * ij) / extents, 1);
-    uv[1]       = 1 - uv[1];
-    auto [u, v] = uv;
-    auto hue =
-        (clamp((int)(u * 8), 0, 7) + (clamp((int)(v * 8), 0, 7) + 5) % 8 * 8) /
-        (T)64.0;
-    auto [vu, vv]   = fmod(uv * 4, 1);
-    auto vc         = vu <= 0.5f != vv <= 0.5f;
+    auto uv  = flip_v(fmod((scale * ij) / extents, 1));
+    auto hue = (clamp((int)(uv.x * 8), 0, 7) +
+                   (clamp((int)(uv.y * 8), 0, 7) + 5) % 8 * 8) /
+               (T)64.0;
+    auto v          = fmod(uv * 4, 1);
+    auto vc         = v.x <= 0.5f != v.y <= 0.5f;
     auto value      = vc ? 0.5f - 0.05f : 0.5f + 0.05f;
-    auto [su, sv]   = fmod(uv * 16, 1);
+    auto s          = fmod(uv * 16, 1);
     auto st         = (T)0.01 / 2;
-    auto sc         = su <= st || su >= 1 - st || sv <= st || sv >= 1 - st;
+    auto sc         = s.x <= st || s.x >= 1 - st || s.y <= st || s.y >= 1 - st;
     auto saturation = (T)0;
     if (sc) {
       saturation = (T)0.2;
@@ -441,16 +440,16 @@ inline array2d<vec<T, 4>> make_uvgrid(
 template <typename T = float>
 inline array2d<vec<T, 4>> make_colormapramp(const vec2s& extents, T scale = 1) {
   return _make_proc_image(extents, [=](vec2s ij) -> vec<T, 4> {
-    auto [u, v] = fmod((scale * ij) / extents, 1);
-    auto rgb    = vec<T, 3>{0, 0, 0};
-    if (v < (T)0.25) {
-      rgb = colormap(u, colormap_type::viridis);
-    } else if (v < (T)0.50) {
-      rgb = colormap(u, colormap_type::plasma);
-    } else if (v < (T)0.75) {
-      rgb = colormap(u, colormap_type::magma);
+    auto uv  = fmod((scale * ij) / extents, 1);
+    auto rgb = vec<T, 3>{0, 0, 0};
+    if (uv.y < (T)0.25) {
+      rgb = colormap(uv.x, colormap_type::viridis);
+    } else if (uv.y < (T)0.50) {
+      rgb = colormap(uv.x, colormap_type::plasma);
+    } else if (uv.y < (T)0.75) {
+      rgb = colormap(uv.x, colormap_type::magma);
     } else {
-      rgb = colormap(u, colormap_type::inferno);
+      rgb = colormap(uv.x, colormap_type::inferno);
     }
     return vec<T, 4>{rgb, 1};
   });
@@ -516,12 +515,12 @@ template <typename T = float>
 inline array2d<vec<T, 4>> add_border(const array2d<vec<T, 4>>& image, T width,
     const vec<T, 4>& color = {0, 0, 0, 1}) {
   auto result = image;
-  auto [w, h] = image.extents();
+  auto size   = image.extents();
   auto scale  = (T)1 / max(image.extents());
   for (auto ij : range(image.extents())) {
-    auto [u, v] = (vec2f)ij * scale;
-    if (u < width || v < width || v > w * scale - width ||
-        v > h * scale - width) {
+    auto uv = (vec2f)ij * scale;
+    if (uv.x < width || uv.y < width || uv.y > size.x * scale - width ||
+        uv.y > size.y * scale - width) {
       result[ij] = color;
     }
   }
@@ -643,14 +642,11 @@ inline array2d<vec<T, 4>> make_sunsky(const vec2s& extents, float theta_sun,
   // rescale by user
   sun_le *= sun_intensity;
 
-  // size
-  auto [width, height] = extents;
-
   // sun scale from Wikipedia scaled by user quantity and rescaled to at
   // the minimum 5 pixel diameter
   auto sun_angular_radius = 9.35e-03f / 2;  // Wikipedia
   sun_angular_radius *= sun_radius;
-  sun_angular_radius = max(sun_angular_radius, 2 * pif / height);
+  sun_angular_radius = max(sun_angular_radius, 2 * pif / extents.y);
 
   // sun direction
   auto sun_direction = vec3f{0, cos(theta_sun), sin(theta_sun)};
@@ -662,11 +658,11 @@ inline array2d<vec<T, 4>> make_sunsky(const vec2s& extents, float theta_sun,
 
   // Make the sun sky image
   auto img = array2d<vec<T, 4>>(extents);
-  for (auto j : range(height / 2)) {
-    auto theta = pif * ((j + 0.5f) / height);
+  for (auto j : range(extents.y / 2)) {
+    auto theta = pif * ((j + 0.5f) / extents.y);
     theta      = clamp(theta, 0.0f, (T)pi / 2 - flt_eps);
-    for (auto i : range(width)) {
-      auto phi = 2 * (T)pi * (T(i + 0.5) / width);
+    for (auto i : range(extents.x)) {
+      auto phi = 2 * (T)pi * (T(i + 0.5) / extents.x);
       auto w = vec3f{cos(phi) * sin(theta), cos(theta), sin(phi) * sin(theta)};
       auto gamma   = acos(clamp(dot(w, sun_direction), -1, 1));
       auto sky_col = sky(theta, gamma, theta_sun);
@@ -678,22 +674,22 @@ inline array2d<vec<T, 4>> make_sunsky(const vec2s& extents, float theta_sun,
 
   if (ground_albedo != vec<T, 3>{0, 0, 0}) {
     auto ground = vec<T, 3>{0, 0, 0};
-    for (auto j : range(height / 2)) {
-      auto theta = (T)pi * (T(j + 0.5) / height);
-      for (auto i : range(width)) {
+    for (auto j : range(extents.y / 2)) {
+      auto theta = (T)pi * (T(j + 0.5) / extents.y);
+      for (auto i : range(extents.x)) {
         auto le    = xyz(img[{i, j}]);
-        auto angle = sin(theta) * 4 * (T)pi / (width * height);
+        auto angle = sin(theta) * 4 * (T)pi / (extents.x * extents.y);
         ground += le * (ground_albedo / (T)pi) * cos(theta) * angle;
       }
     }
-    for (auto j : range(height / 2, height)) {
-      for (auto i : range(width)) {
+    for (auto j : range(extents.y / 2, extents.y)) {
+      for (auto i : range(extents.x)) {
         img[{i, j}] = {ground, 1};
       }
     }
   } else {
-    for (auto j : range(height / 2, height)) {
-      for (auto i : range(width)) {
+    for (auto j : range(extents.y / 2, extents.y)) {
+      for (auto i : range(extents.x)) {
         img[{i, j}] = {0, 0, 0, 1};
       }
     }
@@ -708,14 +704,13 @@ template <typename T = float>
 inline array2d<vec<T, 4>> make_lights(const vec2s& extents,
     const vec<T, 3>& le = {1, 1, 1}, int nlights = 4, T langle = pif / 4,
     T lwidth = (T)pi / 16, T lheight = (T)pi / 16) {
-  auto [width, height] = extents;
-  auto img             = array2d<vec<T, 4>>(extents);
-  for (auto j : range(height)) {
-    auto theta = pif * ((j + 0.5f) / height);
+  auto img = array2d<vec<T, 4>>(extents);
+  for (auto j : range(extents.y)) {
+    auto theta = pif * ((j + 0.5f) / extents.y);
     theta      = clamp(theta, 0, (T)pi / 2 - (T)0.00001);
     if (fabs(theta - langle) > lheight / 2) continue;
-    for (auto i : range(width)) {
-      auto phi     = 2 * (T)pi * ((i + (T)0.5) / width);
+    for (auto i : range(extents.x)) {
+      auto phi     = 2 * (T)pi * ((i + (T)0.5) / extents.x);
       auto inlight = false;
       for (auto l : range(nlights)) {
         auto lphi = 2 * (T)pi * (l + (T)0.5) / nlights;

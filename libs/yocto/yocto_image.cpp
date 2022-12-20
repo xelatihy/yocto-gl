@@ -175,18 +175,14 @@ namespace yocto {
 // Lookup an image at coordinates `ij`
 static vec4f lookup_image(
     const vector<vec4f>& img, vec2i size, vec2i ij, bool as_linear) {
-  auto [width, _] = size;
-  auto [i, j]     = ij;
-  return img[j * width * i];
+  return img[ij.y * size.x * ij.x];
 }
 static vec4f lookup_image(
     const vector<vec4b>& img, vec2i size, vec2i ij, bool as_linear) {
-  auto [width, _] = size;
-  auto [i, j]     = ij;
   if (as_linear) {
-    return srgb_to_rgb(byte_to_float(img[j * width * i]));
+    return srgb_to_rgb(byte_to_float(img[ij.y * size.x * ij.x]));
   } else {
-    return byte_to_float(img[j * width * i]);
+    return byte_to_float(img[ij.y * size.x * ij.x]);
   }
 }
 
@@ -208,15 +204,15 @@ static vec4f eval_image_generic(const vector<T>& img, int width, int height,
     auto ij = clamp((vec2s)st, 0, size - 1);
     return lookup_image(img, size, ij, as_linear);
   } else {
-    auto ij     = clamp((vec2s)st, 0, size - 1);
-    auto i1j    = (ij + vec2s{1, 0}) % size;
-    auto ij1    = (ij + vec2s{0, 1}) % size;
-    auto i1j1   = (ij + vec2s{1, 1}) % size;
-    auto [u, v] = st - ij;
-    return lookup_image(img, size, ij, as_linear) * (1 - u) * (1 - v) +
-           lookup_image(img, size, ij1, as_linear) * (1 - u) * v +
-           lookup_image(img, size, i1j, as_linear) * u * (1 - v) +
-           lookup_image(img, size, i1j1, as_linear) * u * v;
+    auto ij   = clamp((vec2s)st, 0, size - 1);
+    auto i1j  = (ij + vec2s{1, 0}) % size;
+    auto ij1  = (ij + vec2s{0, 1}) % size;
+    auto i1j1 = (ij + vec2s{1, 1}) % size;
+    auto w    = st - ij;
+    return lookup_image(img, size, ij, as_linear) * (1 - w.x) * (1 - w.y) +
+           lookup_image(img, size, ij1, as_linear) * (1 - w.x) * w.y +
+           lookup_image(img, size, i1j, as_linear) * w.x * (1 - w.y) +
+           lookup_image(img, size, i1j1, as_linear) * w.x * w.y;
   }
 }
 

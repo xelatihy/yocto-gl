@@ -232,18 +232,13 @@ constexpr kernel float microfacet_shadowing(float roughness,
 // Sample a microfacet distribution.
 constexpr kernel vec3f sample_microfacet(
     float roughness, const vec3f& normal, const vec2f& rn, bool ggx = true) {
-#ifndef __CUDACC__
-  auto [r1, r2] = rn;
-#else
-  auto r1 = rn[0], r2 = rn[1];
-#endif
-  auto phi   = 2 * pif * r1;
+  auto phi   = 2 * pif * rn.x;
   auto theta = 0.0f;
   if (ggx) {
-    theta = atan(roughness * sqrt(r2 / (1 - r2)));
+    theta = atan(roughness * sqrt(rn.y / (1 - rn.y)));
   } else {
     auto roughness2 = roughness * roughness;
-    theta           = atan(sqrt(-roughness2 * log(1 - r2)));
+    theta           = atan(sqrt(-roughness2 * log(1 - rn.y)));
   }
   auto local_half_vector = vec3f{
       cos(phi) * sin(theta), sin(phi) * sin(theta), cos(theta)};
@@ -265,30 +260,27 @@ constexpr kernel vec3f sample_microfacet(float roughness, const vec3f& normal,
   // http://jcgt.org/published/0007/04/01/
   if (ggx) {
     // move to local coordinate system
-    auto basis              = basis_fromz(normal);
-    auto [Ve_x, Ve_y, Ve_z] = transform_direction(transpose(basis), outgoing);
-    auto alpha_x = roughness, alpha_y = roughness;
+    auto basis = basis_fromz(normal);
+    auto Ve    = transform_direction(transpose(basis), outgoing);
+    auto alpha = vec2f{roughness, roughness};
     // Section 3.2: transforming the view direction to the hemisphere
     // configuration
-    auto Vh = normalize(vec3f{alpha_x * Ve_x, alpha_y * Ve_y, Ve_z});
-    auto [Vh_x, Vh_y, Vh_z] = Vh;
+    auto Vh = normalize(vec3f{alpha.x * Ve.x, alpha.y * Ve.y, Ve.z});
     // Section 4.1: orthonormal basis (with special case if cross product is
     // zero)
-    auto lensq = Vh_x * Vh_x + Vh_y * Vh_y;
-    auto T1    = lensq > 0 ? vec3f{-Vh_y, Vh_x, 0} * (1 / sqrt(lensq))
+    auto lensq = Vh.x * Vh.x + Vh.y * Vh.y;
+    auto T1    = lensq > 0 ? vec3f{-Vh.y, Vh.x, 0} * (1 / sqrt(lensq))
                            : vec3f{1, 0, 0};
     auto T2    = cross(Vh, T1);
     // Section 4.2: parameterization of the projected area
-    auto [r1, r2] = rn;
-    auto r = sqrt(r2), phi = 2 * pif * r1;
+    auto r = sqrt(rn.y), phi = 2 * pif * rn.x;
     auto t1 = r * cos(phi), t2 = r * sin(phi);
-    auto s = 0.5f * (1 + Vh_z);
+    auto s = 0.5f * (1 + Vh.z);
     t2     = (1 - s) * sqrt(1 - t1 * t1) + s * t2;
     // Section 4.3: reprojection onto hemisphere
-    auto [Nh_x, Nh_y, Nh_z] = t1 * T1 + t2 * T2 +
-                              sqrt(max(1 - t1 * t1 - t2 * t2, 0)) * Vh;
+    auto Nh = t1 * T1 + t2 * T2 + sqrt(max(1 - t1 * t1 - t2 * t2, 0)) * Vh;
     // Section 3.4: transforming the normal back to the ellipsoid configuration
-    auto Ne = normalize(vec3f{alpha_x * Nh_x, alpha_y * Nh_y, max(Nh_z, 0)});
+    auto Ne = normalize(vec3f{alpha.x * Nh.x, alpha.y * Nh.y, max(Nh.z, 0)});
     // move to world coordinate
     auto local_halfway = Ne;
     return transform_direction(basis, local_halfway);
@@ -886,23 +878,18 @@ constexpr kernel float eval_phasefunction(
 // Sample phase function
 constexpr kernel vec3f sample_phasefunction(
     float anisotropy, const vec3f& outgoing, const vec2f& rn) {
-#ifndef __CUDACC__
-  auto [r1, r2] = rn;
-#else
-  auto r1 = rn[0], r2 = rn[1];
-#endif
   auto cos_theta = 0.0f;
   if (abs(anisotropy) < 1e-3f) {
-    cos_theta = 1 - 2 * r2;
+    cos_theta = 1 - 2 * rn.y;
   } else {
     auto square = (1 - anisotropy * anisotropy) /
-                  (1 + anisotropy - 2 * anisotropy * r2);
+                  (1 + anisotropy - 2 * anisotropy * rn.y);
     cos_theta = (1 + anisotropy * anisotropy - square * square) /
                 (2 * anisotropy);
   }
 
   auto sin_theta      = sqrt(max(0.0f, 1 - cos_theta * cos_theta));
-  auto phi            = 2 * pif * r1;
+  auto phi            = 2 * pif * rn.x;
   auto local_incoming = vec3f{
       sin_theta * cos(phi), sin_theta * sin(phi), cos_theta};
   return basis_fromz(-outgoing) * local_incoming;

@@ -120,9 +120,8 @@ constexpr kernel vec<T, N> bbox_diagonal(const bbox<T, N>& a) {
 }
 template <typename T>
 constexpr kernel T bbox_area(const bbox<T, 3>& a) {
-  auto diagonal     = a.max - a.min;
-  auto [dx, dy, dz] = diagonal;
-  return 2 * dx * dy + 2 * dx * dz + 2 * dy * dz;
+  auto d = a.max - a.min;
+  return 2 * d.x * d.y + 2 * d.x * d.z + 2 * d.y * d.z;
 }
 
 // Bounding box comparisons.
@@ -216,10 +215,17 @@ constexpr kernel ray<T, N> transform_ray(
 template <typename T, size_t N>
 constexpr kernel bbox<T, N> transform_bbox(
     const mat<T, N + 1, N + 1>& a, const bbox<T, N>& b) {
-  if constexpr (N == 3) {
+  if constexpr (N == 2) {
     auto xformed = bbox<T, N>();
-    for (auto [i, j, k] : range(vec<int, 3>(2, 2, 2))) {
-      auto corner = vec<T, 3>{b[i][0], b[j][1], b[k][2]};
+    for (auto ij : range(vec<int, 2>(2, 2))) {
+      auto corner = vec<T, 2>{b[ij.x][0], b[ij.y][1]};
+      xformed     = merge(xformed, transform_point(a, corner));
+    }
+    return xformed;
+  } else if constexpr (N == 3) {
+    auto xformed = bbox<T, N>();
+    for (auto ijk : range(vec<int, 3>(2, 2, 2))) {
+      auto corner = vec<T, 3>{b[ijk.x][0], b[ijk.y][1], b[ijk.z][2]};
       xformed     = merge(xformed, transform_point(a, corner));
     }
     return xformed;
@@ -228,10 +234,17 @@ constexpr kernel bbox<T, N> transform_bbox(
 template <typename T, size_t N>
 constexpr kernel bbox<T, N> transform_bbox(
     const frame<T, N>& a, const bbox<T, N>& b) {
-  if constexpr (N == 3) {
+  if constexpr (N == 2) {
     auto xformed = bbox<T, N>();
-    for (auto [i, j, k] : range(vec<int, 3>(2, 2, 2))) {
-      auto corner = vec<T, 3>{b[i][0], b[j][1], b[k][2]};
+    for (auto ij : range(vec<int, 2>(2, 2))) {
+      auto corner = vec<T, 2>{b[ij.x][0], b[ij.y][1]};
+      xformed     = merge(xformed, transform_point(a, corner));
+    }
+    return xformed;
+  } else if constexpr (N == 3) {
+    auto xformed = bbox<T, N>();
+    for (auto ijk : range(vec<int, 3>(2, 2, 2))) {
+      auto corner = vec<T, 3>{b[ijk.x][0], b[ijk.y][1], b[ijk.z][2]};
       xformed     = merge(xformed, transform_point(a, corner));
     }
     return xformed;
@@ -248,8 +261,7 @@ namespace yocto {
 // Check if a quad is a triangle
 template <typename I>
 constexpr kernel bool is_triangle(const vec<I, 4>& quad) {
-  auto [v1, v2, v3, v4] = quad;
-  return v3             = v4;
+  return quad.z == quad.w;
 }
 
 // Get the triangle from the quad
@@ -320,27 +332,25 @@ constexpr kernel bbox<T, N> point_bounds(
 template <typename T, size_t N, typename I>
 constexpr kernel bbox<T, N> line_bounds(
     const vector<vec<T, N>>& positions, const vec<I, 2>& line) {
-  auto [v1, v2] = line;
-  return line_bounds(positions[v1], positions[v2]);
+  return line_bounds(positions[line.x], positions[line.y]);
 }
 template <typename T, size_t N, typename I>
 constexpr kernel bbox<T, N> line_bounds(const vector<vec<T, N>>& positions,
     const vector<T>& radius, const vec<I, 2>& line) {
-  auto [v1, v2] = line;
-  return line_bounds(positions[v1], positions[v2], radius[v1], radius[v2]);
+  return line_bounds(
+      positions[line.x], positions[line.y], radius[line.x], radius[line.y]);
 }
 template <typename T, size_t N, typename I>
 constexpr kernel bbox<T, N> triangle_bounds(
     const vector<vec<T, N>>& positions, const vec<I, 3>& triangle) {
-  auto [v1, v2, v3] = triangle;
-  return triangle_bounds(positions[v1], positions[v2], positions[v3]);
+  return triangle_bounds(
+      positions[triangle.x], positions[triangle.y], positions[triangle.z]);
 }
 template <typename T, size_t N, typename I>
 constexpr kernel bbox<T, N> quad_bounds(
     const vector<vec<T, N>>& positions, const vec<I, 4>& quad) {
-  auto [v1, v2, v3, v4] = quad;
-  return quad_bounds(
-      positions[v1], positions[v2], positions[v3], positions[v4]);
+  return quad_bounds(positions[quad.x], positions[quad.y], positions[quad.z],
+      positions[quad.w]);
 }
 
 // Primitive bounds in indexed arrays.
@@ -356,27 +366,25 @@ constexpr kernel bbox<T, N> point_bounds(
 template <typename T, size_t N, typename I>
 constexpr kernel bbox<T, N> line_bounds(
     cspan<vec<T, N>> positions, vec<I, 2> line) {
-  auto [v1, v2] = line;
-  return line_bounds(positions[v1], positions[v2]);
+  return line_bounds(positions[line.x], positions[line.y]);
 }
 template <typename T, size_t N, typename I>
 constexpr kernel bbox<T, N> line_bounds(
     cspan<vec<T, N>> positions, cspan<T> radius, vec<I, 2> line) {
-  auto [v1, v2] = line;
-  return line_bounds(positions[v1], positions[v2], radius[v1], radius[v2]);
+  return line_bounds(
+      positions[line.x], positions[line.y], radius[line.x], radius[line.y]);
 }
 template <typename T, size_t N, typename I>
 constexpr kernel bbox<T, N> triangle_bounds(
     cspan<vec<T, N>> positions, vec<I, 3> triangle) {
-  auto [v1, v2, v3] = triangle;
-  return triangle_bounds(positions[v1], positions[v2], positions[v3]);
+  return triangle_bounds(
+      positions[triangle.x], positions[triangle.y], positions[triangle.z]);
 }
 template <typename T, size_t N, typename I>
 constexpr kernel bbox<T, N> quad_bounds(
     cspan<vec<T, N>> positions, vec<I, 4> quad) {
-  auto [v1, v2, v3, v4] = quad;
-  return quad_bounds(
-      positions[v1], positions[v2], positions[v3], positions[v4]);
+  return quad_bounds(positions[quad.x], positions[quad.y], positions[quad.z],
+      positions[quad.q]);
 }
 template <typename T, size_t N, typename I>
 constexpr kernel bbox<T, N> sphere_bounds(
@@ -386,8 +394,8 @@ constexpr kernel bbox<T, N> sphere_bounds(
 template <typename T, size_t N, typename I>
 constexpr kernel bbox<T, N> capsule_bounds(
     cspan<vec<T, N>> positions, cspan<T> radius, vec<I, 2> line) {
-  auto [v1, v2] = line;
-  return capsule_bounds(positions[v1], positions[v2], radius[v1], radius[v2]);
+  return capsule_bounds(
+      positions[line.x], positions[line.y], radius[line.x], radius[line.y]);
 }
 
 }  // namespace yocto
@@ -406,8 +414,7 @@ constexpr kernel vec<T, 3> line_tangent(
 template <typename T, typename I>
 constexpr kernel vec<T, 3> line_tangent(
     const vector<vec<T, 3>>& positions, const vec<I, 2>& line) {
-  auto [v1, v2] = line;
-  return line_tangent(positions[v1], positions[v2]);
+  return line_tangent(positions[line.x], positions[line.y]);
 }
 template <typename T>
 constexpr kernel T line_length(const vec<T, 3>& p1, const vec<T, 3>& p2) {
@@ -416,8 +423,7 @@ constexpr kernel T line_length(const vec<T, 3>& p1, const vec<T, 3>& p2) {
 template <typename T, typename I>
 constexpr kernel T line_length(
     const vector<vec<T, 3>>& positions, const vec<I, 2>& line) {
-  auto [v1, v2] = line;
-  return line_length(positions[v1], positions[v2]);
+  return line_length(positions[line.x], positions[line.y]);
 }
 
 // Triangle properties.
@@ -429,8 +435,8 @@ constexpr kernel vec<T, 3> triangle_normal(
 template <typename T, typename I>
 constexpr kernel vec<T, 3> triangle_normal(
     const vector<vec<T, 3>>& positions, const vec<I, 3>& triangle) {
-  auto [v1, v2, v3] = triangle;
-  return triangle_normal(positions[v1], positions[v2], positions[v3]);
+  return triangle_normal(
+      positions[triangle.x], positions[triangle.y], positions[triangle.z]);
 }
 template <typename T>
 constexpr kernel T triangle_area(
@@ -440,8 +446,8 @@ constexpr kernel T triangle_area(
 template <typename T, typename I>
 constexpr kernel T triangle_area(
     const vector<vec<T, 3>>& positions, const vec<I, 3>& triangle) {
-  auto [v1, v2, v3] = triangle;
-  return triangle_area(positions[v1], positions[v2], positions[v3]);
+  return triangle_area(
+      positions[triangle.x], positions[triangle.y], positions[triangle.z]);
 }
 
 // Quad properties.
@@ -453,9 +459,8 @@ constexpr kernel vec<T, 3> quad_normal(const vec<T, 3>& p1, const vec<T, 3>& p2,
 template <typename T, typename I>
 constexpr kernel vec<T, 3> quad_normal(
     const vector<vec<T, 3>>& positions, const vec<I, 4>& quad) {
-  auto [v1, v2, v3, v4] = quad;
-  return quad_normal(
-      positions[v1], positions[v2], positions[v3], positions[v4]);
+  return quad_normal(positions[quad.x], positions[quad.y], positions[quad.z],
+      positions[quad.w]);
 }
 template <typename T>
 constexpr kernel T quad_area(const vec<T, 3>& p1, const vec<T, 3>& p2,
@@ -465,8 +470,8 @@ constexpr kernel T quad_area(const vec<T, 3>& p1, const vec<T, 3>& p2,
 template <typename T, typename I>
 constexpr kernel T quad_area(
     const vector<vec<T, 3>>& positions, const vec<I, 4>& quad) {
-  auto [v1, v2, v3, v4] = quad;
-  return quad_area(positions[v1], positions[v2], positions[v3], positions[v4]);
+  return quad_area(positions[quad.x], positions[quad.y], positions[quad.z],
+      positions[quad.w]);
 }
 
 // Interpolates values over a line parameterized from a to b by u. Same as lerp.
@@ -477,39 +482,31 @@ constexpr kernel T interpolate_line(const T& p1, const T& p2, T1 u) {
 template <typename T, typename T1, typename I>
 constexpr kernel T interpolate_line(
     const vector<T>& vertices, const vec<I, 2>& line, T1 u) {
-  auto [v1, v2] = line;
-  return interpolate_line(vertices[v1], vertices[v2], u);
+  return interpolate_line(vertices[line.x], vertices[line.y], u);
 }
 // Interpolates values over a line parameterized from a to b by u. Same as lerp.
 template <typename T, typename T1>
 constexpr kernel T interpolate_line(
     const T& p1, const T& p2, const vec<T1, 2>& uv) {
-  auto [u, _] = uv;
-  return interpolate_line(p1, p2, u);
+  return interpolate_line(p1, p2, uv.x);
 }
 template <typename T, typename T1, typename I>
 constexpr kernel T interpolate_line(
     const vector<T>& vertices, const vec<I, 2>& line, const vec<T1, 2>& uv) {
-  auto [u, _] = uv;
-  return interpolate_line(vertices, line, u);
+  return interpolate_line(vertices, line, uv.x);
 }
 // Interpolates values over a triangle parameterized by u and v along the
 // (p2-p1) and (p3-p1) directions. Same as barycentric interpolation.
 template <typename T, typename T1>
 constexpr kernel T interpolate_triangle(
     const T& p1, const T& p2, const T& p3, const vec<T1, 2>& uv) {
-#ifndef __CUDACC__
-  auto [u, v] = uv;
-#else
-  auto u = uv[0], v = uv[1];
-#endif
-  return p1 * (1 - u - v) + p2 * u + p3 * v;
+  return p1 * (1 - uv.x - uv.y) + p2 * uv.x + p3 * uv.y;
 }
 template <typename T, typename T1, typename I>
 constexpr kernel T interpolate_triangle(
     const vector<T>& vertices, const vec<I, 3>& triangle, T1 u) {
-  auto [v1, v2, v3] = triangle;
-  return interpolate_triangle(vertices[v1], vertices[v2], vertices[v3], u);
+  return interpolate_triangle(
+      vertices[triangle.x], vertices[triangle.y], vertices[triangle.z], u);
 }
 // Interpolates values over a quad parameterized by u and v along the
 // (p2-p1) and (p3-p2) directions. Same as bilinear interpolation.
@@ -525,9 +522,8 @@ constexpr kernel T interpolate_quad(
 template <typename T, typename T1, typename I>
 constexpr kernel T interpolate_quad(
     const vector<T>& vertices, const vec<I, 4>& quad, T1 u) {
-  auto [v1, v2, v3, v4] = quad;
-  return interpolate_quad(
-      vertices[v1], vertices[v2], vertices[v3], vertices[v4], u);
+  return interpolate_quad(vertices[quad.x], vertices[quad.y], vertices[quad.z],
+      vertices[quad.w], u);
 }
 
 // Interpolates values along a cubic Bezier segment parametrized by u.
@@ -554,8 +550,7 @@ constexpr kernel vec<T, 3> line_point(
 template <typename T, typename I>
 constexpr kernel vec<T, 3> line_point(
     const vector<vec<T, 3>>& positions, const vec<I, 2>& line, T u) {
-  auto [v1, v2] = line;
-  return line_point(positions[v1], positions[v2], u);
+  return line_point(positions[line.x], positions[line.y], u);
 }
 template <typename T>
 constexpr kernel vec<T, 3> line_tangent(
@@ -565,34 +560,31 @@ constexpr kernel vec<T, 3> line_tangent(
 template <typename T, typename I>
 constexpr kernel vec<T, 3> line_tangent(
     const vector<vec<T, 3>>& tangents, const vec<I, 2>& line, T u) {
-  auto [v1, v2] = line;
-  return line_tangent(tangents[v1], tangents[v2], u);
+  return line_tangent(tangents[line.x], tangents[line.y], u);
 }
 
 // Interpolated triangle properties.
 template <typename T>
 constexpr kernel vec<T, 3> triangle_point(const vec<T, 3>& p1,
     const vec<T, 3>& p2, const vec<T, 3>& p3, const vec<T, 2>& uv) {
-  auto [u, v] = uv;
-  return p1 * (1 - u - v) + p2 * u + p3 * v;
+  return p1 * (1 - uv.x - uv.y) + p2 * uv.x + p3 * uv.y;
 }
 template <typename T, typename I>
 constexpr kernel vec<T, 3> triangle_point(const vector<vec<T, 3>>& positions,
     const vec<I, 3>& triangle, const vec<T, 2>& uv) {
-  auto [v1, v2, v3] = triangle;
-  return triangle_point(positions[v1], positions[v2], positions[v3], uv);
+  return triangle_point(
+      positions[triangle.x], positions[triangle.y], positions[triangle.z], uv);
 }
 template <typename T>
 constexpr kernel vec<T, 3> triangle_normal(const vec<T, 3>& n0,
     const vec<T, 3>& n1, const vec<T, 3>& n2, const vec<T, 2>& uv) {
-  auto [u, v] = uv;
-  return normalize(n0 * (1 - u - v) + n1 * u + n2 * v);
+  return normalize(n0 * (1 - uv.x - uv.y) + n1 * uv.x + n2 * uv.y);
 }
 template <typename T, typename I>
 constexpr kernel vec<T, 3> triangle_normal(const vector<vec<T, 3>>& normals,
     const vec<I, 3>& triangle, const vec<T, 2>& uv) {
-  auto [v1, v2, v3] = triangle;
-  return triangle_normal(normals[v1], normals[v2], normals[v3], uv);
+  return triangle_normal(
+      normals[triangle.x], normals[triangle.y], normals[triangle.z], uv);
 }
 
 // Interpolated quad properties.
@@ -608,9 +600,8 @@ constexpr kernel vec<T, 3> quad_point(const vec<T, 3>& p1, const vec<T, 3>& p2,
 template <typename T, typename I>
 constexpr kernel vec<T, 3> quad_point(const vector<vec<T, 3>>& positions,
     const vec<I, 4>& quad, const vec<T, 2>& uv) {
-  auto [v1, v2, v3, v4] = quad;
-  return quad_point(
-      positions[v1], positions[v2], positions[v3], positions[v4], uv);
+  return quad_point(positions[quad.x], positions[quad.y], positions[quad.z],
+      positions[quad.w], uv);
 }
 template <typename T>
 constexpr kernel vec<T, 3> quad_normal(const vec<T, 3>& n0, const vec<T, 3>& n1,
@@ -624,22 +615,22 @@ constexpr kernel vec<T, 3> quad_normal(const vec<T, 3>& n0, const vec<T, 3>& n1,
 template <typename T, typename I>
 constexpr kernel vec<T, 3> quad_normal(const vector<vec<T, 3>>& normals,
     const vec<I, 4>& quad, const vec<T, 2>& uv) {
-  auto [v1, v2, v3, v4] = quad;
-  return quad_normal(normals[v1], normals[v2], normals[v3], normals[v4], uv);
+  return quad_normal(
+      normals[quad.x], normals[quad.y], normals[quad.z], normals[quad.w], uv);
 }
 
 // Interpolated sphere properties.
 template <typename T>
 constexpr kernel vec<T, 3> sphere_point(
     const vec<T, 3> p, T r, const vec<T, 2>& uv) {
-  auto [phi, theta] = uv * vec<T, 2>{2 * (T)pi, (T)pi};
+  auto phi = uv.x * 2 * (T)pi, theta = uv.y * (T)pi;
   return p + r * vec<T, 3>{
                      cos(phi) * sin(theta), sin(phi) * sin(theta), cos(theta)};
 }
 template <typename T>
 constexpr kernel vec<T, 3> sphere_normal(
     const vec<T, 3> p, T r, const vec<T, 2>& uv) {
-  auto [phi, theta] = uv * vec<T, 2>{2 * (T)pi, (T)pi};
+  auto phi = uv.x * 2 * (T)pi, theta = uv.y * (T)pi;
   return normalize(
       vec<T, 3>{cos(phi) * sin(theta), sin(phi) * sin(theta), cos(theta)});
 }
@@ -674,9 +665,9 @@ template <typename T, typename I>
 constexpr kernel pair<vec<T, 3>, vec<T, 3>> triangle_tangents_fromuv(
     const vector<vec<T, 3>>& positions, const vector<vec<T, 2>>& texcoords,
     const vec<I, 3>& triangle) {
-  auto [v1, v2, v3] = triangle;
-  return triangle_tangents_fromuv(positions[v1], positions[v2], positions[v3],
-      texcoords[v1], texcoords[v2], texcoords[v3]);
+  return triangle_tangents_fromuv(positions[triangle.x], positions[triangle.y],
+      positions[triangle.z], texcoords[triangle.x], texcoords[triangle.y],
+      texcoords[triangle.z]);
 }
 
 // Quad tangent and bi-tangent from uv.
@@ -695,10 +686,9 @@ template <typename T, typename I>
 constexpr kernel pair<vec<T, 3>, vec<T, 3>> quad_tangents_fromuv(
     const vector<vec<T, 3>>& positions, const vector<vec<T, 2>>& texcoords,
     const vec<I, 4>& quad, const vec<T, 2>& current_uv) {
-  auto [v1, v2, v3, v4] = quad;
-  return quad_tangents_fromuv(positions[v1], positions[v2], positions[v3],
-      positions[v4], texcoords[v1], texcoords[v2], texcoords[v3], texcoords[v4],
-      current_uv);
+  return quad_tangents_fromuv(positions[quad.x], positions[quad.y],
+      positions[quad.z], positions[quad.w], texcoords[quad.x],
+      texcoords[quad.y], texcoords[quad.z], texcoords[quad.w], current_uv);
 }
 
 }  // namespace yocto
@@ -711,25 +701,18 @@ namespace yocto {
 // Computes the aspect ratio.
 template <typename T>
 constexpr kernel T aspect_ratio(const vec<T, 2>& size) {
-  auto [width, height] = size;
-  return width / height;
+  return size.x / size.y;
 }
 
 // Flip u from [0,1] to [1,0]
 template <typename T>
 constexpr kernel vec<T, 2> flip_u(const vec<T, 2>& uv) {
-#ifndef __CUDACC__
-  auto [u, v] = uv;
-#else
-  auto u = uv[0], v = uv[1];
-#endif
-  return {1 - u, v};
+  return {1 - uv.x, uv.y};
 }
 // Flip v from [0,1] to [1,0]
 template <typename T>
 constexpr kernel vec<T, 2> flip_v(const vec<T, 2>& uv) {
-  auto [u, v] = uv;
-  return {u, 1 - v};
+  return {uv.x, 1 - uv.y};
 }
 
 // Generate a ray from a camera
@@ -852,9 +835,8 @@ template <typename T, typename I>
 constexpr kernel prim_gintersection<T> intersect_line(const ray<T, 3>& ray,
     const vector<vec<T, 3>>& positions, const vector<T>& radius,
     const vec<I, 2>& line) {
-  auto [v1, v2] = line;
-  return intersect_line(
-      ray, positions[v1], positions[v2], radius[v1], radius[v2]);
+  return intersect_line(ray, positions[line.x], positions[line.y],
+      radius[line.x], radius[line.y]);
 }
 
 // Intersect a ray with a sphere
@@ -926,8 +908,8 @@ constexpr kernel prim_gintersection<T> intersect_triangle(const ray<T, 3>& ray,
 template <typename T, typename I>
 constexpr kernel prim_gintersection<T> intersect_triangle(const ray<T, 3>& ray,
     const vector<vec<T, 3>>& positions, const vec<I, 3>& triangle) {
-  auto [v1, v2, v3] = triangle;
-  return intersect_triangle(ray, positions[v1], positions[v2], positions[v3]);
+  return intersect_triangle(
+      ray, positions[triangle.x], positions[triangle.y], positions[triangle.z]);
 }
 
 // Intersect a ray with a quad.
@@ -944,9 +926,8 @@ constexpr kernel prim_gintersection<T> intersect_quad(const ray<T, 3>& ray,
 template <typename T, typename I>
 constexpr kernel prim_gintersection<T> intersect_quad(const ray<T, 3>& ray,
     const vector<vec<T, 3>>& positions, const vec<I, 4>& quad) {
-  auto [v1, v2, v3, v4] = quad;
-  return intersect_quad(
-      ray, positions[v1], positions[v2], positions[v3], positions[v4]);
+  return intersect_quad(ray, positions[quad.x], positions[quad.y],
+      positions[quad.z], positions[quad.w]);
 }
 
 // Intersect a ray with a axis-aligned bounding box
@@ -1034,9 +1015,8 @@ template <typename T, typename I>
 constexpr kernel prim_gintersection<T> overlap_line(const vec<T, 3>& pos,
     T dist_max, const vector<vec<T, 3>>& positions, const vector<T> radius,
     const vec<I, 2>& line) {
-  auto [v1, v2] = line;
-  return overlap_line(
-      pos, dist_max, positions[v1], positions[v2], radius[v1], radius[v2]);
+  return overlap_line(pos, dist_max, positions[line.x], positions[line.y],
+      radius[line.x], radius[line.y]);
 }
 
 // Compute the closest triangle uv to a give position pos.
@@ -1086,9 +1066,8 @@ constexpr kernel vec<T, 2> closestuv_triangle(const vec<T, 3>& pos,
 template <typename T, typename I>
 constexpr kernel prim_gintersection<T> overlap_triangle(const vec<T, 3>& pos,
     T dist_max, const vector<vec<T, 3>>& positions, const vec<I, 3>& triangle) {
-  auto [v1, v2, v3] = triangle;
-  return overlap_triangle(
-      pos, dist_max, positions[v1], positions[v2], positions[v3]);
+  return overlap_triangle(pos, dist_max, positions[triangle.x],
+      positions[triangle.y], positions[triangle.z]);
 }
 
 // Check if a triangle overlaps a position pos withint a maximum distance
@@ -1108,9 +1087,9 @@ template <typename T, typename I>
 constexpr kernel prim_gintersection<T> overlap_triangle(const vec<T, 3>& pos,
     T dist_max, const vector<vec<T, 3>>& positions, const vector<T> radius,
     const vec<I, 3>& triangle) {
-  auto [v1, v2, v3] = triangle;
-  return overlap_triangle(pos, dist_max, positions[v1], positions[v2],
-      positions[v3], radius[v1], radius[v2], radius[v3]);
+  return overlap_triangle(pos, dist_max, positions[triangle.x],
+      positions[triangle.y], positions[triangle.z], radius[triangle.x],
+      radius[triangle.y], radius[triangle.z]);
 }
 
 // Check if a quad overlaps a position pos withint a maximum distance dist_max.
@@ -1128,10 +1107,9 @@ template <typename T, typename I>
 constexpr kernel prim_gintersection<T> overlap_quad(const vec<T, 3>& pos,
     T dist_max, const vector<vec<T, 3>>& positions, const vector<T> radius,
     const vec<I, 4>& quad) {
-  auto [v1, v2, v3, v4] = quad;
-  return overlap_quad(pos, dist_max, positions[v1], positions[v2],
-      positions[v3], positions[v4], radius[v1], radius[v2], radius[v3],
-      radius[v4]);
+  return overlap_quad(pos, dist_max, positions[quad.x], positions[quad.y],
+      positions[quad.z], positions[quad.w], radius[quad.x], radius[quad.y],
+      radius[quad.z], radius[quad.w]);
 }
 
 // Check if a bbox overlaps a position pos withint a maximum distance dist_max.

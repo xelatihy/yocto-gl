@@ -366,12 +366,12 @@ static vec3f sample_lights(const scene_data& scene, const trace_lights& lights,
   } else if (light.environment != invalidid) {
     auto& environment = scene.environments[light.environment];
     if (environment.emission_tex != invalidid) {
-      auto& texture        = scene.textures[environment.emission_tex];
-      auto  idx            = sample_discrete(light.elements_cdf, rel);
-      auto [width, height] = (vec2i)max(
+      auto& texture = scene.textures[environment.emission_tex];
+      auto  idx     = sample_discrete(light.elements_cdf, rel);
+      auto  size    = (vec2i)max(
           texture.pixelsf.extents(), texture.pixelsb.extents());
       auto uv = vec2f{
-          ((idx % width) + 0.5f) / width, ((idx / width) + 0.5f) / height};
+          ((idx % size.x) + 0.5f) / size.x, ((idx / size.x) + 0.5f) / size.y};
       return transform_direction(
           environment.frame, sphericaluv_to_cartesiany(uv));
     } else {
@@ -415,14 +415,14 @@ static float sample_lights_pdf(const scene_data& scene, const trace_bvh& bvh,
         auto& texture  = scene.textures[environment.emission_tex];
         auto  texcoord = cartesiany_to_sphericaluv(
             transform_direction(inverse(environment.frame), direction));
-        auto extents = (vec2i)max(
+        auto size = (vec2i)max(
             texture.pixelsf.extents(), texture.pixelsb.extents());
-        auto [width, height] = extents;
-        auto [i, j] = clamp((vec2i)(texcoord * extents), 0, extents - 1);
-        auto prob   = sample_discrete_pdf(light.elements_cdf, j * width + i) /
+        auto ij   = clamp((vec2i)(texcoord * size), 0, size - 1);
+        auto prob = sample_discrete_pdf(
+                        light.elements_cdf, ij.y * size.x + ij.x) /
                     light.elements_cdf.back();
-        auto angle = (2 * pif / width) * (pif / height) *
-                     sin(pif * (j + 0.5f) / height);
+        auto angle = (2 * pif / size.x) * (pif / size.y) *
+                     sin(pif * (ij.y + 0.5f) / size.y);
         pdf += prob / angle;
       } else {
         pdf += 1 / (4 * pif);
@@ -1558,13 +1558,13 @@ trace_lights make_trace_lights(
     light.environment = (int)handle;
     if (environment.emission_tex != invalidid) {
       auto& texture = scene.textures[environment.emission_tex];
-      auto  extents = max(texture.pixelsf.extents(), texture.pixelsb.extents());
-      auto [width, height] = extents;
-      light.elements_cdf   = vector<float>(prod(extents));
-      for (auto [i, j] : range(extents)) {
-        auto th                 = (j + 0.5f) * pif / height;
-        auto value              = lookup_texture(texture, {i, j});
-        auto idx                = j * width + i;
+      auto  size    = (vec2i)max(
+          texture.pixelsf.extents(), texture.pixelsb.extents());
+      light.elements_cdf = vector<float>(prod(size));
+      for (auto ij : range(size)) {
+        auto th                 = (ij.y + 0.5f) * pif / size.y;
+        auto value              = lookup_texture(texture, ij);
+        auto idx                = ij.y * size.x + ij.x;
         light.elements_cdf[idx] = max(value) * sin(th);
         if (idx != 0) light.elements_cdf[idx] += light.elements_cdf[idx - 1];
       }
@@ -1715,18 +1715,18 @@ void get_denoised_image(array2d<vec4f>& image, const trace_state& state) {
   get_rendered_image(image, state);
 
   // width and height
-  auto [width, height] = (vec2i)image.extents();
+  auto size = (vec2i)image.extents();
 
   // Create a denoising filter
   oidn::FilterRef filter = device.newFilter("RT");  // ray tracing filter
-  filter.setImage("color", (void*)image.data(), oidn::Format::Float3, width,
-      height, 0, sizeof(vec4f), sizeof(vec4f) * width);
+  filter.setImage("color", (void*)image.data(), oidn::Format::Float3, size.x,
+      size.y, 0, sizeof(vec4f), sizeof(vec4f) * size.x);
   filter.setImage("albedo", (void*)state.albedo.data(), oidn::Format::Float3,
-      width, height, 0, sizeof(vec4f), sizeof(vec4f) * width);
+      size.x, size.y, 0, sizeof(vec4f), sizeof(vec4f) * size.x);
   filter.setImage("normal", (void*)state.normal.data(), oidn::Format::Float3,
-      width, height, 0, sizeof(vec4f), sizeof(vec4f) * width);
-  filter.setImage("output", image.data(), oidn::Format::Float3, width, height,
-      0, sizeof(vec4f), sizeof(vec4f) * width);
+      size.x, size.y, 0, sizeof(vec4f), sizeof(vec4f) * size.x);
+  filter.setImage("output", image.data(), oidn::Format::Float3, size.x, size.y,
+      0, sizeof(vec4f), sizeof(vec4f) * size.x);
   filter.set("inputScale", 1.0f);  // set scale as fixed
   filter.set("hdr", true);         // image is HDR
   filter.commit();
@@ -1779,18 +1779,18 @@ void denoise_image(array2d<vec4f>& denoised, const array2d<vec4f>& image,
   denoised = image;
 
   // width, height
-  auto [width, height] = (vec2i)image.extents();
+  auto size = (vec2i)image.extents();
 
   // Create a denoising filter
   oidn::FilterRef filter = device.newFilter("RT");  // ray tracing filter
-  filter.setImage("color", (void*)image.data(), oidn::Format::Float3, width,
-      height, 0, sizeof(vec4f), sizeof(vec4f) * width);
+  filter.setImage("color", (void*)image.data(), oidn::Format::Float3, size.x,
+      size.y, 0, sizeof(vec4f), sizeof(vec4f) * size.x);
   filter.setImage(
-      "albedo", (void*)image.data(), oidn::Format::Float3, width, height);
+      "albedo", (void*)image.data(), oidn::Format::Float3, size.x, size.y);
   filter.setImage(
-      "normal", (void*)image.data(), oidn::Format::Float3, width, height);
-  filter.setImage("output", denoised.data(), oidn::Format::Float3, width,
-      height, 0, sizeof(vec4f), sizeof(vec4f) * width);
+      "normal", (void*)image.data(), oidn::Format::Float3, size.x, size.y);
+  filter.setImage("output", denoised.data(), oidn::Format::Float3, size.x,
+      size.y, 0, sizeof(vec4f), sizeof(vec4f) * size.x);
   filter.set("inputScale", 1.0f);  // set scale as fixed
   filter.set("hdr", true);         // image is HDR
   filter.commit();

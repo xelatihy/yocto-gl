@@ -674,18 +674,18 @@ cuscene_data make_cutrace_scene(cutrace_context& context,
   auto cutextures = vector<cutexture_data>{};
   for (auto& texture : scene.textures) {
     auto& cutexture = cutextures.emplace_back();
-    auto  extents   = max(texture.pixelsf.extents(), texture.pixelsb.extents());
-    cutexture.extents = (vec2i)extents;
+    auto  extents   = (vec2i)max(
+        texture.pixelsf.extents(), texture.pixelsb.extents());
+    cutexture.extents = extents;
     cutexture.linear  = texture.linear;
     cutexture.nearest = texture.nearest;
     cutexture.clamp   = texture.clamp;
 
-    auto as_byte         = !texture.pixelsb.empty();
-    auto [width, height] = extents;
+    auto as_byte = !texture.pixelsb.empty();
 
     auto array_descriptor        = CUDA_ARRAY_DESCRIPTOR{};
-    array_descriptor.Width       = width;
-    array_descriptor.Height      = height;
+    array_descriptor.Width       = extents.x;
+    array_descriptor.Height      = extents.y;
     array_descriptor.NumChannels = 4;
     array_descriptor.Format      = as_byte ? CU_AD_FORMAT_UNSIGNED_INT8
                                            : CU_AD_FORMAT_FLOAT;
@@ -700,9 +700,9 @@ cuscene_data make_cutrace_scene(cutrace_context& context,
     memcpy_descriptor.srcHost       = nullptr;
     memcpy_descriptor.srcXInBytes   = 0;
     memcpy_descriptor.srcY          = 0;
-    memcpy_descriptor.srcPitch      = width * (as_byte ? 4 : 16);
-    memcpy_descriptor.WidthInBytes  = width * (as_byte ? 4 : 16);
-    memcpy_descriptor.Height        = height;
+    memcpy_descriptor.srcPitch      = extents.x * (as_byte ? 4 : 16);
+    memcpy_descriptor.WidthInBytes  = extents.x * (as_byte ? 4 : 16);
+    memcpy_descriptor.Height        = extents.y;
     if (!texture.pixelsb.empty()) {
       memcpy_descriptor.srcHost = texture.pixelsb.data();
       check_result(cuMemcpy2D(&memcpy_descriptor));
