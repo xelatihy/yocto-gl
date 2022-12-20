@@ -108,7 +108,16 @@ constexpr kernel T _cubic_kernel(T x_) {
 }
 template <typename T, size_t N>
 constexpr kernel T _cubic_kernel(const vec<T, N>& x) {
-  return prod(map(x, [](T x) { return _cubic_kernel(x); }));
+  if constexpr (N == 1) {
+    return _cubic_kernel(x.x);
+  } else if constexpr (N == 2) {
+    return _cubic_kernel(x.x) * _cubic_kernel(x.y);
+  } else if constexpr (N == 3) {
+    return _cubic_kernel(x.x) * _cubic_kernel(x.y) * _cubic_kernel(x.z);
+  } else if constexpr (N == 4) {
+    return _cubic_kernel(x.x) * _cubic_kernel(x.y) * _cubic_kernel(x.z) *
+           _cubic_kernel(x.w);
+  }
 }
 
 // Random values

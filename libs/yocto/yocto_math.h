@@ -399,16 +399,16 @@ constexpr auto one = vec<T, N>{1};
 
 // Element access
 template <typename T>
-constexpr kernel vec<T, 2> xy(const vec<T, 3>& a) {
-  return {a.x, a.y};
+constexpr kernel const vec<T, 2>& xy(const vec<T, 3>& a) {
+  return (const vec<T, 2>&)a;
 }
 template <typename T>
-constexpr kernel vec<T, 2> xy(const vec<T, 4>& a) {
-  return {a.x, a.y};
+constexpr kernel const vec<T, 2>& xy(const vec<T, 4>& a) {
+  return (const vec<T, 2>&)a;
 }
 template <typename T>
-constexpr kernel vec<T, 3> xyz(const vec<T, 4>& a) {
-  return {a.x, a.y, a.z};
+constexpr kernel const vec<T, 3>& xyz(const vec<T, 4>& a) {
+  return (const vec<T, 3>&)a;
 }
 
 // Vector sequence operations.
@@ -447,100 +447,6 @@ constexpr kernel const T* data(const vec<T, N>& a) {
 template <typename T, size_t N>
 constexpr kernel T* data(vec<T, N>& a) {
   return &(a.x);
-}
-
-// Implementation of operations using map and fold
-template <typename T1, size_t N, typename Func, typename T = result_t<Func, T1>>
-constexpr kernel vec<T, N> map(const vec<T1, N>& a, Func&& func) {
-  if constexpr (N == 1) {
-    return {func(a.x)};
-  } else if constexpr (N == 2) {
-    return {func(a.x), func(a.y)};
-  } else if constexpr (N == 3) {
-    return {func(a.x), func(a.y), func(a.z)};
-  } else if constexpr (N == 4) {
-    return {func(a.x), func(a.y), func(a.z), func(a.w)};
-  }
-}
-template <typename T1, typename T2, size_t N, typename Func,
-    typename T = result_t<Func, T1, T2>>
-constexpr kernel vec<T, N> map(
-    const vec<T1, N>& a, const vec<T2, N>& b, Func&& func) {
-  if constexpr (N == 1) {
-    return {func(a.x, b.x)};
-  } else if constexpr (N == 2) {
-    return {func(a.x, b.x), func(a.y, b.y)};
-  } else if constexpr (N == 3) {
-    return {func(a.x, b.x), func(a.y, b.y), func(a.z, b.z)};
-  } else if constexpr (N == 4) {
-    return {func(a.x, b.x), func(a.y, b.y), func(a.z, b.z), func(a.w, b.w)};
-  }
-}
-template <typename T1, typename T2, size_t N, typename Func,
-    typename T = result_t<Func, T1, T2>>
-constexpr kernel vec<T, N> map(const vec<T1, N>& a, T2 b, Func&& func) {
-  if constexpr (N == 1) {
-    return {func(a.x, b)};
-  } else if constexpr (N == 2) {
-    return {func(a.x, b), func(a.y, b)};
-  } else if constexpr (N == 3) {
-    return {func(a.x, b), func(a.y, b), func(a.z, b)};
-  } else if constexpr (N == 4) {
-    return {func(a.x, b), func(a.y, b), func(a.z, b), func(a.w, b)};
-  }
-}
-template <typename T1, typename T2, size_t N, typename Func,
-    typename T = result_t<Func, T1, T2>>
-constexpr kernel vec<T, N> map(T1 a, const vec<T2, N>& b, Func&& func) {
-  if constexpr (N == 1) {
-    return {func(a, b.x)};
-  } else if constexpr (N == 2) {
-    return {func(a, b.x), func(a, b.y)};
-  } else if constexpr (N == 3) {
-    return {func(a, b.x), func(a, b.y), func(a, b.z)};
-  } else if constexpr (N == 4) {
-    return {func(a, b.x), func(a, b.y), func(a, b.z), func(a, b.w)};
-  }
-}
-template <typename T1, typename T2, typename T3, size_t N, typename Func,
-    typename T = result_t<Func, T1, T2, T3>>
-constexpr kernel vec<T, N> map(const vec<T1, N>& a, const vec<T2, N>& b,
-    const vec<T3, N>& c, Func&& func) {
-  if constexpr (N == 1) {
-    return {func(a.x, b.x, c.x)};
-  } else if constexpr (N == 2) {
-    return {func(a.x, b.x, c.x), func(a.y, b.y, c.y)};
-  } else if constexpr (N == 3) {
-    return {func(a.x, b.x, c.x), func(a.y, b.y, c.y), func(a.z, b.z, c.z)};
-  } else if constexpr (N == 4) {
-    return {func(a.x, b.x, c.x), func(a.y, b.y, c.y), func(a.z, b.z, c.z),
-        func(a.w, b.w, c.w)};
-  }
-}
-template <typename T1, typename T2, typename T3, size_t N, typename Func,
-    typename T = result_t<Func, T1, T2, T3>>
-constexpr kernel vec<T, N> map(const vec<T1, N>& a, T2 b, T3 c, Func&& func) {
-  if constexpr (N == 1) {
-    return {func(a.x, b, c)};
-  } else if constexpr (N == 2) {
-    return {func(a.x, b, c), func(a.y, b, c)};
-  } else if constexpr (N == 3) {
-    return {func(a.x, b, c), func(a.y, b, c), func(a.z, b, c)};
-  } else if constexpr (N == 4) {
-    return {func(a.x, b, c), func(a.y, b, c), func(a.z, b, c), func(a.w, b, c)};
-  }
-}
-template <typename T, size_t N, typename Func>
-constexpr kernel T fold(const vec<T, N>& a, Func&& func) {
-  if constexpr (N == 1) {
-    return a.x;
-  } else if constexpr (N == 2) {
-    return func(a.x, a.y);
-  } else if constexpr (N == 3) {
-    return func(func(a.x, a.y), a.z);
-  } else if constexpr (N == 4) {
-    return func(func(func(a.x, a.y), a.z), a.w);
-  }
 }
 
 // Vector comparison operations.
@@ -2125,30 +2031,30 @@ constexpr auto identity3x4f = frame3f{
 
 // Frame properties
 template <typename T, size_t N>
-constexpr kernel mat<T, N, N> rotation(const frame<T, N>& a) {
-  if constexpr (N == 2) {
-    return {a.x, a.y};
-  } else if constexpr (N == 3) {
-    return {a.x, a.y, a.z};
-  }
+constexpr kernel const mat<T, N, N>& rotation(const frame<T, N>& a) {
+  return (const mat<T, N, N>&)a;
 }
 template <typename T, size_t N>
-constexpr kernel vec<T, N> translation(const frame<T, N>& a) {
-  if constexpr (N == 2) {
-    return a.o;
-  } else if constexpr (N == 3) {
-    return a.o;
-  }
+constexpr kernel const vec<T, N>& translation(const frame<T, N>& a) {
+  return a.o;
 }
 
 // Frame/mat conversion
 template <typename T, size_t N>
 constexpr kernel frame<T, N - 1> mat_to_frame(const mat<T, N, N>& m) {
-  return (frame<T, N - 1>)m;
+  if constexpr (N == 3) {
+    return {xy(m.x), xy(m.y), xy(m.z)};
+  } else if constexpr (N == 4) {
+    return {xyz(m.x), xyz(m.y), xyz(m.z), xyz(m.w)};
+  }
 }
 template <typename T, size_t N>
 constexpr kernel mat<T, N + 1, N + 1> frame_to_mat(const frame<T, N>& f) {
-  return (mat<T, N + 1, N + 1>)f;
+  if constexpr (N == 2) {
+    return {{f.x, 0}, {f.y, 0}, {f.o, 1}};
+  } else if constexpr (N == 3) {
+    return {{f.x, 0}, {f.y, 0}, {f.z, 0}, {f.o, 1}};
+  }
 }
 
 // Frame comparisons.
@@ -2169,8 +2075,8 @@ constexpr kernel bool operator!=(const frame<T1, N>& a, const frame<T2, N>& b) {
 template <typename T, size_t N>
 constexpr kernel frame<T, N> operator*(
     const frame<T, N>& a, const frame<T, N>& b) {
-  return {
-      rotation(a) * rotation(b), rotation(a) * translation(b) + translation(a)};
+  auto &ma = rotation(a), &mb = rotation(b);
+  return {ma * mb, ma * b.o + a.o};
 }
 template <typename T, size_t N>
 constexpr kernel frame<T, N>& operator*=(frame<T, N>& a, const frame<T, N>& b) {
