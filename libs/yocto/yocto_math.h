@@ -1981,6 +1981,22 @@ constexpr auto identity4x4f = mat4x4f{
     {1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
 
 // Rows and columns
+template <size_t I, typename T, size_t N, size_t M>
+constexpr kernel vec<T, M> row(const mat<T, N, M>& a) {
+  if constexpr (M == 1) {
+    return {a.x[I]};
+  } else if constexpr (M == 2) {
+    return {a.x[I], a.y[I]};
+  } else if constexpr (M == 3) {
+    return {a.x[I], a.y[I], a.z[I]};
+  } else if constexpr (M == 4) {
+    return {a.x[I], a.y[I], a.z[I], a.w[I]};
+  }
+}
+template <size_t J, typename T, size_t N, size_t M>
+constexpr kernel const vec<T, N>& col(const mat<T, N, M>& a) {
+  return (&a.x)[J];
+}
 template <typename T, size_t N, size_t M>
 constexpr kernel vec<T, M> row(const mat<T, N, M>& a, int i) {
   if constexpr (M == 1) {
