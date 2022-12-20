@@ -604,55 +604,159 @@ constexpr kernel vec<T, N> operator+(const vec<T, N>& a) {
 }
 template <typename T, size_t N>
 constexpr kernel vec<T, N> operator-(const vec<T, N>& a) {
-  return map(a, [](T a) { return -a; });
+  if constexpr (N == 1) {
+    return {-a.x};
+  } else if constexpr (N == 2) {
+    return {-a.x, -a.y};
+  } else if constexpr (N == 3) {
+    return {-a.x, -a.y, -a.z};
+  } else if constexpr (N == 4) {
+    return {-a.x, -a.y, -a.z, -a.w};
+  }
 }
 template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
 constexpr kernel vec<T, N> operator+(const vec<T1, N>& a, const vec<T2, N>& b) {
-  return map(a, b, [](T1 a, T2 b) { return a + b; });
+  if constexpr (N == 1) {
+    return {a.x + b.x};
+  } else if constexpr (N == 2) {
+    return {a.x + b.x, a.y + b.y};
+  } else if constexpr (N == 3) {
+    return {a.x + b.x, a.y + b.y, a.z + b.z};
+  } else if constexpr (N == 4) {
+    return {a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w};
+  }
 }
 template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
 constexpr kernel vec<T, N> operator+(const vec<T1, N>& a, T2 b) {
-  return map(a, b, [](T1 a, T2 b) { return a + b; });
+  if constexpr (N == 1) {
+    return {a.x + b};
+  } else if constexpr (N == 2) {
+    return {a.x + b, a.y + b};
+  } else if constexpr (N == 3) {
+    return {a.x + b, a.y + b, a.z + b};
+  } else if constexpr (N == 4) {
+    return {a.x + b, a.y + b, a.z + b, a.w + b};
+  }
 }
 template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
 constexpr kernel vec<T, N> operator+(T1 a, const vec<T2, N>& b) {
-  return map(a, b, [](T1 a, T2 b) { return a + b; });
+  if constexpr (N == 1) {
+    return {a + b.x};
+  } else if constexpr (N == 2) {
+    return {a + b.x, a + b.y};
+  } else if constexpr (N == 3) {
+    return {a + b.x, a + b.y, a + b.z};
+  } else if constexpr (N == 4) {
+    return {a + b.x, a + b.y, a + b.z, a + b.w};
+  }
 }
 template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
 constexpr kernel vec<T, N> operator-(const vec<T1, N>& a, const vec<T2, N>& b) {
-  return map(a, b, [](T1 a, T2 b) { return a - b; });
+  if constexpr (N == 1) {
+    return {a.x - b.x};
+  } else if constexpr (N == 2) {
+    return {a.x - b.x, a.y - b.y};
+  } else if constexpr (N == 3) {
+    return {a.x - b.x, a.y - b.y, a.z - b.z};
+  } else if constexpr (N == 4) {
+    return {a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w};
+  }
 }
 template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
 constexpr kernel vec<T, N> operator-(const vec<T1, N>& a, T2 b) {
-  return map(a, b, [](T1 a, T2 b) { return a - b; });
+  if constexpr (N == 1) {
+    return {a.x - b};
+  } else if constexpr (N == 2) {
+    return {a.x - b, a.y - b};
+  } else if constexpr (N == 3) {
+    return {a.x - b, a.y - b, a.z - b};
+  } else if constexpr (N == 4) {
+    return {a.x - b, a.y - b, a.z - b, a.w - b};
+  }
 }
 template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
 constexpr kernel vec<T, N> operator-(T1 a, const vec<T2, N>& b) {
-  return map(a, b, [](T1 a, T2 b) { return a - b; });
+  if constexpr (N == 1) {
+    return {a - b.x};
+  } else if constexpr (N == 2) {
+    return {a - b.x, a - b.y};
+  } else if constexpr (N == 3) {
+    return {a - b.x, a - b.y, a - b.z};
+  } else if constexpr (N == 4) {
+    return {a - b.x, a - b.y, a - b.z, a - b.w};
+  }
 }
 template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
 constexpr kernel vec<T, N> operator*(const vec<T1, N>& a, const vec<T2, N>& b) {
-  return map(a, b, [](T1 a, T2 b) { return a * b; });
+  if constexpr (N == 1) {
+    return {a.x * b.x};
+  } else if constexpr (N == 2) {
+    return {a.x * b.x, a.y * b.y};
+  } else if constexpr (N == 3) {
+    return {a.x * b.x, a.y * b.y, a.z * b.z};
+  } else if constexpr (N == 4) {
+    return {a.x * b.x, a.y * b.y, a.z * b.z, a.w * b.w};
+  }
 }
 template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
 constexpr kernel vec<T, N> operator*(const vec<T1, N>& a, T2 b) {
-  return map(a, b, [](T1 a, T2 b) { return a * b; });
+  if constexpr (N == 1) {
+    return {a.x * b};
+  } else if constexpr (N == 2) {
+    return {a.x * b, a.y * b};
+  } else if constexpr (N == 3) {
+    return {a.x * b, a.y * b, a.z * b};
+  } else if constexpr (N == 4) {
+    return {a.x * b, a.y * b, a.z * b, a.w * b};
+  }
 }
 template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
 constexpr kernel vec<T, N> operator*(T1 a, const vec<T2, N>& b) {
-  return map(a, b, [](T1 a, T2 b) { return a * b; });
+  if constexpr (N == 1) {
+    return {a * b.x};
+  } else if constexpr (N == 2) {
+    return {a * b.x, a * b.y};
+  } else if constexpr (N == 3) {
+    return {a * b.x, a * b.y, a * b.z};
+  } else if constexpr (N == 4) {
+    return {a * b.x, a * b.y, a * b.z, a * b.w};
+  }
 }
 template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
 constexpr kernel vec<T, N> operator/(const vec<T1, N>& a, const vec<T2, N>& b) {
-  return map(a, b, [](T1 a, T2 b) { return a / b; });
+  if constexpr (N == 1) {
+    return {a.x / b.x};
+  } else if constexpr (N == 2) {
+    return {a.x / b.x, a.y / b.y};
+  } else if constexpr (N == 3) {
+    return {a.x / b.x, a.y / b.y, a.z / b.z};
+  } else if constexpr (N == 4) {
+    return {a.x / b.x, a.y / b.y, a.z / b.z, a.w / b.w};
+  }
 }
 template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
 constexpr kernel vec<T, N> operator/(const vec<T1, N>& a, T2 b) {
-  return map(a, b, [](T1 a, T2 b) { return a / b; });
+  if constexpr (N == 1) {
+    return {a.x / b};
+  } else if constexpr (N == 2) {
+    return {a.x / b, a.y / b};
+  } else if constexpr (N == 3) {
+    return {a.x / b, a.y / b, a.z / b};
+  } else if constexpr (N == 4) {
+    return {a.x / b, a.y / b, a.z / b, a.w / b};
+  }
 }
 template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
 constexpr kernel vec<T, N> operator/(T1 a, const vec<T2, N>& b) {
-  return map(a, b, [](T1 a, T2 b) { return a / b; });
+  if constexpr (N == 1) {
+    return {a / b.x};
+  } else if constexpr (N == 2) {
+    return {a / b.x, a / b.y};
+  } else if constexpr (N == 3) {
+    return {a / b.x, a / b.y, a / b.z};
+  } else if constexpr (N == 4) {
+    return {a / b.x, a / b.y, a / b.z, a / b.w};
+  }
 }
 template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
 constexpr kernel vec<T, N> operator%(const vec<T1, N>& a, const vec<T2, N>& b) {
