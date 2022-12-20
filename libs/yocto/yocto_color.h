@@ -74,11 +74,11 @@ namespace yocto {
 
 // Extracting components
 template <typename T>
-constexpr kernel vec<T, 3> rgb(const vec<T, 4>& color) {
-  return (vec<T, 3>&)color;
+constexpr kernel const vec<T, 3>& rgb(const vec<T, 4>& color) {
+  return (const vec<T, 3>&)color;
 }
 template <typename T>
-constexpr kernel T alpha(const vec<T, 4>& color) {
+constexpr kernel const T& alpha(const vec<T, 4>& color) {
   return color[3];
 }
 
