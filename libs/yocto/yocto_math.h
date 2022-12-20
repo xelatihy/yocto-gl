@@ -267,6 +267,9 @@ struct vec<T, 1> {
   constexpr kernel vec() : x{0} {}
   constexpr kernel vec(T x_) : x{x_} {}
 
+  constexpr kernel      vec(const vec& v)       = default;
+  constexpr kernel vec& operator=(const vec& v) = default;
+
   template <typename U>
   constexpr kernel explicit(!std::is_convertible_v<U, T>)
       vec(const vec<U, 1>& v)
@@ -290,6 +293,9 @@ struct vec<T, 2> {
   constexpr kernel vec() : x{0}, y{0} {}
   constexpr kernel explicit vec(T v) : x{v}, y{v} {}
   constexpr kernel vec(T x_, T y_) : x{x_}, y{y_} {}
+
+  constexpr kernel      vec(const vec& v)       = default;
+  constexpr kernel vec& operator=(const vec& v) = default;
 
   template <typename U>
   constexpr kernel explicit(!std::is_convertible_v<U, T>)
@@ -316,6 +322,9 @@ struct vec<T, 3> {
   constexpr kernel vec(T x_, T y_, T z_) : x{x_}, y{y_}, z{z_} {}
   constexpr kernel vec(vec<T, 2> xy_, T z_) : x{xy_.x}, y{xy_.y}, z{z_} {}
 
+  constexpr kernel      vec(const vec& v)       = default;
+  constexpr kernel vec& operator=(const vec& v) = default;
+
   template <typename U>
   constexpr kernel explicit(!std::is_convertible_v<U, T>)
       vec(const vec<U, 3>& v)
@@ -340,6 +349,9 @@ struct vec<T, 4> {
   constexpr kernel vec(T x_, T y_, T z_, T w_) : x{x_}, y{y_}, z{z_}, w{w_} {}
   constexpr kernel vec(vec<T, 3> xyz_, T w_)
       : x{xyz_.x}, y{xyz_.y}, z{xyz_.z}, w{w_} {}
+
+  constexpr kernel      vec(const vec& v)       = default;
+  constexpr kernel vec& operator=(const vec& v) = default;
 
   template <typename U>
   constexpr kernel explicit(!std::is_convertible_v<U, T>)
@@ -1150,11 +1162,11 @@ template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
 constexpr kernel T angle(const vec<T1, N>& a, const vec<T2, N>& b) {
   return acos(clamp(dot(normalize(a), normalize(b)), (T)-1, (T)1));
 }
-
-template <typename T1, typename T2, typename T3,
+template <typename T1, typename T2, typename T3, size_t N,
     typename T = common_t<T1, T2, T3>>
-constexpr kernel vec<T, 4> slerp(
-    const vec<T1, 4>& a, const vec<T2, 4>& b, T3 u) {
+constexpr kernel vec<T, N> slerp(
+    const vec<T1, N>& a, const vec<T2, N>& b, T3 u) {
+  static_assert(N != 1);
   // https://en.wikipedia.org/wiki/Slerp
   auto an = normalize(a), bn = normalize(b);
   auto d = dot(an, bn);
@@ -1163,9 +1175,10 @@ constexpr kernel vec<T, 4> slerp(
     d  = -d;
   }
   if (d > (T)0.9995) return normalize(an + u * (bn - an));
-  auto th = acos(clamp(d, (T)-1, (T)1));
-  if (th == 0) return an;
-  return an * (sin(th * (1 - u)) / sin(th)) + bn * (sin(th * u) / sin(th));
+  auto theta = acos(clamp(d, (T)-1, (T)1));
+  if (theta == 0) return an;
+  return an * (sin(theta * (1 - u)) / sin(theta)) +
+         bn * (sin(theta * u) / sin(theta));
 }
 
 // Max element and clamp.
@@ -1895,7 +1908,7 @@ template <typename T, size_t N>
 struct mat<T, N, 1> {
   vec<T, N> x;
 
-  constexpr kernel mat() : x{1} {}
+  constexpr kernel mat() : x{0} {}
   constexpr kernel mat(const vec<T, N>& x_) : x{x_} {}
 
   constexpr kernel vec<T, N>& operator[](size_t i) { return (&x)[i]; }
@@ -1909,7 +1922,7 @@ template <typename T, size_t N>
 struct mat<T, N, 2> {
   vec<T, N> x, y;
 
-  constexpr kernel mat() : x{1, 0}, y{0, 1} {}
+  constexpr kernel mat() : x{0}, y{1} {}
   constexpr kernel mat(const vec<T, N>& x_, const vec<T, N>& y_)
       : x{x_}, y{y_} {}
 
@@ -1924,7 +1937,7 @@ template <typename T, size_t N>
 struct mat<T, N, 3> {
   vec<T, N> x, y, z;
 
-  constexpr kernel mat() : x{1, 0, 0}, y{0, 1, 0}, z{0, 0, 1} {}
+  constexpr kernel mat() : x{0}, y{0}, z{0} {}
   constexpr kernel mat(
       const vec<T, N>& x_, const vec<T, N>& y_, const vec<T, N>& z_)
       : x{x_}, y{y_}, z{z_} {}
@@ -1940,8 +1953,7 @@ template <typename T, size_t N>
 struct mat<T, N, 4> {
   vec<T, N> x, y, z, w;
 
-  constexpr kernel mat()
-      : x{1, 0, 0, 0}, y{0, 1, 0, 0}, z{0, 0, 1, 0}, w{0, 0, 0, 1} {}
+  constexpr kernel mat() : x{0}, y{0}, z{0}, w{0} {}
   constexpr kernel mat(const vec<T, N>& x_, const vec<T, N>& y_,
       const vec<T, N>& z_, const vec<T, N>& w_)
       : x{x_}, y{y_}, z{z_}, w{w_} {}
@@ -2024,6 +2036,32 @@ constexpr kernel mat<T, N, M> operator*(const mat<T1, N, M>& a, T2 b) {
 }
 template <typename T1, typename T2, size_t N, size_t M,
     typename T = common_t<T1, T2>>
+constexpr kernel mat<T, N, M> operator*(T1 a, const mat<T2, N, M>& b) {
+  if constexpr (M == 1) {
+    return {a * b.x};
+  } else if constexpr (M == 2) {
+    return {a * b.x, a * b.y};
+  } else if constexpr (M == 3) {
+    return {a * b.x, a * b.y, a * b.z};
+  } else if constexpr (M == 4) {
+    return {a * b.x, a * b.y, a * b.z, a * b.w};
+  }
+}
+template <typename T1, typename T2, size_t N, size_t M,
+    typename T = common_t<T1, T2>>
+constexpr kernel mat<T, N, M> operator/(const mat<T1, N, M>& a, T2 b) {
+  if constexpr (M == 1) {
+    return {a.x / b};
+  } else if constexpr (M == 2) {
+    return {a.x / b, a.y / b};
+  } else if constexpr (M == 3) {
+    return {a.x / b, a.y / b, a.z / b};
+  } else if constexpr (M == 4) {
+    return {a.x / b, a.y / b, a.z / b, a.w / b};
+  }
+}
+template <typename T1, typename T2, size_t N, size_t M,
+    typename T = common_t<T1, T2>>
 constexpr kernel vec<T, N> operator*(
     const mat<T1, N, M>& a, const vec<T2, M>& b) {
   if constexpr (M == 1) {
@@ -2071,6 +2109,11 @@ constexpr kernel mat<T, N, M>& operator+=(
     mat<T, N, M>& a, const mat<T1, N, M>& b) {
   return a = a + b;
 }
+template <typename T, typename T1, size_t N, size_t M>
+constexpr kernel mat<T, N, M>& operator-=(
+    mat<T, N, M>& a, const mat<T1, N, M>& b) {
+  return a = a - b;
+}
 template <typename T, typename T1, size_t N>
 constexpr kernel mat<T, N, N>& operator*=(
     mat<T, N, N>& a, const mat<T1, N, N>& b) {
@@ -2079,6 +2122,10 @@ constexpr kernel mat<T, N, N>& operator*=(
 template <typename T, typename T1, size_t N, size_t M>
 constexpr kernel mat<T, N, M>& operator*=(mat<T, N, M>& a, T1 b) {
   return a = a * b;
+}
+template <typename T, typename T1, size_t N, size_t M>
+constexpr kernel mat<T, N, M>& operator/=(mat<T, N, M>& a, T1 b) {
+  return a = a / b;
 }
 
 // Matrix diagonals and transposes.
