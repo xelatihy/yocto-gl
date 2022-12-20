@@ -1980,9 +1980,31 @@ constexpr auto identity3x3f = mat3x3f{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
 constexpr auto identity4x4f = mat4x4f{
     {1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
 
+// Rows and columns
+template <typename T, size_t N, size_t M>
+constexpr kernel vec<T, M> row(const mat<T, N, M>& a, int i) {
+  if constexpr (M == 1) {
+    return {a.x[i]};
+  } else if constexpr (M == 2) {
+    return {a.x[i], a.y[i]};
+  } else if constexpr (M == 3) {
+    return {a.x[i], a.y[i], a.z[i]};
+  } else if constexpr (M == 4) {
+    return {a.x[i], a.y[i], a.z[i], a.w[i]};
+  }
+}
+template <typename T, size_t N, size_t M>
+constexpr kernel const vec<T, N>& col(const mat<T, N, M>& a, int j) {
+  return (&a.x)[j];
+}
+
 // Data access
 template <typename T, size_t N, size_t M>
 constexpr kernel T* data(mat<T, N, M>& a) {
+  return &a.x.x;
+}
+template <typename T, size_t N, size_t M>
+constexpr kernel const T* data(const mat<T, N, M>& a) {
   return &a.x.x;
 }
 
