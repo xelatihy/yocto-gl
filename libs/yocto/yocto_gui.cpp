@@ -1167,33 +1167,32 @@ inline void clear_buffer(uint& buffer) {
 // Textures
 inline void set_texture(
     uint& texture, vec2i& extents, const array2d<vec4f>& image) {
-  auto [width, height] = (vec2i)image.extents();
+  auto size = (vec2i)image.extents();
   if (!texture || extents != (vec2i)image.extents()) {
     if (!texture) glGenTextures(1, &texture);
     glBindTexture(GL_TEXTURE_2D, texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGBA,
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, size.x, size.y, 0, GL_RGBA,
         GL_FLOAT, image.data());
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   } else {
     glBindTexture(GL_TEXTURE_2D, texture);
-    glTexSubImage2D(
-        GL_TEXTURE_2D, 0, 0, 0, width, height, GL_RGBA, GL_FLOAT, image.data());
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, size.x, size.y, GL_RGBA, GL_FLOAT,
+        image.data());
   }
   extents = (vec2i)image.extents();
 }
 static void set_texture(uint& texture, vec2i& extents,
     const array2d<vec4f>& imagef, const array2d<vec4b>& imageb, bool mipmap) {
-  auto imextents       = (vec2i)max(imagef.extents(), imageb.extents());
-  auto [width, height] = imextents;
-  if (!texture || extents != imextents) {
+  auto size = (vec2i)max(imagef.extents(), imageb.extents());
+  if (!texture || extents != size) {
     if (!texture) glGenTextures(1, &texture);
     glBindTexture(GL_TEXTURE_2D, texture);
     if (!imageb.empty()) {
-      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA,
+      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, size.x, size.y, 0, GL_RGBA,
           GL_UNSIGNED_BYTE, imageb.data());
     } else {
-      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA,
+      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, size.x, size.y, 0, GL_RGBA,
           GL_FLOAT, imagef.data());
     }
     if (mipmap) {
@@ -1208,15 +1207,15 @@ static void set_texture(uint& texture, vec2i& extents,
   } else {
     glBindTexture(GL_TEXTURE_2D, texture);
     if (!imageb.empty()) {
-      glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, GL_RGBA,
+      glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, size.x, size.y, GL_RGBA,
           GL_UNSIGNED_BYTE, imageb.data());
     } else {
-      glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, GL_RGBA, GL_FLOAT,
+      glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, size.x, size.y, GL_RGBA, GL_FLOAT,
           imagef.data());
     }
     if (mipmap) glGenerateMipmap(GL_TEXTURE_2D);
   }
-  extents = imextents;
+  extents = size;
 }
 inline void clear_texture(uint& texture) {
   if (texture) glDeleteTextures(1, &texture);
@@ -1932,22 +1931,23 @@ struct glwindow_state {
 };
 
 static void draw_window(glwindow_state& state) {
-  auto [r, g, b, a] = state.background;
-  glClearColor(r, g, b, a);
+  glClearColor(state.background.x, state.background.y, state.background.z,
+      state.background.w);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   if (state.draw) state.draw(state.input);
   if (state.widgets) {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
-    auto window          = state.window;
-    auto [width, height] = window;
     if (state.widgets_left) {
       ImGui::SetNextWindowPos({0, 0});
-      ImGui::SetNextWindowSize({(float)state.widgets_width, (float)height});
+      ImGui::SetNextWindowSize(
+          {(float)state.widgets_width, (float)state.window.y});
     } else {
-      ImGui::SetNextWindowPos({(float)(width - state.widgets_width), 0});
-      ImGui::SetNextWindowSize({(float)state.widgets_width, (float)height});
+      ImGui::SetNextWindowPos(
+          {(float)(state.window.x - state.widgets_width), 0});
+      ImGui::SetNextWindowSize(
+          {(float)state.widgets_width, (float)state.window.y});
     }
     ImGui::SetNextWindowCollapsed(false);
     ImGui::SetNextWindowBgAlpha(1);

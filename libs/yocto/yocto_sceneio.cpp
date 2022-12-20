@@ -616,30 +616,33 @@ void load_image(const string& filename, array2d<T>& image) {
   auto ext = path_extension(filename);
   if (ext == ".exr" || ext == ".EXR") {
     auto buffer = load_binary(filename);
-    auto width = 0, height = 0, ncomp = 0;
+    auto size   = vec2i{0, 0};
+    auto ncomp  = 0;
     auto pixels = (float*)nullptr;
-    if (LoadEXRFromMemory(&pixels, &width, &height, buffer.data(),
+    if (LoadEXRFromMemory(&pixels, &size.x, &size.y, buffer.data(),
             buffer.size(), nullptr) != 0)
       throw io_error{"cannot read " + filename};
-    image = from_float((vec4f*)pixels, {(size_t)width, (size_t)height});
+    image = from_float((vec4f*)pixels, {(size_t)size.x, (size_t)size.y});
     free(pixels);
   } else if (ext == ".hdr" || ext == ".HDR") {
     auto buffer = load_binary(filename);
-    auto width = 0, height = 0, ncomp = 0;
+    auto size   = vec2i{0, 0};
+    auto ncomp  = 0;
     auto pixels = stbi_loadf_from_memory(
-        buffer.data(), (int)buffer.size(), &width, &height, &ncomp, 4);
+        buffer.data(), (int)buffer.size(), &size.x, &size.y, &ncomp, 4);
     if (!pixels) throw io_error{"cannot read " + filename};
-    image = from_float((vec4f*)pixels, {(size_t)width, (size_t)height});
+    image = from_float((vec4f*)pixels, {(size_t)size.x, (size_t)size.y});
     free(pixels);
   } else if (ext == ".png" || ext == ".PNG" || ext == ".jpg" || ext == ".JPG" ||
              ext == ".jpeg" || ext == ".JPEG" || ext == ".tga" ||
              ext == ".TGA" || ext == ".bmp" || ext == ".BMP") {
     auto buffer = load_binary(filename);
-    auto width = 0, height = 0, ncomp = 0;
+    auto size   = vec2i{0, 0};
+    auto ncomp  = 0;
     auto pixels = stbi_load_from_memory(
-        buffer.data(), (int)buffer.size(), &width, &height, &ncomp, 4);
+        buffer.data(), (int)buffer.size(), &size.x, &size.y, &ncomp, 4);
     if (!pixels) throw io_error{"cannot read " + filename};
-    image = from_byte((vec4b*)pixels, {(size_t)width, (size_t)height});
+    image = from_byte((vec4b*)pixels, {(size_t)size.x, (size_t)size.y});
     free(pixels);
   } else if (ext == ".ypreset" || ext == ".YPRESET") {
     if constexpr (std::is_same_v<T, vec4f>) {
@@ -666,46 +669,46 @@ void save_image(const string& filename, const array2d<T>& image) {
   };
 
   // grab data for low level apis
-  auto [width, height] = (vec2i)image.extents();
+  auto size = (vec2i)image.extents();
 
   auto ext = path_extension(filename);
   if (ext == ".hdr" || ext == ".HDR") {
     auto buffer = vector<byte>{};
     if constexpr (is_float) {
-      if (!stbi_write_hdr_to_func(stbi_write_data, &buffer, width, height,
+      if (!stbi_write_hdr_to_func(stbi_write_data, &buffer, size.x, size.y,
               num_channels, (const float*)image.data()))
         throw io_error{"cannot write " + filename};
     } else {
-      if (!stbi_write_hdr_to_func(stbi_write_data, &buffer, width, height,
+      if (!stbi_write_hdr_to_func(stbi_write_data, &buffer, size.x, size.y,
               num_channels, (const float*)byte_to_float(image).data()))
         throw io_error{"cannot write " + filename};
     }
     return save_binary(filename, buffer);
   } else if (ext == ".exr" || ext == ".EXR") {
-    auto data = (byte*)nullptr;
-    auto size = (size_t)0;
+    auto data  = (byte*)nullptr;
+    auto count = (size_t)0;
     if constexpr (is_float) {
-      if (SaveEXRToMemory((const float*)image.data(), width, height,
-              num_channels, 1, &data, &size, nullptr) < 0)
+      if (SaveEXRToMemory((const float*)image.data(), size.x, size.y,
+              num_channels, 1, &data, &count, nullptr) < 0)
         throw io_error{"cannot write " + filename};
     } else {
-      if (SaveEXRToMemory((const float*)byte_to_float(image).data(), width,
-              height, num_channels, 1, &data, &size, nullptr) < 0)
+      if (SaveEXRToMemory((const float*)byte_to_float(image).data(), size.x,
+              size.y, num_channels, 1, &data, &count, nullptr) < 0)
         throw io_error{"cannot write " + filename};
     }
-    auto buffer = vector<byte>{data, data + size};
+    auto buffer = vector<byte>{data, data + count};
     free(data);
     return save_binary(filename, buffer);
   } else if (ext == ".png" || ext == ".PNG") {
     auto buffer = vector<byte>{};
     if constexpr (is_float) {
-      if (!stbi_write_png_to_func(stbi_write_data, &buffer, width, height,
+      if (!stbi_write_png_to_func(stbi_write_data, &buffer, size.x, size.y,
               num_channels, (const byte*)float_to_byte(image).data(),
-              width * 4))
+              size.x * 4))
         throw io_error{"cannot write " + filename};
     } else {
-      if (!stbi_write_png_to_func(stbi_write_data, &buffer, width, height,
-              num_channels, (const byte*)image.data(), width * 4))
+      if (!stbi_write_png_to_func(stbi_write_data, &buffer, size.x, size.y,
+              num_channels, (const byte*)image.data(), size.x * 4))
         throw io_error{"cannot write " + filename};
     }
     return save_binary(filename, buffer);
@@ -713,11 +716,11 @@ void save_image(const string& filename, const array2d<T>& image) {
              ext == ".JPEG") {
     auto buffer = vector<byte>{};
     if constexpr (is_float) {
-      if (!stbi_write_jpg_to_func(stbi_write_data, &buffer, width, height,
+      if (!stbi_write_jpg_to_func(stbi_write_data, &buffer, size.x, size.y,
               num_channels, (const byte*)float_to_byte(image).data(), 75))
         throw io_error{"cannot write " + filename};
     } else {
-      if (!stbi_write_jpg_to_func(stbi_write_data, &buffer, width, height,
+      if (!stbi_write_jpg_to_func(stbi_write_data, &buffer, size.x, size.y,
               num_channels, (const byte*)image.data(), 75))
         throw io_error{"cannot write " + filename};
     }
@@ -725,11 +728,11 @@ void save_image(const string& filename, const array2d<T>& image) {
   } else if (ext == ".tga" || ext == ".TGA") {
     auto buffer = vector<byte>{};
     if constexpr (is_float) {
-      if (!stbi_write_tga_to_func(stbi_write_data, &buffer, width, height,
+      if (!stbi_write_tga_to_func(stbi_write_data, &buffer, size.x, size.y,
               num_channels, (const byte*)float_to_byte(image).data()))
         throw io_error{"cannot write " + filename};
     } else {
-      if (!stbi_write_tga_to_func(stbi_write_data, &buffer, width, height,
+      if (!stbi_write_tga_to_func(stbi_write_data, &buffer, size.x, size.y,
               num_channels, (const byte*)image.data()))
         throw io_error{"cannot write " + filename};
     }
@@ -737,11 +740,11 @@ void save_image(const string& filename, const array2d<T>& image) {
   } else if (ext == ".bmp" || ext == ".BMP") {
     auto buffer = vector<byte>{};
     if constexpr (is_float) {
-      if (!stbi_write_bmp_to_func(stbi_write_data, &buffer, width, height,
+      if (!stbi_write_bmp_to_func(stbi_write_data, &buffer, size.x, size.y,
               num_channels, (const byte*)float_to_byte(image).data()))
         throw io_error{"cannot write " + filename};
     } else {
-      if (!stbi_write_bmp_to_func(stbi_write_data, &buffer, width, height,
+      if (!stbi_write_bmp_to_func(stbi_write_data, &buffer, size.x, size.y,
               num_channels, (const byte*)image.data()))
         throw io_error{"cannot write " + filename};
     }
@@ -810,16 +813,14 @@ array2d<vec4f> make_image_preset(const string& type_) {
       sub_images.push_back(make_image_preset(sub_type));
     auto montage_size = vec2s{0, 0};
     for (auto& sub_image : sub_images) {
-      auto [mwidth, mheight] = montage_size;
-      auto [width, height]   = sub_image.extents();
-      montage_size           = {mwidth + width, max(mheight, height)};
+      montage_size = {montage_size.x + sub_image.extents().x,
+          max(montage_size.y, sub_image.extents().y)};
     }
     auto image = array2d<vec4f>(montage_size);
     auto pos   = (size_t)0;
     for (auto& sub_image : sub_images) {
-      auto [width, _] = sub_image.extents();
       set_region(image, sub_image, {pos, 0});
-      pos += width;
+      pos += sub_image.extents().x;
     }
     return image;
   } else if (type == "images2") {
@@ -829,16 +830,14 @@ array2d<vec4f> make_image_preset(const string& type_) {
       sub_images.push_back(make_image_preset(sub_type));
     auto montage_size = vec2s{0, 0};
     for (auto& sub_image : sub_images) {
-      auto [mwidth, mheight] = montage_size;
-      auto [width, height]   = sub_image.extents();
-      montage_size           = {mwidth + width, max(mheight, height)};
+      montage_size = {montage_size.x + sub_image.extents().x,
+          max(montage_size.y, sub_image.extents().y)};
     }
     auto image = array2d<vec4f>(montage_size);
     auto pos   = (size_t)0;
     for (auto& sub_image : sub_images) {
-      auto [width, _] = sub_image.extents();
       set_region(image, sub_image, {pos, 0});
-      pos += width;
+      pos += sub_image.extents().x;
     }
     return image;
   } else if (type == "test-floor") {
@@ -1476,47 +1475,46 @@ void save_texture(const string& filename, const texture_data& texture) {
   };
 
   // grab data for low level apis
-  auto [width, height] = (vec2i)max(
-      texture.pixelsf.extents(), texture.pixelsb.extents());
+  auto size = (vec2i)max(texture.pixelsf.extents(), texture.pixelsb.extents());
 
   auto ext = path_extension(filename);
   if (ext == ".hdr" || ext == ".HDR") {
     auto buffer = vector<byte>{};
-    if (!stbi_write_hdr_to_func(stbi_write_data, &buffer, width, height, 4,
+    if (!stbi_write_hdr_to_func(stbi_write_data, &buffer, size.x, size.y, 4,
             (const float*)texture.pixelsf.data()))
       throw io_error("cannot write " + filename);
     save_binary(filename, buffer);
   } else if (ext == ".exr" || ext == ".EXR") {
-    auto data = (byte*)nullptr;
-    auto size = (size_t)0;
-    if (SaveEXRToMemory((const float*)texture.pixelsf.data(), width, height, 4,
-            1, &data, &size, nullptr) < 0)
+    auto data  = (byte*)nullptr;
+    auto count = (size_t)0;
+    if (SaveEXRToMemory((const float*)texture.pixelsf.data(), size.x, size.y, 4,
+            1, &data, &count, nullptr) < 0)
       throw io_error("cannot write " + filename);
-    auto buffer = vector<byte>{data, data + size};
+    auto buffer = vector<byte>{data, data + count};
     free(data);
     save_binary(filename, buffer);
   } else if (ext == ".png" || ext == ".PNG") {
     auto buffer = vector<byte>{};
-    if (!stbi_write_png_to_func(stbi_write_data, &buffer, width, height, 4,
-            (const byte*)texture.pixelsb.data(), width * 4))
+    if (!stbi_write_png_to_func(stbi_write_data, &buffer, size.x, size.y, 4,
+            (const byte*)texture.pixelsb.data(), size.x * 4))
       throw io_error("cannot write " + filename);
     save_binary(filename, buffer);
   } else if (ext == ".jpg" || ext == ".JPG" || ext == ".jpeg" ||
              ext == ".JPEG") {
     auto buffer = vector<byte>{};
-    if (!stbi_write_jpg_to_func(stbi_write_data, &buffer, width, height, 4,
+    if (!stbi_write_jpg_to_func(stbi_write_data, &buffer, size.x, size.y, 4,
             (const byte*)texture.pixelsb.data(), 75))
       throw io_error("cannot write " + filename);
     save_binary(filename, buffer);
   } else if (ext == ".tga" || ext == ".TGA") {
     auto buffer = vector<byte>{};
-    if (!stbi_write_tga_to_func(stbi_write_data, &buffer, width, height, 4,
+    if (!stbi_write_tga_to_func(stbi_write_data, &buffer, size.x, size.y, 4,
             (const byte*)texture.pixelsb.data()))
       throw io_error("cannot write " + filename);
     save_binary(filename, buffer);
   } else if (ext == ".bmp" || ext == ".BMP") {
     auto buffer = vector<byte>{};
-    if (!stbi_write_bmp_to_func(stbi_write_data, &buffer, width, height, 4,
+    if (!stbi_write_bmp_to_func(stbi_write_data, &buffer, size.x, size.y, 4,
             (const byte*)texture.pixelsb.data()))
       throw io_error("cannot write " + filename);
     save_binary(filename, buffer);
@@ -4778,8 +4776,8 @@ static void xml_attribute(
     string& xml, const string& name, const frame3f& value) {
   xml += " " + name + "=\"";
   auto mat = frame_to_mat(value);
-  for (auto [i, j] : range(vec2i(4, 4))) {
-    xml += (xml.back() == '"' ? "" : " ") + std::to_string(value[j][i]);
+  for (auto ij : range(vec2i(4, 4))) {
+    xml += (xml.back() == '"' ? "" : " ") + std::to_string(value[ij.y][ij.x]);
   }
   xml += "\"";
 }
