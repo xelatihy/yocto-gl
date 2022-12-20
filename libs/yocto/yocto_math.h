@@ -546,23 +546,55 @@ constexpr kernel T fold(const vec<T, N>& a, Func&& func) {
 // Vector comparison operations.
 template <typename T1, typename T2, size_t N>
 constexpr kernel bool operator==(const vec<T1, N>& a, const vec<T2, N>& b) {
-  return fold(map(a, b, [](T1 a, T2 b) { return a == b; }),
-      [](bool a, bool b) { return a && b; });
+  if constexpr (N == 1) {
+    return a.x == b.x;
+  } else if constexpr (N == 2) {
+    return a.x == b.x && a.y == b.y;
+  } else if constexpr (N == 3) {
+    return a.x == b.x && a.y == b.y && a.z == b.z;
+  } else if constexpr (N == 4) {
+    return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
+  } else {
+  }
 }
 template <typename T1, typename T2, size_t N>
 constexpr kernel bool operator==(const vec<T1, N>& a, T2 b) {
-  return fold(map(a, b, [](T1 a, T2 b) { return a == b; }),
-      [](bool a, bool b) { return a && b; });
+  if constexpr (N == 1) {
+    return a.x == b;
+  } else if constexpr (N == 2) {
+    return a.x == b && a.y == b;
+  } else if constexpr (N == 3) {
+    return a.x == b && a.y == b && a.z == b;
+  } else if constexpr (N == 4) {
+    return a.x == b && a.y == b && a.z == b && a.w == b;
+  } else {
+  }
 }
 template <typename T1, typename T2, size_t N>
 constexpr kernel bool operator!=(const vec<T1, N>& a, const vec<T2, N>& b) {
-  return fold(map(a, b, [](T1 a, T2 b) { return a != b; }),
-      [](bool a, bool b) { return a || b; });
+  if constexpr (N != 1) {
+    return a.x != b.x;
+  } else if constexpr (N != 2) {
+    return a.x != b.x || a.y != b.y;
+  } else if constexpr (N != 3) {
+    return a.x != b.x || a.y != b.y || a.z != b.z;
+  } else if constexpr (N != 4) {
+    return a.x != b.x || a.y != b.y || a.z != b.z || a.w != b.w;
+  } else {
+  }
 }
 template <typename T1, typename T2, size_t N>
 constexpr kernel bool operator!=(const vec<T1, N>& a, T2 b) {
-  return fold(map(a, b, [](T1 a, T2 b) { return a != b; }),
-      [](bool a, bool b) { return a || b; });
+  if constexpr (N != 1) {
+    return a.x != b;
+  } else if constexpr (N != 2) {
+    return a.x != b || a.y != b;
+  } else if constexpr (N != 3) {
+    return a.x != b || a.y != b || a.z != b;
+  } else if constexpr (N != 4) {
+    return a.x != b || a.y != b || a.z != b || a.w != b;
+  } else {
+  }
 }
 
 // Vector operations.

@@ -121,18 +121,27 @@ constexpr kernel T rgb_to_srgb(T rgb) {
 }
 template <typename T, size_t N>
 constexpr kernel vec<T, N> srgb_to_rgb(const vec<T, N>& srgb) {
-  if constexpr (N == 4) {
-    return {srgb_to_rgb(xyz(srgb)), alpha(srgb)};
-  } else {
-    return map(srgb, [](T srgb) { return srgb_to_rgb(srgb); });
+  if constexpr (N == 1) {
+    return {srgb_to_rgb(srgb.x)};
+  } else if constexpr (N == 2) {
+    return {srgb_to_rgb(srgb.x), srgb.y};
+  } else if constexpr (N == 3) {
+    return {srgb_to_rgb(srgb.x), srgb_to_rgb(srgb.y), srgb_to_rgb(srgb.z)};
+  } else if constexpr (N == 4) {
+    return {
+        srgb_to_rgb(srgb.x), srgb_to_rgb(srgb.y), srgb_to_rgb(srgb.z), srgb.w};
   }
 }
 template <typename T, size_t N>
 constexpr kernel vec<T, N> rgb_to_srgb(const vec<T, N>& rgb) {
-  if constexpr (N == 4) {
-    return {rgb_to_srgb(xyz(rgb)), alpha(rgb)};
-  } else {
-    return map(rgb, [](T rgb) { return rgb_to_srgb(rgb); });
+  if constexpr (N == 1) {
+    return {rgb_to_srgb(rgb.x)};
+  } else if constexpr (N == 2) {
+    return {rgb_to_srgb(rgb.x), rgb.y};
+  } else if constexpr (N == 3) {
+    return {rgb_to_srgb(rgb.x), rgb_to_srgb(rgb.y), rgb_to_srgb(rgb.z)};
+  } else if constexpr (N == 4) {
+    return {rgb_to_srgb(rgb.x), rgb_to_srgb(rgb.y), rgb_to_srgb(rgb.z), rgb.w};
   }
 }
 
