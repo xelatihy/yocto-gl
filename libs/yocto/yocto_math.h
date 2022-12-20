@@ -700,6 +700,90 @@ constexpr kernel vec<T, N> operator%(T1 a, const vec<T2, N>& b) {
     return {a.x % b.x, a.y % b.y, a.z % b.z, a.w % b.w};
   }
 }
+template <typename T, size_t N>
+constexpr kernel vec<T, N> operator~(const vec<T, N>& a) {
+  if constexpr (N == 1) {
+    return {~a.x};
+  } else if constexpr (N == 2) {
+    return {~a.x, ~a.y};
+  } else if constexpr (N == 3) {
+    return {~a.x, ~a.y, ~a.z};
+  } else if constexpr (N == 4) {
+    return {~a.x, ~a.y, ~a.z, ~a.w};
+  }
+}
+template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
+constexpr kernel vec<T, N> operator&(const vec<T1, N>& a, const vec<T2, N>& b) {
+  if constexpr (N == 1) {
+    return {a.x & b.x};
+  } else if constexpr (N == 2) {
+    return {a.x & b.x, a.y & b.y};
+  } else if constexpr (N == 3) {
+    return {a.x & b.x, a.y & b.y, a.z & b.z};
+  } else if constexpr (N == 4) {
+    return {a.x & b.x, a.y & b.y, a.z & b.z, a.w & b.w};
+  }
+}
+template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
+constexpr kernel vec<T, N> operator&(const vec<T1, N>& a, T2 b) {
+  if constexpr (N == 1) {
+    return {a.x & b};
+  } else if constexpr (N == 2) {
+    return {a.x & b, a.y & b};
+  } else if constexpr (N == 3) {
+    return {a.x & b, a.y & b, a.z & b};
+  } else if constexpr (N == 4) {
+    return {a.x & b, a.y & b, a.z & b, a.w & b};
+  }
+}
+template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
+constexpr kernel vec<T, N> operator&(T1 a, const vec<T2, N>& b) {
+  if constexpr (N == 1) {
+    return {a.x & b.x};
+  } else if constexpr (N == 2) {
+    return {a.x & b.x, a.y & b.y};
+  } else if constexpr (N == 3) {
+    return {a.x & b.x, a.y & b.y, a.z & b.z};
+  } else if constexpr (N == 4) {
+    return {a.x & b.x, a.y & b.y, a.z & b.z, a.w & b.w};
+  }
+}
+template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
+constexpr kernel vec<T, N> operator|(const vec<T1, N>& a, const vec<T2, N>& b) {
+  if constexpr (N == 1) {
+    return {a.x | b.x};
+  } else if constexpr (N == 2) {
+    return {a.x | b.x, a.y | b.y};
+  } else if constexpr (N == 3) {
+    return {a.x | b.x, a.y | b.y, a.z | b.z};
+  } else if constexpr (N == 4) {
+    return {a.x | b.x, a.y | b.y, a.z | b.z, a.w | b.w};
+  }
+}
+template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
+constexpr kernel vec<T, N> operator|(const vec<T1, N>& a, T2 b) {
+  if constexpr (N == 1) {
+    return {a.x | b};
+  } else if constexpr (N == 2) {
+    return {a.x | b, a.y | b};
+  } else if constexpr (N == 3) {
+    return {a.x | b, a.y | b, a.z | b};
+  } else if constexpr (N == 4) {
+    return {a.x | b, a.y | b, a.z | b, a.w | b};
+  }
+}
+template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
+constexpr kernel vec<T, N> operator|(T1 a, const vec<T2, N>& b) {
+  if constexpr (N == 1) {
+    return {a.x | b.x};
+  } else if constexpr (N == 2) {
+    return {a.x | b.x, a.y | b.y};
+  } else if constexpr (N == 3) {
+    return {a.x | b.x, a.y | b.y, a.z | b.z};
+  } else if constexpr (N == 4) {
+    return {a.x | b.x, a.y | b.y, a.z | b.z, a.w | b.w};
+  }
+}
 template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
 constexpr kernel vec<T, N> operator^(const vec<T1, N>& a, const vec<T2, N>& b) {
   if constexpr (N == 1) {
@@ -809,6 +893,92 @@ constexpr kernel vec<T, N> operator<<(T a, const vec<T, N>& b) {
     return {a.x << b.x, a.y << b.y, a.z << b.z, a.w << b.w};
   }
 }
+template <size_t N>
+constexpr kernel vec<bool, N> operator!(const vec<bool, N>& a) {
+  if constexpr (N == 1) {
+    return {!a.x};
+  } else if constexpr (N == 2) {
+    return {!a.x, !a.y};
+  } else if constexpr (N == 3) {
+    return {!a.x, !a.y, !a.z};
+  } else if constexpr (N == 4) {
+    return {!a.x, !a.y, !a.z, !a.w};
+  }
+}
+template <size_t N>
+constexpr kernel vec<bool, N> operator&&(
+    const vec<bool, N>& a, const vec<bool, N>& b) {
+  if constexpr (N == 1) {
+    return {a.x && b.x};
+  } else if constexpr (N == 2) {
+    return {a.x && b.x, a.y && b.y};
+  } else if constexpr (N == 3) {
+    return {a.x && b.x, a.y && b.y, a.z && b.z};
+  } else if constexpr (N == 4) {
+    return {a.x && b.x, a.y && b.y, a.z && b.z, a.w && b.w};
+  }
+}
+template <size_t N>
+constexpr kernel vec<bool, N> operator&&(const vec<bool, N>& a, bool b) {
+  if constexpr (N == 1) {
+    return {a.x && b};
+  } else if constexpr (N == 2) {
+    return {a.x && b, a.y && b};
+  } else if constexpr (N == 3) {
+    return {a.x && b, a.y && b, a.z && b};
+  } else if constexpr (N == 4) {
+    return {a.x && b, a.y && b, a.z && b, a.w && b};
+  }
+}
+template <size_t N>
+constexpr kernel vec<bool, N> operator&&(bool a, const vec<bool, N>& b) {
+  if constexpr (N == 1) {
+    return {a && b.x};
+  } else if constexpr (N == 2) {
+    return {a && b.x, a && b.y};
+  } else if constexpr (N == 3) {
+    return {a && b.x, a && b.y, a && b.z};
+  } else if constexpr (N == 4) {
+    return {a && b.x, a && b.y, a && b.z, a && b.w};
+  }
+}
+template <size_t N>
+constexpr kernel vec<bool, N> operator||(
+    const vec<bool, N>& a, const vec<bool, N>& b) {
+  if constexpr (N == 1) {
+    return {a.x || b.x};
+  } else if constexpr (N == 2) {
+    return {a.x || b.x, a.y || b.y};
+  } else if constexpr (N == 3) {
+    return {a.x || b.x, a.y || b.y, a.z || b.z};
+  } else if constexpr (N == 4) {
+    return {a.x || b.x, a.y || b.y, a.z || b.z, a.w || b.w};
+  }
+}
+template <size_t N>
+constexpr kernel vec<bool, N> operator||(const vec<bool, N>& a, bool b) {
+  if constexpr (N == 1) {
+    return {a.x || b};
+  } else if constexpr (N == 2) {
+    return {a.x || b, a.y || b};
+  } else if constexpr (N == 3) {
+    return {a.x || b, a.y || b, a.z || b};
+  } else if constexpr (N == 4) {
+    return {a.x || b, a.y || b, a.z || b, a.w || b};
+  }
+}
+template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
+constexpr kernel vec<T, N> operator||(T1 a, const vec<T2, N>& b) {
+  if constexpr (N == 1) {
+    return {a || b.x};
+  } else if constexpr (N == 2) {
+    return {a || b.x, a || b.y};
+  } else if constexpr (N == 3) {
+    return {a || b.x, a || b.y, a || b.z};
+  } else if constexpr (N == 4) {
+    return {a || b.x, a || b.y, a || b.z, a || b.w};
+  }
+}
 
 // Vector assignments
 template <typename T, typename T1, size_t N>
@@ -850,6 +1020,46 @@ constexpr kernel vec<T, N>& operator%=(vec<T, N>& a, const vec<T1, N>& b) {
 template <typename T, typename T1, size_t N>
 constexpr kernel vec<T, N>& operator%=(vec<T, N>& a, T1 b) {
   return a = a % b;
+}
+template <typename T, typename T1, size_t N>
+constexpr kernel vec<T, N>& operator&=(vec<T, N>& a, const vec<T1, N>& b) {
+  return a = a & b;
+}
+template <typename T, typename T1, size_t N>
+constexpr kernel vec<T, N>& operator&=(vec<T, N>& a, T1 b) {
+  return a = a & b;
+}
+template <typename T, typename T1, size_t N>
+constexpr kernel vec<T, N>& operator|=(vec<T, N>& a, const vec<T1, N>& b) {
+  return a = a | b;
+}
+template <typename T, typename T1, size_t N>
+constexpr kernel vec<T, N>& operator|=(vec<T, N>& a, T1 b) {
+  return a = a | b;
+}
+template <typename T, typename T1, size_t N>
+constexpr kernel vec<T, N>& operator^=(vec<T, N>& a, const vec<T1, N>& b) {
+  return a = a ^ b;
+}
+template <typename T, typename T1, size_t N>
+constexpr kernel vec<T, N>& operator^=(vec<T, N>& a, T1 b) {
+  return a = a ^ b;
+}
+template <typename T, typename T1, size_t N>
+constexpr kernel vec<T, N>& operator>>=(vec<T, N>& a, const vec<T1, N>& b) {
+  return a = a >> b;
+}
+template <typename T, typename T1, size_t N>
+constexpr kernel vec<T, N>& operator>>=(vec<T, N>& a, T1 b) {
+  return a = a >> b;
+}
+template <typename T, typename T1, size_t N>
+constexpr kernel vec<T, N>& operator<<=(vec<T, N>& a, const vec<T1, N>& b) {
+  return a = a << b;
+}
+template <typename T, typename T1, size_t N>
+constexpr kernel vec<T, N>& operator<<=(vec<T, N>& a, T1 b) {
+  return a = a << b;
 }
 
 // Vector products and lengths.
