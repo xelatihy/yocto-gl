@@ -996,27 +996,22 @@ shape_data make_rounded_box(
   for (auto i : range(shape.positions.size())) {
     auto pc = abs(shape.positions[i]);
     auto ps = select(component_less(shape.positions[i], 0), -1.0f, 1.0f);
-    auto [pc_x, pc_y, pc_z] = pc;
-    auto [c_x, c_y, c_z]    = pc;
-    if (pc_x >= c_x && pc_y >= c_y && pc_z >= c_z) {
+    if (pc.x >= c.x && pc.y >= c.y && pc.z >= c.z) {
       auto pn            = normalize(pc - c);
       shape.positions[i] = c + radius * pn;
       shape.normals[i]   = pn;
-    } else if (pc_x >= c_x && pc_y >= c_y) {
-      auto pn              = normalize((pc - c) * vec3f{1, 1, 0});
-      auto [pn_x, pn_y, _] = pn;
-      shape.positions[i]   = {c_x + radius * pn_x, c_y + radius * pn_y, pc_z};
-      shape.normals[i]     = pn;
-    } else if (pc_x >= c_x && pc_z >= c_z) {
-      auto pn              = normalize((pc - c) * vec3f{1, 0, 1});
-      auto [pn_x, _, pn_z] = pn;
-      shape.positions[i]   = {c_x + radius * pn_x, pc_y, c_z + radius * pn_z};
-      shape.normals[i]     = pn;
-    } else if (pc_y >= c_y && pc_z >= c_z) {
-      auto pn              = normalize((pc - c) * vec3f{0, 1, 1});
-      auto [_, pn_y, pn_z] = pn;
-      shape.positions[i]   = {pc_x, c_y + radius * pn_y, c_z + radius * pn_z};
-      shape.normals[i]     = pn;
+    } else if (pc.x >= c.x && pc.y >= c.y) {
+      auto pn            = normalize((pc - c) * vec3f{1, 1, 0});
+      shape.positions[i] = {c.x + radius * pn.x, c.y + radius * pn.y, pc.z};
+      shape.normals[i]   = pn;
+    } else if (pc.x >= c.x && pc.z >= c.z) {
+      auto pn            = normalize((pc - c) * vec3f{1, 0, 1});
+      shape.positions[i] = {c.x + radius * pn.x, pc.y, c.z + radius * pn.z};
+      shape.normals[i]   = pn;
+    } else if (pc.y >= c.y && pc.z >= c.z) {
+      auto pn            = normalize((pc - c) * vec3f{0, 1, 1});
+      shape.positions[i] = {pc.x, c.y + radius * pn.y, c.z + radius * pn.z};
+      shape.normals[i]   = pn;
     } else {
       continue;
     }
@@ -1071,14 +1066,13 @@ shape_data make_capped_uvsphere(const vec2i& steps, float scale, float cap) {
   cap        = min(cap, scale / 2);
   auto zflip = (scale - cap);
   for (auto i : range(shape.positions.size())) {
-    auto [px, py, pz] = shape.positions[i];
-    auto [nx, ny, nz] = shape.normals[i];
-    if (pz > zflip) {
-      shape.positions[i] = {px, py, 2 * zflip - pz};
-      shape.normals[i]   = {-nx, -ny, nz};
-    } else if (pz < -zflip) {
-      shape.positions[i] = {px, py, 2 * (-zflip) - pz};
-      shape.normals[i]   = {-nx, -ny, nz};
+    auto &position = shape.positions[i], &normal = shape.normals[i];
+    if (position.z > zflip) {
+      position = {position.x, position.y, 2 * zflip - position.z};
+      normal   = {-normal.x, -normal.y, normal.z};
+    } else if (position.z < -zflip) {
+      position = {position.x, position.y, 2 * (-zflip) - position.z};
+      normal   = {-normal.x, -normal.y, normal.z};
     }
   }
   return shape;
@@ -1101,35 +1095,27 @@ shape_data make_uvdisk(const vec2i& steps, float scale) {
 // Make a uv cylinder
 shape_data make_uvcylinder(const vec3i& steps, const vec2f& scale) {
   auto shape = shape_data{};
-  // steps
-  auto [steps_circle, steps_sides, steps_ends] = steps;
   // side
-  merge_shape_inplace(
-      shape, make_quads({steps_circle, steps_sides}, [=](vec2f uv) {
-        auto [radius, height] = scale;
-        auto [phi, h]         = uv * vec2f{2 * pif, 1};
-        return make_quads_vertex{
-            vec3f{cos(phi) * radius, sin(phi) * radius, height * (2 * h - 1)},
-            vec3f{cos(phi), sin(phi), 0}, uv};
-      }));
+  merge_shape_inplace(shape, make_quads({steps.x, steps.y}, [=](vec2f uv) {
+    auto [phi, h] = uv * vec2f{2 * pif, 1};
+    return make_quads_vertex{
+        vec3f{cos(phi) * scale.x, sin(phi) * scale.x, scale.y * (2 * h - 1)},
+        vec3f{cos(phi), sin(phi), 0}, uv};
+  }));
   // top
-  merge_shape_inplace(
-      shape, make_quads({steps_circle, steps_ends}, [=](vec2f uv) {
-        auto [radius, height] = scale;
-        auto [phi, r]         = flip_v(uv) * vec2f{2 * pif, 1};
-        return make_quads_vertex{
-            vec3f{r * radius * cos(phi), r * radius * sin(phi), +height},
-            vec3f(0, 0, 1), flip_v(uv)};
-      }));
+  merge_shape_inplace(shape, make_quads({steps.x, steps.z}, [=](vec2f uv) {
+    auto [phi, r] = flip_v(uv) * vec2f{2 * pif, 1};
+    return make_quads_vertex{
+        vec3f{r * scale.x * cos(phi), r * scale.x * sin(phi), +scale.y},
+        vec3f(0, 0, 1), flip_v(uv)};
+  }));
   // bottom
-  merge_shape_inplace(
-      shape, make_quads({steps_circle, steps_ends}, [=](vec2f uv) {
-        auto [radius, height] = scale;
-        auto [phi, r]         = uv * vec2f{2 * pif, 1};
-        return make_quads_vertex{
-            vec3f{r * radius * cos(phi), r * radius * sin(phi), -height},
-            vec3f(0, 0, -1), uv};
-      }));
+  merge_shape_inplace(shape, make_quads({steps.x, steps.z}, [=](vec2f uv) {
+    auto [phi, r] = uv * vec2f{2 * pif, 1};
+    return make_quads_vertex{
+        vec3f{r * scale.x * cos(phi), r * scale.x * sin(phi), -scale.y},
+        vec3f(0, 0, -1), uv};
+  }));
   return shape;
 }
 
@@ -1141,20 +1127,17 @@ shape_data make_rounded_uvcylinder(
     radius = min(radius, min(scale));
     auto c = scale - radius;
     for (auto i : range(shape.positions.size())) {
-      auto [px, py, pz] = shape.positions[i];
-      auto phi          = atan2(py, px);
-      auto r            = length(vec2f{px, py});
-      auto z            = pz;
-      auto pc           = vec2f{r, abs(z)};
-      auto [pc_x, pc_y] = pc;
-      auto [c_x, c_y]   = c;
-      auto ps           = (z < 0) ? -1.0f : 1.0f;
-      if (pc_x >= c_x && pc_y >= c_y) {
-        auto pn            = normalize(pc - c);
-        auto [pn_x, pn_y]  = pn;
-        shape.positions[i] = {cos(phi) * (c_x + radius * pn_x),
-            sin(phi) * (c_x + radius * pn_x), ps * (c_y + radius * pn_y)};
-        shape.normals[i]   = {cos(phi) * pn_x, sin(phi) * pn_x, ps * pn_y};
+      auto &position = shape.positions[i], &normal = shape.positions[i];
+      auto  phi = atan2(position.y, position.x);
+      auto  r   = length(vec2f{position.x, position.y});
+      auto  z   = position.z;
+      auto  pc  = vec2f{r, abs(z)};
+      auto  ps  = (z < 0) ? -1.0f : 1.0f;
+      if (pc.x >= c.x && pc.y >= c.y) {
+        auto pn  = normalize(pc - c);
+        position = {cos(phi) * (c.x + radius * pn.x),
+            sin(phi) * (c.x + radius * pn.x), ps * (c.y + radius * pn.y)};
+        normal   = {cos(phi) * pn.x, sin(phi) * pn.x, ps * pn.y};
       } else {
         continue;
       }
@@ -1166,39 +1149,30 @@ shape_data make_rounded_uvcylinder(
 // Make a uv capsule
 shape_data make_uvcapsule(const vec3i& steps, const vec2f& scale) {
   auto shape = shape_data{};
-  // steps
-  auto [steps_circle, steps_sides, steps_ends] = steps;
   // side
-  merge_shape_inplace(
-      shape, make_quads({steps_circle, steps_sides}, [=](vec2f uv) {
-        auto [radius, height] = scale;
-        auto [phi, h]         = uv * vec2f{2 * pif, 1};
-        return make_quads_vertex{
-            vec3f{cos(phi) * radius, sin(phi) * radius, height * (2 * h - 1)},
-            vec3f{cos(phi), sin(phi), 0}, uv};
-      }));
+  merge_shape_inplace(shape, make_quads({steps.x, steps.y}, [=](vec2f uv) {
+    auto [phi, h] = uv * vec2f{2 * pif, 1};
+    return make_quads_vertex{
+        vec3f{cos(phi) * scale.x, sin(phi) * scale.x, scale.y * (2 * h - 1)},
+        vec3f{cos(phi), sin(phi), 0}, uv};
+  }));
   // top
-  merge_shape_inplace(
-      shape, make_quads({steps_circle, steps_ends}, [=](vec2f uv) {
-        auto [radius, height] = scale;
-        auto [phi, theta]     = flip_v(uv) * vec2f{2 * pif, pif / 2};
-        return make_quads_vertex{
-            vec3f{cos(phi) * sin(theta) * radius,
-                sin(phi) * sin(theta) * radius, cos(theta) * radius + height},
-            vec3f{cos(phi) * sin(theta), sin(phi) * sin(theta), cos(theta)},
-            flip_v(uv)};
-      }));
+  merge_shape_inplace(shape, make_quads({steps.x, steps.z}, [=](vec2f uv) {
+    auto [phi, theta] = flip_v(uv) * vec2f{2 * pif, pif / 2};
+    return make_quads_vertex{
+        vec3f{cos(phi) * sin(theta) * scale.x, sin(phi) * sin(theta) * scale.x,
+            cos(theta) * scale.x + scale.y},
+        vec3f{cos(phi) * sin(theta), sin(phi) * sin(theta), cos(theta)},
+        flip_v(uv)};
+  }));
   // bottom
-  merge_shape_inplace(
-      shape, make_quads({steps_circle, steps_ends}, [=](vec2f uv) {
-        auto [radius, height] = scale;
-        auto [phi, theta]     = uv * vec2f{2 * pif, pif / 2};
-        return make_quads_vertex{
-            vec3f{cos(phi) * sin(theta) * radius,
-                sin(phi) * sin(theta) * radius, -cos(theta) * radius - height},
-            vec3f{cos(phi) * sin(theta), sin(phi) * sin(theta), -cos(theta)},
-            uv};
-      }));
+  merge_shape_inplace(shape, make_quads({steps.x, steps.z}, [=](vec2f uv) {
+    auto [phi, theta] = uv * vec2f{2 * pif, pif / 2};
+    return make_quads_vertex{
+        vec3f{cos(phi) * sin(theta) * scale.x, sin(phi) * sin(theta) * scale.x,
+            -cos(theta) * scale.x - scale.y},
+        vec3f{cos(phi) * sin(theta), sin(phi) * sin(theta), -cos(theta)}, uv};
+  }));
   // done
   return shape;
 }
@@ -1206,28 +1180,22 @@ shape_data make_uvcapsule(const vec3i& steps, const vec2f& scale) {
 // Make a uv cone
 shape_data make_uvcone(const vec3i& steps, const vec2f& scale) {
   auto shape = shape_data{};
-  // steps
-  auto [steps_circle, steps_sides, steps_ends] = steps;
   // side
-  merge_shape_inplace(
-      shape, make_quads({steps_circle, steps_sides}, [=](vec2f uv) {
-        auto [radius, height] = scale;
-        auto [nr, nh]         = normalize(scale * vec2f{1, 2});
-        auto [phi, h]         = uv * vec2f{2 * pif, 1};
-        return make_quads_vertex{
-            vec3f{cos(phi) * (1 - h) * radius, sin(phi) * (1 - h) * radius,
-                height * (2 * h - 1)},
-            vec3f{cos(phi) * nh, sin(phi) * nh, nr}, uv};
-      }));
+  merge_shape_inplace(shape, make_quads({steps.x, steps.y}, [=](vec2f uv) {
+    auto normal2d = normalize(scale * vec2f{1, 2});
+    auto [phi, h] = uv * vec2f{2 * pif, 1};
+    return make_quads_vertex{
+        vec3f{cos(phi) * (1 - h) * scale.x, sin(phi) * (1 - h) * scale.x,
+            scale.y * (2 * h - 1)},
+        vec3f{cos(phi) * normal2d.y, sin(phi) * normal2d.y, normal2d.x}, uv};
+  }));
   // bottom
-  merge_shape_inplace(
-      shape, make_quads({steps_sides, steps_ends}, [=](vec2f uv) {
-        auto [radius, height] = scale;
-        auto [phi, r]         = uv * vec2f{2 * pif, 1};
-        return make_quads_vertex{
-            vec3f{r * radius * cos(phi), r * radius * sin(phi), -height},
-            vec3f(0, 0, -1), uv};
-      }));
+  merge_shape_inplace(shape, make_quads({steps.y, steps.z}, [=](vec2f uv) {
+    auto [phi, r] = uv * vec2f{2 * pif, 1};
+    return make_quads_vertex{
+        vec3f{r * scale.x * cos(phi), r * scale.x * sin(phi), -scale.y},
+        vec3f(0, 0, -1), uv};
+  }));
   return shape;
 }
 
@@ -1303,11 +1271,8 @@ static shape_data make_lines(int num, int steps, Func&& func) {
 shape_data make_lines(
     int num, int steps, const vec2f& scale, const vec2f& rad) {
   return make_lines(num, steps, [&](const vec2f& uv) {
-    auto [len, width]              = scale;
-    auto [base_radius, tip_radius] = rad;
-    auto [u, v]                    = uv;
-    return make_lines_vertex{vec3f{(2 * u - 1) * len, (2 * v - 1) * width, 0},
-        vec3f{1, 0, 0}, vec2f{u, v}, lerp(base_radius, tip_radius, u)};
+    return make_lines_vertex{vec3f{(2 * uv - 1) * scale, 0}, vec3f{1, 0, 0}, uv,
+        lerp(rad.x, rad.y, uv.x)};
   });
 }
 
@@ -1404,13 +1369,11 @@ shape_data make_random_lines(const shape_data& base, int num, int steps,
     btexcoord.push_back(eval_texcoord(base, point.element, point.uv));
   }
 
-  auto [min_len, max_len] = len;
-
   auto shape = make_lines(num, steps, {1, 1}, radius);
   auto rng   = make_rng(seed);
   for (auto idx : range(num)) {
     auto offset = idx * (steps + 1);
-    auto length = lerp(min_len, max_len, rand1f(rng));
+    auto length = lerp(len.x, len.y, rand1f(rng));
     for (auto iidx : range(steps + 1)) {
       auto u                         = iidx / (float)steps;
       shape.positions[offset + iidx] = bpositions[idx] +
@@ -1437,15 +1400,13 @@ shape_data make_random_hairs(const shape_data& base, int num, int steps,
     btexcoord.push_back(eval_texcoord(base, point.element, point.uv));
   }
 
-  auto [min_len, max_len] = len;
-
   auto shape = make_lines(num, steps, {1, 1}, radius);
   auto rng   = make_rng(seed);
   for (auto idx : range(num)) {
     auto offset             = idx * (steps + 1);
     auto position           = bpositions[idx];
     auto direction          = bnormals[idx];
-    auto length             = lerp(min_len, max_len, rand1f(rng));
+    auto length             = lerp(len.x, len.y, rand1f(rng));
     shape.positions[offset] = position;
     for (auto iidx = 1; iidx <= steps; iidx++) {
       shape.positions[offset + iidx] = position;
@@ -1464,25 +1425,21 @@ shape_data make_random_hairs(const shape_data& base, int num, int steps,
 
 // Make a heightfield mesh.
 shape_data make_heightfield(const array2d<float>& height) {
-  auto size       = (vec2i)height.extents();
-  auto shape      = make_recty(size + 1, (vec2f)size / (float)max(size));
-  auto [width, _] = size;
-  for (auto [i, j] : range(size)) {
-    auto& position = shape.positions[j * width + i];
-    auto [x, y, z] = position;
-    position       = {x, height[vec2i{i, j}], z};
+  auto size  = (vec2i)height.extents();
+  auto shape = make_recty(size + 1, (vec2f)size / (float)max(size));
+  for (auto ij : range(size)) {
+    auto& position = shape.positions[ij.y * size.x + ij.x];
+    position       = {position.x, height[ij], position.y};
   }
   shape.normals = quads_normals(shape.quads, shape.positions);
   return shape;
 }
 shape_data make_heightfield(const array2d<vec4f>& height) {
-  auto size       = (vec2i)height.extents();
-  auto shape      = make_recty(size + 1, (vec2f)size / (float)max(size));
-  auto [width, _] = size;
-  for (auto [i, j] : range(size)) {
-    auto& position = shape.positions[j * width + i];
-    auto [x, y, z] = position;
-    position       = {x, mean(xyz(height[vec2i{i, j}])), z};
+  auto size  = (vec2i)height.extents();
+  auto shape = make_recty(size + 1, (vec2f)size / (float)max(size));
+  for (auto ij : range(size)) {
+    auto& position = shape.positions[ij.y * size.x + ij.x];
+    position       = {position.x, mean(xyz(height[ij])), position.z};
   }
   shape.normals = quads_normals(shape.quads, shape.positions);
   return shape;
@@ -2664,24 +2621,21 @@ void split_facevarying(vector<vec4i>& split_quads,
   if (!positions.empty()) {
     split_positions.resize(vert_map.size());
     for (auto& [vert, index] : vert_map) {
-      auto [vid, _, __]      = vert;
-      split_positions[index] = positions[vid];
+      split_positions[index] = positions[vert.x];
     }
   }
   split_normals.clear();
   if (!normals.empty()) {
     split_normals.resize(vert_map.size());
     for (auto& [vert, index] : vert_map) {
-      auto [_, vid, __]    = vert;
-      split_normals[index] = normals[vid];
+      split_normals[index] = normals[vert.y];
     }
   }
   split_texcoords.clear();
   if (!texcoords.empty()) {
     split_texcoords.resize(vert_map.size());
     for (auto& [vert, index] : vert_map) {
-      auto [_, __, vid]      = vert;
-      split_texcoords[index] = texcoords[vid];
+      split_texcoords[index] = texcoords[vert.z];
     }
   }
 }
@@ -2712,8 +2666,7 @@ pair<vector<vec3i>, vector<vec3f>> weld_triangles(
   auto [wpositions, indices] = weld_vertices(positions, threshold);
   auto wtriangles            = triangles;
   for (auto& triangle : wtriangles) {
-    auto [v1, v2, v3] = triangle;
-    triangle          = {indices[v1], indices[v2], indices[v3]};
+    triangle = {indices[triangle.x], indices[triangle.y], indices[triangle.z]};
   }
   return {wtriangles, wpositions};
 }
@@ -2722,8 +2675,7 @@ pair<vector<vec4i>, vector<vec3f>> weld_quads(const vector<vec4i>& quads,
   auto [wpositions, indices] = weld_vertices(positions, threshold);
   auto wquads                = quads;
   for (auto& quad : wquads) {
-    auto [v1, v2, v3, v4] = quad;
-    quad = {indices[v1], indices[v2], indices[v3], indices[v4]};
+    quad = {indices[quad.x], indices[quad.y], indices[quad.z], indices[quad.w]};
   }
   return {wquads, wpositions};
 }
@@ -3024,8 +2976,7 @@ static pair<vector<vec4i>, vector<T>> subdivide_catmullclark_impl(
     acount[point] += 1;
   }
   for (auto& edge : tcrease_edges) {
-    auto [v1, v2] = edge;
-    auto centroid = (tvertices[v1] + tvertices[v2]) / 2;
+    auto centroid = (tvertices[edge.x] + tvertices[edge.y]) / 2;
     for (auto vid : edge) {
       if (tvert_val[vid] != 1) continue;
       avert[vid] += centroid;
@@ -3033,9 +2984,9 @@ static pair<vector<vec4i>, vector<T>> subdivide_catmullclark_impl(
     }
   }
   for (auto& quad : tquads) {
-    auto [v1, v2, v3, v4] = quad;
-    auto centroid =
-        (tvertices[v1] + tvertices[v2] + tvertices[v3] + tvertices[v4]) / 4;
+    auto centroid = (tvertices[quad.x] + tvertices[quad.y] + tvertices[quad.z] +
+                        tvertices[quad.w]) /
+                    4;
     for (auto vid : quad) {
       if (tvert_val[vid] != 2) continue;
       avert[vid] += centroid;
