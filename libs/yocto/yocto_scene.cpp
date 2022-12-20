@@ -137,15 +137,15 @@ vec4f eval_texture(const texture_data& texture, const vec2f& uv, bool as_linear,
     auto ij = clamp((vec2s)st, 0, size - 1);
     return lookup_texture(texture, ij, as_linear);
   } else {
-    auto ij     = clamp((vec2s)st, 0, size - 1);
-    auto i1j    = (ij + vec2s{1, 0}) % size;
-    auto ij1    = (ij + vec2s{0, 1}) % size;
-    auto i1j1   = (ij + vec2s{1, 1}) % size;
-    auto [u, v] = st - ij;
-    return lookup_texture(texture, ij, as_linear) * (1 - u) * (1 - v) +
-           lookup_texture(texture, ij1, as_linear) * (1 - u) * v +
-           lookup_texture(texture, i1j, as_linear) * u * (1 - v) +
-           lookup_texture(texture, i1j1, as_linear) * u * v;
+    auto ij   = clamp((vec2s)st, 0, size - 1);
+    auto i1j  = (ij + vec2s{1, 0}) % size;
+    auto ij1  = (ij + vec2s{0, 1}) % size;
+    auto i1j1 = (ij + vec2s{1, 1}) % size;
+    auto w    = st - ij;
+    return lookup_texture(texture, ij, as_linear) * (1 - w.x) * (1 - w.y) +
+           lookup_texture(texture, ij1, as_linear) * (1 - w.x) * w.y +
+           lookup_texture(texture, i1j, as_linear) * w.x * (1 - w.y) +
+           lookup_texture(texture, i1j1, as_linear) * w.x * w.y;
   }
 }
 vec4f eval_texture(
@@ -202,17 +202,14 @@ material_point eval_material(const scene_data& scene,
   auto scattering_tex = eval_texture(
       scene, material.scattering_tex, texcoord, true);
 
-  // unpack roughness texture
-  auto [_, roughness_tex_roughness, roughness_tex_metallic, __] = roughness_tex;
-
   // material point
   auto point         = material_point{};
   point.type         = material.type;
   point.emission     = material.emission * xyz(emission_tex) * xyz(color_shp);
   point.color        = material.color * xyz(color_tex) * xyz(color_shp);
   point.opacity      = material.opacity * alpha(color_tex) * alpha(color_shp);
-  point.metallic     = material.metallic * roughness_tex_metallic;
-  point.roughness    = material.roughness * roughness_tex_roughness;
+  point.metallic     = material.metallic * roughness_tex.z;
+  point.roughness    = material.roughness * roughness_tex.y;
   point.roughness    = point.roughness * point.roughness;
   point.ior          = material.ior;
   point.scattering   = material.scattering * xyz(scattering_tex);
@@ -487,17 +484,14 @@ material_point eval_material(const scene_data& scene,
   auto scattering_tex = eval_texture(
       scene, material.scattering_tex, texcoord, true);
 
-  // unpack roughness texture
-  auto [_, roughness_tex_roughness, roughness_tex_metallic, __] = roughness_tex;
-
   // material point
   auto point         = material_point{};
   point.type         = material.type;
   point.emission     = material.emission * xyz(emission_tex) * xyz(color_shp);
   point.color        = material.color * xyz(color_tex) * xyz(color_shp);
   point.opacity      = material.opacity * alpha(color_tex) * alpha(color_shp);
-  point.metallic     = material.metallic * roughness_tex_metallic;
-  point.roughness    = material.roughness * roughness_tex_roughness;
+  point.metallic     = material.metallic * roughness_tex.z;
+  point.roughness    = material.roughness * roughness_tex.y;
   point.roughness    = point.roughness * point.roughness;
   point.ior          = material.ior;
   point.scattering   = material.scattering * xyz(scattering_tex);

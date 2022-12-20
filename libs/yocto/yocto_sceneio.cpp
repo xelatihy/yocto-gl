@@ -1009,19 +1009,16 @@ void save_shape(const string& filename, const shape_data& shape,
           str += std::to_string(value) + ",\n";
         } else if constexpr (std::is_same_v<vec2i, T> ||
                              std::is_same_v<vec2f, T>) {
-          auto [valuex, valuey] = value;
-          str += "{" + std::to_string(valuex) + "," + std::to_string(valuey) +
+          str += "{" + std::to_string(value.x) + "," + std::to_string(value.y) +
                  "},\n";
         } else if constexpr (std::is_same_v<vec3i, T> ||
                              std::is_same_v<vec3f, T>) {
-          auto [valuex, valuey, valuez] = value;
-          str += "{" + std::to_string(valuex) + "," + std::to_string(valuey) +
-                 "," + std::to_string(valuez) + "},\n";
+          str += "{" + std::to_string(value.x) + "," + std::to_string(value.y) +
+                 "," + std::to_string(value.z) + "},\n";
         } else if constexpr (std::is_same_v<vec4i, T> ||
                              std::is_same_v<vec4f, T>) {
-          auto [valuex, valuey, valuez, valuew] = value;
-          str += "{" + std::to_string(valuex) + "," + std::to_string(valuey) +
-                 "," + std::to_string(valuez) + "," + std::to_string(valuew) +
+          str += "{" + std::to_string(value.x) + "," + std::to_string(value.y) +
+                 "," + std::to_string(value.z) + "," + std::to_string(value.w) +
                  "},\n";
         } else {
           throw std::invalid_argument{"cannot print this"};
@@ -1163,19 +1160,16 @@ void save_fvshape(const string& filename, const fvshape_data& shape,
           str += std::to_string(value) + ",\n";
         } else if constexpr (std::is_same_v<vec2i, T> ||
                              std::is_same_v<vec2f, T>) {
-          auto [valuex, valuey] = value;
-          str += "{" + std::to_string(valuex) + "," + std::to_string(valuey) +
+          str += "{" + std::to_string(value.x) + "," + std::to_string(value.y) +
                  "},\n";
         } else if constexpr (std::is_same_v<vec3i, T> ||
                              std::is_same_v<vec3f, T>) {
-          auto [valuex, valuey, valuez] = value;
-          str += "{" + std::to_string(valuex) + "," + std::to_string(valuey) +
-                 "," + std::to_string(valuez) + "},\n";
+          str += "{" + std::to_string(value.x) + "," + std::to_string(value.y) +
+                 "," + std::to_string(value.z) + "},\n";
         } else if constexpr (std::is_same_v<vec4i, T> ||
                              std::is_same_v<vec4f, T>) {
-          auto [valuex, valuey, valuez, valuew] = value;
-          str += "{" + std::to_string(valuex) + "," + std::to_string(valuey) +
-                 "," + std::to_string(valuez) + "," + std::to_string(valuew) +
+          str += "{" + std::to_string(value.x) + "," + std::to_string(value.y) +
+                 "," + std::to_string(value.z) + "," + std::to_string(value.w) +
                  "},\n";
         } else {
           throw std::invalid_argument{"cannot print this"};
@@ -4224,20 +4218,18 @@ static void save_gltf_scene(
       gmaterial.name  = copy_string(get_material_name(scene, material));
       auto emission_scale =
           max(material.emission) > 1.0f ? max(material.emission) : 1.0f;
-      auto [emission_x, emission_y, emission_z] = material.emission;
-      gmaterial.emissive_factor[0]              = emission_x / emission_scale;
-      gmaterial.emissive_factor[1]              = emission_y / emission_scale;
-      gmaterial.emissive_factor[2]              = emission_z / emission_scale;
+      gmaterial.emissive_factor[0] = material.emission.x / emission_scale;
+      gmaterial.emissive_factor[1] = material.emission.y / emission_scale;
+      gmaterial.emissive_factor[2] = material.emission.z / emission_scale;
       if (emission_scale > 1.0f) {
         gmaterial.has_emissive_strength               = true;
         gmaterial.emissive_strength.emissive_strength = emission_scale;
       }
       gmaterial.has_pbr_metallic_roughness = true;
       auto& gpbr                           = gmaterial.pbr_metallic_roughness;
-      auto [color_x, color_y, color_z]     = material.color;
-      gpbr.base_color_factor[0]            = color_x;
-      gpbr.base_color_factor[1]            = color_y;
-      gpbr.base_color_factor[2]            = color_z;
+      gpbr.base_color_factor[0]            = material.color.x;
+      gpbr.base_color_factor[1]            = material.color.y;
+      gpbr.base_color_factor[2]            = material.color.z;
       gpbr.base_color_factor[3]            = material.opacity;
       gpbr.metallic_factor                 = material.metallic;
       gpbr.roughness_factor                = material.roughness;

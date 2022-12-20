@@ -2006,9 +2006,8 @@ void show_gui_window(const vec2i& size, const string& title,
   state.uiupdate = callbacks.uiupdate;
 
   // create window
-  auto [width, height] = size;
-  auto window          = glfwCreateWindow(
-      width, height, title.c_str(), nullptr, nullptr);
+  auto window = glfwCreateWindow(
+      size.x, size.y, title.c_str(), nullptr, nullptr);
   if (window == nullptr)
     throw std::runtime_error{"cannot initialize windowing system"};
   glfwMakeContextCurrent(window);
@@ -2032,8 +2031,8 @@ void show_gui_window(const vec2i& size, const string& title,
           state.input.window -= vec2i{state.widgets_width, 0};
         state.input.framebuffer = get_framebuffer_viewport(window);
         if (state.widgets_width) {
-          auto [win_width, _]          = get_window_size(window);
-          auto [framebuffer_width, __] = get_framebuffer_size(window);
+          auto win_width         = get_window_size(window).x;
+          auto framebuffer_width = get_framebuffer_size(window).x;
           auto offset =
               (int)(state.widgets_width * (float)framebuffer_width / win_width);
           state.input.framebuffer -= vec4i{0, 0, offset, 0};
@@ -2092,8 +2091,8 @@ void show_gui_window(const vec2i& size, const string& title,
       state.input.window -= vec2i{state.widgets_width, 0};
     state.input.framebuffer = get_framebuffer_viewport(window);
     if (state.widgets_width) {
-      auto [win_width, _]          = get_window_size(window);
-      auto [framebuffer_width, __] = get_framebuffer_size(window);
+      auto win_width         = get_window_size(window).x;
+      auto framebuffer_width = get_framebuffer_size(window).x;
       auto offset =
           (int)(state.widgets_width * (float)framebuffer_width / win_width);
       state.input.framebuffer -= vec4i{0, 0, offset, 0};

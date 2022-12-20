@@ -515,12 +515,12 @@ template <typename T = float>
 inline array2d<vec<T, 4>> add_border(const array2d<vec<T, 4>>& image, T width,
     const vec<T, 4>& color = {0, 0, 0, 1}) {
   auto result = image;
-  auto [w, h] = image.extents();
+  auto size   = image.extents();
   auto scale  = (T)1 / max(image.extents());
   for (auto ij : range(image.extents())) {
     auto uv = (vec2f)ij * scale;
-    if (uv.x < width || uv.y < width || uv.y > w * scale - width ||
-        uv.y > h * scale - width) {
+    if (uv.x < width || uv.y < width || uv.y > size.x * scale - width ||
+        uv.y > size.y * scale - width) {
       result[ij] = color;
     }
   }
@@ -642,14 +642,11 @@ inline array2d<vec<T, 4>> make_sunsky(const vec2s& extents, float theta_sun,
   // rescale by user
   sun_le *= sun_intensity;
 
-  // size
-  auto [width, height] = extents;
-
   // sun scale from Wikipedia scaled by user quantity and rescaled to at
   // the minimum 5 pixel diameter
   auto sun_angular_radius = 9.35e-03f / 2;  // Wikipedia
   sun_angular_radius *= sun_radius;
-  sun_angular_radius = max(sun_angular_radius, 2 * pif / height);
+  sun_angular_radius = max(sun_angular_radius, 2 * pif / extents.y);
 
   // sun direction
   auto sun_direction = vec3f{0, cos(theta_sun), sin(theta_sun)};
@@ -661,11 +658,11 @@ inline array2d<vec<T, 4>> make_sunsky(const vec2s& extents, float theta_sun,
 
   // Make the sun sky image
   auto img = array2d<vec<T, 4>>(extents);
-  for (auto j : range(height / 2)) {
-    auto theta = pif * ((j + 0.5f) / height);
+  for (auto j : range(extents.y / 2)) {
+    auto theta = pif * ((j + 0.5f) / extents.y);
     theta      = clamp(theta, 0.0f, (T)pi / 2 - flt_eps);
-    for (auto i : range(width)) {
-      auto phi = 2 * (T)pi * (T(i + 0.5) / width);
+    for (auto i : range(extents.x)) {
+      auto phi = 2 * (T)pi * (T(i + 0.5) / extents.x);
       auto w = vec3f{cos(phi) * sin(theta), cos(theta), sin(phi) * sin(theta)};
       auto gamma   = acos(clamp(dot(w, sun_direction), -1, 1));
       auto sky_col = sky(theta, gamma, theta_sun);
@@ -677,22 +674,22 @@ inline array2d<vec<T, 4>> make_sunsky(const vec2s& extents, float theta_sun,
 
   if (ground_albedo != vec<T, 3>{0, 0, 0}) {
     auto ground = vec<T, 3>{0, 0, 0};
-    for (auto j : range(height / 2)) {
-      auto theta = (T)pi * (T(j + 0.5) / height);
-      for (auto i : range(width)) {
+    for (auto j : range(extents.y / 2)) {
+      auto theta = (T)pi * (T(j + 0.5) / extents.y);
+      for (auto i : range(extents.x)) {
         auto le    = xyz(img[{i, j}]);
-        auto angle = sin(theta) * 4 * (T)pi / (width * height);
+        auto angle = sin(theta) * 4 * (T)pi / (extents.x * extents.y);
         ground += le * (ground_albedo / (T)pi) * cos(theta) * angle;
       }
     }
-    for (auto j : range(height / 2, height)) {
-      for (auto i : range(width)) {
+    for (auto j : range(extents.y / 2, extents.y)) {
+      for (auto i : range(extents.x)) {
         img[{i, j}] = {ground, 1};
       }
     }
   } else {
-    for (auto j : range(height / 2, height)) {
-      for (auto i : range(width)) {
+    for (auto j : range(extents.y / 2, extents.y)) {
+      for (auto i : range(extents.x)) {
         img[{i, j}] = {0, 0, 0, 1};
       }
     }
@@ -707,14 +704,13 @@ template <typename T = float>
 inline array2d<vec<T, 4>> make_lights(const vec2s& extents,
     const vec<T, 3>& le = {1, 1, 1}, int nlights = 4, T langle = pif / 4,
     T lwidth = (T)pi / 16, T lheight = (T)pi / 16) {
-  auto [width, height] = extents;
-  auto img             = array2d<vec<T, 4>>(extents);
-  for (auto j : range(height)) {
-    auto theta = pif * ((j + 0.5f) / height);
+  auto img = array2d<vec<T, 4>>(extents);
+  for (auto j : range(extents.y)) {
+    auto theta = pif * ((j + 0.5f) / extents.y);
     theta      = clamp(theta, 0, (T)pi / 2 - (T)0.00001);
     if (fabs(theta - langle) > lheight / 2) continue;
-    for (auto i : range(width)) {
-      auto phi     = 2 * (T)pi * ((i + (T)0.5) / width);
+    for (auto i : range(extents.x)) {
+      auto phi     = 2 * (T)pi * ((i + (T)0.5) / extents.x);
       auto inlight = false;
       for (auto l : range(nlights)) {
         auto lphi = 2 * (T)pi * (l + (T)0.5) / nlights;
