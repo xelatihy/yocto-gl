@@ -1483,7 +1483,15 @@ constexpr kernel vec<T, N> gain(const vec<T1, N>& a, T2 b) {
 // }
 template <typename T, size_t N>
 constexpr kernel bool isfinite(const vec<T, N>& a) {
-  return all(map(a, [](T a) { return isfinite(a); }));
+  if constexpr (N == 1) {
+    return isfinite(a.x);
+  } else if constexpr (N == 2) {
+    return isfinite(a.x) && isfinite(a.y);
+  } else if constexpr (N == 3) {
+    return isfinite(a.x) && isfinite(a.y) && isfinite(a.z);
+  } else if constexpr (N == 4) {
+    return isfinite(a.x) && isfinite(a.y) && isfinite(a.z) && isfinite(a.w);
+  }
 }
 
 // Conversion between ranges
@@ -1558,79 +1566,207 @@ constexpr kernel vec<T, 4> quat_inverse(const vec<T, 4>& a) {
 template <typename T1, typename T2, size_t N>
 constexpr kernel vec<bool, N> component_equal(
     const vec<T1, N>& a, const vec<T2, N>& b) {
-  return map(a, b, [](T1 a, T2 b) { return a == b; });
+  if constexpr (N == 1) {
+    return {a.x == b.x};
+  } else if constexpr (N == 2) {
+    return {a.x == b.x, a.y == b.y};
+  } else if constexpr (N == 3) {
+    return {a.x == b.x, a.y == b.y, a.z == b.z};
+  } else if constexpr (N == 4) {
+    return {a.x == b.x, a.y == b.y, a.z == b.z, a.w == b.w};
+  }
 }
 template <typename T1, typename T2, size_t N>
 constexpr kernel vec<bool, N> component_equal(const vec<T1, N>& a, T2 b) {
-  return map(a, b, [](T1 a, T2 b) { return a == b; });
+  if constexpr (N == 1) {
+    return {a.x == b};
+  } else if constexpr (N == 2) {
+    return {a.x == b, a.y == b};
+  } else if constexpr (N == 3) {
+    return {a.x == b, a.y == b, a.z == b};
+  } else if constexpr (N == 4) {
+    return {a.x == b, a.y == b, a.z == b, a.w == b};
+  }
 }
 template <typename T1, typename T2, size_t N>
 constexpr kernel vec<bool, N> component_not_equal(
     const vec<T1, N>& a, const vec<T2, N>& b) {
-  return map(a, b, [](T1 a, T2 b) { return a != b; });
+  if constexpr (N == 1) {
+    return {a.x != b.x};
+  } else if constexpr (N == 2) {
+    return {a.x != b.x, a.y != b.y};
+  } else if constexpr (N == 3) {
+    return {a.x != b.x, a.y != b.y, a.z != b.z};
+  } else if constexpr (N == 4) {
+    return {a.x != b.x, a.y != b.y, a.z != b.z, a.w != b.w};
+  }
 }
 template <typename T1, typename T2, size_t N>
 constexpr kernel vec<bool, N> component_not_equal(
     const vec<T1, N>& a, const T2 b) {
-  return map(a, b, [](T1 a, T2 b) { return a != b; });
+  if constexpr (N == 1) {
+    return {a.x != b};
+  } else if constexpr (N == 2) {
+    return {a.x != b, a.y != b};
+  } else if constexpr (N == 3) {
+    return {a.x != b, a.y != b, a.z != b};
+  } else if constexpr (N == 4) {
+    return {a.x != b, a.y != b, a.z != b, a.w != b};
+  }
 }
 template <typename T1, typename T2, size_t N>
 constexpr kernel vec<bool, N> component_less(
     const vec<T1, N>& a, const vec<T2, N>& b) {
-  return map(a, b, [](T1 a, T2 b) { return a < b; });
+  if constexpr (N == 1) {
+    return {a.x < b.x};
+  } else if constexpr (N == 2) {
+    return {a.x < b.x, a.y < b.y};
+  } else if constexpr (N == 3) {
+    return {a.x < b.x, a.y < b.y, a.z < b.z};
+  } else if constexpr (N == 4) {
+    return {a.x < b.x, a.y < b.y, a.z < b.z, a.w < b.w};
+  }
 }
 template <typename T1, typename T2, size_t N>
 constexpr kernel vec<bool, N> component_less(const vec<T1, N>& a, const T2 b) {
-  return map(a, b, [](T1 a, T2 b) { return a < b; });
+  if constexpr (N == 1) {
+    return {a.x < b};
+  } else if constexpr (N == 2) {
+    return {a.x < b, a.y < b};
+  } else if constexpr (N == 3) {
+    return {a.x < b, a.y < b, a.z < b};
+  } else if constexpr (N == 4) {
+    return {a.x < b, a.y < b, a.z < b, a.w < b};
+  }
 }
 template <typename T1, typename T2, size_t N>
 constexpr kernel vec<bool, N> component_greater(
     const vec<T1, N>& a, const vec<T2, N>& b) {
-  return map(a, b, [](T1 a, T2 b) { return a > b; });
+  if constexpr (N == 1) {
+    return {a.x > b.x};
+  } else if constexpr (N == 2) {
+    return {a.x > b.x, a.y > b.y};
+  } else if constexpr (N == 3) {
+    return {a.x > b.x, a.y > b.y, a.z > b.z};
+  } else if constexpr (N == 4) {
+    return {a.x > b.x, a.y > b.y, a.z > b.z, a.w > b.w};
+  }
 }
 template <typename T1, typename T2, size_t N>
 constexpr kernel vec<bool, N> component_greater(
     const vec<T1, N>& a, const T2 b) {
-  return map(a, b, [](T1 a, T2 b) { return a > b; });
+  if constexpr (N == 1) {
+    return {a.x > b};
+  } else if constexpr (N == 2) {
+    return {a.x > b, a.y > b};
+  } else if constexpr (N == 3) {
+    return {a.x > b, a.y > b, a.z > b};
+  } else if constexpr (N == 4) {
+    return {a.x > b, a.y > b, a.z > b, a.w > b};
+  }
 }
 template <typename T1, typename T2, size_t N>
 constexpr kernel vec<bool, N> component_less_equal(
     const vec<T1, N>& a, const vec<T2, N>& b) {
-  return map(a, b, [](T1 a, T2 b) { return a <= b; });
+  if constexpr (N == 1) {
+    return {a.x <= b.x};
+  } else if constexpr (N == 2) {
+    return {a.x <= b.x, a.y <= b.y};
+  } else if constexpr (N == 3) {
+    return {a.x <= b.x, a.y <= b.y, a.z <= b.z};
+  } else if constexpr (N == 4) {
+    return {a.x <= b.x, a.y <= b.y, a.z <= b.z, a.w <= b.w};
+  }
 }
 template <typename T1, typename T2, size_t N>
 constexpr kernel vec<bool, N> component_less_equal(
     const vec<T1, N>& a, const T2 b) {
-  return map(a, b, [](T1 a, T2 b) { return a <= b; });
+  if constexpr (N == 1) {
+    return {a.x <= b};
+  } else if constexpr (N == 2) {
+    return {a.x <= b, a.y <= b};
+  } else if constexpr (N == 3) {
+    return {a.x <= b, a.y <= b, a.z <= b};
+  } else if constexpr (N == 4) {
+    return {a.x <= b, a.y <= b, a.z <= b, a.w <= b};
+  }
 }
 template <typename T1, typename T2, size_t N>
 constexpr kernel vec<bool, N> component_greater_equal(
     const vec<T1, N>& a, const vec<T2, N>& b) {
-  return map(a, b, [](T1 a, T2 b) { return a >= b; });
+  if constexpr (N == 1) {
+    return {a.x >= b.x};
+  } else if constexpr (N == 2) {
+    return {a.x >= b.x, a.y >= b.y};
+  } else if constexpr (N == 3) {
+    return {a.x >= b.x, a.y >= b.y, a.z >= b.z};
+  } else if constexpr (N == 4) {
+    return {a.x >= b.x, a.y >= b.y, a.z >= b.z, a.w >= b.w};
+  }
 }
 template <typename T1, typename T2, size_t N>
 constexpr kernel vec<bool, N> component_greater_equal(
     const vec<T1, N>& a, const T2 b) {
-  return map(a, b, [](T1 a, T2 b) { return a >= b; });
+  if constexpr (N == 1) {
+    return {a.x >= b};
+  } else if constexpr (N == 2) {
+    return {a.x >= b, a.y >= b};
+  } else if constexpr (N == 3) {
+    return {a.x >= b, a.y >= b, a.z >= b};
+  } else if constexpr (N == 4) {
+    return {a.x >= b, a.y >= b, a.z >= b, a.w >= b};
+  }
 }
 template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
 constexpr kernel vec<T, N> select(
     const vec<bool, N>& a, const vec<T1, N>& b, const vec<T2, N>& c) {
-  return map(a, b, c, [](bool a, T1 b, T2 c) { return a ? b : c; });
+  if constexpr (N == 1) {
+    return {a.x ? b.x : c.x};
+  } else if constexpr (N == 2) {
+    return {a.x ? b.x : c.x, a.y ? b.y : c.y};
+  } else if constexpr (N == 3) {
+    return {a.x ? b.x : c.x, a.y ? b.y : c.y, a.z ? b.z : c.z};
+  } else if constexpr (N == 4) {
+    return {a.x ? b.x : c.x, a.y ? b.y : c.y, a.z ? b.z : c.z, a.w ? b.w : c.w};
+  }
 }
 template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
 constexpr kernel vec<T, N> select(
     const vec<bool, N>& a, T1 b, const vec<T2, N>& c) {
-  return map(a, b, c, [](bool a, T1 b, T2 c) { return a ? b : c; });
+  if constexpr (N == 1) {
+    return {a.x ? b : c.x};
+  } else if constexpr (N == 2) {
+    return {a.x ? b : c.x, a.y ? b : c.y};
+  } else if constexpr (N == 3) {
+    return {a.x ? b : c.x, a.y ? b : c.y, a.z ? b : c.z};
+  } else if constexpr (N == 4) {
+    return {a.x ? b : c.x, a.y ? b : c.y, a.z ? b : c.z, a.w ? b : c.w};
+  }
 }
 template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
 constexpr kernel vec<T, N> select(
     const vec<bool, N>& a, const vec<T1, N>& b, T2 c) {
-  return map(a, b, c, [](bool a, T1 b, T2 c) { return a ? b : c; });
+  if constexpr (N == 1) {
+    return {a.x ? b.x : c};
+  } else if constexpr (N == 2) {
+    return {a.x ? b.x : c, a.y ? b.y : c};
+  } else if constexpr (N == 3) {
+    return {a.x ? b.x : c, a.y ? b.y : c, a.z ? b.z : c};
+  } else if constexpr (N == 4) {
+    return {a.x ? b.x : c, a.y ? b.y : c, a.z ? b.z : c, a.w ? b.w : c};
+  }
 }
 template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
 constexpr kernel vec<T, N> select(const vec<bool, N>& a, T1 b, T2 c) {
-  return map(a, b, c, [](bool a, T1 b, T2 c) { return a ? b : c; });
+  if constexpr (N == 1) {
+    return {a.x ? b : c};
+  } else if constexpr (N == 2) {
+    return {a.x ? b : c, a.y ? b : c};
+  } else if constexpr (N == 3) {
+    return {a.x ? b : c, a.y ? b : c, a.z ? b : c};
+  } else if constexpr (N == 4) {
+    return {a.x ? b : c, a.y ? b : c, a.z ? b : c, a.w ? b : c};
+  }
 }
 
 }  // namespace yocto
