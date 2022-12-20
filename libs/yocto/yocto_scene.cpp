@@ -76,7 +76,7 @@ ray3f eval_camera(
     // point on the lens
     auto e = vec3f{lens_uv * camera.aperture / 2, 0};
     // point on the focus plane
-    auto p = dc * camera.focus / abs(dc.z());
+    auto p = dc * camera.focus / abs(dc.z);
     // correct ray direction to account for camera focusing
     auto d = normalize(p - e);
     // done
