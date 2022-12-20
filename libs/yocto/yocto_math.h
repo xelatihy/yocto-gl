@@ -1421,28 +1421,22 @@ constexpr kernel vec<T, N> uv_to_unit(const vec<T, N>& a) {
 // Conversion between coordinates
 template <typename T>
 constexpr kernel vec<T, 2> cartesian_to_sphericaluv(const vec<T, 3>& w) {
-  // TODO: fix me
-  auto uv = vec<T, 2>{
-      atan2(w.y, w.x) / (2 * (T)pi), acos(clamp(w.z, -1, 1)) / (T)pi};
-  return mod(uv, 1);
+  auto phi = mod(atan2(w.y, w.x), 1), theta = acos(clamp(w.z, -1, 1));
+  return {phi / (2 * (T)pi), theta / (T)pi};
 }
 template <typename T>
 constexpr kernel vec<T, 2> cartesiany_to_sphericaluv(const vec<T, 3>& w) {
-  // TODO: fix me
-  auto uv = vec<T, 2>{
-      atan2(w.z, w.x) / (2 * (T)pi), acos(clamp(w.y, -1, 1)) / (T)pi};
-  return mod(uv, 1);
+  auto phi = mod(atan2(w.z, w.x), 1), theta = acos(clamp(w.y, -1, 1));
+  return {phi / (2 * (T)pi), theta / (T)pi};
 }
 template <typename T>
 constexpr kernel vec<T, 3> sphericaluv_to_cartesian(const vec<T, 2>& uv) {
-  // TODO: fix me
-  auto [phi, theta] = uv * vec<T, 2>{2 * (T)pi, (T)pi};
+  auto phi = uv.x * 2 * (T)pi, theta = uv.y * (T)pi;
   return {cos(phi) * sin(theta), sin(phi) * sin(theta), cos(theta)};
 }
 template <typename T>
 constexpr kernel vec<T, 3> sphericaluv_to_cartesiany(const vec<T, 2>& uv) {
-  // TODO: fix me
-  auto [phi, theta] = uv * vec<T, 2>{2 * (T)pi, (T)pi};
+  auto phi = uv.x * 2 * (T)pi, theta = uv.y * (T)pi;
   return {cos(phi) * sin(theta), cos(theta), sin(phi) * sin(theta)};
 }
 

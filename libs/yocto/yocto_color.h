@@ -103,8 +103,7 @@ constexpr kernel vec<T, N> byte_to_float(const vec<byte, N>& a) {
 // Luminance
 template <typename T>
 constexpr kernel T luminance(const vec<T, 3>& a) {
-  auto [r, g, b] = a;
-  return (T)0.2126 * r + (T)0.7152 * g + (T)0.0722 * b;
+  return (T)0.2126 * a.x + (T)0.7152 * a.y + (T)0.0722 * a.z;
 }
 
 // sRGB non-linear curve
@@ -683,9 +682,8 @@ constexpr mat<T, 3, 3> rgb_to_xyz_mat(const vec<T, 2>& rc, const vec<T, 2>& gc,
     const vec<T, 2>& bc, const vec<T, 2>& wc) {
   auto r = vec<T, 3>{rc, 1 - sum(rc)}, g = vec<T, 3>{gc, 1 - sum(gc)},
        b = vec<T, 3>{bc, 1 - sum(bc)}, w = vec<T, 3>{wc, 1 - sum(wc)};
-  auto [_, wy, __]  = w;
-  auto [cr, cg, cb] = inverse({r, g, b}) * w / wy;
-  return mat<T, 3, 3>{cr * r, cg * g, cb * b};
+  auto [cr, cg, cb] = inverse({r, g, b}) * w / w.y;
+  return {cr * r, cg * g, cb * b};
 }
 
 // Construct an RGB color space. Predefined color spaces below
