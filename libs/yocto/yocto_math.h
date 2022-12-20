@@ -262,7 +262,7 @@ struct vec;
 
 template <typename T>
 struct vec<T, 1> {
-  T x;
+  T x = 0;
 
   constexpr kernel vec() : x{0} {}
   constexpr kernel vec(T x_) : x{x_} {}
@@ -288,7 +288,8 @@ struct vec<T, 1> {
 
 template <typename T>
 struct vec<T, 2> {
-  T x, y;
+  T x = 0;
+  T y = 0;
 
   constexpr kernel vec() : x{0}, y{0} {}
   constexpr kernel explicit vec(T v) : x{v}, y{v} {}
@@ -315,7 +316,9 @@ struct vec<T, 2> {
 
 template <typename T>
 struct vec<T, 3> {
-  T x, y, z;
+  T x = 0;
+  T y = 0;
+  T z = 0;
 
   constexpr kernel vec() : x{0}, y{0}, z{0} {}
   constexpr kernel explicit vec(T v_) : x{v_}, y{v_}, z{v_} {}
@@ -342,7 +345,10 @@ struct vec<T, 3> {
 
 template <typename T>
 struct vec<T, 4> {
-  T x, y, z, w;
+  T x = 0;
+  T y = 0;
+  T z = 0;
+  T w = 0;
 
   constexpr kernel vec() : x{0}, y{0}, z{0}, w{0} {}
   constexpr kernel explicit vec(T v_) : x{v_}, y{v_}, z{v_}, w{v_} {}
@@ -1906,7 +1912,7 @@ struct mat;
 // Small Fixed-size matrices stored in column major format.
 template <typename T, size_t N>
 struct mat<T, N, 1> {
-  vec<T, N> x;
+  vec<T, N> x = {0};
 
   constexpr kernel mat() : x{0} {}
   constexpr kernel mat(const vec<T, N>& x_) : x{x_} {}
@@ -1920,9 +1926,10 @@ struct mat<T, N, 1> {
 // Small Fixed-size matrices stored in column major format.
 template <typename T, size_t N>
 struct mat<T, N, 2> {
-  vec<T, N> x, y;
+  vec<T, N> x = {0};
+  vec<T, N> y = {0};
 
-  constexpr kernel mat() : x{0}, y{1} {}
+  constexpr kernel mat() : x{0}, y{0} {}
   constexpr kernel mat(const vec<T, N>& x_, const vec<T, N>& y_)
       : x{x_}, y{y_} {}
 
@@ -1935,7 +1942,9 @@ struct mat<T, N, 2> {
 // Small Fixed-size matrices stored in column major format.
 template <typename T, size_t N>
 struct mat<T, N, 3> {
-  vec<T, N> x, y, z;
+  vec<T, N> x = {0};
+  vec<T, N> y = {0};
+  vec<T, N> z = {0};
 
   constexpr kernel mat() : x{0}, y{0}, z{0} {}
   constexpr kernel mat(
@@ -1951,7 +1960,10 @@ struct mat<T, N, 3> {
 // Small Fixed-size matrices stored in column major format.
 template <typename T, size_t N>
 struct mat<T, N, 4> {
-  vec<T, N> x, y, z, w;
+  vec<T, N> x = {0};
+  vec<T, N> y = {0};
+  vec<T, N> z = {0};
+  vec<T, N> w = {0};
 
   constexpr kernel mat() : x{0}, y{0}, z{0}, w{0} {}
   constexpr kernel mat(const vec<T, N>& x_, const vec<T, N>& y_,
@@ -2264,7 +2276,9 @@ struct frame;
 // Rigid frames stored as a column-major affine transform matrix.
 template <typename T>
 struct frame<T, 2> {
-  vec<T, 2> x, y, o;
+  vec<T, 2> x = {1, 0};
+  vec<T, 2> y = {0, 1};
+  vec<T, 2> o = {0, 0};
 
   constexpr kernel frame() : x{1, 0}, y{0, 1}, o{0, 0} {}
   constexpr kernel frame(
@@ -2288,7 +2302,10 @@ struct frame<T, 2> {
 // Rigid frames stored as a column-major affine transform matrix.
 template <typename T>
 struct frame<T, 3> {
-  vec<T, 3> x, y, z, o;
+  vec<T, 3> x = {1, 0, 0};
+  vec<T, 3> y = {0, 0, 1};
+  vec<T, 3> z = {0, 0, 1};
+  vec<T, 3> o = {0, 0, 0};
 
   constexpr kernel frame() : x{1, 0, 0}, y{0, 1, 0}, z{0, 0, 1}, o{0, 0, 0} {}
   constexpr kernel frame(const vec<T, 3>& x_, const vec<T, 3>& y_,
@@ -2330,7 +2347,7 @@ constexpr kernel const vec<T, N>& translation(const frame<T, N>& a) {
 
 // Frame/mat conversion
 template <typename T, size_t N>
-constexpr kernel frame<T, N - 1> mat_to_frame(const mat<T, N, N>& m) {
+constexpr kernel frame<T, N - 1> to_frame(const mat<T, N, N>& m) {
   if constexpr (N == 3) {
     return {xy(m.x), xy(m.y), xy(m.z)};
   } else if constexpr (N == 4) {
@@ -2338,7 +2355,7 @@ constexpr kernel frame<T, N - 1> mat_to_frame(const mat<T, N, N>& m) {
   }
 }
 template <typename T, size_t N>
-constexpr kernel mat<T, N + 1, N + 1> frame_to_mat(const frame<T, N>& f) {
+constexpr kernel mat<T, N + 1, N + 1> to_mat(const frame<T, N>& f) {
   if constexpr (N == 2) {
     return {{f.x, 0}, {f.y, 0}, {f.o, 1}};
   } else if constexpr (N == 3) {

@@ -1786,7 +1786,7 @@ static void draw_scene(glscene_state& glscene, const scene_data& scene,
       camera_aspect >= 0
            ? (2 * atan(camera.film / (camera_aspect * 2 * camera.lens)))
            : (2 * atan(camera.film / (2 * camera.lens)));
-  auto view_matrix       = frame_to_mat(inverse(camera.frame));
+  auto view_matrix       = to_mat(inverse(camera.frame));
   auto projection_matrix = perspective_mat(
       camera_yfov, camera_aspect, params.near, params.far);
   bind_uniform(program, "eye", camera.frame.o);
@@ -1843,9 +1843,9 @@ static void draw_scene(glscene_state& glscene, const scene_data& scene,
     auto& glshape  = glscene.shapes.at(instance.shape);
     auto& material = scene.materials.at(instance.material);
 
-    auto shape_xform     = frame_to_mat(instance.frame);
+    auto shape_xform     = to_mat(instance.frame);
     auto shape_inv_xform = transpose(
-        frame_to_mat(inverse(instance.frame, params.non_rigid_frames)));
+        to_mat(inverse(instance.frame, params.non_rigid_frames)));
     bind_uniform(program, "frame", shape_xform);
     bind_uniform(program, "frameit", shape_inv_xform);
     bind_uniform(program, "faceted", params.faceted || glshape.normals == 0);

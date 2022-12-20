@@ -73,18 +73,81 @@ namespace yocto {
 
 // Axis aligned bounding box represented as a min/max vector pairs.
 template <typename T, size_t N>
-struct bbox {
-  vec<T, N> min = {num_max<T>};
-  vec<T, N> max = {num_min<T>};
+struct bbox;
+
+// Axis aligned bounding box represented as a min/max vector pairs.
+template <typename T>
+struct bbox<T, 1> {
+  vec<T, 1> min = {num_max<T>};
+  vec<T, 1> max = {num_min<T>};
 
   constexpr kernel bbox() : min{num_max<T>}, max{num_min<T>} {}
-  constexpr kernel bbox(const vec<T, N>& min_, const vec<T, N>& max_)
+  constexpr kernel bbox(const vec<T, 1>& min_, const vec<T, 1>& max_)
       : min{min_}, max{max_} {}
 
-  constexpr kernel vec<T, N>& operator[](size_t i) {
+  constexpr kernel vec<T, 1>& operator[](size_t i) {
     return i == 0 ? min : max;
   }
-  constexpr kernel const vec<T, N>& operator[](size_t i) const {
+  constexpr kernel const vec<T, 1>& operator[](size_t i) const {
+    return i == 0 ? min : max;
+  }
+};
+
+// Axis aligned bounding box represented as a min/max vector pairs.
+template <typename T>
+struct bbox<T, 2> {
+  vec<T, 2> min = {num_max<T>, num_max<T>};
+  vec<T, 2> max = {num_min<T>, num_min<T>};
+
+  constexpr kernel bbox()
+      : min{num_max<T>, num_max<T>}, max{num_min<T>, num_min<T>} {}
+  constexpr kernel bbox(const vec<T, 2>& min_, const vec<T, 2>& max_)
+      : min{min_}, max{max_} {}
+
+  constexpr kernel vec<T, 2>& operator[](size_t i) {
+    return i == 0 ? min : max;
+  }
+  constexpr kernel const vec<T, 2>& operator[](size_t i) const {
+    return i == 0 ? min : max;
+  }
+};
+
+// Axis aligned bounding box represented as a min/max vector pairs.
+template <typename T>
+struct bbox<T, 3> {
+  vec<T, 3> min = {num_max<T>, num_max<T>, num_max<T>};
+  vec<T, 3> max = {num_min<T>, num_min<T>, num_min<T>};
+
+  constexpr kernel bbox()
+      : min{num_max<T>, num_max<T>, num_max<T>}
+      , max{num_min<T>, num_min<T>, num_min<T>} {}
+  constexpr kernel bbox(const vec<T, 3>& min_, const vec<T, 3>& max_)
+      : min{min_}, max{max_} {}
+
+  constexpr kernel vec<T, 3>& operator[](size_t i) {
+    return i == 0 ? min : max;
+  }
+  constexpr kernel const vec<T, 3>& operator[](size_t i) const {
+    return i == 0 ? min : max;
+  }
+};
+
+// Axis aligned bounding box represented as a min/max vector pairs.
+template <typename T>
+struct bbox<T, 4> {
+  vec<T, 4> min = {num_max<T>, num_max<T>, num_max<T>, num_max<T>};
+  vec<T, 4> max = {num_min<T>, num_min<T>, num_min<T>, num_min<T>};
+
+  constexpr kernel bbox()
+      : min{num_max<T>, num_max<T>, num_max<T>, num_max<T>}
+      , max{num_min<T>, num_min<T>, num_min<T>, num_min<T>} {}
+  constexpr kernel bbox(const vec<T, 4>& min_, const vec<T, 4>& max_)
+      : min{min_}, max{max_} {}
+
+  constexpr kernel vec<T, 4>& operator[](size_t i) {
+    return i == 0 ? min : max;
+  }
+  constexpr kernel const vec<T, 4>& operator[](size_t i) const {
     return i == 0 ? min : max;
   }
 };
@@ -165,14 +228,33 @@ constexpr auto ray_eps = (T)1e-4;
 
 // Rays with origin, direction and min/max t value.
 template <typename T, size_t N>
-struct ray {
-  vec<T, N> o    = {0};
-  vec<T, N> d    = {0};  // TODO: initialize this properly
+struct ray;
+
+// Rays with origin, direction and min/max t value.
+template <typename T>
+struct ray<T, 2> {
+  vec<T, 3> o    = {0, 0};
+  vec<T, 3> d    = {0, 1};
+  T         tmin = ray_eps<T>;
+  T         tmax = num_max<T>;
+
+  constexpr kernel ray()
+      : o{0, 0}, d{0, 1}, tmin{ray_eps<T>}, tmax{num_max<T>} {}
+  constexpr kernel ray(const vec<T, 2>& o_, const vec<T, 2>& d_,
+      T tmin_ = ray_eps<T>, T tmax_ = num_max<T>)
+      : o{o_}, d{d_}, tmin{tmin_}, tmax{tmax_} {}
+};
+
+// Rays with origin, direction and min/max t value.
+template <typename T>
+struct ray<T, 3> {
+  vec<T, 3> o    = {0, 0, 0};
+  vec<T, 3> d    = {0, 0, 1};
   T         tmin = ray_eps<T>;
   T         tmax = num_max<T>;
 
   constexpr kernel ray() : o{0}, d{0}, tmin{ray_eps<T>}, tmax{num_max<T>} {}
-  constexpr kernel ray(const vec<T, N>& o_, const vec<T, N>& d_,
+  constexpr kernel ray(const vec<T, 3>& o_, const vec<T, 3>& d_,
       T tmin_ = ray_eps<T>, T tmax_ = num_max<T>)
       : o{o_}, d{d_}, tmin{tmin_}, tmax{tmax_} {}
 };

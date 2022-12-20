@@ -4096,7 +4096,7 @@ static void load_gltf_scene(
       auto xform   = mat4f{
             {1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
       cgltf_node_transform_world(&gnode, yocto::data(xform));
-      camera.frame = mat_to_frame(xform);
+      camera.frame = to_frame(xform);
     }
     if (gnode.mesh != nullptr) {
       for (auto& primitive : mesh_primitives.at(gnode.mesh - cgltf.meshes)) {
@@ -4105,7 +4105,7 @@ static void load_gltf_scene(
         auto xform     = mat4f{
                 {1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
         cgltf_node_transform_world(&gnode, yocto::data(xform));
-        instance.frame = mat_to_frame(xform);
+        instance.frame = to_frame(xform);
       }
     }
   }
@@ -4410,7 +4410,7 @@ static void save_gltf_scene(
       auto& camera = scene.cameras[idx];
       auto& gnode  = cgltf.nodes[idx];
       gnode.name   = copy_string(get_camera_name(scene, camera));
-      auto xform   = frame_to_mat(camera.frame);
+      auto xform   = to_mat(camera.frame);
       memcpy(gnode.matrix, &xform, sizeof(mat4f));
       gnode.has_matrix = true;
       gnode.camera     = cgltf.cameras + idx;
@@ -4419,7 +4419,7 @@ static void save_gltf_scene(
       auto& instance = scene.instances[idx];
       auto& gnode    = cgltf.nodes[idx + scene.cameras.size()];
       gnode.name     = copy_string(get_instance_name(scene, instance));
-      auto xform     = frame_to_mat(instance.frame);
+      auto xform     = to_mat(instance.frame);
       memcpy(gnode.matrix, &xform, sizeof(mat4f));
       gnode.has_matrix = true;
       gnode.mesh       = cgltf.meshes +
@@ -4775,7 +4775,7 @@ static void xml_attribute(string& xml, const string& name, const vec3f& value) {
 static void xml_attribute(
     string& xml, const string& name, const frame3f& value) {
   xml += " " + name + "=\"";
-  auto mat = frame_to_mat(value);
+  auto mat = to_mat(value);
   for (auto ij : range(vec2i(4, 4))) {
     xml += (xml.back() == '"' ? "" : " ") + std::to_string(value[ij.y][ij.x]);
   }
