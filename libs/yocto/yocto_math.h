@@ -1421,13 +1421,13 @@ constexpr kernel vec<T, N> uv_to_unit(const vec<T, N>& a) {
 // Conversion between coordinates
 template <typename T>
 constexpr kernel vec<T, 2> cartesian_to_sphericaluv(const vec<T, 3>& w) {
-  auto phi = mod(atan2(w.y, w.x), 1), theta = acos(clamp(w.z, -1, 1));
-  return {phi / (2 * (T)pi), theta / (T)pi};
+  auto phi = atan2(w.y, w.x), theta = acos(clamp(w.z, -1, 1));
+  return {mod(phi / (2 * (T)pi), 1), theta / (T)pi};
 }
 template <typename T>
 constexpr kernel vec<T, 2> cartesiany_to_sphericaluv(const vec<T, 3>& w) {
-  auto phi = mod(atan2(w.z, w.x), 1), theta = acos(clamp(w.y, -1, 1));
-  return {phi / (2 * (T)pi), theta / (T)pi};
+  auto phi = atan2(w.z, w.x), theta = acos(clamp(w.y, -1, 1));
+  return {mod(phi / (2 * (T)pi), 1), theta / (T)pi};
 }
 template <typename T>
 constexpr kernel vec<T, 3> sphericaluv_to_cartesian(const vec<T, 2>& uv) {
