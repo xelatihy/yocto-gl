@@ -443,6 +443,10 @@ constexpr kernel ptrdiff_t ssize(const vec<T, N>& a) {
   return (ptrdiff_t)N;
 }
 template <typename T, size_t N>
+constexpr kernel int isize(const vec<T, N>& a) {
+  return (int)N;
+}
+template <typename T, size_t N>
 constexpr kernel const T* begin(const vec<T, N>& a) {
   return &(a.x);
 }
@@ -3379,6 +3383,10 @@ namespace yocto {
 template <typename T>
 constexpr kernel std::ptrdiff_t ssize(const T& container) {
   return (std::ptrdiff_t)std::size(container);
+}
+template <typename T>
+constexpr kernel int isize(const T& container) {
+  return (int)std::size(container);
 }
 
 }  // namespace yocto
