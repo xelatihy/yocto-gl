@@ -64,26 +64,34 @@ template <typename T, size_t N>
 struct ndarray {
  public:
   // Constructors
-  ndarray() : _extents{0}, _data{} {}
-  explicit ndarray(const vec<size_t, N>& extents)
+  constexpr ndarray() : _extents{0}, _data{} {}
+  constexpr explicit ndarray(const vec<size_t, N>& extents)
       : _extents{extents}, _data(_size(extents), T{}) {}
-  ndarray(const T* data, const vec<size_t, N>& extents)
+  template <typename I>
+  constexpr explicit ndarray(const vec<I, N>& extents)
+      : _extents{(vec<size_t, N>)extents}
+      , _data(_size((vec<size_t, N>)extents), T{}) {}
+  constexpr ndarray(const T* data, const vec<size_t, N>& extents)
       : _extents{extents}, _data(data, data + _size(extents)) {}
-  ndarray(const ndarray& other)
+  template <typename I>
+  constexpr ndarray(const T* data, const vec<I, N>& extents)
+      : _extents{(vec<size_t, N>)extents}
+      , _data(data, data + _size((vec<size_t, N>)extents)) {}
+  constexpr ndarray(const ndarray& other)
       : _extents{other._extents}, _data{other._data} {}
-  ndarray(ndarray&& other) : _extents{0}, _data{} {
+  constexpr ndarray(ndarray&& other) : _extents{0}, _data{} {
     std::swap(_extents, other._extents);
     std::swap(_data, other._data);
   }
 
   // Assignments
-  ndarray& operator=(const ndarray& other) {
+  constexpr ndarray& operator=(const ndarray& other) {
     if (&other == this) return *this;
     _extents = other._extents;
     _data    = other._data;
     return *this;
   }
-  ndarray& operator=(ndarray&& other) {
+  constexpr ndarray& operator=(ndarray&& other) {
     if (&other == this) return *this;
     std::swap(_extents, other._extents);
     std::swap(_data, other._data);
@@ -97,34 +105,40 @@ struct ndarray {
   }
 
   // Size
-  bool           empty() const { return size() == 0; }
-  size_t         size() const { return _size(_extents); }
-  vec<size_t, N> extents() const { return _extents; }
-  size_t         extent(size_t dimension) const { return _extents[dimension]; }
+  constexpr bool           empty() const { return size() == 0; }
+  constexpr size_t         size() const { return _size(_extents); }
+  constexpr vec<size_t, N> extents() const { return _extents; }
+  constexpr size_t         extent(size_t dimension) const {
+    return _extents[dimension];
+  }
 
   // Access
-  T&       operator[](size_t idx) { return _data[idx]; }
-  const T& operator[](size_t idx) const { return _data[idx]; }
-  T&       operator[](const vec<size_t, N>& idx) {
+  constexpr T&       operator[](size_t idx) { return _data[idx]; }
+  constexpr const T& operator[](size_t idx) const { return _data[idx]; }
+  constexpr T&       operator[](const vec<size_t, N>& idx) {
     return _data[_index(idx, _extents)];
   }
-  const T& operator[](const vec<size_t, N>& idx) const {
+  constexpr const T& operator[](const vec<size_t, N>& idx) const {
     return _data[_index(idx, _extents)];
+  }
+  template <typename I>
+  constexpr T& operator[](const vec<I, N>& idx) {
+    return _data[_index((vec2s)idx, _extents)];
+  }
+  template <typename I>
+  constexpr const T& operator[](const vec<I, N>& idx) const {
+    return _data[_index((vec2s)idx, _extents)];
   }
 
   // Iteration
-  T*       begin() { return _data.data(); }
-  T*       end() { return _data.data() + size(); }
-  const T* begin() const { return _data.data(); }
-  const T* end() const { return _data.data() + size(); }
+  constexpr T*       begin() { return _data.data(); }
+  constexpr T*       end() { return _data.data() + size(); }
+  constexpr const T* begin() const { return _data.data(); }
+  constexpr const T* end() const { return _data.data() + size(); }
 
   // Data access
-  T*       data() { return _data.data(); }
-  const T* data() const { return _data.data(); }
-
-  // Data access
-  vector<T>&       data_vector() { return _data; }
-  const vector<T>& data_vector() const { return _data; }
+  constexpr T*       data() { return _data.data(); }
+  constexpr const T* data() const { return _data.data(); }
 
  private:
   vec<size_t, N> _extents = {0};
@@ -161,33 +175,15 @@ using array3d = ndarray<T, 3>;
 
 // equality
 template <typename T, size_t N>
-inline bool operator==(const ndarray<T, N>& a, const ndarray<T, N>& b);
-template <typename T, size_t N>
-inline bool operator!=(const ndarray<T, N>& a, const ndarray<T, N>& b);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-//
-//
-// IMPLEMENTATION
-//
-//
-// -----------------------------------------------------------------------------
-
-// -----------------------------------------------------------------------------
-// ND-ARRAY
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// equality
-template <typename T, size_t N>
-inline bool operator==(const ndarray<T, N>& a, const ndarray<T, N>& b) {
-  return a.extents() == b.extents() && a.data_vector() == b.data_vector();
+constexpr bool operator==(const ndarray<T, N>& a, const ndarray<T, N>& b) {
+  if (a.extents() != b.extents()) return false;
+  for (auto idx : range(a.size()))
+    if (a.data()[idx] != b.data()[idx]) return false;
+  return true;
 }
 template <typename T, size_t N>
-inline bool operator!=(const ndarray<T, N>& a, const ndarray<T, N>& b) {
-  return a.extents() != b.extents() || a.data_vector() != b.data_vector();
+constexpr bool operator!=(const ndarray<T, N>& a, const ndarray<T, N>& b) {
+  return !(a == b);
 }
 
 }  // namespace yocto
