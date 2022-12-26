@@ -40,6 +40,8 @@
 
 #include <vector>
 
+#include "yocto_math.h"
+
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
 // -----------------------------------------------------------------------------
@@ -49,6 +51,17 @@ namespace yocto {
 using std::vector;
 
 }  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// CUDA SUPPORT
+// -----------------------------------------------------------------------------
+#ifndef kernel
+#ifdef __CUDACC__
+#define kernel __device__
+#else
+#define kernel
+#endif
+#endif
 
 // -----------------------------------------------------------------------------
 // ONE-DIMENSIONAL SPAN
@@ -179,11 +192,353 @@ using span3d = ndspan<T, 3>;
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-//
-//
-// IMPLEMENTATION
-//
-//
+// PYTHON-LIKE ITERATORS
 // -----------------------------------------------------------------------------
+namespace yocto {
+
+// Python range: iterator and sequence
+template <typename I>
+struct range_iterator {
+  constexpr kernel      range_iterator(I index_) : index{index_} {}
+  constexpr kernel void operator++() { ++index; }
+  constexpr kernel bool operator!=(const range_iterator& other) const {
+    return index != other.index;
+  }
+  constexpr kernel I operator*() const { return index; }
+
+ private:
+  I index;
+};
+template <typename I>
+struct range_view {
+  constexpr kernel range_view(I min_, I max_) : min{min_}, max{max_} {}
+  constexpr kernel range_iterator<I> begin() const { return {min}; }
+  constexpr kernel range_iterator<I> end() const { return {max}; }
+
+ private:
+  I min, max;
+};
+
+// Python range: iterator and sequence
+template <typename I>
+struct srange_iterator {
+  constexpr kernel srange_iterator(I index_, I step_)
+      : index{index_}, step{step_} {}
+  constexpr kernel void operator++() { index += step; }
+  constexpr kernel bool operator!=(const srange_iterator& other) const {
+    return index != other.index;
+  }
+  constexpr kernel I operator*() const { return index; }
+
+ private:
+  I index, step;
+};
+// Python range: iterator and sequence
+template <typename I>
+struct srange_view {
+  constexpr kernel srange_view(I min_, I max_, I step_)
+      : min{min_}, max{max_}, step{step_} {}
+  constexpr kernel srange_iterator<I> begin() const { return {min, step}; }
+  constexpr kernel srange_iterator<I> end() const {
+    return {min + ((max - min) / step) * step, step};
+  }
+
+ private:
+  I min, max, step;
+};
+
+// Python range. Construct an object that iterates over an integer sequence.
+template <typename I>
+constexpr kernel range_view<I> range(I max) {
+  return range_view<I>((I)0, max);
+}
+template <typename I>
+constexpr kernel range_view<I> range(I min, I max) {
+  return range_view<I>(min, max);
+}
+template <typename I>
+constexpr kernel srange_view<I> range(I min, I max, I step) {
+  return srange_view<I>(min, max, step);
+}
+
+// Python range: iterator and sequence in 2D
+template <typename I, size_t N>
+struct ndrange_sentinel {};
+template <typename I, size_t N>
+struct ndrange_iterator {
+  constexpr kernel ndrange_iterator(
+      const vec<I, N>& cur_, const vec<I, N>& end_)
+      : index{cur_}, end{end_} {}
+  constexpr kernel void operator++() {
+    ++index.x;
+    if constexpr (N > 1) {
+      if (index.x >= end.x) {
+        index.x = 0;
+        index.y++;
+      }
+    }
+    if constexpr (N > 2) {
+      if (index.y >= end.y) {
+        index.y = 0;
+        index.z++;
+      }
+    }
+  }
+  constexpr kernel bool operator!=(const ndrange_sentinel<I, N>&) const {
+    return index[N - 1] != end[N - 1];
+  }
+  constexpr kernel vec<I, N> operator*() const { return index; }
+
+ private:
+  vec<I, N> index, end;
+};
+template <typename I, size_t N>
+struct ndrange_sequence {
+  constexpr kernel ndrange_sequence(const vec<I, N>& max_) : max{max_} {}
+  constexpr kernel ndrange_iterator<I, N> begin() const {
+    return {vec<I, N>{0}, max};
+  }
+  constexpr kernel ndrange_sentinel<I, N> end() const { return {}; }
+
+ private:
+  vec<I, N> max = {0};
+};
+
+// Python range in nd.
+template <typename I, size_t N>
+constexpr kernel ndrange_sequence<I, N> range(const vec<I, N>& max) {
+  return ndrange_sequence<I, N>(max);
+}
+template <typename I, size_t N>
+constexpr kernel ndrange_sequence<I, N> range(const array<I, N>& max) {
+  return range_sequence<I, N>((vec<I, N>)max);
+}
+
+// Python enumerate
+template <typename Sequence, typename I = size_t>
+constexpr kernel auto enumerate(const Sequence& sequence, I start = 0);
+template <typename Sequence, typename I = size_t>
+constexpr kernel auto enumerate(Sequence& sequence, I start = 0);
+
+// Python zip
+template <typename Sequence1, typename Sequence2>
+constexpr kernel auto zip(
+    const Sequence1& sequence1, const Sequence2& sequence2);
+template <typename Sequence1, typename Sequence2>
+constexpr kernel auto zip(Sequence1& sequence1, Sequence2& sequence2);
+template <typename Sequence1, typename Sequence2>
+constexpr kernel auto zip(const Sequence1& sequence1, Sequence2& sequence2);
+template <typename Sequence1, typename Sequence2>
+constexpr kernel auto zip(Sequence1& sequence1, const Sequence2& sequence2);
+
+// Implementation of Python enumerate.
+template <typename Sequence, typename I>
+constexpr kernel auto enumerate(const Sequence& sequence, I start) {
+  using Iterator  = typename Sequence::const_iterator;
+  using Reference = typename Sequence::const_reference;
+  struct enumerate_iterator {
+    I                     index;
+    Iterator              iterator;
+    constexpr kernel bool operator!=(const enumerate_iterator& other) const {
+      return index != other.index;
+    }
+    constexpr kernel void operator++() {
+      ++index;
+      ++iterator;
+    }
+    constexpr kernel pair<const I&, Reference> operator*() const {
+      return {index, *iterator};
+    }
+  };
+  struct enumerate_helper {
+    const Sequence&       sequence;
+    I                     begin_, end_;
+    constexpr kernel auto begin() {
+      return enumerate_iterator{begin_, std::begin(sequence)};
+    }
+    constexpr kernel auto end() {
+      return enumerate_iterator{end_, std::end(sequence)};
+    }
+  };
+  return enumerate_helper{sequence, 0, size(sequence)};
+}
+
+// Python enumerate
+template <typename Sequence, typename I>
+constexpr kernel auto enumerate(Sequence& sequence, I start) {
+  using Iterator  = typename Sequence::iterator;
+  using Reference = typename Sequence::reference;
+  struct enumerate_iterator {
+    I                     index;
+    Iterator              iterator;
+    constexpr kernel bool operator!=(const enumerate_iterator& other) const {
+      return index != other.index;
+    }
+    constexpr kernel void operator++() {
+      ++index;
+      ++iterator;
+    }
+    constexpr kernel pair<I&, Reference> operator*() const {
+      return {index, *iterator};
+    }
+  };
+  struct enumerate_helper {
+    Sequence&             sequence;
+    I                     begin_, end_;
+    constexpr kernel auto begin() {
+      return enumerate_iterator{begin_, std::begin(sequence)};
+    }
+    constexpr kernel auto end() {
+      return enumerate_iterator{end_, std::end(sequence)};
+    }
+  };
+  return enumerate_helper{sequence, 0, size(sequence)};
+}
+
+// Python zip
+template <typename Sequence1, typename Sequence2>
+constexpr kernel auto zip(
+    const Sequence1& sequence1, const Sequence2& sequence2) {
+  using Iterator1  = typename Sequence1::const_iterator;
+  using Reference1 = typename Sequence1::const_reference;
+  using Iterator2  = typename Sequence2::const_iterator;
+  using Reference2 = typename Sequence2::const_reference;
+  struct zip_iterator {
+    Iterator1             iterator1;
+    Iterator2             iterator2;
+    constexpr kernel bool operator!=(const zip_iterator& other) const {
+      return iterator1 != other.iterator1;
+    }
+    constexpr kernel void operator++() {
+      ++iterator1;
+      ++iterator2;
+    }
+    constexpr kernel pair<Reference1, Reference2> operator*() const {
+      return {*iterator1, *iterator2};
+    }
+  };
+  struct zip_helper {
+    const Sequence1&      sequence1;
+    const Sequence2&      sequence2;
+    constexpr kernel auto begin() {
+      return zip_iterator{std::begin(sequence1), std::begin(sequence2)};
+    }
+    constexpr kernel auto end() {
+      return zip_iterator{std::end(sequence1), std::end(sequence2)};
+    }
+  };
+  return zip_helper{sequence1, sequence2};
+}
+
+// Implementation of Python zip
+template <typename Sequence1, typename Sequence2>
+constexpr kernel auto zip(Sequence1& sequence1, Sequence2& sequence2) {
+  using Iterator1  = typename Sequence1::iterator;
+  using Reference1 = typename Sequence1::reference;
+  using Iterator2  = typename Sequence2::iterator;
+  using Reference2 = typename Sequence2::reference;
+  struct zip_iterator {
+    Iterator1             iterator1;
+    Iterator2             iterator2;
+    constexpr kernel bool operator!=(const zip_iterator& other) const {
+      return iterator1 != other.iterator1;
+    }
+    constexpr kernel void operator++() {
+      ++iterator1;
+      ++iterator2;
+    }
+    constexpr kernel pair<Reference1, Reference2> operator*() const {
+      return {*iterator1, *iterator2};
+    }
+  };
+  struct zip_helper {
+    Sequence1&            sequence1;
+    Sequence2&            sequence2;
+    constexpr kernel auto begin() {
+      return zip_iterator{std::begin(sequence1), std::begin(sequence2)};
+    }
+    constexpr kernel auto end() {
+      return zip_iterator{std::end(sequence1), std::end(sequence2)};
+    }
+  };
+  return zip_helper{sequence1, sequence2};
+}
+
+// Implementation of Python zip
+template <typename Sequence1, typename Sequence2>
+constexpr kernel auto zip(const Sequence1& sequence1, Sequence2& sequence2) {
+  using Iterator1  = typename Sequence1::const_iterator;
+  using Reference1 = typename Sequence1::const_reference;
+  using Iterator2  = typename Sequence2::iterator;
+  using Reference2 = typename Sequence2::reference;
+  struct zip_iterator {
+    Iterator1             iterator1;
+    Iterator2             iterator2;
+    constexpr kernel bool operator!=(const zip_iterator& other) const {
+      return iterator1 != other.iterator1;
+    }
+    constexpr kernel void operator++() {
+      ++iterator1;
+      ++iterator2;
+    }
+    constexpr kernel pair<Reference1, Reference2> operator*() const {
+      return {*iterator1, *iterator2};
+    }
+  };
+  struct zip_helper {
+    const Sequence1&      sequence1;
+    Sequence2&            sequence2;
+    constexpr kernel auto begin() {
+      return zip_iterator{std::begin(sequence1), std::begin(sequence2)};
+    }
+    constexpr kernel auto end() {
+      return zip_iterator{std::end(sequence1), std::end(sequence2)};
+    }
+  };
+  return zip_helper{sequence1, sequence2};
+}
+
+// Implementation of Python zip
+template <typename Sequence1, typename Sequence2>
+constexpr kernel auto zip(Sequence1& sequence1, const Sequence2& sequence2) {
+  using Iterator1  = typename Sequence1::iterator;
+  using Reference1 = typename Sequence1::reference;
+  using Iterator2  = typename Sequence2::const_iterator;
+  using Reference2 = typename Sequence2::const_reference;
+  struct zip_iterator {
+    Iterator1             iterator1;
+    Iterator2             iterator2;
+    constexpr kernel bool operator!=(const zip_iterator& other) const {
+      return iterator1 != other.iterator1;
+    }
+    constexpr kernel void operator++() {
+      ++iterator1;
+      ++iterator2;
+    }
+    constexpr kernel pair<Reference1, Reference2> operator*() const {
+      return {*iterator1, *iterator2};
+    }
+  };
+  struct zip_helper {
+    Sequence1&            sequence1;
+    const Sequence2&      sequence2;
+    constexpr kernel auto begin() {
+      return zip_iterator{std::begin(sequence1), std::begin(sequence2)};
+    }
+    constexpr kernel auto end() {
+      return zip_iterator{std::end(sequence1), std::end(sequence2)};
+    }
+  };
+  return zip_helper{sequence1, sequence2};
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// CUDA SUPPORT
+// -----------------------------------------------------------------------------
+#ifdef kernel
+#undef kernel
+#endif
 
 #endif
