@@ -321,40 +321,47 @@ constexpr kernel ndrange_view<I, N> range(const array<I, N>& max) {
 }
 
 // Python enumerate view
-template <typename T, typename I>
+template <typename It, typename Se, typename I>
 struct enumerate_sentinel {};
-template <typename T, typename I>
+template <typename It, typename Se, typename I>
 struct enumerate_iterator {
-  constexpr kernel enumerate_iterator(I index_, I end_, T* iterator_)
-      : index{index_}, end{end_}, iterator{iterator_} {}
+  using Rf = decltype(*std::declval<It>());
+  constexpr kernel enumerate_iterator(It iterator_, Se sentinel_, I index_)
+      : iterator{iterator_}, sentinel{sentinel_}, index{index_} {}
   constexpr kernel bool operator!=(
-      const enumerate_sentinel<T, I>& other) const {
-    return index != end;
+      const enumerate_sentinel<It, Se, I>& other) const {
+    return iterator != sentinel;
   }
   constexpr kernel void operator++() {
-    ++index;
     ++iterator;
+    ++index;
   }
-  constexpr kernel pair<I, T&> operator*() const { return {index, *iterator}; }
+  constexpr kernel pair<I, Rf> operator*() const { return {index, *iterator}; }
 
  private:
-  I  index, end;
-  T* iterator;
+  It iterator;
+  Se sentinel;
+  I  index;
 };
 template <typename T, typename I>
 struct enumerate_view {
-  enumerate_view(span<T> sequence_) : sequence{sequence_}, start{0} {}
+  enumerate_view(span<T> sequence_)
+      : iterator{sequence_.data()}
+      , sentinel{sequence_.data() + sequence_.size()}
+      , start{0} {}
   enumerate_view(span<T> sequence_, I start_)
-      : sequence{sequence_}, start{start_} {}
-  constexpr kernel auto begin() {
-    return enumerate_iterator{
-        start, (I)sequence.size() + start, sequence.data()};
+      : iterator{sequence_.data()}
+      , sentinel{sequence_.data() + sequence_.size()}
+      , start{start_} {}
+  constexpr kernel enumerate_iterator<T*, T*, I> begin() {
+    return {iterator, sentinel, start};
   }
-  constexpr kernel enumerate_sentinel<T, I> end() { return {}; }
+  constexpr kernel enumerate_sentinel<T*, T*, I> end() { return {}; }
 
  private:
-  span<T> sequence = {};
-  I       start    = 0;
+  T* iterator;
+  T* sentinel;
+  I  start;
 };
 
 // Python enumerate over an array
@@ -377,6 +384,51 @@ template <typename T, size_t N, typename I = size_t>
 constexpr kernel enumerate_view<const T, I> enumerate(
     const vec<T, N>& sequence, I start = 0) {
   return enumerate_view<const T, I>(span<const T>{sequence.data(), N}, start);
+}
+
+// Python zip: iterator and sequence
+template <typename T1, typename T2>
+struct zip_sentinel {};
+template <typename T1, typename T2>
+struct zip_iterator {
+  T1*                   iterator1;
+  T2*                   iterator2;
+  T1*                   end1;
+  constexpr kernel bool operator!=(const zip_sentinel<T1, T2>& other) const {
+    return iterator1 != end1;
+  }
+  constexpr kernel void operator++() {
+    ++iterator1;
+    ++iterator2;
+  }
+  constexpr kernel pair<T1&, T2&> operator*() const {
+    return {*iterator1, *iterator2};
+  }
+};
+template <typename T1, typename T2>
+struct zip_view {
+  constexpr kernel zip_view(span<T1> sequence1_, span<T2> sequence2_)
+      : sequence1{sequence1_}, sequence2{sequence2_} {}
+  constexpr kernel zip_iterator<T1, T2> begin() {
+    return zip_iterator{sequence1.data(), sequence2.data(),
+        sequence1.data() + sequence1.size()};
+  }
+  constexpr kernel zip_sentinel<T1, T2> end() { return {}; }
+
+ private:
+  span<T1> sequence1;
+  span<T2> sequence2;
+};
+
+// Python zip
+template <typename T1, typename T2>
+constexpr kernel zip_view<T1, T2> zip(span<T1> sequence1, span<T2> sequence2) {
+  return zip_view<T1, T2>(sequence1, sequence2);
+}
+template <typename T1, typename T2>
+constexpr kernel zip_view<const T1, const T2> zip(
+    const vector<T1>& sequence1, const vector<T2>& sequence2) {
+  return zip_view<const T1, const T2>(span{sequence1}, span{sequence2});
 }
 
 // Python zip
