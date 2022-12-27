@@ -61,8 +61,8 @@ using namespace std::string_literals;
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Generates a ray from a camera for yimg::image plane coordinate uv and
-// the lens coordinates luv.
+// Generates a ray from a camera for image plane coordinate image_uv and
+// the lens coordinates lens_uv.
 ray3f eval_camera(
     const camera_data& camera, const vec2f& image_uv, const vec2f& lens_uv) {
   auto film = camera.aspect >= 1
