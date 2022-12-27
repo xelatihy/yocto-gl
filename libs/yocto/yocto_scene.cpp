@@ -595,20 +595,20 @@ void add_sky(scene_data& scene, float sun_angle) {
 int find_camera(const scene_data& scene, const string& name) {
   if (scene.cameras.empty()) return invalidid;
   if (scene.camera_names.empty()) return 0;
-  for (auto idx : range(scene.camera_names.size())) {
-    if (scene.camera_names[idx] == name) return (int)idx;
+  for (auto&& [idx, cname] : enumerate(scene.camera_names)) {
+    if (cname == name) return (int)idx;
   }
-  for (auto idx : range(scene.camera_names.size())) {
-    if (scene.camera_names[idx] == "default") return (int)idx;
+  for (auto&& [idx, cname] : enumerate(scene.camera_names)) {
+    if (cname == "default") return (int)idx;
   }
-  for (auto idx : range(scene.camera_names.size())) {
-    if (scene.camera_names[idx] == "camera") return (int)idx;
+  for (auto&& [idx, cname] : enumerate(scene.camera_names)) {
+    if (cname == "camera") return (int)idx;
   }
-  for (auto idx : range(scene.camera_names.size())) {
-    if (scene.camera_names[idx] == "camera0") return (int)idx;
+  for (auto&& [idx, cname] : enumerate(scene.camera_names)) {
+    if (cname == "camera0") return (int)idx;
   }
-  for (auto idx : range(scene.camera_names.size())) {
-    if (scene.camera_names[idx] == "camera1") return (int)idx;
+  for (auto&& [idx, cname] : enumerate(scene.camera_names)) {
+    if (cname == "camera1") return (int)idx;
   }
   return 0;
 }
@@ -882,8 +882,7 @@ vector<string> scene_validation(const scene_data& scene, bool notextures) {
     }
   };
   auto check_empty_textures = [&errs](const scene_data& scene) {
-    for (auto idx : range(scene.textures.size())) {
-      auto& texture = scene.textures[idx];
+    for (auto&& [idx, texture] : enumerate(scene.textures)) {
       if (texture.pixelsf.empty() && texture.pixelsb.empty()) {
         errs.push_back("empty texture " + scene.texture_names[idx]);
       }

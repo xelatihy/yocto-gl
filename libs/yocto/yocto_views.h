@@ -80,8 +80,6 @@ struct span {
   constexpr span(T* data, size_t size) noexcept : _data{data}, _size{size} {}
   constexpr span(T* begin, T* end) noexcept :
       _data{begin}, _size{end - begin} {}
-  constexpr span(std::vector<T>& arr) noexcept :
-      _data{arr.data()}, _size{arr.size()} {}
 
   // Assignments
   constexpr span& operator=(const span&) noexcept  = default;
@@ -382,6 +380,11 @@ constexpr kernel enumerate_view<span<T>, I> enumerate(
   return {sequence, start};
 }
 template <typename T, typename I = size_t>
+constexpr kernel enumerate_view<span<T>, I> enumerate(
+    vector<T>& sequence, I start = 0) {
+  return {span<T>{sequence.data(), sequence.size()}, start};
+}
+template <typename T, typename I = size_t>
 constexpr kernel enumerate_view<span<const T>, I> enumerate(
     const vector<T>& sequence, I start = 0) {
   return {span<const T>{sequence.data(), sequence.size()}, start};
@@ -411,6 +414,7 @@ struct zip_view {
   struct sentinel {
     constexpr kernel sentinel(Se1 end1_, Se2 end2_) :
         end1{end1_}, end2{end2_} {}
+    friend struct iterator;
 
    private:
     Se1 end1;
@@ -454,22 +458,26 @@ constexpr kernel zip_view<span<T1>, span<T2>> zip(
 template <typename T1, typename T2>
 constexpr kernel zip_view<span<const T1>, span<const T2>> zip(
     const vector<T1>& sequence1, const vector<T2>& sequence2) {
-  return {span<const T1>{sequence1}, span<const T2>{sequence2}};
+  return {span<const T1>{sequence1.data(), sequence1.size()},
+      span<const T2>{sequence2.data(), sequence2.size()}};
 }
 template <typename T1, typename T2>
 constexpr kernel zip_view<span<const T1>, span<T2>> zip(
     const vector<T1>& sequence1, vector<T2>& sequence2) {
-  return {span<const T1>{sequence1}, span<T2>{sequence2}};
+  return {span<const T1>{sequence1.data(), sequence1.size()},
+      span<T2>{sequence2.data(), sequence2.size()}};
 }
 template <typename T1, typename T2>
 constexpr kernel zip_view<span<T1>, span<const T2>> zip(
     vector<T1>& sequence1, const vector<T2>& sequence2) {
-  return {span<T1>{sequence1}, span<const T2>{sequence2}};
+  return {span<T1>{sequence1.data(), sequence1.size()},
+      span<const T2>{sequence2.data(), sequence2.size()}};
 }
 template <typename T1, typename T2>
 constexpr kernel zip_view<span<T1>, span<T2>> zip(
     vector<T1>& sequence1, vector<T2>& sequence2) {
-  return {span<T1>{sequence1}, span<T2>{sequence2}};
+  return {span<T1>{sequence1.data(), sequence1.size()},
+      span<T2>{sequence2.data(), sequence2.size()}};
 }
 
 }  // namespace yocto

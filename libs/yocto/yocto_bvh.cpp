@@ -235,11 +235,12 @@ static bvh_tree make_bvh(const vector<bbox3f>& bboxes, bool highquality) {
 
   // prepare primitives
   bvh.primitives.resize(bboxes.size());
-  for (auto idx : range(bboxes.size())) bvh.primitives[idx] = (int)idx;
+  for (auto&& [idx, primitive] : enumerate(bvh.primitives))
+    primitive = (int)idx;
 
   // prepare centers
   auto centers = vector<vec3f>(bboxes.size());
-  for (auto idx : range(bboxes.size())) centers[idx] = bbox_center(bboxes[idx]);
+  for (auto&& [center, bbox] : zip(centers, bboxes)) center = bbox_center(bbox);
 
   // push first node onto the stack
   auto stack = vector<vec3i>{{0, 0, (int)bboxes.size()}};
@@ -316,24 +317,23 @@ shape_bvh make_shape_bvh(const shape_data& shape, bool highquality) {
   auto bboxes = vector<bbox3f>{};
   if (!shape.points.empty()) {
     bboxes = vector<bbox3f>(shape.points.size());
-    for (auto [idx, point] : enumerate(shape.points)) {
-      auto& v1    = shape.points[idx];
-      bboxes[idx] = point_bounds(shape.positions, shape.radius, point);
+    for (auto&& [bbox, point] : zip(bboxes, shape.points)) {
+      bbox = point_bounds(shape.positions, shape.radius, point);
     }
   } else if (!shape.lines.empty()) {
     bboxes = vector<bbox3f>(shape.lines.size());
-    for (auto [idx, line] : enumerate(shape.lines)) {
-      bboxes[idx] = line_bounds(shape.positions, shape.radius, line);
+    for (auto&& [bbox, line] : zip(bboxes, shape.lines)) {
+      bbox = line_bounds(shape.positions, shape.radius, line);
     }
   } else if (!shape.triangles.empty()) {
     bboxes = vector<bbox3f>(shape.triangles.size());
-    for (auto [idx, triangle] : enumerate(shape.triangles)) {
-      bboxes[idx] = triangle_bounds(shape.positions, triangle);
+    for (auto&& [bbox, triangle] : zip(bboxes, shape.triangles)) {
+      bbox = triangle_bounds(shape.positions, triangle);
     }
   } else if (!shape.quads.empty()) {
     bboxes = vector<bbox3f>(shape.quads.size());
-    for (auto [idx, quad] : enumerate(shape.quads)) {
-      bboxes[idx] = quad_bounds(shape.positions, quad);
+    for (auto&& [bbox, quad] : zip(bboxes, shape.quads)) {
+      bbox = quad_bounds(shape.positions, quad);
     }
   }
 
@@ -352,8 +352,8 @@ scene_bvh make_scene_bvh(
   // build shape bvh
   sbvh.shapes.resize(scene.shapes.size());
   if (noparallel) {
-    for (auto idx : range(scene.shapes.size())) {
-      sbvh.shapes[idx] = make_shape_bvh(scene.shapes[idx], highquality);
+    for (auto&& [sshape, shape] : zip(sbvh.shapes, scene.shapes)) {
+      sshape = make_shape_bvh(shape, highquality);
     }
   } else {
     parallel_for(scene.shapes.size(), [&](size_t idx) {
@@ -363,12 +363,11 @@ scene_bvh make_scene_bvh(
 
   // instance bboxes
   auto bboxes = vector<bbox3f>(scene.instances.size());
-  for (auto idx : range(bboxes.size())) {
-    auto& instance = scene.instances[idx];
-    bboxes[idx]    = sbvh.shapes[instance.shape].bvh.nodes.empty()
-                         ? invalidb3f
-                         : transform_bbox(instance.frame,
-                               sbvh.shapes[instance.shape].bvh.nodes[0].bbox);
+  for (auto&& [bbox, instance] : zip(bboxes, scene.instances)) {
+    bbox = sbvh.shapes[instance.shape].bvh.nodes.empty()
+               ? invalidb3f
+               : transform_bbox(instance.frame,
+                     sbvh.shapes[instance.shape].bvh.nodes[0].bbox);
   }
 
   // build nodes
@@ -383,23 +382,23 @@ void update_shape_bvh(shape_bvh& sbvh, const shape_data& shape) {
   auto bboxes = vector<bbox3f>{};
   if (!shape.points.empty()) {
     bboxes = vector<bbox3f>(shape.points.size());
-    for (auto [idx, point] : enumerate(shape.points)) {
-      bboxes[idx] = point_bounds(shape.positions, shape.radius, point);
+    for (auto&& [bbox, point] : zip(bboxes, shape.points)) {
+      bbox = point_bounds(shape.positions, shape.radius, point);
     }
   } else if (!shape.lines.empty()) {
     bboxes = vector<bbox3f>(shape.lines.size());
-    for (auto [idx, line] : enumerate(shape.lines)) {
-      bboxes[idx] = line_bounds(shape.positions, shape.radius, line);
+    for (auto&& [bbox, line] : zip(bboxes, shape.lines)) {
+      bbox = line_bounds(shape.positions, shape.radius, line);
     }
   } else if (!shape.triangles.empty()) {
     bboxes = vector<bbox3f>(shape.triangles.size());
-    for (auto [idx, triangle] : enumerate(shape.triangles)) {
-      bboxes[idx] = triangle_bounds(shape.positions, triangle);
+    for (auto&& [bbox, triangle] : zip(bboxes, shape.triangles)) {
+      bbox = triangle_bounds(shape.positions, triangle);
     }
   } else if (!shape.quads.empty()) {
     bboxes = vector<bbox3f>(shape.quads.size());
-    for (auto [idx, quad] : enumerate(shape.quads)) {
-      bboxes[idx] = quad_bounds(shape.positions, quad);
+    for (auto&& [bbox, quad] : zip(bboxes, shape.quads)) {
+      bbox = quad_bounds(shape.positions, quad);
     }
   }
 
@@ -416,9 +415,8 @@ void update_scene_bvh(scene_bvh& sbvh, const scene_data& scene,
 
   // handle instances
   auto bboxes = vector<bbox3f>(scene.instances.size());
-  for (auto idx : range(bboxes.size())) {
-    auto& instance = scene.instances[idx];
-    bboxes[idx]    = transform_bbox(
+  for (auto&& [bbox, instance] : zip(bboxes, scene.instances)) {
+    bbox = transform_bbox(
         instance.frame, sbvh.shapes[instance.shape].bvh.nodes[0].bbox);
   }
 
@@ -890,8 +888,8 @@ scene_ebvh make_scene_ebvh(
   // shape bvhs
   sbvh.shapes.resize(scene.shapes.size());
   if (noparallel) {
-    for (auto idx : range(scene.shapes.size())) {
-      sbvh.shapes[idx] = make_shape_ebvh(scene.shapes[idx], highquality);
+    for (auto&& [sshape, shape] : zip(sbvh.shapes, scene.shapes)) {
+      sshape = make_shape_ebvh(shape, highquality);
     }
   } else {
     parallel_for(scene.shapes.size(), [&](size_t idx) {
@@ -909,16 +907,14 @@ scene_ebvh make_scene_ebvh(
   } else {
     rtcSetSceneFlags(escene, RTC_SCENE_FLAG_COMPACT);
   }
-  for (auto instance_id = 0; instance_id < (int)scene.instances.size();
-       instance_id++) {
-    auto& instance  = scene.instances[instance_id];
-    auto  egeometry = rtcNewGeometry(edevice, RTC_GEOMETRY_TYPE_INSTANCE);
+  for (auto&& [instance_id, instance] : enumerate(scene.instances)) {
+    auto egeometry = rtcNewGeometry(edevice, RTC_GEOMETRY_TYPE_INSTANCE);
     rtcSetGeometryInstancedScene(
         egeometry, (RTCScene)sbvh.shapes[instance.shape].ebvh.get());
     rtcSetGeometryTransform(
         egeometry, 0, RTC_FORMAT_FLOAT3X4_COLUMN_MAJOR, &instance.frame);
     rtcCommitGeometry(egeometry);
-    rtcAttachGeometryByID(escene, egeometry, instance_id);
+    rtcAttachGeometryByID(escene, egeometry, (uint)instance_id);
     rtcReleaseGeometry(egeometry);
   }
   rtcCommitScene(escene);
