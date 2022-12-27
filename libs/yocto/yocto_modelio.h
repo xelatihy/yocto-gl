@@ -620,7 +620,7 @@ inline bool get_value(const ply_model& ply, const string& element,
   if (!has_property(ply, element, property)) return false;
   auto& prop = get_property(ply, element, property);
   if (prop.is_list) return false;
-  values.resize(get_size(prop));
+  values = vector<T>(get_size(prop));
   for (auto index = (size_t)0; index < values.size(); index++) {
     values[index] = get_value<T>(prop, index);
   }
@@ -635,7 +635,8 @@ inline bool get_values(const ply_model& ply, const string& element,
     auto& prop = get_property(ply, element, property);
     if (prop.is_list) return false;
   }
-  values.resize(get_size(get_property(ply, element, properties.front())));
+  values = vector<array<T, N>>(
+      get_size(get_property(ply, element, properties.front())));
   auto item = (size_t)0;
   for (auto& property : properties) {
     auto& prop = get_property(ply, element, property);
@@ -655,10 +656,10 @@ inline bool get_lists(const ply_model& ply, const string& element,
   auto& prop = get_property(ply, element, property);
   if (!prop.is_list) return false;
   auto& sizes = prop.ldata_u8;
-  lists.resize(sizes.size());
+  lists       = vector<vector<T>>(sizes.size());
   auto list = (size_t)0, current = (size_t)0;
   for (auto size : sizes) {
-    lists[list].resize(size);
+    lists[list] = vector<T>(size);
     for (auto item = (size_t)0; item < size; item++)
       lists[list][item] = get_value<T>(prop, current + item);
     list += 1;
@@ -676,7 +677,7 @@ inline bool get_list_sizes(const ply_model& ply, const string& element,
   if constexpr (std::is_same_v<T, uint8_t>) {
     sizes = prop.ldata_u8;
   } else {
-    sizes.resize(prop.ldata_u8.size());
+    sizes = vector<T>(prop.ldata_u8.size());
     for (auto index = (size_t)0; index < sizes.size(); index++) {
       sizes[index] = (T)prop.ldata_u8[index];
     }
@@ -690,7 +691,7 @@ inline bool get_list_values(const ply_model& ply, const string& element,
   if (!has_property(ply, element, property)) return false;
   auto& prop = get_property(ply, element, property);
   if (!prop.is_list) return false;
-  values.resize(get_size(prop));
+  values = vector<T>(get_size(prop));
   for (auto index = (size_t)0; index < values.size(); index++) {
     values[index] = get_value<T>(prop, index);
   }
@@ -858,7 +859,7 @@ inline bool get_colors(const ply_model& ply, vector<array<T, 4>>& colors) {
     auto colors3 = vector<array<T, 3>>{};
     if (!get_values(ply, "vertex", {"red", "green", "blue"}, colors3))
       return false;
-    colors.resize(colors3.size());
+    colors = vector<array<T, 4>>(colors3.size());
     for (auto i = 0; i < (int)colors.size(); i++)
       colors[i] = {colors3[i][0], colors3[i][1], colors3[i][2], 1};
     return true;

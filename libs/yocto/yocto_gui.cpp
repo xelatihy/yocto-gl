@@ -56,40 +56,6 @@
 #endif
 
 // -----------------------------------------------------------------------------
-// PARALLEL HELPERS
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Simple parallel for used since our target platforms do not yet support
-// parallel algorithms. `Func` takes the two integer indices.
-template <typename T, typename Func>
-inline void parallel_for(T num1, T num2, Func&& func) {
-  auto              futures  = vector<std::future<void>>{};
-  auto              nthreads = std::thread::hardware_concurrency();
-  std::atomic<T>    next_idx(0);
-  std::atomic<bool> has_error(false);
-  for (auto thread_id = 0; thread_id < (int)nthreads; thread_id++) {
-    futures.emplace_back(std::async(
-        std::launch::async, [&func, &next_idx, &has_error, num1, num2]() {
-          try {
-            while (true) {
-              auto j = next_idx.fetch_add(1);
-              if (j >= num2) break;
-              if (has_error) break;
-              for (auto i = (T)0; i < num1; i++) func(i, j);
-            }
-          } catch (...) {
-            has_error = true;
-            throw;
-          }
-        }));
-  }
-  for (auto& f : futures) f.get();
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
 // SCENE DRAWING
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -413,7 +379,7 @@ void show_colorgrade_gui(const string& title, const string& name,
 
   // display image
   auto display = image;
-  colorgrade_image_mt(display, image, linear, params);
+  colorgrade_image(display, image, linear, params);
 
   // opengl image
   auto glimage  = glimage_state{};
@@ -456,7 +422,7 @@ void show_colorgrade_gui(const string& title, const string& name,
       edited += draw_gui_coloredit("highlights color", params.highlights_color);
       end_gui_header();
       if (edited) {
-        colorgrade_image_mt(display, image, linear, params);
+        colorgrade_image(display, image, linear, params);
         set_image(glimage, display);
       }
     }
@@ -1786,7 +1752,7 @@ static void draw_scene(glscene_state& glscene, const scene_data& scene,
       camera_aspect >= 0
            ? (2 * atan(camera.film / (camera_aspect * 2 * camera.lens)))
            : (2 * atan(camera.film / (2 * camera.lens)));
-  auto view_matrix       = frame_to_mat(inverse(camera.frame));
+  auto view_matrix       = to_mat(inverse(camera.frame));
   auto projection_matrix = perspective_mat(
       camera_yfov, camera_aspect, params.near, params.far);
   bind_uniform(program, "eye", camera.frame.o);
@@ -1843,9 +1809,9 @@ static void draw_scene(glscene_state& glscene, const scene_data& scene,
     auto& glshape  = glscene.shapes.at(instance.shape);
     auto& material = scene.materials.at(instance.material);
 
-    auto shape_xform     = frame_to_mat(instance.frame);
+    auto shape_xform     = to_mat(instance.frame);
     auto shape_inv_xform = transpose(
-        frame_to_mat(inverse(instance.frame, params.non_rigid_frames)));
+        to_mat(inverse(instance.frame, params.non_rigid_frames)));
     bind_uniform(program, "frame", shape_xform);
     bind_uniform(program, "frameit", shape_inv_xform);
     bind_uniform(program, "faceted", params.faceted || glshape.normals == 0);

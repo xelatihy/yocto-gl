@@ -85,10 +85,10 @@ struct rng_state {
   uint64_t state = 0x853c49e6748fea9bULL;
   uint64_t inc   = 0xda3e39cb94b95bdbULL;
 
-  constexpr kernel rng_state()
-      : state{0x853c49e6748fea9bULL}, inc{0xda3e39cb94b95bdbULL} {}
-  constexpr kernel rng_state(uint64_t state_, uint64_t inc_)
-      : state{state_}, inc{inc_} {}
+  constexpr kernel rng_state() :
+      state{0x853c49e6748fea9bULL}, inc{0xda3e39cb94b95bdbULL} {}
+  constexpr kernel rng_state(uint64_t state_, uint64_t inc_) :
+      state{state_}, inc{inc_} {}
 };
 
 // Next random number, used internally only.

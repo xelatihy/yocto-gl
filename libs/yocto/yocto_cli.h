@@ -433,7 +433,7 @@ inline void add_option(cli_command& cli, const string& name, vector<T>& value,
   cli.usage_options += _cli_usage_option(name, value, usage);
   cli.options[name] = [&value](const vector<string>& args, string& error) {
     if (!_cli_parse_size(args, 1, 1024, error)) return false;
-    value.resize(args.size());
+    value = vector<T>(args.size());
     for (auto idx = 0; idx < (int)args.size(); idx++) {
       if (!_cli_parse_value(args[idx], value[idx], error)) return false;
     }

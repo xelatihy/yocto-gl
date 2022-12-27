@@ -137,6 +137,7 @@
     "bsdfs",
     "denoise",
     "denoising",
+    "isize",
     "khronos",
     "lambertian",
     "microfacet"

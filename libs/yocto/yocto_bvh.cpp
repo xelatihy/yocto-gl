@@ -72,21 +72,26 @@ namespace yocto {
 
 // Simple parallel for used since our target platforms do not yet support
 // parallel algorithms. `Func` takes the integer index.
-template <typename T, typename Func>
-inline void parallel_for(T num, Func&& func) {
-  auto              futures  = vector<std::future<void>>{};
-  auto              nthreads = std::thread::hardware_concurrency();
-  std::atomic<T>    next_idx(0);
-  std::atomic<bool> has_error(false);
+template <typename Sequence1, typename Sequence2, typename Func>
+inline void parallel_zip(
+    Sequence1&& sequence1, Sequence2&& sequence2, Func&& func) {
+  if (std::size(sequence1) != std::size(sequence2))
+    throw std::out_of_range{"invalid sequence lengths"};
+  auto                num      = std::size(sequence1);
+  auto                futures  = vector<std::future<void>>{};
+  auto                nthreads = std::thread::hardware_concurrency();
+  std::atomic<size_t> next_idx(0);
+  std::atomic<bool>   has_error(false);
   for (auto thread_id = 0; thread_id < (int)nthreads; thread_id++) {
-    futures.emplace_back(
-        std::async(std::launch::async, [&func, &next_idx, &has_error, num]() {
+    futures.emplace_back(std::async(std::launch::async,
+        [&func, &next_idx, &has_error, num, &sequence1, &sequence2]() {
           try {
             while (true) {
               auto idx = next_idx.fetch_add(1);
               if (idx >= num) break;
               if (has_error) break;
-              func(idx);
+              func(std::forward<Sequence1>(sequence1)[idx],
+                  std::forward<Sequence2>(sequence2)[idx]);
             }
           } catch (...) {
             has_error = true;
@@ -234,12 +239,13 @@ static bvh_tree make_bvh(const vector<bbox3f>& bboxes, bool highquality) {
   bvh.nodes.reserve(bboxes.size() * 2);
 
   // prepare primitives
-  bvh.primitives.resize(bboxes.size());
-  for (auto idx : range(bboxes.size())) bvh.primitives[idx] = (int)idx;
+  bvh.primitives = vector<int>(bboxes.size());
+  for (auto&& [idx, primitive] : enumerate(bvh.primitives))
+    primitive = (int)idx;
 
   // prepare centers
   auto centers = vector<vec3f>(bboxes.size());
-  for (auto idx : range(bboxes.size())) centers[idx] = bbox_center(bboxes[idx]);
+  for (auto&& [center, bbox] : zip(centers, bboxes)) center = bbox_center(bbox);
 
   // push first node onto the stack
   auto stack = vector<vec3i>{{0, 0, (int)bboxes.size()}};
@@ -316,24 +322,23 @@ shape_bvh make_shape_bvh(const shape_data& shape, bool highquality) {
   auto bboxes = vector<bbox3f>{};
   if (!shape.points.empty()) {
     bboxes = vector<bbox3f>(shape.points.size());
-    for (auto [idx, point] : enumerate(shape.points)) {
-      auto& v1    = shape.points[idx];
-      bboxes[idx] = point_bounds(shape.positions, shape.radius, point);
+    for (auto&& [bbox, point] : zip(bboxes, shape.points)) {
+      bbox = point_bounds(shape.positions, shape.radius, point);
     }
   } else if (!shape.lines.empty()) {
     bboxes = vector<bbox3f>(shape.lines.size());
-    for (auto [idx, line] : enumerate(shape.lines)) {
-      bboxes[idx] = line_bounds(shape.positions, shape.radius, line);
+    for (auto&& [bbox, line] : zip(bboxes, shape.lines)) {
+      bbox = line_bounds(shape.positions, shape.radius, line);
     }
   } else if (!shape.triangles.empty()) {
     bboxes = vector<bbox3f>(shape.triangles.size());
-    for (auto [idx, triangle] : enumerate(shape.triangles)) {
-      bboxes[idx] = triangle_bounds(shape.positions, triangle);
+    for (auto&& [bbox, triangle] : zip(bboxes, shape.triangles)) {
+      bbox = triangle_bounds(shape.positions, triangle);
     }
   } else if (!shape.quads.empty()) {
     bboxes = vector<bbox3f>(shape.quads.size());
-    for (auto [idx, quad] : enumerate(shape.quads)) {
-      bboxes[idx] = quad_bounds(shape.positions, quad);
+    for (auto&& [bbox, quad] : zip(bboxes, shape.quads)) {
+      bbox = quad_bounds(shape.positions, quad);
     }
   }
 
@@ -347,35 +352,34 @@ shape_bvh make_shape_bvh(const shape_data& shape, bool highquality) {
 scene_bvh make_scene_bvh(
     const scene_data& scene, bool highquality, bool noparallel) {
   // bvh
-  auto sbvh = scene_bvh{};
+  auto bvh = scene_bvh{};
 
   // build shape bvh
-  sbvh.shapes.resize(scene.shapes.size());
+  bvh.shapes = vector<shape_bvh>(scene.shapes.size());
   if (noparallel) {
-    for (auto idx : range(scene.shapes.size())) {
-      sbvh.shapes[idx] = make_shape_bvh(scene.shapes[idx], highquality);
+    for (auto&& [sbvh, shape] : zip(bvh.shapes, scene.shapes)) {
+      sbvh = make_shape_bvh(shape, highquality);
     }
   } else {
-    parallel_for(scene.shapes.size(), [&](size_t idx) {
-      sbvh.shapes[idx] = make_shape_bvh(scene.shapes[idx], highquality);
+    parallel_zip(bvh.shapes, scene.shapes, [&](auto&& sbvh, auto&& shape) {
+      sbvh = make_shape_bvh(shape, highquality);
     });
   }
 
   // instance bboxes
   auto bboxes = vector<bbox3f>(scene.instances.size());
-  for (auto idx : range(bboxes.size())) {
-    auto& instance = scene.instances[idx];
-    bboxes[idx]    = sbvh.shapes[instance.shape].bvh.nodes.empty()
-                         ? invalidb3f
-                         : transform_bbox(instance.frame,
-                               sbvh.shapes[instance.shape].bvh.nodes[0].bbox);
+  for (auto&& [bbox, instance] : zip(bboxes, scene.instances)) {
+    bbox = bvh.shapes[instance.shape].bvh.nodes.empty()
+               ? invalidb3f
+               : transform_bbox(instance.frame,
+                     bvh.shapes[instance.shape].bvh.nodes[0].bbox);
   }
 
   // build nodes
-  sbvh.bvh = make_bvh(bboxes, highquality);
+  bvh.bvh = make_bvh(bboxes, highquality);
 
   // done
-  return sbvh;
+  return bvh;
 }
 
 void update_shape_bvh(shape_bvh& sbvh, const shape_data& shape) {
@@ -383,23 +387,23 @@ void update_shape_bvh(shape_bvh& sbvh, const shape_data& shape) {
   auto bboxes = vector<bbox3f>{};
   if (!shape.points.empty()) {
     bboxes = vector<bbox3f>(shape.points.size());
-    for (auto [idx, point] : enumerate(shape.points)) {
-      bboxes[idx] = point_bounds(shape.positions, shape.radius, point);
+    for (auto&& [bbox, point] : zip(bboxes, shape.points)) {
+      bbox = point_bounds(shape.positions, shape.radius, point);
     }
   } else if (!shape.lines.empty()) {
     bboxes = vector<bbox3f>(shape.lines.size());
-    for (auto [idx, line] : enumerate(shape.lines)) {
-      bboxes[idx] = line_bounds(shape.positions, shape.radius, line);
+    for (auto&& [bbox, line] : zip(bboxes, shape.lines)) {
+      bbox = line_bounds(shape.positions, shape.radius, line);
     }
   } else if (!shape.triangles.empty()) {
     bboxes = vector<bbox3f>(shape.triangles.size());
-    for (auto [idx, triangle] : enumerate(shape.triangles)) {
-      bboxes[idx] = triangle_bounds(shape.positions, triangle);
+    for (auto&& [bbox, triangle] : zip(bboxes, shape.triangles)) {
+      bbox = triangle_bounds(shape.positions, triangle);
     }
   } else if (!shape.quads.empty()) {
     bboxes = vector<bbox3f>(shape.quads.size());
-    for (auto [idx, quad] : enumerate(shape.quads)) {
-      bboxes[idx] = quad_bounds(shape.positions, quad);
+    for (auto&& [bbox, quad] : zip(bboxes, shape.quads)) {
+      bbox = quad_bounds(shape.positions, quad);
     }
   }
 
@@ -416,9 +420,8 @@ void update_scene_bvh(scene_bvh& sbvh, const scene_data& scene,
 
   // handle instances
   auto bboxes = vector<bbox3f>(scene.instances.size());
-  for (auto idx : range(bboxes.size())) {
-    auto& instance = scene.instances[idx];
-    bboxes[idx]    = transform_bbox(
+  for (auto&& [bbox, instance] : zip(bboxes, scene.instances)) {
+    bbox = transform_bbox(
         instance.frame, sbvh.shapes[instance.shape].bvh.nodes[0].bbox);
   }
 
@@ -885,44 +888,42 @@ shape_ebvh make_shape_ebvh(const shape_data& shape, bool highquality) {
 scene_ebvh make_scene_ebvh(
     const scene_data& scene, bool highquality, bool noparallel) {
   // scene bvh
-  auto sbvh = scene_ebvh{};
+  auto bvh = scene_ebvh{};
 
   // shape bvhs
-  sbvh.shapes.resize(scene.shapes.size());
+  bvh.shapes = vector<shape_ebvh>(scene.shapes.size());
   if (noparallel) {
-    for (auto idx : range(scene.shapes.size())) {
-      sbvh.shapes[idx] = make_shape_ebvh(scene.shapes[idx], highquality);
+    for (auto&& [sshape, shape] : zip(bvh.shapes, scene.shapes)) {
+      sshape = make_shape_ebvh(shape, highquality);
     }
   } else {
-    parallel_for(scene.shapes.size(), [&](size_t idx) {
-      sbvh.shapes[idx] = make_shape_ebvh(scene.shapes[idx], highquality);
+    parallel_zip(bvh.shapes, scene.shapes, [&](auto&& sbvh, auto&& shape) {
+      sbvh = make_shape_ebvh(shape, highquality);
     });
   }
 
   // scene bvh
   auto edevice = embree_device();
-  sbvh.ebvh    = unique_ptr<void, void (*)(void*)>{
+  bvh.ebvh     = unique_ptr<void, void (*)(void*)>{
       rtcNewScene(edevice), &clear_ebvh};
-  auto escene = (RTCScene)sbvh.ebvh.get();
+  auto escene = (RTCScene)bvh.ebvh.get();
   if (highquality) {
     rtcSetSceneBuildQuality(escene, RTC_BUILD_QUALITY_HIGH);
   } else {
     rtcSetSceneFlags(escene, RTC_SCENE_FLAG_COMPACT);
   }
-  for (auto instance_id = 0; instance_id < (int)scene.instances.size();
-       instance_id++) {
-    auto& instance  = scene.instances[instance_id];
-    auto  egeometry = rtcNewGeometry(edevice, RTC_GEOMETRY_TYPE_INSTANCE);
+  for (auto&& [instance_id, instance] : enumerate(scene.instances)) {
+    auto egeometry = rtcNewGeometry(edevice, RTC_GEOMETRY_TYPE_INSTANCE);
     rtcSetGeometryInstancedScene(
-        egeometry, (RTCScene)sbvh.shapes[instance.shape].ebvh.get());
+        egeometry, (RTCScene)bvh.shapes[instance.shape].ebvh.get());
     rtcSetGeometryTransform(
         egeometry, 0, RTC_FORMAT_FLOAT3X4_COLUMN_MAJOR, &instance.frame);
     rtcCommitGeometry(egeometry);
-    rtcAttachGeometryByID(escene, egeometry, instance_id);
+    rtcAttachGeometryByID(escene, egeometry, (uint)instance_id);
     rtcReleaseGeometry(egeometry);
   }
   rtcCommitScene(escene);
-  return sbvh;
+  return bvh;
 }
 
 // Refit bvh data

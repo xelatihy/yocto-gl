@@ -865,9 +865,9 @@ static shape_data make_quads(const vec2i& steps, Vertex&& vertex) {
   auto vid = [=](vec2i ij) { return ij.y * (steps.x + 1) + ij.x; };
   auto fid = [=](vec2i ij) { return ij.y * steps.x + ij.x; };
 
-  shape.positions.resize(prod(steps + 1));
-  shape.normals.resize(prod(steps + 1));
-  shape.texcoords.resize(prod(steps + 1));
+  shape.positions = vector<vec3f>(prod(steps + 1));
+  shape.normals   = vector<vec3f>(prod(steps + 1));
+  shape.texcoords = vector<vec2f>(prod(steps + 1));
   for (auto ij : range(steps + 1)) {
     auto [position, normal, texcoord] = vertex(ij / (vec2f)steps);
     shape.positions[vid(ij)]          = position;
@@ -875,7 +875,7 @@ static shape_data make_quads(const vec2i& steps, Vertex&& vertex) {
     shape.texcoords[vid(ij)]          = texcoord;
   }
 
-  shape.quads.resize(prod(steps));
+  shape.quads = vector<vec4i>(prod(steps));
   for (auto ij : range(steps)) {
     shape.quads[fid(ij)] = {vid(ij + vec2i{0, 0}), vid(ij + vec2i{1, 0}),
         vid(ij + vec2i{1, 1}), vid(ij + vec2i{0, 1})};
@@ -1247,10 +1247,10 @@ static shape_data make_lines(int num, int steps, Func&& func) {
   auto vid = [stride = steps](vec2i ij) { return ij.y * (stride + 1) + ij.x; };
   auto lid = [stride = steps](vec2i ij) { return ij.y * stride + ij.x; };
 
-  shape.positions.resize((steps + 1) * num);
-  shape.normals.resize((steps + 1) * num);
-  shape.texcoords.resize((steps + 1) * num);
-  shape.radius.resize((steps + 1) * num);
+  shape.positions = vector<vec3f>((steps + 1) * num);
+  shape.normals   = vector<vec3f>((steps + 1) * num);
+  shape.texcoords = vector<vec2f>((steps + 1) * num);
+  shape.radius    = vector<float>((steps + 1) * num);
   for (auto ij : range(vec2i(steps + 1, num))) {
     auto uv = ij / vec2f{(float)steps, (float)(num - 1)};
     auto [position, normal, texcoord, radius] = func(uv);
@@ -1260,7 +1260,7 @@ static shape_data make_lines(int num, int steps, Func&& func) {
     shape.radius[vid(ij)]                     = radius;
   }
 
-  shape.lines.resize(steps * num);
+  shape.lines = vector<vec2i>(steps * num);
   for (auto ij : range(vec2i(steps, num))) {
     shape.lines[lid(ij)] = {vid(ij), vid(ij + vec2i{1, 0})};
   }
@@ -1290,13 +1290,13 @@ shape_data make_point(float radius, bool generate_uv) {
 // Generate a point set with points placed at the origin with texcoords
 // varying along u.
 shape_data make_points(int num, float radius, bool generate_uv) {
-  auto shape = shape_data{};
-  shape.points.resize(num);
+  auto shape   = shape_data{};
+  shape.points = vector<int>(num);
   for (auto i : range(num)) shape.points[i] = i;
-  shape.positions.assign(num, {0, 0, 0});
-  shape.normals.assign(num, {0, 0, 1});
-  shape.texcoords.assign(num, {0, 0});
-  shape.radius.assign(num, radius);
+  shape.positions = vector<vec3f>(num, {0, 0, 0});
+  shape.normals   = vector<vec3f>(num, {0, 0, 1});
+  shape.texcoords = vector<vec2f>(num, {0, 0});
+  shape.radius    = vector<float>(num, radius);
   if (generate_uv) {
     for (auto i : range(shape.texcoords.size()))
       shape.texcoords[i] = {(float)i / (float)num, 0};
@@ -1313,20 +1313,20 @@ shape_data make_quad_grid(const vec2i& steps, float scale_) {
 }
 
 shape_data make_point_grid(const vec2i& steps, float scale, float radius) {
-  auto shape  = make_quad_grid(steps, scale);
-  shape.quads = {};
-  shape.points.resize(shape.positions.size());
-  shape.radius.resize(shape.positions.size());
+  auto shape   = make_quad_grid(steps, scale);
+  shape.quads  = {};
+  shape.points = vector<int>(shape.positions.size());
+  shape.radius = vector<float>(shape.positions.size());
   for (auto i : range(shape.positions.size())) shape.points[i] = (int)i;
   for (auto i : range(shape.texcoords.size())) shape.radius[i] = radius;
   return shape;
 }
 
 shape_data make_line_grid(const vec2i& steps, float scale, float radius) {
-  auto shape  = make_quad_grid(steps, scale);
-  shape.lines = get_edges(shape.quads);
-  shape.quads = {};
-  shape.radius.resize(shape.positions.size());
+  auto shape   = make_quad_grid(steps, scale);
+  shape.lines  = get_edges(shape.quads);
+  shape.quads  = {};
+  shape.radius = vector<float>(shape.positions.size());
   for (auto i : range(shape.texcoords.size())) shape.radius[i] = radius;
   return shape;
 }
@@ -2084,7 +2084,7 @@ static bvh_tree make_bvh(vector<bbox3f>& bboxes) {
   bvh.nodes.reserve(bboxes.size() * 2);
 
   // prepare primitives
-  bvh.primitives.resize(bboxes.size());
+  bvh.primitives = vector<int>(bboxes.size());
   for (auto idx : range(bboxes.size())) bvh.primitives[idx] = (int)idx;
 
   // prepare centers
@@ -2595,7 +2595,7 @@ void split_facevarying(vector<vec4i>& split_quads,
     const vector<vec2f>& texcoords) {
   // make faces unique
   unordered_map<vec3i, int> vert_map;
-  split_quads.resize(quadspos.size());
+  split_quads = vector<vec4i>(quadspos.size());
   for (auto fid : range(quadspos.size())) {
     for (auto c : range(4)) {
       auto v = vec3i{
@@ -2617,21 +2617,21 @@ void split_facevarying(vector<vec4i>& split_quads,
   // fill vert data
   split_positions.clear();
   if (!positions.empty()) {
-    split_positions.resize(vert_map.size());
+    split_positions = vector<vec3f>(vert_map.size());
     for (auto& [vert, index] : vert_map) {
       split_positions[index] = positions[vert.x];
     }
   }
   split_normals.clear();
   if (!normals.empty()) {
-    split_normals.resize(vert_map.size());
+    split_normals = vector<vec3f>(vert_map.size());
     for (auto& [vert, index] : vert_map) {
       split_normals[index] = normals[vert.y];
     }
   }
   split_texcoords.clear();
   if (!texcoords.empty()) {
-    split_texcoords.resize(vert_map.size());
+    split_texcoords = vector<vec2f>(vert_map.size());
     for (auto& [vert, index] : vert_map) {
       split_texcoords[index] = texcoords[vert.z];
     }
@@ -3209,11 +3209,11 @@ void sample_triangles(vector<vec3f>& sampled_positions,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texcoords, int npoints,
     int seed) {
-  sampled_positions.resize(npoints);
-  sampled_normals.resize(npoints);
-  sampled_texcoords.resize(npoints);
-  auto cdf = sample_triangles_cdf(triangles, positions);
-  auto rng = make_rng(seed);
+  sampled_positions = vector<vec3f>(npoints);
+  sampled_normals   = vector<vec3f>(npoints);
+  sampled_texcoords = vector<vec2f>(npoints);
+  auto cdf          = sample_triangles_cdf(triangles, positions);
+  auto rng          = make_rng(seed);
   for (auto i : range(npoints)) {
     auto sample          = sample_triangles(cdf, rand1f(rng), rand2f(rng));
     auto& [v1, v2, v3]   = triangles[sample.first];
@@ -3244,11 +3244,11 @@ void sample_quads(vector<vec3f>& sampled_positions,
     const vector<vec4i>& quads, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texcoords, int npoints,
     int seed) {
-  sampled_positions.resize(npoints);
-  sampled_normals.resize(npoints);
-  sampled_texcoords.resize(npoints);
-  auto cdf = sample_quads_cdf(quads, positions);
-  auto rng = make_rng(seed);
+  sampled_positions = vector<vec3f>(npoints);
+  sampled_normals   = vector<vec3f>(npoints);
+  sampled_texcoords = vector<vec2f>(npoints);
+  auto cdf          = sample_quads_cdf(quads, positions);
+  auto rng          = make_rng(seed);
   for (auto i : range(npoints)) {
     auto sample            = sample_quads(cdf, rand1f(rng), rand2f(rng));
     auto& [v1, v2, v3, v4] = quads[sample.first];

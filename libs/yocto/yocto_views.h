@@ -40,6 +40,8 @@
 
 #include <vector>
 
+#include "yocto_math.h"
+
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
 // -----------------------------------------------------------------------------
@@ -49,6 +51,17 @@ namespace yocto {
 using std::vector;
 
 }  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// CUDA SUPPORT
+// -----------------------------------------------------------------------------
+#ifndef kernel
+#ifdef __CUDACC__
+#define kernel __device__
+#else
+#define kernel
+#endif
+#endif
 
 // -----------------------------------------------------------------------------
 // ONE-DIMENSIONAL SPAN
@@ -65,10 +78,8 @@ struct span {
   constexpr span(const span&) noexcept = default;
   constexpr span(span&&) noexcept      = default;
   constexpr span(T* data, size_t size) noexcept : _data{data}, _size{size} {}
-  constexpr span(T* begin, T* end) noexcept
-      : _data{begin}, _size{end - begin} {}
-  constexpr span(std::vector<T>& arr) noexcept
-      : _data{arr.data()}, _size{arr.size()} {}
+  constexpr span(T* begin, T* end) noexcept :
+      _data{begin}, _size{end - begin} {}
 
   // Assignments
   constexpr span& operator=(const span&) noexcept  = default;
@@ -113,8 +124,8 @@ struct ndspan {
  public:
   // Constructors
   constexpr ndspan() noexcept : _extents{0}, _data{nullptr} {}
-  constexpr ndspan(T* data, const vec<size_t, N>& extents) noexcept
-      : _data{data}, _extents{extents} {}
+  constexpr ndspan(T* data, const vec<size_t, N>& extents) noexcept :
+      _data{data}, _extents{extents} {}
   constexpr ndspan(const ndspan& other) noexcept = default;
   constexpr ndspan(ndspan&& other) noexcept      = default;
 
@@ -132,7 +143,7 @@ struct ndspan {
 
   // Access
   constexpr T& operator[](size_t idx) const noexcept { return _data[idx]; }
-  constexpr T& operator[](const array<size_t, N>& idx) const noexcept {
+  constexpr T& operator[](const vec<size_t, N>& idx) const noexcept {
     return _data[_index(idx, _extents)];
   }
 
@@ -179,11 +190,303 @@ using span3d = ndspan<T, 3>;
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-//
-//
-// IMPLEMENTATION
-//
-//
+// PYTHON-LIKE ITERATORS
 // -----------------------------------------------------------------------------
+namespace yocto {
+
+// Python range: iterator and sequence
+template <typename I>
+struct range_view {
+  struct range_iterator;
+  struct range_sentinel {
+    constexpr kernel   range_sentinel(I end_) : end{end_} {}
+    constexpr kernel I sentinel() const { return end; }
+    friend struct range_iterator;
+
+   private:
+    I end;
+  };
+
+  struct range_iterator {
+    constexpr kernel      range_iterator(I index_) : current{index_} {}
+    constexpr kernel I    index() const { return current; }
+    constexpr kernel void operator++() { ++current; }
+    constexpr kernel bool operator!=(const range_sentinel& other) const {
+      return current != other.end;
+    }
+    constexpr kernel I operator*() const { return current; }
+    friend struct range_sentinel;
+
+   private:
+    I current;
+  };
+
+  constexpr kernel range_view(I max_) : min{0}, max{max_} {}
+  constexpr kernel range_view(I min_, I max_) : min{min_}, max{max_} {}
+  constexpr kernel range_iterator begin() const { return {min}; }
+  constexpr kernel range_sentinel end() const { return {max}; }
+
+ private:
+  I min, max;
+};
+
+// Python range: iterator and sequence
+template <typename I>
+struct srange_view {
+  struct srange_iterator;
+  struct srange_sentinel {
+    constexpr kernel srange_sentinel(I end_) : end{end_} {}
+    friend struct srange_iterator;
+
+   private:
+    I end;
+  };
+  struct srange_iterator {
+    constexpr kernel srange_iterator(I index_, I step_) :
+        index{index_}, step{step_} {}
+    constexpr kernel void operator++() { index += step; }
+    constexpr kernel bool operator!=(const srange_sentinel& other) const {
+      return index != other.end;
+    }
+    constexpr kernel I operator*() const { return index; }
+
+   private:
+    I index, step;
+  };
+
+  constexpr kernel srange_view(I min_, I max_, I step_) :
+      min{min_}, max{max_}, step{step_} {}
+  constexpr kernel srange_iterator begin() const { return {min, step}; }
+  constexpr kernel srange_sentinel end() const {
+    return {min + ((max - min) / step) * step};
+  }
+
+ private:
+  I min, max, step;
+};
+
+// Python range. Construct an object that iterates over an integer sequence.
+template <typename I>
+constexpr kernel range_view<I> range(I max) {
+  return range_view<I>(max);
+}
+template <typename I>
+constexpr kernel range_view<I> range(I min, I max) {
+  return range_view<I>(min, max);
+}
+template <typename I>
+constexpr kernel srange_view<I> range(I min, I max, I step) {
+  return srange_view<I>(min, max, step);
+}
+
+// Python range: iterator and sequence in 2D
+template <typename I, size_t N>
+struct ndrange_sentinel {};
+template <typename I, size_t N>
+struct ndrange_iterator {
+  constexpr kernel ndrange_iterator(
+      const vec<I, N>& cur_, const vec<I, N>& end_) :
+      index{cur_}, end{end_} {}
+  constexpr kernel void operator++() {
+    ++index.x;
+    if constexpr (N > 1) {
+      if (index[0] >= end[0]) {
+        index[0] = 0;
+        index[1]++;
+      }
+    }
+    if constexpr (N > 2) {
+      if (index[1] >= end[1]) {
+        index[1] = 0;
+        index[2]++;
+      }
+    }
+  }
+  constexpr kernel bool operator!=(const ndrange_sentinel<I, N>&) const {
+    return index[N - 1] != end[N - 1];
+  }
+  constexpr kernel vec<I, N> operator*() const { return index; }
+
+ private:
+  vec<I, N> index, end;
+};
+template <typename I, size_t N>
+struct ndrange_view {
+  constexpr kernel ndrange_view(const vec<I, N>& max_) : max{max_} {}
+  constexpr kernel ndrange_iterator<I, N> begin() const {
+    return {vec<I, N>{0}, max};
+  }
+  constexpr kernel ndrange_sentinel<I, N> end() const { return {}; }
+
+ private:
+  vec<I, N> max = {0};
+};
+
+// Python range in nd.
+template <typename I, size_t N>
+constexpr kernel ndrange_view<I, N> range(const vec<I, N>& max) {
+  return ndrange_view<I, N>(max);
+}
+template <typename I, size_t N>
+constexpr kernel ndrange_view<I, N> range(const array<I, N>& max) {
+  return range_sequence<I, N>((vec<I, N>)max);
+}
+
+// Python enumerate view
+template <typename View, typename I>
+struct enumerate_view {
+  using It = decltype(std::begin(std::declval<View>()));
+  using Se = decltype(std::end(std::declval<View>()));
+  using Rf = decltype(*std::begin(std::declval<View>()));
+
+  struct iterator;
+  struct sentinel {
+    constexpr kernel sentinel(Se end_) : end{end_} {}
+    friend struct iterator;
+
+   private:
+    Se end;
+  };
+  struct iterator {
+    constexpr kernel iterator(It cur_, I index_) : cur{cur_}, index{index_} {}
+    constexpr kernel bool operator!=(const sentinel& other) const {
+      return cur != other.end;
+    }
+    constexpr kernel void operator++() {
+      ++cur;
+      ++index;
+    }
+    constexpr kernel pair<I, Rf> operator*() const { return {index, *cur}; }
+
+   private:
+    It cur;
+    I  index;
+  };
+
+  enumerate_view(View view_) : view{view_}, start{0} {}
+  enumerate_view(View view_, I start_) : view{view_}, start{start_} {}
+  constexpr kernel iterator begin() { return {std::begin(view), start}; }
+  constexpr kernel sentinel end() { return {std::end(view)}; }
+
+ private:
+  View view;
+  I    start;
+};
+
+// Python enumerate over an array
+template <typename T, typename I = size_t>
+constexpr kernel enumerate_view<span<T>, I> enumerate(
+    span<T> sequence, I start = 0) {
+  return {sequence, start};
+}
+template <typename T, typename I = size_t>
+constexpr kernel enumerate_view<span<T>, I> enumerate(
+    vector<T>& sequence, I start = 0) {
+  return {span<T>{sequence.data(), sequence.size()}, start};
+}
+template <typename T, typename I = size_t>
+constexpr kernel enumerate_view<span<const T>, I> enumerate(
+    const vector<T>& sequence, I start = 0) {
+  return {span<const T>{sequence.data(), sequence.size()}, start};
+}
+template <typename T, size_t N, typename I = size_t>
+constexpr kernel enumerate_view<span<const T>, I> enumerate(
+    const array<const T, N>& sequence, I start = 0) {
+  return {span<const T>{sequence.data(), N}, start};
+}
+template <typename T, size_t N, typename I = size_t>
+constexpr kernel enumerate_view<span<const T>, I> enumerate(
+    const vec<T, N>& sequence, I start = 0) {
+  return {span<const T>{sequence.data(), N}, start};
+}
+
+// Python zip: iterator and sequence
+template <typename View1, typename View2>
+struct zip_view {
+  using It1 = decltype(std::begin(std::declval<View1>()));
+  using Se1 = decltype(std::end(std::declval<View1>()));
+  using Rf1 = decltype(*std::begin(std::declval<View1>()));
+  using It2 = decltype(std::begin(std::declval<View2>()));
+  using Se2 = decltype(std::end(std::declval<View2>()));
+  using Rf2 = decltype(*std::begin(std::declval<View2>()));
+
+  struct iterator;
+  struct sentinel {
+    constexpr kernel sentinel(Se1 end1_, Se2 end2_) :
+        end1{end1_}, end2{end2_} {}
+    friend struct iterator;
+
+   private:
+    Se1 end1;
+    Se2 end2;
+  };
+  struct iterator {
+    constexpr kernel iterator(It1 cur1_, It2 cur2_) :
+        cur1{cur1_}, cur2{cur2_} {}
+    constexpr kernel bool operator!=(const sentinel& other) const {
+      return cur1 != other.end1 && cur2 != other.end2;
+    }
+    constexpr kernel void operator++() {
+      ++cur1;
+      ++cur2;
+    }
+    constexpr kernel pair<Rf1, Rf2> operator*() const { return {*cur1, *cur2}; }
+
+   private:
+    It1 cur1;
+    It2 cur2;
+  };
+
+  constexpr kernel zip_view(View1 view1_, View2 view2_) :
+      view1{view1_}, view2{view2_} {}
+  constexpr kernel iterator begin() {
+    return {std::begin(view1), std::begin(view2)};
+  }
+  constexpr kernel sentinel end() { return {std::end(view1), std::end(view2)}; }
+
+ private:
+  View1 view1;
+  View2 view2;
+};
+
+// Python zip
+template <typename T1, typename T2>
+constexpr kernel zip_view<span<T1>, span<T2>> zip(
+    span<T1> sequence1, span<T2> sequence2) {
+  return {sequence1, sequence2};
+}
+template <typename T1, typename T2>
+constexpr kernel zip_view<span<const T1>, span<const T2>> zip(
+    const vector<T1>& sequence1, const vector<T2>& sequence2) {
+  return {span<const T1>{sequence1.data(), sequence1.size()},
+      span<const T2>{sequence2.data(), sequence2.size()}};
+}
+template <typename T1, typename T2>
+constexpr kernel zip_view<span<const T1>, span<T2>> zip(
+    const vector<T1>& sequence1, vector<T2>& sequence2) {
+  return {span<const T1>{sequence1.data(), sequence1.size()},
+      span<T2>{sequence2.data(), sequence2.size()}};
+}
+template <typename T1, typename T2>
+constexpr kernel zip_view<span<T1>, span<const T2>> zip(
+    vector<T1>& sequence1, const vector<T2>& sequence2) {
+  return {span<T1>{sequence1.data(), sequence1.size()},
+      span<const T2>{sequence2.data(), sequence2.size()}};
+}
+template <typename T1, typename T2>
+constexpr kernel zip_view<span<T1>, span<T2>> zip(
+    vector<T1>& sequence1, vector<T2>& sequence2) {
+  return {span<T1>{sequence1.data(), sequence1.size()},
+      span<T2>{sequence2.data(), sequence2.size()}};
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// CUDA SUPPORT
+// -----------------------------------------------------------------------------
+#ifdef kernel
+#undef kernel
+#endif
 
 #endif

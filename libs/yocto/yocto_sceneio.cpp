@@ -102,6 +102,38 @@ inline bool parallel_for(T num, Func&& func) {
 }
 
 // Simple parallel for used since our target platforms do not yet support
+// parallel algorithms. `Func` takes the integer index.
+template <typename Sequence1, typename Sequence2, typename Func>
+inline void parallel_zip(
+    Sequence1&& sequence1, Sequence2&& sequence2, Func&& func) {
+  if (std::size(sequence1) != std::size(sequence2))
+    throw std::out_of_range{"invalid sequence lengths"};
+  auto                num      = std::size(sequence1);
+  auto                futures  = vector<std::future<void>>{};
+  auto                nthreads = std::thread::hardware_concurrency();
+  std::atomic<size_t> next_idx(0);
+  std::atomic<bool>   has_error(false);
+  for (auto thread_id = 0; thread_id < (int)nthreads; thread_id++) {
+    futures.emplace_back(std::async(std::launch::async,
+        [&func, &next_idx, &has_error, num, &sequence1, &sequence2]() {
+          try {
+            while (true) {
+              auto idx = next_idx.fetch_add(1);
+              if (idx >= num) break;
+              if (has_error) break;
+              func(std::forward<Sequence1>(sequence1)[idx],
+                  std::forward<Sequence2>(sequence2)[idx]);
+            }
+          } catch (...) {
+            has_error = true;
+            throw;
+          }
+        }));
+  }
+  for (auto& f : futures) f.get();
+}
+
+// Simple parallel for used since our target platforms do not yet support
 // parallel algorithms. `Func` takes a reference to a `T`.
 template <typename T, typename Func>
 inline bool parallel_foreach(vector<T>& values, Func&& func) {
@@ -285,7 +317,7 @@ void load_text(const string& filename, string& str) {
   fseek(fs, 0, SEEK_END);
   auto length = ftell(fs);
   fseek(fs, 0, SEEK_SET);
-  str.resize(length);
+  str = string(length, '\0');
   if (fread(str.data(), 1, length, fs) != length) {
     fclose(fs);
     throw io_error("cannot read " + filename);
@@ -319,7 +351,7 @@ void load_binary(const string& filename, vector<byte>& data) {
   fseek(fs, 0, SEEK_END);
   auto length = ftell(fs);
   fseek(fs, 0, SEEK_SET);
-  data.resize(length);
+  data = vector<byte>(length);
   if (fread(data.data(), 1, length, fs) != length) {
     fclose(fs);
     throw io_error("cannot read " + filename);
@@ -2967,16 +2999,17 @@ static void load_json_scene_version41(const string& filename, json_value& json,
   if (noparallel) {
     try {
       // load shapes
-      for (auto idx : range(scene.shapes.size())) {
-        load_shape(shape_filenames[idx], scene.shapes[idx], true);
+      for (auto&& [filename, shape] : zip(shape_filenames, scene.shapes)) {
+        load_shape(filename, shape, true);
       }
       // load subdivs
-      for (auto idx : range(scene.subdivs.size())) {
-        load_subdiv(subdiv_filenames[idx], scene.subdivs[idx]);
+      for (auto&& [filename, subdiv] : zip(subdiv_filenames, scene.subdivs)) {
+        load_subdiv(filename, subdiv);
       }
       // load textures
-      for (auto idx : range(scene.textures.size())) {
-        load_texture(texture_filenames[idx], scene.textures[idx]);
+      for (auto&& [filename, texture] :
+          zip(texture_filenames, scene.textures)) {
+        load_texture(filename, texture);
       }
     } catch (std::exception& except) {
       throw io_error(
@@ -2985,17 +3018,20 @@ static void load_json_scene_version41(const string& filename, json_value& json,
   } else {
     try {
       // load shapes
-      parallel_for(scene.shapes.size(), [&](size_t idx) {
-        return load_shape(shape_filenames[idx], scene.shapes[idx], true);
-      });
+      parallel_zip(
+          shape_filenames, scene.shapes, [&](auto&& filename, auto&& shape) {
+            return load_shape(filename, shape, true);
+          });
       // load subdivs
-      parallel_for(scene.subdivs.size(), [&](size_t idx) {
-        return load_subdiv(subdiv_filenames[idx], scene.subdivs[idx]);
-      });
+      parallel_zip(
+          subdiv_filenames, scene.subdivs, [&](auto&& filename, auto&& subdiv) {
+            return load_subdiv(filename, subdiv);
+          });
       // load textures
-      parallel_for(scene.textures.size(), [&](size_t idx) {
-        return load_texture(texture_filenames[idx], scene.textures[idx]);
-      });
+      parallel_zip(texture_filenames, scene.textures,
+          [&](auto&& filename, auto&& texture) {
+            return load_texture(filename, texture);
+          });
     } catch (std::exception& except) {
       throw io_error(
           "cannot load " + filename + " since " + string(except.what()));
@@ -3187,19 +3223,17 @@ static void load_json_scene(
   if (noparallel) {
     try {
       // load shapes
-      for (auto idx : range(scene.shapes.size())) {
-        load_shape(
-            path_join(dirname, shape_filenames[idx]), scene.shapes[idx], true);
+      for (auto&& [filename, shape] : zip(shape_filenames, scene.shapes)) {
+        load_shape(path_join(dirname, filename), shape, true);
       }
       // load subdivs
-      for (auto idx : range(scene.subdivs.size())) {
-        load_subdiv(
-            path_join(dirname, subdiv_filenames[idx]), scene.subdivs[idx]);
+      for (auto&& [filename, subdiv] : zip(subdiv_filenames, scene.subdivs)) {
+        load_subdiv(path_join(dirname, filename), subdiv);
       }
       // load textures
-      for (auto idx : range(scene.textures.size())) {
-        load_texture(
-            path_join(dirname, texture_filenames[idx]), scene.textures[idx]);
+      for (auto&& [filename, texture] :
+          zip(texture_filenames, scene.textures)) {
+        load_texture(path_join(dirname, filename), texture);
       }
     } catch (std::exception& except) {
       throw io_error(
@@ -3208,20 +3242,20 @@ static void load_json_scene(
   } else {
     try {
       // load shapes
-      parallel_for(scene.shapes.size(), [&](size_t idx) {
-        return load_shape(
-            path_join(dirname, shape_filenames[idx]), scene.shapes[idx], true);
-      });
+      parallel_zip(
+          shape_filenames, scene.shapes, [&](auto&& filename, auto&& shape) {
+            return load_shape(path_join(dirname, filename), shape, true);
+          });
       // load subdivs
-      parallel_for(scene.subdivs.size(), [&](size_t idx) {
-        return load_subdiv(
-            path_join(dirname, subdiv_filenames[idx]), scene.subdivs[idx]);
-      });
+      parallel_zip(
+          subdiv_filenames, scene.subdivs, [&](auto&& filename, auto&& subdiv) {
+            return load_subdiv(path_join(dirname, filename), subdiv);
+          });
       // load textures
-      parallel_for(scene.textures.size(), [&](size_t idx) {
-        return load_texture(
-            path_join(dirname, texture_filenames[idx]), scene.textures[idx]);
-      });
+      parallel_zip(texture_filenames, scene.textures,
+          [&](auto&& filename, auto&& texture) {
+            return load_texture(path_join(dirname, filename), texture);
+          });
     } catch (std::exception& except) {
       throw io_error(
           "cannot load " + filename + " since " + string(except.what()));
@@ -3438,19 +3472,17 @@ static void save_json_scene(
   if (noparallel) {
     try {
       // save shapes
-      for (auto idx : range(scene.shapes.size())) {
-        save_shape(
-            path_join(dirname, shape_filenames[idx]), scene.shapes[idx], true);
+      for (auto&& [filename, shape] : zip(shape_filenames, scene.shapes)) {
+        save_shape(path_join(dirname, filename), shape, true);
       }
       // save subdiv
-      for (auto idx : range(scene.subdivs.size())) {
-        save_subdiv(
-            path_join(dirname, subdiv_filenames[idx]), scene.subdivs[idx]);
+      for (auto&& [filename, subdiv] : zip(subdiv_filenames, scene.subdivs)) {
+        save_subdiv(path_join(dirname, filename), subdiv);
       }
       // save textures
-      for (auto idx : range(scene.textures.size())) {
-        save_texture(
-            path_join(dirname, texture_filenames[idx]), scene.textures[idx]);
+      for (auto&& [filename, texture] :
+          zip(texture_filenames, scene.textures)) {
+        save_texture(path_join(dirname, filename), texture);
       }
     } catch (std::exception& except) {
       throw io_error(
@@ -3459,20 +3491,20 @@ static void save_json_scene(
   } else {
     try {
       // save shapes
-      parallel_for(scene.shapes.size(), [&](auto idx) {
-        return save_shape(
-            path_join(dirname, shape_filenames[idx]), scene.shapes[idx], true);
-      });
+      parallel_zip(
+          shape_filenames, scene.shapes, [&](auto&& filename, auto&& shape) {
+            return save_shape(path_join(dirname, filename), shape, true);
+          });
       // save subdivs
-      parallel_for(scene.subdivs.size(), [&](auto idx) {
-        return save_subdiv(
-            path_join(dirname, subdiv_filenames[idx]), scene.subdivs[idx]);
-      });
+      parallel_zip(
+          subdiv_filenames, scene.subdivs, [&](auto&& filename, auto&& subdiv) {
+            return save_subdiv(path_join(dirname, filename), subdiv);
+          });
       // save textures
-      parallel_for(scene.textures.size(), [&](auto idx) {
-        return save_texture(
-            path_join(dirname, texture_filenames[idx]), scene.textures[idx]);
-      });
+      parallel_zip(texture_filenames, scene.textures,
+          [&](auto&& filename, auto&& texture) {
+            return save_texture(path_join(dirname, filename), texture);
+          });
     } catch (std::exception& except) {
       throw io_error(
           "cannot save " + filename + " since " + string(except.what()));
@@ -3596,16 +3628,15 @@ static void load_obj_scene(
   try {
     if (noparallel) {
       // load textures
-      for (auto& texture : scene.textures) {
-        auto& path = texture_paths[&texture - &scene.textures.front()];
+      for (auto&& [path, texture] : zip(texture_paths, scene.textures)) {
         load_texture(path_join(dirname, path), texture);
       }
     } else {
       // load textures
-      parallel_foreach(scene.textures, [&](auto& texture) {
-        auto& path = texture_paths[&texture - &scene.textures.front()];
-        return load_texture(path_join(dirname, path), texture);
-      });
+      parallel_zip(
+          texture_paths, scene.textures, [&](auto&& path, auto&& texture) {
+            return load_texture(path_join(dirname, path), texture);
+          });
     }
   } catch (std::exception& except) {
     throw io_error(
@@ -3942,26 +3973,26 @@ static void load_gltf_scene(
             throw io_error{"cannot load " + filename +
                            " for unsupported position components"};
 
-          shape.positions.resize(count);
-          data = (float*)shape.positions.data();
+          shape.positions = vector<vec3f>(count);
+          data            = (float*)shape.positions.data();
         } else if (gname == "NORMAL") {
           if (components != 3)
             throw io_error{"cannot load " + filename +
                            " for unsupported normal components"};
-          shape.normals.resize(count);
-          data = (float*)shape.normals.data();
+          shape.normals = vector<vec3f>(count);
+          data          = (float*)shape.normals.data();
         } else if (gname == "TEXCOORD" || gname == "TEXCOORD_0") {
           if (components != 2)
             throw io_error{"cannot load " + filename +
                            " for unsupported texture components"};
-          shape.texcoords.resize(count);
-          data = (float*)shape.texcoords.data();
+          shape.texcoords = vector<vec2f>(count);
+          data            = (float*)shape.texcoords.data();
         } else if (gname == "COLOR" || gname == "COLOR_0") {
           if (components != 3 && components != 4)
             throw io_error{"cannot load " + filename +
                            " for unsupported color components"};
-          shape.colors.resize(count);
-          data = (float*)shape.colors.data();
+          shape.colors = vector<vec4f>(count);
+          data         = (float*)shape.colors.data();
           if (components == 3) {
             dcomponents = 4;
             for (auto& c : shape.colors) c.w = 1;
@@ -3970,14 +4001,14 @@ static void load_gltf_scene(
           if (components != 4)
             throw io_error{"cannot load " + filename +
                            " for unsupported tangent components"};
-          shape.tangents.resize(count);
-          data = (float*)shape.tangents.data();
+          shape.tangents = vector<vec4f>(count);
+          data           = (float*)shape.tangents.data();
         } else if (gname == "RADIUS") {
           if (components != 1)
             throw io_error{"cannot load " + filename +
                            " for unsupported radius components"};
-          shape.radius.resize(count);
-          data = (float*)shape.radius.data();
+          shape.radius = vector<float>(count);
+          data         = (float*)shape.radius.data();
         } else {
           // ignore
           continue;
@@ -3997,28 +4028,28 @@ static void load_gltf_scene(
       // indices
       if (gprimitive.indices == nullptr) {
         if (gprimitive.type == cgltf_primitive_type_triangles) {
-          shape.triangles.resize(shape.positions.size() / 3);
+          shape.triangles = vector<vec3i>(shape.positions.size() / 3);
           for (auto i = 0; i < (int)shape.positions.size() / 3; i++)
             shape.triangles[i] = {i * 3 + 0, i * 3 + 1, i * 3 + 2};
         } else if (gprimitive.type == cgltf_primitive_type_triangle_fan) {
-          shape.triangles.resize(shape.positions.size() - 2);
+          shape.triangles = vector<vec3i>(shape.positions.size() - 2);
           for (auto i = 2; i < (int)shape.positions.size(); i++)
             shape.triangles[i - 2] = {0, i - 1, i};
         } else if (gprimitive.type == cgltf_primitive_type_triangle_strip) {
-          shape.triangles.resize(shape.positions.size() - 2);
+          shape.triangles = vector<vec3i>(shape.positions.size() - 2);
           for (auto i = 2; i < (int)shape.positions.size(); i++)
             shape.triangles[i - 2] = {i - 2, i - 1, i};
         } else if (gprimitive.type == cgltf_primitive_type_lines) {
-          shape.lines.resize(shape.positions.size() / 2);
+          shape.lines = vector<vec2i>(shape.positions.size() / 2);
           for (auto i = 0; i < (int)shape.positions.size() / 2; i++)
             shape.lines[i] = {i * 2 + 0, i * 2 + 1};
         } else if (gprimitive.type == cgltf_primitive_type_line_loop) {
-          shape.lines.resize(shape.positions.size());
+          shape.lines = vector<vec2i>(shape.positions.size());
           for (auto i = 1; i < (int)shape.positions.size(); i++)
             shape.lines[i - 1] = {i - 1, i};
           shape.lines.back() = {(int)shape.positions.size() - 1, 0};
         } else if (gprimitive.type == cgltf_primitive_type_line_strip) {
-          shape.lines.resize(shape.positions.size() - 1);
+          shape.lines = vector<vec2i>(shape.positions.size() - 1);
           for (auto i = 1; i < (int)shape.positions.size(); i++)
             shape.lines[i - 1] = {i - 1, i};
         } else if (gprimitive.type == cgltf_primitive_type_points) {
@@ -4042,36 +4073,36 @@ static void load_gltf_scene(
                 "cannot load " + filename + " for unsupported accessor type"};
         }
         if (gprimitive.type == cgltf_primitive_type_triangles) {
-          shape.triangles.resize(indices.size() / 3);
+          shape.triangles = vector<vec3i>(indices.size() / 3);
           for (auto i = 0; i < (int)indices.size() / 3; i++) {
             shape.triangles[i] = {
                 indices[i * 3 + 0], indices[i * 3 + 1], indices[i * 3 + 2]};
           }
         } else if (gprimitive.type == cgltf_primitive_type_triangle_fan) {
-          shape.triangles.resize(indices.size() - 2);
+          shape.triangles = vector<vec3i>(indices.size() - 2);
           for (auto i = 2; i < (int)indices.size(); i++) {
             shape.triangles[i - 2] = {
                 indices[0], indices[i - 1], indices[i + 0]};
           }
         } else if (gprimitive.type == cgltf_primitive_type_triangle_strip) {
-          shape.triangles.resize(indices.size() - 2);
+          shape.triangles = vector<vec3i>(indices.size() - 2);
           for (auto i = 2; i < (int)indices.size(); i++) {
             shape.triangles[i - 2] = {
                 indices[i - 2], indices[i - 1], indices[i + 0]};
           }
         } else if (gprimitive.type == cgltf_primitive_type_lines) {
-          shape.lines.resize(indices.size() / 2);
+          shape.lines = vector<vec2i>(indices.size() / 2);
           for (auto i = 0; i < (int)indices.size() / 2; i++) {
             shape.lines[i] = {indices[i * 2 + 0], indices[i * 2 + 1]};
           }
         } else if (gprimitive.type == cgltf_primitive_type_line_loop) {
-          shape.lines.resize(indices.size());
+          shape.lines = vector<vec2i>(indices.size());
           for (auto i : range(indices.size())) {
             shape.lines[i] = {
                 indices[i + 0], indices[i + 1] % (int)indices.size()};
           }
         } else if (gprimitive.type == cgltf_primitive_type_line_strip) {
-          shape.lines.resize(indices.size() - 1);
+          shape.lines = vector<vec2i>(indices.size() - 1);
           for (auto i = 0; i < (int)indices.size() - 1; i++) {
             shape.lines[i] = {indices[i + 0], indices[i + 1]};
           }
@@ -4096,7 +4127,7 @@ static void load_gltf_scene(
       auto xform   = mat4f{
             {1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
       cgltf_node_transform_world(&gnode, yocto::data(xform));
-      camera.frame = mat_to_frame(xform);
+      camera.frame = to_frame(xform);
     }
     if (gnode.mesh != nullptr) {
       for (auto& primitive : mesh_primitives.at(gnode.mesh - cgltf.meshes)) {
@@ -4105,7 +4136,7 @@ static void load_gltf_scene(
         auto xform     = mat4f{
                 {1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
         cgltf_node_transform_world(&gnode, yocto::data(xform));
-        instance.frame = mat_to_frame(xform);
+        instance.frame = to_frame(xform);
       }
     }
   }
@@ -4260,7 +4291,7 @@ static void save_gltf_scene(
         cgltf.accessors_count, cgltf.accessors, scene.shapes.size() * 6);
     alloc_array(
         cgltf.buffer_views_count, cgltf.buffer_views, scene.shapes.size() * 6);
-    shape_accessor_start.resize(scene.shapes.size(), 0);
+    shape_accessor_start     = vector<int>(scene.shapes.size(), 0);
     cgltf.accessors_count    = 0;
     cgltf.buffer_views_count = 0;
     auto add_vertex = [](cgltf_data& cgltf, cgltf_buffer& gbuffer, size_t count,
@@ -4410,7 +4441,7 @@ static void save_gltf_scene(
       auto& camera = scene.cameras[idx];
       auto& gnode  = cgltf.nodes[idx];
       gnode.name   = copy_string(get_camera_name(scene, camera));
-      auto xform   = frame_to_mat(camera.frame);
+      auto xform   = to_mat(camera.frame);
       memcpy(gnode.matrix, &xform, sizeof(mat4f));
       gnode.has_matrix = true;
       gnode.camera     = cgltf.cameras + idx;
@@ -4419,7 +4450,7 @@ static void save_gltf_scene(
       auto& instance = scene.instances[idx];
       auto& gnode    = cgltf.nodes[idx + scene.cameras.size()];
       gnode.name     = copy_string(get_instance_name(scene, instance));
-      auto xform     = frame_to_mat(instance.frame);
+      auto xform     = to_mat(instance.frame);
       memcpy(gnode.matrix, &xform, sizeof(mat4f));
       gnode.has_matrix = true;
       gnode.mesh       = cgltf.meshes +
@@ -4775,7 +4806,7 @@ static void xml_attribute(string& xml, const string& name, const vec3f& value) {
 static void xml_attribute(
     string& xml, const string& name, const frame3f& value) {
   xml += " " + name + "=\"";
-  auto mat = frame_to_mat(value);
+  auto mat = to_mat(value);
   for (auto ij : range(vec2i(4, 4))) {
     xml += (xml.back() == '"' ? "" : " ") + std::to_string(value[ij.y][ij.x]);
   }

@@ -71,10 +71,10 @@ using std::pair;
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-using byte   = unsigned char;
-using uint   = unsigned int;
-using ushort = unsigned short;
-using index  = long;
+using byte    = unsigned char;
+using uint    = unsigned int;
+using ushort  = unsigned short;
+using index_t = ptrdiff_t;
 
 // Common type
 template <typename... Ts>
@@ -262,18 +262,20 @@ struct vec;
 
 template <typename T>
 struct vec<T, 1> {
-  T x;
+  T x = 0;
 
   constexpr kernel vec() : x{0} {}
   constexpr kernel vec(T x_) : x{x_} {}
+  template <typename T1>
+  constexpr kernel vec(T1 x_) : x{(T)x_} {}
 
-  constexpr kernel      vec(const vec& v)       = default;
-  constexpr kernel vec& operator=(const vec& v) = default;
+  constexpr vec(const vec& v)            = default;
+  constexpr vec& operator=(const vec& v) = default;
 
   template <typename U>
   constexpr kernel explicit(!std::is_convertible_v<U, T>)
-      vec(const vec<U, 1>& v)
-      : x{(T)v.x} {}
+      vec(const vec<U, 1>& v) :
+      x{(T)v.x} {}
   template <typename U>
   constexpr kernel explicit(!std::is_convertible_v<T, U>) operator vec<U, 1>() {
     return {(U)x};
@@ -288,19 +290,22 @@ struct vec<T, 1> {
 
 template <typename T>
 struct vec<T, 2> {
-  T x, y;
+  T x = 0;
+  T y = 0;
 
   constexpr kernel vec() : x{0}, y{0} {}
   constexpr kernel explicit vec(T v) : x{v}, y{v} {}
   constexpr kernel vec(T x_, T y_) : x{x_}, y{y_} {}
+  template <typename T1, typename T2>
+  constexpr kernel vec(T1 x_, T2 y_) : x{(T)x_}, y{(T)y_} {}
 
-  constexpr kernel      vec(const vec& v)       = default;
-  constexpr kernel vec& operator=(const vec& v) = default;
+  constexpr vec(const vec& v)            = default;
+  constexpr vec& operator=(const vec& v) = default;
 
   template <typename U>
   constexpr kernel explicit(!std::is_convertible_v<U, T>)
-      vec(const vec<U, 2>& v)
-      : x{(T)v.x}, y{(T)v.y} {}
+      vec(const vec<U, 2>& v) :
+      x{(T)v.x}, y{(T)v.y} {}
   template <typename U>
   constexpr kernel explicit(!std::is_convertible_v<T, U>) operator vec<U, 2>() {
     return {(U)x, (U)y};
@@ -315,20 +320,24 @@ struct vec<T, 2> {
 
 template <typename T>
 struct vec<T, 3> {
-  T x, y, z;
+  T x = 0;
+  T y = 0;
+  T z = 0;
 
   constexpr kernel vec() : x{0}, y{0}, z{0} {}
   constexpr kernel explicit vec(T v_) : x{v_}, y{v_}, z{v_} {}
   constexpr kernel vec(T x_, T y_, T z_) : x{x_}, y{y_}, z{z_} {}
+  template <typename T1, typename T2, typename T3>
+  constexpr kernel vec(T1 x_, T2 y_, T3 z_) : x{(T)x_}, y{(T)y_}, z{(T)z_} {}
   constexpr kernel vec(vec<T, 2> xy_, T z_) : x{xy_.x}, y{xy_.y}, z{z_} {}
 
-  constexpr kernel      vec(const vec& v)       = default;
-  constexpr kernel vec& operator=(const vec& v) = default;
+  constexpr vec(const vec& v)            = default;
+  constexpr vec& operator=(const vec& v) = default;
 
   template <typename U>
   constexpr kernel explicit(!std::is_convertible_v<U, T>)
-      vec(const vec<U, 3>& v)
-      : x{(T)v.x}, y{(T)v.y}, z{(T)v.z} {}
+      vec(const vec<U, 3>& v) :
+      x{(T)v.x}, y{(T)v.y}, z{(T)v.z} {}
   template <typename U>
   constexpr kernel explicit(!std::is_convertible_v<T, U>) operator vec<U, 3>() {
     return {(U)x, (U)y, (U)z};
@@ -342,27 +351,33 @@ struct vec<T, 3> {
 
 template <typename T>
 struct vec<T, 4> {
-  T x, y, z, w;
+  T x = 0;
+  T y = 0;
+  T z = 0;
+  T w = 0;
 
   constexpr kernel vec() : x{0}, y{0}, z{0}, w{0} {}
   constexpr kernel explicit vec(T v_) : x{v_}, y{v_}, z{v_}, w{v_} {}
   constexpr kernel vec(T x_, T y_, T z_, T w_) : x{x_}, y{y_}, z{z_}, w{w_} {}
-  constexpr kernel vec(vec<T, 3> xyz_, T w_)
-      : x{xyz_.x}, y{xyz_.y}, z{xyz_.z}, w{w_} {}
+  template <typename T1, typename T2, typename T3, typename T4>
+  constexpr kernel vec(T1 x_, T2 y_, T3 z_, T4 w_) :
+      x{(T)x_}, y{(T)y_}, z{(T)z_}, w{(T)w_} {}
+  constexpr kernel vec(vec<T, 3> xyz_, T w_) :
+      x{xyz_.x}, y{xyz_.y}, z{xyz_.z}, w{w_} {}
 
-  constexpr kernel      vec(const vec& v)       = default;
-  constexpr kernel vec& operator=(const vec& v) = default;
+  constexpr vec(const vec& v)            = default;
+  constexpr vec& operator=(const vec& v) = default;
 
   template <typename U>
   constexpr kernel explicit(!std::is_convertible_v<U, T>)
-      vec(const vec<U, 4>& v)
-      : x{(T)v.x}, y{(T)v.y}, z{(T)v.z}, w{(T)v.w} {}
+      vec(const vec<U, 4>& v) :
+      x{(T)v.x}, y{(T)v.y}, z{(T)v.z}, w{(T)v.w} {}
   template <typename U>
   constexpr kernel explicit(!std::is_convertible_v<T, U>) operator vec<U, 4>() {
     return {(U)x, (U)y, (U)z, (U)w};
   }
-  constexpr kernel vec(const array<T, 4>& v)
-      : x{v[0]}, y{v[1]}, z{v[2]}, w{v[3]} {}
+  constexpr kernel vec(const array<T, 4>& v) :
+      x{v[0]}, y{v[1]}, z{v[2]}, w{v[3]} {}
   constexpr kernel operator array<T, 4>() { return {x, y, z, w}; }
 
   constexpr kernel T&       operator[](size_t i) { return (&x)[i]; }
@@ -392,6 +407,10 @@ using vec1s = vec<size_t, 1>;
 using vec2s = vec<size_t, 2>;
 using vec3s = vec<size_t, 3>;
 using vec4s = vec<size_t, 4>;
+using vec1x = vec<index_t, 1>;
+using vec2x = vec<index_t, 2>;
+using vec3x = vec<index_t, 3>;
+using vec4x = vec<index_t, 4>;
 
 // Zero vector constants.
 constexpr auto zero1f = vec1f{0};
@@ -435,6 +454,10 @@ constexpr kernel size_t size(const vec<T, N>& a) {
 template <typename T, size_t N>
 constexpr kernel ptrdiff_t ssize(const vec<T, N>& a) {
   return (ptrdiff_t)N;
+}
+template <typename T, size_t N>
+constexpr kernel int isize(const vec<T, N>& a) {
+  return (int)N;
 }
 template <typename T, size_t N>
 constexpr kernel const T* begin(const vec<T, N>& a) {
@@ -1906,7 +1929,7 @@ struct mat;
 // Small Fixed-size matrices stored in column major format.
 template <typename T, size_t N>
 struct mat<T, N, 1> {
-  vec<T, N> x;
+  vec<T, N> x = {0};
 
   constexpr kernel mat() : x{0} {}
   constexpr kernel mat(const vec<T, N>& x_) : x{x_} {}
@@ -1920,11 +1943,12 @@ struct mat<T, N, 1> {
 // Small Fixed-size matrices stored in column major format.
 template <typename T, size_t N>
 struct mat<T, N, 2> {
-  vec<T, N> x, y;
+  vec<T, N> x = {0};
+  vec<T, N> y = {0};
 
-  constexpr kernel mat() : x{0}, y{1} {}
-  constexpr kernel mat(const vec<T, N>& x_, const vec<T, N>& y_)
-      : x{x_}, y{y_} {}
+  constexpr kernel mat() : x{0}, y{0} {}
+  constexpr kernel mat(const vec<T, N>& x_, const vec<T, N>& y_) :
+      x{x_}, y{y_} {}
 
   constexpr kernel vec<T, N>& operator[](size_t i) { return (&x)[i]; }
   constexpr kernel const vec<T, N>& operator[](size_t i) const {
@@ -1935,12 +1959,14 @@ struct mat<T, N, 2> {
 // Small Fixed-size matrices stored in column major format.
 template <typename T, size_t N>
 struct mat<T, N, 3> {
-  vec<T, N> x, y, z;
+  vec<T, N> x = {0};
+  vec<T, N> y = {0};
+  vec<T, N> z = {0};
 
   constexpr kernel mat() : x{0}, y{0}, z{0} {}
   constexpr kernel mat(
-      const vec<T, N>& x_, const vec<T, N>& y_, const vec<T, N>& z_)
-      : x{x_}, y{y_}, z{z_} {}
+      const vec<T, N>& x_, const vec<T, N>& y_, const vec<T, N>& z_) :
+      x{x_}, y{y_}, z{z_} {}
 
   constexpr kernel vec<T, N>& operator[](size_t i) { return (&x)[i]; }
   constexpr kernel const vec<T, N>& operator[](size_t i) const {
@@ -1951,12 +1977,15 @@ struct mat<T, N, 3> {
 // Small Fixed-size matrices stored in column major format.
 template <typename T, size_t N>
 struct mat<T, N, 4> {
-  vec<T, N> x, y, z, w;
+  vec<T, N> x = {0};
+  vec<T, N> y = {0};
+  vec<T, N> z = {0};
+  vec<T, N> w = {0};
 
   constexpr kernel mat() : x{0}, y{0}, z{0}, w{0} {}
   constexpr kernel mat(const vec<T, N>& x_, const vec<T, N>& y_,
-      const vec<T, N>& z_, const vec<T, N>& w_)
-      : x{x_}, y{y_}, z{z_}, w{w_} {}
+      const vec<T, N>& z_, const vec<T, N>& w_) :
+      x{x_}, y{y_}, z{z_}, w{w_} {}
 
   constexpr kernel vec<T, N>& operator[](size_t i) { return (&x)[i]; }
   constexpr kernel const vec<T, N>& operator[](size_t i) const {
@@ -2264,17 +2293,19 @@ struct frame;
 // Rigid frames stored as a column-major affine transform matrix.
 template <typename T>
 struct frame<T, 2> {
-  vec<T, 2> x, y, o;
+  vec<T, 2> x = {1, 0};
+  vec<T, 2> y = {0, 1};
+  vec<T, 2> o = {0, 0};
 
   constexpr kernel frame() : x{1, 0}, y{0, 1}, o{0, 0} {}
   constexpr kernel frame(
-      const vec<T, 2>& x_, const vec<T, 2>& y_, const vec<T, 2>& o_)
-      : x{x_}, y{y_}, o{o_} {}
-  constexpr kernel frame(const mat<T, 2, 2>& xy_, const vec<T, 2>& o_)
-      : x{xy_.x}, y{xy_.y}, o{o_} {}
+      const vec<T, 2>& x_, const vec<T, 2>& y_, const vec<T, 2>& o_) :
+      x{x_}, y{y_}, o{o_} {}
+  constexpr kernel frame(const mat<T, 2, 2>& xy_, const vec<T, 2>& o_) :
+      x{xy_.x}, y{xy_.y}, o{o_} {}
 
-  explicit constexpr kernel frame(const mat<T, 3, 3>& m)
-      : x{xy(m.x)}, y{xy(m.y)}, o{xy(m.z)} {}
+  explicit constexpr kernel frame(const mat<T, 3, 3>& m) :
+      x{xy(m.x)}, y{xy(m.y)}, o{xy(m.z)} {}
   explicit constexpr kernel operator mat<T, 3, 3>() const {
     return {{x, 0}, {y, 0}, {o, 1}};
   }
@@ -2288,17 +2319,20 @@ struct frame<T, 2> {
 // Rigid frames stored as a column-major affine transform matrix.
 template <typename T>
 struct frame<T, 3> {
-  vec<T, 3> x, y, z, o;
+  vec<T, 3> x = {1, 0, 0};
+  vec<T, 3> y = {0, 0, 1};
+  vec<T, 3> z = {0, 0, 1};
+  vec<T, 3> o = {0, 0, 0};
 
   constexpr kernel frame() : x{1, 0, 0}, y{0, 1, 0}, z{0, 0, 1}, o{0, 0, 0} {}
   constexpr kernel frame(const vec<T, 3>& x_, const vec<T, 3>& y_,
-      const vec<T, 3>& z_, const vec<T, 3>& o_)
-      : x{x_}, y{y_}, z{z_}, o{o_} {}
-  constexpr kernel frame(const mat<T, 3, 3>& xyz_, const vec<T, 3>& o_)
-      : x{xyz_.x}, y{xyz_.y}, z{xyz_.z}, o{o_} {}
+      const vec<T, 3>& z_, const vec<T, 3>& o_) :
+      x{x_}, y{y_}, z{z_}, o{o_} {}
+  constexpr kernel frame(const mat<T, 3, 3>& xyz_, const vec<T, 3>& o_) :
+      x{xyz_.x}, y{xyz_.y}, z{xyz_.z}, o{o_} {}
 
-  explicit constexpr kernel frame(const mat<T, 4, 4>& m)
-      : x{xyz(m.x)}, y{xyz(m.y)}, z{xyz(m.z)}, o{xyz(m.w)} {}
+  explicit constexpr kernel frame(const mat<T, 4, 4>& m) :
+      x{xyz(m.x)}, y{xyz(m.y)}, z{xyz(m.z)}, o{xyz(m.w)} {}
   explicit constexpr kernel operator mat<T, 4, 4>() const {
     return {{x, 0}, {y, 0}, {z, 0}, {o, 1}};
   }
@@ -2330,7 +2364,7 @@ constexpr kernel const vec<T, N>& translation(const frame<T, N>& a) {
 
 // Frame/mat conversion
 template <typename T, size_t N>
-constexpr kernel frame<T, N - 1> mat_to_frame(const mat<T, N, N>& m) {
+constexpr kernel frame<T, N - 1> to_frame(const mat<T, N, N>& m) {
   if constexpr (N == 3) {
     return {xy(m.x), xy(m.y), xy(m.z)};
   } else if constexpr (N == 4) {
@@ -2338,7 +2372,7 @@ constexpr kernel frame<T, N - 1> mat_to_frame(const mat<T, N, N>& m) {
   }
 }
 template <typename T, size_t N>
-constexpr kernel mat<T, N + 1, N + 1> frame_to_mat(const frame<T, N>& f) {
+constexpr kernel mat<T, N + 1, N + 1> to_mat(const frame<T, N>& f) {
   if constexpr (N == 2) {
     return {{f.x, 0}, {f.y, 0}, {f.o, 1}};
   } else if constexpr (N == 3) {
@@ -2615,18 +2649,18 @@ template <typename T, size_t N>
 constexpr kernel vec<T, N> transform_point_inverse(
     const frame<T, N>& a, const vec<T, N>& b) {
   if constexpr (N == 2) {
-    return {dot(a.x, b.x - a.o), dot(a.y, b.y - a.o)};
+    return {dot(a.x, b - a.o), dot(a.y, b - a.o)};
   } else if constexpr (N == 3) {
-    return {dot(a.x, b.x - a.o), dot(a.y, b.y - a.o), dot(a.z, b.z - a.o)};
+    return {dot(a.x, b - a.o), dot(a.y, b - a.o), dot(a.z, b - a.o)};
   }
 }
 template <typename T, size_t N>
 constexpr kernel vec<T, N> transform_vector_inverse(
     const frame<T, N>& a, const vec<T, N>& b) {
   if constexpr (N == 2) {
-    return {dot(a.x, b.x), dot(a.y, b.y)};
+    return {dot(a.x, b), dot(a.y, b)};
   } else if constexpr (N == 3) {
-    return {dot(a.x, b.x), dot(a.y, b.y), dot(a.z, b.z)};
+    return {dot(a.x, b), dot(a.y, b), dot(a.z, b)};
   }
 }
 template <typename T, size_t N>
@@ -2999,369 +3033,17 @@ constexpr kernel void update_fpscam(
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// PYTHON-LIKE ITERATORS
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Python range. Construct an object that iterates over an integer sequence.
-template <typename T>
-constexpr kernel auto range(T max);
-template <typename T>
-constexpr kernel auto range(T min, T max);
-template <typename T>
-constexpr kernel auto range(T min, T max, T step);
-
-// Python range in 2d. Construct an object that iterates over a 2d integer
-// sequence.
-template <typename T>
-constexpr kernel auto range(vec<T, 2> max);
-template <typename T>
-constexpr kernel auto range(array<T, 2> max);
-
-// Python range in 3d. Construct an object that iterates over a 3d integer
-// sequence.
-template <typename T>
-constexpr kernel auto range(vec<T, 3> max);
-template <typename T>
-constexpr kernel auto range(array<T, 3> max);
-
-// Python enumerate
-template <typename Sequence, typename T = size_t>
-constexpr kernel auto enumerate(const Sequence& sequence, T start = 0);
-template <typename Sequence, typename T = size_t>
-constexpr kernel auto enumerate(Sequence& sequence, T start = 0);
-
-// Python zip
-template <typename Sequence1, typename Sequence2>
-constexpr kernel auto zip(
-    const Sequence1& sequence1, const Sequence2& sequence2);
-template <typename Sequence1, typename Sequence2>
-constexpr kernel auto zip(Sequence1& sequence1, Sequence2& sequence2);
-template <typename Sequence1, typename Sequence2>
-constexpr kernel auto zip(const Sequence1& sequence1, Sequence2& sequence2);
-template <typename Sequence1, typename Sequence2>
-constexpr kernel auto zip(Sequence1& sequence1, const Sequence2& sequence2);
-
-// Implementation of Python range.
-template <typename T>
-constexpr kernel auto range(T max) {
-  return range((T)0, max);
-}
-template <typename T>
-constexpr kernel auto range(T min, T max) {
-  struct range_iterator {
-    T                     index;
-    constexpr kernel void operator++() { ++index; }
-    constexpr kernel bool operator!=(const range_iterator& other) const {
-      return index != other.index;
-    }
-    constexpr kernel T operator*() const { return index; }
-  };
-  struct range_helper {
-    T                               begin_ = 0, end_ = 0;
-    constexpr kernel range_iterator begin() const { return {begin_}; }
-    constexpr kernel range_iterator end() const { return {end_}; }
-  };
-  return range_helper{min, max};
-}
-template <typename T>
-constexpr kernel auto range(T min, T max, T step) {
-  struct range_iterator {
-    T                     index;
-    T                     step;
-    constexpr kernel void operator++() { index += step; }
-    constexpr kernel bool operator!=(const range_iterator& other) const {
-      return index != other.index;
-    }
-    constexpr kernel T operator*() const { return index; }
-  };
-  struct range_helper {
-    T                               begin_ = 0, end_ = 0, step_ = 0;
-    constexpr kernel range_iterator begin() const { return {begin_, step_}; }
-    constexpr kernel range_iterator end() const {
-      return {begin_ + ((end_ - begin_) / step_) * step_, step_};
-    }
-  };
-  return range_helper{min, max, step};
-}
-
-// Python range in 2d. Construct an object that iterates over a 2d integer
-// sequence.
-template <typename T>
-constexpr kernel auto range(vec<T, 2> max) {
-  struct range_sentinel {};
-  struct range_iterator {
-    vec<T, 2>             index, end;
-    constexpr kernel void operator++() {
-      ++index.x;
-      if (index.x >= end.x) {
-        index.x = 0;
-        index.y++;
-      }
-    }
-    constexpr kernel bool operator!=(const range_sentinel&) const {
-      return index.y != end.y;
-    }
-    constexpr kernel vec<T, 2> operator*() const { return index; }
-  };
-  struct range_sequence {
-    vec<T, 2>                       end_ = {0, 0};
-    constexpr kernel range_iterator begin() const { return {{0, 0}, end_}; }
-    constexpr kernel range_sentinel end() const { return {}; }
-  };
-  return range_sequence{max};
-}
-template <typename T>
-constexpr kernel auto range(array<T, 2> max) {
-  return range(vec<T, 2>{max});
-}
-
-// Python range in 2d. Construct an object that iterates over a 2d integer
-// sequence.
-template <typename T>
-constexpr kernel auto range(vec<T, 3> max) {
-  struct range_sentinel {};
-  struct range_iterator {
-    vec<T, 3>             index, end;
-    constexpr kernel void operator++() {
-      ++index.x;
-      if (index.x >= end.x) {
-        index.x = 0;
-        index.y++;
-      }
-      if (index.y >= end.y) {
-        index.y = 0;
-        index.z++;
-      }
-    }
-    constexpr kernel bool operator!=(const range_sentinel&) const {
-      return index.z != end.z;
-    }
-    constexpr kernel vec<T, 3> operator*() const { return index; }
-  };
-  struct range_sequence {
-    vec<T, 3>                       end_ = {0, 0, 0};
-    constexpr kernel range_iterator begin() const { return {{0, 0, 0}, end_}; }
-    constexpr kernel range_sentinel end() const { return {}; }
-  };
-  return range_sequence{max};
-}
-template <typename T>
-constexpr kernel auto range(array<T, 3> max) {
-  return range(vec<T, 3>{max});
-}
-
-// Implementation of Python enumerate.
-template <typename Sequence, typename T>
-constexpr kernel auto enumerate(const Sequence& sequence, T start) {
-  using Iterator  = typename Sequence::const_iterator;
-  using Reference = typename Sequence::const_reference;
-  struct enumerate_iterator {
-    T                     index;
-    Iterator              iterator;
-    constexpr kernel bool operator!=(const enumerate_iterator& other) const {
-      return index != other.index;
-    }
-    constexpr kernel void operator++() {
-      ++index;
-      ++iterator;
-    }
-    constexpr kernel pair<const T&, Reference> operator*() const {
-      return {index, *iterator};
-    }
-  };
-  struct enumerate_helper {
-    const Sequence&       sequence;
-    T                     begin_, end_;
-    constexpr kernel auto begin() {
-      return enumerate_iterator{begin_, std::begin(sequence)};
-    }
-    constexpr kernel auto end() {
-      return enumerate_iterator{end_, std::end(sequence)};
-    }
-  };
-  return enumerate_helper{sequence, 0, size(sequence)};
-}
-
-// Python enumerate
-template <typename Sequence, typename T>
-constexpr kernel auto enumerate(Sequence& sequence, T start) {
-  using Iterator  = typename Sequence::iterator;
-  using Reference = typename Sequence::reference;
-  struct enumerate_iterator {
-    T                     index;
-    Iterator              iterator;
-    constexpr kernel bool operator!=(const enumerate_iterator& other) const {
-      return index != other.index;
-    }
-    constexpr kernel void operator++() {
-      ++index;
-      ++iterator;
-    }
-    constexpr kernel pair<T&, Reference> operator*() const {
-      return {index, *iterator};
-    }
-  };
-  struct enumerate_helper {
-    Sequence&             sequence;
-    T                     begin_, end_;
-    constexpr kernel auto begin() {
-      return enumerate_iterator{begin_, std::begin(sequence)};
-    }
-    constexpr kernel auto end() {
-      return enumerate_iterator{end_, std::end(sequence)};
-    }
-  };
-  return enumerate_helper{sequence, 0, size(sequence)};
-}
-
-// Python zip
-template <typename Sequence1, typename Sequence2>
-constexpr kernel auto zip(
-    const Sequence1& sequence1, const Sequence2& sequence2) {
-  using Iterator1  = typename Sequence1::const_iterator;
-  using Reference1 = typename Sequence1::const_reference;
-  using Iterator2  = typename Sequence2::const_iterator;
-  using Reference2 = typename Sequence2::const_reference;
-  struct zip_iterator {
-    Iterator1             iterator1;
-    Iterator2             iterator2;
-    constexpr kernel bool operator!=(const zip_iterator& other) const {
-      return iterator1 != other.iterator1;
-    }
-    constexpr kernel void operator++() {
-      ++iterator1;
-      ++iterator2;
-    }
-    constexpr kernel pair<Reference1, Reference2> operator*() const {
-      return {*iterator1, *iterator2};
-    }
-  };
-  struct zip_helper {
-    const Sequence1&      sequence1;
-    const Sequence2&      sequence2;
-    constexpr kernel auto begin() {
-      return zip_iterator{std::begin(sequence1), std::begin(sequence2)};
-    }
-    constexpr kernel auto end() {
-      return zip_iterator{std::end(sequence1), std::end(sequence2)};
-    }
-  };
-  return zip_helper{sequence1, sequence2};
-}
-
-// Implementation of Python zip
-template <typename Sequence1, typename Sequence2>
-constexpr kernel auto zip(Sequence1& sequence1, Sequence2& sequence2) {
-  using Iterator1  = typename Sequence1::iterator;
-  using Reference1 = typename Sequence1::reference;
-  using Iterator2  = typename Sequence2::iterator;
-  using Reference2 = typename Sequence2::reference;
-  struct zip_iterator {
-    Iterator1             iterator1;
-    Iterator2             iterator2;
-    constexpr kernel bool operator!=(const zip_iterator& other) const {
-      return iterator1 != other.iterator1;
-    }
-    constexpr kernel void operator++() {
-      ++iterator1;
-      ++iterator2;
-    }
-    constexpr kernel pair<Reference1, Reference2> operator*() const {
-      return {*iterator1, *iterator2};
-    }
-  };
-  struct zip_helper {
-    Sequence1&            sequence1;
-    Sequence2&            sequence2;
-    constexpr kernel auto begin() {
-      return zip_iterator{std::begin(sequence1), std::begin(sequence2)};
-    }
-    constexpr kernel auto end() {
-      return zip_iterator{std::end(sequence1), std::end(sequence2)};
-    }
-  };
-  return zip_helper{sequence1, sequence2};
-}
-
-// Implementation of Python zip
-template <typename Sequence1, typename Sequence2>
-constexpr kernel auto zip(const Sequence1& sequence1, Sequence2& sequence2) {
-  using Iterator1  = typename Sequence1::const_iterator;
-  using Reference1 = typename Sequence1::const_reference;
-  using Iterator2  = typename Sequence2::iterator;
-  using Reference2 = typename Sequence2::reference;
-  struct zip_iterator {
-    Iterator1             iterator1;
-    Iterator2             iterator2;
-    constexpr kernel bool operator!=(const zip_iterator& other) const {
-      return iterator1 != other.iterator1;
-    }
-    constexpr kernel void operator++() {
-      ++iterator1;
-      ++iterator2;
-    }
-    constexpr kernel pair<Reference1, Reference2> operator*() const {
-      return {*iterator1, *iterator2};
-    }
-  };
-  struct zip_helper {
-    const Sequence1&      sequence1;
-    Sequence2&            sequence2;
-    constexpr kernel auto begin() {
-      return zip_iterator{std::begin(sequence1), std::begin(sequence2)};
-    }
-    constexpr kernel auto end() {
-      return zip_iterator{std::end(sequence1), std::end(sequence2)};
-    }
-  };
-  return zip_helper{sequence1, sequence2};
-}
-
-// Implementation of Python zip
-template <typename Sequence1, typename Sequence2>
-constexpr kernel auto zip(Sequence1& sequence1, const Sequence2& sequence2) {
-  using Iterator1  = typename Sequence1::iterator;
-  using Reference1 = typename Sequence1::reference;
-  using Iterator2  = typename Sequence2::const_iterator;
-  using Reference2 = typename Sequence2::const_reference;
-  struct zip_iterator {
-    Iterator1             iterator1;
-    Iterator2             iterator2;
-    constexpr kernel bool operator!=(const zip_iterator& other) const {
-      return iterator1 != other.iterator1;
-    }
-    constexpr kernel void operator++() {
-      ++iterator1;
-      ++iterator2;
-    }
-    constexpr kernel pair<Reference1, Reference2> operator*() const {
-      return {*iterator1, *iterator2};
-    }
-  };
-  struct zip_helper {
-    Sequence1&            sequence1;
-    const Sequence2&      sequence2;
-    constexpr kernel auto begin() {
-      return zip_iterator{std::begin(sequence1), std::begin(sequence2)};
-    }
-    constexpr kernel auto end() {
-      return zip_iterator{std::end(sequence1), std::end(sequence2)};
-    }
-  };
-  return zip_helper{sequence1, sequence2};
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
 // SIGNED-SIZE
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-template <typename T>
-constexpr kernel std::ptrdiff_t ssize(const T& container) {
-  return (std::ptrdiff_t)std::size(container);
+template <typename Sequence>
+constexpr kernel std::ptrdiff_t ssize(const Sequence& sequence) {
+  return (std::ptrdiff_t)std::size(sequence);
+}
+template <typename Sequence>
+constexpr kernel int isize(const Sequence& sequence) {
+  return (int)std::size(sequence);
 }
 
 }  // namespace yocto

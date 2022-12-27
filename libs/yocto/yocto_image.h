@@ -64,8 +64,8 @@ using std::vector;
 namespace yocto {
 
 // Aspect ratio
-template <typename T = float>
-constexpr T image_aspect(const vec2s& extents) {
+template <typename I, typename T = float>
+constexpr T image_aspect(const vec<I, 2>& extents) {
   return (T)extents[0] / (T)extents[1];
 }
 
@@ -137,8 +137,8 @@ constexpr void rgb_to_srgbb(array2d<Tb>& srgb, const array2d<T>& rgb) {
 
 // Lookup pixel for evaluation
 template <typename T, typename T1, size_t N>
-constexpr vec<T, N> lookup_image(
-    const array2d<vec<T1, N>>& image, const vec2s& ij, bool as_linear = false) {
+constexpr vec<T, N> lookup_image(const array2d<vec<T1, N>>& image,
+    const vec2s& ij, bool as_linear = false) {
   if constexpr (!std::is_same_v<T1, byte>) {
     return as_linear ? srgb_to_rgb(image[ij]) : image[ij];
   } else {
@@ -198,13 +198,6 @@ constexpr void tonemap_image(array2d<vec<T, N>>& result,
     result[idx] = tonemap(image[idx], (T)exposure, filmic, srgb);
   }
 }
-
-// Apply tone mapping. If the input image is an ldr, does nothing.
-// void tonemap_image(array2d<vec4f>& ldr, const array2d<vec4f>& image,
-//     float exposure, bool filmic = false, bool srgb= true);
-// Apply tone mapping using multithreading for speed.
-void tonemap_image_mt(array2d<vec4f>& ldr, const array2d<vec4f>& image,
-    float exposure, bool filmic = false, bool srgb = true);
 
 // Get/Set region
 template <typename T>
@@ -284,11 +277,6 @@ inline void colorgrade_image(array2d<vec<T, 4>>& result,
     result[idx] = colorgrade(image[idx], linear, params);
   }
 }
-
-// Color grade an hsr or ldr image to an ldr image.
-// Uses multithreading for speed.
-void colorgrade_image_mt(array2d<vec4f>& result, const array2d<vec4f>& image,
-    bool linear, const colorgrade_params& params);
 
 // determine white balance colors
 template <typename T>
@@ -438,7 +426,8 @@ inline array2d<vec<T, 4>> make_uvgrid(
 }
 
 template <typename T = float>
-inline array2d<vec<T, 4>> make_colormapramp(const vec2s& extents, T scale = 1) {
+inline array2d<vec<T, 4>> make_colormapramp(
+    const vec2s& extents, T scale = 1) {
   return _make_proc_image(extents, [=](vec2s ij) -> vec<T, 4> {
     auto uv  = fmod((scale * ij) / extents, 1);
     auto rgb = vec<T, 3>{0, 0, 0};
@@ -721,55 +710,6 @@ inline array2d<vec<T, 4>> make_lights(const vec2s& extents,
   }
   return img;
 }
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// IMAGE UTILITIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Conversion from/to floats.
-void byte_to_float(vector<vec4f>& fl, const vector<vec4b>& bt);
-void float_to_byte(vector<vec4b>& bt, const vector<vec4f>& fl);
-
-// Conversion between linear and gamma-encoded images.
-void srgb_to_rgb(vector<vec4f>& rgb, const vector<vec4f>& srgb);
-void rgb_to_srgb(vector<vec4f>& srgb, const vector<vec4f>& rgb);
-void srgb_to_rgb(vector<vec4f>& rgb, const vector<vec4b>& srgb);
-void rgb_to_srgb(vector<vec4b>& srgb, const vector<vec4f>& rgb);
-
-// Apply tone mapping
-void tonemap_image(vector<vec4f>& ldr, const vector<vec4f>& hdr, float exposure,
-    bool filmic = false, bool srgb = true);
-void tonemap_image(vector<vec4b>& ldr, const vector<vec4f>& hdr, float exposure,
-    bool filmic = false, bool srgb = true);
-
-// Apply tone mapping using multithreading for speed
-void tonemap_image_mt(vector<vec4f>& ldr, const vector<vec4f>& hdr,
-    float exposure, bool filmic = false, bool srgb = true);
-void tonemap_image_mt(vector<vec4b>& ldr, const vector<vec4f>& hdr,
-    float exposure, bool filmic = false, bool srgb = true);
-
-// Color grade a linear or srgb image to an srgb image.
-// Uses multithreading for speed.
-void colorgrade_image_mt(vector<vec4f>& corrected, const vector<vec4f>& img,
-    bool linear, const colorgrade_params& params);
-void colorgrade_image_mt(vector<vec4b>& corrected, const vector<vec4f>& img,
-    bool linear, const colorgrade_params& params);
-
-// determine white balance colors
-vec3f compute_white_balance(const vector<vec4f>& img);
-
-// Resize an image.
-void resize_image(vector<vec4f>& res, const vector<vec4f>& img, int width,
-    int height, int res_width, int res_height);
-void resize_image(vector<vec4b>& res, const vector<vec4b>& img, int width,
-    int height, int res_width, int res_height);
-
-// Compute the difference between two images
-void image_difference(vector<vec4f>& diff, const vector<vec4f>& a,
-    const vector<vec4f>& b, bool disply_diff);
 
 }  // namespace yocto
 
