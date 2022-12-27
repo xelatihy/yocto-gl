@@ -145,7 +145,7 @@ struct ndspan {
 
   // Access
   constexpr T& operator[](size_t idx) const noexcept { return _data[idx]; }
-  constexpr T& operator[](const array<size_t, N>& idx) const noexcept {
+  constexpr T& operator[](const vec<size_t, N>& idx) const noexcept {
     return _data[_index(idx, _extents)];
   }
 
