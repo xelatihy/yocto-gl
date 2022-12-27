@@ -350,7 +350,7 @@ scene_bvh make_scene_bvh(
   auto sbvh = scene_bvh{};
 
   // build shape bvh
-  sbvh.shapes.resize(scene.shapes.size());
+  sbvh.shapes = vector<shape_bvh>(scene.shapes.size());
   if (noparallel) {
     for (auto&& [sshape, shape] : zip(sbvh.shapes, scene.shapes)) {
       sshape = make_shape_bvh(shape, highquality);
@@ -886,7 +886,7 @@ scene_ebvh make_scene_ebvh(
   auto sbvh = scene_ebvh{};
 
   // shape bvhs
-  sbvh.shapes.resize(scene.shapes.size());
+  sbvh.shapes = vector<shape_ebvh>(scene.shapes.size());
   if (noparallel) {
     for (auto&& [sshape, shape] : zip(sbvh.shapes, scene.shapes)) {
       sshape = make_shape_ebvh(shape, highquality);

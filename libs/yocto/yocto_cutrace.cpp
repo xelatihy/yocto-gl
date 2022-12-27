@@ -807,10 +807,8 @@ cutrace_bvh make_cutrace_bvh(cutrace_context& context,
   auto instances_data = download_buffer_vector(scene.instances);
 
   // shapes
-  bvh.shapes.resize(scene.shapes.size());
-  for (auto shape_id = (size_t)0; shape_id < scene.shapes.size(); shape_id++) {
-    auto& shape = shapes_data[shape_id];
-
+  bvh.shapes = vector<cushape_bvh>(scene.shapes.size());
+  for (auto&& [bvh, shape] : zip(bvh.shapes, scene.shapes)) {
     // input
     auto built_input                       = OptixBuildInput{};
     built_input.type                       = OPTIX_BUILD_INPUT_TYPE_TRIANGLES;
@@ -853,7 +851,7 @@ cutrace_bvh make_cutrace_bvh(cutrace_context& context,
         context.cuda_stream, accelerator_sizes.tempSizeInBytes, (byte*)nullptr);
     auto  bvh_buffer = make_buffer(context.cuda_stream,
          accelerator_sizes.outputSizeInBytes, (byte*)nullptr);
-    auto& sbvh       = bvh.shapes[shape_id].bvh;
+    auto& sbvh       = bvh.bvh;
     check_result(optixAccelBuild(context.optix_context,
         /* cuda_stream */ 0, &accelerator_options, &built_input, (int)1,
         temporary_buffer.device_ptr(), temporary_buffer.size_in_bytes(),

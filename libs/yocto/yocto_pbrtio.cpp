@@ -93,7 +93,7 @@ static bool load_text(const string& filename, string& str, string& error) {
   fseek(fs, 0, SEEK_END);
   auto length = ftell(fs);
   fseek(fs, 0, SEEK_SET);
-  str.resize(length);
+  str = string(length, '\0');
   if (fread(str.data(), 1, length, fs) != length) {
     fclose(fs);
     error = "cannot read " + filename;
@@ -619,7 +619,7 @@ static bool get_pbrt_value(
     return true;
   } else if (pbrt.type == pbrt_type::real) {
     if (pbrt.vector1f.empty() || (pbrt.vector1f.size() % 2) != 0) return false;
-    val.resize(pbrt.vector1f.size() / 2);
+    val = vector<array<float, 2>>(pbrt.vector1f.size() / 2);
     for (auto i = 0; i < (int)val.size(); i++)
       val[i] = {pbrt.vector1f[i * 2 + 0], pbrt.vector1f[i * 2 + 1]};
     return true;
@@ -639,7 +639,7 @@ static bool get_pbrt_value(
     return true;
   } else if (pbrt.type == pbrt_type::real) {
     if (pbrt.vector1f.empty() || (pbrt.vector1f.size() % 3) != 0) return false;
-    val.resize(pbrt.vector1f.size() / 3);
+    val = vector<array<float, 3>>(pbrt.vector1f.size() / 3);
     for (auto i = 0; i < (int)val.size(); i++)
       val[i] = {pbrt.vector1f[i * 3 + 0], pbrt.vector1f[i * 3 + 1],
           pbrt.vector1f[i * 3 + 2]};
@@ -652,7 +652,7 @@ static bool get_pbrt_value(
 static bool get_pbrt_value(const pbrt_value& pbrt, vector<array<int, 3>>& val) {
   if (pbrt.type == pbrt_type::integer) {
     if (pbrt.vector1i.empty() || (pbrt.vector1i.size() % 3) != 0) return false;
-    val.resize(pbrt.vector1i.size() / 3);
+    val = vector<array<int, 3>>(pbrt.vector1i.size() / 3);
     for (auto i = 0; i < (int)val.size(); i++)
       val[i] = {pbrt.vector1i[i * 3 + 0], pbrt.vector1i[i * 3 + 1],
           pbrt.vector1i[i * 3 + 2]};
@@ -1780,9 +1780,9 @@ static void make_shape(vector<array<int, 3>>& triangles,
   auto vid = [steps](int i, int j) { return j * (steps[0] + 1) + i; };
   auto tid = [steps](
                  int i, int j, int c) { return (j * steps[0] + i) * 2 + c; };
-  positions.resize((steps[0] + 1) * (steps[1] + 1));
-  normals.resize((steps[0] + 1) * (steps[1] + 1));
-  texcoords.resize((steps[0] + 1) * (steps[1] + 1));
+  positions = vector<array<float, 3>>((steps[0] + 1) * (steps[1] + 1));
+  normals   = vector<array<float, 3>>((steps[0] + 1) * (steps[1] + 1));
+  texcoords = vector<array<float, 2>>((steps[0] + 1) * (steps[1] + 1));
   for (auto j = 0; j < steps[1] + 1; j++) {
     for (auto i = 0; i < steps[0] + 1; i++) {
       auto uv = array<float, 2>{i / (float)steps[0], j / (float)steps[1]};
@@ -1791,7 +1791,7 @@ static void make_shape(vector<array<int, 3>>& triangles,
       texcoords[vid(i, j)] = uv;
     }
   }
-  triangles.resize(steps[0] * steps[1] * 2);
+  triangles = vector<array<int, 3>>(steps[0] * steps[1] * 2);
   for (auto j = 0; j < steps[1]; j++) {
     for (auto i = 0; i < steps[0]; i++) {
       triangles[tid(i, j, 0)] = {vid(i, j), vid(i + 1, j), vid(i + 1, j + 1)};
@@ -1887,7 +1887,7 @@ static void make_quad(vector<array<int, 3>>& triangles,
     pshape.triangles = {};
     get_pbrt_value(command.values, "P", pshape.positions);
     get_pbrt_value(command.values, "indices", pshape.triangles);
-    pshape.normals.resize(pshape.positions.size());
+    pshape.normals = vector<array<float, 3>>(pshape.positions.size());
     // compute_normals(pshape.normals, pshape.triangles, pshape.positions);
   } else if (command.type == "plymesh") {
     pshape.filename_ = ""s;
@@ -2352,7 +2352,7 @@ bool load_pbrt(
           named_materials, named_textures, named_mediums, named_objects,
           path_dirname(filename), ply_meshes))
     return false;
-  pbrt.textures.resize(texture_map.size());
+  pbrt.textures = vector<pbrt_texture>(texture_map.size());
   for (auto& [path, texture_id] : texture_map) {
     pbrt.textures[texture_id].filename = path;
   }

@@ -285,7 +285,7 @@ void load_text(const string& filename, string& str) {
   fseek(fs, 0, SEEK_END);
   auto length = ftell(fs);
   fseek(fs, 0, SEEK_SET);
-  str.resize(length);
+  str = string(length, '\0');
   if (fread(str.data(), 1, length, fs) != length) {
     fclose(fs);
     throw io_error("cannot read " + filename);
@@ -319,7 +319,7 @@ void load_binary(const string& filename, vector<byte>& data) {
   fseek(fs, 0, SEEK_END);
   auto length = ftell(fs);
   fseek(fs, 0, SEEK_SET);
-  data.resize(length);
+  data = vector<byte>(length);
   if (fread(data.data(), 1, length, fs) != length) {
     fclose(fs);
     throw io_error("cannot read " + filename);
@@ -3942,26 +3942,26 @@ static void load_gltf_scene(
             throw io_error{"cannot load " + filename +
                            " for unsupported position components"};
 
-          shape.positions.resize(count);
-          data = (float*)shape.positions.data();
+          shape.positions = vector<vec3f>(count);
+          data            = (float*)shape.positions.data();
         } else if (gname == "NORMAL") {
           if (components != 3)
             throw io_error{"cannot load " + filename +
                            " for unsupported normal components"};
-          shape.normals.resize(count);
-          data = (float*)shape.normals.data();
+          shape.normals = vector<vec3f>(count);
+          data          = (float*)shape.normals.data();
         } else if (gname == "TEXCOORD" || gname == "TEXCOORD_0") {
           if (components != 2)
             throw io_error{"cannot load " + filename +
                            " for unsupported texture components"};
-          shape.texcoords.resize(count);
-          data = (float*)shape.texcoords.data();
+          shape.texcoords = vector<vec2f>(count);
+          data            = (float*)shape.texcoords.data();
         } else if (gname == "COLOR" || gname == "COLOR_0") {
           if (components != 3 && components != 4)
             throw io_error{"cannot load " + filename +
                            " for unsupported color components"};
-          shape.colors.resize(count);
-          data = (float*)shape.colors.data();
+          shape.colors = vector<vec4f>(count);
+          data         = (float*)shape.colors.data();
           if (components == 3) {
             dcomponents = 4;
             for (auto& c : shape.colors) c.w = 1;
@@ -3970,14 +3970,14 @@ static void load_gltf_scene(
           if (components != 4)
             throw io_error{"cannot load " + filename +
                            " for unsupported tangent components"};
-          shape.tangents.resize(count);
-          data = (float*)shape.tangents.data();
+          shape.tangents = vector<vec4f>(count);
+          data           = (float*)shape.tangents.data();
         } else if (gname == "RADIUS") {
           if (components != 1)
             throw io_error{"cannot load " + filename +
                            " for unsupported radius components"};
-          shape.radius.resize(count);
-          data = (float*)shape.radius.data();
+          shape.radius = vector<float>(count);
+          data         = (float*)shape.radius.data();
         } else {
           // ignore
           continue;
@@ -3997,28 +3997,28 @@ static void load_gltf_scene(
       // indices
       if (gprimitive.indices == nullptr) {
         if (gprimitive.type == cgltf_primitive_type_triangles) {
-          shape.triangles.resize(shape.positions.size() / 3);
+          shape.triangles = vector<vec3i>(shape.positions.size() / 3);
           for (auto i = 0; i < (int)shape.positions.size() / 3; i++)
             shape.triangles[i] = {i * 3 + 0, i * 3 + 1, i * 3 + 2};
         } else if (gprimitive.type == cgltf_primitive_type_triangle_fan) {
-          shape.triangles.resize(shape.positions.size() - 2);
+          shape.triangles = vector<vec3i>(shape.positions.size() - 2);
           for (auto i = 2; i < (int)shape.positions.size(); i++)
             shape.triangles[i - 2] = {0, i - 1, i};
         } else if (gprimitive.type == cgltf_primitive_type_triangle_strip) {
-          shape.triangles.resize(shape.positions.size() - 2);
+          shape.triangles = vector<vec3i>(shape.positions.size() - 2);
           for (auto i = 2; i < (int)shape.positions.size(); i++)
             shape.triangles[i - 2] = {i - 2, i - 1, i};
         } else if (gprimitive.type == cgltf_primitive_type_lines) {
-          shape.lines.resize(shape.positions.size() / 2);
+          shape.lines = vector<vec2i>(shape.positions.size() / 2);
           for (auto i = 0; i < (int)shape.positions.size() / 2; i++)
             shape.lines[i] = {i * 2 + 0, i * 2 + 1};
         } else if (gprimitive.type == cgltf_primitive_type_line_loop) {
-          shape.lines.resize(shape.positions.size());
+          shape.lines = vector<vec2i>(shape.positions.size());
           for (auto i = 1; i < (int)shape.positions.size(); i++)
             shape.lines[i - 1] = {i - 1, i};
           shape.lines.back() = {(int)shape.positions.size() - 1, 0};
         } else if (gprimitive.type == cgltf_primitive_type_line_strip) {
-          shape.lines.resize(shape.positions.size() - 1);
+          shape.lines = vector<vec2i>(shape.positions.size() - 1);
           for (auto i = 1; i < (int)shape.positions.size(); i++)
             shape.lines[i - 1] = {i - 1, i};
         } else if (gprimitive.type == cgltf_primitive_type_points) {
@@ -4042,36 +4042,36 @@ static void load_gltf_scene(
                 "cannot load " + filename + " for unsupported accessor type"};
         }
         if (gprimitive.type == cgltf_primitive_type_triangles) {
-          shape.triangles.resize(indices.size() / 3);
+          shape.triangles = vector<vec3i>(indices.size() / 3);
           for (auto i = 0; i < (int)indices.size() / 3; i++) {
             shape.triangles[i] = {
                 indices[i * 3 + 0], indices[i * 3 + 1], indices[i * 3 + 2]};
           }
         } else if (gprimitive.type == cgltf_primitive_type_triangle_fan) {
-          shape.triangles.resize(indices.size() - 2);
+          shape.triangles = vector<vec3i>(indices.size() - 2);
           for (auto i = 2; i < (int)indices.size(); i++) {
             shape.triangles[i - 2] = {
                 indices[0], indices[i - 1], indices[i + 0]};
           }
         } else if (gprimitive.type == cgltf_primitive_type_triangle_strip) {
-          shape.triangles.resize(indices.size() - 2);
+          shape.triangles = vector<vec3i>(indices.size() - 2);
           for (auto i = 2; i < (int)indices.size(); i++) {
             shape.triangles[i - 2] = {
                 indices[i - 2], indices[i - 1], indices[i + 0]};
           }
         } else if (gprimitive.type == cgltf_primitive_type_lines) {
-          shape.lines.resize(indices.size() / 2);
+          shape.lines = vector<vec2i>(indices.size() / 2);
           for (auto i = 0; i < (int)indices.size() / 2; i++) {
             shape.lines[i] = {indices[i * 2 + 0], indices[i * 2 + 1]};
           }
         } else if (gprimitive.type == cgltf_primitive_type_line_loop) {
-          shape.lines.resize(indices.size());
+          shape.lines = vector<vec2i>(indices.size());
           for (auto i : range(indices.size())) {
             shape.lines[i] = {
                 indices[i + 0], indices[i + 1] % (int)indices.size()};
           }
         } else if (gprimitive.type == cgltf_primitive_type_line_strip) {
-          shape.lines.resize(indices.size() - 1);
+          shape.lines = vector<vec2i>(indices.size() - 1);
           for (auto i = 0; i < (int)indices.size() - 1; i++) {
             shape.lines[i] = {indices[i + 0], indices[i + 1]};
           }
@@ -4260,7 +4260,7 @@ static void save_gltf_scene(
         cgltf.accessors_count, cgltf.accessors, scene.shapes.size() * 6);
     alloc_array(
         cgltf.buffer_views_count, cgltf.buffer_views, scene.shapes.size() * 6);
-    shape_accessor_start.resize(scene.shapes.size(), 0);
+    shape_accessor_start     = vector<int>(scene.shapes.size(), 0);
     cgltf.accessors_count    = 0;
     cgltf.buffer_views_count = 0;
     auto add_vertex = [](cgltf_data& cgltf, cgltf_buffer& gbuffer, size_t count,

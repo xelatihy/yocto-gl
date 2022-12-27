@@ -93,7 +93,7 @@ static bool load_text(const string& filename, string& str, string& error) {
   fseek(fs, 0, SEEK_END);
   auto length = ftell(fs);
   fseek(fs, 0, SEEK_SET);
-  str.resize(length);
+  str = string(length, '\0');
   if (fread(str.data(), 1, length, fs) != length) {
     fclose(fs);
     error = "cannot read " + filename;
@@ -132,7 +132,7 @@ static bool load_binary(
   fseek(fs, 0, SEEK_END);
   auto length = ftell(fs);
   fseek(fs, 0, SEEK_SET);
-  data.resize(length);
+  data = vector<byte>(length);
   if (fread(data.data(), 1, length, fs) != length) {
     fclose(fs);
     error = "cannot read " + filename;
@@ -2221,9 +2221,9 @@ bool load_stl(const string& filename, stl_model& stl, string& error,
       if (!read_value(data_view, ntriangles)) return read_error();
 
       // resize buffers
-      shape.fnormals.resize(ntriangles);
-      shape.triangles.resize(ntriangles);
-      shape.positions.resize(ntriangles * 3);
+      shape.fnormals  = vector<array<float, 3>>(ntriangles);
+      shape.triangles = vector<array<int, 3>>(ntriangles);
+      shape.positions = vector<array<float, 3>>(ntriangles * 3);
 
       // read all data
       for (auto triangle_id = 0; triangle_id < (int)ntriangles; triangle_id++) {
