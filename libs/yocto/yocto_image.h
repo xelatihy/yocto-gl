@@ -40,23 +40,12 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
-#include <utility>
-#include <vector>
+#include <stdexcept>
 
 #include "yocto_color.h"
 #include "yocto_math.h"
 #include "yocto_ndarray.h"
 #include "yocto_noise.h"
-
-// -----------------------------------------------------------------------------
-// USING DIRECTIVES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// using directives
-using std::vector;
-
-}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMAGE UTILITIES
@@ -137,8 +126,8 @@ constexpr void rgb_to_srgbb(array2d<Tb>& srgb, const array2d<T>& rgb) {
 
 // Lookup pixel for evaluation
 template <typename T, typename T1, size_t N>
-constexpr vec<T, N> lookup_image(const array2d<vec<T1, N>>& image,
-    const vec2s& ij, bool as_linear = false) {
+constexpr vec<T, N> lookup_image(
+    const array2d<vec<T1, N>>& image, const vec2s& ij, bool as_linear = false) {
   if constexpr (!std::is_same_v<T1, byte>) {
     return as_linear ? srgb_to_rgb(image[ij]) : image[ij];
   } else {
@@ -426,8 +415,7 @@ inline array2d<vec<T, 4>> make_uvgrid(
 }
 
 template <typename T = float>
-inline array2d<vec<T, 4>> make_colormapramp(
-    const vec2s& extents, T scale = 1) {
+inline array2d<vec<T, 4>> make_colormapramp(const vec2s& extents, T scale = 1) {
   return _make_proc_image(extents, [=](vec2s ij) -> vec<T, 4> {
     auto uv  = fmod((scale * ij) / extents, 1);
     auto rgb = vec<T, 3>{0, 0, 0};
