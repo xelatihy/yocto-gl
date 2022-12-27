@@ -234,7 +234,7 @@ static bvh_tree make_bvh(const vector<bbox3f>& bboxes, bool highquality) {
   bvh.nodes.reserve(bboxes.size() * 2);
 
   // prepare primitives
-  bvh.primitives.resize(bboxes.size());
+  bvh.primitives = vector<int>(bboxes.size());
   for (auto&& [idx, primitive] : enumerate(bvh.primitives))
     primitive = (int)idx;
 
