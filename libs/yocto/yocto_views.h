@@ -281,42 +281,51 @@ constexpr kernel srange_view<I> range(I min, I max, I step) {
 
 // Python range: iterator and sequence in 2D
 template <typename I, size_t N>
-struct ndrange_sentinel {};
-template <typename I, size_t N>
-struct ndrange_iterator {
-  constexpr kernel ndrange_iterator(
-      const vec<I, N>& cur_, const vec<I, N>& end_) :
-      index{cur_}, end{end_} {}
-  constexpr kernel void operator++() {
-    ++index.x;
-    if constexpr (N > 1) {
-      if (index[0] >= end[0]) {
-        index[0] = 0;
-        index[1]++;
-      }
-    }
-    if constexpr (N > 2) {
-      if (index[1] >= end[1]) {
-        index[1] = 0;
-        index[2]++;
-      }
-    }
-  }
-  constexpr kernel bool operator!=(const ndrange_sentinel<I, N>&) const {
-    return index[N - 1] != end[N - 1];
-  }
-  constexpr kernel vec<I, N> operator*() const { return index; }
-
- private:
-  vec<I, N> index, end;
-};
-template <typename I, size_t N>
 struct ndrange_view {
-  constexpr kernel ndrange_view(const vec<I, N>& max_) : max{max_} {}
-  constexpr kernel ndrange_iterator<I, N> begin() const {
-    return {vec<I, N>{0}, max};
-  }
-  constexpr kernel ndrange_sentinel<I, N> end() const { return {}; }
+  struct iterator;
+  struct sentinel {
+    constexpr kernel sentinel(const vec<I, N>& end_) : end{end_} {}
+    friend struct iterator;
+
+   private:
+    vec<I, N> index, end;
+  };
+  struct iterator {
+    constexpr kernel iterator(const vec<I, N>& cur_, const vec<I, N>& end_) :
+        index{cur_}, end{end_} {}
+    constexpr kernel void operator++() {
+      ++index.x;
+      if constexpr (N > 1) {
+        if (index[0] >= end[0]) {
+          index[0] = 0;
+          index[1]++;
+        }
+      }
+      if constexpr (N > 2) {
+        if (index[1] >= end[1]) {
+          index[1] = 0;
+          index[2]++;
+        }
+      }
+      if constexpr (N > 3) {
+        if (index[2] >= end[2]) {
+          index[2] = 0;
+          index[3]++;
+        }
+      }
+    }
+    constexpr kernel bool operator!=(const sentinel& other) const {
+      return index[N - 1] != other.end[N - 1];
+    }
+    constexpr kernel vec<I, N> operator*() const { return index; }
+
+   private:
+    vec<I, N> index, end;
+  };
+
+  constexpr kernel          ndrange_view(const vec<I, N>& max_) : max{max_} {}
+  constexpr kernel iterator begin() const { return {vec<I, N>{0}, max}; }
+  constexpr kernel sentinel end() const { return {max}; }
 
  private:
   vec<I, N> max = {0};

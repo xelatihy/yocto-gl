@@ -55,6 +55,17 @@ using std::vector;
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// CUDA SUPPORT
+// -----------------------------------------------------------------------------
+#ifndef kernel
+#ifdef __CUDACC__
+#define kernel __device__
+#else
+#define kernel
+#endif
+#endif
+
+// -----------------------------------------------------------------------------
 // ND-ARRAY
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -186,6 +197,63 @@ constexpr bool operator!=(const ndarray<T, N>& a, const ndarray<T, N>& b) {
   return !(a == b);
 }
 
+// Error handling
+template <typename T1, typename T2, size_t N>
+constexpr kernel void check_same_size(
+    const ndarray<T1, N>& a, const ndarray<T2, N>& b) {
+  if (a.extents() != b.extents())
+    throw std::out_of_range{"arrays should have the same size"};
+}
+
+// Apply a function to each element of an array
+template <typename T1, size_t N, typename Func, typename T = result_t<Func, T1>>
+constexpr ndarray<T, N> fmap(const ndarray<T1, N>& a, Func&& func) {
+  auto ret = ndarray<T, N>(a.extents());
+  for (auto idx : range(a.size())) ret[idx] = func(a[idx]);
+  return ret;
+}
+template <typename T, typename T1, size_t N, typename Func>
+constexpr void fmap(ndarray<T, N>& ret, const ndarray<T1, N>& a, Func&& func) {
+  for (auto idx : range(a.size())) ret[idx] = func(a[idx]);
+}
+
+// Python zip
+template <typename T1, typename T2, size_t N>
+constexpr kernel zip_view<span<const T1>, span<const T2>> zip(
+    const ndarray<T1, N>& sequence1, const ndarray<T2, N>& sequence2) {
+  check_same_size(sequence1, sequence2);
+  return {span<const T1>{sequence1.data(), sequence1.size()},
+      span<const T2>{sequence2.data(), sequence2.size()}};
+}
+template <typename T1, typename T2, size_t N>
+constexpr kernel zip_view<span<const T1>, span<T2>> zip(
+    const ndarray<T1, N>& sequence1, ndarray<T2, N>& sequence2) {
+  check_same_size(sequence1, sequence2);
+  return {span<const T1>{sequence1.data(), sequence1.size()},
+      span<T2>{sequence2.data(), sequence2.size()}};
+}
+template <typename T1, typename T2, size_t N>
+constexpr kernel zip_view<span<T1>, span<const T2>> zip(
+    ndarray<T1, N>& sequence1, const ndarray<T2, N>& sequence2) {
+  check_same_size(sequence1, sequence2);
+  return {span<T1>{sequence1.data(), sequence1.size()},
+      span<const T2>{sequence2.data(), sequence2.size()}};
+}
+template <typename T1, typename T2, size_t N>
+constexpr kernel zip_view<span<T1>, span<T2>> zip(
+    ndarray<T1, N>& sequence1, ndarray<T2, N>& sequence2) {
+  check_same_size(sequence1, sequence2);
+  return {span<T1>{sequence1.data(), sequence1.size()},
+      span<T2>{sequence2.data(), sequence2.size()}};
+}
+
 }  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// CUDA SUPPORT
+// -----------------------------------------------------------------------------
+#ifdef kernel
+#undef kernel
+#endif
 
 #endif
