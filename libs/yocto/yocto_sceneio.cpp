@@ -102,6 +102,38 @@ inline bool parallel_for(T num, Func&& func) {
 }
 
 // Simple parallel for used since our target platforms do not yet support
+// parallel algorithms. `Func` takes the integer index.
+template <typename Sequence1, typename Sequence2, typename Func>
+inline void parallel_zip(
+    Sequence1&& sequence1, Sequence2&& sequence2, Func&& func) {
+  if (std::size(sequence1) != std::size(sequence2))
+    throw std::out_of_range{"invalid sequence lengths"};
+  auto                num      = std::size(sequence1);
+  auto                futures  = vector<std::future<void>>{};
+  auto                nthreads = std::thread::hardware_concurrency();
+  std::atomic<size_t> next_idx(0);
+  std::atomic<bool>   has_error(false);
+  for (auto thread_id = 0; thread_id < (int)nthreads; thread_id++) {
+    futures.emplace_back(std::async(std::launch::async,
+        [&func, &next_idx, &has_error, num, &sequence1, &sequence2]() {
+          try {
+            while (true) {
+              auto idx = next_idx.fetch_add(1);
+              if (idx >= num) break;
+              if (has_error) break;
+              func(std::forward<Sequence1>(sequence1)[idx],
+                  std::forward<Sequence2>(sequence2)[idx]);
+            }
+          } catch (...) {
+            has_error = true;
+            throw;
+          }
+        }));
+  }
+  for (auto& f : futures) f.get();
+}
+
+// Simple parallel for used since our target platforms do not yet support
 // parallel algorithms. `Func` takes a reference to a `T`.
 template <typename T, typename Func>
 inline bool parallel_foreach(vector<T>& values, Func&& func) {
@@ -2967,16 +2999,17 @@ static void load_json_scene_version41(const string& filename, json_value& json,
   if (noparallel) {
     try {
       // load shapes
-      for (auto idx : range(scene.shapes.size())) {
-        load_shape(shape_filenames[idx], scene.shapes[idx], true);
+      for (auto&& [filename, shape] : zip(shape_filenames, scene.shapes)) {
+        load_shape(filename, shape, true);
       }
       // load subdivs
-      for (auto idx : range(scene.subdivs.size())) {
-        load_subdiv(subdiv_filenames[idx], scene.subdivs[idx]);
+      for (auto&& [filename, subdiv] : zip(subdiv_filenames, scene.subdivs)) {
+        load_subdiv(filename, subdiv);
       }
       // load textures
-      for (auto idx : range(scene.textures.size())) {
-        load_texture(texture_filenames[idx], scene.textures[idx]);
+      for (auto&& [filename, texture] :
+          zip(texture_filenames, scene.textures)) {
+        load_texture(filename, texture);
       }
     } catch (std::exception& except) {
       throw io_error(
@@ -2985,17 +3018,20 @@ static void load_json_scene_version41(const string& filename, json_value& json,
   } else {
     try {
       // load shapes
-      parallel_for(scene.shapes.size(), [&](size_t idx) {
-        return load_shape(shape_filenames[idx], scene.shapes[idx], true);
-      });
+      parallel_zip(
+          shape_filenames, scene.shapes, [&](auto&& filename, auto&& shape) {
+            return load_shape(filename, shape, true);
+          });
       // load subdivs
-      parallel_for(scene.subdivs.size(), [&](size_t idx) {
-        return load_subdiv(subdiv_filenames[idx], scene.subdivs[idx]);
-      });
+      parallel_zip(
+          subdiv_filenames, scene.subdivs, [&](auto&& filename, auto&& subdiv) {
+            return load_subdiv(filename, subdiv);
+          });
       // load textures
-      parallel_for(scene.textures.size(), [&](size_t idx) {
-        return load_texture(texture_filenames[idx], scene.textures[idx]);
-      });
+      parallel_zip(texture_filenames, scene.textures,
+          [&](auto&& filename, auto&& texture) {
+            return load_texture(filename, texture);
+          });
     } catch (std::exception& except) {
       throw io_error(
           "cannot load " + filename + " since " + string(except.what()));
@@ -3187,19 +3223,17 @@ static void load_json_scene(
   if (noparallel) {
     try {
       // load shapes
-      for (auto idx : range(scene.shapes.size())) {
-        load_shape(
-            path_join(dirname, shape_filenames[idx]), scene.shapes[idx], true);
+      for (auto&& [filename, shape] : zip(shape_filenames, scene.shapes)) {
+        load_shape(path_join(dirname, filename), shape, true);
       }
       // load subdivs
-      for (auto idx : range(scene.subdivs.size())) {
-        load_subdiv(
-            path_join(dirname, subdiv_filenames[idx]), scene.subdivs[idx]);
+      for (auto&& [filename, subdiv] : zip(subdiv_filenames, scene.subdivs)) {
+        load_subdiv(path_join(dirname, filename), subdiv);
       }
       // load textures
-      for (auto idx : range(scene.textures.size())) {
-        load_texture(
-            path_join(dirname, texture_filenames[idx]), scene.textures[idx]);
+      for (auto&& [filename, texture] :
+          zip(texture_filenames, scene.textures)) {
+        load_texture(path_join(dirname, filename), texture);
       }
     } catch (std::exception& except) {
       throw io_error(
@@ -3208,20 +3242,20 @@ static void load_json_scene(
   } else {
     try {
       // load shapes
-      parallel_for(scene.shapes.size(), [&](size_t idx) {
-        return load_shape(
-            path_join(dirname, shape_filenames[idx]), scene.shapes[idx], true);
-      });
+      parallel_zip(
+          shape_filenames, scene.shapes, [&](auto&& filename, auto&& shape) {
+            return load_shape(path_join(dirname, filename), shape, true);
+          });
       // load subdivs
-      parallel_for(scene.subdivs.size(), [&](size_t idx) {
-        return load_subdiv(
-            path_join(dirname, subdiv_filenames[idx]), scene.subdivs[idx]);
-      });
+      parallel_zip(
+          subdiv_filenames, scene.subdivs, [&](auto&& filename, auto&& subdiv) {
+            return load_subdiv(path_join(dirname, filename), subdiv);
+          });
       // load textures
-      parallel_for(scene.textures.size(), [&](size_t idx) {
-        return load_texture(
-            path_join(dirname, texture_filenames[idx]), scene.textures[idx]);
-      });
+      parallel_zip(texture_filenames, scene.textures,
+          [&](auto&& filename, auto&& texture) {
+            return load_texture(path_join(dirname, filename), texture);
+          });
     } catch (std::exception& except) {
       throw io_error(
           "cannot load " + filename + " since " + string(except.what()));
@@ -3438,19 +3472,17 @@ static void save_json_scene(
   if (noparallel) {
     try {
       // save shapes
-      for (auto idx : range(scene.shapes.size())) {
-        save_shape(
-            path_join(dirname, shape_filenames[idx]), scene.shapes[idx], true);
+      for (auto&& [filename, shape] : zip(shape_filenames, scene.shapes)) {
+        save_shape(path_join(dirname, filename), shape, true);
       }
       // save subdiv
-      for (auto idx : range(scene.subdivs.size())) {
-        save_subdiv(
-            path_join(dirname, subdiv_filenames[idx]), scene.subdivs[idx]);
+      for (auto&& [filename, subdiv] : zip(subdiv_filenames, scene.subdivs)) {
+        save_subdiv(path_join(dirname, filename), subdiv);
       }
       // save textures
-      for (auto idx : range(scene.textures.size())) {
-        save_texture(
-            path_join(dirname, texture_filenames[idx]), scene.textures[idx]);
+      for (auto&& [filename, texture] :
+          zip(texture_filenames, scene.textures)) {
+        save_texture(path_join(dirname, filename), texture);
       }
     } catch (std::exception& except) {
       throw io_error(
@@ -3459,20 +3491,20 @@ static void save_json_scene(
   } else {
     try {
       // save shapes
-      parallel_for(scene.shapes.size(), [&](auto idx) {
-        return save_shape(
-            path_join(dirname, shape_filenames[idx]), scene.shapes[idx], true);
-      });
+      parallel_zip(
+          shape_filenames, scene.shapes, [&](auto&& filename, auto&& shape) {
+            return save_shape(path_join(dirname, filename), shape, true);
+          });
       // save subdivs
-      parallel_for(scene.subdivs.size(), [&](auto idx) {
-        return save_subdiv(
-            path_join(dirname, subdiv_filenames[idx]), scene.subdivs[idx]);
-      });
+      parallel_zip(
+          subdiv_filenames, scene.subdivs, [&](auto&& filename, auto&& subdiv) {
+            return save_subdiv(path_join(dirname, filename), subdiv);
+          });
       // save textures
-      parallel_for(scene.textures.size(), [&](auto idx) {
-        return save_texture(
-            path_join(dirname, texture_filenames[idx]), scene.textures[idx]);
-      });
+      parallel_zip(texture_filenames, scene.textures,
+          [&](auto&& filename, auto&& texture) {
+            return save_texture(path_join(dirname, filename), texture);
+          });
     } catch (std::exception& except) {
       throw io_error(
           "cannot save " + filename + " since " + string(except.what()));
@@ -3596,16 +3628,15 @@ static void load_obj_scene(
   try {
     if (noparallel) {
       // load textures
-      for (auto& texture : scene.textures) {
-        auto& path = texture_paths[&texture - &scene.textures.front()];
+      for (auto&& [path, texture] : zip(texture_paths, scene.textures)) {
         load_texture(path_join(dirname, path), texture);
       }
     } else {
       // load textures
-      parallel_foreach(scene.textures, [&](auto& texture) {
-        auto& path = texture_paths[&texture - &scene.textures.front()];
-        return load_texture(path_join(dirname, path), texture);
-      });
+      parallel_zip(
+          texture_paths, scene.textures, [&](auto&& path, auto&& texture) {
+            return load_texture(path_join(dirname, path), texture);
+          });
     }
   } catch (std::exception& except) {
     throw io_error(
