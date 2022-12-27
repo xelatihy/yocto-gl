@@ -71,10 +71,10 @@ using std::pair;
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-using byte   = unsigned char;
-using uint   = unsigned int;
-using ushort = unsigned short;
-using index  = long;
+using byte    = unsigned char;
+using uint    = unsigned int;
+using ushort  = unsigned short;
+using index_t = ptrdiff_t;
 
 // Common type
 template <typename... Ts>
@@ -403,10 +403,14 @@ using vec1b = vec<byte, 3>;
 using vec2b = vec<byte, 4>;
 using vec3b = vec<byte, 3>;
 using vec4b = vec<byte, 4>;
-using vec1s = vec<size_t, 2>;
+using vec1s = vec<size_t, 1>;
 using vec2s = vec<size_t, 2>;
-using vec3s = vec<size_t, 2>;
-using vec4s = vec<size_t, 2>;
+using vec3s = vec<size_t, 3>;
+using vec4s = vec<size_t, 4>;
+using vec1x = vec<index_t, 1>;
+using vec2x = vec<index_t, 2>;
+using vec3x = vec<index_t, 3>;
+using vec4x = vec<index_t, 4>;
 
 // Zero vector constants.
 constexpr auto zero1f = vec1f{0};
