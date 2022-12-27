@@ -205,7 +205,6 @@ template <typename I>
 struct range_sentinel {
   constexpr kernel   range_sentinel(I end_) : end{end_} {}
   constexpr kernel I sentinel() const { return end; }
-
   friend struct range_iterator<I>;
 
  private:
@@ -220,7 +219,6 @@ struct range_iterator {
     return current != other.end;
   }
   constexpr kernel I operator*() const { return current; }
-
   friend struct range_sentinel<I>;
 
  private:
@@ -239,29 +237,40 @@ struct range_view {
 
 // Python range: iterator and sequence
 template <typename I>
-struct srange_sentinel {};
+struct srange_sentinel;
+template <typename I>
+struct srange_iterator;
+template <typename I>
+struct srange_sentinel {
+  constexpr kernel   srange_sentinel(I end_) : end{end_} {}
+  constexpr kernel I sentinel() const { return end; }
+  friend struct srange_iterator<I>;
+
+ private:
+  I end;
+};
 template <typename I>
 struct srange_iterator {
-  constexpr kernel srange_iterator(I index_, I end_, I step_) :
-      index{index_}, end{end_}, step{step_} {}
+  constexpr kernel srange_iterator(I index_, I step_) :
+      index{index_}, step{step_} {}
   constexpr kernel void operator++() { index += step; }
   constexpr kernel bool operator!=(const srange_sentinel<I>& other) const {
-    return index != end;
+    return index != other.end;
   }
   constexpr kernel I operator*() const { return index; }
 
  private:
-  I index, end, step;
+  I index, step;
 };
 // Python range: iterator and sequence
 template <typename I>
 struct srange_view {
   constexpr kernel srange_view(I min_, I max_, I step_) :
       min{min_}, max{max_}, step{step_} {}
-  constexpr kernel srange_iterator<I> begin() const {
-    return {min, min + ((max - min) / step) * step, step};
+  constexpr kernel srange_iterator<I> begin() const { return {min, step}; }
+  constexpr kernel srange_sentinel<I> end() const {
+    return {min + ((max - min) / step) * step};
   }
-  constexpr kernel srange_sentinel<I> end() const { return {}; }
 
  private:
   I min, max, step;
