@@ -678,7 +678,7 @@ inline array2d<vec<T, 4>> make_lights(const vec2s& extents,
     T lwidth = (T)pi / 16, T lheight = (T)pi / 16) {
   auto img = array2d<vec<T, 4>>(extents);
   for (auto j : range(extents.y)) {
-    auto theta = pif * ((j + 0.5f) / extents.y);
+    auto theta = (T)pi * ((j + 0.5f) / extents.y);
     theta      = clamp(theta, 0, (T)pi / 2 - (T)0.00001);
     if (fabs(theta - langle) > lheight / 2) continue;
     for (auto i : range(extents.x)) {
