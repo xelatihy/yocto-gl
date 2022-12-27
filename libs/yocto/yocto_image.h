@@ -278,7 +278,12 @@ inline vec<T, 3> compute_white_balance(const array2d<vec<T, 4>>& image) {
 }
 
 // Resize an image.
-array2d<vec4f> resize_image(const array2d<vec4f>& image, const vec2s& extents);
+template <size_t N>
+array2d<vec<float, N>> resize_image(
+    const array2d<vec<float, N>>& image, const vec2s& extents);
+template <size_t N>
+array2d<vec<byte, N>> resize_image(
+    const array2d<vec<byte, N>>& image, const vec2s& extents);
 
 }  // namespace yocto
 
