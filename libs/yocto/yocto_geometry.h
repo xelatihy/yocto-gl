@@ -82,8 +82,8 @@ struct bbox<T, 1> {
   vec<T, 1> max = {num_min<T>};
 
   constexpr kernel bbox() : min{num_max<T>}, max{num_min<T>} {}
-  constexpr kernel bbox(const vec<T, 1>& min_, const vec<T, 1>& max_)
-      : min{min_}, max{max_} {}
+  constexpr kernel bbox(const vec<T, 1>& min_, const vec<T, 1>& max_) :
+      min{min_}, max{max_} {}
 
   constexpr kernel vec<T, 1>& operator[](size_t i) {
     return i == 0 ? min : max;
@@ -99,10 +99,10 @@ struct bbox<T, 2> {
   vec<T, 2> min = {num_max<T>, num_max<T>};
   vec<T, 2> max = {num_min<T>, num_min<T>};
 
-  constexpr kernel bbox()
-      : min{num_max<T>, num_max<T>}, max{num_min<T>, num_min<T>} {}
-  constexpr kernel bbox(const vec<T, 2>& min_, const vec<T, 2>& max_)
-      : min{min_}, max{max_} {}
+  constexpr kernel bbox() :
+      min{num_max<T>, num_max<T>}, max{num_min<T>, num_min<T>} {}
+  constexpr kernel bbox(const vec<T, 2>& min_, const vec<T, 2>& max_) :
+      min{min_}, max{max_} {}
 
   constexpr kernel vec<T, 2>& operator[](size_t i) {
     return i == 0 ? min : max;
@@ -118,11 +118,11 @@ struct bbox<T, 3> {
   vec<T, 3> min = {num_max<T>, num_max<T>, num_max<T>};
   vec<T, 3> max = {num_min<T>, num_min<T>, num_min<T>};
 
-  constexpr kernel bbox()
-      : min{num_max<T>, num_max<T>, num_max<T>}
-      , max{num_min<T>, num_min<T>, num_min<T>} {}
-  constexpr kernel bbox(const vec<T, 3>& min_, const vec<T, 3>& max_)
-      : min{min_}, max{max_} {}
+  constexpr kernel bbox() :
+      min{num_max<T>, num_max<T>, num_max<T>},
+      max{num_min<T>, num_min<T>, num_min<T>} {}
+  constexpr kernel bbox(const vec<T, 3>& min_, const vec<T, 3>& max_) :
+      min{min_}, max{max_} {}
 
   constexpr kernel vec<T, 3>& operator[](size_t i) {
     return i == 0 ? min : max;
@@ -138,11 +138,11 @@ struct bbox<T, 4> {
   vec<T, 4> min = {num_max<T>, num_max<T>, num_max<T>, num_max<T>};
   vec<T, 4> max = {num_min<T>, num_min<T>, num_min<T>, num_min<T>};
 
-  constexpr kernel bbox()
-      : min{num_max<T>, num_max<T>, num_max<T>, num_max<T>}
-      , max{num_min<T>, num_min<T>, num_min<T>, num_min<T>} {}
-  constexpr kernel bbox(const vec<T, 4>& min_, const vec<T, 4>& max_)
-      : min{min_}, max{max_} {}
+  constexpr kernel bbox() :
+      min{num_max<T>, num_max<T>, num_max<T>, num_max<T>},
+      max{num_min<T>, num_min<T>, num_min<T>, num_min<T>} {}
+  constexpr kernel bbox(const vec<T, 4>& min_, const vec<T, 4>& max_) :
+      min{min_}, max{max_} {}
 
   constexpr kernel vec<T, 4>& operator[](size_t i) {
     return i == 0 ? min : max;
@@ -238,11 +238,11 @@ struct ray<T, 2> {
   T         tmin = ray_eps<T>;
   T         tmax = num_max<T>;
 
-  constexpr kernel ray()
-      : o{0, 0}, d{0, 1}, tmin{ray_eps<T>}, tmax{num_max<T>} {}
+  constexpr kernel ray() :
+      o{0, 0}, d{0, 1}, tmin{ray_eps<T>}, tmax{num_max<T>} {}
   constexpr kernel ray(const vec<T, 2>& o_, const vec<T, 2>& d_,
-      T tmin_ = ray_eps<T>, T tmax_ = num_max<T>)
-      : o{o_}, d{d_}, tmin{tmin_}, tmax{tmax_} {}
+      T tmin_ = ray_eps<T>, T tmax_ = num_max<T>) :
+      o{o_}, d{d_}, tmin{tmin_}, tmax{tmax_} {}
 };
 
 // Rays with origin, direction and min/max t value.
@@ -255,8 +255,8 @@ struct ray<T, 3> {
 
   constexpr kernel ray() : o{0}, d{0}, tmin{ray_eps<T>}, tmax{num_max<T>} {}
   constexpr kernel ray(const vec<T, 3>& o_, const vec<T, 3>& d_,
-      T tmin_ = ray_eps<T>, T tmax_ = num_max<T>)
-      : o{o_}, d{d_}, tmin{tmin_}, tmax{tmax_} {}
+      T tmin_ = ray_eps<T>, T tmax_ = num_max<T>) :
+      o{o_}, d{d_}, tmin{tmin_}, tmax{tmax_} {}
 };
 
 // Ray aliases

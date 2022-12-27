@@ -78,10 +78,10 @@ struct span {
   constexpr span(const span&) noexcept = default;
   constexpr span(span&&) noexcept      = default;
   constexpr span(T* data, size_t size) noexcept : _data{data}, _size{size} {}
-  constexpr span(T* begin, T* end) noexcept
-      : _data{begin}, _size{end - begin} {}
-  constexpr span(std::vector<T>& arr) noexcept
-      : _data{arr.data()}, _size{arr.size()} {}
+  constexpr span(T* begin, T* end) noexcept :
+      _data{begin}, _size{end - begin} {}
+  constexpr span(std::vector<T>& arr) noexcept :
+      _data{arr.data()}, _size{arr.size()} {}
 
   // Assignments
   constexpr span& operator=(const span&) noexcept  = default;
@@ -126,8 +126,8 @@ struct ndspan {
  public:
   // Constructors
   constexpr ndspan() noexcept : _extents{0}, _data{nullptr} {}
-  constexpr ndspan(T* data, const vec<size_t, N>& extents) noexcept
-      : _data{data}, _extents{extents} {}
+  constexpr ndspan(T* data, const vec<size_t, N>& extents) noexcept :
+      _data{data}, _extents{extents} {}
   constexpr ndspan(const ndspan& other) noexcept = default;
   constexpr ndspan(ndspan&& other) noexcept      = default;
 
@@ -242,8 +242,8 @@ template <typename I>
 struct srange_sentinel {};
 template <typename I>
 struct srange_iterator {
-  constexpr kernel srange_iterator(I index_, I end_, I step_)
-      : index{index_}, end{end_}, step{step_} {}
+  constexpr kernel srange_iterator(I index_, I end_, I step_) :
+      index{index_}, end{end_}, step{step_} {}
   constexpr kernel void operator++() { index += step; }
   constexpr kernel bool operator!=(const srange_sentinel<I>& other) const {
     return index != end;
@@ -256,8 +256,8 @@ struct srange_iterator {
 // Python range: iterator and sequence
 template <typename I>
 struct srange_view {
-  constexpr kernel srange_view(I min_, I max_, I step_)
-      : min{min_}, max{max_}, step{step_} {}
+  constexpr kernel srange_view(I min_, I max_, I step_) :
+      min{min_}, max{max_}, step{step_} {}
   constexpr kernel srange_iterator<I> begin() const {
     return {min, min + ((max - min) / step) * step, step};
   }
@@ -287,8 +287,8 @@ struct ndrange_sentinel {};
 template <typename I, size_t N>
 struct ndrange_iterator {
   constexpr kernel ndrange_iterator(
-      const vec<I, N>& cur_, const vec<I, N>& end_)
-      : index{cur_}, end{end_} {}
+      const vec<I, N>& cur_, const vec<I, N>& end_) :
+      index{cur_}, end{end_} {}
   constexpr kernel void operator++() {
     ++index.x;
     if constexpr (N > 1) {
@@ -342,8 +342,8 @@ struct enumerate_iterator {
   using It = decltype(std::begin(std::declval<View>()));
   using Se = decltype(std::end(std::declval<View>()));
   using Rf = decltype(*std::begin(std::declval<View>()));
-  constexpr kernel enumerate_iterator(View view_, I index_)
-      : iterator{std::begin(view_)}, sentinel{std::end(view_)}, index{index_} {}
+  constexpr kernel enumerate_iterator(View view_, I index_) :
+      iterator{std::begin(view_)}, sentinel{std::end(view_)}, index{index_} {}
   constexpr kernel bool operator!=(
       const enumerate_sentinel<View, I>& other) const {
     return iterator != sentinel;
@@ -404,11 +404,11 @@ struct zip_iterator {
   using It2 = decltype(std::begin(std::declval<View2>()));
   using Se2 = decltype(std::end(std::declval<View2>()));
   using Rf2 = decltype(*std::begin(std::declval<View2>()));
-  constexpr kernel zip_iterator(View1 view1_, View2 view2_)
-      : iterator1{std::begin(view1_)}
-      , sentinel1{std::end(view1_)}
-      , iterator2{std::begin(view2_)}
-      , sentinel2{std::end(view2_)} {}
+  constexpr kernel zip_iterator(View1 view1_, View2 view2_) :
+      iterator1{std::begin(view1_)},
+      sentinel1{std::end(view1_)},
+      iterator2{std::begin(view2_)},
+      sentinel2{std::end(view2_)} {}
   constexpr kernel bool operator!=(
       const zip_sentinel<View1, View2>& other) const {
     return iterator1 != sentinel1 && iterator2 != sentinel2;
@@ -429,8 +429,8 @@ struct zip_iterator {
 };
 template <typename View1, typename View2>
 struct zip_view {
-  constexpr kernel zip_view(View1 view1_, View2 view2_)
-      : view1{view1_}, view2{view2_} {}
+  constexpr kernel zip_view(View1 view1_, View2 view2_) :
+      view1{view1_}, view2{view2_} {}
   constexpr kernel zip_iterator<View1, View2> begin() {
     return zip_iterator{view1, view2};
   }

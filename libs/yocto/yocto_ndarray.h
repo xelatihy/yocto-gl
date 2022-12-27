@@ -65,20 +65,20 @@ struct ndarray {
  public:
   // Constructors
   constexpr ndarray() : _extents{0}, _data{} {}
-  constexpr explicit ndarray(const vec<size_t, N>& extents)
-      : _extents{extents}, _data(_size(extents), T{}) {}
+  constexpr explicit ndarray(const vec<size_t, N>& extents) :
+      _extents{extents}, _data(_size(extents), T{}) {}
   template <typename I>
-  constexpr explicit ndarray(const vec<I, N>& extents)
-      : _extents{(vec<size_t, N>)extents}
-      , _data(_size((vec<size_t, N>)extents), T{}) {}
-  constexpr ndarray(const T* data, const vec<size_t, N>& extents)
-      : _extents{extents}, _data(data, data + _size(extents)) {}
+  constexpr explicit ndarray(const vec<I, N>& extents) :
+      _extents{(vec<size_t, N>)extents},
+      _data(_size((vec<size_t, N>)extents), T{}) {}
+  constexpr ndarray(const T* data, const vec<size_t, N>& extents) :
+      _extents{extents}, _data(data, data + _size(extents)) {}
   template <typename I>
-  constexpr ndarray(const T* data, const vec<I, N>& extents)
-      : _extents{(vec<size_t, N>)extents}
-      , _data(data, data + _size((vec<size_t, N>)extents)) {}
-  constexpr ndarray(const ndarray& other)
-      : _extents{other._extents}, _data{other._data} {}
+  constexpr ndarray(const T* data, const vec<I, N>& extents) :
+      _extents{(vec<size_t, N>)extents},
+      _data(data, data + _size((vec<size_t, N>)extents)) {}
+  constexpr ndarray(const ndarray& other) :
+      _extents{other._extents}, _data{other._data} {}
   constexpr ndarray(ndarray&& other) : _extents{0}, _data{} {
     std::swap(_extents, other._extents);
     std::swap(_data, other._data);

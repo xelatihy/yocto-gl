@@ -274,8 +274,8 @@ struct vec<T, 1> {
 
   template <typename U>
   constexpr kernel explicit(!std::is_convertible_v<U, T>)
-      vec(const vec<U, 1>& v)
-      : x{(T)v.x} {}
+      vec(const vec<U, 1>& v) :
+      x{(T)v.x} {}
   template <typename U>
   constexpr kernel explicit(!std::is_convertible_v<T, U>) operator vec<U, 1>() {
     return {(U)x};
@@ -304,8 +304,8 @@ struct vec<T, 2> {
 
   template <typename U>
   constexpr kernel explicit(!std::is_convertible_v<U, T>)
-      vec(const vec<U, 2>& v)
-      : x{(T)v.x}, y{(T)v.y} {}
+      vec(const vec<U, 2>& v) :
+      x{(T)v.x}, y{(T)v.y} {}
   template <typename U>
   constexpr kernel explicit(!std::is_convertible_v<T, U>) operator vec<U, 2>() {
     return {(U)x, (U)y};
@@ -336,8 +336,8 @@ struct vec<T, 3> {
 
   template <typename U>
   constexpr kernel explicit(!std::is_convertible_v<U, T>)
-      vec(const vec<U, 3>& v)
-      : x{(T)v.x}, y{(T)v.y}, z{(T)v.z} {}
+      vec(const vec<U, 3>& v) :
+      x{(T)v.x}, y{(T)v.y}, z{(T)v.z} {}
   template <typename U>
   constexpr kernel explicit(!std::is_convertible_v<T, U>) operator vec<U, 3>() {
     return {(U)x, (U)y, (U)z};
@@ -360,24 +360,24 @@ struct vec<T, 4> {
   constexpr kernel explicit vec(T v_) : x{v_}, y{v_}, z{v_}, w{v_} {}
   constexpr kernel vec(T x_, T y_, T z_, T w_) : x{x_}, y{y_}, z{z_}, w{w_} {}
   template <typename T1, typename T2, typename T3, typename T4>
-  constexpr kernel vec(T1 x_, T2 y_, T3 z_, T4 w_)
-      : x{(T)x_}, y{(T)y_}, z{(T)z_}, w{(T)w_} {}
-  constexpr kernel vec(vec<T, 3> xyz_, T w_)
-      : x{xyz_.x}, y{xyz_.y}, z{xyz_.z}, w{w_} {}
+  constexpr kernel vec(T1 x_, T2 y_, T3 z_, T4 w_) :
+      x{(T)x_}, y{(T)y_}, z{(T)z_}, w{(T)w_} {}
+  constexpr kernel vec(vec<T, 3> xyz_, T w_) :
+      x{xyz_.x}, y{xyz_.y}, z{xyz_.z}, w{w_} {}
 
   constexpr kernel      vec(const vec& v)       = default;
   constexpr kernel vec& operator=(const vec& v) = default;
 
   template <typename U>
   constexpr kernel explicit(!std::is_convertible_v<U, T>)
-      vec(const vec<U, 4>& v)
-      : x{(T)v.x}, y{(T)v.y}, z{(T)v.z}, w{(T)v.w} {}
+      vec(const vec<U, 4>& v) :
+      x{(T)v.x}, y{(T)v.y}, z{(T)v.z}, w{(T)v.w} {}
   template <typename U>
   constexpr kernel explicit(!std::is_convertible_v<T, U>) operator vec<U, 4>() {
     return {(U)x, (U)y, (U)z, (U)w};
   }
-  constexpr kernel vec(const array<T, 4>& v)
-      : x{v[0]}, y{v[1]}, z{v[2]}, w{v[3]} {}
+  constexpr kernel vec(const array<T, 4>& v) :
+      x{v[0]}, y{v[1]}, z{v[2]}, w{v[3]} {}
   constexpr kernel operator array<T, 4>() { return {x, y, z, w}; }
 
   constexpr kernel T&       operator[](size_t i) { return (&x)[i]; }
@@ -1943,8 +1943,8 @@ struct mat<T, N, 2> {
   vec<T, N> y = {0};
 
   constexpr kernel mat() : x{0}, y{0} {}
-  constexpr kernel mat(const vec<T, N>& x_, const vec<T, N>& y_)
-      : x{x_}, y{y_} {}
+  constexpr kernel mat(const vec<T, N>& x_, const vec<T, N>& y_) :
+      x{x_}, y{y_} {}
 
   constexpr kernel vec<T, N>& operator[](size_t i) { return (&x)[i]; }
   constexpr kernel const vec<T, N>& operator[](size_t i) const {
@@ -1961,8 +1961,8 @@ struct mat<T, N, 3> {
 
   constexpr kernel mat() : x{0}, y{0}, z{0} {}
   constexpr kernel mat(
-      const vec<T, N>& x_, const vec<T, N>& y_, const vec<T, N>& z_)
-      : x{x_}, y{y_}, z{z_} {}
+      const vec<T, N>& x_, const vec<T, N>& y_, const vec<T, N>& z_) :
+      x{x_}, y{y_}, z{z_} {}
 
   constexpr kernel vec<T, N>& operator[](size_t i) { return (&x)[i]; }
   constexpr kernel const vec<T, N>& operator[](size_t i) const {
@@ -1980,8 +1980,8 @@ struct mat<T, N, 4> {
 
   constexpr kernel mat() : x{0}, y{0}, z{0}, w{0} {}
   constexpr kernel mat(const vec<T, N>& x_, const vec<T, N>& y_,
-      const vec<T, N>& z_, const vec<T, N>& w_)
-      : x{x_}, y{y_}, z{z_}, w{w_} {}
+      const vec<T, N>& z_, const vec<T, N>& w_) :
+      x{x_}, y{y_}, z{z_}, w{w_} {}
 
   constexpr kernel vec<T, N>& operator[](size_t i) { return (&x)[i]; }
   constexpr kernel const vec<T, N>& operator[](size_t i) const {
@@ -2295,13 +2295,13 @@ struct frame<T, 2> {
 
   constexpr kernel frame() : x{1, 0}, y{0, 1}, o{0, 0} {}
   constexpr kernel frame(
-      const vec<T, 2>& x_, const vec<T, 2>& y_, const vec<T, 2>& o_)
-      : x{x_}, y{y_}, o{o_} {}
-  constexpr kernel frame(const mat<T, 2, 2>& xy_, const vec<T, 2>& o_)
-      : x{xy_.x}, y{xy_.y}, o{o_} {}
+      const vec<T, 2>& x_, const vec<T, 2>& y_, const vec<T, 2>& o_) :
+      x{x_}, y{y_}, o{o_} {}
+  constexpr kernel frame(const mat<T, 2, 2>& xy_, const vec<T, 2>& o_) :
+      x{xy_.x}, y{xy_.y}, o{o_} {}
 
-  explicit constexpr kernel frame(const mat<T, 3, 3>& m)
-      : x{xy(m.x)}, y{xy(m.y)}, o{xy(m.z)} {}
+  explicit constexpr kernel frame(const mat<T, 3, 3>& m) :
+      x{xy(m.x)}, y{xy(m.y)}, o{xy(m.z)} {}
   explicit constexpr kernel operator mat<T, 3, 3>() const {
     return {{x, 0}, {y, 0}, {o, 1}};
   }
@@ -2322,13 +2322,13 @@ struct frame<T, 3> {
 
   constexpr kernel frame() : x{1, 0, 0}, y{0, 1, 0}, z{0, 0, 1}, o{0, 0, 0} {}
   constexpr kernel frame(const vec<T, 3>& x_, const vec<T, 3>& y_,
-      const vec<T, 3>& z_, const vec<T, 3>& o_)
-      : x{x_}, y{y_}, z{z_}, o{o_} {}
-  constexpr kernel frame(const mat<T, 3, 3>& xyz_, const vec<T, 3>& o_)
-      : x{xyz_.x}, y{xyz_.y}, z{xyz_.z}, o{o_} {}
+      const vec<T, 3>& z_, const vec<T, 3>& o_) :
+      x{x_}, y{y_}, z{z_}, o{o_} {}
+  constexpr kernel frame(const mat<T, 3, 3>& xyz_, const vec<T, 3>& o_) :
+      x{xyz_.x}, y{xyz_.y}, z{xyz_.z}, o{o_} {}
 
-  explicit constexpr kernel frame(const mat<T, 4, 4>& m)
-      : x{xyz(m.x)}, y{xyz(m.y)}, z{xyz(m.z)}, o{xyz(m.w)} {}
+  explicit constexpr kernel frame(const mat<T, 4, 4>& m) :
+      x{xyz(m.x)}, y{xyz(m.y)}, z{xyz(m.z)}, o{xyz(m.w)} {}
   explicit constexpr kernel operator mat<T, 4, 4>() const {
     return {{x, 0}, {y, 0}, {z, 0}, {o, 1}};
   }
