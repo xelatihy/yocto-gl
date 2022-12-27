@@ -4,8 +4,8 @@ BasedOnStyle: Google
 Standard:        Cpp11
 
 AlignAfterOpenBracket: DontAlign
-AlignConsecutiveAssignments: true
-AlignConsecutiveDeclarations: true
+AlignConsecutiveAssignments: Consecutive
+AlignConsecutiveDeclarations: Consecutive
 
 AllowShortCaseLabelsOnASingleLine: true
 AllowShortCaseLabelsOnASingleLine: true
