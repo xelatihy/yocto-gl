@@ -198,26 +198,40 @@ namespace yocto {
 
 // Python range: iterator and sequence
 template <typename I>
-struct range_sentinel {};
+struct range_sentinel;
 template <typename I>
-struct range_iterator {
-  constexpr kernel range_iterator(I index_, I end_)
-      : index{index_}, end{end_} {}
-  constexpr kernel void operator++() { ++index; }
-  constexpr kernel bool operator!=(const range_sentinel<I>& other) const {
-    return index != end;
-  }
-  constexpr kernel I operator*() const { return index; }
+struct range_iterator;
+template <typename I>
+struct range_sentinel {
+  constexpr kernel   range_sentinel(I end_) : end{end_} {}
+  constexpr kernel I sentinel() const { return end; }
+
+  friend struct range_iterator<I>;
 
  private:
-  I index, end;
+  I end;
+};
+template <typename I>
+struct range_iterator {
+  constexpr kernel      range_iterator(I index_) : current{index_} {}
+  constexpr kernel I    index() const { return current; }
+  constexpr kernel void operator++() { ++current; }
+  constexpr kernel bool operator!=(const range_sentinel<I>& other) const {
+    return current != other.end;
+  }
+  constexpr kernel I operator*() const { return current; }
+
+  friend struct range_sentinel<I>;
+
+ private:
+  I current;
 };
 template <typename I>
 struct range_view {
   constexpr kernel range_view(I max_) : min{0}, max{max_} {}
   constexpr kernel range_view(I min_, I max_) : min{min_}, max{max_} {}
-  constexpr kernel range_iterator<I> begin() const { return {min, max}; }
-  constexpr kernel range_sentinel<I> end() const { return {}; }
+  constexpr kernel range_iterator<I> begin() const { return {min}; }
+  constexpr kernel range_sentinel<I> end() const { return {max}; }
 
  private:
   I min, max;
