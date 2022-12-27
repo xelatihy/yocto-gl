@@ -64,7 +64,7 @@ void run(const vector<string>& args) {
 
   // resize if needed
   if (width != 0 || height != 0) {
-    image = resize_image(image, vec2s(width, height));
+    image = resize_image(image, vec2uz(width, height));
   }
 
   // switch between interactive and offline
@@ -82,7 +82,7 @@ void run(const vector<string>& args) {
     auto  display  = array2d<vec4f>{image.extents()};
     float exposure = 0;
     bool  filmic   = false;
-    tonemap_image_mt(display, image, exposure, filmic, linear);
+    tonemap_image(display, image, exposure, filmic, linear);
 
     // opengl image
     auto glimage  = glimage_state{};
@@ -101,7 +101,7 @@ void run(const vector<string>& args) {
     };
     callbacks.widgets = [&](const gui_input& input) {
       if (draw_tonemap_widgets(input, exposure, filmic)) {
-        tonemap_image_mt(display, image, exposure, filmic, linear);
+        tonemap_image(display, image, exposure, filmic, linear);
         set_image(glimage, display);
       }
       draw_image_widgets(input, image, display, glparams);

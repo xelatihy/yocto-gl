@@ -123,11 +123,11 @@ struct ndarray {
   }
   template <typename I>
   constexpr T& operator[](const vec<I, N>& idx) {
-    return _data[_index((vec2s)idx, _extents)];
+    return _data[_index((vec2uz)idx, _extents)];
   }
   template <typename I>
   constexpr const T& operator[](const vec<I, N>& idx) const {
-    return _data[_index((vec2s)idx, _extents)];
+    return _data[_index((vec2uz)idx, _extents)];
   }
 
   // Iteration

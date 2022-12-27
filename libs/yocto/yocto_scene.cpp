@@ -107,7 +107,7 @@ namespace yocto {
 
 // pixel access
 vec4f lookup_texture(
-    const texture_data& texture, const vec2s& ij, bool as_linear) {
+    const texture_data& texture, const vec2uz& ij, bool as_linear) {
   auto color = vec4f{0, 0, 0, 0};
   if (!texture.pixelsf.empty()) {
     color = texture.pixelsf[ij];
@@ -134,13 +134,13 @@ vec4f eval_texture(const texture_data& texture, const vec2f& uv, bool as_linear,
 
   // handle interpolation
   if (no_interpolation) {
-    auto ij = clamp((vec2s)st, 0, size - 1);
+    auto ij = clamp((vec2uz)st, 0, size - 1);
     return lookup_texture(texture, ij, as_linear);
   } else {
-    auto ij   = clamp((vec2s)st, 0, size - 1);
-    auto i1j  = (ij + vec2s{1, 0}) % size;
-    auto ij1  = (ij + vec2s{0, 1}) % size;
-    auto i1j1 = (ij + vec2s{1, 1}) % size;
+    auto ij   = clamp((vec2uz)st, 0, size - 1);
+    auto i1j  = (ij + vec2uz{1, 0}) % size;
+    auto ij1  = (ij + vec2uz{0, 1}) % size;
+    auto i1j1 = (ij + vec2uz{1, 1}) % size;
     auto w    = st - ij;
     return lookup_texture(texture, ij, as_linear) * (1 - w.x) * (1 - w.y) +
            lookup_texture(texture, ij1, as_linear) * (1 - w.x) * w.y +

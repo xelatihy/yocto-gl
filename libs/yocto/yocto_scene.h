@@ -240,7 +240,7 @@ vec4f eval_texture(const scene_data& scene, int texture, const vec2f& uv,
 
 // pixel access
 vec4f lookup_texture(
-    const texture_data& texture, const vec2s&, bool as_linear = false);
+    const texture_data& texture, const vec2uz&, bool as_linear = false);
 
 // conversion from image
 texture_data image_to_texture(const array2d<vec4f>& image, bool linear);

@@ -118,36 +118,13 @@ inline void parallel_for_batch(array<T, 2> num, Func&& func) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Apply tone mapping using multithreading for speed.
-void tonemap_image_mt(array2d<vec4f>& result, const array2d<vec4f>& image,
-    float exposure, bool filmic, bool srgb) {
-  if (image.extents() != result.extents())
-    throw std::invalid_argument{"image should be the same size"};
-  parallel_for_batch(image.size(), image.extent(0),
-      [&result, &image, exposure, filmic, srgb](size_t idx) {
-        result[idx] = tonemap(image[idx], exposure, filmic, srgb);
-      });
-}
-
-// Color grade an hsr or ldr image to an ldr image.
-// Uses multithreading for speed.
-void colorgrade_image_mt(array2d<vec4f>& result, const array2d<vec4f>& image,
-    bool linear, const colorgrade_params& params) {
-  if (image.extents() != result.extents())
-    throw std::invalid_argument{"image should be the same size"};
-  parallel_for_batch(image.size(), image.extent(0),
-      [&result, &image, &params, linear](size_t idx) {
-        result[idx] = colorgrade(image[idx], linear, params);
-      });
-}
-
 // Resize an image.
 array2d<vec4f> resize_image(
-    const array2d<vec4f>& image, const vec2s& extents_) {
+    const array2d<vec4f>& image, const vec2uz& extents_) {
   // determine new size
   auto extents = extents_;
   auto aspect  = (double)image.extent(0) / (double)image.extent(1);
-  if (extents == vec2s{0, 0})
+  if (extents == vec2uz{0, 0})
     throw std::invalid_argument{"bad image size in resize"};
   if (extents[1] == 0) {
     extents = {extents[0], (size_t)round(extents[0] / aspect)};

@@ -64,8 +64,8 @@ using std::vector;
 namespace yocto {
 
 // Aspect ratio
-template <typename T = float>
-constexpr T image_aspect(const vec2s& extents) {
+template <typename I, typename T = float>
+constexpr T image_aspect(const vec<I, 2>& extents) {
   return (T)extents[0] / (T)extents[1];
 }
 
@@ -137,8 +137,8 @@ constexpr void rgb_to_srgbb(array2d<Tb>& srgb, const array2d<T>& rgb) {
 
 // Lookup pixel for evaluation
 template <typename T, typename T1, size_t N>
-constexpr vec<T, N> lookup_image(
-    const array2d<vec<T1, N>>& image, const vec2s& ij, bool as_linear = false) {
+constexpr vec<T, N> lookup_image(const array2d<vec<T1, N>>& image,
+    const vec2uz& ij, bool as_linear = false) {
   if constexpr (!std::is_same_v<T1, byte>) {
     return as_linear ? srgb_to_rgb(image[ij]) : image[ij];
   } else {
@@ -161,13 +161,13 @@ constexpr vec<T, N> eval_image(const array2d<vec<T1, N>>& image,
 
   // handle interpolation
   if (no_interpolation) {
-    auto ij = clamp((vec2s)st, 0, size - 1);
+    auto ij = clamp((vec2uz)st, 0, size - 1);
     return lookup_image(image, ij, as_linear);
   } else {
-    auto ij   = clamp((vec2s)st, 0, size - 1);
-    auto i1j  = (ij + vec2s{1, 0}) % size;
-    auto ij1  = (ij + vec2s{0, 1}) % size;
-    auto i1j1 = (ij + vec2s{1, 1}) % size;
+    auto ij   = clamp((vec2uz)st, 0, size - 1);
+    auto i1j  = (ij + vec2uz{1, 0}) % size;
+    auto ij1  = (ij + vec2uz{0, 1}) % size;
+    auto i1j1 = (ij + vec2uz{1, 1}) % size;
     auto w    = st - ij;
     return lookup_image(image, ij, as_linear) * (1 - w.x) * (1 - w.y) +
            lookup_image(image, ij1, as_linear) * (1 - w.x) * w.y +
@@ -199,23 +199,16 @@ constexpr void tonemap_image(array2d<vec<T, N>>& result,
   }
 }
 
-// Apply tone mapping. If the input image is an ldr, does nothing.
-// void tonemap_image(array2d<vec4f>& ldr, const array2d<vec4f>& image,
-//     float exposure, bool filmic = false, bool srgb= true);
-// Apply tone mapping using multithreading for speed.
-void tonemap_image_mt(array2d<vec4f>& ldr, const array2d<vec4f>& image,
-    float exposure, bool filmic = false, bool srgb = true);
-
 // Get/Set region
 template <typename T>
 constexpr void get_region(array2d<T>& region, const array2d<T>& image,
-    const vec2s& offset, const vec2s& extents) {
+    const vec2uz& offset, const vec2uz& extents) {
   if (region.extents() != extents) region = array2d<vec4f>(extents);
   for (auto ij : range(region.extents())) region[ij] = image[ij + offset];
 }
 template <typename T>
 constexpr void set_region(
-    array2d<T>& image, const array2d<T>& region, const vec2s& offset) {
+    array2d<T>& image, const array2d<T>& region, const vec2uz& offset) {
   for (auto ij : range(region.extents())) image[ij + offset] = region[ij];
 }
 
@@ -285,11 +278,6 @@ inline void colorgrade_image(array2d<vec<T, 4>>& result,
   }
 }
 
-// Color grade an hsr or ldr image to an ldr image.
-// Uses multithreading for speed.
-void colorgrade_image_mt(array2d<vec4f>& result, const array2d<vec4f>& image,
-    bool linear, const colorgrade_params& params);
-
 // determine white balance colors
 template <typename T>
 inline vec<T, 3> compute_white_balance(const array2d<vec<T, 4>>& image) {
@@ -301,7 +289,7 @@ inline vec<T, 3> compute_white_balance(const array2d<vec<T, 4>>& image) {
 }
 
 // Resize an image.
-array2d<vec4f> resize_image(const array2d<vec4f>& image, const vec2s& extents);
+array2d<vec4f> resize_image(const array2d<vec4f>& image, const vec2uz& extents);
 
 }  // namespace yocto
 
@@ -310,8 +298,8 @@ array2d<vec4f> resize_image(const array2d<vec4f>& image, const vec2s& extents);
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-template <typename Func, typename T = std::invoke_result_t<Func, vec2s>>
-inline array2d<T> _make_proc_image(const vec2s& extents, Func&& func) {
+template <typename Func, typename T = std::invoke_result_t<Func, vec2uz>>
+inline array2d<T> _make_proc_image(const vec2uz& extents, Func&& func) {
   auto image = array2d<T>(extents);
   for (auto ij : range(extents)) image[ij] = func(ij);
   return image;
@@ -319,10 +307,10 @@ inline array2d<T> _make_proc_image(const vec2s& extents, Func&& func) {
 
 // Make an image
 template <typename T = float>
-inline array2d<vec<T, 4>> make_grid(const vec2s& extents, T scale = 1,
+inline array2d<vec<T, 4>> make_grid(const vec2uz& extents, T scale = 1,
     const vec<T, 4>& color0 = {0.5, 0.5, 0.5, 1.0},
     const vec<T, 4>& color1 = {0.5, 0.5, 0.7, 1.0}) {
-  return _make_proc_image(extents, [=](vec2s ij) -> vec<T, 4> {
+  return _make_proc_image(extents, [=](vec2uz ij) -> vec<T, 4> {
     auto uv    = fmod((4 * scale * ij) / extents, 1);
     auto thick = (T)0.01 / 2;
     auto c     = uv.x <= thick || uv.x >= 1 - thick || uv.y <= thick ||
@@ -334,10 +322,10 @@ inline array2d<vec<T, 4>> make_grid(const vec2s& extents, T scale = 1,
 }
 
 template <typename T = float>
-inline array2d<vec<T, 4>> make_checker(const vec2s& extents, T scale = 1,
+inline array2d<vec<T, 4>> make_checker(const vec2uz& extents, T scale = 1,
     const vec<T, 4>& color0 = {0.5, 0.5, 0.6, 1.0},
     const vec<T, 4>& color1 = {0.7, 0.7, 0.7, 1.0}) {
-  return _make_proc_image(extents, [=](vec2s ij) -> vec<T, 4> {
+  return _make_proc_image(extents, [=](vec2uz ij) -> vec<T, 4> {
     auto uv = fmod((4 * scale * ij) / extents, 1);
     auto c  = uv.x <= (T)0.5 != uv.y <= (T)0.5;
     return c ? color0 : color1;
@@ -345,10 +333,10 @@ inline array2d<vec<T, 4>> make_checker(const vec2s& extents, T scale = 1,
 }
 
 template <typename T = float>
-inline array2d<vec<T, 4>> make_bumps(const vec2s& extents, T scale = 1,
+inline array2d<vec<T, 4>> make_bumps(const vec2uz& extents, T scale = 1,
     const vec<T, 4>& color0 = {0, 0, 0, 1},
     const vec<T, 4>& color1 = {1, 1, 1, 1}) {
-  return _make_proc_image(extents, [=](vec2s ij) -> vec<T, 4> {
+  return _make_proc_image(extents, [=](vec2uz ij) -> vec<T, 4> {
     auto uv     = fmod((4 * scale * ij) / extents, 1);
     auto thick  = (T)0.125;
     auto center = vec<T, 2>{
@@ -363,20 +351,20 @@ inline array2d<vec<T, 4>> make_bumps(const vec2s& extents, T scale = 1,
 }
 
 template <typename T = float>
-inline array2d<vec<T, 4>> make_ramp(const vec2s& extents, T scale = 1,
+inline array2d<vec<T, 4>> make_ramp(const vec2uz& extents, T scale = 1,
     const vec<T, 4>& color0 = {0, 0, 0, 1},
     const vec<T, 4>& color1 = {1, 1, 1, 1}) {
-  return _make_proc_image(extents, [=](vec2s ij) -> vec<T, 4> {
+  return _make_proc_image(extents, [=](vec2uz ij) -> vec<T, 4> {
     auto uv = fmod((scale * ij) / extents, 1);
     return lerp(color0, color1, uv.x);
   });
 }
 
 template <typename T = float>
-inline array2d<vec<T, 4>> make_gammaramp(const vec2s& extents, T scale = 1,
+inline array2d<vec<T, 4>> make_gammaramp(const vec2uz& extents, T scale = 1,
     const vec<T, 4>& color0 = {0, 0, 0, 1},
     const vec<T, 4>& color1 = {1, 1, 1, 1}) {
-  return _make_proc_image(extents, [=](vec2s ij) -> vec<T, 4> {
+  return _make_proc_image(extents, [=](vec2uz ij) -> vec<T, 4> {
     auto uv    = fmod((scale * ij) / extents, 1);
     auto gamma = (T)2.2;
     if (uv.y < (T)1 / 3) {
@@ -391,8 +379,8 @@ inline array2d<vec<T, 4>> make_gammaramp(const vec2s& extents, T scale = 1,
 
 template <typename T = float>
 inline array2d<vec<T, 4>> make_uvramp(
-    const vec2s& extents = {1024, 1024}, T scale = 1) {
-  return _make_proc_image(extents, [=](vec2s ij) -> vec<T, 4> {
+    const vec2uz& extents = {1024, 1024}, T scale = 1) {
+  return _make_proc_image(extents, [=](vec2uz ij) -> vec<T, 4> {
     auto uv = fmod((scale * ij) / extents, 1);
     return vec<T, 4>{uv.x, uv.y, 0, 1};
   });
@@ -400,8 +388,8 @@ inline array2d<vec<T, 4>> make_uvramp(
 
 template <typename T = float>
 inline array2d<vec<T, 4>> make_orgrid(
-    const vec2s& extents = {1024, 1024}, T scale = 1) {
-  return _make_proc_image(extents, [=](vec2s ij) -> vec<T, 4> {
+    const vec2uz& extents = {1024, 1024}, T scale = 1) {
+  return _make_proc_image(extents, [=](vec2uz ij) -> vec<T, 4> {
     auto uv = fmod((scale * ij) / extents, 1);
     return uv.x < (T)0.5
                ? (uv.y < (T)0.5 ? vec<T, 4>{0, 0, 0, 1} : vec<T, 4>{0, 1, 0, 1})
@@ -412,8 +400,8 @@ inline array2d<vec<T, 4>> make_orgrid(
 
 template <typename T = float>
 inline array2d<vec<T, 4>> make_uvgrid(
-    const vec2s& extents = {1024, 1024}, T scale = 1, bool colored = true) {
-  return _make_proc_image(extents, [=](vec2s ij) -> vec<T, 4> {
+    const vec2uz& extents = {1024, 1024}, T scale = 1, bool colored = true) {
+  return _make_proc_image(extents, [=](vec2uz ij) -> vec<T, 4> {
     auto uv  = flip_v(fmod((scale * ij) / extents, 1));
     auto hue = (clamp((int)(uv.x * 8), 0, 7) +
                    (clamp((int)(uv.y * 8), 0, 7) + 5) % 8 * 8) /
@@ -438,8 +426,9 @@ inline array2d<vec<T, 4>> make_uvgrid(
 }
 
 template <typename T = float>
-inline array2d<vec<T, 4>> make_colormapramp(const vec2s& extents, T scale = 1) {
-  return _make_proc_image(extents, [=](vec2s ij) -> vec<T, 4> {
+inline array2d<vec<T, 4>> make_colormapramp(
+    const vec2uz& extents, T scale = 1) {
+  return _make_proc_image(extents, [=](vec2uz ij) -> vec<T, 4> {
     auto uv  = fmod((scale * ij) / extents, 1);
     auto rgb = vec<T, 3>{0, 0, 0};
     if (uv.y < (T)0.25) {
@@ -456,10 +445,10 @@ inline array2d<vec<T, 4>> make_colormapramp(const vec2s& extents, T scale = 1) {
 }
 
 template <typename T = float>
-inline array2d<vec<T, 4>> make_gnoisemap(const vec2s& extents, T scale = 1,
+inline array2d<vec<T, 4>> make_gnoisemap(const vec2uz& extents, T scale = 1,
     const vec<T, 4>& color0 = {0, 0, 0, 1},
     const vec<T, 4>& color1 = {1, 1, 1, 1}) {
-  return _make_proc_image(extents, [=](vec2s ij) -> vec<T, 4> {
+  return _make_proc_image(extents, [=](vec2uz ij) -> vec<T, 4> {
     auto uv    = (8 * scale * ij) / extents;
     auto value = gradient_noise(uv);
     return lerp(color0, color1, clamp(value, 0, 1));
@@ -467,10 +456,10 @@ inline array2d<vec<T, 4>> make_gnoisemap(const vec2s& extents, T scale = 1,
 }
 
 template <typename T = float>
-inline array2d<vec<T, 4>> make_vnoisemap(const vec2s& extents, T scale = 1,
+inline array2d<vec<T, 4>> make_vnoisemap(const vec2uz& extents, T scale = 1,
     const vec<T, 4>& color0 = {0, 0, 0, 1},
     const vec<T, 4>& color1 = {1, 1, 1, 1}) {
-  return _make_proc_image(extents, [=](vec2s ij) -> vec<T, 4> {
+  return _make_proc_image(extents, [=](vec2uz ij) -> vec<T, 4> {
     auto uv    = (8 * scale * ij) / extents;
     auto value = value_noise(uv);
     return lerp(color0, color1, clamp(value, 0, 1));
@@ -478,10 +467,10 @@ inline array2d<vec<T, 4>> make_vnoisemap(const vec2s& extents, T scale = 1,
 }
 
 template <typename T = float>
-inline array2d<vec<T, 4>> make_fnoisemap(const vec2s& extents, T scale = 1,
+inline array2d<vec<T, 4>> make_fnoisemap(const vec2uz& extents, T scale = 1,
     const vec<T, 4>& color0 = {0, 0, 0, 1},
     const vec<T, 4>& color1 = {1, 1, 1, 1}) {
-  return _make_proc_image(extents, [=](vec2s ij) -> vec<T, 4> {
+  return _make_proc_image(extents, [=](vec2uz ij) -> vec<T, 4> {
     auto uv    = (8 * scale * ij) / extents;
     auto value = fractal_noise(uv);
     return lerp(color0, color1, clamp(value, 0, 1));
@@ -489,10 +478,10 @@ inline array2d<vec<T, 4>> make_fnoisemap(const vec2s& extents, T scale = 1,
 }
 
 template <typename T = float>
-inline array2d<vec<T, 4>> make_tnoisemap(const vec2s& extents, T scale = 1,
+inline array2d<vec<T, 4>> make_tnoisemap(const vec2uz& extents, T scale = 1,
     const vec<T, 4>& color0 = {0, 0, 0, 1},
     const vec<T, 4>& color1 = {1, 1, 1, 1}) {
-  return _make_proc_image(extents, [=](vec2s ij) -> vec<T, 4> {
+  return _make_proc_image(extents, [=](vec2uz ij) -> vec<T, 4> {
     auto uv    = (8 * scale * ij) / extents;
     auto value = turbulence_noise(uv);
     return lerp(color0, color1, clamp(value, 0, 1));
@@ -500,10 +489,10 @@ inline array2d<vec<T, 4>> make_tnoisemap(const vec2s& extents, T scale = 1,
 }
 
 template <typename T = float>
-inline array2d<vec<T, 4>> make_rnoisemap(const vec2s& extents, T scale = 1,
+inline array2d<vec<T, 4>> make_rnoisemap(const vec2uz& extents, T scale = 1,
     const vec<T, 4>& color0 = {0, 0, 0, 1},
     const vec<T, 4>& color1 = {1, 1, 1, 1}) {
-  return _make_proc_image(extents, [=](vec2s ij) -> vec<T, 4> {
+  return _make_proc_image(extents, [=](vec2uz ij) -> vec<T, 4> {
     auto uv    = (8 * scale * ij) / extents;
     auto value = ridge_noise(uv);
     return lerp(color0, color1, clamp(value, 0, 1));
@@ -535,8 +524,8 @@ inline void bump_to_normal(array2d<vec<T, 4>>& normalmap,
     throw std::out_of_range{"different image sizes"};
   auto dxy = 1 / (vec2f)bumpmap.extents();
   for (auto ij : range(bumpmap.extents())) {
-    auto i1j = (ij + vec2s{1, 0}) % bumpmap.extents();
-    auto ij1 = (ij + vec2s{0, 1}) % bumpmap.extents();
+    auto i1j = (ij + vec2uz{1, 0}) % bumpmap.extents();
+    auto ij1 = (ij + vec2uz{0, 1}) % bumpmap.extents();
     auto p00 = bumpmap[ij], p10 = bumpmap[i1j], p01 = bumpmap[ij1];
     auto g00 = mean(p00), g10 = mean(p10), g01 = mean(p01);
     auto normal = vec<T, 3>{
@@ -557,7 +546,7 @@ inline array2d<vec<T, 4>> bump_to_normal(
 
 // Implementation of sunsky modified heavily from pbrt
 template <typename T = float>
-inline array2d<vec<T, 4>> make_sunsky(const vec2s& extents, float theta_sun,
+inline array2d<vec<T, 4>> make_sunsky(const vec2uz& extents, float theta_sun,
     T turbidity = 3, bool has_sun = false, T sun_intensity = 1,
     T                sun_radius    = 1,
     const vec<T, 3>& ground_albedo = vec<T, 3>{0.2, 0.2, 0.2}) {
@@ -701,7 +690,7 @@ inline array2d<vec<T, 4>> make_sunsky(const vec2s& extents, float theta_sun,
 
 // Make an image of multiple lights.
 template <typename T = float>
-inline array2d<vec<T, 4>> make_lights(const vec2s& extents,
+inline array2d<vec<T, 4>> make_lights(const vec2uz& extents,
     const vec<T, 3>& le = {1, 1, 1}, int nlights = 4, T langle = pif / 4,
     T lwidth = (T)pi / 16, T lheight = (T)pi / 16) {
   auto img = array2d<vec<T, 4>>(extents);

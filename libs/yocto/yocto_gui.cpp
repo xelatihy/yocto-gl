@@ -413,7 +413,7 @@ void show_colorgrade_gui(const string& title, const string& name,
 
   // display image
   auto display = image;
-  colorgrade_image_mt(display, image, linear, params);
+  colorgrade_image(display, image, linear, params);
 
   // opengl image
   auto glimage  = glimage_state{};
@@ -456,7 +456,7 @@ void show_colorgrade_gui(const string& title, const string& name,
       edited += draw_gui_coloredit("highlights color", params.highlights_color);
       end_gui_header();
       if (edited) {
-        colorgrade_image_mt(display, image, linear, params);
+        colorgrade_image(display, image, linear, params);
         set_image(glimage, display);
       }
     }

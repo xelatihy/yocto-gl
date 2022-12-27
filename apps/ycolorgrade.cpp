@@ -67,7 +67,7 @@ void run(const vector<string>& args) {
   }
 
   // load image
-  auto image = load_image(imagename);
+  auto image  = load_image(imagename);
   auto linear = is_hdr_filename(imagename);
 
   // switch between interactive and offline
@@ -85,7 +85,7 @@ void run(const vector<string>& args) {
 
     // display image
     auto display = array2d<vec4f>{image.extents()};
-    colorgrade_image_mt(display, image, linear, params);
+    colorgrade_image(display, image, linear, params);
 
     // opengl image
     auto glimage  = glimage_state{};
@@ -124,7 +124,7 @@ void run(const vector<string>& args) {
             "highlights color", params.highlights_color);
         end_gui_header();
         if (edited) {
-          colorgrade_image_mt(display, image, linear, params);
+          colorgrade_image(display, image, linear, params);
           set_image(glimage, display);
         }
       }

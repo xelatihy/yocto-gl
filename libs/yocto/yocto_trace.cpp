@@ -1457,7 +1457,7 @@ bool is_sampler_lit(const trace_params& params) {
 void trace_sample(trace_state& state, const scene_data& scene,
     const trace_bvh& bvh, const trace_lights& lights, const vec2i& ij_,
     int sample, const trace_params& params) {
-  auto  ij      = (vec2s)ij_;
+  auto  ij      = (vec2uz)ij_;
   auto& camera  = scene.cameras[params.camera];
   auto  sampler = get_trace_sampler_func(params);
   auto  ray     = sample_camera(camera, ij, (vec2i)state.image.extents(),
@@ -1491,9 +1491,9 @@ trace_state make_trace_state(
   auto& camera     = scene.cameras[params.camera];
   auto  state      = trace_state{};
   auto  resolution = (camera.aspect >= 1)
-                         ? vec2s{(size_t)params.resolution,
+                         ? vec2uz{(size_t)params.resolution,
                               (size_t)round(params.resolution / camera.aspect)}
-                         : vec2s{
+                         : vec2uz{
                               (size_t)round(params.resolution * camera.aspect),
                               (size_t)params.resolution};
   state.samples    = 0;
@@ -1599,7 +1599,7 @@ void trace_samples(trace_state& state, const scene_data& scene,
       }
     }
   } else {
-    parallel_for_batch(state.image.extents(), [&](vec2s ij) {
+    parallel_for_batch(state.image.extents(), [&](vec2uz ij) {
       for (auto sample : range(state.samples, state.samples + params.batch)) {
         trace_sample(state, scene, bvh, lights, ij, sample, params);
       }
@@ -1625,7 +1625,7 @@ void trace_start(trace_context& context, trace_state& state,
   context.done   = false;
   context.worker = std::async(std::launch::async, [&]() {
     if (context.stop) return;
-    parallel_for_batch(state.image.extents(), [&](vec2s ij) {
+    parallel_for_batch(state.image.extents(), [&](vec2uz ij) {
       for (auto sample : range(state.samples, state.samples + params.batch)) {
         if (context.stop) return;
         trace_sample(state, scene, bvh, lights, ij, sample, params);
@@ -1667,7 +1667,7 @@ void trace_preview(array2d<vec4f>& image, trace_context& context,
 
 // Check image type
 template <typename T>
-static void check_image(const array2d<T>& image, const vec2s& extents) {
+static void check_image(const array2d<T>& image, const vec2uz& extents) {
   if (image.extents() != extents)
     throw std::invalid_argument{"image should have the same size"};
 }

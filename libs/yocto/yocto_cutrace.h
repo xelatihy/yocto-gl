@@ -208,7 +208,7 @@ struct cuspan {
 template <typename T>
 struct cuspan2d {
   bool        empty() const { return size() == 0; }
-  vec2s       extents() const { return _extents; }
+  vec2uz       extents() const { return _extents; }
   size_t      extent(size_t dimension) const { return _extents[dimension]; }
   size_t      size() const { return _extents[0] * _extents[1]; }
   CUdeviceptr device_ptr() const { return _data; }
@@ -219,7 +219,7 @@ struct cuspan2d {
   }
 
   CUdeviceptr _data    = 0;
-  vec2s       _extents = {0, 0};
+  vec2uz       _extents = {0, 0};
 };
 
 // cuda array
