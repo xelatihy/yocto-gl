@@ -269,8 +269,8 @@ struct vec<T, 1> {
   template <typename T1>
   constexpr kernel vec(T1 x_) : x{(T)x_} {}
 
-  constexpr kernel      vec(const vec& v)       = default;
-  constexpr kernel vec& operator=(const vec& v) = default;
+  constexpr vec(const vec& v)            = default;
+  constexpr vec& operator=(const vec& v) = default;
 
   template <typename U>
   constexpr kernel explicit(!std::is_convertible_v<U, T>)
@@ -299,8 +299,8 @@ struct vec<T, 2> {
   template <typename T1, typename T2>
   constexpr kernel vec(T1 x_, T2 y_) : x{(T)x_}, y{(T)y_} {}
 
-  constexpr kernel      vec(const vec& v)       = default;
-  constexpr kernel vec& operator=(const vec& v) = default;
+  constexpr vec(const vec& v)            = default;
+  constexpr vec& operator=(const vec& v) = default;
 
   template <typename U>
   constexpr kernel explicit(!std::is_convertible_v<U, T>)
@@ -331,8 +331,8 @@ struct vec<T, 3> {
   constexpr kernel vec(T1 x_, T2 y_, T3 z_) : x{(T)x_}, y{(T)y_}, z{(T)z_} {}
   constexpr kernel vec(vec<T, 2> xy_, T z_) : x{xy_.x}, y{xy_.y}, z{z_} {}
 
-  constexpr kernel      vec(const vec& v)       = default;
-  constexpr kernel vec& operator=(const vec& v) = default;
+  constexpr vec(const vec& v)            = default;
+  constexpr vec& operator=(const vec& v) = default;
 
   template <typename U>
   constexpr kernel explicit(!std::is_convertible_v<U, T>)
@@ -365,8 +365,8 @@ struct vec<T, 4> {
   constexpr kernel vec(vec<T, 3> xyz_, T w_) :
       x{xyz_.x}, y{xyz_.y}, z{xyz_.z}, w{w_} {}
 
-  constexpr kernel      vec(const vec& v)       = default;
-  constexpr kernel vec& operator=(const vec& v) = default;
+  constexpr vec(const vec& v)            = default;
+  constexpr vec& operator=(const vec& v) = default;
 
   template <typename U>
   constexpr kernel explicit(!std::is_convertible_v<U, T>)
@@ -2649,18 +2649,18 @@ template <typename T, size_t N>
 constexpr kernel vec<T, N> transform_point_inverse(
     const frame<T, N>& a, const vec<T, N>& b) {
   if constexpr (N == 2) {
-    return {dot(a.x, b.x - a.o), dot(a.y, b.y - a.o)};
+    return {dot(a.x, b - a.o), dot(a.y, b - a.o)};
   } else if constexpr (N == 3) {
-    return {dot(a.x, b.x - a.o), dot(a.y, b.y - a.o), dot(a.z, b.z - a.o)};
+    return {dot(a.x, b - a.o), dot(a.y, b - a.o), dot(a.z, b - a.o)};
   }
 }
 template <typename T, size_t N>
 constexpr kernel vec<T, N> transform_vector_inverse(
     const frame<T, N>& a, const vec<T, N>& b) {
   if constexpr (N == 2) {
-    return {dot(a.x, b.x), dot(a.y, b.y)};
+    return {dot(a.x, b), dot(a.y, b)};
   } else if constexpr (N == 3) {
-    return {dot(a.x, b.x), dot(a.y, b.y), dot(a.z, b.z)};
+    return {dot(a.x, b), dot(a.y, b), dot(a.z, b)};
   }
 }
 template <typename T, size_t N>

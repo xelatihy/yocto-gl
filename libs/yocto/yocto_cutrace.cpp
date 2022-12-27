@@ -808,7 +808,11 @@ cutrace_bvh make_cutrace_bvh(cutrace_context& context,
 
   // shapes
   bvh.shapes = vector<cushape_bvh>(scene.shapes.size());
-  for (auto&& [bvh, shape] : zip(bvh.shapes, scene.shapes)) {
+  bvh.shapes.resize(scene.shapes.size());
+  for (auto shape_id = (size_t)0; shape_id < scene.shapes.size(); shape_id++) {
+    auto& sbvh_ = bvh.shapes[shape_id];
+    auto& shape = shapes_data[shape_id];
+
     // input
     auto built_input                       = OptixBuildInput{};
     built_input.type                       = OPTIX_BUILD_INPUT_TYPE_TRIANGLES;
@@ -851,11 +855,11 @@ cutrace_bvh make_cutrace_bvh(cutrace_context& context,
         context.cuda_stream, accelerator_sizes.tempSizeInBytes, (byte*)nullptr);
     auto  bvh_buffer = make_buffer(context.cuda_stream,
          accelerator_sizes.outputSizeInBytes, (byte*)nullptr);
-    auto& sbvh       = bvh.bvh;
+    auto& cubvh      = bvh.shapes[shape_id].bvh;
     check_result(optixAccelBuild(context.optix_context,
         /* cuda_stream */ 0, &accelerator_options, &built_input, (int)1,
         temporary_buffer.device_ptr(), temporary_buffer.size_in_bytes(),
-        bvh_buffer.device_ptr(), bvh_buffer.size_in_bytes(), &sbvh.handle,
+        bvh_buffer.device_ptr(), bvh_buffer.size_in_bytes(), &cubvh.handle,
         &readback_descriptor, 1));
 
     // sync
@@ -863,11 +867,11 @@ cutrace_bvh make_cutrace_bvh(cutrace_context& context,
 
     // compact
     auto compacted_size = download_buffer_value(compacted_size_buffer);
-    sbvh.buffer         = make_buffer(
+    cubvh.buffer        = make_buffer(
         context.cuda_stream, compacted_size, (byte*)nullptr);
     check_result(optixAccelCompact(context.optix_context,
-        /*cuda_stream:*/ 0, sbvh.handle, sbvh.buffer.device_ptr(),
-        sbvh.buffer.size_in_bytes(), &sbvh.handle));
+        /*cuda_stream:*/ 0, cubvh.handle, cubvh.buffer.device_ptr(),
+        cubvh.buffer.size_in_bytes(), &cubvh.handle));
 
     // sync
     sync_gpu(context.cuda_stream);
@@ -886,7 +890,7 @@ cutrace_bvh make_cutrace_bvh(cutrace_context& context,
          instance_id++) {
       auto& instance   = instances_data[instance_id];
       auto& opinstance = opinstances[instance_id];
-      auto  transform  = transpose(frame_to_mat(instance.frame));
+      auto  transform  = transpose(to_mat(instance.frame));
       memcpy(opinstance.transform, &transform, sizeof(float) * 12);
       opinstance.sbtOffset         = 0;
       opinstance.instanceId        = instance_id;
