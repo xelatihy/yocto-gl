@@ -71,6 +71,7 @@ using std::pair;
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// Basic types
 using byte    = unsigned char;
 using uint    = unsigned int;
 using ushort  = unsigned short;
@@ -87,6 +88,7 @@ template <typename Func, typename... Ts>
 using result_t = std::result_of_t<Func(Ts...)>;
 #endif
 
+// Numeric constants
 template <typename T = double>
 constexpr auto pi_t = (T)3.14159265358979323846;
 constexpr auto pi   = 3.14159265358979323846;
@@ -105,6 +107,9 @@ constexpr auto num_min = std::numeric_limits<T>::lowest();
 template <typename T>
 constexpr auto num_eps = std::numeric_limits<T>::epsilon();
 
+// std imports
+using std::data;
+using std::size;
 using std::swap;
 
 template <typename T>

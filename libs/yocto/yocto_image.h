@@ -238,11 +238,9 @@ inline void composite_image(array2d<vec<T, 4>>& result,
 template <typename T>
 inline array2d<vec<T, 4>> colorgrade_image(const array2d<vec<T, 4>>& image,
     bool linear, const colorgrade_gparams<T>& params) {
-  auto result = array2d<vec<T, 4>>(image.extents());
-  for (auto idx : range(image.size())) {
-    result[idx] = colorgrade(image[idx], linear, params);
-  }
-  return result;
+  return fmap(image, [&](const vec<T, 4>& pixel) {
+    return colorgrade(pixel, linear, params);
+  });
 }
 
 // Color grade an hsr or ldr image to an ldr image.
@@ -250,11 +248,9 @@ template <typename T>
 inline void colorgrade_image(array2d<vec<T, 4>>& result,
     const array2d<vec<T, 4>>& image, bool linear,
     const colorgrade_gparams<T>& params) {
-  if (image.extents() != result.extents())
-    throw std::invalid_argument{"image should be the same size"};
-  for (auto idx : range(image.size())) {
-    result[idx] = colorgrade(image[idx], linear, params);
-  }
+  return fmap(result, image, [&](const vec<T, 4>& pixel) {
+    return colorgrade(pixel, linear, params);
+  });
 }
 
 // determine white balance colors

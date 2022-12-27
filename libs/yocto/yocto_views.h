@@ -80,6 +80,10 @@ struct span {
   constexpr span(T* data, size_t size) noexcept : _data{data}, _size{size} {}
   constexpr span(T* begin, T* end) noexcept :
       _data{begin}, _size{end - begin} {}
+  constexpr span(vector<T>& v) : _data{v.data()}, _size(v.size()) {}
+  template <typename U>
+  constexpr explicit span(const vector<U>& v) :
+      _data{v.data()}, _size(v.size()) {}
 
   // Assignments
   constexpr span& operator=(const span&) noexcept  = default;
