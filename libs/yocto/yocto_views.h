@@ -380,260 +380,78 @@ constexpr kernel enumerate_view<span<const T>, I> enumerate(
 }
 
 // Python zip: iterator and sequence
-template <typename T1, typename T2>
+template <typename View1, typename View2>
 struct zip_sentinel {};
-template <typename T1, typename T2>
+template <typename View1, typename View2>
 struct zip_iterator {
-  T1*                   iterator1;
-  T2*                   iterator2;
-  T1*                   end1;
-  constexpr kernel bool operator!=(const zip_sentinel<T1, T2>& other) const {
-    return iterator1 != end1;
+  using It1 = decltype(std::begin(std::declval<View1>()));
+  using Se1 = decltype(std::end(std::declval<View1>()));
+  using Rf1 = decltype(*std::begin(std::declval<View1>()));
+  using It2 = decltype(std::begin(std::declval<View2>()));
+  using Se2 = decltype(std::end(std::declval<View2>()));
+  using Rf2 = decltype(*std::begin(std::declval<View2>()));
+  constexpr kernel zip_iterator(View1 view1_, View2 view2_)
+      : iterator1{std::begin(view1_)}
+      , sentinel1{std::end(view1_)}
+      , iterator2{std::begin(view2_)}
+      , sentinel2{std::end(view2_)} {}
+  constexpr kernel bool operator!=(
+      const zip_sentinel<View1, View2>& other) const {
+    return iterator1 != sentinel1 && iterator2 != sentinel2;
   }
   constexpr kernel void operator++() {
     ++iterator1;
     ++iterator2;
   }
-  constexpr kernel pair<T1&, T2&> operator*() const {
+  constexpr kernel pair<Rf1, Rf2> operator*() const {
     return {*iterator1, *iterator2};
   }
-};
-template <typename T1, typename T2>
-struct zip_view {
-  constexpr kernel zip_view(span<T1> sequence1_, span<T2> sequence2_)
-      : sequence1{sequence1_}, sequence2{sequence2_} {}
-  constexpr kernel zip_iterator<T1, T2> begin() {
-    return zip_iterator{sequence1.data(), sequence2.data(),
-        sequence1.data() + sequence1.size()};
-  }
-  constexpr kernel zip_sentinel<T1, T2> end() { return {}; }
 
  private:
-  span<T1> sequence1;
-  span<T2> sequence2;
+  It1 iterator1;
+  It2 iterator2;
+  Se1 sentinel1;
+  Se2 sentinel2;
+};
+template <typename View1, typename View2>
+struct zip_view {
+  constexpr kernel zip_view(View1 view1_, View2 view2_)
+      : view1{view1_}, view2{view2_} {}
+  constexpr kernel zip_iterator<View1, View2> begin() {
+    return zip_iterator{view1, view2};
+  }
+  constexpr kernel zip_sentinel<View1, View2> end() { return {}; }
+
+ private:
+  View1 view1;
+  View2 view2;
 };
 
 // Python zip
 template <typename T1, typename T2>
-constexpr kernel zip_view<T1, T2> zip(span<T1> sequence1, span<T2> sequence2) {
-  return zip_view<T1, T2>(sequence1, sequence2);
+constexpr kernel zip_view<span<T1>, span<T2>> zip(
+    span<T1> sequence1, span<T2> sequence2) {
+  return {sequence1, sequence2};
 }
 template <typename T1, typename T2>
-constexpr kernel zip_view<const T1, const T2> zip(
+constexpr kernel zip_view<span<const T1>, span<const T2>> zip(
     const vector<T1>& sequence1, const vector<T2>& sequence2) {
-  return zip_view<const T1, const T2>(span{sequence1}, span{sequence2});
+  return {span{sequence1}, span{sequence2}};
 }
-
-// Python zip
-template <typename Sequence1, typename Sequence2>
-constexpr kernel auto zip(
-    const Sequence1& sequence1, const Sequence2& sequence2);
-template <typename Sequence1, typename Sequence2>
-constexpr kernel auto zip(Sequence1& sequence1, Sequence2& sequence2);
-template <typename Sequence1, typename Sequence2>
-constexpr kernel auto zip(const Sequence1& sequence1, Sequence2& sequence2);
-template <typename Sequence1, typename Sequence2>
-constexpr kernel auto zip(Sequence1& sequence1, const Sequence2& sequence2);
-
-// Implementation of Python enumerate.
-template <typename Sequence, typename I>
-constexpr kernel auto enumerate(const Sequence& sequence, I start) {
-  using Iterator  = typename Sequence::const_iterator;
-  using Reference = typename Sequence::const_reference;
-  struct enumerate_iterator {
-    I                     index;
-    Iterator              iterator;
-    constexpr kernel bool operator!=(const enumerate_iterator& other) const {
-      return index != other.index;
-    }
-    constexpr kernel void operator++() {
-      ++index;
-      ++iterator;
-    }
-    constexpr kernel pair<const I&, Reference> operator*() const {
-      return {index, *iterator};
-    }
-  };
-  struct enumerate_helper {
-    const Sequence&       sequence;
-    I                     begin_, end_;
-    constexpr kernel auto begin() {
-      return enumerate_iterator{begin_, std::begin(sequence)};
-    }
-    constexpr kernel auto end() {
-      return enumerate_iterator{end_, std::end(sequence)};
-    }
-  };
-  return enumerate_helper{sequence, 0, size(sequence)};
+template <typename T1, typename T2>
+constexpr kernel zip_view<span<const T1>, span<T2>> zip(
+    const vector<T1>& sequence1, vector<T2>& sequence2) {
+  return {span{sequence1}, span{sequence2}};
 }
-
-// Python enumerate
-template <typename Sequence, typename I>
-constexpr kernel auto enumerate(Sequence& sequence, I start) {
-  using Iterator  = typename Sequence::iterator;
-  using Reference = typename Sequence::reference;
-  struct enumerate_iterator {
-    I                     index;
-    Iterator              iterator;
-    constexpr kernel bool operator!=(const enumerate_iterator& other) const {
-      return index != other.index;
-    }
-    constexpr kernel void operator++() {
-      ++index;
-      ++iterator;
-    }
-    constexpr kernel pair<I&, Reference> operator*() const {
-      return {index, *iterator};
-    }
-  };
-  struct enumerate_helper {
-    Sequence&             sequence;
-    I                     begin_, end_;
-    constexpr kernel auto begin() {
-      return enumerate_iterator{begin_, std::begin(sequence)};
-    }
-    constexpr kernel auto end() {
-      return enumerate_iterator{end_, std::end(sequence)};
-    }
-  };
-  return enumerate_helper{sequence, 0, size(sequence)};
+template <typename T1, typename T2>
+constexpr kernel zip_view<span<T1>, span<const T2>> zip(
+    vector<T1>& sequence1, const vector<T2>& sequence2) {
+  return {span{sequence1}, span{sequence2}};
 }
-
-// Python zip
-template <typename Sequence1, typename Sequence2>
-constexpr kernel auto zip(
-    const Sequence1& sequence1, const Sequence2& sequence2) {
-  using Iterator1  = typename Sequence1::const_iterator;
-  using Reference1 = typename Sequence1::const_reference;
-  using Iterator2  = typename Sequence2::const_iterator;
-  using Reference2 = typename Sequence2::const_reference;
-  struct zip_iterator {
-    Iterator1             iterator1;
-    Iterator2             iterator2;
-    constexpr kernel bool operator!=(const zip_iterator& other) const {
-      return iterator1 != other.iterator1;
-    }
-    constexpr kernel void operator++() {
-      ++iterator1;
-      ++iterator2;
-    }
-    constexpr kernel pair<Reference1, Reference2> operator*() const {
-      return {*iterator1, *iterator2};
-    }
-  };
-  struct zip_helper {
-    const Sequence1&      sequence1;
-    const Sequence2&      sequence2;
-    constexpr kernel auto begin() {
-      return zip_iterator{std::begin(sequence1), std::begin(sequence2)};
-    }
-    constexpr kernel auto end() {
-      return zip_iterator{std::end(sequence1), std::end(sequence2)};
-    }
-  };
-  return zip_helper{sequence1, sequence2};
-}
-
-// Implementation of Python zip
-template <typename Sequence1, typename Sequence2>
-constexpr kernel auto zip(Sequence1& sequence1, Sequence2& sequence2) {
-  using Iterator1  = typename Sequence1::iterator;
-  using Reference1 = typename Sequence1::reference;
-  using Iterator2  = typename Sequence2::iterator;
-  using Reference2 = typename Sequence2::reference;
-  struct zip_iterator {
-    Iterator1             iterator1;
-    Iterator2             iterator2;
-    constexpr kernel bool operator!=(const zip_iterator& other) const {
-      return iterator1 != other.iterator1;
-    }
-    constexpr kernel void operator++() {
-      ++iterator1;
-      ++iterator2;
-    }
-    constexpr kernel pair<Reference1, Reference2> operator*() const {
-      return {*iterator1, *iterator2};
-    }
-  };
-  struct zip_helper {
-    Sequence1&            sequence1;
-    Sequence2&            sequence2;
-    constexpr kernel auto begin() {
-      return zip_iterator{std::begin(sequence1), std::begin(sequence2)};
-    }
-    constexpr kernel auto end() {
-      return zip_iterator{std::end(sequence1), std::end(sequence2)};
-    }
-  };
-  return zip_helper{sequence1, sequence2};
-}
-
-// Implementation of Python zip
-template <typename Sequence1, typename Sequence2>
-constexpr kernel auto zip(const Sequence1& sequence1, Sequence2& sequence2) {
-  using Iterator1  = typename Sequence1::const_iterator;
-  using Reference1 = typename Sequence1::const_reference;
-  using Iterator2  = typename Sequence2::iterator;
-  using Reference2 = typename Sequence2::reference;
-  struct zip_iterator {
-    Iterator1             iterator1;
-    Iterator2             iterator2;
-    constexpr kernel bool operator!=(const zip_iterator& other) const {
-      return iterator1 != other.iterator1;
-    }
-    constexpr kernel void operator++() {
-      ++iterator1;
-      ++iterator2;
-    }
-    constexpr kernel pair<Reference1, Reference2> operator*() const {
-      return {*iterator1, *iterator2};
-    }
-  };
-  struct zip_helper {
-    const Sequence1&      sequence1;
-    Sequence2&            sequence2;
-    constexpr kernel auto begin() {
-      return zip_iterator{std::begin(sequence1), std::begin(sequence2)};
-    }
-    constexpr kernel auto end() {
-      return zip_iterator{std::end(sequence1), std::end(sequence2)};
-    }
-  };
-  return zip_helper{sequence1, sequence2};
-}
-
-// Implementation of Python zip
-template <typename Sequence1, typename Sequence2>
-constexpr kernel auto zip(Sequence1& sequence1, const Sequence2& sequence2) {
-  using Iterator1  = typename Sequence1::iterator;
-  using Reference1 = typename Sequence1::reference;
-  using Iterator2  = typename Sequence2::const_iterator;
-  using Reference2 = typename Sequence2::const_reference;
-  struct zip_iterator {
-    Iterator1             iterator1;
-    Iterator2             iterator2;
-    constexpr kernel bool operator!=(const zip_iterator& other) const {
-      return iterator1 != other.iterator1;
-    }
-    constexpr kernel void operator++() {
-      ++iterator1;
-      ++iterator2;
-    }
-    constexpr kernel pair<Reference1, Reference2> operator*() const {
-      return {*iterator1, *iterator2};
-    }
-  };
-  struct zip_helper {
-    Sequence1&            sequence1;
-    const Sequence2&      sequence2;
-    constexpr kernel auto begin() {
-      return zip_iterator{std::begin(sequence1), std::begin(sequence2)};
-    }
-    constexpr kernel auto end() {
-      return zip_iterator{std::end(sequence1), std::end(sequence2)};
-    }
-  };
-  return zip_helper{sequence1, sequence2};
+template <typename T1, typename T2>
+constexpr kernel zip_view<span<T1>, span<T2>> zip(
+    vector<T1>& sequence1, vector<T2>& sequence2) {
+  return {span{sequence1}, span{sequence2}};
 }
 
 }  // namespace yocto
