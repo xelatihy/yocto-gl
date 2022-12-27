@@ -547,7 +547,7 @@ constexpr array2d<vec<T, M>> convert_channels(
 // Convert channels
 template <typename T, size_t M, typename T1, size_t N>
 constexpr array2d<vec<T, M>> convert_channels(
-    vec<T1, N>* image, vec2uz extents) {
+    vec<T1, N>* image, vec2s extents) {
   auto converted = array2d<vec<T, M>>(extents);
   for (auto idx : range(converted.extents())) {
     converted[idx] = convert_channels(image[idx]);
@@ -569,7 +569,7 @@ void load_image(const string& filename, array2d<T>& image) {
   constexpr auto is_float     = is_image_float<T>();
 
   // color conversion
-  auto from_float = [](vec4f* pixels, vec2uz extents) -> array2d<T> {
+  auto from_float = [](vec4f* pixels, vec2s extents) -> array2d<T> {
     constexpr auto N     = get_image_channels<T>();
     auto           image = array2d<T>{extents};
     for (auto idx : range(image.size())) {
@@ -590,7 +590,7 @@ void load_image(const string& filename, array2d<T>& image) {
     }
     return image;
   };
-  auto from_byte = [](vec4b* pixels, vec2uz extents) -> array2d<T> {
+  auto from_byte = [](vec4b* pixels, vec2s extents) -> array2d<T> {
     constexpr auto N     = get_image_channels<T>();
     auto           image = array2d<T>{extents};
     for (auto idx : range(image.size())) {
@@ -768,7 +768,7 @@ bool is_ldr_preset(const string& type_) {
 }
 array2d<vec4f> make_image_preset(const string& type_) {
   auto type    = path_basename(type_);
-  auto extents = vec2uz{1024, 1024};
+  auto extents = vec2s{1024, 1024};
   if (type.find("sky") != type.npos) extents = {2048, 1024};
   if (type.find("images2") != type.npos) extents = {2048, 1024};
   if (type == "grid") {
@@ -811,7 +811,7 @@ array2d<vec4f> make_image_preset(const string& type_) {
     auto sub_images = vector<array2d<vec4f>>();
     for (auto& sub_type : sub_types)
       sub_images.push_back(make_image_preset(sub_type));
-    auto montage_size = vec2uz{0, 0};
+    auto montage_size = vec2s{0, 0};
     for (auto& sub_image : sub_images) {
       montage_size = {montage_size.x + sub_image.extents().x,
           max(montage_size.y, sub_image.extents().y)};
@@ -828,7 +828,7 @@ array2d<vec4f> make_image_preset(const string& type_) {
     auto sub_images = vector<array2d<vec4f>>();
     for (auto& sub_type : sub_types)
       sub_images.push_back(make_image_preset(sub_type));
-    auto montage_size = vec2uz{0, 0};
+    auto montage_size = vec2s{0, 0};
     for (auto& sub_image : sub_images) {
       montage_size = {montage_size.x + sub_image.extents().x,
           max(montage_size.y, sub_image.extents().y)};

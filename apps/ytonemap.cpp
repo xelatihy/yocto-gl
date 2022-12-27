@@ -64,7 +64,7 @@ void run(const vector<string>& args) {
 
   // resize if needed
   if (width != 0 || height != 0) {
-    image = resize_image(image, vec2uz(width, height));
+    image = resize_image(image, vec2s(width, height));
   }
 
   // switch between interactive and offline

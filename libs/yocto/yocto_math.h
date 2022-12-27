@@ -391,26 +391,22 @@ vec(Args...) -> vec<common_t<Args...>, sizeof...(Args)>;
 #endif
 
 // Vector aliases
-using vec1f  = vec<float, 1>;
-using vec2f  = vec<float, 2>;
-using vec3f  = vec<float, 3>;
-using vec4f  = vec<float, 4>;
-using vec1i  = vec<int, 1>;
-using vec2i  = vec<int, 2>;
-using vec3i  = vec<int, 3>;
-using vec4i  = vec<int, 4>;
-using vec1b  = vec<byte, 3>;
-using vec2b  = vec<byte, 4>;
-using vec3b  = vec<byte, 3>;
-using vec4b  = vec<byte, 4>;
-using vec1z  = vec<ptrdiff_t, 1>;
-using vec2z  = vec<ptrdiff_t, 2>;
-using vec3z  = vec<ptrdiff_t, 3>;
-using vec4z  = vec<ptrdiff_t, 4>;
-using vec1uz = vec<size_t, 1>;
-using vec2uz = vec<size_t, 2>;
-using vec3uz = vec<size_t, 3>;
-using vec4uz = vec<size_t, 4>;
+using vec1f = vec<float, 1>;
+using vec2f = vec<float, 2>;
+using vec3f = vec<float, 3>;
+using vec4f = vec<float, 4>;
+using vec1i = vec<int, 1>;
+using vec2i = vec<int, 2>;
+using vec3i = vec<int, 3>;
+using vec4i = vec<int, 4>;
+using vec1b = vec<byte, 3>;
+using vec2b = vec<byte, 4>;
+using vec3b = vec<byte, 3>;
+using vec4b = vec<byte, 4>;
+using vec1s = vec<size_t, 2>;
+using vec2s = vec<size_t, 2>;
+using vec3s = vec<size_t, 2>;
+using vec4s = vec<size_t, 2>;
 
 // Zero vector constants.
 constexpr auto zero1f = vec1f{0};

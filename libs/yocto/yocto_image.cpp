@@ -120,11 +120,11 @@ namespace yocto {
 
 // Resize an image.
 array2d<vec4f> resize_image(
-    const array2d<vec4f>& image, const vec2uz& extents_) {
+    const array2d<vec4f>& image, const vec2s& extents_) {
   // determine new size
   auto extents = extents_;
   auto aspect  = (double)image.extent(0) / (double)image.extent(1);
-  if (extents == vec2uz{0, 0})
+  if (extents == vec2s{0, 0})
     throw std::invalid_argument{"bad image size in resize"};
   if (extents[1] == 0) {
     extents = {extents[0], (size_t)round(extents[0] / aspect)};
