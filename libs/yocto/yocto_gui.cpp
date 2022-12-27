@@ -56,40 +56,6 @@
 #endif
 
 // -----------------------------------------------------------------------------
-// PARALLEL HELPERS
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Simple parallel for used since our target platforms do not yet support
-// parallel algorithms. `Func` takes the two integer indices.
-template <typename T, typename Func>
-inline void parallel_for(T num1, T num2, Func&& func) {
-  auto              futures  = vector<std::future<void>>{};
-  auto              nthreads = std::thread::hardware_concurrency();
-  std::atomic<T>    next_idx(0);
-  std::atomic<bool> has_error(false);
-  for (auto thread_id = 0; thread_id < (int)nthreads; thread_id++) {
-    futures.emplace_back(std::async(
-        std::launch::async, [&func, &next_idx, &has_error, num1, num2]() {
-          try {
-            while (true) {
-              auto j = next_idx.fetch_add(1);
-              if (j >= num2) break;
-              if (has_error) break;
-              for (auto i = (T)0; i < num1; i++) func(i, j);
-            }
-          } catch (...) {
-            has_error = true;
-            throw;
-          }
-        }));
-  }
-  for (auto& f : futures) f.get();
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
 // SCENE DRAWING
 // -----------------------------------------------------------------------------
 namespace yocto {
