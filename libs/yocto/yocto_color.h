@@ -91,11 +91,11 @@ template <typename T = float>
 constexpr kernel T byte_to_float(byte a) {
   return a / (T)255;
 }
-template <size_t N, typename T>
+template <typename T, size_t N>
 constexpr kernel vec<byte, N> float_to_byte(const vec<T, N>& a) {
   return (vec<byte, N>)clamp(vec<int, N>(a * 256), 0, 255);
 }
-template <size_t N, typename T = float>
+template <typename T = float, size_t N = 4>
 constexpr kernel vec<T, N> byte_to_float(const vec<byte, N>& a) {
   return a / (T)255;
 }
@@ -145,7 +145,7 @@ constexpr kernel vec<T, N> rgb_to_srgb(const vec<T, N>& rgb) {
 }
 
 // sRGB non-linear curve
-template <typename T>
+template <typename T = float>
 constexpr kernel T srgbb_to_rgb(byte srgb) {
   return srgb_to_rgb(byte_to_float<T>(srgb));
 }
@@ -153,9 +153,9 @@ template <typename T>
 constexpr kernel byte rgb_to_srgbb(T rgb) {
   return float_to_byte(srgb_to_rgb(rgb));
 }
-template <typename T, size_t N>
+template <typename T = float, size_t N = 4>
 constexpr kernel vec<T, N> srgbb_to_rgb(const vec<byte, N>& srgb) {
-  return srgb_to_rgb(byte_to_float<N, T>(srgb));
+  return srgb_to_rgb(byte_to_float<T>(srgb));
 }
 template <typename T, size_t N>
 constexpr kernel vec<byte, N> rgb_to_srgbb(const vec<T, N>& rgb) {
@@ -204,6 +204,37 @@ constexpr kernel vec<T, 3> saturate(const vec<T, 3>& rgb, T saturation,
         (T)(1.0 / 3.0), (T)(1.0 / 3.0), (T)(1.0 / 3.0)}) {
   auto grey = dot(weights, rgb);
   return max(grey + (rgb - grey) * (saturation * 2), 0);
+}
+
+// Convert channels
+template <size_t M, typename T, size_t N>
+constexpr kernel vec<T, M> convert_channels(const vec<T, N>& color) {
+  constexpr auto a1 = std::is_same_v<T, byte> ? (byte)255 : (T)1;
+  if constexpr (N == M) {
+    return color;
+  } else if constexpr (N == 1) {
+    if constexpr (M == 1) return {color[0]};
+    if constexpr (M == 2) return {color[0], a1};
+    if constexpr (M == 3) return {color[0], color[0], color[0]};
+    if constexpr (M == 4) return {color[0], color[0], color[0], a1};
+  } else if constexpr (N == 2) {
+    if constexpr (M == 1) return {color[0]};
+    if constexpr (M == 2) return {color[0], color[1]};
+    if constexpr (M == 3) return {color[0], color[0], color[0]};
+    if constexpr (M == 4) return {color[0], color[0], color[0], color[1]};
+  } else if constexpr (N == 3) {
+    if constexpr (M == 1) return {mean(color[0])};
+    if constexpr (M == 2) return {mean(color[0]), a1};
+    if constexpr (M == 3) return {color[0], color[1], color[2]};
+    if constexpr (M == 4) return {color[0], color[1], color[2], a1};
+  } else if constexpr (N == 4) {
+    if constexpr (M == 1) return {mean(color[0])};
+    if constexpr (M == 2) return {mean(color[0]), color[3]};
+    if constexpr (M == 3) return {color[0], color[1], color[2]};
+    if constexpr (M == 4) return {color[0], color[1], color[2], color[3]};
+  } else {
+    return vec<T, M>{0};
+  }
 }
 
 #ifndef __CUDACC__

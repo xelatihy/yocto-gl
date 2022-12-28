@@ -76,21 +76,24 @@ struct io_error : std::runtime_error {
 namespace yocto {
 
 // Check if an image is HDR or LDR based on filename.
-bool is_hdr_filename(const string& filename);
-bool is_ldr_filename(const string& filename);
+bool is_srgb_filename(const string& filename);
 
-// Loads/saves a 3/4 channels float/byte image in linear/srgb color space.
-// Supports data as vec3f, vec4f, vec3b, vec4b.
-template <typename T = vec4f>
-array2d<T> load_image(const string& filename);
-template <typename T>
-void load_image(const string& filename, array2d<T>& image);
-template <typename T>
-void save_image(const string& filename, const array2d<T>& image);
+// Loads/saves a float image.
+array2d<vec4f> load_image(const string& filename, bool srgb = false);
+void           load_image(
+              const string& filename, array2d<vec4f>& image, bool srgb = false);
+void save_image(
+    const string& filename, const array2d<vec4f>& image, bool srgb = false);
+
+// Loads/saves a byte image.
+array2d<vec4b> load_imageb(const string& filename, bool srgb = true);
+void           load_image(
+              const string& filename, array2d<vec4b>& image, bool srgb = true);
+void save_image(
+    const string& filename, const array2d<vec4b>& image, bool srgb = true);
 
 // Make presets. Supported mostly in IO.
-bool           is_hdr_preset(const string& type);
-bool           is_ldr_preset(const string& type);
+bool           is_srgb_preset(const string& type);
 array2d<vec4f> make_image_preset(const string& type);
 
 }  // namespace yocto

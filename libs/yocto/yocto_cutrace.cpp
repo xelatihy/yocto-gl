@@ -676,12 +676,11 @@ cuscene_data make_cutrace_scene(cutrace_context& context,
     auto& cutexture = cutextures.emplace_back();
     auto  extents   = (vec2i)max(
         texture.pixelsf.extents(), texture.pixelsb.extents());
+    auto as_byte      = !texture.pixelsb.empty();
     cutexture.extents = extents;
-    cutexture.linear  = texture.linear;
+    cutexture.linear  = !as_byte;
     cutexture.nearest = texture.nearest;
     cutexture.clamp   = texture.clamp;
-
-    auto as_byte = !texture.pixelsb.empty();
 
     auto array_descriptor        = CUDA_ARRAY_DESCRIPTOR{};
     array_descriptor.Width       = extents.x;
