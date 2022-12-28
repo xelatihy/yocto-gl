@@ -503,11 +503,10 @@ shape_intersection intersect_shape_bvh(const shape_bvh& sbvh,
   }
 }
 
-scene_intersection intersect_scene_bvh(const scene_bvh& sbvh,
-    const scene_data& scene, const ray3f& ray_, bool find_any) {
-  // get instances bvh
-  auto& bvh = sbvh.bvh;
-
+template <typename T, typename Func>
+scene_intersection intersect_instances_bvh(const bvh_tree& bvh,
+    const vector<T>& instances, const ray3f& ray_, bool find_any,
+    Func&& intersect_instance) {
   // check empty
   if (bvh.nodes.empty()) return {};
 
@@ -549,10 +548,8 @@ scene_intersection intersect_scene_bvh(const scene_bvh& sbvh,
       }
     } else {
       for (auto idx = node.start; idx < node.start + node.num; idx++) {
-        auto& instance_ = scene.instances[bvh.primitives[idx]];
-        auto  inv_ray   = transform_ray(inverse(instance_.frame, true), ray);
-        auto  sintersection = intersect_shape_bvh(sbvh.shapes[instance_.shape],
-             scene.shapes[instance_.shape], inv_ray, find_any);
+        auto sintersection = intersect_instance(
+            ray, instances[bvh.primitives[idx]], find_any);
         if (!sintersection.hit) continue;
         intersection = {bvh.primitives[idx], sintersection.element,
             sintersection.uv, sintersection.distance, true};
@@ -565,6 +562,16 @@ scene_intersection intersect_scene_bvh(const scene_bvh& sbvh,
   }
 
   return intersection;
+}
+
+scene_intersection intersect_scene_bvh(const scene_bvh& sbvh,
+    const scene_data& scene, const ray3f& ray, bool find_any) {
+  return intersect_instances_bvh(sbvh.bvh, scene.instances, ray, find_any,
+      [&](const ray3f& ray, const instance_data& instance, bool find_any) {
+        auto inv_ray = transform_ray(inverse(instance.frame, true), ray);
+        return intersect_shape_bvh(sbvh.shapes[instance.shape],
+            scene.shapes[instance.shape], inv_ray, find_any);
+      });
 }
 
 scene_intersection intersect_instance_bvh(const scene_bvh& sbvh,
