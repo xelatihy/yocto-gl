@@ -305,7 +305,9 @@ static bvh_tree make_bvh(
 }
 
 // Update bvh
-static void refit_bvh(bvh_tree& bvh, const vector<bbox3f>& bboxes) {
+template <typename T, typename Func>
+static void refit_bvh(
+    bvh_tree& bvh, const vector<T>& elements, Func&& bbox_func) {
   for (auto nodeid = (int)bvh.nodes.size() - 1; nodeid >= 0; nodeid--) {
     auto& node = bvh.nodes[nodeid];
     node.bbox  = invalidb3f;
@@ -314,8 +316,8 @@ static void refit_bvh(bvh_tree& bvh, const vector<bbox3f>& bboxes) {
         node.bbox = merge(node.bbox, bvh.nodes[node.start + idx].bbox);
       }
     } else {
-      for (auto idx : range(node.num)) {
-        node.bbox = merge(node.bbox, bboxes[bvh.primitives[node.start + idx]]);
+      for (auto idx : range(node.start, node.start + node.num)) {
+        node.bbox = merge(node.bbox, bbox_func(elements[bvh.primitives[idx]]));
       }
     }
   }
@@ -374,31 +376,22 @@ scene_bvh make_scene_bvh(
 
 void update_shape_bvh(shape_bvh& sbvh, const shape_data& shape) {
   // build primitives
-  auto bboxes = vector<bbox3f>{};
   if (is_points(shape)) {
-    bboxes = vector<bbox3f>(shape.points.size());
-    for (auto&& [bbox, point] : zip(bboxes, shape.points)) {
-      bbox = point_bounds(shape.positions, shape.radius, point);
-    }
+    refit_bvh(sbvh.bvh, shape.points, [&](const int& point) {
+      return point_bounds(shape.positions, shape.radius, point);
+    });
   } else if (is_lines(shape)) {
-    bboxes = vector<bbox3f>(shape.lines.size());
-    for (auto&& [bbox, line] : zip(bboxes, shape.lines)) {
-      bbox = line_bounds(shape.positions, shape.radius, line);
-    }
+    refit_bvh(sbvh.bvh, shape.lines, [&](const vec2i& line) {
+      return line_bounds(shape.positions, shape.radius, line);
+    });
   } else if (is_triangles(shape)) {
-    bboxes = vector<bbox3f>(shape.triangles.size());
-    for (auto&& [bbox, triangle] : zip(bboxes, shape.triangles)) {
-      bbox = triangle_bounds(shape.positions, triangle);
-    }
+    refit_bvh(sbvh.bvh, shape.triangles, [&](const vec3i& triangle) {
+      return triangle_bounds(shape.positions, triangle);
+    });
   } else if (is_quads(shape)) {
-    bboxes = vector<bbox3f>(shape.quads.size());
-    for (auto&& [bbox, quad] : zip(bboxes, shape.quads)) {
-      bbox = quad_bounds(shape.positions, quad);
-    }
+    refit_bvh(sbvh.bvh, shape.quads,
+        [&](const vec4i& quad) { return quad_bounds(shape.positions, quad); });
   }
-
-  // update nodes
-  refit_bvh(sbvh.bvh, bboxes);
 }
 
 void update_scene_bvh(scene_bvh& sbvh, const scene_data& scene,
@@ -408,15 +401,11 @@ void update_scene_bvh(scene_bvh& sbvh, const scene_data& scene,
     update_shape_bvh(sbvh.shapes[shape], scene.shapes[shape]);
   }
 
-  // handle instances
-  auto bboxes = vector<bbox3f>(scene.instances.size());
-  for (auto&& [bbox, instance] : zip(bboxes, scene.instances)) {
-    bbox = transform_bbox(
-        instance.frame, sbvh.shapes[instance.shape].bvh.nodes[0].bbox);
-  }
-
   // update nodes
-  refit_bvh(sbvh.bvh, bboxes);
+  refit_bvh(sbvh.bvh, scene.instances, [&](const instance_data& instance) {
+    return transform_bbox(
+        instance.frame, sbvh.shapes[instance.shape].bvh.nodes[0].bbox);
+  });
 }
 
 }  // namespace yocto
