@@ -1305,14 +1305,14 @@ inline void refit_bvh(
     bvh_data& bvh, const vector<T>& elements, Func&& bbox_func);
 
 template <typename T, typename Func>
-inline intersection3f intersect_elements_bvh(const bvh_data& bvh,
+inline intersection3f intersect_bvh(const bvh_data& bvh,
     const vector<T>& elements, const ray3f& ray_, bool find_any,
     Func&& intersect_element);
 
 template <typename T, typename Func>
-inline intersection3f intersect_instances_bvh(const bvh_data& bvh,
-    const vector<T>& instances, const ray3f& ray_, bool find_any,
-    Func&& intersect_instance);
+inline intersection3f overlap_bvh(const bvh_data& bvh,
+    const vector<T>& elements, const vec3f& pos, float max_distance,
+    bool find_any, Func&& overlap_element);
 
 }  // namespace yocto
 
@@ -1575,7 +1575,7 @@ inline void refit_bvh(
 }
 
 template <typename T, typename Func>
-inline intersection3f intersect_elements_bvh(const bvh_data& bvh,
+inline intersection3f intersect_bvh(const bvh_data& bvh,
     const vector<T>& elements, const ray3f& ray_, bool find_any,
     Func&& intersect_element) {
   // check empty
@@ -1634,27 +1634,21 @@ inline intersection3f intersect_elements_bvh(const bvh_data& bvh,
   return intersection;
 }
 
+// Check if a point overlaps some elements.
 template <typename T, typename Func>
-inline intersection3f intersect_instances_bvh(const bvh_data& bvh,
-    const vector<T>& instances, const ray3f& ray_, bool find_any,
-    Func&& intersect_instance) {
-  // check empty
+inline intersection3f overlap_bvh(const bvh_data& bvh,
+    const vector<T>& elements, const vec3f& pos, float max_distance,
+    bool find_any, Func&& overlap_element) {
+  // check if empty
   if (bvh.nodes.empty()) return {};
 
   // node stack
-  auto node_stack        = array<int, 128>{};
+  auto node_stack        = array<int, 64>{};
   auto node_cur          = 0;
   node_stack[node_cur++] = 0;
 
   // intersection
   auto intersection = intersection3f{};
-
-  // copy ray to modify it
-  auto ray = ray_;
-
-  // prepare ray for fast queries
-  auto ray_dinv  = 1 / ray.d;
-  auto ray_dsign = component_less(ray_dinv, 0);
 
   // walking stack
   while (node_cur != 0) {
@@ -1662,28 +1656,21 @@ inline intersection3f intersect_instances_bvh(const bvh_data& bvh,
     auto& node = bvh.nodes[node_stack[--node_cur]];
 
     // intersect bbox
-    // if (!intersect_bbox(ray, ray_dinv, ray_dsign, node.bbox)) continue;
-    if (!intersect_bbox(ray, ray_dinv, node.bbox)) continue;
+    if (!overlap_bbox(pos, max_distance, node.bbox)) continue;
 
     // intersect node, switching based on node type
     // for each type, iterate over the the primitive list
     if (node.internal) {
-      // for internal nodes, attempts to proceed along the
-      // split axis from smallest to largest nodes
-      if (ray_dsign[node.axis]) {
-        node_stack[node_cur++] = node.start + 0;
-        node_stack[node_cur++] = node.start + 1;
-      } else {
-        node_stack[node_cur++] = node.start + 1;
-        node_stack[node_cur++] = node.start + 0;
-      }
+      // internal node
+      node_stack[node_cur++] = node.start + 0;
+      node_stack[node_cur++] = node.start + 1;
     } else {
-      for (auto idx = node.start; idx < node.start + node.num; idx++) {
-        auto sintersection = intersect_instance(
-            ray, instances[bvh.primitives[idx]], find_any);
-        if (!sintersection.hit) continue;
-        intersection = {bvh.primitives[idx], sintersection};
-        ray.tmax     = sintersection.distance;
+      for (auto idx : range(node.start, node.start + node.num)) {
+        auto eintersection = overlap_element(
+            pos, max_distance, elements[bvh.primitives[idx]]);
+        if (!eintersection.hit) continue;
+        intersection = {bvh.primitives[idx], eintersection};
+        max_distance = eintersection.distance;
       }
     }
 
@@ -1751,7 +1738,7 @@ inline void update_quads_bvh(
 inline intersection3f intersect_points_bvh(const bvh_data& bvh,
     const vector<int>& points, const vector<vec3f>& positions,
     const vector<float>& radius, const ray3f& ray, bool find_any) {
-  return intersect_elements_bvh(
+  return intersect_bvh(
       bvh, points, ray, find_any, [&](const ray3f& ray, const int& point) {
         return intersect_point(ray, positions, radius, point);
       });
@@ -1759,7 +1746,7 @@ inline intersection3f intersect_points_bvh(const bvh_data& bvh,
 inline intersection3f intersect_lines_bvh(const bvh_data& bvh,
     const vector<vec2i>& lines, const vector<vec3f>& positions,
     const vector<float>& radius, const ray3f& ray, bool find_any) {
-  return intersect_elements_bvh(
+  return intersect_bvh(
       bvh, lines, ray, find_any, [&](const ray3f& ray, const vec2i& line) {
         return intersect_line(ray, positions, radius, line);
       });
@@ -1767,7 +1754,7 @@ inline intersection3f intersect_lines_bvh(const bvh_data& bvh,
 inline intersection3f intersect_triangles_bvh(const bvh_data& bvh,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const ray3f& ray, bool find_any) {
-  return intersect_elements_bvh(bvh, triangles, ray, find_any,
+  return intersect_bvh(bvh, triangles, ray, find_any,
       [&](const ray3f& ray, const vec3i& triangle) {
         return intersect_triangle(ray, positions, triangle);
       });
@@ -1775,7 +1762,7 @@ inline intersection3f intersect_triangles_bvh(const bvh_data& bvh,
 inline intersection3f intersect_quads_bvh(const bvh_data& bvh,
     const vector<vec4i>& quads, const vector<vec3f>& positions,
     const ray3f& ray, bool find_any) {
-  return intersect_elements_bvh(
+  return intersect_bvh(
       bvh, quads, ray, find_any, [&](const ray3f& ray, const vec4i& quad) {
         return intersect_quad(ray, positions, quad);
       });
