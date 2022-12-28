@@ -1313,12 +1313,10 @@ void load_texture(const string& filename, texture_data& texture) {
   auto ext = path_extension(filename);
   if (ext == ".exr" || ext == ".EXR" || ext == ".hdr" || ext == ".HDR") {
     texture.pixelsf = load_image(filename);
-    texture.linear  = true;
   } else if (ext == ".png" || ext == ".PNG" || ext == ".jpg" || ext == ".JPG" ||
              ext == ".jpeg" || ext == ".JPEG" || ext == ".tga" ||
              ext == ".TGA" || ext == ".bmp" || ext == ".BMP") {
     texture.pixelsb = load_imageb(filename);
-    texture.linear  = false;
   } else if (ext == ".ypreset" || ext == ".YPRESET") {
     texture = make_texture_preset(filename);
   } else {
@@ -2892,7 +2890,6 @@ static void load_json_scene(
         auto&                  uri     = texture_filenames.emplace_back();
         get_opt(element, "name", name);
         get_opt(element, "uri", uri);
-        get_opt(element, "linear", texture.linear);
         get_opt(element, "nearest", texture.nearest);
         get_opt(element, "clamp", texture.clamp);
       }
@@ -3149,7 +3146,6 @@ static void save_json_scene(
       auto& element = append_object(group);
       set_val(element, "name", get_name(scene.texture_names, idx), "");
       set_val(element, "uri", texture_filenames[idx], ""s);
-      set_val(element, "linear", texture.linear, default_.linear);
       set_val(element, "nearest", texture.nearest, default_.nearest);
       set_val(element, "clamp", texture.clamp, default_.clamp);
     }

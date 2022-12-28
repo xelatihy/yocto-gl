@@ -107,23 +107,17 @@ namespace yocto {
 
 // pixel access
 vec4f lookup_texture(
-    const texture_data& texture, const vec2s& ij, bool as_linear) {
-  auto color = vec4f{0, 0, 0, 0};
-  if (!texture.pixelsf.empty()) {
-    color = texture.pixelsf[ij];
-  } else {
-    color = byte_to_float(texture.pixelsb[ij]);
-  }
-  if (as_linear && !texture.linear) {
-    return srgb_to_rgb(color);
-  } else {
-    return color;
-  }
+    const texture_data& texture, const vec2s& ij, bool ldr_as_linear) {
+  if (!texture.pixelsf.empty()) return texture.pixelsf[ij];
+  if (!texture.pixelsb.empty())
+    return ldr_as_linear ? byte_to_float(texture.pixelsb[ij])
+                         : srgb_to_rgb(byte_to_float(texture.pixelsb[ij]));
+  return vec4f{0, 0, 0, 0};
 }
 
 // Evaluates an image at a point `uv`.
-vec4f eval_texture(const texture_data& texture, const vec2f& uv, bool as_linear,
-    bool no_interpolation, bool clamp_to_edge) {
+vec4f eval_texture(const texture_data& texture, const vec2f& uv,
+    bool ldr_as_linear, bool no_interpolation, bool clamp_to_edge) {
   if (texture.pixelsf.empty() && texture.pixelsb.empty()) return {0, 0, 0, 0};
 
   // get texture width/height
@@ -135,22 +129,23 @@ vec4f eval_texture(const texture_data& texture, const vec2f& uv, bool as_linear,
   // handle interpolation
   if (no_interpolation) {
     auto ij = clamp((vec2s)st, 0, size - 1);
-    return lookup_texture(texture, ij, as_linear);
+    return lookup_texture(texture, ij, ldr_as_linear);
   } else {
     auto ij   = clamp((vec2s)st, 0, size - 1);
     auto i1j  = (ij + vec2s{1, 0}) % size;
     auto ij1  = (ij + vec2s{0, 1}) % size;
     auto i1j1 = (ij + vec2s{1, 1}) % size;
     auto w    = st - ij;
-    return lookup_texture(texture, ij, as_linear) * (1 - w.x) * (1 - w.y) +
-           lookup_texture(texture, ij1, as_linear) * (1 - w.x) * w.y +
-           lookup_texture(texture, i1j, as_linear) * w.x * (1 - w.y) +
-           lookup_texture(texture, i1j1, as_linear) * w.x * w.y;
+    return lookup_texture(texture, ij, ldr_as_linear) * (1 - w.x) * (1 - w.y) +
+           lookup_texture(texture, ij1, ldr_as_linear) * (1 - w.x) * w.y +
+           lookup_texture(texture, i1j, ldr_as_linear) * w.x * (1 - w.y) +
+           lookup_texture(texture, i1j1, ldr_as_linear) * w.x * w.y;
   }
 }
 vec4f eval_texture(
-    const texture_data& texture, const vec2f& uv, bool as_linear) {
-  return eval_texture(texture, uv, as_linear, texture.nearest, texture.clamp);
+    const texture_data& texture, const vec2f& uv, bool ldr_as_linear) {
+  return eval_texture(
+      texture, uv, ldr_as_linear, texture.nearest, texture.clamp);
 }
 
 // Helpers
@@ -169,8 +164,7 @@ vec4f eval_texture(const scene_data& scene, int texture, const vec2f& uv,
 
 // conversion from image
 texture_data image_to_texture(const array2d<vec4f>& image, bool linear) {
-  auto texture   = texture_data{};
-  texture.linear = linear;
+  auto texture = texture_data{};
   if (linear) {
     texture.pixelsf = image;
   } else {
@@ -194,13 +188,10 @@ material_point eval_material(const scene_data& scene,
     const material_data& material, const vec2f& texcoord,
     const vec4f& color_shp) {
   // evaluate textures
-  auto emission_tex = eval_texture(
-      scene, material.emission_tex, texcoord, true);
-  auto color_tex     = eval_texture(scene, material.color_tex, texcoord, true);
-  auto roughness_tex = eval_texture(
-      scene, material.roughness_tex, texcoord, false);
-  auto scattering_tex = eval_texture(
-      scene, material.scattering_tex, texcoord, true);
+  auto emission_tex   = eval_texture(scene, material.emission_tex, texcoord);
+  auto color_tex      = eval_texture(scene, material.color_tex, texcoord);
+  auto roughness_tex  = eval_texture(scene, material.roughness_tex, texcoord);
+  auto scattering_tex = eval_texture(scene, material.scattering_tex, texcoord);
 
   // material point
   auto point         = material_point{};
@@ -398,7 +389,7 @@ vec3f eval_normalmap(const scene_data& scene, const instance_data& instance,
   if (material.normal_tex != invalidid &&
       (is_triangles(shape) || is_quads(shape))) {
     auto& normal_tex = scene.textures[material.normal_tex];
-    auto  normalmap  = -1 + 2 * xyz(eval_texture(normal_tex, texcoord, false));
+    auto  normalmap  = -1 + 2 * xyz(eval_texture(normal_tex, texcoord, true));
     auto [tu, tv]    = eval_element_tangents(scene, instance, element);
     auto frame       = orthonormalize(frame3f{tu, tv, normal, {0, 0, 0}});
     auto flip_v      = dot(frame[1], tv) < 0;
@@ -475,14 +466,11 @@ material_point eval_material(const scene_data& scene,
   auto  texcoord = eval_texcoord(scene, instance, element, uv);
 
   // evaluate textures
-  auto emission_tex = eval_texture(
-      scene, material.emission_tex, texcoord, true);
-  auto color_shp     = eval_color(scene, instance, element, uv);
-  auto color_tex     = eval_texture(scene, material.color_tex, texcoord, true);
-  auto roughness_tex = eval_texture(
-      scene, material.roughness_tex, texcoord, false);
-  auto scattering_tex = eval_texture(
-      scene, material.scattering_tex, texcoord, true);
+  auto emission_tex   = eval_texture(scene, material.emission_tex, texcoord);
+  auto color_shp      = eval_color(scene, instance, element, uv);
+  auto color_tex      = eval_texture(scene, material.color_tex, texcoord);
+  auto roughness_tex  = eval_texture(scene, material.roughness_tex, texcoord);
+  auto scattering_tex = eval_texture(scene, material.scattering_tex, texcoord);
 
   // material point
   auto point         = material_point{};
@@ -722,7 +710,7 @@ void tesselate_subdiv(
       for (auto i : range(4)) {
         auto& displacement_tex = scene.textures[subdiv.displacement_tex];
         auto  disp             = mean(
-            eval_texture(displacement_tex, subdiv.texcoords[qtxt[i]], false));
+            eval_texture(displacement_tex, subdiv.texcoords[qtxt[i]], true));
         if (!displacement_tex.pixelsb.empty()) disp -= 0.5f;
         offset[qpos[i]] += subdiv.displacement * disp;
         count[qpos[i]] += 1;

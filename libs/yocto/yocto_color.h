@@ -145,7 +145,7 @@ constexpr kernel vec<T, N> rgb_to_srgb(const vec<T, N>& rgb) {
 }
 
 // sRGB non-linear curve
-template <typename T>
+template <typename T = float>
 constexpr kernel T srgbb_to_rgb(byte srgb) {
   return srgb_to_rgb(byte_to_float<T>(srgb));
 }
@@ -153,7 +153,7 @@ template <typename T>
 constexpr kernel byte rgb_to_srgbb(T rgb) {
   return float_to_byte(srgb_to_rgb(rgb));
 }
-template <typename T, size_t N>
+template <typename T = float, size_t N = 4>
 constexpr kernel vec<T, N> srgbb_to_rgb(const vec<byte, N>& srgb) {
   return srgb_to_rgb(byte_to_float<T>(srgb));
 }

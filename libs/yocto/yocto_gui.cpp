@@ -346,7 +346,6 @@ bool draw_scene_widgets(scene_data& scene, scene_selection& selection,
         (int)max(texture.pixelsf.extent(0), texture.pixelsb.extent(0)));
     draw_gui_label("height",
         (int)max(texture.pixelsf.extent(1), texture.pixelsb.extent(1)));
-    draw_gui_label("linear", texture.linear);
     draw_gui_label("byte", !texture.pixelsb.empty());
     end_gui_header();
   }
