@@ -40,23 +40,12 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
-#include <utility>
-#include <vector>
+#include <stdexcept>
 
 #include "yocto_color.h"
 #include "yocto_math.h"
 #include "yocto_ndarray.h"
 #include "yocto_noise.h"
-
-// -----------------------------------------------------------------------------
-// USING DIRECTIVES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// using directives
-using std::vector;
-
-}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMAGE UTILITIES
@@ -72,73 +61,61 @@ constexpr T image_aspect(const vec<I, 2>& extents) {
 // Conversion from/to floats.
 template <size_t N, typename T = float>
 constexpr array2d<vec<T, N>> byte_to_float(const array2d<vec<byte, N>>& bt) {
-  auto fl = array2d<vec<T, N>>{bt.extents()};
-  for (auto idx : range(fl.size())) fl[idx] = byte_to_float(bt[idx]);
-  return fl;
+  return fmap(bt, [](const vec<byte, N>& a) { return byte_to_float<T>(a); });
 }
 template <typename T, size_t N>
 constexpr array2d<vec<byte, N>> float_to_byte(const array2d<vec<T, N>>& fl) {
-  auto bt = array2d<vec<byte, N>>{fl.extents()};
-  for (auto idx : range(fl.size())) bt[idx] = float_to_byte(fl[idx]);
-  return bt;
+  return fmap(fl, [](const vec<T, N>& a) { return float_to_byte(a); });
 }
 template <typename T, typename Tb>
 constexpr void byte_to_float(array2d<T>& fl, const array2d<Tb>& bt) {
-  for (auto idx : range(fl.size())) fl[idx] = byte_to_float(bt[idx]);
+  return fmap(fl, [](Tb a) { return byte_to_float<T>(a); });
 }
 template <typename T, typename Tb>
 constexpr void float_to_byte(array2d<Tb>& bt, const array2d<T>& fl) {
-  for (auto idx : range(fl.size())) bt[idx] = float_to_byte(fl[idx]);
+  return fmap(fl, [](T a) { return float_to_byte(a); });
 }
 
 // Conversion between linear and gamma-encoded images.
 template <typename T>
 constexpr array2d<T> srgb_to_rgb(const array2d<T>& srgb) {
-  auto rgb = array2d<T>{srgb.extents()};
-  for (auto idx : range(rgb.size())) rgb[idx] = srgb_to_rgb(srgb[idx]);
-  return rgb;
+  return fmap(srgb, [](const T& a) { return srgb_to_rgb(a); });
 }
 template <typename T>
 constexpr array2d<T> rgb_to_srgb(const array2d<T>& rgb) {
-  auto srgb = array2d<T>{rgb.extents()};
-  for (auto idx : range(srgb.size())) srgb[idx] = rgb_to_srgb(rgb[idx]);
-  return srgb;
+  return fmap(rgb, [](const T& a) { return rgb_to_srgb(a); });
 }
 template <typename T>
 constexpr void srgb_to_rgb(array2d<T>& rgb, const array2d<T>& srgb) {
-  for (auto idx : range(rgb.size())) rgb[idx] = srgb_to_rgb(srgb[idx]);
+  return fmap(rgb, srgb, [](const T& a) { return srgb_to_rgb(a); });
 }
 template <typename T>
 constexpr void rgb_to_srgb(array2d<T>& srgb, const array2d<T>& rgb) {
-  for (auto idx : range(srgb.size())) srgb[idx] = rgb_to_srgb(rgb[idx]);
+  return fmap(srgb, rgb, [](const T& a) { return rgb_to_srgb(a); });
 }
 
 // Conversion between linear and gamma-encoded images.
 template <size_t N, typename T = float>
 constexpr array2d<vec<T, N>> srgbb_to_rgb(const array2d<vec<byte, N>>& srgb) {
-  auto rgb = array2d<vec<T, N>>{srgb.extents()};
-  for (auto idx : range(rgb.size())) rgb[idx] = srgbb_to_rgb<T>(srgb[idx]);
-  return rgb;
+  return fmap(srgb, [](const vec<byte, N>& a) { return srgbb_to_rgb<T>(a); });
 }
 template <typename T, size_t N>
 constexpr array2d<vec<byte, N>> rgb_to_srgbb(const array2d<vec<T, N>>& rgb) {
-  auto srgb = array2d<vec<byte, N>>{rgb.extents()};
-  for (auto idx : range(rgb.size())) srgb[idx] = rgb_to_srgbb(rgb[idx]);
-  return srgb;
+  return fmap(rgb, [](const vec<T, N>& a) { return rgb_to_srgbb(a); });
 }
 template <typename T, typename Tb>
 constexpr void srgbb_to_rgb(array2d<T>& rgb, const array2d<Tb>& srgb) {
-  for (auto idx : range(rgb.size())) rgb[idx] = srgbb_to_rgb<float>(srgb[idx]);
+  return fmap(srgb, [](const Tb& a) { return srgbb_to_rgb<T>(a); });
 }
 template <typename T, typename Tb>
 constexpr void rgb_to_srgbb(array2d<Tb>& srgb, const array2d<T>& rgb) {
-  for (auto idx : range(rgb.size())) srgb[idx] = rgb_to_srgbb(rgb[idx]);
+  return fmap(rgb, [](const T& a) { return rgb_to_srgbb(a); });
 }
 
 // Lookup pixel for evaluation
 template <typename T, typename T1, size_t N>
-constexpr vec<T, N> lookup_image(const array2d<vec<T1, N>>& image,
-    const vec2s& ij, bool as_linear = false) {
+constexpr vec<T, N> lookup_image(
+    const array2d<vec<T1, N>>& image, const vec2s& ij, bool as_linear = false) {
   if constexpr (!std::is_same_v<T1, byte>) {
     return as_linear ? srgb_to_rgb(image[ij]) : image[ij];
   } else {
@@ -180,11 +157,9 @@ constexpr vec<T, N> eval_image(const array2d<vec<T1, N>>& image,
 template <typename T, size_t N, typename T1>
 constexpr array2d<vec<T, N>> tonemap_image(const array2d<vec<T, N>>& image,
     T1 exposure, bool filmic = false, bool srgb = true) {
-  auto result = array2d<vec<T, N>>(image.extents());
-  for (auto idx : range(image.size())) {
-    result[idx] = tonemap(image[idx], (T)exposure, filmic, srgb);
-  }
-  return result;
+  return fmap(image, [=](const vec<T, N>& pixel) {
+    return tonemap(pixel, (T)exposure, filmic, srgb);
+  });
 }
 
 // Apply tone mapping. If the input image is an ldr, does nothing.
@@ -192,18 +167,23 @@ template <typename T, size_t N, typename T1>
 constexpr void tonemap_image(array2d<vec<T, N>>& result,
     const array2d<vec<T, N>>& image, T1 exposure, bool filmic = false,
     bool srgb = true) {
-  if (image.extents() != result.extents())
-    throw std::invalid_argument{"image should be the same size"};
-  for (auto idx : range(image.size())) {
-    result[idx] = tonemap(image[idx], (T)exposure, filmic, srgb);
-  }
+  return fmap(result, image, [=](const vec<T, N>& pixel) {
+    return tonemap(pixel, (T)exposure, filmic, srgb);
+  });
 }
 
 // Get/Set region
 template <typename T>
+constexpr array2d<T> get_region(
+    const array2d<T>& image, const vec2s& offset, const vec2s& extents) {
+  auto region = array2d<T>(extents);
+  for (auto ij : range(region.extents())) region[ij] = image[ij + offset];
+  return region;
+}
+template <typename T>
 constexpr void get_region(array2d<T>& region, const array2d<T>& image,
     const vec2s& offset, const vec2s& extents) {
-  if (region.extents() != extents) region = array2d<vec4f>(extents);
+  if (region.extents() != extents) region = array2d<T>(extents);
   for (auto ij : range(region.extents())) region[ij] = image[ij + offset];
 }
 template <typename T>
@@ -216,8 +196,7 @@ constexpr void set_region(
 inline array2d<vec4f> image_difference(
     const array2d<vec4f>& image1, const array2d<vec4f>& image2, bool display) {
   // check sizes
-  if (image1.extents() != image2.extents())
-    throw std::invalid_argument{"image sizes are different"};
+  check_same_size(image1, image2);
 
   // compute diff
   auto difference = array2d<vec4f>(image1.extents());
@@ -259,11 +238,9 @@ inline void composite_image(array2d<vec<T, 4>>& result,
 template <typename T>
 inline array2d<vec<T, 4>> colorgrade_image(const array2d<vec<T, 4>>& image,
     bool linear, const colorgrade_gparams<T>& params) {
-  auto result = array2d<vec<T, 4>>(image.extents());
-  for (auto idx : range(image.size())) {
-    result[idx] = colorgrade(image[idx], linear, params);
-  }
-  return result;
+  return fmap(image, [&](const vec<T, 4>& pixel) {
+    return colorgrade(pixel, linear, params);
+  });
 }
 
 // Color grade an hsr or ldr image to an ldr image.
@@ -271,11 +248,9 @@ template <typename T>
 inline void colorgrade_image(array2d<vec<T, 4>>& result,
     const array2d<vec<T, 4>>& image, bool linear,
     const colorgrade_gparams<T>& params) {
-  if (image.extents() != result.extents())
-    throw std::invalid_argument{"image should be the same size"};
-  for (auto idx : range(image.size())) {
-    result[idx] = colorgrade(image[idx], linear, params);
-  }
+  return fmap(result, image, [&](const vec<T, 4>& pixel) {
+    return colorgrade(pixel, linear, params);
+  });
 }
 
 // determine white balance colors
@@ -289,7 +264,12 @@ inline vec<T, 3> compute_white_balance(const array2d<vec<T, 4>>& image) {
 }
 
 // Resize an image.
-array2d<vec4f> resize_image(const array2d<vec4f>& image, const vec2s& extents);
+template <size_t N>
+array2d<vec<float, N>> resize_image(
+    const array2d<vec<float, N>>& image, const vec2s& extents);
+template <size_t N>
+array2d<vec<byte, N>> resize_image(
+    const array2d<vec<byte, N>>& image, const vec2s& extents);
 
 }  // namespace yocto
 
@@ -298,7 +278,7 @@ array2d<vec4f> resize_image(const array2d<vec4f>& image, const vec2s& extents);
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-template <typename Func, typename T = std::invoke_result_t<Func, vec2s>>
+template <typename Func, typename T = result_t<Func, vec2s>>
 inline array2d<T> _make_proc_image(const vec2s& extents, Func&& func) {
   auto image = array2d<T>(extents);
   for (auto ij : range(extents)) image[ij] = func(ij);
@@ -426,8 +406,7 @@ inline array2d<vec<T, 4>> make_uvgrid(
 }
 
 template <typename T = float>
-inline array2d<vec<T, 4>> make_colormapramp(
-    const vec2s& extents, T scale = 1) {
+inline array2d<vec<T, 4>> make_colormapramp(const vec2s& extents, T scale = 1) {
   return _make_proc_image(extents, [=](vec2s ij) -> vec<T, 4> {
     auto uv  = fmod((scale * ij) / extents, 1);
     auto rgb = vec<T, 3>{0, 0, 0};
@@ -695,7 +674,7 @@ inline array2d<vec<T, 4>> make_lights(const vec2s& extents,
     T lwidth = (T)pi / 16, T lheight = (T)pi / 16) {
   auto img = array2d<vec<T, 4>>(extents);
   for (auto j : range(extents.y)) {
-    auto theta = pif * ((j + 0.5f) / extents.y);
+    auto theta = (T)pi * ((j + (T)0.5) / extents.y);
     theta      = clamp(theta, 0, (T)pi / 2 - (T)0.00001);
     if (fabs(theta - langle) > lheight / 2) continue;
     for (auto i : range(extents.x)) {

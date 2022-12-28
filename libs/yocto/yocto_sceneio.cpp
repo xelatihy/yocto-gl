@@ -1007,12 +1007,12 @@ void save_shape(const string& filename, const shape_data& shape,
     save_obj(filename, obj);
   } else if (ext == ".stl" || ext == ".STL") {
     auto stl = stl_model{};
-    if (!shape.lines.empty()) throw io_error{"empty shape " + filename};
-    if (!shape.points.empty()) throw io_error{"empty shape " + filename};
-    if (!shape.triangles.empty()) {
+    if (is_lines(shape)) throw io_error{"empty shape " + filename};
+    if (is_points(shape)) throw io_error{"empty shape " + filename};
+    if (is_triangles(shape)) {
       add_triangles(stl, (const vector<array<int, 3>>&)shape.triangles,
           (const vector<array<float, 3>>&)shape.positions, {});
-    } else if (!shape.quads.empty()) {
+    } else if (is_quads(shape)) {
       auto triangles = quads_to_triangles(shape.quads);
       add_triangles(stl, (const vector<array<int, 3>>&)triangles,
           (const vector<array<float, 3>>&)shape.positions, {});
@@ -4417,16 +4417,16 @@ static void save_gltf_scene(
         gattribute.name  = copy_string("RADIUS");
         gattribute.data  = cgltf.accessors + cur_accessor++;
       }
-      if (!shape.points.empty()) {
+      if (is_points(shape)) {
         gprimitive.type    = cgltf_primitive_type_points;
         gprimitive.indices = cgltf.accessors + cur_accessor++;
-      } else if (!shape.lines.empty()) {
+      } else if (is_lines(shape)) {
         gprimitive.type    = cgltf_primitive_type_lines;
         gprimitive.indices = cgltf.accessors + cur_accessor++;
-      } else if (!shape.triangles.empty()) {
+      } else if (is_triangles(shape)) {
         gprimitive.type    = cgltf_primitive_type_triangles;
         gprimitive.indices = cgltf.accessors + cur_accessor++;
-      } else if (!shape.quads.empty()) {
+      } else if (is_quads(shape)) {
         gprimitive.type    = cgltf_primitive_type_triangles;
         gprimitive.indices = cgltf.accessors + cur_accessor++;
       }

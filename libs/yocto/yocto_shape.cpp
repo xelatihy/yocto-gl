@@ -61,16 +61,16 @@ namespace yocto {
 
 // Interpolate vertex data
 vec3f eval_position(const shape_data& shape, int element, const vec2f& uv) {
-  if (!shape.points.empty()) {
+  if (is_points(shape)) {
     auto& point = shape.points[element];
     return shape.positions[point];
-  } else if (!shape.lines.empty()) {
+  } else if (is_lines(shape)) {
     auto& line = shape.lines[element];
     return interpolate_line(shape.positions, line, uv.x);
-  } else if (!shape.triangles.empty()) {
+  } else if (is_triangles(shape)) {
     auto& triangle = shape.triangles[element];
     return interpolate_triangle(shape.positions, triangle, uv);
-  } else if (!shape.quads.empty()) {
+  } else if (is_quads(shape)) {
     auto& quad = shape.quads[element];
     return interpolate_quad(shape.positions, quad, uv);
   } else {
@@ -80,16 +80,16 @@ vec3f eval_position(const shape_data& shape, int element, const vec2f& uv) {
 
 vec3f eval_normal(const shape_data& shape, int element, const vec2f& uv) {
   if (shape.normals.empty()) return eval_element_normal(shape, element);
-  if (!shape.points.empty()) {
+  if (is_points(shape)) {
     auto& point = shape.points[element];
     return normalize(shape.normals[point]);
-  } else if (!shape.lines.empty()) {
+  } else if (is_lines(shape)) {
     auto& line = shape.lines[element];
     return normalize(interpolate_line(shape.normals, line, uv.x));
-  } else if (!shape.triangles.empty()) {
+  } else if (is_triangles(shape)) {
     auto& triangle = shape.triangles[element];
     return normalize(interpolate_triangle(shape.normals, triangle, uv));
-  } else if (!shape.quads.empty()) {
+  } else if (is_quads(shape)) {
     auto& quad = shape.quads[element];
     return normalize(interpolate_quad(shape.normals, quad, uv));
   } else {
@@ -103,16 +103,16 @@ vec3f eval_tangent(const shape_data& shape, int element, const vec2f& uv) {
 
 vec2f eval_texcoord(const shape_data& shape, int element, const vec2f& uv) {
   if (shape.texcoords.empty()) return uv;
-  if (!shape.points.empty()) {
+  if (is_points(shape)) {
     auto& point = shape.points[element];
     return shape.texcoords[point];
-  } else if (!shape.lines.empty()) {
+  } else if (is_lines(shape)) {
     auto& line = shape.lines[element];
     return interpolate_line(shape.texcoords, line, uv.x);
-  } else if (!shape.triangles.empty()) {
+  } else if (is_triangles(shape)) {
     auto& triangle = shape.triangles[element];
     return interpolate_triangle(shape.texcoords, triangle, uv);
-  } else if (!shape.quads.empty()) {
+  } else if (is_quads(shape)) {
     auto& quad = shape.quads[element];
     return interpolate_quad(shape.texcoords, quad, uv);
   } else {
@@ -122,16 +122,16 @@ vec2f eval_texcoord(const shape_data& shape, int element, const vec2f& uv) {
 
 vec4f eval_color(const shape_data& shape, int element, const vec2f& uv) {
   if (shape.colors.empty()) return {1, 1, 1, 1};
-  if (!shape.points.empty()) {
+  if (is_points(shape)) {
     auto& point = shape.points[element];
     return shape.colors[point];
-  } else if (!shape.lines.empty()) {
+  } else if (is_lines(shape)) {
     auto& line = shape.lines[element];
     return interpolate_line(shape.colors, line, uv.x);
-  } else if (!shape.triangles.empty()) {
+  } else if (is_triangles(shape)) {
     auto& triangle = shape.triangles[element];
     return interpolate_triangle(shape.colors, triangle, uv);
-  } else if (!shape.quads.empty()) {
+  } else if (is_quads(shape)) {
     auto& quad = shape.quads[element];
     return interpolate_quad(shape.colors, quad, uv);
   } else {
@@ -141,16 +141,16 @@ vec4f eval_color(const shape_data& shape, int element, const vec2f& uv) {
 
 float eval_radius(const shape_data& shape, int element, const vec2f& uv) {
   if (shape.radius.empty()) return 0;
-  if (!shape.points.empty()) {
+  if (is_points(shape)) {
     auto& point = shape.points[element];
     return shape.radius[point];
-  } else if (!shape.lines.empty()) {
+  } else if (is_lines(shape)) {
     auto& line = shape.lines[element];
     return interpolate_line(shape.radius, line, uv.x);
-  } else if (!shape.triangles.empty()) {
+  } else if (is_triangles(shape)) {
     auto& triangle = shape.triangles[element];
     return interpolate_triangle(shape.radius, triangle, uv);
-  } else if (!shape.quads.empty()) {
+  } else if (is_quads(shape)) {
     auto& quad = shape.quads[element];
     return interpolate_quad(shape.radius, quad, uv);
   } else {
@@ -160,15 +160,15 @@ float eval_radius(const shape_data& shape, int element, const vec2f& uv) {
 
 // Evaluate element normals
 vec3f eval_element_normal(const shape_data& shape, int element) {
-  if (!shape.points.empty()) {
+  if (is_points(shape)) {
     return {0, 0, 1};
-  } else if (!shape.lines.empty()) {
+  } else if (is_lines(shape)) {
     auto& line = shape.lines[element];
     return line_tangent(shape.positions, line);
-  } else if (!shape.triangles.empty()) {
+  } else if (is_triangles(shape)) {
     auto& triangle = shape.triangles[element];
     return triangle_normal(shape.positions, triangle);
-  } else if (!shape.quads.empty()) {
+  } else if (is_quads(shape)) {
     auto& quad = shape.quads[element];
     return quad_normal(shape.positions, quad);
   } else {
@@ -178,26 +178,26 @@ vec3f eval_element_normal(const shape_data& shape, int element) {
 
 // Compute per-vertex normals/tangents for lines/triangles/quads.
 vector<vec3f> compute_normals(const shape_data& shape) {
-  if (!shape.points.empty()) {
+  if (is_points(shape)) {
     return vector<vec3f>(shape.positions.size(), {0, 0, 1});
-  } else if (!shape.lines.empty()) {
+  } else if (is_lines(shape)) {
     return lines_tangents(shape.lines, shape.positions);
-  } else if (!shape.triangles.empty()) {
+  } else if (is_triangles(shape)) {
     return triangles_normals(shape.triangles, shape.positions);
-  } else if (!shape.quads.empty()) {
+  } else if (is_quads(shape)) {
     return quads_normals(shape.quads, shape.positions);
   } else {
     return vector<vec3f>(shape.positions.size(), {0, 0, 1});
   }
 }
 void compute_normals(vector<vec3f>& normals, const shape_data& shape) {
-  if (!shape.points.empty()) {
+  if (is_points(shape)) {
     normals.assign(shape.positions.size(), {0, 0, 1});
-  } else if (!shape.lines.empty()) {
+  } else if (is_lines(shape)) {
     lines_tangents(normals, shape.lines, shape.positions);
-  } else if (!shape.triangles.empty()) {
+  } else if (is_triangles(shape)) {
     triangles_normals(normals, shape.triangles, shape.positions);
-  } else if (!shape.quads.empty()) {
+  } else if (is_quads(shape)) {
     quads_normals(normals, shape.quads, shape.positions);
   } else {
     normals.assign(shape.positions.size(), {0, 0, 1});
@@ -206,13 +206,13 @@ void compute_normals(vector<vec3f>& normals, const shape_data& shape) {
 
 // Shape sampling
 vector<float> sample_shape_cdf(const shape_data& shape) {
-  if (!shape.points.empty()) {
+  if (is_points(shape)) {
     return sample_points_cdf((int)shape.points.size());
-  } else if (!shape.lines.empty()) {
+  } else if (is_lines(shape)) {
     return sample_lines_cdf(shape.lines, shape.positions);
-  } else if (!shape.triangles.empty()) {
+  } else if (is_triangles(shape)) {
     return sample_triangles_cdf(shape.triangles, shape.positions);
-  } else if (!shape.quads.empty()) {
+  } else if (is_quads(shape)) {
     return sample_quads_cdf(shape.quads, shape.positions);
   } else {
     return sample_points_cdf((int)shape.positions.size());
@@ -220,13 +220,13 @@ vector<float> sample_shape_cdf(const shape_data& shape) {
 }
 
 void sample_shape_cdf(vector<float>& cdf, const shape_data& shape) {
-  if (!shape.points.empty()) {
+  if (is_points(shape)) {
     sample_points_cdf(cdf, (int)shape.points.size());
-  } else if (!shape.lines.empty()) {
+  } else if (is_lines(shape)) {
     sample_lines_cdf(cdf, shape.lines, shape.positions);
-  } else if (!shape.triangles.empty()) {
+  } else if (is_triangles(shape)) {
     sample_triangles_cdf(cdf, shape.triangles, shape.positions);
-  } else if (!shape.quads.empty()) {
+  } else if (is_quads(shape)) {
     sample_quads_cdf(cdf, shape.quads, shape.positions);
   } else {
     sample_points_cdf(cdf, (int)shape.positions.size());
@@ -235,16 +235,16 @@ void sample_shape_cdf(vector<float>& cdf, const shape_data& shape) {
 
 shape_point sample_shape(const shape_data& shape, const vector<float>& cdf,
     float rn, const vec2f& ruv) {
-  if (!shape.points.empty()) {
+  if (is_points(shape)) {
     auto element = sample_points(cdf, rn);
     return {element, {0, 0}};
-  } else if (!shape.lines.empty()) {
+  } else if (is_lines(shape)) {
     auto [element, u] = sample_lines(cdf, rn, ruv.x);
     return {element, {u, 0}};
-  } else if (!shape.triangles.empty()) {
+  } else if (is_triangles(shape)) {
     auto [element, uv] = sample_triangles(cdf, rn, ruv);
     return {element, uv};
-  } else if (!shape.quads.empty()) {
+  } else if (is_quads(shape)) {
     auto [element, uv] = sample_quads(cdf, rn, ruv);
     return {element, uv};
   } else {
@@ -267,7 +267,7 @@ vector<shape_point> sample_shape(
 // Conversions
 shape_data quads_to_triangles(const shape_data& shape) {
   auto result = shape;
-  if (!shape.quads.empty()) {
+  if (is_quads(shape)) {
     result.triangles = quads_to_triangles(shape.quads);
     result.quads     = {};
   }
@@ -469,14 +469,14 @@ shape_data fvshape_to_shape(const fvshape_data& fvshape, bool as_triangles) {
   return shape;
 }
 fvshape_data shape_to_fvshape(const shape_data& shape) {
-  if (!shape.points.empty() || !shape.lines.empty())
+  if (is_points(shape) || is_lines(shape))
     throw std::invalid_argument{"cannor convert shape"};
   auto fvshape          = fvshape_data{};
   fvshape.positions     = shape.positions;
   fvshape.normals       = shape.normals;
   fvshape.texcoords     = shape.texcoords;
-  fvshape.quadspos      = !shape.quads.empty() ? shape.quads
-                                               : triangles_to_quads(shape.triangles);
+  fvshape.quadspos      = is_quads(shape) ? shape.quads
+                                          : triangles_to_quads(shape.triangles);
   fvshape.quadsnorm     = !shape.normals.empty() ? fvshape.quadspos
                                                  : vector<vec4i>{};
   fvshape.quadstexcoord = !shape.texcoords.empty() ? fvshape.quadspos
@@ -2025,457 +2025,6 @@ vector<vector<int>> ordered_boundaries(const vector<vec3i>& triangles,
   }
 
   return boundaries;
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION FOR BVH
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Splits a BVH node using the middle heuristic_ Returns split position and
-// axis.
-static pair<int, int> split_middle(vector<int>& primitives,
-    const vector<bbox3f>& bboxes, const vector<vec3f>& centers, int start,
-    int end) {
-  // initialize split axis and position
-  auto axis = 0;
-  auto mid  = (start + end) / 2;
-
-  // compute primintive bounds and size
-  auto cbbox = invalidb3f;
-  for (auto i = start; i < end; i++)
-    cbbox = merge(cbbox, centers[primitives[i]]);
-  auto csize = cbbox.max - cbbox.min;
-  if (csize == vec3f{0, 0, 0}) return {mid, axis};
-
-  // split along largest
-  axis = (int)argmax(csize);
-
-  // split the space in the middle along the largest axis
-  auto cmiddle = (cbbox.max + cbbox.min) / 2;
-  auto middle  = cmiddle[axis];
-  mid = (int)(std::partition(primitives.data() + start, primitives.data() + end,
-                  [axis, middle, &centers](
-                      auto a) { return centers[a][axis] < middle; }) -
-              primitives.data());
-
-  // if we were not able to split, just break the primitives in half
-  if (mid == start || mid == end) {
-    axis = 0;
-    mid  = (start + end) / 2;
-    // throw std::runtime_error("bad bvh split");
-  }
-
-  return {mid, axis};
-}
-
-// Maximum number of primitives per BVH node.
-const int bvh_max_prims = 4;
-
-// Build BVH nodes
-static bvh_tree make_bvh(vector<bbox3f>& bboxes) {
-  // bvh
-  auto bvh = bvh_tree{};
-
-  // prepare to build nodes
-  bvh.nodes.clear();
-  bvh.nodes.reserve(bboxes.size() * 2);
-
-  // prepare primitives
-  bvh.primitives = vector<int>(bboxes.size());
-  for (auto idx : range(bboxes.size())) bvh.primitives[idx] = (int)idx;
-
-  // prepare centers
-  auto centers = vector<vec3f>(bboxes.size());
-  for (auto idx : range(bboxes.size())) centers[idx] = bbox_center(bboxes[idx]);
-
-  // queue up first node
-  auto queue = deque<vec3i>{{0, 0, (int)bboxes.size()}};
-  bvh.nodes.emplace_back();
-
-  // create nodes until the queue is empty
-  while (!queue.empty()) {
-    // grab node to work on
-    auto [nodeid, start, end] = queue.front();
-    queue.pop_front();
-
-    // grab node
-    auto& node = bvh.nodes[nodeid];
-
-    // compute bounds
-    node.bbox = invalidb3f;
-    for (auto i = start; i < end; i++)
-      node.bbox = merge(node.bbox, bboxes[bvh.primitives[i]]);
-
-    // split into two children
-    if (end - start > bvh_max_prims) {
-      // get split
-      auto [mid, axis] = split_middle(
-          bvh.primitives, bboxes, centers, start, end);
-
-      // make an internal node
-      node.internal = true;
-      node.axis     = (int8_t)axis;
-      node.num      = 2;
-      node.start    = (int)bvh.nodes.size();
-      bvh.nodes.emplace_back();
-      bvh.nodes.emplace_back();
-      queue.push_back({node.start + 0, start, mid});
-      queue.push_back({node.start + 1, mid, end});
-    } else {
-      // Make a leaf node
-      node.internal = false;
-      node.num      = (int16_t)(end - start);
-      node.start    = start;
-    }
-  }
-
-  // cleanup
-  bvh.nodes.shrink_to_fit();
-
-  // done
-  return bvh;
-}
-
-// Update bvh
-static void update_bvh(bvh_tree& bvh, const vector<bbox3f>& bboxes) {
-  for (auto nodeid = (int)bvh.nodes.size() - 1; nodeid >= 0; nodeid--) {
-    auto& node = bvh.nodes[nodeid];
-    node.bbox  = invalidb3f;
-    if (node.internal) {
-      for (auto idx : range(2)) {
-        node.bbox = merge(node.bbox, bvh.nodes[node.start + idx].bbox);
-      }
-    } else {
-      for (auto idx : range(node.num)) {
-        node.bbox = merge(node.bbox, bboxes[bvh.primitives[node.start + idx]]);
-      }
-    }
-  }
-}
-
-// Build shape bvh
-bvh_tree make_points_bvh(const vector<int>& points,
-    const vector<vec3f>& positions, const vector<float>& radius) {
-  // build primitives
-  auto bboxes = vector<bbox3f>(points.size());
-  for (auto idx : range(bboxes.size())) {
-    auto& p     = points[idx];
-    bboxes[idx] = point_bounds(positions[p], radius[p]);
-  }
-
-  // build nodes
-  return make_bvh(bboxes);
-}
-bvh_tree make_lines_bvh(const vector<vec2i>& lines,
-    const vector<vec3f>& positions, const vector<float>& radius) {
-  // build primitives
-  auto bboxes = vector<bbox3f>(lines.size());
-  for (auto idx : range(bboxes.size())) {
-    auto& [v1, v2] = lines[idx];
-    bboxes[idx]    = line_bounds(
-        positions[v1], positions[v2], radius[v1], radius[v2]);
-  }
-
-  // build nodes
-  return make_bvh(bboxes);
-}
-bvh_tree make_triangles_bvh(const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, const vector<float>& radius) {
-  // build primitives
-  auto bboxes = vector<bbox3f>(triangles.size());
-  for (auto idx : range(bboxes.size())) {
-    auto& [v1, v2, v3] = triangles[idx];
-    bboxes[idx] = triangle_bounds(positions[v1], positions[v2], positions[v3]);
-  }
-
-  // build nodes
-  return make_bvh(bboxes);
-}
-bvh_tree make_quads_bvh(const vector<vec4i>& quads,
-    const vector<vec3f>& positions, const vector<float>& radius) {
-  // build primitives
-  auto bboxes = vector<bbox3f>(quads.size());
-  for (auto idx : range(bboxes.size())) {
-    auto& [v1, v2, v3, v4] = quads[idx];
-    bboxes[idx]            = quad_bounds(
-        positions[v1], positions[v2], positions[v3], positions[v4]);
-  }
-
-  // build nodes
-  return make_bvh(bboxes);
-}
-
-void update_points_bvh(bvh_tree& bvh, const vector<int>& points,
-    const vector<vec3f>& positions, const vector<float>& radius) {
-  // build primitives
-  auto bboxes = vector<bbox3f>(points.size());
-  for (auto idx : range(bboxes.size())) {
-    auto& p     = points[idx];
-    bboxes[idx] = point_bounds(positions[p], radius[p]);
-  }
-
-  // update nodes
-  update_bvh(bvh, bboxes);
-}
-void update_lines_bvh(bvh_tree& bvh, const vector<vec2i>& lines,
-    const vector<vec3f>& positions, const vector<float>& radius) {
-  // build primitives
-  auto bboxes = vector<bbox3f>(lines.size());
-  for (auto idx : range(bboxes.size())) {
-    auto& [v1, v2] = lines[idx];
-    bboxes[idx]    = line_bounds(
-        positions[v1], positions[v2], radius[v1], radius[v2]);
-  }
-
-  // update nodes
-  update_bvh(bvh, bboxes);
-}
-void update_triangles_bvh(bvh_tree& bvh, const vector<vec3i>& triangles,
-    const vector<vec3f>& positions) {
-  // build primitives
-  auto bboxes = vector<bbox3f>(triangles.size());
-  for (auto idx : range(bboxes.size())) {
-    auto& [v1, v2, v3] = triangles[idx];
-    bboxes[idx] = triangle_bounds(positions[v1], positions[v2], positions[v3]);
-  }
-
-  // update nodes
-  update_bvh(bvh, bboxes);
-}
-void update_quads_bvh(
-    bvh_tree& bvh, const vector<vec4i>& quads, const vector<vec3f>& positions) {
-  // build primitives
-  auto bboxes = vector<bbox3f>(quads.size());
-  for (auto idx : range(bboxes.size())) {
-    auto& [v1, v2, v3, v4] = quads[idx];
-    bboxes[idx]            = quad_bounds(
-        positions[v1], positions[v2], positions[v3], positions[v4]);
-  }
-
-  // update nodes
-  update_bvh(bvh, bboxes);
-}
-
-// Intersect ray with a bvh.
-template <typename Intersect>
-static shape_intersection intersect_elements_bvh(const bvh_tree& bvh,
-    Intersect&& intersect_element, const ray3f& ray_, bool find_any) {
-  // check empty
-  if (bvh.nodes.empty()) return {};
-
-  // node stack
-  auto node_stack        = array<int, 128>{};
-  auto node_cur          = 0;
-  node_stack[node_cur++] = 0;
-
-  // shared variables
-  auto intersection = shape_intersection{};
-
-  // copy ray to modify it
-  auto ray = ray_;
-
-  // prepare ray for fast queries
-  auto ray_dinv  = 1 / ray.d;
-  auto ray_dsign = component_less(ray_dinv, 0);
-
-  // walking stack
-  while (node_cur) {
-    // grab node
-    auto& node = bvh.nodes[node_stack[--node_cur]];
-
-    // intersect bbox
-    // if (!intersect_bbox(ray, ray_dinv, ray_dsign, node.bbox)) continue;
-    if (!intersect_bbox(ray, ray_dinv, node.bbox)) continue;
-
-    // intersect node, switching based on node type
-    // for each type, iterate over the the primitive list
-    if (node.internal) {
-      // for internal nodes, attempts to proceed along the
-      // split axis from smallest to largest nodes
-      if (ray_dsign[node.axis]) {
-        node_stack[node_cur++] = node.start + 0;
-        node_stack[node_cur++] = node.start + 1;
-      } else {
-        node_stack[node_cur++] = node.start + 1;
-        node_stack[node_cur++] = node.start + 0;
-      }
-    } else {
-      for (auto idx : range(node.num)) {
-        auto primitive     = bvh.primitives[node.start + idx];
-        auto eintersection = intersect_element(primitive, ray);
-        if (!eintersection.hit) continue;
-        intersection = {
-            primitive, eintersection.uv, eintersection.distance, true};
-        ray.tmax = eintersection.distance;
-      }
-    }
-
-    // check for early exit
-    if (find_any && intersection.hit) return intersection;
-  }
-
-  return intersection;
-}
-
-// Intersect ray with a bvh.
-shape_intersection intersect_points_bvh(const bvh_tree& bvh,
-    const vector<int>& points, const vector<vec3f>& positions,
-    const vector<float>& radius, const ray3f& ray, bool find_any) {
-  return intersect_elements_bvh(
-      bvh,
-      [&points, &positions, &radius](int idx, const ray3f& ray) {
-        auto& p = points[idx];
-        return intersect_point(ray, positions[p], radius[p]);
-      },
-      ray, find_any);
-}
-shape_intersection intersect_lines_bvh(const bvh_tree& bvh,
-    const vector<vec2i>& lines, const vector<vec3f>& positions,
-    const vector<float>& radius, const ray3f& ray, bool find_any) {
-  return intersect_elements_bvh(
-      bvh,
-      [&lines, &positions, &radius](int idx, const ray3f& ray) {
-        auto& [v1, v2] = lines[idx];
-        return intersect_line(
-            ray, positions[v1], positions[v2], radius[v1], radius[v2]);
-      },
-      ray, find_any);
-}
-shape_intersection intersect_triangles_bvh(const bvh_tree& bvh,
-    const vector<vec3i>& triangles, const vector<vec3f>& positions,
-    const ray3f& ray, bool find_any) {
-  return intersect_elements_bvh(
-      bvh,
-      [&triangles, &positions](int idx, const ray3f& ray) {
-        auto& [v1, v2, v3] = triangles[idx];
-        return intersect_triangle(
-            ray, positions[v1], positions[v2], positions[v3]);
-      },
-      ray, find_any);
-}
-shape_intersection intersect_quads_bvh(const bvh_tree& bvh,
-    const vector<vec4i>& quads, const vector<vec3f>& positions,
-    const ray3f& ray, bool find_any) {
-  return intersect_elements_bvh(
-      bvh,
-      [&quads, &positions](int idx, const ray3f& ray) {
-        auto& [v1, v2, v3, v4] = quads[idx];
-        return intersect_quad(
-            ray, positions[v1], positions[v2], positions[v3], positions[v4]);
-      },
-      ray, find_any);
-}
-
-// Intersect ray with a bvh.
-template <typename Overlap>
-static shape_intersection overlap_elements_bvh(const bvh_tree& bvh,
-    Overlap&& overlap_element, const vec3f& pos, float max_distance,
-    bool find_any) {
-  // check if empty
-  if (bvh.nodes.empty()) return {};
-
-  // node stack
-  auto node_stack        = array<int, 128>{};
-  auto node_cur          = 0;
-  node_stack[node_cur++] = 0;
-
-  // hit
-  auto intersection = shape_intersection{};
-
-  // walking stack
-  while (node_cur) {
-    // grab node
-    auto& node = bvh.nodes[node_stack[--node_cur]];
-
-    // intersect bbox
-    if (!overlap_bbox(pos, max_distance, node.bbox)) continue;
-
-    // intersect node, switching based on node type
-    // for each type, iterate over the the primitive list
-    if (node.internal) {
-      // internal node
-      node_stack[node_cur++] = node.start + 0;
-      node_stack[node_cur++] = node.start + 1;
-    } else {
-      for (auto idx : range(node.num)) {
-        auto primitive     = bvh.primitives[node.start + idx];
-        auto eintersection = overlap_element(primitive, pos, max_distance);
-        if (!eintersection.hit) continue;
-        intersection = {
-            primitive, eintersection.uv, eintersection.distance, true};
-        max_distance = eintersection.distance;
-      }
-    }
-
-    // check for early exit
-    if (find_any && intersection.hit) return intersection;
-  }
-
-  return intersection;
-}
-
-// Find a shape element that overlaps a point within a given distance
-// max distance, returning either the closest or any overlap depending on
-// `find_any`. Returns the point distance, the instance id, the shape element
-// index and the element barycentric coordinates.
-shape_intersection overlap_points_bvh(const bvh_tree& bvh,
-    const vector<int>& points, const vector<vec3f>& positions,
-    const vector<float>& radius, const vec3f& pos, float max_distance,
-    bool find_any) {
-  return overlap_elements_bvh(
-      bvh,
-      [&points, &positions, &radius](
-          int idx, const vec3f& pos, float max_distance) {
-        auto& p = points[idx];
-        return overlap_point(pos, max_distance, positions[p], radius[p]);
-      },
-      pos, max_distance, find_any);
-}
-shape_intersection overlap_lines_bvh(const bvh_tree& bvh,
-    const vector<vec2i>& lines, const vector<vec3f>& positions,
-    const vector<float>& radius, const vec3f& pos, float max_distance,
-    bool find_any) {
-  return overlap_elements_bvh(
-      bvh,
-      [&lines, &positions, &radius](
-          int idx, const vec3f& pos, float max_distance) {
-        auto& [v1, v2] = lines[idx];
-        return overlap_line(pos, max_distance, positions[v1], positions[v2],
-            radius[v1], radius[v2]);
-      },
-      pos, max_distance, find_any);
-}
-shape_intersection overlap_triangles_bvh(const bvh_tree& bvh,
-    const vector<vec3i>& triangles, const vector<vec3f>& positions,
-    const vector<float>& radius, const vec3f& pos, float max_distance,
-    bool find_any) {
-  return overlap_elements_bvh(
-      bvh,
-      [&triangles, &positions, &radius](
-          int idx, const vec3f& pos, float max_distance) {
-        auto& [v1, v2, v3] = triangles[idx];
-        return overlap_triangle(pos, max_distance, positions[v1], positions[v2],
-            positions[v3], radius[v1], radius[v2], radius[v3]);
-      },
-      pos, max_distance, find_any);
-}
-shape_intersection overlap_quads_bvh(const bvh_tree& bvh,
-    const vector<vec4i>& quads, const vector<vec3f>& positions,
-    const vector<float>& radius, const vec3f& pos, float max_distance,
-    bool find_any) {
-  return overlap_elements_bvh(
-      bvh,
-      [&quads, &positions, &radius](
-          int idx, const vec3f& pos, float max_distance) {
-        auto& [v1, v2, v3, v4] = quads[idx];
-        return overlap_quad(pos, max_distance, positions[v1], positions[v2],
-            positions[v3], positions[v4], radius[v1], radius[v2], radius[v3],
-            radius[v4]);
-      },
-      pos, max_distance, find_any);
 }
 
 }  // namespace yocto

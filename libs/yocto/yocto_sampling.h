@@ -145,7 +145,7 @@ constexpr kernel vec3f rand3f(rng_state& rng) {
 template <typename T>
 constexpr kernel void shuffle(span<T> vals, rng_state& rng) {
   // https://en.wikipedia.org/wiki/Fisher–Yates_shuffle
-  for (auto i = (int)vals.size() - 1; i > 0; i--) {
+  for (auto i = (int)size(vals) - 1; i > 0; i--) {
     auto j = rand1i(rng, i + 1);
     std::swap(vals[j], vals[i]);
   }
@@ -321,27 +321,27 @@ constexpr kernel T sample_uniform_pdf(I size) {
 template <typename T, typename E>
 constexpr kernel E sample_uniform(cspan<E> elements, T r) {
   if (elements.empty()) return E{};
-  auto size = elements.size();
-  return elements[clamp((size_t)(r * size), (size_t)0, size - 1)];
+  auto num = size(elements);
+  return elements[clamp((size_t)(r * num), (size_t)0, num - 1)];
 }
 template <typename E, typename T = float>
 constexpr kernel T sample_uniform_pdf(cspan<E> elements) {
   if (elements.empty()) return 0;
-  return (T)1 / (T)elements.size();
+  return (T)1 / (T)size(elements);
 }
 
 // TODO: this should be constexpr, once we understand why
 // Sample a discrete distribution represented by its cdf.
 template <typename T, typename I = int>
-inline kernel I sample_discrete(cspan<T> cdf, T r) {
-  r        = clamp(r * cdf.back(), (T)0, cdf.back() - (T)0.00001);
-  auto idx = (I)(std::upper_bound(cdf.data(), cdf.data() + cdf.size(), r) -
-                 cdf.data());
-  return clamp(idx, (I)0, (I)cdf.size() - 1);
+inline kernel I sample_discrete(span<const T> cdf, T r) {
+  r = clamp(r * cdf.back(), (T)0, cdf.back() - (T)0.00001);
+  auto idx =
+      (I)(std::upper_bound(data(cdf), data(cdf) + size(cdf), r) - data(cdf));
+  return clamp(idx, (I)0, (I)size(cdf) - 1);
 }
 // Pdf for uniform discrete distribution sampling.
 template <typename T, typename I>
-inline kernel T sample_discrete_pdf(cspan<T> cdf, I idx) {
+inline kernel T sample_discrete_pdf(span<const T> cdf, I idx) {
   if (idx == 0) return cdf[0];
   return cdf[idx] - cdf[idx - 1];
 }
@@ -350,12 +350,12 @@ inline kernel T sample_discrete_pdf(cspan<T> cdf, I idx) {
 // Sample a discrete distribution represented by its cdf.
 template <typename T, typename I = int>
 inline kernel int sample_discrete(const vector<T>& cdf, T r) {
-  return sample_discrete(cspan<T>{cdf.data(), cdf.size()}, r);
+  return sample_discrete(span<const T>{cdf}, r);
 }
 // Pdf for uniform discrete distribution sampling.
 template <typename T, typename I>
 inline kernel T sample_discrete_pdf(const vector<T>& cdf, I idx) {
-  return sample_discrete_pdf(cspan<T>{cdf.data(), cdf.size()}, idx);
+  return sample_discrete_pdf(span<const T>{cdf}, idx);
 }
 
 }  // namespace yocto
