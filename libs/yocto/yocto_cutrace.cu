@@ -402,16 +402,12 @@ constexpr auto min_roughness = 0.03f * 0.03f;
 
 // Evaluates an image at a point `uv`.
 static vec4f eval_texture(const texture_data& texture, const vec2f& texcoord,
-    bool as_linear = false, bool no_interpolation = false,
+    bool ldr_as_linear = false, bool no_interpolation = false,
     bool clamp_to_edge = false) {
   auto fromTexture = tex2D<float4>(texture.texture, texcoord[0], texcoord[1]);
   auto color       = vec4f{
       fromTexture.x, fromTexture.y, fromTexture.z, fromTexture.w};
-  if (as_linear && !texture.linear) {
-    return srgb_to_rgb(color);
-  } else {
-    return color;
-  }
+  return (texture.linear || ldr_as_linear) ? color : srgb_to_rgb(color);
 }
 
 // Helpers
@@ -521,7 +517,7 @@ static vec3f eval_normalmap(const scene_data& scene,
   auto texcoord = eval_texcoord(scene, instance, element, uv);
   if (material.normal_tex != invalidid && (!shape.triangles.empty())) {
     auto& normal_tex = scene.textures[material.normal_tex];
-    auto  normalmap  = -1 + 2 * xyz(eval_texture(normal_tex, texcoord, false));
+    auto  normalmap  = -1 + 2 * xyz(eval_texture(normal_tex, texcoord, true));
     auto  tuv        = eval_element_tangents(scene, instance, element);
     auto  frame      = frame3f{tuv.first, tuv.second, normal, {0, 0, 0}};
     frame[0]         = orthonormalize(frame[0], frame[2]);
@@ -584,14 +580,11 @@ static material_point eval_material(const scene_data& scene,
   auto  texcoord = eval_texcoord(scene, instance, element, uv);
 
   // evaluate textures
-  auto emission_tex = eval_texture(
-      scene, material.emission_tex, texcoord, true);
-  auto color_shp     = eval_color(scene, instance, element, uv);
-  auto color_tex     = eval_texture(scene, material.color_tex, texcoord, true);
-  auto roughness_tex = eval_texture(
-      scene, material.roughness_tex, texcoord, false);
-  auto scattering_tex = eval_texture(
-      scene, material.scattering_tex, texcoord, true);
+  auto emission_tex   = eval_texture(scene, material.emission_tex, texcoord);
+  auto color_shp      = eval_color(scene, instance, element, uv);
+  auto color_tex      = eval_texture(scene, material.color_tex, texcoord);
+  auto roughness_tex  = eval_texture(scene, material.roughness_tex, texcoord);
+  auto scattering_tex = eval_texture(scene, material.scattering_tex, texcoord);
 
   // material point
   auto point         = material_point{};
