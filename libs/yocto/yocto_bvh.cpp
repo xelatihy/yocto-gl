@@ -415,11 +415,10 @@ void update_scene_bvh(scene_bvh& sbvh, const scene_data& scene,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-shape_intersection intersect_shape_bvh(const shape_bvh& sbvh,
-    const shape_data& shape, const ray3f& ray_, bool find_any) {
-  // get bvh tree
-  auto& bvh = sbvh.bvh;
-
+template <typename T, typename Func>
+shape_intersection intersect_elements_bvh(const bvh_tree& bvh,
+    const vector<T>& elements, const ray3f& ray_, bool find_any,
+    Func&& intersect_element) {
   // check empty
   if (bvh.nodes.empty()) return {};
 
@@ -459,39 +458,10 @@ shape_intersection intersect_shape_bvh(const shape_bvh& sbvh,
         node_stack[node_cur++] = node.start + 1;
         node_stack[node_cur++] = node.start + 0;
       }
-    } else if (is_points(shape)) {
+    } else {
       for (auto idx = node.start; idx < node.start + node.num; idx++) {
-        auto& v1            = shape.points[bvh.primitives[idx]];
-        auto  pintersection = intersect_point(
-            ray, shape.positions[v1], shape.radius[v1]);
-        if (!pintersection.hit) continue;
-        intersection = {bvh.primitives[idx], pintersection.uv,
-            pintersection.distance, true};
-        ray.tmax     = pintersection.distance;
-      }
-    } else if (is_lines(shape)) {
-      for (auto idx = node.start; idx < node.start + node.num; idx++) {
-        auto& line          = shape.lines[bvh.primitives[idx]];
-        auto  pintersection = intersect_line(
-            ray, shape.positions, shape.radius, line);
-        if (!pintersection.hit) continue;
-        intersection = {bvh.primitives[idx], pintersection.uv,
-            pintersection.distance, true};
-        ray.tmax     = pintersection.distance;
-      }
-    } else if (is_triangles(shape)) {
-      for (auto idx = node.start; idx < node.start + node.num; idx++) {
-        auto& triangle     = shape.triangles[bvh.primitives[idx]];
-        auto pintersection = intersect_triangle(ray, shape.positions, triangle);
-        if (!pintersection.hit) continue;
-        intersection = {bvh.primitives[idx], pintersection.uv,
-            pintersection.distance, true};
-        ray.tmax     = pintersection.distance;
-      }
-    } else if (is_quads(shape)) {
-      for (auto idx = node.start; idx < node.start + node.num; idx++) {
-        auto& quad          = shape.quads[bvh.primitives[idx]];
-        auto  pintersection = intersect_quad(ray, shape.positions, quad);
+        auto pintersection = intersect_element(
+            ray, elements[bvh.primitives[idx]]);
         if (!pintersection.hit) continue;
         intersection = {bvh.primitives[idx], pintersection.uv,
             pintersection.distance, true};
@@ -504,6 +474,33 @@ shape_intersection intersect_shape_bvh(const shape_bvh& sbvh,
   }
 
   return intersection;
+}
+
+shape_intersection intersect_shape_bvh(const shape_bvh& sbvh,
+    const shape_data& shape, const ray3f& ray, bool find_any) {
+  if (is_points(shape)) {
+    return intersect_elements_bvh(sbvh.bvh, shape.points, ray, find_any,
+        [&shape](const ray3f& ray, const int& point) {
+          return intersect_point(ray, shape.positions, shape.radius, point);
+        });
+  } else if (is_lines(shape)) {
+    return intersect_elements_bvh(sbvh.bvh, shape.lines, ray, find_any,
+        [&shape](const ray3f& ray, const vec2i& line) {
+          return intersect_line(ray, shape.positions, shape.radius, line);
+        });
+  } else if (is_triangles(shape)) {
+    return intersect_elements_bvh(sbvh.bvh, shape.triangles, ray, find_any,
+        [&shape](const ray3f& ray, const vec3i& triangle) {
+          return intersect_triangle(ray, shape.positions, triangle);
+        });
+  } else if (is_quads(shape)) {
+    return intersect_elements_bvh(sbvh.bvh, shape.quads, ray, find_any,
+        [&shape](const ray3f& ray, const vec4i& quad) {
+          return intersect_quad(ray, shape.positions, quad);
+        });
+  } else {
+    return {};
+  }
 }
 
 scene_intersection intersect_scene_bvh(const scene_bvh& sbvh,
