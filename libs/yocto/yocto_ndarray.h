@@ -39,6 +39,7 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
+#include <stdexcept>
 #include <vector>
 
 #include "yocto_math.h"
