@@ -1231,22 +1231,28 @@ namespace yocto {
 // primitives or internal nodes, the node element type,
 // and the split axis. Leaf and internal nodes are identical, except that
 // indices refer to primitives for leaf nodes or other nodes for internal nodes.
-struct bvh_node {
-  bbox3f  bbox     = invalidb3f;
-  int32_t start    = 0;
-  int16_t num      = 0;
-  int8_t  axis     = 0;
-  bool    internal = false;
+template <typename T, size_t N>
+struct bvh_gnode {
+  bbox<T, N> bbox     = {};
+  int32_t    start    = 0;
+  int16_t    num      = 0;
+  int8_t     axis     = 0;
+  bool       internal = false;
 };
 
 // BVH tree stored as a node array with the tree structure is encoded using
 // array indices. BVH nodes indices refer to either the node array,
 // for internal nodes, or the primitive arrays, for leaf nodes.
 // Application data is not stored explicitly.
-struct bvh_data {
-  vector<bvh_node> nodes      = {};
-  vector<int>      primitives = {};
+template <typename T, size_t N>
+struct bvh_gdata {
+  vector<bvh_gnode<T, N>> nodes      = {};
+  vector<int>             primitives = {};
 };
+
+// Typedefs
+using bvh_node = bvh_gnode<float, 3>;
+using bvh_data = bvh_gdata<float, 3>;
 
 // Results of intersect_xxx and overlap_xxx functions that include hit flag,
 // instance id, shape element id, shape element uv and intersection distance.
@@ -1287,22 +1293,23 @@ struct intersection {
 using intersection3f = intersection<float, 3>;
 
 // Build BVH nodes
-template <typename T, typename Func>
-inline bvh_data make_bvh(
-    const vector<T>& elements, bool highquality, Func&& bbox_func);
+template <typename E, typename Func,
+    typename T = decltype(std::declval<result_t<Func, E>>().min.x)>
+inline bvh_gdata<T, 3> make_bvh(
+    const vector<E>& elements, bool highquality, Func&& bbox_func);
 
 // Update bvh
-template <typename T, typename Func>
+template <typename T, typename E, typename Func>
 inline void refit_bvh(
-    bvh_data& bvh, const vector<T>& elements, Func&& bbox_func);
+    bvh_gdata<T, 3>& bvh, const vector<E>& elements, Func&& bbox_func);
 
 template <typename T, typename E, typename Func>
-inline intersection<T, 3> intersect_bvh(const bvh_data& bvh,
+inline intersection<T, 3> intersect_bvh(const bvh_gdata<T, 3>& bvh,
     const vector<E>& elements, const ray<T, 3>& ray_, bool find_any,
     Func&& intersect_element);
 
 template <typename T, typename E, typename Func>
-inline intersection<T, 3> overlap_bvh(const bvh_data& bvh,
+inline intersection<T, 3> overlap_bvh(const bvh_gdata<T, 3>& bvh,
     const vector<E>& elements, const ray<T, 3>& pos, float max_distance,
     bool find_any, Func&& overlap_element);
 
@@ -1357,7 +1364,7 @@ namespace yocto {
 // Splits a BVH node using the SAH heuristic. Returns split position and axis.
 inline vec2i split_sah(vector<int>& primitives, const vector<bbox3f>& bboxes,
     const vector<vec3f>& centers, int start, int end) {
-  // compute primintive bounds and size
+  // compute primitive bounds and size
   auto cbbox = invalidb3f;
   for (auto i = start; i < end; i++)
     cbbox = merge(cbbox, centers[primitives[i]]);
@@ -1473,11 +1480,11 @@ inline vec2i split_middle(vector<int>& primitives, const vector<bbox3f>& bboxes,
 constexpr auto bvh_max_prims = 4;
 
 // Build BVH nodes
-template <typename T, typename Func>
-inline bvh_data make_bvh(
-    const vector<T>& elements, bool highquality, Func&& bbox_func) {
+template <typename E, typename Func, typename T>
+inline bvh_gdata<T, 3> make_bvh(
+    const vector<E>& elements, bool highquality, Func&& bbox_func) {
   // bvh
-  auto bvh = bvh_data{};
+  auto bvh = bvh_gdata<T, 3>{};
 
   // prepare to build nodes
   bvh.nodes.clear();
@@ -1548,9 +1555,9 @@ inline bvh_data make_bvh(
 }
 
 // Update bvh
-template <typename T, typename Func>
+template <typename T, typename E, typename Func>
 inline void refit_bvh(
-    bvh_data& bvh, const vector<T>& elements, Func&& bbox_func) {
+    bvh_gdata<T, 3>& bvh, const vector<E>& elements, Func&& bbox_func) {
   for (auto nodeid = (int)bvh.nodes.size() - 1; nodeid >= 0; nodeid--) {
     auto& node = bvh.nodes[nodeid];
     node.bbox  = invalidb3f;
@@ -1566,9 +1573,9 @@ inline void refit_bvh(
   }
 }
 
-template <typename T, typename Func>
-inline intersection3f intersect_bvh(const bvh_data& bvh,
-    const vector<T>& elements, const ray3f& ray_, bool find_any,
+template <typename T, typename E, typename Func>
+inline intersection<T, 3> intersect_bvh(const bvh_gdata<T, 3>& bvh,
+    const vector<E>& elements, const ray<T, 3>& ray_, bool find_any,
     Func&& intersect_element) {
   // check empty
   if (bvh.nodes.empty()) return {};
@@ -1579,7 +1586,7 @@ inline intersection3f intersect_bvh(const bvh_data& bvh,
   node_stack[node_cur++] = 0;
 
   // shared variables
-  auto intersection = intersection3f{};
+  auto sintersection = intersection<T, 3>{};
 
   // copy ray to modify it
   auto ray = ray_;
@@ -1611,25 +1618,25 @@ inline intersection3f intersect_bvh(const bvh_data& bvh,
       }
     } else {
       for (auto idx = node.start; idx < node.start + node.num; idx++) {
-        auto pintersection = intersect_element(
+        auto eintersection = intersect_element(
             ray, elements[bvh.primitives[idx]]);
-        if (!pintersection.hit) continue;
-        intersection = {bvh.primitives[idx], pintersection};
-        ray.tmax     = pintersection.distance;
+        if (!eintersection.hit) continue;
+        sintersection = {bvh.primitives[idx], eintersection};
+        ray.tmax      = eintersection.distance;
       }
     }
 
     // check for early exit
-    if (find_any && intersection.hit) return intersection;
+    if (find_any && sintersection.hit) return sintersection;
   }
 
-  return intersection;
+  return sintersection;
 }
 
 // Check if a point overlaps some elements.
-template <typename T, typename Func>
-inline intersection3f overlap_bvh(const bvh_data& bvh,
-    const vector<T>& elements, const vec3f& pos, float max_distance,
+template <typename T, typename E, typename Func>
+inline intersection<T, 3> overlap_bvh(const bvh_gdata<T, 3>& bvh,
+    const vector<E>& elements, const vec<T, 3>& pos, float max_distance,
     bool find_any, Func&& overlap_element) {
   // check if empty
   if (bvh.nodes.empty()) return {};
@@ -1640,7 +1647,7 @@ inline intersection3f overlap_bvh(const bvh_data& bvh,
   node_stack[node_cur++] = 0;
 
   // intersection
-  auto intersection = intersection3f{};
+  auto sintersection = intersection<T, 3>{};
 
   // walking stack
   while (node_cur != 0) {
@@ -1661,16 +1668,16 @@ inline intersection3f overlap_bvh(const bvh_data& bvh,
         auto eintersection = overlap_element(
             pos, max_distance, elements[bvh.primitives[idx]]);
         if (!eintersection.hit) continue;
-        intersection = {bvh.primitives[idx], eintersection};
-        max_distance = eintersection.distance;
+        sintersection = {bvh.primitives[idx], eintersection};
+        max_distance  = eintersection.distance;
       }
     }
 
     // check for early exit
-    if (find_any && intersection.hit) return intersection;
+    if (find_any && sintersection.hit) return sintersection;
   }
 
-  return intersection;
+  return sintersection;
 }
 
 }  // namespace yocto
