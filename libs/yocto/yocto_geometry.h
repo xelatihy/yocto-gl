@@ -832,8 +832,8 @@ struct pintersection {
   T         distance = num_max<T>;  // TODO: num_max<T>
   bool      hit      = false;
 
-  pintersection() : hit{false} {}
-  pintersection(const vec<T, 2>& uv_, T distance_) :
+  constexpr kernel pintersection() : hit{false} {}
+  constexpr kernel pintersection(const vec<T, 2>& uv_, T distance_) :
       uv{uv_}, distance{distance_}, hit{true} {}
 };
 
@@ -967,12 +967,12 @@ constexpr kernel pintersection<T, 3> intersect_triangle(const ray<T, 3>& ray,
   if (det == 0) return {};
   auto inv_det = (T)1.0 / det;
 
-  // compute and check first bricentric coordinated
+  // compute and check first barycentric coordinate
   auto tvec = ray.o - p1;
   auto u    = dot(tvec, pvec) * inv_det;
   if (u < 0 || u > 1) return {};
 
-  // compute and check second bricentric coordinated
+  // compute and check second barycentric coordinate
   auto qvec = cross(tvec, edge1);
   auto v    = dot(ray.d, qvec) * inv_det;
   if (v < 0 || u + v > 1) return {};
