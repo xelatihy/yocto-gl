@@ -193,7 +193,7 @@ void update_scene_bvh(scene_bvh& sbvh, const scene_data& scene,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-shape_intersection intersect_shape_bvh(const shape_bvh& sbvh,
+intersection3f intersect_shape_bvh(const shape_bvh& sbvh,
     const shape_data& shape, const ray3f& ray, bool find_any) {
   if (is_points(shape)) {
     return intersect_elements_bvh(sbvh.bvh, shape.points, ray, find_any,
@@ -220,7 +220,7 @@ shape_intersection intersect_shape_bvh(const shape_bvh& sbvh,
   }
 }
 
-scene_intersection intersect_scene_bvh(const scene_bvh& sbvh,
+intersection3f intersect_scene_bvh(const scene_bvh& sbvh,
     const scene_data& scene, const ray3f& ray, bool find_any) {
   return intersect_instances_bvh(sbvh.bvh, scene.instances, ray, find_any,
       [&](const ray3f& ray, const instance_data& instance, bool find_any) {
@@ -230,15 +230,14 @@ scene_intersection intersect_scene_bvh(const scene_bvh& sbvh,
       });
 }
 
-scene_intersection intersect_instance_bvh(const scene_bvh& sbvh,
+intersection3f intersect_instance_bvh(const scene_bvh& sbvh,
     const scene_data& scene, int instance_, const ray3f& ray, bool find_any) {
-  auto& instance     = scene.instances[instance_];
-  auto  inv_ray      = transform_ray(inverse(instance.frame, true), ray);
-  auto  intersection = intersect_shape_bvh(sbvh.shapes[instance.shape],
+  auto& instance      = scene.instances[instance_];
+  auto  inv_ray       = transform_ray(inverse(instance.frame, true), ray);
+  auto  sintersection = intersect_shape_bvh(sbvh.shapes[instance.shape],
        scene.shapes[instance.shape], inv_ray, find_any);
-  if (!intersection.hit) return {};
-  return {instance_, intersection.element, intersection.uv,
-      intersection.distance, true};
+  if (!sintersection.hit) return {};
+  return {instance_, sintersection};
 }
 
 }  // namespace yocto
@@ -250,7 +249,7 @@ namespace yocto {
 
 // Intersect ray with a bvh.
 template <typename T, typename Func>
-shape_intersection overlap_elements_bvh(const bvh_data& bvh,
+intersection3f overlap_elements_bvh(const bvh_data& bvh,
     const vector<T>& elements, const vec3f& pos, float max_distance,
     bool find_any, Func&& overlap_element) {
   // check if empty
@@ -262,7 +261,7 @@ shape_intersection overlap_elements_bvh(const bvh_data& bvh,
   node_stack[node_cur++] = 0;
 
   // intersection
-  auto intersection = shape_intersection{};
+  auto intersection = intersection3f{};
 
   // walking stack
   while (node_cur != 0) {
@@ -283,8 +282,7 @@ shape_intersection overlap_elements_bvh(const bvh_data& bvh,
         auto eintersection = overlap_element(
             pos, max_distance, elements[bvh.primitives[idx]]);
         if (!eintersection.hit) continue;
-        intersection = {bvh.primitives[idx], eintersection.uv,
-            eintersection.distance, true};
+        intersection = {bvh.primitives[idx], eintersection};
         max_distance = eintersection.distance;
       }
     }
@@ -297,9 +295,8 @@ shape_intersection overlap_elements_bvh(const bvh_data& bvh,
 }
 
 // Intersect ray with a bvh.
-shape_intersection overlap_shape_bvh(const shape_bvh& sbvh,
-    const shape_data& shape, const vec3f& pos, float max_distance,
-    bool find_any) {
+intersection3f overlap_shape_bvh(const shape_bvh& sbvh, const shape_data& shape,
+    const vec3f& pos, float max_distance, bool find_any) {
   if (is_points(shape)) {
     return overlap_elements_bvh(sbvh.bvh, shape.points, pos, max_distance,
         find_any, [&](const vec3f& pos, float max_distance, const int& point) {
@@ -332,7 +329,7 @@ shape_intersection overlap_shape_bvh(const shape_bvh& sbvh,
 
 // Intersect ray with a bvh.
 template <typename T, typename Func>
-scene_intersection overlap_instances_bvh(const bvh_data& bvh,
+intersection3f overlap_instances_bvh(const bvh_data& bvh,
     const vector<T>& elements, const vec3f& pos, float max_distance,
     bool find_any, Func&& overlap_element) {
   // check if empty
@@ -344,7 +341,7 @@ scene_intersection overlap_instances_bvh(const bvh_data& bvh,
   node_stack[node_cur++] = 0;
 
   // intersection
-  auto intersection = scene_intersection{};
+  auto intersection = intersection3f{};
 
   // walking stack
   while (node_cur != 0) {
@@ -365,8 +362,7 @@ scene_intersection overlap_instances_bvh(const bvh_data& bvh,
         auto sintersection = overlap_element(
             pos, max_distance, elements[bvh.primitives[idx]], find_any);
         if (!sintersection.hit) continue;
-        intersection = {bvh.primitives[idx], sintersection.element,
-            sintersection.uv, sintersection.distance, true};
+        intersection = {bvh.primitives[idx], sintersection};
         max_distance = sintersection.distance;
       }
     }
@@ -379,9 +375,8 @@ scene_intersection overlap_instances_bvh(const bvh_data& bvh,
 }
 
 // Intersect ray with a bvh.
-scene_intersection overlap_scene_bvh(const scene_bvh& sbvh,
-    const scene_data& scene, const vec3f& pos, float max_distance,
-    bool find_any) {
+intersection3f overlap_scene_bvh(const scene_bvh& sbvh, const scene_data& scene,
+    const vec3f& pos, float max_distance, bool find_any) {
   return overlap_instances_bvh(sbvh.bvh, scene.instances, pos, max_distance,
       find_any,
       [&](const vec3f& pos, float max_distance, const instance_data& instance,
@@ -594,7 +589,7 @@ void update_scene_ebvh(scene_ebvh& sbvh, const scene_data& scene,
 // Intersect ray with a bvh returning either the first or any intersection
 // depending on `find_any`. Returns the ray distance , the instance id,
 // the shape element index and the element barycentric coordinates.
-shape_intersection intersect_shape_ebvh(const shape_ebvh& sbvh,
+intersection3f intersect_shape_ebvh(const shape_ebvh& sbvh,
     const shape_data& shape, const ray3f& ray, bool find_any) {
   RTCRayHit embree_ray;
   embree_ray.ray.org_x     = ray.o[0];
@@ -617,10 +612,10 @@ shape_intersection intersect_shape_ebvh(const shape_ebvh& sbvh,
   auto element  = (int)embree_ray.hit.primID;
   auto uv       = vec2f{embree_ray.hit.u, embree_ray.hit.v};
   auto distance = embree_ray.ray.tfar;
-  return {element, uv, distance, true};
+  return {element, uv, distance};
 }
 
-scene_intersection intersect_scene_ebvh(const scene_ebvh& sbvh,
+intersection3f intersect_scene_ebvh(const scene_ebvh& sbvh,
     const scene_data& scene, const ray3f& ray, bool find_any) {
   RTCRayHit embree_ray;
   embree_ray.ray.org_x     = ray.o[0];
@@ -644,18 +639,17 @@ scene_intersection intersect_scene_ebvh(const scene_ebvh& sbvh,
   auto element  = (int)embree_ray.hit.primID;
   auto uv       = vec2f{embree_ray.hit.u, embree_ray.hit.v};
   auto distance = embree_ray.ray.tfar;
-  return {instance, element, uv, distance, true};
+  return {instance, element, uv, distance};
 }
 
-scene_intersection intersect_instance_ebvh(const scene_ebvh& sbvh,
+intersection3f intersect_instance_ebvh(const scene_ebvh& sbvh,
     const scene_data& scene, int instance_, const ray3f& ray, bool find_any) {
   auto& instance     = scene.instances[instance_];
   auto  inv_ray      = transform_ray(inverse(instance.frame, true), ray);
   auto  intersection = intersect_shape_ebvh(sbvh.shapes[instance.shape],
        scene.shapes[instance.shape], inv_ray, find_any);
   if (!intersection.hit) return {};
-  return {instance_, intersection.element, intersection.uv,
-      intersection.distance, true};
+  return {instance_, intersection};
 }
 
 #else
@@ -682,15 +676,15 @@ void update_scene_ebvh(scene_ebvh& sbvh, const scene_data& scene,
 }
 
 // Not implemented
-shape_intersection intersect_shape_ebvh(const shape_ebvh& sbvh,
+intersection3f intersect_shape_ebvh(const shape_ebvh& sbvh,
     const shape_data& shape, const ray3f& ray, bool find_any) {
   throw embree_error{"Embree not available"};
 }
-scene_intersection intersect_scene_ebvh(const scene_ebvh& sbvh,
+intersection3f intersect_scene_ebvh(const scene_ebvh& sbvh,
     const scene_data& scene, const ray3f& ray, bool find_any) {
   throw embree_error{"Embree not available"};
 }
-scene_intersection intersect_instance_ebvh(const scene_ebvh& sbvh,
+intersection3f intersect_instance_ebvh(const scene_ebvh& sbvh,
     const scene_data& scene, int instance, const ray3f& ray, bool find_any) {
   throw embree_error{"Embree not available"};
 }

@@ -74,10 +74,6 @@ struct scene_bvh {
   vector<shape_bvh> shapes = {};
 };
 
-// Intersections
-using shape_intersection = elements_intersection;
-using scene_intersection = instances_intersection;
-
 // Build the bvh acceleration structure.
 shape_bvh make_shape_bvh(const shape_data& shape, bool highquality = false);
 scene_bvh make_scene_bvh(
@@ -91,11 +87,11 @@ void update_scene_bvh(scene_bvh& bvh, const scene_data& scene,
 // Intersect ray with a bvh returning either the first or any intersection
 // depending on `find_any`. Returns the ray distance , the instance id,
 // the shape element index and the element barycentric coordinates.
-shape_intersection intersect_shape_bvh(const shape_bvh& bvh,
+intersection3f intersect_shape_bvh(const shape_bvh& bvh,
     const shape_data& shape, const ray3f& ray, bool find_any = false);
-scene_intersection intersect_scene_bvh(const scene_bvh& bvh,
+intersection3f intersect_scene_bvh(const scene_bvh& bvh,
     const scene_data& scene, const ray3f& ray, bool find_any = false);
-scene_intersection intersect_instance_bvh(const scene_bvh& bvh,
+intersection3f intersect_instance_bvh(const scene_bvh& bvh,
     const scene_data& scene, int instance, const ray3f& ray,
     bool find_any = false);
 
@@ -103,12 +99,10 @@ scene_intersection intersect_instance_bvh(const scene_bvh& bvh,
 // max distance, returning either the closest or any overlap depending on
 // `find_any`. Returns the point distance, the instance id, the shape element
 // index and the element barycentric coordinates.
-shape_intersection overlap_shape_bvh(const shape_bvh& bvh,
-    const shape_data& shape, const vec3f& pos, float max_distance,
-    bool find_any = false);
-scene_intersection overlap_scene_bvh(const scene_bvh& bvh,
-    const scene_data& scene, const vec3f& pos, float max_distance,
-    bool find_any = false);
+intersection3f overlap_shape_bvh(const shape_bvh& bvh, const shape_data& shape,
+    const vec3f& pos, float max_distance, bool find_any = false);
+intersection3f overlap_scene_bvh(const scene_bvh& bvh, const scene_data& scene,
+    const vec3f& pos, float max_distance, bool find_any = false);
 
 }  // namespace yocto
 
@@ -147,11 +141,11 @@ void update_scene_ebvh(scene_ebvh& bvh, const scene_data& scene,
 // Intersect ray with a bvh returning either the first or any intersection
 // depending on `find_any`. Returns the ray distance , the instance id,
 // the shape element index and the element barycentric coordinates.
-shape_intersection intersect_shape_ebvh(const shape_ebvh& bvh,
+intersection3f intersect_shape_ebvh(const shape_ebvh& bvh,
     const shape_data& shape, const ray3f& ray, bool find_any = false);
-scene_intersection intersect_scene_ebvh(const scene_ebvh& bvh,
+intersection3f intersect_scene_ebvh(const scene_ebvh& bvh,
     const scene_data& scene, const ray3f& ray, bool find_any = false);
-scene_intersection intersect_instance_ebvh(const scene_ebvh& bvh,
+intersection3f intersect_instance_ebvh(const scene_ebvh& bvh,
     const scene_data& scene, int instance, const ray3f& ray,
     bool find_any = false);
 
@@ -186,54 +180,53 @@ using bvh_scene [[deprecated]] = scene_bvh;
 }
 
 // backward compatibility
-[[deprecated]] inline shape_intersection intersect_bvh(const shape_bvh& bvh,
+[[deprecated]] inline intersection3f intersect_bvh(const shape_bvh& bvh,
     const shape_data& shape, const ray3f& ray, bool find_any = false) {
   return intersect_shape_bvh(bvh, shape, ray, find_any);
 }
-[[deprecated]] inline scene_intersection intersect_bvh(const scene_bvh& bvh,
+[[deprecated]] inline intersection3f intersect_bvh(const scene_bvh& bvh,
     const scene_data& scene, const ray3f& ray, bool find_any = false) {
   return intersect_scene_bvh(bvh, scene, ray, find_any);
 }
-[[deprecated]] inline scene_intersection intersect_bvh(const scene_bvh& bvh,
+[[deprecated]] inline intersection3f intersect_bvh(const scene_bvh& bvh,
     const scene_data& scene, int instance, const ray3f& ray,
     bool find_any = false) {
   return intersect_instance_bvh(bvh, scene, instance, ray, find_any);
 }
 
 // backward compatibility
-[[deprecated]] inline shape_intersection overlap_bvh(const shape_bvh& bvh,
+[[deprecated]] inline intersection3f overlap_bvh(const shape_bvh& bvh,
     const shape_data& shape, const vec3f& pos, float max_distance,
     bool find_any = false) {
   return overlap_shape_bvh(bvh, shape, pos, max_distance, find_any);
 }
-[[deprecated]] inline scene_intersection overlap_bvh(const scene_bvh& bvh,
+[[deprecated]] inline intersection3f overlap_bvh(const scene_bvh& bvh,
     const scene_data& scene, const vec3f& pos, float max_distance,
     bool find_any = false) {
   return overlap_scene_bvh(bvh, scene, pos, max_distance, find_any);
 }
 
 // backward compatibility
-[[deprecated]] inline shape_intersection intersect_shape(const shape_bvh& bvh,
+[[deprecated]] inline intersection3f intersect_shape(const shape_bvh& bvh,
     const shape_data& shape, const ray3f& ray, bool find_any = false) {
   return intersect_shape_bvh(bvh, shape, ray, find_any);
 }
-[[deprecated]] inline scene_intersection intersect_scene(const scene_bvh& bvh,
+[[deprecated]] inline intersection3f intersect_scene(const scene_bvh& bvh,
     const scene_data& scene, const ray3f& ray, bool find_any) {
   return intersect_scene_bvh(bvh, scene, ray, find_any);
 }
-[[deprecated]] inline scene_intersection intersect_instance(
-    const scene_bvh& bvh, const scene_data& scene, int instance,
-    const ray3f& ray, bool find_any) {
+[[deprecated]] inline intersection3f intersect_instance(const scene_bvh& bvh,
+    const scene_data& scene, int instance, const ray3f& ray, bool find_any) {
   return intersect_instance_bvh(bvh, scene, instance, ray, find_any);
 }
 
 // backward compatibility
-[[deprecated]] inline shape_intersection overlap_shape(const shape_bvh& bvh,
+[[deprecated]] inline intersection3f overlap_shape(const shape_bvh& bvh,
     const shape_data& shape, const vec3f& pos, float max_distance,
     bool find_any = false) {
   return overlap_shape_bvh(bvh, shape, pos, max_distance, find_any);
 }
-[[deprecated]] inline scene_intersection overlap_scene(const scene_bvh& bvh,
+[[deprecated]] inline intersection3f overlap_scene(const scene_bvh& bvh,
     const scene_data& scene, const vec3f& pos, float max_distance,
     bool find_any = false) {
   return overlap_scene_bvh(bvh, scene, pos, max_distance, find_any);
@@ -275,17 +268,17 @@ using scene_embree_bvh = scene_ebvh;
 // Intersect ray with a bvh returning either the first or any intersection
 // depending on `find_any`. Returns the ray distance , the instance id,
 // the shape element index and the element barycentric coordinates.
-[[deprecated]] inline shape_intersection intersect_shape_embree_bvh(
+[[deprecated]] inline intersection3f intersect_shape_embree_bvh(
     const shape_ebvh& bvh, const shape_data& shape, const ray3f& ray,
     bool find_any = false) {
   return intersect_shape_ebvh(bvh, shape, ray, find_any);
 }
-[[deprecated]] inline scene_intersection intersect_scene_embree_bvh(
+[[deprecated]] inline intersection3f intersect_scene_embree_bvh(
     const scene_ebvh& bvh, const scene_data& scene, const ray3f& ray,
     bool find_any = false) {
   return intersect_scene_ebvh(bvh, scene, ray, find_any);
 }
-[[deprecated]] inline scene_intersection intersect_instance_embree_bvh(
+[[deprecated]] inline intersection3f intersect_instance_embree_bvh(
     const scene_ebvh& bvh, const scene_data& scene, int instance,
     const ray3f& ray, bool find_any = false) {
   return intersect_instance_ebvh(bvh, scene, instance, ray, find_any);
