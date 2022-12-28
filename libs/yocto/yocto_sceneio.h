@@ -76,8 +76,6 @@ struct io_error : std::runtime_error {
 namespace yocto {
 
 // Check if an image is HDR or LDR based on filename.
-bool is_hdr_filename(const string& filename);
-bool is_ldr_filename(const string& filename);
 bool is_srgb_filename(const string& filename);
 
 // Loads/saves a float image.

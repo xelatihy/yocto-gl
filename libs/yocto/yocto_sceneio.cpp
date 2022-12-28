@@ -479,19 +479,6 @@ static array<float, 12> to_array(const frame3f& value) {
 namespace yocto {
 
 // Check if an image is HDR based on filename.
-bool is_hdr_filename(const string& filename) {
-  auto ext = path_extension(filename);
-  if (ext == ".ypreset" || ext == ".YPRESET") return !is_srgb_preset(filename);
-  return ext == ".hdr" || ext == ".exr" || ext == ".pfm";
-}
-
-bool is_ldr_filename(const string& filename) {
-  auto ext = path_extension(filename);
-  if (ext == ".ypreset" || ext == ".YPRESET") return is_srgb_preset(filename);
-  return ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".bmp" ||
-         ext == ".tga";
-}
-
 bool is_srgb_filename(const string& filename) {
   auto ext = path_extension(filename);
   if (ext == ".ypreset" || ext == ".YPRESET") return is_srgb_preset(filename);
@@ -1324,37 +1311,14 @@ namespace yocto {
 // Loads/saves an image. Chooses hdr or ldr based on file name.
 void load_texture(const string& filename, texture_data& texture) {
   auto ext = path_extension(filename);
-  if (ext == ".exr" || ext == ".EXR") {
-    auto pixels = (float*)nullptr;
-    auto width = 0, height = 0;
-    if (LoadEXR(&pixels, &width, &height, filename.c_str(), nullptr) != 0)
-      throw io_error("cannot read " + filename);
+  if (ext == ".exr" || ext == ".EXR" || ext == ".hdr" || ext == ".HDR") {
+    texture.pixelsf = load_image(filename);
     texture.linear  = true;
-    texture.pixelsf = array2d<vec4f>{
-        (vec4f*)pixels, {(size_t)width, (size_t)height}};
-    free(pixels);
-  } else if (ext == ".hdr" || ext == ".HDR") {
-    auto buffer = load_binary(filename);
-    auto width = 0, height = 0, ncomp = 0;
-    auto pixels = stbi_loadf_from_memory(
-        buffer.data(), (int)buffer.size(), &width, &height, &ncomp, 4);
-    if (!pixels) throw io_error("cannot read " + filename);
-    texture.linear  = true;
-    texture.pixelsf = array2d<vec4f>{
-        (vec4f*)pixels, {(size_t)width, (size_t)height}};
-    free(pixels);
   } else if (ext == ".png" || ext == ".PNG" || ext == ".jpg" || ext == ".JPG" ||
              ext == ".jpeg" || ext == ".JPEG" || ext == ".tga" ||
              ext == ".TGA" || ext == ".bmp" || ext == ".BMP") {
-    auto buffer = load_binary(filename);
-    auto width = 0, height = 0, ncomp = 0;
-    auto pixels = stbi_load_from_memory(
-        buffer.data(), (int)buffer.size(), &width, &height, &ncomp, 4);
-    if (!pixels) throw io_error("cannot read " + filename);
+    texture.pixelsb = load_imageb(filename);
     texture.linear  = false;
-    texture.pixelsb = array2d<vec4b>{
-        (vec4b*)pixels, {(size_t)width, (size_t)height}};
-    free(pixels);
   } else if (ext == ".ypreset" || ext == ".YPRESET") {
     texture = make_texture_preset(filename);
   } else {
@@ -1364,70 +1328,10 @@ void load_texture(const string& filename, texture_data& texture) {
 
 // Saves an hdr image.
 void save_texture(const string& filename, const texture_data& texture) {
-  // check for correct handling
-  if (!texture.pixelsf.empty() && is_ldr_filename(filename)) {
-    auto ntexture    = texture_data{};
-    ntexture.pixelsb = rgb_to_srgbb(texture.pixelsf);
-    return save_texture(filename, ntexture);
-  }
-  if (!texture.pixelsb.empty() && is_hdr_filename(filename)) {
-    auto ntexture    = texture_data{};
-    ntexture.pixelsf = srgbb_to_rgb(texture.pixelsb);
-    return save_texture(filename, ntexture);
-  }
-
-  // write data
-  auto stbi_write_data = [](void* context, void* data, int size) {
-    auto& buffer = *(vector<byte>*)context;
-    buffer.insert(buffer.end(), (byte*)data, (byte*)data + size);
-  };
-
-  // grab data for low level apis
-  auto size = (vec2i)max(texture.pixelsf.extents(), texture.pixelsb.extents());
-
-  auto ext = path_extension(filename);
-  if (ext == ".hdr" || ext == ".HDR") {
-    auto buffer = vector<byte>{};
-    if (!stbi_write_hdr_to_func(stbi_write_data, &buffer, size.x, size.y, 4,
-            (const float*)texture.pixelsf.data()))
-      throw io_error("cannot write " + filename);
-    save_binary(filename, buffer);
-  } else if (ext == ".exr" || ext == ".EXR") {
-    auto data  = (byte*)nullptr;
-    auto count = (size_t)0;
-    if (SaveEXRToMemory((const float*)texture.pixelsf.data(), size.x, size.y, 4,
-            1, &data, &count, nullptr) < 0)
-      throw io_error("cannot write " + filename);
-    auto buffer = vector<byte>{data, data + count};
-    free(data);
-    save_binary(filename, buffer);
-  } else if (ext == ".png" || ext == ".PNG") {
-    auto buffer = vector<byte>{};
-    if (!stbi_write_png_to_func(stbi_write_data, &buffer, size.x, size.y, 4,
-            (const byte*)texture.pixelsb.data(), size.x * 4))
-      throw io_error("cannot write " + filename);
-    save_binary(filename, buffer);
-  } else if (ext == ".jpg" || ext == ".JPG" || ext == ".jpeg" ||
-             ext == ".JPEG") {
-    auto buffer = vector<byte>{};
-    if (!stbi_write_jpg_to_func(stbi_write_data, &buffer, size.x, size.y, 4,
-            (const byte*)texture.pixelsb.data(), 75))
-      throw io_error("cannot write " + filename);
-    save_binary(filename, buffer);
-  } else if (ext == ".tga" || ext == ".TGA") {
-    auto buffer = vector<byte>{};
-    if (!stbi_write_tga_to_func(stbi_write_data, &buffer, size.x, size.y, 4,
-            (const byte*)texture.pixelsb.data()))
-      throw io_error("cannot write " + filename);
-    save_binary(filename, buffer);
-  } else if (ext == ".bmp" || ext == ".BMP") {
-    auto buffer = vector<byte>{};
-    if (!stbi_write_bmp_to_func(stbi_write_data, &buffer, size.x, size.y, 4,
-            (const byte*)texture.pixelsb.data()))
-      throw io_error("cannot write " + filename);
-    save_binary(filename, buffer);
+  if (!texture.pixelsf.empty()) {
+    save_image(filename, texture.pixelsf);
   } else {
-    throw io_error("unsupported format " + filename);
+    save_image(filename, texture.pixelsb);
   }
 }
 
