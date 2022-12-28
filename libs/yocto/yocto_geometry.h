@@ -166,14 +166,6 @@ constexpr auto invalidb4f = bbox4f{};
 
 // Bounding box properties
 template <typename T, size_t N>
-[[deprecated]] constexpr kernel vec<T, N> center(const bbox<T, N>& a) {
-  return (a.min + a.max) / 2;
-}
-template <typename T, size_t N>
-[[deprecated]] constexpr kernel vec<T, N> size(const bbox<T, N>& a) {
-  return a.max - a.min;
-}
-template <typename T, size_t N>
 constexpr kernel vec<T, N> bbox_center(const bbox<T, N>& a) {
   return (a.min + a.max) / 2;
 }
