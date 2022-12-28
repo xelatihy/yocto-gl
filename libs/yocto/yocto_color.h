@@ -91,11 +91,11 @@ template <typename T = float>
 constexpr kernel T byte_to_float(byte a) {
   return a / (T)255;
 }
-template <size_t N, typename T>
+template <typename T, size_t N>
 constexpr kernel vec<byte, N> float_to_byte(const vec<T, N>& a) {
   return (vec<byte, N>)clamp(vec<int, N>(a * 256), 0, 255);
 }
-template <size_t N, typename T = float>
+template <typename T = float, size_t N = 4>
 constexpr kernel vec<T, N> byte_to_float(const vec<byte, N>& a) {
   return a / (T)255;
 }
@@ -155,7 +155,7 @@ constexpr kernel byte rgb_to_srgbb(T rgb) {
 }
 template <typename T, size_t N>
 constexpr kernel vec<T, N> srgbb_to_rgb(const vec<byte, N>& srgb) {
-  return srgb_to_rgb(byte_to_float<N, T>(srgb));
+  return srgb_to_rgb(byte_to_float<T>(srgb));
 }
 template <typename T, size_t N>
 constexpr kernel vec<byte, N> rgb_to_srgbb(const vec<T, N>& rgb) {
