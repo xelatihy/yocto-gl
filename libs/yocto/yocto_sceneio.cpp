@@ -492,17 +492,24 @@ bool is_ldr_filename(const string& filename) {
          ext == ".tga";
 }
 
+bool is_srgb_filename(const string& filename) {
+  auto ext = path_extension(filename);
+  if (ext == ".ypreset" || ext == ".YPRESET") return is_ldr_preset(filename);
+  return ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".bmp" ||
+         ext == ".tga";
+}
+
 // Loads a float image.
-array2d<vec4f> load_image(const string& filename) {
+array2d<vec4f> load_image(const string& filename, bool srgb) {
   auto image = array2d<vec4f>{};
-  load_image(filename, image);
+  load_image(filename, image, srgb);
   return image;
 }
 
 // Loads a byte image.
-array2d<vec4b> load_imageb(const string& filename) {
+array2d<vec4b> load_imageb(const string& filename, bool srgb) {
   auto image = array2d<vec4b>{};
-  load_image(filename, image);
+  load_image(filename, image, srgb);
   return image;
 }
 
@@ -562,7 +569,7 @@ constexpr array2d<vec<T, M>> convert_channels(
 }
 
 // Loads a float image.
-void load_image(const string& filename, array2d<vec4f>& image) {
+void load_image(const string& filename, array2d<vec4f>& image, bool srgb) {
   auto ext = path_extension(filename);
   if (ext == ".exr" || ext == ".EXR") {
     auto buffer = load_binary(filename);
@@ -572,6 +579,7 @@ void load_image(const string& filename, array2d<vec4f>& image) {
             buffer.size(), nullptr) != 0)
       throw io_error{"cannot read " + filename};
     image = {(vec4f*)pixels, {(size_t)width, (size_t)height}};
+    if (srgb) image = rgb_to_srgb(image);
     free(pixels);
   } else if (ext == ".hdr" || ext == ".HDR") {
     auto buffer = load_binary(filename);
@@ -580,25 +588,29 @@ void load_image(const string& filename, array2d<vec4f>& image) {
         buffer.data(), (int)buffer.size(), &width, &height, &ncomp, 4);
     if (!pixels) throw io_error{"cannot read " + filename};
     image = {(vec4f*)pixels, {(size_t)width, (size_t)height}};
+    if (srgb) image = rgb_to_srgb(image);
     free(pixels);
   } else if (ext == ".png" || ext == ".PNG" || ext == ".jpg" || ext == ".JPG" ||
              ext == ".jpeg" || ext == ".JPEG" || ext == ".tga" ||
              ext == ".TGA" || ext == ".bmp" || ext == ".BMP") {
     auto imageb = load_imageb(filename);
-    image       = byte_to_float(imageb);
+    image       = srgb ? byte_to_float(imageb) : srgbb_to_rgb(imageb);
   } else if (ext == ".ypreset" || ext == ".YPRESET") {
     image = make_image_preset(filename);
+    if (is_srgb_preset(filename) != srgb) {
+      image = srgb ? rgb_to_srgb(image) : srgb_to_rgb(image);
+    }
   } else {
     throw io_error{"unsupported format " + filename};
   }
 }
 
 // Loads a byte image.
-void load_image(const string& filename, array2d<vec4b>& image) {
+void load_image(const string& filename, array2d<vec4b>& image, bool srgb) {
   auto ext = path_extension(filename);
   if (ext == ".exr" || ext == ".EXR" || ext == ".hdr" || ext == ".HDR") {
     auto imagef = load_image(filename);
-    image       = float_to_byte(imagef);
+    image       = srgb ? rgb_to_srgbb(imagef) : float_to_byte(imagef);
   } else if (ext == ".png" || ext == ".PNG" || ext == ".jpg" || ext == ".JPG" ||
              ext == ".jpeg" || ext == ".JPEG" || ext == ".tga" ||
              ext == ".TGA" || ext == ".bmp" || ext == ".BMP") {
@@ -608,17 +620,23 @@ void load_image(const string& filename, array2d<vec4b>& image) {
         buffer.data(), (int)buffer.size(), &width, &height, &ncomp, 4);
     if (!pixels) throw io_error{"cannot read " + filename};
     image = {(vec4b*)pixels, {(size_t)width, (size_t)height}};
+    if (!srgb) image = float_to_byte(srgbb_to_rgb(image));
     free(pixels);
   } else if (ext == ".ypreset" || ext == ".YPRESET") {
     auto imagef = load_image(filename);
-    image       = float_to_byte(imagef);
+    if (is_srgb_preset(filename) != srgb) {
+      image = srgb ? rgb_to_srgbb(imagef) : float_to_byte(srgb_to_rgb(imagef));
+    } else {
+      image = float_to_byte(imagef);
+    }
   } else {
     throw io_error{"unsupported format " + filename};
   }
 }
 
 // Saves a float image.
-void save_image(const string& filename, const array2d<vec4f>& image) {
+void save_image(
+    const string& filename, const array2d<vec4f>& image, bool srgb) {
   // write data
   auto stbi_write_data = [](void* context, void* data, int size) {
     auto& buffer = *(vector<byte>*)context;
@@ -631,16 +649,18 @@ void save_image(const string& filename, const array2d<vec4f>& image) {
 
   auto ext = path_extension(filename);
   if (ext == ".hdr" || ext == ".HDR") {
-    auto buffer = vector<byte>{};
+    auto& image_ = srgb ? srgb_to_rgb(image) : image;
+    auto  buffer = vector<byte>{};
     if (!stbi_write_hdr_to_func(stbi_write_data, &buffer, width, height,
-            num_channels, (const float*)image.data()))
+            num_channels, (const float*)image_.data()))
       throw io_error{"cannot write " + filename};
     return save_binary(filename, buffer);
   } else if (ext == ".exr" || ext == ".EXR") {
-    auto data  = (byte*)nullptr;
-    auto count = (size_t)0;
-    if (SaveEXRToMemory((const float*)image.data(), width, height, num_channels,
-            1, &data, &count, nullptr) < 0)
+    auto& image_ = srgb ? srgb_to_rgb(image) : image;
+    auto  data   = (byte*)nullptr;
+    auto  count  = (size_t)0;
+    if (SaveEXRToMemory((const float*)image_.data(), width, height,
+            num_channels, 1, &data, &count, nullptr) < 0)
       throw io_error{"cannot write " + filename};
     auto buffer = vector<byte>{data, data + count};
     free(data);
@@ -648,14 +668,15 @@ void save_image(const string& filename, const array2d<vec4f>& image) {
   } else if (ext == ".png" || ext == ".PNG" || ext == ".jpg" || ext == ".JPG" ||
              ext == ".jpeg" || ext == ".JPEG" || ext == ".tga" ||
              ext == ".TGA" || ext == ".bmp" || ext == ".BMP") {
-    save_image(filename, float_to_byte(image));
+    save_image(filename, srgb ? float_to_byte(image) : rgb_to_srgbb(image));
   } else {
     throw io_error{"unsupported format " + filename};
   }
 }
 
 // Saves a byte image.
-void save_image(const string& filename, const array2d<vec4b>& image) {
+void save_image(
+    const string& filename, const array2d<vec4b>& image, bool srgb) {
   // write data
   auto stbi_write_data = [](void* context, void* data, int size) {
     auto& buffer = *(vector<byte>*)context;
@@ -670,28 +691,32 @@ void save_image(const string& filename, const array2d<vec4b>& image) {
   if (ext == ".hdr" || ext == ".HDR" || ext == ".exr" || ext == ".EXR") {
     return save_image(filename, byte_to_float(image));
   } else if (ext == ".png" || ext == ".PNG") {
-    auto buffer = vector<byte>{};
+    auto& image_ = srgb ? image : rgb_to_srgbb(byte_to_float(image));
+    auto  buffer = vector<byte>{};
     if (!stbi_write_png_to_func(stbi_write_data, &buffer, width, height,
-            num_channels, (const byte*)image.data(), width * 4))
+            num_channels, (const byte*)image_.data(), width * 4))
       throw io_error{"cannot write " + filename};
     return save_binary(filename, buffer);
   } else if (ext == ".jpg" || ext == ".JPG" || ext == ".jpeg" ||
              ext == ".JPEG") {
-    auto buffer = vector<byte>{};
+    auto& image_ = srgb ? image : rgb_to_srgbb(byte_to_float(image));
+    auto  buffer = vector<byte>{};
     if (!stbi_write_jpg_to_func(stbi_write_data, &buffer, width, height,
-            num_channels, (const byte*)image.data(), 75))
+            num_channels, (const byte*)image_.data(), 75))
       throw io_error{"cannot write " + filename};
     return save_binary(filename, buffer);
   } else if (ext == ".tga" || ext == ".TGA") {
-    auto buffer = vector<byte>{};
+    auto& image_ = srgb ? image : rgb_to_srgbb(byte_to_float(image));
+    auto  buffer = vector<byte>{};
     if (!stbi_write_tga_to_func(stbi_write_data, &buffer, width, height,
-            num_channels, (const byte*)image.data()))
+            num_channels, (const byte*)image_.data()))
       throw io_error{"cannot write " + filename};
     return save_binary(filename, buffer);
   } else if (ext == ".bmp" || ext == ".BMP") {
-    auto buffer = vector<byte>{};
+    auto& image_ = srgb ? image : rgb_to_srgbb(byte_to_float(image));
+    auto  buffer = vector<byte>{};
     if (!stbi_write_bmp_to_func(stbi_write_data, &buffer, width, height,
-            num_channels, (const byte*)image.data()))
+            num_channels, (const byte*)image_.data()))
       throw io_error{"cannot write " + filename};
     return save_binary(filename, buffer);
   } else {
@@ -704,6 +729,10 @@ bool is_hdr_preset(const string& type_) {
   return type.find("sky") != type.npos;
 }
 bool is_ldr_preset(const string& type_) {
+  auto type = path_basename(type_);
+  return type.find("sky") == type.npos;
+}
+bool is_srgb_preset(const string& type_) {
   auto type = path_basename(type_);
   return type.find("sky") == type.npos;
 }

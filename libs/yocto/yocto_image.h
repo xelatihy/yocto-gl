@@ -253,6 +253,22 @@ inline void colorgrade_image(array2d<vec<T, 4>>& result,
   });
 }
 
+// Color grade an hsr or ldr image to an ldr image.
+template <typename T>
+inline array2d<vec<T, 4>> colorgrade_image(
+    const array2d<vec<T, 4>>& image, const colorgrade_gparams<T>& params) {
+  return fmap(image,
+      [&](const vec<T, 4>& pixel) { return colorgrade(pixel, true, params); });
+}
+
+// Color grade an hsr or ldr image to an ldr image.
+template <typename T>
+inline void colorgrade_image(array2d<vec<T, 4>>& result,
+    const array2d<vec<T, 4>>& image, const colorgrade_gparams<T>& params) {
+  return fmap(result, image,
+      [&](const vec<T, 4>& pixel) { return colorgrade(pixel, true, params); });
+}
+
 // determine white balance colors
 template <typename T>
 inline vec<T, 3> compute_white_balance(const array2d<vec<T, 4>>& image) {
