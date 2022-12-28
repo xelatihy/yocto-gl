@@ -158,7 +158,8 @@ void run(const vector<string>& args) {
       print_info("render sample {}/{}: {}", state.samples, params.samples,
           elapsed_formatted(sample_timer));
       if (savebatch && state.samples % params.batch == 0) {
-        auto image     = get_image(state);
+        auto image = get_image(state);
+        if (is_ldr_filename(outname)) image = rgb_to_srgb(image);
         auto batchname = replace_extension(outname,
             "-" + std::to_string(state.samples) + path_extension(outname));
         save_image(batchname, image);
@@ -169,6 +170,7 @@ void run(const vector<string>& args) {
     // save image
     timer      = simple_timer{};
     auto image = get_image(state);
+    if (is_ldr_filename(outname)) image = rgb_to_srgb(image);
     save_image(outname, image);
     print_info("save image: {}", elapsed_formatted(timer));
   } else {
