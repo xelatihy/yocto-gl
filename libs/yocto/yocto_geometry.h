@@ -38,6 +38,7 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
+#include <algorithm>
 #include <utility>
 #include <vector>
 
