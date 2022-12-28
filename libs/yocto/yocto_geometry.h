@@ -1236,7 +1236,7 @@ namespace yocto {
 // indices refer to primitives for leaf nodes or other nodes for internal nodes.
 template <typename T, size_t N>
 struct bvh_gnode {
-  bbox<T, N> bbox     = {};
+  bbox<T, N> bbox_    = {};
   int32_t    start    = 0;
   int16_t    num      = 0;
   int8_t     axis     = 0;
@@ -1521,9 +1521,9 @@ inline bvh_gdata<T, 3> make_bvh(
     auto& node = bvh.nodes[nodeid];
 
     // compute bounds
-    node.bbox = invalidb3f;
+    node.bbox_ = invalidb3f;
     for (auto i = start; i < end; i++)
-      node.bbox = merge(node.bbox, bboxes[bvh.primitives[i]]);
+      node.bbox_ = merge(node.bbox_, bboxes[bvh.primitives[i]]);
 
     // split into two children
     if (end - start > bvh_max_prims) {
@@ -1563,14 +1563,15 @@ inline void refit_bvh(
     bvh_gdata<T, 3>& bvh, const vector<E>& elements, Func&& bbox_func) {
   for (auto nodeid = (int)bvh.nodes.size() - 1; nodeid >= 0; nodeid--) {
     auto& node = bvh.nodes[nodeid];
-    node.bbox  = invalidb3f;
+    node.bbox_ = invalidb3f;
     if (node.internal) {
       for (auto idx : range(2)) {
-        node.bbox = merge(node.bbox, bvh.nodes[node.start + idx].bbox);
+        node.bbox_ = merge(node.bbox_, bvh.nodes[node.start + idx].bbox_);
       }
     } else {
       for (auto idx : range(node.start, node.start + node.num)) {
-        node.bbox = merge(node.bbox, bbox_func(elements[bvh.primitives[idx]]));
+        node.bbox_ = merge(
+            node.bbox_, bbox_func(elements[bvh.primitives[idx]]));
       }
     }
   }
@@ -1605,7 +1606,7 @@ inline intersection<T, 3> intersect_bvh(const bvh_gdata<T, 3>& bvh,
 
     // intersect bbox
     // if (!intersect_bbox(ray, ray_dinv, ray_dsign, node.bbox)) continue;
-    if (!intersect_bbox(ray, ray_dinv, node.bbox)) continue;
+    if (!intersect_bbox(ray, ray_dinv, node.bbox_)) continue;
 
     // intersect node, switching based on node type
     // for each type, iterate over the the primitive list
@@ -1658,7 +1659,7 @@ inline intersection<T, 3> overlap_bvh(const bvh_gdata<T, 3>& bvh,
     auto& node = bvh.nodes[node_stack[--node_cur]];
 
     // intersect bbox
-    if (!overlap_bbox(pos, max_distance, node.bbox)) continue;
+    if (!overlap_bbox(pos, max_distance, node.bbox_)) continue;
 
     // intersect node, switching based on node type
     // for each type, iterate over the the primitive list

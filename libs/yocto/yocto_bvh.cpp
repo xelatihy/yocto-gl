@@ -145,7 +145,7 @@ scene_bvh make_scene_bvh(
         return bvh.shapes[instance.shape].bvh.nodes.empty()
                    ? invalidb3f
                    : transform_bbox(instance.frame,
-                         bvh.shapes[instance.shape].bvh.nodes[0].bbox);
+                         bvh.shapes[instance.shape].bvh.nodes[0].bbox_);
       });
 
   // done
@@ -182,7 +182,7 @@ void update_scene_bvh(scene_bvh& sbvh, const scene_data& scene,
   // update nodes
   refit_bvh(sbvh.bvh, scene.instances, [&](const instance_data& instance) {
     return transform_bbox(
-        instance.frame, sbvh.shapes[instance.shape].bvh.nodes[0].bbox);
+        instance.frame, sbvh.shapes[instance.shape].bvh.nodes[0].bbox_);
   });
 }
 
