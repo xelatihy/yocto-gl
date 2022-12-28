@@ -1492,7 +1492,7 @@ inline bvh_gdata<T, 3> make_bvh(
   bvh.nodes.reserve(elements.size() * 2);
 
   // prepare bboxes
-  auto bboxes = vector<bbox3f>(elements.size());
+  auto bboxes = vector<bbox<T, 3>>(elements.size());
   for (auto&& [bbox, element] : zip(bboxes, elements))
     bbox = bbox_func(element);
 
@@ -1502,7 +1502,7 @@ inline bvh_gdata<T, 3> make_bvh(
     primitive = (int)idx;
 
   // prepare centers
-  auto centers = vector<vec3f>(bboxes.size());
+  auto centers = vector<vec<T, 3>>(bboxes.size());
   for (auto&& [center, bbox] : zip(centers, bboxes)) center = bbox_center(bbox);
 
   // push first node onto the stack
