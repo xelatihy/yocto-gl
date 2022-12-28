@@ -95,8 +95,6 @@ void save_image(
     const string& filename, const array2d<vec4b>& image, bool srgb = true);
 
 // Make presets. Supported mostly in IO.
-bool           is_hdr_preset(const string& type);
-bool           is_ldr_preset(const string& type);
 bool           is_srgb_preset(const string& type);
 array2d<vec4f> make_image_preset(const string& type);
 

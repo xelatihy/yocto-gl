@@ -481,20 +481,20 @@ namespace yocto {
 // Check if an image is HDR based on filename.
 bool is_hdr_filename(const string& filename) {
   auto ext = path_extension(filename);
-  if (ext == ".ypreset" || ext == ".YPRESET") return is_hdr_preset(filename);
+  if (ext == ".ypreset" || ext == ".YPRESET") return !is_srgb_preset(filename);
   return ext == ".hdr" || ext == ".exr" || ext == ".pfm";
 }
 
 bool is_ldr_filename(const string& filename) {
   auto ext = path_extension(filename);
-  if (ext == ".ypreset" || ext == ".YPRESET") return is_ldr_preset(filename);
+  if (ext == ".ypreset" || ext == ".YPRESET") return is_srgb_preset(filename);
   return ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".bmp" ||
          ext == ".tga";
 }
 
 bool is_srgb_filename(const string& filename) {
   auto ext = path_extension(filename);
-  if (ext == ".ypreset" || ext == ".YPRESET") return is_ldr_preset(filename);
+  if (ext == ".ypreset" || ext == ".YPRESET") return is_srgb_preset(filename);
   return ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".bmp" ||
          ext == ".tga";
 }
@@ -724,14 +724,6 @@ void save_image(
   }
 }
 
-bool is_hdr_preset(const string& type_) {
-  auto type = path_basename(type_);
-  return type.find("sky") != type.npos;
-}
-bool is_ldr_preset(const string& type_) {
-  auto type = path_basename(type_);
-  return type.find("sky") == type.npos;
-}
 bool is_srgb_preset(const string& type_) {
   auto type = path_basename(type_);
   return type.find("sky") == type.npos;
@@ -1494,7 +1486,7 @@ void save_texture(const string& filename, const texture_data& texture) {
 }
 
 texture_data make_texture_preset(const string& type) {
-  return image_to_texture(make_image_preset(type), is_hdr_preset(type));
+  return image_to_texture(make_image_preset(type), !is_srgb_preset(type));
 }
 
 // Loads/saves an image. Chooses hdr or ldr based on file name.
