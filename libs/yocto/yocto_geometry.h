@@ -1223,6 +1223,8 @@ constexpr kernel bool overlap_bbox(
 
 }  // namespace yocto
 
+#ifndef __CUDACC__
+
 // -----------------------------------------------------------------------------
 // GENERIC BVH FOR INTERSECTION AND OVERLAP
 // -----------------------------------------------------------------------------
@@ -1769,6 +1771,8 @@ inline intersection3f intersect_quads_bvh(const bvh_data& bvh,
 }
 
 }  // namespace yocto
+
+#endif
 
 // -----------------------------------------------------------------------------
 // CUDA SUPPORT
