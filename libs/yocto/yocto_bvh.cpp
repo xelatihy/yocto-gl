@@ -51,7 +51,6 @@ namespace yocto {
 
 // using directives
 using std::array;
-using std::atomic;
 
 // consts
 inline const auto uint_max = std::numeric_limits<unsigned int>::max();
@@ -745,8 +744,8 @@ struct embree_error : std::runtime_error {
 bool embree_supported() { return true; }
 
 // Get Embree device
-atomic<ssize_t>  embree_memory = 0;
-static RTCDevice embree_device() {
+std::atomic<ssize_t> embree_memory = 0;
+static RTCDevice     embree_device() {
   static RTCDevice device = nullptr;
   if (!device) {
     device = rtcNewDevice("");
