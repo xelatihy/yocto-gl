@@ -689,7 +689,8 @@ void save_image(
 
   auto ext = path_extension(filename);
   if (ext == ".hdr" || ext == ".HDR" || ext == ".exr" || ext == ".EXR") {
-    return save_image(filename, byte_to_float(image));
+    return save_image(
+        filename, srgb ? srgbb_to_rgb(image) : byte_to_float(image));
   } else if (ext == ".png" || ext == ".PNG") {
     auto& image_ = srgb ? image : rgb_to_srgbb(byte_to_float(image));
     auto  buffer = vector<byte>{};
