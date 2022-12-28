@@ -1373,7 +1373,7 @@ struct bvh_data {
 // The values are all set for scene intersection. Shape intersection does not
 // set the instance id and element intersections do not set shape element id
 // and the instance id. Results values are set only if hit is true.
-struct shape_intersection {
+struct elements_intersection {
   int   element  = -1;
   vec2f uv       = {0, 0};
   float distance = 0;
@@ -1385,7 +1385,7 @@ struct shape_intersection {
 // The values are all set for scene intersection. Shape intersection does not
 // set the instance id and element intersections do not set shape element id
 // and the instance id. Results values are set only if hit is true.
-struct scene_intersection {
+struct instances_intersection {
   int   instance = -1;
   int   element  = -1;
   vec2f uv       = {0, 0};
@@ -1404,12 +1404,12 @@ inline void refit_bvh(
     bvh_data& bvh, const vector<T>& elements, Func&& bbox_func);
 
 template <typename T, typename Func>
-inline shape_intersection intersect_elements_bvh(const bvh_data& bvh,
+inline elements_intersection intersect_elements_bvh(const bvh_data& bvh,
     const vector<T>& elements, const ray3f& ray_, bool find_any,
     Func&& intersect_element);
 
 template <typename T, typename Func>
-inline scene_intersection intersect_instances_bvh(const bvh_data& bvh,
+inline instances_intersection intersect_instances_bvh(const bvh_data& bvh,
     const vector<T>& instances, const ray3f& ray_, bool find_any,
     Func&& intersect_instance);
 
@@ -1441,16 +1441,16 @@ inline void update_quads_bvh(
     bvh_data& bvh, const vector<vec4i>& quads, const vector<vec3f>& positions);
 
 // Bvh intersection
-inline shape_intersection intersect_points_bvh(const bvh_data& bvh,
+inline elements_intersection intersect_points_bvh(const bvh_data& bvh,
     const vector<int>& points, const vector<vec3f>& positions,
     const vector<float>& radius, const ray3f& ray, bool find_any = false);
-inline shape_intersection intersect_lines_bvh(const bvh_data& bvh,
+inline elements_intersection intersect_lines_bvh(const bvh_data& bvh,
     const vector<vec2i>& lines, const vector<vec3f>& positions,
     const vector<float>& radius, const ray3f& ray, bool find_any = false);
-inline shape_intersection intersect_triangles_bvh(const bvh_data& bvh,
+inline elements_intersection intersect_triangles_bvh(const bvh_data& bvh,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const ray3f& ray, bool find_any = false);
-inline shape_intersection intersect_quads_bvh(const bvh_data& bvh,
+inline elements_intersection intersect_quads_bvh(const bvh_data& bvh,
     const vector<vec4i>& quads, const vector<vec3f>& positions,
     const ray3f& ray, bool find_any = false);
 
@@ -1674,7 +1674,7 @@ inline void refit_bvh(
 }
 
 template <typename T, typename Func>
-inline shape_intersection intersect_elements_bvh(const bvh_data& bvh,
+inline elements_intersection intersect_elements_bvh(const bvh_data& bvh,
     const vector<T>& elements, const ray3f& ray_, bool find_any,
     Func&& intersect_element) {
   // check empty
@@ -1686,7 +1686,7 @@ inline shape_intersection intersect_elements_bvh(const bvh_data& bvh,
   node_stack[node_cur++] = 0;
 
   // shared variables
-  auto intersection = shape_intersection{};
+  auto intersection = elements_intersection{};
 
   // copy ray to modify it
   auto ray = ray_;
@@ -1735,7 +1735,7 @@ inline shape_intersection intersect_elements_bvh(const bvh_data& bvh,
 }
 
 template <typename T, typename Func>
-inline scene_intersection intersect_instances_bvh(const bvh_data& bvh,
+inline instances_intersection intersect_instances_bvh(const bvh_data& bvh,
     const vector<T>& instances, const ray3f& ray_, bool find_any,
     Func&& intersect_instance) {
   // check empty
@@ -1747,7 +1747,7 @@ inline scene_intersection intersect_instances_bvh(const bvh_data& bvh,
   node_stack[node_cur++] = 0;
 
   // intersection
-  auto intersection = scene_intersection{};
+  auto intersection = instances_intersection{};
 
   // copy ray to modify it
   auto ray = ray_;
@@ -1849,7 +1849,7 @@ inline void update_quads_bvh(
       [&](const vec4i& quad) { return quad_bounds(positions, quad); });
 }
 
-inline shape_intersection intersect_points_bvh(const bvh_data& bvh,
+inline elements_intersection intersect_points_bvh(const bvh_data& bvh,
     const vector<int>& points, const vector<vec3f>& positions,
     const vector<float>& radius, const ray3f& ray, bool find_any) {
   return intersect_elements_bvh(
@@ -1857,7 +1857,7 @@ inline shape_intersection intersect_points_bvh(const bvh_data& bvh,
         return intersect_point(ray, positions, radius, point);
       });
 }
-inline shape_intersection intersect_lines_bvh(const bvh_data& bvh,
+inline elements_intersection intersect_lines_bvh(const bvh_data& bvh,
     const vector<vec2i>& lines, const vector<vec3f>& positions,
     const vector<float>& radius, const ray3f& ray, bool find_any) {
   return intersect_elements_bvh(
@@ -1865,7 +1865,7 @@ inline shape_intersection intersect_lines_bvh(const bvh_data& bvh,
         return intersect_line(ray, positions, radius, line);
       });
 }
-inline shape_intersection intersect_triangles_bvh(const bvh_data& bvh,
+inline elements_intersection intersect_triangles_bvh(const bvh_data& bvh,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const ray3f& ray, bool find_any) {
   return intersect_elements_bvh(bvh, triangles, ray, find_any,
@@ -1873,7 +1873,7 @@ inline shape_intersection intersect_triangles_bvh(const bvh_data& bvh,
         return intersect_triangle(ray, positions, triangle);
       });
 }
-inline shape_intersection intersect_quads_bvh(const bvh_data& bvh,
+inline elements_intersection intersect_quads_bvh(const bvh_data& bvh,
     const vector<vec4i>& quads, const vector<vec3f>& positions,
     const ray3f& ray, bool find_any) {
   return intersect_elements_bvh(

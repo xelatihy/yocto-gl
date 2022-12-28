@@ -74,6 +74,10 @@ struct scene_bvh {
   vector<shape_bvh> shapes = {};
 };
 
+// Intersections
+using shape_intersection = elements_intersection;
+using scene_intersection = instances_intersection;
+
 // Build the bvh acceleration structure.
 shape_bvh make_shape_bvh(const shape_data& shape, bool highquality = false);
 scene_bvh make_scene_bvh(
