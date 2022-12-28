@@ -279,6 +279,14 @@ inline vec<T, 3> compute_white_balance(const array2d<vec<T, 4>>& image) {
   return rgb;
 }
 
+// Convert channels
+template <size_t M, typename T, size_t N>
+inline array2d<vec<T, M>> convert_channels(const array2d<vec<T, N>>& image) {
+  if constexpr (N == M) return image;
+  return fmap(image,
+      [&](const vec<T, N>& pixel) { return convert_channels<M>(pixel); });
+}
+
 // Resize an image.
 template <size_t N>
 array2d<vec<float, N>> resize_image(

@@ -206,6 +206,37 @@ constexpr kernel vec<T, 3> saturate(const vec<T, 3>& rgb, T saturation,
   return max(grey + (rgb - grey) * (saturation * 2), 0);
 }
 
+// Convert channels
+template <size_t M, typename T, size_t N>
+constexpr kernel vec<T, M> convert_channels(const vec<T, N>& color) {
+  constexpr auto a1 = std::is_same_v<T, byte> ? (byte)255 : (T)1;
+  if constexpr (N == M) {
+    return color;
+  } else if constexpr (N == 1) {
+    if constexpr (M == 1) return {color[0]};
+    if constexpr (M == 2) return {color[0], a1};
+    if constexpr (M == 3) return {color[0], color[0], color[0]};
+    if constexpr (M == 4) return {color[0], color[0], color[0], a1};
+  } else if constexpr (N == 2) {
+    if constexpr (M == 1) return {color[0]};
+    if constexpr (M == 2) return {color[0], color[1]};
+    if constexpr (M == 3) return {color[0], color[0], color[0]};
+    if constexpr (M == 4) return {color[0], color[0], color[0], color[1]};
+  } else if constexpr (N == 3) {
+    if constexpr (M == 1) return {mean(color[0])};
+    if constexpr (M == 2) return {mean(color[0]), a1};
+    if constexpr (M == 3) return {color[0], color[1], color[2]};
+    if constexpr (M == 4) return {color[0], color[1], color[2], a1};
+  } else if constexpr (N == 4) {
+    if constexpr (M == 1) return {mean(color[0])};
+    if constexpr (M == 2) return {mean(color[0]), color[3]};
+    if constexpr (M == 3) return {color[0], color[1], color[2]};
+    if constexpr (M == 4) return {color[0], color[1], color[2], color[3]};
+  } else {
+    return vec<T, M>{0};
+  }
+}
+
 #ifndef __CUDACC__
 
 // Filmic tonemapping

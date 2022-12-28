@@ -513,61 +513,6 @@ array2d<vec4b> load_imageb(const string& filename, bool srgb) {
   return image;
 }
 
-// Convert channels
-template <size_t M, typename T, size_t N>
-constexpr vec<T, M> convert_channels(const vec<T, N>& color) {
-  constexpr auto a1 = std::is_same_v<T, byte> ? (byte)255 : (T)1;
-  if constexpr (N == M) {
-    return color;
-  } else if constexpr (N == 1) {
-    if constexpr (M == 1) return {color[0]};
-    if constexpr (M == 2) return {color[0], a1};
-    if constexpr (M == 3) return {color[0], color[0], color[0]};
-    if constexpr (M == 4) return {color[0], color[0], color[0], a1};
-  } else if constexpr (N == 2) {
-    if constexpr (M == 1) return {color[0]};
-    if constexpr (M == 2) return {color[0], color[1]};
-    if constexpr (M == 3) return {color[0], color[0], color[0]};
-    if constexpr (M == 4) return {color[0], color[0], color[0], color[1]};
-  } else if constexpr (N == 3) {
-    if constexpr (M == 1) return {mean(color[0])};
-    if constexpr (M == 2) return {mean(color[0]), a1};
-    if constexpr (M == 3) return {color[0], color[1], color[2]};
-    if constexpr (M == 4) return {color[0], color[1], color[2], a1};
-  } else if constexpr (N == 4) {
-    if constexpr (M == 1) return {mean(color[0])};
-    if constexpr (M == 2) return {mean(color[0]), color[3]};
-    if constexpr (M == 3) return {color[0], color[1], color[2]};
-    if constexpr (M == 4) return {color[0], color[1], color[2], color[3]};
-  } else {
-    return vec<T, M>{0};
-  }
-}
-
-// Convert channels
-template <typename T, size_t M, typename T1, size_t N>
-constexpr array2d<vec<T, M>> convert_channels(
-    const array2d<vec<T1, N>>& image) {
-  if constexpr (N == M && std::is_same_v<T, T1>) return image;
-
-  auto converted = array2d<vec<T, M>>(image.extents());
-  for (auto idx : range(converted.extents())) {
-    converted[idx] = convert_channels(image[idx]);
-  }
-  return converted;
-}
-
-// Convert channels
-template <typename T, size_t M, typename T1, size_t N>
-constexpr array2d<vec<T, M>> convert_channels(
-    vec<T1, N>* image, vec2s extents) {
-  auto converted = array2d<vec<T, M>>(extents);
-  for (auto idx : range(converted.extents())) {
-    converted[idx] = convert_channels(image[idx]);
-  }
-  return converted;
-}
-
 // Loads a float image.
 void load_image(const string& filename, array2d<vec4f>& image, bool srgb) {
   auto ext = path_extension(filename);
