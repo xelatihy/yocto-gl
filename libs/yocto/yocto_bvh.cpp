@@ -230,13 +230,20 @@ static pair<int, int> split_middle(vector<int>& primitives,
 const int bvh_max_prims = 4;
 
 // Build BVH nodes
-static bvh_tree make_bvh(const vector<bbox3f>& bboxes, bool highquality) {
+template <typename T, typename Func>
+static bvh_tree make_bvh(
+    const vector<T>& elements, bool highquality, Func&& bbox_func) {
   // bvh
   auto bvh = bvh_tree{};
 
   // prepare to build nodes
   bvh.nodes.clear();
-  bvh.nodes.reserve(bboxes.size() * 2);
+  bvh.nodes.reserve(elements.size() * 2);
+
+  // prepare bboxes
+  auto bboxes = vector<bbox3f>(elements.size());
+  for (auto&& [bbox, element] : zip(bboxes, elements))
+    bbox = bbox_func(element);
 
   // prepare primitives
   bvh.primitives = vector<int>(bboxes.size());
@@ -315,38 +322,24 @@ static void refit_bvh(bvh_tree& bvh, const vector<bbox3f>& bboxes) {
 }
 
 shape_bvh make_shape_bvh(const shape_data& shape, bool highquality) {
-  // bvh
-  auto sbvh = shape_bvh{};
-
-  // build primitives
-  auto bboxes = vector<bbox3f>{};
   if (is_points(shape)) {
-    bboxes = vector<bbox3f>(shape.points.size());
-    for (auto&& [bbox, point] : zip(bboxes, shape.points)) {
-      bbox = point_bounds(shape.positions, shape.radius, point);
-    }
+    return {make_bvh(shape.points, highquality, [&](const int& point) {
+      return point_bounds(shape.positions, shape.radius, point);
+    })};
   } else if (is_lines(shape)) {
-    bboxes = vector<bbox3f>(shape.lines.size());
-    for (auto&& [bbox, line] : zip(bboxes, shape.lines)) {
-      bbox = line_bounds(shape.positions, shape.radius, line);
-    }
+    return {make_bvh(shape.lines, highquality, [&](const vec2i& line) {
+      return line_bounds(shape.positions, shape.radius, line);
+    })};
   } else if (is_triangles(shape)) {
-    bboxes = vector<bbox3f>(shape.triangles.size());
-    for (auto&& [bbox, triangle] : zip(bboxes, shape.triangles)) {
-      bbox = triangle_bounds(shape.positions, triangle);
-    }
+    return {make_bvh(shape.triangles, highquality, [&](const vec3i& triangle) {
+      return triangle_bounds(shape.positions, triangle);
+    })};
   } else if (is_quads(shape)) {
-    bboxes = vector<bbox3f>(shape.quads.size());
-    for (auto&& [bbox, quad] : zip(bboxes, shape.quads)) {
-      bbox = quad_bounds(shape.positions, quad);
-    }
+    return {make_bvh(shape.quads, highquality,
+        [&](const vec4i& quad) { return quad_bounds(shape.positions, quad); })};
+  } else {
+    return {};
   }
-
-  // build nodes
-  sbvh.bvh = make_bvh(bboxes, highquality);
-
-  // done
-  return sbvh;
 }
 
 scene_bvh make_scene_bvh(
@@ -366,17 +359,14 @@ scene_bvh make_scene_bvh(
     });
   }
 
-  // instance bboxes
-  auto bboxes = vector<bbox3f>(scene.instances.size());
-  for (auto&& [bbox, instance] : zip(bboxes, scene.instances)) {
-    bbox = bvh.shapes[instance.shape].bvh.nodes.empty()
-               ? invalidb3f
-               : transform_bbox(instance.frame,
-                     bvh.shapes[instance.shape].bvh.nodes[0].bbox);
-  }
-
-  // build nodes
-  bvh.bvh = make_bvh(bboxes, highquality);
+  // instance bvh
+  bvh.bvh = make_bvh(
+      scene.instances, highquality, [&](const instance_data& instance) {
+        return bvh.shapes[instance.shape].bvh.nodes.empty()
+                   ? invalidb3f
+                   : transform_bbox(instance.frame,
+                         bvh.shapes[instance.shape].bvh.nodes[0].bbox);
+      });
 
   // done
   return bvh;
