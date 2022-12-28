@@ -86,6 +86,14 @@ struct shape_data {
   vector<vec4f> tangents  = {};
 };
 
+// Shape type
+inline bool is_points(const shape_data& shape) { return !shape.points.empty(); }
+inline bool is_lines(const shape_data& shape) { return !shape.lines.empty(); }
+inline bool is_triangles(const shape_data& shape) {
+  return !shape.triangles.empty();
+}
+inline bool is_quads(const shape_data& shape) { return !shape.quads.empty(); }
+
 // Interpolate vertex data
 vec3f eval_position(const shape_data& shape, int element, const vec2f& uv);
 vec3f eval_normal(const shape_data& shape, int element, const vec2f& uv);

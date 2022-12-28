@@ -278,19 +278,19 @@ namespace yocto {
 vec3f eval_position(const scene_data& scene, const instance_data& instance,
     int element, const vec2f& uv) {
   auto& shape = scene.shapes[instance.shape];
-  if (!shape.triangles.empty()) {
+  if (is_triangles(shape)) {
     auto triangle = shape.triangles[element];
     return transform_point(
         instance.frame, interpolate_triangle(shape.positions, triangle, uv));
-  } else if (!shape.quads.empty()) {
+  } else if (is_quads(shape)) {
     auto quad = shape.quads[element];
     return transform_point(
         instance.frame, interpolate_quad(shape.positions, quad, uv));
-  } else if (!shape.lines.empty()) {
+  } else if (is_lines(shape)) {
     auto line = shape.lines[element];
     return transform_point(
         instance.frame, interpolate_line(shape.positions, line, uv));
-  } else if (!shape.points.empty()) {
+  } else if (is_points(shape)) {
     return transform_point(
         instance.frame, shape.positions[shape.points[element]]);
   } else {
@@ -302,18 +302,18 @@ vec3f eval_position(const scene_data& scene, const instance_data& instance,
 vec3f eval_element_normal(
     const scene_data& scene, const instance_data& instance, int element) {
   auto& shape = scene.shapes[instance.shape];
-  if (!shape.triangles.empty()) {
+  if (is_triangles(shape)) {
     auto triangle = shape.triangles[element];
     return transform_normal(
         instance.frame, triangle_normal(shape.positions, triangle));
-  } else if (!shape.quads.empty()) {
+  } else if (is_quads(shape)) {
     auto quad = shape.quads[element];
     return transform_normal(instance.frame, quad_normal(shape.positions, quad));
-  } else if (!shape.lines.empty()) {
+  } else if (is_lines(shape)) {
     auto line = shape.lines[element];
     return transform_normal(
         instance.frame, line_tangent(shape.positions, line));
-  } else if (!shape.points.empty()) {
+  } else if (is_points(shape)) {
     return {0, 0, 1};
   } else {
     return {0, 0, 0};
@@ -326,19 +326,19 @@ vec3f eval_normal(const scene_data& scene, const instance_data& instance,
   auto& shape = scene.shapes[instance.shape];
   if (shape.normals.empty())
     return eval_element_normal(scene, instance, element);
-  if (!shape.triangles.empty()) {
+  if (is_triangles(shape)) {
     auto triangle = shape.triangles[element];
     return transform_normal(instance.frame,
         normalize(interpolate_triangle(shape.normals, triangle, uv)));
-  } else if (!shape.quads.empty()) {
+  } else if (is_quads(shape)) {
     auto quad = shape.quads[element];
     return transform_normal(
         instance.frame, normalize(interpolate_quad(shape.normals, quad, uv)));
-  } else if (!shape.lines.empty()) {
+  } else if (is_lines(shape)) {
     auto line = shape.lines[element];
     return transform_normal(
         instance.frame, normalize(interpolate_line(shape.normals, line, uv)));
-  } else if (!shape.points.empty()) {
+  } else if (is_points(shape)) {
     return transform_normal(
         instance.frame, normalize(shape.normals[shape.points[element]]));
   } else {
@@ -351,16 +351,16 @@ vec2f eval_texcoord(const scene_data& scene, const instance_data& instance,
     int element, const vec2f& uv) {
   auto& shape = scene.shapes[instance.shape];
   if (shape.texcoords.empty()) return uv;
-  if (!shape.triangles.empty()) {
+  if (is_triangles(shape)) {
     auto triangle = shape.triangles[element];
     return interpolate_triangle(shape.texcoords, triangle, uv);
-  } else if (!shape.quads.empty()) {
+  } else if (is_quads(shape)) {
     auto quad = shape.quads[element];
     return interpolate_quad(shape.texcoords, quad, uv);
-  } else if (!shape.lines.empty()) {
+  } else if (is_lines(shape)) {
     auto line = shape.lines[element];
     return interpolate_line(shape.texcoords, line, uv);
-  } else if (!shape.points.empty()) {
+  } else if (is_points(shape)) {
     return shape.texcoords[shape.points[element]];
   } else {
     return vec2f{0, 0};
@@ -371,13 +371,13 @@ vec2f eval_texcoord(const scene_data& scene, const instance_data& instance,
 pair<vec3f, vec3f> eval_element_tangents(
     const scene_data& scene, const instance_data& instance, int element) {
   auto& shape = scene.shapes[instance.shape];
-  if (!shape.triangles.empty() && !shape.texcoords.empty()) {
+  if (is_triangles(shape) && !shape.texcoords.empty()) {
     auto triangle = shape.triangles[element];
     auto [tu, tv] = triangle_tangents_fromuv(
         shape.positions, shape.texcoords, triangle);
     return {transform_direction(instance.frame, tu),
         transform_direction(instance.frame, tv)};
-  } else if (!shape.quads.empty() && !shape.texcoords.empty()) {
+  } else if (is_quads(shape) && !shape.texcoords.empty()) {
     auto quad     = shape.quads[element];
     auto [tu, tv] = quad_tangents_fromuv(
         shape.positions, shape.texcoords, quad, {0, 0});
@@ -396,7 +396,7 @@ vec3f eval_normalmap(const scene_data& scene, const instance_data& instance,
   auto normal   = eval_normal(scene, instance, element, uv);
   auto texcoord = eval_texcoord(scene, instance, element, uv);
   if (material.normal_tex != invalidid &&
-      (!shape.triangles.empty() || !shape.quads.empty())) {
+      (is_triangles(shape) || is_quads(shape))) {
     auto& normal_tex = scene.textures[material.normal_tex];
     auto  normalmap  = -1 + 2 * xyz(eval_texture(normal_tex, texcoord, false));
     auto [tu, tv]    = eval_element_tangents(scene, instance, element);
@@ -413,11 +413,11 @@ vec3f eval_shading_position(const scene_data& scene,
     const instance_data& instance, int element, const vec2f& uv,
     const vec3f& outgoing) {
   auto& shape = scene.shapes[instance.shape];
-  if (!shape.triangles.empty() || !shape.quads.empty()) {
+  if (is_triangles(shape) || is_quads(shape)) {
     return eval_position(scene, instance, element, uv);
-  } else if (!shape.lines.empty()) {
+  } else if (is_lines(shape)) {
     return eval_position(scene, instance, element, uv);
-  } else if (!shape.points.empty()) {
+  } else if (is_points(shape)) {
     return eval_position(shape, element, uv);
   } else {
     return {0, 0, 0};
@@ -430,17 +430,17 @@ vec3f eval_shading_normal(const scene_data& scene,
     const vec3f& outgoing) {
   auto& shape    = scene.shapes[instance.shape];
   auto& material = scene.materials[instance.material];
-  if (!shape.triangles.empty() || !shape.quads.empty()) {
+  if (is_triangles(shape) || is_quads(shape)) {
     auto normal = eval_normal(scene, instance, element, uv);
     if (material.normal_tex != invalidid) {
       normal = eval_normalmap(scene, instance, element, uv);
     }
     if (material.type == material_type::refractive) return normal;
     return dot(normal, outgoing) >= 0 ? normal : -normal;
-  } else if (!shape.lines.empty()) {
+  } else if (is_lines(shape)) {
     auto normal = eval_normal(scene, instance, element, uv);
     return orthonormalize(outgoing, normal);
-  } else if (!shape.points.empty()) {
+  } else if (is_points(shape)) {
     return outgoing;
   } else {
     return {0, 0, 0};
@@ -452,16 +452,16 @@ vec4f eval_color(const scene_data& scene, const instance_data& instance,
     int element, const vec2f& uv) {
   auto& shape = scene.shapes[instance.shape];
   if (shape.colors.empty()) return {1, 1, 1, 1};
-  if (!shape.triangles.empty()) {
+  if (is_triangles(shape)) {
     auto triangle = shape.triangles[element];
     return interpolate_triangle(shape.colors, triangle, uv);
-  } else if (!shape.quads.empty()) {
+  } else if (is_quads(shape)) {
     auto quad = shape.quads[element];
     return interpolate_quad(shape.colors, quad, uv);
-  } else if (!shape.lines.empty()) {
+  } else if (is_lines(shape)) {
     auto line = shape.lines[element];
     return interpolate_line(shape.colors, line, uv);
-  } else if (!shape.points.empty()) {
+  } else if (is_points(shape)) {
     return shape.colors[shape.points[element]];
   } else {
     return {0, 0, 0, 0};

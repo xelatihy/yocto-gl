@@ -320,22 +320,22 @@ shape_bvh make_shape_bvh(const shape_data& shape, bool highquality) {
 
   // build primitives
   auto bboxes = vector<bbox3f>{};
-  if (!shape.points.empty()) {
+  if (is_points(shape)) {
     bboxes = vector<bbox3f>(shape.points.size());
     for (auto&& [bbox, point] : zip(bboxes, shape.points)) {
       bbox = point_bounds(shape.positions, shape.radius, point);
     }
-  } else if (!shape.lines.empty()) {
+  } else if (is_lines(shape)) {
     bboxes = vector<bbox3f>(shape.lines.size());
     for (auto&& [bbox, line] : zip(bboxes, shape.lines)) {
       bbox = line_bounds(shape.positions, shape.radius, line);
     }
-  } else if (!shape.triangles.empty()) {
+  } else if (is_triangles(shape)) {
     bboxes = vector<bbox3f>(shape.triangles.size());
     for (auto&& [bbox, triangle] : zip(bboxes, shape.triangles)) {
       bbox = triangle_bounds(shape.positions, triangle);
     }
-  } else if (!shape.quads.empty()) {
+  } else if (is_quads(shape)) {
     bboxes = vector<bbox3f>(shape.quads.size());
     for (auto&& [bbox, quad] : zip(bboxes, shape.quads)) {
       bbox = quad_bounds(shape.positions, quad);
@@ -385,22 +385,22 @@ scene_bvh make_scene_bvh(
 void update_shape_bvh(shape_bvh& sbvh, const shape_data& shape) {
   // build primitives
   auto bboxes = vector<bbox3f>{};
-  if (!shape.points.empty()) {
+  if (is_points(shape)) {
     bboxes = vector<bbox3f>(shape.points.size());
     for (auto&& [bbox, point] : zip(bboxes, shape.points)) {
       bbox = point_bounds(shape.positions, shape.radius, point);
     }
-  } else if (!shape.lines.empty()) {
+  } else if (is_lines(shape)) {
     bboxes = vector<bbox3f>(shape.lines.size());
     for (auto&& [bbox, line] : zip(bboxes, shape.lines)) {
       bbox = line_bounds(shape.positions, shape.radius, line);
     }
-  } else if (!shape.triangles.empty()) {
+  } else if (is_triangles(shape)) {
     bboxes = vector<bbox3f>(shape.triangles.size());
     for (auto&& [bbox, triangle] : zip(bboxes, shape.triangles)) {
       bbox = triangle_bounds(shape.positions, triangle);
     }
-  } else if (!shape.quads.empty()) {
+  } else if (is_quads(shape)) {
     bboxes = vector<bbox3f>(shape.quads.size());
     for (auto&& [bbox, quad] : zip(bboxes, shape.quads)) {
       bbox = quad_bounds(shape.positions, quad);
@@ -480,7 +480,7 @@ shape_intersection intersect_shape_bvh(const shape_bvh& sbvh,
         node_stack[node_cur++] = node.start + 1;
         node_stack[node_cur++] = node.start + 0;
       }
-    } else if (!shape.points.empty()) {
+    } else if (is_points(shape)) {
       for (auto idx = node.start; idx < node.start + node.num; idx++) {
         auto& v1            = shape.points[bvh.primitives[idx]];
         auto  pintersection = intersect_point(
@@ -490,7 +490,7 @@ shape_intersection intersect_shape_bvh(const shape_bvh& sbvh,
             pintersection.distance, true};
         ray.tmax     = pintersection.distance;
       }
-    } else if (!shape.lines.empty()) {
+    } else if (is_lines(shape)) {
       for (auto idx = node.start; idx < node.start + node.num; idx++) {
         auto& line          = shape.lines[bvh.primitives[idx]];
         auto  pintersection = intersect_line(
@@ -500,7 +500,7 @@ shape_intersection intersect_shape_bvh(const shape_bvh& sbvh,
             pintersection.distance, true};
         ray.tmax     = pintersection.distance;
       }
-    } else if (!shape.triangles.empty()) {
+    } else if (is_triangles(shape)) {
       for (auto idx = node.start; idx < node.start + node.num; idx++) {
         auto& triangle     = shape.triangles[bvh.primitives[idx]];
         auto pintersection = intersect_triangle(ray, shape.positions, triangle);
@@ -509,7 +509,7 @@ shape_intersection intersect_shape_bvh(const shape_bvh& sbvh,
             pintersection.distance, true};
         ray.tmax     = pintersection.distance;
       }
-    } else if (!shape.quads.empty()) {
+    } else if (is_quads(shape)) {
       for (auto idx = node.start; idx < node.start + node.num; idx++) {
         auto& quad          = shape.quads[bvh.primitives[idx]];
         auto  pintersection = intersect_quad(ray, shape.positions, quad);
@@ -641,7 +641,7 @@ shape_intersection overlap_shape_bvh(const shape_bvh& sbvh,
       // internal node
       node_stack[node_cur++] = node.start + 0;
       node_stack[node_cur++] = node.start + 1;
-    } else if (!shape.points.empty()) {
+    } else if (is_points(shape)) {
       for (auto idx : range(node.num)) {
         auto  primitive     = bvh.primitives[node.start + idx];
         auto& point         = shape.points[primitive];
@@ -652,7 +652,7 @@ shape_intersection overlap_shape_bvh(const shape_bvh& sbvh,
             primitive, eintersection.uv, eintersection.distance, true};
         max_distance = eintersection.distance;
       }
-    } else if (!shape.lines.empty()) {
+    } else if (is_lines(shape)) {
       for (auto idx : range(node.num)) {
         auto  primitive     = bvh.primitives[node.start + idx];
         auto& line          = shape.lines[primitive];
@@ -663,7 +663,7 @@ shape_intersection overlap_shape_bvh(const shape_bvh& sbvh,
             primitive, eintersection.uv, eintersection.distance, true};
         max_distance = eintersection.distance;
       }
-    } else if (!shape.triangles.empty()) {
+    } else if (is_triangles(shape)) {
       for (auto idx : range(node.num)) {
         auto  primitive     = bvh.primitives[node.start + idx];
         auto& triangle      = shape.triangles[primitive];
@@ -674,7 +674,7 @@ shape_intersection overlap_shape_bvh(const shape_bvh& sbvh,
             primitive, eintersection.uv, eintersection.distance, true};
         max_distance = eintersection.distance;
       }
-    } else if (!shape.quads.empty()) {
+    } else if (is_quads(shape)) {
       for (auto idx : range(node.num)) {
         auto  primitive     = bvh.primitives[node.start + idx];
         auto& quad          = shape.quads[primitive];
@@ -819,9 +819,9 @@ shape_ebvh make_shape_ebvh(const shape_data& shape, bool highquality) {
   } else {
     rtcSetSceneFlags(escene, RTC_SCENE_FLAG_COMPACT);
   }
-  if (!shape.points.empty()) {
+  if (is_points(shape)) {
     throw std::runtime_error("embree does not support points");
-  } else if (!shape.lines.empty()) {
+  } else if (is_lines(shape)) {
     auto elines     = vector<int>{};
     auto epositions = vector<vec4f>{};
     auto last_index = -1;
@@ -848,7 +848,7 @@ shape_ebvh make_shape_ebvh(const shape_data& shape, bool highquality) {
     rtcCommitGeometry(egeometry);
     rtcAttachGeometryByID(escene, egeometry, 0);
     rtcReleaseGeometry(egeometry);
-  } else if (!shape.triangles.empty()) {
+  } else if (is_triangles(shape)) {
     auto egeometry = rtcNewGeometry(edevice, RTC_GEOMETRY_TYPE_TRIANGLE);
     rtcSetGeometryVertexAttributeCount(egeometry, 1);
     auto embree_positions = rtcSetNewGeometryBuffer(egeometry,
@@ -864,7 +864,7 @@ shape_ebvh make_shape_ebvh(const shape_data& shape, bool highquality) {
     rtcCommitGeometry(egeometry);
     rtcAttachGeometryByID(escene, egeometry, 0);
     rtcReleaseGeometry(egeometry);
-  } else if (!shape.quads.empty()) {
+  } else if (is_quads(shape)) {
     auto egeometry = rtcNewGeometry(edevice, RTC_GEOMETRY_TYPE_QUAD);
     rtcSetGeometryVertexAttributeCount(egeometry, 1);
     auto embree_positions = rtcSetNewGeometryBuffer(egeometry,

@@ -354,13 +354,13 @@ static ray3f sample_camera(const camera_data& camera, const vec2i& ij,
 // Sample lights wrt solid angle
 static vec3f sample_lights(const scene_data& scene, const trace_lights& lights,
     const vec3f& position, float rl, float rel, const vec2f& ruv) {
-  auto  light_id = sample_uniform((int)lights.lights.size(), rl);
+  auto  light_id = sample_uniform(lights.lights.size(), rl);
   auto& light    = lights.lights[light_id];
   if (light.instance != invalidid) {
     auto& instance  = scene.instances[light.instance];
     auto& shape     = scene.shapes[instance.shape];
     auto  element   = sample_discrete(light.elements_cdf, rel);
-    auto  uv        = (!shape.triangles.empty()) ? sample_triangle(ruv) : ruv;
+    auto  uv        = (is_triangles(shape)) ? sample_triangle(ruv) : ruv;
     auto  lposition = eval_position(scene, instance, element, uv);
     return normalize(lposition - position);
   } else if (light.environment != invalidid) {
@@ -429,7 +429,7 @@ static float sample_lights_pdf(const scene_data& scene, const trace_bvh& bvh,
       }
     }
   }
-  pdf *= sample_uniform_pdf((int)lights.lights.size());
+  pdf *= sample_uniform_pdf(lights.lights.size());
   return pdf;
 }
 
@@ -1522,8 +1522,7 @@ trace_lights make_trace_lights(
     const scene_data& scene, const trace_params& params) {
   auto lights = trace_lights{};
 
-  for (auto handle : range(scene.instances.size())) {
-    auto& instance = scene.instances[handle];
+  for (auto&& [handle, instance] : enumerate(scene.instances)) {
     auto& material = scene.materials[instance.material];
     if (material.emission == vec3f{0, 0, 0}) continue;
     auto& shape = scene.shapes[instance.shape];
@@ -1531,7 +1530,7 @@ trace_lights make_trace_lights(
     auto& light       = add_light(lights);
     light.instance    = (int)handle;
     light.environment = invalidid;
-    if (!shape.triangles.empty()) {
+    if (is_triangles(shape)) {
       light.elements_cdf = vector<float>(shape.triangles.size());
       for (auto idx : range(light.elements_cdf.size())) {
         auto& [t0, t1, t2]      = shape.triangles[idx];
@@ -1539,8 +1538,7 @@ trace_lights make_trace_lights(
             shape.positions[t0], shape.positions[t1], shape.positions[t2]);
         if (idx != 0) light.elements_cdf[idx] += light.elements_cdf[idx - 1];
       }
-    }
-    if (!shape.quads.empty()) {
+    } else if (is_quads(shape)) {
       light.elements_cdf = vector<float>(shape.quads.size());
       for (auto idx : range(light.elements_cdf.size())) {
         auto& [q0, q1, q2, q3]  = shape.quads[idx];
@@ -1550,8 +1548,7 @@ trace_lights make_trace_lights(
       }
     }
   }
-  for (auto handle : range(scene.environments.size())) {
-    auto& environment = scene.environments[handle];
+  for (auto&& [handle, environment] : enumerate(scene.environments)) {
     if (environment.emission == vec3f{0, 0, 0}) continue;
     auto& light       = add_light(lights);
     light.instance    = invalidid;
