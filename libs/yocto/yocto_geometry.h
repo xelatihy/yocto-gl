@@ -834,18 +834,18 @@ namespace yocto {
 
 // Primitive intersection
 template <typename T = float>
-struct prim_gintersection {
+struct element_gintersection {
   vec<T, 2> uv       = {0, 0};
   T         distance = num_max<T>;  // TODO: num_max<T>
   bool      hit      = false;
 };
 
 // Typedefs
-using prim_intersection = prim_gintersection<float>;
+using element_intersection = element_gintersection<float>;
 
 // Intersect a ray with a point (approximate)
 template <typename T>
-constexpr kernel prim_gintersection<T> intersect_point(
+constexpr kernel element_gintersection<T> intersect_point(
     const ray<T, 3>& ray, const vec<T, 3>& p, T r) {
   // find parameter for line-point minimum distance
   auto w = p - ray.o;
@@ -863,7 +863,7 @@ constexpr kernel prim_gintersection<T> intersect_point(
   return {{0, 0}, t, true};
 }
 template <typename T, typename I>
-constexpr kernel prim_gintersection<T> intersect_point(const ray<T, 3>& ray,
+constexpr kernel element_gintersection<T> intersect_point(const ray<T, 3>& ray,
     const vector<vec<T, 3>>& positions, const vector<T>& radius, I point) {
   auto v1 = point;
   return intersect_point(ray, positions[v1], radius[v1]);
@@ -871,7 +871,7 @@ constexpr kernel prim_gintersection<T> intersect_point(const ray<T, 3>& ray,
 
 // Intersect a ray with a line
 template <typename T>
-constexpr kernel prim_gintersection<T> intersect_line(const ray<T, 3>& ray,
+constexpr kernel element_gintersection<T> intersect_line(const ray<T, 3>& ray,
     const vec<T, 3>& p1, const vec<T, 3>& p2, T r1, T r2) {
   // setup intersection params
   auto u = ray.d;
@@ -914,7 +914,7 @@ constexpr kernel prim_gintersection<T> intersect_line(const ray<T, 3>& ray,
   return {{s, sqrt(d2) / r}, t, true};
 }
 template <typename T, typename I>
-constexpr kernel prim_gintersection<T> intersect_line(const ray<T, 3>& ray,
+constexpr kernel element_gintersection<T> intersect_line(const ray<T, 3>& ray,
     const vector<vec<T, 3>>& positions, const vector<T>& radius,
     const vec<I, 2>& line) {
   return intersect_line(ray, positions[line.x], positions[line.y],
@@ -923,7 +923,7 @@ constexpr kernel prim_gintersection<T> intersect_line(const ray<T, 3>& ray,
 
 // Intersect a ray with a sphere
 template <typename T>
-constexpr kernel prim_gintersection<T> intersect_sphere(
+constexpr kernel element_gintersection<T> intersect_sphere(
     const ray<T, 3>& ray, const vec<T, 3>& p, T r) {
   // compute parameters
   auto a = dot(ray.d, ray.d);
@@ -955,8 +955,9 @@ constexpr kernel prim_gintersection<T> intersect_sphere(
 
 // Intersect a ray with a triangle
 template <typename T>
-constexpr kernel prim_gintersection<T> intersect_triangle(const ray<T, 3>& ray,
-    const vec<T, 3>& p1, const vec<T, 3>& p2, const vec<T, 3>& p3) {
+constexpr kernel element_gintersection<T> intersect_triangle(
+    const ray<T, 3>& ray, const vec<T, 3>& p1, const vec<T, 3>& p2,
+    const vec<T, 3>& p3) {
   // compute triangle edges
   auto edge1 = p2 - p1;
   auto edge2 = p3 - p1;
@@ -988,15 +989,16 @@ constexpr kernel prim_gintersection<T> intersect_triangle(const ray<T, 3>& ray,
   return {{u, v}, t, true};
 }
 template <typename T, typename I>
-constexpr kernel prim_gintersection<T> intersect_triangle(const ray<T, 3>& ray,
-    const vector<vec<T, 3>>& positions, const vec<I, 3>& triangle) {
+constexpr kernel element_gintersection<T> intersect_triangle(
+    const ray<T, 3>& ray, const vector<vec<T, 3>>& positions,
+    const vec<I, 3>& triangle) {
   return intersect_triangle(
       ray, positions[triangle.x], positions[triangle.y], positions[triangle.z]);
 }
 
 // Intersect a ray with a quad.
 template <typename T>
-constexpr kernel prim_gintersection<T> intersect_quad(const ray<T, 3>& ray,
+constexpr kernel element_gintersection<T> intersect_quad(const ray<T, 3>& ray,
     const vec<T, 3>& p1, const vec<T, 3>& p2, const vec<T, 3>& p3,
     const vec<T, 3>& p4) {
   if (p3 == p4) return intersect_triangle(ray, p1, p2, p4);
@@ -1006,7 +1008,7 @@ constexpr kernel prim_gintersection<T> intersect_quad(const ray<T, 3>& ray,
   return isec1.distance < isec2.distance ? isec1 : isec2;
 }
 template <typename T, typename I>
-constexpr kernel prim_gintersection<T> intersect_quad(const ray<T, 3>& ray,
+constexpr kernel element_gintersection<T> intersect_quad(const ray<T, 3>& ray,
     const vector<vec<T, 3>>& positions, const vec<I, 4>& quad) {
   return intersect_quad(ray, positions[quad.x], positions[quad.y],
       positions[quad.z], positions[quad.w]);
@@ -1052,14 +1054,14 @@ namespace yocto {
 
 // Check if a point overlaps a position pos withint a maximum distance dist_max.
 template <typename T>
-constexpr kernel prim_gintersection<T> overlap_point(
+constexpr kernel element_gintersection<T> overlap_point(
     const vec<T, 3>& pos, T dist_max, const vec<T, 3>& p, T r) {
   auto d2 = dot(pos - p, pos - p);
   if (d2 > (dist_max + r) * (dist_max + r)) return {};
   return {{0, 0}, sqrt(d2), true};
 }
 template <typename T, typename I>
-constexpr kernel prim_gintersection<T> overlap_point(const vec<T, 3>& pos,
+constexpr kernel element_gintersection<T> overlap_point(const vec<T, 3>& pos,
     T dist_max, const vector<vec<T, 3>>& positions, const vector<T> radius,
     I point) {
   auto v1 = point;
@@ -1081,7 +1083,7 @@ constexpr kernel T closestuv_line(
 
 // Check if a line overlaps a position pos withint a maximum distance dist_max.
 template <typename T>
-constexpr kernel prim_gintersection<T> overlap_line(const vec<T, 3>& pos,
+constexpr kernel element_gintersection<T> overlap_line(const vec<T, 3>& pos,
     T dist_max, const vec<T, 3>& p1, const vec<T, 3>& p2, T r1, T r2) {
   auto u = closestuv_line(pos, p1, p2);
   // Compute projected position from the clamped t d = a + t * ab;
@@ -1094,7 +1096,7 @@ constexpr kernel prim_gintersection<T> overlap_line(const vec<T, 3>& pos,
   return {{u, 0}, sqrt(d2), true};
 }
 template <typename T, typename I>
-constexpr kernel prim_gintersection<T> overlap_line(const vec<T, 3>& pos,
+constexpr kernel element_gintersection<T> overlap_line(const vec<T, 3>& pos,
     T dist_max, const vector<vec<T, 3>>& positions, const vector<T> radius,
     const vec<I, 2>& line) {
   return overlap_line(pos, dist_max, positions[line.x], positions[line.y],
@@ -1146,7 +1148,7 @@ constexpr kernel vec<T, 2> closestuv_triangle(const vec<T, 3>& pos,
   return {u, v};
 }
 template <typename T, typename I>
-constexpr kernel prim_gintersection<T> overlap_triangle(const vec<T, 3>& pos,
+constexpr kernel element_gintersection<T> overlap_triangle(const vec<T, 3>& pos,
     T dist_max, const vector<vec<T, 3>>& positions, const vec<I, 3>& triangle) {
   return overlap_triangle(pos, dist_max, positions[triangle.x],
       positions[triangle.y], positions[triangle.z]);
@@ -1155,7 +1157,7 @@ constexpr kernel prim_gintersection<T> overlap_triangle(const vec<T, 3>& pos,
 // Check if a triangle overlaps a position pos withint a maximum distance
 // dist_max.
 template <typename T>
-constexpr kernel prim_gintersection<T> overlap_triangle(const vec<T, 3>& pos,
+constexpr kernel element_gintersection<T> overlap_triangle(const vec<T, 3>& pos,
     T dist_max, const vec<T, 3>& p1, const vec<T, 3>& p2, const vec<T, 3>& p3,
     T r1, T r2, T r3) {
   auto uv = closestuv_triangle(pos, p1, p2, p3);
@@ -1166,7 +1168,7 @@ constexpr kernel prim_gintersection<T> overlap_triangle(const vec<T, 3>& pos,
   return {uv, sqrt(dd), true};
 }
 template <typename T, typename I>
-constexpr kernel prim_gintersection<T> overlap_triangle(const vec<T, 3>& pos,
+constexpr kernel element_gintersection<T> overlap_triangle(const vec<T, 3>& pos,
     T dist_max, const vector<vec<T, 3>>& positions, const vector<T> radius,
     const vec<I, 3>& triangle) {
   return overlap_triangle(pos, dist_max, positions[triangle.x],
@@ -1176,7 +1178,7 @@ constexpr kernel prim_gintersection<T> overlap_triangle(const vec<T, 3>& pos,
 
 // Check if a quad overlaps a position pos withint a maximum distance dist_max.
 template <typename T>
-constexpr kernel prim_gintersection<T> overlap_quad(const vec<T, 3>& pos,
+constexpr kernel element_gintersection<T> overlap_quad(const vec<T, 3>& pos,
     T dist_max, const vec<T, 3>& p1, const vec<T, 3>& p2, const vec<T, 3>& p3,
     const vec<T, 3>& p4, T r1, T r2, T r3, T r4) {
   if (p3 == p4) return overlap_triangle(pos, dist_max, p1, p2, p4, r1, r2, r3);
@@ -1186,7 +1188,7 @@ constexpr kernel prim_gintersection<T> overlap_quad(const vec<T, 3>& pos,
   return isec1.distance < isec2.distance ? isec1 : isec2;
 }
 template <typename T, typename I>
-constexpr kernel prim_gintersection<T> overlap_quad(const vec<T, 3>& pos,
+constexpr kernel element_gintersection<T> overlap_quad(const vec<T, 3>& pos,
     T dist_max, const vector<vec<T, 3>>& positions, const vector<T> radius,
     const vec<I, 4>& quad) {
   return overlap_quad(pos, dist_max, positions[quad.x], positions[quad.y],
@@ -1336,6 +1338,548 @@ template <typename T>
   uv   = intersection.uv;
   dist = intersection.distance;
   return true;
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// GENERIC BVH FOR INTERSECTION AND OVERLAP
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// BVH tree node containing its bounds, indices to the BVH arrays of either
+// primitives or internal nodes, the node element type,
+// and the split axis. Leaf and internal nodes are identical, except that
+// indices refer to primitives for leaf nodes or other nodes for internal nodes.
+struct bvh_node {
+  bbox3f  bbox     = invalidb3f;
+  int32_t start    = 0;
+  int16_t num      = 0;
+  int8_t  axis     = 0;
+  bool    internal = false;
+};
+
+// BVH tree stored as a node array with the tree structure is encoded using
+// array indices. BVH nodes indices refer to either the node array,
+// for internal nodes, or the primitive arrays, for leaf nodes.
+// Application data is not stored explicitly.
+struct bvh_data {
+  vector<bvh_node> nodes      = {};
+  vector<int>      primitives = {};
+};
+
+// Results of intersect_xxx and overlap_xxx functions that include hit flag,
+// instance id, shape element id, shape element uv and intersection distance.
+// The values are all set for scene intersection. Shape intersection does not
+// set the instance id and element intersections do not set shape element id
+// and the instance id. Results values are set only if hit is true.
+struct shape_intersection {
+  int   element  = -1;
+  vec2f uv       = {0, 0};
+  float distance = 0;
+  bool  hit      = false;
+};
+
+// Results of intersect_xxx and overlap_xxx functions that include hit flag,
+// instance id, shape element id, shape element uv and intersection distance.
+// The values are all set for scene intersection. Shape intersection does not
+// set the instance id and element intersections do not set shape element id
+// and the instance id. Results values are set only if hit is true.
+struct scene_intersection {
+  int   instance = -1;
+  int   element  = -1;
+  vec2f uv       = {0, 0};
+  float distance = 0;
+  bool  hit      = false;
+};
+
+// Build BVH nodes
+template <typename T, typename Func>
+inline bvh_data make_bvh(
+    const vector<T>& elements, bool highquality, Func&& bbox_func);
+
+// Update bvh
+template <typename T, typename Func>
+inline void refit_bvh(
+    bvh_data& bvh, const vector<T>& elements, Func&& bbox_func);
+
+template <typename T, typename Func>
+inline shape_intersection intersect_elements_bvh(const bvh_data& bvh,
+    const vector<T>& elements, const ray3f& ray_, bool find_any,
+    Func&& intersect_element);
+
+template <typename T, typename Func>
+inline scene_intersection intersect_instances_bvh(const bvh_data& bvh,
+    const vector<T>& instances, const ray3f& ray_, bool find_any,
+    Func&& intersect_instance);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// BVH FOR COLLECTION OF PRIMITIVES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Build elements bvh
+inline bvh_data make_points_bvh(const vector<int>& points,
+    const vector<vec3f>& positions, const vector<float>& radius);
+inline bvh_data make_lines_bvh(const vector<vec2i>& lines,
+    const vector<vec3f>& positions, const vector<float>& radius);
+inline bvh_data make_triangles_bvh(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<float>& radius);
+inline bvh_data make_quads_bvh(const vector<vec4i>& quads,
+    const vector<vec3f>& positions, const vector<float>& radius);
+
+// Refit elements bvh
+inline void update_points_bvh(bvh_data& bvh, const vector<int>& points,
+    const vector<vec3f>& positions, const vector<float>& radius);
+inline void update_lines_bvh(bvh_data& bvh, const vector<vec2i>& lines,
+    const vector<vec3f>& positions, const vector<float>& radius);
+inline void update_triangles_bvh(bvh_data& bvh, const vector<vec3i>& triangles,
+    const vector<vec3f>& positions);
+inline void update_quads_bvh(
+    bvh_data& bvh, const vector<vec4i>& quads, const vector<vec3f>& positions);
+
+// Bvh intersection
+inline shape_intersection intersect_points_bvh(const bvh_data& bvh,
+    const vector<int>& points, const vector<vec3f>& positions,
+    const vector<float>& radius, const ray3f& ray, bool find_any = false);
+inline shape_intersection intersect_lines_bvh(const bvh_data& bvh,
+    const vector<vec2i>& lines, const vector<vec3f>& positions,
+    const vector<float>& radius, const ray3f& ray, bool find_any = false);
+inline shape_intersection intersect_triangles_bvh(const bvh_data& bvh,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const ray3f& ray, bool find_any = false);
+inline shape_intersection intersect_quads_bvh(const bvh_data& bvh,
+    const vector<vec4i>& quads, const vector<vec3f>& positions,
+    const ray3f& ray, bool find_any = false);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION FOR GENERIC BVH
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Splits a BVH node using the SAH heuristic. Returns split position and axis.
+inline vec2i split_sah(vector<int>& primitives, const vector<bbox3f>& bboxes,
+    const vector<vec3f>& centers, int start, int end) {
+  // compute primintive bounds and size
+  auto cbbox = invalidb3f;
+  for (auto i = start; i < end; i++)
+    cbbox = merge(cbbox, centers[primitives[i]]);
+  auto csize = cbbox.max - cbbox.min;
+  if (csize == vec3f{0, 0, 0}) return {(start + end) / 2, 0};
+
+  // consider N bins, compute their cost and keep the minimum
+  auto      axis     = 0;
+  const int nbins    = 16;
+  auto      split    = 0.0f;
+  auto      min_cost = flt_max;
+  for (auto saxis : range(3)) {
+    for (auto b = 1; b < nbins; b++) {
+      auto bsplit    = cbbox.min[saxis] + b * csize[saxis] / nbins;
+      auto left_bbox = invalidb3f, right_bbox = invalidb3f;
+      auto left_nprims = 0, right_nprims = 0;
+      for (auto i = start; i < end; i++) {
+        if (centers[primitives[i]][saxis] < bsplit) {
+          left_bbox = merge(left_bbox, bboxes[primitives[i]]);
+          left_nprims += 1;
+        } else {
+          right_bbox = merge(right_bbox, bboxes[primitives[i]]);
+          right_nprims += 1;
+        }
+      }
+      auto cost =
+          1 + left_nprims * bbox_area(left_bbox) / (bbox_area(cbbox) + 1e-12f) +
+          right_nprims * bbox_area(right_bbox) / (bbox_area(cbbox) + 1e-12f);
+      if (cost < min_cost) {
+        min_cost = cost;
+        split    = bsplit;
+        axis     = saxis;
+      }
+    }
+  }
+  // split
+  auto middle =
+      (int)(std::partition(primitives.data() + start, primitives.data() + end,
+                [axis, split, &centers](auto primitive) {
+                  return centers[primitive][axis] < split;
+                }) -
+            primitives.data());
+
+  // if we were not able to split, just break the primitives in half
+  if (middle == start || middle == end) return {(start + end) / 2, axis};
+
+  // done
+  return {middle, axis};
+}
+
+// Splits a BVH node using the balance heuristic. Returns split position and
+// axis.
+inline vec2i split_balanced(vector<int>& primitives,
+    const vector<bbox3f>& bboxes, const vector<vec3f>& centers, int start,
+    int end) {
+  // compute primitives bounds and size
+  auto cbbox = invalidb3f;
+  for (auto i = start; i < end; i++)
+    cbbox = merge(cbbox, centers[primitives[i]]);
+  auto csize = cbbox.max - cbbox.min;
+  if (csize == vec3f{0, 0, 0}) return {(start + end) / 2, 0};
+
+  // split along largest
+  auto axis = (int)argmax(csize);
+
+  // balanced tree split: find the largest axis of the
+  // bounding box and split along this one right in the middle
+  auto middle = (start + end) / 2;
+  std::nth_element(primitives.data() + start, primitives.data() + middle,
+      primitives.data() + end,
+      [axis, &centers](auto primitive_a, auto primitive_b) {
+        return centers[primitive_a][axis] < centers[primitive_b][axis];
+      });
+
+  // if we were not able to split, just break the primitives in half
+  if (middle == start || middle == end) return {(start + end) / 2, axis};
+
+  // done
+  return {middle, axis};
+}
+
+// Splits a BVH node using the middle heuristic. Returns split position and
+// axis.
+inline vec2i split_middle(vector<int>& primitives, const vector<bbox3f>& bboxes,
+    const vector<vec3f>& centers, int start, int end) {
+  // compute primintive bounds and size
+  auto cbbox = invalidb3f;
+  for (auto i = start; i < end; i++)
+    cbbox = merge(cbbox, centers[primitives[i]]);
+  auto csize = cbbox.max - cbbox.min;
+  if (csize == vec3f{0, 0, 0}) return {(start + end) / 2, 0};
+
+  // split along largest
+  auto axis = (int)argmax(csize);
+
+  // split the space in the middle along the largest axis
+  auto split = bbox_center(cbbox)[axis];
+  auto middle =
+      (int)(std::partition(primitives.data() + start, primitives.data() + end,
+                [axis, split, &centers](auto primitive) {
+                  return centers[primitive][axis] < split;
+                }) -
+            primitives.data());
+
+  // if we were not able to split, just break the primitives in half
+  if (middle == start || middle == end) return {(start + end) / 2, axis};
+
+  // done
+  return {middle, axis};
+}
+
+// Maximum number of primitives per BVH node.
+constexpr auto bvh_max_prims = 4;
+
+// Build BVH nodes
+template <typename T, typename Func>
+inline bvh_data make_bvh(
+    const vector<T>& elements, bool highquality, Func&& bbox_func) {
+  // bvh
+  auto bvh = bvh_data{};
+
+  // prepare to build nodes
+  bvh.nodes.clear();
+  bvh.nodes.reserve(elements.size() * 2);
+
+  // prepare bboxes
+  auto bboxes = vector<bbox3f>(elements.size());
+  for (auto&& [bbox, element] : zip(bboxes, elements))
+    bbox = bbox_func(element);
+
+  // prepare primitives
+  bvh.primitives = vector<int>(bboxes.size());
+  for (auto&& [idx, primitive] : enumerate(bvh.primitives))
+    primitive = (int)idx;
+
+  // prepare centers
+  auto centers = vector<vec3f>(bboxes.size());
+  for (auto&& [center, bbox] : zip(centers, bboxes)) center = bbox_center(bbox);
+
+  // push first node onto the stack
+  auto stack = vector<vec3i>{{0, 0, (int)bboxes.size()}};
+  bvh.nodes.emplace_back();
+
+  // create nodes until the stack is empty
+  while (!stack.empty()) {
+    // grab node to work on
+    auto [nodeid, start, end] = stack.back();
+    stack.pop_back();
+
+    // grab node
+    auto& node = bvh.nodes[nodeid];
+
+    // compute bounds
+    node.bbox = invalidb3f;
+    for (auto i = start; i < end; i++)
+      node.bbox = merge(node.bbox, bboxes[bvh.primitives[i]]);
+
+    // split into two children
+    if (end - start > bvh_max_prims) {
+      // get split
+      auto [mid, axis] =
+          highquality
+              ? split_sah(bvh.primitives, bboxes, centers, start, end)
+              : split_middle(bvh.primitives, bboxes, centers, start, end);
+
+      // make an internal node
+      node.internal = true;
+      node.axis     = (uint8_t)axis;
+      node.num      = 2;
+      node.start    = (int)bvh.nodes.size();
+      bvh.nodes.emplace_back();
+      bvh.nodes.emplace_back();
+      stack.push_back({node.start + 0, start, mid});
+      stack.push_back({node.start + 1, mid, end});
+    } else {
+      // Make a leaf node
+      node.internal = false;
+      node.num      = (int16_t)(end - start);
+      node.start    = start;
+    }
+  }
+
+  // cleanup
+  bvh.nodes.shrink_to_fit();
+
+  // done
+  return bvh;
+}
+
+// Update bvh
+template <typename T, typename Func>
+inline void refit_bvh(
+    bvh_data& bvh, const vector<T>& elements, Func&& bbox_func) {
+  for (auto nodeid = (int)bvh.nodes.size() - 1; nodeid >= 0; nodeid--) {
+    auto& node = bvh.nodes[nodeid];
+    node.bbox  = invalidb3f;
+    if (node.internal) {
+      for (auto idx : range(2)) {
+        node.bbox = merge(node.bbox, bvh.nodes[node.start + idx].bbox);
+      }
+    } else {
+      for (auto idx : range(node.start, node.start + node.num)) {
+        node.bbox = merge(node.bbox, bbox_func(elements[bvh.primitives[idx]]));
+      }
+    }
+  }
+}
+
+template <typename T, typename Func>
+inline shape_intersection intersect_elements_bvh(const bvh_data& bvh,
+    const vector<T>& elements, const ray3f& ray_, bool find_any,
+    Func&& intersect_element) {
+  // check empty
+  if (bvh.nodes.empty()) return {};
+
+  // node stack
+  auto node_stack        = array<int, 128>{};
+  auto node_cur          = 0;
+  node_stack[node_cur++] = 0;
+
+  // shared variables
+  auto intersection = shape_intersection{};
+
+  // copy ray to modify it
+  auto ray = ray_;
+
+  // prepare ray for fast queries
+  auto ray_dinv  = 1 / ray.d;
+  auto ray_dsign = component_less(ray_dinv, 0);
+
+  // walking stack
+  while (node_cur != 0) {
+    // grab node
+    auto& node = bvh.nodes[node_stack[--node_cur]];
+
+    // intersect bbox
+    // if (!intersect_bbox(ray, ray_dinv, ray_dsign, node.bbox)) continue;
+    if (!intersect_bbox(ray, ray_dinv, node.bbox)) continue;
+
+    // intersect node, switching based on node type
+    // for each type, iterate over the the primitive list
+    if (node.internal) {
+      // for internal nodes, attempts to proceed along the
+      // split axis from smallest to largest nodes
+      if (ray_dsign[node.axis]) {
+        node_stack[node_cur++] = node.start + 0;
+        node_stack[node_cur++] = node.start + 1;
+      } else {
+        node_stack[node_cur++] = node.start + 1;
+        node_stack[node_cur++] = node.start + 0;
+      }
+    } else {
+      for (auto idx = node.start; idx < node.start + node.num; idx++) {
+        auto pintersection = intersect_element(
+            ray, elements[bvh.primitives[idx]]);
+        if (!pintersection.hit) continue;
+        intersection = {bvh.primitives[idx], pintersection.uv,
+            pintersection.distance, true};
+        ray.tmax     = pintersection.distance;
+      }
+    }
+
+    // check for early exit
+    if (find_any && intersection.hit) return intersection;
+  }
+
+  return intersection;
+}
+
+template <typename T, typename Func>
+inline scene_intersection intersect_instances_bvh(const bvh_data& bvh,
+    const vector<T>& instances, const ray3f& ray_, bool find_any,
+    Func&& intersect_instance) {
+  // check empty
+  if (bvh.nodes.empty()) return {};
+
+  // node stack
+  auto node_stack        = array<int, 128>{};
+  auto node_cur          = 0;
+  node_stack[node_cur++] = 0;
+
+  // intersection
+  auto intersection = scene_intersection{};
+
+  // copy ray to modify it
+  auto ray = ray_;
+
+  // prepare ray for fast queries
+  auto ray_dinv  = 1 / ray.d;
+  auto ray_dsign = component_less(ray_dinv, 0);
+
+  // walking stack
+  while (node_cur != 0) {
+    // grab node
+    auto& node = bvh.nodes[node_stack[--node_cur]];
+
+    // intersect bbox
+    // if (!intersect_bbox(ray, ray_dinv, ray_dsign, node.bbox)) continue;
+    if (!intersect_bbox(ray, ray_dinv, node.bbox)) continue;
+
+    // intersect node, switching based on node type
+    // for each type, iterate over the the primitive list
+    if (node.internal) {
+      // for internal nodes, attempts to proceed along the
+      // split axis from smallest to largest nodes
+      if (ray_dsign[node.axis]) {
+        node_stack[node_cur++] = node.start + 0;
+        node_stack[node_cur++] = node.start + 1;
+      } else {
+        node_stack[node_cur++] = node.start + 1;
+        node_stack[node_cur++] = node.start + 0;
+      }
+    } else {
+      for (auto idx = node.start; idx < node.start + node.num; idx++) {
+        auto sintersection = intersect_instance(
+            ray, instances[bvh.primitives[idx]], find_any);
+        if (!sintersection.hit) continue;
+        intersection = {bvh.primitives[idx], sintersection.element,
+            sintersection.uv, sintersection.distance, true};
+        ray.tmax     = sintersection.distance;
+      }
+    }
+
+    // check for early exit
+    if (find_any && intersection.hit) return intersection;
+  }
+
+  return intersection;
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION FOR ELEMENTS BVH
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Build shape bvh
+inline bvh_data make_points_bvh(const vector<int>& points,
+    const vector<vec3f>& positions, const vector<float>& radius,
+    bool highquality = false) {
+  return make_bvh(points, highquality,
+      [&](int point) { return point_bounds(positions, radius, point); });
+}
+inline bvh_data make_lines_bvh(const vector<vec2i>& lines,
+    const vector<vec3f>& positions, const vector<float>& radius,
+    bool highquality = false) {
+  return make_bvh(lines, highquality,
+      [&](const vec2i& line) { return line_bounds(positions, radius, line); });
+}
+inline bvh_data make_triangles_bvh(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, bool highquality = false) {
+  return make_bvh(triangles, highquality, [&](const vec3i& triangle) {
+    return triangle_bounds(positions, triangle);
+  });
+}
+inline bvh_data make_quads_bvh(const vector<vec4i>& quads,
+    const vector<vec3f>& positions, bool highquality = false) {
+  return make_bvh(quads, highquality,
+      [&](const vec4i& quad) { return quad_bounds(positions, quad); });
+}
+
+inline void update_points_bvh(bvh_data& bvh, const vector<int>& points,
+    const vector<vec3f>& positions, const vector<float>& radius) {
+  refit_bvh(bvh, points,
+      [&](int point) { return point_bounds(positions, radius, point); });
+}
+inline void update_lines_bvh(bvh_data& bvh, const vector<vec2i>& lines,
+    const vector<vec3f>& positions, const vector<float>& radius) {
+  refit_bvh(bvh, lines,
+      [&](const vec2i& line) { return line_bounds(positions, radius, line); });
+}
+inline void update_triangles_bvh(bvh_data& bvh, const vector<vec3i>& triangles,
+    const vector<vec3f>& positions) {
+  refit_bvh(bvh, triangles, [&](const vec3i& triangle) {
+    return triangle_bounds(positions, triangle);
+  });
+}
+inline void update_quads_bvh(
+    bvh_data& bvh, const vector<vec4i>& quads, const vector<vec3f>& positions) {
+  refit_bvh(bvh, quads,
+      [&](const vec4i& quad) { return quad_bounds(positions, quad); });
+}
+
+inline shape_intersection intersect_points_bvh(const bvh_data& bvh,
+    const vector<int>& points, const vector<vec3f>& positions,
+    const vector<float>& radius, const ray3f& ray, bool find_any) {
+  return intersect_elements_bvh(
+      bvh, points, ray, find_any, [&](const ray3f& ray, const int& point) {
+        return intersect_point(ray, positions, radius, point);
+      });
+}
+inline shape_intersection intersect_lines_bvh(const bvh_data& bvh,
+    const vector<vec2i>& lines, const vector<vec3f>& positions,
+    const vector<float>& radius, const ray3f& ray, bool find_any) {
+  return intersect_elements_bvh(
+      bvh, lines, ray, find_any, [&](const ray3f& ray, const vec2i& line) {
+        return intersect_line(ray, positions, radius, line);
+      });
+}
+inline shape_intersection intersect_triangles_bvh(const bvh_data& bvh,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const ray3f& ray, bool find_any) {
+  return intersect_elements_bvh(bvh, triangles, ray, find_any,
+      [&](const ray3f& ray, const vec3i& triangle) {
+        return intersect_triangle(ray, positions, triangle);
+      });
+}
+inline shape_intersection intersect_quads_bvh(const bvh_data& bvh,
+    const vector<vec4i>& quads, const vector<vec3f>& positions,
+    const ray3f& ray, bool find_any) {
+  return intersect_elements_bvh(
+      bvh, quads, ray, find_any, [&](const ray3f& ray, const vec4i& quad) {
+        return intersect_quad(ray, positions, quad);
+      });
 }
 
 }  // namespace yocto

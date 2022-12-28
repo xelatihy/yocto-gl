@@ -64,13 +64,13 @@ namespace yocto {
 
 // Shape BVHs are just the bvh for the shape.
 struct shape_bvh {
-  bvh_tree bvh = {};
+  bvh_data bvh = {};
 };
 
 // Scene BVHs store the bvh for instances and shapes.
 // Application data is not stored explicitly.
 struct scene_bvh {
-  bvh_tree          bvh    = {};
+  bvh_data          bvh    = {};
   vector<shape_bvh> shapes = {};
 };
 
@@ -83,19 +83,6 @@ scene_bvh make_scene_bvh(
 void update_shape_bvh(shape_bvh& bvh, const shape_data& shape);
 void update_scene_bvh(scene_bvh& bvh, const scene_data& scene,
     const vector<int>& updated_instances, const vector<int>& updated_shapes);
-
-// Results of intersect_xxx and overlap_xxx functions that include hit flag,
-// instance id, shape element id, shape element uv and intersection distance.
-// The values are all set for scene intersection. Shape intersection does not
-// set the instance id and element intersections do not set shape element id
-// and the instance id. Results values are set only if hit is true.
-struct scene_intersection {
-  int   instance = -1;
-  int   element  = -1;
-  vec2f uv       = {0, 0};
-  float distance = 0;
-  bool  hit      = false;
-};
 
 // Intersect ray with a bvh returning either the first or any intersection
 // depending on `find_any`. Returns the ray distance , the instance id,
