@@ -584,12 +584,10 @@ scene_intersection intersect_instance_bvh(const scene_bvh& sbvh,
 namespace yocto {
 
 // Intersect ray with a bvh.
-shape_intersection overlap_shape_bvh(const shape_bvh& sbvh,
-    const shape_data& shape, const vec3f& pos, float max_distance,
-    bool find_any) {
-  // get bvh tree
-  auto& bvh = sbvh.bvh;
-
+template <typename T, typename Func>
+shape_intersection overlap_elements_bvh(const bvh_tree& bvh,
+    const vector<T>& elements, const vec3f& pos, float max_distance,
+    bool find_any, Func&& overlap_element) {
   // check if empty
   if (bvh.nodes.empty()) return {};
 
@@ -615,48 +613,13 @@ shape_intersection overlap_shape_bvh(const shape_bvh& sbvh,
       // internal node
       node_stack[node_cur++] = node.start + 0;
       node_stack[node_cur++] = node.start + 1;
-    } else if (is_points(shape)) {
-      for (auto idx : range(node.num)) {
-        auto  primitive     = bvh.primitives[node.start + idx];
-        auto& point         = shape.points[primitive];
-        auto  eintersection = overlap_point(
-            pos, max_distance, shape.positions, shape.radius, point);
+    } else {
+      for (auto idx : range(node.start, node.start + node.num)) {
+        auto eintersection = overlap_element(
+            pos, max_distance, elements[bvh.primitives[idx]]);
         if (!eintersection.hit) continue;
-        intersection = {
-            primitive, eintersection.uv, eintersection.distance, true};
-        max_distance = eintersection.distance;
-      }
-    } else if (is_lines(shape)) {
-      for (auto idx : range(node.num)) {
-        auto  primitive     = bvh.primitives[node.start + idx];
-        auto& line          = shape.lines[primitive];
-        auto  eintersection = overlap_line(
-            pos, max_distance, shape.positions, shape.radius, line);
-        if (!eintersection.hit) continue;
-        intersection = {
-            primitive, eintersection.uv, eintersection.distance, true};
-        max_distance = eintersection.distance;
-      }
-    } else if (is_triangles(shape)) {
-      for (auto idx : range(node.num)) {
-        auto  primitive     = bvh.primitives[node.start + idx];
-        auto& triangle      = shape.triangles[primitive];
-        auto  eintersection = overlap_triangle(
-            pos, max_distance, shape.positions, shape.radius, triangle);
-        if (!eintersection.hit) continue;
-        intersection = {
-            primitive, eintersection.uv, eintersection.distance, true};
-        max_distance = eintersection.distance;
-      }
-    } else if (is_quads(shape)) {
-      for (auto idx : range(node.num)) {
-        auto  primitive     = bvh.primitives[node.start + idx];
-        auto& quad          = shape.quads[primitive];
-        auto  eintersection = overlap_quad(
-            pos, max_distance, shape.positions, shape.radius, quad);
-        if (!eintersection.hit) continue;
-        intersection = {
-            primitive, eintersection.uv, eintersection.distance, true};
+        intersection = {bvh.primitives[idx], eintersection.uv,
+            eintersection.distance, true};
         max_distance = eintersection.distance;
       }
     }
@@ -669,12 +632,44 @@ shape_intersection overlap_shape_bvh(const shape_bvh& sbvh,
 }
 
 // Intersect ray with a bvh.
-scene_intersection overlap_scene_bvh(const scene_bvh& sbvh,
-    const scene_data& scene, const vec3f& pos, float max_distance,
+shape_intersection overlap_shape_bvh(const shape_bvh& sbvh,
+    const shape_data& shape, const vec3f& pos, float max_distance,
     bool find_any) {
-  // get instances bvh
-  auto& bvh = sbvh.bvh;
+  if (is_points(shape)) {
+    return overlap_elements_bvh(sbvh.bvh, shape.points, pos, max_distance,
+        find_any, [&](const vec3f& pos, float max_distance, const int& point) {
+          return overlap_point(
+              pos, max_distance, shape.positions, shape.radius, point);
+        });
+  } else if (is_lines(shape)) {
+    return overlap_elements_bvh(sbvh.bvh, shape.lines, pos, max_distance,
+        find_any, [&](const vec3f& pos, float max_distance, const vec2i& line) {
+          return overlap_line(
+              pos, max_distance, shape.positions, shape.radius, line);
+        });
+  } else if (is_triangles(shape)) {
+    return overlap_elements_bvh(sbvh.bvh, shape.triangles, pos, max_distance,
+        find_any,
+        [&](const vec3f& pos, float max_distance, const vec3i& triangle) {
+          return overlap_triangle(
+              pos, max_distance, shape.positions, shape.radius, triangle);
+        });
+  } else if (is_quads(shape)) {
+    return overlap_elements_bvh(sbvh.bvh, shape.quads, pos, max_distance,
+        find_any, [&](const vec3f& pos, float max_distance, const vec4i& quad) {
+          return overlap_quad(
+              pos, max_distance, shape.positions, shape.radius, quad);
+        });
+  } else {
+    return {};
+  }
+}
 
+// Intersect ray with a bvh.
+template <typename T, typename Func>
+scene_intersection overlap_instances_bvh(const bvh_tree& bvh,
+    const vector<T>& elements, const vec3f& pos, float max_distance,
+    bool find_any, Func&& overlap_element) {
   // check if empty
   if (bvh.nodes.empty()) return {};
 
@@ -701,15 +696,12 @@ scene_intersection overlap_scene_bvh(const scene_bvh& sbvh,
       node_stack[node_cur++] = node.start + 0;
       node_stack[node_cur++] = node.start + 1;
     } else {
-      for (auto idx : range(node.num)) {
-        auto  primitive = bvh.primitives[node.start + idx];
-        auto& instance_ = scene.instances[primitive];
-        auto  inv_pos   = transform_point(inverse(instance_.frame, true), pos);
-        auto  sintersection = overlap_shape_bvh(sbvh.shapes[instance_.shape],
-             scene.shapes[instance_.shape], inv_pos, max_distance, find_any);
+      for (auto idx : range(node.start, node.start + node.num)) {
+        auto sintersection = overlap_element(
+            pos, max_distance, elements[bvh.primitives[idx]], find_any);
         if (!sintersection.hit) continue;
-        intersection = {primitive, sintersection.element, sintersection.uv,
-            sintersection.distance, true};
+        intersection = {bvh.primitives[idx], sintersection.element,
+            sintersection.uv, sintersection.distance, true};
         max_distance = sintersection.distance;
       }
     }
@@ -719,6 +711,20 @@ scene_intersection overlap_scene_bvh(const scene_bvh& sbvh,
   }
 
   return intersection;
+}
+
+// Intersect ray with a bvh.
+scene_intersection overlap_scene_bvh(const scene_bvh& sbvh,
+    const scene_data& scene, const vec3f& pos, float max_distance,
+    bool find_any) {
+  return overlap_instances_bvh(sbvh.bvh, scene.instances, pos, max_distance,
+      find_any,
+      [&](const vec3f& pos, float max_distance, const instance_data& instance,
+          bool find_any) {
+        auto inv_pos = transform_point(inverse(instance.frame, true), pos);
+        return overlap_shape_bvh(sbvh.shapes[instance.shape],
+            scene.shapes[instance.shape], inv_pos, max_distance, find_any);
+      });
 }
 
 }  // namespace yocto
