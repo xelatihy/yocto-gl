@@ -33,14 +33,10 @@
 #include "yocto_bvh.h"
 
 #include <algorithm>
-#include <array>
 #include <climits>
 #include <cstring>
 #include <future>
-#include <memory>
 #include <stdexcept>
-#include <string>
-#include <utility>
 
 #include "yocto_geometry.h"
 
@@ -56,9 +52,6 @@ namespace yocto {
 // using directives
 using std::array;
 using std::atomic;
-using std::pair;
-using std::string;
-using namespace std::string_literals;
 
 // consts
 inline const auto uint_max = std::numeric_limits<unsigned int>::max();
@@ -110,9 +103,8 @@ inline void parallel_zip(
 namespace yocto {
 
 // Splits a BVH node using the SAH heuristic. Returns split position and axis.
-static pair<int, int> split_sah(vector<int>& primitives,
-    const vector<bbox3f>& bboxes, const vector<vec3f>& centers, int start,
-    int end) {
+static vec2i split_sah(vector<int>& primitives, const vector<bbox3f>& bboxes,
+    const vector<vec3f>& centers, int start, int end) {
   // compute primintive bounds and size
   auto cbbox = invalidb3f;
   for (auto i = start; i < end; i++)
@@ -166,7 +158,7 @@ static pair<int, int> split_sah(vector<int>& primitives,
 
 // Splits a BVH node using the balance heuristic. Returns split position and
 // axis.
-[[maybe_unused]] static pair<int, int> split_balanced(vector<int>& primitives,
+[[maybe_unused]] static vec2i split_balanced(vector<int>& primitives,
     const vector<bbox3f>& bboxes, const vector<vec3f>& centers, int start,
     int end) {
   // compute primitives bounds and size
@@ -197,9 +189,8 @@ static pair<int, int> split_sah(vector<int>& primitives,
 
 // Splits a BVH node using the middle heuristic. Returns split position and
 // axis.
-static pair<int, int> split_middle(vector<int>& primitives,
-    const vector<bbox3f>& bboxes, const vector<vec3f>& centers, int start,
-    int end) {
+static vec2i split_middle(vector<int>& primitives, const vector<bbox3f>& bboxes,
+    const vector<vec3f>& centers, int start, int end) {
   // compute primintive bounds and size
   auto cbbox = invalidb3f;
   for (auto i = start; i < end; i++)
