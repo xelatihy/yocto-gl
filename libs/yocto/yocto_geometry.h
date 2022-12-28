@@ -833,7 +833,7 @@ constexpr kernel ray<T, 3> camera_ray(const frame<T, 3>& frame, T lens,
 namespace yocto {
 
 // Primitive intersection
-template <typename T = float>
+template <typename T, size_t N>
 struct pintersection {
   vec<T, 2> uv       = {0, 0};
   T         distance = num_max<T>;  // TODO: num_max<T>
@@ -845,11 +845,11 @@ struct pintersection {
 };
 
 // Typedefs
-using pintersection3f = pintersection<float>;
+using pintersection3f = pintersection<float, 3>;
 
 // Intersect a ray with a point (approximate)
 template <typename T>
-constexpr kernel pintersection<T> intersect_point(
+constexpr kernel pintersection<T, 3> intersect_point(
     const ray<T, 3>& ray, const vec<T, 3>& p, T r) {
   // find parameter for line-point minimum distance
   auto w = p - ray.o;
@@ -867,7 +867,7 @@ constexpr kernel pintersection<T> intersect_point(
   return {{0, 0}, t};
 }
 template <typename T, typename I>
-constexpr kernel pintersection<T> intersect_point(const ray<T, 3>& ray,
+constexpr kernel pintersection<T, 3> intersect_point(const ray<T, 3>& ray,
     const vector<vec<T, 3>>& positions, const vector<T>& radius, I point) {
   auto v1 = point;
   return intersect_point(ray, positions[v1], radius[v1]);
@@ -875,7 +875,7 @@ constexpr kernel pintersection<T> intersect_point(const ray<T, 3>& ray,
 
 // Intersect a ray with a line
 template <typename T>
-constexpr kernel pintersection<T> intersect_line(const ray<T, 3>& ray,
+constexpr kernel pintersection<T, 3> intersect_line(const ray<T, 3>& ray,
     const vec<T, 3>& p1, const vec<T, 3>& p2, T r1, T r2) {
   // setup intersection params
   auto u = ray.d;
@@ -918,7 +918,7 @@ constexpr kernel pintersection<T> intersect_line(const ray<T, 3>& ray,
   return {{s, sqrt(d2) / r}, t};
 }
 template <typename T, typename I>
-constexpr kernel pintersection<T> intersect_line(const ray<T, 3>& ray,
+constexpr kernel pintersection<T, 3> intersect_line(const ray<T, 3>& ray,
     const vector<vec<T, 3>>& positions, const vector<T>& radius,
     const vec<I, 2>& line) {
   return intersect_line(ray, positions[line.x], positions[line.y],
@@ -927,7 +927,7 @@ constexpr kernel pintersection<T> intersect_line(const ray<T, 3>& ray,
 
 // Intersect a ray with a sphere
 template <typename T>
-constexpr kernel pintersection<T> intersect_sphere(
+constexpr kernel pintersection<T, 3> intersect_sphere(
     const ray<T, 3>& ray, const vec<T, 3>& p, T r) {
   // compute parameters
   auto a = dot(ray.d, ray.d);
@@ -959,7 +959,7 @@ constexpr kernel pintersection<T> intersect_sphere(
 
 // Intersect a ray with a triangle
 template <typename T>
-constexpr kernel pintersection<T> intersect_triangle(const ray<T, 3>& ray,
+constexpr kernel pintersection<T, 3> intersect_triangle(const ray<T, 3>& ray,
     const vec<T, 3>& p1, const vec<T, 3>& p2, const vec<T, 3>& p3) {
   // compute triangle edges
   auto edge1 = p2 - p1;
@@ -992,7 +992,7 @@ constexpr kernel pintersection<T> intersect_triangle(const ray<T, 3>& ray,
   return {{u, v}, t};
 }
 template <typename T, typename I>
-constexpr kernel pintersection<T> intersect_triangle(const ray<T, 3>& ray,
+constexpr kernel pintersection<T, 3> intersect_triangle(const ray<T, 3>& ray,
     const vector<vec<T, 3>>& positions, const vec<I, 3>& triangle) {
   return intersect_triangle(
       ray, positions[triangle.x], positions[triangle.y], positions[triangle.z]);
@@ -1000,7 +1000,7 @@ constexpr kernel pintersection<T> intersect_triangle(const ray<T, 3>& ray,
 
 // Intersect a ray with a quad.
 template <typename T>
-constexpr kernel pintersection<T> intersect_quad(const ray<T, 3>& ray,
+constexpr kernel pintersection<T, 3> intersect_quad(const ray<T, 3>& ray,
     const vec<T, 3>& p1, const vec<T, 3>& p2, const vec<T, 3>& p3,
     const vec<T, 3>& p4) {
   if (p3 == p4) return intersect_triangle(ray, p1, p2, p4);
@@ -1010,7 +1010,7 @@ constexpr kernel pintersection<T> intersect_quad(const ray<T, 3>& ray,
   return isec1.distance < isec2.distance ? isec1 : isec2;
 }
 template <typename T, typename I>
-constexpr kernel pintersection<T> intersect_quad(const ray<T, 3>& ray,
+constexpr kernel pintersection<T, 3> intersect_quad(const ray<T, 3>& ray,
     const vector<vec<T, 3>>& positions, const vec<I, 4>& quad) {
   return intersect_quad(ray, positions[quad.x], positions[quad.y],
       positions[quad.z], positions[quad.w]);
@@ -1056,14 +1056,14 @@ namespace yocto {
 
 // Check if a point overlaps a position pos withint a maximum distance dist_max.
 template <typename T>
-constexpr kernel pintersection<T> overlap_point(
+constexpr kernel pintersection<T, 3> overlap_point(
     const vec<T, 3>& pos, T dist_max, const vec<T, 3>& p, T r) {
   auto d2 = dot(pos - p, pos - p);
   if (d2 > (dist_max + r) * (dist_max + r)) return {};
   return {{0, 0}, sqrt(d2)};
 }
 template <typename T, typename I>
-constexpr kernel pintersection<T> overlap_point(const vec<T, 3>& pos,
+constexpr kernel pintersection<T, 3> overlap_point(const vec<T, 3>& pos,
     T dist_max, const vector<vec<T, 3>>& positions, const vector<T> radius,
     I point) {
   auto v1 = point;
@@ -1085,8 +1085,8 @@ constexpr kernel T closestuv_line(
 
 // Check if a line overlaps a position pos withint a maximum distance dist_max.
 template <typename T>
-constexpr kernel pintersection<T> overlap_line(const vec<T, 3>& pos, T dist_max,
-    const vec<T, 3>& p1, const vec<T, 3>& p2, T r1, T r2) {
+constexpr kernel pintersection<T, 3> overlap_line(const vec<T, 3>& pos,
+    T dist_max, const vec<T, 3>& p1, const vec<T, 3>& p2, T r1, T r2) {
   auto u = closestuv_line(pos, p1, p2);
   // Compute projected position from the clamped t d = a + t * ab;
   auto p  = p1 + (p2 - p1) * u;
@@ -1098,8 +1098,8 @@ constexpr kernel pintersection<T> overlap_line(const vec<T, 3>& pos, T dist_max,
   return {{u, 0}, sqrt(d2)};
 }
 template <typename T, typename I>
-constexpr kernel pintersection<T> overlap_line(const vec<T, 3>& pos, T dist_max,
-    const vector<vec<T, 3>>& positions, const vector<T> radius,
+constexpr kernel pintersection<T, 3> overlap_line(const vec<T, 3>& pos,
+    T dist_max, const vector<vec<T, 3>>& positions, const vector<T> radius,
     const vec<I, 2>& line) {
   return overlap_line(pos, dist_max, positions[line.x], positions[line.y],
       radius[line.x], radius[line.y]);
@@ -1150,7 +1150,7 @@ constexpr kernel vec<T, 2> closestuv_triangle(const vec<T, 3>& pos,
   return {u, v};
 }
 template <typename T, typename I>
-constexpr kernel pintersection<T> overlap_triangle(const vec<T, 3>& pos,
+constexpr kernel pintersection<T, 3> overlap_triangle(const vec<T, 3>& pos,
     T dist_max, const vector<vec<T, 3>>& positions, const vec<I, 3>& triangle) {
   return overlap_triangle(pos, dist_max, positions[triangle.x],
       positions[triangle.y], positions[triangle.z]);
@@ -1159,7 +1159,7 @@ constexpr kernel pintersection<T> overlap_triangle(const vec<T, 3>& pos,
 // Check if a triangle overlaps a position pos withint a maximum distance
 // dist_max.
 template <typename T>
-constexpr kernel pintersection<T> overlap_triangle(const vec<T, 3>& pos,
+constexpr kernel pintersection<T, 3> overlap_triangle(const vec<T, 3>& pos,
     T dist_max, const vec<T, 3>& p1, const vec<T, 3>& p2, const vec<T, 3>& p3,
     T r1, T r2, T r3) {
   auto uv = closestuv_triangle(pos, p1, p2, p3);
@@ -1170,7 +1170,7 @@ constexpr kernel pintersection<T> overlap_triangle(const vec<T, 3>& pos,
   return {uv, sqrt(dd)};
 }
 template <typename T, typename I>
-constexpr kernel pintersection<T> overlap_triangle(const vec<T, 3>& pos,
+constexpr kernel pintersection<T, 3> overlap_triangle(const vec<T, 3>& pos,
     T dist_max, const vector<vec<T, 3>>& positions, const vector<T> radius,
     const vec<I, 3>& triangle) {
   return overlap_triangle(pos, dist_max, positions[triangle.x],
@@ -1180,8 +1180,8 @@ constexpr kernel pintersection<T> overlap_triangle(const vec<T, 3>& pos,
 
 // Check if a quad overlaps a position pos withint a maximum distance dist_max.
 template <typename T>
-constexpr kernel pintersection<T> overlap_quad(const vec<T, 3>& pos, T dist_max,
-    const vec<T, 3>& p1, const vec<T, 3>& p2, const vec<T, 3>& p3,
+constexpr kernel pintersection<T, 3> overlap_quad(const vec<T, 3>& pos,
+    T dist_max, const vec<T, 3>& p1, const vec<T, 3>& p2, const vec<T, 3>& p3,
     const vec<T, 3>& p4, T r1, T r2, T r3, T r4) {
   if (p3 == p4) return overlap_triangle(pos, dist_max, p1, p2, p4, r1, r2, r3);
   auto isec1 = overlap_triangle(pos, dist_max, p1, p2, p4, r1, r2, r3);
@@ -1190,8 +1190,8 @@ constexpr kernel pintersection<T> overlap_quad(const vec<T, 3>& pos, T dist_max,
   return isec1.distance < isec2.distance ? isec1 : isec2;
 }
 template <typename T, typename I>
-constexpr kernel pintersection<T> overlap_quad(const vec<T, 3>& pos, T dist_max,
-    const vector<vec<T, 3>>& positions, const vector<T> radius,
+constexpr kernel pintersection<T, 3> overlap_quad(const vec<T, 3>& pos,
+    T dist_max, const vector<vec<T, 3>>& positions, const vector<T> radius,
     const vec<I, 4>& quad) {
   return overlap_quad(pos, dist_max, positions[quad.x], positions[quad.y],
       positions[quad.z], positions[quad.w], radius[quad.x], radius[quad.y],
@@ -1261,7 +1261,7 @@ struct bvh_data {
 // The values are all set for scene intersection. Shape intersection does not
 // set the instance id and element intersections do not set shape element id
 // and the instance id. Results values are set only if hit is true.
-template <typename T>
+template <typename T, size_t N>
 struct intersection {
   int       instance = -1;
   int       element  = -1;
@@ -1278,7 +1278,7 @@ struct intersection {
       uv{uv_},
       distance{distance_},
       hit{true} {}
-  intersection(int element_, const pintersection<T>& intersection_) :
+  intersection(int element_, const pintersection<T, 3>& intersection_) :
       element{element_},
       uv{intersection_.uv},
       distance{intersection_.distance},
@@ -1292,7 +1292,7 @@ struct intersection {
 };
 
 // Typedefs
-using intersection3f = intersection<float>;
+using intersection3f = intersection<float, 3>;
 
 // Build BVH nodes
 template <typename T, typename Func>
@@ -1304,14 +1304,14 @@ template <typename T, typename Func>
 inline void refit_bvh(
     bvh_data& bvh, const vector<T>& elements, Func&& bbox_func);
 
-template <typename T, typename Func>
-inline intersection3f intersect_bvh(const bvh_data& bvh,
-    const vector<T>& elements, const ray3f& ray_, bool find_any,
+template <typename T, typename E, typename Func>
+inline intersection<T, 3> intersect_bvh(const bvh_data& bvh,
+    const vector<E>& elements, const ray<T, 3>& ray_, bool find_any,
     Func&& intersect_element);
 
-template <typename T, typename Func>
-inline intersection3f overlap_bvh(const bvh_data& bvh,
-    const vector<T>& elements, const vec3f& pos, float max_distance,
+template <typename T, typename E, typename Func>
+inline intersection<T, 3> overlap_bvh(const bvh_data& bvh,
+    const vector<E>& elements, const ray<T, 3>& pos, float max_distance,
     bool find_any, Func&& overlap_element);
 
 }  // namespace yocto
