@@ -122,7 +122,8 @@
     "numbers": "cpp",
     "semaphore": "cpp",
     "source_location": "cpp",
-    "span": "cpp"
+    "span": "cpp",
+    "cfenv": "cpp"
   },
   "json.schemas": [
     {

@@ -1371,7 +1371,7 @@ inline vec2i split_sah(
   auto cbbox = invalidb3f;
   for (auto i = start; i < end; i++)
     cbbox = merge(cbbox, bbox_center(bboxes[primitives[i]]));
-  auto csize = cbbox.max - cbbox.min;
+  auto csize = bbox_diagonal(cbbox);
   if (csize == vec3f{0, 0, 0}) return {(start + end) / 2, 0};
 
   // consider N bins, compute their cost and keep the minimum
@@ -1426,7 +1426,7 @@ inline vec2i split_balanced(
   auto cbbox = invalidb3f;
   for (auto i = start; i < end; i++)
     cbbox = merge(cbbox, bbox_center(bboxes[primitives[i]]));
-  auto csize = cbbox.max - cbbox.min;
+  auto csize = bbox_diagonal(cbbox);
   if (csize == vec3f{0, 0, 0}) return {(start + end) / 2, 0};
 
   // split along largest
@@ -1457,7 +1457,7 @@ inline vec2i split_middle(
   auto cbbox = invalidb3f;
   for (auto i = start; i < end; i++)
     cbbox = merge(cbbox, bbox_center(bboxes[primitives[i]]));
-  auto csize = cbbox.max - cbbox.min;
+  auto csize = bbox_diagonal(cbbox);
   if (csize == vec3f{0, 0, 0}) return {(start + end) / 2, 0};
 
   // split along largest
