@@ -848,8 +848,8 @@ vector<string> scene_stats(const scene_data& scene, bool verbose) {
   stats.push_back("texels4f:     " +
                   format(accumulate(scene.textures,
                       [](auto& texture) { return texture.pixelsf.size(); })));
-  stats.push_back("center:       " + format3(bbox_center(bbox)));
-  stats.push_back("diagonal:     " + format3(bbox_diagonal(bbox)));
+  stats.push_back("center:       " + format3(center(bbox)));
+  stats.push_back("diagonal:     " + format3(diagonal(bbox)));
 
   return stats;
 }

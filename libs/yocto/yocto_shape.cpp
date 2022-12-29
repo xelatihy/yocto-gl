@@ -388,8 +388,8 @@ vector<string> shape_stats(const shape_data& shape, bool verbose) {
   stats.push_back("texcoords:    " + format(shape.texcoords.size()));
   stats.push_back("colors:       " + format(shape.colors.size()));
   stats.push_back("radius:       " + format(shape.radius.size()));
-  stats.push_back("center:       " + format3(bbox_center(bbox)));
-  stats.push_back("diagonal:     " + format3(bbox_diagonal(bbox)));
+  stats.push_back("center:       " + format3(center(bbox)));
+  stats.push_back("diagonal:     " + format3(diagonal(bbox)));
   stats.push_back("min:          " + format3(bbox.min));
   stats.push_back("max:          " + format3(bbox.max));
 
@@ -544,8 +544,8 @@ vector<string> fvshape_stats(const fvshape_data& shape, bool verbose) {
   stats.push_back("positions:    " + format(shape.positions.size()));
   stats.push_back("normals:      " + format(shape.normals.size()));
   stats.push_back("texcoords:    " + format(shape.texcoords.size()));
-  stats.push_back("center:       " + format3(bbox_center(bbox)));
-  stats.push_back("diagonal:     " + format3(bbox_diagonal(bbox)));
+  stats.push_back("center:       " + format3(center(bbox)));
+  stats.push_back("diagonal:     " + format3(diagonal(bbox)));
   stats.push_back("min:          " + format3(bbox.min));
   stats.push_back("max:          " + format3(bbox.max));
 

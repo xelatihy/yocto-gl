@@ -167,6 +167,27 @@ constexpr auto invalidb4f = bbox4f{};
 
 // Bounding box properties
 template <typename T, size_t N>
+constexpr kernel vec<T, N> valid(const bbox<T, N>& a) {
+  return all(component_less_equal(a.min, a.max));
+}
+template <typename T, size_t N>
+constexpr kernel bool empty(const bbox<T, N>& a) {
+  return a.min == a.max;
+}
+template <typename T, size_t N>
+constexpr kernel vec<T, N> center(const bbox<T, N>& a) {
+  return (a.min + a.max) / 2;
+}
+template <typename T, size_t N>
+constexpr kernel vec<T, N> diagonal(const bbox<T, N>& a) {
+  return a.max - a.min;
+}
+template <typename T>
+constexpr kernel T area(const bbox<T, 3>& a) {
+  auto d = a.max - a.min;
+  return 2 * d.x * d.y + 2 * d.x * d.z + 2 * d.y * d.z;
+}
+template <typename T, size_t N>
 constexpr kernel vec<T, N> bbox_center(const bbox<T, N>& a) {
   return (a.min + a.max) / 2;
 }
@@ -1368,11 +1389,10 @@ namespace yocto {
 inline vec2i split_sah(
     vector<int>& primitives, const vector<bbox3f>& bboxes, int start, int end) {
   // compute primitive bounds and size
-  auto cbbox = invalidb3f;
+  auto cbox = invalidb3f;
   for (auto i = start; i < end; i++)
-    cbbox = merge(cbbox, bbox_center(bboxes[primitives[i]]));
-  auto csize = bbox_diagonal(cbbox);
-  if (csize == vec3f{0, 0, 0}) return {(start + end) / 2, 0};
+    cbox = merge(cbox, center(bboxes[primitives[i]]));
+  if (empty(cbox)) return {(start + end) / 2, 0};
 
   // consider N bins, compute their cost and keep the minimum
   auto      axis     = 0;
@@ -1381,21 +1401,20 @@ inline vec2i split_sah(
   auto      min_cost = flt_max;
   for (auto saxis : range(3)) {
     for (auto b = 1; b < nbins; b++) {
-      auto bsplit    = cbbox.min[saxis] + b * csize[saxis] / nbins;
-      auto left_bbox = invalidb3f, right_bbox = invalidb3f;
-      auto left_nprims = 0, right_nprims = 0;
+      auto bsplit = cbox.min[saxis] + b * diagonal(cbox)[saxis] / nbins;
+      auto lbox = invalidb3f, rbox = invalidb3f;
+      auto lprims = 0, rprims = 0;
       for (auto i = start; i < end; i++) {
-        if (bbox_center(bboxes[primitives[i]])[saxis] < bsplit) {
-          left_bbox = merge(left_bbox, bboxes[primitives[i]]);
-          left_nprims += 1;
+        if (center(bboxes[primitives[i]])[saxis] < bsplit) {
+          lbox = merge(lbox, bboxes[primitives[i]]);
+          lprims += 1;
         } else {
-          right_bbox = merge(right_bbox, bboxes[primitives[i]]);
-          right_nprims += 1;
+          rbox = merge(rbox, bboxes[primitives[i]]);
+          rprims += 1;
         }
       }
-      auto cost =
-          1 + left_nprims * bbox_area(left_bbox) / (bbox_area(cbbox) + 1e-12f) +
-          right_nprims * bbox_area(right_bbox) / (bbox_area(cbbox) + 1e-12f);
+      auto cost = 1 + lprims * area(lbox) / (area(cbox) + 1e-12f) +
+                  rprims * area(rbox) / (area(cbox) + 1e-12f);
       if (cost < min_cost) {
         min_cost = cost;
         split    = bsplit;
@@ -1407,7 +1426,7 @@ inline vec2i split_sah(
   auto middle =
       (int)(std::partition(primitives.data() + start, primitives.data() + end,
                 [axis, split, &bboxes](auto primitive) {
-                  return bbox_center(bboxes[primitive])[axis] < split;
+                  return center(bboxes[primitive])[axis] < split;
                 }) -
             primitives.data());
 
@@ -1423,14 +1442,13 @@ inline vec2i split_sah(
 inline vec2i split_balanced(
     vector<int>& primitives, const vector<bbox3f>& bboxes, int start, int end) {
   // compute primitives bounds and size
-  auto cbbox = invalidb3f;
+  auto cbox = invalidb3f;
   for (auto i = start; i < end; i++)
-    cbbox = merge(cbbox, bbox_center(bboxes[primitives[i]]));
-  auto csize = bbox_diagonal(cbbox);
-  if (csize == vec3f{0, 0, 0}) return {(start + end) / 2, 0};
+    cbox = merge(cbox, center(bboxes[primitives[i]]));
+  if (empty(cbox)) return {(start + end) / 2, 0};
 
   // split along largest
-  auto axis = (int)argmax(csize);
+  auto axis = (int)argmax(diagonal(cbox));
 
   // balanced tree split: find the largest axis of the
   // bounding box and split along this one right in the middle
@@ -1438,8 +1456,8 @@ inline vec2i split_balanced(
   std::nth_element(primitives.data() + start, primitives.data() + middle,
       primitives.data() + end,
       [axis, &bboxes](auto primitive_a, auto primitive_b) {
-        return bbox_center(bboxes[primitive_a])[axis] <
-               bbox_center(bboxes[primitive_b])[axis];
+        return center(bboxes[primitive_a])[axis] <
+               center(bboxes[primitive_b])[axis];
       });
 
   // if we were not able to split, just break the primitives in half
@@ -1454,21 +1472,20 @@ inline vec2i split_balanced(
 inline vec2i split_middle(
     vector<int>& primitives, const vector<bbox3f>& bboxes, int start, int end) {
   // compute primintive bounds and size
-  auto cbbox = invalidb3f;
+  auto cbox = invalidb3f;
   for (auto i = start; i < end; i++)
-    cbbox = merge(cbbox, bbox_center(bboxes[primitives[i]]));
-  auto csize = bbox_diagonal(cbbox);
-  if (csize == vec3f{0, 0, 0}) return {(start + end) / 2, 0};
+    cbox = merge(cbox, center(bboxes[primitives[i]]));
+  if (empty(cbox) == vec3f{0, 0, 0}) return {(start + end) / 2, 0};
 
   // split along largest
-  auto axis = (int)argmax(csize);
+  auto axis = (int)argmax(diagonal(cbox));
 
   // split the space in the middle along the largest axis
-  auto split = bbox_center(cbbox)[axis];
+  auto split = center(cbox)[axis];
   auto middle =
       (int)(std::partition(primitives.data() + start, primitives.data() + end,
                 [axis, split, &bboxes](auto primitive) {
-                  return bbox_center(bboxes[primitive])[axis] < split;
+                  return center(bboxes[primitive])[axis] < split;
                 }) -
             primitives.data());
 
