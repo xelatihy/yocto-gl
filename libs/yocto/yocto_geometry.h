@@ -165,6 +165,23 @@ constexpr auto invalidb2f = bbox2f{};
 constexpr auto invalidb3f = bbox3f{};
 constexpr auto invalidb4f = bbox4f{};
 
+// Bounding box construction from a range
+template <typename R, typename T = element_t<rvalue_t<R>>,
+    size_t N = element_d<rvalue_t<R>>>
+inline bbox<T, N> to_bbox(R&& range) {
+  auto box = bbox<T, N>{};
+  for (auto value : range) box = merge(value);
+  return box;
+}
+template <typename R, typename Func,
+    typename T = element_t<result_t<Func, rvalue_t<R>>>,
+    size_t N   = element_d<result_t<Func, rvalue_t<R>>>>
+inline bbox<T, N> to_bbox(R&& range, Func&& func) {
+  auto box = bbox<T, N>{};
+  for (auto value : range) box = merge(func(value));
+  return box;
+}
+
 // Bounding box properties
 template <typename T, size_t N>
 constexpr kernel vec<T, N> valid(const bbox<T, N>& a) {

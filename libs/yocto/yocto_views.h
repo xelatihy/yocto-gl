@@ -194,39 +194,18 @@ using span3d = ndspan<T, 3>;
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// TYPE TRAITS FROM THE STANDARD LIBRARY, UNTIL SUPPORTED BY ALL COMPILERS
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-template <typename R>
-using iterator_t = decltype(std::begin(std::declval<R&>()));
-template <typename R>
-using sentinel_t = decltype(std::end(std::declval<R&>()));
-template <typename R>
-using range_size_t = decltype(std::size(std::declval<R&>()));
-template <typename R>
-using range_difference_t = std::iter_difference_t<iterator_t<R>>;
-template <typename R>
-using range_value_t = std::iter_value_t<iterator_t<R>>;
-template <typename R>
-using range_reference_t = std::iter_reference_t<iterator_t<R>>;
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
 // ARRAY CREATION VIA VIEWS
 // -----------------------------------------------------------------------------
 namespace yocto {
 
 // Make a vector from a view
-template <typename R, typename T = range_value_t<R>>
+template <typename R, typename T = rvalue_t<R>>
 inline vector<T> to_vector(R&& range) {
   auto values = vector<T>{};
   for (auto value : range) values.push_back(value);
   return values;
 }
-template <typename R, typename Func,
-    typename T = result_t<Func, range_value_t<R>>>
+template <typename R, typename Func, typename T = result_t<Func, rvalue_t<R>>>
 inline vector<T> to_vector(R&& range, Func&& func) {
   auto values = vector<T>{};
   for (auto value : range) values.push_back(func(value));
