@@ -182,23 +182,16 @@ template <typename T, size_t N>
 constexpr kernel vec<T, N> diagonal(const bbox<T, N>& a) {
   return a.max - a.min;
 }
-template <typename T>
-constexpr kernel T area(const bbox<T, 3>& a) {
-  auto d = a.max - a.min;
-  return 2 * d.x * d.y + 2 * d.x * d.z + 2 * d.y * d.z;
-}
 template <typename T, size_t N>
-constexpr kernel vec<T, N> bbox_center(const bbox<T, N>& a) {
-  return (a.min + a.max) / 2;
-}
-template <typename T, size_t N>
-constexpr kernel vec<T, N> bbox_diagonal(const bbox<T, N>& a) {
-  return a.max - a.min;
-}
-template <typename T>
-constexpr kernel T bbox_area(const bbox<T, 3>& a) {
-  auto d = a.max - a.min;
-  return 2 * d.x * d.y + 2 * d.x * d.z + 2 * d.y * d.z;
+constexpr kernel T area(const bbox<T, N>& a) {
+  static_assert(N == 2 || N == 3);
+  if constexpr (N == 2) {
+    auto d = a.max - a.min;
+    return 2 * d.x * d.y;
+  } else if constexpr (N == 3) {
+    auto d = a.max - a.min;
+    return 2 * d.x * d.y + 2 * d.x * d.z + 2 * d.y * d.z;
+  }
 }
 
 // Bounding box comparisons.
@@ -1392,7 +1385,7 @@ inline vec2i split_sah(
   auto cbox = invalidb3f;
   for (auto i = start; i < end; i++)
     cbox = merge(cbox, center(bboxes[primitives[i]]));
-  if (empty(cbox)) return {(start + end) / 2, 0};
+  if (cbox.min == cbox.max) return {(start + end) / 2, 0};
 
   // consider N bins, compute their cost and keep the minimum
   auto      axis     = 0;
@@ -1445,7 +1438,7 @@ inline vec2i split_balanced(
   auto cbox = invalidb3f;
   for (auto i = start; i < end; i++)
     cbox = merge(cbox, center(bboxes[primitives[i]]));
-  if (empty(cbox)) return {(start + end) / 2, 0};
+  if (cbox.min == cbox.max) return {(start + end) / 2, 0};
 
   // split along largest
   auto axis = (int)argmax(diagonal(cbox));
@@ -1475,7 +1468,7 @@ inline vec2i split_middle(
   auto cbox = invalidb3f;
   for (auto i = start; i < end; i++)
     cbox = merge(cbox, center(bboxes[primitives[i]]));
-  if (empty(cbox) == vec3f{0, 0, 0}) return {(start + end) / 2, 0};
+  if (cbox.min == cbox.max) return {(start + end) / 2, 0};
 
   // split along largest
   auto axis = (int)argmax(diagonal(cbox));
