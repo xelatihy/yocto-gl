@@ -1628,7 +1628,7 @@ inline intersection<T, 3> intersect_bvh(const bvh_gdata<T, 3>& bvh,
         node_stack[node_cur++] = node.start + 0;
       }
     } else {
-      for (auto idx = node.start; idx < node.start + node.num; idx++) {
+      for (auto idx : range(node.start, node.start + node.num)) {
         auto eintersection = intersect_element(
             ray, elements[bvh.primitives[idx]]);
         if (!eintersection.hit) continue;
