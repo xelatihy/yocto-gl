@@ -482,22 +482,58 @@ inline vector<vec<I, 2>> get_edges(const edge_map<I>& emap);
 template <typename I>
 inline vector<vec<I, 2>> get_boundary(const edge_map<I>& emap);
 
+// Make edge unique
+template <typename I>
+constexpr inline vec<I, 2> _make_edge(const vec<I, 2>& hedge) {
+  return {min(hedge), max(hedge)};
+}
+template <typename I>
+constexpr inline vec<I, 2> _make_edge(I a, I b) {
+  return {min(a, b), max(a, b)};
+}
+
 // Edge lists
 template <typename I>
-inline vector<vec<I, 2>> get_edges(const vector<vec<I, 3>>& triangles) {
-  return get_edges(make_edge_map(triangles));
+inline ptrdiff_t search_edge(
+    const vector<vec<I, 2>>& edges, const vec<I, 2>& edge) {
+  auto pos = std::binary_search(edges.begin(), edges.end(), _make_edge(edge));
+  if (pos == edges.end()) return -1;
+  return pos - edges.begin();
 }
 template <typename I>
-inline vector<vec<I, 2>> get_edges(const vector<vec<I, 4>>& quads) {
-  return get_edges(make_edge_map(quads));
+inline vector<vec<I, 2>> get_edges(
+    const vector<vec<I, 3>>& triangles, bool no_map = false) {
+  if (!no_map) return get_edges(make_edge_map(triangles));
+  auto edges = vector<vec<I, 2>>();
+  for (auto& triangle : triangles) {
+    edges.push_back(_make_edge(triangle.x, triangle.y));
+    edges.push_back(_make_edge(triangle.y, triangle.z));
+    edges.push_back(_make_edge(triangle.z, triangle.x));
+  }
+  return remove_duplicates(edges);
 }
 template <typename I>
-inline vector<vec<I, 2>> get_boundary(const vector<vec<I, 3>>& triangles) {
-  return get_boundary(make_edge_map(triangles));
+inline vector<vec<I, 2>> get_edges(
+    const vector<vec<I, 4>>& quads, bool no_map = false) {
+  if (!no_map) return get_edges(make_edge_map(quads));
+  auto edges = vector<vec<I, 2>>();
+  for (auto& quad : quads) {
+    edges.push_back(_make_edge(quad.x, quad.y));
+    edges.push_back(_make_edge(quad.y, quad.z));
+    if (quad.z != quad.w) edges.push_back(_make_edge(quad.z, quad.w));
+    edges.push_back(_make_edge(quad.w, quad.x));
+  }
+  return remove_duplicates(edges);
 }
 template <typename I>
-inline vector<vec<I, 2>> get_boundary(const vector<vec<I, 4>>& quads) {
-  return get_boundary(make_edge_map(quads));
+inline vector<vec<I, 2>> get_boundary(
+    const vector<vec<I, 3>>& triangles, bool no_map = false) {
+  if (!no_map) return get_boundary(make_edge_map(triangles));
+}
+template <typename I>
+inline vector<vec<I, 2>> get_boundary(
+    const vector<vec<I, 4>>& quads, bool no_map = false) {
+  if (!no_map) return get_boundary(make_edge_map(quads));
 }
 
 // Build adjacencies between faces (sorted counter-clockwise)
