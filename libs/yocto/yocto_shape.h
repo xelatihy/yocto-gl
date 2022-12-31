@@ -447,6 +447,70 @@ struct hash<yocto::vec<T, N>> {
 }  // namespace std
 
 // -----------------------------------------------------------------------------
+// SHAPE ELEMENT CONVERSION AND GROUPING
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Convert quads to triangles
+template <typename I>
+inline vector<vec<I, 3>> quads_to_triangles(const vector<vec<I, 4>>& quads);
+// Convert triangles to quads by creating degenerate quads
+template <typename I>
+inline vector<vec<I, 4>> triangles_to_quads(const vector<vec<I, 3>>& triangles);
+// Convert beziers to lines using 3 lines for each bezier.
+template <typename I>
+inline vector<vec<I, 4>> bezier_to_lines(vector<vec<I, 2>>& lines);
+
+// Convert face-varying data to single primitives. Returns the quads indices
+// and filled vectors for pos, norm and texcoord.
+template <typename T, typename I>
+inline void split_facevarying(vector<vec<I, 4>>& split_quads,
+    vector<vec<T, 3>>& split_positions, vector<vec<T, 3>>& split_normals,
+    vector<vec<T, 2>>& split_texcoords, const vector<vec<I, 4>>& quadspos,
+    const vector<vec<I, 4>>& quadsnorm, const vector<vec<I, 4>>& quadstexcoord,
+    const vector<vec<T, 3>>& positions, const vector<vec<T, 3>>& normals,
+    const vector<vec<T, 2>>& texcoords);
+
+// Weld vertices within a threshold.
+template <typename T>
+inline pair<vector<vec<T, 3>>, vector<int>> weld_vertices(
+    const vector<vec<T, 3>>& positions, T threshold);
+template <typename T, typename I>
+inline pair<vector<vec<I, 3>>, vector<vec<T, 3>>> weld_triangles(
+    const vector<vec<I, 3>>& triangles, const vector<vec<T, 3>>& positions,
+    T threshold);
+template <typename T, typename I>
+inline pair<vector<vec<I, 4>>, vector<vec<T, 3>>> weld_quads(
+    const vector<vec<I, 4>>& quads, const vector<vec<T, 3>>& positions,
+    T threshold);
+
+// Merge shape elements
+template <typename T, typename I>
+inline void merge_lines(vector<vec<I, 2>>& lines, vector<vec<T, 3>>& positions,
+    vector<vec<T, 3>>& tangents, vector<vec<T, 2>>& texcoords,
+    vector<T>& radius, const vector<vec<I, 2>>& merge_lines,
+    const vector<vec<T, 3>>& merge_positions,
+    const vector<vec<T, 3>>& merge_tangents,
+    const vector<vec<T, 2>>& merge_texturecoords,
+    const vector<T>&         merge_radius);
+template <typename T, typename I>
+inline void merge_triangles(vector<vec<I, 3>>& triangles,
+    vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
+    vector<vec<T, 2>>& texcoords, const vector<vec<I, 2>>& merge_triangles,
+    const vector<vec<T, 3>>& merge_positions,
+    const vector<vec<T, 3>>& merge_normals,
+    const vector<vec<T, 2>>& merge_texturecoords);
+template <typename T, typename I>
+inline void merge_quads(vector<vec<I, 4>>& quads, vector<vec<T, 3>>& positions,
+    vector<vec<T, 3>>& normals, vector<vec<T, 2>>& texcoords,
+    const vector<vec<I, 4>>& merge_quads,
+    const vector<vec<T, 3>>& merge_positions,
+    const vector<vec<T, 3>>& merge_normals,
+    const vector<vec<T, 2>>& merge_texturecoords);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // EDGES AND ADJACENCIES
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -587,56 +651,6 @@ void find_neighbors(const hash_grid& grid, vector<int>& neighbors,
     const vec3f& position, float max_radius);
 void find_neighbors(const hash_grid& grid, vector<int>& neighbors, int vertex,
     float max_radius);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// SHAPE ELEMENT CONVERSION AND GROUPING
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Convert quads to triangles
-vector<vec3i> quads_to_triangles(const vector<vec4i>& quads);
-// Convert triangles to quads by creating degenerate quads
-vector<vec4i> triangles_to_quads(const vector<vec3i>& triangles);
-// Convert beziers to lines using 3 lines for each bezier.
-vector<vec4i> bezier_to_lines(vector<vec2i>& lines);
-
-// Convert face-varying data to single primitives. Returns the quads indices
-// and filled vectors for pos, norm and texcoord.
-void split_facevarying(vector<vec4i>& split_quads,
-    vector<vec3f>& split_positions, vector<vec3f>& split_normals,
-    vector<vec2f>& split_texcoords, const vector<vec4i>& quadspos,
-    const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords);
-
-// Weld vertices within a threshold.
-pair<vector<vec3f>, vector<int>> weld_vertices(
-    const vector<vec3f>& positions, float threshold);
-pair<vector<vec3i>, vector<vec3f>> weld_triangles(
-    const vector<vec3i>& triangles, const vector<vec3f>& positions,
-    float threshold);
-pair<vector<vec4i>, vector<vec3f>> weld_quads(const vector<vec4i>& quads,
-    const vector<vec3f>& positions, float threshold);
-
-// Merge shape elements
-void merge_lines(vector<vec2i>& lines, vector<vec3f>& positions,
-    vector<vec3f>& tangents, vector<vec2f>& texcoords, vector<float>& radius,
-    const vector<vec2i>& merge_lines, const vector<vec3f>& merge_positions,
-    const vector<vec3f>& merge_tangents,
-    const vector<vec2f>& merge_texturecoords,
-    const vector<float>& merge_radius);
-void merge_triangles(vector<vec3i>& triangles, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords,
-    const vector<vec2i>& merge_triangles, const vector<vec3f>& merge_positions,
-    const vector<vec3f>& merge_normals,
-    const vector<vec2f>& merge_texturecoords);
-void merge_quads(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords,
-    const vector<vec4i>& merge_quads, const vector<vec3f>& merge_positions,
-    const vector<vec3f>& merge_normals,
-    const vector<vec2f>& merge_texturecoords);
 
 }  // namespace yocto
 
@@ -1037,7 +1051,198 @@ inline vector<vec<T, 3>> align_vertices(
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// EDGEA AND ADJACENCIES
+// IMPLEMENTATION OF SHAPE ELEMENT CONVERSION AND GROUPING
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Convert quads to triangles
+template <typename I>
+inline vector<vec<I, 3>> quads_to_triangles(const vector<vec<I, 4>>& quads) {
+  auto triangles = vector<vec<I, 3>>{};
+  triangles.reserve(quads.size() * 2);
+  for (auto& [v1, v2, v3, v4] : quads) {
+    triangles.push_back({v1, v2, v4});
+    if (v3 != v4) triangles.push_back({v3, v4, v2});
+  }
+  return triangles;
+}
+
+// Convert triangles to quads by creating degenerate quads
+template <typename I>
+inline vector<vec<I, 4>> triangles_to_quads(
+    const vector<vec<I, 3>>& triangles) {
+  auto quads = vector<vec<I, 4>>{};
+  quads.reserve(triangles.size());
+  for (auto& [v1, v2, v3] : triangles) quads.push_back({v1, v2, v3, v3});
+  return quads;
+}
+
+// Convert beziers to lines using 3 lines for each bezier.
+template <typename I>
+inline vector<vec<I, 2>> bezier_to_lines(const vector<vec<I, 4>>& beziers) {
+  auto lines = vector<vec<I, 2>>{};
+  lines.reserve(beziers.size() * 3);
+  for (auto& bezier : beziers) {
+    lines.push_back({bezier.x, bezier.y});
+    lines.push_back({bezier.y, bezier.z});
+    lines.push_back({bezier.z, bezier.w});
+  }
+  return lines;
+}
+
+// Convert face varying data to single primitives. Returns the quads indices
+// and filled vectors for pos, norm and texcoord.
+template <typename T, typename I>
+inline void split_facevarying(vector<vec<I, 4>>& split_quads,
+    vector<vec<T, 3>>& split_positions, vector<vec<T, 3>>& split_normals,
+    vector<vec<T, 2>>& split_texcoords, const vector<vec<I, 4>>& quadspos,
+    const vector<vec<I, 4>>& quadsnorm, const vector<vec<I, 4>>& quadstexcoord,
+    const vector<vec<T, 3>>& positions, const vector<vec<T, 3>>& normals,
+    const vector<vec<T, 2>>& texcoords) {
+  // make faces unique
+  unordered_map<vec<I, 3>, int> vert_map;
+  split_quads = vector<vec<I, 4>>(quadspos.size());
+  for (auto fid : range(quadspos.size())) {
+    for (auto c : range(4)) {
+      auto v = vec<I, 3>{
+          quadspos[fid][c],
+          (!quadsnorm.empty()) ? quadsnorm[fid][c] : -1,
+          (!quadstexcoord.empty()) ? quadstexcoord[fid][c] : -1,
+      };
+      auto it = vert_map.find(v);
+      if (it == vert_map.end()) {
+        auto s = (int)vert_map.size();
+        vert_map.insert(it, {v, s});
+        split_quads[fid][c] = s;
+      } else {
+        split_quads[fid][c] = it->second;
+      }
+    }
+  }
+
+  // fill vert data
+  split_positions.clear();
+  if (!positions.empty()) {
+    split_positions = vector<vec<T, 3>>(vert_map.size());
+    for (auto& [vert, index] : vert_map) {
+      split_positions[index] = positions[vert.x];
+    }
+  }
+  split_normals.clear();
+  if (!normals.empty()) {
+    split_normals = vector<vec<T, 3>>(vert_map.size());
+    for (auto& [vert, index] : vert_map) {
+      split_normals[index] = normals[vert.y];
+    }
+  }
+  split_texcoords.clear();
+  if (!texcoords.empty()) {
+    split_texcoords = vector<vec<T, 2>>(vert_map.size());
+    for (auto& [vert, index] : vert_map) {
+      split_texcoords[index] = texcoords[vert.z];
+    }
+  }
+}
+
+// Weld vertices within a threshold.
+template <typename T>
+inline pair<vector<vec<T, 3>>, vector<int>> weld_vertices(
+    const vector<vec<T, 3>>& positions, T threshold) {
+  auto indices   = vector<int>(positions.size());
+  auto welded    = vector<vec<T, 3>>{};
+  auto grid      = make_hash_grid(threshold);
+  auto neighbors = vector<int>{};
+  for (auto vertex : range(positions.size())) {
+    auto& position = positions[vertex];
+    find_neighbors(grid, neighbors, position, threshold);
+    if (neighbors.empty()) {
+      welded.push_back(position);
+      indices[vertex] = (int)welded.size() - 1;
+      insert_vertex(grid, position);
+    } else {
+      indices[vertex] = neighbors.front();
+    }
+  }
+  return {welded, indices};
+}
+template <typename T, typename I>
+inline pair<vector<vec<I, 3>>, vector<vec<T, 3>>> weld_triangles(
+    const vector<vec<I, 3>>& triangles, const vector<vec<T, 3>>& positions,
+    T threshold) {
+  auto [wpositions, indices] = weld_vertices(positions, threshold);
+  auto wtriangles            = triangles;
+  for (auto& triangle : wtriangles) {
+    triangle = {indices[triangle.x], indices[triangle.y], indices[triangle.z]};
+  }
+  return {wtriangles, wpositions};
+}
+template <typename T, typename I>
+inline pair<vector<vec<I, 4>>, vector<vec<T, 3>>> weld_quads(
+    const vector<vec<I, 4>>& quads, const vector<vec<T, 3>>& positions,
+    T threshold) {
+  auto [wpositions, indices] = weld_vertices(positions, threshold);
+  auto wquads                = quads;
+  for (auto& quad : wquads) {
+    quad = {indices[quad.x], indices[quad.y], indices[quad.z], indices[quad.w]};
+  }
+  return {wquads, wpositions};
+}
+
+// Merge shape elements
+template <typename T, typename I>
+inline void merge_lines(vector<vec<I, 2>>& lines, vector<vec<T, 3>>& positions,
+    vector<vec<T, 3>>& tangents, vector<vec<T, 2>>& texcoords,
+    vector<T>& radius, const vector<vec<I, 2>>& merge_lines,
+    const vector<vec<T, 3>>& merge_positions,
+    const vector<vec<T, 3>>& merge_tangents,
+    const vector<vec<T, 2>>& merge_texturecoords,
+    const vector<T>&         merge_radius) {
+  auto merge_verts = (int)positions.size();
+  for (auto& [v1, v2] : merge_lines)
+    lines.push_back({v1 + merge_verts, v2 + merge_verts});
+  positions.insert(
+      positions.end(), merge_positions.begin(), merge_positions.end());
+  tangents.insert(tangents.end(), merge_tangents.begin(), merge_tangents.end());
+  texcoords.insert(
+      texcoords.end(), merge_texturecoords.begin(), merge_texturecoords.end());
+  radius.insert(radius.end(), merge_radius.begin(), merge_radius.end());
+}
+template <typename T, typename I>
+inline void merge_triangles(vector<vec<I, 3>>& triangles,
+    vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
+    vector<vec<T, 2>>& texcoords, const vector<vec<I, 3>>& merge_triangles,
+    const vector<vec<T, 3>>& merge_positions,
+    const vector<vec<T, 3>>& merge_normals,
+    const vector<vec<T, 2>>& merge_texturecoords) {
+  auto merge_verts = (int)positions.size();
+  for (auto& triangle : merge_triangles)
+    triangles.push_back(triangle + merge_verts);
+  positions.insert(
+      positions.end(), merge_positions.begin(), merge_positions.end());
+  normals.insert(normals.end(), merge_normals.begin(), merge_normals.end());
+  texcoords.insert(
+      texcoords.end(), merge_texturecoords.begin(), merge_texturecoords.end());
+}
+template <typename T, typename I>
+inline void merge_quads(vector<vec<I, 4>>& quads, vector<vec<T, 3>>& positions,
+    vector<vec<T, 3>>& normals, vector<vec<T, 2>>& texcoords,
+    const vector<vec<I, 4>>& merge_quads,
+    const vector<vec<T, 3>>& merge_positions,
+    const vector<vec<T, 3>>& merge_normals,
+    const vector<vec<T, 2>>& merge_texturecoords) {
+  auto merge_verts = (int)positions.size();
+  for (auto& quad : merge_quads) quads.push_back(quad + merge_verts);
+  positions.insert(
+      positions.end(), merge_positions.begin(), merge_positions.end());
+  normals.insert(normals.end(), merge_normals.begin(), merge_normals.end());
+  texcoords.insert(
+      texcoords.end(), merge_texturecoords.begin(), merge_texturecoords.end());
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// EDGES AND ADJACENCIES
 // -----------------------------------------------------------------------------
 namespace yocto {
 
