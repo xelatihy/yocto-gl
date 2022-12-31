@@ -663,7 +663,11 @@ inline pair<vector<vec<I, 4>>, vector<T>> subdivide_quads(
 template <typename T, typename I>
 inline pair<vector<vec<I, 4>>, vector<T>> subdivide_beziers(
     const vector<vec<I, 3>>& beziers, const vector<T>& vertex);
-// Subdivide quads using Carmull-Clark subdivision rules.
+// Subdivide lines using B-splines subdivision rules.
+template <typename T, typename I>
+inline pair<vector<vec<I, 2>>, vector<T>> subdivide_bspline(
+    const vector<vec<I, 2>>& lines, const vector<T>& vert);
+// Subdivide quads using Catmull-Clark subdivision rules.
 template <typename T, typename I>
 inline pair<vector<vec<I, 4>>, vector<T>> subdivide_catmullclark(
     const vector<vec<I, 4>>& quads, const vector<T>& vertex,
@@ -687,7 +691,11 @@ inline pair<vector<vec<I, 4>>, vector<T>> subdivide_quads(
 template <typename T, typename I>
 inline pair<vector<vec<I, 4>>, vector<T>> subdivide_beziers(
     const vector<vec<I, 4>>& beziers, const vector<T>& vertices, int level);
-// Subdivide quads using Carmull-Clark subdivision rules.
+// Subdivide lines using B-splines subdivision rules.
+template <typename T, typename I>
+inline pair<vector<vec<I, 2>>, vector<T>> subdivide_bspline(
+    const vector<vec<I, 2>>& lines, const vector<T>& vert, int level);
+// Subdivide quads using Catmull-Clark subdivision rules.
 template <typename T, typename I>
 inline pair<vector<vec<I, 4>>, vector<T>> subdivide_catmullclark(
     const vector<vec<I, 4>>& quads, const vector<T>& vertices, int level,
@@ -1415,6 +1423,43 @@ inline pair<vector<vec<I, 4>>, vector<T>> subdivide_beziers(
   return {tbeziers, tvertices};
 }
 
+// Subdivide bspline.
+template <typename T, typename I>
+inline pair<vector<vec<I, 2>>, vector<T>> subdivide_bspline(
+    const vector<vec<I, 2>>& lines, const vector<T>& vert) {
+  // split elements ------------------------------------
+  auto [tlines, tvert] = subdivide_lines(lines, vert);
+
+  // boundary ------------------------------------------
+  auto valence = vector<bool>(tvert.size(), 1);
+  // TODO: fixme
+  auto tcreases = vector<int>{};
+
+  // averaging pass ----------------------------------
+  auto avert  = vector<T>(tvert.size(), T{});
+  auto acount = vector<int>(tvert.size(), 0);
+  for (auto& p : tcreases) {
+    auto c = tvert[p];
+    for (auto vid : {p}) {
+      if (valence[vid] != 0) continue;
+      avert[vid] += c;
+      acount[vid] += 1;
+    }
+  }
+  for (auto& l : tlines) {
+    auto c = (tvert[l.x] + tvert[l.y]) / 2;
+    for (auto vid : {l.x, l.y}) {
+      if (valence[vid] != 1) continue;
+      avert[vid] += c;
+      acount[vid] += 1;
+    }
+  }
+  for (auto i = 0; i < tvert.size(); i++) avert[i] /= (float)acount[i];
+  tvert = avert;
+
+  return {tlines, tvert};
+}
+
 // Subdivide catmullclark.
 template <typename T, typename I>
 inline pair<vector<vec<I, 4>>, vector<T>> subdivide_catmullclark(
@@ -1422,6 +1467,7 @@ inline pair<vector<vec<I, 4>>, vector<T>> subdivide_catmullclark(
     bool lock_boundary) {
   // early exit
   if (quads.empty() || vertices.empty()) return {quads, vertices};
+
   // get edges
   auto emap     = make_edge_map(quads);
   auto edges    = get_edges(emap);
@@ -1581,6 +1627,16 @@ inline pair<vector<vec<I, 4>>, vector<T>> subdivide_beziers(
   auto tess = pair{beziers, vertices};
   for (auto idx : range(level))
     tess = subdivide_beziers(tess.first, tess.second);
+  return tess;
+}
+// Subdivide lines using B-spline subdivision rules.
+template <typename T>
+inline pair<vector<vec2i>, vector<T>> subdivide_bspline(
+    const vector<vec2i>& lines, const vector<T>& vertices, int level) {
+  if (level < 1) return {lines, vertices};
+  auto tess = pair{lines, vertices};
+  for (auto idx : range(level))
+    tess = subdivide_bspline(tess.first, tess.second);
   return tess;
 }
 // Subdivide quads using Carmull-Clark subdivision rules.
