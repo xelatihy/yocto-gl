@@ -142,6 +142,7 @@
     "khronos",
     "lambertian",
     "microfacet",
-    "texcoords"
+    "texcoords",
+    "texcoord"
   ]
 }
