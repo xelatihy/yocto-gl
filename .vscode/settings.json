@@ -141,6 +141,7 @@
     "isize",
     "khronos",
     "lambertian",
-    "microfacet"
+    "microfacet",
+    "texcoords"
   ]
 }
