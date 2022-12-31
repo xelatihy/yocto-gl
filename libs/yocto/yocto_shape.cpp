@@ -190,19 +190,6 @@ vector<vec3f> compute_normals(const shape_data& shape) {
     return vector<vec3f>(shape.positions.size(), {0, 0, 1});
   }
 }
-void compute_normals(vector<vec3f>& normals, const shape_data& shape) {
-  if (is_points(shape)) {
-    normals.assign(shape.positions.size(), {0, 0, 1});
-  } else if (is_lines(shape)) {
-    lines_tangents(normals, shape.lines, shape.positions);
-  } else if (is_triangles(shape)) {
-    triangles_normals(normals, shape.triangles, shape.positions);
-  } else if (is_quads(shape)) {
-    quads_normals(normals, shape.quads, shape.positions);
-  } else {
-    normals.assign(shape.positions.size(), {0, 0, 1});
-  }
-}
 
 // Shape sampling
 vector<float> sample_shape_cdf(const shape_data& shape) {
@@ -216,20 +203,6 @@ vector<float> sample_shape_cdf(const shape_data& shape) {
     return sample_quads_cdf(shape.quads, shape.positions);
   } else {
     return sample_points_cdf((int)shape.positions.size());
-  }
-}
-
-void sample_shape_cdf(vector<float>& cdf, const shape_data& shape) {
-  if (is_points(shape)) {
-    sample_points_cdf(cdf, (int)shape.points.size());
-  } else if (is_lines(shape)) {
-    sample_lines_cdf(cdf, shape.lines, shape.positions);
-  } else if (is_triangles(shape)) {
-    sample_triangles_cdf(cdf, shape.triangles, shape.positions);
-  } else if (is_quads(shape)) {
-    sample_quads_cdf(cdf, shape.quads, shape.positions);
-  } else {
-    sample_points_cdf(cdf, (int)shape.positions.size());
   }
 }
 
@@ -340,10 +313,10 @@ shape_data subdivide_shape(
 
 // Transform shape
 shape_data transform_shape(
-    const frame3f& frame, const shape_data& shape, bool non_rigid) {
-  return transform_shape(frame, shape, 1, non_rigid);
+    const shape_data& shape, const frame3f& frame, bool non_rigid) {
+  return transform_shape(shape, frame, 1, non_rigid);
 }
-shape_data transform_shape(const frame3f& frame, const shape_data& shape,
+shape_data transform_shape(const shape_data& shape, const frame3f& frame,
     float radius_scale, bool non_rigid) {
   auto transformed = shape;
   for (auto& position : transformed.positions)
@@ -356,6 +329,11 @@ shape_data transform_shape(const frame3f& frame, const shape_data& shape,
 shape_data remove_normals(const shape_data& shape) {
   auto transformed    = shape;
   transformed.normals = {};
+  return transformed;
+}
+shape_data add_normals(const shape_data& shape) {
+  auto transformed    = shape;
+  transformed.normals = compute_normals(shape);
   return transformed;
 }
 

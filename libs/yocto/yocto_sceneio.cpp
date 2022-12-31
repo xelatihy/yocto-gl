@@ -1149,13 +1149,13 @@ shape_data make_shape_preset(const string& type_) {
   } else if (type == "matball") {
     return make_sphere();
   } else if (type == "lineball") {
-    auto base = transform_shape(scaling_frame(0.8f), make_sphere());
+    auto base = transform_shape(make_sphere(), scaling_frame(0.8f));
     return make_random_lines(base, pow2(16), 4, {0.2f, 0.2f}, {0.002f, 0.001f});
   } else if (type == "hairball") {
-    auto base = transform_shape(scaling_frame(0.8f), make_sphere());
+    auto base = transform_shape(make_sphere(), scaling_frame(0.8f));
     return make_random_hairs(base, pow2(16), 4, {0.2f, 0.2f}, {0.002f, 0.001f});
   } else if (type == "hairball_interior") {
-    return transform_shape(scaling_frame(0.8f), make_sphere());
+    return transform_shape(make_sphere(), scaling_frame(0.8f));
   } else if (type == "monkey") {
     return make_monkey();
   } else if (type == "wtcube") {
@@ -1177,73 +1177,72 @@ shape_data make_shape_preset(const string& type_) {
   } else if (type == "floor") {
     return make_floor();
   } else if (type == "test_cube") {
-    return transform_shape(test_xform, make_rounded_cube());
+    return transform_shape(make_rounded_cube(), test_xform);
   } else if (type == "test_uvsphere") {
-    return transform_shape(test_xform, make_uvsphere());
+    return transform_shape(make_uvsphere(), test_xform);
   } else if (type == "test_capped_uvsphere") {
-    return transform_shape(test_xform, make_capped_uvsphere());
+    return transform_shape(make_capped_uvsphere(), test_xform);
   } else if (type == "test_uvspherey") {
-    return transform_shape(test_xform, make_uvspherey());
+    return transform_shape(make_uvspherey(), test_xform);
   } else if (type == "test_capped_uvspherey") {
-    return transform_shape(test_xform, make_capped_uvspherey());
+    return transform_shape(make_capped_uvspherey(), test_xform);
   } else if (type == "test_sphere") {
-    return transform_shape(test_xform, make_sphere());
+    return transform_shape(make_sphere(), test_xform);
   } else if (type == "test_matcube") {
-    return transform_shape(test_xform, make_rounded_cube());
+    return transform_shape(make_rounded_cube(), test_xform);
   } else if (type == "test_matsphere") {
-    return transform_shape(test_xform, make_uvspherey());
+    return transform_shape(make_uvspherey(), test_xform);
   } else if (type == "test_displaced_sphere") {
-    return transform_shape(test_xform, make_sphere(7));
+    return transform_shape(make_sphere(7), test_xform);
   } else if (type == "test_smallsphere") {
-    return transform_shape(
-        translation_frame(vec3f{0, 0.015f, 0}) * scaling_frame(0.015f),
-        make_sphere());
+    return transform_shape(make_sphere(),
+        translation_frame(vec3f{0, 0.015f, 0}) * scaling_frame(0.015f));
   } else if (type == "test_disk") {
-    return transform_shape(test_xform, make_disk());
+    return transform_shape(make_disk(), test_xform);
   } else if (type == "test_uvcylinder") {
-    return transform_shape(test_xform, make_rounded_uvcylinder());
+    return transform_shape(make_rounded_uvcylinder(), test_xform);
   } else if (type == "test_floor") {
     return make_floor();
   } else if (type == "test_quad") {
-    return transform_shape(test_xform, make_quad());
+    return transform_shape(make_quad(), test_xform);
   } else if (type == "test_quady") {
-    return transform_shape(test_xform, make_quady());
+    return transform_shape(make_quady(), test_xform);
   } else if (type == "test_displaced_quad") {
-    return transform_shape(test_xform, make_quad(8));
+    return transform_shape(make_quad(8), test_xform);
   } else if (type == "test_displaced_quady") {
-    return transform_shape(test_xform, make_quady(8));
+    return transform_shape(make_quady(8), test_xform);
   } else if (type == "test_matball") {
-    return transform_shape(test_xform, make_sphere());
+    return transform_shape(make_sphere(), test_xform);
   } else if (type == "test_geosphere") {
-    return transform_shape(test_xform, make_geosphere());
+    return transform_shape(make_geosphere(), test_xform);
   } else if (type == "test_faceted_geosphere") {
-    return transform_shape(test_xform, remove_normals(make_geosphere()));
+    return transform_shape(remove_normals(make_geosphere()), test_xform);
   } else if (type == "test_subdivided_geosphere") {
-    return transform_shape(test_xform, make_geosphere(6));
+    return transform_shape(make_geosphere(6), test_xform);
   } else if (type == "test_lineball") {
     auto base = transform_shape(
-        test_xform * scaling_frame(0.8f), make_sphere());
+        make_sphere(), test_xform * scaling_frame(0.8f));
     return make_random_lines(base, pow2(16), 4, {0.1f * 0.15f, 0.1f * 0.15f},
         {0.001f * 0.15f, 0.0005f * 0.15f});
   } else if (type == "test_hairball") {
     auto base = transform_shape(
-        test_xform * scaling_frame(0.8f), make_sphere());
+        make_sphere(), test_xform * scaling_frame(0.8f));
     return make_random_hairs(base, pow2(16), 4, {0.1f * 0.15f, 0.1f * 0.15f},
         {0.001f * 0.15f, 0.0005f * 0.15f});
   } else if (type == "test_hairball-interior") {
-    return transform_shape(test_xform * scaling_frame(0.8f), make_sphere());
+    return transform_shape(make_sphere(), test_xform * scaling_frame(0.8f));
   } else if (type == "test_suzanne_subdiv") {
-    return transform_shape(test_xform * scaling_frame(0.8f), make_monkey());
+    return transform_shape(make_monkey(), test_xform * scaling_frame(0.8f));
   } else if (type == "test_wtcube") {
-    return transform_shape(test_xform, make_wtcube());
+    return transform_shape(make_wtcube(), test_xform);
   } else if (type == "test_arealight1") {
-    return transform_shape(scaling_frame(0.2f), make_quad());
+    return transform_shape(make_quad(), scaling_frame(0.2f));
   } else if (type == "test_arealight2") {
-    return transform_shape(scaling_frame(0.2f), make_quad());
+    return transform_shape(make_quad(), scaling_frame(0.2f));
   } else if (type == "test_largearealight1") {
-    return transform_shape(scaling_frame(0.4f), make_quad());
+    return transform_shape(make_quad(), scaling_frame(0.4f));
   } else if (type == "test_largearealight2") {
-    return transform_shape(scaling_frame(0.4f), make_quad());
+    return transform_shape(make_quad(), scaling_frame(0.4f));
   } else if (type == "test_pointlight1") {
     return make_point(0);
   } else if (type == "test_pointlight2") {
@@ -1253,22 +1252,22 @@ shape_data make_shape_preset(const string& type_) {
   } else if (type == "test_points") {
     return make_random_points(4096);
   } else if (type == "test_points_random") {
-    return transform_shape(test_xform, make_random_points(4096));
+    return transform_shape(make_random_points(4096), test_xform);
   } else if (type == "test_points_grid") {
-    return transform_shape(test_xform, make_point_grid(), test_radius_scale);
+    return transform_shape(make_point_grid(), test_xform, test_radius_scale);
   } else if (type == "test_lines_grid") {
-    return transform_shape(test_xform, make_lines(), test_radius_scale);
+    return transform_shape(make_lines(), test_xform, test_radius_scale);
   } else if (type == "test_thickpoints_grid") {
     return transform_shape(
-        test_xform, make_point_grid(), test_radius_scale * 10);
+        make_point_grid(), test_xform, test_radius_scale * 10);
   } else if (type == "test_thicklines_grid") {
-    return transform_shape(test_xform, make_lines(), test_radius_scale);
+    return transform_shape(make_lines(), test_xform, test_radius_scale);
   } else if (type == "test_particles") {
     return make_points(4096);
   } else if (type == "test_cloth") {
-    return transform_shape(scaling_frame(0.2f), make_quad(6));
+    return transform_shape(make_quad(6), scaling_frame(0.2f));
   } else if (type == "test_clothy") {
-    return transform_shape(scaling_frame(0.2f), make_quady(6));
+    return transform_shape(make_quady(6), scaling_frame(0.2f));
   } else {
     throw io_error{"unknown preset " + type};
   }

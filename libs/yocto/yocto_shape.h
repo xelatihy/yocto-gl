@@ -107,7 +107,6 @@ vec3f eval_element_normal(const shape_data& shape, int element);
 
 // Compute per-vertex normals/tangents for lines/triangles/quads.
 vector<vec3f> compute_normals(const shape_data& shape);
-void          compute_normals(vector<vec3f>& normals, const shape_data& shape);
 
 // An unevaluated location on a shape
 struct shape_point {
@@ -117,7 +116,6 @@ struct shape_point {
 
 // Shape sampling
 vector<float> sample_shape_cdf(const shape_data& shape);
-void          sample_shape_cdf(vector<float>& cdf, const shape_data& shape);
 shape_point   sample_shape(const shape_data& shape, const vector<float>& cdf,
       float rn, const vec2f& ruv);
 vector<shape_point> sample_shape(
@@ -133,10 +131,11 @@ shape_data subdivide_shape(
 
 // Transform shape
 shape_data transform_shape(
-    const frame3f& frame, const shape_data& shape, bool non_rigid = false);
-shape_data transform_shape(const frame3f& frame, const shape_data& shape,
+    const shape_data& shape, const frame3f& frame, bool non_rigid = false);
+shape_data transform_shape(const shape_data& shape, const frame3f& frame,
     float radius_scale, bool non_rigid = false);
 shape_data remove_normals(const shape_data& shape);
+shape_data add_normals(const shape_data& shape);
 
 // Merge a shape into another
 void merge_shape_inplace(shape_data& shape, const shape_data& merge);
