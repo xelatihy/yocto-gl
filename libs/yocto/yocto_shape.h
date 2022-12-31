@@ -49,6 +49,7 @@
 #include "yocto_geometry.h"
 #include "yocto_math.h"
 #include "yocto_ndarray.h"
+#include "yocto_sampling.h"
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
@@ -427,27 +428,7 @@ inline vector<vec<T, 3>> align_vertices(
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// VECTOR HASHING
-// -----------------------------------------------------------------------------
-namespace std {
-
-// Hash functor for vector for use with hash_map
-template <typename T, size_t N>
-struct hash<yocto::vec<T, N>> {
-  size_t operator()(const yocto::vec<T, N>& v) const {
-    static const auto hasher = std::hash<T>();
-    auto              h      = (size_t)0;
-    for (auto i = 0; i < N; i++) {
-      h ^= hasher(v[i]) + 0x9e3779b9 + (h << 6) + (h >> 2);
-    }
-    return h;
-  }
-};
-
-}  // namespace std
-
-// -----------------------------------------------------------------------------
-// SHAPE ELEMENT CONVERSION AND GROUPING
+// SHAPE ELEMENT CONVERSION
 // -----------------------------------------------------------------------------
 namespace yocto {
 
@@ -470,45 +451,68 @@ inline void split_facevarying(vector<vec<I, 4>>& split_quads,
     const vector<vec<I, 4>>& quadsnorm, const vector<vec<I, 4>>& quadstexcoord,
     const vector<vec<T, 3>>& positions, const vector<vec<T, 3>>& normals,
     const vector<vec<T, 2>>& texcoords);
+}  // namespace yocto
 
-// Weld vertices within a threshold.
-template <typename T>
-inline pair<vector<vec<T, 3>>, vector<int>> weld_vertices(
-    const vector<vec<T, 3>>& positions, T threshold);
-template <typename T, typename I>
-inline pair<vector<vec<I, 3>>, vector<vec<T, 3>>> weld_triangles(
-    const vector<vec<I, 3>>& triangles, const vector<vec<T, 3>>& positions,
-    T threshold);
-template <typename T, typename I>
-inline pair<vector<vec<I, 4>>, vector<vec<T, 3>>> weld_quads(
-    const vector<vec<I, 4>>& quads, const vector<vec<T, 3>>& positions,
-    T threshold);
+// -----------------------------------------------------------------------------
+// SHAPE SAMPLING
+// -----------------------------------------------------------------------------
+namespace yocto {
 
-// Merge shape elements
+// Pick a point in a point set uniformly.
+template <typename T, typename I = int>
+inline I sample_points(I npoints, T re);
+template <typename T, typename I = int>
+inline I sample_points(const vector<T>& cdf, T re);
+template <typename I, typename T = float>
+inline vector<T> sample_points_cdf(I npoints);
+
+// Pick a point on lines uniformly.
+template <typename T, typename I = int>
+inline pair<I, T> sample_lines(const vector<T>& cdf, T re, T ru);
 template <typename T, typename I>
-inline void merge_lines(vector<vec<I, 2>>& lines, vector<vec<T, 3>>& positions,
-    vector<vec<T, 3>>& tangents, vector<vec<T, 2>>& texcoords,
-    vector<T>& radius, const vector<vec<I, 2>>& merge_lines,
-    const vector<vec<T, 3>>& merge_positions,
-    const vector<vec<T, 3>>& merge_tangents,
-    const vector<vec<T, 2>>& merge_texturecoords,
-    const vector<T>&         merge_radius);
+inline vector<T> sample_lines_cdf(
+    const vector<vec<I, 2>>& lines, const vector<vec<T, 3>>& positions);
+
+// Pick a point on a triangle mesh uniformly.
+template <typename T, typename I = int>
+inline pair<I, vec<T, 2>> sample_triangles(
+    const vector<T>& cdf, T re, const vec<T, 2>& ruv);
 template <typename T, typename I>
-inline void merge_triangles(vector<vec<I, 3>>& triangles,
-    vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
-    vector<vec<T, 2>>& texcoords, const vector<vec<I, 2>>& merge_triangles,
-    const vector<vec<T, 3>>& merge_positions,
-    const vector<vec<T, 3>>& merge_normals,
-    const vector<vec<T, 2>>& merge_texturecoords);
+inline vector<T> sample_triangles_cdf(
+    const vector<vec<I, 3>>& triangles, const vector<vec<T, 3>>& positions);
+
+// Pick a point on a quad mesh uniformly.
+template <typename T, typename I = int>
+inline pair<I, vec<T, 2>> sample_quads(
+    const vector<T>& cdf, T re, const vec<T, 2>& ruv);
+template <typename T, typename I = int>
+inline pair<I, vec<T, 2>> sample_quads(const vector<vec<I, 4>>& quads,
+    const vector<T>& cdf, T re, const vec<T, 2>& ruv);
 template <typename T, typename I>
-inline void merge_quads(vector<vec<I, 4>>& quads, vector<vec<T, 3>>& positions,
-    vector<vec<T, 3>>& normals, vector<vec<T, 2>>& texcoords,
-    const vector<vec<I, 4>>& merge_quads,
-    const vector<vec<T, 3>>& merge_positions,
-    const vector<vec<T, 3>>& merge_normals,
-    const vector<vec<T, 2>>& merge_texturecoords);
+inline vector<T> sample_quads_cdf(
+    const vector<vec<I, 4>>& quads, const vector<vec<T, 3>>& positions);
 
 }  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// VECTOR HASHING
+// -----------------------------------------------------------------------------
+namespace std {
+
+// Hash functor for vector for use with hash_map
+template <typename T, size_t N>
+struct hash<yocto::vec<T, N>> {
+  size_t operator()(const yocto::vec<T, N>& v) const {
+    static const auto hasher = std::hash<T>();
+    auto              h      = (size_t)0;
+    for (auto i = 0; i < N; i++) {
+      h ^= hasher(v[i]) + 0x9e3779b9 + (h << 6) + (h >> 2);
+    }
+    return h;
+  }
+};
+
+}  // namespace std
 
 // -----------------------------------------------------------------------------
 // EDGES AND ADJACENCIES
@@ -718,51 +722,46 @@ inline pair<vector<vec<I, 4>>, vector<T>> subdivide_catmullclark(
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// SHAPE SAMPLING
+// SHAPE ELEMENT GROUPING
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Pick a point in a point set uniformly.
-int           sample_points(int npoints, float re);
-int           sample_points(const vector<float>& cdf, float re);
-vector<float> sample_points_cdf(int npoints);
-void          sample_points_cdf(vector<float>& cdf, int npoints);
+// Weld vertices within a threshold.
+template <typename T>
+inline pair<vector<vec<T, 3>>, vector<int>> weld_vertices(
+    const vector<vec<T, 3>>& positions, T threshold);
+template <typename T, typename I>
+inline pair<vector<vec<I, 3>>, vector<vec<T, 3>>> weld_triangles(
+    const vector<vec<I, 3>>& triangles, const vector<vec<T, 3>>& positions,
+    T threshold);
+template <typename T, typename I>
+inline pair<vector<vec<I, 4>>, vector<vec<T, 3>>> weld_quads(
+    const vector<vec<I, 4>>& quads, const vector<vec<T, 3>>& positions,
+    T threshold);
 
-// Pick a point on lines uniformly.
-pair<int, float> sample_lines(const vector<float>& cdf, float re, float ru);
-vector<float>    sample_lines_cdf(
-       const vector<vec2i>& lines, const vector<vec3f>& positions);
-void sample_lines_cdf(vector<float>& cdf, const vector<vec2i>& lines,
-    const vector<vec3f>& positions);
-
-// Pick a point on a triangle mesh uniformly.
-pair<int, vec2f> sample_triangles(
-    const vector<float>& cdf, float re, const vec2f& ruv);
-vector<float> sample_triangles_cdf(
-    const vector<vec3i>& triangles, const vector<vec3f>& positions);
-void sample_triangles_cdf(vector<float>& cdf, const vector<vec3i>& triangles,
-    const vector<vec3f>& positions);
-
-// Pick a point on a quad mesh uniformly.
-pair<int, vec2f> sample_quads(
-    const vector<float>& cdf, float re, const vec2f& ruv);
-vector<float> sample_quads_cdf(
-    const vector<vec4i>& quads, const vector<vec3f>& positions);
-void sample_quads_cdf(vector<float>& cdf, const vector<vec4i>& quads,
-    const vector<vec3f>& positions);
-
-// Samples a set of points over a triangle/quad mesh uniformly. Returns pos,
-// norm and texcoord of the sampled points.
-void sample_triangles(vector<vec3f>& sampled_positions,
-    vector<vec3f>& sampled_normals, vector<vec2f>& sampled_texcoords,
-    const vector<vec3i>& triangles, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texcoords, int npoints,
-    int seed = 7);
-void sample_quads(vector<vec3f>& sampled_positions,
-    vector<vec3f>& sampled_normals, vector<vec2f>& sampled_texcoords,
-    const vector<vec4i>& quads, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texcoords, int npoints,
-    int seed = 7);
+// Merge shape elements
+template <typename T, typename I>
+inline void merge_lines(vector<vec<I, 2>>& lines, vector<vec<T, 3>>& positions,
+    vector<vec<T, 3>>& tangents, vector<vec<T, 2>>& texcoords,
+    vector<T>& radius, const vector<vec<I, 2>>& merge_lines,
+    const vector<vec<T, 3>>& merge_positions,
+    const vector<vec<T, 3>>& merge_tangents,
+    const vector<vec<T, 2>>& merge_texturecoords,
+    const vector<T>&         merge_radius);
+template <typename T, typename I>
+inline void merge_triangles(vector<vec<I, 3>>& triangles,
+    vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
+    vector<vec<T, 2>>& texcoords, const vector<vec<I, 2>>& merge_triangles,
+    const vector<vec<T, 3>>& merge_positions,
+    const vector<vec<T, 3>>& merge_normals,
+    const vector<vec<T, 2>>& merge_texturecoords);
+template <typename T, typename I>
+inline void merge_quads(vector<vec<I, 4>>& quads, vector<vec<T, 3>>& positions,
+    vector<vec<T, 3>>& normals, vector<vec<T, 2>>& texcoords,
+    const vector<vec<I, 4>>& merge_quads,
+    const vector<vec<T, 3>>& merge_positions,
+    const vector<vec<T, 3>>& merge_normals,
+    const vector<vec<T, 2>>& merge_texturecoords);
 
 }  // namespace yocto
 
@@ -1051,7 +1050,7 @@ inline vector<vec<T, 3>> align_vertices(
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// IMPLEMENTATION OF SHAPE ELEMENT CONVERSION AND GROUPING
+// IMPLEMENTATION OF SHAPE ELEMENT CONVERSION
 // -----------------------------------------------------------------------------
 namespace yocto {
 
@@ -1144,105 +1143,97 @@ inline void split_facevarying(vector<vec<I, 4>>& split_quads,
   }
 }
 
-// Weld vertices within a threshold.
-template <typename T>
-inline pair<vector<vec<T, 3>>, vector<int>> weld_vertices(
-    const vector<vec<T, 3>>& positions, T threshold) {
-  auto indices   = vector<int>(positions.size());
-  auto welded    = vector<vec<T, 3>>{};
-  auto grid      = make_hash_grid(threshold);
-  auto neighbors = vector<int>{};
-  for (auto vertex : range(positions.size())) {
-    auto& position = positions[vertex];
-    find_neighbors(grid, neighbors, position, threshold);
-    if (neighbors.empty()) {
-      welded.push_back(position);
-      indices[vertex] = (int)welded.size() - 1;
-      insert_vertex(grid, position);
-    } else {
-      indices[vertex] = neighbors.front();
-    }
-  }
-  return {welded, indices};
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION OF SHAPE SAMPLING
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Pick a point in a point set uniformly.
+template <typename T, typename I>
+inline I sample_points(I npoints, T re) {
+  return sample_uniform(npoints, re);
 }
 template <typename T, typename I>
-inline pair<vector<vec<I, 3>>, vector<vec<T, 3>>> weld_triangles(
-    const vector<vec<I, 3>>& triangles, const vector<vec<T, 3>>& positions,
-    T threshold) {
-  auto [wpositions, indices] = weld_vertices(positions, threshold);
-  auto wtriangles            = triangles;
-  for (auto& triangle : wtriangles) {
-    triangle = {indices[triangle.x], indices[triangle.y], indices[triangle.z]};
-  }
-  return {wtriangles, wpositions};
+inline I sample_points(const vector<T>& cdf, T re) {
+  return sample_discrete<T, I>(cdf, re);
 }
-template <typename T, typename I>
-inline pair<vector<vec<I, 4>>, vector<vec<T, 3>>> weld_quads(
-    const vector<vec<I, 4>>& quads, const vector<vec<T, 3>>& positions,
-    T threshold) {
-  auto [wpositions, indices] = weld_vertices(positions, threshold);
-  auto wquads                = quads;
-  for (auto& quad : wquads) {
-    quad = {indices[quad.x], indices[quad.y], indices[quad.z], indices[quad.w]};
-  }
-  return {wquads, wpositions};
+template <typename I, typename T>
+inline vector<T> sample_points_cdf(I npoints) {
+  auto cdf = vector<T>(npoints);
+  for (auto i : range(cdf.size())) cdf[i] = 1 + (i != 0 ? cdf[i - 1] : 0);
+  return cdf;
 }
 
-// Merge shape elements
+// Pick a point on lines uniformly.
 template <typename T, typename I>
-inline void merge_lines(vector<vec<I, 2>>& lines, vector<vec<T, 3>>& positions,
-    vector<vec<T, 3>>& tangents, vector<vec<T, 2>>& texcoords,
-    vector<T>& radius, const vector<vec<I, 2>>& merge_lines,
-    const vector<vec<T, 3>>& merge_positions,
-    const vector<vec<T, 3>>& merge_tangents,
-    const vector<vec<T, 2>>& merge_texturecoords,
-    const vector<T>&         merge_radius) {
-  auto merge_verts = (int)positions.size();
-  for (auto& [v1, v2] : merge_lines)
-    lines.push_back({v1 + merge_verts, v2 + merge_verts});
-  positions.insert(
-      positions.end(), merge_positions.begin(), merge_positions.end());
-  tangents.insert(tangents.end(), merge_tangents.begin(), merge_tangents.end());
-  texcoords.insert(
-      texcoords.end(), merge_texturecoords.begin(), merge_texturecoords.end());
-  radius.insert(radius.end(), merge_radius.begin(), merge_radius.end());
+inline pair<I, T> sample_lines(const vector<T>& cdf, T re, T ru) {
+  return {sample_discrete(cdf, re), ru};
 }
 template <typename T, typename I>
-inline void merge_triangles(vector<vec<I, 3>>& triangles,
-    vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
-    vector<vec<T, 2>>& texcoords, const vector<vec<I, 3>>& merge_triangles,
-    const vector<vec<T, 3>>& merge_positions,
-    const vector<vec<T, 3>>& merge_normals,
-    const vector<vec<T, 2>>& merge_texturecoords) {
-  auto merge_verts = (int)positions.size();
-  for (auto& triangle : merge_triangles)
-    triangles.push_back(triangle + merge_verts);
-  positions.insert(
-      positions.end(), merge_positions.begin(), merge_positions.end());
-  normals.insert(normals.end(), merge_normals.begin(), merge_normals.end());
-  texcoords.insert(
-      texcoords.end(), merge_texturecoords.begin(), merge_texturecoords.end());
+inline vector<T> sample_lines_cdf(
+    const vector<vec<I, 2>>& lines, const vector<vec<T, 3>>& positions) {
+  auto cdf = vector<T>(lines.size());
+  for (auto i : range(cdf.size())) {
+    auto& [v1, v2] = lines[i];
+    auto w         = line_length(positions[v1], positions[v2]);
+    cdf[i]         = w + (i != 0 ? cdf[i - 1] : 0);
+  }
+  return cdf;
+}
+
+// Pick a point on a triangle mesh uniformly.
+template <typename T, typename I>
+inline pair<I, vec<T, 2>> sample_triangles(
+    const vector<T>& cdf, T re, const vec<T, 2>& ruv) {
+  return {sample_discrete(cdf, re), sample_triangle(ruv)};
 }
 template <typename T, typename I>
-inline void merge_quads(vector<vec<I, 4>>& quads, vector<vec<T, 3>>& positions,
-    vector<vec<T, 3>>& normals, vector<vec<T, 2>>& texcoords,
-    const vector<vec<I, 4>>& merge_quads,
-    const vector<vec<T, 3>>& merge_positions,
-    const vector<vec<T, 3>>& merge_normals,
-    const vector<vec<T, 2>>& merge_texturecoords) {
-  auto merge_verts = (int)positions.size();
-  for (auto& quad : merge_quads) quads.push_back(quad + merge_verts);
-  positions.insert(
-      positions.end(), merge_positions.begin(), merge_positions.end());
-  normals.insert(normals.end(), merge_normals.begin(), merge_normals.end());
-  texcoords.insert(
-      texcoords.end(), merge_texturecoords.begin(), merge_texturecoords.end());
+inline vector<T> sample_triangles_cdf(
+    const vector<vec<I, 3>>& triangles, const vector<vec<T, 3>>& positions) {
+  auto cdf = vector<float>(triangles.size());
+  for (auto i : range(cdf.size())) {
+    auto& [v1, v2, v3] = triangles[i];
+    auto w = triangle_area(positions[v1], positions[v2], positions[v3]);
+    cdf[i] = w + (i != 0 ? cdf[i - 1] : 0);
+  }
+  return cdf;
+}
+
+// Pick a point on a quad mesh uniformly.
+template <typename T, typename I>
+inline pair<I, vec<T, 2>> sample_quads(
+    const vector<T>& cdf, T re, const vec<T, 2>& ruv) {
+  return {sample_discrete(cdf, re), ruv};
+}
+template <typename T, typename I>
+inline pair<I, vec<T, 2>> sample_quads(const vector<vec<I, 4>>& quads,
+    const vector<T>& cdf, T re, const vec<T, 2>& ruv) {
+  auto element = sample_discrete(cdf, re);
+  if (!is_triangle(quads[element])) {
+    return {element, sample_triangle(ruv)};
+  } else {
+    return {element, ruv};
+  }
+}
+template <typename T, typename I>
+inline vector<T> sample_quads_cdf(
+    const vector<vec<I, 4>>& quads, const vector<vec<T, 3>>& positions) {
+  auto cdf = vector<T>(quads.size());
+  for (auto i : range(cdf.size())) {
+    auto& [v1, v2, v3, v4] = quads[i];
+    auto w                 = quad_area(
+        positions[v1], positions[v2], positions[v3], positions[v4]);
+    cdf[i] = w + (i ? cdf[i - 1] : 0);
+  }
+  return cdf;
 }
 
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// EDGES AND ADJACENCIES
+// IMPLEMENTATION OF EDGES AND ADJACENCIES
 // -----------------------------------------------------------------------------
 namespace yocto {
 
@@ -1854,6 +1845,108 @@ inline pair<vector<vec<I, 4>>, vector<T>> subdivide_catmullclark(
   for (auto idx : range(level))
     tess = subdivide_catmullclark(tess.first, tess.second, lock_boundary);
   return tess;
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION OF SHAPE ELEMENT GROUPING
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Weld vertices within a threshold.
+template <typename T>
+inline pair<vector<vec<T, 3>>, vector<int>> weld_vertices(
+    const vector<vec<T, 3>>& positions, T threshold) {
+  auto indices   = vector<int>(positions.size());
+  auto welded    = vector<vec<T, 3>>{};
+  auto grid      = make_hash_grid(threshold);
+  auto neighbors = vector<int>{};
+  for (auto vertex : range(positions.size())) {
+    auto& position = positions[vertex];
+    find_neighbors(grid, neighbors, position, threshold);
+    if (neighbors.empty()) {
+      welded.push_back(position);
+      indices[vertex] = (int)welded.size() - 1;
+      insert_vertex(grid, position);
+    } else {
+      indices[vertex] = neighbors.front();
+    }
+  }
+  return {welded, indices};
+}
+template <typename T, typename I>
+inline pair<vector<vec<I, 3>>, vector<vec<T, 3>>> weld_triangles(
+    const vector<vec<I, 3>>& triangles, const vector<vec<T, 3>>& positions,
+    T threshold) {
+  auto [wpositions, indices] = weld_vertices(positions, threshold);
+  auto wtriangles            = triangles;
+  for (auto& triangle : wtriangles) {
+    triangle = {indices[triangle.x], indices[triangle.y], indices[triangle.z]};
+  }
+  return {wtriangles, wpositions};
+}
+template <typename T, typename I>
+inline pair<vector<vec<I, 4>>, vector<vec<T, 3>>> weld_quads(
+    const vector<vec<I, 4>>& quads, const vector<vec<T, 3>>& positions,
+    T threshold) {
+  auto [wpositions, indices] = weld_vertices(positions, threshold);
+  auto wquads                = quads;
+  for (auto& quad : wquads) {
+    quad = {indices[quad.x], indices[quad.y], indices[quad.z], indices[quad.w]};
+  }
+  return {wquads, wpositions};
+}
+
+// Merge shape elements
+template <typename T, typename I>
+inline void merge_lines(vector<vec<I, 2>>& lines, vector<vec<T, 3>>& positions,
+    vector<vec<T, 3>>& tangents, vector<vec<T, 2>>& texcoords,
+    vector<T>& radius, const vector<vec<I, 2>>& merge_lines,
+    const vector<vec<T, 3>>& merge_positions,
+    const vector<vec<T, 3>>& merge_tangents,
+    const vector<vec<T, 2>>& merge_texturecoords,
+    const vector<T>&         merge_radius) {
+  auto merge_verts = (int)positions.size();
+  for (auto& [v1, v2] : merge_lines)
+    lines.push_back({v1 + merge_verts, v2 + merge_verts});
+  positions.insert(
+      positions.end(), merge_positions.begin(), merge_positions.end());
+  tangents.insert(tangents.end(), merge_tangents.begin(), merge_tangents.end());
+  texcoords.insert(
+      texcoords.end(), merge_texturecoords.begin(), merge_texturecoords.end());
+  radius.insert(radius.end(), merge_radius.begin(), merge_radius.end());
+}
+template <typename T, typename I>
+inline void merge_triangles(vector<vec<I, 3>>& triangles,
+    vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
+    vector<vec<T, 2>>& texcoords, const vector<vec<I, 3>>& merge_triangles,
+    const vector<vec<T, 3>>& merge_positions,
+    const vector<vec<T, 3>>& merge_normals,
+    const vector<vec<T, 2>>& merge_texturecoords) {
+  auto merge_verts = (int)positions.size();
+  for (auto& triangle : merge_triangles)
+    triangles.push_back(triangle + merge_verts);
+  positions.insert(
+      positions.end(), merge_positions.begin(), merge_positions.end());
+  normals.insert(normals.end(), merge_normals.begin(), merge_normals.end());
+  texcoords.insert(
+      texcoords.end(), merge_texturecoords.begin(), merge_texturecoords.end());
+}
+template <typename T, typename I>
+inline void merge_quads(vector<vec<I, 4>>& quads, vector<vec<T, 3>>& positions,
+    vector<vec<T, 3>>& normals, vector<vec<T, 2>>& texcoords,
+    const vector<vec<I, 4>>& merge_quads,
+    const vector<vec<T, 3>>& merge_positions,
+    const vector<vec<T, 3>>& merge_normals,
+    const vector<vec<T, 2>>& merge_texturecoords) {
+  auto merge_verts = (int)positions.size();
+  for (auto& quad : merge_quads) quads.push_back(quad + merge_verts);
+  positions.insert(
+      positions.end(), merge_positions.begin(), merge_positions.end());
+  normals.insert(normals.end(), merge_normals.begin(), merge_normals.end());
+  texcoords.insert(
+      texcoords.end(), merge_texturecoords.begin(), merge_texturecoords.end());
 }
 
 }  // namespace yocto
