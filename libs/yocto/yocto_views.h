@@ -245,6 +245,41 @@ inline vector<T> to_vector(R&& range, Func&& func) {
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// ARRAY SEARCH AND SORT
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Find an element with linear search
+template <typename T>
+inline ptrdiff_t find_index(const vector<T>& values, const T& value) {
+  auto pos = std::find(values.begin(), values.end(), value);
+  if (pos == values.end()) return -1;
+  return pos - values.begin();
+}
+
+// Find an element with binary search
+template <typename T>
+inline ptrdiff_t search_index(const vector<T>& values, const T& value) {
+  auto pos = std::bsearch(values.begin(), values.end(), value);
+  if (pos == values.end()) return -1;
+  return pos - values.begin();
+}
+
+// Sort elements in an array
+template <typename T>
+inline void sort(vector<T>& values) {
+  std::sort(values.begin(), values.end());
+}
+template <typename T>
+inline vector<T> sorted(const vector<T>& values) {
+  auto sorted = values;
+  std::sort(sorted.begin(), sorted.end());
+  return sorted;
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // PYTHON-LIKE ITERATORS
 // -----------------------------------------------------------------------------
 namespace yocto {
