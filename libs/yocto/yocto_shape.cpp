@@ -286,9 +286,9 @@ shape_data subdivide_shape(
   // but how it is not obvious
   if (subdivisions == 0) return shape;
   auto subdivided = shape_data{};
-  if (!subdivided.points.empty()) {
+  if (!shape.points.empty()) {
     subdivided = shape;
-  } else if (!subdivided.lines.empty()) {
+  } else if (!shape.lines.empty()) {
     std::tie(std::ignore, subdivided.normals) = subdivide_lines(
         shape.lines, shape.normals, subdivisions);
     std::tie(std::ignore, subdivided.texcoords) = subdivide_lines(
@@ -299,7 +299,7 @@ shape_data subdivide_shape(
         subdivided.lines, shape.radius, subdivisions);
     std::tie(subdivided.lines, subdivided.positions) = subdivide_lines(
         shape.lines, shape.positions, subdivisions);
-  } else if (!subdivided.triangles.empty()) {
+  } else if (!shape.triangles.empty()) {
     std::tie(std::ignore, subdivided.normals) = subdivide_triangles(
         shape.triangles, shape.normals, subdivisions);
     std::tie(std::ignore, subdivided.texcoords) = subdivide_triangles(
@@ -310,7 +310,7 @@ shape_data subdivide_shape(
         shape.triangles, shape.radius, subdivisions);
     std::tie(subdivided.triangles, subdivided.positions) = subdivide_triangles(
         shape.triangles, shape.positions, subdivisions);
-  } else if (!subdivided.quads.empty() && !catmullclark) {
+  } else if (!shape.quads.empty() && !catmullclark) {
     std::tie(std::ignore, subdivided.normals) = subdivide_quads(
         shape.quads, shape.normals, subdivisions);
     std::tie(std::ignore, subdivided.texcoords) = subdivide_quads(
@@ -321,7 +321,7 @@ shape_data subdivide_shape(
         shape.quads, shape.radius, subdivisions);
     std::tie(subdivided.quads, subdivided.positions) = subdivide_quads(
         shape.quads, shape.positions, subdivisions);
-  } else if (!subdivided.quads.empty() && catmullclark) {
+  } else if (!shape.quads.empty() && catmullclark) {
     std::tie(std::ignore, subdivided.normals) = subdivide_catmullclark(
         shape.quads, shape.normals, subdivisions);
     std::tie(std::ignore, subdivided.texcoords) = subdivide_catmullclark(

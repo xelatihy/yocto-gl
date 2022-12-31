@@ -1156,16 +1156,20 @@ shape_data make_shape_preset(const string& type_) {
     return make_random_hairs(base, pow2(16), 4, {0.2f, 0.2f}, {0.002f, 0.001f});
   } else if (type == "hairball_interior") {
     return transform_shape(scaling_frame(0.8f), make_sphere());
-  } else if (type == "suzanne") {
+  } else if (type == "monkey") {
     return make_monkey();
   } else if (type == "wtcube") {
     return make_wtcube();
   } else if (type == "wtsphere") {
     return make_wtsphere();
-  } else if (type == "facevarying_cube") {
+  } else if (type == "fvcube") {
     return fvshape_to_shape(make_fvbox());
-  } else if (type == "facevarying_sphere") {
+  } else if (type == "fvsphere") {
     return fvshape_to_shape(make_fvsphere());
+  } else if (type == "monkey_subdiv") {
+    return subdivide_shape(make_monkey(), 2, true);
+  } else if (type == "wtcube_subdiv") {
+    return subdivide_shape(make_wtcube(), 4, true);
   } else if (type == "displaced_quady") {
     return make_quady(8);
   } else if (type == "displaced_sphere") {
@@ -1230,7 +1234,7 @@ shape_data make_shape_preset(const string& type_) {
     return transform_shape(test_xform * scaling_frame(0.8f), make_sphere());
   } else if (type == "test_suzanne_subdiv") {
     return transform_shape(test_xform * scaling_frame(0.8f), make_monkey());
-  } else if (type == "test_cube_subdiv") {
+  } else if (type == "test_wtcube") {
     return transform_shape(test_xform, make_wtcube());
   } else if (type == "test_arealight1") {
     return transform_shape(scaling_frame(0.2f), make_quad());

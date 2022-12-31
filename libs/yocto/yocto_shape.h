@@ -482,7 +482,7 @@ inline vector<vec<I, 2>> get_edges(const edge_map<I>& emap);
 template <typename I>
 inline vector<vec<I, 2>> get_boundary(const edge_map<I>& emap);
 
-// Make edge unique
+// Edges helpers
 template <typename I>
 constexpr inline vec<I, 2> _make_edge(const vec<I, 2>& hedge) {
   return {min(hedge), max(hedge)};
