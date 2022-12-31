@@ -1997,27 +1997,26 @@ static pair<vector<vec4i>, vector<T>> subdivide_catmullclark_impl(
   }
 
   // define verted valence ---------------------------
-  auto tvert_val = vector<int>(tvertices.size(), 2);
+  enum struct valence_t { locked, boundary, standard };
+  auto tvert_val = vector<valence_t>(tvertices.size(), valence_t::standard);
   for (auto& [v1, v2] : tboundary) {
-    tvert_val[v1] = 1;
-    tvert_val[v2] = 1;
+    tvert_val[v1] = valence_t::boundary;
+    tvert_val[v2] = valence_t::boundary;
   }
-  for (auto& v1 : tlocked) {
-    tvert_val[v1] = 0;
-  }
+  for (auto& v1 : tlocked) tvert_val[v1] = valence_t::locked;
 
   // averaging pass ----------------------------------
   auto avert  = vector<T>(tvertices.size(), T());
   auto acount = vector<int>(tvertices.size(), 0);
   for (auto& point : tlocked) {
-    if (tvert_val[point] != 0) continue;
+    if (tvert_val[point] != valence_t::locked) continue;
     avert[point] += tvertices[point];
     acount[point] += 1;
   }
   for (auto& edge : tboundary) {
     auto centroid = (tvertices[edge.x] + tvertices[edge.y]) / 2;
     for (auto vid : edge) {
-      if (tvert_val[vid] != 1) continue;
+      if (tvert_val[vid] != valence_t::boundary) continue;
       avert[vid] += centroid;
       acount[vid] += 1;
     }
@@ -2027,7 +2026,7 @@ static pair<vector<vec4i>, vector<T>> subdivide_catmullclark_impl(
                         tvertices[quad.w]) /
                     4;
     for (auto vid : quad) {
-      if (tvert_val[vid] != 2) continue;
+      if (tvert_val[vid] != valence_t::standard) continue;
       avert[vid] += centroid;
       acount[vid] += 1;
     }
@@ -2037,7 +2036,7 @@ static pair<vector<vec4i>, vector<T>> subdivide_catmullclark_impl(
   // correction pass ----------------------------------
   // p = p + (avg_p - p) * (4/avg_count)
   for (auto i : range(tvertices.size())) {
-    if (tvert_val[i] != 2) continue;
+    if (tvert_val[i] != valence_t::standard) continue;
     avert[i] = tvertices[i] +
                (avert[i] - tvertices[i]) * (4 / (float)acount[i]);
   }
