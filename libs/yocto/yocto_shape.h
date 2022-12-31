@@ -448,52 +448,79 @@ struct hash<yocto::vec<T, N>> {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// Data related to edges for an edge_map
+template <typename I>
+struct edge_map_edge {
+  I index, nfaces;
+};
+
 // Dictionary to store edge information. `index` is the index to the edge
 // array, `edges` the array of edges and `nfaces` the number of adjacent faces.
 // We store only bidirectional edges to keep the dictionary small. Use the
 // functions below to access this data.
+template <typename I>
 struct edge_map {
-  struct edge_data {
-    int index;
-    int nfaces;
-  };
-  unordered_map<vec2i, edge_data> edges = {};
+  unordered_map<vec<I, 2>, edge_map_edge<I>> edges = {};
 };
 
 // Initialize an edge map with elements.
-edge_map make_edge_map(const vector<vec3i>& triangles);
-edge_map make_edge_map(const vector<vec4i>& quads);
-void     insert_edges(edge_map& emap, const vector<vec3i>& triangles);
-void     insert_edges(edge_map& emap, const vector<vec4i>& quads);
+template <typename I>
+inline edge_map<I> make_edge_map(const vector<vec<I, 3>>& triangles);
+template <typename I>
+inline edge_map<I> make_edge_map(const vector<vec<I, 4>>& quads);
 // Insert an edge and return its index
-int insert_edge(edge_map& emap, const vec2i& edge);
+template <typename I>
+inline I insert_edge(edge_map<I>& emap, const vec<I, 2>& edge);
 // Get the edge index
-int edge_index(const edge_map& emap, const vec2i& edge);
+template <typename I>
+inline I edge_index(const edge_map<I>& emap, const vec<I, 2>& edge);
 // Get edges and boundaries
-int           num_edges(const edge_map& emap);
-vector<vec2i> get_edges(const edge_map& emap);
-vector<vec2i> get_boundary(const edge_map& emap);
-vector<vec2i> get_edges(const vector<vec3i>& triangles);
-vector<vec2i> get_edges(const vector<vec4i>& quads);
-vector<vec2i> get_edges(
-    const vector<vec3i>& triangles, const vector<vec4i>& quads);
+template <typename I>
+inline I num_edges(const edge_map<I>& emap);
+template <typename I>
+inline vector<vec<I, 2>> get_edges(const edge_map<I>& emap);
+template <typename I>
+inline vector<vec<I, 2>> get_boundary(const edge_map<I>& emap);
+
+// Edge lists
+template <typename I>
+inline vector<vec<I, 2>> get_edges(const vector<vec<I, 3>>& triangles) {
+  return get_edges(make_edge_map(triangles));
+}
+template <typename I>
+inline vector<vec<I, 2>> get_edges(const vector<vec<I, 4>>& quads) {
+  return get_edges(make_edge_map(quads));
+}
+template <typename I>
+inline vector<vec<I, 2>> get_boundary(const vector<vec<I, 3>>& triangles) {
+  return get_boundary(make_edge_map(triangles));
+}
+template <typename I>
+inline vector<vec<I, 2>> get_boundary(const vector<vec<I, 4>>& quads) {
+  return get_boundary(make_edge_map(quads));
+}
 
 // Build adjacencies between faces (sorted counter-clockwise)
-vector<vec3i> face_adjacencies(const vector<vec3i>& triangles);
+template <typename I>
+inline vector<vec<I, 3>> face_adjacencies(const vector<vec<I, 3>>& triangles);
 
 // Build adjacencies between vertices (sorted counter-clockwise)
-vector<vector<int>> vertex_adjacencies(
-    const vector<vec3i>& triangles, const vector<vec3i>& adjacencies);
+template <typename I>
+inline vector<vector<int>> vertex_adjacencies(
+    const vector<vec<I, 3>>& triangles, const vector<vec<I, 3>>& adjacencies);
 
 // Compute boundaries as a list of loops (sorted counter-clockwise)
-vector<vector<int>> ordered_boundaries(const vector<vec3i>& triangles,
-    const vector<vec3i>& adjacency, int num_vertices);
+template <typename I>
+inline vector<vector<int>> ordered_boundaries(
+    const vector<vec<I, 3>>& triangles, const vector<vec<I, 3>>& adjacency,
+    int num_vertices);
 
 // Build adjacencies between each vertex and its adjacent faces.
 // Adjacencies are sorted counter-clockwise and have same starting points as
 // vertex_adjacencies()
-vector<vector<int>> vertex_to_faces_adjacencies(
-    const vector<vec3i>& triangles, const vector<vec3i>& adjacencies);
+template <typename I>
+inline vector<vector<int>> vertex_to_faces_adjacencies(
+    const vector<vec<I, 3>>& triangles, const vector<vec<I, 3>>& adjacencies);
 
 }  // namespace yocto
 
@@ -1045,6 +1072,244 @@ inline pair<vector<vec4i>, vector<T>> subdivide_catmullclark(
   for (auto idx : range(level))
     tess = subdivide_catmullclark(tess.first, tess.second, lock_boundary);
   return tess;
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// EDGEA AND ADJACENCIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Initialize an edge map with elements.
+template <typename I>
+inline edge_map<I> make_edge_map(const vector<vec<I, 3>>& triangles) {
+  auto emap = edge_map<I>{};
+  for (auto& [v1, v2, v3] : triangles) {
+    insert_edge(emap, {v1, v2});
+    insert_edge(emap, {v2, v3});
+    insert_edge(emap, {v3, v1});
+  }
+  return emap;
+}
+template <typename I>
+inline edge_map<I> make_edge_map(const vector<vec<I, 4>>& quads) {
+  auto emap = edge_map<I>{};
+  for (auto& [v1, v2, v3, v4] : quads) {
+    insert_edge(emap, {v1, v2});
+    insert_edge(emap, {v2, v3});
+    if (v3 != v4) insert_edge(emap, {v3, v4});
+    insert_edge(emap, {v4, v1});
+  }
+  return emap;
+}
+// Insert an edge and return its index
+template <typename I>
+inline I insert_edge(edge_map<I>& emap, const vec<I, 2>& edge) {
+  auto es = vec<I, 2>{min(edge), max(edge)};
+  auto it = emap.edges.find(es);
+  if (it == emap.edges.end()) {
+    auto index = (I)emap.edges.size();
+    emap.edges.insert(it, {es, {index, 1}});
+    return index;
+  } else {
+    auto& data = it->second;
+    data.nfaces += 1;
+    return data.index;
+  }
+}
+// Get number of edges
+template <typename I>
+inline I num_edges(const edge_map<I>& emap) {
+  return (I)emap.edges.size();
+}
+// Get the edge index
+template <typename I>
+inline I edge_index(const edge_map<I>& emap, const vec<I, 2>& edge) {
+  auto es       = vec<I, 2>{min(edge), max(edge)};
+  auto iterator = emap.edges.find(es);
+  if (iterator == emap.edges.end()) return -1;
+  return iterator->second.index;
+}
+// Get a list of edges, boundary edges, boundary vertices
+template <typename I>
+inline vector<vec<I, 2>> get_edges(const edge_map<I>& emap) {
+  auto edges = vector<vec<I, 2>>(emap.edges.size());
+  for (auto& [edge, data] : emap.edges) edges[data.index] = edge;
+  return edges;
+}
+template <typename I>
+inline vector<vec<I, 2>> get_boundary(const edge_map<I>& emap) {
+  auto boundary = vector<vec<I, 2>>{};
+  for (auto& [edge, data] : emap.edges) {
+    if (data.nfaces < 2) boundary.push_back(edge);
+  }
+  return boundary;
+}
+
+// Build adjacencies between faces (sorted counter-clockwise)
+template <typename I>
+inline vector<vec<I, 3>> face_adjacencies(const vector<vec<I, 3>>& triangles) {
+  auto get_edge = [](const vec<I, 3>& triangle, I i) -> vec<I, 2> {
+    auto x = triangle[i], y = triangle[i < 2 ? i + 1 : 0];
+    return x < y ? vec<I, 2>{x, y} : vec<I, 2>{y, x};
+  };
+  auto adjacencies = vector<vec<I, 3>>{triangles.size(), vec<I, 3>{-1, -1, -1}};
+  auto edge_map    = unordered_map<vec<I, 2>, I>();
+  edge_map.reserve((size_t)(triangles.size() * 1.5));
+  for (auto i = 0; i < (I)triangles.size(); ++i) {
+    for (auto k = 0; k < 3; ++k) {
+      auto edge = get_edge(triangles[i], k);
+      auto it   = edge_map.find(edge);
+      if (it == edge_map.end()) {
+        edge_map.insert(it, {edge, i});
+      } else {
+        auto neighbor     = it->second;
+        adjacencies[i][k] = neighbor;
+        for (auto kk = 0; kk < 3; ++kk) {
+          auto edge2 = get_edge(triangles[neighbor], kk);
+          if (edge2 == edge) {
+            adjacencies[neighbor][kk] = i;
+            break;
+          }
+        }
+      }
+    }
+  }
+  return adjacencies;
+}
+
+// Build adjacencies between vertices (sorted counter-clockwise)
+template <typename I>
+inline vector<vector<I>> vertex_adjacencies(
+    const vector<vec<I, 3>>& triangles, const vector<vec<I, 3>>& adjacencies) {
+  auto find_index = [](const vec<I, 3>& v, I x) {
+    for (auto vid : range(3))
+      if (v[vid] == x) return vid;
+    return -1;
+  };
+
+  // For each vertex, find any adjacent face.
+  auto num_vertices     = 0;
+  auto face_from_vertex = vector<I>(triangles.size() * 3, -1);
+
+  for (auto i = 0; i < (I)triangles.size(); ++i) {
+    for (auto k : range(3)) {
+      face_from_vertex[triangles[i][k]] = i;
+      num_vertices                      = max(num_vertices, triangles[i][k]);
+    }
+  }
+
+  // Init result.
+  auto result = vector<vector<I>>(num_vertices);
+
+  // For each vertex, loop around it and build its adjacency.
+  for (auto i = 0; i < num_vertices; ++i) {
+    result[i].reserve(6);
+    auto first_face = face_from_vertex[i];
+    if (first_face == -1) continue;
+
+    auto face = first_face;
+    while (true) {
+      auto k = find_index(triangles[face], i);
+      k      = k != 0 ? k - 1 : 2;
+      result[i].push_back(triangles[face][k]);
+      face = adjacencies[face][k];
+      if (face == -1) break;
+      if (face == first_face) break;
+    }
+  }
+
+  return result;
+}
+
+// Build adjacencies between each vertex and its adjacent faces.
+// Adjacencies are sorted counter-clockwise and have same starting points as
+// vertex_adjacencies()
+template <typename I>
+inline vector<vector<I>> vertex_to_faces_adjacencies(
+    const vector<vec<I, 3>>& triangles, const vector<vec<I, 3>>& adjacencies) {
+  auto find_index = [](const vec<I, 3>& v, I x) {
+    for (auto vid : range(3))
+      if (v[vid] == x) return vid;
+    return -1;
+  };
+
+  // For each vertex, find any adjacent face.
+  auto num_vertices     = 0;
+  auto face_from_vertex = vector<I>(triangles.size() * 3, -1);
+
+  for (auto i = 0; i < (I)triangles.size(); ++i) {
+    for (auto k : range(3)) {
+      face_from_vertex[triangles[i][k]] = i;
+      num_vertices                      = max(num_vertices, triangles[i][k]);
+    }
+  }
+
+  // Init result.
+  auto result = vector<vector<I>>(num_vertices);
+
+  // For each vertex, loop around it and build its adjacency.
+  for (auto i = 0; i < num_vertices; ++i) {
+    result[i].reserve(6);
+    auto first_face = face_from_vertex[i];
+    if (first_face == -1) continue;
+
+    auto face = first_face;
+    while (true) {
+      auto k = find_index(triangles[face], i);
+      k      = k != 0 ? k - 1 : 2;
+      face   = adjacencies[face][k];
+      result[i].push_back(face);
+      if (face == -1) break;
+      if (face == first_face) break;
+    }
+  }
+
+  return result;
+}
+
+// Compute boundaries as a list of loops (sorted counter-clockwise)
+template <typename I>
+inline vector<vector<I>> ordered_boundaries(const vector<vec<I, 3>>& triangles,
+    const vector<vec<I, 3>>& adjacency, I num_vertices) {
+  // map every boundary vertex to its next one
+  auto next_vert = vector<I>(num_vertices, -1);
+  for (auto i = 0; i < (I)triangles.size(); ++i) {
+    for (auto k = 0; k < 3; ++k) {
+      if (adjacency[i][k] == -1)
+        next_vert[triangles[i][k]] = triangles[i][(k + 1) % 3];
+    }
+  }
+
+  // result
+  auto boundaries = vector<vector<I>>();
+
+  // arrange boundary vertices in loops
+  for (auto i : range(next_vert.size())) {
+    if (next_vert[i] == -1) continue;
+
+    // add new empty boundary
+    boundaries.emplace_back();
+    auto current = (I)i;
+
+    while (true) {
+      auto next = next_vert[current];
+      if (next == -1) {
+        return {};
+      }
+      next_vert[current] = -1;
+      boundaries.back().push_back(current);
+
+      // close loop if necessary
+      if (next == i)
+        break;
+      else
+        current = next;
+    }
+  }
+
+  return boundaries;
 }
 
 }  // namespace yocto
