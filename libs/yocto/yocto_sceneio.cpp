@@ -1174,6 +1174,9 @@ shape_data make_shape_preset(const string& type_) {
     return add_normals(subdivide_shape(make_wtcube(), 4, true));
   } else if (type == "opcube_subdiv") {
     return add_normals(subdivide_shape(make_opcube(), 4, true));
+  } else if (type == "fvcube_subdiv") {
+    return fvshape_to_shape(
+        add_normals(subdivide_fvshape(make_fvcube(), 4, true)));
   } else if (type == "displaced_quady") {
     return make_quady(8);
   } else if (type == "displaced_sphere") {
@@ -1281,14 +1284,14 @@ shape_data make_shape_preset(const string& type_) {
 fvshape_data make_fvshape_preset(const string& type) {
   auto test_xform = translation_frame(vec3f{0, 0.75f, 0}) *
                     scaling_frame(0.75f);
-  if (type == "facevarying_cube") {
+  if (type == "fvcube") {
     return make_fvbox();
-  } else if (type == "facevarying_sphere") {
+  } else if (type == "fvsphere") {
     return make_fvsphere();
   } else if (type == "test_facevarying_cube") {
-    return transform_fvshape(test_xform, make_fvbox());
+    return transform_fvshape(make_fvbox(), test_xform);
   } else if (type == "test_facevarying_sphere") {
-    return transform_fvshape(test_xform, make_fvsphere());
+    return transform_fvshape(make_fvsphere(), test_xform);
   } else {
     return shape_to_fvshape(make_shape_preset(type));
   }

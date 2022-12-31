@@ -489,12 +489,24 @@ fvshape_data subdivide_fvshape(
 
 // Transform shape
 fvshape_data transform_fvshape(
-    const frame3f& frame, const fvshape_data& shape, bool non_rigid) {
+    const fvshape_data& shape, const frame3f& frame, bool non_rigid) {
   auto transformed = shape;
   for (auto& position : transformed.positions)
     position = transform_point(frame, position);
   for (auto& normal : transformed.normals)
     normal = transform_normal(frame, normal, non_rigid);
+  return transformed;
+}
+fvshape_data remove_normals(const fvshape_data& shape) {
+  auto transformed      = shape;
+  transformed.quadsnorm = {};
+  transformed.normals   = {};
+  return transformed;
+}
+fvshape_data add_normals(const fvshape_data& shape) {
+  auto transformed      = shape;
+  transformed.quadsnorm = transformed.quadspos;
+  transformed.normals   = compute_normals(shape);
   return transformed;
 }
 

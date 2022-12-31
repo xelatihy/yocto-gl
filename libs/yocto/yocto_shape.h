@@ -186,7 +186,9 @@ fvshape_data subdivide_fvshape(
 
 // Transform shape
 fvshape_data transform_fvshape(
-    const frame3f& frame, const fvshape_data& shape, bool non_rigid = false);
+    const fvshape_data& shape, const frame3f& frame, bool non_rigid = false);
+fvshape_data remove_normals(const fvshape_data& shape);
+fvshape_data add_normals(const fvshape_data& shape);
 
 // Shape statistics
 vector<string> fvshape_stats(const fvshape_data& shape, bool verbose = false);
