@@ -1985,34 +1985,36 @@ static pair<vector<vec4i>, vector<T>> subdivide_catmullclark_impl(
     tboundary.push_back({edge_vertex({v1, v2}), v2});
   }
 
-  // setup creases -----------------------------------
-  auto tcrease_edges = vector<vec2i>{};
-  auto tcrease_verts = vector<int>{};
+  // handle locked -----------------------------------
+  auto tlocked = vector<int>{};
   if (lock_boundary) {
     for (auto& [v1, v2] : tboundary) {
-      tcrease_verts.push_back(v1);
-      tcrease_verts.push_back(v2);
+      tlocked.push_back(v1);
+      tlocked.push_back(v2);
     }
-  } else {
-    for (auto& b : tboundary) tcrease_edges.push_back(b);
+    tlocked   = remove_duplicates(tlocked);
+    tboundary = {};
   }
 
-  // define vertices valence ---------------------------
+  // define verted valence ---------------------------
   auto tvert_val = vector<int>(tvertices.size(), 2);
   for (auto& [v1, v2] : tboundary) {
-    tvert_val[v1] = (lock_boundary) ? 0 : 1;
-    tvert_val[v2] = (lock_boundary) ? 0 : 1;
+    tvert_val[v1] = 1;
+    tvert_val[v2] = 1;
+  }
+  for (auto& v1 : tlocked) {
+    tvert_val[v1] = 0;
   }
 
   // averaging pass ----------------------------------
   auto avert  = vector<T>(tvertices.size(), T());
   auto acount = vector<int>(tvertices.size(), 0);
-  for (auto& point : tcrease_verts) {
+  for (auto& point : tlocked) {
     if (tvert_val[point] != 0) continue;
     avert[point] += tvertices[point];
     acount[point] += 1;
   }
-  for (auto& edge : tcrease_edges) {
+  for (auto& edge : tboundary) {
     auto centroid = (tvertices[edge.x] + tvertices[edge.y]) / 2;
     for (auto vid : edge) {
       if (tvert_val[vid] != 1) continue;
