@@ -194,9 +194,39 @@ using span3d = ndspan<T, 3>;
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// HELPERS FUNCTIONS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Error handling
+template <typename T1, typename T2>
+constexpr kernel void check_same_size(span<T1> a, span<T2> b) {
+  if (a.size() != b.size())
+    throw std::out_of_range{"arrays should have the same size"};
+}
+
+// Error handling
+template <typename T1, typename T2, size_t N>
+constexpr kernel void check_same_size(
+    const ndspan<T1, N>& a, const ndspan<T2, N>& b) {
+  if (a.extents() != b.extents())
+    throw std::out_of_range{"arrays should have the same size"};
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // ARRAY CREATION VIA VIEWS
 // -----------------------------------------------------------------------------
 namespace yocto {
+
+// Error handling
+template <typename T1, typename T2>
+constexpr kernel void check_same_size(
+    const vector<T1>& a, const vector<T2>& b) {
+  if (a.size() != b.size())
+    throw std::out_of_range{"arrays should have the same size"};
+}
 
 // Make a vector from a view
 template <typename R, typename T = rvalue_t<R>>

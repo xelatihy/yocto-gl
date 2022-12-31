@@ -725,12 +725,10 @@ inline vector<vec<T, 3>> lines_tangents(
     const vector<vec<I, 2>>& lines, const vector<vec<T, 3>>& positions) {
   auto tangents = vector<vec<T, 3>>{positions.size()};
   for (auto& tangent : tangents) tangent = {0, 0, 0};
-  for (auto& [v1, v2] : lines) {
-    auto &p1 = positions[v1], &p2 = positions[v2];
-    auto  tangent = line_tangent(p1, p2);
-    auto  length  = line_length(p1, p2);
-    tangents[v1] += tangent * length;
-    tangents[v2] += tangent * length;
+  for (auto& line : lines) {
+    auto tangent = line_tangent(positions, line);
+    auto length  = line_length(positions, line);
+    for (auto vid : line) tangents[vid] += tangent * length;
   }
   for (auto& tangent : tangents) tangent = normalize(tangent);
   return tangents;
@@ -774,9 +772,7 @@ inline vector<vec<T, 3>> quads_normals(
 template <typename T, typename I>
 inline void lines_tangents(vector<vec<T, 3>>& tangents,
     const vector<vec<I, 2>>& lines, const vector<vec<T, 3>>& positions) {
-  if (tangents.size() != positions.size()) {
-    throw std::out_of_range("array should be the same length");
-  }
+  check_same_size(tangents, positions);
   for (auto& tangent : tangents) tangent = {0, 0, 0};
   for (auto& line : lines) {
     auto tangent = line_tangent(positions, line);
@@ -790,9 +786,7 @@ inline void lines_tangents(vector<vec<T, 3>>& tangents,
 template <typename T, typename I>
 inline void triangles_normals(vector<vec<T, 3>>& normals,
     const vector<vec<I, 3>>& triangles, const vector<vec<T, 3>>& positions) {
-  if (normals.size() != positions.size()) {
-    throw std::out_of_range("array should be the same length");
-  }
+  check_same_size(normals, positions);
   for (auto& normal : normals) normal = {0, 0, 0};
   for (auto& triangle : triangles) {
     auto normal = triangle_normal(positions, triangle);
@@ -806,9 +800,7 @@ inline void triangles_normals(vector<vec<T, 3>>& normals,
 template <typename T, typename I>
 inline void quads_normals(vector<vec<T, 3>>& normals,
     const vector<vec<I, 4>>& quads, const vector<vec<T, 3>>& positions) {
-  if (normals.size() != positions.size()) {
-    throw std::out_of_range("array should be the same length");
-  }
+  check_same_size(normals, positions);
   for (auto& normal : normals) normal = {0, 0, 0};
   for (auto& quad : quads) {
     auto normal = quad_normal(positions, quad);
