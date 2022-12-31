@@ -38,6 +38,8 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
+#include <algorithm>
+#include <stdexcept>
 #include <vector>
 
 #include "yocto_math.h"
@@ -190,6 +192,106 @@ template <typename T>
 using span2d = ndspan<T, 2>;
 template <typename T>
 using span3d = ndspan<T, 3>;
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// HELPERS FUNCTIONS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Error handling
+template <typename T1, typename T2>
+constexpr kernel void check_same_size(span<T1> a, span<T2> b) {
+  if (a.size() != b.size())
+    throw std::out_of_range{"arrays should have the same size"};
+}
+
+// Error handling
+template <typename T1, typename T2, size_t N>
+constexpr kernel void check_same_size(
+    const ndspan<T1, N>& a, const ndspan<T2, N>& b) {
+  if (a.extents() != b.extents())
+    throw std::out_of_range{"arrays should have the same size"};
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// ARRAY CREATION VIA VIEWS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Error handling
+template <typename T1, typename T2>
+constexpr kernel void check_same_size(
+    const vector<T1>& a, const vector<T2>& b) {
+  if (a.size() != b.size())
+    throw std::out_of_range{"arrays should have the same size"};
+}
+
+#ifndef __CUDACC__
+
+// Make a vector from a view
+template <typename R, typename T = rvalue_t<R>>
+inline vector<T> to_vector(R&& range) {
+  auto values = vector<T>{};
+  for (auto value : range) values.push_back(value);
+  return values;
+}
+template <typename R, typename Func, typename T = result_t<Func, rvalue_t<R>>>
+inline vector<T> to_vector(R&& range, Func&& func) {
+  auto values = vector<T>{};
+  for (auto value : range) values.push_back(func(value));
+  return values;
+}
+
+#endif
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// ARRAY SEARCH AND SORT
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Find an element with linear search
+template <typename T>
+inline ptrdiff_t find_index(const vector<T>& values, const T& value) {
+  auto pos = std::find(values.begin(), values.end(), value);
+  if (pos == values.end()) return -1;
+  return pos - values.begin();
+}
+
+// Find an element with binary search
+template <typename T>
+inline ptrdiff_t search_index(const vector<T>& values, const T& value) {
+  auto pos = std::binary_search(values.begin(), values.end(), value);
+  if (pos == values.end()) return -1;
+  return pos - values.begin();
+}
+
+// Sort elements in an array
+template <typename T>
+inline void sort(vector<T>& values) {
+  std::sort(values.begin(), values.end());
+}
+template <typename T>
+inline vector<T> sorted(const vector<T>& values) {
+  auto sorted = values;
+  std::sort(sorted.begin(), sorted.end());
+  return sorted;
+}
+
+// Sort and remove duplicates
+template <typename T>
+inline vector<T> remove_duplicates(const vector<T>& values_) {
+  auto values = values_;
+  std::sort(values.begin(), values.end());
+  auto pos = std::unique(values.begin(), values.end());
+  values.erase(pos, values.end());
+  return values;
+}
 
 }  // namespace yocto
 

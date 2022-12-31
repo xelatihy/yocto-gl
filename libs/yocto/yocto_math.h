@@ -67,15 +67,9 @@ using std::pair;
 #endif
 
 // -----------------------------------------------------------------------------
-// MATH CONSTANTS AND FUNCTIONS
+// TYPE TRAITS
 // -----------------------------------------------------------------------------
 namespace yocto {
-
-// Basic types
-using byte    = unsigned char;
-using uint    = unsigned int;
-using ushort  = unsigned short;
-using index_t = ptrdiff_t;
 
 // Common type
 template <typename... Ts>
@@ -87,6 +81,65 @@ using result_t = std::invoke_result_t<Func, Ts...>;
 template <typename Func, typename... Ts>
 using result_t = std::result_of_t<Func(Ts...)>;
 #endif
+template <typename R>
+using iterator_t = decltype(std::begin(std::declval<R&>()));
+template <typename R>
+using sentinel_t = decltype(std::end(std::declval<R&>()));
+template <typename R>
+using rsize_t = decltype(std::size(std::declval<R&>()));
+#ifndef __CUDACC__
+template <typename R>
+using rdifference_t = std::iter_difference_t<iterator_t<R>>;
+template <typename R>
+using rvalue_t = std::iter_value_t<iterator_t<R>>;
+template <typename R>
+using rreference_t = std::iter_reference_t<iterator_t<R>>;
+#endif
+
+// Generic helpers
+template <typename T>
+struct type_constant {
+  using type = T;
+};
+
+// Math specific traits
+template <typename T>
+struct is_vec : std::bool_constant<false> {};
+template <typename T>
+struct is_mat : std::bool_constant<false> {};
+template <typename T>
+struct is_frame : std::bool_constant<false> {};
+template <typename T>
+struct element_type : type_constant<void> {};
+template <typename T>
+struct element_dimension : std::integral_constant<size_t, 0> {};
+
+// Helper variables
+template <typename T>
+constexpr auto vec_v = is_vec<std::remove_cvref_t<T>>::value;
+template <typename T>
+constexpr auto mat_v = is_mat<std::remove_cvref_t<T>>::value;
+template <typename T>
+constexpr auto frame_v = is_frame<std::remove_cvref_t<T>>::value;
+#ifndef __CUDACC__
+template <typename T>
+using element_t = typename element_type<std::remove_cvref_t<T>>::type;
+template <typename T>
+constexpr auto element_d = element_dimension<std::remove_cvref_t<T>>::value;
+#endif
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// MATH CONSTANTS AND FUNCTIONS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Basic types
+using byte    = unsigned char;
+using uint    = unsigned int;
+using ushort  = unsigned short;
+using index_t = ptrdiff_t;
 
 // Numeric constants
 template <typename T = double>
@@ -395,6 +448,14 @@ template <typename... Args>
 vec(Args...) -> vec<common_t<Args...>, sizeof...(Args)>;
 #endif
 
+// Math specific traits
+template <typename T, size_t N>
+struct is_vec<vec<T, N>> : std::bool_constant<true> {};
+template <typename T, size_t N>
+struct element_type<vec<T, N>> : type_constant<T> {};
+template <typename T, size_t N>
+struct element_dimension<vec<T, N>> : std::integral_constant<size_t, N> {};
+
 // Vector aliases
 using vec1f = vec<float, 1>;
 using vec2f = vec<float, 2>;
@@ -539,6 +600,23 @@ constexpr kernel bool operator!=(const vec<T1, N>& a, T2 b) {
     return a.x != b || a.y != b || a.z != b;
   } else if constexpr (N != 4) {
     return a.x != b || a.y != b || a.z != b || a.w != b;
+  } else {
+  }
+}
+template <typename T1, typename T2, size_t N>
+constexpr kernel bool operator<(const vec<T1, N>& a, const vec<T2, N>& b) {
+  if constexpr (N == 1) {
+    return a.x < b.x;
+  } else if constexpr (N == 2) {
+    return a.x < b.x || (a.x == b.x && a.y < b.y);
+  } else if constexpr (N == 3) {
+    return a.x < b.x ||
+           (a.x == b.x && (a.y < b.y || (a.y == b.y && a.z < b.z)));
+  } else if constexpr (N == 4) {
+    return a.x < b.x ||
+           (a.x == b.x &&
+               (a.y < b.y ||
+                   (a.y == b.y && (a.z < b.z || (a.z == b.z && a.w < b.w)))));
   } else {
   }
 }
@@ -1385,6 +1463,18 @@ constexpr kernel size_t argmin(const vec<T, N>& a) {
       return 3;
     else
       return argmin(xyz(a));
+  }
+}
+template <typename T, size_t N, typename I = int>
+constexpr kernel I find_index(const vec<T, N>& a, T b) {
+  if constexpr (N == 1) {
+    return a.x == b ? 0 : -1;
+  } else if constexpr (N == 2) {
+    return a.x == b ? 0 : (a.y == b ? 1 : -1);
+  } else if constexpr (N == 3) {
+    return a.x == b ? 0 : (a.y == b ? 1 : (a.z == b ? 2 : -1));
+  } else if constexpr (N == 4) {
+    return a.x == b ? 0 : (a.y == b ? 1 : (a.z == b ? 2 : (a.w == b ? 3 : -1)));
   }
 }
 

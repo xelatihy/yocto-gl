@@ -33,26 +33,8 @@
 #include "yocto_shape.h"
 
 #include <algorithm>
-#include <deque>
-#include <memory>
-#include <stdexcept>
-#include <string>
 
-#include "yocto_geometry.h"
-#include "yocto_modelio.h"
 #include "yocto_noise.h"
-#include "yocto_sampling.h"
-
-// -----------------------------------------------------------------------------
-// USING DIRECTIVES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// using directives
-using std::deque;
-using namespace std::string_literals;
-
-}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FO SHAPE PROPERTIES
@@ -190,19 +172,6 @@ vector<vec3f> compute_normals(const shape_data& shape) {
     return vector<vec3f>(shape.positions.size(), {0, 0, 1});
   }
 }
-void compute_normals(vector<vec3f>& normals, const shape_data& shape) {
-  if (is_points(shape)) {
-    normals.assign(shape.positions.size(), {0, 0, 1});
-  } else if (is_lines(shape)) {
-    lines_tangents(normals, shape.lines, shape.positions);
-  } else if (is_triangles(shape)) {
-    triangles_normals(normals, shape.triangles, shape.positions);
-  } else if (is_quads(shape)) {
-    quads_normals(normals, shape.quads, shape.positions);
-  } else {
-    normals.assign(shape.positions.size(), {0, 0, 1});
-  }
-}
 
 // Shape sampling
 vector<float> sample_shape_cdf(const shape_data& shape) {
@@ -216,20 +185,6 @@ vector<float> sample_shape_cdf(const shape_data& shape) {
     return sample_quads_cdf(shape.quads, shape.positions);
   } else {
     return sample_points_cdf((int)shape.positions.size());
-  }
-}
-
-void sample_shape_cdf(vector<float>& cdf, const shape_data& shape) {
-  if (is_points(shape)) {
-    sample_points_cdf(cdf, (int)shape.points.size());
-  } else if (is_lines(shape)) {
-    sample_lines_cdf(cdf, shape.lines, shape.positions);
-  } else if (is_triangles(shape)) {
-    sample_triangles_cdf(cdf, shape.triangles, shape.positions);
-  } else if (is_quads(shape)) {
-    sample_quads_cdf(cdf, shape.quads, shape.positions);
-  } else {
-    sample_points_cdf(cdf, (int)shape.positions.size());
   }
 }
 
@@ -286,9 +241,9 @@ shape_data subdivide_shape(
   // but how it is not obvious
   if (subdivisions == 0) return shape;
   auto subdivided = shape_data{};
-  if (!subdivided.points.empty()) {
+  if (!shape.points.empty()) {
     subdivided = shape;
-  } else if (!subdivided.lines.empty()) {
+  } else if (!shape.lines.empty()) {
     std::tie(std::ignore, subdivided.normals) = subdivide_lines(
         shape.lines, shape.normals, subdivisions);
     std::tie(std::ignore, subdivided.texcoords) = subdivide_lines(
@@ -299,7 +254,7 @@ shape_data subdivide_shape(
         subdivided.lines, shape.radius, subdivisions);
     std::tie(subdivided.lines, subdivided.positions) = subdivide_lines(
         shape.lines, shape.positions, subdivisions);
-  } else if (!subdivided.triangles.empty()) {
+  } else if (!shape.triangles.empty()) {
     std::tie(std::ignore, subdivided.normals) = subdivide_triangles(
         shape.triangles, shape.normals, subdivisions);
     std::tie(std::ignore, subdivided.texcoords) = subdivide_triangles(
@@ -310,7 +265,7 @@ shape_data subdivide_shape(
         shape.triangles, shape.radius, subdivisions);
     std::tie(subdivided.triangles, subdivided.positions) = subdivide_triangles(
         shape.triangles, shape.positions, subdivisions);
-  } else if (!subdivided.quads.empty() && !catmullclark) {
+  } else if (!shape.quads.empty() && !catmullclark) {
     std::tie(std::ignore, subdivided.normals) = subdivide_quads(
         shape.quads, shape.normals, subdivisions);
     std::tie(std::ignore, subdivided.texcoords) = subdivide_quads(
@@ -321,7 +276,7 @@ shape_data subdivide_shape(
         shape.quads, shape.radius, subdivisions);
     std::tie(subdivided.quads, subdivided.positions) = subdivide_quads(
         shape.quads, shape.positions, subdivisions);
-  } else if (!subdivided.quads.empty() && catmullclark) {
+  } else if (!shape.quads.empty() && catmullclark) {
     std::tie(std::ignore, subdivided.normals) = subdivide_catmullclark(
         shape.quads, shape.normals, subdivisions);
     std::tie(std::ignore, subdivided.texcoords) = subdivide_catmullclark(
@@ -340,10 +295,10 @@ shape_data subdivide_shape(
 
 // Transform shape
 shape_data transform_shape(
-    const frame3f& frame, const shape_data& shape, bool non_rigid) {
-  return transform_shape(frame, shape, 1, non_rigid);
+    const shape_data& shape, const frame3f& frame, bool non_rigid) {
+  return transform_shape(shape, frame, 1, non_rigid);
 }
-shape_data transform_shape(const frame3f& frame, const shape_data& shape,
+shape_data transform_shape(const shape_data& shape, const frame3f& frame,
     float radius_scale, bool non_rigid) {
   auto transformed = shape;
   for (auto& position : transformed.positions)
@@ -356,6 +311,11 @@ shape_data transform_shape(const frame3f& frame, const shape_data& shape,
 shape_data remove_normals(const shape_data& shape) {
   auto transformed    = shape;
   transformed.normals = {};
+  return transformed;
+}
+shape_data add_normals(const shape_data& shape) {
+  auto transformed    = shape;
+  transformed.normals = compute_normals(shape);
   return transformed;
 }
 
@@ -388,8 +348,8 @@ vector<string> shape_stats(const shape_data& shape, bool verbose) {
   stats.push_back("texcoords:    " + format(shape.texcoords.size()));
   stats.push_back("colors:       " + format(shape.colors.size()));
   stats.push_back("radius:       " + format(shape.radius.size()));
-  stats.push_back("center:       " + format3(bbox_center(bbox)));
-  stats.push_back("diagonal:     " + format3(bbox_diagonal(bbox)));
+  stats.push_back("center:       " + format3(center(bbox)));
+  stats.push_back("diagonal:     " + format3(diagonal(bbox)));
   stats.push_back("min:          " + format3(bbox.min));
   stats.push_back("max:          " + format3(bbox.max));
 
@@ -511,12 +471,24 @@ fvshape_data subdivide_fvshape(
 
 // Transform shape
 fvshape_data transform_fvshape(
-    const frame3f& frame, const fvshape_data& shape, bool non_rigid) {
+    const fvshape_data& shape, const frame3f& frame, bool non_rigid) {
   auto transformed = shape;
   for (auto& position : transformed.positions)
     position = transform_point(frame, position);
   for (auto& normal : transformed.normals)
     normal = transform_normal(frame, normal, non_rigid);
+  return transformed;
+}
+fvshape_data remove_normals(const fvshape_data& shape) {
+  auto transformed      = shape;
+  transformed.quadsnorm = {};
+  transformed.normals   = {};
+  return transformed;
+}
+fvshape_data add_normals(const fvshape_data& shape) {
+  auto transformed      = shape;
+  transformed.quadsnorm = transformed.quadspos;
+  transformed.normals   = compute_normals(shape);
   return transformed;
 }
 
@@ -544,8 +516,8 @@ vector<string> fvshape_stats(const fvshape_data& shape, bool verbose) {
   stats.push_back("positions:    " + format(shape.positions.size()));
   stats.push_back("normals:      " + format(shape.normals.size()));
   stats.push_back("texcoords:    " + format(shape.texcoords.size()));
-  stats.push_back("center:       " + format3(bbox_center(bbox)));
-  stats.push_back("diagonal:     " + format3(bbox_diagonal(bbox)));
+  stats.push_back("center:       " + format3(center(bbox)));
+  stats.push_back("diagonal:     " + format3(diagonal(bbox)));
   stats.push_back("min:          " + format3(bbox.min));
   stats.push_back("max:          " + format3(bbox.max));
 
@@ -700,6 +672,23 @@ shape_data make_wtcube(int subdivisions) {
   } else {
     std::tie(shape.quads, shape.positions) = subdivide_quads(
         wtcube_quads, wtcube_positions, subdivisions);
+  }
+  return shape;
+}
+shape_data make_opcube(int subdivisions) {
+  static const auto opcube_positions = vector<vec3f>{{-1, -1, +1}, {+1, -1, +1},
+      {+1, +1, +1}, {-1, +1, +1}, {+1, -1, -1}, {-1, -1, -1}, {-1, +1, -1},
+      {+1, +1, -1}};
+  static const auto opcube_quads     = vector<vec4i>{
+      {0, 1, 2, 3}, {4, 5, 6, 7}, {1, 4, 7, 2}, {5, 0, 3, 6}, {3, 2, 7, 6}};
+
+  auto shape = shape_data{};
+  if (subdivisions == 0) {
+    shape.quads     = opcube_quads;
+    shape.positions = opcube_positions;
+  } else {
+    std::tie(shape.quads, shape.positions) = subdivide_quads(
+        opcube_quads, opcube_positions, subdivisions);
   }
   return shape;
 }
@@ -1510,526 +1499,6 @@ shape_data lines_to_cylinders(const vector<vec2i>& lines,
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// IMPLEMENTATION OF COMPUTATION OF PER-VERTEX PROPERTIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Compute per-vertex tangents for lines.
-vector<vec3f> lines_tangents(
-    const vector<vec2i>& lines, const vector<vec3f>& positions) {
-  auto tangents = vector<vec3f>{positions.size()};
-  for (auto& tangent : tangents) tangent = {0, 0, 0};
-  for (auto& [v1, v2] : lines) {
-    auto &p1 = positions[v1], &p2 = positions[v2];
-    auto  tangent = line_tangent(p1, p2);
-    auto  length  = line_length(p1, p2);
-    tangents[v1] += tangent * length;
-    tangents[v2] += tangent * length;
-  }
-  for (auto& tangent : tangents) tangent = normalize(tangent);
-  return tangents;
-}
-
-// Compute per-vertex normals for triangles.
-vector<vec3f> triangles_normals(
-    const vector<vec3i>& triangles, const vector<vec3f>& positions) {
-  auto normals = vector<vec3f>{positions.size()};
-  for (auto& normal : normals) normal = {0, 0, 0};
-  for (auto& triangle : triangles) {
-    auto normal = triangle_normal(positions, triangle);
-    auto area   = triangle_area(positions, triangle);
-    for (auto vid : triangle) normals[vid] += normal * area;
-  }
-  for (auto& normal : normals) normal = normalize(normal);
-  return normals;
-}
-
-// Compute per-vertex normals for quads.
-vector<vec3f> quads_normals(
-    const vector<vec4i>& quads, const vector<vec3f>& positions) {
-  auto normals = vector<vec3f>{positions.size()};
-  for (auto& normal : normals) normal = {0, 0, 0};
-  for (auto& quad : quads) {
-    auto normal = quad_normal(positions, quad);
-    auto area   = quad_area(positions, quad);
-    if (!is_triangle(quad)) {
-      for (auto vid : quad) normals[vid] += normal * area;
-    } else {
-      for (auto vid : as_triangle(quad)) normals[vid] += normal * area;
-    }
-  }
-  for (auto& normal : normals) normal = normalize(normal);
-  return normals;
-}
-
-// Compute per-vertex tangents for lines.
-void lines_tangents(vector<vec3f>& tangents, const vector<vec2i>& lines,
-    const vector<vec3f>& positions) {
-  if (tangents.size() != positions.size()) {
-    throw std::out_of_range("array should be the same length");
-  }
-  for (auto& tangent : tangents) tangent = {0, 0, 0};
-  for (auto& line : lines) {
-    auto tangent = line_tangent(positions, line);
-    auto length  = line_length(positions, line);
-    for (auto vid : line) tangents[vid] += tangent * length;
-  }
-  for (auto& tangent : tangents) tangent = normalize(tangent);
-}
-
-// Compute per-vertex normals for triangles.
-void triangles_normals(vector<vec3f>& normals, const vector<vec3i>& triangles,
-    const vector<vec3f>& positions) {
-  if (normals.size() != positions.size()) {
-    throw std::out_of_range("array should be the same length");
-  }
-  for (auto& normal : normals) normal = {0, 0, 0};
-  for (auto& triangle : triangles) {
-    auto normal = triangle_normal(positions, triangle);
-    auto area   = triangle_area(positions, triangle);
-    for (auto vid : triangle) normals[vid] += normal * area;
-  }
-  for (auto& normal : normals) normal = normalize(normal);
-}
-
-// Compute per-vertex normals for quads.
-void quads_normals(vector<vec3f>& normals, const vector<vec4i>& quads,
-    const vector<vec3f>& positions) {
-  if (normals.size() != positions.size()) {
-    throw std::out_of_range("array should be the same length");
-  }
-  for (auto& normal : normals) normal = {0, 0, 0};
-  for (auto& quad : quads) {
-    auto normal = quad_normal(positions, quad);
-    auto area   = quad_area(positions, quad);
-    if (!is_triangle(quad)) {
-      for (auto vid : quad) normals[vid] += normal * area;
-    } else {
-      for (auto vid : as_triangle(quad)) normals[vid] += normal * area;
-    }
-  }
-  for (auto& normal : normals) normal = normalize(normal);
-}
-
-// Compute per-vertex tangent frame for triangle meshes.
-// Tangent space is defined by a four component vector.
-// The first three components are the tangent with respect to the U texcoord.
-// The fourth component is the sign of the tangent wrt the V texcoord.
-// Tangent frame is useful in normal mapping.
-vector<vec4f> triangles_tangent_spaces(const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords) {
-  auto tangu = vector<vec3f>(positions.size(), vec3f{0, 0, 0});
-  auto tangv = vector<vec3f>(positions.size(), vec3f{0, 0, 0});
-  for (auto& triangle : triangles) {
-    auto tutv = triangle_tangents_fromuv(positions[triangle.x],
-        positions[triangle.y], positions[triangle.z], texcoords[triangle.x],
-        texcoords[triangle.y], texcoords[triangle.z]);
-    for (auto vid : triangle) tangu[vid] += normalize(tutv.first);
-    for (auto vid : triangle) tangv[vid] += normalize(tutv.second);
-  }
-  for (auto& tangent : tangu) tangent = normalize(tangent);
-  for (auto& tangent : tangv) tangent = normalize(tangent);
-
-  auto tangent_spaces = vector<vec4f>(positions.size());
-  for (auto& tangent : tangent_spaces) tangent = vec4f{0, 0, 0, 0};
-  for (auto vid : range(positions.size())) {
-    tangu[vid] = orthonormalize(tangu[vid], normals[vid]);
-    auto s     = dot(cross(normals[vid], tangu[vid]), tangv[vid]) < 0 ? -1.0f
-                                                                      : 1.0f;
-    tangent_spaces[vid] = {tangu[vid], s};
-  }
-  return tangent_spaces;
-}
-
-// Apply skinning
-pair<vector<vec3f>, vector<vec3f>> skin_vertices(const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec4f>& weights,
-    const vector<vec4i>& joints, const vector<frame3f>& xforms) {
-  auto skinned_positions = vector<vec3f>{positions.size()};
-  auto skinned_normals   = vector<vec3f>{positions.size()};
-  for (auto i : range(positions.size())) {
-    skinned_positions[i] =
-        transform_point(xforms[joints[i].x], positions[i]) * weights[i].x +
-        transform_point(xforms[joints[i].y], positions[i]) * weights[i].y +
-        transform_point(xforms[joints[i].z], positions[i]) * weights[i].z +
-        transform_point(xforms[joints[i].w], positions[i]) * weights[i].w;
-    skinned_normals[i] = normalize(
-        transform_direction(xforms[joints[i].x], normals[i]) * weights[i].x +
-        transform_direction(xforms[joints[i].y], normals[i]) * weights[i].y +
-        transform_direction(xforms[joints[i].z], normals[i]) * weights[i].z +
-        transform_direction(xforms[joints[i].w], normals[i]) * weights[i].w);
-  }
-  return {skinned_positions, skinned_normals};
-}
-
-// Apply skinning as specified in Khronos glTF
-pair<vector<vec3f>, vector<vec3f>> skin_matrices(const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec4f>& weights,
-    const vector<vec4i>& joints, const vector<mat4f>& xforms) {
-  auto skinned_positions = vector<vec3f>{positions.size()};
-  auto skinned_normals   = vector<vec3f>{positions.size()};
-  for (auto i : range(positions.size())) {
-    auto xform = xforms[joints[i].x] * weights[i].x +
-                 xforms[joints[i].y] * weights[i].y +
-                 xforms[joints[i].z] * weights[i].z +
-                 xforms[joints[i].w] * weights[i].w;
-    skinned_positions[i] = transform_point(xform, positions[i]);
-    skinned_normals[i]   = normalize(transform_direction(xform, normals[i]));
-  }
-  return {skinned_positions, skinned_normals};
-}
-
-// Apply skinning
-void skin_vertices(vector<vec3f>& skinned_positions,
-    vector<vec3f>& skinned_normals, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec4f>& weights,
-    const vector<vec4i>& joints, const vector<frame3f>& xforms) {
-  if (skinned_positions.size() != positions.size() ||
-      skinned_normals.size() != normals.size()) {
-    throw std::out_of_range("arrays should be the same size");
-  }
-  for (auto i : range(positions.size())) {
-    skinned_positions[i] =
-        transform_point(xforms[joints[i].x], positions[i]) * weights[i].x +
-        transform_point(xforms[joints[i].y], positions[i]) * weights[i].y +
-        transform_point(xforms[joints[i].z], positions[i]) * weights[i].z +
-        transform_point(xforms[joints[i].w], positions[i]) * weights[i].w;
-    skinned_normals[i] = normalize(
-        transform_direction(xforms[joints[i].x], normals[i]) * weights[i].x +
-        transform_direction(xforms[joints[i].y], normals[i]) * weights[i].y +
-        transform_direction(xforms[joints[i].z], normals[i]) * weights[i].z +
-        transform_direction(xforms[joints[i].w], normals[i]) * weights[i].w);
-  }
-}
-
-// Apply skinning as specified in Khronos glTF
-void skin_matrices(vector<vec3f>& skinned_positions,
-    vector<vec3f>& skinned_normals, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec4f>& weights,
-    const vector<vec4i>& joints, const vector<mat4f>& xforms) {
-  if (skinned_positions.size() != positions.size() ||
-      skinned_normals.size() != normals.size()) {
-    throw std::out_of_range("arrays should be the same size");
-  }
-  for (auto i : range(positions.size())) {
-    auto xform = xforms[joints[i].x] * weights[i].x +
-                 xforms[joints[i].y] * weights[i].y +
-                 xforms[joints[i].z] * weights[i].z +
-                 xforms[joints[i].w] * weights[i].w;
-    skinned_positions[i] = transform_point(xform, positions[i]);
-    skinned_normals[i]   = normalize(transform_direction(xform, normals[i]));
-  }
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// COMPUTATION OF PER VERTEX PROPETIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Flip vertex normals
-vector<vec3f> flip_normals(const vector<vec3f>& normals) {
-  auto flipped = normals;
-  for (auto& n : flipped) n = -n;
-  return flipped;
-}
-// Flip face orientation
-vector<vec3i> flip_triangles(const vector<vec3i>& triangles) {
-  auto flipped = triangles;
-  for (auto& [v1, v2, v3] : flipped) swap(v2, v3);
-  return flipped;
-}
-vector<vec4i> flip_quads(const vector<vec4i>& quads) {
-  auto flipped = quads;
-  for (auto& [v1, v2, v3, v4] : flipped) {
-    if (v3 != v4) {
-      swap(v2, v4);
-    } else {
-      swap(v2, v3);
-      v4 = v3;
-    }
-  }
-  return flipped;
-}
-
-// Align vertex positions. Alignment is 0: none, 1: min, 2: max, 3: center.
-vector<vec3f> align_vertices(
-    const vector<vec3f>& positions, const vec3i& alignment) {
-  auto bounds = invalidb3f;
-  for (auto& p : positions) bounds = merge(bounds, p);
-  auto offset = vec3f{0, 0, 0};
-  for (auto a : range(3)) {
-    switch (alignment[a]) {
-      case 0: break;
-      case 1: offset[a] = bounds.min[a]; break;
-      case 2: offset[a] = (bounds.min[a] + bounds.max[a]) / 2; break;
-      case 3: offset[a] = bounds.max[a]; break;
-      default: throw std::invalid_argument{"invalid alignment"};
-    }
-  }
-  auto aligned = positions;
-  for (auto& p : aligned) p -= offset;
-  return aligned;
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// EDGEA AND ADJACENCIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Initialize an edge map with elements.
-edge_map make_edge_map(const vector<vec3i>& triangles) {
-  auto emap = edge_map{};
-  for (auto& [v1, v2, v3] : triangles) {
-    insert_edge(emap, {v1, v2});
-    insert_edge(emap, {v2, v3});
-    insert_edge(emap, {v3, v1});
-  }
-  return emap;
-}
-edge_map make_edge_map(const vector<vec4i>& quads) {
-  auto emap = edge_map{};
-  for (auto& [v1, v2, v3, v4] : quads) {
-    insert_edge(emap, {v1, v2});
-    insert_edge(emap, {v2, v3});
-    if (v3 != v4) insert_edge(emap, {v3, v4});
-    insert_edge(emap, {v4, v1});
-  }
-  return emap;
-}
-void insert_edges(edge_map& emap, const vector<vec3i>& triangles) {
-  for (auto& [v1, v2, v3] : triangles) {
-    insert_edge(emap, {v1, v2});
-    insert_edge(emap, {v2, v3});
-    insert_edge(emap, {v3, v1});
-  }
-}
-void insert_edges(edge_map& emap, const vector<vec4i>& quads) {
-  for (auto& [v1, v2, v3, v4] : quads) {
-    insert_edge(emap, {v1, v2});
-    insert_edge(emap, {v2, v3});
-    if (v3 != v4) insert_edge(emap, {v3, v4});
-    insert_edge(emap, {v4, v1});
-  }
-}
-// Insert an edge and return its index
-int insert_edge(edge_map& emap, const vec2i& edge) {
-  auto es = vec2i{min(edge), max(edge)};
-  auto it = emap.edges.find(es);
-  if (it == emap.edges.end()) {
-    auto data = edge_map::edge_data{(int)emap.edges.size(), 1};
-    emap.edges.insert(it, {es, data});
-    return data.index;
-  } else {
-    auto& data = it->second;
-    data.nfaces += 1;
-    return data.index;
-  }
-}
-// Get number of edges
-int num_edges(const edge_map& emap) { return (int)emap.edges.size(); }
-// Get the edge index
-int edge_index(const edge_map& emap, const vec2i& edge) {
-  auto es       = vec2i{min(edge), max(edge)};
-  auto iterator = emap.edges.find(es);
-  if (iterator == emap.edges.end()) return -1;
-  return iterator->second.index;
-}
-// Get a list of edges, boundary edges, boundary vertices
-vector<vec2i> get_edges(const edge_map& emap) {
-  auto edges = vector<vec2i>(emap.edges.size());
-  for (auto& [edge, data] : emap.edges) edges[data.index] = edge;
-  return edges;
-}
-vector<vec2i> get_boundary(const edge_map& emap) {
-  auto boundary = vector<vec2i>{};
-  for (auto& [edge, data] : emap.edges) {
-    if (data.nfaces < 2) boundary.push_back(edge);
-  }
-  return boundary;
-}
-vector<vec2i> get_edges(const vector<vec3i>& triangles) {
-  return get_edges(make_edge_map(triangles));
-}
-vector<vec2i> get_edges(const vector<vec4i>& quads) {
-  return get_edges(make_edge_map(quads));
-}
-vector<vec2i> get_edges(
-    const vector<vec3i>& triangles, const vector<vec4i>& quads) {
-  auto edges      = get_edges(triangles);
-  auto more_edges = get_edges(quads);
-  edges.insert(edges.end(), more_edges.begin(), more_edges.end());
-  return edges;
-}
-
-// Build adjacencies between faces (sorted counter-clockwise)
-vector<vec3i> face_adjacencies(const vector<vec3i>& triangles) {
-  auto get_edge = [](const vec3i& triangle, int i) -> vec2i {
-    auto x = triangle[i], y = triangle[i < 2 ? i + 1 : 0];
-    return x < y ? vec2i{x, y} : vec2i{y, x};
-  };
-  auto adjacencies = vector<vec3i>{triangles.size(), vec3i{-1, -1, -1}};
-  auto edge_map    = unordered_map<vec2i, int>();
-  edge_map.reserve((size_t)(triangles.size() * 1.5));
-  for (auto i = 0; i < (int)triangles.size(); ++i) {
-    for (auto k = 0; k < 3; ++k) {
-      auto edge = get_edge(triangles[i], k);
-      auto it   = edge_map.find(edge);
-      if (it == edge_map.end()) {
-        edge_map.insert(it, {edge, i});
-      } else {
-        auto neighbor     = it->second;
-        adjacencies[i][k] = neighbor;
-        for (auto kk = 0; kk < 3; ++kk) {
-          auto edge2 = get_edge(triangles[neighbor], kk);
-          if (edge2 == edge) {
-            adjacencies[neighbor][kk] = i;
-            break;
-          }
-        }
-      }
-    }
-  }
-  return adjacencies;
-}
-
-// Build adjacencies between vertices (sorted counter-clockwise)
-vector<vector<int>> vertex_adjacencies(
-    const vector<vec3i>& triangles, const vector<vec3i>& adjacencies) {
-  auto find_index = [](const vec3i& v, int x) {
-    for (auto vid : range(3))
-      if (v[vid] == x) return vid;
-    return -1;
-  };
-
-  // For each vertex, find any adjacent face.
-  auto num_vertices     = 0;
-  auto face_from_vertex = vector<int>(triangles.size() * 3, -1);
-
-  for (auto i = 0; i < (int)triangles.size(); ++i) {
-    for (auto k : range(3)) {
-      face_from_vertex[triangles[i][k]] = i;
-      num_vertices                      = max(num_vertices, triangles[i][k]);
-    }
-  }
-
-  // Init result.
-  auto result = vector<vector<int>>(num_vertices);
-
-  // For each vertex, loop around it and build its adjacency.
-  for (auto i = 0; i < num_vertices; ++i) {
-    result[i].reserve(6);
-    auto first_face = face_from_vertex[i];
-    if (first_face == -1) continue;
-
-    auto face = first_face;
-    while (true) {
-      auto k = find_index(triangles[face], i);
-      k      = k != 0 ? k - 1 : 2;
-      result[i].push_back(triangles[face][k]);
-      face = adjacencies[face][k];
-      if (face == -1) break;
-      if (face == first_face) break;
-    }
-  }
-
-  return result;
-}
-
-// Build adjacencies between each vertex and its adjacent faces.
-// Adjacencies are sorted counter-clockwise and have same starting points as
-// vertex_adjacencies()
-vector<vector<int>> vertex_to_faces_adjacencies(
-    const vector<vec3i>& triangles, const vector<vec3i>& adjacencies) {
-  auto find_index = [](const vec3i& v, int x) {
-    for (auto vid : range(3))
-      if (v[vid] == x) return vid;
-    return -1;
-  };
-
-  // For each vertex, find any adjacent face.
-  auto num_vertices     = 0;
-  auto face_from_vertex = vector<int>(triangles.size() * 3, -1);
-
-  for (auto i = 0; i < (int)triangles.size(); ++i) {
-    for (auto k : range(3)) {
-      face_from_vertex[triangles[i][k]] = i;
-      num_vertices                      = max(num_vertices, triangles[i][k]);
-    }
-  }
-
-  // Init result.
-  auto result = vector<vector<int>>(num_vertices);
-
-  // For each vertex, loop around it and build its adjacency.
-  for (auto i = 0; i < num_vertices; ++i) {
-    result[i].reserve(6);
-    auto first_face = face_from_vertex[i];
-    if (first_face == -1) continue;
-
-    auto face = first_face;
-    while (true) {
-      auto k = find_index(triangles[face], i);
-      k      = k != 0 ? k - 1 : 2;
-      face   = adjacencies[face][k];
-      result[i].push_back(face);
-      if (face == -1) break;
-      if (face == first_face) break;
-    }
-  }
-
-  return result;
-}
-
-// Compute boundaries as a list of loops (sorted counter-clockwise)
-vector<vector<int>> ordered_boundaries(const vector<vec3i>& triangles,
-    const vector<vec3i>& adjacency, int num_vertices) {
-  // map every boundary vertex to its next one
-  auto next_vert = vector<int>(num_vertices, -1);
-  for (auto i = 0; i < (int)triangles.size(); ++i) {
-    for (auto k = 0; k < 3; ++k) {
-      if (adjacency[i][k] == -1)
-        next_vert[triangles[i][k]] = triangles[i][(k + 1) % 3];
-    }
-  }
-
-  // result
-  auto boundaries = vector<vector<int>>();
-
-  // arrange boundary vertices in loops
-  for (auto i : range(next_vert.size())) {
-    if (next_vert[i] == -1) continue;
-
-    // add new empty boundary
-    boundaries.emplace_back();
-    auto current = (int)i;
-
-    while (true) {
-      auto next = next_vert[current];
-      if (next == -1) {
-        return {};
-      }
-      next_vert[current] = -1;
-      boundaries.back().push_back(current);
-
-      // close loop if necessary
-      if (next == i)
-        break;
-      else
-        current = next;
-    }
-  }
-
-  return boundaries;
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
 // HASH GRID AND NEAREST NEIGHBORS
 // -----------------------------------------------------------------------------
 
@@ -2094,730 +1563,6 @@ void find_neighbors(const hash_grid& grid, vector<int>& neighbors,
 void find_neighbors(const hash_grid& grid, vector<int>& neighbors, int vertex,
     float max_radius) {
   find_neighbors(grid, neighbors, grid.positions[vertex], max_radius, vertex);
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION OF SHAPE ELEMENT CONVERSION AND GROUPING
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Convert quads to triangles
-vector<vec3i> quads_to_triangles(const vector<vec4i>& quads) {
-  auto triangles = vector<vec3i>{};
-  triangles.reserve(quads.size() * 2);
-  for (auto& [v1, v2, v3, v4] : quads) {
-    triangles.push_back({v1, v2, v4});
-    if (v3 != v4) triangles.push_back({v3, v4, v2});
-  }
-  return triangles;
-}
-
-// Convert triangles to quads by creating degenerate quads
-vector<vec4i> triangles_to_quads(const vector<vec3i>& triangles) {
-  auto quads = vector<vec4i>{};
-  quads.reserve(triangles.size());
-  for (auto& [v1, v2, v3] : triangles) quads.push_back({v1, v2, v3, v3});
-  return quads;
-}
-
-// Convert beziers to lines using 3 lines for each bezier.
-vector<vec2i> bezier_to_lines(const vector<vec4i>& beziers) {
-  auto lines = vector<vec2i>{};
-  lines.reserve(beziers.size() * 3);
-  for (auto& bezier : beziers) {
-    lines.push_back({bezier.x, bezier.y});
-    lines.push_back({bezier.y, bezier.z});
-    lines.push_back({bezier.z, bezier.w});
-  }
-  return lines;
-}
-
-// Convert face varying data to single primitives. Returns the quads indices
-// and filled vectors for pos, norm and texcoord.
-void split_facevarying(vector<vec4i>& split_quads,
-    vector<vec3f>& split_positions, vector<vec3f>& split_normals,
-    vector<vec2f>& split_texcoords, const vector<vec4i>& quadspos,
-    const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords) {
-  // make faces unique
-  unordered_map<vec3i, int> vert_map;
-  split_quads = vector<vec4i>(quadspos.size());
-  for (auto fid : range(quadspos.size())) {
-    for (auto c : range(4)) {
-      auto v = vec3i{
-          quadspos[fid][c],
-          (!quadsnorm.empty()) ? quadsnorm[fid][c] : -1,
-          (!quadstexcoord.empty()) ? quadstexcoord[fid][c] : -1,
-      };
-      auto it = vert_map.find(v);
-      if (it == vert_map.end()) {
-        auto s = (int)vert_map.size();
-        vert_map.insert(it, {v, s});
-        split_quads[fid][c] = s;
-      } else {
-        split_quads[fid][c] = it->second;
-      }
-    }
-  }
-
-  // fill vert data
-  split_positions.clear();
-  if (!positions.empty()) {
-    split_positions = vector<vec3f>(vert_map.size());
-    for (auto& [vert, index] : vert_map) {
-      split_positions[index] = positions[vert.x];
-    }
-  }
-  split_normals.clear();
-  if (!normals.empty()) {
-    split_normals = vector<vec3f>(vert_map.size());
-    for (auto& [vert, index] : vert_map) {
-      split_normals[index] = normals[vert.y];
-    }
-  }
-  split_texcoords.clear();
-  if (!texcoords.empty()) {
-    split_texcoords = vector<vec2f>(vert_map.size());
-    for (auto& [vert, index] : vert_map) {
-      split_texcoords[index] = texcoords[vert.z];
-    }
-  }
-}
-
-// Weld vertices within a threshold.
-pair<vector<vec3f>, vector<int>> weld_vertices(
-    const vector<vec3f>& positions, float threshold) {
-  auto indices   = vector<int>(positions.size());
-  auto welded    = vector<vec3f>{};
-  auto grid      = make_hash_grid(threshold);
-  auto neighbors = vector<int>{};
-  for (auto vertex : range(positions.size())) {
-    auto& position = positions[vertex];
-    find_neighbors(grid, neighbors, position, threshold);
-    if (neighbors.empty()) {
-      welded.push_back(position);
-      indices[vertex] = (int)welded.size() - 1;
-      insert_vertex(grid, position);
-    } else {
-      indices[vertex] = neighbors.front();
-    }
-  }
-  return {welded, indices};
-}
-pair<vector<vec3i>, vector<vec3f>> weld_triangles(
-    const vector<vec3i>& triangles, const vector<vec3f>& positions,
-    float threshold) {
-  auto [wpositions, indices] = weld_vertices(positions, threshold);
-  auto wtriangles            = triangles;
-  for (auto& triangle : wtriangles) {
-    triangle = {indices[triangle.x], indices[triangle.y], indices[triangle.z]};
-  }
-  return {wtriangles, wpositions};
-}
-pair<vector<vec4i>, vector<vec3f>> weld_quads(const vector<vec4i>& quads,
-    const vector<vec3f>& positions, float threshold) {
-  auto [wpositions, indices] = weld_vertices(positions, threshold);
-  auto wquads                = quads;
-  for (auto& quad : wquads) {
-    quad = {indices[quad.x], indices[quad.y], indices[quad.z], indices[quad.w]};
-  }
-  return {wquads, wpositions};
-}
-
-// Merge shape elements
-void merge_lines(vector<vec2i>& lines, vector<vec3f>& positions,
-    vector<vec3f>& tangents, vector<vec2f>& texcoords, vector<float>& radius,
-    const vector<vec2i>& merge_lines, const vector<vec3f>& merge_positions,
-    const vector<vec3f>& merge_tangents,
-    const vector<vec2f>& merge_texturecoords,
-    const vector<float>& merge_radius) {
-  auto merge_verts = (int)positions.size();
-  for (auto& [v1, v2] : merge_lines)
-    lines.push_back({v1 + merge_verts, v2 + merge_verts});
-  positions.insert(
-      positions.end(), merge_positions.begin(), merge_positions.end());
-  tangents.insert(tangents.end(), merge_tangents.begin(), merge_tangents.end());
-  texcoords.insert(
-      texcoords.end(), merge_texturecoords.begin(), merge_texturecoords.end());
-  radius.insert(radius.end(), merge_radius.begin(), merge_radius.end());
-}
-void merge_triangles(vector<vec3i>& triangles, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords,
-    const vector<vec3i>& merge_triangles, const vector<vec3f>& merge_positions,
-    const vector<vec3f>& merge_normals,
-    const vector<vec2f>& merge_texturecoords) {
-  auto merge_verts = (int)positions.size();
-  for (auto& triangle : merge_triangles)
-    triangles.push_back(triangle + merge_verts);
-  positions.insert(
-      positions.end(), merge_positions.begin(), merge_positions.end());
-  normals.insert(normals.end(), merge_normals.begin(), merge_normals.end());
-  texcoords.insert(
-      texcoords.end(), merge_texturecoords.begin(), merge_texturecoords.end());
-}
-void merge_quads(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords,
-    const vector<vec4i>& merge_quads, const vector<vec3f>& merge_positions,
-    const vector<vec3f>& merge_normals,
-    const vector<vec2f>& merge_texturecoords) {
-  auto merge_verts = (int)positions.size();
-  for (auto& quad : merge_quads) quads.push_back(quad + merge_verts);
-  positions.insert(
-      positions.end(), merge_positions.begin(), merge_positions.end());
-  normals.insert(normals.end(), merge_normals.begin(), merge_normals.end());
-  texcoords.insert(
-      texcoords.end(), merge_texturecoords.begin(), merge_texturecoords.end());
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION OF SHAPE SUBDIVISION
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Subdivide lines.
-template <typename T>
-static pair<vector<vec2i>, vector<T>> subdivide_lines_impl(
-    const vector<vec2i>& lines, const vector<T>& vertices) {
-  // early exit
-  if (lines.empty() || vertices.empty()) return {lines, vertices};
-  // create vertices
-  auto tvertices = vector<T>{};
-  tvertices.reserve(vertices.size() + lines.size());
-  for (auto& vertex : vertices) tvertices.push_back(vertex);
-  for (auto& [v1, v2] : lines) {
-    tvertices.push_back((vertices[v1] + vertices[v2]) / 2);
-  }
-  // create lines
-  auto tlines = vector<vec2i>{};
-  tlines.reserve(lines.size() * 2);
-  auto line_vertex = [nverts = (int)vertices.size()](
-                         size_t line_id) { return nverts + (int)line_id; };
-  for (auto&& [line_id, line] : enumerate(lines)) {
-    auto& [v1, v2] = line;
-    tlines.push_back({v1, line_vertex(line_id)});
-    tlines.push_back({line_vertex(line_id), v2});
-  }
-  // done
-  return {tlines, tvertices};
-}
-
-// Subdivide triangle.
-template <typename T>
-static pair<vector<vec3i>, vector<T>> subdivide_triangles_impl(
-    const vector<vec3i>& triangles, const vector<T>& vertices) {
-  // early exit
-  if (triangles.empty() || vertices.empty()) return {triangles, vertices};
-  // get edges
-  auto emap  = make_edge_map(triangles);
-  auto edges = get_edges(emap);
-  // create vertices
-  auto tvertices = vector<T>{};
-  tvertices.reserve(vertices.size() + edges.size());
-  for (auto& vertex : vertices) tvertices.push_back(vertex);
-  for (auto& [v1, v2] : edges)
-    tvertices.push_back((vertices[v1] + vertices[v2]) / 2);
-  // create triangles
-  auto ttriangles = vector<vec3i>{};
-  ttriangles.reserve(triangles.size() * 4);
-  auto edge_vertex = [&emap, nverts = (int)vertices.size()](const vec2i& edge) {
-    return nverts + edge_index(emap, edge);
-  };
-  for (auto& triangle : triangles) {
-    ttriangles.push_back({triangle.x, edge_vertex({triangle.x, triangle.y}),
-        edge_vertex({triangle.z, triangle.x})});
-    ttriangles.push_back({triangle.y, edge_vertex({triangle.y, triangle.z}),
-        edge_vertex({triangle.x, triangle.y})});
-    ttriangles.push_back({triangle.z, edge_vertex({triangle.z, triangle.x}),
-        edge_vertex({triangle.y, triangle.z})});
-    ttriangles.push_back({edge_vertex({triangle.x, triangle.y}),
-        edge_vertex({triangle.y, triangle.z}),
-        edge_vertex({triangle.z, triangle.x})});
-  }
-  // done
-  return {ttriangles, tvertices};
-}
-
-// Subdivide quads.
-template <typename T>
-static pair<vector<vec4i>, vector<T>> subdivide_quads_impl(
-    const vector<vec4i>& quads, const vector<T>& vertices) {
-  // early exit
-  if (quads.empty() || vertices.empty()) return {quads, vertices};
-  // get edges
-  auto emap  = make_edge_map(quads);
-  auto edges = get_edges(emap);
-  // create vertices
-  auto tvertices = vector<T>{};
-  tvertices.reserve(vertices.size() + edges.size() + quads.size());
-  for (auto& vertex : vertices) tvertices.push_back(vertex);
-  for (auto& [v1, v2] : edges)
-    tvertices.push_back((vertices[v1] + vertices[v2]) / 2);
-  for (auto& [v1, v2, v3, v4] : quads) {
-    if (v3 != v4) {
-      tvertices.push_back(
-          (vertices[v1] + vertices[v2] + vertices[v3] + vertices[v4]) / 4);
-    } else {
-      tvertices.push_back((vertices[v1] + vertices[v2] + vertices[v3]) / 3);
-    }
-  }
-  // create quads
-  auto tquads = vector<vec4i>{};
-  tquads.reserve(quads.size() * 4);
-  auto edge_vertex = [&emap, nverts = (int)vertices.size()](const vec2i& edge) {
-    return nverts + edge_index(emap, edge);
-  };
-  auto quad_vertex = [nverts    = (int)vertices.size(),
-                         nedges = (int)edges.size()](size_t quad_id) {
-    return nverts + nedges + (int)quad_id;
-  };
-  for (auto&& [quad_id, quad] : enumerate(quads)) {
-    if (!is_triangle(quad)) {
-      tquads.push_back({quad.x, edge_vertex({quad.x, quad.y}),
-          quad_vertex(quad_id), edge_vertex({quad.w, quad.x})});
-      tquads.push_back({quad.y, edge_vertex({quad.y, quad.z}),
-          quad_vertex(quad_id), edge_vertex({quad.x, quad.y})});
-      tquads.push_back({quad.z, edge_vertex({quad.z, quad.w}),
-          quad_vertex(quad_id), edge_vertex({quad.y, quad.z})});
-      tquads.push_back({quad.w, edge_vertex({quad.w, quad.x}),
-          quad_vertex(quad_id), edge_vertex({quad.z, quad.w})});
-    } else {
-      tquads.push_back({quad.x, edge_vertex({quad.x, quad.y}),
-          quad_vertex(quad_id), edge_vertex({quad.z, quad.x})});
-      tquads.push_back({quad.y, edge_vertex({quad.y, quad.z}),
-          quad_vertex(quad_id), edge_vertex({quad.x, quad.y})});
-      tquads.push_back({quad.z, edge_vertex({quad.z, quad.x}),
-          quad_vertex(quad_id), edge_vertex({quad.y, quad.z})});
-    }
-  }
-  // done
-  return {tquads, tvertices};
-}
-
-// Subdivide beziers.
-template <typename T>
-static pair<vector<vec4i>, vector<T>> subdivide_beziers_impl(
-    const vector<vec4i>& beziers, const vector<T>& vertices) {
-  // early exit
-  if (beziers.empty() || vertices.empty()) return {beziers, vertices};
-  // get edges
-  auto vmap      = unordered_map<int, int>();
-  auto tvertices = vector<T>();
-  auto tbeziers  = vector<vec4i>();
-  for (auto& bezier : beziers) {
-    for (auto vid : {bezier.x, bezier.w}) {
-      if (vmap.find(vid) == vmap.end()) {
-        vmap[vid] = (int)tvertices.size();
-        tvertices.push_back(vertices[vid]);
-      }
-    }
-    auto bo = (int)tvertices.size();
-    tbeziers.push_back({vmap.at(bezier.x), bo + 0, bo + 1, bo + 2});
-    tbeziers.push_back({bo + 2, bo + 3, bo + 4, vmap.at(bezier.w)});
-    tvertices.push_back(vertices[bezier.x] / 2 + vertices[bezier.y] / 2);
-    tvertices.push_back(vertices[bezier.x] / 4 + vertices[bezier.y] / 2 +
-                        vertices[bezier.z] / 4);
-    tvertices.push_back(
-        vertices[bezier.x] / 8 + vertices[bezier.y] * ((float)3 / (float)8) +
-        vertices[bezier.z] * ((float)3 / (float)8) + vertices[bezier.w] / 8);
-    tvertices.push_back(vertices[bezier.y] / 4 + vertices[bezier.z] / 2 +
-                        vertices[bezier.w] / 4);
-    tvertices.push_back(vertices[bezier.z] / 2 + vertices[bezier.w] / 2);
-  }
-
-  // done
-  return {tbeziers, tvertices};
-}
-
-// Subdivide catmullclark.
-template <typename T>
-static pair<vector<vec4i>, vector<T>> subdivide_catmullclark_impl(
-    const vector<vec4i>& quads, const vector<T>& vertices, bool lock_boundary) {
-  // early exit
-  if (quads.empty() || vertices.empty()) return {quads, vertices};
-  // get edges
-  auto emap     = make_edge_map(quads);
-  auto edges    = get_edges(emap);
-  auto boundary = get_boundary(emap);
-
-  // split elements ------------------------------------
-  // create vertices
-  auto tvertices = vector<T>{};
-  tvertices.reserve(vertices.size() + edges.size() + quads.size());
-  for (auto& vertex : vertices) tvertices.push_back(vertex);
-  for (auto& [v1, v2] : edges)
-    tvertices.push_back((vertices[v1] + vertices[v2]) / 2);
-  for (auto& [v1, v2, v3, v4] : quads) {
-    if (v3 != v4) {
-      tvertices.push_back(
-          (vertices[v1] + vertices[v2] + vertices[v3] + vertices[v4]) / 4);
-    } else {
-      tvertices.push_back((vertices[v1] + vertices[v2] + vertices[v3]) / 3);
-    }
-  }
-  // create quads
-  auto tquads = vector<vec4i>{};
-  tquads.reserve(quads.size() * 4);
-  auto edge_vertex = [&emap, nverts = (int)vertices.size()](const vec2i& edge) {
-    return nverts + edge_index(emap, edge);
-  };
-  auto quad_vertex = [nverts    = (int)vertices.size(),
-                         nedges = (int)edges.size()](size_t quad_id) {
-    return nverts + nedges + (int)quad_id;
-  };
-  for (auto&& [quad_id, quad] : enumerate(quads)) {
-    auto& [v1, v2, v3, v4] = quad;
-    if (v3 != v4) {
-      tquads.push_back({v1, edge_vertex({v1, v2}), quad_vertex(quad_id),
-          edge_vertex({v4, v1})});
-      tquads.push_back({v2, edge_vertex({v2, v3}), quad_vertex(quad_id),
-          edge_vertex({v1, v2})});
-      tquads.push_back({v3, edge_vertex({v3, v4}), quad_vertex(quad_id),
-          edge_vertex({v2, v3})});
-      tquads.push_back({v4, edge_vertex({v4, v1}), quad_vertex(quad_id),
-          edge_vertex({v3, v4})});
-    } else {
-      tquads.push_back({v1, edge_vertex({v1, v2}), quad_vertex(quad_id),
-          edge_vertex({v3, v1})});
-      tquads.push_back({v2, edge_vertex({v2, v3}), quad_vertex(quad_id),
-          edge_vertex({v1, v2})});
-      tquads.push_back({v3, edge_vertex({v3, v1}), quad_vertex(quad_id),
-          edge_vertex({v2, v3})});
-    }
-  }
-
-  // split boundary
-  auto tboundary = vector<vec2i>{};
-  tboundary.reserve(boundary.size());
-  for (auto& [v1, v2] : boundary) {
-    tboundary.push_back({v1, edge_vertex({v1, v2})});
-    tboundary.push_back({edge_vertex({v1, v2}), v2});
-  }
-
-  // setup creases -----------------------------------
-  auto tcrease_edges = vector<vec2i>{};
-  auto tcrease_verts = vector<int>{};
-  if (lock_boundary) {
-    for (auto& [v1, v2] : tboundary) {
-      tcrease_verts.push_back(v1);
-      tcrease_verts.push_back(v2);
-    }
-  } else {
-    for (auto& b : tboundary) tcrease_edges.push_back(b);
-  }
-
-  // define vertices valence ---------------------------
-  auto tvert_val = vector<int>(tvertices.size(), 2);
-  for (auto& [v1, v2] : tboundary) {
-    tvert_val[v1] = (lock_boundary) ? 0 : 1;
-    tvert_val[v2] = (lock_boundary) ? 0 : 1;
-  }
-
-  // averaging pass ----------------------------------
-  auto avert  = vector<T>(tvertices.size(), T());
-  auto acount = vector<int>(tvertices.size(), 0);
-  for (auto& point : tcrease_verts) {
-    if (tvert_val[point] != 0) continue;
-    avert[point] += tvertices[point];
-    acount[point] += 1;
-  }
-  for (auto& edge : tcrease_edges) {
-    auto centroid = (tvertices[edge.x] + tvertices[edge.y]) / 2;
-    for (auto vid : edge) {
-      if (tvert_val[vid] != 1) continue;
-      avert[vid] += centroid;
-      acount[vid] += 1;
-    }
-  }
-  for (auto& quad : tquads) {
-    auto centroid = (tvertices[quad.x] + tvertices[quad.y] + tvertices[quad.z] +
-                        tvertices[quad.w]) /
-                    4;
-    for (auto vid : quad) {
-      if (tvert_val[vid] != 2) continue;
-      avert[vid] += centroid;
-      acount[vid] += 1;
-    }
-  }
-  for (auto i : range(tvertices.size())) avert[i] /= (float)acount[i];
-
-  // correction pass ----------------------------------
-  // p = p + (avg_p - p) * (4/avg_count)
-  for (auto i : range(tvertices.size())) {
-    if (tvert_val[i] != 2) continue;
-    avert[i] = tvertices[i] +
-               (avert[i] - tvertices[i]) * (4 / (float)acount[i]);
-  }
-  tvertices = avert;
-
-  // done
-  return {tquads, tvertices};
-}
-
-pair<vector<vec2i>, vector<float>> subdivide_lines(
-    const vector<vec2i>& lines, const vector<float>& vertices) {
-  return subdivide_lines_impl(lines, vertices);
-}
-pair<vector<vec2i>, vector<vec2f>> subdivide_lines(
-    const vector<vec2i>& lines, const vector<vec2f>& vertices) {
-  return subdivide_lines_impl(lines, vertices);
-}
-pair<vector<vec2i>, vector<vec3f>> subdivide_lines(
-    const vector<vec2i>& lines, const vector<vec3f>& vertices) {
-  return subdivide_lines_impl(lines, vertices);
-}
-pair<vector<vec2i>, vector<vec4f>> subdivide_lines(
-    const vector<vec2i>& lines, const vector<vec4f>& vertices) {
-  return subdivide_lines_impl(lines, vertices);
-}
-
-pair<vector<vec3i>, vector<float>> subdivide_triangles(
-    const vector<vec3i>& triangles, const vector<float>& vertices) {
-  return subdivide_triangles_impl(triangles, vertices);
-}
-pair<vector<vec3i>, vector<vec2f>> subdivide_triangles(
-    const vector<vec3i>& triangles, const vector<vec2f>& vertices) {
-  return subdivide_triangles_impl(triangles, vertices);
-}
-pair<vector<vec3i>, vector<vec3f>> subdivide_triangles(
-    const vector<vec3i>& triangles, const vector<vec3f>& vertices) {
-  return subdivide_triangles_impl(triangles, vertices);
-}
-pair<vector<vec3i>, vector<vec4f>> subdivide_triangles(
-    const vector<vec3i>& triangles, const vector<vec4f>& vertices) {
-  return subdivide_triangles_impl(triangles, vertices);
-}
-
-pair<vector<vec4i>, vector<float>> subdivide_quads(
-    const vector<vec4i>& quads, const vector<float>& vertices) {
-  return subdivide_quads_impl(quads, vertices);
-}
-pair<vector<vec4i>, vector<vec2f>> subdivide_quads(
-    const vector<vec4i>& quads, const vector<vec2f>& vertices) {
-  return subdivide_quads_impl(quads, vertices);
-}
-pair<vector<vec4i>, vector<vec3f>> subdivide_quads(
-    const vector<vec4i>& quads, const vector<vec3f>& vertices) {
-  return subdivide_quads_impl(quads, vertices);
-}
-pair<vector<vec4i>, vector<vec4f>> subdivide_quads(
-    const vector<vec4i>& quads, const vector<vec4f>& vertices) {
-  return subdivide_quads_impl(quads, vertices);
-}
-
-pair<vector<vec4i>, vector<float>> subdivide_beziers(
-    const vector<vec4i>& beziers, const vector<float>& vertices) {
-  return subdivide_beziers_impl(beziers, vertices);
-}
-pair<vector<vec4i>, vector<vec2f>> subdivide_beziers(
-    const vector<vec4i>& beziers, const vector<vec2f>& vertices) {
-  return subdivide_beziers_impl(beziers, vertices);
-}
-pair<vector<vec4i>, vector<vec3f>> subdivide_beziers(
-    const vector<vec4i>& beziers, const vector<vec3f>& vertices) {
-  return subdivide_beziers_impl(beziers, vertices);
-}
-pair<vector<vec4i>, vector<vec4f>> subdivide_beziers(
-    const vector<vec4i>& beziers, const vector<vec4f>& vertices) {
-  return subdivide_beziers_impl(beziers, vertices);
-}
-
-pair<vector<vec4i>, vector<float>> subdivide_catmullclark(
-    const vector<vec4i>& quads, const vector<float>& vertices,
-    bool lock_boundary) {
-  return subdivide_catmullclark_impl(quads, vertices, lock_boundary);
-}
-pair<vector<vec4i>, vector<vec2f>> subdivide_catmullclark(
-    const vector<vec4i>& quads, const vector<vec2f>& vertices,
-    bool lock_boundary) {
-  return subdivide_catmullclark_impl(quads, vertices, lock_boundary);
-}
-pair<vector<vec4i>, vector<vec3f>> subdivide_catmullclark(
-    const vector<vec4i>& quads, const vector<vec3f>& vertices,
-    bool lock_boundary) {
-  return subdivide_catmullclark_impl(quads, vertices, lock_boundary);
-}
-pair<vector<vec4i>, vector<vec4f>> subdivide_catmullclark(
-    const vector<vec4i>& quads, const vector<vec4f>& vertices,
-    bool lock_boundary) {
-  return subdivide_catmullclark_impl(quads, vertices, lock_boundary);
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION OF SHAPE SAMPLING
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Pick a point in a point set uniformly.
-int sample_points(int npoints, float re) { return sample_uniform(npoints, re); }
-int sample_points(const vector<float>& cdf, float re) {
-  return sample_discrete(cdf, re);
-}
-vector<float> sample_points_cdf(int npoints) {
-  auto cdf = vector<float>(npoints);
-  for (auto i : range(cdf.size())) cdf[i] = 1 + (i != 0 ? cdf[i - 1] : 0);
-  return cdf;
-}
-void sample_points_cdf(vector<float>& cdf, int npoints) {
-  for (auto i : range(cdf.size())) cdf[i] = 1 + (i != 0 ? cdf[i - 1] : 0);
-}
-
-// Pick a point on lines uniformly.
-pair<int, float> sample_lines(const vector<float>& cdf, float re, float ru) {
-  return {sample_discrete(cdf, re), ru};
-}
-vector<float> sample_lines_cdf(
-    const vector<vec2i>& lines, const vector<vec3f>& positions) {
-  auto cdf = vector<float>(lines.size());
-  for (auto i : range(cdf.size())) {
-    auto& [v1, v2] = lines[i];
-    auto w         = line_length(positions[v1], positions[v2]);
-    cdf[i]         = w + (i != 0 ? cdf[i - 1] : 0);
-  }
-  return cdf;
-}
-void sample_lines_cdf(vector<float>& cdf, const vector<vec2i>& lines,
-    const vector<vec3f>& positions) {
-  for (auto i : range(cdf.size())) {
-    auto& [v1, v2] = lines[i];
-    auto w         = line_length(positions[v1], positions[v2]);
-    cdf[i]         = w + (i != 0 ? cdf[i - 1] : 0);
-  }
-}
-
-// Pick a point on a triangle mesh uniformly.
-pair<int, vec2f> sample_triangles(
-    const vector<float>& cdf, float re, const vec2f& ruv) {
-  return {sample_discrete(cdf, re), sample_triangle(ruv)};
-}
-vector<float> sample_triangles_cdf(
-    const vector<vec3i>& triangles, const vector<vec3f>& positions) {
-  auto cdf = vector<float>(triangles.size());
-  for (auto i : range(cdf.size())) {
-    auto& [v1, v2, v3] = triangles[i];
-    auto w = triangle_area(positions[v1], positions[v2], positions[v3]);
-    cdf[i] = w + (i != 0 ? cdf[i - 1] : 0);
-  }
-  return cdf;
-}
-void sample_triangles_cdf(vector<float>& cdf, const vector<vec3i>& triangles,
-    const vector<vec3f>& positions) {
-  for (auto i : range(cdf.size())) {
-    auto& [v1, v2, v3] = triangles[i];
-    auto w = triangle_area(positions[v1], positions[v2], positions[v3]);
-    cdf[i] = w + (i != 0 ? cdf[i - 1] : 0);
-  }
-}
-
-// Pick a point on a quad mesh uniformly.
-pair<int, vec2f> sample_quads(
-    const vector<float>& cdf, float re, const vec2f& ruv) {
-  return {sample_discrete(cdf, re), ruv};
-}
-pair<int, vec2f> sample_quads(const vector<vec4i>& quads,
-    const vector<float>& cdf, float re, const vec2f& ruv) {
-  auto element = sample_discrete(cdf, re);
-  if (!is_triangle(quads[element])) {
-    return {element, sample_triangle(ruv)};
-  } else {
-    return {element, ruv};
-  }
-}
-vector<float> sample_quads_cdf(
-    const vector<vec4i>& quads, const vector<vec3f>& positions) {
-  auto cdf = vector<float>(quads.size());
-  for (auto i : range(cdf.size())) {
-    auto& [v1, v2, v3, v4] = quads[i];
-    auto w                 = quad_area(
-        positions[v1], positions[v2], positions[v3], positions[v4]);
-    cdf[i] = w + (i ? cdf[i - 1] : 0);
-  }
-  return cdf;
-}
-void sample_quads_cdf(vector<float>& cdf, const vector<vec4i>& quads,
-    const vector<vec3f>& positions) {
-  for (auto i : range(cdf.size())) {
-    auto& [v1, v2, v3, v4] = quads[i];
-    auto w                 = quad_area(
-        positions[v1], positions[v2], positions[v3], positions[v4]);
-    cdf[i] = w + (i ? cdf[i - 1] : 0);
-  }
-}
-
-// Samples a set of points over a triangle mesh uniformly. The rng function
-// takes the point index and returns vec3f numbers uniform directibuted in
-// [0,1]^3. unorm and texcoord are optional.
-void sample_triangles(vector<vec3f>& sampled_positions,
-    vector<vec3f>& sampled_normals, vector<vec2f>& sampled_texcoords,
-    const vector<vec3i>& triangles, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texcoords, int npoints,
-    int seed) {
-  sampled_positions = vector<vec3f>(npoints);
-  sampled_normals   = vector<vec3f>(npoints);
-  sampled_texcoords = vector<vec2f>(npoints);
-  auto cdf          = sample_triangles_cdf(triangles, positions);
-  auto rng          = make_rng(seed);
-  for (auto i : range(npoints)) {
-    auto sample          = sample_triangles(cdf, rand1f(rng), rand2f(rng));
-    auto& [v1, v2, v3]   = triangles[sample.first];
-    auto uv              = sample.second;
-    sampled_positions[i] = interpolate_triangle(
-        positions[v1], positions[v2], positions[v3], uv);
-    if (!sampled_normals.empty()) {
-      sampled_normals[i] = normalize(
-          interpolate_triangle(normals[v1], normals[v2], normals[v3], uv));
-    } else {
-      sampled_normals[i] = triangle_normal(
-          positions[v1], positions[v2], positions[v3]);
-    }
-    if (!sampled_texcoords.empty()) {
-      sampled_texcoords[i] = interpolate_triangle(
-          texcoords[v1], texcoords[v2], texcoords[v3], uv);
-    } else {
-      sampled_texcoords[i] = vec2f{0, 0};
-    }
-  }
-}
-
-// Samples a set of points over a triangle mesh uniformly. The rng function
-// takes the point index and returns vec3f numbers uniform directibuted in
-// [0,1]^3. unorm and texcoord are optional.
-void sample_quads(vector<vec3f>& sampled_positions,
-    vector<vec3f>& sampled_normals, vector<vec2f>& sampled_texcoords,
-    const vector<vec4i>& quads, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texcoords, int npoints,
-    int seed) {
-  sampled_positions = vector<vec3f>(npoints);
-  sampled_normals   = vector<vec3f>(npoints);
-  sampled_texcoords = vector<vec2f>(npoints);
-  auto cdf          = sample_quads_cdf(quads, positions);
-  auto rng          = make_rng(seed);
-  for (auto i : range(npoints)) {
-    auto sample            = sample_quads(cdf, rand1f(rng), rand2f(rng));
-    auto& [v1, v2, v3, v4] = quads[sample.first];
-    auto uv                = sample.second;
-    sampled_positions[i]   = interpolate_quad(
-        positions[v1], positions[v2], positions[v3], positions[v4], uv);
-    if (!sampled_normals.empty()) {
-      sampled_normals[i] = normalize(interpolate_quad(
-          normals[v1], normals[v2], normals[v3], normals[v4], uv));
-    } else {
-      sampled_normals[i] = quad_normal(
-          positions[v1], positions[v2], positions[v3], positions[v4]);
-    }
-    if (!sampled_texcoords.empty()) {
-      sampled_texcoords[i] = interpolate_quad(
-          texcoords[v1], texcoords[v2], texcoords[v3], texcoords[v4], uv);
-    } else {
-      sampled_texcoords[i] = vec2f{0, 0};
-    }
-  }
 }
 
 }  // namespace yocto

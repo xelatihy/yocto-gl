@@ -165,19 +165,54 @@ constexpr auto invalidb2f = bbox2f{};
 constexpr auto invalidb3f = bbox3f{};
 constexpr auto invalidb4f = bbox4f{};
 
+#ifndef __CUDACC__
+
+// Bounding box construction from a range
+template <typename R, typename T = element_t<rvalue_t<R>>,
+    size_t N = element_d<rvalue_t<R>>>
+inline bbox<T, N> to_bbox(R&& range) {
+  auto box = bbox<T, N>{};
+  for (auto value : range) box = merge(value);
+  return box;
+}
+template <typename R, typename Func,
+    typename T = element_t<result_t<Func, rvalue_t<R>>>,
+    size_t N   = element_d<result_t<Func, rvalue_t<R>>>>
+inline bbox<T, N> to_bbox(R&& range, Func&& func) {
+  auto box = bbox<T, N>{};
+  for (auto value : range) box = merge(func(value));
+  return box;
+}
+
+#endif
+
 // Bounding box properties
 template <typename T, size_t N>
-constexpr kernel vec<T, N> bbox_center(const bbox<T, N>& a) {
+constexpr kernel vec<T, N> valid(const bbox<T, N>& a) {
+  return all(component_less_equal(a.min, a.max));
+}
+template <typename T, size_t N>
+constexpr kernel bool empty(const bbox<T, N>& a) {
+  return a.min == a.max;
+}
+template <typename T, size_t N>
+constexpr kernel vec<T, N> center(const bbox<T, N>& a) {
   return (a.min + a.max) / 2;
 }
 template <typename T, size_t N>
-constexpr kernel vec<T, N> bbox_diagonal(const bbox<T, N>& a) {
+constexpr kernel vec<T, N> diagonal(const bbox<T, N>& a) {
   return a.max - a.min;
 }
-template <typename T>
-constexpr kernel T bbox_area(const bbox<T, 3>& a) {
-  auto d = a.max - a.min;
-  return 2 * d.x * d.y + 2 * d.x * d.z + 2 * d.y * d.z;
+template <typename T, size_t N>
+constexpr kernel T area(const bbox<T, N>& a) {
+  static_assert(N == 2 || N == 3);
+  if constexpr (N == 2) {
+    auto d = a.max - a.min;
+    return 2 * d.x * d.y;
+  } else if constexpr (N == 3) {
+    auto d = a.max - a.min;
+    return 2 * d.x * d.y + 2 * d.x * d.z + 2 * d.y * d.z;
+  }
 }
 
 // Bounding box comparisons.
@@ -1365,14 +1400,13 @@ inline intersection3f intersect_quads_bvh(const bvh_data& bvh,
 namespace yocto {
 
 // Splits a BVH node using the SAH heuristic. Returns split position and axis.
-inline vec2i split_sah(vector<int>& primitives, const vector<bbox3f>& bboxes,
-    const vector<vec3f>& centers, int start, int end) {
+inline vec2i split_sah(
+    vector<int>& primitives, const vector<bbox3f>& bboxes, int start, int end) {
   // compute primitive bounds and size
-  auto cbbox = invalidb3f;
+  auto cbox = invalidb3f;
   for (auto i = start; i < end; i++)
-    cbbox = merge(cbbox, centers[primitives[i]]);
-  auto csize = cbbox.max - cbbox.min;
-  if (csize == vec3f{0, 0, 0}) return {(start + end) / 2, 0};
+    cbox = merge(cbox, center(bboxes[primitives[i]]));
+  if (cbox.min == cbox.max) return {(start + end) / 2, 0};
 
   // consider N bins, compute their cost and keep the minimum
   auto      axis     = 0;
@@ -1381,21 +1415,20 @@ inline vec2i split_sah(vector<int>& primitives, const vector<bbox3f>& bboxes,
   auto      min_cost = flt_max;
   for (auto saxis : range(3)) {
     for (auto b = 1; b < nbins; b++) {
-      auto bsplit    = cbbox.min[saxis] + b * csize[saxis] / nbins;
-      auto left_bbox = invalidb3f, right_bbox = invalidb3f;
-      auto left_nprims = 0, right_nprims = 0;
+      auto bsplit = cbox.min[saxis] + b * diagonal(cbox)[saxis] / nbins;
+      auto lbox = invalidb3f, rbox = invalidb3f;
+      auto lprims = 0, rprims = 0;
       for (auto i = start; i < end; i++) {
-        if (centers[primitives[i]][saxis] < bsplit) {
-          left_bbox = merge(left_bbox, bboxes[primitives[i]]);
-          left_nprims += 1;
+        if (center(bboxes[primitives[i]])[saxis] < bsplit) {
+          lbox = merge(lbox, bboxes[primitives[i]]);
+          lprims += 1;
         } else {
-          right_bbox = merge(right_bbox, bboxes[primitives[i]]);
-          right_nprims += 1;
+          rbox = merge(rbox, bboxes[primitives[i]]);
+          rprims += 1;
         }
       }
-      auto cost =
-          1 + left_nprims * bbox_area(left_bbox) / (bbox_area(cbbox) + 1e-12f) +
-          right_nprims * bbox_area(right_bbox) / (bbox_area(cbbox) + 1e-12f);
+      auto cost = 1 + lprims * area(lbox) / (area(cbox) + 1e-12f) +
+                  rprims * area(rbox) / (area(cbox) + 1e-12f);
       if (cost < min_cost) {
         min_cost = cost;
         split    = bsplit;
@@ -1406,8 +1439,8 @@ inline vec2i split_sah(vector<int>& primitives, const vector<bbox3f>& bboxes,
   // split
   auto middle =
       (int)(std::partition(primitives.data() + start, primitives.data() + end,
-                [axis, split, &centers](auto primitive) {
-                  return centers[primitive][axis] < split;
+                [axis, split, &bboxes](auto primitive) {
+                  return center(bboxes[primitive])[axis] < split;
                 }) -
             primitives.data());
 
@@ -1420,26 +1453,25 @@ inline vec2i split_sah(vector<int>& primitives, const vector<bbox3f>& bboxes,
 
 // Splits a BVH node using the balance heuristic. Returns split position and
 // axis.
-inline vec2i split_balanced(vector<int>& primitives,
-    const vector<bbox3f>& bboxes, const vector<vec3f>& centers, int start,
-    int end) {
+inline vec2i split_balanced(
+    vector<int>& primitives, const vector<bbox3f>& bboxes, int start, int end) {
   // compute primitives bounds and size
-  auto cbbox = invalidb3f;
+  auto cbox = invalidb3f;
   for (auto i = start; i < end; i++)
-    cbbox = merge(cbbox, centers[primitives[i]]);
-  auto csize = cbbox.max - cbbox.min;
-  if (csize == vec3f{0, 0, 0}) return {(start + end) / 2, 0};
+    cbox = merge(cbox, center(bboxes[primitives[i]]));
+  if (cbox.min == cbox.max) return {(start + end) / 2, 0};
 
   // split along largest
-  auto axis = (int)argmax(csize);
+  auto axis = (int)argmax(diagonal(cbox));
 
   // balanced tree split: find the largest axis of the
   // bounding box and split along this one right in the middle
   auto middle = (start + end) / 2;
   std::nth_element(primitives.data() + start, primitives.data() + middle,
       primitives.data() + end,
-      [axis, &centers](auto primitive_a, auto primitive_b) {
-        return centers[primitive_a][axis] < centers[primitive_b][axis];
+      [axis, &bboxes](auto primitive_a, auto primitive_b) {
+        return center(bboxes[primitive_a])[axis] <
+               center(bboxes[primitive_b])[axis];
       });
 
   // if we were not able to split, just break the primitives in half
@@ -1451,24 +1483,23 @@ inline vec2i split_balanced(vector<int>& primitives,
 
 // Splits a BVH node using the middle heuristic. Returns split position and
 // axis.
-inline vec2i split_middle(vector<int>& primitives, const vector<bbox3f>& bboxes,
-    const vector<vec3f>& centers, int start, int end) {
+inline vec2i split_middle(
+    vector<int>& primitives, const vector<bbox3f>& bboxes, int start, int end) {
   // compute primintive bounds and size
-  auto cbbox = invalidb3f;
+  auto cbox = invalidb3f;
   for (auto i = start; i < end; i++)
-    cbbox = merge(cbbox, centers[primitives[i]]);
-  auto csize = cbbox.max - cbbox.min;
-  if (csize == vec3f{0, 0, 0}) return {(start + end) / 2, 0};
+    cbox = merge(cbox, center(bboxes[primitives[i]]));
+  if (cbox.min == cbox.max) return {(start + end) / 2, 0};
 
   // split along largest
-  auto axis = (int)argmax(csize);
+  auto axis = (int)argmax(diagonal(cbox));
 
   // split the space in the middle along the largest axis
-  auto split = bbox_center(cbbox)[axis];
+  auto split = center(cbox)[axis];
   auto middle =
       (int)(std::partition(primitives.data() + start, primitives.data() + end,
-                [axis, split, &centers](auto primitive) {
-                  return centers[primitive][axis] < split;
+                [axis, split, &bboxes](auto primitive) {
+                  return center(bboxes[primitive])[axis] < split;
                 }) -
             primitives.data());
 
@@ -1486,6 +1517,8 @@ constexpr auto bvh_max_prims = 4;
 template <typename E, typename Func, typename T>
 inline bvh_gdata<T, 3> make_bvh(
     const vector<E>& elements, bool highquality, Func&& bbox_func) {
+  // create primitives
+
   // bvh
   auto bvh = bvh_gdata<T, 3>{};
 
@@ -1502,10 +1535,6 @@ inline bvh_gdata<T, 3> make_bvh(
   bvh.primitives = vector<int>(bboxes.size());
   for (auto&& [idx, primitive] : enumerate(bvh.primitives))
     primitive = (int)idx;
-
-  // prepare centers
-  auto centers = vector<vec<T, 3>>(bboxes.size());
-  for (auto&& [center, bbox] : zip(centers, bboxes)) center = bbox_center(bbox);
 
   // push first node onto the stack
   auto stack = vector<vec3i>{{0, 0, (int)bboxes.size()}};
@@ -1528,10 +1557,9 @@ inline bvh_gdata<T, 3> make_bvh(
     // split into two children
     if (end - start > bvh_max_prims) {
       // get split
-      auto [mid, axis] =
-          highquality
-              ? split_sah(bvh.primitives, bboxes, centers, start, end)
-              : split_middle(bvh.primitives, bboxes, centers, start, end);
+      auto [mid, axis] = highquality
+                             ? split_sah(bvh.primitives, bboxes, start, end)
+                             : split_middle(bvh.primitives, bboxes, start, end);
 
       // make an internal node
       node.internal = true;
@@ -1621,7 +1649,7 @@ inline intersection<T, 3> intersect_bvh(const bvh_gdata<T, 3>& bvh,
         node_stack[node_cur++] = node.start + 0;
       }
     } else {
-      for (auto idx = node.start; idx < node.start + node.num; idx++) {
+      for (auto idx : range(node.start, node.start + node.num)) {
         auto eintersection = intersect_element(
             ray, elements[bvh.primitives[idx]]);
         if (!eintersection.hit) continue;
