@@ -1160,6 +1160,8 @@ shape_data make_shape_preset(const string& type_) {
     return make_monkey();
   } else if (type == "wtcube") {
     return make_wtcube();
+  } else if (type == "opcube") {
+    return make_opcube();
   } else if (type == "wtsphere") {
     return make_wtsphere();
   } else if (type == "fvcube") {
@@ -1167,9 +1169,11 @@ shape_data make_shape_preset(const string& type_) {
   } else if (type == "fvsphere") {
     return fvshape_to_shape(make_fvsphere());
   } else if (type == "monkey_subdiv") {
-    return subdivide_shape(make_monkey(), 2, true);
+    return add_normals(subdivide_shape(make_monkey(), 2, true));
   } else if (type == "wtcube_subdiv") {
-    return subdivide_shape(make_wtcube(), 4, true);
+    return add_normals(subdivide_shape(make_wtcube(), 4, true));
+  } else if (type == "opcube_subdiv") {
+    return add_normals(subdivide_shape(make_opcube(), 4, true));
   } else if (type == "displaced_quady") {
     return make_quady(8);
   } else if (type == "displaced_sphere") {

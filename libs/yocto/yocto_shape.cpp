@@ -681,6 +681,23 @@ shape_data make_wtcube(int subdivisions) {
   }
   return shape;
 }
+shape_data make_opcube(int subdivisions) {
+  static const auto opcube_positions = vector<vec3f>{{-1, -1, +1}, {+1, -1, +1},
+      {+1, +1, +1}, {-1, +1, +1}, {+1, -1, -1}, {-1, -1, -1}, {-1, +1, -1},
+      {+1, +1, -1}};
+  static const auto opcube_quads     = vector<vec4i>{
+      {0, 1, 2, 3}, {4, 5, 6, 7}, {1, 4, 7, 2}, {5, 0, 3, 6}, {3, 2, 7, 6}};
+
+  auto shape = shape_data{};
+  if (subdivisions == 0) {
+    shape.quads     = opcube_quads;
+    shape.positions = opcube_positions;
+  } else {
+    std::tie(shape.quads, shape.positions) = subdivide_quads(
+        opcube_quads, opcube_positions, subdivisions);
+  }
+  return shape;
+}
 shape_data make_wtsphere(int subdivisions) {
   auto shape = make_wtcube(subdivisions);
   for (auto& p : shape.positions) p = normalize(p);

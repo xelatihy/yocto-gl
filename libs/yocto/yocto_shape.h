@@ -210,6 +210,8 @@ shape_data make_sphere(int subdivisions = 5);
 shape_data make_geosphere(int subdivisions = 3);
 // Make a cube that is watertight (only positions)
 shape_data make_wtcube(int subdivisions = 0);
+// Make a cube that is watertight and open (only positions)
+shape_data make_opcube(int subdivisions = 0);
 // Make a sphere that is watertight (only positions and normals)
 shape_data make_wtsphere(int subdivisions = 5);
 // Make a disk
