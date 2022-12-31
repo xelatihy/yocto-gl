@@ -873,6 +873,93 @@ static shape_data make_quads(const vec2i& steps, Vertex&& vertex) {
   return shape;
 }
 
+// Make a tessellated rectangle. Useful in other subdivisions.
+struct make_patch_vertex {
+  vec3f position;
+  vec3f normal;
+  vec2f texcoord;
+};
+template <typename Vertex>
+static shape_data make_quad_patch(const vec2i& steps, Vertex&& vertex) {
+  // indices and sizes
+  auto nverts = prod(steps + 1), nquads = prod(steps);
+  auto vid = [=](vec2i ij) { return ij.y * (steps.x + 1) + ij.x; };
+  auto fid = [=](vec2i ij) { return ij.y * steps.x + ij.x; };
+
+  // shape
+  auto shape = shape_data{};
+
+  // vertices
+  shape.positions = vector<vec3f>(nverts);
+  shape.normals   = vector<vec3f>(nverts);
+  shape.texcoords = vector<vec2f>(nverts);
+  for (auto ij : range(steps + 1)) {
+    auto [position, normal, texcoord] = vertex(ij / (vec2f)steps);
+    shape.positions[vid(ij)]          = position;
+    shape.normals[vid(ij)]            = normal;
+    shape.texcoords[vid(ij)]          = texcoord;
+  }
+
+  // faces
+  shape.quads = vector<vec4i>(nquads);
+  for (auto ij : range(steps)) {
+    shape.quads[fid(ij)] = {vid(ij + vec2i{0, 0}), vid(ij + vec2i{1, 0}),
+        vid(ij + vec2i{1, 1}), vid(ij + vec2i{0, 1})};
+  }
+
+  // done
+  return shape;
+}
+template <typename Vertex, size_t N>
+static shape_data make_quad_patches(
+    const array<vec2i, N>& steps, Vertex&& vertex) {
+  // indices and sizes
+  auto num_verts = 0, num_faces = 0;
+  auto vert_offsets = array<int, N>{0}, face_offsets = array<int, N>{0};
+  for (auto&& [p, steps_] : enumerate(steps)) {
+    vert_offsets[p] = num_verts + prod(steps_ + 1);
+    num_verts += prod(steps_ + 1);
+    face_offsets[p] = num_faces + prod(steps_);
+    num_faces += prod(steps_);
+  }
+  auto vid = [=](int patch, vec2i ij) {
+    return vert_offsets[patch] + ij.y * (steps[patch].x + 1) + ij.x;
+  };
+  auto fid = [=](int patch, vec2i ij) {
+    return face_offsets[patch] + ij.y * steps[patch].x + ij.x;
+  };
+
+  // shape
+  auto shape = shape_data{};
+
+  // vertices
+  shape.positions = vector<vec3f>(num_verts);
+  shape.normals   = vector<vec3f>(num_verts);
+  shape.texcoords = vector<vec2f>(num_verts);
+  for (auto patch : range((int)N)) {
+    for (auto ij : range(steps[patch] + 1)) {
+      auto [position, normal, texcoord] = vertex(
+          patch, ij / (vec2f)steps[patch]);
+      shape.positions[vid(patch, ij)] = position;
+      shape.normals[vid(patch, ij)]   = normal;
+      shape.texcoords[vid(patch, ij)] = texcoord;
+    }
+  }
+
+  // faces
+  shape.quads = vector<vec4i>(num_faces);
+  for (auto patch : range((int)N)) {
+    for (auto ij : range(steps[patch])) {
+      shape.quads[fid(patch, ij)] = {vid(patch, ij + vec2i{0, 0}),
+          vid(patch, ij + vec2i{1, 0}), vid(patch, ij + vec2i{1, 1}),
+          vid(patch, ij + vec2i{0, 1})};
+    }
+  }
+
+  // done
+  return shape;
+}
+
 // Merge shape elements
 void merge_shape_inplace(shape_data& shape, const shape_data& merge) {
   auto offset = (int)shape.positions.size();
@@ -937,44 +1024,39 @@ shape_data make_bulged_recty(
 
 // Make a box.
 shape_data make_box(const vec3i& steps, const vec3f& scale) {
-  auto shape = shape_data{};
-  // + z
-  merge_shape_inplace(shape, make_quads({steps.x, steps.y}, [=](vec2f uv) {
-    return make_quads_vertex{
-        vec3f(+scale.x * (uv.x * 2 - 1), +scale.y * (uv.y * 2 - 1), +scale.z),
-        vec3f(0, 0, 1), flip_v(uv)};
-  }));
-  // - z
-  merge_shape_inplace(shape, make_quads({steps.x, steps.y}, [=](vec2f uv) {
-    return make_quads_vertex{
-        vec3f(-scale.x * (uv.x * 2 - 1), +scale.y * (uv.y * 2 - 1), -scale.z),
-        vec3f(0, 0, -1), flip_v(uv)};
-  }));
-  // + x
-  merge_shape_inplace(shape, make_quads({steps.z, steps.y}, [=](vec2f uv) {
-    return make_quads_vertex{
-        vec3f(+scale.x, +scale.y * (uv.y * 2 - 1), -scale.z * (uv.x * 2 - 1)),
-        vec3f(1, 0, 0), flip_v(uv)};
-  }));
-  // - x
-  merge_shape_inplace(shape, make_quads({steps.z, steps.y}, [=](vec2f uv) {
-    return make_quads_vertex{
-        vec3f(-scale.x, +scale.y * (uv.y * 2 - 1), +scale.z * (uv.x * 2 - 1)),
-        vec3f(-1, 0, 0), flip_v(uv)};
-  }));
-  // + uv.y
-  merge_shape_inplace(shape, make_quads({steps.x, steps.z}, [=](vec2f uv) {
-    return make_quads_vertex{
-        vec3f(+scale.x * (uv.x * 2 - 1), +scale.y, -scale.z * (uv.y * 2 - 1)),
-        vec3f(0, +1, 0), flip_v(uv)};
-  }));
-  // - uv.y
-  merge_shape_inplace(shape, make_quads({steps.x, steps.z}, [=](vec2f uv) {
-    return make_quads_vertex{
-        vec3f(+scale.x * (uv.x * 2 - 1), -scale.y, +scale.z * (uv.y * 2 - 1)),
-        vec3f(0, -1, 0), flip_v(uv)};
-  }));
-  return shape;
+  return make_quad_patches(
+      array<vec2i, 6>{vec2i{steps.x, steps.y}, vec2i{steps.x, steps.y},
+          vec2i{steps.z, steps.y}, vec2i{steps.z, steps.y},
+          vec2i{steps.x, steps.z}, vec2i{steps.x, steps.z}},
+      [=](int patch, vec2f uv) {
+        switch (patch) {
+          case 0:  // + z
+            return make_quads_vertex{vec3f(+scale.x * (uv.x * 2 - 1),
+                                         +scale.y * (uv.y * 2 - 1), +scale.z),
+                vec3f(0, 0, 1), flip_v(uv)};
+          case 1:  // - z
+            return make_quads_vertex{vec3f(-scale.x * (uv.x * 2 - 1),
+                                         +scale.y * (uv.y * 2 - 1), -scale.z),
+                vec3f(0, 0, -1), flip_v(uv)};
+          case 2:  // + x
+            return make_quads_vertex{vec3f(+scale.x, +scale.y * (uv.y * 2 - 1),
+                                         -scale.z * (uv.x * 2 - 1)),
+                vec3f(1, 0, 0), flip_v(uv)};
+          case 3:  // - x
+            return make_quads_vertex{vec3f(-scale.x, +scale.y * (uv.y * 2 - 1),
+                                         +scale.z * (uv.x * 2 - 1)),
+                vec3f(-1, 0, 0), flip_v(uv)};
+          case 4:  // + y
+            return make_quads_vertex{vec3f(+scale.x * (uv.x * 2 - 1), +scale.y,
+                                         -scale.z * (uv.y * 2 - 1)),
+                vec3f(0, +1, 0), flip_v(uv)};
+          case 5:  // - y
+            return make_quads_vertex{vec3f(+scale.x * (uv.x * 2 - 1), -scale.y,
+                                         +scale.z * (uv.y * 2 - 1)),
+                vec3f(0, -1, 0), flip_v(uv)};
+          default: return make_quads_vertex{};
+        }
+      });
 }
 shape_data make_rounded_box(
     const vec3i& steps, const vec3f& scale, float radius) {
@@ -1083,29 +1165,33 @@ shape_data make_uvdisk(const vec2i& steps, float scale) {
 
 // Make a uv cylinder
 shape_data make_uvcylinder(const vec3i& steps, const vec2f& scale) {
-  auto shape = shape_data{};
-  // side
-  merge_shape_inplace(shape, make_quads({steps.x, steps.y}, [=](vec2f uv) {
-    auto phi = uv.x * 2 * pif, h = uv.y;
-    return make_quads_vertex{
-        vec3f{cos(phi) * scale.x, sin(phi) * scale.x, scale.y * (2 * h - 1)},
-        vec3f{cos(phi), sin(phi), 0}, uv};
-  }));
-  // top
-  merge_shape_inplace(shape, make_quads({steps.x, steps.z}, [=](vec2f uv) {
-    auto phi = uv.x * 2 * pif, r = 1 - uv.y;
-    return make_quads_vertex{
-        vec3f{r * scale.x * cos(phi), r * scale.x * sin(phi), +scale.y},
-        vec3f(0, 0, 1), flip_v(uv)};
-  }));
-  // bottom
-  merge_shape_inplace(shape, make_quads({steps.x, steps.z}, [=](vec2f uv) {
-    auto phi = uv.x * 2 * pif, r = uv.y;
-    return make_quads_vertex{
-        vec3f{r * scale.x * cos(phi), r * scale.x * sin(phi), -scale.y},
-        vec3f(0, 0, -1), uv};
-  }));
-  return shape;
+  return make_quad_patches(
+      array<vec2i, 3>{vec2i{steps.x, steps.y}, vec2i{steps.x, steps.z},
+          vec2i{steps.x, steps.z}},
+      [=](int patch, vec2f uv) {
+        switch (patch) {
+          case 0: {  // side
+            auto phi = uv.x * 2 * pif, h = uv.y;
+            return make_quads_vertex{
+                vec3f{cos(phi) * scale.x, sin(phi) * scale.x,
+                    scale.y * (2 * h - 1)},
+                vec3f{cos(phi), sin(phi), 0}, uv};
+          } break;
+          case 1: {  // top
+            auto phi = uv.x * 2 * pif, r = 1 - uv.y;
+            return make_quads_vertex{
+                vec3f{r * scale.x * cos(phi), r * scale.x * sin(phi), +scale.y},
+                vec3f(0, 0, 1), flip_v(uv)};
+          } break;
+          case 2: {  // bottom
+            auto phi = uv.x * 2 * pif, r = uv.y;
+            return make_quads_vertex{
+                vec3f{r * scale.x * cos(phi), r * scale.x * sin(phi), -scale.y},
+                vec3f(0, 0, -1), uv};
+          } break;
+          default: return make_quads_vertex{};
+        }
+      });
 }
 
 // Make a rounded uv cylinder
@@ -1137,55 +1223,64 @@ shape_data make_rounded_uvcylinder(
 
 // Make a uv capsule
 shape_data make_uvcapsule(const vec3i& steps, const vec2f& scale) {
-  auto shape = shape_data{};
-  // side
-  merge_shape_inplace(shape, make_quads({steps.x, steps.y}, [=](vec2f uv) {
-    auto phi = uv.x * 2 * pif, h = uv.y;
-    return make_quads_vertex{
-        vec3f{cos(phi) * scale.x, sin(phi) * scale.x, scale.y * (2 * h - 1)},
-        vec3f{cos(phi), sin(phi), 0}, uv};
-  }));
-  // top
-  merge_shape_inplace(shape, make_quads({steps.x, steps.z}, [=](vec2f uv) {
-    auto phi = uv.x * 2 * pif, theta = (1 - uv.y) * pif / 2;
-    return make_quads_vertex{
-        vec3f{cos(phi) * sin(theta) * scale.x, sin(phi) * sin(theta) * scale.x,
-            cos(theta) * scale.x + scale.y},
-        vec3f{cos(phi) * sin(theta), sin(phi) * sin(theta), cos(theta)},
-        flip_v(uv)};
-  }));
-  // bottom
-  merge_shape_inplace(shape, make_quads({steps.x, steps.z}, [=](vec2f uv) {
-    auto phi = uv.x * 2 * pif, theta = (1 - uv.y) * pif / 2;
-    return make_quads_vertex{
-        vec3f{cos(phi) * sin(theta) * scale.x, sin(phi) * sin(theta) * scale.x,
-            -cos(theta) * scale.x - scale.y},
-        vec3f{cos(phi) * sin(theta), sin(phi) * sin(theta), -cos(theta)}, uv};
-  }));
-  // done
-  return shape;
+  return make_quad_patches(
+      array<vec2i, 3>{vec2i{steps.x, steps.y}, vec2i{steps.x, steps.z},
+          vec2i{steps.x, steps.z}},
+      [=](int patch, vec2f uv) {
+        switch (patch) {
+          case 0: {  // side
+            auto phi = uv.x * 2 * pif, h = uv.y;
+            return make_quads_vertex{
+                vec3f{cos(phi) * scale.x, sin(phi) * scale.x,
+                    scale.y * (2 * h - 1)},
+                vec3f{cos(phi), sin(phi), 0}, uv};
+          } break;
+          case 1: {  // top
+            auto phi = uv.x * 2 * pif, theta = (1 - uv.y) * pif / 2;
+            return make_quads_vertex{vec3f{cos(phi) * sin(theta) * scale.x,
+                                         sin(phi) * sin(theta) * scale.x,
+                                         cos(theta) * scale.x + scale.y},
+                vec3f{cos(phi) * sin(theta), sin(phi) * sin(theta), cos(theta)},
+                flip_v(uv)};
+          } break;
+          case 2: {  // bottom
+            auto phi = uv.x * 2 * pif, theta = (1 - uv.y) * pif / 2;
+            return make_quads_vertex{vec3f{cos(phi) * sin(theta) * scale.x,
+                                         sin(phi) * sin(theta) * scale.x,
+                                         -cos(theta) * scale.x - scale.y},
+                vec3f{
+                    cos(phi) * sin(theta), sin(phi) * sin(theta), -cos(theta)},
+                uv};
+          } break;
+          default: return make_quads_vertex{};
+        }
+      });
 }
 
 // Make a uv cone
 shape_data make_uvcone(const vec3i& steps, const vec2f& scale) {
-  auto shape = shape_data{};
-  // side
-  merge_shape_inplace(shape, make_quads({steps.x, steps.y}, [=](vec2f uv) {
-    auto normal2d = normalize(scale * vec2f{1, 2});
-    auto phi = uv.x * 2 * pif, h = uv.y;
-    return make_quads_vertex{
-        vec3f{cos(phi) * (1 - h) * scale.x, sin(phi) * (1 - h) * scale.x,
-            scale.y * (2 * h - 1)},
-        vec3f{cos(phi) * normal2d.y, sin(phi) * normal2d.y, normal2d.x}, uv};
-  }));
-  // bottom
-  merge_shape_inplace(shape, make_quads({steps.y, steps.z}, [=](vec2f uv) {
-    auto phi = uv.x * 2 * pif, r = uv.y;
-    return make_quads_vertex{
-        vec3f{r * scale.x * cos(phi), r * scale.x * sin(phi), -scale.y},
-        vec3f(0, 0, -1), uv};
-  }));
-  return shape;
+  return make_quad_patches(
+      array<vec2i, 2>{vec2i{steps.x, steps.y}, vec2i{steps.y, steps.z}},
+      [=](int patch, vec2f uv) {
+        switch (patch) {
+          case 0: {  // side
+            auto normal2d = normalize(scale * vec2f{1, 2});
+            auto phi = uv.x * 2 * pif, h = uv.y;
+            return make_quads_vertex{
+                vec3f{cos(phi) * (1 - h) * scale.x,
+                    sin(phi) * (1 - h) * scale.x, scale.y * (2 * h - 1)},
+                vec3f{cos(phi) * normal2d.y, sin(phi) * normal2d.y, normal2d.x},
+                uv};
+          } break;
+          case 1: {  // bottom
+            auto phi = uv.x * 2 * pif, r = uv.y;
+            return make_quads_vertex{
+                vec3f{r * scale.x * cos(phi), r * scale.x * sin(phi), -scale.y},
+                vec3f(0, 0, -1), uv};
+          } break;
+          default: return make_quads_vertex{};
+        }
+      });
 }
 
 // Make a face-varying rect
