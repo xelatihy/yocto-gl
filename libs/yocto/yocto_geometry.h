@@ -165,6 +165,8 @@ constexpr auto invalidb2f = bbox2f{};
 constexpr auto invalidb3f = bbox3f{};
 constexpr auto invalidb4f = bbox4f{};
 
+#ifndef __CUDACC__
+
 // Bounding box construction from a range
 template <typename R, typename T = element_t<rvalue_t<R>>,
     size_t N = element_d<rvalue_t<R>>>
@@ -181,6 +183,8 @@ inline bbox<T, N> to_bbox(R&& range, Func&& func) {
   for (auto value : range) box = merge(func(value));
   return box;
 }
+
+#endif
 
 // Bounding box properties
 template <typename T, size_t N>

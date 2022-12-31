@@ -87,12 +87,14 @@ template <typename R>
 using sentinel_t = decltype(std::end(std::declval<R&>()));
 template <typename R>
 using rsize_t = decltype(std::size(std::declval<R&>()));
+#ifndef __CUDACC__
 template <typename R>
 using rdifference_t = std::iter_difference_t<iterator_t<R>>;
 template <typename R>
 using rvalue_t = std::iter_value_t<iterator_t<R>>;
 template <typename R>
 using rreference_t = std::iter_reference_t<iterator_t<R>>;
+#endif
 
 // Generic helpers
 template <typename T>
@@ -119,10 +121,12 @@ template <typename T>
 constexpr auto mat_v = is_mat<std::remove_cvref_t<T>>::value;
 template <typename T>
 constexpr auto frame_v = is_frame<std::remove_cvref_t<T>>::value;
+#ifndef __CUDACC__
 template <typename T>
 using element_t = typename element_type<std::remove_cvref_t<T>>::type;
 template <typename T>
 constexpr auto element_d = element_dimension<std::remove_cvref_t<T>>::value;
+#endif
 
 }  // namespace yocto
 

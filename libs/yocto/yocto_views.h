@@ -38,6 +38,8 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
+#include <algorithm>
+#include <stdexcept>
 #include <vector>
 
 #include "yocto_math.h"
@@ -228,6 +230,8 @@ constexpr kernel void check_same_size(
     throw std::out_of_range{"arrays should have the same size"};
 }
 
+#ifndef __CUDACC__
+
 // Make a vector from a view
 template <typename R, typename T = rvalue_t<R>>
 inline vector<T> to_vector(R&& range) {
@@ -241,6 +245,8 @@ inline vector<T> to_vector(R&& range, Func&& func) {
   for (auto value : range) values.push_back(func(value));
   return values;
 }
+
+#endif
 
 }  // namespace yocto
 
