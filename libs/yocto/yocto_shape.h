@@ -1433,11 +1433,11 @@ inline pair<vector<vec<I, 2>>, vector<T>> subdivide_bspline(
   // boundary ------------------------------------------
   auto valence = vector<bool>(tvert.size(), 1);
   // TODO: fixme
-  auto tcreases = vector<int>{};
+  auto tcreases = vector<I>{};
 
   // averaging pass ----------------------------------
   auto avert  = vector<T>(tvert.size(), T{});
-  auto acount = vector<int>(tvert.size(), 0);
+  auto acount = vector<I>(tvert.size(), 0);
   for (auto& p : tcreases) {
     auto c = tvert[p];
     for (auto vid : {p}) {
@@ -1630,9 +1630,9 @@ inline pair<vector<vec<I, 4>>, vector<T>> subdivide_beziers(
   return tess;
 }
 // Subdivide lines using B-spline subdivision rules.
-template <typename T>
-inline pair<vector<vec2i>, vector<T>> subdivide_bspline(
-    const vector<vec2i>& lines, const vector<T>& vertices, int level) {
+template <typename T, typename I>
+inline pair<vector<vec<I, 2>>, vector<T>> subdivide_bspline(
+    const vector<vec<I, 2>>& lines, const vector<T>& vertices, int level) {
   if (level < 1) return {lines, vertices};
   auto tess = pair{lines, vertices};
   for (auto idx : range(level))
