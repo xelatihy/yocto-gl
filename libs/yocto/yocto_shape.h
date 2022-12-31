@@ -1183,12 +1183,6 @@ inline vector<vec<I, 3>> face_adjacencies(const vector<vec<I, 3>>& triangles) {
 template <typename I>
 inline vector<vector<I>> vertex_adjacencies(
     const vector<vec<I, 3>>& triangles, const vector<vec<I, 3>>& adjacencies) {
-  auto find_index = [](const vec<I, 3>& v, I x) {
-    for (auto vid : range(3))
-      if (v[vid] == x) return vid;
-    return -1;
-  };
-
   // For each vertex, find any adjacent face.
   auto num_vertices     = 0;
   auto face_from_vertex = vector<I>(triangles.size() * 3, -1);
@@ -1229,12 +1223,6 @@ inline vector<vector<I>> vertex_adjacencies(
 template <typename I>
 inline vector<vector<I>> vertex_to_faces_adjacencies(
     const vector<vec<I, 3>>& triangles, const vector<vec<I, 3>>& adjacencies) {
-  auto find_index = [](const vec<I, 3>& v, I x) {
-    for (auto vid : range(3))
-      if (v[vid] == x) return vid;
-    return -1;
-  };
-
   // For each vertex, find any adjacent face.
   auto num_vertices     = 0;
   auto face_from_vertex = vector<I>(triangles.size() * 3, -1);

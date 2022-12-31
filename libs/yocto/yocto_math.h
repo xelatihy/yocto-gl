@@ -1444,6 +1444,18 @@ constexpr kernel size_t argmin(const vec<T, N>& a) {
       return argmin(xyz(a));
   }
 }
+template <typename T, size_t N, typename I = int>
+constexpr kernel I find_index(const vec<T, N>& a, T b) {
+  if constexpr (N == 1) {
+    return a.x == b ? 0 : -1;
+  } else if constexpr (N == 2) {
+    return a.x == b ? 0 : (a.y == b ? 1 : -1);
+  } else if constexpr (N == 3) {
+    return a.x == b ? 0 : (a.y == b ? 1 : (a.z == b ? 2 : -1));
+  } else if constexpr (N == 4) {
+    return a.x == b ? 0 : (a.y == b ? 1 : (a.z == b ? 2 : (a.w == b ? 3 : -1)));
+  }
+}
 
 template <typename T, size_t N>
 constexpr kernel T sum(const vec<T, N>& a) {
