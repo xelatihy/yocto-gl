@@ -882,7 +882,7 @@ struct make_patch_vertex {
 template <typename Vertex>
 static shape_data make_quad_patch(const vec2i& steps, Vertex&& vertex) {
   // indices and sizes
-  auto nverts = prod(steps + 1), nquads = prod(steps);
+  auto num_verts = prod(steps + 1), num_faces = prod(steps);
   auto vid = [=](vec2i ij) { return ij.y * (steps.x + 1) + ij.x; };
   auto fid = [=](vec2i ij) { return ij.y * steps.x + ij.x; };
 
@@ -890,9 +890,9 @@ static shape_data make_quad_patch(const vec2i& steps, Vertex&& vertex) {
   auto shape = shape_data{};
 
   // vertices
-  shape.positions = vector<vec3f>(nverts);
-  shape.normals   = vector<vec3f>(nverts);
-  shape.texcoords = vector<vec2f>(nverts);
+  shape.positions = vector<vec3f>(num_verts);
+  shape.normals   = vector<vec3f>(num_verts);
+  shape.texcoords = vector<vec2f>(num_verts);
   for (auto ij : range(steps + 1)) {
     auto [position, normal, texcoord] = vertex(ij / (vec2f)steps);
     shape.positions[vid(ij)]          = position;
@@ -901,7 +901,7 @@ static shape_data make_quad_patch(const vec2i& steps, Vertex&& vertex) {
   }
 
   // faces
-  shape.quads = vector<vec4i>(nquads);
+  shape.quads = vector<vec4i>(num_faces);
   for (auto ij : range(steps)) {
     shape.quads[fid(ij)] = {vid(ij + vec2i{0, 0}), vid(ij + vec2i{1, 0}),
         vid(ij + vec2i{1, 1}), vid(ij + vec2i{0, 1})};
@@ -1088,20 +1088,6 @@ shape_data make_rounded_box(
     }
     shape.positions[i] *= ps;
     shape.normals[i] *= ps;
-  }
-  return shape;
-}
-
-// Make a quad stack
-shape_data make_rect_stack(int vsteps, const vec2i& steps, const vec3f& scale) {
-  auto shape = shape_data{};
-  for (auto i : range(vsteps + 1)) {
-    auto w = i / (float)vsteps;
-    merge_shape_inplace(shape, make_quads(steps, [=](vec2f uv) {
-      auto uvw = vec3f{uv, w};
-      return make_quads_vertex{
-          scale * (uvw * 2 - 1), vec3f(0, 0, 1), flip_v(uv)};
-    }));
   }
   return shape;
 }
