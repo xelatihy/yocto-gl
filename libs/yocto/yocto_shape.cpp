@@ -916,16 +916,16 @@ static shape_data make_quad_patches(
   // indices and sizes
   auto num_verts = 0, num_faces = 0;
   auto vert_offsets = array<int, N>{0}, face_offsets = array<int, N>{0};
-  for (auto&& [p, steps_] : enumerate(steps)) {
-    vert_offsets[p] = num_verts + prod(steps_ + 1);
-    num_verts += prod(steps_ + 1);
-    face_offsets[p] = num_faces + prod(steps_);
-    num_faces += prod(steps_);
+  for (auto patch : range(N)) {
+    vert_offsets[patch] = num_verts;
+    num_verts += prod(steps[patch] + 1);
+    face_offsets[patch] = num_faces;
+    num_faces += prod(steps[patch]);
   }
-  auto vid = [=](int patch, vec2i ij) {
+  auto vid = [=](size_t patch, vec2i ij) {
     return vert_offsets[patch] + ij.y * (steps[patch].x + 1) + ij.x;
   };
-  auto fid = [=](int patch, vec2i ij) {
+  auto fid = [=](size_t patch, vec2i ij) {
     return face_offsets[patch] + ij.y * steps[patch].x + ij.x;
   };
 
@@ -936,10 +936,10 @@ static shape_data make_quad_patches(
   shape.positions = vector<vec3f>(num_verts);
   shape.normals   = vector<vec3f>(num_verts);
   shape.texcoords = vector<vec2f>(num_verts);
-  for (auto patch : range((int)N)) {
+  for (auto patch : range(N)) {
     for (auto ij : range(steps[patch] + 1)) {
       auto [position, normal, texcoord] = vertex(
-          patch, ij / (vec2f)steps[patch]);
+          (int)patch, ij / (vec2f)steps[patch]);
       shape.positions[vid(patch, ij)] = position;
       shape.normals[vid(patch, ij)]   = normal;
       shape.texcoords[vid(patch, ij)] = texcoord;
@@ -948,7 +948,7 @@ static shape_data make_quad_patches(
 
   // faces
   shape.quads = vector<vec4i>(num_faces);
-  for (auto patch : range((int)N)) {
+  for (auto patch : range(N)) {
     for (auto ij : range(steps[patch])) {
       shape.quads[fid(patch, ij)] = {vid(patch, ij + vec2i{0, 0}),
           vid(patch, ij + vec2i{1, 0}), vid(patch, ij + vec2i{1, 1}),
