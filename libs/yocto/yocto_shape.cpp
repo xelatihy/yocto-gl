@@ -1151,10 +1151,10 @@ shape_data make_capped_uvspherey(const vec2i& steps, float scale, float cap) {
 
 // Make a uv disk
 shape_data make_uvdisk(const vec2i& steps, float scale) {
-  return make_quads(steps, [=](vec2f uv) {
+  return make_quads(steps, [=](vec2f uv) -> make_quads_vertex {
     auto phi = uv.x * 2 * pif, r = 1 - uv.y;
-    return make_quads_vertex{vec3f{r * cos(phi), r * sin(phi), 0} * scale,
-        vec3f(0, 0, 1), flip_v(uv)};
+    return {
+        vec3f{r * cos(phi), r * sin(phi), 0} * scale, {0, 0, 1}, flip_v(uv)};
   });
 }
 
@@ -1217,33 +1217,31 @@ shape_data make_uvcapsule(const vec3i& steps, const vec2f& scale) {
   return make_quad_patches(
       array<vec2i, 3>{vec2i{steps.x, steps.y}, vec2i{steps.x, steps.z},
           vec2i{steps.x, steps.z}},
-      [=](int patch, vec2f uv) {
+      [=](int patch, vec2f uv) -> make_quads_vertex {
         switch (patch) {
           case 0: {  // side
             auto phi = uv.x * 2 * pif, h = uv.y;
-            return make_quads_vertex{
-                vec3f{cos(phi) * scale.x, sin(phi) * scale.x,
-                    scale.y * (2 * h - 1)},
-                vec3f{cos(phi), sin(phi), 0}, uv};
+            return {
+                {cos(phi) * scale.x, sin(phi) * scale.x, scale.y * (2 * h - 1)},
+                {cos(phi), sin(phi), 0}, uv};
           } break;
           case 1: {  // top
             auto phi = uv.x * 2 * pif, theta = (1 - uv.y) * pif / 2;
-            return make_quads_vertex{vec3f{cos(phi) * sin(theta) * scale.x,
-                                         sin(phi) * sin(theta) * scale.x,
-                                         cos(theta) * scale.x + scale.y},
-                vec3f{cos(phi) * sin(theta), sin(phi) * sin(theta), cos(theta)},
+            return {{cos(phi) * sin(theta) * scale.x,
+                        sin(phi) * sin(theta) * scale.x,
+                        cos(theta) * scale.x + scale.y},
+                {cos(phi) * sin(theta), sin(phi) * sin(theta), cos(theta)},
                 flip_v(uv)};
           } break;
           case 2: {  // bottom
             auto phi = uv.x * 2 * pif, theta = (1 - uv.y) * pif / 2;
-            return make_quads_vertex{vec3f{cos(phi) * sin(theta) * scale.x,
-                                         sin(phi) * sin(theta) * scale.x,
-                                         -cos(theta) * scale.x - scale.y},
-                vec3f{
-                    cos(phi) * sin(theta), sin(phi) * sin(theta), -cos(theta)},
+            return {{cos(phi) * sin(theta) * scale.x,
+                        sin(phi) * sin(theta) * scale.x,
+                        -cos(theta) * scale.x - scale.y},
+                {cos(phi) * sin(theta), sin(phi) * sin(theta), -cos(theta)},
                 uv};
           } break;
-          default: return make_quads_vertex{};
+          default: return {};
         }
       });
 }
@@ -1252,24 +1250,21 @@ shape_data make_uvcapsule(const vec3i& steps, const vec2f& scale) {
 shape_data make_uvcone(const vec3i& steps, const vec2f& scale) {
   return make_quad_patches(
       array<vec2i, 2>{vec2i{steps.x, steps.y}, vec2i{steps.y, steps.z}},
-      [=](int patch, vec2f uv) {
+      [=](int patch, vec2f uv) -> make_quads_vertex {
         switch (patch) {
           case 0: {  // side
             auto normal2d = normalize(scale * vec2f{1, 2});
             auto phi = uv.x * 2 * pif, h = uv.y;
-            return make_quads_vertex{
-                vec3f{cos(phi) * (1 - h) * scale.x,
-                    sin(phi) * (1 - h) * scale.x, scale.y * (2 * h - 1)},
-                vec3f{cos(phi) * normal2d.y, sin(phi) * normal2d.y, normal2d.x},
-                uv};
+            return {{cos(phi) * (1 - h) * scale.x, sin(phi) * (1 - h) * scale.x,
+                        scale.y * (2 * h - 1)},
+                {cos(phi) * normal2d.y, sin(phi) * normal2d.y, normal2d.x}, uv};
           } break;
           case 1: {  // bottom
             auto phi = uv.x * 2 * pif, r = uv.y;
-            return make_quads_vertex{
-                vec3f{r * scale.x * cos(phi), r * scale.x * sin(phi), -scale.y},
-                vec3f(0, 0, -1), uv};
+            return {{r * scale.x * cos(phi), r * scale.x * sin(phi), -scale.y},
+                {0, 0, -1}, uv};
           } break;
-          default: return make_quads_vertex{};
+          default: return {};
         }
       });
 }
