@@ -308,6 +308,8 @@ shape_data transform_shape(const shape_data& shape, const frame3f& frame,
   for (auto& radius : transformed.radius) radius *= radius_scale;
   return transformed;
 }
+
+// Manipulate vertex data
 shape_data remove_normals(const shape_data& shape) {
   auto transformed    = shape;
   transformed.normals = {};
@@ -318,8 +320,10 @@ shape_data add_normals(const shape_data& shape) {
   transformed.normals = compute_normals(shape);
   return transformed;
 }
-shape_data weld_vertices(const shape_data& shape, float threshold) {
+shape_data weld_vertices(
+    const shape_data& shape, float threshold, bool normals, bool others) {
   auto transform_vert = [](auto&& old_verts, const vector<int>& old_indices) {
+    if (old_verts.empty()) return old_verts;
     using T    = typename std::remove_cvref_t<decltype(old_verts[0])>;
     auto verts = vector<T>(old_indices.size());
     for (auto&& [idx, vert] : enumerate(verts))
@@ -336,13 +340,24 @@ shape_data weld_vertices(const shape_data& shape, float threshold) {
       }
     return elems;
   };
+
   auto [old_indices, new_indices] = weld_indices(shape.positions, threshold);
   auto transformed                = shape;
   transformed.positions = transform_vert(transformed.positions, old_indices);
-  transformed.normals   = transform_vert(transformed.normals, old_indices);
-  transformed.texcoords = transform_vert(transformed.texcoords, old_indices);
-  transformed.colors    = transform_vert(transformed.colors, old_indices);
-  transformed.radius    = transform_vert(transformed.radius, old_indices);
+  if (normals) {
+    transformed.normals = transform_vert(transformed.normals, old_indices);
+  } else {
+    transformed.normals = {};
+  }
+  if (others) {
+    transformed.texcoords = transform_vert(transformed.texcoords, old_indices);
+    transformed.colors    = transform_vert(transformed.colors, old_indices);
+    transformed.radius    = transform_vert(transformed.radius, old_indices);
+  } else {
+    transformed.texcoords = {};
+    transformed.colors    = {};
+    transformed.radius    = {};
+  }
   transformed.tangents  = transform_vert(transformed.tangents, old_indices);
   transformed.points    = transform_elem(transformed.points, new_indices);
   transformed.lines     = transform_elem(transformed.lines, new_indices);
@@ -1093,6 +1108,20 @@ shape_data make_rounded_box(const vec3i& steps, const vec3f& scale,
           return {position, normal, texcoord};
         }
       });
+}
+
+// Make a watertight box.
+shape_data make_wtbox(
+    const vec3i& steps, const vec3f& scale, const vec3f& uvscale) {
+  // if (steps == 1 && scale == 1 && uvscale == 1) return make_wtcube();
+  return weld_vertices(make_box(steps, scale, uvscale), min(scale / steps));
+}
+
+// Make a watertight box.
+shape_data make_opbox(
+    const vec3i& steps, const vec3f& scale, const vec3f& uvscale) {
+  if (steps == 1 && scale == 1 && uvscale == 1) return make_opcube();
+  return weld_vertices(make_box(steps, scale, uvscale), min(scale / steps));
 }
 
 // Make a sphere.

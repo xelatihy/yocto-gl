@@ -135,9 +135,12 @@ shape_data transform_shape(
     const shape_data& shape, const frame3f& frame, bool non_rigid = false);
 shape_data transform_shape(const shape_data& shape, const frame3f& frame,
     float radius_scale, bool non_rigid = false);
+
+// Manipulate vertex data
 shape_data remove_normals(const shape_data& shape);
 shape_data add_normals(const shape_data& shape);
-shape_data weld_vertices(const shape_data& shape);
+shape_data weld_vertices(const shape_data& shape, float threshold,
+    bool normals = false, bool others = false);
 
 // Merge a shape into another
 void merge_shape_inplace(shape_data& shape, const shape_data& merge);
@@ -232,6 +235,12 @@ shape_data make_floor(const vec2i& steps = {1, 1},
 shape_data make_disk(int steps = 32, float scale = 1, float uvscale = 1);
 // Make a box
 shape_data make_box(const vec3i& steps = {1, 1, 1},
+    const vec3f& scale = {1, 1, 1}, const vec3f& uvscale = {1, 1, 1});
+// Make a watertight box (positions-only)
+shape_data make_wtbox(const vec3i& steps = {1, 1, 1},
+    const vec3f& scale = {1, 1, 1}, const vec3f& uvscale = {1, 1, 1});
+// Make a watertight and open box (positions-only)
+shape_data make_opbox(const vec3i& steps = {1, 1, 1},
     const vec3f& scale = {1, 1, 1}, const vec3f& uvscale = {1, 1, 1});
 // Make a tesselated sphere
 shape_data make_tsphere(int steps = 32, float scale = 1, float uvscale = 1);
@@ -1900,7 +1909,7 @@ inline pair<vector<I>, vector<I>> weld_indices(
       new_indices[vertex] = neighbors.front();
     }
   }
-  return {new_indices, old_indices};
+  return {old_indices, new_indices};
 }
 template <typename T, typename I>
 inline pair<vector<vec<I, 3>>, vector<vec<T, 3>>> weld_triangles(

@@ -1164,6 +1164,8 @@ shape_data make_shape_preset(const string& type_) {
     return make_opcube();
   } else if (type == "wtsphere") {
     return make_wtsphere();
+  } else if (type == "wtbox") {
+    return make_wtbox();
   } else if (type == "fvcube") {
     return fvshape_to_shape(make_fvbox());
   } else if (type == "fvsphere") {
@@ -1174,6 +1176,10 @@ shape_data make_shape_preset(const string& type_) {
     return add_normals(subdivide_shape(make_wtcube(), 4, true));
   } else if (type == "opcube_subdiv") {
     return add_normals(subdivide_shape(make_opcube(), 4, true));
+  } else if (type == "wtbox_subdiv") {
+    return add_normals(subdivide_shape(make_wtbox(), 4, true));
+  } else if (type == "opbox_subdiv") {
+    return add_normals(subdivide_shape(make_opbox(), 4, true));
   } else if (type == "fvcube_subdiv") {
     return fvshape_to_shape(
         add_normals(subdivide_fvshape(make_fvcube(), 4, true)));
