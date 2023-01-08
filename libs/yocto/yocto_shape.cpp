@@ -318,6 +318,38 @@ shape_data add_normals(const shape_data& shape) {
   transformed.normals = compute_normals(shape);
   return transformed;
 }
+shape_data weld_vertices(const shape_data& shape, float threshold) {
+  auto transform_vert = [](auto&& old_verts, const vector<int>& old_indices) {
+    using T    = typename std::remove_cvref_t<decltype(old_verts[0])>;
+    auto verts = vector<T>(old_indices.size());
+    for (auto&& [idx, vert] : enumerate(verts))
+      vert = old_verts[old_indices[idx]];
+    return verts;
+  };
+  auto transform_elem = [](auto&& elems_, const vector<int>& new_indices) {
+    auto elems = std::move(elems_);
+    for (auto& elem : elems)
+      if constexpr (std::is_same_v<std::remove_cvref_t<decltype(elem)>, int>) {
+        elem = new_indices[elem];
+      } else {
+        for (auto& vid : elem) vid = new_indices[vid];
+      }
+    return elems;
+  };
+  auto [old_indices, new_indices] = weld_indices(shape.positions, threshold);
+  auto transformed                = shape;
+  transformed.positions = transform_vert(transformed.positions, old_indices);
+  transformed.normals   = transform_vert(transformed.normals, old_indices);
+  transformed.texcoords = transform_vert(transformed.texcoords, old_indices);
+  transformed.colors    = transform_vert(transformed.colors, old_indices);
+  transformed.radius    = transform_vert(transformed.radius, old_indices);
+  transformed.tangents  = transform_vert(transformed.tangents, old_indices);
+  transformed.points    = transform_elem(transformed.points, new_indices);
+  transformed.lines     = transform_elem(transformed.lines, new_indices);
+  transformed.triangles = transform_elem(transformed.triangles, new_indices);
+  transformed.quads     = transform_elem(transformed.quads, new_indices);
+  return transformed;
+}
 
 vector<string> shape_stats(const shape_data& shape, bool verbose) {
   auto format = [](auto num) {

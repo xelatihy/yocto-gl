@@ -137,6 +137,7 @@ shape_data transform_shape(const shape_data& shape, const frame3f& frame,
     float radius_scale, bool non_rigid = false);
 shape_data remove_normals(const shape_data& shape);
 shape_data add_normals(const shape_data& shape);
+shape_data weld_vertices(const shape_data& shape);
 
 // Merge a shape into another
 void merge_shape_inplace(shape_data& shape, const shape_data& merge);
@@ -724,8 +725,11 @@ inline pair<vector<vec<I, 4>>, vector<T>> subdivide_catmullclark(
 namespace yocto {
 
 // Weld vertices within a threshold.
-template <typename T>
-inline pair<vector<vec<T, 3>>, vector<int>> weld_vertices(
+template <typename T, typename I = int>
+inline pair<vector<vec<T, 3>>, vector<I>> weld_vertices(
+    const vector<vec<T, 3>>& positions, T threshold);
+template <typename T, typename I = int>
+inline pair<vector<I>, vector<I>> weld_indices(
     const vector<vec<T, 3>>& positions, T threshold);
 template <typename T, typename I>
 inline pair<vector<vec<I, 3>>, vector<vec<T, 3>>> weld_triangles(
@@ -1852,10 +1856,10 @@ inline pair<vector<vec<I, 4>>, vector<T>> subdivide_catmullclark(
 namespace yocto {
 
 // Weld vertices within a threshold.
-template <typename T>
-inline pair<vector<vec<T, 3>>, vector<int>> weld_vertices(
+template <typename T, typename I>
+inline pair<vector<vec<T, 3>>, vector<I>> weld_vertices(
     const vector<vec<T, 3>>& positions, T threshold) {
-  auto indices   = vector<int>(positions.size());
+  auto indices   = vector<I>(positions.size());
   auto welded    = vector<vec<T, 3>>{};
   auto grid      = make_hash_grid(threshold);
   auto neighbors = vector<int>{};
@@ -1864,13 +1868,33 @@ inline pair<vector<vec<T, 3>>, vector<int>> weld_vertices(
     find_neighbors(grid, neighbors, position, threshold);
     if (neighbors.empty()) {
       welded.push_back(position);
-      indices[vertex] = (int)welded.size() - 1;
+      indices[vertex] = (I)welded.size() - 1;
       insert_vertex(grid, position);
     } else {
       indices[vertex] = neighbors.front();
     }
   }
   return {welded, indices};
+}
+template <typename T, typename I>
+inline pair<vector<I>, vector<I>> weld_indices(
+    const vector<vec<T, 3>>& positions, T threshold) {
+  auto new_indices = vector<I>(positions.size());
+  auto old_indices = vector<I>();
+  auto grid        = make_hash_grid(threshold);
+  auto neighbors   = vector<int>{};
+  for (auto vertex : range(positions.size())) {
+    auto& position = positions[vertex];
+    find_neighbors(grid, neighbors, position, threshold);
+    if (neighbors.empty()) {
+      old_indices.push_back((I)vertex);
+      new_indices[vertex] = (I)old_indices.size() - 1;
+      insert_vertex(grid, position);
+    } else {
+      new_indices[vertex] = neighbors.front();
+    }
+  }
+  return {new_indices, old_indices};
 }
 template <typename T, typename I>
 inline pair<vector<vec<I, 3>>, vector<vec<T, 3>>> weld_triangles(
