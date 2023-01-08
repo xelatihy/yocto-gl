@@ -208,8 +208,6 @@ shape_data make_quad(int subdivisions = 0);
 shape_data make_quady(int subdivisions = 0);
 // Make a cube
 shape_data make_cube(int subdivisions = 0);
-// Make a sphere
-shape_data make_sphere(int subdivisions = 5);
 // Make a geosphere
 shape_data make_geosphere(int subdivisions = 3);
 // Make a cube that is watertight (only positions)
@@ -218,21 +216,8 @@ shape_data make_wtcube(int subdivisions = 0);
 shape_data make_opcube(int subdivisions = 0);
 // Make a sphere that is watertight (only positions and normals)
 shape_data make_wtsphere(int subdivisions = 5);
-// Make a disk
-shape_data make_disk(int subdivisions = 5);
-// Make a floor
-shape_data make_floor(int subdivisions = 0, float size = 10);
 // Make a monkey
 shape_data make_monkey(int subdivisions = 0);
-// Make a rounded cube
-shape_data make_rounded_cube(int subdivisions = 5, float radius = 0.3f);
-// Make a bulged quad
-shape_data make_bulged_quad(int subdivisions = 5, float radius = 0.3f);
-// Make a bulged disk
-shape_data make_bulged_disk(int subdivisions = 5, float height = 0.3f);
-// Make a bent disk
-shape_data make_bent_floor(
-    int subdivisions = 5, float size = 10, float bent = 0.5f);
 
 // Make a rectangle
 shape_data make_rect(const vec2i& steps = {1, 1}, const vec2f& scale = {1, 1},
@@ -240,6 +225,9 @@ shape_data make_rect(const vec2i& steps = {1, 1}, const vec2f& scale = {1, 1},
 // Make a rectangle along y
 shape_data make_recty(const vec2i& steps = {1, 1}, const vec2f& scale = {1, 1},
     const vec2f& uvscale = {1, 1});
+// Make a floor
+shape_data make_floor(const vec2i& steps = {1, 1},
+    const vec2f& scale = {10, 10}, const vec2f& uvscale = {20, 20});
 // Make a box
 shape_data make_box(const vec3i& steps = {1, 1, 1},
     const vec3f& scale = {1, 1, 1}, const vec3f& uvscale = {1, 1, 1});
@@ -271,6 +259,10 @@ shape_data make_bulged_rect(const vec2i& steps = {1, 1},
 shape_data make_bulged_recty(const vec2i& steps = {1, 1},
     const vec2f& scale = {1, 1}, float radius = 0.3f,
     const vec2f& uvscale = {1, 1});
+// Make a bent disk
+shape_data make_bent_floor(const vec2i& steps = {1, 1},
+    const vec2f& scale = {10, 10}, float bent = 0.5f,
+    const vec2f& uvscale = {10, 10});
 // Make a rounded box
 shape_data make_rounded_box(const vec3i& steps = {32, 32, 32},
     const vec3f& scale = {1, 1, 1}, float radius = 0.3f,

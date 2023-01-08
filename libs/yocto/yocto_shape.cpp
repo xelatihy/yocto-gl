@@ -730,12 +730,6 @@ shape_data make_wtsphere(int subdivisions) {
   shape.normals = shape.positions;
   return shape;
 }
-shape_data make_floor(int subdivisions, float scale) {
-  auto shape = make_quady(subdivisions);
-  for (auto& position : shape.positions) position *= scale;
-  for (auto& texcoord : shape.texcoords) texcoord *= scale;
-  return shape;
-}
 shape_data make_monkey(int subdivisions) {
   extern vector<vec3f> suzanne_positions;
   extern vector<vec4i> suzanne_quads;
@@ -807,27 +801,6 @@ shape_data make_rounded_cube(int subdivisions, float radius) {
     }
     shape.positions[i] *= ps;
     shape.normals[i] *= ps;
-  }
-  return shape;
-}
-shape_data make_bent_floor(int subdivisions, float scale, float radius) {
-  if (radius == 0) return make_floor(subdivisions, scale);
-  auto shape = make_floor(subdivisions, scale);
-  radius     = min(radius * scale, scale);
-  auto start = (scale - radius) / 2;
-  auto end   = start + radius;
-  for (auto i : range(shape.positions.size())) {
-    auto p = shape.positions[i];
-    if (p.z < -end) {
-      shape.positions[i] = {p.x, -p.z - end + radius, -end};
-      shape.normals[i]   = {0, 0, 1};
-    } else if (p.z < -start && p.z >= -end) {
-      auto phi           = (pif / 2) * (-p.z - start) / radius;
-      shape.positions[i] = {
-          p.x, -cos(phi) * radius + radius, -sin(phi) * radius - start};
-      shape.normals[i] = {0, cos(phi), sin(phi)};
-    } else {
-    }
   }
   return shape;
 }
@@ -1067,6 +1040,34 @@ shape_data make_recty(
 shape_data make_bulged_recty(const vec2i& steps, const vec2f& scale,
     float height, const vec2f& uvscale) {
   return _flip_yz(make_bulged_rect(steps, scale, height, uvscale));
+}
+
+// Make a large quad in the xy plane
+shape_data make_floor(
+    const vec2i& steps, const vec2f& scale, const vec2f& uvscale) {
+  return make_recty(steps, scale, uvscale);
+}
+shape_data make_bent_floor(const vec2i& steps, const vec2f& scale, float radius,
+    const vec2f& uvscale) {
+  if (radius == 0) return make_floor(steps, scale, uvscale);
+  radius     = min(radius * scale, scale);
+  auto start = (scale - radius) / 2;
+  auto end   = start + radius;
+  return transform_patch_vertices(make_floor(steps, scale, uvscale),
+      [&](const vec3f& position, const vec3f& normal,
+          const vec2f& texcoord) -> make_patch_vertex {
+        auto p = position;
+        if (p.z < -end) {
+          return {{p.x, -p.z - end + radius, -end}, {0, 0, 1}, texcoord};
+        } else if (p.z < -start && p.z >= -end) {
+          auto phi = (pif / 2) * (-p.z - start) / radius;
+          return {
+              {p.x, -cos(phi) * radius + radius, -sin(phi) * radius - start},
+              {0, cos(phi), sin(phi)}, texcoord};
+        } else {
+          return {position, normal, texcoord};
+        }
+      });
 }
 
 // Make a box.
