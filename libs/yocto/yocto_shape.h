@@ -194,6 +194,12 @@ fvshape_data subdivide_fvshape(
 // Transform shape
 fvshape_data transform_fvshape(
     const fvshape_data& shape, const frame3f& frame, bool non_rigid = false);
+fvshape_data scale_fvshape(
+    const fvshape_data& shape, float scale, float uvscale = 1);
+fvshape_data scale_fvshape(
+    fvshape_data&& shape, float scale, float uvscale = 1);
+
+// Vertex properties
 fvshape_data remove_normals(const fvshape_data& shape);
 fvshape_data add_normals(const fvshape_data& shape);
 
@@ -292,17 +298,18 @@ shape_data make_geosphere(float scale = 1, int subdivisions = 3);
 // Make a monkey
 shape_data make_monkey(float scale = 1);
 
+// Make a face-varying quad
+fvshape_data make_fvquad(int steps = 1, float scale = 1, float uvscale = 1);
 // Make a face-varying rectangle
 fvshape_data make_fvrect(const vec2i& steps = {1, 1},
     const vec2f& scale = {1, 1}, const vec2f& uvscale = {1, 1});
+// Make a face-varying cube
+fvshape_data make_fvcube(int steps = 1, float scale = 1, float uvscale = 1);
 // Make a face-varying box
 fvshape_data make_fvbox(const vec3i& steps = {1, 1, 1},
     const vec3f& scale = {1, 1, 1}, const vec3f& uvscale = {1, 1, 1});
 // Make a face-varying sphere
 fvshape_data make_fvsphere(int steps = 32, float scale = 1, float uvscale = 1);
-
-// Make a face-varying cube
-fvshape_data make_fvcube();
 
 // Make a point.
 shape_data make_point(float radius = 0.001f, bool generate_uv = true);

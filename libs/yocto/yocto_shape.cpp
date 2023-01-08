@@ -540,6 +540,23 @@ fvshape_data transform_fvshape(
     normal = transform_normal(frame, normal, non_rigid);
   return transformed;
 }
+fvshape_data scale_fvshape(
+    const fvshape_data& shape, float scale, float uvscale) {
+  if (scale == 1 && uvscale == 1) return shape;
+  auto transformed = shape;
+  for (auto& position : transformed.positions) position *= scale;
+  for (auto& texcoord : transformed.texcoords) texcoord *= uvscale;
+  return transformed;
+}
+fvshape_data scale_fvshape(fvshape_data&& shape, float scale, float uvscale) {
+  if (scale == 1 && uvscale == 1) return std::move(shape);
+  auto transformed = std::move(shape);
+  for (auto& position : transformed.positions) position *= scale;
+  for (auto& texcoord : transformed.texcoords) texcoord *= uvscale;
+  return transformed;
+}
+
+// Vertex properties
 fvshape_data remove_normals(const fvshape_data& shape) {
   auto transformed      = shape;
   transformed.quadsnorm = {};
@@ -1115,13 +1132,10 @@ shape_data make_quad(int steps, float scale, float uvscale) {
   static const auto quad_quads = vector<vec4i>{{0, 1, 2, 3}};
 
   if (steps == 1) {
-    return scale_shape(
-        shape_data{
-            .quads     = quad_quads,
-            .positions = quad_positions,
-            .normals   = quad_normals,
-            .texcoords = quad_texcoords,
-        },
+    return scale_shape({.quads        = quad_quads,
+                           .positions = quad_positions,
+                           .normals   = quad_normals,
+                           .texcoords = quad_texcoords},
         scale, uvscale);
   } else {
     return make_rect({steps, steps}, {scale, scale}, {uvscale, uvscale});
@@ -1137,13 +1151,10 @@ shape_data make_quady(int steps, float scale, float uvscale) {
   static const auto quady_quads = vector<vec4i>{{0, 1, 2, 3}};
 
   if (steps == 1) {
-    return scale_shape(
-        shape_data{
-            .quads     = quady_quads,
-            .positions = quady_positions,
-            .normals   = quady_normals,
-            .texcoords = quady_texcoords,
-        },
+    return scale_shape({.quads        = quady_quads,
+                           .positions = quady_positions,
+                           .normals   = quady_normals,
+                           .texcoords = quady_texcoords},
         scale, uvscale);
   } else {
     return make_recty({steps, steps}, {scale, scale}, {uvscale, uvscale});
@@ -1169,10 +1180,10 @@ shape_data make_cube(int steps, float scale, float uvscale) {
           {8, 9, 10, 11}, {12, 13, 14, 15}, {16, 17, 18, 19}, {20, 21, 22, 23}};
 
   if (steps == 1) {
-    return scale_shape(shape_data{.quads = cube_quads,
-                           .positions    = cube_positions,
-                           .normals      = cube_normals,
-                           .texcoords    = cube_texcoords},
+    return scale_shape({.quads        = cube_quads,
+                           .positions = cube_positions,
+                           .normals   = cube_normals,
+                           .texcoords = cube_texcoords},
         scale, uvscale);
   } else {
     return make_box({steps, steps, steps}, {scale, scale, scale},
@@ -1214,8 +1225,7 @@ shape_data make_wtcube(int steps, float scale) {
 
   if (steps == 1) {
     return scale_shape(
-        shape_data{.quads = wtcube_quads, .positions = wtcube_positions},
-        scale);
+        {.quads = wtcube_quads, .positions = wtcube_positions}, scale);
   } else {
     return make_wtbox({steps, steps, steps}, {scale, scale, scale});
   }
@@ -1229,8 +1239,7 @@ shape_data make_opcube(int steps, float scale) {
 
   if (steps == 1) {
     return scale_shape(
-        shape_data{.quads = opcube_quads, .positions = opcube_positions},
-        scale);
+        {.quads = opcube_quads, .positions = opcube_positions}, scale);
   } else {
     return make_opbox({steps, steps, steps}, {scale, scale, scale});
   }
@@ -1240,13 +1249,38 @@ shape_data make_monkey(float scale) {
   extern vector<vec4i> suzanne_quads;
 
   return scale_shape(
-      shape_data{.quads = suzanne_quads, .positions = suzanne_positions},
-      scale);
+      {.quads = suzanne_quads, .positions = suzanne_positions}, scale);
+}
+
+// Make a face-varying quad
+fvshape_data make_fvquad(int steps, float scale, float uvscale) {
+  static const auto fvquad_positions = vector<vec3f>{
+      {-1, -1, 0}, {+1, -1, 0}, {+1, +1, 0}, {-1, +1, 0}};
+  static const auto fvquad_normals = vector<vec3f>{
+      {0, 0, 1}, {0, 0, 1}, {0, 0, 1}, {0, 0, 1}};
+  static const auto fvquad_texcoords = vector<vec2f>{
+      {0, 1}, {1, 1}, {1, 0}, {0, 0}};
+  static const auto fvquad_quadspos      = vector<vec4i>{{0, 1, 2, 3}};
+  static const auto fvquad_quadsnorm     = vector<vec4i>{{0, 1, 2, 3}};
+  static const auto fvquad_quadstexcoord = vector<vec4i>{{0, 1, 2, 3}};
+
+  if (steps == 1) {
+    return scale_fvshape({.quadspos         = fvquad_quadspos,
+                             .quadsnorm     = fvquad_quadsnorm,
+                             .quadstexcoord = fvquad_quadstexcoord,
+                             .positions     = fvquad_positions,
+                             .normals       = fvquad_normals,
+                             .texcoords     = fvquad_texcoords},
+        scale, uvscale);
+  } else {
+    return make_fvrect({steps, steps}, {scale, scale}, {uvscale, uvscale});
+  }
 }
 
 // Make a face-varying rect
 fvshape_data make_fvrect(
     const vec2i& steps, const vec2f& scale, const vec2f& uvscale) {
+  if (steps == 1 && scale == 1 && uvscale == 1) return make_fvquad();
   auto rect           = make_rect(steps, scale, uvscale);
   auto shape          = fvshape_data{};
   shape.positions     = rect.positions;
@@ -1258,30 +1292,8 @@ fvshape_data make_fvrect(
   return shape;
 }
 
-// Make a face-varying box
-fvshape_data make_fvbox(
-    const vec3i& steps, const vec3f& scale, const vec3f& uvscale) {
-  auto box                                  = make_box(steps, scale, uvscale);
-  auto shape                                = fvshape_data{};
-  shape.quadsnorm                           = box.quads;
-  shape.quadstexcoord                       = box.quads;
-  std::tie(shape.quadspos, shape.positions) = weld_quads(
-      box.quads, box.positions, 0.1f * min(scale) / max(steps));
-  return shape;
-}
-
-// Make a face-varying sphere
-fvshape_data make_fvsphere(int steps, float scale, float uvscale) {
-  auto shape      = make_fvbox({steps, steps, steps}, {scale, scale, scale},
-           {uvscale, uvscale, uvscale});
-  shape.quadsnorm = shape.quadspos;
-  shape.normals   = shape.positions;
-  for (auto& n : shape.normals) n = normalize(n);
-  return shape;
-}
-
 // Predefined meshes
-fvshape_data make_fvcube() {
+fvshape_data make_fvcube(int steps, float scale, float uvscale) {
   static const auto fvcube_positions = vector<vec3f>{{-1, -1, +1}, {+1, -1, +1},
       {+1, +1, +1}, {-1, +1, +1}, {+1, -1, -1}, {-1, -1, -1}, {-1, +1, -1},
       {+1, +1, -1}};
@@ -1302,14 +1314,41 @@ fvshape_data make_fvcube() {
       {4, 5, 6, 7}, {8, 9, 10, 11}, {12, 13, 14, 15}, {16, 17, 18, 19},
       {20, 21, 22, 23}};
 
-  return {
-      .quadspos      = fvcube_quadspos,
-      .quadsnorm     = fvcube_quadsnorm,
-      .quadstexcoord = fvcube_quadstexcoord,
-      .positions     = fvcube_positions,
-      .normals       = fvcube_normals,
-      .texcoords     = fvcube_texcoords,
-  };
+  if (steps == 1) {
+    return scale_fvshape({.quadspos         = fvcube_quadspos,
+                             .quadsnorm     = fvcube_quadsnorm,
+                             .quadstexcoord = fvcube_quadstexcoord,
+                             .positions     = fvcube_positions,
+                             .normals       = fvcube_normals,
+                             .texcoords     = fvcube_texcoords},
+        scale, uvscale);
+  } else {
+    return make_fvbox({steps, steps, steps}, {scale, scale, scale},
+        {uvscale, uvscale, uvscale});
+  }
+}
+
+// Make a face-varying box
+fvshape_data make_fvbox(
+    const vec3i& steps, const vec3f& scale, const vec3f& uvscale) {
+  if (steps == 1 && scale == 1 && uvscale == 1) return make_fvcube();
+  auto box                                  = make_box(steps, scale, uvscale);
+  auto shape                                = fvshape_data{};
+  shape.quadsnorm                           = box.quads;
+  shape.quadstexcoord                       = box.quads;
+  std::tie(shape.quadspos, shape.positions) = weld_quads(
+      box.quads, box.positions, 0.1f * min(scale) / max(steps));
+  return shape;
+}
+
+// Make a face-varying sphere
+fvshape_data make_fvsphere(int steps, float scale, float uvscale) {
+  auto shape      = make_fvbox({steps, steps, steps}, {scale, scale, scale},
+           {uvscale, uvscale, uvscale});
+  shape.quadsnorm = shape.quadspos;
+  shape.normals   = shape.positions;
+  for (auto& n : shape.normals) n = normalize(n);
+  return shape;
 }
 
 // Generate lines.
