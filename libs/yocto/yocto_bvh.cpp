@@ -295,8 +295,7 @@ struct embree_error : std::runtime_error {
 bool embree_supported() { return true; }
 
 // Get Embree device
-std::atomic<ssize_t> embree_memory = 0;
-static RTCDevice     embree_device() {
+static RTCDevice embree_device() {
   static RTCDevice device = nullptr;
   if (!device) {
     device = rtcNewDevice("");
@@ -319,13 +318,6 @@ static RTCDevice     embree_device() {
               throw std::runtime_error("RTC_ERROR_CANCELLED: " + str);
             default: throw std::runtime_error("invalid error code");
           }
-        },
-        nullptr);
-    rtcSetDeviceMemoryMonitorFunction(
-        device,
-        [](void* userPtr, ssize_t bytes, bool) {
-          embree_memory += bytes;
-          return true;
         },
         nullptr);
   }
