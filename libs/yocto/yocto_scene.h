@@ -30,8 +30,8 @@
 // SOFTWARE.
 //
 
-#ifndef _YOCTO_SCENE_H_
-#define _YOCTO_SCENE_H_
+#ifndef YOCTO_SCENE_H_
+#define YOCTO_SCENE_H_
 
 // -----------------------------------------------------------------------------
 // INCLUDES

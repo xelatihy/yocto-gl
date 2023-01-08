@@ -147,10 +147,36 @@
   ],
   "C_Cpp.codeAnalysis.clangTidy.enabled": true,
   "C_Cpp.codeAnalysis.exclude": {
-    "apps/_deprecated": true,
-    "build": true,
-    "ext": true,
-    "libs/yocto/*_old.*": true,
-    "libs/yocto/_deprecated": true
-  }
+    "**/apps/_deprecated/*": true,
+    "**/build/*": true,
+    "**/exts/*": true,
+    "**/libs/yocto/*_old.*": true,
+    "**/libs/yocto/_deprecated": true
+  },
+  "C_Cpp.codeAnalysis.clangTidy.checks.enabled": [
+    "clang-analyzer-*",
+    "bugprone-*",
+    "cppcoreguidelines-*",
+    "misc-*",
+    "modernize-*",
+    "performance-*",
+    "portability-*",
+    "readability-*"
+  ],
+  "C_Cpp.codeAnalysis.clangTidy.checks.disabled": [
+    "cppcoreguidelines-avoid-magic-numbers",
+    "readability-uppercase-literal-suffix",
+    "modernize-use-trailing-return-type",
+    "readability-identifier-length",
+    "readability-braces-around-statements",
+    "readability-magic-numbers",
+    "bugprone-easily-swappable-parameters",
+    "readability-else-after-return",
+    "readability-qualified-auto",
+    "misc-non-private-member-variables-in-classes",
+    "misc-unused-parameters",
+    "readability-isolate-declaration",
+    "modernize-use-nodiscard",
+    "misc-no-recursion"
+  ]
 }

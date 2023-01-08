@@ -31,8 +31,8 @@
 // SOFTWARE.
 //
 
-#ifndef _YOCTO_MODELIO_H_
-#define _YOCTO_MODELIO_H_
+#ifndef YOCTO_MODELIO_H_
+#define YOCTO_MODELIO_H_
 
 // -----------------------------------------------------------------------------
 // INCLUDES

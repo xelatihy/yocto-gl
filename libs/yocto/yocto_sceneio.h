@@ -32,8 +32,8 @@
 // SOFTWARE.
 //
 
-#ifndef _YOCTO_SCENEIO_H_
-#define _YOCTO_SCENEIO_H_
+#ifndef YOCTO_SCENEIO_H_
+#define YOCTO_SCENEIO_H_
 
 // -----------------------------------------------------------------------------
 // INCLUDES

@@ -31,8 +31,8 @@
 //
 //
 
-#ifndef _YOCTO_VIEWS_H_
-#define _YOCTO_VIEWS_H_
+#ifndef YOCTO_VIEWS_H_
+#define YOCTO_VIEWS_H_
 
 // -----------------------------------------------------------------------------
 // INCLUDES

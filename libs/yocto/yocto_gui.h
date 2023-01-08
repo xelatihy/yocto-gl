@@ -27,8 +27,8 @@
 //
 //
 
-#ifndef _YOCTO_GLVIEW_
-#define _YOCTO_GLVIEW_
+#ifndef YOCTO_GUI_H_
+#define YOCTO_GUI_H_
 
 #ifdef YOCTO_OPENGL
 

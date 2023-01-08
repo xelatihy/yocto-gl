@@ -32,8 +32,8 @@
 //
 //
 
-#ifndef _YOCTO_CLI_H_
-#define _YOCTO_CLI_H_
+#ifndef YOCTO_CLI_H_
+#define YOCTO_CLI_H_
 
 // -----------------------------------------------------------------------------
 // INCLUDES
@@ -219,13 +219,13 @@ struct cli_command {
   cli_map<string, cli_setter>  options  = {};
   cli_map<string, cli_command> commands = {};
   // command
-  string     command_sel = "";
+  string     command_sel = {};
   cli_setter command_var = {};
   // usage
-  string usage_name     = "";
-  string usage_descr    = "";
-  string usage_options  = "";
-  string usage_commands = "";
+  string usage_name     = {};
+  string usage_descr    = {};
+  string usage_options  = {};
+  string usage_commands = {};
 };
 
 // Helpers

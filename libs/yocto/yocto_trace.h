@@ -30,8 +30,8 @@
 //
 //
 
-#ifndef _YOCTO_TRACE_H_
-#define _YOCTO_TRACE_H_
+#ifndef YOCTO_TRACE_H_
+#define YOCTO_TRACE_H_
 
 // -----------------------------------------------------------------------------
 // INCLUDES

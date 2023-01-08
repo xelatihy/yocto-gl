@@ -30,8 +30,8 @@
 // SOFTWARE.
 //
 
-#ifndef _YOCTO_MATH_H_
-#define _YOCTO_MATH_H_
+#ifndef YOCTO_MATH_H_
+#define YOCTO_MATH_H_
 
 // -----------------------------------------------------------------------------
 // INCLUDES
@@ -147,11 +147,13 @@ constexpr auto pi_t = (T)3.14159265358979323846;
 constexpr auto pi   = 3.14159265358979323846;
 constexpr auto pif  = (float)pi;
 
-constexpr auto int_max = std::numeric_limits<int>::max();
-constexpr auto int_min = std::numeric_limits<int>::lowest();
-constexpr auto flt_max = std::numeric_limits<float>::max();
-constexpr auto flt_min = std::numeric_limits<float>::lowest();
-constexpr auto flt_eps = std::numeric_limits<float>::epsilon();
+constexpr auto int_max  = std::numeric_limits<int>::max();
+constexpr auto int_min  = std::numeric_limits<int>::lowest();
+constexpr auto flt_max  = std::numeric_limits<float>::max();
+constexpr auto flt_min  = std::numeric_limits<float>::lowest();
+constexpr auto flt_eps  = std::numeric_limits<float>::epsilon();
+constexpr auto uint_max = std::numeric_limits<unsigned int>::max();
+constexpr auto uint_min = std::numeric_limits<unsigned int>::lowest();
 
 template <typename T>
 constexpr auto num_max = std::numeric_limits<T>::max();

@@ -192,8 +192,8 @@ bool draw_tonemap_widgets(
     const gui_input& input, float& exposure, bool& filmic) {
   auto edited = 0;
   if (draw_gui_header("tonemap")) {
-    edited += draw_gui_slider("exposure", exposure, -5, 5);
-    edited += draw_gui_checkbox("filmic", filmic);
+    edited += (int)draw_gui_slider("exposure", exposure, -5, 5);
+    edited += (int)draw_gui_checkbox("filmic", filmic);
     end_gui_header();
   }
   return (bool)edited;
@@ -241,21 +241,21 @@ bool draw_trace_widgets(const gui_input& input, int sample,
   auto edited = 0;
   draw_gui_progressbar("sample", sample, params.samples);
   if (draw_gui_header("render")) {
-    edited += draw_gui_combobox("camera", params.camera, camera_names);
-    edited += draw_gui_slider("resolution", params.resolution, 180, 4096);
-    edited += draw_gui_slider("samples", params.samples, 16, 4096);
-    edited += draw_gui_combobox(
+    edited += (int)draw_gui_combobox("camera", params.camera, camera_names);
+    edited += (int)draw_gui_slider("resolution", params.resolution, 180, 4096);
+    edited += (int)draw_gui_slider("samples", params.samples, 16, 4096);
+    edited += (int)draw_gui_combobox(
         "tracer", (int&)params.sampler, trace_sampler_names);
-    edited += draw_gui_combobox(
+    edited += (int)draw_gui_combobox(
         "false color", (int&)params.falsecolor, trace_falsecolor_names);
-    edited += draw_gui_slider("bounces", params.bounces, 1, 128);
-    edited += draw_gui_slider("batch", params.batch, 1, 16);
-    edited += draw_gui_slider("clamp", params.clamp, 10, 1000);
-    edited += draw_gui_checkbox("envhidden", params.envhidden);
+    edited += (int)draw_gui_slider("bounces", params.bounces, 1, 128);
+    edited += (int)draw_gui_slider("batch", params.batch, 1, 16);
+    edited += (int)draw_gui_slider("clamp", params.clamp, 10, 1000);
+    edited += (int)draw_gui_checkbox("envhidden", params.envhidden);
     continue_gui_line();
-    edited += draw_gui_checkbox("filter", params.tentfilter);
-    edited += draw_gui_slider("pratio", params.pratio, 1, 64);
-    edited += draw_gui_checkbox("denoise", params.denoise);
+    edited += (int)draw_gui_checkbox("filter", params.tentfilter);
+    edited += (int)draw_gui_slider("pratio", params.pratio, 1, 64);
+    edited += (int)draw_gui_checkbox("denoise", params.denoise);
     end_gui_header();
   }
   return (bool)edited;
@@ -267,13 +267,13 @@ bool draw_scene_widgets(scene_data& scene, scene_selection& selection,
   if (draw_gui_header("cameras")) {
     draw_gui_combobox("camera", selection.camera, scene.camera_names);
     auto camera = scene.cameras.at(selection.camera);
-    edited += draw_gui_checkbox("ortho", camera.orthographic);
-    edited += draw_gui_slider("lens", camera.lens, 0.001f, 1);
-    edited += draw_gui_slider("aspect", camera.aspect, 0.1f, 5);
-    edited += draw_gui_slider("film", camera.film, 0.1f, 0.5f);
-    edited += draw_gui_slider("focus", camera.focus, 0.001f, 100);
-    edited += draw_gui_slider("aperture", camera.aperture, 0, 1);
-    if (edited) {
+    edited += (int)draw_gui_checkbox("ortho", camera.orthographic);
+    edited += (int)draw_gui_slider("lens", camera.lens, 0.001f, 1);
+    edited += (int)draw_gui_slider("aspect", camera.aspect, 0.1f, 5);
+    edited += (int)draw_gui_slider("film", camera.film, 0.1f, 0.5f);
+    edited += (int)draw_gui_slider("focus", camera.focus, 0.001f, 100);
+    edited += (int)draw_gui_slider("aperture", camera.aperture, 0, 1);
+    if ((bool)edited) {
       if (before_edit) before_edit();
       scene.cameras.at(selection.camera) = camera;
     }
@@ -283,10 +283,10 @@ bool draw_scene_widgets(scene_data& scene, scene_selection& selection,
     draw_gui_combobox(
         "environment", selection.environment, scene.environment_names);
     auto environment = scene.environments.at(selection.environment);
-    edited += draw_gui_coloredithdr("emission", environment.emission);
-    edited += draw_gui_combobox(
+    edited += (int)draw_gui_coloredithdr("emission", environment.emission);
+    edited += (int)draw_gui_combobox(
         "emission_tex", environment.emission_tex, scene.texture_names, true);
-    if (edited) {
+    if ((bool)edited) {
       if (before_edit) before_edit();
       scene.environments.at(selection.environment) = environment;
     }
@@ -295,10 +295,11 @@ bool draw_scene_widgets(scene_data& scene, scene_selection& selection,
   if (draw_gui_header("instances")) {
     draw_gui_combobox("instance", selection.instance, scene.instance_names);
     auto instance = scene.instances.at(selection.instance);
-    edited += draw_gui_combobox("shape", instance.shape, scene.shape_names);
-    edited += draw_gui_combobox(
+    edited += (int)draw_gui_combobox(
+        "shape", instance.shape, scene.shape_names);
+    edited += (int)draw_gui_combobox(
         "material", instance.material, scene.material_names);
-    if (edited) {
+    if ((bool)edited) {
       if (before_edit) before_edit();
       scene.instances.at(selection.instance) = instance;
     }
@@ -307,18 +308,18 @@ bool draw_scene_widgets(scene_data& scene, scene_selection& selection,
   if (draw_gui_header("materials")) {
     draw_gui_combobox("material", selection.material, scene.material_names);
     auto material = scene.materials.at(selection.material);
-    edited += draw_gui_coloredithdr("emission", material.emission);
-    edited += draw_gui_combobox(
+    edited += (int)draw_gui_coloredithdr("emission", material.emission);
+    edited += (int)draw_gui_combobox(
         "emission_tex", material.emission_tex, scene.texture_names, true);
-    edited += draw_gui_coloredithdr("color", material.color);
-    edited += draw_gui_combobox(
+    edited += (int)draw_gui_coloredithdr("color", material.color);
+    edited += (int)draw_gui_combobox(
         "color_tex", material.color_tex, scene.texture_names, true);
-    edited += draw_gui_slider("roughness", material.roughness, 0, 1);
-    edited += draw_gui_combobox(
+    edited += (int)draw_gui_slider("roughness", material.roughness, 0, 1);
+    edited += (int)draw_gui_combobox(
         "roughness_tex", material.roughness_tex, scene.texture_names, true);
-    edited += draw_gui_slider("metallic", material.metallic, 0, 1);
-    edited += draw_gui_slider("ior", material.ior, 0.1f, 5);
-    if (edited) {
+    edited += (int)draw_gui_slider("metallic", material.metallic, 0, 1);
+    edited += (int)draw_gui_slider("ior", material.ior, 0.1f, 5);
+    if ((bool)edited) {
       if (before_edit) before_edit();
       scene.materials.at(selection.material) = material;
     }
@@ -403,24 +404,27 @@ void show_colorgrade_gui(const string& title, const string& name,
     draw_gui_combobox("name", selected, names);
     if (draw_gui_header("colorgrade")) {
       auto edited = 0;
-      edited += draw_gui_slider("exposure", params.exposure, -5, 5);
-      edited += draw_gui_coloredit("tint", params.tint);
-      edited += draw_gui_slider("lincontrast", params.lincontrast, 0, 1);
-      edited += draw_gui_slider("logcontrast", params.logcontrast, 0, 1);
-      edited += draw_gui_slider("linsaturation", params.linsaturation, 0, 1);
-      edited += draw_gui_checkbox("filmic", params.filmic);
+      edited += (int)draw_gui_slider("exposure", params.exposure, -5, 5);
+      edited += (int)draw_gui_coloredit("tint", params.tint);
+      edited += (int)draw_gui_slider("lincontrast", params.lincontrast, 0, 1);
+      edited += (int)draw_gui_slider("logcontrast", params.logcontrast, 0, 1);
+      edited += (int)draw_gui_slider(
+          "linsaturation", params.linsaturation, 0, 1);
+      edited += (int)draw_gui_checkbox("filmic", params.filmic);
       continue_gui_line();
-      edited += draw_gui_checkbox("srgb", params.srgb);
-      edited += draw_gui_slider("contrast", params.contrast, 0, 1);
-      edited += draw_gui_slider("saturation", params.saturation, 0, 1);
-      edited += draw_gui_slider("shadows", params.shadows, 0, 1);
-      edited += draw_gui_slider("midtones", params.midtones, 0, 1);
-      edited += draw_gui_slider("highlights", params.highlights, 0, 1);
-      edited += draw_gui_coloredit("shadows color", params.shadows_color);
-      edited += draw_gui_coloredit("midtones color", params.midtones_color);
-      edited += draw_gui_coloredit("highlights color", params.highlights_color);
+      edited += (int)draw_gui_checkbox("srgb", params.srgb);
+      edited += (int)draw_gui_slider("contrast", params.contrast, 0, 1);
+      edited += (int)draw_gui_slider("saturation", params.saturation, 0, 1);
+      edited += (int)draw_gui_slider("shadows", params.shadows, 0, 1);
+      edited += (int)draw_gui_slider("midtones", params.midtones, 0, 1);
+      edited += (int)draw_gui_slider("highlights", params.highlights, 0, 1);
+      edited += (int)draw_gui_coloredit("shadows color", params.shadows_color);
+      edited += (int)draw_gui_coloredit(
+          "midtones color", params.midtones_color);
+      edited += (int)draw_gui_coloredit(
+          "highlights color", params.highlights_color);
       end_gui_header();
-      if (edited) {
+      if ((bool)edited) {
         colorgrade_image(display, image, linear, params);
         set_image(glimage, display);
       }
@@ -554,23 +558,24 @@ void show_trace_gui(const string& title, const string& name, scene_data& scene,
     if (draw_gui_header("render")) {
       auto edited  = 0;
       auto tparams = params;
-      edited += draw_gui_combobox("camera", tparams.camera, camera_names);
-      edited += draw_gui_slider("resolution", tparams.resolution, 180, 4096);
-      edited += draw_gui_slider("samples", tparams.samples, 16, 4096);
-      edited += draw_gui_combobox(
+      edited += (int)draw_gui_combobox("camera", tparams.camera, camera_names);
+      edited += (int)draw_gui_slider(
+          "resolution", tparams.resolution, 180, 4096);
+      edited += (int)draw_gui_slider("samples", tparams.samples, 16, 4096);
+      edited += (int)draw_gui_combobox(
           "tracer", (int&)tparams.sampler, trace_sampler_names);
-      edited += draw_gui_combobox(
+      edited += (int)draw_gui_combobox(
           "false color", (int&)tparams.falsecolor, trace_falsecolor_names);
-      edited += draw_gui_slider("bounces", tparams.bounces, 1, 128);
-      edited += draw_gui_slider("batch", tparams.batch, 1, 16);
-      edited += draw_gui_slider("clamp", tparams.clamp, 10, 1000);
-      edited += draw_gui_checkbox("envhidden", tparams.envhidden);
+      edited += (int)draw_gui_slider("bounces", tparams.bounces, 1, 128);
+      edited += (int)draw_gui_slider("batch", tparams.batch, 1, 16);
+      edited += (int)draw_gui_slider("clamp", tparams.clamp, 10, 1000);
+      edited += (int)draw_gui_checkbox("envhidden", tparams.envhidden);
       continue_gui_line();
-      edited += draw_gui_checkbox("filter", tparams.tentfilter);
-      edited += draw_gui_slider("pratio", tparams.pratio, 1, 64);
-      edited += draw_gui_checkbox("denoise", tparams.denoise);
+      edited += (int)draw_gui_checkbox("filter", tparams.tentfilter);
+      edited += (int)draw_gui_slider("pratio", tparams.pratio, 1, 64);
+      edited += (int)draw_gui_checkbox("denoise", tparams.denoise);
       end_gui_header();
-      if (edited) {
+      if ((bool)edited) {
         render_cancel();
         params = tparams;
         render_reset();
@@ -911,14 +916,13 @@ static void set_program(uint& program_id, uint& vertex_id, uint& fragment_id,
     const string& vertex, const string& fragment) {
   // error
   auto program_error = [&](const char* message, const char* log) {
-    if (program_id) glDeleteProgram(program_id);
-    if (vertex_id) glDeleteShader(program_id);
-    if (fragment_id) glDeleteShader(program_id);
+    if (program_id != 0) glDeleteProgram(program_id);
+    if (vertex_id != 0) glDeleteShader(program_id);
+    if (fragment_id != 0) glDeleteShader(program_id);
     program_id  = 0;
     vertex_id   = 0;
     fragment_id = 0;
-    printf("%s\n", message);
-    printf("%s\n", log);
+    throw std::invalid_argument{string{message} + string{log}};
   };
 
   const char* ccvertex   = vertex.data();
@@ -930,7 +934,7 @@ static void set_program(uint& program_id, uint& vertex_id, uint& fragment_id,
 
   // create vertex
   vertex_id = glCreateShader(GL_VERTEX_SHADER);
-  glShaderSource(vertex_id, 1, &ccvertex, NULL);
+  glShaderSource(vertex_id, 1, &ccvertex, nullptr);
   glCompileShader(vertex_id);
   glGetShaderiv(vertex_id, GL_COMPILE_STATUS, &errflags);
   if (errflags == 0) {
@@ -941,7 +945,7 @@ static void set_program(uint& program_id, uint& vertex_id, uint& fragment_id,
 
   // create fragment
   fragment_id = glCreateShader(GL_FRAGMENT_SHADER);
-  glShaderSource(fragment_id, 1, &ccfragment, NULL);
+  glShaderSource(fragment_id, 1, &ccfragment, nullptr);
   glCompileShader(fragment_id);
   glGetShaderiv(fragment_id, GL_COMPILE_STATUS, &errflags);
   if (errflags == 0) {
@@ -976,9 +980,9 @@ static void set_program(uint& program_id, uint& vertex_id, uint& fragment_id,
 #endif
 }
 inline void clear_program(uint& program, uint& vertex, uint& fragment) {
-  if (program) glDeleteProgram(program);
-  if (vertex) glDeleteShader(vertex);
-  if (fragment) glDeleteShader(fragment);
+  if (program != 0) glDeleteProgram(program);
+  if (vertex != 0) glDeleteShader(vertex);
+  if (fragment != 0) glDeleteShader(fragment);
   program  = 0;
   vertex   = 0;
   fragment = 0;

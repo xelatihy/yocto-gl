@@ -33,8 +33,8 @@
 //
 //
 
-#ifndef _YOCTO_CUTRACE_H_
-#define _YOCTO_CUTRACE_H_
+#ifndef YOCTO_CUTRACE_H_
+#define YOCTO_CUTRACE_H_
 
 #ifdef YOCTO_CUDA
 

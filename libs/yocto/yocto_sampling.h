@@ -40,8 +40,8 @@
 // Licensed under Apache License 2.0 (NO WARRANTY, etc. see website)
 //
 
-#ifndef _YOCTO_SAMPLING_H_
-#define _YOCTO_SAMPLING_H_
+#ifndef YOCTO_SAMPLING_H_
+#define YOCTO_SAMPLING_H_
 
 // -----------------------------------------------------------------------------
 // INCLUDES

@@ -30,17 +30,19 @@
 //
 //
 
-#ifndef _YOCTO_PARALLEL_H_
-#define _YOCTO_PARALLEL_H_
+#ifndef YOCTO_PARALLEL_H_
+#define YOCTO_PARALLEL_H_
 
 // -----------------------------------------------------------------------------
 // INCLUDES
 // -----------------------------------------------------------------------------
 
+#include <array>
 #include <atomic>
 #include <deque>
 #include <future>
 #include <mutex>
+#include <string>
 #include <thread>
 #include <utility>
 #include <vector>
@@ -51,10 +53,12 @@
 namespace yocto {
 
 // using directives
+using std::array;
 using std::atomic;
 using std::deque;
 using std::future;
 using std::mutex;
+using std::string;
 using std::vector;
 
 }  // namespace yocto
@@ -107,7 +111,7 @@ inline void parallel_for_batch(T num, T batch, Func&& func);
 // parallel algorithms. `Func` takes the integer index.
 // Works on num[0] sized chunks.
 template <typename T, typename Func>
-inline void parallel_for_batch(array<T, 2>, Func&& func);
+inline void parallel_for_batch(array<T, 2> num, Func&& func);
 
 // Simple parallel for used since our target platforms do not yet support
 // parallel algorithms. `Func` takes a reference to a `T`.

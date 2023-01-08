@@ -31,8 +31,8 @@
 // SOFTWARE.
 //
 
-#ifndef _YOCTO_PBRTIO_H_
-#define _YOCTO_PBRTIO_H_
+#ifndef YOCTO_PBRTIO_H_
+#define YOCTO_PBRTIO_H_
 
 // -----------------------------------------------------------------------------
 // INCLUDES

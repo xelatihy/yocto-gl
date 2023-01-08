@@ -44,8 +44,8 @@
 //
 //
 
-#ifndef _YOCTO_COLOR_H_
-#define _YOCTO_COLOR_H_
+#ifndef YOCTO_COLOR_H_
+#define YOCTO_COLOR_H_
 
 // -----------------------------------------------------------------------------
 // INCLUDES

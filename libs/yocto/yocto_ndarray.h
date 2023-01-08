@@ -32,8 +32,8 @@
 //
 //
 
-#ifndef _YOCTO_NDARRAY_H_
-#define _YOCTO_NDARRAY_H_
+#ifndef YOCTO_NDARRAY_H_
+#define YOCTO_NDARRAY_H_
 
 // -----------------------------------------------------------------------------
 // INCLUDES

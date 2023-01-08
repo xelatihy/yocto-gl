@@ -31,8 +31,8 @@
 // SOFTWARE.
 //
 
-#ifndef _YOCTO_GEOMETRY_H_
-#define _YOCTO_GEOMETRY_H_
+#ifndef YOCTO_GEOMETRY_H_
+#define YOCTO_GEOMETRY_H_
 
 // -----------------------------------------------------------------------------
 // INCLUDES

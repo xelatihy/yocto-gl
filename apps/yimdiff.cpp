@@ -64,7 +64,7 @@ void run(const vector<string>& args) {
   auto diff = image_difference(image1, image2, true);
 
   // save
-  if (outname != "") save_image(outname, diff);
+  if (!outname.empty()) save_image(outname, diff);
 
   // check diff
   if (signal) {

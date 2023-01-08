@@ -31,8 +31,8 @@
 //
 //
 
-#ifndef _YOCTO_SHAPE_H_
-#define _YOCTO_SHAPE_H_
+#ifndef YOCTO_SHAPE_H_
+#define YOCTO_SHAPE_H_
 
 // -----------------------------------------------------------------------------
 // INCLUDES
