@@ -1476,10 +1476,9 @@ shape_data make_random_points(
 // Grow lines around a shape
 shape_data make_random_points(
     const shape_data& base, int num, float radius, uint64_t seed) {
-  auto cdf = sample_shape_cdf(base);
-  auto rng = make_rng(seed);
-  return make_points(num, [=, &base, &rng](float u) -> make_points_vertex {
-    auto [selement, suv] = sample_shape(base, cdf, rand1f(rng), rand2f(rng));
+  auto samples = sample_shape(base, num, seed);
+  return make_points(num, [&](float u) -> make_points_vertex {
+    auto [selement, suv] = samples[(int)round(u * num)];
     return {eval_position(base, selement, suv), {0, 0, 1}, {u, 0}, radius};
   });
 }
@@ -1488,22 +1487,17 @@ shape_data make_random_points(
 shape_data make_random_lines(const shape_data& base, int num, int steps,
     const vec2f& len, const vec2f& radius, uint64_t seed) {
   auto samples = sample_shape(base, num, seed);
-  auto shape   = make_lines(num, steps, {1, 1}, radius);
-  auto rng     = make_rng(seed);
-  for (auto idx : range(num)) {
-    auto bposition = eval_position(base, samples[idx].element, samples[idx].uv);
-    auto bnormal   = eval_normal(base, samples[idx].element, samples[idx].uv);
-    auto offset    = idx * (steps + 1);
-    auto length    = lerp(len.x, len.y, rand1f(rng));
-    for (auto iidx : range(steps + 1)) {
-      auto u                         = iidx / (float)steps;
-      shape.positions[offset + iidx] = bposition + u * length * bnormal;
-    }
-  }
-
-  shape.normals = lines_tangents(shape.lines, shape.positions);
-
-  return shape;
+  auto rng     = make_rng(seed, 17);
+  auto lenghts = vector<float>(num);
+  for (auto& length : lenghts) length = lerp(len.x, len.y, rand1f(rng));
+  return make_lines(num, steps, [&](vec2f uv) -> make_lines_vertex {
+    auto [selement, suv] = samples[(int)round(uv.y * num)];
+    auto bposition       = eval_position(base, selement, suv);
+    auto bnormal         = eval_normal(base, selement, suv);
+    auto length          = lenghts[(int)round(uv.y * num)];
+    return {bposition + uv.x * length * bnormal, bnormal, uv,
+        lerp(radius.x, radius.y, uv.x)};
+  });
 }
 
 // Grow hairs around a shape
