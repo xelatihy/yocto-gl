@@ -228,6 +228,8 @@ shape_data make_recty(const vec2i& steps = {1, 1}, const vec2f& scale = {1, 1},
 // Make a floor
 shape_data make_floor(const vec2i& steps = {1, 1},
     const vec2f& scale = {10, 10}, const vec2f& uvscale = {20, 20});
+// Make a disk
+shape_data make_disk(int steps = 32, float scale = 1, float uvscale = 1);
 // Make a box
 shape_data make_box(const vec3i& steps = {1, 1, 1},
     const vec3f& scale = {1, 1, 1}, const vec3f& uvscale = {1, 1, 1});
@@ -263,6 +265,9 @@ shape_data make_bulged_recty(const vec2i& steps = {1, 1},
 shape_data make_bent_floor(const vec2i& steps = {1, 1},
     const vec2f& scale = {10, 10}, float bent = 0.5f,
     const vec2f& uvscale = {10, 10});
+// Make a bulged disk
+shape_data make_bulged_disk(
+    int steps = 32, float scale = 1, float height = 0.3f, float uvscale = 1);
 // Make a rounded box
 shape_data make_rounded_box(const vec3i& steps = {32, 32, 32},
     const vec3f& scale = {1, 1, 1}, float radius = 0.3f,

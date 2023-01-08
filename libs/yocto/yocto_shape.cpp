@@ -678,18 +678,6 @@ shape_data make_geosphere(int subdivisions) {
   }
   return shape;
 }
-shape_data make_disk(int subdivisions) {
-  auto shape = make_quad(subdivisions);
-  for (auto& position : shape.positions) {
-    // Analytical Methods for Squaring the Disc, by C. Fong
-    // https://arxiv.org/abs/1509.06344
-    auto xy = yocto::xy(position);
-    auto uv = vec2f{
-        xy.x * sqrt(1 - xy.y * xy.y / 2), xy.y * sqrt(1 - xy.x * xy.x / 2)};
-    position = vec3f{uv, 0};
-  }
-  return shape;
-}
 shape_data make_wtcube(int subdivisions) {
   static const auto wtcube_positions = vector<vec3f>{{-1, -1, +1}, {+1, -1, +1},
       {+1, +1, +1}, {-1, +1, +1}, {+1, -1, -1}, {-1, -1, -1}, {-1, +1, -1},
@@ -741,66 +729,6 @@ shape_data make_monkey(int subdivisions) {
   } else {
     std::tie(shape.quads, shape.positions) = subdivide_quads(
         suzanne_quads, suzanne_positions, subdivisions);
-  }
-  return shape;
-}
-
-// Deformed shapes
-shape_data make_bulged_quad(int subdivisions, float height) {
-  if (height == 0) return make_quad(subdivisions);
-  auto shape  = make_quad(subdivisions);
-  height      = min(height, 1);
-  auto radius = (1 + height * height) / (2 * height);
-  auto center = vec3f{0, 0, -radius + height};
-  for (auto i : range(shape.positions.size())) {
-    auto pn            = normalize(shape.positions[i] - center);
-    shape.positions[i] = center + pn * radius;
-    shape.normals[i]   = pn;
-  }
-  return shape;
-}
-shape_data make_bulged_disk(int subdivisions, float height) {
-  if (height == 0) return make_disk(subdivisions);
-  auto shape  = make_disk(subdivisions);
-  height      = min(height, 1);
-  auto radius = (1 + height * height) / (2 * height);
-  auto center = vec3f{0, 0, -radius + height};
-  for (auto i : range(shape.positions.size())) {
-    auto pn            = normalize(shape.positions[i] - center);
-    shape.positions[i] = center + pn * radius;
-    shape.normals[i]   = pn;
-  }
-  return shape;
-}
-shape_data make_rounded_cube(int subdivisions, float radius) {
-  if (radius == 0) return make_cube(subdivisions);
-  auto shape = make_cube(subdivisions);
-  radius     = min(radius, 1);
-  auto c     = 1 - radius;
-  for (auto i : range(shape.positions.size())) {
-    auto pc = abs(shape.positions[i]);
-    auto ps = select(component_less(shape.positions[i], 0), -1.0f, 1.0f);
-    if (pc.x >= c && pc.y >= c && pc.z >= c) {
-      auto pn            = normalize(pc - c);
-      shape.positions[i] = c + radius * pn;
-      shape.normals[i]   = pn;
-    } else if (pc.x >= c && pc.y >= c) {
-      auto pn            = normalize((pc - c) * vec3f{1, 1, 0});
-      shape.positions[i] = {c + radius * pn.x, c + radius * pn.y, pc.z};
-      shape.normals[i]   = pn;
-    } else if (pc.x >= c && pc.z >= c) {
-      auto pn            = normalize((pc - c) * vec3f{1, 0, 1});
-      shape.positions[i] = {c + radius * pn.x, pc.y, c + radius * pn.z};
-      shape.normals[i]   = pn;
-    } else if (pc.y >= c && pc.z >= c) {
-      auto pn            = normalize((pc - c) * vec3f{0, 1, 1});
-      shape.positions[i] = {pc.x, c + radius * pn.y, c + radius * pn.z};
-      shape.normals[i]   = pn;
-    } else {
-      continue;
-    }
-    shape.positions[i] *= ps;
-    shape.normals[i] *= ps;
   }
   return shape;
 }
@@ -1050,8 +978,8 @@ shape_data make_floor(
 shape_data make_bent_floor(const vec2i& steps, const vec2f& scale, float radius,
     const vec2f& uvscale) {
   if (radius == 0) return make_floor(steps, scale, uvscale);
-  radius     = min(radius * scale, scale);
-  auto start = (scale - radius) / 2;
+  radius     = min(radius, scale.y);
+  auto start = (scale.y - radius) / 2;
   auto end   = start + radius;
   return transform_patch_vertices(make_floor(steps, scale, uvscale),
       [&](const vec3f& position, const vec3f& normal,
@@ -1067,6 +995,34 @@ shape_data make_bent_floor(const vec2i& steps, const vec2f& scale, float radius,
         } else {
           return {position, normal, texcoord};
         }
+      });
+}
+
+// Make a disk
+shape_data make_disk(int steps, float scale, float uvscale) {
+  return transform_patch_vertices(
+      make_rect({steps, steps}, {scale, scale}, {uvscale, uvscale}),
+      [&](const vec3f& position, const vec3f& normal,
+          const vec2f& texcoord) -> make_patch_vertex {
+        // Analytical Methods for Squaring the Disc, by C. Fong
+        // https://arxiv.org/abs/1509.06344
+        auto xy = yocto::xy(position);
+        auto uv = vec2f{
+            xy.x * sqrt(1 - xy.y * xy.y / 2), xy.y * sqrt(1 - xy.x * xy.x / 2)};
+        return {{uv, 0}, normal, texcoord};
+      });
+}
+shape_data make_bulged_disk(
+    int steps, float scale, float height, float uvscale) {
+  if (height == 0) return make_disk(steps, scale, uvscale);
+  height      = min(height, scale);
+  auto radius = (1 + height * height) / (2 * height);
+  auto center = vec3f{0, 0, -radius + height};
+  return transform_patch_vertices(make_disk(steps, scale, uvscale),
+      [&](const vec3f& position, const vec3f& normal,
+          const vec2f& texcoord) -> make_patch_vertex {
+        auto pn = normalize(position - center);
+        return {center + pn * radius, pn, texcoord};
       });
 }
 
