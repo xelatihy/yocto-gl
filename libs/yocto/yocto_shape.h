@@ -312,13 +312,18 @@ fvshape_data make_fvbox(const vec3i& steps = {1, 1, 1},
 fvshape_data make_fvsphere(int steps = 32, float scale = 1, float uvscale = 1);
 
 // Make a point.
-shape_data make_point(float radius = 0.001f, bool generate_uv = true);
+shape_data make_point(float radius = 0.001f);
 // Make many points at the origin (useful for particle systems).
 shape_data make_points(
-    int num = 65536, float radius = 0.001f, bool generate_uv = true);
+    int num = 65536, float radius = 0.001f, float uvscale = 1);
+
+// Make a line.
+shape_data make_line(int steps = 4, float scale = 1,
+    const vec2f& radius = {0.001f, 0.001f}, float uvscale = 1);
 // Make lines along a quad.
 shape_data make_lines(int num = 65536, int steps = 4,
-    const vec2f& scale = {1, 1}, const vec2f& radius = {0.001f, 0.001f});
+    const vec2f& scale = {1, 1}, const vec2f& radius = {0.001f, 0.001f},
+    const vec2f& uvscale = {1, 1});
 
 // Make a grid of quads
 shape_data make_quad_grid(const vec2i& steps = {256, 256}, float scale = 1);
@@ -329,23 +334,21 @@ shape_data make_point_grid(
 shape_data make_line_grid(
     const vec2i& steps = {256, 256}, float scale = 1, float radius = 0.001f);
 
-// Make random points in a cube.
-// TODO: switch to quad?
+// Make random points in a qiad or cube.
 shape_data make_random_points(int num = 65536, float radius = 0.001f,
-    bool generate_uv = true, uint64_t seed = 17);
+    bool on_quad = false, uint64_t seed = 17);
 // Make points on a shape
 shape_data make_random_points(const shape_data& shape, int num = 65536,
-    float radius = 0.001f, bool generate_uv = true, int seed = 7);
+    float radius = 0.001f, uint64_t seed = 17);
 // Make lines on a shape
 shape_data make_random_lines(const shape_data& shape, int num = 65536,
     int steps = 8, const vec2f& length = {0.1f, 0.1f},
-    const vec2f& radius = {0.001f, 0.001f}, bool generate_uv = true,
-    int seed = 7);
+    const vec2f& radius = {0.001f, 0.001f}, uint64_t seed = 17);
 // Make hairs on a shape
 shape_data make_random_hairs(const shape_data& shape, int num = 65536,
     int steps = 8, const vec2f& length = {0.1f, 0.1f},
     const vec2f& radius = {0.001f, 0.001f}, float noise = 0,
-    float gravity = 0.001f, bool generate_uv = true, int seed = 7);
+    float gravity = 0.001f, uint64_t seed = 17);
 
 // Convert points to small spheres and lines to small cylinders. This is
 // intended for making very small primitives for display in interactive

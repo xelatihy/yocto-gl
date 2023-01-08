@@ -1316,13 +1316,65 @@ fvshape_data make_fvsphere(int steps, float scale, float uvscale) {
 }
 
 // Generate lines.
+struct make_points_vertex {
+  vec3f position;
+  vec3f normal;
+  vec2f texcoord;
+  float radius;
+};
+template <typename Func>
+static shape_data make_points(int num, Func&& func) {
+  auto shape = shape_data{};
+
+  shape.positions = vector<vec3f>(num);
+  shape.normals   = vector<vec3f>(num);
+  shape.texcoords = vector<vec2f>(num);
+  shape.radius    = vector<float>(num);
+  for (auto idx : range(num)) {
+    auto u = num > 1 ? idx / (float)(num - 1) : 0;
+    auto [position, normal, texcoord, radius] = func(u);
+    shape.positions[idx]                      = position;
+    shape.normals[idx]                        = normal;
+    shape.texcoords[idx]                      = texcoord;
+    shape.radius[idx]                         = radius;
+  }
+
+  shape.points = vector<int>(num);
+  for (auto idx : range(num)) {
+    shape.points[idx] = idx;
+  }
+
+  return shape;
+}
+
+// Make a point.
+shape_data make_point(float radius) {
+  static const auto point_positions = vector<vec3f>{{0, 0, 0}};
+  static const auto point_normals   = vector<vec3f>{{0, 0, 1}};
+  static const auto point_texcoords = vector<vec2f>{{0, 0}};
+  static const auto point_points    = vector<int>{0};
+
+  return {.points = point_points,
+      .positions  = point_positions,
+      .normals    = point_normals,
+      .texcoords  = point_texcoords};
+}
+
+// Generate a point set with points placed at the origin with texcoords
+// varying along u.
+shape_data make_points(int num, float radius, float uvscale) {
+  return make_points(num, [=](float u) -> make_points_vertex {
+    return {{0, 0, 0}, {0, 0, 1}, {u * uvscale, 0}, radius};
+  });
+}
+
+// Generate lines.
 struct make_lines_vertex {
   vec3f position;
   vec3f normal;
   vec2f texcoord;
   float radius;
 };
-// Generate lines set along a quad.
 template <typename Func>
 static shape_data make_lines(int num, int steps, Func&& func) {
   auto num_verts = (steps + 1) * num, num_lines = steps * num;
@@ -1352,43 +1404,36 @@ static shape_data make_lines(int num, int steps, Func&& func) {
   return shape;
 }
 
+// Make a line.
+shape_data make_line(
+    int steps, float scale, const vec2f& radius, float uvscale) {
+  static const auto line_positions = vector<vec3f>{{-1, 0, 0}, {+1, 0, 0}};
+  static const auto line_normals   = vector<vec3f>{{1, 0, 0}, {1, 0, 0}};
+  static const auto line_texcoords = vector<vec2f>{{0, 0}, {1, 0}};
+  static const auto line_lines     = vector<vec2i>{{0, 1}};
+
+  if (steps == 1) {
+    return scale_shape({.lines        = line_lines,
+                           .positions = line_positions,
+                           .normals   = line_normals,
+                           .texcoords = line_texcoords,
+                           .radius    = {radius.x, radius.y}},
+        scale, uvscale);
+  } else {
+    return make_lines(1, steps, {scale, scale}, radius, {uvscale, uvscale});
+  }
+}
+
 // Generate lines set along a quad.
-shape_data make_lines(
-    int num, int steps, const vec2f& scale, const vec2f& rad) {
+shape_data make_lines(int num, int steps, const vec2f& scale,
+    const vec2f& radius, const vec2f& uvscale) {
   return make_lines(num, steps, [&](const vec2f& uv) {
-    return make_lines_vertex{vec3f{(2 * uv - 1) * scale, 0}, vec3f{1, 0, 0}, uv,
-        lerp(rad.x, rad.y, uv.x)};
+    return make_lines_vertex{vec3f{(2 * uv - 1) * scale, 0}, vec3f{1, 0, 0},
+        uv * uvscale, lerp(radius.x, radius.y, uv.x)};
   });
 }
 
-// Make point primitives. Returns points, pos, norm, texcoord, radius.
-shape_data make_point(float radius, bool generate_uv) {
-  auto shape      = shape_data{};
-  shape.points    = {0};
-  shape.positions = {{0, 0, 0}};
-  shape.normals   = {{0, 0, 1}};
-  if (generate_uv) shape.texcoords = {{0, 0}};
-  shape.radius = {radius};
-  return shape;
-}
-
-// Generate a point set with points placed at the origin with texcoords
-// varying along u.
-shape_data make_points(int num, float radius, bool generate_uv) {
-  auto shape   = shape_data{};
-  shape.points = vector<int>(num);
-  for (auto i : range(num)) shape.points[i] = i;
-  shape.positions = vector<vec3f>(num, {0, 0, 0});
-  shape.normals   = vector<vec3f>(num, {0, 0, 1});
-  shape.texcoords = vector<vec2f>(num, {0, 0});
-  shape.radius    = vector<float>(num, radius);
-  if (generate_uv) {
-    for (auto i : range(shape.texcoords.size()))
-      shape.texcoords[i] = {(float)i / (float)num, 0};
-  }
-  return shape;
-}
-
+// Make a grid of quads
 shape_data make_quad_grid(const vec2i& steps, float scale_) {
   auto scale = scale_ * vec2f{aspect_ratio((vec2f)steps), 1};
   return make_quads(steps, [=](vec2f uv) {
@@ -1397,53 +1442,52 @@ shape_data make_quad_grid(const vec2i& steps, float scale_) {
   });
 }
 
+// Make points on a grid of quads
 shape_data make_point_grid(const vec2i& steps, float scale, float radius) {
   auto shape   = make_quad_grid(steps, scale);
   shape.quads  = {};
   shape.points = vector<int>(shape.positions.size());
   shape.radius = vector<float>(shape.positions.size());
   for (auto i : range(shape.positions.size())) shape.points[i] = (int)i;
-  for (auto i : range(shape.texcoords.size())) shape.radius[i] = radius;
+  for (auto i : range(shape.positions.size())) shape.radius[i] = radius;
   return shape;
 }
 
+// Make lines on a grid of quads
 shape_data make_line_grid(const vec2i& steps, float scale, float radius) {
   auto shape   = make_quad_grid(steps, scale);
   shape.lines  = get_edges(shape.quads);
   shape.quads  = {};
   shape.radius = vector<float>(shape.positions.size());
-  for (auto i : range(shape.texcoords.size())) shape.radius[i] = radius;
+  for (auto i : range(shape.positions.size())) shape.radius[i] = radius;
   return shape;
 }
 
 // Make points inside a cube
 shape_data make_random_points(
-    int num, float radius, bool generate_uv, uint64_t seed) {
+    int num, float radius, bool on_quad, uint64_t seed) {
   auto shape = make_points(num, radius);
   auto rng   = make_rng(seed);
-  for (auto& position : shape.positions) position = (2 * rand3f(rng) - 1);
+  for (auto& position : shape.positions)
+    position = on_quad ? vec3f{2 * rand2f(rng) - 1, 0} : (2 * rand3f(rng) - 1);
   for (auto& texcoord : shape.texcoords) texcoord = rand2f(rng);
   return shape;
 }
 
 // Grow lines around a shape
 shape_data make_random_points(
-    const shape_data& base, int num, float radius, bool generate_uv, int seed) {
-  auto points     = sample_shape(base, num, seed);
-  auto bpositions = vector<vec3f>{};
-  auto btexcoord  = vector<vec2f>{};
-  for (auto& point : points) {
-    bpositions.push_back(eval_position(base, point.element, point.uv));
-    btexcoord.push_back(eval_texcoord(base, point.element, point.uv));
+    const shape_data& base, int num, float radius, uint64_t seed) {
+  auto samples = sample_shape(base, num, seed);
+  auto shape   = make_points(num, radius);
+  for (auto&& [position, sample] : zip(shape.positions, samples)) {
+    position = eval_position(base, sample.element, sample.uv);
   }
-  auto shape      = make_points(num, radius, generate_uv);
-  shape.positions = bpositions;
   return shape;
 }
 
 // Grow lines around a shape
 shape_data make_random_lines(const shape_data& base, int num, int steps,
-    const vec2f& len, const vec2f& radius, bool generate_uv, int seed) {
+    const vec2f& len, const vec2f& radius, uint64_t seed) {
   auto points     = sample_shape(base, num, seed);
   auto bpositions = vector<vec3f>{};
   auto bnormals   = vector<vec3f>{};
@@ -1474,7 +1518,7 @@ shape_data make_random_lines(const shape_data& base, int num, int steps,
 // Grow hairs around a shape
 shape_data make_random_hairs(const shape_data& base, int num, int steps,
     const vec2f& len, const vec2f& radius, float noise, float gravity,
-    bool generate_uv, int seed) {
+    uint64_t seed) {
   auto points     = sample_shape(base, num, seed);
   auto bpositions = vector<vec3f>{};
   auto bnormals   = vector<vec3f>{};
