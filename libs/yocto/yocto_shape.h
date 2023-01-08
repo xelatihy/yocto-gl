@@ -691,21 +691,21 @@ namespace yocto {
 // Subdivide lines by splitting each line in half.
 template <typename T, typename I>
 inline pair<vector<vec<I, 2>>, vector<T>> subdivide_lines(
-    const vector<vec<I, 2>>& lines, const vector<T>& vertex);
+    const vector<vec<I, 2>>& lines, const vector<T>& vert);
 // Subdivide triangle by splitting each triangle in four, creating new
 // vertices for each edge.
 template <typename T, typename I>
 inline pair<vector<vec<I, 3>>, vector<T>> subdivide_triangles(
-    const vector<vec<I, 3>>& triangles, const vector<T>& vertex);
+    const vector<vec<I, 3>>& triangles, const vector<T>& vert);
 // Subdivide quads by splitting each quads in four, creating new
 // vertices for each edge and for each face.
 template <typename T, typename I>
 inline pair<vector<vec<I, 4>>, vector<T>> subdivide_quads(
-    const vector<vec<I, 4>>& quads, const vector<T>& vertex);
+    const vector<vec<I, 4>>& quads, const vector<T>& vert);
 // Subdivide beziers by splitting each segment in two.
 template <typename T, typename I>
 inline pair<vector<vec<I, 4>>, vector<T>> subdivide_beziers(
-    const vector<vec<I, 3>>& beziers, const vector<T>& vertex);
+    const vector<vec<I, 3>>& beziers, const vector<T>& vert);
 // Subdivide lines using B-splines subdivision rules.
 template <typename T, typename I>
 inline pair<vector<vec<I, 2>>, vector<T>> subdivide_bspline(
@@ -713,7 +713,7 @@ inline pair<vector<vec<I, 2>>, vector<T>> subdivide_bspline(
 // Subdivide quads using Catmull-Clark subdivision rules.
 template <typename T, typename I>
 inline pair<vector<vec<I, 4>>, vector<T>> subdivide_catmullclark(
-    const vector<vec<I, 4>>& quads, const vector<T>& vertex,
+    const vector<vec<I, 4>>& quads, const vector<T>& vert,
     bool lock_boundary = false);
 
 // Subdivide lines by splitting each line in half.

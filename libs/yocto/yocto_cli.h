@@ -496,7 +496,7 @@ inline bool parse_cli(
       return false;
     }
     // get command
-    auto name       = args[pos++];
+    auto& name      = args[pos++];
     cli.command_sel = name;
     // set command
     if (!cli.command_var({name}, error)) {
@@ -597,12 +597,12 @@ inline string _format_duration(int64_t duration) {
   elapsed %= 3600000;
   auto mins = (int)(elapsed / 60000);
   elapsed %= 60000;
-  auto secs  = (int)(elapsed / 1000);
-  auto msecs = (int)(elapsed % 1000);
-  char buffer[256];
-  snprintf(
-      buffer, sizeof(buffer), "%02d:%02d:%02d.%03d", hours, mins, secs, msecs);
-  return buffer;
+  auto             secs  = (int)(elapsed / 1000);
+  auto             msecs = (int)(elapsed % 1000);
+  array<char, 256> buffer;
+  snprintf(buffer.data(), buffer.size(), "%02d:%02d:%02d.%03d", hours, mins,
+      secs, msecs);
+  return string{buffer.data()};
 }
 
 // Simple timer
@@ -659,13 +659,13 @@ template <typename... Args>
 inline void print(const string& format, const Args&... values) {
   auto stream = std::stringstream{};
   format_to(stream, format, values...);
-  printf("%s", stream.str().c_str());
+  puts(stream.str().c_str());
 }
 template <typename... Args>
 inline void println(const string& format, const Args&... values) {
   auto stream = std::stringstream{};
   format_to(stream, format, values...);
-  printf("%s\n", stream.str().c_str());
+  puts(stream.str().c_str());
 }
 
 // Prints a message line.
@@ -673,7 +673,7 @@ template <typename... Args>
 inline void print_info(const string& format, const Args&... values) {
   auto stream = std::stringstream{};
   format_to(stream, format, values...);
-  printf("%s\n", stream.str().c_str());
+  puts(stream.str().c_str());
   fflush(stdout);
 }
 // Prints an error.

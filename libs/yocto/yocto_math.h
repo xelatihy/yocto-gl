@@ -2565,16 +2565,13 @@ struct quat;
 // Quaternions to represent rotations
 template <typename T>
 struct quat<T, 4> {
-  union {  // clang-format off
-    T d[4];
-    struct { T x, y, z, w; };
-  };  // clang-format on
+  T x = 0, y = 0, z = 0, w = 0;
 
   constexpr kernel quat() : x{0}, y{0}, z{0}, w{1} {}
   constexpr kernel quat(T x_, T y_, T z_, T w_) : x{x_}, y{y_}, z{z_}, w{w_} {}
 
-  constexpr kernel T&       operator[](size_t i) { return d[i]; }
-  constexpr kernel const T& operator[](size_t i) const { return d[i]; }
+  constexpr kernel T&       operator[](size_t i) { return (&x)[i]; }
+  constexpr kernel const T& operator[](size_t i) const { return (&x)[i]; }
 };
 
 // Quaternion aliases

@@ -180,6 +180,10 @@
     "misc-no-recursion",
     "bugprone-exception-escape",
     "cppcoreguidelines-pro-bounds-constant-array-index",
-    "readability-function-cognitive-complexity"
+    "readability-function-cognitive-complexity",
+    "misc-confusable-identifiers",
+    "bugprone-narrowing-conversions",
+    "bugprone-implicit-widening-of-multiplication-result",
+    "cppcoreguidelines-narrowing-conversions"
   ]
 }

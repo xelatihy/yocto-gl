@@ -297,7 +297,7 @@ bool embree_supported() { return true; }
 // Get Embree device
 static RTCDevice embree_device() {
   static RTCDevice device = nullptr;
-  if (!device) {
+  if (device == nullptr) {
     device = rtcNewDevice("");
     rtcSetDeviceErrorFunction(
         device,
