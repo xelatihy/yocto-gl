@@ -135,6 +135,8 @@ shape_data transform_shape(
     const shape_data& shape, const frame3f& frame, bool non_rigid = false);
 shape_data transform_shape(const shape_data& shape, const frame3f& frame,
     float radius_scale, bool non_rigid = false);
+shape_data scale_shape(const shape_data& shape, float scale, float uvscale = 1);
+shape_data scale_shape(shape_data&& shape, float scale, float uvscale = 1);
 
 // Manipulate vertex data
 shape_data remove_normals(const shape_data& shape);
@@ -205,6 +207,10 @@ vector<string> fvshape_stats(const fvshape_data& shape, bool verbose = false);
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// Make a quad
+shape_data make_quad(int steps = 1, float scale = 1, float uvscale = 1);
+// Make a quad along y
+shape_data make_quady(int steps = 1, float scale = 1, float uvscale = 1);
 // Make a rectangle
 shape_data make_rect(const vec2i& steps = {1, 1}, const vec2f& scale = {1, 1},
     const vec2f& uvscale = {1, 1});
@@ -216,15 +222,21 @@ shape_data make_floor(const vec2i& steps = {1, 1},
     const vec2f& scale = {10, 10}, const vec2f& uvscale = {20, 20});
 // Make a disk
 shape_data make_disk(int steps = 32, float scale = 1, float uvscale = 1);
+// Make a cube
+shape_data make_cube(int steps = 1, float scale = 1, float uvscale = 1);
+// Make a cube that is watertight (only positions)
+shape_data make_wtcube(int steps = 1, float scale = 1);
+// Make a cube that is watertight and open (only positions)
+shape_data make_opcube(int steps = 1, float scale = 1);
 // Make a box
 shape_data make_box(const vec3i& steps = {1, 1, 1},
     const vec3f& scale = {1, 1, 1}, const vec3f& uvscale = {1, 1, 1});
 // Make a watertight box (positions-only)
-shape_data make_wtbox(const vec3i& steps = {1, 1, 1},
-    const vec3f& scale = {1, 1, 1}, const vec3f& uvscale = {1, 1, 1});
+shape_data make_wtbox(
+    const vec3i& steps = {1, 1, 1}, const vec3f& scale = {1, 1, 1});
 // Make a watertight and open box (positions-only)
-shape_data make_opbox(const vec3i& steps = {1, 1, 1},
-    const vec3f& scale = {1, 1, 1}, const vec3f& uvscale = {1, 1, 1});
+shape_data make_opbox(
+    const vec3i& steps = {1, 1, 1}, const vec3f& scale = {1, 1, 1});
 // Make a tesselated sphere
 shape_data make_tsphere(int steps = 32, float scale = 1, float uvscale = 1);
 // Make a uv sphere
@@ -275,20 +287,10 @@ shape_data make_rounded_uvcylinder(const vec3i& steps = {32, 32, 32},
     const vec2f& scale = {1, 1}, float radius = 0.3f,
     const vec3f& uvscale = {1, 1, 1});
 
-// Make a quad
-shape_data make_quad();
-// Make a quad along y
-shape_data make_quady();
-// Make a cube
-shape_data make_cube();
 // Make a geosphere
-shape_data make_geosphere(int subdivisions = 3);
-// Make a cube that is watertight (only positions)
-shape_data make_wtcube();
-// Make a cube that is watertight and open (only positions)
-shape_data make_opcube();
+shape_data make_geosphere(float scale = 1, int subdivisions = 3);
 // Make a monkey
-shape_data make_monkey();
+shape_data make_monkey(float scale = 1);
 
 // Make a face-varying rectangle
 fvshape_data make_fvrect(const vec2i& steps = {1, 1},

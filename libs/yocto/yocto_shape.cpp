@@ -308,6 +308,20 @@ shape_data transform_shape(const shape_data& shape, const frame3f& frame,
   for (auto& radius : transformed.radius) radius *= radius_scale;
   return transformed;
 }
+shape_data scale_shape(const shape_data& shape, float scale, float uvscale) {
+  if (scale == 1 && uvscale == 1) return shape;
+  auto transformed = shape;
+  for (auto& position : transformed.positions) position *= scale;
+  for (auto& texcoord : transformed.texcoords) texcoord *= uvscale;
+  return transformed;
+}
+shape_data scale_shape(shape_data&& shape, float scale, float uvscale) {
+  if (scale == 1 && uvscale == 1) return std::move(shape);
+  auto transformed = std::move(shape);
+  for (auto& position : transformed.positions) position *= scale;
+  for (auto& texcoord : transformed.texcoords) texcoord *= uvscale;
+  return transformed;
+}
 
 // Manipulate vertex data
 shape_data remove_normals(const shape_data& shape) {
@@ -900,17 +914,15 @@ shape_data make_rounded_box(const vec3i& steps, const vec3f& scale,
 }
 
 // Make a watertight box.
-shape_data make_wtbox(
-    const vec3i& steps, const vec3f& scale, const vec3f& uvscale) {
-  if (steps == 1 && scale == 1 && uvscale == 1) return make_wtcube();
-  return weld_vertices(make_box(steps, scale, uvscale), min(scale / steps));
+shape_data make_wtbox(const vec3i& steps, const vec3f& scale) {
+  if (steps == 1 && scale == 1) return make_wtcube();
+  return weld_vertices(make_box(steps, scale), min(scale / steps));
 }
 
 // Make a watertight box.
-shape_data make_opbox(
-    const vec3i& steps, const vec3f& scale, const vec3f& uvscale) {
-  if (steps == 1 && scale == 1 && uvscale == 1) return make_opcube();
-  return weld_vertices(make_box(steps, scale, uvscale), min(scale / steps));
+shape_data make_opbox(const vec3i& steps, const vec3f& scale) {
+  if (steps == 1 && scale == 1) return make_opcube();
+  return weld_vertices(make_box(steps, scale), min(scale / steps));
 }
 
 // Make a sphere.
@@ -1093,7 +1105,7 @@ shape_data make_uvcone(
 }
 
 // Predefined meshes
-shape_data make_quad() {
+shape_data make_quad(int steps, float scale, float uvscale) {
   static const auto quad_positions = vector<vec3f>{
       {-1, -1, 0}, {+1, -1, 0}, {+1, +1, 0}, {-1, +1, 0}};
   static const auto quad_normals = vector<vec3f>{
@@ -1102,14 +1114,20 @@ shape_data make_quad() {
       {0, 1}, {1, 1}, {1, 0}, {0, 0}};
   static const auto quad_quads = vector<vec4i>{{0, 1, 2, 3}};
 
-  return {
-      .quads     = quad_quads,
-      .positions = quad_positions,
-      .normals   = quad_normals,
-      .texcoords = quad_texcoords,
-  };
+  if (steps == 1) {
+    return scale_shape(
+        shape_data{
+            .quads     = quad_quads,
+            .positions = quad_positions,
+            .normals   = quad_normals,
+            .texcoords = quad_texcoords,
+        },
+        scale, uvscale);
+  } else {
+    return make_rect({steps, steps}, {scale, scale}, {uvscale, uvscale});
+  }
 }
-shape_data make_quady() {
+shape_data make_quady(int steps, float scale, float uvscale) {
   static const auto quady_positions = vector<vec3f>{
       {-1, 0, -1}, {-1, 0, +1}, {+1, 0, +1}, {+1, 0, -1}};
   static const auto quady_normals = vector<vec3f>{
@@ -1118,14 +1136,20 @@ shape_data make_quady() {
       {0, 0}, {1, 0}, {1, 1}, {0, 1}};
   static const auto quady_quads = vector<vec4i>{{0, 1, 2, 3}};
 
-  return {
-      .quads     = quady_quads,
-      .positions = quady_positions,
-      .normals   = quady_normals,
-      .texcoords = quady_texcoords,
-  };
+  if (steps == 1) {
+    return scale_shape(
+        shape_data{
+            .quads     = quady_quads,
+            .positions = quady_positions,
+            .normals   = quady_normals,
+            .texcoords = quady_texcoords,
+        },
+        scale, uvscale);
+  } else {
+    return make_recty({steps, steps}, {scale, scale}, {uvscale, uvscale});
+  }
 }
-shape_data make_cube() {
+shape_data make_cube(int steps, float scale, float uvscale) {
   static const auto cube_positions = vector<vec3f>{{-1, -1, +1}, {+1, -1, +1},
       {+1, +1, +1}, {-1, +1, +1}, {+1, -1, -1}, {-1, -1, -1}, {-1, +1, -1},
       {+1, +1, -1}, {+1, -1, +1}, {+1, -1, -1}, {+1, +1, -1}, {+1, +1, +1},
@@ -1144,14 +1168,18 @@ shape_data make_cube() {
   static const auto cube_quads     = vector<vec4i>{{0, 1, 2, 3}, {4, 5, 6, 7},
           {8, 9, 10, 11}, {12, 13, 14, 15}, {16, 17, 18, 19}, {20, 21, 22, 23}};
 
-  return {
-      .quads     = cube_quads,
-      .positions = cube_positions,
-      .normals   = cube_normals,
-      .texcoords = cube_texcoords,
-  };
+  if (steps == 1) {
+    return scale_shape(shape_data{.quads = cube_quads,
+                           .positions    = cube_positions,
+                           .normals      = cube_normals,
+                           .texcoords    = cube_texcoords},
+        scale, uvscale);
+  } else {
+    return make_box({steps, steps, steps}, {scale, scale, scale},
+        {uvscale, uvscale, uvscale});
+  }
 }
-shape_data make_geosphere(int subdivisions) {
+shape_data make_geosphere(float scale, int subdivisions) {
   // https://stackoverflow.com/questions/17705621/algorithm-for-a-geodesic-sphere
   const float X                   = 0.525731112119133606f;
   const float Z                   = 0.850650808352039932f;
@@ -1165,9 +1193,10 @@ shape_data make_geosphere(int subdivisions) {
 
   auto shape = shape_data{};
   if (subdivisions == 0) {
-    shape.triangles = geosphere_triangles;
-    shape.positions = geosphere_positions;
-    shape.normals   = geosphere_positions;
+    return scale_shape({.triangles    = geosphere_triangles,
+                           .positions = geosphere_positions,
+                           .normals   = geosphere_positions},
+        scale);
   } else {
     std::tie(shape.triangles, shape.positions) = subdivide_triangles(
         geosphere_triangles, geosphere_positions, subdivisions);
@@ -1176,38 +1205,43 @@ shape_data make_geosphere(int subdivisions) {
   }
   return shape;
 }
-shape_data make_wtcube() {
+shape_data make_wtcube(int steps, float scale) {
   static const auto wtcube_positions = vector<vec3f>{{-1, -1, +1}, {+1, -1, +1},
       {+1, +1, +1}, {-1, +1, +1}, {+1, -1, -1}, {-1, -1, -1}, {-1, +1, -1},
       {+1, +1, -1}};
   static const auto wtcube_quads     = vector<vec4i>{{0, 1, 2, 3}, {4, 5, 6, 7},
           {1, 4, 7, 2}, {5, 0, 3, 6}, {3, 2, 7, 6}, {1, 0, 5, 4}};
 
-  return {
-      .quads     = wtcube_quads,
-      .positions = wtcube_positions,
-  };
+  if (steps == 1) {
+    return scale_shape(
+        shape_data{.quads = wtcube_quads, .positions = wtcube_positions},
+        scale);
+  } else {
+    return make_wtbox({steps, steps, steps}, {scale, scale, scale});
+  }
 }
-shape_data make_opcube() {
+shape_data make_opcube(int steps, float scale) {
   static const auto opcube_positions = vector<vec3f>{{-1, -1, +1}, {+1, -1, +1},
       {+1, +1, +1}, {-1, +1, +1}, {+1, -1, -1}, {-1, -1, -1}, {-1, +1, -1},
       {+1, +1, -1}};
   static const auto opcube_quads     = vector<vec4i>{
       {0, 1, 2, 3}, {4, 5, 6, 7}, {1, 4, 7, 2}, {5, 0, 3, 6}, {3, 2, 7, 6}};
 
-  return {
-      .quads     = opcube_quads,
-      .positions = opcube_positions,
-  };
+  if (steps == 1) {
+    return scale_shape(
+        shape_data{.quads = opcube_quads, .positions = opcube_positions},
+        scale);
+  } else {
+    return make_opbox({steps, steps, steps}, {scale, scale, scale});
+  }
 }
-shape_data make_monkey() {
+shape_data make_monkey(float scale) {
   extern vector<vec3f> suzanne_positions;
   extern vector<vec4i> suzanne_quads;
 
-  return {
-      .quads     = suzanne_quads,
-      .positions = suzanne_positions,
-  };
+  return scale_shape(
+      shape_data{.quads = suzanne_quads, .positions = suzanne_positions},
+      scale);
 }
 
 // Make a face-varying rect
