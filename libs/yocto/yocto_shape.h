@@ -205,23 +205,6 @@ vector<string> fvshape_stats(const fvshape_data& shape, bool verbose = false);
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Make a quad
-shape_data make_quad(int subdivisions = 0);
-// Make a quad along y
-shape_data make_quady(int subdivisions = 0);
-// Make a cube
-shape_data make_cube(int subdivisions = 0);
-// Make a geosphere
-shape_data make_geosphere(int subdivisions = 3);
-// Make a cube that is watertight (only positions)
-shape_data make_wtcube(int subdivisions = 0);
-// Make a cube that is watertight and open (only positions)
-shape_data make_opcube(int subdivisions = 0);
-// Make a sphere that is watertight (only positions and normals)
-shape_data make_wtsphere(int subdivisions = 5);
-// Make a monkey
-shape_data make_monkey(int subdivisions = 0);
-
 // Make a rectangle
 shape_data make_rect(const vec2i& steps = {1, 1}, const vec2f& scale = {1, 1},
     const vec2f& uvscale = {1, 1});
@@ -292,8 +275,20 @@ shape_data make_rounded_uvcylinder(const vec3i& steps = {32, 32, 32},
     const vec2f& scale = {1, 1}, float radius = 0.3f,
     const vec3f& uvscale = {1, 1, 1});
 
-// Make a face-varying cube
-fvshape_data make_fvcube(int subdivisions = 0);
+// Make a quad
+shape_data make_quad();
+// Make a quad along y
+shape_data make_quady();
+// Make a cube
+shape_data make_cube();
+// Make a geosphere
+shape_data make_geosphere(int subdivisions = 3);
+// Make a cube that is watertight (only positions)
+shape_data make_wtcube();
+// Make a cube that is watertight and open (only positions)
+shape_data make_opcube();
+// Make a monkey
+shape_data make_monkey();
 
 // Make a face-varying rectangle
 fvshape_data make_fvrect(const vec2i& steps = {1, 1},
@@ -303,6 +298,9 @@ fvshape_data make_fvbox(const vec3i& steps = {1, 1, 1},
     const vec3f& scale = {1, 1, 1}, const vec3f& uvscale = {1, 1, 1});
 // Make a face-varying sphere
 fvshape_data make_fvsphere(int steps = 32, float scale = 1, float uvscale = 1);
+
+// Make a face-varying cube
+fvshape_data make_fvcube();
 
 // Make a point.
 shape_data make_point(float radius = 0.001f, bool generate_uv = true);

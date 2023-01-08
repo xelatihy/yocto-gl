@@ -1162,8 +1162,6 @@ shape_data make_shape_preset(const string& type_) {
     return make_wtcube();
   } else if (type == "opcube") {
     return make_opcube();
-  } else if (type == "wtsphere") {
-    return make_wtsphere();
   } else if (type == "wtbox") {
     return make_wtbox();
   } else if (type == "fvcube") {
@@ -1184,7 +1182,7 @@ shape_data make_shape_preset(const string& type_) {
     return fvshape_to_shape(
         add_normals(subdivide_fvshape(make_fvcube(), 4, true)));
   } else if (type == "displaced_quady") {
-    return make_quady(8);
+    return make_recty({pow2(8), pow2(8)});
   } else if (type == "displaced_sphere") {
     return make_tsphere(pow2(7));
   } else if (type == "floor") {
@@ -1221,9 +1219,9 @@ shape_data make_shape_preset(const string& type_) {
   } else if (type == "test_quady") {
     return transform_shape(make_quady(), test_xform);
   } else if (type == "test_displaced_quad") {
-    return transform_shape(make_quad(8), test_xform);
+    return transform_shape(make_rect({pow2(8), pow2(8)}), test_xform);
   } else if (type == "test_displaced_quady") {
-    return transform_shape(make_quady(8), test_xform);
+    return transform_shape(make_recty({pow2(8), pow2(8)}), test_xform);
   } else if (type == "test_matball") {
     return transform_shape(make_tsphere(), test_xform);
   } else if (type == "test_geosphere") {
@@ -1278,9 +1276,9 @@ shape_data make_shape_preset(const string& type_) {
   } else if (type == "test_particles") {
     return make_points(4096);
   } else if (type == "test_cloth") {
-    return transform_shape(make_quad(6), scaling_frame(0.2f));
+    return transform_shape(make_rect({pow2(6), pow2(6)}), scaling_frame(0.2f));
   } else if (type == "test_clothy") {
-    return transform_shape(make_quady(6), scaling_frame(0.2f));
+    return transform_shape(make_recty({pow2(6), pow2(6)}), scaling_frame(0.2f));
   } else {
     throw io_error{"unknown preset " + type};
   }
