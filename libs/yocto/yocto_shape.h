@@ -363,8 +363,10 @@ shape_data lines_to_cylinders(const vector<vec2i>& lines,
     const vector<vec3f>& positions, int steps = 4, float scale = 0.01f);
 
 // Make a heightfield mesh.
-shape_data make_heightfield(const array2d<float>& height);
-shape_data make_heightfield(const array2d<vec4f>& height);
+shape_data make_heightfield(
+    const array2d<float>& height, const vec2f& scale = {1, 1});
+shape_data make_heightfield(
+    const array2d<vec4f>& height, const vec2f& scale = {1, 1});
 
 }  // namespace yocto
 

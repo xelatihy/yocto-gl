@@ -1529,22 +1529,24 @@ shape_data make_random_hairs(const shape_data& base, int num, int steps,
 }
 
 // Make a heightfield mesh.
-shape_data make_heightfield(const array2d<float>& height) {
+shape_data make_heightfield(const array2d<float>& height, const vec2f& scale) {
   auto size  = (vec2i)height.extents();
   auto shape = make_recty(size + 1, (vec2f)size / (float)max(size));
   for (auto ij : range(size)) {
     auto& position = shape.positions[ij.y * size.x + ij.x];
-    position       = {position.x, height[ij], position.y};
+    position       = {
+        position.x * scale.x, height[ij] * scale.y, position.y * scale.x};
   }
   shape.normals = quads_normals(shape.quads, shape.positions);
   return shape;
 }
-shape_data make_heightfield(const array2d<vec4f>& height) {
+shape_data make_heightfield(const array2d<vec4f>& height, const vec2f& scale) {
   auto size  = (vec2i)height.extents();
   auto shape = make_recty(size + 1, (vec2f)size / (float)max(size));
   for (auto ij : range(size)) {
     auto& position = shape.positions[ij.y * size.x + ij.x];
-    position       = {position.x, mean(xyz(height[ij])), position.z};
+    position       = {position.x * scale.x, mean(xyz(height[ij])) * scale.y,
+              position.z * scale.x};
   }
   shape.normals = quads_normals(shape.quads, shape.positions);
   return shape;
