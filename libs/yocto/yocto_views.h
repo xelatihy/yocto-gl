@@ -505,8 +505,13 @@ constexpr kernel enumerate_view<span<const T>, I> enumerate(
   return {span<const T>{sequence.data(), sequence.size()}, start};
 }
 template <typename T, size_t N, typename I = size_t>
+constexpr kernel enumerate_view<span<T>, I> enumerate(
+    array<T, N>& sequence, I start = 0) {
+  return {span<T>{sequence.data(), N}, start};
+}
+template <typename T, size_t N, typename I = size_t>
 constexpr kernel enumerate_view<span<const T>, I> enumerate(
-    const array<const T, N>& sequence, I start = 0) {
+    const array<T, N>& sequence, I start = 0) {
   return {span<const T>{sequence.data(), N}, start};
 }
 template <typename T, size_t N, typename I = size_t>

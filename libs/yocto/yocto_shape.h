@@ -135,8 +135,14 @@ shape_data transform_shape(
     const shape_data& shape, const frame3f& frame, bool non_rigid = false);
 shape_data transform_shape(const shape_data& shape, const frame3f& frame,
     float radius_scale, bool non_rigid = false);
+shape_data scale_shape(const shape_data& shape, float scale, float uvscale = 1);
+shape_data scale_shape(shape_data&& shape, float scale, float uvscale = 1);
+
+// Manipulate vertex data
 shape_data remove_normals(const shape_data& shape);
 shape_data add_normals(const shape_data& shape);
+shape_data weld_vertices(const shape_data& shape, float threshold,
+    bool normals = false, bool others = false);
 
 // Merge a shape into another
 void merge_shape_inplace(shape_data& shape, const shape_data& merge);
@@ -188,6 +194,12 @@ fvshape_data subdivide_fvshape(
 // Transform shape
 fvshape_data transform_fvshape(
     const fvshape_data& shape, const frame3f& frame, bool non_rigid = false);
+fvshape_data scale_fvshape(
+    const fvshape_data& shape, float scale, float uvscale = 1);
+fvshape_data scale_fvshape(
+    fvshape_data&& shape, float scale, float uvscale = 1);
+
+// Vertex properties
 fvshape_data remove_normals(const fvshape_data& shape);
 fvshape_data add_normals(const fvshape_data& shape);
 
@@ -202,103 +214,116 @@ vector<string> fvshape_stats(const fvshape_data& shape, bool verbose = false);
 namespace yocto {
 
 // Make a quad
-shape_data make_quad(int subdivisions = 0);
+shape_data make_quad(int steps = 1, float scale = 1, float uvscale = 1);
 // Make a quad along y
-shape_data make_quady(int subdivisions = 0);
-// Make a cube
-shape_data make_cube(int subdivisions = 0);
-// Make a sphere
-shape_data make_sphere(int subdivisions = 5);
-// Make a geosphere
-shape_data make_geosphere(int subdivisions = 3);
-// Make a cube that is watertight (only positions)
-shape_data make_wtcube(int subdivisions = 0);
-// Make a cube that is watertight and open (only positions)
-shape_data make_opcube(int subdivisions = 0);
-// Make a sphere that is watertight (only positions and normals)
-shape_data make_wtsphere(int subdivisions = 5);
-// Make a disk
-shape_data make_disk(int subdivisions = 5);
-// Make a floor
-shape_data make_floor(int subdivisions = 0, float size = 10);
-// Make a monkey
-shape_data make_monkey(int subdivisions = 0);
-// Make a rounded cube
-shape_data make_rounded_cube(int subdivisions = 5, float radius = 0.3f);
-// Make a bulged quad
-shape_data make_bulged_quad(int subdivisions = 5, float radius = 0.3f);
-// Make a bulged disk
-shape_data make_bulged_disk(int subdivisions = 5, float height = 0.3f);
-// Make a bent disk
-shape_data make_bent_floor(
-    int subdivisions = 5, float size = 10, float bent = 0.5f);
-
+shape_data make_quady(int steps = 1, float scale = 1, float uvscale = 1);
 // Make a rectangle
-shape_data make_rect(const vec2i& steps = {1, 1}, const vec2f& scale = {1, 1});
+shape_data make_rect(const vec2i& steps = {1, 1}, const vec2f& scale = {1, 1},
+    const vec2f& uvscale = {1, 1});
 // Make a rectangle along y
-shape_data make_recty(const vec2i& steps = {1, 1}, const vec2f& scale = {1, 1});
+shape_data make_recty(const vec2i& steps = {1, 1}, const vec2f& scale = {1, 1},
+    const vec2f& uvscale = {1, 1});
+// Make a floor
+shape_data make_floor(const vec2i& steps = {1, 1},
+    const vec2f& scale = {10, 10}, const vec2f& uvscale = {20, 20});
+// Make a disk
+shape_data make_disk(int steps = 32, float scale = 1, float uvscale = 1);
+// Make a cube
+shape_data make_cube(int steps = 1, float scale = 1, float uvscale = 1);
+// Make a cube that is watertight (only positions)
+shape_data make_wtcube(int steps = 1, float scale = 1);
+// Make a cube that is watertight and open (only positions)
+shape_data make_opcube(int steps = 1, float scale = 1);
 // Make a box
-shape_data make_box(
+shape_data make_box(const vec3i& steps = {1, 1, 1},
+    const vec3f& scale = {1, 1, 1}, const vec3f& uvscale = {1, 1, 1});
+// Make a watertight box (positions-only)
+shape_data make_wtbox(
     const vec3i& steps = {1, 1, 1}, const vec3f& scale = {1, 1, 1});
-// Make a rectangle stack
-shape_data make_rect_stack(int vsteps = 1, const vec2i& steps = {1, 1},
-    const vec3f& scale = {1, 1, 1});
+// Make a watertight and open box (positions-only)
+shape_data make_opbox(
+    const vec3i& steps = {1, 1, 1}, const vec3f& scale = {1, 1, 1});
 // Make a tesselated sphere
-shape_data make_tsphere(const vec3i& steps = {32, 32, 32}, float scale = 1);
+shape_data make_tsphere(int steps = 32, float scale = 1, float uvscale = 1);
 // Make a uv sphere
-shape_data make_uvsphere(const vec2i& steps = {64, 32}, float scale = 1);
+shape_data make_uvsphere(const vec2i& steps = {64, 32}, float scale = 1,
+    const vec2f& uvscale = {1, 1});
 // Make a uv sphere aligned to y
-shape_data make_uvspherey(const vec2i& steps = {64, 32}, float scale = 1);
+shape_data make_uvspherey(const vec2i& steps = {64, 32}, float scale = 1,
+    const vec2f& uvscale = {1, 1});
 // Make a uv disk
-shape_data make_uvdisk(const vec2i& steps = {32, 1}, float scale = 1);
+shape_data make_uvdisk(const vec2i& steps = {32, 1}, float scale = 1,
+    const vec2f& uvscale = {1, 1});
 // Make a uv cylinder
-shape_data make_uvcylinder(
-    const vec3i& steps = {32, 32, 32}, const vec2f& scale = {1, 1});
+shape_data make_uvcylinder(const vec3i& steps = {32, 32, 32},
+    const vec2f& scale = {1, 1}, const vec3f& uvscale = {1, 1, 1});
 // Make a uv capsule
-shape_data make_uvcapsule(
-    const vec3i& steps = {32, 32, 32}, const vec2f& scale = {1, 1});
+shape_data make_uvcapsule(const vec3i& steps = {32, 32, 32},
+    const vec2f& scale = {1, 1}, const vec3f& uvscale = {1, 1, 1});
 // Make a uv cone
-shape_data make_uvcone(
-    const vec3i& steps = {32, 32, 32}, const vec2f& scale = {1, 1});
+shape_data make_uvcone(const vec3i& steps = {32, 32, 32},
+    const vec2f& scale = {1, 1}, const vec3f& uvscale = {1, 1, 1});
 // Make a bulged rectangle
 shape_data make_bulged_rect(const vec2i& steps = {1, 1},
-    const vec2f& scale = {1, 1}, float radius = 0.3f);
+    const vec2f& scale = {1, 1}, float radius = 0.3f,
+    const vec2f& uvscale = {1, 1});
 // Make a bulged rectangle along y
 shape_data make_bulged_recty(const vec2i& steps = {1, 1},
-    const vec2f& scale = {1, 1}, float radius = 0.3f);
+    const vec2f& scale = {1, 1}, float radius = 0.3f,
+    const vec2f& uvscale = {1, 1});
+// Make a bent disk
+shape_data make_bent_floor(const vec2i& steps = {1, 1},
+    const vec2f& scale = {10, 10}, float bent = 0.5f,
+    const vec2f& uvscale = {10, 10});
+// Make a bulged disk
+shape_data make_bulged_disk(
+    int steps = 32, float scale = 1, float height = 0.3f, float uvscale = 1);
 // Make a rounded box
 shape_data make_rounded_box(const vec3i& steps = {32, 32, 32},
-    const vec3f& scale = {1, 1, 1}, float radius = 0.3f);
+    const vec3f& scale = {1, 1, 1}, float radius = 0.3f,
+    const vec3f& uvscale = {1, 1, 1});
 // Make a capped uv sphere
-shape_data make_capped_uvsphere(
-    const vec2i& steps = {32, 32}, float scale = 1, float height = 0.3f);
+shape_data make_capped_uvsphere(const vec2i& steps = {32, 32}, float scale = 1,
+    float height = 0.3f, const vec2f& uvscale = {1, 1});
 // Make a capped uv spherey
-shape_data make_capped_uvspherey(
-    const vec2i& steps = {32, 32}, float scale = 1, float height = 0.3f);
+shape_data make_capped_uvspherey(const vec2i& steps = {32, 32}, float scale = 1,
+    float height = 0.3f, const vec2f& uvscale = {1, 1});
 // Make a rounded uv cylinder
 shape_data make_rounded_uvcylinder(const vec3i& steps = {32, 32, 32},
-    const vec2f& scale = {1, 1}, float radius = 0.3f);
+    const vec2f& scale = {1, 1}, float radius = 0.3f,
+    const vec3f& uvscale = {1, 1, 1});
 
-// Make a face-varying cube
-fvshape_data make_fvcube(int subdivisions = 0);
+// Make a geosphere
+shape_data make_geosphere(float scale = 1, int subdivisions = 3);
+// Make a monkey
+shape_data make_monkey(float scale = 1);
 
+// Make a face-varying quad
+fvshape_data make_fvquad(int steps = 1, float scale = 1, float uvscale = 1);
 // Make a face-varying rectangle
-fvshape_data make_fvrect(
-    const vec2i& steps = {1, 1}, const vec2f& scale = {1, 1});
+fvshape_data make_fvrect(const vec2i& steps = {1, 1},
+    const vec2f& scale = {1, 1}, const vec2f& uvscale = {1, 1});
+// Make a face-varying cube
+fvshape_data make_fvcube(int steps = 1, float scale = 1, float uvscale = 1);
 // Make a face-varying box
-fvshape_data make_fvbox(
-    const vec3i& steps = {1, 1, 1}, const vec3f& scale = {1, 1, 1});
+fvshape_data make_fvbox(const vec3i& steps = {1, 1, 1},
+    const vec3f& scale = {1, 1, 1}, const vec3f& uvscale = {1, 1, 1});
 // Make a face-varying sphere
-fvshape_data make_fvsphere(int steps = 32, float scale = 1);
+fvshape_data make_fvsphere(int steps = 32, float scale = 1, float uvscale = 1);
 
 // Make a point.
-shape_data make_point(float radius = 0.001f, bool generate_uv = true);
+shape_data make_point(float radius = 0.001f);
 // Make many points at the origin (useful for particle systems).
 shape_data make_points(
-    int num = 65536, float radius = 0.001f, bool generate_uv = true);
+    int num = 65536, float radius = 0.001f, float uvscale = 1);
+
+// Make a line.
+shape_data make_line(int steps = 4, float scale = 1,
+    const vec2f& radius = {0.001f, 0.001f}, float uvscale = 1);
 // Make lines along a quad.
 shape_data make_lines(int num = 65536, int steps = 4,
-    const vec2f& scale = {1, 1}, const vec2f& radius = {0.001f, 0.001f});
+    const vec2f& scale = {1, 1}, const vec2f& radius = {0.001f, 0.001f},
+    const vec2f& uvscale = {1, 1});
 
 // Make a grid of quads
 shape_data make_quad_grid(const vec2i& steps = {256, 256}, float scale = 1);
@@ -309,23 +334,21 @@ shape_data make_point_grid(
 shape_data make_line_grid(
     const vec2i& steps = {256, 256}, float scale = 1, float radius = 0.001f);
 
-// Make random points in a cube.
-// TODO: switch to quad?
+// Make random points in a qiad or cube.
 shape_data make_random_points(int num = 65536, float radius = 0.001f,
-    bool generate_uv = true, uint64_t seed = 17);
+    bool on_quad = false, uint64_t seed = 17);
 // Make points on a shape
 shape_data make_random_points(const shape_data& shape, int num = 65536,
-    float radius = 0.001f, bool generate_uv = true, int seed = 7);
+    float radius = 0.001f, uint64_t seed = 17);
 // Make lines on a shape
 shape_data make_random_lines(const shape_data& shape, int num = 65536,
     int steps = 8, const vec2f& length = {0.1f, 0.1f},
-    const vec2f& radius = {0.001f, 0.001f}, bool generate_uv = true,
-    int seed = 7);
+    const vec2f& radius = {0.001f, 0.001f}, uint64_t seed = 17);
 // Make hairs on a shape
 shape_data make_random_hairs(const shape_data& shape, int num = 65536,
     int steps = 8, const vec2f& length = {0.1f, 0.1f},
     const vec2f& radius = {0.001f, 0.001f}, float noise = 0,
-    float gravity = 0.001f, bool generate_uv = true, int seed = 7);
+    float gravity = 0.001f, uint64_t seed = 17);
 
 // Convert points to small spheres and lines to small cylinders. This is
 // intended for making very small primitives for display in interactive
@@ -340,8 +363,10 @@ shape_data lines_to_cylinders(const vector<vec2i>& lines,
     const vector<vec3f>& positions, int steps = 4, float scale = 0.01f);
 
 // Make a heightfield mesh.
-shape_data make_heightfield(const array2d<float>& height);
-shape_data make_heightfield(const array2d<vec4f>& height);
+shape_data make_heightfield(
+    const array2d<float>& height, const vec2f& scale = {1, 1});
+shape_data make_heightfield(
+    const array2d<vec4f>& height, const vec2f& scale = {1, 1});
 
 }  // namespace yocto
 
@@ -727,8 +752,11 @@ inline pair<vector<vec<I, 4>>, vector<T>> subdivide_catmullclark(
 namespace yocto {
 
 // Weld vertices within a threshold.
-template <typename T>
-inline pair<vector<vec<T, 3>>, vector<int>> weld_vertices(
+template <typename T, typename I = int>
+inline pair<vector<vec<T, 3>>, vector<I>> weld_vertices(
+    const vector<vec<T, 3>>& positions, T threshold);
+template <typename T, typename I = int>
+inline pair<vector<I>, vector<I>> weld_indices(
     const vector<vec<T, 3>>& positions, T threshold);
 template <typename T, typename I>
 inline pair<vector<vec<I, 3>>, vector<vec<T, 3>>> weld_triangles(
@@ -1855,10 +1883,10 @@ inline pair<vector<vec<I, 4>>, vector<T>> subdivide_catmullclark(
 namespace yocto {
 
 // Weld vertices within a threshold.
-template <typename T>
-inline pair<vector<vec<T, 3>>, vector<int>> weld_vertices(
+template <typename T, typename I>
+inline pair<vector<vec<T, 3>>, vector<I>> weld_vertices(
     const vector<vec<T, 3>>& positions, T threshold) {
-  auto indices   = vector<int>(positions.size());
+  auto indices   = vector<I>(positions.size());
   auto welded    = vector<vec<T, 3>>{};
   auto grid      = make_hash_grid(threshold);
   auto neighbors = vector<int>{};
@@ -1867,13 +1895,33 @@ inline pair<vector<vec<T, 3>>, vector<int>> weld_vertices(
     find_neighbors(grid, neighbors, position, threshold);
     if (neighbors.empty()) {
       welded.push_back(position);
-      indices[vertex] = (int)welded.size() - 1;
+      indices[vertex] = (I)welded.size() - 1;
       insert_vertex(grid, position);
     } else {
       indices[vertex] = neighbors.front();
     }
   }
   return {welded, indices};
+}
+template <typename T, typename I>
+inline pair<vector<I>, vector<I>> weld_indices(
+    const vector<vec<T, 3>>& positions, T threshold) {
+  auto new_indices = vector<I>(positions.size());
+  auto old_indices = vector<I>();
+  auto grid        = make_hash_grid(threshold);
+  auto neighbors   = vector<int>{};
+  for (auto vertex : range(positions.size())) {
+    auto& position = positions[vertex];
+    find_neighbors(grid, neighbors, position, threshold);
+    if (neighbors.empty()) {
+      old_indices.push_back((I)vertex);
+      new_indices[vertex] = (I)old_indices.size() - 1;
+      insert_vertex(grid, position);
+    } else {
+      new_indices[vertex] = neighbors.front();
+    }
+  }
+  return {old_indices, new_indices};
 }
 template <typename T, typename I>
 inline pair<vector<vec<I, 3>>, vector<vec<T, 3>>> weld_triangles(
