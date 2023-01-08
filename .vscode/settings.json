@@ -177,6 +177,7 @@
     "misc-unused-parameters",
     "readability-isolate-declaration",
     "modernize-use-nodiscard",
-    "misc-no-recursion"
+    "misc-no-recursion",
+    "bugprone-exception-escape"
   ]
 }
