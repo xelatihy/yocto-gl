@@ -609,7 +609,7 @@ vector<string> fvshape_stats(const fvshape_data& shape, bool verbose) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Make a tesselated rectangle. Useful in other subdivisions.
+// Make a tessellated rectangle made of quads. Useful in other subdivisions.
 struct make_quads_vertex {
   vec3f position;
   vec3f normal;
@@ -617,38 +617,6 @@ struct make_quads_vertex {
 };
 template <typename Vertex>
 static shape_data make_quads(const vec2i& steps, Vertex&& vertex) {
-  auto shape = shape_data{};
-
-  auto vid = [=](vec2i ij) { return ij.y * (steps.x + 1) + ij.x; };
-  auto fid = [=](vec2i ij) { return ij.y * steps.x + ij.x; };
-
-  shape.positions = vector<vec3f>(prod(steps + 1));
-  shape.normals   = vector<vec3f>(prod(steps + 1));
-  shape.texcoords = vector<vec2f>(prod(steps + 1));
-  for (auto ij : range(steps + 1)) {
-    auto [position, normal, texcoord] = vertex(ij / (vec2f)steps);
-    shape.positions[vid(ij)]          = position;
-    shape.normals[vid(ij)]            = normal;
-    shape.texcoords[vid(ij)]          = texcoord;
-  }
-
-  shape.quads = vector<vec4i>(prod(steps));
-  for (auto ij : range(steps)) {
-    shape.quads[fid(ij)] = {vid(ij + vec2i{0, 0}), vid(ij + vec2i{1, 0}),
-        vid(ij + vec2i{1, 1}), vid(ij + vec2i{0, 1})};
-  }
-
-  return shape;
-}
-
-// Make a tessellated rectangle. Useful in other subdivisions.
-struct make_patch_vertex {
-  vec3f position;
-  vec3f normal;
-  vec2f texcoord;
-};
-template <typename Vertex>
-static shape_data make_quad_patch(const vec2i& steps, Vertex&& vertex) {
   // indices and sizes
   auto num_verts = prod(steps + 1), num_faces = prod(steps);
   auto vid = [=](vec2i ij) { return ij.y * (steps.x + 1) + ij.x; };
@@ -679,8 +647,7 @@ static shape_data make_quad_patch(const vec2i& steps, Vertex&& vertex) {
   return shape;
 }
 template <typename Vertex, size_t N>
-static shape_data make_quad_patches(
-    const array<vec2i, N>& steps, Vertex&& vertex) {
+static shape_data make_quads(const array<vec2i, N>& steps, Vertex&& vertex) {
   // indices and sizes
   auto num_verts = 0, num_faces = 0;
   auto vert_offsets = array<int, N>{0}, face_offsets = array<int, N>{0};
@@ -728,8 +695,7 @@ static shape_data make_quad_patches(
   return shape;
 }
 template <typename Vertex>
-static shape_data transform_patch_vertices(
-    const shape_data& shape, Vertex&& vertex) {
+static shape_data transform_vertices(const shape_data& shape, Vertex&& vertex) {
   auto transformed = shape;
   for (auto idx : range(shape.positions.size())) {
     auto [position, normal, texcoord] = vertex(transformed.positions[idx],
@@ -787,9 +753,9 @@ shape_data make_bulged_rect(const vec2i& steps, const vec2f& scale,
   height      = min(height, min(scale));
   auto radius = (1 + height * height) / (2 * height);
   auto center = vec3f{0, 0, -radius + height};
-  return transform_patch_vertices(make_rect(steps, scale, uvscale),
+  return transform_vertices(make_rect(steps, scale, uvscale),
       [&](const vec3f& position, const vec3f& normal,
-          const vec2f& texcoord) -> make_patch_vertex {
+          const vec2f& texcoord) -> make_quads_vertex {
         auto pn = normalize(position - center);
         return {center + pn * radius, pn, texcoord};
       });
@@ -816,9 +782,9 @@ shape_data make_bent_floor(const vec2i& steps, const vec2f& scale, float radius,
   radius     = min(radius, scale.y);
   auto start = (scale.y - radius) / 2;
   auto end   = start + radius;
-  return transform_patch_vertices(make_floor(steps, scale, uvscale),
+  return transform_vertices(make_floor(steps, scale, uvscale),
       [&](const vec3f& position, const vec3f& normal,
-          const vec2f& texcoord) -> make_patch_vertex {
+          const vec2f& texcoord) -> make_quads_vertex {
         auto p = position;
         if (p.z < -end) {
           return {{p.x, -p.z - end + radius, -end}, {0, 0, 1}, texcoord};
@@ -835,10 +801,10 @@ shape_data make_bent_floor(const vec2i& steps, const vec2f& scale, float radius,
 
 // Make a disk
 shape_data make_disk(int steps, float scale, float uvscale) {
-  return transform_patch_vertices(
+  return transform_vertices(
       make_rect({steps, steps}, {scale, scale}, {uvscale, uvscale}),
       [&](const vec3f& position, const vec3f& normal,
-          const vec2f& texcoord) -> make_patch_vertex {
+          const vec2f& texcoord) -> make_quads_vertex {
         // Analytical Methods for Squaring the Disc, by C. Fong
         // https://arxiv.org/abs/1509.06344
         auto xy = yocto::xy(position);
@@ -853,9 +819,9 @@ shape_data make_bulged_disk(
   height      = min(height, scale);
   auto radius = (1 + height * height) / (2 * height);
   auto center = vec3f{0, 0, -radius + height};
-  return transform_patch_vertices(make_disk(steps, scale, uvscale),
+  return transform_vertices(make_disk(steps, scale, uvscale),
       [&](const vec3f& position, const vec3f& normal,
-          const vec2f& texcoord) -> make_patch_vertex {
+          const vec2f& texcoord) -> make_quads_vertex {
         auto pn = normalize(position - center);
         return {center + pn * radius, pn, texcoord};
       });
@@ -865,7 +831,7 @@ shape_data make_bulged_disk(
 shape_data make_box(
     const vec3i& steps, const vec3f& scale, const vec3f& uvscale) {
   if (steps == 1 && scale == 1 && uvscale == 1) return make_cube();
-  return make_quad_patches(
+  return make_quads(
       array<vec2i, 6>{vec2i{steps.x, steps.y}, vec2i{steps.x, steps.y},
           vec2i{steps.z, steps.y}, vec2i{steps.z, steps.y},
           vec2i{steps.x, steps.z}, vec2i{steps.x, steps.z}},
@@ -904,9 +870,9 @@ shape_data make_rounded_box(const vec3i& steps, const vec3f& scale,
   if (radius == 0) make_box(steps, scale, uvscale);
   radius = min(radius, min(scale));
   auto c = scale - radius;
-  return transform_patch_vertices(make_box(steps, scale, uvscale),
+  return transform_vertices(make_box(steps, scale, uvscale),
       [&](const vec3f& position, const vec3f& normal,
-          const vec2f& texcoord) -> make_patch_vertex {
+          const vec2f& texcoord) -> make_quads_vertex {
         auto pc = abs(position);
         auto ps = select(component_less(position, 0), -1.0f, 1.0f);
         if (pc.x >= c.x && pc.y >= c.y && pc.z >= c.z) {
@@ -976,9 +942,9 @@ shape_data make_capped_uvsphere(
   if (cap != 0) return make_uvsphere(steps, scale, uvscale);
   cap        = min(cap, scale / 2);
   auto zflip = (scale - cap);
-  return transform_patch_vertices(make_uvsphere(steps, scale, uvscale),
+  return transform_vertices(make_uvsphere(steps, scale, uvscale),
       [&](const vec3f& position, const vec3f& normal,
-          const vec2f& texcoord) -> make_patch_vertex {
+          const vec2f& texcoord) -> make_quads_vertex {
         if (position.z > zflip) {
           return {{position.x, position.y, 2 * zflip - position.z},
               {-normal.x, -normal.y, normal.z}, texcoord};
@@ -1009,9 +975,8 @@ shape_data make_uvdisk(const vec2i& steps, float scale, const vec2f& uvscale) {
 // Make a uv cylinder
 shape_data make_uvcylinder(
     const vec3i& steps, const vec2f& scale, const vec3f& uvscale) {
-  return make_quad_patches(
-      array<vec2i, 3>{vec2i{steps.x, steps.y}, vec2i{steps.x, steps.z},
-          vec2i{steps.x, steps.z}},
+  return make_quads(array<vec2i, 3>{vec2i{steps.x, steps.y},
+                        vec2i{steps.x, steps.z}, vec2i{steps.x, steps.z}},
       [=](int patch, vec2f uv) -> make_quads_vertex {
         switch (patch) {
           case 0: {  // side
@@ -1041,7 +1006,7 @@ shape_data make_rounded_uvcylinder(const vec3i& steps, const vec2f& scale,
   if (radius == 0) return make_uvcylinder(steps, scale, uvscale);
   radius = min(radius, min(scale));
   auto c = scale - radius;
-  return transform_patch_vertices(make_uvcylinder(steps, scale, uvscale),
+  return transform_vertices(make_uvcylinder(steps, scale, uvscale),
       [&](const vec3f& position, const vec3f& normal,
           const vec2f& texcoord) -> make_quads_vertex {
         auto phi = atan2(position.y, position.x);
@@ -1064,9 +1029,8 @@ shape_data make_rounded_uvcylinder(const vec3i& steps, const vec2f& scale,
 // Make a uv capsule
 shape_data make_uvcapsule(
     const vec3i& steps, const vec2f& scale, const vec3f& uvscale) {
-  return make_quad_patches(
-      array<vec2i, 3>{vec2i{steps.x, steps.y}, vec2i{steps.x, steps.z},
-          vec2i{steps.x, steps.z}},
+  return make_quads(array<vec2i, 3>{vec2i{steps.x, steps.y},
+                        vec2i{steps.x, steps.z}, vec2i{steps.x, steps.z}},
       [=](int patch, vec2f uv) -> make_quads_vertex {
         switch (patch) {
           case 0: {  // side
@@ -1099,7 +1063,7 @@ shape_data make_uvcapsule(
 // Make a uv cone
 shape_data make_uvcone(
     const vec3i& steps, const vec2f& scale, const vec3f& uvscale) {
-  return make_quad_patches(
+  return make_quads(
       array<vec2i, 2>{vec2i{steps.x, steps.y}, vec2i{steps.y, steps.z}},
       [=](int patch, vec2f uv) -> make_quads_vertex {
         switch (patch) {
@@ -1361,15 +1325,16 @@ struct make_lines_vertex {
 // Generate lines set along a quad.
 template <typename Func>
 static shape_data make_lines(int num, int steps, Func&& func) {
-  auto shape = shape_data{};
-
+  auto num_verts = (steps + 1) * num, num_lines = steps * num;
   auto vid = [stride = steps](vec2i ij) { return ij.y * (stride + 1) + ij.x; };
   auto lid = [stride = steps](vec2i ij) { return ij.y * stride + ij.x; };
 
-  shape.positions = vector<vec3f>((steps + 1) * num);
-  shape.normals   = vector<vec3f>((steps + 1) * num);
-  shape.texcoords = vector<vec2f>((steps + 1) * num);
-  shape.radius    = vector<float>((steps + 1) * num);
+  auto shape = shape_data{};
+
+  shape.positions = vector<vec3f>(num_verts);
+  shape.normals   = vector<vec3f>(num_verts);
+  shape.texcoords = vector<vec2f>(num_verts);
+  shape.radius    = vector<float>(num_verts);
   for (auto ij : range(vec2i(steps + 1, num))) {
     auto uv = ij / vec2f{(float)steps, (float)(num - 1)};
     auto [position, normal, texcoord, radius] = func(uv);
@@ -1379,13 +1344,14 @@ static shape_data make_lines(int num, int steps, Func&& func) {
     shape.radius[vid(ij)]                     = radius;
   }
 
-  shape.lines = vector<vec2i>(steps * num);
+  shape.lines = vector<vec2i>(num_lines);
   for (auto ij : range(vec2i(steps, num))) {
     shape.lines[lid(ij)] = {vid(ij), vid(ij + vec2i{1, 0})};
   }
 
   return shape;
 }
+
 // Generate lines set along a quad.
 shape_data make_lines(
     int num, int steps, const vec2f& scale, const vec2f& rad) {
