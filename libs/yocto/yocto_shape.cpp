@@ -1466,47 +1466,38 @@ shape_data make_line_grid(const vec2i& steps, float scale, float radius) {
 // Make points inside a cube
 shape_data make_random_points(
     int num, float radius, bool on_quad, uint64_t seed) {
-  auto shape = make_points(num, radius);
-  auto rng   = make_rng(seed);
-  for (auto& position : shape.positions)
-    position = on_quad ? vec3f{2 * rand2f(rng) - 1, 0} : (2 * rand3f(rng) - 1);
-  for (auto& texcoord : shape.texcoords) texcoord = rand2f(rng);
-  return shape;
+  auto rng = make_rng(seed);
+  return make_points(num, [=, &rng](float u) -> make_points_vertex {
+    return {on_quad ? vec3f{2 * rand2f(rng) - 1, 0} : (2 * rand3f(rng) - 1),
+        {0, 0, 1}, {u, 0}, radius};
+  });
 }
 
 // Grow lines around a shape
 shape_data make_random_points(
     const shape_data& base, int num, float radius, uint64_t seed) {
-  auto samples = sample_shape(base, num, seed);
-  auto shape   = make_points(num, radius);
-  for (auto&& [position, sample] : zip(shape.positions, samples)) {
-    position = eval_position(base, sample.element, sample.uv);
-  }
-  return shape;
+  auto cdf = sample_shape_cdf(base);
+  auto rng = make_rng(seed);
+  return make_points(num, [=, &base, &rng](float u) -> make_points_vertex {
+    auto [selement, suv] = sample_shape(base, cdf, rand1f(rng), rand2f(rng));
+    return {eval_position(base, selement, suv), {0, 0, 1}, {u, 0}, radius};
+  });
 }
 
 // Grow lines around a shape
 shape_data make_random_lines(const shape_data& base, int num, int steps,
     const vec2f& len, const vec2f& radius, uint64_t seed) {
-  auto points     = sample_shape(base, num, seed);
-  auto bpositions = vector<vec3f>{};
-  auto bnormals   = vector<vec3f>{};
-  auto btexcoord  = vector<vec2f>{};
-  for (auto& point : points) {
-    bpositions.push_back(eval_position(base, point.element, point.uv));
-    bnormals.push_back(eval_normal(base, point.element, point.uv));
-    btexcoord.push_back(eval_texcoord(base, point.element, point.uv));
-  }
-
-  auto shape = make_lines(num, steps, {1, 1}, radius);
-  auto rng   = make_rng(seed);
+  auto samples = sample_shape(base, num, seed);
+  auto shape   = make_lines(num, steps, {1, 1}, radius);
+  auto rng     = make_rng(seed);
   for (auto idx : range(num)) {
-    auto offset = idx * (steps + 1);
-    auto length = lerp(len.x, len.y, rand1f(rng));
+    auto bposition = eval_position(base, samples[idx].element, samples[idx].uv);
+    auto bnormal   = eval_normal(base, samples[idx].element, samples[idx].uv);
+    auto offset    = idx * (steps + 1);
+    auto length    = lerp(len.x, len.y, rand1f(rng));
     for (auto iidx : range(steps + 1)) {
       auto u                         = iidx / (float)steps;
-      shape.positions[offset + iidx] = bpositions[idx] +
-                                       u * length * bnormals[idx];
+      shape.positions[offset + iidx] = bposition + u * length * bnormal;
     }
   }
 
@@ -1519,23 +1510,14 @@ shape_data make_random_lines(const shape_data& base, int num, int steps,
 shape_data make_random_hairs(const shape_data& base, int num, int steps,
     const vec2f& len, const vec2f& radius, float noise, float gravity,
     uint64_t seed) {
-  auto points     = sample_shape(base, num, seed);
-  auto bpositions = vector<vec3f>{};
-  auto bnormals   = vector<vec3f>{};
-  auto btexcoord  = vector<vec2f>{};
-  for (auto& point : points) {
-    bpositions.push_back(eval_position(base, point.element, point.uv));
-    bnormals.push_back(eval_normal(base, point.element, point.uv));
-    btexcoord.push_back(eval_texcoord(base, point.element, point.uv));
-  }
-
-  auto shape = make_lines(num, steps, {1, 1}, radius);
-  auto rng   = make_rng(seed);
+  auto samples = sample_shape(base, num, seed);
+  auto shape   = make_lines(num, steps, {1, 1}, radius);
+  auto rng     = make_rng(seed);
   for (auto idx : range(num)) {
-    auto offset             = idx * (steps + 1);
-    auto position           = bpositions[idx];
-    auto direction          = bnormals[idx];
-    auto length             = lerp(len.x, len.y, rand1f(rng));
+    auto offset    = idx * (steps + 1);
+    auto position  = eval_position(base, samples[idx].element, samples[idx].uv);
+    auto direction = eval_normal(base, samples[idx].element, samples[idx].uv);
+    auto length    = lerp(len.x, len.y, rand1f(rng));
     shape.positions[offset] = position;
     for (auto iidx = 1; iidx <= steps; iidx++) {
       shape.positions[offset + iidx] = position;
