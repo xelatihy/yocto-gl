@@ -1037,18 +1037,20 @@ shape_data _flip_yz(const shape_data& shape) {
 }
 
 // Make a plane.
-shape_data make_rect(const vec2i& steps, const vec2f& scale) {
+shape_data make_rect(
+    const vec2i& steps, const vec2f& scale, const vec2f& uvscale) {
   return make_quads(steps, [=](vec2f uv) -> make_quads_vertex {
-    return {vec3f(scale * (uv * 2 - 1), 0), vec3f(0, 0, 1), flip_v(uv)};
+    return {
+        vec3f(scale * (uv * 2 - 1), 0), vec3f(0, 0, 1), flip_v(uv) * uvscale};
   });
 }
-shape_data make_bulged_rect(
-    const vec2i& steps, const vec2f& scale, float height) {
-  if (height == 0) return make_rect(steps, scale);
+shape_data make_bulged_rect(const vec2i& steps, const vec2f& scale,
+    float height, const vec2f& uvscale) {
+  if (height == 0) return make_rect(steps, scale, uvscale);
   height      = min(height, min(scale));
   auto radius = (1 + height * height) / (2 * height);
   auto center = vec3f{0, 0, -radius + height};
-  return transform_patch_vertices(make_rect(steps, scale),
+  return transform_patch_vertices(make_rect(steps, scale, uvscale),
       [&](const vec3f& position, const vec3f& normal,
           const vec2f& texcoord) -> make_patch_vertex {
         auto pn = normalize(position - center);
@@ -1057,16 +1059,18 @@ shape_data make_bulged_rect(
 }
 
 // Make a plane in the xz plane.
-shape_data make_recty(const vec2i& steps, const vec2f& scale) {
-  return _flip_yz(make_rect(steps, scale));
+shape_data make_recty(
+    const vec2i& steps, const vec2f& scale, const vec2f& uvscale) {
+  return _flip_yz(make_rect(steps, scale, uvscale));
 }
-shape_data make_bulged_recty(
-    const vec2i& steps, const vec2f& scale, float height) {
-  return _flip_yz(make_bulged_rect(steps, scale, height));
+shape_data make_bulged_recty(const vec2i& steps, const vec2f& scale,
+    float height, const vec2f& uvscale) {
+  return _flip_yz(make_bulged_rect(steps, scale, height, uvscale));
 }
 
 // Make a box.
-shape_data make_box(const vec3i& steps, const vec3f& scale) {
+shape_data make_box(
+    const vec3i& steps, const vec3f& scale, const vec3f& uvscale) {
   return make_quad_patches(
       array<vec2i, 6>{vec2i{steps.x, steps.y}, vec2i{steps.x, steps.y},
           vec2i{steps.z, steps.y}, vec2i{steps.z, steps.y},
@@ -1076,37 +1080,37 @@ shape_data make_box(const vec3i& steps, const vec3f& scale) {
           case 0:  // + z
             return {{+scale.x * (uv.x * 2 - 1), +scale.y * (uv.y * 2 - 1),
                         +scale.z},
-                {0, 0, 1}, flip_v(uv)};
+                {0, 0, 1}, flip_v(uv) * vec2f{uvscale.x, uvscale.y}};
           case 1:  // - z
             return {{-scale.x * (uv.x * 2 - 1), +scale.y * (uv.y * 2 - 1),
                         -scale.z},
-                {0, 0, -1}, flip_v(uv)};
+                {0, 0, -1}, flip_v(uv) * vec2f{uvscale.x, uvscale.y}};
           case 2:  // + x
             return {{+scale.x, +scale.y * (uv.y * 2 - 1),
                         -scale.z * (uv.x * 2 - 1)},
-                {1, 0, 0}, flip_v(uv)};
+                {1, 0, 0}, flip_v(uv) * vec2f{uvscale.y, uvscale.x}};
           case 3:  // - x
             return {{-scale.x, +scale.y * (uv.y * 2 - 1),
                         +scale.z * (uv.x * 2 - 1)},
-                {-1, 0, 0}, flip_v(uv)};
+                {-1, 0, 0}, flip_v(uv) * vec2f{uvscale.y, uvscale.x}};
           case 4:  // + y
             return {{+scale.x * (uv.x * 2 - 1), +scale.y,
                         -scale.z * (uv.y * 2 - 1)},
-                {0, +1, 0}, flip_v(uv)};
+                {0, +1, 0}, flip_v(uv) * vec2f{uvscale.x, uvscale.x}};
           case 5:  // - y
             return {{+scale.x * (uv.x * 2 - 1), -scale.y,
                         +scale.z * (uv.y * 2 - 1)},
-                {0, -1, 0}, flip_v(uv)};
+                {0, -1, 0}, flip_v(uv) * vec2f{uvscale.x, uvscale.x}};
           default: return {};
         }
       });
 }
-shape_data make_rounded_box(
-    const vec3i& steps, const vec3f& scale, float radius) {
-  if (radius == 0) make_box(steps, scale);
+shape_data make_rounded_box(const vec3i& steps, const vec3f& scale,
+    float radius, const vec3f& uvscale) {
+  if (radius == 0) make_box(steps, scale, uvscale);
   radius = min(radius, min(scale));
   auto c = scale - radius;
-  return transform_patch_vertices(make_box(steps, scale),
+  return transform_patch_vertices(make_box(steps, scale, uvscale),
       [&](const vec3f& position, const vec3f& normal,
           const vec2f& texcoord) -> make_patch_vertex {
         auto pc = abs(position);
@@ -1133,8 +1137,9 @@ shape_data make_rounded_box(
 }
 
 // Make a sphere.
-shape_data make_tsphere(const vec3i& steps, float scale) {
-  auto shape = make_box(steps, {scale, scale, scale});
+shape_data make_tsphere(const vec3i& steps, float scale, float uvscale) {
+  auto shape = make_box(
+      steps, {scale, scale, scale}, {uvscale, uvscale, uvscale});
   for (auto& p : shape.positions) p = normalize(p) * scale;
   shape.normals = shape.positions;
   for (auto& n : shape.normals) n = normalize(n);
@@ -1142,26 +1147,30 @@ shape_data make_tsphere(const vec3i& steps, float scale) {
 }
 
 // Make a sphere.
-shape_data make_uvsphere(const vec2i& steps, float scale) {
+shape_data make_uvsphere(
+    const vec2i& steps, float scale, const vec2f& uvscale) {
   return make_quads(steps, [=](vec2f uv) -> make_quads_vertex {
     auto phi = uv.x * 2 * pif, theta = (1 - uv.y) * pif;
     return {
         vec3f{cos(phi) * sin(theta), sin(phi) * sin(theta), cos(theta)} * scale,
-        vec3f{cos(phi) * sin(theta), sin(phi) * sin(theta), cos(theta)}, uv};
+        vec3f{cos(phi) * sin(theta), sin(phi) * sin(theta), cos(theta)},
+        uv * uvscale};
   });
 }
 
 // Make a sphere.
-shape_data make_uvspherey(const vec2i& steps, float scale) {
-  return _flip_yz(make_uvsphere(steps, scale));
+shape_data make_uvspherey(
+    const vec2i& steps, float scale, const vec2f& uvscale) {
+  return _flip_yz(make_uvsphere(steps, scale, uvscale));
 }
 
 // Make a sphere with slipped caps.
-shape_data make_capped_uvsphere(const vec2i& steps, float scale, float cap) {
-  if (cap != 0) return make_uvsphere(steps, scale);
+shape_data make_capped_uvsphere(
+    const vec2i& steps, float scale, float cap, const vec2f& uvscale) {
+  if (cap != 0) return make_uvsphere(steps, scale, uvscale);
   cap        = min(cap, scale / 2);
   auto zflip = (scale - cap);
-  return transform_patch_vertices(make_uvsphere(steps, scale),
+  return transform_patch_vertices(make_uvsphere(steps, scale, uvscale),
       [&](const vec3f& position, const vec3f& normal,
           const vec2f& texcoord) -> make_patch_vertex {
         if (position.z > zflip) {
@@ -1177,21 +1186,23 @@ shape_data make_capped_uvsphere(const vec2i& steps, float scale, float cap) {
 }
 
 // Make a sphere with slipped caps.
-shape_data make_capped_uvspherey(const vec2i& steps, float scale, float cap) {
-  return _flip_yz(make_capped_uvsphere(steps, scale, cap));
+shape_data make_capped_uvspherey(
+    const vec2i& steps, float scale, float cap, const vec2f& uvscale) {
+  return _flip_yz(make_capped_uvsphere(steps, scale, cap, uvscale));
 }
 
 // Make a uv disk
-shape_data make_uvdisk(const vec2i& steps, float scale) {
+shape_data make_uvdisk(const vec2i& steps, float scale, const vec2f& uvscale) {
   return make_quads(steps, [=](vec2f uv) -> make_quads_vertex {
     auto phi = uv.x * 2 * pif, r = 1 - uv.y;
-    return {
-        vec3f{r * cos(phi), r * sin(phi), 0} * scale, {0, 0, 1}, flip_v(uv)};
+    return {vec3f{r * cos(phi), r * sin(phi), 0} * scale, {0, 0, 1},
+        flip_v(uv) * uvscale};
   });
 }
 
 // Make a uv cylinder
-shape_data make_uvcylinder(const vec3i& steps, const vec2f& scale) {
+shape_data make_uvcylinder(
+    const vec3i& steps, const vec2f& scale, const vec3f& uvscale) {
   return make_quad_patches(
       array<vec2i, 3>{vec2i{steps.x, steps.y}, vec2i{steps.x, steps.z},
           vec2i{steps.x, steps.z}},
@@ -1201,17 +1212,17 @@ shape_data make_uvcylinder(const vec3i& steps, const vec2f& scale) {
             auto phi = uv.x * 2 * pif, h = uv.y;
             return {
                 {cos(phi) * scale.x, sin(phi) * scale.x, scale.y * (2 * h - 1)},
-                {cos(phi), sin(phi), 0}, uv};
+                {cos(phi), sin(phi), 0}, uv * vec2f{uvscale.x, uvscale.y}};
           } break;
           case 1: {  // top
             auto phi = uv.x * 2 * pif, r = 1 - uv.y;
             return {{r * scale.x * cos(phi), r * scale.x * sin(phi), +scale.y},
-                {0, 0, 1}, flip_v(uv)};
+                {0, 0, 1}, flip_v(uv) * vec2f{uvscale.x, uvscale.z}};
           } break;
           case 2: {  // bottom
             auto phi = uv.x * 2 * pif, r = uv.y;
             return {{r * scale.x * cos(phi), r * scale.x * sin(phi), -scale.y},
-                {0, 0, -1}, uv};
+                {0, 0, -1}, uv * vec2f{uvscale.x, uvscale.z}};
           } break;
           default: return {};
         }
@@ -1219,12 +1230,12 @@ shape_data make_uvcylinder(const vec3i& steps, const vec2f& scale) {
 }
 
 // Make a rounded uv cylinder
-shape_data make_rounded_uvcylinder(
-    const vec3i& steps, const vec2f& scale, float radius) {
-  if (radius == 0) return make_uvcylinder(steps, scale);
+shape_data make_rounded_uvcylinder(const vec3i& steps, const vec2f& scale,
+    float radius, const vec3f& uvscale) {
+  if (radius == 0) return make_uvcylinder(steps, scale, uvscale);
   radius = min(radius, min(scale));
   auto c = scale - radius;
-  return transform_patch_vertices(make_uvcylinder(steps, scale),
+  return transform_patch_vertices(make_uvcylinder(steps, scale, uvscale),
       [&](const vec3f& position, const vec3f& normal,
           const vec2f& texcoord) -> make_quads_vertex {
         auto phi = atan2(position.y, position.x);
@@ -1245,7 +1256,8 @@ shape_data make_rounded_uvcylinder(
 }
 
 // Make a uv capsule
-shape_data make_uvcapsule(const vec3i& steps, const vec2f& scale) {
+shape_data make_uvcapsule(
+    const vec3i& steps, const vec2f& scale, const vec3f& uvscale) {
   return make_quad_patches(
       array<vec2i, 3>{vec2i{steps.x, steps.y}, vec2i{steps.x, steps.z},
           vec2i{steps.x, steps.z}},
@@ -1255,7 +1267,7 @@ shape_data make_uvcapsule(const vec3i& steps, const vec2f& scale) {
             auto phi = uv.x * 2 * pif, h = uv.y;
             return {
                 {cos(phi) * scale.x, sin(phi) * scale.x, scale.y * (2 * h - 1)},
-                {cos(phi), sin(phi), 0}, uv};
+                {cos(phi), sin(phi), 0}, uv * vec2f{uvscale.x, uvscale.y}};
           } break;
           case 1: {  // top
             auto phi = uv.x * 2 * pif, theta = (1 - uv.y) * pif / 2;
@@ -1263,7 +1275,7 @@ shape_data make_uvcapsule(const vec3i& steps, const vec2f& scale) {
                         sin(phi) * sin(theta) * scale.x,
                         cos(theta) * scale.x + scale.y},
                 {cos(phi) * sin(theta), sin(phi) * sin(theta), cos(theta)},
-                flip_v(uv)};
+                flip_v(uv) * vec2f{uvscale.x, uvscale.z}};
           } break;
           case 2: {  // bottom
             auto phi = uv.x * 2 * pif, theta = (1 - uv.y) * pif / 2;
@@ -1271,7 +1283,7 @@ shape_data make_uvcapsule(const vec3i& steps, const vec2f& scale) {
                         sin(phi) * sin(theta) * scale.x,
                         -cos(theta) * scale.x - scale.y},
                 {cos(phi) * sin(theta), sin(phi) * sin(theta), -cos(theta)},
-                uv};
+                uv * vec2f{uvscale.x, uvscale.z}};
           } break;
           default: return {};
         }
@@ -1279,7 +1291,8 @@ shape_data make_uvcapsule(const vec3i& steps, const vec2f& scale) {
 }
 
 // Make a uv cone
-shape_data make_uvcone(const vec3i& steps, const vec2f& scale) {
+shape_data make_uvcone(
+    const vec3i& steps, const vec2f& scale, const vec3f& uvscale) {
   return make_quad_patches(
       array<vec2i, 2>{vec2i{steps.x, steps.y}, vec2i{steps.y, steps.z}},
       [=](int patch, vec2f uv) -> make_quads_vertex {
@@ -1289,12 +1302,13 @@ shape_data make_uvcone(const vec3i& steps, const vec2f& scale) {
             auto phi = uv.x * 2 * pif, h = uv.y;
             return {{cos(phi) * (1 - h) * scale.x, sin(phi) * (1 - h) * scale.x,
                         scale.y * (2 * h - 1)},
-                {cos(phi) * normal2d.y, sin(phi) * normal2d.y, normal2d.x}, uv};
+                {cos(phi) * normal2d.y, sin(phi) * normal2d.y, normal2d.x},
+                uv * vec2f{uvscale.x, uvscale.y}};
           } break;
           case 1: {  // bottom
             auto phi = uv.x * 2 * pif, r = uv.y;
             return {{r * scale.x * cos(phi), r * scale.x * sin(phi), -scale.y},
-                {0, 0, -1}, uv};
+                {0, 0, -1}, uv * vec2f{uvscale.x, uvscale.z}};
           } break;
           default: return {};
         }
@@ -1302,8 +1316,9 @@ shape_data make_uvcone(const vec3i& steps, const vec2f& scale) {
 }
 
 // Make a face-varying rect
-fvshape_data make_fvrect(const vec2i& steps, const vec2f& scale) {
-  auto rect           = make_rect(steps, scale);
+fvshape_data make_fvrect(
+    const vec2i& steps, const vec2f& scale, const vec2f& uvscale) {
+  auto rect           = make_rect(steps, scale, uvscale);
   auto shape          = fvshape_data{};
   shape.positions     = rect.positions;
   shape.normals       = rect.normals;
@@ -1315,8 +1330,9 @@ fvshape_data make_fvrect(const vec2i& steps, const vec2f& scale) {
 }
 
 // Make a face-varying box
-fvshape_data make_fvbox(const vec3i& steps, const vec3f& scale) {
-  auto box                                  = make_box(steps, scale);
+fvshape_data make_fvbox(
+    const vec3i& steps, const vec3f& scale, const vec3f& uvscale) {
+  auto box                                  = make_box(steps, scale, uvscale);
   auto shape                                = fvshape_data{};
   shape.quadsnorm                           = box.quads;
   shape.quadstexcoord                       = box.quads;
@@ -1326,8 +1342,9 @@ fvshape_data make_fvbox(const vec3i& steps, const vec3f& scale) {
 }
 
 // Make a face-varying sphere
-fvshape_data make_fvsphere(int steps, float scale) {
-  auto shape      = make_fvbox({steps, steps, steps}, {scale, scale, scale});
+fvshape_data make_fvsphere(int steps, float scale, float uvscale) {
+  auto shape      = make_fvbox({steps, steps, steps}, {scale, scale, scale},
+           {uvscale, uvscale, uvscale});
   shape.quadsnorm = shape.quadspos;
   shape.normals   = shape.positions;
   for (auto& n : shape.normals) n = normalize(n);

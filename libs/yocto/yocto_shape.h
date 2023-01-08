@@ -235,59 +235,69 @@ shape_data make_bent_floor(
     int subdivisions = 5, float size = 10, float bent = 0.5f);
 
 // Make a rectangle
-shape_data make_rect(const vec2i& steps = {1, 1}, const vec2f& scale = {1, 1});
+shape_data make_rect(const vec2i& steps = {1, 1}, const vec2f& scale = {1, 1},
+    const vec2f& uvscale = {1, 1});
 // Make a rectangle along y
-shape_data make_recty(const vec2i& steps = {1, 1}, const vec2f& scale = {1, 1});
+shape_data make_recty(const vec2i& steps = {1, 1}, const vec2f& scale = {1, 1},
+    const vec2f& uvscale = {1, 1});
 // Make a box
-shape_data make_box(
-    const vec3i& steps = {1, 1, 1}, const vec3f& scale = {1, 1, 1});
+shape_data make_box(const vec3i& steps = {1, 1, 1},
+    const vec3f& scale = {1, 1, 1}, const vec3f& uvscale = {1, 1, 1});
 // Make a tesselated sphere
-shape_data make_tsphere(const vec3i& steps = {32, 32, 32}, float scale = 1);
+shape_data make_tsphere(
+    const vec3i& steps = {32, 32, 32}, float scale = 1, float uvscale = 1);
 // Make a uv sphere
-shape_data make_uvsphere(const vec2i& steps = {64, 32}, float scale = 1);
+shape_data make_uvsphere(const vec2i& steps = {64, 32}, float scale = 1,
+    const vec2f& uvscale = {1, 1});
 // Make a uv sphere aligned to y
-shape_data make_uvspherey(const vec2i& steps = {64, 32}, float scale = 1);
+shape_data make_uvspherey(const vec2i& steps = {64, 32}, float scale = 1,
+    const vec2f& uvscale = {1, 1});
 // Make a uv disk
-shape_data make_uvdisk(const vec2i& steps = {32, 1}, float scale = 1);
+shape_data make_uvdisk(const vec2i& steps = {32, 1}, float scale = 1,
+    const vec2f& uvscale = {1, 1});
 // Make a uv cylinder
-shape_data make_uvcylinder(
-    const vec3i& steps = {32, 32, 32}, const vec2f& scale = {1, 1});
+shape_data make_uvcylinder(const vec3i& steps = {32, 32, 32},
+    const vec2f& scale = {1, 1}, const vec3f& uvscale = {1, 1, 1});
 // Make a uv capsule
-shape_data make_uvcapsule(
-    const vec3i& steps = {32, 32, 32}, const vec2f& scale = {1, 1});
+shape_data make_uvcapsule(const vec3i& steps = {32, 32, 32},
+    const vec2f& scale = {1, 1}, const vec3f& uvscale = {1, 1, 1});
 // Make a uv cone
-shape_data make_uvcone(
-    const vec3i& steps = {32, 32, 32}, const vec2f& scale = {1, 1});
+shape_data make_uvcone(const vec3i& steps = {32, 32, 32},
+    const vec2f& scale = {1, 1}, const vec3f& uvscale = {1, 1, 1});
 // Make a bulged rectangle
 shape_data make_bulged_rect(const vec2i& steps = {1, 1},
-    const vec2f& scale = {1, 1}, float radius = 0.3f);
+    const vec2f& scale = {1, 1}, float radius = 0.3f,
+    const vec2f& uvscale = {1, 1});
 // Make a bulged rectangle along y
 shape_data make_bulged_recty(const vec2i& steps = {1, 1},
-    const vec2f& scale = {1, 1}, float radius = 0.3f);
+    const vec2f& scale = {1, 1}, float radius = 0.3f,
+    const vec2f& uvscale = {1, 1});
 // Make a rounded box
 shape_data make_rounded_box(const vec3i& steps = {32, 32, 32},
-    const vec3f& scale = {1, 1, 1}, float radius = 0.3f);
+    const vec3f& scale = {1, 1, 1}, float radius = 0.3f,
+    const vec3f& uvscale = {1, 1, 1});
 // Make a capped uv sphere
-shape_data make_capped_uvsphere(
-    const vec2i& steps = {32, 32}, float scale = 1, float height = 0.3f);
+shape_data make_capped_uvsphere(const vec2i& steps = {32, 32}, float scale = 1,
+    float height = 0.3f, const vec2f& uvscale = {1, 1});
 // Make a capped uv spherey
-shape_data make_capped_uvspherey(
-    const vec2i& steps = {32, 32}, float scale = 1, float height = 0.3f);
+shape_data make_capped_uvspherey(const vec2i& steps = {32, 32}, float scale = 1,
+    float height = 0.3f, const vec2f& uvscale = {1, 1});
 // Make a rounded uv cylinder
 shape_data make_rounded_uvcylinder(const vec3i& steps = {32, 32, 32},
-    const vec2f& scale = {1, 1}, float radius = 0.3f);
+    const vec2f& scale = {1, 1}, float radius = 0.3f,
+    const vec3f& uvscale = {1, 1, 1});
 
 // Make a face-varying cube
 fvshape_data make_fvcube(int subdivisions = 0);
 
 // Make a face-varying rectangle
-fvshape_data make_fvrect(
-    const vec2i& steps = {1, 1}, const vec2f& scale = {1, 1});
+fvshape_data make_fvrect(const vec2i& steps = {1, 1},
+    const vec2f& scale = {1, 1}, const vec2f& uvscale = {1, 1});
 // Make a face-varying box
-fvshape_data make_fvbox(
-    const vec3i& steps = {1, 1, 1}, const vec3f& scale = {1, 1, 1});
+fvshape_data make_fvbox(const vec3i& steps = {1, 1, 1},
+    const vec3f& scale = {1, 1, 1}, const vec3f& uvscale = {1, 1, 1});
 // Make a face-varying sphere
-fvshape_data make_fvsphere(int steps = 32, float scale = 1);
+fvshape_data make_fvsphere(int steps = 32, float scale = 1, float uvscale = 1);
 
 // Make a point.
 shape_data make_point(float radius = 0.001f, bool generate_uv = true);
