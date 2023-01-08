@@ -1039,6 +1039,7 @@ shape_data _flip_yz(const shape_data& shape) {
 // Make a plane.
 shape_data make_rect(
     const vec2i& steps, const vec2f& scale, const vec2f& uvscale) {
+  if (steps == 1 && scale == 1 && uvscale == 1) return make_quad();
   return make_quads(steps, [=](vec2f uv) -> make_quads_vertex {
     return {
         vec3f(scale * (uv * 2 - 1), 0), vec3f(0, 0, 1), flip_v(uv) * uvscale};
@@ -1071,6 +1072,7 @@ shape_data make_bulged_recty(const vec2i& steps, const vec2f& scale,
 // Make a box.
 shape_data make_box(
     const vec3i& steps, const vec3f& scale, const vec3f& uvscale) {
+  if (steps == 1 && scale == 1 && uvscale == 1) return make_cube();
   return make_quad_patches(
       array<vec2i, 6>{vec2i{steps.x, steps.y}, vec2i{steps.x, steps.y},
           vec2i{steps.z, steps.y}, vec2i{steps.z, steps.y},
@@ -1137,9 +1139,9 @@ shape_data make_rounded_box(const vec3i& steps, const vec3f& scale,
 }
 
 // Make a sphere.
-shape_data make_tsphere(const vec3i& steps, float scale, float uvscale) {
-  auto shape = make_box(
-      steps, {scale, scale, scale}, {uvscale, uvscale, uvscale});
+shape_data make_tsphere(int steps, float scale, float uvscale) {
+  auto shape = make_box({steps, steps, steps}, {scale, scale, scale},
+      {uvscale, uvscale, uvscale});
   for (auto& p : shape.positions) p = normalize(p) * scale;
   shape.normals = shape.positions;
   for (auto& n : shape.normals) n = normalize(n);
@@ -1571,7 +1573,7 @@ shape_data points_to_spheres(
     const vector<vec3f>& vertices, int steps, float scale) {
   auto shape = shape_data{};
   for (auto& vertex : vertices) {
-    auto sphere = make_tsphere({steps, steps, steps}, scale);
+    auto sphere = make_tsphere(steps, scale);
     for (auto& position : sphere.positions) position += vertex;
     merge_shape_inplace(shape, sphere);
   }
