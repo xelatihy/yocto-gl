@@ -1504,6 +1504,7 @@ shape_data make_random_lines(const shape_data& base, int num, int steps,
 shape_data make_random_hairs(const shape_data& base, int num, int steps,
     const vec2f& len, const vec2f& radius, float noise, float gravity,
     uint64_t seed) {
+  // TODO: this should be fixed
   auto samples = sample_shape(base, num, seed);
   auto shape   = make_lines(num, steps, {1, 1}, radius);
   auto rng     = make_rng(seed);
