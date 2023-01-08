@@ -1113,7 +1113,7 @@ shape_data make_rounded_box(const vec3i& steps, const vec3f& scale,
 // Make a watertight box.
 shape_data make_wtbox(
     const vec3i& steps, const vec3f& scale, const vec3f& uvscale) {
-  // if (steps == 1 && scale == 1 && uvscale == 1) return make_wtcube();
+  if (steps == 1 && scale == 1 && uvscale == 1) return make_wtcube();
   return weld_vertices(make_box(steps, scale, uvscale), min(scale / steps));
 }
 
