@@ -783,8 +783,6 @@ namespace yocto {
 
 // Load mesh
 void load_shape(const string& filename, shape_data& shape, bool flip_texcoord) {
-  auto shape_error = [&]() { throw io_error{"empty shape " + filename}; };
-
   shape = {};
 
   auto ext = path_extension(filename);
@@ -4594,9 +4592,9 @@ static void xml_attribute(string& xml, const string& name, const vec3f& value) {
   }
 }
 static void xml_attribute(
-    string& xml, const string& name, const frame3f& value) {
+    string& xml, const string& name, const frame3f& value_) {
   xml += " " + name + "=\"";
-  auto mat = to_mat(value);
+  auto value = to_mat(value_);
   for (auto ij : range(vec2i(4, 4))) {
     xml += (xml.back() == '"' ? "" : " ") + std::to_string(value[ij.y][ij.x]);
   }
