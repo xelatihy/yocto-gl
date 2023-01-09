@@ -31,8 +31,8 @@
 //
 //
 
-#ifndef _YOCTO_BVH_H_
-#define _YOCTO_BVH_H_
+#ifndef YOCTO_BVH_H_
+#define YOCTO_BVH_H_
 
 // -----------------------------------------------------------------------------
 // INCLUDES
@@ -148,141 +148,6 @@ intersection3f intersect_scene_ebvh(const scene_ebvh& bvh,
 intersection3f intersect_instance_ebvh(const scene_ebvh& bvh,
     const scene_data& scene, int instance, const ray3f& ray,
     bool find_any = false);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// BACKWARD COMPATIBILITY
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// backward compatibility
-using bvh_shape [[deprecated]] = shape_bvh;
-using bvh_scene [[deprecated]] = scene_bvh;
-
-// backward compatibility
-[[deprecated]] inline shape_bvh make_bvh(
-    const shape_data& shape, bool embree = false, bool highquality = false) {
-  return make_shape_bvh(shape, highquality);
-}
-[[deprecated]] inline scene_bvh make_bvh(const scene_data& scene,
-    bool embree = false, bool highquality = false, bool noparallel = false) {
-  return make_scene_bvh(scene, highquality, noparallel);
-}
-
-// backward compatibility
-[[deprecated]] inline void update_bvh(shape_bvh& bvh, const shape_data& shape) {
-  return update_shape_bvh(bvh, shape);
-}
-[[deprecated]] inline void update_bvh(scene_bvh& bvh, const scene_data& scene,
-    const vector<int>& updated_instances, const vector<int>& updated_shapes) {
-  return update_scene_bvh(bvh, scene, updated_instances, updated_shapes);
-}
-
-// backward compatibility
-[[deprecated]] inline intersection3f intersect_bvh(const shape_bvh& bvh,
-    const shape_data& shape, const ray3f& ray, bool find_any = false) {
-  return intersect_shape_bvh(bvh, shape, ray, find_any);
-}
-[[deprecated]] inline intersection3f intersect_bvh(const scene_bvh& bvh,
-    const scene_data& scene, const ray3f& ray, bool find_any = false) {
-  return intersect_scene_bvh(bvh, scene, ray, find_any);
-}
-[[deprecated]] inline intersection3f intersect_bvh(const scene_bvh& bvh,
-    const scene_data& scene, int instance, const ray3f& ray,
-    bool find_any = false) {
-  return intersect_instance_bvh(bvh, scene, instance, ray, find_any);
-}
-
-// backward compatibility
-[[deprecated]] inline intersection3f overlap_bvh(const shape_bvh& bvh,
-    const shape_data& shape, const vec3f& pos, float max_distance,
-    bool find_any = false) {
-  return overlap_shape_bvh(bvh, shape, pos, max_distance, find_any);
-}
-[[deprecated]] inline intersection3f overlap_bvh(const scene_bvh& bvh,
-    const scene_data& scene, const vec3f& pos, float max_distance,
-    bool find_any = false) {
-  return overlap_scene_bvh(bvh, scene, pos, max_distance, find_any);
-}
-
-// backward compatibility
-[[deprecated]] inline intersection3f intersect_shape(const shape_bvh& bvh,
-    const shape_data& shape, const ray3f& ray, bool find_any = false) {
-  return intersect_shape_bvh(bvh, shape, ray, find_any);
-}
-[[deprecated]] inline intersection3f intersect_scene(const scene_bvh& bvh,
-    const scene_data& scene, const ray3f& ray, bool find_any) {
-  return intersect_scene_bvh(bvh, scene, ray, find_any);
-}
-[[deprecated]] inline intersection3f intersect_instance(const scene_bvh& bvh,
-    const scene_data& scene, int instance, const ray3f& ray, bool find_any) {
-  return intersect_instance_bvh(bvh, scene, instance, ray, find_any);
-}
-
-// backward compatibility
-[[deprecated]] inline intersection3f overlap_shape(const shape_bvh& bvh,
-    const shape_data& shape, const vec3f& pos, float max_distance,
-    bool find_any = false) {
-  return overlap_shape_bvh(bvh, shape, pos, max_distance, find_any);
-}
-[[deprecated]] inline intersection3f overlap_scene(const scene_bvh& bvh,
-    const scene_data& scene, const vec3f& pos, float max_distance,
-    bool find_any = false) {
-  return overlap_scene_bvh(bvh, scene, pos, max_distance, find_any);
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// EMBREE BACKWARD COMPATIBILITY
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// backward compatibility
-using shape_embree_bvh = shape_ebvh;
-using scene_embree_bvh = scene_ebvh;
-
-// Build the bvh acceleration structure.
-[[deprecated]] inline shape_embree_bvh make_shape_embree_bvh(
-    const shape_data& shape, bool highquality = false) {
-  return make_shape_ebvh(shape, highquality);
-}
-[[deprecated]] inline scene_embree_bvh make_scene_embree_bvh(
-    const scene_data& scene, bool highquality = false,
-    bool noparallel = false) {
-  return make_scene_ebvh(scene, highquality, noparallel);
-}
-
-// Refit bvh data
-[[deprecated]] inline void update_shape_embree_bvh(
-    shape_embree_bvh& bvh, const shape_data& shape) {
-  return update_shape_ebvh(bvh, shape);
-}
-[[deprecated]] inline void update_scene_embree_bvh(scene_ebvh& bvh,
-    const scene_data& scene, const vector<int>& updated_instances,
-    const vector<int>& updated_shapes) {
-  return update_scene_ebvh(bvh, scene, updated_instances, updated_shapes);
-}
-
-// Intersect ray with a bvh returning either the first or any intersection
-// depending on `find_any`. Returns the ray distance , the instance id,
-// the shape element index and the element barycentric coordinates.
-[[deprecated]] inline intersection3f intersect_shape_embree_bvh(
-    const shape_ebvh& bvh, const shape_data& shape, const ray3f& ray,
-    bool find_any = false) {
-  return intersect_shape_ebvh(bvh, shape, ray, find_any);
-}
-[[deprecated]] inline intersection3f intersect_scene_embree_bvh(
-    const scene_ebvh& bvh, const scene_data& scene, const ray3f& ray,
-    bool find_any = false) {
-  return intersect_scene_ebvh(bvh, scene, ray, find_any);
-}
-[[deprecated]] inline intersection3f intersect_instance_embree_bvh(
-    const scene_ebvh& bvh, const scene_data& scene, int instance,
-    const ray3f& ray, bool find_any = false) {
-  return intersect_instance_ebvh(bvh, scene, instance, ray, find_any);
-}
 
 }  // namespace yocto
 

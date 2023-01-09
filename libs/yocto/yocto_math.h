@@ -30,8 +30,8 @@
 // SOFTWARE.
 //
 
-#ifndef _YOCTO_MATH_H_
-#define _YOCTO_MATH_H_
+#ifndef YOCTO_MATH_H_
+#define YOCTO_MATH_H_
 
 // -----------------------------------------------------------------------------
 // INCLUDES
@@ -147,11 +147,13 @@ constexpr auto pi_t = (T)3.14159265358979323846;
 constexpr auto pi   = 3.14159265358979323846;
 constexpr auto pif  = (float)pi;
 
-constexpr auto int_max = std::numeric_limits<int>::max();
-constexpr auto int_min = std::numeric_limits<int>::lowest();
-constexpr auto flt_max = std::numeric_limits<float>::max();
-constexpr auto flt_min = std::numeric_limits<float>::lowest();
-constexpr auto flt_eps = std::numeric_limits<float>::epsilon();
+constexpr auto int_max  = std::numeric_limits<int>::max();
+constexpr auto int_min  = std::numeric_limits<int>::lowest();
+constexpr auto flt_max  = std::numeric_limits<float>::max();
+constexpr auto flt_min  = std::numeric_limits<float>::lowest();
+constexpr auto flt_eps  = std::numeric_limits<float>::epsilon();
+constexpr auto uint_max = std::numeric_limits<unsigned int>::max();
+constexpr auto uint_min = std::numeric_limits<unsigned int>::lowest();
 
 template <typename T>
 constexpr auto num_max = std::numeric_limits<T>::max();
@@ -326,6 +328,7 @@ struct vec<T, 1> {
   constexpr kernel vec(T x_) : x{x_} {}
   template <typename T1>
   constexpr kernel vec(T1 x_) : x{(T)x_} {}
+  constexpr kernel ~vec() = default;
 
   constexpr vec(const vec& v)            = default;
   constexpr vec& operator=(const vec& v) = default;
@@ -356,6 +359,7 @@ struct vec<T, 2> {
   constexpr kernel vec(T x_, T y_) : x{x_}, y{y_} {}
   template <typename T1, typename T2>
   constexpr kernel vec(T1 x_, T2 y_) : x{(T)x_}, y{(T)y_} {}
+  constexpr kernel ~vec() = default;
 
   constexpr vec(const vec& v)            = default;
   constexpr vec& operator=(const vec& v) = default;
@@ -388,6 +392,7 @@ struct vec<T, 3> {
   template <typename T1, typename T2, typename T3>
   constexpr kernel vec(T1 x_, T2 y_, T3 z_) : x{(T)x_}, y{(T)y_}, z{(T)z_} {}
   constexpr kernel vec(vec<T, 2> xy_, T z_) : x{xy_.x}, y{xy_.y}, z{z_} {}
+  constexpr kernel ~vec() = default;
 
   constexpr vec(const vec& v)            = default;
   constexpr vec& operator=(const vec& v) = default;
@@ -422,6 +427,7 @@ struct vec<T, 4> {
       x{(T)x_}, y{(T)y_}, z{(T)z_}, w{(T)w_} {}
   constexpr kernel vec(vec<T, 3> xyz_, T w_) :
       x{xyz_.x}, y{xyz_.y}, z{xyz_.z}, w{w_} {}
+  constexpr kernel ~vec() = default;
 
   constexpr vec(const vec& v)            = default;
   constexpr vec& operator=(const vec& v) = default;
@@ -2563,16 +2569,13 @@ struct quat;
 // Quaternions to represent rotations
 template <typename T>
 struct quat<T, 4> {
-  union {  // clang-format off
-    T d[4];
-    struct { T x, y, z, w; };
-  };  // clang-format on
+  T x = 0, y = 0, z = 0, w = 0;
 
   constexpr kernel quat() : x{0}, y{0}, z{0}, w{1} {}
   constexpr kernel quat(T x_, T y_, T z_, T w_) : x{x_}, y{y_}, z{z_}, w{w_} {}
 
-  constexpr kernel T&       operator[](size_t i) { return d[i]; }
-  constexpr kernel const T& operator[](size_t i) const { return d[i]; }
+  constexpr kernel T&       operator[](size_t i) { return (&x)[i]; }
+  constexpr kernel const T& operator[](size_t i) const { return (&x)[i]; }
 };
 
 // Quaternion aliases

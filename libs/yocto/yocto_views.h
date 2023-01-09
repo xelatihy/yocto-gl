@@ -31,8 +31,8 @@
 //
 //
 
-#ifndef _YOCTO_VIEWS_H_
-#define _YOCTO_VIEWS_H_
+#ifndef YOCTO_VIEWS_H_
+#define YOCTO_VIEWS_H_
 
 // -----------------------------------------------------------------------------
 // INCLUDES
@@ -86,6 +86,7 @@ struct span {
   template <typename U>
   constexpr explicit span(const vector<U>& v) :
       _data{v.data()}, _size(v.size()) {}
+  constexpr ~span() = default;
 
   // Assignments
   constexpr span& operator=(const span&) noexcept  = default;

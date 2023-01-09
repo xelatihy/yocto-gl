@@ -40,8 +40,8 @@
 // Licensed under Apache License 2.0 (NO WARRANTY, etc. see website)
 //
 
-#ifndef _YOCTO_SAMPLING_H_
-#define _YOCTO_SAMPLING_H_
+#ifndef YOCTO_SAMPLING_H_
+#define YOCTO_SAMPLING_H_
 
 // -----------------------------------------------------------------------------
 // INCLUDES
@@ -93,10 +93,10 @@ struct rng_state {
 
 // Next random number, used internally only.
 constexpr kernel uint32_t _advance_rng(rng_state& rng) {
-  uint64_t oldstate = rng.state;
-  rng.state         = oldstate * 6364136223846793005ULL + rng.inc;
-  auto xorshifted   = (uint32_t)(((oldstate >> 18u) ^ oldstate) >> 27u);
-  auto rot          = (uint32_t)(oldstate >> 59u);
+  auto oldstate   = rng.state;
+  rng.state       = oldstate * 6364136223846793005ULL + rng.inc;
+  auto xorshifted = (uint32_t)(((oldstate >> 18u) ^ oldstate) >> 27u);
+  auto rot        = (uint32_t)(oldstate >> 59u);
   // return (xorshifted >> rot) | (xorshifted << ((-rot) & 31));
   return (xorshifted >> rot) | (xorshifted << ((~rot + 1u) & 31));
 }

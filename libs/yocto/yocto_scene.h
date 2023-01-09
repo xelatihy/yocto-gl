@@ -30,8 +30,8 @@
 // SOFTWARE.
 //
 
-#ifndef _YOCTO_SCENE_H_
-#define _YOCTO_SCENE_H_
+#ifndef YOCTO_SCENE_H_
+#define YOCTO_SCENE_H_
 
 // -----------------------------------------------------------------------------
 // INCLUDES
@@ -206,7 +206,7 @@ struct scene_data {
   vector<string> subdiv_names      = {};
 
   // copyright info preserve in IO
-  string copyright = "";
+  string copyright = {};
 };
 
 }  // namespace yocto
@@ -239,7 +239,7 @@ vec4f eval_texture(const scene_data& scene, int texture, const vec2f& uv,
 
 // pixel access
 vec4f lookup_texture(
-    const texture_data& texture, const vec2s&, bool ldr_as_linear = false);
+    const texture_data& texture, const vec2s& ij, bool ldr_as_linear = false);
 
 // conversion from image
 texture_data image_to_texture(const array2d<vec4f>& image, bool linear);
@@ -278,7 +278,6 @@ bool is_delta(const material_point& material);
 // check if a material has a volume
 bool is_volumetric(const material_data& material);
 bool is_volumetric(const material_point& material);
-bool is_volumetric(const scene_data& scene, const instance_data& instance);
 
 }  // namespace yocto
 

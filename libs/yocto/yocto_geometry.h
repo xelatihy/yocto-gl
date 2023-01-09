@@ -31,8 +31,8 @@
 // SOFTWARE.
 //
 
-#ifndef _YOCTO_GEOMETRY_H_
-#define _YOCTO_GEOMETRY_H_
+#ifndef YOCTO_GEOMETRY_H_
+#define YOCTO_GEOMETRY_H_
 
 // -----------------------------------------------------------------------------
 // INCLUDES
@@ -1438,11 +1438,11 @@ inline vec2i split_sah(
   }
   // split
   auto middle =
-      (int)(std::partition(primitives.data() + start, primitives.data() + end,
+      (int)(std::partition(primitives.begin() + start, primitives.begin() + end,
                 [axis, split, &bboxes](auto primitive) {
                   return center(bboxes[primitive])[axis] < split;
                 }) -
-            primitives.data());
+            primitives.begin());
 
   // if we were not able to split, just break the primitives in half
   if (middle == start || middle == end) return {(start + end) / 2, axis};
@@ -1467,8 +1467,8 @@ inline vec2i split_balanced(
   // balanced tree split: find the largest axis of the
   // bounding box and split along this one right in the middle
   auto middle = (start + end) / 2;
-  std::nth_element(primitives.data() + start, primitives.data() + middle,
-      primitives.data() + end,
+  std::nth_element(primitives.begin() + start, primitives.begin() + middle,
+      primitives.begin() + end,
       [axis, &bboxes](auto primitive_a, auto primitive_b) {
         return center(bboxes[primitive_a])[axis] <
                center(bboxes[primitive_b])[axis];
@@ -1497,11 +1497,11 @@ inline vec2i split_middle(
   // split the space in the middle along the largest axis
   auto split = center(cbox)[axis];
   auto middle =
-      (int)(std::partition(primitives.data() + start, primitives.data() + end,
+      (int)(std::partition(primitives.begin() + start, primitives.begin() + end,
                 [axis, split, &bboxes](auto primitive) {
                   return center(bboxes[primitive])[axis] < split;
                 }) -
-            primitives.data());
+            primitives.begin());
 
   // if we were not able to split, just break the primitives in half
   if (middle == start || middle == end) return {(start + end) / 2, axis};

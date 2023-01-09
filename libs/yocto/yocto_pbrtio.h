@@ -31,8 +31,8 @@
 // SOFTWARE.
 //
 
-#ifndef _YOCTO_PBRTIO_H_
-#define _YOCTO_PBRTIO_H_
+#ifndef YOCTO_PBRTIO_H_
+#define YOCTO_PBRTIO_H_
 
 // -----------------------------------------------------------------------------
 // INCLUDES
@@ -75,9 +75,9 @@ struct pbrt_camera {
 
 // Pbrt material
 struct pbrt_texture {
-  string          name     = "";
+  string          name     = {};
   array<float, 3> constant = {1, 1, 1};
-  string          filename = "";
+  string          filename = {};
 };
 
 // Pbrt material type (simplified and only for the materials that matter here)
@@ -89,7 +89,7 @@ enum struct pbrt_mtype {
 
 // Pbrt material
 struct pbrt_material {
-  string          name            = "";
+  string          name            = {};
   pbrt_mtype      type            = pbrt_mtype::matte;
   array<float, 3> emission        = {0, 0, 0};
   array<float, 3> color           = {0, 0, 0};
@@ -110,7 +110,7 @@ struct pbrt_shape {
   vector<array<float, 12>> instances = {};
   vector<array<float, 12>> instaends = {};
   int                      material  = -1;
-  string                   filename_ = "";
+  string                   filename_ = {};
   vector<array<float, 3>>  positions = {};
   vector<array<float, 3>>  normals   = {};
   vector<array<float, 2>>  texcoords = {};

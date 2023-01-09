@@ -29,8 +29,8 @@
 // SOFTWARE.
 //
 
-#ifndef _YOCTO_NOISE_H_
-#define _YOCTO_NOISE_H_
+#ifndef YOCTO_NOISE_H_
+#define YOCTO_NOISE_H_
 
 // -----------------------------------------------------------------------------
 // INCLUDES

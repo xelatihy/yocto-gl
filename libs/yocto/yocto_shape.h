@@ -31,8 +31,8 @@
 //
 //
 
-#ifndef _YOCTO_SHAPE_H_
-#define _YOCTO_SHAPE_H_
+#ifndef YOCTO_SHAPE_H_
+#define YOCTO_SHAPE_H_
 
 // -----------------------------------------------------------------------------
 // INCLUDES
@@ -173,7 +173,7 @@ struct fvshape_data {
 // Interpolate vertex data
 vec3f eval_position(const fvshape_data& shape, int element, const vec2f& uv);
 vec3f eval_normal(const fvshape_data& shape, int element, const vec2f& uv);
-vec2f eval_texcoord(const shape_data& shape, int element, const vec2f& uv);
+vec2f eval_texcoord(const fvshape_data& shape, int element, const vec2f& uv);
 
 // Evaluate element normals
 vec3f eval_element_normal(const fvshape_data& shape, int element);
@@ -265,15 +265,15 @@ shape_data make_uvcone(const vec3i& steps = {32, 32, 32},
     const vec2f& scale = {1, 1}, const vec3f& uvscale = {1, 1, 1});
 // Make a bulged rectangle
 shape_data make_bulged_rect(const vec2i& steps = {1, 1},
-    const vec2f& scale = {1, 1}, float radius = 0.3f,
+    const vec2f& scale = {1, 1}, float height = 0.3f,
     const vec2f& uvscale = {1, 1});
 // Make a bulged rectangle along y
 shape_data make_bulged_recty(const vec2i& steps = {1, 1},
-    const vec2f& scale = {1, 1}, float radius = 0.3f,
+    const vec2f& scale = {1, 1}, float height = 0.3f,
     const vec2f& uvscale = {1, 1});
 // Make a bent disk
 shape_data make_bent_floor(const vec2i& steps = {1, 1},
-    const vec2f& scale = {10, 10}, float bent = 0.5f,
+    const vec2f& scale = {10, 10}, float radius = 0.5f,
     const vec2f& uvscale = {10, 10});
 // Make a bulged disk
 shape_data make_bulged_disk(
@@ -691,21 +691,21 @@ namespace yocto {
 // Subdivide lines by splitting each line in half.
 template <typename T, typename I>
 inline pair<vector<vec<I, 2>>, vector<T>> subdivide_lines(
-    const vector<vec<I, 2>>& lines, const vector<T>& vertex);
+    const vector<vec<I, 2>>& lines, const vector<T>& vert);
 // Subdivide triangle by splitting each triangle in four, creating new
 // vertices for each edge.
 template <typename T, typename I>
 inline pair<vector<vec<I, 3>>, vector<T>> subdivide_triangles(
-    const vector<vec<I, 3>>& triangles, const vector<T>& vertex);
+    const vector<vec<I, 3>>& triangles, const vector<T>& vert);
 // Subdivide quads by splitting each quads in four, creating new
 // vertices for each edge and for each face.
 template <typename T, typename I>
 inline pair<vector<vec<I, 4>>, vector<T>> subdivide_quads(
-    const vector<vec<I, 4>>& quads, const vector<T>& vertex);
+    const vector<vec<I, 4>>& quads, const vector<T>& vert);
 // Subdivide beziers by splitting each segment in two.
 template <typename T, typename I>
 inline pair<vector<vec<I, 4>>, vector<T>> subdivide_beziers(
-    const vector<vec<I, 3>>& beziers, const vector<T>& vertex);
+    const vector<vec<I, 3>>& beziers, const vector<T>& vert);
 // Subdivide lines using B-splines subdivision rules.
 template <typename T, typename I>
 inline pair<vector<vec<I, 2>>, vector<T>> subdivide_bspline(
@@ -713,7 +713,7 @@ inline pair<vector<vec<I, 2>>, vector<T>> subdivide_bspline(
 // Subdivide quads using Catmull-Clark subdivision rules.
 template <typename T, typename I>
 inline pair<vector<vec<I, 4>>, vector<T>> subdivide_catmullclark(
-    const vector<vec<I, 4>>& quads, const vector<T>& vertex,
+    const vector<vec<I, 4>>& quads, const vector<T>& vert,
     bool lock_boundary = false);
 
 // Subdivide lines by splitting each line in half.

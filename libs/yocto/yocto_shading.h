@@ -29,8 +29,8 @@
 // SOFTWARE.
 //
 
-#ifndef _YOCTO_SHADING_H_
-#define _YOCTO_SHADING_H_
+#ifndef YOCTO_SHADING_H_
+#define YOCTO_SHADING_H_
 
 // -----------------------------------------------------------------------------
 // INCLUDES
@@ -312,11 +312,13 @@ constexpr kernel float sample_microfacet_pdf(float roughness,
 constexpr kernel float microfacet_cosintegral(
     float roughness, const vec3f& normal, const vec3f& outgoing) {
   // https://blog.selfshadow.com/publications/s2017-shading-course/imageworks/s2017_pbs_imageworks_slides_v2.pdf
-  const float S[5] = {-0.170718f, 4.07985f, -11.5295f, 18.4961f, -9.23618f};
-  const float T[5] = {0.0632331f, 3.1434f, -7.47567f, 13.0482f, -7.0401f};
-  auto        m    = abs(dot(normal, outgoing));
-  auto        r    = roughness;
-  auto        s = S[0] * sqrt(m) + S[1] * r + S[2] * r * r + S[3] * r * r * r +
+  const auto S = array<float, 5>{
+      -0.170718f, 4.07985f, -11.5295f, 18.4961f, -9.23618f};
+  const auto T = array<float, 5>{
+      0.0632331f, 3.1434f, -7.47567f, 13.0482f, -7.0401f};
+  auto m = abs(dot(normal, outgoing));
+  auto r = roughness;
+  auto s = S[0] * sqrt(m) + S[1] * r + S[2] * r * r + S[3] * r * r * r +
            S[4] * r * r * r * r;
   auto t = T[0] * m + T[1] * r + T[2] * r * r + T[3] * r * r * r +
            T[4] * r * r * r * r;

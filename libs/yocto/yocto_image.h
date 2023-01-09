@@ -33,8 +33,8 @@
 // SOFTWARE.
 //
 
-#ifndef _YOCTO_IMAGE_H_
-#define _YOCTO_IMAGE_H_
+#ifndef YOCTO_IMAGE_H_
+#define YOCTO_IMAGE_H_
 
 // -----------------------------------------------------------------------------
 // INCLUDES

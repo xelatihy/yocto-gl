@@ -51,7 +51,6 @@
 namespace yocto {
 
 // using directives
-using std::unique_ptr;
 using namespace std::string_literals;
 
 }  // namespace yocto
@@ -186,7 +185,7 @@ static const auto min_roughness = 0.03f * 0.03f;
 // Evaluate material
 material_point eval_material(const scene_data& scene,
     const material_data& material, const vec2f& texcoord,
-    const vec4f& color_shp) {
+    const vec4f& shape_color) {
   // evaluate textures
   auto emission_tex   = eval_texture(scene, material.emission_tex, texcoord);
   auto color_tex      = eval_texture(scene, material.color_tex, texcoord);
@@ -196,9 +195,9 @@ material_point eval_material(const scene_data& scene,
   // material point
   auto point         = material_point{};
   point.type         = material.type;
-  point.emission     = material.emission * xyz(emission_tex) * xyz(color_shp);
-  point.color        = material.color * xyz(color_tex) * xyz(color_shp);
-  point.opacity      = material.opacity * alpha(color_tex) * alpha(color_shp);
+  point.emission     = material.emission * xyz(emission_tex) * xyz(shape_color);
+  point.color        = material.color * xyz(color_tex) * xyz(shape_color);
+  point.opacity      = material.opacity * alpha(color_tex) * alpha(shape_color);
   point.metallic     = material.metallic * roughness_tex.z;
   point.roughness    = material.roughness * roughness_tex.y;
   point.roughness    = point.roughness * point.roughness;
@@ -616,7 +615,7 @@ bool has_lights(const scene_data& scene) {
 }
 
 // create a scene from a shape
-scene_data make_shape_scene(const shape_data& shape, bool addsky) {
+scene_data make_shape_scene(const shape_data& shape, bool sky) {
   // scene
   auto scene = scene_data{};
   // shape
@@ -636,7 +635,7 @@ scene_data make_shape_scene(const shape_data& shape, bool addsky) {
   // camera
   add_camera(scene);
   // environment
-  if (addsky) add_sky(scene);
+  if (sky) add_sky(scene);
   // done
   return scene;
 }

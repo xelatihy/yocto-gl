@@ -45,19 +45,6 @@
 #endif
 
 // -----------------------------------------------------------------------------
-// USING DIRECTIVES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// using directives
-using std::array;
-
-// consts
-inline const auto uint_max = std::numeric_limits<unsigned int>::max();
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
 // PARALLEL HELPERS
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -232,10 +219,10 @@ intersection3f intersect_scene_bvh(const scene_bvh& sbvh,
 
 intersection3f intersect_instance_bvh(const scene_bvh& sbvh,
     const scene_data& scene, int instance_, const ray3f& ray, bool find_any) {
-  auto& instance      = scene.instances[instance_];
-  auto  inv_ray       = transform_ray(inverse(instance.frame, true), ray);
-  auto  sintersection = intersect_shape_bvh(sbvh.shapes[instance.shape],
-       scene.shapes[instance.shape], inv_ray, find_any);
+  const auto& instance      = scene.instances[instance_];
+  auto        inv_ray       = transform_ray(inverse(instance.frame, true), ray);
+  auto        sintersection = intersect_shape_bvh(sbvh.shapes[instance.shape],
+             scene.shapes[instance.shape], inv_ray, find_any);
   if (!sintersection.hit) return {};
   return {instance_, sintersection};
 }
@@ -308,10 +295,9 @@ struct embree_error : std::runtime_error {
 bool embree_supported() { return true; }
 
 // Get Embree device
-std::atomic<ssize_t> embree_memory = 0;
-static RTCDevice     embree_device() {
+static RTCDevice embree_device() {
   static RTCDevice device = nullptr;
-  if (!device) {
+  if (device == nullptr) {
     device = rtcNewDevice("");
     rtcSetDeviceErrorFunction(
         device,
@@ -334,20 +320,13 @@ static RTCDevice     embree_device() {
           }
         },
         nullptr);
-    rtcSetDeviceMemoryMonitorFunction(
-        device,
-        [](void* userPtr, ssize_t bytes, bool post) {
-          embree_memory += bytes;
-          return true;
-        },
-        nullptr);
   }
   return device;
 }
 
 // Clear Embree bvh
 void clear_ebvh(void* ebvh) {
-  if (ebvh) rtcReleaseScene((RTCScene)ebvh);
+  if (ebvh != nullptr) rtcReleaseScene((RTCScene)ebvh);
 }
 
 // Build the bvh acceleration structure.
@@ -494,7 +473,7 @@ void update_scene_ebvh(scene_ebvh& sbvh, const scene_data& scene,
 // the shape element index and the element barycentric coordinates.
 intersection3f intersect_shape_ebvh(const shape_ebvh& sbvh,
     const shape_data& shape, const ray3f& ray, bool find_any) {
-  RTCRayHit embree_ray;
+  auto embree_ray          = RTCRayHit{};
   embree_ray.ray.org_x     = ray.o[0];
   embree_ray.ray.org_y     = ray.o[1];
   embree_ray.ray.org_z     = ray.o[2];
@@ -508,7 +487,7 @@ intersection3f intersect_shape_ebvh(const shape_ebvh& sbvh,
   embree_ray.ray.id        = 0;
   embree_ray.hit.geomID    = RTC_INVALID_GEOMETRY_ID;
   embree_ray.hit.instID[0] = RTC_INVALID_GEOMETRY_ID;
-  RTCIntersectContext embree_ctx;
+  auto embree_ctx          = RTCIntersectContext{};
   rtcInitIntersectContext(&embree_ctx);
   rtcIntersect1((RTCScene)sbvh.ebvh.get(), &embree_ctx, &embree_ray);
   if (embree_ray.hit.geomID == RTC_INVALID_GEOMETRY_ID) return {};
@@ -520,7 +499,7 @@ intersection3f intersect_shape_ebvh(const shape_ebvh& sbvh,
 
 intersection3f intersect_scene_ebvh(const scene_ebvh& sbvh,
     const scene_data& scene, const ray3f& ray, bool find_any) {
-  RTCRayHit embree_ray;
+  auto embree_ray          = RTCRayHit{};
   embree_ray.ray.org_x     = ray.o[0];
   embree_ray.ray.org_y     = ray.o[1];
   embree_ray.ray.org_z     = ray.o[2];
@@ -534,7 +513,7 @@ intersection3f intersect_scene_ebvh(const scene_ebvh& sbvh,
   embree_ray.ray.id        = 0;
   embree_ray.hit.geomID    = RTC_INVALID_GEOMETRY_ID;
   embree_ray.hit.instID[0] = RTC_INVALID_GEOMETRY_ID;
-  RTCIntersectContext embree_ctx;
+  auto embree_ctx          = RTCIntersectContext{};
   rtcInitIntersectContext(&embree_ctx);
   rtcIntersect1((RTCScene)sbvh.ebvh.get(), &embree_ctx, &embree_ray);
   if (embree_ray.hit.geomID == RTC_INVALID_GEOMETRY_ID) return {};

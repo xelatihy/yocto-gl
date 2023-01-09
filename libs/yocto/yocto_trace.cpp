@@ -1340,7 +1340,6 @@ static trace_result trace_falsecolor(const scene_data& scene,
   auto outgoing = -ray.d;
   auto position = eval_shading_position(scene, intersection, outgoing);
   auto normal   = eval_shading_normal(scene, intersection, outgoing);
-  auto vnormal  = eval_normal(scene, intersection);
   auto gnormal  = eval_element_normal(scene, intersection);
   auto texcoord = eval_texcoord(scene, intersection);
   auto material = eval_material(scene, intersection);
@@ -1756,10 +1755,10 @@ void get_normal_image(array2d<vec3f>& normal, const trace_state& state) {
 }
 
 // Denoise image
-array2d<vec4f> denoise_image(const array2d<vec4f>& render,
+array2d<vec4f> denoise_image(const array2d<vec4f>& image,
     const array2d<vec3f>& albedo, const array2d<vec3f>& normal) {
-  auto denoised = array2d<vec4f>{render.extents()};
-  denoise_image(denoised, render, albedo, normal);
+  auto denoised = array2d<vec4f>{image.extents()};
+  denoise_image(denoised, image, albedo, normal);
   return denoised;
 }
 void denoise_image(array2d<vec4f>& denoised, const array2d<vec4f>& image,

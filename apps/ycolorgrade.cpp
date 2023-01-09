@@ -104,25 +104,28 @@ void run(const vector<string>& args) {
     callbacks.widgets = [&](const gui_input& input) {
       if (draw_gui_header("colorgrade")) {
         auto edited = 0;
-        edited += draw_gui_slider("exposure", params.exposure, -5, 5);
-        edited += draw_gui_coloredit("tint", params.tint);
-        edited += draw_gui_slider("lincontrast", params.lincontrast, 0, 1);
-        edited += draw_gui_slider("logcontrast", params.logcontrast, 0, 1);
-        edited += draw_gui_slider("linsaturation", params.linsaturation, 0, 1);
-        edited += draw_gui_checkbox("filmic", params.filmic);
+        edited += (int)draw_gui_slider("exposure", params.exposure, -5, 5);
+        edited += (int)draw_gui_coloredit("tint", params.tint);
+        edited += (int)draw_gui_slider("lincontrast", params.lincontrast, 0, 1);
+        edited += (int)draw_gui_slider("logcontrast", params.logcontrast, 0, 1);
+        edited += (int)draw_gui_slider(
+            "linsaturation", params.linsaturation, 0, 1);
+        edited += (int)draw_gui_checkbox("filmic", params.filmic);
         continue_gui_line();
-        edited += draw_gui_checkbox("srgb", params.srgb);
-        edited += draw_gui_slider("contrast", params.contrast, 0, 1);
-        edited += draw_gui_slider("saturation", params.saturation, 0, 1);
-        edited += draw_gui_slider("shadows", params.shadows, 0, 1);
-        edited += draw_gui_slider("midtones", params.midtones, 0, 1);
-        edited += draw_gui_slider("highlights", params.highlights, 0, 1);
-        edited += draw_gui_coloredit("shadows color", params.shadows_color);
-        edited += draw_gui_coloredit("midtones color", params.midtones_color);
-        edited += draw_gui_coloredit(
+        edited += (int)draw_gui_checkbox("srgb", params.srgb);
+        edited += (int)draw_gui_slider("contrast", params.contrast, 0, 1);
+        edited += (int)draw_gui_slider("saturation", params.saturation, 0, 1);
+        edited += (int)draw_gui_slider("shadows", params.shadows, 0, 1);
+        edited += (int)draw_gui_slider("midtones", params.midtones, 0, 1);
+        edited += (int)draw_gui_slider("highlights", params.highlights, 0, 1);
+        edited += (int)draw_gui_coloredit(
+            "shadows color", params.shadows_color);
+        edited += (int)draw_gui_coloredit(
+            "midtones color", params.midtones_color);
+        edited += (int)draw_gui_coloredit(
             "highlights color", params.highlights_color);
         end_gui_header();
-        if (edited) {
+        if (edited > 0) {
           colorgrade_image(display, image, params);
           set_image(glimage, display);
         }

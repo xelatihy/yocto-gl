@@ -313,7 +313,7 @@ string load_text(const string& filename) {
 void load_text(const string& filename, string& str) {
   // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
   auto fs = fopen_utf8(filename.c_str(), "rb");
-  if (!fs) throw io_error("cannot open " + filename);
+  if (fs == nullptr) throw io_error("cannot open " + filename);
   fseek(fs, 0, SEEK_END);
   auto length = ftell(fs);
   fseek(fs, 0, SEEK_SET);
@@ -328,7 +328,7 @@ void load_text(const string& filename, string& str) {
 // Save a text file
 void save_text(const string& filename, const string& str) {
   auto fs = fopen_utf8(filename.c_str(), "wt");
-  if (!fs) throw io_error("cannot create " + filename);
+  if (fs == nullptr) throw io_error("cannot create " + filename);
   if (fprintf(fs, "%s", str.c_str()) < 0) {
     fclose(fs);
     throw io_error("cannot write " + filename);
@@ -347,7 +347,7 @@ vector<byte> load_binary(const string& filename) {
 void load_binary(const string& filename, vector<byte>& data) {
   // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
   auto fs = fopen_utf8(filename.c_str(), "rb");
-  if (!fs) throw io_error("cannot open " + filename);
+  if (fs == nullptr) throw io_error("cannot open " + filename);
   fseek(fs, 0, SEEK_END);
   auto length = ftell(fs);
   fseek(fs, 0, SEEK_SET);
@@ -362,7 +362,7 @@ void load_binary(const string& filename, vector<byte>& data) {
 // Save a binary file
 void save_binary(const string& filename, const vector<byte>& data) {
   auto fs = fopen_utf8(filename.c_str(), "wb");
-  if (!fs) throw io_error("cannot create " + filename);
+  if (fs == nullptr) throw io_error("cannot create " + filename);
   if (fwrite(data.data(), 1, data.size(), fs) != data.size()) {
     fclose(fs);
     throw io_error("cannot write " + filename);
@@ -518,7 +518,7 @@ void load_image(const string& filename, array2d<vec4f>& image, bool srgb) {
     auto width = 0, height = 0, ncomp = 0;
     auto pixels = stbi_loadf_from_memory(
         buffer.data(), (int)buffer.size(), &width, &height, &ncomp, 4);
-    if (!pixels) throw io_error{"cannot read " + filename};
+    if (pixels == nullptr) throw io_error{"cannot read " + filename};
     image = {(vec4f*)pixels, {(size_t)width, (size_t)height}};
     if (srgb) image = rgb_to_srgb(image);
     free(pixels);
@@ -550,7 +550,7 @@ void load_image(const string& filename, array2d<vec4b>& image, bool srgb) {
     auto width = 0, height = 0, ncomp = 0;
     auto pixels = stbi_load_from_memory(
         buffer.data(), (int)buffer.size(), &width, &height, &ncomp, 4);
-    if (!pixels) throw io_error{"cannot read " + filename};
+    if (pixels == nullptr) throw io_error{"cannot read " + filename};
     image = {(vec4b*)pixels, {(size_t)width, (size_t)height}};
     if (!srgb) image = float_to_byte(srgbb_to_rgb(image));
     free(pixels);
@@ -583,7 +583,7 @@ void save_image(
   if (ext == ".hdr" || ext == ".HDR") {
     auto& image_ = srgb ? srgb_to_rgb(image) : image;
     auto  buffer = vector<byte>{};
-    if (!stbi_write_hdr_to_func(stbi_write_data, &buffer, width, height,
+    if (!(bool)stbi_write_hdr_to_func(stbi_write_data, &buffer, width, height,
             num_channels, (const float*)image_.data()))
       throw io_error{"cannot write " + filename};
     return save_binary(filename, buffer);
@@ -626,7 +626,7 @@ void save_image(
   } else if (ext == ".png" || ext == ".PNG") {
     auto& image_ = srgb ? image : rgb_to_srgbb(byte_to_float(image));
     auto  buffer = vector<byte>{};
-    if (!stbi_write_png_to_func(stbi_write_data, &buffer, width, height,
+    if (!(bool)stbi_write_png_to_func(stbi_write_data, &buffer, width, height,
             num_channels, (const byte*)image_.data(), width * 4))
       throw io_error{"cannot write " + filename};
     return save_binary(filename, buffer);
@@ -634,21 +634,21 @@ void save_image(
              ext == ".JPEG") {
     auto& image_ = srgb ? image : rgb_to_srgbb(byte_to_float(image));
     auto  buffer = vector<byte>{};
-    if (!stbi_write_jpg_to_func(stbi_write_data, &buffer, width, height,
+    if (!(bool)stbi_write_jpg_to_func(stbi_write_data, &buffer, width, height,
             num_channels, (const byte*)image_.data(), 75))
       throw io_error{"cannot write " + filename};
     return save_binary(filename, buffer);
   } else if (ext == ".tga" || ext == ".TGA") {
     auto& image_ = srgb ? image : rgb_to_srgbb(byte_to_float(image));
     auto  buffer = vector<byte>{};
-    if (!stbi_write_tga_to_func(stbi_write_data, &buffer, width, height,
+    if (!(bool)stbi_write_tga_to_func(stbi_write_data, &buffer, width, height,
             num_channels, (const byte*)image_.data()))
       throw io_error{"cannot write " + filename};
     return save_binary(filename, buffer);
   } else if (ext == ".bmp" || ext == ".BMP") {
     auto& image_ = srgb ? image : rgb_to_srgbb(byte_to_float(image));
     auto  buffer = vector<byte>{};
-    if (!stbi_write_bmp_to_func(stbi_write_data, &buffer, width, height,
+    if (!(bool)stbi_write_bmp_to_func(stbi_write_data, &buffer, width, height,
             num_channels, (const byte*)image_.data()))
       throw io_error{"cannot write " + filename};
     return save_binary(filename, buffer);
@@ -659,13 +659,13 @@ void save_image(
 
 bool is_srgb_preset(const string& type_) {
   auto type = path_basename(type_);
-  return type.find("sky") == type.npos;
+  return type.find("sky") == string::npos;
 }
 array2d<vec4f> make_image_preset(const string& type_) {
   auto type    = path_basename(type_);
   auto extents = vec2s{1024, 1024};
-  if (type.find("sky") != type.npos) extents = {2048, 1024};
-  if (type.find("images2") != type.npos) extents = {2048, 1024};
+  if (type.find("sky") != string::npos) extents = {2048, 1024};
+  if (type.find("images2") != string::npos) extents = {2048, 1024};
   if (type == "grid") {
     return make_grid(extents);
   } else if (type == "checker") {
@@ -783,8 +783,6 @@ namespace yocto {
 
 // Load mesh
 void load_shape(const string& filename, shape_data& shape, bool flip_texcoord) {
-  auto shape_error = [&]() { throw io_error{"empty shape " + filename}; };
-
   shape = {};
 
   auto ext = path_extension(filename);
@@ -2363,7 +2361,7 @@ static void load_json_scene_version40(const string& filename,
       instance_ply[instance_id] = it->second;
     } else {
       ply_instances_names.emplace_back(name);
-      ply_instances.emplace_back(ply_instance());
+      ply_instances.push_back({});
       auto ply_instance_id      = (int)ply_instances.size() - 1;
       ply_instance_map[name]    = ply_instance_id;
       instance_ply[instance_id] = ply_instance_id;
@@ -3653,7 +3651,8 @@ static void load_gltf_scene(
       camera.film   = 0.036f;
     } else if (gcamera.type == cgltf_camera_type_perspective) {
       auto& gpersp  = gcamera.data.perspective;
-      camera.aspect = gpersp.has_aspect_ratio ? gpersp.aspect_ratio : 0.0f;
+      camera.aspect = (bool)gpersp.has_aspect_ratio ? gpersp.aspect_ratio
+                                                    : 0.0f;
       auto yfov     = gpersp.yfov;
       if (camera.aspect == 0) camera.aspect = 16.0f / 9.0f;
       camera.film = 0.036f;
@@ -3705,11 +3704,11 @@ static void load_gltf_scene(
     material.type     = material_type::gltfpbr;
     material.emission = {gmaterial.emissive_factor[0],
         gmaterial.emissive_factor[1], gmaterial.emissive_factor[2]};
-    if (gmaterial.has_emissive_strength)
+    if ((bool)gmaterial.has_emissive_strength)
       material.emission *= gmaterial.emissive_strength.emissive_strength;
     material.emission_tex = get_texture(gmaterial.emissive_texture);
     material.normal_tex   = get_texture(gmaterial.normal_texture);
-    if (gmaterial.has_pbr_metallic_roughness) {
+    if ((bool)gmaterial.has_pbr_metallic_roughness) {
       auto& gpbr        = gmaterial.pbr_metallic_roughness;
       material.type     = material_type::gltfpbr;
       material.color    = {gpbr.base_color_factor[0], gpbr.base_color_factor[1],
@@ -3720,7 +3719,7 @@ static void load_gltf_scene(
       material.color_tex     = get_texture(gpbr.base_color_texture);
       material.roughness_tex = get_texture(gpbr.metallic_roughness_texture);
     }
-    if (gmaterial.has_transmission) {
+    if ((bool)gmaterial.has_transmission) {
       auto& gtransmission = gmaterial.transmission;
       auto  transmission  = gtransmission.transmission_factor;
       if (transmission > 0) {
@@ -3744,13 +3743,13 @@ static void load_gltf_scene(
       auto& shape       = scene.shapes.emplace_back();
       auto& instance    = primitives.emplace_back();
       instance.shape    = (int)scene.shapes.size() - 1;
-      instance.material = gprimitive.material
+      instance.material = gprimitive.material != nullptr
                               ? (int)(gprimitive.material - cgltf.materials)
                               : -1;
       for (auto idx : range(gprimitive.attributes_count)) {
         auto& gattribute = gprimitive.attributes[idx];
         auto& gaccessor  = *gattribute.data;
-        if (gaccessor.is_sparse)
+        if ((bool)gaccessor.is_sparse)
           throw io_error{
               "cannot load " + filename + " for unsupported sparse accessor"};
         auto gname       = string{gattribute.name};
@@ -3805,7 +3804,7 @@ static void load_gltf_scene(
         }
         // convert values
         for (auto idx : range(count)) {
-          if (!cgltf_accessor_read_float(
+          if (!(bool)cgltf_accessor_read_float(
                   &gaccessor, idx, &data[idx * dcomponents], components))
             throw io_error{"cannot load " + filename +
                            " for unsupported accessor conversion"};
@@ -3857,7 +3856,7 @@ static void load_gltf_scene(
                          " for unsupported non-scalar indices"};
         auto indices = vector<int>(gaccessor.count);
         for (auto idx : range(gaccessor.count)) {
-          if (!cgltf_accessor_read_uint(
+          if (!(bool)cgltf_accessor_read_uint(
                   &gaccessor, idx, (cgltf_uint*)&indices[idx], 1))
             throw io_error{
                 "cannot load " + filename + " for unsupported accessor type"};
@@ -3999,7 +3998,7 @@ static void save_gltf_scene(
       gcamera.name       = copy_string(get_camera_name(scene, camera));
       gcamera.type       = cgltf_camera_type_perspective;
       auto& gperspective = gcamera.data.perspective;
-      gperspective.has_aspect_ratio = true;
+      gperspective.has_aspect_ratio = 1;
       gperspective.aspect_ratio     = camera.aspect;
       gperspective.yfov             = 0.660593;  // TODO(fabio): yfov
       gperspective.znear            = 0.001;     // TODO(fabio): configurable?
@@ -4041,10 +4040,10 @@ static void save_gltf_scene(
       gmaterial.emissive_factor[1] = material.emission.y / emission_scale;
       gmaterial.emissive_factor[2] = material.emission.z / emission_scale;
       if (emission_scale > 1.0f) {
-        gmaterial.has_emissive_strength               = true;
+        gmaterial.has_emissive_strength               = 1;
         gmaterial.emissive_strength.emissive_strength = emission_scale;
       }
-      gmaterial.has_pbr_metallic_roughness = true;
+      gmaterial.has_pbr_metallic_roughness = 1;
       auto& gpbr                           = gmaterial.pbr_metallic_roughness;
       gpbr.base_color_factor[0]            = material.color.x;
       gpbr.base_color_factor[1]            = material.color.y;
@@ -4098,8 +4097,8 @@ static void save_gltf_scene(
       gaccessor.count          = count;
       gaccessor.type           = type;
       gaccessor.component_type = cgltf_component_type_r_32f;
-      gaccessor.has_min        = true;
-      gaccessor.has_max        = true;
+      gaccessor.has_min        = 1;
+      gaccessor.has_max        = 1;
       for (auto component : range(components)) {
         gaccessor.min[component] = flt_max;
         gaccessor.max[component] = flt_min;
@@ -4233,7 +4232,7 @@ static void save_gltf_scene(
       gnode.name   = copy_string(get_camera_name(scene, camera));
       auto xform   = to_mat(camera.frame);
       memcpy(gnode.matrix, &xform, sizeof(mat4f));
-      gnode.has_matrix = true;
+      gnode.has_matrix = 1;
       gnode.camera     = cgltf.cameras + idx;
     }
     for (auto idx : range(scene.instances.size())) {
@@ -4242,7 +4241,7 @@ static void save_gltf_scene(
       gnode.name     = copy_string(get_instance_name(scene, instance));
       auto xform     = to_mat(instance.frame);
       memcpy(gnode.matrix, &xform, sizeof(mat4f));
-      gnode.has_matrix = true;
+      gnode.has_matrix = 1;
       gnode.mesh       = cgltf.meshes +
                    mesh_map.at({instance.shape, instance.material});
     }
@@ -4594,9 +4593,9 @@ static void xml_attribute(string& xml, const string& name, const vec3f& value) {
   }
 }
 static void xml_attribute(
-    string& xml, const string& name, const frame3f& value) {
+    string& xml, const string& name, const frame3f& value_) {
   xml += " " + name + "=\"";
-  auto mat = to_mat(value);
+  auto value = to_mat(value_);
   for (auto ij : range(vec2i(4, 4))) {
     xml += (xml.back() == '"' ? "" : " ") + std::to_string(value[ij.y][ij.x]);
   }
@@ -5245,7 +5244,7 @@ json_value make_json_cli(const vector<string>& args) {
           json[name].push_back(false);
         } else if (value == "null") {
           json[name].push_back(nullptr);
-        } else if (std::isdigit((int)value[0]) || value[0] == '-' ||
+        } else if ((bool)std::isdigit((int)value[0]) || value[0] == '-' ||
                    value[0] == '+') {
           try {
             if (value.find('.') != string::npos) {

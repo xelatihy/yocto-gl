@@ -66,7 +66,7 @@ struct glscene_texture {
   vec2i extents = {0, 0};
 
   // opengl state
-  uint texture = 0;
+  glhandle texture = {};
 };
 
 // Create texture
@@ -90,17 +90,17 @@ struct glscene_shape {
   int num_quads     = 0;
 
   // OpenGl state
-  uint  vertexarray = 0;
-  uint  positions   = 0;
-  uint  normals     = 0;
-  uint  texcoords   = 0;
-  uint  colors      = 0;
-  uint  tangents    = 0;
-  uint  points      = 0;
-  uint  lines       = 0;
-  uint  triangles   = 0;
-  uint  quads       = 0;
-  float point_size  = 1;
+  glhandle vertexarray = {};
+  glhandle positions   = {};
+  glhandle normals     = {};
+  glhandle texcoords   = {};
+  glhandle colors      = {};
+  glhandle tangents    = {};
+  glhandle points      = {};
+  glhandle lines       = {};
+  glhandle triangles   = {};
+  glhandle quads       = {};
+  float    point_size  = 1;
 };
 
 // Create shape
@@ -116,9 +116,9 @@ struct glscene_state {
   vector<glscene_texture> textures = {};
 
   // programs
-  uint program  = 0;
-  uint vertex   = 0;
-  uint fragment = 0;
+  glhandle program  = {};
+  glhandle vertex   = {};
+  glhandle fragment = {};
 };
 
 // init scene
@@ -192,8 +192,8 @@ bool draw_tonemap_widgets(
     const gui_input& input, float& exposure, bool& filmic) {
   auto edited = 0;
   if (draw_gui_header("tonemap")) {
-    edited += draw_gui_slider("exposure", exposure, -5, 5);
-    edited += draw_gui_checkbox("filmic", filmic);
+    edited += (int)draw_gui_slider("exposure", exposure, -5, 5);
+    edited += (int)draw_gui_checkbox("filmic", filmic);
     end_gui_header();
   }
   return (bool)edited;
@@ -241,21 +241,21 @@ bool draw_trace_widgets(const gui_input& input, int sample,
   auto edited = 0;
   draw_gui_progressbar("sample", sample, params.samples);
   if (draw_gui_header("render")) {
-    edited += draw_gui_combobox("camera", params.camera, camera_names);
-    edited += draw_gui_slider("resolution", params.resolution, 180, 4096);
-    edited += draw_gui_slider("samples", params.samples, 16, 4096);
-    edited += draw_gui_combobox(
-        "tracer", (int&)params.sampler, trace_sampler_names);
-    edited += draw_gui_combobox(
-        "false color", (int&)params.falsecolor, trace_falsecolor_names);
-    edited += draw_gui_slider("bounces", params.bounces, 1, 128);
-    edited += draw_gui_slider("batch", params.batch, 1, 16);
-    edited += draw_gui_slider("clamp", params.clamp, 10, 1000);
-    edited += draw_gui_checkbox("envhidden", params.envhidden);
+    edited += (int)draw_gui_combobox("camera", params.camera, camera_names);
+    edited += (int)draw_gui_slider("resolution", params.resolution, 180, 4096);
+    edited += (int)draw_gui_slider("samples", params.samples, 16, 4096);
+    edited += (int)draw_gui_combobox(
+        "tracer", params.sampler, trace_sampler_names);
+    edited += (int)draw_gui_combobox(
+        "false color", params.falsecolor, trace_falsecolor_names);
+    edited += (int)draw_gui_slider("bounces", params.bounces, 1, 128);
+    edited += (int)draw_gui_slider("batch", params.batch, 1, 16);
+    edited += (int)draw_gui_slider("clamp", params.clamp, 10, 1000);
+    edited += (int)draw_gui_checkbox("envhidden", params.envhidden);
     continue_gui_line();
-    edited += draw_gui_checkbox("filter", params.tentfilter);
-    edited += draw_gui_slider("pratio", params.pratio, 1, 64);
-    edited += draw_gui_checkbox("denoise", params.denoise);
+    edited += (int)draw_gui_checkbox("filter", params.tentfilter);
+    edited += (int)draw_gui_slider("pratio", params.pratio, 1, 64);
+    edited += (int)draw_gui_checkbox("denoise", params.denoise);
     end_gui_header();
   }
   return (bool)edited;
@@ -267,13 +267,13 @@ bool draw_scene_widgets(scene_data& scene, scene_selection& selection,
   if (draw_gui_header("cameras")) {
     draw_gui_combobox("camera", selection.camera, scene.camera_names);
     auto camera = scene.cameras.at(selection.camera);
-    edited += draw_gui_checkbox("ortho", camera.orthographic);
-    edited += draw_gui_slider("lens", camera.lens, 0.001f, 1);
-    edited += draw_gui_slider("aspect", camera.aspect, 0.1f, 5);
-    edited += draw_gui_slider("film", camera.film, 0.1f, 0.5f);
-    edited += draw_gui_slider("focus", camera.focus, 0.001f, 100);
-    edited += draw_gui_slider("aperture", camera.aperture, 0, 1);
-    if (edited) {
+    edited += (int)draw_gui_checkbox("ortho", camera.orthographic);
+    edited += (int)draw_gui_slider("lens", camera.lens, 0.001f, 1);
+    edited += (int)draw_gui_slider("aspect", camera.aspect, 0.1f, 5);
+    edited += (int)draw_gui_slider("film", camera.film, 0.1f, 0.5f);
+    edited += (int)draw_gui_slider("focus", camera.focus, 0.001f, 100);
+    edited += (int)draw_gui_slider("aperture", camera.aperture, 0, 1);
+    if ((bool)edited) {
       if (before_edit) before_edit();
       scene.cameras.at(selection.camera) = camera;
     }
@@ -283,10 +283,10 @@ bool draw_scene_widgets(scene_data& scene, scene_selection& selection,
     draw_gui_combobox(
         "environment", selection.environment, scene.environment_names);
     auto environment = scene.environments.at(selection.environment);
-    edited += draw_gui_coloredithdr("emission", environment.emission);
-    edited += draw_gui_combobox(
+    edited += (int)draw_gui_coloredithdr("emission", environment.emission);
+    edited += (int)draw_gui_combobox(
         "emission_tex", environment.emission_tex, scene.texture_names, true);
-    if (edited) {
+    if ((bool)edited) {
       if (before_edit) before_edit();
       scene.environments.at(selection.environment) = environment;
     }
@@ -295,10 +295,11 @@ bool draw_scene_widgets(scene_data& scene, scene_selection& selection,
   if (draw_gui_header("instances")) {
     draw_gui_combobox("instance", selection.instance, scene.instance_names);
     auto instance = scene.instances.at(selection.instance);
-    edited += draw_gui_combobox("shape", instance.shape, scene.shape_names);
-    edited += draw_gui_combobox(
+    edited += (int)draw_gui_combobox(
+        "shape", instance.shape, scene.shape_names);
+    edited += (int)draw_gui_combobox(
         "material", instance.material, scene.material_names);
-    if (edited) {
+    if ((bool)edited) {
       if (before_edit) before_edit();
       scene.instances.at(selection.instance) = instance;
     }
@@ -307,18 +308,18 @@ bool draw_scene_widgets(scene_data& scene, scene_selection& selection,
   if (draw_gui_header("materials")) {
     draw_gui_combobox("material", selection.material, scene.material_names);
     auto material = scene.materials.at(selection.material);
-    edited += draw_gui_coloredithdr("emission", material.emission);
-    edited += draw_gui_combobox(
+    edited += (int)draw_gui_coloredithdr("emission", material.emission);
+    edited += (int)draw_gui_combobox(
         "emission_tex", material.emission_tex, scene.texture_names, true);
-    edited += draw_gui_coloredithdr("color", material.color);
-    edited += draw_gui_combobox(
+    edited += (int)draw_gui_coloredithdr("color", material.color);
+    edited += (int)draw_gui_combobox(
         "color_tex", material.color_tex, scene.texture_names, true);
-    edited += draw_gui_slider("roughness", material.roughness, 0, 1);
-    edited += draw_gui_combobox(
+    edited += (int)draw_gui_slider("roughness", material.roughness, 0, 1);
+    edited += (int)draw_gui_combobox(
         "roughness_tex", material.roughness_tex, scene.texture_names, true);
-    edited += draw_gui_slider("metallic", material.metallic, 0, 1);
-    edited += draw_gui_slider("ior", material.ior, 0.1f, 5);
-    if (edited) {
+    edited += (int)draw_gui_slider("metallic", material.metallic, 0, 1);
+    edited += (int)draw_gui_slider("ior", material.ior, 0.1f, 5);
+    if ((bool)edited) {
       if (before_edit) before_edit();
       scene.materials.at(selection.material) = material;
     }
@@ -403,24 +404,27 @@ void show_colorgrade_gui(const string& title, const string& name,
     draw_gui_combobox("name", selected, names);
     if (draw_gui_header("colorgrade")) {
       auto edited = 0;
-      edited += draw_gui_slider("exposure", params.exposure, -5, 5);
-      edited += draw_gui_coloredit("tint", params.tint);
-      edited += draw_gui_slider("lincontrast", params.lincontrast, 0, 1);
-      edited += draw_gui_slider("logcontrast", params.logcontrast, 0, 1);
-      edited += draw_gui_slider("linsaturation", params.linsaturation, 0, 1);
-      edited += draw_gui_checkbox("filmic", params.filmic);
+      edited += (int)draw_gui_slider("exposure", params.exposure, -5, 5);
+      edited += (int)draw_gui_coloredit("tint", params.tint);
+      edited += (int)draw_gui_slider("lincontrast", params.lincontrast, 0, 1);
+      edited += (int)draw_gui_slider("logcontrast", params.logcontrast, 0, 1);
+      edited += (int)draw_gui_slider(
+          "linsaturation", params.linsaturation, 0, 1);
+      edited += (int)draw_gui_checkbox("filmic", params.filmic);
       continue_gui_line();
-      edited += draw_gui_checkbox("srgb", params.srgb);
-      edited += draw_gui_slider("contrast", params.contrast, 0, 1);
-      edited += draw_gui_slider("saturation", params.saturation, 0, 1);
-      edited += draw_gui_slider("shadows", params.shadows, 0, 1);
-      edited += draw_gui_slider("midtones", params.midtones, 0, 1);
-      edited += draw_gui_slider("highlights", params.highlights, 0, 1);
-      edited += draw_gui_coloredit("shadows color", params.shadows_color);
-      edited += draw_gui_coloredit("midtones color", params.midtones_color);
-      edited += draw_gui_coloredit("highlights color", params.highlights_color);
+      edited += (int)draw_gui_checkbox("srgb", params.srgb);
+      edited += (int)draw_gui_slider("contrast", params.contrast, 0, 1);
+      edited += (int)draw_gui_slider("saturation", params.saturation, 0, 1);
+      edited += (int)draw_gui_slider("shadows", params.shadows, 0, 1);
+      edited += (int)draw_gui_slider("midtones", params.midtones, 0, 1);
+      edited += (int)draw_gui_slider("highlights", params.highlights, 0, 1);
+      edited += (int)draw_gui_coloredit("shadows color", params.shadows_color);
+      edited += (int)draw_gui_coloredit(
+          "midtones color", params.midtones_color);
+      edited += (int)draw_gui_coloredit(
+          "highlights color", params.highlights_color);
       end_gui_header();
-      if (edited) {
+      if ((bool)edited) {
         colorgrade_image(display, image, linear, params);
         set_image(glimage, display);
       }
@@ -554,23 +558,24 @@ void show_trace_gui(const string& title, const string& name, scene_data& scene,
     if (draw_gui_header("render")) {
       auto edited  = 0;
       auto tparams = params;
-      edited += draw_gui_combobox("camera", tparams.camera, camera_names);
-      edited += draw_gui_slider("resolution", tparams.resolution, 180, 4096);
-      edited += draw_gui_slider("samples", tparams.samples, 16, 4096);
-      edited += draw_gui_combobox(
-          "tracer", (int&)tparams.sampler, trace_sampler_names);
-      edited += draw_gui_combobox(
-          "false color", (int&)tparams.falsecolor, trace_falsecolor_names);
-      edited += draw_gui_slider("bounces", tparams.bounces, 1, 128);
-      edited += draw_gui_slider("batch", tparams.batch, 1, 16);
-      edited += draw_gui_slider("clamp", tparams.clamp, 10, 1000);
-      edited += draw_gui_checkbox("envhidden", tparams.envhidden);
+      edited += (int)draw_gui_combobox("camera", tparams.camera, camera_names);
+      edited += (int)draw_gui_slider(
+          "resolution", tparams.resolution, 180, 4096);
+      edited += (int)draw_gui_slider("samples", tparams.samples, 16, 4096);
+      edited += (int)draw_gui_combobox(
+          "tracer", tparams.sampler, trace_sampler_names);
+      edited += (int)draw_gui_combobox(
+          "false color", tparams.falsecolor, trace_falsecolor_names);
+      edited += (int)draw_gui_slider("bounces", tparams.bounces, 1, 128);
+      edited += (int)draw_gui_slider("batch", tparams.batch, 1, 16);
+      edited += (int)draw_gui_slider("clamp", tparams.clamp, 10, 1000);
+      edited += (int)draw_gui_checkbox("envhidden", tparams.envhidden);
       continue_gui_line();
-      edited += draw_gui_checkbox("filter", tparams.tentfilter);
-      edited += draw_gui_slider("pratio", tparams.pratio, 1, 64);
-      edited += draw_gui_checkbox("denoise", tparams.denoise);
+      edited += (int)draw_gui_checkbox("filter", tparams.tentfilter);
+      edited += (int)draw_gui_slider("pratio", tparams.pratio, 1, 64);
+      edited += (int)draw_gui_checkbox("denoise", tparams.denoise);
       end_gui_header();
-      if (edited) {
+      if ((bool)edited) {
         render_cancel();
         params = tparams;
         render_reset();
@@ -579,10 +584,10 @@ void show_trace_gui(const string& title, const string& name, scene_data& scene,
       }
     }
     if (draw_gui_header("tonemap")) {
-      edited += draw_gui_slider("exposure", glparams.exposure, -5, 5);
-      edited += draw_gui_checkbox("filmic", glparams.filmic);
+      edited += (int)draw_gui_slider("exposure", glparams.exposure, -5, 5);
+      edited += (int)draw_gui_checkbox("filmic", glparams.filmic);
       end_gui_header();
-      if (edited) set_image(glimage, image);
+      if ((bool)edited) set_image(glimage, image);
     }
     draw_image_widgets(input, image, glparams);
     if (edit) {
@@ -907,18 +912,17 @@ namespace yocto {
 static void assert_glerror() { assert(_assert_ogl_error() == GL_NO_ERROR); }
 
 // initialize program
-static void set_program(uint& program_id, uint& vertex_id, uint& fragment_id,
-    const string& vertex, const string& fragment) {
+static void set_program(glhandle& program_id, glhandle& vertex_id,
+    glhandle& fragment_id, const string& vertex, const string& fragment) {
   // error
   auto program_error = [&](const char* message, const char* log) {
-    if (program_id) glDeleteProgram(program_id);
-    if (vertex_id) glDeleteShader(program_id);
-    if (fragment_id) glDeleteShader(program_id);
-    program_id  = 0;
-    vertex_id   = 0;
-    fragment_id = 0;
-    printf("%s\n", message);
-    printf("%s\n", log);
+    if (program_id) glDeleteProgram(program_id.handle());
+    if (vertex_id) glDeleteShader(program_id.handle());
+    if (fragment_id) glDeleteShader(program_id.handle());
+    program_id  = {};
+    vertex_id   = {};
+    fragment_id = {};
+    throw std::invalid_argument{string{message} + string{log}};
   };
 
   const char* ccvertex   = vertex.data();
@@ -929,35 +933,35 @@ static void set_program(uint& program_id, uint& vertex_id, uint& fragment_id,
   assert_glerror();
 
   // create vertex
-  vertex_id = glCreateShader(GL_VERTEX_SHADER);
-  glShaderSource(vertex_id, 1, &ccvertex, NULL);
-  glCompileShader(vertex_id);
-  glGetShaderiv(vertex_id, GL_COMPILE_STATUS, &errflags);
+  vertex_id = glhandle{glCreateShader(GL_VERTEX_SHADER)};
+  glShaderSource(vertex_id.handle(), 1, &ccvertex, nullptr);
+  glCompileShader(vertex_id.handle());
+  glGetShaderiv(vertex_id.handle(), GL_COMPILE_STATUS, &errflags);
   if (errflags == 0) {
-    glGetShaderInfoLog(vertex_id, 10000, 0, errbuf.data());
+    glGetShaderInfoLog(vertex_id.handle(), 10000, nullptr, errbuf.data());
     return program_error("vertex shader not compiled", errbuf.data());
   }
   assert_glerror();
 
   // create fragment
-  fragment_id = glCreateShader(GL_FRAGMENT_SHADER);
-  glShaderSource(fragment_id, 1, &ccfragment, NULL);
-  glCompileShader(fragment_id);
-  glGetShaderiv(fragment_id, GL_COMPILE_STATUS, &errflags);
+  fragment_id = glhandle{glCreateShader(GL_FRAGMENT_SHADER)};
+  glShaderSource(fragment_id.handle(), 1, &ccfragment, nullptr);
+  glCompileShader(fragment_id.handle());
+  glGetShaderiv(fragment_id.handle(), GL_COMPILE_STATUS, &errflags);
   if (errflags == 0) {
-    glGetShaderInfoLog(fragment_id, 10000, 0, errbuf.data());
+    glGetShaderInfoLog(fragment_id.handle(), 10000, nullptr, errbuf.data());
     return program_error("fragment shader not compiled", errbuf.data());
   }
   assert_glerror();
 
   // create program
-  program_id = glCreateProgram();
-  glAttachShader(program_id, vertex_id);
-  glAttachShader(program_id, fragment_id);
-  glLinkProgram(program_id);
-  glGetProgramiv(program_id, GL_LINK_STATUS, &errflags);
+  program_id = glhandle{glCreateProgram()};
+  glAttachShader(program_id.handle(), vertex_id.handle());
+  glAttachShader(program_id.handle(), fragment_id.handle());
+  glLinkProgram(program_id.handle());
+  glGetProgramiv(program_id.handle(), GL_LINK_STATUS, &errflags);
   if (errflags == 0) {
-    glGetProgramInfoLog(program_id, 10000, 0, errbuf.data());
+    glGetProgramInfoLog(program_id.handle(), 10000, nullptr, errbuf.data());
     return program_error("program not linked", errbuf.data());
   }
 // TODO(fabio): Apparently validation must be done just before drawing.
@@ -975,15 +979,17 @@ static void set_program(uint& program_id, uint& vertex_id, uint& fragment_id,
   assert_glerror();
 #endif
 }
-inline void clear_program(uint& program, uint& vertex, uint& fragment) {
-  if (program) glDeleteProgram(program);
-  if (vertex) glDeleteShader(vertex);
-  if (fragment) glDeleteShader(fragment);
-  program  = 0;
-  vertex   = 0;
-  fragment = 0;
+inline void clear_program(
+    glhandle& program, glhandle& vertex, glhandle& fragment) {
+  if (program) glDeleteProgram(program.handle());
+  if (vertex) glDeleteShader(vertex.handle());
+  if (fragment) glDeleteShader(fragment.handle());
+  program  = {};
+  vertex   = {};
+  fragment = {};
 }
-inline void bind_program(uint program) { glUseProgram(program); }
+inline void bind_program(glhandle program) { glUseProgram(program.handle()); }
+inline void unbind_program() { glUseProgram(0); }
 
 // Viewport and framebuffer
 inline void bind_viewport(const vec4i& framebuffer) {
@@ -1012,25 +1018,26 @@ inline void bind_wireframe(bool enabled) {
 }
 
 // Vertex arrays
-inline void set_vertexarrays(uint& vertexarray) {
-  if (!vertexarray) glGenVertexArrays(1, &vertexarray);
-  glBindVertexArray(vertexarray);
+inline void set_vertexarrays(glhandle& vertexarray) {
+  if (!vertexarray) glGenVertexArrays(1, &vertexarray.handle());
+  glBindVertexArray(vertexarray.handle());
 }
-inline void clear_vertexarrays(uint& vertexarray) {
-  glDeleteVertexArrays(1, &vertexarray);
-  vertexarray = 0;
+inline void clear_vertexarrays(glhandle& vertexarray) {
+  glDeleteVertexArrays(1, &vertexarray.handle());
+  vertexarray = {};
 }
-inline void bind_vertexarrays(uint vertexarray) {
-  glBindVertexArray(vertexarray);
+inline void bind_vertexarrays(glhandle vertexarray) {
+  glBindVertexArray(vertexarray.handle());
 }
+inline void unbind_vertexarrays() { glBindVertexArray(0); }
 
 // Vertex buffers
 template <typename T>
-inline void set_vertex(uint& buffer, int& num, const vector<T>& values,
+inline void set_vertex(glhandle& buffer, int& num, const vector<T>& values,
     const T& def, int location) {
   if (values.empty()) {
-    if (buffer) glDeleteBuffers(1, &buffer);
-    buffer = 0;
+    if (buffer) glDeleteBuffers(1, &buffer.handle());
+    buffer = {};
     num    = 0;
     glDisableVertexAttribArray(location);
     if constexpr (sizeof(def) == sizeof(float))
@@ -1043,116 +1050,116 @@ inline void set_vertex(uint& buffer, int& num, const vector<T>& values,
       glVertexAttrib4fv(location, data(def));
   } else {
     if (!buffer || (int)values.size() != num) {
-      if (buffer) glDeleteBuffers(1, &buffer);
-      glGenBuffers(1, &buffer);
-      glBindBuffer(GL_ARRAY_BUFFER, buffer);
+      if (buffer) glDeleteBuffers(1, &buffer.handle());
+      glGenBuffers(1, &buffer.handle());
+      glBindBuffer(GL_ARRAY_BUFFER, buffer.handle());
       glBufferData(GL_ARRAY_BUFFER, values.size() * sizeof(values.front()),
           values.data(), GL_STATIC_DRAW);
       num = (int)values.size();
     } else {
       // we have enough space
-      glBindBuffer(GL_ARRAY_BUFFER, buffer);
+      glBindBuffer(GL_ARRAY_BUFFER, buffer.handle());
       glBufferSubData(GL_ARRAY_BUFFER, 0,
           values.size() * sizeof(values.front()), values.data());
     }
-    glBindBuffer(GL_ARRAY_BUFFER, buffer);
+    glBindBuffer(GL_ARRAY_BUFFER, buffer.handle());
     glEnableVertexAttribArray(location);
     glVertexAttribPointer(location, sizeof(values.front()) / sizeof(float),
         GL_FLOAT, false, 0, nullptr);
   }
 }
 template <typename T>
-inline void set_vertex(uint& buffer, const vector<T>& data, int location) {
+inline void set_vertex(glhandle& buffer, const vector<T>& data, int location) {
   auto num = 0;
   auto def = T{};
   set_vertex(buffer, num, data, def, location);
 }
-inline void clear_vertex(uint& buffer) {
-  if (buffer) glDeleteBuffers(1, &buffer);
-  buffer = 0;
+inline void clear_vertex(glhandle& buffer) {
+  if (buffer) glDeleteBuffers(1, &buffer.handle());
+  buffer = {};
 }
 
 // Primitive indices
 template <typename T>
-inline void set_indices(uint& buffer, int& num, const vector<T>& data) {
+inline void set_indices(glhandle& buffer, int& num, const vector<T>& data) {
   if (data.empty()) {
-    if (buffer) glDeleteBuffers(1, &buffer);
-    buffer = 0;
+    if (buffer) glDeleteBuffers(1, &buffer.handle());
+    buffer = {};
     num    = 0;
   } else {
     if (!buffer || (int)data.size() != num) {
-      if (buffer) glDeleteBuffers(1, &buffer);
-      glGenBuffers(1, &buffer);
-      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer);
+      if (buffer) glDeleteBuffers(1, &buffer.handle());
+      glGenBuffers(1, &buffer.handle());
+      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer.handle());
       glBufferData(GL_ELEMENT_ARRAY_BUFFER, data.size() * sizeof(data.front()),
           data.data(), GL_STATIC_DRAW);
       num = (int)data.size();
     } else {
       // we have enough space
-      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer);
+      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer.handle());
       glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0,
           data.size() * sizeof(data.front()), data.data());
     }
   }
 }
 template <typename T>
-inline void set_indices(uint& buffer, const vector<T>& data) {
+inline void set_indices(glhandle& buffer, const vector<T>& data) {
   auto num = 0;
   set_indices(buffer, num, data);
 }
-inline void clear_indices(uint& buffer) {
-  if (buffer) glDeleteBuffers(1, &buffer);
-  buffer = 0;
+inline void clear_indices(glhandle& buffer) {
+  if (buffer) glDeleteBuffers(1, &buffer.handle());
+  buffer = {};
 }
-inline void draw_points(uint buffer, int num) {
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer);
+inline void draw_points(glhandle buffer, int num) {
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer.handle());
   glDrawElements(GL_POINTS, (GLsizei)num, GL_UNSIGNED_INT, nullptr);
 }
-inline void draw_points(uint buffer, int num, float size) {
+inline void draw_points(glhandle buffer, int num, float size) {
   glPointSize(size);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer.handle());
   glDrawElements(GL_POINTS, (GLsizei)num, GL_UNSIGNED_INT, nullptr);
   glPointSize(1);
 }
-inline void draw_lines(uint buffer, int num) {
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer);
+inline void draw_lines(glhandle buffer, int num) {
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer.handle());
   glDrawElements(GL_LINES, (GLsizei)num * 2, GL_UNSIGNED_INT, nullptr);
 }
-inline void draw_triangles(uint buffer, int num) {
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer);
+inline void draw_triangles(glhandle buffer, int num) {
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer.handle());
   glDrawElements(GL_TRIANGLES, num * 3, GL_UNSIGNED_INT, nullptr);
 }
 
 // Buffers
-inline void clear_buffer(uint& buffer) {
-  if (buffer) glDeleteBuffers(1, &buffer);
-  buffer = 0;
+inline void clear_buffer(glhandle& buffer) {
+  if (buffer) glDeleteBuffers(1, &buffer.handle());
+  buffer = {};
 }
 
 // Textures
 inline void set_texture(
-    uint& texture, vec2i& extents, const array2d<vec4f>& image) {
+    glhandle& texture, vec2i& extents, const array2d<vec4f>& image) {
   auto size = (vec2i)image.extents();
   if (!texture || extents != (vec2i)image.extents()) {
-    if (!texture) glGenTextures(1, &texture);
-    glBindTexture(GL_TEXTURE_2D, texture);
+    if (!texture) glGenTextures(1, &texture.handle());
+    glBindTexture(GL_TEXTURE_2D, texture.handle());
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, size.x, size.y, 0, GL_RGBA,
         GL_FLOAT, image.data());
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   } else {
-    glBindTexture(GL_TEXTURE_2D, texture);
+    glBindTexture(GL_TEXTURE_2D, texture.handle());
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, size.x, size.y, GL_RGBA, GL_FLOAT,
         image.data());
   }
   extents = (vec2i)image.extents();
 }
-static void set_texture(uint& texture, vec2i& extents,
+static void set_texture(glhandle& texture, vec2i& extents,
     const array2d<vec4f>& imagef, const array2d<vec4b>& imageb, bool mipmap) {
   auto size = (vec2i)max(imagef.extents(), imageb.extents());
   if (!texture || extents != size) {
-    if (!texture) glGenTextures(1, &texture);
-    glBindTexture(GL_TEXTURE_2D, texture);
+    if (!texture) glGenTextures(1, &texture.handle());
+    glBindTexture(GL_TEXTURE_2D, texture.handle());
     if (!imageb.empty()) {
       glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, size.x, size.y, 0, GL_RGBA,
           GL_UNSIGNED_BYTE, imageb.data());
@@ -1170,7 +1177,7 @@ static void set_texture(uint& texture, vec2i& extents,
       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     }
   } else {
-    glBindTexture(GL_TEXTURE_2D, texture);
+    glBindTexture(GL_TEXTURE_2D, texture.handle());
     if (!imageb.empty()) {
       glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, size.x, size.y, GL_RGBA,
           GL_UNSIGNED_BYTE, imageb.data());
@@ -1182,9 +1189,9 @@ static void set_texture(uint& texture, vec2i& extents,
   }
   extents = size;
 }
-inline void clear_texture(uint& texture) {
-  if (texture) glDeleteTextures(1, &texture);
-  texture = 0;
+inline void clear_texture(glhandle& texture) {
+  if (texture) glDeleteTextures(1, &texture.handle());
+  texture = {};
 }
 
 // Parameter setting
@@ -1198,20 +1205,21 @@ inline void bind_uniform(int loc, vec3i v) { glUniform3iv(loc, 1, &v[0]); }
 inline void bind_uniform(int loc, vec4i v) { glUniform4iv(loc, 1, &v[0]); }
 inline void bind_uniform(int loc, bool v) { glUniform1i(loc, v ? 1 : 0); }
 inline void bind_uniform(int loc, const mat4f& v) {
-  glUniformMatrix4fv(loc, 1, false, &v[0][0]);
+  glUniformMatrix4fv(loc, 1, GL_FALSE, &v[0][0]);
 }
 template <typename T>
-inline void bind_uniform(uint program, const char* name, const T& v) {
-  return bind_uniform(glGetUniformLocation(program, name), v);
+inline void bind_uniform(glhandle program, const char* name, const T& v) {
+  return bind_uniform(glGetUniformLocation(program.handle(), name), v);
 }
-inline void bind_texture(int loc, uint texture, int unit) {
+inline void bind_texture(int loc, glhandle texture, int unit) {
   glActiveTexture(GL_TEXTURE0 + unit);
-  glBindTexture(GL_TEXTURE_2D, texture);
+  glBindTexture(GL_TEXTURE_2D, texture.handle());
   bind_uniform(loc, unit);
 }
 inline void bind_texture(
-    uint program, const char* name, uint texture, int unit) {
-  return bind_texture(glGetUniformLocation(program, name), texture, unit);
+    glhandle program, const char* name, glhandle texture, int unit) {
+  return bind_texture(
+      glGetUniformLocation(program.handle(), name), texture, unit);
 }
 
 }  // namespace yocto
@@ -1221,7 +1229,7 @@ inline void bind_texture(
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-static auto glimage_vertex =
+static const auto glimage_vertex =
     R"(
 #version 330
 in vec2 positions;
@@ -1250,7 +1258,7 @@ void main() {
 }
 )";
 #endif
-static auto glimage_fragment =
+static const auto glimage_fragment =
     R"(
 #version 330
 in vec2 frag_texcoord;
@@ -1368,11 +1376,11 @@ void draw_image(glimage_state& glimage, const glimage_params& params) {
   // draw
   bind_vertexarrays(glimage.vertexarray);
   draw_triangles(glimage.triangles, 2);
-  bind_vertexarrays(0);
+  unbind_vertexarrays();
   assert_glerror();
 
   // unbind program
-  bind_program(0);
+  unbind_program();
   assert_glerror();
 
   // blend
@@ -1670,7 +1678,7 @@ static void set_shape(glscene_shape& glshape, const shape_data& shape) {
       glshape.colors, glshape.num_colors, shape.colors, vec4f{1, 1, 1, 1}, 3);
   set_vertex(glshape.tangents, glshape.num_tangents, shape.tangents,
       vec4f{0, 0, 1, 1}, 4);
-  bind_vertexarrays(0);
+  unbind_vertexarrays();
 }
 
 // Clean shape
@@ -1720,14 +1728,14 @@ static void clear_scene(glscene_state& glscene) {
 }
 
 [[maybe_unused]] static void draw_shape(glscene_shape& shape) {
-  if (shape.vertexarray == 0) return;
+  if (!shape.vertexarray) return;
   bind_vertexarrays(shape.vertexarray);
   if (shape.points)
     draw_points(shape.points, shape.num_points, shape.point_size);
   if (shape.lines) draw_lines(shape.lines, shape.num_lines);
   if (shape.triangles) draw_triangles(shape.triangles, shape.num_triangles);
   if (shape.quads) draw_triangles(shape.quads, shape.num_quads);
-  bind_vertexarrays(0);
+  unbind_vertexarrays();
   assert_glerror();
 }
 
@@ -1790,14 +1798,14 @@ static void draw_scene(glscene_state& glscene, const scene_data& scene,
 
   // helper
   auto bind_scene_texture =
-      [](uint program, const char* name, const char* name_on,
+      [](glhandle program, const char* name, const char* name_on,
           const glscene_state& glscene, int texture_idx, int unit) {
         if (texture_idx >= 0) {
           auto& gltexture = glscene.textures.at(texture_idx);
           bind_texture(program, name, gltexture.texture, unit);
           bind_uniform(program, name_on, 1);
         } else {
-          bind_texture(program, name, 0, unit);
+          bind_texture(program, name, {}, unit);
           bind_uniform(program, name_on, 0);
         }
       };
@@ -1813,7 +1821,7 @@ static void draw_scene(glscene_state& glscene, const scene_data& scene,
         to_mat(inverse(instance.frame, params.non_rigid_frames)));
     bind_uniform(program, "frame", shape_xform);
     bind_uniform(program, "frameit", shape_inv_xform);
-    bind_uniform(program, "faceted", params.faceted || glshape.normals == 0);
+    bind_uniform(program, "faceted", params.faceted || !glshape.normals);
 
     bind_uniform(program, "unlit", 0);
     bind_uniform(program, "emission", material.emission);
@@ -1863,13 +1871,13 @@ static void draw_scene(glscene_state& glscene, const scene_data& scene,
       draw_triangles(glshape.quads, glshape.num_quads);
     }
 
-    bind_vertexarrays(0);
+    unbind_vertexarrays();
     assert_glerror();
   }
   bind_wireframe(false);
 
   // done
-  bind_program(0);
+  unbind_program();
 }
 
 }  // namespace yocto
@@ -1881,7 +1889,7 @@ namespace yocto {
 
 // OpenGL window wrapper
 struct glwindow_state {
-  string       title         = "";
+  string       title         = {};
   gui_callback init          = {};
   gui_callback clear         = {};
   gui_callback draw          = {};
@@ -1949,7 +1957,7 @@ vec4i get_framebuffer_viewport(GLFWwindow* window) {
 void show_gui_window(const vec2i& size, const string& title,
     const gui_callbacks& callbacks, int widgets_width, bool widgets_left) {
   // init glfw
-  if (!glfwInit())
+  if (glfwInit() != GLFW_TRUE)
     throw std::runtime_error("cannot initialize windowing system");
   glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
   glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
@@ -1990,10 +1998,10 @@ void show_gui_window(const vec2i& size, const string& title,
       window, [](GLFWwindow* window, int width, int height) {
         auto& state        = *(glwindow_state*)glfwGetWindowUserPointer(window);
         state.input.window = get_window_size(window);
-        if (state.widgets_width)
+        if (state.widgets_width != 0)
           state.input.window -= vec2i{state.widgets_width, 0};
         state.input.framebuffer = get_framebuffer_viewport(window);
-        if (state.widgets_width) {
+        if (state.widgets_width != 0) {
           auto win_width         = get_window_size(window).x;
           auto framebuffer_width = get_framebuffer_size(window).x;
           auto offset =
@@ -2005,7 +2013,7 @@ void show_gui_window(const vec2i& size, const string& title,
       });
 
   // init gl extensions
-  if (!gladLoadGL())
+  if (gladLoadGL() != GL_TRUE)
     throw std::runtime_error{"cannot initialize OpenGL extensions"};
 
   // widgets
@@ -2029,13 +2037,13 @@ void show_gui_window(const vec2i& size, const string& title,
   if (state.init) state.init(state.input);
 
   // run ui
-  while (!glfwWindowShouldClose(window)) {
+  while (glfwWindowShouldClose(window) != GLFW_TRUE) {
     // update input
     state.input.last = state.input.cursor;
     auto mouse_posx = 0.0, mouse_posy = 0.0;
     glfwGetCursorPos(window, &mouse_posx, &mouse_posy);
     state.input.cursor = vec2f{(float)mouse_posx, (float)mouse_posy};
-    if (state.widgets_width && state.widgets_left)
+    if (state.widgets_width != 0 && state.widgets_left)
       state.input.cursor -= vec2i{state.widgets_width, 0};
     state.input.delta = state.input.cursor - state.input.last;
     state.input.mouse = {
@@ -2050,10 +2058,10 @@ void show_gui_window(const vec2i& size, const string& title,
         glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS ||
             glfwGetKey(window, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS};
     state.input.window = get_window_size(window);
-    if (state.widgets_width)
+    if (state.widgets_width != 0)
       state.input.window -= vec2i{state.widgets_width, 0};
     state.input.framebuffer = get_framebuffer_viewport(window);
-    if (state.widgets_width) {
+    if (state.widgets_width != 0) {
       auto win_width         = get_window_size(window).x;
       auto framebuffer_width = get_framebuffer_size(window).x;
       auto offset =
@@ -2061,7 +2069,7 @@ void show_gui_window(const vec2i& size, const string& title,
       state.input.framebuffer -= vec4i{0, 0, offset, 0};
       if (state.widgets_left) state.input.framebuffer += vec4i{offset, 0, 0, 0};
     }
-    if (state.widgets_width) {
+    if (state.widgets_width != 0) {
       auto io               = &ImGui::GetIO();
       state.input.onwidgets = io->WantTextInput || io->WantCaptureMouse ||
                               io->WantCaptureKeyboard;
@@ -2117,8 +2125,8 @@ bool draw_gui_button(const char* lbl, bool enabled) {
   }
 }
 
-void draw_gui_label(const char* lbl, const string& label) {
-  ImGui::LabelText(lbl, "%s", label.c_str());
+void draw_gui_label(const char* lbl, const string& text) {
+  ImGui::LabelText(lbl, "%s", text.c_str());
 }
 void draw_gui_label(const char* lbl, int value) {
   ImGui::LabelText(lbl, "%s", std::to_string(value).c_str());

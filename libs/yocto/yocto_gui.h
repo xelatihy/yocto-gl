@@ -27,8 +27,8 @@
 //
 //
 
-#ifndef _YOCTO_GLVIEW_
-#define _YOCTO_GLVIEW_
+#ifndef YOCTO_GUI_H_
+#define YOCTO_GUI_H_
 
 #ifdef YOCTO_OPENGL
 
@@ -125,19 +125,31 @@ void show_shade_gui(const string& title, const string& name, scene_data& scene,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// OpenGL handle
+struct glhandle {
+  constexpr glhandle() : _handle{0} {}
+  constexpr explicit glhandle(uint handle) : _handle{handle} {}
+  constexpr uint&       handle() { return _handle; }
+  constexpr const uint& handle() const { return _handle; }
+  constexpr explicit    operator bool() const { return _handle != 0; }
+
+ private:
+  uint _handle = 0;
+};
+
 // OpenGL image data
 struct glimage_state {
   // image properties
   vec2i extents = {0, 0};
 
   // Opengl state
-  uint texture     = 0;  // texture
-  uint program     = 0;  // program
-  uint vertex      = 0;
-  uint fragment    = 0;
-  uint vertexarray = 0;  // vertex
-  uint positions   = 0;
-  uint triangles   = 0;  // elements
+  glhandle texture     = {};  // texture
+  glhandle program     = {};  // program
+  glhandle vertex      = {};
+  glhandle fragment    = {};
+  glhandle vertexarray = {};  // vertex
+  glhandle positions   = {};
+  glhandle triangles   = {};  // elements
 };
 
 // OpenGL image drawing params
@@ -216,7 +228,7 @@ struct gui_callbacks {
 
 // run the user interface with the give callbacks
 void show_gui_window(const vec2i& size, const string& title,
-    const gui_callbacks& callbaks, int widgets_width = 320,
+    const gui_callbacks& callbacks, int widgets_width = 320,
     bool widgets_left = true);
 
 }  // namespace yocto
@@ -227,7 +239,7 @@ void show_gui_window(const vec2i& size, const string& title,
 namespace yocto {
 
 // Headers
-bool draw_gui_header(const char* title);
+bool draw_gui_header(const char* lbl);
 void end_gui_header();
 
 // Labels
@@ -285,10 +297,18 @@ bool draw_gui_coloredithdr(const char* lbl, vec3f& value);
 bool draw_gui_coloredithdr(const char* lbl, vec4f& value);
 
 // Combo box
-bool draw_gui_combobox(const char* lbl, int& idx, const vector<string>& labels,
-    bool include_null = false);
+bool draw_gui_combobox(const char* lbl, int& value,
+    const vector<string>& labels, bool include_null = false);
 bool draw_gui_combobox(const char* lbl, string& value,
     const vector<string>& labels, bool include_null = false);
+template <typename T>
+inline bool draw_gui_combobox(const char* lbl, T& value,
+    const vector<string>& labels, bool include_null = false) {
+  static_assert(std::is_enum_v<T>, "enum only here");
+  static_assert(
+      std::is_same_v<std::underlying_type_t<T>, int>, "enum as ints only");
+  return draw_gui_combobox(lbl, (int&)value, labels, include_null);
+}
 
 // Progress bar
 void draw_gui_progressbar(const char* lbl, float fraction);

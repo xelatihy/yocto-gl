@@ -65,7 +65,7 @@ void run(const vector<string>& args) {
   print_info("load scene: {}", elapsed_formatted(timer));
 
   // copyright
-  if (copyright != "") {
+  if (!copyright.empty()) {
     scene.copyright = copyright;
   }
 
@@ -79,7 +79,7 @@ void run(const vector<string>& args) {
   // print info
   if (info) {
     print_info("scene stats ------------");
-    for (auto stat : scene_stats(scene)) print_info(stat);
+    for (auto& stat : scene_stats(scene)) print_info(stat);
   }
 
   // tesselate if needed

@@ -32,8 +32,8 @@
 //
 //
 
-#ifndef _YOCTO_NDARRAY_H_
-#define _YOCTO_NDARRAY_H_
+#ifndef YOCTO_NDARRAY_H_
+#define YOCTO_NDARRAY_H_
 
 // -----------------------------------------------------------------------------
 // INCLUDES
@@ -91,7 +91,7 @@ struct ndarray {
       _data(data, data + _size((vec<size_t, N>)extents)) {}
   constexpr ndarray(const ndarray& other) :
       _extents{other._extents}, _data{other._data} {}
-  constexpr ndarray(ndarray&& other) : _extents{0}, _data{} {
+  constexpr ndarray(ndarray&& other) noexcept : _extents{0}, _data{} {
     std::swap(_extents, other._extents);
     std::swap(_data, other._data);
   }
@@ -103,7 +103,7 @@ struct ndarray {
     _data    = other._data;
     return *this;
   }
-  constexpr ndarray& operator=(ndarray&& other) {
+  constexpr ndarray& operator=(ndarray&& other) noexcept {
     if (&other == this) return *this;
     std::swap(_extents, other._extents);
     std::swap(_data, other._data);

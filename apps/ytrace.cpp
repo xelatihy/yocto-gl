@@ -179,12 +179,6 @@ void run(const vector<string>& args) {
       }
     }
 
-    // start rendering batch
-    auto render_next = [&]() {
-      trace_cancel(context);
-      trace_start(context, state, scene, bvh, lights, params);
-    };
-
     // restart renderer
     auto render_restart = [&]() {
       // make sure we can start

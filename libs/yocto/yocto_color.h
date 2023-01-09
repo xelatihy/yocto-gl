@@ -44,8 +44,8 @@
 //
 //
 
-#ifndef _YOCTO_COLOR_H_
-#define _YOCTO_COLOR_H_
+#ifndef YOCTO_COLOR_H_
+#define YOCTO_COLOR_H_
 
 // -----------------------------------------------------------------------------
 // INCLUDES
@@ -395,7 +395,7 @@ constexpr kernel vec<T, 3> hsv_to_rgb(const vec<T, 3>& hsv) {
     case 3: return {p, q, v};
     case 4: return {t, p, v};
     case 5: return {v, p, q};
-    default: return {v, p, q};
+    default: return {};
   }
 }
 
