@@ -3804,7 +3804,7 @@ static void load_gltf_scene(
         }
         // convert values
         for (auto idx : range(count)) {
-          if (!cgltf_accessor_read_float(
+          if (!(bool)cgltf_accessor_read_float(
                   &gaccessor, idx, &data[idx * dcomponents], components))
             throw io_error{"cannot load " + filename +
                            " for unsupported accessor conversion"};
@@ -3856,7 +3856,7 @@ static void load_gltf_scene(
                          " for unsupported non-scalar indices"};
         auto indices = vector<int>(gaccessor.count);
         for (auto idx : range(gaccessor.count)) {
-          if (!cgltf_accessor_read_uint(
+          if (!(bool)cgltf_accessor_read_uint(
                   &gaccessor, idx, (cgltf_uint*)&indices[idx], 1))
             throw io_error{
                 "cannot load " + filename + " for unsupported accessor type"};
@@ -3998,7 +3998,7 @@ static void save_gltf_scene(
       gcamera.name       = copy_string(get_camera_name(scene, camera));
       gcamera.type       = cgltf_camera_type_perspective;
       auto& gperspective = gcamera.data.perspective;
-      gperspective.has_aspect_ratio = true;
+      gperspective.has_aspect_ratio = 1;
       gperspective.aspect_ratio     = camera.aspect;
       gperspective.yfov             = 0.660593;  // TODO(fabio): yfov
       gperspective.znear            = 0.001;     // TODO(fabio): configurable?
@@ -4040,10 +4040,10 @@ static void save_gltf_scene(
       gmaterial.emissive_factor[1] = material.emission.y / emission_scale;
       gmaterial.emissive_factor[2] = material.emission.z / emission_scale;
       if (emission_scale > 1.0f) {
-        gmaterial.has_emissive_strength               = true;
+        gmaterial.has_emissive_strength               = 1;
         gmaterial.emissive_strength.emissive_strength = emission_scale;
       }
-      gmaterial.has_pbr_metallic_roughness = true;
+      gmaterial.has_pbr_metallic_roughness = 1;
       auto& gpbr                           = gmaterial.pbr_metallic_roughness;
       gpbr.base_color_factor[0]            = material.color.x;
       gpbr.base_color_factor[1]            = material.color.y;
@@ -4097,8 +4097,8 @@ static void save_gltf_scene(
       gaccessor.count          = count;
       gaccessor.type           = type;
       gaccessor.component_type = cgltf_component_type_r_32f;
-      gaccessor.has_min        = true;
-      gaccessor.has_max        = true;
+      gaccessor.has_min        = 1;
+      gaccessor.has_max        = 1;
       for (auto component : range(components)) {
         gaccessor.min[component] = flt_max;
         gaccessor.max[component] = flt_min;
