@@ -65,7 +65,7 @@ void run(const vector<string>& args) {
 
   // edit alpha
   auto out = array2d<vec4f>{image.extents()};
-  for (auto idx : range(image.size())) {
+  for (auto idx : range(image.extents())) {
     auto calpha = alpha[idx];
     auto alpha_ = from_color   ? mean(xyz(calpha))
                   : from_black ? (mean(xyz(calpha)) > 0.01 ? 1.0f : 0.0f)

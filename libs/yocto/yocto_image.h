@@ -200,7 +200,7 @@ inline array2d<vec4f> image_difference(
 
   // compute diff
   auto difference = array2d<vec4f>(image1.extents());
-  for (auto idx : range(difference.size())) {
+  for (auto idx : range(difference.extents())) {
     auto diff       = abs(image1[idx] - image2[idx]);
     difference[idx] = display ? vec4f{max(diff), max(diff), max(diff), 1}
                               : diff;

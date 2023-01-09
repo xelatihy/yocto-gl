@@ -147,9 +147,10 @@ struct ndspan {
   constexpr size_t         extent(size_t dimension) const noexcept {
     return _extents[dimension];
   }
+  constexpr vec<size_t, N> shape() const { return _extents; }
+  constexpr size_t         rank() const { return N; }
 
   // Access
-  constexpr T& operator[](size_t idx) const noexcept { return _data[idx]; }
   constexpr T& operator[](const vec<size_t, N>& idx) const noexcept {
     return _data[_index(idx, _extents)];
   }

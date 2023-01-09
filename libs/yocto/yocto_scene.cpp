@@ -748,7 +748,7 @@ namespace yocto {
 size_t compute_memory(const scene_data& scene) {
   auto vector_memory = [](auto& values) -> size_t {
     if (values.empty()) return 0;
-    return values.size() * sizeof(values[0]);
+    return values.size() * sizeof(*values.data());
   };
 
   auto memory = (size_t)0;
