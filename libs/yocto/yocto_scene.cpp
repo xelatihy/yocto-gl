@@ -615,7 +615,7 @@ bool has_lights(const scene_data& scene) {
 }
 
 // create a scene from a shape
-scene_data make_shape_scene(const shape_data& shape, bool addsky) {
+scene_data make_shape_scene(const shape_data& shape, bool sky) {
   // scene
   auto scene = scene_data{};
   // shape
@@ -635,7 +635,7 @@ scene_data make_shape_scene(const shape_data& shape, bool addsky) {
   // camera
   add_camera(scene);
   // environment
-  if (addsky) add_sky(scene);
+  if (sky) add_sky(scene);
   // done
   return scene;
 }

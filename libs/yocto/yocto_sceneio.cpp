@@ -583,7 +583,7 @@ void save_image(
   if (ext == ".hdr" || ext == ".HDR") {
     auto& image_ = srgb ? srgb_to_rgb(image) : image;
     auto  buffer = vector<byte>{};
-    if (!stbi_write_hdr_to_func(stbi_write_data, &buffer, width, height,
+    if (!(bool)stbi_write_hdr_to_func(stbi_write_data, &buffer, width, height,
             num_channels, (const float*)image_.data()))
       throw io_error{"cannot write " + filename};
     return save_binary(filename, buffer);
@@ -626,7 +626,7 @@ void save_image(
   } else if (ext == ".png" || ext == ".PNG") {
     auto& image_ = srgb ? image : rgb_to_srgbb(byte_to_float(image));
     auto  buffer = vector<byte>{};
-    if (!stbi_write_png_to_func(stbi_write_data, &buffer, width, height,
+    if (!(bool)stbi_write_png_to_func(stbi_write_data, &buffer, width, height,
             num_channels, (const byte*)image_.data(), width * 4))
       throw io_error{"cannot write " + filename};
     return save_binary(filename, buffer);
@@ -634,21 +634,21 @@ void save_image(
              ext == ".JPEG") {
     auto& image_ = srgb ? image : rgb_to_srgbb(byte_to_float(image));
     auto  buffer = vector<byte>{};
-    if (!stbi_write_jpg_to_func(stbi_write_data, &buffer, width, height,
+    if (!(bool)stbi_write_jpg_to_func(stbi_write_data, &buffer, width, height,
             num_channels, (const byte*)image_.data(), 75))
       throw io_error{"cannot write " + filename};
     return save_binary(filename, buffer);
   } else if (ext == ".tga" || ext == ".TGA") {
     auto& image_ = srgb ? image : rgb_to_srgbb(byte_to_float(image));
     auto  buffer = vector<byte>{};
-    if (!stbi_write_tga_to_func(stbi_write_data, &buffer, width, height,
+    if (!(bool)stbi_write_tga_to_func(stbi_write_data, &buffer, width, height,
             num_channels, (const byte*)image_.data()))
       throw io_error{"cannot write " + filename};
     return save_binary(filename, buffer);
   } else if (ext == ".bmp" || ext == ".BMP") {
     auto& image_ = srgb ? image : rgb_to_srgbb(byte_to_float(image));
     auto  buffer = vector<byte>{};
-    if (!stbi_write_bmp_to_func(stbi_write_data, &buffer, width, height,
+    if (!(bool)stbi_write_bmp_to_func(stbi_write_data, &buffer, width, height,
             num_channels, (const byte*)image_.data()))
       throw io_error{"cannot write " + filename};
     return save_binary(filename, buffer);
