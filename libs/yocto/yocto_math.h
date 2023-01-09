@@ -2400,6 +2400,8 @@ struct frame<T, 2> {
   vec<T, 2> o = {0, 0};
 
   constexpr kernel frame() : x{1, 0}, y{0, 1}, o{0, 0} {}
+  constexpr kernel frame(const vec<T, 3>& r0, const vec<T, 3>& r1) :
+      x{r0.x, r1.x}, y{r0.y, r1.y}, o{r0.z, r1.z} {}
   constexpr kernel frame(
       const vec<T, 2>& x_, const vec<T, 2>& y_, const vec<T, 2>& o_) :
       x{x_}, y{y_}, o{o_} {}
@@ -2427,6 +2429,12 @@ struct frame<T, 3> {
   vec<T, 3> o = {0, 0, 0};
 
   constexpr kernel frame() : x{1, 0, 0}, y{0, 1, 0}, z{0, 0, 1}, o{0, 0, 0} {}
+  constexpr kernel frame(
+      const vec<T, 4>& r0, const vec<T, 4>& r1, const vec<T, 4>& r2) :
+      x{r0.x, r1.x, r2.x},
+      y{r0.y, r1.y, r2.y},
+      z{r0.z, r1.z, r2.z},
+      o{r0.w, r1.w, r2.w} {}
   constexpr kernel frame(const vec<T, 3>& x_, const vec<T, 3>& y_,
       const vec<T, 3>& z_, const vec<T, 3>& o_) :
       x{x_}, y{y_}, z{z_}, o{o_} {}
@@ -2825,7 +2833,7 @@ constexpr kernel frame<T, 3> rotation_frame(const quat<T, 4>& quat) {
 }
 template <typename T>
 constexpr kernel frame<T, 3> rotation_frame(const mat<T, 3, 3>& rot) {
-  return {rot.x, rot.y, rot.z, {0, 0, 0}};
+  return {rot, {0, 0, 0}};
 }
 
 // Lookat frame. Z-axis can be inverted with inv_xz.
