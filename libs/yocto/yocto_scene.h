@@ -278,7 +278,6 @@ bool is_delta(const material_point& material);
 // check if a material has a volume
 bool is_volumetric(const material_data& material);
 bool is_volumetric(const material_point& material);
-bool is_volumetric(const scene_data& scene, const instance_data& instance);
 
 }  // namespace yocto
 
