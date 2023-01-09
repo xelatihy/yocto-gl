@@ -2632,10 +2632,7 @@ bool save_pbrt(const string& filename, const pbrt_model& pbrt, string& error,
   format_values(buffer, "\nWorldEnd\n\n");
 
   // save file
-  if (!save_text(filename, buffer, error)) return false;
-
-  // done
-  return true;
+  return save_text(filename, buffer, error);
 }
 
 }  // namespace yocto

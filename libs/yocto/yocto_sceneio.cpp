@@ -2361,7 +2361,7 @@ static void load_json_scene_version40(const string& filename,
       instance_ply[instance_id] = it->second;
     } else {
       ply_instances_names.emplace_back(name);
-      ply_instances.emplace_back(ply_instance());
+      ply_instances.push_back({});
       auto ply_instance_id      = (int)ply_instances.size() - 1;
       ply_instance_map[name]    = ply_instance_id;
       instance_ply[instance_id] = ply_instance_id;

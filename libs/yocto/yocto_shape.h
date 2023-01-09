@@ -173,7 +173,7 @@ struct fvshape_data {
 // Interpolate vertex data
 vec3f eval_position(const fvshape_data& shape, int element, const vec2f& uv);
 vec3f eval_normal(const fvshape_data& shape, int element, const vec2f& uv);
-vec2f eval_texcoord(const shape_data& shape, int element, const vec2f& uv);
+vec2f eval_texcoord(const fvshape_data& shape, int element, const vec2f& uv);
 
 // Evaluate element normals
 vec3f eval_element_normal(const fvshape_data& shape, int element);

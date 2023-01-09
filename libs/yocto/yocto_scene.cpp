@@ -51,7 +51,6 @@
 namespace yocto {
 
 // using directives
-using std::unique_ptr;
 using namespace std::string_literals;
 
 }  // namespace yocto
