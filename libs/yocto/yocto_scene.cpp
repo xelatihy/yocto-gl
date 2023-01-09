@@ -550,7 +550,7 @@ int add_camera(
     scene_data& scene, const string& name, const camera_data& camera) {
   scene.camera_names.push_back(name);
   scene.cameras.push_back(camera);
-  return (int)scene.cameras.size();
+  return (int)scene.cameras.size() - 1;
 }
 int add_camera(scene_data& scene, const string& name, const frame3f& frame,
     float lens, float aspect, float aperture, float focus) {
@@ -585,7 +585,7 @@ int add_camera(scene_data& scene, const string& name, const vec3f& from,
 int add_shape(scene_data& scene, const string& name, const shape_data& shape) {
   scene.shape_names.push_back(name);
   scene.shapes.push_back(shape);
-  return (int)scene.shapes.size();
+  return (int)scene.shapes.size() - 1;
 }
 
 // Add a material
@@ -593,7 +593,7 @@ int add_material(
     scene_data& scene, const string& name, const material_data& material) {
   scene.material_names.push_back(name);
   scene.materials.push_back(material);
-  return (int)scene.materials.size();
+  return (int)scene.materials.size() - 1;
 }
 
 // Add an instance
@@ -601,7 +601,7 @@ int add_instance(
     scene_data& scene, const string& name, const instance_data& instance) {
   scene.instance_names.push_back(name);
   scene.instances.push_back(instance);
-  return (int)scene.instances.size();
+  return (int)scene.instances.size() - 1;
 }
 int add_instance(scene_data& scene, const string& name, const frame3f& frame,
     int shape, int material) {
