@@ -3651,7 +3651,8 @@ static void load_gltf_scene(
       camera.film   = 0.036f;
     } else if (gcamera.type == cgltf_camera_type_perspective) {
       auto& gpersp  = gcamera.data.perspective;
-      camera.aspect = gpersp.has_aspect_ratio ? gpersp.aspect_ratio : 0.0f;
+      camera.aspect = (bool)gpersp.has_aspect_ratio ? gpersp.aspect_ratio
+                                                    : 0.0f;
       auto yfov     = gpersp.yfov;
       if (camera.aspect == 0) camera.aspect = 16.0f / 9.0f;
       camera.film = 0.036f;
@@ -3703,11 +3704,11 @@ static void load_gltf_scene(
     material.type     = material_type::gltfpbr;
     material.emission = {gmaterial.emissive_factor[0],
         gmaterial.emissive_factor[1], gmaterial.emissive_factor[2]};
-    if (gmaterial.has_emissive_strength)
+    if ((bool)gmaterial.has_emissive_strength)
       material.emission *= gmaterial.emissive_strength.emissive_strength;
     material.emission_tex = get_texture(gmaterial.emissive_texture);
     material.normal_tex   = get_texture(gmaterial.normal_texture);
-    if (gmaterial.has_pbr_metallic_roughness) {
+    if ((bool)gmaterial.has_pbr_metallic_roughness) {
       auto& gpbr        = gmaterial.pbr_metallic_roughness;
       material.type     = material_type::gltfpbr;
       material.color    = {gpbr.base_color_factor[0], gpbr.base_color_factor[1],
@@ -3718,7 +3719,7 @@ static void load_gltf_scene(
       material.color_tex     = get_texture(gpbr.base_color_texture);
       material.roughness_tex = get_texture(gpbr.metallic_roughness_texture);
     }
-    if (gmaterial.has_transmission) {
+    if ((bool)gmaterial.has_transmission) {
       auto& gtransmission = gmaterial.transmission;
       auto  transmission  = gtransmission.transmission_factor;
       if (transmission > 0) {
@@ -3742,13 +3743,13 @@ static void load_gltf_scene(
       auto& shape       = scene.shapes.emplace_back();
       auto& instance    = primitives.emplace_back();
       instance.shape    = (int)scene.shapes.size() - 1;
-      instance.material = gprimitive.material
+      instance.material = gprimitive.material != nullptr
                               ? (int)(gprimitive.material - cgltf.materials)
                               : -1;
       for (auto idx : range(gprimitive.attributes_count)) {
         auto& gattribute = gprimitive.attributes[idx];
         auto& gaccessor  = *gattribute.data;
-        if (gaccessor.is_sparse)
+        if ((bool)gaccessor.is_sparse)
           throw io_error{
               "cannot load " + filename + " for unsupported sparse accessor"};
         auto gname       = string{gattribute.name};

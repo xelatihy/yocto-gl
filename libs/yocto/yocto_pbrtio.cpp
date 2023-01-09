@@ -753,7 +753,7 @@ static pbrt_value make_pbrt_value(const string& name,
   auto pbrt     = pbrt_value{};
   pbrt.name     = name;
   pbrt.type     = type;
-  pbrt.vector1i = {&val.front()[0], &val.front()[0] + val.size() * 3};
+  pbrt.vector1i = {(int*)val.data(), (int*)val.data() + val.size() * 3};
   return pbrt;
 }
 
