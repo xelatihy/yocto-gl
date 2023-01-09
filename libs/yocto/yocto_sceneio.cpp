@@ -403,53 +403,29 @@ using json_value = nlohmann::ordered_json;
 }
 
 // Json conversions
-inline void to_json(json_value& json, const vec2f& value) {
-  nlohmann::to_json(json, (const array<float, 2>&)value);
+template <typename T, size_t N>
+inline void to_json(json_value& json, const vec<T, N>& value) {
+  nlohmann::to_json(json, (const array<T, N>&)value);
 }
-inline void to_json(json_value& json, const vec3f& value) {
-  nlohmann::to_json(json, (const array<float, 3>&)value);
+template <typename T, size_t N>
+inline void to_json(json_value& json, const frame<T, N>& value) {
+  nlohmann::to_json(json, (const array<T, N*(N + 1)>&)value);
 }
-inline void to_json(json_value& json, const vec4f& value) {
-  nlohmann::to_json(json, (const array<float, 4>&)value);
+template <typename T, size_t N, size_t M>
+inline void to_json(json_value& json, const mat<T, N, M>& value) {
+  nlohmann::to_json(json, (const array<T, N * M>&)value);
 }
-inline void to_json(json_value& json, const frame2f& value) {
-  nlohmann::to_json(json, (const array<float, 6>&)value);
+template <typename T, size_t N>
+inline void from_json(const json_value& json, vec<T, N>& value) {
+  nlohmann::from_json(json, (array<T, N>&)value);
 }
-inline void to_json(json_value& json, const frame3f& value) {
-  nlohmann::to_json(json, (const array<float, 12>&)value);
+template <typename T, size_t N>
+inline void from_json(const json_value& json, frame<T, N>& value) {
+  nlohmann::from_json(json, (array<T, N*(N + 1)>&)value);
 }
-inline void to_json(json_value& json, const mat2f& value) {
-  nlohmann::to_json(json, (const array<float, 4>&)value);
-}
-inline void to_json(json_value& json, const mat3f& value) {
-  nlohmann::to_json(json, (const array<float, 9>&)value);
-}
-inline void to_json(json_value& json, const mat4f& value) {
-  nlohmann::to_json(json, (const array<float, 16>&)value);
-}
-inline void from_json(const json_value& json, vec2f& value) {
-  nlohmann::from_json(json, (array<float, 2>&)value);
-}
-inline void from_json(const json_value& json, vec3f& value) {
-  nlohmann::from_json(json, (array<float, 3>&)value);
-}
-inline void from_json(const json_value& json, vec4f& value) {
-  nlohmann::from_json(json, (array<float, 4>&)value);
-}
-inline void from_json(const json_value& json, frame2f& value) {
-  nlohmann::from_json(json, (array<float, 6>&)value);
-}
-inline void from_json(const json_value& json, frame3f& value) {
-  nlohmann::from_json(json, (array<float, 12>&)value);
-}
-inline void from_json(const json_value& json, mat2f& value) {
-  nlohmann::from_json(json, (array<float, 4>&)value);
-}
-inline void from_json(const json_value& json, mat3f& value) {
-  nlohmann::from_json(json, (array<float, 9>&)value);
-}
-inline void from_json(const json_value& json, mat4f& value) {
-  nlohmann::from_json(json, (array<float, 16>&)value);
+template <typename T, size_t N, size_t M>
+inline void from_json(const json_value& json, mat<T, N, M>& value) {
+  nlohmann::from_json(json, (array<T, N * M>&)value);
 }
 
 }  // namespace yocto

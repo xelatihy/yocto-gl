@@ -66,9 +66,9 @@ void run(const vector<string>& args) {
   add_option(cli, "facet", facet, "facet normals");
   add_option(cli, "aspositions", aspositions, "remove all but positions");
   add_option(cli, "astriangles", astriangles, "convert to triangles");
-  add_option(cli, "translate", (array<float, 3>&)translate, "translate shape");
-  add_option(cli, "scale", (array<float, 3>&)scale, "scale shape");
-  add_option(cli, "rotate", (array<float, 3>&)rotate, "rotate shape");
+  add_option(cli, "translate", translate, "translate shape");
+  add_option(cli, "scale", scale, "scale shape");
+  add_option(cli, "rotate", rotate, "rotate shape");
   add_option(cli, "subdivisions", subdivisions, "apply subdivision");
   add_option(cli, "catmullclark", catmullclark, "subdivide as Catmull-Clark");
   add_option(cli, "toedges", toedges, "convert shape to edges");

@@ -63,10 +63,9 @@ void add_options(cli_command& cli, convert_params& params) {
   add_option(
       cli, "aspositions", params.aspositions, "remove all but positions");
   add_option(cli, "astriangles", params.astriangles, "convert to triangles");
-  add_option(
-      cli, "translate", (array<float, 3>&)params.translate, "translate shape");
-  add_option(cli, "scale", (array<float, 3>&)params.scale, "scale shape");
-  add_option(cli, "rotate", (array<float, 3>&)params.rotate, "rotate shape");
+  add_option(cli, "translate", params.translate, "translate shape");
+  add_option(cli, "scale", params.scale, "scale shape");
+  add_option(cli, "rotate", params.rotate, "rotate shape");
   add_option(cli, "subdivisions", params.subdivisions, "apply subdivision");
   add_option(
       cli, "catmullclark", params.catmullclark, "subdivide as Catmull-Clark");
@@ -192,10 +191,9 @@ void add_options(cli_command& cli, fvconvert_params& params) {
   add_option(cli, "facet", params.facet, "facet normals");
   add_option(
       cli, "aspositions", params.aspositions, "remove all but positions");
-  add_option(
-      cli, "translate", (array<float, 3>&)params.translate, "translate shape");
-  add_option(cli, "scale", (array<float, 3>&)params.scale, "scale shape");
-  add_option(cli, "rotate", (array<float, 3>&)params.rotate, "rotate shape");
+  add_option(cli, "translate", params.translate, "translate shape");
+  add_option(cli, "scale", params.scale, "scale shape");
+  add_option(cli, "rotate", params.rotate, "rotate shape");
   add_option(cli, "subdivisions", params.subdivisions, "apply subdivision");
   add_option(
       cli, "catmullclark", params.catmullclark, "subdivide as Catmull-Clark");
@@ -308,10 +306,9 @@ void add_options(cli_command& cli, heightfield_params& params) {
   add_option(cli, "smooth", params.smooth, "smoooth normals");
   add_option(cli, "height", params.height, "shape height");
   add_option(cli, "info", params.info, "print info");
-  add_option(
-      cli, "translate", (array<float, 3>&)params.translate, "translate shape");
-  add_option(cli, "scale", (array<float, 3>&)params.scale, "scale shape");
-  add_option(cli, "rotate", (array<float, 3>&)params.rotate, "rotate shape");
+  add_option(cli, "translate", params.translate, "translate shape");
+  add_option(cli, "scale", params.scale, "scale shape");
+  add_option(cli, "rotate", params.rotate, "rotate shape");
 }
 
 void run_heightfield(const heightfield_params& params) {

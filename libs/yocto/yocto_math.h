@@ -40,6 +40,7 @@
 #include <array>
 #include <cmath>
 #include <cstdint>
+#include <iosfwd>
 #include <limits>
 #include <type_traits>
 #include <utility>
@@ -3142,6 +3143,120 @@ constexpr kernel std::ptrdiff_t ssize(const Sequence& sequence) {
 template <typename Sequence>
 constexpr kernel int isize(const Sequence& sequence) {
   return (int)std::size(sequence);
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// IOSTREAM SUPPORT
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+template <typename C>
+std::basic_istream<C>& operator>>(std::basic_istream<C>& s, const char a) {
+  constexpr auto max_size = std::numeric_limits<ptrdiff_t>::max();
+  return s.ignore(max_size, a);
+}
+template <typename C>
+std::basic_istream<C>& operator>>(std::basic_istream<C>& s, const char* a) {
+  constexpr auto max_size = std::numeric_limits<ptrdiff_t>::max();
+  return s.ignore(max_size, a[0]);
+}
+
+template <typename C, typename T, size_t N>
+std::basic_ostream<C>& operator<<(
+    std::basic_ostream<C>& s, const vec<T, N>& a) {
+  if constexpr (N == 1) {
+    return s << "[" << a.x << "]";
+  } else if constexpr (N == 2) {
+    return s << "[" << a.x << "," << a.y << "]";
+  } else if constexpr (N == 3) {
+    return s << "[" << a.x << "," << a.y << "," << a.z << "]";
+  } else if constexpr (N == 4) {
+    return s << "[" << a.x << "," << a.y << "," << a.z << "," << a.w << "]";
+  } else {
+  }
+}
+
+template <typename C, typename T, size_t N>
+std::basic_istream<C>& operator>>(std::basic_istream<C>& s, vec<T, N>& a) {
+  if constexpr (N == 1) {
+    return s >> "[" >> a.x >> "]";
+  } else if constexpr (N == 2) {
+    return s >> "[" >> a.x >> "," >> a.y >> "]";
+  } else if constexpr (N == 3) {
+    return s >> "[" >> a.x >> "," >> a.y >> "," >> a.z >> "]";
+  } else if constexpr (N == 4) {
+    return s >> "[" >> a.x >> "," >> a.y >> "," >> a.z >> "," >> a.w >> "]";
+  } else {
+  }
+}
+
+template <typename C, typename T, size_t N, size_t M>
+std::basic_ostream<C>& operator<<(
+    std::basic_ostream<C>& out, const mat<T, N, M>& a) {
+  if constexpr (N == 1) {
+    return out << "[" << a.x << "]";
+  } else if constexpr (N == 2) {
+    return out << "[" << a.x << "," << a.y << "]";
+  } else if constexpr (N == 3) {
+    return out << "[" << a.x << "," << a.y << "," << a.z << "]";
+  } else if constexpr (N == 4) {
+    return out << "[" << a.x << "," << a.y << "," << a.z << "," << a.w << "]";
+  } else {
+  }
+}
+
+template <typename C, typename T, size_t N, size_t M>
+std::basic_istream<C>& operator>>(std::basic_istream<C>& out, mat<T, N, M>& a) {
+  if constexpr (N == 1) {
+    return out >> "[" >> a.x >> "]";
+  } else if constexpr (N == 2) {
+    return out >> "[" >> a.x >> "," >> a.y >> "]";
+  } else if constexpr (N == 3) {
+    return out >> "[" >> a.x >> "," >> a.y >> "," >> a.z >> "]";
+  } else if constexpr (N == 4) {
+    return out >> "[" >> a.x >> "," >> a.y >> "," >> a.z >> "," >> a.w >> "]";
+  } else {
+  }
+}
+
+template <typename C, typename T, size_t N>
+std::basic_ostream<C>& operator<<(
+    std::basic_ostream<C>& out, const frame<T, N>& a) {
+  if constexpr (N == 2) {
+    return out << "[" << a.x << "," << a.y << "," << a.o << "]";
+  } else if constexpr (N == 3) {
+    return out << "[" << a.x << "," << a.y << "," << a.z << "," << a.o << "]";
+  } else {
+  }
+}
+
+template <typename C, typename T, size_t N>
+std::basic_istream<C>& operator>>(std::basic_istream<C>& out, frame<T, N>& a) {
+  if constexpr (N == 2) {
+    return out >> "[" >> a.x >> "," >> a.y >> "," >> a.o >> "]";
+  } else if constexpr (N == 3) {
+    return out >> "[" >> a.x >> "," >> a.y >> "," >> a.z >> "," >> a.o >> "]";
+  } else {
+  }
+}
+
+template <typename C, typename T, size_t N>
+std::basic_ostream<C>& operator<<(
+    std::basic_ostream<C>& out, const quat<T, N>& a) {
+  if constexpr (N == 4) {
+    return out << "[" << a.x << "," << a.y << "," << a.z << "," << a.w << "]";
+  } else {
+  }
+}
+
+template <typename C, typename T, size_t N>
+std::basic_istream<C>& operator>>(std::basic_istream<C>& out, quat<T, N>& a) {
+  if constexpr (N == 4) {
+    return out >> "[" >> a.x >> "," >> a.y >> "," >> a.z >> "," >> a.w >> "]";
+  } else {
+  }
 }
 
 }  // namespace yocto
