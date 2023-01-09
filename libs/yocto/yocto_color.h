@@ -395,7 +395,7 @@ constexpr kernel vec<T, 3> hsv_to_rgb(const vec<T, 3>& hsv) {
     case 3: return {p, q, v};
     case 4: return {t, p, v};
     case 5: return {v, p, q};
-    default: return {v, p, q};
+    default: return {};
   }
 }
 

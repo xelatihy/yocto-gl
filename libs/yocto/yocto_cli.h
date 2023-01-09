@@ -606,10 +606,7 @@ inline string _format_duration(int64_t duration) {
 }
 
 // Simple timer
-inline simple_timer::simple_timer() {
-  start = _get_time();
-  stop  = -1;
-}
+inline simple_timer::simple_timer() : start{_get_time()}, stop{-1} {}
 
 // Timer opreations
 inline void start_timer(simple_timer& timer) {
@@ -665,7 +662,7 @@ template <typename... Args>
 inline void println(const string& format, const Args&... values) {
   auto stream = std::stringstream{};
   format_to(stream, format, values...);
-  puts(stream.str().c_str());
+  printf("%s\n", stream.str().c_str());
 }
 
 // Prints a message line.
@@ -673,7 +670,7 @@ template <typename... Args>
 inline void print_info(const string& format, const Args&... values) {
   auto stream = std::stringstream{};
   format_to(stream, format, values...);
-  puts(stream.str().c_str());
+  printf("%s\n", stream.str().c_str());
   fflush(stdout);
 }
 // Prints an error.
