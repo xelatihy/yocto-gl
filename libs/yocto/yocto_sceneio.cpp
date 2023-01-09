@@ -1099,7 +1099,7 @@ shape_data make_shape_preset(const string& type_) {
   } else if (type == "rounded_cube") {
     return make_rounded_box();
   } else if (type == "sphere") {
-    return make_tsphere();
+    return make_sphere();
   } else if (type == "matcube") {
     return make_rounded_box();
   } else if (type == "matsphere") {
@@ -1119,7 +1119,7 @@ shape_data make_shape_preset(const string& type_) {
   } else if (type == "rounded_box") {
     return make_rounded_box();
   } else if (type == "tsphere") {
-    return make_tsphere();
+    return make_sphere();
   } else if (type == "uvsphere") {
     return make_uvsphere();
   } else if (type == "capped_uvsphere") {
@@ -1145,15 +1145,15 @@ shape_data make_shape_preset(const string& type_) {
   } else if (type == "bent_floor") {
     return make_bent_floor();
   } else if (type == "matball") {
-    return make_tsphere();
+    return make_sphere();
   } else if (type == "lineball") {
-    auto base = transform_shape(make_tsphere(), scaling_frame(0.8f));
+    auto base = transform_shape(make_sphere(), scaling_frame(0.8f));
     return make_random_lines(base, pow2(16), 4, {0.2f, 0.2f}, {0.002f, 0.001f});
   } else if (type == "hairball") {
-    auto base = transform_shape(make_tsphere(), scaling_frame(0.8f));
+    auto base = transform_shape(make_sphere(), scaling_frame(0.8f));
     return make_random_hairs(base, pow2(16), 4, {0.2f, 0.2f}, {0.002f, 0.001f});
   } else if (type == "hairball_interior") {
-    return transform_shape(make_tsphere(), scaling_frame(0.8f));
+    return transform_shape(make_sphere(), scaling_frame(0.8f));
   } else if (type == "monkey") {
     return make_monkey();
   } else if (type == "wtcube") {
@@ -1182,7 +1182,7 @@ shape_data make_shape_preset(const string& type_) {
   } else if (type == "displaced_quady") {
     return make_recty({pow2(8), pow2(8)});
   } else if (type == "displaced_sphere") {
-    return make_tsphere(pow2(7));
+    return make_sphere(pow2(7));
   } else if (type == "floor") {
     return make_floor();
   } else if (type == "test_cube") {
@@ -1196,15 +1196,15 @@ shape_data make_shape_preset(const string& type_) {
   } else if (type == "test_capped_uvspherey") {
     return transform_shape(make_capped_uvspherey(), test_xform);
   } else if (type == "test_sphere") {
-    return transform_shape(make_tsphere(), test_xform);
+    return transform_shape(make_sphere(), test_xform);
   } else if (type == "test_matcube") {
     return transform_shape(make_rounded_box(), test_xform);
   } else if (type == "test_matsphere") {
     return transform_shape(make_uvspherey(), test_xform);
   } else if (type == "test_displaced_sphere") {
-    return transform_shape(make_tsphere(pow2(7)), test_xform);
+    return transform_shape(make_sphere(pow2(7)), test_xform);
   } else if (type == "test_smallsphere") {
-    return transform_shape(make_tsphere(),
+    return transform_shape(make_sphere(),
         translation_frame(vec3f{0, 0.015f, 0}) * scaling_frame(0.015f));
   } else if (type == "test_disk") {
     return transform_shape(make_disk(), test_xform);
@@ -1221,7 +1221,7 @@ shape_data make_shape_preset(const string& type_) {
   } else if (type == "test_displaced_quady") {
     return transform_shape(make_recty({pow2(8), pow2(8)}), test_xform);
   } else if (type == "test_matball") {
-    return transform_shape(make_tsphere(), test_xform);
+    return transform_shape(make_sphere(), test_xform);
   } else if (type == "test_geosphere") {
     return transform_shape(make_geosphere(), test_xform);
   } else if (type == "test_faceted_geosphere") {
@@ -1230,16 +1230,16 @@ shape_data make_shape_preset(const string& type_) {
     return transform_shape(make_geosphere(6), test_xform);
   } else if (type == "test_lineball") {
     auto base = transform_shape(
-        make_tsphere(), test_xform * scaling_frame(0.8f));
+        make_sphere(), test_xform * scaling_frame(0.8f));
     return make_random_lines(base, pow2(16), 4, {0.1f * 0.15f, 0.1f * 0.15f},
         {0.001f * 0.15f, 0.0005f * 0.15f});
   } else if (type == "test_hairball") {
     auto base = transform_shape(
-        make_tsphere(), test_xform * scaling_frame(0.8f));
+        make_sphere(), test_xform * scaling_frame(0.8f));
     return make_random_hairs(base, pow2(16), 4, {0.1f * 0.15f, 0.1f * 0.15f},
         {0.001f * 0.15f, 0.0005f * 0.15f});
   } else if (type == "test_hairball-interior") {
-    return transform_shape(make_tsphere(), test_xform * scaling_frame(0.8f));
+    return transform_shape(make_sphere(), test_xform * scaling_frame(0.8f));
   } else if (type == "test_suzanne_subdiv") {
     return transform_shape(make_monkey(), test_xform * scaling_frame(0.8f));
   } else if (type == "test_wtcube") {
