@@ -66,7 +66,7 @@ struct glscene_texture {
   vec2i extents = {0, 0};
 
   // opengl state
-  uint texture = 0;
+  glhandle texture = {};
 };
 
 // Create texture
@@ -90,17 +90,17 @@ struct glscene_shape {
   int num_quads     = 0;
 
   // OpenGl state
-  uint  vertexarray = 0;
-  uint  positions   = 0;
-  uint  normals     = 0;
-  uint  texcoords   = 0;
-  uint  colors      = 0;
-  uint  tangents    = 0;
-  uint  points      = 0;
-  uint  lines       = 0;
-  uint  triangles   = 0;
-  uint  quads       = 0;
-  float point_size  = 1;
+  glhandle vertexarray = {};
+  glhandle positions   = {};
+  glhandle normals     = {};
+  glhandle texcoords   = {};
+  glhandle colors      = {};
+  glhandle tangents    = {};
+  glhandle points      = {};
+  glhandle lines       = {};
+  glhandle triangles   = {};
+  glhandle quads       = {};
+  float    point_size  = 1;
 };
 
 // Create shape
@@ -116,9 +116,9 @@ struct glscene_state {
   vector<glscene_texture> textures = {};
 
   // programs
-  uint program  = 0;
-  uint vertex   = 0;
-  uint fragment = 0;
+  glhandle program  = {};
+  glhandle vertex   = {};
+  glhandle fragment = {};
 };
 
 // init scene
@@ -912,16 +912,16 @@ namespace yocto {
 static void assert_glerror() { assert(_assert_ogl_error() == GL_NO_ERROR); }
 
 // initialize program
-static void set_program(uint& program_id, uint& vertex_id, uint& fragment_id,
-    const string& vertex, const string& fragment) {
+static void set_program(glhandle& program_id, glhandle& vertex_id,
+    glhandle& fragment_id, const string& vertex, const string& fragment) {
   // error
   auto program_error = [&](const char* message, const char* log) {
-    if (program_id != 0) glDeleteProgram(program_id);
-    if (vertex_id != 0) glDeleteShader(program_id);
-    if (fragment_id != 0) glDeleteShader(program_id);
-    program_id  = 0;
-    vertex_id   = 0;
-    fragment_id = 0;
+    if (program_id) glDeleteProgram(program_id.handle());
+    if (vertex_id) glDeleteShader(program_id.handle());
+    if (fragment_id) glDeleteShader(program_id.handle());
+    program_id  = {};
+    vertex_id   = {};
+    fragment_id = {};
     throw std::invalid_argument{string{message} + string{log}};
   };
 
@@ -933,35 +933,35 @@ static void set_program(uint& program_id, uint& vertex_id, uint& fragment_id,
   assert_glerror();
 
   // create vertex
-  vertex_id = glCreateShader(GL_VERTEX_SHADER);
-  glShaderSource(vertex_id, 1, &ccvertex, nullptr);
-  glCompileShader(vertex_id);
-  glGetShaderiv(vertex_id, GL_COMPILE_STATUS, &errflags);
+  vertex_id = glhandle{glCreateShader(GL_VERTEX_SHADER)};
+  glShaderSource(vertex_id.handle(), 1, &ccvertex, nullptr);
+  glCompileShader(vertex_id.handle());
+  glGetShaderiv(vertex_id.handle(), GL_COMPILE_STATUS, &errflags);
   if (errflags == 0) {
-    glGetShaderInfoLog(vertex_id, 10000, 0, errbuf.data());
+    glGetShaderInfoLog(vertex_id.handle(), 10000, 0, errbuf.data());
     return program_error("vertex shader not compiled", errbuf.data());
   }
   assert_glerror();
 
   // create fragment
-  fragment_id = glCreateShader(GL_FRAGMENT_SHADER);
-  glShaderSource(fragment_id, 1, &ccfragment, nullptr);
-  glCompileShader(fragment_id);
-  glGetShaderiv(fragment_id, GL_COMPILE_STATUS, &errflags);
+  fragment_id = glhandle{glCreateShader(GL_FRAGMENT_SHADER)};
+  glShaderSource(fragment_id.handle(), 1, &ccfragment, nullptr);
+  glCompileShader(fragment_id.handle());
+  glGetShaderiv(fragment_id.handle(), GL_COMPILE_STATUS, &errflags);
   if (errflags == 0) {
-    glGetShaderInfoLog(fragment_id, 10000, 0, errbuf.data());
+    glGetShaderInfoLog(fragment_id.handle(), 10000, 0, errbuf.data());
     return program_error("fragment shader not compiled", errbuf.data());
   }
   assert_glerror();
 
   // create program
-  program_id = glCreateProgram();
-  glAttachShader(program_id, vertex_id);
-  glAttachShader(program_id, fragment_id);
-  glLinkProgram(program_id);
-  glGetProgramiv(program_id, GL_LINK_STATUS, &errflags);
+  program_id = glhandle{glCreateProgram()};
+  glAttachShader(program_id.handle(), vertex_id.handle());
+  glAttachShader(program_id.handle(), fragment_id.handle());
+  glLinkProgram(program_id.handle());
+  glGetProgramiv(program_id.handle(), GL_LINK_STATUS, &errflags);
   if (errflags == 0) {
-    glGetProgramInfoLog(program_id, 10000, 0, errbuf.data());
+    glGetProgramInfoLog(program_id.handle(), 10000, 0, errbuf.data());
     return program_error("program not linked", errbuf.data());
   }
 // TODO(fabio): Apparently validation must be done just before drawing.
@@ -979,15 +979,17 @@ static void set_program(uint& program_id, uint& vertex_id, uint& fragment_id,
   assert_glerror();
 #endif
 }
-inline void clear_program(uint& program, uint& vertex, uint& fragment) {
-  if (program != 0) glDeleteProgram(program);
-  if (vertex != 0) glDeleteShader(vertex);
-  if (fragment != 0) glDeleteShader(fragment);
-  program  = 0;
-  vertex   = 0;
-  fragment = 0;
+inline void clear_program(
+    glhandle& program, glhandle& vertex, glhandle& fragment) {
+  if (program) glDeleteProgram(program.handle());
+  if (vertex) glDeleteShader(vertex.handle());
+  if (fragment) glDeleteShader(fragment.handle());
+  program  = {};
+  vertex   = {};
+  fragment = {};
 }
-inline void bind_program(uint program) { glUseProgram(program); }
+inline void bind_program(glhandle program) { glUseProgram(program.handle()); }
+inline void unbind_program() { glUseProgram(0); }
 
 // Viewport and framebuffer
 inline void bind_viewport(const vec4i& framebuffer) {
@@ -1016,25 +1018,26 @@ inline void bind_wireframe(bool enabled) {
 }
 
 // Vertex arrays
-inline void set_vertexarrays(uint& vertexarray) {
-  if (!vertexarray) glGenVertexArrays(1, &vertexarray);
-  glBindVertexArray(vertexarray);
+inline void set_vertexarrays(glhandle& vertexarray) {
+  if (!vertexarray) glGenVertexArrays(1, &vertexarray.handle());
+  glBindVertexArray(vertexarray.handle());
 }
-inline void clear_vertexarrays(uint& vertexarray) {
-  glDeleteVertexArrays(1, &vertexarray);
-  vertexarray = 0;
+inline void clear_vertexarrays(glhandle& vertexarray) {
+  glDeleteVertexArrays(1, &vertexarray.handle());
+  vertexarray = {};
 }
-inline void bind_vertexarrays(uint vertexarray) {
-  glBindVertexArray(vertexarray);
+inline void bind_vertexarrays(glhandle vertexarray) {
+  glBindVertexArray(vertexarray.handle());
 }
+inline void unbind_vertexarrays() { glBindVertexArray(0); }
 
 // Vertex buffers
 template <typename T>
-inline void set_vertex(uint& buffer, int& num, const vector<T>& values,
+inline void set_vertex(glhandle& buffer, int& num, const vector<T>& values,
     const T& def, int location) {
   if (values.empty()) {
-    if (buffer) glDeleteBuffers(1, &buffer);
-    buffer = 0;
+    if (buffer) glDeleteBuffers(1, &buffer.handle());
+    buffer = {};
     num    = 0;
     glDisableVertexAttribArray(location);
     if constexpr (sizeof(def) == sizeof(float))
@@ -1047,116 +1050,116 @@ inline void set_vertex(uint& buffer, int& num, const vector<T>& values,
       glVertexAttrib4fv(location, data(def));
   } else {
     if (!buffer || (int)values.size() != num) {
-      if (buffer) glDeleteBuffers(1, &buffer);
-      glGenBuffers(1, &buffer);
-      glBindBuffer(GL_ARRAY_BUFFER, buffer);
+      if (buffer) glDeleteBuffers(1, &buffer.handle());
+      glGenBuffers(1, &buffer.handle());
+      glBindBuffer(GL_ARRAY_BUFFER, buffer.handle());
       glBufferData(GL_ARRAY_BUFFER, values.size() * sizeof(values.front()),
           values.data(), GL_STATIC_DRAW);
       num = (int)values.size();
     } else {
       // we have enough space
-      glBindBuffer(GL_ARRAY_BUFFER, buffer);
+      glBindBuffer(GL_ARRAY_BUFFER, buffer.handle());
       glBufferSubData(GL_ARRAY_BUFFER, 0,
           values.size() * sizeof(values.front()), values.data());
     }
-    glBindBuffer(GL_ARRAY_BUFFER, buffer);
+    glBindBuffer(GL_ARRAY_BUFFER, buffer.handle());
     glEnableVertexAttribArray(location);
     glVertexAttribPointer(location, sizeof(values.front()) / sizeof(float),
         GL_FLOAT, false, 0, nullptr);
   }
 }
 template <typename T>
-inline void set_vertex(uint& buffer, const vector<T>& data, int location) {
+inline void set_vertex(glhandle& buffer, const vector<T>& data, int location) {
   auto num = 0;
   auto def = T{};
   set_vertex(buffer, num, data, def, location);
 }
-inline void clear_vertex(uint& buffer) {
-  if (buffer) glDeleteBuffers(1, &buffer);
-  buffer = 0;
+inline void clear_vertex(glhandle& buffer) {
+  if (buffer) glDeleteBuffers(1, &buffer.handle());
+  buffer = {};
 }
 
 // Primitive indices
 template <typename T>
-inline void set_indices(uint& buffer, int& num, const vector<T>& data) {
+inline void set_indices(glhandle& buffer, int& num, const vector<T>& data) {
   if (data.empty()) {
-    if (buffer) glDeleteBuffers(1, &buffer);
-    buffer = 0;
+    if (buffer) glDeleteBuffers(1, &buffer.handle());
+    buffer = {};
     num    = 0;
   } else {
     if (!buffer || (int)data.size() != num) {
-      if (buffer) glDeleteBuffers(1, &buffer);
-      glGenBuffers(1, &buffer);
-      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer);
+      if (buffer) glDeleteBuffers(1, &buffer.handle());
+      glGenBuffers(1, &buffer.handle());
+      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer.handle());
       glBufferData(GL_ELEMENT_ARRAY_BUFFER, data.size() * sizeof(data.front()),
           data.data(), GL_STATIC_DRAW);
       num = (int)data.size();
     } else {
       // we have enough space
-      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer);
+      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer.handle());
       glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0,
           data.size() * sizeof(data.front()), data.data());
     }
   }
 }
 template <typename T>
-inline void set_indices(uint& buffer, const vector<T>& data) {
+inline void set_indices(glhandle& buffer, const vector<T>& data) {
   auto num = 0;
   set_indices(buffer, num, data);
 }
-inline void clear_indices(uint& buffer) {
-  if (buffer) glDeleteBuffers(1, &buffer);
-  buffer = 0;
+inline void clear_indices(glhandle& buffer) {
+  if (buffer) glDeleteBuffers(1, &buffer.handle());
+  buffer = {};
 }
-inline void draw_points(uint buffer, int num) {
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer);
+inline void draw_points(glhandle buffer, int num) {
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer.handle());
   glDrawElements(GL_POINTS, (GLsizei)num, GL_UNSIGNED_INT, nullptr);
 }
-inline void draw_points(uint buffer, int num, float size) {
+inline void draw_points(glhandle buffer, int num, float size) {
   glPointSize(size);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer.handle());
   glDrawElements(GL_POINTS, (GLsizei)num, GL_UNSIGNED_INT, nullptr);
   glPointSize(1);
 }
-inline void draw_lines(uint buffer, int num) {
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer);
+inline void draw_lines(glhandle buffer, int num) {
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer.handle());
   glDrawElements(GL_LINES, (GLsizei)num * 2, GL_UNSIGNED_INT, nullptr);
 }
-inline void draw_triangles(uint buffer, int num) {
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer);
+inline void draw_triangles(glhandle buffer, int num) {
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer.handle());
   glDrawElements(GL_TRIANGLES, num * 3, GL_UNSIGNED_INT, nullptr);
 }
 
 // Buffers
-inline void clear_buffer(uint& buffer) {
-  if (buffer) glDeleteBuffers(1, &buffer);
-  buffer = 0;
+inline void clear_buffer(glhandle& buffer) {
+  if (buffer) glDeleteBuffers(1, &buffer.handle());
+  buffer = {};
 }
 
 // Textures
 inline void set_texture(
-    uint& texture, vec2i& extents, const array2d<vec4f>& image) {
+    glhandle& texture, vec2i& extents, const array2d<vec4f>& image) {
   auto size = (vec2i)image.extents();
   if (!texture || extents != (vec2i)image.extents()) {
-    if (!texture) glGenTextures(1, &texture);
-    glBindTexture(GL_TEXTURE_2D, texture);
+    if (!texture) glGenTextures(1, &texture.handle());
+    glBindTexture(GL_TEXTURE_2D, texture.handle());
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, size.x, size.y, 0, GL_RGBA,
         GL_FLOAT, image.data());
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   } else {
-    glBindTexture(GL_TEXTURE_2D, texture);
+    glBindTexture(GL_TEXTURE_2D, texture.handle());
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, size.x, size.y, GL_RGBA, GL_FLOAT,
         image.data());
   }
   extents = (vec2i)image.extents();
 }
-static void set_texture(uint& texture, vec2i& extents,
+static void set_texture(glhandle& texture, vec2i& extents,
     const array2d<vec4f>& imagef, const array2d<vec4b>& imageb, bool mipmap) {
   auto size = (vec2i)max(imagef.extents(), imageb.extents());
   if (!texture || extents != size) {
-    if (!texture) glGenTextures(1, &texture);
-    glBindTexture(GL_TEXTURE_2D, texture);
+    if (!texture) glGenTextures(1, &texture.handle());
+    glBindTexture(GL_TEXTURE_2D, texture.handle());
     if (!imageb.empty()) {
       glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, size.x, size.y, 0, GL_RGBA,
           GL_UNSIGNED_BYTE, imageb.data());
@@ -1174,7 +1177,7 @@ static void set_texture(uint& texture, vec2i& extents,
       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     }
   } else {
-    glBindTexture(GL_TEXTURE_2D, texture);
+    glBindTexture(GL_TEXTURE_2D, texture.handle());
     if (!imageb.empty()) {
       glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, size.x, size.y, GL_RGBA,
           GL_UNSIGNED_BYTE, imageb.data());
@@ -1186,9 +1189,9 @@ static void set_texture(uint& texture, vec2i& extents,
   }
   extents = size;
 }
-inline void clear_texture(uint& texture) {
-  if (texture) glDeleteTextures(1, &texture);
-  texture = 0;
+inline void clear_texture(glhandle& texture) {
+  if (texture) glDeleteTextures(1, &texture.handle());
+  texture = {};
 }
 
 // Parameter setting
@@ -1205,17 +1208,18 @@ inline void bind_uniform(int loc, const mat4f& v) {
   glUniformMatrix4fv(loc, 1, false, &v[0][0]);
 }
 template <typename T>
-inline void bind_uniform(uint program, const char* name, const T& v) {
-  return bind_uniform(glGetUniformLocation(program, name), v);
+inline void bind_uniform(glhandle program, const char* name, const T& v) {
+  return bind_uniform(glGetUniformLocation(program.handle(), name), v);
 }
-inline void bind_texture(int loc, uint texture, int unit) {
+inline void bind_texture(int loc, glhandle texture, int unit) {
   glActiveTexture(GL_TEXTURE0 + unit);
-  glBindTexture(GL_TEXTURE_2D, texture);
+  glBindTexture(GL_TEXTURE_2D, texture.handle());
   bind_uniform(loc, unit);
 }
 inline void bind_texture(
-    uint program, const char* name, uint texture, int unit) {
-  return bind_texture(glGetUniformLocation(program, name), texture, unit);
+    glhandle program, const char* name, glhandle texture, int unit) {
+  return bind_texture(
+      glGetUniformLocation(program.handle(), name), texture, unit);
 }
 
 }  // namespace yocto
@@ -1372,11 +1376,11 @@ void draw_image(glimage_state& glimage, const glimage_params& params) {
   // draw
   bind_vertexarrays(glimage.vertexarray);
   draw_triangles(glimage.triangles, 2);
-  bind_vertexarrays(0);
+  unbind_vertexarrays();
   assert_glerror();
 
   // unbind program
-  bind_program(0);
+  unbind_program();
   assert_glerror();
 
   // blend
@@ -1674,7 +1678,7 @@ static void set_shape(glscene_shape& glshape, const shape_data& shape) {
       glshape.colors, glshape.num_colors, shape.colors, vec4f{1, 1, 1, 1}, 3);
   set_vertex(glshape.tangents, glshape.num_tangents, shape.tangents,
       vec4f{0, 0, 1, 1}, 4);
-  bind_vertexarrays(0);
+  unbind_vertexarrays();
 }
 
 // Clean shape
@@ -1724,14 +1728,14 @@ static void clear_scene(glscene_state& glscene) {
 }
 
 [[maybe_unused]] static void draw_shape(glscene_shape& shape) {
-  if (shape.vertexarray == 0) return;
+  if (!shape.vertexarray) return;
   bind_vertexarrays(shape.vertexarray);
   if (shape.points)
     draw_points(shape.points, shape.num_points, shape.point_size);
   if (shape.lines) draw_lines(shape.lines, shape.num_lines);
   if (shape.triangles) draw_triangles(shape.triangles, shape.num_triangles);
   if (shape.quads) draw_triangles(shape.quads, shape.num_quads);
-  bind_vertexarrays(0);
+  unbind_vertexarrays();
   assert_glerror();
 }
 
@@ -1794,14 +1798,14 @@ static void draw_scene(glscene_state& glscene, const scene_data& scene,
 
   // helper
   auto bind_scene_texture =
-      [](uint program, const char* name, const char* name_on,
+      [](glhandle program, const char* name, const char* name_on,
           const glscene_state& glscene, int texture_idx, int unit) {
         if (texture_idx >= 0) {
           auto& gltexture = glscene.textures.at(texture_idx);
           bind_texture(program, name, gltexture.texture, unit);
           bind_uniform(program, name_on, 1);
         } else {
-          bind_texture(program, name, 0, unit);
+          bind_texture(program, name, {}, unit);
           bind_uniform(program, name_on, 0);
         }
       };
@@ -1817,7 +1821,7 @@ static void draw_scene(glscene_state& glscene, const scene_data& scene,
         to_mat(inverse(instance.frame, params.non_rigid_frames)));
     bind_uniform(program, "frame", shape_xform);
     bind_uniform(program, "frameit", shape_inv_xform);
-    bind_uniform(program, "faceted", params.faceted || glshape.normals == 0);
+    bind_uniform(program, "faceted", params.faceted || !glshape.normals);
 
     bind_uniform(program, "unlit", 0);
     bind_uniform(program, "emission", material.emission);
@@ -1867,13 +1871,13 @@ static void draw_scene(glscene_state& glscene, const scene_data& scene,
       draw_triangles(glshape.quads, glshape.num_quads);
     }
 
-    bind_vertexarrays(0);
+    unbind_vertexarrays();
     assert_glerror();
   }
   bind_wireframe(false);
 
   // done
-  bind_program(0);
+  unbind_program();
 }
 
 }  // namespace yocto

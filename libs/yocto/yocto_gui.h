@@ -125,19 +125,31 @@ void show_shade_gui(const string& title, const string& name, scene_data& scene,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// OpenGL handle
+struct glhandle {
+  constexpr glhandle() : _handle{0} {}
+  constexpr explicit glhandle(uint handle) : _handle{handle} {}
+  constexpr uint&       handle() { return _handle; }
+  constexpr const uint& handle() const { return _handle; }
+  constexpr explicit    operator bool() const { return _handle != 0; }
+
+ private:
+  uint _handle = 0;
+};
+
 // OpenGL image data
 struct glimage_state {
   // image properties
   vec2i extents = {0, 0};
 
   // Opengl state
-  uint texture     = 0;  // texture
-  uint program     = 0;  // program
-  uint vertex      = 0;
-  uint fragment    = 0;
-  uint vertexarray = 0;  // vertex
-  uint positions   = 0;
-  uint triangles   = 0;  // elements
+  glhandle texture     = {};  // texture
+  glhandle program     = {};  // program
+  glhandle vertex      = {};
+  glhandle fragment    = {};
+  glhandle vertexarray = {};  // vertex
+  glhandle positions   = {};
+  glhandle triangles   = {};  // elements
 };
 
 // OpenGL image drawing params
