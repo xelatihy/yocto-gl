@@ -173,7 +173,8 @@
     "modernize-use-default-member-init",
     "performance-inefficient-string-concatenation",
     "modernize-use-emplace",
-    "readability-suspicious-call-argument"
+    "readability-suspicious-call-argument",
+    "bugprone-branch-clone"
   ],
   "cSpell.diagnosticLevel": "Hint"
 }

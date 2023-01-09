@@ -2013,7 +2013,7 @@ void show_gui_window(const vec2i& size, const string& title,
       });
 
   // init gl extensions
-  if (!gladLoadGL())
+  if (gladLoadGL() != GL_TRUE)
     throw std::runtime_error{"cannot initialize OpenGL extensions"};
 
   // widgets
@@ -2037,7 +2037,7 @@ void show_gui_window(const vec2i& size, const string& title,
   if (state.init) state.init(state.input);
 
   // run ui
-  while (!glfwWindowShouldClose(window)) {
+  while (glfwWindowShouldClose(window) != GLFW_TRUE) {
     // update input
     state.input.last = state.input.cursor;
     auto mouse_posx = 0.0, mouse_posy = 0.0;

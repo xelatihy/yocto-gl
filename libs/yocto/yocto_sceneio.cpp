@@ -313,7 +313,7 @@ string load_text(const string& filename) {
 void load_text(const string& filename, string& str) {
   // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
   auto fs = fopen_utf8(filename.c_str(), "rb");
-  if (!fs) throw io_error("cannot open " + filename);
+  if (fs == nullptr) throw io_error("cannot open " + filename);
   fseek(fs, 0, SEEK_END);
   auto length = ftell(fs);
   fseek(fs, 0, SEEK_SET);
@@ -328,7 +328,7 @@ void load_text(const string& filename, string& str) {
 // Save a text file
 void save_text(const string& filename, const string& str) {
   auto fs = fopen_utf8(filename.c_str(), "wt");
-  if (!fs) throw io_error("cannot create " + filename);
+  if (fs == nullptr) throw io_error("cannot create " + filename);
   if (fprintf(fs, "%s", str.c_str()) < 0) {
     fclose(fs);
     throw io_error("cannot write " + filename);
@@ -347,7 +347,7 @@ vector<byte> load_binary(const string& filename) {
 void load_binary(const string& filename, vector<byte>& data) {
   // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
   auto fs = fopen_utf8(filename.c_str(), "rb");
-  if (!fs) throw io_error("cannot open " + filename);
+  if (fs == nullptr) throw io_error("cannot open " + filename);
   fseek(fs, 0, SEEK_END);
   auto length = ftell(fs);
   fseek(fs, 0, SEEK_SET);
@@ -362,7 +362,7 @@ void load_binary(const string& filename, vector<byte>& data) {
 // Save a binary file
 void save_binary(const string& filename, const vector<byte>& data) {
   auto fs = fopen_utf8(filename.c_str(), "wb");
-  if (!fs) throw io_error("cannot create " + filename);
+  if (fs == nullptr) throw io_error("cannot create " + filename);
   if (fwrite(data.data(), 1, data.size(), fs) != data.size()) {
     fclose(fs);
     throw io_error("cannot write " + filename);
@@ -518,7 +518,7 @@ void load_image(const string& filename, array2d<vec4f>& image, bool srgb) {
     auto width = 0, height = 0, ncomp = 0;
     auto pixels = stbi_loadf_from_memory(
         buffer.data(), (int)buffer.size(), &width, &height, &ncomp, 4);
-    if (!pixels) throw io_error{"cannot read " + filename};
+    if (pixels == nullptr) throw io_error{"cannot read " + filename};
     image = {(vec4f*)pixels, {(size_t)width, (size_t)height}};
     if (srgb) image = rgb_to_srgb(image);
     free(pixels);
@@ -550,7 +550,7 @@ void load_image(const string& filename, array2d<vec4b>& image, bool srgb) {
     auto width = 0, height = 0, ncomp = 0;
     auto pixels = stbi_load_from_memory(
         buffer.data(), (int)buffer.size(), &width, &height, &ncomp, 4);
-    if (!pixels) throw io_error{"cannot read " + filename};
+    if (pixels == nullptr) throw io_error{"cannot read " + filename};
     image = {(vec4b*)pixels, {(size_t)width, (size_t)height}};
     if (!srgb) image = float_to_byte(srgbb_to_rgb(image));
     free(pixels);
@@ -659,13 +659,13 @@ void save_image(
 
 bool is_srgb_preset(const string& type_) {
   auto type = path_basename(type_);
-  return type.find("sky") == type.npos;
+  return type.find("sky") == string::npos;
 }
 array2d<vec4f> make_image_preset(const string& type_) {
   auto type    = path_basename(type_);
   auto extents = vec2s{1024, 1024};
-  if (type.find("sky") != type.npos) extents = {2048, 1024};
-  if (type.find("images2") != type.npos) extents = {2048, 1024};
+  if (type.find("sky") != string::npos) extents = {2048, 1024};
+  if (type.find("images2") != string::npos) extents = {2048, 1024};
   if (type == "grid") {
     return make_grid(extents);
   } else if (type == "checker") {
@@ -4231,7 +4231,7 @@ static void save_gltf_scene(
       gnode.name   = copy_string(get_camera_name(scene, camera));
       auto xform   = to_mat(camera.frame);
       memcpy(gnode.matrix, &xform, sizeof(mat4f));
-      gnode.has_matrix = true;
+      gnode.has_matrix = 1;
       gnode.camera     = cgltf.cameras + idx;
     }
     for (auto idx : range(scene.instances.size())) {
@@ -4240,7 +4240,7 @@ static void save_gltf_scene(
       gnode.name     = copy_string(get_instance_name(scene, instance));
       auto xform     = to_mat(instance.frame);
       memcpy(gnode.matrix, &xform, sizeof(mat4f));
-      gnode.has_matrix = true;
+      gnode.has_matrix = 1;
       gnode.mesh       = cgltf.meshes +
                    mesh_map.at({instance.shape, instance.material});
     }
@@ -5243,7 +5243,7 @@ json_value make_json_cli(const vector<string>& args) {
           json[name].push_back(false);
         } else if (value == "null") {
           json[name].push_back(nullptr);
-        } else if (std::isdigit((int)value[0]) || value[0] == '-' ||
+        } else if ((bool)std::isdigit((int)value[0]) || value[0] == '-' ||
                    value[0] == '+') {
           try {
             if (value.find('.') != string::npos) {

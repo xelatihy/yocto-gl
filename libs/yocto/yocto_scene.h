@@ -206,7 +206,7 @@ struct scene_data {
   vector<string> subdiv_names      = {};
 
   // copyright info preserve in IO
-  string copyright = "";
+  string copyright = {};
 };
 
 }  // namespace yocto

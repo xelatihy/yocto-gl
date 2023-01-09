@@ -86,7 +86,7 @@ static FILE* fopen_utf8(const char* filename, const char* mode) {
 static bool load_text(const string& filename, string& str, string& error) {
   // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
   auto fs = fopen_utf8(filename.c_str(), "rb");
-  if (!fs) {
+  if (fs == nullptr) {
     error = "cannot open " + filename;
     return false;
   }
@@ -107,7 +107,7 @@ static bool load_text(const string& filename, string& str, string& error) {
 static bool save_text(
     const string& filename, const string& str, string& error) {
   auto fs = fopen_utf8(filename.c_str(), "wt");
-  if (!fs) {
+  if (fs == nullptr) {
     error = "cannot create " + filename;
     return false;
   }
@@ -536,14 +536,14 @@ enum struct pbrt_type {
 
 // Pbrt value
 struct pbrt_value {
-  string                  name     = "";
+  string                  name     = {};
   pbrt_type               type     = pbrt_type::real;
   int                     value1i  = 0;
   float                   value1f  = 0;
   array<float, 2>         value2f  = {0, 0};
   array<float, 3>         value3f  = {0, 0, 0};
   bool                    value1b  = false;
-  string                  value1s  = "";
+  string                  value1s  = {};
   vector<float>           vector1f = {};
   vector<array<float, 2>> vector2f = {};
   vector<array<float, 3>> vector3f = {};
@@ -552,8 +552,8 @@ struct pbrt_value {
 
 // Pbrt command
 struct pbrt_command {
-  string                    name   = "";
-  string                    type   = "";
+  string                    name   = {};
+  string                    type   = {};
   vector<pbrt_value>        values = {};
   array<array<float, 3>, 4> frame  = {array<float, 3>{1, 0, 0},
        array<float, 3>{0, 1, 0}, array<float, 3>{0, 0, 1},
@@ -804,7 +804,7 @@ static bool read_pbrt_cmdline(string_view& str, string& cmd) {
 // parse a quoted string
 [[nodiscard]] static bool parse_command(string_view& str, string& value) {
   skip_whitespace(str);
-  if (!isalpha((int)str.front())) return false;
+  if (!(bool)isalpha((int)str.front())) return false;
   auto pos = str.find_first_not_of(
       "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz");
   if (pos == string_view::npos) {
@@ -1254,21 +1254,21 @@ static array<float, 3> blackbody_to_rgb_(float temperature) {
 // Other pbrt elements
 struct pbrt_film {
   // film approximation
-  string        filename   = "";
+  string        filename   = {};
   array<int, 2> resolution = {0, 0};
 };
 
 // Pbrt area light
 struct pbrt_arealight {
   // arealight parameters
-  string          name     = "";
+  string          name     = {};
   array<float, 3> emission = {0, 0, 0};
 };
 
 // Pbrt medium. Not parsed at the moment.
 struct pbrt_medium {
   // medium parameters
-  string name = "";
+  string name = {};
 };
 
 // convert pbrt films
@@ -2040,7 +2040,7 @@ struct pbrt_stack_element {
 struct pbrt_context {
   vector<pbrt_stack_element>                stack           = {};
   unordered_map<string, pbrt_stack_element> coordsys        = {};
-  string                                    cur_object      = "";
+  string                                    cur_object      = {};
   array<int, 2>                             film_resolution = {512, 512};
 };
 

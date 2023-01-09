@@ -1340,7 +1340,6 @@ static trace_result trace_falsecolor(const scene_data& scene,
   auto outgoing = -ray.d;
   auto position = eval_shading_position(scene, intersection, outgoing);
   auto normal   = eval_shading_normal(scene, intersection, outgoing);
-  auto vnormal  = eval_normal(scene, intersection);
   auto gnormal  = eval_element_normal(scene, intersection);
   auto texcoord = eval_texcoord(scene, intersection);
   auto material = eval_material(scene, intersection);
