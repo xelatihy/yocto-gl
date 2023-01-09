@@ -1756,10 +1756,10 @@ void get_normal_image(array2d<vec3f>& normal, const trace_state& state) {
 }
 
 // Denoise image
-array2d<vec4f> denoise_image(const array2d<vec4f>& render,
+array2d<vec4f> denoise_image(const array2d<vec4f>& image,
     const array2d<vec3f>& albedo, const array2d<vec3f>& normal) {
-  auto denoised = array2d<vec4f>{render.extents()};
-  denoise_image(denoised, render, albedo, normal);
+  auto denoised = array2d<vec4f>{image.extents()};
+  denoise_image(denoised, image, albedo, normal);
   return denoised;
 }
 void denoise_image(array2d<vec4f>& denoised, const array2d<vec4f>& image,

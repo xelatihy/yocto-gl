@@ -184,14 +184,14 @@ void get_rendered_image(array2d<vec4f>& image, const trace_state& state);
 array2d<vec4f> get_denoised_image(const trace_state& state);
 void get_denoised_image(array2d<vec4f>& image, const trace_state& state);
 array2d<vec3f> get_albedo_image(const trace_state& state);
-void get_albedo_image(array2d<vec3f>& image, const trace_state& state);
+void get_albedo_image(array2d<vec3f>& albedo, const trace_state& state);
 array2d<vec3f> get_normal_image(const trace_state& state);
-void get_normal_image(array2d<vec3f>& image, const trace_state& state);
+void get_normal_image(array2d<vec3f>& normal, const trace_state& state);
 
 // Denoise image
-array2d<vec4f> denoise_image(const array2d<vec4f>& render,
+array2d<vec4f> denoise_image(const array2d<vec4f>& image,
     const array2d<vec3f>& albedo, const array2d<vec3f>& normal);
-void denoise_image(array2d<vec4f>& image, const array2d<vec4f>& render,
+void denoise_image(array2d<vec4f>& denoised, const array2d<vec4f>& image,
     const array2d<vec3f>& albedo, const array2d<vec3f>& normal);
 
 // Async implementation

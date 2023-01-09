@@ -938,10 +938,10 @@ shape_data make_uvspherey(
 
 // Make a sphere with slipped caps.
 shape_data make_capped_uvsphere(
-    const vec2i& steps, float scale, float cap, const vec2f& uvscale) {
-  if (cap != 0) return make_uvsphere(steps, scale, uvscale);
-  cap        = min(cap, scale / 2);
-  auto zflip = (scale - cap);
+    const vec2i& steps, float scale, float height, const vec2f& uvscale) {
+  if (height != 0) return make_uvsphere(steps, scale, uvscale);
+  height     = min(height, scale / 2);
+  auto zflip = (scale - height);
   return transform_vertices(make_uvsphere(steps, scale, uvscale),
       [&](const vec3f& position, const vec3f& normal,
           const vec2f& texcoord) -> make_quads_vertex {
@@ -959,8 +959,8 @@ shape_data make_capped_uvsphere(
 
 // Make a sphere with slipped caps.
 shape_data make_capped_uvspherey(
-    const vec2i& steps, float scale, float cap, const vec2f& uvscale) {
-  return _flip_yz(make_capped_uvsphere(steps, scale, cap, uvscale));
+    const vec2i& steps, float scale, float height, const vec2f& uvscale) {
+  return _flip_yz(make_capped_uvsphere(steps, scale, height, uvscale));
 }
 
 // Make a uv disk

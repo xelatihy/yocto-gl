@@ -265,11 +265,11 @@ shape_data make_uvcone(const vec3i& steps = {32, 32, 32},
     const vec2f& scale = {1, 1}, const vec3f& uvscale = {1, 1, 1});
 // Make a bulged rectangle
 shape_data make_bulged_rect(const vec2i& steps = {1, 1},
-    const vec2f& scale = {1, 1}, float radius = 0.3f,
+    const vec2f& scale = {1, 1}, float height = 0.3f,
     const vec2f& uvscale = {1, 1});
 // Make a bulged rectangle along y
 shape_data make_bulged_recty(const vec2i& steps = {1, 1},
-    const vec2f& scale = {1, 1}, float radius = 0.3f,
+    const vec2f& scale = {1, 1}, float height = 0.3f,
     const vec2f& uvscale = {1, 1});
 // Make a bent disk
 shape_data make_bent_floor(const vec2i& steps = {1, 1},

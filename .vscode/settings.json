@@ -133,18 +133,6 @@
   ],
   "editor.formatOnSave": true,
   "python.formatting.provider": "yapf",
-  "cSpell.words": [
-    "bsdf",
-    "bsdfs",
-    "denoise",
-    "denoising",
-    "isize",
-    "khronos",
-    "lambertian",
-    "microfacet",
-    "texcoords",
-    "texcoord"
-  ],
   "C_Cpp.codeAnalysis.clangTidy.enabled": true,
   "C_Cpp.codeAnalysis.exclude": {
     "**/apps/_deprecated/*": true,
@@ -184,6 +172,11 @@
     "misc-confusable-identifiers",
     "bugprone-narrowing-conversions",
     "bugprone-implicit-widening-of-multiplication-result",
-    "cppcoreguidelines-narrowing-conversions"
-  ]
+    "cppcoreguidelines-narrowing-conversions",
+    "readability-use-anyofallof",
+    "cppcoreguidelines-pro-bounds-pointer-arithmetic",
+    "cppcoreguidelines-pro-type-vararg",
+    "modernize-use-default-member-init"
+  ],
+  "cSpell.diagnosticLevel": "Hint"
 }
