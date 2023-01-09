@@ -239,7 +239,7 @@ void show_gui_window(const vec2i& size, const string& title,
 namespace yocto {
 
 // Headers
-bool draw_gui_header(const char* title);
+bool draw_gui_header(const char* lbl);
 void end_gui_header();
 
 // Labels

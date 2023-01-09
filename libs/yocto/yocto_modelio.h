@@ -67,7 +67,7 @@ enum struct ply_type { i8, i16, i32, i64, u8, u16, u32, u64, f32, f64 };
 // Ply property
 struct ply_property {
   // description
-  string   name    = "";
+  string   name    = {};
   bool     is_list = false;
   ply_type type    = ply_type::f32;
 
@@ -90,7 +90,7 @@ struct ply_property {
 // Ply elements
 struct ply_element {
   // element content
-  string               name       = "";
+  string               name       = {};
   size_t               count      = 0;
   vector<ply_property> properties = {};
 };
@@ -136,18 +136,18 @@ inline bool get_list_values(const ply_model& ply, const string& element,
 
 // Get ply properties for meshes
 template <typename T>
-inline bool get_positions(const ply_model& ply, vector<array<T, 3>>& values);
+inline bool get_positions(const ply_model& ply, vector<array<T, 3>>& positions);
 template <typename T>
-inline bool get_normals(const ply_model& ply, vector<array<T, 3>>& values);
+inline bool get_normals(const ply_model& ply, vector<array<T, 3>>& normals);
 template <typename T>
 inline bool get_texcoords(
-    const ply_model& ply, vector<array<T, 2>>& values, bool flipv = false);
+    const ply_model& ply, vector<array<T, 2>>& texcoords, bool flipv = false);
 template <typename T>
-inline bool get_colors(const ply_model& ply, vector<array<T, 3>>& values);
+inline bool get_colors(const ply_model& ply, vector<array<T, 3>>& colors);
 template <typename T>
-inline bool get_colors(const ply_model& ply, vector<array<T, 4>>& values);
+inline bool get_colors(const ply_model& ply, vector<array<T, 4>>& colors);
 template <typename T>
-inline bool get_radius(const ply_model& ply, vector<T>& values);
+inline bool get_radius(const ply_model& ply, vector<T>& radius);
 template <typename T>
 inline bool get_faces(const ply_model& ply, vector<vector<T>>& faces);
 template <typename T>
@@ -1137,21 +1137,22 @@ inline bool add_faces(ply_model& ply, const vector<array<T, 3>>& triangles,
   }
 }
 template <typename T>
-inline bool add_triangles(ply_model& ply, const vector<array<T, 3>>& values) {
-  return add_faces(ply, values, {});
+inline bool add_triangles(
+    ply_model& ply, const vector<array<T, 3>>& triangles) {
+  return add_faces(ply, triangles, {});
 }
 template <typename T>
-inline bool add_quads(ply_model& ply, const vector<array<T, 4>>& values) {
-  return add_faces(ply, {}, values);
+inline bool add_quads(ply_model& ply, const vector<array<T, 4>>& quads) {
+  return add_faces(ply, {}, quads);
 }
 template <typename T>
-inline bool add_lines(ply_model& ply, const vector<array<T, 2>>& values) {
-  return add_lists(ply, "line", "vertex_indices", values);
+inline bool add_lines(ply_model& ply, const vector<array<T, 2>>& lines) {
+  return add_lists(ply, "line", "vertex_indices", lines);
 }
 template <typename T>
-inline bool add_points(ply_model& ply, const vector<T>& values) {
+inline bool add_points(ply_model& ply, const vector<T>& points) {
   return add_lists(
-      ply, "point", "vertex_indices", (const vector<array<T, 1>>&)values);
+      ply, "point", "vertex_indices", (const vector<array<T, 1>>&)points);
 }
 
 }  // namespace yocto

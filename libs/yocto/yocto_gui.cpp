@@ -245,9 +245,9 @@ bool draw_trace_widgets(const gui_input& input, int sample,
     edited += (int)draw_gui_slider("resolution", params.resolution, 180, 4096);
     edited += (int)draw_gui_slider("samples", params.samples, 16, 4096);
     edited += (int)draw_gui_combobox(
-        "tracer", (int&)params.sampler, trace_sampler_names);
+        "tracer", params.sampler, trace_sampler_names);
     edited += (int)draw_gui_combobox(
-        "false color", (int&)params.falsecolor, trace_falsecolor_names);
+        "false color", params.falsecolor, trace_falsecolor_names);
     edited += (int)draw_gui_slider("bounces", params.bounces, 1, 128);
     edited += (int)draw_gui_slider("batch", params.batch, 1, 16);
     edited += (int)draw_gui_slider("clamp", params.clamp, 10, 1000);
@@ -563,9 +563,9 @@ void show_trace_gui(const string& title, const string& name, scene_data& scene,
           "resolution", tparams.resolution, 180, 4096);
       edited += (int)draw_gui_slider("samples", tparams.samples, 16, 4096);
       edited += (int)draw_gui_combobox(
-          "tracer", (int&)tparams.sampler, trace_sampler_names);
+          "tracer", tparams.sampler, trace_sampler_names);
       edited += (int)draw_gui_combobox(
-          "false color", (int&)tparams.falsecolor, trace_falsecolor_names);
+          "false color", tparams.falsecolor, trace_falsecolor_names);
       edited += (int)draw_gui_slider("bounces", tparams.bounces, 1, 128);
       edited += (int)draw_gui_slider("batch", tparams.batch, 1, 16);
       edited += (int)draw_gui_slider("clamp", tparams.clamp, 10, 1000);
@@ -584,10 +584,10 @@ void show_trace_gui(const string& title, const string& name, scene_data& scene,
       }
     }
     if (draw_gui_header("tonemap")) {
-      edited += draw_gui_slider("exposure", glparams.exposure, -5, 5);
-      edited += draw_gui_checkbox("filmic", glparams.filmic);
+      edited += (int)draw_gui_slider("exposure", glparams.exposure, -5, 5);
+      edited += (int)draw_gui_checkbox("filmic", glparams.filmic);
       end_gui_header();
-      if (edited) set_image(glimage, image);
+      if ((bool)edited) set_image(glimage, image);
     }
     draw_image_widgets(input, image, glparams);
     if (edit) {
@@ -938,7 +938,7 @@ static void set_program(glhandle& program_id, glhandle& vertex_id,
   glCompileShader(vertex_id.handle());
   glGetShaderiv(vertex_id.handle(), GL_COMPILE_STATUS, &errflags);
   if (errflags == 0) {
-    glGetShaderInfoLog(vertex_id.handle(), 10000, 0, errbuf.data());
+    glGetShaderInfoLog(vertex_id.handle(), 10000, nullptr, errbuf.data());
     return program_error("vertex shader not compiled", errbuf.data());
   }
   assert_glerror();
@@ -949,7 +949,7 @@ static void set_program(glhandle& program_id, glhandle& vertex_id,
   glCompileShader(fragment_id.handle());
   glGetShaderiv(fragment_id.handle(), GL_COMPILE_STATUS, &errflags);
   if (errflags == 0) {
-    glGetShaderInfoLog(fragment_id.handle(), 10000, 0, errbuf.data());
+    glGetShaderInfoLog(fragment_id.handle(), 10000, nullptr, errbuf.data());
     return program_error("fragment shader not compiled", errbuf.data());
   }
   assert_glerror();
@@ -961,7 +961,7 @@ static void set_program(glhandle& program_id, glhandle& vertex_id,
   glLinkProgram(program_id.handle());
   glGetProgramiv(program_id.handle(), GL_LINK_STATUS, &errflags);
   if (errflags == 0) {
-    glGetProgramInfoLog(program_id.handle(), 10000, 0, errbuf.data());
+    glGetProgramInfoLog(program_id.handle(), 10000, nullptr, errbuf.data());
     return program_error("program not linked", errbuf.data());
   }
 // TODO(fabio): Apparently validation must be done just before drawing.
@@ -1205,7 +1205,7 @@ inline void bind_uniform(int loc, vec3i v) { glUniform3iv(loc, 1, &v[0]); }
 inline void bind_uniform(int loc, vec4i v) { glUniform4iv(loc, 1, &v[0]); }
 inline void bind_uniform(int loc, bool v) { glUniform1i(loc, v ? 1 : 0); }
 inline void bind_uniform(int loc, const mat4f& v) {
-  glUniformMatrix4fv(loc, 1, false, &v[0][0]);
+  glUniformMatrix4fv(loc, 1, GL_FALSE, &v[0][0]);
 }
 template <typename T>
 inline void bind_uniform(glhandle program, const char* name, const T& v) {
@@ -1229,7 +1229,7 @@ inline void bind_texture(
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-static auto glimage_vertex =
+static const auto glimage_vertex =
     R"(
 #version 330
 in vec2 positions;
@@ -1258,7 +1258,7 @@ void main() {
 }
 )";
 #endif
-static auto glimage_fragment =
+static const auto glimage_fragment =
     R"(
 #version 330
 in vec2 frag_texcoord;
@@ -1889,7 +1889,7 @@ namespace yocto {
 
 // OpenGL window wrapper
 struct glwindow_state {
-  string       title         = "";
+  string       title         = {};
   gui_callback init          = {};
   gui_callback clear         = {};
   gui_callback draw          = {};
@@ -1998,10 +1998,10 @@ void show_gui_window(const vec2i& size, const string& title,
       window, [](GLFWwindow* window, int width, int height) {
         auto& state        = *(glwindow_state*)glfwGetWindowUserPointer(window);
         state.input.window = get_window_size(window);
-        if (state.widgets_width)
+        if (state.widgets_width != 0)
           state.input.window -= vec2i{state.widgets_width, 0};
         state.input.framebuffer = get_framebuffer_viewport(window);
-        if (state.widgets_width) {
+        if (state.widgets_width != 0) {
           auto win_width         = get_window_size(window).x;
           auto framebuffer_width = get_framebuffer_size(window).x;
           auto offset =
@@ -2043,7 +2043,7 @@ void show_gui_window(const vec2i& size, const string& title,
     auto mouse_posx = 0.0, mouse_posy = 0.0;
     glfwGetCursorPos(window, &mouse_posx, &mouse_posy);
     state.input.cursor = vec2f{(float)mouse_posx, (float)mouse_posy};
-    if (state.widgets_width && state.widgets_left)
+    if (state.widgets_width != 0 && state.widgets_left)
       state.input.cursor -= vec2i{state.widgets_width, 0};
     state.input.delta = state.input.cursor - state.input.last;
     state.input.mouse = {
@@ -2058,10 +2058,10 @@ void show_gui_window(const vec2i& size, const string& title,
         glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS ||
             glfwGetKey(window, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS};
     state.input.window = get_window_size(window);
-    if (state.widgets_width)
+    if (state.widgets_width != 0)
       state.input.window -= vec2i{state.widgets_width, 0};
     state.input.framebuffer = get_framebuffer_viewport(window);
-    if (state.widgets_width) {
+    if (state.widgets_width != 0) {
       auto win_width         = get_window_size(window).x;
       auto framebuffer_width = get_framebuffer_size(window).x;
       auto offset =
@@ -2069,7 +2069,7 @@ void show_gui_window(const vec2i& size, const string& title,
       state.input.framebuffer -= vec4i{0, 0, offset, 0};
       if (state.widgets_left) state.input.framebuffer += vec4i{offset, 0, 0, 0};
     }
-    if (state.widgets_width) {
+    if (state.widgets_width != 0) {
       auto io               = &ImGui::GetIO();
       state.input.onwidgets = io->WantTextInput || io->WantCaptureMouse ||
                               io->WantCaptureKeyboard;
@@ -2125,8 +2125,8 @@ bool draw_gui_button(const char* lbl, bool enabled) {
   }
 }
 
-void draw_gui_label(const char* lbl, const string& label) {
-  ImGui::LabelText(lbl, "%s", label.c_str());
+void draw_gui_label(const char* lbl, const string& text) {
+  ImGui::LabelText(lbl, "%s", text.c_str());
 }
 void draw_gui_label(const char* lbl, int value) {
   ImGui::LabelText(lbl, "%s", std::to_string(value).c_str());
