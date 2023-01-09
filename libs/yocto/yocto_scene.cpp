@@ -541,6 +541,84 @@ vec3f eval_environment(const scene_data& scene, const vec3f& direction) {
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// SCENE CREATION
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Add a camera
+int add_camera(
+    scene_data& scene, const string& name, const camera_data& camera) {
+  scene.camera_names.push_back(name);
+  scene.cameras.push_back(camera);
+  return (int)scene.cameras.size();
+}
+int add_camera(scene_data& scene, const string& name, const frame3f& frame,
+    float lens, float aspect, float aperture, float focus) {
+  return add_camera(scene, name,
+      {.frame       = frame,
+          .lens     = lens,
+          .aspect   = aspect,
+          .aperture = aperture,
+          .focus    = focus});
+}
+int add_camera(scene_data& scene, const string& name, const vec3f& from,
+    const vec3f& to, float lens, float aspect, float aperture) {
+  return add_camera(scene, name,
+      {.frame       = lookat_frame(from, to, {0, 1, 0}),
+          .lens     = lens,
+          .aspect   = aspect,
+          .aperture = aperture,
+          .focus    = distance(from, to)});
+}
+int add_camera(scene_data& scene, const string& name, const vec3f& from,
+    const vec3f& to, const vec3f& up, float lens, float aspect,
+    float aperture) {
+  return add_camera(scene, name,
+      {.frame       = lookat_frame(from, to, up),
+          .lens     = lens,
+          .aspect   = aspect,
+          .aperture = aperture,
+          .focus    = distance(from, to)});
+}
+
+// Add a shape
+int add_shape(scene_data& scene, const string& name, const shape_data& shape) {
+  scene.shape_names.push_back(name);
+  scene.shapes.push_back(shape);
+  return (int)scene.shapes.size();
+}
+
+// Add a material
+int add_material(
+    scene_data& scene, const string& name, const material_data& material) {
+  scene.material_names.push_back(name);
+  scene.materials.push_back(material);
+  return (int)scene.materials.size();
+}
+
+// Add an instance
+int add_instance(
+    scene_data& scene, const string& name, const instance_data& instance) {
+  scene.instance_names.push_back(name);
+  scene.instances.push_back(instance);
+  return (int)scene.instances.size();
+}
+int add_instance(scene_data& scene, const string& name, const frame3f& frame,
+    int shape, int material) {
+  return add_instance(
+      scene, name, {.frame = frame, .shape = shape, .material = material});
+}
+int add_instance(scene_data& scene, const string& name, const frame3f& frame,
+    const shape_data& shape, const material_data& material) {
+  return add_instance(scene, name,
+      {.frame       = frame,
+          .shape    = add_shape(scene, name, shape),
+          .material = add_material(scene, name, material)});
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // SCENE UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -897,106 +975,69 @@ namespace yocto {
 scene_data make_cornellbox() {
   auto scene = scene_data{};
 
-  auto& camera    = scene.cameras.emplace_back();
-  camera.frame    = frame3f{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 1, 3.9f}};
-  camera.lens     = 0.035f;
-  camera.aperture = 0.0;
-  camera.focus    = 3.9f;
-  camera.film     = 0.024f;
-  camera.aspect   = 1;
+  add_camera(scene, "camera", {0, 1, 3.75f}, {0, 1, 0}, 0.050f, 1);
 
-  auto& floor_shape       = scene.shapes.emplace_back();
-  floor_shape.positions   = {{-1, 0, 1}, {1, 0, 1}, {1, 0, -1}, {-1, 0, -1}};
-  floor_shape.triangles   = {{0, 1, 2}, {2, 3, 0}};
-  auto& floor_material    = scene.materials.emplace_back();
-  floor_material.color    = {0.725f, 0.71f, 0.68f};
-  auto& floor_instance    = scene.instances.emplace_back();
-  floor_instance.shape    = (int)scene.shapes.size() - 1;
-  floor_instance.material = (int)scene.materials.size() - 1;
+  add_instance(scene, "floor", identity3x4f,
+      {.positions    = {{-1, 0, 1}, {1, 0, 1}, {1, 0, -1}, {-1, 0, -1}},
+          .triangles = {{0, 1, 2}, {2, 3, 0}}},
+      {.color = {0.725f, 0.71f, 0.68f}});
 
-  auto& ceiling_shape       = scene.shapes.emplace_back();
-  ceiling_shape.positions   = {{-1, 2, 1}, {-1, 2, -1}, {1, 2, -1}, {1, 2, 1}};
-  ceiling_shape.triangles   = {{0, 1, 2}, {2, 3, 0}};
-  auto& ceiling_material    = scene.materials.emplace_back();
-  ceiling_material.color    = {0.725f, 0.71f, 0.68f};
-  auto& ceiling_instance    = scene.instances.emplace_back();
-  ceiling_instance.shape    = (int)scene.shapes.size() - 1;
-  ceiling_instance.material = (int)scene.materials.size() - 1;
+  add_instance(scene, "ceiling", identity3x4f,
+      {.positions    = {{-1, 2, 1}, {-1, 2, -1}, {1, 2, -1}, {1, 2, 1}},
+          .triangles = {{0, 1, 2}, {2, 3, 0}}},
+      {.color = {0.725f, 0.71f, 0.68f}});
 
-  auto& backwall_shape     = scene.shapes.emplace_back();
-  backwall_shape.positions = {{-1, 0, -1}, {1, 0, -1}, {1, 2, -1}, {-1, 2, -1}};
-  backwall_shape.triangles = {{0, 1, 2}, {2, 3, 0}};
-  auto& backwall_material  = scene.materials.emplace_back();
-  backwall_material.color  = {0.725f, 0.71f, 0.68f};
-  auto& backwall_instance  = scene.instances.emplace_back();
-  backwall_instance.shape  = (int)scene.shapes.size() - 1;
-  backwall_instance.material = (int)scene.materials.size() - 1;
+  add_instance(scene, "backwall", identity3x4f,
+      {.positions    = {{-1, 0, -1}, {1, 0, -1}, {1, 2, -1}, {-1, 2, -1}},
+          .triangles = {{0, 1, 2}, {2, 3, 0}}},
+      {.color = {0.725f, 0.71f, 0.68f}});
 
-  auto& rightwall_shape       = scene.shapes.emplace_back();
-  rightwall_shape.positions   = {{1, 0, -1}, {1, 0, 1}, {1, 2, 1}, {1, 2, -1}};
-  rightwall_shape.triangles   = {{0, 1, 2}, {2, 3, 0}};
-  auto& rightwall_material    = scene.materials.emplace_back();
-  rightwall_material.color    = {0.14f, 0.45f, 0.091f};
-  auto& rightwall_instance    = scene.instances.emplace_back();
-  rightwall_instance.shape    = (int)scene.shapes.size() - 1;
-  rightwall_instance.material = (int)scene.materials.size() - 1;
+  add_instance(scene, "rightwall", identity3x4f,
+      {.positions    = {{1, 0, -1}, {1, 0, 1}, {1, 2, 1}, {1, 2, -1}},
+          .triangles = {{0, 1, 2}, {2, 3, 0}}},
+      {.color = {0.14f, 0.45f, 0.091f}});
 
-  auto& leftwall_shape     = scene.shapes.emplace_back();
-  leftwall_shape.positions = {{-1, 0, 1}, {-1, 0, -1}, {-1, 2, -1}, {-1, 2, 1}};
-  leftwall_shape.triangles = {{0, 1, 2}, {2, 3, 0}};
-  auto& leftwall_material  = scene.materials.emplace_back();
-  leftwall_material.color  = {0.63f, 0.065f, 0.05f};
-  auto& leftwall_instance  = scene.instances.emplace_back();
-  leftwall_instance.shape  = (int)scene.shapes.size() - 1;
-  leftwall_instance.material = (int)scene.materials.size() - 1;
+  add_instance(scene, "leftwall", identity3x4f,
+      {.positions    = {{-1, 0, 1}, {-1, 0, -1}, {-1, 2, -1}, {-1, 2, 1}},
+          .triangles = {{0, 1, 2}, {2, 3, 0}}},
+      {.color = {0.63f, 0.065f, 0.05f}});
 
-  auto& shortbox_shape       = scene.shapes.emplace_back();
-  shortbox_shape.positions   = {{0.53f, 0.6f, 0.75f}, {0.7f, 0.6f, 0.17f},
-        {0.13f, 0.6f, 0.0f}, {-0.05f, 0.6f, 0.57f}, {-0.05f, 0.0f, 0.57f},
-        {-0.05f, 0.6f, 0.57f}, {0.13f, 0.6f, 0.0f}, {0.13f, 0.0f, 0.0f},
-        {0.53f, 0.0f, 0.75f}, {0.53f, 0.6f, 0.75f}, {-0.05f, 0.6f, 0.57f},
-        {-0.05f, 0.0f, 0.57f}, {0.7f, 0.0f, 0.17f}, {0.7f, 0.6f, 0.17f},
-        {0.53f, 0.6f, 0.75f}, {0.53f, 0.0f, 0.75f}, {0.13f, 0.0f, 0.0f},
-        {0.13f, 0.6f, 0.0f}, {0.7f, 0.6f, 0.17f}, {0.7f, 0.0f, 0.17f},
-        {0.53f, 0.0f, 0.75f}, {0.7f, 0.0f, 0.17f}, {0.13f, 0.0f, 0.0f},
-        {-0.05f, 0.0f, 0.57f}};
-  shortbox_shape.triangles   = {{0, 1, 2}, {2, 3, 0}, {4, 5, 6}, {6, 7, 4},
-        {8, 9, 10}, {10, 11, 8}, {12, 13, 14}, {14, 15, 12}, {16, 17, 18},
-        {18, 19, 16}, {20, 21, 22}, {22, 23, 20}};
-  auto& shortbox_material    = scene.materials.emplace_back();
-  shortbox_material.color    = {0.725f, 0.71f, 0.68f};
-  auto& shortbox_instance    = scene.instances.emplace_back();
-  shortbox_instance.shape    = (int)scene.shapes.size() - 1;
-  shortbox_instance.material = (int)scene.materials.size() - 1;
+  add_instance(scene, "shortbox", identity3x4f,
+      {.positions    = {{0.53f, 0.6f, 0.75f}, {0.7f, 0.6f, 0.17f},
+              {0.13f, 0.6f, 0.0f}, {-0.05f, 0.6f, 0.57f}, {-0.05f, 0.0f, 0.57f},
+              {-0.05f, 0.6f, 0.57f}, {0.13f, 0.6f, 0.0f}, {0.13f, 0.0f, 0.0f},
+              {0.53f, 0.0f, 0.75f}, {0.53f, 0.6f, 0.75f}, {-0.05f, 0.6f, 0.57f},
+              {-0.05f, 0.0f, 0.57f}, {0.7f, 0.0f, 0.17f}, {0.7f, 0.6f, 0.17f},
+              {0.53f, 0.6f, 0.75f}, {0.53f, 0.0f, 0.75f}, {0.13f, 0.0f, 0.0f},
+              {0.13f, 0.6f, 0.0f}, {0.7f, 0.6f, 0.17f}, {0.7f, 0.0f, 0.17f},
+              {0.53f, 0.0f, 0.75f}, {0.7f, 0.0f, 0.17f}, {0.13f, 0.0f, 0.0f},
+              {-0.05f, 0.0f, 0.57f}},
+          .triangles = {{0, 1, 2}, {2, 3, 0}, {4, 5, 6}, {6, 7, 4}, {8, 9, 10},
+              {10, 11, 8}, {12, 13, 14}, {14, 15, 12}, {16, 17, 18},
+              {18, 19, 16}, {20, 21, 22}, {22, 23, 20}}},
+      {.color = {0.725f, 0.71f, 0.68f}});
 
-  auto& tallbox_shape       = scene.shapes.emplace_back();
-  tallbox_shape.positions   = {{-0.53f, 1.2f, 0.09f}, {0.04f, 1.2f, -0.09f},
-        {-0.14f, 1.2f, -0.67f}, {-0.71f, 1.2f, -0.49f}, {-0.53f, 0.0f, 0.09f},
-        {-0.53f, 1.2f, 0.09f}, {-0.71f, 1.2f, -0.49f}, {-0.71f, 0.0f, -0.49f},
-        {-0.71f, 0.0f, -0.49f}, {-0.71f, 1.2f, -0.49f}, {-0.14f, 1.2f, -0.67f},
-        {-0.14f, 0.0f, -0.67f}, {-0.14f, 0.0f, -0.67f}, {-0.14f, 1.2f, -0.67f},
-        {0.04f, 1.2f, -0.09f}, {0.04f, 0.0f, -0.09f}, {0.04f, 0.0f, -0.09f},
-        {0.04f, 1.2f, -0.09f}, {-0.53f, 1.2f, 0.09f}, {-0.53f, 0.0f, 0.09f},
-        {-0.53f, 0.0f, 0.09f}, {0.04f, 0.0f, -0.09f}, {-0.14f, 0.0f, -0.67f},
-        {-0.71f, 0.0f, -0.49f}};
-  tallbox_shape.triangles   = {{0, 1, 2}, {2, 3, 0}, {4, 5, 6}, {6, 7, 4},
-        {8, 9, 10}, {10, 11, 8}, {12, 13, 14}, {14, 15, 12}, {16, 17, 18},
-        {18, 19, 16}, {20, 21, 22}, {22, 23, 20}};
-  auto& tallbox_material    = scene.materials.emplace_back();
-  tallbox_material.color    = {0.725f, 0.71f, 0.68f};
-  auto& tallbox_instance    = scene.instances.emplace_back();
-  tallbox_instance.shape    = (int)scene.shapes.size() - 1;
-  tallbox_instance.material = (int)scene.materials.size() - 1;
+  add_instance(scene, "tallbox", identity3x4f,
+      {.positions    = {{-0.53f, 1.2f, 0.09f}, {0.04f, 1.2f, -0.09f},
+              {-0.14f, 1.2f, -0.67f}, {-0.71f, 1.2f, -0.49f},
+              {-0.53f, 0.0f, 0.09f}, {-0.53f, 1.2f, 0.09f}, {-0.71f, 1.2f, -0.49f},
+              {-0.71f, 0.0f, -0.49f}, {-0.71f, 0.0f, -0.49f},
+              {-0.71f, 1.2f, -0.49f}, {-0.14f, 1.2f, -0.67f},
+              {-0.14f, 0.0f, -0.67f}, {-0.14f, 0.0f, -0.67f},
+              {-0.14f, 1.2f, -0.67f}, {0.04f, 1.2f, -0.09f}, {0.04f, 0.0f, -0.09f},
+              {0.04f, 0.0f, -0.09f}, {0.04f, 1.2f, -0.09f}, {-0.53f, 1.2f, 0.09f},
+              {-0.53f, 0.0f, 0.09f}, {-0.53f, 0.0f, 0.09f}, {0.04f, 0.0f, -0.09f},
+              {-0.14f, 0.0f, -0.67f}, {-0.71f, 0.0f, -0.49f}},
+          .triangles = {{0, 1, 2}, {2, 3, 0}, {4, 5, 6}, {6, 7, 4}, {8, 9, 10},
+              {10, 11, 8}, {12, 13, 14}, {14, 15, 12}, {16, 17, 18},
+              {18, 19, 16}, {20, 21, 22}, {22, 23, 20}}},
+      {.color = {0.725f, 0.71f, 0.68f}});
 
-  auto& light_shape       = scene.shapes.emplace_back();
-  light_shape.positions   = {{-0.25f, 1.99f, 0.25f}, {-0.25f, 1.99f, -0.25f},
-        {0.25f, 1.99f, -0.25f}, {0.25f, 1.99f, 0.25f}};
-  light_shape.triangles   = {{0, 1, 2}, {2, 3, 0}};
-  auto& light_material    = scene.materials.emplace_back();
-  light_material.emission = {17, 12, 4};
-  auto& light_instance    = scene.instances.emplace_back();
-  light_instance.shape    = (int)scene.shapes.size() - 1;
-  light_instance.material = (int)scene.materials.size() - 1;
+  add_instance(scene, "backwall", identity3x4f,
+      {.positions    = {{-0.25f, 1.99f, 0.25f}, {-0.25f, 1.99f, -0.25f},
+              {0.25f, 1.99f, -0.25f}, {0.25f, 1.99f, 0.25f}},
+          .triangles = {{0, 1, 2}, {2, 3, 0}}},
+      {.emission = {17, 12, 4}});
 
   return scene;
 }

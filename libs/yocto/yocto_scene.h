@@ -329,6 +329,37 @@ vec3f eval_environment(const scene_data& scene, const vec3f& direction);
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// SCENE CREATION
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Add a camera
+int add_camera(
+    scene_data& scene, const string& name, const camera_data& camera);
+int add_camera(scene_data& scene, const string& name, const frame3f& frame,
+    float lens = 0.50f, float aspect = 1, float aperture = 0, float focus = 1);
+int add_camera(scene_data& scene, const string& name, const vec3f& from,
+    const vec3f& to, float lens = 0.50f, float aspect = 1, float aperture = 0);
+int add_camera(scene_data& scene, const string& name, const vec3f& from,
+    const vec3f& to, const vec3f& up, float lens = 0.50f, float aspect = 1,
+    float aperture = 0);
+
+// Add a shape
+int add_shape(scene_data& scene, const string& name, const shape_data& shape);
+
+// Add a material
+int add_material(
+    scene_data& scene, const string& name, const material_data& material);
+
+// Add an instance
+int add_instance(scene_data& scene, const string& name, const frame3f& frame,
+    int shape, int material);
+int add_instance(scene_data& scene, const string& name, const frame3f& frame,
+    const shape_data& shape, const material_data& material);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // SCENE UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto {
