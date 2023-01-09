@@ -1475,25 +1475,25 @@ shape_data make_random_points(
 
 // Grow lines around a shape
 shape_data make_random_points(
-    const shape_data& base, int num, float radius, uint64_t seed) {
-  auto samples = sample_shape(base, num, seed);
+    const shape_data& shape, int num, float radius, uint64_t seed) {
+  auto samples = sample_shape(shape, num, seed);
   return make_points(num, [&](float u) -> make_points_vertex {
     auto [selement, suv] = samples[(int)round(u * num)];
-    return {eval_position(base, selement, suv), {0, 0, 1}, {u, 0}, radius};
+    return {eval_position(shape, selement, suv), {0, 0, 1}, {u, 0}, radius};
   });
 }
 
 // Grow lines around a shape
-shape_data make_random_lines(const shape_data& base, int num, int steps,
+shape_data make_random_lines(const shape_data& shape, int num, int steps,
     const vec2f& len, const vec2f& radius, uint64_t seed) {
-  auto samples = sample_shape(base, num, seed);
+  auto samples = sample_shape(shape, num, seed);
   auto rng     = make_rng(seed, 17);
   auto lenghts = vector<float>(num);
   for (auto& length : lenghts) length = lerp(len.x, len.y, rand1f(rng));
   return make_lines(num, steps, [&](vec2f uv) -> make_lines_vertex {
     auto [selement, suv] = samples[(int)round(uv.y * num)];
-    auto bposition       = eval_position(base, selement, suv);
-    auto bnormal         = eval_normal(base, selement, suv);
+    auto bposition       = eval_position(shape, selement, suv);
+    auto bnormal         = eval_normal(shape, selement, suv);
     auto length          = lenghts[(int)round(uv.y * num)];
     return {bposition + uv.x * length * bnormal, bnormal, uv,
         lerp(radius.x, radius.y, uv.x)};
@@ -1501,32 +1501,32 @@ shape_data make_random_lines(const shape_data& base, int num, int steps,
 }
 
 // Grow hairs around a shape
-shape_data make_random_hairs(const shape_data& base, int num, int steps,
+shape_data make_random_hairs(const shape_data& shape, int num, int steps,
     const vec2f& len, const vec2f& radius, float noise, float gravity,
     uint64_t seed) {
   // TODO: this should be fixed
-  auto samples = sample_shape(base, num, seed);
-  auto shape   = make_lines(num, steps, {1, 1}, radius);
+  auto samples = sample_shape(shape, num, seed);
+  auto hairs   = make_lines(num, steps, {1, 1}, radius);
   auto rng     = make_rng(seed);
   for (auto idx : range(num)) {
-    auto offset    = idx * (steps + 1);
-    auto position  = eval_position(base, samples[idx].element, samples[idx].uv);
-    auto direction = eval_normal(base, samples[idx].element, samples[idx].uv);
+    auto offset   = idx * (steps + 1);
+    auto position = eval_position(shape, samples[idx].element, samples[idx].uv);
+    auto direction = eval_normal(shape, samples[idx].element, samples[idx].uv);
     auto length    = lerp(len.x, len.y, rand1f(rng));
-    shape.positions[offset] = position;
+    hairs.positions[offset] = position;
     for (auto iidx = 1; iidx <= steps; iidx++) {
-      shape.positions[offset + iidx] = position;
-      shape.positions[offset + iidx] += direction * length / (float)steps;
-      shape.positions[offset + iidx] += (2 * rand3f(rng) - 1) * noise;
-      shape.positions[offset + iidx] += vec3f{0, -gravity, 0};
-      direction = normalize(shape.positions[offset + iidx] - position);
-      position  = shape.positions[offset + iidx];
+      hairs.positions[offset + iidx] = position;
+      hairs.positions[offset + iidx] += direction * length / (float)steps;
+      hairs.positions[offset + iidx] += (2 * rand3f(rng) - 1) * noise;
+      hairs.positions[offset + iidx] += vec3f{0, -gravity, 0};
+      direction = normalize(hairs.positions[offset + iidx] - position);
+      position  = hairs.positions[offset + iidx];
     }
   }
 
-  shape.normals = lines_tangents(shape.lines, shape.positions);
+  hairs.normals = lines_tangents(hairs.lines, hairs.positions);
 
-  return shape;
+  return hairs;
 }
 
 // Make a heightfield mesh.

@@ -597,9 +597,9 @@ inline string _format_duration(int64_t duration) {
   elapsed %= 3600000;
   auto mins = (int)(elapsed / 60000);
   elapsed %= 60000;
-  auto             secs  = (int)(elapsed / 1000);
-  auto             msecs = (int)(elapsed % 1000);
-  array<char, 256> buffer;
+  auto secs   = (int)(elapsed / 1000);
+  auto msecs  = (int)(elapsed % 1000);
+  auto buffer = array<char, 256>{};
   snprintf(buffer.data(), buffer.size(), "%02d:%02d:%02d.%03d", hours, mins,
       secs, msecs);
   return string{buffer.data()};

@@ -297,17 +297,17 @@ bool draw_gui_coloredithdr(const char* lbl, vec3f& value);
 bool draw_gui_coloredithdr(const char* lbl, vec4f& value);
 
 // Combo box
-bool draw_gui_combobox(const char* lbl, int& idx, const vector<string>& labels,
-    bool include_null = false);
+bool draw_gui_combobox(const char* lbl, int& value,
+    const vector<string>& labels, bool include_null = false);
 bool draw_gui_combobox(const char* lbl, string& value,
     const vector<string>& labels, bool include_null = false);
 template <typename T>
-inline bool draw_gui_combobox(const char* lbl, T& idx,
+inline bool draw_gui_combobox(const char* lbl, T& value,
     const vector<string>& labels, bool include_null = false) {
   static_assert(std::is_enum_v<T>, "enum only here");
   static_assert(
       std::is_same_v<std::underlying_type_t<T>, int>, "enum as ints only");
-  return draw_gui_combobox(lbl, (int&)idx, labels, include_null);
+  return draw_gui_combobox(lbl, (int&)value, labels, include_null);
 }
 
 // Progress bar

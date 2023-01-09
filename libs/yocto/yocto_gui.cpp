@@ -1957,7 +1957,7 @@ vec4i get_framebuffer_viewport(GLFWwindow* window) {
 void show_gui_window(const vec2i& size, const string& title,
     const gui_callbacks& callbacks, int widgets_width, bool widgets_left) {
   // init glfw
-  if (!glfwInit())
+  if (glfwInit() != GLFW_TRUE)
     throw std::runtime_error("cannot initialize windowing system");
   glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
   glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);

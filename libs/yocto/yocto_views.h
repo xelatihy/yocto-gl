@@ -86,6 +86,7 @@ struct span {
   template <typename U>
   constexpr explicit span(const vector<U>& v) :
       _data{v.data()}, _size(v.size()) {}
+  constexpr ~span() = default;
 
   // Assignments
   constexpr span& operator=(const span&) noexcept  = default;

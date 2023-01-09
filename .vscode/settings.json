@@ -144,7 +144,6 @@
   "C_Cpp.codeAnalysis.clangTidy.checks.enabled": [
     "clang-analyzer-*",
     "bugprone-*",
-    "cppcoreguidelines-*",
     "misc-*",
     "modernize-*",
     "performance-*",
@@ -152,7 +151,6 @@
     "readability-*"
   ],
   "C_Cpp.codeAnalysis.clangTidy.checks.disabled": [
-    "cppcoreguidelines-avoid-magic-numbers",
     "readability-uppercase-literal-suffix",
     "modernize-use-trailing-return-type",
     "readability-identifier-length",
@@ -167,16 +165,15 @@
     "modernize-use-nodiscard",
     "misc-no-recursion",
     "bugprone-exception-escape",
-    "cppcoreguidelines-pro-bounds-constant-array-index",
     "readability-function-cognitive-complexity",
     "misc-confusable-identifiers",
     "bugprone-narrowing-conversions",
     "bugprone-implicit-widening-of-multiplication-result",
-    "cppcoreguidelines-narrowing-conversions",
     "readability-use-anyofallof",
-    "cppcoreguidelines-pro-bounds-pointer-arithmetic",
-    "cppcoreguidelines-pro-type-vararg",
-    "modernize-use-default-member-init"
+    "modernize-use-default-member-init",
+    "performance-inefficient-string-concatenation",
+    "modernize-use-emplace",
+    "readability-suspicious-call-argument"
   ],
   "cSpell.diagnosticLevel": "Hint"
 }

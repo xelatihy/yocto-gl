@@ -273,7 +273,7 @@ shape_data make_bulged_recty(const vec2i& steps = {1, 1},
     const vec2f& uvscale = {1, 1});
 // Make a bent disk
 shape_data make_bent_floor(const vec2i& steps = {1, 1},
-    const vec2f& scale = {10, 10}, float bent = 0.5f,
+    const vec2f& scale = {10, 10}, float radius = 0.5f,
     const vec2f& uvscale = {10, 10});
 // Make a bulged disk
 shape_data make_bulged_disk(
