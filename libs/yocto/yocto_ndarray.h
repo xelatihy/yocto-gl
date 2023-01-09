@@ -123,11 +123,11 @@ struct ndarray {
   constexpr size_t         extent(size_t dimension) const {
     return _extents[dimension];
   }
+  constexpr vec<size_t, N> shape() const { return _extents; }
+  constexpr size_t         rank() const { return N; }
 
   // Access
-  constexpr T&       operator[](size_t idx) { return _data[idx]; }
-  constexpr const T& operator[](size_t idx) const { return _data[idx]; }
-  constexpr T&       operator[](const vec<size_t, N>& idx) {
+  constexpr T& operator[](const vec<size_t, N>& idx) {
     return _data[_index(idx, _extents)];
   }
   constexpr const T& operator[](const vec<size_t, N>& idx) const {
@@ -210,12 +210,12 @@ constexpr kernel void check_same_size(
 template <typename T1, size_t N, typename Func, typename T = result_t<Func, T1>>
 constexpr ndarray<T, N> fmap(const ndarray<T1, N>& a, Func&& func) {
   auto ret = ndarray<T, N>(a.extents());
-  for (auto idx : range(a.size())) ret[idx] = func(a[idx]);
+  for (auto idx : range(a.extents())) ret[idx] = func(a[idx]);
   return ret;
 }
 template <typename T, typename T1, size_t N, typename Func>
 constexpr void fmap(ndarray<T, N>& ret, const ndarray<T1, N>& a, Func&& func) {
-  for (auto idx : range(a.size())) ret[idx] = func(a[idx]);
+  for (auto idx : range(a.extents())) ret[idx] = func(a[idx]);
 }
 
 // Python zip
