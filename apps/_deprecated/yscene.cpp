@@ -182,7 +182,7 @@ void run_render(const render_params& params_) {
 
   // add environment
   if (!params.envname.empty()) {
-    add_environment(scene, params.envname);
+    add_environment(scene, "env", params.envname);
   }
 
   // camera
@@ -286,7 +286,7 @@ void run_view(const view_params& params_) {
 
   // add environment
   if (!params.envname.empty()) {
-    add_environment(scene, params.envname);
+    add_environment(scene, "env", params.envname);
   }
 
   // tesselation

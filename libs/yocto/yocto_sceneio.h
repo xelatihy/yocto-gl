@@ -163,7 +163,8 @@ void save_scene(
     const string& filename, const scene_data& scene, bool noparallel = false);
 
 // Add environment
-void add_environment(scene_data& scene, const string& filename);
+void add_environment(
+    scene_data& scene, const string& name, const string& filename);
 
 // Make missing scene directories
 void make_scene_directories(const string& filename, const scene_data& scene);

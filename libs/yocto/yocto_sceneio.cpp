@@ -1579,6 +1579,50 @@ struct test_params {
   test_instance_name_type instance_name = test_instance_name_type::material;
 };
 
+// Make a test scene with a callback to add your own objects.
+template <typename Func>
+scene_data make_test_scene(Func&& func) {
+  auto scene = scene_data{};
+
+  add_camera(scene, "camera", {0, 5, 17}, {0, 0, 0}, {0, 1, 0}, 0.05, 3, 0);
+
+  add_environment(scene, "sky", identity3x4f, {0.5, 0.5, 0.5},
+      add_texture(scene, "sky",
+          make_sunsky({2048, 1024}, pif / 4, 3.0f, false, 1.0f, 1.0f,
+              {0.7f, 0.7f, 0.7f}),
+          true, false));
+
+  add_instance(scene, "arealight1",
+      lookat_frame(vec3f{-0.4f, 0.8f, 0.8f}, {0.0f, 0.1f, 0.0f},
+          {0.0f, 1.0f, 0.0f}, true),
+      add_shape(scene, "arealight1", make_rect({1, 1}, {0.2f, 0.2f})),
+      add_emission_material(scene, "arealight1", {20, 20, 20}));
+  add_instance(scene, "arealight2",
+      lookat_frame(vec3f{+0.4f, 0.8f, 0.8f}, {0.0f, 0.1f, 0.0f},
+          {0.0f, 1.0f, 0.0f}, true),
+      add_shape(scene, "arealight2", make_rect({1, 1}, {0.2, 0.2})),
+      add_emission_material(scene, "arealight2", {20, 20, 20}));
+
+  add_instance(scene, "floor", translation_frame(vec3f{0, -1, 0}), make_floor(),
+      make_matte_material(), make_grid({1024, 1024}));
+
+  auto num = 5;
+  for (auto idx : range(num)) {
+    func(scene, "object" + std::to_string(idx + 1),
+        translation_frame(vec3f{2.5f * (idx - num / 2), 0.0f, 0.0f}), idx);
+  }
+
+  return scene;
+}
+
+// Scene test
+scene_data make_features1_scene() {
+  return make_test_scene(
+      [](scene_data& scene, const string& name, const frame3f& frame, int idx) {
+        add_instance(scene, name, frame, make_sphere(), make_matte_material());
+      });
+}
+
 // Scene test
 scene_data make_test(const test_params& params) {
   // scene
@@ -1646,8 +1690,7 @@ scene_data make_test(const test_params& params) {
       add_instance(scene, "floor", {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}},
           add_shape(scene, "floor", make_floor({1, 1}, {2, 2}, {20, 20})),
           add_matte_material(scene, "floor", {1, 1, 1},
-              add_texture(
-                  scene, "floor", float_to_byte(make_grid({1024, 1024})))));
+              add_texture(scene, "floor", make_grid({1024, 1024}))));
     } break;
   }
   auto shapes = vector<int>{}, shapesi = vector<int>{};
@@ -1677,8 +1720,8 @@ scene_data make_test(const test_params& params) {
                      shapes[1], 2),
           add_subdiv(scene, "displaced", make_sphere(128, 0.075f, 1), shapes[3],
               0, 0.025,
-              add_texture(scene, "bumps-displacement",
-                  float_to_byte(make_bumps({1024, 1024}))))};
+              add_texture(
+                  scene, "bumps-displacement", make_bumps({1024, 1024})))};
     } break;
     case test_shapes_type::rows: {
       auto bunny  = add_shape(scene, "bunny", make_sphere(32, 0.075, 1));
@@ -1719,8 +1762,8 @@ scene_data make_test(const test_params& params) {
               scene, "suzanne-subdiv", make_monkey(0, 0.075), shapes[1], 2),
           add_subdiv(scene, "displaced", make_sphere(128, 0.075f), shapes[2], 0,
               0.025,
-              add_texture(scene, "bumps-displacement",
-                  float_to_byte(make_bumps({1024, 1024}))))};
+              add_texture(
+                  scene, "bumps-displacement", make_bumps({1024, 1024})))};
     } break;
     case test_shapes_type::shapes3: {
       shapes = {
@@ -1747,13 +1790,12 @@ scene_data make_test(const test_params& params) {
           add_glossy_material(scene, "coated", {1, 1, 1}, 0.2,
               add_texture(scene, "uvgrid", make_uvgrid({1024, 1024}))),
           add_refractive_material(scene, "glass", {1, 0.5, 0.5}, 0),
-          add_refractive_material(
-              scene, "jade", {0.5, 0.5, 0.5}, 0, {0.3, 0.6, 0.3}),
+          add_scattering_material(
+              scene, "jade", {0.5, 0.5, 0.5}, {0.3, 0.6, 0.3}, 0),
           add_glossy_material(scene, "bumped", {0.5, 0.7, 0.5}, 0.2, invalidid,
               invalidid,
               add_texture(scene, "bumps-normal",
-                  float_to_byte(
-                      bump_to_normal(make_bumps({1024, 1024}), 0.05)))),
+                  bump_to_normal(make_bumps({1024, 1024}), 0.05))),
           add_reflective_material(scene, "metal", {0.66, 0.45, 0.34}, 0.2),
       };
     } break;
@@ -1803,7 +1845,7 @@ scene_data make_test(const test_params& params) {
     } break;
     case test_materials_type::materials3: {
       auto bumps_normal = add_texture(scene, "bumps-normal",
-          float_to_byte(bump_to_normal(make_bumps({1024, 1024}), 0.05)));
+          bump_to_normal(make_bumps({1024, 1024}), 0.05));
       materials         = {
           add_glossy_material(scene, "plastic1", {0.5, 0.5, 0.7}, 0.01,
                       invalidid, invalidid, bumps_normal),
@@ -1819,31 +1861,31 @@ scene_data make_test(const test_params& params) {
           add_volumetric_material(
               scene, "cloud", {0.65, 0.65, 0.65}, {0.9, 0.9, 0.9}, 1),
           add_refractive_material(scene, "glass", {1, 0.5, 0.5}, 0),
-          add_refractive_material(
-              scene, "jade", {0.5, 0.5, 0.5}, 0, {0.3, 0.6, 0.3}),
-          add_refractive_material(
-              scene, "jade2", {0.5, 0.5, 0.5}, 0, {0.3, 0.6, 0.3}),
+          add_scattering_material(
+              scene, "jade", {0.5, 0.5, 0.5}, {0.3, 0.6, 0.3}, 0),
+          add_scattering_material(
+              scene, "jade2", {0.5, 0.5, 0.5}, {0.3, 0.6, 0.3}, 0),
           add_volumetric_material(
               scene, "smoke", {0.5, 0.5, 0.5}, {0.2, 0.2, 0.2}),
       };
     } break;
     case test_materials_type::materials5: {
       materials = {
-          add_refractive_material(scene, "skin1a", {0.76, 0.48, 0.23}, 0.25,
-              {0.436, 0.227, 0.131}, invalidid, invalidid, invalidid, 1.5, -0.8,
-              0.001),
-          add_refractive_material(scene, "skin2a", {0.82, 0.55, 0.4}, 0.25,
-              {0.623, 0.433, 0.343}, invalidid, invalidid, invalidid, 1.5, -0.8,
-              0.001),
-          add_refractive_material(scene, "skins", {0.76, 0.48, 0.23}, 0,
-              {0.436, 0.227, 0.131}, invalidid, invalidid, invalidid, 1.5, -0.8,
-              0.001),
-          add_refractive_material(scene, "skin1b", {0.76, 0.48, 0.23}, 0.25,
-              {0.436, 0.227, 0.131}, invalidid, invalidid, invalidid, 1.5, -0.8,
-              0.001),
-          add_refractive_material(scene, "skin2b", {0.82, 0.55, 0.4}, 0.25,
-              {0.623, 0.433, 0.343}, invalidid, invalidid, invalidid, 1.5, -0.8,
-              0.001),
+          add_scattering_material(scene, "skin1a", {0.76, 0.48, 0.23},
+              {0.436, 0.227, 0.131}, 0.25, invalidid, invalidid, invalidid,
+              invalidid, 1.5, -0.8, 0.001),
+          add_scattering_material(scene, "skin2a", {0.82, 0.55, 0.4},
+              {0.623, 0.433, 0.343}, 0.25, invalidid, invalidid, invalidid,
+              invalidid, 1.5, -0.8, 0.001),
+          add_scattering_material(scene, "skins", {0.76, 0.48, 0.23},
+              {0.436, 0.227, 0.131}, 0, invalidid, invalidid, invalidid,
+              invalidid, 1.5, -0.8, 0.001),
+          add_scattering_material(scene, "skin1b", {0.76, 0.48, 0.23},
+              {0.436, 0.227, 0.131}, 0.25, invalidid, invalidid, invalidid,
+              invalidid, 1.5, -0.8, 0.001),
+          add_scattering_material(scene, "skin2b", {0.82, 0.55, 0.4},
+              {0.623, 0.433, 0.343}, 0.25, invalidid, invalidid, invalidid,
+              invalidid, 1.5, -0.8, 0.001),
       };
     } break;
   }
@@ -1879,10 +1921,7 @@ scene_data make_scene_preset(const string& type_) {
   if (type == "cornellbox") {
     return make_cornellbox();
   } else if (type == "features1") {
-    return make_test({test_cameras_type::standard, test_environments_type::sky,
-        test_arealights_type::standard, test_floor_type::standard,
-        test_shapes_type::features1, test_materials_type::features1,
-        test_instance_name_type::material});
+    return make_features1_scene();
   } else if (type == "features2") {
     return make_test({test_cameras_type::standard, test_environments_type::sky,
         test_arealights_type::standard, test_floor_type::standard,
@@ -2106,7 +2145,8 @@ void make_scene_directories(const string& filename, const scene_data& scene) {
 }
 
 // Add environment
-void add_environment(scene_data& scene, const string& filename) {
+void add_environment(
+    scene_data& scene, const string& name, const string& filename) {
   auto texture = load_texture(filename);
   scene.textures.push_back(std::move(texture));
   scene.environments.push_back({{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}},

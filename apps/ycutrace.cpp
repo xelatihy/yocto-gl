@@ -109,7 +109,7 @@ void run(const vector<string>& args) {
 
   // add environment
   if (!envname.empty()) {
-    add_environment(scene, envname);
+    add_environment(scene, "env", envname);
   }
 
   // camera

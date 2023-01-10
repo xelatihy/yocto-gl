@@ -545,6 +545,148 @@ vec3f eval_environment(const scene_data& scene, const vec3f& direction) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// Make a camera
+camera_data make_camera(const frame3f& frame, float lens, float aspect,
+    float aperture, float focus) {
+  return {.frame = frame,
+      .lens      = lens,
+      .aspect    = aspect,
+      .aperture  = aperture,
+      .focus     = focus};
+}
+camera_data make_camera(const vec3f& from, const vec3f& to, const vec3f& up,
+    float lens, float aspect, float aperture) {
+  return {.frame = lookat_frame(from, to, up),
+      .lens      = lens,
+      .aspect    = aspect,
+      .aperture  = aperture,
+      .focus     = distance(from, to)};
+}
+
+// Make a texture
+texture_data make_texture(
+    const array2d<vec4f>& image, bool as_float, bool srgb) {
+  return {
+      .pixelsf = as_float ? (srgb ? srgb_to_rgb(image) : image)
+                          : array2d<vec4f>{},
+      .pixelsb = as_float ? array2d<vec4b>{}
+                          : (srgb ? float_to_byte(image) : rgb_to_srgbb(image)),
+  };
+}
+
+// Make a material of different types
+material_data make_emission_material(
+    const vec3f& emission, int emission_tex, int normal_tex) {
+  return {.type     = material_type::matte,
+      .emission     = emission,
+      .color        = {0, 0, 0},
+      .emission_tex = emission_tex,
+      .normal_tex   = normal_tex};
+}
+material_data make_matte_material(
+    const vec3f& color, int color_tex, int normal_tex) {
+  return {.type   = material_type::matte,
+      .color      = color,
+      .color_tex  = color_tex,
+      .normal_tex = normal_tex};
+}
+material_data make_glossy_material(const vec3f& color, float roughness,
+    int color_tex, int roughness_tex, int normal_tex) {
+  return {.type      = material_type::glossy,
+      .color         = color,
+      .roughness     = roughness,
+      .color_tex     = color_tex,
+      .roughness_tex = roughness_tex,
+      .normal_tex    = normal_tex};
+}
+material_data make_reflective_material(const vec3f& color, float roughness,
+    int color_tex, int roughness_tex, int normal_tex) {
+  return {.type      = material_type::reflective,
+      .color         = color,
+      .roughness     = roughness,
+      .color_tex     = color_tex,
+      .roughness_tex = roughness_tex,
+      .normal_tex    = normal_tex};
+}
+material_data make_transparent_material(const vec3f& color, float roughness,
+    int color_tex, int roughness_tex, int normal_tex) {
+  return {.type      = material_type::transparent,
+      .color         = color,
+      .roughness     = roughness,
+      .color_tex     = color_tex,
+      .roughness_tex = roughness_tex,
+      .normal_tex    = normal_tex};
+}
+material_data make_refractive_material(const vec3f& color, float roughness,
+    int color_tex, int roughness_tex, int normal_tex, float ior) {
+  return {.type      = material_type::refractive,
+      .color         = color,
+      .roughness     = roughness,
+      .ior           = ior,
+      .color_tex     = color_tex,
+      .roughness_tex = roughness_tex,
+      .normal_tex    = normal_tex};
+}
+material_data make_scattering_material(const vec3f& color,
+    const vec3f& scattering, float roughness, int color_tex, int scattering_tex,
+    int roughness_tex, int normal_tex, float ior, float scanisotropy,
+    float trdepth) {
+  return {.type       = material_type::refractive,
+      .color          = color,
+      .roughness      = roughness,
+      .ior            = ior,
+      .scattering     = scattering,
+      .scanisotropy   = scanisotropy,
+      .trdepth        = trdepth,
+      .color_tex      = color_tex,
+      .roughness_tex  = roughness_tex,
+      .scattering_tex = scattering_tex,
+      .normal_tex     = normal_tex};
+}
+material_data make_volumetric_material(const vec3f& color,
+    const vec3f& scattering, float scanisotropy, float trdepth) {
+  return {.type     = material_type::volumetric,
+      .color        = color,
+      .scattering   = scattering,
+      .scanisotropy = scanisotropy,
+      .trdepth      = trdepth};
+}
+
+// Make an instance
+instance_data make_instance(const frame3f& frame, int shape, int material) {
+  return {.frame = frame, .shape = shape, .material = material};
+}
+
+// Make an environment
+environment_data make_environment(
+    const frame3f& frame, const vec3f& emission, int emission_tex) {
+  return {.frame = frame, .emission = emission, .emission_tex = emission_tex};
+}
+
+// Make a subdiv
+subdiv_data make_subdiv(const shape_data& subdiv, int shape, int subdivisions,
+    float displacement, int displacement_tex) {
+  return {.quadspos     = subdiv.quads,
+      .positions        = subdiv.positions,
+      .shape            = shape,
+      .subdivisions     = subdivisions,
+      .displacement     = displacement,
+      .displacement_tex = displacement_tex};
+}
+subdiv_data make_subdiv(const fvshape_data& subdiv, int shape, int subdivisions,
+    float displacement, int displacement_tex) {
+  return {.quadspos     = subdiv.quadspos,
+      .quadsnorm        = subdiv.quadsnorm,
+      .quadstexcoord    = subdiv.quadstexcoord,
+      .positions        = subdiv.positions,
+      .normals          = subdiv.normals,
+      .texcoords        = subdiv.texcoords,
+      .shape            = shape,
+      .subdivisions     = subdivisions,
+      .displacement     = displacement,
+      .displacement_tex = displacement_tex};
+}
+
 // Add a camera
 int add_camera(
     scene_data& scene, const string& name, const camera_data& camera) {
@@ -552,42 +694,12 @@ int add_camera(
   scene.cameras.push_back(camera);
   return (int)scene.cameras.size() - 1;
 }
-int add_camera(scene_data& scene, const string& name, const frame3f& frame,
-    float lens, float aspect, float aperture, float focus) {
-  return add_camera(scene, name,
-      {.frame       = frame,
-          .lens     = lens,
-          .aspect   = aspect,
-          .aperture = aperture,
-          .focus    = focus});
-}
-int add_camera(scene_data& scene, const string& name, const vec3f& from,
-    const vec3f& to, float lens, float aspect, float aperture) {
-  return add_camera(scene, name,
-      {.frame       = lookat_frame(from, to, {0, 1, 0}),
-          .lens     = lens,
-          .aspect   = aspect,
-          .aperture = aperture,
-          .focus    = distance(from, to)});
-}
-int add_camera(scene_data& scene, const string& name, const vec3f& from,
-    const vec3f& to, const vec3f& up, float lens, float aspect,
-    float aperture) {
-  return add_camera(scene, name,
-      {.frame       = lookat_frame(from, to, up),
-          .lens     = lens,
-          .aspect   = aspect,
-          .aperture = aperture,
-          .focus    = distance(from, to)});
-}
-
 // Add a shape
 int add_shape(scene_data& scene, const string& name, const shape_data& shape) {
   scene.shape_names.push_back(name);
   scene.shapes.push_back(shape);
   return (int)scene.shapes.size() - 1;
 }
-
 // Add a texture
 int add_texture(
     scene_data& scene, const string& name, const texture_data& texture) {
@@ -595,15 +707,6 @@ int add_texture(
   scene.textures.push_back(texture);
   return (int)scene.textures.size() - 1;
 }
-int add_texture(
-    scene_data& scene, const string& name, const array2d<vec4f>& imagef) {
-  return add_texture(scene, name, {.pixelsf = imagef});
-}
-int add_texture(
-    scene_data& scene, const string& name, const array2d<vec4b>& imageb) {
-  return add_texture(scene, name, {.pixelsb = imageb});
-}
-
 // Add a material
 int add_material(
     scene_data& scene, const string& name, const material_data& material) {
@@ -611,76 +714,6 @@ int add_material(
   scene.materials.push_back(material);
   return (int)scene.materials.size() - 1;
 }
-int add_emission_material(scene_data& scene, const string& name,
-    const vec3f& emission, int emission_tex) {
-  return add_material(scene, name,
-      {.emission = emission, .emission_tex = emission_tex, .color = {0, 0, 0}});
-}
-int add_matte_material(scene_data& scene, const string& name,
-    const vec3f& color, int color_tex, int normal_tex) {
-  return add_material(scene, name,
-      {.color = {0, 0, 0}, .color_tex = color_tex, .normal_tex = normal_tex});
-}
-int add_glossy_material(scene_data& scene, const string& name,
-    const vec3f& color, float roughness, int color_tex, int roughness_tex,
-    int normal_tex) {
-  return add_material(scene, name,
-      {.type             = material_type::glossy,
-          .color         = {0, 0, 0},
-          .roughness     = roughness,
-          .color_tex     = color_tex,
-          .roughness_tex = roughness_tex,
-          .normal_tex    = normal_tex});
-}
-int add_reflective_material(scene_data& scene, const string& name,
-    const vec3f& color, float roughness, int color_tex, int roughness_tex,
-    int normal_tex) {
-  return add_material(scene, name,
-      {.type             = material_type::reflective,
-          .color         = {0, 0, 0},
-          .roughness     = roughness,
-          .color_tex     = color_tex,
-          .roughness_tex = roughness_tex,
-          .normal_tex    = normal_tex});
-}
-int add_transparent_material(scene_data& scene, const string& name,
-    const vec3f& color, float roughness, int color_tex, int roughness_tex,
-    int normal_tex) {
-  return add_material(scene, name,
-      {.type             = material_type::transparent,
-          .color         = {0, 0, 0},
-          .roughness     = roughness,
-          .color_tex     = color_tex,
-          .roughness_tex = roughness_tex,
-          .normal_tex    = normal_tex});
-}
-int add_refractive_material(scene_data& scene, const string& name,
-    const vec3f& color, float roughness, const vec3f& scattering, int color_tex,
-    int roughness_tex, int normal_tex, float ior, float scanisotropy,
-    float trdepth) {
-  return add_material(scene, name,
-      {.type             = material_type::refractive,
-          .color         = {0, 0, 0},
-          .roughness     = roughness,
-          .ior           = ior,
-          .scattering    = scattering,
-          .scanisotropy  = scanisotropy,
-          .trdepth       = trdepth,
-          .color_tex     = color_tex,
-          .roughness_tex = roughness_tex,
-          .normal_tex    = normal_tex});
-}
-int add_volumetric_material(scene_data& scene, const string& name,
-    const vec3f& color, const vec3f& scattering, float scanisotropy,
-    float trdepth) {
-  return add_material(scene, name,
-      {.type            = material_type::volumetric,
-          .color        = {0, 0, 0},
-          .scattering   = scattering,
-          .scanisotropy = scanisotropy,
-          .trdepth      = trdepth});
-}
-
 // Add an instance
 int add_instance(
     scene_data& scene, const string& name, const instance_data& instance) {
@@ -688,19 +721,6 @@ int add_instance(
   scene.instances.push_back(instance);
   return (int)scene.instances.size() - 1;
 }
-int add_instance(scene_data& scene, const string& name, const frame3f& frame,
-    int shape, int material) {
-  return add_instance(
-      scene, name, {.frame = frame, .shape = shape, .material = material});
-}
-int add_instance(scene_data& scene, const string& name, const frame3f& frame,
-    const shape_data& shape, const material_data& material) {
-  return add_instance(scene, name,
-      {.frame       = frame,
-          .shape    = add_shape(scene, name, shape),
-          .material = add_material(scene, name, material)});
-}
-
 // Add an environment
 int add_environment(scene_data& scene, const string& name,
     const environment_data& environment) {
@@ -708,19 +728,6 @@ int add_environment(scene_data& scene, const string& name,
   scene.environments.push_back(environment);
   return (int)scene.environments.size() - 1;
 }
-int add_environment(scene_data& scene, const string& name, const frame3f& frame,
-    const vec3f& emission, int emission_tex) {
-  return add_environment(scene, name,
-      {.frame = frame, .emission = emission, .emission_tex = emission_tex});
-}
-int add_environment(scene_data& scene, const string& name, const frame3f& frame,
-    const vec3f& emission, const array2d<vec4f>& emission_tex) {
-  return add_environment(scene, name,
-      {.frame           = frame,
-          .emission     = emission,
-          .emission_tex = add_texture(scene, name, emission_tex)});
-}
-
 // Add a subdiv
 int add_subdiv(
     scene_data& scene, const string& name, const subdiv_data& subdiv) {
@@ -728,30 +735,149 @@ int add_subdiv(
   scene.subdivs.push_back(subdiv);
   return (int)scene.subdivs.size() - 1;
 }
+
+// Add a camera
+int add_camera(scene_data& scene, const string& name, const frame3f& frame,
+    float lens, float aspect, float aperture, float focus) {
+  return add_camera(
+      scene, name, make_camera(frame, lens, aspect, aperture, focus));
+}
+int add_camera(scene_data& scene, const string& name, const vec3f& from,
+    const vec3f& to, const vec3f& up, float lens, float aspect,
+    float aperture) {
+  return add_camera(
+      scene, name, make_camera(from, to, up, lens, aspect, aperture));
+}
+
+// Add a texture
+int add_texture(scene_data& scene, const string& name,
+    const array2d<vec4f>& image, bool as_float, bool srgb) {
+  return add_texture(scene, name, make_texture(image, as_float, srgb));
+}
+
+// Add a material
+int add_emission_material(scene_data& scene, const string& name,
+    const vec3f& emission, int emission_tex, int normal_tex) {
+  return add_material(
+      scene, name, make_emission_material(emission, emission_tex, normal_tex));
+}
+int add_matte_material(scene_data& scene, const string& name,
+    const vec3f& color, int color_tex, int normal_tex) {
+  return add_material(
+      scene, name, make_matte_material(color, color_tex, normal_tex));
+}
+int add_glossy_material(scene_data& scene, const string& name,
+    const vec3f& color, float roughness, int color_tex, int roughness_tex,
+    int normal_tex) {
+  return add_material(scene, name,
+      make_glossy_material(
+          color, roughness, color_tex, roughness_tex, normal_tex));
+}
+int add_reflective_material(scene_data& scene, const string& name,
+    const vec3f& color, float roughness, int color_tex, int roughness_tex,
+    int normal_tex) {
+  return add_material(scene, name,
+      make_reflective_material(
+          color, roughness, color_tex, roughness_tex, normal_tex));
+}
+int add_transparent_material(scene_data& scene, const string& name,
+    const vec3f& color, float roughness, int color_tex, int roughness_tex,
+    int normal_tex) {
+  return add_material(scene, name,
+      make_transparent_material(
+          color, roughness, color_tex, roughness_tex, normal_tex));
+}
+int add_refractive_material(scene_data& scene, const string& name,
+    const vec3f& color, float roughness, int color_tex, int roughness_tex,
+    int normal_tex, float ior) {
+  return add_material(scene, name,
+      make_refractive_material(
+          color, roughness, color_tex, roughness_tex, normal_tex, ior));
+}
+int add_scattering_material(scene_data& scene, const string& name,
+    const vec3f& color, const vec3f& scattering, float roughness, int color_tex,
+    int scattering_tex, int roughness_tex, int normal_tex, float ior,
+    float scanisotropy, float trdepth) {
+  return add_material(scene, name,
+      make_scattering_material(color, scattering, roughness, color_tex,
+          scattering_tex, roughness_tex, normal_tex, ior, scanisotropy,
+          trdepth));
+}
+int add_volumetric_material(scene_data& scene, const string& name,
+    const vec3f& color, const vec3f& scattering, float scanisotropy,
+    float trdepth) {
+  return add_material(scene, name,
+      make_volumetric_material(color, scattering, scanisotropy, trdepth));
+}
+
+// Add an instance
+int add_instance(scene_data& scene, const string& name, const frame3f& frame,
+    int shape, int material) {
+  return add_instance(scene, name, make_instance(frame, shape, material));
+}
+int add_instance(scene_data& scene, const string& name, const frame3f& frame,
+    const shape_data& shape, const material_data& material) {
+  return add_instance(scene, name,
+      make_instance(frame, add_shape(scene, name, shape),
+          add_material(scene, name, material)));
+}
+int add_instance(scene_data& scene, const string& name, const frame3f& frame,
+    const shape_data& shape, const material_data& material,
+    const array2d<vec4f>& color_tex, const array2d<vec4f>& roughness_tex,
+    const array2d<vec4f>& normal_tex) {
+  auto material_ = material;
+  if (!color_tex.empty())
+    material_.color_tex = add_texture(scene, name + "_diffuse", color_tex);
+  if (!roughness_tex.empty())
+    material_.roughness_tex = add_texture(
+        scene, name + "_roughness", roughness_tex);
+  if (!normal_tex.empty())
+    material_.roughness_tex = add_texture(scene, name + "_normal", normal_tex);
+  return add_instance(scene, name,
+      make_instance(frame, add_shape(scene, name, shape),
+          add_material(scene, name, material_)));
+}
+int add_instance(scene_data& scene, const string& name, const frame3f& frame,
+    const shape_data& shape, const material_data& material,
+    const texture_data& color_tex, const texture_data& roughness_tex,
+    const texture_data& normal_tex) {
+  auto material_ = material;
+  if (!color_tex.pixelsf.empty() || !color_tex.pixelsb.empty())
+    material_.color_tex = add_texture(scene, name + "_diffuse", color_tex);
+  if (!roughness_tex.pixelsf.empty() || !roughness_tex.pixelsb.empty())
+    material_.roughness_tex = add_texture(
+        scene, name + "_roughness", roughness_tex);
+  if (!normal_tex.pixelsf.empty() || !normal_tex.pixelsb.empty())
+    material_.roughness_tex = add_texture(scene, name + "_normal", normal_tex);
+  return add_instance(scene, name,
+      make_instance(frame, add_shape(scene, name, shape),
+          add_material(scene, name, material_)));
+}
+
+// Add an environment
+int add_environment(scene_data& scene, const string& name, const frame3f& frame,
+    const vec3f& emission, int emission_tex) {
+  return add_environment(
+      scene, name, make_environment(frame, emission, emission_tex));
+}
+int add_environment(scene_data& scene, const string& name, const frame3f& frame,
+    const vec3f& emission, const array2d<vec4f>& emission_tex) {
+  return add_environment(scene, name,
+      make_environment(frame, emission,
+          add_texture(scene, name, emission_tex, true, false)));
+}
+
+// Add a subdiv
 int add_subdiv(scene_data& scene, const string& name, const shape_data& subdiv,
     int shape, int subdivisions, float displacement, int displacement_tex) {
   return add_subdiv(scene, name,
-      {.quadspos            = subdiv.quads,
-          .positions        = subdiv.positions,
-          .shape            = shape,
-          .subdivisions     = subdivisions,
-          .displacement     = displacement,
-          .displacement_tex = displacement_tex});
+      make_subdiv(subdiv, shape, subdivisions, displacement, displacement_tex));
 }
 int add_subdiv(scene_data& scene, const string& name,
     const fvshape_data& subdiv, int shape, int subdivisions, float displacement,
     int displacement_tex) {
   return add_subdiv(scene, name,
-      {.quadspos            = subdiv.quadspos,
-          .quadsnorm        = subdiv.quadsnorm,
-          .quadstexcoord    = subdiv.quadstexcoord,
-          .positions        = subdiv.positions,
-          .normals          = subdiv.normals,
-          .texcoords        = subdiv.texcoords,
-          .shape            = shape,
-          .subdivisions     = subdivisions,
-          .displacement     = displacement,
-          .displacement_tex = displacement_tex});
+      make_subdiv(subdiv, shape, subdivisions, displacement, displacement_tex));
 }
 
 }  // namespace yocto
@@ -1113,7 +1239,7 @@ namespace yocto {
 scene_data make_cornellbox() {
   auto scene = scene_data{};
 
-  add_camera(scene, "camera", {0, 1, 3.75f}, {0, 1, 0}, 0.050f, 1);
+  add_camera(scene, "camera", {0, 1, 3.75f}, {0, 1, 0}, {0, 1, 0}, 0.050f, 1);
 
   add_instance(scene, "floor", identity3x4f,
       {.positions    = {{-1, 0, 1}, {1, 0, 1}, {1, 0, -1}, {-1, 0, -1}},
