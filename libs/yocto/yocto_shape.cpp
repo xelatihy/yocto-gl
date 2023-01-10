@@ -1154,7 +1154,7 @@ shape_data make_cube(int steps, float scale, float uvscale) {
         {uvscale, uvscale, uvscale});
   }
 }
-shape_data make_geosphere(float scale, int subdivisions) {
+shape_data make_geosphere(int subdivisions, float scale) {
   // https://stackoverflow.com/questions/17705621/algorithm-for-a-geodesic-sphere
   const float X                   = 0.525731112119133606f;
   const float Z                   = 0.850650808352039932f;
@@ -1208,12 +1208,20 @@ shape_data make_opcube(int steps, float scale) {
     return make_opbox({steps, steps, steps}, {scale, scale, scale});
   }
 }
-shape_data make_monkey(float scale) {
+shape_data make_monkey(int subdivisions, float scale) {
   extern vector<vec3f> suzanne_positions;
   extern vector<vec4i> suzanne_quads;
 
-  return scale_shape(
-      {.quads = suzanne_quads, .positions = suzanne_positions}, scale);
+  if (subdivisions == 0) {
+    return scale_shape(
+        {.quads = suzanne_quads, .positions = suzanne_positions}, scale);
+  } else {
+    auto [squads, spositions] = subdivide_catmullclark(
+        suzanne_quads, suzanne_positions, subdivisions);
+    auto snormals = quads_normals(squads, spositions);
+    return scale_shape(
+        {.quads = squads, .positions = spositions, .normals = snormals}, scale);
+  }
 }
 
 // Make a face-varying quad

@@ -347,15 +347,62 @@ int add_camera(scene_data& scene, const string& name, const vec3f& from,
 // Add a shape
 int add_shape(scene_data& scene, const string& name, const shape_data& shape);
 
+// Add a texture
+int add_texture(
+    scene_data& scene, const string& name, const texture_data& texture);
+int add_texture(
+    scene_data& scene, const string& name, const array2d<vec4f>& imagef);
+int add_texture(
+    scene_data& scene, const string& name, const array2d<vec4b>& imageb);
+
 // Add a material
 int add_material(
     scene_data& scene, const string& name, const material_data& material);
+int add_emission_material(scene_data& scene, const string& name,
+    const vec3f& emission, int emission_tex = invalidid);
+int add_matte_material(scene_data& scene, const string& name,
+    const vec3f& color, int color_tex = invalidid, int normal_tex = invalidid);
+int add_glossy_material(scene_data& scene, const string& name,
+    const vec3f& color, float roughness = 0.01f, int color_tex = invalidid,
+    int roughness_tex = invalidid, int normal_tex = invalidid);
+int add_reflective_material(scene_data& scene, const string& name,
+    const vec3f& color, float roughness = 0, int color_tex = invalidid,
+    int roughness_tex = invalidid, int normal_tex = invalidid);
+int add_transparent_material(scene_data& scene, const string& name,
+    const vec3f& color, float roughness = 0, int color_tex = invalidid,
+    int roughness_tex = invalidid, int normal_tex = invalidid);
+int add_refractive_material(scene_data& scene, const string& name,
+    const vec3f& color, float roughness = 0,
+    const vec3f& scattering = {0, 0, 0}, int color_tex = invalidid,
+    int roughness_tex = invalidid, int normal_tex = invalidid, float ior = 1.5f,
+    float scanisotropy = 0, float trdepth = 0);
+int add_volumetric_material(scene_data& scene, const string& name,
+    const vec3f& color, const vec3f& scattering = {0, 0, 0},
+    float scanisotropy = 0, float trdepth = 0);
 
 // Add an instance
 int add_instance(scene_data& scene, const string& name, const frame3f& frame,
     int shape, int material);
 int add_instance(scene_data& scene, const string& name, const frame3f& frame,
     const shape_data& shape, const material_data& material);
+
+// Add an environment
+int add_environment(
+    scene_data& scene, const string& name, const environment_data& environment);
+int add_environment(scene_data& scene, const string& name, const frame3f& frame,
+    const vec3f& emission, int emission_tex = invalidid);
+int add_environment(scene_data& scene, const string& name, const frame3f& frame,
+    const vec3f& emission, const array2d<vec4f>& emission_tex);
+
+// Add a subdiv
+int add_subdiv(
+    scene_data& scene, const string& name, const subdiv_data& subdiv);
+int add_subdiv(scene_data& scene, const string& name, const shape_data& subdiv,
+    int shape, int subdivisions = 0, float displacement = 0,
+    int displacement_tex = invalidid);
+int add_subdiv(scene_data& scene, const string& name,
+    const fvshape_data& subdiv, int shape, int subdivisions = 0,
+    float displacement = 0, int displacement_tex = invalidid);
 
 }  // namespace yocto
 

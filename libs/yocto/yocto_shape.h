@@ -294,9 +294,9 @@ shape_data make_rounded_uvcylinder(const vec3i& steps = {32, 32, 32},
     const vec3f& uvscale = {1, 1, 1});
 
 // Make a geosphere
-shape_data make_geosphere(float scale = 1, int subdivisions = 3);
+shape_data make_geosphere(int subdivisions = 3, float scale = 1);
 // Make a monkey
-shape_data make_monkey(float scale = 1);
+shape_data make_monkey(int subdivisions = 0, float scale = 1);
 
 // Make a face-varying quad
 fvshape_data make_fvquad(int steps = 1, float scale = 1, float uvscale = 1);

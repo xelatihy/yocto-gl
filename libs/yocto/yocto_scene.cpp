@@ -588,12 +588,97 @@ int add_shape(scene_data& scene, const string& name, const shape_data& shape) {
   return (int)scene.shapes.size() - 1;
 }
 
+// Add a texture
+int add_texture(
+    scene_data& scene, const string& name, const texture_data& texture) {
+  scene.texture_names.push_back(name);
+  scene.textures.push_back(texture);
+  return (int)scene.textures.size() - 1;
+}
+int add_texture(
+    scene_data& scene, const string& name, const array2d<vec4f>& imagef) {
+  return add_texture(scene, name, {.pixelsf = imagef});
+}
+int add_texture(
+    scene_data& scene, const string& name, const array2d<vec4b>& imageb) {
+  return add_texture(scene, name, {.pixelsb = imageb});
+}
+
 // Add a material
 int add_material(
     scene_data& scene, const string& name, const material_data& material) {
   scene.material_names.push_back(name);
   scene.materials.push_back(material);
   return (int)scene.materials.size() - 1;
+}
+int add_emission_material(scene_data& scene, const string& name,
+    const vec3f& emission, int emission_tex) {
+  return add_material(scene, name,
+      {.emission = emission, .emission_tex = emission_tex, .color = {0, 0, 0}});
+}
+int add_matte_material(scene_data& scene, const string& name,
+    const vec3f& color, int color_tex, int normal_tex) {
+  return add_material(scene, name,
+      {.color = {0, 0, 0}, .color_tex = color_tex, .normal_tex = normal_tex});
+}
+int add_glossy_material(scene_data& scene, const string& name,
+    const vec3f& color, float roughness, int color_tex, int roughness_tex,
+    int normal_tex) {
+  return add_material(scene, name,
+      {.type             = material_type::glossy,
+          .color         = {0, 0, 0},
+          .roughness     = roughness,
+          .color_tex     = color_tex,
+          .roughness_tex = roughness_tex,
+          .normal_tex    = normal_tex});
+}
+int add_reflective_material(scene_data& scene, const string& name,
+    const vec3f& color, float roughness, int color_tex, int roughness_tex,
+    int normal_tex) {
+  return add_material(scene, name,
+      {.type             = material_type::reflective,
+          .color         = {0, 0, 0},
+          .roughness     = roughness,
+          .color_tex     = color_tex,
+          .roughness_tex = roughness_tex,
+          .normal_tex    = normal_tex});
+}
+int add_transparent_material(scene_data& scene, const string& name,
+    const vec3f& color, float roughness, int color_tex, int roughness_tex,
+    int normal_tex) {
+  return add_material(scene, name,
+      {.type             = material_type::transparent,
+          .color         = {0, 0, 0},
+          .roughness     = roughness,
+          .color_tex     = color_tex,
+          .roughness_tex = roughness_tex,
+          .normal_tex    = normal_tex});
+}
+int add_refractive_material(scene_data& scene, const string& name,
+    const vec3f& color, float roughness, const vec3f& scattering, int color_tex,
+    int roughness_tex, int normal_tex, float ior, float scanisotropy,
+    float trdepth) {
+  return add_material(scene, name,
+      {.type             = material_type::refractive,
+          .color         = {0, 0, 0},
+          .roughness     = roughness,
+          .ior           = ior,
+          .scattering    = scattering,
+          .scanisotropy  = scanisotropy,
+          .trdepth       = trdepth,
+          .color_tex     = color_tex,
+          .roughness_tex = roughness_tex,
+          .normal_tex    = normal_tex});
+}
+int add_volumetric_material(scene_data& scene, const string& name,
+    const vec3f& color, const vec3f& scattering, float scanisotropy,
+    float trdepth) {
+  return add_material(scene, name,
+      {.type            = material_type::volumetric,
+          .color        = {0, 0, 0},
+          .scattering   = scattering,
+          .scanisotropy = scanisotropy,
+          .trdepth      = trdepth});
 }
 
 // Add an instance
@@ -614,6 +699,59 @@ int add_instance(scene_data& scene, const string& name, const frame3f& frame,
       {.frame       = frame,
           .shape    = add_shape(scene, name, shape),
           .material = add_material(scene, name, material)});
+}
+
+// Add an environment
+int add_environment(scene_data& scene, const string& name,
+    const environment_data& environment) {
+  scene.environment_names.push_back(name);
+  scene.environments.push_back(environment);
+  return (int)scene.environments.size() - 1;
+}
+int add_environment(scene_data& scene, const string& name, const frame3f& frame,
+    const vec3f& emission, int emission_tex) {
+  return add_environment(scene, name,
+      {.frame = frame, .emission = emission, .emission_tex = emission_tex});
+}
+int add_environment(scene_data& scene, const string& name, const frame3f& frame,
+    const vec3f& emission, const array2d<vec4f>& emission_tex) {
+  return add_environment(scene, name,
+      {.frame           = frame,
+          .emission     = emission,
+          .emission_tex = add_texture(scene, name, emission_tex)});
+}
+
+// Add a subdiv
+int add_subdiv(
+    scene_data& scene, const string& name, const subdiv_data& subdiv) {
+  scene.subdiv_names.push_back(name);
+  scene.subdivs.push_back(subdiv);
+  return (int)scene.subdivs.size() - 1;
+}
+int add_subdiv(scene_data& scene, const string& name, const shape_data& subdiv,
+    int shape, int subdivisions, float displacement, int displacement_tex) {
+  return add_subdiv(scene, name,
+      {.quadspos            = subdiv.quads,
+          .positions        = subdiv.positions,
+          .shape            = shape,
+          .subdivisions     = subdivisions,
+          .displacement     = displacement,
+          .displacement_tex = displacement_tex});
+}
+int add_subdiv(scene_data& scene, const string& name,
+    const fvshape_data& subdiv, int shape, int subdivisions, float displacement,
+    int displacement_tex) {
+  return add_subdiv(scene, name,
+      {.quadspos            = subdiv.quadspos,
+          .quadsnorm        = subdiv.quadsnorm,
+          .quadstexcoord    = subdiv.quadstexcoord,
+          .positions        = subdiv.positions,
+          .normals          = subdiv.normals,
+          .texcoords        = subdiv.texcoords,
+          .shape            = shape,
+          .subdivisions     = subdivisions,
+          .displacement     = displacement,
+          .displacement_tex = displacement_tex});
 }
 
 }  // namespace yocto
