@@ -311,9 +311,9 @@ inline array2d<T> _make_proc_image(const vec2s& extents, Func&& func) {
 
 // Make an image
 template <typename T = float>
-inline array2d<vec<T, 4>> make_grid(const vec2s& extents, T scale = 1,
-    const vec<T, 4>& color0 = {0.5, 0.5, 0.5, 1.0},
-    const vec<T, 4>& color1 = {0.5, 0.5, 0.7, 1.0}) {
+inline array2d<vec<T, 4>> make_grid(const vec2s& extents = {1024, 1024},
+    T scale = 1, const vec<T, 4>& color0 = {0.5, 0.5, 0.5, 1.0},
+    const vec<T, 4>& color1 = {0.7, 0.7, 0.7, 1.0}) {
   return _make_proc_image(extents, [=](vec2s ij) -> vec<T, 4> {
     auto uv    = fmod((4 * scale * ij) / extents, 1);
     auto thick = (T)0.01 / 2;
@@ -326,8 +326,8 @@ inline array2d<vec<T, 4>> make_grid(const vec2s& extents, T scale = 1,
 }
 
 template <typename T = float>
-inline array2d<vec<T, 4>> make_checker(const vec2s& extents, T scale = 1,
-    const vec<T, 4>& color0 = {0.5, 0.5, 0.6, 1.0},
+inline array2d<vec<T, 4>> make_checker(const vec2s& extents = {1024, 1024},
+    T scale = 1, const vec<T, 4>& color0 = {0.5, 0.5, 0.6, 1.0},
     const vec<T, 4>& color1 = {0.7, 0.7, 0.7, 1.0}) {
   return _make_proc_image(extents, [=](vec2s ij) -> vec<T, 4> {
     auto uv = fmod((4 * scale * ij) / extents, 1);
@@ -337,8 +337,8 @@ inline array2d<vec<T, 4>> make_checker(const vec2s& extents, T scale = 1,
 }
 
 template <typename T = float>
-inline array2d<vec<T, 4>> make_bumps(const vec2s& extents, T scale = 1,
-    const vec<T, 4>& color0 = {0, 0, 0, 1},
+inline array2d<vec<T, 4>> make_bumps(const vec2s& extents = {1024, 1024},
+    T scale = 1, const vec<T, 4>& color0 = {0, 0, 0, 1},
     const vec<T, 4>& color1 = {1, 1, 1, 1}) {
   return _make_proc_image(extents, [=](vec2s ij) -> vec<T, 4> {
     auto uv     = fmod((4 * scale * ij) / extents, 1);
@@ -355,8 +355,8 @@ inline array2d<vec<T, 4>> make_bumps(const vec2s& extents, T scale = 1,
 }
 
 template <typename T = float>
-inline array2d<vec<T, 4>> make_ramp(const vec2s& extents, T scale = 1,
-    const vec<T, 4>& color0 = {0, 0, 0, 1},
+inline array2d<vec<T, 4>> make_ramp(const vec2s& extents = {1024, 1024},
+    T scale = 1, const vec<T, 4>& color0 = {0, 0, 0, 1},
     const vec<T, 4>& color1 = {1, 1, 1, 1}) {
   return _make_proc_image(extents, [=](vec2s ij) -> vec<T, 4> {
     auto uv = fmod((scale * ij) / extents, 1);
@@ -365,8 +365,8 @@ inline array2d<vec<T, 4>> make_ramp(const vec2s& extents, T scale = 1,
 }
 
 template <typename T = float>
-inline array2d<vec<T, 4>> make_gammaramp(const vec2s& extents, T scale = 1,
-    const vec<T, 4>& color0 = {0, 0, 0, 1},
+inline array2d<vec<T, 4>> make_gammaramp(const vec2s& extents = {1024, 1024},
+    T scale = 1, const vec<T, 4>& color0 = {0, 0, 0, 1},
     const vec<T, 4>& color1 = {1, 1, 1, 1}) {
   return _make_proc_image(extents, [=](vec2s ij) -> vec<T, 4> {
     auto uv    = fmod((scale * ij) / extents, 1);
@@ -430,7 +430,8 @@ inline array2d<vec<T, 4>> make_uvgrid(
 }
 
 template <typename T = float>
-inline array2d<vec<T, 4>> make_colormapramp(const vec2s& extents, T scale = 1) {
+inline array2d<vec<T, 4>> make_colormapramp(
+    const vec2s& extents = {1024, 1024}, T scale = 1) {
   return _make_proc_image(extents, [=](vec2s ij) -> vec<T, 4> {
     auto uv  = fmod((scale * ij) / extents, 1);
     auto rgb = vec<T, 3>{0, 0, 0};
@@ -448,8 +449,8 @@ inline array2d<vec<T, 4>> make_colormapramp(const vec2s& extents, T scale = 1) {
 }
 
 template <typename T = float>
-inline array2d<vec<T, 4>> make_gnoisemap(const vec2s& extents, T scale = 1,
-    const vec<T, 4>& color0 = {0, 0, 0, 1},
+inline array2d<vec<T, 4>> make_gnoisemap(const vec2s& extents = {1024, 1024},
+    T scale = 1, const vec<T, 4>& color0 = {0, 0, 0, 1},
     const vec<T, 4>& color1 = {1, 1, 1, 1}) {
   return _make_proc_image(extents, [=](vec2s ij) -> vec<T, 4> {
     auto uv    = (8 * scale * ij) / extents;
@@ -459,8 +460,8 @@ inline array2d<vec<T, 4>> make_gnoisemap(const vec2s& extents, T scale = 1,
 }
 
 template <typename T = float>
-inline array2d<vec<T, 4>> make_vnoisemap(const vec2s& extents, T scale = 1,
-    const vec<T, 4>& color0 = {0, 0, 0, 1},
+inline array2d<vec<T, 4>> make_vnoisemap(const vec2s& extents = {1024, 1024},
+    T scale = 1, const vec<T, 4>& color0 = {0, 0, 0, 1},
     const vec<T, 4>& color1 = {1, 1, 1, 1}) {
   return _make_proc_image(extents, [=](vec2s ij) -> vec<T, 4> {
     auto uv    = (8 * scale * ij) / extents;
@@ -470,8 +471,8 @@ inline array2d<vec<T, 4>> make_vnoisemap(const vec2s& extents, T scale = 1,
 }
 
 template <typename T = float>
-inline array2d<vec<T, 4>> make_fnoisemap(const vec2s& extents, T scale = 1,
-    const vec<T, 4>& color0 = {0, 0, 0, 1},
+inline array2d<vec<T, 4>> make_fnoisemap(const vec2s& extents = {1024, 1024},
+    T scale = 1, const vec<T, 4>& color0 = {0, 0, 0, 1},
     const vec<T, 4>& color1 = {1, 1, 1, 1}) {
   return _make_proc_image(extents, [=](vec2s ij) -> vec<T, 4> {
     auto uv    = (8 * scale * ij) / extents;
@@ -481,8 +482,8 @@ inline array2d<vec<T, 4>> make_fnoisemap(const vec2s& extents, T scale = 1,
 }
 
 template <typename T = float>
-inline array2d<vec<T, 4>> make_tnoisemap(const vec2s& extents, T scale = 1,
-    const vec<T, 4>& color0 = {0, 0, 0, 1},
+inline array2d<vec<T, 4>> make_tnoisemap(const vec2s& extents = {1024, 1024},
+    T scale = 1, const vec<T, 4>& color0 = {0, 0, 0, 1},
     const vec<T, 4>& color1 = {1, 1, 1, 1}) {
   return _make_proc_image(extents, [=](vec2s ij) -> vec<T, 4> {
     auto uv    = (8 * scale * ij) / extents;
@@ -492,8 +493,8 @@ inline array2d<vec<T, 4>> make_tnoisemap(const vec2s& extents, T scale = 1,
 }
 
 template <typename T = float>
-inline array2d<vec<T, 4>> make_rnoisemap(const vec2s& extents, T scale = 1,
-    const vec<T, 4>& color0 = {0, 0, 0, 1},
+inline array2d<vec<T, 4>> make_rnoisemap(const vec2s& extents = {1024, 1024},
+    T scale = 1, const vec<T, 4>& color0 = {0, 0, 0, 1},
     const vec<T, 4>& color1 = {1, 1, 1, 1}) {
   return _make_proc_image(extents, [=](vec2s ij) -> vec<T, 4> {
     auto uv    = (8 * scale * ij) / extents;
@@ -549,10 +550,10 @@ inline array2d<vec<T, 4>> bump_to_normal(
 
 // Implementation of sunsky modified heavily from pbrt
 template <typename T = float>
-inline array2d<vec<T, 4>> make_sunsky(const vec2s& extents, float theta_sun,
-    T turbidity = 3, bool has_sun = false, T sun_intensity = 1,
-    T                sun_radius    = 1,
-    const vec<T, 3>& ground_albedo = vec<T, 3>{0.2, 0.2, 0.2}) {
+inline array2d<vec<T, 4>> make_sunsky(const vec2s& extents = {2048, 1024},
+    T theta_sun = (T)pi / 4, T turbidity = 3, bool has_sun = false,
+    T sun_intensity = 1, T sun_radius = 1,
+    const vec<T, 3>& ground_albedo = vec<T, 3>{0.7, 0.7, 0.7}) {
   auto zenith_xyY = vec<T, 3>{
       ((T)0.00165 * pow(theta_sun, 3) - (T)0.00374 * pow(theta_sun, 2) +
           (T)0.00208 * theta_sun + (T)0.00000) *
@@ -636,9 +637,9 @@ inline array2d<vec<T, 4>> make_sunsky(const vec2s& extents, float theta_sun,
 
   // sun scale from Wikipedia scaled by user quantity and rescaled to at
   // the minimum 5 pixel diameter
-  auto sun_angular_radius = 9.35e-03f / 2;  // Wikipedia
+  auto sun_angular_radius = (T)9.35e-03 / 2;  // Wikipedia
   sun_angular_radius *= sun_radius;
-  sun_angular_radius = max(sun_angular_radius, 2 * pif / extents.y);
+  sun_angular_radius = max(sun_angular_radius, 2 * (T)pi / extents.y);
 
   // sun direction
   auto sun_direction = vec3f{0, cos(theta_sun), sin(theta_sun)};
@@ -651,11 +652,12 @@ inline array2d<vec<T, 4>> make_sunsky(const vec2s& extents, float theta_sun,
   // Make the sun sky image
   auto img = array2d<vec<T, 4>>(extents);
   for (auto j : range(extents.y / 2)) {
-    auto theta = pif * ((j + 0.5f) / extents.y);
-    theta      = clamp(theta, 0.0f, (T)pi / 2 - flt_eps);
+    auto theta = pif * (T(j + 0.5) / extents.y);
+    theta      = clamp(theta, 0, (T)pi / 2 - flt_eps);
     for (auto i : range(extents.x)) {
       auto phi = 2 * (T)pi * (T(i + 0.5) / extents.x);
-      auto w = vec3f{cos(phi) * sin(theta), cos(theta), sin(phi) * sin(theta)};
+      auto w   = vec<T, 3>{
+          cos(phi) * sin(theta), cos(theta), sin(phi) * sin(theta)};
       auto gamma   = acos(clamp(dot(w, sun_direction), -1, 1));
       auto sky_col = sky(theta, gamma, theta_sun);
       auto sun_col = sun(theta, gamma);
@@ -687,13 +689,17 @@ inline array2d<vec<T, 4>> make_sunsky(const vec2s& extents, float theta_sun,
     }
   }
 
+  // Something seems to be wrong in the implementation. We scale down the
+  // default by a factor.
+  for (auto& pixel : img) pixel = {xyz(pixel) / 4, 1};
+
   // done
   return img;
 }
 
 // Make an image of multiple lights.
 template <typename T = float>
-inline array2d<vec<T, 4>> make_lights(const vec2s& extents,
+inline array2d<vec<T, 4>> make_lights(const vec2s& extents = {2048, 1024},
     const vec<T, 3>& le = {1, 1, 1}, int nlights = 4, T langle = pif / 4,
     T lwidth = (T)pi / 16, T lheight = (T)pi / 16) {
   auto img = array2d<vec<T, 4>>(extents);
