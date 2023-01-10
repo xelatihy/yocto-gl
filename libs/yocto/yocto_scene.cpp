@@ -826,13 +826,19 @@ int add_instance(scene_data& scene, const string& name, const frame3f& frame,
     const array2d<vec4f>& color_tex, const array2d<vec4f>& roughness_tex,
     const array2d<vec4f>& normal_tex) {
   auto material_ = material;
-  if (!color_tex.empty())
+  if (!color_tex.empty()) {
+    material_.color     = {1, 1, 1};
     material_.color_tex = add_texture(scene, name + "_diffuse", color_tex);
-  if (!roughness_tex.empty())
+  }
+  if (!roughness_tex.empty()) {
+    material_.roughness     = 1;
+    material_.metallic      = 1;
     material_.roughness_tex = add_texture(
         scene, name + "_roughness", roughness_tex);
-  if (!normal_tex.empty())
-    material_.roughness_tex = add_texture(scene, name + "_normal", normal_tex);
+  }
+  if (!normal_tex.empty()) {
+    material_.normal_tex = add_texture(scene, name + "_normal", normal_tex);
+  }
   return add_instance(scene, name,
       make_instance(frame, add_shape(scene, name, shape),
           add_material(scene, name, material_)));
