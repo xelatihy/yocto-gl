@@ -366,10 +366,10 @@ material_data make_scattering_material(const vec3f& color = {1, 1, 1},
     const vec3f& scattering = {0, 0, 0}, float roughness = 0,
     int color_tex = invalidid, int scattering_tex = invalidid,
     int roughness_tex = invalidid, int normal_tex = invalidid, float ior = 1.5f,
-    float scanisotropy = 0, float trdepth = 0);
+    float scanisotropy = 0, float trdepth = 0.1f);
 material_data make_volumetric_material(const vec3f& color = {1, 1, 1},
     const vec3f& scattering = {0, 0, 0}, float scanisotropy = 0,
-    float trdepth = 0);
+    float trdepth = 0.1f);
 
 // Make an instance
 instance_data make_instance(const frame3f& frame, int shape, int material);
