@@ -1964,10 +1964,7 @@ scene_data make_scene_preset(const string& type_) {
   } else if (type == "features1") {
     return make_features1_scene();
   } else if (type == "features2") {
-    return make_test({test_cameras_type::standard, test_environments_type::sky,
-        test_arealights_type::standard, test_floor_type::standard,
-        test_shapes_type::features2, test_materials_type::features2,
-        test_instance_name_type::shape});
+    return make_features2_scene();
   } else if (type == "materials1") {
     return make_test({test_cameras_type::wide, test_environments_type::sky,
         test_arealights_type::large, test_floor_type::standard,
