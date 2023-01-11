@@ -666,11 +666,16 @@ environment_data make_environment(
 // Make a subdiv
 subdiv_data make_subdiv(const shape_data& subdiv, int shape, int subdivisions,
     float displacement, int displacement_tex) {
-  return {.quadspos     = subdiv.quads,
-      .positions        = subdiv.positions,
-      .shape            = shape,
-      .subdivisions     = subdivisions,
-      .displacement     = displacement,
+  return {.quadspos  = subdiv.quads,
+      .quadsnorm     = subdiv.normals.empty() ? vector<vec4i>{} : subdiv.quads,
+      .quadstexcoord = subdiv.texcoords.empty() ? vector<vec4i>{}
+                                                : subdiv.quads,
+      .positions     = subdiv.positions,
+      .normals       = subdiv.normals,
+      .texcoords     = subdiv.texcoords,
+      .shape         = shape,
+      .subdivisions  = subdivisions,
+      .displacement  = displacement,
       .displacement_tex = displacement_tex};
 }
 subdiv_data make_subdiv(const fvshape_data& subdiv, int shape, int subdivisions,
@@ -884,6 +889,28 @@ int add_subdiv(scene_data& scene, const string& name,
     int displacement_tex) {
   return add_subdiv(scene, name,
       make_subdiv(subdiv, shape, subdivisions, displacement, displacement_tex));
+}
+int add_subdiv(scene_data& scene, const string& name, const shape_data& subdiv,
+    int shape, int subdivisions, float displacement,
+    const array2d<vec4f>& displacement_tex) {
+  auto displacement_tex_ =
+      displacement_tex.empty()
+          ? invalidid
+          : add_texture(scene, name + "_displacement.png", displacement_tex);
+  return add_subdiv(scene, name,
+      make_subdiv(
+          subdiv, shape, subdivisions, displacement, displacement_tex_));
+}
+int add_subdiv(scene_data& scene, const string& name,
+    const fvshape_data& subdiv, int shape, int subdivisions, float displacement,
+    const array2d<vec4f>& displacement_tex) {
+  auto displacement_tex_ =
+      displacement_tex.empty()
+          ? invalidid
+          : add_texture(scene, name + "_displacement.png", displacement_tex);
+  return add_subdiv(scene, name,
+      make_subdiv(
+          subdiv, shape, subdivisions, displacement, displacement_tex_));
 }
 
 }  // namespace yocto

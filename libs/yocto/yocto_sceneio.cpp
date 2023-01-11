@@ -1638,29 +1638,31 @@ scene_data make_features1_scene() {
 
 // Scene test 2
 scene_data make_features2_scene() {
-  return make_test_scene(
-      [](scene_data& scene, const string& name, const frame3f& frame, int idx) {
-        if (idx == 0) {
-          add_instance(scene, name, frame, make_sphere(),
-              make_glossy_material(), make_uvgrid());
-        } else if (idx == 1) {
-          add_instance(scene, name, frame, make_sphere(),
-              make_refractive_material({1.0, 0.5, 0.5}));
-        } else if (idx == 2) {
-          add_instance(scene, name, frame, make_sphere(),
-              make_scattering_material({0.5, 0.5, 0.5}, {0.3, 0.6, 0.3}),
-              make_uvgrid());
-        } else if (idx == 3) {
-          add_instance(scene, name, frame, make_sphere(),
-              make_glossy_material({0.5, 0.7, 0.5}), {}, {},
-              bump_to_normal(make_bumps(), 0.05));
-        } else if (idx == 4) {
-          add_instance(scene, name, frame, make_sphere(),
-              make_reflective_material({0.66, 0.45, 0.34}, 0.2f));
-        } else {
-          throw std::out_of_range("unknown instance");
-        }
-      });
+  return make_test_scene([](scene_data& scene, const string& name,
+                             const frame3f& frame, int idx) {
+    if (idx == 0) {
+      add_instance(scene, name, frame, make_sphere(), make_glossy_material(),
+          make_uvgrid());
+    } else if (idx == 1) {
+      add_instance(scene, name, frame, make_monkey(),
+          make_glossy_material({1.0, 0.5, 0.5}));
+      add_subdiv(scene, name, make_monkey(), (int)scene.shapes.size() - 1, 2);
+    } else if (idx == 2) {
+      add_instance(scene, name, frame, make_sphere(), make_matte_material());
+      add_instance(scene, name, frame, make_random_hairs(scene.shapes.back()),
+          make_matte_material());
+    } else if (idx == 3) {
+      add_instance(scene, name, frame, make_sphere(8),
+          make_glossy_material({0.5, 0.7, 0.5}));
+      add_subdiv(scene, name, make_sphere(8), (int)scene.shapes.size() - 1, 0,
+          0.1f, make_bumps());
+    } else if (idx == 4) {
+      add_instance(scene, name, frame, make_rounded_box(),
+          make_glossy_material(), make_uvgrid());
+    } else {
+      throw std::out_of_range("unknown instance");
+    }
+  });
 }
 // Scene test
 scene_data make_test(const test_params& params) {
