@@ -1584,18 +1584,18 @@ template <typename Func>
 scene_data make_test_scene(Func&& func) {
   auto scene = scene_data{};
 
-  add_camera(scene, "camera", {0, 5, 17}, {0, 0, 0}, {0, 1, 0}, 0.05, 3, 0);
+  add_camera(scene, "camera", {0, 10, 35}, {0, 0, 0}, {0, 1, 0}, 0.1, 3, 0);
 
   add_environment(scene, "sky", identity3x4f, {0.5, 0.5, 0.5}, make_sunsky());
 
   add_instance(scene, "arealight1",
-      lookat_frame(vec3f{-5, 10, 10}, {0, 0, 0}, {0, 1, 0}, true),
-      add_shape(scene, "arealight1", make_rect()),
-      add_emission_material(scene, "arealight1", {50, 50, 50}));
+      lookat_frame(vec3f{-10, 20, 20}, {0, 0, 0}, {0, 1, 0}, true),
+      add_shape(scene, "arealight1", scale_shape(make_rect(), 5)),
+      add_emission_material(scene, "arealight1", {10, 10, 10}));
   add_instance(scene, "arealight2",
-      lookat_frame(vec3f{+5, 10, 10}, {0, 0, 0}, {0, 1, 0}, true),
-      add_shape(scene, "arealight2", make_rect()),
-      add_emission_material(scene, "arealight2", {50, 50, 50}));
+      lookat_frame(vec3f{+10, 20, 20}, {0, 0, 0}, {0, 1, 0}, true),
+      add_shape(scene, "arealight2", scale_shape(make_rect(), 5)),
+      add_emission_material(scene, "arealight2", {10, 10, 10}));
 
   add_instance(scene, "floor", translation_frame(vec3f{0, -1, 0}), make_floor(),
       make_matte_material(), make_grid());
