@@ -1591,11 +1591,11 @@ scene_data make_test_scene(Func&& func) {
   add_instance(scene, "arealight1",
       lookat_frame(vec3f{-5, 10, 10}, {0, 0, 0}, {0, 1, 0}, true),
       add_shape(scene, "arealight1", make_rect()),
-      add_emission_material(scene, "arealight1", {100, 100, 100}));
+      add_emission_material(scene, "arealight1", {50, 50, 50}));
   add_instance(scene, "arealight2",
       lookat_frame(vec3f{+5, 10, 10}, {0, 0, 0}, {0, 1, 0}, true),
       add_shape(scene, "arealight2", make_rect()),
-      add_emission_material(scene, "arealight2", {100, 100, 100}));
+      add_emission_material(scene, "arealight2", {50, 50, 50}));
 
   add_instance(scene, "floor", translation_frame(vec3f{0, -1, 0}), make_floor(),
       make_matte_material(), make_grid());
@@ -1613,7 +1613,26 @@ scene_data make_test_scene(Func&& func) {
 scene_data make_features1_scene() {
   return make_test_scene(
       [](scene_data& scene, const string& name, const frame3f& frame, int idx) {
-        add_instance(scene, name, frame, make_sphere(), make_matte_material());
+        if (idx == 0) {
+          add_instance(scene, name, frame, make_sphere(),
+              make_glossy_material(), make_uvgrid());
+        } else if (idx == 1) {
+          add_instance(scene, name, frame, make_sphere(),
+              make_refractive_material({1.0, 0.5, 0.5}));
+        } else if (idx == 2) {
+          add_instance(scene, name, frame, make_sphere(),
+              make_scattering_material({0.5, 0.5, 0.5}, {0.3, 0.6, 0.3}),
+              make_uvgrid());
+        } else if (idx == 3) {
+          add_instance(scene, name, frame, make_sphere(),
+              make_glossy_material({0.5, 0.7, 0.5}), {}, {},
+              bump_to_normal(make_bumps(), 0.05));
+        } else if (idx == 4) {
+          add_instance(scene, name, frame, make_sphere(),
+              make_reflective_material({0.66, 0.45, 0.34}, 0.2f));
+        } else {
+          throw std::out_of_range("unknown instance");
+        }
       });
 }
 

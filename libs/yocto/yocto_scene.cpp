@@ -575,7 +575,7 @@ texture_data make_texture(
 }
 
 // Make a material of different types
-material_data make_emission_material(
+material_data make_emissive_material(
     const vec3f& emission, int emission_tex, int normal_tex) {
   return {.type     = material_type::matte,
       .emission     = emission,
@@ -759,7 +759,7 @@ int add_texture(scene_data& scene, const string& name,
 int add_emission_material(scene_data& scene, const string& name,
     const vec3f& emission, int emission_tex, int normal_tex) {
   return add_material(
-      scene, name, make_emission_material(emission, emission_tex, normal_tex));
+      scene, name, make_emissive_material(emission, emission_tex, normal_tex));
 }
 int add_matte_material(scene_data& scene, const string& name,
     const vec3f& color, int color_tex, int normal_tex) {
