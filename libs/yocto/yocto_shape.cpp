@@ -278,13 +278,13 @@ shape_data subdivide_shape(
         shape.quads, shape.positions, subdivisions);
   } else if (!shape.quads.empty() && catmullclark) {
     std::tie(std::ignore, subdivided.normals) = subdivide_catmullclark(
-        shape.quads, shape.normals, subdivisions);
+        shape.quads, shape.normals, subdivisions, true);
     std::tie(std::ignore, subdivided.texcoords) = subdivide_catmullclark(
-        shape.quads, shape.texcoords, subdivisions);
+        shape.quads, shape.texcoords, subdivisions, true);
     std::tie(std::ignore, subdivided.colors) = subdivide_catmullclark(
-        shape.quads, shape.colors, subdivisions);
+        shape.quads, shape.colors, subdivisions, true);
     std::tie(std::ignore, subdivided.radius) = subdivide_catmullclark(
-        shape.quads, shape.radius, subdivisions);
+        shape.quads, shape.radius, subdivisions, true);
     std::tie(subdivided.quads, subdivided.positions) = subdivide_catmullclark(
         shape.quads, shape.positions, subdivisions);
   } else {
@@ -1268,7 +1268,7 @@ shape_data make_sdcube(int subdivisions, float scale) {
     auto [squadspos, spositions] = subdivide_catmullclark(
         sdcube_quadspos, sdcube_positions, subdivisions);
     auto [squadstexcoord, stexcoords] = subdivide_catmullclark(
-        sdcube_quadstexcoord, sdcube_texcoords, subdivisions);
+        sdcube_quadstexcoord, sdcube_texcoords, subdivisions, true);
     auto snormals = quads_normals(squadspos, spositions);
     return scale_shape(fvshape_to_shape({.quadspos = squadspos,
                            .quadstexcoord          = squadstexcoord,
