@@ -1648,14 +1648,15 @@ scene_data make_features2_scene() {
           make_glossy_material({1.0, 0.5, 0.5}));
       add_subdiv(scene, name, make_monkey(), (int)scene.shapes.size() - 1, 2);
     } else if (idx == 2) {
-      add_instance(scene, name, frame, make_sphere(), make_matte_material());
+      add_instance(scene, name, frame, scale_shape(make_sphere(), 0.65f),
+          make_matte_material());
       add_instance(scene, name, frame, make_random_hairs(scene.shapes.back()),
           make_matte_material());
     } else if (idx == 3) {
-      add_instance(scene, name, frame, make_sphere(8),
+      add_instance(scene, name, frame, make_sphere(128),
           make_glossy_material({0.5, 0.7, 0.5}));
-      add_subdiv(scene, name, make_sphere(8), (int)scene.shapes.size() - 1, 0,
-          0.1f, make_bumps());
+      add_subdiv(scene, name, make_sphere(128), (int)scene.shapes.size() - 1, 0,
+          0.25f, make_bumps());
     } else if (idx == 4) {
       add_instance(scene, name, frame, make_rounded_box(),
           make_glossy_material(), make_uvgrid());

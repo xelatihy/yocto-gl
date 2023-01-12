@@ -346,8 +346,8 @@ shape_data make_random_lines(const shape_data& shape, int num = 65536,
     const vec2f& radius = {0.001f, 0.001f}, uint64_t seed = 17);
 // Make hairs on a shape
 shape_data make_random_hairs(const shape_data& shape, int num = 65536,
-    int steps = 8, const vec2f& length = {0.1f, 0.1f},
-    const vec2f& radius = {0.001f, 0.001f}, float noise = 0,
+    int steps = 8, const vec2f& length = {0.35f, 0.35f},
+    const vec2f& radius = {0.001f, 0.001f}, float noise = 0.1f,
     float gravity = 0.001f, uint64_t seed = 17);
 
 // Convert points to small spheres and lines to small cylinders. This is
