@@ -304,7 +304,7 @@ shape_data make_rounded_uvcylinder(const vec3i& steps = {32, 32, 32},
 // Make a geosphere
 shape_data make_geosphere(int subdivisions = 3, float scale = 1);
 // Make a monkey
-shape_data make_monkey(int subdivisions = 0, float scale = 1);
+shape_data make_monkey(int subdivisions = 2, float scale = 1);
 // Make a subdiv cube
 shape_data make_sdcube(int subdivisions = 4, float scale = 1);
 // Make a subdiv cube with texture coordinates

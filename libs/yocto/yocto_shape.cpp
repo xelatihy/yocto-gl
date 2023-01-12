@@ -297,23 +297,23 @@ shape_data subdivide_shape(
 shape_data displace_shape(const shape_data& shape,
     const array2d<float>& displacement, float height, float offset) {
   if (displacement.empty() || shape.texcoords.empty() ||
-      (shape.triangles.empty() && shape.quads.empty()))
+      shape.normals.empty() || (shape.triangles.empty() && shape.quads.empty()))
     return shape;
   auto displaced      = shape;
   displaced.positions = displace_vertices(displaced.positions,
       displaced.normals, displaced.texcoords, displacement, height, offset);
-  if (!displaced.normals.empty()) displaced.normals = compute_normals(shape);
+  displaced.normals   = compute_normals(displaced);
   return displaced;
 }
 shape_data displace_shape(const shape_data& shape,
     const array2d<vec4f>& displacement, float height, float offset) {
   if (displacement.empty() || shape.texcoords.empty() ||
-      (shape.triangles.empty() && shape.quads.empty()))
+      shape.normals.empty() || (shape.triangles.empty() && shape.quads.empty()))
     return shape;
   auto displaced      = shape;
   displaced.positions = displace_vertices(displaced.positions,
       displaced.normals, displaced.texcoords, displacement, height, offset);
-  if (!displaced.normals.empty()) displaced.normals = compute_normals(shape);
+  displaced.normals   = compute_normals(displaced);
   return displaced;
 }
 

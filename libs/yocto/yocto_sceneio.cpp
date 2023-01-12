@@ -1151,7 +1151,7 @@ shape_data make_shape_preset(const string& type_) {
   } else if (type == "fvsphere") {
     return fvshape_to_shape(make_fvsphere());
   } else if (type == "monkey_subdiv") {
-    return add_normals(subdivide_shape(make_monkey(), 2, true));
+    return add_normals(subdivide_shape(make_monkey(0), 2, true));
   } else if (type == "wtcube_subdiv") {
     return add_normals(subdivide_shape(make_wtcube(), 4, true));
   } else if (type == "opcube_subdiv") {
@@ -1225,7 +1225,7 @@ shape_data make_shape_preset(const string& type_) {
   } else if (type == "test_hairball-interior") {
     return transform_shape(make_sphere(), test_xform * scaling_frame(0.8f));
   } else if (type == "test_suzanne_subdiv") {
-    return transform_shape(make_monkey(), test_xform * scaling_frame(0.8f));
+    return transform_shape(make_monkey(0), test_xform * scaling_frame(0.8f));
   } else if (type == "test_wtcube") {
     return transform_shape(make_wtcube(), test_xform);
   } else if (type == "test_arealight1") {
@@ -1646,7 +1646,7 @@ scene_data make_features2_scene() {
     } else if (idx == 1) {
       add_instance(scene, name, frame, make_monkey(),
           make_glossy_material({1.0, 0.5, 0.5}));
-      add_subdiv(scene, name, make_monkey(), (int)scene.shapes.size() - 1, 2);
+      add_subdiv(scene, name, make_monkey(0), (int)scene.shapes.size() - 1, 2);
     } else if (idx == 2) {
       add_instance(scene, name, frame, scale_shape(make_sphere(), 0.65f),
           make_matte_material());
