@@ -3400,8 +3400,8 @@ static void save_json_scene(
       set_val(element, "smooth", subdiv.smooth, default_.smooth);
       set_val(
           element, "displacement", subdiv.displacement, default_.displacement);
-      set_val(element, "displacement_tex",
-          get_texture_name(scene, subdiv.displacement_tex), "");
+      set_val(element, "displacement_tex", subdiv.displacement_tex,
+          default_.displacement_tex);
     }
   }
 
