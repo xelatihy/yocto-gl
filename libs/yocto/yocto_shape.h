@@ -307,6 +307,8 @@ shape_data make_geosphere(int subdivisions = 3, float scale = 1);
 shape_data make_monkey(int subdivisions = 0, float scale = 1);
 // Make a subdiv cube
 shape_data make_sdcube(int subdivisions = 4, float scale = 1);
+// Make a subdiv cube with texture coordinates
+shape_data make_sdtcube(int subdivisions = 4, float scale = 1);
 
 // Make a face-varying quad
 fvshape_data make_fvquad(int steps = 1, float scale = 1, float uvscale = 1);

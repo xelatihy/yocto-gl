@@ -1251,24 +1251,41 @@ shape_data make_sdcube(int subdivisions, float scale) {
   static const auto sdcube_positions = vector<vec3f>{{-1, -1, +1}, {+1, -1, +1},
       {+1, +1, +1}, {-1, +1, +1}, {+1, -1, -1}, {-1, -1, -1}, {-1, +1, -1},
       {+1, +1, -1}};
-  static const auto sdcube_texcoords = vector<vec2f>{{0, 1}, {1, 1}, {1, 0},
+  static const auto sdcube_quads     = vector<vec4i>{{0, 1, 2, 3}, {4, 5, 6, 7},
+          {1, 4, 7, 2}, {5, 0, 3, 6}, {3, 2, 7, 6}, {1, 0, 5, 4}};
+
+  if (subdivisions == 0) {
+    return scale_shape(
+        {.quads = sdcube_quads, .positions = sdcube_positions}, scale);
+  } else {
+    auto [squads, spositions] = subdivide_catmullclark(
+        sdcube_quads, sdcube_positions, subdivisions);
+    auto snormals = quads_normals(squads, spositions);
+    return scale_shape({.quads = squads, .positions = spositions}, scale);
+  }
+}
+shape_data make_sdtcube(int subdivisions, float scale) {
+  static const auto sdtcube_positions = vector<vec3f>{{-1, -1, +1},
+      {+1, -1, +1}, {+1, +1, +1}, {-1, +1, +1}, {+1, -1, -1}, {-1, -1, -1},
+      {-1, +1, -1}, {+1, +1, -1}};
+  static const auto sdtcube_texcoords = vector<vec2f>{{0, 1}, {1, 1}, {1, 0},
       {0, 0}, {0, 1}, {1, 1}, {1, 0}, {0, 0}, {0, 1}, {1, 1}, {1, 0}, {0, 0},
       {0, 1}, {1, 1}, {1, 0}, {0, 0}, {0, 1}, {1, 1}, {1, 0}, {0, 0}, {0, 1},
       {1, 1}, {1, 0}, {0, 0}};
-  static const auto sdcube_quadspos  = vector<vec4i>{{0, 1, 2, 3}, {4, 5, 6, 7},
-       {1, 4, 7, 2}, {5, 0, 3, 6}, {3, 2, 7, 6}, {1, 0, 5, 4}};
-  static const auto sdcube_quadstexcoord = vector<vec4i>{{0, 1, 2, 3},
+  static const auto sdtcube_quadspos = vector<vec4i>{{0, 1, 2, 3}, {4, 5, 6, 7},
+      {1, 4, 7, 2}, {5, 0, 3, 6}, {3, 2, 7, 6}, {1, 0, 5, 4}};
+  static const auto sdtcube_quadstexcoord = vector<vec4i>{{0, 1, 2, 3},
       {4, 5, 6, 7}, {8, 9, 10, 11}, {12, 13, 14, 15}, {16, 17, 18, 19},
       {20, 21, 22, 23}};
 
   if (subdivisions == 0) {
     return scale_shape(
-        {.quads = sdcube_quadspos, .positions = sdcube_positions}, scale);
+        {.quads = sdtcube_quadspos, .positions = sdtcube_positions}, scale);
   } else {
     auto [squadspos, spositions] = subdivide_catmullclark(
-        sdcube_quadspos, sdcube_positions, subdivisions);
+        sdtcube_quadspos, sdtcube_positions, subdivisions);
     auto [squadstexcoord, stexcoords] = subdivide_catmullclark(
-        sdcube_quadstexcoord, sdcube_texcoords, subdivisions, true);
+        sdtcube_quadstexcoord, sdtcube_texcoords, subdivisions, true);
     auto snormals = quads_normals(squadspos, spositions);
     return scale_shape(fvshape_to_shape({.quadspos = squadspos,
                            .quadstexcoord          = squadstexcoord,
