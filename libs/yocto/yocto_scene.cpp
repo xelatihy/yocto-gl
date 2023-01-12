@@ -651,6 +651,14 @@ material_data make_volumetric_material(const vec3f& color,
       .scanisotropy = scanisotropy,
       .trdepth      = trdepth};
 }
+material_data make_opacity_material(
+    const vec3f& color, float opacity, int color_tex, int normal_tex) {
+  return {.type   = material_type::matte,
+      .color      = color,
+      .opacity    = opacity,
+      .color_tex  = color_tex,
+      .normal_tex = normal_tex};
+}
 
 // Make an instance
 instance_data make_instance(const frame3f& frame, int shape, int material) {
@@ -813,6 +821,11 @@ int add_volumetric_material(scene_data& scene, const string& name,
     float trdepth) {
   return add_material(scene, name,
       make_volumetric_material(color, scattering, scanisotropy, trdepth));
+}
+int add_opacity_material(scene_data& scene, const string& name,
+    const vec3f& color, float opacity, int color_tex, int normal_tex) {
+  return add_material(scene, name,
+      make_opacity_material(color, opacity, color_tex, normal_tex));
 }
 
 // Add an instance

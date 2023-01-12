@@ -1668,54 +1668,64 @@ scene_data make_features2_scene() {
 
 // Scene test materials 1
 scene_data make_materials1_scene() {
-  return make_test_scene(
-      [](scene_data& scene, const string& name, const frame3f& frame, int idx) {
-        if (idx == 0) {
-          add_instance(scene, name, frame, make_sphere(),
-              make_glossy_material({0.5, 0.5, 0.7}, 0));
-        } else if (idx == 1) {
-          add_instance(scene, name, frame, make_sphere(),
-              make_glossy_material({0.5, 0.7, 0.5}, 0.2));
-        } else if (idx == 2) {
-          add_instance(scene, name, frame, make_sphere(),
-              make_matte_material({0.7, 0.7, 0.7}));
-        } else if (idx == 3) {
-          add_instance(scene, name, frame, make_sphere(),
-              make_reflective_material({0.7, 0.7, 0.7}, 0));
-        } else if (idx == 4) {
-          add_instance(scene, name, frame, make_sphere(),
-              make_reflective_material({0.66, 0.45, 0.34}, 0.2));
-        } else {
-          throw std::out_of_range("unknown instance");
-        }
-      });
+  return make_test_scene([shape = invalidid](scene_data& scene,
+                             const string& name, const frame3f& frame,
+                             int idx) mutable {
+    if (shape == invalidid) {
+      shape = add_shape(scene, "sphere", make_sphere());
+    }
+
+    if (idx == 0) {
+      add_instance(scene, name, frame, shape,
+          add_glossy_material(scene, "glossys", {0.5, 0.5, 0.7}, 0));
+    } else if (idx == 1) {
+      add_instance(scene, name, frame, shape,
+          add_glossy_material(scene, "glossyr", {0.5, 0.7, 0.5}, 0.2));
+    } else if (idx == 2) {
+      add_instance(scene, name, frame, shape,
+          add_glossy_material(scene, "matte", {0.7, 0.7, 0.7}));
+    } else if (idx == 3) {
+      add_instance(scene, name, frame, shape,
+          add_reflective_material(scene, "reflectives", {0.7, 0.7, 0.7}, 0));
+    } else if (idx == 4) {
+      add_instance(scene, name, frame, shape,
+          add_reflective_material(
+              scene, "reflectiver", {0.66, 0.45, 0.34}, 0.2));
+    } else {
+      throw std::out_of_range("unknown instance");
+    }
+  });
 }
 
 // Scene test materials 2
 scene_data make_materials2_scene() {
-  return make_test_scene(
-      [](scene_data& scene, const string& name, const frame3f& frame, int idx) {
-        if (idx == 0) {
-          add_instance(scene, name, frame, make_sphere(),
-              make_refractive_material({1.0, 1.0, 1.0}, 0));
-        } else if (idx == 1) {
-          add_instance(scene, name, frame, make_sphere(),
-              make_refractive_material({1.0, 0.7, 0.7}, 0.1));
-        } else if (idx == 2) {
-          add_instance(scene, name, frame, make_sphere(),
-              material_data{.type = material_type::matte,
-                  .color          = {0.7, 0.5, 0.5},
-                  .opacity        = 0.2});
-        } else if (idx == 3) {
-          add_instance(scene, name, frame, make_sphere(),
-              make_transparent_material({1.0, 1.0, 1.0}, 0));
-        } else if (idx == 4) {
-          add_instance(scene, name, frame, make_sphere(),
-              make_transparent_material({1.0, 0.7, 0.7}, 0.1));
-        } else {
-          throw std::out_of_range("unknown instance");
-        }
-      });
+  return make_test_scene([shape = invalidid](scene_data& scene,
+                             const string& name, const frame3f& frame,
+                             int idx) mutable {
+    if (shape == invalidid) {
+      shape = add_shape(scene, "sphere", make_sphere());
+    }
+
+    if (idx == 0) {
+      add_instance(scene, name, frame, shape,
+          add_refractive_material(scene, "refractives", {1.0, 1.0, 1.0}, 0));
+    } else if (idx == 1) {
+      add_instance(scene, name, frame, shape,
+          add_refractive_material(scene, "refractiver", {1.0, 0.7, 0.7}, 0.1));
+    } else if (idx == 2) {
+      add_instance(scene, name, frame, shape,
+          add_opacity_material(scene, "opacity", {0.7, 0.5, 0.5}, 0.2));
+    } else if (idx == 3) {
+      add_instance(scene, name, frame, shape,
+          add_transparent_material(scene, "transparents", {1.0, 1.0, 1.0}, 0));
+    } else if (idx == 4) {
+      add_instance(scene, name, frame, shape,
+          add_transparent_material(
+              scene, "transparentr", {1.0, 0.7, 0.7}, 0.1));
+    } else {
+      throw std::out_of_range("unknown instance");
+    }
+  });
 }
 
 // Scene test materials 4

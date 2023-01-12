@@ -370,6 +370,8 @@ material_data make_scattering_material(const vec3f& color = {1, 1, 1},
 material_data make_volumetric_material(const vec3f& color = {1, 1, 1},
     const vec3f& scattering = {0, 0, 0}, float scanisotropy = 0,
     float trdepth = 0.1f);
+material_data make_opacity_material(const vec3f& color = {0.8, 0.8, 0.8},
+    float opacity = 1, int color_tex = invalidid, int normal_tex = invalidid);
 
 // Make an instance
 instance_data make_instance(const frame3f& frame, int shape, int material);
@@ -418,10 +420,10 @@ int add_emission_material(scene_data& scene, const string& name,
     const vec3f& emission = {1, 1, 1}, int emission_tex = invalidid,
     int normal_tex = invalidid);
 int add_matte_material(scene_data& scene, const string& name,
-    const vec3f& color = {1, 1, 1}, int color_tex = invalidid,
+    const vec3f& color = {0.8, 0.8, 0.8}, int color_tex = invalidid,
     int normal_tex = invalidid);
 int add_glossy_material(scene_data& scene, const string& name,
-    const vec3f& color = {1, 1, 1}, float roughness = 0,
+    const vec3f& color = {0.8, 0.8, 0.8}, float roughness = 0.01f,
     int color_tex = invalidid, int roughness_tex = invalidid,
     int normal_tex = invalidid);
 int add_reflective_material(scene_data& scene, const string& name,
@@ -441,10 +443,13 @@ int add_scattering_material(scene_data& scene, const string& name,
     float roughness = 0, int color_tex = invalidid,
     int scattering_tex = invalidid, int roughness_tex = invalidid,
     int normal_tex = invalidid, float ior = 1.5, float scanisotropy = 0,
-    float trdepth = 0.001);
+    float trdepth = 0.1);
 int add_volumetric_material(scene_data& scene, const string& name,
     const vec3f& color = {1, 1, 1}, const vec3f& scattering = {0, 0, 0},
-    float scanisotropy = 0, float trdepth = 0.001);
+    float scanisotropy = 0, float trdepth = 0.1);
+int add_opacity_material(scene_data& scene, const string& name,
+    const vec3f& color = {0.8, 0.8, 0.8}, float opacity = 1,
+    int color_tex = invalidid, int normal_tex = invalidid);
 
 // Add instance shortcuts
 int add_instance(scene_data& scene, const string& name, const frame3f& frame,
