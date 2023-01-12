@@ -478,8 +478,8 @@ int add_subdiv(scene_data& scene, const string& name, const shape_data& subdiv,
     int shape, int subdivisions, float displacement,
     const array2d<vec4f>& displacement_tex);
 int add_subdiv(scene_data& scene, const string& name,
-    const fvshape_data& subdiv, int shape, int subdivisions,
-    float displacement, const array2d<vec4f>& displacement_tex);
+    const fvshape_data& subdiv, int shape, int subdivisions, float displacement,
+    const array2d<vec4f>& displacement_tex);
 
 }  // namespace yocto
 

@@ -1718,6 +1718,31 @@ scene_data make_materials2_scene() {
       });
 }
 
+// Scene test materials 4
+scene_data make_materials4_scene() {
+  return make_test_scene(
+      [](scene_data& scene, const string& name, const frame3f& frame, int idx) {
+        if (idx == 0) {
+          add_instance(scene, name, frame, make_sphere(),
+              make_volumetric_material({0.5, 0.5, 0.5}, {0.9, 0.9, 0.9}));
+        } else if (idx == 1) {
+          add_instance(scene, name, frame, make_sphere(),
+              make_refractive_material({1.0, 0.5, 0.5}, 0));
+        } else if (idx == 2) {
+          add_instance(scene, name, frame, make_sphere(),
+              make_refractive_material({1.0, 1.0, 1.0}, 0));
+        } else if (idx == 3) {
+          add_instance(scene, name, frame, make_sphere(),
+              make_scattering_material({0.5, 0.5, 0.5}, {0.3, 0.6, 0.3}, 0));
+        } else if (idx == 4) {
+          add_instance(scene, name, frame, make_sphere(),
+              make_volumetric_material({0.65, 0.65, 0.65}, {0.2, 0.2, 0.2}));
+        } else {
+          throw std::out_of_range("unknown instance");
+        }
+      });
+}
+
 // Scene test
 scene_data make_test(const test_params& params) {
   // scene
@@ -2024,15 +2049,9 @@ scene_data make_scene_preset(const string& type_) {
   } else if (type == "materials2") {
     return make_materials2_scene();
   } else if (type == "materials3") {
-    return make_test({test_cameras_type::wide, test_environments_type::sky,
-        test_arealights_type::large, test_floor_type::standard,
-        test_shapes_type::rows, test_materials_type::materials3,
-        test_instance_name_type::material});
+    return make_materials4_scene();
   } else if (type == "materials4") {
-    return make_test({test_cameras_type::wide, test_environments_type::sky,
-        test_arealights_type::large, test_floor_type::standard,
-        test_shapes_type::rows, test_materials_type::materials4,
-        test_instance_name_type::material});
+    return make_materials4_scene();
   } else if (type == "materials5") {
     return make_test({test_cameras_type::wide, test_environments_type::sky,
         test_arealights_type::large, test_floor_type::standard,
