@@ -1036,7 +1036,7 @@ inline bool add_lists(ply_model& ply, const string& element,
     const vector<T>& values) {
   if (values.empty()) return false;
   if (!add_property(
-          ply, element, property, values.size(), get_ply_type<T>(), true))
+          ply, element, property, sizes.size(), get_ply_type<T>(), true))
     return false;
   auto& prop    = get_property(ply, element, property);
   prop.ldata_u8 = sizes;
