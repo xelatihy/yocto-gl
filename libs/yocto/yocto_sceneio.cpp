@@ -1665,6 +1665,32 @@ scene_data make_features2_scene() {
     }
   });
 }
+
+// Scene test materials 1
+scene_data make_materials1_scene() {
+  return make_test_scene(
+      [](scene_data& scene, const string& name, const frame3f& frame, int idx) {
+        if (idx == 0) {
+          add_instance(scene, name, frame, make_sphere(),
+              make_glossy_material({0.5, 0.5, 0.7}, 0));
+        } else if (idx == 1) {
+          add_instance(scene, name, frame, make_sphere(),
+              make_glossy_material({0.5, 0.7, 0.5}, 0.2));
+        } else if (idx == 2) {
+          add_instance(scene, name, frame, make_sphere(),
+              make_matte_material({0.7, 0.7, 0.7}));
+        } else if (idx == 3) {
+          add_instance(scene, name, frame, make_sphere(),
+              make_reflective_material({0.7, 0.7, 0.7}, 0));
+        } else if (idx == 4) {
+          add_instance(scene, name, frame, make_sphere(),
+              make_reflective_material({0.66, 0.45, 0.34}, 0.2));
+        } else {
+          throw std::out_of_range("unknown instance");
+        }
+      });
+}
+
 // Scene test
 scene_data make_test(const test_params& params) {
   // scene
@@ -1967,10 +1993,7 @@ scene_data make_scene_preset(const string& type_) {
   } else if (type == "features2") {
     return make_features2_scene();
   } else if (type == "materials1") {
-    return make_test({test_cameras_type::wide, test_environments_type::sky,
-        test_arealights_type::large, test_floor_type::standard,
-        test_shapes_type::rows, test_materials_type::materials1,
-        test_instance_name_type::material});
+    return make_materials1_scene();
   } else if (type == "materials2") {
     return make_test({test_cameras_type::wide, test_environments_type::sky,
         test_arealights_type::large, test_floor_type::standard,
