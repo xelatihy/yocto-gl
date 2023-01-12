@@ -1783,7 +1783,7 @@ scene_data make_shapes2_scene() {
         } else if (idx == 2) {
           add_instance(scene, name, frame,
               add_shape(scene, "displaced",
-                  displace_shape(make_sphere(128), make_bumps())),
+                  displace_shape(make_sphere(128), make_bumps(), 0.1f)),
               material);
         } else if (idx == 3) {
           add_instance(scene, name, frame,

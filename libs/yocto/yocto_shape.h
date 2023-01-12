@@ -764,12 +764,12 @@ namespace yocto {
 // Displace vertices
 template <typename T>
 inline vector<vec<T, 3>> displace_vertices(const vector<vec<T, 3>>& positions,
-    const vector<vec<T, 2>>& texcoords, const array2d<T>& displacement,
-    T scale = 1, T offset = (T)0.5);
+    const vector<vec<T, 3>>& normals, const vector<vec<T, 2>>& texcoords,
+    const array2d<T>& displacement, T scale = 1, T offset = (T)0.5);
 template <typename T>
 inline vector<vec<T, 3>> displace_vertices(const vector<vec<T, 3>>& positions,
-    const vector<vec<T, 2>>& texcoords, const array2d<vec<T, 4>>& displacement,
-    T scale = 1, T offset = (T)0.5);
+    const vector<vec<T, 3>>& normals, const vector<vec<T, 2>>& texcoords,
+    const array2d<vec<T, 4>>& displacement, T scale = 1, T offset = (T)0.5);
 
 }  // namespace yocto
 
@@ -1912,24 +1912,27 @@ namespace yocto {
 // Displace vertices
 template <typename T>
 inline vector<vec<T, 3>> displace_vertices(const vector<vec<T, 3>>& positions,
-    const vector<vec<T, 2>>& texcoords, const array2d<T>& displacement, T scale,
-    T offset) {
+    const vector<vec<T, 3>>& normals, const vector<vec<T, 2>>& texcoords,
+    const array2d<T>& displacement, T scale, T offset) {
   if (texcoords.empty()) return positions;
   auto displaced = positions;
-  for (auto&& [position, texcoord] : zip(displaced, texcoords)) {
-    position += (eval_image(displacement, texcoord) - offset) * scale;
+  for (auto idx : range(displaced.size())) {
+    displaced[idx] += normals[idx] *
+                      (eval_image(displacement, texcoords[idx]) - offset) *
+                      scale;
   }
   return displaced;
 }
 template <typename T>
 inline vector<vec<T, 3>> displace_vertices(const vector<vec<T, 3>>& positions,
-    const vector<vec<T, 2>>& texcoords, const array2d<vec<T, 4>>& displacement,
-    T scale, T offset) {
+    const vector<vec<T, 3>>& normals, const vector<vec<T, 2>>& texcoords,
+    const array2d<vec<T, 4>>& displacement, T scale, T offset) {
   if (texcoords.empty()) return positions;
   auto displaced = positions;
-  for (auto&& [position, texcoord] : zip(displaced, texcoords)) {
-    position += (mean(xyz(eval_image(displacement, texcoord))) - offset) *
-                scale;
+  for (auto idx : range(displaced.size())) {
+    displaced[idx] +=
+        normals[idx] *
+        (mean(xyz(eval_image(displacement, texcoords[idx]))) - offset) * scale;
   }
   return displaced;
 }
