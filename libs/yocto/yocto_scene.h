@@ -453,8 +453,6 @@ int add_opacity_material(scene_data& scene, const string& name,
 
 // Add instance shortcuts
 int add_instance(scene_data& scene, const string& name, const frame3f& frame,
-    int shape, int material);
-int add_instance(scene_data& scene, const string& name, const frame3f& frame,
     const shape_data& shape, const material_data& material);
 int add_instance(scene_data& scene, const string& name, const frame3f& frame,
     const shape_data& shape, const material_data& material,

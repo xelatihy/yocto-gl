@@ -293,6 +293,30 @@ shape_data subdivide_shape(
   return subdivided;
 }
 
+// Displacement
+shape_data displace_shape(const shape_data& shape,
+    const array2d<float>& displacement, float height, float offset) {
+  if (displacement.empty() || shape.texcoords.empty() ||
+      (shape.triangles.empty() && shape.quads.empty()))
+    return shape;
+  auto displaced      = shape;
+  displaced.positions = displace_vertices(
+      displaced.positions, displaced.texcoords, displacement, height, offset);
+  if (!displaced.normals.empty()) displaced.normals = compute_normals(shape);
+  return displaced;
+}
+shape_data displace_shape(const shape_data& shape,
+    const array2d<vec4f>& displacement, float height, float offset) {
+  if (displacement.empty() || shape.texcoords.empty() ||
+      (shape.triangles.empty() && shape.quads.empty()))
+    return shape;
+  auto displaced      = shape;
+  displaced.positions = displace_vertices(
+      displaced.positions, displaced.texcoords, displacement, height, offset);
+  if (!displaced.normals.empty()) displaced.normals = compute_normals(shape);
+  return displaced;
+}
+
 // Transform shape
 shape_data transform_shape(
     const shape_data& shape, const frame3f& frame, bool non_rigid) {
@@ -729,7 +753,7 @@ void merge_shape_inplace(shape_data& shape, const shape_data& merge) {
 }
 
 // Flip the y and z axis for example shapes
-shape_data _flip_yz(const shape_data& shape) {
+shape_data flipyz_shape(const shape_data& shape) {
   auto transformed = shape;
   for (auto& position : transformed.positions)
     position = {position.x, position.z, -position.y};
@@ -764,11 +788,11 @@ shape_data make_bulged_rect(const vec2i& steps, const vec2f& scale,
 // Make a plane in the xz plane.
 shape_data make_recty(
     const vec2i& steps, const vec2f& scale, const vec2f& uvscale) {
-  return _flip_yz(make_rect(steps, scale, uvscale));
+  return flipyz_shape(make_rect(steps, scale, uvscale));
 }
 shape_data make_bulged_recty(const vec2i& steps, const vec2f& scale,
     float height, const vec2f& uvscale) {
-  return _flip_yz(make_bulged_rect(steps, scale, height, uvscale));
+  return flipyz_shape(make_bulged_rect(steps, scale, height, uvscale));
 }
 
 // Make a large quad in the xy plane
@@ -933,7 +957,7 @@ shape_data make_uvsphere(
 // Make a sphere.
 shape_data make_uvspherey(
     const vec2i& steps, float scale, const vec2f& uvscale) {
-  return _flip_yz(make_uvsphere(steps, scale, uvscale));
+  return flipyz_shape(make_uvsphere(steps, scale, uvscale));
 }
 
 // Make a sphere with slipped caps.
@@ -960,7 +984,7 @@ shape_data make_capped_uvsphere(
 // Make a sphere with slipped caps.
 shape_data make_capped_uvspherey(
     const vec2i& steps, float scale, float height, const vec2f& uvscale) {
-  return _flip_yz(make_capped_uvsphere(steps, scale, height, uvscale));
+  return flipyz_shape(make_capped_uvsphere(steps, scale, height, uvscale));
 }
 
 // Make a uv disk
@@ -1154,32 +1178,6 @@ shape_data make_cube(int steps, float scale, float uvscale) {
         {uvscale, uvscale, uvscale});
   }
 }
-shape_data make_geosphere(int subdivisions, float scale) {
-  // https://stackoverflow.com/questions/17705621/algorithm-for-a-geodesic-sphere
-  const float X                   = 0.525731112119133606f;
-  const float Z                   = 0.850650808352039932f;
-  static auto geosphere_positions = vector<vec3f>{{-X, 0.0, Z}, {X, 0.0, Z},
-      {-X, 0.0, -Z}, {X, 0.0, -Z}, {0.0, Z, X}, {0.0, Z, -X}, {0.0, -Z, X},
-      {0.0, -Z, -X}, {Z, X, 0.0}, {-Z, X, 0.0}, {Z, -X, 0.0}, {-Z, -X, 0.0}};
-  static auto geosphere_triangles = vector<vec3i>{{0, 1, 4}, {0, 4, 9},
-      {9, 4, 5}, {4, 8, 5}, {4, 1, 8}, {8, 1, 10}, {8, 10, 3}, {5, 8, 3},
-      {5, 3, 2}, {2, 3, 7}, {7, 3, 10}, {7, 10, 6}, {7, 6, 11}, {11, 6, 0},
-      {0, 6, 1}, {6, 10, 1}, {9, 11, 0}, {9, 2, 11}, {9, 5, 2}, {7, 11, 2}};
-
-  auto shape = shape_data{};
-  if (subdivisions == 0) {
-    return scale_shape({.triangles    = geosphere_triangles,
-                           .positions = geosphere_positions,
-                           .normals   = geosphere_positions},
-        scale);
-  } else {
-    std::tie(shape.triangles, shape.positions) = subdivide_triangles(
-        geosphere_triangles, geosphere_positions, subdivisions);
-    for (auto& position : shape.positions) position = normalize(position);
-    shape.normals = shape.positions;
-  }
-  return shape;
-}
 shape_data make_wtcube(int steps, float scale) {
   static const auto wtcube_positions = vector<vec3f>{{-1, -1, +1}, {+1, -1, +1},
       {+1, +1, +1}, {-1, +1, +1}, {+1, -1, -1}, {-1, -1, -1}, {-1, +1, -1},
@@ -1208,6 +1206,32 @@ shape_data make_opcube(int steps, float scale) {
     return make_opbox({steps, steps, steps}, {scale, scale, scale});
   }
 }
+shape_data make_geosphere(int subdivisions, float scale) {
+  // https://stackoverflow.com/questions/17705621/algorithm-for-a-geodesic-sphere
+  const float X                   = 0.525731112119133606f;
+  const float Z                   = 0.850650808352039932f;
+  static auto geosphere_positions = vector<vec3f>{{-X, 0.0, Z}, {X, 0.0, Z},
+      {-X, 0.0, -Z}, {X, 0.0, -Z}, {0.0, Z, X}, {0.0, Z, -X}, {0.0, -Z, X},
+      {0.0, -Z, -X}, {Z, X, 0.0}, {-Z, X, 0.0}, {Z, -X, 0.0}, {-Z, -X, 0.0}};
+  static auto geosphere_triangles = vector<vec3i>{{0, 1, 4}, {0, 4, 9},
+      {9, 4, 5}, {4, 8, 5}, {4, 1, 8}, {8, 1, 10}, {8, 10, 3}, {5, 8, 3},
+      {5, 3, 2}, {2, 3, 7}, {7, 3, 10}, {7, 10, 6}, {7, 6, 11}, {11, 6, 0},
+      {0, 6, 1}, {6, 10, 1}, {9, 11, 0}, {9, 2, 11}, {9, 5, 2}, {7, 11, 2}};
+
+  auto shape = shape_data{};
+  if (subdivisions == 0) {
+    return scale_shape({.triangles    = geosphere_triangles,
+                           .positions = geosphere_positions,
+                           .normals   = geosphere_positions},
+        scale);
+  } else {
+    std::tie(shape.triangles, shape.positions) = subdivide_triangles(
+        geosphere_triangles, geosphere_positions, subdivisions);
+    for (auto& position : shape.positions) position = normalize(position);
+    shape.normals = shape.positions;
+  }
+  return shape;
+}
 shape_data make_monkey(int subdivisions, float scale) {
   extern vector<vec3f> suzanne_positions;
   extern vector<vec4i> suzanne_quads;
@@ -1221,6 +1245,36 @@ shape_data make_monkey(int subdivisions, float scale) {
     auto snormals = quads_normals(squads, spositions);
     return scale_shape(
         {.quads = squads, .positions = spositions, .normals = snormals}, scale);
+  }
+}
+shape_data make_sdcube(int subdivisions, float scale) {
+  static const auto sdcube_positions = vector<vec3f>{{-1, -1, +1}, {+1, -1, +1},
+      {+1, +1, +1}, {-1, +1, +1}, {+1, -1, -1}, {-1, -1, -1}, {-1, +1, -1},
+      {+1, +1, -1}};
+  static const auto sdcube_texcoords = vector<vec2f>{{0, 1}, {1, 1}, {1, 0},
+      {0, 0}, {0, 1}, {1, 1}, {1, 0}, {0, 0}, {0, 1}, {1, 1}, {1, 0}, {0, 0},
+      {0, 1}, {1, 1}, {1, 0}, {0, 0}, {0, 1}, {1, 1}, {1, 0}, {0, 0}, {0, 1},
+      {1, 1}, {1, 0}, {0, 0}};
+  static const auto sdcube_quadspos  = vector<vec4i>{{0, 1, 2, 3}, {4, 5, 6, 7},
+       {1, 4, 7, 2}, {5, 0, 3, 6}, {3, 2, 7, 6}, {1, 0, 5, 4}};
+  static const auto sdcube_quadstexcoord = vector<vec4i>{{0, 1, 2, 3},
+      {4, 5, 6, 7}, {8, 9, 10, 11}, {12, 13, 14, 15}, {16, 17, 18, 19},
+      {20, 21, 22, 23}};
+
+  if (subdivisions == 0) {
+    return scale_shape(
+        {.quads = sdcube_quadspos, .positions = sdcube_positions}, scale);
+  } else {
+    auto [squadspos, spositions] = subdivide_catmullclark(
+        sdcube_quadspos, sdcube_positions, subdivisions);
+    auto [squadstexcoord, stexcoords] = subdivide_catmullclark(
+        sdcube_quadstexcoord, sdcube_texcoords, subdivisions);
+    auto snormals = quads_normals(squadspos, spositions);
+    return scale_shape(fvshape_to_shape({.quadspos = squadspos,
+                           .quadstexcoord          = squadstexcoord,
+                           .positions              = spositions,
+                           .texcoords              = stexcoords}),
+        scale);
   }
 }
 

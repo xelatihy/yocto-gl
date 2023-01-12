@@ -1728,6 +1728,75 @@ scene_data make_materials2_scene() {
   });
 }
 
+// Scene test shapes 1
+scene_data make_shapes1_scene() {
+  return make_test_scene(
+      [material = invalidid](scene_data& scene, const string& name,
+          const frame3f& frame, int idx) mutable {
+        if (material == invalidid) {
+          auto texture = add_texture(scene, "uvgrid", make_uvgrid());
+          material     = add_material(
+              scene, "material", make_glossy_material({1, 1, 1}, 0.2, texture));
+        }
+
+        if (idx == 0) {
+          add_instance(scene, name, frame,
+              add_shape(scene, "sphere", make_sphere()), material);
+        } else if (idx == 1) {
+          add_instance(scene, name, frame,
+              add_shape(scene, "capped_uvspherey",
+                  flipyz_shape(make_capped_uvsphere())),
+              material);
+        } else if (idx == 2) {
+          add_instance(scene, name, frame,
+              add_shape(scene, "disk", make_disk()), material);
+        } else if (idx == 3) {
+          add_instance(scene, name, frame,
+              add_shape(scene, "uvcylindery", flipyz_shape(make_uvcylinder())),
+              material);
+        } else if (idx == 4) {
+          add_instance(scene, name, frame,
+              add_shape(scene, "rounded_box", make_rounded_box()), material);
+        } else {
+          throw std::out_of_range("unknown instance");
+        }
+      });
+}
+
+// Scene test shapes 2
+scene_data make_shapes2_scene() {
+  return make_test_scene(
+      [material = invalidid](scene_data& scene, const string& name,
+          const frame3f& frame, int idx) mutable {
+        if (material == invalidid) {
+          auto texture = add_texture(scene, "uvgrid", make_uvgrid());
+          material     = add_material(
+              scene, "material", make_glossy_material({1, 1, 1}, 0.2, texture));
+        }
+
+        if (idx == 0) {
+          add_instance(scene, name, frame,
+              add_shape(scene, "sdcube", make_sdcube()), material);
+        } else if (idx == 1) {
+          add_instance(scene, name, frame,
+              add_shape(scene, "sdmonkey", make_monkey()), material);
+        } else if (idx == 2) {
+          add_instance(scene, name, frame,
+              add_shape(scene, "displaced",
+                  displace_shape(make_sphere(128), make_bumps())),
+              material);
+        } else if (idx == 3) {
+          add_instance(scene, name, frame,
+              add_shape(scene, "bunny", make_sphere()), material);
+        } else if (idx == 4) {
+          add_instance(scene, name, frame,
+              add_shape(scene, "teapot", make_sphere()), material);
+        } else {
+          throw std::out_of_range("unknown instance");
+        }
+      });
+}
+
 // Scene test materials 4
 scene_data make_materials4_scene() {
   return make_test_scene(
@@ -2062,26 +2131,10 @@ scene_data make_scene_preset(const string& type_) {
     return make_materials4_scene();
   } else if (type == "materials4") {
     return make_materials4_scene();
-  } else if (type == "materials5") {
-    return make_test({test_cameras_type::wide, test_environments_type::sky,
-        test_arealights_type::large, test_floor_type::standard,
-        test_shapes_type::rows, test_materials_type::materials5,
-        test_instance_name_type::material});
   } else if (type == "shapes1") {
-    return make_test({test_cameras_type::standard, test_environments_type::sky,
-        test_arealights_type::large, test_floor_type::standard,
-        test_shapes_type::shapes1, test_materials_type::uvgrid,
-        test_instance_name_type::shape});
+    return make_shapes1_scene();
   } else if (type == "shapes2") {
-    return make_test({test_cameras_type::standard, test_environments_type::sky,
-        test_arealights_type::large, test_floor_type::standard,
-        test_shapes_type::shapes2, test_materials_type::uvgrid,
-        test_instance_name_type::shape});
-  } else if (type == "shapes3") {
-    return make_test({test_cameras_type::standard, test_environments_type::sky,
-        test_arealights_type::large, test_floor_type::standard,
-        test_shapes_type::shapes3, test_materials_type::hair,
-        test_instance_name_type::shape});
+    return make_shapes2_scene();
   } else if (type == "environments1") {
     return make_test({test_cameras_type::standard, test_environments_type::sky,
         test_arealights_type::none, test_floor_type::standard,

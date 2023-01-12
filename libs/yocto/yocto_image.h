@@ -113,10 +113,12 @@ constexpr void rgb_to_srgbb(array2d<Tb>& srgb, const array2d<T>& rgb) {
 }
 
 // Lookup pixel for evaluation
-template <typename T, typename T1, size_t N>
-constexpr vec<T, N> lookup_image(
-    const array2d<vec<T1, N>>& image, const vec2s& ij, bool as_linear = false) {
-  if constexpr (!std::is_same_v<T1, byte>) {
+template <typename T>
+constexpr T lookup_image(
+    const array2d<T>& image, const vec2s& ij, bool as_linear = false) {
+  if constexpr (!(std::is_same_v<T, byte> || std::is_same_v<T, vec1b> ||
+                    std::is_same_v<T, vec3b> || std::is_same_v<T, vec3b> ||
+                    std::is_same_v<T, vec4b>)) {
     return as_linear ? srgb_to_rgb(image[ij]) : image[ij];
   } else {
     return as_linear ? srgbb_to_rgb(image[ij]) : byte_to_float(image[ij]);
@@ -124,11 +126,11 @@ constexpr vec<T, N> lookup_image(
 }
 
 // Evaluates an image at a point `uv`.
-template <typename T, typename T1, size_t N>
-constexpr vec<T, N> eval_image(const array2d<vec<T1, N>>& image,
-    const vec<T, 2>& uv, bool as_linear = false, bool no_interpolation = false,
+template <typename T, typename T1>
+constexpr T eval_image(const array2d<T>& image, const vec<T1, 2>& uv,
+    bool as_linear = false, bool no_interpolation = false,
     bool clamp_to_edge = false) {
-  if (image.empty()) return vec<T, N>{0};
+  if (image.empty()) return T{0};
 
   // get image width/height
   auto size = image.extents();
