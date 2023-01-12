@@ -1769,9 +1769,8 @@ scene_data make_shapes2_scene() {
       [material = invalidid](scene_data& scene, const string& name,
           const frame3f& frame, int idx) mutable {
         if (material == invalidid) {
-          auto texture = add_texture(scene, "uvgrid", make_uvgrid());
-          material     = add_material(
-              scene, "material", make_glossy_material({1, 1, 1}, 0.2, texture));
+          material = add_material(
+              scene, "material", make_glossy_material({0.5, 0.5, 1}, 0.2));
         }
 
         if (idx == 0) {
