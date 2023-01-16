@@ -40,7 +40,7 @@ using namespace std::string_literals;
 // main function
 void run(const vector<string>& args) {
   // parameters
-  auto shapename = "shape.ply"s;
+  auto shapename = "quad.ypreset"s;
   auto outname   = "out.ply"s;
   auto ashairs   = false;
   auto samples   = 4096;

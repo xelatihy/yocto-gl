@@ -38,8 +38,8 @@ using namespace std::string_literals;
 // main function
 void run(const vector<string>& args) {
   // parameters
-  auto filename1 = "image1.png"s;
-  auto filename2 = "image2.png"s;
+  auto filename1 = "uvgrid.ypreset"s;
+  auto filename2 = "uvgrid.ypreset"s;
   auto outname   = ""s;
   auto signal    = false;
   auto threshold = 0.0f;

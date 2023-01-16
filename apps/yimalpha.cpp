@@ -38,8 +38,8 @@ using namespace std::string_literals;
 // main function
 void run(const vector<string>& args) {
   // parameters
-  auto imagename  = "image.png"s;
-  auto alphaname  = "alpha.png"s;
+  auto imagename  = "uvgrid.ypreset"s;
+  auto alphaname  = "uvgrid.ypreset"s;
   auto outname    = "out.png"s;
   auto from_color = false;
   auto from_black = false;

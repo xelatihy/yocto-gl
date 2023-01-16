@@ -41,7 +41,7 @@ using namespace std::string_literals;
 void run(const vector<string>& args) {
 #ifdef YOCTO_OPENGL
   // parameters
-  auto scenename = "scene.json"s;
+  auto scenename = "features1.ypreset"s;
   auto camname   = ""s;
 
   // parse command line
