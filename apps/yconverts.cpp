@@ -56,6 +56,8 @@ void run(const vector<string>& args) {
   auto catmullclark = false;
   auto toedges      = false;
   auto tovertices   = false;
+  auto heightfield  = ""s;
+  auto heightscale  = 1.0f;
 
   // parse command line
   auto cli = make_cli("yconverts", "convert shapes");
@@ -73,14 +75,19 @@ void run(const vector<string>& args) {
   add_option(cli, "catmullclark", catmullclark, "subdivide as Catmull-Clark");
   add_option(cli, "toedges", toedges, "convert shape to edges");
   add_option(cli, "tovertices", tovertices, "convert shape to vertices");
+  add_option(cli, "heightfield", heightfield, "heightfield image");
+  add_option(cli, "heightscale", heightscale, "heightfield scale");
   parse_cli(cli, args);
-
-  // start converting
 
   // switch between facevarying and not
   if (!facevarying) {
     // load mesh
     auto shape = load_shape(shapename, true);
+
+    // heightfield
+    if (!heightfield.empty()) {
+      shape = make_heightfield(load_image(heightfield), {1, heightscale});
+    }
 
     // remove data
     if (aspositions) {
