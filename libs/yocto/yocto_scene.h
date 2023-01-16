@@ -350,7 +350,7 @@ material_data make_emissive_material(const vec3f& emission = {1, 1, 1},
 material_data make_matte_material(const vec3f& color = {0.8, 0.8, 0.8},
     int color_tex = invalidid, int normal_tex = invalidid);
 material_data make_glossy_material(const vec3f& color = {0.8, 0.8, 0.8},
-    float roughness = 0.01f, int color_tex = invalidid,
+    float roughness = 0.2f, int color_tex = invalidid,
     int roughness_tex = invalidid, int normal_tex = invalidid);
 material_data make_reflective_material(const vec3f& color = {1, 1, 1},
     float roughness = 0, int color_tex = invalidid,
@@ -423,7 +423,7 @@ int add_matte_material(scene_data& scene, const string& name,
     const vec3f& color = {0.8, 0.8, 0.8}, int color_tex = invalidid,
     int normal_tex = invalidid);
 int add_glossy_material(scene_data& scene, const string& name,
-    const vec3f& color = {0.8, 0.8, 0.8}, float roughness = 0.01f,
+    const vec3f& color = {0.8, 0.8, 0.8}, float roughness = 0.2f,
     int color_tex = invalidid, int roughness_tex = invalidid,
     int normal_tex = invalidid);
 int add_reflective_material(scene_data& scene, const string& name,
