@@ -76,73 +76,86 @@ namespace yocto {
 // Simple parallel for used since our target platforms do not yet support
 // parallel algorithms. `Func` takes the integer index.
 template <typename T, typename Func>
-inline bool parallel_for(T num, Func&& func) {
-  auto              futures  = vector<std::future<void>>{};
-  auto              nthreads = std::thread::hardware_concurrency();
-  std::atomic<T>    next_idx(0);
-  std::atomic<bool> has_error(false);
-  for (auto thread_id = 0; thread_id < (int)nthreads; thread_id++) {
-    futures.emplace_back(
-        std::async(std::launch::async, [&func, &next_idx, &has_error, num]() {
-          while (true) {
-            if (has_error) break;
-            auto idx = next_idx.fetch_add(1);
-            if (idx >= num) break;
-            try {
-              func(idx);
-            } catch (std::exception& error) {
-              has_error = true;
-              throw;
+inline void parallel_for(T num, bool noparallel, Func&& func) {
+  if (noparallel) {
+    for (auto idx : range(num)) {
+      func(idx);
+    }
+  } else {
+    auto              futures  = vector<std::future<void>>{};
+    auto              nthreads = std::thread::hardware_concurrency();
+    std::atomic<T>    next_idx(0);
+    std::atomic<bool> has_error(false);
+    for (auto thread_id = 0; thread_id < (int)nthreads; thread_id++) {
+      futures.emplace_back(
+          std::async(std::launch::async, [&func, &next_idx, &has_error, num]() {
+            while (true) {
+              if (has_error) break;
+              auto idx = next_idx.fetch_add(1);
+              if (idx >= num) break;
+              try {
+                func(idx);
+              } catch (std::exception& error) {
+                has_error = true;
+                throw;
+              }
             }
-          }
-        }));
+          }));
+    }
+    for (auto& f : futures) f.get();
   }
-  for (auto& f : futures) f.get();
-  return !(bool)has_error;
 }
 
 // Simple parallel for used since our target platforms do not yet support
 // parallel algorithms. `Func` takes the integer index.
 template <typename Sequence1, typename Sequence2, typename Func>
-inline void parallel_zip(
-    Sequence1&& sequence1, Sequence2&& sequence2, Func&& func) {
+inline void parallel_zip(Sequence1&& sequence1, Sequence2&& sequence2,
+    bool noparallel, Func&& func) {
   if (std::size(sequence1) != std::size(sequence2))
     throw std::out_of_range{"invalid sequence lengths"};
-  auto                num      = std::size(sequence1);
-  auto                futures  = vector<std::future<void>>{};
-  auto                nthreads = std::thread::hardware_concurrency();
-  std::atomic<size_t> next_idx(0);
-  std::atomic<bool>   has_error(false);
-  for (auto thread_id = 0; thread_id < (int)nthreads; thread_id++) {
-    futures.emplace_back(std::async(std::launch::async,
-        [&func, &next_idx, &has_error, num, &sequence1, &sequence2]() {
-          try {
-            while (true) {
-              auto idx = next_idx.fetch_add(1);
-              if (idx >= num) break;
-              if (has_error) break;
-              func(std::forward<Sequence1>(sequence1)[idx],
-                  std::forward<Sequence2>(sequence2)[idx]);
+  if (noparallel) {
+    for (auto idx : range(sequence1.size())) {
+      func(std::forward<Sequence1>(sequence1)[idx],
+          std::forward<Sequence2>(sequence2)[idx]);
+    }
+  } else {
+    auto                num      = std::size(sequence1);
+    auto                futures  = vector<std::future<void>>{};
+    auto                nthreads = std::thread::hardware_concurrency();
+    std::atomic<size_t> next_idx(0);
+    std::atomic<bool>   has_error(false);
+    for (auto thread_id = 0; thread_id < (int)nthreads; thread_id++) {
+      futures.emplace_back(std::async(std::launch::async,
+          [&func, &next_idx, &has_error, num, &sequence1, &sequence2]() {
+            try {
+              while (true) {
+                auto idx = next_idx.fetch_add(1);
+                if (idx >= num) break;
+                if (has_error) break;
+                func(std::forward<Sequence1>(sequence1)[idx],
+                    std::forward<Sequence2>(sequence2)[idx]);
+              }
+            } catch (...) {
+              has_error = true;
+              throw;
             }
-          } catch (...) {
-            has_error = true;
-            throw;
-          }
-        }));
+          }));
+    }
+    for (auto& f : futures) f.get();
   }
-  for (auto& f : futures) f.get();
 }
 
 // Simple parallel for used since our target platforms do not yet support
 // parallel algorithms. `Func` takes a reference to a `T`.
 template <typename T, typename Func>
-inline bool parallel_foreach(vector<T>& values, Func&& func) {
-  return parallel_for(values.size(),
+inline void parallel_foreach(vector<T>& values, bool noparallel, Func&& func) {
+  return parallel_for(values.size(), noparallel,
       [&func, &values](size_t idx) { return func(values[idx]); });
 }
 template <typename T, typename Func>
-inline bool parallel_foreach(const vector<T>& values, Func&& func) {
-  return parallel_for(values.size(),
+inline void parallel_foreach(
+    const vector<T>& values, bool noparallel, Func&& func) {
+  return parallel_for(values.size(), noparallel,
       [&func, &values](size_t idx) { return func(values[idx]); });
 }
 
@@ -403,53 +416,37 @@ using json_value = nlohmann::ordered_json;
 }
 
 // Json conversions
-inline void to_json(json_value& json, const vec2f& value) {
-  nlohmann::to_json(json, (const array<float, 2>&)value);
+template <typename T, size_t N>
+inline void to_json(json_value& json, const vec<T, N>& value) {
+  nlohmann::to_json(json, (const array<T, N>&)value);
 }
-inline void to_json(json_value& json, const vec3f& value) {
-  nlohmann::to_json(json, (const array<float, 3>&)value);
+template <typename T, size_t N>
+inline void to_json(json_value& json, const frame<T, N>& value) {
+  nlohmann::to_json(json, (const array<array<T, N>, (N + 1)>&)value);
 }
-inline void to_json(json_value& json, const vec4f& value) {
-  nlohmann::to_json(json, (const array<float, 4>&)value);
+template <typename T, size_t N, size_t M>
+inline void to_json(json_value& json, const mat<T, N, M>& value) {
+  nlohmann::to_json(json, (const array<array<T, N>, M>&)value);
 }
-inline void to_json(json_value& json, const frame2f& value) {
-  nlohmann::to_json(json, (const array<float, 6>&)value);
+template <typename T, size_t N>
+inline void from_json(const json_value& json, vec<T, N>& value) {
+  nlohmann::from_json(json, (array<T, N>&)value);
 }
-inline void to_json(json_value& json, const frame3f& value) {
-  nlohmann::to_json(json, (const array<float, 12>&)value);
+template <typename T, size_t N>
+inline void from_json(const json_value& json, frame<T, N>& value) {
+  if (json.is_array() && !json.empty() && !json.front().is_array()) {
+    nlohmann::from_json(json, (array<T, N*(N + 1)>&)value);
+  } else {
+    nlohmann::from_json(json, (array<array<T, N>, (N + 1)>&)value);
+  }
 }
-inline void to_json(json_value& json, const mat2f& value) {
-  nlohmann::to_json(json, (const array<float, 4>&)value);
-}
-inline void to_json(json_value& json, const mat3f& value) {
-  nlohmann::to_json(json, (const array<float, 9>&)value);
-}
-inline void to_json(json_value& json, const mat4f& value) {
-  nlohmann::to_json(json, (const array<float, 16>&)value);
-}
-inline void from_json(const json_value& json, vec2f& value) {
-  nlohmann::from_json(json, (array<float, 2>&)value);
-}
-inline void from_json(const json_value& json, vec3f& value) {
-  nlohmann::from_json(json, (array<float, 3>&)value);
-}
-inline void from_json(const json_value& json, vec4f& value) {
-  nlohmann::from_json(json, (array<float, 4>&)value);
-}
-inline void from_json(const json_value& json, frame2f& value) {
-  nlohmann::from_json(json, (array<float, 6>&)value);
-}
-inline void from_json(const json_value& json, frame3f& value) {
-  nlohmann::from_json(json, (array<float, 12>&)value);
-}
-inline void from_json(const json_value& json, mat2f& value) {
-  nlohmann::from_json(json, (array<float, 4>&)value);
-}
-inline void from_json(const json_value& json, mat3f& value) {
-  nlohmann::from_json(json, (array<float, 9>&)value);
-}
-inline void from_json(const json_value& json, mat4f& value) {
-  nlohmann::from_json(json, (array<float, 16>&)value);
+template <typename T, size_t N, size_t M>
+inline void from_json(const json_value& json, mat<T, N, M>& value) {
+  if (json.is_array() && !json.empty() && !json.front().is_array()) {
+    nlohmann::from_json(json, (array<T, N * M>&)value);
+  } else {
+    nlohmann::from_json(json, (array<array<T, N>, M>&)value);
+  }
 }
 
 }  // namespace yocto
@@ -1167,7 +1164,7 @@ shape_data make_shape_preset(const string& type_) {
   } else if (type == "fvsphere") {
     return fvshape_to_shape(make_fvsphere());
   } else if (type == "monkey_subdiv") {
-    return add_normals(subdivide_shape(make_monkey(), 2, true));
+    return add_normals(subdivide_shape(make_monkey(0), 2, true));
   } else if (type == "wtcube_subdiv") {
     return add_normals(subdivide_shape(make_wtcube(), 4, true));
   } else if (type == "opcube_subdiv") {
@@ -1241,7 +1238,7 @@ shape_data make_shape_preset(const string& type_) {
   } else if (type == "test_hairball-interior") {
     return transform_shape(make_sphere(), test_xform * scaling_frame(0.8f));
   } else if (type == "test_suzanne_subdiv") {
-    return transform_shape(make_monkey(), test_xform * scaling_frame(0.8f));
+    return transform_shape(make_monkey(0), test_xform * scaling_frame(0.8f));
   } else if (type == "test_wtcube") {
     return transform_shape(make_wtcube(), test_xform);
   } else if (type == "test_arealight1") {
@@ -1595,307 +1592,538 @@ struct test_params {
   test_instance_name_type instance_name = test_instance_name_type::material;
 };
 
+// Make a test scene with a callback to add your own objects.
+template <typename Func>
+scene_data make_test_scene(Func&& func) {
+  auto scene = scene_data{};
+
+  add_camera(scene, "camera", {0, 10, 35}, {0, 0, 0}, {0, 1, 0}, 0.1, 3, 0);
+
+  add_environment(scene, "sky", identity3x4f, {0.5, 0.5, 0.5}, make_sunsky());
+
+  add_instance(scene, "arealight1",
+      lookat_frame(vec3f{-10, 20, 20}, {0, 0, 0}, {0, 1, 0}, true),
+      add_shape(scene, "arealight1", scale_shape(make_rect(), 5)),
+      add_emission_material(scene, "arealight1", {10, 10, 10}));
+  add_instance(scene, "arealight2",
+      lookat_frame(vec3f{+10, 20, 20}, {0, 0, 0}, {0, 1, 0}, true),
+      add_shape(scene, "arealight2", scale_shape(make_rect(), 5)),
+      add_emission_material(scene, "arealight2", {10, 10, 10}));
+
+  add_instance(scene, "floor", translation_frame(vec3f{0, -1, 0}), make_floor(),
+      make_matte_material(), make_grid());
+
+  auto num = 5;
+  for (auto idx : range(num)) {
+    func(scene, "object" + std::to_string(idx + 1),
+        translation_frame(vec3f{2.5f * (idx - num / 2), 0.0f, 0.0f}), idx);
+  }
+
+  return scene;
+}
+
+// Scene test 1
+scene_data make_features1_scene() {
+  return make_test_scene(
+      [](scene_data& scene, const string& name, const frame3f& frame, int idx) {
+        if (idx == 0) {
+          add_instance(scene, name, frame, make_sphere(),
+              make_glossy_material(), make_uvgrid());
+        } else if (idx == 1) {
+          add_instance(scene, name, frame, make_sphere(),
+              make_refractive_material({1.0, 0.5, 0.5}));
+        } else if (idx == 2) {
+          add_instance(scene, name, frame, make_sphere(),
+              make_scattering_material({0.5, 0.5, 0.5}, {0.3, 0.6, 0.3}),
+              make_uvgrid());
+        } else if (idx == 3) {
+          add_instance(scene, name, frame, make_sphere(),
+              make_glossy_material({0.5, 0.7, 0.5}), {}, {},
+              bump_to_normal(make_bumps(), 0.05));
+        } else if (idx == 4) {
+          add_instance(scene, name, frame, make_sphere(),
+              make_reflective_material({0.66, 0.45, 0.34}, 0.2f));
+        } else {
+          throw std::out_of_range("unknown instance");
+        }
+      });
+}
+
+// Scene test 2
+scene_data make_features2_scene() {
+  return make_test_scene([](scene_data& scene, const string& name,
+                             const frame3f& frame, int idx) {
+    if (idx == 0) {
+      add_instance(scene, name, frame, make_sphere(), make_glossy_material(),
+          make_uvgrid());
+    } else if (idx == 1) {
+      add_instance(scene, name, frame, make_monkey(),
+          make_glossy_material({1.0, 0.5, 0.5}));
+      add_subdiv(scene, name, make_monkey(0), (int)scene.shapes.size() - 1, 2);
+    } else if (idx == 2) {
+      add_instance(scene, name, frame, scale_shape(make_sphere(), 0.65f),
+          make_matte_material());
+      add_instance(scene, name, frame, make_random_hairs(scene.shapes.back()),
+          make_matte_material());
+    } else if (idx == 3) {
+      add_instance(scene, name, frame, make_sphere(128),
+          make_glossy_material({0.5, 0.7, 0.5}));
+      add_subdiv(scene, name, make_sphere(128), (int)scene.shapes.size() - 1, 0,
+          0.25f, make_bumps());
+    } else if (idx == 4) {
+      add_instance(scene, name, frame, make_rounded_box(),
+          make_glossy_material(), make_uvgrid());
+    } else {
+      throw std::out_of_range("unknown instance");
+    }
+  });
+}
+
+// Scene test materials 1
+scene_data make_materials1_scene() {
+  return make_test_scene([shape = invalidid](scene_data& scene,
+                             const string& name, const frame3f& frame,
+                             int idx) mutable {
+    if (shape == invalidid) {
+      shape = add_shape(scene, "sphere", make_sphere());
+    }
+
+    if (idx == 0) {
+      add_instance(scene, name, frame, shape,
+          add_glossy_material(scene, "glossys", {0.5, 0.5, 0.7}, 0));
+    } else if (idx == 1) {
+      add_instance(scene, name, frame, shape,
+          add_glossy_material(scene, "glossyr", {0.5, 0.7, 0.5}, 0.2));
+    } else if (idx == 2) {
+      add_instance(scene, name, frame, shape,
+          add_glossy_material(scene, "matte", {0.7, 0.7, 0.7}));
+    } else if (idx == 3) {
+      add_instance(scene, name, frame, shape,
+          add_reflective_material(scene, "reflectives", {0.7, 0.7, 0.7}, 0));
+    } else if (idx == 4) {
+      add_instance(scene, name, frame, shape,
+          add_reflective_material(
+              scene, "reflectiver", {0.66, 0.45, 0.34}, 0.2));
+    } else {
+      throw std::out_of_range("unknown instance");
+    }
+  });
+}
+
+// Scene test materials 2
+scene_data make_materials2_scene() {
+  return make_test_scene([shape = invalidid](scene_data& scene,
+                             const string& name, const frame3f& frame,
+                             int idx) mutable {
+    if (shape == invalidid) {
+      shape = add_shape(scene, "sphere", make_sphere());
+    }
+
+    if (idx == 0) {
+      add_instance(scene, name, frame, shape,
+          add_refractive_material(scene, "refractives", {1.0, 1.0, 1.0}, 0));
+    } else if (idx == 1) {
+      add_instance(scene, name, frame, shape,
+          add_refractive_material(scene, "refractiver", {1.0, 0.7, 0.7}, 0.1));
+    } else if (idx == 2) {
+      add_instance(scene, name, frame, shape,
+          add_opacity_material(scene, "opacity", {0.7, 0.5, 0.5}, 0.2));
+    } else if (idx == 3) {
+      add_instance(scene, name, frame, shape,
+          add_transparent_material(scene, "transparents", {1.0, 1.0, 1.0}, 0));
+    } else if (idx == 4) {
+      add_instance(scene, name, frame, shape,
+          add_transparent_material(
+              scene, "transparentr", {1.0, 0.7, 0.7}, 0.1));
+    } else {
+      throw std::out_of_range("unknown instance");
+    }
+  });
+}
+
+// Scene test shapes 1
+scene_data make_shapes1_scene() {
+  return make_test_scene(
+      [material = invalidid](scene_data& scene, const string& name,
+          const frame3f& frame, int idx) mutable {
+        if (material == invalidid) {
+          auto texture = add_texture(scene, "uvgrid", make_uvgrid());
+          material     = add_material(
+              scene, "material", make_glossy_material({1, 1, 1}, 0.2, texture));
+        }
+
+        if (idx == 0) {
+          add_instance(scene, name, frame,
+              add_shape(scene, "sphere", make_sphere()), material);
+        } else if (idx == 1) {
+          add_instance(scene, name, frame,
+              add_shape(scene, "capped_uvspherey",
+                  flipyz_shape(make_capped_uvsphere())),
+              material);
+        } else if (idx == 2) {
+          add_instance(scene, name, frame,
+              add_shape(scene, "disk", make_disk()), material);
+        } else if (idx == 3) {
+          add_instance(scene, name, frame,
+              add_shape(scene, "uvcylindery", flipyz_shape(make_uvcylinder())),
+              material);
+        } else if (idx == 4) {
+          add_instance(scene, name, frame,
+              add_shape(scene, "rounded_box", make_rounded_box()), material);
+        } else {
+          throw std::out_of_range("unknown instance");
+        }
+      });
+}
+
+// Scene test shapes 2
+scene_data make_shapes2_scene() {
+  return make_test_scene(
+      [material = invalidid](scene_data& scene, const string& name,
+          const frame3f& frame, int idx) mutable {
+        if (material == invalidid) {
+          material = add_material(
+              scene, "material", make_glossy_material({0.5, 0.5, 1}, 0.2));
+        }
+
+        if (idx == 0) {
+          add_instance(scene, name, frame,
+              add_shape(scene, "sdcube", make_sdcube()), material);
+        } else if (idx == 1) {
+          add_instance(scene, name, frame,
+              add_shape(scene, "sdmonkey", make_monkey()), material);
+        } else if (idx == 2) {
+          add_instance(scene, name, frame,
+              add_shape(scene, "displaced",
+                  displace_shape(make_sphere(128), make_bumps(), 0.1f)),
+              material);
+        } else if (idx == 3) {
+          add_instance(scene, name, frame,
+              add_shape(scene, "bunny", make_sphere()), material);
+        } else if (idx == 4) {
+          add_instance(scene, name, frame,
+              add_shape(scene, "teapot", make_sphere()), material);
+        } else {
+          throw std::out_of_range("unknown instance");
+        }
+      });
+}
+
+// Scene test materials 4
+scene_data make_materials4_scene() {
+  return make_test_scene(
+      [](scene_data& scene, const string& name, const frame3f& frame, int idx) {
+        if (idx == 0) {
+          add_instance(scene, name, frame, make_sphere(),
+              make_volumetric_material({0.5, 0.5, 0.5}, {0.9, 0.9, 0.9}));
+        } else if (idx == 1) {
+          add_instance(scene, name, frame, make_sphere(),
+              make_refractive_material({1.0, 0.5, 0.5}, 0));
+        } else if (idx == 2) {
+          add_instance(scene, name, frame, make_sphere(),
+              make_refractive_material({1.0, 1.0, 1.0}, 0));
+        } else if (idx == 3) {
+          add_instance(scene, name, frame, make_sphere(),
+              make_scattering_material({0.5, 0.5, 0.5}, {0.3, 0.6, 0.3}, 0));
+        } else if (idx == 4) {
+          add_instance(scene, name, frame, make_sphere(),
+              make_volumetric_material({0.65, 0.65, 0.65}, {0.2, 0.2, 0.2}));
+        } else {
+          throw std::out_of_range("unknown instance");
+        }
+      });
+}
+
 // Scene test
 scene_data make_test(const test_params& params) {
-  return {};
-  // // cameras
-  // switch (params.cameras) {
-  //   case test_cameras_type::standard: {
-  //     add_camera(scene, "default", {-0.75, 0.4, 0.9}, {-0.075, 0.05,
-  //     -0.05},
-  //         {0, 1, 0}, 0.05, 2.4, 0);
-  //   } break;
-  //   // TODO(fabio): fix wide camera
-  //   case test_cameras_type::wide: {
-  //     add_camera(scene, "default", {-0.75, 0.4, 0.9}, {-0.075, 0.05,
-  //     -0.05},
-  //         {0, 1, 0}, 0.05, 2.4, 0);
-  //   } break;
-  // }
-  // // TODO(fabio): port other cameras
-  // switch (params.environments) {
-  //   case test_environments_type::none: break;
-  //   case test_environments_type::sky: {
-  //     add_environment(scene, "sky", {{1,0,0}, {0,1,0}, {0,0,1}, {0,0,0}},
-  //     {0.5, 0.5, 0.5},
-  //         add_texture(scene, "sky",
-  //             make_sunsky(
-  //                 {2048, 1024}, pif / 4, 3.0, false, 1.0, 1.0, {0.7, 0.7,
-  //                 0.7}),
-  //             true));
-  //   } break;
-  //   case test_environments_type::sunsky: {
-  //     add_environment(scene, "sunsky", {{1,0,0}, {0,1,0}, {0,0,1},
-  //     {0,0,0}}, {0.5, 0.5, 0.5},
-  //         add_texture(scene, "sky",
-  //             make_sunsky(
-  //                 {2048, 1024}, pif / 4, 3.0, true, 1.0, 1.0, {0.7, 0.7,
-  //                 0.7}),
-  //             true));
-  //   } break;
-  // }
-  // switch (params.arealights) {
-  //   case test_arealights_type::none: break;
-  //   case test_arealights_type::standard: {
-  //     add_instance(scene, "arealight1",
-  //         lookat_frame({-0.4, 0.8, 0.8}, {0, 0.1, 0}, {0, 1, 0}, true),
-  //         add_shape(scene, "arealight1", make_rect({1, 1}, {0.2, 0.2})),
-  //         add_emission_material(
-  //             scene, "arealight1", {20, 20, 20}, invalidid));
-  //     add_instance(scene, "arealight2",
-  //         lookat_frame({+0.4, 0.8, 0.8}, {0, 0.1, 0}, {0, 1, 0}, true),
-  //         add_shape(scene, "arealight2", make_rect({1, 1}, {0.2, 0.2})),
-  //         add_emission_material(
-  //             scene, "arealight2", {20, 20, 20}, invalidid));
-  //   } break;
-  //   case test_arealights_type::large: {
-  //     add_instance(scene, "largearealight1",
-  //         lookat_frame({-0.8, 1.6, 1.6}, {0, 0.1, 0}, {0, 1, 0}, true),
-  //         add_shape(scene, "largearealight1", make_rect({1, 1}, {0.4,
-  //         0.4})), add_emission_material(
-  //             scene, "largearealight1", {10, 10, 10}, invalidid));
-  //     add_instance(scene, "largearealight2",
-  //         lookat_frame({+0.8, 1.6, 1.6}, {0, 0.1, 0}, {0, 1, 0}, true),
-  //         add_shape(scene, "largearealight2", make_rect({1, 1}, {0.4,
-  //         0.4})), add_emission_material(
-  //             scene, "largearealight2", {10, 10, 10}, invalidid));
-  //   } break;
-  // }
-  // switch (params.floor) {
-  //   case test_floor_type::none: break;
-  //   case test_floor_type::standard: {
-  //     add_instance(scene, "floor", {{1,0,0}, {0,1,0}, {0,0,1}, {0,0,0}},
-  //         add_shape(scene, "floor", make_floor({1, 1}, {2, 2}, {20, 20})),
-  //         add_matte_material(scene, "floor", {1, 1, 1},
-  //             add_texture(scene, "floor", make_grid({1024, 1024}))));
-  //   } break;
-  // }
-  // auto shapes = vector<int>{}, shapesi =
-  // vector<int>{}; auto subdivs   =
-  // vector<int>{}; auto materials =
-  // vector<int>{}; switch (params.shapes) {
-  //   case test_shapes_type::features1: {
-  //     auto bunny  = add_shape(scene, "sphere", make_sphere(32, 0.075, 1));
-  //     auto sphere = add_shape(scene, "sphere", make_sphere(32, 0.075, 1));
-  //     shapes      = {bunny, sphere, bunny, sphere, bunny};
-  //   } break;
-  //   case test_shapes_type::features2: {
-  //     shapes  = {add_shape(scene, "sphere", make_sphere(32, 0.075, 1)),
-  //         add_shape(scene, "suzanne", make_monkey(0.075f * 0.8f)),
-  //         add_shape(scene, "hair",
-  //             make_hair(make_sphere(32, 0.075f * 0.8f, 1), {4, 65536},
-  //                 {0.1f * 0.15f, 0.1f * 0.15f},
-  //                 {0.001f * 0.15f, 0.0005f * 0.15f}, {0.03, 100})),
-  //         add_shape(scene, "displaced", make_sphere(128, 0.075f, 1)),
-  //         add_shape(scene, "cube",
-  //             make_rounded_box({32, 32, 32}, {0.075, 0.075, 0.075}, {1, 1,
-  //             1},
-  //                 0.3 * 0.075f))};
-  //     shapesi = {invalidid, invalidid,
-  //         add_shape(scene, "hairi", make_sphere(32, 0.075f * 0.8f, 1)),
-  //         invalidid, invalidid};
-  //     subdivs = {add_subdiv(scene, "suzanne", make_monkey(0.075f * 0.8f),
-  //                    shapes[1], 2),
-  //         add_subdiv(scene, "displaced", make_sphere(128, 0.075f, 1),
-  //         shapes[3],
-  //             0, 0.025,
-  //             add_texture(scene, "bumps-displacement", make_bumps({1024,
-  //             1024}),
-  //                 false, true))};
-  //   } break;
-  //   case test_shapes_type::rows: {
-  //     auto bunny  = add_shape(scene, "bunny", make_sphere(32, 0.075, 1));
-  //     auto sphere = add_shape(scene, "sphere", make_sphere(32, 0.075, 1));
-  //     shapes      = {bunny, bunny, bunny, bunny, bunny, sphere, sphere,
-  //     sphere,
-  //         sphere, sphere};
-  //   } break;
-  //   case test_shapes_type::bunny_sphere: {
-  //     auto bunny  = add_shape(scene, "bunny", make_sphere(32, 0.075, 1));
-  //     auto sphere = add_shape(scene, "sphere", make_sphere(32, 0.075, 1));
-  //     shapes      = {bunny, sphere, bunny, sphere, bunny};
-  //   } break;
-  //   case test_shapes_type::shapes1: {
-  //     shapes = {
-  //         add_shape(scene, "sphere", make_sphere(32, 0.075, 1)),
-  //         add_shape(scene, "uvsphere-flipcap",
-  //             make_capped_uvsphere({32, 32}, 0.075, {1, 1}, 0.3 * 0.075)),
-  //         add_shape(scene, "disk", make_disk(32, 0.075f, 1)),
-  //         add_shape(scene, "uvcylinder",
-  //             make_rounded_uvcylinder(
-  //                 {32, 32, 32}, {0.075, 0.075}, {1, 1, 1}, 0.3 * 0.075)),
-  //         add_shape(scene, "cube",
-  //             make_rounded_box({32, 32, 32}, {0.075, 0.075, 0.075}, {1, 1,
-  //             1},
-  //                 0.3 * 0.075f)),
-  //     };
-  //   } break;
-  //   case test_shapes_type::shapes2: {
-  //     shapes = {
-  //         add_shape(scene, "cube-subdiv", make_fvcube(0.075)),
-  //         add_shape(scene, "suzanne-subdiv", make_monkey(0.075)),
-  //         add_shape(scene, "displaced", make_sphere(128, 0.075f, 1)),
-  //         add_shape(scene, "bunny", make_sphere(32, 0.075, 1)),
-  //         add_shape(scene, "teapot", make_sphere(32, 0.075, 1)),
-  //     };
-  //     subdivs = {
-  //         add_subdiv(scene, "cube-subdiv", make_fvcube(0.075), shapes[0],
-  //         4), add_subdiv(scene, "suzanne-subdiv", make_monkey(0.075),
-  //         shapes[1], 2), add_subdiv(scene, "displaced", make_sphere(128,
-  //         0.075f, 1), shapes[2],
-  //             0, 0.025,
-  //             add_texture(scene, "bumps-displacement", make_bumps({1024,
-  //             1024}),
-  //                 false, true))};
-  //   } break;
-  //   case test_shapes_type::shapes3: {
-  //     shapes = {
-  //         invalidid,
-  //         add_shape(scene, "hair1",
-  //             make_hair(make_sphere(32, 0.075f * 0.8f, 1), {4, 65536},
-  //                 {0.1f * 0.15f, 0.1f * 0.15f},
-  //                 {0.001f * 0.15f, 0.0005f * 0.15f}, {0.03, 100})),
-  //         add_shape(scene, "hair2",
-  //             make_hair(make_sphere(32, 0.075f * 0.8f, 1), {4, 65536},
-  //                 {0.1f * 0.15f, 0.1f * 0.15f},
-  //                 {0.001f * 0.15f, 0.0005f * 0.15f})),
-  //         add_shape(scene, "hair3",
-  //             make_hair(make_sphere(32, 0.075f * 0.8f, 1), {4, 65536},
-  //                 {0.1f * 0.15f, 0.1f * 0.15f},
-  //                 {0.001f * 0.15f, 0.0005f * 0.15f}, {0, 0}, {0.5, 128})),
-  //         invalidid,
-  //     };
-  //   } break;
-  // }
-  // switch (params.materials) {
-  //   case test_materials_type::features1: {
-  //     materials = {
-  //         add_plastic_material(scene, "coated", {1, 1, 1}, 0.2,
-  //             add_texture(scene, "uvgrid", make_uvgrid({1024, 1024}))),
-  //         add_glass_material(scene, "glass", {1, 0.5, 0.5}, 0),
-  //         add_glass_material(
-  //             scene, "jade", {0.5, 0.5, 0.5}, 0, {0.3, 0.6, 0.3}),
-  //         add_plastic_material(scene, "bumped", {0.5, 0.7, 0.5}, 0.2,
-  //             invalidid, invalidid,
-  //             add_texture(scene, "bumps-normal",
-  //                 bump_to_normal(make_bumps({1024, 1024}), 0.05), false,
-  //                 true)),
-  //         add_metal_material(scene, "metal", {0.66, 0.45, 0.34}, 0.2),
-  //     };
-  //   } break;
-  //   case test_materials_type::features2: {
-  //     auto uvgrid  = add_plastic_material(scene, "uvgrid", {1, 1, 1}, 0.2,
-  //         add_texture(scene, "uvgrid", make_uvgrid({1024, 1024})));
-  //     auto plastic = add_plastic_material(
-  //         scene, "plastic", {0.5, 0.7, 0.5}, 0.2);
-  //     auto hair = add_matte_material(scene, "hair", {0.7, 0.7, 0.7});
-  //     materials = {uvgrid, plastic, hair, plastic, uvgrid};
-  //   } break;
-  //   case test_materials_type::uvgrid: {
-  //     auto uvgrid = add_plastic_material(scene, "uvgrid", {1, 1, 1}, 0.2,
-  //         add_texture(scene, "uvgrid", make_uvgrid({1024, 1024})));
-  //     materials   = {uvgrid, uvgrid, uvgrid, uvgrid, uvgrid};
-  //   } break;
-  //   case test_materials_type::hair: {
-  //     auto hair = add_matte_material(scene, "hair", {0.7, 0.7, 0.7});
-  //     materials = {hair, hair, hair, hair, hair};
-  //   } break;
-  //   case test_materials_type::plastic_metal: {
-  //     materials = {
-  //         add_plastic_material(scene, "plastic1", {0.5, 0.5, 0.7}, 0.01),
-  //         add_plastic_material(scene, "plastic2", {0.5, 0.7, 0.5}, 0.2),
-  //         add_matte_material(scene, "matte", {0.7, 0.7, 0.7}),
-  //         add_metal_material(scene, "metal1", {0.7, 0.7, 0.7}, 0),
-  //         add_metal_material(scene, "metal2", {0.66, 0.45, 0.34}, 0.2),
-  //     };
-  //   } break;
-  //   case test_materials_type::materials1: {
-  //     materials = {
-  //         add_plastic_material(scene, "plastic1", {0.5, 0.5, 0.7}, 0.01),
-  //         add_plastic_material(scene, "plastic2", {0.5, 0.7, 0.5}, 0.2),
-  //         add_matte_material(scene, "matte", {0.7, 0.7, 0.7}),
-  //         add_plastic_material(scene, "metal1", {0.7, 0.7, 0.7}, 0),
-  //         add_plastic_material(scene, "metal2", {0.66, 0.45, 0.34}, 0.2),
-  //     };
-  //   } break;
-  //   case test_materials_type::materials2: {
-  //     materials = {
-  //         add_glass_material(scene, "glass1", {1, 1, 1}, 0),
-  //         add_glass_material(scene, "glass2", {1, 0.7, 0.7}, 0.1),
-  //         add_transparent_material(scene, "transparent", {0.7, 0.5, 0.5},
-  //         0.2), add_thinglass_material(scene, "tglass1", {1, 1, 1}, 0),
-  //         add_thinglass_material(scene, "tglass2", {1, 0.7, 0.7}, 0.1),
-  //     };
-  //   } break;
-  //   case test_materials_type::materials3: {
-  //     auto bumps_normal = add_texture(scene, "bumps-normal",
-  //         bump_to_normal(make_bumps({1024, 1024}), 0.05), false, true);
-  //     materials         = {
-  //         add_plastic_material(scene, "plastic1", {0.5, 0.5, 0.7}, 0.01,
-  //             invalidid, invalidid, bumps_normal),
-  //         add_plastic_material(scene, "plastic2", {0.5, 0.7, 0.5}, 0.2),
-  //         add_metal_material(scene, "metal1", {0.7, 0.7, 0.7}, 0,
-  //             invalidid, invalidid, bumps_normal),
-  //         add_metal_material(scene, "metal2", {0.66, 0.45, 0.34}, 0.2),
-  //         add_metal_material(scene, "metal3", {0.66, 0.45, 0.34}, 0.2),
-  //     };
-  //   } break;
-  //   case test_materials_type::materials4: {
-  //     materials = {
-  //         add_volume_material(
-  //             scene, "cloud", {0.65, 0.65, 0.65}, {0.9, 0.9, 0.9}, 1),
-  //         add_glass_material(scene, "glass", {1, 0.5, 0.5}, 0),
-  //         add_glass_material(
-  //             scene, "jade", {0.5, 0.5, 0.5}, 0, {0.3, 0.6, 0.3}),
-  //         add_glass_material(
-  //             scene, "jade2", {0.5, 0.5, 0.5}, 0, {0.3, 0.6, 0.3}),
-  //         add_volume_material(scene, "smoke", {0.5, 0.5, 0.5}, {0.2, 0.2,
-  //         0.2}),
-  //     };
-  //   } break;
-  //   case test_materials_type::materials5: {
-  //     materials = {
-  //         add_glass_material(scene, "skin1a", {0.76, 0.48, 0.23}, 0.25,
-  //             {0.436, 0.227, 0.131}, invalidid, invalidid,
-  //             invalidid, 1.5, -0.8, 0.001),
-  //         add_glass_material(scene, "skin2a", {0.82, 0.55, 0.4}, 0.25,
-  //             {0.623, 0.433, 0.343}, invalidid, invalidid,
-  //             invalidid, 1.5, -0.8, 0.001),
-  //         add_glass_material(scene, "skins", {0.76, 0.48, 0.23}, 0,
-  //             {0.436, 0.227, 0.131}, invalidid, invalidid,
-  //             invalidid, 1.5, -0.8, 0.001),
-  //         add_glass_material(scene, "skin1b", {0.76, 0.48, 0.23}, 0.25,
-  //             {0.436, 0.227, 0.131}, invalidid, invalidid,
-  //             invalidid, 1.5, -0.8, 0.001),
-  //         add_glass_material(scene, "skin2b", {0.82, 0.55, 0.4}, 0.25,
-  //             {0.623, 0.433, 0.343}, invalidid, invalidid,
-  //             invalidid, 1.5, -0.8, 0.001),
-  //     };
-  //   } break;
-  // }
-  // for (auto idx : range(shapes.size())) {
-  //   if (!shapes[idx]) continue;
-  //   if (shapes.size() > 5) {
-  //     add_instance(scene,
-  //         scene.shape_names[idx] + "-" + scene.shape_names[idx % 5],
-  //         {{1, 0, 0}, {0, 1, 0}, {0, 0, 1},
-  //             {0.2f * (idx % 5 - 2), 0.075, -0.4f * (idx / 5)}},
-  //         shapes[idx], materials[idx % 5]);
-  //   } else {
-  //     auto name = params.instance_name == test_instance_name_type::material
-  //                     ? scene.material_names[idx]
-  //                     : scene.shape_names[idx];
-  //     add_instance(scene, name,
-  //         {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0.2f * (idx % 5 - 2), 0.075,
-  //         0}}, shapes[idx], materials[idx]);
-  //   }
-  //   if (!shapesi.empty() && shapesi[idx]) {
-  //     // TODO(fabio): fix name
-  //     add_instance(scene, "",
-  //         {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0.2f * (idx - 2), 0.075, 0}},
-  //         shapesi[idx], materials[idx]);
-  //   }
-  // }
+  // scene
+  auto scene = scene_data{};
+  // cameras
+  switch (params.cameras) {
+    case test_cameras_type::standard: {
+      add_camera(scene, "default", {-0.75, 0.4, 0.9}, {-0.075, 0.05, -0.05},
+          {0, 1, 0}, 0.05, 2.4, 0);
+    } break;
+    // TODO(fabio): fix wide camera
+    case test_cameras_type::wide: {
+      add_camera(scene, "default", {-0.75, 0.4, 0.9}, {-0.075, 0.05, -0.05},
+          {0, 1, 0}, 0.05, 2.4, 0);
+    } break;
+  }
+  // TODO(fabio): port other cameras
+  switch (params.environments) {
+    case test_environments_type::none: break;
+    case test_environments_type::sky: {
+      add_environment(scene, "sky",
+          {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}}, {0.5, 0.5, 0.5},
+          add_texture(scene, "sky",
+              make_sunsky({2048, 1024}, pif / 4, 3.0f, false, 1.0f, 1.0f,
+                  {0.7f, 0.7f, 0.7f})));
+    } break;
+    case test_environments_type::sunsky: {
+      add_environment(scene, "sunsky",
+          {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}}, {0.5, 0.5, 0.5},
+          add_texture(scene, "sky",
+              make_sunsky({2048, 1024}, pif / 4, 3.0f, true, 1.0f, 1.0f,
+                  {0.7f, 0.7f, 0.7f})));
+    } break;
+  }
+  switch (params.arealights) {
+    case test_arealights_type::none: break;
+    case test_arealights_type::standard: {
+      add_instance(scene, "arealight1",
+          lookat_frame(vec3f{-0.4f, 0.8f, 0.8f}, {0.0f, 0.1f, 0.0f},
+              {0.0f, 1.0f, 0.0f}, true),
+          add_shape(scene, "arealight1", make_rect({1, 1}, {0.2f, 0.2f})),
+          add_emission_material(scene, "arealight1", {20, 20, 20}));
+      add_instance(scene, "arealight2",
+          lookat_frame(vec3f{+0.4f, 0.8f, 0.8f}, {0.0f, 0.1f, 0.0f},
+              {0.0f, 1.0f, 0.0f}, true),
+          add_shape(scene, "arealight2", make_rect({1, 1}, {0.2, 0.2})),
+          add_emission_material(scene, "arealight2", {20, 20, 20}));
+    } break;
+    case test_arealights_type::large: {
+      add_instance(scene, "largearealight1",
+          lookat_frame(vec3f{-0.8f, 1.6f, 1.6f}, {0.0f, 0.1f, 0.0f},
+              {0.0f, 1.0f, 0.0f}, true),
+          add_shape(scene, "largearealight1", make_rect({1, 1}, {0.4f, 0.4f})),
+          add_emission_material(scene, "largearealight1", {10, 10, 10}));
+      add_instance(scene, "largearealight2",
+          lookat_frame(vec3f{+0.8f, 1.6f, 1.6f}, {0.0f, 0.1f, 0.0f},
+              {0.0f, 1.0f, 0.0f}, true),
+          add_shape(scene, "largearealight2", make_rect({1, 1}, {0.4f, 0.4f})),
+          add_emission_material(scene, "largearealight2", {10, 10, 10}));
+    } break;
+  }
+  switch (params.floor) {
+    case test_floor_type::none: break;
+    case test_floor_type::standard: {
+      add_instance(scene, "floor", {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}},
+          add_shape(scene, "floor", make_floor({1, 1}, {2, 2}, {20, 20})),
+          add_matte_material(scene, "floor", {1, 1, 1},
+              add_texture(scene, "floor", make_grid({1024, 1024}))));
+    } break;
+  }
+  auto shapes = vector<int>{}, shapesi = vector<int>{};
+  auto subdivs   = vector<int>{};
+  auto materials = vector<int>{};
+  switch (params.shapes) {
+    case test_shapes_type::features1: {
+      auto bunny  = add_shape(scene, "sphere", make_sphere(32, 0.075, 1));
+      auto sphere = add_shape(scene, "sphere", make_sphere(32, 0.075, 1));
+      shapes      = {bunny, sphere, bunny, sphere, bunny};
+    } break;
+    case test_shapes_type::features2: {
+      shapes  = {add_shape(scene, "sphere", make_sphere(32, 0.075, 1)),
+           add_shape(scene, "suzanne", make_monkey(0, 0.075f * 0.8f)),
+           add_shape(scene, "hair",
+               make_random_hairs(make_sphere(32, 0.075f * 0.8f, 1), 65536, 4,
+                   {0.1f * 0.15f, 0.1f * 0.15f},
+                   {0.001f * 0.15f, 0.0005f * 0.15f}, 0.03)),
+           add_shape(scene, "displaced", make_sphere(128, 0.075f, 1)),
+           add_shape(scene, "cube",
+               make_rounded_box({32, 32, 32}, {0.075, 0.075, 0.075},
+                   0.3 * 0.075f, {1, 1, 1}))};
+      shapesi = {invalidid, invalidid,
+          add_shape(scene, "hairi", make_sphere(32, 0.075f * 0.8f, 1)),
+          invalidid, invalidid};
+      subdivs = {add_subdiv(scene, "suzanne", make_monkey(0, 0.075f * 0.8f),
+                     shapes[1], 2),
+          add_subdiv(scene, "displaced", make_sphere(128, 0.075f, 1), shapes[3],
+              0, 0.025,
+              add_texture(
+                  scene, "bumps-displacement", make_bumps({1024, 1024})))};
+    } break;
+    case test_shapes_type::rows: {
+      auto bunny  = add_shape(scene, "bunny", make_sphere(32, 0.075, 1));
+      auto sphere = add_shape(scene, "sphere", make_sphere(32, 0.075, 1));
+      shapes      = {bunny, bunny, bunny, bunny, bunny, sphere, sphere, sphere,
+               sphere, sphere};
+    } break;
+    case test_shapes_type::bunny_sphere: {
+      auto bunny  = add_shape(scene, "bunny", make_sphere(32, 0.075, 1));
+      auto sphere = add_shape(scene, "sphere", make_sphere(32, 0.075, 1));
+      shapes      = {bunny, sphere, bunny, sphere, bunny};
+    } break;
+    case test_shapes_type::shapes1: {
+      shapes = {
+          add_shape(scene, "sphere", make_sphere(32, 0.075, 1)),
+          add_shape(scene, "uvsphere-flipcap",
+              make_capped_uvsphere({32, 32}, 0.075, 0.3 * 0.075, {1, 1})),
+          add_shape(scene, "disk", make_disk(32, 0.075f, 1)),
+          add_shape(scene, "uvcylinder",
+              make_rounded_uvcylinder(
+                  {32, 32, 32}, {0.075, 0.075}, 0.3 * 0.075, {1, 1, 1})),
+          add_shape(scene, "cube",
+              make_rounded_box({32, 32, 32}, {0.075, 0.075, 0.075},
+                  0.3 * 0.075f, {1, 1, 1})),
+      };
+    } break;
+    case test_shapes_type::shapes2: {
+      shapes = {
+          add_shape(scene, "cube-subdiv", make_wtcube(1, 0.075)),
+          add_shape(scene, "suzanne-subdiv", make_monkey(0, 0.075)),
+          add_shape(scene, "displaced", make_sphere(128, 0.075f, 1)),
+          add_shape(scene, "bunny", make_sphere(32, 0.075, 1)),
+          add_shape(scene, "teapot", make_sphere(32, 0.075, 1)),
+      };
+      subdivs = {
+          add_subdiv(scene, "cube-subdiv", make_fvcube(1, 0.075), shapes[0], 4),
+          add_subdiv(
+              scene, "suzanne-subdiv", make_monkey(0, 0.075), shapes[1], 2),
+          add_subdiv(scene, "displaced", make_sphere(128, 0.075f), shapes[2], 0,
+              0.025,
+              add_texture(
+                  scene, "bumps-displacement", make_bumps({1024, 1024})))};
+    } break;
+    case test_shapes_type::shapes3: {
+      shapes = {
+          invalidid,
+          add_shape(scene, "hair1",
+              make_random_hairs(make_sphere(32, 0.075f * 0.8f), 65536, 4,
+                  {0.1f * 0.15f, 0.1f * 0.15f},
+                  {0.001f * 0.15f, 0.0005f * 0.15f}, 0.03)),
+          add_shape(scene, "hair2",
+              make_random_hairs(make_sphere(32, 0.075f * 0.8f), 65536, 4,
+                  {0.1f * 0.15f, 0.1f * 0.15f},
+                  {0.001f * 0.15f, 0.0005f * 0.15f})),
+          add_shape(scene, "hair3",
+              make_random_hairs(make_sphere(32, 0.075f * 0.8f), 65536, 4,
+                  {0.1f * 0.15f, 0.1f * 0.15f},
+                  {0.001f * 0.15f, 0.0005f * 0.15f})),
+          invalidid,
+      };
+    } break;
+  }
+  switch (params.materials) {
+    case test_materials_type::features1: {
+      materials = {
+          add_glossy_material(scene, "coated", {1, 1, 1}, 0.2,
+              add_texture(scene, "uvgrid", make_uvgrid({1024, 1024}))),
+          add_refractive_material(scene, "glass", {1, 0.5, 0.5}, 0),
+          add_scattering_material(
+              scene, "jade", {0.5, 0.5, 0.5}, {0.3, 0.6, 0.3}, 0),
+          add_glossy_material(scene, "bumped", {0.5, 0.7, 0.5}, 0.2, invalidid,
+              invalidid,
+              add_texture(scene, "bumps-normal",
+                  bump_to_normal(make_bumps({1024, 1024}), 0.05))),
+          add_reflective_material(scene, "metal", {0.66, 0.45, 0.34}, 0.2),
+      };
+    } break;
+    case test_materials_type::features2: {
+      auto uvgrid  = add_glossy_material(scene, "uvgrid", {1, 1, 1}, 0.2,
+           add_texture(scene, "uvgrid", make_uvgrid({1024, 1024})));
+      auto plastic = add_glossy_material(
+          scene, "plastic", {0.5, 0.7, 0.5}, 0.2);
+      auto hair = add_matte_material(scene, "hair", {0.7, 0.7, 0.7});
+      materials = {uvgrid, plastic, hair, plastic, uvgrid};
+    } break;
+    case test_materials_type::uvgrid: {
+      auto uvgrid = add_glossy_material(scene, "uvgrid", {1, 1, 1}, 0.2,
+          add_texture(scene, "uvgrid", make_uvgrid({1024, 1024})));
+      materials   = {uvgrid, uvgrid, uvgrid, uvgrid, uvgrid};
+    } break;
+    case test_materials_type::hair: {
+      auto hair = add_matte_material(scene, "hair", {0.7, 0.7, 0.7});
+      materials = {hair, hair, hair, hair, hair};
+    } break;
+    case test_materials_type::plastic_metal: {
+      materials = {
+          add_glossy_material(scene, "plastic1", {0.5, 0.5, 0.7}, 0.01),
+          add_glossy_material(scene, "plastic2", {0.5, 0.7, 0.5}, 0.2),
+          add_matte_material(scene, "matte", {0.7, 0.7, 0.7}),
+          add_reflective_material(scene, "metal1", {0.7, 0.7, 0.7}, 0),
+          add_reflective_material(scene, "metal2", {0.66, 0.45, 0.34}, 0.2),
+      };
+    } break;
+    case test_materials_type::materials1: {
+      materials = {
+          add_glossy_material(scene, "plastic1", {0.5, 0.5, 0.7}, 0.01),
+          add_glossy_material(scene, "plastic2", {0.5, 0.7, 0.5}, 0.2),
+          add_matte_material(scene, "matte", {0.7, 0.7, 0.7}),
+          add_glossy_material(scene, "metal1", {0.7, 0.7, 0.7}, 0),
+          add_glossy_material(scene, "metal2", {0.66, 0.45, 0.34}, 0.2),
+      };
+    } break;
+    case test_materials_type::materials2: {
+      materials = {
+          add_glossy_material(scene, "glass1", {1, 1, 1}, 0),
+          add_glossy_material(scene, "glass2", {1, 0.7, 0.7}, 0.1),
+          add_transparent_material(scene, "transparent", {0.7, 0.5, 0.5}, 0.2),
+          add_transparent_material(scene, "tglass1", {1, 1, 1}, 0),
+          add_transparent_material(scene, "tglass2", {1, 0.7, 0.7}, 0.1),
+      };
+    } break;
+    case test_materials_type::materials3: {
+      auto bumps_normal = add_texture(scene, "bumps-normal",
+          bump_to_normal(make_bumps({1024, 1024}), 0.05));
+      materials         = {
+          add_glossy_material(scene, "plastic1", {0.5, 0.5, 0.7}, 0.01,
+                      invalidid, invalidid, bumps_normal),
+          add_glossy_material(scene, "plastic2", {0.5, 0.7, 0.5}, 0.2),
+          add_reflective_material(scene, "metal1", {0.7, 0.7, 0.7}, 0,
+                      invalidid, invalidid, bumps_normal),
+          add_reflective_material(scene, "metal2", {0.66, 0.45, 0.34}, 0.2),
+          add_reflective_material(scene, "metal3", {0.66, 0.45, 0.34}, 0.2),
+      };
+    } break;
+    case test_materials_type::materials4: {
+      materials = {
+          add_volumetric_material(
+              scene, "cloud", {0.65, 0.65, 0.65}, {0.9, 0.9, 0.9}, 1),
+          add_refractive_material(scene, "glass", {1, 0.5, 0.5}, 0),
+          add_scattering_material(
+              scene, "jade", {0.5, 0.5, 0.5}, {0.3, 0.6, 0.3}, 0),
+          add_scattering_material(
+              scene, "jade2", {0.5, 0.5, 0.5}, {0.3, 0.6, 0.3}, 0),
+          add_volumetric_material(
+              scene, "smoke", {0.5, 0.5, 0.5}, {0.2, 0.2, 0.2}),
+      };
+    } break;
+    case test_materials_type::materials5: {
+      materials = {
+          add_scattering_material(scene, "skin1a", {0.76, 0.48, 0.23},
+              {0.436, 0.227, 0.131}, 0.25, invalidid, invalidid, invalidid,
+              invalidid, 1.5, -0.8, 0.001),
+          add_scattering_material(scene, "skin2a", {0.82, 0.55, 0.4},
+              {0.623, 0.433, 0.343}, 0.25, invalidid, invalidid, invalidid,
+              invalidid, 1.5, -0.8, 0.001),
+          add_scattering_material(scene, "skins", {0.76, 0.48, 0.23},
+              {0.436, 0.227, 0.131}, 0, invalidid, invalidid, invalidid,
+              invalidid, 1.5, -0.8, 0.001),
+          add_scattering_material(scene, "skin1b", {0.76, 0.48, 0.23},
+              {0.436, 0.227, 0.131}, 0.25, invalidid, invalidid, invalidid,
+              invalidid, 1.5, -0.8, 0.001),
+          add_scattering_material(scene, "skin2b", {0.82, 0.55, 0.4},
+              {0.623, 0.433, 0.343}, 0.25, invalidid, invalidid, invalidid,
+              invalidid, 1.5, -0.8, 0.001),
+      };
+    } break;
+  }
+  for (auto idx : range(shapes.size())) {
+    if (!shapes[idx]) continue;
+    if (shapes.size() > 5) {
+      add_instance(scene,
+          scene.shape_names[idx] + "-" + scene.shape_names[idx % 5],
+          {{1, 0, 0}, {0, 1, 0}, {0, 0, 1},
+              {0.2f * (idx % 5 - 2), 0.075, -0.4f * (idx / 5)}},
+          shapes[idx], materials[idx % 5]);
+    } else {
+      auto name = params.instance_name == test_instance_name_type::material
+                      ? scene.material_names[idx]
+                      : scene.shape_names[idx];
+      add_instance(scene, name,
+          {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0.2f * (idx % 5 - 2), 0.075, 0}},
+          shapes[idx], materials[idx]);
+    }
+    if (!shapesi.empty() && shapesi[idx]) {
+      // TODO(fabio): fix name
+      add_instance(scene, "",
+          {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0.2f * (idx - 2), 0.075, 0}},
+          shapesi[idx], materials[idx]);
+    }
+  }
+  return scene;
 }
 
 // Scene presets used for testing.
@@ -1904,55 +2132,21 @@ scene_data make_scene_preset(const string& type_) {
   if (type == "cornellbox") {
     return make_cornellbox();
   } else if (type == "features1") {
-    return make_test({test_cameras_type::standard, test_environments_type::sky,
-        test_arealights_type::standard, test_floor_type::standard,
-        test_shapes_type::features1, test_materials_type::features1,
-        test_instance_name_type::material});
+    return make_features1_scene();
   } else if (type == "features2") {
-    return make_test({test_cameras_type::standard, test_environments_type::sky,
-        test_arealights_type::standard, test_floor_type::standard,
-        test_shapes_type::features2, test_materials_type::features2,
-        test_instance_name_type::shape});
+    return make_features2_scene();
   } else if (type == "materials1") {
-    return make_test({test_cameras_type::wide, test_environments_type::sky,
-        test_arealights_type::large, test_floor_type::standard,
-        test_shapes_type::rows, test_materials_type::materials1,
-        test_instance_name_type::material});
+    return make_materials1_scene();
   } else if (type == "materials2") {
-    return make_test({test_cameras_type::wide, test_environments_type::sky,
-        test_arealights_type::large, test_floor_type::standard,
-        test_shapes_type::rows, test_materials_type::materials2,
-        test_instance_name_type::material});
+    return make_materials2_scene();
   } else if (type == "materials3") {
-    return make_test({test_cameras_type::wide, test_environments_type::sky,
-        test_arealights_type::large, test_floor_type::standard,
-        test_shapes_type::rows, test_materials_type::materials3,
-        test_instance_name_type::material});
+    return make_materials4_scene();
   } else if (type == "materials4") {
-    return make_test({test_cameras_type::wide, test_environments_type::sky,
-        test_arealights_type::large, test_floor_type::standard,
-        test_shapes_type::rows, test_materials_type::materials4,
-        test_instance_name_type::material});
-  } else if (type == "materials5") {
-    return make_test({test_cameras_type::wide, test_environments_type::sky,
-        test_arealights_type::large, test_floor_type::standard,
-        test_shapes_type::rows, test_materials_type::materials5,
-        test_instance_name_type::material});
+    return make_materials4_scene();
   } else if (type == "shapes1") {
-    return make_test({test_cameras_type::standard, test_environments_type::sky,
-        test_arealights_type::large, test_floor_type::standard,
-        test_shapes_type::shapes1, test_materials_type::uvgrid,
-        test_instance_name_type::shape});
+    return make_shapes1_scene();
   } else if (type == "shapes2") {
-    return make_test({test_cameras_type::standard, test_environments_type::sky,
-        test_arealights_type::large, test_floor_type::standard,
-        test_shapes_type::shapes2, test_materials_type::uvgrid,
-        test_instance_name_type::shape});
-  } else if (type == "shapes3") {
-    return make_test({test_cameras_type::standard, test_environments_type::sky,
-        test_arealights_type::large, test_floor_type::standard,
-        test_shapes_type::shapes3, test_materials_type::hair,
-        test_instance_name_type::shape});
+    return make_shapes2_scene();
   } else if (type == "environments1") {
     return make_test({test_cameras_type::standard, test_environments_type::sky,
         test_arealights_type::none, test_floor_type::standard,
@@ -2131,7 +2325,8 @@ void make_scene_directories(const string& filename, const scene_data& scene) {
 }
 
 // Add environment
-void add_environment(scene_data& scene, const string& filename) {
+void add_environment(
+    scene_data& scene, const string& name, const string& filename) {
   auto texture = load_texture(filename);
   scene.textures.push_back(std::move(texture));
   scene.environments.push_back({{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}},
@@ -2503,57 +2698,30 @@ static void load_json_scene_version40(const string& filename,
 
   // load resources
   try {
-    if (noparallel) {
-      // load shapes
-      for (auto& shape : scene.shapes) {
-        auto path = find_path(
-            get_shape_name(scene, shape), "shapes", {".ply", ".obj"});
-        load_shape(path_join(dirname, path), shape, true);
-      }
-      // load subdivs
-      for (auto& subdiv : scene.subdivs) {
-        auto path = find_path(
-            get_subdiv_name(scene, subdiv), "subdivs", {".ply", ".obj"});
-        load_subdiv(path_join(dirname, path), subdiv);
-      }
-      // load textures
-      for (auto& texture : scene.textures) {
-        auto path = find_path(get_texture_name(scene, texture), "textures",
-            {".hdr", ".exr", ".png", ".jpg"});
-        load_texture(path_join(dirname, path), texture);
-      }
-      // load instances
-      for (auto& ply_instance : ply_instances) {
-        auto path = find_path(
-            get_ply_instance_name(scene, ply_instance), "instances", {".ply"});
-        load_instance(path_join(dirname, path), ply_instance.frames);
-      }
-    } else {
-      // load shapes
-      parallel_foreach(scene.shapes, [&](auto& shape) {
-        auto path = find_path(
-            get_shape_name(scene, shape), "shapes", {".ply", ".obj"});
-        return load_shape(path_join(dirname, path), shape, true);
-      });
-      // load subdivs
-      parallel_foreach(scene.subdivs, [&](auto& subdiv) {
-        auto path = find_path(
-            get_subdiv_name(scene, subdiv), "subdivs", {".ply", ".obj"});
-        return load_subdiv(path_join(dirname, path), subdiv);
-      });
-      // load textures
-      parallel_foreach(scene.textures, [&](auto& texture) {
-        auto path = find_path(get_texture_name(scene, texture), "textures",
-            {".hdr", ".exr", ".png", ".jpg"});
-        return load_texture(path_join(dirname, path), texture);
-      });
-      // load instances
-      parallel_foreach(ply_instances, [&](auto& ply_instance) {
-        auto path = find_path(
-            get_ply_instance_name(scene, ply_instance), "instances", {".ply"});
-        return load_instance(path_join(dirname, path), ply_instance.frames);
-      });
-    }
+    // load shapes
+    parallel_foreach(scene.shapes, noparallel, [&](auto& shape) {
+      auto path = find_path(
+          get_shape_name(scene, shape), "shapes", {".ply", ".obj"});
+      return load_shape(path_join(dirname, path), shape, true);
+    });
+    // load subdivs
+    parallel_foreach(scene.subdivs, noparallel, [&](auto& subdiv) {
+      auto path = find_path(
+          get_subdiv_name(scene, subdiv), "subdivs", {".ply", ".obj"});
+      return load_subdiv(path_join(dirname, path), subdiv);
+    });
+    // load textures
+    parallel_foreach(scene.textures, noparallel, [&](auto& texture) {
+      auto path = find_path(get_texture_name(scene, texture), "textures",
+          {".hdr", ".exr", ".png", ".jpg"});
+      return load_texture(path_join(dirname, path), texture);
+    });
+    // load instances
+    parallel_foreach(ply_instances, noparallel, [&](auto& ply_instance) {
+      auto path = find_path(
+          get_ply_instance_name(scene, ply_instance), "instances", {".ply"});
+      return load_instance(path_join(dirname, path), ply_instance.frames);
+    });
   } catch (std::exception& except) {
     throw io_error(
         "cannot load " + filename + " since " + string(except.what()));
@@ -2786,46 +2954,25 @@ static void load_json_scene_version41(const string& filename, json_value& json,
     datafile = path_join(dirname, "subdivs", datafile);
 
   // load resources
-  if (noparallel) {
-    try {
-      // load shapes
-      for (auto&& [filename, shape] : zip(shape_filenames, scene.shapes)) {
-        load_shape(filename, shape, true);
-      }
-      // load subdivs
-      for (auto&& [filename, subdiv] : zip(subdiv_filenames, scene.subdivs)) {
-        load_subdiv(filename, subdiv);
-      }
-      // load textures
-      for (auto&& [filename, texture] :
-          zip(texture_filenames, scene.textures)) {
-        load_texture(filename, texture);
-      }
-    } catch (std::exception& except) {
-      throw io_error(
-          "cannot load " + filename + " since " + string(except.what()));
-    }
-  } else {
-    try {
-      // load shapes
-      parallel_zip(
-          shape_filenames, scene.shapes, [&](auto&& filename, auto&& shape) {
-            return load_shape(filename, shape, true);
-          });
-      // load subdivs
-      parallel_zip(
-          subdiv_filenames, scene.subdivs, [&](auto&& filename, auto&& subdiv) {
-            return load_subdiv(filename, subdiv);
-          });
-      // load textures
-      parallel_zip(texture_filenames, scene.textures,
-          [&](auto&& filename, auto&& texture) {
-            return load_texture(filename, texture);
-          });
-    } catch (std::exception& except) {
-      throw io_error(
-          "cannot load " + filename + " since " + string(except.what()));
-    }
+  try {
+    // load shapes
+    parallel_zip(shape_filenames, scene.shapes, noparallel,
+        [&](auto&& filename, auto&& shape) {
+          return load_shape(filename, shape, true);
+        });
+    // load subdivs
+    parallel_zip(subdiv_filenames, scene.subdivs, noparallel,
+        [&](auto&& filename, auto&& subdiv) {
+          return load_subdiv(filename, subdiv);
+        });
+    // load textures
+    parallel_zip(texture_filenames, scene.textures, noparallel,
+        [&](auto&& filename, auto&& texture) {
+          return load_texture(filename, texture);
+        });
+  } catch (std::exception& except) {
+    throw io_error(
+        "cannot load " + filename + " since " + string(except.what()));
   }
 
   // fix scene
@@ -3009,46 +3156,25 @@ static void load_json_scene(
   auto dirname = path_dirname(filename);
 
   // load resources
-  if (noparallel) {
-    try {
-      // load shapes
-      for (auto&& [filename, shape] : zip(shape_filenames, scene.shapes)) {
-        load_shape(path_join(dirname, filename), shape, true);
-      }
-      // load subdivs
-      for (auto&& [filename, subdiv] : zip(subdiv_filenames, scene.subdivs)) {
-        load_subdiv(path_join(dirname, filename), subdiv);
-      }
-      // load textures
-      for (auto&& [filename, texture] :
-          zip(texture_filenames, scene.textures)) {
-        load_texture(path_join(dirname, filename), texture);
-      }
-    } catch (std::exception& except) {
-      throw io_error(
-          "cannot load " + filename + " since " + string(except.what()));
-    }
-  } else {
-    try {
-      // load shapes
-      parallel_zip(
-          shape_filenames, scene.shapes, [&](auto&& filename, auto&& shape) {
-            return load_shape(path_join(dirname, filename), shape, true);
-          });
-      // load subdivs
-      parallel_zip(
-          subdiv_filenames, scene.subdivs, [&](auto&& filename, auto&& subdiv) {
-            return load_subdiv(path_join(dirname, filename), subdiv);
-          });
-      // load textures
-      parallel_zip(texture_filenames, scene.textures,
-          [&](auto&& filename, auto&& texture) {
-            return load_texture(path_join(dirname, filename), texture);
-          });
-    } catch (std::exception& except) {
-      throw io_error(
-          "cannot load " + filename + " since " + string(except.what()));
-    }
+  try {
+    // load shapes
+    parallel_zip(shape_filenames, scene.shapes, noparallel,
+        [&](auto&& filename, auto&& shape) {
+          return load_shape(path_join(dirname, filename), shape, true);
+        });
+    // load subdivs
+    parallel_zip(subdiv_filenames, scene.subdivs, noparallel,
+        [&](auto&& filename, auto&& subdiv) {
+          return load_subdiv(path_join(dirname, filename), subdiv);
+        });
+    // load textures
+    parallel_zip(texture_filenames, scene.textures, noparallel,
+        [&](auto&& filename, auto&& texture) {
+          return load_texture(path_join(dirname, filename), texture);
+        });
+  } catch (std::exception& except) {
+    throw io_error(
+        "cannot load " + filename + " since " + string(except.what()));
   }
 
   // fix scene
@@ -3218,8 +3344,8 @@ static void save_json_scene(
       set_val(element, "smooth", subdiv.smooth, default_.smooth);
       set_val(
           element, "displacement", subdiv.displacement, default_.displacement);
-      set_val(element, "displacement_tex",
-          get_texture_name(scene, subdiv.displacement_tex), "");
+      set_val(element, "displacement_tex", subdiv.displacement_tex,
+          default_.displacement_tex);
     }
   }
 
@@ -3257,46 +3383,25 @@ static void save_json_scene(
   auto dirname = path_dirname(filename);
 
   // dirname
-  if (noparallel) {
-    try {
-      // save shapes
-      for (auto&& [filename, shape] : zip(shape_filenames, scene.shapes)) {
-        save_shape(path_join(dirname, filename), shape, true);
-      }
-      // save subdiv
-      for (auto&& [filename, subdiv] : zip(subdiv_filenames, scene.subdivs)) {
-        save_subdiv(path_join(dirname, filename), subdiv);
-      }
-      // save textures
-      for (auto&& [filename, texture] :
-          zip(texture_filenames, scene.textures)) {
-        save_texture(path_join(dirname, filename), texture);
-      }
-    } catch (std::exception& except) {
-      throw io_error(
-          "cannot save " + filename + " since " + string(except.what()));
-    }
-  } else {
-    try {
-      // save shapes
-      parallel_zip(
-          shape_filenames, scene.shapes, [&](auto&& filename, auto&& shape) {
-            return save_shape(path_join(dirname, filename), shape, true);
-          });
-      // save subdivs
-      parallel_zip(
-          subdiv_filenames, scene.subdivs, [&](auto&& filename, auto&& subdiv) {
-            return save_subdiv(path_join(dirname, filename), subdiv);
-          });
-      // save textures
-      parallel_zip(texture_filenames, scene.textures,
-          [&](auto&& filename, auto&& texture) {
-            return save_texture(path_join(dirname, filename), texture);
-          });
-    } catch (std::exception& except) {
-      throw io_error(
-          "cannot save " + filename + " since " + string(except.what()));
-    }
+  try {
+    // save shapes
+    parallel_zip(shape_filenames, scene.shapes, noparallel,
+        [&](auto&& filename, auto&& shape) {
+          return save_shape(path_join(dirname, filename), shape, true);
+        });
+    // save subdivs
+    parallel_zip(subdiv_filenames, scene.subdivs, noparallel,
+        [&](auto&& filename, auto&& subdiv) {
+          return save_subdiv(path_join(dirname, filename), subdiv);
+        });
+    // save textures
+    parallel_zip(texture_filenames, scene.textures, noparallel,
+        [&](auto&& filename, auto&& texture) {
+          return save_texture(path_join(dirname, filename), texture);
+        });
+  } catch (std::exception& except) {
+    throw io_error(
+        "cannot save " + filename + " since " + string(except.what()));
   }
 }
 
@@ -3414,18 +3519,11 @@ static void load_obj_scene(
   auto dirname = path_dirname(filename);
 
   try {
-    if (noparallel) {
-      // load textures
-      for (auto&& [path, texture] : zip(texture_paths, scene.textures)) {
-        load_texture(path_join(dirname, path), texture);
-      }
-    } else {
-      // load textures
-      parallel_zip(
-          texture_paths, scene.textures, [&](auto&& path, auto&& texture) {
-            return load_texture(path_join(dirname, path), texture);
-          });
-    }
+    // load textures
+    parallel_zip(texture_paths, scene.textures, noparallel,
+        [&](auto&& path, auto&& texture) {
+          return load_texture(path_join(dirname, path), texture);
+        });
   } catch (std::exception& except) {
     throw io_error(
         "cannot load " + filename + " since " + string(except.what()));
@@ -3521,21 +3619,12 @@ static void save_obj_scene(
   auto dirname = path_dirname(filename);
 
   try {
-    if (noparallel) {
-      // save textures
-      for (auto& texture : scene.textures) {
-        auto path = "textures/" + get_texture_name(scene, texture) +
-                    (!texture.pixelsf.empty() ? ".hdr"s : ".png"s);
-        save_texture(path_join(dirname, path), texture);
-      }
-    } else {
-      // save textures
-      parallel_foreach(scene.textures, [&](auto& texture) {
-        auto path = "textures/" + get_texture_name(scene, texture) +
-                    (!texture.pixelsf.empty() ? ".hdr"s : ".png"s);
-        return save_texture(path_join(dirname, path), texture);
-      });
-    }
+    // save textures
+    parallel_foreach(scene.textures, noparallel, [&](auto& texture) {
+      auto path = "textures/" + get_texture_name(scene, texture) +
+                  (!texture.pixelsf.empty() ? ".hdr"s : ".png"s);
+      return save_texture(path_join(dirname, path), texture);
+    });
   } catch (std::exception& except) {
     throw io_error(
         "cannot save " + filename + " since " + string(except.what()));
@@ -3934,19 +4023,11 @@ static void load_gltf_scene(
   auto dirname = path_dirname(filename);
 
   try {
-    if (noparallel) {
-      // load texture
-      for (auto& texture : scene.textures) {
-        auto& path = texture_paths[&texture - &scene.textures.front()];
-        load_texture(path_join(dirname, path), texture);
-      }
-    } else {
-      // load textures
-      parallel_foreach(scene.textures, [&](auto& texture) {
-        auto& path = texture_paths[&texture - &scene.textures.front()];
-        return load_texture(path_join(dirname, path), texture);
-      });
-    }
+    // load textures
+    parallel_foreach(scene.textures, noparallel, [&](auto& texture) {
+      auto& path = texture_paths[&texture - &scene.textures.front()];
+      return load_texture(path_join(dirname, path), texture);
+    });
   } catch (std::exception& except) {
     throw io_error(
         "cannot load " + filename + " since " + string(except.what()));
@@ -4283,29 +4364,16 @@ static void save_gltf_scene(
   auto dirname = path_dirname(filename);
 
   try {
-    if (noparallel) {
-      // save shapes
-      for (auto& shape : scene.shapes) {
-        auto path = "shapes/" + get_shape_name(scene, shape) + ".bin";
-        save_binshape(path_join(dirname, path), shape);
-      }
-      // save textures
-      for (auto& texture : scene.textures) {
-        auto path = "textures/" + get_texture_name(scene, texture) + ".png";
-        save_texture(path_join(dirname, path), texture);
-      }
-    } else {
-      // save shapes
-      parallel_foreach(scene.shapes, [&](auto& shape) {
-        auto path = "shapes/" + get_shape_name(scene, shape) + ".bin";
-        return save_binshape(path_join(dirname, path), shape);
-      });
-      // save textures
-      parallel_foreach(scene.textures, [&](auto& texture) {
-        auto path = "textures/" + get_texture_name(scene, texture) + ".png";
-        return save_texture(path_join(dirname, path), texture);
-      });
-    }
+    // save shapes
+    parallel_foreach(scene.shapes, noparallel, [&](auto& shape) {
+      auto path = "shapes/" + get_shape_name(scene, shape) + ".bin";
+      return save_binshape(path_join(dirname, path), shape);
+    });
+    // save textures
+    parallel_foreach(scene.textures, noparallel, [&](auto& texture) {
+      auto path = "textures/" + get_texture_name(scene, texture) + ".png";
+      return save_texture(path_join(dirname, path), texture);
+    });
   } catch (std::exception& except) {
     throw io_error(
         "cannot save " + filename + " since " + string(except.what()));
@@ -4419,31 +4487,17 @@ static void load_pbrt_scene(
   auto dirname = path_dirname(filename);
 
   try {
-    if (noparallel) {
-      // load shape
-      for (auto& shape : scene.shapes) {
-        auto& path = shapes_paths[&shape - &scene.shapes.front()];
-        if (path.empty()) continue;
-        load_shape(path_join(dirname, path), shape, true);
-      }
-      // load texture
-      for (auto& texture : scene.textures) {
-        auto& path = texture_paths[&texture - &scene.textures.front()];
-        load_texture(path_join(dirname, path), texture);
-      }
-    } else {
-      // load shapes
-      parallel_foreach(scene.shapes, [&](auto& shape) {
-        auto& path = shapes_paths[&shape - &scene.shapes.front()];
-        if (path.empty()) return;
-        load_shape(path_join(dirname, path), shape, true);
-      });
-      // load textures
-      parallel_foreach(scene.textures, [&](auto& texture) {
-        auto& path = texture_paths[&texture - &scene.textures.front()];
-        return load_texture(path_join(dirname, path), texture);
-      });
-    }
+    // load shapes
+    parallel_foreach(scene.shapes, noparallel, [&](auto& shape) {
+      auto& path = shapes_paths[&shape - &scene.shapes.front()];
+      if (path.empty()) return;
+      load_shape(path_join(dirname, path), shape, true);
+    });
+    // load textures
+    parallel_foreach(scene.textures, noparallel, [&](auto& texture) {
+      auto& path = texture_paths[&texture - &scene.textures.front()];
+      return load_texture(path_join(dirname, path), texture);
+    });
   } catch (std::exception& except) {
     throw io_error(
         "cannot load " + filename + " since " + string(except.what()));
@@ -4522,31 +4576,17 @@ static void save_pbrt_scene(
   auto dirname = path_dirname(filename);
 
   try {
-    if (noparallel) {
-      // save textures
-      for (auto& shape : scene.shapes) {
-        auto path = "shapes/" + get_shape_name(scene, shape) + ".ply";
-        save_shape(path_join(dirname, path), shape, true);
-      }
-      // save shapes
-      for (auto& texture : scene.textures) {
-        auto path = "textures/" + get_texture_name(scene, texture) +
-                    (!texture.pixelsf.empty() ? ".hdr" : ".png");
-        save_texture(path_join(dirname, path), texture);
-      }
-    } else {
-      // save shapes
-      parallel_foreach(scene.shapes, [&](auto& shape) {
-        auto path = "shapes/" + get_shape_name(scene, shape) + ".ply";
-        return save_shape(path_join(dirname, path), shape, true);
-      });
-      // save textures
-      parallel_foreach(scene.textures, [&](auto& texture) {
-        auto path = "textures/" + get_texture_name(scene, texture) +
-                    (!texture.pixelsf.empty() ? ".hdr"s : ".png"s);
-        return save_texture(path_join(dirname, path), texture);
-      });
-    }
+    // save shapes
+    parallel_foreach(scene.shapes, noparallel, [&](auto& shape) {
+      auto path = "shapes/" + get_shape_name(scene, shape) + ".ply";
+      return save_shape(path_join(dirname, path), shape, true);
+    });
+    // save textures
+    parallel_foreach(scene.textures, noparallel, [&](auto& texture) {
+      auto path = "textures/" + get_texture_name(scene, texture) +
+                  (!texture.pixelsf.empty() ? ".hdr"s : ".png"s);
+      return save_texture(path_join(dirname, path), texture);
+    });
   } catch (std::exception& except) {
     throw io_error(
         "cannot save " + filename + " since " + string(except.what()));
@@ -4899,31 +4939,17 @@ static void save_mitsuba_scene(
   };
 
   try {
-    if (noparallel) {
-      // save shapes
-      for (auto& shape : scene.shapes) {
-        auto path = "shapes/" + get_shape_name(scene, shape) + ".ply";
-        save_shape(path_join(dirname, path), triangulate(shape), true);
-      }
-      // save textures
-      for (auto& texture : scene.textures) {
-        auto path = "textures/" + get_texture_name(scene, texture) +
-                    (!texture.pixelsf.empty() ? ".hdr" : ".png");
-        save_texture(path_join(dirname, path), texture);
-      }
-    } else {
-      // save shapes
-      parallel_foreach(scene.shapes, [&](auto& shape) {
-        auto path = "shapes/" + get_shape_name(scene, shape) + ".ply";
-        return save_shape(path_join(dirname, path), triangulate(shape), true);
-      });
-      // save textures
-      parallel_foreach(scene.textures, [&](auto& texture) {
-        auto path = "textures/" + get_texture_name(scene, texture) +
-                    (!texture.pixelsf.empty() ? ".hdr"s : ".png"s);
-        return save_texture(path_join(dirname, path), texture);
-      });
-    }
+    // save shapes
+    parallel_foreach(scene.shapes, noparallel, [&](auto& shape) {
+      auto path = "shapes/" + get_shape_name(scene, shape) + ".ply";
+      return save_shape(path_join(dirname, path), triangulate(shape), true);
+    });
+    // save textures
+    parallel_foreach(scene.textures, noparallel, [&](auto& texture) {
+      auto path = "textures/" + get_texture_name(scene, texture) +
+                  (!texture.pixelsf.empty() ? ".hdr"s : ".png"s);
+      return save_texture(path_join(dirname, path), texture);
+    });
   } catch (std::exception& except) {
     throw io_error(
         "cannot save " + filename + " since " + string(except.what()));

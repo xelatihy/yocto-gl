@@ -329,6 +329,164 @@ vec3f eval_environment(const scene_data& scene, const vec3f& direction);
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// SCENE CREATION
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Make a camera
+camera_data make_camera(const frame3f& frame, float lens = 0.050f,
+    float aspect = 16.0f / 9.0f, float aperture = 0, float focus = 1);
+camera_data make_camera(const vec3f& from = {0, 0, 0},
+    const vec3f& to = {0, 0, 1}, const vec3f& up = {0, 1, 0},
+    float lens = 0.050f, float aspect = 1, float aperture = 0);
+
+// Make a texture
+texture_data make_texture(
+    const array2d<vec4f>& image, bool as_float = false, bool srgb = false);
+
+// Make a material of different types
+material_data make_emissive_material(const vec3f& emission = {1, 1, 1},
+    int emission_tex = invalidid, int normal_tex = invalidid);
+material_data make_matte_material(const vec3f& color = {0.8, 0.8, 0.8},
+    int color_tex = invalidid, int normal_tex = invalidid);
+material_data make_glossy_material(const vec3f& color = {0.8, 0.8, 0.8},
+    float roughness = 0.2f, int color_tex = invalidid,
+    int roughness_tex = invalidid, int normal_tex = invalidid);
+material_data make_reflective_material(const vec3f& color = {1, 1, 1},
+    float roughness = 0, int color_tex = invalidid,
+    int roughness_tex = invalidid, int normal_tex = invalidid);
+material_data make_transparent_material(const vec3f& color = {1, 1, 1},
+    float roughness = 0, int color_tex = invalidid,
+    int roughness_tex = invalidid, int normal_tex = invalidid);
+material_data make_refractive_material(const vec3f& color = {1, 1, 1},
+    float roughness = 0, int color_tex = invalidid,
+    int roughness_tex = invalidid, int normal_tex = invalidid,
+    float ior = 1.5f);
+material_data make_scattering_material(const vec3f& color = {1, 1, 1},
+    const vec3f& scattering = {0, 0, 0}, float roughness = 0,
+    int color_tex = invalidid, int scattering_tex = invalidid,
+    int roughness_tex = invalidid, int normal_tex = invalidid, float ior = 1.5f,
+    float scanisotropy = 0, float trdepth = 0.1f);
+material_data make_volumetric_material(const vec3f& color = {1, 1, 1},
+    const vec3f& scattering = {0, 0, 0}, float scanisotropy = 0,
+    float trdepth = 0.1f);
+material_data make_opacity_material(const vec3f& color = {0.8, 0.8, 0.8},
+    float opacity = 1, int color_tex = invalidid, int normal_tex = invalidid);
+
+// Make an instance
+instance_data make_instance(const frame3f& frame, int shape, int material);
+
+// Make an environment
+environment_data make_environment(const frame3f& frame = identity3x4f,
+    const vec3f& emission = {1, 1, 1}, int emission_tex = invalidid);
+
+// Make a subdiv
+subdiv_data make_subdiv(const shape_data& subdiv, int shape,
+    int subdivisions = 0, float displacement = 0,
+    int displacement_tex = invalidid);
+subdiv_data make_subdiv(const fvshape_data& subdiv, int shape,
+    int subdivisions = 0, float displacement = 0,
+    int displacement_tex = invalidid);
+
+// Add scene elements
+int add_camera(
+    scene_data& scene, const string& name, const camera_data& camera);
+int add_shape(scene_data& scene, const string& name, const shape_data& shape);
+int add_texture(
+    scene_data& scene, const string& name, const texture_data& texture);
+int add_material(
+    scene_data& scene, const string& name, const material_data& material);
+int add_instance(scene_data& scene, const string& name, const frame3f& frame,
+    int shape, int material);
+int add_environment(
+    scene_data& scene, const string& name, const environment_data& environment);
+int add_subdiv(
+    scene_data& scene, const string& name, const subdiv_data& subdiv);
+
+// Add camera shortcuts
+int add_camera(scene_data& scene, const string& name, const frame3f& frame,
+    float lens = 0.05f, float aspect = 16.0f / 9.0f, float aperture = 0,
+    float focus = 1);
+int add_camera(scene_data& scene, const string& name, const vec3f& from,
+    const vec3f& to, const vec3f& up, float lens = 0.050f,
+    float aspect = 16.0f / 9.0f, float aperture = 0);
+
+// Add texture shortcuts
+int add_texture(scene_data& scene, const string& name,
+    const array2d<vec4f>& image, bool as_float = false, bool srgb = true);
+
+// Add material shortcuts
+int add_emission_material(scene_data& scene, const string& name,
+    const vec3f& emission = {1, 1, 1}, int emission_tex = invalidid,
+    int normal_tex = invalidid);
+int add_matte_material(scene_data& scene, const string& name,
+    const vec3f& color = {0.8, 0.8, 0.8}, int color_tex = invalidid,
+    int normal_tex = invalidid);
+int add_glossy_material(scene_data& scene, const string& name,
+    const vec3f& color = {0.8, 0.8, 0.8}, float roughness = 0.2f,
+    int color_tex = invalidid, int roughness_tex = invalidid,
+    int normal_tex = invalidid);
+int add_reflective_material(scene_data& scene, const string& name,
+    const vec3f& color = {1, 1, 1}, float roughness = 0,
+    int color_tex = invalidid, int roughness_tex = invalidid,
+    int normal_tex = invalidid);
+int add_transparent_material(scene_data& scene, const string& name,
+    const vec3f& color = {1, 1, 1}, float roughness = 0,
+    int color_tex = invalidid, int roughness_tex = invalidid,
+    int normal_tex = invalidid);
+int add_refractive_material(scene_data& scene, const string& name,
+    const vec3f& color = {1, 1, 1}, float roughness = 0,
+    int color_tex = invalidid, int roughness_tex = invalidid,
+    int normal_tex = invalidid, float ior = 1.5);
+int add_scattering_material(scene_data& scene, const string& name,
+    const vec3f& color = {1, 1, 1}, const vec3f& scattering = {0, 0, 0},
+    float roughness = 0, int color_tex = invalidid,
+    int scattering_tex = invalidid, int roughness_tex = invalidid,
+    int normal_tex = invalidid, float ior = 1.5, float scanisotropy = 0,
+    float trdepth = 0.1);
+int add_volumetric_material(scene_data& scene, const string& name,
+    const vec3f& color = {1, 1, 1}, const vec3f& scattering = {0, 0, 0},
+    float scanisotropy = 0, float trdepth = 0.1);
+int add_opacity_material(scene_data& scene, const string& name,
+    const vec3f& color = {0.8, 0.8, 0.8}, float opacity = 1,
+    int color_tex = invalidid, int normal_tex = invalidid);
+
+// Add instance shortcuts
+int add_instance(scene_data& scene, const string& name, const frame3f& frame,
+    const shape_data& shape, const material_data& material);
+int add_instance(scene_data& scene, const string& name, const frame3f& frame,
+    const shape_data& shape, const material_data& material,
+    const array2d<vec4f>& color_tex, const array2d<vec4f>& roughness_tex = {},
+    const array2d<vec4f>& normal_tex = {});
+int add_instance(scene_data& scene, const string& name, const frame3f& frame,
+    const shape_data& shape, const material_data& material,
+    const texture_data& color_tex, const texture_data& roughness_tex = {},
+    const texture_data& normal_tex = {});
+
+// Add environment shortcuts
+int add_environment(scene_data& scene, const string& name,
+    const frame3f& frame = identity3x4f, const vec3f& emission = {1, 1, 1},
+    int emission_tex = invalidid);
+int add_environment(scene_data& scene, const string& name, const frame3f& frame,
+    const vec3f& emission, const array2d<vec4f>& emission_tex);
+
+// Add subdiv shortcuts
+int add_subdiv(scene_data& scene, const string& name, const shape_data& subdiv,
+    int shape, int subdivisions = 0, float displacement = 0,
+    int displacement_tex = invalidid);
+int add_subdiv(scene_data& scene, const string& name,
+    const fvshape_data& subdiv, int shape, int subdivisions = 0,
+    float displacement = 0, int displacement_tex = invalidid);
+int add_subdiv(scene_data& scene, const string& name, const shape_data& subdiv,
+    int shape, int subdivisions, float displacement,
+    const array2d<vec4f>& displacement_tex);
+int add_subdiv(scene_data& scene, const string& name,
+    const fvshape_data& subdiv, int shape, int subdivisions, float displacement,
+    const array2d<vec4f>& displacement_tex);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // SCENE UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto {

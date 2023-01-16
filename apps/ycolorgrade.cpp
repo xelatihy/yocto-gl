@@ -40,7 +40,7 @@ using namespace std::string_literals;
 // main function
 void run(const vector<string>& args) {
   // parameters
-  auto imagename   = "image.png"s;
+  auto imagename   = "uvgrid.ypreset"s;
   auto outname     = "out.png"s;
   auto paramsname  = ""s;
   auto interactive = true;

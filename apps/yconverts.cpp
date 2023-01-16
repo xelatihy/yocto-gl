@@ -41,7 +41,7 @@ using namespace std::string_literals;
 // main function
 void run(const vector<string>& args) {
   // parameters
-  auto shapename    = "shape.ply"s;
+  auto shapename    = "quad.ypreset"s;
   auto outname      = "out.ply"s;
   auto facevarying  = false;
   auto info         = false;
@@ -56,6 +56,8 @@ void run(const vector<string>& args) {
   auto catmullclark = false;
   auto toedges      = false;
   auto tovertices   = false;
+  auto heightfield  = ""s;
+  auto heightscale  = 1.0f;
 
   // parse command line
   auto cli = make_cli("yconverts", "convert shapes");
@@ -66,21 +68,26 @@ void run(const vector<string>& args) {
   add_option(cli, "facet", facet, "facet normals");
   add_option(cli, "aspositions", aspositions, "remove all but positions");
   add_option(cli, "astriangles", astriangles, "convert to triangles");
-  add_option(cli, "translate", (array<float, 3>&)translate, "translate shape");
-  add_option(cli, "scale", (array<float, 3>&)scale, "scale shape");
-  add_option(cli, "rotate", (array<float, 3>&)rotate, "rotate shape");
+  add_option(cli, "translate", translate, "translate shape");
+  add_option(cli, "scale", scale, "scale shape");
+  add_option(cli, "rotate", rotate, "rotate shape");
   add_option(cli, "subdivisions", subdivisions, "apply subdivision");
   add_option(cli, "catmullclark", catmullclark, "subdivide as Catmull-Clark");
   add_option(cli, "toedges", toedges, "convert shape to edges");
   add_option(cli, "tovertices", tovertices, "convert shape to vertices");
+  add_option(cli, "heightfield", heightfield, "heightfield image");
+  add_option(cli, "heightscale", heightscale, "heightfield scale");
   parse_cli(cli, args);
-
-  // start converting
 
   // switch between facevarying and not
   if (!facevarying) {
     // load mesh
     auto shape = load_shape(shapename, true);
+
+    // heightfield
+    if (!heightfield.empty()) {
+      shape = make_heightfield(load_image(heightfield), {1, heightscale});
+    }
 
     // remove data
     if (aspositions) {

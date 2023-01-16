@@ -40,7 +40,7 @@ using namespace std::string_literals;
 // main function
 void run(const vector<string>& args) {
   // parameters
-  auto scenename   = "scene.json"s;
+  auto scenename   = "features1.ypreset"s;
   auto outname     = "out.png"s;
   auto paramsname  = ""s;
   auto interactive = false;
@@ -108,7 +108,7 @@ void run(const vector<string>& args) {
 
   // add environment
   if (!envname.empty()) {
-    add_environment(scene, envname);
+    add_environment(scene, "env", envname);
   }
 
   // camera

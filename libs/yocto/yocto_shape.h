@@ -47,6 +47,7 @@
 #include <vector>
 
 #include "yocto_geometry.h"
+#include "yocto_image.h"
 #include "yocto_math.h"
 #include "yocto_ndarray.h"
 #include "yocto_sampling.h"
@@ -130,6 +131,12 @@ void       quads_to_triangles_inplace(shape_data& shape);
 shape_data subdivide_shape(
     const shape_data& shape, int subdivisions, bool catmullclark);
 
+// Displacement
+shape_data displace_shape(const shape_data& shape,
+    const array2d<float>& displacement, float height = 1, float offset = 0.5f);
+shape_data displace_shape(const shape_data& shape,
+    const array2d<vec4f>& displacement, float height = 1, float offset = 0.5f);
+
 // Transform shape
 shape_data transform_shape(
     const shape_data& shape, const frame3f& frame, bool non_rigid = false);
@@ -137,6 +144,7 @@ shape_data transform_shape(const shape_data& shape, const frame3f& frame,
     float radius_scale, bool non_rigid = false);
 shape_data scale_shape(const shape_data& shape, float scale, float uvscale = 1);
 shape_data scale_shape(shape_data&& shape, float scale, float uvscale = 1);
+shape_data flipyz_shape(const shape_data& shape);
 
 // Manipulate vertex data
 shape_data remove_normals(const shape_data& shape);
@@ -225,7 +233,7 @@ shape_data make_recty(const vec2i& steps = {1, 1}, const vec2f& scale = {1, 1},
     const vec2f& uvscale = {1, 1});
 // Make a floor
 shape_data make_floor(const vec2i& steps = {1, 1},
-    const vec2f& scale = {10, 10}, const vec2f& uvscale = {20, 20});
+    const vec2f& scale = {20, 20}, const vec2f& uvscale = {20, 20});
 // Make a disk
 shape_data make_disk(int steps = 32, float scale = 1, float uvscale = 1);
 // Make a cube
@@ -273,8 +281,8 @@ shape_data make_bulged_recty(const vec2i& steps = {1, 1},
     const vec2f& uvscale = {1, 1});
 // Make a bent disk
 shape_data make_bent_floor(const vec2i& steps = {1, 1},
-    const vec2f& scale = {10, 10}, float radius = 0.5f,
-    const vec2f& uvscale = {10, 10});
+    const vec2f& scale = {20, 20}, float radius = 0.5f,
+    const vec2f& uvscale = {20, 20});
 // Make a bulged disk
 shape_data make_bulged_disk(
     int steps = 32, float scale = 1, float height = 0.3f, float uvscale = 1);
@@ -294,9 +302,13 @@ shape_data make_rounded_uvcylinder(const vec3i& steps = {32, 32, 32},
     const vec3f& uvscale = {1, 1, 1});
 
 // Make a geosphere
-shape_data make_geosphere(float scale = 1, int subdivisions = 3);
+shape_data make_geosphere(int subdivisions = 3, float scale = 1);
 // Make a monkey
-shape_data make_monkey(float scale = 1);
+shape_data make_monkey(int subdivisions = 2, float scale = 1);
+// Make a subdiv cube
+shape_data make_sdcube(int subdivisions = 4, float scale = 1);
+// Make a subdiv cube with texture coordinates
+shape_data make_sdtcube(int subdivisions = 4, float scale = 1);
 
 // Make a face-varying quad
 fvshape_data make_fvquad(int steps = 1, float scale = 1, float uvscale = 1);
@@ -346,8 +358,8 @@ shape_data make_random_lines(const shape_data& shape, int num = 65536,
     const vec2f& radius = {0.001f, 0.001f}, uint64_t seed = 17);
 // Make hairs on a shape
 shape_data make_random_hairs(const shape_data& shape, int num = 65536,
-    int steps = 8, const vec2f& length = {0.1f, 0.1f},
-    const vec2f& radius = {0.001f, 0.001f}, float noise = 0,
+    int steps = 8, const vec2f& length = {0.35f, 0.35f},
+    const vec2f& radius = {0.001f, 0.001f}, float noise = 0.1f,
     float gravity = 0.001f, uint64_t seed = 17);
 
 // Convert points to small spheres and lines to small cylinders. This is
@@ -743,6 +755,23 @@ template <typename T, typename I>
 inline pair<vector<vec<I, 4>>, vector<T>> subdivide_catmullclark(
     const vector<vec<I, 4>>& quads, const vector<T>& vertices, int level,
     bool lock_boundary = false);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// SHAPE DISPLACEMENT
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Displace vertices
+template <typename T>
+inline vector<vec<T, 3>> displace_vertices(const vector<vec<T, 3>>& positions,
+    const vector<vec<T, 3>>& normals, const vector<vec<T, 2>>& texcoords,
+    const array2d<T>& displacement, T scale = 1, T offset = (T)0.5);
+template <typename T>
+inline vector<vec<T, 3>> displace_vertices(const vector<vec<T, 3>>& positions,
+    const vector<vec<T, 3>>& normals, const vector<vec<T, 2>>& texcoords,
+    const array2d<vec<T, 4>>& displacement, T scale = 1, T offset = (T)0.5);
 
 }  // namespace yocto
 
@@ -1873,6 +1902,41 @@ inline pair<vector<vec<I, 4>>, vector<T>> subdivide_catmullclark(
   for (auto idx : range(level))
     tess = subdivide_catmullclark(tess.first, tess.second, lock_boundary);
   return tess;
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION OF SHAPE DISPLACEMENT
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Displace vertices
+template <typename T>
+inline vector<vec<T, 3>> displace_vertices(const vector<vec<T, 3>>& positions,
+    const vector<vec<T, 3>>& normals, const vector<vec<T, 2>>& texcoords,
+    const array2d<T>& displacement, T scale, T offset) {
+  if (texcoords.empty()) return positions;
+  auto displaced = positions;
+  for (auto idx : range(displaced.size())) {
+    displaced[idx] += normals[idx] *
+                      (eval_image(displacement, texcoords[idx]) - offset) *
+                      scale;
+  }
+  return displaced;
+}
+template <typename T>
+inline vector<vec<T, 3>> displace_vertices(const vector<vec<T, 3>>& positions,
+    const vector<vec<T, 3>>& normals, const vector<vec<T, 2>>& texcoords,
+    const array2d<vec<T, 4>>& displacement, T scale, T offset) {
+  if (texcoords.empty()) return positions;
+  auto displaced = positions;
+  for (auto idx : range(displaced.size())) {
+    displaced[idx] +=
+        normals[idx] *
+        (mean(xyz(eval_image(displacement, texcoords[idx]))) - offset) * scale;
+  }
+  return displaced;
 }
 
 }  // namespace yocto

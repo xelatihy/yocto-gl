@@ -40,8 +40,8 @@ using namespace std::string_literals;
 // main function
 void run(const vector<string>& args) {
   // parameters
-  auto scenename = "scene.json"s;
-  auto outname   = "out.json"s;
+  auto scenename = "features1.ypreset"s;
+  auto outname   = "out/out.json"s;
   auto info      = false;
   auto validate  = false;
   auto copyright = ""s;
