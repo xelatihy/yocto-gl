@@ -42,6 +42,7 @@
 #include "yocto_geometry.h"
 #include "yocto_image.h"
 #include "yocto_noise.h"
+#include "yocto_scene.h"
 #include "yocto_shading.h"
 #include "yocto_shape.h"
 
@@ -551,16 +552,16 @@ camera_data make_camera(const frame3f& frame, float lens, float aspect,
   return {.frame = frame,
       .lens      = lens,
       .aspect    = aspect,
-      .aperture  = aperture,
-      .focus     = focus};
+      .focus     = focus,
+      .aperture  = aperture};
 }
 camera_data make_camera(const vec3f& from, const vec3f& to, const vec3f& up,
     float lens, float aspect, float aperture) {
   return {.frame = lookat_frame(from, to, up),
       .lens      = lens,
       .aspect    = aspect,
-      .aperture  = aperture,
-      .focus     = distance(from, to)};
+      .focus     = distance(from, to),
+      .aperture  = aperture};
 }
 
 // Make a texture
@@ -681,10 +682,10 @@ subdiv_data make_subdiv(const shape_data& subdiv, int shape, int subdivisions,
       .positions     = subdiv.positions,
       .normals       = subdiv.normals,
       .texcoords     = subdiv.texcoords,
-      .shape         = shape,
       .subdivisions  = subdivisions,
       .displacement  = displacement,
-      .displacement_tex = displacement_tex};
+      .displacement_tex = displacement_tex,
+      .shape            = shape};
 }
 subdiv_data make_subdiv(const fvshape_data& subdiv, int shape, int subdivisions,
     float displacement, int displacement_tex) {
@@ -694,10 +695,10 @@ subdiv_data make_subdiv(const fvshape_data& subdiv, int shape, int subdivisions,
       .positions        = subdiv.positions,
       .normals          = subdiv.normals,
       .texcoords        = subdiv.texcoords,
-      .shape            = shape,
       .subdivisions     = subdivisions,
       .displacement     = displacement,
-      .displacement_tex = displacement_tex};
+      .displacement_tex = displacement_tex,
+      .shape            = shape};
 }
 
 // Add a camera
@@ -1288,32 +1289,35 @@ scene_data make_cornellbox() {
   add_camera(scene, "camera", {0, 1, 3.75f}, {0, 1, 0}, {0, 1, 0}, 0.050f, 1);
 
   add_instance(scene, "floor", identity3x4f,
-      {.positions    = {{-1, 0, 1}, {1, 0, 1}, {1, 0, -1}, {-1, 0, -1}},
-          .triangles = {{0, 1, 2}, {2, 3, 0}}},
+      {.triangles    = {{0, 1, 2}, {2, 3, 0}},
+          .positions = {{-1, 0, 1}, {1, 0, 1}, {1, 0, -1}, {-1, 0, -1}}},
       {.color = {0.725f, 0.71f, 0.68f}});
 
   add_instance(scene, "ceiling", identity3x4f,
-      {.positions    = {{-1, 2, 1}, {-1, 2, -1}, {1, 2, -1}, {1, 2, 1}},
-          .triangles = {{0, 1, 2}, {2, 3, 0}}},
+      {.triangles    = {{0, 1, 2}, {2, 3, 0}},
+          .positions = {{-1, 2, 1}, {-1, 2, -1}, {1, 2, -1}, {1, 2, 1}}},
       {.color = {0.725f, 0.71f, 0.68f}});
 
   add_instance(scene, "backwall", identity3x4f,
-      {.positions    = {{-1, 0, -1}, {1, 0, -1}, {1, 2, -1}, {-1, 2, -1}},
-          .triangles = {{0, 1, 2}, {2, 3, 0}}},
+      {.triangles    = {{0, 1, 2}, {2, 3, 0}},
+          .positions = {{-1, 0, -1}, {1, 0, -1}, {1, 2, -1}, {-1, 2, -1}}},
       {.color = {0.725f, 0.71f, 0.68f}});
 
   add_instance(scene, "rightwall", identity3x4f,
-      {.positions    = {{1, 0, -1}, {1, 0, 1}, {1, 2, 1}, {1, 2, -1}},
-          .triangles = {{0, 1, 2}, {2, 3, 0}}},
+      {.triangles    = {{0, 1, 2}, {2, 3, 0}},
+          .positions = {{1, 0, -1}, {1, 0, 1}, {1, 2, 1}, {1, 2, -1}}},
       {.color = {0.14f, 0.45f, 0.091f}});
 
   add_instance(scene, "leftwall", identity3x4f,
-      {.positions    = {{-1, 0, 1}, {-1, 0, -1}, {-1, 2, -1}, {-1, 2, 1}},
-          .triangles = {{0, 1, 2}, {2, 3, 0}}},
+      {.triangles    = {{0, 1, 2}, {2, 3, 0}},
+          .positions = {{-1, 0, 1}, {-1, 0, -1}, {-1, 2, -1}, {-1, 2, 1}}},
       {.color = {0.63f, 0.065f, 0.05f}});
 
   add_instance(scene, "shortbox", identity3x4f,
-      {.positions    = {{0.53f, 0.6f, 0.75f}, {0.7f, 0.6f, 0.17f},
+      {.triangles    = {{0, 1, 2}, {2, 3, 0}, {4, 5, 6}, {6, 7, 4}, {8, 9, 10},
+              {10, 11, 8}, {12, 13, 14}, {14, 15, 12}, {16, 17, 18}, {18, 19, 16},
+              {20, 21, 22}, {22, 23, 20}},
+          .positions = {{0.53f, 0.6f, 0.75f}, {0.7f, 0.6f, 0.17f},
               {0.13f, 0.6f, 0.0f}, {-0.05f, 0.6f, 0.57f}, {-0.05f, 0.0f, 0.57f},
               {-0.05f, 0.6f, 0.57f}, {0.13f, 0.6f, 0.0f}, {0.13f, 0.0f, 0.0f},
               {0.53f, 0.0f, 0.75f}, {0.53f, 0.6f, 0.75f}, {-0.05f, 0.6f, 0.57f},
@@ -1321,32 +1325,31 @@ scene_data make_cornellbox() {
               {0.53f, 0.6f, 0.75f}, {0.53f, 0.0f, 0.75f}, {0.13f, 0.0f, 0.0f},
               {0.13f, 0.6f, 0.0f}, {0.7f, 0.6f, 0.17f}, {0.7f, 0.0f, 0.17f},
               {0.53f, 0.0f, 0.75f}, {0.7f, 0.0f, 0.17f}, {0.13f, 0.0f, 0.0f},
-              {-0.05f, 0.0f, 0.57f}},
-          .triangles = {{0, 1, 2}, {2, 3, 0}, {4, 5, 6}, {6, 7, 4}, {8, 9, 10},
-              {10, 11, 8}, {12, 13, 14}, {14, 15, 12}, {16, 17, 18},
-              {18, 19, 16}, {20, 21, 22}, {22, 23, 20}}},
+              {-0.05f, 0.0f, 0.57f}}},
       {.color = {0.725f, 0.71f, 0.68f}});
 
   add_instance(scene, "tallbox", identity3x4f,
-      {.positions    = {{-0.53f, 1.2f, 0.09f}, {0.04f, 1.2f, -0.09f},
+      {.triangles    = {{0, 1, 2}, {2, 3, 0}, {4, 5, 6}, {6, 7, 4}, {8, 9, 10},
+              {10, 11, 8}, {12, 13, 14}, {14, 15, 12}, {16, 17, 18}, {18, 19, 16},
+              {20, 21, 22}, {22, 23, 20}},
+          .positions = {{-0.53f, 1.2f, 0.09f}, {0.04f, 1.2f, -0.09f},
               {-0.14f, 1.2f, -0.67f}, {-0.71f, 1.2f, -0.49f},
-              {-0.53f, 0.0f, 0.09f}, {-0.53f, 1.2f, 0.09f}, {-0.71f, 1.2f, -0.49f},
-              {-0.71f, 0.0f, -0.49f}, {-0.71f, 0.0f, -0.49f},
-              {-0.71f, 1.2f, -0.49f}, {-0.14f, 1.2f, -0.67f},
-              {-0.14f, 0.0f, -0.67f}, {-0.14f, 0.0f, -0.67f},
-              {-0.14f, 1.2f, -0.67f}, {0.04f, 1.2f, -0.09f}, {0.04f, 0.0f, -0.09f},
-              {0.04f, 0.0f, -0.09f}, {0.04f, 1.2f, -0.09f}, {-0.53f, 1.2f, 0.09f},
-              {-0.53f, 0.0f, 0.09f}, {-0.53f, 0.0f, 0.09f}, {0.04f, 0.0f, -0.09f},
-              {-0.14f, 0.0f, -0.67f}, {-0.71f, 0.0f, -0.49f}},
-          .triangles = {{0, 1, 2}, {2, 3, 0}, {4, 5, 6}, {6, 7, 4}, {8, 9, 10},
-              {10, 11, 8}, {12, 13, 14}, {14, 15, 12}, {16, 17, 18},
-              {18, 19, 16}, {20, 21, 22}, {22, 23, 20}}},
+              {-0.53f, 0.0f, 0.09f}, {-0.53f, 1.2f, 0.09f},
+              {-0.71f, 1.2f, -0.49f}, {-0.71f, 0.0f, -0.49f},
+              {-0.71f, 0.0f, -0.49f}, {-0.71f, 1.2f, -0.49f},
+              {-0.14f, 1.2f, -0.67f}, {-0.14f, 0.0f, -0.67f},
+              {-0.14f, 0.0f, -0.67f}, {-0.14f, 1.2f, -0.67f},
+              {0.04f, 1.2f, -0.09f}, {0.04f, 0.0f, -0.09f},
+              {0.04f, 0.0f, -0.09f}, {0.04f, 1.2f, -0.09f},
+              {-0.53f, 1.2f, 0.09f}, {-0.53f, 0.0f, 0.09f},
+              {-0.53f, 0.0f, 0.09f}, {0.04f, 0.0f, -0.09f},
+              {-0.14f, 0.0f, -0.67f}, {-0.71f, 0.0f, -0.49f}}},
       {.color = {0.725f, 0.71f, 0.68f}});
 
   add_instance(scene, "backwall", identity3x4f,
-      {.positions    = {{-0.25f, 1.99f, 0.25f}, {-0.25f, 1.99f, -0.25f},
-              {0.25f, 1.99f, -0.25f}, {0.25f, 1.99f, 0.25f}},
-          .triangles = {{0, 1, 2}, {2, 3, 0}}},
+      {.triangles    = {{0, 1, 2}, {2, 3, 0}},
+          .positions = {{-0.25f, 1.99f, 0.25f}, {-0.25f, 1.99f, -0.25f},
+              {0.25f, 1.99f, -0.25f}, {0.25f, 1.99f, 0.25f}}},
       {.emission = {17, 12, 4}});
 
   return scene;
