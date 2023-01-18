@@ -305,34 +305,23 @@ namespace yocto {
 // Python range: iterator and sequence
 template <typename I>
 struct range_view {
-  struct range_iterator;
-  struct range_sentinel {
-    constexpr kernel   range_sentinel(I end_) : end{end_} {}
-    constexpr kernel I sentinel() const { return end; }
-    friend struct range_iterator;
-
-   private:
-    I end;
-  };
-
-  struct range_iterator {
-    constexpr kernel      range_iterator(I index_) : current{index_} {}
-    constexpr kernel I    index() const { return current; }
-    constexpr kernel void operator++() { ++current; }
-    constexpr kernel bool operator!=(const range_sentinel& other) const {
-      return current != other.end;
+  struct iterator {
+    constexpr kernel      iterator(I index_) : index{index_} {}
+    constexpr kernel void operator++() { ++index; }
+    constexpr kernel bool operator==(const iterator& other) const {
+      return index == other.index;
     }
-    constexpr kernel I operator*() const { return current; }
-    friend struct range_sentinel;
+    constexpr kernel I operator*() const { return index; }
 
    private:
-    I current;
+    I index;
   };
+  using sentinel = iterator;
 
-  constexpr kernel range_view(I max_) : min{0}, max{max_} {}
-  constexpr kernel range_view(I min_, I max_) : min{min_}, max{max_} {}
-  constexpr kernel range_iterator begin() const { return {min}; }
-  constexpr kernel range_sentinel end() const { return {max}; }
+  constexpr kernel          range_view(I max_) : min{0}, max{max_} {}
+  constexpr kernel          range_view(I min_, I max_) : min{min_}, max{max_} {}
+  constexpr kernel iterator begin() const { return {min}; }
+  constexpr kernel sentinel end() const { return {max}; }
 
  private:
   I min, max;
@@ -341,32 +330,24 @@ struct range_view {
 // Python range: iterator and sequence
 template <typename I>
 struct srange_view {
-  struct srange_iterator;
-  struct srange_sentinel {
-    constexpr kernel srange_sentinel(I end_) : end{end_} {}
-    friend struct srange_iterator;
-
-   private:
-    I end;
-  };
-  struct srange_iterator {
-    constexpr kernel srange_iterator(I index_, I step_) :
-        index{index_}, step{step_} {}
+  struct iterator {
+    constexpr kernel iterator(I index_, I step_) : index{index_}, step{step_} {}
     constexpr kernel void operator++() { index += step; }
-    constexpr kernel bool operator!=(const srange_sentinel& other) const {
-      return index != other.end;
+    constexpr kernel bool operator==(const iterator& other) const {
+      return index == other.index;
     }
     constexpr kernel I operator*() const { return index; }
 
    private:
     I index, step;
   };
+  using sentinel = iterator;
 
   constexpr kernel srange_view(I min_, I max_, I step_) :
       min{min_}, max{max_}, step{step_} {}
-  constexpr kernel srange_iterator begin() const { return {min, step}; }
-  constexpr kernel srange_sentinel end() const {
-    return {min + ((max - min) / step) * step};
+  constexpr kernel iterator begin() const { return {min, step}; }
+  constexpr kernel sentinel end() const {
+    return {min + ((max - min) / step) * step, step};
   }
 
  private:
@@ -456,18 +437,10 @@ struct enumerate_view {
   using Se = decltype(std::end(std::declval<View>()));
   using Rf = decltype(*std::begin(std::declval<View>()));
 
-  struct iterator;
-  struct sentinel {
-    constexpr kernel sentinel(Se end_) : end{end_} {}
-    friend struct iterator;
-
-   private:
-    Se end;
-  };
   struct iterator {
     constexpr kernel iterator(It cur_, I index_) : cur{cur_}, index{index_} {}
-    constexpr kernel bool operator!=(const sentinel& other) const {
-      return cur != other.end;
+    constexpr kernel bool operator==(const iterator& other) const {
+      return cur == other.cur;
     }
     constexpr kernel void operator++() {
       ++cur;
@@ -479,11 +452,14 @@ struct enumerate_view {
     It cur;
     I  index;
   };
+  using sentinel = iterator;
 
   enumerate_view(View view_) : view{view_}, start{0} {}
   enumerate_view(View view_, I start_) : view{view_}, start{start_} {}
   constexpr kernel iterator begin() { return {std::begin(view), start}; }
-  constexpr kernel sentinel end() { return {std::end(view)}; }
+  constexpr kernel sentinel end() {
+    return {std::end(view), (I)(std::end(view) - std::begin(view))};
+  }
 
  private:
   View view;
@@ -532,21 +508,11 @@ struct zip_view {
   using Se2 = decltype(std::end(std::declval<View2>()));
   using Rf2 = decltype(*std::begin(std::declval<View2>()));
 
-  struct iterator;
-  struct sentinel {
-    constexpr kernel sentinel(Se1 end1_, Se2 end2_) :
-        end1{end1_}, end2{end2_} {}
-    friend struct iterator;
-
-   private:
-    Se1 end1;
-    Se2 end2;
-  };
   struct iterator {
     constexpr kernel iterator(It1 cur1_, It2 cur2_) :
         cur1{cur1_}, cur2{cur2_} {}
-    constexpr kernel bool operator!=(const sentinel& other) const {
-      return cur1 != other.end1 && cur2 != other.end2;
+    constexpr kernel bool operator==(const iterator& other) const {
+      return cur1 == other.cur1 && cur2 == other.cur2;
     }
     constexpr kernel void operator++() {
       ++cur1;
@@ -558,6 +524,7 @@ struct zip_view {
     It1 cur1;
     It2 cur2;
   };
+  using sentinel = iterator;
 
   constexpr kernel zip_view(View1 view1_, View2 view2_) :
       view1{view1_}, view2{view2_} {}
