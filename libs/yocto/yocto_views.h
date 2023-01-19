@@ -441,7 +441,7 @@ struct enumerate_view {
       ++cur;
       ++index;
     }
-    constexpr kernel pair<I, Rf> operator*() const { return {index, *cur}; }
+    constexpr kernel tuple<I, Rf> operator*() const { return {index, *cur}; }
 
    private:
     It cur;
