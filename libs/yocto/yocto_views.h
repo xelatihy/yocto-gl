@@ -371,17 +371,9 @@ constexpr kernel srange_view<I> range(I min, I max, I step) {
 // Python range: iterator and sequence in 2D
 template <typename I, size_t N>
 struct ndrange_view {
-  struct iterator;
-  struct sentinel {
-    constexpr kernel sentinel(const vec<I, N>& end_) : end{end_} {}
-    friend struct iterator;
-
-   private:
-    vec<I, N> index, end;
-  };
   struct iterator {
-    constexpr kernel iterator(const vec<I, N>& cur_, const vec<I, N>& end_) :
-        index{cur_}, end{end_} {}
+    constexpr kernel iterator(const vec<I, N>& index_, const vec<I, N>& end_) :
+        index{index_}, end{end_} {}
     constexpr kernel void operator++() {
       ++index.x;
       if constexpr (N > 1) {
@@ -403,18 +395,19 @@ struct ndrange_view {
         }
       }
     }
-    constexpr kernel bool operator!=(const sentinel& other) const {
-      return index[N - 1] != other.end[N - 1];
+    constexpr kernel bool operator==(const iterator& other) const {
+      return index[N - 1] == other.index[N - 1];
     }
     constexpr kernel vec<I, N> operator*() const { return index; }
 
    private:
     vec<I, N> index, end;
   };
+  using sentinel = iterator;
 
   constexpr kernel          ndrange_view(const vec<I, N>& max_) : max{max_} {}
   constexpr kernel iterator begin() const { return {vec<I, N>{0}, max}; }
-  constexpr kernel sentinel end() const { return {max}; }
+  constexpr kernel sentinel end() const { return {max, max}; }
 
  private:
   vec<I, N> max = {0};
