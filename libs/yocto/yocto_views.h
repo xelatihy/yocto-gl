@@ -40,6 +40,7 @@
 
 #include <algorithm>
 #include <stdexcept>
+#include <tuple>
 #include <vector>
 
 #include "yocto_math.h"
@@ -50,6 +51,7 @@
 namespace yocto {
 
 // using directives
+using std::tuple;
 using std::vector;
 
 }  // namespace yocto
@@ -492,43 +494,63 @@ constexpr kernel enumerate_view<span<const T>, I> enumerate(
 }
 
 // Python zip: iterator and sequence
-template <typename View1, typename View2>
+template <typename... Views>
 struct zip_view {
-  using It1 = decltype(std::begin(std::declval<View1>()));
-  using Se1 = decltype(std::end(std::declval<View1>()));
-  using Rf1 = decltype(*std::begin(std::declval<View1>()));
-  using It2 = decltype(std::begin(std::declval<View2>()));
-  using Se2 = decltype(std::end(std::declval<View2>()));
-  using Rf2 = decltype(*std::begin(std::declval<View2>()));
+  static constexpr auto N = sizeof...(Views);
+  using ViewT             = tuple<Views...>;
+  using ItT = tuple<decltype(std::begin(std::declval<Views>()))...>;
+  using SeT = tuple<decltype(std::end(std::declval<Views>()))...>;
+  using RfT = tuple<decltype(*std::begin(std::declval<Views>()))...>;
 
   struct iterator {
-    constexpr kernel iterator(It1 cur1_, It2 cur2_) :
-        cur1{cur1_}, cur2{cur2_} {}
+    constexpr kernel      iterator(ItT curs_) : curs{curs_} {}
     constexpr kernel bool operator==(const iterator& other) const {
-      return cur1 == other.cur1 && cur2 == other.cur2;
+      return curs == other.curs;
     }
     constexpr kernel void operator++() {
-      ++cur1;
-      ++cur2;
+      if constexpr (N >= 1) ++get<0>(curs);
+      if constexpr (N >= 2) ++get<1>(curs);
+      if constexpr (N >= 3) ++get<2>(curs);
+      if constexpr (N >= 4) ++get<3>(curs);
     }
-    constexpr kernel pair<Rf1, Rf2> operator*() const { return {*cur1, *cur2}; }
+    constexpr kernel RfT operator*() const {
+      if constexpr (N == 1) return {*get<0>(curs)};
+      if constexpr (N == 2) return {*get<0>(curs), *get<1>(curs)};
+      if constexpr (N == 3)
+        return {*get<0>(curs), *get<1>(curs), *get<2>(curs)};
+      if constexpr (N == 4)
+        return {*get<0>(curs), *get<1>(curs), *get<2>(curs), *get<3>(curs)};
+    }
 
    private:
-    It1 cur1;
-    It2 cur2;
+    ItT curs;
   };
   using sentinel = iterator;
 
-  constexpr kernel zip_view(View1 view1_, View2 view2_) :
-      view1{view1_}, view2{view2_} {}
+  constexpr kernel          zip_view(Views... views_) : views{views_...} {}
   constexpr kernel iterator begin() {
-    return {std::begin(view1), std::begin(view2)};
+    if constexpr (N == 2)
+      return {{std::begin(get<0>(views)), std::begin(get<1>(views))}};
+    if constexpr (N == 3)
+      return {{std::begin(get<0>(views)), std::begin(get<1>(views)),
+          std::begin(get<2>(views))}};
+    if constexpr (N == 4)
+      return {{std::begin(get<0>(views)), std::begin(get<1>(views)),
+          std::begin(get<2>(views)), std::begin(get<3>(views))}};
   }
-  constexpr kernel sentinel end() { return {std::end(view1), std::end(view2)}; }
+  constexpr kernel sentinel end() {
+    if constexpr (N == 2)
+      return {{std::end(get<0>(views)), std::end(get<1>(views))}};
+    if constexpr (N == 3)
+      return {{std::end(get<0>(views)), std::end(get<1>(views)),
+          std::end(get<2>(views))}};
+    if constexpr (N == 4)
+      return {{std::end(get<0>(views)), std::end(get<1>(views)),
+          std::end(get<2>(views)), std::end(get<3>(views))}};
+  }
 
  private:
-  View1 view1;
-  View2 view2;
+  ViewT views;
 };
 
 // Python zip
