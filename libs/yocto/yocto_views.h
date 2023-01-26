@@ -222,39 +222,6 @@ constexpr kernel void check_same_size(
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// ARRAY CREATION VIA VIEWS
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Error handling
-template <typename T1, typename T2>
-constexpr kernel void check_same_size(
-    const vector<T1>& a, const vector<T2>& b) {
-  if (a.size() != b.size())
-    throw std::out_of_range{"arrays should have the same size"};
-}
-
-#ifndef __CUDACC__
-
-// Make a vector from a view
-template <typename R, typename T = rvalue_t<R>>
-inline vector<T> to_vector(R&& range) {
-  auto values = vector<T>{};
-  for (auto value : range) values.push_back(value);
-  return values;
-}
-template <typename R, typename Func, typename T = result_t<Func, rvalue_t<R>>>
-inline vector<T> to_vector(R&& range, Func&& func) {
-  auto values = vector<T>{};
-  for (auto value : range) values.push_back(func(value));
-  return values;
-}
-
-#endif
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
 // ARRAY SEARCH AND SORT
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -528,6 +495,39 @@ constexpr kernel zip_view<span<T1>, span<T2>> zip(
   return {span<T1>{sequence1.data(), sequence1.size()},
       span<T2>{sequence2.data(), sequence2.size()}};
 }
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// ARRAY CREATION VIA VIEWS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Error handling
+template <typename T1, typename T2>
+constexpr kernel void check_same_size(
+    const vector<T1>& a, const vector<T2>& b) {
+  if (a.size() != b.size())
+    throw std::out_of_range{"arrays should have the same size"};
+}
+
+#ifndef __CUDACC__
+
+// Make a vector from a view
+template <typename R, typename T = rvalue_t<R>>
+inline vector<T> to_vector(R&& range) {
+  auto values = vector<T>{};
+  for (auto value : range) values.push_back(value);
+  return values;
+}
+template <typename R, typename Func, typename T = result_t<Func, rvalue_t<R>>>
+inline vector<T> to_vector(R&& range, Func&& func) {
+  auto values = vector<T>{};
+  for (auto value : range) values.push_back(func(value));
+  return values;
+}
+
+#endif
 
 }  // namespace yocto
 
