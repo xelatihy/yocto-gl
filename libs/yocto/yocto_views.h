@@ -647,6 +647,13 @@ struct ndenumerate_view {
   vec<I, N> max = {0};
 };
 
+// Python enumerate over an array
+template <typename T, typename I = size_t, size_t N>
+constexpr kernel ndenumerate_view<ndspan<T, N>, I, N> enumerate(
+    ndspan<T, N> sequence) {
+  return {sequence, sequence.extents()};
+}
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
