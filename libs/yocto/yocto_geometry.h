@@ -1414,7 +1414,7 @@ inline vec2i split_sah(
   auto      split    = 0.0f;
   auto      min_cost = flt_max;
   for (auto saxis : range(3)) {
-    for (auto b = 1; b < nbins; b++) {
+    for (auto b : range(1, nbins)) {
       auto bsplit = cbox.min[saxis] + b * diagonal(cbox)[saxis] / nbins;
       auto lbox = invalidb3f, rbox = invalidb3f;
       auto lprims = 0, rprims = 0;
