@@ -40,6 +40,7 @@
 
 #include <algorithm>
 #include <stdexcept>
+#include <tuple>
 #include <vector>
 
 #include "yocto_math.h"
@@ -50,6 +51,7 @@
 namespace yocto {
 
 // using directives
+using std::tuple;
 using std::vector;
 
 }  // namespace yocto
@@ -220,39 +222,6 @@ constexpr kernel void check_same_size(
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// ARRAY CREATION VIA VIEWS
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Error handling
-template <typename T1, typename T2>
-constexpr kernel void check_same_size(
-    const vector<T1>& a, const vector<T2>& b) {
-  if (a.size() != b.size())
-    throw std::out_of_range{"arrays should have the same size"};
-}
-
-#ifndef __CUDACC__
-
-// Make a vector from a view
-template <typename R, typename T = rvalue_t<R>>
-inline vector<T> to_vector(R&& range) {
-  auto values = vector<T>{};
-  for (auto value : range) values.push_back(value);
-  return values;
-}
-template <typename R, typename Func, typename T = result_t<Func, rvalue_t<R>>>
-inline vector<T> to_vector(R&& range, Func&& func) {
-  auto values = vector<T>{};
-  for (auto value : range) values.push_back(func(value));
-  return values;
-}
-
-#endif
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
 // ARRAY SEARCH AND SORT
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -298,41 +267,30 @@ inline vector<T> remove_duplicates(const vector<T>& values_) {
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// PYTHON-LIKE ITERATORS
+// ONE DIMENSIONAL VIEWS
 // -----------------------------------------------------------------------------
 namespace yocto {
 
 // Python range: iterator and sequence
 template <typename I>
 struct range_view {
-  struct range_iterator;
-  struct range_sentinel {
-    constexpr kernel   range_sentinel(I end_) : end{end_} {}
-    constexpr kernel I sentinel() const { return end; }
-    friend struct range_iterator;
-
-   private:
-    I end;
-  };
-
-  struct range_iterator {
-    constexpr kernel      range_iterator(I index_) : current{index_} {}
-    constexpr kernel I    index() const { return current; }
-    constexpr kernel void operator++() { ++current; }
-    constexpr kernel bool operator!=(const range_sentinel& other) const {
-      return current != other.end;
+  struct iterator {
+    constexpr kernel      iterator(I index_) : index{index_} {}
+    constexpr kernel void operator++() { ++index; }
+    constexpr kernel bool operator==(const iterator& other) const {
+      return index == other.index;
     }
-    constexpr kernel I operator*() const { return current; }
-    friend struct range_sentinel;
+    constexpr kernel I operator*() const { return index; }
 
    private:
-    I current;
+    I index;
   };
+  using sentinel = iterator;
 
-  constexpr kernel range_view(I max_) : min{0}, max{max_} {}
-  constexpr kernel range_view(I min_, I max_) : min{min_}, max{max_} {}
-  constexpr kernel range_iterator begin() const { return {min}; }
-  constexpr kernel range_sentinel end() const { return {max}; }
+  constexpr kernel          range_view(I max_) : min{0}, max{max_} {}
+  constexpr kernel          range_view(I min_, I max_) : min{min_}, max{max_} {}
+  constexpr kernel iterator begin() const { return {min}; }
+  constexpr kernel sentinel end() const { return {max}; }
 
  private:
   I min, max;
@@ -341,32 +299,24 @@ struct range_view {
 // Python range: iterator and sequence
 template <typename I>
 struct srange_view {
-  struct srange_iterator;
-  struct srange_sentinel {
-    constexpr kernel srange_sentinel(I end_) : end{end_} {}
-    friend struct srange_iterator;
-
-   private:
-    I end;
-  };
-  struct srange_iterator {
-    constexpr kernel srange_iterator(I index_, I step_) :
-        index{index_}, step{step_} {}
+  struct iterator {
+    constexpr kernel iterator(I index_, I step_) : index{index_}, step{step_} {}
     constexpr kernel void operator++() { index += step; }
-    constexpr kernel bool operator!=(const srange_sentinel& other) const {
-      return index != other.end;
+    constexpr kernel bool operator==(const iterator& other) const {
+      return index == other.index;
     }
     constexpr kernel I operator*() const { return index; }
 
    private:
     I index, step;
   };
+  using sentinel = iterator;
 
   constexpr kernel srange_view(I min_, I max_, I step_) :
       min{min_}, max{max_}, step{step_} {}
-  constexpr kernel srange_iterator begin() const { return {min, step}; }
-  constexpr kernel srange_sentinel end() const {
-    return {min + ((max - min) / step) * step};
+  constexpr kernel iterator begin() const { return {min, step}; }
+  constexpr kernel sentinel end() const {
+    return {min + ((max - min) / step) * step, step};
   }
 
  private:
@@ -387,68 +337,6 @@ constexpr kernel srange_view<I> range(I min, I max, I step) {
   return srange_view<I>(min, max, step);
 }
 
-// Python range: iterator and sequence in 2D
-template <typename I, size_t N>
-struct ndrange_view {
-  struct iterator;
-  struct sentinel {
-    constexpr kernel sentinel(const vec<I, N>& end_) : end{end_} {}
-    friend struct iterator;
-
-   private:
-    vec<I, N> index, end;
-  };
-  struct iterator {
-    constexpr kernel iterator(const vec<I, N>& cur_, const vec<I, N>& end_) :
-        index{cur_}, end{end_} {}
-    constexpr kernel void operator++() {
-      ++index.x;
-      if constexpr (N > 1) {
-        if (index[0] >= end[0]) {
-          index[0] = 0;
-          index[1]++;
-        }
-      }
-      if constexpr (N > 2) {
-        if (index[1] >= end[1]) {
-          index[1] = 0;
-          index[2]++;
-        }
-      }
-      if constexpr (N > 3) {
-        if (index[2] >= end[2]) {
-          index[2] = 0;
-          index[3]++;
-        }
-      }
-    }
-    constexpr kernel bool operator!=(const sentinel& other) const {
-      return index[N - 1] != other.end[N - 1];
-    }
-    constexpr kernel vec<I, N> operator*() const { return index; }
-
-   private:
-    vec<I, N> index, end;
-  };
-
-  constexpr kernel          ndrange_view(const vec<I, N>& max_) : max{max_} {}
-  constexpr kernel iterator begin() const { return {vec<I, N>{0}, max}; }
-  constexpr kernel sentinel end() const { return {max}; }
-
- private:
-  vec<I, N> max = {0};
-};
-
-// Python range in nd.
-template <typename I, size_t N>
-constexpr kernel ndrange_view<I, N> range(const vec<I, N>& max) {
-  return ndrange_view<I, N>(max);
-}
-template <typename I, size_t N>
-constexpr kernel ndrange_view<I, N> range(const array<I, N>& max) {
-  return range_sequence<I, N>((vec<I, N>)max);
-}
-
 // Python enumerate view
 template <typename View, typename I>
 struct enumerate_view {
@@ -456,34 +344,29 @@ struct enumerate_view {
   using Se = decltype(std::end(std::declval<View>()));
   using Rf = decltype(*std::begin(std::declval<View>()));
 
-  struct iterator;
-  struct sentinel {
-    constexpr kernel sentinel(Se end_) : end{end_} {}
-    friend struct iterator;
-
-   private:
-    Se end;
-  };
   struct iterator {
     constexpr kernel iterator(It cur_, I index_) : cur{cur_}, index{index_} {}
-    constexpr kernel bool operator!=(const sentinel& other) const {
-      return cur != other.end;
+    constexpr kernel bool operator==(const iterator& other) const {
+      return cur == other.cur;
     }
     constexpr kernel void operator++() {
       ++cur;
       ++index;
     }
-    constexpr kernel pair<I, Rf> operator*() const { return {index, *cur}; }
+    constexpr kernel tuple<I, Rf> operator*() const { return {index, *cur}; }
 
    private:
     It cur;
     I  index;
   };
+  using sentinel = iterator;
 
   enumerate_view(View view_) : view{view_}, start{0} {}
   enumerate_view(View view_, I start_) : view{view_}, start{start_} {}
   constexpr kernel iterator begin() { return {std::begin(view), start}; }
-  constexpr kernel sentinel end() { return {std::end(view)}; }
+  constexpr kernel sentinel end() {
+    return {std::end(view), (I)(std::end(view) - std::begin(view))};
+  }
 
  private:
   View view;
@@ -523,52 +406,63 @@ constexpr kernel enumerate_view<span<const T>, I> enumerate(
 }
 
 // Python zip: iterator and sequence
-template <typename View1, typename View2>
+template <typename... Views>
 struct zip_view {
-  using It1 = decltype(std::begin(std::declval<View1>()));
-  using Se1 = decltype(std::end(std::declval<View1>()));
-  using Rf1 = decltype(*std::begin(std::declval<View1>()));
-  using It2 = decltype(std::begin(std::declval<View2>()));
-  using Se2 = decltype(std::end(std::declval<View2>()));
-  using Rf2 = decltype(*std::begin(std::declval<View2>()));
+  static constexpr auto N = sizeof...(Views);
+  using ViewT             = tuple<Views...>;
+  using ItT = tuple<decltype(std::begin(std::declval<Views>()))...>;
+  using SeT = tuple<decltype(std::end(std::declval<Views>()))...>;
+  using RfT = tuple<decltype(*std::begin(std::declval<Views>()))...>;
 
-  struct iterator;
-  struct sentinel {
-    constexpr kernel sentinel(Se1 end1_, Se2 end2_) :
-        end1{end1_}, end2{end2_} {}
-    friend struct iterator;
-
-   private:
-    Se1 end1;
-    Se2 end2;
-  };
   struct iterator {
-    constexpr kernel iterator(It1 cur1_, It2 cur2_) :
-        cur1{cur1_}, cur2{cur2_} {}
-    constexpr kernel bool operator!=(const sentinel& other) const {
-      return cur1 != other.end1 && cur2 != other.end2;
+    constexpr kernel      iterator(ItT curs_) : curs{curs_} {}
+    constexpr kernel bool operator==(const iterator& other) const {
+      return curs == other.curs;
     }
     constexpr kernel void operator++() {
-      ++cur1;
-      ++cur2;
+      if constexpr (N >= 1) ++get<0>(curs);
+      if constexpr (N >= 2) ++get<1>(curs);
+      if constexpr (N >= 3) ++get<2>(curs);
+      if constexpr (N >= 4) ++get<3>(curs);
     }
-    constexpr kernel pair<Rf1, Rf2> operator*() const { return {*cur1, *cur2}; }
+    constexpr kernel RfT operator*() const {
+      if constexpr (N == 1) return {*get<0>(curs)};
+      if constexpr (N == 2) return {*get<0>(curs), *get<1>(curs)};
+      if constexpr (N == 3)
+        return {*get<0>(curs), *get<1>(curs), *get<2>(curs)};
+      if constexpr (N == 4)
+        return {*get<0>(curs), *get<1>(curs), *get<2>(curs), *get<3>(curs)};
+    }
 
    private:
-    It1 cur1;
-    It2 cur2;
+    ItT curs;
   };
+  using sentinel = iterator;
 
-  constexpr kernel zip_view(View1 view1_, View2 view2_) :
-      view1{view1_}, view2{view2_} {}
+  constexpr kernel          zip_view(Views... views_) : views{views_...} {}
   constexpr kernel iterator begin() {
-    return {std::begin(view1), std::begin(view2)};
+    if constexpr (N == 2)
+      return {{std::begin(get<0>(views)), std::begin(get<1>(views))}};
+    if constexpr (N == 3)
+      return {{std::begin(get<0>(views)), std::begin(get<1>(views)),
+          std::begin(get<2>(views))}};
+    if constexpr (N == 4)
+      return {{std::begin(get<0>(views)), std::begin(get<1>(views)),
+          std::begin(get<2>(views)), std::begin(get<3>(views))}};
   }
-  constexpr kernel sentinel end() { return {std::end(view1), std::end(view2)}; }
+  constexpr kernel sentinel end() {
+    if constexpr (N == 2)
+      return {{std::end(get<0>(views)), std::end(get<1>(views))}};
+    if constexpr (N == 3)
+      return {{std::end(get<0>(views)), std::end(get<1>(views)),
+          std::end(get<2>(views))}};
+    if constexpr (N == 4)
+      return {{std::end(get<0>(views)), std::end(get<1>(views)),
+          std::end(get<2>(views)), std::end(get<3>(views))}};
+  }
 
  private:
-  View1 view1;
-  View2 view2;
+  ViewT views;
 };
 
 // Python zip
@@ -600,6 +494,164 @@ constexpr kernel zip_view<span<T1>, span<T2>> zip(
     vector<T1>& sequence1, vector<T2>& sequence2) {
   return {span<T1>{sequence1.data(), sequence1.size()},
       span<T2>{sequence2.data(), sequence2.size()}};
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// ARRAY CREATION VIA VIEWS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Error handling
+template <typename T1, typename T2>
+constexpr kernel void check_same_size(
+    const vector<T1>& a, const vector<T2>& b) {
+  if (a.size() != b.size())
+    throw std::out_of_range{"arrays should have the same size"};
+}
+
+#ifndef __CUDACC__
+
+// Make a vector from a view
+template <typename R, typename T = rvalue_t<R>>
+inline vector<T> to_vector(R&& range) {
+  auto values = vector<T>{};
+  for (auto value : range) values.push_back(value);
+  return values;
+}
+template <typename R, typename Func, typename T = result_t<Func, rvalue_t<R>>>
+inline vector<T> to_vector(R&& range, Func&& func) {
+  auto values = vector<T>{};
+  for (auto value : range) values.push_back(func(value));
+  return values;
+}
+
+#endif
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// MULTI DIMENSIONAL VIEWS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Range sequence in ND
+template <typename I, size_t N>
+struct ndrange_view {
+  struct iterator {
+    constexpr kernel iterator(const vec<I, N>& index_, const vec<I, N>& end_) :
+        index{index_}, end{end_} {}
+    constexpr kernel void operator++() {
+      ++index.x;
+      if constexpr (N > 1) {
+        if (index[0] >= end[0]) {
+          index[0] = 0;
+          index[1]++;
+        }
+      }
+      if constexpr (N > 2) {
+        if (index[1] >= end[1]) {
+          index[1] = 0;
+          index[2]++;
+        }
+      }
+      if constexpr (N > 3) {
+        if (index[2] >= end[2]) {
+          index[2] = 0;
+          index[3]++;
+        }
+      }
+    }
+    constexpr kernel bool operator==(const iterator& other) const {
+      return index[N - 1] == other.index[N - 1];
+    }
+    constexpr kernel vec<I, N> operator*() const { return index; }
+
+   private:
+    vec<I, N> index, end;
+  };
+  using sentinel = iterator;
+
+  constexpr kernel          ndrange_view(const vec<I, N>& max_) : max{max_} {}
+  constexpr kernel iterator begin() const { return {vec<I, N>{0}, max}; }
+  constexpr kernel sentinel end() const { return {max, max}; }
+
+ private:
+  vec<I, N> max = {0};
+};
+
+// Python range in nd.
+template <typename I, size_t N>
+constexpr kernel ndrange_view<I, N> range(const vec<I, N>& max) {
+  return ndrange_view<I, N>(max);
+}
+template <typename I, size_t N>
+constexpr kernel ndrange_view<I, N> range(const array<I, N>& max) {
+  return range_sequence<I, N>((vec<I, N>)max);
+}
+
+// Enumerate sequence in ND
+template <typename View, typename I, size_t N>
+struct ndenumerate_view {
+  using It = decltype(std::begin(std::declval<View>()));
+  using Se = decltype(std::end(std::declval<View>()));
+  using Rf = decltype(*std::begin(std::declval<View>()));
+
+  struct iterator {
+    constexpr kernel iterator(
+        View view_, const vec<I, N>& index_, const vec<I, N>& end_) :
+        index{index_}, end{end_} {}
+    constexpr kernel void operator++() {
+      ++cur;
+      ++index.x;
+      if constexpr (N > 1) {
+        if (index[0] >= end[0]) {
+          index[0] = 0;
+          index[1]++;
+        }
+      }
+      if constexpr (N > 2) {
+        if (index[1] >= end[1]) {
+          index[1] = 0;
+          index[2]++;
+        }
+      }
+      if constexpr (N > 3) {
+        if (index[2] >= end[2]) {
+          index[2] = 0;
+          index[3]++;
+        }
+      }
+    }
+    constexpr kernel bool operator==(const iterator& other) const {
+      return index[N - 1] == other.index[N - 1];
+    }
+    constexpr kernel tuple<vec<I, N>, Rf> operator*() const {
+      return {index, *cur};
+    }
+
+   private:
+    It        cur;
+    vec<I, N> index, end;
+  };
+  using sentinel = iterator;
+
+  constexpr kernel ndenumerate_view(View view_, const vec<I, N>& max_) :
+      view{view_}, max{max_} {}
+  constexpr kernel iterator begin() const { return {view, vec<I, N>{0}, max}; }
+  constexpr kernel sentinel end() const { return {view, max, max}; }
+
+ private:
+  View      view;
+  vec<I, N> max = {0};
+};
+
+// Python enumerate over an array
+template <typename T, typename I = size_t, size_t N>
+constexpr kernel ndenumerate_view<ndspan<T, N>, I, N> enumerate(
+    ndspan<T, N> sequence) {
+  return {sequence, sequence.extents()};
 }
 
 }  // namespace yocto
