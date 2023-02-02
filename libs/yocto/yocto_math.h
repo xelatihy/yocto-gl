@@ -329,7 +329,6 @@ struct vec<T, 1> {
   constexpr kernel vec(T x_) : x{x_} {}
   template <typename T1>
   constexpr kernel vec(T1 x_) : x{(T)x_} {}
-  constexpr kernel ~vec() = default;
 
   constexpr vec(const vec& v)            = default;
   constexpr vec& operator=(const vec& v) = default;
@@ -360,7 +359,6 @@ struct vec<T, 2> {
   constexpr kernel vec(T x_, T y_) : x{x_}, y{y_} {}
   template <typename T1, typename T2>
   constexpr kernel vec(T1 x_, T2 y_) : x{(T)x_}, y{(T)y_} {}
-  constexpr kernel ~vec() = default;
 
   constexpr vec(const vec& v)            = default;
   constexpr vec& operator=(const vec& v) = default;
@@ -393,7 +391,6 @@ struct vec<T, 3> {
   template <typename T1, typename T2, typename T3>
   constexpr kernel vec(T1 x_, T2 y_, T3 z_) : x{(T)x_}, y{(T)y_}, z{(T)z_} {}
   constexpr kernel vec(vec<T, 2> xy_, T z_) : x{xy_.x}, y{xy_.y}, z{z_} {}
-  constexpr kernel ~vec() = default;
 
   constexpr vec(const vec& v)            = default;
   constexpr vec& operator=(const vec& v) = default;
@@ -428,7 +425,6 @@ struct vec<T, 4> {
       x{(T)x_}, y{(T)y_}, z{(T)z_}, w{(T)w_} {}
   constexpr kernel vec(vec<T, 3> xyz_, T w_) :
       x{xyz_.x}, y{xyz_.y}, z{xyz_.z}, w{w_} {}
-  constexpr kernel ~vec() = default;
 
   constexpr vec(const vec& v)            = default;
   constexpr vec& operator=(const vec& v) = default;
