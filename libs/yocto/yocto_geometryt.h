@@ -309,13 +309,13 @@ namespace yocto {
 
 // Generate a ray from a camera
 template <typename T>
-inline ray<T, 3> camera_ray(const frame3f& frame, T lens, const vec<T, 2>& film,
+inline ray<T, 3> camera_ray(const frame<T, 3>& frame, T lens, const vec<T, 2>& film,
     const vec<T, 2>& image_uv);
 
 // Generate a ray from a camera
 template <typename T>
 inline ray<T, 3> camera_ray(
-    const frame3f& frame, T lens, T aspect, T film, const vec<T, 2>& image_uv);
+    const frame<T, 3>& frame, T lens, T aspect, T film, const vec<T, 2>& image_uv);
 
 }  // namespace yocto
 
@@ -777,7 +777,7 @@ namespace yocto {
 
 // Generate a ray from a camera
 template <typename T>
-inline ray<T, 3> camera_ray(const frame3f& frame, T lens, const vec<T, 2>& film,
+inline ray<T, 3> camera_ray(const frame<T, 3>& frame, T lens, const vec<T, 2>& film,
     const vec<T, 2>& image_uv) {
   auto e = vec<T, 3>{0, 0, 0};
   auto q = vec<T, 3>{
@@ -791,7 +791,7 @@ inline ray<T, 3> camera_ray(const frame3f& frame, T lens, const vec<T, 2>& film,
 
 // Generate a ray from a camera
 template <typename T>
-inline ray<T, 3> camera_ray(const frame3f& frame, T lens, T aspect, T film_,
+inline ray<T, 3> camera_ray(const frame<T, 3>& frame, T lens, T aspect, T film_,
     const vec<T, 2>& image_uv) {
   auto film = aspect >= 1 ? vec<T, 2>{film_, film_ / aspect}
                           : vec<T, 2>{film_ * aspect, film_};
