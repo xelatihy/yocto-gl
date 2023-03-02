@@ -1782,9 +1782,9 @@ void denoise_image(array2d<vec4f>& denoised, const array2d<vec4f>& image,
   filter.setImage("color", (void*)image.data(), oidn::Format::Float3, size.x,
       size.y, 0, sizeof(vec4f), sizeof(vec4f) * size.x);
   filter.setImage(
-      "albedo", (void*)image.data(), oidn::Format::Float3, size.x, size.y);
+      "albedo", (void*)albedo.data(), oidn::Format::Float3, size.x, size.y);
   filter.setImage(
-      "normal", (void*)image.data(), oidn::Format::Float3, size.x, size.y);
+      "normal", (void*)normal.data(), oidn::Format::Float3, size.x, size.y);
   filter.setImage("output", denoised.data(), oidn::Format::Float3, size.x,
       size.y, 0, sizeof(vec4f), sizeof(vec4f) * size.x);
   filter.set("inputScale", 1.0f);  // set scale as fixed
