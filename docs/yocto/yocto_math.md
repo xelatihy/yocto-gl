@@ -97,13 +97,13 @@ assumed to be orthonormal and used as is, unless specifically requested as
 for inverses.
 
 For convenience, Yocto/Math provides several functions to construct transform
-frames and matrices. Translation, rotation and scaling frames are created with  
+frames and matrices. Translation, rotation and scaling frames are created with
 `translation_frame(t)`, `rotation_frame(r)` and `scaling_frame(s)`. Rotation
 frames can be derived from axis-angle, quaternion and matrix representations.
 To define camera frames, one can use `lookat_frame(from,to,up)`.
 
 ```cpp
-auto f = tranlation_frame({1,0,0}) * rotation_frame({0,1,0},pi/2); // transform
+auto f = translation_frame({1,0,0}) * rotation_frame({0,1,0},pi/2); // transform
 auto lp = vec3f{1,2,3}, lv = vec3f{0,2,3}; // point and vector in local coords
 auto wp = transform_point(f, lp);          // point in world coords
 auto wv = transform_vector(f, lv);         // vector in world coords
