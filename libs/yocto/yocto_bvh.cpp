@@ -41,7 +41,7 @@
 #include "yocto_geometry.h"
 
 #ifdef YOCTO_EMBREE
-#include <embree3/rtcore.h>
+#include <embree4/rtcore.h>
 #endif
 
 // -----------------------------------------------------------------------------
@@ -487,9 +487,7 @@ intersection3f intersect_shape_ebvh(const shape_ebvh& sbvh,
   embree_ray.ray.id        = 0;
   embree_ray.hit.geomID    = RTC_INVALID_GEOMETRY_ID;
   embree_ray.hit.instID[0] = RTC_INVALID_GEOMETRY_ID;
-  auto embree_ctx          = RTCIntersectContext{};
-  rtcInitIntersectContext(&embree_ctx);
-  rtcIntersect1((RTCScene)sbvh.ebvh.get(), &embree_ctx, &embree_ray);
+  rtcIntersect1((RTCScene)sbvh.ebvh.get(), &embree_ray);
   if (embree_ray.hit.geomID == RTC_INVALID_GEOMETRY_ID) return {};
   auto element  = (int)embree_ray.hit.primID;
   auto uv       = vec2f{embree_ray.hit.u, embree_ray.hit.v};
@@ -513,9 +511,7 @@ intersection3f intersect_scene_ebvh(const scene_ebvh& sbvh,
   embree_ray.ray.id        = 0;
   embree_ray.hit.geomID    = RTC_INVALID_GEOMETRY_ID;
   embree_ray.hit.instID[0] = RTC_INVALID_GEOMETRY_ID;
-  auto embree_ctx          = RTCIntersectContext{};
-  rtcInitIntersectContext(&embree_ctx);
-  rtcIntersect1((RTCScene)sbvh.ebvh.get(), &embree_ctx, &embree_ray);
+  rtcIntersect1((RTCScene)sbvh.ebvh.get(), &embree_ray);
   if (embree_ray.hit.geomID == RTC_INVALID_GEOMETRY_ID) return {};
   auto instance = (int)embree_ray.hit.instID[0];
   auto element  = (int)embree_ray.hit.primID;
