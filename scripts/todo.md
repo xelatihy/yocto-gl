@@ -1,5 +1,11 @@
 # ToDo V5
 
+## Changes
+
+- flip image coordinates up?
+- flip texture coordinates?
+- center image and texels at 0.5
+
 ## Infrastructure
 
 - Docs
