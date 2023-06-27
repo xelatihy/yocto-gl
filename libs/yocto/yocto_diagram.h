@@ -3,6 +3,7 @@
 //
 // Yocto/Diagram defines diagram representations.
 // Yocto/Diagram is implemented in `yocto_diagram.h` and `yocto_diagram.cpp`.
+// THIS LIBRARY IS EXPERIMENTAL AND SHOULD NOT BE USED IN PRODUCTION CODE.
 //
 
 //
@@ -593,9 +594,11 @@ inline pair<vector<vec4i>, vector<T>> subdivide_catmullclark_(
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// tests --------------------------------------------------
 inline auto  placeholder_tags = vector<string>{"missing"};
 diagram_data placeholder_diagrams(const string& tag);
 
+// math ---------------------------------------------------
 inline auto frame_tags = vector<string>{
     "composition", "coordinates", "definition"};
 diagram_data frame_diagrams(const string& tag);
@@ -614,12 +617,98 @@ diagram_data transform_diagrams(const string& tag);
 inline auto  vector_tags = vector<string>{"operations", "products"};
 diagram_data vector_diagrams(const string& tag);
 
+// image --------------------------------------------------
 inline auto compositing_tags = vector<string>{
     "alpha1", "alpha2", "alpha3", "alpha4"};
 diagram_data compositing_diagrams(const string& tag);
 
 inline auto  image_tags = vector<string>{"approximation", "gamma", "grid"};
 diagram_data image_diagrams(const string& tag);
+
+inline auto tonemapping_tags = vector<string>{
+    "exposure", "falsecolor", "filmic", "gamma", "linear", "srgb"};
+diagram_data tonemapping_diagrams(const string& tag);
+
+inline auto tonemapplot_tags = vector<string>{
+    "filmic", "gamma", "srgb", "srgbvsgamma"};
+diagram_data tonemapplot_diagrams(const string& tag);
+
+// scene --------------------------------------------------
+inline auto  barycentric_tags = vector<string>{"line", "triangle", "trianglea"};
+diagram_data barycentric_diagrams(const string& tag);
+
+inline auto  camera_tags = vector<string>{"frame"};
+diagram_data camera_diagrams(const string& tag);
+
+inline auto  environment_tags = vector<string>{"map"};
+diagram_data environment_diagrams(const string& tag);
+
+inline auto shape_tags = vector<string>{
+    "elements", "elements1", "indexed1", "indexed2", "indexed3"};
+diagram_data shape_diagrams(const string& tag);
+
+inline auto  shapeapprox_tags = vector<string>{"circle"};
+diagram_data shapeapprox_diagrams(const string& tag);
+
+inline auto  texcoords_tags = vector<string>{"cow", "triangle"};
+diagram_data texcoords_diagrams(const string& tag);
+
+inline auto antialiasing_tags = vector<string>{
+    "center", "random", "stratified", "supersample"};
+diagram_data antialiasing_diagrams(const string& tag);
+
+inline auto  brdfframe_tags = vector<string>{"arealight", "arealight2",
+     "areashadow", "areashadow2", "diffuse", "diffuse2", "emission", "envlight",
+     "envshadow", "frame", "pointlight", "pointshadow", "reflection",
+     "rreflection", "transmission"};
+diagram_data brdfframe_diagrams(const string& tag);
+
+inline auto brdfplot_tags = vector<string>{
+    "fdielectric", "ggx", "phong", "schlickd", "schlickm", "shadowing"};
+diagram_data brdfplot_diagrams(const string& tag);
+
+inline auto  cameraray_tags = vector<string>{"pinhole"};
+diagram_data cameraray_diagrams(const string& tag);
+
+inline auto lighting_tags = vector<string>{
+    "lambertlaw", "lambertlaw2", "lightrsquared"};
+diagram_data lighting_diagrams(const string& tag);
+
+inline auto  rendering_tags = vector<string>{"image", "lighting"};
+diagram_data rendering_diagrams(const string& tag);
+
+// intersect ----------------------------------------------
+inline auto  bbox_tags = vector<string>{"slabs"};
+diagram_data bbox_diagrams(const string& tag);
+
+inline auto intersect_tags = vector<string>{"bbox", "instance", "line", "point",
+    "ray", "scene", "shape", "slab", "triangle"};
+diagram_data intersect_diagrams(const string& tag);
+
+// modeling -----------------------------------------------
+inline auto bezier_tags = vector<string>{
+    "cusps", "hulls", "joins", "splines", "splits", "tangents", "transforms"};
+diagram_data bezier_diagrams(const string& tag);
+
+inline auto  subcurve_tags = vector<string>{"step", "steps"};
+diagram_data subcurve_diagrams(const string& tag);
+
+inline auto  subdiv_tags = vector<string>{"correction", "step", "steps"};
+diagram_data subdiv_diagrams(const string& tag);
+
+// renderingeq --------------------------------------------
+inline auto  integration_tags = vector<string>{"montecarlo", "quadrature"};
+diagram_data integration_diagrams(const string& tag);
+
+inline auto mcplot_tags = vector<string>{
+    "mcfuncerror", "mcfunceval", "mcpierror", "mcpieval"};
+diagram_data mcplot_diagrams(const string& tag);
+
+inline auto  pisamples_tags = vector<string>{"stratified", "uniform"};
+diagram_data pisamples_diagrams(const string& tag);
+
+inline auto  sampling_tags = vector<string>{"disk", "stratified", "triangle"};
+diagram_data sampling_diagrams(const string& tag);
 
 }  // namespace yocto
 

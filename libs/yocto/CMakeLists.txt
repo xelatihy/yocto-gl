@@ -11,6 +11,7 @@ add_library(yocto STATIC
   yocto_pbrtio.h yocto_pbrtio.cpp
   yocto_sceneio.h yocto_sceneio.cpp
   yocto_gui.h yocto_gui.cpp
+  yocto_diagram.h yocto_diagram.cpp
   yocto_cutrace.h yocto_cutrace.cpp
   yocto_parallel.h yocto_cli.h
 )

@@ -14,6 +14,7 @@ add_yapp(yimalpha)
 add_yapp(yconvert)
 add_yapp(yconverts)
 add_yapp(ysamples)
+add_yapp(ydiagram)
 
 if(YOCTO_CUDA)
   add_yapp(ycutrace)
