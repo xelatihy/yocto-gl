@@ -61,7 +61,7 @@ constexpr T image_aspect(const vec<I, 2>& extents) {
 // Conversion from/to floats.
 template <size_t N, typename T = float>
 constexpr array2d<vec<T, N>> byte_to_float(const array2d<vec<byte, N>>& bt) {
-  return fmap(bt, [](const vec<byte, N>& a) { return byte_to_float<T>(a); });
+  return fmap(bt, [](const vec<byte, N>& a) { return byte_to_float(a); });
 }
 template <typename T, size_t N>
 constexpr array2d<vec<byte, N>> float_to_byte(const array2d<vec<T, N>>& fl) {
@@ -69,7 +69,7 @@ constexpr array2d<vec<byte, N>> float_to_byte(const array2d<vec<T, N>>& fl) {
 }
 template <typename T, typename Tb>
 constexpr void byte_to_float(array2d<T>& fl, const array2d<Tb>& bt) {
-  return fmap(fl, [](Tb a) { return byte_to_float<T>(a); });
+  return fmap(fl, [](Tb a) { return byte_to_float(a); });
 }
 template <typename T, typename Tb>
 constexpr void float_to_byte(array2d<Tb>& bt, const array2d<T>& fl) {
@@ -97,7 +97,7 @@ constexpr void rgb_to_srgb(array2d<T>& srgb, const array2d<T>& rgb) {
 // Conversion between linear and gamma-encoded images.
 template <size_t N, typename T = float>
 constexpr array2d<vec<T, N>> srgbb_to_rgb(const array2d<vec<byte, N>>& srgb) {
-  return fmap(srgb, [](const vec<byte, N>& a) { return srgbb_to_rgb<T>(a); });
+  return fmap(srgb, [](const vec<byte, N>& a) { return srgbb_to_rgb(a); });
 }
 template <typename T, size_t N>
 constexpr array2d<vec<byte, N>> rgb_to_srgbb(const array2d<vec<T, N>>& rgb) {
@@ -239,7 +239,7 @@ inline void composite_image(array2d<vec<T, 4>>& result,
 // Color grade an hsr or ldr image to an ldr image.
 template <typename T>
 inline array2d<vec<T, 4>> colorgrade_image(const array2d<vec<T, 4>>& image,
-    bool linear, const colorgrade_gparams<T>& params) {
+    bool linear, const colorgrade_params& params) {
   return fmap(image, [&](const vec<T, 4>& pixel) {
     return colorgrade(pixel, linear, params);
   });
@@ -249,7 +249,7 @@ inline array2d<vec<T, 4>> colorgrade_image(const array2d<vec<T, 4>>& image,
 template <typename T>
 inline void colorgrade_image(array2d<vec<T, 4>>& result,
     const array2d<vec<T, 4>>& image, bool linear,
-    const colorgrade_gparams<T>& params) {
+    const colorgrade_params& params) {
   return fmap(result, image, [&](const vec<T, 4>& pixel) {
     return colorgrade(pixel, linear, params);
   });
@@ -258,7 +258,7 @@ inline void colorgrade_image(array2d<vec<T, 4>>& result,
 // Color grade an hsr or ldr image to an ldr image.
 template <typename T>
 inline array2d<vec<T, 4>> colorgrade_image(
-    const array2d<vec<T, 4>>& image, const colorgrade_gparams<T>& params) {
+    const array2d<vec<T, 4>>& image, const colorgrade_params& params) {
   return fmap(image,
       [&](const vec<T, 4>& pixel) { return colorgrade(pixel, true, params); });
 }
@@ -266,7 +266,7 @@ inline array2d<vec<T, 4>> colorgrade_image(
 // Color grade an hsr or ldr image to an ldr image.
 template <typename T>
 inline void colorgrade_image(array2d<vec<T, 4>>& result,
-    const array2d<vec<T, 4>>& image, const colorgrade_gparams<T>& params) {
+    const array2d<vec<T, 4>>& image, const colorgrade_params& params) {
   return fmap(result, image,
       [&](const vec<T, 4>& pixel) { return colorgrade(pixel, true, params); });
 }
