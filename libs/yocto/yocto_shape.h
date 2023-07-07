@@ -388,59 +388,48 @@ shape_data make_heightfield(
 namespace yocto {
 
 // Compute per-vertex normals/tangents for lines/triangles/quads.
-template <typename T, typename I>
-inline vector<vec<T, 3>> lines_tangents(
-    const vector<vec<I, 2>>& lines, const vector<vec<T, 3>>& positions);
-template <typename T, typename I>
-inline vector<vec<T, 3>> triangles_normals(
-    const vector<vec<I, 3>>& triangles, const vector<vec<T, 3>>& positions);
-template <typename T, typename I>
-inline vector<vec<T, 3>> quads_normals(
-    const vector<vec<I, 4>>& quads, const vector<vec<T, 3>>& positions);
+inline vector<vec3f> lines_tangents(
+    const vector<vec2i>& lines, const vector<vec3f>& positions);
+inline vector<vec3f> triangles_normals(
+    const vector<vec3i>& triangles, const vector<vec3f>& positions);
+inline vector<vec3f> quads_normals(
+    const vector<vec4i>& quads, const vector<vec3f>& positions);
 // Update normals and tangents
-template <typename T, typename I>
-inline void lines_tangents(vector<vec<T, 3>>& tangents,
-    const vector<vec<I, 2>>& lines, const vector<vec<T, 3>>& positions);
-template <typename T, typename I>
-inline void triangles_normals(vector<vec<T, 3>>& normals,
-    const vector<vec<I, 3>>& triangles, const vector<vec<T, 3>>& positions);
-template <typename T, typename I>
-inline void quads_normals(vector<vec<T, 3>>& normals,
-    const vector<vec<I, 4>>& quads, const vector<vec<T, 3>>& positions);
+inline void lines_tangents(vector<vec3f>& tangents, const vector<vec2i>& lines,
+    const vector<vec3f>& positions);
+inline void triangles_normals(vector<vec3f>& normals,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions);
+inline void quads_normals(vector<vec3f>& normals, const vector<vec4i>& quads,
+    const vector<vec3f>& positions);
 
 // Compute per-vertex tangent space for triangle meshes.
 // Tangent space is defined by a four component vector.
 // The first three components are the tangent with respect to the u texcoord.
 // The fourth component is the sign of the tangent wrt the v texcoord.
 // Tangent frame is useful in normal mapping.
-template <typename T, typename I>
-inline vector<vec<T, 4>> triangle_tangent_spaces(
-    const vector<vec<I, 3>>& triangles, const vector<vec<T, 3>>& positions,
-    const vector<vec<T, 3>>& normals, const vector<vec<T, 2>>& texcoords);
+inline vector<vec4f> triangle_tangent_spaces(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords);
 
 // Apply skinning to vertex position and normals.
-template <typename T, typename I>
-inline pair<vector<vec<T, 3>>, vector<vec<T, 3>>> skin_vertices(
-    const vector<vec<T, 3>>& positions, const vector<vec<T, 3>>& normals,
-    const vector<vec<T, 4>>& weights, const vector<vec<I, 4>>& joints,
+inline pair<vector<vec3f>, vector<vec3f>> skin_vertices(
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec4f>& weights, const vector<vec4i>& joints,
     const vector<frame3f>& xforms);
 // Apply skinning as specified in Khronos glTF.
-template <typename T, typename I>
-inline pair<vector<vec<T, 3>>, vector<vec<T, 3>>> skin_matrices(
-    const vector<vec<T, 3>>& positions, const vector<vec<T, 3>>& normals,
-    const vector<vec<T, 4>>& weights, const vector<vec<I, 4>>& joints,
+inline pair<vector<vec3f>, vector<vec3f>> skin_matrices(
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec4f>& weights, const vector<vec4i>& joints,
     const vector<mat4f>& xforms);
 // Update skinning
-template <typename T, typename I>
-inline void skin_vertices(vector<vec<T, 3>>& skinned_positions,
-    vector<vec<T, 3>>& skinned_normals, const vector<vec<T, 3>>& positions,
-    const vector<vec<T, 3>>& normals, const vector<vec<T, 4>>& weights,
-    const vector<vec<I, 4>>& joints, const vector<frame3f>& xforms);
-template <typename T, typename I>
-inline void skin_matrices(vector<vec<T, 3>>& skinned_positions,
-    vector<vec<T, 3>>& skinned_normals, const vector<vec<T, 3>>& positions,
-    const vector<vec<T, 3>>& normals, const vector<vec<T, 4>>& weights,
-    const vector<vec<I, 4>>& joints, const vector<mat4f>& xforms);
+inline void skin_vertices(vector<vec3f>& skinned_positions,
+    vector<vec3f>& skinned_normals, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec4f>& weights,
+    const vector<vec4i>& joints, const vector<frame3f>& xforms);
+inline void skin_matrices(vector<vec3f>& skinned_positions,
+    vector<vec3f>& skinned_normals, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec4f>& weights,
+    const vector<vec4i>& joints, const vector<mat4f>& xforms);
 
 }  // namespace yocto
 
@@ -450,17 +439,15 @@ inline void skin_matrices(vector<vec<T, 3>>& skinned_positions,
 namespace yocto {
 
 // Flip vertex normals
-template <typename T>
-inline vector<vec<T, 3>> flip_normals(const vector<vec<T, 3>>& normals);
+inline vector<vec3f> flip_normals(const vector<vec3f>& normals);
+
 // Flip face orientation
-template <typename I>
-inline vector<vec<I, 3>> flip_triangles(const vector<vec<I, 3>>& triangles);
-template <typename I>
-inline vector<vec<I, 4>> flip_quads(const vector<vec<I, 4>>& quads);
+inline vector<vec3i> flip_triangles(const vector<vec3i>& triangles);
+inline vector<vec4i> flip_quads(const vector<vec4i>& quads);
+
 // Align vertex positions. Alignment is 0: none, 1: min, 2: max, 3: center.
-template <typename T, typename I>
-inline vector<vec<T, 3>> align_vertices(
-    const vector<vec<T, 3>>& positions, const vec<I, 3>& alignment);
+inline vector<vec3f> align_vertices(
+    const vector<vec3f>& positions, const vec3i& alignment);
 
 }  // namespace yocto
 
@@ -470,24 +457,21 @@ inline vector<vec<T, 3>> align_vertices(
 namespace yocto {
 
 // Convert quads to triangles
-template <typename I>
-inline vector<vec<I, 3>> quads_to_triangles(const vector<vec<I, 4>>& quads);
+inline vector<vec3i> quads_to_triangles(const vector<vec4i>& quads);
 // Convert triangles to quads by creating degenerate quads
-template <typename I>
-inline vector<vec<I, 4>> triangles_to_quads(const vector<vec<I, 3>>& triangles);
+inline vector<vec4i> triangles_to_quads(const vector<vec3i>& triangles);
 // Convert beziers to lines using 3 lines for each bezier.
-template <typename I>
-inline vector<vec<I, 4>> bezier_to_lines(vector<vec<I, 2>>& lines);
+inline vector<vec4i> bezier_to_lines(vector<vec2i>& lines);
 
 // Convert face-varying data to single primitives. Returns the quads indices
 // and filled vectors for pos, norm and texcoord.
-template <typename T, typename I>
-inline void split_facevarying(vector<vec<I, 4>>& split_quads,
-    vector<vec<T, 3>>& split_positions, vector<vec<T, 3>>& split_normals,
-    vector<vec<T, 2>>& split_texcoords, const vector<vec<I, 4>>& quadspos,
-    const vector<vec<I, 4>>& quadsnorm, const vector<vec<I, 4>>& quadstexcoord,
-    const vector<vec<T, 3>>& positions, const vector<vec<T, 3>>& normals,
-    const vector<vec<T, 2>>& texcoords);
+inline void split_facevarying(vector<vec4i>& split_quads,
+    vector<vec3f>& split_positions, vector<vec3f>& split_normals,
+    vector<vec2f>& split_texcoords, const vector<vec4i>& quadspos,
+    const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords);
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -496,38 +480,29 @@ inline void split_facevarying(vector<vec<I, 4>>& split_quads,
 namespace yocto {
 
 // Pick a point in a point set uniformly.
-template <typename T, typename I = int>
-inline I sample_points(I npoints, T re);
-template <typename T, typename I = int>
-inline I sample_points(const vector<T>& cdf, T re);
-template <typename I, typename T = float>
-inline vector<T> sample_points_cdf(I npoints);
+inline int           sample_points(int npoints, float re);
+inline int           sample_points(const vector<float>& cdf, float re);
+inline vector<float> sample_points_cdf(int npoints);
 
 // Pick a point on lines uniformly.
-template <typename T, typename I = int>
-inline pair<I, T> sample_lines(const vector<T>& cdf, T re, T ru);
-template <typename T, typename I>
-inline vector<T> sample_lines_cdf(
-    const vector<vec<I, 2>>& lines, const vector<vec<T, 3>>& positions);
+inline pair<int, float> sample_lines(
+    const vector<float>& cdf, float re, float ru);
+inline vector<float> sample_lines_cdf(
+    const vector<vec2i>& lines, const vector<vec3f>& positions);
 
 // Pick a point on a triangle mesh uniformly.
-template <typename T, typename I = int>
-inline pair<I, vec<T, 2>> sample_triangles(
-    const vector<T>& cdf, T re, const vec<T, 2>& ruv);
-template <typename T, typename I>
-inline vector<T> sample_triangles_cdf(
-    const vector<vec<I, 3>>& triangles, const vector<vec<T, 3>>& positions);
+inline pair<int, vec2f> sample_triangles(
+    const vector<float>& cdf, float re, const vec2f& ruv);
+inline vector<float> sample_triangles_cdf(
+    const vector<vec3i>& triangles, const vector<vec3f>& positions);
 
 // Pick a point on a quad mesh uniformly.
-template <typename T, typename I = int>
-inline pair<I, vec<T, 2>> sample_quads(
-    const vector<T>& cdf, T re, const vec<T, 2>& ruv);
-template <typename T, typename I = int>
-inline pair<I, vec<T, 2>> sample_quads(const vector<vec<I, 4>>& quads,
-    const vector<T>& cdf, T re, const vec<T, 2>& ruv);
-template <typename T, typename I>
-inline vector<T> sample_quads_cdf(
-    const vector<vec<I, 4>>& quads, const vector<vec<T, 3>>& positions);
+inline pair<int, vec2f> sample_quads(
+    const vector<float>& cdf, float re, const vec2f& ruv);
+inline pair<int, vec2f> sample_quads(const vector<vec4i>& quads,
+    const vector<float>& cdf, float re, const vec2f& ruv);
+inline vector<float>    sample_quads_cdf(
+       const vector<vec4i>& quads, const vector<vec3f>& positions);
 
 }  // namespace yocto
 
@@ -557,62 +532,43 @@ struct hash<yocto::vec<T, N>> {
 namespace yocto {
 
 // Data related to edges for an edge_map
-template <typename I>
 struct edge_map_edge {
-  I index, nfaces;
+  int index, nfaces;
 };
 
 // Dictionary to store edge information. `index` is the index to the edge
 // array, `edges` the array of edges and `nfaces` the number of adjacent faces.
 // We store only bidirectional edges to keep the dictionary small. Use the
 // functions below to access this data.
-template <typename I>
 struct edge_map {
-  unordered_map<vec<I, 2>, edge_map_edge<I>> edges = {};
+  unordered_map<vec2i, edge_map_edge> edges = {};
 };
 
 // Initialize an edge map with elements.
-template <typename I>
-inline edge_map<I> make_edge_map(const vector<vec<I, 3>>& triangles);
-template <typename I>
-inline edge_map<I> make_edge_map(const vector<vec<I, 4>>& quads);
+inline edge_map make_edge_map(const vector<vec3i>& triangles);
+inline edge_map make_edge_map(const vector<vec4i>& quads);
+
 // Insert an edge and return its index
-template <typename I>
-inline I insert_edge(edge_map<I>& emap, const vec<I, 2>& edge);
+inline int insert_edge(edge_map& emap, const vec2i& edge);
+
 // Get the edge index
-template <typename I>
-inline I edge_index(const edge_map<I>& emap, const vec<I, 2>& edge);
+inline int edge_index(const edge_map& emap, const vec2i& edge);
 // Get edges and boundaries
-template <typename I>
-inline I num_edges(const edge_map<I>& emap);
-template <typename I>
-inline vector<vec<I, 2>> get_edges(const edge_map<I>& emap);
-template <typename I>
-inline vector<vec<I, 2>> get_boundary(const edge_map<I>& emap);
+inline int           num_edges(const edge_map& emap);
+inline vector<vec2i> get_edges(const edge_map& emap);
+inline vector<vec2i> get_boundary(const edge_map& emap);
 
 // Edges helpers
-template <typename I>
-constexpr inline vec<I, 2> _make_edge(const vec<I, 2>& hedge) {
+constexpr inline vec2i _make_edge(const vec2i& hedge) {
   return {min(hedge), max(hedge)};
 }
-template <typename I>
-constexpr inline vec<I, 2> _make_edge(I a, I b) {
+constexpr inline vec2i _make_edge(int a, int b) {
   return {min(a, b), max(a, b)};
 }
-
-// Edge lists
-template <typename I>
-inline ptrdiff_t search_edge(
-    const vector<vec<I, 2>>& edges, const vec<I, 2>& edge) {
-  auto pos = std::binary_search(edges.begin(), edges.end(), _make_edge(edge));
-  if (pos == edges.end()) return -1;
-  return pos - edges.begin();
-}
-template <typename I>
-inline vector<vec<I, 2>> get_edges(
-    const vector<vec<I, 3>>& triangles, bool no_map = false) {
+inline vector<vec2i> get_edges(
+    const vector<vec3i>& triangles, bool no_map = false) {
   if (!no_map) return get_edges(make_edge_map(triangles));
-  auto edges = vector<vec<I, 2>>();
+  auto edges = vector<vec2i>();
   for (auto& triangle : triangles) {
     edges.push_back(_make_edge(triangle.x, triangle.y));
     edges.push_back(_make_edge(triangle.y, triangle.z));
@@ -620,11 +576,10 @@ inline vector<vec<I, 2>> get_edges(
   }
   return remove_duplicates(edges);
 }
-template <typename I>
-inline vector<vec<I, 2>> get_edges(
-    const vector<vec<I, 4>>& quads, bool no_map = false) {
+inline vector<vec2i> get_edges(
+    const vector<vec4i>& quads, bool no_map = false) {
   if (!no_map) return get_edges(make_edge_map(quads));
-  auto edges = vector<vec<I, 2>>();
+  auto edges = vector<vec2i>();
   for (auto& quad : quads) {
     edges.push_back(_make_edge(quad.x, quad.y));
     edges.push_back(_make_edge(quad.y, quad.z));
@@ -633,38 +588,30 @@ inline vector<vec<I, 2>> get_edges(
   }
   return remove_duplicates(edges);
 }
-template <typename I>
-inline vector<vec<I, 2>> get_boundary(
-    const vector<vec<I, 3>>& triangles, bool no_map = false) {
-  if (!no_map) return get_boundary(make_edge_map(triangles));
+inline vector<vec2i> get_boundary(const vector<vec3i>& triangles) {
+  return get_boundary(make_edge_map(triangles));
 }
-template <typename I>
-inline vector<vec<I, 2>> get_boundary(
-    const vector<vec<I, 4>>& quads, bool no_map = false) {
-  if (!no_map) return get_boundary(make_edge_map(quads));
+inline vector<vec2i> get_boundary(const vector<vec4i>& quads) {
+  return get_boundary(make_edge_map(quads));
 }
 
 // Build adjacencies between faces (sorted counter-clockwise)
-template <typename I>
-inline vector<vec<I, 3>> face_adjacencies(const vector<vec<I, 3>>& triangles);
+inline vector<vec3i> face_adjacencies(const vector<vec3i>& triangles);
 
 // Build adjacencies between vertices (sorted counter-clockwise)
-template <typename I>
 inline vector<vector<int>> vertex_adjacencies(
-    const vector<vec<I, 3>>& triangles, const vector<vec<I, 3>>& adjacencies);
+    const vector<vec3i>& triangles, const vector<vec3i>& adjacencies);
 
 // Compute boundaries as a list of loops (sorted counter-clockwise)
-template <typename I>
-inline vector<vector<int>> ordered_boundaries(
-    const vector<vec<I, 3>>& triangles, const vector<vec<I, 3>>& adjacency,
-    int num_vertices);
+inline vector<vector<int>> ordered_boundaries(const vector<vec3i>& triangles,
+    const vector<vec3i>& adjacency, int num_vertices);
 
 // Build adjacencies between each vertex and its adjacent faces.
 // Adjacencies are sorted counter-clockwise and have same starting points as
 // vertex_adjacencies()
-template <typename I>
+
 inline vector<vector<int>> vertex_to_faces_adjacencies(
-    const vector<vec<I, 3>>& triangles, const vector<vec<I, 3>>& adjacencies);
+    const vector<vec3i>& triangles, const vector<vec3i>& adjacencies);
 
 }  // namespace yocto
 
@@ -701,59 +648,59 @@ void find_neighbors(const hash_grid& grid, vector<int>& neighbors, int vertex,
 namespace yocto {
 
 // Subdivide lines by splitting each line in half.
-template <typename T, typename I>
-inline pair<vector<vec<I, 2>>, vector<T>> subdivide_lines(
-    const vector<vec<I, 2>>& lines, const vector<T>& vert);
+template <typename T>
+inline pair<vector<vec2i>, vector<T>> subdivide_lines(
+    const vector<vec2i>& lines, const vector<T>& vert);
 // Subdivide triangle by splitting each triangle in four, creating new
 // vertices for each edge.
-template <typename T, typename I>
-inline pair<vector<vec<I, 3>>, vector<T>> subdivide_triangles(
-    const vector<vec<I, 3>>& triangles, const vector<T>& vert);
+template <typename T>
+inline pair<vector<vec3i>, vector<T>> subdivide_triangles(
+    const vector<vec3i>& triangles, const vector<T>& vert);
 // Subdivide quads by splitting each quads in four, creating new
 // vertices for each edge and for each face.
-template <typename T, typename I>
-inline pair<vector<vec<I, 4>>, vector<T>> subdivide_quads(
-    const vector<vec<I, 4>>& quads, const vector<T>& vert);
+template <typename T>
+inline pair<vector<vec4i>, vector<T>> subdivide_quads(
+    const vector<vec4i>& quads, const vector<T>& vert);
 // Subdivide beziers by splitting each segment in two.
-template <typename T, typename I>
-inline pair<vector<vec<I, 4>>, vector<T>> subdivide_beziers(
-    const vector<vec<I, 3>>& beziers, const vector<T>& vert);
+template <typename T>
+inline pair<vector<vec4i>, vector<T>> subdivide_beziers(
+    const vector<vec3i>& beziers, const vector<T>& vert);
 // Subdivide lines using B-splines subdivision rules.
-template <typename T, typename I>
-inline pair<vector<vec<I, 2>>, vector<T>> subdivide_bspline(
-    const vector<vec<I, 2>>& lines, const vector<T>& vert);
+template <typename T>
+inline pair<vector<vec2i>, vector<T>> subdivide_bspline(
+    const vector<vec2i>& lines, const vector<T>& vert);
 // Subdivide quads using Catmull-Clark subdivision rules.
-template <typename T, typename I>
-inline pair<vector<vec<I, 4>>, vector<T>> subdivide_catmullclark(
-    const vector<vec<I, 4>>& quads, const vector<T>& vert,
+template <typename T>
+inline pair<vector<vec4i>, vector<T>> subdivide_catmullclark(
+    const vector<vec4i>& quads, const vector<T>& vert,
     bool lock_boundary = false);
 
 // Subdivide lines by splitting each line in half.
-template <typename T, typename I>
-inline pair<vector<vec<I, 2>>, vector<T>> subdivide_lines(
-    const vector<vec<I, 2>>& lines, const vector<T>& vertices, int level);
+template <typename T>
+inline pair<vector<vec2i>, vector<T>> subdivide_lines(
+    const vector<vec2i>& lines, const vector<T>& vertices, int level);
 // Subdivide triangle by splitting each triangle in four, creating new
 // vertices for each edge.
-template <typename T, typename I>
-inline pair<vector<vec<I, 3>>, vector<T>> subdivide_triangles(
-    const vector<vec<I, 3>>& triangles, const vector<T>& vertices, int level);
+template <typename T>
+inline pair<vector<vec3i>, vector<T>> subdivide_triangles(
+    const vector<vec3i>& triangles, const vector<T>& vertices, int level);
 // Subdivide quads by splitting each quads in four, creating new
 // vertices for each edge and for each face.
-template <typename T, typename I>
-inline pair<vector<vec<I, 4>>, vector<T>> subdivide_quads(
-    const vector<vec<I, 4>>& quads, const vector<T>& vertices, int level);
+template <typename T>
+inline pair<vector<vec4i>, vector<T>> subdivide_quads(
+    const vector<vec4i>& quads, const vector<T>& vertices, int level);
 // Subdivide beziers by splitting each segment in two.
-template <typename T, typename I>
-inline pair<vector<vec<I, 4>>, vector<T>> subdivide_beziers(
-    const vector<vec<I, 4>>& beziers, const vector<T>& vertices, int level);
+template <typename T>
+inline pair<vector<vec4i>, vector<T>> subdivide_beziers(
+    const vector<vec4i>& beziers, const vector<T>& vertices, int level);
 // Subdivide lines using B-splines subdivision rules.
-template <typename T, typename I>
-inline pair<vector<vec<I, 2>>, vector<T>> subdivide_bspline(
-    const vector<vec<I, 2>>& lines, const vector<T>& vert, int level);
+template <typename T>
+inline pair<vector<vec2i>, vector<T>> subdivide_bspline(
+    const vector<vec2i>& lines, const vector<T>& vert, int level);
 // Subdivide quads using Catmull-Clark subdivision rules.
-template <typename T, typename I>
-inline pair<vector<vec<I, 4>>, vector<T>> subdivide_catmullclark(
-    const vector<vec<I, 4>>& quads, const vector<T>& vertices, int level,
+template <typename T>
+inline pair<vector<vec4i>, vector<T>> subdivide_catmullclark(
+    const vector<vec4i>& quads, const vector<T>& vertices, int level,
     bool lock_boundary = false);
 
 }  // namespace yocto
@@ -764,14 +711,12 @@ inline pair<vector<vec<I, 4>>, vector<T>> subdivide_catmullclark(
 namespace yocto {
 
 // Displace vertices
-template <typename T>
-inline vector<vec<T, 3>> displace_vertices(const vector<vec<T, 3>>& positions,
-    const vector<vec<T, 3>>& normals, const vector<vec<T, 2>>& texcoords,
-    const array2d<T>& displacement, T scale = 1, T offset = (T)0.5);
-template <typename T>
-inline vector<vec<T, 3>> displace_vertices(const vector<vec<T, 3>>& positions,
-    const vector<vec<T, 3>>& normals, const vector<vec<T, 2>>& texcoords,
-    const array2d<vec<T, 4>>& displacement, T scale = 1, T offset = (T)0.5);
+inline vector<vec3f> displace_vertices(const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
+    const array2d<float>& displacement, float scale = 1, float offset = 0.5);
+inline vector<vec3f> displace_vertices(const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
+    const array2d<vec4f>& displacement, float scale = 1, float offset = 0.5);
 
 }  // namespace yocto
 
@@ -781,44 +726,33 @@ inline vector<vec<T, 3>> displace_vertices(const vector<vec<T, 3>>& positions,
 namespace yocto {
 
 // Weld vertices within a threshold.
-template <typename T, typename I = int>
-inline pair<vector<vec<T, 3>>, vector<I>> weld_vertices(
-    const vector<vec<T, 3>>& positions, T threshold);
-template <typename T, typename I = int>
-inline pair<vector<I>, vector<I>> weld_indices(
-    const vector<vec<T, 3>>& positions, T threshold);
-template <typename T, typename I>
-inline pair<vector<vec<I, 3>>, vector<vec<T, 3>>> weld_triangles(
-    const vector<vec<I, 3>>& triangles, const vector<vec<T, 3>>& positions,
-    T threshold);
-template <typename T, typename I>
-inline pair<vector<vec<I, 4>>, vector<vec<T, 3>>> weld_quads(
-    const vector<vec<I, 4>>& quads, const vector<vec<T, 3>>& positions,
-    T threshold);
+inline pair<vector<vec3f>, vector<int>> weld_vertices(
+    const vector<vec3f>& positions, float threshold);
+inline pair<vector<int>, vector<int>> weld_indices(
+    const vector<vec3f>& positions, float threshold);
+inline pair<vector<vec3i>, vector<vec3f>> weld_triangles(
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    float threshold);
+inline pair<vector<vec4i>, vector<vec3f>> weld_quads(const vector<vec4i>& quads,
+    const vector<vec3f>& positions, float threshold);
 
 // Merge shape elements
-template <typename T, typename I>
-inline void merge_lines(vector<vec<I, 2>>& lines, vector<vec<T, 3>>& positions,
-    vector<vec<T, 3>>& tangents, vector<vec<T, 2>>& texcoords,
-    vector<T>& radius, const vector<vec<I, 2>>& merge_lines,
-    const vector<vec<T, 3>>& merge_positions,
-    const vector<vec<T, 3>>& merge_tangents,
-    const vector<vec<T, 2>>& merge_texturecoords,
-    const vector<T>&         merge_radius);
-template <typename T, typename I>
-inline void merge_triangles(vector<vec<I, 3>>& triangles,
-    vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
-    vector<vec<T, 2>>& texcoords, const vector<vec<I, 2>>& merge_triangles,
-    const vector<vec<T, 3>>& merge_positions,
-    const vector<vec<T, 3>>& merge_normals,
-    const vector<vec<T, 2>>& merge_texturecoords);
-template <typename T, typename I>
-inline void merge_quads(vector<vec<I, 4>>& quads, vector<vec<T, 3>>& positions,
-    vector<vec<T, 3>>& normals, vector<vec<T, 2>>& texcoords,
-    const vector<vec<I, 4>>& merge_quads,
-    const vector<vec<T, 3>>& merge_positions,
-    const vector<vec<T, 3>>& merge_normals,
-    const vector<vec<T, 2>>& merge_texturecoords);
+inline void merge_lines(vector<vec2i>& lines, vector<vec3f>& positions,
+    vector<vec3f>& tangents, vector<vec2f>& texcoords, vector<float>& radius,
+    const vector<vec2i>& merge_lines, const vector<vec3f>& merge_positions,
+    const vector<vec3f>& merge_tangents,
+    const vector<vec2f>& merge_texturecoords,
+    const vector<float>& merge_radius);
+inline void merge_triangles(vector<vec3i>& triangles, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords,
+    const vector<vec2i>& merge_triangles, const vector<vec3f>& merge_positions,
+    const vector<vec3f>& merge_normals,
+    const vector<vec2f>& merge_texturecoords);
+inline void merge_quads(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords,
+    const vector<vec4i>& merge_quads, const vector<vec3f>& merge_positions,
+    const vector<vec3f>& merge_normals,
+    const vector<vec2f>& merge_texturecoords);
 
 }  // namespace yocto
 
@@ -836,10 +770,9 @@ inline void merge_quads(vector<vec<I, 4>>& quads, vector<vec<T, 3>>& positions,
 namespace yocto {
 
 // Compute per-vertex tangents for lines.
-template <typename T, typename I>
-inline vector<vec<T, 3>> lines_tangents(
-    const vector<vec<I, 2>>& lines, const vector<vec<T, 3>>& positions) {
-  auto tangents = vector<vec<T, 3>>{positions.size()};
+inline vector<vec3f> lines_tangents(
+    const vector<vec2i>& lines, const vector<vec3f>& positions) {
+  auto tangents = vector<vec3f>{positions.size()};
   for (auto& tangent : tangents) tangent = {0, 0, 0};
   for (auto& line : lines) {
     auto tangent = line_tangent(positions, line);
@@ -851,10 +784,9 @@ inline vector<vec<T, 3>> lines_tangents(
 }
 
 // Compute per-vertex normals for triangles.
-template <typename T, typename I>
-inline vector<vec<T, 3>> triangles_normals(
-    const vector<vec<I, 3>>& triangles, const vector<vec<T, 3>>& positions) {
-  auto normals = vector<vec<T, 3>>{positions.size()};
+inline vector<vec3f> triangles_normals(
+    const vector<vec3i>& triangles, const vector<vec3f>& positions) {
+  auto normals = vector<vec3f>{positions.size()};
   for (auto& normal : normals) normal = {0, 0, 0};
   for (auto& triangle : triangles) {
     auto normal = triangle_normal(positions, triangle);
@@ -866,10 +798,9 @@ inline vector<vec<T, 3>> triangles_normals(
 }
 
 // Compute per-vertex normals for quads.
-template <typename T, typename I>
-inline vector<vec<T, 3>> quads_normals(
-    const vector<vec<I, 4>>& quads, const vector<vec<T, 3>>& positions) {
-  auto normals = vector<vec<T, 3>>{positions.size()};
+inline vector<vec3f> quads_normals(
+    const vector<vec4i>& quads, const vector<vec3f>& positions) {
+  auto normals = vector<vec3f>{positions.size()};
   for (auto& normal : normals) normal = {0, 0, 0};
   for (auto& quad : quads) {
     auto normal = quad_normal(positions, quad);
@@ -885,9 +816,8 @@ inline vector<vec<T, 3>> quads_normals(
 }
 
 // Compute per-vertex tangents for lines.
-template <typename T, typename I>
-inline void lines_tangents(vector<vec<T, 3>>& tangents,
-    const vector<vec<I, 2>>& lines, const vector<vec<T, 3>>& positions) {
+inline void lines_tangents(vector<vec3f>& tangents, const vector<vec2i>& lines,
+    const vector<vec3f>& positions) {
   check_same_size(tangents, positions);
   for (auto& tangent : tangents) tangent = {0, 0, 0};
   for (auto& line : lines) {
@@ -899,9 +829,8 @@ inline void lines_tangents(vector<vec<T, 3>>& tangents,
 }
 
 // Compute per-vertex normals for triangles.
-template <typename T, typename I>
-inline void triangles_normals(vector<vec<T, 3>>& normals,
-    const vector<vec<I, 3>>& triangles, const vector<vec<T, 3>>& positions) {
+inline void triangles_normals(vector<vec3f>& normals,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions) {
   check_same_size(normals, positions);
   for (auto& normal : normals) normal = {0, 0, 0};
   for (auto& triangle : triangles) {
@@ -913,9 +842,8 @@ inline void triangles_normals(vector<vec<T, 3>>& normals,
 }
 
 // Compute per-vertex normals for quads.
-template <typename T, typename I>
-inline void quads_normals(vector<vec<T, 3>>& normals,
-    const vector<vec<I, 4>>& quads, const vector<vec<T, 3>>& positions) {
+inline void quads_normals(vector<vec3f>& normals, const vector<vec4i>& quads,
+    const vector<vec3f>& positions) {
   check_same_size(normals, positions);
   for (auto& normal : normals) normal = {0, 0, 0};
   for (auto& quad : quads) {
@@ -935,12 +863,11 @@ inline void quads_normals(vector<vec<T, 3>>& normals,
 // The first three components are the tangent with respect to the U texcoord.
 // The fourth component is the sign of the tangent wrt the V texcoord.
 // Tangent frame is useful in normal mapping.
-template <typename T, typename I>
-inline vector<vec<T, 4>> triangles_tangent_spaces(
-    const vector<vec<I, 3>>& triangles, const vector<vec<T, 3>>& positions,
-    const vector<vec<T, 3>>& normals, const vector<vec<T, 2>>& texcoords) {
-  auto tangu = vector<vec<T, 3>>(positions.size(), vec<T, 3>{0, 0, 0});
-  auto tangv = vector<vec<T, 3>>(positions.size(), vec<T, 3>{0, 0, 0});
+inline vector<vec4f> triangles_tangent_spaces(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords) {
+  auto tangu = vector<vec3f>(positions.size(), vec3f{0, 0, 0});
+  auto tangv = vector<vec3f>(positions.size(), vec3f{0, 0, 0});
   for (auto& triangle : triangles) {
     auto tutv = triangle_tangents_fromuv(positions[triangle.x],
         positions[triangle.y], positions[triangle.z], texcoords[triangle.x],
@@ -951,8 +878,8 @@ inline vector<vec<T, 4>> triangles_tangent_spaces(
   for (auto& tangent : tangu) tangent = normalize(tangent);
   for (auto& tangent : tangv) tangent = normalize(tangent);
 
-  auto tangent_spaces = vector<vec<T, 4>>(positions.size());
-  for (auto& tangent : tangent_spaces) tangent = vec<T, 4>{0, 0, 0, 0};
+  auto tangent_spaces = vector<vec4f>(positions.size());
+  for (auto& tangent : tangent_spaces) tangent = vec4f{0, 0, 0, 0};
   for (auto vid : range(positions.size())) {
     tangu[vid] = orthonormalize(tangu[vid], normals[vid]);
     auto s     = dot(cross(normals[vid], tangu[vid]), tangv[vid]) < 0 ? -1.0f
@@ -963,13 +890,12 @@ inline vector<vec<T, 4>> triangles_tangent_spaces(
 }
 
 // Apply skinning
-template <typename T, typename I>
-inline pair<vector<vec<T, 3>>, vector<vec<T, 3>>> skin_vertices(
-    const vector<vec<T, 3>>& positions, const vector<vec<T, 3>>& normals,
-    const vector<vec<T, 4>>& weights, const vector<vec<I, 4>>& joints,
+inline pair<vector<vec3f>, vector<vec3f>> skin_vertices(
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec4f>& weights, const vector<vec4i>& joints,
     const vector<frame3f>& xforms) {
-  auto skinned_positions = vector<vec<T, 3>>{positions.size()};
-  auto skinned_normals   = vector<vec<T, 3>>{positions.size()};
+  auto skinned_positions = vector<vec3f>{positions.size()};
+  auto skinned_normals   = vector<vec3f>{positions.size()};
   for (auto i : range(positions.size())) {
     skinned_positions[i] =
         transform_point(xforms[joints[i].x], positions[i]) * weights[i].x +
@@ -986,13 +912,12 @@ inline pair<vector<vec<T, 3>>, vector<vec<T, 3>>> skin_vertices(
 }
 
 // Apply skinning as specified in Khronos glTF
-template <typename T, typename I>
-inline pair<vector<vec<T, 3>>, vector<vec<T, 3>>> skin_matrices(
-    const vector<vec<T, 3>>& positions, const vector<vec<T, 3>>& normals,
-    const vector<vec<T, 4>>& weights, const vector<vec<I, 4>>& joints,
+inline pair<vector<vec3f>, vector<vec3f>> skin_matrices(
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec4f>& weights, const vector<vec4i>& joints,
     const vector<mat4f>& xforms) {
-  auto skinned_positions = vector<vec<T, 3>>{positions.size()};
-  auto skinned_normals   = vector<vec<T, 3>>{positions.size()};
+  auto skinned_positions = vector<vec3f>{positions.size()};
+  auto skinned_normals   = vector<vec3f>{positions.size()};
   for (auto i : range(positions.size())) {
     auto xform = xforms[joints[i].x] * weights[i].x +
                  xforms[joints[i].y] * weights[i].y +
@@ -1005,11 +930,10 @@ inline pair<vector<vec<T, 3>>, vector<vec<T, 3>>> skin_matrices(
 }
 
 // Apply skinning
-template <typename T, typename I>
-inline void skin_vertices(vector<vec<T, 3>>& skinned_positions,
-    vector<vec<T, 3>>& skinned_normals, const vector<vec<T, 3>>& positions,
-    const vector<vec<T, 3>>& normals, const vector<vec<T, 4>>& weights,
-    const vector<vec<I, 4>>& joints, const vector<frame3f>& xforms) {
+inline void skin_vertices(vector<vec3f>& skinned_positions,
+    vector<vec3f>& skinned_normals, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec4f>& weights,
+    const vector<vec4i>& joints, const vector<frame3f>& xforms) {
   if (skinned_positions.size() != positions.size() ||
       skinned_normals.size() != normals.size()) {
     throw std::out_of_range("arrays should be the same size");
@@ -1029,11 +953,10 @@ inline void skin_vertices(vector<vec<T, 3>>& skinned_positions,
 }
 
 // Apply skinning as specified in Khronos glTF
-template <typename T, typename I>
-inline void skin_matrices(vector<vec<T, 3>>& skinned_positions,
-    vector<vec<T, 3>>& skinned_normals, const vector<vec<T, 3>>& positions,
-    const vector<vec<T, 3>>& normals, const vector<vec<T, 4>>& weights,
-    const vector<vec<I, 4>>& joints, const vector<mat4f>& xforms) {
+inline void skin_matrices(vector<vec3f>& skinned_positions,
+    vector<vec3f>& skinned_normals, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec4f>& weights,
+    const vector<vec4i>& joints, const vector<mat4f>& xforms) {
   if (skinned_positions.size() != positions.size() ||
       skinned_normals.size() != normals.size()) {
     throw std::out_of_range("arrays should be the same size");
@@ -1056,21 +979,19 @@ inline void skin_matrices(vector<vec<T, 3>>& skinned_positions,
 namespace yocto {
 
 // Flip vertex normals
-template <typename T>
-inline vector<vec<T, 3>> flip_normals(const vector<vec<T, 3>>& normals) {
+inline vector<vec3f> flip_normals(const vector<vec3f>& normals) {
   auto flipped = normals;
   for (auto& n : flipped) n = -n;
   return flipped;
 }
+
 // Flip face orientation
-template <typename I>
-inline vector<vec<I, 3>> flip_triangles(const vector<vec<I, 3>>& triangles) {
+inline vector<vec3i> flip_triangles(const vector<vec3i>& triangles) {
   auto flipped = triangles;
   for (auto& [v1, v2, v3] : flipped) swap(v2, v3);
   return flipped;
 }
-template <typename I>
-inline vector<vec<I, 4>> flip_quads(const vector<vec<I, 4>>& quads) {
+inline vector<vec4i> flip_quads(const vector<vec4i>& quads) {
   auto flipped = quads;
   for (auto& [v1, v2, v3, v4] : flipped) {
     if (v3 != v4) {
@@ -1084,12 +1005,11 @@ inline vector<vec<I, 4>> flip_quads(const vector<vec<I, 4>>& quads) {
 }
 
 // Align vertex positions. Alignment is 0: none, 1: min, 2: max, 3: center.
-template <typename T, typename I>
-inline vector<vec<T, 3>> align_vertices(
-    const vector<vec<T, 3>>& positions, const vec<I, 3>& alignment) {
+inline vector<vec3f> align_vertices(
+    const vector<vec3f>& positions, const vec3i& alignment) {
   auto bounds = invalidb3f;
   for (auto& p : positions) bounds = merge(bounds, p);
-  auto offset = vec<T, 3>{0, 0, 0};
+  auto offset = vec3f{0, 0, 0};
   for (auto a : range(3)) {
     switch (alignment[a]) {
       case 0: break;
@@ -1112,9 +1032,8 @@ inline vector<vec<T, 3>> align_vertices(
 namespace yocto {
 
 // Convert quads to triangles
-template <typename I>
-inline vector<vec<I, 3>> quads_to_triangles(const vector<vec<I, 4>>& quads) {
-  auto triangles = vector<vec<I, 3>>{};
+inline vector<vec3i> quads_to_triangles(const vector<vec4i>& quads) {
+  auto triangles = vector<vec3i>{};
   triangles.reserve(quads.size() * 2);
   for (auto& [v1, v2, v3, v4] : quads) {
     triangles.push_back({v1, v2, v4});
@@ -1124,19 +1043,16 @@ inline vector<vec<I, 3>> quads_to_triangles(const vector<vec<I, 4>>& quads) {
 }
 
 // Convert triangles to quads by creating degenerate quads
-template <typename I>
-inline vector<vec<I, 4>> triangles_to_quads(
-    const vector<vec<I, 3>>& triangles) {
-  auto quads = vector<vec<I, 4>>{};
+inline vector<vec4i> triangles_to_quads(const vector<vec3i>& triangles) {
+  auto quads = vector<vec4i>{};
   quads.reserve(triangles.size());
   for (auto& [v1, v2, v3] : triangles) quads.push_back({v1, v2, v3, v3});
   return quads;
 }
 
 // Convert beziers to lines using 3 lines for each bezier.
-template <typename I>
-inline vector<vec<I, 2>> bezier_to_lines(const vector<vec<I, 4>>& beziers) {
-  auto lines = vector<vec<I, 2>>{};
+inline vector<vec2i> bezier_to_lines(const vector<vec4i>& beziers) {
+  auto lines = vector<vec2i>{};
   lines.reserve(beziers.size() * 3);
   for (auto& bezier : beziers) {
     lines.push_back({bezier.x, bezier.y});
@@ -1148,19 +1064,18 @@ inline vector<vec<I, 2>> bezier_to_lines(const vector<vec<I, 4>>& beziers) {
 
 // Convert face varying data to single primitives. Returns the quads indices
 // and filled vectors for pos, norm and texcoord.
-template <typename T, typename I>
-inline void split_facevarying(vector<vec<I, 4>>& split_quads,
-    vector<vec<T, 3>>& split_positions, vector<vec<T, 3>>& split_normals,
-    vector<vec<T, 2>>& split_texcoords, const vector<vec<I, 4>>& quadspos,
-    const vector<vec<I, 4>>& quadsnorm, const vector<vec<I, 4>>& quadstexcoord,
-    const vector<vec<T, 3>>& positions, const vector<vec<T, 3>>& normals,
-    const vector<vec<T, 2>>& texcoords) {
+inline void split_facevarying(vector<vec4i>& split_quads,
+    vector<vec3f>& split_positions, vector<vec3f>& split_normals,
+    vector<vec2f>& split_texcoords, const vector<vec4i>& quadspos,
+    const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords) {
   // make faces unique
-  unordered_map<vec<I, 3>, int> vert_map;
-  split_quads = vector<vec<I, 4>>(quadspos.size());
+  unordered_map<vec3i, int> vert_map;
+  split_quads = vector<vec4i>(quadspos.size());
   for (auto fid : range(quadspos.size())) {
     for (auto c : range(4)) {
-      auto v = vec<I, 3>{
+      auto v = vec3i{
           quadspos[fid][c],
           (!quadsnorm.empty()) ? quadsnorm[fid][c] : -1,
           (!quadstexcoord.empty()) ? quadstexcoord[fid][c] : -1,
@@ -1179,21 +1094,21 @@ inline void split_facevarying(vector<vec<I, 4>>& split_quads,
   // fill vert data
   split_positions.clear();
   if (!positions.empty()) {
-    split_positions = vector<vec<T, 3>>(vert_map.size());
+    split_positions = vector<vec3f>(vert_map.size());
     for (auto& [vert, index] : vert_map) {
       split_positions[index] = positions[vert.x];
     }
   }
   split_normals.clear();
   if (!normals.empty()) {
-    split_normals = vector<vec<T, 3>>(vert_map.size());
+    split_normals = vector<vec3f>(vert_map.size());
     for (auto& [vert, index] : vert_map) {
       split_normals[index] = normals[vert.y];
     }
   }
   split_texcoords.clear();
   if (!texcoords.empty()) {
-    split_texcoords = vector<vec<T, 2>>(vert_map.size());
+    split_texcoords = vector<vec2f>(vert_map.size());
     for (auto& [vert, index] : vert_map) {
       split_texcoords[index] = texcoords[vert.z];
     }
@@ -1208,30 +1123,26 @@ inline void split_facevarying(vector<vec<I, 4>>& split_quads,
 namespace yocto {
 
 // Pick a point in a point set uniformly.
-template <typename T, typename I>
-inline I sample_points(I npoints, T re) {
+inline int sample_points(int npoints, float re) {
   return sample_uniform(npoints, re);
 }
-template <typename T, typename I>
-inline I sample_points(const vector<T>& cdf, T re) {
-  return sample_discrete<T, I>(cdf, re);
+inline int sample_points(const vector<float>& cdf, float re) {
+  return sample_discrete(cdf, re);
 }
-template <typename I, typename T>
-inline vector<T> sample_points_cdf(I npoints) {
-  auto cdf = vector<T>(npoints);
+inline vector<float> sample_points_cdf(int npoints) {
+  auto cdf = vector<float>(npoints);
   for (auto i : range(cdf.size())) cdf[i] = 1 + (i != 0 ? cdf[i - 1] : 0);
   return cdf;
 }
 
 // Pick a point on lines uniformly.
-template <typename T, typename I>
-inline pair<I, T> sample_lines(const vector<T>& cdf, T re, T ru) {
+inline pair<int, float> sample_lines(
+    const vector<float>& cdf, float re, float ru) {
   return {sample_discrete(cdf, re), ru};
 }
-template <typename T, typename I>
-inline vector<T> sample_lines_cdf(
-    const vector<vec<I, 2>>& lines, const vector<vec<T, 3>>& positions) {
-  auto cdf = vector<T>(lines.size());
+inline vector<float> sample_lines_cdf(
+    const vector<vec2i>& lines, const vector<vec3f>& positions) {
+  auto cdf = vector<float>(lines.size());
   for (auto i : range(cdf.size())) {
     auto& [v1, v2] = lines[i];
     auto w         = line_length(positions[v1], positions[v2]);
@@ -1241,14 +1152,12 @@ inline vector<T> sample_lines_cdf(
 }
 
 // Pick a point on a triangle mesh uniformly.
-template <typename T, typename I>
-inline pair<I, vec<T, 2>> sample_triangles(
-    const vector<T>& cdf, T re, const vec<T, 2>& ruv) {
+inline pair<int, vec2f> sample_triangles(
+    const vector<float>& cdf, float re, const vec2f& ruv) {
   return {sample_discrete(cdf, re), sample_triangle(ruv)};
 }
-template <typename T, typename I>
-inline vector<T> sample_triangles_cdf(
-    const vector<vec<I, 3>>& triangles, const vector<vec<T, 3>>& positions) {
+inline vector<float> sample_triangles_cdf(
+    const vector<vec3i>& triangles, const vector<vec3f>& positions) {
   auto cdf = vector<float>(triangles.size());
   for (auto i : range(cdf.size())) {
     auto& [v1, v2, v3] = triangles[i];
@@ -1259,14 +1168,12 @@ inline vector<T> sample_triangles_cdf(
 }
 
 // Pick a point on a quad mesh uniformly.
-template <typename T, typename I>
-inline pair<I, vec<T, 2>> sample_quads(
-    const vector<T>& cdf, T re, const vec<T, 2>& ruv) {
+inline pair<int, vec2f> sample_quads(
+    const vector<float>& cdf, float re, const vec2f& ruv) {
   return {sample_discrete(cdf, re), ruv};
 }
-template <typename T, typename I>
-inline pair<I, vec<T, 2>> sample_quads(const vector<vec<I, 4>>& quads,
-    const vector<T>& cdf, T re, const vec<T, 2>& ruv) {
+inline pair<int, vec2f> sample_quads(const vector<vec4i>& quads,
+    const vector<float>& cdf, float re, const vec2f& ruv) {
   auto element = sample_discrete(cdf, re);
   if (!is_triangle(quads[element])) {
     return {element, sample_triangle(ruv)};
@@ -1274,10 +1181,9 @@ inline pair<I, vec<T, 2>> sample_quads(const vector<vec<I, 4>>& quads,
     return {element, ruv};
   }
 }
-template <typename T, typename I>
-inline vector<T> sample_quads_cdf(
-    const vector<vec<I, 4>>& quads, const vector<vec<T, 3>>& positions) {
-  auto cdf = vector<T>(quads.size());
+inline vector<float> sample_quads_cdf(
+    const vector<vec4i>& quads, const vector<vec3f>& positions) {
+  auto cdf = vector<float>(quads.size());
   for (auto i : range(cdf.size())) {
     auto& [v1, v2, v3, v4] = quads[i];
     auto w                 = quad_area(
@@ -1295,9 +1201,8 @@ inline vector<T> sample_quads_cdf(
 namespace yocto {
 
 // Initialize an edge map with elements.
-template <typename I>
-inline edge_map<I> make_edge_map(const vector<vec<I, 3>>& triangles) {
-  auto emap = edge_map<I>{};
+inline edge_map make_edge_map(const vector<vec3i>& triangles) {
+  auto emap = edge_map{};
   for (auto& [v1, v2, v3] : triangles) {
     insert_edge(emap, {v1, v2});
     insert_edge(emap, {v2, v3});
@@ -1305,9 +1210,8 @@ inline edge_map<I> make_edge_map(const vector<vec<I, 3>>& triangles) {
   }
   return emap;
 }
-template <typename I>
-inline edge_map<I> make_edge_map(const vector<vec<I, 4>>& quads) {
-  auto emap = edge_map<I>{};
+inline edge_map make_edge_map(const vector<vec4i>& quads) {
+  auto emap = edge_map{};
   for (auto& [v1, v2, v3, v4] : quads) {
     insert_edge(emap, {v1, v2});
     insert_edge(emap, {v2, v3});
@@ -1317,12 +1221,11 @@ inline edge_map<I> make_edge_map(const vector<vec<I, 4>>& quads) {
   return emap;
 }
 // Insert an edge and return its index
-template <typename I>
-inline I insert_edge(edge_map<I>& emap, const vec<I, 2>& edge) {
-  auto es = vec<I, 2>{min(edge), max(edge)};
+inline int insert_edge(edge_map& emap, const vec2i& edge) {
+  auto es = vec2i{min(edge), max(edge)};
   auto it = emap.edges.find(es);
   if (it == emap.edges.end()) {
-    auto index = (I)emap.edges.size();
+    auto index = (int)emap.edges.size();
     emap.edges.insert(it, {es, {index, 1}});
     return index;
   } else {
@@ -1332,28 +1235,22 @@ inline I insert_edge(edge_map<I>& emap, const vec<I, 2>& edge) {
   }
 }
 // Get number of edges
-template <typename I>
-inline I num_edges(const edge_map<I>& emap) {
-  return (I)emap.edges.size();
-}
+inline int num_edges(const edge_map& emap) { return (int)emap.edges.size(); }
 // Get the edge index
-template <typename I>
-inline I edge_index(const edge_map<I>& emap, const vec<I, 2>& edge) {
-  auto es       = vec<I, 2>{min(edge), max(edge)};
+inline int edge_index(const edge_map& emap, const vec2i& edge) {
+  auto es       = vec2i{min(edge), max(edge)};
   auto iterator = emap.edges.find(es);
   if (iterator == emap.edges.end()) return -1;
   return iterator->second.index;
 }
 // Get a list of edges, boundary edges, boundary vertices
-template <typename I>
-inline vector<vec<I, 2>> get_edges(const edge_map<I>& emap) {
-  auto edges = vector<vec<I, 2>>(emap.edges.size());
+inline vector<vec2i> get_edges(const edge_map& emap) {
+  auto edges = vector<vec2i>(emap.edges.size());
   for (auto& [edge, data] : emap.edges) edges[data.index] = edge;
   return edges;
 }
-template <typename I>
-inline vector<vec<I, 2>> get_boundary(const edge_map<I>& emap) {
-  auto boundary = vector<vec<I, 2>>{};
+inline vector<vec2i> get_boundary(const edge_map& emap) {
+  auto boundary = vector<vec2i>{};
   for (auto& [edge, data] : emap.edges) {
     if (data.nfaces < 2) boundary.push_back(edge);
   }
@@ -1361,16 +1258,15 @@ inline vector<vec<I, 2>> get_boundary(const edge_map<I>& emap) {
 }
 
 // Build adjacencies between faces (sorted counter-clockwise)
-template <typename I>
-inline vector<vec<I, 3>> face_adjacencies(const vector<vec<I, 3>>& triangles) {
-  auto get_edge = [](const vec<I, 3>& triangle, I i) -> vec<I, 2> {
+inline vector<vec3i> face_adjacencies(const vector<vec3i>& triangles) {
+  auto get_edge = [](const vec3i& triangle, int i) -> vec2i {
     auto x = triangle[i], y = triangle[i < 2 ? i + 1 : 0];
-    return x < y ? vec<I, 2>{x, y} : vec<I, 2>{y, x};
+    return x < y ? vec2i{x, y} : vec2i{y, x};
   };
-  auto adjacencies = vector<vec<I, 3>>{triangles.size(), vec<I, 3>{-1, -1, -1}};
-  auto edge_map    = unordered_map<vec<I, 2>, I>();
+  auto adjacencies = vector<vec3i>{triangles.size(), vec3i{-1, -1, -1}};
+  auto edge_map    = unordered_map<vec2i, int>();
   edge_map.reserve((size_t)(triangles.size() * 1.5));
-  for (auto i = 0; i < (I)triangles.size(); ++i) {
+  for (auto i = 0; i < (int)triangles.size(); ++i) {
     for (auto k = 0; k < 3; ++k) {
       auto edge = get_edge(triangles[i], k);
       auto it   = edge_map.find(edge);
@@ -1393,14 +1289,13 @@ inline vector<vec<I, 3>> face_adjacencies(const vector<vec<I, 3>>& triangles) {
 }
 
 // Build adjacencies between vertices (sorted counter-clockwise)
-template <typename I>
-inline vector<vector<I>> vertex_adjacencies(
-    const vector<vec<I, 3>>& triangles, const vector<vec<I, 3>>& adjacencies) {
+inline vector<vector<int>> vertex_adjacencies(
+    const vector<vec3i>& triangles, const vector<vec3i>& adjacencies) {
   // For each vertex, find any adjacent face.
   auto num_vertices     = 0;
-  auto face_from_vertex = vector<I>(triangles.size() * 3, -1);
+  auto face_from_vertex = vector<int>(triangles.size() * 3, -1);
 
-  for (auto i = 0; i < (I)triangles.size(); ++i) {
+  for (auto i = 0; i < (int)triangles.size(); ++i) {
     for (auto k : range(3)) {
       face_from_vertex[triangles[i][k]] = i;
       num_vertices                      = max(num_vertices, triangles[i][k]);
@@ -1408,7 +1303,7 @@ inline vector<vector<I>> vertex_adjacencies(
   }
 
   // Init result.
-  auto result = vector<vector<I>>(num_vertices);
+  auto result = vector<vector<int>>(num_vertices);
 
   // For each vertex, loop around it and build its adjacency.
   for (auto i = 0; i < num_vertices; ++i) {
@@ -1433,14 +1328,13 @@ inline vector<vector<I>> vertex_adjacencies(
 // Build adjacencies between each vertex and its adjacent faces.
 // Adjacencies are sorted counter-clockwise and have same starting points as
 // vertex_adjacencies()
-template <typename I>
-inline vector<vector<I>> vertex_to_faces_adjacencies(
-    const vector<vec<I, 3>>& triangles, const vector<vec<I, 3>>& adjacencies) {
+inline vector<vector<int>> vertex_to_faces_adjacencies(
+    const vector<vec3i>& triangles, const vector<vec3i>& adjacencies) {
   // For each vertex, find any adjacent face.
   auto num_vertices     = 0;
-  auto face_from_vertex = vector<I>(triangles.size() * 3, -1);
+  auto face_from_vertex = vector<int>(triangles.size() * 3, -1);
 
-  for (auto i = 0; i < (I)triangles.size(); ++i) {
+  for (auto i = 0; i < (int)triangles.size(); ++i) {
     for (auto k : range(3)) {
       face_from_vertex[triangles[i][k]] = i;
       num_vertices                      = max(num_vertices, triangles[i][k]);
@@ -1448,7 +1342,7 @@ inline vector<vector<I>> vertex_to_faces_adjacencies(
   }
 
   // Init result.
-  auto result = vector<vector<I>>(num_vertices);
+  auto result = vector<vector<int>>(num_vertices);
 
   // For each vertex, loop around it and build its adjacency.
   for (auto i = 0; i < num_vertices; ++i) {
@@ -1471,12 +1365,11 @@ inline vector<vector<I>> vertex_to_faces_adjacencies(
 }
 
 // Compute boundaries as a list of loops (sorted counter-clockwise)
-template <typename I>
-inline vector<vector<I>> ordered_boundaries(const vector<vec<I, 3>>& triangles,
-    const vector<vec<I, 3>>& adjacency, I num_vertices) {
+inline vector<vector<int>> ordered_boundaries(const vector<vec3i>& triangles,
+    const vector<vec3i>& adjacency, int num_vertices) {
   // map every boundary vertex to its next one
-  auto next_vert = vector<I>(num_vertices, -1);
-  for (auto i = 0; i < (I)triangles.size(); ++i) {
+  auto next_vert = vector<int>(num_vertices, -1);
+  for (auto i = 0; i < (int)triangles.size(); ++i) {
     for (auto k = 0; k < 3; ++k) {
       if (adjacency[i][k] == -1)
         next_vert[triangles[i][k]] = triangles[i][(k + 1) % 3];
@@ -1484,7 +1377,7 @@ inline vector<vector<I>> ordered_boundaries(const vector<vec<I, 3>>& triangles,
   }
 
   // result
-  auto boundaries = vector<vector<I>>();
+  auto boundaries = vector<vector<int>>();
 
   // arrange boundary vertices in loops
   for (auto i : range(next_vert.size())) {
@@ -1492,7 +1385,7 @@ inline vector<vector<I>> ordered_boundaries(const vector<vec<I, 3>>& triangles,
 
     // add new empty boundary
     boundaries.emplace_back();
-    auto current = (I)i;
+    auto current = (int)i;
 
     while (true) {
       auto next = next_vert[current];
@@ -1521,9 +1414,9 @@ inline vector<vector<I>> ordered_boundaries(const vector<vec<I, 3>>& triangles,
 namespace yocto {
 
 // Subdivide lines.
-template <typename T, typename I>
-inline pair<vector<vec<I, 2>>, vector<T>> subdivide_lines(
-    const vector<vec<I, 2>>& lines, const vector<T>& vertices) {
+template <typename T>
+inline pair<vector<vec2i>, vector<T>> subdivide_lines(
+    const vector<vec2i>& lines, const vector<T>& vertices) {
   // early exit
   if (lines.empty() || vertices.empty()) return {lines, vertices};
   // create vertices
@@ -1534,7 +1427,7 @@ inline pair<vector<vec<I, 2>>, vector<T>> subdivide_lines(
     tvertices.push_back((vertices[v1] + vertices[v2]) / 2);
   }
   // create lines
-  auto tlines = vector<vec<I, 2>>{};
+  auto tlines = vector<vec2i>{};
   tlines.reserve(lines.size() * 2);
   auto line_vertex = [nverts = (int)vertices.size()](
                          size_t line_id) { return nverts + (int)line_id; };
@@ -1548,9 +1441,9 @@ inline pair<vector<vec<I, 2>>, vector<T>> subdivide_lines(
 }
 
 // Subdivide triangle.
-template <typename T, typename I>
-inline pair<vector<vec<I, 3>>, vector<T>> subdivide_triangles(
-    const vector<vec<I, 3>>& triangles, const vector<T>& vertices) {
+template <typename T>
+inline pair<vector<vec3i>, vector<T>> subdivide_triangles(
+    const vector<vec3i>& triangles, const vector<T>& vertices) {
   // early exit
   if (triangles.empty() || vertices.empty()) return {triangles, vertices};
   // get edges
@@ -1563,10 +1456,9 @@ inline pair<vector<vec<I, 3>>, vector<T>> subdivide_triangles(
   for (auto& [v1, v2] : edges)
     tvertices.push_back((vertices[v1] + vertices[v2]) / 2);
   // create triangles
-  auto ttriangles = vector<vec<I, 3>>{};
+  auto ttriangles = vector<vec3i>{};
   ttriangles.reserve(triangles.size() * 4);
-  auto edge_vertex = [&emap, nverts = (int)vertices.size()](
-                         const vec<I, 2>& edge) {
+  auto edge_vertex = [&emap, nverts = (int)vertices.size()](const vec2i& edge) {
     return nverts + edge_index(emap, edge);
   };
   for (auto& triangle : triangles) {
@@ -1585,9 +1477,9 @@ inline pair<vector<vec<I, 3>>, vector<T>> subdivide_triangles(
 }
 
 // Subdivide quads.
-template <typename T, typename I>
-inline pair<vector<vec<I, 4>>, vector<T>> subdivide_quads(
-    const vector<vec<I, 4>>& quads, const vector<T>& vertices) {
+template <typename T>
+inline pair<vector<vec4i>, vector<T>> subdivide_quads(
+    const vector<vec4i>& quads, const vector<T>& vertices) {
   // early exit
   if (quads.empty() || vertices.empty()) return {quads, vertices};
   // get edges
@@ -1608,10 +1500,9 @@ inline pair<vector<vec<I, 4>>, vector<T>> subdivide_quads(
     }
   }
   // create quads
-  auto tquads = vector<vec<I, 4>>{};
+  auto tquads = vector<vec4i>{};
   tquads.reserve(quads.size() * 4);
-  auto edge_vertex = [&emap, nverts = (int)vertices.size()](
-                         const vec<I, 2>& edge) {
+  auto edge_vertex = [&emap, nverts = (int)vertices.size()](const vec2i& edge) {
     return nverts + edge_index(emap, edge);
   };
   auto quad_vertex = [nverts    = (int)vertices.size(),
@@ -1642,15 +1533,15 @@ inline pair<vector<vec<I, 4>>, vector<T>> subdivide_quads(
 }
 
 // Subdivide beziers.
-template <typename T, typename I>
-inline pair<vector<vec<I, 4>>, vector<T>> subdivide_beziers(
-    const vector<vec<I, 4>>& beziers, const vector<T>& vertices) {
+template <typename T>
+inline pair<vector<vec4i>, vector<T>> subdivide_beziers(
+    const vector<vec4i>& beziers, const vector<T>& vertices) {
   // early exit
   if (beziers.empty() || vertices.empty()) return {beziers, vertices};
   // get edges
   auto vmap      = unordered_map<int, int>();
   auto tvertices = vector<T>();
-  auto tbeziers  = vector<vec<I, 4>>();
+  auto tbeziers  = vector<vec4i>();
   for (auto& bezier : beziers) {
     for (auto vid : {bezier.x, bezier.w}) {
       if (vmap.find(vid) == vmap.end()) {
@@ -1677,20 +1568,20 @@ inline pair<vector<vec<I, 4>>, vector<T>> subdivide_beziers(
 }
 
 // Subdivide bspline.
-template <typename T, typename I>
-inline pair<vector<vec<I, 2>>, vector<T>> subdivide_bspline(
-    const vector<vec<I, 2>>& lines, const vector<T>& vert) {
+template <typename T>
+inline pair<vector<vec2i>, vector<T>> subdivide_bspline(
+    const vector<vec2i>& lines, const vector<T>& vert) {
   // split elements ------------------------------------
   auto [tlines, tvert] = subdivide_lines(lines, vert);
 
   // boundary ------------------------------------------
   auto valence = vector<bool>(tvert.size(), 1);
   // TODO: fixme
-  auto tcreases = vector<I>{};
+  auto tcreases = vector<int>{};
 
   // averaging pass ----------------------------------
   auto avert  = vector<T>(tvert.size(), T{});
-  auto acount = vector<I>(tvert.size(), 0);
+  auto acount = vector<int>(tvert.size(), 0);
   for (auto& p : tcreases) {
     auto c = tvert[p];
     for (auto vid : {p}) {
@@ -1714,10 +1605,9 @@ inline pair<vector<vec<I, 2>>, vector<T>> subdivide_bspline(
 }
 
 // Subdivide catmullclark.
-template <typename T, typename I>
-inline pair<vector<vec<I, 4>>, vector<T>> subdivide_catmullclark(
-    const vector<vec<I, 4>>& quads, const vector<T>& vertices,
-    bool lock_boundary) {
+template <typename T>
+inline pair<vector<vec4i>, vector<T>> subdivide_catmullclark(
+    const vector<vec4i>& quads, const vector<T>& vertices, bool lock_boundary) {
   // early exit
   if (quads.empty() || vertices.empty()) return {quads, vertices};
 
@@ -1742,10 +1632,9 @@ inline pair<vector<vec<I, 4>>, vector<T>> subdivide_catmullclark(
     }
   }
   // create quads
-  auto tquads = vector<vec<I, 4>>{};
+  auto tquads = vector<vec4i>{};
   tquads.reserve(quads.size() * 4);
-  auto edge_vertex = [&emap, nverts = (int)vertices.size()](
-                         const vec<I, 2>& edge) {
+  auto edge_vertex = [&emap, nverts = (int)vertices.size()](const vec2i& edge) {
     return nverts + edge_index(emap, edge);
   };
   auto quad_vertex = [nverts    = (int)vertices.size(),
@@ -1774,7 +1663,7 @@ inline pair<vector<vec<I, 4>>, vector<T>> subdivide_catmullclark(
   }
 
   // split boundary
-  auto tboundary = vector<vec<I, 2>>{};
+  auto tboundary = vector<vec2i>{};
   tboundary.reserve(boundary.size());
   for (auto& [v1, v2] : boundary) {
     tboundary.push_back({v1, edge_vertex({v1, v2})});
@@ -1843,9 +1732,9 @@ inline pair<vector<vec<I, 4>>, vector<T>> subdivide_catmullclark(
 }
 
 // Subdivide lines by splitting each line in half.
-template <typename T, typename I>
-inline pair<vector<vec<I, 2>>, vector<T>> subdivide_lines(
-    const vector<vec<I, 2>>& lines, const vector<T>& vertices, int level) {
+template <typename T>
+inline pair<vector<vec2i>, vector<T>> subdivide_lines(
+    const vector<vec2i>& lines, const vector<T>& vertices, int level) {
   if (level < 1) return {lines, vertices};
   auto tess = pair{lines, vertices};
   for (auto idx : range(level)) tess = subdivide_lines(tess.first, tess.second);
@@ -1853,9 +1742,9 @@ inline pair<vector<vec<I, 2>>, vector<T>> subdivide_lines(
 }
 // Subdivide triangle by splitting each triangle in four, creating new
 // vertices for each edge.
-template <typename T, typename I>
-inline pair<vector<vec<I, 3>>, vector<T>> subdivide_triangles(
-    const vector<vec<I, 3>>& triangles, const vector<T>& vertices, int level) {
+template <typename T>
+inline pair<vector<vec3i>, vector<T>> subdivide_triangles(
+    const vector<vec3i>& triangles, const vector<T>& vertices, int level) {
   if (level < 1) return {triangles, vertices};
   auto tess = pair{triangles, vertices};
   for (auto idx : range(level))
@@ -1864,18 +1753,18 @@ inline pair<vector<vec<I, 3>>, vector<T>> subdivide_triangles(
 }
 // Subdivide quads by splitting each quads in four, creating new
 // vertices for each edge and for each face.
-template <typename T, typename I>
-inline pair<vector<vec<I, 4>>, vector<T>> subdivide_quads(
-    const vector<vec<I, 4>>& quads, const vector<T>& vertices, int level) {
+template <typename T>
+inline pair<vector<vec4i>, vector<T>> subdivide_quads(
+    const vector<vec4i>& quads, const vector<T>& vertices, int level) {
   if (level < 1) return {quads, vertices};
   auto tess = pair{quads, vertices};
   for (auto idx : range(level)) tess = subdivide_quads(tess.first, tess.second);
   return tess;
 }
 // Subdivide beziers by splitting each segment in two.
-template <typename T, typename I>
-inline pair<vector<vec<I, 4>>, vector<T>> subdivide_beziers(
-    const vector<vec<I, 4>>& beziers, const vector<T>& vertices, int level) {
+template <typename T>
+inline pair<vector<vec4i>, vector<T>> subdivide_beziers(
+    const vector<vec4i>& beziers, const vector<T>& vertices, int level) {
   if (level < 1) return {beziers, vertices};
   auto tess = pair{beziers, vertices};
   for (auto idx : range(level))
@@ -1883,9 +1772,9 @@ inline pair<vector<vec<I, 4>>, vector<T>> subdivide_beziers(
   return tess;
 }
 // Subdivide lines using B-spline subdivision rules.
-template <typename T, typename I>
-inline pair<vector<vec<I, 2>>, vector<T>> subdivide_bspline(
-    const vector<vec<I, 2>>& lines, const vector<T>& vertices, int level) {
+template <typename T>
+inline pair<vector<vec2i>, vector<T>> subdivide_bspline(
+    const vector<vec2i>& lines, const vector<T>& vertices, int level) {
   if (level < 1) return {lines, vertices};
   auto tess = pair{lines, vertices};
   for (auto idx : range(level))
@@ -1893,9 +1782,9 @@ inline pair<vector<vec<I, 2>>, vector<T>> subdivide_bspline(
   return tess;
 }
 // Subdivide quads using Carmull-Clark subdivision rules.
-template <typename T, typename I>
-inline pair<vector<vec<I, 4>>, vector<T>> subdivide_catmullclark(
-    const vector<vec<I, 4>>& quads, const vector<T>& vertices, int level,
+template <typename T>
+inline pair<vector<vec4i>, vector<T>> subdivide_catmullclark(
+    const vector<vec4i>& quads, const vector<T>& vertices, int level,
     bool lock_boundary) {
   if (level < 1) return {quads, vertices};
   auto tess = pair{quads, vertices};
@@ -1912,10 +1801,9 @@ inline pair<vector<vec<I, 4>>, vector<T>> subdivide_catmullclark(
 namespace yocto {
 
 // Displace vertices
-template <typename T>
-inline vector<vec<T, 3>> displace_vertices(const vector<vec<T, 3>>& positions,
-    const vector<vec<T, 3>>& normals, const vector<vec<T, 2>>& texcoords,
-    const array2d<T>& displacement, T scale, T offset) {
+inline vector<vec3f> displace_vertices(const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
+    const array2d<float>& displacement, float scale, float offset) {
   if (texcoords.empty()) return positions;
   auto displaced = positions;
   for (auto idx : range(displaced.size())) {
@@ -1925,10 +1813,9 @@ inline vector<vec<T, 3>> displace_vertices(const vector<vec<T, 3>>& positions,
   }
   return displaced;
 }
-template <typename T>
-inline vector<vec<T, 3>> displace_vertices(const vector<vec<T, 3>>& positions,
-    const vector<vec<T, 3>>& normals, const vector<vec<T, 2>>& texcoords,
-    const array2d<vec<T, 4>>& displacement, T scale, T offset) {
+inline vector<vec3f> displace_vertices(const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
+    const array2d<vec4f>& displacement, float scale, float offset) {
   if (texcoords.empty()) return positions;
   auto displaced = positions;
   for (auto idx : range(displaced.size())) {
@@ -1947,11 +1834,10 @@ inline vector<vec<T, 3>> displace_vertices(const vector<vec<T, 3>>& positions,
 namespace yocto {
 
 // Weld vertices within a threshold.
-template <typename T, typename I>
-inline pair<vector<vec<T, 3>>, vector<I>> weld_vertices(
-    const vector<vec<T, 3>>& positions, T threshold) {
-  auto indices   = vector<I>(positions.size());
-  auto welded    = vector<vec<T, 3>>{};
+inline pair<vector<vec3f>, vector<int>> weld_vertices(
+    const vector<vec3f>& positions, float threshold) {
+  auto indices   = vector<int>(positions.size());
+  auto welded    = vector<vec3f>{};
   auto grid      = make_hash_grid(threshold);
   auto neighbors = vector<int>{};
   for (auto vertex : range(positions.size())) {
@@ -1959,7 +1845,7 @@ inline pair<vector<vec<T, 3>>, vector<I>> weld_vertices(
     find_neighbors(grid, neighbors, position, threshold);
     if (neighbors.empty()) {
       welded.push_back(position);
-      indices[vertex] = (I)welded.size() - 1;
+      indices[vertex] = (int)welded.size() - 1;
       insert_vertex(grid, position);
     } else {
       indices[vertex] = neighbors.front();
@@ -1967,19 +1853,18 @@ inline pair<vector<vec<T, 3>>, vector<I>> weld_vertices(
   }
   return {welded, indices};
 }
-template <typename T, typename I>
-inline pair<vector<I>, vector<I>> weld_indices(
-    const vector<vec<T, 3>>& positions, T threshold) {
-  auto new_indices = vector<I>(positions.size());
-  auto old_indices = vector<I>();
+inline pair<vector<int>, vector<int>> weld_indices(
+    const vector<vec3f>& positions, float threshold) {
+  auto new_indices = vector<int>(positions.size());
+  auto old_indices = vector<int>();
   auto grid        = make_hash_grid(threshold);
   auto neighbors   = vector<int>{};
   for (auto vertex : range(positions.size())) {
     auto& position = positions[vertex];
     find_neighbors(grid, neighbors, position, threshold);
     if (neighbors.empty()) {
-      old_indices.push_back((I)vertex);
-      new_indices[vertex] = (I)old_indices.size() - 1;
+      old_indices.push_back((int)vertex);
+      new_indices[vertex] = (int)old_indices.size() - 1;
       insert_vertex(grid, position);
     } else {
       new_indices[vertex] = neighbors.front();
@@ -1987,10 +1872,9 @@ inline pair<vector<I>, vector<I>> weld_indices(
   }
   return {old_indices, new_indices};
 }
-template <typename T, typename I>
-inline pair<vector<vec<I, 3>>, vector<vec<T, 3>>> weld_triangles(
-    const vector<vec<I, 3>>& triangles, const vector<vec<T, 3>>& positions,
-    T threshold) {
+inline pair<vector<vec3i>, vector<vec3f>> weld_triangles(
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    float threshold) {
   auto [wpositions, indices] = weld_vertices(positions, threshold);
   auto wtriangles            = triangles;
   for (auto& triangle : wtriangles) {
@@ -1998,10 +1882,8 @@ inline pair<vector<vec<I, 3>>, vector<vec<T, 3>>> weld_triangles(
   }
   return {wtriangles, wpositions};
 }
-template <typename T, typename I>
-inline pair<vector<vec<I, 4>>, vector<vec<T, 3>>> weld_quads(
-    const vector<vec<I, 4>>& quads, const vector<vec<T, 3>>& positions,
-    T threshold) {
+inline pair<vector<vec4i>, vector<vec3f>> weld_quads(const vector<vec4i>& quads,
+    const vector<vec3f>& positions, float threshold) {
   auto [wpositions, indices] = weld_vertices(positions, threshold);
   auto wquads                = quads;
   for (auto& quad : wquads) {
@@ -2011,14 +1893,12 @@ inline pair<vector<vec<I, 4>>, vector<vec<T, 3>>> weld_quads(
 }
 
 // Merge shape elements
-template <typename T, typename I>
-inline void merge_lines(vector<vec<I, 2>>& lines, vector<vec<T, 3>>& positions,
-    vector<vec<T, 3>>& tangents, vector<vec<T, 2>>& texcoords,
-    vector<T>& radius, const vector<vec<I, 2>>& merge_lines,
-    const vector<vec<T, 3>>& merge_positions,
-    const vector<vec<T, 3>>& merge_tangents,
-    const vector<vec<T, 2>>& merge_texturecoords,
-    const vector<T>&         merge_radius) {
+inline void merge_lines(vector<vec2i>& lines, vector<vec3f>& positions,
+    vector<vec3f>& tangents, vector<vec2f>& texcoords, vector<float>& radius,
+    const vector<vec2i>& merge_lines, const vector<vec3f>& merge_positions,
+    const vector<vec3f>& merge_tangents,
+    const vector<vec2f>& merge_texturecoords,
+    const vector<float>& merge_radius) {
   auto merge_verts = (int)positions.size();
   for (auto& [v1, v2] : merge_lines)
     lines.push_back({v1 + merge_verts, v2 + merge_verts});
@@ -2029,13 +1909,11 @@ inline void merge_lines(vector<vec<I, 2>>& lines, vector<vec<T, 3>>& positions,
       texcoords.end(), merge_texturecoords.begin(), merge_texturecoords.end());
   radius.insert(radius.end(), merge_radius.begin(), merge_radius.end());
 }
-template <typename T, typename I>
-inline void merge_triangles(vector<vec<I, 3>>& triangles,
-    vector<vec<T, 3>>& positions, vector<vec<T, 3>>& normals,
-    vector<vec<T, 2>>& texcoords, const vector<vec<I, 3>>& merge_triangles,
-    const vector<vec<T, 3>>& merge_positions,
-    const vector<vec<T, 3>>& merge_normals,
-    const vector<vec<T, 2>>& merge_texturecoords) {
+inline void merge_triangles(vector<vec3i>& triangles, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords,
+    const vector<vec3i>& merge_triangles, const vector<vec3f>& merge_positions,
+    const vector<vec3f>& merge_normals,
+    const vector<vec2f>& merge_texturecoords) {
   auto merge_verts = (int)positions.size();
   for (auto& triangle : merge_triangles)
     triangles.push_back(triangle + merge_verts);
@@ -2045,13 +1923,11 @@ inline void merge_triangles(vector<vec<I, 3>>& triangles,
   texcoords.insert(
       texcoords.end(), merge_texturecoords.begin(), merge_texturecoords.end());
 }
-template <typename T, typename I>
-inline void merge_quads(vector<vec<I, 4>>& quads, vector<vec<T, 3>>& positions,
-    vector<vec<T, 3>>& normals, vector<vec<T, 2>>& texcoords,
-    const vector<vec<I, 4>>& merge_quads,
-    const vector<vec<T, 3>>& merge_positions,
-    const vector<vec<T, 3>>& merge_normals,
-    const vector<vec<T, 2>>& merge_texturecoords) {
+inline void merge_quads(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords,
+    const vector<vec4i>& merge_quads, const vector<vec3f>& merge_positions,
+    const vector<vec3f>& merge_normals,
+    const vector<vec2f>& merge_texturecoords) {
   auto merge_verts = (int)positions.size();
   for (auto& quad : merge_quads) quads.push_back(quad + merge_verts);
   positions.insert(

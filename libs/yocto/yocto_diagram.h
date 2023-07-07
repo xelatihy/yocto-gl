@@ -751,13 +751,9 @@ pair<vector<vec2i>, vector<vec3f>> subdivide_bspline(
 pair<vector<vec2i>, vector<vec4f>> subdivide_bspline(
     const vector<vec2i>& lines, const vector<vec4f>& vertices);
 
-template <typename T>
-inline pair<vector<vec2i>, vector<T>> subdivide_bspline(
-    const vector<vec2i>& lines, const vector<T>& vertices, int level);
-
 // Subdivide lines by splitting each line in half.
 template <typename T>
-inline pair<vector<vec2i>, vector<T>> subdivide_bspline(
+inline pair<vector<vec2i>, vector<T>> subdivide_bspline_(
     const vector<vec2i>& lines, const vector<T>& vertices, int level) {
   if (level < 1) return {lines, vertices};
   auto tess = pair{lines, vertices};

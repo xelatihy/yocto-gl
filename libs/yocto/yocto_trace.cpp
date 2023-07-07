@@ -354,7 +354,7 @@ static ray3f sample_camera(const camera_data& camera, const vec2i& ij,
 // Sample lights wrt solid angle
 static vec3f sample_lights(const scene_data& scene, const trace_lights& lights,
     const vec3f& position, float rl, float rel, const vec2f& ruv) {
-  auto  light_id = sample_uniform(lights.lights.size(), rl);
+  auto  light_id = sample_uniform((int)lights.lights.size(), rl);
   auto& light    = lights.lights[light_id];
   if (light.instance != invalidid) {
     auto& instance  = scene.instances[light.instance];
@@ -429,7 +429,7 @@ static float sample_lights_pdf(const scene_data& scene, const trace_bvh& bvh,
       }
     }
   }
-  pdf *= sample_uniform_pdf(lights.lights.size());
+  pdf *= sample_uniform_pdf((int)lights.lights.size());
   return pdf;
 }
 
