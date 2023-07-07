@@ -3,13 +3,12 @@
 //
 // Yocto/Diagram defines diagram representations.
 // Yocto/Diagram is implemented in `yocto_diagram.h` and `yocto_diagram.cpp`.
-// THIS LIBRARY IS EXPERIMENTAL AND SHOULD NOT BE USED IN PRODUCTION CODE.
 //
 
 //
 // LICENSE:
 //
-// Copyright (c) 2016 -- 2022 Fabio Pellacini
+// Copyright (c) 2016 -- 2023 Fabio Pellacini
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -57,16 +56,36 @@ using std::vector;
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// PATTERN REPRESENTATION
+// DIAGRAM REPRESENTATION
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Diagram style
-struct style_data {
+// Diagram object
+struct diagram_object {
+  // Object data
+  frame3f frame = identity3x4f;
+
+  // Element data
+  vector<int>   points    = {};
+  vector<vec2i> lines     = {};
+  vector<vec2i> arrows    = {};
+  vector<vec3i> triangles = {};
+  vector<vec4i> quads     = {};
+
+  // Vertex data
+  vector<vec3f> positions = {};
+  vector<vec3f> normals   = {};
+  vector<vec2f> texcoords = {};
+  vector<vec4f> colors    = {};
+
+  // Labels data
+  vector<string> labels     = {};
+  vector<vec3f>  lpositions = {};
+
+  // Style data
   vec4f          stroke    = {0, 0, 0, 1};
   vec4f          fill      = {0.4, 1.0, 1.0, 1};
   vec4f          text      = {0, 0, 0, 1};
-  vector<vec4f>  fcolors   = {};
   array2d<vec4f> texture   = {};
   bool           arrow     = false;
   bool           nearest   = false;
@@ -76,22 +95,24 @@ struct style_data {
   float          connect   = 0;
 };
 
-// Diagram text
-struct label_data {
-  vector<vec3f>  positions = {};
-  vector<string> labels    = {};
+// Diagram scene
+struct diagram_scene {
+  // scene rendering
+  vec2f size   = {0, 0};
+  vec2f offset = {0, 0};
+  vec2f margin = {0.1, 0.3};
+
+  // scene transforms
+  frame3f frame = identity3x4f;
+
+  // scene objects
+  vector<diagram_object> objects = {};
 };
 
 // Diagram data
 struct diagram_data {
-  scene_data scene = {};
-};
-
-// Diagram context
-struct diagram_context {
-  diagram_data& diagram;
-  scene_data&   scene;
-  frame3f       frame = {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}};
+  // Scene data
+  vector<diagram_scene> scenes = {};
 };
 
 // Diagram function ref
@@ -120,22 +141,9 @@ namespace yocto {
 // Init diagram
 diagram_data make_diagram();
 
-// Diagram callback
-using diagram_callback = diagram_func<void, const diagram_context&>;
-
-// Render a diagram to an image
+// Rendering a diagram
 array2d<vec4f> render_diagram(
     const diagram_data& diagram, bool draft = false, bool crop = true);
-array2d<vec4f> render_diagram(
-    const diagram_callback& callback, bool draft = false, bool crop = true);
-
-#ifdef YOCTO_OPENGL
-
-// Render a diagram interactively
-void view_diagram(const string& name, const diagram_data& diagram);
-void view_diagram(const string& name, const diagram_callback& callback);
-
-#endif
 
 }  // namespace yocto
 
@@ -170,6 +178,7 @@ inline const auto tfill5      = vec4f{1.0, 1.0, 0.0, 0.4};
 // Thickness
 namespace dthickness {
 inline const auto default_    = 0.015f;
+inline const auto medium      = 0.02f;
 inline const auto thin        = 0.01f;
 inline const auto extra_thick = 0.035f;
 };  // namespace dthickness
@@ -223,306 +232,507 @@ inline const auto fvcube_positions = vector<vec3f>{{-1, -1, +1}, {+1, -1, +1},
     {+1, +1, -1}};
 };  // namespace dconstants
 
-// Group nodes
-frame3f add_group(diagram_data& diagram, const vec3f& offset = {0, 0, 0},
-    const frame3f& frame = identity3x4f);
-frame3f add_tgroup(diagram_data& diagram, const frame3f& frame);
-
-// Point transformations
-inline vector<vec3f> translate(
-    const vec3f& translation, const vector<vec3f>& positions) {
-  auto transformed = positions;
-  for (auto& position : transformed) position += translation;
-  return transformed;
+// Easy checking in lists
+inline bool contains(const string& tag, const vector<string>& tags) {
+  for (auto tag_ : tags) {
+    if (tag_ == tag) return true;
+  }
+  return false;
 }
 
-// Shape nodes
-void add_label(diagram_data& diagram, const frame3f& frame,
-    const vec3f& position, const string& label,
-    const vec4f& textcolor = dcolors::black);
-void add_labels(diagram_data& diagram, const frame3f& frame,
-    const vector<vec3f>& positions, const vector<string>& labels,
-    const vec4f& textcolor = dcolors::black);
-void add_point(diagram_data& diagram, const frame3f& frame,
-    const vec3f& position, const string& label = "",
-    const vec4f& stroke    = dcolors::black,
-    float        thickness = dthickness::default_);
-void add_points(diagram_data& diagram, const frame3f& frame,
-    const vector<vec3f>& positions, const vector<string>& labels = {},
-    const vec4f& color     = dcolors::black,
-    float        thickness = dthickness::default_);
-void add_points(diagram_data& diagram, const frame3f& frame,
-    const vector<vec2f>& positions, const vector<string>& labels = {},
-    const vec4f& color     = dcolors::black,
-    float        thickness = dthickness::default_);
-void add_line(diagram_data& diagram, const frame3f& frame,
-    const vec3f& positions1, const vec3f& position2,
-    const vector<string>& labels = {}, const vec4f& stroke = dcolors::black,
-    float thickness = dthickness::default_);
-void add_lines(diagram_data& diagram, const frame3f& frame,
-    const vector<vec3f>& positions, const vector<string>& labels = {},
-    const vec4f& stroke    = dcolors::black,
-    float        thickness = dthickness::default_);
-void add_lines(diagram_data& diagram, const frame3f& frame,
-    const vector<vec2i>& lines, const vector<vec3f>& positions,
-    const vector<string>& labels = {}, const vec4f& stroke = dcolors::black,
-    float thickness = dthickness::default_);
-void add_arrow(diagram_data& diagram, const frame3f& frame,
-    const vec3f& positions1, const vec3f& position2,
-    const vector<string>& labels = {}, const vec4f& stroke = dcolors::black,
-    float thickness = dthickness::default_);
-void add_arrows(diagram_data& diagram, const frame3f& frame,
-    const vector<vec3f>& positions, const vector<string>& labels = {},
-    const vec4f& stroke    = dcolors::black,
-    float        thickness = dthickness::default_);
-void add_cline(diagram_data& diagram, const frame3f& frame,
-    const vec3f& positions1, const vec3f& position2,
-    const vector<string>& labels = {}, const vec4f& stroke = dcolors::black,
-    float thickness = dthickness::default_);
-void add_carrow(diagram_data& diagram, const frame3f& frame,
-    const vec3f& positions1, const vec3f& position2,
-    const vector<string>& labels = {}, const vec4f& stroke = dcolors::black,
-    float thickness = dthickness::default_);
-void add_vector(diagram_data& diagram, const frame3f& frame,
-    const vec3f& direction, const vector<string>& labels = {},
-    const vec4f& stroke    = dcolors::black,
-    float        thickness = dthickness::default_);
-void add_axes(diagram_data& diagram, const frame3f& frame,
-    const vec3f& position, float scale, const vector<string>& labels = {},
-    const vec4f& stroke    = dcolors::black,
-    float        thickness = dthickness::default_);
-void add_axes(diagram_data& diagram, const frame3f& frame,
-    const frame3f& frame1, float scale, const vector<string>& labels = {},
-    const vec4f& stroke    = dcolors::black,
-    float        thickness = dthickness::default_);
-void add_ray(diagram_data& diagram, const frame3f& frame, const vec3f& position,
-    const vec3f& direction, const vector<string>& labels = {},
-    const vec4f& stroke    = dcolors::black,
-    float        thickness = dthickness::default_);
-void add_polyline(diagram_data& diagram, const frame3f& frame,
-    const vector<vec3f>& positions, const vector<string>& labels = {},
-    const vec4f& stroke    = dcolors::black,
-    float        thickness = dthickness::default_);
-void add_quad(diagram_data& diagram, const frame3f& frame,
-    const vec3f& position, float scale, const vector<string>& labels = {},
-    const vec4f& fill = dcolors::fill1, const vec4f& stroke = dcolors::black,
-    float thickness = dthickness::default_);
-void add_quadv(diagram_data& diagram, const frame3f& frame,
-    const vector<vec3f>& positions, const vector<string>& labels = {},
-    const vec4f& fill = dcolors::fill1, const vec4f& stroke = dcolors::black,
-    float thickness = dthickness::default_);
-void add_tquad(diagram_data& diagram, const frame3f& frame,
-    const array2d<vec4f>& texture, const vec4f& stroke = dcolors::black,
-    float thickness = dthickness::default_);
-void add_rect(diagram_data& diagram, const frame3f& frame, const vec2f& aspect,
-    const vec3f& position, float scale, const vector<string>& labels = {},
-    const vec4f& fill = dcolors::fill1, const vec4f& stroke = dcolors::black,
-    float thickness = dthickness::default_);
-void add_triangle(diagram_data& diagram, const frame3f& frame,
-    const vec3f& position, float scale, const vector<string>& labels = {},
-    const vec4f& fill = dcolors::fill1, const vec4f& stroke = dcolors::black,
-    float thickness = dthickness::default_);
-void add_trianglev(diagram_data& diagram, const frame3f& frame,
-    const vector<vec3f>& positions, const vector<string>& labels = {},
-    const vec4f& fill = dcolors::fill1, const vec4f& stroke = dcolors::black,
-    float thickness = dthickness::default_);
-void add_polygon(diagram_data& diagram, const frame3f& frame,
-    const vector<vec3f>& positions, const vector<string>& labels = {},
-    const vec4f& fill = dcolors::fill1, const vec4f& stroke = dcolors::black,
-    float thickness = dthickness::default_);
-void add_triangles(diagram_data& diagram, const frame3f& frame,
-    const vector<vec3i>& triangles, const vector<vec3f>& positions,
-    const vector<string>& labels = {}, const vec4f& fill = dcolors::fill1,
-    const vec4f& stroke    = dcolors::black,
-    float        thickness = dthickness::default_);
-void add_quads(diagram_data& diagram, const frame3f& frame,
-    const vector<vec4i>& quads, const vector<vec3f>& positions,
-    const vector<string>& labels = {}, const vec4f& fill = dcolors::fill1,
-    const vec4f& stroke    = dcolors::black,
-    float        thickness = dthickness::default_);
-void add_disk(diagram_data& diagram, const frame3f& frame,
-    const vec3f& position, float scale, const vector<string>& labels = {},
-    const vec4f& fill = dcolors::fill1, const vec4f& stroke = dcolors::black,
-    float thickness = dthickness::default_);
-void add_circle(diagram_data& diagram, const frame3f& frame,
-    const vec3f& position, float scale, const vector<string>& labels = {},
-    const vec4f& fill = dcolors::fill1, const vec4f& stroke = dcolors::black,
-    float thickness = dthickness::default_);
-void add_arc(diagram_data& diagram, const frame3f& frame, const vec3f& position,
-    float scale, float angle, const vector<string>& labels = {},
-    const vec4f& stroke    = dcolors::black,
-    float        thickness = dthickness::default_);
-void add_cube(diagram_data& diagram, const frame3f& frame,
-    const vec3f& position, float scale, const vector<string>& labels = {},
-    const vec4f& fill = dcolors::fill1, const vec4f& stroke = dcolors::black,
-    float thickness = dthickness::default_);
-void add_sphere(diagram_data& diagram, const frame3f& frame,
-    const vec3f& position, float scale, const vector<string>& labels = {},
-    const vec4f& fill      = dcolors::fill1,
-    const vec4f& stroke    = dcolors::transparent,
-    float        thickness = dthickness::default_);
-void add_uvsphere(diagram_data& diagram, const frame3f& frame,
-    const vec3f& position, float scale, const vector<string>& labels = {},
-    const vec4f& fill      = dcolors::fill1,
-    const vec4f& stroke    = dcolors::transparent,
-    float        thickness = dthickness::default_);
-void add_uvspheret(diagram_data& diagram, const frame3f& frame,
-    const vec3f& position, float scale, const array2d<vec4f>& texture,
-    const vector<string>& labels    = {},
-    const vec4f&          stroke    = dcolors::transparent,
-    float                 thickness = dthickness::default_);
-void add_grid(diagram_data& diagram, const frame3f& frame,
-    const vec3f& position, float scale, const vec2i& steps,
-    const vector<string>& labels = {}, const vec4f& stroke = dcolors::black,
-    float thickness = dthickness::default_);
-void add_cgrid(diagram_data& diagram, const frame3f& frame,
-    const vec3f& position, float scale, const vec2i& steps,
-    const vector<string>& labels = {}, const vec4f& stroke = dcolors::black,
-    float thickness = dthickness::default_);
-void add_cgridnu(diagram_data& diagram, const frame3f& frame,
-    const vec3f& position, float scale, const vec2i& steps,
-    const vector<string>& labels = {}, const vec4f& stroke = dcolors::black,
-    float thickness = dthickness::default_);
-void add_tgrid(diagram_data& diagram, const frame3f& frame,
-    const vec3f& position, float scale, const vec2i& steps,
-    const vector<string>& labels = {}, const vec4f& stroke = dcolors::black,
-    float thickness = dthickness::default_);
-void add_tgridv(diagram_data& diagram, const frame3f& frame,
-    const vector<vec3f>& positions, const vec2i& steps,
-    const vector<string>& labels = {}, const vec4f& stroke = dcolors::black,
-    float thickness = dthickness::default_);
-void add_bezier(diagram_data& diagram, const frame3f& frame,
-    const vector<vec3f>& positions, const vector<string>& labels = {},
-    const vec4f& stroke    = dcolors::black,
-    float        thickness = dthickness::default_);
-void add_qbezier(diagram_data& diagram, const frame3f& frame,
-    const vector<vec3f>& positions, const vector<string>& labels = {},
-    const vec4f& stroke    = dcolors::black,
-    float        thickness = dthickness::default_);
-void add_slabs(diagram_data& diagram, const frame3f& frame,
-    const vec3f& position, float scale, const vector<string>& labels = {},
-    const vec4f& fill = dcolors::fill1, const vec4f& stroke = dcolors::black,
-    float thickness = dthickness::default_);
-void add_slab(diagram_data& diagram, const frame3f& frame,
-    const vec3f& position, float scale, const vector<string>& labels = {},
-    const vec4f& fill = dcolors::fill1, const vec4f& stroke = dcolors::black,
-    float thickness = dthickness::default_);
-void add_image(diagram_data& diagram, const frame3f& frame,
-    const vec3f& position, float scale, const array2d<vec4f>& image,
-    const vector<string>& labels    = {},
-    const vec4f&          stroke    = dcolors::transparent,
-    float                 thickness = dthickness::default_);
-void add_imagegrid(diagram_data& diagram, const frame3f& frame,
-    const vec3f& position, float scale, const array2d<vec4f>& image,
-    const vector<string>& labels = {}, const vec4f& stroke = dcolors::black,
-    float thickness = dthickness::default_);
-void add_imagefull(diagram_data& diagram, const frame3f& frame,
-    const array2d<vec4f>& image, const string& label = "");
-void add_imagemosaic(diagram_data& diagram, const frame3f& frame,
-    const vector<array2d<vec4f>>& images, const vector<string>& labels = {});
-void add_rpoints(diagram_data& diagram, const frame3f& frame,
-    const diagram_func<vec3f, vec2f>& func, int steps, bool stratified = false,
-    const vector<string>& labels = {}, const vec4f& stroke = dcolors::black,
-    float thickness = dthickness::default_);
-void add_rpoints(diagram_data& diagram, const frame3f& frame,
-    const vec3f& position, float scale, int steps, bool stratified = false,
-    const vector<string>& labels = {}, const vec4f& stroke = dcolors::black,
-    float thickness = dthickness::default_);
-void add_rdpoints(diagram_data& diagram, const frame3f& frame,
-    const vec3f& position, float scale, int steps, bool stratified = false,
-    const vector<string>& labels = {}, const vec4f& stroke = dcolors::black,
-    float thickness = dthickness::default_);
-void add_rdpointsnu(diagram_data& diagram, const frame3f& frame,
-    const vec3f& position, float scale, int steps, bool stratified = false,
-    const vector<string>& labels = {}, const vec4f& stroke = dcolors::black,
-    float thickness = dthickness::default_);
-void add_rtpoints(diagram_data& diagram, const frame3f& frame,
-    const vec3f& position, float scale, int steps, bool stratified = false,
-    const vector<string>& labels = {}, const vec4f& stroke = dcolors::black,
-    float thickness = dthickness::default_);
-void add_rtpoints(diagram_data& diagram, const frame3f& frame,
-    const vector<vec3f>& triangle, int steps = 32, bool stratified = false,
-    const vector<string>& labels = {}, const vec4f& stroke = dcolors::black,
-    float thickness = dthickness::default_);
-enum struct rlines_type { hemi, hemicos, hemicospower, beam };
-void add_rlines(diagram_data& diagram, const frame3f& frame,
-    const vec3f& position, float scale, rlines_type type, int steps,
-    bool stratified = false, const vector<string>& labels = {},
-    const vec4f& stroke    = dcolors::black,
-    float        thickness = dthickness::default_);
-void add_atgrid(diagram_data& diagram, const frame3f& frame,
-    const vec3f& position, float scale, const vec2i& steps,
-    const vector<string>& labels = {}, const vec4f& stroke = dcolors::black,
-    float thickness = dthickness::default_);
-
-// Shape nodes
-void add_lines(diagram_data& diagram, const frame3f& frame,
-    const shape_data& shape, const vector<string>& labels = {},
-    const vec4f& stroke    = dcolors::black,
-    float        thickness = dthickness::default_);
-void add_shape(diagram_data& diagram, const frame3f& frame,
-    const shape_data& shape, const vector<string>& labels = {},
-    const vec4f& fill = dcolors::fill1, const vec4f& stroke = dcolors::black,
-    float thickness = dthickness::default_);
-void add_shape(diagram_data& diagram, const frame3f& frame,
-    const shape_data& shape, const vector<string>& labels,
-    const array2d<vec4f>& texture, const vec4f& stroke = dcolors::black,
-    float thickness = dthickness::default_);
-
-// Easy checking in lists
-bool contains(const string& tag, const vector<string>& tags);
-
 // Frames
-frame3f dtranslation(const vec3f& translation);
-frame3f drotation(const vec3f& rotation);
-frame3f dscaling(const vec3f& scale);
-frame3f dscaling(float scale);
-frame3f dlookat(const vec3f& from, const vec3f& to = {0, 0, 0},
-    const vec3f& up = {0, 1, 0});
-frame3f dtransform(const vec3f& translation, const vec3f& rotation);
-frame3f dgtransform(
-    const vec3f& translation, const vec3f& rotation, const vec3f& scaling);
-
-// Plot axes
-struct dplotaxes_params {
-  vec2f          aspect  = {2, 1};
-  vec2f          xbounds = {0, 1};
-  vec2f          ybounds = {0, 1};
-  bool           polar   = false;
-  vector<string> titles  = {};
-  vector<string> xlabels = {};
-  vector<float>  xticks  = {};
-  vector<string> ylabels = {};
-  vector<float>  yticks  = {};
-};
-
-// Plot functions
-frame3f add_plot(
-    diagram_data& diagram, const frame3f& frame, const dplotaxes_params& axes);
-void add_lineplot(diagram_data& diagram, const frame3f& frame,
-    const vector<vec2f>& points, const vector<string>& labels = {},
-    const vec4f& stroke    = dcolors::black,
-    float        thickness = dthickness::default_);
-void add_lineplot(diagram_data& diagram, const frame3f& frame,
-    const diagram_func<float, float>& function, const vec2f& range,
-    const vector<string>& labels = {}, const vec4f& stroke = dcolors::black,
-    float thickness = dthickness::default_);
-void add_scatterplot(diagram_data& diagram, const frame3f& frame,
-    const vector<vec2f>& points, const vector<string>& labels = {},
-    const vec4f& stroke    = dcolors::black,
-    float        thickness = dthickness::default_);
-void add_scatterplot(diagram_data& diagram, const frame3f& frame,
-    const diagram_func<float, float>& function, const vec2f& range,
-    const vector<string>& labels = {}, const vec4f& stroke = dcolors::black,
-    float thickness = dthickness::default_);
+inline frame3f dtranslation(const vec3f& translation) {
+  return translation_frame(translation);
+}
+inline frame3f drotation(const vec3f& rotation) {
+  return rotation_frame(vec3f{1, 0, 0}, radians(rotation.x)) *
+         rotation_frame(vec3f{0, 1, 0}, radians(rotation.y)) *
+         rotation_frame(vec3f{0, 0, 1}, radians(rotation.z));
+}
+inline frame3f dscaling(const vec3f& scaling) { return scaling_frame(scaling); }
+inline frame3f dscaling(float scale) {
+  return scaling_frame(vec3f{scale, scale, scale});
+}
+inline frame3f dlookat(const vec3f& from, const vec3f& to = {0, 0, 0},
+    const vec3f& up = {0, 1, 0}) {
+  return lookat_frame(from, to, up, true);
+}
+inline frame3f dtransform(const vec3f& translation, const vec3f& rotation) {
+  return dtranslation(translation) * drotation(rotation);
+}
+inline frame3f dgtransform(
+    const vec3f& translation, const vec3f& rotation, const vec3f& scaling) {
+  return dtranslation(translation) * drotation(rotation) * dscaling(scaling);
+}
 
 // Sampling functions
-vector<vec2f> sample_function(const diagram_func<float, float>& function,
-    const vec2f& range, int samples = 100);
+inline vector<vec2f> sample_function(const diagram_func<float, float>& function,
+    const vec2f& range_, int samples = 100) {
+  auto data = vector<vec2f>(samples);
+  for (auto idx : range(samples)) {
+    auto x    = lerp(range_.x, range_.y, (float)idx / (float)(samples - 1));
+    data[idx] = {x, function(x)};
+  }
+  return data;
+}
 
-// Color shapes
-array2d<vec4f> random_image(const vec2i& steps);
-array2d<vec4f> gamma_image(const vec2i& steps);
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// DIAGRAM CREATION
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Add scene
+struct diagram_scene_params {
+  vec2f   size        = {2, 2};
+  vec2f   center      = {0, 0};
+  string  title       = "";
+  string  subtitle    = "";
+  frame3f frame       = identity3x4f;
+  vec2f   margin      = {0.2, 1.0};
+  vec2f   spacing     = {0.15, 0.15};
+  bool    auto_offset = true;
+};
+diagram_scene& add_scene(
+    diagram_data& diagram, const diagram_scene_params& params);
+
+// Add labels
+struct diagram_labels_params {
+  frame3f        frame     = identity3x4f;
+  vector<vec3f>  positions = {};
+  vector<string> labels    = {};
+};
+void add_labels(diagram_scene& diagram, const diagram_labels_params& params);
+
+// Add points
+struct diagram_points_params {
+  frame3f        frame     = identity3x4f;
+  vector<vec3f>  positions = {{0, 0, 0}};
+  vec3f          position  = {0, 0, 0};
+  float          scale     = 1;
+  vector<string> labels    = {};
+  vec4f          stroke    = dcolors::black;
+  float          thickness = dthickness::default_;
+};
+void add_points(diagram_scene& diagram, const diagram_points_params& params);
+
+// Add lines
+struct diagram_lines_params {
+  frame3f        frame     = identity3x4f;
+  vector<vec3f>  positions = {{0, -1, 0}, {0, 1, 0}};
+  vector<vec2i>  lines     = {};
+  vec3f          position  = {0, 0, 0};
+  float          scale     = 1;
+  bool           connector = false;
+  vector<string> labels    = {};
+  vector<string> clabels   = {};
+  vec4f          stroke    = dcolors::black;
+  float          thickness = dthickness::default_;
+};
+void add_lines(diagram_scene& diagram, const diagram_lines_params& params);
+
+// Add arrows
+struct diagram_arrows_params {
+  frame3f        frame     = identity3x4f;
+  vector<vec3f>  positions = {{0, -1, 0}, {0, 1, 0}};
+  vector<vec2i>  arrows    = {};
+  vec3f          position  = {0, 0, 0};
+  float          scale     = 1;
+  bool           connector = false;
+  vector<string> labels    = {};
+  vector<string> clabels   = {};
+  vec4f          stroke    = dcolors::black;
+  float          thickness = dthickness::default_;
+};
+void add_arrows(diagram_scene& diagram, const diagram_arrows_params& params);
+
+// Add vectors
+struct diagram_vectors_params {
+  frame3f        frame     = identity3x4f;
+  vector<vec3f>  vectors   = {{0, 1, 0}};
+  vec3f          position  = {0, 0, 0};
+  float          scale     = 1;
+  vector<string> labels    = {};
+  vector<string> clabels   = {};
+  vec4f          stroke    = dcolors::black;
+  float          thickness = dthickness::default_;
+};
+void add_vectors(diagram_scene& diagram, const diagram_vectors_params& params);
+
+// Add axes
+struct diagram_axes_params {
+  frame3f        frame     = identity3x4f;
+  frame3f        axes      = identity3x4f;
+  vec3f          aspect    = {1, 1, 1};
+  vec3f          position  = {0, 0, 0};
+  float          scale     = 1;
+  vector<string> labels    = {};
+  vector<string> clabels   = {};
+  vec4f          stroke    = dcolors::black;
+  float          thickness = dthickness::default_;
+};
+void add_axes(diagram_scene& diagram, const diagram_axes_params& params);
+
+// Add rays
+struct diagram_rays_params {
+  frame3f        frame      = identity3x4f;
+  vector<ray3f>  rays       = {{{0, 0, 0}, {0, 0, 1}}};
+  vec3f          position   = {0, 0, 0};
+  float          scale      = 1;
+  bool           connector  = false;
+  vector<string> labels     = {};
+  vector<string> clabels    = {};
+  vec4f          stroke     = dcolors::black;
+  float          thickness  = dthickness::default_;
+  float          llength    = 0;
+  vec4f          lstroke    = dcolors::gray;
+  float          lthickness = dthickness::default_;
+  vector<string> llabels    = {};
+  vector<string> lclabels   = {};
+};
+void add_rays(diagram_scene& diagram, const diagram_rays_params& params);
+
+// Add quads
+struct diagram_quads_params {
+  frame3f       frame     = identity3x4f;
+  vector<vec3f> positions = {
+      {-1, -1, 0}, {+1, -1, 0}, {+1, +1, 0}, {-1, +1, 0}};
+  vector<vec2f>  texcoords = {};
+  vector<vec4i>  quads     = {};
+  vec3f          position  = {0, 0, 0};
+  float          scale     = 1;
+  vector<string> labels    = {};
+  vector<string> clabels   = {};
+  vec4f          stroke    = dcolors::black;
+  vec4f          fill      = dcolors::fill1;
+  float          thickness = dthickness::default_;
+  array2d<vec4f> texture   = {};
+};
+void add_quads(diagram_scene& diagram, const diagram_quads_params& params);
+
+// Add triangles
+struct diagram_triangles_params {
+  frame3f        frame     = identity3x4f;
+  vector<vec3f>  positions = {{-1, -1, 0}, {+1, -1, 0}, {0, +1, 0}};
+  vector<vec2f>  texcoords = {};
+  vector<vec3i>  triangles = {};
+  vec3f          position  = {0, 0, 0};
+  float          scale     = 1;
+  vector<string> labels    = {};
+  vector<string> clabels   = {};
+  vec4f          stroke    = dcolors::black;
+  vec4f          fill      = dcolors::fill1;
+  float          thickness = dthickness::default_;
+  array2d<vec4f> texture   = {};
+};
+void add_triangles(
+    diagram_scene& diagram, const diagram_triangles_params& params);
+
+// Add polyline
+struct diagram_polyline_params {
+  frame3f        frame     = identity3x4f;
+  vector<vec3f>  positions = {{0, -1, 0}, {0, +1, 0}};
+  vec3f          position  = {0, 0, 0};
+  float          scale     = 1;
+  vector<string> labels    = {};
+  vector<string> clabels   = {};
+  vec4f          stroke    = dcolors::black;
+  float          thickness = dthickness::default_;
+};
+void add_polyline(
+    diagram_scene& diagram, const diagram_polyline_params& params);
+
+// Add polygon
+struct diagram_polygon_params {
+  frame3f        frame     = identity3x4f;
+  vector<vec3f>  positions = {{-1, -1, 0}, {+1, -1, 0}, {0, +1, 0}};
+  vec3f          position  = {0, 0, 0};
+  float          scale     = 1;
+  vector<string> labels    = {};
+  vector<string> clabels   = {};
+  vec4f          stroke    = dcolors::black;
+  vec4f          fill      = dcolors::fill1;
+  float          thickness = dthickness::default_;
+};
+void add_polygon(diagram_scene& diagram, const diagram_polygon_params& params);
+
+// Add rect
+struct diagram_rect_params {
+  frame3f        frame     = identity3x4f;
+  vec3f          position  = {0, 0, 0};
+  vec2f          aspect    = {1, 1};
+  float          scale     = 1;
+  vector<string> labels    = {};
+  vector<string> clabels   = {};
+  vec4f          stroke    = dcolors::black;
+  vec4f          fill      = dcolors::fill1;
+  float          thickness = dthickness::default_;
+  array2d<vec4f> texture   = {};
+};
+void add_rect(diagram_scene& diagram, const diagram_rect_params& params);
+
+// Add disk
+struct diagram_disk_params {
+  frame3f        frame     = identity3x4f;
+  vec3f          position  = {0, 0, 0};
+  vec2f          aspect    = {1, 1};
+  float          scale     = 1;
+  int            steps     = 32;
+  vector<string> labels    = {};
+  vector<string> clabels   = {};
+  vec4f          stroke    = dcolors::black;
+  vec4f          fill      = dcolors::fill1;
+  float          thickness = dthickness::default_;
+};
+void add_disk(diagram_scene& diagram, const diagram_disk_params& params);
+
+// Add arc
+struct diagram_arc_params {
+  frame3f        frame     = identity3x4f;
+  vec3f          position  = {0, 0, 0};
+  vec3f          from      = {1, 0, 0};
+  vec3f          to        = {0, 1, 0};
+  float          scale     = 1;
+  int            steps     = 16;
+  vector<string> labels    = {};
+  vector<string> clabels   = {};
+  vec4f          stroke    = dcolors::black;
+  vec4f          fill      = dcolors::fill1;
+  float          thickness = dthickness::default_;
+};
+void add_arc(diagram_scene& diagram, const diagram_arc_params& params);
+
+// Add qbezier
+struct diagram_qbeziers_params {
+  frame3f        frame     = identity3x4f;
+  vector<vec3f>  positions = {{0, -1, 0}, {0, 1, 0}};
+  vec3f          position  = {0, 0, 0};
+  float          scale     = 1;
+  int            steps     = 32;
+  vector<string> labels    = {};
+  vector<string> clabels   = {};
+  vec4f          stroke    = dcolors::black;
+  float          thickness = dthickness::default_;
+};
+void add_qbeziers(
+    diagram_scene& diagram, const diagram_qbeziers_params& params);
+
+// Add bezier
+struct diagram_beziers_params {
+  frame3f        frame     = identity3x4f;
+  vector<vec3f>  positions = {{0, -1, 0}, {0, 1, 0}};
+  vec3f          position  = {0, 0, 0};
+  float          scale     = 1;
+  int            steps     = 32;
+  vector<string> labels    = {};
+  vector<string> clabels   = {};
+  vec4f          stroke    = dcolors::black;
+  float          thickness = dthickness::default_;
+};
+void add_beziers(diagram_scene& diagram, const diagram_beziers_params& params);
+
+// Add measure
+struct diagram_measure_params {
+  frame3f        frame     = identity3x4f;
+  vec3f          from      = {0, 0, 0};
+  vec3f          to        = {1, 0, 0};
+  vec3f          offset    = {0, 1, 0};
+  float          scale     = 1;
+  vector<string> labels    = {};
+  vector<string> clabels   = {};
+  vec4f          stroke    = dcolors::black;
+  vec4f          fill      = dcolors::fill1;
+  float          thickness = dthickness::default_;
+};
+void add_measure(diagram_scene& diagram, const diagram_measure_params& params);
+
+// Add cube
+struct diagram_cube_params {
+  frame3f        frame     = identity3x4f;
+  vec3f          position  = {0, 0, 0};
+  float          scale     = 1;
+  vector<string> labels    = {};
+  vector<string> clabels   = {};
+  vec4f          stroke    = dcolors::black;
+  vec4f          fill      = dcolors::fill1;
+  float          thickness = dthickness::default_;
+};
+void add_cube(diagram_scene& diagram, const diagram_cube_params& params);
+
+// Add sphere
+struct diagram_sphere_params {
+  frame3f        frame     = identity3x4f;
+  vec3f          position  = {0, 0, 0};
+  float          scale     = 1;
+  bool           uvsphere  = false;
+  int            steps     = 32;
+  vector<string> labels    = {};
+  vector<string> clabels   = {};
+  vec4f          stroke    = dcolors::black;
+  vec4f          fill      = dcolors::fill1;
+  float          thickness = dthickness::default_;
+  array2d<vec4f> texture   = {};
+};
+void add_sphere(diagram_scene& diagram, const diagram_sphere_params& params);
+
+// Add grid
+struct diagram_grid_params {
+  frame3f        frame     = identity3x4f;
+  vec3f          position  = {0, 0, 0};
+  float          scale     = 1;
+  vec2i          steps     = {4, 4};
+  vector<string> labels    = {};
+  vector<string> clabels   = {};
+  vec4f          stroke    = dcolors::black;
+  vec4f          fill      = dcolors::transparent;
+  float          thickness = dthickness::default_;
+};
+void add_grid(diagram_scene& diagram, const diagram_grid_params& params);
+
+// Add affine grid
+struct diagram_affinegrid_params {
+  frame3f        frame     = identity3x4f;
+  vec3f          position  = {0, 0, 0};
+  vec3f          axes_a    = {1, 0, 0};
+  vec3f          axes_b    = {0, 1, 0};
+  float          scale     = 1;
+  vec2i          steps     = {4, 4};
+  vector<string> labels    = {};
+  vector<string> clabels   = {};
+  vec4f          stroke    = dcolors::black;
+  vec4f          fill      = dcolors::transparent;
+  float          thickness = dthickness::default_;
+};
+void add_affinegrid(
+    diagram_scene& diagram, const diagram_affinegrid_params& params);
+
+// Add image
+struct diagram_image_params {
+  frame3f        frame       = identity3x4f;
+  array2d<vec4f> image       = {};
+  vec3f          position    = {0, 0, 0};
+  float          scale       = 1;
+  bool           scaley      = false;
+  bool           interpolate = false;
+  vector<string> labels      = {};
+  vector<string> clabels     = {};
+  vector<string> olabels     = {};
+  vec4f          stroke      = dcolors::transparent;
+  vec4f          fill        = dcolors::white;
+  float          thickness   = dthickness::default_;
+};
+void add_image(diagram_scene& diagram, const diagram_image_params& params);
+
+// Add image grid
+struct diagram_imagegrid_params {
+  frame3f        frame       = identity3x4f;
+  array2d<vec4f> image       = {};
+  vec3f          position    = {0, 0, 0};
+  float          scale       = 1;
+  bool           interpolate = false;
+  vector<string> labels      = {};
+  vector<string> clabels     = {};
+  vec4f          stroke      = dcolors::black;
+  vec4f          fill        = dcolors::white;
+  float          thickness   = dthickness::default_;
+};
+void add_imagegrid(
+    diagram_scene& diagram, const diagram_imagegrid_params& params);
+
+// Add image mosaic
+struct diagram_imagemosaic_params {
+  frame3f                frame       = identity3x4f;
+  vector<array2d<vec4f>> images      = {};
+  vec3f                  position    = {0, 0, 0};
+  float                  scale       = 1;
+  bool                   scaley      = false;
+  bool                   interpolate = false;
+  vector<string>         labels      = {};
+  vector<string>         clabels     = {};
+  vector<string>         olabels     = {};
+  vec4f                  stroke      = dcolors::transparent;
+  vec4f                  fill        = dcolors::white;
+  float                  thickness   = dthickness::default_;
+};
+void add_imagemosaic(
+    diagram_scene& diagram, const diagram_imagemosaic_params& params);
+
+// Add random points
+enum struct diagram_randompoints_type { quad, disk, disknu, triangle };
+struct diagram_randompoints_params {
+  frame3f                   frame      = identity3x4f;
+  vec3f                     position   = {0, 0, 0};
+  float                     scale      = 1;
+  diagram_randompoints_type type       = diagram_randompoints_type::quad;
+  int                       steps      = 16;
+  bool                      stratified = false;
+  vector<vec3f>             triangle   = dconstants::triangle_positions;
+  vector<string>            labels     = {};
+  vec4f                     stroke     = dcolors::black;
+  float                     thickness  = dthickness::default_;
+};
+void add_randompoints(
+    diagram_scene& diagram, const diagram_randompoints_params& params);
+
+// Add random lines
+enum struct diagram_randomlines_type { hemi, hemicos, hemicospower, beam };
+struct diagram_randomlines_params {
+  frame3f                  frame      = identity3x4f;
+  vec3f                    position   = {0, 0, 0};
+  float                    scale      = 1;
+  diagram_randomlines_type type       = diagram_randomlines_type::hemi;
+  int                      steps      = 16;
+  bool                     stratified = false;
+  vector<string>           labels     = {};
+  vector<string>           clabels    = {};
+  vec4f                    stroke     = dcolors::black;
+  float                    thickness  = dthickness::default_;
+};
+void add_randomlines(
+    diagram_scene& diagram, const diagram_randomlines_params& params);
+
+// Add plot
+struct diagram_plot_params {
+  vec2f   size        = {4, 2};
+  vec2f   center      = {0, 0};
+  string  title       = "";
+  string  subtitle    = "";
+  frame3f frame       = identity3x4f;
+  vec2f   margin      = {0.8, 1.0};
+  vec2f   spacing     = {0.15, 0.15};
+  bool    auto_offset = true;
+};
+diagram_scene& add_plot(
+    diagram_data& diagram, const diagram_plot_params& params);
+
+// Add plot axes
+struct diagram_plotaxes_params {
+  string         title     = "";
+  vec2f          xbounds   = {0, 1};
+  vec2f          ybounds   = {0, 1};
+  vector<string> xlabels   = {};
+  vector<float>  xticks    = {};
+  vector<string> ylabels   = {};
+  vector<float>  yticks    = {};
+  vec4f          stroke    = dcolors::black;
+  float          thickness = dthickness::default_;
+};
+diagram_scene& add_plotaxes(
+    diagram_scene& diagram, const diagram_plotaxes_params& params);
+
+// Plot functions
+struct diagram_plotdata_params {
+  frame3f                    frame     = identity3x4f;
+  vector<vec2f>              points    = {};
+  diagram_func<float, float> function  = [](float x) { return x; };
+  vec2f                      range     = {0, 1};
+  int                        steps     = 100;
+  vector<string>             labels    = {};
+  vec4f                      stroke    = dcolors::black;
+  float                      thickness = dthickness::default_;
+};
+void add_plotdata(diagram_scene& diagram, const diagram_plotdata_params& frame);
 
 }  // namespace yocto
 
@@ -586,129 +796,6 @@ inline pair<vector<vec4i>, vector<T>> subdivide_catmullclark_(
     tess = subdivide_catmullclark_(tess.first, tess.second, uncorrected);
   return tess;
 }
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// EXAMPLE DIAGRAMS
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// tests --------------------------------------------------
-inline auto  placeholder_tags = vector<string>{"missing"};
-diagram_data placeholder_diagrams(const string& tag);
-
-// math ---------------------------------------------------
-inline auto frame_tags = vector<string>{
-    "composition", "coordinates", "definition"};
-diagram_data frame_diagrams(const string& tag);
-
-inline auto  objtransform_tags = vector<string>{"rotationx", "rotationy",
-     "rotationz", "scalingnu", "scalingu", "translation"};
-diagram_data objtransform_diagrams(const string& tag);
-
-inline auto  primitive_tags = vector<string>{"types"};
-diagram_data primitive_diagrams(const string& tag);
-
-inline auto transform_tags = vector<string>{
-    "rotation", "scaling", "translation"};
-diagram_data transform_diagrams(const string& tag);
-
-inline auto  vector_tags = vector<string>{"operations", "products"};
-diagram_data vector_diagrams(const string& tag);
-
-// image --------------------------------------------------
-inline auto compositing_tags = vector<string>{
-    "alpha1", "alpha2", "alpha3", "alpha4"};
-diagram_data compositing_diagrams(const string& tag);
-
-inline auto  image_tags = vector<string>{"approximation", "gamma", "grid"};
-diagram_data image_diagrams(const string& tag);
-
-inline auto tonemapping_tags = vector<string>{
-    "exposure", "falsecolor", "filmic", "gamma", "linear", "srgb"};
-diagram_data tonemapping_diagrams(const string& tag);
-
-inline auto tonemapplot_tags = vector<string>{
-    "filmic", "gamma", "srgb", "srgbvsgamma"};
-diagram_data tonemapplot_diagrams(const string& tag);
-
-// scene --------------------------------------------------
-inline auto  barycentric_tags = vector<string>{"line", "triangle", "trianglea"};
-diagram_data barycentric_diagrams(const string& tag);
-
-inline auto  camera_tags = vector<string>{"frame"};
-diagram_data camera_diagrams(const string& tag);
-
-inline auto  environment_tags = vector<string>{"map"};
-diagram_data environment_diagrams(const string& tag);
-
-inline auto shape_tags = vector<string>{
-    "elements", "elements1", "indexed1", "indexed2", "indexed3"};
-diagram_data shape_diagrams(const string& tag);
-
-inline auto  shapeapprox_tags = vector<string>{"circle"};
-diagram_data shapeapprox_diagrams(const string& tag);
-
-inline auto  texcoords_tags = vector<string>{"cow", "triangle"};
-diagram_data texcoords_diagrams(const string& tag);
-
-inline auto antialiasing_tags = vector<string>{
-    "center", "random", "stratified", "supersample"};
-diagram_data antialiasing_diagrams(const string& tag);
-
-inline auto  brdfframe_tags = vector<string>{"arealight", "arealight2",
-     "areashadow", "areashadow2", "diffuse", "diffuse2", "emission", "envlight",
-     "envshadow", "frame", "pointlight", "pointshadow", "reflection",
-     "rreflection", "transmission"};
-diagram_data brdfframe_diagrams(const string& tag);
-
-inline auto brdfplot_tags = vector<string>{
-    "fdielectric", "ggx", "phong", "schlickd", "schlickm", "shadowing"};
-diagram_data brdfplot_diagrams(const string& tag);
-
-inline auto  cameraray_tags = vector<string>{"pinhole"};
-diagram_data cameraray_diagrams(const string& tag);
-
-inline auto lighting_tags = vector<string>{
-    "lambertlaw", "lambertlaw2", "lightrsquared"};
-diagram_data lighting_diagrams(const string& tag);
-
-inline auto  rendering_tags = vector<string>{"image", "lighting"};
-diagram_data rendering_diagrams(const string& tag);
-
-// intersect ----------------------------------------------
-inline auto  bbox_tags = vector<string>{"slabs"};
-diagram_data bbox_diagrams(const string& tag);
-
-inline auto intersect_tags = vector<string>{"bbox", "instance", "line", "point",
-    "ray", "scene", "shape", "slab", "triangle"};
-diagram_data intersect_diagrams(const string& tag);
-
-// modeling -----------------------------------------------
-inline auto bezier_tags = vector<string>{
-    "cusps", "hulls", "joins", "splines", "splits", "tangents", "transforms"};
-diagram_data bezier_diagrams(const string& tag);
-
-inline auto  subcurve_tags = vector<string>{"step", "steps"};
-diagram_data subcurve_diagrams(const string& tag);
-
-inline auto  subdiv_tags = vector<string>{"correction", "step", "steps"};
-diagram_data subdiv_diagrams(const string& tag);
-
-// renderingeq --------------------------------------------
-inline auto  integration_tags = vector<string>{"montecarlo", "quadrature"};
-diagram_data integration_diagrams(const string& tag);
-
-inline auto mcplot_tags = vector<string>{
-    "mcfuncerror", "mcfunceval", "mcpierror", "mcpieval"};
-diagram_data mcplot_diagrams(const string& tag);
-
-inline auto  pisamples_tags = vector<string>{"stratified", "uniform"};
-diagram_data pisamples_diagrams(const string& tag);
-
-inline auto  sampling_tags = vector<string>{"disk", "stratified", "triangle"};
-diagram_data sampling_diagrams(const string& tag);
 
 }  // namespace yocto
 

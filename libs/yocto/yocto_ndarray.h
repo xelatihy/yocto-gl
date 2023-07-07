@@ -77,12 +77,13 @@ struct ndarray {
  public:
   // Constructors
   constexpr ndarray() : _extents{0}, _data{} {}
-  constexpr explicit ndarray(const vec<size_t, N>& extents) :
-      _extents{extents}, _data(_size(extents), T{}) {}
+  constexpr explicit ndarray(
+      const vec<size_t, N>& extents, const T& value = {}) :
+      _extents{extents}, _data(_size(extents), value) {}
   template <typename I>
-  constexpr explicit ndarray(const vec<I, N>& extents) :
+  constexpr explicit ndarray(const vec<I, N>& extents, const T& value = {}) :
       _extents{(vec<size_t, N>)extents},
-      _data(_size((vec<size_t, N>)extents), T{}) {}
+      _data(_size((vec<size_t, N>)extents), value) {}
   constexpr ndarray(const T* data, const vec<size_t, N>& extents) :
       _extents{extents}, _data(data, data + _size(extents)) {}
   template <typename I>
