@@ -58,6 +58,114 @@ using std::vector;
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// BVH FOR INTERSECTION AND OVERLAP
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// BVH tree node containing its bounds, indices to the BVH arrays of either
+// primitives or internal nodes, the node element type,
+// and the split axis. Leaf and internal nodes are identical, except that
+// indices refer to primitives for leaf nodes or other nodes for internal nodes.
+struct bvh_node {
+  bbox3f  bbox_    = {};
+  int32_t start    = 0;
+  int16_t num      = 0;
+  int8_t  axis     = 0;
+  bool    internal = false;
+};
+
+// BVH tree stored as a node array with the tree structure is encoded using
+// array indices. BVH nodes indices refer to either the node array,
+// for internal nodes, or the primitive arrays, for leaf nodes.
+// Application data is not stored explicitly.
+struct bvh_data {
+  vector<bvh_node> nodes      = {};
+  vector<int>      primitives = {};
+};
+
+// Results of intersect_xxx and overlap_xxx functions that include hit flag,
+// instance id, shape element id, shape element uv and intersection distance.
+// The values are all set for scene intersection. Shape intersection does not
+// set the instance id and element intersections do not set shape element id
+// and the instance id. Results values are set only if hit is true.
+struct intersection3f {
+  int   instance = -1;
+  int   element  = -1;
+  vec2f uv       = {0, 0};
+  float distance = 0;
+  bool  hit      = false;
+
+  intersection3f() : hit{false} {}
+  intersection3f(int element_, const vec2f& uv_, float distance_) :
+      element{element_}, uv{uv_}, distance{distance_}, hit{true} {}
+  intersection3f(
+      int instance_, int element_, const vec2f& uv_, float distance_) :
+      instance{instance_},
+      element{element_},
+      uv{uv_},
+      distance{distance_},
+      hit{true} {}
+  intersection3f(int element_, const pintersection3f& intersection_) :
+      element{element_},
+      uv{intersection_.uv},
+      distance{intersection_.distance},
+      hit{intersection_.hit} {}
+  intersection3f(int instance_, const intersection3f& intersection_) :
+      instance{instance_},
+      element{intersection_.element},
+      uv{intersection_.uv},
+      distance{intersection_.distance},
+      hit{intersection_.hit} {}
+};
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// BVH FOR COLLECTION OF PRIMITIVES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Build elements bvh
+bvh_data make_points_bvh(const vector<int>& points,
+    const vector<vec3f>& positions, const vector<float>& radius,
+    bool highquality = false);
+bvh_data make_lines_bvh(const vector<vec2i>& lines,
+    const vector<vec3f>& positions, const vector<float>& radius,
+    bool highquality = false);
+bvh_data make_triangles_bvh(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<float>& radius,
+    bool highquality = false);
+bvh_data make_quads_bvh(const vector<vec4i>& quads,
+    const vector<vec3f>& positions, const vector<float>& radius,
+    bool highquality = false);
+
+// Refit elements bvh
+void update_points_bvh(bvh_data& bvh, const vector<int>& points,
+    const vector<vec3f>& positions, const vector<float>& radius);
+void update_lines_bvh(bvh_data& bvh, const vector<vec2i>& lines,
+    const vector<vec3f>& positions, const vector<float>& radius);
+void update_triangles_bvh(bvh_data& bvh, const vector<vec3i>& triangles,
+    const vector<vec3f>& positions);
+void update_quads_bvh(
+    bvh_data& bvh, const vector<vec4i>& quads, const vector<vec3f>& positions);
+
+// Bvh intersection
+intersection3f intersect_points_bvh(const bvh_data& bvh,
+    const vector<int>& points, const vector<vec3f>& positions,
+    const vector<float>& radius, const ray3f& ray, bool find_any = false);
+intersection3f intersect_lines_bvh(const bvh_data& bvh,
+    const vector<vec2i>& lines, const vector<vec3f>& positions,
+    const vector<float>& radius, const ray3f& ray, bool find_any = false);
+intersection3f intersect_triangles_bvh(const bvh_data& bvh,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const ray3f& ray, bool find_any = false);
+intersection3f intersect_quads_bvh(const bvh_data& bvh,
+    const vector<vec4i>& quads, const vector<vec3f>& positions,
+    const ray3f& ray, bool find_any = false);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // BVH, RAY INTERSECTION AND OVERLAP QUERIES
 // -----------------------------------------------------------------------------
 namespace yocto {

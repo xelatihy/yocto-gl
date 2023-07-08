@@ -99,14 +99,14 @@ static const T* _upper_bound(const T* first, const T* last, const T& value) {
 }
 
 // Sample a discrete distribution represented by its cdf.
-inline int sample_discrete(const span<float>& cdf, float r) {
+inline int sample_discrete(const cuspan<float>& cdf, float r) {
   r = clamp(r * cdf.back(), (float)0, cdf.back() - (float)0.00001);
   auto idx =
       (int)(_upper_bound(cdf.data(), cdf.data() + cdf.size(), r) - cdf.data());
   return clamp(idx, 0, (int)cdf.size() - 1);
 }
 // Pdf for uniform discrete distribution sampling.
-inline float sample_discrete_pdf(const span<float>& cdf, int idx) {
+inline float sample_discrete_pdf(const cuspan<float>& cdf, int idx) {
   if (idx == 0) return cdf[0];
   return cdf[idx] - cdf[idx - 1];
 }
@@ -134,8 +134,6 @@ struct cuspan {
   inline T&       back() { return *(_data + _size - 1); }
   inline const T& front() const { return *_data; }
   inline const T& back() const { return *(_data + _size - 1); }
-
-  inline operator span<T>() const { return {_data, _size}; }
 
   T*     _data = nullptr;
   size_t _size = 0;

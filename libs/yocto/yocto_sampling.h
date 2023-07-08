@@ -143,7 +143,7 @@ constexpr kernel vec3f rand3f(rng_state& rng) {
 
 // Shuffles a sequence of elements
 template <typename T>
-constexpr kernel void shuffle(span<T> vals, rng_state& rng) {
+constexpr kernel void shuffle(const vector<T>& vals, rng_state& rng) {
   // https://en.wikipedia.org/wiki/Fisher–Yates_shuffle
   for (auto i = (int)size(vals) - 1; i > 0; i--) {
     auto j = rand1i(rng, i + 1);
@@ -304,26 +304,16 @@ constexpr kernel float sample_uniform_pdf(cspan<E> elements) {
 }
 
 // Sample a discrete distribution represented by its cdf.
-inline kernel int sample_discrete(span<const float> cdf, float r) {
+inline kernel int sample_discrete(const vector<float>& cdf, float r) {
   r = clamp(r * cdf.back(), 0.0f, cdf.back() - 0.00001f);
   auto idx =
       (int)(std::upper_bound(data(cdf), data(cdf) + size(cdf), r) - data(cdf));
   return clamp(idx, (int)0, (int)size(cdf) - 1);
 }
 // Pdf for uniform discrete distribution sampling.
-inline kernel float sample_discrete_pdf(span<const float> cdf, int idx) {
+inline kernel float sample_discrete_pdf(const vector<float>& cdf, int idx) {
   if (idx == 0) return cdf[0];
   return cdf[idx] - cdf[idx - 1];
-}
-
-// TODO: eventually remove these
-// Sample a discrete distribution represented by its cdf.
-inline kernel int sample_discrete(const vector<float>& cdf, float r) {
-  return sample_discrete(span<const float>{cdf}, r);
-}
-// Pdf for uniform discrete distribution sampling.
-inline kernel float sample_discrete_pdf(const vector<float>& cdf, int idx) {
-  return sample_discrete_pdf(span<const float>{cdf}, idx);
 }
 
 }  // namespace yocto
