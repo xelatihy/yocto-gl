@@ -72,7 +72,7 @@ void run(const vector<string>& args) {
   // switch between interactive and offline
   if (!interactive) {
     // apply color grade
-    image = colorgrade_image(image, params);
+    image = colorgrade_image(image, true, params);
 
     // save image
     save_image(outname, image, true);
@@ -84,7 +84,7 @@ void run(const vector<string>& args) {
 
     // display image
     auto display = array2d<vec4f>{image.extents()};
-    colorgrade_image(display, image, params);
+    colorgrade_image(display, image, true, params);
 
     // opengl image
     auto glimage  = glimage_state{};
@@ -126,7 +126,7 @@ void run(const vector<string>& args) {
             "highlights color", params.highlights_color);
         end_gui_header();
         if (edited > 0) {
-          colorgrade_image(display, image, params);
+          colorgrade_image(display, image, true, params);
           set_image(glimage, display);
         }
       }

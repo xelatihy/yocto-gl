@@ -42,7 +42,7 @@ namespace yocto {
 // Resize an image.
 template <size_t N>
 array2d<vec<float, N>> resize_image(
-    const array2d<vec<float, N>>& image, const vec2s& extents_) {
+    const array2d<vec<float, N>>& image, const vec2i& extents_) {
   // determine new size
   auto extents = extents_;
   auto aspect  = (double)image.extent(0) / (double)image.extent(1);
@@ -68,15 +68,15 @@ array2d<vec<float, N>> resize_image(
 }
 
 // Explicit instantiations
-template array2d<vec1f> resize_image(const array2d<vec1f>&, const vec2s&);
-template array2d<vec2f> resize_image(const array2d<vec2f>&, const vec2s&);
-template array2d<vec3f> resize_image(const array2d<vec3f>&, const vec2s&);
-template array2d<vec4f> resize_image(const array2d<vec4f>&, const vec2s&);
+template array2d<vec1f> resize_image(const array2d<vec1f>&, const vec2i&);
+template array2d<vec2f> resize_image(const array2d<vec2f>&, const vec2i&);
+template array2d<vec3f> resize_image(const array2d<vec3f>&, const vec2i&);
+template array2d<vec4f> resize_image(const array2d<vec4f>&, const vec2i&);
 
 // Resize an image.
 template <size_t N>
 array2d<vec<byte, N>> resize_image(
-    const array2d<vec<byte, N>>& image, const vec2s& extents_) {
+    const array2d<vec<byte, N>>& image, const vec2i& extents_) {
   // determine new size
   auto extents = extents_;
   auto aspect  = (double)image.extent(0) / (double)image.extent(1);
@@ -102,9 +102,9 @@ array2d<vec<byte, N>> resize_image(
 }
 
 // Explicit instantiations
-template array2d<vec1b> resize_image(const array2d<vec1b>&, const vec2s&);
-template array2d<vec2b> resize_image(const array2d<vec2b>&, const vec2s&);
-template array2d<vec3b> resize_image(const array2d<vec3b>&, const vec2s&);
-template array2d<vec4b> resize_image(const array2d<vec4b>&, const vec2s&);
+template array2d<vec1b> resize_image(const array2d<vec1b>&, const vec2i&);
+template array2d<vec2b> resize_image(const array2d<vec2b>&, const vec2i&);
+template array2d<vec3b> resize_image(const array2d<vec3b>&, const vec2i&);
+template array2d<vec4b> resize_image(const array2d<vec4b>&, const vec2i&);
 
 }  // namespace yocto

@@ -658,7 +658,7 @@ constexpr kernel pair<vec3f, vec3f> quad_tangents_fromuv(
 namespace yocto {
 
 // Computes the aspect ratio.
-constexpr kernel float aspect_ratio(const vec2f& size) {
+constexpr kernel float aspect_ratio(const vec2i& size) {
   return size.x / size.y;
 }
 

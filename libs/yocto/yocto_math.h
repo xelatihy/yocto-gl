@@ -2907,6 +2907,23 @@ constexpr kernel vec<T, 4> rotation_quat(const vec<T, 4>& axisangle) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// Computes the aspect ratio.
+template <typename I, typename T = float>
+constexpr kernel T aspect_ratio(const vec<I, 2>& size) {
+  return (T)size.x / (T)size.y;
+}
+
+// Flip u from [0,1] to [1,0]
+template <typename T>
+constexpr kernel vec<T, 2> flip_u(const vec<T, 2>& uv) {
+  return {1 - uv.x, uv.y};
+}
+// Flip v from [0,1] to [1,0]
+template <typename T>
+constexpr kernel vec<T, 2> flip_v(const vec<T, 2>& uv) {
+  return {uv.x, 1 - uv.y};
+}
+
 // Computes the image uv coordinates corresponding to the view parameters.
 // Returns negative coordinates if out of the image.
 template <typename T, typename I>

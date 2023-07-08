@@ -77,19 +77,10 @@ struct ndarray {
  public:
   // Constructors
   constexpr ndarray() : _extents{0}, _data{} {}
-  constexpr explicit ndarray(
-      const vec<size_t, N>& extents, const T& value = {}) :
+  constexpr explicit ndarray(const vec<int, N>& extents, const T& value = {}) :
       _extents{extents}, _data(_size(extents), value) {}
-  template <typename I>
-  constexpr explicit ndarray(const vec<I, N>& extents, const T& value = {}) :
-      _extents{(vec<size_t, N>)extents},
-      _data(_size((vec<size_t, N>)extents), value) {}
-  constexpr ndarray(const T* data, const vec<size_t, N>& extents) :
+  constexpr ndarray(const T* data, const vec<int, N>& extents) :
       _extents{extents}, _data(data, data + _size(extents)) {}
-  template <typename I>
-  constexpr ndarray(const T* data, const vec<I, N>& extents) :
-      _extents{(vec<size_t, N>)extents},
-      _data(data, data + _size((vec<size_t, N>)extents)) {}
   constexpr ndarray(const ndarray& other) :
       _extents{other._extents}, _data{other._data} {}
   constexpr ndarray(ndarray&& other) noexcept : _extents{0}, _data{} {
@@ -118,28 +109,20 @@ struct ndarray {
   }
 
   // Size
-  constexpr bool           empty() const { return size() == 0; }
-  constexpr size_t         size() const { return _size(_extents); }
-  constexpr vec<size_t, N> extents() const { return _extents; }
-  constexpr size_t         extent(size_t dimension) const {
+  constexpr bool        empty() const { return size() == 0; }
+  constexpr size_t      size() const { return _size(_extents); }
+  constexpr vec<int, N> extents() const { return _extents; }
+  constexpr size_t      extent(size_t dimension) const {
     return _extents[dimension];
   }
-  constexpr vec<size_t, N> shape() const { return _extents; }
-  constexpr size_t         rank() const { return N; }
+  constexpr vec<int, N> shape() const { return _extents; }
+  constexpr size_t      rank() const { return N; }
 
   // Access
-  constexpr T& operator[](const vec<size_t, N>& idx) {
-    return _data[_index(idx, _extents)];
-  }
-  constexpr const T& operator[](const vec<size_t, N>& idx) const {
-    return _data[_index(idx, _extents)];
-  }
-  template <typename I>
-  constexpr T& operator[](const vec<I, N>& idx) {
+  constexpr T& operator[](const vec<int, N>& idx) {
     return _data[_index((vec2s)idx, _extents)];
   }
-  template <typename I>
-  constexpr const T& operator[](const vec<I, N>& idx) const {
+  constexpr const T& operator[](const vec<int, N>& idx) const {
     return _data[_index((vec2s)idx, _extents)];
   }
 
@@ -154,26 +137,23 @@ struct ndarray {
   constexpr const T* data() const { return _data.data(); }
 
  private:
-  vec<size_t, N> _extents = {0};
-  vector<T>      _data    = {};
+  vec<int, N> _extents = {0};
+  vector<T>   _data    = {};
 
-  static size_t _size(const vec<size_t, 1>& extents) { return extents[0]; }
-  static size_t _size(const vec<size_t, 2>& extents) {
+  static size_t _size(const vec<int, 1>& extents) { return extents[0]; }
+  static size_t _size(const vec<int, 2>& extents) {
     return extents[0] * extents[1];
   }
-  static size_t _size(const vec<size_t, 3>& extents) {
+  static size_t _size(const vec<int, 3>& extents) {
     return extents[0] * extents[1] * extents[2];
   }
-  static size_t _index(
-      const vec<size_t, 1>& index, const vec<size_t, 1>& extents) {
+  static size_t _index(const vec<int, 1>& index, const vec<int, 1>& extents) {
     return index[0];
   }
-  static size_t _index(
-      const vec<size_t, 2>& index, const vec<size_t, 2>& extents) {
+  static size_t _index(const vec<int, 2>& index, const vec<int, 2>& extents) {
     return index[1] * extents[0] + index[0];
   }
-  static size_t _index(
-      const vec<size_t, 3>& index, const vec<size_t, 3>& extents) {
+  static size_t _index(const vec<int, 3>& index, const vec<int, 3>& extents) {
     return (index[2] * extents[1] + index[1]) * extents[0] + index[0];
   }
 };
