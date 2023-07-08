@@ -657,18 +657,8 @@ constexpr kernel pair<vec3f, vec3f> quad_tangents_fromuv(
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Computes the aspect ratio.
-constexpr kernel float aspect_ratio(const vec2i& size) {
-  return size.x / size.y;
-}
-
-// Flip u from [0,1] to [1,0]
-constexpr kernel vec2f flip_u(const vec2f& uv) { return {1 - uv.x, uv.y}; }
-// Flip v from [0,1] to [1,0]
-constexpr kernel vec2f flip_v(const vec2f& uv) { return {uv.x, 1 - uv.y}; }
-
 // Generate a ray from a camera
-constexpr kernel ray3f camera_ray(const frame3f& frame, float lens,
+inline kernel ray3f camera_ray(const frame3f& frame, float lens,
     const vec2f& film, const vec2f& image_uv) {
   auto uv  = flip_u(image_uv);
   auto e   = vec3f{0, 0, 0};
@@ -680,8 +670,8 @@ constexpr kernel ray3f camera_ray(const frame3f& frame, float lens,
 }
 
 // Generate a ray from a camera
-constexpr kernel ray3f camera_ray(const frame3f& frame, float lens,
-    float aspect, float film_, const vec2f& image_uv) {
+inline kernel ray3f camera_ray(const frame3f& frame, float lens, float aspect,
+    float film_, const vec2f& image_uv) {
   auto uv   = flip_u(image_uv);
   auto film = aspect >= 1 ? vec2f{film_, film_ / aspect}
                           : vec2f{film_ * aspect, film_};

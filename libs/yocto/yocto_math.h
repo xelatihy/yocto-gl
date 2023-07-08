@@ -2908,179 +2908,52 @@ constexpr kernel vec<T, 4> rotation_quat(const vec<T, 4>& axisangle) {
 namespace yocto {
 
 // Computes the aspect ratio.
-template <typename I, typename T = float>
-constexpr kernel T aspect_ratio(const vec<I, 2>& size) {
-  return (T)size.x / (T)size.y;
+inline kernel float aspect_ratio(const vec2i& size) {
+  return (float)size.x / (float)size.y;
 }
 
 // Flip u from [0,1] to [1,0]
-template <typename T>
-constexpr kernel vec<T, 2> flip_u(const vec<T, 2>& uv) {
-  return {1 - uv.x, uv.y};
-}
+inline kernel vec2f flip_u(const vec2f& uv) { return {1 - uv.x, uv.y}; }
 // Flip v from [0,1] to [1,0]
-template <typename T>
-constexpr kernel vec<T, 2> flip_v(const vec<T, 2>& uv) {
-  return {uv.x, 1 - uv.y};
-}
+inline kernel vec2f flip_v(const vec2f& uv) { return {uv.x, 1 - uv.y}; }
 
 // Computes the image uv coordinates corresponding to the view parameters.
 // Returns negative coordinates if out of the image.
-template <typename T, typename I>
-constexpr kernel vec<I, 2> image_coords(const vec<T, 2>& mouse_pos,
-    const vec<T, 2>& center, T scale, const vec<I, 2>& size,
-    bool clamped = true) {
+inline kernel vec2i image_coords(const vec2f& mouse_pos, const vec2f& center,
+    float scale, const vec2i& size, bool clamped = true) {
   auto xy = (mouse_pos - center) / scale;
-  auto ij = (vec<I, 2>)round(xy + size / (T)2);
+  auto ij = (vec2i)round(xy + size / 2.0f);
   return clamped ? clamp(ij, 0, size) : ij;
 }
 
 // Center image and autofit. Returns center and scale.
-template <typename T, typename I>
-constexpr kernel pair<vec<T, 2>, T> camera_imview(const vec<T, 2>& center,
-    T scale, const vec<I, 2>& imsize, const vec<I, 2>& winsize,
-    bool zoom_to_fit) {
+inline kernel pair<vec2f, float> camera_imview(const vec2f& center, float scale,
+    const vec2i& imsize, const vec2i& winsize, bool zoom_to_fit) {
   if (zoom_to_fit) {
-    return {(vec<T, 2>)winsize / 2, min(winsize / (vec<T, 2>)imsize)};
+    return {(vec2f)winsize / 2, min(winsize / (vec2f)imsize)};
   } else {
     return {select(component_greater_equal(winsize, imsize * scale),
-                (vec<T, 2>)winsize / 2, center),
+                (vec2f)winsize / 2, center),
         scale};
   }
 }
 
 // Turntable for UI navigation. Returns from and to.
-template <typename T>
-constexpr kernel pair<vec<T, 3>, vec<T, 3>> camera_turntable(
-    const vec<T, 3>& from_, const vec<T, 3>& to_, const vec<T, 3>& up,
-    const vec<T, 2>& rotate, T dolly, const vec<T, 2>& pan) {
+inline kernel pair<vec3f, vec3f> camera_turntable(const vec3f& from_,
+    const vec3f& to_, const vec3f& up, const vec2f& rotate, float dolly,
+    const vec2f& pan) {
   // copy values
   auto from = from_, to = to_;
 
   // rotate if necessary
-  if (rotate != vec<T, 2>{0, 0}) {
+  if (rotate != vec2f{0, 0}) {
     auto z     = normalize(to - from);
     auto lz    = length(to - from);
     auto phi   = atan2(z.z, z.x) + rotate.x;
     auto theta = acos(z.y) + rotate.y;
-    theta      = clamp(theta, (T)0.001, (T)pi - (T)0.001);
-    auto nz    = vec<T, 3>{sin(theta) * cos(phi) * lz, cos(theta) * lz,
-           sin(theta) * sin(phi) * lz};
-    from       = to - nz;
-  }
-
-  // dolly if necessary
-  if (dolly != 0) {
-    auto z  = normalize(to - from);
-    auto lz = max((T)0.001, length(to - from) * (1 + dolly));
-    z *= lz;
-    from = to - z;
-  }
-
-  // pan if necessary
-  if (pan != vec<T, 2>{0, 0}) {
-    auto z = normalize(to - from);
-    auto x = normalize(cross(up, z));
-    auto y = normalize(cross(z, x));
-    auto t = vec<T, 3>{pan.x * x.x + pan.y * y.x, pan.x * x.y + pan.y * y.y,
-        pan.x * x.z + pan.y * y.z};
-    from += t;
-    to += t;
-  }
-
-  // done
-  return {from, to};
-}
-
-// Turntable for UI navigation. Returns frame and focus.
-template <typename T>
-constexpr kernel pair<frame<T, 3>, T> camera_turntable(
-    const frame<T, 3>& frame_, T focus, const vec<T, 2>& rotate, T dolly,
-    const vec<T, 2>& pan) {
-  // copy values
-  auto frame = frame_;
-
-  // rotate if necessary
-  if (rotate != vec<T, 2>{0, 0}) {
-    auto phi   = atan2(frame.z.z, frame.z.x) + rotate.x;
-    auto theta = acos(frame.z.y) + rotate.y;
-    theta      = clamp(theta, (T)0.001, (T)pi - (T)0.001);
-    auto new_z = vec<T, 3>{
-        sin(theta) * cos(phi), cos(theta), sin(theta) * sin(phi)};
-    auto new_center = frame.o - frame.z * focus;
-    auto new_o      = new_center + new_z * focus;
-    frame           = lookat_frame(new_o, new_center, vec<T, 3>{0, 1, 0});
-    focus           = length(new_o - new_center);
-  }
-
-  // pan if necessary
-  if (dolly != 0) {
-    auto c  = frame.o - frame.z * focus;
-    focus   = max(focus * (1 + dolly), (T)0.001);
-    frame.o = c + frame.z * focus;
-  }
-
-  // pan if necessary
-  if (pan != vec<T, 2>{0, 0}) {
-    frame.o += frame.x * pan.x + frame.y * pan.y;
-  }
-
-  // done
-  return {frame, focus};
-}
-
-// FPS camera for UI navigation for a frame parametrization. Returns frame.
-template <typename T>
-constexpr kernel frame<T, 3> camera_fpscam(const frame<T, 3>& frame,
-    const vec<T, 3>& transl, const vec<T, 2>& rotate) {
-  // https://gamedev.stackexchange.com/questions/30644/how-to-keep-my-quaternion-using-fps-camera-from-tilting-and-messing-up
-  auto y = vec<T, 3>{0, 1, 0};
-  auto z = orthonormalize(frame.z, y);
-  auto x = cross(y, z);
-
-  auto rot = rotation_frame(vec<T, 3>{1, 0, 0}, rotate.y) *
-             yocto::frame<T, 3>{frame.x, frame.y, frame.z, vec<T, 3>{0, 0, 0}} *
-             rotation_frame(vec<T, 3>{0, 1, 0}, rotate.x);
-  auto pos = frame.o() + transl.x * x + transl.y * y + transl.z * z;
-
-  return {rot.x, rot.y, rot.z, pos};
-}
-
-// Computes the image uv coordinates corresponding to the view parameters.
-// Returns negative coordinates if out of the image.
-template <typename T, typename I>
-constexpr kernel vec2i get_image_coords(const vec<T, 2>& mouse_pos,
-    const vec<T, 2>& center, T scale, const vec<I, 2>& txt_size) {
-  auto xy = (mouse_pos - center) / scale;
-  return (vec2i)round(xy + txt_size / (T)2);
-}
-
-// Center image and autofit.
-template <typename T, typename I>
-constexpr kernel void update_imview(vec<T, 2>& center, T& scale,
-    const vec<I, 2>& imsize, const vec<I, 2>& winsize, bool zoom_to_fit) {
-  if (zoom_to_fit) {
-    scale  = min((vec<T, 2>)winsize / imsize);
-    center = (vec<T, 2>)winsize / 2;
-  } else {
-    if (winsize.x >= imsize.x * scale) center.x = (T)winsize.x / 2;
-    if (winsize.y >= imsize.y * scale) center.y = (T)winsize.y / 2;
-  }
-}
-
-// Turntable for UI navigation.
-template <typename T>
-constexpr kernel void update_turntable(vec<T, 3>& from, vec<T, 3>& to,
-    vec<T, 3>& up, const vec<T, 2>& rotate, T dolly, const vec<T, 2>& pan) {
-  // rotate if necessary
-  if (rotate != vec<T, 2>{0, 0}) {
-    auto z     = normalize(to - from);
-    auto lz    = length(to - from);
-    auto phi   = atan2(z.z, z.x) + rotate.x;
-    auto theta = acos(z.y) + rotate.y;
-    theta      = clamp(theta, (T)0.001, (T)pi - (T)0.001);
-    auto nz    = vec<T, 3>{sin(theta) * cos(phi) * lz, cos(theta) * lz,
-           sin(theta) * sin(phi) * lz};
+    theta      = clamp(theta, 0.001f, pif - 0.001f);
+    auto nz    = vec3f{sin(theta) * cos(phi) * lz, cos(theta) * lz,
+        sin(theta) * sin(phi) * lz};
     from       = to - nz;
   }
 
@@ -3093,7 +2966,116 @@ constexpr kernel void update_turntable(vec<T, 3>& from, vec<T, 3>& to,
   }
 
   // pan if necessary
-  if (pan != vec<T, 2>{0, 0}) {
+  if (pan != vec2f{0, 0}) {
+    auto z = normalize(to - from);
+    auto x = normalize(cross(up, z));
+    auto y = normalize(cross(z, x));
+    auto t = vec3f{pan.x * x.x + pan.y * y.x, pan.x * x.y + pan.y * y.y,
+        pan.x * x.z + pan.y * y.z};
+    from += t;
+    to += t;
+  }
+
+  // done
+  return {from, to};
+}
+
+// Turntable for UI navigation. Returns frame and focus.
+inline kernel pair<frame3f, float> camera_turntable(const frame3f& frame_,
+    float focus, const vec2f& rotate, float dolly, const vec2f& pan) {
+  // copy values
+  auto frame = frame_;
+
+  // rotate if necessary
+  if (rotate != vec2f{0, 0}) {
+    auto phi   = atan2(frame.z.z, frame.z.x) + rotate.x;
+    auto theta = acos(frame.z.y) + rotate.y;
+    theta      = clamp(theta, 0.001f, pif - 0.001f);
+    auto new_z = vec3f{
+        sin(theta) * cos(phi), cos(theta), sin(theta) * sin(phi)};
+    auto new_center = frame.o - frame.z * focus;
+    auto new_o      = new_center + new_z * focus;
+    frame           = lookat_frame(new_o, new_center, vec3f{0, 1, 0});
+    focus           = length(new_o - new_center);
+  }
+
+  // pan if necessary
+  if (dolly != 0) {
+    auto c  = frame.o - frame.z * focus;
+    focus   = max(focus * (1 + dolly), 0.001f);
+    frame.o = c + frame.z * focus;
+  }
+
+  // pan if necessary
+  if (pan != vec2f{0, 0}) {
+    frame.o += frame.x * pan.x + frame.y * pan.y;
+  }
+
+  // done
+  return {frame, focus};
+}
+
+// FPS camera for UI navigation for a frame parametrization. Returns frame.
+inline kernel frame3f camera_fpscam(
+    const frame3f& frame, const vec3f& transl, const vec2f& rotate) {
+  // https://gamedev.stackexchange.com/questions/30644/how-to-keep-my-quaternion-using-fps-camera-from-tilting-and-messing-up
+  auto y = vec3f{0, 1, 0};
+  auto z = orthonormalize(frame.z, y);
+  auto x = cross(y, z);
+
+  auto rot = rotation_frame(vec3f{1, 0, 0}, rotate.y) *
+             yocto::frame3f{frame.x, frame.y, frame.z, vec3f{0, 0, 0}} *
+             rotation_frame(vec3f{0, 1, 0}, rotate.x);
+  auto pos = frame.o + transl.x * x + transl.y * y + transl.z * z;
+
+  return {rot.x, rot.y, rot.z, pos};
+}
+
+// Computes the image uv coordinates corresponding to the view parameters.
+// Returns negative coordinates if out of the image.
+inline kernel vec2i get_image_coords(const vec2f& mouse_pos,
+    const vec2f& center, float scale, const vec2i& txt_size) {
+  auto xy = (mouse_pos - center) / scale;
+  return (vec2i)round(xy + txt_size / 2.0f);
+}
+
+// Center image and autofit.
+inline kernel void update_imview(vec2f& center, float& scale,
+    const vec2i& imsize, const vec2i& winsize, bool zoom_to_fit) {
+  if (zoom_to_fit) {
+    scale  = min((vec2f)winsize / imsize);
+    center = (vec2f)winsize / 2;
+  } else {
+    if (winsize.x >= imsize.x * scale) center.x = winsize.x / 2.0f;
+    if (winsize.y >= imsize.y * scale) center.y = winsize.y / 2.0f;
+  }
+}
+
+// Turntable for UI navigation.
+inline kernel void update_turntable(vec3f& from, vec3f& to, vec3f& up,
+    const vec2f& rotate, float dolly, const vec2f& pan) {
+  // rotate if necessary
+  if (rotate != vec2f{0, 0}) {
+    auto z     = normalize(to - from);
+    auto lz    = length(to - from);
+    auto phi   = atan2(z.z, z.x) + rotate.x;
+    auto theta = acos(z.y) + rotate.y;
+    theta      = clamp(theta, 0.001f, pif - 0.001f);
+    auto nz    = vec3f{sin(theta) * cos(phi) * lz, cos(theta) * lz,
+        sin(theta) * sin(phi) * lz};
+    from       = to - nz;
+  }
+
+  // dolly if necessary
+  if (dolly != 0) {
+    auto z  = normalize(to - from);
+    auto lz = max(0.001f, length(to - from) * (1 + dolly));
+    z *= lz;
+    from = to - z;
+  }
+
+  // pan if necessary
+  if (pan != vec2f{0, 0}) {
     auto z = normalize(to - from);
     auto x = normalize(cross(up, z));
     auto y = normalize(cross(z, x));
@@ -3104,15 +3086,14 @@ constexpr kernel void update_turntable(vec<T, 3>& from, vec<T, 3>& to,
 }
 
 // Turntable for UI navigation.
-template <typename T>
-constexpr kernel void update_turntable(frame<T, 3>& frame, T& focus,
-    const vec<T, 2>& rotate, T dolly, const vec<T, 2>& pan) {
+inline kernel void update_turntable(frame3f& frame, float& focus,
+    const vec2f& rotate, float dolly, const vec2f& pan) {
   // rotate if necessary
-  if (rotate != vec<T, 2>{0, 0}) {
+  if (rotate != vec2f{0, 0}) {
     auto phi   = atan2(frame.z.z, frame.z.x) + rotate.x;
     auto theta = acos(frame.z.y) + rotate.y;
-    theta      = clamp(theta, (T)0.001, (T)pi - (T)0.001);
-    auto new_z = vec<T, 3>{
+    theta      = clamp(theta, 0.001f, pif - 0.001f);
+    auto new_z = vec3f{
         sin(theta) * cos(phi), cos(theta), sin(theta) * sin(phi)};
     auto new_center = frame.o - frame.z * focus;
     auto new_o      = new_center + new_z * focus;
@@ -3123,31 +3104,30 @@ constexpr kernel void update_turntable(frame<T, 3>& frame, T& focus,
   // pan if necessary
   if (dolly != 0) {
     auto c  = frame.o - frame.z * focus;
-    focus   = max(focus * (1 + dolly), (T)0.001);
+    focus   = max(focus * (1 + dolly), 0.001f);
     frame.o = c + frame.z * focus;
   }
 
   // pan if necessary
-  if (pan != vec<T, 2>{0, 0}) {
-    frame.o() += frame.x * pan.x + frame.y * pan.y;
+  if (pan != vec2f{0, 0}) {
+    frame.o += frame.x * pan.x + frame.y * pan.y;
   }
 }
 
 // FPS camera for UI navigation for a frame parametrization.
-template <typename T>
-constexpr kernel void update_fpscam(
-    frame<T, 3>& frame, const vec<T, 3>& transl, const vec<T, 2>& rotate) {
+inline kernel void update_fpscam(
+    frame3f& frame, const vec3f& transl, const vec2f& rotate) {
   // https://gamedev.stackexchange.com/questions/30644/how-to-keep-my-quaternion-using-fps-camera-from-tilting-and-messing-up
-  auto y = vec<T, 3>{0, 1, 0};
+  auto y = vec3f{0, 1, 0};
   auto z = orthonormalize(frame.z, y);
   auto x = cross(y, z);
 
-  auto rot = rotation_frame(vec<T, 3>{1, 0, 0}, rotate.y) *
-             yocto::frame<T, 3>{frame.x, frame.y, frame.z, vec<T, 3>{0, 0, 0}} *
-             rotation_frame(vec<T, 3>{0, 1, 0}, rotate.x);
+  auto rot = rotation_frame(vec3f{1, 0, 0}, rotate.y) *
+             yocto::frame3f{frame.x, frame.y, frame.z, vec3f{0, 0, 0}} *
+             rotation_frame(vec3f{0, 1, 0}, rotate.x);
   auto pos = frame.o + transl.x * x + transl.y * y + transl.z * z;
 
-  frame = {rot, pos};
+  frame = {rot.x, rot.y, rot.z, pos};
 }
 
 }  // namespace yocto
@@ -3174,18 +3154,20 @@ constexpr kernel int isize(const Sequence& sequence) {
 namespace yocto {
 
 template <typename C>
-std::basic_istream<C>& operator>>(std::basic_istream<C>& s, const char a) {
+inline std::basic_istream<C>& operator>>(
+    std::basic_istream<C>& s, const char a) {
   constexpr auto max_size = std::numeric_limits<ptrdiff_t>::max();
   return s.ignore(max_size, a);
 }
 template <typename C>
-std::basic_istream<C>& operator>>(std::basic_istream<C>& s, const char* a) {
+inline std::basic_istream<C>& operator>>(
+    std::basic_istream<C>& s, const char* a) {
   constexpr auto max_size = std::numeric_limits<ptrdiff_t>::max();
   return s.ignore(max_size, a[0]);
 }
 
 template <typename C, typename T, size_t N>
-std::basic_ostream<C>& operator<<(
+inline std::basic_ostream<C>& operator<<(
     std::basic_ostream<C>& s, const vec<T, N>& a) {
   if constexpr (N == 1) {
     return s << "[" << a.x << "]";
@@ -3200,7 +3182,8 @@ std::basic_ostream<C>& operator<<(
 }
 
 template <typename C, typename T, size_t N>
-std::basic_istream<C>& operator>>(std::basic_istream<C>& s, vec<T, N>& a) {
+inline std::basic_istream<C>& operator>>(
+    std::basic_istream<C>& s, vec<T, N>& a) {
   if constexpr (N == 1) {
     return s >> "[" >> a.x >> "]";
   } else if constexpr (N == 2) {
@@ -3214,7 +3197,7 @@ std::basic_istream<C>& operator>>(std::basic_istream<C>& s, vec<T, N>& a) {
 }
 
 template <typename C, typename T, size_t N, size_t M>
-std::basic_ostream<C>& operator<<(
+inline std::basic_ostream<C>& operator<<(
     std::basic_ostream<C>& out, const mat<T, N, M>& a) {
   if constexpr (N == 1) {
     return out << "[" << a.x << "]";
@@ -3229,7 +3212,8 @@ std::basic_ostream<C>& operator<<(
 }
 
 template <typename C, typename T, size_t N, size_t M>
-std::basic_istream<C>& operator>>(std::basic_istream<C>& out, mat<T, N, M>& a) {
+inline std::basic_istream<C>& operator>>(
+    std::basic_istream<C>& out, mat<T, N, M>& a) {
   if constexpr (N == 1) {
     return out >> "[" >> a.x >> "]";
   } else if constexpr (N == 2) {
@@ -3243,7 +3227,7 @@ std::basic_istream<C>& operator>>(std::basic_istream<C>& out, mat<T, N, M>& a) {
 }
 
 template <typename C, typename T, size_t N>
-std::basic_ostream<C>& operator<<(
+inline std::basic_ostream<C>& operator<<(
     std::basic_ostream<C>& out, const frame<T, N>& a) {
   if constexpr (N == 2) {
     return out << "[" << a.x << "," << a.y << "," << a.o << "]";
@@ -3254,7 +3238,8 @@ std::basic_ostream<C>& operator<<(
 }
 
 template <typename C, typename T, size_t N>
-std::basic_istream<C>& operator>>(std::basic_istream<C>& out, frame<T, N>& a) {
+inline std::basic_istream<C>& operator>>(
+    std::basic_istream<C>& out, frame<T, N>& a) {
   if constexpr (N == 2) {
     return out >> "[" >> a.x >> "," >> a.y >> "," >> a.o >> "]";
   } else if constexpr (N == 3) {
@@ -3264,7 +3249,7 @@ std::basic_istream<C>& operator>>(std::basic_istream<C>& out, frame<T, N>& a) {
 }
 
 template <typename C, typename T, size_t N>
-std::basic_ostream<C>& operator<<(
+inline std::basic_ostream<C>& operator<<(
     std::basic_ostream<C>& out, const quat<T, N>& a) {
   if constexpr (N == 4) {
     return out << "[" << a.x << "," << a.y << "," << a.z << "," << a.w << "]";
@@ -3273,7 +3258,8 @@ std::basic_ostream<C>& operator<<(
 }
 
 template <typename C, typename T, size_t N>
-std::basic_istream<C>& operator>>(std::basic_istream<C>& out, quat<T, N>& a) {
+inline std::basic_istream<C>& operator>>(
+    std::basic_istream<C>& out, quat<T, N>& a) {
   if constexpr (N == 4) {
     return out >> "[" >> a.x >> "," >> a.y >> "," >> a.z >> "," >> a.w >> "]";
   } else {
