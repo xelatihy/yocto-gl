@@ -420,9 +420,8 @@ template <typename T, size_t N>
 inline void to_json(json_value& json, const vec<T, N>& value) {
   nlohmann::to_json(json, (const array<T, N>&)value);
 }
-template <typename T, size_t N>
-inline void to_json(json_value& json, const frame<T, N>& value) {
-  nlohmann::to_json(json, (const array<array<T, N>, (N + 1)>&)value);
+inline void to_json(json_value& json, const frame3f& value) {
+  nlohmann::to_json(json, (const array<array<float, 3>, 4>&)value);
 }
 template <typename T, size_t N, size_t M>
 inline void to_json(json_value& json, const mat<T, N, M>& value) {
@@ -432,12 +431,11 @@ template <typename T, size_t N>
 inline void from_json(const json_value& json, vec<T, N>& value) {
   nlohmann::from_json(json, (array<T, N>&)value);
 }
-template <typename T, size_t N>
-inline void from_json(const json_value& json, frame<T, N>& value) {
+inline void from_json(const json_value& json, frame3f& value) {
   if (json.is_array() && !json.empty() && !json.front().is_array()) {
-    nlohmann::from_json(json, (array<T, N*(N + 1)>&)value);
+    nlohmann::from_json(json, (array<float, 12>&)value);
   } else {
-    nlohmann::from_json(json, (array<array<T, N>, (N + 1)>&)value);
+    nlohmann::from_json(json, (array<array<float, 3>, 4>&)value);
   }
 }
 template <typename T, size_t N, size_t M>

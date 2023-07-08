@@ -2385,73 +2385,58 @@ constexpr kernel mat<T, 3, 3> basis_fromz(const vec<T, 3>& v) {
 namespace yocto {
 
 // Rigid frames stored as a column-major affine transform matrix.
-template <typename T, size_t N>
-struct frame;
+struct frame2f {
+  vec2f x = {1, 0};
+  vec2f y = {0, 1};
+  vec2f o = {0, 0};
 
-// Rigid frames stored as a column-major affine transform matrix.
-template <typename T>
-struct frame<T, 2> {
-  vec<T, 2> x = {1, 0};
-  vec<T, 2> y = {0, 1};
-  vec<T, 2> o = {0, 0};
-
-  constexpr kernel frame() : x{1, 0}, y{0, 1}, o{0, 0} {}
-  constexpr kernel frame(const vec<T, 3>& r0, const vec<T, 3>& r1) :
-      x{r0.x, r1.x}, y{r0.y, r1.y}, o{r0.z, r1.z} {}
-  constexpr kernel frame(
-      const vec<T, 2>& x_, const vec<T, 2>& y_, const vec<T, 2>& o_) :
+  constexpr kernel frame2f() : x{1, 0}, y{0, 1}, o{0, 0} {}
+  // constexpr kernel frame2f(const vec<T, 3>& r0, const vec<T, 3>& r1) :
+  //     x{r0.x, r1.x}, y{r0.y, r1.y}, o{r0.z, r1.z} {}
+  constexpr kernel frame2f(const vec2f& x_, const vec2f& y_, const vec2f& o_) :
       x{x_}, y{y_}, o{o_} {}
-  constexpr kernel frame(const mat<T, 2, 2>& xy_, const vec<T, 2>& o_) :
+  constexpr kernel frame2f(const mat2x2f& xy_, const vec2f& o_) :
       x{xy_.x}, y{xy_.y}, o{o_} {}
 
-  explicit constexpr kernel frame(const mat<T, 3, 3>& m) :
+  explicit constexpr kernel frame2f(const mat3x3f& m) :
       x{xy(m.x)}, y{xy(m.y)}, o{xy(m.z)} {}
-  explicit constexpr kernel operator mat<T, 3, 3>() const {
+  explicit constexpr kernel operator mat3x3f() const {
     return {{x, 0}, {y, 0}, {o, 1}};
   }
 
-  constexpr kernel vec<T, 2>& operator[](size_t i) { return (&x)[i]; }
-  constexpr kernel const vec<T, 2>& operator[](size_t i) const {
-    return (&x)[i];
-  }
+  constexpr kernel vec2f&       operator[](size_t i) { return (&x)[i]; }
+  constexpr kernel const vec2f& operator[](size_t i) const { return (&x)[i]; }
 };
 
 // Rigid frames stored as a column-major affine transform matrix.
-template <typename T>
-struct frame<T, 3> {
-  vec<T, 3> x = {1, 0, 0};
-  vec<T, 3> y = {0, 0, 1};
-  vec<T, 3> z = {0, 0, 1};
-  vec<T, 3> o = {0, 0, 0};
+struct frame3f {
+  vec3f x = {1, 0, 0};
+  vec3f y = {0, 0, 1};
+  vec3f z = {0, 0, 1};
+  vec3f o = {0, 0, 0};
 
-  constexpr kernel frame() : x{1, 0, 0}, y{0, 1, 0}, z{0, 0, 1}, o{0, 0, 0} {}
-  constexpr kernel frame(
-      const vec<T, 4>& r0, const vec<T, 4>& r1, const vec<T, 4>& r2) :
-      x{r0.x, r1.x, r2.x},
-      y{r0.y, r1.y, r2.y},
-      z{r0.z, r1.z, r2.z},
-      o{r0.w, r1.w, r2.w} {}
-  constexpr kernel frame(const vec<T, 3>& x_, const vec<T, 3>& y_,
-      const vec<T, 3>& z_, const vec<T, 3>& o_) :
+  constexpr kernel frame3f() : x{1, 0, 0}, y{0, 1, 0}, z{0, 0, 1}, o{0, 0, 0} {}
+  // constexpr kernel frame3f(const vec4f& r0, const vec4f& r1, const vec4f& r2)
+  // :
+  //     x{r0.x, r1.x, r2.x},
+  //     y{r0.y, r1.y, r2.y},
+  //     z{r0.z, r1.z, r2.z},
+  //     o{r0.w, r1.w, r2.w} {}
+  constexpr kernel frame3f(
+      const vec3f& x_, const vec3f& y_, const vec3f& z_, const vec3f& o_) :
       x{x_}, y{y_}, z{z_}, o{o_} {}
-  constexpr kernel frame(const mat<T, 3, 3>& xyz_, const vec<T, 3>& o_) :
+  constexpr kernel frame3f(const mat3x3f& xyz_, const vec3f& o_) :
       x{xyz_.x}, y{xyz_.y}, z{xyz_.z}, o{o_} {}
 
-  explicit constexpr kernel frame(const mat<T, 4, 4>& m) :
+  explicit constexpr kernel frame3f(const mat4x4f& m) :
       x{xyz(m.x)}, y{xyz(m.y)}, z{xyz(m.z)}, o{xyz(m.w)} {}
-  explicit constexpr kernel operator mat<T, 4, 4>() const {
+  explicit constexpr kernel operator mat4x4f() const {
     return {{x, 0}, {y, 0}, {z, 0}, {o, 1}};
   }
 
-  constexpr kernel vec<T, 3>& operator[](size_t i) { return (&x)[i]; }
-  constexpr kernel const vec<T, 3>& operator[](size_t i) const {
-    return (&x)[i];
-  }
+  constexpr kernel vec3f&       operator[](size_t i) { return (&x)[i]; }
+  constexpr kernel const vec3f& operator[](size_t i) const { return (&x)[i]; }
 };
-
-// Frame aliases
-using frame2f = frame<float, 2>;
-using frame3f = frame<float, 3>;
 
 // Identity frames.
 constexpr auto identity2x3f = frame2f{{1, 0}, {0, 1}, {0, 0}};
@@ -2459,63 +2444,80 @@ constexpr auto identity3x4f = frame3f{
     {1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}};
 
 // Frame properties
-template <typename T, size_t N>
-constexpr kernel const mat<T, N, N>& rotation(const frame<T, N>& a) {
-  return (const mat<T, N, N>&)a;
+inline kernel const mat2f& rotation(const frame2f& a) {
+  return (const mat2f&)a;
 }
-template <typename T, size_t N>
-constexpr kernel const vec<T, N>& translation(const frame<T, N>& a) {
-  return a.o;
-}
+inline kernel const vec2f& translation(const frame2f& a) { return a.o; }
 
 // Frame/mat conversion
-template <typename T, size_t N>
-constexpr kernel frame<T, N - 1> to_frame(const mat<T, N, N>& m) {
-  if constexpr (N == 3) {
-    return {xy(m.x), xy(m.y), xy(m.z)};
-  } else if constexpr (N == 4) {
-    return {xyz(m.x), xyz(m.y), xyz(m.z), xyz(m.w)};
-  }
+inline kernel frame2f to_frame(const mat3f& m) {
+  return {xy(m.x), xy(m.y), xy(m.z)};
 }
-template <typename T, size_t N>
-constexpr kernel mat<T, N + 1, N + 1> to_mat(const frame<T, N>& f) {
-  if constexpr (N == 2) {
-    return {{f.x, 0}, {f.y, 0}, {f.o, 1}};
-  } else if constexpr (N == 3) {
-    return {{f.x, 0}, {f.y, 0}, {f.z, 0}, {f.o, 1}};
-  }
+inline kernel mat3x3f to_mat(const frame2f& f) {
+  return {{f.x, 0}, {f.y, 0}, {f.o, 1}};
 }
 
 // Frame comparisons.
-template <typename T1, typename T2, size_t N>
-constexpr kernel bool operator==(const frame<T1, N>& a, const frame<T2, N>& b) {
-  if constexpr (N == 2) {
-    return a.x == b.x && a.y == b.y && a.o == b.o;
-  } else if constexpr (N == 3) {
-    return a.x == b.x && a.y == b.y && a.z == b.z && a.o == b.o;
-  }
+inline kernel bool operator==(const frame2f& a, const frame2f& b) {
+  return a.x == b.x && a.y == b.y && a.o == b.o;
 }
-template <typename T1, typename T2, size_t N>
-constexpr kernel bool operator!=(const frame<T1, N>& a, const frame<T2, N>& b) {
+inline kernel bool operator!=(const frame2f& a, const frame2f& b) {
   return !(a == b);
 }
 
 // Frame composition, equivalent to affine matrix product.
-template <typename T, size_t N>
-constexpr kernel frame<T, N> operator*(
-    const frame<T, N>& a, const frame<T, N>& b) {
+inline kernel frame2f operator*(const frame2f& a, const frame2f& b) {
   auto &ma = rotation(a), &mb = rotation(b);
   return {ma * mb, ma * b.o + a.o};
 }
-template <typename T, size_t N>
-constexpr kernel frame<T, N>& operator*=(frame<T, N>& a, const frame<T, N>& b) {
+inline kernel frame2f& operator*=(frame2f& a, const frame2f& b) {
   return a = a * b;
 }
 
 // Frame inverse, equivalent to rigid affine inverse.
-template <typename T, size_t N>
-constexpr kernel frame<T, N> inverse(
-    const frame<T, N>& a, bool non_rigid = false) {
+inline kernel frame2f inverse(const frame2f& a, bool non_rigid = false) {
+  if (non_rigid) {
+    auto minv = inverse(rotation(a));
+    return {minv, -(minv * a.o)};
+  } else {
+    auto minv = transpose(rotation(a));
+    return {minv, -(minv * a.o)};
+  }
+}
+
+// Frame properties
+inline kernel const mat3x3f& rotation(const frame3f& a) {
+  return (const mat3x3f&)a;
+}
+inline kernel const vec3f& translation(const frame3f& a) { return a.o; }
+
+// Frame/mat conversion
+inline kernel frame3f to_frame(const mat4f& m) {
+  return {xyz(m.x), xyz(m.y), xyz(m.z), xyz(m.w)};
+}
+inline kernel mat4x4f to_mat(const frame3f& f) {
+  return {{f.x, 0}, {f.y, 0}, {f.z, 0}, {f.o, 1}};
+}
+
+// Frame comparisons.
+inline kernel bool operator==(const frame3f& a, const frame3f& b) {
+  return a.x == b.x && a.y == b.y && a.z == b.z && a.o == b.o;
+}
+inline kernel bool operator!=(const frame3f& a, const frame3f& b) {
+  return !(a == b);
+}
+
+// Frame composition, equivalent to affine matrix product.
+inline kernel frame3f operator*(const frame3f& a, const frame3f& b) {
+  auto &ma = rotation(a), &mb = rotation(b);
+  return {ma * mb, ma * b.o + a.o};
+}
+inline kernel frame3f& operator*=(frame3f& a, const frame3f& b) {
+  return a = a * b;
+}
+
+// Frame inverse, equivalent to rigid affine inverse.
+inline kernel frame3f inverse(const frame3f& a, bool non_rigid = false) {
   if (non_rigid) {
     auto minv = inverse(rotation(a));
     return {minv, -(minv * a.o)};
@@ -2526,38 +2528,29 @@ constexpr kernel frame<T, N> inverse(
 }
 
 // Frame construction from axis.
-template <typename T>
-constexpr kernel frame<T, 3> frame_fromz(
-    const vec<T, 3>& o, const vec<T, 3>& v) {
+inline kernel frame3f frame_fromz(const vec3f& o, const vec3f& v) {
   // https://graphics.pixar.com/library/OrthonormalB/paper.pdf
-  if constexpr (std::is_same_v<T, float>) {
-    auto z    = normalize(v);
-    auto sign = copysignf((T)1, z.z);
-    auto a    = -1 / (sign + z.z);
-    auto b    = z.x * z.y * a;
-    auto x    = vec<T, 3>{1 + sign * z.x * z.x * a, sign * b, -sign * z.x};
-    auto y    = vec<T, 3>{b, sign + z.y * z.y * a, -z.y};
-    return {x, y, z, o};
-  } else if constexpr (std::is_same_v<T, double>) {
-    // TODO: double
-    return {};
-  }
+  auto z    = normalize(v);
+  auto sign = copysignf(1.0f, z.z);
+  auto a    = -1 / (sign + z.z);
+  auto b    = z.x * z.y * a;
+  auto x    = vec3f{1 + sign * z.x * z.x * a, sign * b, -sign * z.x};
+  auto y    = vec3f{b, sign + z.y * z.y * a, -z.y};
+  return {x, y, z, o};
 }
-template <typename T>
-constexpr kernel frame<T, 3> frame_fromzx(
-    const vec<T, 3>& o, const vec<T, 3>& z_, const vec<T, 3>& x_) {
+inline kernel frame3f frame_fromzx(
+    const vec3f& o, const vec3f& z_, const vec3f& x_) {
   auto z = normalize(z_);
   auto x = orthonormalize(x_, z);
   auto y = normalize(cross(z, x));
   return {x, y, z, o};
 }
-template <typename T>
-constexpr kernel frame<T, 3> orthonormalize(const frame<T, 3>& frame_) {
+inline kernel frame3f orthonormalize(const frame3f& frame_) {
   auto z = normalize(frame_.z);
   auto x = orthonormalize(frame_.x, z);
   auto y = normalize(cross(z, x));
   auto o = frame_.o;
-  return frame<T, 3>{x, y, z, o};
+  return frame3f{x, y, z, o};
 }
 
 }  // namespace yocto
@@ -3190,26 +3183,26 @@ inline std::basic_istream<C>& operator>>(
   }
 }
 
-template <typename C, typename T, size_t N>
+template <typename C>
 inline std::basic_ostream<C>& operator<<(
-    std::basic_ostream<C>& out, const frame<T, N>& a) {
-  if constexpr (N == 2) {
-    return out << "[" << a.x << "," << a.y << "," << a.o << "]";
-  } else if constexpr (N == 3) {
-    return out << "[" << a.x << "," << a.y << "," << a.z << "," << a.o << "]";
-  } else {
-  }
+    std::basic_ostream<C>& out, const frame2f& a) {
+  return out << "[" << a.x << "," << a.y << "," << a.o << "]";
+}
+template <typename C>
+inline std::basic_istream<C>& operator>>(
+    std::basic_istream<C>& out, frame2f& a) {
+  return out >> "[" >> a.x >> "," >> a.y >> "," >> a.o >> "]";
 }
 
-template <typename C, typename T, size_t N>
+template <typename C>
+inline std::basic_ostream<C>& operator<<(
+    std::basic_ostream<C>& out, const frame3f& a) {
+  return out << "[" << a.x << "," << a.y << "," << a.z << "," << a.o << "]";
+}
+template <typename C>
 inline std::basic_istream<C>& operator>>(
-    std::basic_istream<C>& out, frame<T, N>& a) {
-  if constexpr (N == 2) {
-    return out >> "[" >> a.x >> "," >> a.y >> "," >> a.o >> "]";
-  } else if constexpr (N == 3) {
-    return out >> "[" >> a.x >> "," >> a.y >> "," >> a.z >> "," >> a.o >> "]";
-  } else {
-  }
+    std::basic_istream<C>& out, frame3f& a) {
+  return out >> "[" >> a.x >> "," >> a.y >> "," >> a.z >> "," >> a.o >> "]";
 }
 
 template <typename C>
@@ -3217,7 +3210,6 @@ inline std::basic_ostream<C>& operator<<(
     std::basic_ostream<C>& out, const quat4f& a) {
   return out << "[" << a.x << "," << a.y << "," << a.z << "," << a.w << "]";
 }
-
 template <typename C>
 inline std::basic_istream<C>& operator>>(
     std::basic_istream<C>& out, quat4f& a) {
