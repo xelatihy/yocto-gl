@@ -73,175 +73,99 @@ using std::vector;
 namespace yocto {
 
 // Axis aligned bounding box represented as a min/max vector pairs.
-template <typename T, size_t N>
-struct bbox;
+struct bbox2f {
+  vec2f min = {flt_max, flt_max};
+  vec2f max = {flt_min, flt_min};
 
-// Axis aligned bounding box represented as a min/max vector pairs.
-template <typename T>
-struct bbox<T, 1> {
-  vec<T, 1> min = {num_max<T>};
-  vec<T, 1> max = {num_min<T>};
-
-  constexpr kernel bbox() : min{num_max<T>}, max{num_min<T>} {}
-  constexpr kernel bbox(const vec<T, 1>& min_, const vec<T, 1>& max_) :
+  constexpr kernel bbox2f() : min{flt_max, flt_max}, max{flt_min, flt_min} {}
+  constexpr kernel bbox2f(const vec2f& min_, const vec2f& max_) :
       min{min_}, max{max_} {}
 
-  constexpr kernel vec<T, 1>& operator[](size_t i) {
-    return i == 0 ? min : max;
-  }
-  constexpr kernel const vec<T, 1>& operator[](size_t i) const {
+  constexpr kernel vec2f& operator[](size_t i) { return i == 0 ? min : max; }
+  constexpr kernel const vec2f& operator[](size_t i) const {
     return i == 0 ? min : max;
   }
 };
 
 // Axis aligned bounding box represented as a min/max vector pairs.
-template <typename T>
-struct bbox<T, 2> {
-  vec<T, 2> min = {num_max<T>, num_max<T>};
-  vec<T, 2> max = {num_min<T>, num_min<T>};
+struct bbox3f {
+  vec3f min = {flt_max, flt_max, flt_max};
+  vec3f max = {flt_min, flt_min, flt_min};
 
-  constexpr kernel bbox() :
-      min{num_max<T>, num_max<T>}, max{num_min<T>, num_min<T>} {}
-  constexpr kernel bbox(const vec<T, 2>& min_, const vec<T, 2>& max_) :
+  constexpr kernel bbox3f() :
+      min{flt_max, flt_max, flt_max}, max{flt_min, flt_min, flt_min} {}
+  constexpr kernel bbox3f(const vec3f& min_, const vec3f& max_) :
       min{min_}, max{max_} {}
 
-  constexpr kernel vec<T, 2>& operator[](size_t i) {
-    return i == 0 ? min : max;
-  }
-  constexpr kernel const vec<T, 2>& operator[](size_t i) const {
+  constexpr kernel vec3f& operator[](size_t i) { return i == 0 ? min : max; }
+  constexpr kernel const vec3f& operator[](size_t i) const {
     return i == 0 ? min : max;
   }
 };
-
-// Axis aligned bounding box represented as a min/max vector pairs.
-template <typename T>
-struct bbox<T, 3> {
-  vec<T, 3> min = {num_max<T>, num_max<T>, num_max<T>};
-  vec<T, 3> max = {num_min<T>, num_min<T>, num_min<T>};
-
-  constexpr kernel bbox() :
-      min{num_max<T>, num_max<T>, num_max<T>},
-      max{num_min<T>, num_min<T>, num_min<T>} {}
-  constexpr kernel bbox(const vec<T, 3>& min_, const vec<T, 3>& max_) :
-      min{min_}, max{max_} {}
-
-  constexpr kernel vec<T, 3>& operator[](size_t i) {
-    return i == 0 ? min : max;
-  }
-  constexpr kernel const vec<T, 3>& operator[](size_t i) const {
-    return i == 0 ? min : max;
-  }
-};
-
-// Axis aligned bounding box represented as a min/max vector pairs.
-template <typename T>
-struct bbox<T, 4> {
-  vec<T, 4> min = {num_max<T>, num_max<T>, num_max<T>, num_max<T>};
-  vec<T, 4> max = {num_min<T>, num_min<T>, num_min<T>, num_min<T>};
-
-  constexpr kernel bbox() :
-      min{num_max<T>, num_max<T>, num_max<T>, num_max<T>},
-      max{num_min<T>, num_min<T>, num_min<T>, num_min<T>} {}
-  constexpr kernel bbox(const vec<T, 4>& min_, const vec<T, 4>& max_) :
-      min{min_}, max{max_} {}
-
-  constexpr kernel vec<T, 4>& operator[](size_t i) {
-    return i == 0 ? min : max;
-  }
-  constexpr kernel const vec<T, 4>& operator[](size_t i) const {
-    return i == 0 ? min : max;
-  }
-};
-
-// Bbox aliases
-using bbox1f = bbox<float, 1>;
-using bbox2f = bbox<float, 2>;
-using bbox3f = bbox<float, 3>;
-using bbox4f = bbox<float, 4>;
 
 // Empty bbox constant.
-constexpr auto invalidb1f = bbox1f{};
 constexpr auto invalidb2f = bbox2f{};
 constexpr auto invalidb3f = bbox3f{};
-constexpr auto invalidb4f = bbox4f{};
-
-#ifndef __CUDACC__
-
-// Bounding box construction from a range
-template <typename R, typename T = element_t<rvalue_t<R>>,
-    size_t N = element_d<rvalue_t<R>>>
-inline bbox<T, N> to_bbox(R&& range) {
-  auto box = bbox<T, N>{};
-  for (auto value : range) box = merge(value);
-  return box;
-}
-template <typename R, typename Func,
-    typename T = element_t<result_t<Func, rvalue_t<R>>>,
-    size_t N   = element_d<result_t<Func, rvalue_t<R>>>>
-inline bbox<T, N> to_bbox(R&& range, Func&& func) {
-  auto box = bbox<T, N>{};
-  for (auto value : range) box = merge(func(value));
-  return box;
-}
-
-#endif
 
 // Bounding box properties
-template <typename T, size_t N>
-constexpr kernel vec<T, N> valid(const bbox<T, N>& a) {
-  return all(component_less_equal(a.min, a.max));
+constexpr kernel bool valid(const bbox2f& a) {
+  return a.min.x <= a.max.x && a.min.y <= a.max.y;
 }
-template <typename T, size_t N>
-constexpr kernel bool empty(const bbox<T, N>& a) {
-  return a.min == a.max;
-}
-template <typename T, size_t N>
-constexpr kernel vec<T, N> center(const bbox<T, N>& a) {
-  return (a.min + a.max) / 2;
-}
-template <typename T, size_t N>
-constexpr kernel vec<T, N> diagonal(const bbox<T, N>& a) {
-  return a.max - a.min;
-}
-template <typename T, size_t N>
-constexpr kernel T area(const bbox<T, N>& a) {
-  static_assert(N == 2 || N == 3);
-  if constexpr (N == 2) {
-    auto d = a.max - a.min;
-    return 2 * d.x * d.y;
-  } else if constexpr (N == 3) {
-    auto d = a.max - a.min;
-    return 2 * d.x * d.y + 2 * d.x * d.z + 2 * d.y * d.z;
-  }
+constexpr kernel bool  empty(const bbox2f& a) { return a.min == a.max; }
+constexpr kernel vec2f center(const bbox2f& a) { return (a.min + a.max) / 2; }
+constexpr kernel vec2f diagonal(const bbox2f& a) { return a.max - a.min; }
+constexpr kernel float area(const bbox2f& a) {
+  auto d = a.max - a.min;
+  return 2 * d.x * d.y;
 }
 
 // Bounding box comparisons.
-template <typename T, size_t N>
-constexpr kernel bool operator==(const bbox<T, N>& a, const bbox<T, N>& b) {
+constexpr kernel bool operator==(const bbox2f& a, const bbox2f& b) {
   return a.min == b.min && a.max == b.max;
 }
-template <typename T, size_t N>
-constexpr kernel bool operator!=(const bbox<T, N>& a, const bbox<T, N>& b) {
+constexpr kernel bool operator!=(const bbox2f& a, const bbox2f& b) {
   return a.min != b.min || a.max != b.max;
 }
 
 // Bounding box expansions with points and other boxes.
-template <typename T, size_t N>
-constexpr kernel bbox<T, N> merge(const bbox<T, N>& a, const vec<T, N>& b) {
+constexpr kernel bbox2f merge(const bbox2f& a, const vec2f& b) {
   return {min(a.min, b), max(a.max, b)};
 }
-template <typename T, size_t N>
-constexpr kernel bbox<T, N> merge(const bbox<T, N>& a, const bbox<T, N>& b) {
+constexpr kernel bbox2f merge(const bbox2f& a, const bbox2f& b) {
   return {min(a.min, b.min), max(a.max, b.max)};
 }
-template <typename T, size_t N>
-constexpr kernel void expand(bbox<T, N>& a, const vec<T, N>& b) {
-  a = merge(a, b);
+constexpr kernel void expand(bbox2f& a, const vec2f& b) { a = merge(a, b); }
+constexpr kernel void expand(bbox2f& a, const bbox2f& b) { a = merge(a, b); }
+
+// Bounding box properties
+constexpr kernel bool valid(const bbox3f& a) {
+  return a.min.x <= a.max.x && a.min.y <= a.max.y && a.min.z <= a.max.z;
 }
-template <typename T, size_t N>
-constexpr kernel void expand(bbox<T, N>& a, const bbox<T, N>& b) {
-  a = merge(a, b);
+constexpr kernel bool  empty(const bbox3f& a) { return a.min == a.max; }
+constexpr kernel vec3f center(const bbox3f& a) { return (a.min + a.max) / 2; }
+constexpr kernel vec3f diagonal(const bbox3f& a) { return a.max - a.min; }
+constexpr kernel float area(const bbox3f& a) {
+  auto d = a.max - a.min;
+  return 2 * d.x * d.y + 2 * d.x * d.z + 2 * d.y * d.z;
 }
+
+// Bounding box comparisons.
+constexpr kernel bool operator==(const bbox3f& a, const bbox3f& b) {
+  return a.min == b.min && a.max == b.max;
+}
+constexpr kernel bool operator!=(const bbox3f& a, const bbox3f& b) {
+  return a.min != b.min || a.max != b.max;
+}
+
+// Bounding box expansions with points and other boxes.
+constexpr kernel bbox3f merge(const bbox3f& a, const vec3f& b) {
+  return {min(a.min, b), max(a.max, b)};
+}
+constexpr kernel bbox3f merge(const bbox3f& a, const bbox3f& b) {
+  return {min(a.min, b.min), max(a.max, b.max)};
+}
+constexpr kernel void expand(bbox3f& a, const vec3f& b) { a = merge(a, b); }
+constexpr kernel void expand(bbox3f& a, const bbox3f& b) { a = merge(a, b); }
 
 }  // namespace yocto
 
@@ -251,53 +175,47 @@ constexpr kernel void expand(bbox<T, N>& a, const bbox<T, N>& b) {
 namespace yocto {
 
 // Ray epsilon
-template <typename T>
-constexpr auto ray_eps = (T)1e-4;
+constexpr float ray_eps = 1e-4f;
 
 // Rays with origin, direction and min/max t value.
-template <typename T, size_t N>
-struct ray;
+struct ray2f {
+  vec2f o    = {0, 0};
+  vec2f d    = {0, 1};
+  float tmin = ray_eps;
+  float tmax = flt_max;
 
-// Rays with origin, direction and min/max t value.
-template <typename T>
-struct ray<T, 2> {
-  vec<T, 3> o    = {0, 0};
-  vec<T, 3> d    = {0, 1};
-  T         tmin = ray_eps<T>;
-  T         tmax = num_max<T>;
-
-  constexpr kernel ray() :
-      o{0, 0}, d{0, 1}, tmin{ray_eps<T>}, tmax{num_max<T>} {}
-  constexpr kernel ray(const vec<T, 2>& o_, const vec<T, 2>& d_,
-      T tmin_ = ray_eps<T>, T tmax_ = num_max<T>) :
+  constexpr kernel ray2f() : o{0, 0}, d{0, 1}, tmin{ray_eps}, tmax{flt_max} {}
+  constexpr kernel ray2f(const vec2f& o_, const vec2f& d_,
+      float tmin_ = ray_eps, float tmax_ = flt_max) :
       o{o_}, d{d_}, tmin{tmin_}, tmax{tmax_} {}
 };
 
 // Rays with origin, direction and min/max t value.
-template <typename T>
-struct ray<T, 3> {
-  vec<T, 3> o    = {0, 0, 0};
-  vec<T, 3> d    = {0, 0, 1};
-  T         tmin = ray_eps<T>;
-  T         tmax = num_max<T>;
+struct ray3f {
+  vec3f o    = {0, 0, 0};
+  vec3f d    = {0, 0, 1};
+  float tmin = ray_eps;
+  float tmax = flt_max;
 
-  constexpr kernel ray() : o{0}, d{0}, tmin{ray_eps<T>}, tmax{num_max<T>} {}
-  constexpr kernel ray(const vec<T, 3>& o_, const vec<T, 3>& d_,
-      T tmin_ = ray_eps<T>, T tmax_ = num_max<T>) :
+  constexpr kernel ray3f() : o{0}, d{0}, tmin{ray_eps}, tmax{flt_max} {}
+  constexpr kernel ray3f(const vec3f& o_, const vec3f& d_,
+      float tmin_ = ray_eps, float tmax_ = flt_max) :
       o{o_}, d{d_}, tmin{tmin_}, tmax{tmax_} {}
 };
-
-// Ray aliases
-using ray2f = ray<float, 2>;
-using ray3f = ray<float, 3>;
 
 // Computes a point on a ray
-template <typename T, size_t N>
-constexpr kernel vec<T, N> ray_point(const ray<T, N>& ray, T t) {
+constexpr kernel vec2f ray_point(const ray2f& ray, float t) {
   return ray.o + ray.d * t;
 }
-template <typename T, size_t N>
-constexpr kernel vec<T, N> eval_ray(const ray<T, N>& ray, T t) {
+constexpr kernel vec2f eval_ray(const ray2f& ray, float t) {
+  return ray.o + ray.d * t;
+}
+
+// Computes a point on a ray
+constexpr kernel vec3f ray_point(const ray3f& ray, float t) {
+  return ray.o + ray.d * t;
+}
+constexpr kernel vec3f eval_ray(const ray3f& ray, float t) {
   return ray.o + ray.d * t;
 }
 
@@ -309,56 +227,54 @@ constexpr kernel vec<T, N> eval_ray(const ray<T, N>& ray, T t) {
 namespace yocto {
 
 // Transforms rays.
-template <typename T, size_t N>
-constexpr kernel ray<T, N> transform_ray(
-    const mat<T, N + 1, N + 1>& a, const ray<T, N>& b) {
+constexpr kernel ray2f transform_ray(const mat3f& a, const ray2f& b) {
+  return {transform_point(a, b.o), transform_vector(a, b.d), b.tmin, b.tmax};
+}
+constexpr kernel ray2f transform_ray(const frame2f& a, const ray2f& b) {
   return {transform_point(a, b.o), transform_vector(a, b.d), b.tmin, b.tmax};
 }
 
-template <typename T, size_t N>
-constexpr kernel ray<T, N> transform_ray(
-    const frame<T, N>& a, const ray<T, N>& b) {
+// Transforms rays.
+constexpr kernel ray3f transform_ray(const mat4f& a, const ray3f& b) {
+  return {transform_point(a, b.o), transform_vector(a, b.d), b.tmin, b.tmax};
+}
+constexpr kernel ray3f transform_ray(const frame3f& a, const ray3f& b) {
   return {transform_point(a, b.o), transform_vector(a, b.d), b.tmin, b.tmax};
 }
 
 // Transforms bboxes.
-template <typename T, size_t N>
-constexpr kernel bbox<T, N> transform_bbox(
-    const mat<T, N + 1, N + 1>& a, const bbox<T, N>& b) {
-  if constexpr (N == 2) {
-    auto xformed = bbox<T, N>();
-    for (auto ij : range(vec<int, 2>(2, 2))) {
-      auto corner = vec<T, 2>{b[ij.x][0], b[ij.y][1]};
-      xformed     = merge(xformed, transform_point(a, corner));
-    }
-    return xformed;
-  } else if constexpr (N == 3) {
-    auto xformed = bbox<T, N>();
-    for (auto ijk : range(vec<int, 3>(2, 2, 2))) {
-      auto corner = vec<T, 3>{b[ijk.x][0], b[ijk.y][1], b[ijk.z][2]};
-      xformed     = merge(xformed, transform_point(a, corner));
-    }
-    return xformed;
+constexpr kernel bbox2f transform_bbox(const mat3f& a, const bbox2f& b) {
+  auto xformed = bbox2f{};
+  for (auto ij : range(vec2i(2, 2))) {
+    auto corner = vec2f{b[ij.x][0], b[ij.y][1]};
+    xformed     = merge(xformed, transform_point(a, corner));
   }
+  return xformed;
 }
-template <typename T, size_t N>
-constexpr kernel bbox<T, N> transform_bbox(
-    const frame<T, N>& a, const bbox<T, N>& b) {
-  if constexpr (N == 2) {
-    auto xformed = bbox<T, N>();
-    for (auto ij : range(vec<int, 2>(2, 2))) {
-      auto corner = vec<T, 2>{b[ij.x][0], b[ij.y][1]};
-      xformed     = merge(xformed, transform_point(a, corner));
-    }
-    return xformed;
-  } else if constexpr (N == 3) {
-    auto xformed = bbox<T, N>();
-    for (auto ijk : range(vec<int, 3>(2, 2, 2))) {
-      auto corner = vec<T, 3>{b[ijk.x][0], b[ijk.y][1], b[ijk.z][2]};
-      xformed     = merge(xformed, transform_point(a, corner));
-    }
-    return xformed;
+constexpr kernel bbox2f transform_bbox(const frame2f& a, const bbox2f& b) {
+  auto xformed = bbox2f{};
+  for (auto ij : range(vec2i(2, 2))) {
+    auto corner = vec2f{b[ij.x][0], b[ij.y][1]};
+    xformed     = merge(xformed, transform_point(a, corner));
   }
+  return xformed;
+}
+
+constexpr kernel bbox3f transform_bbox(const mat4f& a, const bbox3f& b) {
+  auto xformed = bbox3f{};
+  for (auto ijk : range(vec3i(2, 2, 2))) {
+    auto corner = vec3f{b[ijk.x][0], b[ijk.y][1], b[ijk.z][2]};
+    xformed     = merge(xformed, transform_point(a, corner));
+  }
+  return xformed;
+}
+constexpr kernel bbox3f transform_bbox(const frame3f& a, const bbox3f& b) {
+  auto xformed = bbox3f{};
+  for (auto ijk : range(vec3i(2, 2, 2))) {
+    auto corner = vec3f{b[ijk.x][0], b[ijk.y][1], b[ijk.z][2]};
+    xformed     = merge(xformed, transform_point(a, corner));
+  }
+  return xformed;
 }
 
 }  // namespace yocto
@@ -369,16 +285,12 @@ constexpr kernel bbox<T, N> transform_bbox(
 namespace yocto {
 
 // Check if a quad is a triangle
-template <typename I>
-constexpr kernel bool is_triangle(const vec<I, 4>& quad) {
+constexpr kernel bool is_triangle(const vec4i& quad) {
   return quad.z == quad.w;
 }
 
 // Get the triangle from the quad
-template <typename I>
-constexpr kernel vec<I, 3> as_triangle(const vec<I, 4>& quad) {
-  return xyz(quad);
-}
+constexpr kernel vec3i as_triangle(const vec4i& quad) { return xyz(quad); }
 
 }  // namespace yocto
 
@@ -388,122 +300,95 @@ constexpr kernel vec<I, 3> as_triangle(const vec<I, 4>& quad) {
 namespace yocto {
 
 // Primitive bounds.
-template <typename T, size_t N>
-constexpr kernel bbox<T, N> point_bounds(const vec<T, N>& p) {
-  return {p, p};
-}
-template <typename T, size_t N>
-constexpr kernel bbox<T, N> point_bounds(const vec<T, N>& p, T r) {
+constexpr kernel bbox3f point_bounds(const vec3f& p) { return {p, p}; }
+constexpr kernel bbox3f point_bounds(const vec3f& p, float r) {
   return {min(p - r, p + r), max(p - r, p + r)};
 }
-template <typename T, size_t N>
-constexpr kernel bbox<T, N> line_bounds(
-    const vec<T, N>& p1, const vec<T, N>& p2) {
+constexpr kernel bbox3f line_bounds(const vec3f& p1, const vec3f& p2) {
   return {min(p1, p2), max(p1, p2)};
 }
-template <typename T, size_t N>
-constexpr kernel bbox<T, N> line_bounds(
-    const vec<T, N>& p1, const vec<T, N>& p2, T r1, T r2) {
+constexpr kernel bbox3f line_bounds(
+    const vec3f& p1, const vec3f& p2, float r1, float r2) {
   return {min(p1 - r1, p2 - r2), max(p1 + r1, p2 + r2)};
 }
-template <typename T, size_t N>
-constexpr kernel bbox<T, N> triangle_bounds(
-    const vec<T, N>& p1, const vec<T, N>& p2, const vec<T, N>& p3) {
+constexpr kernel bbox3f triangle_bounds(
+    const vec3f& p1, const vec3f& p2, const vec3f& p3) {
   return {min(p1, min(p2, p3)), max(p1, max(p2, p3))};
 }
-template <typename T, size_t N>
-constexpr kernel bbox<T, N> quad_bounds(const vec<T, N>& p1,
-    const vec<T, N>& p2, const vec<T, N>& p3, const vec<T, N>& p4) {
+constexpr kernel bbox3f quad_bounds(
+    const vec3f& p1, const vec3f& p2, const vec3f& p3, const vec3f& p4) {
   return {min(p1, min(p2, min(p3, p4))), max(p1, max(p2, max(p3, p4)))};
 }
-template <typename T, size_t N>
-constexpr kernel bbox<T, N> sphere_bounds(const vec<T, N>& p, T r) {
+constexpr kernel bbox3f sphere_bounds(const vec3f& p, float r) {
   return {p - r, p + r};
 }
-template <typename T, size_t N>
-constexpr kernel bbox<T, N> capsule_bounds(
-    const vec<T, N>& p1, const vec<T, N>& p2, T r1, T r2) {
+constexpr kernel bbox3f capsule_bounds(
+    const vec3f& p1, const vec3f& p2, float r1, float r2) {
   return {min(p1 - r1, p2 - r2), max(p1 + r1, p2 + r2)};
 }
 
 // Primitive bounds.
-template <typename T, size_t N, typename I>
-constexpr kernel bbox<T, N> point_bounds(
-    const vector<vec<T, N>>& positions, I point) {
+constexpr kernel bbox3f point_bounds(
+    const vector<vec3f>& positions, int point) {
   auto v1 = point;
   return point_bounds(positions[v1]);
 }
-template <typename T, size_t N, typename I>
-constexpr kernel bbox<T, N> point_bounds(
-    const vector<vec<T, N>>& positions, const vector<T>& radius, I point) {
+constexpr kernel bbox3f point_bounds(
+    const vector<vec3f>& positions, const vector<float>& radius, int point) {
   auto v1 = point;
   return point_bounds(positions[v1], radius[v1]);
 }
-template <typename T, size_t N, typename I>
-constexpr kernel bbox<T, N> line_bounds(
-    const vector<vec<T, N>>& positions, const vec<I, 2>& line) {
+constexpr kernel bbox3f line_bounds(
+    const vector<vec3f>& positions, const vec2i& line) {
   return line_bounds(positions[line.x], positions[line.y]);
 }
-template <typename T, size_t N, typename I>
-constexpr kernel bbox<T, N> line_bounds(const vector<vec<T, N>>& positions,
-    const vector<T>& radius, const vec<I, 2>& line) {
+constexpr kernel bbox3f line_bounds(const vector<vec3f>& positions,
+    const vector<float>& radius, const vec2i& line) {
   return line_bounds(
       positions[line.x], positions[line.y], radius[line.x], radius[line.y]);
 }
-template <typename T, size_t N, typename I>
-constexpr kernel bbox<T, N> triangle_bounds(
-    const vector<vec<T, N>>& positions, const vec<I, 3>& triangle) {
+constexpr kernel bbox3f triangle_bounds(
+    const vector<vec3f>& positions, const vec3i& triangle) {
   return triangle_bounds(
       positions[triangle.x], positions[triangle.y], positions[triangle.z]);
 }
-template <typename T, size_t N, typename I>
-constexpr kernel bbox<T, N> quad_bounds(
-    const vector<vec<T, N>>& positions, const vec<I, 4>& quad) {
+constexpr kernel bbox3f quad_bounds(
+    const vector<vec3f>& positions, const vec4i& quad) {
   return quad_bounds(positions[quad.x], positions[quad.y], positions[quad.z],
       positions[quad.w]);
 }
 
 // Primitive bounds in indexed arrays.
-template <typename T, size_t N, typename I>
-constexpr kernel bbox<T, N> point_bounds(cspan<vec<T, N>> positions, I point) {
+constexpr kernel bbox3f point_bounds(cspan<vec3f> positions, int point) {
   return point_bounds(positions[point]);
 }
-template <typename T, size_t N, typename I>
-constexpr kernel bbox<T, N> point_bounds(
-    cspan<vec<T, N>> positions, cspan<T> radius, I point) {
+constexpr kernel bbox3f point_bounds(
+    cspan<vec3f> positions, cspan<float> radius, int point) {
   return point_bounds(positions[point], radius[point]);
 }
-template <typename T, size_t N, typename I>
-constexpr kernel bbox<T, N> line_bounds(
-    cspan<vec<T, N>> positions, vec<I, 2> line) {
+constexpr kernel bbox3f line_bounds(cspan<vec3f> positions, vec2i line) {
   return line_bounds(positions[line.x], positions[line.y]);
 }
-template <typename T, size_t N, typename I>
-constexpr kernel bbox<T, N> line_bounds(
-    cspan<vec<T, N>> positions, cspan<T> radius, vec<I, 2> line) {
+constexpr kernel bbox3f line_bounds(
+    cspan<vec3f> positions, cspan<float> radius, vec2i line) {
   return line_bounds(
       positions[line.x], positions[line.y], radius[line.x], radius[line.y]);
 }
-template <typename T, size_t N, typename I>
-constexpr kernel bbox<T, N> triangle_bounds(
-    cspan<vec<T, N>> positions, vec<I, 3> triangle) {
+constexpr kernel bbox3f triangle_bounds(
+    cspan<vec3f> positions, vec3i triangle) {
   return triangle_bounds(
       positions[triangle.x], positions[triangle.y], positions[triangle.z]);
 }
-template <typename T, size_t N, typename I>
-constexpr kernel bbox<T, N> quad_bounds(
-    cspan<vec<T, N>> positions, vec<I, 4> quad) {
+constexpr kernel bbox3f quad_bounds(cspan<vec3f> positions, vec4i quad) {
   return quad_bounds(positions[quad.x], positions[quad.y], positions[quad.z],
-      positions[quad.q]);
+      positions[quad.w]);
 }
-template <typename T, size_t N, typename I>
-constexpr kernel bbox<T, N> sphere_bounds(
-    cspan<vec<T, N>> positions, cspan<T> radius, I point) {
+constexpr kernel bbox3f sphere_bounds(
+    cspan<vec3f> positions, cspan<float> radius, int point) {
   return sphere_bounds(positions[point], radius[point]);
 }
-template <typename T, size_t N, typename I>
-constexpr kernel bbox<T, N> capsule_bounds(
-    cspan<vec<T, N>> positions, cspan<T> radius, vec<I, 2> line) {
+constexpr kernel bbox3f capsule_bounds(
+    cspan<vec3f> positions, cspan<float> radius, vec2i line) {
   return capsule_bounds(
       positions[line.x], positions[line.y], radius[line.x], radius[line.y]);
 }
@@ -516,254 +401,221 @@ constexpr kernel bbox<T, N> capsule_bounds(
 namespace yocto {
 
 // Line properties.
-template <typename T>
-constexpr kernel vec<T, 3> line_tangent(
-    const vec<T, 3>& p1, const vec<T, 3>& p2) {
+constexpr kernel vec3f line_tangent(const vec3f& p1, const vec3f& p2) {
   return normalize(p2 - p1);
 }
-template <typename T, typename I>
-constexpr kernel vec<T, 3> line_tangent(
-    const vector<vec<T, 3>>& positions, const vec<I, 2>& line) {
+constexpr kernel vec3f line_tangent(
+    const vector<vec3f>& positions, const vec2i& line) {
   return line_tangent(positions[line.x], positions[line.y]);
 }
-template <typename T>
-constexpr kernel T line_length(const vec<T, 3>& p1, const vec<T, 3>& p2) {
+constexpr kernel float line_length(const vec3f& p1, const vec3f& p2) {
   return length(p2 - p1);
 }
-template <typename T, typename I>
-constexpr kernel T line_length(
-    const vector<vec<T, 3>>& positions, const vec<I, 2>& line) {
+constexpr kernel float line_length(
+    const vector<vec3f>& positions, const vec2i& line) {
   return line_length(positions[line.x], positions[line.y]);
 }
 
 // Triangle properties.
-template <typename T>
-constexpr kernel vec<T, 3> triangle_normal(
-    const vec<T, 3>& p1, const vec<T, 3>& p2, const vec<T, 3>& p3) {
+constexpr kernel vec3f triangle_normal(
+    const vec3f& p1, const vec3f& p2, const vec3f& p3) {
   return normalize(cross(p2 - p1, p3 - p1));
 }
-template <typename T, typename I>
-constexpr kernel vec<T, 3> triangle_normal(
-    const vector<vec<T, 3>>& positions, const vec<I, 3>& triangle) {
+constexpr kernel vec3f triangle_normal(
+    const vector<vec3f>& positions, const vec3i& triangle) {
   return triangle_normal(
       positions[triangle.x], positions[triangle.y], positions[triangle.z]);
 }
-template <typename T>
-constexpr kernel T triangle_area(
-    const vec<T, 3>& p1, const vec<T, 3>& p2, const vec<T, 3>& p3) {
+constexpr kernel float triangle_area(
+    const vec3f& p1, const vec3f& p2, const vec3f& p3) {
   return length(cross(p2 - p1, p3 - p1)) / 2;
 }
-template <typename T, typename I>
-constexpr kernel T triangle_area(
-    const vector<vec<T, 3>>& positions, const vec<I, 3>& triangle) {
+constexpr kernel float triangle_area(
+    const vector<vec3f>& positions, const vec3i& triangle) {
   return triangle_area(
       positions[triangle.x], positions[triangle.y], positions[triangle.z]);
 }
 
 // Quad properties.
-template <typename T>
-constexpr kernel vec<T, 3> quad_normal(const vec<T, 3>& p1, const vec<T, 3>& p2,
-    const vec<T, 3>& p3, const vec<T, 3>& p4) {
+constexpr kernel vec3f quad_normal(
+    const vec3f& p1, const vec3f& p2, const vec3f& p3, const vec3f& p4) {
   return normalize(triangle_normal(p1, p2, p4) + triangle_normal(p3, p4, p2));
 }
-template <typename T, typename I>
-constexpr kernel vec<T, 3> quad_normal(
-    const vector<vec<T, 3>>& positions, const vec<I, 4>& quad) {
+constexpr kernel vec3f quad_normal(
+    const vector<vec3f>& positions, const vec4i& quad) {
   return quad_normal(positions[quad.x], positions[quad.y], positions[quad.z],
       positions[quad.w]);
 }
-template <typename T>
-constexpr kernel T quad_area(const vec<T, 3>& p1, const vec<T, 3>& p2,
-    const vec<T, 3>& p3, const vec<T, 3>& p4) {
+constexpr kernel float quad_area(
+    const vec3f& p1, const vec3f& p2, const vec3f& p3, const vec3f& p4) {
   return triangle_area(p1, p2, p4) + triangle_area(p3, p4, p2);
 }
-template <typename T, typename I>
-constexpr kernel T quad_area(
-    const vector<vec<T, 3>>& positions, const vec<I, 4>& quad) {
+constexpr kernel float quad_area(
+    const vector<vec3f>& positions, const vec4i& quad) {
   return quad_area(positions[quad.x], positions[quad.y], positions[quad.z],
       positions[quad.w]);
 }
 
 // Interpolates values over a line parameterized from a to b by u. Same as lerp.
-template <typename T, typename T1>
-constexpr kernel T interpolate_line(const T& p1, const T& p2, T1 u) {
+template <typename T>
+constexpr kernel T interpolate_line(const T& p1, const T& p2, float u) {
   return p1 * (1 - u) + p2 * u;
 }
-template <typename T, typename T1, typename I>
+template <typename T>
 constexpr kernel T interpolate_line(
-    const vector<T>& vertices, const vec<I, 2>& line, T1 u) {
+    const vector<T>& vertices, const vec2i& line, float u) {
   return interpolate_line(vertices[line.x], vertices[line.y], u);
 }
 // Interpolates values over a line parameterized from a to b by u. Same as lerp.
-template <typename T, typename T1>
-constexpr kernel T interpolate_line(
-    const T& p1, const T& p2, const vec<T1, 2>& uv) {
+template <typename T>
+constexpr kernel T interpolate_line(const T& p1, const T& p2, const vec2f& uv) {
   return interpolate_line(p1, p2, uv.x);
 }
-template <typename T, typename T1, typename I>
+template <typename T>
 constexpr kernel T interpolate_line(
-    const vector<T>& vertices, const vec<I, 2>& line, const vec<T1, 2>& uv) {
+    const vector<T>& vertices, const vec2i& line, const vec2f& uv) {
   return interpolate_line(vertices, line, uv.x);
 }
 // Interpolates values over a triangle parameterized by u and v along the
 // (p2-p1) and (p3-p1) directions. Same as barycentric interpolation.
-template <typename T, typename T1>
+template <typename T>
 constexpr kernel T interpolate_triangle(
-    const T& p1, const T& p2, const T& p3, const vec<T1, 2>& uv) {
+    const T& p1, const T& p2, const T& p3, const vec2f& uv) {
   return p1 * (1 - uv.x - uv.y) + p2 * uv.x + p3 * uv.y;
 }
-template <typename T, typename T1, typename I>
+template <typename T>
 constexpr kernel T interpolate_triangle(
-    const vector<T>& vertices, const vec<I, 3>& triangle, T1 u) {
+    const vector<T>& vertices, const vec3i& triangle, const vec2f& uv) {
   return interpolate_triangle(
-      vertices[triangle.x], vertices[triangle.y], vertices[triangle.z], u);
+      vertices[triangle.x], vertices[triangle.y], vertices[triangle.z], uv);
 }
 // Interpolates values over a quad parameterized by u and v along the
 // (p2-p1) and (p3-p2) directions. Same as bilinear interpolation.
-template <typename T, typename T1>
+template <typename T>
 constexpr kernel T interpolate_quad(
-    const T& p1, const T& p2, const T& p3, const T& p4, const vec<T1, 2>& uv) {
+    const T& p1, const T& p2, const T& p3, const T& p4, const vec2f& uv) {
   if (sum(uv) <= 1) {
     return interpolate_triangle(p1, p2, p4, uv);
   } else {
     return interpolate_triangle(p3, p4, p2, 1 - uv);
   }
 }
-template <typename T, typename T1, typename I>
+template <typename T>
 constexpr kernel T interpolate_quad(
-    const vector<T>& vertices, const vec<I, 4>& quad, T1 u) {
+    const vector<T>& vertices, const vec4i& quad, const vec2f& uv) {
   return interpolate_quad(vertices[quad.x], vertices[quad.y], vertices[quad.z],
-      vertices[quad.w], u);
+      vertices[quad.w], uv);
 }
 
 // Interpolates values along a cubic Bezier segment parametrized by u.
-template <typename T, typename T1>
+template <typename T>
 constexpr kernel T interpolate_bezier(
-    const T& p1, const T& p2, const T& p3, const T& p4, T1 u) {
+    const T& p1, const T& p2, const T& p3, const T& p4, float u) {
   return p1 * (1 - u) * (1 - u) * (1 - u) + p2 * 3 * u * (1 - u) * (1 - u) +
          p3 * 3 * u * u * (1 - u) + p4 * u * u * u;
 }
 // Computes the derivative of a cubic Bezier segment parametrized by u.
-template <typename T, typename T1>
+template <typename T>
 constexpr kernel T interpolate_bezier_derivative(
-    const T& p1, const T& p2, const T& p3, const T& p4, T1 u) {
+    const T& p1, const T& p2, const T& p3, const T& p4, float u) {
   return (p2 - p1) * 3 * (1 - u) * (1 - u) + (p3 - p2) * 6 * u * (1 - u) +
          (p4 - p3) * 3 * u * u;
 }
 
 // Interpolated line properties.
-template <typename T>
-constexpr kernel vec<T, 3> line_point(
-    const vec<T, 3>& p1, const vec<T, 3>& p2, T u) {
+constexpr kernel vec3f line_point(const vec3f& p1, const vec3f& p2, float u) {
   return p1 * (1 - u) + p2 * u;
 }
-template <typename T, typename I>
-constexpr kernel vec<T, 3> line_point(
-    const vector<vec<T, 3>>& positions, const vec<I, 2>& line, T u) {
+constexpr kernel vec3f line_point(
+    const vector<vec3f>& positions, const vec2i& line, float u) {
   return line_point(positions[line.x], positions[line.y], u);
 }
-template <typename T>
-constexpr kernel vec<T, 3> line_tangent(
-    const vec<T, 3>& t0, const vec<T, 3>& t1, T u) {
+constexpr kernel vec3f line_tangent(const vec3f& t0, const vec3f& t1, float u) {
   return normalize(t0 * (1 - u) + t1 * u);
 }
-template <typename T, typename I>
-constexpr kernel vec<T, 3> line_tangent(
-    const vector<vec<T, 3>>& tangents, const vec<I, 2>& line, T u) {
+constexpr kernel vec3f line_tangent(
+    const vector<vec3f>& tangents, const vec2i& line, float u) {
   return line_tangent(tangents[line.x], tangents[line.y], u);
 }
 
 // Interpolated triangle properties.
-template <typename T>
-constexpr kernel vec<T, 3> triangle_point(const vec<T, 3>& p1,
-    const vec<T, 3>& p2, const vec<T, 3>& p3, const vec<T, 2>& uv) {
+constexpr kernel vec3f triangle_point(
+    const vec3f& p1, const vec3f& p2, const vec3f& p3, const vec2f& uv) {
   return p1 * (1 - uv.x - uv.y) + p2 * uv.x + p3 * uv.y;
 }
-template <typename T, typename I>
-constexpr kernel vec<T, 3> triangle_point(const vector<vec<T, 3>>& positions,
-    const vec<I, 3>& triangle, const vec<T, 2>& uv) {
+constexpr kernel vec3f triangle_point(
+    const vector<vec3f>& positions, const vec3i& triangle, const vec2f& uv) {
   return triangle_point(
       positions[triangle.x], positions[triangle.y], positions[triangle.z], uv);
 }
-template <typename T>
-constexpr kernel vec<T, 3> triangle_normal(const vec<T, 3>& n0,
-    const vec<T, 3>& n1, const vec<T, 3>& n2, const vec<T, 2>& uv) {
+constexpr kernel vec3f triangle_normal(
+    const vec3f& n0, const vec3f& n1, const vec3f& n2, const vec2f& uv) {
   return normalize(n0 * (1 - uv.x - uv.y) + n1 * uv.x + n2 * uv.y);
 }
-template <typename T, typename I>
-constexpr kernel vec<T, 3> triangle_normal(const vector<vec<T, 3>>& normals,
-    const vec<I, 3>& triangle, const vec<T, 2>& uv) {
+constexpr kernel vec3f triangle_normal(
+    const vector<vec3f>& normals, const vec3i& triangle, const vec2f& uv) {
   return triangle_normal(
       normals[triangle.x], normals[triangle.y], normals[triangle.z], uv);
 }
 
 // Interpolated quad properties.
-template <typename T>
-constexpr kernel vec<T, 3> quad_point(const vec<T, 3>& p1, const vec<T, 3>& p2,
-    const vec<T, 3>& p3, const vec<T, 3>& p4, const vec<T, 2>& uv) {
+constexpr kernel vec3f quad_point(const vec3f& p1, const vec3f& p2,
+    const vec3f& p3, const vec3f& p4, const vec2f& uv) {
   if (sum(uv) <= 1) {
     return triangle_point(p1, p2, p4, uv);
   } else {
     return triangle_point(p3, p4, p2, 1 - uv);
   }
 }
-template <typename T, typename I>
-constexpr kernel vec<T, 3> quad_point(const vector<vec<T, 3>>& positions,
-    const vec<I, 4>& quad, const vec<T, 2>& uv) {
+constexpr kernel vec3f quad_point(
+    const vector<vec3f>& positions, const vec4i& quad, const vec2f& uv) {
   return quad_point(positions[quad.x], positions[quad.y], positions[quad.z],
       positions[quad.w], uv);
 }
-template <typename T>
-constexpr kernel vec<T, 3> quad_normal(const vec<T, 3>& n0, const vec<T, 3>& n1,
-    const vec<T, 3>& n2, const vec<T, 3>& n3, const vec<T, 2>& uv) {
+constexpr kernel vec3f quad_normal(const vec3f& n0, const vec3f& n1,
+    const vec3f& n2, const vec3f& n3, const vec2f& uv) {
   if (sum(uv) <= 1) {
     return triangle_normal(n0, n1, n3, uv);
   } else {
     return triangle_normal(n2, n3, n1, 1 - uv);
   }
 }
-template <typename T, typename I>
-constexpr kernel vec<T, 3> quad_normal(const vector<vec<T, 3>>& normals,
-    const vec<I, 4>& quad, const vec<T, 2>& uv) {
+constexpr kernel vec3f quad_normal(
+    const vector<vec3f>& normals, const vec4i& quad, const vec2f& uv) {
   return quad_normal(
       normals[quad.x], normals[quad.y], normals[quad.z], normals[quad.w], uv);
 }
 
 // Interpolated sphere properties.
-template <typename T>
-constexpr kernel vec<T, 3> sphere_point(
-    const vec<T, 3> p, T r, const vec<T, 2>& uv) {
-  auto phi = uv.x * 2 * (T)pi, theta = uv.y * (T)pi;
-  return p + r * vec<T, 3>{
-                     cos(phi) * sin(theta), sin(phi) * sin(theta), cos(theta)};
+constexpr kernel vec3f sphere_point(const vec3f p, float r, const vec2f& uv) {
+  auto phi = uv.x * 2 * pif, theta = uv.y * pif;
+  return p +
+         r * vec3f{cos(phi) * sin(theta), sin(phi) * sin(theta), cos(theta)};
 }
-template <typename T>
-constexpr kernel vec<T, 3> sphere_normal(
-    const vec<T, 3> p, T r, const vec<T, 2>& uv) {
-  auto phi = uv.x * 2 * (T)pi, theta = uv.y * (T)pi;
+constexpr kernel vec3f sphere_normal(const vec3f p, float r, const vec2f& uv) {
+  auto phi = uv.x * 2 * pif, theta = uv.y * pif;
   return normalize(
-      vec<T, 3>{cos(phi) * sin(theta), sin(phi) * sin(theta), cos(theta)});
+      vec3f{cos(phi) * sin(theta), sin(phi) * sin(theta), cos(theta)});
 }
 
 // Triangle tangent and bi-tangent from uv
-template <typename T>
-constexpr kernel pair<vec<T, 3>, vec<T, 3>> triangle_tangents_fromuv(
-    const vec<T, 3>& p1, const vec<T, 3>& p2, const vec<T, 3>& p3,
-    const vec<T, 2>& uv0, const vec<T, 2>& uv1, const vec<T, 2>& uv2) {
+constexpr kernel pair<vec3f, vec3f> triangle_tangents_fromuv(const vec3f& p1,
+    const vec3f& p2, const vec3f& p3, const vec2f& uv0, const vec2f& uv1,
+    const vec2f& uv2) {
   // Follows the definition in http://www.terathon.com/code/tangent.html and
   // https://gist.github.com/aras-p/2843984
   // normal points up from texture space
   // TODO: do this without indices
   auto p = p2 - p1, q = p3 - p1;
-  auto s   = vec<T, 2>{uv1[0] - uv0[0], uv2[0] - uv0[0]};
-  auto t   = vec<T, 2>{uv1[1] - uv0[1], uv2[1] - uv0[1]};
+  auto s   = vec2f{uv1[0] - uv0[0], uv2[0] - uv0[0]};
+  auto t   = vec2f{uv1[1] - uv0[1], uv2[1] - uv0[1]};
   auto div = cross(s, t);
 
   if (div != 0) {
-    auto tu = vec<T, 3>{t[1] * p[0] - t[0] * q[0], t[1] * p[1] - t[0] * q[1],
+    auto tu = vec3f{t[1] * p[0] - t[0] * q[0], t[1] * p[1] - t[0] * q[1],
                   t[1] * p[2] - t[0] * q[2]} /
               div;
-    auto tv = vec<T, 3>{s[0] * q[0] - s[1] * p[0], s[0] * q[1] - s[1] * p[1],
+    auto tv = vec3f{s[0] * q[0] - s[1] * p[0], s[0] * q[1] - s[1] * p[1],
                   s[0] * q[2] - s[1] * p[2]} /
               div;
     return {tu, tv};
@@ -771,31 +623,28 @@ constexpr kernel pair<vec<T, 3>, vec<T, 3>> triangle_tangents_fromuv(
     return {{1, 0, 0}, {0, 1, 0}};
   }
 }
-template <typename T, typename I>
-constexpr kernel pair<vec<T, 3>, vec<T, 3>> triangle_tangents_fromuv(
-    const vector<vec<T, 3>>& positions, const vector<vec<T, 2>>& texcoords,
-    const vec<I, 3>& triangle) {
+constexpr kernel pair<vec3f, vec3f> triangle_tangents_fromuv(
+    const vector<vec3f>& positions, const vector<vec2f>& texcoords,
+    const vec3i& triangle) {
   return triangle_tangents_fromuv(positions[triangle.x], positions[triangle.y],
       positions[triangle.z], texcoords[triangle.x], texcoords[triangle.y],
       texcoords[triangle.z]);
 }
 
 // Quad tangent and bi-tangent from uv.
-template <typename T>
-constexpr kernel pair<vec<T, 3>, vec<T, 3>> quad_tangents_fromuv(
-    const vec<T, 3>& p1, const vec<T, 3>& p2, const vec<T, 3>& p3,
-    const vec<T, 3>& p4, const vec<T, 2>& uv0, const vec<T, 2>& uv1,
-    const vec<T, 2>& uv2, const vec<T, 2>& uv3, const vec<T, 2>& current_uv) {
+constexpr kernel pair<vec3f, vec3f> quad_tangents_fromuv(const vec3f& p1,
+    const vec3f& p2, const vec3f& p3, const vec3f& p4, const vec2f& uv0,
+    const vec2f& uv1, const vec2f& uv2, const vec2f& uv3,
+    const vec2f& current_uv) {
   if (sum(current_uv) <= 1) {
     return triangle_tangents_fromuv(p1, p2, p4, uv0, uv1, uv3);
   } else {
     return triangle_tangents_fromuv(p3, p4, p2, uv2, uv3, uv1);
   }
 }
-template <typename T, typename I>
-constexpr kernel pair<vec<T, 3>, vec<T, 3>> quad_tangents_fromuv(
-    const vector<vec<T, 3>>& positions, const vector<vec<T, 2>>& texcoords,
-    const vec<I, 4>& quad, const vec<T, 2>& current_uv) {
+constexpr kernel pair<vec3f, vec3f> quad_tangents_fromuv(
+    const vector<vec3f>& positions, const vector<vec2f>& texcoords,
+    const vec4i& quad, const vec2f& current_uv) {
   return quad_tangents_fromuv(positions[quad.x], positions[quad.y],
       positions[quad.z], positions[quad.w], texcoords[quad.x],
       texcoords[quad.y], texcoords[quad.z], texcoords[quad.w], current_uv);
@@ -809,46 +658,37 @@ constexpr kernel pair<vec<T, 3>, vec<T, 3>> quad_tangents_fromuv(
 namespace yocto {
 
 // Computes the aspect ratio.
-template <typename T>
-constexpr kernel T aspect_ratio(const vec<T, 2>& size) {
+constexpr kernel float aspect_ratio(const vec2f& size) {
   return size.x / size.y;
 }
 
 // Flip u from [0,1] to [1,0]
-template <typename T>
-constexpr kernel vec<T, 2> flip_u(const vec<T, 2>& uv) {
-  return {1 - uv.x, uv.y};
-}
+constexpr kernel vec2f flip_u(const vec2f& uv) { return {1 - uv.x, uv.y}; }
 // Flip v from [0,1] to [1,0]
-template <typename T>
-constexpr kernel vec<T, 2> flip_v(const vec<T, 2>& uv) {
-  return {uv.x, 1 - uv.y};
-}
+constexpr kernel vec2f flip_v(const vec2f& uv) { return {uv.x, 1 - uv.y}; }
 
 // Generate a ray from a camera
-template <typename T>
-constexpr kernel ray<T, 3> camera_ray(const frame<T, 3>& frame, T lens,
-    const vec<T, 2>& film, const vec<T, 2>& image_uv) {
+constexpr kernel ray3f camera_ray(const frame3f& frame, float lens,
+    const vec2f& film, const vec2f& image_uv) {
   auto uv  = flip_u(image_uv);
-  auto e   = vec<T, 3>{0, 0, 0};
-  auto q   = vec<T, 3>{film * (uv - (T)0.5), lens};
+  auto e   = vec3f{0, 0, 0};
+  auto q   = vec3f{film * (uv - 0.5f), lens};
   auto d   = normalize(e - q);
-  auto ray = yocto::ray<T, 3>{
+  auto ray = yocto::ray3f{
       transform_point(frame, e), transform_direction(frame, d)};
   return ray;
 }
 
 // Generate a ray from a camera
-template <typename T>
-constexpr kernel ray<T, 3> camera_ray(const frame<T, 3>& frame, T lens,
-    T aspect, T film_, const vec<T, 2>& image_uv) {
+constexpr kernel ray3f camera_ray(const frame3f& frame, float lens,
+    float aspect, float film_, const vec2f& image_uv) {
   auto uv   = flip_u(image_uv);
-  auto film = aspect >= 1 ? vec<T, 2>{film_, film_ / aspect}
-                          : vec<T, 2>{film_ * aspect, film_};
-  auto e    = vec<T, 3>{0, 0, 0};
-  auto q    = vec<T, 3>{film * (uv - (T)0.5), lens};
+  auto film = aspect >= 1 ? vec2f{film_, film_ / aspect}
+                          : vec2f{film_ * aspect, film_};
+  auto e    = vec3f{0, 0, 0};
+  auto q    = vec3f{film * (uv - 0.5f), lens};
   auto d    = normalize(e - q);
-  auto ray  = yocto::ray<T, 3>{
+  auto ray  = yocto::ray3f{
       transform_point(frame, e), transform_direction(frame, d)};
   return ray;
 }
@@ -861,24 +701,19 @@ constexpr kernel ray<T, 3> camera_ray(const frame<T, 3>& frame, T lens,
 namespace yocto {
 
 // Primitive intersection
-template <typename T, size_t N>
-struct pintersection {
-  vec<T, 2> uv       = {0, 0};
-  T         distance = num_max<T>;  // TODO: num_max<T>
-  bool      hit      = false;
+struct pintersection3f {
+  vec2f uv       = {0, 0};
+  float distance = flt_max;  // TODO: flt_max
+  bool  hit      = false;
 
-  constexpr kernel pintersection() : hit{false} {}
-  constexpr kernel pintersection(const vec<T, 2>& uv_, T distance_) :
+  constexpr kernel pintersection3f() : hit{false} {}
+  constexpr kernel pintersection3f(const vec2f& uv_, float distance_) :
       uv{uv_}, distance{distance_}, hit{true} {}
 };
 
-// Typedefs
-using pintersection3f = pintersection<float, 3>;
-
 // Intersect a ray with a point (approximate)
-template <typename T>
-constexpr kernel pintersection<T, 3> intersect_point(
-    const ray<T, 3>& ray, const vec<T, 3>& p, T r) {
+constexpr kernel pintersection3f intersect_point(
+    const ray3f& ray, const vec3f& p, float r) {
   // find parameter for line-point minimum distance
   auto w = p - ray.o;
   auto t = dot(w, ray.d) / dot(ray.d, ray.d);
@@ -894,17 +729,15 @@ constexpr kernel pintersection<T, 3> intersect_point(
   // intersection occurred: set params and exit
   return {{0, 0}, t};
 }
-template <typename T, typename I>
-constexpr kernel pintersection<T, 3> intersect_point(const ray<T, 3>& ray,
-    const vector<vec<T, 3>>& positions, const vector<T>& radius, I point) {
+constexpr kernel pintersection3f intersect_point(const ray3f& ray,
+    const vector<vec3f>& positions, const vector<float>& radius, int point) {
   auto v1 = point;
   return intersect_point(ray, positions[v1], radius[v1]);
 }
 
 // Intersect a ray with a line
-template <typename T>
-constexpr kernel pintersection<T, 3> intersect_line(const ray<T, 3>& ray,
-    const vec<T, 3>& p1, const vec<T, 3>& p2, T r1, T r2) {
+constexpr kernel pintersection3f intersect_line(
+    const ray3f& ray, const vec3f& p1, const vec3f& p2, float r1, float r2) {
   // setup intersection params
   auto u = ray.d;
   auto v = p2 - p1;
@@ -930,7 +763,7 @@ constexpr kernel pintersection<T, 3> intersect_line(const ray<T, 3>& ray,
   if (t < ray.tmin || t > ray.tmax) return {};
 
   // clamp segment param to segment corners
-  s = clamp(s, (T)0, (T)1);
+  s = clamp(s, (float)0, (float)1);
 
   // compute segment-segment distance on the closest points
   auto pr  = ray.o + ray.d * t;
@@ -945,18 +778,16 @@ constexpr kernel pintersection<T, 3> intersect_line(const ray<T, 3>& ray,
   // intersection occurred: set params and exit
   return {{s, sqrt(d2) / r}, t};
 }
-template <typename T, typename I>
-constexpr kernel pintersection<T, 3> intersect_line(const ray<T, 3>& ray,
-    const vector<vec<T, 3>>& positions, const vector<T>& radius,
-    const vec<I, 2>& line) {
+constexpr kernel pintersection3f intersect_line(const ray3f& ray,
+    const vector<vec3f>& positions, const vector<float>& radius,
+    const vec2i& line) {
   return intersect_line(ray, positions[line.x], positions[line.y],
       radius[line.x], radius[line.y]);
 }
 
 // Intersect a ray with a sphere
-template <typename T>
-constexpr kernel pintersection<T, 3> intersect_sphere(
-    const ray<T, 3>& ray, const vec<T, 3>& p, T r) {
+constexpr kernel pintersection3f intersect_sphere(
+    const ray3f& ray, const vec3f& p, float r) {
   // compute parameters
   auto a = dot(ray.d, ray.d);
   auto b = 2 * dot(ray.o - p, ray.d);
@@ -969,7 +800,7 @@ constexpr kernel pintersection<T, 3> intersect_sphere(
   // compute ray parameter
   auto t = (-b - sqrt(dis)) / (2 * a);
 
-  // exit if not within bound(T)pi
+  // exit if not within boundpif
   if (t < ray.tmin || t > ray.tmax) return {};
 
   // try other ray parameter
@@ -986,9 +817,8 @@ constexpr kernel pintersection<T, 3> intersect_sphere(
 }
 
 // Intersect a ray with a triangle
-template <typename T>
-constexpr kernel pintersection<T, 3> intersect_triangle(const ray<T, 3>& ray,
-    const vec<T, 3>& p1, const vec<T, 3>& p2, const vec<T, 3>& p3) {
+constexpr kernel pintersection3f intersect_triangle(
+    const ray3f& ray, const vec3f& p1, const vec3f& p2, const vec3f& p3) {
   // compute triangle edges
   auto edge1 = p2 - p1;
   auto edge2 = p3 - p1;
@@ -1000,7 +830,7 @@ constexpr kernel pintersection<T, 3> intersect_triangle(const ray<T, 3>& ray,
   // check determinant and exit if triangle and ray are parallel
   // (could use EPSILONS if desired)
   if (det == 0) return {};
-  auto inv_det = (T)1.0 / det;
+  auto inv_det = 1.0f / det;
 
   // compute and check first barycentric coordinate
   auto tvec = ray.o - p1;
@@ -1019,35 +849,29 @@ constexpr kernel pintersection<T, 3> intersect_triangle(const ray<T, 3>& ray,
   // intersection occurred: set params and exit
   return {{u, v}, t};
 }
-template <typename T, typename I>
-constexpr kernel pintersection<T, 3> intersect_triangle(const ray<T, 3>& ray,
-    const vector<vec<T, 3>>& positions, const vec<I, 3>& triangle) {
+constexpr kernel pintersection3f intersect_triangle(
+    const ray3f& ray, const vector<vec3f>& positions, const vec3i& triangle) {
   return intersect_triangle(
       ray, positions[triangle.x], positions[triangle.y], positions[triangle.z]);
 }
 
 // Intersect a ray with a quad.
-template <typename T>
-constexpr kernel pintersection<T, 3> intersect_quad(const ray<T, 3>& ray,
-    const vec<T, 3>& p1, const vec<T, 3>& p2, const vec<T, 3>& p3,
-    const vec<T, 3>& p4) {
+constexpr kernel pintersection3f intersect_quad(const ray3f& ray,
+    const vec3f& p1, const vec3f& p2, const vec3f& p3, const vec3f& p4) {
   if (p3 == p4) return intersect_triangle(ray, p1, p2, p4);
   auto isec1 = intersect_triangle(ray, p1, p2, p4);
   auto isec2 = intersect_triangle(ray, p3, p4, p2);
   if (isec2.hit) isec2.uv = 1 - isec2.uv;
   return isec1.distance < isec2.distance ? isec1 : isec2;
 }
-template <typename T, typename I>
-constexpr kernel pintersection<T, 3> intersect_quad(const ray<T, 3>& ray,
-    const vector<vec<T, 3>>& positions, const vec<I, 4>& quad) {
+constexpr kernel pintersection3f intersect_quad(
+    const ray3f& ray, const vector<vec3f>& positions, const vec4i& quad) {
   return intersect_quad(ray, positions[quad.x], positions[quad.y],
       positions[quad.z], positions[quad.w]);
 }
 
 // Intersect a ray with a axis-aligned bounding box
-template <typename T>
-constexpr kernel bool intersect_bbox(
-    const ray<T, 3>& ray, const bbox<T, 3>& bbox) {
+constexpr kernel bool intersect_bbox(const ray3f& ray, const bbox3f& bbox) {
   auto ray_dinv = 1 / ray.d;
   auto it_min   = (bbox.min - ray.o) * ray_dinv;
   auto it_max   = (bbox.max - ray.o) * ray_dinv;
@@ -1055,23 +879,20 @@ constexpr kernel bool intersect_bbox(
   auto tmax     = max(it_min, it_max);
   auto t0       = max(max(tmin), ray.tmin);
   auto t1       = min(min(tmax), ray.tmax);
-  if constexpr (std::is_same_v<T, float>) t1 *= 1.00000024f;
-  if constexpr (std::is_same_v<T, double>) t1 *= 1.0000000000000004;
+  t1 *= 1.00000024f;
   return t0 <= t1;
 }
 
 // Intersect a ray with a axis-aligned bounding box
-template <typename T>
 constexpr kernel bool intersect_bbox(
-    const ray<T, 3>& ray, const vec<T, 3>& ray_dinv, const bbox<T, 3>& bbox) {
+    const ray3f& ray, const vec3f& ray_dinv, const bbox3f& bbox) {
   auto it_min = (bbox.min - ray.o) * ray_dinv;
   auto it_max = (bbox.max - ray.o) * ray_dinv;
   auto tmin   = min(it_min, it_max);
   auto tmax   = max(it_min, it_max);
   auto t0     = max(max(tmin), ray.tmin);
   auto t1     = min(min(tmax), ray.tmax);
-  if constexpr (std::is_same_v<T, float>) t1 *= 1.00000024f;
-  if constexpr (std::is_same_v<T, double>) t1 *= 1.0000000000000004;
+  t1 *= 1.00000024f;
   return t0 <= t1;
 }
 
@@ -1083,38 +904,33 @@ constexpr kernel bool intersect_bbox(
 namespace yocto {
 
 // Check if a point overlaps a position pos withint a maximum distance dist_max.
-template <typename T>
-constexpr kernel pintersection<T, 3> overlap_point(
-    const vec<T, 3>& pos, T dist_max, const vec<T, 3>& p, T r) {
+constexpr kernel pintersection3f overlap_point(
+    const vec3f& pos, float dist_max, const vec3f& p, float r) {
   auto d2 = dot(pos - p, pos - p);
   if (d2 > (dist_max + r) * (dist_max + r)) return {};
   return {{0, 0}, sqrt(d2)};
 }
-template <typename T, typename I>
-constexpr kernel pintersection<T, 3> overlap_point(const vec<T, 3>& pos,
-    T dist_max, const vector<vec<T, 3>>& positions, const vector<T> radius,
-    I point) {
+constexpr kernel pintersection3f overlap_point(const vec3f& pos, float dist_max,
+    const vector<vec3f>& positions, const vector<float>& radius, int point) {
   auto v1 = point;
   return overlap_point(pos, dist_max, positions[v1], radius[v1]);
 }
 
 // Compute the closest line uv to a give position pos.
-template <typename T>
-constexpr kernel T closestuv_line(
-    const vec<T, 3>& pos, const vec<T, 3>& p1, const vec<T, 3>& p2) {
+constexpr kernel float closestuv_line(
+    const vec3f& pos, const vec3f& p1, const vec3f& p2) {
   auto ab = p2 - p1;
   auto d  = dot(ab, ab);
   // Project c onto ab, computing parameterized position d(t) = a + t*(b –
   // a)
   auto u = dot(pos - p1, ab) / d;
-  u      = clamp(u, (T)0, (T)1);
+  u      = clamp(u, 0.0f, 1.0f);
   return u;
 }
 
 // Check if a line overlaps a position pos withint a maximum distance dist_max.
-template <typename T>
-constexpr kernel pintersection<T, 3> overlap_line(const vec<T, 3>& pos,
-    T dist_max, const vec<T, 3>& p1, const vec<T, 3>& p2, T r1, T r2) {
+constexpr kernel pintersection3f overlap_line(const vec3f& pos, float dist_max,
+    const vec3f& p1, const vec3f& p2, float r1, float r2) {
   auto u = closestuv_line(pos, p1, p2);
   // Compute projected position from the clamped t d = a + t * ab;
   auto p  = p1 + (p2 - p1) * u;
@@ -1125,18 +941,16 @@ constexpr kernel pintersection<T, 3> overlap_line(const vec<T, 3>& pos,
   // done
   return {{u, 0}, sqrt(d2)};
 }
-template <typename T, typename I>
-constexpr kernel pintersection<T, 3> overlap_line(const vec<T, 3>& pos,
-    T dist_max, const vector<vec<T, 3>>& positions, const vector<T> radius,
-    const vec<I, 2>& line) {
+constexpr kernel pintersection3f overlap_line(const vec3f& pos, float dist_max,
+    const vector<vec3f>& positions, const vector<float> radius,
+    const vec2i& line) {
   return overlap_line(pos, dist_max, positions[line.x], positions[line.y],
       radius[line.x], radius[line.y]);
 }
 
 // Compute the closest triangle uv to a give position pos.
-template <typename T>
-constexpr kernel vec<T, 2> closestuv_triangle(const vec<T, 3>& pos,
-    const vec<T, 3>& p1, const vec<T, 3>& p2, const vec<T, 3>& p3) {
+constexpr kernel vec2f closestuv_triangle(
+    const vec3f& pos, const vec3f& p1, const vec3f& p2, const vec3f& p3) {
   // this is a complicated test -> I probably "--"+prefix to use a sequence of
   // test (triangle body, and 3 edges)
   auto ab = p2 - p1;
@@ -1177,19 +991,12 @@ constexpr kernel vec<T, 2> closestuv_triangle(const vec<T, 3>& pos,
   auto v     = vc * denom;
   return {u, v};
 }
-template <typename T, typename I>
-constexpr kernel pintersection<T, 3> overlap_triangle(const vec<T, 3>& pos,
-    T dist_max, const vector<vec<T, 3>>& positions, const vec<I, 3>& triangle) {
-  return overlap_triangle(pos, dist_max, positions[triangle.x],
-      positions[triangle.y], positions[triangle.z]);
-}
 
 // Check if a triangle overlaps a position pos withint a maximum distance
 // dist_max.
-template <typename T>
-constexpr kernel pintersection<T, 3> overlap_triangle(const vec<T, 3>& pos,
-    T dist_max, const vec<T, 3>& p1, const vec<T, 3>& p2, const vec<T, 3>& p3,
-    T r1, T r2, T r3) {
+constexpr kernel pintersection3f overlap_triangle(const vec3f& pos,
+    float dist_max, const vec3f& p1, const vec3f& p2, const vec3f& p3, float r1,
+    float r2, float r3) {
   auto uv = closestuv_triangle(pos, p1, p2, p3);
   auto p  = interpolate_triangle(p1, p2, p3, uv);
   auto r  = interpolate_triangle(r1, r2, r3, uv);
@@ -1197,41 +1004,37 @@ constexpr kernel pintersection<T, 3> overlap_triangle(const vec<T, 3>& pos,
   if (dd > (dist_max + r) * (dist_max + r)) return {};
   return {uv, sqrt(dd)};
 }
-template <typename T, typename I>
-constexpr kernel pintersection<T, 3> overlap_triangle(const vec<T, 3>& pos,
-    T dist_max, const vector<vec<T, 3>>& positions, const vector<T> radius,
-    const vec<I, 3>& triangle) {
+constexpr kernel pintersection3f overlap_triangle(const vec3f& pos,
+    float dist_max, const vector<vec3f>& positions, const vector<float> radius,
+    const vec3i& triangle) {
   return overlap_triangle(pos, dist_max, positions[triangle.x],
       positions[triangle.y], positions[triangle.z], radius[triangle.x],
       radius[triangle.y], radius[triangle.z]);
 }
 
 // Check if a quad overlaps a position pos withint a maximum distance dist_max.
-template <typename T>
-constexpr kernel pintersection<T, 3> overlap_quad(const vec<T, 3>& pos,
-    T dist_max, const vec<T, 3>& p1, const vec<T, 3>& p2, const vec<T, 3>& p3,
-    const vec<T, 3>& p4, T r1, T r2, T r3, T r4) {
+constexpr kernel pintersection3f overlap_quad(const vec3f& pos, float dist_max,
+    const vec3f& p1, const vec3f& p2, const vec3f& p3, const vec3f& p4,
+    float r1, float r2, float r3, float r4) {
   if (p3 == p4) return overlap_triangle(pos, dist_max, p1, p2, p4, r1, r2, r3);
   auto isec1 = overlap_triangle(pos, dist_max, p1, p2, p4, r1, r2, r3);
   auto isec2 = overlap_triangle(pos, dist_max, p3, p4, p2, r3, r4, r2);
   if (isec2.hit) isec2.uv = 1 - isec2.uv;
   return isec1.distance < isec2.distance ? isec1 : isec2;
 }
-template <typename T, typename I>
-constexpr kernel pintersection<T, 3> overlap_quad(const vec<T, 3>& pos,
-    T dist_max, const vector<vec<T, 3>>& positions, const vector<T> radius,
-    const vec<I, 4>& quad) {
+constexpr kernel pintersection3f overlap_quad(const vec3f& pos, float dist_max,
+    const vector<vec3f>& positions, const vector<float> radius,
+    const vec4i& quad) {
   return overlap_quad(pos, dist_max, positions[quad.x], positions[quad.y],
       positions[quad.z], positions[quad.w], radius[quad.x], radius[quad.y],
       radius[quad.z], radius[quad.w]);
 }
 
 // Check if a bbox overlaps a position pos withint a maximum distance dist_max.
-template <typename T>
 constexpr kernel bool overlap_bbox(
-    const vec<T, 3>& pos, T dist_max, const bbox<T, 3>& bbox) {
+    const vec3f& pos, float dist_max, const bbox3f& bbox) {
   // computing distance
-  auto dd = (T)0.0;
+  auto dd = 0.0f;
 
   // For each axis count any excess distance outside box extents
   for (auto a : range(3)) {
@@ -1246,9 +1049,7 @@ constexpr kernel bool overlap_bbox(
 }
 
 // Check if two bboxes overlap.
-template <typename T>
-constexpr kernel bool overlap_bbox(
-    const bbox<T, 3>& bbox1, const bbox<T, 3>& bbox2) {
+constexpr kernel bool overlap_bbox(const bbox3f& bbox1, const bbox3f& bbox2) {
   for (auto a : range(3)) {
     if (bbox1.max[a] < bbox2.min[a] || bbox1.min[a] > bbox2.max[a])
       return false;
@@ -1269,57 +1070,51 @@ namespace yocto {
 // primitives or internal nodes, the node element type,
 // and the split axis. Leaf and internal nodes are identical, except that
 // indices refer to primitives for leaf nodes or other nodes for internal nodes.
-template <typename T, size_t N>
-struct bvh_gnode {
-  bbox<T, N> bbox_    = {};
-  int32_t    start    = 0;
-  int16_t    num      = 0;
-  int8_t     axis     = 0;
-  bool       internal = false;
+struct bvh_node {
+  bbox3f  bbox_    = {};
+  int32_t start    = 0;
+  int16_t num      = 0;
+  int8_t  axis     = 0;
+  bool    internal = false;
 };
 
 // BVH tree stored as a node array with the tree structure is encoded using
 // array indices. BVH nodes indices refer to either the node array,
 // for internal nodes, or the primitive arrays, for leaf nodes.
 // Application data is not stored explicitly.
-template <typename T, size_t N>
-struct bvh_gdata {
-  vector<bvh_gnode<T, N>> nodes      = {};
-  vector<int>             primitives = {};
+struct bvh_data {
+  vector<bvh_node> nodes      = {};
+  vector<int>      primitives = {};
 };
-
-// Typedefs
-using bvh_node = bvh_gnode<float, 3>;
-using bvh_data = bvh_gdata<float, 3>;
 
 // Results of intersect_xxx and overlap_xxx functions that include hit flag,
 // instance id, shape element id, shape element uv and intersection distance.
 // The values are all set for scene intersection. Shape intersection does not
 // set the instance id and element intersections do not set shape element id
 // and the instance id. Results values are set only if hit is true.
-template <typename T, size_t N>
-struct intersection {
-  int       instance = -1;
-  int       element  = -1;
-  vec<T, 2> uv       = {0, 0};
-  T         distance = 0;
-  bool      hit      = false;
+struct intersection3f {
+  int   instance = -1;
+  int   element  = -1;
+  vec2f uv       = {0, 0};
+  float distance = 0;
+  bool  hit      = false;
 
-  intersection() : hit{false} {}
-  intersection(int element_, const vec<T, 2>& uv_, T distance_) :
+  intersection3f() : hit{false} {}
+  intersection3f(int element_, const vec2f& uv_, float distance_) :
       element{element_}, uv{uv_}, distance{distance_}, hit{true} {}
-  intersection(int instance_, int element_, const vec<T, 2>& uv_, T distance_) :
+  intersection3f(
+      int instance_, int element_, const vec2f& uv_, float distance_) :
       instance{instance_},
       element{element_},
       uv{uv_},
       distance{distance_},
       hit{true} {}
-  intersection(int element_, const pintersection<T, 3>& intersection_) :
+  intersection3f(int element_, const pintersection3f& intersection_) :
       element{element_},
       uv{intersection_.uv},
       distance{intersection_.distance},
       hit{intersection_.hit} {}
-  intersection(int instance_, const intersection& intersection_) :
+  intersection3f(int instance_, const intersection3f& intersection_) :
       instance{instance_},
       element{intersection_.element},
       uv{intersection_.uv},
@@ -1327,28 +1122,24 @@ struct intersection {
       hit{intersection_.hit} {}
 };
 
-// Typedefs
-using intersection3f = intersection<float, 3>;
-
 // Build BVH nodes
-template <typename E, typename Func,
-    typename T = decltype(std::declval<result_t<Func, E>>().min.x)>
-inline bvh_gdata<T, 3> make_bvh(
+template <typename E, typename Func>
+inline bvh_data make_bvh(
     const vector<E>& elements, bool highquality, Func&& bbox_func);
 
 // Update bvh
-template <typename T, typename E, typename Func>
+template <typename E, typename Func>
 inline void refit_bvh(
-    bvh_gdata<T, 3>& bvh, const vector<E>& elements, Func&& bbox_func);
+    bvh_data& bvh, const vector<E>& elements, Func&& bbox_func);
 
-template <typename T, typename E, typename Func>
-inline intersection<T, 3> intersect_bvh(const bvh_gdata<T, 3>& bvh,
-    const vector<E>& elements, const ray<T, 3>& ray_, bool find_any,
+template <typename E, typename Func>
+inline intersection3f intersect_bvh(const bvh_data& bvh,
+    const vector<E>& elements, const ray3f& ray_, bool find_any,
     Func&& intersect_element);
 
-template <typename T, typename E, typename Func>
-inline intersection<T, 3> overlap_bvh(const bvh_gdata<T, 3>& bvh,
-    const vector<E>& elements, const ray<T, 3>& pos, float max_distance,
+template <typename E, typename Func>
+inline intersection3f overlap_bvh(const bvh_data& bvh,
+    const vector<E>& elements, const vec3f& pos, float max_distance,
     bool find_any, Func&& overlap_element);
 
 }  // namespace yocto
@@ -1514,20 +1305,20 @@ inline vec2i split_middle(
 constexpr auto bvh_max_prims = 4;
 
 // Build BVH nodes
-template <typename E, typename Func, typename T>
-inline bvh_gdata<T, 3> make_bvh(
+template <typename E, typename Func>
+inline bvh_data make_bvh(
     const vector<E>& elements, bool highquality, Func&& bbox_func) {
   // create primitives
 
   // bvh
-  auto bvh = bvh_gdata<T, 3>{};
+  auto bvh = bvh_data{};
 
   // prepare to build nodes
   bvh.nodes.clear();
   bvh.nodes.reserve(elements.size() * 2);
 
   // prepare bboxes
-  auto bboxes = vector<bbox<T, 3>>(elements.size());
+  auto bboxes = vector<bbox3f>(elements.size());
   for (auto&& [bbox, element] : zip(bboxes, elements))
     bbox = bbox_func(element);
 
@@ -1586,9 +1377,9 @@ inline bvh_gdata<T, 3> make_bvh(
 }
 
 // Update bvh
-template <typename T, typename E, typename Func>
+template <typename E, typename Func>
 inline void refit_bvh(
-    bvh_gdata<T, 3>& bvh, const vector<E>& elements, Func&& bbox_func) {
+    bvh_data& bvh, const vector<E>& elements, Func&& bbox_func) {
   for (auto nodeid = (int)bvh.nodes.size() - 1; nodeid >= 0; nodeid--) {
     auto& node = bvh.nodes[nodeid];
     node.bbox_ = invalidb3f;
@@ -1605,9 +1396,9 @@ inline void refit_bvh(
   }
 }
 
-template <typename T, typename E, typename Func>
-inline intersection<T, 3> intersect_bvh(const bvh_gdata<T, 3>& bvh,
-    const vector<E>& elements, const ray<T, 3>& ray_, bool find_any,
+template <typename E, typename Func>
+inline intersection3f intersect_bvh(const bvh_data& bvh,
+    const vector<E>& elements, const ray3f& ray_, bool find_any,
     Func&& intersect_element) {
   // check empty
   if (bvh.nodes.empty()) return {};
@@ -1618,7 +1409,7 @@ inline intersection<T, 3> intersect_bvh(const bvh_gdata<T, 3>& bvh,
   node_stack[node_cur++] = 0;
 
   // shared variables
-  auto sintersection = intersection<T, 3>{};
+  auto sintersection = intersection3f{};
 
   // copy ray to modify it
   auto ray = ray_;
@@ -1666,9 +1457,9 @@ inline intersection<T, 3> intersect_bvh(const bvh_gdata<T, 3>& bvh,
 }
 
 // Check if a point overlaps some elements.
-template <typename T, typename E, typename Func>
-inline intersection<T, 3> overlap_bvh(const bvh_gdata<T, 3>& bvh,
-    const vector<E>& elements, const vec<T, 3>& pos, float max_distance,
+template <typename E, typename Func>
+inline intersection3f overlap_bvh(const bvh_data& bvh,
+    const vector<E>& elements, const vec3f& pos, float max_distance,
     bool find_any, Func&& overlap_element) {
   // check if empty
   if (bvh.nodes.empty()) return {};
@@ -1679,7 +1470,7 @@ inline intersection<T, 3> overlap_bvh(const bvh_gdata<T, 3>& bvh,
   node_stack[node_cur++] = 0;
 
   // intersection
-  auto sintersection = intersection<T, 3>{};
+  auto sintersection = intersection3f{};
 
   // walking stack
   while (node_cur != 0) {

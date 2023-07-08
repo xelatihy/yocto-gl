@@ -2681,10 +2681,10 @@ constexpr kernel vec<T, N> transform_vector(
     const mat<T, N + 1, N + 1>& a, const vec<T, N>& b) {
   if constexpr (N == 2) {
     auto tvb = a * vec<T, 3>{b, 0};
-    return xyz(tvb) / tvb.z;
+    return vec<T, N>{tvb.x, tvb.y} / tvb.z;
   } else if constexpr (N == 3) {
     auto tvb = a * vec<T, 4>{b, 0};
-    return xyz(tvb) / tvb.w;
+    return vec<T, N>{tvb.x, tvb.y, tvb.z} / tvb.w;
   }
 }
 template <typename T, size_t N>

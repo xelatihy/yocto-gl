@@ -1188,7 +1188,7 @@ inline vector<float> sample_quads_cdf(
     auto& [v1, v2, v3, v4] = quads[i];
     auto w                 = quad_area(
         positions[v1], positions[v2], positions[v3], positions[v4]);
-    cdf[i] = w + (i ? cdf[i - 1] : 0);
+    cdf[i] = w + (i != 0 ? cdf[i - 1] : 0);
   }
   return cdf;
 }
