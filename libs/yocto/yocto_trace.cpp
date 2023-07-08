@@ -96,7 +96,7 @@ trace_bvh make_trace_bvh(const scene_data& scene, const trace_params& params) {
 }
 
 // Ray-intersection shortcuts
-static intersection3f intersect_scene(const trace_bvh& bvh,
+static scene_intersection intersect_scene(const trace_bvh& bvh,
     const scene_data& scene, const ray3f& ray, bool find_any = false) {
   if (bvh.ebvh.ebvh) {
     return intersect_scene_ebvh(bvh.ebvh, scene, ray, find_any);
@@ -104,7 +104,7 @@ static intersection3f intersect_scene(const trace_bvh& bvh,
     return intersect_scene_bvh(bvh.bvh, scene, ray, find_any);
   }
 }
-static intersection3f intersect_instance(const trace_bvh& bvh,
+static scene_intersection intersect_instance(const trace_bvh& bvh,
     const scene_data& scene, int instance, const ray3f& ray,
     bool find_any = false) {
   if (bvh.ebvh.ebvh) {
@@ -123,42 +123,42 @@ namespace yocto {
 
 // Convenience functions
 [[maybe_unused]] static vec3f eval_position(
-    const scene_data& scene, const intersection3f& intersection) {
+    const scene_data& scene, const scene_intersection& intersection) {
   return eval_position(scene, scene.instances[intersection.instance],
       intersection.element, intersection.uv);
 }
 [[maybe_unused]] static vec3f eval_normal(
-    const scene_data& scene, const intersection3f& intersection) {
+    const scene_data& scene, const scene_intersection& intersection) {
   return eval_normal(scene, scene.instances[intersection.instance],
       intersection.element, intersection.uv);
 }
 [[maybe_unused]] static vec3f eval_element_normal(
-    const scene_data& scene, const intersection3f& intersection) {
+    const scene_data& scene, const scene_intersection& intersection) {
   return eval_element_normal(
       scene, scene.instances[intersection.instance], intersection.element);
 }
 [[maybe_unused]] static vec3f eval_shading_position(const scene_data& scene,
-    const intersection3f& intersection, const vec3f& outgoing) {
+    const scene_intersection& intersection, const vec3f& outgoing) {
   return eval_shading_position(scene, scene.instances[intersection.instance],
       intersection.element, intersection.uv, outgoing);
 }
 [[maybe_unused]] static vec3f eval_shading_normal(const scene_data& scene,
-    const intersection3f& intersection, const vec3f& outgoing) {
+    const scene_intersection& intersection, const vec3f& outgoing) {
   return eval_shading_normal(scene, scene.instances[intersection.instance],
       intersection.element, intersection.uv, outgoing);
 }
 [[maybe_unused]] static vec2f eval_texcoord(
-    const scene_data& scene, const intersection3f& intersection) {
+    const scene_data& scene, const scene_intersection& intersection) {
   return eval_texcoord(scene, scene.instances[intersection.instance],
       intersection.element, intersection.uv);
 }
 [[maybe_unused]] static material_point eval_material(
-    const scene_data& scene, const intersection3f& intersection) {
+    const scene_data& scene, const scene_intersection& intersection) {
   return eval_material(scene, scene.instances[intersection.instance],
       intersection.element, intersection.uv);
 }
 [[maybe_unused]] static bool is_volumetric(
-    const scene_data& scene, const intersection3f& intersection) {
+    const scene_data& scene, const scene_intersection& intersection) {
   return is_volumetric(scene, scene.instances[intersection.instance]);
 }
 
@@ -778,7 +778,7 @@ static trace_result trace_pathmis(const scene_data& scene, const trace_bvh& bvh,
            (this_pdf * this_pdf + other_pdf * other_pdf);
   };
   auto next_emission     = true;
-  auto next_intersection = intersection3f{};
+  auto next_intersection = scene_intersection{};
 
   // trace  path
   for (auto bounce = 0; bounce < params.bounces; bounce++) {

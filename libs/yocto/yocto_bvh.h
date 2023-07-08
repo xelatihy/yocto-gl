@@ -67,7 +67,7 @@ namespace yocto {
 // and the split axis. Leaf and internal nodes are identical, except that
 // indices refer to primitives for leaf nodes or other nodes for internal nodes.
 struct bvh_node {
-  bbox3f  bbox_    = {};
+  bbox3f  bbox     = {};
   int32_t start    = 0;
   int16_t num      = 0;
   int8_t  axis     = 0;
@@ -78,20 +78,20 @@ struct bvh_node {
 // array indices. BVH nodes indices refer to either the node array,
 // for internal nodes, or the primitive arrays, for leaf nodes.
 // Application data is not stored explicitly.
-struct bvh_data {
+struct bvh_tree {
   vector<bvh_node> nodes      = {};
   vector<int>      primitives = {};
 };
 
 // Shape BVHs are just the bvh for the shape.
 struct shape_bvh {
-  bvh_data bvh = {};
+  bvh_tree bvh = {};
 };
 
 // Scene BVHs store the bvh for instances and shapes.
 // Application data is not stored explicitly.
 struct scene_bvh {
-  bvh_data          bvh    = {};
+  bvh_tree          bvh    = {};
   vector<shape_bvh> shapes = {};
 };
 
@@ -106,48 +106,32 @@ void update_scene_bvh(scene_bvh& bvh, const scene_data& scene,
     const vector<int>& updated_instances, const vector<int>& updated_shapes);
 
 // Results of intersect_xxx and overlap_xxx functions that include hit flag,
+// shape element id, shape element uv and intersection distance.
+struct shape_intersection {
+  int   element  = -1;
+  vec2f uv       = {0, 0};
+  float distance = 0;
+  bool  hit      = false;
+};
+
+// Results of intersect_xxx and overlap_xxx functions that include hit flag,
 // instance id, shape element id, shape element uv and intersection distance.
-// The values are all set for scene intersection. Shape intersection does not
-// set the instance id and element intersections do not set shape element id
-// and the instance id. Results values are set only if hit is true.
-struct intersection3f {
+struct scene_intersection {
   int   instance = -1;
   int   element  = -1;
   vec2f uv       = {0, 0};
   float distance = 0;
   bool  hit      = false;
-
-  intersection3f() : hit{false} {}
-  intersection3f(int element_, const vec2f& uv_, float distance_) :
-      element{element_}, uv{uv_}, distance{distance_}, hit{true} {}
-  intersection3f(
-      int instance_, int element_, const vec2f& uv_, float distance_) :
-      instance{instance_},
-      element{element_},
-      uv{uv_},
-      distance{distance_},
-      hit{true} {}
-  intersection3f(int element_, const prim_intersection& intersection_) :
-      element{element_},
-      uv{intersection_.uv},
-      distance{intersection_.distance},
-      hit{intersection_.hit} {}
-  intersection3f(int instance_, const intersection3f& intersection_) :
-      instance{instance_},
-      element{intersection_.element},
-      uv{intersection_.uv},
-      distance{intersection_.distance},
-      hit{intersection_.hit} {}
 };
 
 // Intersect ray with a bvh returning either the first or any intersection
 // depending on `find_any`. Returns the ray distance , the instance id,
 // the shape element index and the element barycentric coordinates.
-intersection3f intersect_shape_bvh(const shape_bvh& bvh,
+shape_intersection intersect_shape_bvh(const shape_bvh& bvh,
     const shape_data& shape, const ray3f& ray, bool find_any = false);
-intersection3f intersect_scene_bvh(const scene_bvh& bvh,
+scene_intersection intersect_scene_bvh(const scene_bvh& bvh,
     const scene_data& scene, const ray3f& ray, bool find_any = false);
-intersection3f intersect_instance_bvh(const scene_bvh& bvh,
+scene_intersection intersect_instance_bvh(const scene_bvh& bvh,
     const scene_data& scene, int instance, const ray3f& ray,
     bool find_any = false);
 
@@ -155,10 +139,12 @@ intersection3f intersect_instance_bvh(const scene_bvh& bvh,
 // max distance, returning either the closest or any overlap depending on
 // `find_any`. Returns the point distance, the instance id, the shape element
 // index and the element barycentric coordinates.
-intersection3f overlap_shape_bvh(const shape_bvh& bvh, const shape_data& shape,
-    const vec3f& pos, float max_distance, bool find_any = false);
-intersection3f overlap_scene_bvh(const scene_bvh& bvh, const scene_data& scene,
-    const vec3f& pos, float max_distance, bool find_any = false);
+shape_intersection overlap_shape_bvh(const shape_bvh& bvh,
+    const shape_data& shape, const vec3f& pos, float max_distance,
+    bool find_any = false);
+scene_intersection overlap_scene_bvh(const scene_bvh& bvh,
+    const scene_data& scene, const vec3f& pos, float max_distance,
+    bool find_any = false);
 
 }  // namespace yocto
 
@@ -168,40 +154,38 @@ intersection3f overlap_scene_bvh(const scene_bvh& bvh, const scene_data& scene,
 namespace yocto {
 
 // Build elements bvh
-bvh_data make_points_bvh(const vector<int>& points,
+bvh_tree make_points_bvh(const vector<int>& points,
     const vector<vec3f>& positions, const vector<float>& radius,
     bool highquality = false);
-bvh_data make_lines_bvh(const vector<vec2i>& lines,
+bvh_tree make_lines_bvh(const vector<vec2i>& lines,
     const vector<vec3f>& positions, const vector<float>& radius,
     bool highquality = false);
-bvh_data make_triangles_bvh(const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, const vector<float>& radius,
-    bool highquality = false);
-bvh_data make_quads_bvh(const vector<vec4i>& quads,
-    const vector<vec3f>& positions, const vector<float>& radius,
-    bool highquality = false);
+bvh_tree make_triangles_bvh(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, bool highquality = false);
+bvh_tree make_quads_bvh(const vector<vec4i>& quads,
+    const vector<vec3f>& positions, bool highquality = false);
 
 // Refit elements bvh
-void update_points_bvh(bvh_data& bvh, const vector<int>& points,
+void update_points_bvh(bvh_tree& bvh, const vector<int>& points,
     const vector<vec3f>& positions, const vector<float>& radius);
-void update_lines_bvh(bvh_data& bvh, const vector<vec2i>& lines,
+void update_lines_bvh(bvh_tree& bvh, const vector<vec2i>& lines,
     const vector<vec3f>& positions, const vector<float>& radius);
-void update_triangles_bvh(bvh_data& bvh, const vector<vec3i>& triangles,
+void update_triangles_bvh(bvh_tree& bvh, const vector<vec3i>& triangles,
     const vector<vec3f>& positions);
 void update_quads_bvh(
-    bvh_data& bvh, const vector<vec4i>& quads, const vector<vec3f>& positions);
+    bvh_tree& bvh, const vector<vec4i>& quads, const vector<vec3f>& positions);
 
 // Bvh intersection
-intersection3f intersect_points_bvh(const bvh_data& bvh,
+shape_intersection intersect_points_bvh(const bvh_tree& bvh,
     const vector<int>& points, const vector<vec3f>& positions,
     const vector<float>& radius, const ray3f& ray, bool find_any = false);
-intersection3f intersect_lines_bvh(const bvh_data& bvh,
+shape_intersection intersect_lines_bvh(const bvh_tree& bvh,
     const vector<vec2i>& lines, const vector<vec3f>& positions,
     const vector<float>& radius, const ray3f& ray, bool find_any = false);
-intersection3f intersect_triangles_bvh(const bvh_data& bvh,
+shape_intersection intersect_triangles_bvh(const bvh_tree& bvh,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const ray3f& ray, bool find_any = false);
-intersection3f intersect_quads_bvh(const bvh_data& bvh,
+shape_intersection intersect_quads_bvh(const bvh_tree& bvh,
     const vector<vec4i>& quads, const vector<vec3f>& positions,
     const ray3f& ray, bool find_any = false);
 
@@ -242,11 +226,11 @@ void update_scene_ebvh(scene_ebvh& bvh, const scene_data& scene,
 // Intersect ray with a bvh returning either the first or any intersection
 // depending on `find_any`. Returns the ray distance , the instance id,
 // the shape element index and the element barycentric coordinates.
-intersection3f intersect_shape_ebvh(const shape_ebvh& bvh,
+shape_intersection intersect_shape_ebvh(const shape_ebvh& bvh,
     const shape_data& shape, const ray3f& ray, bool find_any = false);
-intersection3f intersect_scene_ebvh(const scene_ebvh& bvh,
+scene_intersection intersect_scene_ebvh(const scene_ebvh& bvh,
     const scene_data& scene, const ray3f& ray, bool find_any = false);
-intersection3f intersect_instance_ebvh(const scene_ebvh& bvh,
+scene_intersection intersect_instance_ebvh(const scene_ebvh& bvh,
     const scene_data& scene, int instance, const ray3f& ray,
     bool find_any = false);
 

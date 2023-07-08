@@ -100,8 +100,9 @@ static vector<vec3f> transform_points(const frame3f& frame,
 template <typename T>
 struct zip_labels {
   struct iterator {
-    iterator(size_t idx, const vector<string>& labels, const vector<T>& others)
-        : idx{idx}, labels{labels}, others{others} {}
+    iterator(
+        size_t idx, const vector<string>& labels, const vector<T>& others) :
+        idx{idx}, labels{labels}, others{others} {}
 
     bool operator!=(const iterator& other) const { return idx != other.idx; }
     void operator++() { idx++; }
@@ -115,8 +116,8 @@ struct zip_labels {
     const vector<T>&      others;
   };
 
-  zip_labels(const vector<string>& labels, const vector<T>& others)
-      : labels{labels}, others{others} {}
+  zip_labels(const vector<string>& labels, const vector<T>& others) :
+      labels{labels}, others{others} {}
   iterator begin() { return {(size_t)0, labels, others}; }
   iterator end() { return {min(labels.size(), others.size()), labels, others}; }
 
@@ -1943,22 +1944,22 @@ inline void parallel_for_batch(vec<T, 2> num, Func&& func) {
 
 // Convenience functions
 [[maybe_unused]] static vec3f eval_position(
-    const scene_data& scene, const intersection3f& intersection) {
+    const scene_data& scene, const scene_intersection& intersection) {
   return eval_position(scene, scene.instances[intersection.instance],
       intersection.element, intersection.uv);
 }
 [[maybe_unused]] static vec3f eval_normal(
-    const scene_data& scene, const intersection3f& intersection) {
+    const scene_data& scene, const scene_intersection& intersection) {
   return eval_normal(scene, scene.instances[intersection.instance],
       intersection.element, intersection.uv);
 }
 [[maybe_unused]] static vec2f eval_texcoord(
-    const scene_data& scene, const intersection3f& intersection) {
+    const scene_data& scene, const scene_intersection& intersection) {
   return eval_texcoord(scene, scene.instances[intersection.instance],
       intersection.element, intersection.uv);
 }
 [[maybe_unused]] static material_point eval_material(
-    const scene_data& scene, const intersection3f& intersection) {
+    const scene_data& scene, const scene_intersection& intersection) {
   return eval_material(scene, scene.instances[intersection.instance],
       intersection.element, intersection.uv);
 }
