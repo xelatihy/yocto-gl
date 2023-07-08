@@ -80,7 +80,7 @@ inline kernel const float& alpha(const vec4f& color) { return color[3]; }
 
 // Conversion between floats and bytes
 inline kernel byte float_to_byte(float a) {
-  return (byte)clamp(int(a * 256), 0, 255);
+  return (byte)clamp(int(a * 256.0f), 0, 255);
 }
 inline kernel float byte_to_float(byte a) { return a / 255.0f; }
 inline kernel vec3b float_to_byte(const vec3f& a) {
@@ -89,8 +89,8 @@ inline kernel vec3b float_to_byte(const vec3f& a) {
 inline kernel vec4b float_to_byte(const vec4f& a) {
   return (vec4b)clamp(vec4i(a * 256), 0, 255);
 }
-inline kernel vec3f byte_to_float(const vec3b& a) { return a / 255.0f; }
-inline kernel vec4f byte_to_float(const vec4b& a) { return a / 255.0f; }
+inline kernel vec3f byte_to_float(const vec3b& a) { return (vec3f)a / 255.0f; }
+inline kernel vec4f byte_to_float(const vec4b& a) { return (vec4f)a / 255.0f; }
 
 // Luminance
 inline kernel float luminance(const vec3f& a) {
@@ -149,7 +149,7 @@ inline kernel vec3f rgba_to_rgb(const vec4f& rgba) { return xyz(rgba); }
 
 // Apply contrast. Grey should be 0.18 for linear and 0.5 for gamma.
 inline kernel vec3f lincontrast(const vec3f& rgb, float contrast, float grey) {
-  return max(grey + (rgb - grey) * (contrast * 2), 0);
+  return max(grey + (rgb - grey) * (contrast * 2), 0.0f);
 }
 // Apply contrast in log2. Grey should be 0.18 for linear and 0.5 for gamma.
 inline kernel vec3f logcontrast(
@@ -158,7 +158,7 @@ inline kernel vec3f logcontrast(
   auto log_grey = log2(grey);
   auto log_ldr  = log2(rgb + epsilon);
   auto adjusted = log_grey + (log_ldr - log_grey) * (logcontrast * 2);
-  return max(exp2(adjusted) - epsilon, 0);
+  return max(exp2(adjusted) - epsilon, 0.0f);
 }
 // Apply an s-shaped contrast.
 inline kernel vec3f contrast(const vec3f& rgb, float contrast) {
@@ -168,7 +168,7 @@ inline kernel vec3f contrast(const vec3f& rgb, float contrast) {
 inline kernel vec3f saturate(const vec3f& rgb, float saturation,
     const vec3f& weights = vec3f{1.0f / 3.0f, 1.0f / 3.0f, 1.0f / 3.0f}) {
   auto grey = dot(weights, rgb);
-  return max(grey + (rgb - grey) * (saturation * 2), 0);
+  return max(grey + (rgb - grey) * (saturation * 2), 0.0f);
 }
 
 #ifndef __CUDACC__

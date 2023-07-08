@@ -123,17 +123,17 @@ vec4f eval_texture(const texture_data& texture, const vec2f& uv,
   auto size = max(texture.pixelsf.extents(), texture.pixelsb.extents());
 
   // get coordinates normalized for tiling
-  auto st = (clamp_to_edge ? clamp(uv, 0, 1) : mod(uv, 1)) * size;
+  auto st = (clamp_to_edge ? clamp(uv, 0.0f, 1.0f) : mod(uv, 1.0f)) * size;
 
   // handle interpolation
   if (no_interpolation) {
-    auto ij = clamp((vec2s)st, 0, size - 1);
+    auto ij = clamp((vec2i)st, 0, size - 1);
     return lookup_texture(texture, ij, ldr_as_linear);
   } else {
-    auto ij   = clamp((vec2s)st, 0, size - 1);
-    auto i1j  = (ij + vec2s{1, 0}) % size;
-    auto ij1  = (ij + vec2s{0, 1}) % size;
-    auto i1j1 = (ij + vec2s{1, 1}) % size;
+    auto ij   = clamp((vec2i)st, 0, size - 1);
+    auto i1j  = (ij + vec2i{1, 0}) % size;
+    auto ij1  = (ij + vec2i{0, 1}) % size;
+    auto i1j1 = (ij + vec2i{1, 1}) % size;
     auto w    = st - ij;
     return lookup_texture(texture, ij, ldr_as_linear) * (1 - w.x) * (1 - w.y) +
            lookup_texture(texture, ij1, ldr_as_linear) * (1 - w.x) * w.y +

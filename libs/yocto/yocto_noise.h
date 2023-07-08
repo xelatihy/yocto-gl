@@ -57,7 +57,11 @@ namespace yocto {
 // The implementation follows https://www.jcgt.org/published/0009/03/02/
 // Hash Functions for GPU Rendering", Mark Jarzynski and Marc Olano, JCGT
 
-inline kernel vec<uint32_t, 3> hash_pcg(const vec<uint32_t, 3>& v_) {
+// Unsupported for now
+
+#if 0
+
+inline kernel array<uint32_t, 3> hash_pcg(const array<uint32_t, 3>& v_) {
   // https://www.jcgt.org/published/0009/03/02/
   // clang-format off
   auto v = v_ * 1664525u + 1013904223u;
@@ -67,7 +71,7 @@ inline kernel vec<uint32_t, 3> hash_pcg(const vec<uint32_t, 3>& v_) {
   // clang-format on
   return v;
 }
-inline kernel vec<uint32_t, 4> hash_pcg(const vec<uint32_t, 4>& v_) {
+inline kernel array<uint32_t, 4> hash_pcg(const array<uint32_t, 4>& v_) {
   // https://www.jcgt.org/published/0009/03/02/
   // clang-format off
   auto v = v_ * 1664525u + 1013904223u;
@@ -77,11 +81,11 @@ inline kernel vec<uint32_t, 4> hash_pcg(const vec<uint32_t, 4>& v_) {
   // clang-format on
   return v;
 }
-inline kernel vec<uint32_t, 2> hash_pcg(const vec<uint32_t, 2>& v) {
+inline kernel array<uint32_t, 2> hash_pcg(const array<uint32_t, 2>& v) {
   return xy(hash_pcg(vec<uint32_t, 3>{v, 0}));
 }
 template <typename T, size_t N>
-inline kernel vec<T, N> hash_pcgr(const vec<uint32_t, N>& v) {
+inline kernel vec<T, N> hash_pcgr(const array<uint32_t, N>& v) {
   return hash_pcg(v) * (T)(1.0 / std::numeric_limits<uint32_t>::max());
 }
 template <typename T, size_t N>
@@ -101,13 +105,12 @@ namespace yocto {
 // http://eastfarthing.com/blog/2015-04-21-noise/
 
 // Interpolants and surflets
-template <typename T>
-constexpr kernel T _cubic_kernel(T x_) {
+inline kernel float _cubic_kernel(float x_) {
   auto x = abs(x_);
   return x >= 1 ? 0 : 1 - (3 - 2 * x) * x * x;
 }
 template <typename T, size_t N>
-constexpr kernel T _cubic_kernel(const vec<T, N>& x) {
+inline kernel T _cubic_kernel(const vec<T, N>& x) {
   if constexpr (N == 1) {
     return _cubic_kernel(x.x);
   } else if constexpr (N == 2) {
@@ -182,6 +185,35 @@ inline T turbulence_noise(const vec<T, N>& p, int octaves = 6) {
     sum += abs(uv_to_unit(gradient_noise(p * pow2(octave)))) / pow2(octave);
   }
   return sum;
+}
+
+#endif
+
+// Gradient noise
+template <typename T, size_t N>
+inline T gradient_noise(const vec<T, N>& p) {
+  return 0;
+}
+// Value noise
+template <typename T, size_t N>
+inline T value_noise(const vec<T, N>& p) {
+  return 0;
+}
+
+// Fractal noise
+template <typename T, size_t N>
+inline T fractal_noise(const vec<T, N>& p, int octaves = 6) {
+  return 0;
+}
+// Ridge noise
+template <typename T, size_t N>
+inline T ridge_noise(const vec<T, N>& p, int octaves = 6) {
+  return 0;
+}
+// Turbulence noise
+template <typename T, size_t N>
+inline T turbulence_noise(const vec<T, N>& p, int octaves = 6) {
+  return 0;
 }
 
 }  // namespace yocto

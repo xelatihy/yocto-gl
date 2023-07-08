@@ -343,9 +343,11 @@ static ray3f sample_camera(const camera_data& camera, const vec2i& ij,
   } else {
     const auto width  = 2.0f;
     const auto offset = 0.5f;
-    auto fuv = width * select(component_less(puv, 0.5f), sqrt(2 * puv) - 1,
-                           1 - sqrt(2 - 2 * puv)) +
-               offset;
+    auto       fuv =
+        width *
+            vec2f{puv.x < 0.5f ? sqrt(2 * puv.x) - 1 : 1 - sqrt(2 - 2 * puv.x),
+                puv.y < 0.5f ? sqrt(2 * puv.y) - 1 : 1 - sqrt(2 - 2 * puv.y)} +
+        offset;
     auto uv = (ij + fuv) / image_size;
     return eval_camera(camera, uv, sample_disk(luv));
   }

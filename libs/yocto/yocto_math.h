@@ -578,13 +578,31 @@ inline kernel vec2f operator-(const vec2f& a) { return {-a.x, -a.y}; }
 inline kernel vec2f operator+(const vec2f& a, const vec2f& b) {
   return {a.x + b.x, a.y + b.y};
 }
+inline kernel vec2f operator+(const vec2i& a, const vec2f& b) {
+  return {a.x + b.x, a.y + b.y};
+}
+inline kernel vec2f operator+(const vec2f& a, const vec2i& b) {
+  return {a.x + b.x, a.y + b.y};
+}
 inline kernel vec2f operator+(const vec2f& a, float b) {
   return {a.x + b, a.y + b};
 }
 inline kernel vec2f operator+(float a, const vec2f& b) {
   return {a + b.x, a + b.y};
 }
+inline kernel vec2f operator+(const vec2f& a, int b) {
+  return {a.x + b, a.y + b};
+}
+inline kernel vec2f operator+(int a, const vec2f& b) {
+  return {a + b.x, a + b.y};
+}
 inline kernel vec2f operator-(const vec2f& a, const vec2f& b) {
+  return {a.x - b.x, a.y - b.y};
+}
+inline kernel vec2f operator-(const vec2i& a, const vec2f& b) {
+  return {a.x - b.x, a.y - b.y};
+}
+inline kernel vec2f operator-(const vec2f& a, const vec2i& b) {
   return {a.x - b.x, a.y - b.y};
 }
 inline kernel vec2f operator-(const vec2f& a, float b) {
@@ -593,7 +611,19 @@ inline kernel vec2f operator-(const vec2f& a, float b) {
 inline kernel vec2f operator-(float a, const vec2f& b) {
   return {a - b.x, a - b.y};
 }
+inline kernel vec2f operator-(const vec2f& a, int b) {
+  return {a.x - b, a.y - b};
+}
+inline kernel vec2f operator-(int a, const vec2f& b) {
+  return {a - b.x, a - b.y};
+}
 inline kernel vec2f operator*(const vec2f& a, const vec2f& b) {
+  return {a.x * b.x, a.y * b.y};
+}
+inline kernel vec2f operator*(const vec2i& a, const vec2f& b) {
+  return {a.x * b.x, a.y * b.y};
+}
+inline kernel vec2f operator*(const vec2f& a, const vec2i& b) {
   return {a.x * b.x, a.y * b.y};
 }
 inline kernel vec2f operator*(const vec2f& a, float b) {
@@ -602,13 +632,31 @@ inline kernel vec2f operator*(const vec2f& a, float b) {
 inline kernel vec2f operator*(float a, const vec2f& b) {
   return {a * b.x, a * b.y};
 }
+inline kernel vec2f operator*(const vec2f& a, int b) {
+  return {a.x * b, a.y * b};
+}
+inline kernel vec2f operator*(int a, const vec2f& b) {
+  return {a * b.x, a * b.y};
+}
 inline kernel vec2f operator/(const vec2f& a, const vec2f& b) {
+  return {a.x / b.x, a.y / b.y};
+}
+inline kernel vec2f operator/(const vec2i& a, const vec2f& b) {
+  return {a.x / b.x, a.y / b.y};
+}
+inline kernel vec2f operator/(const vec2f& a, const vec2i& b) {
   return {a.x / b.x, a.y / b.y};
 }
 inline kernel vec2f operator/(const vec2f& a, float b) {
   return {a.x / b, a.y / b};
 }
 inline kernel vec2f operator/(float a, const vec2f& b) {
+  return {a / b.x, a / b.y};
+}
+inline kernel vec2f operator/(const vec2f& a, int b) {
+  return {a.x / b, a.y / b};
+}
+inline kernel vec2f operator/(int a, const vec2f& b) {
   return {a / b.x, a / b.y};
 }
 
@@ -719,6 +767,9 @@ inline kernel vec2f fmod(const vec2f& a, const vec2f& b) {
 inline kernel vec2f fmod(const vec2f& a, float b) {
   return {fmod(a.x, b), fmod(a.y, b)};
 }
+inline kernel vec2f fmod(const vec2f& a, int b) {
+  return {fmod(a.x, (float)b), fmod(a.y, (float)b)};
+}
 inline kernel vec2f mod(const vec2f& a, const vec2f& b) {
   return {mod(a.x, b.x), mod(a.y, b.y)};
 }
@@ -764,13 +815,31 @@ inline kernel vec3f operator-(const vec3f& a) { return {-a.x, -a.y, -a.z}; }
 inline kernel vec3f operator+(const vec3f& a, const vec3f& b) {
   return {a.x + b.x, a.y + b.y, a.z + b.z};
 }
+inline kernel vec3f operator+(const vec3i& a, const vec3f& b) {
+  return {a.x + b.x, a.y + b.y, a.z + b.z};
+}
+inline kernel vec3f operator+(const vec3f& a, const vec3i& b) {
+  return {a.x + b.x, a.y + b.y, a.z + b.z};
+}
 inline kernel vec3f operator+(const vec3f& a, float b) {
   return {a.x + b, a.y + b, a.z + b};
 }
 inline kernel vec3f operator+(float a, const vec3f& b) {
   return {a + b.x, a + b.y, a + b.z};
 }
+inline kernel vec3f operator+(const vec3f& a, int b) {
+  return {a.x + b, a.y + b, a.z + b};
+}
+inline kernel vec3f operator+(int a, const vec3f& b) {
+  return {a + b.x, a + b.y, a + b.z};
+}
 inline kernel vec3f operator-(const vec3f& a, const vec3f& b) {
+  return {a.x - b.x, a.y - b.y, a.z - b.z};
+}
+inline kernel vec3f operator-(const vec3i& a, const vec3f& b) {
+  return {a.x - b.x, a.y - b.y, a.z - b.z};
+}
+inline kernel vec3f operator-(const vec3f& a, const vec3i& b) {
   return {a.x - b.x, a.y - b.y, a.z - b.z};
 }
 inline kernel vec3f operator-(const vec3f& a, float b) {
@@ -779,7 +848,19 @@ inline kernel vec3f operator-(const vec3f& a, float b) {
 inline kernel vec3f operator-(float a, const vec3f& b) {
   return {a - b.x, a - b.y, a - b.z};
 }
+inline kernel vec3f operator-(const vec3f& a, int b) {
+  return {a.x - b, a.y - b, a.z - b};
+}
+inline kernel vec3f operator-(int a, const vec3f& b) {
+  return {a - b.x, a - b.y, a - b.z};
+}
 inline kernel vec3f operator*(const vec3f& a, const vec3f& b) {
+  return {a.x * b.x, a.y * b.y, a.z * b.z};
+}
+inline kernel vec3f operator*(const vec3i& a, const vec3f& b) {
+  return {a.x * b.x, a.y * b.y, a.z * b.z};
+}
+inline kernel vec3f operator*(const vec3f& a, const vec3i& b) {
   return {a.x * b.x, a.y * b.y, a.z * b.z};
 }
 inline kernel vec3f operator*(const vec3f& a, float b) {
@@ -788,13 +869,31 @@ inline kernel vec3f operator*(const vec3f& a, float b) {
 inline kernel vec3f operator*(float a, const vec3f& b) {
   return {a * b.x, a * b.y, a * b.z};
 }
+inline kernel vec3f operator*(const vec3f& a, int b) {
+  return {a.x * b, a.y * b, a.z * b};
+}
+inline kernel vec3f operator*(int a, const vec3f& b) {
+  return {a * b.x, a * b.y, a * b.z};
+}
 inline kernel vec3f operator/(const vec3f& a, const vec3f& b) {
+  return {a.x / b.x, a.y / b.y, a.z / b.z};
+}
+inline kernel vec3f operator/(const vec3i& a, const vec3f& b) {
+  return {a.x / b.x, a.y / b.y, a.z / b.z};
+}
+inline kernel vec3f operator/(const vec3f& a, const vec3i& b) {
   return {a.x / b.x, a.y / b.y, a.z / b.z};
 }
 inline kernel vec3f operator/(const vec3f& a, float b) {
   return {a.x / b, a.y / b, a.z / b};
 }
 inline kernel vec3f operator/(float a, const vec3f& b) {
+  return {a / b.x, a / b.y, a / b.z};
+}
+inline kernel vec3f operator/(const vec3f& a, int b) {
+  return {a.x / b, a.y / b, a.z / b};
+}
+inline kernel vec3f operator/(int a, const vec3f& b) {
   return {a / b.x, a / b.y, a / b.z};
 }
 
@@ -960,6 +1059,9 @@ inline kernel vec3f fmod(const vec3f& a, const vec3f& b) {
 inline kernel vec3f fmod(const vec3f& a, float b) {
   return {fmod(a.x, b), fmod(a.y, b), fmod(a.z, b)};
 }
+inline kernel vec3f fmod(const vec3f& a, int b) {
+  return {fmod(a.x, (float)b), fmod(a.y, (float)b), fmod(a.z, (float)b)};
+}
 inline kernel vec3f mod(const vec3f& a, const vec3f& b) {
   return {mod(a.x, b.x), mod(a.y, b.y), mod(a.z, b.z)};
 }
@@ -1024,13 +1126,31 @@ inline kernel vec4f operator-(const vec4f& a) {
 inline kernel vec4f operator+(const vec4f& a, const vec4f& b) {
   return {a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w};
 }
+inline kernel vec4f operator+(const vec4i& a, const vec4f& b) {
+  return {a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w};
+}
+inline kernel vec4f operator+(const vec4f& a, const vec4i& b) {
+  return {a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w};
+}
 inline kernel vec4f operator+(const vec4f& a, float b) {
   return {a.x + b, a.y + b, a.z + b, a.w + b};
 }
 inline kernel vec4f operator+(float a, const vec4f& b) {
   return {a + b.x, a + b.y, a + b.z, a + b.w};
 }
+inline kernel vec4f operator+(const vec4f& a, int b) {
+  return {a.x + b, a.y + b, a.z + b, a.w + b};
+}
+inline kernel vec4f operator+(int a, const vec4f& b) {
+  return {a + b.x, a + b.y, a + b.z, a + b.w};
+}
 inline kernel vec4f operator-(const vec4f& a, const vec4f& b) {
+  return {a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w};
+}
+inline kernel vec4f operator-(const vec4i& a, const vec4f& b) {
+  return {a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w};
+}
+inline kernel vec4f operator-(const vec4f& a, const vec4i& b) {
   return {a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w};
 }
 inline kernel vec4f operator-(const vec4f& a, float b) {
@@ -1039,7 +1159,19 @@ inline kernel vec4f operator-(const vec4f& a, float b) {
 inline kernel vec4f operator-(float a, const vec4f& b) {
   return {a - b.x, a - b.y, a - b.z, a - b.w};
 }
+inline kernel vec4f operator-(const vec4f& a, int b) {
+  return {a.x - b, a.y - b, a.z - b, a.w - b};
+}
+inline kernel vec4f operator-(int a, const vec4f& b) {
+  return {a - b.x, a - b.y, a - b.z, a - b.w};
+}
 inline kernel vec4f operator*(const vec4f& a, const vec4f& b) {
+  return {a.x * b.x, a.y * b.y, a.z * b.z, a.w * b.w};
+}
+inline kernel vec4f operator*(const vec4i& a, const vec4f& b) {
+  return {a.x * b.x, a.y * b.y, a.z * b.z, a.w * b.w};
+}
+inline kernel vec4f operator*(const vec4f& a, const vec4i& b) {
   return {a.x * b.x, a.y * b.y, a.z * b.z, a.w * b.w};
 }
 inline kernel vec4f operator*(const vec4f& a, float b) {
@@ -1048,13 +1180,31 @@ inline kernel vec4f operator*(const vec4f& a, float b) {
 inline kernel vec4f operator*(float a, const vec4f& b) {
   return {a * b.x, a * b.y, a * b.z, a * b.w};
 }
+inline kernel vec4f operator*(const vec4f& a, int b) {
+  return {a.x * b, a.y * b, a.z * b, a.w * b};
+}
+inline kernel vec4f operator*(int a, const vec4f& b) {
+  return {a * b.x, a * b.y, a * b.z, a * b.w};
+}
 inline kernel vec4f operator/(const vec4f& a, const vec4f& b) {
+  return {a.x / b.x, a.y / b.y, a.z / b.z, a.w / b.w};
+}
+inline kernel vec4f operator/(const vec4i& a, const vec4f& b) {
+  return {a.x / b.x, a.y / b.y, a.z / b.z, a.w / b.w};
+}
+inline kernel vec4f operator/(const vec4f& a, const vec4i& b) {
   return {a.x / b.x, a.y / b.y, a.z / b.z, a.w / b.w};
 }
 inline kernel vec4f operator/(const vec4f& a, float b) {
   return {a.x / b, a.y / b, a.z / b, a.w / b};
 }
 inline kernel vec4f operator/(float a, const vec4f& b) {
+  return {a / b.x, a / b.y, a / b.z, a / b.w};
+}
+inline kernel vec4f operator/(const vec4f& a, int b) {
+  return {a.x / b, a.y / b, a.z / b, a.w / b};
+}
+inline kernel vec4f operator/(int a, const vec4f& b) {
   return {a / b.x, a / b.y, a / b.z, a / b.w};
 }
 
@@ -1208,6 +1358,10 @@ inline kernel vec4f fmod(const vec4f& a, const vec4f& b) {
 inline kernel vec4f fmod(const vec4f& a, float b) {
   return {fmod(a.x, b), fmod(a.y, b), fmod(a.z, b), fmod(a.w, b)};
 }
+inline kernel vec4f fmod(const vec4f& a, int b) {
+  return {fmod(a.x, (float)b), fmod(a.y, (float)b), fmod(a.z, (float)b),
+      fmod(a.w, (float)b)};
+}
 inline kernel vec4f mod(const vec4f& a, const vec4f& b) {
   return {mod(a.x, b.x), mod(a.y, b.y), mod(a.z, b.z), mod(a.w, b.w)};
 }
@@ -1271,6 +1425,12 @@ inline kernel vec2i operator+(const vec2i& a, int b) {
 inline kernel vec2i operator+(int a, const vec2i& b) {
   return {a + b.x, a + b.y};
 }
+inline kernel vec2f operator+(const vec2i& a, float b) {
+  return {a.x + b, a.y + b};
+}
+inline kernel vec2f operator+(float a, const vec2i& b) {
+  return {a + b.x, a + b.y};
+}
 inline kernel vec2i operator-(const vec2i& a, const vec2i& b) {
   return {a.x - b.x, a.y - b.y};
 }
@@ -1278,6 +1438,12 @@ inline kernel vec2i operator-(const vec2i& a, int b) {
   return {a.x - b, a.y - b};
 }
 inline kernel vec2i operator-(int a, const vec2i& b) {
+  return {a - b.x, a - b.y};
+}
+inline kernel vec2f operator-(const vec2i& a, float b) {
+  return {a.x - b, a.y - b};
+}
+inline kernel vec2f operator-(float a, const vec2i& b) {
   return {a - b.x, a - b.y};
 }
 inline kernel vec2i operator*(const vec2i& a, const vec2i& b) {
@@ -1289,6 +1455,12 @@ inline kernel vec2i operator*(const vec2i& a, int b) {
 inline kernel vec2i operator*(int a, const vec2i& b) {
   return {a * b.x, a * b.y};
 }
+inline kernel vec2f operator*(const vec2i& a, float b) {
+  return {a.x * b, a.y * b};
+}
+inline kernel vec2f operator*(float a, const vec2i& b) {
+  return {a * b.x, a * b.y};
+}
 inline kernel vec2i operator/(const vec2i& a, const vec2i& b) {
   return {a.x / b.x, a.y / b.y};
 }
@@ -1297,6 +1469,21 @@ inline kernel vec2i operator/(const vec2i& a, int b) {
 }
 inline kernel vec2i operator/(int a, const vec2i& b) {
   return {a / b.x, a / b.y};
+}
+inline kernel vec2f operator/(const vec2i& a, float b) {
+  return {a.x / b, a.y / b};
+}
+inline kernel vec2f operator/(float a, const vec2i& b) {
+  return {a / b.x, a / b.y};
+}
+inline kernel vec2i operator%(const vec2i& a, const vec2i& b) {
+  return {a.x % b.x, a.y % b.y};
+}
+inline kernel vec2i operator%(const vec2i& a, int b) {
+  return {a.x % b, a.y % b};
+}
+inline kernel vec2i operator%(int a, const vec2i& b) {
+  return {a % b.x, a % b.y};
 }
 
 // Vector assignments
@@ -1388,6 +1575,12 @@ inline kernel vec3i operator+(const vec3i& a, int b) {
 inline kernel vec3i operator+(int a, const vec3i& b) {
   return {a + b.x, a + b.y, a + b.z};
 }
+inline kernel vec3f operator+(const vec3i& a, float b) {
+  return {a.x + b, a.y + b, a.z + b};
+}
+inline kernel vec3f operator+(float a, const vec3i& b) {
+  return {a + b.x, a + b.y, a + b.z};
+}
 inline kernel vec3i operator-(const vec3i& a, const vec3i& b) {
   return {a.x - b.x, a.y - b.y, a.z - b.z};
 }
@@ -1397,10 +1590,22 @@ inline kernel vec3i operator-(const vec3i& a, int b) {
 inline kernel vec3i operator-(int a, const vec3i& b) {
   return {a - b.x, a - b.y, a - b.z};
 }
+inline kernel vec3f operator-(const vec3i& a, float b) {
+  return {a.x - b, a.y - b, a.z - b};
+}
+inline kernel vec3f operator-(float a, const vec3i& b) {
+  return {a - b.x, a - b.y, a - b.z};
+}
 inline kernel vec3i operator*(const vec3i& a, const vec3i& b) {
   return {a.x * b.x, a.y * b.y, a.z * b.z};
 }
 inline kernel vec3i operator*(const vec3i& a, int b) {
+  return {a.x * b, a.y * b, a.z * b};
+}
+inline kernel vec3f operator*(float a, const vec3i& b) {
+  return {a * b.x, a * b.y, a * b.z};
+}
+inline kernel vec3f operator*(const vec3i& a, float b) {
   return {a.x * b, a.y * b, a.z * b};
 }
 inline kernel vec3i operator*(int a, const vec3i& b) {
@@ -1414,6 +1619,21 @@ inline kernel vec3i operator/(const vec3i& a, int b) {
 }
 inline kernel vec3i operator/(int a, const vec3i& b) {
   return {a / b.x, a / b.y, a / b.z};
+}
+inline kernel vec3f operator/(const vec3i& a, float b) {
+  return {a.x / b, a.y / b, a.z / b};
+}
+inline kernel vec3f operator/(float a, const vec3i& b) {
+  return {a / b.x, a / b.y, a / b.z};
+}
+inline kernel vec3i operator%(const vec3i& a, const vec3i& b) {
+  return {a.x % b.x, a.y % b.y, a.z % b.z};
+}
+inline kernel vec3i operator%(const vec3i& a, int b) {
+  return {a.x % b, a.y % b, a.z % b};
+}
+inline kernel vec3i operator%(int a, const vec3i& b) {
+  return {a % b.x, a % b.y, a % b.z};
 }
 
 // Vector assignments
@@ -1523,6 +1743,12 @@ inline kernel vec4i operator+(const vec4i& a, int b) {
 inline kernel vec4i operator+(int a, const vec4i& b) {
   return {a + b.x, a + b.y, a + b.z, a + b.w};
 }
+inline kernel vec4f operator+(const vec4i& a, float b) {
+  return {a.x + b, a.y + b, a.z + b, a.w + b};
+}
+inline kernel vec4f operator+(float a, const vec4i& b) {
+  return {a + b.x, a + b.y, a + b.z, a + b.w};
+}
 inline kernel vec4i operator-(const vec4i& a, const vec4i& b) {
   return {a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w};
 }
@@ -1530,6 +1756,12 @@ inline kernel vec4i operator-(const vec4i& a, int b) {
   return {a.x - b, a.y - b, a.z - b, a.w - b};
 }
 inline kernel vec4i operator-(int a, const vec4i& b) {
+  return {a - b.x, a - b.y, a - b.z, a - b.w};
+}
+inline kernel vec4f operator-(const vec4i& a, float b) {
+  return {a.x - b, a.y - b, a.z - b, a.w - b};
+}
+inline kernel vec4f operator-(float a, const vec4i& b) {
   return {a - b.x, a - b.y, a - b.z, a - b.w};
 }
 inline kernel vec4i operator*(const vec4i& a, const vec4i& b) {
@@ -1541,6 +1773,12 @@ inline kernel vec4i operator*(const vec4i& a, int b) {
 inline kernel vec4i operator*(int a, const vec4i& b) {
   return {a * b.x, a * b.y, a * b.z, a * b.w};
 }
+inline kernel vec4f operator*(const vec4i& a, float b) {
+  return {a.x * b, a.y * b, a.z * b, a.w * b};
+}
+inline kernel vec4f operator*(float a, const vec4i& b) {
+  return {a * b.x, a * b.y, a * b.z, a * b.w};
+}
 inline kernel vec4i operator/(const vec4i& a, const vec4i& b) {
   return {a.x / b.x, a.y / b.y, a.z / b.z, a.w / b.w};
 }
@@ -1549,6 +1787,21 @@ inline kernel vec4i operator/(const vec4i& a, int b) {
 }
 inline kernel vec4i operator/(int a, const vec4i& b) {
   return {a / b.x, a / b.y, a / b.z, a / b.w};
+}
+inline kernel vec4f operator/(const vec4i& a, float b) {
+  return {a.x / b, a.y / b, a.z / b, a.w / b};
+}
+inline kernel vec4f operator/(float a, const vec4i& b) {
+  return {a / b.x, a / b.y, a / b.z, a / b.w};
+}
+inline kernel vec4i operator%(const vec4i& a, const vec4i& b) {
+  return {a.x % b.x, a.y % b.y, a.z % b.z, a.w % b.w};
+}
+inline kernel vec4i operator%(const vec4i& a, int b) {
+  return {a.x % b, a.y % b, a.z % b, a.w % b};
+}
+inline kernel vec4i operator%(int a, const vec4i& b) {
+  return {a % b.x, a % b.y, a % b.z, a % b.w};
 }
 
 // Vector assignments
@@ -1867,1397 +2120,6 @@ inline kernel byte argmin(const vec4b& a) {
 }
 inline kernel byte find_index(const vec4b& a, byte b) {
   return a.x == b ? 0 : (a.y == b ? 1 : (a.z == b ? 2 : (a.w == b ? 3 : -1)));
-}
-
-// ------------------------------------------------------------------
-
-// Vector operations.
-template <typename T, size_t N>
-constexpr kernel vec<T, N> operator+(const vec<T, N>& a) {
-  return a;
-}
-template <typename T, size_t N>
-constexpr kernel vec<T, N> operator-(const vec<T, N>& a) {
-  if constexpr (N == 1) {
-    return {-a.x};
-  } else if constexpr (N == 2) {
-    return {-a.x, -a.y};
-  } else if constexpr (N == 3) {
-    return {-a.x, -a.y, -a.z};
-  } else if constexpr (N == 4) {
-    return {-a.x, -a.y, -a.z, -a.w};
-  }
-}
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, N> operator+(const vec<T1, N>& a, const vec<T2, N>& b) {
-  if constexpr (N == 1) {
-    return {a.x + b.x};
-  } else if constexpr (N == 2) {
-    return {a.x + b.x, a.y + b.y};
-  } else if constexpr (N == 3) {
-    return {a.x + b.x, a.y + b.y, a.z + b.z};
-  } else if constexpr (N == 4) {
-    return {a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w};
-  }
-}
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, N> operator+(const vec<T1, N>& a, T2 b) {
-  if constexpr (N == 1) {
-    return {a.x + b};
-  } else if constexpr (N == 2) {
-    return {a.x + b, a.y + b};
-  } else if constexpr (N == 3) {
-    return {a.x + b, a.y + b, a.z + b};
-  } else if constexpr (N == 4) {
-    return {a.x + b, a.y + b, a.z + b, a.w + b};
-  }
-}
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, N> operator+(T1 a, const vec<T2, N>& b) {
-  if constexpr (N == 1) {
-    return {a + b.x};
-  } else if constexpr (N == 2) {
-    return {a + b.x, a + b.y};
-  } else if constexpr (N == 3) {
-    return {a + b.x, a + b.y, a + b.z};
-  } else if constexpr (N == 4) {
-    return {a + b.x, a + b.y, a + b.z, a + b.w};
-  }
-}
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, N> operator-(const vec<T1, N>& a, const vec<T2, N>& b) {
-  if constexpr (N == 1) {
-    return {a.x - b.x};
-  } else if constexpr (N == 2) {
-    return {a.x - b.x, a.y - b.y};
-  } else if constexpr (N == 3) {
-    return {a.x - b.x, a.y - b.y, a.z - b.z};
-  } else if constexpr (N == 4) {
-    return {a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w};
-  }
-}
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, N> operator-(const vec<T1, N>& a, T2 b) {
-  if constexpr (N == 1) {
-    return {a.x - b};
-  } else if constexpr (N == 2) {
-    return {a.x - b, a.y - b};
-  } else if constexpr (N == 3) {
-    return {a.x - b, a.y - b, a.z - b};
-  } else if constexpr (N == 4) {
-    return {a.x - b, a.y - b, a.z - b, a.w - b};
-  }
-}
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, N> operator-(T1 a, const vec<T2, N>& b) {
-  if constexpr (N == 1) {
-    return {a - b.x};
-  } else if constexpr (N == 2) {
-    return {a - b.x, a - b.y};
-  } else if constexpr (N == 3) {
-    return {a - b.x, a - b.y, a - b.z};
-  } else if constexpr (N == 4) {
-    return {a - b.x, a - b.y, a - b.z, a - b.w};
-  }
-}
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, N> operator*(const vec<T1, N>& a, const vec<T2, N>& b) {
-  if constexpr (N == 1) {
-    return {a.x * b.x};
-  } else if constexpr (N == 2) {
-    return {a.x * b.x, a.y * b.y};
-  } else if constexpr (N == 3) {
-    return {a.x * b.x, a.y * b.y, a.z * b.z};
-  } else if constexpr (N == 4) {
-    return {a.x * b.x, a.y * b.y, a.z * b.z, a.w * b.w};
-  }
-}
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, N> operator*(const vec<T1, N>& a, T2 b) {
-  if constexpr (N == 1) {
-    return {a.x * b};
-  } else if constexpr (N == 2) {
-    return {a.x * b, a.y * b};
-  } else if constexpr (N == 3) {
-    return {a.x * b, a.y * b, a.z * b};
-  } else if constexpr (N == 4) {
-    return {a.x * b, a.y * b, a.z * b, a.w * b};
-  }
-}
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, N> operator*(T1 a, const vec<T2, N>& b) {
-  if constexpr (N == 1) {
-    return {a * b.x};
-  } else if constexpr (N == 2) {
-    return {a * b.x, a * b.y};
-  } else if constexpr (N == 3) {
-    return {a * b.x, a * b.y, a * b.z};
-  } else if constexpr (N == 4) {
-    return {a * b.x, a * b.y, a * b.z, a * b.w};
-  }
-}
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, N> operator/(const vec<T1, N>& a, const vec<T2, N>& b) {
-  if constexpr (N == 1) {
-    return {a.x / b.x};
-  } else if constexpr (N == 2) {
-    return {a.x / b.x, a.y / b.y};
-  } else if constexpr (N == 3) {
-    return {a.x / b.x, a.y / b.y, a.z / b.z};
-  } else if constexpr (N == 4) {
-    return {a.x / b.x, a.y / b.y, a.z / b.z, a.w / b.w};
-  }
-}
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, N> operator/(const vec<T1, N>& a, T2 b) {
-  if constexpr (N == 1) {
-    return {a.x / b};
-  } else if constexpr (N == 2) {
-    return {a.x / b, a.y / b};
-  } else if constexpr (N == 3) {
-    return {a.x / b, a.y / b, a.z / b};
-  } else if constexpr (N == 4) {
-    return {a.x / b, a.y / b, a.z / b, a.w / b};
-  }
-}
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, N> operator/(T1 a, const vec<T2, N>& b) {
-  if constexpr (N == 1) {
-    return {a / b.x};
-  } else if constexpr (N == 2) {
-    return {a / b.x, a / b.y};
-  } else if constexpr (N == 3) {
-    return {a / b.x, a / b.y, a / b.z};
-  } else if constexpr (N == 4) {
-    return {a / b.x, a / b.y, a / b.z, a / b.w};
-  }
-}
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, N> operator%(const vec<T1, N>& a, const vec<T2, N>& b) {
-  if constexpr (N == 1) {
-    return {a.x % b.x};
-  } else if constexpr (N == 2) {
-    return {a.x % b.x, a.y % b.y};
-  } else if constexpr (N == 3) {
-    return {a.x % b.x, a.y % b.y, a.z % b.z};
-  } else if constexpr (N == 4) {
-    return {a.x % b.x, a.y % b.y, a.z % b.z, a.w % b.w};
-  }
-}
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, N> operator%(const vec<T1, N>& a, T2 b) {
-  if constexpr (N == 1) {
-    return {a.x % b};
-  } else if constexpr (N == 2) {
-    return {a.x % b, a.y % b};
-  } else if constexpr (N == 3) {
-    return {a.x % b, a.y % b, a.z % b};
-  } else if constexpr (N == 4) {
-    return {a.x % b, a.y % b, a.z % b, a.w % b};
-  }
-}
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, N> operator%(T1 a, const vec<T2, N>& b) {
-  if constexpr (N == 1) {
-    return {a.x % b.x};
-  } else if constexpr (N == 2) {
-    return {a.x % b.x, a.y % b.y};
-  } else if constexpr (N == 3) {
-    return {a.x % b.x, a.y % b.y, a.z % b.z};
-  } else if constexpr (N == 4) {
-    return {a.x % b.x, a.y % b.y, a.z % b.z, a.w % b.w};
-  }
-}
-template <typename T, size_t N>
-constexpr kernel vec<T, N> operator~(const vec<T, N>& a) {
-  if constexpr (N == 1) {
-    return {~a.x};
-  } else if constexpr (N == 2) {
-    return {~a.x, ~a.y};
-  } else if constexpr (N == 3) {
-    return {~a.x, ~a.y, ~a.z};
-  } else if constexpr (N == 4) {
-    return {~a.x, ~a.y, ~a.z, ~a.w};
-  }
-}
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, N> operator&(const vec<T1, N>& a, const vec<T2, N>& b) {
-  if constexpr (N == 1) {
-    return {a.x & b.x};
-  } else if constexpr (N == 2) {
-    return {a.x & b.x, a.y & b.y};
-  } else if constexpr (N == 3) {
-    return {a.x & b.x, a.y & b.y, a.z & b.z};
-  } else if constexpr (N == 4) {
-    return {a.x & b.x, a.y & b.y, a.z & b.z, a.w & b.w};
-  }
-}
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, N> operator&(const vec<T1, N>& a, T2 b) {
-  if constexpr (N == 1) {
-    return {a.x & b};
-  } else if constexpr (N == 2) {
-    return {a.x & b, a.y & b};
-  } else if constexpr (N == 3) {
-    return {a.x & b, a.y & b, a.z & b};
-  } else if constexpr (N == 4) {
-    return {a.x & b, a.y & b, a.z & b, a.w & b};
-  }
-}
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, N> operator&(T1 a, const vec<T2, N>& b) {
-  if constexpr (N == 1) {
-    return {a.x & b.x};
-  } else if constexpr (N == 2) {
-    return {a.x & b.x, a.y & b.y};
-  } else if constexpr (N == 3) {
-    return {a.x & b.x, a.y & b.y, a.z & b.z};
-  } else if constexpr (N == 4) {
-    return {a.x & b.x, a.y & b.y, a.z & b.z, a.w & b.w};
-  }
-}
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, N> operator|(const vec<T1, N>& a, const vec<T2, N>& b) {
-  if constexpr (N == 1) {
-    return {a.x | b.x};
-  } else if constexpr (N == 2) {
-    return {a.x | b.x, a.y | b.y};
-  } else if constexpr (N == 3) {
-    return {a.x | b.x, a.y | b.y, a.z | b.z};
-  } else if constexpr (N == 4) {
-    return {a.x | b.x, a.y | b.y, a.z | b.z, a.w | b.w};
-  }
-}
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, N> operator|(const vec<T1, N>& a, T2 b) {
-  if constexpr (N == 1) {
-    return {a.x | b};
-  } else if constexpr (N == 2) {
-    return {a.x | b, a.y | b};
-  } else if constexpr (N == 3) {
-    return {a.x | b, a.y | b, a.z | b};
-  } else if constexpr (N == 4) {
-    return {a.x | b, a.y | b, a.z | b, a.w | b};
-  }
-}
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, N> operator|(T1 a, const vec<T2, N>& b) {
-  if constexpr (N == 1) {
-    return {a.x | b.x};
-  } else if constexpr (N == 2) {
-    return {a.x | b.x, a.y | b.y};
-  } else if constexpr (N == 3) {
-    return {a.x | b.x, a.y | b.y, a.z | b.z};
-  } else if constexpr (N == 4) {
-    return {a.x | b.x, a.y | b.y, a.z | b.z, a.w | b.w};
-  }
-}
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, N> operator^(const vec<T1, N>& a, const vec<T2, N>& b) {
-  if constexpr (N == 1) {
-    return {a.x ^ b.x};
-  } else if constexpr (N == 2) {
-    return {a.x ^ b.x, a.y ^ b.y};
-  } else if constexpr (N == 3) {
-    return {a.x ^ b.x, a.y ^ b.y, a.z ^ b.z};
-  } else if constexpr (N == 4) {
-    return {a.x ^ b.x, a.y ^ b.y, a.z ^ b.z, a.w ^ b.w};
-  }
-}
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, N> operator^(const vec<T1, N>& a, T2 b) {
-  if constexpr (N == 1) {
-    return {a.x ^ b};
-  } else if constexpr (N == 2) {
-    return {a.x ^ b, a.y ^ b};
-  } else if constexpr (N == 3) {
-    return {a.x ^ b, a.y ^ b, a.z ^ b};
-  } else if constexpr (N == 4) {
-    return {a.x ^ b, a.y ^ b, a.z ^ b, a.w ^ b};
-  }
-}
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, N> operator^(T1 a, const vec<T2, N>& b) {
-  if constexpr (N == 1) {
-    return {a.x ^ b.x};
-  } else if constexpr (N == 2) {
-    return {a.x ^ b.x, a.y ^ b.y};
-  } else if constexpr (N == 3) {
-    return {a.x ^ b.x, a.y ^ b.y, a.z ^ b.z};
-  } else if constexpr (N == 4) {
-    return {a.x ^ b.x, a.y ^ b.y, a.z ^ b.z, a.w ^ b.w};
-  }
-}
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, N> operator>>(
-    const vec<T1, N>& a, const vec<T2, N>& b) {
-  if constexpr (N == 1) {
-    return {a.x >> b.x};
-  } else if constexpr (N == 2) {
-    return {a.x >> b.x, a.y >> b.y};
-  } else if constexpr (N == 3) {
-    return {a.x >> b.x, a.y >> b.y, a.z >> b.z};
-  } else if constexpr (N == 4) {
-    return {a.x >> b.x, a.y >> b.y, a.z >> b.z, a.w >> b.w};
-  }
-}
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, N> operator>>(const vec<T1, N>& a, T2 b) {
-  if constexpr (N == 1) {
-    return {a.x >> b};
-  } else if constexpr (N == 2) {
-    return {a.x >> b, a.y >> b};
-  } else if constexpr (N == 3) {
-    return {a.x >> b, a.y >> b, a.z >> b};
-  } else if constexpr (N == 4) {
-    return {a.x >> b, a.y >> b, a.z >> b, a.w >> b};
-  }
-}
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, N> operator>>(T1 a, const vec<T2, N>& b) {
-  if constexpr (N == 1) {
-    return {a.x >> b.x};
-  } else if constexpr (N == 2) {
-    return {a.x >> b.x, a.y >> b.y};
-  } else if constexpr (N == 3) {
-    return {a.x >> b.x, a.y >> b.y, a.z >> b.z};
-  } else if constexpr (N == 4) {
-    return {a.x >> b.x, a.y >> b.y, a.z >> b.z, a.w >> b.w};
-  }
-}
-template <typename T, size_t N>
-constexpr kernel vec<T, N> operator<<(const vec<T, N>& a, const vec<T, N>& b) {
-  if constexpr (N == 1) {
-    return {a.x << b.x};
-  } else if constexpr (N == 2) {
-    return {a.x << b.x, a.y << b.y};
-  } else if constexpr (N == 3) {
-    return {a.x << b.x, a.y << b.y, a.z << b.z};
-  } else if constexpr (N == 4) {
-    return {a.x << b.x, a.y << b.y, a.z << b.z, a.w << b.w};
-  }
-}
-template <typename T, size_t N>
-constexpr kernel vec<T, N> operator<<(const vec<T, N>& a, T b) {
-  if constexpr (N == 1) {
-    return {a.x << b};
-  } else if constexpr (N == 2) {
-    return {a.x << b, a.y << b};
-  } else if constexpr (N == 3) {
-    return {a.x << b, a.y << b, a.z << b};
-  } else if constexpr (N == 4) {
-    return {a.x << b, a.y << b, a.z << b, a.w << b};
-  }
-}
-template <typename T, size_t N>
-constexpr kernel vec<T, N> operator<<(T a, const vec<T, N>& b) {
-  if constexpr (N == 1) {
-    return {a.x << b.x};
-  } else if constexpr (N == 2) {
-    return {a.x << b.x, a.y << b.y};
-  } else if constexpr (N == 3) {
-    return {a.x << b.x, a.y << b.y, a.z << b.z};
-  } else if constexpr (N == 4) {
-    return {a.x << b.x, a.y << b.y, a.z << b.z, a.w << b.w};
-  }
-}
-template <size_t N>
-constexpr kernel vec<bool, N> operator!(const vec<bool, N>& a) {
-  if constexpr (N == 1) {
-    return {!a.x};
-  } else if constexpr (N == 2) {
-    return {!a.x, !a.y};
-  } else if constexpr (N == 3) {
-    return {!a.x, !a.y, !a.z};
-  } else if constexpr (N == 4) {
-    return {!a.x, !a.y, !a.z, !a.w};
-  }
-}
-template <size_t N>
-constexpr kernel vec<bool, N> operator&&(
-    const vec<bool, N>& a, const vec<bool, N>& b) {
-  if constexpr (N == 1) {
-    return {a.x && b.x};
-  } else if constexpr (N == 2) {
-    return {a.x && b.x, a.y && b.y};
-  } else if constexpr (N == 3) {
-    return {a.x && b.x, a.y && b.y, a.z && b.z};
-  } else if constexpr (N == 4) {
-    return {a.x && b.x, a.y && b.y, a.z && b.z, a.w && b.w};
-  }
-}
-template <size_t N>
-constexpr kernel vec<bool, N> operator&&(const vec<bool, N>& a, bool b) {
-  if constexpr (N == 1) {
-    return {a.x && b};
-  } else if constexpr (N == 2) {
-    return {a.x && b, a.y && b};
-  } else if constexpr (N == 3) {
-    return {a.x && b, a.y && b, a.z && b};
-  } else if constexpr (N == 4) {
-    return {a.x && b, a.y && b, a.z && b, a.w && b};
-  }
-}
-template <size_t N>
-constexpr kernel vec<bool, N> operator&&(bool a, const vec<bool, N>& b) {
-  if constexpr (N == 1) {
-    return {a && b.x};
-  } else if constexpr (N == 2) {
-    return {a && b.x, a && b.y};
-  } else if constexpr (N == 3) {
-    return {a && b.x, a && b.y, a && b.z};
-  } else if constexpr (N == 4) {
-    return {a && b.x, a && b.y, a && b.z, a && b.w};
-  }
-}
-template <size_t N>
-constexpr kernel vec<bool, N> operator||(
-    const vec<bool, N>& a, const vec<bool, N>& b) {
-  if constexpr (N == 1) {
-    return {a.x || b.x};
-  } else if constexpr (N == 2) {
-    return {a.x || b.x, a.y || b.y};
-  } else if constexpr (N == 3) {
-    return {a.x || b.x, a.y || b.y, a.z || b.z};
-  } else if constexpr (N == 4) {
-    return {a.x || b.x, a.y || b.y, a.z || b.z, a.w || b.w};
-  }
-}
-template <size_t N>
-constexpr kernel vec<bool, N> operator||(const vec<bool, N>& a, bool b) {
-  if constexpr (N == 1) {
-    return {a.x || b};
-  } else if constexpr (N == 2) {
-    return {a.x || b, a.y || b};
-  } else if constexpr (N == 3) {
-    return {a.x || b, a.y || b, a.z || b};
-  } else if constexpr (N == 4) {
-    return {a.x || b, a.y || b, a.z || b, a.w || b};
-  }
-}
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, N> operator||(T1 a, const vec<T2, N>& b) {
-  if constexpr (N == 1) {
-    return {a || b.x};
-  } else if constexpr (N == 2) {
-    return {a || b.x, a || b.y};
-  } else if constexpr (N == 3) {
-    return {a || b.x, a || b.y, a || b.z};
-  } else if constexpr (N == 4) {
-    return {a || b.x, a || b.y, a || b.z, a || b.w};
-  }
-}
-
-// Vector assignments
-template <typename T, typename T1, size_t N>
-constexpr kernel vec<T, N>& operator+=(vec<T, N>& a, const vec<T1, N>& b) {
-  return a = a + b;
-}
-template <typename T, typename T1, size_t N>
-constexpr kernel vec<T, N>& operator+=(vec<T, N>& a, T1 b) {
-  return a = a + b;
-}
-template <typename T, typename T1, size_t N>
-constexpr kernel vec<T, N>& operator-=(vec<T, N>& a, const vec<T1, N>& b) {
-  return a = a - b;
-}
-template <typename T, typename T1, size_t N>
-constexpr kernel vec<T, N>& operator-=(vec<T, N>& a, T1 b) {
-  return a = a - b;
-}
-template <typename T, typename T1, size_t N>
-constexpr kernel vec<T, N>& operator*=(vec<T, N>& a, const vec<T1, N>& b) {
-  return a = a * b;
-}
-template <typename T, typename T1, size_t N>
-constexpr kernel vec<T, N>& operator*=(vec<T, N>& a, T1 b) {
-  return a = a * b;
-}
-template <typename T, typename T1, size_t N>
-constexpr kernel vec<T, N>& operator/=(vec<T, N>& a, const vec<T1, N>& b) {
-  return a = a / b;
-}
-template <typename T, typename T1, size_t N>
-constexpr kernel vec<T, N>& operator/=(vec<T, N>& a, T1 b) {
-  return a = a / b;
-}
-template <typename T, typename T1, size_t N>
-constexpr kernel vec<T, N>& operator%=(vec<T, N>& a, const vec<T1, N>& b) {
-  return a = a % b;
-}
-template <typename T, typename T1, size_t N>
-constexpr kernel vec<T, N>& operator%=(vec<T, N>& a, T1 b) {
-  return a = a % b;
-}
-template <typename T, typename T1, size_t N>
-constexpr kernel vec<T, N>& operator&=(vec<T, N>& a, const vec<T1, N>& b) {
-  return a = a & b;
-}
-template <typename T, typename T1, size_t N>
-constexpr kernel vec<T, N>& operator&=(vec<T, N>& a, T1 b) {
-  return a = a & b;
-}
-template <typename T, typename T1, size_t N>
-constexpr kernel vec<T, N>& operator|=(vec<T, N>& a, const vec<T1, N>& b) {
-  return a = a | b;
-}
-template <typename T, typename T1, size_t N>
-constexpr kernel vec<T, N>& operator|=(vec<T, N>& a, T1 b) {
-  return a = a | b;
-}
-template <typename T, typename T1, size_t N>
-constexpr kernel vec<T, N>& operator^=(vec<T, N>& a, const vec<T1, N>& b) {
-  return a = a ^ b;
-}
-template <typename T, typename T1, size_t N>
-constexpr kernel vec<T, N>& operator^=(vec<T, N>& a, T1 b) {
-  return a = a ^ b;
-}
-template <typename T, typename T1, size_t N>
-constexpr kernel vec<T, N>& operator>>=(vec<T, N>& a, const vec<T1, N>& b) {
-  return a = a >> b;
-}
-template <typename T, typename T1, size_t N>
-constexpr kernel vec<T, N>& operator>>=(vec<T, N>& a, T1 b) {
-  return a = a >> b;
-}
-template <typename T, typename T1, size_t N>
-constexpr kernel vec<T, N>& operator<<=(vec<T, N>& a, const vec<T1, N>& b) {
-  return a = a << b;
-}
-template <typename T, typename T1, size_t N>
-constexpr kernel vec<T, N>& operator<<=(vec<T, N>& a, T1 b) {
-  return a = a << b;
-}
-
-// Vector products and lengths.
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
-constexpr kernel T dot(const vec<T1, N>& a, const vec<T2, N>& b) {
-  if constexpr (N == 1) {
-    return a.x * b.x;
-  } else if constexpr (N == 2) {
-    return a.x * b.x + a.y * b.y;
-  } else if constexpr (N == 3) {
-    return a.x * b.x + a.y * b.y + a.z * b.z;
-  } else if constexpr (N == 4) {
-    return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
-  }
-}
-template <typename T1, typename T2, typename T = common_t<T1, T2>>
-constexpr kernel T cross(const vec<T1, 2>& a, const vec<T2, 2>& b) {
-  return a.x * b.y - a.y * b.x;
-}
-template <typename T1, typename T2, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, 3> cross(const vec<T1, 3>& a, const vec<T2, 3>& b) {
-  return {a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x};
-}
-template <typename T1, typename T2, typename T = common_t<T1, T2>>
-constexpr kernel T angle(const vec<T1, 3>& a, const vec<T2, 3>& b) {
-  return acos(clamp(dot(normalize(a), normalize(b)), (T)-1, (T)1));
-}
-
-// Orthogonal vectors.
-template <typename T>
-constexpr kernel vec<T, 3> orthogonal(const vec<T, 3>& v) {
-  // http://lolengine.net/blog/2013/09/21/picking-orthogonal-vector-combing-coconuts)
-  return abs(v.x) > abs(v.z) ? vec<T, 3>{-v.y, v.x, 0}
-                             : vec<T, 3>{0, -v.z, v.y};
-}
-template <typename T1, typename T2, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, 3> orthonormalize(
-    const vec<T1, 3>& a, const vec<T2, 3>& b) {
-  return normalize(a - b * dot(a, b));
-}
-
-// Reflected and refracted vector.
-template <typename T1, typename T2, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, 3> reflect(const vec<T1, 3>& w, const vec<T2, 3>& n) {
-  return -w + 2 * dot(n, w) * n;
-}
-template <typename T1, typename T2, typename T3,
-    typename T = common_t<T1, T2, T3>>
-constexpr kernel vec<T, 3> refract(
-    const vec<T1, 3>& w, const vec<T2, 3>& n, T3 inv_eta) {
-  auto cosine = dot(n, w);
-  auto k      = 1 + inv_eta * inv_eta * (cosine * cosine - 1);
-  if (k < 0) return {0, 0, 0};  // tir
-  return -w * inv_eta + (inv_eta * cosine - sqrt(k)) * n;
-}
-
-template <typename T, size_t N>
-constexpr kernel T length(const vec<T, N>& a) {
-  return sqrt(dot(a, a));
-}
-template <typename T, size_t N>
-constexpr kernel T length2(const vec<T, N>& a) {
-  return dot(a, a);
-}
-template <typename T, size_t N>
-[[deprecated]] constexpr kernel T length_squared(const vec<T, N>& a) {
-  return dot(a, a);
-}
-template <typename T, size_t N>
-constexpr kernel vec<T, N> normalize(const vec<T, N>& a) {
-  auto l = length(a);
-  return (l != 0) ? a / l : a;
-}
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
-constexpr kernel T distance(const vec<T1, N>& a, const vec<T2, N>& b) {
-  return length(a - b);
-}
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
-constexpr kernel T distance2(const vec<T1, N>& a, const vec<T2, N>& b) {
-  return dot(a - b, a - b);
-}
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
-[[deprecated]] constexpr kernel T distance_squared(
-    const vec<T1, N>& a, const vec<T2, N>& b) {
-  return dot(a - b, a - b);
-}
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
-constexpr kernel T angle(const vec<T1, N>& a, const vec<T2, N>& b) {
-  return acos(clamp(dot(normalize(a), normalize(b)), (T)-1, (T)1));
-}
-template <typename T1, typename T2, typename T3, size_t N,
-    typename T = common_t<T1, T2, T3>>
-constexpr kernel vec<T, N> slerp(
-    const vec<T1, N>& a, const vec<T2, N>& b, T3 u) {
-  static_assert(N != 1);
-  // https://en.wikipedia.org/wiki/Slerp
-  auto an = normalize(a), bn = normalize(b);
-  auto d = dot(an, bn);
-  if (d < 0) {
-    bn = -bn;
-    d  = -d;
-  }
-  if (d > (T)0.9995) return normalize(an + u * (bn - an));
-  auto theta = acos(clamp(d, (T)-1, (T)1));
-  if (theta == 0) return an;
-  return an * (sin(theta * (1 - u)) / sin(theta)) +
-         bn * (sin(theta * u) / sin(theta));
-}
-
-// Max element and clamp.
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, N> max(const vec<T1, N>& a, const vec<T2, N>& b) {
-  if constexpr (N == 1) {
-    return {max(a.x, b.x)};
-  } else if constexpr (N == 2) {
-    return {max(a.x, b.x), max(a.y, b.y)};
-  } else if constexpr (N == 3) {
-    return {max(a.x, b.x), max(a.y, b.y), max(a.z, b.z)};
-  } else if constexpr (N == 4) {
-    return {max(a.x, b.x), max(a.y, b.y), max(a.z, b.z), max(a.w, b.w)};
-  }
-}
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, N> max(const vec<T1, N>& a, T2 b) {
-  if constexpr (N == 1) {
-    return {max(a.x, b)};
-  } else if constexpr (N == 2) {
-    return {max(a.x, b), max(a.y, b)};
-  } else if constexpr (N == 3) {
-    return {max(a.x, b), max(a.y, b), max(a.z, b)};
-  } else if constexpr (N == 4) {
-    return {max(a.x, b), max(a.y, b), max(a.z, b), max(a.w, b)};
-  }
-}
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, N> min(const vec<T1, N>& a, const vec<T2, N>& b) {
-  if constexpr (N == 1) {
-    return {min(a.x, b.x)};
-  } else if constexpr (N == 2) {
-    return {min(a.x, b.x), min(a.y, b.y)};
-  } else if constexpr (N == 3) {
-    return {min(a.x, b.x), min(a.y, b.y), min(a.z, b.z)};
-  } else if constexpr (N == 4) {
-    return {min(a.x, b.x), min(a.y, b.y), min(a.z, b.z), min(a.w, b.w)};
-  }
-}
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, N> min(const vec<T1, N>& a, T2 b) {
-  if constexpr (N == 1) {
-    return {min(a.x, b)};
-  } else if constexpr (N == 2) {
-    return {min(a.x, b), min(a.y, b)};
-  } else if constexpr (N == 3) {
-    return {min(a.x, b), min(a.y, b), min(a.z, b)};
-  } else if constexpr (N == 4) {
-    return {min(a.x, b), min(a.y, b), min(a.z, b), min(a.w, b)};
-  }
-}
-template <typename T1, typename T2, typename T3, size_t N,
-    typename T = common_t<T1, T2, T3>>
-constexpr kernel vec<T, N> clamp(
-    const vec<T1, N>& x, const vec<T2, N>& min, const vec<T3, N>& max) {
-  if constexpr (N == 1) {
-    return {clamp(x.x, min.x, max.x)};
-  } else if constexpr (N == 2) {
-    return {clamp(x.x, min.x, max.x), clamp(x.y, min.y, max.y)};
-  } else if constexpr (N == 3) {
-    return {clamp(x.x, min.x, max.x), clamp(x.y, min.y, max.y),
-        clamp(x.z, min.z, max.z)};
-  } else if constexpr (N == 4) {
-    return {clamp(x.x, min.x, max.x), clamp(x.y, min.y, max.y),
-        clamp(x.z, min.z, max.z), clamp(x.w, min.w, max.w)};
-  }
-}
-template <typename T1, typename T2, typename T3, size_t N,
-    typename T = common_t<T1, T2, T3>>
-constexpr kernel vec<T, N> clamp(const vec<T1, N>& x, T2 min, T3 max) {
-  if constexpr (N == 1) {
-    return {clamp(x.x, min, max)};
-  } else if constexpr (N == 2) {
-    return {clamp(x.x, min, max), clamp(x.y, min, max)};
-  } else if constexpr (N == 3) {
-    return {clamp(x.x, min, max), clamp(x.y, min, max), clamp(x.z, min, max)};
-  } else if constexpr (N == 4) {
-    return {clamp(x.x, min, max), clamp(x.y, min, max), clamp(x.z, min, max),
-        clamp(x.w, min, max)};
-  }
-}
-template <typename T1, typename T2, typename T3, size_t N,
-    typename T = common_t<T1, T2, T3>>
-constexpr kernel vec<T, N> clamp(
-    const vec<T1, N>& x, const vec<T2, N>& min, T3 max) {
-  if constexpr (N == 1) {
-    return {clamp(x.x, min.x, max)};
-  } else if constexpr (N == 2) {
-    return {clamp(x.x, min.x, max), clamp(x.y, min.y, max)};
-  } else if constexpr (N == 3) {
-    return {
-        clamp(x.x, min.x, max), clamp(x.y, min.y, max), clamp(x.z, min.z, max)};
-  } else if constexpr (N == 4) {
-    return {clamp(x.x, min.x, max), clamp(x.y, min.y, max),
-        clamp(x.z, min.z, max), clamp(x.w, min.w, max)};
-  }
-}
-template <typename T1, typename T2, typename T3, size_t N,
-    typename T = common_t<T1, T2, T3>>
-constexpr kernel vec<T, N> clamp(
-    const vec<T1, N>& x, T2 min, const vec<T3, N>& max) {
-  if constexpr (N == 1) {
-    return {clamp(x.x, min, max.x)};
-  } else if constexpr (N == 2) {
-    return {clamp(x.x, min, max.x), clamp(x.y, min, max.y)};
-  } else if constexpr (N == 3) {
-    return {clamp(x.x, min, max.x), clamp(x.y, min, max.y),
-        clamp(x.z, min.z, max.z)};
-  } else if constexpr (N == 4) {
-    return {clamp(x.x, min, max.x), clamp(x.y, min, max.y),
-        clamp(x.z, min, max.z), clamp(x.w, min, max.w)};
-  }
-}
-template <typename T1, typename T2, typename T3, size_t N,
-    typename T = common_t<T1, T2, T3>>
-constexpr kernel vec<T, N> lerp(
-    const vec<T1, N>& a, const vec<T2, N>& b, T3 u) {
-  return a * (1 - u) + b * u;
-}
-template <typename T1, typename T2, typename T3, size_t N,
-    typename T = common_t<T1, T2, T3>>
-constexpr kernel vec<T, N> lerp(
-    const vec<T1, N>& a, const vec<T2, N>& b, const vec<T3, N>& u) {
-  return a * (1 - u) + b * u;
-}
-
-template <typename T, size_t N>
-constexpr kernel T max(const vec<T, N>& a) {
-  if constexpr (N == 1) {
-    return a.x;
-  } else if constexpr (N == 2) {
-    return max(a.x, a.y);
-  } else if constexpr (N == 3) {
-    return max(max(a.x, a.y), a.z);
-  } else if constexpr (N == 4) {
-    return max(max(max(a.x, a.y), a.z), a.w);
-  }
-}
-template <typename T, size_t N>
-constexpr kernel T min(const vec<T, N>& a) {
-  if constexpr (N == 1) {
-    return a.x;
-  } else if constexpr (N == 2) {
-    return min(a.x, a.y);
-  } else if constexpr (N == 3) {
-    return min(min(a.x, a.y), a.z);
-  } else if constexpr (N == 4) {
-    return min(min(min(a.x, a.y), a.z), a.w);
-  }
-}
-template <typename T, size_t N>
-constexpr kernel size_t argmax(const vec<T, N>& a) {
-  if constexpr (N == 1) {
-    return 0;
-  } else if constexpr (N == 2) {
-    return a.x >= a.y ? 0 : 1;
-  } else if constexpr (N == 3) {
-    return a.x >= a.y ? (a.x >= a.z ? 0 : 2) : (a.y >= a.z ? 1 : 2);
-  } else if constexpr (N == 4) {
-    if (a.w >= a.x && a.w >= a.y && a.w >= a.z)
-      return 3;
-    else
-      return argmax(xyz(a));
-  }
-}
-template <typename T, size_t N>
-constexpr kernel size_t argmin(const vec<T, N>& a) {
-  if constexpr (N == 1) {
-    return 0;
-  } else if constexpr (N == 2) {
-    return a.x <= a.y ? 0 : 1;
-  } else if constexpr (N == 3) {
-    return a.x <= a.y ? (a.x <= a.z ? 0 : 2) : (a.y <= a.z ? 1 : 2);
-  } else if constexpr (N == 4) {
-    if (a.w <= a.x && a.w <= a.y && a.w <= a.z)
-      return 3;
-    else
-      return argmin(xyz(a));
-  }
-}
-template <typename T, size_t N, typename I = int>
-constexpr kernel I find_index(const vec<T, N>& a, T b) {
-  if constexpr (N == 1) {
-    return a.x == b ? 0 : -1;
-  } else if constexpr (N == 2) {
-    return a.x == b ? 0 : (a.y == b ? 1 : -1);
-  } else if constexpr (N == 3) {
-    return a.x == b ? 0 : (a.y == b ? 1 : (a.z == b ? 2 : -1));
-  } else if constexpr (N == 4) {
-    return a.x == b ? 0 : (a.y == b ? 1 : (a.z == b ? 2 : (a.w == b ? 3 : -1)));
-  }
-}
-
-template <typename T, size_t N>
-constexpr kernel T sum(const vec<T, N>& a) {
-  if constexpr (N == 1) {
-    return a.x;
-  } else if constexpr (N == 2) {
-    return a.x + a.y;
-  } else if constexpr (N == 3) {
-    return a.x + a.y + a.z;
-  } else if constexpr (N == 4) {
-    return a.x + a.y + a.z + a.w;
-  }
-}
-template <typename T, size_t N>
-constexpr kernel T prod(const vec<T, N>& a) {
-  if constexpr (N == 1) {
-    return a.x;
-  } else if constexpr (N == 2) {
-    return a.x * a.y;
-  } else if constexpr (N == 3) {
-    return a.x * a.y * a.z;
-  } else if constexpr (N == 4) {
-    return a.x * a.y * a.z * a.w;
-  }
-}
-template <typename T, size_t N>
-constexpr kernel T mean(const vec<T, N>& a) {
-  return sum(a) / N;
-}
-template <size_t N>
-constexpr kernel bool all(const vec<bool, N>& a) {
-  if constexpr (N == 1) {
-    return a.x;
-  } else if constexpr (N == 2) {
-    return a.x && a.y;
-  } else if constexpr (N == 3) {
-    return a.x && a.y && a.z;
-  } else if constexpr (N == 4) {
-    return a.x && a.y && a.z && a.w;
-  }
-}
-template <typename T, size_t N>
-constexpr kernel T any(const vec<bool, N>& a) {
-  if constexpr (N == 1) {
-    return a.x;
-  } else if constexpr (N == 2) {
-    return a.x || a.y;
-  } else if constexpr (N == 3) {
-    return a.x || a.y || a.z;
-  } else if constexpr (N == 4) {
-    return a.x || a.y || a.z || a.w;
-  }
-}
-
-// Functions applied to vector elements
-template <typename T, size_t N>
-constexpr kernel vec<T, N> abs(const vec<T, N>& a) {
-  if constexpr (N == 1) {
-    return {abs(a.x)};
-  } else if constexpr (N == 2) {
-    return {abs(a.x), abs(a.y)};
-  } else if constexpr (N == 3) {
-    return {abs(a.x), abs(a.y), abs(a.z)};
-  } else if constexpr (N == 4) {
-    return {abs(a.x), abs(a.y), abs(a.z), abs(a.w)};
-  }
-}
-template <typename T, size_t N>
-constexpr kernel vec<T, N> sqr(const vec<T, N>& a) {
-  if constexpr (N == 1) {
-    return {sqr(a.x)};
-  } else if constexpr (N == 2) {
-    return {sqr(a.x), sqr(a.y)};
-  } else if constexpr (N == 3) {
-    return {sqr(a.x), sqr(a.y), sqr(a.z)};
-  } else if constexpr (N == 4) {
-    return {sqr(a.x), sqr(a.y), sqr(a.z), sqr(a.w)};
-  }
-}
-template <typename T, size_t N>
-constexpr kernel vec<T, N> sqrt(const vec<T, N>& a) {
-  if constexpr (N == 1) {
-    return {sqrt(a.x)};
-  } else if constexpr (N == 2) {
-    return {sqrt(a.x), sqrt(a.y)};
-  } else if constexpr (N == 3) {
-    return {sqrt(a.x), sqrt(a.y), sqrt(a.z)};
-  } else if constexpr (N == 4) {
-    return {sqrt(a.x), sqrt(a.y), sqrt(a.z), sqrt(a.w)};
-  }
-}
-template <typename T, size_t N>
-constexpr kernel vec<T, N> exp(const vec<T, N>& a) {
-  if constexpr (N == 1) {
-    return {exp(a.x)};
-  } else if constexpr (N == 2) {
-    return {exp(a.x), exp(a.y)};
-  } else if constexpr (N == 3) {
-    return {exp(a.x), exp(a.y), exp(a.z)};
-  } else if constexpr (N == 4) {
-    return {exp(a.x), exp(a.y), exp(a.z), exp(a.w)};
-  }
-}
-template <typename T, size_t N>
-constexpr kernel vec<T, N> log(const vec<T, N>& a) {
-  if constexpr (N == 1) {
-    return {log(a.x)};
-  } else if constexpr (N == 2) {
-    return {log(a.x), log(a.y)};
-  } else if constexpr (N == 3) {
-    return {log(a.x), log(a.y), log(a.z)};
-  } else if constexpr (N == 4) {
-    return {log(a.x), log(a.y), log(a.z), log(a.w)};
-  }
-}
-template <typename T, size_t N>
-constexpr kernel vec<T, N> exp2(const vec<T, N>& a) {
-  if constexpr (N == 1) {
-    return {exp2(a.x)};
-  } else if constexpr (N == 2) {
-    return {exp2(a.x), exp2(a.y)};
-  } else if constexpr (N == 3) {
-    return {exp2(a.x), exp2(a.y), exp2(a.z)};
-  } else if constexpr (N == 4) {
-    return {exp2(a.x), exp2(a.y), exp2(a.z), exp2(a.w)};
-  }
-}
-template <typename T, size_t N>
-constexpr kernel vec<T, N> log2(const vec<T, N>& a) {
-  if constexpr (N == 1) {
-    return {log2(a.x)};
-  } else if constexpr (N == 2) {
-    return {log2(a.x), log2(a.y)};
-  } else if constexpr (N == 3) {
-    return {log2(a.x), log2(a.y), log2(a.z)};
-  } else if constexpr (N == 4) {
-    return {log2(a.x), log2(a.y), log2(a.z), log2(a.w)};
-  }
-}
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, N> pow(const vec<T1, N>& a, const vec<T2, N>& b) {
-  if constexpr (N == 1) {
-    return {pow(a.x, b.x)};
-  } else if constexpr (N == 2) {
-    return {pow(a.x, b.x), pow(a.y, b.y)};
-  } else if constexpr (N == 3) {
-    return {pow(a.x, b.x), pow(a.y, b.y), pow(a.z, b.z)};
-  } else if constexpr (N == 4) {
-    return {pow(a.x, b.x), pow(a.y, b.y), pow(a.z, b.z), pow(a.w, b.w)};
-  }
-}
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, N> pow(const vec<T1, N>& a, T2 b) {
-  if constexpr (N == 1) {
-    return {pow(a.x, b)};
-  } else if constexpr (N == 2) {
-    return {pow(a.x, b), pow(a.y, b)};
-  } else if constexpr (N == 3) {
-    return {pow(a.x, b), pow(a.y, b), pow(a.z, b)};
-  } else if constexpr (N == 4) {
-    return {pow(a.x, b), pow(a.y, b), pow(a.z, b), pow(a.w, b)};
-  }
-}
-template <typename T, size_t N>
-constexpr kernel vec<T, N> round(const vec<T, N>& a) {
-  if constexpr (N == 1) {
-    return {round(a.x)};
-  } else if constexpr (N == 2) {
-    return {round(a.x), round(a.y)};
-  } else if constexpr (N == 3) {
-    return {round(a.x), round(a.y), round(a.z)};
-  } else if constexpr (N == 4) {
-    return {round(a.x), round(a.y), round(a.z), round(a.w)};
-  }
-}
-template <typename T, typename T1, size_t N>
-constexpr kernel vec<T, N> fmod(const vec<T, N>& a, const vec<T1, N>& b) {
-  if constexpr (N == 1) {
-    return {fmod(a.x, b.x)};
-  } else if constexpr (N == 2) {
-    return {fmod(a.x, b.x), fmod(a.y, b.y)};
-  } else if constexpr (N == 3) {
-    return {fmod(a.x, b.x), fmod(a.y, b.y), fmod(a.z, b.z)};
-  } else if constexpr (N == 4) {
-    return {fmod(a.x, b.x), fmod(a.y, b.y), fmod(a.z, b.z), fmod(a.w, b.w)};
-  }
-}
-template <typename T, typename T1, size_t N>
-constexpr kernel vec<T, N> fmod(const vec<T, N>& a, T1 b) {
-  if constexpr (N == 1) {
-    return {fmod(a.x, b)};
-  } else if constexpr (N == 2) {
-    return {fmod(a.x, b), fmod(a.y, b)};
-  } else if constexpr (N == 3) {
-    return {fmod(a.x, b), fmod(a.y, b), fmod(a.z, b)};
-  } else if constexpr (N == 4) {
-    return {fmod(a.x, b), fmod(a.y, b), fmod(a.z, b), fmod(a.w, b)};
-  }
-}
-template <typename T, typename T1, size_t N>
-constexpr kernel vec<T, N> mod(const vec<T, N>& a, const vec<T1, N>& b) {
-  if constexpr (N == 1) {
-    return {mod(a.x, b.x)};
-  } else if constexpr (N == 2) {
-    return {mod(a.x, b.x), mod(a.y, b.y)};
-  } else if constexpr (N == 3) {
-    return {mod(a.x, b.x), mod(a.y, b.y), mod(a.z, b.z)};
-  } else if constexpr (N == 4) {
-    return {mod(a.x, b.x), mod(a.y, b.y), mod(a.z, b.z), mod(a.w, b.w)};
-  }
-}
-template <typename T, typename T1, size_t N>
-constexpr kernel vec<T, N> mod(const vec<T, N>& a, T1 b) {
-  if constexpr (N == 1) {
-    return {mod(a.x, b)};
-  } else if constexpr (N == 2) {
-    return {mod(a.x, b), mod(a.y, b)};
-  } else if constexpr (N == 3) {
-    return {mod(a.x, b), mod(a.y, b), mod(a.z, b)};
-  } else if constexpr (N == 4) {
-    return {mod(a.x, b), mod(a.y, b), mod(a.z, b), mod(a.w, b)};
-  }
-}
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, N> bias(const vec<T1, N>& a, T2 b) {
-  if constexpr (N == 1) {
-    return {bias(a.x, b)};
-  } else if constexpr (N == 2) {
-    return {bias(a.x, b), bias(a.y, b)};
-  } else if constexpr (N == 3) {
-    return {bias(a.x, b), bias(a.y, b), bias(a.z, b)};
-  } else if constexpr (N == 4) {
-    return {bias(a.x, b), bias(a.y, b), bias(a.z, b), bias(a.w, b)};
-  }
-}
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, N> gain(const vec<T1, N>& a, T2 b) {
-  if constexpr (N == 1) {
-    return {gain(a.x, b)};
-  } else if constexpr (N == 2) {
-    return {gain(a.x, b), gain(a.y, b)};
-  } else if constexpr (N == 3) {
-    return {gain(a.x, b), gain(a.y, b), gain(a.z, b)};
-  } else if constexpr (N == 4) {
-    return {gain(a.x, b), gain(a.y, b), gain(a.z, b), gain(a.w, b)};
-  }
-}
-// template <typename T, size_t N>
-// inline void swap(vec<T, N>& a, vec<T, N>& b) {
-//   std::swap(a, b);
-// }
-template <typename T, size_t N>
-constexpr kernel bool isfinite(const vec<T, N>& a) {
-  if constexpr (N == 1) {
-    return isfinite(a.x);
-  } else if constexpr (N == 2) {
-    return isfinite(a.x) && isfinite(a.y);
-  } else if constexpr (N == 3) {
-    return isfinite(a.x) && isfinite(a.y) && isfinite(a.z);
-  } else if constexpr (N == 4) {
-    return isfinite(a.x) && isfinite(a.y) && isfinite(a.z) && isfinite(a.w);
-  }
-}
-
-// Conversion between ranges
-template <typename T>
-constexpr kernel T unit_to_uv(T a) {
-  return (a + 1) / 2;
-}
-template <typename T, size_t N>
-constexpr kernel vec<T, N> unit_to_uv(const vec<T, N>& a) {
-  return (a + 1) / 2;
-}
-template <typename T>
-constexpr kernel T uv_to_unit(T a) {
-  return a * 2 - 1;
-}
-template <typename T, size_t N>
-constexpr kernel vec<T, N> uv_to_unit(const vec<T, N>& a) {
-  return a * 2 - 1;
-}
-
-// Conversion between coordinates
-template <typename T>
-constexpr kernel vec<T, 2> cartesian_to_sphericaluv(const vec<T, 3>& w) {
-  auto phi = atan2(w.y, w.x), theta = acos(clamp(w.z, -1, 1));
-  return {mod(phi / (2 * (T)pi), 1), theta / (T)pi};
-}
-template <typename T>
-constexpr kernel vec<T, 2> cartesiany_to_sphericaluv(const vec<T, 3>& w) {
-  auto phi = atan2(w.z, w.x), theta = acos(clamp(w.y, -1, 1));
-  return {mod(phi / (2 * (T)pi), 1), theta / (T)pi};
-}
-template <typename T>
-constexpr kernel vec<T, 3> sphericaluv_to_cartesian(const vec<T, 2>& uv) {
-  auto phi = uv.x * 2 * (T)pi, theta = uv.y * (T)pi;
-  return {cos(phi) * sin(theta), sin(phi) * sin(theta), cos(theta)};
-}
-template <typename T>
-constexpr kernel vec<T, 3> sphericaluv_to_cartesiany(const vec<T, 2>& uv) {
-  auto phi = uv.x * 2 * (T)pi, theta = uv.y * (T)pi;
-  return {cos(phi) * sin(theta), cos(theta), sin(phi) * sin(theta)};
-}
-
-// Quaternion operations represented as xi + yj + zk + w
-// const auto identity_quat4f = vec4f{0, 0, 0, 1};
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, 4> quat_mul(const vec<T1, 4>& a, T2 b) {
-  return {a.x * b, a.y * b, a.z * b, a.w * b};
-}
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, 4> quat_mul(const vec<T1, 4>& a, const vec<T2, 4>& b) {
-  return {a.x * b.w + a.w * b.x + a.y * b.w - a.z * b.y,
-      a.y * b.w + a.w * b.y + a.z * b.x - a.x * b.z,
-      a.z * b.w + a.w * b.z + a.x * b.y - a.y * b.x,
-      a.w * b.w - a.x * b.x - a.y * b.y - a.z * b.z};
-}
-template <typename T>
-constexpr kernel vec<T, 4> quat_conjugate(const vec<T, 4>& a) {
-  return {-a.x, -a.y, -a.z, a.w};
-}
-template <typename T>
-constexpr kernel vec<T, 4> quat_inverse(const vec<T, 4>& a) {
-  return quat_conjugate(a) / dot(a, a);
-}
-
-// Component-wise comparison operations.
-template <typename T1, typename T2, size_t N>
-constexpr kernel vec<bool, N> component_equal(
-    const vec<T1, N>& a, const vec<T2, N>& b) {
-  if constexpr (N == 1) {
-    return {a.x == b.x};
-  } else if constexpr (N == 2) {
-    return {a.x == b.x, a.y == b.y};
-  } else if constexpr (N == 3) {
-    return {a.x == b.x, a.y == b.y, a.z == b.z};
-  } else if constexpr (N == 4) {
-    return {a.x == b.x, a.y == b.y, a.z == b.z, a.w == b.w};
-  }
-}
-template <typename T1, typename T2, size_t N>
-constexpr kernel vec<bool, N> component_equal(const vec<T1, N>& a, T2 b) {
-  if constexpr (N == 1) {
-    return {a.x == b};
-  } else if constexpr (N == 2) {
-    return {a.x == b, a.y == b};
-  } else if constexpr (N == 3) {
-    return {a.x == b, a.y == b, a.z == b};
-  } else if constexpr (N == 4) {
-    return {a.x == b, a.y == b, a.z == b, a.w == b};
-  }
-}
-template <typename T1, typename T2, size_t N>
-constexpr kernel vec<bool, N> component_not_equal(
-    const vec<T1, N>& a, const vec<T2, N>& b) {
-  if constexpr (N == 1) {
-    return {a.x != b.x};
-  } else if constexpr (N == 2) {
-    return {a.x != b.x, a.y != b.y};
-  } else if constexpr (N == 3) {
-    return {a.x != b.x, a.y != b.y, a.z != b.z};
-  } else if constexpr (N == 4) {
-    return {a.x != b.x, a.y != b.y, a.z != b.z, a.w != b.w};
-  }
-}
-template <typename T1, typename T2, size_t N>
-constexpr kernel vec<bool, N> component_not_equal(
-    const vec<T1, N>& a, const T2 b) {
-  if constexpr (N == 1) {
-    return {a.x != b};
-  } else if constexpr (N == 2) {
-    return {a.x != b, a.y != b};
-  } else if constexpr (N == 3) {
-    return {a.x != b, a.y != b, a.z != b};
-  } else if constexpr (N == 4) {
-    return {a.x != b, a.y != b, a.z != b, a.w != b};
-  }
-}
-template <typename T1, typename T2, size_t N>
-constexpr kernel vec<bool, N> component_less(
-    const vec<T1, N>& a, const vec<T2, N>& b) {
-  if constexpr (N == 1) {
-    return {a.x < b.x};
-  } else if constexpr (N == 2) {
-    return {a.x < b.x, a.y < b.y};
-  } else if constexpr (N == 3) {
-    return {a.x < b.x, a.y < b.y, a.z < b.z};
-  } else if constexpr (N == 4) {
-    return {a.x < b.x, a.y < b.y, a.z < b.z, a.w < b.w};
-  }
-}
-template <typename T1, typename T2, size_t N>
-constexpr kernel vec<bool, N> component_less(const vec<T1, N>& a, const T2 b) {
-  if constexpr (N == 1) {
-    return {a.x < b};
-  } else if constexpr (N == 2) {
-    return {a.x < b, a.y < b};
-  } else if constexpr (N == 3) {
-    return {a.x < b, a.y < b, a.z < b};
-  } else if constexpr (N == 4) {
-    return {a.x < b, a.y < b, a.z < b, a.w < b};
-  }
-}
-template <typename T1, typename T2, size_t N>
-constexpr kernel vec<bool, N> component_greater(
-    const vec<T1, N>& a, const vec<T2, N>& b) {
-  if constexpr (N == 1) {
-    return {a.x > b.x};
-  } else if constexpr (N == 2) {
-    return {a.x > b.x, a.y > b.y};
-  } else if constexpr (N == 3) {
-    return {a.x > b.x, a.y > b.y, a.z > b.z};
-  } else if constexpr (N == 4) {
-    return {a.x > b.x, a.y > b.y, a.z > b.z, a.w > b.w};
-  }
-}
-template <typename T1, typename T2, size_t N>
-constexpr kernel vec<bool, N> component_greater(
-    const vec<T1, N>& a, const T2 b) {
-  if constexpr (N == 1) {
-    return {a.x > b};
-  } else if constexpr (N == 2) {
-    return {a.x > b, a.y > b};
-  } else if constexpr (N == 3) {
-    return {a.x > b, a.y > b, a.z > b};
-  } else if constexpr (N == 4) {
-    return {a.x > b, a.y > b, a.z > b, a.w > b};
-  }
-}
-template <typename T1, typename T2, size_t N>
-constexpr kernel vec<bool, N> component_less_equal(
-    const vec<T1, N>& a, const vec<T2, N>& b) {
-  if constexpr (N == 1) {
-    return {a.x <= b.x};
-  } else if constexpr (N == 2) {
-    return {a.x <= b.x, a.y <= b.y};
-  } else if constexpr (N == 3) {
-    return {a.x <= b.x, a.y <= b.y, a.z <= b.z};
-  } else if constexpr (N == 4) {
-    return {a.x <= b.x, a.y <= b.y, a.z <= b.z, a.w <= b.w};
-  }
-}
-template <typename T1, typename T2, size_t N>
-constexpr kernel vec<bool, N> component_less_equal(
-    const vec<T1, N>& a, const T2 b) {
-  if constexpr (N == 1) {
-    return {a.x <= b};
-  } else if constexpr (N == 2) {
-    return {a.x <= b, a.y <= b};
-  } else if constexpr (N == 3) {
-    return {a.x <= b, a.y <= b, a.z <= b};
-  } else if constexpr (N == 4) {
-    return {a.x <= b, a.y <= b, a.z <= b, a.w <= b};
-  }
-}
-template <typename T1, typename T2, size_t N>
-constexpr kernel vec<bool, N> component_greater_equal(
-    const vec<T1, N>& a, const vec<T2, N>& b) {
-  if constexpr (N == 1) {
-    return {a.x >= b.x};
-  } else if constexpr (N == 2) {
-    return {a.x >= b.x, a.y >= b.y};
-  } else if constexpr (N == 3) {
-    return {a.x >= b.x, a.y >= b.y, a.z >= b.z};
-  } else if constexpr (N == 4) {
-    return {a.x >= b.x, a.y >= b.y, a.z >= b.z, a.w >= b.w};
-  }
-}
-template <typename T1, typename T2, size_t N>
-constexpr kernel vec<bool, N> component_greater_equal(
-    const vec<T1, N>& a, const T2 b) {
-  if constexpr (N == 1) {
-    return {a.x >= b};
-  } else if constexpr (N == 2) {
-    return {a.x >= b, a.y >= b};
-  } else if constexpr (N == 3) {
-    return {a.x >= b, a.y >= b, a.z >= b};
-  } else if constexpr (N == 4) {
-    return {a.x >= b, a.y >= b, a.z >= b, a.w >= b};
-  }
-}
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, N> select(
-    const vec<bool, N>& a, const vec<T1, N>& b, const vec<T2, N>& c) {
-  if constexpr (N == 1) {
-    return {a.x ? b.x : c.x};
-  } else if constexpr (N == 2) {
-    return {a.x ? b.x : c.x, a.y ? b.y : c.y};
-  } else if constexpr (N == 3) {
-    return {a.x ? b.x : c.x, a.y ? b.y : c.y, a.z ? b.z : c.z};
-  } else if constexpr (N == 4) {
-    return {a.x ? b.x : c.x, a.y ? b.y : c.y, a.z ? b.z : c.z, a.w ? b.w : c.w};
-  }
-}
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, N> select(
-    const vec<bool, N>& a, T1 b, const vec<T2, N>& c) {
-  if constexpr (N == 1) {
-    return {a.x ? b : c.x};
-  } else if constexpr (N == 2) {
-    return {a.x ? b : c.x, a.y ? b : c.y};
-  } else if constexpr (N == 3) {
-    return {a.x ? b : c.x, a.y ? b : c.y, a.z ? b : c.z};
-  } else if constexpr (N == 4) {
-    return {a.x ? b : c.x, a.y ? b : c.y, a.z ? b : c.z, a.w ? b : c.w};
-  }
-}
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, N> select(
-    const vec<bool, N>& a, const vec<T1, N>& b, T2 c) {
-  if constexpr (N == 1) {
-    return {a.x ? b.x : c};
-  } else if constexpr (N == 2) {
-    return {a.x ? b.x : c, a.y ? b.y : c};
-  } else if constexpr (N == 3) {
-    return {a.x ? b.x : c, a.y ? b.y : c, a.z ? b.z : c};
-  } else if constexpr (N == 4) {
-    return {a.x ? b.x : c, a.y ? b.y : c, a.z ? b.z : c, a.w ? b.w : c};
-  }
-}
-template <typename T1, typename T2, size_t N, typename T = common_t<T1, T2>>
-constexpr kernel vec<T, N> select(const vec<bool, N>& a, T1 b, T2 c) {
-  if constexpr (N == 1) {
-    return {a.x ? b : c};
-  } else if constexpr (N == 2) {
-    return {a.x ? b : c, a.y ? b : c};
-  } else if constexpr (N == 3) {
-    return {a.x ? b : c, a.y ? b : c, a.z ? b : c};
-  } else if constexpr (N == 4) {
-    return {a.x ? b : c, a.y ? b : c, a.z ? b : c, a.w ? b : c};
-  }
 }
 
 #if 0
@@ -8448,8 +7310,8 @@ inline kernel pair<vec2f, float> camera_imview(const vec2f& center, float scale,
   if (zoom_to_fit) {
     return {(vec2f)winsize / 2, min(winsize / (vec2f)imsize)};
   } else {
-    return {select(component_greater_equal(winsize, imsize * scale),
-                (vec2f)winsize / 2, center),
+    return {{(winsize.x >= imsize.x * scale) ? winsize.x / 2 : center.x,
+                (winsize.y >= imsize.y * scale) ? winsize.y / 2 : center.y},
         scale};
   }
 }

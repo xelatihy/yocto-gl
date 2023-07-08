@@ -164,7 +164,7 @@ inline T eval_image(const array2d<T>& image, const vec2f& uv,
   auto size = image.extents();
 
   // get coordinates normalized for tiling
-  auto st = (clamp_to_edge ? clamp(uv, 0, 1) : mod(uv, 1)) * size;
+  auto st = (clamp_to_edge ? clamp(uv, 0.0f, 1.0f) : mod(uv, 1.0f)) * size;
 
   // handle interpolation
   if (no_interpolation) {

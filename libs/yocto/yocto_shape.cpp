@@ -2100,7 +2100,8 @@ shape_data make_rounded_box(const vec3i& steps, const vec3f& scale,
       [&](const vec3f& position, const vec3f& normal,
           const vec2f& texcoord) -> make_quads_vertex {
         auto pc = abs(position);
-        auto ps = select(component_less(position, 0), -1.0f, 1.0f);
+        auto ps = vec3f{position.x < 0 ? -1.0f : 1.0f,
+            position.y < 0 ? -1.0f : 1.0f, position.z < 0 ? -1.0f : 1.0f};
         if (pc.x >= c.x && pc.y >= c.y && pc.z >= c.z) {
           auto pn = normalize(pc - c);
           return {(c + radius * pn) * ps, pn * ps, texcoord};
