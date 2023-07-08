@@ -2021,85 +2021,52 @@ constexpr kernel vec<T, N> select(const vec<bool, N>& a, T1 b, T2 c) {
 namespace yocto {
 
 // Small Fixed-size matrices stored in column major format.
-template <typename T, size_t N, size_t M>
-struct mat;
+struct mat2x2f {
+  vec2f x = {0, 0};
+  vec2f y = {0, 0};
 
-// Small Fixed-size matrices stored in column major format.
-template <typename T, size_t N>
-struct mat<T, N, 1> {
-  vec<T, N> x = {0};
+  constexpr kernel mat2x2f() : x{0, 0}, y{0, 0} {}
+  constexpr kernel mat2x2f(const vec2f& x_, const vec2f& y_) : x{x_}, y{y_} {}
 
-  constexpr kernel mat() : x{0} {}
-  constexpr kernel mat(const vec<T, N>& x_) : x{x_} {}
-
-  constexpr kernel vec<T, N>& operator[](size_t i) { return (&x)[i]; }
-  constexpr kernel const vec<T, N>& operator[](size_t i) const {
-    return (&x)[i];
-  }
+  constexpr kernel vec2f&       operator[](size_t i) { return (&x)[i]; }
+  constexpr kernel const vec2f& operator[](size_t i) const { return (&x)[i]; }
 };
 
 // Small Fixed-size matrices stored in column major format.
-template <typename T, size_t N>
-struct mat<T, N, 2> {
-  vec<T, N> x = {0};
-  vec<T, N> y = {0};
+struct mat3x3f {
+  vec3f x = {0, 0, 0};
+  vec3f y = {0, 0, 0};
+  vec3f z = {0, 0, 0};
 
-  constexpr kernel mat() : x{0}, y{0} {}
-  constexpr kernel mat(const vec<T, N>& x_, const vec<T, N>& y_) :
-      x{x_}, y{y_} {}
-
-  constexpr kernel vec<T, N>& operator[](size_t i) { return (&x)[i]; }
-  constexpr kernel const vec<T, N>& operator[](size_t i) const {
-    return (&x)[i];
-  }
-};
-
-// Small Fixed-size matrices stored in column major format.
-template <typename T, size_t N>
-struct mat<T, N, 3> {
-  vec<T, N> x = {0};
-  vec<T, N> y = {0};
-  vec<T, N> z = {0};
-
-  constexpr kernel mat() : x{0}, y{0}, z{0} {}
-  constexpr kernel mat(
-      const vec<T, N>& x_, const vec<T, N>& y_, const vec<T, N>& z_) :
+  constexpr kernel mat3x3f() : x{0, 0, 0}, y{0, 0, 0}, z{0, 0, 0} {}
+  constexpr kernel mat3x3f(const vec3f& x_, const vec3f& y_, const vec3f& z_) :
       x{x_}, y{y_}, z{z_} {}
 
-  constexpr kernel vec<T, N>& operator[](size_t i) { return (&x)[i]; }
-  constexpr kernel const vec<T, N>& operator[](size_t i) const {
-    return (&x)[i];
-  }
+  constexpr kernel vec3f&       operator[](size_t i) { return (&x)[i]; }
+  constexpr kernel const vec3f& operator[](size_t i) const { return (&x)[i]; }
 };
 
 // Small Fixed-size matrices stored in column major format.
-template <typename T, size_t N>
-struct mat<T, N, 4> {
-  vec<T, N> x = {0};
-  vec<T, N> y = {0};
-  vec<T, N> z = {0};
-  vec<T, N> w = {0};
+struct mat4x4f {
+  vec4f x = {0, 0, 0, 0};
+  vec4f y = {0, 0, 0, 0};
+  vec4f z = {0, 0, 0, 0};
+  vec4f w = {0, 0, 0, 0};
 
-  constexpr kernel mat() : x{0}, y{0}, z{0}, w{0} {}
-  constexpr kernel mat(const vec<T, N>& x_, const vec<T, N>& y_,
-      const vec<T, N>& z_, const vec<T, N>& w_) :
+  constexpr kernel mat4x4f() :
+      x{0, 0, 0, 0}, y{0, 0, 0, 0}, z{0, 0, 0, 0}, w{0, 0, 0, 0} {}
+  constexpr kernel mat4x4f(
+      const vec4f& x_, const vec4f& y_, const vec4f& z_, const vec4f& w_) :
       x{x_}, y{y_}, z{z_}, w{w_} {}
 
-  constexpr kernel vec<T, N>& operator[](size_t i) { return (&x)[i]; }
-  constexpr kernel const vec<T, N>& operator[](size_t i) const {
-    return (&x)[i];
-  }
+  constexpr kernel vec4f&       operator[](size_t i) { return (&x)[i]; }
+  constexpr kernel const vec4f& operator[](size_t i) const { return (&x)[i]; }
 };
 
 // Matrix aliases
-using mat1f   = mat<float, 1, 1>;
-using mat2f   = mat<float, 2, 2>;
-using mat3f   = mat<float, 3, 3>;
-using mat4f   = mat<float, 4, 4>;
-using mat1x1f = mat<float, 1, 1>;
-using mat2x2f = mat<float, 2, 2>;
-using mat3x3f = mat<float, 3, 3>;
-using mat4x4f = mat<float, 4, 4>;
+using mat2f = mat2x2f;
+using mat3f = mat3x3f;
+using mat4f = mat4x4f;
 
 // Identity matrices constants.
 inline auto identity2x2f = mat2x2f{{1, 0}, {0, 1}};
@@ -3104,34 +3071,40 @@ inline std::basic_istream<C>& operator>>(
   }
 }
 
-template <typename C, typename T, size_t N, size_t M>
+template <typename C>
 inline std::basic_ostream<C>& operator<<(
-    std::basic_ostream<C>& out, const mat<T, N, M>& a) {
-  if constexpr (N == 1) {
-    return out << "[" << a.x << "]";
-  } else if constexpr (N == 2) {
-    return out << "[" << a.x << "," << a.y << "]";
-  } else if constexpr (N == 3) {
-    return out << "[" << a.x << "," << a.y << "," << a.z << "]";
-  } else if constexpr (N == 4) {
-    return out << "[" << a.x << "," << a.y << "," << a.z << "," << a.w << "]";
-  } else {
-  }
+    std::basic_ostream<C>& out, const mat2x2f& a) {
+  return out << "[" << a.x << "," << a.y << "]";
 }
 
-template <typename C, typename T, size_t N, size_t M>
+template <typename C>
 inline std::basic_istream<C>& operator>>(
-    std::basic_istream<C>& out, mat<T, N, M>& a) {
-  if constexpr (N == 1) {
-    return out >> "[" >> a.x >> "]";
-  } else if constexpr (N == 2) {
-    return out >> "[" >> a.x >> "," >> a.y >> "]";
-  } else if constexpr (N == 3) {
-    return out >> "[" >> a.x >> "," >> a.y >> "," >> a.z >> "]";
-  } else if constexpr (N == 4) {
-    return out >> "[" >> a.x >> "," >> a.y >> "," >> a.z >> "," >> a.w >> "]";
-  } else {
-  }
+    std::basic_istream<C>& out, mat2x2f& a) {
+  return out >> "[" >> a.x >> "," >> a.y >> "]";
+}
+
+template <typename C>
+inline std::basic_ostream<C>& operator<<(
+    std::basic_ostream<C>& out, const mat3x3f& a) {
+  return out << "[" << a.x << "," << a.y << "," << a.z << "]";
+}
+
+template <typename C>
+inline std::basic_istream<C>& operator>>(
+    std::basic_istream<C>& out, mat3x3f& a) {
+  return out >> "[" >> a.x >> "," >> a.y >> "," >> a.z >> "]";
+}
+
+template <typename C>
+inline std::basic_ostream<C>& operator<<(
+    std::basic_ostream<C>& out, const mat4x4f& a) {
+  return out << "[" << a.x << "," << a.y << "," << a.z << "," << a.w << "]";
+}
+
+template <typename C>
+inline std::basic_istream<C>& operator>>(
+    std::basic_istream<C>& out, mat4x4f& a) {
+  return out >> "[" >> a.x >> "," >> a.y >> "," >> a.z >> "," >> a.w >> "]";
 }
 
 template <typename C>
