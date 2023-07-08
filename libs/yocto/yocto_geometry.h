@@ -701,18 +701,18 @@ constexpr kernel ray3f camera_ray(const frame3f& frame, float lens,
 namespace yocto {
 
 // Primitive intersection
-struct pintersection3f {
+struct prim_intersection {
   vec2f uv       = {0, 0};
-  float distance = flt_max;  // TODO: flt_max
+  float distance = flt_max;
   bool  hit      = false;
 
-  constexpr kernel pintersection3f() : hit{false} {}
-  constexpr kernel pintersection3f(const vec2f& uv_, float distance_) :
-      uv{uv_}, distance{distance_}, hit{true} {}
+  prim_intersection() {}  // no intersection
+  prim_intersection(const vec2f& uv, float distance, bool hit) :
+      uv{uv}, distance{distance}, hit{hit} {}
 };
 
 // Intersect a ray with a point (approximate)
-constexpr kernel pintersection3f intersect_point(
+inline kernel prim_intersection intersect_point(
     const ray3f& ray, const vec3f& p, float r) {
   // find parameter for line-point minimum distance
   auto w = p - ray.o;
@@ -727,16 +727,16 @@ constexpr kernel pintersection3f intersect_point(
   if (dot(prp, prp) > r * r) return {};
 
   // intersection occurred: set params and exit
-  return {{0, 0}, t};
+  return {{0, 0}, t, true};
 }
-constexpr kernel pintersection3f intersect_point(const ray3f& ray,
+inline kernel prim_intersection intersect_point(const ray3f& ray,
     const vector<vec3f>& positions, const vector<float>& radius, int point) {
   auto v1 = point;
   return intersect_point(ray, positions[v1], radius[v1]);
 }
 
 // Intersect a ray with a line
-constexpr kernel pintersection3f intersect_line(
+inline kernel prim_intersection intersect_line(
     const ray3f& ray, const vec3f& p1, const vec3f& p2, float r1, float r2) {
   // setup intersection params
   auto u = ray.d;
@@ -776,9 +776,9 @@ constexpr kernel pintersection3f intersect_line(
   if (d2 > r * r) return {};
 
   // intersection occurred: set params and exit
-  return {{s, sqrt(d2) / r}, t};
+  return {{s, sqrt(d2) / r}, t, true};
 }
-constexpr kernel pintersection3f intersect_line(const ray3f& ray,
+inline kernel prim_intersection intersect_line(const ray3f& ray,
     const vector<vec3f>& positions, const vector<float>& radius,
     const vec2i& line) {
   return intersect_line(ray, positions[line.x], positions[line.y],
@@ -786,7 +786,7 @@ constexpr kernel pintersection3f intersect_line(const ray3f& ray,
 }
 
 // Intersect a ray with a sphere
-constexpr kernel pintersection3f intersect_sphere(
+inline kernel prim_intersection intersect_sphere(
     const ray3f& ray, const vec3f& p, float r) {
   // compute parameters
   auto a = dot(ray.d, ray.d);
@@ -813,11 +813,11 @@ constexpr kernel pintersection3f intersect_sphere(
   auto uv = cartesian_to_sphericaluv(((ray.o + ray.d * t) - p) / r);
 
   // intersection occurred: set params and exit
-  return {uv, t};
+  return {uv, t, true};
 }
 
 // Intersect a ray with a triangle
-constexpr kernel pintersection3f intersect_triangle(
+inline kernel prim_intersection intersect_triangle(
     const ray3f& ray, const vec3f& p1, const vec3f& p2, const vec3f& p3) {
   // compute triangle edges
   auto edge1 = p2 - p1;
@@ -847,16 +847,16 @@ constexpr kernel pintersection3f intersect_triangle(
   if (t < ray.tmin || t > ray.tmax) return {};
 
   // intersection occurred: set params and exit
-  return {{u, v}, t};
+  return {{u, v}, t, true};
 }
-constexpr kernel pintersection3f intersect_triangle(
+inline kernel prim_intersection intersect_triangle(
     const ray3f& ray, const vector<vec3f>& positions, const vec3i& triangle) {
   return intersect_triangle(
       ray, positions[triangle.x], positions[triangle.y], positions[triangle.z]);
 }
 
 // Intersect a ray with a quad.
-constexpr kernel pintersection3f intersect_quad(const ray3f& ray,
+inline kernel prim_intersection intersect_quad(const ray3f& ray,
     const vec3f& p1, const vec3f& p2, const vec3f& p3, const vec3f& p4) {
   if (p3 == p4) return intersect_triangle(ray, p1, p2, p4);
   auto isec1 = intersect_triangle(ray, p1, p2, p4);
@@ -864,14 +864,14 @@ constexpr kernel pintersection3f intersect_quad(const ray3f& ray,
   if (isec2.hit) isec2.uv = 1 - isec2.uv;
   return isec1.distance < isec2.distance ? isec1 : isec2;
 }
-constexpr kernel pintersection3f intersect_quad(
+inline kernel prim_intersection intersect_quad(
     const ray3f& ray, const vector<vec3f>& positions, const vec4i& quad) {
   return intersect_quad(ray, positions[quad.x], positions[quad.y],
       positions[quad.z], positions[quad.w]);
 }
 
 // Intersect a ray with a axis-aligned bounding box
-constexpr kernel bool intersect_bbox(const ray3f& ray, const bbox3f& bbox) {
+inline kernel bool intersect_bbox(const ray3f& ray, const bbox3f& bbox) {
   auto ray_dinv = 1 / ray.d;
   auto it_min   = (bbox.min - ray.o) * ray_dinv;
   auto it_max   = (bbox.max - ray.o) * ray_dinv;
@@ -884,7 +884,7 @@ constexpr kernel bool intersect_bbox(const ray3f& ray, const bbox3f& bbox) {
 }
 
 // Intersect a ray with a axis-aligned bounding box
-constexpr kernel bool intersect_bbox(
+inline kernel bool intersect_bbox(
     const ray3f& ray, const vec3f& ray_dinv, const bbox3f& bbox) {
   auto it_min = (bbox.min - ray.o) * ray_dinv;
   auto it_max = (bbox.max - ray.o) * ray_dinv;
@@ -904,20 +904,20 @@ constexpr kernel bool intersect_bbox(
 namespace yocto {
 
 // Check if a point overlaps a position pos withint a maximum distance dist_max.
-constexpr kernel pintersection3f overlap_point(
+inline kernel prim_intersection overlap_point(
     const vec3f& pos, float dist_max, const vec3f& p, float r) {
   auto d2 = dot(pos - p, pos - p);
   if (d2 > (dist_max + r) * (dist_max + r)) return {};
-  return {{0, 0}, sqrt(d2)};
+  return {{0, 0}, sqrt(d2), true};
 }
-constexpr kernel pintersection3f overlap_point(const vec3f& pos, float dist_max,
+inline kernel prim_intersection overlap_point(const vec3f& pos, float dist_max,
     const vector<vec3f>& positions, const vector<float>& radius, int point) {
   auto v1 = point;
   return overlap_point(pos, dist_max, positions[v1], radius[v1]);
 }
 
 // Compute the closest line uv to a give position pos.
-constexpr kernel float closestuv_line(
+inline kernel float closestuv_line(
     const vec3f& pos, const vec3f& p1, const vec3f& p2) {
   auto ab = p2 - p1;
   auto d  = dot(ab, ab);
@@ -929,7 +929,7 @@ constexpr kernel float closestuv_line(
 }
 
 // Check if a line overlaps a position pos withint a maximum distance dist_max.
-constexpr kernel pintersection3f overlap_line(const vec3f& pos, float dist_max,
+inline kernel prim_intersection overlap_line(const vec3f& pos, float dist_max,
     const vec3f& p1, const vec3f& p2, float r1, float r2) {
   auto u = closestuv_line(pos, p1, p2);
   // Compute projected position from the clamped t d = a + t * ab;
@@ -939,9 +939,9 @@ constexpr kernel pintersection3f overlap_line(const vec3f& pos, float dist_max,
   // check distance
   if (d2 > (dist_max + r) * (dist_max + r)) return {};
   // done
-  return {{u, 0}, sqrt(d2)};
+  return {{u, 0}, sqrt(d2), true};
 }
-constexpr kernel pintersection3f overlap_line(const vec3f& pos, float dist_max,
+inline kernel prim_intersection overlap_line(const vec3f& pos, float dist_max,
     const vector<vec3f>& positions, const vector<float> radius,
     const vec2i& line) {
   return overlap_line(pos, dist_max, positions[line.x], positions[line.y],
@@ -949,7 +949,7 @@ constexpr kernel pintersection3f overlap_line(const vec3f& pos, float dist_max,
 }
 
 // Compute the closest triangle uv to a give position pos.
-constexpr kernel vec2f closestuv_triangle(
+inline kernel vec2f closestuv_triangle(
     const vec3f& pos, const vec3f& p1, const vec3f& p2, const vec3f& p3) {
   // this is a complicated test -> I probably "--"+prefix to use a sequence of
   // test (triangle body, and 3 edges)
@@ -994,7 +994,7 @@ constexpr kernel vec2f closestuv_triangle(
 
 // Check if a triangle overlaps a position pos withint a maximum distance
 // dist_max.
-constexpr kernel pintersection3f overlap_triangle(const vec3f& pos,
+inline kernel prim_intersection overlap_triangle(const vec3f& pos,
     float dist_max, const vec3f& p1, const vec3f& p2, const vec3f& p3, float r1,
     float r2, float r3) {
   auto uv = closestuv_triangle(pos, p1, p2, p3);
@@ -1002,9 +1002,9 @@ constexpr kernel pintersection3f overlap_triangle(const vec3f& pos,
   auto r  = interpolate_triangle(r1, r2, r3, uv);
   auto dd = dot(p - pos, p - pos);
   if (dd > (dist_max + r) * (dist_max + r)) return {};
-  return {uv, sqrt(dd)};
+  return {uv, sqrt(dd), true};
 }
-constexpr kernel pintersection3f overlap_triangle(const vec3f& pos,
+inline kernel prim_intersection overlap_triangle(const vec3f& pos,
     float dist_max, const vector<vec3f>& positions, const vector<float> radius,
     const vec3i& triangle) {
   return overlap_triangle(pos, dist_max, positions[triangle.x],
@@ -1013,7 +1013,7 @@ constexpr kernel pintersection3f overlap_triangle(const vec3f& pos,
 }
 
 // Check if a quad overlaps a position pos withint a maximum distance dist_max.
-constexpr kernel pintersection3f overlap_quad(const vec3f& pos, float dist_max,
+inline kernel prim_intersection overlap_quad(const vec3f& pos, float dist_max,
     const vec3f& p1, const vec3f& p2, const vec3f& p3, const vec3f& p4,
     float r1, float r2, float r3, float r4) {
   if (p3 == p4) return overlap_triangle(pos, dist_max, p1, p2, p4, r1, r2, r3);
@@ -1022,7 +1022,7 @@ constexpr kernel pintersection3f overlap_quad(const vec3f& pos, float dist_max,
   if (isec2.hit) isec2.uv = 1 - isec2.uv;
   return isec1.distance < isec2.distance ? isec1 : isec2;
 }
-constexpr kernel pintersection3f overlap_quad(const vec3f& pos, float dist_max,
+inline kernel prim_intersection overlap_quad(const vec3f& pos, float dist_max,
     const vector<vec3f>& positions, const vector<float> radius,
     const vec4i& quad) {
   return overlap_quad(pos, dist_max, positions[quad.x], positions[quad.y],
@@ -1031,7 +1031,7 @@ constexpr kernel pintersection3f overlap_quad(const vec3f& pos, float dist_max,
 }
 
 // Check if a bbox overlaps a position pos withint a maximum distance dist_max.
-constexpr kernel bool overlap_bbox(
+inline kernel bool overlap_bbox(
     const vec3f& pos, float dist_max, const bbox3f& bbox) {
   // computing distance
   auto dd = 0.0f;
@@ -1049,7 +1049,7 @@ constexpr kernel bool overlap_bbox(
 }
 
 // Check if two bboxes overlap.
-constexpr kernel bool overlap_bbox(const bbox3f& bbox1, const bbox3f& bbox2) {
+inline kernel bool overlap_bbox(const bbox3f& bbox1, const bbox3f& bbox2) {
   for (auto a : range(3)) {
     if (bbox1.max[a] < bbox2.min[a] || bbox1.min[a] > bbox2.max[a])
       return false;
