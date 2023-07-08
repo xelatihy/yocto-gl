@@ -1635,6 +1635,242 @@ inline kernel vec4i mod(const vec4i& a, int b) {
 
 // ------------------------------------------------------------------
 
+// Vector comparison operations.
+inline kernel bool operator==(const vec3b& a, const vec3b& b) {
+  return a.x == b.x && a.y == b.y && a.z == b.z;
+}
+inline kernel bool operator==(const vec3b& a, byte b) {
+  return a.x == b && a.y == b && a.z == b;
+}
+inline kernel bool operator!=(const vec3b& a, const vec3b& b) {
+  return a.x != b.x || a.y != b.y || a.z != b.z;
+}
+inline kernel bool operator!=(const vec3b& a, byte b) {
+  return a.x != b || a.y != b || a.z != b;
+}
+inline kernel bool operator<(const vec3b& a, const vec3b& b) {
+  return a.x < b.x || (a.x == b.x && (a.y < b.y || (a.y == b.y && a.z < b.z)));
+}
+
+// Vector operations.
+inline kernel vec3b operator+(const vec3b& a) { return a; }
+inline kernel vec3b operator-(const vec3b& a) { return {-a.x, -a.y, -a.z}; }
+inline kernel vec3b operator+(const vec3b& a, const vec3b& b) {
+  return {a.x + b.x, a.y + b.y, a.z + b.z};
+}
+inline kernel vec3b operator+(const vec3b& a, byte b) {
+  return {a.x + b, a.y + b, a.z + b};
+}
+inline kernel vec3b operator+(byte a, const vec3b& b) {
+  return {a + b.x, a + b.y, a + b.z};
+}
+inline kernel vec3b operator-(const vec3b& a, const vec3b& b) {
+  return {a.x - b.x, a.y - b.y, a.z - b.z};
+}
+inline kernel vec3b operator-(const vec3b& a, byte b) {
+  return {a.x - b, a.y - b, a.z - b};
+}
+inline kernel vec3b operator-(byte a, const vec3b& b) {
+  return {a - b.x, a - b.y, a - b.z};
+}
+inline kernel vec3b operator*(const vec3b& a, const vec3b& b) {
+  return {a.x * b.x, a.y * b.y, a.z * b.z};
+}
+inline kernel vec3b operator*(const vec3b& a, byte b) {
+  return {a.x * b, a.y * b, a.z * b};
+}
+inline kernel vec3b operator*(byte a, const vec3b& b) {
+  return {a * b.x, a * b.y, a * b.z};
+}
+inline kernel vec3b operator/(const vec3b& a, const vec3b& b) {
+  return {a.x / b.x, a.y / b.y, a.z / b.z};
+}
+inline kernel vec3b operator/(const vec3b& a, byte b) {
+  return {a.x / b, a.y / b, a.z / b};
+}
+inline kernel vec3b operator/(byte a, const vec3b& b) {
+  return {a / b.x, a / b.y, a / b.z};
+}
+
+// Vector assignments
+inline kernel vec3b& operator+=(vec3b& a, const vec3b& b) { return a = a + b; }
+inline kernel vec3b& operator+=(vec3b& a, byte b) { return a = a + b; }
+inline kernel vec3b& operator-=(vec3b& a, const vec3b& b) { return a = a - b; }
+inline kernel vec3b& operator-=(vec3b& a, byte b) { return a = a - b; }
+inline kernel vec3b& operator*=(vec3b& a, const vec3b& b) { return a = a * b; }
+inline kernel vec3b& operator*=(vec3b& a, byte b) { return a = a * b; }
+inline kernel vec3b& operator/=(vec3b& a, const vec3b& b) { return a = a / b; }
+inline kernel vec3b& operator/=(vec3b& a, byte b) { return a = a / b; }
+
+// Max element and clamp.
+inline kernel vec3b max(const vec3b& a, const vec3b& b) {
+  return {max(a.x, b.x), max(a.y, b.y), max(a.z, b.z)};
+}
+inline kernel vec3b max(const vec3b& a, byte b) {
+  return {max(a.x, b), max(a.y, b), max(a.z, b)};
+}
+inline kernel vec3b min(const vec3b& a, const vec3b& b) {
+  return {min(a.x, b.x), min(a.y, b.y), min(a.z, b.z)};
+}
+inline kernel vec3b min(const vec3b& a, byte b) {
+  return {min(a.x, b), min(a.y, b), min(a.z, b)};
+}
+inline kernel vec3b clamp(const vec3b& x, const vec3b& min, const vec3b& max) {
+  return {clamp(x.x, min.x, max.x), clamp(x.y, min.y, max.y),
+      clamp(x.z, min.z, max.z)};
+}
+inline kernel vec3b clamp(const vec3b& x, byte min, byte max) {
+  return {clamp(x.x, min, max), clamp(x.y, min, max), clamp(x.z, min, max)};
+}
+inline kernel vec3b clamp(const vec3b& x, const vec3b& min, byte max) {
+  return {
+      clamp(x.x, min.x, max), clamp(x.y, min.y, max), clamp(x.z, min.z, max)};
+}
+inline kernel vec3b clamp(const vec3b& x, byte min, const vec3b& max) {
+  return {
+      clamp(x.x, min, max.x), clamp(x.y, min, max.y), clamp(x.z, min, max.z)};
+}
+
+inline kernel byte max(const vec3b& a) { return max(max(a.x, a.y), a.z); }
+inline kernel byte min(const vec3b& a) { return min(min(a.x, a.y), a.z); }
+inline kernel byte argmax(const vec3b& a) {
+  return a.x >= a.y ? (a.x >= a.z ? 0 : 2) : (a.y >= a.z ? 1 : 2);
+}
+inline kernel byte argmin(const vec3b& a) {
+  return a.x <= a.y ? (a.x <= a.z ? 0 : 2) : (a.y <= a.z ? 1 : 2);
+}
+inline kernel byte find_index(const vec3b& a, byte b) {
+  return a.x == b ? 0 : (a.y == b ? 1 : (a.z == b ? 2 : -1));
+}
+
+// ------------------------------------------------------------------
+
+// Vector comparison operations.
+inline kernel bool operator==(const vec4b& a, const vec4b& b) {
+  return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
+}
+inline kernel bool operator==(const vec4b& a, byte b) {
+  return a.x == b && a.y == b && a.z == b && a.w == b;
+}
+inline kernel bool operator!=(const vec4b& a, const vec4b& b) {
+  return a.x != b.x || a.y != b.y || a.z != b.z || a.w != b.w;
+}
+inline kernel bool operator!=(const vec4b& a, byte b) {
+  return a.x != b || a.y != b || a.z != b || a.w != b;
+}
+inline kernel bool operator<(const vec4b& a, const vec4b& b) {
+  return a.x < b.x ||
+         (a.x == b.x &&
+             (a.y < b.y ||
+                 (a.y == b.y && (a.z < b.z || (a.z == b.z && a.w < b.w)))));
+}
+
+// Vector operations.
+inline kernel vec4b operator+(const vec4b& a) { return a; }
+inline kernel vec4b operator-(const vec4b& a) {
+  return {-a.x, -a.y, -a.z, -a.w};
+}
+inline kernel vec4b operator+(const vec4b& a, const vec4b& b) {
+  return {a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w};
+}
+inline kernel vec4b operator+(const vec4b& a, byte b) {
+  return {a.x + b, a.y + b, a.z + b, a.w + b};
+}
+inline kernel vec4b operator+(byte a, const vec4b& b) {
+  return {a + b.x, a + b.y, a + b.z, a + b.w};
+}
+inline kernel vec4b operator-(const vec4b& a, const vec4b& b) {
+  return {a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w};
+}
+inline kernel vec4b operator-(const vec4b& a, byte b) {
+  return {a.x - b, a.y - b, a.z - b, a.w - b};
+}
+inline kernel vec4b operator-(byte a, const vec4b& b) {
+  return {a - b.x, a - b.y, a - b.z, a - b.w};
+}
+inline kernel vec4b operator*(const vec4b& a, const vec4b& b) {
+  return {a.x * b.x, a.y * b.y, a.z * b.z, a.w * b.w};
+}
+inline kernel vec4b operator*(const vec4b& a, byte b) {
+  return {a.x * b, a.y * b, a.z * b, a.w * b};
+}
+inline kernel vec4b operator*(byte a, const vec4b& b) {
+  return {a * b.x, a * b.y, a * b.z, a * b.w};
+}
+inline kernel vec4b operator/(const vec4b& a, const vec4b& b) {
+  return {a.x / b.x, a.y / b.y, a.z / b.z, a.w / b.w};
+}
+inline kernel vec4b operator/(const vec4b& a, byte b) {
+  return {a.x / b, a.y / b, a.z / b, a.w / b};
+}
+inline kernel vec4b operator/(byte a, const vec4b& b) {
+  return {a / b.x, a / b.y, a / b.z, a / b.w};
+}
+
+// Vector assignments
+inline kernel vec4b& operator+=(vec4b& a, const vec4b& b) { return a = a + b; }
+inline kernel vec4b& operator+=(vec4b& a, byte b) { return a = a + b; }
+inline kernel vec4b& operator-=(vec4b& a, const vec4b& b) { return a = a - b; }
+inline kernel vec4b& operator-=(vec4b& a, byte b) { return a = a - b; }
+inline kernel vec4b& operator*=(vec4b& a, const vec4b& b) { return a = a * b; }
+inline kernel vec4b& operator*=(vec4b& a, byte b) { return a = a * b; }
+inline kernel vec4b& operator/=(vec4b& a, const vec4b& b) { return a = a / b; }
+inline kernel vec4b& operator/=(vec4b& a, byte b) { return a = a / b; }
+
+// Max element and clamp.
+inline kernel vec4b max(const vec4b& a, const vec4b& b) {
+  return {max(a.x, b.x), max(a.y, b.y), max(a.z, b.z), max(a.w, b.w)};
+}
+inline kernel vec4b max(const vec4b& a, byte b) {
+  return {max(a.x, b), max(a.y, b), max(a.z, b), max(a.w, b)};
+}
+inline kernel vec4b min(const vec4b& a, const vec4b& b) {
+  return {min(a.x, b.x), min(a.y, b.y), min(a.z, b.z), min(a.w, b.w)};
+}
+inline kernel vec4b min(const vec4b& a, byte b) {
+  return {min(a.x, b), min(a.y, b), min(a.z, b), min(a.w, b)};
+}
+inline kernel vec4b clamp(const vec4b& x, const vec4b& min, const vec4b& max) {
+  return {clamp(x.x, min.x, max.x), clamp(x.y, min.y, max.y),
+      clamp(x.z, min.z, max.z), clamp(x.w, min.w, max.w)};
+}
+inline kernel vec4b clamp(const vec4b& x, byte min, byte max) {
+  return {clamp(x.x, min, max), clamp(x.y, min, max), clamp(x.z, min, max),
+      clamp(x.w, min, max)};
+}
+inline kernel vec4b clamp(const vec4b& x, const vec4b& min, byte max) {
+  return {clamp(x.x, min.x, max), clamp(x.y, min.y, max),
+      clamp(x.z, min.z, max), clamp(x.w, min.w, max)};
+}
+inline kernel vec4b clamp(const vec4b& x, byte min, const vec4b& max) {
+  return {clamp(x.x, min, max.x), clamp(x.y, min, max.y),
+      clamp(x.z, min, max.z), clamp(x.w, min, max.w)};
+}
+
+inline kernel byte max(const vec4b& a) {
+  return max(max(max(a.x, a.y), a.z), a.w);
+}
+inline kernel byte min(const vec4b& a) {
+  return min(min(min(a.x, a.y), a.z), a.w);
+}
+inline kernel byte argmax(const vec4b& a) {
+  if (a.w >= a.x && a.w >= a.y && a.w >= a.z)
+    return 3;
+  else
+    return argmax(xyz(a));
+}
+inline kernel byte argmin(const vec4b& a) {
+  if (a.w <= a.x && a.w <= a.y && a.w <= a.z)
+    return 3;
+  else
+    return argmin(xyz(a));
+}
+inline kernel byte find_index(const vec4b& a, byte b) {
+  return a.x == b ? 0 : (a.y == b ? 1 : (a.z == b ? 2 : (a.w == b ? 3 : -1)));
+}
+
+// ------------------------------------------------------------------
+
 // Vector operations.
 template <typename T, size_t N>
 constexpr kernel vec<T, N> operator+(const vec<T, N>& a) {
