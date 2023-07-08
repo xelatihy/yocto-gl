@@ -2102,279 +2102,241 @@ using mat3x3f = mat<float, 3, 3>;
 using mat4x4f = mat<float, 4, 4>;
 
 // Identity matrices constants.
-constexpr auto identity2x2f = mat2x2f{{1, 0}, {0, 1}};
-constexpr auto identity3x3f = mat3x3f{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
-constexpr auto identity4x4f = mat4x4f{
+inline auto identity2x2f = mat2x2f{{1, 0}, {0, 1}};
+inline auto identity3x3f = mat3x3f{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
+inline auto identity4x4f = mat4x4f{
     {1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
 
 // Rows and columns
-template <size_t I, typename T, size_t N, size_t M>
-constexpr kernel vec<T, M> row(const mat<T, N, M>& a) {
-  if constexpr (M == 1) {
-    return {a.x[I]};
-  } else if constexpr (M == 2) {
-    return {a.x[I], a.y[I]};
-  } else if constexpr (M == 3) {
-    return {a.x[I], a.y[I], a.z[I]};
-  } else if constexpr (M == 4) {
-    return {a.x[I], a.y[I], a.z[I], a.w[I]};
-  }
-}
-template <size_t J, typename T, size_t N, size_t M>
-constexpr kernel const vec<T, N>& col(const mat<T, N, M>& a) {
-  return (&a.x)[J];
-}
-template <typename T, size_t N, size_t M>
-constexpr kernel vec<T, M> row(const mat<T, N, M>& a, int i) {
-  if constexpr (M == 1) {
-    return {a.x[i]};
-  } else if constexpr (M == 2) {
-    return {a.x[i], a.y[i]};
-  } else if constexpr (M == 3) {
-    return {a.x[i], a.y[i], a.z[i]};
-  } else if constexpr (M == 4) {
-    return {a.x[i], a.y[i], a.z[i], a.w[i]};
-  }
-}
-template <typename T, size_t N, size_t M>
-constexpr kernel const vec<T, N>& col(const mat<T, N, M>& a, int j) {
-  return (&a.x)[j];
-}
+inline kernel vec2f row(const mat2x2f& a, int i) { return {a.x[i], a.y[i]}; }
+inline kernel const vec2f& col(const mat2x2f& a, int j) { return (&a.x)[j]; }
 
 // Data access
-template <typename T, size_t N, size_t M>
-constexpr kernel T* data(mat<T, N, M>& a) {
-  return &a.x.x;
-}
-template <typename T, size_t N, size_t M>
-constexpr kernel const T* data(const mat<T, N, M>& a) {
-  return &a.x.x;
-}
+inline kernel float*       data(mat2x2f& a) { return &a.x.x; }
+inline kernel const float* data(const mat2x2f& a) { return &a.x.x; }
 
 // Matrix comparisons.
-template <typename T1, typename T2, size_t N, size_t M>
-constexpr kernel bool operator==(
-    const mat<T1, N, M>& a, const mat<T2, N, M>& b) {
-  if constexpr (M == 1) {
-    return a.x == b.x;
-  } else if constexpr (M == 2) {
-    return a.x == b.x && a.y == b.y;
-  } else if constexpr (M == 3) {
-    return a.x == b.x && a.y == b.y && a.z == b.z;
-  } else if constexpr (M == 4) {
-    return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
-  }
+inline kernel bool operator==(const mat2x2f& a, const mat2x2f& b) {
+  return a.x == b.x && a.y == b.y;
 }
-template <typename T1, typename T2, size_t N, size_t M>
-constexpr kernel bool operator!=(
-    const mat<T1, N, M>& a, const mat<T2, N, M>& b) {
+inline kernel bool operator!=(const mat2x2f& a, const mat2x2f& b) {
   return !(a == b);
 }
 
 // Matrix operations.
-template <typename T1, typename T2, size_t N, size_t M,
-    typename T = common_t<T1, T2>>
-constexpr kernel mat<T, N, M> operator+(
-    const mat<T1, N, M>& a, const mat<T2, N, M>& b) {
-  if constexpr (M == 1) {
-    return {a.x + b.x};
-  } else if constexpr (M == 2) {
-    return {a.x + b.x, a.y + b.y};
-  } else if constexpr (M == 3) {
-    return {a.x + b.x, a.y + b.y, a.z + b.z};
-  } else if constexpr (M == 4) {
-    return {a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w};
-  }
+inline kernel mat2x2f operator+(const mat2x2f& a, const mat2x2f& b) {
+  return {a.x + b.x, a.y + b.y};
 }
-template <typename T1, typename T2, size_t N, size_t M,
-    typename T = common_t<T1, T2>>
-constexpr kernel mat<T, N, M> operator*(const mat<T1, N, M>& a, T2 b) {
-  if constexpr (M == 1) {
-    return {a.x * b};
-  } else if constexpr (M == 2) {
-    return {a.x * b, a.y * b};
-  } else if constexpr (M == 3) {
-    return {a.x * b, a.y * b, a.z * b};
-  } else if constexpr (M == 4) {
-    return {a.x * b, a.y * b, a.z * b, a.w * b};
-  }
+inline kernel mat2x2f operator-(const mat2x2f& a, const mat2x2f& b) {
+  return {a.x - b.x, a.y - b.y};
 }
-template <typename T1, typename T2, size_t N, size_t M,
-    typename T = common_t<T1, T2>>
-constexpr kernel mat<T, N, M> operator*(T1 a, const mat<T2, N, M>& b) {
-  if constexpr (M == 1) {
-    return {a * b.x};
-  } else if constexpr (M == 2) {
-    return {a * b.x, a * b.y};
-  } else if constexpr (M == 3) {
-    return {a * b.x, a * b.y, a * b.z};
-  } else if constexpr (M == 4) {
-    return {a * b.x, a * b.y, a * b.z, a * b.w};
-  }
+inline kernel mat2x2f operator*(const mat2x2f& a, float b) {
+  return {a.x * b, a.y * b};
 }
-template <typename T1, typename T2, size_t N, size_t M,
-    typename T = common_t<T1, T2>>
-constexpr kernel mat<T, N, M> operator/(const mat<T1, N, M>& a, T2 b) {
-  if constexpr (M == 1) {
-    return {a.x / b};
-  } else if constexpr (M == 2) {
-    return {a.x / b, a.y / b};
-  } else if constexpr (M == 3) {
-    return {a.x / b, a.y / b, a.z / b};
-  } else if constexpr (M == 4) {
-    return {a.x / b, a.y / b, a.z / b, a.w / b};
-  }
+inline kernel mat2x2f operator*(float a, const mat2x2f& b) {
+  return {a * b.x, a * b.y};
 }
-template <typename T1, typename T2, size_t N, size_t M,
-    typename T = common_t<T1, T2>>
-constexpr kernel vec<T, N> operator*(
-    const mat<T1, N, M>& a, const vec<T2, M>& b) {
-  if constexpr (M == 1) {
-    return a.x * b.x;
-  } else if constexpr (M == 2) {
-    return a.x * b.x + a.y * b.y;
-  } else if constexpr (M == 3) {
-    return a.x * b.x + a.y * b.y + a.z * b.z;
-  } else if constexpr (M == 4) {
-    return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
-  }
+inline kernel mat2x2f operator/(const mat2x2f& a, float b) {
+  return {a.x / b, a.y / b};
 }
-template <typename T1, typename T2, size_t N, size_t M,
-    typename T = common_t<T1, T2>>
-constexpr kernel vec<T, M> operator*(
-    const vec<T1, N>& a, const mat<T2, N, M>& b) {
-  if constexpr (M == 1) {
-    return {dot(a, b.x)};
-  } else if constexpr (M == 2) {
-    return {dot(a, b.x), dot(a, b.y)};
-  } else if constexpr (M == 3) {
-    return {dot(a, b.x), dot(a, b.y), dot(a, b.z)};
-  } else if constexpr (M == 4) {
-    return {dot(a, b.x), dot(a, b.y), dot(a, b.z), dot(a, b.w)};
-  }
+inline kernel vec2f operator*(const mat2x2f& a, const vec2f& b) {
+  return a.x * b.x + a.y * b.y;
 }
-template <typename T1, typename T2, size_t N, size_t M, size_t K,
-    typename T = common_t<T1, T2>>
-constexpr kernel mat<T, N, M> operator*(
-    const mat<T1, N, K>& a, const mat<T2, K, M>& b) {
-  if constexpr (M == 1) {
-    return {a * b.x};
-  } else if constexpr (M == 2) {
-    return {a * b.x, a * b.y};
-  } else if constexpr (M == 3) {
-    return {a * b.x, a * b.y, a * b.z};
-  } else if constexpr (M == 4) {
-    return {a * b.x, a * b.y, a * b.z, a * b.w};
-  }
+inline kernel vec2f operator*(const vec2f& a, const mat2x2f& b) {
+  return {dot(a, b.x), dot(a, b.y)};
+}
+inline kernel mat2x2f operator*(const mat2x2f& a, const mat2x2f& b) {
+  return {a * b.x, a * b.y};
 }
 
 // Matrix assignments.
 template <typename T, typename T1, size_t N, size_t M>
-constexpr kernel mat<T, N, M>& operator+=(
-    mat<T, N, M>& a, const mat<T1, N, M>& b) {
+inline kernel mat2x2f& operator+=(mat2x2f& a, const mat2x2f& b) {
   return a = a + b;
 }
 template <typename T, typename T1, size_t N, size_t M>
-constexpr kernel mat<T, N, M>& operator-=(
-    mat<T, N, M>& a, const mat<T1, N, M>& b) {
+inline kernel mat2x2f& operator-=(mat2x2f& a, const mat2x2f& b) {
   return a = a - b;
 }
-template <typename T, typename T1, size_t N>
-constexpr kernel mat<T, N, N>& operator*=(
-    mat<T, N, N>& a, const mat<T1, N, N>& b) {
+inline kernel mat2x2f& operator*=(mat2x2f& a, const mat2x2f& b) {
   return a = a * b;
 }
-template <typename T, typename T1, size_t N, size_t M>
-constexpr kernel mat<T, N, M>& operator*=(mat<T, N, M>& a, T1 b) {
-  return a = a * b;
-}
-template <typename T, typename T1, size_t N, size_t M>
-constexpr kernel mat<T, N, M>& operator/=(mat<T, N, M>& a, T1 b) {
-  return a = a / b;
-}
+inline kernel mat2x2f& operator*=(mat2x2f& a, float b) { return a = a * b; }
+inline kernel mat2x2f& operator/=(mat2x2f& a, float b) { return a = a / b; }
 
 // Matrix diagonals and transposes.
-template <typename T, size_t N>
-constexpr kernel vec<T, N> diagonal(const mat<T, N, N>& a) {
-  if constexpr (N == 1) {
-    return {a.x.x};
-  } else if constexpr (N == 2) {
-    return {a.x.x, a.y.y};
-  } else if constexpr (N == 3) {
-    return {a.x.x, a.y.y, a.z.z};
-  } else if constexpr (N == 4) {
-    return {a.x.x, a.y.y, a.z.z, a.w.w};
-  }
-}
-template <typename T, size_t N>
-constexpr kernel mat<T, N, N> transpose(const mat<T, N, N>& a) {
-  if constexpr (N == 1) {
-    return {{a.x.x}};
-  } else if constexpr (N == 2) {
-    return {{a.x.x, a.y.x}, {a.x.y, a.y.y}};
-  } else if constexpr (N == 3) {
-    return {
-        {a.x.x, a.y.x, a.z.x},
-        {a.x.y, a.y.y, a.z.y},
-        {a.x.z, a.y.z, a.z.z},
-    };
-  } else if constexpr (N == 4) {
-    return {
-        {a.x.x, a.y.x, a.z.x, a.w.x},
-        {a.x.y, a.y.y, a.z.y, a.w.y},
-        {a.x.z, a.y.z, a.z.z, a.w.z},
-        {a.x.w, a.y.w, a.z.w, a.w.w},
-    };
-  }
+inline kernel vec2f   diagonal(const mat2x2f& a) { return {a.x.x, a.y.y}; }
+inline kernel mat2x2f transpose(const mat2x2f& a) {
+  return {{a.x.x, a.y.x}, {a.x.y, a.y.y}};
 }
 
 // Matrix adjoints, determinants and inverses.
-template <typename T, size_t N>
-constexpr kernel T determinant(const mat<T, N, N>& a) {
-  if constexpr (N == 1) {
-    return a.x;
-  } else if constexpr (N == 2) {
-    return cross(a.x, a.y);
-  } else if constexpr (N == 3) {
-    return dot(a.x, cross(a.y, a.z));
-  } else if constexpr (N == 4) {
-    return 0;  // TODO
-  }
+inline kernel float   determinant(const mat2x2f& a) { return cross(a.x, a.y); }
+inline kernel mat2x2f adjoint(const mat2x2f& a) {
+  return {{a.y.y, -a.x.y}, {-a.y.x, a.x.x}};
 }
-template <typename T, size_t N>
-constexpr kernel mat<T, N, N> adjoint(const mat<T, N, N>& a) {
-  if constexpr (N == 1) {
-    return {{a.x.x}};
-  } else if constexpr (N == 2) {
-    return {{a.y.y, -a.x.y}, {-a.y.x, a.x.x}};
-  } else if constexpr (N == 3) {
-    return transpose(
-        mat<T, 3, 3>{cross(a.y, a.z), cross(a.z, a.x), cross(a.x, a.y)});
-  } else if constexpr (N == 4) {
-    return {};  // TODO
-  }
+inline kernel mat2x2f inverse(const mat2x2f& a) {
+  return adjoint(a) * (1 / determinant(a));
 }
-template <typename T, size_t N>
-constexpr kernel mat<T, N, N> inverse(const mat<T, N, N>& a) {
+
+// Rows and columns
+inline kernel vec3f row(const mat3x3f& a, int i) {
+  return {a.x[i], a.y[i], a.z[i]};
+}
+inline kernel const vec3f& col(const mat3x3f& a, int j) { return (&a.x)[j]; }
+
+// Data access
+inline kernel float*       data(mat3x3f& a) { return &a.x.x; }
+inline kernel const float* data(const mat3x3f& a) { return &a.x.x; }
+
+// Matrix comparisons.
+inline kernel bool operator==(const mat3x3f& a, const mat3x3f& b) {
+  return a.x == b.x && a.y == b.y && a.z == b.z;
+}
+inline kernel bool operator!=(const mat3x3f& a, const mat3x3f& b) {
+  return !(a == b);
+}
+
+// Matrix operations.
+inline kernel mat3x3f operator+(const mat3x3f& a, const mat3x3f& b) {
+  return {a.x + b.x, a.y + b.y, a.z + b.z};
+}
+inline kernel mat3x3f operator-(const mat3x3f& a, const mat3x3f& b) {
+  return {a.x - b.x, a.y - b.y, a.z - b.z};
+}
+inline kernel mat3x3f operator*(const mat3x3f& a, float b) {
+  return {a.x * b, a.y * b, a.z * b};
+}
+inline kernel mat3x3f operator*(float a, const mat3x3f& b) {
+  return {a * b.x, a * b.y, a * b.z};
+}
+inline kernel mat3x3f operator/(const mat3x3f& a, float b) {
+  return {a.x / b, a.y / b, a.z / b};
+}
+inline kernel vec3f operator*(const mat3x3f& a, const vec3f& b) {
+  return a.x * b.x + a.y * b.y + a.z * b.z;
+}
+inline kernel vec3f operator*(const vec3f& a, const mat3x3f& b) {
+  return {dot(a, b.x), dot(a, b.y), dot(a, b.z)};
+}
+inline kernel mat3x3f operator*(const mat3x3f& a, const mat3x3f& b) {
+  return {a * b.x, a * b.y, a * b.z};
+}
+
+// Matrix assignments.
+inline kernel mat3x3f& operator+=(mat3x3f& a, const mat3x3f& b) {
+  return a = a + b;
+}
+inline kernel mat3x3f& operator-=(mat3x3f& a, const mat3x3f& b) {
+  return a = a - b;
+}
+inline kernel mat3x3f& operator*=(mat3x3f& a, const mat3x3f& b) {
+  return a = a * b;
+}
+inline kernel mat3x3f& operator*=(mat3x3f& a, float b) { return a = a * b; }
+inline kernel mat3x3f& operator/=(mat3x3f& a, float b) { return a = a / b; }
+
+// Matrix diagonals and transposes.
+inline kernel vec3f diagonal(const mat3x3f& a) { return {a.x.x, a.y.y, a.z.z}; }
+inline kernel mat3x3f transpose(const mat3x3f& a) {
+  return {
+      {a.x.x, a.y.x, a.z.x},
+      {a.x.y, a.y.y, a.z.y},
+      {a.x.z, a.y.z, a.z.z},
+  };
+}
+
+// Matrix adjoints, determinants and inverses.
+inline kernel float determinant(const mat3x3f& a) {
+  return dot(a.x, cross(a.y, a.z));
+}
+inline kernel mat3x3f adjoint(const mat3x3f& a) {
+  return transpose(mat3x3f{cross(a.y, a.z), cross(a.z, a.x), cross(a.x, a.y)});
+}
+inline kernel mat3x3f inverse(const mat3x3f& a) {
   return adjoint(a) * (1 / determinant(a));
 }
 
 // Constructs a basis from a direction
-template <typename T>
-constexpr kernel mat<T, 3, 3> basis_fromz(const vec<T, 3>& v) {
+inline kernel mat3x3f basis_fromz(const vec3f& v) {
   // https://graphics.pixar.com/library/OrthonormalB/paper.pdf
-  if constexpr (std::is_same_v<T, float>) {
-    auto z    = normalize(v);
-    auto sign = copysignf(1.0f, z.z);
-    auto a    = -1.0f / (sign + z.z);
-    auto b    = z.x * z.y * a;
-    auto x    = vec<T, 3>{1.0f + sign * z.x * z.x * a, sign * b, -sign * z.x};
-    auto y    = vec<T, 3>{b, sign + z.y * z.y * a, -z.y};
-    return {x, y, z};
-  } else if constexpr (std::is_same_v<T, float>) {
-    // TODO: double
-    return {};
-  }
+  auto z    = normalize(v);
+  auto sign = copysignf(1.0f, z.z);
+  auto a    = -1.0f / (sign + z.z);
+  auto b    = z.x * z.y * a;
+  auto x    = vec3f{1.0f + sign * z.x * z.x * a, sign * b, -sign * z.x};
+  auto y    = vec3f{b, sign + z.y * z.y * a, -z.y};
+  return {x, y, z};
+}
+
+// Rows and columns
+inline kernel vec4f row(const mat4x4f& a, int i) {
+  return {a.x[i], a.y[i], a.z[i], a.w[i]};
+}
+inline kernel const vec4f& col(const mat4x4f& a, int j) { return (&a.x)[j]; }
+
+// Data access
+inline kernel float*       data(mat4x4f& a) { return &a.x.x; }
+inline kernel const float* data(const mat4x4f& a) { return &a.x.x; }
+
+// Matrix comparisons.
+inline kernel bool operator==(const mat4x4f& a, const mat4x4f& b) {
+  return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
+}
+inline kernel bool operator!=(const mat4x4f& a, const mat4x4f& b) {
+  return !(a == b);
+}
+
+// Matrix operations.
+inline kernel mat4x4f operator+(const mat4x4f& a, const mat4x4f& b) {
+  return {a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w};
+}
+inline kernel mat4x4f operator-(const mat4x4f& a, const mat4x4f& b) {
+  return {a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w};
+}
+inline kernel mat4x4f operator*(const mat4x4f& a, float b) {
+  return {a.x * b, a.y * b, a.z * b, a.w * b};
+}
+inline kernel mat4x4f operator*(float a, const mat4x4f& b) {
+  return {a * b.x, a * b.y, a * b.z, a * b.w};
+}
+inline kernel mat4x4f operator/(const mat4x4f& a, float b) {
+  return {a.x / b, a.y / b, a.z / b, a.w / b};
+}
+inline kernel vec4f operator*(const mat4x4f& a, const vec4f& b) {
+  return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
+}
+inline kernel vec4f operator*(const vec4f& a, const mat4x4f& b) {
+  return {dot(a, b.x), dot(a, b.y), dot(a, b.z), dot(a, b.w)};
+}
+inline kernel mat4x4f operator*(const mat4x4f& a, const mat4x4f& b) {
+  return {a * b.x, a * b.y, a * b.z, a * b.w};
+}
+
+// Matrix assignments.
+inline kernel mat4x4f& operator+=(mat4x4f& a, const mat4x4f& b) {
+  return a = a + b;
+}
+inline kernel mat4x4f& operator-=(mat4x4f& a, const mat4x4f& b) {
+  return a = a - b;
+}
+inline kernel mat4x4f& operator*=(mat4x4f& a, const mat4x4f& b) {
+  return a = a * b;
+}
+inline kernel mat4x4f& operator*=(mat4x4f& a, float b) { return a = a * b; }
+inline kernel mat4x4f& operator/=(mat4x4f& a, float b) { return a = a / b; }
+
+// Matrix diagonals and transposes.
+inline kernel vec4f diagonal(const mat4x4f& a) {
+  return {a.x.x, a.y.y, a.z.z, a.w.w};
+}
+inline kernel mat4x4f transpose(const mat4x4f& a) {
+  return {
+      {a.x.x, a.y.x, a.z.x, a.w.x},
+      {a.x.y, a.y.y, a.z.y, a.w.y},
+      {a.x.z, a.y.z, a.z.z, a.w.z},
+      {a.x.w, a.y.w, a.z.w, a.w.w},
+  };
 }
 
 }  // namespace yocto
@@ -2391,8 +2353,6 @@ struct frame2f {
   vec2f o = {0, 0};
 
   constexpr kernel frame2f() : x{1, 0}, y{0, 1}, o{0, 0} {}
-  // constexpr kernel frame2f(const vec<T, 3>& r0, const vec<T, 3>& r1) :
-  //     x{r0.x, r1.x}, y{r0.y, r1.y}, o{r0.z, r1.z} {}
   constexpr kernel frame2f(const vec2f& x_, const vec2f& y_, const vec2f& o_) :
       x{x_}, y{y_}, o{o_} {}
   constexpr kernel frame2f(const mat2x2f& xy_, const vec2f& o_) :
@@ -2416,12 +2376,6 @@ struct frame3f {
   vec3f o = {0, 0, 0};
 
   constexpr kernel frame3f() : x{1, 0, 0}, y{0, 1, 0}, z{0, 0, 1}, o{0, 0, 0} {}
-  // constexpr kernel frame3f(const vec4f& r0, const vec4f& r1, const vec4f& r2)
-  // :
-  //     x{r0.x, r1.x, r2.x},
-  //     y{r0.y, r1.y, r2.y},
-  //     z{r0.z, r1.z, r2.z},
-  //     o{r0.w, r1.w, r2.w} {}
   constexpr kernel frame3f(
       const vec3f& x_, const vec3f& y_, const vec3f& z_, const vec3f& o_) :
       x{x_}, y{y_}, z{z_}, o{o_} {}
@@ -2666,9 +2620,6 @@ inline kernel vec3f transform_vector(const mat4x4f& a, const vec3f& b) {
 }
 inline kernel vec3f transform_direction(const mat4x4f& a, const vec3f& b) {
   return normalize(transform_vector(a, b));
-}
-inline kernel vec3f transform_normal(const mat4x4f& a, const vec3f& b) {
-  return normalize(transform_vector(transpose(inverse(a)), b));
 }
 inline kernel vec3f transform_vector(const mat3x3f& a, const vec3f& b) {
   return a * b;
