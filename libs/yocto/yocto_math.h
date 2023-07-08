@@ -2665,81 +2665,67 @@ constexpr kernel quat<T, 4> slerp(
 namespace yocto {
 
 // Transforms points, vectors and directions by matrices.
-template <typename T, size_t N>
-constexpr kernel vec<T, N> transform_point(
-    const mat<T, N + 1, N + 1>& a, const vec<T, N>& b) {
-  if constexpr (N == 2) {
-    auto tvb = a * vec<T, 3>{b, 1};
-    return xy(tvb) / tvb.z;
-  } else if constexpr (N == 3) {
-    auto tvb = a * vec<T, 4>{b, 1};
-    return xyz(tvb) / tvb.w;
-  }
+inline kernel vec2f transform_point(const mat3x3f& a, const vec2f& b) {
+  auto tvb = a * vec3f{b.x, b.y, 1};
+  return vec2f{tvb.x, tvb.y} / tvb.z;
 }
-template <typename T, size_t N>
-constexpr kernel vec<T, N> transform_vector(
-    const mat<T, N + 1, N + 1>& a, const vec<T, N>& b) {
-  if constexpr (N == 2) {
-    auto tvb = a * vec<T, 3>{b, 0};
-    return vec<T, N>{tvb.x, tvb.y} / tvb.z;
-  } else if constexpr (N == 3) {
-    auto tvb = a * vec<T, 4>{b, 0};
-    return vec<T, N>{tvb.x, tvb.y, tvb.z} / tvb.w;
-  }
+inline kernel vec2f transform_vector(const mat3x3f& a, const vec2f& b) {
+  auto tvb = a * vec3f{b, 0};
+  return vec2f{tvb.x, tvb.y} / tvb.z;
 }
-template <typename T, size_t N>
-constexpr kernel vec<T, N> transform_direction(
-    const mat<T, N + 1, N + 1>& a, const vec<T, N>& b) {
+inline kernel vec2f transform_direction(const mat3x3f& a, const vec2f& b) {
   return normalize(transform_vector(a, b));
 }
-template <typename T, size_t N>
-constexpr kernel vec<T, N> transform_normal(
-    const mat<T, N + 1, N + 1>& a, const vec<T, N>& b) {
+inline kernel vec2f transform_normal(const mat3x3f& a, const vec2f& b) {
   return normalize(transform_vector(transpose(inverse(a)), b));
 }
-template <typename T, size_t N>
-constexpr kernel vec<T, N> transform_vector(
-    const mat<T, N, N>& a, const vec<T, N>& b) {
+inline kernel vec2f transform_vector(const mat2x2f& a, const vec2f& b) {
   return a * b;
 }
-template <typename T, size_t N>
-constexpr kernel vec<T, N> transform_direction(
-    const mat<T, N, N>& a, const vec<T, N>& b) {
+inline kernel vec2f transform_direction(const mat2x2f& a, const vec2f& b) {
   return normalize(transform_vector(a, b));
 }
-template <typename T, size_t N>
-constexpr kernel vec<T, N> transform_normal(
-    const mat<T, N, N>& a, const vec<T, N>& b) {
+inline kernel vec2f transform_normal(const mat2x2f& a, const vec2f& b) {
+  return normalize(transform_vector(transpose(inverse(a)), b));
+}
+
+// Transforms points, vectors and directions by matrices.
+inline kernel vec3f transform_point(const mat4x4f& a, const vec3f& b) {
+  auto tvb = a * vec4f{b, 1};
+  return vec3f{tvb.x, tvb.y, tvb.z} / tvb.w;
+}
+inline kernel vec3f transform_vector(const mat4x4f& a, const vec3f& b) {
+  auto tvb = a * vec4f{b, 0};
+  return vec3f{tvb.x, tvb.y, tvb.z} / tvb.w;
+}
+inline kernel vec3f transform_direction(const mat4x4f& a, const vec3f& b) {
+  return normalize(transform_vector(a, b));
+}
+inline kernel vec3f transform_normal(const mat4x4f& a, const vec3f& b) {
+  return normalize(transform_vector(transpose(inverse(a)), b));
+}
+inline kernel vec3f transform_vector(const mat3x3f& a, const vec3f& b) {
+  return a * b;
+}
+inline kernel vec3f transform_direction(const mat3x3f& a, const vec3f& b) {
+  return normalize(transform_vector(a, b));
+}
+inline kernel vec3f transform_normal(const mat3x3f& a, const vec3f& b) {
   return normalize(transform_vector(transpose(inverse(a)), b));
 }
 
 // Transforms points, vectors and directions by frames.
-template <typename T, size_t N>
-constexpr kernel vec<T, N> transform_point(
-    const frame<T, N>& a, const vec<T, N>& b) {
-  if constexpr (N == 2) {
-    return a.x * b.x + a.y * b.y + a.o;
-  } else if constexpr (N == 3) {
-    return a.x * b.x + a.y * b.y + a.z * b.z + a.o;
-  }
+inline kernel vec2f transform_point(const frame2f& a, const vec2f& b) {
+  return a.x * b.x + a.y * b.y + a.o;
 }
-template <typename T, size_t N>
-constexpr kernel vec<T, N> transform_vector(
-    const frame<T, N>& a, const vec<T, N>& b) {
-  if constexpr (N == 2) {
-    return a.x * b.x + a.y * b.y;
-  } else if constexpr (N == 3) {
-    return a.x * b.x + a.y * b.y + a.z * b.z;
-  }
+inline kernel vec2f transform_vector(const frame2f& a, const vec2f& b) {
+  return a.x * b.x + a.y * b.y;
 }
-template <typename T, size_t N>
-constexpr kernel vec<T, N> transform_direction(
-    const frame<T, N>& a, const vec<T, N>& b) {
+inline kernel vec2f transform_direction(const frame2f& a, const vec2f& b) {
   return normalize(transform_vector(a, b));
 }
-template <typename T, size_t N>
-constexpr kernel vec<T, N> transform_normal(
-    const frame<T, N>& a, const vec<T, N>& b, bool non_rigid = false) {
+inline kernel vec2f transform_normal(
+    const frame2f& a, const vec2f& b, bool non_rigid = false) {
   if (non_rigid) {
     return transform_normal(rotation(a), b);
   } else {
@@ -2748,45 +2734,59 @@ constexpr kernel vec<T, N> transform_normal(
 }
 
 // Transforms points, vectors and directions by frames.
-template <typename T, size_t N>
-constexpr kernel vec<T, N> transform_point_inverse(
-    const frame<T, N>& a, const vec<T, N>& b) {
-  if constexpr (N == 2) {
-    return {dot(a.x, b - a.o), dot(a.y, b - a.o)};
-  } else if constexpr (N == 3) {
-    return {dot(a.x, b - a.o), dot(a.y, b - a.o), dot(a.z, b - a.o)};
+inline kernel vec3f transform_point(const frame3f& a, const vec3f& b) {
+  return a.x * b.x + a.y * b.y + a.z * b.z + a.o;
+}
+inline kernel vec3f transform_vector(const frame3f& a, const vec3f& b) {
+  return a.x * b.x + a.y * b.y + a.z * b.z;
+}
+inline kernel vec3f transform_direction(const frame3f& a, const vec3f& b) {
+  return normalize(transform_vector(a, b));
+}
+inline kernel vec3f transform_normal(
+    const frame3f& a, const vec3f& b, bool non_rigid = false) {
+  if (non_rigid) {
+    return transform_normal(rotation(a), b);
+  } else {
+    return normalize(transform_vector(a, b));
   }
 }
-template <typename T, size_t N>
-constexpr kernel vec<T, N> transform_vector_inverse(
-    const frame<T, N>& a, const vec<T, N>& b) {
-  if constexpr (N == 2) {
-    return {dot(a.x, b), dot(a.y, b)};
-  } else if constexpr (N == 3) {
-    return {dot(a.x, b), dot(a.y, b), dot(a.z, b)};
-  }
+
+// Transforms points, vectors and directions by frames.
+inline kernel vec2f transform_point_inverse(const frame2f& a, const vec2f& b) {
+  return {dot(a.x, b - a.o), dot(a.y, b - a.o)};
 }
-template <typename T, size_t N>
-constexpr kernel vec<T, N> transform_direction_inverse(
-    const frame<T, N>& a, const vec<T, N>& b) {
+inline kernel vec2f transform_vector_inverse(const frame2f& a, const vec2f& b) {
+  return {dot(a.x, b), dot(a.y, b)};
+}
+inline kernel vec2f transform_direction_inverse(
+    const frame2f& a, const vec2f& b) {
+  return normalize(transform_vector_inverse(a, b));
+}
+
+// Transforms points, vectors and directions by frames.
+inline kernel vec3f transform_point_inverse(const frame3f& a, const vec3f& b) {
+  return {dot(a.x, b - a.o), dot(a.y, b - a.o), dot(a.z, b - a.o)};
+}
+inline kernel vec3f transform_vector_inverse(const frame3f& a, const vec3f& b) {
+  return {dot(a.x, b), dot(a.y, b), dot(a.z, b)};
+}
+inline kernel vec3f transform_direction_inverse(
+    const frame3f& a, const vec3f& b) {
   return normalize(transform_vector_inverse(a, b));
 }
 
 // Translation, scaling and rotations transforms.
-template <typename T>
-constexpr kernel frame<T, 3> translation_frame(const vec<T, 3>& a) {
+inline kernel frame3f translation_frame(const vec3f& a) {
   return {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, a};
 }
-template <typename T>
-constexpr kernel frame<T, 3> scaling_frame(const vec<T, 3>& a) {
+inline kernel frame3f scaling_frame(const vec3f& a) {
   return {{a.x, 0, 0}, {0, a.y, 0}, {0, 0, a.z}, {0, 0, 0}};
 }
-template <typename T>
-constexpr kernel frame<T, 3> scaling_frame(T a) {
-  return scaling_frame(vec<T, 3>{a, a, a});
+inline kernel frame3f scaling_frame(float a) {
+  return scaling_frame(vec3f{a, a, a});
 }
-template <typename T>
-constexpr kernel frame<T, 3> rotation_frame(const vec<T, 3>& axis, T angle) {
+inline kernel frame3f rotation_frame(const vec3f& axis, float angle) {
   auto s = sin(angle), c = cos(angle);
   auto vv = normalize(axis);
   return {
@@ -2799,8 +2799,7 @@ constexpr kernel frame<T, 3> rotation_frame(const vec<T, 3>& axis, T angle) {
       {0, 0, 0},
   };
 }
-template <typename T>
-constexpr kernel frame<T, 3> rotation_frame(const vec<T, 4>& quat) {
+inline kernel frame3f rotation_frame(const vec4f& quat) {
   auto v = quat;
   return {
       {v.w * v.w + v.x * v.x - v.y * v.y - v.z * v.z,
@@ -2813,8 +2812,7 @@ constexpr kernel frame<T, 3> rotation_frame(const vec<T, 4>& quat) {
       {0, 0, 0},
   };
 }
-template <typename T>
-constexpr kernel frame<T, 3> rotation_frame(const quat<T, 4>& quat) {
+inline kernel frame3f rotation_frame(const quat4f& quat) {
   auto v = quat;
   return {
       {v.w * v.w + v.x * v.x - v.y * v.y - v.z * v.z,
@@ -2827,15 +2825,13 @@ constexpr kernel frame<T, 3> rotation_frame(const quat<T, 4>& quat) {
       {0, 0, 0},
   };
 }
-template <typename T>
-constexpr kernel frame<T, 3> rotation_frame(const mat<T, 3, 3>& rot) {
+inline kernel frame3f rotation_frame(const mat3x3f& rot) {
   return {rot, {0, 0, 0}};
 }
 
 // Lookat frame. Z-axis can be inverted with inv_xz.
-template <typename T>
-constexpr kernel frame<T, 3> lookat_frame(const vec<T, 3>& eye,
-    const vec<T, 3>& center, const vec<T, 3>& up, bool inv_xz = false) {
+inline kernel frame3f lookat_frame(const vec3f& eye, const vec3f& center,
+    const vec3f& up, bool inv_xz = false) {
   auto w = normalize(eye - center);
   auto u = normalize(cross(up, w));
   auto v = normalize(cross(w, u));
@@ -2847,57 +2843,52 @@ constexpr kernel frame<T, 3> lookat_frame(const vec<T, 3>& eye,
 }
 
 // OpenGL frustum, ortho and perspecgive matrices.
-template <typename T>
-constexpr kernel mat<T, 4, 4> frustum_mat(T l, T r, T b, T t, T n, T f) {
+inline kernel mat4x4f frustum_mat(
+    float l, float r, float b, float t, float n, float f) {
   return {{2 * n / (r - l), 0, 0, 0}, {0, 2 * n / (t - b), 0, 0},
       {(r + l) / (r - l), (t + b) / (t - b), -(f + n) / (f - n), -1},
       {0, 0, -2 * f * n / (f - n), 0}};
 }
-template <typename T>
-constexpr kernel mat<T, 4, 4> ortho_mat(T l, T r, T b, T t, T n, T f) {
+inline kernel mat4x4f ortho_mat(
+    float l, float r, float b, float t, float n, float f) {
   return {{2 / (r - l), 0, 0, 0}, {0, 2 / (t - b), 0, 0},
       {0, 0, -2 / (f - n), 0},
       {-(r + l) / (r - l), -(t + b) / (t - b), -(f + n) / (f - n), 1}};
 }
-template <typename T>
-constexpr kernel mat<T, 4, 4> ortho2d_mat(T left, T right, T bottom, T top) {
+inline kernel mat4x4f ortho2d_mat(
+    float left, float right, float bottom, float top) {
   return ortho_mat(left, right, bottom, top, -1, 1);
 }
-template <typename T>
-constexpr kernel mat<T, 4, 4> ortho_mat(T xmag, T ymag, T near, T far) {
+inline kernel mat4x4f ortho_mat(float xmag, float ymag, float near, float far) {
   return {{1 / xmag, 0, 0, 0}, {0, 1 / ymag, 0, 0}, {0, 0, 2 / (near - far), 0},
       {0, 0, (far + near) / (near - far), 1}};
 }
-template <typename T>
-constexpr kernel mat<T, 4, 4> perspective_mat(T fovy, T aspect, T near, T far) {
+inline kernel mat4x4f perspective_mat(
+    float fovy, float aspect, float near, float far) {
   auto tg = tan(fovy / 2);
   return {{1 / (aspect * tg), 0, 0, 0}, {0, 1 / tg, 0, 0},
       {0, 0, (far + near) / (near - far), -1},
       {0, 0, 2 * far * near / (near - far), 0}};
 }
-template <typename T>
-constexpr kernel mat<T, 4, 4> perspective_mat(T fovy, T aspect, T near) {
+inline kernel mat4x4f perspective_mat(float fovy, float aspect, float near) {
   auto tg = tan(fovy / 2);
   return {{1 / (aspect * tg), 0, 0, 0}, {0, 1 / tg, 0, 0}, {0, 0, -1, -1},
       {0, 0, 2 * near, 0}};
 }
 
 // Rotation conversions.
-template <typename T>
-constexpr kernel pair<vec<T, 3>, T> rotation_axisangle(const vec<T, 4>& quat) {
-  return {normalize(vec<T, 3>{quat.x, quat.y, quat.z}), 2 * acos(quat.w)};
+inline kernel pair<vec3f, float> rotation_axisangle(const vec4f& quat) {
+  return {normalize(vec3f{quat.x, quat.y, quat.z}), 2 * acos(quat.w)};
 }
-template <typename T>
-constexpr kernel vec<T, 4> rotation_quat(const vec<T, 3>& axis, T angle) {
+inline kernel vec4f rotation_quat(const vec3f& axis, float angle) {
   auto len = length(axis);
   if (len == 0) return {0, 0, 0, 1};
-  return vec<T, 4>{sin(angle / 2) * axis.x / len, sin(angle / 2) * axis.y / len,
+  return vec4f{sin(angle / 2) * axis.x / len, sin(angle / 2) * axis.y / len,
       sin(angle / 2) * axis.z / len, cos(angle / 2)};
 }
-template <typename T>
-constexpr kernel vec<T, 4> rotation_quat(const vec<T, 4>& axisangle) {
+inline kernel vec4f rotation_quat(const vec4f& axisangle) {
   return rotation_quat(
-      vec<T, 3>{axisangle.x, axisangle.y, axisangle.z}, axisangle.w);
+      vec3f{axisangle.x, axisangle.y, axisangle.z}, axisangle.w);
 }
 
 }  // namespace yocto
