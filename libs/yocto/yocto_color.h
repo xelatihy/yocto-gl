@@ -294,7 +294,7 @@ inline kernel vec3f xyz_to_rgb(const vec3f& xyz) {
 // Convert between CIE XYZ and xyY
 
 inline kernel vec3f xyz_to_xyY(const vec3f& xyz) {
-  if (xyz == 0) return {0, 0, 0};
+  if (xyz == 0.0f) return {0, 0, 0};
   auto [x, y, z] = xyz;
   return {x / (x + y + z), y / (x + y + z), y};
 }
@@ -480,8 +480,8 @@ struct colorgrade_params {
 inline kernel vec3f colorgrade(
     const vec3f& rgb_, bool linear, const colorgrade_params& params) {
   auto rgb = rgb_;
-  if (params.exposure != 0) rgb *= exp2(params.exposure);
-  if (params.tint != 1) rgb *= params.tint;
+  if (params.exposure != 0.0f) rgb *= exp2(params.exposure);
+  if (params.tint != 1.0f) rgb *= params.tint;
   if (params.lincontrast != 0.5f)
     rgb = lincontrast(rgb, params.lincontrast, linear ? 0.18f : 0.5f);
   if (params.logcontrast != 0.5f)
@@ -492,8 +492,8 @@ inline kernel vec3f colorgrade(
   if (params.contrast != 0.5f) rgb = contrast(rgb, params.contrast);
   if (params.saturation != 0.5f) rgb = saturate(rgb, params.saturation);
   if (params.shadows != 0.5f || params.midtones != 0.5f ||
-      params.highlights != 0.5f || params.shadows_color != 1 ||
-      params.midtones_color != 1 || params.highlights_color != 1) {
+      params.highlights != 0.5f || params.shadows_color != 1.0f ||
+      params.midtones_color != 1.0f || params.highlights_color != 1.0f) {
     auto lift  = params.shadows_color;
     auto gamma = params.midtones_color;
     auto gain  = params.highlights_color;
@@ -505,7 +505,7 @@ inline kernel vec3f colorgrade(
 
     // apply_image
     auto lerp_value = clamp(pow(rgb, 1 / gamma), 0.0f, 1.0f);
-    rgb             = gain * lerp_value + lift * (1 - lerp_value);
+    rgb             = gain * lerp_value + lift * (1.0f - lerp_value);
   }
   return rgb;
 }

@@ -1967,7 +1967,7 @@ shape_data flipyz_shape(const shape_data& shape) {
 // Make a plane.
 shape_data make_rect(
     const vec2i& steps, const vec2f& scale, const vec2f& uvscale) {
-  if (steps == 1 && scale == 1 && uvscale == 1) return make_quad();
+  if (steps == 1 && scale == 1.0f && uvscale == 1.0f) return make_quad();
   return make_quads(steps, [=](vec2f uv) -> make_quads_vertex {
     return {
         vec3f(scale * (uv * 2 - 1), 0), vec3f(0, 0, 1), flip_v(uv) * uvscale};
@@ -2056,7 +2056,7 @@ shape_data make_bulged_disk(
 // Make a box.
 shape_data make_box(
     const vec3i& steps, const vec3f& scale, const vec3f& uvscale) {
-  if (steps == 1 && scale == 1 && uvscale == 1) return make_cube();
+  if (steps == 1 && scale == 1.0f && uvscale == 1.0f) return make_cube();
   return make_quads(
       array<vec2i, 6>{vec2i{steps.x, steps.y}, vec2i{steps.x, steps.y},
           vec2i{steps.z, steps.y}, vec2i{steps.z, steps.y},
@@ -2124,13 +2124,13 @@ shape_data make_rounded_box(const vec3i& steps, const vec3f& scale,
 
 // Make a watertight box.
 shape_data make_wtbox(const vec3i& steps, const vec3f& scale) {
-  if (steps == 1 && scale == 1) return make_wtcube();
+  if (steps == 1 && scale == 1.0f) return make_wtcube();
   return weld_vertices(make_box(steps, scale), min(scale / steps));
 }
 
 // Make a watertight box.
 shape_data make_opbox(const vec3i& steps, const vec3f& scale) {
-  if (steps == 1 && scale == 1) return make_opcube();
+  if (steps == 1 && scale == 1.0f) return make_opcube();
   return weld_vertices(make_box(steps, scale), min(scale / steps));
 }
 
@@ -2525,7 +2525,7 @@ fvshape_data make_fvquad(int steps, float scale, float uvscale) {
 // Make a face-varying rect
 fvshape_data make_fvrect(
     const vec2i& steps, const vec2f& scale, const vec2f& uvscale) {
-  if (steps == 1 && scale == 1 && uvscale == 1) return make_fvquad();
+  if (steps == 1 && scale == 1.0f && uvscale == 1.0f) return make_fvquad();
   auto rect           = make_rect(steps, scale, uvscale);
   auto shape          = fvshape_data{};
   shape.positions     = rect.positions;
@@ -2576,7 +2576,7 @@ fvshape_data make_fvcube(int steps, float scale, float uvscale) {
 // Make a face-varying box
 fvshape_data make_fvbox(
     const vec3i& steps, const vec3f& scale, const vec3f& uvscale) {
-  if (steps == 1 && scale == 1 && uvscale == 1) return make_fvcube();
+  if (steps == 1 && scale == 1.0f && uvscale == 1.0f) return make_fvcube();
   auto box                                  = make_box(steps, scale, uvscale);
   auto shape                                = fvshape_data{};
   shape.quadsnorm                           = box.quads;
