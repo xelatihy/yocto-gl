@@ -553,6 +553,449 @@ constexpr kernel T* data(vec<T, N>& a) {
   return &(a.x);
 }
 
+// -----------------------------------------------------------------------------
+
+// Vector comparison operations.
+inline kernel bool operator==(const vec2f& a, const vec2f& b) {
+  return a.x == b.x && a.y == b.y;
+}
+inline kernel bool operator==(const vec2f& a, float b) {
+  return a.x == b && a.y == b;
+}
+inline kernel bool operator!=(const vec2f& a, const vec2f& b) {
+  return a.x != b.x || a.y != b.y;
+}
+inline kernel bool operator!=(const vec2f& a, float b) {
+  return a.x != b || a.y != b;
+}
+inline kernel bool operator<(const vec2f& a, const vec2f& b) {
+  return a.x < b.x || (a.x == b.x && a.y < b.y);
+}
+
+// Vector operations.
+inline kernel vec2f operator+(const vec2f& a) { return a; }
+inline kernel vec2f operator-(const vec2f& a) { return {-a.x, -a.y}; }
+inline kernel vec2f operator+(const vec2f& a, const vec2f& b) {
+  return {a.x + b.x, a.y + b.y};
+}
+inline kernel vec2f operator+(const vec2f& a, float b) {
+  return {a.x + b, a.y + b};
+}
+inline kernel vec2f operator+(float a, const vec2f& b) {
+  return {a + b.x, a + b.y};
+}
+inline kernel vec2f operator-(const vec2f& a, const vec2f& b) {
+  return {a.x - b.x, a.y - b.y};
+}
+inline kernel vec2f operator-(const vec2f& a, float b) {
+  return {a.x - b, a.y - b};
+}
+inline kernel vec2f operator-(float a, const vec2f& b) {
+  return {a - b.x, a - b.y};
+}
+inline kernel vec2f operator*(const vec2f& a, const vec2f& b) {
+  return {a.x * b.x, a.y * b.y};
+}
+inline kernel vec2f operator*(const vec2f& a, float b) {
+  return {a.x * b, a.y * b};
+}
+inline kernel vec2f operator*(float a, const vec2f& b) {
+  return {a * b.x, a * b.y};
+}
+inline kernel vec2f operator/(const vec2f& a, const vec2f& b) {
+  return {a.x / b.x, a.y / b.y};
+}
+inline kernel vec2f operator/(const vec2f& a, float b) {
+  return {a.x / b, a.y / b};
+}
+inline kernel vec2f operator/(float a, const vec2f& b) {
+  return {a / b.x, a / b.y};
+}
+
+// Vector assignments
+inline kernel vec2f& operator+=(vec2f& a, const vec2f& b) { return a = a + b; }
+inline kernel vec2f& operator+=(vec2f& a, float b) { return a = a + b; }
+inline kernel vec2f& operator-=(vec2f& a, const vec2f& b) { return a = a - b; }
+inline kernel vec2f& operator-=(vec2f& a, float b) { return a = a - b; }
+inline kernel vec2f& operator*=(vec2f& a, const vec2f& b) { return a = a * b; }
+inline kernel vec2f& operator*=(vec2f& a, float b) { return a = a * b; }
+inline kernel vec2f& operator/=(vec2f& a, const vec2f& b) { return a = a / b; }
+inline kernel vec2f& operator/=(vec2f& a, float b) { return a = a / b; }
+
+// Vector products and lengths.
+inline kernel float dot(const vec2f& a, const vec2f& b) {
+  return a.x * b.x + a.y * b.y;
+}
+inline kernel float cross(const vec2f& a, const vec2f& b) {
+  return a.x * b.y - a.y * b.x;
+}
+
+inline kernel float length(const vec2f& a) { return sqrt(dot(a, a)); }
+inline kernel float length2(const vec2f& a) { return dot(a, a); }
+[[deprecated]] inline kernel float length_squared(const vec2f& a) {
+  return dot(a, a);
+}
+inline kernel vec2f normalize(const vec2f& a) {
+  auto l = length(a);
+  return (l != 0) ? a / l : a;
+}
+inline kernel float distance(const vec2f& a, const vec2f& b) {
+  return length(a - b);
+}
+inline kernel float distance2(const vec2f& a, const vec2f& b) {
+  return dot(a - b, a - b);
+}
+[[deprecated]] inline kernel float distance_squared(
+    const vec2f& a, const vec2f& b) {
+  return dot(a - b, a - b);
+}
+inline kernel float angle(const vec2f& a, const vec2f& b) {
+  return acos(clamp(dot(normalize(a), normalize(b)), -1.0f, 1.0f));
+}
+
+// Max element and clamp.
+inline kernel vec2f max(const vec2f& a, const vec2f& b) {
+  return {max(a.x, b.x), max(a.y, b.y)};
+}
+inline kernel vec2f max(const vec2f& a, float b) {
+  return {max(a.x, b), max(a.y, b)};
+}
+inline kernel vec2f min(const vec2f& a, const vec2f& b) {
+  return {min(a.x, b.x), min(a.y, b.y)};
+}
+inline kernel vec2f min(const vec2f& a, float b) {
+  return {min(a.x, b), min(a.y, b)};
+}
+constexpr kernel vec2f clamp(
+    const vec2f& x, const vec2f& min, const vec2f& max) {
+  return {clamp(x.x, min.x, max.x), clamp(x.y, min.y, max.y)};
+}
+constexpr kernel vec2f clamp(const vec2f& x, float min, float max) {
+  return {clamp(x.x, min, max), clamp(x.y, min, max)};
+}
+constexpr kernel vec2f clamp(const vec2f& x, const vec2f& min, float max) {
+  return {clamp(x.x, min.x, max), clamp(x.y, min.y, max)};
+}
+constexpr kernel vec2f clamp(const vec2f& x, float min, const vec2f& max) {
+  return {clamp(x.x, min, max.x), clamp(x.y, min, max.y)};
+}
+constexpr kernel vec2f lerp(const vec2f& a, const vec2f& b, float u) {
+  return a * (1 - u) + b * u;
+}
+constexpr kernel vec2f lerp(const vec2f& a, const vec2f& b, const vec2f& u) {
+  return a * (1 - u) + b * u;
+}
+
+inline kernel float max(const vec2f& a) { return max(a.x, a.y); }
+inline kernel float min(const vec2f& a) { return min(a.x, a.y); }
+inline kernel int   argmax(const vec2f& a) { return a.x >= a.y ? 0 : 1; }
+inline kernel int   argmin(const vec2f& a) { return a.x <= a.y ? 0 : 1; }
+inline kernel int   find_index(const vec2f& a, float b) {
+  return a.x == b ? 0 : (a.y == b ? 1 : -1);
+}
+
+inline kernel float sum(const vec2f& a) { return a.x + a.y; }
+inline kernel float prod(const vec2f& a) { return a.x * a.y; }
+inline kernel float mean(const vec2f& a) { return sum(a) / 2; }
+
+// Functions applied to vector elements
+inline kernel vec2f abs(const vec2f& a) { return {abs(a.x), abs(a.y)}; }
+inline kernel vec2f sqr(const vec2f& a) { return {sqr(a.x), sqr(a.y)}; }
+inline kernel vec2f sqrt(const vec2f& a) { return {sqrt(a.x), sqrt(a.y)}; }
+inline kernel vec2f exp(const vec2f& a) { return {exp(a.x), exp(a.y)}; }
+inline kernel vec2f log(const vec2f& a) { return {log(a.x), log(a.y)}; }
+inline kernel vec2f exp2(const vec2f& a) { return {exp2(a.x), exp2(a.y)}; }
+inline kernel vec2f log2(const vec2f& a) { return {log2(a.x), log2(a.y)}; }
+inline kernel vec2f pow(const vec2f& a, const vec2f& b) {
+  return {pow(a.x, b.x), pow(a.y, b.y)};
+}
+inline kernel vec2f pow(const vec2f& a, float b) {
+  return {pow(a.x, b), pow(a.y, b)};
+}
+inline kernel vec2f round(const vec2f& a) { return {round(a.x), round(a.y)}; }
+inline kernel vec2f fmod(const vec2f& a, const vec2f& b) {
+  return {fmod(a.x, b.x), fmod(a.y, b.y)};
+}
+inline kernel vec2f fmod(const vec2f& a, float b) {
+  return {fmod(a.x, b), fmod(a.y, b)};
+}
+inline kernel vec2f mod(const vec2f& a, const vec2f& b) {
+  return {mod(a.x, b.x), mod(a.y, b.y)};
+}
+inline kernel vec2f mod(const vec2f& a, float b) {
+  return {mod(a.x, b), mod(a.y, b)};
+}
+inline kernel vec2f bias(const vec2f& a, float b) {
+  return {bias(a.x, b), bias(a.y, b)};
+}
+inline kernel vec2f gain(const vec2f& a, float b) {
+  return {gain(a.x, b), gain(a.y, b)};
+}
+inline kernel bool isfinite(const vec2f& a) {
+  return isfinite(a.x) && isfinite(a.y);
+}
+
+// Conversion between ranges
+inline kernel vec2f unit_to_uv(const vec2f& a) { return (a + 1) / 2; }
+inline kernel vec2f uv_to_unit(const vec2f& a) { return a * 2 - 1; }
+
+// -----------------------------------------------------------------------------
+
+// Vector comparison operations.
+inline kernel bool operator==(const vec3f& a, const vec3f& b) {
+  return a.x == b.x && a.y == b.y && a.z == b.z;
+}
+inline kernel bool operator==(const vec3f& a, float b) {
+  return a.x == b && a.y == b && a.z == b;
+}
+inline kernel bool operator!=(const vec3f& a, const vec3f& b) {
+  return a.x != b.x || a.y != b.y || a.z != b.z;
+}
+inline kernel bool operator!=(const vec3f& a, float b) {
+  return a.x != b || a.y != b || a.z != b;
+}
+inline kernel bool operator<(const vec3f& a, const vec3f& b) {
+  return a.x < b.x || (a.x == b.x && (a.y < b.y || (a.y == b.y && a.z < b.z)));
+}
+
+// Vector operations.
+inline kernel vec3f operator+(const vec3f& a) { return a; }
+inline kernel vec3f operator-(const vec3f& a) { return {-a.x, -a.y, -a.z}; }
+inline kernel vec3f operator+(const vec3f& a, const vec3f& b) {
+  return {a.x + b.x, a.y + b.y, a.z + b.z};
+}
+inline kernel vec3f operator+(const vec3f& a, float b) {
+  return {a.x + b, a.y + b, a.z + b};
+}
+inline kernel vec3f operator+(float a, const vec3f& b) {
+  return {a + b.x, a + b.y, a + b.z};
+}
+inline kernel vec3f operator-(const vec3f& a, const vec3f& b) {
+  return {a.x - b.x, a.y - b.y, a.z - b.z};
+}
+inline kernel vec3f operator-(const vec3f& a, float b) {
+  return {a.x - b, a.y - b, a.z - b};
+}
+inline kernel vec3f operator-(float a, const vec3f& b) {
+  return {a - b.x, a - b.y, a - b.z};
+}
+inline kernel vec3f operator*(const vec3f& a, const vec3f& b) {
+  return {a.x * b.x, a.y * b.y, a.z * b.z};
+}
+inline kernel vec3f operator*(const vec3f& a, float b) {
+  return {a.x * b, a.y * b, a.z * b};
+}
+inline kernel vec3f operator*(float a, const vec3f& b) {
+  return {a * b.x, a * b.y, a * b.z};
+}
+inline kernel vec3f operator/(const vec3f& a, const vec3f& b) {
+  return {a.x / b.x, a.y / b.y, a.z / b.z};
+}
+inline kernel vec3f operator/(const vec3f& a, float b) {
+  return {a.x / b, a.y / b, a.z / b};
+}
+inline kernel vec3f operator/(float a, const vec3f& b) {
+  return {a / b.x, a / b.y, a / b.z};
+}
+
+// Vector assignments
+inline kernel vec3f& operator+=(vec3f& a, const vec3f& b) { return a = a + b; }
+inline kernel vec3f& operator+=(vec3f& a, float b) { return a = a + b; }
+inline kernel vec3f& operator-=(vec3f& a, const vec3f& b) { return a = a - b; }
+inline kernel vec3f& operator-=(vec3f& a, float b) { return a = a - b; }
+inline kernel vec3f& operator*=(vec3f& a, const vec3f& b) { return a = a * b; }
+inline kernel vec3f& operator*=(vec3f& a, float b) { return a = a * b; }
+inline kernel vec3f& operator/=(vec3f& a, const vec3f& b) { return a = a / b; }
+inline kernel vec3f& operator/=(vec3f& a, float b) { return a = a / b; }
+
+// Vector products and lengths.
+inline kernel float dot(const vec3f& a, const vec3f& b) {
+  return a.x * b.x + a.y * b.y + a.z * b.z;
+}
+inline kernel vec3f cross(const vec3f& a, const vec3f& b) {
+  return {a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x};
+}
+inline kernel float length(const vec3f& a) { return sqrt(dot(a, a)); }
+inline kernel float length2(const vec3f& a) { return dot(a, a); }
+[[deprecated]] inline kernel float length_squared(const vec3f& a) {
+  return dot(a, a);
+}
+inline kernel vec3f normalize(const vec3f& a) {
+  auto l = length(a);
+  return (l != 0) ? a / l : a;
+}
+inline kernel float distance(const vec3f& a, const vec3f& b) {
+  return length(a - b);
+}
+inline kernel float distance2(const vec3f& a, const vec3f& b) {
+  return dot(a - b, a - b);
+}
+[[deprecated]] inline kernel float distance_squared(
+    const vec3f& a, const vec3f& b) {
+  return dot(a - b, a - b);
+}
+inline kernel float angle(const vec3f& a, const vec3f& b) {
+  return acos(clamp(dot(normalize(a), normalize(b)), -1.0f, 1.0f));
+}
+inline kernel vec3f slerp(const vec3f& a, const vec3f& b, float u) {
+  // https://en.wikipedia.org/wiki/Slerp
+  auto an = normalize(a), bn = normalize(b);
+  auto d = dot(an, bn);
+  if (d < 0) {
+    bn = -bn;
+    d  = -d;
+  }
+  if (d > (float)0.9995) return normalize(an + u * (bn - an));
+  auto theta = acos(clamp(d, (float)-1, (float)1));
+  if (theta == 0) return an;
+  return an * (sin(theta * (1 - u)) / sin(theta)) +
+         bn * (sin(theta * u) / sin(theta));
+}
+
+// Orthogonal vectors.
+inline kernel vec3f orthogonal(const vec3f& v) {
+  // http://lolengine.net/blog/2013/09/21/picking-orthogonal-vector-combing-coconuts)
+  return abs(v.x) > abs(v.z) ? vec3f{-v.y, v.x, 0} : vec3f{0, -v.z, v.y};
+}
+inline kernel vec3f orthonormalize(const vec3f& a, const vec3f& b) {
+  return normalize(a - b * dot(a, b));
+}
+
+// Reflected and refracted vector.
+inline kernel vec3f reflect(const vec3f& w, const vec3f& n) {
+  return -w + 2 * dot(n, w) * n;
+}
+inline kernel vec3f refract(const vec3f& w, const vec3f& n, float inv_eta) {
+  auto cosine = dot(n, w);
+  auto k      = 1 + inv_eta * inv_eta * (cosine * cosine - 1);
+  if (k < 0) return {0, 0, 0};  // tir
+  return -w * inv_eta + (inv_eta * cosine - sqrt(k)) * n;
+}
+
+// Max element and clamp.
+inline kernel vec3f max(const vec3f& a, const vec3f& b) {
+  return {max(a.x, b.x), max(a.y, b.y), max(a.z, b.z)};
+}
+inline kernel vec3f max(const vec3f& a, float b) {
+  return {max(a.x, b), max(a.y, b), max(a.z, b)};
+}
+inline kernel vec3f min(const vec3f& a, const vec3f& b) {
+  return {min(a.x, b.x), min(a.y, b.y), min(a.z, b.z)};
+}
+inline kernel vec3f min(const vec3f& a, float b) {
+  return {min(a.x, b), min(a.y, b), min(a.z, b)};
+}
+inline kernel vec3f clamp(const vec3f& x, const vec3f& min, const vec3f& max) {
+  return {clamp(x.x, min.x, max.x), clamp(x.y, min.y, max.y),
+      clamp(x.z, min.z, max.z)};
+}
+inline kernel vec3f clamp(const vec3f& x, float min, float max) {
+  return {clamp(x.x, min, max), clamp(x.y, min, max), clamp(x.z, min, max)};
+}
+inline kernel vec3f clamp(const vec3f& x, const vec3f& min, float max) {
+  return {
+      clamp(x.x, min.x, max), clamp(x.y, min.y, max), clamp(x.z, min.z, max)};
+}
+inline kernel vec3f clamp(const vec3f& x, float min, const vec3f& max) {
+  return {
+      clamp(x.x, min, max.x), clamp(x.y, min, max.y), clamp(x.z, min, max.z)};
+}
+inline kernel vec3f lerp(const vec3f& a, const vec3f& b, float u) {
+  return a * (1 - u) + b * u;
+}
+inline kernel vec3f lerp(const vec3f& a, const vec3f& b, const vec3f& u) {
+  return a * (1 - u) + b * u;
+}
+
+inline kernel float max(const vec3f& a) { return max(max(a.x, a.y), a.z); }
+inline kernel float min(const vec3f& a) { return min(min(a.x, a.y), a.z); }
+inline kernel int   argmax(const vec3f& a) {
+  return a.x >= a.y ? (a.x >= a.z ? 0 : 2) : (a.y >= a.z ? 1 : 2);
+}
+inline kernel int argmin(const vec3f& a) {
+  return a.x <= a.y ? (a.x <= a.z ? 0 : 2) : (a.y <= a.z ? 1 : 2);
+}
+inline kernel int find_index(const vec3f& a, float b) {
+  return a.x == b ? 0 : (a.y == b ? 1 : (a.z == b ? 2 : -1));
+}
+
+inline kernel float sum(const vec3f& a) { return a.x + a.y + a.z; }
+inline kernel float prod(const vec3f& a) { return a.x * a.y * a.z; }
+inline kernel float mean(const vec3f& a) { return sum(a) / 3; }
+
+// Functions applied to vector elements
+inline kernel vec3f abs(const vec3f& a) {
+  return {abs(a.x), abs(a.y), abs(a.z)};
+}
+inline kernel vec3f sqr(const vec3f& a) {
+  return {sqr(a.x), sqr(a.y), sqr(a.z)};
+}
+inline kernel vec3f sqrt(const vec3f& a) {
+  return {sqrt(a.x), sqrt(a.y), sqrt(a.z)};
+}
+inline kernel vec3f exp(const vec3f& a) {
+  return {exp(a.x), exp(a.y), exp(a.z)};
+}
+inline kernel vec3f log(const vec3f& a) {
+  return {log(a.x), log(a.y), log(a.z)};
+}
+inline kernel vec3f exp2(const vec3f& a) {
+  return {exp2(a.x), exp2(a.y), exp2(a.z)};
+}
+inline kernel vec3f log2(const vec3f& a) {
+  return {log2(a.x), log2(a.y), log2(a.z)};
+}
+inline kernel vec3f pow(const vec3f& a, const vec3f& b) {
+  return {pow(a.x, b.x), pow(a.y, b.y), pow(a.z, b.z)};
+}
+inline kernel vec3f pow(const vec3f& a, float b) {
+  return {pow(a.x, b), pow(a.y, b), pow(a.z, b)};
+}
+inline kernel vec3f round(const vec3f& a) {
+  return {round(a.x), round(a.y), round(a.z)};
+}
+inline kernel vec3f fmod(const vec3f& a, const vec3f& b) {
+  return {fmod(a.x, b.x), fmod(a.y, b.y), fmod(a.z, b.z)};
+}
+inline kernel vec3f fmod(const vec3f& a, float b) {
+  return {fmod(a.x, b), fmod(a.y, b), fmod(a.z, b)};
+}
+inline kernel vec3f mod(const vec3f& a, const vec3f& b) {
+  return {mod(a.x, b.x), mod(a.y, b.y), mod(a.z, b.z)};
+}
+inline kernel vec3f mod(const vec3f& a, float b) {
+  return {mod(a.x, b), mod(a.y, b), mod(a.z, b)};
+}
+inline kernel vec3f bias(const vec3f& a, float b) {
+  return {bias(a.x, b), bias(a.y, b), bias(a.z, b)};
+}
+inline kernel vec3f gain(const vec3f& a, float b) {
+  return {gain(a.x, b), gain(a.y, b), gain(a.z, b)};
+}
+inline kernel bool isfinite(const vec3f& a) {
+  return isfinite(a.x) && isfinite(a.y) && isfinite(a.z);
+}
+
+// Conversion between coordinates
+inline kernel vec2f cartesian_to_sphericaluv(const vec3f& w) {
+  auto phi = atan2(w.y, w.x), theta = acos(clamp(w.z, -1, 1));
+  return {mod(phi / (2 * (float)pi), 1), theta / (float)pi};
+}
+inline kernel vec2f cartesiany_to_sphericaluv(const vec3f& w) {
+  auto phi = atan2(w.z, w.x), theta = acos(clamp(w.y, -1, 1));
+  return {mod(phi / (2 * (float)pi), 1), theta / (float)pi};
+}
+inline kernel vec3f sphericaluv_to_cartesian(const vec2f& uv) {
+  auto phi = uv.x * 2 * (float)pi, theta = uv.y * (float)pi;
+  return {cos(phi) * sin(theta), sin(phi) * sin(theta), cos(theta)};
+}
+inline kernel vec3f sphericaluv_to_cartesiany(const vec2f& uv) {
+  auto phi = uv.x * 2 * (float)pi, theta = uv.y * (float)pi;
+  return {cos(phi) * sin(theta), cos(theta), sin(phi) * sin(theta)};
+}
+
+// ------------------------------------------------------------------
+
 // Vector comparison operations.
 template <typename T1, typename T2, size_t N>
 constexpr kernel bool operator==(const vec<T1, N>& a, const vec<T2, N>& b) {

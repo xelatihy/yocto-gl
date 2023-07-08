@@ -73,13 +73,13 @@ using std::vector;
 namespace yocto {
 
 // Check if on the same side of the hemisphere
-constexpr kernel bool same_hemisphere(
+inline kernel bool same_hemisphere(
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
   return dot(normal, outgoing) * dot(normal, incoming) >= 0;
 }
 
 // Schlick approximation of the Fresnel term
-constexpr kernel vec3f fresnel_schlick(
+inline kernel vec3f fresnel_schlick(
     const vec3f& specular, const vec3f& normal, const vec3f& outgoing) {
   if (specular == vec3f{0, 0, 0}) return {0, 0, 0};
   auto cosine = dot(normal, outgoing);
@@ -88,7 +88,7 @@ constexpr kernel vec3f fresnel_schlick(
 }
 
 // Compute the fresnel term for dielectrics.
-constexpr kernel float fresnel_dielectric(
+inline kernel float fresnel_dielectric(
     float eta, const vec3f& normal, const vec3f& outgoing) {
   // Implementation from
   // https://seblagarde.wordpress.com/2013/04/29/memo-on-fresnel-equations/
@@ -111,7 +111,7 @@ constexpr kernel float fresnel_dielectric(
 }
 
 // Compute the fresnel term for metals.
-constexpr kernel vec3f fresnel_conductor(const vec3f& eta, const vec3f& etak,
+inline kernel vec3f fresnel_conductor(const vec3f& eta, const vec3f& etak,
     const vec3f& normal, const vec3f& outgoing) {
   // Implementation from
   // https://seblagarde.wordpress.com/2013/04/29/memo-on-fresnel-equations/
@@ -139,22 +139,21 @@ constexpr kernel vec3f fresnel_conductor(const vec3f& eta, const vec3f& etak,
 }
 
 // Convert eta to reflectivity
-constexpr kernel vec3f eta_to_reflectivity(const vec3f& eta) {
+inline kernel vec3f eta_to_reflectivity(const vec3f& eta) {
   return ((eta - 1) * (eta - 1)) / ((eta + 1) * (eta + 1));
 }
 // Convert reflectivity to  eta.
-constexpr kernel vec3f reflectivity_to_eta(const vec3f& reflectivity_) {
+inline kernel vec3f reflectivity_to_eta(const vec3f& reflectivity_) {
   auto reflectivity = clamp(reflectivity_, 0.0f, 0.99f);
   return (1 + sqrt(reflectivity)) / (1 - sqrt(reflectivity));
 }
 // Convert conductor eta to reflectivity
-constexpr kernel vec3f eta_to_reflectivity(
-    const vec3f& eta, const vec3f& etak) {
+inline kernel vec3f eta_to_reflectivity(const vec3f& eta, const vec3f& etak) {
   return ((eta - 1) * (eta - 1) + etak * etak) /
          ((eta + 1) * (eta + 1) + etak * etak);
 }
 // Convert eta to edge tint parametrization
-constexpr kernel pair<vec3f, vec3f> eta_to_edgetint(
+inline kernel pair<vec3f, vec3f> eta_to_edgetint(
     const vec3f& eta, const vec3f& etak) {
   auto reflectivity = eta_to_reflectivity(eta, etak);
   auto numer        = (1 + sqrt(reflectivity)) / (1 - sqrt(reflectivity)) - eta;
@@ -164,7 +163,7 @@ constexpr kernel pair<vec3f, vec3f> eta_to_edgetint(
   return {reflectivity, edgetint};
 }
 // Convert reflectivity and edge tint to eta.
-constexpr kernel pair<vec3f, vec3f> edgetint_to_eta(
+inline kernel pair<vec3f, vec3f> edgetint_to_eta(
     const vec3f& reflectivity, const vec3f& edgetint) {
   auto r = clamp(reflectivity, 0.0f, 0.99f);
   auto g = edgetint;
@@ -181,7 +180,7 @@ constexpr kernel pair<vec3f, vec3f> edgetint_to_eta(
 }
 
 // Evaluate microfacet distribution
-constexpr kernel float microfacet_distribution(float roughness,
+inline kernel float microfacet_distribution(float roughness,
     const vec3f& normal, const vec3f& halfway, bool ggx = true) {
   // https://google.github.io/filament/Filament.html#materialsystem/specularbrdf
   // http://graphicrants.blogspot.com/2013/08/specular-brdf-reference.html
@@ -199,9 +198,8 @@ constexpr kernel float microfacet_distribution(float roughness,
 }
 
 // Evaluate the microfacet shadowing1
-constexpr kernel float microfacet_shadowing1(float roughness,
-    const vec3f& normal, const vec3f& halfway, const vec3f& direction,
-    bool ggx = true) {
+inline kernel float microfacet_shadowing1(float roughness, const vec3f& normal,
+    const vec3f& halfway, const vec3f& direction, bool ggx = true) {
   // https://google.github.io/filament/Filament.html#materialsystem/specularbrdf
   // http://graphicrants.blogspot.com/2013/08/specular-brdf-reference.html
   // https://github.com/KhronosGroup/glTF/tree/master/specification/2.0#appendix-b-brdf-implementation
@@ -222,15 +220,15 @@ constexpr kernel float microfacet_shadowing1(float roughness,
 }
 
 // Evaluate microfacet shadowing
-constexpr kernel float microfacet_shadowing(float roughness,
-    const vec3f& normal, const vec3f& halfway, const vec3f& outgoing,
-    const vec3f& incoming, bool ggx = true) {
+inline kernel float microfacet_shadowing(float roughness, const vec3f& normal,
+    const vec3f& halfway, const vec3f& outgoing, const vec3f& incoming,
+    bool ggx = true) {
   return microfacet_shadowing1(roughness, normal, halfway, outgoing, ggx) *
          microfacet_shadowing1(roughness, normal, halfway, incoming, ggx);
 }
 
 // Sample a microfacet distribution.
-constexpr kernel vec3f sample_microfacet(
+inline kernel vec3f sample_microfacet(
     float roughness, const vec3f& normal, const vec2f& rn, bool ggx = true) {
   auto phi   = 2 * pif * rn.x;
   auto theta = 0.0f;
@@ -246,8 +244,8 @@ constexpr kernel vec3f sample_microfacet(
 }
 
 // Pdf for microfacet distribution sampling.
-constexpr kernel float sample_microfacet_pdf(float roughness,
-    const vec3f& normal, const vec3f& halfway, bool ggx = true) {
+inline kernel float sample_microfacet_pdf(float roughness, const vec3f& normal,
+    const vec3f& halfway, bool ggx = true) {
   auto cosine = dot(normal, halfway);
   if (cosine < 0) return 0;
   return microfacet_distribution(roughness, normal, halfway, ggx) * cosine;
@@ -255,7 +253,7 @@ constexpr kernel float sample_microfacet_pdf(float roughness,
 
 #ifndef __CUDACC__
 // Sample a microfacet distribution with the distribution of visible normals.
-constexpr kernel vec3f sample_microfacet(float roughness, const vec3f& normal,
+inline kernel vec3f sample_microfacet(float roughness, const vec3f& normal,
     const vec3f& outgoing, const vec2f& rn, bool ggx = true) {
   // http://jcgt.org/published/0007/04/01/
   if (ggx) {
@@ -289,7 +287,7 @@ constexpr kernel vec3f sample_microfacet(float roughness, const vec3f& normal,
   }
 }
 #else
-constexpr kernel vec3f sample_microfacet(float roughness, const vec3f& normal,
+inline kernel vec3f sample_microfacet(float roughness, const vec3f& normal,
     const vec3f& outgoing, const vec2f& rn, bool ggx = true) {
   return {0, 0, 0};
 }
@@ -297,9 +295,8 @@ constexpr kernel vec3f sample_microfacet(float roughness, const vec3f& normal,
 
 // Pdf for microfacet distribution sampling with the distribution of visible
 // normals.
-constexpr kernel float sample_microfacet_pdf(float roughness,
-    const vec3f& normal, const vec3f& halfway, const vec3f& outgoing,
-    bool ggx) {
+inline kernel float sample_microfacet_pdf(float roughness, const vec3f& normal,
+    const vec3f& halfway, const vec3f& outgoing, bool ggx) {
   // http://jcgt.org/published/0007/04/01/
   if (dot(normal, halfway) < 0) return 0;
   if (dot(halfway, outgoing) < 0) return 0;
@@ -309,7 +306,7 @@ constexpr kernel float sample_microfacet_pdf(float roughness,
 }
 
 // Microfacet energy compensation (E(cos(w)))
-constexpr kernel float microfacet_cosintegral(
+inline kernel float microfacet_cosintegral(
     float roughness, const vec3f& normal, const vec3f& outgoing) {
   // https://blog.selfshadow.com/publications/s2017-shading-course/imageworks/s2017_pbs_imageworks_slides_v2.pdf
   const auto S = array<float, 5>{
@@ -326,29 +323,29 @@ constexpr kernel float microfacet_cosintegral(
 }
 
 // Approximate microfacet compensation for metals with Schlick's Fresnel
-constexpr kernel vec3f microfacet_compensation(const vec3f& color,
-    float roughness, const vec3f& normal, const vec3f& outgoing) {
+inline kernel vec3f microfacet_compensation(const vec3f& color, float roughness,
+    const vec3f& normal, const vec3f& outgoing) {
   // https://blog.selfshadow.com/publications/turquin/ms_comp_final.pdf
   auto E = microfacet_cosintegral(sqrt(roughness), normal, outgoing);
   return 1 + color * (1 - E) / E;
 }
 
 // Evaluate a diffuse BRDF lobe.
-constexpr kernel vec3f eval_matte(const vec3f& color, const vec3f& normal,
+inline kernel vec3f eval_matte(const vec3f& color, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
   if (dot(normal, incoming) * dot(normal, outgoing) <= 0) return {0, 0, 0};
   return color / pif * abs(dot(normal, incoming));
 }
 
 // Sample a diffuse BRDF lobe.
-constexpr kernel vec3f sample_matte(const vec3f& color, const vec3f& normal,
+inline kernel vec3f sample_matte(const vec3f& color, const vec3f& normal,
     const vec3f& outgoing, const vec2f& rn) {
   auto up_normal = dot(normal, outgoing) <= 0 ? -normal : normal;
   return sample_hemisphere_cos(up_normal, rn);
 }
 
 // Pdf for diffuse BRDF lobe sampling.
-constexpr kernel float sample_matte_pdf(const vec3f& color, const vec3f& normal,
+inline kernel float sample_matte_pdf(const vec3f& color, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
   if (dot(normal, incoming) * dot(normal, outgoing) <= 0) return 0;
   auto up_normal = dot(normal, outgoing) <= 0 ? -normal : normal;
@@ -356,9 +353,8 @@ constexpr kernel float sample_matte_pdf(const vec3f& color, const vec3f& normal,
 }
 
 // Evaluate a specular BRDF lobe.
-constexpr kernel vec3f eval_glossy(const vec3f& color, float ior,
-    float roughness, const vec3f& normal, const vec3f& outgoing,
-    const vec3f& incoming) {
+inline kernel vec3f eval_glossy(const vec3f& color, float ior, float roughness,
+    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
   if (dot(normal, incoming) * dot(normal, outgoing) <= 0) return {0, 0, 0};
   auto up_normal = dot(normal, outgoing) <= 0 ? -normal : normal;
   auto F1        = fresnel_dielectric(ior, up_normal, outgoing);
@@ -374,7 +370,7 @@ constexpr kernel vec3f eval_glossy(const vec3f& color, float ior,
 }
 
 // Sample a specular BRDF lobe.
-constexpr kernel vec3f sample_glossy(const vec3f& color, float ior,
+inline kernel vec3f sample_glossy(const vec3f& color, float ior,
     float roughness, const vec3f& normal, const vec3f& outgoing, float rnl,
     const vec2f& rn) {
   auto up_normal = dot(normal, outgoing) <= 0 ? -normal : normal;
@@ -389,7 +385,7 @@ constexpr kernel vec3f sample_glossy(const vec3f& color, float ior,
 }
 
 // Pdf for specular BRDF lobe sampling.
-constexpr kernel float sample_glossy_pdf(const vec3f& color, float ior,
+inline kernel float sample_glossy_pdf(const vec3f& color, float ior,
     float roughness, const vec3f& normal, const vec3f& outgoing,
     const vec3f& incoming) {
   if (dot(normal, incoming) * dot(normal, outgoing) <= 0) return 0;
@@ -402,7 +398,7 @@ constexpr kernel float sample_glossy_pdf(const vec3f& color, float ior,
 }
 
 // Evaluate a metal BRDF lobe.
-constexpr kernel vec3f eval_reflective(const vec3f& color, float roughness,
+inline kernel vec3f eval_reflective(const vec3f& color, float roughness,
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
   if (dot(normal, incoming) * dot(normal, outgoing) <= 0) return {0, 0, 0};
   auto up_normal = dot(normal, outgoing) <= 0 ? -normal : normal;
@@ -417,7 +413,7 @@ constexpr kernel vec3f eval_reflective(const vec3f& color, float roughness,
 }
 
 // Sample a metal BRDF lobe.
-constexpr kernel vec3f sample_reflective(const vec3f& color, float roughness,
+inline kernel vec3f sample_reflective(const vec3f& color, float roughness,
     const vec3f& normal, const vec3f& outgoing, const vec2f& rn) {
   auto up_normal = dot(normal, outgoing) <= 0 ? -normal : normal;
   auto halfway   = sample_microfacet(roughness, up_normal, rn);
@@ -427,9 +423,8 @@ constexpr kernel vec3f sample_reflective(const vec3f& color, float roughness,
 }
 
 // Pdf for metal BRDF lobe sampling.
-constexpr kernel float sample_reflective_pdf(const vec3f& color,
-    float roughness, const vec3f& normal, const vec3f& outgoing,
-    const vec3f& incoming) {
+inline kernel float sample_reflective_pdf(const vec3f& color, float roughness,
+    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
   if (dot(normal, incoming) * dot(normal, outgoing) <= 0) return 0;
   auto up_normal = dot(normal, outgoing) <= 0 ? -normal : normal;
   auto halfway   = normalize(outgoing + incoming);
@@ -438,7 +433,7 @@ constexpr kernel float sample_reflective_pdf(const vec3f& color,
 }
 
 // Evaluate a metal BRDF lobe.
-constexpr kernel vec3f eval_reflective(const vec3f& eta, const vec3f& etak,
+inline kernel vec3f eval_reflective(const vec3f& eta, const vec3f& etak,
     float roughness, const vec3f& normal, const vec3f& outgoing,
     const vec3f& incoming) {
   if (dot(normal, incoming) * dot(normal, outgoing) <= 0) return {0, 0, 0};
@@ -453,7 +448,7 @@ constexpr kernel vec3f eval_reflective(const vec3f& eta, const vec3f& etak,
 }
 
 // Sample a metal BRDF lobe.
-constexpr kernel vec3f sample_reflective(const vec3f& eta, const vec3f& etak,
+inline kernel vec3f sample_reflective(const vec3f& eta, const vec3f& etak,
     float roughness, const vec3f& normal, const vec3f& outgoing,
     const vec2f& rn) {
   auto up_normal = dot(normal, outgoing) <= 0 ? -normal : normal;
@@ -462,9 +457,9 @@ constexpr kernel vec3f sample_reflective(const vec3f& eta, const vec3f& etak,
 }
 
 // Pdf for metal BRDF lobe sampling.
-constexpr kernel float sample_reflective_pdf(const vec3f& eta,
-    const vec3f& etak, float roughness, const vec3f& normal,
-    const vec3f& outgoing, const vec3f& incoming) {
+inline kernel float sample_reflective_pdf(const vec3f& eta, const vec3f& etak,
+    float roughness, const vec3f& normal, const vec3f& outgoing,
+    const vec3f& incoming) {
   if (dot(normal, incoming) * dot(normal, outgoing) <= 0) return 0;
   auto up_normal = dot(normal, outgoing) <= 0 ? -normal : normal;
   auto halfway   = normalize(outgoing + incoming);
@@ -473,7 +468,7 @@ constexpr kernel float sample_reflective_pdf(const vec3f& eta,
 }
 
 // Evaluate a delta metal BRDF lobe.
-constexpr kernel vec3f eval_reflective(const vec3f& color, const vec3f& normal,
+inline kernel vec3f eval_reflective(const vec3f& color, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
   if (dot(normal, incoming) * dot(normal, outgoing) <= 0) return {0, 0, 0};
   auto up_normal = dot(normal, outgoing) <= 0 ? -normal : normal;
@@ -482,21 +477,21 @@ constexpr kernel vec3f eval_reflective(const vec3f& color, const vec3f& normal,
 }
 
 // Sample a delta metal BRDF lobe.
-constexpr kernel vec3f sample_reflective(
+inline kernel vec3f sample_reflective(
     const vec3f& color, const vec3f& normal, const vec3f& outgoing) {
   auto up_normal = dot(normal, outgoing) <= 0 ? -normal : normal;
   return reflect(outgoing, up_normal);
 }
 
 // Pdf for delta metal BRDF lobe sampling.
-constexpr kernel float sample_reflective_pdf(const vec3f& color,
+inline kernel float sample_reflective_pdf(const vec3f& color,
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
   if (dot(normal, incoming) * dot(normal, outgoing) <= 0) return 0;
   return 1;
 }
 
 // Evaluate a delta metal BRDF lobe.
-constexpr kernel vec3f eval_reflective(const vec3f& eta, const vec3f& etak,
+inline kernel vec3f eval_reflective(const vec3f& eta, const vec3f& etak,
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
   if (dot(normal, incoming) * dot(normal, outgoing) <= 0) return {0, 0, 0};
   auto up_normal = dot(normal, outgoing) <= 0 ? -normal : normal;
@@ -504,23 +499,22 @@ constexpr kernel vec3f eval_reflective(const vec3f& eta, const vec3f& etak,
 }
 
 // Sample a delta metal BRDF lobe.
-constexpr kernel vec3f sample_reflective(const vec3f& eta, const vec3f& etak,
+inline kernel vec3f sample_reflective(const vec3f& eta, const vec3f& etak,
     const vec3f& normal, const vec3f& outgoing) {
   auto up_normal = dot(normal, outgoing) <= 0 ? -normal : normal;
   return reflect(outgoing, up_normal);
 }
 
 // Pdf for delta metal BRDF lobe sampling.
-constexpr kernel float sample_reflective_pdf(const vec3f& eta,
-    const vec3f& etak, const vec3f& normal, const vec3f& outgoing,
-    const vec3f& incoming) {
+inline kernel float sample_reflective_pdf(const vec3f& eta, const vec3f& etak,
+    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
   if (dot(normal, incoming) * dot(normal, outgoing) <= 0) return 0;
   return 1;
 }
 
 // Evaluate a specular BRDF lobe.
-constexpr kernel vec3f eval_gltfpbr(const vec3f& color, float ior,
-    float roughness, float metallic, const vec3f& normal, const vec3f& outgoing,
+inline kernel vec3f eval_gltfpbr(const vec3f& color, float ior, float roughness,
+    float metallic, const vec3f& normal, const vec3f& outgoing,
     const vec3f& incoming) {
   if (dot(normal, incoming) * dot(normal, outgoing) <= 0) return {0, 0, 0};
   auto reflectivity = lerp(
@@ -539,7 +533,7 @@ constexpr kernel vec3f eval_gltfpbr(const vec3f& color, float ior,
 }
 
 // Sample a specular BRDF lobe.
-constexpr kernel vec3f sample_gltfpbr(const vec3f& color, float ior,
+inline kernel vec3f sample_gltfpbr(const vec3f& color, float ior,
     float roughness, float metallic, const vec3f& normal, const vec3f& outgoing,
     float rnl, const vec2f& rn) {
   auto up_normal    = dot(normal, outgoing) <= 0 ? -normal : normal;
@@ -556,7 +550,7 @@ constexpr kernel vec3f sample_gltfpbr(const vec3f& color, float ior,
 }
 
 // Pdf for specular BRDF lobe sampling.
-constexpr kernel float sample_gltfpbr_pdf(const vec3f& color, float ior,
+inline kernel float sample_gltfpbr_pdf(const vec3f& color, float ior,
     float roughness, float metallic, const vec3f& normal, const vec3f& outgoing,
     const vec3f& incoming) {
   if (dot(normal, incoming) * dot(normal, outgoing) <= 0) return 0;
@@ -571,7 +565,7 @@ constexpr kernel float sample_gltfpbr_pdf(const vec3f& color, float ior,
 }
 
 // Evaluate a transmission BRDF lobe.
-constexpr kernel vec3f eval_transparent(const vec3f& color, float ior,
+inline kernel vec3f eval_transparent(const vec3f& color, float ior,
     float roughness, const vec3f& normal, const vec3f& outgoing,
     const vec3f& incoming) {
   auto up_normal = dot(normal, outgoing) <= 0 ? -normal : normal;
@@ -598,7 +592,7 @@ constexpr kernel vec3f eval_transparent(const vec3f& color, float ior,
 }
 
 // Sample a transmission BRDF lobe.
-constexpr kernel vec3f sample_transparent(const vec3f& color, float ior,
+inline kernel vec3f sample_transparent(const vec3f& color, float ior,
     float roughness, const vec3f& normal, const vec3f& outgoing, float rnl,
     const vec2f& rn) {
   auto up_normal = dot(normal, outgoing) <= 0 ? -normal : normal;
@@ -616,7 +610,7 @@ constexpr kernel vec3f sample_transparent(const vec3f& color, float ior,
 }
 
 // Pdf for transmission BRDF lobe sampling.
-constexpr kernel float sample_tranparent_pdf(const vec3f& color, float ior,
+inline kernel float sample_tranparent_pdf(const vec3f& color, float ior,
     float roughness, const vec3f& normal, const vec3f& outgoing,
     const vec3f& incoming) {
   auto up_normal = dot(normal, outgoing) <= 0 ? -normal : normal;
@@ -635,7 +629,7 @@ constexpr kernel float sample_tranparent_pdf(const vec3f& color, float ior,
 }
 
 // Evaluate a delta transmission BRDF lobe.
-constexpr kernel vec3f eval_transparent(const vec3f& color, float ior,
+inline kernel vec3f eval_transparent(const vec3f& color, float ior,
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
   auto up_normal = dot(normal, outgoing) <= 0 ? -normal : normal;
   if (dot(normal, incoming) * dot(normal, outgoing) >= 0) {
@@ -646,7 +640,7 @@ constexpr kernel vec3f eval_transparent(const vec3f& color, float ior,
 }
 
 // Sample a delta transmission BRDF lobe.
-constexpr kernel vec3f sample_transparent(const vec3f& color, float ior,
+inline kernel vec3f sample_transparent(const vec3f& color, float ior,
     const vec3f& normal, const vec3f& outgoing, float rnl) {
   auto up_normal = dot(normal, outgoing) <= 0 ? -normal : normal;
   if (rnl < fresnel_dielectric(ior, up_normal, outgoing)) {
@@ -657,7 +651,7 @@ constexpr kernel vec3f sample_transparent(const vec3f& color, float ior,
 }
 
 // Pdf for delta transmission BRDF lobe sampling.
-constexpr kernel float sample_transparent_pdf(const vec3f& color, float ior,
+inline kernel float sample_transparent_pdf(const vec3f& color, float ior,
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
   auto up_normal = dot(normal, outgoing) <= 0 ? -normal : normal;
   if (dot(normal, incoming) * dot(normal, outgoing) >= 0) {
@@ -668,7 +662,7 @@ constexpr kernel float sample_transparent_pdf(const vec3f& color, float ior,
 }
 
 // Evaluate a refraction BRDF lobe.
-constexpr kernel vec3f eval_refractive(const vec3f& color, float ior,
+inline kernel vec3f eval_refractive(const vec3f& color, float ior,
     float roughness, const vec3f& normal, const vec3f& outgoing,
     const vec3f& incoming) {
   auto entering  = dot(normal, outgoing) >= 0;
@@ -702,7 +696,7 @@ constexpr kernel vec3f eval_refractive(const vec3f& color, float ior,
 }
 
 // Sample a refraction BRDF lobe.
-constexpr kernel vec3f sample_refractive(const vec3f& color, float ior,
+inline kernel vec3f sample_refractive(const vec3f& color, float ior,
     float roughness, const vec3f& normal, const vec3f& outgoing, float rnl,
     const vec2f& rn) {
   auto entering  = dot(normal, outgoing) >= 0;
@@ -721,7 +715,7 @@ constexpr kernel vec3f sample_refractive(const vec3f& color, float ior,
 }
 
 // Pdf for refraction BRDF lobe sampling.
-constexpr kernel float sample_refractive_pdf(const vec3f& color, float ior,
+inline kernel float sample_refractive_pdf(const vec3f& color, float ior,
     float roughness, const vec3f& normal, const vec3f& outgoing,
     const vec3f& incoming) {
   auto entering  = dot(normal, outgoing) >= 0;
@@ -746,7 +740,7 @@ constexpr kernel float sample_refractive_pdf(const vec3f& color, float ior,
 }
 
 // Evaluate a delta refraction BRDF lobe.
-constexpr kernel vec3f eval_refractive(const vec3f& color, float ior,
+inline kernel vec3f eval_refractive(const vec3f& color, float ior,
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
   if (abs(ior - 1) < 1e-3)
     return dot(normal, incoming) * dot(normal, outgoing) <= 0 ? vec3f{1, 1, 1}
@@ -763,7 +757,7 @@ constexpr kernel vec3f eval_refractive(const vec3f& color, float ior,
 }
 
 // Sample a delta refraction BRDF lobe.
-constexpr kernel vec3f sample_refractive(const vec3f& color, float ior,
+inline kernel vec3f sample_refractive(const vec3f& color, float ior,
     const vec3f& normal, const vec3f& outgoing, float rnl) {
   if (abs(ior - 1) < 1e-3) return -outgoing;
   auto entering  = dot(normal, outgoing) >= 0;
@@ -777,7 +771,7 @@ constexpr kernel vec3f sample_refractive(const vec3f& color, float ior,
 }
 
 // Pdf for delta refraction BRDF lobe sampling.
-constexpr kernel float sample_refractive_pdf(const vec3f& color, float ior,
+inline kernel float sample_refractive_pdf(const vec3f& color, float ior,
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
   if (abs(ior - 1) < 1e-3)
     return dot(normal, incoming) * dot(normal, outgoing) < 0 ? 1.0f : 0.0f;
@@ -792,21 +786,21 @@ constexpr kernel float sample_refractive_pdf(const vec3f& color, float ior,
 }
 
 // Evaluate a translucent BRDF lobe.
-constexpr kernel vec3f eval_translucent(const vec3f& color, const vec3f& normal,
+inline kernel vec3f eval_translucent(const vec3f& color, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
   if (dot(normal, incoming) * dot(normal, outgoing) >= 0) return {0, 0, 0};
   return color / pif * abs(dot(normal, incoming));
 }
 
 // Sample a translucency BRDF lobe.
-constexpr kernel vec3f sample_translucent(const vec3f& color,
-    const vec3f& normal, const vec3f& outgoing, const vec2f& rn) {
+inline kernel vec3f sample_translucent(const vec3f& color, const vec3f& normal,
+    const vec3f& outgoing, const vec2f& rn) {
   auto up_normal = dot(normal, outgoing) <= 0 ? -normal : normal;
   return sample_hemisphere_cos(-up_normal, rn);
 }
 
 // Pdf for translucency BRDF lobe sampling.
-constexpr kernel float sample_translucent_pdf(const vec3f& color,
+inline kernel float sample_translucent_pdf(const vec3f& color,
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
   if (dot(normal, incoming) * dot(normal, outgoing) >= 0) return 0;
   auto up_normal = dot(normal, outgoing) <= 0 ? -normal : normal;
@@ -814,7 +808,7 @@ constexpr kernel float sample_translucent_pdf(const vec3f& color,
 }
 
 // Evaluate a passthrough BRDF lobe.
-constexpr kernel vec3f eval_passthrough(const vec3f& color, const vec3f& normal,
+inline kernel vec3f eval_passthrough(const vec3f& color, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
   if (dot(normal, incoming) * dot(normal, outgoing) >= 0) {
     return vec3f{0, 0, 0};
@@ -824,13 +818,13 @@ constexpr kernel vec3f eval_passthrough(const vec3f& color, const vec3f& normal,
 }
 
 // Sample a passthrough BRDF lobe.
-constexpr kernel vec3f sample_passthrough(
+inline kernel vec3f sample_passthrough(
     const vec3f& color, const vec3f& normal, const vec3f& outgoing) {
   return -outgoing;
 }
 
 // Pdf for passthrough BRDF lobe sampling.
-constexpr kernel float sample_passthrough_pdf(const vec3f& color,
+inline kernel float sample_passthrough_pdf(const vec3f& color,
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
   if (dot(normal, incoming) * dot(normal, outgoing) >= 0) {
     return 0;
@@ -840,18 +834,17 @@ constexpr kernel float sample_passthrough_pdf(const vec3f& color,
 }
 
 // Convert mean-free-path to transmission
-constexpr kernel vec3f mfp_to_transmission(const vec3f& mfp, float depth) {
+inline kernel vec3f mfp_to_transmission(const vec3f& mfp, float depth) {
   return exp(-depth / mfp);
 }
 
 // Evaluate transmittance
-constexpr kernel vec3f eval_transmittance(
-    const vec3f& density, float distance) {
+inline kernel vec3f eval_transmittance(const vec3f& density, float distance) {
   return exp(-density * distance);
 }
 
 // Sample a distance proportionally to transmittance
-constexpr kernel float sample_transmittance(
+inline kernel float sample_transmittance(
     const vec3f& density, float max_distance, float rl, float rd) {
   auto channel  = clamp((int)(rl * 3), 0, 2);
   auto distance = (density[channel] == 0) ? flt_max
@@ -860,7 +853,7 @@ constexpr kernel float sample_transmittance(
 }
 
 // Pdf for distance sampling
-constexpr kernel float sample_transmittance_pdf(
+inline kernel float sample_transmittance_pdf(
     const vec3f& density, float distance, float max_distance) {
   if (distance < max_distance) {
     return sum(density * exp(-density * distance)) / 3;
@@ -870,7 +863,7 @@ constexpr kernel float sample_transmittance_pdf(
 }
 
 // Evaluate phase function
-constexpr kernel float eval_phasefunction(
+inline kernel float eval_phasefunction(
     float anisotropy, const vec3f& outgoing, const vec3f& incoming) {
   auto cosine = -dot(outgoing, incoming);
   auto denom  = 1 + anisotropy * anisotropy - 2 * anisotropy * cosine;
@@ -878,7 +871,7 @@ constexpr kernel float eval_phasefunction(
 }
 
 // Sample phase function
-constexpr kernel vec3f sample_phasefunction(
+inline kernel vec3f sample_phasefunction(
     float anisotropy, const vec3f& outgoing, const vec2f& rn) {
   auto cos_theta = 0.0f;
   if (abs(anisotropy) < 1e-3f) {
@@ -898,7 +891,7 @@ constexpr kernel vec3f sample_phasefunction(
 }
 
 // Pdf for phase function sampling
-constexpr kernel float sample_phasefunction_pdf(
+inline kernel float sample_phasefunction_pdf(
     float anisotropy, const vec3f& outgoing, const vec3f& incoming) {
   return eval_phasefunction(anisotropy, outgoing, incoming);
 }
@@ -1005,53 +998,53 @@ inline pair<vec3f, vec3f> conductor_eta(const string& name) {
 namespace yocto {
 
 // Evaluates a metal BRDF lobe.
-[[deprecated]] constexpr kernel vec3f eval_metallic(const vec3f& color,
+[[deprecated]] inline kernel vec3f eval_metallic(const vec3f& color,
     float roughness, const vec3f& normal, const vec3f& outgoing,
     const vec3f& incoming) {
   return eval_reflective(color, roughness, normal, outgoing, incoming);
 }
 // Sample a metal BRDF lobe.
-[[deprecated]] constexpr kernel vec3f sample_metallic(const vec3f& color,
+[[deprecated]] inline kernel vec3f sample_metallic(const vec3f& color,
     float roughness, const vec3f& normal, const vec3f& outgoing,
     const vec2f& rn) {
   return sample_reflective(color, roughness, normal, outgoing, rn);
 }
 // Pdf for metal BRDF lobe sampling.
-[[deprecated]] constexpr kernel float sample_metallic_pdf(const vec3f& color,
+[[deprecated]] inline kernel float sample_metallic_pdf(const vec3f& color,
     float roughness, const vec3f& normal, const vec3f& outgoing,
     const vec3f& incoming) {
   return sample_reflective_pdf(color, roughness, normal, outgoing, incoming);
 }
 
 // Evaluate a delta metal BRDF lobe.
-[[deprecated]] constexpr kernel vec3f eval_metallic(const vec3f& color,
+[[deprecated]] inline kernel vec3f eval_metallic(const vec3f& color,
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
   return eval_reflective(color, normal, outgoing, incoming);
 }
 // Sample a delta metal BRDF lobe.
-[[deprecated]] constexpr kernel vec3f sample_metallic(
+[[deprecated]] inline kernel vec3f sample_metallic(
     const vec3f& color, const vec3f& normal, const vec3f& outgoing) {
   return sample_reflective(color, normal, outgoing);
 }
 // Pdf for delta metal BRDF lobe sampling.
-[[deprecated]] constexpr kernel float sample_metallic_pdf(const vec3f& color,
+[[deprecated]] inline kernel float sample_metallic_pdf(const vec3f& color,
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
   return sample_reflective_pdf(color, normal, outgoing, incoming);
 }
 
 // Evaluate a delta metal BRDF lobe.
-[[deprecated]] constexpr kernel vec3f eval_metallic(const vec3f& eta,
+[[deprecated]] inline kernel vec3f eval_metallic(const vec3f& eta,
     const vec3f& etak, const vec3f& normal, const vec3f& outgoing,
     const vec3f& incoming) {
   return eval_reflective(eta, etak, normal, outgoing, incoming);
 }
 // Sample a delta metal BRDF lobe.
-[[deprecated]] constexpr kernel vec3f sample_metallic(const vec3f& eta,
+[[deprecated]] inline kernel vec3f sample_metallic(const vec3f& eta,
     const vec3f& etak, const vec3f& normal, const vec3f& outgoing) {
   return sample_reflective(eta, etak, normal, outgoing);
 }
 // Pdf for delta metal BRDF lobe sampling.
-[[deprecated]] constexpr kernel float sample_metallic_pdf(const vec3f& eta,
+[[deprecated]] inline kernel float sample_metallic_pdf(const vec3f& eta,
     const vec3f& etak, const vec3f& normal, const vec3f& outgoing,
     const vec3f& incoming) {
   return sample_reflective_pdf(eta, etak, normal, outgoing, incoming);
