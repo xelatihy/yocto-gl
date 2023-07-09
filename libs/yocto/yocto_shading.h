@@ -276,7 +276,8 @@ inline kernel vec3f sample_microfacet(float roughness, const vec3f& normal,
     auto s = 0.5f * (1 + Vh.z);
     t2     = (1 - s) * sqrt(1 - t1 * t1) + s * t2;
     // Section 4.3: reprojection onto hemisphere
-    auto Nh = t1 * T1 + t2 * T2 + sqrt(max(1 - t1 * t1 - t2 * t2, 0)) * Vh;
+    // TODO: check this line
+    auto Nh = t1 * T1 + t2 * T2 + sqrt(max(1 - t1 * t1 - t2 * t2, 0.0f)) * Vh;
     // Section 3.4: transforming the normal back to the ellipsoid configuration
     auto Ne = normalize(vec3f{alpha.x * Nh.x, alpha.y * Nh.y, max(Nh.z, 0)});
     // move to world coordinate

@@ -709,7 +709,7 @@ array2d<vec4f> make_image_preset(const string& type_) {
     auto sub_images = vector<array2d<vec4f>>();
     for (auto& sub_type : sub_types)
       sub_images.push_back(make_image_preset(sub_type));
-    auto montage_size = vec2s{0, 0};
+    auto montage_size = vec2i{0, 0};
     for (auto& sub_image : sub_images) {
       montage_size = {montage_size.x + sub_image.extents().x,
           max(montage_size.y, sub_image.extents().y)};
@@ -726,13 +726,13 @@ array2d<vec4f> make_image_preset(const string& type_) {
     auto sub_images = vector<array2d<vec4f>>();
     for (auto& sub_type : sub_types)
       sub_images.push_back(make_image_preset(sub_type));
-    auto montage_size = vec2s{0, 0};
+    auto montage_size = vec2i{0, 0};
     for (auto& sub_image : sub_images) {
       montage_size = {montage_size.x + sub_image.extents().x,
           max(montage_size.y, sub_image.extents().y)};
     }
     auto image = array2d<vec4f>(montage_size);
-    auto pos   = (size_t)0;
+    auto pos   = 0;
     for (auto& sub_image : sub_images) {
       set_region(image, sub_image, {pos, 0});
       pos += sub_image.extents().x;

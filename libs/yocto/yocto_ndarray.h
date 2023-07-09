@@ -112,9 +112,7 @@ struct ndarray {
   constexpr bool        empty() const { return size() == 0; }
   constexpr size_t      size() const { return _size(_extents); }
   constexpr vec<int, N> extents() const { return _extents; }
-  constexpr size_t      extent(size_t dimension) const {
-    return _extents[dimension];
-  }
+  constexpr int extent(size_t dimension) const { return _extents[dimension]; }
   constexpr vec<int, N> shape() const { return _extents; }
   constexpr size_t      rank() const { return N; }
 

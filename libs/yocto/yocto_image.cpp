@@ -153,7 +153,7 @@ array2d<vec4f> make_bumps(const vec2i& extents, float scale,
         uv.x <= 0.5f ? 0.25f : 0.75f,
         uv.y <= 0.5f ? 0.25f : 0.75f,
     };
-    auto dist = clamp(length(uv - center), 0, thick) / thick;
+    auto dist = clamp(length(uv - center), 0.0f, thick) / thick;
     auto val  = uv.x <= 0.5f != uv.y <= 0.5f ? (1 + sqrt(1 - dist)) / 2
                                              : (dist * dist) / 2;
     return lerp(color0, color1, val);
@@ -421,7 +421,7 @@ array2d<vec4f> make_sunsky(const vec2i& extents, float theta_sun,
   auto img = array2d<vec4f>(extents);
   for (auto j : range(extents.y / 2)) {
     auto theta = pif * ((j + 0.5f) / extents.y);
-    theta      = clamp(theta, 0, pif / 2 - flt_eps);
+    theta      = clamp(theta, 0.0f, pif / 2 - flt_eps);
     for (auto i : range(extents.x)) {
       auto phi = 2 * pif * ((i + 0.5f) / extents.x);
       auto w = vec3f{cos(phi) * sin(theta), cos(theta), sin(phi) * sin(theta)};
@@ -470,7 +470,7 @@ array2d<vec4f> make_lights(const vec2i& extents, const vec3f& le, int nlights,
   auto img = array2d<vec4f>(extents);
   for (auto j : range(extents.y)) {
     auto theta = pif * ((j + 0.5f) / extents.y);
-    theta      = clamp(theta, 0, pif / 2 - 0.00001f);
+    theta      = clamp(theta, 0.0f, pif / 2 - 0.00001f);
     if (fabs(theta - langle) > lheight / 2) continue;
     for (auto i : range(extents.x)) {
       auto phi     = 2 * pif * ((i + 0.5f) / extents.x);

@@ -119,7 +119,9 @@ struct zip_labels {
   zip_labels(const vector<string>& labels, const vector<T>& others) :
       labels{labels}, others{others} {}
   iterator begin() { return {(size_t)0, labels, others}; }
-  iterator end() { return {min(labels.size(), others.size()), labels, others}; }
+  iterator end() {
+    return {std::min(labels.size(), others.size()), labels, others};
+  }
 
  private:
   const vector<string>& labels;

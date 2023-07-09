@@ -143,10 +143,8 @@ using ushort  = unsigned short;
 using index_t = ptrdiff_t;
 
 // Numeric constants
-template <typename T = double>
-constexpr auto pi_t = (T)3.14159265358979323846;
-constexpr auto pi   = 3.14159265358979323846;
-constexpr auto pif  = (float)pi;
+constexpr auto pi  = 3.14159265358979323846;
+constexpr auto pif = (float)pi;
 
 constexpr auto int_max  = std::numeric_limits<int>::max();
 constexpr auto int_min  = std::numeric_limits<int>::lowest();
@@ -156,160 +154,86 @@ constexpr auto flt_eps  = std::numeric_limits<float>::epsilon();
 constexpr auto uint_max = std::numeric_limits<unsigned int>::max();
 constexpr auto uint_min = std::numeric_limits<unsigned int>::lowest();
 
-template <typename T>
-constexpr auto num_max = std::numeric_limits<T>::max();
-template <typename T>
-constexpr auto num_min = std::numeric_limits<T>::lowest();
-template <typename T>
-constexpr auto num_eps = std::numeric_limits<T>::epsilon();
-
 // std imports
 using std::data;
 using std::size;
 using std::swap;
 
-template <typename T>
-constexpr kernel T abs(T a) {
-  return a < 0 ? -a : a;
+inline kernel float abs(float a) { return a < 0 ? -a : a; }
+inline kernel float min(float a, float b) {
+  return (a < b) ? (float)a : (float)b;
 }
-template <typename T1, typename T2, typename T = common_t<T1, T2>>
-constexpr kernel T min(T1 a, T2 b) {
-  return (a < b) ? (T)a : (T)b;
+inline kernel float min(float a, int b) { return (a < b) ? a : (float)b; }
+inline kernel float max(float a, float b) {
+  return (a > b) ? (float)a : (float)b;
 }
-template <typename T1, typename T2, typename T = common_t<T1, T2>>
-constexpr kernel T max(T1 a, T2 b) {
-  return (a > b) ? (T)a : (T)b;
-}
-template <typename T1, typename T2, typename T3,
-    typename T = common_t<T1, T2, T3>>
-constexpr kernel T clamp(T1 a, T2 min_, T3 max_) {
+inline kernel float max(float a, int b) { return (a > b) ? a : (float)b; }
+inline kernel float clamp(float a, float min_, float max_) {
   return min(max(a, min_), max_);
 }
-template <typename T>
-constexpr kernel T sign(T a) {
-  return a < 0 ? (T)-1 : (T)1;
+inline kernel float clamp(float a, int min_, int max_) {
+  return min(max(a, min_), max_);
 }
-template <typename T>
-constexpr kernel T sqr(T a) {
-  return a * a;
-}
-template <typename T>
-constexpr kernel T sqrt(T a) {
-  return std::sqrt(a);
-}
-template <typename T>
-constexpr kernel T sin(T a) {
-  return std::sin(a);
-}
-template <typename T>
-constexpr kernel T cos(T a) {
-  return std::cos(a);
-}
-template <typename T>
-constexpr kernel T tan(T a) {
-  return std::tan(a);
-}
-template <typename T>
-constexpr kernel T asin(T a) {
-  return std::asin(a);
-}
-template <typename T>
-constexpr kernel T acos(T a) {
-  return std::acos(a);
-}
-template <typename T>
-constexpr kernel T atan(T a) {
-  return std::atan(a);
-}
-template <typename T>
-constexpr kernel T log(T a) {
-  return std::log(a);
-}
-template <typename T>
-constexpr kernel T exp(T a) {
-  return std::exp(a);
-}
-template <typename T>
-constexpr kernel T log2(T a) {
-  return std::log2(a);
-}
-template <typename T>
-constexpr kernel T exp2(T a) {
-  return std::exp2(a);
-}
-template <typename T1, typename T2, typename T = common_t<T1, T2>>
-constexpr kernel T pow(T1 a, T2 b) {
-  return std::pow((T)a, (T)b);
-}
-template <typename T>
-constexpr kernel bool isfinite(T a) {
+inline kernel float sign(float a) { return a < 0 ? (float)-1 : (float)1; }
+inline kernel float sqr(float a) { return a * a; }
+inline kernel float sqrt(float a) { return std::sqrt(a); }
+inline kernel float sin(float a) { return std::sin(a); }
+inline kernel float cos(float a) { return std::cos(a); }
+inline kernel float tan(float a) { return std::tan(a); }
+inline kernel float asin(float a) { return std::asin(a); }
+inline kernel float acos(float a) { return std::acos(a); }
+inline kernel float atan(float a) { return std::atan(a); }
+inline kernel float log(float a) { return std::log(a); }
+inline kernel float exp(float a) { return std::exp(a); }
+inline kernel float log2(float a) { return std::log2(a); }
+inline kernel float exp2(float a) { return std::exp2(a); }
+inline kernel float pow(float a, float b) { return std::pow(a, b); }
+inline kernel bool  isfinite(float a) {
 #ifndef __CUDACC__
   return std::isfinite(a);
 #else
   return ::isfinite(a);
 #endif
 }
-template <typename T1, typename T2, typename T = common_t<T1, T2>>
-constexpr kernel T atan2(T1 a, T2 b) {
-  return std::atan2((T)a, (T)b);
+inline kernel float atan2(float a, float b) { return std::atan2(a, b); }
+inline kernel float round(float a) { return std::round(a); }
+inline kernel float fmod(float a, float b) { return std::fmod(a, b); }
+inline kernel float mod(float a, float b) {
+  auto m = fmod(a, b);
+  return (m >= 0) ? m : m + b;
 }
-template <typename T>
-constexpr kernel T round(T a) {
-  return std::round(a);
-}
-template <typename T, typename T1>
-constexpr kernel T fmod(T a, T1 b) {
-  return std::fmod(a, (T)b);
-}
-template <typename T, typename T1>
-constexpr kernel T mod(T a, T1 b) {
-  if constexpr (std::is_floating_point_v<T> || std::is_floating_point_v<T1>) {
-    auto m = fmod(a, b);
-    return (m >= 0) ? m : m + b;
-  } else {
-    auto m = a % b;
-    return (m >= 0) ? m : m + b;
-  }
-}
-// template <typename T>
-// inline void swap(T& a, T& b) {
-//   std::swap(a, b);
-// }
-template <typename T>
-constexpr kernel T radians(T a) {
-  return a * (T)pi / 180;
-}
-template <typename T>
-constexpr kernel T degrees(T a) {
-  return a * 180 / (T)pi;
-}
-template <typename T1, typename T2, typename T3, typename T = common_t<T1, T2>>
-constexpr kernel T lerp(T1 a, T2 b, T3 u) {
+inline kernel float radians(float a) { return a * pif / 180; }
+inline kernel float degrees(float a) { return a * 180 / pif; }
+inline kernel float lerp(float a, float b, float u) {
   return a * (1 - u) + b * u;
 }
-template <typename T1, typename T2, typename T = common_t<T1, T2>>
-constexpr kernel T step(T1 a, T2 u) {
-  return u < a ? (T)0 : (T)1;
-}
-template <typename T1, typename T2, typename T3,
-    typename T = common_t<T1, T2, T3>>
-constexpr kernel T smoothstep(T1 a, T2 b, T3 u) {
-  auto t = clamp((u - a) / (b - a), (T)0, (T)1);
+inline kernel float step(float a, float u) { return u < a ? 0.0f : 1.0f; }
+inline kernel float smoothstep(float a, float b, float u) {
+  auto t = clamp((u - a) / (b - a), (float)0, (float)1);
   return t * t * (3 - 2 * t);
 }
-template <typename T1, typename T2, typename T = common_t<T1, T2>>
-constexpr kernel T bias(T1 a, T2 bias) {
+inline kernel float bias(float a, float bias) {
   return a / ((1 / bias - 2) * (1 - a) + 1);
 }
-template <typename T1, typename T2, typename T = common_t<T1, T2>>
-constexpr kernel T gain(T1 a, T2 gain) {
-  return (a < (T)0.5) ? bias(a * 2, gain) / 2
-                      : bias(a * 2 - 1, 1 - gain) / 2 + (T)0.5;
+inline kernel float gain(float a, float gain) {
+  return (a < (float)0.5) ? bias(a * 2, gain) / 2
+                          : bias(a * 2 - 1, 1 - gain) / 2 + (float)0.5;
 }
-template <typename I>
-constexpr kernel I pow2(I a) {
-  return 1 << a;
+
+inline kernel int abs(int a) { return a < 0 ? -a : a; }
+inline kernel int min(int a, int b) { return (a < b) ? (int)a : (int)b; }
+inline kernel int max(int a, int b) { return (a > b) ? (int)a : (int)b; }
+inline kernel int clamp(int a, int min_, int max_) {
+  return min(max(a, min_), max_);
 }
+inline kernel int sign(int a) { return a < 0 ? (int)-1 : (int)1; }
+inline kernel int sqr(int a) { return a * a; }
+inline kernel int mod(int a, int b) {
+  auto m = a % b;
+  return (m >= 0) ? m : m + b;
+}
+inline kernel int  pow2(int a) { return 1 << a; }
+inline kernel uint pow2(uint a) { return 1 << a; }
 
 }  // namespace yocto
 
@@ -1076,19 +1000,19 @@ inline kernel bool isfinite(const vec3f& a) {
 
 // Conversion between coordinates
 inline kernel vec2f cartesian_to_sphericaluv(const vec3f& w) {
-  auto phi = atan2(w.y, w.x), theta = acos(clamp(w.z, -1, 1));
-  return {mod(phi / (2 * (float)pi), 1), theta / (float)pi};
+  auto phi = atan2(w.y, w.x), theta = acos(clamp(w.z, -1.0f, 1.0f));
+  return {mod(phi / (2 * pif), 1.0f), theta / pif};
 }
 inline kernel vec2f cartesiany_to_sphericaluv(const vec3f& w) {
-  auto phi = atan2(w.z, w.x), theta = acos(clamp(w.y, -1, 1));
-  return {mod(phi / (2 * (float)pi), 1), theta / (float)pi};
+  auto phi = atan2(w.z, w.x), theta = acos(clamp(w.y, -1.0f, 1.0f));
+  return {mod(phi / (2 * pif), 1.0f), theta / pif};
 }
 inline kernel vec3f sphericaluv_to_cartesian(const vec2f& uv) {
-  auto phi = uv.x * 2 * (float)pi, theta = uv.y * (float)pi;
+  auto phi = uv.x * 2 * pif, theta = uv.y * pif;
   return {cos(phi) * sin(theta), sin(phi) * sin(theta), cos(theta)};
 }
 inline kernel vec3f sphericaluv_to_cartesiany(const vec2f& uv) {
-  auto phi = uv.x * 2 * (float)pi, theta = uv.y * (float)pi;
+  auto phi = uv.x * 2 * pif, theta = uv.y * pif;
   return {cos(phi) * sin(theta), cos(theta), sin(phi) * sin(theta)};
 }
 
@@ -1972,8 +1896,8 @@ inline kernel vec3b clamp(const vec3b& x, byte min, const vec3b& max) {
       clamp(x.x, min, max.x), clamp(x.y, min, max.y), clamp(x.z, min, max.z)};
 }
 
-inline kernel byte max(const vec3b& a) { return max(max(a.x, a.y), a.z); }
-inline kernel byte min(const vec3b& a) { return min(min(a.x, a.y), a.z); }
+inline kernel byte max(const vec3b& a) { return (byte)max(max(a.x, a.y), a.z); }
+inline kernel byte min(const vec3b& a) { return (byte)min(min(a.x, a.y), a.z); }
 inline kernel byte argmax(const vec3b& a) {
   return a.x >= a.y ? (a.x >= a.z ? 0 : 2) : (a.y >= a.z ? 1 : 2);
 }
@@ -2087,10 +2011,10 @@ inline kernel vec4b clamp(const vec4b& x, byte min, const vec4b& max) {
 }
 
 inline kernel byte max(const vec4b& a) {
-  return max(max(max(a.x, a.y), a.z), a.w);
+  return (byte)max(max(max(a.x, a.y), a.z), a.w);
 }
 inline kernel byte min(const vec4b& a) {
-  return min(min(min(a.x, a.y), a.z), a.w);
+  return (byte)min(min(min(a.x, a.y), a.z), a.w);
 }
 inline kernel byte argmax(const vec4b& a) {
   if (a.w >= a.x && a.w >= a.y && a.w >= a.z)
