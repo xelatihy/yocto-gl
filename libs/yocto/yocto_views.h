@@ -213,51 +213,6 @@ constexpr kernel void check_same_size(
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// ARRAY SEARCH AND SORT
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Find an element with linear search
-template <typename T>
-inline ptrdiff_t find_index(const vector<T>& values, const T& value) {
-  auto pos = std::find(values.begin(), values.end(), value);
-  if (pos == values.end()) return -1;
-  return pos - values.begin();
-}
-
-// Find an element with binary search
-template <typename T>
-inline ptrdiff_t search_index(const vector<T>& values, const T& value) {
-  auto pos = std::binary_search(values.begin(), values.end(), value);
-  if (pos == values.end()) return -1;
-  return pos - values.begin();
-}
-
-// Sort elements in an array
-template <typename T>
-inline void sort(vector<T>& values) {
-  std::sort(values.begin(), values.end());
-}
-template <typename T>
-inline vector<T> sorted(const vector<T>& values) {
-  auto sorted = values;
-  std::sort(sorted.begin(), sorted.end());
-  return sorted;
-}
-
-// Sort and remove duplicates
-template <typename T>
-inline vector<T> remove_duplicates(const vector<T>& values_) {
-  auto values = values_;
-  std::sort(values.begin(), values.end());
-  auto pos = std::unique(values.begin(), values.end());
-  values.erase(pos, values.end());
-  return values;
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
 // ONE DIMENSIONAL VIEWS
 // -----------------------------------------------------------------------------
 namespace yocto {

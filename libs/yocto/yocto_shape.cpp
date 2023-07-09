@@ -536,7 +536,9 @@ vector<vec2i> get_edges(const vector<vec3i>& triangles, bool no_map) {
     edges.push_back(_make_edge(triangle.y, triangle.z));
     edges.push_back(_make_edge(triangle.z, triangle.x));
   }
-  return remove_duplicates(edges);
+  std::sort(edges.begin(), edges.end());
+  edges.erase(std::unique(edges.begin(), edges.end()), edges.end());
+  return edges;
 }
 vector<vec2i> get_edges(const vector<vec4i>& quads, bool no_map) {
   if (!no_map) return get_edges(make_edge_map(quads));
@@ -547,7 +549,9 @@ vector<vec2i> get_edges(const vector<vec4i>& quads, bool no_map) {
     if (quad.z != quad.w) edges.push_back(_make_edge(quad.z, quad.w));
     edges.push_back(_make_edge(quad.w, quad.x));
   }
-  return remove_duplicates(edges);
+  std::sort(edges.begin(), edges.end());
+  edges.erase(std::unique(edges.begin(), edges.end()), edges.end());
+  return edges;
 }
 vector<vec2i> get_boundary(const vector<vec3i>& triangles) {
   return get_boundary(make_edge_map(triangles));
@@ -976,7 +980,10 @@ pair<vector<vec4i>, vector<T>> subdivide_catmullclark(
       tlocked.push_back(v1);
       tlocked.push_back(v2);
     }
-    tlocked   = remove_duplicates(tlocked);
+    // TODO: remove duplicates?
+    // std::sort(tlocked.begin(), tlocked.end());
+    // tlocked.erase(std::unique(tlocked.begin(), tlocked.end()),
+    // tlocked.end());
     tboundary = {};
   }
 
