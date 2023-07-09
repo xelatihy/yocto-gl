@@ -180,7 +180,8 @@ constexpr kernel void check_same_size(
 }
 
 // Apply a function to each element of an array
-template <typename T1, size_t N, typename Func, typename T = result_t<Func, T1>>
+template <typename T1, size_t N, typename Func,
+    typename T = std::invoke_result_t<Func, T1>>
 constexpr ndarray<T, N> fmap(const ndarray<T1, N>& a, Func&& func) {
   auto ret = ndarray<T, N>(a.extents());
   for (auto idx : range(a.extents())) ret[idx] = func(a[idx]);

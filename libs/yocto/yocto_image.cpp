@@ -131,9 +131,9 @@ array2d<vec4b> resize_image(
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-template <typename Func, typename T = result_t<Func, vec2i>>
-static array2d<T> _make_proc_image(const vec2i& extents, Func&& func) {
-  auto image = array2d<T>(extents);
+template <typename Func>
+static array2d<vec4f> _make_proc_image(const vec2i& extents, Func&& func) {
+  auto image = array2d<vec4f>(extents);
   for (auto ij : range(extents)) image[ij] = func(ij);
   return image;
 }

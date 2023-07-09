@@ -497,24 +497,6 @@ constexpr kernel void check_same_size(
     throw std::out_of_range{"arrays should have the same size"};
 }
 
-#ifndef __CUDACC__
-
-// Make a vector from a view
-template <typename R, typename T = rvalue_t<R>>
-inline vector<T> to_vector(R&& range) {
-  auto values = vector<T>{};
-  for (auto value : range) values.push_back(value);
-  return values;
-}
-template <typename R, typename Func, typename T = result_t<Func, rvalue_t<R>>>
-inline vector<T> to_vector(R&& range, Func&& func) {
-  auto values = vector<T>{};
-  for (auto value : range) values.push_back(func(value));
-  return values;
-}
-
-#endif
-
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
