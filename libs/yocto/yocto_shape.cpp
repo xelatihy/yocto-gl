@@ -2717,7 +2717,7 @@ shape_data make_lines(int num, int steps, const vec2f& scale,
 
 // Make a grid of quads
 shape_data make_quad_grid(const vec2i& steps, float scale_) {
-  auto scale = scale_ * vec2f{aspect_ratio((vec2f)steps), 1};
+  auto scale = scale_ * vec2f{aspect_ratio(steps), 1};
   return make_quads(steps, [=](vec2f uv) {
     return make_quads_vertex{
         vec3f(scale * (uv * 2 - 1), 0), vec3f(0, 0, 1), flip_v(uv)};

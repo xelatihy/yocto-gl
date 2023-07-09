@@ -190,31 +190,16 @@ inline T turbulence_noise(const vec<T, N>& p, int octaves = 6) {
 #endif
 
 // Gradient noise
-template <typename T, size_t N>
-inline T gradient_noise(const vec<T, N>& p) {
-  return 0;
-}
+inline float gradient_noise(const vec2f& p) { return 0; }
 // Value noise
-template <typename T, size_t N>
-inline T value_noise(const vec<T, N>& p) {
-  return 0;
-}
+inline float value_noise(const vec2f& p) { return 0; }
 
 // Fractal noise
-template <typename T, size_t N>
-inline T fractal_noise(const vec<T, N>& p, int octaves = 6) {
-  return 0;
-}
+inline float fractal_noise(const vec2f& p, int octaves = 6) { return 0; }
 // Ridge noise
-template <typename T, size_t N>
-inline T ridge_noise(const vec<T, N>& p, int octaves = 6) {
-  return 0;
-}
+inline float ridge_noise(const vec2f& p, int octaves = 6) { return 0; }
 // Turbulence noise
-template <typename T, size_t N>
-inline T turbulence_noise(const vec<T, N>& p, int octaves = 6) {
-  return 0;
-}
+inline float turbulence_noise(const vec2f& p, int octaves = 6) { return 0; }
 
 }  // namespace yocto
 

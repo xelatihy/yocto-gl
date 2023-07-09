@@ -128,11 +128,16 @@ namespace yocto {
 // N-dimensional span similar to std::mdspan. We will switch to the standard
 // version as it becomes available.
 template <typename T, size_t N>
-struct ndspan {
+struct ndspan;
+
+// N-dimensional span similar to std::mdspan. We will switch to the standard
+// version as it becomes available.
+template <typename T>
+struct ndspan<T, 2> {
  public:
   // Constructors
   constexpr ndspan() noexcept : _extents{0}, _data{nullptr} {}
-  constexpr ndspan(T* data, const vec<size_t, N>& extents) noexcept :
+  constexpr ndspan(T* data, const vec2i& extents) noexcept :
       _data{data}, _extents{extents} {}
   constexpr ndspan(const ndspan& other) noexcept = default;
   constexpr ndspan(ndspan&& other) noexcept      = default;
@@ -142,17 +147,17 @@ struct ndspan {
   constexpr ndspan& operator=(ndspan&& other) noexcept      = default;
 
   // Size
-  constexpr bool           empty() const noexcept { return size() == 0; }
-  constexpr size_t         size() const noexcept { return _size(_extents); }
-  constexpr vec<size_t, N> extents() const noexcept { return _extents; }
-  constexpr size_t         extent(size_t dimension) const noexcept {
+  constexpr bool    empty() const noexcept { return size() == 0; }
+  constexpr size_t  size() const noexcept { return _size(_extents); }
+  constexpr vec2i   extents() const noexcept { return _extents; }
+  constexpr int32_t extent(int dimension) const noexcept {
     return _extents[dimension];
   }
-  constexpr vec<size_t, N> shape() const { return _extents; }
-  constexpr size_t         rank() const { return N; }
+  constexpr vec2i shape() const { return _extents; }
+  constexpr int   rank() const { return 2; }
 
   // Access
-  constexpr T& operator[](const vec<size_t, N>& idx) const noexcept {
+  constexpr T& operator[](const vec2i& idx) const noexcept {
     return _data[_index(idx, _extents)];
   }
 
@@ -164,27 +169,14 @@ struct ndspan {
   constexpr T* data() const noexcept { return _data; }
 
  private:
-  T*             _data    = nullptr;
-  vec<size_t, N> _extents = {0};
+  T*    _data    = nullptr;
+  vec2i _extents = {0, 0};
 
-  static size_t _size(const vec<size_t, 1>& extents) { return extents[0]; }
-  static size_t _size(const vec<size_t, 2>& extents) {
-    return extents[0] * extents[1];
+  static size_t _size(const vec2i& extents) {
+    return (size_t)extents[0] * (size_t)extents[1];
   }
-  static size_t _size(const vec<size_t, 3>& extents) {
-    return extents[0] * extents[1] * extents[2];
-  }
-  static size_t _index(
-      const vec<size_t, 1>& index, const vec<size_t, 1>& extents) {
-    return index[0];
-  }
-  static size_t _index(
-      const vec<size_t, 2>& index, const vec<size_t, 2>& extents) {
-    return index[1] * extents[0] + index[0];
-  }
-  static size_t _index(
-      const vec<size_t, 3>& index, const vec<size_t, 3>& extents) {
-    return (index[2] * extents[1] + index[1]) * extents[0] + index[0];
+  static size_t _index(const vec2i& index, const vec2i& extents) {
+    return (size_t)index[1] * (size_t)extents[0] + (size_t)index[0];
   }
 };
 
@@ -398,11 +390,6 @@ constexpr kernel enumerate_view<span<const T>, I> enumerate(
     const array<T, N>& sequence, I start = 0) {
   return {span<const T>{sequence.data(), N}, start};
 }
-template <typename T, size_t N, typename I = size_t>
-constexpr kernel enumerate_view<span<const T>, I> enumerate(
-    const vec<T, N>& sequence, I start = 0) {
-  return {span<const T>{sequence.data(), N}, start};
-}
 
 // Python zip: iterator and sequence
 template <typename... Views>
@@ -536,13 +523,14 @@ inline vector<T> to_vector(R&& range, Func&& func) {
 namespace yocto {
 
 // Range sequence in ND
-template <typename I, size_t N>
+template <typename I, size_t N, typename O = array<I, N>>
 struct ndrange_view {
   struct iterator {
-    constexpr kernel iterator(const vec<I, N>& index_, const vec<I, N>& end_) :
+    constexpr kernel iterator(
+        const array<I, N>& index_, const array<I, N>& end_) :
         index{index_}, end{end_} {}
     constexpr kernel void operator++() {
-      ++index.x;
+      ++index[0];
       if constexpr (N > 1) {
         if (index[0] >= end[0]) {
           index[0] = 0;
@@ -565,29 +553,33 @@ struct ndrange_view {
     constexpr kernel bool operator==(const iterator& other) const {
       return index[N - 1] == other.index[N - 1];
     }
-    constexpr kernel vec<I, N> operator*() const { return index; }
+    constexpr kernel O operator*() const { return (O)index; }
 
    private:
-    vec<I, N> index, end;
+    array<I, N> index, end;
   };
   using sentinel = iterator;
 
-  constexpr kernel          ndrange_view(const vec<I, N>& max_) : max{max_} {}
-  constexpr kernel iterator begin() const { return {vec<I, N>{0}, max}; }
+  constexpr kernel          ndrange_view(const array<I, N>& max_) : max{max_} {}
+  constexpr kernel iterator begin() const { return {array<I, N>{0}, max}; }
   constexpr kernel sentinel end() const { return {max, max}; }
 
  private:
-  vec<I, N> max = {0};
+  array<I, N> max = {0};
 };
-
 // Python range in nd.
 template <typename I, size_t N>
-constexpr kernel ndrange_view<I, N> range(const vec<I, N>& max) {
-  return ndrange_view<I, N>(max);
-}
-template <typename I, size_t N>
 constexpr kernel ndrange_view<I, N> range(const array<I, N>& max) {
-  return range_sequence<I, N>((vec<I, N>)max);
+  return range_sequence<I, N>(max);
+}
+constexpr kernel ndrange_view<int, 2, vec2i> range(const vec2i& max) {
+  return ndrange_view<int, 2, vec2i>(max);
+}
+constexpr kernel ndrange_view<int, 3, vec3i> range(const vec3i& max) {
+  return ndrange_view<int, 3, vec3i>(max);
+}
+constexpr kernel ndrange_view<int, 4, vec4i> range(const vec4i& max) {
+  return ndrange_view<int, 4, vec4i>(max);
 }
 
 // Enumerate sequence in ND
@@ -599,7 +591,7 @@ struct ndenumerate_view {
 
   struct iterator {
     constexpr kernel iterator(
-        View view_, const vec<I, N>& index_, const vec<I, N>& end_) :
+        View view_, const array<I, N>& index_, const array<I, N>& end_) :
         index{index_}, end{end_} {}
     constexpr kernel void operator++() {
       ++cur;
@@ -626,24 +618,26 @@ struct ndenumerate_view {
     constexpr kernel bool operator==(const iterator& other) const {
       return index[N - 1] == other.index[N - 1];
     }
-    constexpr kernel tuple<vec<I, N>, Rf> operator*() const {
+    constexpr kernel tuple<array<I, N>, Rf> operator*() const {
       return {index, *cur};
     }
 
    private:
-    It        cur;
-    vec<I, N> index, end;
+    It          cur;
+    array<I, N> index, end;
   };
   using sentinel = iterator;
 
-  constexpr kernel ndenumerate_view(View view_, const vec<I, N>& max_) :
+  constexpr kernel ndenumerate_view(View view_, const array<I, N>& max_) :
       view{view_}, max{max_} {}
-  constexpr kernel iterator begin() const { return {view, vec<I, N>{0}, max}; }
+  constexpr kernel iterator begin() const {
+    return {view, array<I, N>{0}, max};
+  }
   constexpr kernel sentinel end() const { return {view, max, max}; }
 
  private:
-  View      view;
-  vec<I, N> max = {0};
+  View        view;
+  array<I, N> max = {0};
 };
 
 // Python enumerate over an array

@@ -39,73 +39,90 @@
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Resize an image.
-template <size_t N>
-array2d<vec<float, N>> resize_image(
-    const array2d<vec<float, N>>& image, const vec2i& extents_) {
-  // determine new size
-  auto extents = extents_;
-  auto aspect  = (double)image.extent(0) / (double)image.extent(1);
-  if (extents == vec2s{0, 0})
-    throw std::invalid_argument{"bad image size in resize"};
-  if (extents[1] == 0) {
-    extents = {extents[0], (size_t)round(extents[0] / aspect)};
-  } else if (extents[0] == 0) {
-    extents = {(size_t)round(extents[1] * aspect), extents[1]};
+// Compute size for resixing
+static vec2i resize_size(const vec2i& size, const vec2i& resize) {
+  auto aspect = (float)size.x / (float)size.y;
+  if (resize == zero2i) throw std::invalid_argument{"bad image size in resize"};
+  if (resize.x == 0) {
+    return {(int)round(resize.y * aspect), resize.y};
+  } else if (resize.y == 0) {
+    return {resize.x, (int)round(resize.x * aspect)};
+  } else {
+    return resize;
   }
+}
+
+// Resize an image.
+array2d<vec3f> resize_image(
+    const array2d<vec3f>& image, const vec2i& extents_) {
+  // determine new size
+  auto extents = resize_size(image.extents(), extents_);
 
   // alpha channel index
-  auto alpha_index = N == 4 ? 3 : STBIR_ALPHA_CHANNEL_NONE;
+  auto alpha_index = STBIR_ALPHA_CHANNEL_NONE;
 
   // resize
-  auto result = array2d<vec<float, N>>(extents);
+  auto result = array2d<vec3f>(extents);
   stbir_resize_float_generic((float*)image.data(), (int)image.extent(0),
-      (int)image.extent(1), (int)(sizeof(float) * N * image.extent(0)),
+      (int)image.extent(1), (int)(sizeof(float) * 3 * image.extent(0)),
       (float*)result.data(), (int)result.extent(0), (int)result.extent(1),
-      (int)(sizeof(float) * N * result.extent(0)), N, alpha_index, 0,
+      (int)(sizeof(float) * 3 * result.extent(0)), 3, alpha_index, 0,
       STBIR_EDGE_CLAMP, STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
   return result;
 }
-
-// Explicit instantiations
-template array2d<vec1f> resize_image(const array2d<vec1f>&, const vec2i&);
-template array2d<vec2f> resize_image(const array2d<vec2f>&, const vec2i&);
-template array2d<vec3f> resize_image(const array2d<vec3f>&, const vec2i&);
-template array2d<vec4f> resize_image(const array2d<vec4f>&, const vec2i&);
-
-// Resize an image.
-template <size_t N>
-array2d<vec<byte, N>> resize_image(
-    const array2d<vec<byte, N>>& image, const vec2i& extents_) {
+array2d<vec4f> resize_image(
+    const array2d<vec4f>& image, const vec2i& extents_) {
   // determine new size
-  auto extents = extents_;
-  auto aspect  = (double)image.extent(0) / (double)image.extent(1);
-  if (extents == vec2s{0, 0})
-    throw std::invalid_argument{"bad image size in resize"};
-  if (extents[1] == 0) {
-    extents = {extents[0], (size_t)round(extents[0] / aspect)};
-  } else if (extents[0] == 0) {
-    extents = {(size_t)round(extents[1] * aspect), extents[1]};
-  }
+  auto extents = resize_size(image.extents(), extents_);
 
   // alpha channel index
-  auto alpha_index = N == 4 ? 3 : STBIR_ALPHA_CHANNEL_NONE;
+  auto alpha_index = 3;
 
   // resize
-  auto result = array2d<vec<byte, N>>(extents);
-  stbir_resize_uint8_generic((byte*)image.data(), (int)image.extent(0),
-      (int)image.extent(1), (int)(sizeof(byte) * N * image.extent(0)),
-      (byte*)result.data(), (int)result.extent(0), (int)result.extent(1),
-      (int)(sizeof(byte) * N * result.extent(0)), N, alpha_index, 0,
+  auto result = array2d<vec4f>(extents);
+  stbir_resize_float_generic((float*)image.data(), (int)image.extent(0),
+      (int)image.extent(1), (int)(sizeof(float) * 4 * image.extent(0)),
+      (float*)result.data(), (int)result.extent(0), (int)result.extent(1),
+      (int)(sizeof(float) * 4 * result.extent(0)), 4, alpha_index, 0,
       STBIR_EDGE_CLAMP, STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
   return result;
 }
 
-// Explicit instantiations
-template array2d<vec1b> resize_image(const array2d<vec1b>&, const vec2i&);
-template array2d<vec2b> resize_image(const array2d<vec2b>&, const vec2i&);
-template array2d<vec3b> resize_image(const array2d<vec3b>&, const vec2i&);
-template array2d<vec4b> resize_image(const array2d<vec4b>&, const vec2i&);
+// Resize an image.
+array2d<vec3b> resize_image(
+    const array2d<vec3b>& image, const vec2i& extents_) {
+  // determine new size
+  auto extents = resize_size(image.extents(), extents_);
+
+  // alpha channel index
+  auto alpha_index = STBIR_ALPHA_CHANNEL_NONE;
+
+  // resize
+  auto result = array2d<vec3b>(extents);
+  stbir_resize_uint8_generic((byte*)image.data(), (int)image.extent(0),
+      (int)image.extent(1), (int)(sizeof(byte) * 3 * image.extent(0)),
+      (byte*)result.data(), (int)result.extent(0), (int)result.extent(1),
+      (int)(sizeof(byte) * 3 * result.extent(0)), 3, alpha_index, 0,
+      STBIR_EDGE_CLAMP, STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
+  return result;
+}
+array2d<vec4b> resize_image(
+    const array2d<vec4b>& image, const vec2i& extents_) {
+  // determine new size
+  auto extents = resize_size(image.extents(), extents_);
+
+  // alpha channel index
+  auto alpha_index = 3;
+
+  // resize
+  auto result = array2d<vec4b>(extents);
+  stbir_resize_uint8_generic((byte*)image.data(), (int)image.extent(0),
+      (int)image.extent(1), (int)(sizeof(byte) * 4 * image.extent(0)),
+      (byte*)result.data(), (int)result.extent(0), (int)result.extent(1),
+      (int)(sizeof(byte) * 4 * result.extent(0)), 4, alpha_index, 0,
+      STBIR_EDGE_CLAMP, STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
+  return result;
+}
 
 }  // namespace yocto
 

@@ -235,6 +235,12 @@ inline kernel int mod(int a, int b) {
 inline kernel int  pow2(int a) { return 1 << a; }
 inline kernel uint pow2(uint a) { return 1 << a; }
 
+inline kernel byte min(byte a, byte b) { return (a < b) ? (byte)a : (byte)b; }
+inline kernel byte max(byte a, byte b) { return (a > b) ? (byte)a : (byte)b; }
+inline kernel byte clamp(byte a, byte min_, byte max_) {
+  return min(max(a, min_), max_);
+}
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -242,168 +248,243 @@ inline kernel uint pow2(uint a) { return 1 << a; }
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-template <typename T, size_t N>
-struct vec;
+struct vec1f {
+  float x = 0;
 
-template <typename T>
-struct vec<T, 1> {
-  T x = 0;
+  constexpr kernel vec1f() : x{0} {}
+  constexpr kernel vec1f(float x_) : x{x_} {}
 
-  constexpr kernel vec() : x{0} {}
-  constexpr kernel vec(T x_) : x{x_} {}
-  template <typename T1>
-  constexpr kernel vec(T1 x_) : x{(T)x_} {}
+  constexpr vec1f(const vec1f& v)            = default;
+  constexpr vec1f& operator=(const vec1f& v) = default;
 
-  constexpr vec(const vec& v)            = default;
-  constexpr vec& operator=(const vec& v) = default;
+  constexpr kernel vec1f(const array<float, 1>& v) : x{v[0]} {}
+  constexpr kernel operator array<float, 1>() { return {x}; }
 
-  template <typename U>
-  constexpr kernel explicit(!std::is_convertible_v<U, T>)
-      vec(const vec<U, 1>& v) :
-      x{(T)v.x} {}
-  template <typename U>
-  constexpr kernel explicit(!std::is_convertible_v<T, U>) operator vec<U, 1>() {
-    return {(U)x};
-  }
-
-  constexpr kernel vec(const array<T, 1>& v) : x{v[0]} {}
-  constexpr kernel operator array<T, 1>() { return {x}; }
-
-  constexpr kernel T&       operator[](size_t i) { return (&x)[i]; }
-  constexpr kernel const T& operator[](size_t i) const { return (&x)[i]; }
+  constexpr kernel float&       operator[](int i) { return (&x)[i]; }
+  constexpr kernel const float& operator[](int i) const { return (&x)[i]; }
 };
 
-template <typename T>
-struct vec<T, 2> {
-  T x = 0;
-  T y = 0;
+struct vec2f {
+  float x = 0;
+  float y = 0;
 
-  constexpr kernel vec() : x{0}, y{0} {}
-  constexpr kernel explicit vec(T v) : x{v}, y{v} {}
-  constexpr kernel vec(T x_, T y_) : x{x_}, y{y_} {}
-  template <typename T1, typename T2>
-  constexpr kernel vec(T1 x_, T2 y_) : x{(T)x_}, y{(T)y_} {}
+  constexpr kernel vec2f() : x{0}, y{0} {}
+  constexpr kernel explicit vec2f(float v) : x{v}, y{v} {}
+  constexpr kernel vec2f(float x_, float y_) : x{x_}, y{y_} {}
 
-  constexpr vec(const vec& v)            = default;
-  constexpr vec& operator=(const vec& v) = default;
+  constexpr vec2f(const vec2f& v)            = default;
+  constexpr vec2f& operator=(const vec2f& v) = default;
 
-  template <typename U>
-  constexpr kernel explicit(!std::is_convertible_v<U, T>)
-      vec(const vec<U, 2>& v) :
-      x{(T)v.x}, y{(T)v.y} {}
-  template <typename U>
-  constexpr kernel explicit(!std::is_convertible_v<T, U>) operator vec<U, 2>() {
-    return {(U)x, (U)y};
-  }
+  constexpr kernel vec2f(const array<float, 2>& v) : x{v[0]}, y{v[1]} {}
+  constexpr kernel operator array<float, 2>() { return {x, y}; }
 
-  constexpr kernel vec(const array<T, 2>& v) : x{v[0]}, y{v[1]} {}
-  constexpr kernel operator array<T, 2>() { return {x, y}; }
-
-  constexpr kernel T&       operator[](size_t i) { return (&x)[i]; }
-  constexpr kernel const T& operator[](size_t i) const { return (&x)[i]; }
+  constexpr kernel float&       operator[](int i) { return (&x)[i]; }
+  constexpr kernel const float& operator[](int i) const { return (&x)[i]; }
 };
 
-template <typename T>
-struct vec<T, 3> {
-  T x = 0;
-  T y = 0;
-  T z = 0;
+struct vec3f {
+  float x = 0;
+  float y = 0;
+  float z = 0;
 
-  constexpr kernel vec() : x{0}, y{0}, z{0} {}
-  constexpr kernel explicit vec(T v_) : x{v_}, y{v_}, z{v_} {}
-  constexpr kernel vec(T x_, T y_, T z_) : x{x_}, y{y_}, z{z_} {}
-  template <typename T1, typename T2, typename T3>
-  constexpr kernel vec(T1 x_, T2 y_, T3 z_) : x{(T)x_}, y{(T)y_}, z{(T)z_} {}
-  constexpr kernel vec(vec<T, 2> xy_, T z_) : x{xy_.x}, y{xy_.y}, z{z_} {}
+  constexpr kernel vec3f() : x{0}, y{0}, z{0} {}
+  constexpr kernel explicit vec3f(float v_) : x{v_}, y{v_}, z{v_} {}
+  constexpr kernel vec3f(float x_, float y_, float z_) : x{x_}, y{y_}, z{z_} {}
+  constexpr kernel vec3f(vec2f xy_, float z_) : x{xy_.x}, y{xy_.y}, z{z_} {}
 
-  constexpr vec(const vec& v)            = default;
-  constexpr vec& operator=(const vec& v) = default;
+  constexpr vec3f(const vec3f& v)            = default;
+  constexpr vec3f& operator=(const vec3f& v) = default;
 
-  template <typename U>
-  constexpr kernel explicit(!std::is_convertible_v<U, T>)
-      vec(const vec<U, 3>& v) :
-      x{(T)v.x}, y{(T)v.y}, z{(T)v.z} {}
-  template <typename U>
-  constexpr kernel explicit(!std::is_convertible_v<T, U>) operator vec<U, 3>() {
-    return {(U)x, (U)y, (U)z};
-  }
-  constexpr kernel vec(const array<T, 3>& v) : x{v[0]}, y{v[1]}, z{v[2]} {}
-  constexpr kernel operator array<T, 3>() { return {x, y, z}; }
+  constexpr kernel vec3f(const array<float, 3>& v) :
+      x{v[0]}, y{v[1]}, z{v[2]} {}
+  constexpr kernel operator array<float, 3>() { return {x, y, z}; }
 
-  constexpr kernel T&       operator[](size_t i) { return (&x)[i]; }
-  constexpr kernel const T& operator[](size_t i) const { return (&x)[i]; }
+  constexpr kernel float&       operator[](int i) { return (&x)[i]; }
+  constexpr kernel const float& operator[](int i) const { return (&x)[i]; }
 };
 
-template <typename T>
-struct vec<T, 4> {
-  T x = 0;
-  T y = 0;
-  T z = 0;
-  T w = 0;
+struct vec4f {
+  float x = 0;
+  float y = 0;
+  float z = 0;
+  float w = 0;
 
-  constexpr kernel vec() : x{0}, y{0}, z{0}, w{0} {}
-  constexpr kernel explicit vec(T v_) : x{v_}, y{v_}, z{v_}, w{v_} {}
-  constexpr kernel vec(T x_, T y_, T z_, T w_) : x{x_}, y{y_}, z{z_}, w{w_} {}
-  template <typename T1, typename T2, typename T3, typename T4>
-  constexpr kernel vec(T1 x_, T2 y_, T3 z_, T4 w_) :
-      x{(T)x_}, y{(T)y_}, z{(T)z_}, w{(T)w_} {}
-  constexpr kernel vec(vec<T, 3> xyz_, T w_) :
+  constexpr kernel vec4f() : x{0}, y{0}, z{0}, w{0} {}
+  constexpr kernel explicit vec4f(float v_) : x{v_}, y{v_}, z{v_}, w{v_} {}
+  constexpr kernel vec4f(float x_, float y_, float z_, float w_) :
+      x{x_}, y{y_}, z{z_}, w{w_} {}
+  constexpr kernel vec4f(vec3f xyz_, float w_) :
       x{xyz_.x}, y{xyz_.y}, z{xyz_.z}, w{w_} {}
 
-  constexpr vec(const vec& v)            = default;
-  constexpr vec& operator=(const vec& v) = default;
+  constexpr vec4f(const vec4f& v)            = default;
+  constexpr vec4f& operator=(const vec4f& v) = default;
 
-  template <typename U>
-  constexpr kernel explicit(!std::is_convertible_v<U, T>)
-      vec(const vec<U, 4>& v) :
-      x{(T)v.x}, y{(T)v.y}, z{(T)v.z}, w{(T)v.w} {}
-  template <typename U>
-  constexpr kernel explicit(!std::is_convertible_v<T, U>) operator vec<U, 4>() {
-    return {(U)x, (U)y, (U)z, (U)w};
-  }
-  constexpr kernel vec(const array<T, 4>& v) :
+  constexpr kernel vec4f(const array<float, 4>& v) :
       x{v[0]}, y{v[1]}, z{v[2]}, w{v[3]} {}
-  constexpr kernel operator array<T, 4>() { return {x, y, z, w}; }
+  constexpr kernel operator array<float, 4>() { return {x, y, z, w}; }
 
-  constexpr kernel T&       operator[](size_t i) { return (&x)[i]; }
-  constexpr kernel const T& operator[](size_t i) const { return (&x)[i]; }
+  constexpr kernel float&       operator[](int i) { return (&x)[i]; }
+  constexpr kernel const float& operator[](int i) const { return (&x)[i]; }
 };
 
-// Deduction guides
-#ifndef __CUDACC__
-template <typename... Args>
-vec(Args...) -> vec<common_t<Args...>, sizeof...(Args)>;
-#endif
+struct vec1i {
+  int x = 0;
 
-// Math specific traits
-template <typename T, size_t N>
-struct is_vec<vec<T, N>> : std::bool_constant<true> {};
-template <typename T, size_t N>
-struct element_type<vec<T, N>> : type_constant<T> {};
-template <typename T, size_t N>
-struct element_dimension<vec<T, N>> : std::integral_constant<size_t, N> {};
+  constexpr kernel vec1i() : x{0} {}
+  constexpr kernel vec1i(int x_) : x{x_} {}
 
-// Vector aliases
-using vec1f = vec<float, 1>;
-using vec2f = vec<float, 2>;
-using vec3f = vec<float, 3>;
-using vec4f = vec<float, 4>;
-using vec1i = vec<int, 1>;
-using vec2i = vec<int, 2>;
-using vec3i = vec<int, 3>;
-using vec4i = vec<int, 4>;
-using vec1b = vec<byte, 1>;
-using vec2b = vec<byte, 2>;
-using vec3b = vec<byte, 3>;
-using vec4b = vec<byte, 4>;
-using vec1s = vec<size_t, 1>;
-using vec2s = vec<size_t, 2>;
-using vec3s = vec<size_t, 3>;
-using vec4s = vec<size_t, 4>;
-using vec1x = vec<index_t, 1>;
-using vec2x = vec<index_t, 2>;
-using vec3x = vec<index_t, 3>;
-using vec4x = vec<index_t, 4>;
+  constexpr vec1i(const vec1i& v)            = default;
+  constexpr vec1i& operator=(const vec1i& v) = default;
+
+  constexpr kernel explicit vec1i(const vec1f& v) : x{(int)v.x} {}
+  constexpr kernel operator vec1f() { return {(float)x}; }
+
+  constexpr kernel vec1i(const array<int, 1>& v) : x{v[0]} {}
+  constexpr kernel operator array<int, 1>() { return {x}; }
+
+  constexpr kernel int&       operator[](int i) { return (&x)[i]; }
+  constexpr kernel const int& operator[](int i) const { return (&x)[i]; }
+};
+
+struct vec2i {
+  int x = 0;
+  int y = 0;
+
+  constexpr kernel vec2i() : x{0}, y{0} {}
+  constexpr kernel explicit vec2i(int v) : x{v}, y{v} {}
+  constexpr kernel vec2i(int x_, int y_) : x{x_}, y{y_} {}
+
+  constexpr vec2i(const vec2i& v)            = default;
+  constexpr vec2i& operator=(const vec2i& v) = default;
+
+  constexpr kernel explicit vec2i(const vec2f& v) : x{(int)v.x}, y{(int)v.y} {}
+  constexpr kernel operator vec2f() const { return {(float)x, (float)y}; }
+
+  constexpr kernel vec2i(const array<int, 2>& v) : x{v[0]}, y{v[1]} {}
+  constexpr kernel operator array<int, 2>() const { return {x, y}; }
+
+  constexpr kernel int&       operator[](int i) { return (&x)[i]; }
+  constexpr kernel const int& operator[](int i) const { return (&x)[i]; }
+};
+
+struct vec3i {
+  int x = 0;
+  int y = 0;
+  int z = 0;
+
+  constexpr kernel vec3i() : x{0}, y{0}, z{0} {}
+  constexpr kernel explicit vec3i(int v_) : x{v_}, y{v_}, z{v_} {}
+  constexpr kernel vec3i(int x_, int y_, int z_) : x{x_}, y{y_}, z{z_} {}
+  constexpr kernel vec3i(vec2i xy_, int z_) : x{xy_.x}, y{xy_.y}, z{z_} {}
+
+  constexpr vec3i(const vec3i& v)            = default;
+  constexpr vec3i& operator=(const vec3i& v) = default;
+
+  constexpr kernel explicit vec3i(const vec3f& v) :
+      x{(int)v.x}, y{(int)v.y}, z{(int)v.z} {}
+  constexpr kernel operator vec3f() const {
+    return {(float)x, (float)y, (float)z};
+  }
+
+  constexpr kernel vec3i(const array<int, 3>& v) : x{v[0]}, y{v[1]}, z{v[2]} {}
+  constexpr kernel operator array<int, 3>() const { return {x, y, z}; }
+
+  constexpr kernel int&       operator[](int i) { return (&x)[i]; }
+  constexpr kernel const int& operator[](int i) const { return (&x)[i]; }
+};
+
+struct vec4i {
+  int x = 0;
+  int y = 0;
+  int z = 0;
+  int w = 0;
+
+  constexpr kernel vec4i() : x{0}, y{0}, z{0}, w{0} {}
+  constexpr kernel explicit vec4i(int v_) : x{v_}, y{v_}, z{v_}, w{v_} {}
+  constexpr kernel vec4i(int x_, int y_, int z_, int w_) :
+      x{x_}, y{y_}, z{z_}, w{w_} {}
+  constexpr kernel vec4i(vec3i xyz_, int w_) :
+      x{xyz_.x}, y{xyz_.y}, z{xyz_.z}, w{w_} {}
+
+  constexpr vec4i(const vec4i& v)            = default;
+  constexpr vec4i& operator=(const vec4i& v) = default;
+
+  constexpr kernel explicit vec4i(const vec4f& v) :
+      x{(int)v.x}, y{(int)v.y}, z{(int)v.z}, w{(int)v.w} {}
+  constexpr kernel operator vec4f() const {
+    return {(float)x, (float)y, (float)z, (float)w};
+  }
+
+  constexpr kernel vec4i(const array<int, 4>& v) :
+      x{v[0]}, y{v[1]}, z{v[2]}, w{v[3]} {}
+  constexpr kernel operator array<int, 4>() const { return {x, y, z, w}; }
+
+  constexpr kernel int&       operator[](int i) { return (&x)[i]; }
+  constexpr kernel const int& operator[](int i) const { return (&x)[i]; }
+};
+
+struct vec3b {
+  byte x = 0;
+  byte y = 0;
+  byte z = 0;
+
+  constexpr kernel vec3b() : x{0}, y{0}, z{0} {}
+  constexpr kernel explicit vec3b(byte v_) : x{v_}, y{v_}, z{v_} {}
+  constexpr kernel vec3b(byte x_, byte y_, byte z_) : x{x_}, y{y_}, z{z_} {}
+
+  constexpr vec3b(const vec3b& v)            = default;
+  constexpr vec3b& operator=(const vec3b& v) = default;
+
+  constexpr kernel explicit vec3b(const vec3i& v) :
+      x{(byte)v.x}, y{(byte)v.y}, z{(byte)v.z} {}
+  constexpr kernel operator vec3i() const { return {(int)x, (int)y, (int)z}; }
+  constexpr kernel explicit vec3b(const vec3f& v) :
+      x{(byte)v.x}, y{(byte)v.y}, z{(byte)v.z} {}
+  constexpr kernel operator vec3f() const {
+    return {(float)x, (float)y, (float)z};
+  }
+
+  constexpr kernel vec3b(const array<byte, 3>& v) : x{v[0]}, y{v[1]}, z{v[2]} {}
+  constexpr kernel operator array<byte, 3>() const { return {x, y, z}; }
+
+  constexpr kernel byte&       operator[](int i) { return (&x)[i]; }
+  constexpr kernel const byte& operator[](int i) const { return (&x)[i]; }
+};
+
+struct vec4b {
+  byte x = 0;
+  byte y = 0;
+  byte z = 0;
+  byte w = 0;
+
+  constexpr kernel vec4b() : x{0}, y{0}, z{0}, w{0} {}
+  constexpr kernel explicit vec4b(byte v_) : x{v_}, y{v_}, z{v_}, w{v_} {}
+  constexpr kernel vec4b(byte x_, byte y_, byte z_, byte w_) :
+      x{x_}, y{y_}, z{z_}, w{w_} {}
+  constexpr kernel vec4b(vec3b xyz_, byte w_) :
+      x{xyz_.x}, y{xyz_.y}, z{xyz_.z}, w{w_} {}
+
+  constexpr vec4b(const vec4b& v)            = default;
+  constexpr vec4b& operator=(const vec4b& v) = default;
+
+  constexpr kernel explicit vec4b(const vec4i& v) :
+      x{(byte)v.x}, y{(byte)v.y}, z{(byte)v.z}, w{(byte)v.w} {}
+  constexpr kernel operator vec4i() const {
+    return {(int)x, (int)y, (int)z, (int)w};
+  }
+  constexpr kernel explicit vec4b(const vec4f& v) :
+      x{(byte)v.x}, y{(byte)v.y}, z{(byte)v.z}, w{(byte)v.w} {}
+  constexpr kernel operator vec4f() const {
+    return {(float)x, (float)y, (float)z, (float)w};
+  }
+
+  constexpr kernel vec4b(const array<byte, 4>& v) :
+      x{v[0]}, y{v[1]}, z{v[2]}, w{v[3]} {}
+  constexpr kernel operator array<byte, 4>() const { return {x, y, z, w}; }
+
+  constexpr kernel byte&       operator[](int i) { return (&x)[i]; }
+  constexpr kernel const byte& operator[](int i) const { return (&x)[i]; }
+};
 
 // Zero vector constants.
 constexpr auto zero1f = vec1f{0};
@@ -415,67 +496,74 @@ constexpr auto zero3i = vec3i{0, 0, 0};
 constexpr auto zero4i = vec4i{0, 0, 0, 0};
 constexpr auto zero4b = vec4b{0, 0, 0, 0};
 
-// Generic constants
-template <typename T, int N>
-constexpr auto zero = vec<T, N>{0};
-template <typename T, int N>
-constexpr auto one = vec<T, N>{1};
-
 // Element access
-template <typename T>
-constexpr kernel const vec<T, 2>& xy(const vec<T, 3>& a) {
-  return (const vec<T, 2>&)a;
-}
-template <typename T>
-constexpr kernel const vec<T, 2>& xy(const vec<T, 4>& a) {
-  return (const vec<T, 2>&)a;
-}
-template <typename T>
-constexpr kernel const vec<T, 3>& xyz(const vec<T, 4>& a) {
-  return (const vec<T, 3>&)a;
-}
+inline kernel const vec2f& xy(const vec3f& a) { return (const vec2f&)a; }
+inline kernel const vec2f& xy(const vec4f& a) { return (const vec2f&)a; }
+inline kernel const vec3f& xyz(const vec4f& a) { return (const vec3f&)a; }
+inline kernel const vec2i& xy(const vec3i& a) { return (const vec2i&)a; }
+inline kernel const vec2i& xy(const vec4i& a) { return (const vec2i&)a; }
+inline kernel const vec3i& xyz(const vec4i& a) { return (const vec3i&)a; }
+inline kernel const vec3b& xyz(const vec4b& a) { return (const vec3b&)a; }
 
 // Vector sequence operations.
-template <typename T, size_t N>
-constexpr kernel bool empty(const vec<T, N>& a) {
-  return false;
-}
-template <typename T, size_t N>
-constexpr kernel size_t size(const vec<T, N>& a) {
-  return N;
-}
-template <typename T, size_t N>
-constexpr kernel ptrdiff_t ssize(const vec<T, N>& a) {
-  return (ptrdiff_t)N;
-}
-template <typename T, size_t N>
-constexpr kernel int isize(const vec<T, N>& a) {
-  return (int)N;
-}
-template <typename T, size_t N>
-constexpr kernel const T* begin(const vec<T, N>& a) {
-  return &(a.x);
-}
-template <typename T, size_t N>
-constexpr kernel const T* end(const vec<T, N>& a) {
-  return &(a.x) + N;
-}
-template <typename T, size_t N>
-constexpr kernel T* begin(vec<T, N>& a) {
-  return &(a.x);
-}
-template <typename T, size_t N>
-constexpr kernel T* end(vec<T, N>& a) {
-  return &(a.x) + N;
-}
-template <typename T, size_t N>
-constexpr kernel const T* data(const vec<T, N>& a) {
-  return &(a.x);
-}
-template <typename T, size_t N>
-constexpr kernel T* data(vec<T, N>& a) {
-  return &(a.x);
-}
+constexpr kernel bool         empty(const vec2f& a) { return false; }
+constexpr kernel int          size(const vec2f& a) { return 2; }
+constexpr kernel const float* begin(const vec2f& a) { return &(a.x); }
+constexpr kernel const float* end(const vec2f& a) { return &(a.x) + 2; }
+constexpr kernel float*       begin(vec2f& a) { return &(a.x); }
+constexpr kernel float*       end(vec2f& a) { return &(a.x) + 2; }
+constexpr kernel const float* data(const vec2f& a) { return &(a.x); }
+constexpr kernel float*       data(vec2f& a) { return &(a.x); }
+
+// Vector sequence operations.
+constexpr kernel bool         empty(const vec3f& a) { return false; }
+constexpr kernel int          size(const vec3f& a) { return 3; }
+constexpr kernel const float* begin(const vec3f& a) { return &(a.x); }
+constexpr kernel const float* end(const vec3f& a) { return &(a.x) + 3; }
+constexpr kernel float*       begin(vec3f& a) { return &(a.x); }
+constexpr kernel float*       end(vec3f& a) { return &(a.x) + 3; }
+constexpr kernel const float* data(const vec3f& a) { return &(a.x); }
+constexpr kernel float*       data(vec3f& a) { return &(a.x); }
+
+// Vector sequence operations.
+constexpr kernel bool         empty(const vec4f& a) { return false; }
+constexpr kernel int          size(const vec4f& a) { return 4; }
+constexpr kernel const float* begin(const vec4f& a) { return &(a.x); }
+constexpr kernel const float* end(const vec4f& a) { return &(a.x) + 4; }
+constexpr kernel float*       begin(vec4f& a) { return &(a.x); }
+constexpr kernel float*       end(vec4f& a) { return &(a.x) + 4; }
+constexpr kernel const float* data(const vec4f& a) { return &(a.x); }
+constexpr kernel float*       data(vec4f& a) { return &(a.x); }
+
+// Vector sequence operations.
+constexpr kernel bool       empty(const vec2i& a) { return false; }
+constexpr kernel int        size(const vec2i& a) { return 2; }
+constexpr kernel const int* begin(const vec2i& a) { return &(a.x); }
+constexpr kernel const int* end(const vec2i& a) { return &(a.x) + 2; }
+constexpr kernel int*       begin(vec2i& a) { return &(a.x); }
+constexpr kernel int*       end(vec2i& a) { return &(a.x) + 2; }
+constexpr kernel const int* data(const vec2i& a) { return &(a.x); }
+constexpr kernel int*       data(vec2i& a) { return &(a.x); }
+
+// Vector sequence operations.
+constexpr kernel bool       empty(const vec3i& a) { return false; }
+constexpr kernel int        size(const vec3i& a) { return 3; }
+constexpr kernel const int* begin(const vec3i& a) { return &(a.x); }
+constexpr kernel const int* end(const vec3i& a) { return &(a.x) + 3; }
+constexpr kernel int*       begin(vec3i& a) { return &(a.x); }
+constexpr kernel int*       end(vec3i& a) { return &(a.x) + 3; }
+constexpr kernel const int* data(const vec3i& a) { return &(a.x); }
+constexpr kernel int*       data(vec3i& a) { return &(a.x); }
+
+// Vector sequence operations.
+constexpr kernel bool       empty(const vec4i& a) { return false; }
+constexpr kernel int        size(const vec4i& a) { return 4; }
+constexpr kernel const int* begin(const vec4i& a) { return &(a.x); }
+constexpr kernel const int* end(const vec4i& a) { return &(a.x) + 4; }
+constexpr kernel int*       begin(vec4i& a) { return &(a.x); }
+constexpr kernel int*       end(vec4i& a) { return &(a.x) + 4; }
+constexpr kernel const int* data(const vec4i& a) { return &(a.x); }
+constexpr kernel int*       data(vec4i& a) { return &(a.x); }
 
 // Vector comparison operations.
 inline kernel bool operator==(const vec2f& a, const vec2f& b) {
@@ -1817,56 +1905,6 @@ inline kernel bool operator<(const vec3b& a, const vec3b& b) {
   return a.x < b.x || (a.x == b.x && (a.y < b.y || (a.y == b.y && a.z < b.z)));
 }
 
-// Vector operations.
-inline kernel vec3b operator+(const vec3b& a) { return a; }
-inline kernel vec3b operator-(const vec3b& a) { return {-a.x, -a.y, -a.z}; }
-inline kernel vec3b operator+(const vec3b& a, const vec3b& b) {
-  return {a.x + b.x, a.y + b.y, a.z + b.z};
-}
-inline kernel vec3b operator+(const vec3b& a, byte b) {
-  return {a.x + b, a.y + b, a.z + b};
-}
-inline kernel vec3b operator+(byte a, const vec3b& b) {
-  return {a + b.x, a + b.y, a + b.z};
-}
-inline kernel vec3b operator-(const vec3b& a, const vec3b& b) {
-  return {a.x - b.x, a.y - b.y, a.z - b.z};
-}
-inline kernel vec3b operator-(const vec3b& a, byte b) {
-  return {a.x - b, a.y - b, a.z - b};
-}
-inline kernel vec3b operator-(byte a, const vec3b& b) {
-  return {a - b.x, a - b.y, a - b.z};
-}
-inline kernel vec3b operator*(const vec3b& a, const vec3b& b) {
-  return {a.x * b.x, a.y * b.y, a.z * b.z};
-}
-inline kernel vec3b operator*(const vec3b& a, byte b) {
-  return {a.x * b, a.y * b, a.z * b};
-}
-inline kernel vec3b operator*(byte a, const vec3b& b) {
-  return {a * b.x, a * b.y, a * b.z};
-}
-inline kernel vec3b operator/(const vec3b& a, const vec3b& b) {
-  return {a.x / b.x, a.y / b.y, a.z / b.z};
-}
-inline kernel vec3b operator/(const vec3b& a, byte b) {
-  return {a.x / b, a.y / b, a.z / b};
-}
-inline kernel vec3b operator/(byte a, const vec3b& b) {
-  return {a / b.x, a / b.y, a / b.z};
-}
-
-// Vector assignments
-inline kernel vec3b& operator+=(vec3b& a, const vec3b& b) { return a = a + b; }
-inline kernel vec3b& operator+=(vec3b& a, byte b) { return a = a + b; }
-inline kernel vec3b& operator-=(vec3b& a, const vec3b& b) { return a = a - b; }
-inline kernel vec3b& operator-=(vec3b& a, byte b) { return a = a - b; }
-inline kernel vec3b& operator*=(vec3b& a, const vec3b& b) { return a = a * b; }
-inline kernel vec3b& operator*=(vec3b& a, byte b) { return a = a * b; }
-inline kernel vec3b& operator/=(vec3b& a, const vec3b& b) { return a = a / b; }
-inline kernel vec3b& operator/=(vec3b& a, byte b) { return a = a / b; }
-
 // Max element and clamp.
 inline kernel vec3b max(const vec3b& a, const vec3b& b) {
   return {max(a.x, b.x), max(a.y, b.y), max(a.z, b.z)};
@@ -1927,58 +1965,6 @@ inline kernel bool operator<(const vec4b& a, const vec4b& b) {
              (a.y < b.y ||
                  (a.y == b.y && (a.z < b.z || (a.z == b.z && a.w < b.w)))));
 }
-
-// Vector operations.
-inline kernel vec4b operator+(const vec4b& a) { return a; }
-inline kernel vec4b operator-(const vec4b& a) {
-  return {-a.x, -a.y, -a.z, -a.w};
-}
-inline kernel vec4b operator+(const vec4b& a, const vec4b& b) {
-  return {a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w};
-}
-inline kernel vec4b operator+(const vec4b& a, byte b) {
-  return {a.x + b, a.y + b, a.z + b, a.w + b};
-}
-inline kernel vec4b operator+(byte a, const vec4b& b) {
-  return {a + b.x, a + b.y, a + b.z, a + b.w};
-}
-inline kernel vec4b operator-(const vec4b& a, const vec4b& b) {
-  return {a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w};
-}
-inline kernel vec4b operator-(const vec4b& a, byte b) {
-  return {a.x - b, a.y - b, a.z - b, a.w - b};
-}
-inline kernel vec4b operator-(byte a, const vec4b& b) {
-  return {a - b.x, a - b.y, a - b.z, a - b.w};
-}
-inline kernel vec4b operator*(const vec4b& a, const vec4b& b) {
-  return {a.x * b.x, a.y * b.y, a.z * b.z, a.w * b.w};
-}
-inline kernel vec4b operator*(const vec4b& a, byte b) {
-  return {a.x * b, a.y * b, a.z * b, a.w * b};
-}
-inline kernel vec4b operator*(byte a, const vec4b& b) {
-  return {a * b.x, a * b.y, a * b.z, a * b.w};
-}
-inline kernel vec4b operator/(const vec4b& a, const vec4b& b) {
-  return {a.x / b.x, a.y / b.y, a.z / b.z, a.w / b.w};
-}
-inline kernel vec4b operator/(const vec4b& a, byte b) {
-  return {a.x / b, a.y / b, a.z / b, a.w / b};
-}
-inline kernel vec4b operator/(byte a, const vec4b& b) {
-  return {a / b.x, a / b.y, a / b.z, a / b.w};
-}
-
-// Vector assignments
-inline kernel vec4b& operator+=(vec4b& a, const vec4b& b) { return a = a + b; }
-inline kernel vec4b& operator+=(vec4b& a, byte b) { return a = a + b; }
-inline kernel vec4b& operator-=(vec4b& a, const vec4b& b) { return a = a - b; }
-inline kernel vec4b& operator-=(vec4b& a, byte b) { return a = a - b; }
-inline kernel vec4b& operator*=(vec4b& a, const vec4b& b) { return a = a * b; }
-inline kernel vec4b& operator*=(vec4b& a, byte b) { return a = a * b; }
-inline kernel vec4b& operator/=(vec4b& a, const vec4b& b) { return a = a / b; }
-inline kernel vec4b& operator/=(vec4b& a, byte b) { return a = a / b; }
 
 // Max element and clamp.
 inline kernel vec4b max(const vec4b& a, const vec4b& b) {
@@ -3060,34 +3046,70 @@ inline std::basic_istream<C>& operator>>(
   return s.ignore(max_size, a[0]);
 }
 
-template <typename C, typename T, size_t N>
+template <typename C>
 inline std::basic_ostream<C>& operator<<(
-    std::basic_ostream<C>& s, const vec<T, N>& a) {
-  if constexpr (N == 1) {
-    return s << "[" << a.x << "]";
-  } else if constexpr (N == 2) {
-    return s << "[" << a.x << "," << a.y << "]";
-  } else if constexpr (N == 3) {
-    return s << "[" << a.x << "," << a.y << "," << a.z << "]";
-  } else if constexpr (N == 4) {
-    return s << "[" << a.x << "," << a.y << "," << a.z << "," << a.w << "]";
-  } else {
-  }
+    std::basic_ostream<C>& out, const vec2f& a) {
+  return out << "[" << a.x << "," << a.y << "]";
 }
 
-template <typename C, typename T, size_t N>
-inline std::basic_istream<C>& operator>>(
-    std::basic_istream<C>& s, vec<T, N>& a) {
-  if constexpr (N == 1) {
-    return s >> "[" >> a.x >> "]";
-  } else if constexpr (N == 2) {
-    return s >> "[" >> a.x >> "," >> a.y >> "]";
-  } else if constexpr (N == 3) {
-    return s >> "[" >> a.x >> "," >> a.y >> "," >> a.z >> "]";
-  } else if constexpr (N == 4) {
-    return s >> "[" >> a.x >> "," >> a.y >> "," >> a.z >> "," >> a.w >> "]";
-  } else {
-  }
+template <typename C>
+inline std::basic_istream<C>& operator>>(std::basic_istream<C>& out, vec2f& a) {
+  return out >> "[" >> a.x >> "," >> a.y >> "]";
+}
+
+template <typename C>
+inline std::basic_ostream<C>& operator<<(
+    std::basic_ostream<C>& out, const vec3f& a) {
+  return out << "[" << a.x << "," << a.y << "," << a.z << "]";
+}
+
+template <typename C>
+inline std::basic_istream<C>& operator>>(std::basic_istream<C>& out, vec3f& a) {
+  return out >> "[" >> a.x >> "," >> a.y >> "," >> a.z >> "]";
+}
+
+template <typename C>
+inline std::basic_ostream<C>& operator<<(
+    std::basic_ostream<C>& out, const vec4f& a) {
+  return out << "[" << a.x << "," << a.y << "," << a.z << "," << a.w << "]";
+}
+
+template <typename C>
+inline std::basic_istream<C>& operator>>(std::basic_istream<C>& out, vec4f& a) {
+  return out >> "[" >> a.x >> "," >> a.y >> "," >> a.z >> "," >> a.w >> "]";
+}
+
+template <typename C>
+inline std::basic_ostream<C>& operator<<(
+    std::basic_ostream<C>& out, const vec2i& a) {
+  return out << "[" << a.x << "," << a.y << "]";
+}
+
+template <typename C>
+inline std::basic_istream<C>& operator>>(std::basic_istream<C>& out, vec2i& a) {
+  return out >> "[" >> a.x >> "," >> a.y >> "]";
+}
+
+template <typename C>
+inline std::basic_ostream<C>& operator<<(
+    std::basic_ostream<C>& out, const vec3i& a) {
+  return out << "[" << a.x << "," << a.y << "," << a.z << "]";
+}
+
+template <typename C>
+inline std::basic_istream<C>& operator>>(std::basic_istream<C>& out, vec3i& a) {
+  return out >> "[" >> a.x >> "," >> a.y >> "," >> a.z >> "]";
+}
+
+template <typename C>
+inline std::basic_ostream<C>& operator<<(
+    std::basic_ostream<C>& out, const vec4i& a) {
+  return out << "[" << a.x << "," << a.y << "," << a.z << "," << a.w << "]";
+}
+
+template <typename C>
+inline std::basic_istream<C>& operator>>(std::basic_istream<C>& out, vec4i& a) {
+  return out >> "[" >> a.x >> "," >> a.y >> "," >> a.z >> "," >> a.w >> "]";
 }
 
 template <typename C>

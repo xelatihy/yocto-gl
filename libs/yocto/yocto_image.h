@@ -65,7 +65,7 @@ namespace yocto {
 
 // Aspect ratio
 inline float image_aspect(const vec2i& extents) {
-  return extents[0] / extents[1];
+  return (float)extents[0] / (float)extents[1];
 }
 
 // Conversion from/to floats.
@@ -144,8 +144,7 @@ inline void rgb_to_srgbb(array2d<vec4b>& srgb, const array2d<vec4f>& rgb) {
 template <typename T>
 inline T lookup_image(
     const array2d<T>& image, const vec2i& ij, bool as_linear = false) {
-  if constexpr (!(std::is_same_v<T, byte> || std::is_same_v<T, vec1b> ||
-                    std::is_same_v<T, vec3b> || std::is_same_v<T, vec3b> ||
+  if constexpr (!(std::is_same_v<T, byte> || std::is_same_v<T, vec3b> ||
                     std::is_same_v<T, vec4b>)) {
     return as_linear ? srgb_to_rgb(image[ij]) : image[ij];
   } else {
@@ -293,12 +292,10 @@ inline vec3f compute_white_balance(const array2d<vec4f>& image) {
 }
 
 // Resize an image.
-template <size_t N>
-array2d<vec<float, N>> resize_image(
-    const array2d<vec<float, N>>& image, const vec2i& extents);
-template <size_t N>
-array2d<vec<byte, N>> resize_image(
-    const array2d<vec<byte, N>>& image, const vec2i& extents);
+array2d<vec3f> resize_image(const array2d<vec3f>& image, const vec2i& extents);
+array2d<vec4f> resize_image(const array2d<vec4f>& image, const vec2i& extents);
+array2d<vec3b> resize_image(const array2d<vec3b>& image, const vec2i& extents);
+array2d<vec4b> resize_image(const array2d<vec4b>& image, const vec2i& extents);
 
 }  // namespace yocto
 

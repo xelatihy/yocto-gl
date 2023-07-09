@@ -52,11 +52,11 @@ namespace yocto {
 
 // Simple parallel for used since our target platforms do not yet support
 // parallel algorithms. `Func` takes the two integer indices.
-template <typename T, typename Func>
-inline void parallel_for_batch(vec<T, 2> num, Func&& func) {
+template <typename Func>
+inline void parallel_for_batch(vec2i num, Func&& func) {
   auto              futures  = vector<std::future<void>>{};
   auto              nthreads = std::thread::hardware_concurrency();
-  std::atomic<T>    next_idx(0);
+  std::atomic<int>  next_idx(0);
   std::atomic<bool> has_error(false);
   for (auto thread_id = 0; thread_id < (int)nthreads; thread_id++) {
     futures.emplace_back(
@@ -66,7 +66,7 @@ inline void parallel_for_batch(vec<T, 2> num, Func&& func) {
               auto j = next_idx.fetch_add(1);
               if (j >= num[1]) break;
               if (has_error) break;
-              for (auto i = (T)0; i < num[0]; i++) func(vec<T, 2>{i, j});
+              for (auto i = 0; i < num[0]; i++) func(vec2i{i, j});
             }
           } catch (...) {
             has_error = true;
@@ -1456,12 +1456,11 @@ bool is_sampler_lit(const trace_params& params) {
 
 // Trace a block of samples
 void trace_sample(trace_state& state, const scene_data& scene,
-    const trace_bvh& bvh, const trace_lights& lights, const vec2i& ij_,
+    const trace_bvh& bvh, const trace_lights& lights, const vec2i& ij,
     int sample, const trace_params& params) {
-  auto  ij      = (vec2s)ij_;
   auto& camera  = scene.cameras[params.camera];
   auto  sampler = get_trace_sampler_func(params);
-  auto  ray     = sample_camera(camera, ij, (vec2i)state.image.extents(),
+  auto  ray     = sample_camera(camera, ij, state.image.extents(),
            rand2f(state.rngs[ij]), rand2f(state.rngs[ij]), params.tentfilter);
   auto [radiance, hit, albedo, normal] = sampler(
       scene, bvh, lights, ray, state.rngs[ij], params);
@@ -1492,11 +1491,10 @@ trace_state make_trace_state(
   auto& camera     = scene.cameras[params.camera];
   auto  state      = trace_state{};
   auto  resolution = (camera.aspect >= 1)
-                         ? vec2s{(size_t)params.resolution,
-                              (size_t)round(params.resolution / camera.aspect)}
-                         : vec2s{
-                              (size_t)round(params.resolution * camera.aspect),
-                              (size_t)params.resolution};
+                         ? vec2i{params.resolution,
+                              (int)round(params.resolution / camera.aspect)}
+                         : vec2i{(int)round(params.resolution * camera.aspect),
+                              params.resolution};
   state.samples    = 0;
   state.image      = array2d<vec4f>{resolution};
   state.albedo     = array2d<vec3f>{resolution};
@@ -1597,7 +1595,7 @@ void trace_samples(trace_state& state, const scene_data& scene,
       }
     }
   } else {
-    parallel_for_batch(state.image.extents(), [&](vec2s ij) {
+    parallel_for_batch(state.image.extents(), [&](vec2i ij) {
       for (auto sample : range(state.samples, state.samples + params.batch)) {
         trace_sample(state, scene, bvh, lights, ij, sample, params);
       }
@@ -1623,7 +1621,7 @@ void trace_start(trace_context& context, trace_state& state,
   context.done   = false;
   context.worker = std::async(std::launch::async, [&]() {
     if (context.stop) return;
-    parallel_for_batch(state.image.extents(), [&](vec2s ij) {
+    parallel_for_batch(state.image.extents(), [&](vec2i ij) {
       for (auto sample : range(state.samples, state.samples + params.batch)) {
         if (context.stop) return;
         trace_sample(state, scene, bvh, lights, ij, sample, params);
@@ -1665,7 +1663,7 @@ void trace_preview(array2d<vec4f>& image, trace_context& context,
 
 // Check image type
 template <typename T>
-static void check_image(const array2d<T>& image, const vec2s& extents) {
+static void check_image(const array2d<T>& image, const vec2i& extents) {
   if (image.extents() != extents)
     throw std::invalid_argument{"image should have the same size"};
 }

@@ -106,7 +106,7 @@ namespace yocto {
 
 // pixel access
 vec4f lookup_texture(
-    const texture_data& texture, const vec2s& ij, bool ldr_as_linear) {
+    const texture_data& texture, const vec2i& ij, bool ldr_as_linear) {
   if (!texture.pixelsf.empty()) return texture.pixelsf[ij];
   if (!texture.pixelsb.empty())
     return ldr_as_linear ? byte_to_float(texture.pixelsb[ij])

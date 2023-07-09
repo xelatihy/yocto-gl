@@ -416,9 +416,23 @@ using json_value = nlohmann::ordered_json;
 }
 
 // Json conversions
-template <typename T, size_t N>
-inline void to_json(json_value& json, const vec<T, N>& value) {
-  nlohmann::to_json(json, (const array<T, N>&)value);
+inline void to_json(json_value& json, const vec2i& value) {
+  nlohmann::to_json(json, (const array<int, 2>&)value);
+}
+inline void to_json(json_value& json, const vec3i& value) {
+  nlohmann::to_json(json, (const array<int, 3>&)value);
+}
+inline void to_json(json_value& json, const vec4i& value) {
+  nlohmann::to_json(json, (const array<int, 4>&)value);
+}
+inline void to_json(json_value& json, const vec2f& value) {
+  nlohmann::to_json(json, (const array<float, 2>&)value);
+}
+inline void to_json(json_value& json, const vec3f& value) {
+  nlohmann::to_json(json, (const array<float, 3>&)value);
+}
+inline void to_json(json_value& json, const vec4f& value) {
+  nlohmann::to_json(json, (const array<float, 4>&)value);
 }
 inline void to_json(json_value& json, const frame3f& value) {
   nlohmann::to_json(json, (const array<array<float, 3>, 4>&)value);
@@ -429,9 +443,23 @@ inline void to_json(json_value& json, const mat3x3f& value) {
 inline void to_json(json_value& json, const mat4x4f& value) {
   nlohmann::to_json(json, (const array<array<float, 4>, 4>&)value);
 }
-template <typename T, size_t N>
-inline void from_json(const json_value& json, vec<T, N>& value) {
-  nlohmann::from_json(json, (array<T, N>&)value);
+inline void from_json(const json_value& json, vec2i& value) {
+  nlohmann::from_json(json, (array<int, 2>&)value);
+}
+inline void from_json(const json_value& json, vec3i& value) {
+  nlohmann::from_json(json, (array<int, 3>&)value);
+}
+inline void from_json(const json_value& json, vec4i& value) {
+  nlohmann::from_json(json, (array<int, 4>&)value);
+}
+inline void from_json(const json_value& json, vec2f& value) {
+  nlohmann::from_json(json, (array<float, 2>&)value);
+}
+inline void from_json(const json_value& json, vec3f& value) {
+  nlohmann::from_json(json, (array<float, 3>&)value);
+}
+inline void from_json(const json_value& json, vec4f& value) {
+  nlohmann::from_json(json, (array<float, 4>&)value);
 }
 inline void from_json(const json_value& json, frame3f& value) {
   if (json.is_array() && !json.empty() && !json.front().is_array()) {
@@ -513,7 +541,7 @@ void load_image(const string& filename, array2d<vec4f>& image, bool srgb) {
     if (LoadEXRFromMemory(&pixels, &width, &height, buffer.data(),
             buffer.size(), nullptr) != 0)
       throw io_error{"cannot read " + filename};
-    image = {(vec4f*)pixels, {(size_t)width, (size_t)height}};
+    image = {(vec4f*)pixels, vec2i{width, height}};
     if (srgb) image = rgb_to_srgb(image);
     free(pixels);
   } else if (ext == ".hdr" || ext == ".HDR") {
@@ -522,7 +550,7 @@ void load_image(const string& filename, array2d<vec4f>& image, bool srgb) {
     auto pixels = stbi_loadf_from_memory(
         buffer.data(), (int)buffer.size(), &width, &height, &ncomp, 4);
     if (pixels == nullptr) throw io_error{"cannot read " + filename};
-    image = {(vec4f*)pixels, {(size_t)width, (size_t)height}};
+    image = {(vec4f*)pixels, vec2i{width, height}};
     if (srgb) image = rgb_to_srgb(image);
     free(pixels);
   } else if (ext == ".png" || ext == ".PNG" || ext == ".jpg" || ext == ".JPG" ||
@@ -554,7 +582,7 @@ void load_image(const string& filename, array2d<vec4b>& image, bool srgb) {
     auto pixels = stbi_load_from_memory(
         buffer.data(), (int)buffer.size(), &width, &height, &ncomp, 4);
     if (pixels == nullptr) throw io_error{"cannot read " + filename};
-    image = {(vec4b*)pixels, {(size_t)width, (size_t)height}};
+    image = {(vec4b*)pixels, vec2i{width, height}};
     if (!srgb) image = float_to_byte(srgbb_to_rgb(image));
     free(pixels);
   } else if (ext == ".ypreset" || ext == ".YPRESET") {
@@ -666,7 +694,7 @@ bool is_srgb_preset(const string& type_) {
 }
 array2d<vec4f> make_image_preset(const string& type_) {
   auto type    = path_basename(type_);
-  auto extents = vec2s{1024, 1024};
+  auto extents = vec2i{1024, 1024};
   if (type.find("sky") != string::npos) extents = {2048, 1024};
   if (type.find("images2") != string::npos) extents = {2048, 1024};
   if (type == "grid") {
@@ -715,7 +743,7 @@ array2d<vec4f> make_image_preset(const string& type_) {
           max(montage_size.y, sub_image.extents().y)};
     }
     auto image = array2d<vec4f>(montage_size);
-    auto pos   = (size_t)0;
+    auto pos   = 0;
     for (auto& sub_image : sub_images) {
       set_region(image, sub_image, {pos, 0});
       pos += sub_image.extents().x;

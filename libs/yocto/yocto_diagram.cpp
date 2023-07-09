@@ -1627,8 +1627,8 @@ static scene_data convert_scene(const diagram_scene& diagram) {
 // crop image vertically
 static array2d<vec4f> crop_image(const array2d<vec4f>& image) {
   // find min and max
-  auto [width, height] = (vec2s)image.extents();
-  auto min = (size_t)0, max = height;
+  auto [width, height] = image.extents();
+  auto min = 0, max = height;
   for (auto j : range(height)) {
     auto empty = true;
     for (auto i : range(width)) {
@@ -1919,11 +1919,11 @@ namespace yocto {
 
 // Simple parallel for used since our target platforms do not yet support
 // parallel algorithms. `Func` takes the two integer indices.
-template <typename T, typename Func>
-inline void parallel_for_batch(vec<T, 2> num, Func&& func) {
+template <typename Func>
+inline void parallel_for_batch(vec2i num, Func&& func) {
   auto              futures  = vector<std::future<void>>{};
   auto              nthreads = std::thread::hardware_concurrency();
-  std::atomic<T>    next_idx(0);
+  std::atomic<int>  next_idx(0);
   std::atomic<bool> has_error(false);
   for (auto thread_id = 0; thread_id < (int)nthreads; thread_id++) {
     futures.emplace_back(
@@ -1933,7 +1933,7 @@ inline void parallel_for_batch(vec<T, 2> num, Func&& func) {
               auto j = next_idx.fetch_add(1);
               if (j >= num[1]) break;
               if (has_error) break;
-              for (auto i = (T)0; i < num[0]; i++) func(vec<T, 2>{i, j});
+              for (auto i = 0; i < num[0]; i++) func(vec2i{i, j});
             }
           } catch (...) {
             has_error = true;

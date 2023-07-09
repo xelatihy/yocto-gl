@@ -509,12 +509,34 @@ vector<float>    sample_quads_cdf(
 namespace std {
 
 // Hash functor for vector for use with hash_map
-template <typename T, size_t N>
-struct hash<yocto::vec<T, N>> {
-  size_t operator()(const yocto::vec<T, N>& v) const {
-    static const auto hasher = std::hash<T>();
+template <>
+struct hash<yocto::vec2i> {
+  size_t operator()(const yocto::vec2i& v) const {
+    static const auto hasher = std::hash<int>();
     auto              h      = (size_t)0;
-    for (auto i = 0; i < N; i++) {
+    for (auto i = 0; i < 2; i++) {
+      h ^= hasher(v[i]) + 0x9e3779b9 + (h << 6) + (h >> 2);
+    }
+    return h;
+  }
+};
+template <>
+struct hash<yocto::vec3i> {
+  size_t operator()(const yocto::vec3i& v) const {
+    static const auto hasher = std::hash<int>();
+    auto              h      = (size_t)0;
+    for (auto i = 0; i < 3; i++) {
+      h ^= hasher(v[i]) + 0x9e3779b9 + (h << 6) + (h >> 2);
+    }
+    return h;
+  }
+};
+template <>
+struct hash<yocto::vec4i> {
+  size_t operator()(const yocto::vec4i& v) const {
+    static const auto hasher = std::hash<int>();
+    auto              h      = (size_t)0;
+    for (auto i = 0; i < 4; i++) {
       h ^= hasher(v[i]) + 0x9e3779b9 + (h << 6) + (h >> 2);
     }
     return h;
