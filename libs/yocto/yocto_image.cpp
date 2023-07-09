@@ -262,7 +262,7 @@ array2d<vec4f> make_gnoisemap(const vec2i& extents, float scale,
   return _make_proc_image(extents, [=](vec2i ij) -> vec4f {
     auto uv    = (8 * scale * ij) / extents;
     auto value = gradient_noise(uv);
-    return lerp(color0, color1, clamp(value, 0, 1));
+    return lerp(color0, color1, clamp(value, 0.0f, 1.0f));
   });
 }
 
@@ -271,7 +271,7 @@ array2d<vec4f> make_vnoisemap(const vec2i& extents, float scale,
   return _make_proc_image(extents, [=](vec2i ij) -> vec4f {
     auto uv    = (8 * scale * ij) / extents;
     auto value = value_noise(uv);
-    return lerp(color0, color1, clamp(value, 0, 1));
+    return lerp(color0, color1, clamp(value, 0.0f, 1.0f));
   });
 }
 
@@ -280,7 +280,7 @@ array2d<vec4f> make_fnoisemap(const vec2i& extents, float scale,
   return _make_proc_image(extents, [=](vec2i ij) -> vec4f {
     auto uv    = (8 * scale * ij) / extents;
     auto value = fractal_noise(uv);
-    return lerp(color0, color1, clamp(value, 0, 1));
+    return lerp(color0, color1, clamp(value, 0.0f, 1.0f));
   });
 }
 
@@ -289,7 +289,7 @@ array2d<vec4f> make_tnoisemap(const vec2i& extents, float scale,
   return _make_proc_image(extents, [=](vec2i ij) -> vec4f {
     auto uv    = (8 * scale * ij) / extents;
     auto value = turbulence_noise(uv);
-    return lerp(color0, color1, clamp(value, 0, 1));
+    return lerp(color0, color1, clamp(value, 0.0f, 1.0f));
   });
 }
 
@@ -298,7 +298,7 @@ array2d<vec4f> make_rnoisemap(const vec2i& extents, float scale,
   return _make_proc_image(extents, [=](vec2i ij) -> vec4f {
     auto uv    = (8 * scale * ij) / extents;
     auto value = ridge_noise(uv);
-    return lerp(color0, color1, clamp(value, 0, 1));
+    return lerp(color0, color1, clamp(value, 0.0f, 1.0f));
   });
 }
 
@@ -442,7 +442,7 @@ array2d<vec4f> make_sunsky(const vec2i& extents, float theta_sun,
     for (auto i : range(extents.x)) {
       auto phi = 2 * pif * ((i + 0.5f) / extents.x);
       auto w = vec3f{cos(phi) * sin(theta), cos(theta), sin(phi) * sin(theta)};
-      auto gamma   = acos(clamp(dot(w, sun_direction), -1, 1));
+      auto gamma   = acos(clamp(dot(w, sun_direction), -1.0f, 1.0f));
       auto sky_col = sky(theta, gamma, theta_sun);
       auto sun_col = sun(theta, gamma);
       auto col     = sky_col + sun_col;

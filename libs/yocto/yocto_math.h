@@ -99,15 +99,10 @@ inline kernel float abs(float a) { return a < 0 ? -a : a; }
 inline kernel float min(float a, float b) {
   return (a < b) ? (float)a : (float)b;
 }
-inline kernel float min(float a, int b) { return (a < b) ? a : (float)b; }
 inline kernel float max(float a, float b) {
   return (a > b) ? (float)a : (float)b;
 }
-inline kernel float max(float a, int b) { return (a > b) ? a : (float)b; }
 inline kernel float clamp(float a, float min_, float max_) {
-  return min(max(a, min_), max_);
-}
-inline kernel float clamp(float a, int min_, int max_) {
   return min(max(a, min_), max_);
 }
 inline kernel float sign(float a) { return a < 0 ? (float)-1 : (float)1; }
@@ -889,7 +884,7 @@ inline kernel vec3f slerp(const vec3f& a, const vec3f& b, float u) {
     d  = -d;
   }
   if (d > (float)0.9995) return normalize(an + u * (bn - an));
-  auto theta = acos(clamp(d, (float)-1, (float)1));
+  auto theta = acos(clamp(d, -1.0f, 1.0f));
   if (theta == 0) return an;
   return an * (sin(theta * (1 - u)) / sin(theta)) +
          bn * (sin(theta * u) / sin(theta));
