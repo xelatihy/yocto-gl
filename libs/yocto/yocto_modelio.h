@@ -38,6 +38,8 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
+#include <stdint.h>
+
 #include <algorithm>
 #include <array>
 #include <stdexcept>
