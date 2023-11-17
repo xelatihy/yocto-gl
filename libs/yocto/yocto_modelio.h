@@ -533,7 +533,8 @@ inline T get_value(const ply_property& prop, size_t index) {
   return 0;
 }
 // Assumes T is a floating point type, and any integral type will
-// be divided by the max value of its unsigned counterpart.
+// be divided by the max value of its type (matching behavior
+// of Blender PLY import).
 template <typename T>
 inline T get_normalized_value(const ply_property& prop, size_t index) {
   switch (prop.type) {
