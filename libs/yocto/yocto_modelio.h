@@ -537,10 +537,10 @@ inline T get_value(const ply_property& prop, size_t index) {
 template <typename T>
 inline T get_normalized_value(const ply_property& prop, size_t index) {
   switch (prop.type) {
-    case ply_type::i8: return (T)prop.data_i8[index]/(T)std::numeric_limits<uint8_t>::max();
-    case ply_type::i16: return (T)prop.data_i16[index]/(T)std::numeric_limits<uint16_t>::max();
-    case ply_type::i32: return (T)prop.data_i32[index]/(T)std::numeric_limits<uint32_t>::max();
-    case ply_type::i64: return (T)prop.data_i64[index]/(T)std::numeric_limits<uint64_t>::max();
+    case ply_type::i8: return (T)prop.data_i8[index]/(T)std::numeric_limits<int8_t>::max();
+    case ply_type::i16: return (T)prop.data_i16[index]/(T)std::numeric_limits<int16_t>::max();
+    case ply_type::i32: return (T)prop.data_i32[index]/(T)std::numeric_limits<int32_t>::max();
+    case ply_type::i64: return (T)prop.data_i64[index]/(T)std::numeric_limits<int64_t>::max();
     case ply_type::u8: return (T)prop.data_u8[index]/(T)std::numeric_limits<uint8_t>::max();
     case ply_type::u16: return (T)prop.data_u16[index]/(T)std::numeric_limits<uint16_t>::max();
     case ply_type::u32: return (T)prop.data_u32[index]/(T)std::numeric_limits<uint32_t>::max();
