@@ -43,6 +43,7 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
+#include <limits>
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
@@ -531,6 +532,24 @@ inline T get_value(const ply_property& prop, size_t index) {
   }
   return 0;
 }
+// Assumes T is a floating point type, and any integral type will
+// be divided by the max value of its unsigned counterpart.
+template <typename T>
+inline T get_normalized_value(const ply_property& prop, size_t index) {
+  switch (prop.type) {
+    case ply_type::i8: return (T)prop.data_i8[index]/(T)std::numeric_limits<uint8_t>::max();
+    case ply_type::i16: return (T)prop.data_i16[index]/(T)std::numeric_limits<uint16_t>::max();
+    case ply_type::i32: return (T)prop.data_i32[index]/(T)std::numeric_limits<uint32_t>::max();
+    case ply_type::i64: return (T)prop.data_i64[index]/(T)std::numeric_limits<uint64_t>::max();
+    case ply_type::u8: return (T)prop.data_u8[index]/(T)std::numeric_limits<uint8_t>::max();
+    case ply_type::u16: return (T)prop.data_u16[index]/(T)std::numeric_limits<uint16_t>::max();
+    case ply_type::u32: return (T)prop.data_u32[index]/(T)std::numeric_limits<uint32_t>::max();
+    case ply_type::u64: return (T)prop.data_u64[index]/(T)std::numeric_limits<uint64_t>::max();
+    case ply_type::f32: return (T)prop.data_f32[index];
+    case ply_type::f64: return (T)prop.data_f64[index];
+  }
+  return 0;
+}
 template <typename T>
 inline bool get_value(const ply_model& ply, const string& element,
     const string& property, vector<T>& values) {
@@ -546,7 +565,7 @@ inline bool get_value(const ply_model& ply, const string& element,
 }
 template <typename T, size_t N>
 inline bool get_values(const ply_model& ply, const string& element,
-    const array<string, N>& properties, vector<array<T, N>>& values) {
+    const array<string, N>& properties, bool normalize, vector<array<T, N>>& values) {
   values.clear();
   for (auto& property : properties) {
     if (!has_property(ply, element, property)) return false;
@@ -558,11 +577,20 @@ inline bool get_values(const ply_model& ply, const string& element,
   for (auto& property : properties) {
     auto& prop = get_property(ply, element, property);
     for (auto index = (size_t)0; index < values.size(); index++) {
-      values[index][item] = get_value<T>(prop, index);
+      if(normalize) {
+        values[index][item] = get_normalized_value<T>(prop, index);
+      } else {
+        values[index][item] = get_value<T>(prop, index);
+      }
     }
     item++;
   }
   return true;
+}
+template <typename T, size_t N>
+inline bool get_values(const ply_model& ply, const string& element,
+    const array<string, N>& properties, vector<array<T, N>>& values) {
+  return get_values(ply, element, properties, /* normalize */ false, values);
 }
 
 template <typename T>
@@ -766,15 +794,15 @@ inline bool get_texcoords(
 }
 template <typename T>
 inline bool get_colors(const ply_model& ply, vector<array<T, 3>>& colors) {
-  return get_values(ply, "vertex", {"red", "green", "blue"}, colors);
+  return get_values(ply, "vertex", {"red", "green", "blue"}, /* normalize */ true, colors);
 }
 template <typename T>
 inline bool get_colors(const ply_model& ply, vector<array<T, 4>>& colors) {
   if (has_property(ply, "vertex", "alpha")) {
-    return get_values(ply, "vertex", {"red", "green", "blue", "alpha"}, colors);
+    return get_values(ply, "vertex", {"red", "green", "blue", "alpha"}, /* normalize */ true, colors);
   } else {
     auto colors3 = vector<array<T, 3>>{};
-    if (!get_values(ply, "vertex", {"red", "green", "blue"}, colors3))
+    if (!get_values(ply, "vertex", {"red", "green", "blue"}, /* normalize */ true, colors3))
       return false;
     colors.resize(colors3.size());
     for (auto i = 0; i < (int)colors.size(); i++)
