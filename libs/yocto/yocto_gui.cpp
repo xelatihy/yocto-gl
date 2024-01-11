@@ -2557,7 +2557,7 @@ struct glwidgets_param {
   glwidgets_param(
       vec3f value, const vec2f& minmax = {0, 0}, bool readonly = false)
       : type{glwidgets_param_type::value3f}
-      , valuef{value.x, value.y, value.z}
+      , valuef{value.x, value.y, value.z, 0}
       , minmaxf{minmax}
       , readonly{readonly} {}
   glwidgets_param(

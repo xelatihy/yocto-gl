@@ -176,10 +176,6 @@ scene_intersection intersect_instance_ebvh(const scene_ebvh& bvh,
 namespace yocto {
 
 // backward compatibility
-using bvh_shape [[deprecated]] = shape_bvh;
-using bvh_scene [[deprecated]] = scene_bvh;
-
-// backward compatibility
 [[deprecated]] inline shape_bvh make_bvh(
     const shape_data& shape, bool embree = false, bool highquality = false) {
   return make_shape_bvh(shape, highquality);

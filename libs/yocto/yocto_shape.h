@@ -87,6 +87,12 @@ struct shape_data {
   vector<vec4f> tangents  = {};
 };
 
+// Shape creation
+template <typename PFunc, typename TFunc>
+inline shape_data make_lines(int steps, PFunc&& position, TFunc&& tangent);
+template <typename PFunc, typename NFunc>
+inline shape_data make_quads(int steps, PFunc&& position, NFunc&& normal);
+
 // Interpolate vertex data
 vec3f eval_position(const shape_data& shape, int element, const vec2f& uv);
 vec3f eval_normal(const shape_data& shape, int element, const vec2f& uv);
@@ -123,6 +129,24 @@ void       quads_to_triangles_inplace(shape_data& shape);
 // Subdivision
 shape_data subdivide_shape(
     const shape_data& shape, int subdivisions, bool catmullclark);
+
+// Transform shape
+shape_data transform_shape(
+    const shape_data& shape, const frame3f& frame, bool non_rigid = false);
+shape_data transform_shape(const shape_data& shape, const frame3f& frame,
+    float radius_scale, bool non_rigid = false);
+shape_data scale_shape(const shape_data& shape, float scale, float uvscale = 1);
+shape_data scale_shape(shape_data&& shape, float scale, float uvscale = 1);
+shape_data flipyz_shape(const shape_data& shape);
+
+// Manipulate vertex data
+shape_data remove_normals(const shape_data& shape);
+shape_data add_normals(const shape_data& shape);
+shape_data weld_vertices(const shape_data& shape, float threshold,
+    bool normals = false, bool others = false);
+
+// Merge a shape into another
+void merge_shape_inplace(shape_data& shape, const shape_data& merge);
 
 // Shape statistics
 vector<string> shape_stats(const shape_data& shape, bool verbose = false);
@@ -167,6 +191,18 @@ fvshape_data shape_to_fvshape(const shape_data& shape);
 // Subdivision
 fvshape_data subdivide_fvshape(
     const fvshape_data& shape, int subdivisions, bool catmullclark);
+
+// Transform shape
+fvshape_data transform_fvshape(
+    const fvshape_data& shape, const frame3f& frame, bool non_rigid = false);
+fvshape_data scale_fvshape(
+    const fvshape_data& shape, float scale, float uvscale = 1);
+fvshape_data scale_fvshape(
+    fvshape_data&& shape, float scale, float uvscale = 1);
+
+// Vertex properties
+fvshape_data remove_normals(const fvshape_data& shape);
+fvshape_data add_normals(const fvshape_data& shape);
 
 // Shape statistics
 vector<string> fvshape_stats(const fvshape_data& shape, bool verbose = false);
@@ -232,6 +268,12 @@ shape_data make_uvcylinder(const vec3i& steps = {32, 32, 32},
 shape_data make_rounded_uvcylinder(const vec3i& steps = {32, 32, 32},
     const vec2f& scale = {1, 1}, const vec3f& uvscale = {1, 1, 1},
     float radius = 0.3f);
+// Make a uv capsule
+shape_data make_uvcapsule(const vec3i& steps = {32, 32, 32},
+    const vec2f& scale = {1, 1}, const vec3f& uvscale = {1, 1, 1});
+// Make a uv cone
+shape_data make_uvcone(const vec3i& steps = {32, 32, 32},
+    const vec2f& scale = {1, 1}, const vec3f& uvscale = {1, 1, 1});
 
 // Make a facevarying rect
 fvshape_data make_fvrect(const vec2i& steps = {1, 1},
@@ -243,7 +285,7 @@ fvshape_data make_fvbox(const vec3i& steps = {1, 1, 1},
 fvshape_data make_fvsphere(int steps = 32, float scale = 1, float uvscale = 1);
 
 // Generate lines set along a quad. Returns lines, pos, norm, texcoord, radius.
-shape_data make_lines(const vec2i& steps = {4, 65536},
+shape_data make_lines(int num = 65536, int steps = 4,
     const vec2f& scale = {1, 1}, const vec2f& uvscale = {1, 1},
     const vec2f& radius = {0.001f, 0.001f});
 
@@ -260,12 +302,12 @@ shape_data make_random_points(int num = 65536, const vec3f& size = {1, 1, 1},
     float uvscale = 1, float radius = 0.001f, uint64_t seed = 17);
 
 // Predefined meshes
-shape_data   make_monkey(float scale = 1, int subdivisions = 0);
-shape_data   make_quad(float scale = 1, int subdivisions = 0);
-shape_data   make_quady(float scale = 1, int subdivisions = 0);
-shape_data   make_cube(float scale = 1, int subdivisions = 0);
-fvshape_data make_fvcube(float scale = 1, int subdivisions = 0);
-shape_data   make_geosphere(float scale = 1, int subdivisions = 0);
+shape_data   make_monkey(int subdivisions = 0, float scale = 1);
+shape_data   make_quad(int subdivisions = 0, float scale = 1);
+shape_data   make_quady(int subdivisions = 0, float scale = 1);
+shape_data   make_cube(int subdivisions = 0, float scale = 1);
+fvshape_data make_fvcube(int subdivisions = 0, float scale = 1);
+shape_data   make_geosphere(int subdivisions = 0, float scale = 1);
 
 // Make a hair ball around a shape.
 // length: minimum and maximum length
@@ -282,6 +324,16 @@ shape_data make_hair(const shape_data& shape, const vec2i& steps = {8, 65536},
 shape_data make_hair2(const shape_data& shape, const vec2i& steps = {8, 65536},
     const vec2f& length = {0.1f, 0.1f}, const vec2f& radius = {0.001f, 0.001f},
     float noise = 0, float gravity = 0.001f, int seed = 7);
+
+// Grow hairs around a shape
+shape_data make_random_hairs(const shape_data& shape, int num = 65536,
+    int steps = 8, const vec2f& length = {1, 1},
+    const vec2f& radius = {0.01, 0.01}, float noise = 0, float gravity = 0.05,
+    uint64_t seed = 7);
+
+// Grow points around a shape
+shape_data make_random_points(const shape_data& shape, int num = 65536,
+    float radius = 0.01f, uint64_t seed = 7);
 
 // Convert points to small spheres and lines to small cylinders. This is
 // intended for making very small primitives for display in interactive
@@ -611,6 +663,8 @@ void split_facevarying(vector<vec4i>& split_quads,
 // Weld vertices within a threshold.
 pair<vector<vec3f>, vector<int>> weld_vertices(
     const vector<vec3f>& positions, float threshold);
+pair<vector<int>, vector<int>> weld_indices(
+    const vector<vec3f>& positions, float threshold);
 pair<vector<vec3i>, vector<vec3f>> weld_triangles(
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     float threshold);
@@ -895,15 +949,15 @@ void make_quad(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, float scale,
     int subdivisions);
 void make_quady(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, float scale,
-    int subdivisions);
+    vector<vec3f>& normals, vector<vec2f>& texcoords, int subdivisions,
+    float scale);
 void make_cube(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, float scale,
-    int subdivisions);
+    vector<vec3f>& normals, vector<vec2f>& texcoords, int subdivisions,
+    float scale);
 void make_fvcube(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
     vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, float scale,
-    int subdivisions);
+    vector<vec3f>& normals, vector<vec2f>& texcoords, int subdivisions,
+    float scale);
 void make_geosphere(vector<vec3i>& triangles, vector<vec3f>& positions,
     vector<vec3f>& normals, float scale, int subdivisions);
 
@@ -964,6 +1018,56 @@ void make_heightfield(vector<vec4i>& quads, vector<vec3f>& positions,
 //
 //
 // -----------------------------------------------------------------------------
+
+// -----------------------------------------------------------------------------
+// SHAPE FUNCTIONS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Shape creation
+template <typename PFunc, typename TFunc>
+inline shape_data make_lines(int steps, PFunc&& position, TFunc&& tangent) {
+  auto shape      = shape_data{};
+  shape.positions = vector<vec3f>(steps + 1);
+  shape.normals   = vector<vec3f>(steps + 1);
+  shape.texcoords = vector<vec2f>(steps + 1);
+  for (auto idx : range(steps + 1)) {
+    auto u               = (float)idx / (float)steps;
+    shape.positions[idx] = position(u);
+    shape.normals[idx]   = tangent(u);
+    shape.texcoords[idx] = {u, 0};
+  }
+  shape.lines = vector<vec2i>(steps);
+  for (auto idx : range(steps)) shape.lines[idx] = {idx, idx + 1};
+  return shape;
+}
+template <typename PFunc, typename NFunc>
+inline shape_data make_quads(vec2i steps, PFunc&& position, NFunc&& normal) {
+  auto shape      = shape_data{};
+  shape.positions = vector<vec3f>((steps.x + 1) * (steps.y + 1));
+  shape.normals   = vector<vec3f>((steps.x + 1) * (steps.y + 1));
+  shape.texcoords = vector<vec2f>((steps.x + 1) * (steps.y + 1));
+  for (auto j : range(steps.y + 1)) {
+    for (auto i : range(steps.x + 1)) {
+      auto uv              = vec2f{i / (float)steps.x, j / (float)steps.y};
+      auto idx             = j * (steps.x + 1) + i;
+      shape.positions[idx] = position(uv);
+      shape.normals[idx]   = normal(uv);
+      shape.texcoords[idx] = uv;
+    }
+  }
+  shape.quads = vector<vec4i>(steps.x * steps.y);
+  for (auto j : range(steps.y)) {
+    for (auto i : range(steps.x)) {
+      auto idx         = j * steps.x + i;
+      shape.quads[idx] = {j * (steps.x + 1) + i, j * (steps.x + 1) + i + 1,
+          (j + 1) * (steps.x + 1) + i + 1, (j + 1) * (steps.x + 1) + i};
+    }
+  }
+  return shape;
+}
+
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // SHAPE SUBDIVISION

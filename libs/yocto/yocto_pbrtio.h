@@ -31,8 +31,8 @@
 // SOFTWARE.
 //
 
-#ifndef _YOCTO_PBRTIO_H_
-#define _YOCTO_PBRTIO_H_
+#ifndef YOCTO_PBRTIO_H_
+#define YOCTO_PBRTIO_H_
 
 // -----------------------------------------------------------------------------
 // INCLUDES
@@ -75,9 +75,9 @@ struct pbrt_camera {
 
 // Pbrt material
 struct pbrt_texture {
-  string          name     = "";
+  string          name     = {};
   array<float, 3> constant = {1, 1, 1};
-  string          filename = "";
+  string          filename = {};
 };
 
 // Pbrt material type (simplified and only for the materials that matter here)
@@ -89,7 +89,7 @@ enum struct pbrt_mtype {
 
 // Pbrt material
 struct pbrt_material {
-  string          name            = "";
+  string          name            = {};
   pbrt_mtype      type            = pbrt_mtype::matte;
   array<float, 3> emission        = {0, 0, 0};
   array<float, 3> color           = {0, 0, 0};
@@ -110,7 +110,7 @@ struct pbrt_shape {
   vector<array<float, 12>> instances = {};
   vector<array<float, 12>> instaends = {};
   int                      material  = -1;
-  string                   filename_ = "";
+  string                   filename_ = {};
   vector<array<float, 3>>  positions = {};
   vector<array<float, 3>>  normals   = {};
   vector<array<float, 2>>  texcoords = {};
@@ -156,6 +156,29 @@ struct pbrt_model {
     string& error, bool ply_meshes = false);
 [[nodiscard]] bool save_pbrt(const string& filename, const pbrt_model& pbrt,
     string& error, bool ply_meshes = false);
+
+// exception API
+struct pbrt_error : std::runtime_error {
+  using std::runtime_error::runtime_error;
+};
+
+// Load/save pbrt
+inline pbrt_model load_pbrt(const string& filename, bool ply_meshes = false) {
+  auto pbrt  = pbrt_model{};
+  auto error = string{};
+  if (!load_pbrt(filename, pbrt, error, ply_meshes)) throw pbrt_error{error};
+  return pbrt;
+}
+inline void load_pbrt(
+    const string& filename, pbrt_model& pbrt, bool ply_meshes = false) {
+  auto error = string{};
+  if (!load_pbrt(filename, pbrt, error, ply_meshes)) throw pbrt_error{error};
+}
+inline void save_pbrt(
+    const string& filename, const pbrt_model& pbrt, bool ply_meshes = false) {
+  auto error = string{};
+  if (!save_pbrt(filename, pbrt, error, ply_meshes)) throw pbrt_error{error};
+}
 
 }  // namespace yocto
 

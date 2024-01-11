@@ -86,14 +86,14 @@ static FILE* fopen_utf8(const char* filename, const char* mode) {
 static bool load_text(const string& filename, string& str, string& error) {
   // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
   auto fs = fopen_utf8(filename.c_str(), "rb");
-  if (!fs) {
+  if (fs == nullptr) {
     error = "cannot open " + filename;
     return false;
   }
   fseek(fs, 0, SEEK_END);
   auto length = ftell(fs);
   fseek(fs, 0, SEEK_SET);
-  str.resize(length);
+  str = string(length, '\0');
   if (fread(str.data(), 1, length, fs) != length) {
     fclose(fs);
     error = "cannot read " + filename;
@@ -107,7 +107,7 @@ static bool load_text(const string& filename, string& str, string& error) {
 static bool save_text(
     const string& filename, const string& str, string& error) {
   auto fs = fopen_utf8(filename.c_str(), "wt");
-  if (!fs) {
+  if (fs == nullptr) {
     error = "cannot create " + filename;
     return false;
   }
@@ -128,23 +128,30 @@ static bool save_text(
 namespace yocto {
 
 // Make a path from a utf8 string
-static std::filesystem::path make_path(const string& filename) {
-  return std::filesystem::u8path(filename);
+static std::filesystem::path to_path(const string& filename) {
+  auto filename8 = std::u8string((char8_t*)filename.data(), filename.size());
+  return std::filesystem::path(filename8);
+}
+
+// Make a utf8 string from a path
+static string to_string(const std::filesystem::path& path) {
+  auto string8 = path.u8string();
+  return string((char*)string8.data(), string8.size());
 }
 
 // Get directory name (not including /)
 static string path_dirname(const string& filename) {
-  return make_path(filename).parent_path().generic_u8string();
+  return to_string(to_path(filename).parent_path());
 }
 
 // Get filename without directory.
 static string path_filename(const string& filename) {
-  return make_path(filename).filename().generic_u8string();
+  return to_string(to_path(filename).filename());
 }
 
 // Joins paths
 static string path_join(const string& patha, const string& pathb) {
-  return (make_path(patha) / make_path(pathb)).generic_u8string();
+  return to_string(to_path(patha) / to_path(pathb));
 }
 
 }  // namespace yocto
@@ -529,14 +536,14 @@ enum struct pbrt_type {
 
 // Pbrt value
 struct pbrt_value {
-  string                  name     = "";
+  string                  name     = {};
   pbrt_type               type     = pbrt_type::real;
   int                     value1i  = 0;
   float                   value1f  = 0;
   array<float, 2>         value2f  = {0, 0};
   array<float, 3>         value3f  = {0, 0, 0};
   bool                    value1b  = false;
-  string                  value1s  = "";
+  string                  value1s  = {};
   vector<float>           vector1f = {};
   vector<array<float, 2>> vector2f = {};
   vector<array<float, 3>> vector3f = {};
@@ -545,15 +552,15 @@ struct pbrt_value {
 
 // Pbrt command
 struct pbrt_command {
-  string                    name   = "";
-  string                    type   = "";
+  string                    name   = {};
+  string                    type   = {};
   vector<pbrt_value>        values = {};
   array<array<float, 3>, 4> frame  = {array<float, 3>{1, 0, 0},
-      array<float, 3>{0, 1, 0}, array<float, 3>{0, 0, 1},
-      array<float, 3>{0, 0, 0}};
+       array<float, 3>{0, 1, 0}, array<float, 3>{0, 0, 1},
+       array<float, 3>{0, 0, 0}};
   array<array<float, 3>, 4> frend  = {array<float, 3>{1, 0, 0},
-      array<float, 3>{0, 1, 0}, array<float, 3>{0, 0, 1},
-      array<float, 3>{0, 0, 0}};
+       array<float, 3>{0, 1, 0}, array<float, 3>{0, 0, 1},
+       array<float, 3>{0, 0, 0}};
 };
 
 // get pbrt value
@@ -612,7 +619,7 @@ static bool get_pbrt_value(
     return true;
   } else if (pbrt.type == pbrt_type::real) {
     if (pbrt.vector1f.empty() || (pbrt.vector1f.size() % 2) != 0) return false;
-    val.resize(pbrt.vector1f.size() / 2);
+    val = vector<array<float, 2>>(pbrt.vector1f.size() / 2);
     for (auto i = 0; i < (int)val.size(); i++)
       val[i] = {pbrt.vector1f[i * 2 + 0], pbrt.vector1f[i * 2 + 1]};
     return true;
@@ -632,7 +639,7 @@ static bool get_pbrt_value(
     return true;
   } else if (pbrt.type == pbrt_type::real) {
     if (pbrt.vector1f.empty() || (pbrt.vector1f.size() % 3) != 0) return false;
-    val.resize(pbrt.vector1f.size() / 3);
+    val = vector<array<float, 3>>(pbrt.vector1f.size() / 3);
     for (auto i = 0; i < (int)val.size(); i++)
       val[i] = {pbrt.vector1f[i * 3 + 0], pbrt.vector1f[i * 3 + 1],
           pbrt.vector1f[i * 3 + 2]};
@@ -645,7 +652,7 @@ static bool get_pbrt_value(
 static bool get_pbrt_value(const pbrt_value& pbrt, vector<array<int, 3>>& val) {
   if (pbrt.type == pbrt_type::integer) {
     if (pbrt.vector1i.empty() || (pbrt.vector1i.size() % 3) != 0) return false;
-    val.resize(pbrt.vector1i.size() / 3);
+    val = vector<array<int, 3>>(pbrt.vector1i.size() / 3);
     for (auto i = 0; i < (int)val.size(); i++)
       val[i] = {pbrt.vector1i[i * 3 + 0], pbrt.vector1i[i * 3 + 1],
           pbrt.vector1i[i * 3 + 2]};
@@ -746,7 +753,7 @@ static pbrt_value make_pbrt_value(const string& name,
   auto pbrt     = pbrt_value{};
   pbrt.name     = name;
   pbrt.type     = type;
-  pbrt.vector1i = {&val.front()[0], &val.front()[0] + val.size() * 3};
+  pbrt.vector1i = {(int*)val.data(), (int*)val.data() + val.size() * 3};
   return pbrt;
 }
 
@@ -797,7 +804,7 @@ static bool read_pbrt_cmdline(string_view& str, string& cmd) {
 // parse a quoted string
 [[nodiscard]] static bool parse_command(string_view& str, string& value) {
   skip_whitespace(str);
-  if (!isalpha((int)str.front())) return false;
+  if (!(bool)isalpha((int)str.front())) return false;
   auto pos = str.find_first_not_of(
       "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz");
   if (pos == string_view::npos) {
@@ -1247,21 +1254,21 @@ static array<float, 3> blackbody_to_rgb_(float temperature) {
 // Other pbrt elements
 struct pbrt_film {
   // film approximation
-  string        filename   = "";
+  string        filename   = {};
   array<int, 2> resolution = {0, 0};
 };
 
 // Pbrt area light
 struct pbrt_arealight {
   // arealight parameters
-  string          name     = "";
+  string          name     = {};
   array<float, 3> emission = {0, 0, 0};
 };
 
 // Pbrt medium. Not parsed at the moment.
 struct pbrt_medium {
   // medium parameters
-  string name = "";
+  string name = {};
 };
 
 // convert pbrt films
@@ -1704,8 +1711,8 @@ struct pbrt_medium {
     pmaterial.volmeanfreepath = {1 / (sigma_a[0] + sigma_s[0]),
         1 / (sigma_a[1] + sigma_s[1]), 1 / (sigma_a[2] + sigma_s[2])};
     pmaterial.volscatter      = {sigma_s[0] / (sigma_a[0] + sigma_s[0]),
-        sigma_s[1] / (sigma_a[1] + sigma_s[1]),
-        sigma_s[2] / (sigma_a[2] + sigma_s[2])};
+             sigma_s[1] / (sigma_a[1] + sigma_s[1]),
+             sigma_s[2] / (sigma_a[2] + sigma_s[2])};
     if (verbose) printf("subsurface material not properly supported\n");
   } else if (command.type == "mix") {
     auto namedmaterial1 = ""s, namedmaterial2 = ""s;
@@ -1773,9 +1780,9 @@ static void make_shape(vector<array<int, 3>>& triangles,
   auto vid = [steps](int i, int j) { return j * (steps[0] + 1) + i; };
   auto tid = [steps](
                  int i, int j, int c) { return (j * steps[0] + i) * 2 + c; };
-  positions.resize((steps[0] + 1) * (steps[1] + 1));
-  normals.resize((steps[0] + 1) * (steps[1] + 1));
-  texcoords.resize((steps[0] + 1) * (steps[1] + 1));
+  positions = vector<array<float, 3>>((steps[0] + 1) * (steps[1] + 1));
+  normals   = vector<array<float, 3>>((steps[0] + 1) * (steps[1] + 1));
+  texcoords = vector<array<float, 2>>((steps[0] + 1) * (steps[1] + 1));
   for (auto j = 0; j < steps[1] + 1; j++) {
     for (auto i = 0; i < steps[0] + 1; i++) {
       auto uv = array<float, 2>{i / (float)steps[0], j / (float)steps[1]};
@@ -1784,7 +1791,7 @@ static void make_shape(vector<array<int, 3>>& triangles,
       texcoords[vid(i, j)] = uv;
     }
   }
-  triangles.resize(steps[0] * steps[1] * 2);
+  triangles = vector<array<int, 3>>(steps[0] * steps[1] * 2);
   for (auto j = 0; j < steps[1]; j++) {
     for (auto i = 0; i < steps[0]; i++) {
       triangles[tid(i, j, 0)] = {vid(i, j), vid(i + 1, j), vid(i + 1, j + 1)};
@@ -1880,7 +1887,7 @@ static void make_quad(vector<array<int, 3>>& triangles,
     pshape.triangles = {};
     get_pbrt_value(command.values, "P", pshape.positions);
     get_pbrt_value(command.values, "indices", pshape.triangles);
-    pshape.normals.resize(pshape.positions.size());
+    pshape.normals = vector<array<float, 3>>(pshape.positions.size());
     // compute_normals(pshape.normals, pshape.triangles, pshape.positions);
   } else if (command.type == "plymesh") {
     pshape.filename_ = ""s;
@@ -1966,7 +1973,7 @@ static void make_quad(vector<array<int, 3>>& triangles,
     get_pbrt_value(command.values, "from", plight.from);
     plight.area_emission = plight.emission;
     plight.area_frame    = flatten(
-           mul(unflatten(plight.frame), translation_frame(plight.from)));
+        mul(unflatten(plight.frame), translation_frame(plight.from)));
     plight.area_frend = flatten(
         mul(unflatten(plight.frend), translation_frame(plight.from)));
     auto texcoords = vector<array<float, 2>>{};
@@ -2015,11 +2022,11 @@ static void make_quad(vector<array<int, 3>>& triangles,
 // pbrt stack ctm
 struct pbrt_stack_element {
   array<array<float, 3>, 4> transform_start        = {array<float, 3>{1, 0, 0},
-      array<float, 3>{0, 1, 0}, array<float, 3>{0, 0, 1},
-      array<float, 3>{0, 0, 0}};
+             array<float, 3>{0, 1, 0}, array<float, 3>{0, 0, 1},
+             array<float, 3>{0, 0, 0}};
   array<array<float, 3>, 4> transform_end          = {array<float, 3>{1, 0, 0},
-      array<float, 3>{0, 1, 0}, array<float, 3>{0, 0, 1},
-      array<float, 3>{0, 0, 0}};
+               array<float, 3>{0, 1, 0}, array<float, 3>{0, 0, 1},
+               array<float, 3>{0, 0, 0}};
   pbrt_material             material               = {};
   pbrt_arealight            arealight              = {};
   pbrt_medium               interior               = {};
@@ -2033,7 +2040,7 @@ struct pbrt_stack_element {
 struct pbrt_context {
   vector<pbrt_stack_element>                stack           = {};
   unordered_map<string, pbrt_stack_element> coordsys        = {};
-  string                                    cur_object      = "";
+  string                                    cur_object      = {};
   array<int, 2>                             film_resolution = {512, 512};
 };
 
@@ -2345,7 +2352,7 @@ bool load_pbrt(
           named_materials, named_textures, named_mediums, named_objects,
           path_dirname(filename), ply_meshes))
     return false;
-  pbrt.textures.resize(texture_map.size());
+  pbrt.textures = vector<pbrt_texture>(texture_map.size());
   for (auto& [path, texture_id] : texture_map) {
     pbrt.textures[texture_id].filename = path;
   }
@@ -2625,10 +2632,7 @@ bool save_pbrt(const string& filename, const pbrt_model& pbrt, string& error,
   format_values(buffer, "\nWorldEnd\n\n");
 
   // save file
-  if (!save_text(filename, buffer, error)) return false;
-
-  // done
-  return true;
+  return save_text(filename, buffer, error);
 }
 
 }  // namespace yocto

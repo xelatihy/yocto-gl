@@ -53,15 +53,12 @@
 namespace yocto {
 
 // using directives
-using std::pair;
 using std::string_view;
 using std::unordered_map;
 using std::unordered_set;
 using namespace std::string_literals;
 using namespace std::string_view_literals;
 using byte = unsigned char;
-using std::cos;
-using std::sin;
 
 }  // namespace yocto
 
@@ -86,14 +83,14 @@ static FILE* fopen_utf8(const char* filename, const char* mode) {
 static bool load_text(const string& filename, string& str, string& error) {
   // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
   auto fs = fopen_utf8(filename.c_str(), "rb");
-  if (!fs) {
+  if (fs == nullptr) {
     error = "cannot open " + filename;
     return false;
   }
   fseek(fs, 0, SEEK_END);
   auto length = ftell(fs);
   fseek(fs, 0, SEEK_SET);
-  str.resize(length);
+  str = string(length, '\0');
   if (fread(str.data(), 1, length, fs) != length) {
     fclose(fs);
     error = "cannot read " + filename;
@@ -107,7 +104,7 @@ static bool load_text(const string& filename, string& str, string& error) {
 static bool save_text(
     const string& filename, const string& str, string& error) {
   auto fs = fopen_utf8(filename.c_str(), "wt");
-  if (!fs) {
+  if (fs == nullptr) {
     error = "cannot create " + filename;
     return false;
   }
@@ -125,14 +122,14 @@ static bool load_binary(
     const string& filename, vector<byte>& data, string& error) {
   // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
   auto fs = fopen_utf8(filename.c_str(), "rb");
-  if (!fs) {
+  if (fs == nullptr) {
     error = "cannot open " + filename;
     return false;
   }
   fseek(fs, 0, SEEK_END);
   auto length = ftell(fs);
   fseek(fs, 0, SEEK_SET);
-  data.resize(length);
+  data = vector<byte>(length);
   if (fread(data.data(), 1, length, fs) != length) {
     fclose(fs);
     error = "cannot read " + filename;
@@ -146,7 +143,7 @@ static bool load_binary(
 static bool save_binary(
     const string& filename, const vector<byte>& data, string& error) {
   auto fs = fopen_utf8(filename.c_str(), "wb");
-  if (!fs) {
+  if (fs == nullptr) {
     error = "cannot create " + filename;
     return false;
   }
@@ -167,33 +164,40 @@ static bool save_binary(
 namespace yocto {
 
 // Make a path from a utf8 string
-static std::filesystem::path make_path(const string& filename) {
-  return std::filesystem::u8path(filename);
+static std::filesystem::path to_path(const string& filename) {
+  auto filename8 = std::u8string((char8_t*)filename.data(), filename.size());
+  return std::filesystem::path(filename8);
+}
+
+// Make a utf8 string from a path
+static string to_string(const std::filesystem::path& path) {
+  auto string8 = path.u8string();
+  return string((char*)string8.data(), string8.size());
 }
 
 // Get directory name (not including /)
 static string path_dirname(const string& filename) {
-  return make_path(filename).parent_path().generic_u8string();
+  return to_string(to_path(filename).parent_path());
 }
 
 // Get filename without directory.
 static string path_filename(const string& filename) {
-  return make_path(filename).filename().generic_u8string();
+  return to_string(to_path(filename).filename());
 }
 
 // Joins paths
 static string path_join(const string& patha, const string& pathb) {
-  return (make_path(patha) / make_path(pathb)).generic_u8string();
+  return to_string(to_path(patha) / to_path(pathb));
 }
 
 // Replaces extensions
 static string replace_extension(const string& filename, const string& ext) {
-  return make_path(filename).replace_extension(ext).generic_u8string();
+  return to_string(to_path(filename).replace_extension(ext));
 }
 
 // Check if a file can be opened for reading.
 static bool path_exists(const string& filename) {
-  return exists(make_path(filename));
+  return exists(to_path(filename));
 }
 
 }  // namespace yocto
@@ -281,7 +285,7 @@ static void format_value(string& str, T value) {
     str.append(buffer.data(), result.ptr);
 #else
     auto len = snprintf(buffer.data(), buffer.size(), "%.9g", value);
-    str.append(buffer.data(), buffer.data() + len);
+    str.append(buffer.begin(), buffer.begin() + len);
 #endif
   } else if constexpr (std::is_same_v<T, double>) {
 #ifdef _WIN32
@@ -290,7 +294,7 @@ static void format_value(string& str, T value) {
     str.append(buffer.data(), result.ptr);
 #else
     auto len = snprintf(buffer.data(), buffer.size(), "%.17g", value);
-    str.append(buffer.data(), buffer.data() + len);
+    str.append(buffer.begin(), buffer.begin() + len);
 #endif
   } else {
     auto result = std::to_chars(
@@ -1576,10 +1580,7 @@ static bool save_mtl(
   }
 
   // save file
-  if (!save_text(filename, buffer, error)) return false;
-
-  // done
-  return true;
+  return save_text(filename, buffer, error);
 }
 
 // Save obj
@@ -1622,10 +1623,7 @@ static bool save_obx(
   }
 
   // save file
-  if (!save_text(filename, buffer, error)) return false;
-
-  // done
-  return true;
+  return save_text(filename, buffer, error);
 }
 
 // Save obj
@@ -1748,10 +1746,7 @@ bool save_obj(const string& filename, const obj_shape& shape, string& error) {
   }
 
   // save file
-  if (!save_text(filename, buffer, error)) return false;
-
-  // done
-  return true;
+  return save_text(filename, buffer, error);
 }
 
 // Get obj shape.
@@ -2028,8 +2023,7 @@ void add_texcoords(
 }
 void add_triangles(obj_shape& shape, const vector<array<int, 3>>& triangles,
     int material, bool has_normals, bool has_texcoord) {
-  for (auto idx = 0; idx < (int)triangles.size(); idx++) {
-    auto& triangle = triangles[idx];
+  for (auto& triangle : triangles) {
     for (auto c = 0; c < 3; c++) {
       shape.vertices.push_back({
           triangle[c] + 1,
@@ -2042,9 +2036,8 @@ void add_triangles(obj_shape& shape, const vector<array<int, 3>>& triangles,
 }
 void add_quads(obj_shape& shape, const vector<array<int, 4>>& quads,
     int material, bool has_normals, bool has_texcoord) {
-  for (auto idx = 0; idx < (int)quads.size(); idx++) {
-    auto& quad = quads[idx];
-    auto  nv   = quad[2] == quad[3] ? 3 : 4;
+  for (auto& quad : quads) {
+    auto nv = quad[2] == quad[3] ? 3 : 4;
     for (auto c = 0; c < nv; c++) {
       shape.vertices.push_back({
           quad[c] + 1,
@@ -2057,8 +2050,7 @@ void add_quads(obj_shape& shape, const vector<array<int, 4>>& quads,
 }
 void add_lines(obj_shape& shape, const vector<array<int, 2>>& lines,
     int material, bool has_normals, bool has_texcoord) {
-  for (auto idx = 0; idx < (int)lines.size(); idx++) {
-    auto& line = lines[idx];
+  for (auto& line : lines) {
     for (auto c = 0; c < 2; c++) {
       shape.vertices.push_back({
           line[c] + 1,
@@ -2071,8 +2063,7 @@ void add_lines(obj_shape& shape, const vector<array<int, 2>>& lines,
 }
 void add_points(obj_shape& shape, const vector<int>& points, int material,
     bool has_normals, bool has_texcoord) {
-  for (auto idx = 0; idx < (int)points.size(); idx++) {
-    auto& point = points[idx];
+  for (auto& point : points) {
     shape.vertices.push_back({
         point + 1,
         !has_texcoord ? 0 : point + 1,
@@ -2214,9 +2205,9 @@ bool load_stl(const string& filename, stl_model& stl, string& error,
       if (!read_value(data_view, ntriangles)) return read_error();
 
       // resize buffers
-      shape.fnormals.resize(ntriangles);
-      shape.triangles.resize(ntriangles);
-      shape.positions.resize(ntriangles * 3);
+      shape.fnormals  = vector<array<float, 3>>(ntriangles);
+      shape.triangles = vector<array<int, 3>>(ntriangles);
+      shape.positions = vector<array<float, 3>>(ntriangles * 3);
 
       // read all data
       for (auto triangle_id = 0; triangle_id < (int)ntriangles; triangle_id++) {

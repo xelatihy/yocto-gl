@@ -129,69 +129,71 @@ inline bool parallel_foreach(
 namespace yocto {
 
 // Make a path from a utf8 string
-static std::filesystem::path make_path(const string& path) {
-  return std::filesystem::u8path(path);
+static std::filesystem::path to_path(const string& filename) {
+  auto filename8 = std::u8string((char8_t*)filename.data(), filename.size());
+  return std::filesystem::path(filename8);
+}
+
+// Make a utf8 string from a path
+static string to_string(const std::filesystem::path& path) {
+  auto string8 = path.u8string();
+  return string((char*)string8.data(), string8.size());
 }
 
 // Normalize a path
-string path_normalized(const string& path) {
-  return make_path(path).generic_u8string();
-}
+string path_normalized(const string& path) { return to_string(to_path(path)); }
 
 // Get directory name (not including /)
 string path_dirname(const string& path) {
-  return make_path(path).parent_path().generic_u8string();
+  return to_string(to_path(path).parent_path());
 }
 
 // Get filename without directory and extension.
 string path_basename(const string& path) {
-  return make_path(path).stem().generic_u8string();
+  return to_string(to_path(path).stem());
 }
 
 // Get extension
 string path_extension(const string& path) {
-  return make_path(path).extension().generic_u8string();
+  return to_string(to_path(path).extension());
 }
 
 // Check if a file can be opened for reading.
-bool path_exists(const string& path) { return exists(make_path(path)); }
+bool path_exists(const string& path) { return exists(to_path(path)); }
 
 // Replace the extension of a file
 string replace_extension(const string& path, const string& extension) {
-  auto ext = make_path(extension).extension();
-  return make_path(path).replace_extension(ext).generic_u8string();
+  auto ext = to_path(extension).extension();
+  return to_string(to_path(path).replace_extension(ext));
 }
 
 // Create a directory and all missing parent directories if needed
 void make_directory(const string& path) {
   if (path_exists(path)) return;
   try {
-    create_directories(make_path(path));
+    create_directories(to_path(path));
   } catch (...) {
-    throw io_error{path + ": cannot create directory"};
+    throw io_error{"cannot create directory " + path};
   }
 }
 
-// Create a directory and all missing parent directories if needed
 bool make_directory(const string& path, string& error) {
-  if (path_exists(path)) return true;
   try {
-    create_directories(make_path(path));
+    make_directory(path);
     return true;
   } catch (...) {
-    error = path + ": cannot create directory";
+    error = "cannot create directory " + path;
     return false;
   }
 }
 
 // Joins paths
 static string path_join(const string& patha, const string& pathb) {
-  return (make_path(patha) / make_path(pathb)).generic_u8string();
+  return to_string(to_path(patha) / to_path(pathb));
 }
 static string path_join(
     const string& patha, const string& pathb, const string& pathc) {
-  return (make_path(patha) / make_path(pathb) / make_path(pathc))
-      .generic_u8string();
+  return to_string(to_path(patha) / to_path(pathb) / to_path(pathc));
 }
 
 }  // namespace yocto
@@ -1481,16 +1483,16 @@ shape_data make_shape_preset(const string& type) {
     for (auto& p : shape.positions) p += {0, 0.075f, 0};
     return shape;
   } else if (type == "test-geosphere") {
-    auto shape = make_geosphere(0.075f, 3);
+    auto shape = make_geosphere(3, 0.075f);
     for (auto& p : shape.positions) p += {0, 0.075f, 0};
     return shape;
   } else if (type == "test-geosphere-flat") {
-    auto shape = make_geosphere(0.075f, 3);
+    auto shape = make_geosphere(3, 0.075f);
     for (auto& p : shape.positions) p += {0, 0.075f, 0};
     shape.normals = {};
     return shape;
   } else if (type == "test-geosphere-subdivided") {
-    auto shape = make_geosphere(0.075f, 6);
+    auto shape = make_geosphere(3, 0.075f);
     for (auto& p : shape.positions) p += {0, 0.075f, 0};
     return shape;
   } else if (type == "test-hairball1") {
@@ -1513,11 +1515,11 @@ shape_data make_shape_preset(const string& type) {
     for (auto& p : shape.positions) p += {0, 0.075f, 0};
     return shape;
   } else if (type == "test-suzanne-subdiv") {
-    auto shape = make_monkey(0.075f * 0.8f);
+    auto shape = make_monkey(0, 0.075f * 0.8f);
     for (auto& p : shape.positions) p += {0, 0.075f, 0};
     return shape;
   } else if (type == "test-cube-subdiv") {
-    auto fvshape    = make_fvcube(0.075f);
+    auto fvshape    = make_fvcube(0, 0.075f);
     auto shape      = shape_data{};
     shape.quads     = fvshape.quadspos;
     shape.positions = fvshape.positions;
@@ -1549,7 +1551,7 @@ shape_data make_shape_preset(const string& type) {
     for (auto& r : shape.radius) r *= 0.075f;
     return shape;
   } else if (type == "test-lines-grid") {
-    auto shape = make_lines({256, 256}, {0.075f, 0.075f});
+    auto shape = make_lines(256, 256, {0.075f, 0.075f});
     for (auto& p : shape.positions) p += {0, 0.075f, 0};
     for (auto& r : shape.radius) r *= 0.075f;
     return shape;
@@ -1559,7 +1561,7 @@ shape_data make_shape_preset(const string& type) {
     for (auto& r : shape.radius) r *= 0.075f * 10;
     return shape;
   } else if (type == "test-thicklines-grid") {
-    auto shape = make_lines({16, 16}, {0.075f, 0.075f});
+    auto shape = make_lines(16, 16, {0.075f, 0.075f});
     for (auto& p : shape.positions) p += {0, 0.075f, 0};
     for (auto& r : shape.radius) r *= 0.075f * 10;
     return shape;
@@ -1694,11 +1696,11 @@ fvshape_data make_fvshape_preset(const string& type) {
     for (auto& p : shape.positions) p += {0, 0.075f, 0};
     return shape_to_fvshape(shape);
   } else if (type == "test-suzanne-subdiv") {
-    auto shape = make_monkey(0.075f * 0.8f);
+    auto shape = make_monkey(0, 0.075f * 0.8f);
     for (auto& p : shape.positions) p += {0, 0.075f, 0};
     return shape_to_fvshape(shape);
   } else if (type == "test-cube-subdiv") {
-    auto fvshape = make_fvcube(0.075f);
+    auto fvshape = make_fvcube(0, 0.075f);
     for (auto& p : fvshape.positions) p += {0, 0.075f, 0};
     return fvshape;
   } else if (type == "test-arealight1") {

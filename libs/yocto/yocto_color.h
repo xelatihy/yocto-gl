@@ -91,12 +91,17 @@ inline vec3f rgba_to_rgb(const vec4f& rgba);
 
 // Apply contrast. Grey should be 0.18 for linear and 0.5 for gamma.
 inline vec3f lincontrast(const vec3f& rgb, float contrast, float grey);
+inline vec4f lincontrast(const vec4f& rgb, float contrast, float grey);
 // Apply contrast in log2. Grey should be 0.18 for linear and 0.5 for gamma.
 inline vec3f logcontrast(const vec3f& rgb, float logcontrast, float grey);
+inline vec4f logcontrast(const vec4f& rgb, float logcontrast, float grey);
 // Apply an s-shaped contrast.
 inline vec3f contrast(const vec3f& rgb, float contrast);
+inline vec4f contrast(const vec4f& rgb, float contrast);
 // Apply saturation.
 inline vec3f saturate(const vec3f& rgb, float saturation,
+    const vec3f& weights = vec3f{0.333333f, 0.333333f, 0.333333f});
+inline vec4f saturate(const vec4f& rgb, float saturation,
     const vec3f& weights = vec3f{0.333333f, 0.333333f, 0.333333f});
 
 // Apply tone mapping
@@ -262,6 +267,10 @@ inline vec3f rgba_to_rgb(const vec4f& rgba) { return xyz(rgba); }
 inline vec3f lincontrast(const vec3f& rgb, float contrast, float grey) {
   return max({0, 0, 0}, grey + (rgb - grey) * (contrast * 2));
 }
+inline vec4f lincontrast(const vec4f& rgb, float contrast, float grey) {
+  auto ret = lincontrast(xyz(rgb), contrast, grey);
+  return {ret.x, ret.y, ret.z, rgb.w};
+}
 // Apply contrast in log2. Grey should be 0.18 for linear and 0.5 for gamma.
 inline vec3f logcontrast(const vec3f& rgb, float logcontrast, float grey) {
   auto epsilon  = (float)0.0001;
@@ -270,15 +279,28 @@ inline vec3f logcontrast(const vec3f& rgb, float logcontrast, float grey) {
   auto adjusted = log_grey + (log_ldr - log_grey) * (logcontrast * 2);
   return max({0, 0, 0}, exp2(adjusted) - epsilon);
 }
+inline vec4f logcontrast(const vec4f& rgb, float contrast, float grey) {
+  auto ret = logcontrast(xyz(rgb), contrast, grey);
+  return {ret.x, ret.y, ret.z, rgb.w};
+}
 // Apply an s-shaped contrast.
 inline vec3f contrast(const vec3f& rgb, float contrast) {
   return gain(rgb, 1 - contrast);
+}
+inline vec4f contrast(const vec4f& rgb, float contrast) {
+  auto ret = yocto::contrast(xyz(rgb), contrast);
+  return {ret.x, ret.y, ret.z, rgb.w};
 }
 // Apply saturation.
 inline vec3f saturate(
     const vec3f& rgb, float saturation, const vec3f& weights) {
   auto grey = dot(weights, rgb);
   return max({0, 0, 0}, grey + (rgb - grey) * (saturation * 2));
+}
+inline vec4f saturate(
+    const vec4f& rgb, float saturation, const vec3f& weights) {
+  auto ret = saturate(xyz(rgb), saturation, weights);
+  return {ret.x, ret.y, ret.z, rgb.w};
 }
 
 #ifndef __CUDACC__

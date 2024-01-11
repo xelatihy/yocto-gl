@@ -67,7 +67,7 @@ enum struct ply_type { i8, i16, i32, i64, u8, u16, u32, u64, f32, f64 };
 // Ply property
 struct ply_property {
   // description
-  string   name    = "";
+  string   name    = {};
   bool     is_list = false;
   ply_type type    = ply_type::f32;
 
@@ -90,7 +90,7 @@ struct ply_property {
 // Ply elements
 struct ply_element {
   // element content
-  string               name       = "";
+  string               name       = {};
   size_t               count      = 0;
   vector<ply_property> properties = {};
 };
@@ -136,18 +136,18 @@ inline bool get_list_values(const ply_model& ply, const string& element,
 
 // Get ply properties for meshes
 template <typename T>
-inline bool get_positions(const ply_model& ply, vector<array<T, 3>>& values);
+inline bool get_positions(const ply_model& ply, vector<array<T, 3>>& positions);
 template <typename T>
-inline bool get_normals(const ply_model& ply, vector<array<T, 3>>& values);
+inline bool get_normals(const ply_model& ply, vector<array<T, 3>>& normals);
 template <typename T>
 inline bool get_texcoords(
-    const ply_model& ply, vector<array<T, 2>>& values, bool flipv = false);
+    const ply_model& ply, vector<array<T, 2>>& texcoords, bool flipv = false);
 template <typename T>
-inline bool get_colors(const ply_model& ply, vector<array<T, 3>>& values);
+inline bool get_colors(const ply_model& ply, vector<array<T, 3>>& colors);
 template <typename T>
-inline bool get_colors(const ply_model& ply, vector<array<T, 4>>& values);
+inline bool get_colors(const ply_model& ply, vector<array<T, 4>>& colors);
 template <typename T>
-inline bool get_radius(const ply_model& ply, vector<T>& values);
+inline bool get_radius(const ply_model& ply, vector<T>& radius);
 template <typename T>
 inline bool get_faces(const ply_model& ply, vector<vector<T>>& faces);
 template <typename T>
@@ -210,6 +210,27 @@ inline bool add_lines(ply_model& ply, const vector<array<T, 2>>& lines);
 template <typename T>
 inline bool add_points(ply_model& ply, const vector<T>& points);
 
+// exception API
+struct ply_error : std::runtime_error {
+  using std::runtime_error::runtime_error;
+};
+
+// Load and save ply
+inline ply_model load_ply(const string& filename) {
+  auto ply   = ply_model{};
+  auto error = string{};
+  if (!load_ply(filename, ply, error)) throw ply_error(filename);
+  return ply;
+}
+inline void load_ply(const string& filename, ply_model& ply) {
+  auto error = string{};
+  if (!load_ply(filename, ply, error)) throw ply_error(filename);
+}
+inline void save_ply(const string& filename, const ply_model& ply) {
+  auto error = string{};
+  if (!save_ply(filename, ply, error)) throw ply_error(filename);
+}
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -241,7 +262,7 @@ struct obj_element {
 
 // Obj texture information.
 struct obj_texture {
-  string path  = "";     // file path
+  string path  = {};     // file path
   bool   clamp = false;  // clamp to edge
   float  scale = 1;      // scale for bump/displacement
 
@@ -252,7 +273,7 @@ struct obj_texture {
 // Obj material
 struct obj_material {
   // material name and type
-  string name  = "";
+  string name  = {};
   int    illum = 0;
 
   // material colors and values
@@ -282,7 +303,7 @@ struct obj_material {
 
 // Obj shape
 struct obj_shape {
-  string                  name      = "";
+  string                  name      = {};
   vector<array<float, 3>> positions = {};
   vector<array<float, 3>> normals   = {};
   vector<array<float, 2>> texcoords = {};
@@ -292,7 +313,7 @@ struct obj_shape {
 
 // Obj camera
 struct obj_camera {
-  string           name     = "";
+  string           name     = {};
   array<float, 12> frame    = {1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0};
   bool             ortho    = false;
   float            aspect   = 16.0f / 9.0f;
@@ -304,7 +325,7 @@ struct obj_camera {
 
 // Obj environment
 struct obj_environment {
-  string           name         = "";
+  string           name         = {};
   array<float, 12> frame        = {1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0};
   array<float, 3>  emission     = {0, 0, 0};
   int              emission_tex = -1;
@@ -320,12 +341,6 @@ struct obj_model {
   vector<obj_environment> environments = {};
 };
 
-// Load and save obj shape
-obj_shape load_sobj(const string& filename, bool face_varying = false);
-void      load_obj(
-         const string& filename, obj_shape& obj, bool face_varying = false);
-void save_obj(const string& filename, const obj_shape& obj);
-
 // Load and save obj
 [[nodiscard]] bool load_obj(const string& filename, obj_model& obj,
     string& error, bool face_varying = false, bool split_materials = false);
@@ -333,59 +348,101 @@ void save_obj(const string& filename, const obj_shape& obj);
     const string& filename, const obj_model& obj, string& error);
 
 // Load and save obj shape
-[[nodiscard]] bool load_obj(const string& filename, obj_shape& obj,
+[[nodiscard]] bool load_obj(const string& filename, obj_shape& shape,
     string& error, bool face_varying = false);
 [[nodiscard]] bool save_obj(
-    const string& filename, const obj_shape& obj, string& error);
+    const string& filename, const obj_shape& shape, string& error);
 
 // Get obj shape.
-void get_positions(const obj_shape& obj, vector<array<float, 3>>& positions);
-void get_normals(const obj_shape& obj, vector<array<float, 3>>& normals);
-void get_texcoords(const obj_shape& obj, vector<array<float, 2>>& texcoords,
+void get_positions(const obj_shape& shape, vector<array<float, 3>>& positions);
+void get_normals(const obj_shape& shape, vector<array<float, 3>>& normals);
+void get_texcoords(const obj_shape& shape, vector<array<float, 2>>& texcoords,
     bool flipv = false);
-void get_faces(const obj_shape& obj, vector<array<int, 3>>& triangles,
+void get_faces(const obj_shape& shape, vector<array<int, 3>>& triangles,
     vector<array<int, 4>>& quads, vector<int>& materials);
-void get_triangles(const obj_shape& obj, vector<array<int, 3>>& triangles,
+void get_triangles(const obj_shape& shape, vector<array<int, 3>>& triangles,
     vector<int>& materials);
-void get_quads(
-    const obj_shape& obj, vector<array<int, 4>>& quads, vector<int>& materials);
-void get_lines(
-    const obj_shape& obj, vector<array<int, 2>>& lines, vector<int>& materials);
+void get_quads(const obj_shape& shape, vector<array<int, 4>>& quads,
+    vector<int>& materials);
+void get_lines(const obj_shape& shape, vector<array<int, 2>>& lines,
+    vector<int>& materials);
 void get_points(
-    const obj_shape& obj, vector<int>& points, vector<int>& materials);
-void get_fvquads(const obj_shape& obj, vector<array<int, 4>>& quadspos,
+    const obj_shape& shape, vector<int>& points, vector<int>& materials);
+void get_fvquads(const obj_shape& shape, vector<array<int, 4>>& quadspos,
     vector<array<int, 4>>& quadsnorm, vector<array<int, 4>>& quadstexcoord,
     vector<int>& materials);
-void get_faces(const obj_shape& obj, int material,
+void get_faces(const obj_shape& shape, int material,
     vector<array<int, 3>>& triangles, vector<array<int, 4>>& quads);
 void get_triangles(
-    const obj_shape& obj, int material, vector<array<int, 3>>& triangles);
+    const obj_shape& shape, int material, vector<array<int, 3>>& triangles);
 void get_quads(
-    const obj_shape& obj, int material, vector<array<int, 4>>& quads);
+    const obj_shape& shape, int material, vector<array<int, 4>>& quads);
 void get_lines(
-    const obj_shape& obj, int material, vector<array<int, 2>>& lines);
-void get_points(const obj_shape& obj, int material, vector<int>& points);
-bool has_quads(const obj_shape& obj);
+    const obj_shape& shape, int material, vector<array<int, 2>>& lines);
+void get_points(const obj_shape& shape, int material, vector<int>& points);
+bool has_quads(const obj_shape& shape);
 
 // get unique materials from shape
-vector<int> get_materials(const obj_shape& obj);
+vector<int> get_materials(const obj_shape& shape);
 
 // Add obj shape
-void add_positions(obj_shape& obj, const vector<array<float, 3>>& positions);
-void add_normals(obj_shape& obj, const vector<array<float, 3>>& normals);
-void add_texcoords(obj_shape& obj, const vector<array<float, 2>>& texcoords,
+void add_positions(obj_shape& shape, const vector<array<float, 3>>& positions);
+void add_normals(obj_shape& shape, const vector<array<float, 3>>& normals);
+void add_texcoords(obj_shape& shape, const vector<array<float, 2>>& texcoords,
     bool flipv = false);
-void add_triangles(obj_shape& obj, const vector<array<int, 3>>& triangles,
+void add_triangles(obj_shape& shape, const vector<array<int, 3>>& triangles,
     int material, bool has_normals, bool has_texcoord);
-void add_quads(obj_shape& obj, const vector<array<int, 4>>& quads, int material,
+void add_quads(obj_shape& shape, const vector<array<int, 4>>& quads,
+    int material, bool has_normals, bool has_texcoord);
+void add_lines(obj_shape& shape, const vector<array<int, 2>>& lines,
+    int material, bool has_normals, bool has_texcoord);
+void add_points(obj_shape& shape, const vector<int>& points, int material,
     bool has_normals, bool has_texcoord);
-void add_lines(obj_shape& obj, const vector<array<int, 2>>& lines, int material,
-    bool has_normals, bool has_texcoord);
-void add_points(obj_shape& obj, const vector<int>& points, int material,
-    bool has_normals, bool has_texcoord);
-void add_fvquads(obj_shape& obj, const vector<array<int, 4>>& quadspos,
+void add_fvquads(obj_shape& shape, const vector<array<int, 4>>& quadspos,
     const vector<array<int, 4>>& quadsnorm,
     const vector<array<int, 4>>& quadstexcoord, int material);
+
+// exception API
+struct obj_error : std::runtime_error {
+  using std::runtime_error::runtime_error;
+};
+
+// Load and save obj shape
+inline obj_shape load_sobj(const string& filename, bool face_varying = false) {
+  auto obj   = obj_shape{};
+  auto error = string{};
+  if (!load_obj(filename, obj, error, face_varying)) throw obj_error(error);
+  return obj;
+}
+inline void load_obj(
+    const string& filename, obj_shape& obj, bool face_varying = false) {
+  auto error = string{};
+  if (!load_obj(filename, obj, error, face_varying)) throw obj_error(error);
+}
+inline void save_obj(const string& filename, const obj_shape& obj) {
+  auto error = string{};
+  if (!save_obj(filename, obj, error)) throw obj_error(error);
+}
+
+// Load and save obj
+inline obj_model load_obj(const string& filename, bool face_varying = false,
+    bool split_materials = false) {
+  auto obj   = obj_model{};
+  auto error = string{};
+  if (!load_obj(filename, obj, error, face_varying, split_materials))
+    throw obj_error(error);
+  return obj;
+}
+inline void load_obj(const string& filename, obj_model& obj,
+    bool face_varying = false, bool split_materials = false) {
+  auto error = string{};
+  if (!load_obj(filename, obj, error, face_varying, split_materials))
+    throw obj_error(error);
+}
+inline void save_obj(const string& filename, const obj_model& obj) {
+  auto error = string{};
+  if (!save_obj(filename, obj, error)) throw obj_error(error);
+}
 
 }  // namespace yocto
 
@@ -437,6 +494,31 @@ bool get_triangles(const stl_model& stl, int shape_id,
 void add_triangles(stl_model& stl, const vector<array<int, 3>>& triangles,
     const vector<array<float, 3>>& positions,
     const vector<array<float, 3>>& fnormals);
+
+// exception API
+struct stl_error : std::runtime_error {
+  using std::runtime_error::runtime_error;
+};
+
+// Load and save stl
+inline stl_model load_stl(const string& filename, bool unique_vertices = true) {
+  auto stl   = stl_model{};
+  auto error = string{};
+  if (!load_stl(filename, stl, error, unique_vertices))
+    throw stl_error(filename);
+  return stl;
+}
+inline void load_stl(
+    const string& filename, stl_model& stl, bool unique_vertices = true) {
+  auto error = string{};
+  if (!load_stl(filename, stl, error, unique_vertices))
+    throw stl_error(filename);
+}
+inline void save_stl(
+    const string& filename, const stl_model& stl, bool ascii = false) {
+  auto error = string{};
+  if (!save_stl(filename, stl, error, ascii)) throw stl_error(filename);
+}
 
 }  // namespace yocto
 
@@ -538,7 +620,7 @@ inline bool get_value(const ply_model& ply, const string& element,
   if (!has_property(ply, element, property)) return false;
   auto& prop = get_property(ply, element, property);
   if (prop.is_list) return false;
-  values.resize(get_size(prop));
+  values = vector<T>(get_size(prop));
   for (auto index = (size_t)0; index < values.size(); index++) {
     values[index] = get_value<T>(prop, index);
   }
@@ -553,7 +635,8 @@ inline bool get_values(const ply_model& ply, const string& element,
     auto& prop = get_property(ply, element, property);
     if (prop.is_list) return false;
   }
-  values.resize(get_size(get_property(ply, element, properties.front())));
+  values = vector<array<T, N>>(
+      get_size(get_property(ply, element, properties.front())));
   auto item = (size_t)0;
   for (auto& property : properties) {
     auto& prop = get_property(ply, element, property);
@@ -573,10 +656,10 @@ inline bool get_lists(const ply_model& ply, const string& element,
   auto& prop = get_property(ply, element, property);
   if (!prop.is_list) return false;
   auto& sizes = prop.ldata_u8;
-  lists.resize(sizes.size());
+  lists       = vector<vector<T>>(sizes.size());
   auto list = (size_t)0, current = (size_t)0;
   for (auto size : sizes) {
-    lists[list].resize(size);
+    lists[list] = vector<T>(size);
     for (auto item = (size_t)0; item < size; item++)
       lists[list][item] = get_value<T>(prop, current + item);
     list += 1;
@@ -594,7 +677,7 @@ inline bool get_list_sizes(const ply_model& ply, const string& element,
   if constexpr (std::is_same_v<T, uint8_t>) {
     sizes = prop.ldata_u8;
   } else {
-    sizes.resize(prop.ldata_u8.size());
+    sizes = vector<T>(prop.ldata_u8.size());
     for (auto index = (size_t)0; index < sizes.size(); index++) {
       sizes[index] = (T)prop.ldata_u8[index];
     }
@@ -608,7 +691,7 @@ inline bool get_list_values(const ply_model& ply, const string& element,
   if (!has_property(ply, element, property)) return false;
   auto& prop = get_property(ply, element, property);
   if (!prop.is_list) return false;
-  values.resize(get_size(prop));
+  values = vector<T>(get_size(prop));
   for (auto index = (size_t)0; index < values.size(); index++) {
     values[index] = get_value<T>(prop, index);
   }
@@ -776,7 +859,7 @@ inline bool get_colors(const ply_model& ply, vector<array<T, 4>>& colors) {
     auto colors3 = vector<array<T, 3>>{};
     if (!get_values(ply, "vertex", {"red", "green", "blue"}, colors3))
       return false;
-    colors.resize(colors3.size());
+    colors = vector<array<T, 4>>(colors3.size());
     for (auto i = 0; i < (int)colors.size(); i++)
       colors[i] = {colors3[i][0], colors3[i][1], colors3[i][2], 1};
     return true;
@@ -953,7 +1036,7 @@ inline bool add_lists(ply_model& ply, const string& element,
     const vector<T>& values) {
   if (values.empty()) return false;
   if (!add_property(
-          ply, element, property, values.size(), get_ply_type<T>(), true))
+          ply, element, property, sizes.size(), get_ply_type<T>(), true))
     return false;
   auto& prop    = get_property(ply, element, property);
   prop.ldata_u8 = sizes;
@@ -1054,21 +1137,22 @@ inline bool add_faces(ply_model& ply, const vector<array<T, 3>>& triangles,
   }
 }
 template <typename T>
-inline bool add_triangles(ply_model& ply, const vector<array<T, 3>>& values) {
-  return add_faces(ply, values, {});
+inline bool add_triangles(
+    ply_model& ply, const vector<array<T, 3>>& triangles) {
+  return add_faces(ply, triangles, {});
 }
 template <typename T>
-inline bool add_quads(ply_model& ply, const vector<array<T, 4>>& values) {
-  return add_faces(ply, {}, values);
+inline bool add_quads(ply_model& ply, const vector<array<T, 4>>& quads) {
+  return add_faces(ply, {}, quads);
 }
 template <typename T>
-inline bool add_lines(ply_model& ply, const vector<array<T, 2>>& values) {
-  return add_lists(ply, "line", "vertex_indices", values);
+inline bool add_lines(ply_model& ply, const vector<array<T, 2>>& lines) {
+  return add_lists(ply, "line", "vertex_indices", lines);
 }
 template <typename T>
-inline bool add_points(ply_model& ply, const vector<T>& values) {
+inline bool add_points(ply_model& ply, const vector<T>& points) {
   return add_lists(
-      ply, "point", "vertex_indices", (const vector<array<T, 1>>&)values);
+      ply, "point", "vertex_indices", (const vector<array<T, 1>>&)points);
 }
 
 }  // namespace yocto

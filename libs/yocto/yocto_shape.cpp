@@ -147,7 +147,7 @@ vec4f eval_color(const shape_data& shape, int element, const vec2f& uv) {
     return interpolate_quad(shape.colors[quad.x], shape.colors[quad.y],
         shape.colors[quad.z], shape.colors[quad.w], uv);
   } else {
-    return {0, 0};
+    return {0, 0, 0, 0};
   }
 }
 
@@ -352,6 +352,93 @@ shape_data subdivide_shape(
     // empty shape
   }
   return subdivided;
+}
+
+// Transform shape
+shape_data transform_shape(
+    const shape_data& shape, const frame3f& frame, bool non_rigid) {
+  return transform_shape(shape, frame, 1, non_rigid);
+}
+shape_data transform_shape(const shape_data& shape, const frame3f& frame,
+    float radius_scale, bool non_rigid) {
+  auto transformed = shape;
+  for (auto& position : transformed.positions)
+    position = transform_point(frame, position);
+  for (auto& normal : transformed.normals)
+    normal = transform_normal(frame, normal, non_rigid);
+  for (auto& radius : transformed.radius) radius *= radius_scale;
+  return transformed;
+}
+shape_data scale_shape(const shape_data& shape, float scale, float uvscale) {
+  if (scale == 1 && uvscale == 1) return shape;
+  auto transformed = shape;
+  for (auto& position : transformed.positions) position *= scale;
+  for (auto& texcoord : transformed.texcoords) texcoord *= uvscale;
+  return transformed;
+}
+shape_data scale_shape(shape_data&& shape, float scale, float uvscale) {
+  if (scale == 1 && uvscale == 1) return std::move(shape);
+  auto transformed = std::move(shape);
+  for (auto& position : transformed.positions) position *= scale;
+  for (auto& texcoord : transformed.texcoords) texcoord *= uvscale;
+  return transformed;
+}
+
+// Manipulate vertex data
+shape_data remove_normals(const shape_data& shape) {
+  auto transformed    = shape;
+  transformed.normals = {};
+  return transformed;
+}
+shape_data add_normals(const shape_data& shape) {
+  auto transformed    = shape;
+  transformed.normals = compute_normals(shape);
+  return transformed;
+}
+shape_data weld_vertices(
+    const shape_data& shape, float threshold, bool normals, bool others) {
+  auto transform_vert = [](auto&& old_verts, const vector<int>& old_indices) {
+    if (old_verts.empty()) return old_verts;
+    using T    = typename std::remove_cvref_t<decltype(old_verts[0])>;
+    auto verts = vector<T>(old_indices.size());
+    for (auto&& [idx, vert] : enumerate(verts))
+      vert = old_verts[old_indices[idx]];
+    return verts;
+  };
+  auto transform_elem = [](auto&& elems_, const vector<int>& new_indices) {
+    auto elems = std::move(elems_);
+    for (auto& elem : elems)
+      if constexpr (std::is_same_v<std::remove_cvref_t<decltype(elem)>, int>) {
+        elem = new_indices[elem];
+      } else {
+        for (auto& vid : elem) vid = new_indices[vid];
+      }
+    return elems;
+  };
+
+  auto [old_indices, new_indices] = weld_indices(shape.positions, threshold);
+  auto transformed                = shape;
+  transformed.positions = transform_vert(transformed.positions, old_indices);
+  if (normals) {
+    transformed.normals = transform_vert(transformed.normals, old_indices);
+  } else {
+    transformed.normals = {};
+  }
+  if (others) {
+    transformed.texcoords = transform_vert(transformed.texcoords, old_indices);
+    transformed.colors    = transform_vert(transformed.colors, old_indices);
+    transformed.radius    = transform_vert(transformed.radius, old_indices);
+  } else {
+    transformed.texcoords = {};
+    transformed.colors    = {};
+    transformed.radius    = {};
+  }
+  transformed.tangents  = transform_vert(transformed.tangents, old_indices);
+  transformed.points    = transform_elem(transformed.points, new_indices);
+  transformed.lines     = transform_elem(transformed.lines, new_indices);
+  transformed.triangles = transform_elem(transformed.triangles, new_indices);
+  transformed.quads     = transform_elem(transformed.quads, new_indices);
+  return transformed;
 }
 
 vector<string> shape_stats(const shape_data& shape, bool verbose) {
@@ -958,28 +1045,108 @@ shape_data make_rounded_uvcylinder(const vec3i& steps, const vec2f& scale,
   return shape;
 }
 
+// Make a uv capsule
+shape_data make_uvcapsule(
+    const vec3i& steps, const vec2f& scale, const vec3f& uvscale) {
+  auto shape  = shape_data{};
+  auto qshape = shape_data{};
+  // side
+  qshape = make_rect({steps.x, steps.y}, {1, 1}, {1, 1});
+  for (auto i : range(qshape.positions.size())) {
+    auto uv             = qshape.texcoords[i];
+    auto phi            = 2 * pif * uv.x;
+    qshape.positions[i] = {
+        cos(phi) * scale.x, sin(phi) * scale.x, (2 * uv.y - 1) * scale.y};
+    qshape.normals[i]   = {cos(phi), sin(phi), 0};
+    qshape.texcoords[i] = uv * vec2f{uvscale.x, uvscale.y};
+  }
+  for (auto& quad : qshape.quads) quad = {quad.x, quad.w, quad.z, quad.y};
+  merge_shape_inplace(shape, qshape);
+  // top
+  qshape = make_rect({steps.x, steps.z}, {1, 1}, {1, 1});
+  for (auto i : range(qshape.positions.size())) {
+    auto uv  = qshape.texcoords[i];
+    auto phi = uv.x * 2 * pif, theta = (1 - uv.y) * pif / 2;
+    qshape.positions[i] = {cos(phi) * sin(theta) * scale.x,
+        sin(phi) * sin(theta) * scale.x, cos(theta) * scale.x + scale.y};
+    qshape.normals[i]   = {
+        cos(phi) * sin(theta), sin(phi) * sin(theta), cos(theta)};
+    qshape.texcoords[i] = uv * vec2f{uvscale.x, uvscale.z};
+  }
+  merge_shape_inplace(shape, qshape);
+  // bottom
+  qshape = make_rect({steps.x, steps.z}, {1, 1}, {1, 1});
+  for (auto i : range(qshape.positions.size())) {
+    auto uv  = qshape.texcoords[i];
+    auto phi = uv.x * 2 * pif, theta = (1 - uv.y) * pif / 2;
+    qshape.positions[i] = {cos(phi) * sin(theta) * scale.x,
+        sin(phi) * sin(theta) * scale.x, -cos(theta) * scale.x - scale.y};
+    qshape.normals[i]   = {
+        cos(phi) * sin(theta), sin(phi) * sin(theta), -cos(theta)};
+    qshape.texcoords[i] = uv * vec2f{uvscale.x, uvscale.z};
+    qshape.normals[i]   = -qshape.normals[i];
+  }
+  for (auto& qquad : qshape.quads) swap(qquad.x, qquad.z);
+  merge_shape_inplace(shape, qshape);
+  return shape;
+}
+
+// Make a uv cone
+shape_data make_uvcone(
+    const vec3i& steps, const vec2f& scale, const vec3f& uvscale) {
+  auto shape  = shape_data{};
+  auto qshape = shape_data{};
+  // side
+  qshape = make_rect({steps.x, steps.y}, {1, 1}, {1, 1});
+  for (auto i : range(qshape.positions.size())) {
+    auto uv             = qshape.texcoords[i];
+    auto phi            = 2 * pif * uv.x;
+    auto normal2d       = normalize(scale * vec2f{1, 2});
+    qshape.positions[i] = {cos(phi) * (1 - uv.y) * scale.x,
+        sin(phi) * (1 - uv.y) * scale.x, scale.y * (2 * uv.y - 1)};
+    qshape.normals[i]   = {
+        cos(phi) * normal2d.y, sin(phi) * normal2d.y, normal2d.x};
+    qshape.texcoords[i] = uv * vec2f{uvscale.x, uvscale.y};
+  }
+  for (auto& quad : qshape.quads) quad = {quad.x, quad.w, quad.z, quad.y};
+  merge_shape_inplace(shape, qshape);
+  // bottom
+  qshape = make_rect({steps.x, steps.z}, {1, 1}, {1, 1});
+  for (auto i : range(qshape.positions.size())) {
+    auto uv             = qshape.texcoords[i];
+    auto phi            = uv.x * 2 * pif;
+    qshape.positions[i] = {
+        uv.y * scale.x * cos(phi), uv.y * scale.x * sin(phi), -scale.y};
+    qshape.normals[i]   = {0, 0, -1};
+    qshape.texcoords[i] = uv * vec2f{uvscale.x, uvscale.z};
+  }
+  for (auto& qquad : qshape.quads) swap(qquad.x, qquad.z);
+  merge_shape_inplace(shape, qshape);
+  return shape;
+}
+
 // Generate lines set along a quad. Returns lines, pos, norm, texcoord, radius.
-shape_data make_lines(const vec2i& steps, const vec2f& scale,
+shape_data make_lines(int num, int steps, const vec2f& scale,
     const vec2f& uvscale, const vec2f& rad) {
   auto shape = shape_data{};
-  shape.positions.resize((steps.x + 1) * steps.y);
-  shape.normals.resize((steps.x + 1) * steps.y);
-  shape.texcoords.resize((steps.x + 1) * steps.y);
-  shape.radius.resize((steps.x + 1) * steps.y);
-  if (steps.y > 1) {
-    for (auto j : range(steps.y)) {
-      for (auto i : range(steps.x + 1)) {
-        auto uv = vec2f{i / (float)steps.x, j / (float)(steps.y - 1)};
-        shape.positions[j * (steps.x + 1) + i] = {
+  shape.positions.resize((steps + 1) * num);
+  shape.normals.resize((steps + 1) * num);
+  shape.texcoords.resize((steps + 1) * num);
+  shape.radius.resize((steps + 1) * num);
+  if (num > 1) {
+    for (auto j : range(num)) {
+      for (auto i : range(steps + 1)) {
+        auto uv = vec2f{i / (float)steps, j / (float)(num - 1)};
+        shape.positions[j * (steps + 1) + i] = {
             (uv.x - 0.5f) * scale.x, (uv.y - 0.5f) * scale.y, 0};
-        shape.normals[j * (steps.x + 1) + i]   = {1, 0, 0};
-        shape.texcoords[j * (steps.x + 1) + i] = uv * uvscale;
-        shape.radius[j * (steps.x + 1) + i]    = lerp(rad.x, rad.y, uv.x);
+        shape.normals[j * (steps + 1) + i]   = {1, 0, 0};
+        shape.texcoords[j * (steps + 1) + i] = uv * uvscale;
+        shape.radius[j * (steps + 1) + i]    = lerp(rad.x, rad.y, uv.x);
       }
     }
   } else {
-    for (auto i : range(steps.x + 1)) {
-      auto uv            = vec2f{i / (float)steps.x, 0};
+    for (auto i : range(steps + 1)) {
+      auto uv            = vec2f{i / (float)steps, 0};
       shape.positions[i] = {(uv.x - 0.5f) * scale.x, 0, 0};
       shape.normals[i]   = {1, 0, 0};
       shape.texcoords[i] = uv * uvscale;
@@ -987,11 +1154,11 @@ shape_data make_lines(const vec2i& steps, const vec2f& scale,
     }
   }
 
-  shape.lines.resize(steps.x * steps.y);
-  for (int j = 0; j < steps.y; j++) {
-    for (int i = 0; i < steps.x; i++) {
-      shape.lines[j * steps.x + i] = {
-          j * (steps.x + 1) + i, j * (steps.x + 1) + i + 1};
+  shape.lines.resize(steps * num);
+  for (auto j = 0; j < num; j++) {
+    for (auto i = 0; i < steps; i++) {
+      shape.lines[j * steps + i] = {
+          j * (steps + 1) + i, j * (steps + 1) + i + 1};
     }
   }
 
@@ -1080,7 +1247,7 @@ fvshape_data make_fvsphere(int steps, float scale, float uvscale) {
 }
 
 // Predefined meshes
-shape_data make_monkey(float scale, int subdivisions) {
+shape_data make_monkey(int subdivisions, float scale) {
   extern vector<vec3f> suzanne_positions;
   extern vector<vec4i> suzanne_quads;
 
@@ -1097,7 +1264,7 @@ shape_data make_monkey(float scale, int subdivisions) {
   }
   return shape;
 }
-shape_data make_quad(float scale, int subdivisions) {
+shape_data make_quad(int subdivisions, float scale) {
   static const auto quad_positions = vector<vec3f>{
       {-1, -1, 0}, {+1, -1, 0}, {+1, +1, 0}, {-1, +1, 0}};
   static const auto quad_normals = vector<vec3f>{
@@ -1124,7 +1291,7 @@ shape_data make_quad(float scale, int subdivisions) {
   }
   return shape;
 }
-shape_data make_quady(float scale, int subdivisions) {
+shape_data make_quady(int subdivisions, float scale) {
   static const auto quady_positions = vector<vec3f>{
       {-1, 0, -1}, {-1, 0, +1}, {+1, 0, +1}, {+1, 0, -1}};
   static const auto quady_normals = vector<vec3f>{
@@ -1151,7 +1318,7 @@ shape_data make_quady(float scale, int subdivisions) {
   }
   return shape;
 }
-shape_data make_cube(float scale, int subdivisions) {
+shape_data make_cube(int subdivisions, float scale) {
   static const auto cube_positions = vector<vec3f>{{-1, -1, +1}, {+1, -1, +1},
       {+1, +1, +1}, {-1, +1, +1}, {+1, -1, -1}, {-1, -1, -1}, {-1, +1, -1},
       {+1, +1, -1}, {+1, -1, +1}, {+1, -1, -1}, {+1, +1, -1}, {+1, +1, +1},
@@ -1189,7 +1356,7 @@ shape_data make_cube(float scale, int subdivisions) {
   }
   return shape;
 }
-fvshape_data make_fvcube(float scale, int subdivisions) {
+fvshape_data make_fvcube(int subdivisions, float scale) {
   static const auto fvcube_positions = vector<vec3f>{{-1, -1, +1}, {+1, -1, +1},
       {+1, +1, +1}, {-1, +1, +1}, {+1, -1, -1}, {-1, -1, -1}, {-1, +1, -1},
       {+1, +1, -1}};
@@ -1231,7 +1398,7 @@ fvshape_data make_fvcube(float scale, int subdivisions) {
   }
   return shape;
 }
-shape_data make_geosphere(float scale, int subdivisions) {
+shape_data make_geosphere(int subdivisions, float scale) {
   // https://stackoverflow.com/questions/17705621/algorithm-for-a-geodesic-sphere
   const float X                   = 0.525731112119133606f;
   const float Z                   = 0.850650808352039932f;
@@ -1295,7 +1462,7 @@ shape_data make_hair(const shape_data& base, const vec2i& steps,
     }
   }
 
-  auto shape = make_lines(steps, {1, 1}, {1, 1}, {1, 1});
+  auto shape = make_lines(steps.y, steps.x, {1, 1}, {1, 1}, {1, 1});
   for (auto i : range((int)shape.positions.size())) {
     auto u             = shape.texcoords[i].x;
     auto bidx          = i / (steps.x + 1);
@@ -1333,6 +1500,49 @@ shape_data make_hair(const shape_data& base, const vec2i& steps,
   return shape;
 }
 
+
+// Grow points around a shape
+shape_data make_random_points(
+    const shape_data& shape, int num, float radius, uint64_t seed) {
+  auto samples = sample_shape(shape, num, seed);
+  auto points  = make_points(num, 1, radius);
+  for (auto idx : range(num)) {
+    points.positions[idx] = eval_position(
+        shape, samples[idx].element, samples[idx].uv);
+    points.normals[idx] = eval_normal(
+        shape, samples[idx].element, samples[idx].uv);
+  }
+  return points;
+}
+
+// Grow hairs around a shape
+shape_data make_random_hairs(const shape_data& shape, int num, int steps,
+    const vec2f& len, const vec2f& radius, float noise, float gravity,
+    uint64_t seed) {
+  auto samples = sample_shape(shape, num, seed);
+  auto hairs   = make_lines(num, steps, {1, 1}, {1, 1}, radius);
+  auto rng     = make_rng(seed);
+  for (auto idx : range(num)) {
+    auto offset   = idx * (steps + 1);
+    auto position = eval_position(shape, samples[idx].element, samples[idx].uv);
+    auto direction = eval_normal(shape, samples[idx].element, samples[idx].uv);
+    auto length    = lerp(len.x, len.y, rand1f(rng));
+    hairs.positions[offset] = position;
+    for (auto iidx = 1; iidx <= steps; iidx++) {
+      hairs.positions[offset + iidx] = position;
+      hairs.positions[offset + iidx] += direction * length / (float)steps;
+      hairs.positions[offset + iidx] += (2 * rand3f(rng) - 1) * noise;
+      hairs.positions[offset + iidx] += vec3f{0, -gravity, 0};
+      direction = normalize(hairs.positions[offset + iidx] - position);
+      position  = hairs.positions[offset + iidx];
+    }
+  }
+
+  hairs.normals = lines_tangents(hairs.lines, hairs.positions);
+
+  return hairs;
+}
+
 // Grow hairs around a shape
 shape_data make_hair2(const shape_data& base, const vec2i& steps,
     const vec2f& len, const vec2f& radius, float noise, float gravity,
@@ -1347,7 +1557,7 @@ shape_data make_hair2(const shape_data& base, const vec2i& steps,
     btexcoord.push_back(eval_texcoord(base, point.element, point.uv));
   }
 
-  auto shape = make_lines(steps, {1, 1}, {1, 1}, radius);
+  auto shape = make_lines(steps.y, steps.x, {1, 1}, {1, 1}, radius);
   auto rng   = make_rng(seed);
   for (auto idx : range(steps.y)) {
     auto offset             = idx * (steps.x + 1);
@@ -2635,6 +2845,25 @@ pair<vector<vec3f>, vector<int>> weld_vertices(
   }
   return {welded, indices};
 }
+inline pair<vector<int>, vector<int>> weld_indices(
+    const vector<vec3f>& positions, float threshold) {
+  auto new_indices = vector<int>(positions.size());
+  auto old_indices = vector<int>();
+  auto grid        = make_hash_grid(threshold);
+  auto neighbors   = vector<int>{};
+  for (auto vertex : range(positions.size())) {
+    auto& position = positions[vertex];
+    find_neighbors(grid, neighbors, position, threshold);
+    if (neighbors.empty()) {
+      old_indices.push_back((int)vertex);
+      new_indices[vertex] = (int)old_indices.size() - 1;
+      insert_vertex(grid, position);
+    } else {
+      new_indices[vertex] = neighbors.front();
+    }
+  }
+  return {old_indices, new_indices};
+}
 pair<vector<vec3i>, vector<vec3f>> weld_triangles(
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     float threshold) {
@@ -3804,8 +4033,8 @@ void make_fvsphere(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
 }
 
 // Predefined meshes
-void make_monkey(vector<vec4i>& quads, vector<vec3f>& positions, float scale,
-    int subdivisions) {
+void make_monkey(vector<vec4i>& quads, vector<vec3f>& positions,
+    int subdivisions, float scale) {
   extern vector<vec3f> suzanne_positions;
   extern vector<vec4i> suzanne_quads;
 
@@ -3850,8 +4079,8 @@ void make_quad(vector<vec4i>& quads, vector<vec3f>& positions,
 }
 
 void make_quady(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, float scale,
-    int subdivisions) {
+    vector<vec3f>& normals, vector<vec2f>& texcoords, int subdivisions,
+    float scale) {
   static const auto quady_positions = vector<vec3f>{
       {-1, 0, -1}, {-1, 0, +1}, {+1, 0, +1}, {+1, 0, -1}};
   static const auto quady_normals = vector<vec3f>{
@@ -3878,8 +4107,8 @@ void make_quady(vector<vec4i>& quads, vector<vec3f>& positions,
 }
 
 void make_cube(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, float scale,
-    int subdivisions) {
+    vector<vec3f>& normals, vector<vec2f>& texcoords, int subdivisions,
+    float scale) {
   static const auto cube_positions = vector<vec3f>{{-1, -1, +1}, {+1, -1, +1},
       {+1, +1, +1}, {-1, +1, +1}, {+1, -1, -1}, {-1, -1, -1}, {-1, +1, -1},
       {+1, +1, -1}, {+1, -1, +1}, {+1, -1, -1}, {+1, +1, -1}, {+1, +1, +1},
@@ -3917,8 +4146,8 @@ void make_cube(vector<vec4i>& quads, vector<vec3f>& positions,
 
 void make_fvcube(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
     vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, float scale,
-    int subdivisions) {
+    vector<vec3f>& normals, vector<vec2f>& texcoords, int subdivisions,
+    float scale) {
   static const auto fvcube_positions = vector<vec3f>{{-1, -1, +1}, {+1, -1, +1},
       {+1, +1, +1}, {-1, +1, +1}, {+1, -1, -1}, {-1, -1, -1}, {-1, +1, -1},
       {+1, +1, -1}};
