@@ -2,7 +2,7 @@
 // # Yocto/Bvh: Accelerated ray-intersection and point-overlap
 //
 // Yocto/Bvh provides ray-intersection and point-overlap queries accelerated
-// by a two-level BVH using an internal or wrapping Embree.
+// by a two-level BVH.
 // Yocto/Bvh is implemented in `yocto_bvh.h` and `yocto_bvh.cpp`.
 //
 
@@ -231,12 +231,12 @@ using bvh_scene [[deprecated]] = scene_bvh;
   return intersect_shape_bvh(bvh, shape, ray, find_any);
 }
 [[deprecated]] inline scene_intersection intersect_scene(const scene_bvh& bvh,
-    const scene_data& scene, const ray3f& ray, bool find_any) {
+    const scene_data& scene, const ray3f& ray, bool find_any = false) {
   return intersect_scene_bvh(bvh, scene, ray, find_any);
 }
 [[deprecated]] inline scene_intersection intersect_instance(
     const scene_bvh& bvh, const scene_data& scene, int instance,
-    const ray3f& ray, bool find_any) {
+    const ray3f& ray, bool find_any = false) {
   return intersect_instance_bvh(bvh, scene, instance, ray, find_any);
 }
 
