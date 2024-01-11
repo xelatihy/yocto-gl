@@ -381,29 +381,4 @@ scene_data make_cornellbox();
 
 }  // namespace yocto
 
-// -----------------------------------------------------------------------------
-// BACKWARDS COMPATIBILITY
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-using sceneio_scene [[deprecated]]       = scene_data;
-using scene_model [[deprecated]]         = scene_data;
-using sceneio_camera [[deprecated]]      = camera_data;
-using scene_camera [[deprecated]]        = camera_data;
-using sceneio_texture [[deprecated]]     = texture_data;
-using scene_texture [[deprecated]]       = texture_data;
-using sceneio_material [[deprecated]]    = material_data;
-using scene_material_type [[deprecated]] = material_type;
-using sceneio_material [[deprecated]]    = material_data;
-using sceneio_shape [[deprecated]]       = shape_data;
-using scene_shape [[deprecated]]         = shape_data;
-using scene_fvshape [[deprecated]]       = fvshape_data;
-using sceneio_instance [[deprecated]]    = instance_data;
-using scene_instance [[deprecated]]      = instance_data;
-using sceneio_environment [[deprecated]] = environment_data;
-using scene_environment [[deprecated]]   = environment_data;
-using scene_subdiv [[deprecated]]        = subdiv_data;
-
-}  // namespace yocto
-
 #endif

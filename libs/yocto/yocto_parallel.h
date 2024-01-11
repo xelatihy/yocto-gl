@@ -67,8 +67,8 @@ namespace yocto {
 // a simple concurrent queue that locks at every call
 template <typename T>
 struct concurrent_queue {
-  concurrent_queue()                              = default;
-  concurrent_queue(const concurrent_queue& other) = delete;
+  concurrent_queue()                                         = default;
+  concurrent_queue(const concurrent_queue& other)            = delete;
   concurrent_queue& operator=(const concurrent_queue& other) = delete;
 
   bool empty();
