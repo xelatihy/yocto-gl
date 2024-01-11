@@ -593,6 +593,46 @@ fvshape_data subdivide_fvshape(
   return subdivided;
 }
 
+// Transform shape
+fvshape_data transform_fvshape(
+    const fvshape_data& shape, const frame3f& frame, bool non_rigid) {
+  auto transformed = shape;
+  for (auto& position : transformed.positions)
+    position = transform_point(frame, position);
+  for (auto& normal : transformed.normals)
+    normal = transform_normal(frame, normal, non_rigid);
+  return transformed;
+}
+fvshape_data scale_fvshape(
+    const fvshape_data& shape, float scale, float uvscale) {
+  if (scale == 1 && uvscale == 1) return shape;
+  auto transformed = shape;
+  for (auto& position : transformed.positions) position *= scale;
+  for (auto& texcoord : transformed.texcoords) texcoord *= uvscale;
+  return transformed;
+}
+fvshape_data scale_fvshape(fvshape_data&& shape, float scale, float uvscale) {
+  if (scale == 1 && uvscale == 1) return std::move(shape);
+  auto transformed = std::move(shape);
+  for (auto& position : transformed.positions) position *= scale;
+  for (auto& texcoord : transformed.texcoords) texcoord *= uvscale;
+  return transformed;
+}
+
+// Vertex properties
+fvshape_data remove_normals(const fvshape_data& shape) {
+  auto transformed      = shape;
+  transformed.quadsnorm = {};
+  transformed.normals   = {};
+  return transformed;
+}
+fvshape_data add_normals(const fvshape_data& shape) {
+  auto transformed      = shape;
+  transformed.quadsnorm = transformed.quadspos;
+  transformed.normals   = compute_normals(shape);
+  return transformed;
+}
+
 vector<string> fvshape_stats(const fvshape_data& shape, bool verbose) {
   auto format = [](auto num) {
     auto str = std::to_string(num);
@@ -1499,7 +1539,6 @@ shape_data make_hair(const shape_data& base, const vec2i& steps,
 
   return shape;
 }
-
 
 // Grow points around a shape
 shape_data make_random_points(
@@ -4051,8 +4090,8 @@ void make_monkey(vector<vec4i>& quads, vector<vec3f>& positions,
 }
 
 void make_quad(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, float scale,
-    int subdivisions) {
+    vector<vec3f>& normals, vector<vec2f>& texcoords, int subdivisions,
+    float scale) {
   static const auto quad_positions = vector<vec3f>{
       {-1, -1, 0}, {+1, -1, 0}, {+1, +1, 0}, {-1, +1, 0}};
   static const auto quad_normals = vector<vec3f>{

@@ -69,6 +69,9 @@ struct bbox2f {
   vec2f min = {flt_max, flt_max};
   vec2f max = {flt_min, flt_min};
 
+  constexpr bbox2f() : min{flt_max, flt_max}, max{flt_min, flt_min} {}
+  constexpr bbox2f(const vec2f& min, const vec2f& max) : min{min}, max{max} {}
+
   inline vec2f&       operator[](int i);
   inline const vec2f& operator[](int i) const;
 };
@@ -77,6 +80,10 @@ struct bbox2f {
 struct bbox3f {
   vec3f min = {flt_max, flt_max, flt_max};
   vec3f max = {flt_min, flt_min, flt_min};
+
+  constexpr bbox3f()
+      : min{flt_max, flt_max, flt_max}, max{flt_min, flt_min, flt_min} {}
+  constexpr bbox3f(const vec3f& min, const vec3f& max) : min{min}, max{max} {}
 
   inline vec3f&       operator[](int i);
   inline const vec3f& operator[](int i) const;
@@ -89,6 +96,10 @@ constexpr auto invalidb3f = bbox3f{};
 // Bounding box properties
 inline vec2f center(const bbox2f& a);
 inline vec2f size(const bbox2f& a);
+
+// Bounding box tests
+inline bool contains(const bbox2f& a, const vec2f& b);
+inline bool contains(const bbox2f& a, const bbox2f& b);
 
 // Bounding box comparisons.
 inline bool operator==(const bbox2f& a, const bbox2f& b);
@@ -103,6 +114,10 @@ inline void   expand(bbox2f& a, const bbox2f& b);
 // Bounding box properties
 inline vec3f center(const bbox3f& a);
 inline vec3f size(const bbox3f& a);
+
+// Bounding box tests
+inline bool contains(const bbox3f& a, const vec3f& b);
+inline bool contains(const bbox3f& a, const bbox3f& b);
 
 // Bounding box comparisons.
 inline bool operator==(const bbox3f& a, const bbox3f& b);
@@ -129,6 +144,11 @@ struct ray2f {
   vec2f d    = {0, 1};
   float tmin = ray_eps;
   float tmax = flt_max;
+
+  constexpr ray2f() : o{0, 0}, d{0, 1}, tmin{ray_eps}, tmax{flt_max} {}
+  constexpr ray2f(const vec2f& o_, const vec2f& d_, float tmin_ = ray_eps,
+      float tmax_ = flt_max)
+      : o{o_}, d{d_}, tmin{tmin_}, tmax{tmax_} {}
 };
 
 // Rays with origin, direction and min/max t value.
@@ -137,6 +157,11 @@ struct ray3f {
   vec3f d    = {0, 0, 1};
   float tmin = ray_eps;
   float tmax = flt_max;
+
+  constexpr ray3f() : o{0, 0, 0}, d{0, 0, 1}, tmin{ray_eps}, tmax{flt_max} {}
+  constexpr ray3f(const vec3f& o_, const vec3f& d_, float tmin_ = ray_eps,
+      float tmax_ = flt_max)
+      : o{o_}, d{d_}, tmin{tmin_}, tmax{tmax_} {}
 };
 
 // Computes a point on a ray
@@ -365,16 +390,24 @@ inline bool overlap_bbox(const bbox3f& bbox1, const bbox3f& bbox2);
 namespace yocto {
 
 // Axis aligned bounding box represented as a min/max vector pairs.
-inline vec2f& bbox2f::operator[](int i) { return (&min)[i]; }
+inline vec2f&       bbox2f::operator[](int i) { return (&min)[i]; }
 inline const vec2f& bbox2f::operator[](int i) const { return (&min)[i]; }
 
 // Axis aligned bounding box represented as a min/max vector pairs.
-inline vec3f& bbox3f::operator[](int i) { return (&min)[i]; }
+inline vec3f&       bbox3f::operator[](int i) { return (&min)[i]; }
 inline const vec3f& bbox3f::operator[](int i) const { return (&min)[i]; }
 
 // Bounding box properties
 inline vec2f center(const bbox2f& a) { return (a.min + a.max) / 2; }
 inline vec2f size(const bbox2f& a) { return a.max - a.min; }
+
+// Bounding box tests
+inline bool contains(const bbox2f& a, const vec2f& b) {
+  return b.x >= a.min.x && b.x <= a.max.x && b.y >= a.min.y && b.y <= a.max.y;
+}
+inline bool contains(const bbox2f& a, const bbox2f& b) {
+  return contains(a, b.min) && contains(a, b.max);
+}
 
 // Bounding box comparisons.
 inline bool operator==(const bbox2f& a, const bbox2f& b) {
@@ -397,6 +430,15 @@ inline void expand(bbox2f& a, const bbox2f& b) { a = merge(a, b); }
 // Bounding box properties
 inline vec3f center(const bbox3f& a) { return (a.min + a.max) / 2; }
 inline vec3f size(const bbox3f& a) { return a.max - a.min; }
+
+// Bounding box tests
+inline bool contains(const bbox3f& a, const vec3f& b) {
+  return b.x >= a.min.x && b.x <= a.max.x && b.y >= a.min.y && b.y <= a.max.y &&
+         b.z >= a.min.z && b.z <= a.max.z;
+}
+inline bool contains(const bbox3f& a, const bbox3f& b) {
+  return contains(a, b.min) && contains(a, b.max);
+}
 
 // Bounding box comparisons.
 inline bool operator==(const bbox3f& a, const bbox3f& b) {
@@ -771,11 +813,8 @@ inline prim_intersection intersect_sphere(
   // compute ray parameter
   auto t = (-b - sqrt(dis)) / (2 * a);
 
-  // exit if not within bounds
-  if (t < ray.tmin || t > ray.tmax) return {};
-
   // try other ray parameter
-  t = (-b + sqrt(dis)) / (2 * a);
+  if (t < ray.tmin || t > ray.tmax) t = (-b + sqrt(dis)) / (2 * a);
 
   // exit if not within bounds
   if (t < ray.tmin || t > ray.tmax) return {};
