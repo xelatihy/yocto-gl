@@ -216,7 +216,7 @@ inline const auto quad_quads     = vector<vec4i>{{0, 1, 2, 3}};
 inline const auto quad_positions = vector<vec3f>{
     {-1, -1, 0}, {+1, -1, 0}, {+1, +1, 0}, {-1, +1, 0}};
 inline const auto quad_texcoords = vector<vec2f>{
-    {0, 1}, {1, 1}, {1, 0}, {0, 0}};
+    {0, 0}, {1, 0}, {1, 1}, {0, 1}};
 inline const auto triangle_triangles = vector<vec3i>{{0, 1, 2}};
 inline const auto triangle_positions = vector<vec3f>{
     {-1, -1, 0}, {+1, -1, 0}, {0, +1, 0}};
@@ -267,10 +267,10 @@ inline const auto fvcube_normals   = vector<vec3f>{{0, 0, +1}, {0, 0, +1},
       {+1, 0, 0}, {+1, 0, 0}, {+1, 0, 0}, {+1, 0, 0}, {-1, 0, 0}, {-1, 0, 0},
       {-1, 0, 0}, {-1, 0, 0}, {0, +1, 0}, {0, +1, 0}, {0, +1, 0}, {0, +1, 0},
       {0, -1, 0}, {0, -1, 0}, {0, -1, 0}, {0, -1, 0}};
-inline const auto fvcube_texcoords = vector<vec2f>{{0, 1}, {1, 1}, {1, 0},
-    {0, 0}, {0, 1}, {1, 1}, {1, 0}, {0, 0}, {0, 1}, {1, 1}, {1, 0}, {0, 0},
-    {0, 1}, {1, 1}, {1, 0}, {0, 0}, {0, 1}, {1, 1}, {1, 0}, {0, 0}, {0, 1},
-    {1, 1}, {1, 0}, {0, 0}};
+inline const auto fvcube_texcoords = vector<vec2f>{{0, 0}, {1, 0}, {1, 1},
+    {0, 1}, {0, 0}, {1, 0}, {1, 1}, {0, 1}, {0, 0}, {1, 0}, {1, 1}, {0, 1},
+    {0, 0}, {1, 0}, {1, 1}, {0, 1}, {0, 0}, {1, 0}, {1, 1}, {0, 1}, {0, 0},
+    {1, 0}, {1, 1}, {0, 1}};
 inline const auto fvcube_quadspos  = vector<vec4i>{{0, 1, 2, 3}, {4, 5, 6, 7},
      {1, 4, 7, 2}, {5, 0, 3, 6}, {3, 2, 7, 6}, {1, 0, 5, 4}};
 inline const auto fvcube_quadsnorm = vector<vec4i>{{0, 1, 2, 3}, {4, 5, 6, 7},

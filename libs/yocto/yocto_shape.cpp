@@ -683,7 +683,7 @@ static shape_data make_quads(
       shape.positions[j * (steps.x + 1) + i] = {
           (2 * uv.x - 1) * scale.x, (2 * uv.y - 1) * scale.y, 0};
       shape.normals[j * (steps.x + 1) + i]   = {0, 0, 1};
-      shape.texcoords[j * (steps.x + 1) + i] = vec2f{uv.x, 1 - uv.y} * uvscale;
+      shape.texcoords[j * (steps.x + 1) + i] = vec2f{uv.x, uv.y} * uvscale;
     }
   }
 
@@ -928,8 +928,7 @@ shape_data make_uvspherey(
   for (auto& position : shape.positions)
     position = {position.x, position.z, position.y};
   for (auto& normal : shape.normals) normal = {normal.x, normal.z, normal.y};
-  for (auto& texcoord : shape.texcoords)
-    texcoord = {texcoord.x, 1 - texcoord.y};
+  for (auto& texcoord : shape.texcoords) texcoord = {texcoord.x, texcoord.y};
   for (auto& quad : shape.quads) quad = {quad.x, quad.w, quad.z, quad.y};
   return shape;
 }
@@ -1310,7 +1309,7 @@ shape_data make_quad(int subdivisions, float scale) {
   static const auto quad_normals = vector<vec3f>{
       {0, 0, 1}, {0, 0, 1}, {0, 0, 1}, {0, 0, 1}};
   static const auto quad_texcoords = vector<vec2f>{
-      {0, 1}, {1, 1}, {1, 0}, {0, 0}};
+      {0, 0}, {1, 0}, {1, 1}, {0, 1}};
   static const auto quad_quads = vector<vec4i>{{0, 1, 2, 3}};
   auto              shape      = shape_data{};
   if (subdivisions == 0) {
@@ -1337,7 +1336,7 @@ shape_data make_quady(int subdivisions, float scale) {
   static const auto quady_normals = vector<vec3f>{
       {0, 1, 0}, {0, 1, 0}, {0, 1, 0}, {0, 1, 0}};
   static const auto quady_texcoords = vector<vec2f>{
-      {0, 0}, {1, 0}, {1, 1}, {0, 1}};
+      {0, 1}, {1, 1}, {1, 0}, {0, 0}};
   static const auto quady_quads = vector<vec4i>{{0, 1, 2, 3}};
   auto              shape       = shape_data{};
   if (subdivisions == 0) {
@@ -1370,10 +1369,10 @@ shape_data make_cube(int subdivisions, float scale) {
         {+1, 0, 0}, {+1, 0, 0}, {+1, 0, 0}, {+1, 0, 0}, {-1, 0, 0}, {-1, 0, 0},
         {-1, 0, 0}, {-1, 0, 0}, {0, +1, 0}, {0, +1, 0}, {0, +1, 0}, {0, +1, 0},
         {0, -1, 0}, {0, -1, 0}, {0, -1, 0}, {0, -1, 0}};
-  static const auto cube_texcoords = vector<vec2f>{{0, 1}, {1, 1}, {1, 0},
-      {0, 0}, {0, 1}, {1, 1}, {1, 0}, {0, 0}, {0, 1}, {1, 1}, {1, 0}, {0, 0},
-      {0, 1}, {1, 1}, {1, 0}, {0, 0}, {0, 1}, {1, 1}, {1, 0}, {0, 0}, {0, 1},
-      {1, 1}, {1, 0}, {0, 0}};
+  static const auto cube_texcoords = vector<vec2f>{{0, 0}, {1, 0}, {1, 1},
+      {0, 1}, {0, 0}, {1, 0}, {1, 1}, {0, 1}, {0, 0}, {1, 0}, {1, 1}, {0, 1},
+      {0, 0}, {1, 0}, {1, 1}, {0, 1}, {0, 0}, {1, 0}, {1, 1}, {0, 1}, {0, 0},
+      {1, 0}, {1, 1}, {0, 1}};
   static const auto cube_quads     = vector<vec4i>{{0, 1, 2, 3}, {4, 5, 6, 7},
           {8, 9, 10, 11}, {12, 13, 14, 15}, {16, 17, 18, 19}, {20, 21, 22, 23}};
 
@@ -1405,10 +1404,10 @@ fvshape_data make_fvcube(int subdivisions, float scale) {
         {+1, 0, 0}, {+1, 0, 0}, {+1, 0, 0}, {+1, 0, 0}, {-1, 0, 0}, {-1, 0, 0},
         {-1, 0, 0}, {-1, 0, 0}, {0, +1, 0}, {0, +1, 0}, {0, +1, 0}, {0, +1, 0},
         {0, -1, 0}, {0, -1, 0}, {0, -1, 0}, {0, -1, 0}};
-  static const auto fvcube_texcoords = vector<vec2f>{{0, 1}, {1, 1}, {1, 0},
-      {0, 0}, {0, 1}, {1, 1}, {1, 0}, {0, 0}, {0, 1}, {1, 1}, {1, 0}, {0, 0},
-      {0, 1}, {1, 1}, {1, 0}, {0, 0}, {0, 1}, {1, 1}, {1, 0}, {0, 0}, {0, 1},
-      {1, 1}, {1, 0}, {0, 0}};
+  static const auto fvcube_texcoords = vector<vec2f>{{0, 0}, {1, 0}, {1, 1},
+      {0, 1}, {0, 0}, {1, 0}, {1, 1}, {0, 1}, {0, 0}, {1, 0}, {1, 1}, {0, 1},
+      {0, 0}, {1, 0}, {1, 1}, {0, 1}, {0, 0}, {1, 0}, {1, 1}, {0, 1}, {0, 0},
+      {1, 0}, {1, 1}, {0, 1}};
   static const auto fvcube_quadspos  = vector<vec4i>{{0, 1, 2, 3}, {4, 5, 6, 7},
        {1, 4, 7, 2}, {5, 0, 3, 6}, {3, 2, 7, 6}, {1, 0, 5, 4}};
   static const auto fvcube_quadsnorm = vector<vec4i>{{0, 1, 2, 3}, {4, 5, 6, 7},
