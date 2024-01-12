@@ -88,7 +88,7 @@ void run(const vector<string>& args) {
         {radius, radius}, noise, gravity);
 
     // save mesh
-    save_shape(outname, sshape, true);
+    save_shape(outname, sshape);
   }
 }
 

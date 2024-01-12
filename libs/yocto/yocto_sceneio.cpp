@@ -730,7 +730,7 @@ void save_imageb(const string& filename, const image_t<vec4b>& image) {
 namespace yocto {
 
 // Load mesh
-void load_shape(const string& filename, shape_data& shape, bool flip_texcoord) {
+void load_shape(const string& filename, shape_data& shape) {
   shape = {};
 
   auto ext = path_extension(filename);
@@ -739,8 +739,7 @@ void load_shape(const string& filename, shape_data& shape, bool flip_texcoord) {
     // TODO: remove when all as arrays
     get_positions(ply, (vector<array<float, 3>>&)shape.positions);
     get_normals(ply, (vector<array<float, 3>>&)shape.normals);
-    get_texcoords(
-        ply, (vector<array<float, 2>>&)shape.texcoords, flip_texcoord);
+    get_texcoords(ply, (vector<array<float, 2>>&)shape.texcoords);
     get_colors(ply, (vector<array<float, 4>>&)shape.colors);
     get_radius(ply, shape.radius);
     get_faces(ply, (vector<array<int, 3>>&)shape.triangles,
@@ -756,8 +755,7 @@ void load_shape(const string& filename, shape_data& shape, bool flip_texcoord) {
     // TODO: remove when all as arrays
     get_positions(obj, (vector<array<float, 3>>&)shape.positions);
     get_normals(obj, (vector<array<float, 3>>&)shape.normals);
-    get_texcoords(
-        obj, (vector<array<float, 2>>&)shape.texcoords, flip_texcoord);
+    get_texcoords(obj, (vector<array<float, 2>>&)shape.texcoords);
     get_faces(obj, (vector<array<int, 3>>&)shape.triangles,
         (vector<array<int, 4>>&)shape.quads, materials);
     get_lines(obj, (vector<array<int, 2>>&)shape.lines, materials);
@@ -781,16 +779,14 @@ void load_shape(const string& filename, shape_data& shape, bool flip_texcoord) {
 }
 
 // Save ply mesh
-void save_shape(const string& filename, const shape_data& shape,
-    bool flip_texcoord, bool ascii) {
+void save_shape(const string& filename, const shape_data& shape, bool ascii) {
   auto ext = path_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     auto ply = ply_model{};
     // TODO: remove when all as arrays
     add_positions(ply, (const vector<array<float, 3>>&)shape.positions);
     add_normals(ply, (const vector<array<float, 3>>&)shape.normals);
-    add_texcoords(
-        ply, (const vector<array<float, 2>>&)shape.texcoords, flip_texcoord);
+    add_texcoords(ply, (const vector<array<float, 2>>&)shape.texcoords);
     add_colors(ply, (const vector<array<float, 4>>&)shape.colors);
     add_radius(ply, shape.radius);
     add_faces(ply, (const vector<array<int, 3>>&)shape.triangles,
@@ -803,8 +799,7 @@ void save_shape(const string& filename, const shape_data& shape,
     // TODO: remove when all as arrays
     add_positions(obj, (const vector<array<float, 3>>&)shape.positions);
     add_normals(obj, (const vector<array<float, 3>>&)shape.normals);
-    add_texcoords(
-        obj, (const vector<array<float, 2>>&)shape.texcoords, flip_texcoord);
+    add_texcoords(obj, (const vector<array<float, 2>>&)shape.texcoords);
     add_triangles(obj, (const vector<array<int, 3>>&)shape.triangles, 0,
         !shape.normals.empty(), !shape.texcoords.empty());
     add_quads(obj, (const vector<array<int, 4>>&)shape.quads, 0,
@@ -886,8 +881,7 @@ void save_shape(const string& filename, const shape_data& shape,
 }
 
 // Load face-varying mesh
-void load_fvshape(
-    const string& filename, fvshape_data& shape, bool flip_texcoord) {
+void load_fvshape(const string& filename, fvshape_data& shape) {
   shape = {};
 
   auto ext = path_extension(filename);
@@ -896,8 +890,7 @@ void load_fvshape(
     // TODO: remove when all as arrays
     get_positions(ply, (vector<array<float, 3>>&)shape.positions);
     get_normals(ply, (vector<array<float, 3>>&)shape.normals);
-    get_texcoords(
-        ply, (vector<array<float, 2>>&)shape.texcoords, flip_texcoord);
+    get_texcoords(ply, (vector<array<float, 2>>&)shape.texcoords);
     get_quads(ply, (vector<array<int, 4>>&)shape.quadspos);
     if (!shape.normals.empty()) shape.quadsnorm = shape.quadspos;
     if (!shape.texcoords.empty()) shape.quadstexcoord = shape.quadspos;
@@ -908,8 +901,7 @@ void load_fvshape(
     auto materials = vector<int>{};
     get_positions(obj, (vector<array<float, 3>>&)shape.positions);
     get_normals(obj, (vector<array<float, 3>>&)shape.normals);
-    get_texcoords(
-        obj, (vector<array<float, 2>>&)shape.texcoords, flip_texcoord);
+    get_texcoords(obj, (vector<array<float, 2>>&)shape.texcoords);
     get_fvquads(obj, (vector<array<int, 4>>&)shape.quadspos,
         (vector<array<int, 4>>&)shape.quadsnorm,
         (vector<array<int, 4>>&)shape.quadstexcoord, materials);
@@ -933,8 +925,8 @@ void load_fvshape(
 }
 
 // Save ply mesh
-void save_fvshape(const string& filename, const fvshape_data& shape,
-    bool flip_texcoord, bool ascii) {
+void save_fvshape(
+    const string& filename, const fvshape_data& shape, bool ascii) {
   auto ext = path_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     auto ply             = ply_model{};
@@ -948,8 +940,7 @@ void save_fvshape(const string& filename, const fvshape_data& shape,
     // TODO: remove when all as arrays
     add_positions(ply, (const vector<array<float, 3>>&)split_positions);
     add_normals(ply, (const vector<array<float, 3>>&)split_normals);
-    add_texcoords(
-        ply, (const vector<array<float, 2>>&)split_texcoords, flip_texcoord);
+    add_texcoords(ply, (const vector<array<float, 2>>&)split_texcoords);
     add_quads(ply, (const vector<array<int, 4>>&)split_quads);
     save_ply(filename, ply);
   } else if (ext == ".obj" || ext == ".OBJ") {
@@ -957,8 +948,7 @@ void save_fvshape(const string& filename, const fvshape_data& shape,
     // TODO: remove when all as arrays
     add_positions(obj, (const vector<array<float, 3>>&)shape.positions);
     add_normals(obj, (const vector<array<float, 3>>&)shape.normals);
-    add_texcoords(
-        obj, (const vector<array<float, 2>>&)shape.texcoords, flip_texcoord);
+    add_texcoords(obj, (const vector<array<float, 2>>&)shape.texcoords);
     add_fvquads(obj, (const vector<array<int, 4>>&)shape.quadspos,
         (const vector<array<int, 4>>&)shape.quadsnorm,
         (const vector<array<int, 4>>&)shape.quadstexcoord, 0);
@@ -1270,16 +1260,16 @@ fvshape_data make_fvshape_preset(const string& type) {
 }
 
 // Load mesh
-shape_data load_shape(const string& filename, bool flip_texcoord) {
+shape_data load_shape(const string& filename) {
   auto shape = shape_data{};
-  load_shape(filename, shape, flip_texcoord);
+  load_shape(filename, shape);
   return shape;
 }
 
 // Load mesh
-fvshape_data load_fvshape(const string& filename, bool flip_texcoord) {
+fvshape_data load_fvshape(const string& filename) {
   auto shape = fvshape_data{};
-  load_fvshape(filename, shape, flip_texcoord);
+  load_fvshape(filename, shape);
   return shape;
 }
 
@@ -2197,7 +2187,7 @@ static void load_instance(const string& filename, vector<frame3f>& frames) {
 
 // load subdiv
 void load_subdiv(const string& filename, subdiv_data& subdiv) {
-  auto lsubdiv         = load_fvshape(filename, true);
+  auto lsubdiv         = load_fvshape(filename);
   subdiv.quadspos      = lsubdiv.quadspos;
   subdiv.quadsnorm     = lsubdiv.quadsnorm;
   subdiv.quadstexcoord = lsubdiv.quadstexcoord;
@@ -2215,7 +2205,7 @@ void save_subdiv(const string& filename, const subdiv_data& subdiv) {
   ssubdiv.positions     = subdiv.positions;
   ssubdiv.normals       = subdiv.normals;
   ssubdiv.texcoords     = subdiv.texcoords;
-  save_fvshape(filename, ssubdiv, true);
+  save_fvshape(filename, ssubdiv);
 }
 
 // load/save subdiv
@@ -2519,7 +2509,7 @@ static void load_json_scene_version40(const string& filename,
     parallel_foreach(scene.shapes, noparallel, [&](auto& shape) {
       auto path = find_path(
           get_shape_name(scene, shape), "shapes", {".ply", ".obj"});
-      return load_shape(path_join(dirname, path), shape, true);
+      return load_shape(path_join(dirname, path), shape);
     });
     // load subdivs
     parallel_foreach(scene.subdivs, noparallel, [&](auto& subdiv) {
@@ -2775,7 +2765,7 @@ static void load_json_scene_version41(const string& filename, json_value& json,
     // load shapes
     parallel_zip(shape_filenames, scene.shapes, noparallel,
         [&](auto&& filename, auto&& shape) {
-          return load_shape(filename, shape, true);
+          return load_shape(filename, shape);
         });
     // load subdivs
     parallel_zip(subdiv_filenames, scene.subdivs, noparallel,
@@ -2972,7 +2962,7 @@ static void load_json_scene(
     // load shapes
     parallel_zip(shape_filenames, scene.shapes, noparallel,
         [&](auto&& filename, auto&& shape) {
-          return load_shape(path_join(dirname, filename), shape, true);
+          return load_shape(path_join(dirname, filename), shape);
         });
     // load subdivs
     parallel_zip(subdiv_filenames, scene.subdivs, noparallel,
@@ -3196,7 +3186,7 @@ static void save_json_scene(
     // save shapes
     parallel_zip(shape_filenames, scene.shapes, noparallel,
         [&](auto&& filename, auto&& shape) {
-          return save_shape(path_join(dirname, filename), shape, true);
+          return save_shape(path_join(dirname, filename), shape);
         });
     // save subdivs
     parallel_zip(subdiv_filenames, scene.subdivs, noparallel,
@@ -3450,7 +3440,7 @@ namespace yocto {
 static void load_ply_scene(
     const string& filename, scene_data& scene, bool noparallel) {
   // load ply mesh and make instance
-  auto shape = load_shape(filename, true);
+  auto shape = load_shape(filename);
   scene.shapes.push_back(shape);
   scene.instances.push_back({{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}},
       (int)scene.shapes.size() - 1, -1});
@@ -3466,7 +3456,7 @@ static void save_ply_scene(
     const string& filename, const scene_data& scene, bool noparallel) {
   // save shape
   if (scene.shapes.empty()) throw std::invalid_argument{"empty shape"};
-  return save_shape(filename, scene.shapes.front(), false);
+  return save_shape(filename, scene.shapes.front());
 }
 
 }  // namespace yocto
@@ -3479,7 +3469,7 @@ namespace yocto {
 static void load_stl_scene(
     const string& filename, scene_data& scene, bool noparallel) {
   // load ply mesh and make instance
-  auto shape = load_shape(filename, true);
+  auto shape = load_shape(filename);
   scene.instances.push_back({{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}},
       (int)scene.shapes.size() - 1, -1});
 
@@ -3494,7 +3484,7 @@ static void save_stl_scene(
     const string& filename, const scene_data& scene, bool noparallel) {
   // save shape
   if (scene.shapes.empty()) throw std::invalid_argument{"empty shape"};
-  return save_shape(filename, scene.shapes.front(), false);
+  return save_shape(filename, scene.shapes.front());
 }
 
 }  // namespace yocto
@@ -3798,6 +3788,7 @@ static void load_gltf_scene(
               "cannot load " + filename + " for unsupported primitive type"};
         }
       }
+      for (auto& texcoord : shape.texcoords) texcoord.y = 1 - texcoord.y;
     }
   }
 
@@ -3958,6 +3949,13 @@ static void save_gltf_scene(
     }
   }
 
+  // UV flip
+  auto flip_uv = [](const vector<vec2f>& texcoords) {
+    auto ftexcoords = texcoords;
+    for (auto& uv : ftexcoords) uv.y = 1 - uv.y;
+    return ftexcoords;
+  };
+
   // buffers
   auto shape_accessor_start = vector<int>{};
   if (!scene.shapes.empty()) {
@@ -4024,7 +4022,7 @@ static void save_gltf_scene(
       add_vertex(cgltf, gbuffer, shape.normals.size(), cgltf_type_vec3,
           (const float*)shape.normals.data());
       add_vertex(cgltf, gbuffer, shape.texcoords.size(), cgltf_type_vec2,
-          (const float*)shape.texcoords.data());
+          (const float*)flip_uv(shape.texcoords).data());
       add_vertex(cgltf, gbuffer, shape.colors.size(), cgltf_type_vec4,
           (const float*)shape.colors.data());
       add_vertex(cgltf, gbuffer, shape.radius.size(), cgltf_type_scalar,
@@ -4296,7 +4294,7 @@ static void load_pbrt_scene(
     parallel_foreach(scene.shapes, noparallel, [&](auto& shape) {
       auto& path = shapes_paths[&shape - &scene.shapes.front()];
       if (path.empty()) return;
-      load_shape(path_join(dirname, path), shape, true);
+      load_shape(path_join(dirname, path), shape);
     });
     // load textures
     parallel_foreach(scene.textures, noparallel, [&](auto& texture) {
@@ -4384,7 +4382,7 @@ static void save_pbrt_scene(
     // save shapes
     parallel_foreach(scene.shapes, noparallel, [&](auto& shape) {
       auto path = "shapes/" + get_shape_name(scene, shape) + ".ply";
-      return save_shape(path_join(dirname, path), shape, true);
+      return save_shape(path_join(dirname, path), shape);
     });
     // save textures
     parallel_foreach(scene.textures, noparallel, [&](auto& texture) {
@@ -4745,7 +4743,7 @@ static void save_mitsuba_scene(
     // save shapes
     parallel_foreach(scene.shapes, noparallel, [&](auto& shape) {
       auto path = "shapes/" + get_shape_name(scene, shape) + ".ply";
-      return save_shape(path_join(dirname, path), triangulate(shape), true);
+      return save_shape(path_join(dirname, path), triangulate(shape));
     });
     // save textures
     parallel_foreach(scene.textures, noparallel, [&](auto& texture) {

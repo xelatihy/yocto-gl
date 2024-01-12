@@ -126,30 +126,26 @@ bool make_texture_preset(
 namespace yocto {
 
 // Load/save a shape
-bool load_shape(const string& filename, shape_data& shape, string& error,
-    bool flip_texcoords = true);
+bool load_shape(const string& filename, shape_data& shape, string& error);
 bool save_shape(const string& filename, const shape_data& shape, string& error,
-    bool flip_texcoords = true, bool ascii = false);
+    bool ascii = false);
 
 // Load/save a shape
-shape_data load_shape(const string& filename, bool flip_texcoords = true);
-void       load_shape(
-          const string& filename, shape_data& shape, bool flip_texcoords = true);
-void save_shape(const string& filename, const shape_data& shape,
-    bool flip_texcoords = true, bool ascii = false);
+shape_data load_shape(const string& filename);
+void       load_shape(const string& filename, shape_data& shape);
+void       save_shape(
+          const string& filename, const shape_data& shape, bool ascii = false);
 
 // Load/save a subdiv
-bool load_fvshape(const string& filename, fvshape_data& shape, string& error,
-    bool flip_texcoords = true);
+bool load_fvshape(const string& filename, fvshape_data& shape, string& error);
 bool save_fvshape(const string& filename, const fvshape_data& shape,
-    string& error, bool flip_texcoords = true, bool ascii = false);
+    string& error, bool ascii = false);
 
 // Load/save a subdiv
-fvshape_data load_fvshape(const string& filename, bool flip_texcoords = true);
-void         load_fvshape(
-            const string& filename, fvshape_data& shape, bool flip_texcoords = true);
-void save_fvshape(const string& filename, const fvshape_data& shape,
-    bool flip_texcoords = true, bool ascii = false);
+fvshape_data load_fvshape(const string& filename);
+void         load_fvshape(const string& filename, fvshape_data& shape);
+void         save_fvshape(
+            const string& filename, const fvshape_data& shape, bool ascii = false);
 
 // Make presets. Supported mostly in IO.
 shape_data   make_shape_preset(const string& type);
