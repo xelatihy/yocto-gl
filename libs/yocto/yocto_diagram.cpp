@@ -91,7 +91,7 @@ static shape_data make_dquads(
       shape.positions[j * (steps.x + 1) + i] = {
           (2 * uv.x - 1) * scale.x, (2 * uv.y - 1) * scale.y, 0};
       shape.normals[j * (steps.x + 1) + i]   = {0, 0, 1};
-      shape.texcoords[j * (steps.x + 1) + i] = vec2f{uv.x, 1 - uv.y} * uvscale;
+      shape.texcoords[j * (steps.x + 1) + i] = vec2f{uv.x, uv.y} * uvscale;
     }
   }
 
@@ -1678,7 +1678,7 @@ static shape_data make_text_shape(const string& text, const vec3f& offset,
     if (offset.y < 0) p.y += -height + offset_.y * offset.y;
     if (offset.z > 0) p.z += offset.z;
   }
-  shape.texcoords = {{0, 1}, {1, 1}, {1, 0}, {0, 0}};
+  shape.texcoords = {{0, 0}, {1, 0}, {1, 1}, {0, 1}};
   return shape;
 }
 

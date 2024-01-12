@@ -489,7 +489,7 @@ image_t<vec4f> load_image(const string& filename) {
   } else if (ext == ".png" || ext == ".PNG" || ext == ".jpg" || ext == ".JPG" ||
              ext == ".jpeg" || ext == ".JPEG" || ext == ".tga" ||
              ext == ".TGA" || ext == ".bmp" || ext == ".BMP") {
-    return srgbb_to_rgb(load_imageb(filename));
+    return byte_to_float(load_imageb(filename));
   } else if (ext == ".ypreset" || ext == ".YPRESET") {
     auto image = make_image_preset(filename);
     return is_srgb_preset(filename) ? srgb_to_rgb(image) : image;
