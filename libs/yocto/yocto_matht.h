@@ -2298,7 +2298,7 @@ inline pair<vec<T, 3>, vec<T, 3>> camera_turntable(const vec<T, 3>& from_,
     auto theta = acos(z.y) + rotate.y;
     theta      = clamp(theta, (T)0.001, (T)pi - (T)0.001);
     auto nz    = vec<T, 3>{sin(theta) * cos(phi) * lz, cos(theta) * lz,
-        sin(theta) * sin(phi) * lz};
+           sin(theta) * sin(phi) * lz};
     from       = to - nz;
   }
 
@@ -2413,7 +2413,7 @@ inline void update_turntable(vec<T, 3>& from, vec<T, 3>& to, vec<T, 3>& up,
     auto theta = acos(z.y) + rotate.y;
     theta      = clamp(theta, (T)0.001, (T)pi - (T)0.001);
     auto nz    = vec<T, 3>{sin(theta) * cos(phi) * lz, cos(theta) * lz,
-        sin(theta) * sin(phi) * lz};
+           sin(theta) * sin(phi) * lz};
     from       = to - nz;
   }
 

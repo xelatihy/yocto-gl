@@ -77,6 +77,33 @@ inline void parallel_for(T num1, T num2, Func&& func) {
   for (auto& f : futures) f.get();
 }
 
+// Simple parallel for used since our target platforms do not yet support
+// parallel algorithms. `Func` takes the two integer indices.
+template <typename Func>
+inline void parallel_for_batch(vec2i num, Func&& func) {
+  auto              futures  = vector<std::future<void>>{};
+  auto              nthreads = std::thread::hardware_concurrency();
+  std::atomic<int>  next_idx(0);
+  std::atomic<bool> has_error(false);
+  for (auto thread_id = 0; thread_id < (int)nthreads; thread_id++) {
+    futures.emplace_back(
+        std::async(std::launch::async, [&func, &next_idx, &has_error, num]() {
+          try {
+            while (true) {
+              auto j = next_idx.fetch_add(1);
+              if (j >= num[1]) break;
+              if (has_error) break;
+              for (auto i = 0; i < num[0]; i++) func(vec2i{i, j});
+            }
+          } catch (...) {
+            has_error = true;
+            throw;
+          }
+        }));
+  }
+  for (auto& f : futures) f.get();
+}
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -372,10 +399,11 @@ static vec3f sample_lights(const scene_data& scene, const trace_lights& lights,
   } else if (light.environment != invalidid) {
     auto& environment = scene.environments[light.environment];
     if (environment.emission_tex != invalidid) {
-      auto& emission_tex = scene.textures[environment.emission_tex];
-      auto  idx          = sample_discrete(light.elements_cdf, rel);
-      auto  uv = vec2f{((idx % emission_tex.width) + 0.5f) / emission_tex.width,
-          ((idx / emission_tex.width) + 0.5f) / emission_tex.height};
+      auto& texture = scene.textures[environment.emission_tex];
+      auto  idx     = sample_discrete(light.elements_cdf, rel);
+      auto  size    = max(texture.pixelsf.size(), texture.pixelsb.size());
+      auto  uv      = vec2f{
+          ((idx % size.x) + 0.5f) / size.x, ((idx / size.x) + 0.5f) / size.y};
       return transform_direction(environment.frame,
           {cos(uv.x * 2 * pif) * sin(uv.y * pif), cos(uv.y * pif),
               sin(uv.x * 2 * pif) * sin(uv.y * pif)});
@@ -422,16 +450,14 @@ static float sample_lights_pdf(const scene_data& scene, const trace_bvh& bvh,
         auto  texcoord = vec2f{atan2(wl.z, wl.x) / (2 * pif),
             acos(clamp(wl.y, -1.0f, 1.0f)) / pif};
         if (texcoord.x < 0) texcoord.x += 1;
-        auto i = clamp(
-            (int)(texcoord.x * emission_tex.width), 0, emission_tex.width - 1);
-        auto j    = clamp((int)(texcoord.y * emission_tex.height), 0,
-               emission_tex.height - 1);
+        auto size = max(
+            emission_tex.pixelsf.size(), emission_tex.pixelsb.size());
+        auto ij   = clamp((vec2i)(texcoord * (vec2f)size), zero2i, size - 1);
         auto prob = sample_discrete_pdf(
-                        light.elements_cdf, j * emission_tex.width + i) /
+                        light.elements_cdf, ij.y * size.x + ij.x) /
                     light.elements_cdf.back();
-        auto angle = (2 * pif / emission_tex.width) *
-                     (pif / emission_tex.height) *
-                     sin(pif * (j + 0.5f) / emission_tex.height);
+        auto angle = (2 * pif / size.x) * (pif / size.y) *
+                     sin(pif * (ij.y + 0.5f) / size.y);
         pdf += prob / angle;
       } else {
         pdf += 1 / (4 * pif);
@@ -479,7 +505,7 @@ static trace_result trace_path(const scene_data& scene, const trace_bvh& bvh,
     if (!volume_stack.empty()) {
       auto& vsdf     = volume_stack.back();
       auto  distance = sample_transmittance(
-           vsdf.density, intersection.distance, rand1f(rng), rand1f(rng));
+          vsdf.density, intersection.distance, rand1f(rng), rand1f(rng));
       weight *= eval_transmittance(vsdf.density, distance) /
                 sample_transmittance_pdf(
                     vsdf.density, distance, intersection.distance);
@@ -626,7 +652,7 @@ static trace_result trace_pathdirect(const scene_data& scene,
     if (!volume_stack.empty()) {
       auto& vsdf     = volume_stack.back();
       auto  distance = sample_transmittance(
-           vsdf.density, intersection.distance, rand1f(rng), rand1f(rng));
+          vsdf.density, intersection.distance, rand1f(rng), rand1f(rng));
       weight *= eval_transmittance(vsdf.density, distance) /
                 sample_transmittance_pdf(
                     vsdf.density, distance, intersection.distance);
@@ -805,7 +831,7 @@ static trace_result trace_pathmis(const scene_data& scene, const trace_bvh& bvh,
     if (!volume_stack.empty()) {
       auto& vsdf     = volume_stack.back();
       auto  distance = sample_transmittance(
-           vsdf.density, intersection.distance, rand1f(rng), rand1f(rng));
+          vsdf.density, intersection.distance, rand1f(rng), rand1f(rng));
       weight *= eval_transmittance(vsdf.density, distance) /
                 sample_transmittance_pdf(
                     vsdf.density, distance, intersection.distance);
@@ -1028,6 +1054,112 @@ static trace_result trace_pathtest(const scene_data& scene,
   return {radiance, hit, hit_albedo, hit_normal};
 }
 
+// Recursive path tracing by sampling lights.
+static trace_result trace_lightsampling(const scene_data& scene,
+    const trace_bvh& bvh, const trace_lights& lights, const ray3f& ray_,
+    rng_state& rng, const trace_params& params) {
+  // initialize
+  auto radiance      = vec3f{0, 0, 0};
+  auto weight        = vec3f{1, 1, 1};
+  auto ray           = ray_;
+  auto hit           = false;
+  auto hit_albedo    = vec3f{0, 0, 0};
+  auto hit_normal    = vec3f{0, 0, 0};
+  auto next_emission = true;
+  auto opbounce      = 0;
+
+  // trace  path
+  for (auto bounce = 0; bounce < params.bounces; bounce++) {
+    // intersect next point
+    auto intersection = intersect_scene(bvh, scene, ray);
+    if (!intersection.hit) {
+      if ((bounce > 0 || !params.envhidden) && next_emission)
+        radiance += weight * eval_environment(scene, ray.d);
+      break;
+    }
+
+    // prepare shading point
+    auto outgoing = -ray.d;
+    auto position = eval_shading_position(scene, intersection, outgoing);
+    auto normal   = eval_shading_normal(scene, intersection, outgoing);
+    auto material = eval_material(scene, intersection);
+
+    // handle opacity
+    if (material.opacity < 1 && rand1f(rng) >= material.opacity) {
+      if (opbounce++ > 128) break;
+      ray = {position + ray.d * 1e-2f, ray.d};
+      bounce -= 1;
+      continue;
+    }
+
+    // set hit variables
+    if (bounce == 0) {
+      hit        = true;
+      hit_albedo = material.color;
+      hit_normal = normal;
+    }
+
+    // accumulate emission
+    if (next_emission)
+      radiance += weight * eval_emission(material, normal, outgoing);
+
+    // direct
+    if (!is_delta(material)) {
+      auto incoming = sample_lights(
+          scene, lights, position, rand1f(rng), rand1f(rng), rand2f(rng));
+      auto pdf     = sample_lights_pdf(scene, bvh, lights, position, incoming);
+      auto bsdfcos = eval_bsdfcos(material, normal, outgoing, incoming);
+      if (bsdfcos != vec3f{0, 0, 0} && pdf > 0) {
+        auto intersection = intersect_scene(bvh, scene, {position, incoming});
+        auto emission =
+            !intersection.hit
+                ? eval_environment(scene, incoming)
+                : eval_emission(eval_material(scene,
+                                    scene.instances[intersection.instance],
+                                    intersection.element, intersection.uv),
+                      eval_shading_normal(scene,
+                          scene.instances[intersection.instance],
+                          intersection.element, intersection.uv, -incoming),
+                      -incoming);
+        radiance += weight * bsdfcos * emission / pdf;
+      }
+      next_emission = false;
+    } else {
+      next_emission = true;
+    }
+
+    // next direction
+    auto incoming = vec3f{0, 0, 0};
+    if (material.roughness != 0) {
+      incoming = sample_bsdfcos(
+          material, normal, outgoing, rand1f(rng), rand2f(rng));
+      if (incoming == vec3f{0, 0, 0}) break;
+      weight *= eval_bsdfcos(material, normal, outgoing, incoming) /
+                sample_bsdfcos_pdf(material, normal, outgoing, incoming);
+    } else {
+      incoming = sample_delta(material, normal, outgoing, rand1f(rng));
+      if (incoming == vec3f{0, 0, 0}) break;
+      weight *= eval_delta(material, normal, outgoing, incoming) /
+                sample_delta_pdf(material, normal, outgoing, incoming);
+    }
+
+    // check weight
+    if (weight == vec3f{0, 0, 0} || !isfinite(weight)) break;
+
+    // russian roulette
+    if (bounce > 3) {
+      auto rr_prob = min((float)0.99, max(weight));
+      if (rand1f(rng) >= rr_prob) break;
+      weight *= 1 / rr_prob;
+    }
+
+    // setup next iteration
+    ray = {position, incoming};
+  }
+
+  return {radiance, hit, hit_albedo, hit_normal};
+}
+
 // Recursive path tracing.
 static trace_result trace_naive(const scene_data& scene, const trace_bvh& bvh,
     const trace_lights& lights, const ray3f& ray_, rng_state& rng,
@@ -1077,7 +1209,7 @@ static trace_result trace_naive(const scene_data& scene, const trace_bvh& bvh,
 
     // next direction
     auto incoming = vec3f{0, 0, 0};
-    if (material.roughness != 0) {
+    if (!is_delta(material)) {
       incoming = sample_bsdfcos(
           material, normal, outgoing, rand1f(rng), rand2f(rng));
       if (incoming == vec3f{0, 0, 0}) break;
@@ -1127,75 +1259,6 @@ static trace_result trace_eyelight(const scene_data& scene,
     if (!intersection.hit) {
       if (bounce > 0 || !params.envhidden)
         radiance += weight * eval_environment(scene, ray.d);
-      break;
-    }
-
-    // prepare shading point
-    auto outgoing = -ray.d;
-    auto position = eval_shading_position(scene, intersection, outgoing);
-    auto normal   = eval_shading_normal(scene, intersection, outgoing);
-    auto material = eval_material(scene, intersection);
-
-    // handle opacity
-    if (material.opacity < 1 && rand1f(rng) >= material.opacity) {
-      if (opbounce++ > 128) break;
-      ray = {position + ray.d * 1e-2f, ray.d};
-      bounce -= 1;
-      continue;
-    }
-
-    // set hit variables
-    if (bounce == 0) {
-      hit        = true;
-      hit_albedo = material.color;
-      hit_normal = normal;
-    }
-
-    // accumulate emission
-    auto incoming = outgoing;
-    radiance += weight * eval_emission(material, normal, outgoing);
-
-    // brdf * light
-    radiance += weight * pif *
-                eval_bsdfcos(material, normal, outgoing, incoming);
-
-    // continue path
-    if (!is_delta(material)) break;
-    incoming = sample_delta(material, normal, outgoing, rand1f(rng));
-    if (incoming == vec3f{0, 0, 0}) break;
-    weight *= eval_delta(material, normal, outgoing, incoming) /
-              sample_delta_pdf(material, normal, outgoing, incoming);
-    if (weight == vec3f{0, 0, 0} || !isfinite(weight)) break;
-
-    // setup next iteration
-    ray = {position, incoming};
-  }
-
-  return {radiance, hit, hit_albedo, hit_normal};
-}
-
-// Diagram previewing.
-static trace_result trace_diagram(const scene_data& scene, const trace_bvh& bvh,
-    const trace_lights& lights, const ray3f& ray_, rng_state& rng,
-    const trace_params& params) {
-  // initialize
-  auto radiance   = vec3f{0, 0, 0};
-  auto weight     = vec3f{1, 1, 1};
-  auto ray        = ray_;
-  auto hit        = false;
-  auto hit_albedo = vec3f{0, 0, 0};
-  auto hit_normal = vec3f{0, 0, 0};
-  auto opbounce   = 0;
-
-  // trace  path
-  for (auto bounce = 0; bounce < max(params.bounces, 4); bounce++) {
-    // intersect next point
-    auto intersection = intersect_scene(bvh, scene, ray);
-    if (!intersection.hit) {
-      radiance += weight * vec3f{1, 1, 1};
-      hit = true;
-      // if (bounce > 0 || !params.envhidden)
-      //   radiance += weight * eval_environment(scene, ray.d);
       break;
     }
 
@@ -1428,9 +1491,9 @@ static sampler_func get_trace_sampler_func(const trace_params& params) {
     case trace_sampler_type::pathdirect: return trace_pathdirect;
     case trace_sampler_type::pathmis: return trace_pathmis;
     case trace_sampler_type::pathtest: return trace_pathtest;
+    case trace_sampler_type::lightsampling: return trace_lightsampling;
     case trace_sampler_type::naive: return trace_naive;
     case trace_sampler_type::eyelight: return trace_eyelight;
-    case trace_sampler_type::diagram: return trace_diagram;
     case trace_sampler_type::furnace: return trace_furnace;
     case trace_sampler_type::falsecolor: return trace_falsecolor;
     default: {
@@ -1459,62 +1522,59 @@ bool is_sampler_lit(const trace_params& params) {
 
 // Trace a block of samples
 void trace_sample(trace_state& state, const scene_data& scene,
-    const trace_bvh& bvh, const trace_lights& lights, int i, int j, int sample,
+    const trace_bvh& bvh, const trace_lights& lights, vec2i ij, int sample,
     const trace_params& params) {
   auto& camera  = scene.cameras[params.camera];
   auto  sampler = get_trace_sampler_func(params);
-  auto  idx     = state.width * j + i;
-  auto  ray     = sample_camera(camera, {i, j}, {state.width, state.height},
-           rand2f(state.rngs[idx]), rand2f(state.rngs[idx]), params.tentfilter);
+  auto  ray     = sample_camera(camera, ij, state.render.size(),
+           rand2f(state.rngs[ij]), rand2f(state.rngs[ij]), params.tentfilter);
   auto [radiance, hit, albedo, normal] = sampler(
-      scene, bvh, lights, ray, state.rngs[idx], params);
+      scene, bvh, lights, ray, state.rngs[ij], params);
   if (!isfinite(radiance)) radiance = {0, 0, 0};
   if (max(radiance) > params.clamp)
     radiance = radiance * (params.clamp / max(radiance));
   auto weight = 1.0f / (sample + 1);
   if (hit) {
-    state.image[idx] = lerp(
-        state.image[idx], {radiance.x, radiance.y, radiance.z, 1}, weight);
-    state.albedo[idx] = lerp(state.albedo[idx], albedo, weight);
-    state.normal[idx] = lerp(state.normal[idx], normal, weight);
-    state.hits[idx] += 1;
+    state.render[ij] = lerp(
+        state.render[ij], {radiance.x, radiance.y, radiance.z, 1}, weight);
+    state.albedo[ij] = lerp(state.albedo[ij], albedo, weight);
+    state.normal[ij] = lerp(state.normal[ij], normal, weight);
+    state.hits[ij] += 1;
   } else if (!params.envhidden && !scene.environments.empty()) {
-    state.image[idx] = lerp(
-        state.image[idx], {radiance.x, radiance.y, radiance.z, 1}, weight);
-    state.albedo[idx] = lerp(state.albedo[idx], {1, 1, 1}, weight);
-    state.normal[idx] = lerp(state.normal[idx], -ray.d, weight);
-    state.hits[idx] += 1;
+    state.render[ij] = lerp(
+        state.render[ij], {radiance.x, radiance.y, radiance.z, 1}, weight);
+    state.albedo[ij] = lerp(state.albedo[ij], {1, 1, 1}, weight);
+    state.normal[ij] = lerp(state.normal[ij], -ray.d, weight);
+    state.hits[ij] += 1;
   } else {
-    state.image[idx]  = lerp(state.image[idx], {0, 0, 0, 0}, weight);
-    state.albedo[idx] = lerp(state.albedo[idx], {0, 0, 0}, weight);
-    state.normal[idx] = lerp(state.normal[idx], -ray.d, weight);
+    state.render[ij] = lerp(state.render[ij], {0, 0, 0, 0}, weight);
+    state.albedo[ij] = lerp(state.albedo[ij], {0, 0, 0}, weight);
+    state.normal[ij] = lerp(state.normal[ij], -ray.d, weight);
   }
 }
 
 // Init a sequence of random number generators.
 trace_state make_trace_state(
     const scene_data& scene, const trace_params& params) {
-  auto& camera = scene.cameras[params.camera];
-  auto  state  = trace_state{};
-  if (camera.aspect >= 1) {
-    state.width  = params.resolution;
-    state.height = (int)round(params.resolution / camera.aspect);
-  } else {
-    state.height = params.resolution;
-    state.width  = (int)round(params.resolution * camera.aspect);
-  }
-  state.samples = 0;
-  state.image.assign(state.width * state.height, {0, 0, 0, 0});
-  state.albedo.assign(state.width * state.height, {0, 0, 0});
-  state.normal.assign(state.width * state.height, {0, 0, 0});
-  state.hits.assign(state.width * state.height, 0);
-  state.rngs.assign(state.width * state.height, {});
-  auto rng_ = make_rng(1301081);
+  auto& camera     = scene.cameras[params.camera];
+  auto  state      = trace_state{};
+  auto  resolution = (camera.aspect >= 1)
+                         ? vec2i{params.resolution,
+                              (int)round(params.resolution / camera.aspect)}
+                         : vec2i{(int)round(params.resolution * camera.aspect),
+                              params.resolution};
+  state.samples    = 0;
+  state.render     = image_t<vec4f>{resolution};
+  state.albedo     = image_t<vec3f>{resolution};
+  state.normal     = image_t<vec3f>{resolution};
+  state.hits       = image_t<int>{resolution};
+  state.rngs       = image_t<rng_state>{resolution};
+  auto rng_        = make_rng(1301081);
   for (auto& rng : state.rngs) {
     rng = make_rng(params.seed, rand1i(rng_, 1 << 31) / 2 + 1);
   }
   if (params.denoise) {
-    state.denoised.assign(state.width * state.height, {0, 0, 0, 0});
+    state.denoised = image_t<vec4f>{resolution};
   }
   return state;
 }
@@ -1565,11 +1625,12 @@ trace_lights make_trace_lights(
     light.environment = (int)handle;
     if (environment.emission_tex != invalidid) {
       auto& texture      = scene.textures[environment.emission_tex];
-      light.elements_cdf = vector<float>(texture.width * texture.height);
+      auto  size         = max(texture.pixelsf.size(), texture.pixelsb.size());
+      light.elements_cdf = vector<float>(size.x * size.y);
       for (auto idx : range(light.elements_cdf.size())) {
-        auto ij    = vec2i{(int)idx % texture.width, (int)idx / texture.width};
-        auto th    = (ij.y + 0.5f) * pif / texture.height;
-        auto value = lookup_texture(texture, ij.x, ij.y);
+        auto ij                 = vec2i{(int)idx % size.x, (int)idx / size.x};
+        auto th                 = (ij.y + 0.5f) * pif / size.y;
+        auto value              = lookup_texture(texture, ij);
         light.elements_cdf[idx] = max(value) * sin(th);
         if (idx != 0) light.elements_cdf[idx] += light.elements_cdf[idx - 1];
       }
@@ -1580,8 +1641,26 @@ trace_lights make_trace_lights(
   return lights;
 }
 
+// Convenience helper
+image_t<vec4f> trace_image(const scene_data& scene, trace_sampler_type type,
+    int resolution, int samples, int bounces) {
+  auto params       = trace_params{};
+  params.sampler    = type;
+  params.resolution = resolution;
+  params.samples    = samples;
+  params.bounces    = bounces;
+  auto bvh          = make_trace_bvh(scene, params);
+  auto lights       = make_trace_lights(scene, params);
+  auto state        = make_trace_state(scene, params);
+  for (auto sample = 0; sample < params.samples; sample++) {
+    trace_samples(state, scene, bvh, lights, params);
+  }
+  return get_image(state);
+}
+
 // Progressively computes an image.
-image_data trace_image(const scene_data& scene, const trace_params& params) {
+image_t<vec4f> trace_image(
+    const scene_data& scene, const trace_params& params) {
   auto bvh    = make_trace_bvh(scene, params);
   auto lights = make_trace_lights(scene, params);
   auto state  = make_trace_state(scene, params);
@@ -1597,24 +1676,21 @@ void trace_samples(trace_state& state, const scene_data& scene,
     const trace_params& params) {
   if (state.samples >= params.samples) return;
   if (params.noparallel) {
-    for (auto j : range(state.height)) {
-      for (auto i : range(state.width)) {
-        for (auto sample : range(state.samples, state.samples + params.batch)) {
-          trace_sample(state, scene, bvh, lights, i, j, sample, params);
-        }
+    for (auto ij : range(state.render.size())) {
+      for (auto sample : range(state.samples, state.samples + params.batch)) {
+        trace_sample(state, scene, bvh, lights, ij, sample, params);
       }
     }
   } else {
-    parallel_for(state.width, state.height, [&](int i, int j) {
+    parallel_for_batch(state.render.size(), [&](vec2i ij) {
       for (auto sample : range(state.samples, state.samples + params.batch)) {
-        trace_sample(state, scene, bvh, lights, i, j, sample, params);
+        trace_sample(state, scene, bvh, lights, ij, sample, params);
       }
     });
   }
   state.samples += params.batch;
   if (params.denoise && !state.denoised.empty()) {
-    denoise_image(state.denoised, state.width, state.height, state.image,
-        state.albedo, state.normal);
+    denoise_image(state.denoised, state.render, state.albedo, state.normal);
   }
 }
 
@@ -1632,17 +1708,16 @@ void trace_start(trace_context& context, trace_state& state,
   context.done   = false;
   context.worker = std::async(std::launch::async, [&]() {
     if (context.stop) return;
-    parallel_for(state.width, state.height, [&](int i, int j) {
+    parallel_for_batch(state.render.size(), [&](vec2i ij) {
       for (auto sample : range(state.samples, state.samples + params.batch)) {
         if (context.stop) return;
-        trace_sample(state, scene, bvh, lights, i, j, sample, params);
+        trace_sample(state, scene, bvh, lights, ij, sample, params);
       }
     });
     state.samples += params.batch;
     if (context.stop) return;
     if (params.denoise && !state.denoised.empty()) {
-      denoise_image(state.denoised, state.width, state.height, state.image,
-          state.albedo, state.normal);
+      denoise_image(state.denoised, state.render, state.albedo, state.normal);
     }
     context.done = true;
   });
@@ -1657,7 +1732,7 @@ void trace_cancel(trace_context& context) {
 // Async done
 bool trace_done(const trace_context& context) { return context.done; }
 
-void trace_preview(color_image& image, trace_context& context,
+void trace_preview(image_t<vec4f>& image, trace_context& context,
     trace_state& state, const scene_data& scene, const trace_bvh& bvh,
     const trace_lights& lights, const trace_params& params) {
   // preview
@@ -1667,66 +1742,50 @@ void trace_preview(color_image& image, trace_context& context,
   auto pstate     = make_trace_state(scene, pparams);
   trace_samples(pstate, scene, bvh, lights, pparams);
   auto preview = get_image(pstate);
-  for (auto idx = 0; idx < state.width * state.height; idx++) {
-    auto i = idx % image.width, j = idx / image.width;
-    auto pi           = clamp(i / params.pratio, 0, preview.width - 1),
-         pj           = clamp(j / params.pratio, 0, preview.height - 1);
-    image.pixels[idx] = preview.pixels[pj * preview.width + pi];
+  for (auto ij : range(state.size())) {
+    auto pij  = clamp(ij / params.pratio, vec2i{0, 0}, preview.size() - 1);
+    image[ij] = preview[pij];
   }
 };
 
 // Check image type
-static void check_image(
-    const image_data& image, int width, int height, bool linear) {
-  if (image.width != width || image.height != height)
-    throw std::invalid_argument{"image should have the same size"};
-  if (image.linear != linear)
-    throw std::invalid_argument{
-        linear ? "expected linear image" : "expected srgb image"};
-}
 template <typename T>
-static void check_image(const vector<T>& image, int width, int height) {
-  if (image.size() != (size_t)width * (size_t)height)
+static void check_image(const image_t<T>& image, vec2i size) {
+  if (image.size() != size)
     throw std::invalid_argument{"image should have the same size"};
 }
 
 // Get resulting render, denoised if requested
-image_data get_image(const trace_state& state) {
-  auto image = make_image(state.width, state.height, true);
-  get_image(image, state);
-  return image;
+image_t<vec4f> get_image(const trace_state& state) {
+  auto render = image_t<vec4f>{state.render.size()};
+  get_image(render, state);
+  return render;
 }
-void get_image(image_data& image, const trace_state& state) {
-  image.width  = state.width;
-  image.height = state.height;
-  image.linear = true;
+void get_image(image_t<vec4f>& render, const trace_state& state) {
+  check_image(render, state.render.size());
   if (state.denoised.empty()) {
-    image.pixels = state.image;
+    render = state.render;
   } else {
-    image.pixels = state.denoised;
+    render = state.denoised;
   }
 }
 
 // Get resulting render
-image_data get_rendered_image(const trace_state& state) {
-  auto image = make_image(state.width, state.height, true);
-  get_rendered_image(image, state);
-  return image;
+image_t<vec4f> get_rendered_image(const trace_state& state) {
+  return state.render;
 }
-void get_rendered_image(image_data& image, const trace_state& state) {
-  check_image(image, state.width, state.height, true);
-  for (auto idx = 0; idx < state.width * state.height; idx++) {
-    image.pixels[idx] = state.image[idx];
-  }
+void get_rendered_image(image_t<vec4f>& image, const trace_state& state) {
+  check_image(image, state.render.size());
+  image = state.render;
 }
 
 // Get denoised render
-image_data get_denoised_image(const trace_state& state) {
-  auto image = make_image(state.width, state.height, true);
+image_t<vec4f> get_denoised_image(const trace_state& state) {
+  auto image = state.render;
   get_denoised_image(image, state);
   return image;
 }
-void get_denoised_image(image_data& image, const trace_state& state) {
+void get_denoised_image(image_t<vec4f>& image, const trace_state& state) {
 #if YOCTO_DENOISE
   // Create an Intel Open Image Denoise device
   oidn::DeviceRef device = oidn::newDevice();
@@ -1734,25 +1793,20 @@ void get_denoised_image(image_data& image, const trace_state& state) {
 
   // get image
   get_rendered_image(image, state);
-
-  // get albedo and normal
-  auto albedo = vector<vec3f>(image.pixels.size()),
-       normal = vector<vec3f>(image.pixels.size());
-  for (auto idx = 0; idx < state.width * state.height; idx++) {
-    albedo[idx] = state.albedo[idx];
-    normal[idx] = state.normal[idx];
-  }
+  auto& albedo = state.albedo;
+  auto& normal = state.normal;
 
   // Create a denoising filter
   oidn::FilterRef filter = device.newFilter("RT");  // ray tracing filter
-  filter.setImage("color", (void*)image.pixels.data(), oidn::Format::Float3,
-      state.width, state.height, 0, sizeof(vec4f), sizeof(vec4f) * state.width);
+  filter.setImage("color", (void*)image.data(), oidn::Format::Float3,
+      state.size().x, state.size().y, 0, sizeof(vec4f),
+      sizeof(vec4f) * state.size().x);
   filter.setImage("albedo", (void*)albedo.data(), oidn::Format::Float3,
-      state.width, state.height);
+      state.size().x, state.size().y);
   filter.setImage("normal", (void*)normal.data(), oidn::Format::Float3,
-      state.width, state.height);
-  filter.setImage("output", image.pixels.data(), oidn::Format::Float3,
-      state.width, state.height, 0, sizeof(vec4f), sizeof(vec4f) * state.width);
+      state.size().x, state.size().y);
+  filter.setImage("output", image.data(), oidn::Format::Float3, state.size().x,
+      state.size().y, 0, sizeof(vec4f), sizeof(vec4f) * state.size().x);
   filter.set("inputScale", 1.0f);  // set scale as fixed
   filter.set("hdr", true);         // image is HDR
   filter.commit();
@@ -1765,43 +1819,31 @@ void get_denoised_image(image_data& image, const trace_state& state) {
 }
 
 // Get denoising buffers
-image_data get_albedo_image(const trace_state& state) {
-  auto albedo = make_image(state.width, state.height, true);
-  get_albedo_image(albedo, state);
-  return albedo;
+image_t<vec3f> get_albedo_image(const trace_state& state) {
+  return state.albedo;
 }
-void get_albedo_image(image_data& albedo, const trace_state& state) {
-  check_image(albedo, state.width, state.height, true);
-  for (auto idx = 0; idx < state.width * state.height; idx++) {
-    albedo.pixels[idx] = {
-        state.albedo[idx].x, state.albedo[idx].y, state.albedo[idx].z, 1.0f};
-  }
+void get_albedo_image(image_t<vec3f>& albedo, const trace_state& state) {
+  albedo = state.albedo;
 }
-image_data get_normal_image(const trace_state& state) {
-  auto normal = make_image(state.width, state.height, true);
-  get_normal_image(normal, state);
-  return normal;
+image_t<vec3f> get_normal_image(const trace_state& state) {
+  return state.normal;
 }
-void get_normal_image(image_data& normal, const trace_state& state) {
-  check_image(normal, state.width, state.height, true);
-  for (auto idx = 0; idx < state.width * state.height; idx++) {
-    normal.pixels[idx] = {
-        state.normal[idx].x, state.normal[idx].y, state.normal[idx].z, 1.0f};
-  }
+void get_normal_image(image_t<vec3f>& normal, const trace_state& state) {
+  normal = state.normal;
 }
 
 // Denoise image
-image_data denoise_image(const image_data& render, const image_data& albedo,
-    const image_data& normal) {
-  auto denoised = make_image(render.width, render.height, render.linear);
+image_t<vec4f> denoise_image(const image_t<vec4f>& render,
+    const image_t<vec3f>& albedo, const image_t<vec3f>& normal) {
+  auto denoised = render;
   denoise_image(denoised, render, albedo, normal);
   return denoised;
 }
-void denoise_image(image_data& denoised, const image_data& render,
-    const image_data& albedo, const image_data& normal) {
-  check_image(denoised, render.width, render.height, render.linear);
-  check_image(albedo, render.width, render.height, albedo.linear);
-  check_image(normal, render.width, render.height, normal.linear);
+void denoise_image(image_t<vec4f>& denoised, const image_t<vec4f>& render,
+    const image_t<vec3f>& albedo, const image_t<vec3f>& normal) {
+  check_image(denoised, render.size());
+  check_image(albedo, render.size());
+  check_image(normal, render.size());
 #if YOCTO_DENOISE
   // Create an Intel Open Image Denoise device
   oidn::DeviceRef device = oidn::newDevice();
@@ -1812,54 +1854,18 @@ void denoise_image(image_data& denoised, const image_data& render,
 
   // Create a denoising filter
   oidn::FilterRef filter = device.newFilter("RT");  // ray tracing filter
-  filter.setImage("color", (void*)render.pixels.data(), oidn::Format::Float3,
-      render.width, render.height, 0, sizeof(vec4f),
-      sizeof(vec4f) * render.width);
-  filter.setImage("albedo", (void*)albedo.pixels.data(), oidn::Format::Float3,
-      albedo.width, albedo.height, 0, sizeof(vec4f),
-      sizeof(vec4f) * albedo.width);
-  filter.setImage("normal", (void*)normal.pixels.data(), oidn::Format::Float3,
-      normal.width, normal.height, 0, sizeof(vec4f),
-      sizeof(vec4f) * normal.width);
-  filter.setImage("output", denoised.pixels.data(), oidn::Format::Float3,
-      denoised.width, denoised.height, 0, sizeof(vec4f),
-      sizeof(vec4f) * denoised.width);
-  filter.set("inputScale", 1.0f);  // set scale as fixed
-  filter.set("hdr", true);         // image is HDR
-  filter.commit();
-
-  // Filter the image
-  filter.execute();
-#else
-  denoised = render;
-#endif
-}
-
-void denoise_image(vector<vec4f>& denoised, int width, int height,
-    const vector<vec4f>& render, const vector<vec3f>& albedo,
-    const vector<vec3f>& normal) {
-  check_image(denoised, width, height);
-  check_image(render, width, height);
-  check_image(albedo, width, height);
-  check_image(normal, width, height);
-#if YOCTO_DENOISE
-  // Create an Intel Open Image Denoise device
-  oidn::DeviceRef device = oidn::newDevice();
-  device.commit();
-
-  // set image
-  denoised = render;
-
-  // Create a denoising filter
-  oidn::FilterRef filter = device.newFilter("RT");  // ray tracing filter
-  filter.setImage("color", (void*)render.data(), oidn::Format::Float3, width,
-      height, 0, sizeof(vec4f), sizeof(vec4f) * width);
-  filter.setImage("albedo", (void*)albedo.data(), oidn::Format::Float3, width,
-      height, 0, sizeof(vec3f), sizeof(vec3f) * width);
-  filter.setImage("normal", (void*)normal.data(), oidn::Format::Float3, width,
-      height, 0, sizeof(vec3f), sizeof(vec3f) * width);
-  filter.setImage("output", denoised.data(), oidn::Format::Float3, width,
-      height, 0, sizeof(vec4f), sizeof(vec4f) * width);
+  filter.setImage("color", (void*)render.data(), oidn::Format::Float3,
+      render.size().x, render.size().y, 0, sizeof(vec4f),
+      sizeof(vec4f) * render.size().x);
+  filter.setImage("albedo", (void*)albedo.data(), oidn::Format::Float3,
+      albedo.size().x, albedo.size().y, 0, sizeof(vec3f),
+      sizeof(vec4f) * albedo.size().x);
+  filter.setImage("normal", (void*)normal.data(), oidn::Format::Float3,
+      normal.size().x, normal.size().y, 0, sizeof(vec3f),
+      sizeof(vec4f) * normal.size().x);
+  filter.setImage("output", denoised.data(), oidn::Format::Float3,
+      denoised.size().x, denoised.size().y, 0, sizeof(vec4f),
+      sizeof(vec4f) * denoised.size().x);
   filter.set("inputScale", 1.0f);  // set scale as fixed
   filter.set("hdr", true);         // image is HDR
   filter.commit();

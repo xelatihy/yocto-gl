@@ -177,13 +177,12 @@ static void draw_scene(glscene_state& glscene, const scene_data& scene,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-void update_image_params(
-    const gui_input& input, const image_data& image, glimage_params& glparams) {
+void update_image_params(const gui_input& input, const image_t<vec4f>& image,
+    glimage_params& glparams) {
   glparams.window                           = input.window;
   glparams.framebuffer                      = input.framebuffer;
   std::tie(glparams.center, glparams.scale) = camera_imview(glparams.center,
-      glparams.scale, {image.width, image.height}, glparams.window,
-      glparams.fit);
+      glparams.scale, image.size(), glparams.window, glparams.fit);
 }
 
 bool uiupdate_image_params(const gui_input& input, glimage_params& glparams) {
@@ -235,21 +234,21 @@ bool draw_tonemap_widgets(
   return (bool)edited;
 }
 
-bool draw_image_widgets(const gui_input& input, const image_data& image,
-    const image_data& display, glimage_params& glparams) {
+bool draw_image_widgets(const gui_input& input, const image_t<vec4f>& image,
+    const image_t<vec4f>& display, glimage_params& glparams) {
   if (draw_gui_header("inspect")) {
     draw_gui_slider("zoom", glparams.scale, 0.1f, 10);
     draw_gui_checkbox("fit", glparams.fit);
     draw_gui_coloredit("background", glparams.background);
-    auto [i, j] = image_coords(input.cursor, glparams.center, glparams.scale,
-        vec2i{image.width, image.height});
-    auto ij     = vec2i{i, j};
+    auto ij = image_coords(
+        input.cursor, glparams.center, glparams.scale, image.size());
     draw_gui_dragger("mouse", ij);
     auto image_pixel   = vec4f{0, 0, 0, 0};
     auto display_pixel = vec4f{0, 0, 0, 0};
-    if (i >= 0 && i < image.width && j >= 0 && j < image.height) {
-      image_pixel   = image.pixels[j * image.width + i];
-      display_pixel = image.pixels[j * image.width + i];
+    if (ij.x >= 0 && ij.x < image.size().x && ij.y >= 0 &&
+        ij.y < image.size().y) {
+      image_pixel   = image[ij];
+      display_pixel = image[ij];
     }
     draw_gui_coloredit("image", image_pixel);
     draw_gui_coloredit("display", display_pixel);
@@ -258,20 +257,20 @@ bool draw_image_widgets(const gui_input& input, const image_data& image,
   return false;
 }
 
-bool draw_image_widgets(
-    const gui_input& input, const image_data& image, glimage_params& glparams) {
+bool draw_image_widgets(const gui_input& input, const image_t<vec4f>& image,
+    glimage_params& glparams) {
   if (draw_gui_header("inspect")) {
     draw_gui_slider("zoom", glparams.scale, 0.1f, 10);
     draw_gui_checkbox("fit", glparams.fit);
     draw_gui_coloredit("background", glparams.background);
-    auto [i, j] = image_coords(input.cursor, glparams.center, glparams.scale,
-        vec2i{image.width, image.height});
-    auto ij     = vec2i{i, j};
+    auto ij = image_coords(
+        input.cursor, glparams.center, glparams.scale, image.size());
     draw_gui_dragger("mouse", ij);
     auto image_pixel   = vec4f{0, 0, 0, 0};
     auto display_pixel = vec4f{0, 0, 0, 0};
-    if (i >= 0 && i < image.width && j >= 0 && j < image.height) {
-      image_pixel   = image.pixels[j * image.width + i];
+    if (ij.x >= 0 && ij.x < image.size().x && ij.y >= 0 &&
+        ij.y < image.size().y) {
+      image_pixel   = image[ij];
       display_pixel = tonemap(
           image_pixel, glparams.exposure, glparams.filmic, glparams.srgb);
     }
@@ -389,9 +388,12 @@ bool draw_scene_widgets(scene_data& scene, scene_selection& selection,
   if (draw_gui_header("textures")) {
     draw_gui_combobox("texture", selection.texture, scene.texture_names);
     auto& texture = scene.textures.at(selection.texture);
-    draw_gui_label("width", texture.width);
-    draw_gui_label("height", texture.height);
-    draw_gui_label("linear", texture.linear);
+    draw_gui_label(
+        "width", max(texture.pixelsb.size().x, texture.pixelsf.size().x));
+    draw_gui_label(
+        "height", max(texture.pixelsb.size().y, texture.pixelsf.size().y));
+    draw_gui_label("clamp", texture.clamp);
+    draw_gui_label("nearest", texture.nearest);
     draw_gui_label("byte", !texture.pixelsb.empty());
     end_gui_header();
   }
@@ -417,13 +419,13 @@ bool draw_scene_widgets(scene_data& scene, scene_selection& selection,
 namespace yocto {
 
 // Open a window and show an image
-void show_image_gui(
-    const string& title, const string& name, const image_data& image) {
+void show_image_gui(const string& title, const string& name,
+    const image_t<vec4f>& image, bool linear) {
   // display image
-  auto  display  = make_image(image.width, image.height, false);
+  auto  display  = image;
   float exposure = 0;
   bool  filmic   = false;
-  tonemap_image_mt(display, image, exposure, filmic);
+  if (linear) tonemap_image(display, image, exposure, filmic);
 
   // opengl image
   auto glimage  = glimage_state{};
@@ -447,7 +449,7 @@ void show_image_gui(
   callbacks.widgets = [&](const gui_input& input) {
     draw_gui_combobox("name", selected, names);
     if (draw_tonemap_widgets(input, exposure, filmic)) {
-      tonemap_image_mt(display, image, exposure, filmic);
+      if (linear) tonemap_image(display, image, exposure, filmic);
       set_image(glimage, display);
     }
     draw_image_widgets(input, image, display, glparams);
@@ -462,14 +464,15 @@ void show_image_gui(
 
 // Open a window and show an image
 void show_image_gui(const string& title, const vector<string>& names,
-    const vector<image_data>& images) {
+    const vector<image_t<vec4f>>& images, const vector<bool>& linears) {
   // display image
-  auto displays  = vector<image_data>(images.size());
+  auto displays  = vector<image_t<vec4f>>(images.size());
   auto exposures = vector<float>(images.size(), 0);
   auto filmics   = vector<bool>(images.size(), false);
   for (auto idx : range((int)images.size())) {
-    displays[idx] = make_image(images[idx].width, images[idx].height, false);
-    tonemap_image_mt(displays[idx], images[idx], exposures[idx], filmics[idx]);
+    displays[idx] = images[idx];
+    if (linears[idx])
+      tonemap_image(displays[idx], images[idx], exposures[idx], filmics[idx]);
   }
 
   // opengl image
@@ -501,8 +504,9 @@ void show_image_gui(const string& title, const vector<string>& names,
     auto filmic = (bool)filmics[selected];  // vector of bool ...
     if (draw_tonemap_widgets(input, exposures[selected], filmic)) {
       filmics[selected] = filmic;
-      tonemap_image_mt(displays[selected], images[selected],
-          exposures[selected], filmics[selected]);
+      if (linears[selected])
+        tonemap_image(displays[selected], images[selected], exposures[selected],
+            filmics[selected]);
       set_image(glimages[selected], displays[selected]);
     }
     draw_image_widgets(
@@ -517,14 +521,14 @@ void show_image_gui(const string& title, const vector<string>& names,
 }
 
 // Open a window and show an image
-void show_colorgrade_gui(
-    const string& title, const string& name, const image_data& image) {
+void show_colorgrade_gui(const string& title, const string& name,
+    const image_t<vec4f>& image, bool linear) {
   // color grading parameters
   auto params = colorgrade_params{};
 
   // display image
-  auto display = make_image(image.width, image.height, false);
-  colorgrade_image_mt(display, image, params);
+  auto display = image;
+  colorgrade_image(display, image, linear, params);
 
   // opengl image
   auto glimage  = glimage_state{};
@@ -567,7 +571,7 @@ void show_colorgrade_gui(
       edited += draw_gui_coloredit("highlights color", params.highlights_color);
       end_gui_header();
       if (edited) {
-        colorgrade_image_mt(display, image, params);
+        colorgrade_image(display, image, linear, params);
         set_image(glimage, display);
       }
     }
@@ -603,7 +607,7 @@ void show_trace_gui(const string& title, const string& name, scene_data& scene,
 
   // init state
   auto state = make_trace_state(scene, params);
-  auto image = make_image(state.width, state.height, true);
+  auto image = image_t<vec4f>{state.render.size()};
 
   // opengl image
   auto glimage     = glimage_state{};
@@ -635,11 +639,9 @@ void show_trace_gui(const string& title, const string& name, scene_data& scene,
     auto pstate     = make_trace_state(scene, pparams);
     trace_samples(pstate, scene, bvh, lights, pparams);
     auto preview = get_image(pstate);
-    for (auto idx = 0; idx < state.width * state.height; idx++) {
-      auto i = idx % image.width, j = idx / image.width;
-      auto pi           = clamp(i / params.pratio, 0, preview.width - 1),
-           pj           = clamp(j / params.pratio, 0, preview.height - 1);
-      image.pixels[idx] = preview.pixels[pj * preview.width + pi];
+    for (auto idx : range(state.render.size())) {
+      auto pij   = clamp(idx / params.pratio, {0, 0}, preview.size() - 1);
+      image[idx] = preview[pij];
     }
     return true;
   };
@@ -649,8 +651,7 @@ void show_trace_gui(const string& title, const string& name, scene_data& scene,
     // make sure we can start
     trace_cancel(context);
     state = make_trace_state(scene, params);
-    if (image.width != state.width || image.height != state.height)
-      image = make_image(state.width, state.height, true);
+    if (image.size() != state.render.size()) image = state.render.size();
   };
 
   // start rendering batch
@@ -1262,22 +1263,22 @@ void clear_image(glimage_state& glimage) {
   glimage = {};
 }
 
-void set_image(glimage_state& glimage, const image_data& image) {
-  if (!glimage.texture || glimage.width != image.width ||
-      glimage.height != image.height) {
+void set_image(glimage_state& glimage, const image_t<vec4f>& image) {
+  if (!glimage.texture || glimage.width != image.size().x ||
+      glimage.height != image.size().y) {
     if (!glimage.texture) glGenTextures(1, &glimage.texture);
     glBindTexture(GL_TEXTURE_2D, glimage.texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, image.width, image.height, 0,
-        GL_RGBA, GL_FLOAT, image.pixels.data());
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, image.size().x, image.size().y,
+        0, GL_RGBA, GL_FLOAT, image.data());
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   } else {
     glBindTexture(GL_TEXTURE_2D, glimage.texture);
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, image.width, image.height, GL_RGBA,
-        GL_FLOAT, image.pixels.data());
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, image.size().x, image.size().y,
+        GL_RGBA, GL_FLOAT, image.data());
   }
-  glimage.width  = image.width;
-  glimage.height = image.height;
+  glimage.width  = image.size().x;
+  glimage.height = image.size().y;
 }
 
 // draw image
@@ -1602,16 +1603,21 @@ void main() {
 // Create texture
 static void set_texture(
     glscene_texture& gltexture, const texture_data& texture) {
-  if (!gltexture.texture || gltexture.width != texture.width ||
-      gltexture.height != texture.height) {
+  if (!gltexture.texture ||
+      gltexture.width !=
+          max(texture.pixelsb.size().x, texture.pixelsf.size().x) ||
+      gltexture.height !=
+          max(texture.pixelsb.size().y, texture.pixelsf.size().y)) {
     if (!gltexture.texture) glGenTextures(1, &gltexture.texture);
     glBindTexture(GL_TEXTURE_2D, gltexture.texture);
     if (!texture.pixelsb.empty()) {
-      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, texture.width, texture.height, 0,
-          GL_RGBA, GL_UNSIGNED_BYTE, texture.pixelsb.data());
+      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, texture.pixelsb.size().x,
+          texture.pixelsb.size().y, 0, GL_RGBA, GL_UNSIGNED_BYTE,
+          texture.pixelsb.data());
     } else {
-      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, texture.width, texture.height, 0,
-          GL_RGBA, GL_FLOAT, texture.pixelsf.data());
+      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, texture.pixelsf.size().x,
+          texture.pixelsf.size().y, 0, GL_RGBA, GL_FLOAT,
+          texture.pixelsf.data());
     }
     glGenerateMipmap(GL_TEXTURE_2D);
     glTexParameteri(
@@ -1620,11 +1626,12 @@ static void set_texture(
   } else {
     glBindTexture(GL_TEXTURE_2D, gltexture.texture);
     if (!texture.pixelsb.empty()) {
-      glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, texture.width, texture.height,
-          GL_RGBA, GL_UNSIGNED_BYTE, texture.pixelsb.data());
+      glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, texture.pixelsb.size().x,
+          texture.pixelsb.size().y, GL_RGBA, GL_UNSIGNED_BYTE,
+          texture.pixelsb.data());
     } else {
-      glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, texture.width, texture.height,
-          GL_RGBA, GL_FLOAT, texture.pixelsf.data());
+      glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, texture.pixelsf.size().x,
+          texture.pixelsf.size().y, GL_RGBA, GL_FLOAT, texture.pixelsf.data());
     }
     glGenerateMipmap(GL_TEXTURE_2D);
   }

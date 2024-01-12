@@ -108,7 +108,7 @@ void run(const vector<string>& args) {
 
   // add environment
   if (!envname.empty()) {
-    add_environment(scene, envname);
+    add_environment(scene, "environment", envname);
   }
 
   // camera
@@ -164,7 +164,7 @@ void run(const vector<string>& args) {
     auto context = make_trace_context(params);
 
     // init image
-    auto image = make_image(state.width, state.height, true);
+    auto image = image_t<vec4f>{state.render.size()};
 
     // opengl image
     auto glimage     = glimage_state{};
@@ -190,8 +190,8 @@ void run(const vector<string>& args) {
       // make sure we can start
       trace_cancel(context);
       state = make_trace_state(scene, params);
-      if (image.width != state.width || image.height != state.height)
-        image = make_image(state.width, state.height, true);
+      if (image.size() != state.render.size())
+        image = image_t<vec4f>{state.render.size()};
 
       // render preview
       trace_preview(image, context, state, scene, bvh, lights, params);

@@ -109,82 +109,62 @@ namespace yocto {
 
 // pixel access
 vec4f lookup_texture(
-    const texture_data& texture, int i, int j, bool as_linear) {
-  auto color = vec4f{0, 0, 0, 0};
-  if (!texture.pixelsf.empty()) {
-    color = texture.pixelsf[j * texture.width + i];
-  } else {
-    color = byte_to_float(texture.pixelsb[j * texture.width + i]);
-  }
-  if (as_linear && !texture.linear) {
-    return srgb_to_rgb(color);
-  } else {
-    return color;
-  }
+    const texture_data& texture, vec2i ij, bool ldr_as_linear) {
+  if (!texture.pixelsf.empty()) return texture.pixelsf[ij];
+  if (!texture.pixelsb.empty())
+    return ldr_as_linear ? byte_to_float(texture.pixelsb[ij])
+                         : srgb_to_rgb(byte_to_float(texture.pixelsb[ij]));
+  return vec4f{0, 0, 0, 0};
 }
 
 // Evaluates an image at a point `uv`.
-vec4f eval_texture(const texture_data& texture, const vec2f& uv, bool as_linear,
-    bool no_interpolation, bool clamp_to_edge) {
-  if (texture.width == 0 || texture.height == 0) return {0, 0, 0, 0};
+vec4f eval_texture(const texture_data& texture, const vec2f& uv,
+    bool ldr_as_linear, bool no_interpolation, bool clamp_to_edge) {
+  if (texture.pixelsf.empty() && texture.pixelsb.empty()) return {0, 0, 0, 0};
 
   // get texture width/height
-  auto size = vec2i{texture.width, texture.height};
+  auto size = max(texture.pixelsf.size(), texture.pixelsb.size());
 
   // get coordinates normalized for tiling
-  auto s = 0.0f, t = 0.0f;
-  if (clamp_to_edge) {
-    s = clamp(uv.x, 0.0f, 1.0f) * size.x;
-    t = clamp(uv.y, 0.0f, 1.0f) * size.y;
-  } else {
-    s = fmod(uv.x, 1.0f) * size.x;
-    if (s < 0) s += size.x;
-    t = fmod(uv.y, 1.0f) * size.y;
-    if (t < 0) t += size.y;
-  }
-
-  // get image coordinates and residuals
-  auto i = clamp((int)s, 0, size.x - 1), j = clamp((int)t, 0, size.y - 1);
-  auto ii = (i + 1) % size.x, jj = (j + 1) % size.y;
-  auto u = s - i, v = t - j;
+  auto st = (clamp_to_edge ? clamp(uv, 0.0f, 1.0f) : mod(uv, 1.0f)) *
+            (vec2f)size;
 
   // handle interpolation
   if (no_interpolation) {
-    return lookup_texture(texture, i, j, as_linear);
+    auto ij = clamp((vec2i)st, {0, 0}, size - 1);
+    return lookup_texture(texture, ij, ldr_as_linear);
   } else {
-    return lookup_texture(texture, i, j, as_linear) * (1 - u) * (1 - v) +
-           lookup_texture(texture, i, jj, as_linear) * (1 - u) * v +
-           lookup_texture(texture, ii, j, as_linear) * u * (1 - v) +
-           lookup_texture(texture, ii, jj, as_linear) * u * v;
+    auto ij   = clamp((vec2i)st, zero2i, size - 1);
+    auto i1j  = (ij + vec2i{1, 0}) % size;
+    auto ij1  = (ij + vec2i{0, 1}) % size;
+    auto i1j1 = (ij + vec2i{1, 1}) % size;
+    auto w    = st - (vec2f)ij;
+    return lookup_texture(texture, ij, ldr_as_linear) * (1 - w.x) * (1 - w.y) +
+           lookup_texture(texture, ij1, ldr_as_linear) * (1 - w.x) * w.y +
+           lookup_texture(texture, i1j, ldr_as_linear) * w.x * (1 - w.y) +
+           lookup_texture(texture, i1j1, ldr_as_linear) * w.x * w.y;
   }
 }
 vec4f eval_texture(
-    const texture_data& texture, const vec2f& uv, bool as_linear) {
-  return eval_texture(texture, uv, as_linear, texture.nearest, texture.clamp);
+    const texture_data& texture, const vec2f& uv, bool ldr_as_linear) {
+  return eval_texture(
+      texture, uv, ldr_as_linear, texture.nearest, texture.clamp);
 }
 
 // Helpers
 vec4f eval_texture(
     const scene_data& scene, int texture, const vec2f& uv, bool ldr_as_linear) {
   if (texture == invalidid) return {1, 1, 1, 1};
-  return eval_texture(scene.textures[texture], uv, ldr_as_linear,
-      scene.textures[texture].nearest, scene.textures[texture].clamp);
-}
-vec4f eval_texture(const scene_data& scene, int texture, const vec2f& uv,
-    bool ldr_as_linear, bool no_interpolation, bool clamp_to_edge) {
-  if (texture == invalidid) return {1, 1, 1, 1};
-  return eval_texture(scene.textures[texture], uv, ldr_as_linear,
-      no_interpolation, clamp_to_edge);
+  return eval_texture(scene.textures[texture], uv, ldr_as_linear);
 }
 
 // conversion from image
-texture_data image_to_texture(const image_data& image) {
-  auto texture = texture_data{image.width, image.height, image.linear, {}, {}};
-  if (image.linear) {
-    texture.pixelsf = image.pixels;
+texture_data image_to_texture(const image_t<vec4f>& image, bool linear) {
+  auto texture = texture_data{};
+  if (linear) {
+    texture.pixelsf = image;
   } else {
-    texture.pixelsb.resize(image.pixels.size());
-    float_to_byte(texture.pixelsb, image.pixels);
+    texture.pixelsb = float_to_byte(image);
   }
   return texture;
 }
@@ -204,18 +184,15 @@ material_point eval_material(const scene_data& scene,
     const material_data& material, const vec2f& texcoord,
     const vec4f& color_shp) {
   // evaluate textures
-  auto emission_tex = eval_texture(
-      scene, material.emission_tex, texcoord, true);
-  auto color_tex     = eval_texture(scene, material.color_tex, texcoord, true);
-  auto roughness_tex = eval_texture(
-      scene, material.roughness_tex, texcoord, false);
-  auto scattering_tex = eval_texture(
-      scene, material.scattering_tex, texcoord, true);
+  auto emission_tex   = eval_texture(scene, material.emission_tex, texcoord);
+  auto color_tex      = eval_texture(scene, material.color_tex, texcoord);
+  auto roughness_tex  = eval_texture(scene, material.roughness_tex, texcoord);
+  auto scattering_tex = eval_texture(scene, material.scattering_tex, texcoord);
 
   // material point
   auto point         = material_point{};
   point.type         = material.type;
-  point.emission     = material.emission * xyz(emission_tex) * xyz(color_shp);
+  point.emission     = material.emission * xyz(emission_tex);
   point.color        = material.color * xyz(color_tex) * xyz(color_shp);
   point.opacity      = material.opacity * color_tex.w * color_shp.w;
   point.metallic     = material.metallic * roughness_tex.z;
@@ -453,7 +430,7 @@ vec3f eval_normalmap(const scene_data& scene, const instance_data& instance,
   if (material.normal_tex != invalidid &&
       (!shape.triangles.empty() || !shape.quads.empty())) {
     auto& normal_tex = scene.textures[material.normal_tex];
-    auto  normalmap  = -1 + 2 * xyz(eval_texture(normal_tex, texcoord, false));
+    auto  normalmap  = -1 + 2 * xyz(eval_texture(normal_tex, texcoord, true));
     auto [tu, tv]    = eval_element_tangents(scene, instance, element);
     auto frame       = frame3f{tu, tv, normal, {0, 0, 0}};
     frame.x          = orthonormalize(frame.x, frame.z);
@@ -645,7 +622,7 @@ void add_camera(scene_data& scene) {
 void add_sky(scene_data& scene, float sun_angle) {
   scene.texture_names.emplace_back("sky");
   auto& texture = scene.textures.emplace_back();
-  texture       = image_to_texture(make_sunsky(1024, 512, sun_angle));
+  texture       = image_to_texture(make_sunsky({1024, 512}, sun_angle), true);
   scene.environment_names.emplace_back("sky");
   auto& environment        = scene.environments.emplace_back();
   environment.emission     = {1, 1, 1};
@@ -727,6 +704,160 @@ bbox3f compute_bounds(const scene_data& scene) {
     bbox       = merge(bbox, transform_bbox(instance.frame, sbvh));
   }
   return bbox;
+}
+
+// Scene creation helpers
+scene_data make_scene() { return scene_data{}; }
+
+// Scene creation helpers
+int add_camera(
+    scene_data& scene, const string& name, const camera_data& camera) {
+  scene.camera_names.push_back(name);
+  scene.cameras.push_back(camera);
+  return (int)scene.cameras.size() - 1;
+}
+int add_texture(
+    scene_data& scene, const string& name, const texture_data& texture) {
+  scene.texture_names.push_back(name);
+  scene.textures.push_back(texture);
+  return (int)scene.textures.size() - 1;
+}
+int add_material(
+    scene_data& scene, const string& name, const material_data& material) {
+  scene.material_names.push_back(name);
+  scene.materials.push_back(material);
+  return (int)scene.materials.size() - 1;
+}
+int add_shape(scene_data& scene, const string& name, const shape_data& shape) {
+  scene.camera_names.push_back(name);
+  scene.shapes.push_back(shape);
+  return (int)scene.shapes.size() - 1;
+}
+int add_instance(
+    scene_data& scene, const string& name, const instance_data& instance) {
+  scene.instance_names.push_back(name);
+  scene.instances.push_back(instance);
+  return (int)scene.instances.size() - 1;
+}
+int add_environment(scene_data& scene, const string& name,
+    const environment_data& environment) {
+  scene.environment_names.push_back(name);
+  scene.environments.push_back(environment);
+  return (int)scene.environments.size() - 1;
+}
+
+int add_camera(scene_data& scene, const string& name, const vec3f& from,
+    const vec3f& to, float lens, float aspect, float aperture,
+    float focus_offset) {
+  return add_camera(scene, name,
+      {.frame       = lookat_frame(from, to, {0, 1, 0}),
+          .lens     = lens,
+          .aspect   = aspect,
+          .aperture = aperture,
+          .focus    = length(from - to) + focus_offset});
+}
+
+int add_camera(scene_data& scene, const string& name, const frame3f& frame,
+    float lens, float aspect, float aperture, float focus) {
+  return add_camera(scene, name,
+      {.frame       = frame,
+          .lens     = lens,
+          .aspect   = aspect,
+          .aperture = aperture,
+          .focus    = focus});
+}
+
+// Scene creation helpers
+int add_material(scene_data& scene, const string& name, const vec3f& emission,
+    material_type type, const vec3f& color, float roughness, int color_tex,
+    int roughness_tex, int normal_tex) {
+  return add_material(scene, name,
+      {.type             = type,
+          .emission      = emission,
+          .color         = color,
+          .roughness     = roughness,
+          .color_tex     = color_tex,
+          .roughness_tex = roughness_tex,
+          .normal_tex    = normal_tex});
+}
+
+// Scene creation helpers
+int add_material(scene_data& scene, const string& name, material_type type,
+    const vec3f& color, float roughness, int color_tex, int roughness_tex,
+    int normal_tex) {
+  return add_material(scene, name,
+      {.type             = type,
+          .color         = color,
+          .roughness     = roughness,
+          .color_tex     = color_tex,
+          .roughness_tex = roughness_tex,
+          .normal_tex    = normal_tex});
+}
+
+// Scene creation helpers
+int add_material(scene_data& scene, const string& name, material_type type,
+    const vec3f& color, float roughness, const vec3f& scattering,
+    float scanisotropy, float trdepth, int color_tex, int roughness_tex,
+    int scattering_tex, int normal_tex) {
+  return add_material(scene, name,
+      {.type              = type,
+          .color          = color,
+          .roughness      = roughness,
+          .scattering     = scattering,
+          .scanisotropy   = scanisotropy,
+          .trdepth        = trdepth,
+          .color_tex      = color_tex,
+          .roughness_tex  = roughness_tex,
+          .scattering_tex = scattering_tex,
+          .normal_tex     = normal_tex});
+}
+
+// Scene creation helpers
+int add_instance(scene_data& scene, const string& name, const frame3f& frame,
+    int shape, int material) {
+  return add_instance(
+      scene, name, {.frame = frame, .shape = shape, .material = material});
+}
+
+// Scene creation helpers
+int add_instance(scene_data& scene, const string& name, const frame3f& frame,
+    const shape_data& shape, const material_data& material) {
+  return add_instance(scene, name,
+      {.frame       = frame,
+          .shape    = add_shape(scene, name, shape),
+          .material = add_material(scene, name, material)});
+}
+
+// Scene creation helpers
+int add_environment(scene_data& scene, const string& name, const frame3f& frame,
+    const vec3f& emission, int emission_tex) {
+  return add_environment(scene, name,
+      {.frame = frame, .emission = emission, .emission_tex = emission_tex});
+  return (int)scene.environments.size() - 1;
+}
+
+// Scene creation helpers
+int add_texture(scene_data& scene, const string& name,
+    const image_t<vec4f>& texture, bool linear) {
+  if (texture.empty()) return invalidid;
+  if (linear) {
+    scene.textures.push_back({.pixelsf = texture});
+  } else {
+    scene.textures.push_back({.pixelsb = float_to_byte(texture)});
+  }
+  return (int)scene.textures.size() - 1;
+}
+
+// Scene creation helpers
+int add_texture(scene_data& scene, const string& name,
+    const image_t<vec4b>& texture, bool linear) {
+  if (texture.empty()) return invalidid;
+  if (linear) {
+    scene.textures.push_back({.pixelsf = srgbb_to_rgb(texture)});
+  } else {
+    scene.textures.push_back({.pixelsb = texture});
+  }
+  return (int)scene.textures.size() - 1;
 }
 
 }  // namespace yocto
@@ -824,6 +955,11 @@ size_t compute_memory(const scene_data& scene) {
     if (values.empty()) return 0;
     return values.size() * sizeof(values[0]);
   };
+  auto image_memory = [](auto& values) -> size_t {
+    if (values.empty()) return 0;
+    return (size_t)values.size().x * (size_t)values.size().y *
+           sizeof(values[{0, 0}]);
+  };
 
   auto memory = (size_t)0;
   memory += vector_memory(scene.cameras);
@@ -858,14 +994,19 @@ size_t compute_memory(const scene_data& scene) {
     memory += vector_memory(subdiv.texcoords);
   }
   for (auto& texture : scene.textures) {
-    memory += vector_memory(texture.pixelsb);
-    memory += vector_memory(texture.pixelsf);
+    memory += image_memory(texture.pixelsb);
+    memory += image_memory(texture.pixelsf);
   }
   return memory;
 }
 
 vector<string> scene_stats(const scene_data& scene, bool verbose) {
   auto accumulate = [](const auto& values, const auto& func) -> size_t {
+    auto sum = (size_t)0;
+    for (auto& value : values) sum += func(value);
+    return sum;
+  };
+  auto accumulate2d = [](const auto& values, const auto& func) -> size_t {
     auto sum = (size_t)0;
     for (auto& value : values) sum += func(value);
     return sum;
@@ -913,12 +1054,16 @@ vector<string> scene_stats(const scene_data& scene, bool verbose) {
   stats.push_back("fvquads:      " +
                   format(accumulate(scene.subdivs,
                       [](auto& subdiv) { return subdiv.quadspos.size(); })));
-  stats.push_back("texels4b:     " +
-                  format(accumulate(scene.textures,
-                      [](auto& texture) { return texture.pixelsb.size(); })));
-  stats.push_back("texels4f:     " +
-                  format(accumulate(scene.textures,
-                      [](auto& texture) { return texture.pixelsf.size(); })));
+  stats.push_back(
+      "texels4b:     " + format(accumulate(scene.textures, [](auto& texture) {
+        return (size_t)texture.pixelsb.size().x *
+               (size_t)texture.pixelsb.size().y;
+      })));
+  stats.push_back(
+      "texels4f:     " + format(accumulate(scene.textures, [](auto& texture) {
+        return (size_t)texture.pixelsf.size().x *
+               (size_t)texture.pixelsf.size().y;
+      })));
   stats.push_back("center:       " + format3(center(bbox)));
   stats.push_back("size:         " + format3(size(bbox)));
 

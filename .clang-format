@@ -1,13 +1,12 @@
 BasedOnStyle: Google
 
 # Language:        Cpp
-Standard:        Cpp11
+Standard: Cpp11
 
 AlignAfterOpenBracket: DontAlign
 AlignConsecutiveAssignments: true
 AlignConsecutiveDeclarations: true
 
-AllowShortCaseLabelsOnASingleLine: true
 AllowShortCaseLabelsOnASingleLine: true
 
 BreakConstructorInitializersBeforeComma: true

@@ -76,49 +76,87 @@ namespace yocto {
 // Simple parallel for used since our target platforms do not yet support
 // parallel algorithms. `Func` takes the integer index.
 template <typename T, typename Func>
-inline bool parallel_for(T num, string& error, Func&& func) {
-  auto              futures  = vector<std::future<void>>{};
-  auto              nthreads = std::thread::hardware_concurrency();
-  std::atomic<T>    next_idx(0);
-  std::atomic<bool> has_error(false);
-  std::mutex        error_mutex;
-  for (auto thread_id = 0; thread_id < (int)nthreads; thread_id++) {
-    futures.emplace_back(std::async(std::launch::async,
-        [&func, &next_idx, &has_error, &error_mutex, &error, num]() {
-          auto this_error = string{};
-          while (true) {
-            if (has_error) break;
-            auto idx = next_idx.fetch_add(1);
-            if (idx >= num) break;
-            if (!func(idx, this_error)) {
-              has_error = true;
-              auto _    = std::lock_guard{error_mutex};
-              error     = this_error;
-              break;
+inline void parallel_for(T num, bool noparallel, Func&& func) {
+  if (noparallel) {
+    for (auto idx : range(num)) {
+      func(idx);
+    }
+  } else {
+    auto              futures  = vector<std::future<void>>{};
+    auto              nthreads = std::thread::hardware_concurrency();
+    std::atomic<T>    next_idx(0);
+    std::atomic<bool> has_error(false);
+    for (auto thread_id = 0; thread_id < (int)nthreads; thread_id++) {
+      futures.emplace_back(
+          std::async(std::launch::async, [&func, &next_idx, &has_error, num]() {
+            while (true) {
+              if (has_error) break;
+              auto idx = next_idx.fetch_add(1);
+              if (idx >= num) break;
+              try {
+                func(idx);
+              } catch (std::exception& error) {
+                has_error = true;
+                throw;
+              }
             }
-          }
-        }));
+          }));
+    }
+    for (auto& f : futures) f.get();
   }
-  for (auto& f : futures) f.get();
-  return !(bool)has_error;
+}
+
+// Simple parallel for used since our target platforms do not yet support
+// parallel algorithms. `Func` takes the integer index.
+template <typename Sequence1, typename Sequence2, typename Func>
+inline void parallel_zip(Sequence1&& sequence1, Sequence2&& sequence2,
+    bool noparallel, Func&& func) {
+  if (std::size(sequence1) != std::size(sequence2))
+    throw std::out_of_range{"invalid sequence lengths"};
+  if (noparallel) {
+    for (auto idx : range(sequence1.size())) {
+      func(std::forward<Sequence1>(sequence1)[idx],
+          std::forward<Sequence2>(sequence2)[idx]);
+    }
+  } else {
+    auto                num      = std::size(sequence1);
+    auto                futures  = vector<std::future<void>>{};
+    auto                nthreads = std::thread::hardware_concurrency();
+    std::atomic<size_t> next_idx(0);
+    std::atomic<bool>   has_error(false);
+    for (auto thread_id = 0; thread_id < (int)nthreads; thread_id++) {
+      futures.emplace_back(std::async(std::launch::async,
+          [&func, &next_idx, &has_error, num, &sequence1, &sequence2]() {
+            try {
+              while (true) {
+                auto idx = next_idx.fetch_add(1);
+                if (idx >= num) break;
+                if (has_error) break;
+                func(std::forward<Sequence1>(sequence1)[idx],
+                    std::forward<Sequence2>(sequence2)[idx]);
+              }
+            } catch (...) {
+              has_error = true;
+              throw;
+            }
+          }));
+    }
+    for (auto& f : futures) f.get();
+  }
 }
 
 // Simple parallel for used since our target platforms do not yet support
 // parallel algorithms. `Func` takes a reference to a `T`.
 template <typename T, typename Func>
-inline bool parallel_foreach(vector<T>& values, string& error, Func&& func) {
-  return parallel_for(
-      values.size(), error, [&func, &values](size_t idx, string& error) {
-        return func(values[idx], error);
-      });
+inline void parallel_foreach(vector<T>& values, bool noparallel, Func&& func) {
+  return parallel_for(values.size(), noparallel,
+      [&func, &values](size_t idx) { return func(values[idx]); });
 }
 template <typename T, typename Func>
-inline bool parallel_foreach(
-    const vector<T>& values, string& error, Func&& func) {
-  return parallel_for(
-      values.size(), error, [&func, &values](size_t idx, string& error) {
-        return func(values[idx], error);
-      });
+inline void parallel_foreach(
+    const vector<T>& values, bool noparallel, Func&& func) {
+  return parallel_for(values.size(), noparallel,
+      [&func, &values](size_t idx) { return func(values[idx]); });
 }
 
 }  // namespace yocto
@@ -199,67 +237,6 @@ static string path_join(
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// FILE WATCHER
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Initialize file watcher
-watch_context make_watch_context(const vector<string>& filenames, int delay) {
-  return {{0}, {}, filenames, vector<int64_t>(filenames.size(), 0),
-      (int64_t)delay, {false}};
-}
-
-// Start file watcher
-void watch_start(watch_context& context) {
-  // stop
-  if (context.worker.valid()) context.worker.get();
-  context.stop = false;
-
-  // initialize file times
-  for (auto index : range(context.filenames.size())) {
-    auto time = std::filesystem::last_write_time(context.filenames[index])
-                    .time_since_epoch()
-                    .count();
-    context.filetimes[index] = (int64_t)time;
-  }
-
-  // start watcher
-  context.worker = std::async(std::launch::async, [&]() {
-    // until done
-    while (!context.stop) {
-      // sleep
-      std::this_thread::sleep_for(std::chrono::milliseconds(context.delay));
-
-      // check times
-      auto changed = false;
-      for (auto index : range(context.filenames.size())) {
-        auto time = std::filesystem::last_write_time(context.filenames[index])
-                        .time_since_epoch()
-                        .count();
-        if ((int64_t)time != context.filetimes[index]) {
-          changed                  = true;
-          context.filetimes[index] = (int64_t)time;
-        }
-      }
-
-      // update version
-      if (changed) context.version++;
-    }
-  });
-}
-
-// Stop file watcher
-void watch_stop(watch_context& context) {
-  context.stop = true;
-  if (context.worker.valid()) context.worker.get();
-}
-
-// Got file versions
-int get_version(const watch_context& context) { return context.version; }
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
 // FILE IO
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -287,115 +264,72 @@ FILE* fopen_utf8(const string& filename, const string& mode) {
 #endif
 }
 
-// Load a text file
+// Load a binary file
 string load_text(const string& filename) {
-  auto error = string{};
-  auto str   = string{};
-  if (!load_text(filename, str, error)) throw io_error{error};
+  auto str = string{};
+  load_text(filename, str);
   return str;
 }
-void load_text(const string& filename, string& text) {
-  auto error = string{};
-  if (!load_text(filename, text, error)) throw io_error{error};
+
+// Load a text file
+void load_text(const string& filename, string& str) {
+  // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
+  auto fs = fopen_utf8(filename.c_str(), "rb");
+  if (fs == nullptr) throw io_error("cannot open " + filename);
+  fseek(fs, 0, SEEK_END);
+  auto length = ftell(fs);
+  fseek(fs, 0, SEEK_SET);
+  str = string(length, '\0');
+  if (fread(str.data(), 1, length, fs) != length) {
+    fclose(fs);
+    throw io_error("cannot read " + filename);
+  }
+  fclose(fs);
 }
 
 // Save a text file
-void save_text(const string& filename, const string& text) {
-  auto error = string{};
-  if (!save_text(filename, text, error)) throw io_error{error};
+void save_text(const string& filename, const string& str) {
+  auto fs = fopen_utf8(filename.c_str(), "wt");
+  if (fs == nullptr) throw io_error("cannot create " + filename);
+  if (fprintf(fs, "%s", str.c_str()) < 0) {
+    fclose(fs);
+    throw io_error("cannot write " + filename);
+  }
+  fclose(fs);
 }
 
 // Load a binary file
 vector<byte> load_binary(const string& filename) {
-  auto error = string{};
-  auto data  = vector<byte>{};
-  if (!load_binary(filename, data, error)) throw io_error{error};
+  auto data = vector<byte>{};
+  load_binary(filename, data);
   return data;
 }
+
+// Load a binary file
 void load_binary(const string& filename, vector<byte>& data) {
-  auto error = string{};
-  if (!load_binary(filename, data, error)) throw io_error{error};
+  // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
+  auto fs = fopen_utf8(filename.c_str(), "rb");
+  if (fs == nullptr) throw io_error("cannot open " + filename);
+  fseek(fs, 0, SEEK_END);
+  auto length = ftell(fs);
+  fseek(fs, 0, SEEK_SET);
+  data = vector<byte>(length);
+  if (fread(data.data(), 1, length, fs) != length) {
+    fclose(fs);
+    throw io_error("cannot read " + filename);
+  }
+  fclose(fs);
 }
 
 // Save a binary file
 void save_binary(const string& filename, const vector<byte>& data) {
-  auto error = string{};
-  if (!save_binary(filename, data, error)) throw io_error{error};
-}
-
-// Load a text file
-bool load_text(const string& filename, string& str, string& error) {
-  // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
-  auto fs = fopen_utf8(filename.c_str(), "rb");
-  if (!fs) {
-    error = "cannot open " + filename;
-    return false;
-  }
-  fseek(fs, 0, SEEK_END);
-  auto length = ftell(fs);
-  fseek(fs, 0, SEEK_SET);
-  str.resize(length);
-  if (fread(str.data(), 1, length, fs) != length) {
-    fclose(fs);
-    error = "cannot read " + filename;
-    return false;
-  }
-  fclose(fs);
-  return true;
-}
-
-// Save a text file
-bool save_text(const string& filename, const string& str, string& error) {
-  auto fs = fopen_utf8(filename.c_str(), "wt");
-  if (!fs) {
-    error = "cannot create " + filename;
-    return false;
-  }
-  if (fprintf(fs, "%s", str.c_str()) < 0) {
-    fclose(fs);
-    error = "cannot write " + filename;
-    return false;
-  }
-  fclose(fs);
-  return true;
-}
-
-// Load a binary file
-bool load_binary(const string& filename, vector<byte>& data, string& error) {
-  // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
-  auto fs = fopen_utf8(filename.c_str(), "rb");
-  if (!fs) {
-    error = "cannot open " + filename;
-    return false;
-  }
-  fseek(fs, 0, SEEK_END);
-  auto length = ftell(fs);
-  fseek(fs, 0, SEEK_SET);
-  data.resize(length);
-  if (fread(data.data(), 1, length, fs) != length) {
-    fclose(fs);
-    error = "cannot read " + filename;
-    return false;
-  }
-  fclose(fs);
-  return true;
-}
-
-// Save a binary file
-bool save_binary(
-    const string& filename, const vector<byte>& data, string& error) {
   auto fs = fopen_utf8(filename.c_str(), "wb");
-  if (!fs) {
-    error = "cannot create " + filename;
-    return false;
-  }
+  if (fs == nullptr) throw io_error("cannot create " + filename);
   if (fwrite(data.data(), 1, data.size(), fs) != data.size()) {
     fclose(fs);
-    error = "cannot write " + filename;
-    return false;
+    throw io_error("cannot write " + filename);
   }
   fclose(fs);
-  return true;
 }
 
 }  // namespace yocto
@@ -409,38 +343,25 @@ namespace yocto {
 using json_value = nlohmann::ordered_json;
 
 // Load/save json
-static bool load_json(const string& filename, json_value& json, string& error) {
-  auto text = string{};
-  if (!load_text(filename, text, error)) return false;
-  try {
-    json = json_value::parse(text);
-    return true;
-  } catch (...) {
-    error = "cannot parse " + filename;
-    return false;
-  }
-}
-static bool save_json(
-    const string& filename, const json_value& json, string& error) {
-  return save_text(filename, json.dump(2), error);
-}
-
-// Load/save json
+[[maybe_unused]] static void load_json(
+    const string& filename, json_value& json);
 [[maybe_unused]] static json_value load_json(const string& filename) {
-  auto error = string{};
-  auto json  = json_value{};
-  if (!load_json(filename, json, error)) throw io_error{error};
+  auto json = json_value{};
+  load_json(filename, json);
   return json;
 }
 [[maybe_unused]] static void load_json(
     const string& filename, json_value& json) {
-  auto error = string{};
-  if (!load_json(filename, json, error)) throw io_error{error};
+  auto text = load_text(filename);
+  try {
+    json = json_value::parse(text);
+  } catch (...) {
+    throw io_error("cannot parse " + filename);
+  }
 }
 [[maybe_unused]] static void save_json(
     const string& filename, const json_value& json) {
-  auto error = string{};
-  if (!save_json(filename, json, error)) throw io_error{error};
+  return save_text(filename, json.dump(2));
 }
 
 // Json conversions
@@ -531,475 +452,293 @@ bool is_ldr_filename(const string& filename) {
          ext == ".tga";
 }
 
-// Loads/saves an image. Chooses hdr or ldr based on file name.
-bool load_image(const string& filename, image_data& image, string& error) {
-  auto read_error = [&]() {
-    error = "cannot read " + filename;
-    return false;
-  };
+// Loads a float image.
+image_t<vec4f> load_image(const string& filename, bool srgb) {
+  auto image_ = image_t<vec4f>{};
+  load_image(filename, image_, srgb);
+  return image_;
+}
 
-  // conversion helpers
-  auto from_linear = [](const float* pixels, int width, int height) {
-    if (pixels == nullptr) return vector<vec4f>{};
-    return vector<vec4f>{
-        (vec4f*)pixels, (vec4f*)pixels + (size_t)width * (size_t)height};
-  };
-  auto from_srgb = [](const byte* pixels, int width, int height) {
-    if (pixels == nullptr) return vector<vec4f>{};
-    auto pixelsf = vector<vec4f>((size_t)width * (size_t)height);
-    for (auto idx : range(pixelsf.size())) {
-      pixelsf[idx] = byte_to_float(((vec4b*)pixels)[idx]);
-    }
-    return pixelsf;
-  };
+// Loads a byte image.
+image_t<vec4b> load_imageb(const string& filename, bool srgb) {
+  auto image_ = image_t<vec4b>{};
+  load_image(filename, image_, srgb);
+  return image_;
+}
 
+// Loads a float image.
+void load_image(const string& filename, image_t<vec4f>& image, bool srgb) {
   auto ext = path_extension(filename);
   if (ext == ".exr" || ext == ".EXR") {
-    auto buffer = vector<byte>{};
-    if (!load_binary(filename, buffer, error)) return false;
+    auto buffer = load_binary(filename);
+    auto width = 0, height = 0;
     auto pixels = (float*)nullptr;
-    if (LoadEXRFromMemory(&pixels, &image.width, &image.height, buffer.data(),
+    if (LoadEXRFromMemory(&pixels, &width, &height, buffer.data(),
             buffer.size(), nullptr) != 0)
-      return read_error();
-    image.linear = true;
-    image.pixels = from_linear(pixels, image.width, image.height);
+      throw io_error{"cannot read " + filename};
+    image = {{width, height}, (vec4f*)pixels};
+    if (srgb) image = rgb_to_srgb(image);
     free(pixels);
-    return true;
   } else if (ext == ".hdr" || ext == ".HDR") {
-    auto buffer = vector<byte>{};
-    if (!load_binary(filename, buffer, error)) return false;
-    auto ncomp  = 0;
-    auto pixels = stbi_loadf_from_memory(buffer.data(), (int)buffer.size(),
-        &image.width, &image.height, &ncomp, 4);
-    if (!pixels) return read_error();
-    image.linear = true;
-    image.pixels = from_linear(pixels, image.width, image.height);
+    auto buffer = load_binary(filename);
+    auto width = 0, height = 0, ncomp = 0;
+    auto pixels = stbi_loadf_from_memory(
+        buffer.data(), (int)buffer.size(), &width, &height, &ncomp, 4);
+    if (pixels == nullptr) throw io_error{"cannot read " + filename};
+    image = {{width, height}, (vec4f*)pixels};
+    if (srgb) image = rgb_to_srgb(image);
     free(pixels);
-    return true;
-  } else if (ext == ".png" || ext == ".PNG") {
-    auto buffer = vector<byte>{};
-    if (!load_binary(filename, buffer, error)) return false;
-    auto ncomp  = 0;
-    auto pixels = stbi_load_from_memory(buffer.data(), (int)buffer.size(),
-        &image.width, &image.height, &ncomp, 4);
-    if (!pixels) return read_error();
-    image.linear = false;
-    image.pixels = from_srgb(pixels, image.width, image.height);
-    free(pixels);
-    return true;
-  } else if (ext == ".jpg" || ext == ".JPG" || ext == ".jpeg" ||
-             ext == ".JPEG") {
-    auto buffer = vector<byte>{};
-    if (!load_binary(filename, buffer, error)) return false;
-    auto ncomp  = 0;
-    auto pixels = stbi_load_from_memory(buffer.data(), (int)buffer.size(),
-        &image.width, &image.height, &ncomp, 4);
-    if (!pixels) return read_error();
-    image.linear = false;
-    image.pixels = from_srgb(pixels, image.width, image.height);
-    free(pixels);
-    return true;
-  } else if (ext == ".tga" || ext == ".TGA") {
-    auto buffer = vector<byte>{};
-    if (!load_binary(filename, buffer, error)) return false;
-    auto ncomp  = 0;
-    auto pixels = stbi_load_from_memory(buffer.data(), (int)buffer.size(),
-        &image.width, &image.height, &ncomp, 4);
-    if (!pixels) return read_error();
-    image.linear = false;
-    image.pixels = from_srgb(pixels, image.width, image.height);
-    free(pixels);
-    return true;
-  } else if (ext == ".bmp" || ext == ".BMP") {
-    auto buffer = vector<byte>{};
-    if (!load_binary(filename, buffer, error)) return false;
-    auto ncomp  = 0;
-    auto pixels = stbi_load_from_memory(buffer.data(), (int)buffer.size(),
-        &image.width, &image.height, &ncomp, 4);
-    if (!pixels) return read_error();
-    image.linear = false;
-    image.pixels = from_srgb(pixels, image.width, image.height);
-    free(pixels);
-    return true;
+  } else if (ext == ".png" || ext == ".PNG" || ext == ".jpg" || ext == ".JPG" ||
+             ext == ".jpeg" || ext == ".JPEG" || ext == ".tga" ||
+             ext == ".TGA" || ext == ".bmp" || ext == ".BMP") {
+    auto imageb = load_imageb(filename);
+    image       = srgb ? byte_to_float(imageb) : srgbb_to_rgb(imageb);
   } else if (ext == ".ypreset" || ext == ".YPRESET") {
-    // create preset
-    if (!make_image_preset(filename, image, error)) return false;
-    return true;
+    image = make_image_preset(filename);
+    if (is_srgb_preset(filename) != srgb) {
+      image = srgb ? rgb_to_srgb(image) : srgb_to_rgb(image);
+    }
   } else {
-    error = "unsupported format " + filename;
-    return false;
+    throw io_error{"unsupported format " + filename};
   }
 }
 
-// Saves an hdr image.
-bool save_image(
-    const string& filename, const image_data& image, string& error) {
-  auto write_error = [&]() {
-    error = "cannot write " + filename;
-    return false;
-  };
-
-  // conversion helpers
-  auto to_linear = [](const image_data& image) {
-    if (image.linear) return image.pixels;
-    auto pixelsf = vector<vec4f>(image.pixels.size());
-    srgb_to_rgb(pixelsf, image.pixels);
-    return pixelsf;
-  };
-  auto to_srgb = [](const image_data& image) {
-    auto pixelsb = vector<vec4b>(image.pixels.size());
-    if (image.linear) {
-      rgb_to_srgb(pixelsb, image.pixels);
+// Loads a byte image.
+void load_image(const string& filename, image_t<vec4b>& image, bool srgb) {
+  auto ext = path_extension(filename);
+  if (ext == ".exr" || ext == ".EXR" || ext == ".hdr" || ext == ".HDR") {
+    auto imagef = load_image(filename);
+    image       = srgb ? rgb_to_srgbb(imagef) : float_to_byte(imagef);
+  } else if (ext == ".png" || ext == ".PNG" || ext == ".jpg" || ext == ".JPG" ||
+             ext == ".jpeg" || ext == ".JPEG" || ext == ".tga" ||
+             ext == ".TGA" || ext == ".bmp" || ext == ".BMP") {
+    auto buffer = load_binary(filename);
+    auto width = 0, height = 0, ncomp = 0;
+    auto pixels = stbi_load_from_memory(
+        buffer.data(), (int)buffer.size(), &width, &height, &ncomp, 4);
+    if (pixels == nullptr) throw io_error{"cannot read " + filename};
+    image = {{width, height}, (vec4b*)pixels};
+    if (!srgb) image = float_to_byte(srgbb_to_rgb(image));
+    free(pixels);
+  } else if (ext == ".ypreset" || ext == ".YPRESET") {
+    auto imagef = load_image(filename);
+    if (is_srgb_preset(filename) != srgb) {
+      image = srgb ? rgb_to_srgbb(imagef) : float_to_byte(srgb_to_rgb(imagef));
     } else {
-      float_to_byte(pixelsb, image.pixels);
+      image = float_to_byte(imagef);
     }
-    return pixelsb;
-  };
+  } else {
+    throw io_error{"unsupported format " + filename};
+  }
+}
 
+bool is_srgb_preset(const string& type_) {
+  auto type = path_basename(type_);
+  return type.find("sky") == string::npos;
+}
+image_t<vec4f> make_image_preset(const string& type_) {
+  auto type    = path_basename(type_);
+  auto extents = vec2i{1024, 1024};
+  if (type.find("sky") != string::npos) extents = {2048, 1024};
+  if (type.find("images2") != string::npos) extents = {2048, 1024};
+  if (type == "grid") {
+    return make_grid(extents);
+  } else if (type == "checker") {
+    return make_checker(extents);
+  } else if (type == "bumps") {
+    return make_bumps(extents);
+  } else if (type == "uvramp") {
+    return make_uvramp(extents);
+  } else if (type == "gammaramp") {
+    return make_gammaramp(extents);
+  } else if (type == "uvgrid") {
+    return make_uvgrid(extents);
+  } else if (type == "colormapramp") {
+    return make_colormapramp(extents);
+  } else if (type == "sky") {
+    return make_sunsky(
+        extents, pif / 4, 3.0f, false, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f});
+  } else if (type == "sunsky") {
+    return make_sunsky(
+        extents, pif / 4, 3.0f, true, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f});
+  } else if (type == "gnoisemap") {
+    return make_noisemap(extents, 1.0f);
+  } else if (type == "fnoisemap") {
+    return make_fbmmap(extents, 1.0f);
+  } else if (type == "rnoisemap") {
+    return make_ridgemap(extents, 1.0f);
+  } else if (type == "tnoisemap") {
+    return make_turbulencemap(extents, 1.0f);
+  } else if (type == "bump-normal") {
+    return make_bumps(extents);
+    // TODO(fabio): fix color space
+    // img   = srgb_to_rgb(bump_to_normal(img, 0.05f));
+  } else if (type == "images1") {
+    auto sub_types  = vector<string>{"grid", "uvgrid", "checker", "gammaramp",
+         "bumps", "bump-normal", "noise", "fbm", "blackbodyramp"};
+    auto sub_images = vector<image_t<vec4f>>();
+    for (auto& sub_type : sub_types)
+      sub_images.push_back(make_image_preset(sub_type));
+    auto montage_size = vec2i{0, 0};
+    for (auto& sub_image : sub_images) {
+      montage_size = {montage_size.x + sub_image.size().x,
+          max(montage_size.y, sub_image.size().y)};
+    }
+    auto composite = image_t<vec4f>(montage_size);
+    auto pos       = 0;
+    for (auto& sub_image : sub_images) {
+      set_region(composite, sub_image, {pos, 0});
+      pos += sub_image.size().x;
+    }
+    return composite;
+  } else if (type == "images2") {
+    auto sub_types  = vector<string>{"sky", "sunsky"};
+    auto sub_images = vector<image_t<vec4f>>();
+    for (auto& sub_type : sub_types)
+      sub_images.push_back(make_image_preset(sub_type));
+    auto montage_size = vec2i{0, 0};
+    for (auto& sub_image : sub_images) {
+      montage_size = {montage_size.x + sub_image.size().x,
+          max(montage_size.y, sub_image.size().y)};
+    }
+    auto composite = image_t<vec4f>(montage_size);
+    auto pos       = 0;
+    for (auto& sub_image : sub_images) {
+      set_region(composite, sub_image, {pos, 0});
+      pos += sub_image.size().x;
+    }
+    return composite;
+  } else if (type == "test-floor") {
+    return add_border(make_grid(extents), 0.0025f);
+  } else if (type == "test-grid") {
+    return make_grid(extents);
+  } else if (type == "test-checker") {
+    return make_checker(extents);
+  } else if (type == "test-bumps") {
+    return make_bumps(extents);
+  } else if (type == "test-uvramp") {
+    return make_uvramp(extents);
+  } else if (type == "test-gammaramp") {
+    return make_gammaramp(extents);
+  } else if (type == "test-colormapramp") {
+    return make_colormapramp(extents);
+    // TODO(fabio): fix color space
+    // img   = srgb_to_rgb(img);
+  } else if (type == "test-uvgrid") {
+    return make_uvgrid(extents);
+  } else if (type == "test-sky") {
+    return make_sunsky(
+        extents, pif / 4, 3.0f, false, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f});
+  } else if (type == "test-sunsky") {
+    return make_sunsky(
+        extents, pif / 4, 3.0f, true, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f});
+  } else if (type == "test-bumps-normal") {
+    return bump_to_normal(make_bumps(extents), 0.05f);
+  } else if (type == "test-bumps-displacement") {
+    return make_bumps(extents);
+    // TODO(fabio): fix color space
+    // img   = srgb_to_rgb(img);
+  } else if (type == "test-checker-opacity") {
+    return make_checker(extents, 1.0f, vec4f{1, 1, 1, 1}, vec4f{0, 0, 0, 0});
+  } else if (type == "test-grid-opacity") {
+    return make_grid(extents, 1.0f, vec4f{1, 1, 1, 1}, vec4f{0, 0, 0, 0});
+  } else {
+    throw io_error{"unknown preset " + type};
+  }
+}
+
+// Saves a float image.
+void save_image(
+    const string& filename, const image_t<vec4f>& image, bool srgb) {
   // write data
   auto stbi_write_data = [](void* context, void* data, int size) {
     auto& buffer = *(vector<byte>*)context;
     buffer.insert(buffer.end(), (byte*)data, (byte*)data + size);
   };
 
+  // grab data for low level apis
+  auto [width, height] = image.size();
+  auto num_channels    = 4;
+
   auto ext = path_extension(filename);
   if (ext == ".hdr" || ext == ".HDR") {
-    auto buffer = vector<byte>{};
-    if (!stbi_write_hdr_to_func(stbi_write_data, &buffer, (int)image.width,
-            (int)image.height, 4, (const float*)to_linear(image).data()))
-      return write_error();
-    if (!save_binary(filename, buffer, error)) return false;
-    return true;
+    auto& image_ = srgb ? srgb_to_rgb(image) : image;
+    auto  buffer = vector<byte>{};
+    if (!(bool)stbi_write_hdr_to_func(stbi_write_data, &buffer, width, height,
+            num_channels, (const float*)image_.data()))
+      throw io_error{"cannot write " + filename};
+    return save_binary(filename, buffer);
   } else if (ext == ".exr" || ext == ".EXR") {
-    auto data = (byte*)nullptr;
-    auto size = (size_t)0;
-    if (SaveEXRToMemory((const float*)to_linear(image).data(), (int)image.width,
-            (int)image.height, 4, 1, &data, &size, nullptr) < 0)
-      return write_error();
-    auto buffer = vector<byte>{data, data + size};
+    auto& image_ = srgb ? srgb_to_rgb(image) : image;
+    auto  data   = (byte*)nullptr;
+    auto  count  = (size_t)0;
+    if (SaveEXRToMemory((const float*)image_.data(), width, height,
+            num_channels, 1, &data, &count, nullptr) < 0)
+      throw io_error{"cannot write " + filename};
+    auto buffer = vector<byte>{data, data + count};
     free(data);
-    if (!save_binary(filename, buffer, error)) return false;
-    return true;
+    return save_binary(filename, buffer);
+  } else if (ext == ".png" || ext == ".PNG" || ext == ".jpg" || ext == ".JPG" ||
+             ext == ".jpeg" || ext == ".JPEG" || ext == ".tga" ||
+             ext == ".TGA" || ext == ".bmp" || ext == ".BMP") {
+    save_image(filename, srgb ? float_to_byte(image) : rgb_to_srgbb(image));
+  } else {
+    throw io_error{"unsupported format " + filename};
+  }
+}
+
+// Saves a byte image.
+void save_image(
+    const string& filename, const image_t<vec4b>& image, bool srgb) {
+  // write data
+  auto stbi_write_data = [](void* context, void* data, int size) {
+    auto& buffer = *(vector<byte>*)context;
+    buffer.insert(buffer.end(), (byte*)data, (byte*)data + size);
+  };
+
+  // grab data for low level apis
+  auto [width, height] = image.size();
+  auto num_channels    = 4;
+
+  auto ext = path_extension(filename);
+  if (ext == ".hdr" || ext == ".HDR" || ext == ".exr" || ext == ".EXR") {
+    return save_image(
+        filename, srgb ? srgbb_to_rgb(image) : byte_to_float(image));
   } else if (ext == ".png" || ext == ".PNG") {
-    auto buffer = vector<byte>{};
-    if (!stbi_write_png_to_func(stbi_write_data, &buffer, (int)image.width,
-            (int)image.height, 4, (const byte*)to_srgb(image).data(),
-            (int)image.width * 4))
-      return write_error();
-    if (!save_binary(filename, buffer, error)) return false;
-    return true;
+    auto& image_ = srgb ? image : rgb_to_srgbb(byte_to_float(image));
+    auto  buffer = vector<byte>{};
+    if (!(bool)stbi_write_png_to_func(stbi_write_data, &buffer, width, height,
+            num_channels, (const byte*)image_.data(), width * 4))
+      throw io_error{"cannot write " + filename};
+    return save_binary(filename, buffer);
   } else if (ext == ".jpg" || ext == ".JPG" || ext == ".jpeg" ||
              ext == ".JPEG") {
-    auto buffer = vector<byte>{};
-    if (!stbi_write_jpg_to_func(stbi_write_data, &buffer, (int)image.width,
-            (int)image.height, 4, (const byte*)to_srgb(image).data(), 75))
-      return write_error();
-    if (!save_binary(filename, buffer, error)) return false;
-    return true;
+    auto& image_ = srgb ? image : rgb_to_srgbb(byte_to_float(image));
+    auto  buffer = vector<byte>{};
+    if (!(bool)stbi_write_jpg_to_func(stbi_write_data, &buffer, width, height,
+            num_channels, (const byte*)image_.data(), 75))
+      throw io_error{"cannot write " + filename};
+    return save_binary(filename, buffer);
   } else if (ext == ".tga" || ext == ".TGA") {
-    auto buffer = vector<byte>{};
-    if (!stbi_write_tga_to_func(stbi_write_data, &buffer, (int)image.width,
-            (int)image.height, 4, (const byte*)to_srgb(image).data()))
-      return write_error();
-    if (!save_binary(filename, buffer, error)) return false;
-    return true;
+    auto& image_ = srgb ? image : rgb_to_srgbb(byte_to_float(image));
+    auto  buffer = vector<byte>{};
+    if (!(bool)stbi_write_tga_to_func(stbi_write_data, &buffer, width, height,
+            num_channels, (const byte*)image_.data()))
+      throw io_error{"cannot write " + filename};
+    return save_binary(filename, buffer);
   } else if (ext == ".bmp" || ext == ".BMP") {
-    auto buffer = vector<byte>{};
-    if (!stbi_write_bmp_to_func(stbi_write_data, &buffer, (int)image.width,
-            (int)image.height, 4, (const byte*)to_srgb(image).data()))
-      return write_error();
-    if (!save_binary(filename, buffer, error)) return false;
-    return true;
+    auto& image_ = srgb ? image : rgb_to_srgbb(byte_to_float(image));
+    auto  buffer = vector<byte>{};
+    if (!(bool)stbi_write_bmp_to_func(stbi_write_data, &buffer, width, height,
+            num_channels, (const byte*)image_.data()))
+      throw io_error{"cannot write " + filename};
+    return save_binary(filename, buffer);
   } else {
-    error = "unsupported format " + filename;
-    return false;
+    throw io_error{"unsupported format " + filename};
   }
-}
-
-image_data make_image_preset(const string& type_) {
-  auto type  = path_basename(type_);
-  auto width = 1024, height = 1024;
-  if (type.find("sky") != type.npos) width = 2048;
-  if (type.find("images2") != type.npos) width = 2048;
-  if (type == "grid") {
-    return make_grid(width, height);
-  } else if (type == "checker") {
-    return make_checker(width, height);
-  } else if (type == "bumps") {
-    return make_bumps(width, height);
-  } else if (type == "uvramp") {
-    return make_uvramp(width, height);
-  } else if (type == "gammaramp") {
-    return make_gammaramp(width, height);
-  } else if (type == "blackbodyramp") {
-    return make_blackbodyramp(width, height);
-  } else if (type == "uvgrid") {
-    return make_uvgrid(width, height);
-  } else if (type == "colormapramp") {
-    return make_colormapramp(width, height);
-  } else if (type == "sky") {
-    return make_sunsky(width, height, pif / 4, 3.0f, false, 1.0f, 1.0f,
-        vec3f{0.7f, 0.7f, 0.7f});
-  } else if (type == "sunsky") {
-    return make_sunsky(width, height, pif / 4, 3.0f, true, 1.0f, 1.0f,
-        vec3f{0.7f, 0.7f, 0.7f});
-  } else if (type == "noise") {
-    return make_noisemap(width, height, 1);
-  } else if (type == "fbm") {
-    return make_fbmmap(width, height, 1);
-  } else if (type == "ridge") {
-    return make_ridgemap(width, height, 1);
-  } else if (type == "turbulence") {
-    return make_turbulencemap(width, height, 1);
-  } else if (type == "bump-normal") {
-    return make_bumps(width, height);
-    // TODO(fabio): fix color space
-    // img   = srgb_to_rgb(bump_to_normal(img, 0.05f));
-  } else if (type == "images1") {
-    auto sub_types  = vector<string>{"grid", "uvgrid", "checker", "gammaramp",
-         "bumps", "bump-normal", "noise", "fbm", "blackbodyramp"};
-    auto sub_images = vector<image_data>();
-    for (auto& sub_type : sub_types)
-      sub_images.push_back(make_image_preset(sub_type));
-    auto montage_size = vec2i{0, 0};
-    for (auto& sub_image : sub_images) {
-      montage_size.x += sub_image.width;
-      montage_size.y = max(montage_size.y, sub_image.height);
-    }
-    auto image = make_image(
-        montage_size.x, montage_size.y, sub_images[0].linear);
-    auto pos = 0;
-    for (auto& sub_image : sub_images) {
-      set_region(image, sub_image, pos, 0);
-      pos += sub_image.width;
-    }
-    return image;
-  } else if (type == "images2") {
-    auto sub_types  = vector<string>{"sky", "sunsky"};
-    auto sub_images = vector<image_data>();
-    for (auto& sub_type : sub_types)
-      sub_images.push_back(make_image_preset(sub_type));
-    auto montage_size = vec2i{0, 0};
-    for (auto& sub_image : sub_images) {
-      montage_size.x += sub_image.width;
-      montage_size.y = max(montage_size.y, sub_image.height);
-    }
-    auto image = make_image(
-        montage_size.x, montage_size.y, sub_images[0].linear);
-    auto pos = 0;
-    for (auto& sub_image : sub_images) {
-      set_region(image, sub_image, pos, 0);
-      pos += sub_image.width;
-    }
-    return image;
-  } else if (type == "test-floor") {
-    return add_border(make_grid(width, height), 0.0025f);
-  } else if (type == "test-grid") {
-    return make_grid(width, height);
-  } else if (type == "test-checker") {
-    return make_checker(width, height);
-  } else if (type == "test-bumps") {
-    return make_bumps(width, height);
-  } else if (type == "test-uvramp") {
-    return make_uvramp(width, height);
-  } else if (type == "test-gammaramp") {
-    return make_gammaramp(width, height);
-  } else if (type == "test-blackbodyramp") {
-    return make_blackbodyramp(width, height);
-  } else if (type == "test-colormapramp") {
-    return make_colormapramp(width, height);
-    // TODO(fabio): fix color space
-    // img   = srgb_to_rgb(img);
-  } else if (type == "test-uvgrid") {
-    return make_uvgrid(width, height);
-  } else if (type == "test-sky") {
-    return make_sunsky(width, height, pif / 4, 3.0f, false, 1.0f, 1.0f,
-        vec3f{0.7f, 0.7f, 0.7f});
-  } else if (type == "test-sunsky") {
-    return make_sunsky(width, height, pif / 4, 3.0f, true, 1.0f, 1.0f,
-        vec3f{0.7f, 0.7f, 0.7f});
-  } else if (type == "test-noise") {
-    return make_noisemap(width, height);
-  } else if (type == "test-fbm") {
-    return make_noisemap(width, height);
-  } else if (type == "test-bumps-normal") {
-    return bump_to_normal(make_bumps(width, height), 0.05f);
-  } else if (type == "test-bumps-displacement") {
-    return make_bumps(width, height);
-    // TODO(fabio): fix color space
-    // img   = srgb_to_rgb(img);
-  } else if (type == "test-fbm-displacement") {
-    return make_fbmmap(width, height);
-    // TODO(fabio): fix color space
-    // img   = srgb_to_rgb(img);
-  } else if (type == "test-checker-opacity") {
-    return make_checker(width, height, 1, {1, 1, 1, 1}, {0, 0, 0, 0});
-  } else if (type == "test-grid-opacity") {
-    return make_grid(width, height, 1, {1, 1, 1, 1}, {0, 0, 0, 0});
-  } else {
-    return {};
-  }
-}
-
-// Loads/saves an image. Chooses hdr or ldr based on file name.
-image_data load_image(const string& filename, string& error) {
-  auto image = image_data{};
-  if (!load_image(filename, image, error)) return image_data{};
-  return image;
-}
-image_data load_image(const string& filename) {
-  auto error = string{};
-  auto image = image_data{};
-  if (!load_image(filename, image, error)) throw io_error{error};
-  return image;
-}
-void load_image(const string& filename, image_data& image) {
-  auto error = string{};
-  if (!load_image(filename, image, error)) throw io_error{error};
-}
-void save_image(const string& filename, const image_data& image) {
-  auto error = string{};
-  if (!save_image(filename, image, error)) throw io_error{error};
-}
-
-bool make_image_preset(
-    const string& filename, image_data& image, string& error) {
-  image = make_image_preset(path_basename(filename));
-  if (image.pixels.empty()) {
-    error = "unknown preset";
-    return false;
-  }
-  return true;
 }
 
 }  // namespace yocto
-
-#if 0
-
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION FOR VOLUME IMAGE IO
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Volume load
-static bool load_yvol(const string& filename, int& width, int& height,
-    int& depth, int& components, vector<float>& voxels, string& error) {
-  // error helpers
-  auto open_error = [filename, &error]() {
-    error = "cannot open " + filename;
-    return false;
-  };
-  auto parse_error = [filename, &error]() {
-    error = "cannot parse " + filename;
-    return false;
-  };
-  auto read_error = [filename, &error]() {
-    error = "cannot read " + filename;
-    return false;
-  };
-
-  // Split a string
-  auto split_string = [](const string& str) -> vector<string> {
-    auto ret = vector<string>();
-    if (str.empty()) return ret;
-    auto lpos = (size_t)0;
-    while (lpos != string::npos) {
-      auto pos = str.find_first_of(" \t\n\r", lpos);
-      if (pos != string::npos) {
-        if (pos > lpos) ret.push_back(str.substr(lpos, pos - lpos));
-        lpos = pos + 1;
-      } else {
-        if (lpos < str.size()) ret.push_back(str.substr(lpos));
-        lpos = pos;
-      }
-    }
-    return ret;
-  };
-
-  auto fs       = fopen_utf8(filename.c_str(), "rb");
-  auto fs_guard = unique_ptr<FILE, int (*)(FILE*)>(fs, &fclose);
-  if (!fs) return open_error();
-
-  // buffer
-  auto buffer = array<char, 4096>{};
-  auto toks   = vector<string>();
-
-  // read magic
-  if (!fgets(buffer.data(), (int)buffer.size(), fs)) return parse_error();
-  toks = split_string(buffer.data());
-  if (toks[0] != "YVOL") return parse_error();
-
-  // read width, height
-  if (!fgets(buffer.data(), (int)buffer.size(), fs)) return parse_error();
-  toks       = split_string(buffer.data());
-  width      = atoi(toks[0].c_str());
-  height     = atoi(toks[1].c_str());
-  depth      = atoi(toks[2].c_str());
-  components = atoi(toks[3].c_str());
-
-  // read data
-  auto nvoxels = (size_t)width * (size_t)height * (size_t)depth;
-  auto nvalues = nvoxels * (size_t)components;
-  voxels       = vector<float>(nvalues);
-  if (!read_values(fs, voxels.data(), nvalues)) return read_error();
-
-  // done
-  return true;
-}
-
-// save pfm
-static bool save_yvol(const string& filename, int width, int height, int depth,
-    int components, const vector<float>& voxels, string& error) {
-  // error helpers
-  auto open_error = [filename, &error]() {
-    error = "cannot create " + filename;
-    return false;
-  };
-  auto write_error = [filename, &error]() {
-    error = "cannot read " + filename;
-    return false;
-  };
-
-  auto fs       = fopen_utf8(filename.c_str(), "wb");
-  auto fs_guard = unique_ptr<FILE, int (*)(FILE*)>(fs, &fclose);
-  if (!fs) return open_error();
-
-  if (!write_text(fs, "YVOL\n")) return write_error();
-  if (!write_text(fs, std::to_string(width) + " " + std::to_string(height) +
-                          " " + std::to_string(depth) + " " +
-                          std::to_string(components) + "\n"))
-    return write_error();
-  auto nvalues = (size_t)width * (size_t)height * (size_t)depth *
-                 (size_t)components;
-  if (!write_values(fs, voxels.data(), nvalues)) return write_error();
-  return true;
-}
-
-// Loads volume data from binary format.
-bool load_volume(const string& filename, volume<float>& vol, string& error) {
-  auto read_error = [filename, &error]() {
-    error = "cannot read " + filename;
-    return false;
-  };
-  auto width = 0, height = 0, depth = 0, ncomp = 0;
-  auto voxels = vector<float>{};
-  if (!load_yvol(filename, width, height, depth, ncomp, voxels, error))
-    return false;
-  if (ncomp != 1) voxels = convert_components(voxels, ncomp, 1);
-  vol = volume{{width, height, depth}, (const float*)voxels.data()};
-  return true;
-}
-
-// Saves volume data in binary format.
-bool save_volume(
-    const string& filename, const volume<float>& vol, string& error) {
-  return save_yvol(filename, vol.width(), vol.height(), vol.depth(), 1,
-      {vol.data(), vol.data() + vol.count()}, error);
-}
-
-}  // namespace yocto
-
-#endif
 
 // -----------------------------------------------------------------------------
 // SHAPE IO
@@ -1007,19 +746,12 @@ bool save_volume(
 namespace yocto {
 
 // Load mesh
-bool load_shape(const string& filename, shape_data& shape, string& error,
-    bool flip_texcoord) {
-  auto shape_error = [&]() {
-    error = "empty shape " + filename;
-    return false;
-  };
-
+void load_shape(const string& filename, shape_data& shape, bool flip_texcoord) {
   shape = {};
 
   auto ext = path_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
-    auto ply = ply_model{};
-    if (!load_ply(filename, ply, error)) return false;
+    auto ply = load_ply(filename);
     // TODO: remove when all as arrays
     get_positions(ply, (vector<array<float, 3>>&)shape.positions);
     get_normals(ply, (vector<array<float, 3>>&)shape.normals);
@@ -1033,11 +765,9 @@ bool load_shape(const string& filename, shape_data& shape, string& error,
     get_points(ply, shape.points);
     if (shape.points.empty() && shape.lines.empty() &&
         shape.triangles.empty() && shape.quads.empty())
-      return shape_error();
-    return true;
+      throw io_error{"empty shape " + filename};
   } else if (ext == ".obj" || ext == ".OBJ") {
-    auto obj = obj_shape{};
-    if (!load_obj(filename, obj, error, false)) return false;
+    auto obj       = load_sobj(filename, false);
     auto materials = vector<int>{};
     // TODO: remove when all as arrays
     get_positions(obj, (vector<array<float, 3>>&)shape.positions);
@@ -1050,35 +780,25 @@ bool load_shape(const string& filename, shape_data& shape, string& error,
     get_points(obj, shape.points, materials);
     if (shape.points.empty() && shape.lines.empty() &&
         shape.triangles.empty() && shape.quads.empty())
-      return shape_error();
-    return true;
+      throw io_error{"empty shape " + filename};
   } else if (ext == ".stl" || ext == ".STL") {
-    auto stl = stl_model{};
-    if (!load_stl(filename, stl, error, true)) return false;
-    if (stl.shapes.size() != 1) return shape_error();
+    auto stl = load_stl(filename, true);
+    if (stl.shapes.size() != 1) throw io_error{"empty shape " + filename};
     auto fnormals = vector<vec3f>{};
     if (!get_triangles(stl, 0, (vector<array<int, 3>>&)shape.triangles,
             (vector<array<float, 3>>&)shape.positions,
             (vector<array<float, 3>>&)fnormals))
-      return shape_error();
-    return true;
+      throw io_error{"empty shape " + filename};
   } else if (ext == ".ypreset" || ext == ".YPRESET") {
-    if (!make_shape_preset(filename, shape, error)) return false;
-    return true;
+    shape = make_shape_preset(filename);
   } else {
-    error = "unsupported format " + filename;
-    return false;
+    throw io_error("unsupported format " + filename);
   }
 }
 
 // Save ply mesh
-bool save_shape(const string& filename, const shape_data& shape, string& error,
+void save_shape(const string& filename, const shape_data& shape,
     bool flip_texcoord, bool ascii) {
-  auto shape_error = [&]() {
-    error = "empty shape " + filename;
-    return false;
-  };
-
   auto ext = path_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     auto ply = ply_model{};
@@ -1093,8 +813,7 @@ bool save_shape(const string& filename, const shape_data& shape, string& error,
         (const vector<array<int, 4>>&)shape.quads);
     add_lines(ply, (const vector<array<int, 2>>&)shape.lines);
     add_points(ply, shape.points);
-    if (!save_ply(filename, ply, error)) return false;
-    return true;
+    save_ply(filename, ply);
   } else if (ext == ".obj" || ext == ".OBJ") {
     auto obj = obj_shape{};
     // TODO: remove when all as arrays
@@ -1110,12 +829,11 @@ bool save_shape(const string& filename, const shape_data& shape, string& error,
         !shape.normals.empty(), !shape.texcoords.empty());
     add_points(
         obj, shape.points, 0, !shape.normals.empty(), !shape.texcoords.empty());
-    if (!save_obj(filename, obj, error)) return false;
-    return true;
+    save_obj(filename, obj);
   } else if (ext == ".stl" || ext == ".STL") {
     auto stl = stl_model{};
-    if (!shape.lines.empty()) return shape_error();
-    if (!shape.points.empty()) return shape_error();
+    if (!shape.lines.empty()) throw io_error{"empty shape " + filename};
+    if (!shape.points.empty()) throw io_error{"empty shape " + filename};
     if (!shape.triangles.empty()) {
       add_triangles(stl, (const vector<array<int, 3>>&)shape.triangles,
           (const vector<array<float, 3>>&)shape.positions, {});
@@ -1124,10 +842,9 @@ bool save_shape(const string& filename, const shape_data& shape, string& error,
       add_triangles(stl, (const vector<array<int, 3>>&)triangles,
           (const vector<array<float, 3>>&)shape.positions, {});
     } else {
-      return shape_error();
+      throw io_error{"empty shape " + filename};
     }
-    if (!save_stl(filename, stl, error)) return false;
-    return true;
+    save_stl(filename, stl);
   } else if (ext == ".cpp" || ext == ".CPP") {
     auto to_cpp = [](const string& name, const string& vname,
                       const auto& values) -> string {
@@ -1178,28 +895,20 @@ bool save_shape(const string& filename, const shape_data& shape, string& error,
     str += to_cpp(name, "lines", shape.lines);
     str += to_cpp(name, "triangles", shape.triangles);
     str += to_cpp(name, "quads", shape.quads);
-    if (!save_text(filename, str, error)) return false;
-    return true;
+    save_text(filename, str);
   } else {
-    error = "unsupported format " + filename;
-    return false;
+    throw io_error("unsupported format " + filename);
   }
 }
 
 // Load face-varying mesh
-bool load_fvshape(const string& filename, fvshape_data& shape, string& error,
-    bool flip_texcoord) {
-  auto shape_error = [&]() {
-    error = "empty shape " + filename;
-    return false;
-  };
-
+void load_fvshape(
+    const string& filename, fvshape_data& shape, bool flip_texcoord) {
   shape = {};
 
   auto ext = path_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
-    auto ply = ply_model{};
-    if (!load_ply(filename, ply, error)) return false;
+    auto ply = load_ply(filename);
     // TODO: remove when all as arrays
     get_positions(ply, (vector<array<float, 3>>&)shape.positions);
     get_normals(ply, (vector<array<float, 3>>&)shape.normals);
@@ -1208,11 +917,9 @@ bool load_fvshape(const string& filename, fvshape_data& shape, string& error,
     get_quads(ply, (vector<array<int, 4>>&)shape.quadspos);
     if (!shape.normals.empty()) shape.quadsnorm = shape.quadspos;
     if (!shape.texcoords.empty()) shape.quadstexcoord = shape.quadspos;
-    if (shape.quadspos.empty()) return shape_error();
-    return true;
+    if (shape.quadspos.empty()) throw io_error{"empty shape " + filename};
   } else if (ext == ".obj" || ext == ".OBJ") {
-    auto obj = obj_shape{};
-    if (!load_obj(filename, obj, error, true)) return false;
+    auto obj = load_sobj(filename, true);
     // TODO: remove when all as arrays
     auto materials = vector<int>{};
     get_positions(obj, (vector<array<float, 3>>&)shape.positions);
@@ -1222,38 +929,28 @@ bool load_fvshape(const string& filename, fvshape_data& shape, string& error,
     get_fvquads(obj, (vector<array<int, 4>>&)shape.quadspos,
         (vector<array<int, 4>>&)shape.quadsnorm,
         (vector<array<int, 4>>&)shape.quadstexcoord, materials);
-    if (shape.quadspos.empty()) return shape_error();
-    return true;
+    if (shape.quadspos.empty()) throw io_error{"empty shape " + filename};
   } else if (ext == ".stl" || ext == ".STL") {
-    auto stl = stl_model{};
-    if (!load_stl(filename, stl, error, true)) return false;
-    if (stl.shapes.empty()) return shape_error();
-    if (stl.shapes.size() > 1) return shape_error();
+    auto stl = load_stl(filename, true);
+    if (stl.shapes.empty()) throw io_error{"empty shape " + filename};
+    if (stl.shapes.size() > 1) throw io_error{"empty shape " + filename};
     auto fnormals  = vector<vec3f>{};
     auto triangles = vector<vec3i>{};
     if (!get_triangles(stl, 0, (vector<array<int, 3>>&)triangles,
             (vector<array<float, 3>>&)shape.positions,
             (vector<array<float, 3>>&)fnormals))
-      return shape_error();
+      throw io_error{"empty shape " + filename};
     shape.quadspos = triangles_to_quads(triangles);
-    return true;
   } else if (ext == ".ypreset" || ext == ".YPRESET") {
-    if (!make_fvshape_preset(filename, shape, error)) return false;
-    return true;
+    shape = make_fvshape_preset(filename);
   } else {
-    error = "unsupported format " + filename;
-    return false;
+    throw io_error("unsupported format " + filename);
   }
 }
 
 // Save ply mesh
-bool save_fvshape(const string& filename, const fvshape_data& shape,
-    string& error, bool flip_texcoord, bool ascii) {
-  auto shape_error = [&]() {
-    error = "empty shape " + filename;
-    return false;
-  };
-
+void save_fvshape(const string& filename, const fvshape_data& shape,
+    bool flip_texcoord, bool ascii) {
   auto ext = path_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     auto ply             = ply_model{};
@@ -1270,8 +967,7 @@ bool save_fvshape(const string& filename, const fvshape_data& shape,
     add_texcoords(
         ply, (const vector<array<float, 2>>&)split_texcoords, flip_texcoord);
     add_quads(ply, (const vector<array<int, 4>>&)split_quads);
-    if (!save_ply(filename, ply, error)) return false;
-    return true;
+    save_ply(filename, ply);
   } else if (ext == ".obj" || ext == ".OBJ") {
     auto obj = obj_shape{};
     // TODO: remove when all as arrays
@@ -1282,8 +978,7 @@ bool save_fvshape(const string& filename, const fvshape_data& shape,
     add_fvquads(obj, (const vector<array<int, 4>>&)shape.quadspos,
         (const vector<array<int, 4>>&)shape.quadsnorm,
         (const vector<array<int, 4>>&)shape.quadstexcoord, 0);
-    if (!save_obj(filename, obj, error)) return false;
-    return true;
+    save_obj(filename, obj);
   } else if (ext == ".stl" || ext == ".STL") {
     auto stl = stl_model{};
     if (!shape.quadspos.empty()) {
@@ -1298,10 +993,9 @@ bool save_fvshape(const string& filename, const fvshape_data& shape,
       add_triangles(stl, (const vector<array<int, 3>>&)triangles,
           (const vector<array<float, 3>>&)split_positions, {});
     } else {
-      return shape_error();
+      throw io_error{"empty shape " + filename};
     }
-    if (!save_stl(filename, stl, error)) return false;
-    return true;
+    save_stl(filename, stl);
   } else if (ext == ".cpp" || ext == ".CPP") {
     auto to_cpp = [](const string& name, const string& vname,
                       const auto& values) -> string {
@@ -1348,11 +1042,9 @@ bool save_fvshape(const string& filename, const fvshape_data& shape,
     str += to_cpp(name, "quadspos", shape.quadspos);
     str += to_cpp(name, "quadsnorm", shape.quadsnorm);
     str += to_cpp(name, "quadstexcoord", shape.quadstexcoord);
-    if (!save_text(filename, str, error)) return false;
-    return true;
+    save_text(filename, str);
   } else {
-    error = "unsupported format " + filename;
-    return false;
+    throw io_error("unsupported format " + filename);
   }
 }
 
@@ -1492,7 +1184,7 @@ shape_data make_shape_preset(const string& type) {
     shape.normals = {};
     return shape;
   } else if (type == "test-geosphere-subdivided") {
-    auto shape = make_geosphere(3, 0.075f);
+    auto shape = make_geosphere(6, 0.075f);
     for (auto& p : shape.positions) p += {0, 0.075f, 0};
     return shape;
   } else if (type == "test-hairball1") {
@@ -1572,219 +1264,39 @@ shape_data make_shape_preset(const string& type) {
   } else if (type == "test-clothy") {
     return make_recty({64, 64}, {0.2f, 0.2f});
   } else {
-    return {};
+    throw io_error{"unknown preset " + type};
   }
 }
 
 // Shape presets used for testing.
 fvshape_data make_fvshape_preset(const string& type) {
-  if (type == "default-quad") {
-    return shape_to_fvshape(make_rect());
-  } else if (type == "default-quady") {
-    return shape_to_fvshape(make_recty());
-  } else if (type == "default-cube") {
-    return shape_to_fvshape(make_box());
-  } else if (type == "default-cube-rounded") {
-    return shape_to_fvshape(make_rounded_box());
-  } else if (type == "default-sphere") {
-    return shape_to_fvshape(make_sphere());
-  } else if (type == "default-matcube") {
-    return shape_to_fvshape(make_rounded_box());
-  } else if (type == "default-matsphere") {
-    return shape_to_fvshape(make_uvspherey());
-  } else if (type == "default-disk") {
-    return shape_to_fvshape(make_disk());
-  } else if (type == "default-disk-bulged") {
-    return shape_to_fvshape(make_bulged_disk());
-  } else if (type == "default-quad-bulged") {
-    return shape_to_fvshape(make_bulged_rect());
-  } else if (type == "default-uvsphere") {
-    return shape_to_fvshape(make_uvsphere());
-  } else if (type == "default-uvsphere-flipcap") {
-    return shape_to_fvshape(make_capped_uvsphere());
-  } else if (type == "default-uvspherey") {
-    return shape_to_fvshape(make_uvspherey());
-  } else if (type == "default-uvspherey-flipcap") {
-    return shape_to_fvshape(make_capped_uvspherey());
-  } else if (type == "default-uvdisk") {
-    return shape_to_fvshape(make_uvdisk());
-  } else if (type == "default-uvcylinder") {
-    return shape_to_fvshape(make_uvcylinder());
-  } else if (type == "default-uvcylinder-rounded") {
-    return shape_to_fvshape(make_rounded_uvcylinder({32, 32, 32}));
-  } else if (type == "default-geosphere") {
-    return shape_to_fvshape(make_geosphere());
-  } else if (type == "default-floor") {
-    return shape_to_fvshape(make_floor());
-  } else if (type == "default-floor-bent") {
-    return shape_to_fvshape(make_bent_floor());
-  } else if (type == "default-matball") {
-    return shape_to_fvshape(make_sphere());
-  } else if (type == "default-hairball-interior") {
-    return shape_to_fvshape(make_sphere(pow2(5), 0.8f));
-  } else if (type == "default-suzanne") {
-    return shape_to_fvshape(make_monkey());
-  } else if (type == "default-cube-facevarying") {
+  auto test_xform = translation_frame(vec3f{0, 0.75f, 0}) *
+                    scaling_frame(vec3f{0.75f, 0.75f, 0.75f});
+  if (type == "fvcube") {
     return make_fvbox();
-  } else if (type == "default-sphere-facevarying") {
+  } else if (type == "fvsphere") {
     return make_fvsphere();
-  } else if (type == "default-quady-displaced") {
-    return shape_to_fvshape(make_recty({256, 256}));
-  } else if (type == "default-sphere-displaced") {
-    return shape_to_fvshape(make_sphere(128));
-  } else if (type == "test-cube") {
-    auto shape = make_rounded_box(
-        {32, 32, 32}, {0.075f, 0.075f, 0.075f}, {1, 1, 1}, 0.3f * 0.075f);
-    for (auto& p : shape.positions) p += {0, 0.075f, 0};
-    return shape_to_fvshape(shape);
-  } else if (type == "test-matsphere") {
-    auto shape = make_uvspherey({32, 32}, 0.075f, {2, 1});
-    for (auto& p : shape.positions) p += {0, 0.075f, 0};
-    return shape_to_fvshape(shape);
-  } else if (type == "test-uvsphere") {
-    auto shape = make_uvsphere({32, 32}, 0.075f);
-    for (auto& p : shape.positions) p += {0, 0.075f, 0};
-    return shape_to_fvshape(shape);
-  } else if (type == "test-uvsphere-flipcap") {
-    auto shape = make_capped_uvsphere({32, 32}, 0.075f, {1, 1}, 0.3f * 0.075f);
-    for (auto& p : shape.positions) p += {0, 0.075f, 0};
-    return shape_to_fvshape(shape);
-  } else if (type == "test-uvspherey") {
-    auto shape = make_uvspherey({32, 32}, 0.075f);
-    for (auto& p : shape.positions) p += {0, 0.075f, 0};
-    return shape_to_fvshape(shape);
-  } else if (type == "test-uvspherey-flipcap") {
-    auto shape = make_capped_uvspherey({32, 32}, 0.075f, {1, 1}, 0.3f * 0.075f);
-    for (auto& p : shape.positions) p += {0, 0.075f, 0};
-    return shape_to_fvshape(shape);
-  } else if (type == "test-sphere") {
-    auto shape = make_sphere(32, 0.075f, 1);
-    for (auto& p : shape.positions) p += {0, 0.075f, 0};
-    return shape_to_fvshape(shape);
-  } else if (type == "test-sphere-displaced") {
-    auto shape = make_sphere(128, 0.075f, 1);
-    for (auto& p : shape.positions) p += {0, 0.075f, 0};
-    return shape_to_fvshape(shape);
-  } else if (type == "test-matcube") {
-    auto shape = make_rounded_box(
-        {32, 32, 32}, {0.075f, 0.075f, 0.075f}, {1, 1, 1}, 0.3f * 0.075f);
-    for (auto& p : shape.positions) p += {0, 0.075f, 0};
-    return shape_to_fvshape(shape);
-  } else if (type == "test-disk") {
-    auto shape = make_disk(32, 0.075f, 1);
-    for (auto& p : shape.positions) p += {0, 0.075f, 0};
-    return shape_to_fvshape(shape);
-  } else if (type == "test-uvcylinder") {
-    auto shape = make_rounded_uvcylinder(
-        {32, 32, 32}, {0.075f, 0.075f}, {1, 1, 1}, 0.3f * 0.075f);
-    for (auto& p : shape.positions) p += {0, 0.075f, 0};
-    return shape_to_fvshape(shape);
-  } else if (type == "test-floor") {
-    return shape_to_fvshape(make_floor({1, 1}, {2, 2}, {20, 20}));
-  } else if (type == "test-smallfloor") {
-    return shape_to_fvshape(make_floor({1, 1}, {0.5f, 0.5f}, {1, 1}));
-  } else if (type == "test-quad") {
-    return shape_to_fvshape(make_rect({1, 1}, {0.075f, 0.075f}, {1, 1}));
-  } else if (type == "test-quady") {
-    return shape_to_fvshape(make_recty({1, 1}, {0.075f, 0.075f}, {1, 1}));
-  } else if (type == "test-quad-displaced") {
-    return shape_to_fvshape(make_rect({256, 256}, {0.075f, 0.075f}, {1, 1}));
-  } else if (type == "test-quady-displaced") {
-    return shape_to_fvshape(make_recty({256, 256}, {0.075f, 0.075f}, {1, 1}));
-  } else if (type == "test-matball") {
-    auto shape = make_sphere(32, 0.075f);
-    for (auto& p : shape.positions) p += {0, 0.075f, 0};
-    return shape_to_fvshape(shape);
-  } else if (type == "test-suzanne-subdiv") {
-    auto shape = make_monkey(0, 0.075f * 0.8f);
-    for (auto& p : shape.positions) p += {0, 0.075f, 0};
-    return shape_to_fvshape(shape);
-  } else if (type == "test-cube-subdiv") {
-    auto fvshape = make_fvcube(0, 0.075f);
-    for (auto& p : fvshape.positions) p += {0, 0.075f, 0};
-    return fvshape;
-  } else if (type == "test-arealight1") {
-    return shape_to_fvshape(make_rect({1, 1}, {0.2f, 0.2f}));
-  } else if (type == "test-arealight2") {
-    return shape_to_fvshape(make_rect({1, 1}, {0.2f, 0.2f}));
-  } else if (type == "test-largearealight1") {
-    return shape_to_fvshape(make_rect({1, 1}, {0.4f, 0.4f}));
-  } else if (type == "test-largearealight2") {
-    return shape_to_fvshape(make_rect({1, 1}, {0.4f, 0.4f}));
-  } else if (type == "test-cloth") {
-    return shape_to_fvshape(make_rect({64, 64}, {0.2f, 0.2f}));
-  } else if (type == "test-clothy") {
-    return shape_to_fvshape(make_recty({64, 64}, {0.2f, 0.2f}));
+  } else if (type == "test_facevarying_cube") {
+    return transform_fvshape(make_fvbox(), test_xform);
+  } else if (type == "test_facevarying_sphere") {
+    return transform_fvshape(make_fvsphere(), test_xform);
   } else {
-    return {};
+    return shape_to_fvshape(make_shape_preset(type));
   }
 }
 
 // Load mesh
-shape_data load_shape(
-    const string& filename, string& error, bool flip_texcoord) {
-  auto shape = shape_data{};
-  if (!load_shape(filename, shape, error, flip_texcoord)) return shape_data{};
-  return shape;
-}
 shape_data load_shape(const string& filename, bool flip_texcoord) {
-  auto error = string{};
   auto shape = shape_data{};
-  if (!load_shape(filename, shape, error, flip_texcoord)) throw io_error{error};
+  load_shape(filename, shape, flip_texcoord);
   return shape;
-}
-void load_shape(const string& filename, shape_data& shape, bool flip_texcoord) {
-  auto error = string{};
-  if (!load_shape(filename, shape, error, flip_texcoord)) throw io_error{error};
-}
-void save_shape(const string& filename, const shape_data& shape,
-    bool flip_texcoord, bool ascii) {
-  auto error = string{};
-  if (!save_shape(filename, shape, error, flip_texcoord, ascii))
-    throw io_error{error};
 }
 
 // Load mesh
 fvshape_data load_fvshape(const string& filename, bool flip_texcoord) {
-  auto error = string{};
   auto shape = fvshape_data{};
-  if (!load_fvshape(filename, shape, error, flip_texcoord))
-    throw io_error{error};
+  load_fvshape(filename, shape, flip_texcoord);
   return shape;
-}
-void load_fvshape(
-    const string& filename, fvshape_data& fvshape, bool flip_texcoord) {
-  auto error = string{};
-  if (!load_fvshape(filename, fvshape, error, flip_texcoord))
-    throw io_error{error};
-}
-void save_fvshape(const string& filename, const fvshape_data& fvshape,
-    bool flip_texcoord, bool ascii) {
-  auto error = string{};
-  if (!save_fvshape(filename, fvshape, error, flip_texcoord, ascii))
-    throw io_error{error};
-}
-
-// Shape presets used ofr testing.
-bool make_shape_preset(
-    const string& filename, shape_data& shape, string& error) {
-  shape = make_shape_preset(path_basename(filename));
-  if (shape.positions.empty()) {
-    error = "unknown preset";
-    return false;
-  }
-  return true;
-}
-
-// Shape presets used for testing.
-bool make_fvshape_preset(
-    const string& filename, fvshape_data& fvshape, string& error) {
-  fvshape = make_fvshape_preset(path_basename(filename));
-  if (fvshape.positions.empty()) {
-    error = "unknown preset";
-    return false;
-  }
-  return true;
 }
 
 }  // namespace yocto
@@ -1795,213 +1307,39 @@ bool make_fvshape_preset(
 namespace yocto {
 
 // Loads/saves an image. Chooses hdr or ldr based on file name.
-bool load_texture(
-    const string& filename, texture_data& texture, string& error) {
-  auto read_error = [&]() {
-    error = "cannot raed " + filename;
-    return false;
-  };
-
+void load_texture(const string& filename, texture_data& texture) {
   auto ext = path_extension(filename);
-  if (ext == ".exr" || ext == ".EXR") {
-    auto pixels = (float*)nullptr;
-    if (LoadEXR(&pixels, &texture.width, &texture.height, filename.c_str(),
-            nullptr) != 0)
-      return read_error();
-    texture.linear  = true;
-    texture.pixelsf = vector<vec4f>{
-        (vec4f*)pixels, (vec4f*)pixels + texture.width * texture.height};
-    free(pixels);
-    return true;
-  } else if (ext == ".hdr" || ext == ".HDR") {
-    auto buffer = vector<byte>{};
-    if (!load_binary(filename, buffer, error)) return false;
-    auto ncomp  = 0;
-    auto pixels = stbi_loadf_from_memory(buffer.data(), (int)buffer.size(),
-        &texture.width, &texture.height, &ncomp, 4);
-    if (!pixels) return read_error();
-    texture.linear  = true;
-    texture.pixelsf = vector<vec4f>{
-        (vec4f*)pixels, (vec4f*)pixels + texture.width * texture.height};
-    free(pixels);
-    return true;
-  } else if (ext == ".png" || ext == ".PNG") {
-    auto buffer = vector<byte>{};
-    if (!load_binary(filename, buffer, error)) return false;
-    auto ncomp  = 0;
-    auto pixels = stbi_load_from_memory(buffer.data(), (int)buffer.size(),
-        &texture.width, &texture.height, &ncomp, 4);
-    if (!pixels) return read_error();
-    texture.linear  = false;
-    texture.pixelsb = vector<vec4b>{
-        (vec4b*)pixels, (vec4b*)pixels + texture.width * texture.height};
-    free(pixels);
-    return true;
-  } else if (ext == ".jpg" || ext == ".JPG" || ext == ".jpeg" ||
-             ext == ".JPEG") {
-    auto buffer = vector<byte>{};
-    if (!load_binary(filename, buffer, error)) return false;
-    auto ncomp  = 0;
-    auto pixels = stbi_load_from_memory(buffer.data(), (int)buffer.size(),
-        &texture.width, &texture.height, &ncomp, 4);
-    if (!pixels) return read_error();
-    texture.linear  = false;
-    texture.pixelsb = vector<vec4b>{
-        (vec4b*)pixels, (vec4b*)pixels + texture.width * texture.height};
-    free(pixels);
-    return true;
-  } else if (ext == ".tga" || ext == ".TGA") {
-    auto buffer = vector<byte>{};
-    if (!load_binary(filename, buffer, error)) return false;
-    auto ncomp  = 0;
-    auto pixels = stbi_load_from_memory(buffer.data(), (int)buffer.size(),
-        &texture.width, &texture.height, &ncomp, 4);
-    if (!pixels) return read_error();
-    texture.linear  = false;
-    texture.pixelsb = vector<vec4b>{
-        (vec4b*)pixels, (vec4b*)pixels + texture.width * texture.height};
-    free(pixels);
-    return true;
-  } else if (ext == ".bmp" || ext == ".BMP") {
-    auto buffer = vector<byte>{};
-    if (!load_binary(filename, buffer, error)) return false;
-    auto ncomp  = 0;
-    auto pixels = stbi_load_from_memory(buffer.data(), (int)buffer.size(),
-        &texture.width, &texture.height, &ncomp, 4);
-    if (!pixels) return read_error();
-    texture.linear  = false;
-    texture.pixelsb = vector<vec4b>{
-        (vec4b*)pixels, (vec4b*)pixels + texture.width * texture.height};
-    free(pixels);
-    return true;
+  if (ext == ".exr" || ext == ".EXR" || ext == ".hdr" || ext == ".HDR") {
+    texture.pixelsf = load_image(filename, false);
+  } else if (ext == ".png" || ext == ".PNG" || ext == ".jpg" || ext == ".JPG" ||
+             ext == ".jpeg" || ext == ".JPEG" || ext == ".tga" ||
+             ext == ".TGA" || ext == ".bmp" || ext == ".BMP") {
+    texture.pixelsb = load_imageb(filename, true);
   } else if (ext == ".ypreset" || ext == ".YPRESET") {
-    if (!make_texture_preset(filename, texture, error)) return false;
-    return true;
+    texture = make_texture_preset(filename);
   } else {
-    error = "unsupported format " + filename;
-    return false;
+    throw io_error("unsupported format " + filename);
   }
 }
 
 // Saves an hdr image.
-bool save_texture(
-    const string& filename, const texture_data& texture, string& error) {
-  auto write_error = [&]() {
-    error = "cannot write " + filename;
-    return false;
-  };
-
-  // check for correct handling
-  if (!texture.pixelsf.empty() && is_ldr_filename(filename)) {
-    auto ntexture   = texture_data{};
-    ntexture.width  = texture.width;
-    ntexture.height = texture.height;
-    ntexture.pixelsb.resize(texture.pixelsf.size());
-    for (auto idx : range(texture.pixelsf.size())) {
-      ntexture.pixelsb[idx] = float_to_byte(rgb_to_srgb(texture.pixelsf[idx]));
-    }
-    return save_texture(filename, ntexture, error);
-  }
-  if (!texture.pixelsb.empty() && is_hdr_filename(filename)) {
-    auto ntexture   = texture_data{};
-    ntexture.width  = texture.width;
-    ntexture.height = texture.height;
-    ntexture.pixelsf.resize(texture.pixelsb.size());
-    for (auto idx : range(texture.pixelsb.size())) {
-      ntexture.pixelsf[idx] = srgb_to_rgb(byte_to_float(texture.pixelsb[idx]));
-    }
-    return save_texture(filename, ntexture, error);
-  }
-
-  // write data
-  auto stbi_write_data = [](void* context, void* data, int size) {
-    auto& buffer = *(vector<byte>*)context;
-    buffer.insert(buffer.end(), (byte*)data, (byte*)data + size);
-  };
-
-  auto ext = path_extension(filename);
-  if (ext == ".hdr" || ext == ".HDR") {
-    auto buffer = vector<byte>{};
-    if (!stbi_write_hdr_to_func(stbi_write_data, &buffer, (int)texture.width,
-            (int)texture.height, 4, (const float*)texture.pixelsf.data()))
-      return write_error();
-    if (!save_binary(filename, buffer, error)) return false;
-    return true;
-  } else if (ext == ".exr" || ext == ".EXR") {
-    auto data = (byte*)nullptr;
-    auto size = (size_t)0;
-    if (SaveEXRToMemory((const float*)texture.pixelsf.data(),
-            (int)texture.width, (int)texture.height, 4, 1, &data, &size,
-            nullptr) < 0)
-      return write_error();
-    auto buffer = vector<byte>{data, data + size};
-    free(data);
-    if (!save_binary(filename, buffer, error)) return false;
-    return true;
-  } else if (ext == ".png" || ext == ".PNG") {
-    auto buffer = vector<byte>{};
-    if (!stbi_write_png_to_func(stbi_write_data, &buffer, (int)texture.width,
-            (int)texture.height, 4, (const byte*)texture.pixelsb.data(),
-            (int)texture.width * 4))
-      return write_error();
-    if (!save_binary(filename, buffer, error)) return false;
-    return true;
-  } else if (ext == ".jpg" || ext == ".JPG" || ext == ".jpeg" ||
-             ext == ".JPEG") {
-    auto buffer = vector<byte>{};
-    if (!stbi_write_jpg_to_func(stbi_write_data, &buffer, (int)texture.width,
-            (int)texture.height, 4, (const byte*)texture.pixelsb.data(), 75))
-      return write_error();
-    if (!save_binary(filename, buffer, error)) return false;
-    return true;
-  } else if (ext == ".tga" || ext == ".TGA") {
-    auto buffer = vector<byte>{};
-    if (!stbi_write_tga_to_func(stbi_write_data, &buffer, (int)texture.width,
-            (int)texture.height, 4, (const byte*)texture.pixelsb.data()))
-      return write_error();
-    if (!save_binary(filename, buffer, error)) return false;
-    return true;
-  } else if (ext == ".bmp" || ext == ".BMP") {
-    auto buffer = vector<byte>{};
-    if (!stbi_write_bmp_to_func(stbi_write_data, &buffer, (int)texture.width,
-            (int)texture.height, 4, (const byte*)texture.pixelsb.data()))
-      return write_error();
-    if (!save_binary(filename, buffer, error)) return false;
-    return true;
+void save_texture(const string& filename, const texture_data& texture) {
+  if (!texture.pixelsf.empty()) {
+    save_image(filename, texture.pixelsf);
   } else {
-    error = "unsupported format " + filename;
-    return false;
+    save_image(filename, texture.pixelsb);
   }
 }
 
 texture_data make_texture_preset(const string& type) {
-  return image_to_texture(make_image_preset(type));
+  return image_to_texture(make_image_preset(type), !is_srgb_preset(type));
 }
 
 // Loads/saves an image. Chooses hdr or ldr based on file name.
 texture_data load_texture(const string& filename) {
-  auto error   = string{};
   auto texture = texture_data{};
-  if (!load_texture(filename, texture, error)) throw io_error{error};
+  load_texture(filename, texture);
   return texture;
-}
-void load_texture(const string& filename, texture_data& texture) {
-  auto error = string{};
-  if (!load_texture(filename, texture, error)) throw io_error{error};
-}
-void save_texture(const string& filename, const texture_data& texture) {
-  auto error = string{};
-  if (!save_texture(filename, texture, error)) throw io_error{error};
-}
-
-bool make_texture_preset(
-    const string& filename, texture_data& texture, string& error) {
-  texture = make_texture_preset(path_basename(filename));
-  if (texture.width == 0 || texture.height == 0) {
-    error = "unknown preset";
-    return false;
-  }
-  return true;
 }
 
 }  // namespace yocto
@@ -2191,10 +1529,6 @@ static void trim_memory(scene_data& scene) {
     subdiv.quadspos.shrink_to_fit();
     subdiv.quadsnorm.shrink_to_fit();
     subdiv.quadstexcoord.shrink_to_fit();
-  }
-  for (auto& texture : scene.textures) {
-    texture.pixelsf.shrink_to_fit();
-    texture.pixelsb.shrink_to_fit();
   }
   scene.cameras.shrink_to_fit();
   scene.shapes.shrink_to_fit();
@@ -2714,155 +2048,126 @@ bool make_scene_preset(
 namespace yocto {
 
 // Load/save a scene in the builtin JSON format.
-static bool load_json_scene(
-    const string& filename, scene_data& scene, string& error, bool noparallel);
-static bool save_json_scene(const string& filename, const scene_data& scene,
-    string& error, bool noparallel);
+static void load_json_scene(
+    const string& filename, scene_data& scene, bool noparallel);
+static void save_json_scene(
+    const string& filename, const scene_data& scene, bool noparallel);
 
 // Load/save a scene from/to OBJ.
-static bool load_obj_scene(
-    const string& filename, scene_data& scene, string& error, bool noparallel);
-static bool save_obj_scene(const string& filename, const scene_data& scene,
-    string& error, bool noparallel);
+static void load_obj_scene(
+    const string& filename, scene_data& scene, bool noparallel);
+static void save_obj_scene(
+    const string& filename, const scene_data& scene, bool noparallel);
 
-// Load/save a scene from/to PLY. Loads/saves only one mesh with no other data.
-static bool load_ply_scene(
-    const string& filename, scene_data& scene, string& error, bool noparallel);
-static bool save_ply_scene(const string& filename, const scene_data& scene,
-    string& error, bool noparallel);
+// Load/save a scene from/to PLY. Loads/saves only one mesh with no other
+// data.
+static void load_ply_scene(
+    const string& filename, scene_data& scene, bool noparallel);
+static void save_ply_scene(
+    const string& filename, const scene_data& scene, bool noparallel);
 
-// Load/save a scene from/to STL. Loads/saves only one mesh with no other data.
-static bool load_stl_scene(
-    const string& filename, scene_data& scene, string& error, bool noparallel);
-static bool save_stl_scene(const string& filename, const scene_data& scene,
-    string& error, bool noparallel);
+// Load/save a scene from/to STL. Loads/saves only one mesh with no other
+// data.
+static void load_stl_scene(
+    const string& filename, scene_data& scene, bool noparallel);
+static void save_stl_scene(
+    const string& filename, const scene_data& scene, bool noparallel);
 
 // Load/save a scene from/to glTF.
-static bool load_gltf_scene(
-    const string& filename, scene_data& scene, string& error, bool noparallel);
-static bool save_gltf_scene(const string& filename, const scene_data& scene,
-    string& error, bool noparallel);
+static void load_gltf_scene(
+    const string& filename, scene_data& scene, bool noparallel);
+static void save_gltf_scene(
+    const string& filename, const scene_data& scene, bool noparallel);
 
 // Load/save a scene from/to pbrt. This is not robust at all and only
 // works on scene that have been previously adapted since the two renderers
 // are too different to match.
-static bool load_pbrt_scene(
-    const string& filename, scene_data& scene, string& error, bool noparallel);
-static bool save_pbrt_scene(const string& filename, const scene_data& scene,
-    string& error, bool noparallel);
+static void load_pbrt_scene(
+    const string& filename, scene_data& scene, bool noparallel);
+static void save_pbrt_scene(
+    const string& filename, const scene_data& scene, bool noparallel);
 
 // Load/save a scene from/to mitsuba. This is not robust at all and only
 // works on scene that have been previously adapted since the two renderers
 // are too different to match. For now, only saving is allowed.
-static bool load_mitsuba_scene(
-    const string& filename, scene_data& scene, string& error, bool noparallel);
-static bool save_mitsuba_scene(const string& filename, const scene_data& scene,
-    string& error, bool noparallel);
+static void load_mitsuba_scene(
+    const string& filename, scene_data& scene, bool noparallel);
+static void save_mitsuba_scene(
+    const string& filename, const scene_data& scene, bool noparallel);
 
 // Load a scene
-bool load_scene(
-    const string& filename, scene_data& scene, string& error, bool noparallel) {
+void load_scene(const string& filename, scene_data& scene, bool noparallel) {
   auto ext = path_extension(filename);
   if (ext == ".json" || ext == ".JSON") {
-    return load_json_scene(filename, scene, error, noparallel);
+    return load_json_scene(filename, scene, noparallel);
   } else if (ext == ".obj" || ext == ".OBJ") {
-    return load_obj_scene(filename, scene, error, noparallel);
+    return load_obj_scene(filename, scene, noparallel);
   } else if (ext == ".gltf" || ext == ".GLTF") {
-    return load_gltf_scene(filename, scene, error, noparallel);
+    return load_gltf_scene(filename, scene, noparallel);
   } else if (ext == ".pbrt" || ext == ".PBRT") {
-    return load_pbrt_scene(filename, scene, error, noparallel);
+    return load_pbrt_scene(filename, scene, noparallel);
   } else if (ext == ".xml" || ext == ".XML") {
-    return load_mitsuba_scene(filename, scene, error, noparallel);
+    return load_mitsuba_scene(filename, scene, noparallel);
   } else if (ext == ".ply" || ext == ".PLY") {
-    return load_ply_scene(filename, scene, error, noparallel);
+    return load_ply_scene(filename, scene, noparallel);
   } else if (ext == ".stl" || ext == ".STL") {
-    return load_stl_scene(filename, scene, error, noparallel);
+    return load_stl_scene(filename, scene, noparallel);
   } else if (ext == ".ypreset" || ext == ".YPRESET") {
-    return make_scene_preset(filename, scene, error);
+    scene = make_scene_preset(filename);
   } else {
-    error = "unsupported format " + filename;
-    return false;
+    throw io_error("unsupported format " + filename);
   }
 }
 
 // Save a scene
-bool save_scene(const string& filename, const scene_data& scene, string& error,
-    bool noparallel) {
+void save_scene(
+    const string& filename, const scene_data& scene, bool noparallel) {
   auto ext = path_extension(filename);
   if (ext == ".json" || ext == ".JSON") {
-    return save_json_scene(filename, scene, error, noparallel);
+    return save_json_scene(filename, scene, noparallel);
   } else if (ext == ".obj" || ext == ".OBJ") {
-    return save_obj_scene(filename, scene, error, noparallel);
+    return save_obj_scene(filename, scene, noparallel);
   } else if (ext == ".gltf" || ext == ".GLTF") {
-    return save_gltf_scene(filename, scene, error, noparallel);
+    return save_gltf_scene(filename, scene, noparallel);
   } else if (ext == ".pbrt" || ext == ".PBRT") {
-    return save_pbrt_scene(filename, scene, error, noparallel);
+    return save_pbrt_scene(filename, scene, noparallel);
   } else if (ext == ".xml" || ext == ".XML") {
-    return save_mitsuba_scene(filename, scene, error, noparallel);
+    return save_mitsuba_scene(filename, scene, noparallel);
   } else if (ext == ".ply" || ext == ".PLY") {
-    return save_ply_scene(filename, scene, error, noparallel);
+    return save_ply_scene(filename, scene, noparallel);
   } else if (ext == ".stl" || ext == ".STL") {
-    return save_stl_scene(filename, scene, error, noparallel);
+    return save_stl_scene(filename, scene, noparallel);
   } else {
-    error = "unsupported format " + filename;
-    return false;
+    throw io_error("unsupported format " + filename);
   }
 }
 
 // Load/save a scene
 scene_data load_scene(const string& filename, bool noparallel) {
-  auto error = string{};
   auto scene = scene_data{};
-  if (!load_scene(filename, scene, error, noparallel)) throw io_error{error};
+  load_scene(filename, scene, noparallel);
   return scene;
-}
-void load_scene(const string& filename, scene_data& scene, bool noparallel) {
-  auto error = string{};
-  if (!load_scene(filename, scene, error, noparallel)) throw io_error{error};
-}
-void save_scene(
-    const string& filename, const scene_data& scene, bool noparallel) {
-  auto error = string{};
-  if (!save_scene(filename, scene, error, noparallel)) throw io_error{error};
-}
-
-// Make missing scene directories
-bool make_scene_directories(
-    const string& filename, const scene_data& scene, string& error) {
-  // make a directory if needed
-  if (!make_directory(path_dirname(filename), error)) return false;
-  if (!scene.shapes.empty())
-    if (!make_directory(path_join(path_dirname(filename), "shapes"), error))
-      return false;
-  if (!scene.textures.empty())
-    if (!make_directory(path_join(path_dirname(filename), "textures"), error))
-      return false;
-  if (!scene.subdivs.empty())
-    if (!make_directory(path_join(path_dirname(filename), "subdivs"), error))
-      return false;
-  return true;
-}
-
-// Add environment
-bool add_environment(scene_data& scene, const string& filename, string& error) {
-  auto texture = texture_data{};
-  if (!load_texture(filename, texture, error)) return false;
-  scene.textures.push_back(std::move(texture));
-  scene.environments.push_back({{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}},
-      {1, 1, 1}, (int)scene.textures.size() - 1});
-  return true;
 }
 
 // Make missing scene directories
 void make_scene_directories(const string& filename, const scene_data& scene) {
-  auto error = string{};
-  if (!make_scene_directories(filename, scene, error)) throw io_error{error};
+  // make a directory if needed
+  make_directory(path_dirname(filename));
+  if (!scene.shapes.empty())
+    make_directory(path_join(path_dirname(filename), "shapes"));
+  if (!scene.textures.empty())
+    make_directory(path_join(path_dirname(filename), "textures"));
+  if (!scene.subdivs.empty())
+    make_directory(path_join(path_dirname(filename), "subdivs"));
 }
 
 // Add environment
-void add_environment(scene_data& scene, const string& filename) {
-  auto error = string{};
-  if (!add_environment(scene, filename, error)) throw io_error{error};
+void add_environment(
+    scene_data& scene, const string& name, const string& filename) {
+  auto texture = load_texture(filename);
+  scene.textures.push_back(std::move(texture));
+  scene.environments.push_back({{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}},
+      {1, 1, 1}, (int)scene.textures.size() - 1});
 }
 
 }  // namespace yocto
@@ -2873,30 +2178,25 @@ void add_environment(scene_data& scene, const string& filename) {
 namespace yocto {
 
 // load instances
-static bool load_instance(
-    const string& filename, vector<frame3f>& frames, string& error) {
+static void load_instance(const string& filename, vector<frame3f>& frames) {
   auto ext = path_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
-    auto ply = ply_model{};
-    if (!load_ply(filename, ply, error)) return false;
+    auto ply = load_ply(filename);
     // TODO: remove when all as arrays
     if (!get_values(ply, "instance",
             {"xx", "xy", "xz", "yx", "yy", "yz", "zx", "zy", "zz", "ox", "oy",
                 "oz"},
             (vector<array<float, 12>>&)frames)) {
-      error = "cannot parse " + filename;
-      return false;
+      throw io_error{"cannot parse " + filename};
     }
-    return true;
   } else {
-    error = "unsupported format " + filename;
-    return false;
+    throw io_error("unsupported format " + filename);
   }
 }
 
 // save instances
-[[maybe_unused]] static bool save_instance(const string& filename,
-    const vector<frame3f>& frames, string& error, bool ascii = false) {
+[[maybe_unused]] static void save_instance(
+    const string& filename, const vector<frame3f>& frames, bool ascii = false) {
   auto ext = path_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     auto ply = ply_model{};
@@ -2905,30 +2205,25 @@ static bool load_instance(
         {"xx", "xy", "xz", "yx", "yy", "yz", "zx", "zy", "zz", "ox", "oy",
             "oz"},
         (const vector<array<float, 12>>&)frames);
-    if (!save_ply(filename, ply, error)) return false;
-    return true;
+    save_ply(filename, ply);
   } else {
-    error = "unsupported format " + filename;
-    return false;
+    throw io_error("unsupported format " + filename);
   }
 }
 
 // load subdiv
-bool load_subdiv(const string& filename, subdiv_data& subdiv, string& error) {
-  auto lsubdiv = fvshape_data{};
-  if (!load_fvshape(filename, lsubdiv, error, true)) return false;
+void load_subdiv(const string& filename, subdiv_data& subdiv) {
+  auto lsubdiv         = load_fvshape(filename, true);
   subdiv.quadspos      = lsubdiv.quadspos;
   subdiv.quadsnorm     = lsubdiv.quadsnorm;
   subdiv.quadstexcoord = lsubdiv.quadstexcoord;
   subdiv.positions     = lsubdiv.positions;
   subdiv.normals       = lsubdiv.normals;
   subdiv.texcoords     = lsubdiv.texcoords;
-  return true;
 }
 
 // save subdiv
-bool save_subdiv(
-    const string& filename, const subdiv_data& subdiv, string& error) {
+void save_subdiv(const string& filename, const subdiv_data& subdiv) {
   auto ssubdiv          = fvshape_data{};
   ssubdiv.quadspos      = subdiv.quadspos;
   ssubdiv.quadsnorm     = subdiv.quadsnorm;
@@ -2936,29 +2231,18 @@ bool save_subdiv(
   ssubdiv.positions     = subdiv.positions;
   ssubdiv.normals       = subdiv.normals;
   ssubdiv.texcoords     = subdiv.texcoords;
-  if (!save_fvshape(filename, ssubdiv, error, true)) return false;
-  return true;
+  save_fvshape(filename, ssubdiv, true);
 }
 
 // load/save subdiv
 subdiv_data load_subdiv(const string& filename) {
-  auto error  = string{};
   auto subdiv = subdiv_data{};
-  if (!load_subdiv(filename, subdiv, error)) throw io_error{error};
+  load_subdiv(filename, subdiv);
   return subdiv;
-}
-void load_subdiv(const string& filename, subdiv_data& subdiv) {
-  auto error = string{};
-  if (!load_subdiv(filename, subdiv, error)) throw io_error{error};
-}
-void save_subdiv(const string& filename, const subdiv_data& subdiv) {
-  auto error = string{};
-  if (!save_subdiv(filename, subdiv, error)) throw io_error{error};
 }
 
 // save binary shape
-static bool save_binshape(
-    const string& filename, const shape_data& shape, string& error) {
+static void save_binshape(const string& filename, const shape_data& shape) {
   auto write_values = [](vector<byte>& buffer, const auto& values) {
     if (values.empty()) return;
     buffer.insert(buffer.end(), (byte*)values.data(),
@@ -2977,8 +2261,7 @@ static bool save_binshape(
   write_values(buffer, shape.triangles);
   write_values(buffer, quads_to_triangles(shape.quads));
 
-  if (!save_binary(filename, buffer, error)) return false;
-  return true;
+  save_binary(filename, buffer);
 }
 
 }  // namespace yocto
@@ -3024,25 +2307,8 @@ NLOHMANN_JSON_SERIALIZE_ENUM(
                    })
 
 // Load a scene in the builtin JSON format.
-static bool load_json_scene_version40(const string& filename,
-    const json_value& json, scene_data& scene, string& error, bool noparallel) {
-  auto parse_error = [filename, &error](const string& patha,
-                         const string& pathb = "", const string& pathc = "") {
-    auto path = patha;
-    if (!pathb.empty()) path += "/" + pathb;
-    if (!pathc.empty()) path += "/" + pathc;
-    error = "parse error " + filename + " at " + path;
-    return false;
-  };
-  auto key_error = [filename, &error](const string& patha,
-                       const string& pathb = "", const string& pathc = "") {
-    auto path = patha;
-    if (!pathb.empty()) path += "/" + pathb;
-    if (!pathc.empty()) path += "/" + pathc;
-    error = filename + "; unknow key at " + path;
-    return false;
-  };
-
+static void load_json_scene_version40(const string& filename,
+    const json_value& json, scene_data& scene, bool noparallel) {
   // parse json value
   auto get_opt = [](const json_value& json, const string& key, auto& value) {
     value = json.value(key, value);
@@ -3114,7 +2380,7 @@ static bool load_json_scene_version40(const string& filename,
   auto ply_instances        = vector<ply_instance>{};
   auto ply_instances_names  = vector<string>{};
   auto ply_instance_map     = unordered_map<string, ply_instance_handle>{
-          {"", invalidid}};
+      {"", invalidid}};
   auto instance_ply = unordered_map<int, ply_instance_handle>{};
   auto get_ist      = [&scene, &ply_instances, &ply_instances_names,
                      &ply_instance_map, &instance_ply](const json_value& json,
@@ -3247,16 +2513,11 @@ static bool load_json_scene_version40(const string& filename,
       }
     }
   } catch (...) {
-    error = "cannot parse " + filename;
-    return false;
+    throw io_error("cannot parse " + filename);
   }
 
   // dirname
-  auto dirname         = path_dirname(filename);
-  auto dependent_error = [&filename, &error]() {
-    error = "cannot load " + filename + " since " + error;
-    return false;
-  };
+  auto dirname = path_dirname(filename);
 
   // get filename from name
   auto find_path = [dirname](const string& name, const string& group,
@@ -3269,69 +2530,34 @@ static bool load_json_scene_version40(const string& filename,
   };
 
   // load resources
-  if (noparallel) {
-    auto error = string{};
+  try {
     // load shapes
-    for (auto& shape : scene.shapes) {
+    parallel_foreach(scene.shapes, noparallel, [&](auto& shape) {
       auto path = find_path(
           get_shape_name(scene, shape), "shapes", {".ply", ".obj"});
-      if (!load_shape(path_join(dirname, path), shape, error, true))
-        return dependent_error();
-    }
+      return load_shape(path_join(dirname, path), shape, true);
+    });
     // load subdivs
-    for (auto& subdiv : scene.subdivs) {
+    parallel_foreach(scene.subdivs, noparallel, [&](auto& subdiv) {
       auto path = find_path(
           get_subdiv_name(scene, subdiv), "subdivs", {".ply", ".obj"});
-      if (!load_subdiv(path_join(dirname, path), subdiv, error))
-        return dependent_error();
-    }
+      return load_subdiv(path_join(dirname, path), subdiv);
+    });
     // load textures
-    for (auto& texture : scene.textures) {
+    parallel_foreach(scene.textures, noparallel, [&](auto& texture) {
       auto path = find_path(get_texture_name(scene, texture), "textures",
           {".hdr", ".exr", ".png", ".jpg"});
-      if (!load_texture(path_join(dirname, path), texture, error))
-        return dependent_error();
-    }
+      return load_texture(path_join(dirname, path), texture);
+    });
     // load instances
-    for (auto& ply_instance : ply_instances) {
+    parallel_foreach(ply_instances, noparallel, [&](auto& ply_instance) {
       auto path = find_path(
           get_ply_instance_name(scene, ply_instance), "instances", {".ply"});
-      if (!load_instance(path_join(dirname, path), ply_instance.frames, error))
-        return dependent_error();
-    }
-  } else {
-    // load shapes
-    if (!parallel_foreach(scene.shapes, error, [&](auto& shape, string& error) {
-          auto path = find_path(
-              get_shape_name(scene, shape), "shapes", {".ply", ".obj"});
-          return load_shape(path_join(dirname, path), shape, error, true);
-        }))
-      return dependent_error();
-    // load subdivs
-    if (!parallel_foreach(
-            scene.subdivs, error, [&](auto& subdiv, string& error) {
-              auto path = find_path(
-                  get_subdiv_name(scene, subdiv), "subdivs", {".ply", ".obj"});
-              return load_subdiv(path_join(dirname, path), subdiv, error);
-            }))
-      return dependent_error();
-    // load textures
-    if (!parallel_foreach(
-            scene.textures, error, [&](auto& texture, string& error) {
-              auto path = find_path(get_texture_name(scene, texture),
-                  "textures", {".hdr", ".exr", ".png", ".jpg"});
-              return load_texture(path_join(dirname, path), texture, error);
-            }))
-      return dependent_error();
-    // load instances
-    if (!parallel_foreach(
-            ply_instances, error, [&](auto& ply_instance, string& error) {
-              auto path = find_path(get_ply_instance_name(scene, ply_instance),
-                  "instances", {".ply"});
-              return load_instance(
-                  path_join(dirname, path), ply_instance.frames, error);
-            }))
-      return dependent_error();
+      return load_instance(path_join(dirname, path), ply_instance.frames);
+    });
+  } catch (std::exception& except) {
+    throw io_error(
+        "cannot load " + filename + " since " + string(except.what()));
   }
 
   // apply instances
@@ -3369,17 +2595,14 @@ static bool load_json_scene_version40(const string& filename,
   add_missing_camera(scene);
   add_missing_radius(scene);
   trim_memory(scene);
-
-  // done
-  return true;
 }
 
 // Load a scene in the builtin JSON format.
-static bool load_json_scene_version41(const string& filename, json_value& json,
-    scene_data& scene, string& error, bool noparallel) {
+static void load_json_scene_version41(const string& filename, json_value& json,
+    scene_data& scene, bool noparallel) {
   // check version
   if (!json.contains("asset") || !json.at("asset").contains("version"))
-    return load_json_scene_version40(filename, json, scene, error, noparallel);
+    return load_json_scene_version40(filename, json, scene, noparallel);
 
   // parse json value
   auto get_opt = [](const json_value& json, const string& key, auto& value) {
@@ -3423,10 +2646,11 @@ static bool load_json_scene_version41(const string& filename, json_value& json,
         get_opt(element, "focus", camera.focus);
         get_opt(element, "aperture", camera.aperture);
         if (element.contains("lookat")) {
-          get_opt(element, "lookat", (mat3f&)camera.frame);
-          camera.focus = length(camera.frame.x - camera.frame.y);
-          camera.frame = lookat_frame(
-              camera.frame.x, camera.frame.y, camera.frame.z);
+          auto lookat = mat3f{};
+          get_opt(element, "lookat", lookat);
+          auto from = lookat[0], to = lookat[1], up = lookat[2];
+          camera.focus = length(from - to);
+          camera.frame = lookat_frame(from, to, up);
         }
       }
     }
@@ -3522,9 +2746,10 @@ static bool load_json_scene_version41(const string& filename, json_value& json,
         get_ref(element, "shape", instance.shape, shape_map);
         get_ref(element, "material", instance.material, material_map);
         if (element.contains("lookat")) {
-          get_opt(element, "lookat", (mat3f&)instance.frame);
-          instance.frame = lookat_frame(
-              instance.frame.x, instance.frame.y, instance.frame.z, false);
+          auto lookat = mat3f{};
+          get_opt(element, "lookat", lookat);
+          auto from = lookat[0], to = lookat[1], up = lookat[2];
+          instance.frame = lookat_frame(from, to, up, false);
         }
       }
     }
@@ -3539,23 +2764,19 @@ static bool load_json_scene_version41(const string& filename, json_value& json,
         get_opt(element, "emission", environment.emission);
         get_ref(element, "emission_tex", environment.emission_tex, texture_map);
         if (element.contains("lookat")) {
-          get_opt(element, "lookat", (mat3f&)environment.frame);
-          environment.frame = lookat_frame(environment.frame.x,
-              environment.frame.y, environment.frame.z, false);
+          auto lookat = mat3f{};
+          get_opt(element, "lookat", lookat);
+          auto from = lookat[0], to = lookat[1], up = lookat[2];
+          environment.frame = lookat_frame(from, to, up, false);
         }
       }
     }
   } catch (...) {
-    error = "cannot parse " + filename;
-    return false;
+    throw io_error("cannot parse " + filename);
   }
 
   // prepare data
-  auto dirname         = path_dirname(filename);
-  auto dependent_error = [&filename, &error]() {
-    error = "cannot load " + filename + " since " + error;
-    return false;
-  };
+  auto dirname = path_dirname(filename);
 
   // fix paths
   for (auto& datafile : shape_filenames)
@@ -3566,69 +2787,45 @@ static bool load_json_scene_version41(const string& filename, json_value& json,
     datafile = path_join(dirname, "subdivs", datafile);
 
   // load resources
-  if (noparallel) {
-    auto error = string{};
+  try {
     // load shapes
-    for (auto idx : range(scene.shapes.size())) {
-      if (!load_shape(shape_filenames[idx], scene.shapes[idx], error, true))
-        return dependent_error();
-    }
+    parallel_zip(shape_filenames, scene.shapes, noparallel,
+        [&](auto&& filename, auto&& shape) {
+          return load_shape(filename, shape, true);
+        });
     // load subdivs
-    for (auto idx : range(scene.subdivs.size())) {
-      if (!load_subdiv(subdiv_filenames[idx], scene.subdivs[idx], error))
-        return dependent_error();
-    }
+    parallel_zip(subdiv_filenames, scene.subdivs, noparallel,
+        [&](auto&& filename, auto&& subdiv) {
+          return load_subdiv(filename, subdiv);
+        });
     // load textures
-    for (auto idx : range(scene.textures.size())) {
-      if (!load_texture(texture_filenames[idx], scene.textures[idx], error))
-        return dependent_error();
-    }
-  } else {
-    // load shapes
-    if (!parallel_for(
-            scene.shapes.size(), error, [&](size_t idx, string& error) {
-              return load_shape(
-                  shape_filenames[idx], scene.shapes[idx], error, true);
-            }))
-      return dependent_error();
-    // load subdivs
-    if (!parallel_for(
-            scene.subdivs.size(), error, [&](size_t idx, string& error) {
-              return load_subdiv(
-                  subdiv_filenames[idx], scene.subdivs[idx], error);
-            }))
-      return dependent_error();
-    // load textures
-    if (!parallel_for(
-            scene.textures.size(), error, [&](size_t idx, string& error) {
-              return load_texture(
-                  texture_filenames[idx], scene.textures[idx], error);
-            }))
-      return dependent_error();
+    parallel_zip(texture_filenames, scene.textures, noparallel,
+        [&](auto&& filename, auto&& texture) {
+          return load_texture(filename, texture);
+        });
+  } catch (std::exception& except) {
+    throw io_error(
+        "cannot load " + filename + " since " + string(except.what()));
   }
 
   // fix scene
   add_missing_camera(scene);
   add_missing_radius(scene);
   trim_memory(scene);
-
-  // done
-  return false;
 }
 
 // Load a scene in the builtin JSON format.
-static bool load_json_scene(
-    const string& filename, scene_data& scene, string& error, bool noparallel) {
+static void load_json_scene(
+    const string& filename, scene_data& scene, bool noparallel) {
   // open file
-  auto json = json_value{};
-  if (!load_json(filename, json, error)) return false;
+  auto json = load_json(filename);
 
   // check version
   if (!json.contains("asset") || !json.at("asset").contains("version"))
-    return load_json_scene_version40(filename, json, scene, error, noparallel);
+    return load_json_scene_version40(filename, json, scene, noparallel);
   if (json.contains("asset") && json.at("asset").contains("version") &&
       json.at("asset").at("version") == "4.1")
-    return load_json_scene_version41(filename, json, scene, error, noparallel);
+    return load_json_scene_version41(filename, json, scene, noparallel);
 
   // parse json value
   auto get_opt = [](const json_value& json, const string& key, auto& value) {
@@ -3640,12 +2837,6 @@ static bool load_json_scene(
   auto texture_filenames = vector<string>{};
   auto subdiv_filenames  = vector<string>{};
 
-  // errors
-  auto parse_error = [&filename, &error]() {
-    error = "cannot parse " + filename;
-    return false;
-  };
-
   // parsing values
   try {
     if (json.contains("asset")) {
@@ -3653,7 +2844,8 @@ static bool load_json_scene(
       get_opt(element, "copyright", scene.copyright);
       auto version = string{};
       get_opt(element, "version", version);
-      if (version != "4.2" && version != "5.0") return parse_error();
+      if (version != "4.2" && version != "5.0")
+        throw io_error("unsupported format version " + filename);
     }
     if (json.contains("cameras")) {
       auto& group = json.at("cameras");
@@ -3689,9 +2881,6 @@ static bool load_json_scene(
         auto&                  uri     = texture_filenames.emplace_back();
         get_opt(element, "name", name);
         get_opt(element, "uri", uri);
-        get_opt(element, "linear", texture.linear);
-        get_opt(element, "nearest", texture.nearest);
-        get_opt(element, "clamp", texture.clamp);
       }
     }
     if (json.contains("materials")) {
@@ -3788,72 +2977,43 @@ static bool load_json_scene(
       }
     }
   } catch (...) {
-    return parse_error();
+    throw io_error("cannot parse " + filename);
   }
 
   // prepare data
-  auto dirname         = path_dirname(filename);
-  auto dependent_error = [&filename, &error]() {
-    error = "cannot load " + filename + " since " + error;
-    return false;
-  };
+  auto dirname = path_dirname(filename);
 
   // load resources
-  if (noparallel) {
+  try {
     // load shapes
-    for (auto idx : range(scene.shapes.size())) {
-      if (!load_shape(path_join(dirname, shape_filenames[idx]),
-              scene.shapes[idx], error, true))
-        return dependent_error();
-    }
+    parallel_zip(shape_filenames, scene.shapes, noparallel,
+        [&](auto&& filename, auto&& shape) {
+          return load_shape(path_join(dirname, filename), shape, true);
+        });
     // load subdivs
-    for (auto idx : range(scene.subdivs.size())) {
-      if (!load_subdiv(path_join(dirname, subdiv_filenames[idx]),
-              scene.subdivs[idx], error))
-        return dependent_error();
-    }
+    parallel_zip(subdiv_filenames, scene.subdivs, noparallel,
+        [&](auto&& filename, auto&& subdiv) {
+          return load_subdiv(path_join(dirname, filename), subdiv);
+        });
     // load textures
-    for (auto idx : range(scene.textures.size())) {
-      if (!load_texture(path_join(dirname, texture_filenames[idx]),
-              scene.textures[idx], error))
-        return dependent_error();
-    }
-  } else {
-    // load shapes
-    if (!parallel_for(
-            scene.shapes.size(), error, [&](size_t idx, string& error) {
-              return load_shape(path_join(dirname, shape_filenames[idx]),
-                  scene.shapes[idx], error, true);
-            }))
-      return dependent_error();
-    // load subdivs
-    if (!parallel_for(
-            scene.subdivs.size(), error, [&](size_t idx, string& error) {
-              return load_subdiv(path_join(dirname, subdiv_filenames[idx]),
-                  scene.subdivs[idx], error);
-            }))
-      return dependent_error();
-    // load textures
-    if (!parallel_for(
-            scene.textures.size(), error, [&](size_t idx, string& error) {
-              return load_texture(path_join(dirname, texture_filenames[idx]),
-                  scene.textures[idx], error);
-            }))
-      return dependent_error();
+    parallel_zip(texture_filenames, scene.textures, noparallel,
+        [&](auto&& filename, auto&& texture) {
+          return load_texture(path_join(dirname, filename), texture);
+        });
+  } catch (std::exception& except) {
+    throw io_error(
+        "cannot load " + filename + " since " + string(except.what()));
   }
 
   // fix scene
   add_missing_camera(scene);
   add_missing_radius(scene);
   trim_memory(scene);
-
-  // done
-  return true;
 }
 
 // Save a scene in the builtin JSON format.
-static bool save_json_scene(const string& filename, const scene_data& scene,
-    string& error, bool noparallel) {
+static void save_json_scene(
+    const string& filename, const scene_data& scene, bool noparallel) {
   // helpers to handel old code paths
   auto add_object = [](json_value& json, const string& name) -> json_value& {
     auto& item = json[name];
@@ -3945,16 +3105,12 @@ static bool save_json_scene(const string& filename, const scene_data& scene,
   }
 
   if (!scene.textures.empty()) {
-    auto  default_ = texture_data{};
-    auto& group    = add_array(json, "textures");
+    auto& group = add_array(json, "textures");
     reserve_values(group, scene.textures.size());
     for (auto&& [idx, texture] : enumerate(scene.textures)) {
       auto& element = append_object(group);
       set_val(element, "name", get_name(scene.texture_names, idx), "");
       set_val(element, "uri", texture_filenames[idx], ""s);
-      set_val(element, "linear", texture.linear, default_.linear);
-      set_val(element, "nearest", texture.nearest, default_.nearest);
-      set_val(element, "clamp", texture.clamp, default_.clamp);
     }
   }
 
@@ -4046,60 +3202,32 @@ static bool save_json_scene(const string& filename, const scene_data& scene,
   }
 
   // save json
-  if (!save_json(filename, json, error)) return false;
+  save_json(filename, json);
 
   // prepare data
-  auto dirname         = path_dirname(filename);
-  auto dependent_error = [&filename, &error]() {
-    error = "cannot save " + filename + " since " + error;
-    return false;
-  };
+  auto dirname = path_dirname(filename);
 
   // dirname
-  if (noparallel) {
+  try {
     // save shapes
-    for (auto idx : range(scene.shapes.size())) {
-      if (!save_shape(path_join(dirname, shape_filenames[idx]),
-              scene.shapes[idx], error, true))
-        return dependent_error();
-    }
-    // save subdiv
-    for (auto idx : range(scene.subdivs.size())) {
-      if (!save_subdiv(path_join(dirname, subdiv_filenames[idx]),
-              scene.subdivs[idx], error))
-        return dependent_error();
-    }
-    // save textures
-    for (auto idx : range(scene.textures.size())) {
-      if (!save_texture(path_join(dirname, texture_filenames[idx]),
-              scene.textures[idx], error))
-        return dependent_error();
-    }
-  } else {
-    // save shapes
-    if (!parallel_for(scene.shapes.size(), error, [&](auto idx, string& error) {
-          return save_shape(path_join(dirname, shape_filenames[idx]),
-              scene.shapes[idx], error, true);
-        }))
-      return dependent_error();
+    parallel_zip(shape_filenames, scene.shapes, noparallel,
+        [&](auto&& filename, auto&& shape) {
+          return save_shape(path_join(dirname, filename), shape, true);
+        });
     // save subdivs
-    if (!parallel_for(
-            scene.subdivs.size(), error, [&](auto idx, string& error) {
-              return save_subdiv(path_join(dirname, subdiv_filenames[idx]),
-                  scene.subdivs[idx], error);
-            }))
-      return dependent_error();
+    parallel_zip(subdiv_filenames, scene.subdivs, noparallel,
+        [&](auto&& filename, auto&& subdiv) {
+          return save_subdiv(path_join(dirname, filename), subdiv);
+        });
     // save textures
-    if (!parallel_for(
-            scene.textures.size(), error, [&](auto idx, string& error) {
-              return save_texture(path_join(dirname, texture_filenames[idx]),
-                  scene.textures[idx], error);
-            }))
-      return dependent_error();
+    parallel_zip(texture_filenames, scene.textures, noparallel,
+        [&](auto&& filename, auto&& texture) {
+          return save_texture(path_join(dirname, filename), texture);
+        });
+  } catch (std::exception& except) {
+    throw io_error(
+        "cannot save " + filename + " since " + string(except.what()));
   }
-
-  // done
-  return true;
 }
 
 }  // namespace yocto
@@ -4110,11 +3238,10 @@ static bool save_json_scene(const string& filename, const scene_data& scene,
 namespace yocto {
 
 // Loads an OBJ
-static bool load_obj_scene(
-    const string& filename, scene_data& scene, string& error, bool noparallel) {
+static void load_obj_scene(
+    const string& filename, scene_data& scene, bool noparallel) {
   // load obj
-  auto obj = obj_model{};
-  if (!load_obj(filename, obj, error, false, true)) return false;
+  auto obj = load_obj(filename, false, true);
 
   // convert cameras
   scene.cameras.reserve(obj.cameras.size());
@@ -4214,39 +3341,26 @@ static bool load_obj_scene(
   scene.instance_names = make_names(scene.instances, {}, "instance");
 
   // dirname
-  auto dirname         = path_dirname(filename);
-  auto dependent_error = [&filename, &error]() {
-    error = "cannot load " + filename + " since " + error;
-    return false;
-  };
+  auto dirname = path_dirname(filename);
 
-  if (noparallel) {
+  try {
     // load textures
-    for (auto& texture : scene.textures) {
-      auto& path = texture_paths[&texture - &scene.textures.front()];
-      if (!load_texture(path_join(dirname, path), texture, error))
-        return dependent_error();
-    }
-  } else {
-    // load textures
-    if (!parallel_foreach(
-            scene.textures, error, [&](auto& texture, string& error) {
-              auto& path = texture_paths[&texture - &scene.textures.front()];
-              return load_texture(path_join(dirname, path), texture, error);
-            }))
-      return dependent_error();
+    parallel_zip(texture_paths, scene.textures, noparallel,
+        [&](auto&& path, auto&& texture) {
+          return load_texture(path_join(dirname, path), texture);
+        });
+  } catch (std::exception& except) {
+    throw io_error(
+        "cannot load " + filename + " since " + string(except.what()));
   }
 
   // fix scene
   add_missing_camera(scene);
   add_missing_radius(scene);
-
-  // done
-  return true;
 }
 
-static bool save_obj_scene(const string& filename, const scene_data& scene,
-    string& error, bool noparallel) {
+static void save_obj_scene(
+    const string& filename, const scene_data& scene, bool noparallel) {
   // build obj
   auto obj = obj_model{};
 
@@ -4324,36 +3438,22 @@ static bool save_obj_scene(const string& filename, const scene_data& scene,
   }
 
   // save obj
-  if (!save_obj(filename, obj, error)) return false;
+  save_obj(filename, obj);
 
   // dirname
-  auto dirname         = path_dirname(filename);
-  auto dependent_error = [&filename, &error]() {
-    error = "cannot save " + filename + " since " + error;
-    return false;
-  };
+  auto dirname = path_dirname(filename);
 
-  if (noparallel) {
+  try {
     // save textures
-    for (auto& texture : scene.textures) {
+    parallel_foreach(scene.textures, noparallel, [&](auto& texture) {
       auto path = "textures/" + get_texture_name(scene, texture) +
                   (!texture.pixelsf.empty() ? ".hdr"s : ".png"s);
-      if (!save_texture(path_join(dirname, path), texture, error))
-        return dependent_error();
-    }
-  } else {
-    // save textures
-    if (!parallel_foreach(
-            scene.textures, error, [&](auto& texture, string& error) {
-              auto path = "textures/" + get_texture_name(scene, texture) +
-                          (!texture.pixelsf.empty() ? ".hdr"s : ".png"s);
-              return save_texture(path_join(dirname, path), texture, error);
-            }))
-      return dependent_error();
+      return save_texture(path_join(dirname, path), texture);
+    });
+  } catch (std::exception& except) {
+    throw io_error(
+        "cannot save " + filename + " since " + string(except.what()));
   }
-
-  // done
-  return true;
 }
 
 }  // namespace yocto
@@ -4363,11 +3463,10 @@ static bool save_obj_scene(const string& filename, const scene_data& scene,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-static bool load_ply_scene(
-    const string& filename, scene_data& scene, string& error, bool noparallel) {
+static void load_ply_scene(
+    const string& filename, scene_data& scene, bool noparallel) {
   // load ply mesh and make instance
-  auto shape = shape_data{};
-  if (!load_shape(filename, shape, error, true)) return false;
+  auto shape = load_shape(filename, true);
   scene.shapes.push_back(shape);
   scene.instances.push_back({{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}},
       (int)scene.shapes.size() - 1, -1});
@@ -4377,16 +3476,13 @@ static bool load_ply_scene(
   add_missing_camera(scene);
   add_missing_radius(scene);
   add_missing_lights(scene);
-
-  // done
-  return true;
 }
 
-static bool save_ply_scene(const string& filename, const scene_data& scene,
-    string& error, bool noparallel) {
+static void save_ply_scene(
+    const string& filename, const scene_data& scene, bool noparallel) {
   // save shape
   if (scene.shapes.empty()) throw std::invalid_argument{"empty shape"};
-  return save_shape(filename, scene.shapes.front(), error, false);
+  return save_shape(filename, scene.shapes.front(), false);
 }
 
 }  // namespace yocto
@@ -4396,11 +3492,10 @@ static bool save_ply_scene(const string& filename, const scene_data& scene,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-static bool load_stl_scene(
-    const string& filename, scene_data& scene, string& error, bool noparallel) {
+static void load_stl_scene(
+    const string& filename, scene_data& scene, bool noparallel) {
   // load ply mesh and make instance
-  auto shape = shape_data{};
-  if (!load_shape(filename, shape, error, true)) return false;
+  auto shape = load_shape(filename, true);
   scene.instances.push_back({{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}},
       (int)scene.shapes.size() - 1, -1});
 
@@ -4409,16 +3504,13 @@ static bool load_stl_scene(
   add_missing_camera(scene);
   add_missing_radius(scene);
   add_missing_lights(scene);
-
-  // done
-  return true;
 }
 
-static bool save_stl_scene(const string& filename, const scene_data& scene,
-    string& error, bool noparallel) {
+static void save_stl_scene(
+    const string& filename, const scene_data& scene, bool noparallel) {
   // save shape
   if (scene.shapes.empty()) throw std::invalid_argument{"empty shape"};
-  return save_shape(filename, scene.shapes.front(), error, false);
+  return save_shape(filename, scene.shapes.front(), false);
 }
 
 }  // namespace yocto
@@ -4429,11 +3521,10 @@ static bool save_stl_scene(const string& filename, const scene_data& scene,
 namespace yocto {
 
 // Load a scene
-static bool load_gltf_scene(
-    const string& filename, scene_data& scene, string& error, bool noparallel) {
+static void load_gltf_scene(
+    const string& filename, scene_data& scene, bool noparallel) {
   // load gltf data
-  auto data = vector<byte>{};
-  if (!load_binary(filename, data, error)) return false;
+  auto data = load_binary(filename);
 
   // parse glTF
   auto options = cgltf_options{};
@@ -4442,8 +3533,7 @@ static bool load_gltf_scene(
   auto cgltf_result = cgltf_parse(
       &options, data.data(), data.size(), &cgltf_ptr);
   if (cgltf_result != cgltf_result_success) {
-    error = "cannot parse " + filename;
-    return false;
+    throw io_error{"cannot parse " + filename};
   }
 
   // load buffers
@@ -4452,19 +3542,14 @@ static bool load_gltf_scene(
   auto buffer_result = cgltf_load_buffers(
       &options, cgltf_ptr, dirname_.c_str());
   if (buffer_result != cgltf_result_success) {
-    error = "cannot load " + filename + " since cannot load buffers";
     cgltf_free(cgltf_ptr);
-    return false;
+    throw io_error{"cannot load " + filename + " since cannot load buffers"};
   }
 
   // setup parsing
   auto& cgltf       = *cgltf_ptr;
   auto  cgltf_guard = std::unique_ptr<cgltf_data, void (*)(cgltf_data*)>(
       cgltf_ptr, cgltf_free);
-  auto unsupported_error = [&filename, &error](const string& message) {
-    error = "cannot load " + filename + " for sunsupported " + message;
-    return false;
-  };
 
   // convert cameras
   auto cameras = vector<camera_data>{};
@@ -4491,7 +3576,8 @@ static bool load_gltf_scene(
       }
       camera.focus = 1;
     } else {
-      return unsupported_error("camera type");
+      throw io_error{
+          "cannot load " + filename + " for unsupported camera type"};
     }
   }
 
@@ -4576,27 +3662,36 @@ static bool load_gltf_scene(
       for (auto idx : range(gprimitive.attributes_count)) {
         auto& gattribute = gprimitive.attributes[idx];
         auto& gaccessor  = *gattribute.data;
-        if (gaccessor.is_sparse) return unsupported_error("sparse accessor");
+        if (gaccessor.is_sparse)
+          throw io_error{
+              "cannot load " + filename + " for unsupported sparse accessor"};
         auto gname       = string{gattribute.name};
         auto count       = gaccessor.count;
         auto components  = cgltf_num_components(gaccessor.type);
         auto dcomponents = components;
         auto data        = (float*)nullptr;
         if (gname == "POSITION") {
-          if (components != 3) return unsupported_error("position components");
+          if (components != 3)
+            throw io_error{"cannot load " + filename +
+                           " for unsupported position components"};
           shape.positions.resize(count);
           data = (float*)shape.positions.data();
         } else if (gname == "NORMAL") {
-          if (components != 3) return unsupported_error("normal components");
+          if (components != 3)
+            throw io_error{"cannot load " + filename +
+                           " for unsupported normal components"};
           shape.normals.resize(count);
           data = (float*)shape.normals.data();
         } else if (gname == "TEXCOORD" || gname == "TEXCOORD_0") {
-          if (components != 2) return unsupported_error("texcoord components");
+          if (components != 2)
+            throw io_error{"cannot load " + filename +
+                           " for unsupported texture components"};
           shape.texcoords.resize(count);
           data = (float*)shape.texcoords.data();
         } else if (gname == "COLOR" || gname == "COLOR_0") {
           if (components != 3 && components != 4)
-            return unsupported_error("color components");
+            throw io_error{"cannot load " + filename +
+                           " for unsupported color components"};
           shape.colors.resize(count);
           data = (float*)shape.colors.data();
           if (components == 3) {
@@ -4604,11 +3699,15 @@ static bool load_gltf_scene(
             for (auto& c : shape.colors) c.w = 1;
           }
         } else if (gname == "TANGENT") {
-          if (components != 4) return unsupported_error("tangent components");
+          if (components != 4)
+            throw io_error{"cannot load " + filename +
+                           " for unsupported tangent components"};
           shape.tangents.resize(count);
           data = (float*)shape.tangents.data();
         } else if (gname == "RADIUS") {
-          if (components != 1) return unsupported_error("radius components");
+          if (components != 1)
+            throw io_error{"cannot load " + filename +
+                           " for unsupported radius components"};
           shape.radius.resize(count);
           data = (float*)shape.radius.data();
         } else {
@@ -4619,7 +3718,8 @@ static bool load_gltf_scene(
         for (auto idx : range(count)) {
           if (!cgltf_accessor_read_float(
                   &gaccessor, idx, &data[idx * dcomponents], components))
-            return unsupported_error("accessor float conversion");
+            throw io_error{"cannot load " + filename +
+                           " for unsupported accessor conversion"};
         }
         // fixes
         if (gname == "TANGENT") {
@@ -4654,19 +3754,23 @@ static bool load_gltf_scene(
           for (auto i = 1; i < (int)shape.positions.size(); i++)
             shape.lines[i - 1] = {i - 1, i};
         } else if (gprimitive.type == cgltf_primitive_type_points) {
-          return unsupported_error("point primitive");
+          throw io_error{
+              "cannot load " + filename + " for unsupported point primitive"};
         } else {
-          return unsupported_error("primitive type");
+          throw io_error{
+              "cannot load " + filename + " for unsupported primitive type"};
         }
       } else {
         auto& gaccessor = *gprimitive.indices;
         if (gaccessor.type != cgltf_type_scalar)
-          return unsupported_error("non-scalar indices");
+          throw io_error{"cannot load " + filename +
+                         " for unsupported non-scalar indices"};
         auto indices = vector<int>(gaccessor.count);
         for (auto idx : range(gaccessor.count)) {
           if (!cgltf_accessor_read_uint(
                   &gaccessor, idx, (cgltf_uint*)&indices[idx], 1))
-            return unsupported_error("accessor uint conversion");
+            throw io_error{
+                "cannot load " + filename + " for unsupported accessor type"};
         }
         if (gprimitive.type == cgltf_primitive_type_triangles) {
           shape.triangles.resize(indices.size() / 3);
@@ -4703,9 +3807,11 @@ static bool load_gltf_scene(
             shape.lines[i] = {indices[i + 0], indices[i + 1]};
           }
         } else if (gprimitive.type == cgltf_primitive_type_points) {
-          return unsupported_error("points primitive");
+          throw io_error{
+              "cannot load " + filename + " for unsupported points indices"};
         } else {
-          return unsupported_error("primitive type");
+          throw io_error{
+              "cannot load " + filename + " for unsupported primitive type"};
         }
       }
     }
@@ -4718,7 +3824,7 @@ static bool load_gltf_scene(
       auto& camera = scene.cameras.emplace_back();
       camera       = cameras.at(gnode.camera - cgltf.cameras);
       auto xform   = mat4f{
-          {1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
+            {1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
       cgltf_node_transform_world(&gnode, &xform.x.x);
       camera.frame = mat_to_frame(xform);
     }
@@ -4727,7 +3833,7 @@ static bool load_gltf_scene(
         auto& instance = scene.instances.emplace_back();
         instance       = primitive;
         auto xform     = mat4f{
-            {1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
+                {1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
         cgltf_node_transform_world(&gnode, &xform.x.x);
         instance.frame = mat_to_frame(xform);
       }
@@ -4735,27 +3841,17 @@ static bool load_gltf_scene(
   }
 
   // dirname
-  auto dirname         = path_dirname(filename);
-  auto dependent_error = [&filename, &error]() {
-    error = "cannot save " + filename + " since " + error;
-    return false;
-  };
+  auto dirname = path_dirname(filename);
 
-  if (noparallel) {
-    // load texture
-    for (auto& texture : scene.textures) {
-      auto& path = texture_paths[&texture - &scene.textures.front()];
-      if (!load_texture(path_join(dirname, path), texture, error))
-        return dependent_error();
-    }
-  } else {
+  try {
     // load textures
-    if (!parallel_foreach(
-            scene.textures, error, [&](auto& texture, string& error) {
-              auto& path = texture_paths[&texture - &scene.textures.front()];
-              return load_texture(path_join(dirname, path), texture, error);
-            }))
-      return dependent_error();
+    parallel_foreach(scene.textures, noparallel, [&](auto& texture) {
+      auto& path = texture_paths[&texture - &scene.textures.front()];
+      return load_texture(path_join(dirname, path), texture);
+    });
+  } catch (std::exception& except) {
+    throw io_error(
+        "cannot load " + filename + " since " + string(except.what()));
   }
 
   // fix scene
@@ -4763,14 +3859,11 @@ static bool load_gltf_scene(
   add_missing_camera(scene);
   add_missing_radius(scene);
   add_missing_lights(scene);
-
-  // done
-  return true;
 }
 
 // Load a scene
-static bool save_gltf_scene(const string& filename, const scene_data& scene,
-    string& error, bool noparallel) {
+static void save_gltf_scene(
+    const string& filename, const scene_data& scene, bool noparallel) {
   // prepare data
   auto cgltf_ptr = (cgltf_data*)malloc(sizeof(cgltf_data));
   memset(cgltf_ptr, 0, sizeof(cgltf_data));
@@ -4941,7 +4034,7 @@ static bool save_gltf_scene(const string& filename, const scene_data& scene,
       auto& gbuffer             = cgltf.buffers[idx];
       shape_accessor_start[idx] = (int)cgltf.accessors_count;
       gbuffer.uri               = copy_string(
-                        "shapes/" + get_shape_name(scene, shape) + ".bin");
+          "shapes/" + get_shape_name(scene, shape) + ".bin");
       add_vertex(cgltf, gbuffer, shape.positions.size(), cgltf_type_vec3,
           (const float*)shape.positions.data());
       add_vertex(cgltf, gbuffer, shape.normals.size(), cgltf_type_vec3,
@@ -5075,9 +4168,8 @@ static bool save_gltf_scene(const string& filename, const scene_data& scene,
   cgltf.memory.free   = [](void*, void* ptr) { free(ptr); };
   auto result         = cgltf_write_file(&options, filename.c_str(), &cgltf);
   if (result != cgltf_result_success) {
-    error = "cannot save " + filename;
     cgltf_free(&cgltf);
-    return false;
+    throw io_error{"cannot save " + filename};
   }
 
   // cleanup
@@ -5090,44 +4182,23 @@ static bool save_gltf_scene(const string& filename, const scene_data& scene,
   };
 
   // dirname
-  auto dirname         = path_dirname(filename);
-  auto dependent_error = [&filename, &error]() {
-    error = "cannot save " + filename + " since " + error;
-    return false;
-  };
+  auto dirname = path_dirname(filename);
 
-  if (noparallel) {
+  try {
     // save shapes
-    for (auto& shape : scene.shapes) {
+    parallel_foreach(scene.shapes, noparallel, [&](auto& shape) {
       auto path = "shapes/" + get_shape_name(scene, shape) + ".bin";
-      if (!save_binshape(path_join(dirname, path), shape, error))
-        return dependent_error();
-    }
+      return save_binshape(path_join(dirname, path), shape);
+    });
     // save textures
-    for (auto& texture : scene.textures) {
+    parallel_foreach(scene.textures, noparallel, [&](auto& texture) {
       auto path = "textures/" + get_texture_name(scene, texture) + ".png";
-      if (!save_texture(path_join(dirname, path), texture, error))
-        return dependent_error();
-    }
-  } else {
-    // save shapes
-    if (!parallel_foreach(scene.shapes, error, [&](auto& shape, string& error) {
-          auto path = "shapes/" + get_shape_name(scene, shape) + ".bin";
-          return save_binshape(path_join(dirname, path), shape, error);
-        }))
-      return dependent_error();
-    // save textures
-    if (!parallel_foreach(
-            scene.textures, error, [&](auto& texture, string& error) {
-              auto path = "textures/" + get_texture_name(scene, texture) +
-                          ".png";
-              return save_texture(path_join(dirname, path), texture, error);
-            }))
-      return dependent_error();
+      return save_texture(path_join(dirname, path), texture);
+    });
+  } catch (std::exception& except) {
+    throw io_error(
+        "cannot save " + filename + " since " + string(except.what()));
   }
-
-  // done
-  return true;
 }
 
 }  // namespace yocto
@@ -5138,11 +4209,10 @@ static bool save_gltf_scene(const string& filename, const scene_data& scene,
 namespace yocto {
 
 // load pbrt scenes
-static bool load_pbrt_scene(
-    const string& filename, scene_data& scene, string& error, bool noparallel) {
+static void load_pbrt_scene(
+    const string& filename, scene_data& scene, bool noparallel) {
   // load pbrt
-  auto pbrt = pbrt_model{};
-  if (!load_pbrt(filename, pbrt, error)) return false;
+  auto pbrt = load_pbrt(filename);
 
   // convert cameras
   for (auto& pcamera : pbrt.cameras) {
@@ -5235,54 +4305,33 @@ static bool load_pbrt_scene(
   }
 
   // dirname
-  auto dirname         = path_dirname(filename);
-  auto dependent_error = [&filename, &error]() {
-    error = "cannot load " + filename + " since " + error;
-    return false;
-  };
+  auto dirname = path_dirname(filename);
 
-  if (noparallel) {
-    // load shape
-    for (auto& shape : scene.shapes) {
-      auto& path = shapes_paths[&shape - &scene.shapes.front()];
-      if (path.empty()) continue;
-      if (!load_shape(path_join(dirname, path), shape, error, true))
-        return dependent_error();
-    }
-    // load texture
-    for (auto& texture : scene.textures) {
-      auto& path = texture_paths[&texture - &scene.textures.front()];
-      if (!load_texture(path_join(dirname, path), texture, error))
-        return dependent_error();
-    }
-  } else {
+  try {
     // load shapes
-    if (!parallel_foreach(scene.shapes, error, [&](auto& shape, string& error) {
-          auto& path = shapes_paths[&shape - &scene.shapes.front()];
-          if (path.empty()) return true;
-          return load_shape(path_join(dirname, path), shape, error, true);
-        }))
-      return dependent_error();
+    parallel_foreach(scene.shapes, noparallel, [&](auto& shape) {
+      auto& path = shapes_paths[&shape - &scene.shapes.front()];
+      if (path.empty()) return;
+      load_shape(path_join(dirname, path), shape, true);
+    });
     // load textures
-    if (!parallel_foreach(
-            scene.textures, error, [&](auto& texture, string& error) {
-              auto& path = texture_paths[&texture - &scene.textures.front()];
-              return load_texture(path_join(dirname, path), texture, error);
-            }))
-      return dependent_error();
+    parallel_foreach(scene.textures, noparallel, [&](auto& texture) {
+      auto& path = texture_paths[&texture - &scene.textures.front()];
+      return load_texture(path_join(dirname, path), texture);
+    });
+  } catch (std::exception& except) {
+    throw io_error(
+        "cannot load " + filename + " since " + string(except.what()));
   }
 
   // fix scene
   add_missing_camera(scene);
   add_missing_radius(scene);
-
-  // done
-  return true;
 }
 
 // Save a pbrt scene
-static bool save_pbrt_scene(const string& filename, const scene_data& scene,
-    string& error, bool noparallel) {
+static void save_pbrt_scene(
+    const string& filename, const scene_data& scene, bool noparallel) {
   // save pbrt
   auto pbrt = pbrt_model{};
 
@@ -5342,48 +4391,27 @@ static bool save_pbrt_scene(const string& filename, const scene_data& scene,
   }
 
   // save pbrt
-  if (!save_pbrt(filename, pbrt, error)) return false;
+  save_pbrt(filename, pbrt);
 
   // dirname
-  auto dirname         = path_dirname(filename);
-  auto dependent_error = [&filename, &error]() {
-    error = "cannot save " + filename + " since " + error;
-    return false;
-  };
+  auto dirname = path_dirname(filename);
 
-  if (noparallel) {
-    // save textures
-    for (auto& shape : scene.shapes) {
+  try {
+    // save shapes
+    parallel_foreach(scene.shapes, noparallel, [&](auto& shape) {
       auto path = "shapes/" + get_shape_name(scene, shape) + ".ply";
-      if (!save_shape(path_join(dirname, path), shape, error, true))
-        return dependent_error();
-    }
-    // save shapes
-    for (auto& texture : scene.textures) {
-      auto path = "textures/" + get_texture_name(scene, texture) +
-                  (!texture.pixelsf.empty() ? ".hdr" : ".png");
-      if (!save_texture(path_join(dirname, path), texture, error))
-        return dependent_error();
-    }
-  } else {
-    // save shapes
-    if (!parallel_foreach(scene.shapes, error, [&](auto& shape, string& error) {
-          auto path = "shapes/" + get_shape_name(scene, shape) + ".ply";
-          return save_shape(path_join(dirname, path), shape, error, true);
-        }))
-      return dependent_error();
+      return save_shape(path_join(dirname, path), shape, true);
+    });
     // save textures
-    if (!parallel_foreach(
-            scene.textures, error, [&](auto& texture, string& error) {
-              auto path = "textures/" + get_texture_name(scene, texture) +
-                          (!texture.pixelsf.empty() ? ".hdr"s : ".png"s);
-              return save_texture(path_join(dirname, path), texture, error);
-            }))
-      return dependent_error();
+    parallel_foreach(scene.textures, noparallel, [&](auto& texture) {
+      auto path = "textures/" + get_texture_name(scene, texture) +
+                  (!texture.pixelsf.empty() ? ".hdr"s : ".png"s);
+      return save_texture(path_join(dirname, path), texture);
+    });
+  } catch (std::exception& except) {
+    throw io_error(
+        "cannot save " + filename + " since " + string(except.what()));
   }
-
-  // done
-  return true;
 }
 
 }  // namespace yocto
@@ -5394,12 +4422,11 @@ static bool save_pbrt_scene(const string& filename, const scene_data& scene,
 namespace yocto {
 
 // load mitsuba scenes
-static bool load_mitsuba_scene(
-    const string& filename, scene_data& scene, string& error, bool noparallel) {
+static void load_mitsuba_scene(
+    const string& filename, scene_data& scene, bool noparallel) {
   // not implemented
-  error = "cannot load " + filename +
-          " since format is not supported for reading";
-  return false;
+  throw io_error(
+      "cannot load " + filename + " since format is not supported for reading");
 }
 
 // To xml helpers
@@ -5506,8 +4533,8 @@ static void xml_property(string& xml, const string& indent, const string& name,
 }
 
 // Save a mitsuba scene
-static bool save_mitsuba_scene(const string& filename, const scene_data& scene,
-    string& error, bool noparallel) {
+static void save_mitsuba_scene(
+    const string& filename, const scene_data& scene, bool noparallel) {
   // write xml directly
   auto xml = string{};
 
@@ -5717,14 +4744,10 @@ static bool save_mitsuba_scene(const string& filename, const scene_data& scene,
   xml_end(xml, indent, "scene");
 
   // save xml
-  if (!save_text(filename, xml, error)) return false;
+  save_text(filename, xml);
 
   // dirname
-  auto dirname         = path_dirname(filename);
-  auto dependent_error = [&filename, &error]() {
-    error = "cannot save " + filename + " since " + error;
-    return false;
-  };
+  auto dirname = path_dirname(filename);
 
   auto triangulate = [](const shape_data& shape) -> shape_data {
     if (shape.quads.empty()) return shape;
@@ -5734,41 +4757,22 @@ static bool save_mitsuba_scene(const string& filename, const scene_data& scene,
     return tshape;
   };
 
-  if (noparallel) {
+  try {
     // save shapes
-    for (auto& shape : scene.shapes) {
+    parallel_foreach(scene.shapes, noparallel, [&](auto& shape) {
       auto path = "shapes/" + get_shape_name(scene, shape) + ".ply";
-      if (!save_shape(
-              path_join(dirname, path), triangulate(shape), error, true))
-        return dependent_error();
-    }
+      return save_shape(path_join(dirname, path), triangulate(shape), true);
+    });
     // save textures
-    for (auto& texture : scene.textures) {
+    parallel_foreach(scene.textures, noparallel, [&](auto& texture) {
       auto path = "textures/" + get_texture_name(scene, texture) +
-                  (!texture.pixelsf.empty() ? ".hdr" : ".png");
-      if (!save_texture(path_join(dirname, path), texture, error))
-        return dependent_error();
-    }
-  } else {
-    // save shapes
-    if (!parallel_foreach(scene.shapes, error, [&](auto& shape, string& error) {
-          auto path = "shapes/" + get_shape_name(scene, shape) + ".ply";
-          return save_shape(
-              path_join(dirname, path), triangulate(shape), error, true);
-        }))
-      return dependent_error();
-    // save textures
-    if (!parallel_foreach(
-            scene.textures, error, [&](auto& texture, string& error) {
-              auto path = "textures/" + get_texture_name(scene, texture) +
-                          (!texture.pixelsf.empty() ? ".hdr"s : ".png"s);
-              return save_texture(path_join(dirname, path), texture, error);
-            }))
-      return dependent_error();
+                  (!texture.pixelsf.empty() ? ".hdr"s : ".png"s);
+      return save_texture(path_join(dirname, path), texture);
+    });
+  } catch (std::exception& except) {
+    throw io_error(
+        "cannot save " + filename + " since " + string(except.what()));
   }
-
-  // done
-  return true;
 }
 
 }  // namespace yocto
@@ -5829,9 +4833,6 @@ static void to_json(json_value& json, const trace_params& value) {
   json["embreebvh"]      = value.embreebvh;
   json["highqualitybvh"] = value.highqualitybvh;
   json["noparallel"]     = value.noparallel;
-  json["pratio"]         = value.pratio;
-  json["denoise"]        = value.denoise;
-  json["batch"]          = value.batch;
 }
 static void from_json(const json_value& json, trace_params& value) {
   value.camera         = json.value("camera", value.camera);
@@ -5848,9 +4849,6 @@ static void from_json(const json_value& json, trace_params& value) {
   value.embreebvh      = json.value("embreebvh", value.embreebvh);
   value.highqualitybvh = json.value("highqualitybvh", value.highqualitybvh);
   value.noparallel     = json.value("noparallel", value.noparallel);
-  value.pratio         = json.value("pratio", value.pratio);
-  value.denoise        = json.value("denoise", value.denoise);
-  value.batch          = json.value("batch", value.batch);
 }
 
 // Conversion to/from json
@@ -5890,115 +4888,72 @@ static void from_json(const json_value& json, colorgrade_params& value) {
       "highlights_color", value.highlights_color);
 }
 
-// Load/Save/Update trace params
 template <typename Params>
-static bool load_params(const string& filename, Params& params, string& error) {
+static Params load_params(const string& filename) {
+  auto params = Params{};
+  load_params(filename, params);
+  return params;
+}
+template <typename Params>
+static void load_params(const string& filename, Params& params) {
   // json
-  auto json = json_value{};
-  if (!load_json(filename, json, error)) return false;
+  auto json = load_json(filename);
 
   // conversion
   try {
     params = {};
     from_json(json, params);
-    return true;
   } catch (...) {
-    error = "error parsing params";
-    return false;
+    throw io_error{"error parsing params"};
   }
 }
 template <typename Params>
-static bool update_params(
-    const string& filename, Params& params, string& error) {
+static void update_params(const string& filename, Params& params) {
   // json
-  auto json = json_value{};
-  if (!load_json(filename, json, error)) return false;
+  auto json = load_json(filename);
 
   // conversion
   try {
     from_json(json, params);
-    return true;
   } catch (...) {
-    error = "error parsing params";
-    return false;
+    throw io_error{"error parsing params"};
   }
 }
 template <typename Params>
-static bool save_params(
-    const string& filename, const Params& params, string& error) {
+static void save_params(const string& filename, const Params& params) {
   auto json = json_value{};
   to_json(json, params);
-  return save_json(filename, json, error);
+  return save_json(filename, json);
 }
 
 // Load/Save/Update trace params
 trace_params load_trace_params(const string& filename) {
-  auto params = trace_params{};
-  auto error  = string{};
-  if (!load_trace_params(filename, params, error)) throw io_error{error};
-  return params;
+  return load_params<trace_params>(filename);
 }
 void load_trace_params(const string& filename, trace_params& params) {
-  auto error = string{};
-  if (!load_trace_params(filename, params, error)) throw io_error{error};
+  return load_params(filename, params);
 }
 void update_trace_params(const string& filename, trace_params& params) {
-  auto error = string{};
-  if (!update_trace_params(filename, params, error)) throw io_error{error};
+  return update_params(filename, params);
 }
 void save_trace_params(const string& filename, const trace_params& params) {
-  auto error = string{};
-  if (!save_trace_params(filename, params, error)) throw io_error{error};
+  return save_params(filename, params);
 }
 
 // Load/Save/Update color grade params
 colorgrade_params load_colorgrade_params(const string& filename) {
-  auto params = colorgrade_params{};
-  auto error  = string{};
-  if (!load_colorgrade_params(filename, params, error)) throw io_error{error};
-  return params;
+  return load_params<colorgrade_params>(filename);
 }
 void load_colorgrade_params(const string& filename, colorgrade_params& params) {
-  auto error = string{};
-  if (!load_colorgrade_params(filename, params, error)) throw io_error{error};
+  return load_params(filename, params);
 }
 void update_colorgrade_params(
     const string& filename, colorgrade_params& params) {
-  auto error = string{};
-  if (!update_colorgrade_params(filename, params, error)) throw io_error{error};
+  return update_params(filename, params);
 }
 void save_colorgrade_params(
     const string& filename, const colorgrade_params& params) {
-  auto error = string{};
-  if (!save_colorgrade_params(filename, params, error)) throw io_error{error};
-}
-
-// Load/Save/Update trace params
-bool load_trace_params(
-    const string& filename, trace_params& params, string& error) {
-  return load_params(filename, params, error);
-}
-bool update_trace_params(
-    const string& filename, trace_params& params, string& error) {
-  return update_params(filename, params, error);
-}
-bool save_trace_params(
-    const string& filename, const trace_params& params, string& error) {
-  return save_params(filename, params, error);
-}
-
-// Load/Save/Update color grade params
-bool load_colorgrade_params(
-    const string& filename, colorgrade_params& params, string& error) {
-  return load_params(filename, params, error);
-}
-bool update_colorgrade_params(
-    const string& filename, colorgrade_params& params, string& error) {
-  return update_params(filename, params, error);
-}
-bool save_colorgrade_params(
-    const string& filename, const colorgrade_params& params, string& error) {
-  return save_params(filename, params, error);
+  return save_params(filename, params);
 }
 
 }  // namespace yocto
@@ -6295,8 +5250,8 @@ bool save_volume(
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-image<vec4f> filter_bilateral(const image<vec4f>& img, float spatial_sigma,
-    float range_sigma, const vector<image<vec4f>>& features,
+image_t<vec4f> filter_bilateral(const image_t<vec4f>& img, float spatial_sigma,
+    float range_sigma, const vector<image_t<vec4f>>& features,
     const vector<float>& features_sigma) {
   auto filtered     = image{img.imsize(), vec4f{0,0,0,0}};
   auto filter_width = (int)ceil(2.57f * spatial_sigma);
@@ -6332,8 +5287,8 @@ image<vec4f> filter_bilateral(const image<vec4f>& img, float spatial_sigma,
   return filtered;
 }
 
-image<vec4f> filter_bilateral(
-    const image<vec4f>& img, float spatial_sigma, float range_sigma) {
+image_t<vec4f> filter_bilateral(
+    const image_t<vec4f>& img, float spatial_sigma, float range_sigma) {
   auto filtered = image{img.imsize(), vec4f{0,0,0,0}};
   auto fwidth   = (int)ceil(2.57f * spatial_sigma);
   auto sw       = 1 / (2.0f * spatial_sigma * spatial_sigma);

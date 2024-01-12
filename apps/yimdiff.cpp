@@ -57,11 +57,7 @@ void run(const vector<string>& args) {
   auto image2 = load_image(filename2);
 
   // check sizes
-  if (image1.width != image2.width || image1.height != image2.height)
-    throw io_error("different image sizes");
-
-  // check types
-  if (image1.linear != image2.linear) throw io_error("different image types");
+  if (image1.size() != image2.size()) throw io_error("different image sizes");
 
   // compute diff
   auto diff = image_difference(image1, image2, true);
@@ -71,7 +67,7 @@ void run(const vector<string>& args) {
 
   // check diff
   if (signal) {
-    for (auto& c : diff.pixels) {
+    for (auto& c : diff) {
       if (max(xyz(c)) > threshold) {
         throw std::runtime_error{"image content differ"};
       }

@@ -69,15 +69,15 @@ namespace yocto {
 
 // Type of tracing algorithm
 enum struct trace_sampler_type {
-  path,        // path tracing
-  pathdirect,  // path tracing with direct
-  pathmis,     // path tracing with mis
-  pathtest,    // path tracing test
-  naive,       // naive path tracing
-  eyelight,    // eyelight rendering
-  diagram,     // diagram rendering
-  furnace,     // furnace test
-  falsecolor,  // false color rendering
+  path,           // path tracing
+  pathdirect,     // path tracing with direct
+  pathmis,        // path tracing with mis
+  pathtest,       // path tracing test
+  lightsampling,  // path tracing with light sampling
+  naive,          // naive path tracing
+  eyelight,       // eyelight rendering
+  furnace,        // furnace test
+  falsecolor,     // false color rendering
 };
 // Type of false color visualization
 enum struct trace_falsecolor_type {
@@ -99,7 +99,7 @@ struct trace_params {
   trace_falsecolor_type falsecolor     = trace_falsecolor_type::color;
   int                   samples        = 512;
   int                   bounces        = 8;
-  float                 clamp          = 10;
+  float                 clamp          = 100;
   bool                  nocaustics     = false;
   bool                  envhidden      = false;
   bool                  tentfilter     = false;
@@ -113,7 +113,19 @@ struct trace_params {
 };
 
 // Progressively computes an image.
-image_data trace_image(const scene_data& scene, const trace_params& params);
+image_t<vec4f> trace_image(const scene_data& scene, const trace_params& params);
+
+// Convenience helper
+image_t<vec4f> trace_image(const scene_data& scene,
+    trace_sampler_type type = trace_sampler_type::path, int resolution = 1440,
+    int samples = 256, int bounces = 8);
+
+// Forward compatibility
+inline image_t<vec4f> pathtrace_image(const scene_data& scene,
+    trace_sampler_type type = trace_sampler_type::path, int resolution = 1440,
+    int samples = 256, int bounces = 8) {
+  return trace_image(scene, type, resolution, samples, bounces);
+}
 
 }  // namespace yocto
 
@@ -145,15 +157,15 @@ bool is_sampler_lit(const trace_params& params);
 
 // Trace state
 struct trace_state {
-  int               width    = 0;
-  int               height   = 0;
-  int               samples  = 0;
-  vector<vec4f>     image    = {};
-  vector<vec3f>     albedo   = {};
-  vector<vec3f>     normal   = {};
-  vector<int>       hits     = {};
-  vector<rng_state> rngs     = {};
-  vector<vec4f>     denoised = {};
+  image_t<vec4f>     render   = {};
+  image_t<vec3f>     albedo   = {};
+  image_t<vec3f>     normal   = {};
+  image_t<int>       hits     = {};
+  image_t<rng_state> rngs     = {};
+  image_t<vec4f>     denoised = {};
+  int                samples  = 0;
+
+  vec2i size() const { return render.size(); }
 };
 
 // Initialize state.
@@ -176,27 +188,27 @@ void trace_sample(trace_state& state, const scene_data& scene,
     const trace_params& params);
 
 // Get resulting render, denoised if requested
-image_data get_image(const trace_state& state);
-void       get_image(image_data& image, const trace_state& state);
+image_t<vec4f> get_image(const trace_state& state);
+void           get_image(image_t<vec4f>& image, const trace_state& state);
 
 // Get internal images from state
-image_data get_rendered_image(const trace_state& state);
-void       get_rendered_image(image_data& image, const trace_state& state);
-image_data get_denoised_image(const trace_state& state);
-void       get_denoised_image(image_data& image, const trace_state& state);
-image_data get_albedo_image(const trace_state& state);
-void       get_albedo_image(image_data& image, const trace_state& state);
-image_data get_normal_image(const trace_state& state);
-void       get_normal_image(image_data& image, const trace_state& state);
+image_t<vec4f> get_rendered_image(const trace_state& state);
+void get_rendered_image(image_t<vec4f>& image, const trace_state& state);
+image_t<vec4f> get_denoised_image(const trace_state& state);
+void get_denoised_image(image_t<vec4f>& image, const trace_state& state);
+image_t<vec3f> get_albedo_image(const trace_state& state);
+void get_albedo_image(image_t<vec3f>& image, const trace_state& state);
+image_t<vec3f> get_normal_image(const trace_state& state);
+void get_normal_image(image_t<vec3f>& image, const trace_state& state);
 
 // Denoise image
-image_data denoise_image(const image_data& render, const image_data& albedo,
-    const image_data& normal);
-void       denoise_image(image_data& image, const image_data& render,
-          const image_data& albedo, const image_data& normal);
-void       denoise_image(vector<vec4f>& denoised, int width, int height,
-          const vector<vec4f>& render, const vector<vec3f>& albedo,
-          const vector<vec3f>& normal);
+image_t<vec4f> denoise_image(const image_t<vec4f>& render,
+    const image_t<vec3f>& albedo, const image_t<vec3f>& normal);
+void denoise_image(image_t<vec4f>& image, const image_t<vec4f>& render,
+    const image_t<vec3f>& albedo, const image_t<vec3f>& normal);
+void denoise_image(vector<vec4f>& denoised, int width, int height,
+    const vector<vec4f>& render, const vector<vec3f>& albedo,
+    const vector<vec3f>& normal);
 
 // Async implementation
 struct trace_context {
@@ -220,7 +232,7 @@ void trace_cancel(trace_context& context);
 void trace_done(trace_context& context);
 
 // Async preview
-void trace_preview(color_image& image, trace_context& context,
+void trace_preview(image_t<vec4f>& image, trace_context& context,
     trace_state& state, const scene_data& scene, const trace_bvh& bvh,
     const trace_lights& lights, const trace_params& params);
 
@@ -233,7 +245,8 @@ namespace yocto {
 
 // trace sampler names
 inline const auto trace_sampler_names = vector<string>{"path", "pathdirect",
-    "pathmis", "pathtest", "naive", "eyelight", "furnace", "falsecolor"};
+    "pathmis", "pathtest", "lightsampling", "naive", "eyelight", "furnace",
+    "falsecolor"};
 
 // false color names
 inline const auto trace_falsecolor_names = vector<string>{"position", "normal",
@@ -247,9 +260,9 @@ inline const auto trace_sampler_labels =
         {trace_sampler_type::pathdirect, "pathdirect"},
         {trace_sampler_type::pathmis, "pathmis"},
         {trace_sampler_type::pathtest, "pathtest"},
+        {trace_sampler_type::lightsampling, "lightsampling"},
         {trace_sampler_type::naive, "naive"},
         {trace_sampler_type::eyelight, "eyelight"},
-        {trace_sampler_type::diagram, "diagram"},
         {trace_sampler_type::furnace, "furnace"},
         {trace_sampler_type::falsecolor, "falsecolor"}};
 
@@ -274,65 +287,6 @@ inline const auto trace_falsecolor_labels =
         {trace_falsecolor_type::material, "material"},
         {trace_falsecolor_type::element, "element"},
         {trace_falsecolor_type::highlight, "highlight"}};
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// BACKWARD COMPATIBILITY
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Initialize state.
-[[deprecated]] inline trace_state make_state(
-    const scene_data& scene, const trace_params& params) {
-  return make_trace_state(scene, params);
-}
-
-// Initialize lights.
-[[deprecated]] inline trace_lights make_lights(
-    const scene_data& scene, const trace_params& params) {
-  return make_trace_lights(scene, params);
-}
-
-// Build the bvh acceleration structure.
-[[deprecated]] inline trace_bvh make_bvh(
-    const scene_data& scene, const trace_params& params) {
-  return make_trace_bvh(scene, params);
-}
-
-// Get resulting render
-[[deprecated]] inline image_data get_render(const trace_state& state) {
-  return get_rendered_image(state);
-}
-[[deprecated]] inline void get_render(
-    image_data& image, const trace_state& state) {
-  return get_rendered_image(image, state);
-}
-
-// Get denoised result
-[[deprecated]] inline image_data get_denoised(const trace_state& state) {
-  return get_denoised_image(state);
-}
-[[deprecated]] inline void get_denoised(
-    image_data& image, const trace_state& state) {
-  return get_denoised_image(image, state);
-}
-
-// Get denoising buffers
-[[deprecated]] inline image_data get_albedo(const trace_state& state) {
-  return get_albedo_image(state);
-}
-[[deprecated]] inline void get_albedo(
-    image_data& image, const trace_state& state) {
-  return get_albedo_image(image, state);
-}
-[[deprecated]] inline image_data get_normal(const trace_state& state) {
-  return get_normal_image(state);
-}
-[[deprecated]] inline void get_normal(
-    image_data& image, const trace_state& state) {
-  return get_normal_image(image, state);
-}
 
 }  // namespace yocto
 

@@ -39,6 +39,7 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
+#include <functional>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -79,20 +80,24 @@ bool is_hdr_filename(const string& filename);
 bool is_ldr_filename(const string& filename);
 
 // Loads/saves a 4 channels float/byte image in linear/srgb color space.
-bool load_image(const string& filename, image_data& img, string& error);
-bool save_image(const string& filename, const image_data& img, string& error);
+image_t<vec4f> load_image(const string& filename, bool srgb = false);
+void           load_image(
+              const string& filename, image_t<vec4f>& image, bool srgb = false);
+void save_image(
+    const string& filename, const image_t<vec4f>& image, bool srgb = false);
 
-// Loads/saves a 4 channels float/byte image in linear/srgb color space.
-image_data load_image(const string& filename);
-void       load_image(const string& filename, image_data& image);
-void       save_image(const string& filename, const image_data& image);
+// Loads/saves a byte image.
+image_t<vec4b> load_imageb(const string& filename, bool srgb = true);
+void           load_image(
+              const string& filename, image_t<vec4b>& image, bool srgb = true);
+void save_image(
+    const string& filename, const image_t<vec4b>& image, bool srgb = true);
 
 // Make presets. Supported mostly in IO.
-image_data make_image_preset(const string& type);
-
-// Make presets. Supported mostly in IO.
-bool make_image_preset(
-    const string& filename, image_data& image, string& error);
+bool           is_srgb_preset(const string& type_);
+image_t<vec4f> make_image_preset(const string& type);
+bool           make_image_preset(
+              const string& filename, image_t<vec4f>& image, string& error);
 
 }  // namespace yocto
 
@@ -195,7 +200,10 @@ bool make_scene_directories(
     const string& filename, const scene_data& scene, string& error);
 
 // Add environment
-bool add_environment(scene_data& scene, const string& filename, string& error);
+bool add_environment(scene_data& scene, const string& name,
+    const string& filename, string& error);
+void add_environment(
+    scene_data& scene, const string& name, const string& filename);
 
 // Load/save a scene in the supported formats.
 scene_data load_scene(const string& filename, bool noparallel = false);
@@ -205,7 +213,8 @@ void save_scene(
     const string& filename, const scene_data& scene, bool noparallel = false);
 
 // Add environment
-void add_environment(scene_data& scene, const string& filename);
+void add_environment(
+    scene_data& scene, const string& name, const string& filename);
 
 // Make missing scene directories
 void make_scene_directories(const string& filename, const scene_data& scene);
@@ -311,33 +320,6 @@ string replace_extension(const string& path, const string& extension);
 // Create a directory and all missing parent directories if needed
 void make_directory(const string& path);
 bool make_directory(const string& path, string& error);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// FILE WATCHER
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// File watcher
-struct watch_context {
-  std::atomic<int>  version   = 0;
-  std::future<void> worker    = {};
-  vector<string>    filenames = {};
-  vector<int64_t>   filetimes = {};
-  int64_t           delay     = 500;
-  std::atomic<bool> stop      = false;
-};
-
-// Initialize file watcher
-watch_context make_watch_context(
-    const vector<string>& filenames, int delay = 500);
-// Start file watcher
-void watch_start(watch_context& context);
-// Stop file watcher
-void watch_stop(watch_context& context);
-// Get file version
-int get_version(const watch_context& context);
 
 }  // namespace yocto
 

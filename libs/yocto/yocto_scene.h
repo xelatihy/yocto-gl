@@ -81,7 +81,7 @@ inline const int invalidid = -1;
 // To compute good apertures, one can use the F-stop number from photography
 // and set the aperture to focal length over f-stop.
 struct camera_data {
-  frame3f frame        = {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}};
+  frame3f frame        = identity3x4f;
   bool    orthographic = false;
   float   lens         = 0.050f;
   float   film         = 0.036f;
@@ -93,13 +93,10 @@ struct camera_data {
 // Texture data as array of float or byte pixels. Textures can be stored in
 // linear or non linear color space.
 struct texture_data {
-  int           width   = 0;
-  int           height  = 0;
-  bool          linear  = false;
-  bool          nearest = false;
-  bool          clamp   = false;
-  vector<vec4f> pixelsf = {};
-  vector<vec4b> pixelsb = {};
+  image_t<vec4f> pixelsf = {};
+  image_t<vec4b> pixelsb = {};
+  bool           nearest = false;
+  bool           clamp   = false;
 };
 
 // Material type
@@ -143,7 +140,7 @@ struct material_data {
 // Instance.
 struct instance_data {
   // instance data
-  frame3f frame    = {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}};
+  frame3f frame    = identity3x4f;
   int     shape    = invalidid;
   int     material = invalidid;
 };
@@ -151,7 +148,7 @@ struct instance_data {
 // Environment map.
 struct environment_data {
   // environment data
-  frame3f frame        = {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}};
+  frame3f frame        = identity3x4f;
   vec3f   emission     = {0, 0, 0};
   int     emission_tex = invalidid;
 };
@@ -235,17 +232,13 @@ vec4f eval_texture(
     const texture_data& texture, const vec2f& uv, bool as_linear = false);
 vec4f eval_texture(const scene_data& scene, int texture, const vec2f& uv,
     bool as_linear = false);
-vec4f eval_texture(const texture_data& texture, const vec2f& uv, bool as_linear,
-    bool no_interpolation, bool clamp_to_edge);
-vec4f eval_texture(const scene_data& scene, int texture, const vec2f& uv,
-    bool as_linear, bool no_interpolation, bool clamp_to_edge);
 
 // pixel access
 vec4f lookup_texture(
-    const texture_data& texture, int i, int j, bool as_linear = false);
+    const texture_data& texture, vec2i ij, bool as_linear = false);
 
 // conversion from image
-texture_data image_to_texture(const image_data& image);
+texture_data image_to_texture(const image_t<vec4f>& image, bool linear);
 
 }  // namespace yocto
 
@@ -352,6 +345,53 @@ bool has_lights(const scene_data& scene);
 
 // create a scene from a shape
 scene_data make_shape_scene(const shape_data& shape, bool add_sky = false);
+
+// Initialize scene
+scene_data make_scene();
+
+// Scene creation helpers
+int add_camera(
+    scene_data& scene, const string& name, const camera_data& camera);
+int add_texture(
+    scene_data& scene, const string& name, const texture_data& texture);
+int add_material(
+    scene_data& scene, const string& name, const material_data& material);
+int add_shape(
+    scene_data& scene, const string& name, const shape_data& material);
+int add_instance(
+    scene_data& scene, const string& name, const instance_data& instance);
+int add_environment(
+    scene_data& scene, const string& name, const environment_data& environment);
+
+// Scene creation helpers
+int add_camera(scene_data& scene, const string& name, const vec3f& from,
+    const vec3f& to, float lens = 0.1f, float aspect = 16.0f / 9.0f,
+    float aperture = 0, float focus_offset = 0);
+int add_camera(scene_data& scene, const string& name, const frame3f& frame,
+    float lens = 0.1f, float aspect = 16.0f / 9.0f, float aperture = 0,
+    float focus = 1);
+int add_material(scene_data& scene, const string& name, const vec3f& emission,
+    material_type type, const vec3f& color, float roughness = 0,
+    int color_tex = invalidid, int roughness_tex = invalidid,
+    int normal_tex = invalidid);
+int add_material(scene_data& scene, const string& name, material_type type,
+    const vec3f& color, float roughness = 0, int color_tex = invalidid,
+    int roughness_tex = invalidid, int normal_tex = invalidid);
+int add_material(scene_data& scene, const string& name, material_type type,
+    const vec3f& color, float roughness, const vec3f& scattering,
+    float scanisotropy = 0, float trdepth = 0.01f, int color_tex = invalidid,
+    int roughness_tex = invalidid, int scattering_tex = invalidid,
+    int normal_tex = invalidid);
+int add_instance(scene_data& scene, const string& name, const frame3f& frame,
+    int shape, int material);
+int add_instance(scene_data& scene, const string& name, const frame3f& frame,
+    const shape_data& shape, const material_data& material);
+int add_environment(scene_data& scene, const string& name, const frame3f& frame,
+    const vec3f& emission, int emission_tex = invalidid);
+int add_texture(scene_data& scene, const string& name,
+    const image_t<vec4f>& texture, bool linear = true);
+int add_texture(scene_data& scene, const string& name,
+    const image_t<vec4b>& texture, bool linear = false);
 
 // Return scene statistics as list of strings.
 vector<string> scene_stats(const scene_data& scene, bool verbose = false);
