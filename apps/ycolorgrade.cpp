@@ -67,12 +67,13 @@ void run(const vector<string>& args) {
   }
 
   // load image
-  auto image = load_image(imagename);
+  auto image     = load_image(imagename);
+  auto in_linear = is_linear_filename(imagename);
 
   // switch between interactive and offline
   if (!interactive) {
     // apply color grade
-    image = colorgrade_image(image, true, params);
+    image = colorgrade_image(image, in_linear, params);
 
     // save image
     save_image(outname, image);
@@ -84,7 +85,7 @@ void run(const vector<string>& args) {
 
     // display image
     auto display = image;
-    colorgrade_image(display, image, true, params);
+    colorgrade_image(display, image, in_linear, params);
 
     // opengl image
     auto glimage  = glimage_state{};

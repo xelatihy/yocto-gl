@@ -59,8 +59,9 @@ void run(const vector<string>& args) {
   parse_cli(cli, args);
 
   // load
-  auto image  = load_image(imagename, is_ldr_filename(imagename));
-  auto linear = is_hdr_filename(imagename);
+  auto image      = load_image(imagename);
+  auto in_linear  = is_linear_filename(imagename);
+  auto out_linear = is_linear_filename(outname);
 
   // resize if needed
   if (width != 0 || height != 0) {
@@ -69,9 +70,11 @@ void run(const vector<string>& args) {
 
   // switch between interactive and offline
   if (!interactive) {
-    // tonemap if needed
-    if (linear && is_ldr_filename(outname)) {
+    // change color space if needed
+    if (in_linear && !out_linear) {
       image = tonemap_image(image, exposure, filmic);
+    } else if (!in_linear && out_linear) {
+      image = srgb_to_rgb(image);
     }
 
     // save
@@ -79,7 +82,7 @@ void run(const vector<string>& args) {
   } else {
 #ifdef YOCTO_OPENGL
     // display image
-    if (!linear) image = srgb_to_rgb(image);
+    if (!in_linear) image = srgb_to_rgb(image);
     auto  display  = image;
     float exposure = 0;
     bool  filmic   = false;

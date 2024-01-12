@@ -156,7 +156,7 @@ void run(const vector<string>& args) {
     // save image
     timer      = simple_timer{};
     auto image = get_image(state);
-    save_image(outname, image);
+    save_image(outname, is_srgb_filename(outname) ? rgb_to_srgb(image) : image);
     print_info("save image: {}", elapsed_formatted(timer));
   } else {
 #ifdef YOCTO_OPENGL

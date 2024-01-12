@@ -56,8 +56,11 @@ void run(const vector<string>& args) {
   auto image1 = load_image(filename1);
   auto image2 = load_image(filename2);
 
-  // check sizes
+  // check sizes and types
   if (image1.size() != image2.size()) throw io_error("different image sizes");
+  if (is_linear_filename(filename1) != is_linear_filename(filename2) ||
+      is_linear_filename(filename1) != is_linear_filename(outname))
+    throw io_error("different image types");
 
   // compute diff
   auto diff = image_difference(image1, image2, true);

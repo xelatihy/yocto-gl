@@ -452,22 +452,20 @@ bool is_ldr_filename(const string& filename) {
          ext == ".tga";
 }
 
-// Loads a float image.
-image_t<vec4f> load_image(const string& filename, bool srgb) {
-  auto image_ = image_t<vec4f>{};
-  load_image(filename, image_, srgb);
-  return image_;
+// Check if an image is linear/sRGB based on filename.
+bool is_linear_filename(const string& filename) {
+  auto ext = path_extension(filename);
+  return ext == ".hdr" || ext == ".exr" || ext == ".pfm";
 }
 
-// Loads a byte image.
-image_t<vec4b> load_imageb(const string& filename, bool srgb) {
-  auto image_ = image_t<vec4b>{};
-  load_image(filename, image_, srgb);
-  return image_;
+bool is_srgb_filename(const string& filename) {
+  auto ext = path_extension(filename);
+  return ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".bmp" ||
+         ext == ".tga";
 }
 
 // Loads a float image.
-void load_image(const string& filename, image_t<vec4f>& image, bool srgb) {
+image_t<vec4f> load_image(const string& filename) {
   auto ext = path_extension(filename);
   if (ext == ".exr" || ext == ".EXR") {
     auto buffer = load_binary(filename);
@@ -476,39 +474,35 @@ void load_image(const string& filename, image_t<vec4f>& image, bool srgb) {
     if (LoadEXRFromMemory(&pixels, &width, &height, buffer.data(),
             buffer.size(), nullptr) != 0)
       throw io_error{"cannot read " + filename};
-    image = {{width, height}, (vec4f*)pixels};
-    if (srgb) image = rgb_to_srgb(image);
+    auto image = image_t<vec4f>{{width, height}, (vec4f*)pixels};
     free(pixels);
+    return image;
   } else if (ext == ".hdr" || ext == ".HDR") {
     auto buffer = load_binary(filename);
     auto width = 0, height = 0, ncomp = 0;
     auto pixels = stbi_loadf_from_memory(
         buffer.data(), (int)buffer.size(), &width, &height, &ncomp, 4);
     if (pixels == nullptr) throw io_error{"cannot read " + filename};
-    image = {{width, height}, (vec4f*)pixels};
-    if (srgb) image = rgb_to_srgb(image);
+    auto image = image_t<vec4f>{{width, height}, (vec4f*)pixels};
     free(pixels);
+    return image;
   } else if (ext == ".png" || ext == ".PNG" || ext == ".jpg" || ext == ".JPG" ||
              ext == ".jpeg" || ext == ".JPEG" || ext == ".tga" ||
              ext == ".TGA" || ext == ".bmp" || ext == ".BMP") {
-    auto imageb = load_imageb(filename);
-    image       = srgb ? byte_to_float(imageb) : srgbb_to_rgb(imageb);
+    return srgbb_to_rgb(load_imageb(filename));
   } else if (ext == ".ypreset" || ext == ".YPRESET") {
-    image = make_image_preset(filename);
-    if (is_srgb_preset(filename) != srgb) {
-      image = srgb ? rgb_to_srgb(image) : srgb_to_rgb(image);
-    }
+    auto image = make_image_preset(filename);
+    return is_srgb_preset(filename) ? srgb_to_rgb(image) : image;
   } else {
     throw io_error{"unsupported format " + filename};
   }
 }
 
 // Loads a byte image.
-void load_image(const string& filename, image_t<vec4b>& image, bool srgb) {
+image_t<vec4b> load_imageb(const string& filename) {
   auto ext = path_extension(filename);
   if (ext == ".exr" || ext == ".EXR" || ext == ".hdr" || ext == ".HDR") {
-    auto imagef = load_image(filename);
-    image       = srgb ? rgb_to_srgbb(imagef) : float_to_byte(imagef);
+    return float_to_byte(load_image(filename));
   } else if (ext == ".png" || ext == ".PNG" || ext == ".jpg" || ext == ".JPG" ||
              ext == ".jpeg" || ext == ".JPEG" || ext == ".tga" ||
              ext == ".TGA" || ext == ".bmp" || ext == ".BMP") {
@@ -517,21 +511,20 @@ void load_image(const string& filename, image_t<vec4b>& image, bool srgb) {
     auto pixels = stbi_load_from_memory(
         buffer.data(), (int)buffer.size(), &width, &height, &ncomp, 4);
     if (pixels == nullptr) throw io_error{"cannot read " + filename};
-    image = {{width, height}, (vec4b*)pixels};
-    if (!srgb) image = float_to_byte(srgbb_to_rgb(image));
+    auto image = image_t<vec4b>{{width, height}, (vec4b*)pixels};
     free(pixels);
+    return image;
   } else if (ext == ".ypreset" || ext == ".YPRESET") {
-    auto imagef = load_image(filename);
-    if (is_srgb_preset(filename) != srgb) {
-      image = srgb ? rgb_to_srgbb(imagef) : float_to_byte(srgb_to_rgb(imagef));
-    } else {
-      image = float_to_byte(imagef);
-    }
+    return float_to_byte(load_image(filename));
   } else {
     throw io_error{"unsupported format " + filename};
   }
 }
 
+bool is_linear_preset(const string& type_) {
+  auto type = path_basename(type_);
+  return type.find("sky") != string::npos;
+}
 bool is_srgb_preset(const string& type_) {
   auto type = path_basename(type_);
   return type.find("sky") == string::npos;
@@ -648,8 +641,7 @@ image_t<vec4f> make_image_preset(const string& type_) {
 }
 
 // Saves a float image.
-void save_image(
-    const string& filename, const image_t<vec4f>& image, bool srgb) {
+void save_image(const string& filename, const image_t<vec4f>& image) {
   // write data
   auto stbi_write_data = [](void* context, void* data, int size) {
     auto& buffer = *(vector<byte>*)context;
@@ -662,18 +654,16 @@ void save_image(
 
   auto ext = path_extension(filename);
   if (ext == ".hdr" || ext == ".HDR") {
-    auto& image_ = srgb ? srgb_to_rgb(image) : image;
-    auto  buffer = vector<byte>{};
+    auto buffer = vector<byte>{};
     if (!(bool)stbi_write_hdr_to_func(stbi_write_data, &buffer, width, height,
-            num_channels, (const float*)image_.data()))
+            num_channels, (const float*)image.data()))
       throw io_error{"cannot write " + filename};
     return save_binary(filename, buffer);
   } else if (ext == ".exr" || ext == ".EXR") {
-    auto& image_ = srgb ? srgb_to_rgb(image) : image;
-    auto  data   = (byte*)nullptr;
-    auto  count  = (size_t)0;
-    if (SaveEXRToMemory((const float*)image_.data(), width, height,
-            num_channels, 1, &data, &count, nullptr) < 0)
+    auto data  = (byte*)nullptr;
+    auto count = (size_t)0;
+    if (SaveEXRToMemory((const float*)image.data(), width, height, num_channels,
+            1, &data, &count, nullptr) < 0)
       throw io_error{"cannot write " + filename};
     auto buffer = vector<byte>{data, data + count};
     free(data);
@@ -681,15 +671,14 @@ void save_image(
   } else if (ext == ".png" || ext == ".PNG" || ext == ".jpg" || ext == ".JPG" ||
              ext == ".jpeg" || ext == ".JPEG" || ext == ".tga" ||
              ext == ".TGA" || ext == ".bmp" || ext == ".BMP") {
-    save_image(filename, srgb ? float_to_byte(image) : rgb_to_srgbb(image));
+    return save_imageb(filename, float_to_byte(image));
   } else {
     throw io_error{"unsupported format " + filename};
   }
 }
 
 // Saves a byte image.
-void save_image(
-    const string& filename, const image_t<vec4b>& image, bool srgb) {
+void save_imageb(const string& filename, const image_t<vec4b>& image) {
   // write data
   auto stbi_write_data = [](void* context, void* data, int size) {
     auto& buffer = *(vector<byte>*)context;
@@ -702,35 +691,30 @@ void save_image(
 
   auto ext = path_extension(filename);
   if (ext == ".hdr" || ext == ".HDR" || ext == ".exr" || ext == ".EXR") {
-    return save_image(
-        filename, srgb ? srgbb_to_rgb(image) : byte_to_float(image));
+    return save_image(filename, byte_to_float(image));
   } else if (ext == ".png" || ext == ".PNG") {
-    auto& image_ = srgb ? image : rgb_to_srgbb(byte_to_float(image));
-    auto  buffer = vector<byte>{};
+    auto buffer = vector<byte>{};
     if (!(bool)stbi_write_png_to_func(stbi_write_data, &buffer, width, height,
-            num_channels, (const byte*)image_.data(), width * 4))
+            num_channels, (const byte*)image.data(), width * 4))
       throw io_error{"cannot write " + filename};
     return save_binary(filename, buffer);
   } else if (ext == ".jpg" || ext == ".JPG" || ext == ".jpeg" ||
              ext == ".JPEG") {
-    auto& image_ = srgb ? image : rgb_to_srgbb(byte_to_float(image));
-    auto  buffer = vector<byte>{};
+    auto buffer = vector<byte>{};
     if (!(bool)stbi_write_jpg_to_func(stbi_write_data, &buffer, width, height,
-            num_channels, (const byte*)image_.data(), 75))
+            num_channels, (const byte*)image.data(), 75))
       throw io_error{"cannot write " + filename};
     return save_binary(filename, buffer);
   } else if (ext == ".tga" || ext == ".TGA") {
-    auto& image_ = srgb ? image : rgb_to_srgbb(byte_to_float(image));
-    auto  buffer = vector<byte>{};
+    auto buffer = vector<byte>{};
     if (!(bool)stbi_write_tga_to_func(stbi_write_data, &buffer, width, height,
-            num_channels, (const byte*)image_.data()))
+            num_channels, (const byte*)image.data()))
       throw io_error{"cannot write " + filename};
     return save_binary(filename, buffer);
   } else if (ext == ".bmp" || ext == ".BMP") {
-    auto& image_ = srgb ? image : rgb_to_srgbb(byte_to_float(image));
-    auto  buffer = vector<byte>{};
+    auto buffer = vector<byte>{};
     if (!(bool)stbi_write_bmp_to_func(stbi_write_data, &buffer, width, height,
-            num_channels, (const byte*)image_.data()))
+            num_channels, (const byte*)image.data()))
       throw io_error{"cannot write " + filename};
     return save_binary(filename, buffer);
   } else {
@@ -1310,11 +1294,11 @@ namespace yocto {
 void load_texture(const string& filename, texture_data& texture) {
   auto ext = path_extension(filename);
   if (ext == ".exr" || ext == ".EXR" || ext == ".hdr" || ext == ".HDR") {
-    texture.pixelsf = load_image(filename, false);
+    texture.pixelsf = load_image(filename);
   } else if (ext == ".png" || ext == ".PNG" || ext == ".jpg" || ext == ".JPG" ||
              ext == ".jpeg" || ext == ".JPEG" || ext == ".tga" ||
              ext == ".TGA" || ext == ".bmp" || ext == ".BMP") {
-    texture.pixelsb = load_imageb(filename, true);
+    texture.pixelsb = load_imageb(filename);
   } else if (ext == ".ypreset" || ext == ".YPRESET") {
     texture = make_texture_preset(filename);
   } else {
@@ -1327,7 +1311,7 @@ void save_texture(const string& filename, const texture_data& texture) {
   if (!texture.pixelsf.empty()) {
     save_image(filename, texture.pixelsf);
   } else {
-    save_image(filename, texture.pixelsb);
+    save_imageb(filename, texture.pixelsb);
   }
 }
 
