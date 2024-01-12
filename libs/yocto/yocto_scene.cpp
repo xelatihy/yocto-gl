@@ -184,9 +184,10 @@ material_point eval_material(const scene_data& scene,
     const material_data& material, const vec2f& texcoord,
     const vec4f& color_shp) {
   // evaluate textures
-  auto emission_tex   = eval_texture(scene, material.emission_tex, texcoord);
-  auto color_tex      = eval_texture(scene, material.color_tex, texcoord);
-  auto roughness_tex  = eval_texture(scene, material.roughness_tex, texcoord);
+  auto emission_tex  = eval_texture(scene, material.emission_tex, texcoord);
+  auto color_tex     = eval_texture(scene, material.color_tex, texcoord);
+  auto roughness_tex = eval_texture(
+      scene, material.roughness_tex, texcoord, true);
   auto scattering_tex = eval_texture(scene, material.scattering_tex, texcoord);
 
   // material point
@@ -511,14 +512,12 @@ material_point eval_material(const scene_data& scene,
   auto  texcoord = eval_texcoord(scene, instance, element, uv);
 
   // evaluate textures
-  auto emission_tex = eval_texture(
-      scene, material.emission_tex, texcoord, true);
+  auto emission_tex  = eval_texture(scene, material.emission_tex, texcoord);
   auto color_shp     = eval_color(scene, instance, element, uv);
-  auto color_tex     = eval_texture(scene, material.color_tex, texcoord, true);
+  auto color_tex     = eval_texture(scene, material.color_tex, texcoord);
   auto roughness_tex = eval_texture(
-      scene, material.roughness_tex, texcoord, false);
-  auto scattering_tex = eval_texture(
-      scene, material.scattering_tex, texcoord, true);
+      scene, material.roughness_tex, texcoord, true);
+  auto scattering_tex = eval_texture(scene, material.scattering_tex, texcoord);
 
   // material point
   auto point         = material_point{};
