@@ -109,7 +109,9 @@ namespace yocto {
 
 // pixel access
 vec4f lookup_texture(
-    const texture_data& texture, vec2i ij, bool ldr_as_linear) {
+    const texture_data& texture, vec2i ij_, bool ldr_as_linear, bool no_flipv) {
+  auto size = max(texture.pixelsb.size(), texture.pixelsf.size());
+  auto ij   = no_flipv ? ij_ : vec2i{ij_.x, size.y - 1 - ij_.y};
   if (!texture.pixelsf.empty()) return texture.pixelsf[ij];
   if (!texture.pixelsb.empty())
     return ldr_as_linear ? byte_to_float(texture.pixelsb[ij])
@@ -119,18 +121,18 @@ vec4f lookup_texture(
 
 // Evaluates an image at a point `uv`.
 vec4f eval_texture(const texture_data& texture, const vec2f& uv,
-    bool ldr_as_linear, bool no_interpolation, bool clamp_to_edge) {
+    bool ldr_as_linear, bool no_flipv) {
   if (texture.pixelsf.empty() && texture.pixelsb.empty()) return {0, 0, 0, 0};
 
   // get texture width/height
   auto size = max(texture.pixelsf.size(), texture.pixelsb.size());
 
   // get coordinates normalized for tiling
-  auto st = (clamp_to_edge ? clamp(uv, 0.0f, 1.0f) : mod(uv, 1.0f)) *
+  auto st = (texture.clamp ? clamp(uv, 0.0f, 1.0f) : mod(uv, 1.0f)) *
             (vec2f)size;
 
   // handle interpolation
-  if (no_interpolation) {
+  if (texture.nearest) {
     auto ij = clamp((vec2i)st, {0, 0}, size - 1);
     return lookup_texture(texture, ij, ldr_as_linear);
   } else {
@@ -145,17 +147,12 @@ vec4f eval_texture(const texture_data& texture, const vec2f& uv,
            lookup_texture(texture, i1j1, ldr_as_linear) * w.x * w.y;
   }
 }
-vec4f eval_texture(
-    const texture_data& texture, const vec2f& uv, bool ldr_as_linear) {
-  return eval_texture(
-      texture, uv, ldr_as_linear, texture.nearest, texture.clamp);
-}
 
 // Helpers
-vec4f eval_texture(
-    const scene_data& scene, int texture, const vec2f& uv, bool ldr_as_linear) {
+vec4f eval_texture(const scene_data& scene, int texture, const vec2f& uv,
+    bool ldr_as_linear, bool no_flipv) {
   if (texture == invalidid) return {1, 1, 1, 1};
-  return eval_texture(scene.textures[texture], uv, ldr_as_linear);
+  return eval_texture(scene.textures[texture], uv, ldr_as_linear, no_flipv);
 }
 
 // conversion from image
