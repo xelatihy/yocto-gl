@@ -402,7 +402,8 @@ static vec3f sample_lights(const scene_data& scene, const trace_lights& lights,
       auto& texture = scene.textures[environment.emission_tex];
       auto  idx     = sample_discrete(light.elements_cdf, rel);
       auto  size    = max(texture.pixelsf.size(), texture.pixelsb.size());
-      auto  uv      = vec2f{
+      // we avoid flipping twice the v in the uv and returned direction
+      auto uv = vec2f{
           ((idx % size.x) + 0.5f) / size.x, ((idx / size.x) + 0.5f) / size.y};
       return transform_direction(environment.frame,
           {cos(uv.x * 2 * pif) * sin(uv.y * pif), cos(uv.y * pif),
@@ -447,7 +448,8 @@ static float sample_lights_pdf(const scene_data& scene, const trace_bvh& bvh,
       if (environment.emission_tex != invalidid) {
         auto& emission_tex = scene.textures[environment.emission_tex];
         auto  wl = transform_direction(inverse(environment.frame), direction);
-        auto  texcoord = vec2f{atan2(wl.z, wl.x) / (2 * pif),
+        // we avoid flipping twice the v in the texcoord and ij
+        auto texcoord = vec2f{atan2(wl.z, wl.x) / (2 * pif),
             acos(clamp(wl.y, -1.0f, 1.0f)) / pif};
         if (texcoord.x < 0) texcoord.x += 1;
         auto size = max(
@@ -1629,7 +1631,7 @@ trace_lights make_trace_lights(
       light.elements_cdf = vector<float>(size.x * size.y);
       for (auto idx : range(light.elements_cdf.size())) {
         auto ij                 = vec2i{(int)idx % size.x, (int)idx / size.x};
-        auto th                 = (ij.y + 0.5f) * pif / size.y;
+        auto th                 = pif - (ij.y + 0.5f) * pif / size.y;
         auto value              = lookup_texture(texture, ij);
         light.elements_cdf[idx] = max(value) * sin(th);
         if (idx != 0) light.elements_cdf[idx] += light.elements_cdf[idx - 1];

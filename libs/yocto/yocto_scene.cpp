@@ -570,7 +570,7 @@ vec3f eval_environment(const scene_data& scene,
     const environment_data& environment, const vec3f& direction) {
   auto wl       = transform_direction(inverse(environment.frame), direction);
   auto texcoord = vec2f{
-      atan2(wl.z, wl.x) / (2 * pif), acos(clamp(wl.y, -1.0f, 1.0f)) / pif};
+      atan2(wl.z, wl.x) / (2 * pif), 1 - acos(clamp(wl.y, -1.0f, 1.0f)) / pif};
   if (texcoord.x < 0) texcoord.x += 1;
   return environment.emission *
          xyz(eval_texture(scene, environment.emission_tex, texcoord));
