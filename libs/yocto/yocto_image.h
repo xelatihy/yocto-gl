@@ -156,17 +156,31 @@ inline T sum(const image_t<T>& img);
 template <typename T>
 inline T sum(const vector<T>& img);
 
+// Reconstruction kernels
+inline float box_kernel(float u);
+inline float hat_kernel(float u);
+inline float bspline_kernel(float u);
+inline float catmullrom_kernel(float u);
+inline float mitchell_kernel(float u);
+inline float box_kernel(vec2f u);
+inline float hat_kernel(vec2f u);
+inline float bspline_kernel(vec2f u);
+inline float catmullrom_kernel(vec2f u);
+inline float mitchell_kernel(vec2f u);
+
+// Generic kernel
+enum struct reconstruction_type { box, hat, bspline, catmullrom, mitchell };
+inline float reconstruction_kernel(reconstruction_type ktype, float u);
+inline float reconstruction_kernel(reconstruction_type ktype, vec2f u);
+inline int   reconstruction_radius(reconstruction_type ktype);
+
 // Image reconstruction
 template <typename T, typename Func>
 inline T reconstruct_image(const image_t<T>& img, const vec2f& uv,
     Func&& kernel, int kradius = 2, bool clamp_to_edge = false);
-
-// Reconstruction kernels
-inline float box_filter(float x);
-inline float hat_filter(float x);
-inline float bspline_filter(float x);
-inline float catmullrom_filter(float x);
-inline float mitchell_filter(float x);
+template <typename T>
+inline T reconstruct_image(const image_t<T>& img, const vec2f& uv,
+    reconstruction_type ktype, bool clamp_to_edge = false);
 
 }  // namespace yocto
 
@@ -709,12 +723,13 @@ inline void set_region(
   for (auto ij : range(source.size())) destination[ij + offset] = source[ij];
 }
 
-inline float box_filter(float x) { return x < 0.5f && x >= -0.5f ? 1 : 0; }
-inline float hat_filter(float x) {
+// Kernels
+inline float box_kernel(float x) { return x < 0.5f && x >= -0.5f ? 1 : 0; }
+inline float hat_kernel(float x) {
   auto xp = abs(x);
   return xp < 1 ? 1 - xp : 0;
 }
-inline float bspline_filter(float x) {
+inline float bspline_kernel(float x) {
   auto xp = abs(x);
 
   if (xp < 1.0f)
@@ -724,7 +739,7 @@ inline float bspline_filter(float x) {
   else
     return 0;
 }
-inline float catmullrom_filter(float x) {
+inline float catmullrom_kernel(float x) {
   auto xp = abs(x);
 
   if (xp < 1.0f)
@@ -734,7 +749,7 @@ inline float catmullrom_filter(float x) {
   else
     return 0;
 }
-inline float mitchell_filter(float x) {
+inline float mitchell_kernel(float x) {
   auto xp = abs(x);
 
   if (xp < 1.0f)
@@ -743,6 +758,51 @@ inline float mitchell_filter(float x) {
     return (32 + xp * (-60 + xp * (36 - 7 * xp))) / 18;
   else
     return 0;
+}
+
+// Kernels
+inline float box_kernel(vec2f x) { return box_kernel(x.x) * box_kernel(x.y); }
+inline float hat_kernel(vec2f x) { return hat_kernel(x.x) * hat_kernel(x.y); }
+inline float bspline_kernel(vec2f x) {
+  return bspline_kernel(x.x) * bspline_kernel(x.y);
+}
+inline float catmullrom_kernel(vec2f x) {
+  return catmullrom_kernel(x.x) * catmullrom_kernel(x.y);
+}
+inline float mitchell_kernel(vec2f x) {
+  return mitchell_kernel(x.x) * mitchell_kernel(x.y);
+}
+
+// Generic kernel
+inline float reconstruction_kernel(reconstruction_type ktype, float u) {
+  switch (ktype) {
+    case reconstruction_type::box: return box_kernel(u);
+    case reconstruction_type::hat: return hat_kernel(u);
+    case reconstruction_type::bspline: return bspline_kernel(u);
+    case reconstruction_type::catmullrom: return catmullrom_kernel(u);
+    case reconstruction_type::mitchell: return mitchell_kernel(u);
+    default: return 0;
+  }
+}
+inline float reconstruction_kernel(reconstruction_type ktype, vec2f uv) {
+  switch (ktype) {
+    case reconstruction_type::box: return box_kernel(uv);
+    case reconstruction_type::hat: return hat_kernel(uv);
+    case reconstruction_type::bspline: return bspline_kernel(uv);
+    case reconstruction_type::catmullrom: return catmullrom_kernel(uv);
+    case reconstruction_type::mitchell: return mitchell_kernel(uv);
+    default: return 0;
+  }
+}
+inline int reconstruction_radius(reconstruction_type ktype) {
+  switch (ktype) {
+    case reconstruction_type::box: return 1;
+    case reconstruction_type::hat: return 1;
+    case reconstruction_type::bspline: return 2;
+    case reconstruction_type::catmullrom: return 2;
+    case reconstruction_type::mitchell: return 2;
+    default: return 0;
+  }
 }
 
 // Image reconstruction
@@ -762,6 +822,31 @@ inline T reconstruct_image(const image_t<T>& img, const vec2f& uv,
   }
   return sum;
 }
+template <typename T>
+inline T reconstruct_image(const image_t<T>& img, const vec2f& uv,
+    reconstruction_type ktype, bool clamp_to_edge) {
+  switch (ktype) {
+    case reconstruction_type::box:
+      return reconstruct_image(
+          img, uv, [](vec2f uv) { return box_kernel(uv); }, 1, clamp_to_edge);
+    case reconstruction_type::hat:
+      return reconstruct_image(
+          img, uv, [](vec2f uv) { return hat_kernel(uv); }, 1, clamp_to_edge);
+    case reconstruction_type::bspline:
+      return reconstruct_image(
+          img, uv, [](vec2f uv) { return bspline_kernel(uv); }, 2,
+          clamp_to_edge);
+    case reconstruction_type::catmullrom:
+      return reconstruct_image(
+          img, uv, [](vec2f uv) { return catmullrom_kernel(uv); }, 2,
+          clamp_to_edge);
+    case reconstruction_type::mitchell:
+      return reconstruct_image(
+          img, uv, [](vec2f uv) { return mitchell_kernel(uv); }, 2,
+          clamp_to_edge);
+    default: return T{};
+  }
+}
 template <typename T, typename Func>
 inline T reconstruct_curve(const vector<T>& curve, float u, Func&& kernel,
     int kradius, bool clamp_to_edge) {
@@ -774,6 +859,13 @@ inline T reconstruct_curve(const vector<T>& curve, float u, Func&& kernel,
     sum += curve[clamp(i, 0, size - 1)] * w;
   }
   return sum;
+}
+template <typename T>
+inline T reconstruct_curve(const vector<T>& curve, float u,
+    reconstruction_type ktype, bool clamp_to_edge) {
+  return reconstruct_curve(
+      curve, u, [ktype](float u) { return reconstruction_kernel(ktype, u); },
+      reconstruction_radius(ktype), clamp_to_edge);
 }
 
 }  // namespace yocto

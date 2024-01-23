@@ -86,6 +86,10 @@ struct rng_state {
 // Init a random number generator with a state state from the sequence seq.
 inline rng_state make_rng(uint64_t seed, uint64_t seq = 1);
 
+// Init a sequence of random number generators.
+inline vector<rng_state> make_rngs(
+    int num, uint64_t seed1 = 961748941ull, uint64_t seed2 = 1301081ull);
+
 // Next random numbers: floats in [0,1), ints in [0,n).
 inline int   rand1i(rng_state& rng, int n);
 inline float rand1f(rng_state& rng);
@@ -202,6 +206,16 @@ inline rng_state make_rng(uint64_t seed, uint64_t seq) {
   rng.state += seed;
   _advance_rng(rng);
   return rng;
+}
+
+// Init a sequence of random number generators.
+inline vector<rng_state> make_rngs(int num, uint64_t seed1, uint64_t seed2) {
+  auto rng_ = make_rng(seed2);
+  auto rngs = vector<rng_state>(num);
+  for (auto& rng : rngs) {
+    rng = make_rng(seed1, rand1i(rng_, 1 << 31) / 2 + 1);
+  }
+  return rngs;
 }
 
 // Next random numbers: floats in [0,1), ints in [0,n).

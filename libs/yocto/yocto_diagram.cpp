@@ -203,6 +203,52 @@ static shape_data make_duvhemisphere(
   return shape;
 }
 
+// Make a uv cylinder
+shape_data make_duvcylinder(
+    const vec3i& steps, const vec2f& scale, const vec3f& uvscale = {1, 1, 1}) {
+  auto shape  = shape_data{};
+  auto qshape = shape_data{};
+  // side
+  qshape = make_rect({steps.x, steps.y}, {1, 1}, {1, 1});
+  for (auto i : range(qshape.positions.size())) {
+    auto uv             = qshape.texcoords[i];
+    auto phi            = 2 * pif * uv.x;
+    qshape.positions[i] = {
+        cos(phi) * scale.x, sin(phi) * scale.x, (2 * uv.y - 1) * scale.y};
+    qshape.normals[i]   = {cos(phi), sin(phi), 0};
+    qshape.texcoords[i] = uv * vec2f{uvscale.x, uvscale.y};
+  }
+  for (auto& quad : qshape.quads) quad = {quad.x, quad.w, quad.z, quad.y};
+  merge_shape_inplace(shape, qshape);
+  // top
+  qshape = make_rect({steps.x, steps.z}, {1, 1}, {1, 1});
+  for (auto i : range(qshape.positions.size())) {
+    auto uv             = qshape.texcoords[i];
+    auto phi            = 2 * pif * uv.x;
+    qshape.positions[i] = {
+        cos(phi) * uv.y * scale.x, sin(phi) * uv.y * scale.x, 0};
+    qshape.normals[i]     = {0, 0, 1};
+    qshape.texcoords[i]   = uv * vec2f{uvscale.x, uvscale.z};
+    qshape.positions[i].z = scale.y;
+  }
+  merge_shape_inplace(shape, qshape);
+  // bottom
+  qshape = make_rect({steps.x, steps.z}, {1, 1}, {1, 1});
+  for (auto i : range(qshape.positions.size())) {
+    auto uv             = qshape.texcoords[i];
+    auto phi            = 2 * pif * uv.x;
+    qshape.positions[i] = {
+        cos(phi) * uv.y * scale.x, sin(phi) * uv.y * scale.x, 0};
+    qshape.normals[i]     = {0, 0, 1};
+    qshape.texcoords[i]   = uv * vec2f{uvscale.x, uvscale.z};
+    qshape.positions[i].z = -scale.y;
+    qshape.normals[i]     = -qshape.normals[i];
+  }
+  for (auto& qquad : qshape.quads) swap(qquad.x, qquad.z);
+  merge_shape_inplace(shape, qshape);
+  return shape;
+}
+
 // Make a uv capsule
 static shape_data make_duvcapsule(
     const vec3i& steps, const vec2f& scale, const vec3f& uvscale = {1, 1, 1}) {
@@ -537,7 +583,7 @@ diagram_shape dpoints(const vector<vec3f>& positions) {
   return shape;
 }
 diagram_shape dpoints(
-    const vector<vec3f>& positions, const vector<int>& points) {
+    const vector<int>& points, const vector<vec3f>& positions) {
   auto shape      = diagram_shape{};
   shape.positions = positions;
   shape.points    = points;
@@ -899,6 +945,16 @@ diagram_shape dcube() {
 
   return shape;
 }
+diagram_shape dcube(int steps) {
+  auto shape_     = make_dbox({steps, steps, steps}, {1, 1, 1});
+  auto shape      = diagram_shape{};
+  shape.positions = shape_.positions;
+  shape.normals   = shape_.normals;
+  shape.texcoords = shape_.texcoords;
+  shape.quads     = shape_.quads;
+  shape.lines     = get_edges(shape.quads);
+  return shape;
+}
 
 // Sphere
 diagram_shape dsphere(int steps, bool isolines) {
@@ -1013,6 +1069,37 @@ diagram_shape dcone(int steps, bool isolines) {
   } else {
     shape.lines = get_edges(shape.quads);
   }
+  return shape;
+}
+
+// Cylinder
+diagram_shape duvcylinder(
+    float hscale, int rsteps, int hsteps, int csteps, bool isolines) {
+  auto shape_     = make_duvcylinder({rsteps, hsteps, csteps}, {1, hscale});
+  auto shape      = diagram_shape{};
+  shape.positions = shape_.positions;
+  shape.normals   = shape_.normals;
+  shape.texcoords = shape_.texcoords;
+
+  shape.quads = shape_.quads;
+
+  // TODO: isolines
+
+  return shape;
+}
+
+// Capsule
+diagram_shape duvcapsule(
+    float hscale, int rsteps, int hsteps, int csteps, bool isolines) {
+  auto shape_     = make_duvcapsule({rsteps, hsteps, csteps}, {1, hscale});
+  auto shape      = diagram_shape{};
+  shape.positions = shape_.positions;
+  shape.normals   = shape_.normals;
+  shape.texcoords = shape_.texcoords;
+
+  shape.quads = shape_.quads;
+
+  // TODO: isolines
 
   return shape;
 }
@@ -1557,12 +1644,12 @@ diagram_shape dplotsurface(const function<float(const vec2f&)>& func,
   if (!isolines) return shape;
 
   // isolines
-  for (auto j : {0, steps.y / 2, steps.y}) {
+  for (auto j : range(0, steps.y + 1, steps.y / 4)) {
     for (auto i : range(steps.x)) {
       shape.lines.push_back({j * stepsp1.x + i, j * stepsp1.x + i + 1});
     }
   }
-  for (auto i : {0, steps.x / 2, steps.x}) {
+  for (auto i : range(0, steps.x + 1, steps.x / 4)) {
     for (auto j : range(steps.y)) {
       shape.lines.push_back({j * stepsp1.x + i, (j + 1) * stepsp1.x + i});
     }
@@ -2167,28 +2254,6 @@ inline void parallel_for_batch(vec2i num, Func&& func) {
         }));
   }
   for (auto& f : futures) f.get();
-}
-
-// Convenience functions
-[[maybe_unused]] static vec3f eval_position(
-    const scene_data& scene, const scene_intersection& intersection) {
-  return eval_position(scene, scene.instances[intersection.instance],
-      intersection.element, intersection.uv);
-}
-[[maybe_unused]] static vec3f eval_normal(
-    const scene_data& scene, const scene_intersection& intersection) {
-  return eval_normal(scene, scene.instances[intersection.instance],
-      intersection.element, intersection.uv);
-}
-[[maybe_unused]] static vec2f eval_texcoord(
-    const scene_data& scene, const scene_intersection& intersection) {
-  return eval_texcoord(scene, scene.instances[intersection.instance],
-      intersection.element, intersection.uv);
-}
-[[maybe_unused]] static material_point eval_material(
-    const scene_data& scene, const scene_intersection& intersection) {
-  return eval_material(scene, scene.instances[intersection.instance],
-      intersection.element, intersection.uv);
 }
 
 // Generates a ray from a camera.

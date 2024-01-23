@@ -98,6 +98,7 @@ inline float log2(float a);
 inline float exp2(float a);
 inline float pow(float a, float b);
 inline bool  isfinite(float a);
+inline float atan(float a, float b);
 inline float atan2(float a, float b);
 inline float fmod(float a, float b);
 inline float mod(float a, float b);
@@ -243,10 +244,11 @@ inline vec2f& operator/=(vec2f& a, float b);
 // Vector products and lengths.
 inline float dot(const vec2f& a, const vec2f& b);
 inline float cross(const vec2f& a, const vec2f& b);
-
+inline float norm(const vec2f& a);
+inline float norm_squared(const vec2f& a);
+inline vec2f normalize(const vec2f& a);
 inline float length(const vec2f& a);
 inline float length_squared(const vec2f& a);
-inline vec2f normalize(const vec2f& a);
 inline float distance(const vec2f& a, const vec2f& b);
 inline float distance_squared(const vec2f& a, const vec2f& b);
 inline float angle(const vec2f& a, const vec2f& b);
@@ -264,6 +266,7 @@ inline float max(const vec2f& a);
 inline float min(const vec2f& a);
 inline float sum(const vec2f& a);
 inline float mean(const vec2f& a);
+inline float prod(const vec2f& a);
 
 // Functions applied to vector elements
 inline vec2f abs(const vec2f& a);
@@ -325,10 +328,11 @@ inline vec3f& operator/=(vec3f& a, float b);
 // Vector products and lengths.
 inline float dot(const vec3f& a, const vec3f& b);
 inline vec3f cross(const vec3f& a, const vec3f& b);
-
+inline float norm(const vec3f& a);
+inline float norm_squared(const vec3f& a);
+inline vec3f normalize(const vec3f& a);
 inline float length(const vec3f& a);
 inline float length_squared(const vec3f& a);
-inline vec3f normalize(const vec3f& a);
 inline float distance(const vec3f& a, const vec3f& b);
 inline float distance_squared(const vec3f& a, const vec3f& b);
 inline float angle(const vec3f& a, const vec3f& b);
@@ -354,6 +358,7 @@ inline float max(const vec3f& a);
 inline float min(const vec3f& a);
 inline float sum(const vec3f& a);
 inline float mean(const vec3f& a);
+inline float prod(const vec3f& a);
 
 // Functions applied to vector elements
 inline vec3f abs(const vec3f& a);
@@ -414,9 +419,11 @@ inline vec4f& operator/=(vec4f& a, float b);
 
 // Vector products and lengths.
 inline float dot(const vec4f& a, const vec4f& b);
+inline float norm(const vec4f& a);
+inline float norm_squared(const vec4f& a);
+inline vec4f normalize(const vec4f& a);
 inline float length(const vec4f& a);
 inline float length_squared(const vec4f& a);
-inline vec4f normalize(const vec4f& a);
 inline float distance(const vec4f& a, const vec4f& b);
 inline float distance_squared(const vec4f& a, const vec4f& b);
 inline float angle(const vec4f& a, const vec4f& b);
@@ -436,6 +443,7 @@ inline float max(const vec4f& a);
 inline float min(const vec4f& a);
 inline float sum(const vec4f& a);
 inline float mean(const vec4f& a);
+inline float prod(const vec4f& a);
 
 // Functions applied to vector elements
 inline vec4f abs(const vec4f& a);
@@ -602,6 +610,7 @@ inline vec2i clamp(const vec2i& x, int min, int max);
 inline int max(const vec2i& a);
 inline int min(const vec2i& a);
 inline int sum(const vec2i& a);
+inline int prod(const vec2i& a);
 
 // Functions applied to vector elements
 inline vec2i abs(const vec2i& a);
@@ -658,6 +667,7 @@ inline vec3i clamp(const vec3i& x, int min, int max);
 inline int max(const vec3i& a);
 inline int min(const vec3i& a);
 inline int sum(const vec3i& a);
+inline int prod(const vec3i& a);
 
 // Functions applied to vector elements
 inline vec3i abs(const vec3i& a);
@@ -714,6 +724,7 @@ inline vec4i clamp(const vec4i& x, int min, int max);
 inline int max(const vec4i& a);
 inline int min(const vec4i& a);
 inline int sum(const vec4i& a);
+inline int prod(const vec4i& a);
 
 // Functions applied to vector elements
 inline vec4i abs(const vec4i& a);
@@ -784,6 +795,7 @@ inline bool operator!=(const mat2f& a, const mat2f& b);
 // Matrix operations.
 inline mat2f operator+(const mat2f& a, const mat2f& b);
 inline mat2f operator*(const mat2f& a, float b);
+inline mat2f operator*(float a, const mat2f& b);
 inline vec2f operator*(const mat2f& a, const vec2f& b);
 inline vec2f operator*(const vec2f& a, const mat2f& b);
 inline mat2f operator*(const mat2f& a, const mat2f& b);
@@ -796,6 +808,7 @@ inline mat2f& operator*=(mat2f& a, float b);
 // Matrix diagonals and transposes.
 inline vec2f diagonal(const mat2f& a);
 inline mat2f transpose(const mat2f& a);
+inline float trace(const mat2f& a);
 
 // Matrix adjoints, determinants and inverses.
 inline float determinant(const mat2f& a);
@@ -809,6 +822,7 @@ inline bool operator!=(const mat3f& a, const mat3f& b);
 // Matrix operations.
 inline mat3f operator+(const mat3f& a, const mat3f& b);
 inline mat3f operator*(const mat3f& a, float b);
+inline mat3f operator*(float a, const mat3f& b);
 inline vec3f operator*(const mat3f& a, const vec3f& b);
 inline vec3f operator*(const vec3f& a, const mat3f& b);
 inline mat3f operator*(const mat3f& a, const mat3f& b);
@@ -821,6 +835,7 @@ inline mat3f& operator*=(mat3f& a, float b);
 // Matrix diagonals and transposes.
 inline vec3f diagonal(const mat3f& a);
 inline mat3f transpose(const mat3f& a);
+inline float trace(const mat3f& a);
 
 // Matrix adjoints, determinants and inverses.
 inline float determinant(const mat3f& a);
@@ -837,6 +852,7 @@ inline bool operator!=(const mat4f& a, const mat4f& b);
 // Matrix operations.
 inline mat4f operator+(const mat4f& a, const mat4f& b);
 inline mat4f operator*(const mat4f& a, float b);
+inline mat4f operator*(float a, const mat4f& b);
 inline vec4f operator*(const mat4f& a, const vec4f& b);
 inline vec4f operator*(const vec4f& a, const mat4f& b);
 inline mat4f operator*(const mat4f& a, const mat4f& b);
@@ -849,6 +865,7 @@ inline mat4f& operator*=(mat4f& a, float b);
 // Matrix diagonals and transposes.
 inline vec4f diagonal(const mat4f& a);
 inline mat4f transpose(const mat4f& a);
+inline float trace(const mat4f& a);
 
 }  // namespace yocto
 
@@ -944,45 +961,6 @@ inline frame3f frame_fromzx(const vec3f& o, const vec3f& z_, const vec3f& x_);
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// QUATERNIONS
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Quaternions to represent rotations
-struct quat4f {
-  float x = 0;
-  float y = 0;
-  float z = 0;
-  float w = 1;
-
-  constexpr quat4f() : x{0}, y{0}, z{0}, w{1} {}
-  constexpr quat4f(float x_, float y_, float z_, float w_)
-      : x{x_}, y{y_}, z{z_}, w{w_} {}
-};
-
-// Constants
-constexpr auto identity_quat4f = quat4f{0, 0, 0, 1};
-
-// Quaternion operations
-inline quat4f operator+(const quat4f& a, const quat4f& b);
-inline quat4f operator*(const quat4f& a, float b);
-inline quat4f operator/(const quat4f& a, float b);
-inline quat4f operator*(const quat4f& a, const quat4f& b);
-
-// Quaternion operations
-inline float  dot(const quat4f& a, const quat4f& b);
-inline float  length(const quat4f& a);
-inline quat4f normalize(const quat4f& a);
-inline quat4f conjugate(const quat4f& a);
-inline quat4f inverse(const quat4f& a);
-inline float  uangle(const quat4f& a, const quat4f& b);
-inline quat4f lerp(const quat4f& a, const quat4f& b, float t);
-inline quat4f nlerp(const quat4f& a, const quat4f& b, float t);
-inline quat4f slerp(const quat4f& a, const quat4f& b, float t);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
 // TRANSFORMS
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -1037,8 +1015,7 @@ inline frame2f rotation_frame(const mat2f& rot);
 inline frame3f translation_frame(const vec3f& a);
 inline frame3f scaling_frame(const vec3f& a);
 inline frame3f rotation_frame(const vec3f& axis, float angle);
-inline frame3f rotation_frame(const vec4f& quat);
-inline frame3f rotation_frame(const quat4f& quat);
+inline frame3f rotation_frame(const pair<vec3f, float>& axis_angle);
 inline frame3f rotation_frame(const mat3f& rot);
 
 // Lookat frame. Z-axis can be inverted with inv_xz.
@@ -1194,6 +1171,11 @@ inline bool isfinite(float a) { return std::isfinite(a); }
 #else
 inline bool isfinite(float a) { return ::isfinite(a); }
 #endif
+inline float atan(float a, float b) {
+  auto angle = std::atan2(a, b);
+  if (angle < 0) angle += 2 * pif;
+  return angle;
+}
 inline float atan2(float a, float b) { return std::atan2(a, b); }
 inline float fmod(float a, float b) { return std::fmod(a, b); }
 inline float mod(float a, float b) {
@@ -1325,13 +1307,14 @@ inline float dot(const vec2f& a, const vec2f& b) {
 inline float cross(const vec2f& a, const vec2f& b) {
   return a.x * b.y - a.y * b.x;
 }
-
-inline float length(const vec2f& a) { return sqrt(dot(a, a)); }
-inline float length_squared(const vec2f& a) { return dot(a, a); }
+inline float norm(const vec2f& a) { return sqrt(dot(a, a)); }
+inline float norm_squared(const vec2f& a) { return dot(a, a); }
 inline vec2f normalize(const vec2f& a) {
-  auto l = length(a);
+  auto l = norm(a);
   return (l != 0) ? a / l : a;
 }
+inline float length(const vec2f& a) { return sqrt(dot(a, a)); }
+inline float length_squared(const vec2f& a) { return dot(a, a); }
 inline float distance(const vec2f& a, const vec2f& b) { return length(a - b); }
 inline float distance_squared(const vec2f& a, const vec2f& b) {
   return dot(a - b, a - b);
@@ -1366,6 +1349,7 @@ inline float max(const vec2f& a) { return max(a.x, a.y); }
 inline float min(const vec2f& a) { return min(a.x, a.y); }
 inline float sum(const vec2f& a) { return a.x + a.y; }
 inline float mean(const vec2f& a) { return sum(a) / 2; }
+inline float prod(const vec2f& a) { return a.x * a.y; }
 
 // Functions applied to vector elements
 inline vec2f abs(const vec2f& a) { return {abs(a.x), abs(a.y)}; }
@@ -1465,13 +1449,14 @@ inline float dot(const vec3f& a, const vec3f& b) {
 inline vec3f cross(const vec3f& a, const vec3f& b) {
   return {a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x};
 }
-
-inline float length(const vec3f& a) { return sqrt(dot(a, a)); }
-inline float length_squared(const vec3f& a) { return dot(a, a); }
+inline float norm(const vec3f& a) { return sqrt(dot(a, a)); }
+inline float norm_squared(const vec3f& a) { return dot(a, a); }
 inline vec3f normalize(const vec3f& a) {
-  auto l = length(a);
+  auto l = norm(a);
   return (l != 0) ? a / l : a;
 }
+inline float length(const vec3f& a) { return sqrt(dot(a, a)); }
+inline float length_squared(const vec3f& a) { return dot(a, a); }
 inline float distance(const vec3f& a, const vec3f& b) { return length(a - b); }
 inline float distance_squared(const vec3f& a, const vec3f& b) {
   return dot(a - b, a - b);
@@ -1531,6 +1516,7 @@ inline float max(const vec3f& a) { return max(max(a.x, a.y), a.z); }
 inline float min(const vec3f& a) { return min(min(a.x, a.y), a.z); }
 inline float sum(const vec3f& a) { return a.x + a.y + a.z; }
 inline float mean(const vec3f& a) { return sum(a) / 3; }
+inline float prod(const vec3f& a) { return a.x * a.y * a.z; }
 
 // Functions applied to vector elements
 inline vec3f abs(const vec3f& a) { return {abs(a.x), abs(a.y), abs(a.z)}; }
@@ -1637,12 +1623,14 @@ inline vec4f& operator/=(vec4f& a, float b) { return a = a / b; }
 inline float dot(const vec4f& a, const vec4f& b) {
   return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
 }
-inline float length(const vec4f& a) { return sqrt(dot(a, a)); }
-inline float length_squared(const vec4f& a) { return dot(a, a); }
+inline float norm(const vec4f& a) { return sqrt(dot(a, a)); }
+inline float norm_squared(const vec4f& a) { return dot(a, a); }
 inline vec4f normalize(const vec4f& a) {
-  auto l = length(a);
+  auto l = norm(a);
   return (l != 0) ? a / l : a;
 }
+inline float length(const vec4f& a) { return sqrt(dot(a, a)); }
+inline float length_squared(const vec4f& a) { return dot(a, a); }
 inline float distance(const vec4f& a, const vec4f& b) { return length(a - b); }
 inline float distance_squared(const vec4f& a, const vec4f& b) {
   return dot(a - b, a - b);
@@ -1697,6 +1685,7 @@ inline float max(const vec4f& a) { return max(max(max(a.x, a.y), a.z), a.w); }
 inline float min(const vec4f& a) { return min(min(min(a.x, a.y), a.z), a.w); }
 inline float sum(const vec4f& a) { return a.x + a.y + a.z + a.w; }
 inline float mean(const vec4f& a) { return sum(a) / 4; }
+inline float prod(const vec4f& a) { return a.x * a.y * a.z * a.w; }
 
 // Functions applied to vector elements
 inline vec4f abs(const vec4f& a) {
@@ -1873,6 +1862,7 @@ inline vec2i mod(vec2i a, int b) { return {mod(a.x, b), mod(a.y, b)}; }
 inline int   max(const vec2i& a) { return max(a.x, a.y); }
 inline int   min(const vec2i& a) { return min(a.x, a.y); }
 inline int   sum(const vec2i& a) { return a.x + a.y; }
+inline int   prod(const vec2i& a) { return a.x * a.y; }
 
 // Functions applied to vector elements
 inline vec2i abs(const vec2i& a) { return {abs(a.x), abs(a.y)}; }
@@ -1981,6 +1971,7 @@ inline vec3i mod(vec3i a, int b) {
 inline int max(const vec3i& a) { return max(max(a.x, a.y), a.z); }
 inline int min(const vec3i& a) { return min(min(a.x, a.y), a.z); }
 inline int sum(const vec3i& a) { return a.x + a.y + a.z; }
+inline int prod(const vec3i& a) { return a.x * a.y * a.z; }
 
 // Functions applied to vector elements
 inline vec3i abs(const vec3i& a) { return {abs(a.x), abs(a.y), abs(a.z)}; }
@@ -2090,6 +2081,7 @@ inline vec4i mod(vec4i a, int b) {
 inline int max(const vec4i& a) { return max(max(max(a.x, a.y), a.z), a.w); }
 inline int min(const vec4i& a) { return min(min(min(a.x, a.y), a.z), a.w); }
 inline int sum(const vec4i& a) { return a.x + a.y + a.z + a.w; }
+inline int prod(const vec4i& a) { return a.x * a.y * a.z * a.w; }
 
 // Functions applied to vector elements
 inline vec4i abs(const vec4i& a) {
@@ -2135,6 +2127,7 @@ inline mat2f operator+(const mat2f& a, const mat2f& b) {
   return {a.x + b.x, a.y + b.y};
 }
 inline mat2f operator*(const mat2f& a, float b) { return {a.x * b, a.y * b}; }
+inline mat2f operator*(float a, const mat2f& b) { return {a * b.x, a * b.y}; }
 inline vec2f operator*(const mat2f& a, const vec2f& b) {
   return a.x * b.x + a.y * b.y;
 }
@@ -2155,6 +2148,7 @@ inline vec2f diagonal(const mat2f& a) { return {a.x.x, a.y.y}; }
 inline mat2f transpose(const mat2f& a) {
   return {{a.x.x, a.y.x}, {a.x.y, a.y.y}};
 }
+inline float trace(const mat2f& a) { return a.x.x + a.y.y; }
 
 // Matrix adjoints, determinants and inverses.
 inline float determinant(const mat2f& a) { return cross(a.x, a.y); }
@@ -2177,6 +2171,9 @@ inline mat3f operator+(const mat3f& a, const mat3f& b) {
 }
 inline mat3f operator*(const mat3f& a, float b) {
   return {a.x * b, a.y * b, a.z * b};
+}
+inline mat3f operator*(float a, const mat3f& b) {
+  return {a * b.x, a * b.y, a * b.z};
 }
 inline vec3f operator*(const mat3f& a, const vec3f& b) {
   return a.x * b.x + a.y * b.y + a.z * b.z;
@@ -2202,6 +2199,7 @@ inline mat3f transpose(const mat3f& a) {
       {a.x.z, a.y.z, a.z.z},
   };
 }
+inline float trace(const mat3f& a) { return a.x.x + a.y.y + a.z.z; }
 
 // Matrix adjoints, determinants and inverses.
 inline float determinant(const mat3f& a) { return dot(a.x, cross(a.y, a.z)); }
@@ -2237,6 +2235,9 @@ inline mat4f operator+(const mat4f& a, const mat4f& b) {
 inline mat4f operator*(const mat4f& a, float b) {
   return {a.x * b, a.y * b, a.z * b, a.w * b};
 }
+inline mat4f operator*(float a, const mat4f& b) {
+  return {a * b.x, a * b.y, a * b.z, a * b.w};
+}
 inline vec4f operator*(const mat4f& a, const vec4f& b) {
   return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
 }
@@ -2262,6 +2263,7 @@ inline mat4f transpose(const mat4f& a) {
       {a.x.w, a.y.w, a.z.w, a.w.w},
   };
 }
+inline float trace(const mat4f& a) { return a.x.x + a.y.y + a.z.z + a.w.w; }
 
 }  // namespace yocto
 
@@ -2376,58 +2378,6 @@ inline frame3f frame_fromzx(const vec3f& o, const vec3f& z_, const vec3f& x_) {
   auto x = orthonormalize(x_, z);
   auto y = normalize(cross(z, x));
   return {x, y, z, o};
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// QUATERNIONS
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Quaternion operatons
-inline quat4f operator+(const quat4f& a, const quat4f& b) {
-  return {a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w};
-}
-inline quat4f operator*(const quat4f& a, float b) {
-  return {a.x * b, a.y * b, a.z * b, a.w * b};
-}
-inline quat4f operator/(const quat4f& a, float b) {
-  return {a.x / b, a.y / b, a.z / b, a.w / b};
-}
-inline quat4f operator*(const quat4f& a, const quat4f& b) {
-  return {a.x * b.w + a.w * b.x + a.y * b.w - a.z * b.y,
-      a.y * b.w + a.w * b.y + a.z * b.x - a.x * b.z,
-      a.z * b.w + a.w * b.z + a.x * b.y - a.y * b.x,
-      a.w * b.w - a.x * b.x - a.y * b.y - a.z * b.z};
-}
-
-// Quaterion operations
-inline float dot(const quat4f& a, const quat4f& b) {
-  return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
-}
-inline float  length(const quat4f& a) { return sqrt(dot(a, a)); }
-inline quat4f normalize(const quat4f& a) {
-  auto l = length(a);
-  return (l != 0) ? a / l : a;
-}
-inline quat4f conjugate(const quat4f& a) { return {-a.x, -a.y, -a.z, a.w}; }
-inline quat4f inverse(const quat4f& a) { return conjugate(a) / dot(a, a); }
-inline float  uangle(const quat4f& a, const quat4f& b) {
-  auto d = dot(a, b);
-  return d > 1 ? 0 : acos(d < -1 ? -1 : d);
-}
-inline quat4f lerp(const quat4f& a, const quat4f& b, float t) {
-  return a * (1 - t) + b * t;
-}
-inline quat4f nlerp(const quat4f& a, const quat4f& b, float t) {
-  return normalize(lerp(a, b, t));
-}
-inline quat4f slerp(const quat4f& a, const quat4f& b, float t) {
-  auto th = uangle(a, b);
-  return th == 0
-             ? a
-             : a * (sin(th * (1 - t)) / sin(th)) + b * (sin(th * t) / sin(th));
 }
 
 }  // namespace yocto
@@ -2570,18 +2520,10 @@ inline frame3f rotation_frame(const vec3f& axis, float angle) {
           c + (1 - c) * vv.z * vv.z},
       {0, 0, 0}};
 }
-inline frame3f rotation_frame(const vec4f& quat) {
-  auto v = quat;
-  return {{v.w * v.w + v.x * v.x - v.y * v.y - v.z * v.z,
-              (v.x * v.y + v.z * v.w) * 2, (v.z * v.x - v.y * v.w) * 2},
-      {(v.x * v.y - v.z * v.w) * 2,
-          v.w * v.w - v.x * v.x + v.y * v.y - v.z * v.z,
-          (v.y * v.z + v.x * v.w) * 2},
-      {(v.z * v.x + v.y * v.w) * 2, (v.y * v.z - v.x * v.w) * 2,
-          v.w * v.w - v.x * v.x - v.y * v.y + v.z * v.z},
-      {0, 0, 0}};
+inline frame3f rotation_frame(const pair<vec3f, float>& axis_angle) {
+  return rotation_frame(axis_angle.first, axis_angle.second);
 }
-inline frame3f rotation_frame(const quat4f& quat) {
+inline frame3f rotation_frame(const vec4f& quat) {
   auto v = quat;
   return {{v.w * v.w + v.x * v.x - v.y * v.y - v.z * v.z,
               (v.x * v.y + v.z * v.w) * 2, (v.z * v.x - v.y * v.w) * 2},

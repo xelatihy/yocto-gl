@@ -178,16 +178,19 @@ inline const auto stroke2     = vec4f{0.0, 0.7, 0.0, 1.0};
 inline const auto stroke3     = vec4f{0.7, 0.3, 0.0, 1.0};
 inline const auto stroke4     = vec4f{0.7, 0.3, 0.7, 1.0};
 inline const auto stroke5     = vec4f{0.7, 0.7, 0.0, 1.0};
+inline const auto stroke6     = vec4f{0.5, 0.5, 0.5, 1.0};
 inline const auto fill1       = vec4f{0.4, 1.0, 1.0, 1.0};
 inline const auto fill2       = vec4f{0.4, 1.0, 0.4, 1.0};
 inline const auto fill3       = vec4f{1.0, 0.6, 0.2, 1.0};
 inline const auto fill4       = vec4f{1.0, 0.6, 1.0, 1.0};
 inline const auto fill5       = vec4f{1.0, 1.0, 0.4, 1.0};
+inline const auto fill6       = vec4f{0.7, 0.7, 0.7, 1.0};
 inline const auto tfill1      = vec4f{0.0, 1.0, 1.0, 0.4};
 inline const auto tfill2      = vec4f{0.0, 1.0, 0.0, 0.4};
 inline const auto tfill3      = vec4f{1.0, 0.3, 0.0, 0.4};
 inline const auto tfill4      = vec4f{1.0, 0.3, 1.0, 0.4};
 inline const auto tfill5      = vec4f{1.0, 1.0, 0.0, 0.4};
+inline const auto tfill6      = vec4f{0.8, 0.8, 0.8, 0.4};
 inline const auto etfill1     = vec4f{0.0, 1.0, 1.0, 0.1};
 inline const auto etfill2     = vec4f{0.0, 1.0, 0.0, 0.1};
 inline const auto etfill3     = vec4f{1.0, 0.3, 0.0, 0.1};
@@ -462,7 +465,7 @@ void add_shape(diagram_scene& diagram, const diagram_frame& frame,
 // Points
 diagram_shape dpoints(const vector<vec3f>& positions = {{0, 0, 0}});
 diagram_shape dpoints(
-    const vector<vec3f>& positions, const vector<int>& points);
+    const vector<int>& points, const vector<vec3f>& positions);
 
 // Lines
 diagram_shape dlines(const vector<vec3f>& positions);
@@ -539,6 +542,7 @@ diagram_shape dbeziers(const vector<vec3f>& positions, int steps = 32);
 
 // Cube
 diagram_shape dcube();
+diagram_shape dcube(int steps);
 
 // Sphere
 diagram_shape dsphere(int steps = 32, bool isolines = true);
@@ -553,6 +557,14 @@ diagram_shape dhemisphere(int steps = 32, bool isolines = true);
 
 // Cone
 diagram_shape dcone(int steps = 32, bool isolines = true);
+
+// Cylinder
+diagram_shape duvcylinder(float hscale = 2, int rsteps = 32, int hsteps = 2,
+    int csteps = 4, bool isolines = true);
+
+// Capsule
+diagram_shape duvcapsule(float hscale = 2, int rsteps = 32, int hsteps = 2,
+    int csteps = 4, bool isolines = true);
 
 // Dot grid
 diagram_shape ddotgrid(const vec2i& steps = {4, 4});
@@ -672,7 +684,7 @@ diagram_scene& add_plotaxes3(diagram_scene& diagram,
 // Plot surface
 diagram_shape dplotsurface(const function<float(const vec2f&)>& func,
     const vec2f& xrange = {0, 1}, const vec2f& yrange = {0, 1},
-    const vec2i& steps = {32, 32}, bool wireframe = true);
+    const vec2i& steps = {64, 64}, bool wireframe = true);
 
 // Helpers to clip lines
 diagram_shape clip_lines(const diagram_shape& shape, const bbox3f& bbox);

@@ -148,47 +148,6 @@ static scene_intersection intersect_instance(const trace_bvh& bvh,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Convenience functions
-[[maybe_unused]] static vec3f eval_position(
-    const scene_data& scene, const scene_intersection& intersection) {
-  return eval_position(scene, scene.instances[intersection.instance],
-      intersection.element, intersection.uv);
-}
-[[maybe_unused]] static vec3f eval_normal(
-    const scene_data& scene, const scene_intersection& intersection) {
-  return eval_normal(scene, scene.instances[intersection.instance],
-      intersection.element, intersection.uv);
-}
-[[maybe_unused]] static vec3f eval_element_normal(
-    const scene_data& scene, const scene_intersection& intersection) {
-  return eval_element_normal(
-      scene, scene.instances[intersection.instance], intersection.element);
-}
-[[maybe_unused]] static vec3f eval_shading_position(const scene_data& scene,
-    const scene_intersection& intersection, const vec3f& outgoing) {
-  return eval_shading_position(scene, scene.instances[intersection.instance],
-      intersection.element, intersection.uv, outgoing);
-}
-[[maybe_unused]] static vec3f eval_shading_normal(const scene_data& scene,
-    const scene_intersection& intersection, const vec3f& outgoing) {
-  return eval_shading_normal(scene, scene.instances[intersection.instance],
-      intersection.element, intersection.uv, outgoing);
-}
-[[maybe_unused]] static vec2f eval_texcoord(
-    const scene_data& scene, const scene_intersection& intersection) {
-  return eval_texcoord(scene, scene.instances[intersection.instance],
-      intersection.element, intersection.uv);
-}
-[[maybe_unused]] static material_point eval_material(
-    const scene_data& scene, const scene_intersection& intersection) {
-  return eval_material(scene, scene.instances[intersection.instance],
-      intersection.element, intersection.uv);
-}
-[[maybe_unused]] static bool is_volumetric(
-    const scene_data& scene, const scene_intersection& intersection) {
-  return is_volumetric(scene, scene.instances[intersection.instance]);
-}
-
 // Evaluates/sample the BRDF scaled by the cosine of the incoming direction.
 static vec3f eval_emission(const material_point& material, const vec3f& normal,
     const vec3f& outgoing) {

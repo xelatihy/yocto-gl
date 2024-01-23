@@ -126,6 +126,87 @@ scene_intersection overlap_scene_bvh(const scene_bvh& bvh,
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// CONVENIENCE FUNCTIONS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Convenience functions
+inline vec3f eval_position(
+    const scene_data& scene, const scene_intersection& intersection);
+inline vec3f eval_normal(
+    const scene_data& scene, const scene_intersection& intersection);
+inline vec3f eval_element_normal(
+    const scene_data& scene, const scene_intersection& intersection);
+inline vec3f eval_shading_position(const scene_data& scene,
+    const scene_intersection& intersection, const vec3f& outgoing);
+inline vec3f eval_shading_normal(const scene_data& scene,
+    const scene_intersection& intersection, const vec3f& outgoing);
+inline vec2f eval_texcoord(
+    const scene_data& scene, const scene_intersection& intersection);
+inline material_point eval_material(
+    const scene_data& scene, const scene_intersection& intersection);
+inline bool is_volumetric(
+    const scene_data& scene, const scene_intersection& intersection);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+//
+//
+// IMPLEMENTATION
+//
+//
+// -----------------------------------------------------------------------------
+
+// -----------------------------------------------------------------------------
+// CONVENIENCE FUNCTIONS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Convenience functions
+inline vec3f eval_position(
+    const scene_data& scene, const scene_intersection& intersection) {
+  return eval_position(scene, scene.instances[intersection.instance],
+      intersection.element, intersection.uv);
+}
+inline vec3f eval_normal(
+    const scene_data& scene, const scene_intersection& intersection) {
+  return eval_normal(scene, scene.instances[intersection.instance],
+      intersection.element, intersection.uv);
+}
+inline vec3f eval_element_normal(
+    const scene_data& scene, const scene_intersection& intersection) {
+  return eval_element_normal(
+      scene, scene.instances[intersection.instance], intersection.element);
+}
+inline vec3f eval_shading_position(const scene_data& scene,
+    const scene_intersection& intersection, const vec3f& outgoing) {
+  return eval_shading_position(scene, scene.instances[intersection.instance],
+      intersection.element, intersection.uv, outgoing);
+}
+inline vec3f eval_shading_normal(const scene_data& scene,
+    const scene_intersection& intersection, const vec3f& outgoing) {
+  return eval_shading_normal(scene, scene.instances[intersection.instance],
+      intersection.element, intersection.uv, outgoing);
+}
+inline vec2f eval_texcoord(
+    const scene_data& scene, const scene_intersection& intersection) {
+  return eval_texcoord(scene, scene.instances[intersection.instance],
+      intersection.element, intersection.uv);
+}
+inline material_point eval_material(
+    const scene_data& scene, const scene_intersection& intersection) {
+  return eval_material(scene, scene.instances[intersection.instance],
+      intersection.element, intersection.uv);
+}
+inline bool is_volumetric(
+    const scene_data& scene, const scene_intersection& intersection) {
+  return is_volumetric(scene, scene.instances[intersection.instance]);
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // BACKWARD COMPATIBILITY
 // -----------------------------------------------------------------------------
 namespace yocto {
