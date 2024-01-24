@@ -1806,33 +1806,52 @@ void denoise_image(image_t<vec4f>& denoised, const image_t<vec4f>& render,
   check_image(albedo, render.size());
   check_image(normal, render.size());
 #if YOCTO_DENOISE
-  // Create an Intel Open Image Denoise device
-  oidn::DeviceRef device = oidn::newDevice();
-  device.commit();
-
   // set image
   denoised = render;
 
+  // Create an Intel Open Image Denoise device
+  oidn::DeviceRef device = oidn::newDevice(OIDN_DEVICE_TYPE_DEFAULT);
+  device.commit();
+
+  // check error
+  const char* errorMessage;
+  if (device.getError(errorMessage) != oidn::Error::None) {
+    printf("Error: %s\n", errorMessage);
+    return;
+  }
+
+  // width and height
+  auto [width, height] = render.size();
+
   // Create a denoising filter
   oidn::FilterRef filter = device.newFilter("RT");  // ray tracing filter
-  filter.setImage("color", (void*)render.data(), oidn::Format::Float3,
-      render.size().x, render.size().y, 0, sizeof(vec4f),
-      sizeof(vec4f) * render.size().x);
-  filter.setImage("albedo", (void*)albedo.data(), oidn::Format::Float3,
-      albedo.size().x, albedo.size().y, 0, sizeof(vec3f),
-      sizeof(vec4f) * albedo.size().x);
-  filter.setImage("normal", (void*)normal.data(), oidn::Format::Float3,
-      normal.size().x, normal.size().y, 0, sizeof(vec3f),
-      sizeof(vec4f) * normal.size().x);
-  filter.setImage("output", denoised.data(), oidn::Format::Float3,
-      denoised.size().x, denoised.size().y, 0, sizeof(vec4f),
-      sizeof(vec4f) * denoised.size().x);
+  filter.setImage("color", (void*)render.data(), oidn::Format::Float3, width,
+      height, 0, sizeof(vec4f), sizeof(vec4f) * render.size().x);
+  filter.setImage("albedo", (void*)albedo.data(), oidn::Format::Float3, width,
+      height, 0, sizeof(vec3f), sizeof(vec3f) * render.size().x);
+  filter.setImage("normal", (void*)normal.data(), oidn::Format::Float3, width,
+      height, 0, sizeof(vec3f), sizeof(vec3f) * render.size().x);
+  filter.setImage("output", denoised.data(), oidn::Format::Float3, width,
+      height, 0, sizeof(vec4f), sizeof(vec4f) * render.size().x);
   filter.set("inputScale", 1.0f);  // set scale as fixed
   filter.set("hdr", true);         // image is HDR
   filter.commit();
 
+  // check error
+  if (device.getError(errorMessage) != oidn::Error::None) {
+    printf("Error: %s\n", errorMessage);
+    return;
+  }
+
   // Filter the image
   filter.execute();
+
+  // check error
+  if (device.getError(errorMessage) != oidn::Error::None) {
+    printf("Error: %s\n", errorMessage);
+    return;
+  }
+
 #else
   denoised = render;
 #endif
