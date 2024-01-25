@@ -42,16 +42,12 @@ void run(const vector<string>& args) {
   // parameters
   auto scenename = "scene.json"s;
   auto outname   = "out.json"s;
-  auto info      = false;
-  auto validate  = false;
   auto copyright = ""s;
 
   // parse command line
   auto cli = make_cli("yconvert", "convert scenes, shapes and images");
   add_option(cli, "scene", scenename, "input scene");
   add_option(cli, "output", outname, "output scenename");
-  add_option(cli, "info", info, "print info");
-  add_option(cli, "validate", validate, "run validate");
   add_option(cli, "copyright", copyright, "set scene copyright");
   parse_cli(cli, args);
 
@@ -67,19 +63,6 @@ void run(const vector<string>& args) {
   // copyright
   if (copyright != "") {
     scene.copyright = copyright;
-  }
-
-  // validate scene
-  if (validate) {
-    auto errors = scene_validation(scene);
-    for (auto& error : errors) print_error(error);
-    if (!errors.empty()) throw io_error{"invalid scene"};
-  }
-
-  // print info
-  if (info) {
-    print_info("scene stats ------------");
-    for (auto stat : scene_stats(scene)) print_info(stat);
   }
 
   // tesselate if needed

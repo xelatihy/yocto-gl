@@ -32,9 +32,12 @@
 
 #include "yocto_diagram.h"
 
-#include <yocto/yocto_sceneio.h>
-
+#include <future>
 #include <unordered_set>
+
+#include "yocto_bvh.h"
+#include "yocto_sampling.h"
+#include "yocto_sceneio.h"
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES

@@ -43,21 +43,18 @@ void run(const vector<string>& args) {
   // parameters
   auto scenename   = "scene.json"s;
   auto outname     = "out.png"s;
-  auto paramsname  = ""s;
   auto interactive = false;
   auto edit        = false;
   auto camname     = ""s;
   bool addsky      = false;
   auto envname     = ""s;
   auto savebatch   = false;
-  auto dumpname    = ""s;
   auto params      = trace_params{};
 
   // parse command line
   auto cli = make_cli("ycutrace", "render with raytracing");
   add_option(cli, "scene", scenename, "scene filename");
   add_option(cli, "output", outname, "output filename");
-  add_option(cli, "params", paramsname, "params filename");
   add_option(cli, "interactive", interactive, "run interactively");
   add_option(cli, "camera", camname, "camera name");
   add_option(cli, "addsky", addsky, "add sky");
@@ -79,21 +76,8 @@ void run(const vector<string>& args) {
   add_option(cli, "embreebvh", params.embreebvh, "use Embree bvh");
   add_option(cli, "highqualitybvh", params.highqualitybvh, "high quality bvh");
   add_option(cli, "noparallel", params.noparallel, "disable threading");
-  add_option(cli, "dumpparams", dumpname, "dump params filename");
   add_option(cli, "edit", edit, "edit interactively");
   parse_cli(cli, args);
-
-  // load config
-  if (!paramsname.empty()) {
-    update_trace_params(paramsname, params);
-    print_info("loading params {}", paramsname);
-  }
-
-  // dump config
-  if (!dumpname.empty()) {
-    save_trace_params(dumpname, params);
-    print_info("saving params {}", dumpname);
-  }
 
   // start rendering
   print_info("rendering {}", scenename);

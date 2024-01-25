@@ -45,7 +45,6 @@
 #include "yocto_image.h"
 #include "yocto_math.h"
 #include "yocto_shape.h"
-#include "yocto_utils.h"
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
@@ -417,6 +416,40 @@ inline float turbulence_noise(
 // -----------------------------------------------------------------------------
 
 // -----------------------------------------------------------------------------
+// ARRAY UTILITIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Concatenation
+template <typename T>
+inline vector<T> join(const vector<T>& a, const vector<T>& b) {
+  auto c = vector<T>{};
+  c.reserve(a.size() + b.size());
+  c.insert(c.end(), a.begin(), a.end());
+  c.insert(c.end(), b.begin(), b.end());
+  return c;
+}
+
+// Concatenation
+template <typename T>
+inline vector<T>& append(vector<T>& a, const vector<T>& b) {
+  a.reserve(a.size() + b.size());
+  a.insert(a.end(), b.begin(), b.end());
+  return a;
+}
+
+// Remove duplicates
+template <typename T>
+inline vector<T> remove_duplicates(const vector<T>& v) {
+  auto result = v;
+  std::sort(result.begin(), result.end());
+  result.erase(std::unique(result.begin(), result.end()), result.end());
+  return result;
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // BÉZIER SPLINES
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -703,7 +736,7 @@ inline vector<T> tesselate_bezier(const vector<T>& control_points, int steps) {
 template <typename T>
 inline vector<T> flatten_beziers(const vector<vector<T>>& beziers) {
   auto points = vector<T>{};
-  for (auto& bezier : beziers) points += bezier;
+  for (auto& bezier : beziers) append(points, bezier);
   return points;
 }
 
@@ -739,9 +772,7 @@ inline vector<vector<T>> subdivide_beziers(
   // tesselate each segment
   auto subdivided_beziers = vector<vector<T>>();
   for (auto& control_points_ : control_points) {
-    auto ssubdivided = subdivide_bezier(control_points_, levels);
-    subdivided_beziers.insert(
-        subdivided_beziers.end(), ssubdivided.begin(), ssubdivided.end());
+    append(subdivided_beziers, subdivide_bezier(control_points_, levels));
   }
   return subdivided_beziers;
 }
@@ -1160,7 +1191,7 @@ inline pair<vector<vec2i>, vector<T>> subdivide_bspline(
     auto boundary = get_boundary_vertices((int)tvertices.size(), tlines);
     auto valence  = vector<int>(tvertices.size(), 1);
     auto tcorners = vector<int>{};
-    for (auto index : remove_duplicates(boundary + corners)) {
+    for (auto index : remove_duplicates(join(boundary, corners))) {
       tcorners.push_back(index);
       valence[index] = 0;
     }
