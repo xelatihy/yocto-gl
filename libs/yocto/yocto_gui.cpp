@@ -1062,8 +1062,8 @@ static void set_program(uint& program_id, uint& vertex_id, uint& fragment_id,
   // error
   auto program_error = [&](const char* message, const char* log) {
     if (program_id) glDeleteProgram(program_id);
-    if (vertex_id) glDeleteShader(program_id);
-    if (fragment_id) glDeleteShader(program_id);
+    if (vertex_id) glDeleteShader(vertex_id);
+    if (fragment_id) glDeleteShader(fragment_id);
     program_id  = 0;
     vertex_id   = 0;
     fragment_id = 0;
@@ -1254,8 +1254,8 @@ bool init_image(glimage_state& glimage) {
 void clear_image(glimage_state& glimage) {
   if (glimage.texture) glDeleteTextures(1, &glimage.texture);
   if (glimage.program) glDeleteProgram(glimage.program);
-  if (glimage.vertex) glDeleteProgram(glimage.vertex);
-  if (glimage.fragment) glDeleteProgram(glimage.fragment);
+  if (glimage.vertex) glDeleteShader(glimage.vertex);
+  if (glimage.fragment) glDeleteShader(glimage.fragment);
   if (glimage.vertexarray) glDeleteVertexArrays(1, &glimage.vertexarray);
   if (glimage.positions) glDeleteBuffers(1, &glimage.positions);
   if (glimage.triangles) glDeleteBuffers(1, &glimage.triangles);
@@ -1769,8 +1769,8 @@ static void clear_scene(glscene_state& glscene) {
   for (auto& texture : glscene.textures) clear_texture(texture);
   for (auto& shape : glscene.shapes) clear_shape(shape);
   if (glscene.program) glDeleteProgram(glscene.program);
-  if (glscene.vertex) glDeleteProgram(glscene.vertex);
-  if (glscene.fragment) glDeleteProgram(glscene.fragment);
+  if (glscene.vertex) glDeleteShader(glscene.vertex);
+  if (glscene.fragment) glDeleteShader(glscene.fragment);
 }
 
 [[maybe_unused]] static void draw_shape(glscene_shape& shape) {
