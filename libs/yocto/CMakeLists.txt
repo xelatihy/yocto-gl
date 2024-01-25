@@ -1,11 +1,11 @@
 add_library(yocto STATIC
   yocto_math.h yocto_color.h yocto_geometry.h
   yocto_sampling.h yocto_shading.h
+  yocto_modeling.h yocto_animation.h
   yocto_bvh.h yocto_bvh.cpp
   yocto_ebvh.h yocto_ebvh.cpp
   yocto_shape.h yocto_shape.cpp
   yocto_image.h yocto_image.cpp
-  yocto_modeling.h yocto_animation.h
   yocto_scene.h yocto_scene.cpp
   yocto_trace.h yocto_trace.cpp
   yocto_modelio.h yocto_modelio.cpp
