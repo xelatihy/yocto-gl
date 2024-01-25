@@ -211,35 +211,18 @@ inline bbox3f capsule_bounds(
 namespace yocto {
 
 // Line properties.
-inline vec3f line_point(const vec3f& p0, const vec3f& p1, float u);
 inline vec3f line_tangent(const vec3f& p0, const vec3f& p1);
 inline float line_length(const vec3f& p0, const vec3f& p1);
 
 // Triangle properties.
-inline vec3f triangle_point(
-    const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec2f& uv);
 inline vec3f triangle_normal(const vec3f& p0, const vec3f& p1, const vec3f& p2);
 inline float triangle_area(const vec3f& p0, const vec3f& p1, const vec3f& p2);
 
 // Quad properties.
-inline vec3f quad_point(
-    const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec2f& uv);
 inline vec3f quad_normal(
     const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec3f& p3);
 inline float quad_area(
     const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec3f& p3);
-
-// Triangle tangent and bitangent from uv
-inline pair<vec3f, vec3f> triangle_tangents_fromuv(const vec3f& p0,
-    const vec3f& p1, const vec3f& p2, const vec2f& uv0, const vec2f& uv1,
-    const vec2f& uv2);
-
-// Quad tangent and bitangent from uv. Note that we pass a current_uv since
-// internally we may want to split the quad in two and we need to known where
-// to do it. If not interested in the split, just pass vec2f{0,0} here.
-inline pair<vec3f, vec3f> quad_tangents_fromuv(const vec3f& p0, const vec3f& p1,
-    const vec3f& p2, const vec3f& p3, const vec2f& uv0, const vec2f& uv1,
-    const vec2f& uv2, const vec2f& uv3, const vec2f& current_uv);
 
 // Interpolates values over a line parameterized from a to b by u. Same as lerp.
 template <typename T>
@@ -278,10 +261,26 @@ inline vec3f triangle_normal(
     const vec3f& n0, const vec3f& n1, const vec3f& n2, const vec2f& uv);
 
 // Interpolated quad properties.
-inline vec3f quad_point(const vec3f& p0, const vec3f& p1, const vec3f& p2,
-    const vec3f& p3, const vec2f& uv);
+inline vec3f quad_point(
+    const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec2f& uv);
 inline vec3f quad_normal(const vec3f& n0, const vec3f& n1, const vec3f& n2,
     const vec3f& n3, const vec2f& uv);
+
+// Interpolated sphere properties.
+inline vec3f sphere_point(const vec3f p, float r, const vec2f& uv);
+inline vec3f sphere_normal(const vec3f p, float r, const vec2f& uv);
+
+// Triangle tangent and bitangent from uv
+inline pair<vec3f, vec3f> triangle_tangents_fromuv(const vec3f& p0,
+    const vec3f& p1, const vec3f& p2, const vec2f& uv0, const vec2f& uv1,
+    const vec2f& uv2);
+
+// Quad tangent and bitangent from uv. Note that we pass a current_uv since
+// internally we may want to split the quad in two and we need to known where
+// to do it. If not interested in the split, just pass vec2f{0,0} here.
+inline pair<vec3f, vec3f> quad_tangents_fromuv(const vec3f& p0, const vec3f& p1,
+    const vec3f& p2, const vec3f& p3, const vec2f& uv0, const vec2f& uv1,
+    const vec2f& uv2, const vec2f& uv3, const vec2f& current_uv);
 
 }  // namespace yocto
 
@@ -327,6 +326,10 @@ inline prim_intersection intersect_triangle(
 // Intersect a ray with a quad.
 inline prim_intersection intersect_quad(const ray3f& ray, const vec3f& p0,
     const vec3f& p1, const vec3f& p2, const vec3f& p3);
+
+// Intersect a ray with a sphere
+inline prim_intersection intersect_sphere(
+    const ray3f& ray, const vec3f& p, float r);
 
 // Intersect a ray with a axis-aligned bounding box
 inline bool intersect_bbox(const ray3f& ray, const bbox3f& bbox);
@@ -578,6 +581,7 @@ template <typename T>
 inline T interpolate_line(const T& p0, const T& p1, float u) {
   return p0 * (1 - u) + p1 * u;
 }
+
 // Interpolates values over a triangle parameterized by u and v along the
 // (p1-p0) and (p2-p0) directions. Same as barycentric interpolation.
 template <typename T>
@@ -585,6 +589,7 @@ inline T interpolate_triangle(
     const T& p0, const T& p1, const T& p2, const vec2f& uv) {
   return p0 * (1 - uv.x - uv.y) + p1 * uv.x + p2 * uv.y;
 }
+
 // Interpolates values over a quad parameterized by u and v along the
 // (p1-p0) and (p2-p1) directions. Same as bilinear interpolation.
 template <typename T>
@@ -798,37 +803,6 @@ inline prim_intersection intersect_line(
   return {{s, sqrt(d2) / r}, t, true};
 }
 
-// Intersect a ray with a sphere
-inline prim_intersection intersect_sphere(
-    const ray3f& ray, const vec3f& p, float r) {
-  // compute parameters
-  auto a = dot(ray.d, ray.d);
-  auto b = 2 * dot(ray.o - p, ray.d);
-  auto c = dot(ray.o - p, ray.o - p) - r * r;
-
-  // check discriminant
-  auto dis = b * b - 4 * a * c;
-  if (dis < 0) return {};
-
-  // compute ray parameter
-  auto t = (-b - sqrt(dis)) / (2 * a);
-
-  // try other ray parameter
-  if (t < ray.tmin || t > ray.tmax) t = (-b + sqrt(dis)) / (2 * a);
-
-  // exit if not within bounds
-  if (t < ray.tmin || t > ray.tmax) return {};
-
-  // compute local point for uvs
-  auto plocal = ((ray.o + ray.d * t) - p) / r;
-  auto u      = atan2(plocal.y, plocal.x) / (2 * pif);
-  if (u < 0) u += 1;
-  auto v = acos(clamp(plocal.z, -1.0f, 1.0f)) / pif;
-
-  // intersection occurred: set params and exit
-  return {{u, v}, t, true};
-}
-
 // Intersect a ray with a triangle
 inline prim_intersection intersect_triangle(
     const ray3f& ray, const vec3f& p0, const vec3f& p1, const vec3f& p2) {
@@ -871,6 +845,37 @@ inline prim_intersection intersect_quad(const ray3f& ray, const vec3f& p0,
   auto isec2 = intersect_triangle(ray, p2, p3, p1);
   if (isec2.hit) isec2.uv = 1 - isec2.uv;
   return isec1.distance < isec2.distance ? isec1 : isec2;
+}
+
+// Intersect a ray with a sphere
+inline prim_intersection intersect_sphere(
+    const ray3f& ray, const vec3f& p, float r) {
+  // compute parameters
+  auto a = dot(ray.d, ray.d);
+  auto b = 2 * dot(ray.o - p, ray.d);
+  auto c = dot(ray.o - p, ray.o - p) - r * r;
+
+  // check discriminant
+  auto dis = b * b - 4 * a * c;
+  if (dis < 0) return {};
+
+  // compute ray parameter
+  auto t = (-b - sqrt(dis)) / (2 * a);
+
+  // try other ray parameter
+  if (t < ray.tmin || t > ray.tmax) t = (-b + sqrt(dis)) / (2 * a);
+
+  // exit if not within bounds
+  if (t < ray.tmin || t > ray.tmax) return {};
+
+  // compute local point for uvs
+  auto plocal = ((ray.o + ray.d * t) - p) / r;
+  auto u      = atan2(plocal.y, plocal.x) / (2 * pif);
+  if (u < 0) u += 1;
+  auto v = acos(clamp(plocal.z, -1.0f, 1.0f)) / pif;
+
+  // intersection occurred: set params and exit
+  return {{u, v}, t, true};
 }
 
 // Intersect a ray with a axis-aligned bounding box

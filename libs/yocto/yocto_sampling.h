@@ -407,8 +407,8 @@ inline int sample_discrete(const vector<float>& cdf, float r) {
 }
 // Pdf for uniform discrete distribution sampling.
 inline float sample_discrete_pdf(const vector<float>& cdf, int idx) {
-  if (idx == 0) return cdf.at(0);
-  return cdf.at(idx) - cdf.at(idx - 1);
+  if (idx == 0) return cdf[0];
+  return cdf[idx] - cdf[idx - 1];
 }
 
 }  // namespace yocto

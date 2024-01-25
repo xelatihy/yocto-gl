@@ -84,6 +84,8 @@ inline vec3f srgb_to_rgb(const vec3f& srgb);
 inline vec4f srgb_to_rgb(const vec4f& srgb);
 inline vec3f rgb_to_srgb(const vec3f& rgb);
 inline vec4f rgb_to_srgb(const vec4f& rgb);
+inline vec4f srgbb_to_rgb(const vec4b& srgb);
+inline vec4b rgb_to_srgbb(const vec4f& rgb);
 
 // Conversion between number of channels.
 inline vec4f rgb_to_rgba(const vec3f& rgb);
@@ -124,9 +126,6 @@ inline vec3f xyY_to_xyz(const vec3f& xyY);
 // Converts between HSV and RGB color spaces.
 inline vec3f hsv_to_rgb(const vec3f& hsv);
 inline vec3f rgb_to_hsv(const vec3f& rgb);
-
-// Approximate color of blackbody radiation from wavelength in nm.
-inline vec3f blackbody_to_rgb(float temperature);
 
 // Colormap type
 enum struct colormap_type { viridis, plasma, magma, inferno };
@@ -249,18 +248,23 @@ inline vec3f srgb_to_rgb(const vec3f& srgb) {
   return {srgb_to_rgb(srgb.x), srgb_to_rgb(srgb.y), srgb_to_rgb(srgb.z)};
 }
 inline vec4f srgb_to_rgb(const vec4f& srgb) {
-  return {
-      srgb_to_rgb(srgb.x), srgb_to_rgb(srgb.y), srgb_to_rgb(srgb.z), srgb.w};
+  return {srgb_to_rgb(xyz(srgb)), srgb.w};
 }
 inline vec3f rgb_to_srgb(const vec3f& rgb) {
   return {rgb_to_srgb(rgb.x), rgb_to_srgb(rgb.y), rgb_to_srgb(rgb.z)};
 }
 inline vec4f rgb_to_srgb(const vec4f& rgb) {
-  return {rgb_to_srgb(rgb.x), rgb_to_srgb(rgb.y), rgb_to_srgb(rgb.z), rgb.w};
+  return {rgb_to_srgb(xyz(rgb)), rgb.w};
+}
+inline vec4f srgbb_to_rgb(const vec4b& srgb) {
+  return srgb_to_rgb(byte_to_float(srgb));
+}
+inline vec4b rgb_to_srgbb(const vec4f& rgb) {
+  return float_to_byte(rgb_to_srgb(rgb));
 }
 
 // Conversion between number of channels.
-inline vec4f rgb_to_rgba(const vec3f& rgb) { return {rgb.x, rgb.y, rgb.z, 1}; }
+inline vec4f rgb_to_rgba(const vec3f& rgb) { return {rgb, 1}; }
 inline vec3f rgba_to_rgb(const vec4f& rgba) { return xyz(rgba); }
 
 // Apply contrast. Grey should be 0.18 for linear and 0.5 for gamma.
@@ -268,8 +272,7 @@ inline vec3f lincontrast(const vec3f& rgb, float contrast, float grey) {
   return max({0, 0, 0}, grey + (rgb - grey) * (contrast * 2));
 }
 inline vec4f lincontrast(const vec4f& rgb, float contrast, float grey) {
-  auto ret = lincontrast(xyz(rgb), contrast, grey);
-  return {ret.x, ret.y, ret.z, rgb.w};
+  return {lincontrast(xyz(rgb), contrast, grey), rgb.w};
 }
 // Apply contrast in log2. Grey should be 0.18 for linear and 0.5 for gamma.
 inline vec3f logcontrast(const vec3f& rgb, float logcontrast, float grey) {
@@ -280,16 +283,14 @@ inline vec3f logcontrast(const vec3f& rgb, float logcontrast, float grey) {
   return max({0, 0, 0}, exp2(adjusted) - epsilon);
 }
 inline vec4f logcontrast(const vec4f& rgb, float contrast, float grey) {
-  auto ret = logcontrast(xyz(rgb), contrast, grey);
-  return {ret.x, ret.y, ret.z, rgb.w};
+  return {logcontrast(xyz(rgb), contrast, grey), rgb.w};
 }
 // Apply an s-shaped contrast.
 inline vec3f contrast(const vec3f& rgb, float contrast) {
   return gain(rgb, 1 - contrast);
 }
 inline vec4f contrast(const vec4f& rgb, float contrast) {
-  auto ret = yocto::contrast(xyz(rgb), contrast);
-  return {ret.x, ret.y, ret.z, rgb.w};
+  return {yocto::contrast(xyz(rgb), contrast), rgb.w};
 }
 // Apply saturation.
 inline vec3f saturate(
@@ -299,8 +300,7 @@ inline vec3f saturate(
 }
 inline vec4f saturate(
     const vec4f& rgb, float saturation, const vec3f& weights) {
-  auto ret = saturate(xyz(rgb), saturation, weights);
-  return {ret.x, ret.y, ret.z, rgb.w};
+  return {saturate(xyz(rgb), saturation, weights), rgb.w};
 }
 
 #ifndef __CUDACC__
@@ -383,8 +383,7 @@ inline vec3f tonemap(const vec3f& hdr, float exposure, bool filmic, bool srgb) {
   return rgb;
 }
 inline vec4f tonemap(const vec4f& hdr, float exposure, bool filmic, bool srgb) {
-  auto ldr = tonemap(xyz(hdr), exposure, filmic, srgb);
-  return {ldr.x, ldr.y, ldr.z, hdr.w};
+  return {tonemap(xyz(hdr), exposure, filmic, srgb), hdr.w};
 }
 
 // Composite colors
@@ -465,34 +464,6 @@ inline vec3f rgb_to_hsv(const vec3f& rgb) {
 
   auto chroma = r - (g < b ? g : b);
   return {abs(K + (g - b) / (6 * chroma + 1e-20f)), chroma / (r + 1e-20f), r};
-}
-
-// Approximate color of blackbody radiation from wavelength in nm.
-inline vec3f blackbody_to_rgb(float temperature) {
-  // clamp to valid range
-  auto t = clamp(temperature, 1667.0f, 25000.0f) / 1000.0f;
-  // compute x
-  auto x = 0.0f;
-  if (temperature < 4000.0f) {
-    x = -0.2661239f * 1 / (t * t * t) - 0.2343589f * 1 / (t * t) +
-        0.8776956f * (1 / t) + 0.179910f;
-  } else {
-    x = -3.0258469f * 1 / (t * t * t) + 2.1070379f * 1 / (t * t) +
-        0.2226347f * (1 / t) + 0.240390f;
-  }
-  // compute y
-  auto y = 0.0f;
-  if (temperature < 2222.0f) {
-    y = -1.1063814f * (x * x * x) - 1.34811020f * (x * x) + 2.18555832f * x -
-        0.20219683f;
-  } else if (temperature < 4000.0f) {
-    y = -0.9549476f * (x * x * x) - 1.37418593f * (x * x) + 2.09137015f * x -
-        0.16748867f;
-  } else {
-    y = +3.0817580f * (x * x * x) - 5.87338670f * (x * x) + 3.75112997f * x -
-        0.37001483f;
-  }
-  return xyz_to_rgb(xyY_to_xyz({x, y, 1}));
 }
 
 inline vec3f colormap_viridis(float t) {

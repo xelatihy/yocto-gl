@@ -41,6 +41,7 @@
 #include "yocto_color.h"
 #include "yocto_geometry.h"
 #include "yocto_image.h"
+#include "yocto_modeling.h"
 #include "yocto_noise.h"
 #include "yocto_shading.h"
 #include "yocto_shape.h"
@@ -60,6 +61,13 @@ using namespace std::string_literals;
 // CAMERA PROPERTIES
 // -----------------------------------------------------------------------------
 namespace yocto {
+
+// Image resolution from camera
+vec2i camera_resolution(const camera_data& camera, int resolution) {
+  return (camera.aspect >= 1)
+             ? vec2i{resolution, (int)round(resolution / camera.aspect)}
+             : vec2i{(int)round(resolution * camera.aspect), resolution};
+}
 
 // Generates a ray from a camera for yimg::image plane coordinate uv and
 // the lens coordinates luv.
@@ -725,7 +733,7 @@ int add_material(
   return (int)scene.materials.size() - 1;
 }
 int add_shape(scene_data& scene, const string& name, const shape_data& shape) {
-  scene.camera_names.push_back(name);
+  scene.shape_names.push_back(name);
   scene.shapes.push_back(shape);
   return (int)scene.shapes.size() - 1;
 }
@@ -942,168 +950,6 @@ void tesselate_subdivs(scene_data& scene) {
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// SCENE STATS AND VALIDATION
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-size_t compute_memory(const scene_data& scene) {
-  auto vector_memory = [](auto& values) -> size_t {
-    if (values.empty()) return 0;
-    return values.size() * sizeof(values[0]);
-  };
-  auto image_memory = [](auto& values) -> size_t {
-    if (values.empty()) return 0;
-    return (size_t)values.size().x * (size_t)values.size().y *
-           sizeof(values[{0, 0}]);
-  };
-
-  auto memory = (size_t)0;
-  memory += vector_memory(scene.cameras);
-  memory += vector_memory(scene.instances);
-  memory += vector_memory(scene.materials);
-  memory += vector_memory(scene.shapes);
-  memory += vector_memory(scene.textures);
-  memory += vector_memory(scene.environments);
-  memory += vector_memory(scene.camera_names);
-  memory += vector_memory(scene.instance_names);
-  memory += vector_memory(scene.material_names);
-  memory += vector_memory(scene.shape_names);
-  memory += vector_memory(scene.texture_names);
-  memory += vector_memory(scene.environment_names);
-  for (auto& shape : scene.shapes) {
-    memory += vector_memory(shape.points);
-    memory += vector_memory(shape.lines);
-    memory += vector_memory(shape.triangles);
-    memory += vector_memory(shape.quads);
-    memory += vector_memory(shape.positions);
-    memory += vector_memory(shape.normals);
-    memory += vector_memory(shape.texcoords);
-    memory += vector_memory(shape.colors);
-    memory += vector_memory(shape.triangles);
-  }
-  for (auto& subdiv : scene.subdivs) {
-    memory += vector_memory(subdiv.quadspos);
-    memory += vector_memory(subdiv.quadsnorm);
-    memory += vector_memory(subdiv.quadstexcoord);
-    memory += vector_memory(subdiv.positions);
-    memory += vector_memory(subdiv.normals);
-    memory += vector_memory(subdiv.texcoords);
-  }
-  for (auto& texture : scene.textures) {
-    memory += image_memory(texture.pixelsb);
-    memory += image_memory(texture.pixelsf);
-  }
-  return memory;
-}
-
-vector<string> scene_stats(const scene_data& scene, bool verbose) {
-  auto accumulate = [](const auto& values, const auto& func) -> size_t {
-    auto sum = (size_t)0;
-    for (auto& value : values) sum += func(value);
-    return sum;
-  };
-  auto accumulate2d = [](const auto& values, const auto& func) -> size_t {
-    auto sum = (size_t)0;
-    for (auto& value : values) sum += func(value);
-    return sum;
-  };
-  auto format = [](size_t num) {
-    auto str = string{};
-    while (num > 0) {
-      str = std::to_string(num % 1000) + (str.empty() ? "" : ",") + str;
-      num /= 1000;
-    }
-    if (str.empty()) str = "0";
-    while (str.size() < 20) str = " " + str;
-    return str;
-  };
-  auto format3 = [](auto num) {
-    auto str = std::to_string(num.x) + " " + std::to_string(num.y) + " " +
-               std::to_string(num.z);
-    while (str.size() < 48) str = " " + str;
-    return str;
-  };
-
-  auto bbox = compute_bounds(scene);
-
-  auto stats = vector<string>{};
-  stats.push_back("cameras:      " + format(scene.cameras.size()));
-  stats.push_back("instances:    " + format(scene.instances.size()));
-  stats.push_back("materials:    " + format(scene.materials.size()));
-  stats.push_back("shapes:       " + format(scene.shapes.size()));
-  stats.push_back("subdivs:      " + format(scene.subdivs.size()));
-  stats.push_back("environments: " + format(scene.environments.size()));
-  stats.push_back("textures:     " + format(scene.textures.size()));
-  stats.push_back("memory:       " + format(compute_memory(scene)));
-  stats.push_back(
-      "points:       " + format(accumulate(scene.shapes,
-                             [](auto& shape) { return shape.points.size(); })));
-  stats.push_back(
-      "lines:        " + format(accumulate(scene.shapes,
-                             [](auto& shape) { return shape.lines.size(); })));
-  stats.push_back("triangles:    " +
-                  format(accumulate(scene.shapes,
-                      [](auto& shape) { return shape.triangles.size(); })));
-  stats.push_back(
-      "quads:        " + format(accumulate(scene.shapes,
-                             [](auto& shape) { return shape.quads.size(); })));
-  stats.push_back("fvquads:      " +
-                  format(accumulate(scene.subdivs,
-                      [](auto& subdiv) { return subdiv.quadspos.size(); })));
-  stats.push_back(
-      "texels4b:     " + format(accumulate(scene.textures, [](auto& texture) {
-        return (size_t)texture.pixelsb.size().x *
-               (size_t)texture.pixelsb.size().y;
-      })));
-  stats.push_back(
-      "texels4f:     " + format(accumulate(scene.textures, [](auto& texture) {
-        return (size_t)texture.pixelsf.size().x *
-               (size_t)texture.pixelsf.size().y;
-      })));
-  stats.push_back("center:       " + format3(center(bbox)));
-  stats.push_back("size:         " + format3(size(bbox)));
-
-  return stats;
-}
-
-// Checks for validity of the scene.
-vector<string> scene_validation(const scene_data& scene, bool notextures) {
-  auto errs        = vector<string>();
-  auto check_names = [&errs](const vector<string>& names, const string& base) {
-    auto used = unordered_map<string, int>();
-    used.reserve(names.size());
-    for (auto& name : names) used[name] += 1;
-    for (auto& [name, used] : used) {
-      if (name.empty()) {
-        errs.push_back("empty " + base + " name");
-      } else if (used > 1) {
-        errs.push_back("duplicated " + base + " name " + name);
-      }
-    }
-  };
-  auto check_empty_textures = [&errs](const scene_data& scene) {
-    for (auto idx : range(scene.textures.size())) {
-      auto& texture = scene.textures[idx];
-      if (texture.pixelsf.empty() && texture.pixelsb.empty()) {
-        errs.push_back("empty texture " + scene.texture_names[idx]);
-      }
-    }
-  };
-
-  check_names(scene.camera_names, "camera");
-  check_names(scene.shape_names, "shape");
-  check_names(scene.material_names, "material");
-  check_names(scene.instance_names, "instance");
-  check_names(scene.texture_names, "texture");
-  check_names(scene.environment_names, "environment");
-  if (!notextures) check_empty_textures(scene);
-
-  return errs;
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
 // EXAMPLE SCENES
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -1213,68 +1059,6 @@ scene_data make_cornellbox() {
   light_instance.material = (int)scene.materials.size() - 1;
 
   return scene;
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// ANIMATION UTILITIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Find the first keyframe value that is greater than the argument.
-inline int keyframe_index(const vector<float>& times, const float& time) {
-  for (auto i : range(times.size()))
-    if (times[i] > time) return (int)i;
-  return (int)times.size();
-}
-
-// Evaluates a keyframed value using step interpolation.
-template <typename T>
-inline T keyframe_step(
-    const vector<float>& times, const vector<T>& vals, float time) {
-  if (time <= times.front()) return vals.front();
-  if (time >= times.back()) return vals.back();
-  time     = clamp(time, times.front(), times.back() - 0.001f);
-  auto idx = keyframe_index(times, time);
-  return vals.at(idx - 1);
-}
-
-// Evaluates a keyframed value using linear interpolation.
-template <typename T>
-inline vec4f keyframe_slerp(
-    const vector<float>& times, const vector<vec4f>& vals, float time) {
-  if (time <= times.front()) return vals.front();
-  if (time >= times.back()) return vals.back();
-  time     = clamp(time, times.front(), times.back() - 0.001f);
-  auto idx = keyframe_index(times, time);
-  auto t   = (time - times.at(idx - 1)) / (times.at(idx) - times.at(idx - 1));
-  return slerp(vals.at(idx - 1), vals.at(idx), t);
-}
-
-// Evaluates a keyframed value using linear interpolation.
-template <typename T>
-inline T keyframe_linear(
-    const vector<float>& times, const vector<T>& vals, float time) {
-  if (time <= times.front()) return vals.front();
-  if (time >= times.back()) return vals.back();
-  time     = clamp(time, times.front(), times.back() - 0.001f);
-  auto idx = keyframe_index(times, time);
-  auto t   = (time - times.at(idx - 1)) / (times.at(idx) - times.at(idx - 1));
-  return vals.at(idx - 1) * (1 - t) + vals.at(idx) * t;
-}
-
-// Evaluates a keyframed value using Bezier interpolation.
-template <typename T>
-inline T keyframe_bezier(
-    const vector<float>& times, const vector<T>& vals, float time) {
-  if (time <= times.front()) return vals.front();
-  if (time >= times.back()) return vals.back();
-  time     = clamp(time, times.front(), times.back() - 0.001f);
-  auto idx = keyframe_index(times, time);
-  auto t   = (time - times.at(idx - 1)) / (times.at(idx) - times.at(idx - 1));
-  return interpolate_bezier(
-      vals.at(idx - 3), vals.at(idx - 2), vals.at(idx - 1), vals.at(idx), t);
 }
 
 }  // namespace yocto

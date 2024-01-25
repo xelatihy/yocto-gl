@@ -1,10 +1,11 @@
 add_library(yocto STATIC
   yocto_math.h yocto_color.h yocto_geometry.h
-  yocto_noise.h yocto_sampling.h yocto_shading.h
+  yocto_sampling.h yocto_shading.h
   yocto_bvh.h yocto_bvh.cpp
   yocto_ebvh.h yocto_ebvh.cpp
   yocto_shape.h yocto_shape.cpp
   yocto_image.h yocto_image.cpp
+  yocto_modeling.h yocto_animation.h
   yocto_scene.h yocto_scene.cpp
   yocto_trace.h yocto_trace.cpp
   yocto_modelio.h yocto_modelio.cpp
@@ -13,6 +14,7 @@ add_library(yocto STATIC
   yocto_gui.h yocto_gui.cpp
   yocto_cutrace.h yocto_cutrace.cpp
   yocto_parallel.h yocto_cli.h
+  yocto_diagram.h yocto_diagram.cpp
 )
 
 set_target_properties(yocto PROPERTIES CXX_STANDARD 20 CXX_STANDARD_REQUIRED YES)

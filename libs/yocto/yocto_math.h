@@ -41,6 +41,7 @@
 #include <cmath>
 #include <cstdint>
 #include <limits>
+#include <tuple>
 #include <utility>
 
 // -----------------------------------------------------------------------------
@@ -51,6 +52,7 @@ namespace yocto {
 // using directives
 using std::array;
 using std::pair;
+using std::tuple;
 
 }  // namespace yocto
 
@@ -1120,6 +1122,12 @@ template <typename Sequence1, typename Sequence2>
 constexpr auto zip(const Sequence1& sequence1, Sequence2& sequence2);
 template <typename Sequence1, typename Sequence2>
 constexpr auto zip(Sequence1& sequence1, const Sequence2& sequence2);
+template <typename Sequence1, typename Sequence2, typename Sequence3>
+constexpr auto zip(const Sequence1& sequence1, const Sequence2& sequence2,
+    const Sequence3& sequence3);
+template <typename Sequence1, typename Sequence2, typename Sequence3>
+constexpr auto zip(Sequence1& sequence1, const Sequence2& sequence2,
+    const Sequence3& sequence3);
 
 }  // namespace yocto
 
@@ -3164,6 +3172,90 @@ constexpr auto zip(Sequence1& sequence1, const Sequence2& sequence2) {
     }
   };
   return zip_helper{sequence1, sequence2};
+}
+
+// Python zip
+template <typename Sequence1, typename Sequence2, typename Sequence3>
+constexpr auto zip(const Sequence1& sequence1, const Sequence2& sequence2,
+    const Sequence3& sequence3) {
+  using Iterator1  = typename Sequence1::const_iterator;
+  using Reference1 = typename Sequence1::const_reference;
+  using Iterator2  = typename Sequence2::const_iterator;
+  using Reference2 = typename Sequence2::const_reference;
+  using Iterator3  = typename Sequence3::const_iterator;
+  using Reference3 = typename Sequence3::const_reference;
+  struct zip_iterator {
+    Iterator1 iterator1;
+    Iterator2 iterator2;
+    Iterator3 iterator3;
+    bool      operator!=(const zip_iterator& other) const {
+      return iterator1 != other.iterator1;
+    }
+    void operator++() {
+      ++iterator1;
+      ++iterator2;
+      ++iterator3;
+    }
+    tuple<Reference1, Reference2, Reference3> operator*() const {
+      return {*iterator1, *iterator2, *iterator3};
+    }
+  };
+  struct zip_helper {
+    const Sequence1& sequence1;
+    const Sequence2& sequence2;
+    const Sequence3& sequence3;
+    auto             begin() {
+      return zip_iterator{
+          std::begin(sequence1), std::begin(sequence2), std::begin(sequence3)};
+    }
+    auto end() {
+      return zip_iterator{
+          std::end(sequence1), std::end(sequence2), std::end(sequence3)};
+    }
+  };
+  return zip_helper{sequence1, sequence2, sequence3};
+}
+
+// Python zip
+template <typename Sequence1, typename Sequence2, typename Sequence3>
+constexpr auto zip(Sequence1& sequence1, const Sequence2& sequence2,
+    const Sequence3& sequence3) {
+  using Iterator1  = typename Sequence1::iterator;
+  using Reference1 = typename Sequence1::reference;
+  using Iterator2  = typename Sequence2::const_iterator;
+  using Reference2 = typename Sequence2::const_reference;
+  using Iterator3  = typename Sequence3::const_iterator;
+  using Reference3 = typename Sequence3::const_reference;
+  struct zip_iterator {
+    Iterator1 iterator1;
+    Iterator2 iterator2;
+    Iterator3 iterator3;
+    bool      operator!=(const zip_iterator& other) const {
+      return iterator1 != other.iterator1;
+    }
+    void operator++() {
+      ++iterator1;
+      ++iterator2;
+      ++iterator3;
+    }
+    tuple<Reference1, Reference2, Reference3> operator*() const {
+      return {*iterator1, *iterator2, *iterator3};
+    }
+  };
+  struct zip_helper {
+    Sequence1&       sequence1;
+    const Sequence2& sequence2;
+    const Sequence3& sequence3;
+    auto             begin() {
+      return zip_iterator{
+          std::begin(sequence1), std::begin(sequence2), std::begin(sequence3)};
+    }
+    auto end() {
+      return zip_iterator{
+          std::end(sequence1), std::end(sequence2), std::end(sequence3)};
+    }
+  };
+  return zip_helper{sequence1, sequence2, sequence3};
 }
 
 }  // namespace yocto

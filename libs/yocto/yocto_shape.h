@@ -382,24 +382,6 @@ vector<vec4f> triangle_tangent_spaces(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texcoords);
 
-// Apply skinning to vertex position and normals.
-pair<vector<vec3f>, vector<vec3f>> skin_vertices(const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec4f>& weights,
-    const vector<vec4i>& joints, const vector<frame3f>& xforms);
-// Apply skinning as specified in Khronos glTF.
-pair<vector<vec3f>, vector<vec3f>> skin_matrices(const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec4f>& weights,
-    const vector<vec4i>& joints, const vector<mat4f>& xforms);
-// Update skinning
-void skin_vertices(vector<vec3f>& skinned_positions,
-    vector<vec3f>& skinned_normals, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec4f>& weights,
-    const vector<vec4i>& joints, const vector<frame3f>& xforms);
-void skin_matrices(vector<vec3f>& skinned_positions,
-    vector<vec3f>& skinned_normals, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec4f>& weights,
-    const vector<vec4i>& joints, const vector<mat4f>& xforms);
-
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -688,89 +670,6 @@ void merge_quads(vector<vec4i>& quads, vector<vec3f>& positions,
     const vector<vec4i>& merge_quads, const vector<vec3f>& merge_positions,
     const vector<vec3f>& merge_normals,
     const vector<vec2f>& merge_texturecoords);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// SHAPE SUBDIVISION
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Subdivide lines by splitting each line in half.
-pair<vector<vec2i>, vector<float>> subdivide_lines(
-    const vector<vec2i>& lines, const vector<float>& vertex);
-pair<vector<vec2i>, vector<vec2f>> subdivide_lines(
-    const vector<vec2i>& lines, const vector<vec2f>& vertex);
-pair<vector<vec2i>, vector<vec3f>> subdivide_lines(
-    const vector<vec2i>& lines, const vector<vec3f>& vertex);
-pair<vector<vec2i>, vector<vec4f>> subdivide_lines(
-    const vector<vec2i>& lines, const vector<vec4f>& vertex);
-// Subdivide triangle by splitting each triangle in four, creating new
-// vertices for each edge.
-pair<vector<vec3i>, vector<float>> subdivide_triangles(
-    const vector<vec3i>& triangles, const vector<float>& vertex);
-pair<vector<vec3i>, vector<vec2f>> subdivide_triangles(
-    const vector<vec3i>& triangles, const vector<vec2f>& vertex);
-pair<vector<vec3i>, vector<vec3f>> subdivide_triangles(
-    const vector<vec3i>& triangles, const vector<vec3f>& vertex);
-pair<vector<vec3i>, vector<vec4f>> subdivide_triangles(
-    const vector<vec3i>& triangles, const vector<vec4f>& vertex);
-// Subdivide quads by splitting each quads in four, creating new
-// vertices for each edge and for each face.
-pair<vector<vec4i>, vector<float>> subdivide_quads(
-    const vector<vec4i>& quads, const vector<float>& vertex);
-pair<vector<vec4i>, vector<vec2f>> subdivide_quads(
-    const vector<vec4i>& quads, const vector<vec2f>& vertex);
-pair<vector<vec4i>, vector<vec3f>> subdivide_quads(
-    const vector<vec4i>& quads, const vector<vec3f>& vertex);
-pair<vector<vec4i>, vector<vec4f>> subdivide_quads(
-    const vector<vec4i>& quads, const vector<vec4f>& vertex);
-// Subdivide beziers by splitting each segment in two.
-pair<vector<vec4i>, vector<float>> subdivide_beziers(
-    const vector<vec4i>& beziers, const vector<float>& vertex);
-pair<vector<vec4i>, vector<vec2f>> subdivide_beziers(
-    const vector<vec4i>& beziers, const vector<vec2f>& vertex);
-pair<vector<vec4i>, vector<vec3f>> subdivide_beziers(
-    const vector<vec4i>& beziers, const vector<vec3f>& vertex);
-pair<vector<vec4i>, vector<vec4f>> subdivide_beziers(
-    const vector<vec4i>& beziers, const vector<vec4f>& vertex);
-// Subdivide quads using Carmull-Clark subdivision rules.
-pair<vector<vec4i>, vector<float>> subdivide_catmullclark(
-    const vector<vec4i>& quads, const vector<float>& vertex,
-    bool lock_boundary = false);
-pair<vector<vec4i>, vector<vec2f>> subdivide_catmullclark(
-    const vector<vec4i>& quads, const vector<vec2f>& vertex,
-    bool lock_boundary = false);
-pair<vector<vec4i>, vector<vec3f>> subdivide_catmullclark(
-    const vector<vec4i>& quads, const vector<vec3f>& vertex,
-    bool lock_boundary = false);
-pair<vector<vec4i>, vector<vec4f>> subdivide_catmullclark(
-    const vector<vec4i>& quads, const vector<vec4f>& vertex,
-    bool lock_boundary = false);
-
-// Subdivide lines by splitting each line in half.
-template <typename T>
-inline pair<vector<vec2i>, vector<T>> subdivide_lines(
-    const vector<vec2i>& lines, const vector<T>& vertices, int level);
-// Subdivide triangle by splitting each triangle in four, creating new
-// vertices for each edge.
-template <typename T>
-inline pair<vector<vec3i>, vector<T>> subdivide_triangles(
-    const vector<vec3i>& triangles, const vector<T>& vertices, int level);
-// Subdivide quads by splitting each quads in four, creating new
-// vertices for each edge and for each face.
-template <typename T>
-inline pair<vector<vec4i>, vector<T>> subdivide_quads(
-    const vector<vec4i>& quads, const vector<T>& vertices, int level);
-// Subdivide beziers by splitting each segment in two.
-template <typename T>
-inline pair<vector<vec4i>, vector<T>> subdivide_beziers(
-    const vector<vec4i>& beziers, const vector<T>& vertices, int level);
-// Subdivide quads using Carmull-Clark subdivision rules.
-template <typename T>
-inline pair<vector<vec4i>, vector<T>> subdivide_catmullclark(
-    const vector<vec4i>& quads, const vector<T>& vertices, int level,
-    bool lock_boundary = false);
 
 }  // namespace yocto
 
@@ -1065,65 +964,6 @@ inline shape_data make_quads(vec2i steps, PFunc&& position, NFunc&& normal) {
     }
   }
   return shape;
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// SHAPE SUBDIVISION
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Subdivide lines by splitting each line in half.
-template <typename T>
-inline pair<vector<vec2i>, vector<T>> subdivide_lines(
-    const vector<vec2i>& lines, const vector<T>& vertices, int level) {
-  if (level < 1) return {lines, vertices};
-  auto tess = pair{lines, vertices};
-  for (auto idx : range(level)) tess = subdivide_lines(tess.first, tess.second);
-  return tess;
-}
-// Subdivide triangle by splitting each triangle in four, creating new
-// vertices for each edge.
-template <typename T>
-inline pair<vector<vec3i>, vector<T>> subdivide_triangles(
-    const vector<vec3i>& triangles, const vector<T>& vertices, int level) {
-  if (level < 1) return {triangles, vertices};
-  auto tess = pair{triangles, vertices};
-  for (auto idx : range(level))
-    tess = subdivide_triangles(tess.first, tess.second);
-  return tess;
-}
-// Subdivide quads by splitting each quads in four, creating new
-// vertices for each edge and for each face.
-template <typename T>
-inline pair<vector<vec4i>, vector<T>> subdivide_quads(
-    const vector<vec4i>& quads, const vector<T>& vertices, int level) {
-  if (level < 1) return {quads, vertices};
-  auto tess = pair{quads, vertices};
-  for (auto idx : range(level)) tess = subdivide_quads(tess.first, tess.second);
-  return tess;
-}
-// Subdivide beziers by splitting each segment in two.
-template <typename T>
-inline pair<vector<vec4i>, vector<T>> subdivide_beziers(
-    const vector<vec4i>& beziers, const vector<T>& vertices, int level) {
-  if (level < 1) return {beziers, vertices};
-  auto tess = pair{beziers, vertices};
-  for (auto idx : range(level))
-    tess = subdivide_beziers(tess.first, tess.second);
-  return tess;
-}
-// Subdivide quads using Carmull-Clark subdivision rules.
-template <typename T>
-inline pair<vector<vec4i>, vector<T>> subdivide_catmullclark(
-    const vector<vec4i>& quads, const vector<T>& vertices, int level,
-    bool lock_boundary) {
-  if (level < 1) return {quads, vertices};
-  auto tess = pair{quads, vertices};
-  for (auto idx : range(level))
-    tess = subdivide_catmullclark(tess.first, tess.second, lock_boundary);
-  return tess;
 }
 
 }  // namespace yocto

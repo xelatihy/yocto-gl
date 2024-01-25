@@ -45,6 +45,7 @@
 #include "yocto_geometry.h"
 #include "yocto_image.h"
 #include "yocto_math.h"
+#include "yocto_modeling.h"
 #include "yocto_shape.h"
 
 // -----------------------------------------------------------------------------
@@ -179,7 +180,7 @@ struct subdiv_data {
   int shape = invalidid;
 };
 
-// Scene comprised an array of objects whose memory is owened by the scene.
+// Scene comprised an array of objects whose memory is owned by the scene.
 // All members are optional,Scene objects (camera, instances, environments)
 // have transforms defined internally. A scene can optionally contain a
 // node hierarchy where each node might point to a camera, instance or
@@ -209,12 +210,27 @@ struct scene_data {
   string copyright = "";
 };
 
+// Scene lights used during rendering.
+struct light_data {
+  int           instance     = invalidid;
+  int           environment  = invalidid;
+  vector<float> elements_cdf = {};
+};
+
+// Scene lights
+struct lights_data {
+  vector<light_data> lights = {};
+};
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // CAMERA PROPERTIES
 // -----------------------------------------------------------------------------
 namespace yocto {
+
+// Computes the image resolution from the camera.
+vec2i camera_resolution(const camera_data& camera, int resolution);
 
 // Generates a ray from a camera.
 ray3f eval_camera(
@@ -392,12 +408,6 @@ int add_texture(scene_data& scene, const string& name,
     const image_t<vec4f>& texture, bool linear = true);
 int add_texture(scene_data& scene, const string& name,
     const image_t<vec4b>& texture, bool linear = false);
-
-// Return scene statistics as list of strings.
-vector<string> scene_stats(const scene_data& scene, bool verbose = false);
-// Return validation errors as list of strings.
-vector<string> scene_validation(
-    const scene_data& scene, bool notextures = false);
 
 }  // namespace yocto
 
