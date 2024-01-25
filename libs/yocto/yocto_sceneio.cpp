@@ -4146,9 +4146,7 @@ static void save_gltf_scene(
   // save gltf
   auto options = cgltf_options{};
   memset(&options, 0, sizeof(options));
-  options.memory.free = [](void*, void* ptr) { free(ptr); };
-  cgltf.memory.free   = [](void*, void* ptr) { free(ptr); };
-  auto result         = cgltf_write_file(&options, filename.c_str(), &cgltf);
+  auto result = cgltf_write_file(&options, filename.c_str(), &cgltf);
   if (result != cgltf_result_success) {
     cgltf_free(&cgltf);
     throw io_error{"cannot save " + filename};
