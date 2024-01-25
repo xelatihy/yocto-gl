@@ -32,7 +32,7 @@
 
 #include "yocto_image.h"
 
-#include <stb_image/stb_image_resize.h>
+#include <stb_image/stb_image_resize2.h>
 
 #include <memory>
 #include <stdexcept>
@@ -166,10 +166,9 @@ image_t<vec4f> resize_image(const image_t<vec4f>& img, vec2i resize) {
     resize.x = (int)round(resize.y * (double)size.x / (double)size.y);
   }
   auto res = image_t<vec4f>{resize};
-  stbir_resize_float_generic((float*)img.data(), size.x, size.y,
+  stbir_resize_float_linear((float*)img.data(), size.x, size.y,
       sizeof(vec4f) * size.x, (float*)res.data(), resize.x, resize.y,
-      sizeof(vec4f) * resize.x, 4, 3, 0, STBIR_EDGE_CLAMP, STBIR_FILTER_DEFAULT,
-      STBIR_COLORSPACE_LINEAR, nullptr);
+      sizeof(vec4f) * resize.x, STBIR_RGBA);
   return res;
 }
 image_t<vec4b> resize_image(const image_t<vec4b>& img, vec2i resize) {
@@ -183,10 +182,9 @@ image_t<vec4b> resize_image(const image_t<vec4b>& img, vec2i resize) {
     resize.x = (int)round(resize.y * (double)size.x / (double)size.y);
   }
   auto res = image_t<vec4b>{resize};
-  stbir_resize_uint8_generic((byte*)img.data(), size.x, size.y,
+  stbir_resize_uint8_linear((byte*)img.data(), size.x, size.y,
       sizeof(vec4b) * size.x, (byte*)res.data(), resize.x, resize.y,
-      sizeof(vec4b) * resize.x, 4, 3, 0, STBIR_EDGE_CLAMP, STBIR_FILTER_DEFAULT,
-      STBIR_COLORSPACE_LINEAR, nullptr);
+      sizeof(vec4b) * resize.x, STBIR_RGBA);
   return res;
 }
 

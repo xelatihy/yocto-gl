@@ -31,7 +31,7 @@
 #include <cgltf/cgltf.h>
 #include <cgltf/cgltf_write.h>
 #include <stb_image/stb_image.h>
-#include <stb_image/stb_image_resize.h>
+#include <stb_image/stb_image_resize2.h>
 #include <stb_image/stb_image_write.h>
 #include <tinyexr/tinyexr.h>
 
