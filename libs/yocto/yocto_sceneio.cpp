@@ -552,14 +552,6 @@ image_t<vec4f> make_image_preset(const string& type_) {
   } else if (type == "sunsky") {
     return make_sunsky(
         extents, pif / 4, 3.0f, true, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f});
-  } else if (type == "gnoisemap") {
-    return make_noisemap(extents, 1.0f);
-  } else if (type == "fnoisemap") {
-    return make_fbmmap(extents, 1.0f);
-  } else if (type == "rnoisemap") {
-    return make_ridgemap(extents, 1.0f);
-  } else if (type == "tnoisemap") {
-    return make_turbulencemap(extents, 1.0f);
   } else if (type == "bump-normal") {
     return make_bumps(extents);
     // TODO(fabio): fix color space

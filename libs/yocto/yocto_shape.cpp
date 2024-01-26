@@ -41,7 +41,6 @@
 #include "yocto_geometry.h"
 #include "yocto_modeling.h"
 #include "yocto_modelio.h"
-#include "yocto_noise.h"
 #include "yocto_sampling.h"
 
 // -----------------------------------------------------------------------------
@@ -1503,15 +1502,16 @@ shape_data make_hair(const shape_data& base, vec2i steps, vec2f len, vec2f rad,
     }
     if (noise.x > 0) {
       auto nx =
-          (perlin_noise(shape.positions[i] * noise.y + vec3f{0, 0, 0}) * 2 -
+          (gradient_noise(shape.positions[i] * noise.y + vec3f{0, 0, 0}) * 2 -
               1) *
           noise.x;
       auto ny =
-          (perlin_noise(shape.positions[i] * noise.y + vec3f{3, 7, 11}) * 2 -
+          (gradient_noise(shape.positions[i] * noise.y + vec3f{3, 7, 11}) * 2 -
               1) *
           noise.x;
       auto nz =
-          (perlin_noise(shape.positions[i] * noise.y + vec3f{13, 17, 19}) * 2 -
+          (gradient_noise(shape.positions[i] * noise.y + vec3f{13, 17, 19}) *
+                  2 -
               1) *
           noise.x;
       shape.positions[i] += {nx, ny, nz};
@@ -3814,13 +3814,13 @@ void make_hair(vector<vec2i>& lines, vector<vec3f>& positions,
     }
     if (noise.x > 0) {
       auto nx =
-          (perlin_noise(positions[i] * noise.y + vec3f{0, 0, 0}) * 2 - 1) *
+          (gradient_noise(positions[i] * noise.y + vec3f{0, 0, 0}) * 2 - 1) *
           noise.x;
       auto ny =
-          (perlin_noise(positions[i] * noise.y + vec3f{3, 7, 11}) * 2 - 1) *
+          (gradient_noise(positions[i] * noise.y + vec3f{3, 7, 11}) * 2 - 1) *
           noise.x;
       auto nz =
-          (perlin_noise(positions[i] * noise.y + vec3f{13, 17, 19}) * 2 - 1) *
+          (gradient_noise(positions[i] * noise.y + vec3f{13, 17, 19}) * 2 - 1) *
           noise.x;
       positions[i] += {nx, ny, nz};
     }

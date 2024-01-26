@@ -38,7 +38,6 @@
 #include <stdexcept>
 
 #include "yocto_color.h"
-#include "yocto_noise.h"
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
@@ -340,47 +339,6 @@ image_t<vec4f> make_colormapramp(vec2i size, float scale) {
       rgb = colormap(uv.x, colormap_type::inferno);
     }
     return vec4f{rgb.x, rgb.y, rgb.z, 1};
-  });
-}
-
-image_t<vec4f> make_noisemap(
-    vec2i size, float scale, vec4f color0, vec4f color1) {
-  return make_proc_image(size, [=](vec2f uv) {
-    uv *= 8 * scale;
-    auto v = perlin_noise(vec3f{uv.x, uv.y, 0});
-    v      = clamp(v, 0.0f, 1.0f);
-    return lerp(color0, color1, v);
-  });
-}
-
-image_t<vec4f> make_fbmmap(
-    vec2i size, float scale, vec4f noise, vec4f color0, vec4f color1) {
-  return make_proc_image(size, [=](vec2f uv) {
-    uv *= 8 * scale;
-    auto v = perlin_fbm({uv.x, uv.y, 0}, noise.x, noise.y, (int)noise.z);
-    v      = clamp(v, 0.0f, 1.0f);
-    return lerp(color0, color1, v);
-  });
-}
-
-image_t<vec4f> make_turbulencemap(
-    vec2i size, float scale, vec4f noise, vec4f color0, vec4f color1) {
-  return make_proc_image(size, [=](vec2f uv) {
-    uv *= 8 * scale;
-    auto v = perlin_turbulence({uv.x, uv.y, 0}, noise.x, noise.y, (int)noise.z);
-    v      = clamp(v, 0.0f, 1.0f);
-    return lerp(color0, color1, v);
-  });
-}
-
-image_t<vec4f> make_ridgemap(
-    vec2i size, float scale, vec4f noise, vec4f color0, vec4f color1) {
-  return make_proc_image(size, [=](vec2f uv) {
-    uv *= 8 * scale;
-    auto v = perlin_ridge(
-        {uv.x, uv.y, 0}, noise.x, noise.y, (int)noise.z, noise.w);
-    v = clamp(v, 0.0f, 1.0f);
-    return lerp(color0, color1, v);
   });
 }
 
