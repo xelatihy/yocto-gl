@@ -292,42 +292,42 @@ inline bool contains(const string& tag, const vector<string>& tags) {
 }
 
 // Frames
-inline frame3f dtranslation(const vec3f& translation) {
+inline frame3f dtranslation(vec3f translation) {
   return translation_frame(translation);
 }
-inline frame3f drotation(const vec3f& rotation) {
+inline frame3f drotation(vec3f rotation) {
   return rotation_frame(vec3f{1, 0, 0}, radians(rotation.x)) *
          rotation_frame(vec3f{0, 1, 0}, radians(rotation.y)) *
          rotation_frame(vec3f{0, 0, 1}, radians(rotation.z));
 }
-inline frame3f drotation(const vec3f& axis, float angle) {
+inline frame3f drotation(vec3f axis, float angle) {
   return rotation_frame(axis, radians(angle));
 }
-inline frame3f dscaling(const vec3f& scaling) { return scaling_frame(scaling); }
+inline frame3f dscaling(vec3f scaling) { return scaling_frame(scaling); }
 inline frame3f dscaling(float scale) {
   return scaling_frame(vec3f{scale, scale, scale});
 }
 inline frame3f dscale(float scale) {
   return scaling_frame(vec3f{scale, scale, scale});
 }
-inline frame3f dframez(const vec3f& z, const vec3f& pos = {0, 0, 0}) {
+inline frame3f dframez(vec3f z, vec3f pos = {0, 0, 0}) {
   return frame_fromz(pos, z);
 }
-inline frame3f dlookat(const vec3f& from, const vec3f& to = {0, 0, 0},
-    const vec3f& up = {0, 1, 0}) {
+inline frame3f dlookat(vec3f from, vec3f to = {0, 0, 0},
+    vec3f up = {0, 1, 0}) {
   return lookat_frame(from, to, up, true);
 }
-inline frame3f dtransform(const vec3f& translation, const vec3f& rotation) {
+inline frame3f dtransform(vec3f translation, vec3f rotation) {
   return dtranslation(translation) * drotation(rotation);
 }
 inline frame3f dgtransform(
-    const vec3f& translation, const vec3f& rotation, const vec3f& scaling) {
+    vec3f translation, vec3f rotation, vec3f scaling) {
   return dtranslation(translation) * drotation(rotation) * dscaling(scaling);
 }
 inline frame3f dreflectx() {
   return frame3f{{-1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}};
 }
-inline frame3f dcentering(const vec2f& center) {
+inline frame3f dcentering(vec2f center) {
   return dtranslation({-center.x, -center.y, 0});
 }
 
@@ -355,21 +355,21 @@ inline diagram_shape transform_shape(
 }
 
 // Styles
-inline diagram_style dstroke(const vec4f& stroke    = dcolors::black,
+inline diagram_style dstroke(vec4f stroke    = dcolors::black,
     float                                 thickness = dthickness::default_) {
   return {
       .stroke = stroke, .fill = dcolors::transparent, .thickness = thickness};
 }
-inline diagram_style dfill(const vec4f& fill = dcolors::fill1) {
+inline diagram_style dfill(vec4f fill = dcolors::fill1) {
   return {.stroke = dcolors::transparent, .fill = fill};
 }
-inline diagram_style dfilled(const vec4f& fill      = dcolors::fill1,
-    const vec4f&                          stroke    = dcolors::black,
+inline diagram_style dfilled(vec4f fill      = dcolors::fill1,
+    vec4f                          stroke    = dcolors::black,
     float                                 thickness = dthickness::default_) {
   return {.stroke = stroke, .fill = fill, .thickness = thickness};
 }
 inline diagram_style dtextured(const image_t<vec4f>& texture,
-    const vec4f&                                     stroke = dcolors::black,
+    vec4f                                     stroke = dcolors::black,
     float thickness = dthickness::default_) {
   return {.stroke = stroke,
       .fill       = {1, 1, 1, 1},
@@ -377,7 +377,7 @@ inline diagram_style dtextured(const image_t<vec4f>& texture,
       .texture    = texture};
 }
 inline diagram_style dtextured(const image_t<vec4f>& texture, bool interpolate,
-    const vec4f& stroke    = dcolors::black,
+    vec4f stroke    = dcolors::black,
     float        thickness = dthickness::default_) {
   return {.stroke = stroke,
       .fill       = {1, 1, 1, 1},
@@ -386,7 +386,7 @@ inline diagram_style dtextured(const image_t<vec4f>& texture, bool interpolate,
       .nearest    = !interpolate};
 }
 inline diagram_style dimtextured(const image_t<vec4f>& texture,
-    const vec4f& stroke    = dcolors::transparent,
+    vec4f stroke    = dcolors::transparent,
     float        thickness = dthickness::default_) {
   return {
       .stroke    = stroke,
@@ -397,7 +397,7 @@ inline diagram_style dimtextured(const image_t<vec4f>& texture,
   };
 }
 inline diagram_style dimtextured(const image_t<vec4f>& texture,
-    bool interpolate, const vec4f& stroke = dcolors::transparent,
+    bool interpolate, vec4f stroke = dcolors::transparent,
     float thickness = dthickness::default_) {
   return {.stroke = stroke,
       .fill       = {1, 1, 1, 1},
@@ -406,7 +406,7 @@ inline diagram_style dimtextured(const image_t<vec4f>& texture,
       .nearest    = !interpolate};
 }
 inline diagram_style dtextcolor(const vec4f textcolor = dcolors::black,
-    const vec4f& fill = dcolors::fill1, const vec4f& stroke = dcolors::black,
+    vec4f fill = dcolors::fill1, vec4f stroke = dcolors::black,
     float thickness = dthickness::default_) {
   return {.stroke = stroke,
       .fill       = fill,
@@ -423,13 +423,13 @@ namespace yocto {
 
 // Add scene
 diagram_scene& add_scene(diagram_data& diagram, const string& title,
-    const frame3f& frame = identity3x4f, const vec2f& margin = {0.2, 1.0});
+    const frame3f& frame = identity3x4f, vec2f margin = {0.2, 1.0});
 diagram_scene& add_scene(diagram_data& diagram, const string& title,
-    const vec2f& size, const frame3f& frame = identity3x4f,
-    const vec2f& margin = {0.2, 1.0});
+    vec2f size, const frame3f& frame = identity3x4f,
+    vec2f margin = {0.2, 1.0});
 diagram_scene& add_scenews(diagram_data& diagram, const string& title,
-    const string& subtitle, const vec2f& size = {2, 2},
-    const frame3f& frame = identity3x4f, const vec2f& margin = {0.2, 1.0});
+    const string& subtitle, vec2f size = {2, 2},
+    const frame3f& frame = identity3x4f, vec2f margin = {0.2, 1.0});
 
 // Labels
 diagram_labels dlabels(const vector<string>& labels);
@@ -489,9 +489,9 @@ diagram_shape dcvectors(const vector<vec3f>& positions);
 
 // Axes
 diagram_shape daxes(
-    const frame3f& axes = identity3x4f, const vec3f& aspect = {1, 1, 1});
+    const frame3f& axes = identity3x4f, vec3f aspect = {1, 1, 1});
 diagram_shape daxes2(
-    const frame3f& axes = identity3x4f, const vec3f& aspect = {1, 1, 1});
+    const frame3f& axes = identity3x4f, vec3f aspect = {1, 1, 1});
 
 // Rays
 diagram_shape drays(const vector<ray3f>& rays = {{{0, 0, 0}, {0, 0, 1}}});
@@ -522,7 +522,7 @@ diagram_shape dpolyline(const vector<vec3f>& positions);
 diagram_shape dpolygon(const vector<vec3f>& positions);  // TODO: remove
 
 // Rect
-diagram_shape drect(const vec2f& aspect = {1, 1});  // TODO: remove
+diagram_shape drect(vec2f aspect = {1, 1});  // TODO: remove
 
 // Disk
 diagram_shape ddisk(int steps = 64);
@@ -531,8 +531,8 @@ diagram_shape ddisk(int steps = 64);
 diagram_shape dhalfdisk(int steps = 32);
 
 // Arc
-diagram_shape darc(const vec3f& from, const vec3f& to,
-    const vec3f& center = {0, 0, 0}, int steps = 16);
+diagram_shape darc(vec3f from, vec3f to,
+    vec3f center = {0, 0, 0}, int steps = 16);
 
 // Qbezier
 diagram_shape dqbeziers(const vector<vec3f>& positions, int steps = 32);
@@ -567,25 +567,25 @@ diagram_shape duvcapsule(float hscale = 2, int rsteps = 32, int hsteps = 2,
     int csteps = 4, bool isolines = true);
 
 // Dot grid
-diagram_shape ddotgrid(const vec2i& steps = {4, 4});
+diagram_shape ddotgrid(vec2i steps = {4, 4});
 
 // Grid
-diagram_shape dgrid(const vec2i& steps = {4, 4});
+diagram_shape dgrid(vec2i steps = {4, 4});
 
 // Disk grid
-diagram_shape ddiskgrid(const vec2i& steps = {4, 4}, int dstep = 32);
-diagram_shape dudiskgrid(const vec2i& steps = {4, 4}, int dstep = 32);
+diagram_shape ddiskgrid(vec2i steps = {4, 4}, int dstep = 32);
+diagram_shape dudiskgrid(vec2i steps = {4, 4}, int dstep = 32);
 
 // Affine grid
-diagram_shape daffinegrid(const vec3f& axes_a = {1, 0, 0},
-    const vec3f& axes_b = {0, 1, 0}, const vec2i& steps = {4, 4});
+diagram_shape daffinegrid(vec3f axes_a = {1, 0, 0},
+    vec3f axes_b = {0, 1, 0}, vec2i steps = {4, 4});
 
 // Image
-diagram_shape dimagerect(const vec2i& size);
+diagram_shape dimagerect(vec2i size);
 diagram_shape dimagerect(const image_t<vec4f>& image);
-diagram_shape dimagegrid(const vec2i& size);
+diagram_shape dimagegrid(vec2i size);
 diagram_shape dimagegrid(const image_t<vec4f>& image);
-diagram_shape dimagelabel(const vec2i& size, float scale = 1);
+diagram_shape dimagelabel(vec2i size, float scale = 1);
 diagram_shape dimagelabel(const image_t<vec4f>& image, float scale = 1);
 
 // Random points
@@ -617,8 +617,8 @@ diagram_shape drandomlines(
 
 // Add plot
 diagram_scene& add_plot(diagram_data& diagram, const string& title,
-    const vec2f& size = {4, 2}, const frame3f& frame = identity3x4f,
-    const vec2f& margin = {0.8, 1.0});
+    vec2f size = {4, 2}, const frame3f& frame = identity3x4f,
+    vec2f margin = {0.8, 1.0});
 
 // Add plot axes
 diagram_scene& add_plotaxes(diagram_scene& diagram,
@@ -640,16 +640,16 @@ diagram_shape dplotline(const vector<vec2f>& points);
 diagram_shape dplotpoints(const vector<vec2f>& points);
 diagram_shape dplotarrows(const vector<vec2f>& points);
 vector<vec2f> dplotfunc(const function<float(float)>& func,
-    const vec2f& range = {0, 1}, int samples = 100);
+    vec2f range = {0, 1}, int samples = 100);
 vector<vec2f> dplotpfunc(const function<float(float)>& func, int samples = 100);
 vector<vec2f> dplotcurve(const vector<float>& curve, bool center = true);
-vector<vec2f> dplotcurve(const vector<float>& curve, const vec2f& range);
+vector<vec2f> dplotcurve(const vector<float>& curve, vec2f range);
 inline diagram_shape dplotline(const function<float(float)>& func,
-    const vec2f& range = {0, 1}, int samples = 100) {
+    vec2f range = {0, 1}, int samples = 100) {
   return dplotline(dplotfunc(func, range, samples));
 }
 inline diagram_shape dplotpoints(const function<float(float)>& func,
-    const vec2f& range = {0, 1}, int samples = 100) {
+    vec2f range = {0, 1}, int samples = 100) {
   return dplotpoints(dplotfunc(func, range, samples));
 }
 inline diagram_shape dplotline(const vector<float>& curve, bool center = true) {
@@ -661,20 +661,20 @@ inline diagram_shape dplotpoints(
 }
 
 // Add plot3
-diagram_scene& add_plot3(diagram_data& diagram, const vec2f& size = {4, 3},
+diagram_scene& add_plot3(diagram_data& diagram, vec2f size = {4, 3},
     const frame3f& frame = drotation({25, 0, 0}) * drotation({0, 45, 0}) *
                            drotation({270, 0, 0}) * drotation({0, 0, 180}),
-    const vec2f& margin = {0.8, 1.0});
+    vec2f margin = {0.8, 1.0});
 diagram_scene& add_plot3(diagram_data& diagram, const string& title,
-    const vec2f&   size  = {4, 3},
+    vec2f   size  = {4, 3},
     const frame3f& frame = drotation({25, 0, 0}) * drotation({0, 45, 0}) *
                            drotation({270, 0, 0}) * drotation({0, 0, 180}),
-    const vec2f& margin = {0.8, 1.0});
+    vec2f margin = {0.8, 1.0});
 
 // Add plot axes
 diagram_scene& add_plotaxes3(diagram_scene& diagram,
     const bbox3f&                           bounds = {{0, 0, 0}, {1, 1, 1}},
-    const vec3f&                            size   = {1, 1, 1},
+    vec3f                            size   = {1, 1, 1},
     const vector<pair<float, string>>&      xticks = {},
     const vector<pair<float, string>>&      yticks = {},
     const vector<pair<float, string>>&      zticks = {},
@@ -682,9 +682,9 @@ diagram_scene& add_plotaxes3(diagram_scene& diagram,
     const diagram_style& lstyle = dstroke(dcolors::transparent));
 
 // Plot surface
-diagram_shape dplotsurface(const function<float(const vec2f&)>& func,
-    const vec2f& xrange = {0, 1}, const vec2f& yrange = {0, 1},
-    const vec2i& steps = {64, 64}, bool wireframe = true);
+diagram_shape dplotsurface(const function<float(vec2f)>& func,
+    vec2f xrange = {0, 1}, vec2f yrange = {0, 1},
+    vec2i steps = {64, 64}, bool wireframe = true);
 
 // Helpers to clip lines
 diagram_shape clip_lines(const diagram_shape& shape, const bbox3f& bbox);

@@ -82,7 +82,7 @@ static void merge_dshape_inplace(shape_data& shape, const shape_data& merge) {
 
 // Make a tesselated rectangle. Useful in other subdivisions.
 static shape_data make_dquads(
-    const vec2i& steps, const vec2f& scale, const vec2f& uvscale) {
+    vec2i steps, vec2f scale, vec2f uvscale) {
   auto shape = shape_data{};
 
   shape.positions.resize((steps.x + 1) * (steps.y + 1));
@@ -112,13 +112,13 @@ static shape_data make_dquads(
 
 // Make a rect
 static shape_data make_drect(
-    const vec2i& steps, const vec2f& scale, const vec2f& uvscale = {1, 1}) {
+    vec2i steps, vec2f scale, vec2f uvscale = {1, 1}) {
   return make_dquads(steps, scale, uvscale);
 }
 
 // Make a box.
 static shape_data make_dbox(
-    const vec3i& steps, const vec3f& scale, const vec3f& uvscale = {1, 1, 1}) {
+    vec3i steps, vec3f scale, vec3f uvscale = {1, 1, 1}) {
   auto shape  = shape_data{};
   auto qshape = shape_data{};
   // + z
@@ -178,7 +178,7 @@ static shape_data make_dsphere(int steps, float scale, float uvscale = 1) {
 
 // Make a sphere.
 static shape_data make_duvsphere(
-    const vec2i& steps, float scale, const vec2f& uvscale = {1, 1}) {
+    vec2i steps, float scale, vec2f uvscale = {1, 1}) {
   auto shape = make_drect({steps.x, steps.y}, {1, 1});
   for (auto i : range(shape.positions.size())) {
     auto uv = shape.texcoords[i];
@@ -193,7 +193,7 @@ static shape_data make_duvsphere(
 
 // Make a hemisphere.
 static shape_data make_duvhemisphere(
-    const vec2i& steps, float scale, const vec2f& uvscale = {1, 1}) {
+    vec2i steps, float scale, vec2f uvscale = {1, 1}) {
   auto shape = make_drect({steps.x, steps.y}, {1, 1});
   for (auto i : range(shape.positions.size())) {
     auto uv = shape.texcoords[i];
@@ -208,7 +208,7 @@ static shape_data make_duvhemisphere(
 
 // Make a uv cylinder
 shape_data make_duvcylinder(
-    const vec3i& steps, const vec2f& scale, const vec3f& uvscale = {1, 1, 1}) {
+    vec3i steps, vec2f scale, vec3f uvscale = {1, 1, 1}) {
   auto shape  = shape_data{};
   auto qshape = shape_data{};
   // side
@@ -254,7 +254,7 @@ shape_data make_duvcylinder(
 
 // Make a uv capsule
 static shape_data make_duvcapsule(
-    const vec3i& steps, const vec2f& scale, const vec3f& uvscale = {1, 1, 1}) {
+    vec3i steps, vec2f scale, vec3f uvscale = {1, 1, 1}) {
   auto shape  = shape_data{};
   auto qshape = shape_data{};
   // side
@@ -300,7 +300,7 @@ static shape_data make_duvcapsule(
 
 // Make a uv cone
 static shape_data make_duvcone(
-    const vec3i& steps, const vec2f& scale, const vec3f& uvscale = {1, 1, 1}) {
+    vec3i steps, vec2f scale, vec3f uvscale = {1, 1, 1}) {
   auto shape  = shape_data{};
   auto qshape = shape_data{};
   // side
@@ -421,16 +421,16 @@ static void update_offsets(diagram_data& diagram) {
 
 // Scene
 diagram_scene& add_scene(diagram_data& diagram, const string& title,
-    const vec2f& size, const frame3f& frame, const vec2f& margin) {
+    vec2f size, const frame3f& frame, vec2f margin) {
   return add_scenews(diagram, title, "", size, frame, margin);
 }
 diagram_scene& add_scene(diagram_data& diagram, const string& title,
-    const frame3f& frame, const vec2f& margin) {
+    const frame3f& frame, vec2f margin) {
   return add_scenews(diagram, title, "", {2, 2}, frame, margin);
 }
 diagram_scene& add_scenews(diagram_data& diagram, const string& title,
-    const string& subtitle, const vec2f& size, const frame3f& frame,
-    const vec2f& margin) {
+    const string& subtitle, vec2f size, const frame3f& frame,
+    vec2f margin) {
   auto& scene  = diagram.scenes.emplace_back();
   scene.size   = size;
   scene.margin = margin;
@@ -671,14 +671,14 @@ diagram_shape dcvectors(const vector<vec3f>& vectors) {
 }
 
 // Add axes
-diagram_shape daxes(const frame3f& axes, const vec3f& aspect) {
+diagram_shape daxes(const frame3f& axes, vec3f aspect) {
   auto shape      = diagram_shape{};
   shape.positions = {axes.o, axes.o + aspect.x * axes.x,
       axes.o + aspect.y * axes.y, axes.o + aspect.z * axes.z};
   shape.arrows    = {{0, 1}, {0, 2}, {0, 3}};
   return shape;
 }
-diagram_shape daxes2(const frame3f& axes, const vec3f& aspect) {
+diagram_shape daxes2(const frame3f& axes, vec3f aspect) {
   auto shape      = diagram_shape{};
   shape.positions = {
       axes.o, axes.o + aspect.x * axes.x, axes.o + aspect.y * axes.y};
@@ -816,7 +816,7 @@ diagram_shape dpolygon(const vector<vec3f>& positions) {
 }
 
 // Add rect
-diagram_shape drect(const vec2f& aspect) {
+diagram_shape drect(vec2f aspect) {
   auto positions_ = dconstants::quad_positions;
   auto scale      = vec3f{aspect.x / aspect.y, 1, 1};
   for (auto& position : positions_) position *= scale;
@@ -878,7 +878,7 @@ diagram_shape dhalfdisk(int steps) {
 
 // Add arc
 diagram_shape darc(
-    const vec3f& from, const vec3f& to, const vec3f& center, int steps) {
+    vec3f from, vec3f to, vec3f center, int steps) {
   // refence frame
   auto x     = normalize(from - center);
   auto y     = normalize(to - center);
@@ -1127,7 +1127,7 @@ diagram_shape dbbox(const bbox3f& bbox_, float epsilon) {
 }
 
 // Add grid
-diagram_shape ddotgrid(const vec2i& steps) {
+diagram_shape ddotgrid(vec2i steps) {
   auto ratio      = (float)steps.x / (float)steps.y;
   auto shape_     = make_drect({steps.x, steps.y}, {ratio, 1});
   auto positions_ = vector<vec3f>{};
@@ -1147,7 +1147,7 @@ diagram_shape ddotgrid(const vec2i& steps) {
 }
 
 // Add grid
-diagram_shape dgrid(const vec2i& steps) {
+diagram_shape dgrid(vec2i steps) {
   auto ratio      = (float)steps.x / (float)steps.y;
   auto shape_     = make_drect({steps.x, steps.y}, {ratio, 1});
   auto shape      = diagram_shape{};
@@ -1160,7 +1160,7 @@ diagram_shape dgrid(const vec2i& steps) {
 }
 
 // Add grid
-diagram_shape ddiskgrid(const vec2i& steps, int dsteps) {
+diagram_shape ddiskgrid(vec2i steps, int dsteps) {
   auto shape = diagram_shape{};
   for (auto idxr : range(steps.x)) {
     auto offset = (int)shape.positions.size();
@@ -1182,7 +1182,7 @@ diagram_shape ddiskgrid(const vec2i& steps, int dsteps) {
 
   return shape;
 }
-diagram_shape dudiskgrid(const vec2i& steps, int dsteps) {
+diagram_shape dudiskgrid(vec2i steps, int dsteps) {
   auto shape = diagram_shape{};
   for (auto idxr : range(steps.x)) {
     auto offset = (int)shape.positions.size();
@@ -1207,7 +1207,7 @@ diagram_shape dudiskgrid(const vec2i& steps, int dsteps) {
 
 // Add affine grid
 diagram_shape daffinegrid(
-    const vec3f& axes_a, const vec3f& axes_b, const vec2i& steps) {
+    vec3f axes_a, vec3f axes_b, vec2i steps) {
   auto ratio      = (float)steps.x / (float)steps.y;
   auto shape_     = make_drect({steps.x, steps.y}, {ratio, 1});
   auto positions_ = shape_.positions;
@@ -1223,7 +1223,7 @@ diagram_shape daffinegrid(
 }
 
 // Add image
-diagram_shape dimagerect(const vec2i& size) {
+diagram_shape dimagerect(vec2i size) {
   auto ratio      = (float)size.x / (float)size.y;
   auto scale      = vec3f{ratio, 1, 1};
   auto positions_ = dconstants::quad_positions;
@@ -1242,7 +1242,7 @@ diagram_shape dimagerect(const image_t<vec4f>& img) {
 }
 
 // Add image grid
-diagram_shape dimagegrid(const vec2i& size) {
+diagram_shape dimagegrid(vec2i size) {
   auto ratio      = (float)size.x / (float)size.y;
   auto shape_     = make_dquads({size.x, size.y}, {ratio, 1}, {1, 1});
   auto shape      = diagram_shape{};
@@ -1256,7 +1256,7 @@ diagram_shape dimagegrid(const image_t<vec4f>& img) {
 }
 
 // Add image label
-diagram_shape dimagelabel(const vec2i& size, float scale) {
+diagram_shape dimagelabel(vec2i size, float scale) {
   auto ratio      = (float)size.x / (float)size.y;
   auto oscale     = vec3f{3 * scale, 1, 1} * 0.1f;
   auto ocenter    = vec3f{ratio, -1, 0} + vec3f{-0.40, +0.175, +0.01};
@@ -1431,7 +1431,7 @@ diagram_shape drandomlines(drandomlines_type type, int num, bool stratified) {
 
 // Add plot
 diagram_scene& add_plot(diagram_data& diagram, const string& title,
-    const vec2f& size, const frame3f& frame, const vec2f& margin) {
+    vec2f size, const frame3f& frame, vec2f margin) {
   return add_scene(diagram, title, size, frame, margin);
 }
 
@@ -1512,7 +1512,7 @@ diagram_shape dplotarrows(const vector<vec2f>& points) {
   return shape;
 }
 vector<vec2f> dplotfunc(
-    const function<float(float)>& func, const vec2f& range_, int samples) {
+    const function<float(float)>& func, vec2f range_, int samples) {
   auto points = vector<vec2f>(samples);
   for (auto idx : range(samples)) {
     auto x      = lerp(range_.x, range_.y, (float)idx / (float)(samples - 1));
@@ -1537,7 +1537,7 @@ vector<vec2f> dplotcurve(const vector<float>& curve, bool center) {
     points[i] = {center ? ((i + 0.5f) / size) : (float(i) / size), curve[i]};
   return points;
 }
-vector<vec2f> dplotcurve(const vector<float>& curve, const vec2f& range) {
+vector<vec2f> dplotcurve(const vector<float>& curve, vec2f range) {
   auto size   = (int)curve.size();
   auto points = vector<vec2f>(curve.size());
   for (auto i : yocto::range(size))
@@ -1547,13 +1547,13 @@ vector<vec2f> dplotcurve(const vector<float>& curve, const vec2f& range) {
 
 // Add plot
 diagram_scene& add_plot3(diagram_data& diagram, const string& title,
-    const vec2f& size, const frame3f& frame, const vec2f& margin) {
+    vec2f size, const frame3f& frame, vec2f margin) {
   return add_scene(diagram, title, size, frame, margin);
 }
 
 // Add plot axes
 diagram_scene& add_plotaxes3(diagram_scene& diagram, const bbox3f& bounds,
-    const vec3f& size, const vector<pair<float, string>>& xticks,
+    vec3f size, const vector<pair<float, string>>& xticks,
     const vector<pair<float, string>>& yticks,
     const vector<pair<float, string>>& zticks, const diagram_style& style,
     const diagram_style& lstyle) {
@@ -1612,8 +1612,8 @@ diagram_scene& add_plotaxes3(diagram_scene& diagram, const bbox3f& bounds,
 }
 
 // Plot surface
-diagram_shape dplotsurface(const function<float(const vec2f&)>& func,
-    const vec2f& xrange, const vec2f& yrange, const vec2i& steps,
+diagram_shape dplotsurface(const function<float(vec2f)>& func,
+    vec2f xrange, vec2f yrange, vec2i steps,
     bool isolines) {
   auto shape = diagram_shape{};
 
@@ -1751,7 +1751,7 @@ static texture_data make_text_texture(const string& text) {
 }
 
 // Text shape
-static shape_data make_text_shape(const string& text, const vec3f& offset,
+static shape_data make_text_shape(const string& text, vec3f offset,
     const texture_data& texture, float scale) {
   auto size            = max(texture.pixelsf.size(), texture.pixelsb.size());
   auto [width, height] = scale * (vec2f)size / 72.0f;
@@ -1774,12 +1774,12 @@ static shape_data make_text_shape(const string& text, const vec3f& offset,
 
 // Text offset
 static frame3f make_text_frame(const string& text, const texture_data& texture,
-    const vec3f& camera, const vec3f& position, float scale) {
+    vec3f camera, vec3f position, float scale) {
   return lookat_frame(position, camera, {0, 1, 0}, true);
 }
 
 // Make text material
-static material_data make_text_material(const vec4f& color, int textureid) {
+static material_data make_text_material(vec4f color, int textureid) {
   return {
       .type      = material_type::matte,
       .color     = {color.x, color.y, color.z},
@@ -1864,7 +1864,7 @@ static shape_data make_quads_shape(const vector<vec4i>& quads,
 
 // Make fill material
 static material_data make_fill_material(
-    const vec4f& fill, bool highlight, int textureid) {
+    vec4f fill, bool highlight, int textureid) {
   return {
       .type      = highlight ? material_type::glossy : material_type::matte,
       .color     = {fill.x, fill.y, fill.z},
@@ -1983,7 +1983,7 @@ static shape_data make_arrows_shape(const vector<vec2i>& lines,
 
 // Make stroke material
 static material_data make_stroke_material(
-    const vec4f& stroke, int textureid = invalidid) {
+    vec4f stroke, int textureid = invalidid) {
   return {
       .type      = material_type::matte,
       .color     = {stroke.x, stroke.y, stroke.z},
@@ -2171,8 +2171,8 @@ image_t<vec4f> render_diagram(const diagram_data& diagram, int resolution,
     auto render = render_image(yscene, resolution, samples, false);
 
     // helpers
-    auto draw_quad = [](image_t<vec4f>& composite, const vec2i& center,
-                         const vec2i& size, const vec4f& color) {
+    auto draw_quad = [](image_t<vec4f>& composite, vec2i center,
+                         vec2i size, vec4f color) {
       auto extents = composite.size();
       for (auto i : range(-size.x / 2, +size.x / 2)) {
         composite[clamp(
@@ -2188,8 +2188,8 @@ image_t<vec4f> render_diagram(const diagram_data& diagram, int resolution,
       }
     };
     auto copy_quad = [](image_t<vec4f>& composite, const image_t<vec4f>& source,
-                         const vec2i& icenter, const vec2i& scenter,
-                         const vec2i& size) {
+                         vec2i icenter, vec2i scenter,
+                         vec2i size) {
       auto csize = composite.size();
       auto ssize = source.size();
       for (auto j : range(-size.y / 2, +size.y / 2)) {
@@ -2260,7 +2260,7 @@ inline void parallel_for_batch(vec2i num, Func&& func) {
 }
 
 // Generates a ray from a camera.
-static ray3f eval_camera(const camera_data& camera, const vec2f& uv_) {
+static ray3f eval_camera(const camera_data& camera, vec2f uv_) {
   auto film = vec2f{camera.film, camera.film / camera.aspect};
   if (!camera.orthographic) {
     // point on film

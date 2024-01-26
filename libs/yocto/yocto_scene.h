@@ -234,7 +234,7 @@ vec2i camera_resolution(const camera_data& camera, int resolution);
 
 // Generates a ray from a camera.
 ray3f eval_camera(
-    const camera_data& camera, const vec2f& image_uv, const vec2f& lens_uv);
+    const camera_data& camera, vec2f image_uv, vec2f lens_uv);
 
 }  // namespace yocto
 
@@ -244,9 +244,9 @@ ray3f eval_camera(
 namespace yocto {
 
 // Evaluates a texture
-vec4f eval_texture(const texture_data& texture, const vec2f& uv,
+vec4f eval_texture(const texture_data& texture, vec2f uv,
     bool ldr_as_linear = false, bool no_vflip = false);
-vec4f eval_texture(const scene_data& scene, int texture, const vec2f& uv,
+vec4f eval_texture(const scene_data& scene, int texture, vec2f uv,
     bool ldr_as_linear = false, bool no_vflip = false);
 
 // pixel access
@@ -280,8 +280,8 @@ struct material_point {
 
 // Eval material to obtain emission, brdf and opacity.
 material_point eval_material(const scene_data& scene,
-    const material_data& material, const vec2f& texcoord,
-    const vec4f& shape_color = {1, 1, 1, 1});
+    const material_data& material, vec2f texcoord,
+    vec4f shape_color = {1, 1, 1, 1});
 
 // check if a material is a delta
 bool is_delta(const material_data& material);
@@ -301,29 +301,29 @@ namespace yocto {
 
 // Evaluate instance properties
 vec3f eval_position(const scene_data& scene, const instance_data& instance,
-    int element, const vec2f& uv);
+    int element, vec2f uv);
 vec3f eval_element_normal(
     const scene_data& scene, const instance_data& instance, int element);
 vec3f eval_normal(const scene_data& scene, const instance_data& instance,
-    int element, const vec2f& uv);
+    int element, vec2f uv);
 vec2f eval_texcoord(const scene_data& scene, const instance_data& instance,
-    int element, const vec2f& uv);
+    int element, vec2f uv);
 pair<vec3f, vec3f> eval_element_tangents(
     const scene_data& scene, const instance_data& instance, int element);
 vec3f eval_normalmap(const scene_data& scene, const instance_data& instance,
-    int element, const vec2f& uv);
+    int element, vec2f uv);
 vec3f eval_shading_position(const scene_data& scene,
-    const instance_data& instance, int element, const vec2f& uv,
-    const vec3f& outgoing);
+    const instance_data& instance, int element, vec2f uv,
+    vec3f outgoing);
 vec3f eval_shading_normal(const scene_data& scene,
-    const instance_data& instance, int element, const vec2f& uv,
-    const vec3f& outgoing);
+    const instance_data& instance, int element, vec2f uv,
+    vec3f outgoing);
 vec4f eval_color(const scene_data& scene, const instance_data& instance,
-    int element, const vec2f& uv);
+    int element, vec2f uv);
 
 // Eval material to obtain emission, brdf and opacity.
 material_point eval_material(const scene_data& scene,
-    const instance_data& instance, int element, const vec2f& uv);
+    const instance_data& instance, int element, vec2f uv);
 // check if a material has a volume
 bool is_volumetric(const scene_data& scene, const instance_data& instance);
 
@@ -336,8 +336,8 @@ namespace yocto {
 
 // Environment
 vec3f eval_environment(const scene_data& scene,
-    const environment_data& environment, const vec3f& direction);
-vec3f eval_environment(const scene_data& scene, const vec3f& direction);
+    const environment_data& environment, vec3f direction);
+vec3f eval_environment(const scene_data& scene, vec3f direction);
 
 }  // namespace yocto
 
@@ -380,21 +380,21 @@ int add_environment(
     scene_data& scene, const string& name, const environment_data& environment);
 
 // Scene creation helpers
-int add_camera(scene_data& scene, const string& name, const vec3f& from,
-    const vec3f& to, float lens = 0.1f, float aspect = 16.0f / 9.0f,
+int add_camera(scene_data& scene, const string& name, vec3f from,
+    vec3f to, float lens = 0.1f, float aspect = 16.0f / 9.0f,
     float aperture = 0, float focus_offset = 0);
 int add_camera(scene_data& scene, const string& name, const frame3f& frame,
     float lens = 0.1f, float aspect = 16.0f / 9.0f, float aperture = 0,
     float focus = 1);
-int add_material(scene_data& scene, const string& name, const vec3f& emission,
-    material_type type, const vec3f& color, float roughness = 0,
+int add_material(scene_data& scene, const string& name, vec3f emission,
+    material_type type, vec3f color, float roughness = 0,
     int color_tex = invalidid, int roughness_tex = invalidid,
     int normal_tex = invalidid);
 int add_material(scene_data& scene, const string& name, material_type type,
-    const vec3f& color, float roughness = 0, int color_tex = invalidid,
+    vec3f color, float roughness = 0, int color_tex = invalidid,
     int roughness_tex = invalidid, int normal_tex = invalidid);
 int add_material(scene_data& scene, const string& name, material_type type,
-    const vec3f& color, float roughness, const vec3f& scattering,
+    vec3f color, float roughness, vec3f scattering,
     float scanisotropy = 0, float trdepth = 0.01f, int color_tex = invalidid,
     int roughness_tex = invalidid, int scattering_tex = invalidid,
     int normal_tex = invalidid);
@@ -403,7 +403,7 @@ int add_instance(scene_data& scene, const string& name, const frame3f& frame,
 int add_instance(scene_data& scene, const string& name, const frame3f& frame,
     const shape_data& shape, const material_data& material);
 int add_environment(scene_data& scene, const string& name, const frame3f& frame,
-    const vec3f& emission, int emission_tex = invalidid);
+    vec3f emission, int emission_tex = invalidid);
 int add_texture(scene_data& scene, const string& name,
     const image_t<vec4f>& texture, bool linear = true);
 int add_texture(scene_data& scene, const string& name,

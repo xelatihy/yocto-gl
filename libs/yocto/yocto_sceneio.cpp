@@ -365,13 +365,13 @@ using json_value = nlohmann::ordered_json;
 }
 
 // Json conversions
-inline void to_json(json_value& json, const vec2f& value) {
+inline void to_json(json_value& json, vec2f value) {
   nlohmann::to_json(json, (const array<float, 2>&)value);
 }
-inline void to_json(json_value& json, const vec3f& value) {
+inline void to_json(json_value& json, vec3f value) {
   nlohmann::to_json(json, (const array<float, 3>&)value);
 }
-inline void to_json(json_value& json, const vec4f& value) {
+inline void to_json(json_value& json, vec4f value) {
   nlohmann::to_json(json, (const array<float, 4>&)value);
 }
 inline void to_json(json_value& json, const frame2f& value) {
@@ -426,7 +426,7 @@ static frame3f to_math(const array<float, 12>& value) {
   return (frame3f&)value;
 }
 
-static array<float, 3> to_array(const vec3f& value) {
+static array<float, 3> to_array(vec3f value) {
   return (array<float, 3>&)value;
 }
 static array<float, 12> to_array(const frame3f& value) {
@@ -4426,7 +4426,7 @@ static void xml_attribute(
     string& xml, const string& name, const string& value) {
   xml += " " + name + "=\"" + value + "\"";
 }
-static void xml_attribute(string& xml, const string& name, const vec3f& value) {
+static void xml_attribute(string& xml, const string& name, vec3f value) {
   xml += " " + name + "=\"" + std::to_string(value.x) + " " +
          std::to_string(value.y) + " " + std::to_string(value.z) + "\"";
 }
@@ -4508,7 +4508,7 @@ static void xml_property(string& xml, const string& indent, const string& name,
   xml_property(xml, indent, "matrix", name, value, ref);
 }
 static void xml_property(string& xml, const string& indent, const string& name,
-    const vec3f& value, const string& ref = "") {
+    vec3f value, const string& ref = "") {
   xml_property(xml, indent, "rgb", name, value, ref);
 }
 

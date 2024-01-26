@@ -65,14 +65,14 @@ struct quat4f {
   float w = 1;
 
   constexpr quat4f() : v{0, 0, 0}, w{1} {}
-  constexpr quat4f(const vec3f& v_, float w_) : v{v_}, w{w_} {}
+  constexpr quat4f(vec3f v_, float w_) : v{v_}, w{w_} {}
 };
 
 // Constants
 constexpr auto identity_quat4f = quat4f{{0, 0, 0}, 1};
 
 // Conversion to/from quaternions
-inline quat4f             axisangle_to_quat(const vec3f& axis, float angle);
+inline quat4f             axisangle_to_quat(vec3f axis, float angle);
 inline pair<vec3f, float> quat_to_axisangle(const quat4f& quaternion);
 
 // Quaternion comparisons.
@@ -140,24 +140,24 @@ inline dualquat4f normalize(const dualquat4f& a);
 namespace yocto {
 
 // Quaternion transformations
-inline vec3f transform_point(const quat4f& a, const vec3f& b);
-inline vec3f transform_vector(const quat4f& a, const vec3f& b);
-inline vec3f transform_direction(const quat4f& a, const vec3f& b);
+inline vec3f transform_point(const quat4f& a, vec3f b);
+inline vec3f transform_vector(const quat4f& a, vec3f b);
+inline vec3f transform_direction(const quat4f& a, vec3f b);
 
 // Dual Quaternion transformations
-inline vec3f transform_point(const dualquat4f& a, const vec3f& b);
-inline vec3f transform_vector(const dualquat4f& a, const vec3f& b);
-inline vec3f transform_direction(const dualquat4f& a, const vec3f& b);
+inline vec3f transform_point(const dualquat4f& a, vec3f b);
+inline vec3f transform_vector(const dualquat4f& a, vec3f b);
+inline vec3f transform_direction(const dualquat4f& a, vec3f b);
 
 // Quaternion transformations
 inline frame3f rotation_frame(const quat4f& quat);
 
 // Dual Quaternion transformations
-inline dualquat4f translation_dualquat(const vec3f& translation);
-inline dualquat4f rotation_dualquat(const vec3f& axis, float angle);
+inline dualquat4f translation_dualquat(vec3f translation);
+inline dualquat4f rotation_dualquat(vec3f axis, float angle);
 inline dualquat4f rotation_dualquat(const quat4f& rotation);
 inline dualquat4f rigidtransform_dualquat(
-    const vec3f& translation, const quat4f& rotation);
+    vec3f translation, const quat4f& rotation);
 inline frame3f rigidtransform_frame(const dualquat4f& transform);
 
 }  // namespace yocto
@@ -172,11 +172,11 @@ using axis_angle3f = pair<vec3f, float>;
 
 // Linear interpolation of translation, scaling and rotations.
 // Rotations are interpolated using the exponential map.
-inline frame3f interpolate_translation(const vec3f& a, const vec3f& b, float t);
+inline frame3f interpolate_translation(vec3f a, vec3f b, float t);
 inline frame3f interpolate_rotation(
     const axis_angle3f& a, const axis_angle3f& b, float t);
 inline frame3f interpolate_rotation(const quat4f& a, const quat4f& b, float t);
-inline frame3f interpolate_scaling(const vec3f& a, const vec3f& b, float t);
+inline frame3f interpolate_scaling(vec3f a, vec3f b, float t);
 
 // Exponential map for matrices and quaternions
 inline mat3f        exp_map(const axis_angle3f& rotation);
@@ -239,7 +239,7 @@ inline void skin_matrices(vector<vec3f>& skinned_positions,
 namespace yocto {
 
 // Conversion to/from quaternions
-inline quat4f axisangle_to_quat(const vec3f& axis, float angle) {
+inline quat4f axisangle_to_quat(vec3f axis, float angle) {
   return {sin(angle / 2) * normalize(axis), cos(angle / 2)};
 }
 inline pair<vec3f, float> quat_to_axisangle(const quat4f& quaternion) {
@@ -348,32 +348,32 @@ inline dualquat4f normalize(const dualquat4f& a) {
 namespace yocto {
 
 // Quaternion transformations
-inline vec3f transform_point(const dualquat4f& a, const vec3f& b) {
+inline vec3f transform_point(const dualquat4f& a, vec3f b) {
   return (a * dualquat4f{{zero3f, 1}, {b, 0}} *
           dualquat4f{conjugate(a.q1), -conjugate(a.q2)})
       .q2.v;
 }
-inline vec3f transform_vector(const dualquat4f& a, const vec3f& b) {
+inline vec3f transform_vector(const dualquat4f& a, vec3f b) {
   return (a * dualquat4f{{zero3f, 0}, {b, 0}} *
           dualquat4f{conjugate(a.q1), -conjugate(a.q2)})
       .q2.v;
 }
-inline vec3f transform_direction(const dualquat4f& a, const vec3f& b) {
+inline vec3f transform_direction(const dualquat4f& a, vec3f b) {
   return normalize(transform_vector(a, b));
 }
 
 // Quaternion transformations
-inline dualquat4f translation_dualquat(const vec3f& translation) {
+inline dualquat4f translation_dualquat(vec3f translation) {
   return {{zero3f, 1}, {translation / 2, 0}};
 }
-inline dualquat4f rotation_dualquat(const vec3f& axis, float angle) {
+inline dualquat4f rotation_dualquat(vec3f axis, float angle) {
   return {{normalize(axis) * sin(angle / 2), cos(angle / 2)}, {zero3f, 0}};
 }
 inline dualquat4f rotation_dualquat(const quat4f& rotation) {
   return {rotation, {zero3f, 0}};
 }
 inline dualquat4f rigidtransform_dualquat(
-    const vec3f& translation, const quat4f& rotation) {
+    vec3f translation, const quat4f& rotation) {
   return translation_dualquat(translation) * rotation_dualquat(rotation);
 }
 inline frame3f rigidtransform_frame(const dualquat4f& transform) {
@@ -400,7 +400,7 @@ inline frame3f rotation_frame(const quat4f& quat) {
 namespace yocto {
 
 // Cross product matrix
-inline mat3f cross_prod_mat(const vec3f& a) {
+inline mat3f cross_prod_mat(vec3f a) {
   return {{0, a.z, -a.y}, {-a.z, 0, a.x}, {a.y, -a.x, 0}};
 }
 
@@ -429,10 +429,10 @@ inline quat4f log_map(const quat4f& q) {
 // Linear interpolation of translation, scaling and rotations.
 // Rotations are interpolated using the exponential map.
 inline frame3f interpolate_translation(
-    const vec3f& a, const vec3f& b, float t) {
+    vec3f a, vec3f b, float t) {
   return translation_frame(lerp(a, b, t));
 }
-inline frame3f interpolate_scaling(const vec3f& a, const vec3f& b, float t) {
+inline frame3f interpolate_scaling(vec3f a, vec3f b, float t) {
   return scaling_frame(lerp(a, b, t));
 }
 inline frame3f interpolate_rotation(

@@ -117,10 +117,10 @@ scene_intersection intersect_instance_bvh(const scene_bvh& bvh,
 // `find_any`. Returns the point distance, the instance id, the shape element
 // index and the element barycentric coordinates.
 shape_intersection overlap_shape_bvh(const shape_bvh& bvh,
-    const shape_data& shape, const vec3f& pos, float max_distance,
+    const shape_data& shape, vec3f pos, float max_distance,
     bool find_any = false);
 scene_intersection overlap_scene_bvh(const scene_bvh& bvh,
-    const scene_data& scene, const vec3f& pos, float max_distance,
+    const scene_data& scene, vec3f pos, float max_distance,
     bool find_any = false);
 
 }  // namespace yocto
@@ -138,9 +138,9 @@ inline vec3f eval_normal(
 inline vec3f eval_element_normal(
     const scene_data& scene, const scene_intersection& intersection);
 inline vec3f eval_shading_position(const scene_data& scene,
-    const scene_intersection& intersection, const vec3f& outgoing);
+    const scene_intersection& intersection, vec3f outgoing);
 inline vec3f eval_shading_normal(const scene_data& scene,
-    const scene_intersection& intersection, const vec3f& outgoing);
+    const scene_intersection& intersection, vec3f outgoing);
 inline vec2f eval_texcoord(
     const scene_data& scene, const scene_intersection& intersection);
 inline material_point eval_material(
@@ -180,12 +180,12 @@ inline vec3f eval_element_normal(
       scene, scene.instances[intersection.instance], intersection.element);
 }
 inline vec3f eval_shading_position(const scene_data& scene,
-    const scene_intersection& intersection, const vec3f& outgoing) {
+    const scene_intersection& intersection, vec3f outgoing) {
   return eval_shading_position(scene, scene.instances[intersection.instance],
       intersection.element, intersection.uv, outgoing);
 }
 inline vec3f eval_shading_normal(const scene_data& scene,
-    const scene_intersection& intersection, const vec3f& outgoing) {
+    const scene_intersection& intersection, vec3f outgoing) {
   return eval_shading_normal(scene, scene.instances[intersection.instance],
       intersection.element, intersection.uv, outgoing);
 }
@@ -247,12 +247,12 @@ namespace yocto {
 
 // backward compatibility
 [[deprecated]] inline shape_intersection overlap_bvh(const shape_bvh& bvh,
-    const shape_data& shape, const vec3f& pos, float max_distance,
+    const shape_data& shape, vec3f pos, float max_distance,
     bool find_any = false) {
   return overlap_shape_bvh(bvh, shape, pos, max_distance, find_any);
 }
 [[deprecated]] inline scene_intersection overlap_bvh(const scene_bvh& bvh,
-    const scene_data& scene, const vec3f& pos, float max_distance,
+    const scene_data& scene, vec3f pos, float max_distance,
     bool find_any = false) {
   return overlap_scene_bvh(bvh, scene, pos, max_distance, find_any);
 }
@@ -274,12 +274,12 @@ namespace yocto {
 
 // backward compatibility
 [[deprecated]] inline shape_intersection overlap_shape(const shape_bvh& bvh,
-    const shape_data& shape, const vec3f& pos, float max_distance,
+    const shape_data& shape, vec3f pos, float max_distance,
     bool find_any = false) {
   return overlap_shape_bvh(bvh, shape, pos, max_distance, find_any);
 }
 [[deprecated]] inline scene_intersection overlap_scene(const scene_bvh& bvh,
-    const scene_data& scene, const vec3f& pos, float max_distance,
+    const scene_data& scene, vec3f pos, float max_distance,
     bool find_any = false) {
   return overlap_scene_bvh(bvh, scene, pos, max_distance, find_any);
 }

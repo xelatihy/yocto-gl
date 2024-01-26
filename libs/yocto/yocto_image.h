@@ -77,8 +77,8 @@ struct image_t {
 
   // image api similar to vector
   image_t();
-  image_t(const vec2i& size, const T& value = T{});
-  image_t(const vec2i& size, const T* values);
+  image_t(vec2i size, const T& value = T{});
+  image_t(vec2i size, const T* values);
 
   // size
   bool  empty() const;
@@ -117,14 +117,14 @@ inline float image_aspect(const image_t<T>& image);
 
 // Evaluates an image at a point `uv`.
 template <typename T>
-inline T eval_image(const image_t<T>& image, const vec2f& uv,
+inline T eval_image(const image_t<T>& image, vec2f uv,
     bool no_interpolation = false, bool clamp_to_edge = false);
 
 // Make an image from a function that goes from [0,1]x[0,1] to T.
 template <typename Func, typename T = std::invoke_result_t<Func, vec2f>>
-inline image_t<T> make_image(const vec2i& size, Func&& func);
+inline image_t<T> make_image(vec2i size, Func&& func);
 template <typename Func, typename T = std::invoke_result_t<Func, vec2f>>
-inline image_t<T> make_image(const vec2i& size, int samples, Func&& func);
+inline image_t<T> make_image(vec2i size, int samples, Func&& func);
 
 // Make an image by applying a function to reach pixel of another.
 template <typename S, typename Func, typename T = std::invoke_result_t<Func, S>>
@@ -158,13 +158,13 @@ inline image_t<float> make_sharpening_kernel2d(float sigma, float scale = 1);
 // Get/Set region
 template <typename T>
 inline image_t<T> get_region(
-    const image_t<T>& source, const vec2i& offset, const vec2i& size);
+    const image_t<T>& source, vec2i offset, vec2i size);
 template <typename T>
-inline void get_region(image_t<T>& region, const image_t<T>& source,
-    const vec2i& offset, const vec2i& size);
+inline void get_region(
+    image_t<T>& region, const image_t<T>& source, vec2i offset, vec2i size);
 template <typename T>
 inline void set_region(
-    image_t<T>& destination, const image_t<T>& source, const vec2i& offset);
+    image_t<T>& destination, const image_t<T>& source, vec2i offset);
 
 // Convenience functions
 template <typename T>
@@ -192,10 +192,10 @@ inline int   reconstruction_radius(reconstruction_type ktype);
 
 // Image reconstruction
 template <typename T, typename Func>
-inline T reconstruct_image(const image_t<T>& img, const vec2f& uv,
-    Func&& kernel, int kradius = 2, bool clamp_to_edge = false);
+inline T reconstruct_image(const image_t<T>& img, vec2f uv, Func&& kernel,
+    int kradius = 2, bool clamp_to_edge = false);
 template <typename T>
-inline T reconstruct_image(const image_t<T>& img, const vec2f& uv,
+inline T reconstruct_image(const image_t<T>& img, vec2f uv,
     reconstruction_type ktype, bool clamp_to_edge = false);
 
 }  // namespace yocto
@@ -260,24 +260,21 @@ namespace yocto {
 
 // Make a grid image.
 image_t<vec4f> make_grid(vec2i size, float scale = 1,
-    const vec4f& color0 = vec4f{0.2f, 0.2f, 0.2f, 1.0f},
-    const vec4f& color1 = vec4f{0.5f, 0.5f, 0.5f, 1.0f});
+    vec4f color0 = vec4f{0.2f, 0.2f, 0.2f, 1.0f},
+    vec4f color1 = vec4f{0.5f, 0.5f, 0.5f, 1.0f});
 // Make a checker image.
 image_t<vec4f> make_checker(vec2i size, float scale = 1,
-    const vec4f& color0 = vec4f{0.2f, 0.2f, 0.2f, 1.0f},
-    const vec4f& color1 = vec4f{0.5f, 0.5f, 0.5f, 1.0f});
+    vec4f color0 = vec4f{0.2f, 0.2f, 0.2f, 1.0f},
+    vec4f color1 = vec4f{0.5f, 0.5f, 0.5f, 1.0f});
 // Make a bump map.
 image_t<vec4f> make_bumps(vec2i size, float scale = 1,
-    const vec4f& color0 = vec4f{0, 0, 0, 1},
-    const vec4f& color1 = vec4f{1, 1, 1, 1});
+    vec4f color0 = vec4f{0, 0, 0, 1}, vec4f color1 = vec4f{1, 1, 1, 1});
 // Make a ramp
 image_t<vec4f> make_ramp(vec2i size, float scale = 1,
-    const vec4f& color0 = vec4f{0, 0, 0, 1},
-    const vec4f& color1 = vec4f{1, 1, 1, 1});
+    vec4f color0 = vec4f{0, 0, 0, 1}, vec4f color1 = vec4f{1, 1, 1, 1});
 // Make a gamma ramp.
 image_t<vec4f> make_gammaramp(vec2i size, float scale = 1,
-    const vec4f& color0 = vec4f{0, 0, 0, 1},
-    const vec4f& color1 = vec4f{1, 1, 1, 1});
+    vec4f color0 = vec4f{0, 0, 0, 1}, vec4f color1 = vec4f{1, 1, 1, 1});
 // Make a uv ramp
 image_t<vec4f> make_uvramp(vec2i size, float scale = 1);
 // Make a uv grid
@@ -286,16 +283,16 @@ image_t<vec4f> make_uvgrid(vec2i size, float scale = 1, bool colored = true);
 image_t<vec4f> make_colormapramp(vec2i size, float scale = 1);
 // Make a noise image. Noise parameters: lacunarity, gain, octaves, offset.
 image_t<vec4f> make_noisemap(vec2i size, float scale = 1,
-    const vec4f& color0 = {0, 0, 0, 1}, const vec4f& color1 = {1, 1, 1, 1});
+    vec4f color0 = {0, 0, 0, 1}, vec4f color1 = {1, 1, 1, 1});
 image_t<vec4f> make_fbmmap(vec2i size, float scale = 1,
-    const vec4f& noise = {2, 0.5, 8, 1}, const vec4f& color0 = {0, 0, 0, 1},
-    const vec4f& color1 = {1, 1, 1, 1});
+    vec4f noise = {2, 0.5, 8, 1}, vec4f color0 = {0, 0, 0, 1},
+    vec4f color1 = {1, 1, 1, 1});
 image_t<vec4f> make_turbulencemap(vec2i size, float scale = 1,
-    const vec4f& noise = {2, 0.5, 8, 1}, const vec4f& color0 = {0, 0, 0, 1},
-    const vec4f& color1 = {1, 1, 1, 1});
+    vec4f noise = {2, 0.5, 8, 1}, vec4f color0 = {0, 0, 0, 1},
+    vec4f color1 = {1, 1, 1, 1});
 image_t<vec4f> make_ridgemap(vec2i size, float scale = 1,
-    const vec4f& noise = {2, 0.5, 8, 1}, const vec4f& color0 = {0, 0, 0, 1},
-    const vec4f& color1 = {1, 1, 1, 1});
+    vec4f noise = {2, 0.5, 8, 1}, vec4f color0 = {0, 0, 0, 1},
+    vec4f color1 = {1, 1, 1, 1});
 
 // Make a sunsky HDR model with sun at sun_angle elevation in [0,pif/2],
 // turbidity in [1.7,10] with or without sun. The sun can be enabled or
@@ -304,18 +301,17 @@ image_t<vec4f> make_ridgemap(vec2i size, float scale = 1,
 // of 0 sets the eath sun defaults (ignoring intensity too).
 image_t<vec4f> make_sunsky(vec2i size, float sun_angle, float turbidity = 3,
     bool has_sun = false, float sun_intensity = 1, float sun_radius = 1,
-    const vec3f& ground_albedo = {0.2f, 0.2f, 0.2f});
+    vec3f ground_albedo = {0.2f, 0.2f, 0.2f});
 // Make an image of multiple lights.
-image_t<vec4f> make_lights(vec2i size, const vec3f& le = {1, 1, 1},
-    int nlights = 4, float langle = pif / 4, float lwidth = pif / 16,
-    float lheight = pif / 16);
+image_t<vec4f> make_lights(vec2i size, vec3f le = {1, 1, 1}, int nlights = 4,
+    float langle = pif / 4, float lwidth = pif / 16, float lheight = pif / 16);
 
 // Comvert a bump map to a normal map. All linear color spaces.
 image_t<vec4f> bump_to_normal(const image_t<vec4f>& image, float scale = 1);
 
 // Add a border to an image
 image_t<vec4f> add_border(
-    const image_t<vec4f>& img, float width, const vec4f& color = {0, 0, 0, 1});
+    const image_t<vec4f>& img, float width, vec4f color = {0, 0, 0, 1});
 
 }  // namespace yocto
 
@@ -336,10 +332,10 @@ namespace yocto {
 template <typename T>
 inline image_t<T>::image_t() : _size{0, 0}, _data{} {}
 template <typename T>
-inline image_t<T>::image_t(const vec2i& size, const T& value)
+inline image_t<T>::image_t(vec2i size, const T& value)
     : _size{size}, _data((size_t)size.x * (size_t)size.y, value) {}
 template <typename T>
-inline image_t<T>::image_t(const vec2i& size, const T* values)
+inline image_t<T>::image_t(vec2i size, const T* values)
     : _size{size}, _data{values, values + size.x * size.y} {}
 
 // size
@@ -417,8 +413,8 @@ inline float image_aspect(const image_t<T>& image) {
 
 // Evaluates an image at a point `uv`.
 template <typename T>
-inline T eval_image(const image_t<T>& image, const vec2f& uv,
-    bool no_interpolation, bool clamp_to_edge) {
+inline T eval_image(const image_t<T>& image, vec2f uv, bool no_interpolation,
+    bool clamp_to_edge) {
   if (image.empty()) return T{};
 
   // get image width/height
@@ -455,7 +451,7 @@ inline T eval_image(const image_t<T>& image, const vec2f& uv,
 
 // Make an image from a function that goes from [0,1]x[0,1] to T.
 template <typename Func, typename T>
-inline image_t<T> make_image(const vec2i& size, Func&& func) {
+inline image_t<T> make_image(vec2i size, Func&& func) {
   auto img = image_t<T>(size);
   for (auto ij : range(size)) {
     img[ij] = func(((vec2f)ij + 0.5f) / (vec2f)size);
@@ -465,7 +461,7 @@ inline image_t<T> make_image(const vec2i& size, Func&& func) {
 
 // Make an image from a function that goes from [0,1]x[0,1] to T.
 template <typename Func, typename T>
-inline image_t<T> make_image(const vec2i& size, int samples, Func&& func) {
+inline image_t<T> make_image(vec2i size, int samples, Func&& func) {
   if (samples <= 1) return make_image(size, std::forward<Func>(func));
   auto ns  = (int)round(sqrt((float)samples));
   auto img = image_t<T>(size, T{});
@@ -614,20 +610,20 @@ inline image_t<float> make_sharpening_kernel2d(float sigma, float scale) {
 // Get/Set region
 template <typename T>
 inline image_t<T> get_region(
-    const image_t<T>& source, const vec2i& offset, const vec2i& size) {
+    const image_t<T>& source, vec2i offset, vec2i size) {
   auto region = image_t<T>(size);
   for (auto ij : range(region.size())) region[ij] = source[ij + offset];
   return region;
 }
 template <typename T>
-inline void get_region(image_t<T>& region, const image_t<T>& source,
-    const vec2i& offset, const vec2i& size) {
+inline void get_region(
+    image_t<T>& region, const image_t<T>& source, vec2i offset, vec2i size) {
   if (region.size() != size) region = image_t<T>(size);
   for (auto ij : range(region.size())) region[ij] = source[ij + offset];
 }
 template <typename T>
 inline void set_region(
-    image_t<T>& destination, const image_t<T>& source, const vec2i& offset) {
+    image_t<T>& destination, const image_t<T>& source, vec2i offset) {
   for (auto ij : range(source.size())) destination[ij + offset] = source[ij];
 }
 
@@ -715,8 +711,8 @@ inline int reconstruction_radius(reconstruction_type ktype) {
 
 // Image reconstruction
 template <typename T, typename Func>
-inline T reconstruct_image(const image_t<T>& img, const vec2f& uv,
-    Func&& kernel, int kradius, bool clamp_to_edge) {
+inline T reconstruct_image(const image_t<T>& img, vec2f uv, Func&& kernel,
+    int kradius, bool clamp_to_edge) {
   auto x    = uv * (vec2f)img.size();
   auto ij   = (vec2i)(x + 0.5f);
   auto size = img.size();
@@ -731,7 +727,7 @@ inline T reconstruct_image(const image_t<T>& img, const vec2f& uv,
   return sum;
 }
 template <typename T>
-inline T reconstruct_image(const image_t<T>& img, const vec2f& uv,
+inline T reconstruct_image(const image_t<T>& img, vec2f uv,
     reconstruction_type ktype, bool clamp_to_edge) {
   switch (ktype) {
     case reconstruction_type::box:

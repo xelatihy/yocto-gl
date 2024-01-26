@@ -149,14 +149,14 @@ static scene_intersection intersect_instance(const trace_bvh& bvh,
 namespace yocto {
 
 // Evaluates/sample the BRDF scaled by the cosine of the incoming direction.
-static vec3f eval_emission(const material_point& material, const vec3f& normal,
-    const vec3f& outgoing) {
+static vec3f eval_emission(const material_point& material, vec3f normal,
+    vec3f outgoing) {
   return dot(normal, outgoing) >= 0 ? material.emission : vec3f{0, 0, 0};
 }
 
 // Evaluates/sample the BRDF scaled by the cosine of the incoming direction.
-static vec3f eval_bsdfcos(const material_point& material, const vec3f& normal,
-    const vec3f& outgoing, const vec3f& incoming) {
+static vec3f eval_bsdfcos(const material_point& material, vec3f normal,
+    vec3f outgoing, vec3f incoming) {
   if (material.roughness == 0) return {0, 0, 0};
 
   if (material.type == material_type::matte) {
@@ -184,8 +184,8 @@ static vec3f eval_bsdfcos(const material_point& material, const vec3f& normal,
   }
 }
 
-static vec3f eval_delta(const material_point& material, const vec3f& normal,
-    const vec3f& outgoing, const vec3f& incoming) {
+static vec3f eval_delta(const material_point& material, vec3f normal,
+    vec3f outgoing, vec3f incoming) {
   if (material.roughness != 0) return {0, 0, 0};
 
   if (material.type == material_type::reflective) {
@@ -204,8 +204,8 @@ static vec3f eval_delta(const material_point& material, const vec3f& normal,
 }
 
 // Picks a direction based on the BRDF
-static vec3f sample_bsdfcos(const material_point& material, const vec3f& normal,
-    const vec3f& outgoing, float rnl, const vec2f& rn) {
+static vec3f sample_bsdfcos(const material_point& material, vec3f normal,
+    vec3f outgoing, float rnl, vec2f rn) {
   if (material.roughness == 0) return {0, 0, 0};
 
   if (material.type == material_type::matte) {
@@ -233,8 +233,8 @@ static vec3f sample_bsdfcos(const material_point& material, const vec3f& normal,
   }
 }
 
-static vec3f sample_delta(const material_point& material, const vec3f& normal,
-    const vec3f& outgoing, float rnl) {
+static vec3f sample_delta(const material_point& material, vec3f normal,
+    vec3f outgoing, float rnl) {
   if (material.roughness != 0) return {0, 0, 0};
 
   if (material.type == material_type::reflective) {
@@ -254,7 +254,7 @@ static vec3f sample_delta(const material_point& material, const vec3f& normal,
 
 // Compute the weight for sampling the BRDF
 static float sample_bsdfcos_pdf(const material_point& material,
-    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
+    vec3f normal, vec3f outgoing, vec3f incoming) {
   if (material.roughness == 0) return 0;
 
   if (material.type == material_type::matte) {
@@ -283,7 +283,7 @@ static float sample_bsdfcos_pdf(const material_point& material,
 }
 
 static float sample_delta_pdf(const material_point& material,
-    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
+    vec3f normal, vec3f outgoing, vec3f incoming) {
   if (material.roughness != 0) return 0;
 
   if (material.type == material_type::reflective) {
@@ -302,27 +302,27 @@ static float sample_delta_pdf(const material_point& material,
 }
 
 static vec3f eval_scattering(const material_point& material,
-    const vec3f& outgoing, const vec3f& incoming) {
+    vec3f outgoing, vec3f incoming) {
   if (material.density == vec3f{0, 0, 0}) return {0, 0, 0};
   return material.scattering * material.density *
          eval_phasefunction(material.scanisotropy, outgoing, incoming);
 }
 
 static vec3f sample_scattering(const material_point& material,
-    const vec3f& outgoing, float rnl, const vec2f& rn) {
+    vec3f outgoing, float rnl, vec2f rn) {
   if (material.density == vec3f{0, 0, 0}) return {0, 0, 0};
   return sample_phasefunction(material.scanisotropy, outgoing, rn);
 }
 
 static float sample_scattering_pdf(const material_point& material,
-    const vec3f& outgoing, const vec3f& incoming) {
+    vec3f outgoing, vec3f incoming) {
   if (material.density == vec3f{0, 0, 0}) return 0;
   return sample_phasefunction_pdf(material.scanisotropy, outgoing, incoming);
 }
 
 // Sample camera
-static ray3f sample_camera(const camera_data& camera, const vec2i& ij,
-    const vec2i& image_size, const vec2f& puv, const vec2f& luv, bool tent) {
+static ray3f sample_camera(const camera_data& camera, vec2i ij,
+    vec2i image_size, vec2f puv, vec2f luv, bool tent) {
   if (!tent) {
     auto uv = vec2f{
         (ij.x + puv.x) / image_size.x, (ij.y + puv.y) / image_size.y};
@@ -345,7 +345,7 @@ static ray3f sample_camera(const camera_data& camera, const vec2i& ij,
 
 // Sample lights wrt solid angle
 static vec3f sample_lights(const scene_data& scene, const trace_lights& lights,
-    const vec3f& position, float rl, float rel, const vec2f& ruv) {
+    vec3f position, float rl, float rel, vec2f ruv) {
   auto  light_id = sample_uniform((int)lights.lights.size(), rl);
   auto& light    = lights.lights[light_id];
   if (light.instance != invalidid) {
@@ -377,7 +377,7 @@ static vec3f sample_lights(const scene_data& scene, const trace_lights& lights,
 
 // Sample lights pdf
 static float sample_lights_pdf(const scene_data& scene, const trace_bvh& bvh,
-    const trace_lights& lights, const vec3f& position, const vec3f& direction) {
+    const trace_lights& lights, vec3f position, vec3f direction) {
   auto pdf = 0.0f;
   for (auto& light : lights.lights) {
     if (light.instance != invalidid) {

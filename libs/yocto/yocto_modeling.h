@@ -348,13 +348,13 @@ namespace yocto {
 
 // Sphere SDF
 inline float sdf_sphere(
-    const vec3f& position, const vec3f& center, float radius);
+    vec3f position, vec3f center, float radius);
 // Box SDF
 inline float sdf_box(
-    const vec3f& position, const vec3f& center, const vec3f& size);
+    vec3f position, vec3f center, vec3f size);
 // Capsule SDF
 inline float sdf_capsule(
-    const vec3f& position, const vec3f& a, const vec3f& b, float radius);
+    vec3f position, vec3f a, vec3f b, float radius);
 
 // Union SDF
 inline float sdf_union(float sdf1, float sdf2);
@@ -399,11 +399,11 @@ inline float voronoi_noise(vec3f position);
 // Fractal noise
 template <typename Noise>
 inline float fractal_noise(
-    Noise&& base_noise, const vec2f& position, int num = 8);
+    Noise&& base_noise, vec2f position, int num = 8);
 // Turbulence noise
 template <typename Noise>
 inline float turbulence_noise(
-    Noise&& base_noise, const vec2f& position, int num = 8);
+    Noise&& base_noise, vec2f position, int num = 8);
 
 }  // namespace yocto
 
@@ -1285,7 +1285,7 @@ static pair<vector<vec4i>, vector<T>> subdivide_beziers(
 namespace yocto {
 
 // Edge comparator
-inline bool compare_edges(const vec2i& a, const vec2i& b) {
+inline bool compare_edges(vec2i a, vec2i b) {
   return a.x < b.x || (a.x == b.x && a.y < b.y);
 }
 
@@ -1464,7 +1464,7 @@ static pair<vector<vec3i>, vector<T>> subdivide_triangles(
     auto nfaces = (int)triangles.size();
 
     // indices
-    auto edge_vertex = [&edges, nverts](const vec2i& edge) {
+    auto edge_vertex = [&edges, nverts](vec2i edge) {
       return nverts + search_edge(edges, edge);
     };
 
@@ -1521,7 +1521,7 @@ static pair<vector<vec4i>, vector<T>> subdivide_quads(
     auto nfaces = (int)quads.size();
 
     // indices
-    auto edge_vertex = [&edges, nverts](const vec2i& edge) {
+    auto edge_vertex = [&edges, nverts](vec2i edge) {
       return nverts + search_edge(edges, edge);
     };
     auto quad_vertex = [nverts, nedges](size_t quad_id) {
@@ -1600,7 +1600,7 @@ static pair<vector<vec4i>, vector<T>> subdivide_catmullclark(
     auto nfaces = (int)quads.size();
 
     // indices
-    auto edge_vertex = [&edges, nverts](const vec2i& edge) {
+    auto edge_vertex = [&edges, nverts](vec2i edge) {
       return nverts + search_edge(edges, edge);
     };
     auto quad_vertex = [nverts, nedges](size_t quad_id) {
@@ -1746,7 +1746,7 @@ static pair<vector<vec4i>, vector<T>> subdivide_catmullclark_creased(
     auto nfaces = (int)quads.size();
 
     // indices
-    auto edge_vertex = [&edges, nverts](const vec2i& edge) {
+    auto edge_vertex = [&edges, nverts](vec2i edge) {
       return nverts + search_edge(edges, edge);
     };
     auto quad_vertex = [nverts, nedges](size_t quad_id) {
@@ -1908,7 +1908,7 @@ static pair<vector<vec4i>, vector<T>> subdivide_catmullclark_illustration(
     auto nfaces = (int)quads.size();
 
     // indices
-    auto edge_vertex = [&edges, nverts](const vec2i& edge) {
+    auto edge_vertex = [&edges, nverts](vec2i edge) {
       return nverts + search_edge(edges, edge);
     };
     auto quad_vertex = [nverts, nedges](size_t quad_id) {
@@ -2058,18 +2058,18 @@ namespace yocto {
 
 // Sphere SDF
 inline float sdf_sphere(
-    const vec3f& position, const vec3f& center, float radius) {
+    vec3f position, vec3f center, float radius) {
   return length(position - center) - radius;
 }
 // Box SDF
 inline float sdf_box(
-    const vec3f& position, const vec3f& center, const vec3f& size) {
+    vec3f position, vec3f center, vec3f size) {
   auto q = abs(position - center) - size;
   return length(max(q, 0.0f)) + min(max(q), 0.0f);
 }
 // Capsule SDF
 inline float sdf_capsule(
-    const vec3f& position, const vec3f& a, const vec3f& b, float radius) {
+    vec3f position, vec3f a, vec3f b, float radius) {
   auto  pos_a = position - a, axis = b - a;
   float height = clamp(dot(pos_a, axis) / dot(axis, axis), 0.0f, 1.0f);
   return length(pos_a - axis * height) - radius;
@@ -2149,10 +2149,10 @@ inline float noise_kernel_cubic(float x_) {
   auto x = abs(x_);
   return x >= 1 ? 0 : (1 - (3 * x * x - 2 * x * x * x));
 }
-inline float noise_kernel_cubic(const vec2f& x) {
+inline float noise_kernel_cubic(vec2f x) {
   return noise_kernel_cubic(x.x) * noise_kernel_cubic(x.y);
 }
-inline float noise_kernel_cubic(const vec3f& x) {
+inline float noise_kernel_cubic(vec3f x) {
   return noise_kernel_cubic(x.x) * noise_kernel_cubic(x.y) *
          noise_kernel_cubic(x.z);
 }
@@ -2160,10 +2160,10 @@ inline float noise_kernel_quintic(float x_) {
   auto x = abs(x_);
   return x >= 1 ? 0 : (1 - ((6 * x - 15) * x + 10) * x * x * x);
 }
-inline float noise_kernel_quintic(const vec2f& x) {
+inline float noise_kernel_quintic(vec2f x) {
   return noise_kernel_quintic(x.x) * noise_kernel_quintic(x.y);
 }
-inline float noise_kernel_quintic(const vec3f& x) {
+inline float noise_kernel_quintic(vec3f x) {
   return noise_kernel_quintic(x.x) * noise_kernel_quintic(x.y) *
          noise_kernel_quintic(x.z);
 }
@@ -2286,7 +2286,7 @@ inline float voronoi_noise(vec3f position) {
 
 // Fractal noise
 template <typename Noise>
-inline float fractal_noise(Noise&& base_noise, const vec2f& position, int num) {
+inline float fractal_noise(Noise&& base_noise, vec2f position, int num) {
   auto noise = 0.0f;
   for (auto index : range(num)) {
     noise += base_noise(position * pow(2, index)) / pow(2, index);
@@ -2297,7 +2297,7 @@ inline float fractal_noise(Noise&& base_noise, const vec2f& position, int num) {
 // Turbulence noise
 template <typename Noise>
 inline float turbulence_noise(
-    Noise&& base_noise, const vec2f& position, int num) {
+    Noise&& base_noise, vec2f position, int num) {
   auto noise = 0.0f;
   for (auto index : range(num)) {
     noise += abs(2 * base_noise(position * pow(2, index)) - 1) / pow(2, index);

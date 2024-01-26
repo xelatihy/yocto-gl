@@ -70,10 +70,10 @@ struct bbox2f {
   vec2f max = {flt_min, flt_min};
 
   constexpr bbox2f() : min{flt_max, flt_max}, max{flt_min, flt_min} {}
-  constexpr bbox2f(const vec2f& min, const vec2f& max) : min{min}, max{max} {}
+  constexpr bbox2f(vec2f min, vec2f max) : min{min}, max{max} {}
 
   inline vec2f&       operator[](int i);
-  inline const vec2f& operator[](int i) const;
+  inline vec2f operator[](int i) const;
 };
 
 // Axis aligned bounding box represented as a min/max vector pairs.
@@ -83,10 +83,10 @@ struct bbox3f {
 
   constexpr bbox3f()
       : min{flt_max, flt_max, flt_max}, max{flt_min, flt_min, flt_min} {}
-  constexpr bbox3f(const vec3f& min, const vec3f& max) : min{min}, max{max} {}
+  constexpr bbox3f(vec3f min, vec3f max) : min{min}, max{max} {}
 
   inline vec3f&       operator[](int i);
-  inline const vec3f& operator[](int i) const;
+  inline vec3f operator[](int i) const;
 };
 
 // Empty bbox constant.
@@ -98,7 +98,7 @@ inline vec2f center(const bbox2f& a);
 inline vec2f size(const bbox2f& a);
 
 // Bounding box tests
-inline bool contains(const bbox2f& a, const vec2f& b);
+inline bool contains(const bbox2f& a, vec2f b);
 inline bool contains(const bbox2f& a, const bbox2f& b);
 
 // Bounding box comparisons.
@@ -106,9 +106,9 @@ inline bool operator==(const bbox2f& a, const bbox2f& b);
 inline bool operator!=(const bbox2f& a, const bbox2f& b);
 
 // Bounding box expansions with points and other boxes.
-inline bbox2f merge(const bbox2f& a, const vec2f& b);
+inline bbox2f merge(const bbox2f& a, vec2f b);
 inline bbox2f merge(const bbox2f& a, const bbox2f& b);
-inline void   expand(bbox2f& a, const vec2f& b);
+inline void   expand(bbox2f& a, vec2f b);
 inline void   expand(bbox2f& a, const bbox2f& b);
 
 // Bounding box properties
@@ -116,7 +116,7 @@ inline vec3f center(const bbox3f& a);
 inline vec3f size(const bbox3f& a);
 
 // Bounding box tests
-inline bool contains(const bbox3f& a, const vec3f& b);
+inline bool contains(const bbox3f& a, vec3f b);
 inline bool contains(const bbox3f& a, const bbox3f& b);
 
 // Bounding box comparisons.
@@ -124,9 +124,9 @@ inline bool operator==(const bbox3f& a, const bbox3f& b);
 inline bool operator!=(const bbox3f& a, const bbox3f& b);
 
 // Bounding box expansions with points and other boxes.
-inline bbox3f merge(const bbox3f& a, const vec3f& b);
+inline bbox3f merge(const bbox3f& a, vec3f b);
 inline bbox3f merge(const bbox3f& a, const bbox3f& b);
-inline void   expand(bbox3f& a, const vec3f& b);
+inline void   expand(bbox3f& a, vec3f b);
 inline void   expand(bbox3f& a, const bbox3f& b);
 
 }  // namespace yocto
@@ -146,7 +146,7 @@ struct ray2f {
   float tmax = flt_max;
 
   constexpr ray2f() : o{0, 0}, d{0, 1}, tmin{ray_eps}, tmax{flt_max} {}
-  constexpr ray2f(const vec2f& o_, const vec2f& d_, float tmin_ = ray_eps,
+  constexpr ray2f(vec2f o_, vec2f d_, float tmin_ = ray_eps,
       float tmax_ = flt_max)
       : o{o_}, d{d_}, tmin{tmin_}, tmax{tmax_} {}
 };
@@ -159,7 +159,7 @@ struct ray3f {
   float tmax = flt_max;
 
   constexpr ray3f() : o{0, 0, 0}, d{0, 0, 1}, tmin{ray_eps}, tmax{flt_max} {}
-  constexpr ray3f(const vec3f& o_, const vec3f& d_, float tmin_ = ray_eps,
+  constexpr ray3f(vec3f o_, vec3f d_, float tmin_ = ray_eps,
       float tmax_ = flt_max)
       : o{o_}, d{d_}, tmin{tmin_}, tmax{tmax_} {}
 };
@@ -191,17 +191,17 @@ inline bbox3f transform_bbox(const frame3f& a, const bbox3f& b);
 namespace yocto {
 
 // Primitive bounds.
-inline bbox3f point_bounds(const vec3f& p);
-inline bbox3f point_bounds(const vec3f& p, float r);
-inline bbox3f line_bounds(const vec3f& p0, const vec3f& p1);
-inline bbox3f line_bounds(const vec3f& p0, const vec3f& p1, float r0, float r1);
+inline bbox3f point_bounds(vec3f p);
+inline bbox3f point_bounds(vec3f p, float r);
+inline bbox3f line_bounds(vec3f p0, vec3f p1);
+inline bbox3f line_bounds(vec3f p0, vec3f p1, float r0, float r1);
 inline bbox3f triangle_bounds(
-    const vec3f& p0, const vec3f& p1, const vec3f& p2);
+    vec3f p0, vec3f p1, vec3f p2);
 inline bbox3f quad_bounds(
-    const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec3f& p3);
-inline bbox3f sphere_bounds(const vec3f& p, float r);
+    vec3f p0, vec3f p1, vec3f p2, vec3f p3);
+inline bbox3f sphere_bounds(vec3f p, float r);
 inline bbox3f capsule_bounds(
-    const vec3f& p0, const vec3f& p1, float r0, float r1);
+    vec3f p0, vec3f p1, float r0, float r1);
 
 }  // namespace yocto
 
@@ -211,18 +211,18 @@ inline bbox3f capsule_bounds(
 namespace yocto {
 
 // Line properties.
-inline vec3f line_tangent(const vec3f& p0, const vec3f& p1);
-inline float line_length(const vec3f& p0, const vec3f& p1);
+inline vec3f line_tangent(vec3f p0, vec3f p1);
+inline float line_length(vec3f p0, vec3f p1);
 
 // Triangle properties.
-inline vec3f triangle_normal(const vec3f& p0, const vec3f& p1, const vec3f& p2);
-inline float triangle_area(const vec3f& p0, const vec3f& p1, const vec3f& p2);
+inline vec3f triangle_normal(vec3f p0, vec3f p1, vec3f p2);
+inline float triangle_area(vec3f p0, vec3f p1, vec3f p2);
 
 // Quad properties.
 inline vec3f quad_normal(
-    const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec3f& p3);
+    vec3f p0, vec3f p1, vec3f p2, vec3f p3);
 inline float quad_area(
-    const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec3f& p3);
+    vec3f p0, vec3f p1, vec3f p2, vec3f p3);
 
 // Interpolates values over a line parameterized from a to b by u. Same as lerp.
 template <typename T>
@@ -232,13 +232,13 @@ inline T interpolate_line(const T& p0, const T& p1, float u);
 // (p1-p0) and (p2-p0) directions. Same as barycentric interpolation.
 template <typename T>
 inline T interpolate_triangle(
-    const T& p0, const T& p1, const T& p2, const vec2f& uv);
+    const T& p0, const T& p1, const T& p2, vec2f uv);
 
 // Interpolates values over a quad parameterized by u and v along the
 // (p1-p0) and (p2-p1) directions. Same as bilinear interpolation.
 template <typename T>
 inline T interpolate_quad(
-    const T& p0, const T& p1, const T& p2, const T& p3, const vec2f& uv);
+    const T& p0, const T& p1, const T& p2, const T& p3, vec2f uv);
 
 // Interpolates values along a cubic Bezier segment parametrized by u.
 template <typename T>
@@ -251,36 +251,36 @@ inline T interpolate_bezier_derivative(
     const T& p0, const T& p1, const T& p2, const T& p3, float u);
 
 // Interpolated line properties.
-inline vec3f line_point(const vec3f& p0, const vec3f& p1, float u);
-inline vec3f line_tangent(const vec3f& t0, const vec3f& t1, float u);
+inline vec3f line_point(vec3f p0, vec3f p1, float u);
+inline vec3f line_tangent(vec3f t0, vec3f t1, float u);
 
 // Interpolated triangle properties.
 inline vec3f triangle_point(
-    const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec2f& uv);
+    vec3f p0, vec3f p1, vec3f p2, vec2f uv);
 inline vec3f triangle_normal(
-    const vec3f& n0, const vec3f& n1, const vec3f& n2, const vec2f& uv);
+    vec3f n0, vec3f n1, vec3f n2, vec2f uv);
 
 // Interpolated quad properties.
 inline vec3f quad_point(
-    const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec2f& uv);
-inline vec3f quad_normal(const vec3f& n0, const vec3f& n1, const vec3f& n2,
-    const vec3f& n3, const vec2f& uv);
+    vec3f p0, vec3f p1, vec3f p2, vec2f uv);
+inline vec3f quad_normal(vec3f n0, vec3f n1, vec3f n2,
+    vec3f n3, vec2f uv);
 
 // Interpolated sphere properties.
-inline vec3f sphere_point(const vec3f p, float r, const vec2f& uv);
-inline vec3f sphere_normal(const vec3f p, float r, const vec2f& uv);
+inline vec3f sphere_point(const vec3f p, float r, vec2f uv);
+inline vec3f sphere_normal(const vec3f p, float r, vec2f uv);
 
 // Triangle tangent and bitangent from uv
-inline pair<vec3f, vec3f> triangle_tangents_fromuv(const vec3f& p0,
-    const vec3f& p1, const vec3f& p2, const vec2f& uv0, const vec2f& uv1,
-    const vec2f& uv2);
+inline pair<vec3f, vec3f> triangle_tangents_fromuv(vec3f p0,
+    vec3f p1, vec3f p2, vec2f uv0, vec2f uv1,
+    vec2f uv2);
 
 // Quad tangent and bitangent from uv. Note that we pass a current_uv since
 // internally we may want to split the quad in two and we need to known where
 // to do it. If not interested in the split, just pass vec2f{0,0} here.
-inline pair<vec3f, vec3f> quad_tangents_fromuv(const vec3f& p0, const vec3f& p1,
-    const vec3f& p2, const vec3f& p3, const vec2f& uv0, const vec2f& uv1,
-    const vec2f& uv2, const vec2f& uv3, const vec2f& current_uv);
+inline pair<vec3f, vec3f> quad_tangents_fromuv(vec3f p0, vec3f p1,
+    vec3f p2, vec3f p3, vec2f uv0, vec2f uv1,
+    vec2f uv2, vec2f uv3, vec2f current_uv);
 
 }  // namespace yocto
 
@@ -291,11 +291,11 @@ namespace yocto {
 
 // Generate a ray from a camera
 inline ray3f camera_ray(
-    const frame3f& frame, float lens, const vec2f& film, const vec2f& image_uv);
+    const frame3f& frame, float lens, vec2f film, vec2f image_uv);
 
 // Generate a ray from a camera
 inline ray3f camera_ray(const frame3f& frame, float lens, float aspect,
-    float film, const vec2f& image_uv);
+    float film, vec2f image_uv);
 
 }  // namespace yocto
 
@@ -313,30 +313,30 @@ struct prim_intersection {
 
 // Intersect a ray with a point (approximate)
 inline prim_intersection intersect_point(
-    const ray3f& ray, const vec3f& p, float r);
+    const ray3f& ray, vec3f p, float r);
 
 // Intersect a ray with a line
 inline prim_intersection intersect_line(
-    const ray3f& ray, const vec3f& p0, const vec3f& p1, float r0, float r1);
+    const ray3f& ray, vec3f p0, vec3f p1, float r0, float r1);
 
 // Intersect a ray with a triangle
 inline prim_intersection intersect_triangle(
-    const ray3f& ray, const vec3f& p0, const vec3f& p1, const vec3f& p2);
+    const ray3f& ray, vec3f p0, vec3f p1, vec3f p2);
 
 // Intersect a ray with a quad.
-inline prim_intersection intersect_quad(const ray3f& ray, const vec3f& p0,
-    const vec3f& p1, const vec3f& p2, const vec3f& p3);
+inline prim_intersection intersect_quad(const ray3f& ray, vec3f p0,
+    vec3f p1, vec3f p2, vec3f p3);
 
 // Intersect a ray with a sphere
 inline prim_intersection intersect_sphere(
-    const ray3f& ray, const vec3f& p, float r);
+    const ray3f& ray, vec3f p, float r);
 
 // Intersect a ray with a axis-aligned bounding box
 inline bool intersect_bbox(const ray3f& ray, const bbox3f& bbox);
 
 // Intersect a ray with a axis-aligned bounding box
 inline bool intersect_bbox(
-    const ray3f& ray, const vec3f& ray_dinv, const bbox3f& bbox);
+    const ray3f& ray, vec3f ray_dinv, const bbox3f& bbox);
 
 }  // namespace yocto
 
@@ -347,32 +347,32 @@ namespace yocto {
 
 // Check if a point overlaps a position pos withint a maximum distance dist_max.
 inline prim_intersection overlap_point(
-    const vec3f& pos, float dist_max, const vec3f& p, float r);
+    vec3f pos, float dist_max, vec3f p, float r);
 
 // Compute the closest line uv to a give position pos.
-inline float closestuv_line(const vec3f& pos, const vec3f& p0, const vec3f& p1);
+inline float closestuv_line(vec3f pos, vec3f p0, vec3f p1);
 
 // Check if a line overlaps a position pos withint a maximum distance dist_max.
-inline prim_intersection overlap_line(const vec3f& pos, float dist_max,
-    const vec3f& p0, const vec3f& p1, float r0, float r1);
+inline prim_intersection overlap_line(vec3f pos, float dist_max,
+    vec3f p0, vec3f p1, float r0, float r1);
 
 // Compute the closest triangle uv to a give position pos.
 inline vec2f closestuv_triangle(
-    const vec3f& pos, const vec3f& p0, const vec3f& p1, const vec3f& p2);
+    vec3f pos, vec3f p0, vec3f p1, vec3f p2);
 
 // Check if a triangle overlaps a position pos withint a maximum distance
 // dist_max.
-inline prim_intersection overlap_triangle(const vec3f& pos, float dist_max,
-    const vec3f& p0, const vec3f& p1, const vec3f& p2, float r0, float r1,
+inline prim_intersection overlap_triangle(vec3f pos, float dist_max,
+    vec3f p0, vec3f p1, vec3f p2, float r0, float r1,
     float r2);
 
 // Check if a quad overlaps a position pos withint a maximum distance dist_max.
-inline prim_intersection overlap_quad(const vec3f& pos, float dist_max,
-    const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec3f& p3,
+inline prim_intersection overlap_quad(vec3f pos, float dist_max,
+    vec3f p0, vec3f p1, vec3f p2, vec3f p3,
     float r0, float r1, float r2, float r3);
 
 // Check if a bbox overlaps a position pos withint a maximum distance dist_max.
-inline bool overlap_bbox(const vec3f& pos, float dist_max, const bbox3f& bbox);
+inline bool overlap_bbox(vec3f pos, float dist_max, const bbox3f& bbox);
 
 // Check if two bboxes overlap.
 inline bool overlap_bbox(const bbox3f& bbox1, const bbox3f& bbox2);
@@ -394,18 +394,18 @@ namespace yocto {
 
 // Axis aligned bounding box represented as a min/max vector pairs.
 inline vec2f&       bbox2f::operator[](int i) { return (&min)[i]; }
-inline const vec2f& bbox2f::operator[](int i) const { return (&min)[i]; }
+inline vec2f bbox2f::operator[](int i) const { return (&min)[i]; }
 
 // Axis aligned bounding box represented as a min/max vector pairs.
 inline vec3f&       bbox3f::operator[](int i) { return (&min)[i]; }
-inline const vec3f& bbox3f::operator[](int i) const { return (&min)[i]; }
+inline vec3f bbox3f::operator[](int i) const { return (&min)[i]; }
 
 // Bounding box properties
 inline vec2f center(const bbox2f& a) { return (a.min + a.max) / 2; }
 inline vec2f size(const bbox2f& a) { return a.max - a.min; }
 
 // Bounding box tests
-inline bool contains(const bbox2f& a, const vec2f& b) {
+inline bool contains(const bbox2f& a, vec2f b) {
   return b.x >= a.min.x && b.x <= a.max.x && b.y >= a.min.y && b.y <= a.max.y;
 }
 inline bool contains(const bbox2f& a, const bbox2f& b) {
@@ -421,13 +421,13 @@ inline bool operator!=(const bbox2f& a, const bbox2f& b) {
 }
 
 // Bounding box expansions with points and other boxes.
-inline bbox2f merge(const bbox2f& a, const vec2f& b) {
+inline bbox2f merge(const bbox2f& a, vec2f b) {
   return {min(a.min, b), max(a.max, b)};
 }
 inline bbox2f merge(const bbox2f& a, const bbox2f& b) {
   return {min(a.min, b.min), max(a.max, b.max)};
 }
-inline void expand(bbox2f& a, const vec2f& b) { a = merge(a, b); }
+inline void expand(bbox2f& a, vec2f b) { a = merge(a, b); }
 inline void expand(bbox2f& a, const bbox2f& b) { a = merge(a, b); }
 
 // Bounding box properties
@@ -435,7 +435,7 @@ inline vec3f center(const bbox3f& a) { return (a.min + a.max) / 2; }
 inline vec3f size(const bbox3f& a) { return a.max - a.min; }
 
 // Bounding box tests
-inline bool contains(const bbox3f& a, const vec3f& b) {
+inline bool contains(const bbox3f& a, vec3f b) {
   return b.x >= a.min.x && b.x <= a.max.x && b.y >= a.min.y && b.y <= a.max.y &&
          b.z >= a.min.z && b.z <= a.max.z;
 }
@@ -452,13 +452,13 @@ inline bool operator!=(const bbox3f& a, const bbox3f& b) {
 }
 
 // Bounding box expansions with points and other boxes.
-inline bbox3f merge(const bbox3f& a, const vec3f& b) {
+inline bbox3f merge(const bbox3f& a, vec3f b) {
   return {min(a.min, b), max(a.max, b)};
 }
 inline bbox3f merge(const bbox3f& a, const bbox3f& b) {
   return {min(a.min, b.min), max(a.max, b.max)};
 }
-inline void expand(bbox3f& a, const vec3f& b) { a = merge(a, b); }
+inline void expand(bbox3f& a, vec3f b) { a = merge(a, b); }
 inline void expand(bbox3f& a, const bbox3f& b) { a = merge(a, b); }
 
 }  // namespace yocto
@@ -517,28 +517,28 @@ inline bbox3f transform_bbox(const frame3f& a, const bbox3f& b) {
 namespace yocto {
 
 // Primitive bounds.
-inline bbox3f point_bounds(const vec3f& p) { return {p, p}; }
-inline bbox3f point_bounds(const vec3f& p, float r) {
+inline bbox3f point_bounds(vec3f p) { return {p, p}; }
+inline bbox3f point_bounds(vec3f p, float r) {
   return {min(p - r, p + r), max(p - r, p + r)};
 }
-inline bbox3f line_bounds(const vec3f& p0, const vec3f& p1) {
+inline bbox3f line_bounds(vec3f p0, vec3f p1) {
   return {min(p0, p1), max(p0, p1)};
 }
 inline bbox3f line_bounds(
-    const vec3f& p0, const vec3f& p1, float r0, float r1) {
+    vec3f p0, vec3f p1, float r0, float r1) {
   return {min(p0 - r0, p1 - r1), max(p0 + r0, p1 + r1)};
 }
 inline bbox3f triangle_bounds(
-    const vec3f& p0, const vec3f& p1, const vec3f& p2) {
+    vec3f p0, vec3f p1, vec3f p2) {
   return {min(p0, min(p1, p2)), max(p0, max(p1, p2))};
 }
 inline bbox3f quad_bounds(
-    const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec3f& p3) {
+    vec3f p0, vec3f p1, vec3f p2, vec3f p3) {
   return {min(p0, min(p1, min(p2, p3))), max(p0, max(p1, max(p2, p3)))};
 }
-inline bbox3f sphere_bounds(const vec3f& p, float r) { return {p - r, p + r}; }
+inline bbox3f sphere_bounds(vec3f p, float r) { return {p - r, p + r}; }
 inline bbox3f capsule_bounds(
-    const vec3f& p0, const vec3f& p1, float r0, float r1) {
+    vec3f p0, vec3f p1, float r0, float r1) {
   return {min(p0 - r0, p1 - r1), max(p0 + r0, p1 + r1)};
 }
 
@@ -550,29 +550,29 @@ inline bbox3f capsule_bounds(
 namespace yocto {
 
 // Line properties.
-inline vec3f line_tangent(const vec3f& p0, const vec3f& p1) {
+inline vec3f line_tangent(vec3f p0, vec3f p1) {
   return normalize(p1 - p0);
 }
-inline float line_length(const vec3f& p0, const vec3f& p1) {
+inline float line_length(vec3f p0, vec3f p1) {
   return length(p1 - p0);
 }
 
 // Triangle properties.
 inline vec3f triangle_normal(
-    const vec3f& p0, const vec3f& p1, const vec3f& p2) {
+    vec3f p0, vec3f p1, vec3f p2) {
   return normalize(cross(p1 - p0, p2 - p0));
 }
-inline float triangle_area(const vec3f& p0, const vec3f& p1, const vec3f& p2) {
+inline float triangle_area(vec3f p0, vec3f p1, vec3f p2) {
   return length(cross(p1 - p0, p2 - p0)) / 2;
 }
 
 // Quad propeties.
 inline vec3f quad_normal(
-    const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec3f& p3) {
+    vec3f p0, vec3f p1, vec3f p2, vec3f p3) {
   return normalize(triangle_normal(p0, p1, p3) + triangle_normal(p2, p3, p1));
 }
 inline float quad_area(
-    const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec3f& p3) {
+    vec3f p0, vec3f p1, vec3f p2, vec3f p3) {
   return triangle_area(p0, p1, p3) + triangle_area(p2, p3, p1);
 }
 
@@ -586,7 +586,7 @@ inline T interpolate_line(const T& p0, const T& p1, float u) {
 // (p1-p0) and (p2-p0) directions. Same as barycentric interpolation.
 template <typename T>
 inline T interpolate_triangle(
-    const T& p0, const T& p1, const T& p2, const vec2f& uv) {
+    const T& p0, const T& p1, const T& p2, vec2f uv) {
   return p0 * (1 - uv.x - uv.y) + p1 * uv.x + p2 * uv.y;
 }
 
@@ -594,7 +594,7 @@ inline T interpolate_triangle(
 // (p1-p0) and (p2-p1) directions. Same as bilinear interpolation.
 template <typename T>
 inline T interpolate_quad(
-    const T& p0, const T& p1, const T& p2, const T& p3, const vec2f& uv) {
+    const T& p0, const T& p1, const T& p2, const T& p3, vec2f uv) {
   if (uv.x + uv.y <= 1) {
     return interpolate_triangle(p0, p1, p3, uv);
   } else {
@@ -618,34 +618,34 @@ inline T interpolate_bezier_derivative(
 }
 
 // Interpolated line properties.
-inline vec3f line_point(const vec3f& p0, const vec3f& p1, float u) {
+inline vec3f line_point(vec3f p0, vec3f p1, float u) {
   return p0 * (1 - u) + p1 * u;
 }
-inline vec3f line_tangent(const vec3f& t0, const vec3f& t1, float u) {
+inline vec3f line_tangent(vec3f t0, vec3f t1, float u) {
   return normalize(t0 * (1 - u) + t1 * u);
 }
 
 // Interpolated triangle properties.
 inline vec3f triangle_point(
-    const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec2f& uv) {
+    vec3f p0, vec3f p1, vec3f p2, vec2f uv) {
   return p0 * (1 - uv.x - uv.y) + p1 * uv.x + p2 * uv.y;
 }
 inline vec3f triangle_normal(
-    const vec3f& n0, const vec3f& n1, const vec3f& n2, const vec2f& uv) {
+    vec3f n0, vec3f n1, vec3f n2, vec2f uv) {
   return normalize(n0 * (1 - uv.x - uv.y) + n1 * uv.x + n2 * uv.y);
 }
 
 // Interpolated quad properties.
-inline vec3f quad_point(const vec3f& p0, const vec3f& p1, const vec3f& p2,
-    const vec3f& p3, const vec2f& uv) {
+inline vec3f quad_point(vec3f p0, vec3f p1, vec3f p2,
+    vec3f p3, vec2f uv) {
   if (uv.x + uv.y <= 1) {
     return triangle_point(p0, p1, p3, uv);
   } else {
     return triangle_point(p2, p3, p1, 1 - uv);
   }
 }
-inline vec3f quad_normal(const vec3f& n0, const vec3f& n1, const vec3f& n2,
-    const vec3f& n3, const vec2f& uv) {
+inline vec3f quad_normal(vec3f n0, vec3f n1, vec3f n2,
+    vec3f n3, vec2f uv) {
   if (uv.x + uv.y <= 1) {
     return triangle_normal(n0, n1, n3, uv);
   } else {
@@ -654,19 +654,19 @@ inline vec3f quad_normal(const vec3f& n0, const vec3f& n1, const vec3f& n2,
 }
 
 // Interpolated sphere properties.
-inline vec3f sphere_point(const vec3f p, float r, const vec2f& uv) {
+inline vec3f sphere_point(const vec3f p, float r, vec2f uv) {
   return p + r * vec3f{cos(uv.x * 2 * pif) * sin(uv.y * pif),
                      sin(uv.x * 2 * pif) * sin(uv.y * pif), cos(uv.y * pif)};
 }
-inline vec3f sphere_normal(const vec3f p, float r, const vec2f& uv) {
+inline vec3f sphere_normal(const vec3f p, float r, vec2f uv) {
   return normalize(vec3f{cos(uv.x * 2 * pif) * sin(uv.y * pif),
       sin(uv.x * 2 * pif) * sin(uv.y * pif), cos(uv.y * pif)});
 }
 
 // Triangle tangent and bitangent from uv
-inline pair<vec3f, vec3f> triangle_tangents_fromuv(const vec3f& p0,
-    const vec3f& p1, const vec3f& p2, const vec2f& uv0, const vec2f& uv1,
-    const vec2f& uv2) {
+inline pair<vec3f, vec3f> triangle_tangents_fromuv(vec3f p0,
+    vec3f p1, vec3f p2, vec2f uv0, vec2f uv1,
+    vec2f uv2) {
   // Follows the definition in http://www.terathon.com/code/tangent.html and
   // https://gist.github.com/aras-p/2843984
   // normal points up from texture space
@@ -690,9 +690,9 @@ inline pair<vec3f, vec3f> triangle_tangents_fromuv(const vec3f& p0,
 }
 
 // Quad tangent and bitangent from uv.
-inline pair<vec3f, vec3f> quad_tangents_fromuv(const vec3f& p0, const vec3f& p1,
-    const vec3f& p2, const vec3f& p3, const vec2f& uv0, const vec2f& uv1,
-    const vec2f& uv2, const vec2f& uv3, const vec2f& current_uv) {
+inline pair<vec3f, vec3f> quad_tangents_fromuv(vec3f p0, vec3f p1,
+    vec3f p2, vec3f p3, vec2f uv0, vec2f uv1,
+    vec2f uv2, vec2f uv3, vec2f current_uv) {
   if (current_uv.x + current_uv.y <= 1) {
     return triangle_tangents_fromuv(p0, p1, p3, uv0, uv1, uv3);
   } else {
@@ -708,8 +708,8 @@ inline pair<vec3f, vec3f> quad_tangents_fromuv(const vec3f& p0, const vec3f& p1,
 namespace yocto {
 
 // Generate a ray from a camera
-inline ray3f camera_ray(const frame3f& frame, float lens, const vec2f& film,
-    const vec2f& image_uv) {
+inline ray3f camera_ray(const frame3f& frame, float lens, vec2f film,
+    vec2f image_uv) {
   auto e = vec3f{0, 0, 0};
   auto q = vec3f{
       film.x * (0.5f - image_uv.x), film.y * (image_uv.y - 0.5f), lens};
@@ -721,7 +721,7 @@ inline ray3f camera_ray(const frame3f& frame, float lens, const vec2f& film,
 
 // Generate a ray from a camera
 inline ray3f camera_ray(const frame3f& frame, float lens, float aspect,
-    float film_, const vec2f& image_uv) {
+    float film_, vec2f image_uv) {
   auto film = aspect >= 1 ? vec2f{film_, film_ / aspect}
                           : vec2f{film_ * aspect, film_};
   auto e    = vec3f{0, 0, 0};
@@ -742,7 +742,7 @@ namespace yocto {
 
 // Intersect a ray with a point (approximate)
 inline prim_intersection intersect_point(
-    const ray3f& ray, const vec3f& p, float r) {
+    const ray3f& ray, vec3f p, float r) {
   // find parameter for line-point minimum distance
   auto w = p - ray.o;
   auto t = dot(w, ray.d) / dot(ray.d, ray.d);
@@ -761,7 +761,7 @@ inline prim_intersection intersect_point(
 
 // Intersect a ray with a line
 inline prim_intersection intersect_line(
-    const ray3f& ray, const vec3f& p0, const vec3f& p1, float r0, float r1) {
+    const ray3f& ray, vec3f p0, vec3f p1, float r0, float r1) {
   // setup intersection params
   auto u = ray.d;
   auto v = p1 - p0;
@@ -805,7 +805,7 @@ inline prim_intersection intersect_line(
 
 // Intersect a ray with a triangle
 inline prim_intersection intersect_triangle(
-    const ray3f& ray, const vec3f& p0, const vec3f& p1, const vec3f& p2) {
+    const ray3f& ray, vec3f p0, vec3f p1, vec3f p2) {
   // compute triangle edges
   auto edge1 = p1 - p0;
   auto edge2 = p2 - p0;
@@ -838,8 +838,8 @@ inline prim_intersection intersect_triangle(
 }
 
 // Intersect a ray with a quad.
-inline prim_intersection intersect_quad(const ray3f& ray, const vec3f& p0,
-    const vec3f& p1, const vec3f& p2, const vec3f& p3) {
+inline prim_intersection intersect_quad(const ray3f& ray, vec3f p0,
+    vec3f p1, vec3f p2, vec3f p3) {
   if (p2 == p3) return intersect_triangle(ray, p0, p1, p3);
   auto isec1 = intersect_triangle(ray, p0, p1, p3);
   auto isec2 = intersect_triangle(ray, p2, p3, p1);
@@ -849,7 +849,7 @@ inline prim_intersection intersect_quad(const ray3f& ray, const vec3f& p0,
 
 // Intersect a ray with a sphere
 inline prim_intersection intersect_sphere(
-    const ray3f& ray, const vec3f& p, float r) {
+    const ray3f& ray, vec3f p, float r) {
   // compute parameters
   auto a = dot(ray.d, ray.d);
   auto b = 2 * dot(ray.o - p, ray.d);
@@ -896,7 +896,7 @@ inline bool intersect_bbox(const ray3f& ray, const bbox3f& bbox) {
 
 // Intersect a ray with a axis-aligned bounding box
 inline bool intersect_bbox(
-    const ray3f& ray, const vec3f& ray_dinv, const bbox3f& bbox) {
+    const ray3f& ray, vec3f ray_dinv, const bbox3f& bbox) {
   auto it_min = (bbox.min - ray.o) * ray_dinv;
   auto it_max = (bbox.max - ray.o) * ray_dinv;
   auto tmin   = min(it_min, it_max);
@@ -916,7 +916,7 @@ namespace yocto {
 
 // Check if a point overlaps a position pos withint a maximum distance dist_max.
 inline prim_intersection overlap_point(
-    const vec3f& pos, float dist_max, const vec3f& p, float r) {
+    vec3f pos, float dist_max, vec3f p, float r) {
   auto d2 = dot(pos - p, pos - p);
   if (d2 > (dist_max + r) * (dist_max + r)) return {};
   return {{0, 0}, sqrt(d2), true};
@@ -924,7 +924,7 @@ inline prim_intersection overlap_point(
 
 // Compute the closest line uv to a give position pos.
 inline float closestuv_line(
-    const vec3f& pos, const vec3f& p0, const vec3f& p1) {
+    vec3f pos, vec3f p0, vec3f p1) {
   auto ab = p1 - p0;
   auto d  = dot(ab, ab);
   // Project c onto ab, computing parameterized position d(t) = a + t*(b –
@@ -935,8 +935,8 @@ inline float closestuv_line(
 }
 
 // Check if a line overlaps a position pos withint a maximum distance dist_max.
-inline prim_intersection overlap_line(const vec3f& pos, float dist_max,
-    const vec3f& p0, const vec3f& p1, float r0, float r1) {
+inline prim_intersection overlap_line(vec3f pos, float dist_max,
+    vec3f p0, vec3f p1, float r0, float r1) {
   auto u = closestuv_line(pos, p0, p1);
   // Compute projected position from the clamped t d = a + t * ab;
   auto p  = p0 + (p1 - p0) * u;
@@ -950,7 +950,7 @@ inline prim_intersection overlap_line(const vec3f& pos, float dist_max,
 
 // Compute the closest triangle uv to a give position pos.
 inline vec2f closestuv_triangle(
-    const vec3f& pos, const vec3f& p0, const vec3f& p1, const vec3f& p2) {
+    vec3f pos, vec3f p0, vec3f p1, vec3f p2) {
   // this is a complicated test -> I probably "--"+prefix to use a sequence of
   // test (triangle body, and 3 edges)
   auto ab = p1 - p0;
@@ -994,8 +994,8 @@ inline vec2f closestuv_triangle(
 
 // Check if a triangle overlaps a position pos withint a maximum distance
 // dist_max.
-inline prim_intersection overlap_triangle(const vec3f& pos, float dist_max,
-    const vec3f& p0, const vec3f& p1, const vec3f& p2, float r0, float r1,
+inline prim_intersection overlap_triangle(vec3f pos, float dist_max,
+    vec3f p0, vec3f p1, vec3f p2, float r0, float r1,
     float r2) {
   auto cuv = closestuv_triangle(pos, p0, p1, p2);
   auto p   = p0 * (1 - cuv.x - cuv.y) + p1 * cuv.x + p2 * cuv.y;
@@ -1006,8 +1006,8 @@ inline prim_intersection overlap_triangle(const vec3f& pos, float dist_max,
 }
 
 // Check if a quad overlaps a position pos withint a maximum distance dist_max.
-inline prim_intersection overlap_quad(const vec3f& pos, float dist_max,
-    const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec3f& p3,
+inline prim_intersection overlap_quad(vec3f pos, float dist_max,
+    vec3f p0, vec3f p1, vec3f p2, vec3f p3,
     float r0, float r1, float r2, float r3) {
   if (p2 == p3) return overlap_triangle(pos, dist_max, p0, p1, p3, r0, r1, r2);
   auto isec1 = overlap_triangle(pos, dist_max, p0, p1, p3, r0, r1, r2);
@@ -1017,7 +1017,7 @@ inline prim_intersection overlap_quad(const vec3f& pos, float dist_max,
 }
 
 // Check if a bbox overlaps a position pos withint a maximum distance dist_max.
-inline bool overlap_bbox(const vec3f& pos, float dist_max, const bbox3f& bbox) {
+inline bool overlap_bbox(vec3f pos, float dist_max, const bbox3f& bbox) {
   // computing distance
   auto dd = 0.0f;
 
@@ -1050,7 +1050,7 @@ namespace yocto {
 
 // Intersect a ray with a point (approximate)
 [[deprecated]] inline bool intersect_point(
-    const ray3f& ray, const vec3f& p, float r, vec2f& uv, float& dist) {
+    const ray3f& ray, vec3f p, float r, vec2f& uv, float& dist) {
   auto intersection = intersect_point(ray, p, r);
   if (!intersection.hit) return false;
   uv   = intersection.uv;
@@ -1059,8 +1059,8 @@ namespace yocto {
 }
 
 // Intersect a ray with a line
-[[deprecated]] inline bool intersect_line(const ray3f& ray, const vec3f& p0,
-    const vec3f& p1, float r0, float r1, vec2f& uv, float& dist) {
+[[deprecated]] inline bool intersect_line(const ray3f& ray, vec3f p0,
+    vec3f p1, float r0, float r1, vec2f& uv, float& dist) {
   auto intersection = intersect_line(ray, p0, p1, r0, r1);
   if (!intersection.hit) return false;
   uv   = intersection.uv;
@@ -1070,7 +1070,7 @@ namespace yocto {
 
 // Intersect a ray with a sphere
 [[deprecated]] inline bool intersect_sphere(
-    const ray3f& ray, const vec3f& p, float r, vec2f& uv, float& dist) {
+    const ray3f& ray, vec3f p, float r, vec2f& uv, float& dist) {
   auto intersection = intersect_sphere(ray, p, r);
   if (!intersection.hit) return false;
   uv   = intersection.uv;
@@ -1079,8 +1079,8 @@ namespace yocto {
 }
 
 // Intersect a ray with a triangle
-[[deprecated]] inline bool intersect_triangle(const ray3f& ray, const vec3f& p0,
-    const vec3f& p1, const vec3f& p2, vec2f& uv, float& dist) {
+[[deprecated]] inline bool intersect_triangle(const ray3f& ray, vec3f p0,
+    vec3f p1, vec3f p2, vec2f& uv, float& dist) {
   auto intersection = intersect_triangle(ray, p0, p1, p2);
   if (!intersection.hit) return false;
   uv   = intersection.uv;
@@ -1089,8 +1089,8 @@ namespace yocto {
 }
 
 // Intersect a ray with a quad.
-[[deprecated]] inline bool intersect_quad(const ray3f& ray, const vec3f& p0,
-    const vec3f& p1, const vec3f& p2, const vec3f& p3, vec2f& uv, float& dist) {
+[[deprecated]] inline bool intersect_quad(const ray3f& ray, vec3f p0,
+    vec3f p1, vec3f p2, vec3f p3, vec2f& uv, float& dist) {
   auto intersection = intersect_quad(ray, p0, p1, p2, p3);
   if (!intersection.hit) return false;
   uv   = intersection.uv;
@@ -1099,8 +1099,8 @@ namespace yocto {
 }
 
 // Check if a point overlaps a position pos withint a maximum distance dist_max.
-[[deprecated]] inline bool overlap_point(const vec3f& pos, float dist_max,
-    const vec3f& p, float r, vec2f& uv, float& dist) {
+[[deprecated]] inline bool overlap_point(vec3f pos, float dist_max,
+    vec3f p, float r, vec2f& uv, float& dist) {
   auto intersection = overlap_point(pos, dist_max, p, r);
   if (!intersection.hit) return false;
   uv   = intersection.uv;
@@ -1109,8 +1109,8 @@ namespace yocto {
 }
 
 // Check if a line overlaps a position pos withint a maximum distance dist_max.
-[[deprecated]] inline bool overlap_line(const vec3f& pos, float dist_max,
-    const vec3f& p0, const vec3f& p1, float r0, float r1, vec2f& uv,
+[[deprecated]] inline bool overlap_line(vec3f pos, float dist_max,
+    vec3f p0, vec3f p1, float r0, float r1, vec2f& uv,
     float& dist) {
   auto intersection = overlap_line(pos, dist_max, p0, p1, r0, r1);
   if (!intersection.hit) return false;
@@ -1121,8 +1121,8 @@ namespace yocto {
 
 // Check if a triangle overlaps a position pos withint a maximum distance
 // dist_max.
-[[deprecated]] inline bool overlap_triangle(const vec3f& pos, float dist_max,
-    const vec3f& p0, const vec3f& p1, const vec3f& p2, float r0, float r1,
+[[deprecated]] inline bool overlap_triangle(vec3f pos, float dist_max,
+    vec3f p0, vec3f p1, vec3f p2, float r0, float r1,
     float r2, vec2f& uv, float& dist) {
   auto intersection = overlap_triangle(pos, dist_max, p0, p1, p2, r0, r1, r2);
   if (!intersection.hit) return false;
@@ -1132,8 +1132,8 @@ namespace yocto {
 }
 
 // Check if a quad overlaps a position pos withint a maximum distance dist_max.
-[[deprecated]] inline bool overlap_quad(const vec3f& pos, float dist_max,
-    const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec3f& p3,
+[[deprecated]] inline bool overlap_quad(vec3f pos, float dist_max,
+    vec3f p0, vec3f p1, vec3f p2, vec3f p3,
     float r0, float r1, float r2, float r3, vec2f& uv, float& dist) {
   auto intersection = overlap_quad(
       pos, dist_max, p0, p1, p2, p3, r0, r1, r2, r3);

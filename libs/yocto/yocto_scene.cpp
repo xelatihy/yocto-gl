@@ -72,7 +72,7 @@ vec2i camera_resolution(const camera_data& camera, int resolution) {
 // Generates a ray from a camera for yimg::image plane coordinate uv and
 // the lens coordinates luv.
 ray3f eval_camera(
-    const camera_data& camera, const vec2f& image_uv, const vec2f& lens_uv) {
+    const camera_data& camera, vec2f image_uv, vec2f lens_uv) {
   auto film = camera.aspect >= 1
                   ? vec2f{camera.film, camera.film / camera.aspect}
                   : vec2f{camera.film * camera.aspect, camera.film};
@@ -128,7 +128,7 @@ vec4f lookup_texture(
 }
 
 // Evaluates an image at a point `uv`.
-vec4f eval_texture(const texture_data& texture, const vec2f& uv,
+vec4f eval_texture(const texture_data& texture, vec2f uv,
     bool ldr_as_linear, bool no_flipv) {
   if (texture.pixelsf.empty() && texture.pixelsb.empty()) return {0, 0, 0, 0};
 
@@ -157,7 +157,7 @@ vec4f eval_texture(const texture_data& texture, const vec2f& uv,
 }
 
 // Helpers
-vec4f eval_texture(const scene_data& scene, int texture, const vec2f& uv,
+vec4f eval_texture(const scene_data& scene, int texture, vec2f uv,
     bool ldr_as_linear, bool no_flipv) {
   if (texture == invalidid) return {1, 1, 1, 1};
   return eval_texture(scene.textures[texture], uv, ldr_as_linear, no_flipv);
@@ -186,8 +186,8 @@ static const auto min_roughness = 0.03f * 0.03f;
 
 // Evaluate material
 material_point eval_material(const scene_data& scene,
-    const material_data& material, const vec2f& texcoord,
-    const vec4f& color_shp) {
+    const material_data& material, vec2f texcoord,
+    vec4f color_shp) {
   // evaluate textures
   auto emission_tex  = eval_texture(scene, material.emission_tex, texcoord);
   auto color_tex     = eval_texture(scene, material.color_tex, texcoord);
@@ -269,7 +269,7 @@ namespace yocto {
 
 // Eval position
 vec3f eval_position(const scene_data& scene, const instance_data& instance,
-    int element, const vec2f& uv) {
+    int element, vec2f uv) {
   auto& shape = scene.shapes[instance.shape];
   if (!shape.triangles.empty()) {
     auto t = shape.triangles[element];
@@ -320,7 +320,7 @@ vec3f eval_element_normal(
 
 // Eval normal
 vec3f eval_normal(const scene_data& scene, const instance_data& instance,
-    int element, const vec2f& uv) {
+    int element, vec2f uv) {
   auto& shape = scene.shapes[instance.shape];
   if (shape.normals.empty())
     return eval_element_normal(scene, instance, element);
@@ -349,7 +349,7 @@ vec3f eval_normal(const scene_data& scene, const instance_data& instance,
 
 // Eval texcoord
 vec2f eval_texcoord(const scene_data& scene, const instance_data& instance,
-    int element, const vec2f& uv) {
+    int element, vec2f uv) {
   auto& shape = scene.shapes[instance.shape];
   if (shape.texcoords.empty()) return uv;
   if (!shape.triangles.empty()) {
@@ -373,7 +373,7 @@ vec2f eval_texcoord(const scene_data& scene, const instance_data& instance,
 #if 0
 // Shape element normal.
 static pair<vec3f, vec3f> eval_tangents(
-    const trace_shape& shape, int element, const vec2f& uv) {
+    const trace_shape& shape, int element, vec2f uv) {
   if (!shape.triangles.empty()) {
     auto t = shape.triangles[element];
     if (shape.texcoords.empty()) {
@@ -427,7 +427,7 @@ pair<vec3f, vec3f> eval_element_tangents(
 }
 
 vec3f eval_normalmap(const scene_data& scene, const instance_data& instance,
-    int element, const vec2f& uv) {
+    int element, vec2f uv) {
   auto& shape    = scene.shapes[instance.shape];
   auto& material = scene.materials[instance.material];
   // apply normal mapping
@@ -450,8 +450,8 @@ vec3f eval_normalmap(const scene_data& scene, const instance_data& instance,
 
 // Eval shading position
 vec3f eval_shading_position(const scene_data& scene,
-    const instance_data& instance, int element, const vec2f& uv,
-    const vec3f& outgoing) {
+    const instance_data& instance, int element, vec2f uv,
+    vec3f outgoing) {
   auto& shape = scene.shapes[instance.shape];
   if (!shape.triangles.empty() || !shape.quads.empty()) {
     return eval_position(scene, instance, element, uv);
@@ -466,8 +466,8 @@ vec3f eval_shading_position(const scene_data& scene,
 
 // Eval shading normal
 vec3f eval_shading_normal(const scene_data& scene,
-    const instance_data& instance, int element, const vec2f& uv,
-    const vec3f& outgoing) {
+    const instance_data& instance, int element, vec2f uv,
+    vec3f outgoing) {
   auto& shape    = scene.shapes[instance.shape];
   auto& material = scene.materials[instance.material];
   if (!shape.triangles.empty() || !shape.quads.empty()) {
@@ -489,7 +489,7 @@ vec3f eval_shading_normal(const scene_data& scene,
 
 // Eval color
 vec4f eval_color(const scene_data& scene, const instance_data& instance,
-    int element, const vec2f& uv) {
+    int element, vec2f uv) {
   auto& shape = scene.shapes[instance.shape];
   if (shape.colors.empty()) return {1, 1, 1, 1};
   if (!shape.triangles.empty()) {
@@ -512,7 +512,7 @@ vec4f eval_color(const scene_data& scene, const instance_data& instance,
 
 // Evaluate material
 material_point eval_material(const scene_data& scene,
-    const instance_data& instance, int element, const vec2f& uv) {
+    const instance_data& instance, int element, vec2f uv) {
   auto& material = scene.materials[instance.material];
   auto  texcoord = eval_texcoord(scene, instance, element, uv);
 
@@ -575,7 +575,7 @@ namespace yocto {
 
 // Evaluate environment color.
 vec3f eval_environment(const scene_data& scene,
-    const environment_data& environment, const vec3f& direction) {
+    const environment_data& environment, vec3f direction) {
   auto wl       = transform_direction(inverse(environment.frame), direction);
   auto texcoord = vec2f{
       atan2(wl.z, wl.x) / (2 * pif), 1 - acos(clamp(wl.y, -1.0f, 1.0f)) / pif};
@@ -585,7 +585,7 @@ vec3f eval_environment(const scene_data& scene,
 }
 
 // Evaluate all environment color.
-vec3f eval_environment(const scene_data& scene, const vec3f& direction) {
+vec3f eval_environment(const scene_data& scene, vec3f direction) {
   auto emission = vec3f{0, 0, 0};
   for (auto& environment : scene.environments) {
     emission += eval_environment(scene, environment, direction);
@@ -750,8 +750,8 @@ int add_environment(scene_data& scene, const string& name,
   return (int)scene.environments.size() - 1;
 }
 
-int add_camera(scene_data& scene, const string& name, const vec3f& from,
-    const vec3f& to, float lens, float aspect, float aperture,
+int add_camera(scene_data& scene, const string& name, vec3f from,
+    vec3f to, float lens, float aspect, float aperture,
     float focus_offset) {
   return add_camera(scene, name,
       {.frame       = lookat_frame(from, to, {0, 1, 0}),
@@ -772,8 +772,8 @@ int add_camera(scene_data& scene, const string& name, const frame3f& frame,
 }
 
 // Scene creation helpers
-int add_material(scene_data& scene, const string& name, const vec3f& emission,
-    material_type type, const vec3f& color, float roughness, int color_tex,
+int add_material(scene_data& scene, const string& name, vec3f emission,
+    material_type type, vec3f color, float roughness, int color_tex,
     int roughness_tex, int normal_tex) {
   return add_material(scene, name,
       {.type             = type,
@@ -787,7 +787,7 @@ int add_material(scene_data& scene, const string& name, const vec3f& emission,
 
 // Scene creation helpers
 int add_material(scene_data& scene, const string& name, material_type type,
-    const vec3f& color, float roughness, int color_tex, int roughness_tex,
+    vec3f color, float roughness, int color_tex, int roughness_tex,
     int normal_tex) {
   return add_material(scene, name,
       {.type             = type,
@@ -800,7 +800,7 @@ int add_material(scene_data& scene, const string& name, material_type type,
 
 // Scene creation helpers
 int add_material(scene_data& scene, const string& name, material_type type,
-    const vec3f& color, float roughness, const vec3f& scattering,
+    vec3f color, float roughness, vec3f scattering,
     float scanisotropy, float trdepth, int color_tex, int roughness_tex,
     int scattering_tex, int normal_tex) {
   return add_material(scene, name,
@@ -834,7 +834,7 @@ int add_instance(scene_data& scene, const string& name, const frame3f& frame,
 
 // Scene creation helpers
 int add_environment(scene_data& scene, const string& name, const frame3f& frame,
-    const vec3f& emission, int emission_tex) {
+    vec3f emission, int emission_tex) {
   return add_environment(scene, name,
       {.frame = frame, .emission = emission, .emission_tex = emission_tex});
   return (int)scene.environments.size() - 1;

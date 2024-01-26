@@ -62,22 +62,22 @@ namespace yocto {
 // [0,1]. Wrap provides a wrapping noise but must be power of two (wraps at 256
 // anyway).
 inline float perlin_noise(float p, int wrap = 0);
-inline float perlin_noise(const vec2f& p, const vec2i& wrap = {0, 0});
-inline float perlin_noise(const vec3f& p, const vec3i& wrap = {0, 0, 0});
-inline float perlin_noise(const vec4f& p, const vec4i& wrap = {0, 0, 0, 0});
+inline float perlin_noise(vec2f p, vec2i wrap = {0, 0});
+inline float perlin_noise(vec3f p, vec3i wrap = {0, 0, 0});
+inline float perlin_noise(vec4f p, vec4i wrap = {0, 0, 0, 0});
 
 // Fractal noise variations. Good values are obtained with
 // octaves=6 (numerber of noise calls),
 // lacunarity=~2.0 (spacing between successive octaves: 2.0 for warpping),
 // gain=0.5 (relative weighting applied to each successive octave),
 // offset=1.0 (used to invert the ridges).
-inline float perlin_ridge(const vec3f& p, float lacunarity = 2,
+inline float perlin_ridge(vec3f p, float lacunarity = 2,
     float gain = 0.5, int octaves = 6, float offset = 1,
-    const vec3i& wrap = {0, 0, 0});
-inline float perlin_fbm(const vec3f& p, float lacunarity = 2, float gain = 0.5,
-    int octaves = 6, const vec3i& wrap = {0, 0, 0});
-inline float perlin_turbulence(const vec3f& p, float lacunarity = 2,
-    float gain = 0.5, int octaves = 6, const vec3i& wrap = {0, 0, 0});
+    vec3i wrap = {0, 0, 0});
+inline float perlin_fbm(vec3f p, float lacunarity = 2, float gain = 0.5,
+    int octaves = 6, vec3i wrap = {0, 0, 0});
+inline float perlin_turbulence(vec3f p, float lacunarity = 2,
+    float gain = 0.5, int octaves = 6, vec3i wrap = {0, 0, 0});
 
 }  // namespace yocto
 
@@ -178,14 +178,14 @@ inline float perlin_noise(float p, int w) {
   return lerp(n0, n1, u) * 0.5f + 0.5f;
 }
 
-inline float perlin_noise(const vec2f& p, const vec2i& w) {
+inline float perlin_noise(vec2f p, vec2i w) {
   auto ease   = [](float a) { return ((a * 6 - 15) * a + 10) * a * a * a; };
   auto ifloor = [](float a) -> int {
     auto ai = (int)a;
     return (a < ai) ? ai - 1 : ai;
   };
   auto grad = [m = vec2i{(w.x - 1) & 255, (w.y - 1) & 255}](
-                  const vec2i& i, const vec2f& f) -> float {
+                  vec2i i, vec2f f) -> float {
     auto& _p   = __perlin_permutation;
     auto  hash = (int)_p[_p[i.x & m.x] + i.y & m.y];
     auto  h    = hash & 7;           // Convert low 3 bits of hash code
@@ -209,14 +209,14 @@ inline float perlin_noise(const vec2f& p, const vec2i& w) {
   return lerp(n0, n1, u.x) * 0.5f + 0.5f;
 }
 
-inline float perlin_noise(const vec3f& p, const vec3i& w) {
+inline float perlin_noise(vec3f p, vec3i w) {
   auto ease   = [](float a) { return ((a * 6 - 15) * a + 10) * a * a * a; };
   auto ifloor = [](float a) -> int {
     int ai = (int)a;
     return (a < ai) ? ai - 1 : ai;
   };
   auto grad = [m = vec3i{(w.x - 1) & 255, (w.y - 1) & 255, (w.z - 1) & 255}](
-                  const vec3i& i, const vec3f& f) -> float {
+                  vec3i i, vec3f f) -> float {
     auto& _p   = __perlin_permutation;
     auto  hash = (int)_p[_p[_p[i.x & m.x] + i.y & m.y] + i.z & m.z];
     // Convert low 4 bits of hash code into 12 simple
@@ -251,14 +251,14 @@ inline float perlin_noise(const vec3f& p, const vec3i& w) {
   return lerp(n0, n1, u.x) * 0.5f + 0.5f;
 }
 
-inline float perlin_noise(const vec4f& p, const vec4i& w) {
+inline float perlin_noise(vec4f p, vec4i w) {
   auto ease   = [](float a) { return ((a * 6 - 15) * a + 10) * a * a * a; };
   auto ifloor = [](float a) -> int {
     int ai = (int)a;
     return (a < ai) ? ai - 1 : ai;
   };
   auto grad = [m = vec4i{(w.x - 1) & 255, (w.y - 1) & 255, (w.z - 1) & 255,
-                   (w.w - 1) & 255}](const vec4i& i, const vec4f& f) -> float {
+                   (w.w - 1) & 255}](vec4i i, vec4f f) -> float {
     auto& _p = __perlin_permutation;
     auto  hash =
         (int)_p[_p[_p[_p[i.x & m.x] + i.y & m.y] + i.z & m.y] + i.w & m.w];
@@ -330,8 +330,8 @@ inline float perlin_noise(const vec4f& p, const vec4i& w) {
 }
 
 // ridge
-inline float perlin_ridge(const vec3f& p, float lacunarity, float gain,
-    int octaves, float offset, const vec3i& wrap) {
+inline float perlin_ridge(vec3f p, float lacunarity, float gain,
+    int octaves, float offset, vec3i wrap) {
   auto frequency = 1.0f;
   auto prev      = 1.0f;
   auto amplitude = 0.5f;
@@ -348,8 +348,8 @@ inline float perlin_ridge(const vec3f& p, float lacunarity, float gain,
 }
 
 // fmb
-inline float perlin_fbm(const vec3f& p, float lacunarity, float gain,
-    int octaves, const vec3i& wrap) {
+inline float perlin_fbm(vec3f p, float lacunarity, float gain,
+    int octaves, vec3i wrap) {
   auto frequency = 1.0f;
   auto amplitude = 1.0f;
   auto sum       = 0.0f;
@@ -362,8 +362,8 @@ inline float perlin_fbm(const vec3f& p, float lacunarity, float gain,
 }
 
 // turbulence
-inline float perlin_turbulence(const vec3f& p, float lacunarity, float gain,
-    int octaves, const vec3i& wrap) {
+inline float perlin_turbulence(vec3f p, float lacunarity, float gain,
+    int octaves, vec3i wrap) {
   auto frequency = 1.0f;
   auto amplitude = 1.0f;
   auto sum       = 0.0f;

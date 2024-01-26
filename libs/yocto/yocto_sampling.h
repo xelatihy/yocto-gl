@@ -108,54 +108,54 @@ inline void shuffle(vector<T>& vals, rng_state& rng);
 namespace yocto {
 
 // Sample an hemispherical direction with uniform distribution.
-inline vec3f sample_hemisphere(const vec2f& ruv);
-inline float sample_hemisphere_pdf(const vec3f& direction);
+inline vec3f sample_hemisphere(vec2f ruv);
+inline float sample_hemisphere_pdf(vec3f direction);
 
 // Sample an hemispherical direction with uniform distribution.
-inline vec3f sample_hemisphere(const vec3f& normal, const vec2f& ruv);
-inline float sample_hemisphere_pdf(const vec3f& normal, const vec3f& direction);
+inline vec3f sample_hemisphere(vec3f normal, vec2f ruv);
+inline float sample_hemisphere_pdf(vec3f normal, vec3f direction);
 
 // Sample a spherical direction with uniform distribution.
-inline vec3f sample_sphere(const vec2f& ruv);
-inline float sample_sphere_pdf(const vec3f& w);
+inline vec3f sample_sphere(vec2f ruv);
+inline float sample_sphere_pdf(vec3f w);
 
 // Sample an hemispherical direction with cosine distribution.
-inline vec3f sample_hemisphere_cos(const vec2f& ruv);
-inline float sample_hemisphere_cos_pdf(const vec3f& direction);
+inline vec3f sample_hemisphere_cos(vec2f ruv);
+inline float sample_hemisphere_cos_pdf(vec3f direction);
 
 // Sample an hemispherical direction with cosine distribution.
-inline vec3f sample_hemisphere_cos(const vec3f& normal, const vec2f& ruv);
+inline vec3f sample_hemisphere_cos(vec3f normal, vec2f ruv);
 inline float sample_hemisphere_cos_pdf(
-    const vec3f& normal, const vec3f& direction);
+    vec3f normal, vec3f direction);
 
 // Sample an hemispherical direction with cosine power distribution.
-inline vec3f sample_hemisphere_cospower(float exponent, const vec2f& ruv);
+inline vec3f sample_hemisphere_cospower(float exponent, vec2f ruv);
 inline float sample_hemisphere_cospower_pdf(
-    float exponent, const vec3f& direction);
+    float exponent, vec3f direction);
 
 // Sample an hemispherical direction with cosine power distribution.
 inline vec3f sample_hemisphere_cospower(
-    float exponent, const vec3f& normal, const vec2f& ruv);
+    float exponent, vec3f normal, vec2f ruv);
 inline float sample_hemisphere_cospower_pdf(
-    float exponent, const vec3f& normal, const vec3f& direction);
+    float exponent, vec3f normal, vec3f direction);
 
 // Sample a point uniformly on a disk.
-inline vec2f sample_disk(const vec2f& ruv);
-inline float sample_disk_pdf(const vec2f& point);
+inline vec2f sample_disk(vec2f ruv);
+inline float sample_disk_pdf(vec2f point);
 
 // Sample a point uniformly on a cylinder, without caps.
-inline vec3f sample_cylinder(const vec2f& ruv);
-inline float sample_cylinder_pdf(const vec3f& point);
+inline vec3f sample_cylinder(vec2f ruv);
+inline float sample_cylinder_pdf(vec3f point);
 
 // Sample a point uniformly on a triangle returning the baricentric coordinates.
-inline vec2f sample_triangle(const vec2f& ruv);
+inline vec2f sample_triangle(vec2f ruv);
 
 // Sample a point uniformly on a triangle.
 inline vec3f sample_triangle(
-    const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec2f& ruv);
+    vec3f p0, vec3f p1, vec3f p2, vec2f ruv);
 // Pdf for uniform triangle sampling, i.e. triangle area.
 inline float sample_triangle_pdf(
-    const vec3f& p0, const vec3f& p1, const vec3f& p2);
+    vec3f p0, vec3f p1, vec3f p2);
 
 // Sample an index with uniform distribution.
 inline int   sample_uniform(int size, float r);
@@ -263,18 +263,18 @@ inline void shuffle(vector<T>& vals, rng_state& rng) {
 namespace yocto {
 
 // Sample an hemispherical direction with uniform distribution.
-inline vec3f sample_hemisphere(const vec2f& ruv) {
+inline vec3f sample_hemisphere(vec2f ruv) {
   auto z   = ruv.y;
   auto r   = sqrt(clamp(1 - z * z, 0.0f, 1.0f));
   auto phi = 2 * pif * ruv.x;
   return {r * cos(phi), r * sin(phi), z};
 }
-inline float sample_hemisphere_pdf(const vec3f& direction) {
+inline float sample_hemisphere_pdf(vec3f direction) {
   return (direction.z <= 0) ? 0 : 1 / (2 * pif);
 }
 
 // Sample an hemispherical direction with uniform distribution.
-inline vec3f sample_hemisphere(const vec3f& normal, const vec2f& ruv) {
+inline vec3f sample_hemisphere(vec3f normal, vec2f ruv) {
   auto z               = ruv.y;
   auto r               = sqrt(clamp(1 - z * z, 0.0f, 1.0f));
   auto phi             = 2 * pif * ruv.x;
@@ -282,32 +282,32 @@ inline vec3f sample_hemisphere(const vec3f& normal, const vec2f& ruv) {
   return transform_direction(basis_fromz(normal), local_direction);
 }
 inline float sample_hemisphere_pdf(
-    const vec3f& normal, const vec3f& direction) {
+    vec3f normal, vec3f direction) {
   return (dot(normal, direction) <= 0) ? 0 : 1 / (2 * pif);
 }
 
 // Sample a spherical direction with uniform distribution.
-inline vec3f sample_sphere(const vec2f& ruv) {
+inline vec3f sample_sphere(vec2f ruv) {
   auto z   = 2 * ruv.y - 1;
   auto r   = sqrt(clamp(1 - z * z, 0.0f, 1.0f));
   auto phi = 2 * pif * ruv.x;
   return {r * cos(phi), r * sin(phi), z};
 }
-inline float sample_sphere_pdf(const vec3f& w) { return 1 / (4 * pif); }
+inline float sample_sphere_pdf(vec3f w) { return 1 / (4 * pif); }
 
 // Sample an hemispherical direction with cosine distribution.
-inline vec3f sample_hemisphere_cos(const vec2f& ruv) {
+inline vec3f sample_hemisphere_cos(vec2f ruv) {
   auto z   = sqrt(ruv.y);
   auto r   = sqrt(1 - z * z);
   auto phi = 2 * pif * ruv.x;
   return {r * cos(phi), r * sin(phi), z};
 }
-inline float sample_hemisphere_cos_pdf(const vec3f& direction) {
+inline float sample_hemisphere_cos_pdf(vec3f direction) {
   return (direction.z <= 0) ? 0 : direction.z / pif;
 }
 
 // Sample an hemispherical direction with cosine distribution.
-inline vec3f sample_hemisphere_cos(const vec3f& normal, const vec2f& ruv) {
+inline vec3f sample_hemisphere_cos(vec3f normal, vec2f ruv) {
   auto z               = sqrt(ruv.y);
   auto r               = sqrt(1 - z * z);
   auto phi             = 2 * pif * ruv.x;
@@ -315,20 +315,20 @@ inline vec3f sample_hemisphere_cos(const vec3f& normal, const vec2f& ruv) {
   return transform_direction(basis_fromz(normal), local_direction);
 }
 inline float sample_hemisphere_cos_pdf(
-    const vec3f& normal, const vec3f& direction) {
+    vec3f normal, vec3f direction) {
   auto cosw = dot(normal, direction);
   return (cosw <= 0) ? 0 : cosw / pif;
 }
 
 // Sample an hemispherical direction with cosine power distribution.
-inline vec3f sample_hemisphere_cospower(float exponent, const vec2f& ruv) {
+inline vec3f sample_hemisphere_cospower(float exponent, vec2f ruv) {
   auto z   = pow(ruv.y, 1 / (exponent + 1));
   auto r   = sqrt(1 - z * z);
   auto phi = 2 * pif * ruv.x;
   return {r * cos(phi), r * sin(phi), z};
 }
 inline float sample_hemisphere_cospower_pdf(
-    float exponent, const vec3f& direction) {
+    float exponent, vec3f direction) {
   return (direction.z <= 0)
              ? 0
              : pow(direction.z, exponent) * (exponent + 1) / (2 * pif);
@@ -336,7 +336,7 @@ inline float sample_hemisphere_cospower_pdf(
 
 // Sample an hemispherical direction with cosine power distribution.
 inline vec3f sample_hemisphere_cospower(
-    float exponent, const vec3f& normal, const vec2f& ruv) {
+    float exponent, vec3f normal, vec2f ruv) {
   auto z               = pow(ruv.y, 1 / (exponent + 1));
   auto r               = sqrt(1 - z * z);
   auto phi             = 2 * pif * ruv.x;
@@ -344,13 +344,13 @@ inline vec3f sample_hemisphere_cospower(
   return transform_direction(basis_fromz(normal), local_direction);
 }
 inline float sample_hemisphere_cospower_pdf(
-    float exponent, const vec3f& normal, const vec3f& direction) {
+    float exponent, vec3f normal, vec3f direction) {
   auto cosw = dot(normal, direction);
   return (cosw <= 0) ? 0 : pow(cosw, exponent) * (exponent + 1) / (2 * pif);
 }
 
 // Sample a point uniformly on a disk.
-inline vec2f sample_disk(const vec2f& ruv) {
+inline vec2f sample_disk(vec2f ruv) {
   auto r   = sqrt(ruv.y);
   auto phi = 2 * pif * ruv.x;
   return {cos(phi) * r, sin(phi) * r};
@@ -358,26 +358,26 @@ inline vec2f sample_disk(const vec2f& ruv) {
 inline float sample_disk_pdf() { return 1 / pif; }
 
 // Sample a point uniformly on a cylinder, without caps.
-inline vec3f sample_cylinder(const vec2f& ruv) {
+inline vec3f sample_cylinder(vec2f ruv) {
   auto phi = 2 * pif * ruv.x;
   return {sin(phi), cos(phi), ruv.y * 2 - 1};
 }
-inline float sample_cylinder_pdf(const vec3f& point) { return 1 / pif; }
+inline float sample_cylinder_pdf(vec3f point) { return 1 / pif; }
 
 // Sample a point uniformly on a triangle returning the baricentric coordinates.
-inline vec2f sample_triangle(const vec2f& ruv) {
+inline vec2f sample_triangle(vec2f ruv) {
   return {1 - sqrt(ruv.x), ruv.y * sqrt(ruv.x)};
 }
 
 // Sample a point uniformly on a triangle.
 inline vec3f sample_triangle(
-    const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec2f& ruv) {
+    vec3f p0, vec3f p1, vec3f p2, vec2f ruv) {
   auto uv = sample_triangle(ruv);
   return p0 * (1 - uv.x - uv.y) + p1 * uv.x + p2 * uv.y;
 }
 // Pdf for uniform triangle sampling, i.e. triangle area.
 inline float sample_triangle_pdf(
-    const vec3f& p0, const vec3f& p1, const vec3f& p2) {
+    vec3f p0, vec3f p1, vec3f p2) {
   return 2 / length(cross(p1 - p0, p2 - p0));
 }
 

@@ -168,7 +168,7 @@ static void clear_scene(glscene_state& scene);
 
 // draw scene
 static void draw_scene(glscene_state& glscene, const scene_data& scene,
-    const vec4i& viewport, const shade_params& params);
+    vec4i viewport, const shade_params& params);
 
 }  // namespace yocto
 
@@ -1812,7 +1812,7 @@ static void clear_scene(glscene_state& glscene) {
 }
 
 static void draw_scene(glscene_state& glscene, const scene_data& scene,
-    const vec4i& viewport, const shade_params& params) {
+    vec4i viewport, const shade_params& params) {
   // check errors
   assert_glerror();
 
@@ -2038,7 +2038,7 @@ static void draw_window(glwindow_state& state) {
 }
 
 // run the user interface with the give callbacks
-void show_gui_window(const vec2i& size, const string& title,
+void show_gui_window(vec2i size, const string& title,
     const gui_callbacks& callbacks, int widgets_width, bool widgets_left) {
   // init glfw
   if (!glfwInit())
@@ -2550,25 +2550,25 @@ struct glwidgets_param {
       , minmaxf{0, 0}
       , readonly{true} {}
   glwidgets_param(
-      float value, const vec2f& minmax = {0, 0}, bool readonly = false)
+      float value, vec2f minmax = {0, 0}, bool readonly = false)
       : type{glwidgets_param_type::value1f}
       , valuef{value, 0, 0, 0}
       , minmaxf{minmax}
       , readonly{readonly} {}
   glwidgets_param(
-      vec2f value, const vec2f& minmax = {0, 0}, bool readonly = false)
+      vec2f value, vec2f minmax = {0, 0}, bool readonly = false)
       : type{glwidgets_param_type::value2f}
       , valuef{value.x, value.y, 0, 0}
       , minmaxf{minmax}
       , readonly{readonly} {}
   glwidgets_param(
-      vec3f value, const vec2f& minmax = {0, 0}, bool readonly = false)
+      vec3f value, vec2f minmax = {0, 0}, bool readonly = false)
       : type{glwidgets_param_type::value3f}
       , valuef{value.x, value.y, value.z, 0}
       , minmaxf{minmax}
       , readonly{readonly} {}
   glwidgets_param(
-      vec4f value, const vec2f& minmax = {0, 0}, bool readonly = false)
+      vec4f value, vec2f minmax = {0, 0}, bool readonly = false)
       : type{glwidgets_param_type::value4f}
       , valuef{value.x, value.y, value.z, value.w}
       , minmaxf{minmax}
@@ -2584,25 +2584,25 @@ struct glwidgets_param {
       , color{color}
       , readonly{readonly} {}
   glwidgets_param(
-      int value, const vec2i& minmax = {0, 0}, bool readonly = false)
+      int value, vec2i minmax = {0, 0}, bool readonly = false)
       : type{glwidgets_param_type::value1i}
       , valuei{value, 0, 0, 0}
       , minmaxi{minmax}
       , readonly{readonly} {}
   glwidgets_param(
-      vec2i value, const vec2i& minmax = {0, 0}, bool readonly = false)
+      vec2i value, vec2i minmax = {0, 0}, bool readonly = false)
       : type{glwidgets_param_type::value2i}
       , valuei{value.x, value.y, 0, 0}
       , minmaxi{minmax}
       , readonly{readonly} {}
   glwidgets_param(
-      vec3i value, const vec2i& minmax = {0, 0}, bool readonly = false)
+      vec3i value, vec2i minmax = {0, 0}, bool readonly = false)
       : type{glwidgets_param_type::value3i}
       , valuei{value.x, value.y, value.z, 0}
       , minmaxi{minmax}
       , readonly{readonly} {}
   glwidgets_param(
-      vec4i value, const vec2i& minmax = {0, 0}, bool readonly = false)
+      vec4i value, vec2i minmax = {0, 0}, bool readonly = false)
       : type{glwidgets_param_type::value4i}
       , valuei{value.x, value.y, value.z, value.w}
       , minmaxi{minmax}

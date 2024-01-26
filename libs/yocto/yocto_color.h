@@ -69,63 +69,63 @@
 namespace yocto {
 
 // Conversion between flots and bytes
-inline vec4b float_to_byte(const vec4f& a);
-inline vec4f byte_to_float(const vec4b& a);
+inline vec4b float_to_byte(vec4f a);
+inline vec4f byte_to_float(vec4b a);
 inline byte  float_to_byte(float a);
 inline float byte_to_float(byte a);
 
 // Luminance
-inline float luminance(const vec3f& a);
+inline float luminance(vec3f a);
 
 // sRGB non-linear curve
 inline float srgb_to_rgb(float srgb);
 inline float rgb_to_srgb(float rgb);
-inline vec3f srgb_to_rgb(const vec3f& srgb);
-inline vec4f srgb_to_rgb(const vec4f& srgb);
-inline vec3f rgb_to_srgb(const vec3f& rgb);
-inline vec4f rgb_to_srgb(const vec4f& rgb);
-inline vec4f srgbb_to_rgb(const vec4b& srgb);
-inline vec4b rgb_to_srgbb(const vec4f& rgb);
+inline vec3f srgb_to_rgb(vec3f srgb);
+inline vec4f srgb_to_rgb(vec4f srgb);
+inline vec3f rgb_to_srgb(vec3f rgb);
+inline vec4f rgb_to_srgb(vec4f rgb);
+inline vec4f srgbb_to_rgb(vec4b srgb);
+inline vec4b rgb_to_srgbb(vec4f rgb);
 
 // Conversion between number of channels.
-inline vec4f rgb_to_rgba(const vec3f& rgb);
-inline vec3f rgba_to_rgb(const vec4f& rgba);
+inline vec4f rgb_to_rgba(vec3f rgb);
+inline vec3f rgba_to_rgb(vec4f rgba);
 
 // Apply contrast. Grey should be 0.18 for linear and 0.5 for gamma.
-inline vec3f lincontrast(const vec3f& rgb, float contrast, float grey);
-inline vec4f lincontrast(const vec4f& rgb, float contrast, float grey);
+inline vec3f lincontrast(vec3f rgb, float contrast, float grey);
+inline vec4f lincontrast(vec4f rgb, float contrast, float grey);
 // Apply contrast in log2. Grey should be 0.18 for linear and 0.5 for gamma.
-inline vec3f logcontrast(const vec3f& rgb, float logcontrast, float grey);
-inline vec4f logcontrast(const vec4f& rgb, float logcontrast, float grey);
+inline vec3f logcontrast(vec3f rgb, float logcontrast, float grey);
+inline vec4f logcontrast(vec4f rgb, float logcontrast, float grey);
 // Apply an s-shaped contrast.
-inline vec3f contrast(const vec3f& rgb, float contrast);
-inline vec4f contrast(const vec4f& rgb, float contrast);
+inline vec3f contrast(vec3f rgb, float contrast);
+inline vec4f contrast(vec4f rgb, float contrast);
 // Apply saturation.
-inline vec3f saturate(const vec3f& rgb, float saturation,
-    const vec3f& weights = vec3f{0.333333f, 0.333333f, 0.333333f});
-inline vec4f saturate(const vec4f& rgb, float saturation,
-    const vec3f& weights = vec3f{0.333333f, 0.333333f, 0.333333f});
+inline vec3f saturate(vec3f rgb, float saturation,
+    vec3f weights = vec3f{0.333333f, 0.333333f, 0.333333f});
+inline vec4f saturate(vec4f rgb, float saturation,
+    vec3f weights = vec3f{0.333333f, 0.333333f, 0.333333f});
 
 // Apply tone mapping
 inline vec3f tonemap(
-    const vec3f& hdr, float exposure, bool filmic = false, bool srgb = true);
+    vec3f hdr, float exposure, bool filmic = false, bool srgb = true);
 inline vec4f tonemap(
-    const vec4f& hdr, float exposure, bool filmic = false, bool srgb = true);
+    vec4f hdr, float exposure, bool filmic = false, bool srgb = true);
 
 // Composite colors
-inline vec4f composite(const vec4f& a, const vec4f& b);
+inline vec4f composite(vec4f a, vec4f b);
 
 // Convert between CIE XYZ and RGB
-inline vec3f rgb_to_xyz(const vec3f& rgb);
-inline vec3f xyz_to_rgb(const vec3f& xyz);
+inline vec3f rgb_to_xyz(vec3f rgb);
+inline vec3f xyz_to_rgb(vec3f xyz);
 
 // Convert between CIE XYZ and xyY
-inline vec3f xyz_to_xyY(const vec3f& xyz);
-inline vec3f xyY_to_xyz(const vec3f& xyY);
+inline vec3f xyz_to_xyY(vec3f xyz);
+inline vec3f xyY_to_xyz(vec3f xyY);
 
 // Converts between HSV and RGB color spaces.
-inline vec3f hsv_to_rgb(const vec3f& hsv);
-inline vec3f rgb_to_hsv(const vec3f& rgb);
+inline vec3f hsv_to_rgb(vec3f hsv);
+inline vec3f rgb_to_hsv(vec3f rgb);
 
 // Colormap type
 enum struct colormap_type { viridis, plasma, magma, inferno };
@@ -161,9 +161,9 @@ struct colorgrade_params {
 
 // Apply color grading from a linear or srgb color to an srgb color.
 inline vec3f colorgrade(
-    const vec3f& color, bool linear, const colorgrade_params& params);
+    vec3f color, bool linear, const colorgrade_params& params);
 inline vec4f colorgrade(
-    const vec4f& color, bool linear, const colorgrade_params& params);
+    vec4f color, bool linear, const colorgrade_params& params);
 
 }  // namespace yocto
 
@@ -195,11 +195,11 @@ enum struct color_space {
 };
 
 // Conversion between rgb color spaces
-inline vec3f color_to_xyz(const vec3f& col, color_space from);
-inline vec3f xyz_to_color(const vec3f& xyz, color_space to);
+inline vec3f color_to_xyz(vec3f col, color_space from);
+inline vec3f xyz_to_color(vec3f xyz, color_space to);
 
 // Conversion between rgb color spaces
-inline vec3f convert_color(const vec3f& col, color_space from, color_space to);
+inline vec3f convert_color(vec3f col, color_space from, color_space to);
 
 }  // namespace yocto
 
@@ -219,19 +219,19 @@ inline vec3f convert_color(const vec3f& col, color_space from, color_space to);
 namespace yocto {
 
 // Conversion between floats and bytes
-inline vec4b float_to_byte(const vec4f& a) {
+inline vec4b float_to_byte(vec4f a) {
   return {(byte)clamp(int(a.x * 256), 0, 255),
       (byte)clamp(int(a.y * 256), 0, 255), (byte)clamp(int(a.z * 256), 0, 255),
       (byte)clamp(int(a.w * 256), 0, 255)};
 }
-inline vec4f byte_to_float(const vec4b& a) {
+inline vec4f byte_to_float(vec4b a) {
   return {a.x / 255.0f, a.y / 255.0f, a.z / 255.0f, a.w / 255.0f};
 }
 inline byte float_to_byte(float a) { return (byte)clamp(int(a * 256), 0, 255); }
 inline float byte_to_float(byte a) { return a / 255.0f; }
 
 // Luminance
-inline float luminance(const vec3f& a) {
+inline float luminance(vec3f a) {
   return (0.2126f * a.x + 0.7152f * a.y + 0.0722f * a.z);
 }
 
@@ -244,69 +244,69 @@ inline float rgb_to_srgb(float rgb) {
   return (rgb <= 0.0031308f) ? 12.92f * rgb
                              : (1 + 0.055f) * pow(rgb, 1 / 2.4f) - 0.055f;
 }
-inline vec3f srgb_to_rgb(const vec3f& srgb) {
+inline vec3f srgb_to_rgb(vec3f srgb) {
   return {srgb_to_rgb(srgb.x), srgb_to_rgb(srgb.y), srgb_to_rgb(srgb.z)};
 }
-inline vec4f srgb_to_rgb(const vec4f& srgb) {
+inline vec4f srgb_to_rgb(vec4f srgb) {
   return {srgb_to_rgb(xyz(srgb)), srgb.w};
 }
-inline vec3f rgb_to_srgb(const vec3f& rgb) {
+inline vec3f rgb_to_srgb(vec3f rgb) {
   return {rgb_to_srgb(rgb.x), rgb_to_srgb(rgb.y), rgb_to_srgb(rgb.z)};
 }
-inline vec4f rgb_to_srgb(const vec4f& rgb) {
+inline vec4f rgb_to_srgb(vec4f rgb) {
   return {rgb_to_srgb(xyz(rgb)), rgb.w};
 }
-inline vec4f srgbb_to_rgb(const vec4b& srgb) {
+inline vec4f srgbb_to_rgb(vec4b srgb) {
   return srgb_to_rgb(byte_to_float(srgb));
 }
-inline vec4b rgb_to_srgbb(const vec4f& rgb) {
+inline vec4b rgb_to_srgbb(vec4f rgb) {
   return float_to_byte(rgb_to_srgb(rgb));
 }
 
 // Conversion between number of channels.
-inline vec4f rgb_to_rgba(const vec3f& rgb) { return {rgb, 1}; }
-inline vec3f rgba_to_rgb(const vec4f& rgba) { return xyz(rgba); }
+inline vec4f rgb_to_rgba(vec3f rgb) { return {rgb, 1}; }
+inline vec3f rgba_to_rgb(vec4f rgba) { return xyz(rgba); }
 
 // Apply contrast. Grey should be 0.18 for linear and 0.5 for gamma.
-inline vec3f lincontrast(const vec3f& rgb, float contrast, float grey) {
+inline vec3f lincontrast(vec3f rgb, float contrast, float grey) {
   return max({0, 0, 0}, grey + (rgb - grey) * (contrast * 2));
 }
-inline vec4f lincontrast(const vec4f& rgb, float contrast, float grey) {
+inline vec4f lincontrast(vec4f rgb, float contrast, float grey) {
   return {lincontrast(xyz(rgb), contrast, grey), rgb.w};
 }
 // Apply contrast in log2. Grey should be 0.18 for linear and 0.5 for gamma.
-inline vec3f logcontrast(const vec3f& rgb, float logcontrast, float grey) {
+inline vec3f logcontrast(vec3f rgb, float logcontrast, float grey) {
   auto epsilon  = (float)0.0001;
   auto log_grey = log2(grey);
   auto log_ldr  = log2(rgb + epsilon);
   auto adjusted = log_grey + (log_ldr - log_grey) * (logcontrast * 2);
   return max({0, 0, 0}, exp2(adjusted) - epsilon);
 }
-inline vec4f logcontrast(const vec4f& rgb, float contrast, float grey) {
+inline vec4f logcontrast(vec4f rgb, float contrast, float grey) {
   return {logcontrast(xyz(rgb), contrast, grey), rgb.w};
 }
 // Apply an s-shaped contrast.
-inline vec3f contrast(const vec3f& rgb, float contrast) {
+inline vec3f contrast(vec3f rgb, float contrast) {
   return gain(rgb, 1 - contrast);
 }
-inline vec4f contrast(const vec4f& rgb, float contrast) {
+inline vec4f contrast(vec4f rgb, float contrast) {
   return {yocto::contrast(xyz(rgb), contrast), rgb.w};
 }
 // Apply saturation.
 inline vec3f saturate(
-    const vec3f& rgb, float saturation, const vec3f& weights) {
+    vec3f rgb, float saturation, vec3f weights) {
   auto grey = dot(weights, rgb);
   return max({0, 0, 0}, grey + (rgb - grey) * (saturation * 2));
 }
 inline vec4f saturate(
-    const vec4f& rgb, float saturation, const vec3f& weights) {
+    vec4f rgb, float saturation, vec3f weights) {
   return {saturate(xyz(rgb), saturation, weights), rgb.w};
 }
 
 #ifndef __CUDACC__
 
 // Filmic tonemapping
-inline vec3f tonemap_filmic(const vec3f& hdr_, bool accurate_fit = false) {
+inline vec3f tonemap_filmic(vec3f hdr_, bool accurate_fit = false) {
   if (!accurate_fit) {
     // https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/
     auto hdr = hdr_ * 0.6f;  // brings it back to ACES range
@@ -328,7 +328,7 @@ inline vec3f tonemap_filmic(const vec3f& hdr_, bool accurate_fit = false) {
         {-0.00327f, -0.07276f, 1.07602f},
     });
     // RRT => ODT
-    auto RRTAndODTFit = [](const vec3f& v) -> vec3f {
+    auto RRTAndODTFit = [](vec3f v) -> vec3f {
       return (v * v + v * 0.0245786f - 0.000090537f) /
              (v * v * 0.983729f + v * 0.4329510f + 0.238081f);
     };
@@ -341,7 +341,7 @@ inline vec3f tonemap_filmic(const vec3f& hdr_, bool accurate_fit = false) {
 #else
 
 // Filmic tonemapping
-inline vec3f tonemap_filmic(const vec3f& hdr_, bool accurate_fit = false) {
+inline vec3f tonemap_filmic(vec3f hdr_, bool accurate_fit = false) {
   if (!accurate_fit) {
     // https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/
     auto hdr = hdr_ * 0.6f;  // brings it back to ACES range
@@ -363,7 +363,7 @@ inline vec3f tonemap_filmic(const vec3f& hdr_, bool accurate_fit = false) {
         {-0.00327f, -0.07276f, 1.07602f},
     });
     // RRT => ODT
-    auto RRTAndODTFit = [](const vec3f& v) -> vec3f {
+    auto RRTAndODTFit = [](vec3f v) -> vec3f {
       return (v * v + v * 0.0245786f - 0.000090537f) /
              (v * v * 0.983729f + v * 0.4329510f + 0.238081f);
     };
@@ -375,19 +375,19 @@ inline vec3f tonemap_filmic(const vec3f& hdr_, bool accurate_fit = false) {
 
 #endif
 
-inline vec3f tonemap(const vec3f& hdr, float exposure, bool filmic, bool srgb) {
+inline vec3f tonemap(vec3f hdr, float exposure, bool filmic, bool srgb) {
   auto rgb = hdr;
   if (exposure != 0) rgb *= exp2(exposure);
   if (filmic) rgb = tonemap_filmic(rgb);
   if (srgb) rgb = rgb_to_srgb(rgb);
   return rgb;
 }
-inline vec4f tonemap(const vec4f& hdr, float exposure, bool filmic, bool srgb) {
+inline vec4f tonemap(vec4f hdr, float exposure, bool filmic, bool srgb) {
   return {tonemap(xyz(hdr), exposure, filmic, srgb), hdr.w};
 }
 
 // Composite colors
-inline vec4f composite(const vec4f& a, const vec4f& b) {
+inline vec4f composite(vec4f a, vec4f b) {
   if (a.w == 0 && b.w == 0) return {0, 0, 0, 0};
   auto cc = xyz(a) * a.w + xyz(b) * b.w * (1 - a.w);
   auto ca = a.w + b.w * (1 - a.w);
@@ -395,7 +395,7 @@ inline vec4f composite(const vec4f& a, const vec4f& b) {
 }
 
 // Convert between CIE XYZ and RGB
-inline vec3f rgb_to_xyz(const vec3f& rgb) {
+inline vec3f rgb_to_xyz(vec3f rgb) {
   // https://en.wikipedia.org/wiki/SRGB
   static const auto mat = mat3f{
       {0.4124f, 0.2126f, 0.0193f},
@@ -404,7 +404,7 @@ inline vec3f rgb_to_xyz(const vec3f& rgb) {
   };
   return mat * rgb;
 }
-inline vec3f xyz_to_rgb(const vec3f& xyz) {
+inline vec3f xyz_to_rgb(vec3f xyz) {
   // https://en.wikipedia.org/wiki/SRGB
   static const auto mat = mat3f{
       {+3.2406f, -0.9689f, +0.0557f},
@@ -415,18 +415,18 @@ inline vec3f xyz_to_rgb(const vec3f& xyz) {
 }
 
 // Convert between CIE XYZ and xyY
-inline vec3f xyz_to_xyY(const vec3f& xyz) {
+inline vec3f xyz_to_xyY(vec3f xyz) {
   if (xyz == vec3f{0, 0, 0}) return {0, 0, 0};
   return {
       xyz.x / (xyz.x + xyz.y + xyz.z), xyz.y / (xyz.x + xyz.y + xyz.z), xyz.y};
 }
-inline vec3f xyY_to_xyz(const vec3f& xyY) {
+inline vec3f xyY_to_xyz(vec3f xyY) {
   if (xyY.y == 0) return {0, 0, 0};
   return {xyY.x * xyY.z / xyY.y, xyY.z, (1 - xyY.x - xyY.y) * xyY.z / xyY.y};
 }
 
 // Convert HSV to RGB
-inline vec3f hsv_to_rgb(const vec3f& hsv) {
+inline vec3f hsv_to_rgb(vec3f hsv) {
   // from Imgui.cpp
   auto h = hsv.x, s = hsv.y, v = hsv.z;
   if (hsv.y == 0) return {v, v, v};
@@ -449,7 +449,7 @@ inline vec3f hsv_to_rgb(const vec3f& hsv) {
   }
 }
 
-inline vec3f rgb_to_hsv(const vec3f& rgb) {
+inline vec3f rgb_to_hsv(vec3f rgb) {
   // from Imgui.cpp
   auto r = rgb.x, g = rgb.y, b = rgb.z;
   auto K = 0.f;
@@ -562,7 +562,7 @@ inline vec3f colormap(float t, colormap_type type) {
 namespace yocto {
 
 inline vec3f colorgrade(
-    const vec3f& rgb_, bool linear, const colorgrade_params& params) {
+    vec3f rgb_, bool linear, const colorgrade_params& params) {
   auto rgb = rgb_;
   if (params.exposure != 0) rgb *= exp2(params.exposure);
   if (params.tint != vec3f{1, 1, 1}) rgb *= params.tint;
@@ -595,7 +595,7 @@ inline vec3f colorgrade(
   return rgb;
 }
 inline vec4f colorgrade(
-    const vec4f& rgba, bool linear, const colorgrade_params& params) {
+    vec4f rgba, bool linear, const colorgrade_params& params) {
   auto graded = colorgrade(xyz(rgba), linear, params);
   return {graded.x, graded.y, graded.z, rgba.w};
 }
@@ -639,7 +639,7 @@ struct color_space_params {
 // Algorithm from: SMPTE Recommended Practice RP 177-1993
 // http://car.france3.mars.free.fr/HD/INA-%2026%20jan%2006/SMPTE%20normes%20et%20confs/rp177.pdf
 inline mat3f rgb_to_xyz_mat(
-    const vec2f& rc, const vec2f& gc, const vec2f& bc, const vec2f& wc) {
+    vec2f rc, vec2f gc, vec2f bc, vec2f wc) {
   auto rgb = mat3f{
       {rc.x, rc.y, 1 - rc.x - rc.y},
       {gc.x, gc.y, 1 - gc.x - gc.y},
@@ -652,18 +652,18 @@ inline mat3f rgb_to_xyz_mat(
 
 // Construct an RGB color space. Predefined color spaces below
 inline color_space_params get_color_scape_params(color_space space) {
-  static auto make_linear_rgb_space = [](const vec2f& red, const vec2f& green,
-                                          const vec2f& blue,
-                                          const vec2f& white) {
+  static auto make_linear_rgb_space = [](vec2f red, vec2f green,
+                                          vec2f blue,
+                                          vec2f white) {
     return color_space_params{red, green, blue, white,
         rgb_to_xyz_mat(red, green, blue, white),
         inverse(rgb_to_xyz_mat(red, green, blue, white)),
         color_space_params::curve_t::linear};
   };
   static auto make_gamma_rgb_space =
-      [](const vec2f& red, const vec2f& green, const vec2f& blue,
-          const vec2f& white, float gamma,
-          const vec4f& curve_abcd = vec4f{0, 0, 0, 0}) {
+      [](vec2f red, vec2f green, vec2f blue,
+          vec2f white, float gamma,
+          vec4f curve_abcd = vec4f{0, 0, 0, 0}) {
         return color_space_params{red, green, blue, white,
             rgb_to_xyz_mat(red, green, blue, white),
             inverse(rgb_to_xyz_mat(red, green, blue, white)),
@@ -672,8 +672,8 @@ inline color_space_params get_color_scape_params(color_space space) {
                 : color_space_params::curve_t::linear_gamma};
       };
   static auto make_other_rgb_space =
-      [](const vec2f& red, const vec2f& green, const vec2f& blue,
-          const vec2f& white, color_space_params::curve_t curve_type) {
+      [](vec2f red, vec2f green, vec2f blue,
+          vec2f white, color_space_params::curve_t curve_type) {
         return color_space_params{red, green, blue, white,
             rgb_to_xyz_mat(red, green, blue, white),
             inverse(rgb_to_xyz_mat(red, green, blue, white)), curve_type};
@@ -773,7 +773,7 @@ inline float gamma_linear_to_display(float x, float gamma) {
 }
 
 // https://en.wikipedia.org/wiki/Rec._709
-inline float gamma_display_to_linear(float x, float gamma, const vec4f& abcd) {
+inline float gamma_display_to_linear(float x, float gamma, vec4f abcd) {
   auto& [a, b, c, d] = abcd;
   if (x < 1 / d) {
     return x / c;
@@ -781,7 +781,7 @@ inline float gamma_display_to_linear(float x, float gamma, const vec4f& abcd) {
     return pow((x + b) / a, gamma);
   }
 }
-inline float gamma_linear_to_display(float x, float gamma, const vec4f& abcd) {
+inline float gamma_linear_to_display(float x, float gamma, vec4f abcd) {
   auto& [a, b, c, d] = abcd;
   if (x < d) {
     return x * c;
@@ -865,7 +865,7 @@ inline float hlg_linear_to_display(float x) {
 }
 
 // Conversion to/from xyz
-inline vec3f color_to_xyz(const vec3f& col, color_space from) {
+inline vec3f color_to_xyz(vec3f col, color_space from) {
   auto space = get_color_scape_params(from);
   auto rgb   = col;
   if (space.curve_type == color_space_params::curve_t::linear) {
@@ -911,7 +911,7 @@ inline vec3f color_to_xyz(const vec3f& col, color_space from) {
   }
   return space.rgb_to_xyz_mat * rgb;
 }
-inline vec3f xyz_to_color(const vec3f& xyz, color_space to) {
+inline vec3f xyz_to_color(vec3f xyz, color_space to) {
   auto space = get_color_scape_params(to);
   auto rgb   = space.xyz_to_rgb_mat * xyz;
   if (space.curve_type == color_space_params::curve_t::linear) {
@@ -958,7 +958,7 @@ inline vec3f xyz_to_color(const vec3f& xyz, color_space to) {
   return rgb;
 }
 
-inline vec3f convert_color(const vec3f& col, color_space from, color_space to) {
+inline vec3f convert_color(vec3f col, color_space from, color_space to) {
   if (from == to) return col;
   return xyz_to_color(color_to_xyz(col, from), to);
 }

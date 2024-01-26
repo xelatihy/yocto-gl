@@ -403,7 +403,7 @@ using environment_data = cuenvironment_data;
 constexpr auto min_roughness = 0.03f * 0.03f;
 
 // Evaluates an image at a point `uv`.
-static vec4f eval_texture(const texture_data& texture, const vec2f& texcoord,
+static vec4f eval_texture(const texture_data& texture, vec2f texcoord,
     bool as_linear = false, bool no_interpolation = false,
     bool clamp_to_edge = false) {
   auto fromTexture = tex2D<float4>(texture.texture, texcoord.x, texcoord.y);
@@ -417,7 +417,7 @@ static vec4f eval_texture(const texture_data& texture, const vec2f& texcoord,
 }
 
 // Helpers
-static vec4f eval_texture(const scene_data& scene, int texture, const vec2f& uv,
+static vec4f eval_texture(const scene_data& scene, int texture, vec2f uv,
     bool ldr_as_linear = false, bool no_interpolation = false,
     bool clamp_to_edge = false) {
   if (texture == invalidid) return {1, 1, 1, 1};
@@ -442,7 +442,7 @@ struct material_point {
 
 // Eval position
 static vec3f eval_position(const scene_data& scene,
-    const instance_data& instance, int element, const vec2f& uv) {
+    const instance_data& instance, int element, vec2f uv) {
   auto& shape = scene.shapes[instance.shape];
   if (!shape.triangles.empty()) {
     auto t = shape.triangles[element];
@@ -470,7 +470,7 @@ static vec3f eval_element_normal(
 
 // Eval normal
 static vec3f eval_normal(const scene_data& scene, const instance_data& instance,
-    int element, const vec2f& uv) {
+    int element, vec2f uv) {
   auto& shape = scene.shapes[instance.shape];
   if (shape.normals.empty())
     return eval_element_normal(scene, instance, element);
@@ -486,7 +486,7 @@ static vec3f eval_normal(const scene_data& scene, const instance_data& instance,
 
 // Eval texcoord
 static vec2f eval_texcoord(const scene_data& scene,
-    const instance_data& instance, int element, const vec2f& uv) {
+    const instance_data& instance, int element, vec2f uv) {
   auto& shape = scene.shapes[instance.shape];
   if (shape.texcoords.empty()) return uv;
   if (!shape.triangles.empty()) {
@@ -515,7 +515,7 @@ static pair_<vec3f, vec3f> eval_element_tangents(
 }
 
 static vec3f eval_normalmap(const scene_data& scene,
-    const instance_data& instance, int element, const vec2f& uv) {
+    const instance_data& instance, int element, vec2f uv) {
   auto& shape    = scene.shapes[instance.shape];
   auto& material = scene.materials[instance.material];
   // apply normal mapping
@@ -537,8 +537,8 @@ static vec3f eval_normalmap(const scene_data& scene,
 
 // Eval shading position
 static vec3f eval_shading_position(const scene_data& scene,
-    const instance_data& instance, int element, const vec2f& uv,
-    const vec3f& outgoing) {
+    const instance_data& instance, int element, vec2f uv,
+    vec3f outgoing) {
   auto& shape = scene.shapes[instance.shape];
   if (!shape.triangles.empty()) {
     return eval_position(scene, instance, element, uv);
@@ -549,8 +549,8 @@ static vec3f eval_shading_position(const scene_data& scene,
 
 // Eval shading normal
 static vec3f eval_shading_normal(const scene_data& scene,
-    const instance_data& instance, int element, const vec2f& uv,
-    const vec3f& outgoing) {
+    const instance_data& instance, int element, vec2f uv,
+    vec3f outgoing) {
   auto& shape    = scene.shapes[instance.shape];
   auto& material = scene.materials[instance.material];
   if (!shape.triangles.empty()) {
@@ -567,7 +567,7 @@ static vec3f eval_shading_normal(const scene_data& scene,
 
 // Eval color
 static vec4f eval_color(const scene_data& scene, const instance_data& instance,
-    int element, const vec2f& uv) {
+    int element, vec2f uv) {
   auto& shape = scene.shapes[instance.shape];
   if (shape.colors.empty()) return {1, 1, 1, 1};
   if (!shape.triangles.empty()) {
@@ -581,7 +581,7 @@ static vec4f eval_color(const scene_data& scene, const instance_data& instance,
 
 // Evaluate material
 static material_point eval_material(const scene_data& scene,
-    const instance_data& instance, int element, const vec2f& uv) {
+    const instance_data& instance, int element, vec2f uv) {
   auto& material = scene.materials[instance.material];
   auto  texcoord = eval_texcoord(scene, instance, element, uv);
 
@@ -656,7 +656,7 @@ static bool is_delta(const material_point& material) {
 }
 
 static ray3f eval_camera(
-    const cucamera_data& camera, const vec2f& image_uv, const vec2f& lens_uv) {
+    const cucamera_data& camera, vec2f image_uv, vec2f lens_uv) {
   auto film = camera.aspect >= 1
                   ? vec2f{camera.film, camera.film / camera.aspect}
                   : vec2f{camera.film * camera.aspect, camera.film};
@@ -678,7 +678,7 @@ static ray3f eval_camera(
 
 // Evaluate environment color.
 static vec3f eval_environment(const scene_data& scene,
-    const environment_data& environment, const vec3f& direction) {
+    const environment_data& environment, vec3f direction) {
   auto wl       = transform_direction_inverse(environment.frame, direction);
   auto texcoord = vec2f{
       atan2(wl.z, wl.x) / (2 * pif), acos(clamp(wl.y, -1.0f, 1.0f)) / pif};
@@ -688,7 +688,7 @@ static vec3f eval_environment(const scene_data& scene,
 }
 
 // Evaluate all environment color.
-static vec3f eval_environment(const scene_data& scene, const vec3f& direction) {
+static vec3f eval_environment(const scene_data& scene, vec3f direction) {
   auto emission = vec3f{0, 0, 0};
   for (auto& environment : scene.environments) {
     emission += eval_environment(scene, environment, direction);
@@ -796,12 +796,12 @@ namespace yocto {
       scene, scene.instances[intersection.instance], intersection.element);
 }
 [[maybe_unused]] static vec3f eval_shading_position(const scene_data& scene,
-    const scene_intersection& intersection, const vec3f& outgoing) {
+    const scene_intersection& intersection, vec3f outgoing) {
   return eval_shading_position(scene, scene.instances[intersection.instance],
       intersection.element, intersection.uv, outgoing);
 }
 [[maybe_unused]] static vec3f eval_shading_normal(const scene_data& scene,
-    const scene_intersection& intersection, const vec3f& outgoing) {
+    const scene_intersection& intersection, vec3f outgoing) {
   return eval_shading_normal(scene, scene.instances[intersection.instance],
       intersection.element, intersection.uv, outgoing);
 }
@@ -828,14 +828,14 @@ namespace yocto {
 namespace yocto {
 
 // Evaluates/sample the BRDF scaled by the cosine of the incoming direction.
-static vec3f eval_emission(const material_point& material, const vec3f& normal,
-    const vec3f& outgoing) {
+static vec3f eval_emission(const material_point& material, vec3f normal,
+    vec3f outgoing) {
   return dot(normal, outgoing) >= 0 ? material.emission : vec3f{0, 0, 0};
 }
 
 // Evaluates/sample the BRDF scaled by the cosine of the incoming direction.
-static vec3f eval_bsdfcos(const material_point& material, const vec3f& normal,
-    const vec3f& outgoing, const vec3f& incoming) {
+static vec3f eval_bsdfcos(const material_point& material, vec3f normal,
+    vec3f outgoing, vec3f incoming) {
   if (material.roughness == 0) return {0, 0, 0};
 
   if (material.type == material_type::matte) {
@@ -863,8 +863,8 @@ static vec3f eval_bsdfcos(const material_point& material, const vec3f& normal,
   }
 }
 
-static vec3f eval_delta(const material_point& material, const vec3f& normal,
-    const vec3f& outgoing, const vec3f& incoming) {
+static vec3f eval_delta(const material_point& material, vec3f normal,
+    vec3f outgoing, vec3f incoming) {
   if (material.roughness != 0) return {0, 0, 0};
 
   if (material.type == material_type::reflective) {
@@ -883,8 +883,8 @@ static vec3f eval_delta(const material_point& material, const vec3f& normal,
 }
 
 // Picks a direction based on the BRDF
-static vec3f sample_bsdfcos(const material_point& material, const vec3f& normal,
-    const vec3f& outgoing, float rnl, const vec2f& rn) {
+static vec3f sample_bsdfcos(const material_point& material, vec3f normal,
+    vec3f outgoing, float rnl, vec2f rn) {
   if (material.roughness == 0) return {0, 0, 0};
 
   if (material.type == material_type::matte) {
@@ -912,8 +912,8 @@ static vec3f sample_bsdfcos(const material_point& material, const vec3f& normal,
   }
 }
 
-static vec3f sample_delta(const material_point& material, const vec3f& normal,
-    const vec3f& outgoing, float rnl) {
+static vec3f sample_delta(const material_point& material, vec3f normal,
+    vec3f outgoing, float rnl) {
   if (material.roughness != 0) return {0, 0, 0};
 
   if (material.type == material_type::reflective) {
@@ -933,7 +933,7 @@ static vec3f sample_delta(const material_point& material, const vec3f& normal,
 
 // Compute the weight for sampling the BRDF
 static float sample_bsdfcos_pdf(const material_point& material,
-    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
+    vec3f normal, vec3f outgoing, vec3f incoming) {
   if (material.roughness == 0) return 0;
 
   if (material.type == material_type::matte) {
@@ -962,7 +962,7 @@ static float sample_bsdfcos_pdf(const material_point& material,
 }
 
 static float sample_delta_pdf(const material_point& material,
-    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
+    vec3f normal, vec3f outgoing, vec3f incoming) {
   if (material.roughness != 0) return 0;
 
   if (material.type == material_type::reflective) {
@@ -981,27 +981,27 @@ static float sample_delta_pdf(const material_point& material,
 }
 
 static vec3f eval_scattering(const material_point& material,
-    const vec3f& outgoing, const vec3f& incoming) {
+    vec3f outgoing, vec3f incoming) {
   if (material.density == vec3f{0, 0, 0}) return {0, 0, 0};
   return material.scattering * material.density *
          eval_phasefunction(material.scanisotropy, outgoing, incoming);
 }
 
 static vec3f sample_scattering(const material_point& material,
-    const vec3f& outgoing, float rnl, const vec2f& rn) {
+    vec3f outgoing, float rnl, vec2f rn) {
   if (material.density == vec3f{0, 0, 0}) return {0, 0, 0};
   return sample_phasefunction(material.scanisotropy, outgoing, rn);
 }
 
 static float sample_scattering_pdf(const material_point& material,
-    const vec3f& outgoing, const vec3f& incoming) {
+    vec3f outgoing, vec3f incoming) {
   if (material.density == vec3f{0, 0, 0}) return 0;
   return sample_phasefunction_pdf(material.scanisotropy, outgoing, incoming);
 }
 
 // Sample camera
-static ray3f sample_camera(const camera_data& camera, const vec2i& ij,
-    const vec2i& image_size, const vec2f& puv, const vec2f& luv, bool tent) {
+static ray3f sample_camera(const camera_data& camera, vec2i ij,
+    vec2i image_size, vec2f puv, vec2f luv, bool tent) {
   if (!tent) {
     auto uv = vec2f{
         (ij.x + puv.x) / image_size.x, (ij.y + puv.y) / image_size.y};
@@ -1024,7 +1024,7 @@ static ray3f sample_camera(const camera_data& camera, const vec2i& ij,
 
 // Sample lights wrt solid angle
 static vec3f sample_lights(const scene_data& scene, const trace_lights& lights,
-    const vec3f& position, float rl, float rel, const vec2f& ruv) {
+    vec3f position, float rl, float rel, vec2f ruv) {
   auto  light_id = sample_uniform((int)lights.lights.size(), rl);
   auto& light    = lights.lights[light_id];
   if (light.instance != invalidid) {
@@ -1054,7 +1054,7 @@ static vec3f sample_lights(const scene_data& scene, const trace_lights& lights,
 
 // Sample lights pdf
 static float sample_lights_pdf(const scene_data& scene, const trace_bvh& bvh,
-    const trace_lights& lights, const vec3f& position, const vec3f& direction) {
+    const trace_lights& lights, vec3f position, vec3f direction) {
   auto pdf = 0.0f;
   for (auto& light : lights.lights) {
     if (light.instance != invalidid) {
