@@ -659,8 +659,7 @@ namespace yocto {
 
 // Intersect ray with a bvh.
 shape_intersection overlap_shape_bvh(const shape_bvh& sbvh,
-    const shape_data& shape, vec3f pos, float max_distance,
-    bool find_any) {
+    const shape_data& shape, vec3f pos, float max_distance, bool find_any) {
   // get bvh tree
   auto& bvh = sbvh.bvh;
 
@@ -748,8 +747,7 @@ shape_intersection overlap_shape_bvh(const shape_bvh& sbvh,
 
 // Intersect ray with a bvh.
 scene_intersection overlap_scene_bvh(const scene_bvh& sbvh,
-    const scene_data& scene, vec3f pos, float max_distance,
-    bool find_any) {
+    const scene_data& scene, vec3f pos, float max_distance, bool find_any) {
   // get instances bvh
   auto& bvh = sbvh.bvh;
 

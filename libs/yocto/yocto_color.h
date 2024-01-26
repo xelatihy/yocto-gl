@@ -253,15 +253,11 @@ inline vec4f srgb_to_rgb(vec4f srgb) {
 inline vec3f rgb_to_srgb(vec3f rgb) {
   return {rgb_to_srgb(rgb.x), rgb_to_srgb(rgb.y), rgb_to_srgb(rgb.z)};
 }
-inline vec4f rgb_to_srgb(vec4f rgb) {
-  return {rgb_to_srgb(xyz(rgb)), rgb.w};
-}
+inline vec4f rgb_to_srgb(vec4f rgb) { return {rgb_to_srgb(xyz(rgb)), rgb.w}; }
 inline vec4f srgbb_to_rgb(vec4b srgb) {
   return srgb_to_rgb(byte_to_float(srgb));
 }
-inline vec4b rgb_to_srgbb(vec4f rgb) {
-  return float_to_byte(rgb_to_srgb(rgb));
-}
+inline vec4b rgb_to_srgbb(vec4f rgb) { return float_to_byte(rgb_to_srgb(rgb)); }
 
 // Conversion between number of channels.
 inline vec4f rgb_to_rgba(vec3f rgb) { return {rgb, 1}; }
@@ -293,13 +289,11 @@ inline vec4f contrast(vec4f rgb, float contrast) {
   return {yocto::contrast(xyz(rgb), contrast), rgb.w};
 }
 // Apply saturation.
-inline vec3f saturate(
-    vec3f rgb, float saturation, vec3f weights) {
+inline vec3f saturate(vec3f rgb, float saturation, vec3f weights) {
   auto grey = dot(weights, rgb);
   return max({0, 0, 0}, grey + (rgb - grey) * (saturation * 2));
 }
-inline vec4f saturate(
-    vec4f rgb, float saturation, vec3f weights) {
+inline vec4f saturate(vec4f rgb, float saturation, vec3f weights) {
   return {saturate(xyz(rgb), saturation, weights), rgb.w};
 }
 
@@ -638,8 +632,7 @@ struct color_space_params {
 // Input: red, green, blue, white (x,y) chromoticities
 // Algorithm from: SMPTE Recommended Practice RP 177-1993
 // http://car.france3.mars.free.fr/HD/INA-%2026%20jan%2006/SMPTE%20normes%20et%20confs/rp177.pdf
-inline mat3f rgb_to_xyz_mat(
-    vec2f rc, vec2f gc, vec2f bc, vec2f wc) {
+inline mat3f rgb_to_xyz_mat(vec2f rc, vec2f gc, vec2f bc, vec2f wc) {
   auto rgb = mat3f{
       {rc.x, rc.y, 1 - rc.x - rc.y},
       {gc.x, gc.y, 1 - gc.x - gc.y},
@@ -652,28 +645,26 @@ inline mat3f rgb_to_xyz_mat(
 
 // Construct an RGB color space. Predefined color spaces below
 inline color_space_params get_color_scape_params(color_space space) {
-  static auto make_linear_rgb_space = [](vec2f red, vec2f green,
-                                          vec2f blue,
+  static auto make_linear_rgb_space = [](vec2f red, vec2f green, vec2f blue,
                                           vec2f white) {
     return color_space_params{red, green, blue, white,
         rgb_to_xyz_mat(red, green, blue, white),
         inverse(rgb_to_xyz_mat(red, green, blue, white)),
         color_space_params::curve_t::linear};
   };
-  static auto make_gamma_rgb_space =
-      [](vec2f red, vec2f green, vec2f blue,
-          vec2f white, float gamma,
-          vec4f curve_abcd = vec4f{0, 0, 0, 0}) {
-        return color_space_params{red, green, blue, white,
-            rgb_to_xyz_mat(red, green, blue, white),
-            inverse(rgb_to_xyz_mat(red, green, blue, white)),
-            curve_abcd == vec4f{0, 0, 0, 0}
-                ? color_space_params::curve_t::gamma
-                : color_space_params::curve_t::linear_gamma};
-      };
+  static auto make_gamma_rgb_space = [](vec2f red, vec2f green, vec2f blue,
+                                         vec2f white, float gamma,
+                                         vec4f curve_abcd = vec4f{0, 0, 0, 0}) {
+    return color_space_params{red, green, blue, white,
+        rgb_to_xyz_mat(red, green, blue, white),
+        inverse(rgb_to_xyz_mat(red, green, blue, white)),
+        curve_abcd == vec4f{0, 0, 0, 0}
+            ? color_space_params::curve_t::gamma
+            : color_space_params::curve_t::linear_gamma};
+  };
   static auto make_other_rgb_space =
-      [](vec2f red, vec2f green, vec2f blue,
-          vec2f white, color_space_params::curve_t curve_type) {
+      [](vec2f red, vec2f green, vec2f blue, vec2f white,
+          color_space_params::curve_t curve_type) {
         return color_space_params{red, green, blue, white,
             rgb_to_xyz_mat(red, green, blue, white),
             inverse(rgb_to_xyz_mat(red, green, blue, white)), curve_type};

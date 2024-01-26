@@ -149,8 +149,8 @@ static scene_intersection intersect_instance(const trace_bvh& bvh,
 namespace yocto {
 
 // Evaluates/sample the BRDF scaled by the cosine of the incoming direction.
-static vec3f eval_emission(const material_point& material, vec3f normal,
-    vec3f outgoing) {
+static vec3f eval_emission(
+    const material_point& material, vec3f normal, vec3f outgoing) {
   return dot(normal, outgoing) >= 0 ? material.emission : vec3f{0, 0, 0};
 }
 
@@ -233,8 +233,8 @@ static vec3f sample_bsdfcos(const material_point& material, vec3f normal,
   }
 }
 
-static vec3f sample_delta(const material_point& material, vec3f normal,
-    vec3f outgoing, float rnl) {
+static vec3f sample_delta(
+    const material_point& material, vec3f normal, vec3f outgoing, float rnl) {
   if (material.roughness != 0) return {0, 0, 0};
 
   if (material.type == material_type::reflective) {
@@ -253,8 +253,8 @@ static vec3f sample_delta(const material_point& material, vec3f normal,
 }
 
 // Compute the weight for sampling the BRDF
-static float sample_bsdfcos_pdf(const material_point& material,
-    vec3f normal, vec3f outgoing, vec3f incoming) {
+static float sample_bsdfcos_pdf(const material_point& material, vec3f normal,
+    vec3f outgoing, vec3f incoming) {
   if (material.roughness == 0) return 0;
 
   if (material.type == material_type::matte) {
@@ -282,8 +282,8 @@ static float sample_bsdfcos_pdf(const material_point& material,
   }
 }
 
-static float sample_delta_pdf(const material_point& material,
-    vec3f normal, vec3f outgoing, vec3f incoming) {
+static float sample_delta_pdf(const material_point& material, vec3f normal,
+    vec3f outgoing, vec3f incoming) {
   if (material.roughness != 0) return 0;
 
   if (material.type == material_type::reflective) {
@@ -301,21 +301,21 @@ static float sample_delta_pdf(const material_point& material,
   }
 }
 
-static vec3f eval_scattering(const material_point& material,
-    vec3f outgoing, vec3f incoming) {
+static vec3f eval_scattering(
+    const material_point& material, vec3f outgoing, vec3f incoming) {
   if (material.density == vec3f{0, 0, 0}) return {0, 0, 0};
   return material.scattering * material.density *
          eval_phasefunction(material.scanisotropy, outgoing, incoming);
 }
 
-static vec3f sample_scattering(const material_point& material,
-    vec3f outgoing, float rnl, vec2f rn) {
+static vec3f sample_scattering(
+    const material_point& material, vec3f outgoing, float rnl, vec2f rn) {
   if (material.density == vec3f{0, 0, 0}) return {0, 0, 0};
   return sample_phasefunction(material.scanisotropy, outgoing, rn);
 }
 
-static float sample_scattering_pdf(const material_point& material,
-    vec3f outgoing, vec3f incoming) {
+static float sample_scattering_pdf(
+    const material_point& material, vec3f outgoing, vec3f incoming) {
   if (material.density == vec3f{0, 0, 0}) return 0;
   return sample_phasefunction_pdf(material.scanisotropy, outgoing, incoming);
 }

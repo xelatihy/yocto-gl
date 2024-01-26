@@ -250,8 +250,8 @@ void sample_shape_cdf(vector<float>& cdf, const shape_data& shape) {
   }
 }
 
-shape_point sample_shape(const shape_data& shape, const vector<float>& cdf,
-    float rn, vec2f ruv) {
+shape_point sample_shape(
+    const shape_data& shape, const vector<float>& cdf, float rn, vec2f ruv) {
   if (!shape.points.empty()) {
     auto element = sample_points(cdf, rn);
     return {element, {0, 0}};
@@ -671,8 +671,7 @@ vector<string> fvshape_stats(const fvshape_data& shape, bool verbose) {
 namespace yocto {
 
 // Make a tesselated rectangle. Useful in other subdivisions.
-static shape_data make_quads(
-    vec2i steps, vec2f scale, vec2f uvscale) {
+static shape_data make_quads(vec2i steps, vec2f scale, vec2f uvscale) {
   auto shape = shape_data{};
 
   shape.positions.resize((steps.x + 1) * (steps.y + 1));
@@ -724,12 +723,11 @@ void merge_shape_inplace(shape_data& shape, const shape_data& merge) {
 }
 
 // Make a plane.
-shape_data make_rect(
-    vec2i steps, vec2f scale, vec2f uvscale) {
+shape_data make_rect(vec2i steps, vec2f scale, vec2f uvscale) {
   return make_quads(steps, scale, uvscale);
 }
-shape_data make_bulged_rect(vec2i steps, vec2f scale,
-    vec2f uvscale, float height) {
+shape_data make_bulged_rect(
+    vec2i steps, vec2f scale, vec2f uvscale, float height) {
   auto shape = make_rect(steps, scale, uvscale);
   if (height != 0) {
     height      = min(height, min(scale));
@@ -745,16 +743,15 @@ shape_data make_bulged_rect(vec2i steps, vec2f scale,
 }
 
 // Make a plane in the xz plane.
-shape_data make_recty(
-    vec2i steps, vec2f scale, vec2f uvscale) {
+shape_data make_recty(vec2i steps, vec2f scale, vec2f uvscale) {
   auto shape = make_rect(steps, scale, uvscale);
   for (auto& position : shape.positions)
     position = {position.x, position.z, -position.y};
   for (auto& normal : shape.normals) normal = {normal.x, normal.z, normal.y};
   return shape;
 }
-shape_data make_bulged_recty(vec2i steps, vec2f scale,
-    vec2f uvscale, float height) {
+shape_data make_bulged_recty(
+    vec2i steps, vec2f scale, vec2f uvscale, float height) {
   auto shape = make_bulged_rect(steps, scale, uvscale, height);
   for (auto& position : shape.positions)
     position = {position.x, position.z, -position.y};
@@ -763,8 +760,7 @@ shape_data make_bulged_recty(vec2i steps, vec2f scale,
 }
 
 // Make a box.
-shape_data make_box(
-    vec3i steps, vec3f scale, vec3f uvscale) {
+shape_data make_box(vec3i steps, vec3f scale, vec3f uvscale) {
   auto shape  = shape_data{};
   auto qshape = shape_data{};
   // + z
@@ -811,8 +807,8 @@ shape_data make_box(
   merge_shape_inplace(shape, qshape);
   return shape;
 }
-shape_data make_rounded_box(vec3i steps, vec3f scale,
-    vec3f uvscale, float radius) {
+shape_data make_rounded_box(
+    vec3i steps, vec3f scale, vec3f uvscale, float radius) {
   auto shape = make_box(steps, scale, uvscale);
   if (radius != 0) {
     radius = min(radius, min(scale));
@@ -850,8 +846,7 @@ shape_data make_rounded_box(vec3i steps, vec3f scale,
 }
 
 // Make a quad stack
-shape_data make_rect_stack(
-    vec3i steps, vec3f scale, vec2f uvscale) {
+shape_data make_rect_stack(vec3i steps, vec3f scale, vec2f uvscale) {
   auto shape  = shape_data{};
   auto qshape = shape_data{};
   for (auto i : range(steps.z + 1)) {
@@ -864,16 +859,15 @@ shape_data make_rect_stack(
 }
 
 // Make a floor.
-shape_data make_floor(
-    vec2i steps, vec2f scale, vec2f uvscale) {
+shape_data make_floor(vec2i steps, vec2f scale, vec2f uvscale) {
   auto shape = make_rect(steps, scale, uvscale);
   for (auto& position : shape.positions)
     position = {position.x, position.z, -position.y};
   for (auto& normal : shape.normals) normal = {normal.x, normal.z, normal.y};
   return shape;
 }
-shape_data make_bent_floor(vec2i steps, vec2f scale,
-    vec2f uvscale, float radius) {
+shape_data make_bent_floor(
+    vec2i steps, vec2f scale, vec2f uvscale, float radius) {
   auto shape = make_floor(steps, scale, uvscale);
   if (radius != 0) {
     radius     = min(radius, scale.y);
@@ -908,8 +902,7 @@ shape_data make_sphere(int steps, float scale, float uvscale) {
 }
 
 // Make a sphere.
-shape_data make_uvsphere(
-    vec2i steps, float scale, vec2f uvscale) {
+shape_data make_uvsphere(vec2i steps, float scale, vec2f uvscale) {
   auto shape = make_rect(steps, {1, 1});
   for (auto i : range(shape.positions.size())) {
     auto uv = shape.texcoords[i];
@@ -923,8 +916,7 @@ shape_data make_uvsphere(
 }
 
 // Make a sphere.
-shape_data make_uvspherey(
-    vec2i steps, float scale, vec2f uvscale) {
+shape_data make_uvspherey(vec2i steps, float scale, vec2f uvscale) {
   auto shape = make_uvsphere(steps, scale, uvscale);
   for (auto& position : shape.positions)
     position = {position.x, position.z, position.y};
@@ -1014,8 +1006,7 @@ shape_data make_uvdisk(vec2i steps, float scale, vec2f uvscale) {
 }
 
 // Make a uv cylinder
-shape_data make_uvcylinder(
-    vec3i steps, vec2f scale, vec3f uvscale) {
+shape_data make_uvcylinder(vec3i steps, vec2f scale, vec3f uvscale) {
   auto shape  = shape_data{};
   auto qshape = shape_data{};
   // side
@@ -1060,8 +1051,8 @@ shape_data make_uvcylinder(
 }
 
 // Make a rounded uv cylinder
-shape_data make_rounded_uvcylinder(vec3i steps, vec2f scale,
-    vec3f uvscale, float radius) {
+shape_data make_rounded_uvcylinder(
+    vec3i steps, vec2f scale, vec3f uvscale, float radius) {
   auto shape = make_uvcylinder(steps, scale, uvscale);
   if (radius != 0) {
     radius = min(radius, min(scale));
@@ -1086,8 +1077,7 @@ shape_data make_rounded_uvcylinder(vec3i steps, vec2f scale,
 }
 
 // Make a uv capsule
-shape_data make_uvcapsule(
-    vec3i steps, vec2f scale, vec3f uvscale) {
+shape_data make_uvcapsule(vec3i steps, vec2f scale, vec3f uvscale) {
   auto shape  = shape_data{};
   auto qshape = shape_data{};
   // side
@@ -1132,8 +1122,7 @@ shape_data make_uvcapsule(
 }
 
 // Make a uv cone
-shape_data make_uvcone(
-    vec3i steps, vec2f scale, vec3f uvscale) {
+shape_data make_uvcone(vec3i steps, vec2f scale, vec3f uvscale) {
   auto shape  = shape_data{};
   auto qshape = shape_data{};
   // side
@@ -1166,8 +1155,8 @@ shape_data make_uvcone(
 }
 
 // Generate lines set along a quad. Returns lines, pos, norm, texcoord, radius.
-shape_data make_lines(int num, int steps, vec2f scale,
-    vec2f uvscale, vec2f rad) {
+shape_data make_lines(
+    int num, int steps, vec2f scale, vec2f uvscale, vec2f rad) {
   auto shape = shape_data{};
   shape.positions.resize((steps + 1) * num);
   shape.normals.resize((steps + 1) * num);
@@ -1231,8 +1220,7 @@ shape_data make_points(int num, float uvscale, float radius) {
   return shape;
 }
 
-shape_data make_points(vec2i steps, vec2f size,
-    vec2f uvscale, vec2f radius) {
+shape_data make_points(vec2i steps, vec2f size, vec2f uvscale, vec2f radius) {
   auto shape  = make_rect(steps, size, uvscale);
   shape.quads = {};
   shape.points.resize(shape.positions.size());
@@ -1256,8 +1244,7 @@ shape_data make_random_points(
 }
 
 // Make a facevarying rect
-fvshape_data make_fvrect(
-    vec2i steps, vec2f scale, vec2f uvscale) {
+fvshape_data make_fvrect(vec2i steps, vec2f scale, vec2f uvscale) {
   auto rect           = make_rect(steps, scale, uvscale);
   auto shape          = fvshape_data{};
   shape.positions     = rect.positions;
@@ -1270,8 +1257,7 @@ fvshape_data make_fvrect(
 }
 
 // Make a facevarying box
-fvshape_data make_fvbox(
-    vec3i steps, vec3f scale, vec3f uvscale) {
+fvshape_data make_fvbox(vec3i steps, vec3f scale, vec3f uvscale) {
   auto shape = fvshape_data{};
   make_fvbox(shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
       shape.positions, shape.normals, shape.texcoords, steps, scale, uvscale);
@@ -1468,9 +1454,8 @@ shape_data make_geosphere(int subdivisions, float scale) {
 }
 
 // Make a hair ball around a shape
-shape_data make_hair(const shape_data& base, vec2i steps,
-    vec2f len, vec2f rad, vec2f noise, vec2f clump,
-    vec2f rotation, int seed) {
+shape_data make_hair(const shape_data& base, vec2i steps, vec2f len, vec2f rad,
+    vec2f noise, vec2f clump, vec2f rotation, int seed) {
   auto points    = sample_shape(base, steps.y, seed);
   auto bpos      = vector<vec3f>{};
   auto bnorm     = vector<vec3f>{};
@@ -1556,8 +1541,7 @@ shape_data make_random_points(
 
 // Grow hairs around a shape
 shape_data make_random_hairs(const shape_data& shape, int num, int steps,
-    vec2f len, vec2f radius, float noise, float gravity,
-    uint64_t seed) {
+    vec2f len, vec2f radius, float noise, float gravity, uint64_t seed) {
   auto samples = sample_shape(shape, num, seed);
   auto hairs   = make_lines(num, steps, {1, 1}, {1, 1}, radius);
   auto rng     = make_rng(seed);
@@ -1583,9 +1567,8 @@ shape_data make_random_hairs(const shape_data& shape, int num, int steps,
 }
 
 // Grow hairs around a shape
-shape_data make_hair2(const shape_data& base, vec2i steps,
-    vec2f len, vec2f radius, float noise, float gravity,
-    int seed) {
+shape_data make_hair2(const shape_data& base, vec2i steps, vec2f len,
+    vec2f radius, float noise, float gravity, int seed) {
   auto points     = sample_shape(base, steps.y, seed);
   auto bpositions = vector<vec3f>{};
   auto bnormals   = vector<vec3f>{};
@@ -1875,8 +1858,7 @@ vector<vec4i> flip_quads(const vector<vec4i>& quads) {
 }
 
 // Align vertex positions. Alignment is 0: none, 1: min, 2: max, 3: center.
-vector<vec3f> align_vertices(
-    const vector<vec3f>& positions, vec3i alignment) {
+vector<vec3f> align_vertices(const vector<vec3f>& positions, vec3i alignment) {
   auto bounds = invalidb3f;
   for (auto& p : positions) bounds = merge(bounds, p);
   auto offset = vec3f{0, 0, 0};
@@ -2512,8 +2494,7 @@ shape_intersection intersect_quads_bvh(const bvh_tree& bvh,
 // Intersect ray with a bvh.
 template <typename Overlap>
 static shape_intersection overlap_elements_bvh(const bvh_tree& bvh,
-    Overlap&& overlap_element, vec3f pos, float max_distance,
-    bool find_any) {
+    Overlap&& overlap_element, vec3f pos, float max_distance, bool find_any) {
   // check if empty
   if (bvh.nodes.empty()) return {};
 
@@ -2563,12 +2544,10 @@ static shape_intersection overlap_elements_bvh(const bvh_tree& bvh,
 // index and the element barycentric coordinates.
 shape_intersection overlap_points_bvh(const bvh_tree& bvh,
     const vector<int>& points, const vector<vec3f>& positions,
-    const vector<float>& radius, vec3f pos, float max_distance,
-    bool find_any) {
+    const vector<float>& radius, vec3f pos, float max_distance, bool find_any) {
   return overlap_elements_bvh(
       bvh,
-      [&points, &positions, &radius](
-          int idx, vec3f pos, float max_distance) {
+      [&points, &positions, &radius](int idx, vec3f pos, float max_distance) {
         auto& p = points[idx];
         return overlap_point(pos, max_distance, positions[p], radius[p]);
       },
@@ -2576,12 +2555,10 @@ shape_intersection overlap_points_bvh(const bvh_tree& bvh,
 }
 shape_intersection overlap_lines_bvh(const bvh_tree& bvh,
     const vector<vec2i>& lines, const vector<vec3f>& positions,
-    const vector<float>& radius, vec3f pos, float max_distance,
-    bool find_any) {
+    const vector<float>& radius, vec3f pos, float max_distance, bool find_any) {
   return overlap_elements_bvh(
       bvh,
-      [&lines, &positions, &radius](
-          int idx, vec3f pos, float max_distance) {
+      [&lines, &positions, &radius](int idx, vec3f pos, float max_distance) {
         auto& l = lines[idx];
         return overlap_line(pos, max_distance, positions[l.x], positions[l.y],
             radius[l.x], radius[l.y]);
@@ -2590,8 +2567,7 @@ shape_intersection overlap_lines_bvh(const bvh_tree& bvh,
 }
 shape_intersection overlap_triangles_bvh(const bvh_tree& bvh,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
-    const vector<float>& radius, vec3f pos, float max_distance,
-    bool find_any) {
+    const vector<float>& radius, vec3f pos, float max_distance, bool find_any) {
   return overlap_elements_bvh(
       bvh,
       [&triangles, &positions, &radius](
@@ -2605,12 +2581,10 @@ shape_intersection overlap_triangles_bvh(const bvh_tree& bvh,
 }
 shape_intersection overlap_quads_bvh(const bvh_tree& bvh,
     const vector<vec4i>& quads, const vector<vec3f>& positions,
-    const vector<float>& radius, vec3f pos, float max_distance,
-    bool find_any) {
+    const vector<float>& radius, vec3f pos, float max_distance, bool find_any) {
   return overlap_elements_bvh(
       bvh,
-      [&quads, &positions, &radius](
-          int idx, vec3f pos, float max_distance) {
+      [&quads, &positions, &radius](int idx, vec3f pos, float max_distance) {
         auto& q = quads[idx];
         return overlap_quad(pos, max_distance, positions[q.x], positions[q.y],
             positions[q.z], positions[q.w], radius[q.x], radius[q.y],
@@ -2958,12 +2932,11 @@ void sample_triangles_cdf(vector<float>& cdf, const vector<vec3i>& triangles,
 }
 
 // Pick a point on a quad mesh uniformly.
-pair<int, vec2f> sample_quads(
-    const vector<float>& cdf, float re, vec2f ruv) {
+pair<int, vec2f> sample_quads(const vector<float>& cdf, float re, vec2f ruv) {
   return {sample_discrete(cdf, re), ruv};
 }
-pair<int, vec2f> sample_quads(const vector<vec4i>& quads,
-    const vector<float>& cdf, float re, vec2f ruv) {
+pair<int, vec2f> sample_quads(
+    const vector<vec4i>& quads, const vector<float>& cdf, float re, vec2f ruv) {
   auto element = sample_discrete(cdf, re);
   if (quads[element].z == quads[element].w) {
     return {element, sample_triangle(ruv)};
@@ -3071,8 +3044,8 @@ namespace yocto {
 
 // Make a quad.
 void make_rect(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, vec2i steps,
-    vec2f scale, vec2f uvscale) {
+    vector<vec3f>& normals, vector<vec2f>& texcoords, vec2i steps, vec2f scale,
+    vec2f uvscale) {
   positions.resize((steps.x + 1) * (steps.y + 1));
   normals.resize((steps.x + 1) * (steps.y + 1));
   texcoords.resize((steps.x + 1) * (steps.y + 1));
@@ -3097,8 +3070,8 @@ void make_rect(vector<vec4i>& quads, vector<vec3f>& positions,
 }
 
 void make_bulged_rect(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, vec2i steps,
-    vec2f scale, vec2f uvscale, float height) {
+    vector<vec3f>& normals, vector<vec2f>& texcoords, vec2i steps, vec2f scale,
+    vec2f uvscale, float height) {
   make_rect(quads, positions, normals, texcoords, steps, scale, uvscale);
   if (height != 0) {
     height      = min(height, min(scale));
@@ -3114,8 +3087,8 @@ void make_bulged_rect(vector<vec4i>& quads, vector<vec3f>& positions,
 
 // Make a quad.
 void make_recty(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, vec2i steps,
-    vec2f scale, vec2f uvscale) {
+    vector<vec3f>& normals, vector<vec2f>& texcoords, vec2i steps, vec2f scale,
+    vec2f uvscale) {
   make_rect(quads, positions, normals, texcoords, steps, scale, uvscale);
   for (auto& position : positions)
     position = {position.x, position.z, -position.y};
@@ -3123,8 +3096,8 @@ void make_recty(vector<vec4i>& quads, vector<vec3f>& positions,
 }
 
 void make_bulged_recty(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, vec2i steps,
-    vec2f scale, vec2f uvscale, float height) {
+    vector<vec3f>& normals, vector<vec2f>& texcoords, vec2i steps, vec2f scale,
+    vec2f uvscale, float height) {
   make_bulged_rect(
       quads, positions, normals, texcoords, steps, scale, uvscale, height);
   for (auto& position : positions)
@@ -3134,8 +3107,8 @@ void make_bulged_recty(vector<vec4i>& quads, vector<vec3f>& positions,
 
 // Make a cube.
 void make_box(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, vec3i steps,
-    vec3f scale, vec3f uvscale) {
+    vector<vec3f>& normals, vector<vec2f>& texcoords, vec3i steps, vec3f scale,
+    vec3f uvscale) {
   quads.clear();
   positions.clear();
   normals.clear();
@@ -3193,8 +3166,8 @@ void make_box(vector<vec4i>& quads, vector<vec3f>& positions,
 }
 
 void make_rounded_box(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, vec3i steps,
-    vec3f scale, vec3f uvscale, float radius) {
+    vector<vec3f>& normals, vector<vec2f>& texcoords, vec3i steps, vec3f scale,
+    vec3f uvscale, float radius) {
   make_box(quads, positions, normals, texcoords, steps, scale, uvscale);
   if (radius != 0) {
     radius = min(radius, min(scale));
@@ -3230,8 +3203,8 @@ void make_rounded_box(vector<vec4i>& quads, vector<vec3f>& positions,
 }
 
 void make_rect_stack(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, vec3i steps,
-    vec3f scale, vec2f uvscale) {
+    vector<vec3f>& normals, vector<vec2f>& texcoords, vec3i steps, vec3f scale,
+    vec2f uvscale) {
   auto qquads         = vector<vec4i>{};
   auto qpositions     = vector<vec3f>{};
   auto qnormals       = vector<vec3f>{};
@@ -3246,8 +3219,8 @@ void make_rect_stack(vector<vec4i>& quads, vector<vec3f>& positions,
 }
 
 void make_floor(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, vec2i steps,
-    vec2f scale, vec2f uvscale) {
+    vector<vec3f>& normals, vector<vec2f>& texcoords, vec2i steps, vec2f scale,
+    vec2f uvscale) {
   make_rect(quads, positions, normals, texcoords, steps, scale, uvscale);
   for (auto& position : positions)
     position = {position.x, position.z, -position.y};
@@ -3255,8 +3228,8 @@ void make_floor(vector<vec4i>& quads, vector<vec3f>& positions,
 }
 
 void make_bent_floor(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, vec2i steps,
-    vec2f scale, vec2f uvscale, float radius) {
+    vector<vec3f>& normals, vector<vec2f>& texcoords, vec2i steps, vec2f scale,
+    vec2f uvscale, float radius) {
   make_floor(quads, positions, normals, texcoords, steps, scale, uvscale);
   if (radius != 0) {
     radius     = min(radius, scale.y);
@@ -3290,8 +3263,8 @@ void make_sphere(vector<vec4i>& quads, vector<vec3f>& positions,
 
 // Generate a uvsphere
 void make_uvsphere(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, vec2i steps,
-    float scale, vec2f uvscale) {
+    vector<vec3f>& normals, vector<vec2f>& texcoords, vec2i steps, float scale,
+    vec2f uvscale) {
   make_rect(quads, positions, normals, texcoords, steps, {1, 1}, {1, 1});
   for (auto i : range(positions.size())) {
     auto uv      = texcoords[i];
@@ -3304,8 +3277,8 @@ void make_uvsphere(vector<vec4i>& quads, vector<vec3f>& positions,
 }
 
 void make_capped_uvsphere(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, vec2i steps,
-    float scale, vec2f uvscale, float cap) {
+    vector<vec3f>& normals, vector<vec2f>& texcoords, vec2i steps, float scale,
+    vec2f uvscale, float cap) {
   make_uvsphere(quads, positions, normals, texcoords, steps, scale, uvscale);
   if (cap != 0) {
     cap        = min(cap, scale / 2);
@@ -3326,8 +3299,8 @@ void make_capped_uvsphere(vector<vec4i>& quads, vector<vec3f>& positions,
 
 // Generate a uvsphere
 void make_uvspherey(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, vec2i steps,
-    float scale, vec2f uvscale) {
+    vector<vec3f>& normals, vector<vec2f>& texcoords, vec2i steps, float scale,
+    vec2f uvscale) {
   make_uvsphere(quads, positions, normals, texcoords, steps, scale, uvscale);
   for (auto& position : positions)
     position = {position.x, position.z, position.y};
@@ -3337,8 +3310,8 @@ void make_uvspherey(vector<vec4i>& quads, vector<vec3f>& positions,
 }
 
 void make_capped_uvspherey(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, vec2i steps,
-    float scale, vec2f uvscale, float cap) {
+    vector<vec3f>& normals, vector<vec2f>& texcoords, vec2i steps, float scale,
+    vec2f uvscale, float cap) {
   make_capped_uvsphere(
       quads, positions, normals, texcoords, steps, scale, uvscale, cap);
   for (auto& position : positions)
@@ -3382,8 +3355,8 @@ void make_bulged_disk(vector<vec4i>& quads, vector<vec3f>& positions,
 
 // Generate a uvdisk
 void make_uvdisk(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, vec2i steps,
-    float scale, vec2f uvscale) {
+    vector<vec3f>& normals, vector<vec2f>& texcoords, vec2i steps, float scale,
+    vec2f uvscale) {
   make_rect(quads, positions, normals, texcoords, steps, {1, 1}, {1, 1});
   for (auto i : range(positions.size())) {
     auto uv      = texcoords[i];
@@ -3396,8 +3369,8 @@ void make_uvdisk(vector<vec4i>& quads, vector<vec3f>& positions,
 
 // Generate a uvcylinder
 void make_uvcylinder(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, vec3i steps,
-    vec2f scale, vec3f uvscale) {
+    vector<vec3f>& normals, vector<vec2f>& texcoords, vec3i steps, vec2f scale,
+    vec3f uvscale) {
   auto qquads     = vector<vec4i>{};
   auto qpositions = vector<vec3f>{};
   auto qnormals   = vector<vec3f>{};
@@ -3448,8 +3421,8 @@ void make_uvcylinder(vector<vec4i>& quads, vector<vec3f>& positions,
 
 // Generate a uvcylinder
 void make_rounded_uvcylinder(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, vec3i steps,
-    vec2f scale, vec3f uvscale, float radius) {
+    vector<vec3f>& normals, vector<vec2f>& texcoords, vec3i steps, vec2f scale,
+    vec3f uvscale, float radius) {
   make_uvcylinder(quads, positions, normals, texcoords, steps, scale, uvscale);
   if (radius != 0) {
     radius = min(radius, min(scale));
@@ -3475,8 +3448,7 @@ void make_rounded_uvcylinder(vector<vec4i>& quads, vector<vec3f>& positions,
 // Generate lines set along a quad.
 void make_lines(vector<vec2i>& lines, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<float>& radius,
-    vec2i steps, vec2f size, vec2f uvscale,
-    vec2f rad) {
+    vec2i steps, vec2f size, vec2f uvscale, vec2f rad) {
   positions.resize((steps.x + 1) * steps.y);
   normals.resize((steps.x + 1) * steps.y);
   texcoords.resize((steps.x + 1) * steps.y);
@@ -3540,8 +3512,7 @@ void make_points(vector<int>& points, vector<vec3f>& positions,
 // Generate a point set along a quad.
 void make_points(vector<int>& points, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<float>& radius,
-    vec2i steps, vec2f size, vec2f uvscale,
-    vec2f rad) {
+    vec2i steps, vec2f size, vec2f uvscale, vec2f rad) {
   auto quads = vector<vec4i>{};
   make_rect(quads, positions, normals, texcoords, steps, size, uvscale);
   points.resize(positions.size());
@@ -3554,8 +3525,7 @@ void make_points(vector<int>& points, vector<vec3f>& positions,
 // Generate a point set.
 void make_random_points(vector<int>& points, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<float>& radius,
-    int num, vec3f size, float uvscale, float point_radius,
-    uint64_t seed) {
+    int num, vec3f size, float uvscale, float point_radius, uint64_t seed) {
   make_points(points, positions, normals, texcoords, radius, num, uvscale,
       point_radius);
   auto rng = make_rng(seed);
@@ -3581,16 +3551,16 @@ void make_bezier_circle(
 // Make fvquad
 void make_fvrect(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
     vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, vec2i steps,
-    vec2f size, vec2f uvscale) {
+    vector<vec3f>& normals, vector<vec2f>& texcoords, vec2i steps, vec2f size,
+    vec2f uvscale) {
   make_rect(quadspos, positions, normals, texcoords, steps, size, uvscale);
   quadsnorm     = quadspos;
   quadstexcoord = quadspos;
 }
 void make_fvbox(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
     vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, vec3i steps,
-    vec3f size, vec3f uvscale) {
+    vector<vec3f>& normals, vector<vec2f>& texcoords, vec3i steps, vec3f size,
+    vec3f uvscale) {
   make_box(quadspos, positions, normals, texcoords, steps, size, uvscale);
   quadsnorm                     = quadspos;
   quadstexcoord                 = quadspos;
@@ -3795,9 +3765,8 @@ void make_hair(vector<vec2i>& lines, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<float>& radius,
     const vector<vec3i>& striangles, const vector<vec4i>& squads,
     const vector<vec3f>& spos, const vector<vec3f>& snorm,
-    const vector<vec2f>& stexcoord, vec2i steps, vec2f len,
-    vec2f rad, vec2f noise, vec2f clump,
-    vec2f rotation, int seed) {
+    const vector<vec2f>& stexcoord, vec2i steps, vec2f len, vec2f rad,
+    vec2f noise, vec2f clump, vec2f rotation, int seed) {
   auto alltriangles    = striangles;
   auto quads_triangles = quads_to_triangles(squads);
   alltriangles.insert(
@@ -3867,8 +3836,8 @@ void make_hair2(vector<vec2i>& lines, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<float>& radius,
     const vector<vec3i>& striangles, const vector<vec4i>& squads,
     const vector<vec3f>& spos, const vector<vec3f>& snorm,
-    const vector<vec2f>& stexcoord, vec2i steps, vec2f len,
-    vec2f rad, float noise, float gravity, int seed) {
+    const vector<vec2f>& stexcoord, vec2i steps, vec2f len, vec2f rad,
+    float noise, float gravity, int seed) {
   auto alltriangles    = striangles;
   auto quads_triangles = quads_to_triangles(squads);
   alltriangles.insert(

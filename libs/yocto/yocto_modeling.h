@@ -347,14 +347,11 @@ namespace yocto {
 // https://iquilezles.org/articles/distfunctions/
 
 // Sphere SDF
-inline float sdf_sphere(
-    vec3f position, vec3f center, float radius);
+inline float sdf_sphere(vec3f position, vec3f center, float radius);
 // Box SDF
-inline float sdf_box(
-    vec3f position, vec3f center, vec3f size);
+inline float sdf_box(vec3f position, vec3f center, vec3f size);
 // Capsule SDF
-inline float sdf_capsule(
-    vec3f position, vec3f a, vec3f b, float radius);
+inline float sdf_capsule(vec3f position, vec3f a, vec3f b, float radius);
 
 // Union SDF
 inline float sdf_union(float sdf1, float sdf2);
@@ -398,12 +395,10 @@ inline float voronoi_noise(vec3f position);
 
 // Fractal noise
 template <typename Noise>
-inline float fractal_noise(
-    Noise&& base_noise, vec2f position, int num = 8);
+inline float fractal_noise(Noise&& base_noise, vec2f position, int num = 8);
 // Turbulence noise
 template <typename Noise>
-inline float turbulence_noise(
-    Noise&& base_noise, vec2f position, int num = 8);
+inline float turbulence_noise(Noise&& base_noise, vec2f position, int num = 8);
 
 }  // namespace yocto
 
@@ -2057,19 +2052,16 @@ inline shape_data displace_shape(const shape_data& shape,
 namespace yocto {
 
 // Sphere SDF
-inline float sdf_sphere(
-    vec3f position, vec3f center, float radius) {
+inline float sdf_sphere(vec3f position, vec3f center, float radius) {
   return length(position - center) - radius;
 }
 // Box SDF
-inline float sdf_box(
-    vec3f position, vec3f center, vec3f size) {
+inline float sdf_box(vec3f position, vec3f center, vec3f size) {
   auto q = abs(position - center) - size;
   return length(max(q, 0.0f)) + min(max(q), 0.0f);
 }
 // Capsule SDF
-inline float sdf_capsule(
-    vec3f position, vec3f a, vec3f b, float radius) {
+inline float sdf_capsule(vec3f position, vec3f a, vec3f b, float radius) {
   auto  pos_a = position - a, axis = b - a;
   float height = clamp(dot(pos_a, axis) / dot(axis, axis), 0.0f, 1.0f);
   return length(pos_a - axis * height) - radius;
@@ -2296,8 +2288,7 @@ inline float fractal_noise(Noise&& base_noise, vec2f position, int num) {
 
 // Turbulence noise
 template <typename Noise>
-inline float turbulence_noise(
-    Noise&& base_noise, vec2f position, int num) {
+inline float turbulence_noise(Noise&& base_noise, vec2f position, int num) {
   auto noise = 0.0f;
   for (auto index : range(num)) {
     noise += abs(2 * base_noise(position * pow(2, index)) - 1) / pow(2, index);

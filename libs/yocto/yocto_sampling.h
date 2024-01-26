@@ -125,13 +125,11 @@ inline float sample_hemisphere_cos_pdf(vec3f direction);
 
 // Sample an hemispherical direction with cosine distribution.
 inline vec3f sample_hemisphere_cos(vec3f normal, vec2f ruv);
-inline float sample_hemisphere_cos_pdf(
-    vec3f normal, vec3f direction);
+inline float sample_hemisphere_cos_pdf(vec3f normal, vec3f direction);
 
 // Sample an hemispherical direction with cosine power distribution.
 inline vec3f sample_hemisphere_cospower(float exponent, vec2f ruv);
-inline float sample_hemisphere_cospower_pdf(
-    float exponent, vec3f direction);
+inline float sample_hemisphere_cospower_pdf(float exponent, vec3f direction);
 
 // Sample an hemispherical direction with cosine power distribution.
 inline vec3f sample_hemisphere_cospower(
@@ -151,11 +149,9 @@ inline float sample_cylinder_pdf(vec3f point);
 inline vec2f sample_triangle(vec2f ruv);
 
 // Sample a point uniformly on a triangle.
-inline vec3f sample_triangle(
-    vec3f p0, vec3f p1, vec3f p2, vec2f ruv);
+inline vec3f sample_triangle(vec3f p0, vec3f p1, vec3f p2, vec2f ruv);
 // Pdf for uniform triangle sampling, i.e. triangle area.
-inline float sample_triangle_pdf(
-    vec3f p0, vec3f p1, vec3f p2);
+inline float sample_triangle_pdf(vec3f p0, vec3f p1, vec3f p2);
 
 // Sample an index with uniform distribution.
 inline int   sample_uniform(int size, float r);
@@ -281,8 +277,7 @@ inline vec3f sample_hemisphere(vec3f normal, vec2f ruv) {
   auto local_direction = vec3f{r * cos(phi), r * sin(phi), z};
   return transform_direction(basis_fromz(normal), local_direction);
 }
-inline float sample_hemisphere_pdf(
-    vec3f normal, vec3f direction) {
+inline float sample_hemisphere_pdf(vec3f normal, vec3f direction) {
   return (dot(normal, direction) <= 0) ? 0 : 1 / (2 * pif);
 }
 
@@ -314,8 +309,7 @@ inline vec3f sample_hemisphere_cos(vec3f normal, vec2f ruv) {
   auto local_direction = vec3f{r * cos(phi), r * sin(phi), z};
   return transform_direction(basis_fromz(normal), local_direction);
 }
-inline float sample_hemisphere_cos_pdf(
-    vec3f normal, vec3f direction) {
+inline float sample_hemisphere_cos_pdf(vec3f normal, vec3f direction) {
   auto cosw = dot(normal, direction);
   return (cosw <= 0) ? 0 : cosw / pif;
 }
@@ -327,8 +321,7 @@ inline vec3f sample_hemisphere_cospower(float exponent, vec2f ruv) {
   auto phi = 2 * pif * ruv.x;
   return {r * cos(phi), r * sin(phi), z};
 }
-inline float sample_hemisphere_cospower_pdf(
-    float exponent, vec3f direction) {
+inline float sample_hemisphere_cospower_pdf(float exponent, vec3f direction) {
   return (direction.z <= 0)
              ? 0
              : pow(direction.z, exponent) * (exponent + 1) / (2 * pif);
@@ -370,14 +363,12 @@ inline vec2f sample_triangle(vec2f ruv) {
 }
 
 // Sample a point uniformly on a triangle.
-inline vec3f sample_triangle(
-    vec3f p0, vec3f p1, vec3f p2, vec2f ruv) {
+inline vec3f sample_triangle(vec3f p0, vec3f p1, vec3f p2, vec2f ruv) {
   auto uv = sample_triangle(ruv);
   return p0 * (1 - uv.x - uv.y) + p1 * uv.x + p2 * uv.y;
 }
 // Pdf for uniform triangle sampling, i.e. triangle area.
-inline float sample_triangle_pdf(
-    vec3f p0, vec3f p1, vec3f p2) {
+inline float sample_triangle_pdf(vec3f p0, vec3f p1, vec3f p2) {
   return 2 / length(cross(p1 - p0, p2 - p0));
 }
 

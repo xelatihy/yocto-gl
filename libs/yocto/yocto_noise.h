@@ -71,13 +71,12 @@ inline float perlin_noise(vec4f p, vec4i wrap = {0, 0, 0, 0});
 // lacunarity=~2.0 (spacing between successive octaves: 2.0 for warpping),
 // gain=0.5 (relative weighting applied to each successive octave),
 // offset=1.0 (used to invert the ridges).
-inline float perlin_ridge(vec3f p, float lacunarity = 2,
-    float gain = 0.5, int octaves = 6, float offset = 1,
-    vec3i wrap = {0, 0, 0});
+inline float perlin_ridge(vec3f p, float lacunarity = 2, float gain = 0.5,
+    int octaves = 6, float offset = 1, vec3i wrap = {0, 0, 0});
 inline float perlin_fbm(vec3f p, float lacunarity = 2, float gain = 0.5,
     int octaves = 6, vec3i wrap = {0, 0, 0});
-inline float perlin_turbulence(vec3f p, float lacunarity = 2,
-    float gain = 0.5, int octaves = 6, vec3i wrap = {0, 0, 0});
+inline float perlin_turbulence(vec3f p, float lacunarity = 2, float gain = 0.5,
+    int octaves = 6, vec3i wrap = {0, 0, 0});
 
 }  // namespace yocto
 
@@ -330,8 +329,8 @@ inline float perlin_noise(vec4f p, vec4i w) {
 }
 
 // ridge
-inline float perlin_ridge(vec3f p, float lacunarity, float gain,
-    int octaves, float offset, vec3i wrap) {
+inline float perlin_ridge(vec3f p, float lacunarity, float gain, int octaves,
+    float offset, vec3i wrap) {
   auto frequency = 1.0f;
   auto prev      = 1.0f;
   auto amplitude = 0.5f;
@@ -348,8 +347,8 @@ inline float perlin_ridge(vec3f p, float lacunarity, float gain,
 }
 
 // fmb
-inline float perlin_fbm(vec3f p, float lacunarity, float gain,
-    int octaves, vec3i wrap) {
+inline float perlin_fbm(
+    vec3f p, float lacunarity, float gain, int octaves, vec3i wrap) {
   auto frequency = 1.0f;
   auto amplitude = 1.0f;
   auto sum       = 0.0f;
@@ -362,8 +361,8 @@ inline float perlin_fbm(vec3f p, float lacunarity, float gain,
 }
 
 // turbulence
-inline float perlin_turbulence(vec3f p, float lacunarity, float gain,
-    int octaves, vec3i wrap) {
+inline float perlin_turbulence(
+    vec3f p, float lacunarity, float gain, int octaves, vec3i wrap) {
   auto frequency = 1.0f;
   auto amplitude = 1.0f;
   auto sum       = 0.0f;

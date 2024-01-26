@@ -313,15 +313,13 @@ inline frame3f dscale(float scale) {
 inline frame3f dframez(vec3f z, vec3f pos = {0, 0, 0}) {
   return frame_fromz(pos, z);
 }
-inline frame3f dlookat(vec3f from, vec3f to = {0, 0, 0},
-    vec3f up = {0, 1, 0}) {
+inline frame3f dlookat(vec3f from, vec3f to = {0, 0, 0}, vec3f up = {0, 1, 0}) {
   return lookat_frame(from, to, up, true);
 }
 inline frame3f dtransform(vec3f translation, vec3f rotation) {
   return dtranslation(translation) * drotation(rotation);
 }
-inline frame3f dgtransform(
-    vec3f translation, vec3f rotation, vec3f scaling) {
+inline frame3f dgtransform(vec3f translation, vec3f rotation, vec3f scaling) {
   return dtranslation(translation) * drotation(rotation) * dscaling(scaling);
 }
 inline frame3f dreflectx() {
@@ -355,30 +353,27 @@ inline diagram_shape transform_shape(
 }
 
 // Styles
-inline diagram_style dstroke(vec4f stroke    = dcolors::black,
-    float                                 thickness = dthickness::default_) {
+inline diagram_style dstroke(
+    vec4f stroke = dcolors::black, float thickness = dthickness::default_) {
   return {
       .stroke = stroke, .fill = dcolors::transparent, .thickness = thickness};
 }
 inline diagram_style dfill(vec4f fill = dcolors::fill1) {
   return {.stroke = dcolors::transparent, .fill = fill};
 }
-inline diagram_style dfilled(vec4f fill      = dcolors::fill1,
-    vec4f                          stroke    = dcolors::black,
-    float                                 thickness = dthickness::default_) {
+inline diagram_style dfilled(vec4f fill = dcolors::fill1,
+    vec4f stroke = dcolors::black, float thickness = dthickness::default_) {
   return {.stroke = stroke, .fill = fill, .thickness = thickness};
 }
 inline diagram_style dtextured(const image_t<vec4f>& texture,
-    vec4f                                     stroke = dcolors::black,
-    float thickness = dthickness::default_) {
+    vec4f stroke = dcolors::black, float thickness = dthickness::default_) {
   return {.stroke = stroke,
       .fill       = {1, 1, 1, 1},
       .thickness  = thickness,
       .texture    = texture};
 }
 inline diagram_style dtextured(const image_t<vec4f>& texture, bool interpolate,
-    vec4f stroke    = dcolors::black,
-    float        thickness = dthickness::default_) {
+    vec4f stroke = dcolors::black, float thickness = dthickness::default_) {
   return {.stroke = stroke,
       .fill       = {1, 1, 1, 1},
       .thickness  = thickness,
@@ -387,7 +382,7 @@ inline diagram_style dtextured(const image_t<vec4f>& texture, bool interpolate,
 }
 inline diagram_style dimtextured(const image_t<vec4f>& texture,
     vec4f stroke    = dcolors::transparent,
-    float        thickness = dthickness::default_) {
+    float thickness = dthickness::default_) {
   return {
       .stroke    = stroke,
       .fill      = {1, 1, 1, 1},
@@ -424,9 +419,8 @@ namespace yocto {
 // Add scene
 diagram_scene& add_scene(diagram_data& diagram, const string& title,
     const frame3f& frame = identity3x4f, vec2f margin = {0.2, 1.0});
-diagram_scene& add_scene(diagram_data& diagram, const string& title,
-    vec2f size, const frame3f& frame = identity3x4f,
-    vec2f margin = {0.2, 1.0});
+diagram_scene& add_scene(diagram_data& diagram, const string& title, vec2f size,
+    const frame3f& frame = identity3x4f, vec2f margin = {0.2, 1.0});
 diagram_scene& add_scenews(diagram_data& diagram, const string& title,
     const string& subtitle, vec2f size = {2, 2},
     const frame3f& frame = identity3x4f, vec2f margin = {0.2, 1.0});
@@ -531,8 +525,8 @@ diagram_shape ddisk(int steps = 64);
 diagram_shape dhalfdisk(int steps = 32);
 
 // Arc
-diagram_shape darc(vec3f from, vec3f to,
-    vec3f center = {0, 0, 0}, int steps = 16);
+diagram_shape darc(
+    vec3f from, vec3f to, vec3f center = {0, 0, 0}, int steps = 16);
 
 // Qbezier
 diagram_shape dqbeziers(const vector<vec3f>& positions, int steps = 32);
@@ -577,8 +571,8 @@ diagram_shape ddiskgrid(vec2i steps = {4, 4}, int dstep = 32);
 diagram_shape dudiskgrid(vec2i steps = {4, 4}, int dstep = 32);
 
 // Affine grid
-diagram_shape daffinegrid(vec3f axes_a = {1, 0, 0},
-    vec3f axes_b = {0, 1, 0}, vec2i steps = {4, 4});
+diagram_shape daffinegrid(
+    vec3f axes_a = {1, 0, 0}, vec3f axes_b = {0, 1, 0}, vec2i steps = {4, 4});
 
 // Image
 diagram_shape dimagerect(vec2i size);
@@ -666,25 +660,24 @@ diagram_scene& add_plot3(diagram_data& diagram, vec2f size = {4, 3},
                            drotation({270, 0, 0}) * drotation({0, 0, 180}),
     vec2f margin = {0.8, 1.0});
 diagram_scene& add_plot3(diagram_data& diagram, const string& title,
-    vec2f   size  = {4, 3},
+    vec2f          size  = {4, 3},
     const frame3f& frame = drotation({25, 0, 0}) * drotation({0, 45, 0}) *
                            drotation({270, 0, 0}) * drotation({0, 0, 180}),
     vec2f margin = {0.8, 1.0});
 
 // Add plot axes
 diagram_scene& add_plotaxes3(diagram_scene& diagram,
-    const bbox3f&                           bounds = {{0, 0, 0}, {1, 1, 1}},
-    vec3f                            size   = {1, 1, 1},
-    const vector<pair<float, string>>&      xticks = {},
-    const vector<pair<float, string>>&      yticks = {},
-    const vector<pair<float, string>>&      zticks = {},
-    const diagram_style&                    style  = dstroke(),
-    const diagram_style& lstyle = dstroke(dcolors::transparent));
+    const bbox3f& bounds = {{0, 0, 0}, {1, 1, 1}}, vec3f size = {1, 1, 1},
+    const vector<pair<float, string>>& xticks = {},
+    const vector<pair<float, string>>& yticks = {},
+    const vector<pair<float, string>>& zticks = {},
+    const diagram_style&               style  = dstroke(),
+    const diagram_style&               lstyle = dstroke(dcolors::transparent));
 
 // Plot surface
 diagram_shape dplotsurface(const function<float(vec2f)>& func,
-    vec2f xrange = {0, 1}, vec2f yrange = {0, 1},
-    vec2i steps = {64, 64}, bool wireframe = true);
+    vec2f xrange = {0, 1}, vec2f yrange = {0, 1}, vec2i steps = {64, 64},
+    bool wireframe = true);
 
 // Helpers to clip lines
 diagram_shape clip_lines(const diagram_shape& shape, const bbox3f& bbox);

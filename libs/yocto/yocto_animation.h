@@ -428,8 +428,7 @@ inline quat4f log_map(const quat4f& q) {
 
 // Linear interpolation of translation, scaling and rotations.
 // Rotations are interpolated using the exponential map.
-inline frame3f interpolate_translation(
-    vec3f a, vec3f b, float t) {
+inline frame3f interpolate_translation(vec3f a, vec3f b, float t) {
   return translation_frame(lerp(a, b, t));
 }
 inline frame3f interpolate_scaling(vec3f a, vec3f b, float t) {

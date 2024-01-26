@@ -233,8 +233,7 @@ namespace yocto {
 vec2i camera_resolution(const camera_data& camera, int resolution);
 
 // Generates a ray from a camera.
-ray3f eval_camera(
-    const camera_data& camera, vec2f image_uv, vec2f lens_uv);
+ray3f eval_camera(const camera_data& camera, vec2f image_uv, vec2f lens_uv);
 
 }  // namespace yocto
 
@@ -313,11 +312,9 @@ pair<vec3f, vec3f> eval_element_tangents(
 vec3f eval_normalmap(const scene_data& scene, const instance_data& instance,
     int element, vec2f uv);
 vec3f eval_shading_position(const scene_data& scene,
-    const instance_data& instance, int element, vec2f uv,
-    vec3f outgoing);
+    const instance_data& instance, int element, vec2f uv, vec3f outgoing);
 vec3f eval_shading_normal(const scene_data& scene,
-    const instance_data& instance, int element, vec2f uv,
-    vec3f outgoing);
+    const instance_data& instance, int element, vec2f uv, vec3f outgoing);
 vec4f eval_color(const scene_data& scene, const instance_data& instance,
     int element, vec2f uv);
 
@@ -380,9 +377,9 @@ int add_environment(
     scene_data& scene, const string& name, const environment_data& environment);
 
 // Scene creation helpers
-int add_camera(scene_data& scene, const string& name, vec3f from,
-    vec3f to, float lens = 0.1f, float aspect = 16.0f / 9.0f,
-    float aperture = 0, float focus_offset = 0);
+int add_camera(scene_data& scene, const string& name, vec3f from, vec3f to,
+    float lens = 0.1f, float aspect = 16.0f / 9.0f, float aperture = 0,
+    float focus_offset = 0);
 int add_camera(scene_data& scene, const string& name, const frame3f& frame,
     float lens = 0.1f, float aspect = 16.0f / 9.0f, float aperture = 0,
     float focus = 1);
@@ -394,8 +391,8 @@ int add_material(scene_data& scene, const string& name, material_type type,
     vec3f color, float roughness = 0, int color_tex = invalidid,
     int roughness_tex = invalidid, int normal_tex = invalidid);
 int add_material(scene_data& scene, const string& name, material_type type,
-    vec3f color, float roughness, vec3f scattering,
-    float scanisotropy = 0, float trdepth = 0.01f, int color_tex = invalidid,
+    vec3f color, float roughness, vec3f scattering, float scanisotropy = 0,
+    float trdepth = 0.01f, int color_tex = invalidid,
     int roughness_tex = invalidid, int scattering_tex = invalidid,
     int normal_tex = invalidid);
 int add_instance(scene_data& scene, const string& name, const frame3f& frame,

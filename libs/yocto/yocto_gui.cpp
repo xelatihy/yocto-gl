@@ -2549,26 +2549,22 @@ struct glwidgets_param {
       , valuef{0, 0, 0, 0}
       , minmaxf{0, 0}
       , readonly{true} {}
-  glwidgets_param(
-      float value, vec2f minmax = {0, 0}, bool readonly = false)
+  glwidgets_param(float value, vec2f minmax = {0, 0}, bool readonly = false)
       : type{glwidgets_param_type::value1f}
       , valuef{value, 0, 0, 0}
       , minmaxf{minmax}
       , readonly{readonly} {}
-  glwidgets_param(
-      vec2f value, vec2f minmax = {0, 0}, bool readonly = false)
+  glwidgets_param(vec2f value, vec2f minmax = {0, 0}, bool readonly = false)
       : type{glwidgets_param_type::value2f}
       , valuef{value.x, value.y, 0, 0}
       , minmaxf{minmax}
       , readonly{readonly} {}
-  glwidgets_param(
-      vec3f value, vec2f minmax = {0, 0}, bool readonly = false)
+  glwidgets_param(vec3f value, vec2f minmax = {0, 0}, bool readonly = false)
       : type{glwidgets_param_type::value3f}
       , valuef{value.x, value.y, value.z, 0}
       , minmaxf{minmax}
       , readonly{readonly} {}
-  glwidgets_param(
-      vec4f value, vec2f minmax = {0, 0}, bool readonly = false)
+  glwidgets_param(vec4f value, vec2f minmax = {0, 0}, bool readonly = false)
       : type{glwidgets_param_type::value4f}
       , valuef{value.x, value.y, value.z, value.w}
       , minmaxf{minmax}
@@ -2583,26 +2579,22 @@ struct glwidgets_param {
       , valuef{value.x, value.y, value.z, value.w}
       , color{color}
       , readonly{readonly} {}
-  glwidgets_param(
-      int value, vec2i minmax = {0, 0}, bool readonly = false)
+  glwidgets_param(int value, vec2i minmax = {0, 0}, bool readonly = false)
       : type{glwidgets_param_type::value1i}
       , valuei{value, 0, 0, 0}
       , minmaxi{minmax}
       , readonly{readonly} {}
-  glwidgets_param(
-      vec2i value, vec2i minmax = {0, 0}, bool readonly = false)
+  glwidgets_param(vec2i value, vec2i minmax = {0, 0}, bool readonly = false)
       : type{glwidgets_param_type::value2i}
       , valuei{value.x, value.y, 0, 0}
       , minmaxi{minmax}
       , readonly{readonly} {}
-  glwidgets_param(
-      vec3i value, vec2i minmax = {0, 0}, bool readonly = false)
+  glwidgets_param(vec3i value, vec2i minmax = {0, 0}, bool readonly = false)
       : type{glwidgets_param_type::value3i}
       , valuei{value.x, value.y, value.z, 0}
       , minmaxi{minmax}
       , readonly{readonly} {}
-  glwidgets_param(
-      vec4i value, vec2i minmax = {0, 0}, bool readonly = false)
+  glwidgets_param(vec4i value, vec2i minmax = {0, 0}, bool readonly = false)
       : type{glwidgets_param_type::value4i}
       , valuei{value.x, value.y, value.z, value.w}
       , minmaxi{minmax}

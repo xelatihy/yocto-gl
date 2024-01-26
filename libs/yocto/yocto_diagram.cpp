@@ -81,8 +81,7 @@ static void merge_dshape_inplace(shape_data& shape, const shape_data& merge) {
 }
 
 // Make a tesselated rectangle. Useful in other subdivisions.
-static shape_data make_dquads(
-    vec2i steps, vec2f scale, vec2f uvscale) {
+static shape_data make_dquads(vec2i steps, vec2f scale, vec2f uvscale) {
   auto shape = shape_data{};
 
   shape.positions.resize((steps.x + 1) * (steps.y + 1));
@@ -111,8 +110,7 @@ static shape_data make_dquads(
 }
 
 // Make a rect
-static shape_data make_drect(
-    vec2i steps, vec2f scale, vec2f uvscale = {1, 1}) {
+static shape_data make_drect(vec2i steps, vec2f scale, vec2f uvscale = {1, 1}) {
   return make_dquads(steps, scale, uvscale);
 }
 
@@ -420,8 +418,8 @@ static void update_offsets(diagram_data& diagram) {
 }
 
 // Scene
-diagram_scene& add_scene(diagram_data& diagram, const string& title,
-    vec2f size, const frame3f& frame, vec2f margin) {
+diagram_scene& add_scene(diagram_data& diagram, const string& title, vec2f size,
+    const frame3f& frame, vec2f margin) {
   return add_scenews(diagram, title, "", size, frame, margin);
 }
 diagram_scene& add_scene(diagram_data& diagram, const string& title,
@@ -429,8 +427,7 @@ diagram_scene& add_scene(diagram_data& diagram, const string& title,
   return add_scenews(diagram, title, "", {2, 2}, frame, margin);
 }
 diagram_scene& add_scenews(diagram_data& diagram, const string& title,
-    const string& subtitle, vec2f size, const frame3f& frame,
-    vec2f margin) {
+    const string& subtitle, vec2f size, const frame3f& frame, vec2f margin) {
   auto& scene  = diagram.scenes.emplace_back();
   scene.size   = size;
   scene.margin = margin;
@@ -877,8 +874,7 @@ diagram_shape dhalfdisk(int steps) {
 }
 
 // Add arc
-diagram_shape darc(
-    vec3f from, vec3f to, vec3f center, int steps) {
+diagram_shape darc(vec3f from, vec3f to, vec3f center, int steps) {
   // refence frame
   auto x     = normalize(from - center);
   auto y     = normalize(to - center);
@@ -1206,8 +1202,7 @@ diagram_shape dudiskgrid(vec2i steps, int dsteps) {
 }
 
 // Add affine grid
-diagram_shape daffinegrid(
-    vec3f axes_a, vec3f axes_b, vec2i steps) {
+diagram_shape daffinegrid(vec3f axes_a, vec3f axes_b, vec2i steps) {
   auto ratio      = (float)steps.x / (float)steps.y;
   auto shape_     = make_drect({steps.x, steps.y}, {ratio, 1});
   auto positions_ = shape_.positions;
@@ -1430,8 +1425,8 @@ diagram_shape drandomlines(drandomlines_type type, int num, bool stratified) {
 }
 
 // Add plot
-diagram_scene& add_plot(diagram_data& diagram, const string& title,
-    vec2f size, const frame3f& frame, vec2f margin) {
+diagram_scene& add_plot(diagram_data& diagram, const string& title, vec2f size,
+    const frame3f& frame, vec2f margin) {
   return add_scene(diagram, title, size, frame, margin);
 }
 
@@ -1546,8 +1541,8 @@ vector<vec2f> dplotcurve(const vector<float>& curve, vec2f range) {
 }
 
 // Add plot
-diagram_scene& add_plot3(diagram_data& diagram, const string& title,
-    vec2f size, const frame3f& frame, vec2f margin) {
+diagram_scene& add_plot3(diagram_data& diagram, const string& title, vec2f size,
+    const frame3f& frame, vec2f margin) {
   return add_scene(diagram, title, size, frame, margin);
 }
 
@@ -1612,9 +1607,8 @@ diagram_scene& add_plotaxes3(diagram_scene& diagram, const bbox3f& bounds,
 }
 
 // Plot surface
-diagram_shape dplotsurface(const function<float(vec2f)>& func,
-    vec2f xrange, vec2f yrange, vec2i steps,
-    bool isolines) {
+diagram_shape dplotsurface(const function<float(vec2f)>& func, vec2f xrange,
+    vec2f yrange, vec2i steps, bool isolines) {
   auto shape = diagram_shape{};
 
   // steps
@@ -2171,8 +2165,8 @@ image_t<vec4f> render_diagram(const diagram_data& diagram, int resolution,
     auto render = render_image(yscene, resolution, samples, false);
 
     // helpers
-    auto draw_quad = [](image_t<vec4f>& composite, vec2i center,
-                         vec2i size, vec4f color) {
+    auto draw_quad = [](image_t<vec4f>& composite, vec2i center, vec2i size,
+                         vec4f color) {
       auto extents = composite.size();
       for (auto i : range(-size.x / 2, +size.x / 2)) {
         composite[clamp(
@@ -2188,8 +2182,7 @@ image_t<vec4f> render_diagram(const diagram_data& diagram, int resolution,
       }
     };
     auto copy_quad = [](image_t<vec4f>& composite, const image_t<vec4f>& source,
-                         vec2i icenter, vec2i scenter,
-                         vec2i size) {
+                         vec2i icenter, vec2i scenter, vec2i size) {
       auto csize = composite.size();
       auto ssize = source.size();
       for (auto j : range(-size.y / 2, +size.y / 2)) {

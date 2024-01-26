@@ -426,9 +426,7 @@ static frame3f to_math(const array<float, 12>& value) {
   return (frame3f&)value;
 }
 
-static array<float, 3> to_array(vec3f value) {
-  return (array<float, 3>&)value;
-}
+static array<float, 3> to_array(vec3f value) { return (array<float, 3>&)value; }
 static array<float, 12> to_array(const frame3f& value) {
   return (array<float, 12>&)value;
 }
