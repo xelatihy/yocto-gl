@@ -142,8 +142,6 @@ shape_data flipyz_shape(const shape_data& shape);
 // Manipulate vertex data
 shape_data remove_normals(const shape_data& shape);
 shape_data add_normals(const shape_data& shape);
-shape_data weld_vertices(const shape_data& shape, float threshold,
-    bool normals = false, bool others = false);
 
 // Merge a shape into another
 void merge_shape_inplace(shape_data& shape, const shape_data& merge);
@@ -570,35 +568,6 @@ void split_facevarying(vector<vec4i>& split_quads,
     const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texcoords);
-
-// Weld vertices within a threshold.
-pair<vector<vec3f>, vector<int>> weld_vertices(
-    const vector<vec3f>& positions, float threshold);
-pair<vector<int>, vector<int>> weld_indices(
-    const vector<vec3f>& positions, float threshold);
-pair<vector<vec3i>, vector<vec3f>> weld_triangles(
-    const vector<vec3i>& triangles, const vector<vec3f>& positions,
-    float threshold);
-pair<vector<vec4i>, vector<vec3f>> weld_quads(const vector<vec4i>& quads,
-    const vector<vec3f>& positions, float threshold);
-
-// Merge shape elements
-void merge_lines(vector<vec2i>& lines, vector<vec3f>& positions,
-    vector<vec3f>& tangents, vector<vec2f>& texcoords, vector<float>& radius,
-    const vector<vec2i>& merge_lines, const vector<vec3f>& merge_positions,
-    const vector<vec3f>& merge_tangents,
-    const vector<vec2f>& merge_texturecoords,
-    const vector<float>& merge_radius);
-void merge_triangles(vector<vec3i>& triangles, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords,
-    const vector<vec2i>& merge_triangles, const vector<vec3f>& merge_positions,
-    const vector<vec3f>& merge_normals,
-    const vector<vec2f>& merge_texturecoords);
-void merge_quads(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords,
-    const vector<vec4i>& merge_quads, const vector<vec3f>& merge_positions,
-    const vector<vec3f>& merge_normals,
-    const vector<vec2f>& merge_texturecoords);
 
 }  // namespace yocto
 
