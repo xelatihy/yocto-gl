@@ -1242,35 +1242,6 @@ shape_data make_random_points(
   return shape;
 }
 
-// Make a facevarying rect
-fvshape_data make_fvrect(vec2i steps, vec2f scale, vec2f uvscale) {
-  auto rect           = make_rect(steps, scale, uvscale);
-  auto shape          = fvshape_data{};
-  shape.positions     = rect.positions;
-  shape.normals       = rect.normals;
-  shape.texcoords     = rect.texcoords;
-  shape.quadspos      = rect.quads;
-  shape.quadsnorm     = rect.quads;
-  shape.quadstexcoord = rect.quads;
-  return shape;
-}
-
-// Make a facevarying box
-fvshape_data make_fvbox(vec3i steps, vec3f scale, vec3f uvscale) {
-  auto shape = fvshape_data{};
-  make_fvbox(shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
-      shape.positions, shape.normals, shape.texcoords, steps, scale, uvscale);
-  return shape;
-}
-
-// Make a facevarying sphere
-fvshape_data make_fvsphere(int steps, float scale, float uvscale) {
-  auto shape = fvshape_data{};
-  make_fvsphere(shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
-      shape.positions, shape.normals, shape.texcoords, steps, scale, uvscale);
-  return shape;
-}
-
 // Predefined meshes
 shape_data make_monkey(int subdivisions, float scale) {
   extern vector<vec3f> suzanne_positions;

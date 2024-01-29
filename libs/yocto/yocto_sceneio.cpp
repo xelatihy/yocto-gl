@@ -1063,10 +1063,6 @@ shape_data make_shape_preset(const string& type) {
     return make_sphere(pow2(5), 0.8f);
   } else if (type == "default-suzanne") {
     return make_monkey();
-  } else if (type == "default-cube-facevarying") {
-    return fvshape_to_shape(make_fvbox());
-  } else if (type == "default-sphere-facevarying") {
-    return fvshape_to_shape(make_fvsphere());
   } else if (type == "default-quady-displaced") {
     return make_recty({256, 256});
   } else if (type == "default-sphere-displaced") {
@@ -1234,19 +1230,7 @@ shape_data make_shape_preset(const string& type) {
 
 // Shape presets used for testing.
 fvshape_data make_fvshape_preset(const string& type) {
-  auto test_xform = translation_frame(vec3f{0, 0.75f, 0}) *
-                    scaling_frame(vec3f{0.75f, 0.75f, 0.75f});
-  if (type == "fvcube") {
-    return make_fvbox();
-  } else if (type == "fvsphere") {
-    return make_fvsphere();
-  } else if (type == "test_facevarying_cube") {
-    return transform_fvshape(make_fvbox(), test_xform);
-  } else if (type == "test_facevarying_sphere") {
-    return transform_fvshape(make_fvsphere(), test_xform);
-  } else {
-    return shape_to_fvshape(make_shape_preset(type));
-  }
+  return shape_to_fvshape(make_shape_preset(type));
 }
 
 // Load mesh
