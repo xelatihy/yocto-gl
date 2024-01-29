@@ -133,8 +133,8 @@ void run(const vector<string>& args) {
       }
 
       // convert to edges
-      auto edges = !shape.triangles.empty() ? get_edges(shape.triangles)
-                                            : get_edges(shape.quads);
+      auto edges = !shape.triangles.empty() ? triangles_edges(shape.triangles)
+                                            : quads_edges(shape.quads);
       shape      = lines_to_cylinders(edges, shape.positions, 4, 0.001f);
     }
 

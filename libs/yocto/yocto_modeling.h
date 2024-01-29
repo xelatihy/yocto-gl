@@ -254,7 +254,7 @@ static pair<vector<vec4i>, vector<T>> subdivide_beziers(
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// MESH EDGE HELPERS
+// MESH EDGES AND ADJACENCIES
 // -----------------------------------------------------------------------------
 namespace yocto {
 
@@ -280,6 +280,23 @@ inline pair<vector<vec2i>, vector<vec2i>> quads_edges_boundaries(
     const vector<vec4i>& quads);
 inline pair<vector<vec2i>, vector<vec2i>> faces_edges_boundaries(
     const vector<vec3i>& triangles, const vector<vec4i>& quads);
+
+// Build adjacencies between faces (sorted counter-clockwise)
+inline vector<vec3i> face_adjacencies(const vector<vec3i>& triangles);
+
+// Build adjacencies between vertices (sorted counter-clockwise)
+inline vector<vector<int>> vertex_adjacencies(
+    const vector<vec3i>& triangles, const vector<vec3i>& adjacencies);
+
+// Compute boundaries as a list of loops (sorted counter-clockwise)
+inline vector<vector<int>> ordered_boundaries(const vector<vec3i>& triangles,
+    const vector<vec3i>& adjacency, int num_vertices);
+
+// Build adjacencies between each vertex and its adjacent faces.
+// Adjacencies are sorted counter-clockwise and have same starting points as
+// vertex_adjacencies()
+inline vector<vector<int>> vertex_to_faces_adjacencies(
+    const vector<vec3i>& triangles, const vector<vec3i>& adjacencies);
 
 }  // namespace yocto
 
@@ -1275,7 +1292,7 @@ static pair<vector<vec4i>, vector<T>> subdivide_beziers(
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// MESH EDGE HELPERS
+// EDGE AND ADJACENCIES FUNCTIONS
 // -----------------------------------------------------------------------------
 namespace yocto {
 
@@ -1426,6 +1443,173 @@ inline pair<vector<vec2i>, vector<vec2i>> faces_edges_boundaries(
 
   // done
   return {edges, boundaries};
+}
+
+// Build adjacencies between faces (sorted counter-clockwise)
+inline vector<vec3i> face_adjacencies(const vector<vec3i>& triangles) {
+  struct face_edge {
+    vec2i edge;
+    int   face;
+    int   edge_index;
+  };
+  auto get_edge = [](vec3i triangle, int i) -> vec2i {
+    auto x = triangle[i], y = triangle[i < 2 ? i + 1 : 0];
+    return x < y ? vec2i{x, y} : vec2i{y, x};
+  };
+  auto edges = vector<face_edge>{};
+  edges.reserve(triangles.size() * 3);
+  for (auto tid : range((int)triangles.size())) {
+    for (auto k = 0; k < 3; ++k) {
+      auto edge = get_edge(triangles[tid], k);
+      edges.push_back({edge, tid, k});
+    }
+  }
+  sort(edges.begin(), edges.end(), [](auto a_, auto b_) {
+    auto a = a_.edge, b = b_.edge;
+    return a.x < b.x || (a.x == b.x && a.y < b.y);
+  });
+
+  auto adjacencies = vector<vec3i>{triangles.size(), vec3i{-1, -1, -1}};
+  for (auto eid : range((int)edges.size() - 1)) {
+    if (edges[eid].edge == edges[eid + 1].edge) continue;
+    adjacencies[edges[eid].face][edges[eid].edge_index] = edges[eid + 1].face;
+    adjacencies[edges[eid + 1].face][edges[eid + 1].edge_index] =
+        edges[eid].face;
+  }
+
+  return adjacencies;
+}
+
+// Build adjacencies between vertices (sorted counter-clockwise)
+inline vector<vector<int>> vertex_adjacencies(
+    const vector<vec3i>& triangles, const vector<vec3i>& adjacencies) {
+  auto find_index = [](vec3i v, int x) {
+    if (v.x == x) return 0;
+    if (v.y == x) return 1;
+    if (v.z == x) return 2;
+    return -1;
+  };
+
+  // For each vertex, find any adjacent face.
+  auto num_vertices     = 0;
+  auto face_from_vertex = vector<int>(triangles.size() * 3, -1);
+
+  for (auto i = 0; i < (int)triangles.size(); ++i) {
+    for (auto k : range(3)) {
+      face_from_vertex[triangles[i][k]] = i;
+      num_vertices                      = max(num_vertices, triangles[i][k]);
+    }
+  }
+
+  // Init result.
+  auto result = vector<vector<int>>(num_vertices);
+
+  // For each vertex, loop around it and build its adjacency.
+  for (auto i = 0; i < num_vertices; ++i) {
+    result[i].reserve(6);
+    auto first_face = face_from_vertex[i];
+    if (first_face == -1) continue;
+
+    auto face = first_face;
+    while (true) {
+      auto k = find_index(triangles[face], i);
+      k      = k != 0 ? k - 1 : 2;
+      result[i].push_back(triangles[face][k]);
+      face = adjacencies[face][k];
+      if (face == -1) break;
+      if (face == first_face) break;
+    }
+  }
+
+  return result;
+}
+
+// Build adjacencies between each vertex and its adjacent faces.
+// Adjacencies are sorted counter-clockwise and have same starting points as
+// vertex_adjacencies()
+inline vector<vector<int>> vertex_to_faces_adjacencies(
+    const vector<vec3i>& triangles, const vector<vec3i>& adjacencies) {
+  auto find_index = [](vec3i v, int x) {
+    if (v.x == x) return 0;
+    if (v.y == x) return 1;
+    if (v.z == x) return 2;
+    return -1;
+  };
+
+  // For each vertex, find any adjacent face.
+  auto num_vertices     = 0;
+  auto face_from_vertex = vector<int>(triangles.size() * 3, -1);
+
+  for (auto i = 0; i < (int)triangles.size(); ++i) {
+    for (auto k : range(3)) {
+      face_from_vertex[triangles[i][k]] = i;
+      num_vertices                      = max(num_vertices, triangles[i][k]);
+    }
+  }
+
+  // Init result.
+  auto result = vector<vector<int>>(num_vertices);
+
+  // For each vertex, loop around it and build its adjacency.
+  for (auto i = 0; i < num_vertices; ++i) {
+    result[i].reserve(6);
+    auto first_face = face_from_vertex[i];
+    if (first_face == -1) continue;
+
+    auto face = first_face;
+    while (true) {
+      auto k = find_index(triangles[face], i);
+      k      = k != 0 ? k - 1 : 2;
+      face   = adjacencies[face][k];
+      result[i].push_back(face);
+      if (face == -1) break;
+      if (face == first_face) break;
+    }
+  }
+
+  return result;
+}
+
+// Compute boundaries as a list of loops (sorted counter-clockwise)
+inline vector<vector<int>> ordered_boundaries(const vector<vec3i>& triangles,
+    const vector<vec3i>& adjacency, int num_vertices) {
+  // map every boundary vertex to its next one
+  auto next_vert = vector<int>(num_vertices, -1);
+  for (auto i = 0; i < (int)triangles.size(); ++i) {
+    for (auto k = 0; k < 3; ++k) {
+      if (adjacency[i][k] == -1)
+        next_vert[triangles[i][k]] = triangles[i][(k + 1) % 3];
+    }
+  }
+
+  // result
+  auto boundaries = vector<vector<int>>();
+
+  // arrange boundary vertices in loops
+  for (auto i : range(next_vert.size())) {
+    if (next_vert[i] == -1) continue;
+
+    // add new empty boundary
+    boundaries.emplace_back();
+    auto current = (int)i;
+
+    while (true) {
+      auto next = next_vert[current];
+      if (next == -1) {
+        return {};
+      }
+      next_vert[current] = -1;
+      boundaries.back().push_back(current);
+
+      // close loop if necessary
+      if (next == i)
+        break;
+      else
+        current = next;
+    }
+  }
+
+  return boundaries;
 }
 
 }  // namespace yocto

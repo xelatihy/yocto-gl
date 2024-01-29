@@ -335,102 +335,6 @@ shape_data make_heightfield(vec2i size, const vector<vec4f>& color);
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// VECTOR HASHING
-// -----------------------------------------------------------------------------
-namespace std {
-
-// Hash functor for vector for use with hash_map
-template <>
-struct hash<yocto::vec2i> {
-  size_t operator()(const yocto::vec2i& v) const {
-    static const auto hasher = std::hash<int>();
-    auto              h      = (size_t)0;
-    h ^= hasher(v.x) + 0x9e3779b9 + (h << 6) + (h >> 2);
-    h ^= hasher(v.y) + 0x9e3779b9 + (h << 6) + (h >> 2);
-    return h;
-  }
-};
-template <>
-struct hash<yocto::vec3i> {
-  size_t operator()(const yocto::vec3i& v) const {
-    static const auto hasher = std::hash<int>();
-    auto              h      = (size_t)0;
-    h ^= hasher(v.x) + 0x9e3779b9 + (h << 6) + (h >> 2);
-    h ^= hasher(v.y) + 0x9e3779b9 + (h << 6) + (h >> 2);
-    h ^= hasher(v.z) + 0x9e3779b9 + (h << 6) + (h >> 2);
-    return h;
-  }
-};
-template <>
-struct hash<yocto::vec4i> {
-  size_t operator()(const yocto::vec4i& v) const {
-    static const auto hasher = std::hash<int>();
-    auto              h      = (size_t)0;
-    h ^= hasher(v.x) + 0x9e3779b9 + (h << 6) + (h >> 2);
-    h ^= hasher(v.y) + 0x9e3779b9 + (h << 6) + (h >> 2);
-    h ^= hasher(v.z) + 0x9e3779b9 + (h << 6) + (h >> 2);
-    h ^= hasher(v.w) + 0x9e3779b9 + (h << 6) + (h >> 2);
-    return h;
-  }
-};
-
-}  // namespace std
-
-// -----------------------------------------------------------------------------
-// EDGES AND ADJACENCIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Dictionary to store edge information. `index` is the index to the edge
-// array, `edges` the array of edges and `nfaces` the number of adjacent faces.
-// We store only bidirectional edges to keep the dictionary small. Use the
-// functions below to access this data.
-struct edge_map {
-  struct edge_data {
-    int index;
-    int nfaces;
-  };
-  unordered_map<vec2i, edge_data> edges = {};
-};
-
-// Initialize an edge map with elements.
-edge_map make_edge_map(const vector<vec3i>& triangles);
-edge_map make_edge_map(const vector<vec4i>& quads);
-void     insert_edges(edge_map& emap, const vector<vec3i>& triangles);
-void     insert_edges(edge_map& emap, const vector<vec4i>& quads);
-// Insert an edge and return its index
-int insert_edge(edge_map& emap, vec2i edge);
-// Get the edge index
-int edge_index(const edge_map& emap, vec2i edge);
-// Get edges and boundaries
-int           num_edges(const edge_map& emap);
-vector<vec2i> get_edges(const edge_map& emap);
-vector<vec2i> get_boundary(const edge_map& emap);
-vector<vec2i> get_edges(const vector<vec3i>& triangles);
-vector<vec2i> get_edges(const vector<vec4i>& quads);
-vector<vec2i> get_edges(
-    const vector<vec3i>& triangles, const vector<vec4i>& quads);
-
-// Build adjacencies between faces (sorted counter-clockwise)
-vector<vec3i> face_adjacencies(const vector<vec3i>& triangles);
-
-// Build adjacencies between vertices (sorted counter-clockwise)
-vector<vector<int>> vertex_adjacencies(
-    const vector<vec3i>& triangles, const vector<vec3i>& adjacencies);
-
-// Compute boundaries as a list of loops (sorted counter-clockwise)
-vector<vector<int>> ordered_boundaries(const vector<vec3i>& triangles,
-    const vector<vec3i>& adjacency, int num_vertices);
-
-// Build adjacencies between each vertex and its adjacent faces.
-// Adjacencies are sorted counter-clockwise and have same starting points as
-// vertex_adjacencies()
-vector<vector<int>> vertex_to_faces_adjacencies(
-    const vector<vec3i>& triangles, const vector<vec3i>& adjacencies);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
 // BVH, RAY INTERSECTION AND OVERLAP QUERIES
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -527,6 +431,48 @@ shape_intersection overlap_quads_bvh(const bvh_tree& bvh,
     bool find_any = false);
 
 }  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// VECTOR HASHING
+// -----------------------------------------------------------------------------
+namespace std {
+
+// Hash functor for vector for use with hash_map
+template <>
+struct hash<yocto::vec2i> {
+  size_t operator()(const yocto::vec2i& v) const {
+    static const auto hasher = std::hash<int>();
+    auto              h      = (size_t)0;
+    h ^= hasher(v.x) + 0x9e3779b9 + (h << 6) + (h >> 2);
+    h ^= hasher(v.y) + 0x9e3779b9 + (h << 6) + (h >> 2);
+    return h;
+  }
+};
+template <>
+struct hash<yocto::vec3i> {
+  size_t operator()(const yocto::vec3i& v) const {
+    static const auto hasher = std::hash<int>();
+    auto              h      = (size_t)0;
+    h ^= hasher(v.x) + 0x9e3779b9 + (h << 6) + (h >> 2);
+    h ^= hasher(v.y) + 0x9e3779b9 + (h << 6) + (h >> 2);
+    h ^= hasher(v.z) + 0x9e3779b9 + (h << 6) + (h >> 2);
+    return h;
+  }
+};
+template <>
+struct hash<yocto::vec4i> {
+  size_t operator()(const yocto::vec4i& v) const {
+    static const auto hasher = std::hash<int>();
+    auto              h      = (size_t)0;
+    h ^= hasher(v.x) + 0x9e3779b9 + (h << 6) + (h >> 2);
+    h ^= hasher(v.y) + 0x9e3779b9 + (h << 6) + (h >> 2);
+    h ^= hasher(v.z) + 0x9e3779b9 + (h << 6) + (h >> 2);
+    h ^= hasher(v.w) + 0x9e3779b9 + (h << 6) + (h >> 2);
+    return h;
+  }
+};
+
+}  // namespace std
 
 // -----------------------------------------------------------------------------
 // HASH GRID AND NEAREST NEIGHBORS

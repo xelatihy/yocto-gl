@@ -525,10 +525,10 @@ void add_shape(diagram_scene& diagram, const diagram_frame& frame,
   // TODO: wireframe
   auto wireframe = true;
   if (wireframe && shape.lines.empty() && !shape.triangles.empty()) {
-    shape.lines = get_edges(shape.triangles);
+    shape.lines = triangles_edges(shape.triangles);
   }
   if (wireframe && shape.lines.empty() && !shape.quads.empty()) {
-    shape.lines = get_edges(shape.quads);
+    shape.lines = quads_edges(shape.quads);
   }
 
   auto labels = diagram_labels{};
@@ -725,7 +725,7 @@ diagram_shape dquads(const vector<vec4i>& quads, const vector<vec3f>& positions,
   } else {
     shape.quads = quads;
   }
-  shape.lines = get_edges(shape.quads);
+  shape.lines = quads_edges(shape.quads);
 
   return shape;
 }
@@ -750,7 +750,7 @@ diagram_shape dtriangles(const vector<vec3i>& triangles,
   } else {
     shape.triangles = triangles;
   }
-  shape.lines = get_edges(shape.triangles);
+  shape.lines = triangles_edges(shape.triangles);
 
   return shape;
 }
@@ -768,10 +768,10 @@ diagram_shape dshape(const shape_data& shape_, bool wireframe) {
   shape.quads     = shape_.quads;
 
   if (wireframe && shape.lines.empty() && !shape.triangles.empty()) {
-    shape.lines = get_edges(shape.triangles);
+    shape.lines = triangles_edges(shape.triangles);
   }
   if (wireframe && shape.lines.empty() && !shape.quads.empty()) {
-    shape.lines = get_edges(shape.quads);
+    shape.lines = quads_edges(shape.quads);
   }
 
   return shape;
@@ -822,7 +822,7 @@ diagram_shape drect(vec2f aspect) {
   shape.texcoords = dconstants::quad_texcoords;
 
   shape.quads = dconstants::quad_quads;
-  shape.lines = get_edges(shape.quads);
+  shape.lines = quads_edges(shape.quads);
 
   return shape;
 }
@@ -940,7 +940,7 @@ diagram_shape dcube() {
 
   shape.quads = dconstants::cube_quads;
 
-  shape.lines = get_edges(shape.quads);
+  shape.lines = quads_edges(shape.quads);
 
   return shape;
 }
@@ -951,7 +951,7 @@ diagram_shape dcube(int steps) {
   shape.normals   = shape_.normals;
   shape.texcoords = shape_.texcoords;
   shape.quads     = shape_.quads;
-  shape.lines     = get_edges(shape.quads);
+  shape.lines     = quads_edges(shape.quads);
   return shape;
 }
 
@@ -979,7 +979,7 @@ diagram_shape dsphere(int steps, bool isolines) {
       }
     }
   } else {
-    shape.lines = get_edges(shape.quads);
+    shape.lines = quads_edges(shape.quads);
   }
 
   return shape;
@@ -1007,7 +1007,7 @@ diagram_shape duvsphere(int steps, bool isolines) {
       }
     }
   } else {
-    shape.lines = get_edges(shape.quads);
+    shape.lines = quads_edges(shape.quads);
   }
 
   return shape;
@@ -1041,7 +1041,7 @@ diagram_shape dhemisphere(int steps, bool isolines) {
       }
     }
   } else {
-    shape.lines = get_edges(shape.quads);
+    shape.lines = quads_edges(shape.quads);
   }
 
   return shape;
@@ -1066,7 +1066,7 @@ diagram_shape dcone(int steps, bool isolines) {
       shape.lines.push_back({offset + idx, offset + (idx + 1) % steps});
     }
   } else {
-    shape.lines = get_edges(shape.quads);
+    shape.lines = quads_edges(shape.quads);
   }
   return shape;
 }
@@ -1117,7 +1117,7 @@ diagram_shape dbbox(const bbox3f& bbox_, float epsilon) {
   shape.positions = positions_;
 
   shape.quads = dconstants::cube_quads;
-  shape.lines = get_edges(shape.quads);
+  shape.lines = quads_edges(shape.quads);
 
   return shape;
 }
@@ -1150,7 +1150,7 @@ diagram_shape dgrid(vec2i steps) {
   shape.positions = shape_.positions;
 
   shape.quads = shape_.quads;
-  shape.lines = get_edges(shape.quads);
+  shape.lines = quads_edges(shape.quads);
 
   return shape;
 }
@@ -1212,7 +1212,7 @@ diagram_shape daffinegrid(vec3f axes_a, vec3f axes_b, vec2i steps) {
   shape.positions = positions_;
 
   shape.quads = shape_.quads;
-  shape.lines = get_edges(shape.quads);
+  shape.lines = quads_edges(shape.quads);
 
   return shape;
 }
@@ -1228,7 +1228,7 @@ diagram_shape dimagerect(vec2i size) {
   shape.texcoords = dconstants::quad_texcoords;
 
   shape.quads = dconstants::quad_quads;
-  shape.lines = get_edges(shape.quads);
+  shape.lines = quads_edges(shape.quads);
 
   return shape;
 }
