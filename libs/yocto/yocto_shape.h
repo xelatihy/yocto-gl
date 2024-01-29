@@ -346,52 +346,6 @@ shape_data make_heightfield(vec2i size, const vector<vec4f>& color);
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// COMPUTATION OF PER_VERTEX PROPERTIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Compute per-vertex normals/tangents for lines/triangles/quads.
-vector<vec3f> lines_tangents(
-    const vector<vec2i>& lines, const vector<vec3f>& positions);
-vector<vec3f> triangles_normals(
-    const vector<vec3i>& triangles, const vector<vec3f>& positions);
-vector<vec3f> quads_normals(
-    const vector<vec4i>& quads, const vector<vec3f>& positions);
-// Update normals and tangents
-void lines_tangents(vector<vec3f>& tangents, const vector<vec2i>& lines,
-    const vector<vec3f>& positions);
-void triangles_normals(vector<vec3f>& normals, const vector<vec3i>& triangles,
-    const vector<vec3f>& positions);
-void quads_normals(vector<vec3f>& normals, const vector<vec4i>& quads,
-    const vector<vec3f>& positions);
-
-// Compute per-vertex tangent space for triangle meshes.
-// Tangent space is defined by a four component vector.
-// The first three components are the tangent with respect to the u texcoord.
-// The fourth component is the sign of the tangent wrt the v texcoord.
-// Tangent frame is useful in normal mapping.
-vector<vec4f> triangle_tangent_spaces(const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// COMPUTATION OF VERTEX PROPERTIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Flip vertex normals
-vector<vec3f> flip_normals(const vector<vec3f>& normals);
-// Flip face orientation
-vector<vec3i> flip_triangles(const vector<vec3i>& triangles);
-vector<vec4i> flip_quads(const vector<vec4i>& quads);
-// Align vertex positions. Alignment is 0: none, 1: min, 2: max, 3: center.
-vector<vec3f> align_vertices(const vector<vec3f>& positions, vec3i alignment);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
 // VECTOR HASHING
 // -----------------------------------------------------------------------------
 namespace std {
