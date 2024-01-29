@@ -420,54 +420,6 @@ void split_facevarying(vector<vec4i>& split_quads,
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// SHAPE SAMPLING
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Pick a point in a point set uniformly.
-int           sample_points(int npoints, float re);
-int           sample_points(const vector<float>& cdf, float re);
-vector<float> sample_points_cdf(int npoints);
-void          sample_points_cdf(vector<float>& cdf, int npoints);
-
-// Pick a point on lines uniformly.
-pair<int, float> sample_lines(const vector<float>& cdf, float re, float ru);
-vector<float>    sample_lines_cdf(
-       const vector<vec2i>& lines, const vector<vec3f>& positions);
-void sample_lines_cdf(vector<float>& cdf, const vector<vec2i>& lines,
-    const vector<vec3f>& positions);
-
-// Pick a point on a triangle mesh uniformly.
-pair<int, vec2f> sample_triangles(
-    const vector<float>& cdf, float re, vec2f ruv);
-vector<float> sample_triangles_cdf(
-    const vector<vec3i>& triangles, const vector<vec3f>& positions);
-void sample_triangles_cdf(vector<float>& cdf, const vector<vec3i>& triangles,
-    const vector<vec3f>& positions);
-
-// Pick a point on a quad mesh uniformly.
-pair<int, vec2f> sample_quads(const vector<float>& cdf, float re, vec2f ruv);
-vector<float>    sample_quads_cdf(
-       const vector<vec4i>& quads, const vector<vec3f>& positions);
-void sample_quads_cdf(vector<float>& cdf, const vector<vec4i>& quads,
-    const vector<vec3f>& positions);
-
-// Samples a set of points over a triangle/quad mesh uniformly. Returns pos,
-// norm and texcoord of the sampled points.
-void sample_triangles(vector<vec3f>& sampled_positions,
-    vector<vec3f>& sampled_normals, vector<vec2f>& sampled_texcoords,
-    const vector<vec3i>& triangles, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texcoords, int npoints,
-    int seed = 7);
-void sample_quads(vector<vec3f>& sampled_positions,
-    vector<vec3f>& sampled_normals, vector<vec2f>& sampled_texcoords,
-    const vector<vec4i>& quads, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texcoords, int npoints,
-    int seed = 7);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
 //
 //
 // IMPLEMENTATION
