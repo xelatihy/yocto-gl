@@ -39,6 +39,7 @@
 
 #include <array>
 #include <tuple>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -55,6 +56,7 @@ namespace yocto {
 using std::array;
 using std::pair;
 using std::tuple;
+using std::unordered_map;
 using std::vector;
 
 }  // namespace yocto
@@ -416,6 +418,76 @@ inline float fractal_noise(Noise&& base_noise, vec2f position, int num = 8);
 // Turbulence noise
 template <typename Noise>
 inline float turbulence_noise(Noise&& base_noise, vec2f position, int num = 8);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// VECTOR HASHING
+// -----------------------------------------------------------------------------
+namespace std {
+
+// Hash functor for vector for use with hash_map
+template <>
+struct hash<yocto::vec2i> {
+  size_t operator()(const yocto::vec2i& v) const {
+    static const auto hasher = std::hash<int>();
+    auto              h      = (size_t)0;
+    h ^= hasher(v.x) + 0x9e3779b9 + (h << 6) + (h >> 2);
+    h ^= hasher(v.y) + 0x9e3779b9 + (h << 6) + (h >> 2);
+    return h;
+  }
+};
+template <>
+struct hash<yocto::vec3i> {
+  size_t operator()(const yocto::vec3i& v) const {
+    static const auto hasher = std::hash<int>();
+    auto              h      = (size_t)0;
+    h ^= hasher(v.x) + 0x9e3779b9 + (h << 6) + (h >> 2);
+    h ^= hasher(v.y) + 0x9e3779b9 + (h << 6) + (h >> 2);
+    h ^= hasher(v.z) + 0x9e3779b9 + (h << 6) + (h >> 2);
+    return h;
+  }
+};
+template <>
+struct hash<yocto::vec4i> {
+  size_t operator()(const yocto::vec4i& v) const {
+    static const auto hasher = std::hash<int>();
+    auto              h      = (size_t)0;
+    h ^= hasher(v.x) + 0x9e3779b9 + (h << 6) + (h >> 2);
+    h ^= hasher(v.y) + 0x9e3779b9 + (h << 6) + (h >> 2);
+    h ^= hasher(v.z) + 0x9e3779b9 + (h << 6) + (h >> 2);
+    h ^= hasher(v.w) + 0x9e3779b9 + (h << 6) + (h >> 2);
+    return h;
+  }
+};
+
+}  // namespace std
+
+// -----------------------------------------------------------------------------
+// HASH GRID AND NEAREST NEIGHBORS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// A sparse grid of cells, containing list of points. Cells are stored in
+// a dictionary to get sparsity. Helpful for nearest neighbor lookups.
+struct hash_grid {
+  float                             cell_size     = 0;
+  float                             cell_inv_size = 0;
+  vector<vec3f>                     positions     = {};
+  unordered_map<vec3i, vector<int>> cells         = {};
+};
+
+// Create a hash_grid
+inline hash_grid make_hash_grid(float cell_size);
+inline hash_grid make_hash_grid(
+    const vector<vec3f>& positions, float cell_size);
+// Inserts a point into the grid
+inline int insert_vertex(hash_grid& grid, vec3f position);
+// Finds the nearest neighbors within a given radius
+inline void find_neighbors(const hash_grid& grid, vector<int>& neighbors,
+    vec3f position, float max_radius);
+inline void find_neighbors(const hash_grid& grid, vector<int>& neighbors,
+    int vertex, float max_radius);
 
 }  // namespace yocto
 
@@ -2478,6 +2550,77 @@ inline float turbulence_noise(Noise&& base_noise, vec2f position, int num) {
     noise += abs(2 * base_noise(position * pow(2, index)) - 1) / pow(2, index);
   }
   return noise;
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// HASH GRID AND NEAREST NEIGHBORS
+// -----------------------------------------------------------------------------
+
+namespace yocto {
+
+// Gets the cell index
+inline vec3i get_cell_index(const hash_grid& grid, vec3f position) {
+  auto scaledpos = position * grid.cell_inv_size;
+  return vec3i{(int)scaledpos.x, (int)scaledpos.y, (int)scaledpos.z};
+}
+
+// Create a hash_grid
+inline hash_grid make_hash_grid(float cell_size) {
+  auto grid          = hash_grid{};
+  grid.cell_size     = cell_size;
+  grid.cell_inv_size = 1 / cell_size;
+  return grid;
+}
+inline hash_grid make_hash_grid(
+    const vector<vec3f>& positions, float cell_size) {
+  auto grid          = hash_grid{};
+  grid.cell_size     = cell_size;
+  grid.cell_inv_size = 1 / cell_size;
+  for (auto& position : positions) insert_vertex(grid, position);
+  return grid;
+}
+// Inserts a point into the grid
+inline int insert_vertex(hash_grid& grid, vec3f position) {
+  auto vertex_id = (int)grid.positions.size();
+  auto cell      = get_cell_index(grid, position);
+  grid.cells[cell].push_back(vertex_id);
+  grid.positions.push_back(position);
+  return vertex_id;
+}
+// Finds the nearest neighbors within a given radius
+inline void find_neighbors(const hash_grid& grid, vector<int>& neighbors,
+    vec3f position, float max_radius, int skip_id) {
+  auto cell        = get_cell_index(grid, position);
+  auto cell_radius = (int)(max_radius * grid.cell_inv_size) + 1;
+  neighbors.clear();
+  auto max_radius_squared = max_radius * max_radius;
+  for (auto k = -cell_radius; k <= cell_radius; k++) {
+    for (auto j = -cell_radius; j <= cell_radius; j++) {
+      for (auto i = -cell_radius; i <= cell_radius; i++) {
+        auto ncell         = cell + vec3i{i, j, k};
+        auto cell_iterator = grid.cells.find(ncell);
+        if (cell_iterator == grid.cells.end()) continue;
+        auto& ncell_vertices = cell_iterator->second;
+        for (auto vertex_id : ncell_vertices) {
+          if (distance_squared(grid.positions[vertex_id], position) >
+              max_radius_squared)
+            continue;
+          if (vertex_id == skip_id) continue;
+          neighbors.push_back(vertex_id);
+        }
+      }
+    }
+  }
+}
+inline void find_neighbors(const hash_grid& grid, vector<int>& neighbors,
+    vec3f position, float max_radius) {
+  find_neighbors(grid, neighbors, position, max_radius, -1);
+}
+inline void find_neighbors(const hash_grid& grid, vector<int>& neighbors,
+    int vertex, float max_radius) {
+  find_neighbors(grid, neighbors, grid.positions[vertex], max_radius, vertex);
 }
 
 }  // namespace yocto

@@ -43,7 +43,6 @@
 #include <memory>
 #include <string>
 #include <tuple>
-#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -59,7 +58,6 @@ namespace yocto {
 using std::array;
 using std::pair;
 using std::string;
-using std::unordered_map;
 using std::vector;
 
 }  // namespace yocto
@@ -116,7 +114,6 @@ struct shape_point {
 
 // Shape sampling
 vector<float> sample_shape_cdf(const shape_data& shape);
-void          sample_shape_cdf(vector<float>& cdf, const shape_data& shape);
 shape_point   sample_shape(
       const shape_data& shape, const vector<float>& cdf, float rn, vec2f ruv);
 vector<shape_point> sample_shape(
@@ -331,91 +328,6 @@ shape_data lines_to_cylinders(const vector<vec2i>& lines,
 // Make a heightfield mesh.
 shape_data make_heightfield(vec2i size, const vector<float>& height);
 shape_data make_heightfield(vec2i size, const vector<vec4f>& color);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// VECTOR HASHING
-// -----------------------------------------------------------------------------
-namespace std {
-
-// Hash functor for vector for use with hash_map
-template <>
-struct hash<yocto::vec2i> {
-  size_t operator()(const yocto::vec2i& v) const {
-    static const auto hasher = std::hash<int>();
-    auto              h      = (size_t)0;
-    h ^= hasher(v.x) + 0x9e3779b9 + (h << 6) + (h >> 2);
-    h ^= hasher(v.y) + 0x9e3779b9 + (h << 6) + (h >> 2);
-    return h;
-  }
-};
-template <>
-struct hash<yocto::vec3i> {
-  size_t operator()(const yocto::vec3i& v) const {
-    static const auto hasher = std::hash<int>();
-    auto              h      = (size_t)0;
-    h ^= hasher(v.x) + 0x9e3779b9 + (h << 6) + (h >> 2);
-    h ^= hasher(v.y) + 0x9e3779b9 + (h << 6) + (h >> 2);
-    h ^= hasher(v.z) + 0x9e3779b9 + (h << 6) + (h >> 2);
-    return h;
-  }
-};
-template <>
-struct hash<yocto::vec4i> {
-  size_t operator()(const yocto::vec4i& v) const {
-    static const auto hasher = std::hash<int>();
-    auto              h      = (size_t)0;
-    h ^= hasher(v.x) + 0x9e3779b9 + (h << 6) + (h >> 2);
-    h ^= hasher(v.y) + 0x9e3779b9 + (h << 6) + (h >> 2);
-    h ^= hasher(v.z) + 0x9e3779b9 + (h << 6) + (h >> 2);
-    h ^= hasher(v.w) + 0x9e3779b9 + (h << 6) + (h >> 2);
-    return h;
-  }
-};
-
-}  // namespace std
-
-// -----------------------------------------------------------------------------
-// HASH GRID AND NEAREST NEIGHBORS
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// A sparse grid of cells, containing list of points. Cells are stored in
-// a dictionary to get sparsity. Helpful for nearest neighbor lookups.
-struct hash_grid {
-  float                             cell_size     = 0;
-  float                             cell_inv_size = 0;
-  vector<vec3f>                     positions     = {};
-  unordered_map<vec3i, vector<int>> cells         = {};
-};
-
-// Create a hash_grid
-hash_grid make_hash_grid(float cell_size);
-hash_grid make_hash_grid(const vector<vec3f>& positions, float cell_size);
-// Inserts a point into the grid
-int insert_vertex(hash_grid& grid, vec3f position);
-// Finds the nearest neighbors within a given radius
-void find_neighbors(const hash_grid& grid, vector<int>& neighbors,
-    vec3f position, float max_radius);
-void find_neighbors(const hash_grid& grid, vector<int>& neighbors, int vertex,
-    float max_radius);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// SHAPE ELEMENT CONVERSION AND GROUPING
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Convert face-varying data to single primitives. Returns the quads indices
-// and filled vectors for pos, norm and texcoord.
-void split_facevarying(vector<vec4i>& split_quads,
-    vector<vec3f>& split_positions, vector<vec3f>& split_normals,
-    vector<vec2f>& split_texcoords, const vector<vec4i>& quadspos,
-    const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords);
 
 }  // namespace yocto
 

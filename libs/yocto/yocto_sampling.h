@@ -177,22 +177,17 @@ namespace yocto {
 inline int           sample_points(int npoints, float re);
 inline int           sample_points(const vector<float>& cdf, float re);
 inline vector<float> sample_points_cdf(int npoints);
-inline void          sample_points_cdf(vector<float>& cdf, int npoints);
 
 // Pick a point on lines uniformly.
 inline pair<int, float> sample_lines(
     const vector<float>& cdf, float re, float ru);
 inline vector<float> sample_lines_cdf(
     const vector<vec2i>& lines, const vector<vec3f>& positions);
-inline void sample_lines_cdf(vector<float>& cdf, const vector<vec2i>& lines,
-    const vector<vec3f>& positions);
 
 // Pick a point on a triangle mesh uniformly.
 inline pair<int, vec2f> sample_triangles(
     const vector<float>& cdf, float re, vec2f ruv);
 inline vector<float> sample_triangles_cdf(
-    const vector<vec3i>& triangles, const vector<vec3f>& positions);
-inline void sample_triangles_cdf(vector<float>& cdf,
     const vector<vec3i>& triangles, const vector<vec3f>& positions);
 
 // Pick a point on a quad mesh uniformly.
@@ -200,8 +195,6 @@ inline pair<int, vec2f> sample_quads(
     const vector<float>& cdf, float re, vec2f ruv);
 inline vector<float> sample_quads_cdf(
     const vector<vec4i>& quads, const vector<vec3f>& positions);
-inline void sample_quads_cdf(vector<float>& cdf, const vector<vec4i>& quads,
-    const vector<vec3f>& positions);
 
 }  // namespace yocto
 
@@ -458,9 +451,6 @@ inline vector<float> sample_points_cdf(int npoints) {
   for (auto i : range(cdf.size())) cdf[i] = 1 + (i != 0 ? cdf[i - 1] : 0);
   return cdf;
 }
-inline void sample_points_cdf(vector<float>& cdf, int npoints) {
-  for (auto i : range(cdf.size())) cdf[i] = 1 + (i != 0 ? cdf[i - 1] : 0);
-}
 
 // Pick a point on lines uniformly.
 inline pair<int, float> sample_lines(
@@ -477,14 +467,6 @@ inline vector<float> sample_lines_cdf(
   }
   return cdf;
 }
-inline void sample_lines_cdf(vector<float>& cdf, const vector<vec2i>& lines,
-    const vector<vec3f>& positions) {
-  for (auto i : range(cdf.size())) {
-    auto& l = lines[i];
-    auto  w = line_length(positions[l.x], positions[l.y]);
-    cdf[i]  = w + (i != 0 ? cdf[i - 1] : 0);
-  }
-}
 
 // Pick a point on a triangle mesh uniformly.
 inline pair<int, vec2f> sample_triangles(
@@ -500,14 +482,6 @@ inline vector<float> sample_triangles_cdf(
     cdf[i]  = w + (i != 0 ? cdf[i - 1] : 0);
   }
   return cdf;
-}
-inline void sample_triangles_cdf(vector<float>& cdf,
-    const vector<vec3i>& triangles, const vector<vec3f>& positions) {
-  for (auto i : range(cdf.size())) {
-    auto& t = triangles[i];
-    auto  w = triangle_area(positions[t.x], positions[t.y], positions[t.z]);
-    cdf[i]  = w + (i != 0 ? cdf[i - 1] : 0);
-  }
 }
 
 // Pick a point on a quad mesh uniformly.
@@ -534,15 +508,6 @@ inline vector<float> sample_quads_cdf(
     cdf[i] = w + (i ? cdf[i - 1] : 0);
   }
   return cdf;
-}
-inline void sample_quads_cdf(vector<float>& cdf, const vector<vec4i>& quads,
-    const vector<vec3f>& positions) {
-  for (auto i : range(cdf.size())) {
-    auto& q = quads[i];
-    auto  w = quad_area(
-        positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
-    cdf[i] = w + (i ? cdf[i - 1] : 0);
-  }
 }
 
 }  // namespace yocto

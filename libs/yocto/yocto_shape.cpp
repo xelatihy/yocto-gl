@@ -235,20 +235,6 @@ vector<float> sample_shape_cdf(const shape_data& shape) {
   }
 }
 
-void sample_shape_cdf(vector<float>& cdf, const shape_data& shape) {
-  if (!shape.points.empty()) {
-    sample_points_cdf(cdf, (int)shape.points.size());
-  } else if (!shape.lines.empty()) {
-    sample_lines_cdf(cdf, shape.lines, shape.positions);
-  } else if (!shape.triangles.empty()) {
-    sample_triangles_cdf(cdf, shape.triangles, shape.positions);
-  } else if (!shape.quads.empty()) {
-    sample_quads_cdf(cdf, shape.quads, shape.positions);
-  } else {
-    sample_points_cdf(cdf, (int)shape.positions.size());
-  }
-}
-
 shape_point sample_shape(
     const shape_data& shape, const vector<float>& cdf, float rn, vec2f ruv) {
   if (!shape.points.empty()) {
@@ -498,6 +484,63 @@ void compute_normals(vector<vec3f>& normals, const fvshape_data& shape) {
   }
 }
 
+// Convert face varying data to single primitives. Returns the quads indices
+// and filled vectors for pos, norm and texcoord.
+void split_facevarying(vector<vec4i>& split_quads,
+    vector<vec3f>& split_positions, vector<vec3f>& split_normals,
+    vector<vec2f>& split_texcoords, const vector<vec4i>& quadspos,
+    const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords) {
+  // make vertices
+  auto vertices = vector<vec3i>{};
+  vertices.reserve(quadspos.size() * 4);
+  for (auto fid : range(quadspos.size())) {
+    for (auto c : range(4)) {
+      auto vertex = vec3i{
+          (&quadspos[fid].x)[c],
+          (!quadsnorm.empty()) ? (&quadsnorm[fid].x)[c] : -1,
+          (!quadstexcoord.empty()) ? (&quadstexcoord[fid].x)[c] : -1,
+      };
+      vertices.push_back(vertex);
+    }
+  }
+
+  // sort vertices and remove duplicates
+  auto compare_vertices = [](vec3i a, vec3i b) {
+    return a.x < b.x || (a.x == b.x && a.y < b.y) ||
+           (a.x == b.x && a.y == b.y && a.z < b.z);
+  };
+  std::sort(vertices.begin(), vertices.end(), compare_vertices);
+  vertices.erase(std::unique(vertices.begin(), vertices.end()), vertices.end());
+
+  // fill vert data
+  if (!positions.empty()) {
+    split_positions.resize(vertices.size());
+    for (auto&& [index, vertex] : enumerate(vertices)) {
+      split_positions[index] = positions[vertex.x];
+    }
+  } else {
+    split_positions.clear();
+  }
+  if (!normals.empty()) {
+    split_normals.resize(vertices.size());
+    for (auto&& [index, vertex] : enumerate(vertices)) {
+      split_normals[index] = normals[vertex.y];
+    }
+  } else {
+    split_normals.clear();
+  }
+  if (!texcoords.empty()) {
+    split_texcoords.resize(vertices.size());
+    for (auto&& [index, vertex] : enumerate(vertices)) {
+      split_texcoords[index] = texcoords[vertex.z];
+    }
+  } else {
+    split_texcoords.clear();
+  }
+}
+
 // Conversions
 shape_data fvshape_to_shape(const fvshape_data& fvshape, bool as_triangles) {
   auto shape = shape_data{};
@@ -509,7 +552,7 @@ shape_data fvshape_to_shape(const fvshape_data& fvshape, bool as_triangles) {
 }
 fvshape_data shape_to_fvshape(const shape_data& shape) {
   if (!shape.points.empty() || !shape.lines.empty())
-    throw std::invalid_argument{"cannor convert shape"};
+    throw std::invalid_argument{"cannot convert shape"};
   auto fvshape          = fvshape_data{};
   fvshape.positions     = shape.positions;
   fvshape.normals       = shape.normals;
@@ -1608,136 +1651,6 @@ shape_data lines_to_cylinders(const vector<vec2i>& lines,
     merge_shape_inplace(shape, cylinder);
   }
   return shape;
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// HASH GRID AND NEAREST NEIGHBORS
-// -----------------------------------------------------------------------------
-
-namespace yocto {
-
-// Gets the cell index
-vec3i get_cell_index(const hash_grid& grid, vec3f position) {
-  auto scaledpos = position * grid.cell_inv_size;
-  return vec3i{(int)scaledpos.x, (int)scaledpos.y, (int)scaledpos.z};
-}
-
-// Create a hash_grid
-hash_grid make_hash_grid(float cell_size) {
-  auto grid          = hash_grid{};
-  grid.cell_size     = cell_size;
-  grid.cell_inv_size = 1 / cell_size;
-  return grid;
-}
-hash_grid make_hash_grid(const vector<vec3f>& positions, float cell_size) {
-  auto grid          = hash_grid{};
-  grid.cell_size     = cell_size;
-  grid.cell_inv_size = 1 / cell_size;
-  for (auto& position : positions) insert_vertex(grid, position);
-  return grid;
-}
-// Inserts a point into the grid
-int insert_vertex(hash_grid& grid, vec3f position) {
-  auto vertex_id = (int)grid.positions.size();
-  auto cell      = get_cell_index(grid, position);
-  grid.cells[cell].push_back(vertex_id);
-  grid.positions.push_back(position);
-  return vertex_id;
-}
-// Finds the nearest neighbors within a given radius
-void find_neighbors(const hash_grid& grid, vector<int>& neighbors,
-    vec3f position, float max_radius, int skip_id) {
-  auto cell        = get_cell_index(grid, position);
-  auto cell_radius = (int)(max_radius * grid.cell_inv_size) + 1;
-  neighbors.clear();
-  auto max_radius_squared = max_radius * max_radius;
-  for (auto k = -cell_radius; k <= cell_radius; k++) {
-    for (auto j = -cell_radius; j <= cell_radius; j++) {
-      for (auto i = -cell_radius; i <= cell_radius; i++) {
-        auto ncell         = cell + vec3i{i, j, k};
-        auto cell_iterator = grid.cells.find(ncell);
-        if (cell_iterator == grid.cells.end()) continue;
-        auto& ncell_vertices = cell_iterator->second;
-        for (auto vertex_id : ncell_vertices) {
-          if (distance_squared(grid.positions[vertex_id], position) >
-              max_radius_squared)
-            continue;
-          if (vertex_id == skip_id) continue;
-          neighbors.push_back(vertex_id);
-        }
-      }
-    }
-  }
-}
-void find_neighbors(const hash_grid& grid, vector<int>& neighbors,
-    vec3f position, float max_radius) {
-  find_neighbors(grid, neighbors, position, max_radius, -1);
-}
-void find_neighbors(const hash_grid& grid, vector<int>& neighbors, int vertex,
-    float max_radius) {
-  find_neighbors(grid, neighbors, grid.positions[vertex], max_radius, vertex);
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION OF SHAPE ELEMENT CONVERSION AND GROUPING
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Convert face varying data to single primitives. Returns the quads indices
-// and filled vectors for pos, norm and texcoord.
-void split_facevarying(vector<vec4i>& split_quads,
-    vector<vec3f>& split_positions, vector<vec3f>& split_normals,
-    vector<vec2f>& split_texcoords, const vector<vec4i>& quadspos,
-    const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords) {
-  // make faces unique
-  unordered_map<vec3i, int> vert_map;
-  split_quads.resize(quadspos.size());
-  for (auto fid : range(quadspos.size())) {
-    for (auto c : range(4)) {
-      auto v = vec3i{
-          (&quadspos[fid].x)[c],
-          (!quadsnorm.empty()) ? (&quadsnorm[fid].x)[c] : -1,
-          (!quadstexcoord.empty()) ? (&quadstexcoord[fid].x)[c] : -1,
-      };
-      auto it = vert_map.find(v);
-      if (it == vert_map.end()) {
-        auto s = (int)vert_map.size();
-        vert_map.insert(it, {v, s});
-        (&split_quads[fid].x)[c] = s;
-      } else {
-        (&split_quads[fid].x)[c] = it->second;
-      }
-    }
-  }
-
-  // fill vert data
-  split_positions.clear();
-  if (!positions.empty()) {
-    split_positions.resize(vert_map.size());
-    for (auto& [vert, index] : vert_map) {
-      split_positions[index] = positions[vert.x];
-    }
-  }
-  split_normals.clear();
-  if (!normals.empty()) {
-    split_normals.resize(vert_map.size());
-    for (auto& [vert, index] : vert_map) {
-      split_normals[index] = normals[vert.y];
-    }
-  }
-  split_texcoords.clear();
-  if (!texcoords.empty()) {
-    split_texcoords.resize(vert_map.size());
-    for (auto& [vert, index] : vert_map) {
-      split_texcoords[index] = texcoords[vert.z];
-    }
-  }
 }
 
 }  // namespace yocto

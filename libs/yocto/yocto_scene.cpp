@@ -928,10 +928,9 @@ void tesselate_subdiv(
     }
   }
 
-  shape = {};
-  split_facevarying(shape.quads, shape.positions, shape.normals,
-      shape.texcoords, subdiv.quadspos, subdiv.quadsnorm, subdiv.quadstexcoord,
-      subdiv.positions, subdiv.normals, subdiv.texcoords);
+  shape = fvshape_to_shape(
+      {subdiv.quadspos, subdiv.quadsnorm, subdiv.quadstexcoord,
+          subdiv.positions, subdiv.normals, subdiv.texcoords});
 }
 
 void tesselate_subdivs(scene_data& scene) {

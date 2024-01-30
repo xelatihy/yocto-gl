@@ -919,20 +919,7 @@ void save_fvshape(
     const string& filename, const fvshape_data& shape, bool ascii) {
   auto ext = path_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
-    auto ply             = ply_model{};
-    auto split_quads     = vector<vec4i>{};
-    auto split_positions = vector<vec3f>{};
-    auto split_normals   = vector<vec3f>{};
-    auto split_texcoords = vector<vec2f>{};
-    split_facevarying(split_quads, split_positions, split_normals,
-        split_texcoords, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
-        shape.positions, shape.normals, shape.texcoords);
-    // TODO: remove when all as arrays
-    add_positions(ply, (const vector<array<float, 3>>&)split_positions);
-    add_normals(ply, (const vector<array<float, 3>>&)split_normals);
-    add_texcoords(ply, (const vector<array<float, 2>>&)split_texcoords);
-    add_quads(ply, (const vector<array<int, 4>>&)split_quads);
-    save_ply(filename, ply);
+    return save_shape(filename, fvshape_to_shape(shape), ascii);
   } else if (ext == ".obj" || ext == ".OBJ") {
     auto obj = obj_shape{};
     // TODO: remove when all as arrays
@@ -944,22 +931,7 @@ void save_fvshape(
         (const vector<array<int, 4>>&)shape.quadstexcoord, 0);
     save_obj(filename, obj);
   } else if (ext == ".stl" || ext == ".STL") {
-    auto stl = stl_model{};
-    if (!shape.quadspos.empty()) {
-      auto split_quads     = vector<vec4i>{};
-      auto split_positions = vector<vec3f>{};
-      auto split_normals   = vector<vec3f>{};
-      auto split_texcoords = vector<vec2f>{};
-      split_facevarying(split_quads, split_positions, split_normals,
-          split_texcoords, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
-          shape.positions, shape.normals, shape.texcoords);
-      auto triangles = quads_to_triangles(split_quads);
-      add_triangles(stl, (const vector<array<int, 3>>&)triangles,
-          (const vector<array<float, 3>>&)split_positions, {});
-    } else {
-      throw io_error{"empty shape " + filename};
-    }
-    save_stl(filename, stl);
+    return save_shape(filename, fvshape_to_shape(shape), ascii);
   } else if (ext == ".cpp" || ext == ".CPP") {
     auto to_cpp = [](const string& name, const string& vname,
                       const auto& values) -> string {
