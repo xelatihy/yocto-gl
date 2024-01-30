@@ -51,10 +51,7 @@ namespace yocto {
 
 // using directives
 using std::array;
-using std::atomic;
 using std::pair;
-using std::string;
-using namespace std::string_literals;
 
 // consts
 inline const auto uint_max = std::numeric_limits<unsigned int>::max();
@@ -83,33 +80,6 @@ inline void parallel_for(T num, Func&& func) {
               if (idx >= num) break;
               if (has_error) break;
               func(idx);
-            }
-          } catch (...) {
-            has_error = true;
-            throw;
-          }
-        }));
-  }
-  for (auto& f : futures) f.get();
-}
-
-// Simple parallel for used since our target platforms do not yet support
-// parallel algorithms. `Func` takes the two integer indices.
-template <typename Func>
-inline void parallel_for_batch(vec2i num, Func&& func) {
-  auto              futures  = vector<std::future<void>>{};
-  auto              nthreads = std::thread::hardware_concurrency();
-  std::atomic<int>  next_idx(0);
-  std::atomic<bool> has_error(false);
-  for (auto thread_id = 0; thread_id < (int)nthreads; thread_id++) {
-    futures.emplace_back(
-        std::async(std::launch::async, [&func, &next_idx, &has_error, num]() {
-          try {
-            while (true) {
-              auto j = next_idx.fetch_add(1);
-              if (j >= num[1]) break;
-              if (has_error) break;
-              for (auto i = 0; i < num[0]; i++) func(vec2i{i, j});
             }
           } catch (...) {
             has_error = true;
