@@ -373,7 +373,7 @@ inline shape_data make_quads(vec2i steps, PFunc&& position, NFunc&& normal) {
       auto idx             = j * (steps.x + 1) + i;
       shape.positions[idx] = position(uv);
       shape.normals[idx]   = normal(uv);
-      shape.texcoords[idx] = uv;
+      shape.texcoords[idx] = {uv.x, 1 - uv.y};
     }
   }
   shape.quads = vector<vec4i>(steps.x * steps.y);

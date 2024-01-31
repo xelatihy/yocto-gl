@@ -680,7 +680,7 @@ static shape_data make_quads(vec2i steps, vec2f scale, vec2f uvscale) {
       shape.positions[j * (steps.x + 1) + i] = {
           (2 * uv.x - 1) * scale.x, (2 * uv.y - 1) * scale.y, 0};
       shape.normals[j * (steps.x + 1) + i]   = {0, 0, 1};
-      shape.texcoords[j * (steps.x + 1) + i] = vec2f{uv.x, uv.y} * uvscale;
+      shape.texcoords[j * (steps.x + 1) + i] = vec2f{uv.x, 1 - uv.y} * uvscale;
     }
   }
 
@@ -903,7 +903,7 @@ shape_data make_uvsphere(vec2i steps, float scale, vec2f uvscale) {
   auto shape = make_rect(steps, {1, 1});
   for (auto i : range(shape.positions.size())) {
     auto uv = shape.texcoords[i];
-    auto a  = vec2f{2 * pif * uv.x, pif * (1 - uv.y)};
+    auto a  = vec2f{2 * pif * uv.x, pif * uv.y};
     shape.positions[i] =
         vec3f{cos(a.x) * sin(a.y), sin(a.x) * sin(a.y), cos(a.y)} * scale;
     shape.normals[i]   = normalize(shape.positions[i]);
@@ -1012,7 +1012,7 @@ shape_data make_uvcylinder(vec3i steps, vec2f scale, vec3f uvscale) {
     auto uv             = qshape.texcoords[i];
     auto phi            = 2 * pif * uv.x;
     qshape.positions[i] = {
-        cos(phi) * scale.x, sin(phi) * scale.x, (2 * uv.y - 1) * scale.y};
+        cos(phi) * scale.x, sin(phi) * scale.x, -(2 * uv.y - 1) * scale.y};
     qshape.normals[i]   = {cos(phi), sin(phi), 0};
     qshape.texcoords[i] = uv * vec2f{uvscale.x, uvscale.y};
   }
