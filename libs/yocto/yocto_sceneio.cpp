@@ -264,27 +264,21 @@ FILE* fopen_utf8(const string& filename, const string& mode) {
 #endif
 }
 
-// Load a binary file
-string load_text(const string& filename) {
-  auto str = string{};
-  load_text(filename, str);
-  return str;
-}
-
 // Load a text file
-void load_text(const string& filename, string& str) {
+string load_text(const string& filename) {
   // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
   auto fs = fopen_utf8(filename.c_str(), "rb");
   if (fs == nullptr) throw io_error("cannot open " + filename);
   fseek(fs, 0, SEEK_END);
   auto length = ftell(fs);
   fseek(fs, 0, SEEK_SET);
-  str = string(length, '\0');
+  auto str = string(length, '\0');
   if (fread(str.data(), 1, length, fs) != length) {
     fclose(fs);
     throw io_error("cannot read " + filename);
   }
   fclose(fs);
+  return str;
 }
 
 // Save a text file
@@ -300,25 +294,19 @@ void save_text(const string& filename, const string& str) {
 
 // Load a binary file
 vector<byte> load_binary(const string& filename) {
-  auto data = vector<byte>{};
-  load_binary(filename, data);
-  return data;
-}
-
-// Load a binary file
-void load_binary(const string& filename, vector<byte>& data) {
   // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
   auto fs = fopen_utf8(filename.c_str(), "rb");
   if (fs == nullptr) throw io_error("cannot open " + filename);
   fseek(fs, 0, SEEK_END);
   auto length = ftell(fs);
   fseek(fs, 0, SEEK_SET);
-  data = vector<byte>(length);
+  auto data = vector<byte>(length);
   if (fread(data.data(), 1, length, fs) != length) {
     fclose(fs);
     throw io_error("cannot read " + filename);
   }
   fclose(fs);
+  return data;
 }
 
 // Save a binary file
@@ -343,18 +331,10 @@ namespace yocto {
 using json_value = nlohmann::ordered_json;
 
 // Load/save json
-[[maybe_unused]] static void load_json(
-    const string& filename, json_value& json);
 [[maybe_unused]] static json_value load_json(const string& filename) {
-  auto json = json_value{};
-  load_json(filename, json);
-  return json;
-}
-[[maybe_unused]] static void load_json(
-    const string& filename, json_value& json) {
   auto text = load_text(filename);
   try {
-    json = json_value::parse(text);
+    return json_value::parse(text);
   } catch (...) {
     throw io_error("cannot parse " + filename);
   }
@@ -720,10 +700,9 @@ void save_imageb(const string& filename, const image_t<vec4b>& image) {
 namespace yocto {
 
 // Load mesh
-void load_shape(const string& filename, shape_data& shape) {
-  shape = {};
-
-  auto ext = path_extension(filename);
+shape_data load_shape(const string& filename) {
+  auto shape = shape_data{};
+  auto ext   = path_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     auto ply = load_ply(filename);
     // TODO: remove when all as arrays
@@ -766,6 +745,7 @@ void load_shape(const string& filename, shape_data& shape) {
   } else {
     throw io_error("unsupported format " + filename);
   }
+  return shape;
 }
 
 // Save ply mesh
@@ -871,10 +851,9 @@ void save_shape(const string& filename, const shape_data& shape, bool ascii) {
 }
 
 // Load face-varying mesh
-void load_fvshape(const string& filename, fvshape_data& shape) {
-  shape = {};
-
-  auto ext = path_extension(filename);
+fvshape_data load_fvshape(const string& filename) {
+  auto shape = fvshape_data{};
+  auto ext   = path_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     auto ply = load_ply(filename);
     // TODO: remove when all as arrays
@@ -912,6 +891,7 @@ void load_fvshape(const string& filename, fvshape_data& shape) {
   } else {
     throw io_error("unsupported format " + filename);
   }
+  return shape;
 }
 
 // Save ply mesh
@@ -1205,20 +1185,6 @@ fvshape_data make_fvshape_preset(const string& type) {
   return shape_to_fvshape(make_shape_preset(type));
 }
 
-// Load mesh
-shape_data load_shape(const string& filename) {
-  auto shape = shape_data{};
-  load_shape(filename, shape);
-  return shape;
-}
-
-// Load mesh
-fvshape_data load_fvshape(const string& filename) {
-  auto shape = fvshape_data{};
-  load_fvshape(filename, shape);
-  return shape;
-}
-
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -1227,16 +1193,16 @@ fvshape_data load_fvshape(const string& filename) {
 namespace yocto {
 
 // Loads/saves an image. Chooses hdr or ldr based on file name.
-void load_texture(const string& filename, texture_data& texture) {
+texture_data load_texture(const string& filename) {
   auto ext = path_extension(filename);
   if (ext == ".exr" || ext == ".EXR" || ext == ".hdr" || ext == ".HDR") {
-    texture.pixelsf = load_image(filename);
+    return {.pixelsf = load_image(filename)};
   } else if (ext == ".png" || ext == ".PNG" || ext == ".jpg" || ext == ".JPG" ||
              ext == ".jpeg" || ext == ".JPEG" || ext == ".tga" ||
              ext == ".TGA" || ext == ".bmp" || ext == ".BMP") {
-    texture.pixelsb = load_imageb(filename);
+    return {.pixelsb = load_imageb(filename)};
   } else if (ext == ".ypreset" || ext == ".YPRESET") {
-    texture = make_texture_preset(filename);
+    return make_texture_preset(filename);
   } else {
     throw io_error("unsupported format " + filename);
   }
@@ -1253,13 +1219,6 @@ void save_texture(const string& filename, const texture_data& texture) {
 
 texture_data make_texture_preset(const string& type) {
   return image_to_texture(make_image_preset(type), !is_srgb_preset(type));
-}
-
-// Loads/saves an image. Chooses hdr or ldr based on file name.
-texture_data load_texture(const string& filename) {
-  auto texture = texture_data{};
-  load_texture(filename, texture);
-  return texture;
 }
 
 }  // namespace yocto
@@ -1968,72 +1927,65 @@ bool make_scene_preset(
 namespace yocto {
 
 // Load/save a scene in the builtin JSON format.
-static void load_json_scene(
-    const string& filename, scene_data& scene, bool noparallel);
-static void save_json_scene(
-    const string& filename, const scene_data& scene, bool noparallel);
+static scene_data load_json_scene(const string& filename, bool noparallel);
+static void       save_json_scene(
+          const string& filename, const scene_data& scene, bool noparallel);
 
 // Load/save a scene from/to OBJ.
-static void load_obj_scene(
-    const string& filename, scene_data& scene, bool noparallel);
-static void save_obj_scene(
-    const string& filename, const scene_data& scene, bool noparallel);
+static scene_data load_obj_scene(const string& filename, bool noparallel);
+static void       save_obj_scene(
+          const string& filename, const scene_data& scene, bool noparallel);
 
 // Load/save a scene from/to PLY. Loads/saves only one mesh with no other
 // data.
-static void load_ply_scene(
-    const string& filename, scene_data& scene, bool noparallel);
-static void save_ply_scene(
-    const string& filename, const scene_data& scene, bool noparallel);
+static scene_data load_ply_scene(const string& filename, bool noparallel);
+static void       save_ply_scene(
+          const string& filename, const scene_data& scene, bool noparallel);
 
 // Load/save a scene from/to STL. Loads/saves only one mesh with no other
 // data.
-static void load_stl_scene(
-    const string& filename, scene_data& scene, bool noparallel);
-static void save_stl_scene(
-    const string& filename, const scene_data& scene, bool noparallel);
+static scene_data load_stl_scene(const string& filename, bool noparallel);
+static void       save_stl_scene(
+          const string& filename, const scene_data& scene, bool noparallel);
 
 // Load/save a scene from/to glTF.
-static void load_gltf_scene(
-    const string& filename, scene_data& scene, bool noparallel);
-static void save_gltf_scene(
-    const string& filename, const scene_data& scene, bool noparallel);
+static scene_data load_gltf_scene(const string& filename, bool noparallel);
+static void       save_gltf_scene(
+          const string& filename, const scene_data& scene, bool noparallel);
 
 // Load/save a scene from/to pbrt. This is not robust at all and only
 // works on scene that have been previously adapted since the two renderers
 // are too different to match.
-static void load_pbrt_scene(
-    const string& filename, scene_data& scene, bool noparallel);
-static void save_pbrt_scene(
-    const string& filename, const scene_data& scene, bool noparallel);
+static scene_data load_pbrt_scene(const string& filename, bool noparallel);
+static void       save_pbrt_scene(
+          const string& filename, const scene_data& scene, bool noparallel);
 
 // Load/save a scene from/to mitsuba. This is not robust at all and only
 // works on scene that have been previously adapted since the two renderers
 // are too different to match. For now, only saving is allowed.
-static void load_mitsuba_scene(
-    const string& filename, scene_data& scene, bool noparallel);
-static void save_mitsuba_scene(
-    const string& filename, const scene_data& scene, bool noparallel);
+static scene_data load_mitsuba_scene(const string& filename, bool noparallel);
+static void       save_mitsuba_scene(
+          const string& filename, const scene_data& scene, bool noparallel);
 
 // Load a scene
-void load_scene(const string& filename, scene_data& scene, bool noparallel) {
+scene_data load_scene(const string& filename, bool noparallel) {
   auto ext = path_extension(filename);
   if (ext == ".json" || ext == ".JSON") {
-    return load_json_scene(filename, scene, noparallel);
+    return load_json_scene(filename, noparallel);
   } else if (ext == ".obj" || ext == ".OBJ") {
-    return load_obj_scene(filename, scene, noparallel);
+    return load_obj_scene(filename, noparallel);
   } else if (ext == ".gltf" || ext == ".GLTF") {
-    return load_gltf_scene(filename, scene, noparallel);
+    return load_gltf_scene(filename, noparallel);
   } else if (ext == ".pbrt" || ext == ".PBRT") {
-    return load_pbrt_scene(filename, scene, noparallel);
+    return load_pbrt_scene(filename, noparallel);
   } else if (ext == ".xml" || ext == ".XML") {
-    return load_mitsuba_scene(filename, scene, noparallel);
+    return load_mitsuba_scene(filename, noparallel);
   } else if (ext == ".ply" || ext == ".PLY") {
-    return load_ply_scene(filename, scene, noparallel);
+    return load_ply_scene(filename, noparallel);
   } else if (ext == ".stl" || ext == ".STL") {
-    return load_stl_scene(filename, scene, noparallel);
+    return load_stl_scene(filename, noparallel);
   } else if (ext == ".ypreset" || ext == ".YPRESET") {
-    scene = make_scene_preset(filename);
+    return make_scene_preset(filename);
   } else {
     throw io_error("unsupported format " + filename);
   }
@@ -2060,13 +2012,6 @@ void save_scene(
   } else {
     throw io_error("unsupported format " + filename);
   }
-}
-
-// Load/save a scene
-scene_data load_scene(const string& filename, bool noparallel) {
-  auto scene = scene_data{};
-  load_scene(filename, scene, noparallel);
-  return scene;
 }
 
 // Make missing scene directories
@@ -2132,14 +2077,16 @@ static void load_instance(const string& filename, vector<frame3f>& frames) {
 }
 
 // load subdiv
-void load_subdiv(const string& filename, subdiv_data& subdiv) {
+subdiv_data load_subdiv(const string& filename) {
   auto lsubdiv         = load_fvshape(filename);
+  auto subdiv          = subdiv_data{};
   subdiv.quadspos      = lsubdiv.quadspos;
   subdiv.quadsnorm     = lsubdiv.quadsnorm;
   subdiv.quadstexcoord = lsubdiv.quadstexcoord;
   subdiv.positions     = lsubdiv.positions;
   subdiv.normals       = lsubdiv.normals;
   subdiv.texcoords     = lsubdiv.texcoords;
+  return subdiv;
 }
 
 // save subdiv
@@ -2152,13 +2099,6 @@ void save_subdiv(const string& filename, const subdiv_data& subdiv) {
   ssubdiv.normals       = subdiv.normals;
   ssubdiv.texcoords     = subdiv.texcoords;
   save_fvshape(filename, ssubdiv);
-}
-
-// load/save subdiv
-subdiv_data load_subdiv(const string& filename) {
-  auto subdiv = subdiv_data{};
-  load_subdiv(filename, subdiv);
-  return subdiv;
 }
 
 // save binary shape
@@ -2227,8 +2167,8 @@ NLOHMANN_JSON_SERIALIZE_ENUM(
                    })
 
 // Load a scene in the builtin JSON format.
-static void load_json_scene_version40(const string& filename,
-    const json_value& json, scene_data& scene, bool noparallel) {
+static scene_data load_json_scene_version40(
+    const string& filename, const json_value& json, bool noparallel) {
   // parse json value
   auto get_opt = [](const json_value& json, const string& key, auto& value) {
     value = json.value(key, value);
@@ -2241,6 +2181,9 @@ static void load_json_scene_version40(const string& filename,
     auto valuea = json.value(key, (array<float, 9>&)value);
     value       = *(mat3f*)&valuea;
   };
+
+  // scene
+  auto scene = scene_data{};
 
   // parse json reference
   auto shape_map = unordered_map<string, int>{};
@@ -2455,19 +2398,19 @@ static void load_json_scene_version40(const string& filename,
     parallel_foreach(scene.shapes, noparallel, [&](auto& shape) {
       auto path = find_path(
           get_shape_name(scene, shape), "shapes", {".ply", ".obj"});
-      return load_shape(path_join(dirname, path), shape);
+      shape = load_shape(path_join(dirname, path));
     });
     // load subdivs
     parallel_foreach(scene.subdivs, noparallel, [&](auto& subdiv) {
       auto path = find_path(
           get_subdiv_name(scene, subdiv), "subdivs", {".ply", ".obj"});
-      return load_subdiv(path_join(dirname, path), subdiv);
+      subdiv = load_subdiv(path_join(dirname, path));
     });
     // load textures
     parallel_foreach(scene.textures, noparallel, [&](auto& texture) {
       auto path = find_path(get_texture_name(scene, texture), "textures",
           {".hdr", ".exr", ".png", ".jpg"});
-      return load_texture(path_join(dirname, path), texture);
+      texture   = load_texture(path_join(dirname, path));
     });
     // load instances
     parallel_foreach(ply_instances, noparallel, [&](auto& ply_instance) {
@@ -2515,14 +2458,17 @@ static void load_json_scene_version40(const string& filename,
   add_missing_camera(scene);
   add_missing_radius(scene);
   trim_memory(scene);
+
+  // done
+  return scene;
 }
 
 // Load a scene in the builtin JSON format.
-static void load_json_scene_version41(const string& filename, json_value& json,
-    scene_data& scene, bool noparallel) {
+static scene_data load_json_scene_version41(
+    const string& filename, json_value& json, bool noparallel) {
   // check version
   if (!json.contains("asset") || !json.at("asset").contains("version"))
-    return load_json_scene_version40(filename, json, scene, noparallel);
+    return load_json_scene_version40(filename, json, noparallel);
 
   // parse json value
   auto get_opt = [](const json_value& json, const string& key, auto& value) {
@@ -2543,6 +2489,9 @@ static void load_json_scene_version41(const string& filename, json_value& json,
   auto shape_filenames   = vector<string>{};
   auto texture_filenames = vector<string>{};
   auto subdiv_filenames  = vector<string>{};
+
+  // scene
+  auto scene = scene_data{};
 
   // parsing values
   try {
@@ -2710,18 +2659,16 @@ static void load_json_scene_version41(const string& filename, json_value& json,
   try {
     // load shapes
     parallel_zip(shape_filenames, scene.shapes, noparallel,
-        [&](auto&& filename, auto&& shape) {
-          return load_shape(filename, shape);
-        });
+        [&](auto&& filename, auto&& shape) { shape = load_shape(filename); });
     // load subdivs
     parallel_zip(subdiv_filenames, scene.subdivs, noparallel,
         [&](auto&& filename, auto&& subdiv) {
-          return load_subdiv(filename, subdiv);
+          subdiv = load_subdiv(filename);
         });
     // load textures
     parallel_zip(texture_filenames, scene.textures, noparallel,
         [&](auto&& filename, auto&& texture) {
-          return load_texture(filename, texture);
+          texture = load_texture(filename);
         });
   } catch (std::exception& except) {
     throw io_error(
@@ -2732,20 +2679,22 @@ static void load_json_scene_version41(const string& filename, json_value& json,
   add_missing_camera(scene);
   add_missing_radius(scene);
   trim_memory(scene);
+
+  // done
+  return scene;
 }
 
 // Load a scene in the builtin JSON format.
-static void load_json_scene(
-    const string& filename, scene_data& scene, bool noparallel) {
+static scene_data load_json_scene(const string& filename, bool noparallel) {
   // open file
   auto json = load_json(filename);
 
   // check version
   if (!json.contains("asset") || !json.at("asset").contains("version"))
-    return load_json_scene_version40(filename, json, scene, noparallel);
+    return load_json_scene_version40(filename, json, noparallel);
   if (json.contains("asset") && json.at("asset").contains("version") &&
       json.at("asset").at("version") == "4.1")
-    return load_json_scene_version41(filename, json, scene, noparallel);
+    return load_json_scene_version41(filename, json, noparallel);
 
   // parse json value
   auto get_opt = [](const json_value& json, const string& key, auto& value) {
@@ -2756,6 +2705,9 @@ static void load_json_scene(
   auto shape_filenames   = vector<string>{};
   auto texture_filenames = vector<string>{};
   auto subdiv_filenames  = vector<string>{};
+
+  // scene
+  auto scene = scene_data{};
 
   // parsing values
   try {
@@ -2908,17 +2860,17 @@ static void load_json_scene(
     // load shapes
     parallel_zip(shape_filenames, scene.shapes, noparallel,
         [&](auto&& filename, auto&& shape) {
-          return load_shape(path_join(dirname, filename), shape);
+          shape = load_shape(path_join(dirname, filename));
         });
     // load subdivs
     parallel_zip(subdiv_filenames, scene.subdivs, noparallel,
         [&](auto&& filename, auto&& subdiv) {
-          return load_subdiv(path_join(dirname, filename), subdiv);
+          subdiv = load_subdiv(path_join(dirname, filename));
         });
     // load textures
     parallel_zip(texture_filenames, scene.textures, noparallel,
         [&](auto&& filename, auto&& texture) {
-          return load_texture(path_join(dirname, filename), texture);
+          texture = load_texture(path_join(dirname, filename));
         });
   } catch (std::exception& except) {
     throw io_error(
@@ -2929,6 +2881,9 @@ static void load_json_scene(
   add_missing_camera(scene);
   add_missing_radius(scene);
   trim_memory(scene);
+
+  // done
+  return scene;
 }
 
 // Save a scene in the builtin JSON format.
@@ -3158,10 +3113,12 @@ static void save_json_scene(
 namespace yocto {
 
 // Loads an OBJ
-static void load_obj_scene(
-    const string& filename, scene_data& scene, bool noparallel) {
+static scene_data load_obj_scene(const string& filename, bool noparallel) {
   // load obj
   auto obj = load_obj(filename, false, true);
+
+  // scene
+  auto scene = scene_data{};
 
   // convert cameras
   scene.cameras.reserve(obj.cameras.size());
@@ -3267,7 +3224,7 @@ static void load_obj_scene(
     // load textures
     parallel_zip(texture_paths, scene.textures, noparallel,
         [&](auto&& path, auto&& texture) {
-          return load_texture(path_join(dirname, path), texture);
+          texture = load_texture(path_join(dirname, path));
         });
   } catch (std::exception& except) {
     throw io_error(
@@ -3277,6 +3234,9 @@ static void load_obj_scene(
   // fix scene
   add_missing_camera(scene);
   add_missing_radius(scene);
+
+  // done
+  return scene;
 }
 
 static void save_obj_scene(
@@ -3383,8 +3343,10 @@ static void save_obj_scene(
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-static void load_ply_scene(
-    const string& filename, scene_data& scene, bool noparallel) {
+static scene_data load_ply_scene(const string& filename, bool noparallel) {
+  // scene
+  auto scene = scene_data{};
+
   // load ply mesh and make instance
   auto shape = load_shape(filename);
   scene.shapes.push_back(shape);
@@ -3396,6 +3358,9 @@ static void load_ply_scene(
   add_missing_camera(scene);
   add_missing_radius(scene);
   add_missing_lights(scene);
+
+  // done
+  return scene;
 }
 
 static void save_ply_scene(
@@ -3412,8 +3377,10 @@ static void save_ply_scene(
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-static void load_stl_scene(
-    const string& filename, scene_data& scene, bool noparallel) {
+static scene_data load_stl_scene(const string& filename, bool noparallel) {
+  // scene
+  auto scene = scene_data{};
+
   // load ply mesh and make instance
   auto shape = load_shape(filename);
   scene.instances.push_back({{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}},
@@ -3424,6 +3391,9 @@ static void load_stl_scene(
   add_missing_camera(scene);
   add_missing_radius(scene);
   add_missing_lights(scene);
+
+  // done
+  return scene;
 }
 
 static void save_stl_scene(
@@ -3441,8 +3411,7 @@ static void save_stl_scene(
 namespace yocto {
 
 // Load a scene
-static void load_gltf_scene(
-    const string& filename, scene_data& scene, bool noparallel) {
+static scene_data load_gltf_scene(const string& filename, bool noparallel) {
   // load gltf data
   auto data = load_binary(filename);
 
@@ -3470,6 +3439,9 @@ static void load_gltf_scene(
   auto& cgltf       = *cgltf_ptr;
   auto  cgltf_guard = std::unique_ptr<cgltf_data, void (*)(cgltf_data*)>(
       cgltf_ptr, cgltf_free);
+
+  // scene
+  auto scene = scene_data{};
 
   // convert cameras
   auto cameras = vector<camera_data>{};
@@ -3768,7 +3740,7 @@ static void load_gltf_scene(
     // load textures
     parallel_foreach(scene.textures, noparallel, [&](auto& texture) {
       auto& path = texture_paths[&texture - &scene.textures.front()];
-      return load_texture(path_join(dirname, path), texture);
+      texture    = load_texture(path_join(dirname, path));
     });
   } catch (std::exception& except) {
     throw io_error(
@@ -3780,6 +3752,9 @@ static void load_gltf_scene(
   add_missing_camera(scene);
   add_missing_radius(scene);
   add_missing_lights(scene);
+
+  // done
+  return scene;
 }
 
 // Load a scene
@@ -4135,10 +4110,12 @@ static void save_gltf_scene(
 namespace yocto {
 
 // load pbrt scenes
-static void load_pbrt_scene(
-    const string& filename, scene_data& scene, bool noparallel) {
+static scene_data load_pbrt_scene(const string& filename, bool noparallel) {
   // load pbrt
   auto pbrt = load_pbrt(filename);
+
+  // scene
+  auto scene = scene_data{};
 
   // convert cameras
   for (auto& pcamera : pbrt.cameras) {
@@ -4238,12 +4215,12 @@ static void load_pbrt_scene(
     parallel_foreach(scene.shapes, noparallel, [&](auto& shape) {
       auto& path = shapes_paths[&shape - &scene.shapes.front()];
       if (path.empty()) return;
-      load_shape(path_join(dirname, path), shape);
+      shape = load_shape(path_join(dirname, path));
     });
     // load textures
     parallel_foreach(scene.textures, noparallel, [&](auto& texture) {
       auto& path = texture_paths[&texture - &scene.textures.front()];
-      return load_texture(path_join(dirname, path), texture);
+      texture    = load_texture(path_join(dirname, path));
     });
   } catch (std::exception& except) {
     throw io_error(
@@ -4253,6 +4230,9 @@ static void load_pbrt_scene(
   // fix scene
   add_missing_camera(scene);
   add_missing_radius(scene);
+
+  // done
+  return scene;
 }
 
 // Save a pbrt scene
@@ -4348,8 +4328,7 @@ static void save_pbrt_scene(
 namespace yocto {
 
 // load mitsuba scenes
-static void load_mitsuba_scene(
-    const string& filename, scene_data& scene, bool noparallel) {
+static scene_data load_mitsuba_scene(const string& filename, bool noparallel) {
   // not implemented
   throw io_error(
       "cannot load " + filename + " since format is not supported for reading");
