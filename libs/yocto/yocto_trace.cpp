@@ -1523,17 +1523,17 @@ trace_state make_trace_state(
                          : vec2i{(int)round(params.resolution * camera.aspect),
                               params.resolution};
   state.samples    = 0;
-  state.render     = image_t<vec4f>{resolution};
-  state.albedo     = image_t<vec3f>{resolution};
-  state.normal     = image_t<vec3f>{resolution};
-  state.hits       = image_t<int>{resolution};
-  state.rngs       = image_t<rng_state>{resolution};
+  state.render     = image<vec4f>{resolution};
+  state.albedo     = image<vec3f>{resolution};
+  state.normal     = image<vec3f>{resolution};
+  state.hits       = image<int>{resolution};
+  state.rngs       = image<rng_state>{resolution};
   auto rng_        = make_rng(1301081);
   for (auto& rng : state.rngs) {
     rng = make_rng(params.seed, rand1i(rng_, 1 << 31) / 2 + 1);
   }
   if (params.denoise) {
-    state.denoised = image_t<vec4f>{resolution};
+    state.denoised = image<vec4f>{resolution};
   }
   return state;
 }
@@ -1601,7 +1601,7 @@ trace_lights make_trace_lights(
 }
 
 // Convenience helper
-image_t<vec4f> trace_image(const scene_data& scene, trace_sampler_type type,
+image<vec4f> trace_image(const scene_data& scene, trace_sampler_type type,
     int resolution, int samples, int bounces) {
   auto params       = trace_params{};
   params.sampler    = type;
@@ -1618,8 +1618,7 @@ image_t<vec4f> trace_image(const scene_data& scene, trace_sampler_type type,
 }
 
 // Progressively computes an image.
-image_t<vec4f> trace_image(
-    const scene_data& scene, const trace_params& params) {
+image<vec4f> trace_image(const scene_data& scene, const trace_params& params) {
   auto bvh    = make_trace_bvh(scene, params);
   auto lights = make_trace_lights(scene, params);
   auto state  = make_trace_state(scene, params);
@@ -1691,7 +1690,7 @@ void trace_cancel(trace_context& context) {
 // Async done
 bool trace_done(const trace_context& context) { return context.done; }
 
-void trace_preview(image_t<vec4f>& image, trace_context& context,
+void trace_preview(image<vec4f>& image, trace_context& context,
     trace_state& state, const scene_data& scene, const trace_bvh& bvh,
     const trace_lights& lights, const trace_params& params) {
   // preview
@@ -1709,18 +1708,18 @@ void trace_preview(image_t<vec4f>& image, trace_context& context,
 
 // Check image type
 template <typename T>
-static void check_image(const image_t<T>& image, vec2i size) {
+static void check_image(const image<T>& image, vec2i size) {
   if (image.size() != size)
     throw std::invalid_argument{"image should have the same size"};
 }
 
 // Get resulting render, denoised if requested
-image_t<vec4f> get_image(const trace_state& state) {
-  auto render = image_t<vec4f>{state.render.size()};
+image<vec4f> get_image(const trace_state& state) {
+  auto render = image<vec4f>{state.render.size()};
   get_image(render, state);
   return render;
 }
-void get_image(image_t<vec4f>& render, const trace_state& state) {
+void get_image(image<vec4f>& render, const trace_state& state) {
   check_image(render, state.render.size());
   if (state.denoised.empty()) {
     render = state.render;
@@ -1730,21 +1729,21 @@ void get_image(image_t<vec4f>& render, const trace_state& state) {
 }
 
 // Get resulting render
-image_t<vec4f> get_rendered_image(const trace_state& state) {
+image<vec4f> get_rendered_image(const trace_state& state) {
   return state.render;
 }
-void get_rendered_image(image_t<vec4f>& image, const trace_state& state) {
+void get_rendered_image(image<vec4f>& image, const trace_state& state) {
   check_image(image, state.render.size());
   image = state.render;
 }
 
 // Get denoised render
-image_t<vec4f> get_denoised_image(const trace_state& state) {
+image<vec4f> get_denoised_image(const trace_state& state) {
   auto image = state.render;
   get_denoised_image(image, state);
   return image;
 }
-void get_denoised_image(image_t<vec4f>& image, const trace_state& state) {
+void get_denoised_image(image<vec4f>& image, const trace_state& state) {
 #if YOCTO_DENOISE
   // Create an Intel Open Image Denoise device
   oidn::DeviceRef device = oidn::newDevice();
@@ -1778,28 +1777,24 @@ void get_denoised_image(image_t<vec4f>& image, const trace_state& state) {
 }
 
 // Get denoising buffers
-image_t<vec3f> get_albedo_image(const trace_state& state) {
-  return state.albedo;
-}
-void get_albedo_image(image_t<vec3f>& albedo, const trace_state& state) {
+image<vec3f> get_albedo_image(const trace_state& state) { return state.albedo; }
+void         get_albedo_image(image<vec3f>& albedo, const trace_state& state) {
   albedo = state.albedo;
 }
-image_t<vec3f> get_normal_image(const trace_state& state) {
-  return state.normal;
-}
-void get_normal_image(image_t<vec3f>& normal, const trace_state& state) {
+image<vec3f> get_normal_image(const trace_state& state) { return state.normal; }
+void         get_normal_image(image<vec3f>& normal, const trace_state& state) {
   normal = state.normal;
 }
 
 // Denoise image
-image_t<vec4f> denoise_image(const image_t<vec4f>& render,
-    const image_t<vec3f>& albedo, const image_t<vec3f>& normal) {
+image<vec4f> denoise_image(const image<vec4f>& render,
+    const image<vec3f>& albedo, const image<vec3f>& normal) {
   auto denoised = render;
   denoise_image(denoised, render, albedo, normal);
   return denoised;
 }
-void denoise_image(image_t<vec4f>& denoised, const image_t<vec4f>& render,
-    const image_t<vec3f>& albedo, const image_t<vec3f>& normal) {
+void denoise_image(image<vec4f>& denoised, const image<vec4f>& render,
+    const image<vec3f>& albedo, const image<vec3f>& normal) {
   check_image(denoised, render.size());
   check_image(albedo, render.size());
   check_image(normal, render.size());

@@ -68,7 +68,7 @@ namespace yocto {
 // Image data as array of float or byte pixels. Images can be stored in linear
 // or non linear color space.
 template <typename T>
-struct image_t {
+struct image {
   // iterators and references
   using iterator        = typename vector<T>::iterator;
   using const_iterator  = typename vector<T>::const_iterator;
@@ -76,9 +76,9 @@ struct image_t {
   using const_reference = typename vector<T>::const_reference;
 
   // image api similar to vector
-  image_t();
-  image_t(vec2i size, const T& value = T{});
-  image_t(vec2i size, const T* values);
+  image();
+  image(vec2i size, const T& value = T{});
+  image(vec2i size, const T* values);
 
   // size
   bool  empty() const;
@@ -107,68 +107,66 @@ struct image_t {
 
 // equality
 template <typename T>
-inline bool operator==(const image_t<T>& a, const image_t<T>& b);
+inline bool operator==(const image<T>& a, const image<T>& b);
 template <typename T>
-inline bool operator!=(const image_t<T>& a, const image_t<T>& b);
+inline bool operator!=(const image<T>& a, const image<T>& b);
 
 // Image data
 template <typename T>
-inline float image_aspect(const image_t<T>& image);
+inline float image_aspect(const image<T>& image);
 
 // Evaluates an image at a point `uv`.
 template <typename T>
-inline T eval_image(const image_t<T>& image, vec2f uv,
+inline T eval_image(const image<T>& image, vec2f uv,
     bool no_interpolation = false, bool clamp_to_edge = false);
 
 // Make an image from a function that goes from [0,1]x[0,1] to T.
 template <typename Func, typename T = std::invoke_result_t<Func, vec2f>>
-inline image_t<T> make_image(vec2i size, Func&& func);
+inline image<T> make_image(vec2i size, Func&& func);
 template <typename Func, typename T = std::invoke_result_t<Func, vec2f>>
-inline image_t<T> make_image(vec2i size, int samples, Func&& func);
+inline image<T> make_image(vec2i size, int samples, Func&& func);
 
 // Make an image by applying a function to reach pixel of another.
 template <typename S, typename Func, typename T = std::invoke_result_t<Func, S>>
-inline image_t<T> transform_image(const image_t<S>& source, Func&& func);
+inline image<T> transform_image(const image<S>& source, Func&& func);
 template <typename T, typename S, typename Func>
 inline void transform_image(
-    image_t<T>& result, const image_t<S>& source, Func&& func);
+    image<T>& result, const image<S>& source, Func&& func);
 template <typename S1, typename S2, typename Func,
     typename T = std::invoke_result_t<Func, S1, S2>>
-inline image_t<T> transform_images(
-    const image_t<S1>& source1, const image_t<S2>& source2, Func&& func);
+inline image<T> transform_images(
+    const image<S1>& source1, const image<S2>& source2, Func&& func);
 template <typename T, typename S1, typename S2, typename Func>
-inline void transform_images(image_t<T>& result, const image_t<S1>& source1,
-    const image_t<S2>& source2, Func&& func);
+inline void transform_images(image<T>& result, const image<S1>& source1,
+    const image<S2>& source2, Func&& func);
 
 // Convolve an image with a kernel
 template <typename T>
-inline image_t<T> convolve_image(
-    const image_t<T>& img, const image_t<float>& kernel);
+inline image<T> convolve_image(const image<T>& img, const image<float>& kernel);
 // Convolve an image with a separable kernel
 template <typename T>
-inline image_t<T> convolve_image(
-    const image_t<T>& img, const vector<float>& kernel);
+inline image<T> convolve_image(
+    const image<T>& img, const vector<float>& kernel);
 // Gaussian kernel
-inline vector<float>  make_gaussian_kernel1d(float sigma);
-inline image_t<float> make_gaussian_kernel2d(float sigma);
+inline vector<float> make_gaussian_kernel1d(float sigma);
+inline image<float>  make_gaussian_kernel2d(float sigma);
 // Sharpening kernel
-inline vector<float>  make_sharpening_kernel1d(float sigma, float scale = 1);
-inline image_t<float> make_sharpening_kernel2d(float sigma, float scale = 1);
+inline vector<float> make_sharpening_kernel1d(float sigma, float scale = 1);
+inline image<float>  make_sharpening_kernel2d(float sigma, float scale = 1);
 
 // Get/Set region
 template <typename T>
-inline image_t<T> get_region(
-    const image_t<T>& source, vec2i offset, vec2i size);
+inline image<T> get_region(const image<T>& source, vec2i offset, vec2i size);
 template <typename T>
 inline void get_region(
-    image_t<T>& region, const image_t<T>& source, vec2i offset, vec2i size);
+    image<T>& region, const image<T>& source, vec2i offset, vec2i size);
 template <typename T>
 inline void set_region(
-    image_t<T>& destination, const image_t<T>& source, vec2i offset);
+    image<T>& destination, const image<T>& source, vec2i offset);
 
 // Convenience functions
 template <typename T>
-inline T sum(const image_t<T>& img);
+inline T sum(const image<T>& img);
 template <typename T>
 inline T sum(const vector<T>& img);
 
@@ -192,10 +190,10 @@ inline int   reconstruction_radius(reconstruction_type ktype);
 
 // Image reconstruction
 template <typename T, typename Func>
-inline T reconstruct_image(const image_t<T>& img, vec2f uv, Func&& kernel,
+inline T reconstruct_image(const image<T>& img, vec2f uv, Func&& kernel,
     int kradius = 2, bool clamp_to_edge = false);
 template <typename T>
-inline T reconstruct_image(const image_t<T>& img, vec2f uv,
+inline T reconstruct_image(const image<T>& img, vec2f uv,
     reconstruction_type ktype, bool clamp_to_edge = false);
 
 }  // namespace yocto
@@ -206,50 +204,50 @@ inline T reconstruct_image(const image_t<T>& img, vec2f uv,
 namespace yocto {
 
 // Conversion from/to floats.
-image_t<vec4f> byte_to_float(const image_t<vec4b>& bt);
-image_t<vec4b> float_to_byte(const image_t<vec4f>& fl);
+image<vec4f> byte_to_float(const image<vec4b>& bt);
+image<vec4b> float_to_byte(const image<vec4f>& fl);
 
 // Conversion between linear and gamma-encoded images.
-image_t<vec4f> srgb_to_rgb(const image_t<vec4f>& srgb);
-image_t<vec4f> rgb_to_srgb(const image_t<vec4f>& rgb);
-image_t<vec4f> srgbb_to_rgb(const image_t<vec4b>& srgb);
-image_t<vec4b> rgb_to_srgbb(const image_t<vec4f>& rgb);
+image<vec4f> srgb_to_rgb(const image<vec4f>& srgb);
+image<vec4f> rgb_to_srgb(const image<vec4f>& rgb);
+image<vec4f> srgbb_to_rgb(const image<vec4b>& srgb);
+image<vec4b> rgb_to_srgbb(const image<vec4f>& rgb);
 
 // Apply exposure and filmic tone mapping
-image_t<vec4f> tonemap_image(const image_t<vec4f>& hdr, float exposure = 0,
+image<vec4f> tonemap_image(const image<vec4f>& hdr, float exposure = 0,
     bool filmic = false, bool srgb = true);
-image_t<vec4b> tonemapb_image(const image_t<vec4f>& hdr, float exposure = 0,
+image<vec4b> tonemapb_image(const image<vec4f>& hdr, float exposure = 0,
     bool filmic = false, bool srgb = true);
 // fast tone map for UI
-void tonemap_image(image_t<vec4f>& ldr, const image_t<vec4f>& hdr,
+void tonemap_image(image<vec4f>& ldr, const image<vec4f>& hdr,
     float exposure = 0, bool filmic = false, bool srgb = true);
 
 // Apply exposure and filmic tone mapping
-image_t<vec4f> colorgrade_image(
-    const image_t<vec4f>& img, bool linear, const colorgrade_params& params);
+image<vec4f> colorgrade_image(
+    const image<vec4f>& img, bool linear, const colorgrade_params& params);
 // compute white balance
-vec3f compute_white_balance(const image_t<vec4f>& img);
+vec3f compute_white_balance(const image<vec4f>& img);
 // fast color grade for UI
-void colorgrade_image(image_t<vec4f>& graded, const image_t<vec4f>& img,
+void colorgrade_image(image<vec4f>& graded, const image<vec4f>& img,
     bool linear, const colorgrade_params& params);
 
 // image compositing
-image_t<vec4f> composite_image(
-    const image_t<vec4f>& foreground, const image_t<vec4f>& background);
+image<vec4f> composite_image(
+    const image<vec4f>& foreground, const image<vec4f>& background);
 
 // removes alpha
-image_t<vec4f> remove_alpha(const image_t<vec4f>& img);
+image<vec4f> remove_alpha(const image<vec4f>& img);
 
 // turns alpha into a gray scale image
-image_t<vec4f> alpha_to_gray(const image_t<vec4f>& img);
+image<vec4f> alpha_to_gray(const image<vec4f>& img);
 
 // image difference
-image_t<vec4f> image_difference(
-    const image_t<vec4f>& a, const image_t<vec4f>& b, bool display);
+image<vec4f> image_difference(
+    const image<vec4f>& a, const image<vec4f>& b, bool display);
 
 // image resizing
-image_t<vec4f> resize_image(const image_t<vec4f>& img, vec2i resize);
-image_t<vec4b> resize_image(const image_t<vec4b>& img, vec2i resize);
+image<vec4f> resize_image(const image<vec4f>& img, vec2i resize);
+image<vec4b> resize_image(const image<vec4b>& img, vec2i resize);
 
 }  // namespace yocto
 
@@ -259,47 +257,47 @@ image_t<vec4b> resize_image(const image_t<vec4b>& img, vec2i resize);
 namespace yocto {
 
 // Make a grid image.
-image_t<vec4f> make_grid(vec2i size, float scale = 1,
+image<vec4f> make_grid(vec2i size, float scale = 1,
     vec4f color0 = vec4f{0.2f, 0.2f, 0.2f, 1.0f},
     vec4f color1 = vec4f{0.5f, 0.5f, 0.5f, 1.0f});
 // Make a checker image.
-image_t<vec4f> make_checker(vec2i size, float scale = 1,
+image<vec4f> make_checker(vec2i size, float scale = 1,
     vec4f color0 = vec4f{0.2f, 0.2f, 0.2f, 1.0f},
     vec4f color1 = vec4f{0.5f, 0.5f, 0.5f, 1.0f});
 // Make a bump map.
-image_t<vec4f> make_bumps(vec2i size, float scale = 1,
+image<vec4f> make_bumps(vec2i size, float scale = 1,
     vec4f color0 = vec4f{0, 0, 0, 1}, vec4f color1 = vec4f{1, 1, 1, 1});
 // Make a ramp
-image_t<vec4f> make_ramp(vec2i size, float scale = 1,
+image<vec4f> make_ramp(vec2i size, float scale = 1,
     vec4f color0 = vec4f{0, 0, 0, 1}, vec4f color1 = vec4f{1, 1, 1, 1});
 // Make a gamma ramp.
-image_t<vec4f> make_gammaramp(vec2i size, float scale = 1,
+image<vec4f> make_gammaramp(vec2i size, float scale = 1,
     vec4f color0 = vec4f{0, 0, 0, 1}, vec4f color1 = vec4f{1, 1, 1, 1});
 // Make a uv ramp
-image_t<vec4f> make_uvramp(vec2i size, float scale = 1);
+image<vec4f> make_uvramp(vec2i size, float scale = 1);
 // Make a uv grid
-image_t<vec4f> make_uvgrid(vec2i size, float scale = 1, bool colored = true);
+image<vec4f> make_uvgrid(vec2i size, float scale = 1, bool colored = true);
 // Make color map ramp.
-image_t<vec4f> make_colormapramp(vec2i size, float scale = 1);
+image<vec4f> make_colormapramp(vec2i size, float scale = 1);
 
 // Make a sunsky HDR model with sun at sun_angle elevation in [0,pif/2],
 // turbidity in [1.7,10] with or without sun. The sun can be enabled or
 // disabled with has_sun. The sun parameters can be slightly modified by
 // changing the sun intensity and temperature. Has a convention, a temperature
 // of 0 sets the eath sun defaults (ignoring intensity too).
-image_t<vec4f> make_sunsky(vec2i size, float sun_angle, float turbidity = 3,
+image<vec4f> make_sunsky(vec2i size, float sun_angle, float turbidity = 3,
     bool has_sun = false, float sun_intensity = 1, float sun_radius = 1,
     vec3f ground_albedo = {0.2f, 0.2f, 0.2f});
 // Make an image of multiple lights.
-image_t<vec4f> make_lights(vec2i size, vec3f le = {1, 1, 1}, int nlights = 4,
+image<vec4f> make_lights(vec2i size, vec3f le = {1, 1, 1}, int nlights = 4,
     float langle = pif / 4, float lwidth = pif / 16, float lheight = pif / 16);
 
 // Comvert a bump map to a normal map. All linear color spaces.
-image_t<vec4f> bump_to_normal(const image_t<vec4f>& image, float scale = 1);
+image<vec4f> bump_to_normal(const image<vec4f>& image, float scale = 1);
 
 // Add a border to an image
-image_t<vec4f> add_border(
-    const image_t<vec4f>& img, float width, vec4f color = {0, 0, 0, 1});
+image<vec4f> add_border(
+    const image<vec4f>& img, float width, vec4f color = {0, 0, 0, 1});
 
 }  // namespace yocto
 
@@ -318,90 +316,90 @@ namespace yocto {
 
 // image api similar to vector
 template <typename T>
-inline image_t<T>::image_t() : _size{0, 0}, _data{} {}
+inline image<T>::image() : _size{0, 0}, _data{} {}
 template <typename T>
-inline image_t<T>::image_t(vec2i size, const T& value)
+inline image<T>::image(vec2i size, const T& value)
     : _size{size}, _data((size_t)size.x * (size_t)size.y, value) {}
 template <typename T>
-inline image_t<T>::image_t(vec2i size, const T* values)
+inline image<T>::image(vec2i size, const T* values)
     : _size{size}, _data{values, values + size.x * size.y} {}
 
 // size
 template <typename T>
-inline bool image_t<T>::empty() const {
+inline bool image<T>::empty() const {
   return _size == zero2i;
 }
 template <typename T>
-inline vec2i image_t<T>::size() const {
+inline vec2i image<T>::size() const {
   return _size;
 }
 
 // iterator access
 template <typename T>
-inline typename image_t<T>::iterator image_t<T>::begin() {
+inline typename image<T>::iterator image<T>::begin() {
   return _data.begin();
 }
 template <typename T>
-inline typename image_t<T>::iterator image_t<T>::end() {
+inline typename image<T>::iterator image<T>::end() {
   return _data.end();
 }
 template <typename T>
-inline typename image_t<T>::const_iterator image_t<T>::begin() const {
+inline typename image<T>::const_iterator image<T>::begin() const {
   return _data.begin();
 }
 template <typename T>
-inline typename image_t<T>::const_iterator image_t<T>::end() const {
+inline typename image<T>::const_iterator image<T>::end() const {
   return _data.end();
 }
 
 // pixel access
 template <typename T>
-inline T& image_t<T>::operator[](vec2i ij) {
+inline T& image<T>::operator[](vec2i ij) {
   return _data[ij.y * _size.x + ij.x];
 }
 template <typename T>
-inline const T& image_t<T>::operator[](vec2i ij) const {
+inline const T& image<T>::operator[](vec2i ij) const {
   return _data[ij.y * _size.x + ij.x];
 }
 
 // data access
 template <typename T>
-inline T* image_t<T>::data() {
+inline T* image<T>::data() {
   return _data.data();
 }
 template <typename T>
-inline const T* image_t<T>::data() const {
+inline const T* image<T>::data() const {
   return _data.data();
 }
 template <typename T>
-inline vector<T>& image_t<T>::pixels() {
+inline vector<T>& image<T>::pixels() {
   return _data;
 }
 template <typename T>
-inline const vector<T>& image_t<T>::pixels() const {
+inline const vector<T>& image<T>::pixels() const {
   return _data;
 }
 
 // equality
 template <typename T>
-inline bool operator==(const image_t<T>& a, const image_t<T>& b) {
+inline bool operator==(const image<T>& a, const image<T>& b) {
   return a.size() == b.size() && a.pixels() == b.pixels();
 }
 template <typename T>
-inline bool operator!=(const image_t<T>& a, const image_t<T>& b) {
+inline bool operator!=(const image<T>& a, const image<T>& b) {
   return a.size() != b.size() || a.pixels() != b.pixels();
 }
 
 // Image data
 template <typename T>
-inline float image_aspect(const image_t<T>& image) {
+inline float image_aspect(const image<T>& image) {
   if (image.empty()) return 0;
   return float{image.size().x} / float{image.size().y};
 }
 
 // Evaluates an image at a point `uv`.
 template <typename T>
-inline T eval_image(const image_t<T>& image, vec2f uv, bool no_interpolation,
+inline T eval_image(const image<T>& image, vec2f uv, bool no_interpolation,
     bool clamp_to_edge) {
   if (image.empty()) return T{};
 
@@ -439,8 +437,8 @@ inline T eval_image(const image_t<T>& image, vec2f uv, bool no_interpolation,
 
 // Make an image from a function that goes from [0,1]x[0,1] to T.
 template <typename Func, typename T>
-inline image_t<T> make_image(vec2i size, Func&& func) {
-  auto img = image_t<T>(size);
+inline image<T> make_image(vec2i size, Func&& func) {
+  auto img = image<T>(size);
   for (auto ij : range(size)) {
     img[ij] = func(((vec2f)ij + 0.5f) / (vec2f)size);
   }
@@ -449,10 +447,10 @@ inline image_t<T> make_image(vec2i size, Func&& func) {
 
 // Make an image from a function that goes from [0,1]x[0,1] to T.
 template <typename Func, typename T>
-inline image_t<T> make_image(vec2i size, int samples, Func&& func) {
+inline image<T> make_image(vec2i size, int samples, Func&& func) {
   if (samples <= 1) return make_image(size, std::forward<Func>(func));
   auto ns  = (int)round(sqrt((float)samples));
-  auto img = image_t<T>(size, T{});
+  auto img = image<T>(size, T{});
   for (auto ij : range(size)) {
     for (auto sij : range({ns, ns})) {
       img[ij] += func(((vec2f)ij + ((vec2f)sij + 0.5f) / ns) / (vec2f)size);
@@ -464,24 +462,24 @@ inline image_t<T> make_image(vec2i size, int samples, Func&& func) {
 
 // Make an image by applying a function to reach pixel of another.
 template <typename S, typename Func, typename T>
-inline image_t<T> transform_image(const image_t<S>& source, Func&& func) {
-  auto result = image_t<T>(source.size());
+inline image<T> transform_image(const image<S>& source, Func&& func) {
+  auto result = image<T>(source.size());
   for (auto&& [res, src] : zip(result, source)) res = func(src);
   return result;
 }
 template <typename T, typename S, typename Func>
 inline void transform_image(
-    image_t<T>& result, const image_t<S>& source, Func&& func) {
+    image<T>& result, const image<S>& source, Func&& func) {
   if (result.size() != source.size())
     throw std::runtime_error("image size mismatch");
   for (auto&& [res, src] : zip(result, source)) res = func(src);
 }
 template <typename S1, typename S2, typename Func, typename T>
-inline image_t<T> transform_images(
-    const image_t<S1>& source1, const image_t<S2>& source2, Func&& func) {
+inline image<T> transform_images(
+    const image<S1>& source1, const image<S2>& source2, Func&& func) {
   if (source1.size() != source2.size())
     throw std::runtime_error("image size mismatch");
-  auto result = image_t<T>(source1.size());
+  auto result = image<T>(source1.size());
   for (auto&& [res, src1, src2] : zip(result, source1, source2))
     res = func(src1, src2);
   return result;
@@ -525,7 +523,7 @@ inline vector<T> make_curve(int size, Func&& func) {
 
 // Convenience functions
 template <typename T>
-inline T sum(const image_t<T>& img) {
+inline T sum(const image<T>& img) {
   auto sum = T{};
   for (auto& value : img) sum += value;
   return sum;
@@ -539,9 +537,9 @@ inline T sum(const vector<T>& values) {
 
 // Convolve an image with a kernel
 template <typename T>
-inline image_t<T> convolve_image(
-    const image_t<T>& img, const image_t<float>& kernel) {
-  auto result  = image_t<T>(img.size());
+inline image<T> convolve_image(
+    const image<T>& img, const image<float>& kernel) {
+  auto result  = image<T>(img.size());
   auto kcenter = kernel.size() / 2;
   for (auto ij : range(img.size())) {
     auto sum    = T{};
@@ -560,8 +558,8 @@ inline image_t<T> convolve_image(
 }
 // Convolve an image with a separable kernel
 template <typename T>
-inline image_t<T> convolve_image(
-    const image_t<T>& img, const vector<float>& kernel);
+inline image<T> convolve_image(
+    const image<T>& img, const vector<float>& kernel);
 // Gaussian kernel
 inline vector<float> make_gaussian_kernel1d(float sigma) {
   auto width  = (int)ceil(sigma * 3);
@@ -572,9 +570,9 @@ inline vector<float> make_gaussian_kernel1d(float sigma) {
   for (auto& value : kernel) value /= sum(kernel);
   return kernel;
 }
-inline image_t<float> make_gaussian_kernel2d(float sigma) {
+inline image<float> make_gaussian_kernel2d(float sigma) {
   auto kernel1d = make_gaussian_kernel1d(sigma);
-  auto kernel   = image_t<float>({(int)kernel1d.size(), (int)kernel1d.size()});
+  auto kernel   = image<float>({(int)kernel1d.size(), (int)kernel1d.size()});
   for (auto ij : range(kernel.size()))
     kernel[ij] = kernel1d[ij.x] * kernel1d[ij.y];
   for (auto& value : kernel) value /= sum(kernel);
@@ -588,7 +586,7 @@ inline vector<float> make_sharpening_kernel1d(float sigma, float scale) {
   return kernel;
 }
 // Sharpening kernel
-inline image_t<float> make_sharpening_kernel2d(float sigma, float scale) {
+inline image<float> make_sharpening_kernel2d(float sigma, float scale) {
   auto kernel = make_gaussian_kernel2d(sigma);
   for (auto& value : kernel) value = -scale * value;
   kernel[kernel.size() / 2] += 1 + scale;
@@ -597,21 +595,20 @@ inline image_t<float> make_sharpening_kernel2d(float sigma, float scale) {
 
 // Get/Set region
 template <typename T>
-inline image_t<T> get_region(
-    const image_t<T>& source, vec2i offset, vec2i size) {
-  auto region = image_t<T>(size);
+inline image<T> get_region(const image<T>& source, vec2i offset, vec2i size) {
+  auto region = image<T>(size);
   for (auto ij : range(region.size())) region[ij] = source[ij + offset];
   return region;
 }
 template <typename T>
 inline void get_region(
-    image_t<T>& region, const image_t<T>& source, vec2i offset, vec2i size) {
-  if (region.size() != size) region = image_t<T>(size);
+    image<T>& region, const image<T>& source, vec2i offset, vec2i size) {
+  if (region.size() != size) region = image<T>(size);
   for (auto ij : range(region.size())) region[ij] = source[ij + offset];
 }
 template <typename T>
 inline void set_region(
-    image_t<T>& destination, const image_t<T>& source, vec2i offset) {
+    image<T>& destination, const image<T>& source, vec2i offset) {
   for (auto ij : range(source.size())) destination[ij + offset] = source[ij];
 }
 
@@ -699,7 +696,7 @@ inline int reconstruction_radius(reconstruction_type ktype) {
 
 // Image reconstruction
 template <typename T, typename Func>
-inline T reconstruct_image(const image_t<T>& img, vec2f uv, Func&& kernel,
+inline T reconstruct_image(const image<T>& img, vec2f uv, Func&& kernel,
     int kradius, bool clamp_to_edge) {
   auto x    = uv * (vec2f)img.size();
   auto ij   = (vec2i)(x + 0.5f);
@@ -715,7 +712,7 @@ inline T reconstruct_image(const image_t<T>& img, vec2f uv, Func&& kernel,
   return sum;
 }
 template <typename T>
-inline T reconstruct_image(const image_t<T>& img, vec2f uv,
+inline T reconstruct_image(const image<T>& img, vec2f uv,
     reconstruction_type ktype, bool clamp_to_edge) {
   switch (ktype) {
     case reconstruction_type::box:

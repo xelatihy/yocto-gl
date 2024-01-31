@@ -55,61 +55,61 @@ using std::unique_ptr;
 namespace yocto {
 
 // Conversion from/to floats.
-image_t<vec4f> byte_to_float(const image_t<vec4b>& bt) {
+image<vec4f> byte_to_float(const image<vec4b>& bt) {
   return transform_image(bt, [](vec4b a) { return byte_to_float(a); });
 }
-image_t<vec4b> float_to_byte(const image_t<vec4f>& fl) {
+image<vec4b> float_to_byte(const image<vec4f>& fl) {
   return transform_image(fl, [](vec4f a) { return float_to_byte(a); });
 }
 
 // Conversion between linear and gamma-encoded images.
-image_t<vec4f> srgb_to_rgb(const image_t<vec4f>& srgb) {
+image<vec4f> srgb_to_rgb(const image<vec4f>& srgb) {
   return transform_image(srgb, [](vec4f a) { return srgb_to_rgb(a); });
 }
-image_t<vec4f> rgb_to_srgb(const image_t<vec4f>& rgb) {
+image<vec4f> rgb_to_srgb(const image<vec4f>& rgb) {
   return transform_image(rgb, [](vec4f a) { return rgb_to_srgb(a); });
 }
-image_t<vec4f> srgbb_to_rgb(const image_t<vec4b>& srgb) {
+image<vec4f> srgbb_to_rgb(const image<vec4b>& srgb) {
   return transform_image(srgb, [](vec4b a) { return srgbb_to_rgb(a); });
 }
-image_t<vec4b> rgb_to_srgbb(const image_t<vec4f>& rgb) {
+image<vec4b> rgb_to_srgbb(const image<vec4f>& rgb) {
   return transform_image(rgb, [](vec4f a) { return rgb_to_srgbb(a); });
 }
 
 // Apply exposure and filmic tone mapping
-image_t<vec4f> tonemap_image(
-    const image_t<vec4f>& hdr, float exposure, bool filmic, bool srgb) {
+image<vec4f> tonemap_image(
+    const image<vec4f>& hdr, float exposure, bool filmic, bool srgb) {
   return transform_image(hdr, [exposure, filmic, srgb](vec4f a) {
     return tonemap(a, exposure, filmic, srgb);
   });
 }
-image_t<vec4b> tonemapb_image(
-    const image_t<vec4f>& hdr, float exposure, bool filmic, bool srgb) {
+image<vec4b> tonemapb_image(
+    const image<vec4f>& hdr, float exposure, bool filmic, bool srgb) {
   return transform_image(hdr, [exposure, filmic, srgb](vec4f a) {
     return float_to_byte(tonemap(a, exposure, filmic, srgb));
   });
 }
-void tonemap_image(image_t<vec4f>& ldr, const image_t<vec4f>& hdr,
-    float exposure, bool filmic, bool srgb) {
+void tonemap_image(image<vec4f>& ldr, const image<vec4f>& hdr, float exposure,
+    bool filmic, bool srgb) {
   return transform_image(ldr, hdr, [exposure, filmic, srgb](vec4f a) {
     return tonemap(a, exposure, filmic, srgb);
   });
 }
 
 // Apply exposure and filmic tone mapping
-image_t<vec4f> colorgrade_image(
-    const image_t<vec4f>& img, bool linear, const colorgrade_params& params) {
+image<vec4f> colorgrade_image(
+    const image<vec4f>& img, bool linear, const colorgrade_params& params) {
   return transform_image(
       img, [linear, params](vec4f a) { return colorgrade(a, linear, params); });
 }
-void colorgrade_image(image_t<vec4f>& graded, const image_t<vec4f>& img,
+void colorgrade_image(image<vec4f>& graded, const image<vec4f>& img,
     bool linear, const colorgrade_params& params) {
   return transform_image(graded, img,
       [linear, params](vec4f a) { return colorgrade(a, linear, params); });
 }
 
 // compute white balance
-vec3f compute_white_balance(const image_t<vec4f>& img) {
+vec3f compute_white_balance(const image<vec4f>& img) {
   auto rgb = vec3f{0, 0, 0};
   for (auto& p : img) rgb += xyz(p);
   if (rgb == vec3f{0, 0, 0}) return {0, 0, 0};
@@ -117,27 +117,27 @@ vec3f compute_white_balance(const image_t<vec4f>& img) {
 }
 
 // image compositing
-image_t<vec4f> composite_image(
-    const image_t<vec4f>& foreground, const image_t<vec4f>& background) {
+image<vec4f> composite_image(
+    const image<vec4f>& foreground, const image<vec4f>& background) {
   return transform_images(
       foreground, background, [](vec4f a, vec4f b) { return composite(a, b); });
 }
 
 // removes alpha
-image_t<vec4f> remove_alpha(const image_t<vec4f>& img) {
+image<vec4f> remove_alpha(const image<vec4f>& img) {
   return transform_image(img, [](vec4f a) -> vec4f { return {xyz(a), 1}; });
 }
 
 // turns alpha into a gray scale image
-image_t<vec4f> alpha_to_gray(const image_t<vec4f>& img) {
+image<vec4f> alpha_to_gray(const image<vec4f>& img) {
   return transform_image(img, [](vec4f a) -> vec4f {
     auto g = a.w;
     return {g, g, g, 1};
   });
 }
 
-image_t<vec4f> image_difference(
-    const image_t<vec4f>& a, const image_t<vec4f>& b, bool display) {
+image<vec4f> image_difference(
+    const image<vec4f>& a, const image<vec4f>& b, bool display) {
   return transform_images(a, b, [display](vec4f a, vec4f b) -> vec4f {
     auto diff = abs(a - b);
     if (display) {
@@ -149,7 +149,7 @@ image_t<vec4f> image_difference(
   });
 }
 
-image_t<vec4f> resize_image(const image_t<vec4f>& img, vec2i resize) {
+image<vec4f> resize_image(const image<vec4f>& img, vec2i resize) {
   auto size = img.size();
   if (resize.x == 0 && resize.y == 0) {
     throw std::invalid_argument{"bad image size in resize"};
@@ -159,13 +159,13 @@ image_t<vec4f> resize_image(const image_t<vec4f>& img, vec2i resize) {
   } else if (resize.x == 0) {
     resize.x = (int)round(resize.y * (double)size.x / (double)size.y);
   }
-  auto res = image_t<vec4f>{resize};
+  auto res = image<vec4f>{resize};
   stbir_resize_float_linear((float*)img.data(), size.x, size.y,
       sizeof(vec4f) * size.x, (float*)res.data(), resize.x, resize.y,
       sizeof(vec4f) * resize.x, STBIR_RGBA);
   return res;
 }
-image_t<vec4b> resize_image(const image_t<vec4b>& img, vec2i resize) {
+image<vec4b> resize_image(const image<vec4b>& img, vec2i resize) {
   auto size = img.size();
   if (resize.x == 0 && resize.y == 0) {
     throw std::invalid_argument{"bad image size in resize"};
@@ -175,7 +175,7 @@ image_t<vec4b> resize_image(const image_t<vec4b>& img, vec2i resize) {
   } else if (resize.x == 0) {
     resize.x = (int)round(resize.y * (double)size.x / (double)size.y);
   }
-  auto res = image_t<vec4b>{resize};
+  auto res = image<vec4b>{resize};
   stbir_resize_uint8_linear((byte*)img.data(), size.x, size.y,
       sizeof(vec4b) * size.x, (byte*)res.data(), resize.x, resize.y,
       sizeof(vec4b) * resize.x, STBIR_RGBA);
@@ -191,7 +191,7 @@ namespace yocto {
 
 // Comvert a bump map to a normal map.
 void bump_to_normal(
-    image_t<vec4f>& normalmap, const image_t<vec4f>& bumpmap, float scale) {
+    image<vec4f>& normalmap, const image<vec4f>& bumpmap, float scale) {
   if (normalmap.size() != bumpmap.size()) normalmap = {bumpmap.size()};
   auto dx = 1.0f / bumpmap.size().x, dy = 1.0f / bumpmap.size().y;
   auto size = bumpmap.size();
@@ -209,15 +209,15 @@ void bump_to_normal(
     normalmap[{i, j}] = {normal.x, normal.y, normal.z, 1};
   }
 }
-image_t<vec4f> bump_to_normal(const image_t<vec4f>& bumpmap, float scale) {
-  auto normalmap = image_t<vec4f>{bumpmap.size()};
+image<vec4f> bump_to_normal(const image<vec4f>& bumpmap, float scale) {
+  auto normalmap = image<vec4f>{bumpmap.size()};
   bump_to_normal(normalmap, bumpmap, scale);
   return normalmap;
 }
 
 template <typename Shader>
-static image_t<vec4f> make_proc_image(vec2i size, Shader&& shader) {
-  auto image_ = image_t<vec4f>{size};
+static image<vec4f> make_proc_image(vec2i size, Shader&& shader) {
+  auto image_ = image<vec4f>{size};
   auto scale  = 1.0f / max(size);
   for (auto ij : range(size)) {
     image_[ij] = shader((vec2f)ij * scale);
@@ -226,7 +226,7 @@ static image_t<vec4f> make_proc_image(vec2i size, Shader&& shader) {
 }
 
 // Make an image
-image_t<vec4f> make_grid(vec2i size, float scale, vec4f color0, vec4f color1) {
+image<vec4f> make_grid(vec2i size, float scale, vec4f color0, vec4f color1) {
   return make_proc_image(size, [=](vec2f uv) {
     uv *= 4 * scale;
     uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
@@ -239,8 +239,7 @@ image_t<vec4f> make_grid(vec2i size, float scale, vec4f color0, vec4f color1) {
   });
 }
 
-image_t<vec4f> make_checker(
-    vec2i size, float scale, vec4f color0, vec4f color1) {
+image<vec4f> make_checker(vec2i size, float scale, vec4f color0, vec4f color1) {
   return make_proc_image(size, [=](vec2f uv) {
     uv *= 4 * scale;
     uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
@@ -249,7 +248,7 @@ image_t<vec4f> make_checker(
   });
 }
 
-image_t<vec4f> make_bumps(vec2i size, float scale, vec4f color0, vec4f color1) {
+image<vec4f> make_bumps(vec2i size, float scale, vec4f color0, vec4f color1) {
   return make_proc_image(size, [=](vec2f uv) {
     uv *= 4 * scale;
     uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
@@ -265,7 +264,7 @@ image_t<vec4f> make_bumps(vec2i size, float scale, vec4f color0, vec4f color1) {
   });
 }
 
-image_t<vec4f> make_ramp(vec2i size, float scale, vec4f color0, vec4f color1) {
+image<vec4f> make_ramp(vec2i size, float scale, vec4f color0, vec4f color1) {
   return make_proc_image(size, [=](vec2f uv) {
     uv *= scale;
     uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
@@ -273,7 +272,7 @@ image_t<vec4f> make_ramp(vec2i size, float scale, vec4f color0, vec4f color1) {
   });
 }
 
-image_t<vec4f> make_gammaramp(
+image<vec4f> make_gammaramp(
     vec2i size, float scale, vec4f color0, vec4f color1) {
   return make_proc_image(size, [=](vec2f uv) {
     uv *= scale;
@@ -288,7 +287,7 @@ image_t<vec4f> make_gammaramp(
   });
 }
 
-image_t<vec4f> make_uvramp(vec2i size, float scale) {
+image<vec4f> make_uvramp(vec2i size, float scale) {
   return make_proc_image(size, [=](vec2f uv) {
     uv *= scale;
     uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
@@ -296,7 +295,7 @@ image_t<vec4f> make_uvramp(vec2i size, float scale) {
   });
 }
 
-image_t<vec4f> make_uvgrid(vec2i size, float scale, bool colored) {
+image<vec4f> make_uvgrid(vec2i size, float scale, bool colored) {
   return make_proc_image(size, [=](vec2f uv) {
     uv *= scale;
     uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
@@ -324,7 +323,7 @@ image_t<vec4f> make_uvgrid(vec2i size, float scale, bool colored) {
   });
 }
 
-image_t<vec4f> make_colormapramp(vec2i size, float scale) {
+image<vec4f> make_colormapramp(vec2i size, float scale) {
   return make_proc_image(size, [=](vec2f uv) {
     uv *= scale;
     uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
@@ -343,8 +342,7 @@ image_t<vec4f> make_colormapramp(vec2i size, float scale) {
 }
 
 // Add image border
-image_t<vec4f> add_border(
-    const image_t<vec4f>& image, float width, vec4f color) {
+image<vec4f> add_border(const image<vec4f>& image, float width, vec4f color) {
   auto result = image;
   auto scale  = 1.0f / max(image.size());
   for (auto ij : range(image.size())) {
@@ -358,7 +356,7 @@ image_t<vec4f> add_border(
 }
 
 // Implementation of sunsky modified heavily from pbrt
-image_t<vec4f> make_sunsky(vec2i size, float theta_sun, float turbidity,
+image<vec4f> make_sunsky(vec2i size, float theta_sun, float turbidity,
     bool has_sun, float sun_intensity, float sun_radius, vec3f ground_albedo) {
   auto zenith_xyY = vec3f{
       (+0.00165f * pow(theta_sun, 3.f) - 0.00374f * pow(theta_sun, 2.f) +
@@ -448,7 +446,7 @@ image_t<vec4f> make_sunsky(vec2i size, float theta_sun, float turbidity,
   };
 
   // Make the sun sky image
-  auto img = image_t<vec4f>{size};
+  auto img = image<vec4f>{size};
   for (auto j = 0; j < size.y / 2; j++) {
     auto theta = pif * ((j + 0.5f) / size.y);
     theta      = clamp(theta, 0.0f, pif / 2 - flt_eps);
@@ -492,9 +490,9 @@ image_t<vec4f> make_sunsky(vec2i size, float theta_sun, float turbidity,
 }
 
 // Make an image of multiple lights.
-image_t<vec4f> make_lights(vec2i size, vec3f le, int nlights, float langle,
+image<vec4f> make_lights(vec2i size, vec3f le, int nlights, float langle,
     float lwidth, float lheight) {
-  auto img = image_t<vec4f>{size};
+  auto img = image<vec4f>{size};
   for (auto j = 0; j < size.y / 2; j++) {
     auto theta = pif * ((j + 0.5f) / size.y);
     theta      = clamp(theta, 0.0f, pif / 2 - 0.00001f);

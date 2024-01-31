@@ -103,18 +103,18 @@ struct diagram_labels {
 // Diagram style
 struct diagram_style {
   // Style data
-  vec4f          stroke    = {0, 0, 0, 1};
-  vec4f          fill      = {0.4, 1.0, 1.0, 1};
-  vec4f          text      = {0, 0, 0, 1};
-  image_t<vec4f> texture   = {};
-  bool           highlight = false;
-  bool           arrow     = false;
-  bool           nearest   = false;
-  bool           linear    = false;
-  bool           wireframe = true;
-  float          thickness = 0.015f;
-  float          textscale = 0.05f;
-  float          connect   = 0;
+  vec4f        stroke    = {0, 0, 0, 1};
+  vec4f        fill      = {0.4, 1.0, 1.0, 1};
+  vec4f        text      = {0, 0, 0, 1};
+  image<vec4f> texture   = {};
+  bool         highlight = false;
+  bool         arrow     = false;
+  bool         nearest   = false;
+  bool         linear    = false;
+  bool         wireframe = true;
+  float        thickness = 0.015f;
+  float        textscale = 0.05f;
+  float        connect   = 0;
 };
 
 // Diagram object
@@ -156,9 +156,8 @@ namespace yocto {
 diagram_data make_diagram();
 
 // Rendering a diagram
-image_t<vec4f> render_diagram(const diagram_data& diagram,
-    int resolution = 1440, int samples = 64, bool boxes = false,
-    bool crop = true);
+image<vec4f> render_diagram(const diagram_data& diagram, int resolution = 1440,
+    int samples = 64, bool boxes = false, bool crop = true);
 
 }  // namespace yocto
 
@@ -365,14 +364,14 @@ inline diagram_style dfilled(vec4f fill = dcolors::fill1,
     vec4f stroke = dcolors::black, float thickness = dthickness::default_) {
   return {.stroke = stroke, .fill = fill, .thickness = thickness};
 }
-inline diagram_style dtextured(const image_t<vec4f>& texture,
+inline diagram_style dtextured(const image<vec4f>& texture,
     vec4f stroke = dcolors::black, float thickness = dthickness::default_) {
   return {.stroke = stroke,
       .fill       = {1, 1, 1, 1},
       .thickness  = thickness,
       .texture    = texture};
 }
-inline diagram_style dtextured(const image_t<vec4f>& texture, bool interpolate,
+inline diagram_style dtextured(const image<vec4f>& texture, bool interpolate,
     vec4f stroke = dcolors::black, float thickness = dthickness::default_) {
   return {.stroke = stroke,
       .fill       = {1, 1, 1, 1},
@@ -380,7 +379,7 @@ inline diagram_style dtextured(const image_t<vec4f>& texture, bool interpolate,
       .texture    = texture,
       .nearest    = !interpolate};
 }
-inline diagram_style dimtextured(const image_t<vec4f>& texture,
+inline diagram_style dimtextured(const image<vec4f>& texture,
     vec4f stroke    = dcolors::transparent,
     float thickness = dthickness::default_) {
   return {
@@ -391,8 +390,8 @@ inline diagram_style dimtextured(const image_t<vec4f>& texture,
       .nearest   = true,
   };
 }
-inline diagram_style dimtextured(const image_t<vec4f>& texture,
-    bool interpolate, vec4f stroke = dcolors::transparent,
+inline diagram_style dimtextured(const image<vec4f>& texture, bool interpolate,
+    vec4f stroke    = dcolors::transparent,
     float thickness = dthickness::default_) {
   return {.stroke = stroke,
       .fill       = {1, 1, 1, 1},
@@ -576,11 +575,11 @@ diagram_shape daffinegrid(
 
 // Image
 diagram_shape dimagerect(vec2i size);
-diagram_shape dimagerect(const image_t<vec4f>& image);
+diagram_shape dimagerect(const image<vec4f>& image);
 diagram_shape dimagegrid(vec2i size);
-diagram_shape dimagegrid(const image_t<vec4f>& image);
+diagram_shape dimagegrid(const image<vec4f>& image);
 diagram_shape dimagelabel(vec2i size, float scale = 1);
-diagram_shape dimagelabel(const image_t<vec4f>& image, float scale = 1);
+diagram_shape dimagelabel(const image<vec4f>& image, float scale = 1);
 
 // Random points
 enum struct drandompoints_type {

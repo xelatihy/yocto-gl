@@ -53,16 +53,16 @@ void run(const vector<string>& args) {
   parse_cli(cli, args);
 
   // load image
-  auto image     = load_image(imagename);
+  auto source    = load_image(imagename);
   auto in_linear = is_linear_filename(imagename);
 
   // switch between interactive and offline
   if (!interactive) {
     // apply color grade
-    image = colorgrade_image(image, in_linear, params);
+    auto graded = colorgrade_image(source, in_linear, params);
 
     // save image
-    save_image(outname, image);
+    save_image(outname, graded);
   } else {
 #ifdef YOCTO_OPENGL
 
@@ -70,8 +70,8 @@ void run(const vector<string>& args) {
     auto params = colorgrade_params{};
 
     // display image
-    auto display = image;
-    colorgrade_image(display, image, in_linear, params);
+    auto display = source;
+    colorgrade_image(display, source, in_linear, params);
 
     // opengl image
     auto glimage  = glimage_state{};
@@ -85,7 +85,7 @@ void run(const vector<string>& args) {
     };
     callbacks.clear = [&](const gui_input& input) { clear_image(glimage); };
     callbacks.draw  = [&](const gui_input& input) {
-      update_image_params(input, image, glparams);
+      update_image_params(input, source, glparams);
       draw_image(glimage, glparams);
     };
     callbacks.widgets = [&](const gui_input& input) {
@@ -110,11 +110,11 @@ void run(const vector<string>& args) {
             "highlights color", params.highlights_color);
         end_gui_header();
         if (edited) {
-          colorgrade_image(display, image, true, params);
+          colorgrade_image(display, source, true, params);
           set_image(glimage, display);
         }
       }
-      draw_image_widgets(input, image, display, glparams);
+      draw_image_widgets(input, source, display, glparams);
     };
     callbacks.uiupdate = [&glparams](const gui_input& input) {
       uiupdate_image_params(input, glparams);

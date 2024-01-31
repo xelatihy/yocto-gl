@@ -1232,7 +1232,7 @@ diagram_shape dimagerect(vec2i size) {
 
   return shape;
 }
-diagram_shape dimagerect(const image_t<vec4f>& img) {
+diagram_shape dimagerect(const image<vec4f>& img) {
   return dimagerect(img.size());
 }
 
@@ -1246,7 +1246,7 @@ diagram_shape dimagegrid(vec2i size) {
   shape.quads     = shape_.quads;
   return shape;
 }
-diagram_shape dimagegrid(const image_t<vec4f>& img) {
+diagram_shape dimagegrid(const image<vec4f>& img) {
   return dimagegrid(img.size());
 }
 
@@ -1263,7 +1263,7 @@ diagram_shape dimagelabel(vec2i size, float scale) {
       .quads     = dconstants::quad_quads,
   };
 }
-diagram_shape dimagelabel(const image_t<vec4f>& image, float scale) {
+diagram_shape dimagelabel(const image<vec4f>& image, float scale) {
   return dimagelabel(image.size(), scale);
 }
 
@@ -1988,7 +1988,7 @@ static material_data make_stroke_material(
 
 // Make an image texture
 static texture_data make_image_texture(
-    const image_t<vec4f>& image, bool linear, bool nearest) {
+    const image<vec4f>& image, bool linear, bool nearest) {
   if (linear) {
     return texture_data{.pixelsf = image, .nearest = nearest};
   } else {
@@ -2104,7 +2104,7 @@ static scene_data convert_scene(const diagram_scene& diagram) {
 }
 
 // crop image vertically
-static image_t<vec4f> crop_image(const image_t<vec4f>& source) {
+static image<vec4f> crop_image(const image<vec4f>& source) {
   // find min and max
   auto [width, height] = source.size();
   auto min = 0, max = height;
@@ -2135,7 +2135,7 @@ static image_t<vec4f> crop_image(const image_t<vec4f>& source) {
   if (max < min) return source;
 
   // crop
-  auto cropped = image_t<vec4f>({width, max - min});
+  auto cropped = image<vec4f>({width, max - min});
   for (auto j : range(min, max)) {
     for (auto i : range(width)) {
       cropped[{i, j - min}] = source[{i, j}];
@@ -2147,14 +2147,14 @@ static image_t<vec4f> crop_image(const image_t<vec4f>& source) {
 }
 
 // Image rendering
-static image_t<vec4f> render_image(const scene_data& scene, int resolution,
+static image<vec4f> render_image(const scene_data& scene, int resolution,
     int samples, bool noparallel = false);
 
 // Render a diagram to an image
-image_t<vec4f> render_diagram(const diagram_data& diagram, int resolution,
+image<vec4f> render_diagram(const diagram_data& diagram, int resolution,
     int samples, bool boxes, bool crop) {
   // final image
-  auto composite = image_t<vec4f>{{resolution, resolution}, {1, 1, 1, 1}};
+  auto composite = image<vec4f>{{resolution, resolution}, {1, 1, 1, 1}};
 
   // render scenes
   for (auto& scene : diagram.scenes) {
@@ -2165,7 +2165,7 @@ image_t<vec4f> render_diagram(const diagram_data& diagram, int resolution,
     auto render = render_image(yscene, resolution, samples, false);
 
     // helpers
-    auto draw_quad = [](image_t<vec4f>& composite, vec2i center, vec2i size,
+    auto draw_quad = [](image<vec4f>& composite, vec2i center, vec2i size,
                          vec4f color) {
       auto extents = composite.size();
       for (auto i : range(-size.x / 2, +size.x / 2)) {
@@ -2181,7 +2181,7 @@ image_t<vec4f> render_diagram(const diagram_data& diagram, int resolution,
             center + vec2i{+size.x / 2, j}, vec2i{0, 0}, extents - 1)] = color;
       }
     };
-    auto copy_quad = [](image_t<vec4f>& composite, const image_t<vec4f>& source,
+    auto copy_quad = [](image<vec4f>& composite, const image<vec4f>& source,
                          vec2i icenter, vec2i scenter, vec2i size) {
       auto csize = composite.size();
       auto ssize = source.size();
@@ -2325,7 +2325,7 @@ static vec4f render_ray(
 }
 
 // Progressively computes an image.
-static image_t<vec4f> render_image(
+static image<vec4f> render_image(
     const scene_data& scene, int resolution, int samples, bool noparallel) {
   // Bvh
   auto bvh = make_scene_bvh(scene, false, noparallel);
@@ -2333,7 +2333,7 @@ static image_t<vec4f> render_image(
   auto& camera = scene.cameras[0];
   // Image
   auto size   = vec2i{resolution, (int)round(resolution / camera.aspect)};
-  auto render = image_t<vec4f>{size, {0, 0, 0, 0}};
+  auto render = image<vec4f>{size, {0, 0, 0, 0}};
   // Start rendering
   auto nsamples = (int)round(sqrt((float)samples));
   if (noparallel) {

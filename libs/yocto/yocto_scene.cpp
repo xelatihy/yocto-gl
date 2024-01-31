@@ -159,7 +159,7 @@ vec4f eval_texture(
 }
 
 // conversion from image
-texture_data image_to_texture(const image_t<vec4f>& image, bool linear) {
+texture_data image_to_texture(const image<vec4f>& image, bool linear) {
   auto texture = texture_data{};
   if (linear) {
     texture.pixelsf = image;
@@ -833,7 +833,7 @@ int add_environment(scene_data& scene, const string& name, const frame3f& frame,
 
 // Scene creation helpers
 int add_texture(scene_data& scene, const string& name,
-    const image_t<vec4f>& texture, bool linear) {
+    const image<vec4f>& texture, bool linear) {
   if (texture.empty()) return invalidid;
   if (linear) {
     scene.textures.push_back({.pixelsf = texture});
@@ -845,7 +845,7 @@ int add_texture(scene_data& scene, const string& name,
 
 // Scene creation helpers
 int add_texture(scene_data& scene, const string& name,
-    const image_t<vec4b>& texture, bool linear) {
+    const image<vec4b>& texture, bool linear) {
   if (texture.empty()) return invalidid;
   if (linear) {
     scene.textures.push_back({.pixelsf = srgbb_to_rgb(texture)});

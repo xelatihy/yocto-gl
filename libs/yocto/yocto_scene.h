@@ -94,10 +94,10 @@ struct camera_data {
 // Texture data as array of float or byte pixels. Textures can be stored in
 // linear or non linear color space.
 struct texture_data {
-  image_t<vec4f> pixelsf = {};
-  image_t<vec4b> pixelsb = {};
-  bool           nearest = false;
-  bool           clamp   = false;
+  image<vec4f> pixelsf = {};
+  image<vec4b> pixelsb = {};
+  bool         nearest = false;
+  bool         clamp   = false;
 };
 
 // Material type
@@ -253,7 +253,7 @@ vec4f lookup_texture(
     const texture_data& texture, vec2i ij, bool ldr_as_linear = false);
 
 // conversion from image
-texture_data image_to_texture(const image_t<vec4f>& image, bool linear);
+texture_data image_to_texture(const image<vec4f>& image, bool linear);
 
 }  // namespace yocto
 
@@ -402,9 +402,9 @@ int add_instance(scene_data& scene, const string& name, const frame3f& frame,
 int add_environment(scene_data& scene, const string& name, const frame3f& frame,
     vec3f emission, int emission_tex = invalidid);
 int add_texture(scene_data& scene, const string& name,
-    const image_t<vec4f>& texture, bool linear = true);
+    const image<vec4f>& texture, bool linear = true);
 int add_texture(scene_data& scene, const string& name,
-    const image_t<vec4b>& texture, bool linear = false);
+    const image<vec4b>& texture, bool linear = false);
 
 }  // namespace yocto
 

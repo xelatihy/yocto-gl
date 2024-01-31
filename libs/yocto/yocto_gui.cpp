@@ -177,7 +177,7 @@ static void draw_scene(glscene_state& glscene, const scene_data& scene,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-void update_image_params(const gui_input& input, const image_t<vec4f>& image,
+void update_image_params(const gui_input& input, const image<vec4f>& image,
     glimage_params& glparams) {
   glparams.window                           = input.window;
   glparams.framebuffer                      = input.framebuffer;
@@ -234,21 +234,21 @@ bool draw_tonemap_widgets(
   return (bool)edited;
 }
 
-bool draw_image_widgets(const gui_input& input, const image_t<vec4f>& image,
-    const image_t<vec4f>& display, glimage_params& glparams) {
+bool draw_image_widgets(const gui_input& input, const image<vec4f>& source,
+    const image<vec4f>& display, glimage_params& glparams) {
   if (draw_gui_header("inspect")) {
     draw_gui_slider("zoom", glparams.scale, 0.1f, 10);
     draw_gui_checkbox("fit", glparams.fit);
     draw_gui_coloredit("background", glparams.background);
     auto ij = image_coords(
-        input.cursor, glparams.center, glparams.scale, image.size());
+        input.cursor, glparams.center, glparams.scale, source.size());
     draw_gui_dragger("mouse", ij);
     auto image_pixel   = vec4f{0, 0, 0, 0};
     auto display_pixel = vec4f{0, 0, 0, 0};
-    if (ij.x >= 0 && ij.x < image.size().x && ij.y >= 0 &&
-        ij.y < image.size().y) {
-      image_pixel   = image[ij];
-      display_pixel = image[ij];
+    if (ij.x >= 0 && ij.x < source.size().x && ij.y >= 0 &&
+        ij.y < source.size().y) {
+      image_pixel   = source[ij];
+      display_pixel = source[ij];
     }
     draw_gui_coloredit("image", image_pixel);
     draw_gui_coloredit("display", display_pixel);
@@ -257,20 +257,20 @@ bool draw_image_widgets(const gui_input& input, const image_t<vec4f>& image,
   return false;
 }
 
-bool draw_image_widgets(const gui_input& input, const image_t<vec4f>& image,
+bool draw_image_widgets(const gui_input& input, const image<vec4f>& source,
     glimage_params& glparams) {
   if (draw_gui_header("inspect")) {
     draw_gui_slider("zoom", glparams.scale, 0.1f, 10);
     draw_gui_checkbox("fit", glparams.fit);
     draw_gui_coloredit("background", glparams.background);
     auto ij = image_coords(
-        input.cursor, glparams.center, glparams.scale, image.size());
+        input.cursor, glparams.center, glparams.scale, source.size());
     draw_gui_dragger("mouse", ij);
     auto image_pixel   = vec4f{0, 0, 0, 0};
     auto display_pixel = vec4f{0, 0, 0, 0};
-    if (ij.x >= 0 && ij.x < image.size().x && ij.y >= 0 &&
-        ij.y < image.size().y) {
-      image_pixel   = image[ij];
+    if (ij.x >= 0 && ij.x < source.size().x && ij.y >= 0 &&
+        ij.y < source.size().y) {
+      image_pixel   = source[ij];
       display_pixel = tonemap(
           image_pixel, glparams.exposure, glparams.filmic, glparams.srgb);
     }
@@ -420,7 +420,7 @@ namespace yocto {
 
 // Open a window and show an image
 void show_image_gui(const string& title, const string& name,
-    const image_t<vec4f>& image, bool linear) {
+    const image<vec4f>& image, bool linear) {
   // display image
   auto  display  = image;
   float exposure = 0;
@@ -464,9 +464,9 @@ void show_image_gui(const string& title, const string& name,
 
 // Open a window and show an image
 void show_image_gui(const string& title, const vector<string>& names,
-    const vector<image_t<vec4f>>& images, const vector<bool>& linears) {
+    const vector<image<vec4f>>& images, const vector<bool>& linears) {
   // display image
-  auto displays  = vector<image_t<vec4f>>(images.size());
+  auto displays  = vector<image<vec4f>>(images.size());
   auto exposures = vector<float>(images.size(), 0);
   auto filmics   = vector<bool>(images.size(), false);
   for (auto idx : range((int)images.size())) {
@@ -522,7 +522,7 @@ void show_image_gui(const string& title, const vector<string>& names,
 
 // Open a window and show an image
 void show_colorgrade_gui(const string& title, const string& name,
-    const image_t<vec4f>& image, bool linear) {
+    const image<vec4f>& image, bool linear) {
   // color grading parameters
   auto params = colorgrade_params{};
 
@@ -606,8 +606,8 @@ void show_trace_gui(const string& title, const string& name, scene_data& scene,
   }
 
   // init state
-  auto state = make_trace_state(scene, params);
-  auto image = image_t<vec4f>{state.render.size()};
+  auto state  = make_trace_state(scene, params);
+  auto render = image<vec4f>{state.render.size()};
 
   // opengl image
   auto glimage     = glimage_state{};
@@ -640,8 +640,8 @@ void show_trace_gui(const string& title, const string& name, scene_data& scene,
     trace_samples(pstate, scene, bvh, lights, pparams);
     auto preview = get_image(pstate);
     for (auto idx : range(state.render.size())) {
-      auto pij   = clamp(idx / params.pratio, {0, 0}, preview.size() - 1);
-      image[idx] = preview[pij];
+      auto pij    = clamp(idx / params.pratio, {0, 0}, preview.size() - 1);
+      render[idx] = preview[pij];
     }
     return true;
   };
@@ -651,7 +651,7 @@ void show_trace_gui(const string& title, const string& name, scene_data& scene,
     // make sure we can start
     trace_cancel(context);
     state = make_trace_state(scene, params);
-    if (image.size() != state.render.size()) image = state.render.size();
+    if (render.size() != state.render.size()) render = state.render.size();
   };
 
   // start rendering batch
@@ -666,7 +666,7 @@ void show_trace_gui(const string& title, const string& name, scene_data& scene,
   // check if batch is done and update image
   auto render_done = [&]() {
     if (context.done) {
-      get_image(image, state);
+      get_image(render, state);
       return true;
     } else {
       return false;
@@ -682,17 +682,17 @@ void show_trace_gui(const string& title, const string& name, scene_data& scene,
     init_image(glimage);
     render_reset();
     render_preview();
-    set_image(glimage, image);
+    set_image(glimage, render);
     render_start();
   };
   callbacks.clear = [&](const gui_input& input) { clear_image(glimage); };
   callbacks.draw  = [&](const gui_input& input) {
     // update image
     if (render_done()) {
-      set_image(glimage, image);
+      set_image(glimage, render);
       render_start();
     }
-    update_image_params(input, image, glparams);
+    update_image_params(input, render, glparams);
     draw_image(glimage, glparams);
   };
   callbacks.widgets = [&](const gui_input& input) {
@@ -723,7 +723,7 @@ void show_trace_gui(const string& title, const string& name, scene_data& scene,
         render_cancel();
         params = tparams;
         render_reset();
-        if (render_preview()) set_image(glimage, image);
+        if (render_preview()) set_image(glimage, render);
         render_start();
       }
     }
@@ -731,13 +731,13 @@ void show_trace_gui(const string& title, const string& name, scene_data& scene,
       edited += draw_gui_slider("exposure", glparams.exposure, -5, 5);
       edited += draw_gui_checkbox("filmic", glparams.filmic);
       end_gui_header();
-      if (edited) set_image(glimage, image);
+      if (edited) set_image(glimage, render);
     }
-    draw_image_widgets(input, image, glparams);
+    draw_image_widgets(input, render, glparams);
     if (edit) {
       if (draw_scene_widgets(scene, selection, [&]() { render_cancel(); })) {
         render_reset();
-        if (render_preview()) set_image(glimage, image);
+        if (render_preview()) set_image(glimage, render);
         render_start();
       }
     }
@@ -748,7 +748,7 @@ void show_trace_gui(const string& title, const string& name, scene_data& scene,
       render_cancel();
       scene.cameras[params.camera] = camera;
       render_reset();
-      if (render_preview()) set_image(glimage, image);
+      if (render_preview()) set_image(glimage, render);
       render_start();
     }
   };
@@ -1263,7 +1263,7 @@ void clear_image(glimage_state& glimage) {
   glimage = {};
 }
 
-void set_image(glimage_state& glimage, const image_t<vec4f>& image) {
+void set_image(glimage_state& glimage, const image<vec4f>& image) {
   if (!glimage.texture || glimage.width != image.size().x ||
       glimage.height != image.size().y) {
     if (!glimage.texture) glGenTextures(1, &glimage.texture);

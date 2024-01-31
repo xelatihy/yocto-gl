@@ -342,18 +342,16 @@ namespace yocto {
 // Displace vertices
 inline vector<vec3f> displace_vertices(const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texcoords,
-    const image_t<float>& displacement, float scale = 1.0f,
-    float offset = 0.5f);
+    const image<float>& displacement, float scale = 1.0f, float offset = 0.5f);
 inline vector<vec3f> displace_vertices(const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texcoords,
-    const image_t<vec4f>& displacement, float scale = 1.0f,
-    float offset = 0.5f);
+    const image<vec4f>& displacement, float scale = 1.0f, float offset = 0.5f);
 
 // Shape displacement
 inline shape_data displace_shape(const shape_data& shape,
-    const image_t<float>& displacement, float height = 1, float offset = 0.5f);
+    const image<float>& displacement, float height = 1, float offset = 0.5f);
 inline shape_data displace_shape(const shape_data& shape,
-    const image_t<vec4f>& displacement, float height = 1, float offset = 0.5f);
+    const image<vec4f>& displacement, float height = 1, float offset = 0.5f);
 
 }  // namespace yocto
 
@@ -2253,7 +2251,7 @@ namespace yocto {
 // Displace vertices
 inline vector<vec3f> displace_vertices(const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texcoords,
-    const image_t<float>& displacement, float scale, float offset) {
+    const image<float>& displacement, float scale, float offset) {
   if (texcoords.empty()) return positions;
   auto displaced = positions;
   for (auto idx : range(displaced.size())) {
@@ -2265,7 +2263,7 @@ inline vector<vec3f> displace_vertices(const vector<vec3f>& positions,
 }
 inline vector<vec3f> displace_vertices(const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texcoords,
-    const image_t<vec4f>& displacement, float scale, float offset) {
+    const image<vec4f>& displacement, float scale, float offset) {
   if (texcoords.empty()) return positions;
   auto displaced = positions;
   for (auto idx : range(displaced.size())) {
@@ -2278,7 +2276,7 @@ inline vector<vec3f> displace_vertices(const vector<vec3f>& positions,
 
 // Displacement
 inline shape_data displace_shape(const shape_data& shape,
-    const image_t<float>& displacement, float height, float offset) {
+    const image<float>& displacement, float height, float offset) {
   if (displacement.empty() || shape.texcoords.empty() ||
       shape.normals.empty() || (shape.triangles.empty() && shape.quads.empty()))
     return shape;
@@ -2289,7 +2287,7 @@ inline shape_data displace_shape(const shape_data& shape,
   return displaced;
 }
 inline shape_data displace_shape(const shape_data& shape,
-    const image_t<vec4f>& displacement, float height, float offset) {
+    const image<vec4f>& displacement, float height, float offset) {
   if (displacement.empty() || shape.texcoords.empty() ||
       shape.normals.empty() || (shape.triangles.empty() && shape.quads.empty()))
     return shape;

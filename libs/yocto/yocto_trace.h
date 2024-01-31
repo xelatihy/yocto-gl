@@ -114,15 +114,15 @@ struct trace_params {
 };
 
 // Progressively computes an image.
-image_t<vec4f> trace_image(const scene_data& scene, const trace_params& params);
+image<vec4f> trace_image(const scene_data& scene, const trace_params& params);
 
 // Convenience helper
-image_t<vec4f> trace_image(const scene_data& scene,
+image<vec4f> trace_image(const scene_data& scene,
     trace_sampler_type type = trace_sampler_type::path, int resolution = 1440,
     int samples = 256, int bounces = 8);
 
 // Forward compatibility
-inline image_t<vec4f> pathtrace_image(const scene_data& scene,
+inline image<vec4f> pathtrace_image(const scene_data& scene,
     trace_sampler_type type = trace_sampler_type::path, int resolution = 1440,
     int samples = 256, int bounces = 8) {
   return trace_image(scene, type, resolution, samples, bounces);
@@ -158,13 +158,13 @@ bool is_sampler_lit(const trace_params& params);
 
 // Trace state
 struct trace_state {
-  image_t<vec4f>     render   = {};
-  image_t<vec3f>     albedo   = {};
-  image_t<vec3f>     normal   = {};
-  image_t<int>       hits     = {};
-  image_t<rng_state> rngs     = {};
-  image_t<vec4f>     denoised = {};
-  int                samples  = 0;
+  image<vec4f>     render   = {};
+  image<vec3f>     albedo   = {};
+  image<vec3f>     normal   = {};
+  image<int>       hits     = {};
+  image<rng_state> rngs     = {};
+  image<vec4f>     denoised = {};
+  int              samples  = 0;
 
   vec2i size() const { return render.size(); }
 };
@@ -189,27 +189,27 @@ void trace_sample(trace_state& state, const scene_data& scene,
     const trace_params& params);
 
 // Get resulting render, denoised if requested
-image_t<vec4f> get_image(const trace_state& state);
-void           get_image(image_t<vec4f>& image, const trace_state& state);
+image<vec4f> get_image(const trace_state& state);
+void         get_image(image<vec4f>& image, const trace_state& state);
 
 // Get internal images from state
-image_t<vec4f> get_rendered_image(const trace_state& state);
-void get_rendered_image(image_t<vec4f>& image, const trace_state& state);
-image_t<vec4f> get_denoised_image(const trace_state& state);
-void get_denoised_image(image_t<vec4f>& image, const trace_state& state);
-image_t<vec3f> get_albedo_image(const trace_state& state);
-void get_albedo_image(image_t<vec3f>& image, const trace_state& state);
-image_t<vec3f> get_normal_image(const trace_state& state);
-void get_normal_image(image_t<vec3f>& image, const trace_state& state);
+image<vec4f> get_rendered_image(const trace_state& state);
+void         get_rendered_image(image<vec4f>& image, const trace_state& state);
+image<vec4f> get_denoised_image(const trace_state& state);
+void         get_denoised_image(image<vec4f>& image, const trace_state& state);
+image<vec3f> get_albedo_image(const trace_state& state);
+void         get_albedo_image(image<vec3f>& image, const trace_state& state);
+image<vec3f> get_normal_image(const trace_state& state);
+void         get_normal_image(image<vec3f>& image, const trace_state& state);
 
 // Denoise image
-image_t<vec4f> denoise_image(const image_t<vec4f>& render,
-    const image_t<vec3f>& albedo, const image_t<vec3f>& normal);
-void denoise_image(image_t<vec4f>& image, const image_t<vec4f>& render,
-    const image_t<vec3f>& albedo, const image_t<vec3f>& normal);
-void denoise_image(vector<vec4f>& denoised, int width, int height,
-    const vector<vec4f>& render, const vector<vec3f>& albedo,
-    const vector<vec3f>& normal);
+image<vec4f> denoise_image(const image<vec4f>& render,
+    const image<vec3f>& albedo, const image<vec3f>& normal);
+void         denoise_image(image<vec4f>& denoised, const image<vec4f>& render,
+            const image<vec3f>& albedo, const image<vec3f>& normal);
+void         denoise_image(vector<vec4f>& denoised, int width, int height,
+            const vector<vec4f>& render, const vector<vec3f>& albedo,
+            const vector<vec3f>& normal);
 
 // Async implementation
 struct trace_context {
@@ -233,7 +233,7 @@ void trace_cancel(trace_context& context);
 void trace_done(trace_context& context);
 
 // Async preview
-void trace_preview(image_t<vec4f>& image, trace_context& context,
+void trace_preview(image<vec4f>& image, trace_context& context,
     trace_state& state, const scene_data& scene, const trace_bvh& bvh,
     const trace_lights& lights, const trace_params& params);
 

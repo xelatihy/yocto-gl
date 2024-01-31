@@ -129,18 +129,19 @@ void run(const vector<string>& args) {
       print_info("render sample {}/{}: {}", state.samples, params.samples,
           elapsed_formatted(sample_timer));
       if (savebatch && state.samples % params.batch == 0) {
-        auto image     = get_image(state);
+        auto render    = get_image(state);
         auto batchname = replace_extension(outname,
             "-" + std::to_string(state.samples) + path_extension(outname));
-        save_image(batchname, image);
+        save_image(batchname, render);
       }
     }
     print_info("render image: {}", elapsed_formatted(timer));
 
     // save image
-    timer      = simple_timer{};
-    auto image = get_image(state);
-    save_image(outname, is_srgb_filename(outname) ? rgb_to_srgb(image) : image);
+    timer       = simple_timer{};
+    auto render = get_image(state);
+    save_image(
+        outname, is_srgb_filename(outname) ? rgb_to_srgb(render) : render);
     print_info("save image: {}", elapsed_formatted(timer));
   } else {
 #ifdef YOCTO_OPENGL
@@ -148,7 +149,7 @@ void run(const vector<string>& args) {
     auto context = make_trace_context(params);
 
     // init image
-    auto image = image_t<vec4f>{state.render.size()};
+    auto render = image<vec4f>{state.render.size()};
 
     // opengl image
     auto glimage     = glimage_state{};
@@ -174,14 +175,14 @@ void run(const vector<string>& args) {
       // make sure we can start
       trace_cancel(context);
       state = make_trace_state(scene, params);
-      if (image.size() != state.render.size())
-        image = image_t<vec4f>{state.render.size()};
+      if (render.size() != state.render.size())
+        render = image<vec4f>{state.render.size()};
 
       // render preview
-      trace_preview(image, context, state, scene, bvh, lights, params);
+      trace_preview(render, context, state, scene, bvh, lights, params);
 
       // update image
-      set_image(glimage, image);
+      set_image(glimage, render);
 
       // start
       trace_start(context, state, scene, bvh, lights, params);
@@ -193,8 +194,8 @@ void run(const vector<string>& args) {
     // render update
     auto render_update = [&]() {
       if (context.done) {
-        get_image(image, state);
-        set_image(glimage, image);
+        get_image(render, state);
+        set_image(glimage, render);
         trace_start(context, state, scene, bvh, lights, params);
       }
     };
@@ -211,7 +212,7 @@ void run(const vector<string>& args) {
     callbacks.clear = [&](const gui_input& input) { clear_image(glimage); };
     callbacks.draw  = [&](const gui_input& input) {
       render_update();
-      update_image_params(input, image, glparams);
+      update_image_params(input, render, glparams);
       draw_image(glimage, glparams);
     };
     callbacks.widgets = [&](const gui_input& input) {
@@ -222,7 +223,7 @@ void run(const vector<string>& args) {
         render_restart();
       }
       draw_tonemap_widgets(input, glparams.exposure, glparams.filmic);
-      draw_image_widgets(input, image, glparams);
+      draw_image_widgets(input, render, glparams);
       if (edit) {
         if (draw_scene_widgets(scene, selection, render_cancel)) {
           render_restart();

@@ -443,7 +443,7 @@ bool is_srgb_filename(const string& filename) {
 }
 
 // Loads a float image.
-image_t<vec4f> load_image(const string& filename) {
+image<vec4f> load_image(const string& filename) {
   auto ext = path_extension(filename);
   if (ext == ".exr" || ext == ".EXR") {
     auto buffer = load_binary(filename);
@@ -452,32 +452,32 @@ image_t<vec4f> load_image(const string& filename) {
     if (LoadEXRFromMemory(&pixels, &width, &height, buffer.data(),
             buffer.size(), nullptr) != 0)
       throw io_error{"cannot read " + filename};
-    auto image = image_t<vec4f>{{width, height}, (vec4f*)pixels};
+    auto ret = image<vec4f>{{width, height}, (vec4f*)pixels};
     free(pixels);
-    return image;
+    return ret;
   } else if (ext == ".hdr" || ext == ".HDR") {
     auto buffer = load_binary(filename);
     auto width = 0, height = 0, ncomp = 0;
     auto pixels = stbi_loadf_from_memory(
         buffer.data(), (int)buffer.size(), &width, &height, &ncomp, 4);
     if (pixels == nullptr) throw io_error{"cannot read " + filename};
-    auto image = image_t<vec4f>{{width, height}, (vec4f*)pixels};
+    auto ret = image<vec4f>{{width, height}, (vec4f*)pixels};
     free(pixels);
-    return image;
+    return ret;
   } else if (ext == ".png" || ext == ".PNG" || ext == ".jpg" || ext == ".JPG" ||
              ext == ".jpeg" || ext == ".JPEG" || ext == ".tga" ||
              ext == ".TGA" || ext == ".bmp" || ext == ".BMP") {
     return byte_to_float(load_imageb(filename));
   } else if (ext == ".ypreset" || ext == ".YPRESET") {
-    auto image = make_image_preset(filename);
-    return is_srgb_preset(filename) ? srgb_to_rgb(image) : image;
+    auto ret = make_image_preset(filename);
+    return is_srgb_preset(filename) ? srgb_to_rgb(ret) : ret;
   } else {
     throw io_error{"unsupported format " + filename};
   }
 }
 
 // Loads a byte image.
-image_t<vec4b> load_imageb(const string& filename) {
+image<vec4b> load_imageb(const string& filename) {
   auto ext = path_extension(filename);
   if (ext == ".exr" || ext == ".EXR" || ext == ".hdr" || ext == ".HDR") {
     return float_to_byte(load_image(filename));
@@ -489,9 +489,9 @@ image_t<vec4b> load_imageb(const string& filename) {
     auto pixels = stbi_load_from_memory(
         buffer.data(), (int)buffer.size(), &width, &height, &ncomp, 4);
     if (pixels == nullptr) throw io_error{"cannot read " + filename};
-    auto image = image_t<vec4b>{{width, height}, (vec4b*)pixels};
+    auto ret = image<vec4b>{{width, height}, (vec4b*)pixels};
     free(pixels);
-    return image;
+    return ret;
   } else if (ext == ".ypreset" || ext == ".YPRESET") {
     return float_to_byte(load_image(filename));
   } else {
@@ -507,7 +507,7 @@ bool is_srgb_preset(const string& type_) {
   auto type = path_basename(type_);
   return type.find("sky") == string::npos;
 }
-image_t<vec4f> make_image_preset(const string& type_) {
+image<vec4f> make_image_preset(const string& type_) {
   auto type    = path_basename(type_);
   auto extents = vec2i{1024, 1024};
   if (type.find("sky") != string::npos) extents = {2048, 1024};
@@ -539,7 +539,7 @@ image_t<vec4f> make_image_preset(const string& type_) {
   } else if (type == "images1") {
     auto sub_types  = vector<string>{"grid", "uvgrid", "checker", "gammaramp",
          "bumps", "bump-normal", "noise", "fbm", "blackbodyramp"};
-    auto sub_images = vector<image_t<vec4f>>();
+    auto sub_images = vector<image<vec4f>>();
     for (auto& sub_type : sub_types)
       sub_images.push_back(make_image_preset(sub_type));
     auto montage_size = vec2i{0, 0};
@@ -547,7 +547,7 @@ image_t<vec4f> make_image_preset(const string& type_) {
       montage_size = {montage_size.x + sub_image.size().x,
           max(montage_size.y, sub_image.size().y)};
     }
-    auto composite = image_t<vec4f>(montage_size);
+    auto composite = image<vec4f>(montage_size);
     auto pos       = 0;
     for (auto& sub_image : sub_images) {
       set_region(composite, sub_image, {pos, 0});
@@ -556,7 +556,7 @@ image_t<vec4f> make_image_preset(const string& type_) {
     return composite;
   } else if (type == "images2") {
     auto sub_types  = vector<string>{"sky", "sunsky"};
-    auto sub_images = vector<image_t<vec4f>>();
+    auto sub_images = vector<image<vec4f>>();
     for (auto& sub_type : sub_types)
       sub_images.push_back(make_image_preset(sub_type));
     auto montage_size = vec2i{0, 0};
@@ -564,7 +564,7 @@ image_t<vec4f> make_image_preset(const string& type_) {
       montage_size = {montage_size.x + sub_image.size().x,
           max(montage_size.y, sub_image.size().y)};
     }
-    auto composite = image_t<vec4f>(montage_size);
+    auto composite = image<vec4f>(montage_size);
     auto pos       = 0;
     for (auto& sub_image : sub_images) {
       set_region(composite, sub_image, {pos, 0});
@@ -611,7 +611,7 @@ image_t<vec4f> make_image_preset(const string& type_) {
 }
 
 // Saves a float image.
-void save_image(const string& filename, const image_t<vec4f>& image) {
+void save_image(const string& filename, const image<vec4f>& image) {
   // write data
   auto stbi_write_data = [](void* context, void* data, int size) {
     auto& buffer = *(vector<byte>*)context;
@@ -648,7 +648,7 @@ void save_image(const string& filename, const image_t<vec4f>& image) {
 }
 
 // Saves a byte image.
-void save_imageb(const string& filename, const image_t<vec4b>& image) {
+void save_imageb(const string& filename, const image<vec4b>& image) {
   // write data
   auto stbi_write_data = [](void* context, void* data, int size) {
     auto& buffer = *(vector<byte>*)context;

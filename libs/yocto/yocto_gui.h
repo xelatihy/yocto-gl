@@ -65,15 +65,15 @@ namespace yocto {
 
 // Open a window and show an image
 void show_image_gui(
-    const string& title, const string& name, const image_t<vec4f>& image);
+    const string& title, const string& name, const image<vec4f>& image);
 
 // Open a window and show a set of images
 void show_image_gui(const string& title, const vector<string>& names,
-    const vector<image_t<vec4f>>& images);
+    const vector<image<vec4f>>& images);
 
 // Open a window and show an image for color grading
 void show_colorgrade_gui(
-    const string& title, const string& name, const image_t<vec4f>& image);
+    const string& title, const string& name, const image<vec4f>& image);
 
 // Open a window and show an scene via path tracing
 void show_trace_gui(const string& title, const string& name, scene_data& scene,
@@ -166,7 +166,7 @@ bool init_image(glimage_state& glimage);
 void clear_image(glimage_state& glimage);
 
 // update image data
-void set_image(glimage_state& glimage, const image_t<vec4f>& image);
+void set_image(glimage_state& glimage, const image<vec4f>& image);
 
 // draw image
 void draw_image(glimage_state& image, const glimage_params& params);
@@ -294,13 +294,13 @@ bool draw_tonemap_widgets(
     const gui_input& input, float& exposure, bool& filmic);
 
 // draw image inspector
-bool draw_image_widgets(const gui_input& input, const image_t<vec4f>& image,
-    const image_t<vec4f>& display, glimage_params& glparams);
-bool draw_image_widgets(const gui_input& input, const image_t<vec4f>& image,
+bool draw_image_widgets(const gui_input& input, const image<vec4f>& source,
+    const image<vec4f>& display, glimage_params& glparams);
+bool draw_image_widgets(const gui_input& input, const image<vec4f>& source,
     glimage_params& glparams);
 
 // update image params
-void update_image_params(const gui_input& input, const image_t<vec4f>& image,
+void update_image_params(const gui_input& input, const image<vec4f>& source,
     glimage_params& glparams);
 
 // update image params from mouse
