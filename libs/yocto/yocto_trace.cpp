@@ -362,8 +362,8 @@ static vec3f sample_lights(const scene_data& scene, const trace_lights& lights,
       auto  idx     = sample_discrete(light.elements_cdf, rel);
       auto  size    = max(texture.pixelsf.size(), texture.pixelsb.size());
       // we avoid flipping twice the v in the uv and returned direction
-      auto uv = vec2f{
-          ((idx % size.x) + 0.5f) / size.x, ((idx / size.x) + 0.5f) / size.y};
+      auto uv = vec2f{((idx % size.x) + 0.5f) / size.x,
+          1 - ((idx / size.x) + 0.5f) / size.y};
       return transform_direction(environment.frame,
           {cos(uv.x * 2 * pif) * sin(uv.y * pif), cos(uv.y * pif),
               sin(uv.x * 2 * pif) * sin(uv.y * pif)});
@@ -409,7 +409,7 @@ static float sample_lights_pdf(const scene_data& scene, const trace_bvh& bvh,
         auto  wl = transform_direction(inverse(environment.frame), direction);
         // we avoid flipping twice the v in the texcoord and ij
         auto texcoord = vec2f{atan2(wl.z, wl.x) / (2 * pif),
-            acos(clamp(wl.y, -1.0f, 1.0f)) / pif};
+            acos(-clamp(wl.y, -1.0f, 1.0f)) / pif};
         if (texcoord.x < 0) texcoord.x += 1;
         auto size = max(
             emission_tex.pixelsf.size(), emission_tex.pixelsb.size());
