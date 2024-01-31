@@ -93,7 +93,7 @@ static shape_data make_dquads(vec2i steps, vec2f scale, vec2f uvscale) {
       shape.positions[j * (steps.x + 1) + i] = {
           (2 * uv.x - 1) * scale.x, (2 * uv.y - 1) * scale.y, 0};
       shape.normals[j * (steps.x + 1) + i]   = {0, 0, 1};
-      shape.texcoords[j * (steps.x + 1) + i] = vec2f{uv.x, uv.y} * uvscale;
+      shape.texcoords[j * (steps.x + 1) + i] = vec2f{uv.x, 1 - uv.y} * uvscale;
     }
   }
 
@@ -180,7 +180,7 @@ static shape_data make_duvsphere(
   auto shape = make_drect({steps.x, steps.y}, {1, 1});
   for (auto i : range(shape.positions.size())) {
     auto uv = shape.texcoords[i];
-    auto a  = vec2f{2 * pif * uv.x, pif * (1 - uv.y)};
+    auto a  = vec2f{2 * pif * uv.x, pif * uv.y};
     shape.positions[i] =
         vec3f{cos(a.x) * sin(a.y), sin(a.x) * sin(a.y), cos(a.y)} * scale;
     shape.normals[i]   = normalize(shape.positions[i]);
@@ -195,7 +195,7 @@ static shape_data make_duvhemisphere(
   auto shape = make_drect({steps.x, steps.y}, {1, 1});
   for (auto i : range(shape.positions.size())) {
     auto uv = shape.texcoords[i];
-    auto a  = vec2f{pif * uv.x, pif * (1 - uv.y)};
+    auto a  = vec2f{pif * uv.x, pif * uv.y};
     shape.positions[i] =
         vec3f{cos(a.x) * sin(a.y), sin(a.x) * sin(a.y), cos(a.y)} * scale;
     shape.normals[i]   = normalize(shape.positions[i]);
@@ -1762,7 +1762,7 @@ static shape_data make_text_shape(const string& text, vec3f offset,
     if (offset.y < 0) p.y += -height + offset_.y * offset.y;
     if (offset.z > 0) p.z += offset.z;
   }
-  shape.texcoords = {{0, 0}, {1, 0}, {1, 1}, {0, 1}};
+  shape.texcoords = {{0, 1}, {1, 1}, {1, 0}, {0, 0}};
   return shape;
 }
 

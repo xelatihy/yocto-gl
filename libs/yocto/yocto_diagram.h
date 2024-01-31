@@ -219,11 +219,11 @@ inline const auto quad_quads     = vector<vec4i>{{0, 1, 2, 3}};
 inline const auto quad_positions = vector<vec3f>{
     {-1, -1, 0}, {+1, -1, 0}, {+1, +1, 0}, {-1, +1, 0}};
 inline const auto quad_texcoords = vector<vec2f>{
-    {0, 0}, {1, 0}, {1, 1}, {0, 1}};
+    {0, 1}, {1, 1}, {1, 0}, {0, 0}};
 inline const auto triangle_triangles = vector<vec3i>{{0, 1, 2}};
 inline const auto triangle_positions = vector<vec3f>{
     {-1, -1, 0}, {+1, -1, 0}, {0, +1, 0}};
-inline const auto triangle_texcoords = vector<vec2f>{{0, 0}, {1, 0}, {0.5, 1}};
+inline const auto triangle_texcoords = vector<vec2f>{{0, 1}, {1, 1}, {0.5, 0}};
 inline const auto cube_quads         = vector<vec4i>{{0, 3, 2, 1}, {4, 5, 6, 7},
             {1, 2, 6, 5}, {0, 4, 7, 3}, {0, 1, 5, 4}, {2, 3, 7, 6}};
 inline const auto cube_positions     = vector<vec3f>{{-1, -1, +1}, {+1, -1, +1},

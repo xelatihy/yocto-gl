@@ -539,6 +539,22 @@ void split_facevarying(vector<vec4i>& split_quads,
   } else {
     split_texcoords.clear();
   }
+
+  // fill quad data
+  split_quads.resize(quadspos.size());
+  for (auto fid : range(quadspos.size())) {
+    for (auto c : range(4)) {
+      auto vertex = vec3i{
+          (&quadspos[fid].x)[c],
+          (!quadsnorm.empty()) ? (&quadsnorm[fid].x)[c] : -1,
+          (!quadstexcoord.empty()) ? (&quadstexcoord[fid].x)[c] : -1,
+      };
+      split_quads[fid][c] =
+          (int)(std::lower_bound(vertices.begin(), vertices.end(), vertex,
+                    compare_vertices) -
+                vertices.begin());
+    }
+  }
 }
 
 // Conversions
