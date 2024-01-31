@@ -243,14 +243,14 @@ ray3f eval_camera(const camera_data& camera, vec2f image_uv, vec2f lens_uv);
 namespace yocto {
 
 // Evaluates a texture
-vec4f eval_texture(const texture_data& texture, vec2f uv,
-    bool ldr_as_linear = false, bool no_vflip = false);
-vec4f eval_texture(const scene_data& scene, int texture, vec2f uv,
-    bool ldr_as_linear = false, bool no_vflip = false);
+vec4f eval_texture(
+    const texture_data& texture, vec2f uv, bool ldr_as_linear = false);
+vec4f eval_texture(
+    const scene_data& scene, int texture, vec2f uv, bool ldr_as_linear = false);
 
 // pixel access
-vec4f lookup_texture(const texture_data& texture, vec2i ij,
-    bool ldr_as_linear = false, bool no_vflip = false);
+vec4f lookup_texture(
+    const texture_data& texture, vec2i ij, bool ldr_as_linear = false);
 
 // conversion from image
 texture_data image_to_texture(const image_t<vec4f>& image, bool linear);

@@ -115,9 +115,7 @@ namespace yocto {
 
 // pixel access
 vec4f lookup_texture(
-    const texture_data& texture, vec2i ij_, bool ldr_as_linear, bool no_flipv) {
-  auto size = max(texture.pixelsb.size(), texture.pixelsf.size());
-  auto ij   = no_flipv ? ij_ : vec2i{ij_.x, size.y - 1 - ij_.y};
+    const texture_data& texture, vec2i ij, bool ldr_as_linear) {
   if (!texture.pixelsf.empty()) return texture.pixelsf[ij];
   if (!texture.pixelsb.empty())
     return ldr_as_linear ? byte_to_float(texture.pixelsb[ij])
@@ -126,8 +124,7 @@ vec4f lookup_texture(
 }
 
 // Evaluates an image at a point `uv`.
-vec4f eval_texture(
-    const texture_data& texture, vec2f uv, bool ldr_as_linear, bool no_flipv) {
+vec4f eval_texture(const texture_data& texture, vec2f uv, bool ldr_as_linear) {
   if (texture.pixelsf.empty() && texture.pixelsb.empty()) return {0, 0, 0, 0};
 
   // get texture width/height
@@ -155,10 +152,10 @@ vec4f eval_texture(
 }
 
 // Helpers
-vec4f eval_texture(const scene_data& scene, int texture, vec2f uv,
-    bool ldr_as_linear, bool no_flipv) {
+vec4f eval_texture(
+    const scene_data& scene, int texture, vec2f uv, bool ldr_as_linear) {
   if (texture == invalidid) return {1, 1, 1, 1};
-  return eval_texture(scene.textures[texture], uv, ldr_as_linear, no_flipv);
+  return eval_texture(scene.textures[texture], uv, ldr_as_linear);
 }
 
 // conversion from image
@@ -573,7 +570,7 @@ vec3f eval_environment(const scene_data& scene,
     const environment_data& environment, vec3f direction) {
   auto wl       = transform_direction(inverse(environment.frame), direction);
   auto texcoord = vec2f{
-      atan2(wl.z, wl.x) / (2 * pif), acos(-clamp(wl.y, -1.0f, 1.0f)) / pif};
+      atan2(wl.z, wl.x) / (2 * pif), acos(clamp(wl.y, -1.0f, 1.0f)) / pif};
   if (texcoord.x < 0) texcoord.x += 1;
   return environment.emission *
          xyz(eval_texture(scene, environment.emission_tex, texcoord));

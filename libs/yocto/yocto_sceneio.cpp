@@ -700,7 +700,7 @@ void save_imageb(const string& filename, const image_t<vec4b>& image) {
 namespace yocto {
 
 // Load mesh
-shape_data load_shape(const string& filename) {
+shape_data load_shape(const string& filename, bool flip_texcoords) {
   auto shape = shape_data{};
   auto ext   = path_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
@@ -708,7 +708,8 @@ shape_data load_shape(const string& filename) {
     // TODO: remove when all as arrays
     get_positions(ply, (vector<array<float, 3>>&)shape.positions);
     get_normals(ply, (vector<array<float, 3>>&)shape.normals);
-    get_texcoords(ply, (vector<array<float, 2>>&)shape.texcoords);
+    get_texcoords(
+        ply, (vector<array<float, 2>>&)shape.texcoords, flip_texcoords);
     get_colors(ply, (vector<array<float, 4>>&)shape.colors);
     get_radius(ply, shape.radius);
     get_faces(ply, (vector<array<int, 3>>&)shape.triangles,
@@ -724,7 +725,8 @@ shape_data load_shape(const string& filename) {
     // TODO: remove when all as arrays
     get_positions(obj, (vector<array<float, 3>>&)shape.positions);
     get_normals(obj, (vector<array<float, 3>>&)shape.normals);
-    get_texcoords(obj, (vector<array<float, 2>>&)shape.texcoords);
+    get_texcoords(
+        obj, (vector<array<float, 2>>&)shape.texcoords, flip_texcoords);
     get_faces(obj, (vector<array<int, 3>>&)shape.triangles,
         (vector<array<int, 4>>&)shape.quads, materials);
     get_lines(obj, (vector<array<int, 2>>&)shape.lines, materials);
@@ -749,14 +751,16 @@ shape_data load_shape(const string& filename) {
 }
 
 // Save ply mesh
-void save_shape(const string& filename, const shape_data& shape, bool ascii) {
+void save_shape(const string& filename, const shape_data& shape,
+    bool flip_texcoords, bool ascii) {
   auto ext = path_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     auto ply = ply_model{};
     // TODO: remove when all as arrays
     add_positions(ply, (const vector<array<float, 3>>&)shape.positions);
     add_normals(ply, (const vector<array<float, 3>>&)shape.normals);
-    add_texcoords(ply, (const vector<array<float, 2>>&)shape.texcoords);
+    add_texcoords(
+        ply, (const vector<array<float, 2>>&)shape.texcoords, flip_texcoords);
     add_colors(ply, (const vector<array<float, 4>>&)shape.colors);
     add_radius(ply, shape.radius);
     add_faces(ply, (const vector<array<int, 3>>&)shape.triangles,
@@ -769,7 +773,8 @@ void save_shape(const string& filename, const shape_data& shape, bool ascii) {
     // TODO: remove when all as arrays
     add_positions(obj, (const vector<array<float, 3>>&)shape.positions);
     add_normals(obj, (const vector<array<float, 3>>&)shape.normals);
-    add_texcoords(obj, (const vector<array<float, 2>>&)shape.texcoords);
+    add_texcoords(
+        obj, (const vector<array<float, 2>>&)shape.texcoords, flip_texcoords);
     add_triangles(obj, (const vector<array<int, 3>>&)shape.triangles, 0,
         !shape.normals.empty(), !shape.texcoords.empty());
     add_quads(obj, (const vector<array<int, 4>>&)shape.quads, 0,
@@ -851,7 +856,7 @@ void save_shape(const string& filename, const shape_data& shape, bool ascii) {
 }
 
 // Load face-varying mesh
-fvshape_data load_fvshape(const string& filename) {
+fvshape_data load_fvshape(const string& filename, bool flip_texcoords) {
   auto shape = fvshape_data{};
   auto ext   = path_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
@@ -859,7 +864,8 @@ fvshape_data load_fvshape(const string& filename) {
     // TODO: remove when all as arrays
     get_positions(ply, (vector<array<float, 3>>&)shape.positions);
     get_normals(ply, (vector<array<float, 3>>&)shape.normals);
-    get_texcoords(ply, (vector<array<float, 2>>&)shape.texcoords);
+    get_texcoords(
+        ply, (vector<array<float, 2>>&)shape.texcoords, flip_texcoords);
     get_quads(ply, (vector<array<int, 4>>&)shape.quadspos);
     if (!shape.normals.empty()) shape.quadsnorm = shape.quadspos;
     if (!shape.texcoords.empty()) shape.quadstexcoord = shape.quadspos;
@@ -870,7 +876,8 @@ fvshape_data load_fvshape(const string& filename) {
     auto materials = vector<int>{};
     get_positions(obj, (vector<array<float, 3>>&)shape.positions);
     get_normals(obj, (vector<array<float, 3>>&)shape.normals);
-    get_texcoords(obj, (vector<array<float, 2>>&)shape.texcoords);
+    get_texcoords(
+        obj, (vector<array<float, 2>>&)shape.texcoords, flip_texcoords);
     get_fvquads(obj, (vector<array<int, 4>>&)shape.quadspos,
         (vector<array<int, 4>>&)shape.quadsnorm,
         (vector<array<int, 4>>&)shape.quadstexcoord, materials);
@@ -895,23 +902,24 @@ fvshape_data load_fvshape(const string& filename) {
 }
 
 // Save ply mesh
-void save_fvshape(
-    const string& filename, const fvshape_data& shape, bool ascii) {
+void save_fvshape(const string& filename, const fvshape_data& shape,
+    bool flip_texcoords, bool ascii) {
   auto ext = path_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
-    return save_shape(filename, fvshape_to_shape(shape), ascii);
+    return save_shape(filename, fvshape_to_shape(shape), flip_texcoords, ascii);
   } else if (ext == ".obj" || ext == ".OBJ") {
     auto obj = obj_shape{};
     // TODO: remove when all as arrays
     add_positions(obj, (const vector<array<float, 3>>&)shape.positions);
     add_normals(obj, (const vector<array<float, 3>>&)shape.normals);
-    add_texcoords(obj, (const vector<array<float, 2>>&)shape.texcoords);
+    add_texcoords(
+        obj, (const vector<array<float, 2>>&)shape.texcoords, flip_texcoords);
     add_fvquads(obj, (const vector<array<int, 4>>&)shape.quadspos,
         (const vector<array<int, 4>>&)shape.quadsnorm,
         (const vector<array<int, 4>>&)shape.quadstexcoord, 0);
     save_obj(filename, obj);
   } else if (ext == ".stl" || ext == ".STL") {
-    return save_shape(filename, fvshape_to_shape(shape), ascii);
+    return save_shape(filename, fvshape_to_shape(shape), flip_texcoords, ascii);
   } else if (ext == ".cpp" || ext == ".CPP") {
     auto to_cpp = [](const string& name, const string& vname,
                       const auto& values) -> string {
@@ -3706,7 +3714,6 @@ static scene_data load_gltf_scene(const string& filename, bool noparallel) {
               "cannot load " + filename + " for unsupported primitive type"};
         }
       }
-      for (auto& texcoord : shape.texcoords) texcoord.y = 1 - texcoord.y;
     }
   }
 
@@ -3870,13 +3877,6 @@ static void save_gltf_scene(
     }
   }
 
-  // UV flip
-  auto flip_uv = [](const vector<vec2f>& texcoords) {
-    auto ftexcoords = texcoords;
-    for (auto& uv : ftexcoords) uv.y = 1 - uv.y;
-    return ftexcoords;
-  };
-
   // buffers
   auto shape_accessor_start = vector<int>{};
   if (!scene.shapes.empty()) {
@@ -3943,7 +3943,7 @@ static void save_gltf_scene(
       add_vertex(cgltf, gbuffer, shape.normals.size(), cgltf_type_vec3,
           (const float*)shape.normals.data());
       add_vertex(cgltf, gbuffer, shape.texcoords.size(), cgltf_type_vec2,
-          (const float*)flip_uv(shape.texcoords).data());
+          (const float*)shape.texcoords.data());
       add_vertex(cgltf, gbuffer, shape.colors.size(), cgltf_type_vec4,
           (const float*)shape.colors.data());
       add_vertex(cgltf, gbuffer, shape.radius.size(), cgltf_type_scalar,
