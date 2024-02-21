@@ -973,7 +973,8 @@ void save_fvshape(const string& filename, const fvshape_data& shape,
 }
 
 // Shape presets used for testing.
-shape_data make_shape_preset(const string& type) {
+shape_data make_shape_preset(const string& type_) {
+  auto type = path_basename(type_);
   if (type == "default-quad") {
     return make_rect();
   } else if (type == "default-quady") {
