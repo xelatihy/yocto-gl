@@ -368,16 +368,16 @@ inline diagram_style dtextured(const image<vec4f>& texture,
     vec4f stroke = dcolors::black, float thickness = dthickness::default_) {
   return {.stroke = stroke,
       .fill       = {1, 1, 1, 1},
-      .thickness  = thickness,
-      .texture    = texture};
+      .texture    = texture,
+      .thickness  = thickness};
 }
 inline diagram_style dtextured(const image<vec4f>& texture, bool interpolate,
     vec4f stroke = dcolors::black, float thickness = dthickness::default_) {
   return {.stroke = stroke,
       .fill       = {1, 1, 1, 1},
-      .thickness  = thickness,
       .texture    = texture,
-      .nearest    = !interpolate};
+      .nearest    = !interpolate,
+      .thickness  = thickness};
 }
 inline diagram_style dimtextured(const image<vec4f>& texture,
     vec4f stroke    = dcolors::transparent,
@@ -385,9 +385,9 @@ inline diagram_style dimtextured(const image<vec4f>& texture,
   return {
       .stroke    = stroke,
       .fill      = {1, 1, 1, 1},
-      .thickness = thickness,
       .texture   = texture,
       .nearest   = true,
+      .thickness = thickness,
   };
 }
 inline diagram_style dimtextured(const image<vec4f>& texture, bool interpolate,
@@ -395,17 +395,17 @@ inline diagram_style dimtextured(const image<vec4f>& texture, bool interpolate,
     float thickness = dthickness::default_) {
   return {.stroke = stroke,
       .fill       = {1, 1, 1, 1},
-      .thickness  = thickness,
       .texture    = texture,
-      .nearest    = !interpolate};
+      .nearest    = !interpolate,
+      .thickness  = thickness};
 }
 inline diagram_style dtextcolor(const vec4f textcolor = dcolors::black,
     vec4f fill = dcolors::fill1, vec4f stroke = dcolors::black,
     float thickness = dthickness::default_) {
   return {.stroke = stroke,
       .fill       = fill,
-      .thickness  = thickness,
-      .text       = textcolor};
+      .text       = textcolor,
+      .thickness  = thickness};
 }
 
 }  // namespace yocto

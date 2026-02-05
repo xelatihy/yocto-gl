@@ -748,8 +748,8 @@ int add_camera(scene_data& scene, const string& name, vec3f from, vec3f to,
       {.frame       = lookat_frame(from, to, {0, 1, 0}),
           .lens     = lens,
           .aspect   = aspect,
-          .aperture = aperture,
-          .focus    = length(from - to) + focus_offset});
+          .focus    = length(from - to) + focus_offset,
+          .aperture = aperture});
 }
 
 int add_camera(scene_data& scene, const string& name, const frame3f& frame,
@@ -758,8 +758,8 @@ int add_camera(scene_data& scene, const string& name, const frame3f& frame,
       {.frame       = frame,
           .lens     = lens,
           .aspect   = aspect,
-          .aperture = aperture,
-          .focus    = focus});
+          .focus    = focus,
+          .aperture = aperture});
 }
 
 // Scene creation helpers
