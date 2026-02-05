@@ -1258,9 +1258,9 @@ diagram_shape dimagelabel(vec2i size, float scale) {
   auto opositions = dconstants::quad_positions;
   for (auto& oposition : opositions) oposition = oposition * oscale + ocenter;
   return {
+      .quads     = dconstants::quad_quads,
       .positions = opositions,
       .texcoords = dconstants::quad_texcoords,
-      .quads     = dconstants::quad_quads,
   };
 }
 diagram_shape dimagelabel(const image<vec4f>& image, float scale) {
@@ -1470,7 +1470,7 @@ diagram_scene& add_plotaxes(diagram_scene& diagram, const bbox2f& bounds,
     tpositions.push_back({min.x, y, 0});
     tlabels.push_back(label + "!!l");
   }
-  add_labels(diagram, {.positions = tpositions, .labels = tlabels});
+  add_labels(diagram, {.labels = tlabels, .positions = tpositions});
 
   return diagram;
 }
@@ -1601,7 +1601,7 @@ diagram_scene& add_plotaxes3(diagram_scene& diagram, const bbox3f& bounds,
     tpositions.push_back({min.x, min.y, z});
     tlabels.push_back(label + "!!r");
   }
-  add_labels(diagram, {.positions = tpositions, .labels = tlabels});
+  add_labels(diagram, {.labels = tlabels, .positions = tpositions});
 
   return diagram;
 }
